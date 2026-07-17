@@ -1,0 +1,41 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Isolated TPT Gate A harness</title>
+<style>html,body{margin:0;background:#111;color:#ddd}canvas{display:block;width:960px;height:720px}</style>
+<canvas id="tpt-canvas" tabindex="0"></canvas>
+<pre id="status">loading</pre>
+<script>
+  window.__gateState = { navigationStart: performance.timeOrigin, runtime: false, firstFrame: 0, frames: 0, errors: [] };
+  const status = document.querySelector('#status');
+  const canvas = document.querySelector('#tpt-canvas');
+  window.Module = {
+    canvas,
+    noExitRuntime: true,
+    locateFile: (file) => file,
+    print: (line) => console.log(`[tpt] ${line}`),
+    printErr: (line) => console.warn(`[tpt] ${line}`),
+    onRuntimeInitialized: () => {
+      window.__gateState.runtime = true;
+      status.textContent = `runtime initialized; canvas=${canvas.width}x${canvas.height}`;
+    }
+  };
+  function frame(now) {
+    window.__gateState.frames++;
+    if (window.__gateState.runtime && !window.__gateState.firstFrame && canvas.width && canvas.height) {
+      window.__gateState.firstFrame = now;
+      status.textContent += `; first frame=${now.toFixed(1)}ms`;
+    }
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+  window.addEventListener('error', (event) => window.__gateState.errors.push(String(event.message || event.error || event)));
+  window.addEventListener('unhandledrejection', (event) => window.__gateState.errors.push(`unhandled rejection: ${event.reason}`));
+</script>
+<script src="/powder.js"></script>
+<script>
+  window.__gateState.factoryStarted = true;
+  create_powder(Module).catch((error) => {
+    window.__gateState.errors.push(`module factory: ${error}`);
+    document.querySelector('#status').textContent = `module factory failed: ${error}`;
+  });
+</script>

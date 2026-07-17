@@ -1,0 +1,57 @@
+{
+  "upstream": {
+    "project": "The-Powder-Toy/The-Powder-Toy",
+    "tag": "v100.0.399",
+    "commit": "9c94feba3ed5eaa75a819ac000c0d29e4ce92570",
+    "source": "https://github.com/The-Powder-Toy/The-Powder-Toy.git",
+    "release": "https://github.com/The-Powder-Toy/The-Powder-Toy/releases/tag/v100.0.399"
+  },
+  "emsdk": {
+    "tag": "3.1.72",
+    "commit": "75eb9522ae0d24a9057c29ff6c72336beddf9508",
+    "source": "https://github.com/emscripten-core/emsdk.git"
+  },
+  "meson": {
+    "version": "1.4.2",
+    "package": "meson==1.4.2",
+    "source": "https://pypi.org/project/meson/1.4.2/",
+    "method": "python3.12 -m venv .cache/tpt/meson-venv followed by that venv's pip install --no-cache-dir meson==1.4.2 (the release is installed from its PyPI source distribution); the build invokes .cache/tpt/meson-venv/bin/meson directly."
+  },
+  "bzip2": {
+    "version": "1.0.8",
+    "source": "https://sourceware.org/pub/bzip2/bzip2-1.0.8.tar.gz",
+    "sha256": "ab5a03176ee106d3f0fa90e381da478ddae405918153cca248e682cd0c4a2269",
+    "method": "Download into .cache/tpt/deps, verify SHA-256, extract locally, compile the seven libbz2 C sources with the pinned emcc/emar, and install bzlib.h plus libbz2.a under .cache/tpt/deps/bzip2/prefix.",
+    "status": "superseded; retained only as prior experiment metadata"
+  },
+  "lua": {
+    "version": "5.2.4",
+    "source": "https://www.lua.org/ftp/lua-5.2.4.tar.gz",
+    "sha256": "b9e2e4aad6789b3b63a056d442f7b39f0ecfca3ae0f1fc0ae4e9614401b69f4b",
+    "method": "Download into .cache/tpt/deps, verify SHA-256, compile Lua library sources with the pinned emcc/emar, install headers and liblua5.2.a under .cache/tpt/deps/lua/prefix, and expose local lua5.2.pc/lua5.2-c++.pc descriptors.",
+    "status": "superseded; retained only as prior experiment metadata"
+  },
+  "fftw": {
+    "version": "3.3.10",
+    "source": "https://www.fftw.org/fftw-3.3.10.tar.gz",
+    "sha256": "56c932549852cddcfafdab3820b0200c7742675be92179e59e6215b340e26467",
+    "configure": ["--enable-single", "--disable-fortran", "--disable-shared", "--enable-static", "--disable-doc"],
+    "method": "Download into .cache/tpt/deps, verify SHA-256, configure with emconfigure and the pinned emsdk, build/install with emmake into .cache/tpt/deps/fftw/prefix, and expose a local fftw3f.pc descriptor.",
+    "status": "superseded; failed before compilation and not invoked by Gate A"
+  },
+  "tpt-libs-prebuilt": {
+    "tag": "v20251019131007",
+    "source": "https://github.com/The-Powder-Toy/tpt-libs/releases/download/v20251019131007/tpt-libs-prebuilt-wasm32-emscripten-emscripten-static-release-v20251019131007.zip",
+    "sha256": "1736b0607f95f653a13bc42aa8da853a185e637e27b343057e5441e3b6a96549",
+    "method": "Cache the ZIP under .cache/tpt/tpt-libs, verify SHA-256, extract its exact top-level directory into vendor/tpt/source/subprojects, and configure upstream Meson with -Dstatic=prebuilt -Dtpt_libs_vtag=v20251019131007. No manual dependency compilation is used by the Gate A build.",
+    "license_metadata": "The archive carries per-component license files for FFTW3f, Lua 5.1/5.2, and JsonCpp under licenses/. This metadata is preserved in spikes/tpt/TPT-LIBS-LICENSES.md; GPL compatibility is not inferred or claimed."
+  },
+  "integrity": {
+    "strategy": "Verify the checked-out commit with git rev-parse --verify HEAD after every clone/update. For release archives or downloaded tools, record SHA-256 with sha256sum in this directory before use; do not trust mutable branch names.",
+    "source_lock": "The TPT and emsdk commit IDs plus the tpt-libs archive SHA-256 are immutable source locks; generated build output is intentionally ignored and is not committed."
+  },
+  "license": {
+    "upstream": "GPL-3.0-or-later",
+    "note": "This is an evaluation of the official full-game build, not an application integration or distribution. Any future redistribution must provide GPL corresponding source, notices, and dependency licenses."
+  }
+}
