@@ -2,6 +2,8 @@ import { Material } from '../shared/materials';
 import type { SimulationBackend } from '../simulation';
 import { ViewTransform, type Point, type ViewState } from './view-transform';
 import { buildWaterSurface } from './materials/water/metaball-surface';
+import type { PixiFieldPresenter } from './pixi-field-presenter';
+import { supportsWebGL } from './webgl-support';
 
 const FRAME_INTERVAL = 1000 / 30;
 
@@ -11,6 +13,7 @@ export class MaterialRenderer {
   private readonly smokeSurface = document.createElement('canvas');
   private readonly fireSurface = document.createElement('canvas');
   private readonly rendered: Uint8Array;
+  private presenter?: PixiFieldPresenter;
   private readonly view: ViewTransform;
   private basePixels!: ImageData;
   private smokePixels!: ImageData;
@@ -32,7 +35,6 @@ export class MaterialRenderer {
     this.surface.style.width = `${this.simulation.width}px`;
     this.surface.style.height = `${this.simulation.height}px`;
     this.surface.style.transformOrigin = '0 0';
-    this.host.append(this.surface);
     const context = this.surface.getContext('2d');
     const smoke = this.smokeSurface.getContext('2d');
     const fire = this.fireSurface.getContext('2d');
@@ -40,6 +42,18 @@ export class MaterialRenderer {
     this.basePixels = context.createImageData(this.simulation.width, this.simulation.height);
     this.smokePixels = smoke.createImageData(this.simulation.width, this.simulation.height);
     this.firePixels = fire.createImageData(this.simulation.width, this.simulation.height);
+    if (supportsWebGL()) {
+      try {
+        const { PixiFieldPresenter } = await import('./pixi-field-presenter');
+        this.presenter = await Promise.race([
+          PixiFieldPresenter.create(this.host, this.surface),
+          new Promise<undefined>((resolve) => window.setTimeout(() => resolve(undefined), 750)),
+        ]);
+        this.presenter?.mount();
+      } catch { // Canvas presentation remains the compatibility path.
+      }
+    }
+    if (!this.presenter) this.host.append(this.surface);
     this.resize();
     new ResizeObserver(() => this.resize()).observe(this.host);
   }
@@ -144,6 +158,7 @@ export class MaterialRenderer {
     context.globalAlpha = 0.92;
     context.drawImage(this.fireSurface, 0, 0);
     context.restore();
+    this.presenter?.update();
   }
 
   private drawWaterSurface(context: CanvasRenderingContext2D): void {
@@ -174,7 +189,8 @@ export class MaterialRenderer {
   private resize(): void { this.view.resize(this.host.clientWidth, this.host.clientHeight); this.syncTransform(); }
   private syncTransform(): void {
     const position = this.view.position;
-    this.surface.style.transform = `translate3d(${position.x}px, ${position.y}px, 0) scale(${this.view.scale})`;
+    if (this.presenter) this.presenter.setTransform(this.view.scale, position.x, position.y);
+    else this.surface.style.transform = `translate3d(${position.x}px, ${position.y}px, 0) scale(${this.view.scale})`;
   }
 }
 
