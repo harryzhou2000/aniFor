@@ -570,6 +570,79 @@ if (typeof process === "undefined" || !process.env.VITEST) test.describe("sandbo
     expect(metrics.max).toBeLessThan(33.3);
   });
 
+  test("repeated renderer work preserves the authoritative v2 snapshot", async ({ page }) => {
+    await page.goto("/");
+    await expect.poll(() => page.evaluate(() => Boolean((window as any).__ANIFOR_TEST__?.snapshotHash))).toBe(true);
+    await page.getByRole("button", { name: "Pause simulation" }).click();
+    const before = await page.evaluate(() => (window as any).__ANIFOR_TEST__.snapshotHash());
+    await page.evaluate(() => (window as any).__ANIFOR_TEST__.renderCurrent(120));
+    const benchmark = await page.evaluate(() => (window as any).__ANIFOR_TEST__.rendererBenchmark());
+    const after = await page.evaluate(() => (window as any).__ANIFOR_TEST__.snapshotHash());
+    expect(after).toBe(before);
+    expect(benchmark.samples).toBe(120);
+    expect(benchmark.p95).toBeLessThan(16.7);
+    expect(benchmark.max).toBeLessThan(33.3);
+  });
+
+  test("reviews the fixed v2 material arrangement in its framed desktop bed", async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await page.goto("/");
+    await expect.poll(() => page.evaluate(() => Boolean((window as any).__ANIFOR_TEST__?.state))).toBe(true);
+    await page.getByRole("button", { name: "Pause simulation" }).click();
+    const surface = page.locator(".canvas-surface");
+    const bounds = await surface.boundingBox();
+    expect(bounds).toBeTruthy();
+    const paint = async (tool: string, x: number, y: number): Promise<void> => {
+      await page.getByRole("button", { name: tool, exact: true }).click();
+      await surface.click({ position: { x: bounds!.width * (x + 0.5) / 256, y: bounds!.height * (y + 0.5) / 192 } });
+    };
+    await paint("Wall", 20, 24);
+    await paint("Sand", 54, 36);
+    await paint("Water", 92, 150);
+    await paint("Oil", 124, 150);
+    await paint("Wood", 164, 150);
+    await paint("Ice", 210, 150);
+    await paint("Acid", 228, 40);
+    await paint("Fire", 92, 149);
+    for (let index = 0; index < 4; index += 1) await page.getByRole("button", { name: "Advance one step" }).click();
+    const geometry = await page.evaluate(() => (window as any).__ANIFOR_TEST__.geometry());
+    expect(Math.abs(geometry.surface.width - geometry.surface.height * 4 / 3)).toBeLessThanOrEqual(0.5);
+    expect(geometry.stage.width).toBeGreaterThan(geometry.bed.width);
+    expect(geometry.stage.height).toBeGreaterThan(geometry.bed.height);
+    await expect(page.locator(".world-bed")).toHaveScreenshot("world-bed-v2-materials-desktop.png");
+  });
+
+  test("reviews the fixed v2 material arrangement in its framed DPR2 mobile bed", async ({ browser }) => {
+    const context = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2 });
+    const page = await context.newPage();
+    await page.goto("/");
+    await expect.poll(() => page.evaluate(() => Boolean((window as any).__ANIFOR_TEST__?.state))).toBe(true);
+    await page.getByRole("button", { name: "Pause simulation" }).click();
+    const surface = page.locator(".canvas-surface");
+    const bounds = await surface.boundingBox();
+    expect(bounds).toBeTruthy();
+    const paint = async (tool: string, x: number, y: number): Promise<void> => {
+      await page.getByRole("button", { name: tool, exact: true }).click();
+      await surface.click({ position: { x: bounds!.width * (x + 0.5) / 256, y: bounds!.height * (y + 0.5) / 192 } });
+    };
+    await paint("Wall", 20, 24);
+    await paint("Sand", 54, 36);
+    await paint("Water", 92, 150);
+    await paint("Oil", 124, 150);
+    await paint("Wood", 164, 150);
+    await paint("Ice", 210, 150);
+    await paint("Acid", 228, 40);
+    await paint("Fire", 92, 149);
+    for (let index = 0; index < 4; index += 1) await page.getByRole("button", { name: "Advance one step" }).click();
+    const geometry = await page.evaluate(() => (window as any).__ANIFOR_TEST__.geometry());
+    expect(Math.abs(geometry.surface.width - geometry.surface.height * 4 / 3)).toBeLessThanOrEqual(0.5);
+    expect(geometry.stage.width).toBeGreaterThan(geometry.bed.width);
+    expect(geometry.stage.height).toBeGreaterThan(geometry.bed.height);
+    expect(geometry.devicePixelRatio).toBe(2);
+    await expect(page.locator(".world-bed")).toHaveScreenshot("world-bed-v2-materials-mobile.png");
+    await context.close();
+  });
+
   test("normal 60Hz scheduling runs ten seconds without catch-up", async ({ page }) => {
     await page.goto("/");
     const diagnostics = await page.evaluate(() => (window as any).__ANIFOR_TEST__.normalSchedule());

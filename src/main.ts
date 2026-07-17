@@ -2,6 +2,7 @@ import { createSandboxController } from "./app";
 import { mountSandboxExperience } from "./ui/mount";
 import { createHalfOccupiedFixture } from "./simulation/fixture";
 import { rasterizeCircle } from "./simulation/raster";
+import { worldHash } from "./simulation/hash";
 import { applyBase64Result, applyBlobResult, createAutosave, snapshotToBase64, snapshotToBlob } from "./persistence";
 
 const AUTOSAVE_KEY = "anifor.autosave.v1";
@@ -133,6 +134,11 @@ async function start(): Promise<void> {
       return snapshot ? { tick: snapshot.world.tick, randomState: snapshot.world.randomState, temperature: snapshot.world.temperature[y * snapshot.world.width + x] } : null;
     },
     restored: (x = 0, y = 0) => restoredSnapshot ? { tick: restoredSnapshot.world.tick, randomState: restoredSnapshot.world.randomState, temperature: restoredSnapshot.world.temperature[y * restoredSnapshot.world.width + x] } : null,
+    snapshotHash: (): string => worldHash(app.snapshot().world),
+    renderCurrent: (repetitions = 1): void => {
+      const view = app.view().simulation;
+      for (let index = 0; index < Math.max(0, Math.floor(repetitions)); index += 1) experience.render(view);
+    },
     benchmark: (): { p95: number; max: number } => {
       const simulation = createHalfOccupiedFixture(0x6d2b79f5);
       for (let index = 0; index < 60; index += 1) simulation.advanceTick();

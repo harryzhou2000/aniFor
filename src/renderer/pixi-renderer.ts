@@ -1,6 +1,7 @@
 import { Application, BufferImageSource, SCALE_MODES, Sprite, Texture } from "pixi.js";
 import type { SimulationView } from "../simulation/contracts";
 import { PixelCamera } from "./camera";
+import { writeCompositedPixel } from "./material-compositor";
 
 export type RendererState = "ready" | "unsupported" | "error";
 
@@ -18,11 +19,6 @@ export interface RendererMountOptions {
   readonly surface: HTMLElement;
   readonly onStateChange?: (state: RendererState, message?: string) => void;
 }
-
-const PALETTE: ReadonlyArray<readonly [number, number, number, number]> = [
-  [20, 28, 40, 255], [105, 91, 80, 255], [222, 180, 99, 255],
-  [73, 157, 205, 255], [249, 124, 61, 255], [147, 160, 176, 180]
-];
 
 /** WebGL-only, full-buffer Pixi renderer. It never writes to SimulationView arrays. */
 export async function mountPixiRenderer(options: RendererMountOptions): Promise<SandboxRenderer | null> {
@@ -79,10 +75,7 @@ export async function mountPixiRenderer(options: RendererMountOptions): Promise<
       state: "ready",
       render(view): void {
         for (let index = 0; index < view.material.length; index += 1) {
-          const color = PALETTE[view.material[index]] ?? PALETTE[0];
-          const pixel = index * 4;
-          rgba[pixel] = color[0]; rgba[pixel + 1] = color[1];
-          rgba[pixel + 2] = color[2]; rgba[pixel + 3] = color[3];
+          writeCompositedPixel(view, index, rgba);
         }
         // One packed RGBA upload for the borrowed, complete simulation view.
         source.update();
