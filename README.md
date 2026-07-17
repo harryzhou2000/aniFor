@@ -33,4 +33,4 @@ Run `npm run fetch:tpt` to obtain the pinned official Powder Toy revision in the
 
 ## Rendering
 
-The active renderer turns the native simulation fields into a continuous Canvas2D surface rather than drawing particle dots. It adds directional occupancy lighting, deterministic stone and sand texture, flow-sensitive water highlights, blurred smoke, and temperature-driven fire bloom. Rendering is capped at 30 Hz while physics continues at 60 Hz, and it does not require WebGPU, WebGL, pthreads, `SharedArrayBuffer`, or custom response headers.
+The active renderer turns the native simulation fields into a continuous Canvas2D surface rather than drawing particle dots. It adds directional occupancy lighting, deterministic stone and sand texture, gradient-filled metaball water with flow-sensitive highlights, blurred smoke, and temperature-driven fire bloom. Rendering is capped at 30 Hz while physics continues at 60 Hz, and it does not require WebGPU, WebGL, pthreads, `SharedArrayBuffer`, or custom response headers.

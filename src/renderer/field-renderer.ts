@@ -1,6 +1,7 @@
 import { Material } from '../shared/materials';
 import type { SimulationBackend } from '../simulation';
 import { ViewTransform, type Point, type ViewState } from './view-transform';
+import { buildWaterSurface } from './materials/water/metaball-surface';
 
 const FRAME_INTERVAL = 1000 / 30;
 
@@ -129,6 +130,7 @@ export class MaterialRenderer {
     smokeContext.putImageData(this.smokePixels, 0, 0);
     fireContext.putImageData(this.firePixels, 0, 0);
     context.putImageData(this.basePixels, 0, 0);
+    this.drawWaterSurface(context);
     context.save();
     context.imageSmoothingEnabled = true;
     context.filter = 'blur(2.2px)';
@@ -141,6 +143,31 @@ export class MaterialRenderer {
     context.filter = 'none';
     context.globalAlpha = 0.92;
     context.drawImage(this.fireSurface, 0, 0);
+    context.restore();
+  }
+
+  private drawWaterSurface(context: CanvasRenderingContext2D): void {
+    const polygons = buildWaterSurface(this.rendered, this.simulation.width, this.simulation.height);
+    if (polygons.length === 0) return;
+    const gradient = context.createLinearGradient(0, 0, 0, this.simulation.height);
+    gradient.addColorStop(0, 'rgba(125, 229, 239, 0.82)');
+    gradient.addColorStop(0.42, 'rgba(40, 157, 190, 0.72)');
+    gradient.addColorStop(1, 'rgba(15, 82, 130, 0.88)');
+    context.save();
+    context.beginPath();
+    for (const polygon of polygons) {
+      context.moveTo(polygon[0].x, polygon[0].y);
+      for (let index = 1; index < polygon.length; index++) context.lineTo(polygon[index].x, polygon[index].y);
+      context.closePath();
+    }
+    context.fillStyle = gradient;
+    context.globalAlpha = 0.72;
+    context.fill();
+    context.globalCompositeOperation = 'screen';
+    context.filter = 'blur(0.8px)';
+    context.globalAlpha = 0.16;
+    context.fillStyle = '#d8fdff';
+    context.fill();
     context.restore();
   }
 
