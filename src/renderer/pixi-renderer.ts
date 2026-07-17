@@ -10,6 +10,7 @@ export interface SandboxRenderer {
   render(view: SimulationView): void;
   resize(): void;
   syncCamera(): void;
+  contentRect(): DOMRectReadOnly;
   destroy(): void;
 }
 
@@ -37,15 +38,14 @@ export async function mountPixiRenderer(options: RendererMountOptions): Promise<
       antialias: false,
       background: "#141c28",
       autoDensity: true,
-      resolution: Math.min(window.devicePixelRatio || 1, 2),
-      resizeTo: options.surface
+      resolution: Math.min(window.devicePixelRatio || 1, 2)
     });
     app.canvas.className = "sandbox-canvas";
     app.canvas.setAttribute("aria-hidden", "true");
     // Keep shell-owned overlays (startup state and brush preview) above the canvas.
     options.surface.prepend(app.canvas);
 
-    const camera = new PixelCamera(256, 192);
+    const camera = new PixelCamera();
     const rgba = new Uint8Array(256 * 192 * 4);
     const source = new BufferImageSource({ resource: rgba, width: 256, height: 192 });
     source.scaleMode = SCALE_MODES.NEAREST;
@@ -58,8 +58,15 @@ export async function mountPixiRenderer(options: RendererMountOptions): Promise<
       sprite.position.set(transform.x, transform.y);
       sprite.scale.set(transform.scale);
     };
+    const contentRect = (): DOMRectReadOnly => options.surface.getBoundingClientRect();
     const syncLayout = (): void => {
-      camera.resize(options.surface.clientWidth, options.surface.clientHeight);
+      const rect = contentRect();
+      // Use the same fractional CSS rect as input and camera geometry. Pixi's
+      // resolution controls backing pixels only; these stay logical CSS pixels.
+      app.renderer.resize(rect.width, rect.height);
+      app.canvas.style.width = `${rect.width}px`;
+      app.canvas.style.height = `${rect.height}px`;
+      camera.resize(rect.width, rect.height);
       syncCamera();
     };
     const observer = new ResizeObserver(syncLayout);
@@ -83,6 +90,7 @@ export async function mountPixiRenderer(options: RendererMountOptions): Promise<
       },
       resize: syncLayout,
       syncCamera,
+      contentRect,
       destroy(): void {
         observer.disconnect();
         app.destroy(true, { children: true, texture: true });

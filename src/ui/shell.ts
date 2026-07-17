@@ -22,7 +22,7 @@ export interface SandboxShell {
   setStatus(message: string): void;
   setRecoveryAvailable(available: boolean): void;
   setSaveText(text: string): void;
-  setBrushPreview(preview: { readonly x: number; readonly y: number; readonly radius: number } | null): void;
+  setBrushPreview(preview: { readonly cells: readonly { readonly x: number; readonly y: number; readonly size: number }[] } | null): void;
   setRendererState(state: "ready" | "unsupported" | "error", message?: string): void;
   destroy(): void;
 }
@@ -40,7 +40,7 @@ export function mountSandboxShell(options: ShellOptions): SandboxShell {
   options.target.innerHTML = `
     <section class="sandbox-shell" aria-label="Particle sandbox">
       <header class="sandbox-header"><div><p class="eyebrow">A quiet physics study</p><h1>Powder garden</h1></div><p class="status" role="status">Preparing the canvas…</p></header>
-      <div class="sandbox-stage"><div class="canvas-surface" tabindex="0" aria-label="Sandbox canvas. Drag to paint. Use two fingers to pan and zoom." aria-describedby="canvas-help"><span id="canvas-help" class="visually-hidden">Press Escape to cancel an active stroke or gesture.</span><div class="brush-preview" aria-hidden="true"></div><div class="canvas-message">Starting renderer…</div></div></div>
+      <div class="sandbox-stage"><div class="world-bed"><div class="canvas-surface" tabindex="0" aria-label="256 by 192 sandbox world. Drag to paint. Use two fingers to pan and zoom." aria-describedby="canvas-help"><span id="canvas-help" class="visually-hidden">Press Escape to cancel an active stroke or gesture.</span><div class="brush-preview" aria-hidden="true"></div><div class="canvas-message">Starting renderer…</div></div></div></div>
       <footer class="sandbox-controls"><div class="tool-row" role="toolbar" aria-label="Materials">${tools.map((tool) => `<button class="tool-button ${tool.id === selected ? "is-selected" : ""}" type="button" data-tool="${tool.id}" aria-pressed="${tool.id === selected}"><span aria-hidden="true">${tool.glyph}</span><span>${tool.label}</span></button>`).join("")}</div><div class="action-stack"><div class="control-row"><label class="brush-control" for="brush-size">Brush <output>3</output><input id="brush-size" type="range" min="1" max="12" value="3" /></label><button class="round-action pause-button" type="button" aria-pressed="false" aria-label="Pause simulation">Ⅱ</button><button class="round-action" type="button" data-action="step" aria-label="Advance one step">›</button><button class="text-action recovery-action" type="button" data-action="recover" hidden disabled>Recover</button><button class="text-action clear-action" type="button" data-action="clear">Clear</button></div><button class="persistence-toggle" type="button" data-action="persistence" aria-controls="persistence-panel" aria-expanded="false">Save / load</button></div><section id="persistence-panel" class="persistence-panel" hidden aria-label="Save and load"><div class="persistence-heading"><p class="eyebrow">Keep this garden</p><p>Save a file, or use a code without adding anything to your browser history.</p></div><div class="persistence-file-row"><button class="text-action" type="button" data-action="export-file">Export file</button><button class="text-action" type="button" data-action="import-file">Import file</button><input class="visually-hidden" type="file" data-save-file tabindex="-1" aria-label="Choose a sandbox save file" /></div><label class="save-code-label" for="save-code">Save code</label><textarea id="save-code" class="save-code" rows="3" spellcheck="false" autocomplete="off" aria-describedby="save-code-help" placeholder="Generated save code appears here. Paste a code here to load it."></textarea><p id="save-code-help" class="save-code-help">Save codes stay on this device until you copy or paste them.</p><div class="persistence-code-row"><button class="text-action" type="button" data-action="export-text">Create code</button><button class="text-action" type="button" data-action="import-text">Load code</button></div></section></footer>
     </section>`;
   const root = options.target.querySelector<HTMLElement>(".sandbox-shell")!;
@@ -111,9 +111,13 @@ export function mountSandboxShell(options: ShellOptions): SandboxShell {
     },
     setBrushPreview(next): void {
       if (!next) { brushPreview.classList.remove("is-visible"); return; }
-      const diameter = Math.max(8, next.radius * 2 + 2);
-      brushPreview.style.width = `${diameter}px`; brushPreview.style.height = `${diameter}px`;
-      brushPreview.style.transform = `translate(${next.x - diameter / 2}px, ${next.y - diameter / 2}px)`;
+      brushPreview.replaceChildren(...next.cells.map((cell) => {
+        const square = document.createElement("span");
+        square.className = "brush-preview-cell";
+        square.style.transform = `translate(${cell.x}px, ${cell.y}px)`;
+        square.style.width = `${cell.size}px`; square.style.height = `${cell.size}px`;
+        return square;
+      }));
       brushPreview.classList.add("is-visible");
     },
     setRendererState(state, detail): void {

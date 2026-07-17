@@ -1,6 +1,7 @@
 import { createSandboxController } from "./app";
 import { mountSandboxExperience } from "./ui/mount";
 import { createHalfOccupiedFixture } from "./simulation/fixture";
+import { rasterizeCircle } from "./simulation/raster";
 import { applyBase64, applyBlob, createAutosave, snapshotToBase64, snapshotToBlob } from "./persistence";
 
 const AUTOSAVE_KEY = "anifor.autosave.v1";
@@ -75,6 +76,29 @@ async function start(): Promise<void> {
     diagnostics: () => app.scheduler.diagnostics,
     camera: () => experience.renderer?.camera.transform ?? null,
     screenToCell: (x: number, y: number) => experience.renderer?.camera.screenToCell(x, y) ?? null,
+    geometry: () => {
+      const rect = (selector: string) => {
+        const element = target.querySelector<HTMLElement>(selector);
+        if (!element) return null;
+        const value = element.getBoundingClientRect();
+        return { x: value.x, y: value.y, width: value.width, height: value.height, right: value.right, bottom: value.bottom };
+      };
+      const canvas = target.querySelector<HTMLCanvasElement>(".sandbox-canvas");
+      const canvasStyle = canvas ? getComputedStyle(canvas) : null;
+      const camera = experience.renderer?.camera;
+      return {
+        stage: rect(".sandbox-stage"), bed: rect(".world-bed"), surface: rect(".canvas-surface"),
+        canvas: rect(".sandbox-canvas"),
+        canvasCss: canvasStyle ? { width: parseFloat(canvasStyle.width), height: parseFloat(canvasStyle.height) } : null,
+        canvasLogical: canvas ? { width: canvas.clientWidth, height: canvas.clientHeight } : null,
+        canvasBacking: canvas ? { width: canvas.width, height: canvas.height } : null,
+        transform: camera?.transform ?? null,
+        devicePixelRatio: window.devicePixelRatio
+      };
+    },
+    cssToCell: (x: number, y: number) => experience.renderer?.camera.cssToCell(x, y) ?? null,
+    cellToCssCenter: (x: number, y: number) => experience.renderer?.camera.cellToCssCenter(x, y) ?? null,
+    rasterizeCircle: (x: number, y: number, radius: number) => rasterizeCircle(x, y, radius, 256, 192),
     state: (x = 0, y = 0) => {
       const view = app.view().simulation;
       const material = view.material[y * view.width + x];

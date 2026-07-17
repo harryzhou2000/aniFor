@@ -1,5 +1,5 @@
 export interface ScreenPoint { readonly x: number; readonly y: number; }
-export interface GestureDelta { readonly panX: number; readonly panY: number; readonly center: ScreenPoint; readonly zoom: number; }
+export interface GestureDelta { readonly oldCenter: ScreenPoint; readonly center: ScreenPoint; readonly oldDistance: number; readonly distance: number; }
 export type PointerMode = "idle" | "paint" | "gesture";
 
 /** DOM-free pointer ownership state: a gesture cannot return to painting mid-contact. */
@@ -25,10 +25,9 @@ export class PointerGestureState {
     const [a, b] = this.pair();
     const center = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
     const distance = Math.hypot(b.x - a.x, b.y - a.y);
-    const previous = this.centroid;
-    const zoom = this.distance > 0 ? distance / this.distance : 1;
+    const previous = this.centroid; const oldDistance = this.distance;
     this.centroid = center; this.distance = distance;
-    return previous ? { panX: center.x - previous.x, panY: center.y - previous.y, center, zoom } : null;
+    return previous ? { oldCenter: previous, center, oldDistance, distance } : null;
   }
 
   public end(id: number): void {

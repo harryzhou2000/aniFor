@@ -46,12 +46,12 @@ export async function mountSandboxExperience(options: SandboxExperienceOptions):
   });
   const input = renderer ? mountInputController({
     surface: shell.surface,
+    getContentRect: renderer.contentRect,
     camera: renderer.camera,
     getTool: shell.getTool,
     getBrushRadius: shell.getBrushRadius,
     onPaint: options.onPaint,
     onCameraChange: renderer.syncCamera,
-    getCellScale: () => renderer.camera.cellScale,
     onBrushPreview: shell.setBrushPreview
   }) : null;
   return {

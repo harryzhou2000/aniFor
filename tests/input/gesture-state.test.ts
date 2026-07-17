@@ -26,7 +26,7 @@ describe("pointer gesture state", () => {
   it("emits only direct pan and pinch deltas without inertia", () => {
     const state = new PointerGestureState();
     state.begin(1, { x: 0, y: 0 }); state.begin(2, { x: 10, y: 0 });
-    expect(state.move(2, { x: 20, y: 0 })).toEqual({ panX: 5, panY: 0, center: { x: 10, y: 0 }, zoom: 2 });
+    expect(state.move(2, { x: 20, y: 0 })).toEqual({ oldCenter: { x: 5, y: 0 }, center: { x: 10, y: 0 }, oldDistance: 10, distance: 20 });
     state.end(2);
     expect(state.move(1, { x: 30, y: 0 })).toBeNull();
   });
@@ -44,7 +44,7 @@ describe("pointer gesture state", () => {
     state.move(2, { x: 32, y: 10 });
     state.cancel(2); // pointercancel/lostcapture rebase the surviving contact.
     state.begin(3, { x: 50, y: 30 });
-    expect(state.move(1, { x: 10, y: 10 })).toEqual({ panX: 0, panY: 0, center: { x: 30, y: 20 }, zoom: 1 });
+    expect(state.move(1, { x: 10, y: 10 })).toEqual({ oldCenter: { x: 30, y: 20 }, center: { x: 30, y: 20 }, oldDistance: Math.hypot(40, 20), distance: Math.hypot(40, 20) });
   });
 
   it("rebases when a third finger is added or removed", () => {
@@ -52,8 +52,8 @@ describe("pointer gesture state", () => {
     state.begin(1, { x: 0, y: 0 }); state.begin(2, { x: 20, y: 0 });
     state.move(2, { x: 24, y: 0 });
     state.begin(3, { x: 80, y: 50 });
-    expect(state.move(1, { x: 0, y: 0 })).toEqual({ panX: 0, panY: 0, center: { x: 12, y: 0 }, zoom: 1 });
+    expect(state.move(1, { x: 0, y: 0 })).toEqual({ oldCenter: { x: 12, y: 0 }, center: { x: 12, y: 0 }, oldDistance: 24, distance: 24 });
     state.end(1);
-    expect(state.move(2, { x: 24, y: 0 })).toEqual({ panX: 0, panY: 0, center: { x: 52, y: 25 }, zoom: 1 });
+    expect(state.move(2, { x: 24, y: 0 })).toEqual({ oldCenter: { x: 52, y: 25 }, center: { x: 52, y: 25 }, oldDistance: Math.hypot(56, 50), distance: Math.hypot(56, 50) });
   });
 });
