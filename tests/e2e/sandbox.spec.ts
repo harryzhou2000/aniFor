@@ -26,13 +26,102 @@ if (typeof process === "undefined" || !process.env.VITEST) test.describe("sandbo
     await page.goto("/");
     await page.getByRole("button", { name: "Pause simulation" }).click();
     const before = await page.evaluate(() => (window as any).__ANIFOR_TEST__.state().occupied);
-    await page.locator(".canvas-surface").click({ position: { x: 640, y: 400 } });
+    const paintSurface = page.locator(".canvas-surface");
+    const paintBounds = await paintSurface.boundingBox();
+    expect(paintBounds).toBeTruthy();
+    await paintSurface.click({ position: { x: paintBounds!.width / 2, y: paintBounds!.height / 2 } });
     const after = await page.evaluate(() => (window as any).__ANIFOR_TEST__.state().occupied);
     expect(after).toBeGreaterThan(before);
     await page.getByRole("button", { name: "Advance one step" }).click();
     await expect.poll(() => page.evaluate(() => (window as any).__ANIFOR_TEST__.state().tick)).toBeGreaterThan(0);
     await page.getByRole("button", { name: "Clear" }).click();
     await expect.poll(() => page.evaluate(() => (window as any).__ANIFOR_TEST__.state().occupied)).toBe(0);
+  });
+
+  test("round-trips a save code through the visible persistence panel", async ({ page }) => {
+    await page.goto("/");
+    await page.getByRole("button", { name: "Pause simulation" }).click();
+    await page.locator(".canvas-surface").click({ position: { x: 620, y: 320 } });
+    const painted = await page.evaluate(() => (window as any).__ANIFOR_TEST__.state().occupied);
+    await page.locator('[data-action="persistence"]').click();
+    await page.locator('[data-action="export-text"]').click();
+    const code = await page.locator("#save-code").inputValue();
+    expect(code.length).toBeGreaterThan(0);
+    await page.getByRole("button", { name: "Clear" }).click();
+    await expect.poll(() => page.evaluate(() => (window as any).__ANIFOR_TEST__.state().occupied)).toBe(0);
+    await page.locator("#save-code").fill(code);
+    await page.locator('[data-action="import-text"]').click();
+    await expect.poll(() => page.evaluate(() => (window as any).__ANIFOR_TEST__.state().occupied)).toBe(painted);
+  });
+
+  test("round-trips a downloaded file through the native file input", async ({ page }) => {
+    await page.goto("/");
+    await page.getByRole("button", { name: "Pause simulation" }).click();
+    await page.locator(".canvas-surface").click({ position: { x: 620, y: 320 } });
+    const painted = await page.evaluate(() => (window as any).__ANIFOR_TEST__.state().occupied);
+    await page.locator('[data-action="persistence"]').click();
+    const downloadPromise = page.waitForEvent("download");
+    await page.locator('[data-action="export-file"]').click();
+    const download = await downloadPromise;
+    expect(download.suggestedFilename()).toBe("anifor-save.anif");
+    await page.getByRole("button", { name: "Clear" }).click();
+    await expect.poll(() => page.evaluate(() => (window as any).__ANIFOR_TEST__.state().occupied)).toBe(0);
+    await page.locator("[data-save-file]").setInputFiles(await download.path());
+    await expect.poll(() => page.evaluate(() => (window as any).__ANIFOR_TEST__.state().occupied)).toBe(painted);
+  });
+
+  test("restores autosave on reload and removes corrupt entries", async ({ page }) => {
+    await page.goto("/");
+    await page.getByRole("button", { name: "Pause simulation" }).click();
+    await page.locator(".canvas-surface").click({ position: { x: 620, y: 320 } });
+    const painted = await page.evaluate(() => (window as any).__ANIFOR_TEST__.state().occupied);
+    await page.waitForTimeout(700);
+    await page.reload();
+    await expect.poll(() => page.evaluate(() => (window as any).__ANIFOR_TEST__.state().occupied)).toBe(painted);
+    await page.evaluate(() => localStorage.setItem("anifor.autosave.v1", "corrupt"));
+    await page.reload();
+    await expect.poll(() => page.evaluate(() => localStorage.getItem("anifor.autosave.v1"))).not.toBe("corrupt");
+  });
+
+  test("autosaves a running paint without pause or lifecycle action", async ({ page }) => {
+    await page.goto("/");
+    const surface = page.locator(".canvas-surface");
+    const bounds = await surface.boundingBox();
+    expect(bounds).toBeTruthy();
+    await surface.click({ position: { x: bounds!.width / 2, y: bounds!.height / 2 } });
+    await expect.poll(() => page.evaluate(() => (window as any).__ANIFOR_TEST__.state().nextSequence)).toBe(1);
+    await page.waitForTimeout(700);
+    await page.reload();
+    await expect.poll(() => page.evaluate(() => (window as any).__ANIFOR_TEST__.state().nextSequence)).toBe(1);
+    expect(await page.evaluate(() => (window as any).__ANIFOR_TEST__.state().occupied)).toBeGreaterThan(0);
+  });
+
+  test("autosaves an unchanged running world and restores its authoritative timeline", async ({ page }) => {
+    await page.goto("/");
+    await expect.poll(() => page.evaluate(() => (window as any).__ANIFOR_TEST__.state().tick)).toBeGreaterThan(0);
+    await page.waitForTimeout(700);
+    const saved = await page.evaluate(() => (window as any).__ANIFOR_TEST__.autosave());
+    expect(saved).toBeTruthy();
+    expect(saved.tick).toBeGreaterThan(0);
+    const current = await page.evaluate(() => (window as any).__ANIFOR_TEST__.state());
+    expect(current.tick).toBeGreaterThan(saved.tick);
+    await page.reload();
+    await expect.poll(() => page.evaluate(() => (window as any).__ANIFOR_TEST__.restored())).toEqual(saved);
+  });
+
+  test("failed text and file imports leave the world intact", async ({ page }) => {
+    await page.goto("/");
+    await page.getByRole("button", { name: "Pause simulation" }).click();
+    await page.locator(".canvas-surface").click({ position: { x: 620, y: 320 } });
+    const painted = await page.evaluate(() => (window as any).__ANIFOR_TEST__.state().occupied);
+    await page.locator('[data-action="persistence"]').click();
+    await page.locator("#save-code").fill("not a save");
+    await page.locator('[data-action="import-text"]').click();
+    await expect(page.locator(".status")).toContainText("Could not import");
+    expect(await page.evaluate(() => (window as any).__ANIFOR_TEST__.state().occupied)).toBe(painted);
+    await page.locator("[data-save-file]").setInputFiles({ name: "bad.anif", mimeType: "application/octet-stream", buffer: Buffer.from([1, 2, 3]) });
+    await expect(page.locator(".status")).toContainText("Could not import");
+    expect(await page.evaluate(() => (window as any).__ANIFOR_TEST__.state().occupied)).toBe(painted);
   });
 
   test("native mouse drag paints the deterministic intermediate cell", async ({ page }) => {
@@ -147,7 +236,7 @@ if (typeof process === "undefined" || !process.env.VITEST) test.describe("sandbo
     await page.keyboard.press("Tab");
     await expect(page.getByRole("button", { name: "Wall" })).toBeFocused();
     await page.keyboard.press("Tab");
-    await expect(page.getByRole("button", { name: "Sand" })).toBeFocused();
+    await expect(page.getByRole("button", { name: "Sand", exact: true })).toBeFocused();
     await page.keyboard.press("Tab");
     await expect(page.getByRole("button", { name: "Water" })).toBeFocused();
     await page.keyboard.press("Tab");
@@ -162,6 +251,27 @@ if (typeof process === "undefined" || !process.env.VITEST) test.describe("sandbo
     await expect(page.getByRole("button", { name: "Advance one step" })).toBeFocused();
     await page.keyboard.press("Tab");
     await expect(page.getByRole("button", { name: "Clear" })).toBeFocused();
+  });
+
+  test("opens the persistence panel by keyboard and skips its native file input", async ({ page }) => {
+    await page.goto("/");
+    for (let index = 0; index < 11; index += 1) await page.keyboard.press("Tab");
+    const toggle = page.getByRole("button", { name: "Save / load" });
+    await expect(toggle).toBeFocused();
+    await expect(toggle).toHaveAttribute("aria-controls", "persistence-panel");
+    await expect(toggle).toHaveAttribute("aria-expanded", "false");
+
+    await page.keyboard.press("Enter");
+    const panel = page.locator("#persistence-panel");
+    await expect(toggle).toHaveAttribute("aria-expanded", "true");
+    await expect(panel).toBeVisible();
+    await page.keyboard.press("Tab");
+    await expect(page.getByRole("button", { name: "Export file" })).toBeFocused();
+    await page.keyboard.press("Tab");
+    await expect(page.getByRole("button", { name: "Import file" })).toBeFocused();
+    await page.keyboard.press("Tab");
+    await expect(page.locator("#save-code")).toBeFocused();
+    await expect(page.locator('input[data-save-file][tabindex="-1"]')).not.toBeFocused();
   });
 
   test("mobile DPR2 remains usable after viewport resize", async ({ browser }) => {

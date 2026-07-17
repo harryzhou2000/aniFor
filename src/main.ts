@@ -1,36 +1,76 @@
 import { createSandboxController } from "./app";
 import { mountSandboxExperience } from "./ui/mount";
 import { createHalfOccupiedFixture } from "./simulation/fixture";
+import { applyBase64, applyBlob, createAutosave, snapshotToBase64, snapshotToBlob } from "./persistence";
+
+const AUTOSAVE_KEY = "anifor.autosave.v1";
+const AUTOSAVE_DELAY_MS = 500;
 
 async function start(): Promise<void> {
   const target = document.querySelector<HTMLElement>("#app");
   if (!target) throw new Error("Sandbox mount target #app was not found.");
   let experience: Awaited<ReturnType<typeof mountSandboxExperience>>;
-  const app = createSandboxController({ onRender: (view) => experience?.render(view.simulation) });
+  const autosave = (() => { try { return createAutosave(window.localStorage, AUTOSAVE_KEY); } catch { return null; } })();
+  let saveTimer: number | null = null;
+  let app: ReturnType<typeof createSandboxController>;
+  let restoredSnapshot: ReturnType<typeof app.snapshot> | null = null;
+  const scheduleAutosave = (): void => {
+    if (!autosave || saveTimer !== null) return;
+    saveTimer = window.setTimeout(() => { saveTimer = null; autosave.save(app.snapshot()); }, AUTOSAVE_DELAY_MS);
+  };
+  app = createSandboxController({ onRender: (view) => {
+    experience?.render(view.simulation);
+    // The timer coalesces frequent physics renders into at most one save per debounce window.
+    scheduleAutosave();
+  }, onAdvance: scheduleAutosave });
+  let restoredAutosave = false;
+  const saved = autosave?.load();
+  if (saved) { try { app.restore(saved); restoredSnapshot = saved; restoredAutosave = true; } catch { /* validated autosave is ignored if the runtime rejects it */ } }
   const syncRecovery = (): void => { experience?.setRecoveryAvailable(app.canRecover); };
   const onAppIntent = (intent: Parameters<typeof app.dispatch>[0]): void => {
     app.dispatch(intent);
     syncRecovery();
+    if (intent.type === "clear" || (intent.type === "pause" && intent.paused)) scheduleAutosave();
   };
   const onRecover = (): void => {
     if (app.recover()) {
       experience?.setRecoveryAvailable(false);
       experience?.setStatus("Recovered the garden.");
+      scheduleAutosave();
     } else {
       experience?.setStatus("No recovery is available.");
     }
+  };
+  const onExportFile = (): void => {
+    const url = URL.createObjectURL(snapshotToBlob(app.snapshot()));
+    const link = document.createElement("a");
+    link.href = url; link.download = "anifor-save.anif"; link.click();
+    window.setTimeout(() => URL.revokeObjectURL(url), 0);
+    experience?.setStatus("Save file exported.");
+  };
+  const onImportFile = async (file: File): Promise<void> => {
+    if (await applyBlob(app, file)) {
+      syncRecovery(); scheduleAutosave(); experience?.setStatus("Save file imported.");
+    } else experience?.setStatus("Could not import that save file.");
+  };
+  const onExportText = (): void => { experience?.setSaveText(snapshotToBase64(app.snapshot())); };
+  const onImportText = (text: string): void => {
+    if (applyBase64(app, text)) {
+      syncRecovery(); scheduleAutosave(); experience?.setStatus("Save code imported.");
+    } else experience?.setStatus("Could not import that save code.");
   };
   experience = await mountSandboxExperience({
     target,
     onAppIntent,
     onPaint: app.paint,
     onStep: app.step,
-    onRecover
+    onRecover, onExportFile, onImportFile, onExportText, onImportText
   });
   experience.setPaused(app.paused);
   experience.setRecoveryAvailable(app.canRecover);
   experience.render(app.view().simulation);
   app.scheduler.start();
+  if (restoredAutosave) experience.setStatus("Autosave restored.");
   (window as Window & { __ANIFOR_TEST__?: unknown }).__ANIFOR_TEST__ = {
     diagnostics: () => app.scheduler.diagnostics,
     camera: () => experience.renderer?.camera.transform ?? null,
@@ -40,6 +80,11 @@ async function start(): Promise<void> {
       const material = view.material[y * view.width + x];
       return { tick: view.tick, material, occupied: view.material.reduce((count, value) => count + (value === 0 ? 0 : 1), 0), nextSequence: app.snapshot().nextSequence };
     },
+    autosave: () => {
+      const snapshot = autosave?.load();
+      return snapshot ? { tick: snapshot.world.tick, randomState: snapshot.world.randomState } : null;
+    },
+    restored: () => restoredSnapshot ? { tick: restoredSnapshot.world.tick, randomState: restoredSnapshot.world.randomState } : null,
     benchmark: (): { p95: number; max: number } => {
       const simulation = createHalfOccupiedFixture(0x6d2b79f5);
       for (let index = 0; index < 60; index += 1) simulation.advanceTick();
@@ -79,7 +124,7 @@ async function start(): Promise<void> {
       return result;
     }
   };
-  window.addEventListener("beforeunload", () => { app.dispose(); experience.destroy(); }, { once: true });
+  window.addEventListener("beforeunload", () => { if (saveTimer !== null) window.clearTimeout(saveTimer); app.dispose(); experience.destroy(); }, { once: true });
 }
 
 start().catch((error: unknown) => {

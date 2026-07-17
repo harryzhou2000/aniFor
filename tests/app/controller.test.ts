@@ -16,6 +16,26 @@ describe("application timeline", () => {
     expect(app.snapshot().nextSequence).toBe(2);
   });
 
+  it("notifies after an unchanged running tick", () => {
+    const callbacks: Array<(time: number) => void> = [];
+    let advances = 0;
+    let renders = 0;
+    const app = createSandboxController({
+      onAdvance: () => { advances += 1; },
+      onRender: () => { renders += 1; },
+      scheduler: {
+        requestFrame: (callback) => { callbacks.push(callback); return callbacks.length - 1; },
+        cancelFrame: () => {}, isHidden: () => false
+      }
+    });
+    app.scheduler.start();
+    callbacks.shift()?.(0);
+    callbacks.shift()?.(1000 / 30);
+    expect(advances).toBe(1);
+    expect(renders).toBe(1);
+    app.dispose();
+  });
+
   it("drains snapshots, restores sequence, and clears without changing timeline state", () => {
     const app = createSandboxController({ seed: 17 });
     app.dispatch({ type: "pause", paused: true });

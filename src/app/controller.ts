@@ -27,6 +27,7 @@ export interface SandboxControllerOptions {
   readonly simulation?: Simulation;
   readonly scheduler?: Omit<FrameSchedulerOptions, "onTick" | "onRender">;
   readonly onRender?: (view: AppView) => void;
+  readonly onAdvance?: () => void;
 }
 
 export function createSandboxController(options: SandboxControllerOptions = {}): SandboxController {
@@ -45,7 +46,9 @@ export function createSandboxController(options: SandboxControllerOptions = {}):
   };
   const tick = (): boolean => {
     const changed = drain();
-    return simulation.advanceTick().changed || changed;
+    const advanced = simulation.advanceTick();
+    options.onAdvance?.();
+    return advanced.changed || changed;
   };
   const scheduler = createFrameScheduler({ ...options.scheduler, onTick: tick, onRender: render });
   const paint = (intent: PaintIntent): void => {
