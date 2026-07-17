@@ -15,7 +15,7 @@ The latest clean Chrome run recorded these values:
 | Check | Method | Result |
 | --- | --- | --- |
 | Simulation tick | 50%-occupied deterministic fixture; 60 warm-up ticks, then 300 timed ticks | p95 1.5 ms; max 1.7 ms |
-| Renderer update | 10 warm-up renders, then 120 full-texture renders | p95 2.3 ms; max 3.0 ms |
+| Renderer update | 10 warm-up renders, then 120 full-texture renders | p95 2.4 ms; max 2.9 ms |
 | Scheduler | Normal and interactive 10-second browser runs | Strict: 0 catch-up-cap hits; 0 dropped ticks |
 
 The test budget for the first two checks is p95 under 16.7 ms and maximum under 33.3 ms. These are host- and Chrome-dependent measurements, not universal performance guarantees.
@@ -24,7 +24,7 @@ The test budget for the first two checks is p95 under 16.7 ms and maximum under 
 
 ## Long-task limitation
 
-The interactive 10-second Chrome run recorded three Long Task entries, with a maximum duration of 142 ms. Chrome does not provide reliable same-page attribution for those entries, so this evidence cannot identify them as application work or as an application regression. The run still had strict zero catch-up-cap hits and zero dropped ticks. Treat the long-task count as an observed limitation of the evidence, not an attributed performance result.
+The interactive 10-second Chrome run recorded six Long Task entries, with a maximum duration of 189 ms. Chrome does not provide reliable same-page attribution for those entries, so this evidence cannot identify them as application work or as an application regression. The run still had strict zero catch-up-cap hits and zero dropped ticks. Treat the long-task count as an observed limitation of the evidence, not an attributed performance result.
 
 ## Deployment smoke
 
