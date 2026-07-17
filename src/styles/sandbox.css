@@ -1,0 +1,25 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap');
+
+:root { color: #edf0e5; background: #0f1722; font-family: "DM Mono", ui-monospace, monospace; }
+* { box-sizing: border-box; }
+body { margin: 0; min-width: 320px; background: radial-gradient(circle at 80% 0%, #253a46 0, transparent 38rem), #0f1722; }
+button, input { font: inherit; }
+button { color: inherit; }
+.sandbox-shell { min-height: 100vh; min-height: 100dvh; padding: max(1rem, env(safe-area-inset-top)) max(1rem, env(safe-area-inset-right)) max(1rem, env(safe-area-inset-bottom)) max(1rem, env(safe-area-inset-left)); display: grid; grid-template-rows: auto minmax(0, 1fr) auto; gap: .8rem; overflow: hidden; }
+.sandbox-header { display: flex; align-items: end; justify-content: space-between; gap: 1rem; max-width: 72rem; width: 100%; margin: 0 auto; }
+.eyebrow { margin: 0 0 .18rem; color: #a7bd9b; text-transform: uppercase; letter-spacing: .12em; font-size: .62rem; }
+h1 { margin: 0; font: 700 clamp(1.65rem, 7vw, 2.8rem)/.9 "Fraunces", Georgia, serif; letter-spacing: -.055em; }
+.status { max-width: 16rem; margin: 0; color: #bdc9c3; font-size: .69rem; line-height: 1.4; text-align: right; }
+.sandbox-stage { min-height: 0; width: 100%; max-width: 72rem; margin: 0 auto; border: 1px solid #52616b; padding: .3rem; background: #0a1019; box-shadow: 0 1.2rem 3rem #02060980, inset 0 0 0 1px #ffffff0a; }
+.canvas-surface { height: 100%; min-height: 15rem; position: relative; overflow: hidden; background: repeating-linear-gradient(45deg, #172230, #172230 2px, #141e2b 2px, #141e2b 4px); touch-action: none; outline: none; }
+.sandbox-canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; }
+.canvas-message { position: absolute; inset: 0; display: grid; place-items: center; padding: 2rem; color: #c5cfc6; text-align: center; font-size: .76rem; }
+.is-unavailable .canvas-message { background: #16202ce8; }
+.sandbox-controls { width: 100%; max-width: 72rem; margin: 0 auto; display: grid; gap: .6rem; }
+.tool-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: .4rem; }
+.tool-button, .round-action, .text-action { min-height: 3.15rem; border: 1px solid #5a6870; border-radius: .7rem; background: #1b2933; cursor: pointer; transition: transform 160ms ease, background 160ms ease, border-color 160ms ease; }
+.tool-button { display: grid; place-content: center; gap: .15rem; font-size: .61rem; }.tool-button span:first-child { font-size: 1.2rem; color: #d6e1b3; }.tool-button.is-selected { background: #a7bd9b; border-color: #d5e4ba; color: #132019; box-shadow: 0 .25rem .8rem #a7bd9b30; }.tool-button.is-selected span:first-child { color: #263c30; }
+.control-row { display: grid; grid-template-columns: 1fr 3.15rem 3.15rem auto; gap: .45rem; align-items: stretch; }.brush-control { display: grid; grid-template-columns: auto 1fr auto; gap: .5rem; align-items: center; min-height: 3.15rem; padding: 0 .7rem; border: 1px solid #45555f; border-radius: .7rem; font-size: .65rem; color: #c6d0c7; }.brush-control output { color: #dce7bd; }.brush-control input { width: 100%; accent-color: #b5ce9d; }.round-action { font-size: 1.35rem; }.text-action { padding: 0 1rem; font-size: .68rem; color: #e7c1a1; }
+button:hover { transform: translateY(-2px); border-color: #b5ce9d; } button:active { transform: translateY(0); } button:focus-visible, input:focus-visible, .canvas-surface:focus-visible { outline: 3px solid #f2d784; outline-offset: 3px; }
+@media (min-width: 760px) { .sandbox-shell { padding: max(1.6rem, env(safe-area-inset-top)) max(2rem, env(safe-area-inset-right)) max(1.6rem, env(safe-area-inset-bottom)) max(2rem, env(safe-area-inset-left)); gap: 1.2rem; }.sandbox-controls { grid-template-columns: 1fr auto; align-items: center; }.tool-row { min-width: 27rem; }.control-row { width: 22rem; }.canvas-surface { min-height: 24rem; } }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; } }
