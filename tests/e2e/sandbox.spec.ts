@@ -13,6 +13,7 @@ if (typeof process === "undefined" || !process.env.VITEST) test.describe("sandbo
   test("supports pause, step, clear, and mobile layout", async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto("/");
+    await expect(page.locator(".sandbox-canvas")).toBeVisible();
     await page.getByRole("button", { name: "Pause simulation" }).click();
     await expect(page.getByRole("button", { name: "Play simulation" })).toBeVisible();
     await page.getByRole("button", { name: "Advance one step" }).click();
@@ -32,6 +33,135 @@ if (typeof process === "undefined" || !process.env.VITEST) test.describe("sandbo
     await expect.poll(() => page.evaluate(() => (window as any).__ANIFOR_TEST__.state().tick)).toBeGreaterThan(0);
     await page.getByRole("button", { name: "Clear" }).click();
     await expect.poll(() => page.evaluate(() => (window as any).__ANIFOR_TEST__.state().occupied)).toBe(0);
+  });
+
+  test("native mouse drag paints the deterministic intermediate cell", async ({ page }) => {
+    await page.goto("/");
+    await expect(page.locator(".sandbox-canvas")).toBeVisible();
+    await page.getByRole("button", { name: "Pause simulation" }).click();
+    const surface = page.locator(".canvas-surface");
+    const bounds = await surface.boundingBox();
+    expect(bounds).toBeTruthy();
+    const start = { x: 300, y: bounds!.height / 2 };
+    const end = { x: Math.min(bounds!.width - 80, 760), y: bounds!.height / 2 };
+    const midpoint = await page.evaluate(({ x, y, width, height }) => {
+      const map = (window as any).__ANIFOR_TEST__.screenToCell;
+      return map(width / 2 + x - width / 2, y) ?? map(x, y);
+    }, { x: (start.x + end.x) / 2, y: start.y, width: bounds!.width, height: bounds!.height });
+    await page.mouse.move(bounds!.x + start.x, bounds!.y + start.y);
+    await page.mouse.down();
+    await page.mouse.move(bounds!.x + end.x, bounds!.y + end.y, { steps: 12 });
+    await page.mouse.up();
+    expect(midpoint).toBeTruthy();
+    expect(await page.evaluate(({ x, y }) => (window as any).__ANIFOR_TEST__.state(x, y).material, midpoint)).not.toBe(0);
+  });
+
+  test("native stroke cancellation stops subsequent painting", async ({ page }) => {
+    await page.goto("/");
+    await expect(page.locator(".sandbox-canvas")).toBeVisible();
+    const surface = page.locator(".canvas-surface");
+    const bounds = await surface.boundingBox();
+    expect(bounds).toBeTruthy();
+    await page.mouse.move(bounds!.x + 180, bounds!.y + 180);
+    await page.mouse.down();
+    const afterDown = await page.evaluate(() => (window as any).__ANIFOR_TEST__.state().nextSequence);
+    await page.keyboard.press("Escape");
+    await page.mouse.move(bounds!.x + 420, bounds!.y + 180, { steps: 5 });
+    expect(await page.evaluate(() => (window as any).__ANIFOR_TEST__.state().nextSequence)).toBe(afterDown);
+    await page.mouse.up();
+  });
+
+  test("selects tools, shows the brush preview, and recovers a clear", async ({ page }) => {
+    await page.goto("/");
+    await expect(page.locator(".sandbox-canvas")).toBeVisible();
+    await page.getByRole("button", { name: "Pause simulation" }).click();
+    await page.getByRole("button", { name: "Water" }).click();
+    await expect(page.getByRole("button", { name: "Water" })).toHaveAttribute("aria-pressed", "true");
+    const surface = page.locator(".canvas-surface");
+    const preview = page.locator(".brush-preview");
+    await expect(preview).toHaveCount(1);
+    const bounds = await surface.boundingBox();
+    expect(bounds).toBeTruthy();
+    const x = bounds!.x + bounds!.width / 2;
+    const y = bounds!.y + bounds!.height / 2;
+    await surface.dispatchEvent("pointerdown", { pointerId: 3, pointerType: "mouse", clientX: x, clientY: y, buttons: 1 });
+    await expect(preview).toHaveClass(/is-visible/);
+    await surface.dispatchEvent("pointerup", { pointerId: 3, pointerType: "mouse", clientX: x, clientY: y });
+    const painted = await page.evaluate(() => (window as any).__ANIFOR_TEST__.state().occupied);
+    expect(painted).toBeGreaterThan(0);
+    await page.getByRole("button", { name: "Clear" }).click();
+    await expect(page.getByRole("button", { name: "Recover" })).toBeVisible();
+    await expect.poll(() => page.evaluate(() => (window as any).__ANIFOR_TEST__.state().occupied)).toBe(0);
+    await page.getByRole("button", { name: "Recover" }).click();
+    await expect.poll(() => page.evaluate(() => (window as any).__ANIFOR_TEST__.state().occupied)).toBe(painted);
+    await expect(page.getByRole("button", { name: "Recover" })).toBeHidden();
+  });
+
+  test("does not paint on the second pointer or cancelled gesture", async ({ page }) => {
+    await page.goto("/");
+    const surface = page.locator(".canvas-surface");
+    await surface.dispatchEvent("pointerdown", { pointerId: 11, pointerType: "touch", clientX: 100, clientY: 100, buttons: 1 });
+    const afterFirst = await page.evaluate(() => (window as any).__ANIFOR_TEST__.state().nextSequence);
+    await surface.dispatchEvent("pointerdown", { pointerId: 12, pointerType: "touch", clientX: 130, clientY: 100, buttons: 1 });
+    await surface.dispatchEvent("pointermove", { pointerId: 11, pointerType: "touch", clientX: 90, clientY: 100, buttons: 1 });
+    await surface.dispatchEvent("pointercancel", { pointerId: 11, pointerType: "touch" });
+    await surface.dispatchEvent("pointercancel", { pointerId: 12, pointerType: "touch" });
+    expect(await page.evaluate(() => (window as any).__ANIFOR_TEST__.state().nextSequence)).toBe(afterFirst);
+  });
+
+  test("Chrome CDP touch pinch changes camera without replay painting", async ({ browser }) => {
+    const context = await browser.newContext({ viewport: { width: 800, height: 600 }, hasTouch: true });
+    const page = await context.newPage();
+    await page.goto("/");
+    await expect(page.locator(".sandbox-canvas")).toBeVisible();
+    const surface = page.locator(".canvas-surface");
+    const bounds = await surface.boundingBox();
+    expect(bounds).toBeTruthy();
+    const client = await context.newCDPSession(page);
+    const point = (x: number, y: number, id: number) => ({ x: bounds!.x + x, y: bounds!.y + y, id, radiusX: 1, radiusY: 1, force: 1 });
+    await client.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [point(250, 220, 1)] });
+    const afterFirst = await page.evaluate(() => (window as any).__ANIFOR_TEST__.state().nextSequence);
+    await client.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [point(250, 220, 1), point(350, 220, 2)] });
+    const before = await page.evaluate(() => ({ camera: (window as any).__ANIFOR_TEST__.camera(), sequence: (window as any).__ANIFOR_TEST__.state().nextSequence }));
+    await client.send("Input.dispatchTouchEvent", { type: "touchMove", touchPoints: [point(220, 220, 1), point(380, 220, 2)] });
+    const after = await page.evaluate(() => ({ camera: (window as any).__ANIFOR_TEST__.camera(), sequence: (window as any).__ANIFOR_TEST__.state().nextSequence }));
+    await client.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+    expect(after.sequence).toBe(afterFirst);
+    expect(after.camera).not.toEqual(before.camera);
+    await context.close();
+  });
+
+  test("preserves the shell under reduced motion", async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    await page.goto("/");
+    await expect(page.locator(".sandbox-shell")).toBeVisible();
+    await expect(page.locator(".canvas-surface")).toBeVisible();
+    const duration = await page.locator(".brush-preview").evaluate((element) => getComputedStyle(element).transitionDuration);
+    expect(parseFloat(duration)).toBeLessThanOrEqual(0.01);
+  });
+
+  test("supports keyboard traversal across canvas, materials, and actions", async ({ page }) => {
+    await page.goto("/");
+    await page.keyboard.press("Tab");
+    await expect(page.locator(".canvas-surface")).toBeFocused();
+    await page.keyboard.press("Tab");
+    await expect(page.getByRole("button", { name: "Wall" })).toBeFocused();
+    await page.keyboard.press("Tab");
+    await expect(page.getByRole("button", { name: "Sand" })).toBeFocused();
+    await page.keyboard.press("Tab");
+    await expect(page.getByRole("button", { name: "Water" })).toBeFocused();
+    await page.keyboard.press("Tab");
+    await expect(page.getByRole("button", { name: "Fire" })).toBeFocused();
+    await page.keyboard.press("Tab");
+    await expect(page.getByRole("button", { name: "Erase" })).toBeFocused();
+    await page.keyboard.press("Tab");
+    await expect(page.locator("#brush-size")).toBeFocused();
+    await page.keyboard.press("Tab");
+    await expect(page.getByRole("button", { name: /Pause|Play/ })).toBeFocused();
+    await page.keyboard.press("Tab");
+    await expect(page.getByRole("button", { name: "Advance one step" })).toBeFocused();
+    await page.keyboard.press("Tab");
+    await expect(page.getByRole("button", { name: "Clear" })).toBeFocused();
   });
 
   test("mobile DPR2 remains usable after viewport resize", async ({ browser }) => {
@@ -82,6 +212,60 @@ if (typeof process === "undefined" || !process.env.VITEST) test.describe("sandbo
     const after = await page.evaluate(() => (window as any).__ANIFOR_TEST__.diagnostics());
     expect(after.catchUpCapHits - before.catchUpCapHits).toBe(0);
     expect(after.droppedTicks - before.droppedTicks).toBe(0);
+  });
+
+  test("interactive ten-second run records long tasks and scheduler health", async ({ page }) => {
+    test.setTimeout(30_000);
+    await page.goto("/");
+    await page.evaluate(() => {
+      const entries: PerformanceEntry[] = [];
+      const observer = new PerformanceObserver((list) => entries.push(...list.getEntries()));
+      observer.observe({ type: "longtask", buffered: true });
+      (window as any).__ANIFOR_LONGTASKS__ = { entries, observer };
+    });
+    await page.waitForTimeout(1_000);
+    const before = await page.evaluate(() => (window as any).__ANIFOR_TEST__.diagnostics());
+    await page.evaluate(() => new Promise<void>((resolve) => {
+      const surface = document.querySelector<HTMLElement>(".canvas-surface")!;
+      const buttons = [
+        document.querySelector<HTMLButtonElement>('[data-tool="water"]')!,
+        document.querySelector<HTMLButtonElement>('[data-tool="sand"]')!
+      ];
+      const rect = surface.getBoundingClientRect();
+      const start = performance.now();
+      let frame = 0;
+      let pointerId = 100;
+      const event = (type: string, x: number, y: number): void => {
+        surface.dispatchEvent(new PointerEvent(type, {
+          bubbles: true, pointerId, pointerType: "mouse", clientX: rect.left + x, clientY: rect.top + y,
+          buttons: type === "pointerup" ? 0 : 1
+        }));
+      };
+      const stroke = (): void => {
+        buttons[(frame / 15) % 2 | 0].click();
+        pointerId += 1;
+        event("pointerdown", 120, 120);
+        event("pointermove", 220, 140);
+        event("pointermove", 320, 160);
+        event("pointerup", 320, 160);
+      };
+      const tick = (now: number): void => {
+        if (now - start >= 10_000) { resolve(); return; }
+        if (frame % 15 === 0) stroke();
+        frame += 1;
+        requestAnimationFrame(tick);
+      };
+      requestAnimationFrame(tick);
+    }));
+    const evidence = await page.evaluate(() => {
+      const hook = (window as any).__ANIFOR_LONGTASKS__;
+      hook.observer.disconnect();
+      const durations = hook.entries.map((entry: PerformanceEntry) => entry.duration);
+      return { count: durations.length, max: Math.max(0, ...durations), diagnostics: (window as any).__ANIFOR_TEST__.diagnostics() };
+    });
+    console.log(`interactive 10s long tasks count=${evidence.count} max=${evidence.max.toFixed(3)}ms; attribution is unavailable for same-page app ownership`);
+    expect(evidence.diagnostics.catchUpCapHits - before.catchUpCapHits).toBe(0);
+    expect(evidence.diagnostics.droppedTicks - before.droppedTicks).toBe(0);
   });
 
   test("loads the built application from a nested base", async ({ browser }) => {

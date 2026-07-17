@@ -7,21 +7,38 @@ async function start(): Promise<void> {
   if (!target) throw new Error("Sandbox mount target #app was not found.");
   let experience: Awaited<ReturnType<typeof mountSandboxExperience>>;
   const app = createSandboxController({ onRender: (view) => experience?.render(view.simulation) });
+  const syncRecovery = (): void => { experience?.setRecoveryAvailable(app.canRecover); };
+  const onAppIntent = (intent: Parameters<typeof app.dispatch>[0]): void => {
+    app.dispatch(intent);
+    syncRecovery();
+  };
+  const onRecover = (): void => {
+    if (app.recover()) {
+      experience?.setRecoveryAvailable(false);
+      experience?.setStatus("Recovered the garden.");
+    } else {
+      experience?.setStatus("No recovery is available.");
+    }
+  };
   experience = await mountSandboxExperience({
     target,
-    onAppIntent: app.dispatch,
+    onAppIntent,
     onPaint: app.paint,
-    onStep: app.step
+    onStep: app.step,
+    onRecover
   });
   experience.setPaused(app.paused);
+  experience.setRecoveryAvailable(app.canRecover);
   experience.render(app.view().simulation);
   app.scheduler.start();
   (window as Window & { __ANIFOR_TEST__?: unknown }).__ANIFOR_TEST__ = {
     diagnostics: () => app.scheduler.diagnostics,
+    camera: () => experience.renderer?.camera.transform ?? null,
+    screenToCell: (x: number, y: number) => experience.renderer?.camera.screenToCell(x, y) ?? null,
     state: (x = 0, y = 0) => {
       const view = app.view().simulation;
       const material = view.material[y * view.width + x];
-      return { tick: view.tick, material, occupied: view.material.reduce((count, value) => count + (value === 0 ? 0 : 1), 0) };
+      return { tick: view.tick, material, occupied: view.material.reduce((count, value) => count + (value === 0 ? 0 : 1), 0), nextSequence: app.snapshot().nextSequence };
     },
     benchmark: (): { p95: number; max: number } => {
       const simulation = createHalfOccupiedFixture(0x6d2b79f5);

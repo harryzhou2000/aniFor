@@ -8,6 +8,7 @@ export class PixelCamera implements Camera {
   private scale = 1;
   private offsetX = 0;
   private offsetY = 0;
+  private hasViewport = false;
 
   public constructor(
     private readonly worldWidth: number,
@@ -15,9 +16,13 @@ export class PixelCamera implements Camera {
   ) {}
 
   public resize(width: number, height: number): void {
+    const centerX = (this.viewportWidth / 2 - this.offsetX) / this.scale;
+    const centerY = (this.viewportHeight / 2 - this.offsetY) / this.scale;
     this.viewportWidth = Math.max(1, width);
     this.viewportHeight = Math.max(1, height);
-    this.fit();
+    if (!this.hasViewport) { this.hasViewport = true; this.fit(); return; }
+    this.offsetX = this.viewportWidth / 2 - centerX * this.scale;
+    this.offsetY = this.viewportHeight / 2 - centerY * this.scale;
   }
 
   public fit(): void {
@@ -49,6 +54,8 @@ export class PixelCamera implements Camera {
     this.offsetX += deltaX;
     this.offsetY += deltaY;
   }
+
+  public get cellScale(): number { return this.scale; }
 
   public get transform(): Readonly<{ x: number; y: number; scale: number }> {
     return { x: this.offsetX, y: this.offsetY, scale: this.scale };

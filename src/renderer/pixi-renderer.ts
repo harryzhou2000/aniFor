@@ -42,7 +42,8 @@ export async function mountPixiRenderer(options: RendererMountOptions): Promise<
     });
     app.canvas.className = "sandbox-canvas";
     app.canvas.setAttribute("aria-hidden", "true");
-    options.surface.replaceChildren(app.canvas);
+    // Keep shell-owned overlays (startup state and brush preview) above the canvas.
+    options.surface.prepend(app.canvas);
 
     const camera = new PixelCamera(256, 192);
     const rgba = new Uint8Array(256 * 192 * 4);

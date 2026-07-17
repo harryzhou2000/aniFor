@@ -8,6 +8,7 @@ export interface SandboxController {
   readonly simulation: Simulation;
   readonly scheduler: FrameScheduler;
   readonly paused: boolean;
+  readonly canRecover: boolean;
   view(): AppView;
   paint(intent: PaintIntent): void;
   dispatch(intent: AppIntent): void;
@@ -15,7 +16,9 @@ export interface SandboxController {
   step(): void;
   snapshot(): AuthoritativeSnapshot;
   restore(snapshot: AuthoritativeSnapshot): void;
+  replaceWithRecovery(incoming: AuthoritativeSnapshot): boolean;
   clear(): void;
+  recover(): boolean;
   dispose(): void;
 }
 
@@ -31,6 +34,7 @@ export function createSandboxController(options: SandboxControllerOptions = {}):
   let paused = false;
   let nextSequence = 0;
   let queue: SimulationCommand[] = [];
+  let recovery: AuthoritativeSnapshot | null = null;
   let disposed = false;
   const render = (): void => options.onRender?.({ simulation: simulation.view(), paused });
   const drain = (): boolean => {
@@ -60,11 +64,37 @@ export function createSandboxController(options: SandboxControllerOptions = {}):
   const clear = (): void => {
     drain();
     const world = simulation.snapshot();
+    recovery = cloneAuthoritative({ world, nextSequence });
     world.material.fill(MaterialId.Empty);
     world.lifetime.fill(0);
     simulation.restore(world);
     queue = [];
     render();
+  };
+  const recover = (): boolean => {
+    if (recovery === null) return false;
+    const stored = recovery;
+    simulation.restore(stored.world);
+    nextSequence = stored.nextSequence;
+    queue = [];
+    recovery = null;
+    render();
+    return true;
+  };
+  const replaceWithRecovery = (incoming: AuthoritativeSnapshot): boolean => {
+    if (!validAuthoritativeSnapshot(incoming)) return false;
+    drain();
+    const current = cloneAuthoritative({ world: simulation.snapshot(), nextSequence });
+    try {
+      simulation.restore(incoming.world);
+    } catch {
+      return false;
+    }
+    recovery = current;
+    nextSequence = incoming.nextSequence;
+    queue = [];
+    render();
+    return true;
   };
   const dispatch = (intent: AppIntent): void => {
     if (intent.type === "paint" || intent.type === "erase") {
@@ -82,6 +112,7 @@ export function createSandboxController(options: SandboxControllerOptions = {}):
   const controller: SandboxController = {
     simulation, scheduler,
     get paused(): boolean { return paused; },
+    get canRecover(): boolean { return recovery !== null; },
     view: () => ({ simulation: simulation.view(), paused }),
     paint, dispatch, drain,
     step(): void { if (paused) scheduler.step(); },
@@ -90,10 +121,32 @@ export function createSandboxController(options: SandboxControllerOptions = {}):
       if (!Number.isSafeInteger(snapshot.nextSequence) || snapshot.nextSequence < 0) throw new Error("Invalid sequence state");
       simulation.restore(snapshot.world); nextSequence = snapshot.nextSequence; queue = []; render();
     },
-    clear,
+    clear, recover, replaceWithRecovery,
     dispose(): void { if (!disposed) { disposed = true; scheduler.stop(); } }
   };
   return controller;
+}
+
+function validAuthoritativeSnapshot(snapshot: AuthoritativeSnapshot): boolean {
+  if (!snapshot || !Number.isSafeInteger(snapshot.nextSequence) || snapshot.nextSequence < 0) return false;
+  try {
+    // Validate through an isolated engine so no live state, queue, or recovery slot is touched.
+    createSimulation(snapshot.world.seed).restore(snapshot.world);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function cloneAuthoritative(snapshot: AuthoritativeSnapshot): AuthoritativeSnapshot {
+  return {
+    nextSequence: snapshot.nextSequence,
+    world: {
+      ...snapshot.world,
+      material: snapshot.world.material.slice(),
+      lifetime: snapshot.world.lifetime.slice()
+    }
+  };
 }
 
 function toolMaterial(tool: PaintIntent["tool"]): MaterialId {

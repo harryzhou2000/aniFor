@@ -12,6 +12,7 @@ export interface SandboxExperienceOptions {
   readonly onAppIntent: (intent: AppIntent) => void;
   readonly onPaint: (intent: PaintIntent) => void;
   readonly onStep?: () => void;
+  readonly onRecover?: () => void;
 }
 
 export interface SandboxExperience {
@@ -19,6 +20,7 @@ export interface SandboxExperience {
   render(view: SimulationView): void;
   setPaused(paused: boolean): void;
   setStatus(message: string): void;
+  setRecoveryAvailable(available: boolean): void;
   destroy(): void;
 }
 
@@ -27,7 +29,7 @@ export async function mountSandboxExperience(options: SandboxExperienceOptions):
   const shell = mountSandboxShell({
     target: options.target,
     onAppIntent: options.onAppIntent,
-    onAction: (action) => { if (action === "step") options.onStep?.(); }
+    onAction: (action) => { if (action === "step") options.onStep?.(); if (action === "recover") options.onRecover?.(); }
   });
   const renderer = await mountPixiRenderer({
     surface: shell.surface,
@@ -39,13 +41,16 @@ export async function mountSandboxExperience(options: SandboxExperienceOptions):
     getTool: shell.getTool,
     getBrushRadius: shell.getBrushRadius,
     onPaint: options.onPaint,
-    onCameraChange: renderer.syncCamera
+    onCameraChange: renderer.syncCamera,
+    getCellScale: () => renderer.camera.cellScale,
+    onBrushPreview: shell.setBrushPreview
   }) : null;
   return {
     renderer,
     render(view): void { renderer?.render(view); },
     setPaused: shell.setPaused,
     setStatus: shell.setStatus,
+    setRecoveryAvailable: shell.setRecoveryAvailable,
     destroy(): void { input?.destroy(); renderer?.destroy(); shell.destroy(); }
   };
 }
