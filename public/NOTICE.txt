@@ -1,0 +1,21 @@
+Stillroom
+Copyright (C) 2026 Stillroom contributors
+
+This program is free software: you can redistribute it and/or modify it
+under the terms of the GNU General Public License as published by the Free
+Software Foundation, version 3 of the License.
+
+This repository is designed to incorporate a modified subset of The Powder
+Toy, whose source is available at:
+https://github.com/The-Powder-Toy/The-Powder-Toy
+
+The exact pinned upstream revision and integration details are recorded in
+third_party/the-powder-toy/UPSTREAM.md. The distributed
+public/wasm/stillroom_core.wasm links the pinned Powder Toy simulation through
+the adapter in native/tpt/. Complete corresponding source and reproducible
+build scripts are available in this repository.
+
+The legacy native/powder_core.cpp compatibility kernel is original Stillroom
+code and remains only as a startup fallback.
+
+This program comes with ABSOLUTELY NO WARRANTY. See LICENSE for details.

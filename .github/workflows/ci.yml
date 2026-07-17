@@ -1,0 +1,73 @@
+name: verify-static-game
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pages-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Cache project-local Emscripten
+        uses: actions/cache@v4
+        with:
+          path: .toolchains/emsdk
+          key: ${{ runner.os }}-emsdk-6.0.3-${{ hashFiles('scripts/setup-emsdk.sh') }}
+
+      - name: Install JavaScript dependencies
+        run: npm ci
+
+      - name: Install pinned Emscripten locally
+        run: npm run setup:emsdk
+
+      - name: Install pinned Meson locally
+        run: npm run setup:build-tools
+
+      - name: Build WebAssembly, test, and build static site
+        run: npm run build:all
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: stillroom-static-site
+          path: dist
+          if-no-files-found: error
+
+      - name: Configure GitHub Pages
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: actions/configure-pages@v5
+
+      - name: Upload GitHub Pages artifact
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

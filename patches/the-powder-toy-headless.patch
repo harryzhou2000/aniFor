@@ -1,0 +1,108 @@
+diff --git a/meson.build b/meson.build
+index 3a44292..7a597aa 100644
+--- a/meson.build
++++ b/meson.build
+@@ -219,6 +219,7 @@ project_cpp_args = []
+ 
+ fftw_dep = dependency('fftw3f', static: is_static)
+ threads_dep = dependency('threads')
++build_stillroom_headless = get_option('build_stillroom_headless')
+ if host_platform == 'emscripten'
+ 	app_exe_jssafe = app_exe.underscorify()
+ 	png_dep = []
+@@ -230,7 +231,7 @@ if host_platform == 'emscripten'
+ 		'-s', 'ALLOW_MEMORY_GROWTH=1',
+ 		'-s', 'FORCE_FILESYSTEM=1',
+ 		'-s', 'EXIT_RUNTIME=0',
+-		'-s', 'EXPORTED_RUNTIME_METHODS=ccall,cwrap',
++		'-s', 'EXPORTED_RUNTIME_METHODS=ccall,cwrap,HEAPU8,HEAP8,HEAPU16',
+ 		'-s', 'FS_DEBUG',
+ 		'-s', 'MODULARIZE',
+ 		'-s', 'EXPORT_NAME=create_' + app_exe_jssafe,
+@@ -242,10 +243,16 @@ if host_platform == 'emscripten'
+ 		'-s', 'USE_SDL=2',
+ 		'-s', 'USE_BZIP2=1',
+ 		'-s', 'USE_LIBPNG',
+-		'-s', 'USE_PTHREADS',
+ 		'-s', 'DISABLE_EXCEPTION_CATCHING=0',
+ 		'-gsource-map',
+ 	]
++	if not build_stillroom_headless
++		emcc_args += [ '-s', 'USE_PTHREADS' ]
++	else
++		project_cpp_args += [ '-DSTILLROOM_HEADLESS' ]
++		project_link_args += [ '-s', 'EXPORT_ES6=1', '-s', 'ENVIRONMENT=web,worker,node' ]
++		project_link_args += [ '-s', 'EXPORTED_FUNCTIONS=["_powder_init","_powder_width","_powder_height","_powder_cells","_powder_temperature","_powder_velocity","_powder_tick","_powder_set_tick","_powder_clear","_powder_set","_powder_step","_powder_save","_powder_save_size","_powder_load_buffer","_powder_load_commit"]' ]
++	endif
+ 	project_link_args += emcc_args
+ 	project_cpp_args += emcc_args
+ else
+@@ -560,6 +567,27 @@ if get_option('build_powder')
+ 	clang_tidy_sources += powder_files
+ endif
+ 
++if build_stillroom_headless
++	if host_platform != 'emscripten'
++		error('build_stillroom_headless currently targets emscripten only')
++	endif
++	executable(
++		app_exe,
++		sources: files(
++			'src/StillroomAdapter.cpp',
++			'src/client/GameSave.cpp',
++			'src/StillroomRendererTables.cpp',
++			'src/StillroomSignMetrics.cpp',
++			'src/simulation/gravity/Null.cpp',
++		),
++		include_directories: project_inc,
++		cpp_args: project_cpp_args,
++		link_args: project_link_args,
++		dependencies: project_deps + [ sta_libs['common'], sta_libs['simulation'] ],
++		override_options: target_options,
++	)
++endif
++
+ if get_option('build_render')
+ 	if host_platform in [ 'android', 'emscripten' ]
+ 		error('render does not target @0@'.format(host_platform))
+@@ -625,7 +653,7 @@ if get_option('clang_tidy')
+ 	)
+ endif
+ 
+-if host_platform == 'emscripten'
++if host_platform == 'emscripten' and get_option('build_powder')
+ 	run_target(
+ 		'serve-locally',
+ 		command: [
+diff --git a/meson_options.txt b/meson_options.txt
+index fb453c3..0662569 100644
+--- a/meson_options.txt
++++ b/meson_options.txt
+@@ -75,6 +75,12 @@ option(
+ 	value: true,
+ 	description: 'Build the game'
+ )
++option(
++	'build_stillroom_headless',
++	type: 'boolean',
++	value: false,
++	description: 'Build the Stillroom simulation-only WebAssembly adapter'
++)
+ option(
+ 	'build_render',
+ 	type: 'boolean',
+diff --git a/src/simulation/SimulationData.cpp b/src/simulation/SimulationData.cpp
+index 96f0c1d..af2967a 100644
+--- a/src/simulation/SimulationData.cpp
++++ b/src/simulation/SimulationData.cpp
+@@ -329,8 +329,10 @@ int SimulationData::GetParticleType(ByteString type) const
+ 
+ SimulationData::SimulationData()
+ {
++#ifndef STILLROOM_HEADLESS
+ 	msections = LoadMenus();
+ 	wtypes = LoadWalls();
++#endif
+ 	elements = GetElements();
+ 	init_can_move();
+ }
