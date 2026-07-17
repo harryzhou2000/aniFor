@@ -10,6 +10,6 @@ export function worldHash(snapshot: WorldSnapshot): string {
   add32(snapshot.tick >>> 0);
   add32(Math.floor(snapshot.tick / 0x100000000));
   add32(snapshot.seed); add32(snapshot.randomState);
-  for (let i = 0; i < snapshot.material.length; i++) { add(snapshot.material[i]); add(snapshot.lifetime[i]); add(snapshot.lifetime[i] >>> 8); }
+  for (let i = 0; i < snapshot.material.length; i++) { add(snapshot.material[i]); add(snapshot.lifetime[i]); add(snapshot.lifetime[i] >>> 8); add(snapshot.temperature[i]); add(snapshot.temperature[i] >>> 8); }
   return h.toString(16).padStart(8, "0");
 }

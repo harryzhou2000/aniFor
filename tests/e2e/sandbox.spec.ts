@@ -38,6 +38,45 @@ if (typeof process === "undefined" || !process.env.VITEST) test.describe("sandbo
     await expect.poll(() => page.evaluate(() => (window as any).__ANIFOR_TEST__.state().occupied)).toBe(0);
   });
 
+  test("selects every v2 material tool and never exposes generated gases", async ({ page }) => {
+    await page.goto("/");
+    await page.getByRole("button", { name: "Pause simulation" }).click();
+    const surface = page.locator(".canvas-surface");
+    const bounds = await surface.boundingBox();
+    expect(bounds).toBeTruthy();
+    const tools = [["Oil", 6], ["Wood", 7], ["Ice", 9], ["Acid", 10]] as const;
+    for (const [label, material] of tools) {
+      await page.getByRole("button", { name: label, exact: true }).click();
+      await surface.click({ position: { x: bounds!.width / 2, y: bounds!.height / 2 } });
+      expect(await page.evaluate(() => (window as any).__ANIFOR_TEST__.state(128, 96).material)).toBe(material);
+    }
+    expect(await page.evaluate(() => (window as any).__ANIFOR_TEST__.state().material)).not.toBe(5);
+  });
+
+  test("preserves v2 fire temperature through import, recovery, and autosave", async ({ page }) => {
+    await page.goto("/");
+    await page.getByRole("button", { name: "Pause simulation" }).click();
+    await page.getByRole("button", { name: "Fire", exact: true }).click();
+    const surface = page.locator(".canvas-surface");
+    const bounds = await surface.boundingBox();
+    expect(bounds).toBeTruthy();
+    await surface.click({ position: { x: bounds!.width / 2, y: bounds!.height / 2 } });
+    const before = await page.evaluate(() => (window as any).__ANIFOR_TEST__.state(128, 96));
+    expect(before.temperature).toBe(1400);
+    await page.locator('[data-action="persistence"]').click();
+    await page.locator('[data-action="export-text"]').click();
+    const code = await page.locator("#save-code").inputValue();
+    await page.getByRole("button", { name: "Clear" }).click();
+    await page.locator("#save-code").fill(code);
+    await page.locator('[data-action="import-text"]').click();
+    expect(await page.evaluate(() => (window as any).__ANIFOR_TEST__.state(128, 96))).toMatchObject({ tick: before.tick, randomState: before.randomState, temperature: 1400 });
+    await page.getByRole("button", { name: "Clear" }).click();
+    await page.getByRole("button", { name: "Recover" }).click();
+    expect(await page.evaluate(() => (window as any).__ANIFOR_TEST__.state(128, 96).temperature)).toBe(1400);
+    await page.waitForTimeout(700);
+    expect(await page.evaluate(() => (window as any).__ANIFOR_TEST__.autosave(128, 96))).toMatchObject({ randomState: before.randomState, temperature: 1400 });
+  });
+
   test("round-trips a save code through the visible persistence panel", async ({ page }) => {
     await page.goto("/");
     await page.getByRole("button", { name: "Pause simulation" }).click();
@@ -92,6 +131,52 @@ if (typeof process === "undefined" || !process.env.VITEST) test.describe("sandbo
     await expect.poll(() => page.evaluate(() => localStorage.getItem("anifor.autosave.v1"))).not.toBe("corrupt");
   });
 
+  test("preserves unsupported autosaves and reports their status distinctly", async ({ page }) => {
+    await page.goto("/");
+    await page.waitForTimeout(700);
+    const unsupported = await page.evaluate(() => {
+      const source = localStorage.getItem("anifor.autosave.v1")!;
+      const bytes = Uint8Array.from(atob(source), character => character.charCodeAt(0));
+      bytes[4] = 3; bytes[5] = 0;
+      let binary = "";
+      for (const byte of bytes) binary += String.fromCharCode(byte);
+      const value = btoa(binary);
+      localStorage.setItem("anifor.autosave.v1", value);
+      return value;
+    });
+    await page.reload();
+    await expect(page.locator(".status")).toContainText("unsupported");
+    expect(await page.evaluate(() => localStorage.getItem("anifor.autosave.v1"))).toBe(unsupported);
+    // A newer stored save is a write-locked value: normal work and several
+    // debounce windows must not replace its bytes.
+    await page.getByRole("button", { name: "Pause simulation" }).click();
+    const surface = page.locator(".canvas-surface");
+    const bounds = await surface.boundingBox();
+    expect(bounds).toBeTruthy();
+    await surface.click({ position: { x: bounds!.width / 2, y: bounds!.height / 2 } });
+    await page.getByRole("button", { name: "Play simulation" }).click();
+    await page.waitForTimeout(1_200);
+    expect(await page.evaluate(() => localStorage.getItem("anifor.autosave.v1"))).toBe(unsupported);
+
+    // Import diagnostics distinguish an unsupported payload from corruption.
+    await page.locator('[data-action="persistence"]').click();
+    await page.locator("#save-code").fill(unsupported);
+    await page.locator('[data-action="import-text"]').click();
+    await expect(page.locator(".status")).toContainText("newer/unsupported save version");
+
+    // Explicit Clear resolves the lock and permits a normal v2 autosave.
+    await page.getByRole("button", { name: "Clear" }).click();
+    await page.waitForTimeout(700);
+    const resolved = await page.evaluate(() => {
+      const value = localStorage.getItem("anifor.autosave.v1");
+      if (!value) return null;
+      const bytes = Uint8Array.from(atob(value), character => character.charCodeAt(0));
+      return { value, version: bytes[4] | (bytes[5] << 8) };
+    });
+    expect(resolved?.version).toBe(2);
+    expect(resolved?.value).not.toBe(unsupported);
+  });
+
   test("autosaves a running paint without pause or lifecycle action", async ({ page }) => {
     await page.goto("/");
     const surface = page.locator(".canvas-surface");
@@ -107,13 +192,18 @@ if (typeof process === "undefined" || !process.env.VITEST) test.describe("sandbo
 
   test("autosaves an unchanged running world and restores its authoritative timeline", async ({ page }) => {
     await page.goto("/");
-    await expect.poll(() => page.evaluate(() => (window as any).__ANIFOR_TEST__.state().tick)).toBeGreaterThan(0);
+    await expect.poll(() => page.evaluate(() => Boolean((window as any).__ANIFOR_TEST__?.state))).toBe(true);
+    const initialTick = await page.evaluate(() => (window as any).__ANIFOR_TEST__.state().tick);
+    await expect.poll(() => page.evaluate(() => (window as any).__ANIFOR_TEST__.state().tick)).toBeGreaterThan(initialTick);
+    await page.waitForTimeout(700);
+    const runningSaved = await page.evaluate(() => (window as any).__ANIFOR_TEST__.autosave());
+    expect(runningSaved).toBeTruthy();
+    expect(runningSaved.tick).toBeGreaterThan(initialTick);
+    await page.getByRole("button", { name: "Pause simulation" }).click();
     await page.waitForTimeout(700);
     const saved = await page.evaluate(() => (window as any).__ANIFOR_TEST__.autosave());
     expect(saved).toBeTruthy();
-    expect(saved.tick).toBeGreaterThan(0);
-    const current = await page.evaluate(() => (window as any).__ANIFOR_TEST__.state());
-    expect(current.tick).toBeGreaterThan(saved.tick);
+    expect(saved.tick).toBeGreaterThanOrEqual(runningSaved.tick);
     await page.reload();
     await expect.poll(() => page.evaluate(() => (window as any).__ANIFOR_TEST__.restored())).toEqual(saved);
   });
@@ -404,7 +494,15 @@ if (typeof process === "undefined" || !process.env.VITEST) test.describe("sandbo
     await page.keyboard.press("Tab");
     await expect(page.getByRole("button", { name: "Water" })).toBeFocused();
     await page.keyboard.press("Tab");
+    await expect(page.getByRole("button", { name: "Oil" })).toBeFocused();
+    await page.keyboard.press("Tab");
     await expect(page.getByRole("button", { name: "Fire" })).toBeFocused();
+    await page.keyboard.press("Tab");
+    await expect(page.getByRole("button", { name: "Wood" })).toBeFocused();
+    await page.keyboard.press("Tab");
+    await expect(page.getByRole("button", { name: "Ice" })).toBeFocused();
+    await page.keyboard.press("Tab");
+    await expect(page.getByRole("button", { name: "Acid" })).toBeFocused();
     await page.keyboard.press("Tab");
     await expect(page.getByRole("button", { name: "Erase" })).toBeFocused();
     await page.keyboard.press("Tab");
@@ -419,7 +517,7 @@ if (typeof process === "undefined" || !process.env.VITEST) test.describe("sandbo
 
   test("opens the persistence panel by keyboard and skips its native file input", async ({ page }) => {
     await page.goto("/");
-    for (let index = 0; index < 11; index += 1) await page.keyboard.press("Tab");
+    for (let index = 0; index < 15; index += 1) await page.keyboard.press("Tab");
     const toggle = page.getByRole("button", { name: "Save / load" });
     await expect(toggle).toBeFocused();
     await expect(toggle).toHaveAttribute("aria-controls", "persistence-panel");

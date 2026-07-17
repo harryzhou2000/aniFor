@@ -1,4 +1,4 @@
-import { createSimulation } from "../simulation/engine";
+import { AMBIENT_TEMPERATURE, createSimulation } from "../simulation/engine";
 import { MaterialId, type Simulation, type SimulationCommand } from "../simulation/contracts";
 import type { AppIntent, AppView, AuthoritativeSnapshot } from "./contracts";
 import type { PaintIntent } from "../input";
@@ -70,6 +70,7 @@ export function createSandboxController(options: SandboxControllerOptions = {}):
     recovery = cloneAuthoritative({ world, nextSequence });
     world.material.fill(MaterialId.Empty);
     world.lifetime.fill(0);
+    world.temperature.fill(AMBIENT_TEMPERATURE);
     simulation.restore(world);
     queue = [];
     render();
@@ -147,13 +148,17 @@ function cloneAuthoritative(snapshot: AuthoritativeSnapshot): AuthoritativeSnaps
     world: {
       ...snapshot.world,
       material: snapshot.world.material.slice(),
-      lifetime: snapshot.world.lifetime.slice()
+      lifetime: snapshot.world.lifetime.slice(),
+      temperature: snapshot.world.temperature.slice()
     }
   };
 }
 
 function toolMaterial(tool: PaintIntent["tool"]): MaterialId {
-  return ({ wall: MaterialId.Wall, sand: MaterialId.Sand, water: MaterialId.Water, fire: MaterialId.Fire } as const)[tool as "wall" | "sand" | "water" | "fire"];
+  return ({
+    wall: MaterialId.Wall, sand: MaterialId.Sand, water: MaterialId.Water, oil: MaterialId.Oil,
+    fire: MaterialId.Fire, wood: MaterialId.Wood, ice: MaterialId.Ice, acid: MaterialId.Acid
+  } as const)[tool as Exclude<PaintIntent["tool"], "eraser">];
 }
 
 export { createFrameScheduler } from "./scheduler";

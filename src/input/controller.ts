@@ -4,7 +4,7 @@ import type { WorldBedGeometry } from "../renderer/camera";
 import { PointerGestureState } from "./gesture-state";
 import { rasterLine } from "./raster";
 
-export type Tool = "wall" | "sand" | "water" | "fire" | "eraser";
+export type Tool = "wall" | "sand" | "water" | "oil" | "fire" | "wood" | "ice" | "acid" | "eraser";
 export interface PaintIntent { readonly tool: Tool; readonly radius: number; readonly points: readonly GridPoint[]; }
 export interface BrushPreview { readonly cells: readonly { readonly x: number; readonly y: number; readonly size: number }[]; }
 export interface InputControllerOptions {

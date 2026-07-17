@@ -1,8 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { createSandboxController } from "../../src/app";
+import { AMBIENT_TEMPERATURE } from "../../src/simulation/engine";
 import { MaterialId } from "../../src/simulation/contracts";
 
-const intent = (tool: "sand" | "eraser", x = 4) => ({ tool, radius: 1, points: [{ x, y: 4 }] });
+const intent = (tool: "sand" | "fire" | "eraser", x = 4) => ({ tool, radius: 1, points: [{ x, y: 4 }] });
 
 describe("application timeline", () => {
   it("paints immediately while paused and assigns frozen monotonic commands", () => {
@@ -34,6 +35,22 @@ describe("application timeline", () => {
     expect(advances).toBe(1);
     expect(renders).toBe(1);
     app.dispose();
+  });
+
+  it("maps each selectable v2 tool without exposing generated gases", () => {
+    const tools = [
+      ["oil", MaterialId.Oil], ["wood", MaterialId.Wood], ["ice", MaterialId.Ice], ["acid", MaterialId.Acid]
+    ] as const;
+    for (const [tool, material] of tools) {
+      const app = createSandboxController();
+      app.dispatch({ type: "pause", paused: true });
+      app.paint({ tool, radius: 0, points: [{ x: 20, y: 20 }] });
+      const snapshot = app.snapshot();
+      expect(snapshot.world.material[20 * 256 + 20]).toBe(material);
+      expect(snapshot.world.material.includes(MaterialId.Smoke)).toBe(false);
+      expect(snapshot.world.material.includes(MaterialId.Steam)).toBe(false);
+      app.dispose();
+    }
   });
 
   it("drains snapshots, restores sequence, and clears without changing timeline state", () => {
@@ -83,10 +100,14 @@ describe("application timeline", () => {
   it("captures one defensive recovery snapshot and restores it exactly", () => {
     const app = createSandboxController({ seed: 31 });
     app.dispatch({ type: "pause", paused: true });
-    app.paint(intent("sand", 12));
+    app.paint(intent("fire", 12));
     const beforeClear = app.snapshot();
     app.clear();
     expect(app.canRecover).toBe(true);
+    const cleared = app.snapshot();
+    expect(cleared.world.temperature.every((value) => value === AMBIENT_TEMPERATURE)).toBe(true);
+    const recoveredTemperature = beforeClear.world.temperature[4 * 256 + 12];
+    (app.simulation.view().temperature as Int16Array)[4 * 256 + 12] = AMBIENT_TEMPERATURE + 1;
     app.paint(intent("eraser", 12));
     app.step();
     expect(app.recover()).toBe(true);
@@ -135,13 +156,17 @@ describe("application timeline", () => {
       ...prior.world,
       tick: 12,
       material: prior.world.material.slice(),
-      lifetime: prior.world.lifetime.slice()
+      lifetime: prior.world.lifetime.slice(),
+      temperature: prior.world.temperature.slice()
     };
     incomingWorld.material[41 * 256 + 41] = MaterialId.Wall;
     const incoming = { world: incomingWorld, nextSequence: 22 };
     expect(app.replaceWithRecovery(incoming)).toBe(true);
     expect(app.snapshot()).toEqual(incoming);
     expect(app.canRecover).toBe(true);
+    const recoveredTemperature = prior.world.temperature[0];
+    (app.simulation.view().temperature as Int16Array)[0] = recoveredTemperature + 1;
+    incomingWorld.temperature[1] += 1;
     expect(app.recover()).toBe(true);
     expect(app.snapshot()).toEqual(prior);
     expect(app.canRecover).toBe(false);
@@ -153,7 +178,12 @@ describe("application timeline", () => {
     app.paint(intent("sand", 50));
     app.clear();
     const before = app.snapshot();
-    const corruptWorld = { ...before.world, material: before.world.material.slice(), lifetime: before.world.lifetime.slice() };
+    const corruptWorld = {
+      ...before.world,
+      material: before.world.material.slice(),
+      lifetime: before.world.lifetime.slice(),
+      temperature: before.world.temperature.slice()
+    };
     corruptWorld.material[0] = 99;
     expect(app.replaceWithRecovery({ world: corruptWorld, nextSequence: 4 })).toBe(false);
     expect(app.snapshot()).toEqual(before);

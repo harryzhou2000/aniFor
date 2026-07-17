@@ -11,6 +11,7 @@ export function createHalfOccupiedFixture(seed = 1): SandboxSimulation {
     for (let x = 0; x < WORLD_WIDTH; x++) {
       const index = y * WORLD_WIDTH + x;
       snapshot.material[index] = (x + y) % 3 === 0 ? MaterialId.Sand : (x & 1) === 0 ? MaterialId.Water : MaterialId.Wall;
+      snapshot.temperature[index] = 200;
     }
   }
   simulation.restore(snapshot);

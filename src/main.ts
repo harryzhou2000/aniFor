@@ -2,7 +2,7 @@ import { createSandboxController } from "./app";
 import { mountSandboxExperience } from "./ui/mount";
 import { createHalfOccupiedFixture } from "./simulation/fixture";
 import { rasterizeCircle } from "./simulation/raster";
-import { applyBase64, applyBlob, createAutosave, snapshotToBase64, snapshotToBlob } from "./persistence";
+import { applyBase64Result, applyBlobResult, createAutosave, snapshotToBase64, snapshotToBlob } from "./persistence";
 
 const AUTOSAVE_KEY = "anifor.autosave.v1";
 const AUTOSAVE_DELAY_MS = 500;
@@ -15,8 +15,9 @@ async function start(): Promise<void> {
   let saveTimer: number | null = null;
   let app: ReturnType<typeof createSandboxController>;
   let restoredSnapshot: ReturnType<typeof app.snapshot> | null = null;
+  let unsupportedAutosave = false;
   const scheduleAutosave = (): void => {
-    if (!autosave || saveTimer !== null) return;
+    if (!autosave || unsupportedAutosave || saveTimer !== null) return;
     saveTimer = window.setTimeout(() => { saveTimer = null; autosave.save(app.snapshot()); }, AUTOSAVE_DELAY_MS);
   };
   app = createSandboxController({ onRender: (view) => {
@@ -25,13 +26,23 @@ async function start(): Promise<void> {
     scheduleAutosave();
   }, onAdvance: scheduleAutosave });
   let restoredAutosave = false;
-  const saved = autosave?.load();
+  const autosaveResult = autosave?.loadResult();
+  const autosaveUnavailable = autosaveResult && !autosaveResult.ok && autosaveResult.error.message === "Autosave storage is unavailable";
+  if (autosaveResult && !autosaveResult.ok) {
+    if (autosaveResult.error.kind === "corrupt" && !autosaveUnavailable) autosave?.load();
+    if (autosaveResult.error.kind === "unsupported-version") unsupportedAutosave = true;
+  }
+  const saved = autosaveResult?.ok ? autosaveResult.value : null;
   if (saved) { try { app.restore(saved); restoredSnapshot = saved; restoredAutosave = true; } catch { /* validated autosave is ignored if the runtime rejects it */ } }
   const syncRecovery = (): void => { experience?.setRecoveryAvailable(app.canRecover); };
   const onAppIntent = (intent: Parameters<typeof app.dispatch>[0]): void => {
     app.dispatch(intent);
     syncRecovery();
-    if (intent.type === "clear" || (intent.type === "pause" && intent.paused)) scheduleAutosave();
+    if (intent.type === "clear") {
+      // Clear is an explicit resolution for a save we could not read.
+      if (unsupportedAutosave) { unsupportedAutosave = false; autosave?.clear(); }
+      scheduleAutosave();
+    } else if (intent.type === "pause" && intent.paused) scheduleAutosave();
   };
   const onRecover = (): void => {
     if (app.recover()) {
@@ -50,15 +61,25 @@ async function start(): Promise<void> {
     experience?.setStatus("Save file exported.");
   };
   const onImportFile = async (file: File): Promise<void> => {
-    if (await applyBlob(app, file)) {
+    const result = await applyBlobResult(app, file);
+    if (result.ok) {
+      unsupportedAutosave = false;
+      autosave?.clear();
       syncRecovery(); scheduleAutosave(); experience?.setStatus("Save file imported.");
-    } else experience?.setStatus("Could not import that save file.");
+    } else if (result.error.kind === "unsupported-version") experience?.setStatus("Could not import that save file: newer/unsupported save version.");
+    else if (result.error.kind === "corrupt") experience?.setStatus("Could not import that save file: corrupt save.");
+    else experience?.setStatus("Could not import that save file: invalid save.");
   };
   const onExportText = (): void => { experience?.setSaveText(snapshotToBase64(app.snapshot())); };
   const onImportText = (text: string): void => {
-    if (applyBase64(app, text)) {
+    const result = applyBase64Result(app, text);
+    if (result.ok) {
+      unsupportedAutosave = false;
+      autosave?.clear();
       syncRecovery(); scheduleAutosave(); experience?.setStatus("Save code imported.");
-    } else experience?.setStatus("Could not import that save code.");
+    } else if (result.error.kind === "unsupported-version") experience?.setStatus("Could not import that save code: newer/unsupported save version.");
+    else if (result.error.kind === "corrupt") experience?.setStatus("Could not import that save code: corrupt save.");
+    else experience?.setStatus("Could not import that save code: invalid save.");
   };
   experience = await mountSandboxExperience({
     target,
@@ -71,7 +92,9 @@ async function start(): Promise<void> {
   experience.setRecoveryAvailable(app.canRecover);
   experience.render(app.view().simulation);
   app.scheduler.start();
-  if (restoredAutosave) experience.setStatus("Autosave restored.");
+  if (autosaveUnavailable) experience.setStatus("Autosave is unavailable; continuing without persistence.");
+  else if (unsupportedAutosave) experience.setStatus("Autosave version is newer/unsupported; the stored save was retained and not loaded.");
+  else if (restoredAutosave) experience.setStatus("Autosave restored.");
   (window as Window & { __ANIFOR_TEST__?: unknown }).__ANIFOR_TEST__ = {
     diagnostics: () => app.scheduler.diagnostics,
     camera: () => experience.renderer?.camera.transform ?? null,
@@ -102,13 +125,14 @@ async function start(): Promise<void> {
     state: (x = 0, y = 0) => {
       const view = app.view().simulation;
       const material = view.material[y * view.width + x];
-      return { tick: view.tick, material, occupied: view.material.reduce((count, value) => count + (value === 0 ? 0 : 1), 0), nextSequence: app.snapshot().nextSequence };
+      const snapshot = app.snapshot();
+      return { tick: view.tick, randomState: snapshot.world.randomState, temperature: view.temperature[y * view.width + x], material, occupied: view.material.reduce((count, value) => count + (value === 0 ? 0 : 1), 0), nextSequence: snapshot.nextSequence };
     },
-    autosave: () => {
+    autosave: (x = 0, y = 0) => {
       const snapshot = autosave?.load();
-      return snapshot ? { tick: snapshot.world.tick, randomState: snapshot.world.randomState } : null;
+      return snapshot ? { tick: snapshot.world.tick, randomState: snapshot.world.randomState, temperature: snapshot.world.temperature[y * snapshot.world.width + x] } : null;
     },
-    restored: () => restoredSnapshot ? { tick: restoredSnapshot.world.tick, randomState: restoredSnapshot.world.randomState } : null,
+    restored: (x = 0, y = 0) => restoredSnapshot ? { tick: restoredSnapshot.world.tick, randomState: restoredSnapshot.world.randomState, temperature: restoredSnapshot.world.temperature[y * restoredSnapshot.world.width + x] } : null,
     benchmark: (): { p95: number; max: number } => {
       const simulation = createHalfOccupiedFixture(0x6d2b79f5);
       for (let index = 0; index < 60; index += 1) simulation.advanceTick();

@@ -1,6 +1,6 @@
 export const WORLD_WIDTH = 256;
 export const WORLD_HEIGHT = 192;
-export const RULESET_VERSION = 1;
+export const RULESET_VERSION = 2;
 
 export enum MaterialId {
   Empty = 0,
@@ -8,7 +8,12 @@ export enum MaterialId {
   Sand = 2,
   Water = 3,
   Fire = 4,
-  Smoke = 5
+  Smoke = 5,
+  Oil = 6,
+  Wood = 7,
+  Steam = 8,
+  Ice = 9,
+  Acid = 10
 }
 
 export interface GridPoint {
@@ -45,6 +50,7 @@ export interface SimulationView {
   readonly tick: number;
   readonly material: Readonly<Uint8Array>;
   readonly lifetime: Readonly<Uint16Array>;
+  readonly temperature: Readonly<Int16Array>;
 }
 
 export interface WorldSnapshot {
@@ -56,6 +62,7 @@ export interface WorldSnapshot {
   readonly randomState: number;
   readonly material: Uint8Array;
   readonly lifetime: Uint16Array;
+  readonly temperature: Int16Array;
 }
 
 export interface Simulation {

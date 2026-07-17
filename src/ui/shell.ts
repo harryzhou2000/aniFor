@@ -29,7 +29,9 @@ export interface SandboxShell {
 
 const tools: ReadonlyArray<{ id: Tool; label: string; glyph: string }> = [
   { id: "wall", label: "Wall", glyph: "▦" }, { id: "sand", label: "Sand", glyph: "◒" },
-  { id: "water", label: "Water", glyph: "≈" }, { id: "fire", label: "Fire", glyph: "♨" },
+  { id: "water", label: "Water", glyph: "≈" }, { id: "oil", label: "Oil", glyph: "●" },
+  { id: "fire", label: "Fire", glyph: "♨" }, { id: "wood", label: "Wood", glyph: "║" },
+  { id: "ice", label: "Ice", glyph: "◇" }, { id: "acid", label: "Acid", glyph: "⊗" },
   { id: "eraser", label: "Erase", glyph: "⌫" }
 ];
 
