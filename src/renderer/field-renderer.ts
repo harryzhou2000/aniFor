@@ -539,7 +539,9 @@ export class MaterialRenderer {
       }
     }
 
-    reconstructSolidSurface(base, this.rendered, fields.lookups.styleBytes, width, height);
+    reconstructSolidSurface(
+      base, this.rendered, fields.lookups.styleBytes, fields.lookups.paletteBytes, width, height,
+    );
     reconstructLiquidSurface(
       liquid, this.rendered, fields.liquid.bytes, width, height,
     );

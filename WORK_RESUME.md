@@ -176,10 +176,17 @@ Queued after the renderer checkpoint: revisit desktop/mobile geometry as a dedic
 - Canvas routes the same five classes through its allocation-free three-channel scratch. A neutral-profile solid such as a LIFE projection now receives its smooth-rigid response from optics; the helper never writes the fourth/alpha channel.
 - The implementation reuses the palette sample and existing shape gradient. It adds no texture fetch, field, upload, reconstruction stage, render pass, or persistent allocation, and leaves every alpha/silhouette expression unchanged.
 
+## Cohesive solid-interior follow-up
+
+- The deterministic six-row material matrix now directly covers neutral-profile GOL, PCLN, DTEC, URAN, and VIBR without expanding or overlapping the fixture. Existing emitter, sink, channel, force, carrier, organic, energy, and profile coverage remains asserted.
+- Canvas closes one- and two-cell exact-solid cavities from an immutable eight-neighbour semantic scan. Four-cardinal enclosure remains supported; shallow cavities otherwise require at least five of eight matching neighbours, three cardinal supports, and zero different nonempty neighbours. Ordinary matching styled RGB is averaged without a brightness bias or cascading reconstructed pixels; trait-bearing solid candidates use canonical palette RGB so radioactive/organic role accents remain confined to semantic cells.
+- WebGL reuses its existing eight semantic samples to enforce the same exact-material/foreign-neighbour gate and a restrained `0.30–0.60` support transition. An explicit interior-cell mask matches Canvas border behavior, native walls take priority before nearby-solid selection, role traits remain disabled on reconstructed empty cells, and mixed solids, liquids, gases, and deep/two-cardinal notches cannot be bridged.
+- The denser Canvas reconstruction raises the pessimistic full-grid solid-surface pass from roughly 1.27 ms to 2.90 ms median on this machine, while combined field storage remains exactly 8,173,320 bytes and no runtime buffer, texture, upload, or pass is added.
+
 ## Verification completed for the LIFE/optics checkpoint
 
 - `npm run typecheck`
-- `npm test`: 40 files, 181 tests passed
+- `npm test`: 40 files, 185 tests passed
 - `npm run build`
 - Static build closure: 20 referenced resources verified (including the explicit favicon)
 - Current live Pages closure: 20 resources verified, including `stillroom_core.wasm` with the correct MIME
@@ -197,6 +204,7 @@ Queued after the renderer checkpoint: revisit desktop/mobile geometry as a dedic
 - The current Canvas role-write checkpoint passes the same two-backend browser gate at 1224×768 backing. Both backends return exactly through `1024×600 → 1440×900 → 1024×600`; wheel-anchor drift is 0.145 cell, middle-pan is 42×27 CSS px, and the Canvas mobile gate retains a 378×378 panel, 1.431× pinch, zero stray cells, and zero browser errors.
 - The optical-depth tranche passes that same real-browser gate with runtime GLSL compilation and zero browser errors. Retained WebGL/Canvas atlas captures show darker saturated gas cores with readable falloff, cohesive liquid columns with local reflective lips, preserved sparse control rows, and no unlike-species seam bleed.
 - The solid-optics follow-up passes the full two-backend browser gate with runtime GLSL compilation and zero browser errors. Canvas and WebGL retain the 1224×768 backing, 1.59375 field aspect, exact landmark painting, 0.145-cell wheel anchoring, 42×27 CSS-pixel middle-pan, repeated resize geometry, 24 LIFE tools, and the mobile one-/two-touch checks. Retained atlases show differentiated solid families without widening their silhouettes.
+- The cohesive-solid follow-up passes the same full browser gate with the six-row GOL/device/radioactive fixture, zero shader/runtime/network errors, and unchanged transform metrics. Retained WebGL and Canvas captures show dense solid blocks with fewer black perforations while mixed-material seams and the sparse powder controls remain open.
 - The stacked tool-discovery gate reports exactly two desktop filter rows at 68 px, a 40 px mobile filter rail, 8/12/8 px palette-to-actions gaps through the repeated desktop resize sequence, and zero mobile horizontal overflow. The optional browser screenshot path now also retains a DPR-2 portrait capture for direct layout review.
 - Latest warmed field profile at 612×384: atmosphere 7.21 ms median, species-aware liquid 11.40 ms, emission 3.18 ms, Canvas atmosphere relief 0.87 ms, solid reconstruction 1.27 ms, surface lighting 6.00 ms, and liquid reconstruction 1.67 ms. Shared volume storage remains 8,173,320 bytes; optical classes add no field or texture allocation.
 - The current pessimistic Canvas energy profile shades all 235,008 cells as radioactive energy cores in 19.37 ms median / 19.58 ms p90 on the local machine. Ordinary scenes call it only for actual energy cells. It adds two reusable 3-float vectors and no field/texture allocation; shared volume storage remains exactly 8,173,320 bytes.
@@ -205,7 +213,7 @@ Queued after the renderer checkpoint: revisit desktop/mobile geometry as a dedic
 - Forced Canvas at 1280×720 and a 390×844 DPR-2 portrait capture retained the 1224×768 backing, square mobile interaction panel with aspect-preserving letterbox, smooth empty-space aura, and crisp material seams. Warm/cool strips visibly reveal profile contours without uniformly whitening block interiors.
 - Native semantic-tool coverage now proves exact scalar deltas, stable typed routing, no vector-to-particle fallthrough, no vector emission during pinch navigation, malformed ABI rejection, Wind response, `WL_BLOCKAIR` isolation, stable-water regression, and unstepped OPS Wind round-tripping.
 
-The configured-source checkpoint `4077b23` is committed, pushed, deployed, and live-verified. The LIFE/optical-response checkpoint `c3bdfd2` is committed and pushed, and the current solid-optics follow-up passes unit, type, production build, allocation profile, desktop WebGL/Canvas visual, and interaction checks. Its manual cached deployment still needs a valid GitHub CLI login; until then the live closure resolves to `4077b23`.
+The configured-source checkpoint `4077b23` is committed, pushed, deployed, and live-verified. The LIFE/optical-response checkpoint `c3bdfd2` and solid-optics checkpoint `20cafb9` are committed and pushed; the current cohesive-solid follow-up passes unit, type, production build, allocation profile, desktop WebGL/Canvas visual, and interaction checks. Its manual cached deployment still needs a valid GitHub CLI login; until then the live closure resolves to `4077b23`.
 
 ## Current blockers and risks
 

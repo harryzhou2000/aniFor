@@ -6,14 +6,14 @@ export const RENDER_LAB_QUERY = 'render-lab';
 export const RENDER_LAB_STYLE_SAMPLES = [
   // Granular surfaces, including emissive/reactive powders.
   Material.Sand, Material.Dust, Material.Salt, Material.Gunpowder, Material.Thermite,
-  // Rigid surfaces.
-  Material.Metal, Material.Glass, Material.Coal, Material.Ice, Material.Wall,
+  // Rigid surfaces plus a neutral-profile LIFE projection with rigid optics.
+  Material.Metal, Material.Glass, Material.LIFE_GOL, Material.Ice, Material.Wall,
   // Organic and growing matter.
   Material.Wood, Material.Plant, Material.SEED, Material.YEST, Material.VINE,
-  // Radioactive solid/liquid/gas/carrier samples plus a blended emitter/sink.
-  Material.PLUT, Material.DEUT, Material.CONV, Material.WARP, Material.NEUT,
-  // Device, emitter, portal-channel pair, and force actuator.
-  Material.SPRK, Material.CLNE, Material.PRTI, Material.PRTO, Material.ACEL,
+  // Radioactive solid families plus sink and carrier semantics.
+  Material.PLUT, Material.URAN, Material.VIBR, Material.CONV, Material.NEUT,
+  // Emitter, powered/sensor devices, portal channel, and force actuator.
+  Material.CLNE, Material.PCLN, Material.DTEC, Material.PRTI, Material.ACEL,
   // Neutral and radioactive energy cores.
   Material.Fire, Material.Plasma, Material.ELEC, Material.PHOT, Material.GRVT,
 ] as const;

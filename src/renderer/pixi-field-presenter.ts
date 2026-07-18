@@ -110,16 +110,37 @@ vec3 discreteShape(vec2 uv, float material) {
 vec3 enclosedSurfaceShape(vec2 uv, float material) {
   vec2 left = vec2(uTexel.x, 0.0);
   vec2 down = vec2(0.0, uTexel.y);
-  float l = sameMaterial(uv - left, material);
-  float r = sameMaterial(uv + left, material);
-  float t = sameMaterial(uv - down, material);
-  float b = sameMaterial(uv + down, material);
-  float tl = sameMaterial(uv - left - down, material);
-  float tr = sameMaterial(uv + left - down, material);
-  float bl = sameMaterial(uv - left + down, material);
-  float br = sameMaterial(uv + left + down, material);
+  float lm = materialAt(uv - left);
+  float rm = materialAt(uv + left);
+  float tm = materialAt(uv - down);
+  float bm = materialAt(uv + down);
+  float tlm = materialAt(uv - left - down);
+  float trm = materialAt(uv + left - down);
+  float blm = materialAt(uv - left + down);
+  float brm = materialAt(uv + left + down);
+  float l = 1.0 - step(0.5, abs(lm - material));
+  float r = 1.0 - step(0.5, abs(rm - material));
+  float t = 1.0 - step(0.5, abs(tm - material));
+  float b = 1.0 - step(0.5, abs(bm - material));
+  float tl = 1.0 - step(0.5, abs(tlm - material));
+  float tr = 1.0 - step(0.5, abs(trm - material));
+  float bl = 1.0 - step(0.5, abs(blm - material));
+  float br = 1.0 - step(0.5, abs(brm - material));
+  float foreign = step(0.5, lm) * (1.0 - l) + step(0.5, rm) * (1.0 - r)
+    + step(0.5, tm) * (1.0 - t) + step(0.5, bm) * (1.0 - b)
+    + step(0.5, tlm) * (1.0 - tl) + step(0.5, trm) * (1.0 - tr)
+    + step(0.5, blm) * (1.0 - bl) + step(0.5, brm) * (1.0 - br);
+  float cardinal = l + r + t + b;
+  float matches = cardinal + tl + tr + bl + br;
+  float cardinallyEnclosed = step(3.5, cardinal);
+  float denseSupport = step(4.5, matches) * step(2.5, cardinal);
+  vec2 cell = floor(clamp(uv * uFieldSize, vec2(0.0), uFieldSize - vec2(1.0)));
+  float interior = step(1.0, cell.x) * step(1.0, cell.y)
+    * step(cell.x, uFieldSize.x - 2.0) * step(cell.y, uFieldSize.y - 2.0);
+  float valid = max(cardinallyEnclosed, denseSupport)
+    * (1.0 - step(0.5, foreign)) * interior;
   float support = (l + r + t + b) * 0.12 + (tl + tr + bl + br) * 0.05;
-  float coverage = smoothstep(0.34, 0.64, support);
+  float coverage = smoothstep(0.30, 0.60, support) * valid;
   float gradientX = (r - l) + (tr + br - tl - bl) * 0.45;
   float gradientY = (b - t) + (bl + br - tl - tr) * 0.45;
   return vec3(coverage * 0.86, gradientX * 0.14, gradientY * 0.14);
@@ -202,6 +223,8 @@ void main() {
       halo = 1.0;
     } else if (atmosphereState.a > 0.004) {
       cloudOnly = 1.0;
+    } else if (wall > 0.5) {
+      wallOnly = 1.0;
     } else {
       vec2 nearby = nearbySurface(fieldUv);
       material = nearby.x;

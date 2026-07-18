@@ -19,7 +19,9 @@ import { compositePixel } from '../src/renderer/rgba-composite';
 const width = 612;
 const height = 384;
 const materials = new Uint8Array(width * height);
-const { gasByMaterial, liquidByMaterial, emissiveByMaterial, colorByMaterial, styleBytes } = createRenderLookups(ALL_MATERIALS);
+const {
+  gasByMaterial, liquidByMaterial, emissiveByMaterial, colorByMaterial, styleBytes, paletteBytes,
+} = createRenderLookups(ALL_MATERIALS);
 
 // A deterministic mixed workload with dense, sparse, and interleaved regions.
 for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) {
@@ -179,7 +181,7 @@ console.log(JSON.stringify({
     },
     solidSurface: sample(() => {
       solidPixels.set(solidSeed);
-      reconstructSolidSurface(solidPixels, solidMaterials, styleBytes, width, height);
+      reconstructSolidSurface(solidPixels, solidMaterials, styleBytes, paletteBytes, width, height);
     }),
     surfaceLighting: sample(() => {
       solidPixels.set(solidSeed);
