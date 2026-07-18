@@ -44,6 +44,15 @@ int ToPowderType(int material)
 	case 3: return PT_DMND;
 	case 4: return PT_FIRE;
 	case 5: return PT_SMKE;
+	case 6: return PT_DUST;
+	case 7: return PT_SALT;
+	case 8: return PT_OIL;
+	case 9: return PT_WOOD;
+	case 10: return PT_PLNT;
+	case 11: return PT_LAVA;
+	case 12: return PT_ICEI;
+	case 13: return PT_ACID;
+	case 14: return PT_GUNP;
 	default: return PT_NONE;
 	}
 }
@@ -53,8 +62,6 @@ uint8_t ToStillroomType(int type)
 	switch (type)
 	{
 	case PT_SAND:
-	case PT_DUST:
-	case PT_SALT:
 		return 1;
 	case PT_WATR:
 	case PT_DSTW:
@@ -66,12 +73,20 @@ uint8_t ToStillroomType(int type)
 		return 3;
 	case PT_FIRE:
 	case PT_PLSM:
-	case PT_LAVA:
 		return 4;
 	case PT_SMKE:
 	case PT_WTRV:
 	case PT_FOG:
 		return 5;
+	case PT_DUST: return 6;
+	case PT_SALT: return 7;
+	case PT_OIL: return 8;
+	case PT_WOOD: return 9;
+	case PT_PLNT: return 10;
+	case PT_LAVA: return 11;
+	case PT_ICEI: return 12;
+	case PT_ACID: return 13;
+	case PT_GUNP: return 14;
 	default:
 		return type ? 3 : 0;
 	}

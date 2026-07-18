@@ -33,16 +33,7 @@ export class MaterialRenderer {
     });
     this.app.canvas.className = 'world-canvas';
     this.host.append(this.app.canvas);
-    this.scene.addChild(
-      this.glow,
-      this.layers.get(Material.Wall)!,
-      this.layers.get(Material.Sand)!,
-      this.layers.get(Material.Water)!,
-      this.waterHighlights,
-      this.occlusion,
-      this.layers.get(Material.Smoke)!,
-      this.layers.get(Material.Fire)!,
-    );
+    this.scene.addChild(this.glow, ...MATERIALS.map(({ id }) => this.layers.get(id)!), this.waterHighlights, this.occlusion);
     this.layers.get(Material.Water)!.alpha = 0.78;
     this.occlusion.blendMode = 'multiply';
     this.app.stage.addChild(this.scene);
@@ -154,5 +145,5 @@ export class MaterialRenderer {
 }
 
 function isDense(material: Material): boolean {
-  return material === Material.Sand || material === Material.Water || material === Material.Wall;
+  return material !== Material.Empty && material !== Material.Fire && material !== Material.Smoke;
 }

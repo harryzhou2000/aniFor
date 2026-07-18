@@ -44,8 +44,8 @@ export class DeterministicBackend implements SimulationBackend {
       for (let n = 0; n < this.width; n++) {
         const x = leftFirst ? n : this.width - 1 - n;
         const material = this.get(x, y);
-        if (material === Material.Sand) this.updateSand(x, y);
-        else if (material === Material.Water) this.updateWater(x, y);
+        if (isPowder(material)) this.updateSand(x, y);
+        else if (isLiquid(material)) this.updateWater(x, y);
       }
     }
     for (let y = 1; y < this.height - 1; y++) {
@@ -123,7 +123,7 @@ export class DeterministicBackend implements SimulationBackend {
   private isEmpty(x: number, y: number): boolean { return this.get(x, y) === Material.Empty; }
   private canDisplace(x: number, y: number, by: Material): boolean {
     const target = this.get(x, y);
-    return target === Material.Empty || (by === Material.Sand && target === Material.Water);
+    return target === Material.Empty || (isPowder(by) && isLiquid(target));
   }
   private set(x: number, y: number, material: Material): void {
     if (!this.inBounds(x, y)) return;
@@ -139,4 +139,12 @@ export class DeterministicBackend implements SimulationBackend {
     this.dirty.add(a); this.dirty.add(b);
   }
   private dirtyAll(): void { for (let i = 0; i < this.world.length; i++) this.dirty.add(i); }
+}
+
+function isPowder(material: Material): boolean {
+  return material === Material.Sand || material === Material.Dust || material === Material.Salt || material === Material.Gunpowder;
+}
+
+function isLiquid(material: Material): boolean {
+  return material === Material.Water || material === Material.Oil || material === Material.Acid || material === Material.Lava;
 }

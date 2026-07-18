@@ -21,6 +21,19 @@ describe('direct Powder Toy backend', () => {
     expect(simulation.consumeDirtyCells().length).toBeGreaterThan(0);
   });
 
+  it('projects every expanded material as its stable frontend ID', async () => {
+    const simulation = await PowderToyBackend.load(moduleArtifact.href);
+    const materials = [
+      Material.Dust, Material.Salt, Material.Oil,
+      Material.Wood, Material.Plant, Material.Lava,
+      Material.Ice, Material.Acid, Material.Gunpowder,
+    ] as const;
+    const y = 120;
+    materials.forEach((material, index) => simulation.paint(180 + index * 20, y, material, 0));
+    const cells = simulation.cells();
+    materials.forEach((material, index) => expect(cells[y * simulation.width + 180 + index * 20]).toBe(material));
+  });
+
   it('restores full native state for deterministic continuation', async () => {
     const source = await PowderToyBackend.load(moduleArtifact.href);
     source.paint(120, 80, Material.Wall, 3);

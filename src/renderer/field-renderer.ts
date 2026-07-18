@@ -132,6 +132,37 @@ export class MaterialRenderer {
 
       if (material === Material.Sand) {
         setPixel(base, pixel, 194 + grain + normalLight, 145 + grain * 0.65 + normalLight, 76 + grain * 0.35 + normalLight, 255);
+      } else if (material === Material.Dust) {
+        const softness = Math.sin(time * 0.0018 + x * 0.17 + y * 0.09) * 4;
+        setPixel(base, pixel, 188 + grain + normalLight + softness, 166 + grain + normalLight + softness, 124 + grain * 0.6 + normalLight, 238);
+      } else if (material === Material.Salt) {
+        const crystal = (hash(index + 211) & 7) === 0 ? 28 : 0;
+        setPixel(base, pixel, 220 + grain + crystal + normalLight, 216 + grain + crystal + normalLight, 202 + grain + crystal + normalLight, 255);
+      } else if (material === Material.Oil) {
+        const flow = velocities ? velocities[index * 2] * 0.12 : 0;
+        const sheen = Math.sin(time * 0.002 + x * 0.08 + flow) * 9 + (exposedTop ? 30 : 0);
+        setPixel(base, pixel, 78 + grain + sheen, 58 + grain * 0.5 + sheen * 0.6, 30 + sheen * 0.25, 238);
+      } else if (material === Material.Wood) {
+        const ring = ((x + Math.floor(y / 3)) % 9) < 2 ? -20 : 4;
+        setPixel(base, pixel, 132 + grain + ring + normalLight, 76 + grain * 0.45 + ring * 0.5 + normalLight, 40 + ring * 0.25 + normalLight, 255);
+      } else if (material === Material.Plant) {
+        const leaf = (hash(index + 401) & 3) * 7;
+        setPixel(base, pixel, 62 + leaf + normalLight, 132 + leaf + normalLight, 58 + grain * 0.35 + normalLight, 255);
+      } else if (material === Material.Lava) {
+        const kelvin = temperatures ? temperatures[index] / 10 : 1450;
+        const heat = clamp((kelvin - 700) / 1100, 0, 1);
+        const crust = exposedTop ? 0 : -45;
+        setPixel(base, pixel, 224 + crust + heat * 31, 48 + grain + heat * 120, 8 + heat * 54, 255);
+        setPixel(fire, pixel, 255, 54 + heat * 130, 8, 145 + heat * 80);
+      } else if (material === Material.Ice) {
+        const facet = (hash(index + 617) & 15) < 3 ? 24 : 0;
+        setPixel(base, pixel, 116 + facet + normalLight, 193 + facet + normalLight, 211 + facet + normalLight, 244);
+      } else if (material === Material.Acid) {
+        const shimmer = Math.sin(time * 0.003 + x * 0.13) * 8 + (exposedTop ? 25 : 0);
+        setPixel(base, pixel, 111 + shimmer, 184 + shimmer + normalLight, 48 + grain * 0.4 + shimmer, 224);
+      } else if (material === Material.Gunpowder) {
+        const spark = (hash(index + 911) & 31) === 0 ? 34 : 0;
+        setPixel(base, pixel, 70 + grain + spark + normalLight, 64 + grain + spark * 0.7 + normalLight, 58 + grain + spark * 0.35 + normalLight, 255);
       } else if (material === Material.Wall) {
         const seam = (hash(index + 73) & 31) === 0 ? -22 : 0;
         setPixel(base, pixel, 105 + grain + seam + normalLight, 98 + grain + seam + normalLight, 88 + grain + seam + normalLight, 255);
