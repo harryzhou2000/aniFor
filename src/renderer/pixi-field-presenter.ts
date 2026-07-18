@@ -8,6 +8,9 @@ export class PixiFieldPresenter {
 
   private constructor(private readonly host: HTMLElement, source: HTMLCanvasElement) {
     this.texture = Texture.from(source);
+    // Smooth GPU interpolation keeps the native field from becoming a grid of
+    // enlarged texels when the world is fitted to a desktop viewport.
+    this.texture.source.scaleMode = 'linear';
     this.scene.addChild(new Sprite(this.texture));
   }
 

@@ -17,6 +17,9 @@ describe('direct Powder Toy backend', () => {
     const cells = simulation.cells();
     expect(cells.filter((value) => value !== Material.Empty)).toHaveLength(2);
     expect(simulation.temperature()).toHaveLength(612 * 384);
+    const pressure = simulation.pressure();
+    expect(pressure).toHaveLength(612 * 384);
+    expect(Array.from(pressure).every(Number.isFinite)).toBe(true);
     expect(simulation.velocity()).toHaveLength(612 * 384 * 2);
     expect(simulation.consumeDirtyCells().length).toBeGreaterThan(0);
   });
@@ -28,6 +31,17 @@ describe('direct Powder Toy backend', () => {
     materials.forEach((material, index) => simulation.paint(30 + index * 15, y, material, 0));
     const cells = simulation.cells();
     materials.forEach((material, index) => expect(cells[y * simulation.width + 30 + index * 15]).toBe(material));
+  });
+
+  it('exposes changing native air pressure', async () => {
+    const simulation = await PowderToyBackend.load(moduleArtifact.href);
+    for (let y = 170; y < 190; y++) simulation.paint(305, y, Material.C4, 10);
+    for (let y = 170; y < 190; y++) simulation.paint(289, y, Material.Fire, 0);
+    for (let index = 0; index < 90; index++) simulation.step();
+    simulation.cells();
+    let peakPressure = 0;
+    for (const pressure of simulation.pressure()) peakPressure = Math.max(peakPressure, Math.abs(pressure));
+    expect(peakPressure).toBeGreaterThan(0.01);
   });
 
   it('settles water without air-driven ejection', async () => {

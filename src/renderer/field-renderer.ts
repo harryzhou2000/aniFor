@@ -1,10 +1,17 @@
-import { Material } from '../shared/materials';
+import { ALL_MATERIALS, Material, type MaterialCategory } from '../shared/materials';
 import type { SimulationBackend } from '../simulation';
 import { ViewTransform, type Point, type ViewState } from './view-transform';
 import type { PixiFieldPresenter } from './pixi-field-presenter';
 import { supportsWebGL } from './webgl-support';
+import { contourLight, materialNeighbourMask, neighbourDensity } from './volumetric-field';
 
 const FRAME_INTERVAL = 1000 / 30;
+
+interface ProjectedRenderInfo { readonly color: number; readonly category: MaterialCategory }
+const PROJECTED_RENDER_INFO: Array<ProjectedRenderInfo | undefined> = [];
+for (const material of ALL_MATERIALS) {
+  PROJECTED_RENDER_INFO[material.id] = { color: Number.parseInt(material.color.slice(1), 16), category: material.category };
+}
 
 /** Continuous field renderer: one shaded texel per native Powder Toy cell. */
 export class MaterialRenderer {
@@ -133,9 +140,14 @@ export class MaterialRenderer {
         const crystal = (hash(index + 211) & 7) === 0 ? 28 : 0;
         setPixel(base, pixel, 220 + grain + crystal + normalLight, 216 + grain + crystal + normalLight, 202 + grain + crystal + normalLight, 255);
       } else if (material === Material.Oil) {
+        const mask = materialNeighbourMask(this.rendered, width, height, x, y, material);
+        const density = neighbourDensity(mask);
+        const contour = contourLight(mask);
         const flow = velocities ? velocities[index * 2] * 0.12 : 0;
-        const sheen = Math.sin(time * 0.002 + x * 0.08 + flow) * 9 + (exposedTop ? 30 : 0);
-        setPixel(base, pixel, 78 + grain + sheen, 58 + grain * 0.5 + sheen * 0.6, 30 + sheen * 0.25, 238);
+        const sheen = Math.sin(time * 0.0017 + x * 0.055 + y * 0.025 + flow) * 5 + contour;
+        const depth = density / 8;
+        setPixel(base, pixel, 91 - depth * 28 + sheen, 67 - depth * 24 + sheen * 0.65, 35 - depth * 14 + sheen * 0.3, 218 + density * 4);
+        if (exposedTop) setPixel(fire, pixel, 172 + sheen, 128 + sheen, 66, 34 + Math.max(0, contour));
       } else if (material === Material.Wood) {
         const ring = ((x + Math.floor(y / 3)) % 9) < 2 ? -20 : 4;
         setPixel(base, pixel, 132 + grain + ring + normalLight, 76 + grain * 0.45 + ring * 0.5 + normalLight, 40 + ring * 0.25 + normalLight, 255);
@@ -143,17 +155,26 @@ export class MaterialRenderer {
         const leaf = (hash(index + 401) & 3) * 7;
         setPixel(base, pixel, 62 + leaf + normalLight, 132 + leaf + normalLight, 58 + grain * 0.35 + normalLight, 255);
       } else if (material === Material.Lava) {
+        const mask = materialNeighbourMask(this.rendered, width, height, x, y, material);
+        const density = neighbourDensity(mask);
+        const contour = contourLight(mask);
         const kelvin = temperatures ? temperatures[index] / 10 : 1450;
         const heat = clamp((kelvin - 700) / 1100, 0, 1);
-        const crust = exposedTop ? 0 : -45;
-        setPixel(base, pixel, 224 + crust + heat * 31, 48 + grain + heat * 120, 8 + heat * 54, 255);
-        setPixel(fire, pixel, 255, 54 + heat * 130, 8, 145 + heat * 80);
+        const crust = density > 6 ? -52 : 0;
+        const pulse = Math.sin(time * 0.003 + x * 0.1 + y * 0.07) * 8;
+        setPixel(base, pixel, 224 + crust + heat * 31 + contour, 48 + pulse + heat * 120 + contour, 8 + heat * 54, 255);
+        setPixel(fire, pixel, 255, 54 + heat * 130 + pulse, 8, 135 + heat * 80 + Math.max(0, contour));
       } else if (material === Material.Ice) {
         const facet = (hash(index + 617) & 15) < 3 ? 24 : 0;
         setPixel(base, pixel, 116 + facet + normalLight, 193 + facet + normalLight, 211 + facet + normalLight, 244);
       } else if (material === Material.Acid) {
-        const shimmer = Math.sin(time * 0.003 + x * 0.13) * 8 + (exposedTop ? 25 : 0);
-        setPixel(base, pixel, 111 + shimmer, 184 + shimmer + normalLight, 48 + grain * 0.4 + shimmer, 224);
+        const mask = materialNeighbourMask(this.rendered, width, height, x, y, material);
+        const density = neighbourDensity(mask);
+        const contour = contourLight(mask);
+        const depth = density / 8;
+        const shimmer = Math.sin(time * 0.0024 + x * 0.075 + y * 0.035) * 6 + contour;
+        setPixel(base, pixel, 127 - depth * 30 + shimmer, 205 - depth * 38 + shimmer, 58 - depth * 14 + shimmer * 0.45, 202 + density * 6);
+        if (exposedTop) setPixel(fire, pixel, 137 + shimmer, 236, 72 + shimmer, 42 + Math.max(0, contour));
       } else if (material === Material.Gunpowder) {
         const spark = (hash(index + 911) & 31) === 0 ? 34 : 0;
         setPixel(base, pixel, 70 + grain + spark + normalLight, 64 + grain + spark * 0.7 + normalLight, 58 + grain + spark * 0.35 + normalLight, 255);
@@ -161,18 +182,54 @@ export class MaterialRenderer {
         const seam = (hash(index + 73) & 31) === 0 ? -22 : 0;
         setPixel(base, pixel, 105 + grain + seam + normalLight, 98 + grain + seam + normalLight, 88 + grain + seam + normalLight, 255);
       } else if (material === Material.Water) {
+        const mask = materialNeighbourMask(this.rendered, width, height, x, y, material);
+        const density = neighbourDensity(mask);
+        const contour = contourLight(mask);
+        const depth = density / 8;
         const flow = velocities ? velocities[index * 2] * 0.18 : 0;
-        const shimmer = Math.sin(time * 0.0025 + x * 0.11 + flow) * 5;
-        const surface = top !== Material.Water ? 42 : 0;
-        setPixel(base, pixel, 27 + shimmer + surface * 0.35, 112 + shimmer + surface, 157 + shimmer + surface, 224);
+        const shimmer = Math.sin(time * 0.002 + x * 0.065 + y * 0.02 + flow) * 4;
+        const light = contour + shimmer;
+        setPixel(base, pixel, 53 - depth * 31 + light * 0.45, 169 - depth * 56 + light, 205 - depth * 40 + light, 198 + density * 7);
+        if (exposedTop) setPixel(fire, pixel, 129 + light, 232 + light, 245, 44 + Math.max(0, contour));
       } else if (material === Material.Smoke) {
+        const mask = materialNeighbourMask(this.rendered, width, height, x, y, material);
+        const density = neighbourDensity(mask);
+        const contour = contourLight(mask);
         const speed = velocities ? Math.abs(velocities[index * 2 + 1]) : 0;
-        setPixel(smoke, pixel, 126 + grain, 128 + grain, 132 + grain, 95 + Math.min(55, speed));
+        const drift = velocities ? velocities[index * 2] * 0.025 : 0;
+        const billow = Math.sin(time * 0.0016 + x * 0.11 + y * 0.065 + drift) * 7;
+        const volume = density * 5 + contour * 0.6 + billow;
+        setPixel(smoke, pixel, 114 + volume, 118 + volume, 124 + volume, 45 + density * 13 + Math.min(38, speed));
       } else if (material === Material.Fire) {
         const kelvin = temperatures ? temperatures[index] / 10 : 1100;
         const heat = clamp((kelvin - 450) / 1100, 0, 1);
         setPixel(base, pixel, 255, 115 + heat * 125, 28 + heat * 130, 255);
         setPixel(fire, pixel, 255, 92 + heat * 100, 18, 210);
+      } else {
+        const info = PROJECTED_RENDER_INFO[material];
+        if (!info) continue;
+        const red = info.color >>> 16;
+        const green = (info.color >>> 8) & 0xFF;
+        const blue = info.color & 0xFF;
+        if (info.category === "gases") {
+          const mask = materialNeighbourMask(this.rendered, width, height, x, y, material);
+          const density = neighbourDensity(mask);
+          const volume = density * 4 + contourLight(mask) * 0.5 + Math.sin(time * 0.0014 + x * 0.08 + y * 0.05) * 5;
+          setPixel(smoke, pixel, red + volume, green + volume, blue + volume, 42 + density * 12);
+        } else if (info.category === "liquids") {
+          const mask = materialNeighbourMask(this.rendered, width, height, x, y, material);
+          const density = neighbourDensity(mask);
+          const contour = contourLight(mask);
+          const depth = density * 3.2;
+          const shimmer = Math.sin(time * 0.0018 + x * 0.055 + y * 0.025) * 4 + contour;
+          setPixel(base, pixel, red - depth + shimmer, green - depth + shimmer, blue - depth + shimmer, 205 + density * 6);
+          if (exposedTop) setPixel(fire, pixel, red + 35, green + 35, blue + 35, 30 + Math.max(0, contour));
+        } else if (info.category === "energy") {
+          setPixel(base, pixel, red + normalLight, green + normalLight, blue + normalLight, 245);
+          setPixel(fire, pixel, red, green, blue, 180);
+        } else {
+          setPixel(base, pixel, red + grain * 0.45 + normalLight, green + grain * 0.45 + normalLight, blue + grain * 0.45 + normalLight, 255);
+        }
       }
     }
 

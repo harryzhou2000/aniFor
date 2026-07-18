@@ -22,6 +22,7 @@ std::vector<char> saveBuffer;
 std::vector<char> loadBuffer;
 uint8_t materialField[FIELD_SIZE];
 uint16_t temperatureField[FIELD_SIZE];
+float pressureField[FIELD_SIZE];
 int8_t velocityField[FIELD_SIZE * 2];
 
 void EnsureSimulation()
@@ -158,16 +159,18 @@ void ExtractFields()
 {
 	std::fill_n(materialField, FIELD_SIZE, uint8_t(0));
 	std::fill_n(temperatureField, FIELD_SIZE, uint16_t(0));
+	std::fill_n(pressureField, FIELD_SIZE, 0.0f);
 	std::fill_n(velocityField, FIELD_SIZE * 2, int8_t(0));
 	for (int y = 0; y < YRES; ++y)
 	{
 		for (int x = 0; x < XRES; ++x)
 		{
+			auto offset = y * XRES + x;
+			pressureField[offset] = simulation->pv[y / CELL][x / CELL];
 			auto packed = simulation->pmap[y][x];
 			if (!TYP(packed)) packed = simulation->photons[y][x];
 			if (!TYP(packed)) continue;
 			auto const &part = simulation->parts[ID(packed)];
-			auto offset = y * XRES + x;
 			materialField[offset] = ToStillroomType(part.type);
 			temperatureField[offset] = uint16_t(std::clamp(part.temp * 10.0f, 0.0f, 65535.0f));
 			velocityField[offset * 2] = int8_t(std::clamp(part.vx * 12.0f, -127.0f, 127.0f));
@@ -183,6 +186,7 @@ __attribute__((visibility("default"))) int powder_width() { return XRES; }
 __attribute__((visibility("default"))) int powder_height() { return YRES; }
 __attribute__((visibility("default"))) uint8_t *powder_cells() { EnsureSimulation(); ExtractFields(); return materialField; }
 __attribute__((visibility("default"))) uint16_t *powder_temperature() { EnsureSimulation(); return temperatureField; }
+__attribute__((visibility("default"))) float *powder_pressure() { EnsureSimulation(); return pressureField; }
 __attribute__((visibility("default"))) int8_t *powder_velocity() { EnsureSimulation(); return velocityField; }
 __attribute__((visibility("default"))) uint32_t powder_tick() { EnsureSimulation(); return simulation->currentTick; }
 __attribute__((visibility("default"))) void powder_set_tick(uint32_t value) { EnsureSimulation(); simulation->currentTick = int(value); simulation->frameCount = value; }

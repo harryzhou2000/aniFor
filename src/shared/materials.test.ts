@@ -15,7 +15,7 @@ describe('material catalog', () => {
   });
 
   it('has a fallback renderer style for every material', () => {
-    for (const material of MATERIALS) expect(cellStyle(material.id)).toBeDefined();
+    for (const material of ALL_MATERIALS) expect(cellStyle(material.id)).toBeDefined();
   });
 
   it('keeps native reaction products out of the selectable brush catalog', () => {

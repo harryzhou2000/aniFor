@@ -15,6 +15,7 @@ export interface SimulationBackend {
   clear(): void;
   cells(): Uint8Array;
   temperature?(): Uint16Array;
+  pressure?(): Float32Array;
   velocity?(): Int8Array;
   consumeDirtyCells(): readonly DirtyCell[];
   saveWorld(): string;

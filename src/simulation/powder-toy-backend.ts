@@ -11,6 +11,7 @@ interface PowderToyModule {
   _powder_height(): number;
   _powder_cells(): number;
   _powder_temperature(): number;
+  _powder_pressure(): number;
   _powder_velocity(): number;
   _powder_tick(): number;
   _powder_set_tick(tick: number): void;
@@ -55,6 +56,10 @@ export class PowderToyBackend implements SimulationBackend {
 
   temperature(): Uint16Array {
     return new Uint16Array(this.module.HEAPU16.buffer, this.module._powder_temperature(), this.width * this.height);
+  }
+
+  pressure(): Float32Array {
+    return new Float32Array(this.module.HEAPU8.buffer, this.module._powder_pressure(), this.width * this.height);
   }
 
   velocity(): Int8Array {

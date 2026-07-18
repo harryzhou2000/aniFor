@@ -15,11 +15,17 @@ export class Game {
   private paused = false;
   private accumulator = 0;
   private lastFrame = performance.now();
+  private probeX = 0;
+  private probeY = 0;
+  private lastIndicatorUpdate = -Infinity;
+  private indicator?: HTMLOutputElement;
 
   constructor(private readonly root: HTMLElement, simulation: SimulationBackend) {
     this.simulation = simulation;
     const viewport = root.querySelector('.viewport') as HTMLElement;
     this.renderer = new MaterialRenderer(viewport, simulation);
+    this.probeX = Math.floor(simulation.width / 2);
+    this.probeY = Math.floor(simulation.height / 2);
   }
 
   async start(): Promise<void> {
@@ -32,6 +38,7 @@ export class Game {
         else this.simulation.paint(x, y, this.material, this.radius);
       },
     });
+    this.mountFieldIndicator(viewport);
     const toolbox = this.root.querySelector<HTMLElement>('.toolbox');
     if (!toolbox) throw new Error('Missing simulation toolbox');
     mountControls(toolbox, {
@@ -54,9 +61,41 @@ export class Game {
       while (this.accumulator >= 1000 / 60) { this.simulation.step(); this.accumulator -= 1000 / 60; }
     }
     this.renderer.render(time);
+    if (time - this.lastIndicatorUpdate >= 100) {
+      this.lastIndicatorUpdate = time;
+      this.updateFieldIndicator();
+    }
     requestAnimationFrame(this.frame);
   };
 
+
+  private mountFieldIndicator(viewport: HTMLElement): void {
+    const indicator = document.createElement("output");
+    indicator.className = "field-indicator glass";
+    indicator.setAttribute("aria-live", "off");
+    viewport.append(indicator);
+    this.indicator = indicator;
+    const selectProbe = (event: PointerEvent): void => {
+      const cell = this.renderer.screenToCell(event.clientX, event.clientY);
+      if (cell.x < 0 || cell.y < 0 || cell.x >= this.simulation.width || cell.y >= this.simulation.height) return;
+      this.probeX = cell.x;
+      this.probeY = cell.y;
+      this.updateFieldIndicator();
+    };
+    viewport.addEventListener("pointermove", selectProbe);
+    viewport.addEventListener("pointerdown", selectProbe);
+    this.updateFieldIndicator();
+  }
+
+  private updateFieldIndicator(): void {
+    if (!this.indicator) return;
+    const index = this.probeY * this.simulation.width + this.probeX;
+    const rawTemperature = this.simulation.temperature?.()[index];
+    const pressure = this.simulation.pressure?.()[index];
+    const temperature = rawTemperature ? (rawTemperature / 10 - 273.15).toFixed(1) + " °C" : "—";
+    const pressureText = pressure === undefined ? "—" : (pressure >= 0 ? "+" : "") + pressure.toFixed(2);
+    this.indicator.innerHTML = "<span><b>Pressure</b>" + pressureText + "</span><span><b>Temperature</b>" + temperature + "</span>";
+  }
 
   private async share(): Promise<boolean> {
     const encoded = await encodeSharedWorld(this.simulation.saveWorld());
