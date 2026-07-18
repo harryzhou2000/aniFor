@@ -192,6 +192,7 @@ async function auditMode(mode) {
     if (mode === 'canvas2d') {
       mobile = await auditMobile(cdp, screenshot ? variantScreenshotPath(screenshot, 'mobile') : undefined);
     }
+    const renderScaleOne = await auditRenderScaleOne(cdp, mode, dpr);
     const nativeSemantics = await auditNativeSemantics(cdp, mode, dpr, screenshot);
     await sleep(50);
     assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
@@ -205,6 +206,7 @@ async function auditMode(mode) {
       lifePreset: nativeSemantics.lifePreset,
       wheelAnchorErrorCells: round(wheelAnchorError, 5),
       middlePanDelta: { x: round(afterPan.panX - beforePan.panX, 3), y: round(afterPan.panY - beforePan.panY, 3) },
+      renderScaleOne,
       toolFilters: { height: round(initial.ui.filters.height), rows: filterRows(initial.ui.filterButtons) },
       resizeMetrics,
       ...(mobile ? { mobile } : {}),
@@ -216,6 +218,105 @@ async function auditMode(mode) {
     await terminate(chrome);
     await rm(profile, { recursive: true, force: true });
   }
+}
+
+async function auditRenderScaleOne(cdp, mode, dpr) {
+  await setDesktopMetrics(cdp, 1280, 720, dpr);
+  const navigateScale = async (outputScale) => {
+    const query = new URLSearchParams({
+      scene: 'render-lab', inputAudit: '1', renderScale: String(outputScale),
+      ...(mode === 'canvas2d' ? { renderer: 'canvas2d' } : {}),
+    });
+    await cdp.send('Page.navigate', { url: `${ORIGIN}/?${query}` });
+    await waitFor(() => evaluate(cdp, `(() => {
+      const scale = new URLSearchParams(location.search).get('renderScale') === ${JSON.stringify(String(outputScale))};
+      const fallback = document.querySelector('.status')?.textContent?.includes('TypeScript deterministic fallback');
+      return scale && fallback && Boolean(window.__ANIFOR_INPUT_AUDIT__ && document.documentElement);
+    })()`), 15_000, `renderScale=${outputScale} input audit API (${mode})`);
+    await waitFor(() => evaluate(cdp, `window.__ANIFOR_INPUT_AUDIT__.backend().backend === ${JSON.stringify(mode)}`),
+      15_000, `renderScale=${outputScale} ${mode} backend`);
+    await evaluate(cdp, `window.__ANIFOR_INPUT_AUDIT__.clear(); window.__ANIFOR_INPUT_AUDIT__.setRadius(0); window.__ANIFOR_INPUT_AUDIT__.resetView(); true`);
+    let previous;
+    let stableSamples = 0;
+    return waitFor(async () => {
+      const current = await metrics(cdp);
+      const backingReady = current.backing.width === WORLD_WIDTH * outputScale
+        && current.backing.height === WORLD_HEIGHT * outputScale;
+      const viewportReady = current.window.width === 1280 && current.window.height === 720;
+      if (!backingReady || !viewportReady) return false;
+      if (previous
+        && Math.abs(current.canvas.width - previous.canvas.width) < 0.05
+        && Math.abs(current.canvas.height - previous.canvas.height) < 0.05) stableSamples++;
+      else stableSamples = 0;
+      previous = current;
+      return stableSamples >= 3 ? current : false;
+    }, 6_000, `renderScale=${outputScale} ${mode} stable geometry`);
+  };
+
+  const reference = await navigateScale(2);
+  assertGeometry(reference, `renderScale=2 ${mode}`, 2);
+  const initial = await navigateScale(1);
+  assertGeometry(initial, `renderScale=1 ${mode}`, 1);
+  assertContained(initial, `renderScale=1 ${mode}`);
+  assertToolboxGeometry(initial, `renderScale=1 ${mode}`, 68);
+  assert(Math.abs(initial.canvas.width - reference.canvas.width) < 0.1
+    && Math.abs(initial.canvas.height - reference.canvas.height) < 0.1,
+  `${mode}: renderScale changed CSS canvas geometry (${reference.canvas.width.toFixed(2)}x${reference.canvas.height.toFixed(2)} -> ${initial.canvas.width.toFixed(2)}x${initial.canvas.height.toFixed(2)})`);
+
+  const landmarks = [{ x: 29, y: 33 }, { x: 306, y: 192 }, { x: 581, y: 347 }];
+  for (const landmark of landmarks) {
+    const point = worldClient(initial.canvas, { x: landmark.x + 0.5, y: landmark.y + 0.5 });
+    await mouseClick(cdp, point.x, point.y, 'left');
+  }
+  await sleep(80);
+  const painted = await evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    return {
+      cells: ${JSON.stringify(landmarks)}.map(({x, y}) => audit.cell(x, y)),
+      occupied: audit.occupiedCells(),
+    };
+  })()`);
+  assert(painted.cells.every((cell) => cell === painted.cells[0] && cell > 0),
+    `${mode}: renderScale=1 landmark cells mismatch (${painted.cells.join(', ')})`);
+  assert(painted.occupied === landmarks.length,
+    `${mode}: renderScale=1 expected ${landmarks.length} exact cells, got ${painted.occupied}`);
+
+  await evaluate(cdp, `window.__ANIFOR_INPUT_AUDIT__.clear(); true`);
+  const anchor = worldClient(initial.canvas, { x: 431.25, y: 117.75 });
+  const beforeWheel = await screenWorld(cdp, anchor);
+  await cdp.send('Input.dispatchMouseEvent', {
+    type: 'mouseWheel', x: anchor.x, y: anchor.y, deltaX: 0, deltaY: -120, modifiers: 0,
+  });
+  await sleep(100);
+  const afterWheel = await screenWorld(cdp, anchor);
+  const zoomed = await evaluate(cdp, `window.__ANIFOR_INPUT_AUDIT__.viewState()`);
+  const wheelAnchorError = Math.hypot(afterWheel.x - beforeWheel.x, afterWheel.y - beforeWheel.y);
+  assert(zoomed.zoom > 1.2, `${mode}: renderScale=1 wheel did not increase zoom`);
+  assert(wheelAnchorError < 0.2,
+    `${mode}: renderScale=1 wheel anchor drifted ${wheelAnchorError.toFixed(4)} cells`);
+
+  await cdp.send('Input.dispatchMouseEvent', {
+    type: 'mousePressed', x: anchor.x, y: anchor.y, button: 'middle', buttons: 4, clickCount: 1,
+  });
+  await cdp.send('Input.dispatchMouseEvent', {
+    type: 'mouseMoved', x: anchor.x + 42, y: anchor.y + 27, button: 'middle', buttons: 4,
+  });
+  await cdp.send('Input.dispatchMouseEvent', {
+    type: 'mouseReleased', x: anchor.x + 42, y: anchor.y + 27, button: 'middle', buttons: 0, clickCount: 1,
+  });
+  await sleep(80);
+  const panned = await evaluate(cdp, `window.__ANIFOR_INPUT_AUDIT__.viewState()`);
+  const panX = panned.panX - zoomed.panX;
+  const panY = panned.panY - zoomed.panY;
+  assert(Math.abs(panX - 42) < 0.12 && Math.abs(panY - 27) < 0.12,
+    `${mode}: renderScale=1 middle-pan mismatch (${panX.toFixed(3)}, ${panY.toFixed(3)})`);
+  return {
+    backing: `${initial.backing.width}x${initial.backing.height}`,
+    cssCanvas: `${round(initial.canvas.width, 2)}x${round(initial.canvas.height, 2)}`,
+    landmarkCells: landmarks.length,
+    wheelAnchorErrorCells: round(wheelAnchorError, 5),
+    middlePanDelta: { x: round(panX, 3), y: round(panY, 3) },
+  };
 }
 
 async function auditNativeSemantics(cdp, mode, dpr, screenshot) {
@@ -463,10 +564,11 @@ async function metrics(cdp) {
   })()`);
 }
 
-function assertGeometry(value, label) {
+function assertGeometry(value, label, outputScale = 2) {
   assert(Math.abs(value.canvas.width / value.canvas.height - WORLD_ASPECT) < 0.0001, `${label}: canvas aspect changed`);
-  assert(value.backing.width === 1224 && value.backing.height === 768, `${label}: backing is ${value.backing.width}x${value.backing.height}`);
-  assert(value.outputScale === '2', `${label}: outputScale is ${value.outputScale}`);
+  assert(value.backing.width === WORLD_WIDTH * outputScale && value.backing.height === WORLD_HEIGHT * outputScale,
+    `${label}: backing is ${value.backing.width}x${value.backing.height}`);
+  assert(value.outputScale === String(outputScale), `${label}: outputScale is ${value.outputScale}`);
 }
 
 function assertContained(value, label) {
