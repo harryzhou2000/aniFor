@@ -56,6 +56,28 @@ int ToPowderType(int material)
 	case 12: return PT_ICEI;
 	case 13: return PT_ACID;
 	case 14: return PT_GUNP;
+	case 21: return PT_STNE;
+	case 22: return PT_BRCK;
+	case 23: return PT_METL;
+	case 24: return PT_GLAS;
+	case 25: return PT_CRMC;
+	case 26: return PT_CNCT;
+	case 27: return PT_WAX;
+	case 28: return PT_CLST;
+	case 29: return PT_PQRT;
+	case 30: return PT_THRM;
+	case 31: return PT_PLEX;
+	case 32: return PT_NITR;
+	case 33: return PT_FWRK;
+	case 34: return PT_DSTW;
+	case 35: return PT_DESL;
+	case 36: return PT_MERC;
+	case 37: return PT_LNTG;
+	case 38: return PT_SOAP;
+	case 39: return PT_O2;
+	case 40: return PT_H2;
+	case 41: return PT_CO2;
+	case 42: return PT_NBLE;
 	default: return PT_NONE;
 	}
 }
@@ -67,18 +89,12 @@ uint8_t ToStillroomType(int type)
 	case PT_SAND:
 		return 1;
 	case PT_WATR:
-	case PT_DSTW:
-	case PT_SLTW:
 		return 2;
 	case PT_DMND:
-	case PT_STNE:
-	case PT_BRCK:
 		return 3;
 	case PT_FIRE:
-	case PT_PLSM:
 		return 4;
 	case PT_SMKE:
-	case PT_WTRV:
 	case PT_FOG:
 		return 5;
 	case PT_DUST: return 6;
@@ -90,9 +106,52 @@ uint8_t ToStillroomType(int type)
 	case PT_ICEI: return 12;
 	case PT_ACID: return 13;
 	case PT_GUNP: return 14;
-	default:
-		return type ? 3 : 0;
+	case PT_WTRV: return 15;
+	case PT_SLTW: return 16;
+	case PT_GAS: return 17;
+	case PT_SNOW: return 18;
+	case PT_BCOL:
+	case PT_COAL:
+		return 19;
+	case PT_PLSM: return 20;
+	case PT_STNE: return 21;
+	case PT_BRCK: return 22;
+	case PT_METL: return 23;
+	case PT_GLAS: return 24;
+	case PT_CRMC: return 25;
+	case PT_CNCT: return 26;
+	case PT_WAX: return 27;
+	case PT_CLST: return 28;
+	case PT_PQRT: return 29;
+	case PT_THRM: return 30;
+	case PT_PLEX: return 31;
+	case PT_NITR: return 32;
+	case PT_FWRK: return 33;
+	case PT_DSTW: return 34;
+	case PT_DESL: return 35;
+	case PT_MERC: return 36;
+	case PT_LNTG: return 37;
+	case PT_SOAP: return 38;
+	case PT_O2: return 39;
+	case PT_H2: return 40;
+	case PT_CO2: return 41;
+	case PT_NBLE: return 42;
+	default: break;
 	}
+
+	// TPT has hundreds of elements and reactions can produce types that are not
+	// brush tools in Stillroom. Project them by physical state instead of the old
+	// catch-all stone rendering, so newly introduced upstream products remain
+	// visible without expanding the public brush ABI for every TPT element.
+	if (type <= PT_NONE || type >= PT_NUM)
+		return 0;
+	auto const properties = simulationData->elements[type].Properties;
+	if (properties & TYPE_ENERGY) return 4;
+	if (properties & TYPE_GAS) return 5;
+	if (properties & TYPE_LIQUID) return 2;
+	if (properties & TYPE_PART) return 1;
+	if (properties & TYPE_SOLID) return 3;
+	return 3;
 }
 
 void ExtractFields()

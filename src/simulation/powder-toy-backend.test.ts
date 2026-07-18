@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { Material } from '../shared/materials';
+import { MATERIALS, Material } from '../shared/materials';
 import { PowderToyBackend } from './powder-toy-backend';
 
 const moduleArtifact = new URL('../../public/wasm/stillroom_core.js', import.meta.url);
@@ -23,15 +23,11 @@ describe('direct Powder Toy backend', () => {
 
   it('projects every expanded material as its stable frontend ID', async () => {
     const simulation = await PowderToyBackend.load(moduleArtifact.href);
-    const materials = [
-      Material.Dust, Material.Salt, Material.Oil,
-      Material.Wood, Material.Plant, Material.Lava,
-      Material.Ice, Material.Acid, Material.Gunpowder,
-    ] as const;
+    const materials = MATERIALS.map(({ id }) => id);
     const y = 120;
-    materials.forEach((material, index) => simulation.paint(180 + index * 20, y, material, 0));
+    materials.forEach((material, index) => simulation.paint(30 + index * 15, y, material, 0));
     const cells = simulation.cells();
-    materials.forEach((material, index) => expect(cells[y * simulation.width + 180 + index * 20]).toBe(material));
+    materials.forEach((material, index) => expect(cells[y * simulation.width + 30 + index * 15]).toBe(material));
   });
 
   it('settles water without air-driven ejection', async () => {
