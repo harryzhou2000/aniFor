@@ -1,8 +1,17 @@
 import { describe, expect, it } from 'vitest';
 import { ALL_MATERIALS, Material } from '../shared/materials';
 import { PowderToyBackend } from './powder-toy-backend';
+import { SimulationTool } from './simulation-tools';
 
 const moduleArtifact = new URL('../../public/wasm/stillroom_core.js', import.meta.url);
+
+interface RawPowderModule {
+  HEAPU8: Uint8Array;
+  _powder_init(): number;
+  _powder_cells(): number;
+  _powder_pressure(): number;
+  _powder_apply_tool(tool: number, x: number, y: number, radius: number, deltaX: number, deltaY: number): number;
+}
 
 describe('direct Powder Toy backend', () => {
   it('loads the pinned 612x384 engine and exposes rendering fields', async () => {
@@ -68,6 +77,159 @@ describe('direct Powder Toy backend', () => {
     let peakPressure = 0;
     for (const pressure of simulation.pressure()) peakPressure = Math.max(peakPressure, Math.abs(pressure));
     expect(peakPressure).toBeGreaterThan(0.01);
+  });
+
+  it('applies native pressure, thermal, and vector wind tools', async () => {
+    const simulation = await PowderToyBackend.load(moduleArtifact.href);
+    const center = { x: 306, y: 180 };
+    simulation.paint(center.x, center.y, Material.Wall, 0);
+    simulation.cells();
+    const centerIndex = center.y * simulation.width + center.x;
+    const initialTemperature = simulation.temperature()[centerIndex];
+
+    simulation.applySimulationTool(SimulationTool.Heat, center.x, center.y, 0);
+    simulation.cells();
+    expect(simulation.temperature()[centerIndex]).toBe(initialTemperature + 20);
+    simulation.applySimulationTool(SimulationTool.Cool, center.x, center.y, 0);
+    simulation.cells();
+    expect(simulation.temperature()[centerIndex]).toBe(initialTemperature);
+
+    const initialPressure = simulation.pressure()[centerIndex];
+    simulation.applySimulationTool(SimulationTool.Air, center.x, center.y, 0);
+    simulation.cells();
+    expect(simulation.pressure()[centerIndex]).toBeCloseTo(initialPressure + 0.05, 5);
+    simulation.applySimulationTool(SimulationTool.Vacuum, center.x, center.y, 0);
+    simulation.cells();
+    expect(simulation.pressure()[centerIndex]).toBeCloseTo(initialPressure, 5);
+
+    simulation.clear();
+    const control = await PowderToyBackend.load(moduleArtifact.href);
+    for (const target of [simulation, control]) target.paint(center.x, center.y, Material.Dust, 4);
+    simulation.applySimulationTool(SimulationTool.Wind, center.x, center.y, 10, 28, 0);
+    for (let step = 0; step < 12; step++) { simulation.step(); control.step(); }
+    const centroidX = (backend: PowderToyBackend): number => {
+      const cells = backend.cells();
+      let total = 0;
+      let count = 0;
+      for (let index = 0; index < cells.length; index++) {
+        if (cells[index] !== Material.Dust) continue;
+        total += index % backend.width;
+        count++;
+      }
+      return total / Math.max(1, count);
+    };
+    expect(centroidX(simulation)).toBeGreaterThan(centroidX(control) + 1);
+  });
+
+  it('passes Wind through native air-wall blocking before particle advection', async () => {
+    const openWind = await PowderToyBackend.load(moduleArtifact.href);
+    const blockedWind = await PowderToyBackend.load(moduleArtifact.href);
+    const blockedControl = await PowderToyBackend.load(moduleArtifact.href);
+    const point = { x: 304, y: 180 };
+    for (const target of [blockedWind, blockedControl]) target.paintWall(point.x, point.y, 16, 0);
+    for (const target of [openWind, blockedWind, blockedControl]) target.paint(point.x, point.y, Material.Dust, 0);
+    openWind.applySimulationTool(SimulationTool.Wind, point.x, point.y, 0, 400, 0);
+    blockedWind.applySimulationTool(SimulationTool.Wind, point.x, point.y, 0, 400, 0);
+    for (const target of [openWind, blockedWind, blockedControl]) target.step();
+
+    const dustVelocityX = (backend: PowderToyBackend): number => {
+      const cells = backend.cells();
+      const velocities = backend.velocity();
+      let total = 0;
+      for (let index = 0; index < cells.length; index++) {
+        if (cells[index] !== Material.Dust) continue;
+        total += velocities[index * 2];
+      }
+      return total;
+    };
+    expect(dustVelocityX(openWind)).toBeGreaterThan(dustVelocityX(blockedWind) + 5);
+    expect(dustVelocityX(blockedWind)).toBe(dustVelocityX(blockedControl));
+  });
+
+  it('does not reactivate unrelated residual air when a Wind gesture starts', async () => {
+    const wind = await PowderToyBackend.load(moduleArtifact.href);
+    const control = await PowderToyBackend.load(moduleArtifact.href);
+    for (const target of [wind, control]) {
+      for (let x = 30; x < target.width - 30; x += 2) target.paint(x, 220, Material.Wall, 1);
+      target.paint(Math.floor(target.width / 2), 155, Material.Water, 12);
+      for (let step = 0; step < 180; step++) target.step();
+      target.paint(210, 90, Material.Dust, 12);
+      for (let step = 0; step < 25; step++) target.step();
+    }
+
+    // AIR_VELOCITYOFF leaves particle-authored coarse vx/vy behind after a
+    // frame. Starting Wind far away must not globally reactivate that residue.
+    wind.applySimulationTool(SimulationTool.Wind, 560, 40, 0, 400, 0);
+    wind.step();
+    control.step();
+
+    const windCells = wind.cells();
+    const controlCells = control.cells();
+    const windVelocity = wind.velocity();
+    const controlVelocity = control.velocity();
+    let cellDifferences = 0;
+    let particleVelocityDifference = 0;
+    let waterVelocityDifference = 0;
+    for (let index = 0; index < windCells.length; index++) {
+      if (windCells[index] !== controlCells[index]) cellDifferences++;
+      const xDifference = Math.abs(windVelocity[index * 2] - controlVelocity[index * 2]);
+      const yDifference = Math.abs(windVelocity[index * 2 + 1] - controlVelocity[index * 2 + 1]);
+      particleVelocityDifference += xDifference + yDifference;
+      if (windCells[index] === Material.Water || controlCells[index] === Material.Water) {
+        waterVelocityDifference += xDifference + yDifference;
+      }
+    }
+    expect(cellDifferences).toBe(0);
+    expect(waterVelocityDifference).toBe(0);
+    expect(particleVelocityDifference).toBeLessThanOrEqual(16);
+  }, 15000);
+
+  it('preserves an unstepped Wind vector through a native OPS round trip', async () => {
+    const source = await PowderToyBackend.load(moduleArtifact.href);
+    const point = { x: 304, y: 180 };
+    source.paint(point.x, point.y, Material.Dust, 0);
+    source.applySimulationTool(SimulationTool.Wind, point.x, point.y, 0, 400, 0);
+    const file = source.saveFile();
+
+    const restored = await PowderToyBackend.load(moduleArtifact.href);
+    // Reload both sides so OPS velocity quantization is part of the comparison.
+    source.loadFile(file);
+    restored.loadFile(file);
+    source.step();
+    restored.step();
+
+    expect(restored.cells()).toEqual(source.cells());
+    expect(restored.pressure()).toEqual(source.pressure());
+    expect(restored.velocity()).toEqual(source.velocity());
+    const cells = restored.cells();
+    const velocities = restored.velocity();
+    const dustVelocity = Array.from(cells).reduce((total, material, index) => (
+      material === Material.Dust ? total + velocities[index * 2] : total
+    ), 0);
+    expect(dustVelocity).toBeGreaterThan(5);
+  }, 15000);
+
+  it('rejects invalid native tool requests without contaminating the air field', async () => {
+    const imported = await import(moduleArtifact.href) as { default: () => Promise<RawPowderModule> };
+    const module = await imported.default();
+    expect(module._powder_init()).toBe(1);
+    const center = { x: 306, y: 180 };
+    const centerIndex = center.y * 612 + center.x;
+    const pressure = (): Float32Array => {
+      module._powder_cells();
+      return new Float32Array(module.HEAPU8.buffer, module._powder_pressure(), 612 * 384);
+    };
+    const before = pressure()[centerIndex];
+
+    expect(module._powder_apply_tool(99, center.x, center.y, 0, 0, 0)).toBe(-1);
+    expect(module._powder_apply_tool(SimulationTool.Air, -1, center.y, 0, 0, 0)).toBe(-1);
+    expect(module._powder_apply_tool(SimulationTool.Air, center.x, center.y, 65, 0, 0)).toBe(-1);
+    expect(module._powder_apply_tool(SimulationTool.Wind, center.x, center.y, 0, 613, 0)).toBe(-1);
+    expect(module._powder_apply_tool(SimulationTool.Wind, center.x, center.y, 0, Number.NaN, Infinity)).toBe(0);
+
+    const after = pressure();
+    expect(after[centerIndex]).toBe(before);
+    expect(Array.from(after).every(Number.isFinite)).toBe(true);
   });
 
   it('settles water without air-driven ejection', async () => {

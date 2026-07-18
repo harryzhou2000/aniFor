@@ -18,7 +18,8 @@ function inputHarness() {
     resetView: vi.fn(),
   };
   const draw = vi.fn();
-  new WorldInputController(element, viewport, { draw });
+  const drawSegment = vi.fn();
+  new WorldInputController(element, viewport, { draw, drawSegment });
   const dispatchPointer = (name: string, overrides: Partial<PointerEvent> = {}) => {
     const event = {
       pointerId: 1, pointerType: 'mouse', button: 0, clientX: 0, clientY: 0,
@@ -27,7 +28,7 @@ function inputHarness() {
     listeners.get(name)!(event);
     return event;
   };
-  return { listeners, element, view, viewport, draw, dispatchPointer };
+  return { listeners, element, view, viewport, draw, drawSegment, dispatchPointer };
 }
 
 describe('wheelZoomRatio', () => {
@@ -82,7 +83,7 @@ describe('WorldInputController pointer modes', () => {
   });
 
   it('uses one touch for a continuous brush and two touches only for pan and zoom', () => {
-    const { viewport, draw, dispatchPointer } = inputHarness();
+    const { viewport, draw, drawSegment, dispatchPointer } = inputHarness();
     dispatchPointer('pointerdown', { pointerId: 1, pointerType: 'touch', clientX: 100, clientY: 100 });
     expect(draw).not.toHaveBeenCalled();
     dispatchPointer('pointermove', { pointerId: 1, pointerType: 'touch', clientX: 140, clientY: 120 });
@@ -94,6 +95,7 @@ describe('WorldInputController pointer modes', () => {
     viewport.getViewState.mockReturnValue(pinchView);
     dispatchPointer('pointerdown', { pointerId: 2, pointerType: 'touch', clientX: 200, clientY: 100 });
     draw.mockClear();
+    drawSegment.mockClear();
     viewport.applyGesture.mockClear();
     dispatchPointer('pointermove', { pointerId: 1, pointerType: 'touch', clientX: 150, clientY: 130 });
     dispatchPointer('pointermove', { pointerId: 2, pointerType: 'touch', clientX: 240, clientY: 120 });
@@ -104,9 +106,11 @@ describe('WorldInputController pointer modes', () => {
       Math.hypot(90, -10) / Math.hypot(60, -20),
     );
     expect(draw).not.toHaveBeenCalled();
+    expect(drawSegment).not.toHaveBeenCalled();
 
     dispatchPointer('pointerup', { pointerId: 2, pointerType: 'touch', clientX: 240, clientY: 120 });
     expect(draw).not.toHaveBeenCalled();
+    expect(drawSegment).not.toHaveBeenCalled();
     viewport.applyGesture.mockClear();
     dispatchPointer('pointermove', { pointerId: 1, pointerType: 'touch', clientX: 160, clientY: 140 });
     expect(draw).toHaveBeenCalledWith({ x: 16, y: 14 }, false);
@@ -132,17 +136,20 @@ describe('WorldInputController pointer modes', () => {
   });
 
   it('keeps primary and secondary drags continuous and semantically separate', () => {
-    const { draw, dispatchPointer } = inputHarness();
+    const { draw, drawSegment, dispatchPointer } = inputHarness();
     dispatchPointer('pointerdown', { pointerId: 1, button: 0, clientX: 20, clientY: 30 });
     dispatchPointer('pointermove', { pointerId: 1, button: 0, clientX: 60, clientY: 50 });
     dispatchPointer('pointerup', { pointerId: 1, button: 0, clientX: 60, clientY: 50 });
     expect(draw).toHaveBeenCalledWith({ x: 2, y: 3 }, false);
     expect(draw).toHaveBeenCalledWith({ x: 6, y: 5 }, false);
+    expect(drawSegment).toHaveBeenCalledWith({ x: 2, y: 3 }, { x: 6, y: 5 }, false);
 
     draw.mockClear();
+    drawSegment.mockClear();
     dispatchPointer('pointerdown', { pointerId: 2, button: 2, clientX: 80, clientY: 90 });
     dispatchPointer('pointermove', { pointerId: 2, button: 2, clientX: 100, clientY: 100 });
     expect(draw.mock.calls.every(([, erase]) => erase === true)).toBe(true);
+    expect(drawSegment).toHaveBeenCalledWith({ x: 8, y: 9 }, { x: 10, y: 10 }, true);
   });
 
   it('stops navigation when pointer capture is lost', () => {

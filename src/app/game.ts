@@ -6,8 +6,9 @@ import { decodeSharedWorld } from '../shared/share-codec';
 import { exportWorldFile, importWorldFile, MAX_WORLD_FILE_BYTES, worldFileName } from '../shared/world-file';
 import type { SimulationBackend } from '../simulation';
 import { mountControls } from '../ui/controls';
-import { buildToolCatalog, type WallToolInfo } from '../ui/tool-catalog';
+import { buildToolCatalog, type SimToolInfo, type WallToolInfo } from '../ui/tool-catalog';
 import { WorldInputController } from '../ui/world-input';
+import { drawToolPoint, drawToolSegment } from './tool-dispatch';
 
 const AUTOSAVE_KEY = 'stillroom-world-v1';
 
@@ -16,6 +17,7 @@ export class Game {
   private readonly renderer: MaterialRenderer;
   private material = Material.Sand;
   private wallTool?: WallToolInfo;
+  private simulationTool?: SimToolInfo;
   private radius = 7;
   private eraseMode = false;
   private paused = false;
@@ -53,26 +55,41 @@ export class Game {
     new WorldInputController(viewport, this.renderer, {
       draw: ({ x, y }, erase) => {
         erase ||= this.eraseMode;
-        if (this.wallTool && this.simulation.paintWall && this.simulation.eraseWall) {
-          if (erase) this.simulation.eraseWall(x, y, this.radius + 1);
-          else this.simulation.paintWall(x, y, this.wallTool.nativeWall, this.radius);
-        } else if (erase) this.simulation.erase(x, y, this.radius + 1);
-        else this.simulation.paint(x, y, this.material, this.radius);
+        drawToolPoint(this.simulation, { x, y }, {
+          material: this.material, wallTool: this.wallTool,
+          simulationTool: this.simulationTool, radius: this.radius,
+        }, erase);
+      },
+      drawSegment: (start, end, erase) => {
+        erase ||= this.eraseMode;
+        drawToolSegment(this.simulation, start, end, {
+          material: this.material, wallTool: this.wallTool,
+          simulationTool: this.simulationTool, radius: this.radius,
+        }, erase);
       },
     });
     this.mountFieldIndicator(viewport);
     const toolbox = this.root.querySelector<HTMLElement>('.toolbox');
     if (!toolbox) throw new Error('Missing simulation toolbox');
     mountControls(toolbox, {
-      onMaterial: (material) => { this.material = material; this.wallTool = undefined; },
+      onMaterial: (material) => { this.material = material; this.wallTool = undefined; this.simulationTool = undefined; },
       onRadius: (radius) => { this.radius = radius; },
       onPause: () => { this.paused = !this.paused; },
       onEraseMode: (erase) => { this.eraseMode = erase; },
       onSaveFile: () => this.downloadWorldFile(),
       onOpenFile: (file) => this.openWorldFile(file),
       onClear: () => { this.simulation.clear(); localStorage.removeItem(AUTOSAVE_KEY); },
-      onTool: (tool) => { if (tool.kind === 'wall') this.wallTool = tool; },
-    }, buildToolCatalog(MATERIALS, { walls: Boolean(this.simulation.paintWall && this.simulation.eraseWall) }));
+      onTool: (tool) => {
+        if (tool.kind === 'wall') { this.wallTool = tool; this.simulationTool = undefined; }
+        else if (tool.kind === 'force' || tool.kind === 'thermal' || tool.kind === 'utility') {
+          this.simulationTool = tool;
+          this.wallTool = undefined;
+        }
+      },
+    }, buildToolCatalog(MATERIALS, {
+      walls: Boolean(this.simulation.paintWall && this.simulation.eraseWall),
+      simulationTools: Boolean(this.simulation.applySimulationTool),
+    }));
     if (renderLab || wallLab) {
       const status = this.root.querySelector('.status');
       const sceneName = renderLab ? 'render lab' : 'native wall lab';

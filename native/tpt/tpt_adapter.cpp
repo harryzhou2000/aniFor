@@ -25,6 +25,29 @@ uint8_t wallField[FIELD_SIZE];
 uint16_t temperatureField[FIELD_SIZE];
 float pressureField[FIELD_SIZE];
 int8_t velocityField[FIELD_SIZE * 2];
+bool windPending = false;
+
+constexpr int STILLROOM_TOOL_AIR = 1;
+constexpr int STILLROOM_TOOL_VACUUM = 2;
+constexpr int STILLROOM_TOOL_WIND = 3;
+constexpr int STILLROOM_TOOL_HEAT = 4;
+constexpr int STILLROOM_TOOL_COOL = 5;
+
+Particle *ParticleAt(int x, int y)
+{
+	auto packed = simulation->pmap[y][x];
+	if (!TYP(packed)) packed = simulation->photons[y][x];
+	return TYP(packed) ? &simulation->parts[ID(packed)] : nullptr;
+}
+
+void RefreshAirBlockCell(int y, int x)
+{
+	auto const wall = simulation->bmap[y][x];
+	auto const blocksAir = wall == WL_WALL || wall == WL_WALLELEC || wall == WL_BLOCKAIR
+		|| (wall == WL_EWALL && !simulation->emap[y][x]);
+	simulation->air->bmap_blockair[y][x] = blocksAir;
+	simulation->air->bmap_blockairh[y][x] = (blocksAir || wall == WL_GRAV) ? 0x8 : 0;
+}
 
 void EnsureSimulation()
 {
@@ -35,9 +58,9 @@ void EnsureSimulation()
 		simulation = Simulation::Factory();
 		simulation->rng.seed(STILLROOM_SEED);
 		simulation->ensureDeterminism = true;
+		simulation->air->airMode = AIR_VELOCITYOFF;
+		simulation->air->vorticityCoeff = 0.0f;
 	}
-	simulation->air->airMode = AIR_VELOCITYOFF;
-	simulation->air->vorticityCoeff = 0.0f;
 }
 
 int ToPowderType(int material)
@@ -462,6 +485,9 @@ __attribute__((visibility("default"))) void powder_clear()
 	simulation->rng.seed(STILLROOM_SEED);
 	simulation->ensureDeterminism = true;
 	simulation->currentTick = 0;
+	simulation->air->airMode = AIR_VELOCITYOFF;
+	simulation->air->vorticityCoeff = 0.0f;
+	windPending = false;
 	ExtractFields();
 }
 __attribute__((visibility("default"))) void powder_set(int x, int y, int material)
@@ -482,13 +508,81 @@ __attribute__((visibility("default"))) void powder_set_wall(int x, int y, int wa
 	for (int wallY = std::max(0, centerY - cellRadius); wallY <= std::min(YCELLS - 1, centerY + cellRadius); ++wallY)
 	{
 		for (int wallX = std::max(0, centerX - cellRadius); wallX <= std::min(XCELLS - 1, centerX + cellRadius); ++wallX)
+		{
 			simulation->bmap[wallY][wallX] = wall;
+			RefreshAirBlockCell(wallY, wallX);
+		}
 	}
+}
+__attribute__((visibility("default"))) int powder_apply_tool(int tool, int x, int y, int radius, int deltaX, int deltaY)
+{
+	EnsureSimulation();
+	if (x < 0 || y < 0 || x >= XRES || y >= YRES || radius < 0 || radius > 64) return -1;
+	if (tool < STILLROOM_TOOL_AIR || tool > STILLROOM_TOOL_COOL) return -1;
+	if (tool == STILLROOM_TOOL_WIND && (deltaX < -XRES || deltaX > XRES || deltaY < -YRES || deltaY > YRES)) return -1;
+	if (tool == STILLROOM_TOOL_WIND && !deltaX && !deltaY) return 0;
+	if (tool == STILLROOM_TOOL_WIND && !windPending)
+	{
+		// AIR_VELOCITYOFF intentionally leaves particle-authored vx/vy behind after
+		// UpdateParticles. A new Wind gesture owns its one AIR_ON frame, so discard
+		// those inactive residuals before accumulating the authored drag segments.
+		for (int airY = 0; airY < YCELLS; ++airY)
+		{
+			std::fill_n(simulation->vx[airY], XCELLS, 0.0f);
+			std::fill_n(simulation->vy[airY], XCELLS, 0.0f);
+		}
+	}
+	int applied = 0;
+	auto const radiusSquared = radius * radius;
+	for (int targetY = std::max(0, y - radius); targetY <= std::min(YRES - 1, y + radius); ++targetY)
+	{
+		for (int targetX = std::max(0, x - radius); targetX <= std::min(XRES - 1, x + radius); ++targetX)
+		{
+			auto const offsetX = targetX - x;
+			auto const offsetY = targetY - y;
+			if (offsetX * offsetX + offsetY * offsetY > radiusSquared) continue;
+			auto const airX = targetX / CELL;
+			auto const airY = targetY / CELL;
+			if (tool == STILLROOM_TOOL_AIR || tool == STILLROOM_TOOL_VACUUM)
+			{
+				auto const pressureDelta = tool == STILLROOM_TOOL_AIR ? 0.05f : -0.05f;
+				simulation->pv[airY][airX] = std::clamp(simulation->pv[airY][airX] + pressureDelta, MIN_PRESSURE, MAX_PRESSURE);
+				++applied;
+			}
+			else if (tool == STILLROOM_TOOL_WIND)
+			{
+				simulation->vx[airY][airX] += deltaX * 0.01f;
+				simulation->vy[airY][airX] += deltaY * 0.01f;
+				++applied;
+			}
+			else if (auto *part = ParticleAt(targetX, targetY))
+			{
+				auto const magnitude = (part->type == PT_PUMP || part->type == PT_GPMP) ? 0.1f : 2.0f;
+				auto const temperatureDelta = tool == STILLROOM_TOOL_HEAT ? magnitude : -magnitude;
+				part->temp = std::clamp(part->temp + temperatureDelta, 0.0f, MAX_TEMP);
+				++applied;
+			}
+		}
+	}
+	if (tool == STILLROOM_TOOL_WIND && applied)
+	{
+		// Match upstream WIND storage so paused native saves retain the authored
+		// vector. The next step enables velocity processing for exactly one frame.
+		windPending = true;
+		simulation->air->airMode = AIR_ON;
+	}
+	return applied;
 }
 __attribute__((visibility("default"))) void powder_step()
 {
 	EnsureSimulation();
+	simulation->air->airMode = windPending ? AIR_ON : AIR_VELOCITYOFF;
 	simulation->BeforeSim(true);
+	// Ordinary headless air velocity remains disabled for stable liquid settling,
+	// but authored WIND has now passed through TPT's diffusion, pressure coupling,
+	// clamping, and air-blocking wall logic before particle advection.
+	simulation->air->airMode = AIR_VELOCITYOFF;
+	windPending = false;
 	simulation->UpdateParticles(0, NPART);
 	simulation->AfterSim();
 }
@@ -499,6 +593,7 @@ __attribute__((visibility("default"))) uint8_t *powder_save()
 	{
 		auto save = simulation->Save(true, RES.OriginRect());
 		save->ensureDeterminism = true;
+		save->stillroomWindPending = windPending;
 		auto serialised = save->Serialise();
 		saveBuffer = std::move(serialised.second);
 		return reinterpret_cast<uint8_t *>(saveBuffer.data());
@@ -525,9 +620,11 @@ __attribute__((visibility("default"))) int powder_load_commit()
 		if (save.hasRngState) candidate->rng.state(save.rngState);
 		else candidate->rng.seed(STILLROOM_SEED);
 		candidate->ensureDeterminism = true;
-		candidate->air->airMode = AIR_VELOCITYOFF;
+		auto const candidateWindPending = save.stillroomWindPending;
+		candidate->air->airMode = candidateWindPending ? AIR_ON : AIR_VELOCITYOFF;
 		candidate->air->vorticityCoeff = 0.0f;
 		simulation = std::move(candidate);
+		windPending = candidateWindPending;
 		ExtractFields();
 		return 1;
 	}

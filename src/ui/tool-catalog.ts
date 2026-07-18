@@ -1,4 +1,5 @@
 import { Material, type MaterialCategory, type MaterialInfo } from '../shared/materials';
+import { SimulationTool, type SimulationToolId } from '../simulation/simulation-tools';
 
 export type ToolKind = 'element' | 'wall' | 'force' | 'thermal' | 'source' | 'sign' | 'utility';
 export type ToolFilter = 'all' | 'favorites' | 'recent' | ToolKind;
@@ -29,7 +30,7 @@ export interface WallToolInfo extends ToolInfoBase {
 
 export interface SimToolInfo extends ToolInfoBase {
   readonly kind: 'force' | 'thermal' | 'utility';
-  readonly nativeTool: number;
+  readonly nativeTool: SimulationToolId;
   readonly gesture: 'brush' | 'vector';
 }
 
@@ -94,27 +95,27 @@ export function semanticTools(capabilities: ToolCapabilities = {}): readonly Exc
       ...unsupported(capabilities.signs, 'native-signs-unavailable'),
     },
     {
-      key: 'tool:air', kind: 'force', nativeTool: 1, gesture: 'brush',
+      key: 'tool:air', kind: 'force', nativeTool: SimulationTool.Air, gesture: 'brush',
       name: 'Air', description: 'Adds positive air pressure', color: '#7cc8ff', icon: '↗', category: 'simulation-forces',
       ...unsupported(capabilities.simulationTools, 'simulation-tools-unavailable'),
     },
     {
-      key: 'tool:vacuum', kind: 'force', nativeTool: 2, gesture: 'brush',
+      key: 'tool:vacuum', kind: 'force', nativeTool: SimulationTool.Vacuum, gesture: 'brush',
       name: 'Vacuum', description: 'Adds negative air pressure', color: '#6b78a8', icon: '↙', category: 'simulation-forces',
       ...unsupported(capabilities.simulationTools, 'simulation-tools-unavailable'),
     },
     {
-      key: 'tool:wind', kind: 'force', nativeTool: 3, gesture: 'vector',
+      key: 'tool:wind', kind: 'force', nativeTool: SimulationTool.Wind, gesture: 'vector',
       name: 'Wind', description: 'Pushes air along a dragged vector', color: '#9bdcff', icon: '➜', category: 'simulation-forces',
       ...unsupported(capabilities.simulationTools, 'simulation-tools-unavailable'),
     },
     {
-      key: 'tool:heat', kind: 'thermal', nativeTool: 4, gesture: 'brush',
+      key: 'tool:heat', kind: 'thermal', nativeTool: SimulationTool.Heat, gesture: 'brush',
       name: 'Heat', description: 'Raises local particle temperature', color: '#ff754f', icon: '+', category: 'thermal-tools',
       ...unsupported(capabilities.simulationTools, 'simulation-tools-unavailable'),
     },
     {
-      key: 'tool:cool', kind: 'thermal', nativeTool: 5, gesture: 'brush',
+      key: 'tool:cool', kind: 'thermal', nativeTool: SimulationTool.Cool, gesture: 'brush',
       name: 'Cool', description: 'Lowers local particle temperature', color: '#63bce8', icon: '−', category: 'thermal-tools',
       ...unsupported(capabilities.simulationTools, 'simulation-tools-unavailable'),
     },

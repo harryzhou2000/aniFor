@@ -5818,6 +5818,7 @@ var _powder_set_tick = Module['_powder_set_tick'] = makeInvalidEarlyAccess('_pow
 var _powder_clear = Module['_powder_clear'] = makeInvalidEarlyAccess('_powder_clear');
 var _powder_set = Module['_powder_set'] = makeInvalidEarlyAccess('_powder_set');
 var _powder_set_wall = Module['_powder_set_wall'] = makeInvalidEarlyAccess('_powder_set_wall');
+var _powder_apply_tool = Module['_powder_apply_tool'] = makeInvalidEarlyAccess('_powder_apply_tool');
 var _powder_step = Module['_powder_step'] = makeInvalidEarlyAccess('_powder_step');
 var _powder_save = Module['_powder_save'] = makeInvalidEarlyAccess('_powder_save');
 var _powder_save_size = Module['_powder_save_size'] = makeInvalidEarlyAccess('_powder_save_size');
@@ -5859,6 +5860,7 @@ function assignWasmExports(wasmExports) {
   assert(typeof wasmExports['powder_clear'] != 'undefined', 'missing Wasm export: powder_clear');
   assert(typeof wasmExports['powder_set'] != 'undefined', 'missing Wasm export: powder_set');
   assert(typeof wasmExports['powder_set_wall'] != 'undefined', 'missing Wasm export: powder_set_wall');
+  assert(typeof wasmExports['powder_apply_tool'] != 'undefined', 'missing Wasm export: powder_apply_tool');
   assert(typeof wasmExports['powder_step'] != 'undefined', 'missing Wasm export: powder_step');
   assert(typeof wasmExports['powder_save'] != 'undefined', 'missing Wasm export: powder_save');
   assert(typeof wasmExports['powder_save_size'] != 'undefined', 'missing Wasm export: powder_save_size');
@@ -5896,6 +5898,7 @@ function assignWasmExports(wasmExports) {
   _powder_clear = Module['_powder_clear'] = createExportWrapper('powder_clear', wasmExports['powder_clear'], 0);
   _powder_set = Module['_powder_set'] = createExportWrapper('powder_set', wasmExports['powder_set'], 3);
   _powder_set_wall = Module['_powder_set_wall'] = createExportWrapper('powder_set_wall', wasmExports['powder_set_wall'], 4);
+  _powder_apply_tool = Module['_powder_apply_tool'] = createExportWrapper('powder_apply_tool', wasmExports['powder_apply_tool'], 6);
   _powder_step = Module['_powder_step'] = createExportWrapper('powder_step', wasmExports['powder_step'], 0);
   _powder_save = Module['_powder_save'] = createExportWrapper('powder_save', wasmExports['powder_save'], 0);
   _powder_save_size = Module['_powder_save_size'] = createExportWrapper('powder_save_size', wasmExports['powder_save_size'], 0);

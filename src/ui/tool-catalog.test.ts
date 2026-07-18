@@ -40,6 +40,17 @@ describe('tool catalog view model', () => {
     expect(semantic.every((tool) => tool.limitations?.length)).toBe(true);
   });
 
+  it('enables native simulation tools independently from sources and signs', () => {
+    const semantic = semanticTools({ simulationTools: true });
+    const simulationTools = semantic.filter((tool) => tool.kind === 'force' || tool.kind === 'thermal');
+    expect(simulationTools.map(({ key }) => key)).toEqual([
+      'tool:air', 'tool:vacuum', 'tool:wind', 'tool:heat', 'tool:cool',
+    ]);
+    expect(simulationTools.every(isToolAvailable)).toBe(true);
+    expect(semantic.find((tool) => tool.kind === 'source')?.available).toBe(false);
+    expect(semantic.find((tool) => tool.kind === 'sign')?.available).toBe(false);
+  });
+
   it('filters favorites and preserves recent-use order', () => {
     const keys = tools.slice(0, 3).map(({ key }) => key);
     expect(filterTools(tools, { mode: 'favorites', query: '', favorites: new Set([keys[1]]), recent: [] }).map(({ key }) => key)).toEqual([keys[1]]);

@@ -17,6 +17,8 @@ export interface WorldViewport {
 
 export interface WorldInputCallbacks {
   draw(cell: Point, erase: boolean): void;
+  /** Raw consecutive grid samples for vector tools such as TPT Wind. */
+  drawSegment?(start: Point, end: Point, erase: boolean): void;
 }
 
 export function wheelZoomRatio(deltaY: number, deltaMode: number, viewportHeight: number): number {
@@ -151,6 +153,7 @@ export class WorldInputController {
       interaction.started = true;
     }
     if (end.x === interaction.lastCell.x && end.y === interaction.lastCell.y) return;
+    this.callbacks.drawSegment?.(interaction.lastCell, end, interaction.erase);
     visitGridLine(interaction.lastCell, end, (cell) => this.callbacks.draw(cell, interaction.erase));
     interaction.lastCell = end;
   }

@@ -1,4 +1,5 @@
 import type { Material } from '../shared/materials';
+import type { SimulationToolId } from './simulation-tools';
 
 export interface DirtyCell {
   readonly index: number;
@@ -25,6 +26,8 @@ export interface SimulationBackend {
   walls?(): Uint8Array;
   paintWall?(x: number, y: number, wall: number, radius: number): void;
   eraseWall?(x: number, y: number, radius: number): void;
+  /** Apply a native simulation tool. Vector tools use deltaX/deltaY as the drag vector. */
+  applySimulationTool?(tool: SimulationToolId, x: number, y: number, radius: number, deltaX?: number, deltaY?: number): void;
   consumeDirtyCells(): readonly DirtyCell[];
   consumeDirtyWalls?(): readonly DirtyWallCell[];
   /** Raw TPT save bytes when the active backend supports native file exchange. */

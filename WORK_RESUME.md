@@ -16,19 +16,20 @@ Immediate priorities are:
 4. Make save/share file-based instead of clipboard/URL-based, using native TPT files wherever the native backend is active.
 5. Keep desktop tool discovery usable at constrained browser scaling and make the portrait toolbox visible without shrinking the viewport into a strip.
 6. Commit and push reviewed work to `main_codex`, run the manual cached `build-and-deploy`, and verify the live Pages runtime rather than accepting a successful workflow alone.
+7. After the next graphics tranche, fix responsive UI geometry: make the over-wide desktop tool-category row scrollable with an obvious affordance or stack it, prevent brush/tool card overlap in short desktop windows, keep mobile content inside a friendly vertical scroll flow with safe touch whitespace, and shrink the mobile pressure/temperature/backend HUD.
 
 ## Repository and deployment snapshot
 
 - Repository: `/home/harry/projects/aniFor_codex`
 - Branch: `main_codex`
-- Local and remote committed HEAD before the current renderer tranche: `edfcf94 Promote Pages rendering and share Canvas volume fields`
-- The renderer tranche described below is the next checkpoint after that baseline.
+- Local and remote committed HEAD before the current semantic-tool tranche: `a56a193 Refine material surfaces and expose renderer status`
+- The Air/Vacuum/Wind/Heat/Cool tranche described below is the next checkpoint after that baseline.
 - GitHub CLI is authenticated as `harryzhou2000` with `repo` and `workflow` scopes.
 - Current live Pages URL: `https://harryzhou2000.github.io/aniFor/`
-- Verified live baseline before the current local tranche: `edfcf94` from Actions run `29647494659`.
-- That deployment contains all 20 referenced resources, serves WASM with `application/wasm`, boots direct native TPT, mounts Canvas immediately, and promotes to WebGL in 6.66–7.50 seconds on fresh SwiftShader profiles. Live index/app/Pixi hashes matched the local production output exactly, and forced Canvas retained shared liquid/gas/emission effects.
+- Verified live baseline before the current local tranche: `a56a193` from Actions run `29648632567`.
+- That deployment contains all 20 referenced resources, serves WASM with `application/wasm`, boots direct native TPT, mounts Canvas immediately, and promotes to WebGL in about six seconds on a fresh SwiftShader profile. Live index/app/Pixi hashes matched the production output exactly, the Pixi bundle contains the liquid-density/surface/gas shader paths, and forced Canvas retains shared liquid/gas/emission effects.
 
-## Committed/live baseline (`edfcf94`)
+## Committed/live baseline (`a56a193`)
 
 - Pinned official TPT 100.0 native engine, single-threaded 612×384 WebAssembly.
 - 170 stable projected material IDs; 165 particle brushes in the catalog, with 160 enabled and five gravity-dependent entries explicitly disabled.
@@ -77,23 +78,21 @@ Immediate priorities are:
 - Native tests project all 170 IDs and verify Steam as an actual reaction product.
 - The published WASM artifact was rebuilt locally.
 
-## Current local renderer tranche
+## Current local semantic-tool tranche
 
-- The viewport HUD now has a colored backend badge. It shows `WebGL`, or a visible Canvas reason (`starting WebGL`, `forced`, `unavailable`, `timeout`, or `error`) as well as machine-readable data attributes.
-- Canvas mounts synchronously on WebGL-capable browsers, the game and controls can paint, and Pixi initialization starts on the following frame. A ready presenter promotes the same viewport in place within a bounded ten-second window; failure or timeout keeps the working Canvas renderer.
-- The previous permanent 1.2-second Pixi cutoff is removed. A fresh production browser trace observed Canvas with `webgl-starting` before Pixi, then promoted to WebGL 6.173 seconds later without geometry drift or runtime/network errors.
-- WebGL and Canvas now share canonical phase/color/emission lookups plus the staggered 12 Hz atmosphere, liquid-density, and emission field set.
-- Canvas uses the shared density field to close small empty liquid pinholes while preserving occupied grains and hard particles, then combines a high-quality surface pass with a restrained crisp 2× pass. Gas and emission use the shared widened/color-mixed volume bytes rather than only discrete blurred source cells.
-- An unchanged native scene no longer forces a full Canvas raster rebuild at 30 Hz merely because temperature and velocity arrays exist; dynamic-only refreshes use the existing 12 Hz ceiling.
-- The current uncommitted graphics tranche makes liquid reconstruction species-aware: RGB carries the uniquely supported liquid color, alpha carries density, same-liquid holes join, and exact unlike-liquid ties remain a seam instead of selecting a scan-order donor.
-- WebGL treats that RGBA field as authoritative for reconstructed liquid-only pixels, including diagonal support, so shader admission and species color cannot diverge through cardinal scan order.
-- Canvas now closes only fully enclosed same-solid pinholes and applies allocation-free canonical granular, rigid, organic, radioactive, device, and field styling to generic projected materials. Exposed notches, occupied cells, unlike-solid seams, particles, and native walls remain semantically unchanged.
-- The desktop tool filter row now owns an explicit non-compressible 34 px grid track, preventing the category labels from collapsing in short/scaled desktop layouts.
+- Air, Vacuum, Wind, Heat, and Cool are now enabled as true simulation tools with stable project-owned ABI IDs rather than particle aliases.
+- Point and raw-vector dispatch are separated. Wind point samples explicitly no-op, so selecting Wind cannot paint the previously selected material; the un-interpolated drag segment is applied once while ordinary brush tools retain continuous grid interpolation.
+- Air/Vacuum apply TPT's exact ±0.05 pressure delta per brush pixel. Heat/Cool apply ±2 K to ordinary particles and ±0.1 K to PUMP/GPMP, with upstream pressure/temperature clamps.
+- Wind clears inactive particle-authored coarse velocity at the start of a new gesture epoch, writes the authored `vx`/`vy`, enables `AIR_ON` for exactly one `BeforeSim` pass, and returns to `AIR_VELOCITYOFF` before particle advection. This preserves diffusion, pressure coupling, clamping, and air-blocker semantics without globally reactivating unrelated residual air or reintroducing the earlier long-term water ejection.
+- Wall mutation now refreshes the corresponding native `bmap_blockair` cell immediately, so a newly authored blocker is effective for the next Wind update.
+- A pending, unstepped Wind vector round-trips through ordinary OPS velocity maps plus the optional namespaced `aniforTptWindPending` Boolean. Stock TPT ignores the unknown field; AniforTPT restores the one-frame intent without misclassifying ordinary imported-save velocity.
+- Native validation rejects invalid IDs, coordinates, radii over 64, and oversized vectors. Integer vector arguments prevent NaN/Infinity from contaminating the air arrays.
+- Signs and configured-source targeting remain disabled and distinct; this tranche does not misclassify them as particle brushes.
 
 ## Verification completed for the current local tree
 
 - `npm run typecheck`
-- `npm test -- --run`: 30 files, 116 tests passed
+- `npm test -- --run`: 31 files, 124 tests passed
 - `npm run build`
 - Static build closure: 20 referenced resources verified (including the explicit favicon)
 - Current live Pages closure: 20 resources verified, including `stillroom_core.wasm` with the correct MIME
@@ -105,22 +104,25 @@ Immediate priorities are:
 - The WebGL and Canvas screenshots show cohesive water/oil/acid/lava columns without black pinholes or cross-family bleeding, continuous mixed gas volumes, and preserved sparse control rows. Canvas deliberately remains softer and more internally speckled than WebGL.
 - A retained real-browser interaction audit painted full 3×3 landmark grids before and after promotion. All 18 HUD-selected cells matched; footprint centroid error stayed below 1.5 CSS px, off-center wheel-anchor error was 0.035 CSS px, middle pan was within 0.013 px, and promotion produced zero canvas-rectangle or world-cell drift.
 - Latest field profile at 612×384: atmosphere 6.61 ms median, species-aware liquid 13.40 ms, emission 3.46 ms, Canvas solid reconstruction 1.40 ms, and Canvas liquid reconstruction 1.74 ms. Shared volume storage is 8,173,320 bytes.
+- Native semantic-tool coverage now proves exact scalar deltas, stable typed routing, no vector-to-particle fallthrough, no vector emission during pinch navigation, malformed ABI rejection, Wind response, `WL_BLOCKAIR` isolation, stable-water regression, and unstepped OPS Wind round-tripping.
 
-The renderer-selection issue is fixed and verified live. The species-aware liquid, Canvas solid/family styling, and backend diagnostics are reviewed and locally browser-verified; their remaining handoff step is commit, manual deployment, and a cache-busted live trace.
+The renderer-selection issue and the `a56a193` graphics checkpoint are fixed and verified live. The current native simulation-tool tranche passes local native/unit/build verification; its remaining handoff is review, commit, manual deployment, and a cache-busted live interaction trace.
 
 ## Current blockers and risks
 
-- The current local graphics tranche is not live until it is committed, pushed to `main_codex`, manually deployed, and tested at the Pages URL.
+- The current local simulation-tool tranche is not live until it is committed, pushed to `main_codex`, manually deployed, and tested at the Pages URL.
 - WebGL runtime GLSL is not compiled by TypeScript/Vite; preserve the fresh browser audit for every shader change.
 - The post-deploy verifier proves network asset closure and MIME, but not shader execution or interaction by itself.
-- Full simulation-force tools, configured sources, signs, LIFE presets, and several special editing semantics remain future work.
+- Configured sources, signs, LIFE presets, and several special editing semantics remain future work.
 - Newtonian FFT gravity is intentionally omitted from the headless build, so gravity-dependent tools/elements must remain disabled or limited.
 - GPU partial texture upload, long-session allocation behavior, context loss, and full performance budgets need further profiling.
+- Responsive geometry still needs the post-graphics pass requested by the user: desktop category navigation, short-window card overlap, mobile page scrolling/touch whitespace, and a compact mobile field/backend HUD.
 
 ## Next sequence
 
-1. Review `git diff`, ensure no unintended/untracked files, and commit the integrated tranche.
+1. Review `git diff`, ensure no unintended/untracked files, and commit the semantic-tool tranche.
 2. Push only `main_codex`, then trigger `verify-static-game` manually with `operation=build-and-deploy`.
 3. Inspect ccache restore/save and the local/live asset-closure steps.
-4. Open the cache-busted live Pages URL; confirm native status, backend badge, liquid/solid/gas visuals, desktop filter height, mobile square/full-field view, and no console/network failures.
-5. Resume the wider semantic-tool and graphics roadmap; the persistent goal stays active.
+4. Open the cache-busted live Pages URL; confirm native status, backend promotion, Air/Vacuum/Heat/Cool HUD changes, Wind vector behavior without particle paint, wall blocking, mobile selection, and no console/network failures.
+5. Continue the next bounded graphics/performance tranche.
+6. Then resolve the recorded desktop/mobile UI geometry and compact-HUD issues before returning to sources/signs/LIFE expansion.

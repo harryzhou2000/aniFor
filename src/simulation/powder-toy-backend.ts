@@ -1,5 +1,6 @@
 import { base64UrlToBytes, bytesToBase64Url } from '../shared/base64-url';
 import { Material } from '../shared/materials';
+import type { SimulationToolId } from './simulation-tools';
 import type { DirtyCell, DirtyWallCell, SimulationBackend } from './types';
 
 interface PowderToyModule {
@@ -19,6 +20,7 @@ interface PowderToyModule {
   _powder_clear(): void;
   _powder_set(x: number, y: number, material: number): void;
   _powder_set_wall(x: number, y: number, wall: number, radius: number): void;
+  _powder_apply_tool(tool: SimulationToolId, x: number, y: number, radius: number, deltaX: number, deltaY: number): number;
   _powder_step(): void;
   _powder_save(): number;
   _powder_save_size(): number;
@@ -100,6 +102,13 @@ export class PowderToyBackend implements SimulationBackend {
   }
 
   eraseWall(x: number, y: number, radius: number): void { this.paintWall(x, y, 0, radius); }
+
+  applySimulationTool(tool: SimulationToolId, x: number, y: number, radius: number, deltaX = 0, deltaY = 0): void {
+    const applied = this.module._powder_apply_tool(tool, x, y, radius, deltaX, deltaY);
+    // Simulation tools mutate air or particle temperature without necessarily
+    // changing material IDs. Force one field extraction on the next render.
+    if (applied > 0) this.dirtyCheck = true;
+  }
 
   consumeDirtyCells(): readonly DirtyCell[] {
     if (!this.dirtyCheck) return [];

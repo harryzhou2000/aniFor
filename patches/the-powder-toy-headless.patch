@@ -32,7 +32,7 @@ index 3a44292..7a597aa 100644
 +	else
 +		project_cpp_args += [ '-DSTILLROOM_HEADLESS' ]
 +		project_link_args += [ '-s', 'EXPORT_ES6=1', '-s', 'ENVIRONMENT=web,worker,node' ]
-+		project_link_args += [ '-s', 'EXPORTED_FUNCTIONS=["_powder_init","_powder_width","_powder_height","_powder_cells","_powder_walls","_powder_temperature","_powder_pressure","_powder_velocity","_powder_tick","_powder_set_tick","_powder_clear","_powder_set","_powder_set_wall","_powder_step","_powder_save","_powder_save_size","_powder_load_buffer","_powder_load_commit"]' ]
++		project_link_args += [ '-s', 'EXPORTED_FUNCTIONS=["_powder_init","_powder_width","_powder_height","_powder_cells","_powder_walls","_powder_temperature","_powder_pressure","_powder_velocity","_powder_tick","_powder_set_tick","_powder_clear","_powder_set","_powder_set_wall","_powder_apply_tool","_powder_step","_powder_save","_powder_save_size","_powder_load_buffer","_powder_load_commit"]' ]
 +	endif
  	project_link_args += emcc_args
  	project_cpp_args += emcc_args
@@ -106,3 +106,36 @@ index 96f0c1d..af2967a 100644
  	elements = GetElements();
  	init_can_move();
  }
+diff --git a/src/client/GameSave.h b/src/client/GameSave.h
+--- a/src/client/GameSave.h
++++ b/src/client/GameSave.h
+@@ -77,6 +77,7 @@ public:
+ 	bool hasBlockAirMaps = false;
+ 	bool hasGravityMaps = false;
+ 	bool ensureDeterminism = false; // only taken seriously by serializeOPS; readOPS may set this even if the save does not have everything required for determinism
++	bool stillroomWindPending = false; // AniforTPT transient tool state; unknown OPS fields remain upstream-compatible
+ 	bool hasRngState = false; // only written by readOPS, never read
+ 	RNG::State rngState;
+ 	uint64_t frameCount = 0;
+diff --git a/src/client/GameSave.cpp b/src/client/GameSave.cpp
+--- a/src/client/GameSave.cpp
++++ b/src/client/GameSave.cpp
+@@ -660,6 +660,7 @@ void GameSave::readOPS(const std::vector<char> &data)
+ 	copyIfInt32(b, "edgeMode", edgeMode);
+ 	copyIfInt32(b, "pmapbits", pmapbits);
+ 	copyIfBool(b, "ensureDeterminism", ensureDeterminism);
++	copyIfBool(b, "aniforTptWindPending", stillroomWindPending);
+ 	copyIfInt64(b, "frameCount", reinterpret_cast<int64_t &>(frameCount));
+ 	if (copyIfUser(b, "rngState", rngState))
+ 	{
+@@ -2670,6 +2671,10 @@ std::pair<int, std::vector<char>> GameSave::serialiseOPS() const
+ 		);
+ 		RESTRICTVERSION(98, 0);
+ 	}
++	if (stillroomWindPending)
++	{
++		b["aniforTptWindPending"] = stillroomWindPending;
++	}
+ 	if (gravityEnable)
+ 	{
+ 		b["gravity"] = std::move(gravityData);
