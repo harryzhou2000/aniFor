@@ -218,9 +218,11 @@ void main() {
     halo = 1.0;
   }
   vec4 materialStyle = texture(uStyleTexture, vec2((material + 0.5) / 256.0, 0.5));
+  vec4 paletteSample = texture(uPaletteTexture, vec2((material + 0.5) / 256.0, 0.5));
   float family = floor(materialStyle.r * 255.0 + 0.5);
   float profile = floor(materialStyle.g * 255.0 + 0.5);
   float traits = floor(materialStyle.a * 255.0 + 0.5);
+  float optics = floor(paletteSample.a * 255.0 + 0.5);
   float energyCore = family == 3.0 ? 1.0 : 0.0;
   vec3 shape = wallOnly > 0.5
     ? wallSurface
@@ -277,7 +279,7 @@ void main() {
     ? emissionState.rgb
     : (cloudOnly > 0.5
     ? atmosphereState.rgb
-    : (liquidOnly > 0.5 ? liquidState.rgb : texture(uPaletteTexture, vec2((material + 0.5) / 256.0, 0.5)).rgb)));
+    : (liquidOnly > 0.5 ? liquidState.rgb : paletteSample.rgb)));
   vec2 velocity = halo > 0.5 ? vec2(0.0) : state.ba * 2.0 - 1.0;
   vec2 fieldPosition = fieldUv * uFieldSize;
   float grain = fract(sin(dot(floor(fieldPosition), vec2(12.9898, 78.233))) * 43758.5453) - 0.5;
@@ -332,8 +334,10 @@ void main() {
     float billow = 0.92 + atmosphere * 0.08;
     // Dense reconstructed gas should read as one mixed volume, not as the raw
     // palette colour of whichever semantic particle occupies this fragment.
-    vec3 gasMixture = mix(base, atmosphereState.rgb, gasInterior * 0.88);
-    vec3 gasBase = vividColor(gasMixture, 1.24);
+    float sootyGas = optics == 5.0 ? 1.0 : 0.0;
+    float cleanGas = optics == 6.0 ? 1.0 : 0.0;
+    vec3 gasMixture = mix(base, atmosphereState.rgb, gasInterior * 0.98);
+    vec3 gasBase = vividColor(gasMixture, 1.20 + cleanGas * 0.10 - sootyGas * 0.08);
     float gasShadeDensity = mix(density, atmosphereState.a, gasInterior);
     float opticalDepth = smoothstep(0.035, 0.62, gasShadeDensity);
     float silverLining = (1.0 - smoothstep(0.10, 0.58, gasShadeDensity))
@@ -344,12 +348,20 @@ void main() {
     alpha = cloudOnly > 0.5 ? cloudAlpha : mix(particleAlpha, cloudAlpha, gasInterior);
     // Beer-like optical depth keeps the core saturated and translucent while a
     // directional silver lining gives the boundary volume without a hard edge.
-    color = gasBase * mix(1.08, 0.74, opticalDepth) * (0.76 + diffuse * 0.28) * billow;
-    color += mix(vec3(0.16, 0.19, 0.24), gasBase, 0.30) * silverLining * 0.26;
+    float gasCoreTransmission = 0.74 + cleanGas * 0.08 - sootyGas * 0.13;
+    float gasScatter = 0.26 + cleanGas * 0.10 - sootyGas * 0.08;
+    color = gasBase * mix(1.08 + cleanGas * 0.04, gasCoreTransmission, opticalDepth)
+      * (0.76 + diffuse * 0.28) * billow;
+    color += mix(vec3(0.16, 0.19, 0.24), gasBase, 0.30 + cleanGas * 0.12)
+      * silverLining * gasScatter;
     color += mix(vec3(0.10, 0.12, 0.16), gasBase, 0.34)
       * specular * mix(0.62, 0.18, gasInterior);
   } else if (liquidVolume > 0.5) {
-    vec3 liquidBase = vividColor(base, 1.24);
+    float aqueous = optics == 1.0 ? 1.0 : 0.0;
+    float oily = optics == 2.0 ? 1.0 : 0.0;
+    float corrosive = optics == 3.0 ? 1.0 : 0.0;
+    float molten = optics == 4.0 ? 1.0 : 0.0;
+    vec3 liquidBase = vividColor(base, 1.24 + aqueous * 0.06 + corrosive * 0.08 - oily * 0.05);
     // Reconstructed density owns silhouette support, while semantic occupancy
     // owns optical depth so isolated droplets do not become opaque pool cores.
     float liquidDepth = liquidInterior;
@@ -369,14 +381,24 @@ void main() {
     float caustic = pow(causticWave, 6.0) * liquidInterior;
     float topLip = smoothstep(0.02, 0.16, volumeSlope.y);
     float lowerShade = smoothstep(0.02, 0.16, -volumeSlope.y);
+    float depthTransmission = 0.66 + aqueous * 0.10 - oily * 0.10
+      + corrosive * 0.04 - molten * 0.15;
+    float gloss = 1.0 + aqueous * 0.18 + oily * 0.30
+      + corrosive * 0.12 - molten * 0.20;
+    float causticStrength = 0.085 + aqueous * 0.055 - oily * 0.045
+      + corrosive * 0.025 - molten * 0.055;
+    vec3 edgeTint = mix(vec3(0.66, 0.82, 0.88), liquidBase, 0.20);
+    edgeTint = mix(edgeTint, vec3(0.72, 0.92, 1.0), aqueous * 0.18);
+    edgeTint = mix(edgeTint, vec3(0.94, 0.72, 0.34), oily * 0.12 + molten * 0.20);
+    edgeTint = mix(edgeTint, vec3(0.72, 1.0, 0.76), corrosive * 0.18);
     alpha = smoothstep(0.34, 0.62, volume) * mix(0.56, 0.82, liquidDepth);
-    color = liquidBase * mix(1.24, 0.66, liquidDepth) * (0.70 + diffuse * 0.30);
-    color += mix(vec3(0.66, 0.82, 0.88), liquidBase, 0.20)
-      * (surfaceSpecular * (0.72 + rim * 0.86) + fresnel * rim * 0.18);
+    color = liquidBase * mix(1.24, depthTransmission, liquidDepth) * (0.70 + diffuse * 0.30);
+    color += edgeTint
+      * (surfaceSpecular * gloss * (0.72 + rim * 0.86) + fresnel * rim * (0.18 + aqueous * 0.08));
     color *= (1.0 + topLip * 0.08 - lowerShade * 0.05)
       * (0.94 + broadSheen * mix(0.035, 0.13, liquidDepth));
     color += mix(vec3(0.52, 0.68, 0.76), liquidBase, 0.50)
-      * (broadSheen * mix(0.016, 0.052, liquidDepth) + caustic * 0.085);
+      * (broadSheen * mix(0.016, 0.052 * gloss, liquidDepth) + caustic * causticStrength);
     color += liquidBase * (0.025 + atmosphere * 0.030) + vec3(0.055, 0.090, 0.105) * rim;
   } else {
     float edgeCenter = 0.49 + (profile == 1.0 ? grain * 0.045 : 0.0);

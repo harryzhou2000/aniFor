@@ -24,11 +24,11 @@ Queued after the renderer checkpoint: revisit desktop/mobile geometry as a dedic
 
 - Repository: `/home/harry/projects/aniFor_codex`
 - Branch: `main_codex`
-- Remote branch and live Pages revision: `be2c9cb Stack desktop tool filters`.
-- The configured-source semantic tranche is included in the current branch checkpoint; its live deployment follows the final local verification gate.
-- Git and GitHub CLI authentication are working. Manual Actions run `29657784967` built, deployed, and live-verified `be2c9cb` after the branch push was independently SHA-checked.
+- Remote branch and live Pages revision: `4077b23 Expose configured TPT sources`.
+- Manual Actions run `29658718547` built, deployed, and live-verified that exact SHA after the branch push was independently checked with `git ls-remote` and the public GitHub API.
+- Git push authentication is working. GitHub CLI authentication is currently invalid, so another manual workflow dispatch requires `gh auth login -h github.com`.
 - Current live Pages URL: `https://harryzhou2000.github.io/aniFor/`
-- Verified live baseline: `be2c9cb` from Actions run `29657784967`.
+- Verified live baseline: `4077b23` from Actions run `29658718547`.
 - Build, deploy, and post-deployment verification all passed. The live closure contains all referenced resources with correct WASM MIME and the exact expected revision. The successful primary ccache key already existed, so the save step correctly skipped.
 
 ## Committed/live baseline through `a64dde9`
@@ -91,7 +91,7 @@ Queued after the renderer checkpoint: revisit desktop/mobile geometry as a dedic
 - Wall mutation now refreshes the corresponding native `bmap_blockair` cell immediately, so a newly authored blocker is effective for the next Wind update.
 - A pending, unstepped Wind vector round-trips through ordinary OPS velocity maps plus the optional namespaced `aniforTptWindPending` Boolean. Stock TPT ignores the unknown field; AniforTPT restores the one-frame intent without misclassifying ordinary imported-save velocity.
 - Native validation rejects invalid IDs, coordinates, radii over 64, and oversized vectors. Integer vector arguments prevent NaN/Infinity from contaminating the air arrays.
-- Signs and configured-source targeting remain disabled and distinct; this tranche does not misclassify them as particle brushes.
+- That historical simulation-tool checkpoint deliberately left signs and configured-source targeting disabled and distinct; configured sources were enabled later through their dedicated semantic tranche.
 
 ## Current local graphics and responsive UI tranche
 
@@ -146,12 +146,12 @@ Queued after the renderer checkpoint: revisit desktop/mobile geometry as a dedic
 
 ## Stacked tool-discovery geometry follow-up
 
-- Desktop tool filters are now a fixed 68 px two-row stack instead of one clipped over-wide row. All nine filters fit at normal toolbox widths; constrained widths retain a thin horizontal fallback without hiding a second line.
+- Desktop tool filters are now a fixed 68 px two-row stack instead of one clipped over-wide row. All ten filters fit at normal toolbox widths; constrained widths retain a thin horizontal fallback without hiding a second line.
 - Mobile retains the compact 40 px horizontal filter rail and bounded catalog. The square 378×378 interaction panel remains first, followed immediately by the visible Material Lab heading and search/filter controls; the document has zero horizontal overflow and remains vertically scrollable to the Brush/actions card.
 - The real-browser audit now measures the filter rail, every filter button, palette/actions separation, and document overflow. It fails if a filter escapes vertically, the Brush card overlaps the palette, or the page grows wider than the viewport.
 - Captured evidence at 1024×600, 1440×900, and 390×844 shows 8–12 px palette/actions separation, a compact 132 px mobile HUD, and no viewport/input regression.
 
-## Configured-source semantic tranche (current local tree)
+## Configured-source semantic tranche (`4077b23`, committed and live)
 
 - The source catalog now contains five separate capability-gated tools for CLNE, BCLN, PCLN, PBCN, and CONV. The last selected element is retained as the target, and the search header shows the active `source → target` pair without adding another toolbox row.
 - Point dispatch gives erasure and simulation tools priority, then calls `paintConfiguredSource`; it always returns before ordinary particle paint, including when a fallback backend lacks the capability.
@@ -160,10 +160,20 @@ Queued after the renderer checkpoint: revisit desktop/mobile geometry as a dedic
 - The field indicator reports the exact target when probing a configured source. Fallback backends keep source tiles disabled; signs remain disabled pending a dedicated safe text editor and overlay.
 - The real-browser gate can opt the paused render lab into native TPT with `simulation=native`. Its Canvas pass selected Water, selected configured CLNE, placed exactly one source at the requested world cell, and read back emitter 126 / target 2 while retaining the established resize, wheel-anchor, middle-pan, and mobile touch checks.
 
+## LIFE and optical-response tranche (current local tree)
+
+- All 24 upstream built-in LIFE presets are exposed as capability-gated semantic tools in native preset order. Stable projection IDs 171–194 encode `PT_LIFE` ctypes 0–23 for rendering only; they remain excluded from the ordinary `MATERIALS` brush catalog and generic `powder_set` path.
+- `powder_set_life` validates active TPT bounds and preset range, creates only in empty matter cells, and never repurposes LIFE drawing as a configured-source shortcut. Erase retains priority, unsupported backends return without ordinary-particle fallback, and switching tool families clears LIFE state.
+- Native tests project all 24 preset IDs, reject invalid/occupied placement atomically, preserve every preset through raw OPS save/load, and evolve a GOL B3/S23 blinker through one upstream generation.
+- The renderer lookup now uses the formerly constant palette alpha byte for 12 optical-response classes: default, aqueous, oily, corrosive, molten, sooty gas, clean gas, rough granular, smooth rigid, organic, device, and radioactive. The existing style alpha remains the independent role-trait mask.
+- WebGL reuses its existing palette sample to tune liquid transmission/gloss/caustics and gas absorption/scatter. Dense occupied gas converges 98% toward the reconstructed mixture, removing semantic colour islands while retaining sparse edge identity. Canvas consumes the same optics byte through an allocation-free RGB helper and preserves the existing alpha/silhouette owner.
+- No texture, field, reconstruction stage, upload, scheduler pass, or persistent volume allocation was added. The local profile still reports exactly 8,173,320 combined field bytes.
+- The browser audit now signature-checks and screenshots the deterministic render-lab backend, then navigates separately to native TPT for configured-source and LIFE UI placement. Both WebGL and Canvas expose 24 LIFE tiles and project GOL as ID 171.
+
 ## Verification completed for the current local tree
 
 - `npm run typecheck`
-- `npm test`: 38 files, 163 tests passed
+- `npm test`: 40 files, 180 tests passed
 - `npm run build`
 - Static build closure: 20 referenced resources verified (including the explicit favicon)
 - Current live Pages closure: 20 resources verified, including `stillroom_core.wasm` with the correct MIME
@@ -172,7 +182,7 @@ Queued after the renderer checkpoint: revisit desktop/mobile geometry as a dedic
 - Final rebuilt mobile smoke at 390×844 DPR 2 booted direct native TPT with the Canvas2D compatibility renderer and 1224×768 backing. The 378×378 viewport contained a 378×237.176 canvas at aspect 1.59375012, with no crop or horizontal overflow.
 - The mobile filter row now has a constant 40 px track with a visible thin scrollbar; filter buttons remain 28 px high. One-finger painting, two-finger pinch without stray paint, and explicit Eraser restoration passed with zero console, exception, or network failures.
 - Fresh render-lab browser evidence at 1280×720 and `renderScale=2` passed for both forced Canvas and SwiftShader WebGL. In the final tree, the badge visibly transitioned from `Canvas 2D · starting WebGL` to `WebGL` as promotion completed in 6.029 seconds. The viewport retained a 1224×768 backing and 827×518.902 CSS canvas with no shader, console, runtime, HTTP, or network errors.
-- The native-backed automated populated-atlas capture passes in both forced Canvas and SwiftShader WebGL. It selects Water then configured CLNE through the visible Sources group, places emitter 126 with exact target 2, rejects `PCLN → PSCN` without activating it, paints the exact three requested radius-zero cells, holds wheel-anchor drift to 0.145 cell, produces exact 42×27 CSS-pixel middle-pan movement, returns to the same fitted geometry after `1024×600 → 1440×900 → 1024×600`, and reports zero browser errors. Canvas additionally retains a 378×378 mobile panel, 1.59375 field aspect, 1.431× pinch zoom, no stray pinch cells, the exact one-touch target cell, and a visible five-tile Sources catalog.
+- The automated populated-atlas capture now asserts the deterministic fallback status, more than 40,000 fixture cells, and two fixed wall samples before screenshots. It then tests mapping separately and navigates to native TPT for semantic tools. Both forced Canvas and SwiftShader WebGL place configured CLNE as emitter 126 / target 2, reject `PCLN → PSCN`, expose all 24 LIFE presets, and place GOL as projection 171. The transform gate paints the exact three requested radius-zero cells, holds wheel-anchor drift to 0.145 cell, produces exact 42×27 CSS-pixel middle-pan movement, returns through `1024×600 → 1440×900 → 1024×600`, and reports zero browser errors. Canvas additionally retains a 378×378 mobile panel, 1.59375 field aspect, 1.431× pinch zoom, no stray pinch cells, and the exact one-touch target cell.
 - The WebGL and Canvas screenshots show cohesive water/oil/acid/lava columns without black pinholes or cross-family bleeding, continuous mixed gas volumes, and preserved sparse control rows. Canvas deliberately remains softer and more internally speckled than WebGL.
 - A retained real-browser interaction audit painted full 3×3 landmark grids before and after promotion. All 18 HUD-selected cells matched; footprint centroid error stayed below 1.5 CSS px, off-center wheel-anchor error was 0.035 CSS px, middle pan was within 0.013 px, and promotion produced zero canvas-rectangle or world-cell drift.
 - A repeated production resize sequence `1280×720 → 1024×600 → 1440×900 → 1024×600` now refits on every transition. The 1024 viewport is 686×430.422 inside its 686.188×470 frame, aspect 1.593785, with subpixel containment and unchanged 1224×768 backing; no stale size, runtime, console, or network error remains.
@@ -181,14 +191,14 @@ Queued after the renderer checkpoint: revisit desktop/mobile geometry as a dedic
 - The current Canvas role-write checkpoint passes the same two-backend browser gate at 1224×768 backing. Both backends return exactly through `1024×600 → 1440×900 → 1024×600`; wheel-anchor drift is 0.145 cell, middle-pan is 42×27 CSS px, and the Canvas mobile gate retains a 378×378 panel, 1.431× pinch, zero stray cells, and zero browser errors.
 - The optical-depth tranche passes that same real-browser gate with runtime GLSL compilation and zero browser errors. Retained WebGL/Canvas atlas captures show darker saturated gas cores with readable falloff, cohesive liquid columns with local reflective lips, preserved sparse control rows, and no unlike-species seam bleed.
 - The stacked tool-discovery gate reports exactly two desktop filter rows at 68 px, a 40 px mobile filter rail, 8/12/8 px palette-to-actions gaps through the repeated desktop resize sequence, and zero mobile horizontal overflow. The optional browser screenshot path now also retains a DPR-2 portrait capture for direct layout review.
-- Latest warmed field profile at 612×384: atmosphere 6.71 ms median, species-aware liquid 10.81 ms, emission 5.26 ms, Canvas atmosphere relief 0.88 ms, solid reconstruction 1.26 ms, surface lighting 5.79 ms, and liquid reconstruction 1.62 ms. Shared volume storage remains 8,173,320 bytes; the presentation passes add no persistent field allocation.
+- Latest warmed field profile at 612×384: atmosphere 7.21 ms median, species-aware liquid 11.40 ms, emission 3.18 ms, Canvas atmosphere relief 0.87 ms, solid reconstruction 1.27 ms, surface lighting 6.00 ms, and liquid reconstruction 1.67 ms. Shared volume storage remains 8,173,320 bytes; optical classes add no field or texture allocation.
 - The current pessimistic Canvas energy profile shades all 235,008 cells as radioactive energy cores in 19.37 ms median / 19.58 ms p90 on the local machine. Ordinary scenes call it only for actual energy cells. It adds two reusable 3-float vectors and no field/texture allocation; shared volume storage remains exactly 8,173,320 bytes.
 - Repeated surface-light stress profiles at 612×384 measured 5.76–11.20 ms median for the standalone dense-contour Canvas pass under varying local load; the latest p90/maximum were 12.08/12.44 ms. Shared field storage remains exactly 8,173,320 bytes; the diagnostic pass includes its own full-grid scan and reuses existing buffers.
 - Fresh local Chrome at 1280×720 promoted the render lab to WebGL with the runtime GLSL compiled. A 1024×600 repeat retained the correct 1.59375 field aspect and backend badge; Chrome logged only Vite connect messages and no shader, WebGL, console, or runtime error.
 - Forced Canvas at 1280×720 and a 390×844 DPR-2 portrait capture retained the 1224×768 backing, square mobile interaction panel with aspect-preserving letterbox, smooth empty-space aura, and crisp material seams. Warm/cool strips visibly reveal profile contours without uniformly whitening block interiors.
 - Native semantic-tool coverage now proves exact scalar deltas, stable typed routing, no vector-to-particle fallthrough, no vector emission during pinch navigation, malformed ABI rejection, Wind response, `WL_BLOCKAIR` isolation, stable-water regression, and unstepped OPS Wind round-tripping.
 
-The `Style materials by cross-phase roles` checkpoint is committed and pushed to `main_codex`. Unit, type, build, profile, desktop WebGL/Canvas visual, and interaction checks pass locally. Its manual cached deployment still needs a valid GitHub CLI login; until then the current live closure contains all 20 resources and resolves to exact revision `c967261`.
+The configured-source checkpoint `4077b23` is committed, pushed, deployed, and live-verified. The LIFE/optical-response tranche is the current uncommitted local tree; unit, type, build, native WASM, profile, desktop WebGL/Canvas visual, and interaction checks pass locally. Its manual cached deployment still needs a valid GitHub CLI login after commit/push; until then the live closure resolves to `4077b23`.
 
 ## Current blockers and risks
 
@@ -196,7 +206,7 @@ The `Style materials by cross-phase roles` checkpoint is committed and pushed to
 - The post-deploy verifier proves network asset closure and MIME, but not shader execution or interaction by itself.
 - Cached-HTML compatibility still relies on a small fixed set of historical JS/CSS aliases, and the live verifier does not compare public content hashes to the local artifact. Harden this before treating repeated stale-asset reports as closed.
 - The browser integration gate now automates `MaterialRenderer.screenToWorld`/Pixi bounds/painted footprints, but public Pages browser execution is still distinct from its post-deploy asset-closure verifier.
-- Configured sources, signs, LIFE presets, and several special editing semantics remain future work.
+- Signs and several special editing semantics remain future work; configured sources and all 24 built-in LIFE presets are implemented through distinct semantic boundaries.
 - GitHub CLI authentication is invalid, so the next manual `build-and-deploy` cannot be dispatched until the user reauthenticates `gh`; ordinary authenticated `git push` still works.
 - Newtonian FFT gravity is intentionally omitted from the headless build, so gravity-dependent tools/elements must remain disabled or limited.
 - GPU partial texture upload, long-session allocation behavior, context loss, and full performance budgets need further profiling.
@@ -204,7 +214,7 @@ The `Style materials by cross-phase roles` checkpoint is committed and pushed to
 
 ## Next sequence
 
-1. After GitHub CLI reauthentication, dispatch the manual cached `build-and-deploy` on `main_codex` and verify the live closure/revision plus a cache-busted browser runtime.
-2. Return to dynamic native `ctype`/life/pressure-state projection as a separate ABI tranche; static role flags deliberately do not claim current activation/channel/growth state.
-3. Continue the deeper material-surface aesthetics and Canvas performance work, then execute the queued desktop/mobile geometry cleanup recorded above.
-4. Keep the persistent goal active for broader interface coverage, especially configured sources, signs, LIFE presets, forces, radioactive elements, and growing plants.
+1. Review, commit, and push the current LIFE/optical-response tranche to `main_codex`.
+2. After GitHub CLI reauthentication, dispatch the manual cached `build-and-deploy` and verify the live closure/revision plus a cache-busted browser runtime.
+3. Continue deeper material-surface aesthetics and dense Canvas performance work, then revisit the queued desktop/mobile geometry polish.
+4. Keep the persistent goal active for remaining TPT interface coverage, especially signs and special editing semantics, while preserving existing forces, sources, radioactive elements, plants, and LIFE behavior.

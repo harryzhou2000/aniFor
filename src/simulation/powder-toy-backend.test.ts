@@ -4,6 +4,8 @@ import { PowderToyBackend } from './powder-toy-backend';
 import { SimulationTool } from './simulation-tools';
 
 const moduleArtifact = new URL('../../public/wasm/stillroom_core.js', import.meta.url);
+const LIFE_FIRST_MATERIAL_ID = 171;
+const LIFE_PRESET_COUNT = 24;
 
 interface RawPowderModule {
   HEAPU8: Uint8Array;
@@ -11,10 +13,12 @@ interface RawPowderModule {
   _powder_cells(): number;
   _powder_pressure(): number;
   _powder_set(x: number, y: number, material: number): void;
+  _powder_set_life(x: number, y: number, preset: number): number;
   _powder_set_configured_source(x: number, y: number, source: number, target: number): number;
   _powder_can_configure_source(source: number, target: number): number;
   _powder_source_target(x: number, y: number): number;
   _powder_apply_tool(tool: number, x: number, y: number, radius: number, deltaX: number, deltaY: number): number;
+  _powder_step(): void;
   _powder_save(): number;
   _powder_save_size(): number;
   _powder_load_buffer(size: number): number;
@@ -49,9 +53,9 @@ describe('direct Powder Toy backend', () => {
     expect(dirtyWalls.every(({ wall }) => wall === 8)).toBe(true);
   });
 
-  it('projects every expanded material as its stable frontend ID', async () => {
+  it('projects every generic native material as its stable frontend ID', async () => {
     const simulation = await PowderToyBackend.load(moduleArtifact.href);
-    const materials = ALL_MATERIALS.map(({ id }) => id);
+    const materials = ALL_MATERIALS.map(({ id }) => id).filter((id) => id <= Material.VSNS);
     const point = (index: number) => ({ x: 24 + (index % 32) * 18, y: 24 + Math.floor(index / 32) * 28 });
     materials.forEach((material, index) => {
       const { x, y } = point(index);
@@ -330,6 +334,97 @@ describe('direct Powder Toy backend', () => {
       expect(restoredCells[160 * 612 + x]).toBe(emitter);
       expect(restored._powder_source_target(x, 160)).toBe(target);
     });
+  });
+
+  it('projects all 24 native LIFE presets to stable frontend IDs', async () => {
+    const imported = await import(moduleArtifact.href) as { default: () => Promise<RawPowderModule> };
+    const module = await imported.default();
+    expect(module._powder_init()).toBe(1);
+
+    for (let preset = 0; preset < LIFE_PRESET_COUNT; preset++) {
+      expect(module._powder_set_life(120 + preset * 16, 100, preset)).toBe(1);
+    }
+    const cells = new Uint8Array(module.HEAPU8.buffer, module._powder_cells(), 612 * 384);
+    for (let preset = 0; preset < LIFE_PRESET_COUNT; preset++) {
+      expect(cells[100 * 612 + 120 + preset * 16]).toBe(LIFE_FIRST_MATERIAL_ID + preset);
+    }
+  });
+
+  it('rejects invalid LIFE presets and preserves occupied particles', async () => {
+    const imported = await import(moduleArtifact.href) as { default: () => Promise<RawPowderModule> };
+    const module = await imported.default();
+    expect(module._powder_init()).toBe(1);
+    const invalidLow = { x: 220, y: 120 };
+    const invalidHigh = { x: 240, y: 120 };
+    const occupied = { x: 260, y: 120 };
+    const configuredSource = { x: 280, y: 120 };
+    module._powder_set(occupied.x, occupied.y, Material.Dust);
+    expect(module._powder_set_configured_source(
+      configuredSource.x, configuredSource.y, Material.CLNE, Material.Water,
+    )).toBe(1);
+
+    expect(module._powder_set_life(invalidLow.x, invalidLow.y, -1)).toBe(-1);
+    expect(module._powder_set_life(invalidHigh.x, invalidHigh.y, LIFE_PRESET_COUNT)).toBe(-1);
+    expect(module._powder_set_life(0, 120, 0)).toBe(-1);
+    expect(module._powder_set_life(occupied.x, occupied.y, 0)).toBe(0);
+    expect(module._powder_set_life(configuredSource.x, configuredSource.y, 0)).toBe(0);
+
+    const cells = new Uint8Array(module.HEAPU8.buffer, module._powder_cells(), 612 * 384);
+    expect(cells[invalidLow.y * 612 + invalidLow.x]).toBe(Material.Empty);
+    expect(cells[invalidHigh.y * 612 + invalidHigh.x]).toBe(Material.Empty);
+    expect(cells[occupied.y * 612 + occupied.x]).toBe(Material.Dust);
+    expect(cells[configuredSource.y * 612 + configuredSource.x]).toBe(Material.CLNE);
+    expect(module._powder_source_target(configuredSource.x, configuredSource.y)).toBe(Material.Water);
+  });
+
+  it('rejects projection-only LIFE IDs through the generic particle brush', async () => {
+    const simulation = await PowderToyBackend.load(moduleArtifact.href);
+    simulation.paint(300, 140, Material.LIFE_GOL, 0);
+    expect(simulation.cells()[140 * simulation.width + 300]).toBe(Material.Empty);
+  });
+
+  it('round-trips all LIFE preset ctypes through native OPS bytes', async () => {
+    const imported = await import(moduleArtifact.href) as { default: () => Promise<RawPowderModule> };
+    const source = await imported.default();
+    expect(source._powder_init()).toBe(1);
+    for (let preset = 0; preset < LIFE_PRESET_COUNT; preset++) {
+      expect(source._powder_set_life(120 + preset * 16, 140, preset)).toBe(1);
+    }
+
+    const savePointer = source._powder_save();
+    const saveSize = source._powder_save_size();
+    expect(savePointer).toBeGreaterThan(0);
+    expect(saveSize).toBeGreaterThan(0);
+    const save = source.HEAPU8.slice(savePointer, savePointer + saveSize);
+
+    const restored = await imported.default();
+    expect(restored._powder_init()).toBe(1);
+    const loadPointer = restored._powder_load_buffer(save.length);
+    expect(loadPointer).toBeGreaterThan(0);
+    restored.HEAPU8.set(save, loadPointer);
+    expect(restored._powder_load_commit()).toBe(1);
+    const cells = new Uint8Array(restored.HEAPU8.buffer, restored._powder_cells(), 612 * 384);
+    for (let preset = 0; preset < LIFE_PRESET_COUNT; preset++) {
+      expect(cells[140 * 612 + 120 + preset * 16]).toBe(LIFE_FIRST_MATERIAL_ID + preset);
+    }
+  });
+
+  it('evolves the built-in GOL preset through one blinker generation', async () => {
+    const imported = await import(moduleArtifact.href) as { default: () => Promise<RawPowderModule> };
+    const module = await imported.default();
+    expect(module._powder_init()).toBe(1);
+    const center = { x: 306, y: 180 };
+    for (const y of [center.y - 1, center.y, center.y + 1]) {
+      expect(module._powder_set_life(center.x, y, 0)).toBe(1);
+    }
+
+    module._powder_step();
+    const cells = new Uint8Array(module.HEAPU8.buffer, module._powder_cells(), 612 * 384);
+    for (const x of [center.x - 1, center.x, center.x + 1]) {
+      expect(cells[center.y * 612 + x]).toBe(LIFE_FIRST_MATERIAL_ID);
+    }
+    expect(cells[(center.y - 1) * 612 + center.x]).toBe(Material.Empty);
+    expect(cells[(center.y + 1) * 612 + center.x]).toBe(Material.Empty);
   });
 
   it('executes upstream clone behavior for an explicitly configured target', async () => {

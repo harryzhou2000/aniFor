@@ -43,7 +43,7 @@ async function auditMode(mode) {
   const profile = await mkdtemp(path.join(tmpdir(), `anifor-input-${mode}-`));
   const dpr = mode === 'canvas2d' ? 2 : 1;
   const query = new URLSearchParams({
-    scene: 'render-lab', simulation: 'native', inputAudit: '1', renderScale: '2',
+    scene: 'render-lab', inputAudit: '1', renderScale: '2',
     ...(mode === 'canvas2d' ? { renderer: 'canvas2d' } : {}),
   });
   const chrome = spawn(chromePath, [
@@ -91,9 +91,20 @@ async function auditMode(mode) {
     await cdp.send('Page.navigate', { url: `${ORIGIN}/?${query}` });
     await waitFor(() => evaluate(cdp, `Boolean(window.__ANIFOR_INPUT_AUDIT__ && document.documentElement)`), 15_000, `input audit API (${mode})`);
     await waitFor(() => evaluate(cdp, `window.__ANIFOR_INPUT_AUDIT__.backend().backend === ${JSON.stringify(mode)}`), 15_000, `${mode} backend`);
+    const canonicalFixture = await evaluate(cdp, `({
+      status: document.querySelector('.status')?.textContent,
+      occupied: window.__ANIFOR_INPUT_AUDIT__.occupiedCells(),
+      upperWall: window.__ANIFOR_INPUT_AUDIT__.cell(200, 138),
+      lowerWall: window.__ANIFOR_INPUT_AUDIT__.cell(50, 348),
+    })`);
+    assert(canonicalFixture.status?.includes('TypeScript deterministic fallback'),
+      `${mode}: canonical render lab used ${canonicalFixture.status}`);
+    assert(canonicalFixture.occupied > 40_000,
+      `${mode}: canonical render lab contains only ${canonicalFixture.occupied} cells`);
+    assert(canonicalFixture.upperWall === 3 && canonicalFixture.lowerWall === 3,
+      `${mode}: canonical render lab signature changed (${JSON.stringify(canonicalFixture)})`);
 
     const screenshot = screenshotPath(mode);
-    let configuredSourceScreenshot;
     if (screenshot) {
       await sleep(250);
       const capture = await cdp.send('Page.captureScreenshot', { format: 'png', fromSurface: true });
@@ -125,69 +136,7 @@ async function auditMode(mode) {
     );
     assert(painted.occupied === landmarks.length, `${mode}: expected ${landmarks.length} exact radius-0 cells, got ${painted.occupied}`);
 
-    const sourcePoint = { x: 250, y: 180 };
-    const sourceClient = worldClient(initial.canvas, { x: sourcePoint.x + 0.5, y: sourcePoint.y + 0.5 });
-    const sourceSelection = await evaluate(cdp, `(() => {
-      window.__ANIFOR_INPUT_AUDIT__.clear();
-      const targetButton = document.querySelector('[data-tool-key="material:2"] .material-button');
-      targetButton?.click();
-      document.querySelector('[data-filter="source"]')?.click();
-      const sourceActivator = document.querySelector('[data-tool-key="source:clne"] .material-button');
-      sourceActivator?.click();
-      const sourceButton = document.querySelector('[data-tool-key="source:clne"] .material-button');
-      const output = document.querySelector('.source-selection');
-      const library = document.querySelector('.tool-library');
-      const sourceRect = sourceButton?.getBoundingClientRect();
-      const libraryRect = library?.getBoundingClientRect();
-      return {
-        value: output?.value, hidden: output?.hidden, target: output?.dataset.target,
-        targetButton: { exists: Boolean(targetButton), disabled: targetButton?.disabled },
-        sourceButton: { exists: Boolean(sourceButton), disabled: sourceButton?.disabled },
-        sourceRect: sourceRect && { width: sourceRect.width, height: sourceRect.height, top: sourceRect.top, bottom: sourceRect.bottom },
-        libraryRect: libraryRect && { top: libraryRect.top, bottom: libraryRect.bottom },
-        status: document.querySelector('.status')?.textContent,
-      };
-    })()`);
-    assert(sourceSelection.value === 'CLNE → Water' && sourceSelection.hidden === false,
-      `${mode}: configured-source readout is ${JSON.stringify(sourceSelection)}`);
-    assert(sourceSelection.target === '2', `${mode}: configured-source target metadata is ${sourceSelection.target}`);
-    assert(sourceSelection.sourceRect?.width > 0 && sourceSelection.sourceRect?.height > 0,
-      `${mode}: configured-source tile is not visibly laid out`);
-    assert(sourceSelection.sourceRect.top >= sourceSelection.libraryRect.top - 1
-      && sourceSelection.sourceRect.bottom <= sourceSelection.libraryRect.bottom + 1,
-    `${mode}: configured-source tile escaped the visible library`);
-    if (screenshot) {
-      configuredSourceScreenshot = variantScreenshotPath(screenshot, 'configured-source');
-      const capture = await cdp.send('Page.captureScreenshot', { format: 'png', fromSurface: true });
-      await writeFile(configuredSourceScreenshot, Buffer.from(capture.data, 'base64'));
-    }
-    await mouseClick(cdp, sourceClient.x, sourceClient.y, 'left');
-    await sleep(80);
-    const configuredSource = await evaluate(cdp, `({
-      cell: window.__ANIFOR_INPUT_AUDIT__.cell(${sourcePoint.x}, ${sourcePoint.y}),
-      target: window.__ANIFOR_INPUT_AUDIT__.sourceTarget(${sourcePoint.x}, ${sourcePoint.y}),
-    })`);
-    assert(configuredSource.cell === 126, `${mode}: source cell projected as ${configuredSource.cell}`);
-    assert(configuredSource.target === 2, `${mode}: source target read back as ${configuredSource.target}`);
-    const rejectedSource = await evaluate(cdp, `(() => {
-      document.querySelector('[data-filter="all"]')?.click();
-      document.querySelector('[data-tool-key="material:146"] .material-button')?.click();
-      document.querySelector('[data-filter="source"]')?.click();
-      const button = document.querySelector('[data-tool-key="source:pcln"] .material-button');
-      button?.click();
-      const output = document.querySelector('.source-selection');
-      return { value: output?.value, rejected: output?.classList.contains('rejected'), selected: button?.getAttribute('aria-pressed') };
-    })()`);
-    assert(rejectedSource.value === 'PCLN → PSCN unsupported' && rejectedSource.rejected,
-      `${mode}: rejected source pair feedback is ${JSON.stringify(rejectedSource)}`);
-    assert(rejectedSource.selected === 'false', `${mode}: rejected source pair became active`);
-    await evaluate(cdp, `(() => {
-      document.querySelector('[data-filter="all"]')?.click();
-      document.querySelector('[data-tool-key="material:1"] .material-button')?.click();
-      document.querySelector('[data-filter="source"]')?.click();
-      window.__ANIFOR_INPUT_AUDIT__.clear();
-      return true;
-    })()`);
+    await evaluate(cdp, `window.__ANIFOR_INPUT_AUDIT__.clear(); true`);
 
     const wheelMetrics = await metrics(cdp);
     const wheelClient = worldClient(wheelMetrics.canvas, { x: 431.25, y: 117.75 });
@@ -243,27 +192,159 @@ async function auditMode(mode) {
     if (mode === 'canvas2d') {
       mobile = await auditMobile(cdp, screenshot ? variantScreenshotPath(screenshot, 'mobile') : undefined);
     }
+    const nativeSemantics = await auditNativeSemantics(cdp, mode, dpr, screenshot);
     await sleep(50);
     assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
     cdp.close();
     return {
       backend: mode, dpr,
       backing: `${initial.backing.width}x${initial.backing.height}`,
+      canonicalFixture: { occupied: canonicalFixture.occupied, wallSignature: '3,3' },
       landmarkCells: landmarks.length,
-      configuredSource: { emitter: configuredSource.cell, target: configuredSource.target },
+      configuredSource: nativeSemantics.configuredSource,
+      lifePreset: nativeSemantics.lifePreset,
       wheelAnchorErrorCells: round(wheelAnchorError, 5),
       middlePanDelta: { x: round(afterPan.panX - beforePan.panX, 3), y: round(afterPan.panY - beforePan.panY, 3) },
       toolFilters: { height: round(initial.ui.filters.height), rows: filterRows(initial.ui.filterButtons) },
       resizeMetrics,
       ...(mobile ? { mobile } : {}),
       ...(screenshot ? { screenshot } : {}),
-      ...(configuredSourceScreenshot ? { configuredSourceScreenshot } : {}),
+      ...nativeSemantics.screenshots,
       browserErrors: errors.length,
     };
   } finally {
     await terminate(chrome);
     await rm(profile, { recursive: true, force: true });
   }
+}
+
+async function auditNativeSemantics(cdp, mode, dpr, screenshot) {
+  await setDesktopMetrics(cdp, 1280, 720, dpr);
+  const query = new URLSearchParams({
+    scene: 'render-lab', simulation: 'native', inputAudit: '1', renderScale: '2',
+    ...(mode === 'canvas2d' ? { renderer: 'canvas2d' } : {}),
+  });
+  await cdp.send('Page.navigate', { url: `${ORIGIN}/?${query}` });
+  await waitFor(() => evaluate(cdp, `(() => {
+    const nativeQuery = new URLSearchParams(location.search).get('simulation') === 'native';
+    const nativeStatus = document.querySelector('.status')?.textContent?.includes('direct WebAssembly');
+    return nativeQuery && nativeStatus && Boolean(window.__ANIFOR_INPUT_AUDIT__ && document.documentElement);
+  })()`), 15_000, `native input audit API (${mode})`);
+  await waitFor(() => evaluate(cdp, `window.__ANIFOR_INPUT_AUDIT__.backend().backend === ${JSON.stringify(mode)}`),
+    15_000, `native ${mode} backend`);
+  await evaluate(cdp, `window.__ANIFOR_INPUT_AUDIT__.clear(); window.__ANIFOR_INPUT_AUDIT__.setRadius(0); window.__ANIFOR_INPUT_AUDIT__.resetView(); true`);
+  await sleep(120);
+  const initial = await metrics(cdp);
+  assertGeometry(initial, `native ${mode}`);
+  assertContained(initial, `native ${mode}`);
+  assertToolboxGeometry(initial, `native ${mode}`, 68);
+
+  const screenshots = {};
+  const sourcePoint = { x: 250, y: 180 };
+  const sourceClient = worldClient(initial.canvas, { x: sourcePoint.x + 0.5, y: sourcePoint.y + 0.5 });
+  const sourceSelection = await evaluate(cdp, `(() => {
+    const targetButton = document.querySelector('[data-tool-key="material:2"] .material-button');
+    targetButton?.click();
+    document.querySelector('[data-filter="source"]')?.click();
+    const sourceActivator = document.querySelector('[data-tool-key="source:clne"] .material-button');
+    sourceActivator?.click();
+    const sourceButton = document.querySelector('[data-tool-key="source:clne"] .material-button');
+    const output = document.querySelector('.source-selection');
+    const library = document.querySelector('.tool-library');
+    const sourceRect = sourceButton?.getBoundingClientRect();
+    const libraryRect = library?.getBoundingClientRect();
+    return {
+      value: output?.value, hidden: output?.hidden, target: output?.dataset.target,
+      targetButton: { exists: Boolean(targetButton), disabled: targetButton?.disabled },
+      sourceButton: { exists: Boolean(sourceButton), disabled: sourceButton?.disabled },
+      sourceRect: sourceRect && { width: sourceRect.width, height: sourceRect.height, top: sourceRect.top, bottom: sourceRect.bottom },
+      libraryRect: libraryRect && { top: libraryRect.top, bottom: libraryRect.bottom },
+      status: document.querySelector('.status')?.textContent,
+    };
+  })()`);
+  assert(sourceSelection.value === 'CLNE → Water' && sourceSelection.hidden === false,
+    `${mode}: configured-source readout is ${JSON.stringify(sourceSelection)}`);
+  assert(sourceSelection.target === '2', `${mode}: configured-source target metadata is ${sourceSelection.target}`);
+  assert(sourceSelection.sourceRect?.width > 0 && sourceSelection.sourceRect?.height > 0,
+    `${mode}: configured-source tile is not visibly laid out`);
+  assert(sourceSelection.sourceRect.top >= sourceSelection.libraryRect.top - 1
+    && sourceSelection.sourceRect.bottom <= sourceSelection.libraryRect.bottom + 1,
+  `${mode}: configured-source tile escaped the visible library`);
+  if (screenshot) {
+    screenshots.configuredSourceScreenshot = variantScreenshotPath(screenshot, 'configured-source');
+    const capture = await cdp.send('Page.captureScreenshot', { format: 'png', fromSurface: true });
+    await writeFile(screenshots.configuredSourceScreenshot, Buffer.from(capture.data, 'base64'));
+  }
+  await mouseClick(cdp, sourceClient.x, sourceClient.y, 'left');
+  await sleep(80);
+  const configuredSource = await evaluate(cdp, `({
+    cell: window.__ANIFOR_INPUT_AUDIT__.cell(${sourcePoint.x}, ${sourcePoint.y}),
+    target: window.__ANIFOR_INPUT_AUDIT__.sourceTarget(${sourcePoint.x}, ${sourcePoint.y}),
+  })`);
+  assert(configuredSource.cell === 126, `${mode}: source cell projected as ${configuredSource.cell}`);
+  assert(configuredSource.target === 2, `${mode}: source target read back as ${configuredSource.target}`);
+  const rejectedSource = await evaluate(cdp, `(() => {
+    document.querySelector('[data-filter="all"]')?.click();
+    document.querySelector('[data-tool-key="material:146"] .material-button')?.click();
+    document.querySelector('[data-filter="source"]')?.click();
+    const button = document.querySelector('[data-tool-key="source:pcln"] .material-button');
+    button?.click();
+    const output = document.querySelector('.source-selection');
+    return { value: output?.value, rejected: output?.classList.contains('rejected'), selected: button?.getAttribute('aria-pressed') };
+  })()`);
+  assert(rejectedSource.value === 'PCLN → PSCN unsupported' && rejectedSource.rejected,
+    `${mode}: rejected source pair feedback is ${JSON.stringify(rejectedSource)}`);
+  assert(rejectedSource.selected === 'false', `${mode}: rejected source pair became active`);
+
+  const lifePoint = { x: 270, y: 180 };
+  const lifeClient = worldClient(initial.canvas, { x: lifePoint.x + 0.5, y: lifePoint.y + 0.5 });
+  const lifeSelection = await evaluate(cdp, `(() => {
+    window.__ANIFOR_INPUT_AUDIT__.clear();
+    document.querySelector('[data-filter="life"]')?.click();
+    const activator = document.querySelector('[data-tool-key="life:gol"] .material-button');
+    activator?.click();
+    const button = document.querySelector('[data-tool-key="life:gol"] .material-button');
+    const library = document.querySelector('.tool-library');
+    const buttonRect = button?.getBoundingClientRect();
+    const libraryRect = library?.getBoundingClientRect();
+    return {
+      count: document.querySelectorAll('.tool-tile[data-tool-kind="life"]').length,
+      exists: Boolean(button), disabled: button?.disabled,
+      selected: button?.getAttribute('aria-pressed'), label: button?.textContent?.trim(),
+      buttonRect: buttonRect && { width: buttonRect.width, height: buttonRect.height, top: buttonRect.top, bottom: buttonRect.bottom },
+      libraryRect: libraryRect && { top: libraryRect.top, bottom: libraryRect.bottom },
+      viewportHeight: innerHeight,
+    };
+  })()`);
+  assert(lifeSelection.count === 24, `${mode}: LIFE filter exposed ${lifeSelection.count} presets`);
+  assert(lifeSelection.exists && lifeSelection.disabled === false && lifeSelection.selected === 'true',
+    `${mode}: GOL LIFE selection failed (${JSON.stringify(lifeSelection)})`);
+  assert(lifeSelection.buttonRect?.width > 0 && lifeSelection.buttonRect?.height > 0,
+    `${mode}: GOL LIFE tile is not visibly laid out`);
+  assert(lifeSelection.buttonRect.top >= lifeSelection.libraryRect.top - 1
+    && lifeSelection.buttonRect.bottom <= lifeSelection.libraryRect.bottom + 1
+    && lifeSelection.buttonRect.top >= 0 && lifeSelection.buttonRect.bottom <= lifeSelection.viewportHeight,
+  `${mode}: GOL LIFE tile is outside the visible library`);
+  await mouseClick(cdp, lifeClient.x, lifeClient.y, 'left');
+  await sleep(80);
+  const lifePreset = await evaluate(cdp, `({
+    preset: 0,
+    projection: window.__ANIFOR_INPUT_AUDIT__.cell(${lifePoint.x}, ${lifePoint.y}),
+    occupied: window.__ANIFOR_INPUT_AUDIT__.occupiedCells(),
+  })`);
+  assert(lifePreset.projection === 171, `${mode}: GOL LIFE cell projected as ${lifePreset.projection}`);
+  assert(lifePreset.occupied === 1, `${mode}: GOL LIFE placement occupied ${lifePreset.occupied} cells`);
+  if (screenshot) {
+    screenshots.lifeToolsScreenshot = variantScreenshotPath(screenshot, 'life-tools');
+    const capture = await cdp.send('Page.captureScreenshot', { format: 'png', fromSurface: true });
+    await writeFile(screenshots.lifeToolsScreenshot, Buffer.from(capture.data, 'base64'));
+  }
+
+  return {
+    configuredSource: { emitter: configuredSource.cell, target: configuredSource.target },
+    lifePreset: { preset: lifePreset.preset, projection: lifePreset.projection, visibleTools: lifeSelection.count },
+    screenshots,
+  };
 }
 
 async function auditMobile(cdp, screenshot) {

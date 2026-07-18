@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { MATERIALS, Material } from '../shared/materials';
+import { LIFE_PRESETS, MATERIALS, Material } from '../shared/materials';
 import { buildToolCatalog, filterTools, isToolAvailable, materialTools, recordRecent, semanticTools, type WallToolInfo } from './tool-catalog';
 
 describe('tool catalog view model', () => {
@@ -35,7 +35,7 @@ describe('tool catalog view model', () => {
 
   it('exposes unsupported semantics as distinct disabled tools instead of particles', () => {
     const semantic = semanticTools();
-    expect(new Set(semantic.map(({ kind }) => kind))).toEqual(new Set(['wall', 'source', 'sign', 'force', 'thermal']));
+    expect(new Set(semantic.map(({ kind }) => kind))).toEqual(new Set(['wall', 'source', 'life', 'sign', 'force', 'thermal']));
     expect(semantic.every((tool) => !isToolAvailable(tool))).toBe(true);
     expect(semantic.every((tool) => tool.limitations?.length)).toBe(true);
   });
@@ -65,6 +65,23 @@ describe('tool catalog view model', () => {
     const enabled = semanticTools({ configuredSources: true }).filter((tool) => tool.kind === 'source');
     expect(enabled).toHaveLength(5);
     expect(enabled.every(isToolAvailable)).toBe(true);
+  });
+
+  it('exposes all native LIFE presets behind an independent capability', () => {
+    const disabled = semanticTools().filter((tool) => tool.kind === 'life');
+    expect(disabled).toHaveLength(24);
+    expect(disabled.map(({ key }) => key)).toEqual(
+      LIFE_PRESETS.map(({ code }) => `life:${code.toLowerCase()}`),
+    );
+    expect(disabled.map(({ preset }) => preset)).toEqual(LIFE_PRESETS.map(({ preset }) => preset));
+    expect(disabled.map(({ projection }) => projection)).toEqual(LIFE_PRESETS.map(({ material }) => material));
+    expect(disabled.every((tool) => tool.category === 'automata' && !isToolAvailable(tool))).toBe(true);
+    expect(disabled.every((tool) => tool.limitations?.includes('life-presets-unavailable'))).toBe(true);
+
+    const enabled = semanticTools({ lifePresets: true }).filter((tool) => tool.kind === 'life');
+    expect(enabled).toHaveLength(24);
+    expect(enabled.every(isToolAvailable)).toBe(true);
+    expect(enabled.map(({ color }) => color)).toEqual(LIFE_PRESETS.map(({ color }) => color));
   });
 
   it('filters favorites and preserves recent-use order', () => {

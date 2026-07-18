@@ -1,7 +1,7 @@
-import { Material, type MaterialCategory, type MaterialInfo } from '../shared/materials';
+import { LIFE_PRESETS, Material, type MaterialCategory, type MaterialInfo } from '../shared/materials';
 import { SimulationTool, type SimulationToolId } from '../simulation/simulation-tools';
 
-export type ToolKind = 'element' | 'wall' | 'force' | 'thermal' | 'source' | 'sign' | 'utility';
+export type ToolKind = 'element' | 'wall' | 'force' | 'thermal' | 'source' | 'life' | 'sign' | 'utility';
 export type ToolFilter = 'all' | 'favorites' | 'recent' | ToolKind;
 
 interface ToolInfoBase {
@@ -40,17 +40,24 @@ export interface SourceToolInfo extends ToolInfoBase {
   readonly requiresTarget: boolean;
 }
 
+export interface LifeToolInfo extends ToolInfoBase {
+  readonly kind: 'life';
+  readonly preset: number;
+  readonly projection: Material;
+}
+
 export interface SignToolInfo extends ToolInfoBase {
   readonly kind: 'sign';
   readonly maximumLength: number;
 }
 
-export type CatalogTool = ElementToolInfo | WallToolInfo | SimToolInfo | SourceToolInfo | SignToolInfo;
+export type CatalogTool = ElementToolInfo | WallToolInfo | SimToolInfo | SourceToolInfo | LifeToolInfo | SignToolInfo;
 
 export interface ToolCapabilities {
   readonly walls?: boolean;
   readonly simulationTools?: boolean;
   readonly configuredSources?: boolean;
+  readonly lifePresets?: boolean;
   readonly signs?: boolean;
 }
 
@@ -102,9 +109,22 @@ export function semanticTools(capabilities: ToolCapabilities = {}): readonly Exc
     category: 'sources',
     ...unsupported(capabilities.configuredSources, 'configured-sources-unavailable'),
   }));
+  const lifePresets: LifeToolInfo[] = LIFE_PRESETS.map(({ preset, material, code, name, rule, color }) => ({
+    key: `life:${code.toLowerCase()}`,
+    kind: 'life',
+    preset,
+    projection: material,
+    name: code,
+    description: `${name}: ${rule}`,
+    color,
+    icon: '▦',
+    category: 'automata',
+    ...unsupported(capabilities.lifePresets, 'life-presets-unavailable'),
+  }));
   return [
     ...walls,
     ...sources,
+    ...lifePresets,
     {
       key: 'sign:place', kind: 'sign', maximumLength: 45,
       name: 'Sign', description: 'Places a persistent text annotation', color: '#f1e4c8', icon: 'T', category: 'signs',

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { ALL_MATERIALS, Material } from '../shared/materials';
 import { renderPhase, renderProfile, RenderPhase } from './render-profile';
 import { createRenderLookups, RenderFieldSet } from './render-field-set';
+import { renderOptics, RenderOptics } from './render-optics';
 import { renderTraits, RenderTrait } from './render-traits';
 
 describe('shared render field set', () => {
@@ -11,19 +12,20 @@ describe('shared render field set', () => {
     expect(lookup.gasByMaterial[Material.Oxygen]).toBe(1);
     expect(lookup.emissiveByMaterial[Material.PHOT]).toBe(1);
     expect(lookup.styleBytes[Material.Water * 4]).toBe(RenderPhase.Liquid);
+    expect(lookup.paletteBytes[Material.Water * 4 + 3]).toBe(RenderOptics.Aqueous);
     expect(lookup.styleBytes[Material.PRTI * 4 + 3]).toBe(RenderTrait.Sink | RenderTrait.Channel);
     expect(Array.from(lookup.colorByMaterial.slice(Material.Acid * 3, Material.Acid * 3 + 3))).toEqual([0xd3, 0x5e, 0xe8]);
   });
 
   it('packs a complete render identity for every projected material', () => {
     const lookup = createRenderLookups(ALL_MATERIALS);
-    expect(ALL_MATERIALS).toHaveLength(170);
-    expect(new Set(ALL_MATERIALS.map(({ id }) => id)).size).toBe(170);
+    expect(ALL_MATERIALS).toHaveLength(194);
+    expect(new Set(ALL_MATERIALS.map(({ id }) => id)).size).toBe(194);
     for (const material of ALL_MATERIALS) {
       const palette = material.id * 4;
       const color = Number.parseInt(material.color.slice(1), 16);
       expect(Array.from(lookup.paletteBytes.slice(palette, palette + 4))).toEqual([
-        color >>> 16, (color >>> 8) & 0xff, color & 0xff, 255,
+        color >>> 16, (color >>> 8) & 0xff, color & 0xff, renderOptics(material),
       ]);
       expect(lookup.styleBytes[palette]).toBe(renderPhase(material));
       expect(lookup.styleBytes[palette + 1]).toBe(renderProfile(material.category));
@@ -66,6 +68,13 @@ describe('shared render field set', () => {
 
   it('keeps shared field memory bounded at the native world size', () => {
     const fields = new RenderFieldSet(612, 384, ALL_MATERIALS);
+    const lookupBytes = fields.lookups.paletteBytes.byteLength
+      + fields.lookups.styleBytes.byteLength
+      + fields.lookups.gasByMaterial.byteLength
+      + fields.lookups.liquidByMaterial.byteLength
+      + fields.lookups.emissiveByMaterial.byteLength
+      + fields.lookups.colorByMaterial.byteLength;
+    expect(lookupBytes).toBe(3_584);
     expect(fields.allocatedByteLength).toBeLessThan(8_200_000);
   });
 });

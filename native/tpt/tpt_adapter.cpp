@@ -16,6 +16,9 @@
 namespace {
 constexpr unsigned int STILLROOM_SEED = 0x51A17EED;
 constexpr int FIELD_SIZE = XRES * YRES;
+constexpr int STILLROOM_LIFE_FIRST = 171;
+constexpr int STILLROOM_LIFE_PRESET_COUNT = 24;
+static_assert(NGOL == STILLROOM_LIFE_PRESET_COUNT, "Stillroom LIFE projection must match TPT builtin GOL presets");
 std::unique_ptr<SimulationData> simulationData;
 std::unique_ptr<Simulation> simulation;
 std::vector<char> saveBuffer;
@@ -479,7 +482,10 @@ void ExtractFields()
 			if (!TYP(packed)) packed = simulation->photons[y][x];
 			if (!TYP(packed)) continue;
 			auto const &part = simulation->parts[ID(packed)];
-			materialField[offset] = ToStillroomType(part.type);
+			if (part.type == PT_LIFE && part.ctype >= 0 && part.ctype < STILLROOM_LIFE_PRESET_COUNT)
+				materialField[offset] = uint8_t(STILLROOM_LIFE_FIRST + part.ctype);
+			else
+				materialField[offset] = ToStillroomType(part.type);
 			temperatureField[offset] = uint16_t(std::clamp(part.temp * 10.0f, 0.0f, 65535.0f));
 			velocityField[offset * 2] = int8_t(std::clamp(part.vx * 12.0f, -127.0f, 127.0f));
 			velocityField[offset * 2 + 1] = int8_t(std::clamp(part.vy * 12.0f, -127.0f, 127.0f));
@@ -517,6 +523,19 @@ __attribute__((visibility("default"))) void powder_set(int x, int y, int materia
 	if (x < CELL || y < CELL || x >= XRES - CELL || y >= YRES - CELL) return;
 	if (material == 0) simulation->delete_part(x, y);
 	else simulation->create_part(-2, x, y, ToPowderType(material));
+}
+__attribute__((visibility("default"))) int powder_set_life(int x, int y, int preset)
+{
+	EnsureSimulation();
+	if (x < CELL || y < CELL || x >= XRES - CELL || y >= YRES - CELL
+		|| preset < 0 || preset >= STILLROOM_LIFE_PRESET_COUNT)
+		return -1;
+	if (!simulationData->elements[PT_LIFE].Enabled) return -1;
+
+	// LIFE is a semantic placement tool, not a source-target shortcut. Keeping
+	// occupied cells atomic also prevents repainting from silently changing ctype.
+	if (TYP(simulation->pmap[y][x])) return 0;
+	return simulation->create_part(-2, x, y, PT_LIFE, preset) >= 0 ? 1 : 0;
 }
 __attribute__((visibility("default"))) int powder_set_configured_source(int x, int y, int source, int target)
 {

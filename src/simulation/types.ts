@@ -32,6 +32,8 @@ export interface SimulationBackend {
   canConfigureSource?(source: Material, target: Material): boolean;
   /** Read the projected ctype target of a native source at one world cell. */
   configuredSourceTargetAt?(x: number, y: number): Material | undefined;
+  /** Place one of TPT's native built-in LIFE presets without treating it as a generic element ID. */
+  paintLifePreset?(x: number, y: number, preset: number, radius: number): number;
   /** Apply a native simulation tool. Vector tools use deltaX/deltaY as the drag vector. */
   applySimulationTool?(tool: SimulationToolId, x: number, y: number, radius: number, deltaX?: number, deltaY?: number): void;
   consumeDirtyCells(): readonly DirtyCell[];

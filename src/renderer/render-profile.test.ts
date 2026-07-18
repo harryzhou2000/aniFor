@@ -13,12 +13,14 @@ describe('render profiles', () => {
     expect(renderProfile('powered')).toBe(RenderProfile.Device);
     expect(renderProfile('sensors')).toBe(RenderProfile.Device);
     expect(renderProfile('force')).toBe(RenderProfile.Field);
+    expect(renderProfile('automata')).toBe(RenderProfile.Neutral);
   });
 
   it('leaves fluid and atmospheric phase styling neutral', () => {
     expect(renderProfile('liquids')).toBe(RenderProfile.Neutral);
     expect(renderProfile('gases')).toBe(RenderProfile.Neutral);
     expect(renderProfile('energy')).toBe(RenderProfile.Neutral);
+    expect(renderPhase({ category: 'automata' })).toBe(RenderPhase.Solid);
   });
 
   it('keeps physical state independent from toolbox grouping', () => {

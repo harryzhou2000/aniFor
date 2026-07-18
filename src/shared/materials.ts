@@ -172,9 +172,35 @@ export const enum Material {
   PSNS = 168,
   TSNS = 169,
   VSNS = 170,
+  // Projected native LIFE variants. These IDs encode PT_LIFE ctype for the
+  // renderer, but remain semantic tools rather than ordinary material brushes.
+  LIFE_GOL = 171,
+  LIFE_HLIF = 172,
+  LIFE_ASIM = 173,
+  LIFE_2X2 = 174,
+  LIFE_DANI = 175,
+  LIFE_AMOE = 176,
+  LIFE_MOVE = 177,
+  LIFE_PGOL = 178,
+  LIFE_DMOE = 179,
+  LIFE_34 = 180,
+  LIFE_LLIF = 181,
+  LIFE_STAN = 182,
+  LIFE_SEED = 183,
+  LIFE_MAZE = 184,
+  LIFE_COAG = 185,
+  LIFE_WALL = 186,
+  LIFE_GNAR = 187,
+  LIFE_REPL = 188,
+  LIFE_MYST = 189,
+  LIFE_LOTE = 190,
+  LIFE_FRG2 = 191,
+  LIFE_STAR = 192,
+  LIFE_FROG = 193,
+  LIFE_BRAN = 194,
 }
 
-export type MaterialCategory = 'powders' | 'liquids' | 'solids' | 'gases' | 'energy' | 'explosives' | 'special' | 'radioactive' | 'force' | 'electronics' | 'powered' | 'sensors' | 'life';
+export type MaterialCategory = 'powders' | 'liquids' | 'solids' | 'gases' | 'energy' | 'explosives' | 'special' | 'radioactive' | 'force' | 'electronics' | 'powered' | 'sensors' | 'life' | 'automata';
 
 /** Physical presentation state. This is independent of the toolbox category. */
 export type MaterialPhase = 'powder' | 'liquid' | 'solid' | 'gas' | 'energy' | 'field';
@@ -195,6 +221,45 @@ export interface MaterialInfo {
   readonly available?: boolean;
   readonly limitations?: readonly NativeLimitation[];
 }
+
+export interface LifePresetInfo {
+  /** Native PT_LIFE ctype index. */
+  readonly preset: number;
+  /** Stable byte ID used only when projecting this preset for rendering. */
+  readonly material: Material;
+  readonly code: string;
+  readonly name: string;
+  readonly rule: string;
+  readonly color: string;
+}
+
+/** Pinned native TPT built-in LIFE order. Preset index is part of the WASM ABI. */
+export const LIFE_PRESETS = [
+  { preset: 0, material: Material.LIFE_GOL, code: 'GOL', name: 'Game of Life', rule: 'B3/S23', color: '#0cac00' },
+  { preset: 1, material: Material.LIFE_HLIF, code: 'HLIF', name: 'High Life', rule: 'B36/S23', color: '#ff0000' },
+  { preset: 2, material: Material.LIFE_ASIM, code: 'ASIM', name: 'Assimilation', rule: 'B345/S4567', color: '#0000ff' },
+  { preset: 3, material: Material.LIFE_2X2, code: '2X2', name: '2X2', rule: 'B36/S125', color: '#ffff00' },
+  { preset: 4, material: Material.LIFE_DANI, code: 'DANI', name: 'Day and Night', rule: 'B3678/S34678', color: '#00ffff' },
+  { preset: 5, material: Material.LIFE_AMOE, code: 'AMOE', name: 'Amoeba', rule: 'B357/S1358', color: '#ff00ff' },
+  { preset: 6, material: Material.LIFE_MOVE, code: 'MOVE', name: 'Move', rule: 'B368/S245', color: '#ffffff' },
+  { preset: 7, material: Material.LIFE_PGOL, code: 'PGOL', name: 'Pseudo Life', rule: 'B357/S238', color: '#e05010' },
+  { preset: 8, material: Material.LIFE_DMOE, code: 'DMOE', name: 'Diamoeba', rule: 'B35678/S5678', color: '#500000' },
+  { preset: 9, material: Material.LIFE_34, code: '3-4', name: '3-4', rule: 'B34/S34', color: '#500050' },
+  { preset: 10, material: Material.LIFE_LLIF, code: 'LLIF', name: 'Long Life', rule: 'B345/S5', color: '#505050' },
+  { preset: 11, material: Material.LIFE_STAN, code: 'STAN', name: 'Stains', rule: 'B3678/S235678', color: '#5000ff' },
+  { preset: 12, material: Material.LIFE_SEED, code: 'SEED', name: 'Seeds', rule: 'B2/S', color: '#fbec7d' },
+  { preset: 13, material: Material.LIFE_MAZE, code: 'MAZE', name: 'Maze', rule: 'B3/S12345', color: '#a8e4a0' },
+  { preset: 14, material: Material.LIFE_COAG, code: 'COAG', name: 'Coagulations', rule: 'B378/S235678', color: '#9acd32' },
+  { preset: 15, material: Material.LIFE_WALL, code: 'WALL', name: 'Walled Cities', rule: 'B45678/S2345', color: '#0047ab' },
+  { preset: 16, material: Material.LIFE_GNAR, code: 'GNAR', name: 'Gnarl', rule: 'B1/S1', color: '#e5b73b' },
+  { preset: 17, material: Material.LIFE_REPL, code: 'REPL', name: 'Replicator', rule: 'B1357/S1357', color: '#259588' },
+  { preset: 18, material: Material.LIFE_MYST, code: 'MYST', name: 'Mystery', rule: 'B3458/S05678', color: '#0c3c00' },
+  { preset: 19, material: Material.LIFE_LOTE, code: 'LOTE', name: 'Living on the Edge', rule: 'B37/S3458/4', color: '#ff0000' },
+  { preset: 20, material: Material.LIFE_FRG2, code: 'FRG2', name: 'Like Frogs', rule: 'B3/S124/3', color: '#006432' },
+  { preset: 21, material: Material.LIFE_STAR, code: 'STAR', name: 'Like Star Wars', rule: 'B278/S3456/6', color: '#000040' },
+  { preset: 22, material: Material.LIFE_FROG, code: 'FROG', name: 'Frogs', rule: 'B34/S12/3', color: '#006400' },
+  { preset: 23, material: Material.LIFE_BRAN, code: 'BRAN', name: 'Brian 6', rule: 'B246/S6/3', color: '#ffff00' },
+] as const satisfies readonly LifePresetInfo[];
 
 export const ALL_MATERIALS: readonly MaterialInfo[] = [
   { id: Material.Sand, name: 'Sand', description: 'Pours and settles', color: '#d7aa68', icon: '●', category: 'powders', selectable: true },
@@ -367,7 +432,15 @@ export const ALL_MATERIALS: readonly MaterialInfo[] = [
   { id: Material.PSNS, name: 'PSNS', description: 'Pressure sensor, creates a spark when the pressure is greater than its temperature.', color: '#db2020', icon: '◉', category: 'sensors', selectable: true },
   { id: Material.TSNS, name: 'TSNS', description: 'Temperature sensor, creates a spark when there\'s a nearby particle with a greater temperature.', color: '#fd00d5', icon: '◉', category: 'sensors', selectable: true },
   { id: Material.VSNS, name: 'VSNS', description: 'Velocity sensor, creates a spark when there\'s a nearby particle with velocity higher than its temperature.', color: '#7c9c00', icon: '◉', category: 'sensors', selectable: true },
-
+  ...LIFE_PRESETS.map(({ material: id, code: name, name: family, rule, color }) => ({
+    id,
+    name,
+    description: `${family}: ${rule}`,
+    color,
+    icon: '▦',
+    category: 'automata' as const,
+    selectable: false,
+  })),
 ];
 
 export const MATERIALS: readonly MaterialInfo[] = ALL_MATERIALS.filter(({ selectable }) => selectable);

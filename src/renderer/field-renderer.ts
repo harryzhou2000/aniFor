@@ -5,6 +5,7 @@ import { contentBoxFromBounds } from './client-coordinate-map';
 import type { PixiFieldPresenter } from './pixi-field-presenter';
 import { backingSize, resolveFieldOutputScale } from './render-resolution';
 import { shadeCanvasAtmosphere } from './canvas-atmosphere-relief';
+import { shadeCanvasOpticalVolume } from './canvas-optics-style';
 import { reconstructLiquidSurface } from './canvas-liquid-surface';
 import { shadeCanvasEnergy } from './canvas-energy-style';
 import { shadeCanvasMaterial } from './canvas-material-style';
@@ -15,6 +16,7 @@ import {
 import { lightCanvasSurface } from './canvas-surface-light';
 import { reconstructSolidSurface } from './canvas-solid-surface';
 import { RenderFieldSet } from './render-field-set';
+import { RenderOptics } from './render-optics';
 import { receivesSurfaceLight, renderPhase, RenderPhase, RenderProfile } from './render-profile';
 import { semanticRenderHeat } from './semantic-field';
 import { compositePixel } from './rgba-composite';
@@ -325,6 +327,7 @@ export class MaterialRenderer {
       const phase = fields.lookups.styleBytes[material * 4] as RenderPhase;
       const profile = fields.lookups.styleBytes[material * 4 + 1] as RenderProfile;
       const traits = fields.lookups.styleBytes[material * 4 + 3];
+      const optics = fields.lookups.paletteBytes[material * 4 + 3] as RenderOptics;
       const applicableTraits = applicableCanvasRenderTraits(traits, phase);
       const target = fields.lookups.liquidByMaterial[material] ? liquid : base;
       const top = y === 0 ? Material.Empty : this.rendered[index - width] as Material;
@@ -462,13 +465,16 @@ export class MaterialRenderer {
         if (info.phase === RenderPhase.Gas) {
           const mask = materialNeighbourMask(this.rendered, width, height, x, y, material);
           const density = neighbourDensity(mask);
-          const volume = density * 4 + contourLight(mask) * 0.5 + Math.sin(time * 0.0014 + x * 0.08 + y * 0.05) * 5;
+          const volume = contourLight(mask) * 0.5 + Math.sin(time * 0.0014 + x * 0.08 + y * 0.05) * 5;
+          shadeCanvasOpticalVolume(
+            this.styledColor, red, green, blue, optics, 'gas', density, volume,
+          );
           if (applicableTraits === 0 && !info.emissive) {
-            setPixel(smoke, pixel, red + volume, green + volume, blue + volume, 42 + density * 12);
+            setPixel(
+              smoke, pixel,
+              this.styledColor[0], this.styledColor[1], this.styledColor[2], 42 + density * 12,
+            );
           } else {
-            this.styledColor[0] = red + volume;
-            this.styledColor[1] = green + volume;
-            this.styledColor[2] = blue + volume;
             if (applicableTraits !== 0) applyCanvasRenderTraits(
               this.styledColor, applicableTraits, phase, material, x, y, index, this.traitClock,
             );
@@ -481,17 +487,16 @@ export class MaterialRenderer {
           const mask = materialNeighbourMask(this.rendered, width, height, x, y, material);
           const density = neighbourDensity(mask);
           const contour = contourLight(mask);
-          const depth = density * 3.2;
           const shimmer = Math.sin(time * 0.0018 + x * 0.055 + y * 0.025) * 4 + contour;
+          shadeCanvasOpticalVolume(
+            this.styledColor, red, green, blue, optics, 'liquid', density, shimmer,
+          );
           if (applicableTraits === 0 && !info.emissive) {
             compositePixel(
-              target, pixel, red - depth + shimmer, green - depth + shimmer,
-              blue - depth + shimmer, canvasLiquidAlpha(density),
+              target, pixel,
+              this.styledColor[0], this.styledColor[1], this.styledColor[2], canvasLiquidAlpha(density),
             );
           } else {
-            this.styledColor[0] = red - depth + shimmer;
-            this.styledColor[1] = green - depth + shimmer;
-            this.styledColor[2] = blue - depth + shimmer;
             if (applicableTraits !== 0) applyCanvasRenderTraits(
               this.styledColor, applicableTraits, phase, material, x, y, index, this.traitClock,
             );

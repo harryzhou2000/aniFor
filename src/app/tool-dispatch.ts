@@ -1,13 +1,14 @@
 import type { Point } from '../renderer/view-transform';
 import type { Material } from '../shared/materials';
 import type { SimulationBackend } from '../simulation';
-import type { SimToolInfo, SourceToolInfo, WallToolInfo } from '../ui/tool-catalog';
+import type { LifeToolInfo, SimToolInfo, SourceToolInfo, WallToolInfo } from '../ui/tool-catalog';
 
 export interface ActiveToolSelection {
   readonly material: Material;
   readonly wallTool?: WallToolInfo;
   readonly simulationTool?: SimToolInfo;
   readonly sourceTool?: SourceToolInfo;
+  readonly lifeTool?: LifeToolInfo;
   readonly radius: number;
 }
 
@@ -42,6 +43,12 @@ export function drawToolPoint(
   if (selection.sourceTool) {
     simulation.paintConfiguredSource?.(
       point.x, point.y, selection.sourceTool.emitter, selection.material, selection.radius,
+    );
+    return;
+  }
+  if (selection.lifeTool) {
+    simulation.paintLifePreset?.(
+      point.x, point.y, selection.lifeTool.preset, selection.radius,
     );
     return;
   }

@@ -5817,6 +5817,7 @@ var _powder_tick = Module['_powder_tick'] = makeInvalidEarlyAccess('_powder_tick
 var _powder_set_tick = Module['_powder_set_tick'] = makeInvalidEarlyAccess('_powder_set_tick');
 var _powder_clear = Module['_powder_clear'] = makeInvalidEarlyAccess('_powder_clear');
 var _powder_set = Module['_powder_set'] = makeInvalidEarlyAccess('_powder_set');
+var _powder_set_life = Module['_powder_set_life'] = makeInvalidEarlyAccess('_powder_set_life');
 var _powder_set_configured_source = Module['_powder_set_configured_source'] = makeInvalidEarlyAccess('_powder_set_configured_source');
 var _powder_can_configure_source = Module['_powder_can_configure_source'] = makeInvalidEarlyAccess('_powder_can_configure_source');
 var _powder_source_target = Module['_powder_source_target'] = makeInvalidEarlyAccess('_powder_source_target');
@@ -5862,6 +5863,7 @@ function assignWasmExports(wasmExports) {
   assert(typeof wasmExports['powder_set_tick'] != 'undefined', 'missing Wasm export: powder_set_tick');
   assert(typeof wasmExports['powder_clear'] != 'undefined', 'missing Wasm export: powder_clear');
   assert(typeof wasmExports['powder_set'] != 'undefined', 'missing Wasm export: powder_set');
+  assert(typeof wasmExports['powder_set_life'] != 'undefined', 'missing Wasm export: powder_set_life');
   assert(typeof wasmExports['powder_set_configured_source'] != 'undefined', 'missing Wasm export: powder_set_configured_source');
   assert(typeof wasmExports['powder_can_configure_source'] != 'undefined', 'missing Wasm export: powder_can_configure_source');
   assert(typeof wasmExports['powder_source_target'] != 'undefined', 'missing Wasm export: powder_source_target');
@@ -5903,6 +5905,7 @@ function assignWasmExports(wasmExports) {
   _powder_set_tick = Module['_powder_set_tick'] = createExportWrapper('powder_set_tick', wasmExports['powder_set_tick'], 1);
   _powder_clear = Module['_powder_clear'] = createExportWrapper('powder_clear', wasmExports['powder_clear'], 0);
   _powder_set = Module['_powder_set'] = createExportWrapper('powder_set', wasmExports['powder_set'], 3);
+  _powder_set_life = Module['_powder_set_life'] = createExportWrapper('powder_set_life', wasmExports['powder_set_life'], 3);
   _powder_set_configured_source = Module['_powder_set_configured_source'] = createExportWrapper('powder_set_configured_source', wasmExports['powder_set_configured_source'], 4);
   _powder_can_configure_source = Module['_powder_can_configure_source'] = createExportWrapper('powder_can_configure_source', wasmExports['powder_can_configure_source'], 2);
   _powder_source_target = Module['_powder_source_target'] = createExportWrapper('powder_source_target', wasmExports['powder_source_target'], 2);

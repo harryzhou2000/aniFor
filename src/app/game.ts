@@ -6,7 +6,7 @@ import { decodeSharedWorld } from '../shared/share-codec';
 import { exportWorldFile, importWorldFile, MAX_WORLD_FILE_BYTES, worldFileName } from '../shared/world-file';
 import type { SimulationBackend } from '../simulation';
 import { mountControls } from '../ui/controls';
-import { buildToolCatalog, type SimToolInfo, type SourceToolInfo, type WallToolInfo } from '../ui/tool-catalog';
+import { buildToolCatalog, type LifeToolInfo, type SimToolInfo, type SourceToolInfo, type WallToolInfo } from '../ui/tool-catalog';
 import { WorldInputController } from '../ui/world-input';
 import { drawToolPoint, drawToolSegment } from './tool-dispatch';
 import { browserInputAuditRequested } from './browser-input-audit';
@@ -20,6 +20,7 @@ export class Game {
   private wallTool?: WallToolInfo;
   private simulationTool?: SimToolInfo;
   private sourceTool?: SourceToolInfo;
+  private lifeTool?: LifeToolInfo;
   private radius = 7;
   private eraseMode = false;
   private paused = false;
@@ -59,7 +60,7 @@ export class Game {
         erase ||= this.eraseMode;
         drawToolPoint(this.simulation, { x, y }, {
           material: this.material, wallTool: this.wallTool,
-          simulationTool: this.simulationTool, sourceTool: this.sourceTool,
+          simulationTool: this.simulationTool, sourceTool: this.sourceTool, lifeTool: this.lifeTool,
           radius: this.radius,
         }, erase);
       },
@@ -67,7 +68,7 @@ export class Game {
         erase ||= this.eraseMode;
         drawToolSegment(this.simulation, start, end, {
           material: this.material, wallTool: this.wallTool,
-          simulationTool: this.simulationTool, sourceTool: this.sourceTool,
+          simulationTool: this.simulationTool, sourceTool: this.sourceTool, lifeTool: this.lifeTool,
           radius: this.radius,
         }, erase);
       },
@@ -81,6 +82,7 @@ export class Game {
         this.wallTool = undefined;
         this.simulationTool = undefined;
         this.sourceTool = undefined;
+        this.lifeTool = undefined;
       },
       onRadius: (radius) => { this.radius = radius; },
       onPause: () => { this.paused = !this.paused; },
@@ -94,15 +96,23 @@ export class Game {
           this.wallTool = tool;
           this.simulationTool = undefined;
           this.sourceTool = undefined;
+          this.lifeTool = undefined;
         }
         else if (tool.kind === 'force' || tool.kind === 'thermal' || tool.kind === 'utility') {
           this.simulationTool = tool;
           this.wallTool = undefined;
           this.sourceTool = undefined;
+          this.lifeTool = undefined;
         } else if (tool.kind === 'source') {
           this.sourceTool = tool;
           this.wallTool = undefined;
           this.simulationTool = undefined;
+          this.lifeTool = undefined;
+        } else if (tool.kind === 'life') {
+          this.lifeTool = tool;
+          this.wallTool = undefined;
+          this.simulationTool = undefined;
+          this.sourceTool = undefined;
         }
       },
     }, buildToolCatalog(MATERIALS, {
@@ -112,6 +122,7 @@ export class Game {
         this.simulation.paintConfiguredSource && this.simulation.canConfigureSource
           && this.simulation.configuredSourceTargetAt,
       ),
+      lifePresets: Boolean(this.simulation.paintLifePreset),
     }));
     if (renderLab || wallLab) {
       const status = this.root.querySelector('.status');
@@ -130,6 +141,7 @@ export class Game {
     this.wallTool = undefined;
     this.simulationTool = undefined;
     this.sourceTool = undefined;
+    this.lifeTool = undefined;
     this.eraseMode = false;
     this.radius = 0;
     this.renderer.resetView();

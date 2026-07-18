@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { Material } from '../shared/materials';
 import { SimulationTool } from '../simulation/simulation-tools';
 import type { SimulationBackend } from '../simulation';
-import type { SimToolInfo, SourceToolInfo } from '../ui/tool-catalog';
+import type { LifeToolInfo, SimToolInfo, SourceToolInfo } from '../ui/tool-catalog';
 import { drawToolPoint, drawToolSegment, type ActiveToolSelection } from './tool-dispatch';
 
 function backend(): SimulationBackend {
@@ -12,6 +12,7 @@ function backend(): SimulationBackend {
     cells: () => new Uint8Array(32 * 20), consumeDirtyCells: () => [],
     saveWorld: () => '', loadWorld: vi.fn(), applySimulationTool: vi.fn(),
     paintConfiguredSource: vi.fn(),
+    paintLifePreset: vi.fn(),
   };
 }
 
@@ -30,6 +31,14 @@ function sourceTool(emitter: SourceToolInfo['emitter']): SourceToolInfo {
   return {
     key: `source:${emitter}`, kind: 'source', emitter, requiresTarget: true,
     name: 'source', description: 'source', color: '#fff', icon: 'x', category: 'sources',
+  };
+}
+
+function lifeTool(preset = 0): LifeToolInfo {
+  return {
+    key: `life:${preset}`, kind: 'life', preset, projection: Material.LIFE_GOL,
+    name: 'GOL', description: 'Game of Life B3/S23', color: '#0cac00', icon: '◫',
+    category: 'automata',
   };
 }
 
@@ -89,6 +98,37 @@ describe('semantic tool dispatch', () => {
     expect(simulation.paintConfiguredSource).not.toHaveBeenCalled();
 
     delete simulation.paintConfiguredSource;
+    drawToolPoint(simulation, { x: 7, y: 8 }, active, false);
+    expect(simulation.paint).not.toHaveBeenCalled();
+  });
+
+  it('places a native LIFE preset without ordinary material fallback', () => {
+    const simulation = backend();
+    const active: ActiveToolSelection = {
+      material: Material.Water,
+      radius: 3,
+      lifeTool: lifeTool(12),
+    };
+
+    drawToolPoint(simulation, { x: 9, y: 11 }, active, false);
+
+    expect(simulation.paintLifePreset).toHaveBeenCalledWith(9, 11, 12, 3);
+    expect(simulation.paint).not.toHaveBeenCalled();
+  });
+
+  it('keeps LIFE erase semantic and never falls through when the capability is absent', () => {
+    const simulation = backend();
+    const active: ActiveToolSelection = {
+      material: Material.Fire,
+      radius: 2,
+      lifeTool: lifeTool(23),
+    };
+
+    drawToolPoint(simulation, { x: 4, y: 6 }, active, true);
+    expect(simulation.erase).toHaveBeenCalledWith(4, 6, 3);
+    expect(simulation.paintLifePreset).not.toHaveBeenCalled();
+
+    delete simulation.paintLifePreset;
     drawToolPoint(simulation, { x: 7, y: 8 }, active, false);
     expect(simulation.paint).not.toHaveBeenCalled();
   });

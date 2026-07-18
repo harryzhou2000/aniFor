@@ -2,6 +2,7 @@ import type { MaterialCategory, MaterialPhase } from '../shared/materials';
 import { AtmosphereField } from './atmosphere-field';
 import { EmissionField } from './emission-field';
 import { LiquidDensityField } from './liquid-density-field';
+import { renderOptics } from './render-optics';
 import { renderPhase, renderProfile, RenderPhase } from './render-profile';
 import { renderTraits } from './render-traits';
 import { VolumeFieldRefreshSchedule, type VolumeFieldKind } from './volume-field-refresh';
@@ -39,7 +40,7 @@ export function createRenderLookups(materials: readonly RenderMaterialStyle[]): 
     paletteBytes[paletteOffset] = color >>> 16;
     paletteBytes[paletteOffset + 1] = (color >>> 8) & 0xff;
     paletteBytes[paletteOffset + 2] = color & 0xff;
-    paletteBytes[paletteOffset + 3] = 255;
+    paletteBytes[paletteOffset + 3] = renderOptics(material);
     styleBytes[paletteOffset] = phase;
     styleBytes[paletteOffset + 1] = renderProfile(material.category);
     const emissive = material.emissive === true || phase === RenderPhase.Energy;
