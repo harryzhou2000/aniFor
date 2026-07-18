@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { shadeCanvasEnergy } from './canvas-energy-style';
 import { RenderProfile } from './render-profile';
+import { RenderTrait } from './render-traits';
 
 describe('Canvas energy core styling', () => {
   it('keeps warm and radioactive carriers distinct with a luminous core', () => {
@@ -9,10 +10,11 @@ describe('Canvas energy core styling', () => {
     const radioactive = new Float32Array(3);
     const radioactiveGlow = new Float32Array(3);
     const warmAlpha = shadeCanvasEnergy(
-      warm, warmGlow, 255, 96, 42, RenderProfile.Neutral, 4, 12, 9, 500, 0.8, 0, -18,
+      warm, warmGlow, 255, 96, 42, RenderProfile.Neutral, 0, 4, 12, 9, 500, 0.8, 0, -18,
     );
     const radioactiveAlpha = shadeCanvasEnergy(
-      radioactive, radioactiveGlow, 32, 224, 255, RenderProfile.Radioactive, 106, 12, 9, 500, 0.2, 28, 0,
+      radioactive, radioactiveGlow, 32, 224, 255, RenderProfile.Radioactive,
+      RenderTrait.Radioactive | RenderTrait.Carrier, 106, 12, 9, 500, 0.2, 28, 0,
     );
     expect(warm[0]).toBeGreaterThan(warm[2]);
     expect(radioactive[2]).toBeGreaterThan(radioactive[0]);
@@ -28,13 +30,30 @@ describe('Canvas energy core styling', () => {
     const second = new Float32Array(3);
     const secondGlow = new Float32Array(3);
     const firstAlpha = shadeCanvasEnergy(
-      first, firstGlow, 223, 239, 255, RenderProfile.Radioactive, 101, 4, 7, 1234, 0.4, 12, -5,
+      first, firstGlow, 223, 239, 255, RenderProfile.Radioactive,
+      RenderTrait.Radioactive | RenderTrait.Carrier, 101, 4, 7, 1234, 0.4, 12, -5,
     );
     const secondAlpha = shadeCanvasEnergy(
-      second, secondGlow, 223, 239, 255, RenderProfile.Radioactive, 101, 4, 7, 1234, 0.4, 12, -5,
+      second, secondGlow, 223, 239, 255, RenderProfile.Radioactive,
+      RenderTrait.Radioactive | RenderTrait.Carrier, 101, 4, 7, 1234, 0.4, 12, -5,
     );
     expect(second).toEqual(first);
     expect(secondGlow).toEqual(firstGlow);
     expect(secondAlpha).toBe(firstAlpha);
+  });
+
+  it('uses Carrier for motion detail and Radioactive only for isotope tint', () => {
+    const isotope = new Float32Array(3), isotopeGlow = new Float32Array(3);
+    const carrier = new Float32Array(3), carrierGlow = new Float32Array(3);
+    shadeCanvasEnergy(
+      isotope, isotopeGlow, 120, 120, 120, RenderProfile.Radioactive,
+      RenderTrait.Radioactive, 111, 5, 8, 740, 0.3, 18, -2,
+    );
+    shadeCanvasEnergy(
+      carrier, carrierGlow, 120, 120, 120, RenderProfile.Neutral,
+      RenderTrait.Carrier, 97, 5, 8, 740, 0.3, 18, -2,
+    );
+    expect(isotope[2] - isotope[0]).toBeGreaterThan(carrier[2] - carrier[0]);
+    expect(carrier).not.toEqual(isotope);
   });
 });

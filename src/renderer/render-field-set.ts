@@ -3,6 +3,7 @@ import { AtmosphereField } from './atmosphere-field';
 import { EmissionField } from './emission-field';
 import { LiquidDensityField } from './liquid-density-field';
 import { renderPhase, renderProfile, RenderPhase } from './render-profile';
+import { renderTraits } from './render-traits';
 import { VolumeFieldRefreshSchedule, type VolumeFieldKind } from './volume-field-refresh';
 
 export interface RenderMaterialStyle {
@@ -43,7 +44,7 @@ export function createRenderLookups(materials: readonly RenderMaterialStyle[]): 
     styleBytes[paletteOffset + 1] = renderProfile(material.category);
     const emissive = material.emissive === true || phase === RenderPhase.Energy;
     styleBytes[paletteOffset + 2] = emissive ? 255 : 0;
-    styleBytes[paletteOffset + 3] = 255;
+    styleBytes[paletteOffset + 3] = renderTraits(material);
     gasByMaterial[material.id] = phase === RenderPhase.Gas ? 1 : 0;
     liquidByMaterial[material.id] = phase === RenderPhase.Liquid ? 1 : 0;
     emissiveByMaterial[material.id] = emissive ? 1 : 0;

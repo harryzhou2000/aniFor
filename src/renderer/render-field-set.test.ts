@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { ALL_MATERIALS, Material } from '../shared/materials';
 import { renderPhase, renderProfile, RenderPhase } from './render-profile';
 import { createRenderLookups, RenderFieldSet } from './render-field-set';
+import { renderTraits, RenderTrait } from './render-traits';
 
 describe('shared render field set', () => {
   it('packs canonical phase, color, and emission lookups', () => {
@@ -10,6 +11,7 @@ describe('shared render field set', () => {
     expect(lookup.gasByMaterial[Material.Oxygen]).toBe(1);
     expect(lookup.emissiveByMaterial[Material.PHOT]).toBe(1);
     expect(lookup.styleBytes[Material.Water * 4]).toBe(RenderPhase.Liquid);
+    expect(lookup.styleBytes[Material.PRTI * 4 + 3]).toBe(RenderTrait.Sink | RenderTrait.Channel);
     expect(Array.from(lookup.colorByMaterial.slice(Material.Acid * 3, Material.Acid * 3 + 3))).toEqual([0xd3, 0x5e, 0xe8]);
   });
 
@@ -25,7 +27,7 @@ describe('shared render field set', () => {
       ]);
       expect(lookup.styleBytes[palette]).toBe(renderPhase(material));
       expect(lookup.styleBytes[palette + 1]).toBe(renderProfile(material.category));
-      expect(lookup.styleBytes[palette + 3]).toBe(255);
+      expect(lookup.styleBytes[palette + 3]).toBe(renderTraits(material));
       expect(lookup.gasByMaterial[material.id]).toBe(Number(renderPhase(material) === RenderPhase.Gas));
       expect(lookup.liquidByMaterial[material.id]).toBe(Number(renderPhase(material) === RenderPhase.Liquid));
       expect(lookup.emissiveByMaterial[material.id]).toBe(Number(

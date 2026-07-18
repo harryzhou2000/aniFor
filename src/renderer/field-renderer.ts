@@ -8,6 +8,9 @@ import { shadeCanvasAtmosphere } from './canvas-atmosphere-relief';
 import { reconstructLiquidSurface } from './canvas-liquid-surface';
 import { shadeCanvasEnergy } from './canvas-energy-style';
 import { shadeCanvasMaterial } from './canvas-material-style';
+import {
+  applicableCanvasRenderTraits, applyCanvasRenderTraits, canvasRenderTraitTarget,
+} from './canvas-render-traits';
 import { lightCanvasSurface } from './canvas-surface-light';
 import { reconstructSolidSurface } from './canvas-solid-surface';
 import { RenderFieldSet } from './render-field-set';
@@ -318,6 +321,7 @@ export class MaterialRenderer {
       if (material === Material.Empty) continue;
       const phase = fields.lookups.styleBytes[material * 4] as RenderPhase;
       const profile = fields.lookups.styleBytes[material * 4 + 1] as RenderProfile;
+      const traits = fields.lookups.styleBytes[material * 4 + 3];
       const target = fields.lookups.liquidByMaterial[material] ? liquid : base;
       const top = y === 0 ? Material.Empty : this.rendered[index - width] as Material;
       const left = x === 0 ? Material.Empty : this.rendered[index - 1] as Material;
@@ -327,6 +331,7 @@ export class MaterialRenderer {
       const normalLight = (left === Material.Empty ? 8 : 0) - (right === Material.Empty ? 6 : 0)
         + (exposedTop ? 18 : 0) - (bottom === Material.Empty ? 5 : 0);
       const grain = hash(index) % 23 - 11;
+      let styledEmissive = false;
 
       if (phase === RenderPhase.Energy) {
         const info = PROJECTED_RENDER_INFO[material];
@@ -336,7 +341,8 @@ export class MaterialRenderer {
         const blue = info.color & 0xFF;
         const heat = semanticRenderHeat(temperatures?.[index]);
         const glowAlpha = shadeCanvasEnergy(
-          this.styledColor, this.energyGlowColor, red, green, blue, profile, material, x, y, time, heat,
+          this.styledColor, this.energyGlowColor, red, green, blue, profile, traits,
+          material, x, y, time, heat,
           velocities?.[index * 2] ?? 0, velocities?.[index * 2 + 1] ?? 0,
         );
         compositePixel(target, pixel, this.styledColor[0], this.styledColor[1], this.styledColor[2], 245);
@@ -443,7 +449,20 @@ export class MaterialRenderer {
             255,
           );
         }
-        if (info.emissive) setPixel(fire, pixel, red, green, blue, 176);
+        styledEmissive = info.emissive;
+      }
+      const semanticTarget = canvasRenderTraitTarget(phase, base, liquid, smoke);
+      const applicableTraits = applicableCanvasRenderTraits(traits, phase);
+      if (applicableTraits !== 0) {
+        applyCanvasRenderTraits(
+          semanticTarget, pixel, applicableTraits, phase, material, x, y, index, time,
+        );
+      }
+      if (styledEmissive) {
+        setPixel(
+          fire, pixel,
+          semanticTarget[pixel], semanticTarget[pixel + 1], semanticTarget[pixel + 2], 176,
+        );
       }
       if (fields.emission.hasLight && receivesSurfaceLight(phase)) {
         const exposure = cardinalExposure(this.rendered, width, height, x, y, material);

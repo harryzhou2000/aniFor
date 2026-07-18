@@ -1,4 +1,5 @@
 import { RenderProfile } from './render-profile';
+import { RenderTrait } from './render-traits';
 
 const WARM_ACCENT = [255, 184, 107] as const;
 const COOL_ACCENT = [184, 230, 255] as const;
@@ -14,7 +15,8 @@ export function shadeCanvasEnergy(
   red: number,
   green: number,
   blue: number,
-  profile: RenderProfile,
+  _profile: RenderProfile,
+  traits: number,
   material: number,
   x: number,
   y: number,
@@ -23,15 +25,16 @@ export function shadeCanvasEnergy(
   velocityX: number,
   velocityY: number,
 ): number {
-  const radioactive = profile === RenderProfile.Radioactive;
+  const radioactive = (traits & RenderTrait.Radioactive) !== 0;
+  const carrier = (traits & RenderTrait.Carrier) !== 0;
   const speed = Math.min(1, (Math.abs(velocityX) + Math.abs(velocityY)) / 128);
   const phase = x * (0.071 + speed * 0.025) + y * (0.043 - velocityX * 0.00012)
     - time * 0.00042 * (1 + speed) + material * 0.137;
   const fraction = phase - Math.floor(phase);
   const wave = 1 - Math.abs(fraction - 0.5) * 4;
   const pulse = 0.5 + wave * 0.5;
-  const scintillation = radioactive && noise(x, y, material) > 0.84 ? 1 : 0;
-  const detail = radioactive
+  const scintillation = carrier && noise(x, y, material) > 0.84 ? 1 : 0;
+  const detail = carrier
     ? 0.98 + wave * 0.04 + scintillation * 0.16
     : 1.0 + wave * 0.07;
   const accent = radioactive ? COOL_ACCENT : WARM_ACCENT;
@@ -44,7 +47,7 @@ export function shadeCanvasEnergy(
   glow[0] = red * glowMix + accent[0] * 0.10;
   glow[1] = green * glowMix + accent[1] * 0.10;
   glow[2] = blue * glowMix + accent[2] * 0.10;
-  return Math.round(154 + pulse * 38 + heat * 38 + Number(radioactive) * scintillation * 22);
+  return Math.round(154 + pulse * 38 + heat * 38 + Number(carrier) * scintillation * 22);
 }
 
 function noise(x: number, y: number, salt: number): number {

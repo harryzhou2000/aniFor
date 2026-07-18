@@ -27,11 +27,9 @@ export function shadeCanvasMaterial(
   } else if (profile === RenderProfile.Organic) {
     const fibre = (x + (hash(y + material * 17) & 7)) % 13 < 3;
     light += fibre ? 6 : -1;
-    tintGreen += fibre ? 8 : 2;
   } else if (profile === RenderProfile.Radioactive) {
     const pulse = hash(index + Math.floor(time / 180) * 97 + material) & 15;
     light += pulse < 3 ? 9 : -1;
-    tintGreen += 5 + Math.max(0, 3 - pulse) * 3;
   } else if (profile === RenderProfile.Device) {
     const trace = (x + material) % 8 === 0 || (y + material * 3) % 8 === 0;
     light += trace ? 5 : -2;
@@ -40,7 +38,6 @@ export function shadeCanvasMaterial(
   } else if (profile === RenderProfile.Field) {
     const wave = (x + y + Math.floor(time / 110) + material) % 12;
     light += wave < 3 ? 7 : -2;
-    tintBlue += wave < 3 ? 11 : 3;
   }
   output[0] = clamp(red + light + tintRed);
   output[1] = clamp(green + light + tintGreen);

@@ -63,6 +63,8 @@ npm run audit:browser-input -- --canvas-only --screenshot=.artifacts/render-lab-
 
 Read [`docs/render-lab.md`](docs/render-lab.md) before changing reconstruction thresholds or blur radii. A TypeScript or Vite build does not compile Pixi's runtime GLSL; a browser screenshot with a clean shader console is required.
 
+The style lookup is an RGBA data texture, not display color: RGB stores phase/profile/emission and alpha stores the static `RenderTrait` mask. Keep nearest sampling and `no-premultiply-alpha`; zero-valued trait alpha must never erase the RGB metadata.
+
 The native wall lab uses the real TPT backend, remains paused, and places ten wall types behind deterministic material gradients and mixtures. Use it after wall ABI, wall texture, or compositing changes to prove that native walls remain distinct from particles and survive the same 612×384-to-2× presentation path.
 
 ## Project hygiene

@@ -50,8 +50,8 @@ float materialAt(vec2 uv) { return floor(field(uv).r * 255.0 + 0.5); }
 float wallAt(vec2 uv) { return floor(wallField(uv).r * 255.0 + 0.5); }
 float sameMaterial(vec2 uv, float material) { return 1.0 - step(0.5, abs(materialAt(uv) - material)); }
 float familyFor(float id) { return floor(texture(uStyleTexture, vec2((id + 0.5) / 256.0, 0.5)).r * 255.0 + 0.5); }
-float profileFor(float id) { return floor(texture(uStyleTexture, vec2((id + 0.5) / 256.0, 0.5)).g * 255.0 + 0.5); }
 float emissionFor(float id) { return texture(uStyleTexture, vec2((id + 0.5) / 256.0, 0.5)).b; }
+float traitFlag(float traits, float mask) { return mod(floor(traits / mask), 2.0); }
 float surfaceLightGain(float profile) {
   if (profile == 2.0) return 0.32;
   if (profile == 5.0) return 0.30;
@@ -61,9 +61,6 @@ float surfaceLightGain(float profile) {
   if (profile == 4.0) return 0.16;
   return 0.20;
 }
-bool isGas(float id) { return familyFor(id) == 1.0; }
-bool isLiquid(float id) { return familyFor(id) == 2.0; }
-bool isEnergy(float id) { return familyFor(id) == 3.0; }
 bool isEmissive(float id) { return emissionFor(id) > 0.5; }
 vec3 vividColor(vec3 color, float saturation) {
   float luminance = dot(color, vec3(0.2126, 0.7152, 0.0722));
@@ -220,8 +217,11 @@ void main() {
     }
     halo = 1.0;
   }
-  float profile = profileFor(material);
-  float energyCore = isEnergy(material) ? 1.0 : 0.0;
+  vec4 materialStyle = texture(uStyleTexture, vec2((material + 0.5) / 256.0, 0.5));
+  float family = floor(materialStyle.r * 255.0 + 0.5);
+  float profile = floor(materialStyle.g * 255.0 + 0.5);
+  float traits = floor(materialStyle.a * 255.0 + 0.5);
+  float energyCore = family == 3.0 ? 1.0 : 0.0;
   vec3 shape = wallOnly > 0.5
     ? wallSurface
     : (surfaceOnly > 0.5
@@ -230,10 +230,10 @@ void main() {
     ? vec3(0.0)
     : (liquidOnly > 0.5
     ? vec3(liquidDensity, 0.0, 0.0)
-    : ((isGas(material) || profile == 1.0) ? discreteShape(fieldUv, material) : occupancyShape(fieldUv, material)))));
+    : ((family == 1.0 || profile == 1.0) ? discreteShape(fieldUv, material) : occupancyShape(fieldUv, material)))));
   float density = shape.x;
-  float gasVolume = max(cloudOnly, isGas(material) ? 1.0 : 0.0);
-  float liquidVolume = max(liquidOnly, isLiquid(material) ? 1.0 : 0.0);
+  float gasVolume = max(cloudOnly, family == 1.0 ? 1.0 : 0.0);
+  float liquidVolume = max(liquidOnly, family == 2.0 ? 1.0 : 0.0);
   float volume = density;
   if (emissionOnly > 0.5) volume = emissionState.a;
   else if (cloudOnly > 0.5) volume = atmosphereState.a;
@@ -306,7 +306,8 @@ void main() {
     );
     float pulse = 0.5 + 0.5 * sin(uTime * 2.35 + material * 0.61 + atmosphere * 1.7);
     float scintillation = fract(sin(dot(floor(fieldPosition * 1.5), vec2(41.73, 19.19)) + material) * 143758.5453);
-    float radioactiveCarrier = profile == 4.0 ? 1.0 : 0.0;
+    float radioactiveCarrier = traitFlag(traits, 16.0);
+    float directedCarrier = traitFlag(traits, 128.0);
     vec3 energyBase = vividColor(base, mix(1.18, 1.32, radioactiveCarrier));
     vec3 auraTint = emissionState.a > 0.002
       ? mix(energyBase, emissionState.rgb, 0.18 + edge * 0.10)
@@ -314,7 +315,7 @@ void main() {
     float carrierDetail = mix(
       0.94 + flowWave * 0.08 + pulse * 0.06,
       0.92 + flowWave * 0.045 + step(0.84, scintillation) * (0.13 + uHighQuality * 0.09),
-      radioactiveCarrier
+      directedCarrier
     );
     alpha = smoothstep(0.18, 0.72, density)
       * mix(0.58 + pulse * 0.08, 0.94, core)
@@ -378,13 +379,11 @@ void main() {
       float pores = sin(fieldPosition.x * 0.083 + fieldPosition.y * 0.157 + material * 0.37)
         * sin(fieldPosition.y * 0.091 - fieldPosition.x * 0.047);
       color *= 0.95 + fibre * 0.042 + pores * 0.024;
-      color += mix(base, vec3(0.18, 0.43, 0.13), 0.34) * max(0.0, fibre) * 0.038;
     } else if (profile == 4.0) {
       float isotope = sin(fieldPosition.x * 0.137 + sin(fieldPosition.y * 0.103 + material) * 1.6)
         * sin(fieldPosition.y * 0.181 - fieldPosition.x * 0.061);
       float decayPulse = 0.5 + 0.5 * sin(uTime * 1.55 + material * 0.73 + isotope * 1.8);
-      color *= 0.94 + isotope * 0.055;
-      color += mix(base, vec3(0.19, 0.72, 0.22), 0.56) * (0.045 + decayPulse * 0.065);
+      color *= 0.97 + isotope * 0.038 + decayPulse * 0.012;
     } else if (profile == 5.0) {
       vec2 circuitCell = abs(fract((fieldPosition + vec2(material * 0.37, material * 0.19)) / 8.0) - 0.5);
       float trace = max(1.0 - smoothstep(0.055, 0.105, circuitCell.x), 1.0 - smoothstep(0.055, 0.105, circuitCell.y));
@@ -396,12 +395,67 @@ void main() {
       float radialWave = sin(length(fieldPosition - vec2(material * 1.7)) * 0.14 + uTime * 0.92);
       float interference = (planeWave + radialWave) * 0.5;
       color *= 0.95 + interference * 0.045;
-      color += mix(base, vec3(0.48, 0.70, 1.0), 0.42) * (0.045 + max(0.0, interference) * 0.07);
+    }
+  }
+  // Static role accents cross phase boundaries without widening semantic
+  // silhouettes. Empty-space volume reconstruction intentionally remains free
+  // of role metadata because it no longer has an authoritative material ID.
+  if (traits > 0.5 && halo < 0.5 && wallOnly < 0.5 && emissionOnly < 0.5) {
+    float emitter = traitFlag(traits, 1.0);
+    float sink = traitFlag(traits, 2.0);
+    float channel = traitFlag(traits, 4.0);
+    float forceRole = traitFlag(traits, 8.0);
+    float radioactive = traitFlag(traits, 16.0);
+    float organic = traitFlag(traits, 32.0);
+    float fibrous = traitFlag(traits, 64.0);
+    float carrier = traitFlag(traits, 128.0);
+    float traitEdge = 1.0 - smoothstep(0.58, 0.94, density);
+    float roleWave = 0.5 + 0.5 * sin(
+      dot(fieldPosition, vec2(0.137, 0.083)) + material * 0.619 - uTime * 0.92
+    );
+    if (emitter + sink > 0.5) {
+      vec3 roleTint = (emitter * vec3(1.0, 0.48, 0.16) + sink * vec3(0.18, 0.52, 1.0))
+        / max(1.0, emitter + sink);
+      color += roleTint * (0.012 + roleWave * 0.035) * (0.45 + traitEdge * 0.55);
+    }
+    if (channel > 0.5) {
+      float band = pow(0.5 + 0.5 * sin(
+        (fieldPosition.x - fieldPosition.y) * 0.18 + uTime * (emitter - sink) * 0.90 + material
+      ), 6.0);
+      color += vec3(0.42, 0.72, 1.0) * (0.009 + band * 0.040);
+    }
+    if (forceRole > 0.5) {
+      float radial = 0.5 + 0.5 * sin(
+        length(fract((fieldPosition + vec2(material)) / 12.0) - 0.5) * 20.0 - uTime * 1.10 + material
+      );
+      color += vec3(0.18, 0.65, 1.0) * (0.012 + radial * 0.040) * (0.55 + traitEdge * 0.45);
+    }
+    if (radioactive > 0.5 && energyCore < 0.5) {
+      float isotopeNoise = fract(sin(
+        dot(floor(fieldPosition), vec2(12.9898, 78.233)) + material * 0.31
+      ) * 43758.5453);
+      float decay = step(0.90, isotopeNoise) * (0.55 + roleWave * 0.45);
+      vec3 isotopeTint = mix(vec3(0.20, 0.72, 0.18), vec3(0.36, 0.82, 1.0), carrier);
+      color += isotopeTint * (0.008 + decay * 0.034 + traitEdge * 0.010);
+    }
+    if (organic > 0.5) {
+      float fibre = 0.5 + 0.5 * sin(
+        fieldPosition.x * 0.18 + sin(fieldPosition.y * 0.11 + material) * 1.4
+      );
+      vec3 organicTint = mix(vec3(0.18, 0.50, 0.12), vec3(0.48, 0.29, 0.12), fibrous);
+      color += mix(base, organicTint, 0.52) * (0.006 + fibre * 0.020);
+    }
+    if (carrier > 0.5 && energyCore < 0.5) {
+      float carrierPulse = 0.5 + 0.5 * sin(
+        dot(fieldPosition, vec2(0.19, 0.07)) - uTime * (1.8 + length(velocity)) + material * 0.43
+      );
+      vec3 carrierTint = mix(vec3(1.0, 0.68, 0.32), vec3(0.56, 0.88, 1.0), radioactive);
+      color += carrierTint * (0.012 + carrierPulse * 0.038) * (0.40 + traitEdge * 0.60);
     }
   }
   float emission = energyCore > 0.5
     ? 0.0
-    : (isEmissive(material) ? 0.48 + heat * 1.05 : (material == 11.0 ? 0.28 + heat * 0.62 : (profile == 4.0 ? 0.07 : 0.0)));
+    : (isEmissive(material) ? 0.48 + heat * 1.05 : (material == 11.0 ? 0.28 + heat * 0.62 : 0.0));
   color += mix(base, vec3(1.0, 0.52, 0.20), heat) * emission;
   if (energyCore < 0.5 && emissionOnly < 0.5 && emissionState.a > 0.002) {
     float lightReach = smoothstep(0.002, 0.42, emissionState.a);

@@ -10,16 +10,16 @@ export const RENDER_LAB_STYLE_SAMPLES = [
   Material.Metal, Material.Glass, Material.Coal, Material.Ice, Material.Wall,
   // Organic and growing matter.
   Material.Wood, Material.Plant, Material.SEED, Material.YEST, Material.VINE,
-  // Radioactive solids rather than phase overrides.
-  Material.PLUT, Material.URAN, Material.ISZS, Material.VIBR, Material.POLO,
-  // Emissive devices and force/special fields.
-  Material.SPRK, Material.ARAY, Material.ACEL, Material.PRTI, Material.PCLN,
+  // Radioactive solid/liquid/gas/carrier samples plus a blended emitter/sink.
+  Material.PLUT, Material.DEUT, Material.CONV, Material.WARP, Material.NEUT,
+  // Device, emitter, portal-channel pair, and force actuator.
+  Material.SPRK, Material.CLNE, Material.PRTI, Material.PRTO, Material.ACEL,
   // Neutral and radioactive energy cores.
-  Material.Fire, Material.Plasma, Material.ELEC, Material.PHOT, Material.NEUT,
+  Material.Fire, Material.Plasma, Material.ELEC, Material.PHOT, Material.GRVT,
 ] as const;
 
 export const RENDER_LAB_ENERGY_SAMPLES = [
-  Material.Fire, Material.Plasma, Material.ELEC, Material.PHOT, Material.NEUT,
+  Material.Fire, Material.Plasma, Material.ELEC, Material.PHOT, Material.GRVT,
 ] as const;
 
 export function renderLabRequested(search = globalThis.location?.search ?? ''): boolean {

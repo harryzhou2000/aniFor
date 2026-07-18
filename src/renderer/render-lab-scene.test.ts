@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { DeterministicBackend } from '../simulation/deterministic-backend';
 import { ALL_MATERIALS, Material } from '../shared/materials';
 import { renderPhase, renderProfile, RenderPhase, RenderProfile } from './render-profile';
+import { hasRenderTrait, renderTraits, RenderTrait } from './render-traits';
 import {
   applyRenderLabScene, RENDER_LAB_ENERGY_SAMPLES, RENDER_LAB_STYLE_SAMPLES, renderLabRequested,
 } from './render-lab-scene';
@@ -28,13 +29,16 @@ describe('render lab scene', () => {
     expect(counts[Material.Oxygen]).toBeGreaterThan(700);
     expect(counts[Material.Metal]).toBeGreaterThan(500);
     expect(counts[Material.PLUT]).toBeGreaterThan(500);
-    expect(counts[Material.SPRK]).toBeGreaterThan(500);
+    expect(counts[Material.CONV]).toBeGreaterThan(500);
+    expect(counts[Material.CLNE]).toBeGreaterThan(500);
+    expect(counts[Material.PRTI]).toBeGreaterThan(500);
+    expect(counts[Material.PRTO]).toBeGreaterThan(500);
     expect(counts[Material.ACEL]).toBeGreaterThan(500);
     expect(counts[Material.Fire]).toBeGreaterThan(500);
     expect(counts[Material.ELEC]).toBeGreaterThan(500);
     expect(counts[Material.Plasma]).toBeGreaterThan(500);
     expect(counts[Material.PHOT]).toBeGreaterThan(500);
-    expect(counts[Material.NEUT]).toBeGreaterThan(500);
+    expect(counts[Material.GRVT]).toBeGreaterThan(500);
   });
 
   it('exercises every non-neutral styled family plus an energy phase', () => {
@@ -56,6 +60,15 @@ describe('render lab scene', () => {
       const material = ALL_MATERIALS.find((candidate) => candidate.id === id)!;
       expect(renderPhase(material)).toBe(RenderPhase.Energy);
       expect(RENDER_LAB_STYLE_SAMPLES).toContain(id);
+    }
+    for (const trait of [
+      RenderTrait.Emitter, RenderTrait.Sink, RenderTrait.Channel, RenderTrait.Force,
+      RenderTrait.Radioactive, RenderTrait.Organic, RenderTrait.Fibrous, RenderTrait.Carrier,
+    ]) {
+      expect(RENDER_LAB_STYLE_SAMPLES.some((id) => {
+        const material = ALL_MATERIALS.find((candidate) => candidate.id === id)!;
+        return hasRenderTrait(renderTraits(material), trait);
+      })).toBe(true);
     }
   });
 });

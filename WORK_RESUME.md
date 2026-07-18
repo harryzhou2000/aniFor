@@ -22,9 +22,9 @@ Immediate priorities are:
 
 - Repository: `/home/harry/projects/aniFor_codex`
 - Branch: `main_codex`
-- Local and remote committed graphics HEAD: `a64dde9 Style energy as luminous material volumes`
-- The phase-aware WebGL/Canvas energy work described below is committed and live.
-- GitHub CLI is authenticated as `harryzhou2000` with `repo` and `workflow` scopes.
+- Remote branch and live Pages revision before the next graphics checkpoint: `c967261 Reconcile graphics deployment notes`; that commit changes only this resume document. Its renderer parent is `a64dde9 Style energy as luminous material volumes`.
+- Current graphics checkpoint: `Style materials by cross-phase roles`, committed and pushed to `main_codex`; its manual Pages deployment is pending GitHub CLI reauthentication.
+- Git pushes currently authenticate, but the saved GitHub CLI token for `harryzhou2000` is invalid. Manual Actions dispatch is blocked until `gh auth login -h github.com` succeeds again.
 - Current live Pages URL: `https://harryzhou2000.github.io/aniFor/`
 - Verified live graphics baseline: `a64dde9` from Actions run `29654711283`.
 - Build, deploy, and post-deployment verification all passed. The live closure contains all 20 referenced resources with correct WASM MIME and the exact expected revision. The restored compiler cache produced 269/270 hits (99.63%); the successful primary key already existed, so the save step correctly skipped.
@@ -118,10 +118,18 @@ Immediate priorities are:
 - The deterministic atlas is now a five-column, six-row matrix covering granular, rigid, organic, radioactive-solid, device/field, and five side-by-side neutral/radioactive energy samples.
 - `npm run audit:browser-input -- --<backend>-only --screenshot=<path>` captures the populated atlas and then continues through the real browser interaction gates.
 
+## Static cross-phase role-trait tranche
+
+- The previously unused alpha byte in the existing 256×1 style lookup now packs composable emitter, sink, channel, force-actuator, radioactive, organic, fibrous, and energy-carrier roles. The texture remains 1,024 bytes with nearest data sampling and no premultiplication.
+- WebGL applies restrained role waves, portal/channel bands, force interference, cross-phase radioactive scintillation, organic fibres, and directed-carrier accents after phase shading. It changes RGB only on authoritative semantic cells, so reconstructed gas/liquid/empty-space volumes do not inherit a guessed role or wider silhouette.
+- Canvas applies the same static roles allocation-free to the phase's existing semantic plane. Ordinary cells take one zero-mask branch; role cells reuse deterministic integer/hash patterns and preserve alpha exactly. Energy-phase carrier cores remain owned by the dedicated energy shader.
+- The deterministic atlas now includes radioactive solid/liquid/gas/carrier samples, an emitter and paired portal channel, a force actuator, organic/fibrous variants, and neutral/radioactive energy cores while retaining its five-by-six matrix.
+- No field, texture, upload, reconstruction pass, scheduler stage, or persistent allocation was added. Shared volume storage remains exactly 8,173,320 bytes.
+
 ## Verification completed for the current local tree
 
 - `npm run typecheck`
-- `npm test -- --run`: 36 files, 142 tests passed
+- `npm test -- --run`: 38 files, 154 tests passed
 - `npm run build`
 - Static build closure: 20 referenced resources verified (including the explicit favicon)
 - Current live Pages closure: 20 resources verified, including `stillroom_core.wasm` with the correct MIME
@@ -143,7 +151,7 @@ Immediate priorities are:
 - Forced Canvas at 1280×720 and a 390×844 DPR-2 portrait capture retained the 1224×768 backing, square mobile interaction panel with aspect-preserving letterbox, smooth empty-space aura, and crisp material seams. Warm/cool strips visibly reveal profile contours without uniformly whitening block interiors.
 - Native semantic-tool coverage now proves exact scalar deltas, stable typed routing, no vector-to-particle fallthrough, no vector emission during pinch navigation, malformed ABI rejection, Wind response, `WL_BLOCKAIR` isolation, stable-water regression, and unstepped OPS Wind round-tripping.
 
-The `a64dde9` energy-core/powder-lighting checkpoint is committed, pushed, and verified live. Unit, type, build, profile, desktop WebGL/Canvas visual, portrait Canvas interaction, cached CI, Pages deployment, and live 20-resource closure checks all pass. The workflow used the exact expected revision and restored 269/270 C++ compilations from ccache (99.63%).
+The `Style materials by cross-phase roles` checkpoint is committed and pushed to `main_codex`. Unit, type, build, profile, desktop WebGL/Canvas visual, and interaction checks pass locally. Its manual cached deployment still needs a valid GitHub CLI login; until then the current live closure contains all 20 resources and resolves to exact revision `c967261`.
 
 ## Current blockers and risks
 
@@ -152,12 +160,12 @@ The `a64dde9` energy-core/powder-lighting checkpoint is committed, pushed, and v
 - Cached-HTML compatibility still relies on a small fixed set of historical JS/CSS aliases, and the live verifier does not compare public content hashes to the local artifact. Harden this before treating repeated stale-asset reports as closed.
 - The browser integration gate now automates `MaterialRenderer.screenToWorld`/Pixi bounds/painted footprints, but public Pages browser execution is still distinct from its post-deploy asset-closure verifier.
 - Configured sources, signs, LIFE presets, and several special editing semantics remain future work.
+- GitHub CLI authentication is invalid, so the next manual `build-and-deploy` cannot be dispatched until the user reauthenticates `gh`; ordinary authenticated `git push` still works.
 - Newtonian FFT gravity is intentionally omitted from the headless build, so gravity-dependent tools/elements must remain disabled or limited.
 - GPU partial texture upload, long-session allocation behavior, context loss, and full performance budgets need further profiling.
 
 ## Next sequence
 
-1. Implement static cross-phase role traits for sources/portals, force actuators, radioactive fluids, plants, and energy carriers without adding a field, texture, or pass.
-2. Expand the deterministic atlas with source/portal, force-pair, radioactive fluid/gas, and plant-variant comparisons; keep the current six-row core matrix readable.
-3. Profile the trait pass and repeat both browser screenshot/interaction gates before publishing.
-4. Return to dynamic native `ctype`/life/pressure-state projection as a separate ABI tranche; keep the persistent goal active.
+1. After GitHub CLI reauthentication, dispatch the manual cached `build-and-deploy` on `main_codex` and verify the live closure/revision plus a cache-busted browser runtime.
+2. Return to dynamic native `ctype`/life/pressure-state projection as a separate ABI tranche; static role flags deliberately do not claim current activation/channel/growth state.
+3. Keep the persistent goal active for deeper material-surface aesthetics, interface coverage, and performance work.
