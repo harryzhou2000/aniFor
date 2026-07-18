@@ -40,7 +40,7 @@ h1 { font-family: inherit; font-size: clamp(26px, 4vw, 44px); font-weight: 500; 
 .footer a { color: #8f857a; font-size: 10px; text-decoration: none; }
 .footer a:hover { color: #d8cec2; }
 @media (min-width: 921px) {
-  .shell { overflow-y: auto; overscroll-behavior-y: contain; }
+  .shell { grid-template-rows: auto minmax(500px, 1fr) auto; overflow-y: auto; overscroll-behavior-y: contain; }
   .workspace { min-height: 500px; }
   .toolbox { min-height: 500px; display: grid; grid-template-rows: auto minmax(230px, 1fr) auto; }
 }
@@ -155,8 +155,8 @@ h1 { font-family: inherit; font-size: clamp(26px, 4vw, 44px); font-weight: 500; 
 
 @media (max-width: 680px) {
   .palette { width: 100%; height: clamp(230px, 36dvh, 300px); min-height: 0; display: grid; grid-template-rows: auto 40px minmax(0, 1fr); overflow: hidden; }
-  .tool-library { display: flex; gap: 7px; overflow: auto; overscroll-behavior-x: contain; overscroll-behavior-y: auto; scroll-snap-type: inline proximity; scrollbar-width: thin; padding: 0 2px 10px; }
-  .tool-library .material-group { flex: 0 0 min(82vw, 330px); scroll-snap-align: start; }
+  .tool-library { display: grid; grid-template-columns: minmax(0, 1fr); align-content: start; gap: 7px; overflow-x: hidden; overflow-y: auto; overscroll-behavior-y: auto; scroll-snap-type: none; scrollbar-width: thin; padding: 0 2px 10px; }
+  .tool-library .material-group { width: 100%; min-width: 0; }
   .tool-library .material-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 }
 .tool-badge.unavailable { color: #c3bac0; background: rgba(120,110,118,.18); }
@@ -183,7 +183,7 @@ h1 { font-family: inherit; font-size: clamp(26px, 4vw, 44px); font-weight: 500; 
 }
 
 @media (min-width: 921px) and (max-height: 720px) {
-  .shell { padding-block: 12px; gap: 10px; }
+  .shell { grid-template-rows: auto minmax(470px, 1fr) auto; padding-block: 12px; gap: 10px; }
   .workspace, .toolbox { min-height: 470px; }
   .toolbox { gap: 8px; }
   .toolbox-heading { padding-block: 3px 0; }

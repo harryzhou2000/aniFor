@@ -140,6 +140,7 @@ async function auditMode(mode) {
     const initial = await metrics(cdp);
     assertGeometry(initial, `${mode} initial`);
     assertToolboxGeometry(initial, `${mode} initial`, 68);
+    assert(filterRows(initial.ui.filterButtons) === 2, `${mode}: desktop tool filters are not two rows`);
     const landmarks = [{ x: 17, y: 21 }, { x: 306, y: 192 }, { x: 594, y: 361 }];
     for (const landmark of landmarks) {
       // Sample cell centres so floating-point rounding at an exact grid edge
@@ -212,6 +213,7 @@ async function auditMode(mode) {
     assert(Math.abs(resizeMetrics[2].canvasWidth - resizeMetrics[0].canvasWidth) < 0.1
       && Math.abs(resizeMetrics[2].canvasHeight - resizeMetrics[0].canvasHeight) < 0.1,
     `${mode}: desktop resize did not return to fitted geometry`);
+    const shortDesktop = await auditShortDesktop(cdp, mode, dpr, previousResize);
 
     let mobile;
     if (mode === 'canvas2d') {
@@ -235,6 +237,7 @@ async function auditMode(mode) {
       renderScaleOne,
       toolFilters: { height: round(initial.ui.filters.height), rows: filterRows(initial.ui.filterButtons) },
       resizeMetrics,
+      shortDesktop,
       ...(mobile ? { mobile } : {}),
       ...(screenshot ? { screenshot } : {}),
       ...nativeSemantics.screenshots,
@@ -244,6 +247,73 @@ async function auditMode(mode) {
     await terminate(chrome);
     await rm(profile, { recursive: true, force: true });
   }
+}
+
+async function auditShortDesktop(cdp, mode, dpr, previous) {
+  const samples = [];
+  let last = previous;
+  for (const [width, height] of [[1280, 520], [1024, 500]]) {
+    await setDesktopMetrics(cdp, width, height, dpr);
+    const current = await waitForStableCanvas(cdp, width, height, last, 6_000, `${mode} short ${width}x${height}`);
+    assertGeometry(current, `${mode} short ${width}x${height}`);
+    assertContained(current, `${mode} short ${width}x${height}`);
+    assertToolboxGeometry(current, `${mode} short ${width}x${height}`, 68);
+    assert(filterRows(current.ui.filterButtons) === 2,
+      `${mode}: short desktop tool filters are not two rows`);
+    assert(current.ui.footer.top >= current.ui.workspace.bottom - 0.75,
+      `${mode}: short desktop footer overlaps the workspace`);
+    const filterReach = await evaluate(cdp, `(() => {
+      const filters = document.querySelector('.tool-filters');
+      if (!(filters instanceof HTMLElement)) throw new Error('Missing desktop filter rail');
+      const before = filters.scrollLeft;
+      filters.scrollLeft = filters.scrollWidth;
+      const after = filters.scrollLeft;
+      filters.scrollLeft = before;
+      return {
+        overflow: getComputedStyle(filters).overflowX,
+        maximum: Math.max(0, filters.scrollWidth - filters.clientWidth),
+        reached: after,
+      };
+    })()`);
+    assert(filterReach.overflow === 'auto', `${mode}: short desktop filter rail is not scrollable`);
+    assert(filterReach.maximum < 1 || filterReach.reached > 0,
+      `${mode}: short desktop filter overflow cannot be reached`);
+    const shellReach = await evaluate(cdp, `(() => {
+      const shell = document.querySelector('.shell');
+      const actions = document.querySelector('.actions');
+      const footer = document.querySelector('.footer');
+      if (!(shell instanceof HTMLElement) || !(actions instanceof HTMLElement)
+        || !(footer instanceof HTMLElement)) throw new Error('Missing desktop shell geometry');
+      shell.scrollTop = shell.scrollHeight;
+      const actionsRect = actions.getBoundingClientRect();
+      const footerRect = footer.getBoundingClientRect();
+      const result = {
+        overflow: getComputedStyle(shell).overflowY,
+        maximum: Math.max(0, shell.scrollHeight - shell.clientHeight),
+        reached: shell.scrollTop,
+        actionsBottom: actionsRect.bottom,
+        footerBottom: footerRect.bottom,
+        viewportHeight: innerHeight,
+      };
+      shell.scrollTop = 0;
+      return result;
+    })()`);
+    assert(shellReach.overflow === 'auto', `${mode}: short desktop shell is not scrollable`);
+    assert(shellReach.maximum > 0 && shellReach.reached >= shellReach.maximum - 1,
+      `${mode}: short desktop shell cannot reach its overflow`);
+    assert(shellReach.actionsBottom <= shellReach.viewportHeight + 1
+      && shellReach.footerBottom <= shellReach.viewportHeight + 1,
+    `${mode}: short desktop controls or footer remain unreachable after scrolling`);
+    samples.push({
+      width, height,
+      canvas: `${round(current.canvas.width, 2)}x${round(current.canvas.height, 2)}`,
+      toolboxGap: round(current.ui.actions.top - current.ui.palette.bottom),
+      filterOverflow: round(filterReach.maximum),
+      shellScroll: round(shellReach.maximum),
+    });
+    last = current;
+  }
+  return samples;
 }
 
 async function auditRenderScaleOne(cdp, mode, dpr) {
@@ -488,7 +558,16 @@ async function auditMobile(cdp, screenshot) {
   assertGeometry(initial, 'mobile Canvas');
   assertContained(initial, 'mobile Canvas');
   assertToolboxGeometry(initial, 'mobile Canvas', 40);
+  assert(filterRows(initial.ui.filterButtons) === 1, 'mobile tool filters are not one row');
   assert(Math.abs(initial.viewport.width - initial.viewport.height) < 1, 'mobile interaction panel is not square');
+  assert(initial.ui.fieldIndicator.width <= 133 && initial.ui.fieldIndicator.height <= 52,
+    `mobile field indicator is ${round(initial.ui.fieldIndicator.width)}x${round(initial.ui.fieldIndicator.height)}`);
+  assert(!rectsOverlap(initial.ui.fieldIndicator, initial.ui.touchHint),
+    'mobile field indicator overlaps the touch hint');
+  assert(initial.ui.toolboxPaddingBottom >= 24,
+    `mobile toolbox has only ${round(initial.ui.toolboxPaddingBottom)}px bottom swipe space`);
+  assert(initial.ui.document.scrollHeight > initial.window.height + 40,
+    'mobile document has no usable vertical scroll range');
   if (screenshot) {
     const capture = await cdp.send('Page.captureScreenshot', { format: 'png', fromSurface: true });
     await writeFile(screenshot, Buffer.from(capture.data, 'base64'));
@@ -514,6 +593,78 @@ async function auditMobile(cdp, screenshot) {
   await sleep(100);
   const tap = await evaluate(cdp, `({ cell: window.__ANIFOR_INPUT_AUDIT__.cell(${target.x}, ${target.y}), occupied: window.__ANIFOR_INPUT_AUDIT__.occupiedCells() })`);
   assert(tap.cell > 0 && tap.occupied === 1, `mobile single-touch tap missed exact cell (${tap.cell}, ${tap.occupied})`);
+  const mobileLibrary = await evaluate(cdp, `(() => {
+    const library = document.querySelector('.tool-library');
+    const group = library?.querySelector('.material-group[open]');
+    const lastTile = group?.querySelector('.tool-tile:last-child');
+    if (!(library instanceof HTMLElement) || !(group instanceof HTMLElement)
+      || !(lastTile instanceof HTMLElement)) {
+      throw new Error('Missing mobile tool library');
+    }
+    library.scrollTop = 0;
+    const initialLibraryRect = library.getBoundingClientRect();
+    const initialTileRect = lastTile.getBoundingClientRect();
+    library.scrollTop = Math.min(
+      library.scrollHeight - library.clientHeight,
+      Math.max(0, initialTileRect.bottom - initialLibraryRect.bottom + 1),
+    );
+    const libraryRect = library.getBoundingClientRect();
+    const tileRect = lastTile.getBoundingClientRect();
+    return {
+      clientHeight: library.clientHeight,
+      scrollHeight: library.scrollHeight,
+      scrollTop: library.scrollTop,
+      tileTop: tileRect.top,
+      tileBottom: tileRect.bottom,
+      libraryTop: libraryRect.top,
+      libraryBottom: libraryRect.bottom,
+      overscrollBehaviorY: getComputedStyle(library).overscrollBehaviorY,
+    };
+  })()`);
+  assert(mobileLibrary.scrollHeight > mobileLibrary.clientHeight,
+    'mobile tool library has no vertical scroll range');
+  assert(mobileLibrary.overscrollBehaviorY === 'auto',
+    `mobile tool library blocks page scroll chaining (${mobileLibrary.overscrollBehaviorY})`);
+  assert(mobileLibrary.scrollTop > 0
+    && mobileLibrary.tileTop >= mobileLibrary.libraryTop - 1
+    && mobileLibrary.tileBottom <= mobileLibrary.libraryBottom + 1,
+  'mobile tool library cannot reveal the last tile in an open group');
+  const scrollStart = await evaluate(cdp, `(() => {
+    const toolboxHeading = document.querySelector('.toolbox-heading');
+    const library = document.querySelector('.tool-library');
+    if (!(toolboxHeading instanceof HTMLElement) || !(library instanceof HTMLElement)) {
+      throw new Error('Missing mobile toolbox');
+    }
+    window.scrollTo(0, document.documentElement.scrollHeight);
+    library.scrollTop = 0;
+    const rect = toolboxHeading.getBoundingClientRect();
+    return {
+      x: Math.max(12, Math.min(innerWidth - 12, rect.left + rect.width / 2)),
+      y: Math.max(80, Math.min(innerHeight - 140, rect.top + rect.height / 2)),
+      scrollY,
+    };
+  })()`);
+  const availablePageScroll = scrollStart.scrollY;
+  assert(availablePageScroll > 30,
+    `mobile palette exposes only ${round(availablePageScroll)}px upward page-scroll range`);
+  await cdp.send('Input.dispatchTouchEvent', {
+    type: 'touchStart', touchPoints: [touch(4, scrollStart.x, scrollStart.y)],
+  });
+  await cdp.send('Input.dispatchTouchEvent', {
+    type: 'touchMove', touchPoints: [touch(4, scrollStart.x, scrollStart.y + 120)],
+  });
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+  await sleep(320);
+  const touchScrollY = await evaluate(cdp, 'scrollY');
+  assert(touchScrollY < scrollStart.scrollY - Math.min(30, availablePageScroll * 0.5),
+    `mobile page swipe did not scroll the toolbox (${scrollStart.scrollY} -> ${touchScrollY})`);
+  const footer = await evaluate(cdp, `(() => {
+    window.scrollTo(0, document.documentElement.scrollHeight);
+    const rect = document.querySelector('.footer')?.getBoundingClientRect();
+    return rect ? { top: rect.top, bottom: rect.bottom, scrollY } : undefined;
+  })()`);
+  assert(footer && footer.top >= -1 && footer.bottom <= initial.window.height + 1,
+    `mobile footer is not reachable (${JSON.stringify(footer)})`);
   return {
     viewport: `${round(initial.viewport.width, 2)}x${round(initial.viewport.height, 2)}`,
     canvasAspect: round(initial.canvas.width / initial.canvas.height, 6),
@@ -523,6 +674,10 @@ async function auditMobile(cdp, screenshot) {
     toolFilterHeight: round(initial.ui.filters.height),
     toolboxGap: round(initial.ui.actions.top - initial.ui.palette.bottom),
     horizontalOverflow: round(initial.ui.horizontalOverflow),
+    fieldIndicator: `${round(initial.ui.fieldIndicator.width)}x${round(initial.ui.fieldIndicator.height)}`,
+    libraryScroll: `${round(mobileLibrary.scrollTop)}/${round(mobileLibrary.scrollHeight - mobileLibrary.clientHeight)}`,
+    touchScroll: `${round(scrollStart.scrollY)}->${round(touchScrollY)}`,
+    footerScrollY: round(footer.scrollY),
     ...(screenshot ? { screenshot } : {}),
   };
 }
@@ -567,8 +722,16 @@ async function metrics(cdp) {
     const palette = document.querySelector('.palette');
     const actions = document.querySelector('.actions');
     const filters = document.querySelector('.tool-filters');
+    const shell = document.querySelector('.shell');
+    const workspace = document.querySelector('.workspace');
+    const toolbox = document.querySelector('.toolbox');
+    const library = document.querySelector('.tool-library');
+    const footer = document.querySelector('.footer');
+    const fieldIndicator = document.querySelector('.field-indicator');
+    const touchHint = document.querySelector('.touch-hint');
     const filterButtons = [...document.querySelectorAll('.tool-filter')];
-    if (!canvas || !viewport || !frame || !palette || !actions || !filters || !filterButtons.length) {
+    if (!canvas || !viewport || !frame || !palette || !actions || !filters || !shell || !workspace || !toolbox
+      || !library || !footer || !fieldIndicator || !touchHint || !filterButtons.length) {
       throw new Error('Missing browser-audit geometry');
     }
     const box = (element) => {
@@ -583,9 +746,12 @@ async function metrics(cdp) {
       backend: window.__ANIFOR_INPUT_AUDIT__.backend(),
       dpr: devicePixelRatio, window: { width: innerWidth, height: innerHeight },
       ui: {
-        palette: box(palette), actions: box(actions), filters: box(filters),
+        shell: box(shell), workspace: box(workspace), toolbox: box(toolbox), palette: box(palette), actions: box(actions), filters: box(filters),
+        library: box(library), footer: box(footer), fieldIndicator: box(fieldIndicator), touchHint: box(touchHint),
         filterButtons: filterButtons.map(box),
         horizontalOverflow: Math.max(0, document.documentElement.scrollWidth - innerWidth),
+        toolboxPaddingBottom: Number.parseFloat(getComputedStyle(toolbox).paddingBottom) || 0,
+        document: { scrollHeight: document.documentElement.scrollHeight, scrollY },
       },
     };
   })()`);
@@ -614,6 +780,12 @@ function assertToolboxGeometry(value, label, expectedFilterHeight) {
   const tolerance = 0.75;
   const gap = value.ui.actions.top - value.ui.palette.bottom;
   assert(gap >= -tolerance, `${label}: actions overlap tool palette by ${round(-gap)}px`);
+  assert(value.ui.palette.top >= value.ui.toolbox.top - tolerance
+    && value.ui.actions.bottom <= value.ui.toolbox.bottom + tolerance,
+  `${label}: toolbox content escaped its layout box`);
+  assert(value.ui.library.top >= value.ui.palette.top - tolerance
+    && value.ui.library.bottom <= value.ui.palette.bottom + tolerance,
+  `${label}: tool library escaped the palette`);
   assert(Math.abs(value.ui.filters.height - expectedFilterHeight) <= tolerance,
     `${label}: tool filter rail is ${round(value.ui.filters.height)}px`);
   for (const button of value.ui.filterButtons) {
@@ -623,6 +795,11 @@ function assertToolboxGeometry(value, label, expectedFilterHeight) {
   }
   assert(value.ui.horizontalOverflow <= tolerance,
     `${label}: document has ${round(value.ui.horizontalOverflow)}px horizontal overflow`);
+}
+
+function rectsOverlap(left, right) {
+  return left.left < right.right && left.right > right.left
+    && left.top < right.bottom && left.bottom > right.top;
 }
 
 function filterRows(buttons) {
