@@ -7,7 +7,9 @@ import { backingSize, resolveFieldOutputScale } from './render-resolution';
 import { shadeCanvasAtmosphere } from './canvas-atmosphere-relief';
 import { canvasLocalEmissionAlpha } from './canvas-emission-style';
 import { shadeCanvasOpticalVolume } from './canvas-optics-style';
-import { reconstructLiquidSurface } from './canvas-liquid-surface';
+import {
+  createLiquidSurfaceScratch, reconstructLiquidSurface, type LiquidSurfaceScratch,
+} from './canvas-liquid-surface';
 import { shadeCanvasEnergy } from './canvas-energy-style';
 import { shadeCanvasMaterial } from './canvas-material-style';
 import {
@@ -70,6 +72,7 @@ export class MaterialRenderer {
   private smokePixels?: ImageData;
   private atmospherePixels?: ImageData;
   private emissionPixels?: ImageData;
+  private liquidSurfaceScratch?: LiquidSurfaceScratch;
   private context!: CanvasRenderingContext2D;
   private liquidContext!: CanvasRenderingContext2D;
   private smokeContext!: CanvasRenderingContext2D;
@@ -245,6 +248,7 @@ export class MaterialRenderer {
     this.firePixels = undefined;
     this.atmospherePixels = undefined;
     this.emissionPixels = undefined;
+    this.liquidSurfaceScratch = undefined;
   }
 
   private syncFallbackVolumeSurfaces(): void {
@@ -287,7 +291,9 @@ export class MaterialRenderer {
     const firePixels = this.firePixels;
     const atmospherePixels = this.atmospherePixels;
     const emissionPixels = this.emissionPixels;
-    if (!fields || !basePixels || !liquidPixels || !smokePixels || !firePixels || !atmospherePixels || !emissionPixels) {
+    const liquidSurfaceScratch = this.liquidSurfaceScratch;
+    if (!fields || !basePixels || !liquidPixels || !smokePixels || !firePixels
+      || !atmospherePixels || !emissionPixels || !liquidSurfaceScratch) {
       throw new Error('Canvas render fields unavailable');
     }
     const rebuiltField = fields.updateNext(this.rendered, time);
@@ -545,7 +551,8 @@ export class MaterialRenderer {
     );
     reconstructLiquidSurface(
       liquid, this.rendered, fields.liquid.bytes,
-      fields.lookups.liquidByMaterial, fields.lookups.colorByMaterial, width, height,
+      fields.lookups.liquidByMaterial, fields.lookups.colorByMaterial, fields.lookups.styleBytes,
+      liquidSurfaceScratch, width, height,
     );
     this.liquidContext.putImageData(liquidPixels, 0, 0);
     this.smokeContext.putImageData(smokePixels, 0, 0);
@@ -648,6 +655,7 @@ export class MaterialRenderer {
     this.firePixels = fireContext.createImageData(width, height);
     this.atmospherePixels = atmosphereContext.createImageData(this.atmosphereSurface.width, this.atmosphereSurface.height);
     this.emissionPixels = emissionContext.createImageData(this.emissionSurface.width, this.emissionSurface.height);
+    this.liquidSurfaceScratch = createLiquidSurfaceScratch(this.liquidPixels.data, width);
     this.host.append(this.fallbackSurface);
   }
 

@@ -9,7 +9,9 @@ import {
 import { lightCanvasSurface } from '../src/renderer/canvas-surface-light';
 import { EmissionField } from '../src/renderer/emission-field';
 import { LiquidDensityField } from '../src/renderer/liquid-density-field';
-import { reconstructLiquidSurface } from '../src/renderer/canvas-liquid-surface';
+import {
+  createLiquidSurfaceScratch, reconstructLiquidSurface,
+} from '../src/renderer/canvas-liquid-surface';
 import { reconstructSolidSurface } from '../src/renderer/canvas-solid-surface';
 import { createRenderLookups } from '../src/renderer/render-field-set';
 import { RenderPhase, RenderProfile } from '../src/renderer/render-profile';
@@ -66,6 +68,22 @@ const solidSeed = seedPixels(solidMaterials);
 const solidPixels = new Uint8ClampedArray(solidSeed.length);
 const liquidSeed = seedPixels(materials, liquidByMaterial);
 const liquidPixels = new Uint8ClampedArray(liquidSeed.length);
+const liquidSurfaceScratch = createLiquidSurfaceScratch(liquidPixels, width);
+const denseLiquidMaterials = new Uint8Array(width * height).fill(Material.Water);
+const splitLiquidMaterials = new Uint8Array(width * height);
+for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) {
+  splitLiquidMaterials[y * width + x] = x < width / 2 ? Material.Water : Material.Oil;
+}
+const denseLiquidField = new LiquidDensityField(width, height, liquidByMaterial, colorByMaterial);
+const splitLiquidField = new LiquidDensityField(width, height, liquidByMaterial, colorByMaterial);
+denseLiquidField.update(denseLiquidMaterials);
+splitLiquidField.update(splitLiquidMaterials);
+const denseLiquidSeed = seedPixels(denseLiquidMaterials, liquidByMaterial);
+const splitLiquidSeed = seedPixels(splitLiquidMaterials, liquidByMaterial);
+const denseLiquidPixels = new Uint8ClampedArray(denseLiquidSeed.length);
+const splitLiquidPixels = new Uint8ClampedArray(splitLiquidSeed.length);
+const denseLiquidSurfaceScratch = createLiquidSurfaceScratch(denseLiquidPixels, width);
+const splitLiquidSurfaceScratch = createLiquidSurfaceScratch(splitLiquidPixels, width);
 const atmospherePixels = new Uint8ClampedArray(atmosphere.bytes.length);
 const energyCore = new Float32Array(3);
 const energyGlow = new Float32Array(3);
@@ -158,6 +176,7 @@ console.log(JSON.stringify({
   },
   canvasPresentation: {
     runtimeKnownScratchBytes: solidPixels.byteLength + liquidPixels.byteLength
+      + liquidSurfaceScratch.rowBytes.byteLength
       + energyCore.byteLength + energyGlow.byteLength + traitRgb.byteLength + traitClock.byteLength,
     diagnosticScratchBytes: traitCompositePixels.byteLength,
     atmosphereRelief: sample(() => {
@@ -204,7 +223,22 @@ console.log(JSON.stringify({
     liquidSurface: sample(() => {
       liquidPixels.set(liquidSeed);
       reconstructLiquidSurface(
-        liquidPixels, materials, liquid.bytes, liquidByMaterial, colorByMaterial, width, height,
+        liquidPixels, materials, liquid.bytes, liquidByMaterial, colorByMaterial, styleBytes,
+        liquidSurfaceScratch, width, height,
+      );
+    }),
+    liquidSurfaceDenseWorstCase: sample(() => {
+      denseLiquidPixels.set(denseLiquidSeed);
+      reconstructLiquidSurface(
+        denseLiquidPixels, denseLiquidMaterials, denseLiquidField.bytes,
+        liquidByMaterial, colorByMaterial, styleBytes, denseLiquidSurfaceScratch, width, height,
+      );
+    }),
+    liquidSurfaceSpeciesBoundary: sample(() => {
+      splitLiquidPixels.set(splitLiquidSeed);
+      reconstructLiquidSurface(
+        splitLiquidPixels, splitLiquidMaterials, splitLiquidField.bytes,
+        liquidByMaterial, colorByMaterial, styleBytes, splitLiquidSurfaceScratch, width, height,
       );
     }),
   },

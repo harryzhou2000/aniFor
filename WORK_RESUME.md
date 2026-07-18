@@ -208,6 +208,15 @@ Queued after the renderer checkpoint: revisit desktop/mobile geometry as a dedic
 - The browser audit captures the composed page and decodes it inside Chrome, avoiding `preserveDrawingBuffer`. It samples Fire, Plasma, ELEC, PHOT, and GRVT display regions and asserts visibility, at most 2% pinned-channel pixels, and stable family hue ordering in both Canvas2D and WebGL.
 - The suite now contains 192 passing tests. Fresh paired browser evidence reports zero pinned pixels in all ten backend/family samples, zero browser errors, unchanged 1×/2× geometry, 0.145-cell wheel anchoring, exact 42×27 middle-pan, repeated resize recovery, and unchanged mobile/native semantic checks.
 
+## Dense Canvas liquid-cohesion follow-up
+
+- Canvas now applies a non-cascading RGB-only cross kernel after liquid pinhole reconstruction. It requires field alpha at least 224, liquid-plane alpha at least 176, four exact smooth-eligible species cardinals, and at least one matching diagonal. Dense canonical-species reconstructed pinholes may satisfy a cardinal, but shorelines, world borders, narrow streams, hard inclusions, and unlike-liquid boundaries cannot.
+- Trait-bearing and emissive liquids bypass the cohesion pass. Every target alpha byte, semantic material byte, liquid-density byte, and separate glow plane remains unchanged; only strongly supported interior RGB is blended. Donors come from a persistent three-row pre-smoothing ring, so results are mirror-symmetric and cannot propagate with scan order.
+- The ring costs 7,344 persistent bytes at width 612 and uses one persistent typed-array source view per world row, avoiding per-frame subarray allocation while retaining native row copies. Shared atmosphere/liquid/emission allocation remains exactly 8,173,320 bytes; the profiler's runtime-known Canvas presentation byte storage is 1,887,464 bytes, excluding JavaScript view-object bookkeeping.
+- The profiler now includes a fully dense 612×384 Water pass and a full-height Water/Oil split. Latest isolated timings are 4.71 ms median / 5.12 ms p90 for the mixed fixture, 7.72 / 7.75 ms for dense Water, and 7.72 / 7.77 ms for the species boundary.
+- The suite now contains 198 passing tests. Coverage proves reduced dense-interior variance, exact shoreline/narrow-stream/boundary preservation, dense-pinhole continuity, low-alpha and trait bypass, alpha/material/density immutability, and mirror symmetry.
+- A fresh forced-Canvas browser capture retains 1224×768 backing, 1.59375 world aspect, exact landmark painting, 0.145-cell wheel anchoring, 42×27 CSS-pixel middle-pan, repeated resize recovery, 1.431× mobile pinch with zero stray cells, and zero browser errors. Visual review confirms calmer liquid interiors without widening sparse droplets or cross-family silhouettes.
+
 ## Verification completed for the LIFE/optics checkpoint
 
 - `npm run typecheck`
@@ -238,7 +247,7 @@ Queued after the renderer checkpoint: revisit desktop/mobile geometry as a dedic
 - Forced Canvas at 1280×720 and a 390×844 DPR-2 portrait capture retained the 1224×768 backing, square mobile interaction panel with aspect-preserving letterbox, smooth empty-space aura, and crisp material seams. Warm/cool strips visibly reveal profile contours without uniformly whitening block interiors.
 - Native semantic-tool coverage now proves exact scalar deltas, stable typed routing, no vector-to-particle fallthrough, no vector emission during pinch navigation, malformed ABI rejection, Wind response, `WL_BLOCKAIR` isolation, stable-water regression, and unstepped OPS Wind round-tripping.
 
-The configured-source checkpoint `4077b23`, LIFE/optical-response checkpoint `c3bdfd2`, solid-optics checkpoint `20cafb9`, cohesive-solid checkpoint `2bb36b2`, render-scale checkpoint `72c7801`, and material-continuity checkpoint `5f1268c` are committed and pushed. `5f1268c` is deployed and live-verified through its exact `revision.txt` plus the 20-resource closure. GitHub CLI authentication is valid. The energy-radiance follow-up has passed local review; treat it as deployed only when CI's live `revision.txt` matches its eventual checkpoint commit and the public runtime check passes.
+The configured-source checkpoint `4077b23`, LIFE/optical-response checkpoint `c3bdfd2`, solid-optics checkpoint `20cafb9`, cohesive-solid checkpoint `2bb36b2`, render-scale checkpoint `72c7801`, material-continuity checkpoint `5f1268c`, and energy-radiance checkpoint `65f4d6e` are committed and pushed. `65f4d6e` is deployed and live-verified through its exact `revision.txt`, 20-resource closure, and live browser smoke. The dense-liquid follow-up is locally verified but not yet checkpointed or deployed. The saved `gh` CLI token is currently invalid; HTTPS Git push still works, but manual Actions dispatch requires `gh auth login` or a valid replacement token.
 
 ## Current blockers and risks
 

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { ALL_MATERIALS, Material } from '../shared/materials';
 import { LiquidDensityField } from './liquid-density-field';
-import { reconstructLiquidSurface } from './canvas-liquid-surface';
+import { createLiquidSurfaceScratch, reconstructLiquidSurface } from './canvas-liquid-surface';
 import { createRenderLookups } from './render-field-set';
 
 describe('Canvas liquid surface reconstruction', () => {
@@ -20,7 +20,7 @@ describe('Canvas liquid surface reconstruction', () => {
     const pixels = seedLiquidPixels(materials);
     reconstruct(pixels, materials, field.bytes, width, height);
     expect(materials[4]).toBe(Material.Empty);
-    expect(pixels[4 * 4 + 3]).toBeGreaterThan(150);
+    expect(pixels[4 * 4 + 3]).toBe(210);
     expect(pixels[4 * 4 + 2]).toBeGreaterThan(pixels[4 * 4]);
   });
 
@@ -145,16 +145,175 @@ describe('Canvas liquid surface reconstruction', () => {
     expect(Array.from(pixels.slice(16, 19))).toEqual([31, 104, 158]);
   });
 
+  it('reduces colour variance only inside a strongly supported liquid body', () => {
+    const width = 7;
+    const height = 5;
+    const materials = new Uint8Array(width * height).fill(Material.Water);
+    const density = uniformDensity(materials.length, Material.Water);
+    const pixels = seedLiquidPixels(materials);
+    const center = (2 * width + 3) * 4;
+    pixels.set([176, 224, 246, 220], center);
+    const alphaBefore = pixels.filter((_, offset) => offset % 4 === 3);
+
+    reconstruct(pixels, materials, density, width, height);
+
+    expect(pixels[center]).toBeLessThan(176);
+    expect(pixels[center]).toBeGreaterThan(lookup.colorByMaterial[Material.Water * 3]);
+    expect(Math.abs(pixels[center] - lookup.colorByMaterial[Material.Water * 3]))
+      .toBeLessThan(Math.abs(176 - lookup.colorByMaterial[Material.Water * 3]) * 0.75);
+    expect(pixels.filter((_, offset) => offset % 4 === 3)).toEqual(alphaBefore);
+  });
+
+  it('keeps cohesion around a reconstructed dense pinhole', () => {
+    const width = 7;
+    const height = 5;
+    const materials = new Uint8Array(width * height).fill(Material.Water);
+    const hole = 2 * width + 3;
+    materials[hole] = Material.Empty;
+    const density = uniformDensity(materials.length, Material.Water);
+    const pixels = seedLiquidPixels(materials);
+    const probe = (hole + 1) * 4;
+    pixels.set([178, 226, 247, 220], probe);
+
+    reconstruct(pixels, materials, density, width, height);
+
+    expect(pixels[hole * 4 + 3]).toBe(210);
+    expect(pixels[probe]).toBeLessThan(178);
+    expect(pixels[probe + 3]).toBe(220);
+  });
+
+  it('leaves a straight shoreline and a narrow stream exactly styled', () => {
+    const width = 7;
+    const height = 5;
+    const materials = new Uint8Array(width * height);
+    for (let y = 2; y < height; y++) for (let x = 0; x < width; x++) {
+      materials[y * width + x] = Material.Water;
+    }
+    const density = densityFromMaterials(materials);
+    const pixels = seedLiquidPixels(materials);
+    const shoreline = (2 * width + 3) * 4;
+    pixels.set([183, 231, 249, 220], shoreline);
+    const before = Array.from(pixels.slice(shoreline, shoreline + 4));
+    reconstruct(pixels, materials, density, width, height);
+    expect(Array.from(pixels.slice(shoreline, shoreline + 4))).toEqual(before);
+
+    const streamMaterials = new Uint8Array(width * height);
+    for (let y = 0; y < height; y++) {
+      streamMaterials[y * width + 2] = Material.Water;
+      streamMaterials[y * width + 3] = Material.Water;
+    }
+    const streamDensity = densityFromMaterials(streamMaterials);
+    const streamPixels = seedLiquidPixels(streamMaterials);
+    const streamCenter = (2 * width + 2) * 4;
+    streamPixels.set([172, 218, 241, 220], streamCenter);
+    const streamBefore = Array.from(streamPixels.slice(streamCenter, streamCenter + 4));
+    reconstruct(streamPixels, streamMaterials, streamDensity, width, height);
+    expect(Array.from(streamPixels.slice(streamCenter, streamCenter + 4))).toEqual(streamBefore);
+  });
+
+  it('does not mix styled colour across a vertical Water/Oil boundary', () => {
+    const width = 6;
+    const height = 5;
+    const materials = new Uint8Array(width * height);
+    for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) {
+      materials[y * width + x] = x < 3 ? Material.Water : Material.Oil;
+    }
+    const density = densityFromMaterials(materials);
+    const pixels = seedLiquidPixels(materials);
+    const waterEdge = (2 * width + 2) * 4;
+    const oilEdge = (2 * width + 3) * 4;
+    pixels.set([181, 228, 247, 220], waterEdge);
+    pixels.set([121, 92, 49, 220], oilEdge);
+    const before = Array.from(pixels.slice(waterEdge, oilEdge + 4));
+    reconstruct(pixels, materials, density, width, height);
+    expect(Array.from(pixels.slice(waterEdge, oilEdge + 4))).toEqual(before);
+  });
+
+  it('leaves low-alpha and trait-bearing liquid pixels unsmoothed', () => {
+    const width = 5;
+    const height = 5;
+    const materials = new Uint8Array(width * height).fill(Material.Water);
+    const density = uniformDensity(materials.length, Material.Water);
+    const lowAlphaPixels = seedLiquidPixels(materials);
+    const center = 12 * 4;
+    lowAlphaPixels.set([180, 229, 248, 175], center);
+    const lowAlphaBefore = Array.from(lowAlphaPixels.slice(center, center + 4));
+    reconstruct(lowAlphaPixels, materials, density, width, height);
+    expect(Array.from(lowAlphaPixels.slice(center, center + 4))).toEqual(lowAlphaBefore);
+
+    const traitPixels = seedLiquidPixels(materials);
+    traitPixels.set([180, 229, 248, 220], center);
+    const traitBefore = Array.from(traitPixels);
+    const style = new Uint8Array(lookup.styleBytes);
+    style[Material.Water * 4 + 3] = 1;
+    reconstruct(traitPixels, materials, density, width, height, style);
+    expect(Array.from(traitPixels)).toEqual(traitBefore);
+  });
+
+  it('is mirror-symmetric and does not mutate material or density semantics', () => {
+    const width = 7;
+    const height = 5;
+    const materials = new Uint8Array(width * height).fill(Material.Water);
+    const density = uniformDensity(materials.length, Material.Water);
+    const pixels = seedLiquidPixels(materials);
+    const levels = [36, 58, 92, 168, 92, 58, 36];
+    for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) {
+      const pixel = (y * width + x) * 4;
+      pixels[pixel] = levels[x];
+      pixels[pixel + 1] = levels[x] + 48;
+      pixels[pixel + 2] = levels[x] + 72;
+    }
+    const materialsBefore = new Uint8Array(materials);
+    const densityBefore = new Uint8Array(density);
+    reconstruct(pixels, materials, density, width, height);
+
+    expect(materials).toEqual(materialsBefore);
+    expect(density).toEqual(densityBefore);
+    for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) {
+      const left = (y * width + x) * 4;
+      const right = (y * width + (width - 1 - x)) * 4;
+      expect(Array.from(pixels.slice(left, left + 4))).toEqual(Array.from(pixels.slice(right, right + 4)));
+    }
+  });
+
   function reconstruct(
     pixels: Uint8ClampedArray,
     materials: Uint8Array,
     density: Uint8Array,
     width: number,
     height: number,
+    style = lookup.styleBytes,
   ): void {
     reconstructLiquidSurface(
-      pixels, materials, density, lookup.liquidByMaterial, lookup.colorByMaterial, width, height,
+      pixels, materials, density, lookup.liquidByMaterial, lookup.colorByMaterial, style,
+      createLiquidSurfaceScratch(pixels, width), width, height,
     );
+  }
+
+  function uniformDensity(length: number, material: Material): Uint8Array {
+    const density = new Uint8Array(length * 4);
+    const color = material * 3;
+    for (let index = 0; index < length; index++) {
+      density[index * 4] = lookup.colorByMaterial[color];
+      density[index * 4 + 1] = lookup.colorByMaterial[color + 1];
+      density[index * 4 + 2] = lookup.colorByMaterial[color + 2];
+      density[index * 4 + 3] = 255;
+    }
+    return density;
+  }
+
+  function densityFromMaterials(materials: Uint8Array): Uint8Array {
+    const density = new Uint8Array(materials.length * 4);
+    for (let index = 0; index < materials.length; index++) {
+      const material = materials[index];
+      if (!material) continue;
+      const color = material * 3;
+      density[index * 4] = lookup.colorByMaterial[color];
+      density[index * 4 + 1] = lookup.colorByMaterial[color + 1];
+      density[index * 4 + 2] = lookup.colorByMaterial[color + 2];
+      density[index * 4 + 3] = 255;
+    }
+    return density;
   }
 
   function seedLiquidPixels(materials: Uint8Array): Uint8ClampedArray {
