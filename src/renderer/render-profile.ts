@@ -29,6 +29,17 @@ export function renderProfile(category: MaterialCategory): RenderProfile {
   return RenderProfile.Neutral;
 }
 
+/** Relative coloured-light response for opaque material-family surfaces. */
+export function surfaceLightGain(profile: RenderProfile): number {
+  if (profile === RenderProfile.Rigid) return 0.32;
+  if (profile === RenderProfile.Device) return 0.30;
+  if (profile === RenderProfile.Field) return 0.26;
+  if (profile === RenderProfile.Organic) return 0.22;
+  if (profile === RenderProfile.Granular) return 0.18;
+  if (profile === RenderProfile.Radioactive) return 0.16;
+  return 0.20;
+}
+
 export function renderPhase(material: Pick<MaterialInfo, 'category' | 'phase'>): RenderPhase {
   const phase = material.phase ?? defaultPhase(material.category);
   if (phase === 'gas') return RenderPhase.Gas;

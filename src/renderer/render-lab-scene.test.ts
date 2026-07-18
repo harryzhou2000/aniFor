@@ -28,6 +28,8 @@ describe('render lab scene', () => {
     expect(counts[Material.PLUT]).toBeGreaterThan(900);
     expect(counts[Material.SPRK]).toBeGreaterThan(900);
     expect(counts[Material.ACEL]).toBeGreaterThan(900);
+    expect(counts[Material.Fire]).toBeGreaterThan(500);
+    expect(counts[Material.ELEC]).toBeGreaterThan(500);
   });
 
   it('exercises every non-neutral styled family plus an energy phase', () => {

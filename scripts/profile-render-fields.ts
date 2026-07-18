@@ -2,11 +2,13 @@ import { performance } from 'node:perf_hooks';
 import { ALL_MATERIALS, Material } from '../src/shared/materials';
 import { AtmosphereField } from '../src/renderer/atmosphere-field';
 import { shadeCanvasAtmosphere } from '../src/renderer/canvas-atmosphere-relief';
+import { lightCanvasSurface } from '../src/renderer/canvas-surface-light';
 import { EmissionField } from '../src/renderer/emission-field';
 import { LiquidDensityField } from '../src/renderer/liquid-density-field';
 import { reconstructLiquidSurface } from '../src/renderer/canvas-liquid-surface';
 import { reconstructSolidSurface } from '../src/renderer/canvas-solid-surface';
 import { createRenderLookups } from '../src/renderer/render-field-set';
+import { RenderProfile } from '../src/renderer/render-profile';
 
 const width = 612;
 const height = 384;
@@ -57,6 +59,13 @@ const solidPixels = new Uint8ClampedArray(solidSeed.length);
 const liquidSeed = seedPixels(materials, liquidByMaterial);
 const liquidPixels = new Uint8ClampedArray(liquidSeed.length);
 const atmospherePixels = new Uint8ClampedArray(atmosphere.bytes.length);
+const profileEmission = new Uint8Array(emission.bytes.length);
+for (let offset = 0; offset < profileEmission.length; offset += 4) {
+  profileEmission[offset] = 255;
+  profileEmission[offset + 1] = 112;
+  profileEmission[offset + 2] = 36;
+  profileEmission[offset + 3] = 196;
+}
 
 function seedPixels(source: Uint8Array, include = new Uint8Array(256).fill(1)): Uint8ClampedArray {
   const pixels = new Uint8ClampedArray(source.length * 4);
@@ -94,6 +103,24 @@ console.log(JSON.stringify({
     solidSurface: sample(() => {
       solidPixels.set(solidSeed);
       reconstructSolidSurface(solidPixels, solidMaterials, styleBytes, width, height);
+    }),
+    surfaceLighting: sample(() => {
+      solidPixels.set(solidSeed);
+      for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) {
+        const index = y * width + x;
+        const material = solidMaterials[index];
+        if (!material) continue;
+        let exposed = 0;
+        if (x === 0 || solidMaterials[index - 1] !== material) exposed++;
+        if (x === width - 1 || solidMaterials[index + 1] !== material) exposed++;
+        if (y === 0 || solidMaterials[index - width] !== material) exposed++;
+        if (y === height - 1 || solidMaterials[index + width] !== material) exposed++;
+        if (!exposed) continue;
+        lightCanvasSurface(
+          solidPixels, index * 4, profileEmission, emission.width, emission.height,
+          width, height, x, y, styleBytes[material * 4 + 1] as RenderProfile, Math.min(1, exposed * 0.34),
+        );
+      }
     }),
     liquidSurface: sample(() => {
       liquidPixels.set(liquidSeed);

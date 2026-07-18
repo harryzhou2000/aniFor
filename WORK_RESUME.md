@@ -1,6 +1,6 @@
 # AniforTPT Work Resume
 
-Last reconciled: 2026-07-18 (Asia/Shanghai)
+Last reconciled: 2026-07-19 (Asia/Shanghai)
 
 This is the authoritative handoff for the active AniforTPT workstream. The goal is not complete.
 
@@ -22,14 +22,14 @@ Immediate priorities are:
 
 - Repository: `/home/harry/projects/aniFor_codex`
 - Branch: `main_codex`
-- Local and remote committed HEAD before the current graphics/UI tranche: `088adba Add native TPT simulation tools`
-- The gas/liquid styling and responsive geometry work described below is the next checkpoint after that baseline.
+- Local and remote committed HEAD before the current surface-lighting tranche: `63849dd Refine fluid rendering and responsive layout`
+- The profile-aware coloured surface-lighting work described below is the next checkpoint after that baseline.
 - GitHub CLI is authenticated as `harryzhou2000` with `repo` and `workflow` scopes.
 - Current live Pages URL: `https://harryzhou2000.github.io/aniFor/`
-- Verified live baseline before the current local tranche: `088adba` from Actions run `29650381262`.
-- Build, deploy, and post-deployment verification all passed. The live closure contains all 20 referenced resources with correct WASM MIME; live app, WASM glue, and WASM binary hashes exactly matched the local production artifacts. The restored compiler cache produced 265/270 hits (98.15%) and saved the new successful-build key.
+- Verified live baseline before the current local tranche: `63849dd` from Actions run `29651654181`.
+- Build, deploy, and post-deployment verification all passed. The live closure contains all 20 referenced resources with correct WASM MIME and the exact expected revision. The restored compiler cache produced 269/270 hits (99.63%); the successful primary key already existed, so the save step correctly skipped.
 
-## Committed/live baseline (`088adba`)
+## Committed/live baseline (`63849dd`)
 
 - Pinned official TPT 100.0 native engine, single-threaded 612×384 WebAssembly.
 - 170 stable projected material IDs; 165 particle brushes in the catalog, with 160 enabled and five gravity-dependent entries explicitly disabled.
@@ -99,10 +99,19 @@ Immediate priorities are:
 - Mobile uses a 230–300 px catalog, inner vertical/horizontal scrolling with document overscroll chaining, compact actions, and 24 px toolbox touch whitespace. The HUD is 132 px wide with smaller labels and a truncated backend row; the touch hint moved to the lower-left so overlap is zero.
 - Viewport fitting is animation-frame coalesced across frame observation, window resize, visual-viewport resize, and compact-media changes. This fixed a reproduced stale 1280-wide viewport after resizing to 1024×600.
 
+## Current local profile-aware surface-lighting tranche
+
+- WebGL reuses the existing emission texture as coloured scene light. Reconstructed contour density, diffuse relief, specular response, and the canonical material profile determine the response instead of applying one flat tint to every surface.
+- Rigid and device surfaces respond more sharply, organic/field surfaces more broadly, and radioactive surfaces retain a restrained response. Gas and liquid volume response remains bounded and emissive cores avoid double-lighting.
+- Canvas samples the same one-third-resolution emission field with clamp-to-edge bilinear coordinates only for exposed solid/field contours. It uses a screen blend that preserves texture and alpha; an empty field or an enclosed interior remains byte-identical.
+- The broad Canvas aura now renders behind opaque matter. Empty space retains the smooth falloff while matter receives contour lighting rather than a milky screen-space overlay.
+- The deterministic render lab adds equal-height warm and cool source strips around the profile matrix, with a lower-light centre comparison.
+- No new field, texture, scheduler stage, or persistent allocation was added.
+
 ## Verification completed for the current local tree
 
 - `npm run typecheck`
-- `npm test -- --run`: 32 files, 127 tests passed
+- `npm test -- --run`: 33 files, 131 tests passed
 - `npm run build`
 - Static build closure: 20 referenced resources verified (including the explicit favicon)
 - Current live Pages closure: 20 resources verified, including `stillroom_core.wasm` with the correct MIME
@@ -117,22 +126,27 @@ Immediate priorities are:
 - Fresh touch-emulated metrics at 390×844 and 360×640 show compact palette/toolbox sizes of 300/533 px and 230.39/463.39 px, a 132×37.78 HUD with zero touch-hint overlap, no viewport/palette/actions/footer overlap, reachable footer, exact square interaction panels, 1.59375 canvas aspect, symmetric 70.41/64.82 px letterboxing, and 1224×768 backing. With the catalog already at its 241 px inner-scroll maximum, one trusted swipe kept it at max and advanced document scrollY from 0 to 144, proving page-scroll chaining.
 - Current WebGL/Canvas browser acceptance has zero shader/runtime/network errors. Dense WebGL gas is continuous without the prior raw-dot island; Canvas gas has clearer relief/species separation; liquid caps and columns show brighter rims, darker depth, and caustic variation while retaining crisp silhouettes and clean unlike-species seams.
 - Latest warmed field profile at 612×384: atmosphere 6.91 ms median, species-aware liquid 12.03 ms, emission 3.25 ms, Canvas atmosphere relief 1.31 ms median / 1.48 ms p90, solid reconstruction 1.28 ms, and liquid reconstruction 1.69 ms. Shared volume storage remains 8,173,320 bytes; the relief pass adds no persistent allocation.
+- Repeated surface-light stress profiles at 612×384 measured 5.76–11.20 ms median for the standalone dense-contour Canvas pass under varying local load; the latest p90/maximum were 12.08/12.44 ms. Shared field storage remains exactly 8,173,320 bytes; the diagnostic pass includes its own full-grid scan and reuses existing buffers.
+- Fresh local Chrome at 1280×720 promoted the render lab to WebGL with the runtime GLSL compiled. A 1024×600 repeat retained the correct 1.59375 field aspect and backend badge; Chrome logged only Vite connect messages and no shader, WebGL, console, or runtime error.
+- Forced Canvas at 1280×720 and a 390×844 DPR-2 portrait capture retained the 1224×768 backing, square mobile interaction panel with aspect-preserving letterbox, smooth empty-space aura, and crisp material seams. Warm/cool strips visibly reveal profile contours without uniformly whitening block interiors.
 - Native semantic-tool coverage now proves exact scalar deltas, stable typed routing, no vector-to-particle fallthrough, no vector emission during pinch navigation, malformed ABI rejection, Wind response, `WL_BLOCKAIR` isolation, stable-water regression, and unstepped OPS Wind round-tripping.
 
-The `088adba` native-tool checkpoint is committed, pushed, and verified live. The current graphics/responsive-UI tranche passes unit, type, build, profile, desktop-resize, visual, and mobile geometry checks; its remaining handoff is final review, commit, manual deployment, and cache-busted live validation.
+The `63849dd` graphics/responsive-layout checkpoint is committed, pushed, and verified live. The current surface-lighting tranche passes unit, type, build, profile, desktop WebGL/Canvas visual, and portrait Canvas checks; its remaining handoff is final review, commit, manual deployment, and cache-busted live validation.
 
 ## Current blockers and risks
 
-- The current local graphics/responsive-UI tranche is not live until it is committed, pushed to `main_codex`, manually deployed, and tested at the Pages URL.
+- The current local surface-lighting tranche is not live until it is committed, pushed to `main_codex`, manually deployed, and tested at the Pages URL.
 - WebGL runtime GLSL is not compiled by TypeScript/Vite; preserve the fresh browser audit for every shader change.
 - The post-deploy verifier proves network asset closure and MIME, but not shader execution or interaction by itself.
+- Cached-HTML compatibility still relies on a small fixed set of historical JS/CSS aliases, and the live verifier does not compare public content hashes to the local artifact. Harden this before treating repeated stale-asset reports as closed.
+- View-transform and gesture tests are strong, but actual `MaterialRenderer.screenToCell`/Pixi bounds/painted-footprint coverage remains a recorded browser gate rather than an automated integration test.
 - Configured sources, signs, LIFE presets, and several special editing semantics remain future work.
 - Newtonian FFT gravity is intentionally omitted from the headless build, so gravity-dependent tools/elements must remain disabled or limited.
 - GPU partial texture upload, long-session allocation behavior, context loss, and full performance budgets need further profiling.
 
 ## Next sequence
 
-1. Review `git diff`, ensure no unintended/untracked files, and commit the graphics/responsive-UI tranche.
+1. Review `git diff`, ensure no unintended/untracked files, and commit the profile-aware surface-lighting tranche.
 2. Push only `main_codex`, then trigger `verify-static-game` manually with `operation=build-and-deploy`.
 3. Inspect ccache restore/save and the local/live asset-closure steps.
 4. Open the cache-busted live Pages URL; confirm native status, backend promotion, Canvas/WebGL gas and liquid visuals, repeated desktop resize containment, mobile catalog/HUD geometry, page-scroll chaining, and no console/network failures.

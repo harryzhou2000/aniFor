@@ -6,9 +6,10 @@ import { backingSize, resolveFieldOutputScale } from './render-resolution';
 import { shadeCanvasAtmosphere } from './canvas-atmosphere-relief';
 import { reconstructLiquidSurface } from './canvas-liquid-surface';
 import { shadeCanvasMaterial } from './canvas-material-style';
+import { lightCanvasSurface } from './canvas-surface-light';
 import { reconstructSolidSurface } from './canvas-solid-surface';
 import { RenderFieldSet } from './render-field-set';
-import { renderPhase, RenderPhase } from './render-profile';
+import { renderPhase, RenderPhase, RenderProfile } from './render-profile';
 import { compositePixel } from './rgba-composite';
 import { forceCanvas2D, supportsWebGL } from './webgl-support';
 import { contourLight, materialNeighbourMask, neighbourDensity } from './volumetric-field';
@@ -303,8 +304,19 @@ export class MaterialRenderer {
       const y = Math.floor(index / width);
       const pixel = index * 4;
       const wall = this.renderedWalls?.[index] ?? 0;
-      if (wall) setWallPixel(base, pixel, wall, x, y);
+      if (wall) {
+        setWallPixel(base, pixel, wall, x, y);
+        if (material === Material.Empty) {
+          const wallExposure = cardinalExposure(this.renderedWalls, width, height, x, y, wall);
+          lightCanvasSurface(
+            base, pixel, fields.emission.bytes, fields.emission.width, fields.emission.height,
+            width, height, x, y, RenderProfile.Rigid, wallExposure,
+          );
+        }
+      }
       if (material === Material.Empty) continue;
+      const phase = fields.lookups.styleBytes[material * 4] as RenderPhase;
+      const profile = fields.lookups.styleBytes[material * 4 + 1] as RenderProfile;
       const target = fields.lookups.liquidByMaterial[material] ? liquid : base;
       const top = y === 0 ? Material.Empty : this.rendered[index - width] as Material;
       const left = x === 0 ? Material.Empty : this.rendered[index - 1] as Material;
@@ -424,6 +436,13 @@ export class MaterialRenderer {
         }
         if (info.emissive) setPixel(fire, pixel, red, green, blue, 176);
       }
+      if (phase === RenderPhase.Solid || phase === RenderPhase.Field) {
+        const exposure = cardinalExposure(this.rendered, width, height, x, y, material);
+        lightCanvasSurface(
+          target, pixel, fields.emission.bytes, fields.emission.width, fields.emission.height,
+          width, height, x, y, profile, exposure,
+        );
+      }
     }
 
     reconstructSolidSurface(base, this.rendered, fields.lookups.styleBytes, width, height);
@@ -437,21 +456,36 @@ export class MaterialRenderer {
     const output = backingSize(width, height, this.outputScale);
     const fallback = this.fallbackContext;
     fallback.clearRect(0, 0, output.width, output.height);
-    fallback.imageSmoothingEnabled = false;
-    fallback.drawImage(this.surface, 0, 0, width, height, 0, 0, output.width, output.height);
     fallback.save();
     fallback.imageSmoothingEnabled = true;
     fallback.imageSmoothingQuality = 'high';
+    fallback.globalCompositeOperation = 'lighter';
+    fallback.filter = `blur(${1.7 * this.outputScale}px)`;
+    fallback.globalAlpha = 0.72;
+    fallback.drawImage(
+      this.emissionSurface, 0, 0, this.emissionSurface.width, this.emissionSurface.height,
+      0, 0, output.width, output.height,
+    );
+    // The broad aura belongs behind matter. Opaque contours receive the same
+    // field as restrained family-aware RGB lighting above, so their texture is
+    // revealed instead of being washed by a screen-space glow.
+    fallback.globalCompositeOperation = 'source-over';
+    fallback.filter = 'none';
     fallback.globalAlpha = 1;
+    fallback.imageSmoothingEnabled = false;
+    fallback.drawImage(this.surface, 0, 0, width, height, 0, 0, output.width, output.height);
+    fallback.imageSmoothingEnabled = true;
     fallback.drawImage(this.liquidSurface, 0, 0, width, height, 0, 0, output.width, output.height);
     // A restrained nearest pass keeps the two-pixel reconstruction crisp while
     // the high-quality pass joins cells into a cohesive liquid surface.
     fallback.imageSmoothingEnabled = false;
     fallback.globalAlpha = 0.34;
     fallback.drawImage(this.liquidSurface, 0, 0, width, height, 0, 0, output.width, output.height);
+    // Gas remains an independent particle/volume plane above native walls and
+    // opaque matter. Only the broad light aura moved behind those surfaces.
     fallback.imageSmoothingEnabled = true;
-    fallback.filter = `blur(${0.55 * this.outputScale}px)`;
     fallback.globalAlpha = 0.82;
+    fallback.filter = `blur(${0.55 * this.outputScale}px)`;
     fallback.drawImage(
       this.atmosphereSurface, 0, 0, this.atmosphereSurface.width, this.atmosphereSurface.height,
       0, 0, output.width, output.height,
@@ -460,12 +494,6 @@ export class MaterialRenderer {
     fallback.globalAlpha = 0.24;
     fallback.drawImage(this.smokeSurface, 0, 0, width, height, 0, 0, output.width, output.height);
     fallback.globalCompositeOperation = 'lighter';
-    fallback.filter = `blur(${1.7 * this.outputScale}px)`;
-    fallback.globalAlpha = 0.72;
-    fallback.drawImage(
-      this.emissionSurface, 0, 0, this.emissionSurface.width, this.emissionSurface.height,
-      0, 0, output.width, output.height,
-    );
     fallback.filter = `blur(${1.1 * this.outputScale}px)`;
     fallback.globalAlpha = 0.52;
     fallback.drawImage(this.fireSurface, 0, 0, width, height, 0, 0, output.width, output.height);
@@ -567,6 +595,23 @@ function hash(value: number): number {
 
 function clamp(value: number, minimum: number, maximum: number): number {
   return Math.max(minimum, Math.min(maximum, value));
+}
+
+function cardinalExposure(
+  values: Uint8Array | undefined,
+  width: number,
+  height: number,
+  x: number,
+  y: number,
+  value: number,
+): number {
+  if (!values) return 1;
+  let exposed = 0;
+  if (x === 0 || values[y * width + x - 1] !== value) exposed++;
+  if (x === width - 1 || values[y * width + x + 1] !== value) exposed++;
+  if (y === 0 || values[(y - 1) * width + x] !== value) exposed++;
+  if (y === height - 1 || values[(y + 1) * width + x] !== value) exposed++;
+  return Math.min(1, exposed * 0.34);
 }
 
 function settleWithin<T>(promise: Promise<T>, milliseconds: number): Promise<T | undefined> {

@@ -63,6 +63,10 @@ export function applyRenderLabScene(simulation: SimulationBackend): void {
     const row = Math.floor(index / 5);
     plot.rect(388 + column * 40, 194 + row * 38, 35, 33, material, 0.90, 601 + index);
   });
+  // Equal-height warm/cool sources expose how each family responds to coloured
+  // scene light. The centre column remains a lower-light comparison surface.
+  plot.rect(377, 194, 5, 147, Material.Fire, 0.78, 677);
+  plot.rect(592, 194, 5, 147, Material.ELEC, 0.78, 683);
   plot.scatterLine(390, 354, 196, Material.PHOT, 0.18, 701);
 }
 

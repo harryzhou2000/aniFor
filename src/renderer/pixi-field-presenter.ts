@@ -51,6 +51,15 @@ float sameMaterial(vec2 uv, float material) { return 1.0 - step(0.5, abs(materia
 float familyFor(float id) { return floor(texture(uStyleTexture, vec2((id + 0.5) / 256.0, 0.5)).r * 255.0 + 0.5); }
 float profileFor(float id) { return floor(texture(uStyleTexture, vec2((id + 0.5) / 256.0, 0.5)).g * 255.0 + 0.5); }
 float emissionFor(float id) { return texture(uStyleTexture, vec2((id + 0.5) / 256.0, 0.5)).b; }
+float surfaceLightGain(float profile) {
+  if (profile == 2.0) return 0.32;
+  if (profile == 5.0) return 0.30;
+  if (profile == 6.0) return 0.26;
+  if (profile == 3.0) return 0.22;
+  if (profile == 1.0) return 0.18;
+  if (profile == 4.0) return 0.16;
+  return 0.20;
+}
 bool isGas(float id) { return familyFor(id) == 1.0; }
 bool isLiquid(float id) { return familyFor(id) == 2.0; }
 bool isEnergy(float id) { return familyFor(id) == 3.0; }
@@ -195,8 +204,6 @@ void main() {
       halo = 1.0;
     } else if (atmosphereState.a > 0.004) {
       cloudOnly = 1.0;
-    } else if (emissionState.a > 0.002) {
-      emissionOnly = 1.0;
     } else {
       vec2 nearby = nearbySurface(fieldUv);
       material = nearby.x;
@@ -206,6 +213,7 @@ void main() {
       }
       if (material < 0.5) {
         if (wall > 0.5) wallOnly = 1.0;
+        else if (emissionState.a > 0.002) emissionOnly = 1.0;
         else { finalColor = vec4(0.0); return; }
       }
     }
@@ -361,7 +369,18 @@ void main() {
   color += mix(base, vec3(1.0, 0.52, 0.20), heat) * emission;
   if (emissionOnly < 0.5 && emissionState.a > 0.002) {
     float lightReach = smoothstep(0.002, 0.42, emissionState.a);
-    color += emissionState.rgb * lightReach * (isEmissive(material) ? 0.28 : 0.16);
+    float volumeResponse = (gasVolume > 0.5 || liquidVolume > 0.5) ? 0.16 : 0.0;
+    float contour = 1.0 - smoothstep(0.54, 0.96, density);
+    float relief = clamp((diffuse - 0.72) / 0.42 + specular * 0.18, 0.0, 1.0);
+    float lightProfile = wallOnly > 0.5 ? 2.0 : profile;
+    float surfaceResponse = surfaceLightGain(lightProfile)
+      * mix(0.14, 1.0, contour)
+      * mix(0.76, 1.16, relief);
+    float lightResponse = isEmissive(material) ? 0.24
+      : (volumeResponse > 0.0 ? volumeResponse : surfaceResponse);
+    // Opaque matter receives coloured light through its reconstructed relief;
+    // empty space keeps the separate emission halo, avoiding a flat milky wash.
+    color += emissionState.rgb * lightReach * lightResponse;
   }
   if (halo > 0.5 && wallOnly < 0.5 && emissionOnly < 0.5 && surfaceOnly < 0.5 && gasVolume < 0.5 && liquidVolume < 0.5) alpha = volume * (isEnergy(material) ? 1.35 + heat : 0.52);
   alpha = clamp(alpha, 0.0, 1.0);
