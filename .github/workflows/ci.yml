@@ -2,8 +2,19 @@ name: verify-static-game
 
 on:
   push:
+    branches-ignore:
+      - main_codex
   pull_request:
   workflow_dispatch:
+    inputs:
+      operation:
+        description: Choose whether to verify the build or also deploy it to GitHub Pages
+        required: true
+        default: build
+        type: choice
+        options:
+          - build
+          - build-and-deploy
 
 permissions:
   contents: read
@@ -48,17 +59,23 @@ jobs:
           if-no-files-found: error
 
       - name: Configure GitHub Pages
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        if: >-
+          (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+          (github.event_name == 'workflow_dispatch' && inputs.operation == 'build-and-deploy')
         uses: actions/configure-pages@v5
 
       - name: Upload GitHub Pages artifact
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        if: >-
+          (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+          (github.event_name == 'workflow_dispatch' && inputs.operation == 'build-and-deploy')
         uses: actions/upload-pages-artifact@v3
         with:
           path: dist
 
   deploy:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: >-
+      (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+      (github.event_name == 'workflow_dispatch' && inputs.operation == 'build-and-deploy')
     needs: build
     runs-on: ubuntu-latest
     permissions:
