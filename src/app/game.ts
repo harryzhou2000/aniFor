@@ -1,4 +1,5 @@
 import { MaterialRenderer } from '../renderer/field-renderer';
+import { applyRenderLabScene, renderLabRequested } from '../renderer/render-lab-scene';
 import { Material } from '../shared/materials';
 import { decodeSharedWorld, encodeSharedWorld } from '../shared/share-codec';
 import type { SimulationBackend } from '../simulation';
@@ -30,7 +31,14 @@ export class Game {
 
   async start(): Promise<void> {
     await this.renderer.init();
-    await this.restore();
+    const renderLab = renderLabRequested();
+    if (renderLab) {
+      applyRenderLabScene(this.simulation);
+      this.paused = true;
+      this.root.dataset.scene = 'render-lab';
+    } else {
+      await this.restore();
+    }
     const viewport = this.root.querySelector('.viewport') as HTMLElement;
     new WorldInputController(viewport, this.renderer, {
       draw: ({ x, y }, erase) => {
@@ -48,8 +56,13 @@ export class Game {
       onShare: () => this.share(),
       onClear: () => { this.simulation.clear(); localStorage.removeItem(AUTOSAVE_KEY); },
     });
-    this.seedIfEmpty();
-    window.setInterval(() => this.save(), 4000);
+    if (renderLab) {
+      const status = this.root.querySelector('.status');
+      if (status) status.textContent = `${this.simulation.name} · paused render lab`;
+    } else {
+      this.seedIfEmpty();
+      window.setInterval(() => this.save(), 4000);
+    }
     requestAnimationFrame(this.frame);
   }
 

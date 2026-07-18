@@ -176,6 +176,9 @@ export const enum Material {
 
 export type MaterialCategory = 'powders' | 'liquids' | 'solids' | 'gases' | 'energy' | 'explosives' | 'special' | 'radioactive' | 'force' | 'electronics' | 'powered' | 'sensors' | 'life';
 
+/** Physical presentation state. This is independent of the toolbox category. */
+export type MaterialPhase = 'powder' | 'liquid' | 'solid' | 'gas' | 'energy' | 'field';
+
 export type NativeLimitation = 'newtonian-gravity-unavailable' | 'air-velocity-limited';
 
 export interface MaterialInfo {
@@ -185,6 +188,8 @@ export interface MaterialInfo {
   readonly color: string;
   readonly icon: string;
   readonly category: MaterialCategory;
+  readonly phase?: MaterialPhase;
+  readonly emissive?: boolean;
   readonly selectable: boolean;
   readonly hazard?: 'caution' | 'danger';
   readonly available?: boolean;
@@ -223,7 +228,7 @@ export const ALL_MATERIALS: readonly MaterialInfo[] = [
   { id: Material.Quartz, name: 'Quartz', description: 'Pressure-sensitive crystal powder', color: '#d8b0c2', icon: '✦', category: 'powders', selectable: true },
   { id: Material.Thermite, name: 'Thermite', description: 'Burns into molten metal', color: '#9f4b32', icon: '⁙', category: 'explosives', selectable: true },
   { id: Material.C4, name: 'C-4', description: 'Pressure-sensitive explosive', color: '#c8c4a6', icon: '⁙', category: 'explosives', selectable: true },
-  { id: Material.Nitro, name: 'Nitro', description: 'Explosive liquid', color: '#b7a66a', icon: '●', category: 'explosives', selectable: true },
+  { id: Material.Nitro, name: 'Nitro', description: 'Explosive liquid', color: '#b7a66a', icon: '●', category: 'explosives', phase: 'liquid', selectable: true },
   { id: Material.Firework, name: 'Firework', description: 'Colourful explosive powder', color: '#9c72c7', icon: '✦', category: 'explosives', selectable: true },
   { id: Material.DistilledWater, name: 'Distilled', description: 'Pure non-conductive water', color: '#75cfdf', icon: '●', category: 'liquids', selectable: true },
   { id: Material.Diesel, name: 'Diesel', description: 'Combustible liquid fuel', color: '#9b7d3d', icon: '●', category: 'liquids', selectable: true },
@@ -278,34 +283,34 @@ export const ALL_MATERIALS: readonly MaterialInfo[] = [
   { id: Material.BANG, name: 'TNT', description: 'TNT, explodes all at once.', color: '#c05050', icon: '⁙', category: 'explosives', selectable: true, hazard: 'danger' },
   { id: Material.BOMB, name: 'BOMB', description: 'Bomb. Explodes and destroys all surrounding particles when it touches something.', color: '#fff288', icon: '⁙', category: 'explosives', selectable: true, hazard: 'danger' },
   { id: Material.C5, name: 'C-5', description: 'Cold explosive, set off by anything cold.', color: '#2050e0', icon: '⁙', category: 'explosives', selectable: true, hazard: 'danger' },
-  { id: Material.CFLM, name: 'CFLM', description: 'Sub-zero flame.', color: '#8080ff', icon: '⁙', category: 'explosives', selectable: true, hazard: 'danger' },
+  { id: Material.CFLM, name: 'CFLM', description: 'Sub-zero flame.', color: '#8080ff', icon: '⁙', category: 'explosives', phase: 'gas', emissive: true, selectable: true, hazard: 'danger' },
   { id: Material.DEST, name: 'DEST', description: 'More destructive Bomb, can break through virtually anything.', color: '#ff3311', icon: '⁙', category: 'explosives', selectable: true, hazard: 'danger' },
   { id: Material.FIRW, name: 'FIRW', description: 'Fireworks! Colorful, set off by fire.', color: '#ffa040', icon: '⁙', category: 'explosives', selectable: true, hazard: 'danger' },
   { id: Material.FSEP, name: 'FSEP', description: 'Fuse Powder. Burns slowly like FUSE.', color: '#63ad5f', icon: '⁙', category: 'explosives', selectable: true, hazard: 'danger' },
   { id: Material.FUSE, name: 'FUSE', description: 'Burns slowly. Ignites at very high temperatures or when sparked.', color: '#0a5706', icon: '⁙', category: 'explosives', selectable: true, hazard: 'danger' },
   { id: Material.IGNT, name: 'IGNC', description: 'Ignition cord. Burns slowly with fire and sparks.', color: '#c0b050', icon: '⁙', category: 'explosives', selectable: true, hazard: 'danger' },
-  { id: Material.LIGH, name: 'LIGH', description: 'Lightning. Change the brush size to set the size of the lightning.', color: '#ffffc0', icon: '⁙', category: 'explosives', selectable: true, hazard: 'danger' },
+  { id: Material.LIGH, name: 'LIGH', description: 'Lightning. Change the brush size to set the size of the lightning.', color: '#ffffc0', icon: '⁙', category: 'explosives', phase: 'solid', emissive: true, selectable: true, hazard: 'danger' },
   { id: Material.LITH, name: 'LITH', description: 'Lithium. Reactive element that explodes on contact with water.', color: '#b6aabf', icon: '⁙', category: 'explosives', selectable: true, hazard: 'danger' },
-  { id: Material.LRBD, name: 'LRBD', description: 'Liquid Rubidium.', color: '#aaaaaa', icon: '⁙', category: 'explosives', selectable: true, hazard: 'danger' },
+  { id: Material.LRBD, name: 'LRBD', description: 'Liquid Rubidium.', color: '#aaaaaa', icon: '⁙', category: 'explosives', phase: 'liquid', selectable: true, hazard: 'danger' },
   { id: Material.RBDM, name: 'RBDM', description: 'Rubidium. Explosive, especially on contact with water. Low melting point.', color: '#cccccc', icon: '⁙', category: 'explosives', selectable: true, hazard: 'danger' },
-  { id: Material.THDR, name: 'THDR', description: 'Lightning! Very hot, inflicts damage upon most materials, and transfers current to metals.', color: '#ffffa0', icon: '⁙', category: 'explosives', selectable: true, hazard: 'danger' },
-  { id: Material.AMTR, name: 'AMTR', description: 'Anti-Matter, destroys a majority of particles.', color: '#808080', icon: '◆', category: 'radioactive', selectable: true, hazard: 'danger' },
+  { id: Material.THDR, name: 'THDR', description: 'Lightning! Very hot, inflicts damage upon most materials, and transfers current to metals.', color: '#ffffa0', icon: '⁙', category: 'explosives', phase: 'powder', emissive: true, selectable: true, hazard: 'danger' },
+  { id: Material.AMTR, name: 'AMTR', description: 'Anti-Matter, destroys a majority of particles.', color: '#808080', icon: '◆', category: 'radioactive', phase: 'gas', selectable: true, hazard: 'danger' },
   { id: Material.BVBR, name: 'BVBR', description: 'Broken vibranium.', color: '#005000', icon: '◆', category: 'radioactive', selectable: true, hazard: 'caution' },
-  { id: Material.DEUT, name: 'DEUT', description: 'Deuterium oxide. Gets more concentrated when cold, explodes with neutrons or protons.', color: '#00153f', icon: '◆', category: 'radioactive', selectable: true, hazard: 'caution' },
-  { id: Material.ELEC, name: 'ELEC', description: 'Electrons. Sparks electronics, reacts with NEUT and WATR.', color: '#dfefff', icon: '◆', category: 'radioactive', selectable: true, hazard: 'caution' },
-  { id: Material.EXOT, name: 'EXOT', description: 'Exotic matter. Explodes with excess exposure to electrons. Has many other odd reactions.', color: '#247bfe', icon: '◆', category: 'radioactive', selectable: true, hazard: 'caution' },
-  { id: Material.GRVT, name: 'GRVT', description: 'Gravitons. Create Newtonian Gravity.', color: '#00ee76', icon: '◆', category: 'radioactive', selectable: true, hazard: 'caution', available: false, limitations: ['newtonian-gravity-unavailable'] },
-  { id: Material.ISOZ, name: 'ISOZ', description: 'Isotope-Z. Radioactive liquid, decays into photons when touching PHOT or under negative pressure.', color: '#aa30d0', icon: '◆', category: 'radioactive', selectable: true, hazard: 'caution' },
+  { id: Material.DEUT, name: 'DEUT', description: 'Deuterium oxide. Gets more concentrated when cold, explodes with neutrons or protons.', color: '#00153f', icon: '◆', category: 'radioactive', phase: 'liquid', selectable: true, hazard: 'caution' },
+  { id: Material.ELEC, name: 'ELEC', description: 'Electrons. Sparks electronics, reacts with NEUT and WATR.', color: '#dfefff', icon: '◆', category: 'radioactive', phase: 'energy', emissive: true, selectable: true, hazard: 'caution' },
+  { id: Material.EXOT, name: 'EXOT', description: 'Exotic matter. Explodes with excess exposure to electrons. Has many other odd reactions.', color: '#247bfe', icon: '◆', category: 'radioactive', phase: 'liquid', selectable: true, hazard: 'caution' },
+  { id: Material.GRVT, name: 'GRVT', description: 'Gravitons. Create Newtonian Gravity.', color: '#00ee76', icon: '◆', category: 'radioactive', phase: 'energy', emissive: true, selectable: true, hazard: 'caution', available: false, limitations: ['newtonian-gravity-unavailable'] },
+  { id: Material.ISOZ, name: 'ISOZ', description: 'Isotope-Z. Radioactive liquid, decays into photons when touching PHOT or under negative pressure.', color: '#aa30d0', icon: '◆', category: 'radioactive', phase: 'liquid', selectable: true, hazard: 'caution' },
   { id: Material.ISZS, name: 'ISZS', description: 'Solid form of ISOZ, slowly decays into PHOT.', color: '#662089', icon: '◆', category: 'radioactive', selectable: true, hazard: 'caution' },
-  { id: Material.NEUT, name: 'NEUT', description: 'Neutrons. Interact with matter in odd ways.', color: '#20e0ff', icon: '◆', category: 'radioactive', selectable: true, hazard: 'caution' },
-  { id: Material.PHOT, name: 'PHOT', description: 'Photons. Refract through glass, and different elements change its color. Can ignite flammable materials.', color: '#ffffff', icon: '◆', category: 'radioactive', selectable: true, hazard: 'caution' },
+  { id: Material.NEUT, name: 'NEUT', description: 'Neutrons. Interact with matter in odd ways.', color: '#20e0ff', icon: '◆', category: 'radioactive', phase: 'energy', emissive: true, selectable: true, hazard: 'caution' },
+  { id: Material.PHOT, name: 'PHOT', description: 'Photons. Refract through glass, and different elements change its color. Can ignite flammable materials.', color: '#ffffff', icon: '◆', category: 'radioactive', phase: 'energy', emissive: true, selectable: true, hazard: 'caution' },
   { id: Material.PLUT, name: 'PLUT', description: 'Plutonium. Heavy, fissile particles. Generates neutrons under pressure.', color: '#407020', icon: '◆', category: 'radioactive', selectable: true, hazard: 'danger' },
   { id: Material.POLO, name: 'POLO', description: 'Polonium, highly radioactive. Decays into NEUT and heats up.', color: '#506030', icon: '◆', category: 'radioactive', selectable: true, hazard: 'danger' },
-  { id: Material.PROT, name: 'PROT', description: 'Protons. Transfer heat to materials, and remove sparks.', color: '#990000', icon: '◆', category: 'radioactive', selectable: true, hazard: 'caution' },
+  { id: Material.PROT, name: 'PROT', description: 'Protons. Transfer heat to materials, and remove sparks.', color: '#990000', icon: '◆', category: 'radioactive', phase: 'energy', emissive: true, selectable: true, hazard: 'caution' },
   { id: Material.SING, name: 'SING', description: 'Singularity. Creates huge amounts of negative pressure and destroys everything.', color: '#242424', icon: '◆', category: 'radioactive', selectable: true, hazard: 'danger' },
   { id: Material.URAN, name: 'URAN', description: 'Uranium. Heavy particles. Generates heat under pressure.', color: '#707020', icon: '◆', category: 'radioactive', selectable: true, hazard: 'caution' },
   { id: Material.VIBR, name: 'VIBR', description: 'Vibranium. Stores energy and releases it in violent explosions.', color: '#005000', icon: '◆', category: 'radioactive', selectable: true, hazard: 'caution' },
-  { id: Material.WARP, name: 'WARP', description: 'Displaces other elements.', color: '#101010', icon: '◆', category: 'radioactive', selectable: true, hazard: 'caution' },
+  { id: Material.WARP, name: 'WARP', description: 'Displaces other elements.', color: '#101010', icon: '◆', category: 'radioactive', phase: 'gas', selectable: true, hazard: 'caution' },
   { id: Material.ACEL, name: 'ACEL', description: 'Accelerator, speeds up nearby elements.', color: '#0099cc', icon: '➜', category: 'force', selectable: true },
   { id: Material.DCEL, name: 'DCEL', description: 'Decelerator, slows down nearby elements.', color: '#99cc00', icon: '➜', category: 'force', selectable: true },
   { id: Material.DMG, name: 'DMG', description: 'Generates damaging pressure and breaks any elements it hits.', color: '#88ff88', icon: '➜', category: 'force', selectable: true, hazard: 'danger' },
@@ -339,7 +344,7 @@ export const ALL_MATERIALS: readonly MaterialInfo[] = [
   { id: Material.NTCT, name: 'NTCT', description: 'NTC Thermistor. Conducts with PSCN and NSCN, but only when heated above 100C.', color: '#505040', icon: '⌁', category: 'electronics', selectable: true },
   { id: Material.PSCN, name: 'PSCN', description: 'P-Type Silicon, Will transfer current to any conductor. Enables powered materials.', color: '#805050', icon: '⌁', category: 'electronics', selectable: true },
   { id: Material.PTCT, name: 'PTCT', description: 'PTC Thermistor. Conducts with PSCN and NSCN, but only when cooled below 100C.', color: '#405050', icon: '⌁', category: 'electronics', selectable: true },
-  { id: Material.SPRK, name: 'SPRK', description: 'Electricity. The basis of all electronics in TPT, travels along conductive elements.', color: '#ffff80', icon: '⌁', category: 'electronics', selectable: true, hazard: 'caution' },
+  { id: Material.SPRK, name: 'SPRK', description: 'Electricity. The basis of all electronics in TPT, travels along conductive elements.', color: '#ffff80', icon: '⌁', category: 'electronics', emissive: true, selectable: true, hazard: 'caution' },
   { id: Material.SWCH, name: 'SWCH', description: 'Switch. Only conducts when switched on. (PSCN switches on, NSCN switches off)', color: '#103b11', icon: '⌁', category: 'electronics', selectable: true },
   { id: Material.TESC, name: 'TESC', description: 'Tesla coil! Creates lightning when sparked.', color: '#707040', icon: '⌁', category: 'electronics', selectable: true, hazard: 'danger' },
   { id: Material.TUNG, name: 'TUNG', description: 'Tungsten. Brittle metal with a very high melting point.', color: '#505050', icon: '⌁', category: 'electronics', selectable: true },

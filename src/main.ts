@@ -1,5 +1,6 @@
 import './styles.css';
 import { Game } from './app/game';
+import { renderLabRequested } from './renderer/render-lab-scene';
 import { fitAspect } from './renderer/view-transform';
 import { createSimulation } from './simulation';
 
@@ -25,7 +26,7 @@ root.innerHTML = `
     <footer class="footer"><p class="status">Deterministic simulation · saved on this device</p><a href="./NOTICE.txt" target="_blank" rel="license">GPLv3 · source notice</a></footer>
   </section>`;
 
-const simulation = await createSimulation();
+const simulation = await createSimulation({ renderLab: renderLabRequested() });
 const viewportFrame = root.querySelector<HTMLElement>('.viewport-frame');
 const viewport = root.querySelector<HTMLElement>('.viewport');
 if (!viewportFrame || !viewport) throw new Error('Missing simulation viewport');

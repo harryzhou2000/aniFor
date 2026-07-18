@@ -1,4 +1,5 @@
 import { ALL_MATERIALS, Material } from '../shared/materials';
+import { renderPhase, RenderPhase } from './render-profile';
 
 export interface CellStyle { color: number; alpha: number; radius: number; glow?: number }
 
@@ -21,9 +22,10 @@ const styles: Record<number, CellStyle> = {
 
 for (const material of ALL_MATERIALS) {
   if (styles[material.id]) continue;
-  const gas = material.category === 'gases';
-  const energy = material.category === 'energy';
-  const liquid = material.category === 'liquids';
+  const phase = renderPhase(material);
+  const gas = phase === RenderPhase.Gas;
+  const energy = phase === RenderPhase.Energy || material.emissive;
+  const liquid = phase === RenderPhase.Liquid;
   styles[material.id] = {
     color: Number.parseInt(material.color.slice(1), 16),
     alpha: gas ? 0.38 : liquid ? 0.8 : 0.96,

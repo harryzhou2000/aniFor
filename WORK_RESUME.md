@@ -16,20 +16,20 @@ The objective is active and not complete.
 
 - Repository: `/home/harry/projects/aniFor_codex`
 - Branch: `main_codex`
-- Local HEAD: `0dc8244 Keep Pixi viewport sizing synchronized`
-- Remote `origin/main_codex`: `c770a0c Expand TPT catalog and add semantic field rendering`
+- Local HEAD: `8ff733a Improve volumetric material rendering`
+- Remote `origin/main_codex`: `6df7177 Add pan gestures and two-times rendering`
 - Local branch is one commit ahead of the remote.
-- Nothing after `c770a0c` has been pushed or deployed.
+- Nothing after `6df7177` has been pushed or deployed.
 - The user asked to wait for GitHub CLI login before further GitHub work.
 
 Recent relevant commits:
 
-1. `0dc8244` — keep Pixi viewport sizing synchronized (local only)
-2. `c770a0c` — expand TPT catalog and add semantic field rendering (pushed)
-3. `06bb7b4` — rename Pages artifact for AniforTPT
-4. `3210070` — add field HUD and smooth projected rendering
-5. `4abeb3e` — rebrand app and categorize material tools
-6. `2ccbff6` — expand Powder Toy material projection ABI
+1. `8ff733a` — add volumetric fluid/gas shading and material-family render profiles (local only)
+2. `6df7177` — add middle/touch pan and fixed two-times backing resolution
+3. `cb23413` — fix the viewport coordinate contract and Pixi field UVs
+4. `0dc8244` — keep Pixi viewport sizing synchronized
+5. `c770a0c` — expand TPT catalog and add semantic field rendering
+6. `06bb7b4` — rename Pages artifact for AniforTPT
 
 ## Committed implementation status
 
@@ -56,12 +56,16 @@ Recent relevant commits:
 - The primary presenter is Pixi/WebGL using an RGBA semantic field containing material ID, temperature, and velocity.
 - Palette and style lookup textures let projected reaction products render without per-element shader branches.
 - The committed shader performs neighborhood-based density, contour lighting, liquid/gas styling, and emissive heat/energy.
+- Desktop WebGL reconstructs nearby liquid and gas occupancy into a merged volume. Liquids receive depth, rim, and specular shading; gases use translucent billows with soft, boundaryless halos. Mobile uses the bounded single-neighborhood path.
+- Gas now has a half-resolution RGB+density atmosphere field, so sparse cells blend into species-coloured cloud volume. Liquid has a separate full-resolution, tight three-tap density field that fills small holes while retaining a substantially harder boundary.
+- Gas and liquid fields invalidate only when a cell enters or leaves their respective physical phase; ordinary falling sand no longer rebuilds either volume field.
+- A style-LUT render profile differentiates granular, rigid, organic, radioactive, device, and field/special families without adding per-element draw calls.
 - Dirty material changes are coalesced into halo-aware 32-cell chunks.
 - The main render cadence is capped at 30 Hz; dynamic semantic-field repacking is capped at 12 Hz.
 - Canvas 2D remains the compatibility path.
 - The local viewport path uses a native 612×384 Pixi logical surface and one uniform CSS camera transform. DPR/backing density is separate from CSS/world math.
 - A custom Pixi filter vertex passes sprite-local `aPosition` as 0–1 `vFieldCoord`. This fixes the upper-left-anchored visual divergence caused by sampling the independent field texture with Pixi's pooled filter `vTextureCoord`.
-- The user confirmed the aspect ratio and view now look correct. An independent live `npm run dev` DPR2 audit verified exact host/canvas geometry, 10/50/90% pointer probes, and paused Diamond placement at three known cells.
+- The user confirmed the aspect ratio and view now look correct and confirmed `?renderScale=2` produces a visible normal scene. An earlier independent live `npm run dev` DPR2 audit verified exact host/canvas geometry, 10/50/90% pointer probes, and paused Diamond placement at three known cells. The latest volumetric shader still needs a fresh browser interaction/image check.
 
 ### CI/CD
 
@@ -74,44 +78,27 @@ Recent relevant commits:
 
 ## Current checkpoint awaiting commit
 
-The following local changes are verified and ready for a progress checkpoint:
+The viewport, interaction, two-times output, and first volumetric material-profile tranches are committed. The current uncommitted tranche adds phase-correct volume reconstruction and a repeatable visual fixture:
 
-- `src/main.ts`
-  - wraps the viewport in `.viewport-frame`;
-  - uses JavaScript `ResizeObserver` sizing to force 612:384.
-- `src/styles.css`
-  - adds the `.viewport-frame` layout container.
-- `src/renderer/view-transform.ts`
-  - adds `fitAspect`.
-- `src/renderer/view-transform.test.ts`
-  - adds fixed-aspect fitting tests.
-- `src/renderer/field-renderer.ts`
-  - changes pointer conversion to use the viewport content box;
-  - caps full dynamic temperature/velocity refreshes at 12 Hz.
-- `src/renderer/pixi-field-presenter.ts`
-  - adds bilinear occupancy reconstruction and analytic gradients;
-  - changes dynamic-field full-refresh behavior;
-  - renders in one native logical coordinate space;
-  - fixes Pixi pooled-filter UV distortion with sprite-local field coordinates.
-- `src/renderer/semantic-field.test.ts`
-  - adds the 12 Hz refresh-budget test.
-- `src/app/game.ts`
-  - exposes the probed cell in HUD diagnostic metadata for browser assertions.
+- `src/shared/materials.ts` adds optional physical render phase metadata for cross-category cases.
+- Nitro and liquid rubidium now use the liquid surface path.
+- DEUT, EXOT, and ISOZ now remain radioactive in the catalog while rendering as liquids.
+- AMTR, CFLM, and WARP preserve TPT gas phase and use volumetric presentation.
+- ELEC, GRVT, NEUT, PHOT, and PROT preserve TPT energy phase. CFLM, LIGH, THDR, and SPRK keep their native gas/solid/powder states but receive an independent emissive trait.
+- `renderPhase()` is shared by WebGL, Canvas2D compatibility rendering, and the legacy palette path so the paths cannot silently disagree.
+- Focused tests prove category/phase independence and representative overrides.
+- A half-resolution atmosphere field blends gas colour and density through a bounded separable kernel; the shader uses explicit finite differences rather than unsupported derivative intrinsics.
+- A full-resolution liquid density field uses a tighter one-cell kernel and harder threshold to fill sparse holes without gas-like spread.
+- `?scene=render-lab&renderScale=2` creates a paused deterministic atlas; `&renderer=canvas2d` captures the compatibility reference. The route bypasses native startup and autosave only for the fixture.
+- Browser captures are retained locally under ignored `.artifacts/`: baseline WebGL, Canvas2D, and the liquid-pass WebGL result.
 
-- `src/ui/world-input.ts` and tests
-  - normalize wheel deltas;
-  - keep wheel zoom cursor-anchored;
-  - interpolate continuous painting strokes.
-- `AGENTS.md` and `docs/viewport-rendering-contract.md`
-  - preserve the coordinate contract and Pixi filter-UV lesson for future work.
-
-The checkpoint passed:
+The current tranche passes:
 
 - `npm run typecheck`
-- `npm test`: 14 test files, 50 tests passed
+- `npm test`: 20 test files, 71 tests passed
 - `npm run build`
 
-The independent browser audit additionally proved cursor/native placement and shader geometry. Temporary Chrome and Vite processes were removed.
+Real-browser checks passed with no shader/WebGL/app errors: 1224×768 backing, 612×384 logical/CSS world, correct uniform viewport fit, continuous Smoke volume, and matched render-lab screenshots. Browser and Vite processes were removed after capture.
 
 ## Confirmed interface gaps from pinned-engine audit
 
@@ -161,14 +148,13 @@ Safe initial tools are HEAT, COOL, AIR, VAC, and MIX. PGRV/NGRV are ineffective 
 
 ## Rendering and performance gaps
 
-- The committed shader still derives its surface from nearest material IDs; smoothing is limited and can remain visibly cell-oriented.
-- The uncommitted bilinear occupancy shader is intended to provide continuous sub-cell density and analytic normals, but has not passed a completed browser/shader runtime check and must not be assumed correct.
-- The style LUT distinguishes only solid, gas, liquid, and energy. Powders, rigid solids, plants, crystals, electronics, and radioactive materials mostly differ only by color.
+- The semantic texture necessarily begins with discrete TPT cells. The dedicated gas/liquid fields materially improve continuity, but gas opacity/edge softness and liquid thresholds still require iterative comparison through the render lab.
+- The style LUT now separates physical phase from visual profile, but the profiles are broad; crystals, individual liquids, portals/sources, and powered-state animation still need dedicated traits.
 - Dirty chunks bound CPU packing, but `BufferImageSource.update()` may still upload the full 612×384 texture; partial GPU transfer is not proven.
-- Canvas fallback buffers are allocated even when WebGL succeeds, wasting several MiB.
 - The Canvas fallback still performs full-field work at the dynamic render cadence.
+- The Canvas fallback has phase-correct fluids/gases and bounded blurred atmosphere layers. Its paired render-lab capture passes geometry/runtime checks, but its much fuzzier gas and flatter liquid lighting are intentionally compatibility-grade rather than pixel-identical to WebGL.
 - The WebGL startup timeout can orphan a late Pixi initialization; teardown and context-loss recovery are absent.
-- DPR is capped, but there is no absolute framebuffer-pixel ceiling for very large displays.
+- The fixed 1224×768 output is bounded, but the current Pixi Filter-on-Sprite may allocate pooled intermediate textures; direct-quad rendering and filter-buffer/MSAA costs remain unprofiled.
 - Tests cover packing, chunk invalidation, view-transform math, neighborhood helpers, and refresh scheduling, but not actual shader execution, rendered-image output, WebGL/fallback selection, context loss, upload bytes, frame time, or allocation ceilings.
 
 ## Current blocker
@@ -179,14 +165,13 @@ GitHub CLI authentication was invalid, and the user asked the agent to wait for 
 
 ## Recommended restart sequence
 
-1. Commit the verified viewport/UV checkpoint.
-2. Add middle-button desktop pan, one-finger touch pan, and continuous two-finger pan/zoom with focused pointer-state tests.
-3. Allocate a 1224×768 WebGL backing surface while retaining a 612×384 logical/CSS world; add an equivalent high-resolution Canvas fallback presentation.
-4. Refine reconstruction into crisp styled material families without broad blur, then profile framebuffer, upload, and frame costs.
-5. Differentiate powders, plants, sources, electronics, radioactive materials, energy, liquids, gases, and rigid solids.
-6. Correct immediate public-particle catalog drift, then implement true walls and configured source workflows.
-7. Update README and integration docs whenever counts or capabilities change.
-8. After GitHub login is confirmed: inspect `gh auth status`, push reviewed commits to `main_codex`, trigger manual `build-and-deploy`, verify ccache restore/save behavior, inspect Actions logs, and validate the deployed Pages assets and runtime interaction.
+1. Review the retained render-lab before/after crops with the user and tune gas opacity/halo plus liquid edge thresholds from concrete visual feedback.
+2. Restore a discrete 3×3 shape/normal kernel for granular and gas cores while keeping the dedicated atmosphere as a faint exterior halo and the tight density field for liquids.
+3. Profile atmosphere/liquid CPU update time, throttle gas-volume refresh if needed, and inspect pooled filter-buffer cost.
+4. Refine styled material families, including crystal, source/portal, powered, and radioactive behaviors.
+5. Correct immediate public-particle catalog drift, then implement true walls and configured source workflows.
+6. Update README and integration docs whenever counts or capabilities change.
+7. After GitHub login is confirmed: inspect `gh auth status`, push reviewed commits to `main_codex`, trigger manual `build-and-deploy`, verify ccache restore/save behavior, inspect Actions logs, and validate the deployed Pages assets and runtime interaction.
 
 ## Local verification commands
 

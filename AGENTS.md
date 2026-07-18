@@ -29,6 +29,19 @@ npm run build
 
 Also validate the actual painted footprint at multiple viewport positions and after cursor-anchored zoom; a HUD value computed by the same mapping is not sufficient evidence.
 
+## Visual regression lab
+
+Use the paused deterministic material atlas before and after material-shader changes:
+
+```text
+?scene=render-lab&renderScale=2
+?scene=render-lab&renderScale=2&renderer=canvas2d
+```
+
+The render-lab query uses a 612×384 in-memory backend, does not restore or write autosave, and contains powder density ramps, cohesive and sparse liquids, overlapping gas species, sand/water mixtures, adjacent liquid families, and representative rigid/organic/radioactive/emissive blocks. Capture the viewport itself at identical browser dimensions and keep local comparison shots under ignored `.artifacts/`.
+
+Read [`docs/render-lab.md`](docs/render-lab.md) before changing reconstruction thresholds or blur radii. A TypeScript or Vite build does not compile Pixi's runtime GLSL; a browser screenshot with a clean shader console is required.
+
 ## Project hygiene
 
 - Use `apply_patch` for source and documentation edits.

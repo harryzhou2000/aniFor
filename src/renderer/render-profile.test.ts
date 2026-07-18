@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { renderProfile, RenderProfile } from './render-profile';
+import { ALL_MATERIALS, Material } from '../shared/materials';
+import { renderPhase, renderProfile, RenderPhase, RenderProfile } from './render-profile';
 
 describe('render profiles', () => {
   it('groups toolbox categories into stable visual surface families', () => {
@@ -18,5 +19,20 @@ describe('render profiles', () => {
     expect(renderProfile('liquids')).toBe(RenderProfile.Neutral);
     expect(renderProfile('gases')).toBe(RenderProfile.Neutral);
     expect(renderProfile('energy')).toBe(RenderProfile.Neutral);
+  });
+
+  it('keeps physical state independent from toolbox grouping', () => {
+    expect(renderPhase({ category: 'liquids' })).toBe(RenderPhase.Liquid);
+    expect(renderPhase({ category: 'gases' })).toBe(RenderPhase.Gas);
+    expect(renderPhase({ category: 'explosives', phase: 'liquid' })).toBe(RenderPhase.Liquid);
+    expect(renderPhase({ category: 'radioactive', phase: 'gas' })).toBe(RenderPhase.Gas);
+    expect(renderPhase({ category: 'electronics', phase: 'energy' })).toBe(RenderPhase.Energy);
+    expect(renderPhase(ALL_MATERIALS.find(({ id }) => id === Material.Nitro)!)).toBe(RenderPhase.Liquid);
+    expect(renderPhase(ALL_MATERIALS.find(({ id }) => id === Material.DEUT)!)).toBe(RenderPhase.Liquid);
+    expect(renderPhase(ALL_MATERIALS.find(({ id }) => id === Material.WARP)!)).toBe(RenderPhase.Gas);
+    expect(renderPhase(ALL_MATERIALS.find(({ id }) => id === Material.SPRK)!)).toBe(RenderPhase.Solid);
+    expect(ALL_MATERIALS.find(({ id }) => id === Material.SPRK)?.emissive).toBe(true);
+    expect(renderPhase(ALL_MATERIALS.find(({ id }) => id === Material.CFLM)!)).toBe(RenderPhase.Gas);
+    expect(renderPhase(ALL_MATERIALS.find(({ id }) => id === Material.THDR)!)).toBe(RenderPhase.Powder);
   });
 });

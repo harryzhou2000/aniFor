@@ -1,8 +1,9 @@
-import { ALL_MATERIALS, Material, type MaterialCategory } from '../shared/materials';
+import { ALL_MATERIALS, Material } from '../shared/materials';
 import type { SimulationBackend } from '../simulation';
 import { clientToViewport, ViewTransform, type Point, type ViewState } from './view-transform';
 import type { PixiFieldPresenter } from './pixi-field-presenter';
 import { backingSize, resolveFieldOutputScale } from './render-resolution';
+import { renderPhase, RenderPhase } from './render-profile';
 import { forceCanvas2D, supportsWebGL } from './webgl-support';
 import { contourLight, materialNeighbourMask, neighbourDensity } from './volumetric-field';
 
@@ -13,10 +14,14 @@ export function dynamicFieldRefreshDue(time: number, lastRefresh: number, enable
   return enabled && time - lastRefresh >= DYNAMIC_FIELD_REFRESH_INTERVAL;
 }
 
-interface ProjectedRenderInfo { readonly color: number; readonly category: MaterialCategory }
+interface ProjectedRenderInfo { readonly color: number; readonly phase: RenderPhase; readonly emissive: boolean }
 const PROJECTED_RENDER_INFO: Array<ProjectedRenderInfo | undefined> = [];
 for (const material of ALL_MATERIALS) {
-  PROJECTED_RENDER_INFO[material.id] = { color: Number.parseInt(material.color.slice(1), 16), category: material.category };
+  PROJECTED_RENDER_INFO[material.id] = {
+    color: Number.parseInt(material.color.slice(1), 16),
+    phase: renderPhase(material),
+    emissive: material.emissive === true || renderPhase(material) === RenderPhase.Energy,
+  };
 }
 
 /** Continuous field renderer: one shaded texel per native Powder Toy cell. */
@@ -67,7 +72,7 @@ export class MaterialRenderer {
     if (time - this.lastDraw < FRAME_INTERVAL) return;
     for (const cell of this.simulation.consumeDirtyCells()) {
       this.rendered[cell.index] = cell.material;
-      this.presenter?.markDirty(cell.index);
+      this.presenter?.markDirty(cell.index, cell.material);
       this.changed = true;
     }
     const hasDynamicFields = Boolean(this.simulation.temperature || this.simulation.velocity);
@@ -222,12 +227,12 @@ export class MaterialRenderer {
         const red = info.color >>> 16;
         const green = (info.color >>> 8) & 0xFF;
         const blue = info.color & 0xFF;
-        if (info.category === "gases") {
+        if (info.phase === RenderPhase.Gas) {
           const mask = materialNeighbourMask(this.rendered, width, height, x, y, material);
           const density = neighbourDensity(mask);
           const volume = density * 4 + contourLight(mask) * 0.5 + Math.sin(time * 0.0014 + x * 0.08 + y * 0.05) * 5;
           setPixel(smoke, pixel, red + volume, green + volume, blue + volume, 42 + density * 12);
-        } else if (info.category === "liquids") {
+        } else if (info.phase === RenderPhase.Liquid) {
           const mask = materialNeighbourMask(this.rendered, width, height, x, y, material);
           const density = neighbourDensity(mask);
           const contour = contourLight(mask);
@@ -235,12 +240,13 @@ export class MaterialRenderer {
           const shimmer = Math.sin(time * 0.0018 + x * 0.055 + y * 0.025) * 4 + contour;
           setPixel(base, pixel, red - depth + shimmer, green - depth + shimmer, blue - depth + shimmer, 205 + density * 6);
           if (exposedTop) setPixel(fire, pixel, red + 35, green + 35, blue + 35, 30 + Math.max(0, contour));
-        } else if (info.category === "energy") {
+        } else if (info.phase === RenderPhase.Energy) {
           setPixel(base, pixel, red + normalLight, green + normalLight, blue + normalLight, 245);
           setPixel(fire, pixel, red, green, blue, 180);
         } else {
           setPixel(base, pixel, red + grain * 0.45 + normalLight, green + grain * 0.45 + normalLight, blue + grain * 0.45 + normalLight, 255);
         }
+        if (info.emissive) setPixel(fire, pixel, red, green, blue, 176);
       }
     }
 

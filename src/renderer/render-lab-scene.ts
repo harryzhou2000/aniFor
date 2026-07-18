@@ -1,0 +1,122 @@
+import { Material } from '../shared/materials';
+import type { SimulationBackend } from '../simulation';
+
+export const RENDER_LAB_QUERY = 'render-lab';
+
+export function renderLabRequested(search = globalThis.location?.search ?? ''): boolean {
+  return new URLSearchParams(search).get('scene') === RENDER_LAB_QUERY;
+}
+
+/** A paused, deterministic material atlas for visual regression screenshots. */
+export function applyRenderLabScene(simulation: SimulationBackend): void {
+  simulation.clear();
+  const plot = new ScenePlotter(simulation);
+
+  // Powder density ramp: isolated grains through a packed sand mass.
+  const powderDensity = [0.16, 0.30, 0.48, 0.70, 0.94];
+  powderDensity.forEach((density, band) => {
+    plot.rect(18 + band * 31, 20, 29, 118, Material.Sand, density, 101 + band);
+  });
+  plot.rect(18, 112, 153, 26, Material.Dust, 0.18, 151);
+  plot.rect(112, 112, 59, 26, Material.Salt, 0.22, 157);
+
+  // Liquids: dense cores, sparse shores, a second liquid, and a hard solid boundary.
+  plot.ellipse(238, 79, 56, 58, Material.Water, 0.98, 211, 0.17);
+  plot.ellipse(289, 87, 43, 48, Material.Oil, 0.90, 223, 0.12);
+  plot.ellipse(332, 62, 24, 31, Material.Acid, 0.82, 227, 0.24);
+  plot.rect(188, 136, 172, 7, Material.Wall, 1, 229);
+  plot.scatterLine(192, 153, 164, Material.Water, 0.10, 233);
+
+  // Gas mixtures: overlapping density-falloff clouds plus a sparse control row.
+  plot.ellipse(420, 76, 55, 51, Material.Smoke, 0.84, 307, 0.58);
+  plot.ellipse(486, 72, 56, 47, Material.Oxygen, 0.72, 311, 0.64);
+  plot.ellipse(544, 88, 45, 39, Material.NobleGas, 0.60, 313, 0.70);
+  plot.scatterLine(382, 145, 202, Material.Smoke, 0.12, 317);
+
+  // Sand entering water: a stable paused mixture and a crisp wall reference.
+  plot.rect(18, 192, 165, 154, Material.Water, 0.90, 401);
+  plot.gradientRect(18, 192, 165, 86, Material.Sand, 0.86, 0.12, 409);
+  plot.rect(18, 344, 165, 8, Material.Wall, 1, 419);
+  plot.mixture(74, 251, 64, 64, Material.Sand, Material.Water, 0.78, 421);
+
+  // Adjacent liquid families make boundary bleeding and over-blur obvious.
+  const liquids = [Material.Water, Material.Oil, Material.Acid, Material.Lava];
+  liquids.forEach((material, column) => {
+    plot.wavyColumn(205 + column * 39, 194, 38, 151, material, 503 + column * 7);
+  });
+  plot.rect(202, 344, 160, 8, Material.Wall, 1, 541);
+
+  // Material-family blocks: rigid, organic, radioactive liquid/gas, and energy.
+  const samples = [
+    Material.Metal, Material.Glass, Material.Plant, Material.Coal,
+    Material.DEUT, Material.WARP, Material.NEUT, Material.SPRK,
+    Material.Lava, Material.CFLM, Material.PHOT, Material.GLOW,
+  ];
+  samples.forEach((material, index) => {
+    const column = index % 4;
+    const row = Math.floor(index / 4);
+    plot.rect(388 + column * 51, 194 + row * 51, 45, 45, material, 0.90, 601 + index);
+  });
+  plot.scatterLine(390, 354, 196, Material.PHOT, 0.18, 701);
+}
+
+class ScenePlotter {
+  constructor(private readonly simulation: SimulationBackend) {}
+
+  rect(x: number, y: number, width: number, height: number, material: Material, density: number, salt: number): void {
+    for (let py = y; py < y + height; py++) for (let px = x; px < x + width; px++) {
+      if (noise(px, py, salt) <= density) this.set(px, py, material);
+    }
+  }
+
+  gradientRect(x: number, y: number, width: number, height: number, material: Material, dense: number, sparse: number, salt: number): void {
+    for (let py = y; py < y + height; py++) {
+      const progress = (py - y) / Math.max(1, height - 1);
+      const density = dense + (sparse - dense) * progress;
+      for (let px = x; px < x + width; px++) if (noise(px, py, salt) <= density) this.set(px, py, material);
+    }
+  }
+
+  ellipse(cx: number, cy: number, rx: number, ry: number, material: Material, density: number, salt: number, edgeFalloff: number): void {
+    for (let y = cy - ry; y <= cy + ry; y++) for (let x = cx - rx; x <= cx + rx; x++) {
+      const distance = Math.sqrt(((x - cx) / rx) ** 2 + ((y - cy) / ry) ** 2);
+      if (distance > 1) continue;
+      const edge = Math.min(1, Math.max(0, (1 - distance) / Math.max(0.001, edgeFalloff)));
+      if (noise(x, y, salt) <= density * edge) this.set(x, y, material);
+    }
+  }
+
+  mixture(x: number, y: number, width: number, height: number, first: Material, second: Material, density: number, salt: number): void {
+    for (let py = y; py < y + height; py++) for (let px = x; px < x + width; px++) {
+      const value = noise(px, py, salt);
+      if (value > density) continue;
+      this.set(px, py, noise(px, py, salt + 97) < 0.5 ? first : second);
+    }
+  }
+
+  wavyColumn(x: number, y: number, width: number, height: number, material: Material, salt: number): void {
+    for (let py = y; py < y + height; py++) {
+      const inset = Math.round(2.5 + Math.sin(py * 0.13 + salt) * 2.5);
+      for (let px = x + inset; px < x + width - inset; px++) {
+        if (noise(px, py, salt) <= 0.94) this.set(px, py, material);
+      }
+    }
+  }
+
+  scatterLine(x: number, y: number, width: number, material: Material, density: number, salt: number): void {
+    for (let px = x; px < x + width; px++) for (let py = y - 3; py <= y + 3; py++) {
+      if (noise(px, py, salt) <= density) this.set(px, py, material);
+    }
+  }
+
+  private set(x: number, y: number, material: Material): void {
+    if (x < 0 || y < 0 || x >= this.simulation.width || y >= this.simulation.height) return;
+    this.simulation.paint(x, y, material, 0);
+  }
+}
+
+function noise(x: number, y: number, salt: number): number {
+  let value = Math.imul(x + salt, 0x9E3779B1) ^ Math.imul(y - salt, 0x85EBCA77);
+  value = Math.imul(value ^ (value >>> 15), 0xC2B2AE3D);
+  return ((value ^ (value >>> 16)) >>> 0) / 0xFFFFFFFF;
+}

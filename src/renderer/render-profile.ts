@@ -1,4 +1,13 @@
-import type { MaterialCategory } from '../shared/materials';
+import type { MaterialCategory, MaterialInfo, MaterialPhase } from '../shared/materials';
+
+export const enum RenderPhase {
+  Solid = 0,
+  Gas = 1,
+  Liquid = 2,
+  Energy = 3,
+  Powder = 4,
+  Field = 5,
+}
 
 export const enum RenderProfile {
   Neutral = 0,
@@ -20,3 +29,21 @@ export function renderProfile(category: MaterialCategory): RenderProfile {
   return RenderProfile.Neutral;
 }
 
+export function renderPhase(material: Pick<MaterialInfo, 'category' | 'phase'>): RenderPhase {
+  const phase = material.phase ?? defaultPhase(material.category);
+  if (phase === 'gas') return RenderPhase.Gas;
+  if (phase === 'liquid') return RenderPhase.Liquid;
+  if (phase === 'energy') return RenderPhase.Energy;
+  if (phase === 'powder') return RenderPhase.Powder;
+  if (phase === 'field') return RenderPhase.Field;
+  return RenderPhase.Solid;
+}
+
+function defaultPhase(category: MaterialCategory): MaterialPhase {
+  if (category === 'gases') return 'gas';
+  if (category === 'liquids') return 'liquid';
+  if (category === 'energy') return 'energy';
+  if (category === 'powders' || category === 'explosives') return 'powder';
+  if (category === 'force' || category === 'special') return 'field';
+  return 'solid';
+}

@@ -7,12 +7,20 @@ import {
   Texture,
   UniformGroup,
 } from 'pixi.js';
-import type { MaterialCategory } from '../shared/materials';
+import type { MaterialCategory, MaterialPhase } from '../shared/materials';
+import { AtmosphereField } from './atmosphere-field';
 import { DirtyChunkGrid } from './dirty-chunk-grid';
-import { renderProfile } from './render-profile';
+import { LiquidDensityField } from './liquid-density-field';
+import { renderPhase, renderProfile, RenderPhase } from './render-profile';
 import { packSemanticRect } from './semantic-field';
 
-interface SemanticMaterialStyle { readonly id: number; readonly color: string; readonly category: MaterialCategory }
+interface SemanticMaterialStyle {
+  readonly id: number;
+  readonly color: string;
+  readonly category: MaterialCategory;
+  readonly phase?: MaterialPhase;
+  readonly emissive?: boolean;
+}
 interface PresenterViewport { readonly width: number; readonly height: number }
 
 const FIELD_VERTEX = `
@@ -33,10 +41,13 @@ const FIELD_FRAGMENT = `
 in vec2 vFieldCoord;
 out vec4 finalColor;
 uniform sampler2D uFieldTexture;
+uniform sampler2D uAtmosphereTexture;
+uniform sampler2D uLiquidTexture;
 uniform sampler2D uPaletteTexture;
 uniform sampler2D uStyleTexture;
 uniform vec2 uTexel;
 uniform vec2 uFieldSize;
+uniform vec2 uAtmosphereTexel;
 uniform float uTime;
 uniform float uHighQuality;
 vec4 field(vec2 uv) { return texture(uFieldTexture, clamp(uv, uTexel * 0.5, vec2(1.0) - uTexel * 0.5)); }
@@ -44,9 +55,11 @@ float materialAt(vec2 uv) { return floor(field(uv).r * 255.0 + 0.5); }
 float sameMaterial(vec2 uv, float material) { return 1.0 - step(0.5, abs(materialAt(uv) - material)); }
 float familyFor(float id) { return floor(texture(uStyleTexture, vec2((id + 0.5) / 256.0, 0.5)).r * 255.0 + 0.5); }
 float profileFor(float id) { return floor(texture(uStyleTexture, vec2((id + 0.5) / 256.0, 0.5)).g * 255.0 + 0.5); }
+float emissionFor(float id) { return texture(uStyleTexture, vec2((id + 0.5) / 256.0, 0.5)).b; }
 bool isGas(float id) { return familyFor(id) == 1.0; }
 bool isLiquid(float id) { return familyFor(id) == 2.0; }
 bool isEnergy(float id) { return familyFor(id) == 3.0; }
+bool isEmissive(float id) { return emissionFor(id) > 0.5; }
 float compatibleAt(vec2 uv, float material, float family) {
   float candidate = materialAt(uv);
   if (abs(candidate - material) < 0.5) return 1.0;
@@ -79,36 +92,81 @@ float mergedFluidDensity(vec2 uv, float material, float center) {
     + occupancyShape(uv + vertical, material).x;
   return clamp(max(center, center * 0.56 + neighbours * 0.14), 0.0, 1.0);
 }
-float nearbyAtmosphere(vec2 uv) {
+float nearbyEmission(vec2 uv) {
   float candidate = materialAt(uv - vec2(uTexel.x, 0.0));
-  if (isGas(candidate) || isEnergy(candidate)) return candidate;
+  if (isEnergy(candidate) || isEmissive(candidate)) return candidate;
   candidate = materialAt(uv + vec2(uTexel.x, 0.0));
-  if (isGas(candidate) || isEnergy(candidate)) return candidate;
+  if (isEnergy(candidate) || isEmissive(candidate)) return candidate;
   candidate = materialAt(uv - vec2(0.0, uTexel.y));
-  if (isGas(candidate) || isEnergy(candidate)) return candidate;
+  if (isEnergy(candidate) || isEmissive(candidate)) return candidate;
   candidate = materialAt(uv + vec2(0.0, uTexel.y));
-  if (isGas(candidate) || isEnergy(candidate)) return candidate;
+  if (isEnergy(candidate) || isEmissive(candidate)) return candidate;
+  return 0.0;
+}
+float nearbyLiquid(vec2 uv) {
+  float candidate = materialAt(uv - vec2(uTexel.x, 0.0));
+  if (isLiquid(candidate)) return candidate;
+  candidate = materialAt(uv + vec2(uTexel.x, 0.0));
+  if (isLiquid(candidate)) return candidate;
+  candidate = materialAt(uv - vec2(0.0, uTexel.y));
+  if (isLiquid(candidate)) return candidate;
+  candidate = materialAt(uv + vec2(0.0, uTexel.y));
+  if (isLiquid(candidate)) return candidate;
   return 0.0;
 }
 void main() {
   vec2 fieldUv = vFieldCoord;
   vec4 state = field(fieldUv);
+  vec4 atmosphereState = texture(uAtmosphereTexture, fieldUv);
+  float liquidDensity = texture(uLiquidTexture, fieldUv).r;
   float material = floor(state.r * 255.0 + 0.5);
   float halo = 0.0;
+  float cloudOnly = 0.0;
+  float liquidOnly = 0.0;
   if (material < 0.5) {
-    material = nearbyAtmosphere(fieldUv);
-    if (material < 0.5) { finalColor = vec4(0.0); return; }
+    if (liquidDensity > 0.12) {
+      material = nearbyLiquid(fieldUv);
+      liquidOnly = material > 0.5 ? 1.0 : 0.0;
+    }
+    if (liquidOnly > 0.5) {
+      halo = 1.0;
+    } else if (atmosphereState.a > 0.004) {
+      cloudOnly = 1.0;
+    } else {
+      material = nearbyEmission(fieldUv);
+      if (material < 0.5) { finalColor = vec4(0.0); return; }
+    }
     halo = 1.0;
   }
-  vec3 shape = occupancyShape(fieldUv, material);
+  vec3 shape = cloudOnly > 0.5 ? vec3(0.0) : occupancyShape(fieldUv, material);
   float density = shape.x;
-  float volume = (isGas(material) || isLiquid(material)) ? mergedFluidDensity(fieldUv, material, density) : density;
-  vec3 normal = normalize(vec3(-shape.y, -shape.z, mix(1.45, 1.15, uHighQuality)));
+  float gasVolume = max(cloudOnly, isGas(material) ? 1.0 : 0.0);
+  float liquidVolume = max(liquidOnly, isLiquid(material) ? 1.0 : 0.0);
+  float volume = density;
+  if (cloudOnly > 0.5) volume = atmosphereState.a;
+  else if (gasVolume > 0.5) volume = mergedFluidDensity(fieldUv, material, density);
+  else if (liquidVolume > 0.5) volume = max(density, liquidDensity);
+  if (gasVolume > 0.5 && cloudOnly < 0.5) volume = max(volume, atmosphereState.a);
+  vec2 volumeSlope = vec2(0.0);
+  if (gasVolume > 0.5) {
+    float cloudLeft = texture(uAtmosphereTexture, fieldUv - vec2(uAtmosphereTexel.x, 0.0)).a;
+    float cloudRight = texture(uAtmosphereTexture, fieldUv + vec2(uAtmosphereTexel.x, 0.0)).a;
+    float cloudTop = texture(uAtmosphereTexture, fieldUv - vec2(0.0, uAtmosphereTexel.y)).a;
+    float cloudBottom = texture(uAtmosphereTexture, fieldUv + vec2(0.0, uAtmosphereTexel.y)).a;
+    volumeSlope = vec2(cloudRight - cloudLeft, cloudBottom - cloudTop) * 0.85;
+  } else if (liquidVolume > 0.5) {
+    float liquidLeft = texture(uLiquidTexture, fieldUv - vec2(uTexel.x, 0.0)).r;
+    float liquidRight = texture(uLiquidTexture, fieldUv + vec2(uTexel.x, 0.0)).r;
+    float liquidTop = texture(uLiquidTexture, fieldUv - vec2(0.0, uTexel.y)).r;
+    float liquidBottom = texture(uLiquidTexture, fieldUv + vec2(0.0, uTexel.y)).r;
+    volumeSlope = vec2(liquidRight - liquidLeft, liquidBottom - liquidTop) * 0.65;
+  }
+  vec3 normal = normalize(vec3(-shape.y - volumeSlope.x, -shape.z - volumeSlope.y, mix(1.45, 1.15, uHighQuality)));
   float diffuse = 0.72 + max(0.0, dot(normal, normalize(vec3(-0.48, -0.68, 0.78)))) * 0.42;
   float specular = pow(max(0.0, dot(normal, normalize(vec3(-0.35, -0.55, 0.92)))), 10.0);
-  vec3 base = texture(uPaletteTexture, vec2((material + 0.5) / 256.0, 0.5)).rgb;
+  vec3 base = cloudOnly > 0.5 ? atmosphereState.rgb : texture(uPaletteTexture, vec2((material + 0.5) / 256.0, 0.5)).rgb;
   float profile = profileFor(material);
-  vec2 velocity = state.ba * 2.0 - 1.0;
+  vec2 velocity = halo > 0.5 ? vec2(0.0) : state.ba * 2.0 - 1.0;
   vec2 fieldPosition = fieldUv * uFieldSize;
   float grain = fract(sin(dot(floor(fieldPosition), vec2(12.9898, 78.233))) * 43758.5453) - 0.5;
   float atmosphere = sin(fieldPosition.x * 0.055 + fieldPosition.y * 0.027 + uTime * 0.7 + velocity.x * 2.0)
@@ -116,14 +174,14 @@ void main() {
   float heat = smoothstep(0.07, 0.34, state.g);
   float alpha;
   vec3 color;
-  if (isGas(material)) {
+  if (gasVolume > 0.5) {
     float billow = 0.88 + atmosphere * 0.12;
-    alpha = smoothstep(0.015, 0.62, volume) * (0.28 + volume * 0.30) * billow;
+    alpha = smoothstep(0.008, 0.48, volume) * (0.30 + volume * 0.32) * billow;
     color = mix(base * 1.28 + vec3(0.045), base * 0.56, volume) * (0.58 + diffuse * 0.42);
     color += mix(vec3(0.09, 0.11, 0.14), base, 0.35) * specular * (1.0 - volume) * 0.44;
-  } else if (isLiquid(material)) {
+  } else if (liquidVolume > 0.5) {
     float rim = 1.0 - smoothstep(0.30, 0.86, volume);
-    alpha = smoothstep(0.24, 0.62, volume);
+    alpha = smoothstep(0.34, 0.62, volume);
     color = base * mix(1.16, 0.55, volume) * (0.70 + diffuse * 0.30);
     color += mix(vec3(0.44, 0.67, 0.72), base, 0.20) * specular * (0.62 + rim * 0.72);
     color += base * atmosphere * 0.03 + vec3(0.045, 0.07, 0.075) * rim;
@@ -133,7 +191,11 @@ void main() {
     color = base * mix(1.10, 0.78, density) * diffuse;
     color += vec3(0.12) * specular * 0.28;
     if (profile == 1.0) {
-      color *= 0.96 + grain * 0.20;
+      vec2 subcell = floor(fract(fieldPosition) * 2.0);
+      float grainFacet = fract(sin(dot(floor(fieldPosition) * 2.0 + subcell, vec2(12.9898, 78.233))) * 43758.5453) - 0.5;
+      alpha = max(alpha, 0.90 + grainFacet * 0.12);
+      color *= 0.91 + grain * 0.22 + grainFacet * 0.13;
+      color += base * max(0.0, -subcell.x - subcell.y + 0.6) * 0.13;
     } else if (profile == 2.0) {
       color += base * clamp(abs(shape.y) + abs(shape.z), 0.0, 1.0) * 0.09;
     } else if (profile == 3.0) {
@@ -147,9 +209,9 @@ void main() {
       color += base * sin(length(fieldPosition) * 0.15 - uTime * 1.4) * 0.07;
     }
   }
-  float emission = isEnergy(material) ? 0.48 + heat * 1.05 : (material == 11.0 ? 0.28 + heat * 0.62 : (profile == 4.0 ? 0.07 : 0.0));
+  float emission = isEmissive(material) ? 0.48 + heat * 1.05 : (material == 11.0 ? 0.28 + heat * 0.62 : (profile == 4.0 ? 0.07 : 0.0));
   color += mix(base, vec3(1.0, 0.52, 0.20), heat) * emission;
-  if (halo > 0.5) alpha = volume * (isEnergy(material) ? 1.35 + heat : (isGas(material) ? 0.38 : 0.52));
+  if (halo > 0.5 && gasVolume < 0.5 && liquidVolume < 0.5) alpha = volume * (isEnergy(material) ? 1.35 + heat : 0.52);
   alpha = clamp(alpha, 0.0, 1.0);
   finalColor = vec4(clamp(color, 0.0, 1.35) * alpha, alpha);
 }
@@ -161,8 +223,16 @@ export class PixiFieldPresenter {
   private readonly scene = new Container();
   private readonly fieldBytes: Uint8Array;
   private readonly fieldSource: BufferImageSource;
+  private readonly atmosphereField: AtmosphereField;
+  private readonly atmosphereSource: BufferImageSource;
+  private readonly liquidField: LiquidDensityField;
+  private readonly liquidSource: BufferImageSource;
+  private readonly gasByMaterial: Uint8Array;
+  private readonly liquidByMaterial: Uint8Array;
   private readonly chunks: DirtyChunkGrid;
   private readonly uniforms: UniformGroup;
+  private atmosphereDirty = true;
+  private liquidDirty = true;
 
   private constructor(
     private readonly host: HTMLElement,
@@ -176,10 +246,33 @@ export class PixiFieldPresenter {
       alphaMode: 'no-premultiply-alpha', scaleMode: 'nearest', autoGarbageCollect: false,
     });
     const fieldTexture = new Texture({ source: this.fieldSource });
-    const { paletteTexture, styleTexture } = createLookupTextures(materials);
+    const { paletteTexture, styleTexture, gasByMaterial, liquidByMaterial, colorByMaterial } = createLookupTextures(materials);
+    this.gasByMaterial = gasByMaterial;
+    this.liquidByMaterial = liquidByMaterial;
+    this.atmosphereField = new AtmosphereField(width, height, this.gasByMaterial, colorByMaterial);
+    this.atmosphereSource = new BufferImageSource({
+      resource: this.atmosphereField.bytes,
+      width: this.atmosphereField.width,
+      height: this.atmosphereField.height,
+      format: 'rgba8unorm',
+      alphaMode: 'no-premultiply-alpha',
+      scaleMode: 'linear',
+      autoGarbageCollect: false,
+    });
+    this.liquidField = new LiquidDensityField(width, height, this.liquidByMaterial);
+    this.liquidSource = new BufferImageSource({
+      resource: this.liquidField.bytes,
+      width,
+      height,
+      format: 'rgba8unorm',
+      alphaMode: 'no-premultiply-alpha',
+      scaleMode: 'linear',
+      autoGarbageCollect: false,
+    });
     this.uniforms = new UniformGroup({
       uTexel: { value: new Float32Array([1 / width, 1 / height]), type: 'vec2<f32>' },
       uFieldSize: { value: new Float32Array([width, height]), type: 'vec2<f32>' },
+      uAtmosphereTexel: { value: new Float32Array([1 / this.atmosphereField.width, 1 / this.atmosphereField.height]), type: 'vec2<f32>' },
       uTime: { value: 0, type: 'f32' },
       uHighQuality: { value: matchMedia('(min-width: 800px) and (pointer: fine)').matches ? 1 : 0, type: 'f32' },
     });
@@ -189,6 +282,10 @@ export class PixiFieldPresenter {
         fieldUniforms: this.uniforms,
         uFieldTexture: this.fieldSource,
         uFieldSampler: this.fieldSource.style,
+        uAtmosphereTexture: this.atmosphereSource,
+        uAtmosphereSampler: this.atmosphereSource.style,
+        uLiquidTexture: this.liquidSource,
+        uLiquidSampler: this.liquidSource.style,
         uPaletteTexture: paletteTexture.source,
         uPaletteSampler: paletteTexture.source.style,
         uStyleTexture: styleTexture.source,
@@ -237,13 +334,28 @@ export class PixiFieldPresenter {
     };
   }
 
-  markDirty(index: number): void { this.chunks.markCell(index); }
+  markDirty(index: number, nextMaterial: number): void {
+    const previousMaterial = this.fieldBytes[index * 4];
+    this.chunks.markCell(index);
+    if (this.gasByMaterial[previousMaterial] || this.gasByMaterial[nextMaterial]) this.atmosphereDirty = true;
+    if (this.liquidByMaterial[previousMaterial] || this.liquidByMaterial[nextMaterial]) this.liquidDirty = true;
+  }
 
   update(materials: Uint8Array, temperatures: Uint16Array | undefined, velocities: Int8Array | undefined, time: number, refreshDynamicFields: boolean): void {
     if (refreshDynamicFields) this.chunks.markAll();
     const rectangles = this.chunks.consume();
     for (const rect of rectangles) packSemanticRect(this.fieldBytes, this.fieldSource.width, materials, temperatures, velocities, rect);
     if (rectangles.length) this.fieldSource.update();
+    if (this.atmosphereDirty) {
+      this.atmosphereField.update(materials);
+      this.atmosphereSource.update();
+      this.atmosphereDirty = false;
+    }
+    if (this.liquidDirty) {
+      this.liquidField.update(materials);
+      this.liquidSource.update();
+      this.liquidDirty = false;
+    }
     this.uniforms.uniforms.uTime = time * 0.001;
     this.app.render();
   }
@@ -256,21 +368,38 @@ export class PixiFieldPresenter {
   }
 }
 
-function createLookupTextures(materials: readonly SemanticMaterialStyle[]): { paletteTexture: Texture; styleTexture: Texture } {
+function createLookupTextures(materials: readonly SemanticMaterialStyle[]): {
+  paletteTexture: Texture;
+  styleTexture: Texture;
+  gasByMaterial: Uint8Array;
+  liquidByMaterial: Uint8Array;
+  colorByMaterial: Uint8Array;
+} {
   const palette = new Uint8Array(256 * 4);
   const styles = new Uint8Array(256 * 4);
+  const gasByMaterial = new Uint8Array(256);
+  const liquidByMaterial = new Uint8Array(256);
+  const colorByMaterial = new Uint8Array(256 * 3);
   for (const material of materials) {
     const color = Number.parseInt(material.color.slice(1), 16);
     const offset = material.id * 4;
+    const colorOffset = material.id * 3;
+    const phase = renderPhase(material);
     palette[offset] = color >>> 16;
     palette[offset + 1] = (color >>> 8) & 0xFF;
     palette[offset + 2] = color & 0xFF;
     palette[offset + 3] = 255;
-    styles[offset] = material.category === 'gases' ? 1 : material.category === 'liquids' ? 2 : material.category === 'energy' ? 3 : 0;
+    styles[offset] = phase;
     styles[offset + 1] = renderProfile(material.category);
+    styles[offset + 2] = material.emissive || phase === RenderPhase.Energy ? 255 : 0;
     styles[offset + 3] = 255;
+    gasByMaterial[material.id] = phase === RenderPhase.Gas ? 1 : 0;
+    liquidByMaterial[material.id] = phase === RenderPhase.Liquid ? 1 : 0;
+    colorByMaterial[colorOffset] = color >>> 16;
+    colorByMaterial[colorOffset + 1] = (color >>> 8) & 0xFF;
+    colorByMaterial[colorOffset + 2] = color & 0xFF;
   }
-  return { paletteTexture: textureFromBytes(palette), styleTexture: textureFromBytes(styles) };
+  return { paletteTexture: textureFromBytes(palette), styleTexture: textureFromBytes(styles), gasByMaterial, liquidByMaterial, colorByMaterial };
 }
 
 function textureFromBytes(bytes: Uint8Array): Texture {

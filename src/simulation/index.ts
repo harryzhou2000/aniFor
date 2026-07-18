@@ -5,7 +5,8 @@ import { WasmBackend } from './wasm-backend';
 
 // The UI depends only on SimulationBackend. A future Powder Toy module can be
 // selected here without leaking its memory layout into rendering or controls.
-export async function createSimulation(): Promise<SimulationBackend> {
+export async function createSimulation(options: { readonly renderLab?: boolean } = {}): Promise<SimulationBackend> {
+  if (options.renderLab) return new DeterministicBackend(612, 384);
   try {
     return await PowderToyBackend.load();
   } catch {
