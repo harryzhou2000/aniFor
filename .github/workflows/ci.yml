@@ -119,6 +119,8 @@ jobs:
     permissions:
       pages: write
       id-token: write
+    outputs:
+      page_url: ${{ steps.deployment.outputs.page_url }}
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
@@ -126,3 +128,16 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+
+  verify-deployment:
+    needs: deploy
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify deployed runtime asset closure
+        env:
+          PAGE_URL: ${{ needs.deploy.outputs.page_url }}
+        run: node scripts/verify-live-pages.mjs "${PAGE_URL}" "${GITHUB_SHA}"

@@ -6068,10 +6068,10 @@ function invoke_vii(index,a1,a2) {
   }
 }
 
-function invoke_vi(index,a1) {
+function invoke_i(index) {
   var sp = stackSave();
   try {
-    getWasmTableEntry(index)(a1);
+    return getWasmTableEntry(index)();
   } catch(e) {
     stackRestore(sp);
     if (!(e instanceof EmscriptenEH)) throw e;
@@ -6123,10 +6123,10 @@ function invoke_viii(index,a1,a2,a3) {
   }
 }
 
-function invoke_i(index) {
+function invoke_vi(index,a1) {
   var sp = stackSave();
   try {
-    return getWasmTableEntry(index)();
+    getWasmTableEntry(index)(a1);
   } catch(e) {
     stackRestore(sp);
     if (!(e instanceof EmscriptenEH)) throw e;

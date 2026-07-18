@@ -56,12 +56,15 @@ export class MaterialRenderer {
   async init(): Promise<void> {
     if (!forceCanvas2D() && supportsWebGL()) {
       try {
-        const { PixiFieldPresenter } = await import('./pixi-field-presenter');
-        this.presenter = await Promise.race([
-          PixiFieldPresenter.create(this.host, this.simulation.width, this.simulation.height, this.outputScale, ALL_MATERIALS),
-          new Promise<undefined>((resolve) => window.setTimeout(() => resolve(undefined), 750)),
-        ]);
-        this.presenter?.mount();
+        const module = await settleWithin(import('./pixi-field-presenter'), 1200);
+        if (module) {
+          const pendingPresenter = module.PixiFieldPresenter.create(
+            this.host, this.simulation.width, this.simulation.height, this.outputScale, ALL_MATERIALS,
+          );
+          this.presenter = await settleWithin(pendingPresenter, 1200);
+          if (this.presenter) this.presenter.mount();
+          else void pendingPresenter.then((latePresenter) => latePresenter.destroy()).catch(() => undefined);
+        }
       } catch (error) { // Canvas presentation remains the compatibility path.
         console.warn('Semantic WebGL renderer unavailable; using Canvas fallback.', error);
       }
@@ -99,8 +102,8 @@ export class MaterialRenderer {
   applyGesture(start: ViewState, anchorStart: Point, anchorCurrent: Point, ratio: number): void {
     this.view.applyGesture(
       start,
-      this.viewportPoint(anchorStart.x, anchorStart.y),
-      this.viewportPoint(anchorCurrent.x, anchorCurrent.y),
+      this.interactionPoint(anchorStart.x, anchorStart.y),
+      this.interactionPoint(anchorCurrent.x, anchorCurrent.y),
       ratio,
     );
     this.syncTransform();
@@ -126,6 +129,14 @@ export class MaterialRenderer {
       height: this.host.clientHeight * scaleY,
     };
     return clientToViewport({ x: clientX, y: clientY }, content, this.host.clientWidth, this.host.clientHeight);
+  }
+
+  private interactionPoint(clientX: number, clientY: number): Point {
+    if (!this.presenter) return this.viewportPoint(clientX, clientY);
+    // Invert the actual transformed canvas rectangle, then return through the
+    // same ViewTransform. This keeps gesture anchors in the exact coordinate
+    // space used by WebGL picking even when CSS bounds are fractional.
+    return this.view.worldToViewport(this.presenter.clientWorldPoint(clientX, clientY));
   }
 
   private drawField(time: number, refreshDynamicFields: boolean): void {
@@ -360,4 +371,25 @@ function hash(value: number): number {
 
 function clamp(value: number, minimum: number, maximum: number): number {
   return Math.max(minimum, Math.min(maximum, value));
+}
+
+function settleWithin<T>(promise: Promise<T>, milliseconds: number): Promise<T | undefined> {
+  return new Promise<T | undefined>((resolve, reject) => {
+    let finished = false;
+    const timeout = window.setTimeout(() => {
+      finished = true;
+      resolve(undefined);
+    }, milliseconds);
+    promise.then((value) => {
+      if (finished) return;
+      finished = true;
+      window.clearTimeout(timeout);
+      resolve(value);
+    }, (error: unknown) => {
+      if (finished) return;
+      finished = true;
+      window.clearTimeout(timeout);
+      reject(error);
+    });
+  });
 }

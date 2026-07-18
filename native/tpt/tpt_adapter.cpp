@@ -58,7 +58,12 @@ int ToPowderType(int material)
 	case 12: return PT_ICEI;
 	case 13: return PT_ACID;
 	case 14: return PT_GUNP;
+	case 15: return PT_WTRV;
+	case 16: return PT_SLTW;
+	case 17: return PT_GAS;
+	case 18: return PT_SNOW;
 	case 19: return PT_COAL;
+	case 20: return PT_PLSM;
 	case 21: return PT_STNE;
 	case 22: return PT_BRCK;
 	case 23: return PT_METL;
@@ -513,13 +518,16 @@ __attribute__((visibility("default"))) int powder_load_commit()
 	try
 	{
 		GameSave save(loadBuffer, false);
-		simulation->clear_sim();
-		simulation->Load(&save, true, { 0, 0 });
-		simulation->frameCount = save.frameCount;
-		simulation->currentTick = int(save.frameCount & 0x7FFFFFFF);
-		if (save.hasRngState) simulation->rng.state(save.rngState);
-		else simulation->rng.seed(STILLROOM_SEED);
-		simulation->ensureDeterminism = true;
+		auto candidate = Simulation::Factory();
+		candidate->Load(&save, true, { 0, 0 });
+		candidate->frameCount = save.frameCount;
+		candidate->currentTick = int(save.frameCount & 0x7FFFFFFF);
+		if (save.hasRngState) candidate->rng.state(save.rngState);
+		else candidate->rng.seed(STILLROOM_SEED);
+		candidate->ensureDeterminism = true;
+		candidate->air->airMode = AIR_VELOCITYOFF;
+		candidate->air->vorticityCoeff = 0.0f;
+		simulation = std::move(candidate);
 		ExtractFields();
 		return 1;
 	}

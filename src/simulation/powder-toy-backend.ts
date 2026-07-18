@@ -135,15 +135,22 @@ export class PowderToyBackend implements SimulationBackend {
   }
 
   saveWorld(): string {
+    return `tpt3.${bytesToBase64Url(this.saveFile())}`;
+  }
+
+  saveFile(): Uint8Array {
     const pointer = this.module._powder_save();
     const size = this.module._powder_save_size();
     if (!pointer || size <= 0) throw new Error('Powder Toy save failed');
-    return `tpt3.${bytesToBase64Url(this.module.HEAPU8.slice(pointer, pointer + size))}`;
+    return this.module.HEAPU8.slice(pointer, pointer + size);
   }
 
   loadWorld(serialized: string): void {
     if (!serialized.startsWith('tpt3.')) throw new Error('Incompatible world');
-    const bytes = base64UrlToBytes(serialized.slice(5));
+    this.loadFile(base64UrlToBytes(serialized.slice(5)));
+  }
+
+  loadFile(bytes: Uint8Array): void {
     const pointer = this.module._powder_load_buffer(bytes.length);
     if (!pointer) throw new Error('World is too large');
     this.module.HEAPU8.set(bytes, pointer);

@@ -1,9 +1,10 @@
 import type { Point, ViewState } from '../renderer/view-transform';
 
 interface PointerSample extends Point { readonly pointerType: string }
+const TOUCH_PAINT_ACTIVATION_DISTANCE = 6;
 
 type Interaction =
-  | { readonly kind: 'paint'; readonly pointerId: number; readonly erase: boolean; lastCell: Point }
+  | { readonly kind: 'paint'; readonly pointerId: number; readonly erase: boolean; lastCell: Point; started: boolean; readonly tapEligible: boolean; readonly origin: Point }
   | { readonly kind: 'pan'; readonly pointerId: number; readonly view: ViewState; readonly start: Point }
   | { readonly kind: 'pinch'; readonly pointerIds: readonly [number, number]; readonly view: ViewState; readonly center: Point; readonly distance: number };
 
@@ -36,9 +37,9 @@ export class WorldInputController {
     element.addEventListener('dragstart', (event) => event.preventDefault());
     element.addEventListener('pointerdown', this.onPointerDown);
     element.addEventListener('pointermove', this.onPointerMove);
-    element.addEventListener('pointerup', this.onPointerEnd);
-    element.addEventListener('pointercancel', this.onPointerEnd);
-    element.addEventListener('lostpointercapture', this.onPointerEnd);
+    element.addEventListener('pointerup', this.onPointerUp);
+    element.addEventListener('pointercancel', this.onPointerAbort);
+    element.addEventListener('lostpointercapture', this.onPointerAbort);
     element.addEventListener('auxclick', (event) => { if (event.button === 1) event.preventDefault(); });
     element.addEventListener('wheel', this.onWheel, { passive: false });
     element.addEventListener('dblclick', () => viewport.resetView());
@@ -59,7 +60,14 @@ export class WorldInputController {
 
     if (isTouch) {
       const touchCount = Array.from(this.pointers.values()).filter(({ pointerType }) => pointerType === 'touch').length;
-      if (touchCount <= 2) this.rebaseTouchNavigation();
+      if (touchCount >= 2) this.rebaseTouchNavigation();
+      else {
+        this.setInteraction({
+          kind: 'paint', pointerId: event.pointerId, erase: false,
+          lastCell: this.viewport.screenToCell(event.clientX, event.clientY),
+          started: false, tapEligible: true, origin: { x: event.clientX, y: event.clientY },
+        });
+      }
       return;
     }
 
@@ -69,6 +77,7 @@ export class WorldInputController {
       this.setInteraction({
         kind: 'paint', pointerId: event.pointerId, erase,
         lastCell: this.drawAt(event.clientX, event.clientY, erase),
+        started: true, tapEligible: false, origin: { x: event.clientX, y: event.clientY },
       });
     }
   };
@@ -99,10 +108,16 @@ export class WorldInputController {
     else this.drawStrokeTo(current.x, current.y, interaction);
   };
 
-  private readonly onPointerEnd = (event: PointerEvent): void => {
+  private readonly onPointerUp = (event: PointerEvent): void => { this.finishPointer(event, true); };
+  private readonly onPointerAbort = (event: PointerEvent): void => { this.finishPointer(event, false); };
+
+  private finishPointer(event: PointerEvent, commitTap: boolean): void {
     if (!this.pointers.has(event.pointerId)) return;
-    this.pointers.delete(event.pointerId);
     const interaction = this.interaction;
+    if (commitTap && interaction?.kind === 'paint' && interaction.pointerId === event.pointerId && !interaction.started && interaction.tapEligible) {
+      this.callbacks.draw(interaction.lastCell, interaction.erase);
+    }
+    this.pointers.delete(event.pointerId);
     if (!interaction) return;
     const endedActivePointer = interaction.kind === 'pinch'
       ? interaction.pointerIds.includes(event.pointerId)
@@ -110,7 +125,7 @@ export class WorldInputController {
     if (!endedActivePointer) return;
     if (event.pointerType === 'touch' || interaction.kind === 'pinch') this.rebaseTouchNavigation();
     else this.setInteraction(undefined);
-  };
+  }
 
   private readonly onWheel = (event: WheelEvent): void => {
     event.preventDefault();
@@ -130,6 +145,12 @@ export class WorldInputController {
 
   private drawStrokeTo(clientX: number, clientY: number, interaction: Extract<Interaction, { kind: 'paint' }>): void {
     const end = this.viewport.screenToCell(clientX, clientY);
+    if (!interaction.started) {
+      if (Math.hypot(clientX - interaction.origin.x, clientY - interaction.origin.y) < TOUCH_PAINT_ACTIVATION_DISTANCE) return;
+      this.callbacks.draw(interaction.lastCell, interaction.erase);
+      interaction.started = true;
+    }
+    if (end.x === interaction.lastCell.x && end.y === interaction.lastCell.y) return;
     visitGridLine(interaction.lastCell, end, (cell) => this.callbacks.draw(cell, interaction.erase));
     interaction.lastCell = end;
   }
@@ -145,7 +166,11 @@ export class WorldInputController {
       });
     } else if (touches.length === 1) {
       const [touch] = touches;
-      this.setInteraction({ kind: 'pan', pointerId: touch.pointerId, view: this.viewport.getViewState(), start: touch.sample });
+      this.setInteraction({
+        kind: 'paint', pointerId: touch.pointerId, erase: false,
+        lastCell: this.viewport.screenToCell(touch.sample.x, touch.sample.y),
+        started: false, tapEligible: false, origin: touch.sample,
+      });
     } else this.setInteraction(undefined);
   }
 

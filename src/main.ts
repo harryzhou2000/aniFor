@@ -16,7 +16,7 @@ root.innerHTML = `
     <section class="workspace">
       <div class="viewport-frame">
         <section class="viewport" aria-label="Particle simulation canvas">
-          <div class="ambient ambient-one"></div><div class="ambient ambient-two"></div><p class="touch-hint">Drag to pan · pinch to zoom</p>
+          <div class="ambient ambient-one"></div><div class="ambient ambient-two"></div><p class="touch-hint">One finger draws · two fingers pan + zoom</p>
         </section>
       </div>
       <aside class="toolbox" aria-label="Simulation tools">
@@ -30,13 +30,17 @@ const simulation = await createSimulation({ renderLab: renderLabRequested() });
 const viewportFrame = root.querySelector<HTMLElement>('.viewport-frame');
 const viewport = root.querySelector<HTMLElement>('.viewport');
 if (!viewportFrame || !viewport) throw new Error('Missing simulation viewport');
+const compactViewport = window.matchMedia('(max-width: 680px)');
 const fitViewport = (): void => {
-  const size = fitAspect(viewportFrame.clientWidth, viewportFrame.clientHeight, simulation.width / simulation.height);
+  const size = compactViewport.matches
+    ? { width: viewportFrame.clientWidth, height: viewportFrame.clientHeight }
+    : fitAspect(viewportFrame.clientWidth, viewportFrame.clientHeight, simulation.width / simulation.height);
   viewport.style.width = size.width + 'px';
   viewport.style.height = size.height + 'px';
   viewport.dataset.aspect = simulation.width + ':' + simulation.height;
 };
 new ResizeObserver(fitViewport).observe(viewportFrame);
+compactViewport.addEventListener('change', fitViewport);
 fitViewport();
 
 root.querySelector('.status')!.textContent = `${simulation.name} · saved on this device`;

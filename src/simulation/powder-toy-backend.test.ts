@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { MATERIALS, Material } from '../shared/materials';
+import { ALL_MATERIALS, Material } from '../shared/materials';
 import { PowderToyBackend } from './powder-toy-backend';
 
 const moduleArtifact = new URL('../../public/wasm/stillroom_core.js', import.meta.url);
@@ -34,7 +34,7 @@ describe('direct Powder Toy backend', () => {
 
   it('projects every expanded material as its stable frontend ID', async () => {
     const simulation = await PowderToyBackend.load(moduleArtifact.href);
-    const materials = MATERIALS.map(({ id }) => id);
+    const materials = ALL_MATERIALS.map(({ id }) => id);
     const point = (index: number) => ({ x: 24 + (index % 32) * 18, y: 24 + Math.floor(index / 32) * 28 });
     materials.forEach((material, index) => {
       const { x, y } = point(index);
@@ -48,6 +48,16 @@ describe('direct Powder Toy backend', () => {
       expect(cells[y * simulation.width + x]).toBe(material);
     });
   });
+
+  it('projects native reaction-only phase products', async () => {
+    const simulation = await PowderToyBackend.load(moduleArtifact.href);
+    simulation.paint(272, 190, Material.Water, 15);
+    simulation.paint(304, 190, Material.Lava, 15);
+    for (let index = 0; index < 180; index++) simulation.step();
+
+    const cells = simulation.cells();
+    expect(cells).toContain(Material.Steam);
+  }, 15000);
 
   it('exposes changing native air pressure', async () => {
     const simulation = await PowderToyBackend.load(moduleArtifact.href);
@@ -131,11 +141,13 @@ describe('direct Powder Toy backend', () => {
     source.paintWall(210, 120, 8, 8);
     for (let index = 0; index < 40; index++) source.step();
 
+    const file = source.saveFile();
+    expect(new TextDecoder().decode(file.slice(0, 4))).toBe('OPS1');
     const saved = source.saveWorld();
     expect(saved.startsWith('tpt3.')).toBe(true);
     const restored = await PowderToyBackend.load(moduleArtifact.href);
     source.loadWorld(saved);
-    restored.loadWorld(saved);
+    restored.loadFile(file);
     expect(restored.cells()).toEqual(source.cells());
     expect(restored.temperature()).toEqual(source.temperature());
     expect(restored.velocity()).toEqual(source.velocity());
@@ -147,4 +159,13 @@ describe('direct Powder Toy backend', () => {
     expect(restored.velocity()).toEqual(source.velocity());
     expect(restored.walls()).toEqual(source.walls());
   }, 15000);
+
+  it('keeps the active world when a native file is rejected', async () => {
+    const simulation = await PowderToyBackend.load(moduleArtifact.href);
+    simulation.paint(240, 180, Material.Wall, 6);
+    const before = simulation.cells().slice();
+    const corrupt = simulation.saveFile().slice(0, 24);
+    expect(() => simulation.loadFile(corrupt)).toThrow('Corrupt world');
+    expect(simulation.cells()).toEqual(before);
+  });
 });

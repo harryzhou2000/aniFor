@@ -29,5 +29,6 @@ done
 grep -Fq 'src="./assets/app.js"' "${DIST_DIR}/index.html"
 grep -Fq 'href="./assets/style.css"' "${DIST_DIR}/index.html"
 grep -Fq 'id="boot-status"' "${DIST_DIR}/index.html"
+node "${PROJECT_ROOT}/scripts/verify-static-assets.mjs" "${DIST_DIR}"
 
-echo "Pages bundle has stable entries, a visible boot shell, and legacy migration aliases"
+echo "Pages bundle has stable entries, a visible boot shell, legacy migration aliases, and a complete runtime asset closure"

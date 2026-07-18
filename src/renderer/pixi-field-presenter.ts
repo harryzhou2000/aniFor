@@ -380,7 +380,6 @@ void main() {
 
 /** Primary WebGL presentation of raw simulation semantics. */
 export class PixiFieldPresenter {
-  private readonly app = new Application();
   private readonly scene = new Container();
   private readonly fieldBytes: Uint8Array;
   private readonly fieldSource: BufferImageSource;
@@ -404,6 +403,7 @@ export class PixiFieldPresenter {
   private liquidDirty = true;
 
   private constructor(
+    private readonly app: Application,
     private readonly host: HTMLElement,
     private readonly width: number,
     private readonly height: number,
@@ -493,12 +493,20 @@ export class PixiFieldPresenter {
   }
 
   static async create(host: HTMLElement, width: number, height: number, outputScale: 1 | 2, materials: readonly SemanticMaterialStyle[]): Promise<PixiFieldPresenter> {
-    const presenter = new PixiFieldPresenter(host, width, height, materials);
-    await presenter.app.init({
-      width, height,
-      preference: 'webgl', backgroundAlpha: 0, antialias: true,
-      resolution: outputScale, autoDensity: true, autoStart: false,
-    });
+    const app = new Application();
+    try {
+      await app.init({
+        width, height,
+        preference: 'webgl', backgroundAlpha: 0, antialias: true,
+        resolution: outputScale, autoDensity: true, autoStart: false,
+      });
+    } catch (error) {
+      try { app.destroy(); } catch { /* partially initialized Pixi application */ }
+      throw error;
+    }
+    let presenter: PixiFieldPresenter;
+    try { presenter = new PixiFieldPresenter(app, host, width, height, materials); }
+    catch (error) { app.destroy(); throw error; }
     presenter.app.canvas.className = 'world-canvas semantic-field-canvas';
     presenter.app.canvas.style.width = width + 'px';
     presenter.app.canvas.style.height = height + 'px';
@@ -512,6 +520,14 @@ export class PixiFieldPresenter {
   }
 
   mount(): void { this.host.append(this.app.canvas); }
+
+  destroy(): void {
+    try { this.app.destroy(); }
+    catch {
+      try { this.scene.destroy({ children: true }); }
+      catch { /* already torn down */ }
+    }
+  }
 
   resize(width: number, height: number): PresenterViewport {
     this.app.canvas.dataset.viewportSize = width + 'x' + height;

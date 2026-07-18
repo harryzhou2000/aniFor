@@ -79,7 +79,9 @@ export interface ControlsCallbacks {
   onMaterial(material: Material): void;
   onRadius(radius: number): void;
   onPause(): void;
-  onShare(): Promise<boolean>;
+  onEraseMode(erase: boolean): void;
+  onSaveFile(): Promise<boolean>;
+  onOpenFile(file: File): Promise<boolean>;
   onClear(): void;
   onTool?(tool: Exclude<CatalogTool, ElementToolInfo>): void;
 }
@@ -226,18 +228,51 @@ export function mountControls(host: HTMLElement, callbacks: ControlsCallbacks, c
   actions.className = 'actions glass';
   actions.innerHTML = `
     <label class="brush-size"><span>Brush</span><input aria-label="Brush size" type="range" min="2" max="24" value="7" /></label>
+    <div class="brush-modes" role="group" aria-label="Mobile brush mode">
+      <button class="action-button brush-mode selected" type="button" data-erase="false" aria-pressed="true">Draw</button>
+      <button class="action-button brush-mode" type="button" data-erase="true" aria-pressed="false">Eraser</button>
+    </div>
     <button class="action-button pause" aria-label="Pause simulation">Pause</button>
-    <button class="action-button share" aria-label="Copy shareable world link">Share</button>
+    <button class="action-button save-file" aria-label="Save or share world as a file">Save / share</button>
+    <button class="action-button open-file" aria-label="Open a world file">Open file</button>
     <button class="action-button clear" aria-label="Clear world">Clear</button>`;
+  const filePicker = document.createElement('input');
+  filePicker.className = 'world-file-input';
+  filePicker.type = 'file';
+  filePicker.accept = '.cps,.stm,.anifortpt,application/octet-stream,application/x-anifortpt-save';
+  filePicker.setAttribute('aria-label', 'Choose a Powder Toy save file');
+  actions.append(filePicker);
   const radius = actions.querySelector('input') as HTMLInputElement;
   radius.addEventListener('input', () => callbacks.onRadius(Number(radius.value)));
+  for (const brushMode of actions.querySelectorAll<HTMLButtonElement>('.brush-mode')) {
+    brushMode.addEventListener('click', () => {
+      const erase = brushMode.dataset.erase === 'true';
+      for (const button of actions.querySelectorAll<HTMLButtonElement>('.brush-mode')) {
+        const selected = button === brushMode;
+        button.classList.toggle('selected', selected);
+        button.setAttribute('aria-pressed', String(selected));
+      }
+      callbacks.onEraseMode(erase);
+    });
+  }
   const pause = actions.querySelector('.pause') as HTMLButtonElement;
   pause.addEventListener('click', () => { callbacks.onPause(); pause.classList.toggle('active'); pause.textContent = pause.classList.contains('active') ? 'Play' : 'Pause'; });
-  const share = actions.querySelector('.share') as HTMLButtonElement;
-  share.addEventListener('click', async () => {
-    share.disabled = true;
-    share.textContent = await callbacks.onShare() ? 'Copied' : 'Link ready';
-    window.setTimeout(() => { share.disabled = false; share.textContent = 'Share'; }, 1600);
+  const saveFile = actions.querySelector('.save-file') as HTMLButtonElement;
+  saveFile.addEventListener('click', async () => {
+    saveFile.disabled = true;
+    saveFile.textContent = await callbacks.onSaveFile() ? 'File ready' : 'Save failed';
+    window.setTimeout(() => { saveFile.disabled = false; saveFile.textContent = 'Save / share'; }, 1600);
+  });
+  const openFile = actions.querySelector('.open-file') as HTMLButtonElement;
+  openFile.addEventListener('click', () => filePicker.click());
+  filePicker.addEventListener('change', async () => {
+    const file = filePicker.files?.[0];
+    if (!file) return;
+    openFile.disabled = true;
+    openFile.textContent = 'Opening…';
+    openFile.textContent = await callbacks.onOpenFile(file) ? 'Opened' : 'Invalid file';
+    filePicker.value = '';
+    window.setTimeout(() => { openFile.disabled = false; openFile.textContent = 'Open file'; }, 1600);
   });
   actions.querySelector('.clear')?.addEventListener('click', callbacks.onClear);
   host.append(tools, actions);

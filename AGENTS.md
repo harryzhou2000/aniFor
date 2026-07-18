@@ -17,6 +17,8 @@ The non-negotiable contract is:
 - The default render backing is 2× per axis (1224×768 for the 612×384 world); use `?renderScale=1` only for A/B diagnosis.
 - Pixi filter `vTextureCoord` is not a world UV. The semantic field shader must use the sprite-local `vFieldCoord` supplied by `FIELD_VERTEX`.
 - Native TPT walls are a separate `bmap`-derived field and texture. Never encode a wall ID as a particle/material ID; particles and walls may coexist at the same world cell and must be composited independently.
+- Compact portrait layout may use a square interaction panel, but zoom 1 must contain the full 612×384 field with a uniform scale and letterboxing. Do not crop the world merely to fill the square.
+- One touch is the mobile brush and two touches are camera pan/pinch. Defer the initial touch mark until the gesture is known to be single-touch so every two-finger gesture does not leave an accidental dot.
 
 Do not confuse the 2× backing resolution with an internal presentation multiplier. Never add scene scaling such as the former 1.5 multiplier, stretch width and height independently, or introduce a second pointer transform.
 
@@ -52,4 +54,6 @@ The native wall lab uses the real TPT backend, remains paused, and places ten wa
 - Use `apply_patch` for source and documentation edits.
 - Keep heavy toolchains and caches such as emsdk and ccache project-local.
 - Preserve the manual GitHub Actions build/build-and-deploy controls and successful-build-only ccache persistence.
+- Native save sharing uses raw `GameSave::Serialise()` bytes in `.cps` files. Do not expand new saves into URL hashes or the clipboard; keep `.anifortpt` visibly separate for non-native fallbacks.
+- A successful Pages upload is not enough evidence. Preserve the recursive local and live asset-closure checks, and browser-test the cache-busted deployment because stalled runtime initialization can look like a missing asset.
 - Clean up locally launched Chrome and Vite processes immediately after browser validation.

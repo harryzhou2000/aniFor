@@ -2,7 +2,8 @@ import { MaterialRenderer } from '../renderer/field-renderer';
 import { applyRenderLabScene, renderLabRequested } from '../renderer/render-lab-scene';
 import { applyWallLabScene, wallLabRequested } from '../renderer/wall-lab-scene';
 import { MATERIALS, Material } from '../shared/materials';
-import { decodeSharedWorld, encodeSharedWorld } from '../shared/share-codec';
+import { decodeSharedWorld } from '../shared/share-codec';
+import { exportWorldFile, importWorldFile, MAX_WORLD_FILE_BYTES, worldFileName } from '../shared/world-file';
 import type { SimulationBackend } from '../simulation';
 import { mountControls } from '../ui/controls';
 import { buildToolCatalog, type WallToolInfo } from '../ui/tool-catalog';
@@ -16,6 +17,7 @@ export class Game {
   private material = Material.Sand;
   private wallTool?: WallToolInfo;
   private radius = 7;
+  private eraseMode = false;
   private paused = false;
   private accumulator = 0;
   private lastFrame = performance.now();
@@ -50,6 +52,7 @@ export class Game {
     const viewport = this.root.querySelector('.viewport') as HTMLElement;
     new WorldInputController(viewport, this.renderer, {
       draw: ({ x, y }, erase) => {
+        erase ||= this.eraseMode;
         if (this.wallTool && this.simulation.paintWall && this.simulation.eraseWall) {
           if (erase) this.simulation.eraseWall(x, y, this.radius + 1);
           else this.simulation.paintWall(x, y, this.wallTool.nativeWall, this.radius);
@@ -64,7 +67,9 @@ export class Game {
       onMaterial: (material) => { this.material = material; this.wallTool = undefined; },
       onRadius: (radius) => { this.radius = radius; },
       onPause: () => { this.paused = !this.paused; },
-      onShare: () => this.share(),
+      onEraseMode: (erase) => { this.eraseMode = erase; },
+      onSaveFile: () => this.downloadWorldFile(),
+      onOpenFile: (file) => this.openWorldFile(file),
       onClear: () => { this.simulation.clear(); localStorage.removeItem(AUTOSAVE_KEY); },
       onTool: (tool) => { if (tool.kind === 'wall') this.wallTool = tool; },
     }, buildToolCatalog(MATERIALS, { walls: Boolean(this.simulation.paintWall && this.simulation.eraseWall) }));
@@ -124,12 +129,42 @@ export class Game {
     this.indicator.innerHTML = "<span><b>Pressure</b>" + pressureText + "</span><span><b>Temperature</b>" + temperature + "</span>";
   }
 
-  private async share(): Promise<boolean> {
-    const encoded = await encodeSharedWorld(this.simulation.saveWorld());
-    const url = new URL(location.href);
-    url.hash = new URLSearchParams({ world: encoded }).toString();
-    history.replaceState(null, '', url);
-    try { await navigator.clipboard.writeText(url.toString()); return true; } catch { return false; }
+  private async downloadWorldFile(): Promise<boolean> {
+    try {
+      const file = exportWorldFile(this.simulation);
+      const name = worldFileName(file.extension);
+      const sharedFile = new File([file.bytes.slice().buffer], name, { type: file.mediaType });
+      const shareData = { files: [sharedFile], title: 'AniforTPT save' };
+      if (navigator.share && navigator.canShare?.(shareData)) {
+        try {
+          await navigator.share(shareData);
+          return true;
+        } catch (error) {
+          if (error instanceof DOMException && error.name === 'AbortError') return false;
+          // Platform or permission failures still get a normal file download.
+        }
+      }
+      const href = URL.createObjectURL(sharedFile);
+      const download = document.createElement('a');
+      download.href = href;
+      download.download = name;
+      download.hidden = true;
+      document.body.append(download);
+      download.click();
+      download.remove();
+      window.setTimeout(() => URL.revokeObjectURL(href), 0);
+      return true;
+    } catch { return false; }
+  }
+
+  private async openWorldFile(file: File): Promise<boolean> {
+    if (!file.size || file.size > MAX_WORLD_FILE_BYTES) return false;
+    try {
+      importWorldFile(this.simulation, new Uint8Array(await file.arrayBuffer()));
+      history.replaceState(null, '', location.pathname + location.search);
+      this.save();
+      return true;
+    } catch { return false; }
   }
 
   private save(): void {

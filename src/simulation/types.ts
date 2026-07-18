@@ -27,6 +27,10 @@ export interface SimulationBackend {
   eraseWall?(x: number, y: number, radius: number): void;
   consumeDirtyCells(): readonly DirtyCell[];
   consumeDirtyWalls?(): readonly DirtyWallCell[];
+  /** Raw TPT save bytes when the active backend supports native file exchange. */
+  saveFile?(): Uint8Array;
+  /** Load raw TPT save bytes without routing them through text/base64 storage. */
+  loadFile?(bytes: Uint8Array): void;
   saveWorld(): string;
   loadWorld(serialized: string): void;
 }

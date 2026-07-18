@@ -14,6 +14,10 @@ The frontend ABI defines 170 stable projected material IDs. The UI catalog conta
 
 Catalog entries are typed as particles, walls, signs, configured sources, or simulation tools rather than conflating TPT concepts. The current drawing surface exposes particle brushes—including native clone/source and force particles—and ten true TPT wall-grid brushes through a separate `bmap` ABI and wall brush. Native walls are rendered and serialized independently from particles, and their interactive dirty scan is bounded to the affected coarse-cell brush region. Signs, configured-source targeting, and simulation force/thermal gestures remain visible but disabled until their dedicated native operations and interaction contracts are exposed.
 
+## Save-file exchange
+
+`GameSave::Serialise()` in the pinned engine produces modern `OPS1` bytes. `PowderToyBackend.saveFile()` exposes those bytes without base64 or URL expansion, and the UI downloads them with TPT's `.cps` extension. Import passes raw `.cps`/`.stm` bytes back through the native `GameSave` parser, which also recognizes legacy `PSv` and `fuC` signatures. Text `.anifortpt` files are reserved for startup fallback backends and are never labeled as native TPT saves. Local autosave continues to use the existing private string wrapper, and old hash links remain read-only migration inputs.
+
 ## Renderer contract
 
 The adapter emits stable material IDs, a full-resolution view of the native coarse wall grid, pressure, particle-temperature, and velocity fields. Powder Toy particle structs and numeric element/wall IDs remain inside the C++ boundary; the frontend owns only copied views and mutates native state through explicit brush functions. The primary Pixi/WebGL presenter packs particles and walls into independent RGBA8 textures and reconstructs softened material fields in a palette/style-driven shader. Halo-aware 32-cell dirty regions bound static updates; dynamic temperature and velocity fields refresh the texture at the 30 Hz render cadence. The logical surface remains 612×384 while the default backing is 1224×768, and the Canvas2D field renderer remains the graceful compatibility path.
