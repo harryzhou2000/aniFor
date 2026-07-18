@@ -22,14 +22,14 @@ Immediate priorities are:
 
 - Repository: `/home/harry/projects/aniFor_codex`
 - Branch: `main_codex`
-- Local and remote committed HEAD before the current energy-core tranche: `638c797 Automate rendered input alignment checks`
-- The phase-aware WebGL/Canvas energy work described below is the next checkpoint after that deployed baseline.
+- Local and remote committed graphics HEAD: `a64dde9 Style energy as luminous material volumes`
+- The phase-aware WebGL/Canvas energy work described below is committed and live.
 - GitHub CLI is authenticated as `harryzhou2000` with `repo` and `workflow` scopes.
 - Current live Pages URL: `https://harryzhou2000.github.io/aniFor/`
-- Verified live baseline before the current local tranche: `638c797` from Actions run `29653815171`.
+- Verified live graphics baseline: `a64dde9` from Actions run `29654711283`.
 - Build, deploy, and post-deployment verification all passed. The live closure contains all 20 referenced resources with correct WASM MIME and the exact expected revision. The restored compiler cache produced 269/270 hits (99.63%); the successful primary key already existed, so the save step correctly skipped.
 
-## Committed/live baseline (`638c797`)
+## Committed/live baseline through `a64dde9`
 
 - Pinned official TPT 100.0 native engine, single-threaded 612×384 WebAssembly.
 - 170 stable projected material IDs; 165 particle brushes in the catalog, with 160 enabled and five gravity-dependent entries explicitly disabled.
@@ -109,7 +109,7 @@ Immediate priorities are:
 - The deterministic render lab adds equal-height warm and cool source strips around the profile matrix, with a lower-light centre comparison.
 - No new field, texture, scheduler stage, or persistent allocation was added.
 
-## Current local phase-aware energy-core tranche
+## Committed/live phase-aware energy-core tranche (`a64dde9`)
 
 - WebGL now gives occupied energy a dedicated luminous-volume branch before gas/liquid/generic matter. Fire and Plasma use warm flowing detail; ELEC, PHOT, NEUT, and other radioactive carriers use cooler scintillation without inheriting radioactive-solid striations.
 - Exact semantic density, palette, temperature, and particle velocity remain authoritative at the core. The existing one-third-resolution emission field owns only the broader aura, so there is no new texture fetch, field, pass, scheduler stage, or persistent allocation.
@@ -143,11 +143,10 @@ Immediate priorities are:
 - Forced Canvas at 1280×720 and a 390×844 DPR-2 portrait capture retained the 1224×768 backing, square mobile interaction panel with aspect-preserving letterbox, smooth empty-space aura, and crisp material seams. Warm/cool strips visibly reveal profile contours without uniformly whitening block interiors.
 - Native semantic-tool coverage now proves exact scalar deltas, stable typed routing, no vector-to-particle fallthrough, no vector emission during pinch navigation, malformed ABI rejection, Wind response, `WL_BLOCKAIR` isolation, stable-water regression, and unstepped OPS Wind round-tripping.
 
-The `638c797` viewport/input automation checkpoint is committed, pushed, and verified live. The current energy-core/powder-lighting tranche passes unit, type, build, profile, desktop WebGL/Canvas visual, and portrait Canvas interaction checks; its remaining handoff is final review, commit, manual deployment, and live asset validation.
+The `a64dde9` energy-core/powder-lighting checkpoint is committed, pushed, and verified live. Unit, type, build, profile, desktop WebGL/Canvas visual, portrait Canvas interaction, cached CI, Pages deployment, and live 20-resource closure checks all pass. The workflow used the exact expected revision and restored 269/270 C++ compilations from ccache (99.63%).
 
 ## Current blockers and risks
 
-- The current local energy-core/powder-lighting tranche is not live until it is committed, pushed to `main_codex`, manually deployed, and tested at the Pages URL.
 - WebGL runtime GLSL is not compiled by TypeScript/Vite; preserve the fresh browser audit for every shader change.
 - The post-deploy verifier proves network asset closure and MIME, but not shader execution or interaction by itself.
 - Cached-HTML compatibility still relies on a small fixed set of historical JS/CSS aliases, and the live verifier does not compare public content hashes to the local artifact. Harden this before treating repeated stale-asset reports as closed.
@@ -158,8 +157,7 @@ The `638c797` viewport/input automation checkpoint is committed, pushed, and ver
 
 ## Next sequence
 
-1. Review `git diff`, ensure no unintended/untracked files, and commit the phase-aware energy-core/powder-lighting tranche.
-2. Push only `main_codex`, then trigger `verify-static-game` manually with `operation=build-and-deploy`.
-3. Inspect ccache restore/save and the local/live asset-closure steps.
-4. Confirm the live Pages runtime closure reports the exact new revision; if public Chrome access is available, repeat the populated atlas/backend check against the live URL.
-5. Implement static cross-phase role traits for sources/portals, force actuators, radioactive fluids, plants, and energy carriers, then return to dynamic native `ctype`/life/pressure-state projection as a separate ABI tranche; keep the persistent goal active.
+1. Implement static cross-phase role traits for sources/portals, force actuators, radioactive fluids, plants, and energy carriers without adding a field, texture, or pass.
+2. Expand the deterministic atlas with source/portal, force-pair, radioactive fluid/gas, and plant-variant comparisons; keep the current six-row core matrix readable.
+3. Profile the trait pass and repeat both browser screenshot/interaction gates before publishing.
+4. Return to dynamic native `ctype`/life/pressure-state projection as a separate ABI tranche; keep the persistent goal active.
