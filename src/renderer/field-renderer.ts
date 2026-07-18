@@ -3,7 +3,7 @@ import type { SimulationBackend } from '../simulation';
 import { clientToViewport, ViewTransform, type Point, type ViewState } from './view-transform';
 import type { PixiFieldPresenter } from './pixi-field-presenter';
 import { backingSize, resolveFieldOutputScale } from './render-resolution';
-import { supportsWebGL } from './webgl-support';
+import { forceCanvas2D, supportsWebGL } from './webgl-support';
 import { contourLight, materialNeighbourMask, neighbourDensity } from './volumetric-field';
 
 const FRAME_INTERVAL = 1000 / 30;
@@ -46,7 +46,7 @@ export class MaterialRenderer {
   }
 
   async init(): Promise<void> {
-    if (supportsWebGL()) {
+    if (!forceCanvas2D() && supportsWebGL()) {
       try {
         const { PixiFieldPresenter } = await import('./pixi-field-presenter');
         this.presenter = await Promise.race([

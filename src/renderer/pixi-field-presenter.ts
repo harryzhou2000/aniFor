@@ -7,10 +7,12 @@ import {
   Texture,
   UniformGroup,
 } from 'pixi.js';
+import type { MaterialCategory } from '../shared/materials';
 import { DirtyChunkGrid } from './dirty-chunk-grid';
+import { renderProfile } from './render-profile';
 import { packSemanticRect } from './semantic-field';
 
-interface SemanticMaterialStyle { readonly id: number; readonly color: string; readonly category: string }
+interface SemanticMaterialStyle { readonly id: number; readonly color: string; readonly category: MaterialCategory }
 interface PresenterViewport { readonly width: number; readonly height: number }
 
 const FIELD_VERTEX = `
@@ -41,6 +43,7 @@ vec4 field(vec2 uv) { return texture(uFieldTexture, clamp(uv, uTexel * 0.5, vec2
 float materialAt(vec2 uv) { return floor(field(uv).r * 255.0 + 0.5); }
 float sameMaterial(vec2 uv, float material) { return 1.0 - step(0.5, abs(materialAt(uv) - material)); }
 float familyFor(float id) { return floor(texture(uStyleTexture, vec2((id + 0.5) / 256.0, 0.5)).r * 255.0 + 0.5); }
+float profileFor(float id) { return floor(texture(uStyleTexture, vec2((id + 0.5) / 256.0, 0.5)).g * 255.0 + 0.5); }
 bool isGas(float id) { return familyFor(id) == 1.0; }
 bool isLiquid(float id) { return familyFor(id) == 2.0; }
 bool isEnergy(float id) { return familyFor(id) == 3.0; }
@@ -66,6 +69,16 @@ vec3 occupancyShape(vec2 uv, float material) {
   float gradientY = mix(q01 - q00, q11 - q10, blend.x);
   return vec3(density, gradientX, gradientY);
 }
+float mergedFluidDensity(vec2 uv, float material, float center) {
+  if (uHighQuality < 0.5) return center;
+  vec2 horizontal = vec2(uTexel.x * 1.2, 0.0);
+  vec2 vertical = vec2(0.0, uTexel.y * 1.2);
+  float neighbours = occupancyShape(uv - horizontal, material).x
+    + occupancyShape(uv + horizontal, material).x
+    + occupancyShape(uv - vertical, material).x
+    + occupancyShape(uv + vertical, material).x;
+  return clamp(max(center, center * 0.56 + neighbours * 0.14), 0.0, 1.0);
+}
 float nearbyAtmosphere(vec2 uv) {
   float candidate = materialAt(uv - vec2(uTexel.x, 0.0));
   if (isGas(candidate) || isEnergy(candidate)) return candidate;
@@ -89,34 +102,54 @@ void main() {
   }
   vec3 shape = occupancyShape(fieldUv, material);
   float density = shape.x;
+  float volume = (isGas(material) || isLiquid(material)) ? mergedFluidDensity(fieldUv, material, density) : density;
   vec3 normal = normalize(vec3(-shape.y, -shape.z, mix(1.45, 1.15, uHighQuality)));
   float diffuse = 0.72 + max(0.0, dot(normal, normalize(vec3(-0.48, -0.68, 0.78)))) * 0.42;
   float specular = pow(max(0.0, dot(normal, normalize(vec3(-0.35, -0.55, 0.92)))), 10.0);
   vec3 base = texture(uPaletteTexture, vec2((material + 0.5) / 256.0, 0.5)).rgb;
+  float profile = profileFor(material);
   vec2 velocity = state.ba * 2.0 - 1.0;
   vec2 fieldPosition = fieldUv * uFieldSize;
+  float grain = fract(sin(dot(floor(fieldPosition), vec2(12.9898, 78.233))) * 43758.5453) - 0.5;
   float atmosphere = sin(fieldPosition.x * 0.055 + fieldPosition.y * 0.027 + uTime * 0.7 + velocity.x * 2.0)
     * sin(fieldPosition.y * 0.043 - uTime * 0.43 + velocity.y * 1.7);
   float heat = smoothstep(0.07, 0.34, state.g);
   float alpha;
   vec3 color;
   if (isGas(material)) {
-    alpha = smoothstep(0.08, 0.72, density) * (0.42 + atmosphere * 0.09);
-    color = mix(base * 0.68, base * 1.24 + vec3(0.05), density) * diffuse;
-    color += vec3(0.06, 0.075, 0.09) * specular;
+    float billow = 0.88 + atmosphere * 0.12;
+    alpha = smoothstep(0.015, 0.62, volume) * (0.28 + volume * 0.30) * billow;
+    color = mix(base * 1.28 + vec3(0.045), base * 0.56, volume) * (0.58 + diffuse * 0.42);
+    color += mix(vec3(0.09, 0.11, 0.14), base, 0.35) * specular * (1.0 - volume) * 0.44;
   } else if (isLiquid(material)) {
-    alpha = smoothstep(0.20, 0.76, density);
-    color = base * mix(1.18, 0.64, density) * diffuse;
-    color += mix(vec3(0.34, 0.52, 0.58), base, 0.28) * specular * 0.82;
-    color += base * atmosphere * 0.035;
+    float rim = 1.0 - smoothstep(0.30, 0.86, volume);
+    alpha = smoothstep(0.24, 0.62, volume);
+    color = base * mix(1.16, 0.55, volume) * (0.70 + diffuse * 0.30);
+    color += mix(vec3(0.44, 0.67, 0.72), base, 0.20) * specular * (0.62 + rim * 0.72);
+    color += base * atmosphere * 0.03 + vec3(0.045, 0.07, 0.075) * rim;
   } else {
-    alpha = smoothstep(0.22, 0.70, density);
+    float edgeCenter = 0.49 + (profile == 1.0 ? grain * 0.045 : 0.0);
+    alpha = smoothstep(edgeCenter - 0.11, edgeCenter + 0.11, density);
     color = base * mix(1.10, 0.78, density) * diffuse;
     color += vec3(0.12) * specular * 0.28;
+    if (profile == 1.0) {
+      color *= 0.96 + grain * 0.20;
+    } else if (profile == 2.0) {
+      color += base * clamp(abs(shape.y) + abs(shape.z), 0.0, 1.0) * 0.09;
+    } else if (profile == 3.0) {
+      color *= 0.96 + sin(fieldPosition.x * 0.19 + sin(fieldPosition.y * 0.11)) * 0.045;
+    } else if (profile == 4.0) {
+      color += vec3(0.08, 0.19, 0.055) * (0.72 + 0.28 * sin(uTime * 1.9 + material));
+    } else if (profile == 5.0) {
+      float trace = max(step(0.94, abs(sin(fieldPosition.x * 0.72))), step(0.94, abs(sin(fieldPosition.y * 0.72))));
+      color += mix(base, vec3(0.38, 0.76, 1.0), 0.52) * trace * 0.13;
+    } else if (profile == 6.0) {
+      color += base * sin(length(fieldPosition) * 0.15 - uTime * 1.4) * 0.07;
+    }
   }
-  float emission = isEnergy(material) ? 0.48 + heat * 1.05 : (material == 11.0 ? 0.28 + heat * 0.62 : 0.0);
+  float emission = isEnergy(material) ? 0.48 + heat * 1.05 : (material == 11.0 ? 0.28 + heat * 0.62 : (profile == 4.0 ? 0.07 : 0.0));
   color += mix(base, vec3(1.0, 0.52, 0.20), heat) * emission;
-  if (halo > 0.5) alpha = density * (isEnergy(material) ? 1.35 + heat : 0.52);
+  if (halo > 0.5) alpha = volume * (isEnergy(material) ? 1.35 + heat : (isGas(material) ? 0.38 : 0.52));
   alpha = clamp(alpha, 0.0, 1.0);
   finalColor = vec4(clamp(color, 0.0, 1.35) * alpha, alpha);
 }
@@ -234,6 +267,7 @@ function createLookupTextures(materials: readonly SemanticMaterialStyle[]): { pa
     palette[offset + 2] = color & 0xFF;
     palette[offset + 3] = 255;
     styles[offset] = material.category === 'gases' ? 1 : material.category === 'liquids' ? 2 : material.category === 'energy' ? 3 : 0;
+    styles[offset + 1] = renderProfile(material.category);
     styles[offset + 3] = 255;
   }
   return { paletteTexture: textureFromBytes(palette), styleTexture: textureFromBytes(styles) };
