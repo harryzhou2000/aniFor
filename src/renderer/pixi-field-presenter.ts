@@ -82,15 +82,24 @@ vec3 occupancyShape(vec2 uv, float material) {
   float gradientY = mix(q01 - q00, q11 - q10, blend.x);
   return vec3(density, gradientX, gradientY);
 }
-float mergedFluidDensity(vec2 uv, float material, float center) {
-  if (uHighQuality < 0.5) return center;
-  vec2 horizontal = vec2(uTexel.x * 1.2, 0.0);
-  vec2 vertical = vec2(0.0, uTexel.y * 1.2);
-  float neighbours = occupancyShape(uv - horizontal, material).x
-    + occupancyShape(uv + horizontal, material).x
-    + occupancyShape(uv - vertical, material).x
-    + occupancyShape(uv + vertical, material).x;
-  return clamp(max(center, center * 0.56 + neighbours * 0.14), 0.0, 1.0);
+vec3 discreteShape(vec2 uv, float material) {
+  vec2 left = vec2(uTexel.x, 0.0);
+  vec2 down = vec2(0.0, uTexel.y);
+  float l = sameMaterial(uv - left, material);
+  float r = sameMaterial(uv + left, material);
+  float t = sameMaterial(uv - down, material);
+  float b = sameMaterial(uv + down, material);
+  float tl = sameMaterial(uv - left - down, material);
+  float tr = sameMaterial(uv + left - down, material);
+  float bl = sameMaterial(uv - left + down, material);
+  float br = sameMaterial(uv + left + down, material);
+  float center = sameMaterial(uv, material);
+  float density = center * mix(0.48, 0.32, uHighQuality)
+    + (l + r + t + b) * mix(0.13, 0.12, uHighQuality)
+    + (tl + tr + bl + br) * 0.05 * uHighQuality;
+  float gradientX = (r - l) + (tr + br - tl - bl) * 0.45 * uHighQuality;
+  float gradientY = (b - t) + (bl + br - tl - tr) * 0.45 * uHighQuality;
+  return vec3(density, gradientX, gradientY);
 }
 float nearbyEmission(vec2 uv) {
   float candidate = materialAt(uv - vec2(uTexel.x, 0.0));
@@ -138,15 +147,16 @@ void main() {
     }
     halo = 1.0;
   }
-  vec3 shape = cloudOnly > 0.5 ? vec3(0.0) : occupancyShape(fieldUv, material);
+  float profile = profileFor(material);
+  vec3 shape = cloudOnly > 0.5
+    ? vec3(0.0)
+    : ((isGas(material) || profile == 1.0) ? discreteShape(fieldUv, material) : occupancyShape(fieldUv, material));
   float density = shape.x;
   float gasVolume = max(cloudOnly, isGas(material) ? 1.0 : 0.0);
   float liquidVolume = max(liquidOnly, isLiquid(material) ? 1.0 : 0.0);
   float volume = density;
   if (cloudOnly > 0.5) volume = atmosphereState.a;
-  else if (gasVolume > 0.5) volume = mergedFluidDensity(fieldUv, material, density);
   else if (liquidVolume > 0.5) volume = max(density, liquidDensity);
-  if (gasVolume > 0.5 && cloudOnly < 0.5) volume = max(volume, atmosphereState.a);
   vec2 volumeSlope = vec2(0.0);
   if (gasVolume > 0.5) {
     float cloudLeft = texture(uAtmosphereTexture, fieldUv - vec2(uAtmosphereTexel.x, 0.0)).a;
@@ -165,7 +175,6 @@ void main() {
   float diffuse = 0.72 + max(0.0, dot(normal, normalize(vec3(-0.48, -0.68, 0.78)))) * 0.42;
   float specular = pow(max(0.0, dot(normal, normalize(vec3(-0.35, -0.55, 0.92)))), 10.0);
   vec3 base = cloudOnly > 0.5 ? atmosphereState.rgb : texture(uPaletteTexture, vec2((material + 0.5) / 256.0, 0.5)).rgb;
-  float profile = profileFor(material);
   vec2 velocity = halo > 0.5 ? vec2(0.0) : state.ba * 2.0 - 1.0;
   vec2 fieldPosition = fieldUv * uFieldSize;
   float grain = fract(sin(dot(floor(fieldPosition), vec2(12.9898, 78.233))) * 43758.5453) - 0.5;
@@ -176,9 +185,15 @@ void main() {
   vec3 color;
   if (gasVolume > 0.5) {
     float billow = 0.88 + atmosphere * 0.12;
-    alpha = smoothstep(0.008, 0.48, volume) * (0.30 + volume * 0.32) * billow;
-    color = mix(base * 1.28 + vec3(0.045), base * 0.56, volume) * (0.58 + diffuse * 0.42);
-    color += mix(vec3(0.09, 0.11, 0.14), base, 0.35) * specular * (1.0 - volume) * 0.44;
+    if (cloudOnly > 0.5) {
+      alpha = smoothstep(0.006, 0.46, volume) * (0.07 + volume * 0.20) * billow;
+      color = mix(base * 1.24 + vec3(0.035), base * 0.72, volume) * (0.64 + diffuse * 0.36);
+      color += mix(vec3(0.075, 0.09, 0.11), base, 0.40) * specular * (1.0 - volume) * 0.24;
+    } else {
+      alpha = smoothstep(0.08, 0.72, density) * (0.42 + atmosphere * 0.07);
+      color = mix(base * 0.68, base * 1.24 + vec3(0.05), density) * diffuse;
+      color += vec3(0.06, 0.075, 0.09) * specular;
+    }
   } else if (liquidVolume > 0.5) {
     float rim = 1.0 - smoothstep(0.30, 0.86, volume);
     alpha = smoothstep(0.34, 0.62, volume);
@@ -193,9 +208,9 @@ void main() {
     if (profile == 1.0) {
       vec2 subcell = floor(fract(fieldPosition) * 2.0);
       float grainFacet = fract(sin(dot(floor(fieldPosition) * 2.0 + subcell, vec2(12.9898, 78.233))) * 43758.5453) - 0.5;
-      alpha = max(alpha, 0.90 + grainFacet * 0.12);
-      color *= 0.91 + grain * 0.22 + grainFacet * 0.13;
-      color += base * max(0.0, -subcell.x - subcell.y + 0.6) * 0.13;
+      alpha = smoothstep(0.18 + grain * 0.025, 0.72 + grain * 0.035, density);
+      color *= 0.91 + grain * 0.20 + grainFacet * 0.10;
+      color += base * max(0.0, 0.6 - subcell.x - subcell.y) * 0.11;
     } else if (profile == 2.0) {
       color += base * clamp(abs(shape.y) + abs(shape.z), 0.0, 1.0) * 0.09;
     } else if (profile == 3.0) {
