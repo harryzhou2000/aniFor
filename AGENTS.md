@@ -16,6 +16,7 @@ The non-negotiable contract is:
 - Device pixel ratio affects backing resolution only, never world or CSS coordinate math.
 - The default render backing is 2× per axis (1224×768 for the 612×384 world); use `?renderScale=1` only for A/B diagnosis.
 - Pixi filter `vTextureCoord` is not a world UV. The semantic field shader must use the sprite-local `vFieldCoord` supplied by `FIELD_VERTEX`.
+- Native TPT walls are a separate `bmap`-derived field and texture. Never encode a wall ID as a particle/material ID; particles and walls may coexist at the same world cell and must be composited independently.
 
 Do not confuse the 2× backing resolution with an internal presentation multiplier. Never add scene scaling such as the former 1.5 multiplier, stretch width and height independently, or introduce a second pointer transform.
 
@@ -36,11 +37,15 @@ Use the paused deterministic material atlas before and after material-shader cha
 ```text
 ?scene=render-lab&renderScale=2
 ?scene=render-lab&renderScale=2&renderer=canvas2d
+?scene=wall-lab&renderScale=2
+?scene=wall-lab&renderScale=2&renderer=canvas2d
 ```
 
 The render-lab query uses a 612×384 in-memory backend, does not restore or write autosave, and contains powder density ramps, cohesive and sparse liquids, overlapping gas species, sand/water mixtures, adjacent liquid families, and representative rigid/organic/radioactive/emissive blocks. Capture the viewport itself at identical browser dimensions and keep local comparison shots under ignored `.artifacts/`.
 
 Read [`docs/render-lab.md`](docs/render-lab.md) before changing reconstruction thresholds or blur radii. A TypeScript or Vite build does not compile Pixi's runtime GLSL; a browser screenshot with a clean shader console is required.
+
+The native wall lab uses the real TPT backend, remains paused, and places ten wall types behind deterministic material gradients and mixtures. Use it after wall ABI, wall texture, or compositing changes to prove that native walls remain distinct from particles and survive the same 612×384-to-2× presentation path.
 
 ## Project hygiene
 

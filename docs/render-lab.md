@@ -20,6 +20,15 @@ Screenshots created during local review belong in ignored `.artifacts/`, for exa
 .artifacts/render-lab-canvas2d.png
 ```
 
+For the native wall/particle composition fixture, use:
+
+```text
+http://localhost:5173/?scene=wall-lab&renderScale=2
+http://localhost:5173/?scene=wall-lab&renderScale=2&renderer=canvas2d
+```
+
+Unlike `render-lab`, `wall-lab` deliberately loads the native TPT backend. It clears only its in-memory diagnostic world, remains paused, skips restore/autosave, and lays ten native wall types behind deterministic particle density gradients and mixtures. This catches accidental wall-as-particle encoding, missing wall uploads, texture-coordinate drift, and wall/particle compositing errors.
+
 ## Atlas layout
 
 - Upper left: five sand-density bands plus dust and salt. This shows isolated grains, packed powder relief, and whether smoothing turns grains into a flat slab.
@@ -38,6 +47,7 @@ For every shader or field-reconstruction change:
 3. Confirm the browser console contains no shader, WebGL, runtime, or network-asset failure related to the app.
 4. Compare powder granularity, liquid interior continuity and hard boundary, gas halo/volume, material mixing, energy-core legibility, aura falloff, neighboring light tint, and emissive clipping. Enclosed solid pinholes should close, while exposed notches, silhouettes, and seams between unlike solids must remain visible.
 5. Keep the previous WebGL crop until the new result has been visually reviewed.
+6. When wall rendering changes, repeat the same checks with `scene=wall-lab` and confirm all ten wall patterns remain distinct behind particle mixtures.
 
 The scene is a visual fixture, not a replacement for real-browser pointer, wheel, pan, and painted-footprint checks.
 
@@ -45,7 +55,7 @@ The scene is a visual fixture, not a replacement for real-browser pointer, wheel
 
 The exact semantic texture may update at the renderer's 30 Hz cap. The atmosphere, liquid, and emission reconstructions are separately capped at 12 Hz and, when several are due, are staggered so only one is rebuilt in a frame. A paused brush edit remains pending until its scheduled reconstruction is uploaded, so throttling cannot strand stale liquid, gas, or light volume.
 
-At the fixed 612×384 world size, the preallocated CPU volume-field buffers are 3,055,104 bytes for atmosphere, 3,760,128 bytes for liquid, and 1,357,824 bytes for emission: 8,173,056 bytes combined. Including the 940,032-byte semantic staging buffer, the presenter's known CPU field storage is 9,113,088 bytes. The semantic, liquid, half-resolution atmosphere, one-third-resolution emission, palette, and style GPU source textures total 2,221,568 bytes; the 2× RGBA output target is another 3,760,128 bytes. Pixi-managed filter scratch targets are implementation-owned and are not included in those source-texture figures.
+At the fixed 612×384 world size, the preallocated CPU volume-field buffers are 3,055,104 bytes for atmosphere, 3,760,128 bytes for liquid, and 1,357,824 bytes for emission: 8,173,056 bytes combined. The semantic and independent native-wall RGBA staging buffers use 940,032 bytes each, so the presenter's known CPU field storage is 10,053,120 bytes. The semantic, wall, liquid, half-resolution atmosphere, one-third-resolution emission, palette, and style GPU source textures total 3,161,600 bytes; the 2× RGBA output target is another 3,760,128 bytes. Pixi-managed filter scratch targets are implementation-owned and are not included in those source-texture figures.
 
 Run the allocation check and a local timing sample with:
 

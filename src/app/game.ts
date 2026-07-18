@@ -1,9 +1,11 @@
 import { MaterialRenderer } from '../renderer/field-renderer';
 import { applyRenderLabScene, renderLabRequested } from '../renderer/render-lab-scene';
-import { Material } from '../shared/materials';
+import { applyWallLabScene, wallLabRequested } from '../renderer/wall-lab-scene';
+import { MATERIALS, Material } from '../shared/materials';
 import { decodeSharedWorld, encodeSharedWorld } from '../shared/share-codec';
 import type { SimulationBackend } from '../simulation';
 import { mountControls } from '../ui/controls';
+import { buildToolCatalog, type WallToolInfo } from '../ui/tool-catalog';
 import { WorldInputController } from '../ui/world-input';
 
 const AUTOSAVE_KEY = 'stillroom-world-v1';
@@ -12,6 +14,7 @@ export class Game {
   private readonly simulation: SimulationBackend;
   private readonly renderer: MaterialRenderer;
   private material = Material.Sand;
+  private wallTool?: WallToolInfo;
   private radius = 7;
   private paused = false;
   private accumulator = 0;
@@ -32,17 +35,25 @@ export class Game {
   async start(): Promise<void> {
     await this.renderer.init();
     const renderLab = renderLabRequested();
+    const wallLab = wallLabRequested();
     if (renderLab) {
       applyRenderLabScene(this.simulation);
       this.paused = true;
       this.root.dataset.scene = 'render-lab';
+    } else if (wallLab) {
+      applyWallLabScene(this.simulation);
+      this.paused = true;
+      this.root.dataset.scene = 'wall-lab';
     } else {
       await this.restore();
     }
     const viewport = this.root.querySelector('.viewport') as HTMLElement;
     new WorldInputController(viewport, this.renderer, {
       draw: ({ x, y }, erase) => {
-        if (erase) this.simulation.erase(x, y, this.radius + 1);
+        if (this.wallTool && this.simulation.paintWall && this.simulation.eraseWall) {
+          if (erase) this.simulation.eraseWall(x, y, this.radius + 1);
+          else this.simulation.paintWall(x, y, this.wallTool.nativeWall, this.radius);
+        } else if (erase) this.simulation.erase(x, y, this.radius + 1);
         else this.simulation.paint(x, y, this.material, this.radius);
       },
     });
@@ -50,15 +61,17 @@ export class Game {
     const toolbox = this.root.querySelector<HTMLElement>('.toolbox');
     if (!toolbox) throw new Error('Missing simulation toolbox');
     mountControls(toolbox, {
-      onMaterial: (material) => { this.material = material; },
+      onMaterial: (material) => { this.material = material; this.wallTool = undefined; },
       onRadius: (radius) => { this.radius = radius; },
       onPause: () => { this.paused = !this.paused; },
       onShare: () => this.share(),
       onClear: () => { this.simulation.clear(); localStorage.removeItem(AUTOSAVE_KEY); },
-    });
-    if (renderLab) {
+      onTool: (tool) => { if (tool.kind === 'wall') this.wallTool = tool; },
+    }, buildToolCatalog(MATERIALS, { walls: Boolean(this.simulation.paintWall && this.simulation.eraseWall) }));
+    if (renderLab || wallLab) {
       const status = this.root.querySelector('.status');
-      if (status) status.textContent = `${this.simulation.name} · paused render lab`;
+      const sceneName = renderLab ? 'render lab' : 'native wall lab';
+      if (status) status.textContent = `${this.simulation.name} · paused ${sceneName}`;
     } else {
       this.seedIfEmpty();
       window.setInterval(() => this.save(), 4000);

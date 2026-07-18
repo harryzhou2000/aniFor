@@ -36,7 +36,7 @@ const MATERIAL_GROUP_DEFINITIONS: ReadonlyArray<{ readonly id: string; readonly 
 ];
 
 const KIND_LABELS: Readonly<Record<ToolKind, string>> = {
-  element: 'Elements', wall: 'Walls', force: 'Forces', thermal: 'Thermal', source: 'Sources', utility: 'Tools',
+  element: 'Elements', wall: 'Walls', force: 'Forces', thermal: 'Thermal', source: 'Sources', sign: 'Signs', utility: 'Tools',
 };
 
 export function groupMaterials(materials: readonly MaterialInfo[] = MATERIALS): readonly MaterialGroup[] {

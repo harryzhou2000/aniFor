@@ -1,6 +1,6 @@
 import { base64UrlToBytes, bytesToBase64Url } from '../shared/base64-url';
 import { Material } from '../shared/materials';
-import type { DirtyCell, SimulationBackend } from './types';
+import type { DirtyCell, DirtyWallCell, SimulationBackend } from './types';
 
 interface PowderToyModule {
   HEAPU8: Uint8Array;
@@ -10,6 +10,7 @@ interface PowderToyModule {
   _powder_width(): number;
   _powder_height(): number;
   _powder_cells(): number;
+  _powder_walls(): number;
   _powder_temperature(): number;
   _powder_pressure(): number;
   _powder_velocity(): number;
@@ -17,6 +18,7 @@ interface PowderToyModule {
   _powder_set_tick(tick: number): void;
   _powder_clear(): void;
   _powder_set(x: number, y: number, material: number): void;
+  _powder_set_wall(x: number, y: number, wall: number, radius: number): void;
   _powder_step(): void;
   _powder_save(): number;
   _powder_save_size(): number;
@@ -25,6 +27,8 @@ interface PowderToyModule {
 }
 
 type PowderToyFactory = () => Promise<PowderToyModule>;
+interface DirtyBounds { left: number; top: number; right: number; bottom: number }
+const TPT_CELL_SIZE = 4;
 
 /** Owns the official Powder Toy Emscripten module and its curated field ABI. */
 export class PowderToyBackend implements SimulationBackend {
@@ -32,7 +36,10 @@ export class PowderToyBackend implements SimulationBackend {
   readonly width: number;
   readonly height: number;
   private readonly shadow: Uint8Array;
+  private readonly wallShadow: Uint8Array;
   private dirtyCheck = true;
+  private wallDirtyAll = true;
+  private wallDirtyBounds?: DirtyBounds;
 
   private constructor(private readonly module: PowderToyModule) {
     if (module._powder_init() !== 1) throw new Error('Powder Toy initialization failed');
@@ -40,6 +47,7 @@ export class PowderToyBackend implements SimulationBackend {
     this.height = module._powder_height();
     if (this.width !== 612 || this.height !== 384) throw new Error('Unexpected Powder Toy field dimensions');
     this.shadow = new Uint8Array(this.width * this.height);
+    this.wallShadow = new Uint8Array(this.width * this.height);
   }
 
   static async load(moduleUrl = './wasm/stillroom_core.js'): Promise<PowderToyBackend> {
@@ -51,6 +59,11 @@ export class PowderToyBackend implements SimulationBackend {
 
   cells(): Uint8Array {
     const pointer = this.module._powder_cells();
+    return new Uint8Array(this.module.HEAPU8.buffer, pointer, this.width * this.height);
+  }
+
+  walls(): Uint8Array {
+    const pointer = this.module._powder_walls();
     return new Uint8Array(this.module.HEAPU8.buffer, pointer, this.width * this.height);
   }
 
@@ -67,7 +80,7 @@ export class PowderToyBackend implements SimulationBackend {
   }
 
   step(): void { this.module._powder_step(); this.dirtyCheck = true; }
-  clear(): void { this.module._powder_clear(); this.dirtyCheck = true; }
+  clear(): void { this.module._powder_clear(); this.dirtyCheck = true; this.wallDirtyAll = true; this.wallDirtyBounds = undefined; }
 
   paint(cx: number, cy: number, material: Material, radius: number): void {
     const r2 = radius * radius;
@@ -81,6 +94,13 @@ export class PowderToyBackend implements SimulationBackend {
 
   erase(x: number, y: number, radius: number): void { this.paint(x, y, Material.Empty, radius); }
 
+  paintWall(x: number, y: number, wall: number, radius: number): void {
+    this.module._powder_set_wall(x, y, wall, radius);
+    this.markWallBrushDirty(x, y, radius);
+  }
+
+  eraseWall(x: number, y: number, radius: number): void { this.paintWall(x, y, 0, radius); }
+
   consumeDirtyCells(): readonly DirtyCell[] {
     if (!this.dirtyCheck) return [];
     this.dirtyCheck = false;
@@ -90,6 +110,26 @@ export class PowderToyBackend implements SimulationBackend {
       if (world[index] === this.shadow[index]) continue;
       this.shadow[index] = world[index];
       changed.push({ index, material: world[index] as Material });
+    }
+    return changed;
+  }
+
+  consumeDirtyWalls(): readonly DirtyWallCell[] {
+    const bounds = this.wallDirtyAll
+      ? { left: 0, top: 0, right: this.width, bottom: this.height }
+      : this.wallDirtyBounds;
+    if (!bounds) return [];
+    this.wallDirtyAll = false;
+    this.wallDirtyBounds = undefined;
+    const walls = this.walls();
+    const changed: DirtyWallCell[] = [];
+    for (let y = bounds.top; y < bounds.bottom; y++) {
+      for (let x = bounds.left; x < bounds.right; x++) {
+        const index = y * this.width + x;
+        if (walls[index] === this.wallShadow[index]) continue;
+        this.wallShadow[index] = walls[index];
+        changed.push({ index, wall: walls[index] });
+      }
     }
     return changed;
   }
@@ -109,6 +149,30 @@ export class PowderToyBackend implements SimulationBackend {
     this.module.HEAPU8.set(bytes, pointer);
     if (this.module._powder_load_commit() !== 1) throw new Error('Corrupt world');
     this.shadow.fill(0xFF);
+    this.wallShadow.fill(0xFF);
     this.dirtyCheck = true;
+    this.wallDirtyAll = true;
+    this.wallDirtyBounds = undefined;
+  }
+
+  private markWallBrushDirty(x: number, y: number, radius: number): void {
+    if (this.wallDirtyAll) return;
+    const coarseRadius = Math.max(0, Math.ceil(radius / TPT_CELL_SIZE));
+    const cellX = Math.floor(x / TPT_CELL_SIZE);
+    const cellY = Math.floor(y / TPT_CELL_SIZE);
+    const bounds = {
+      left: Math.max(0, (cellX - coarseRadius) * TPT_CELL_SIZE),
+      top: Math.max(0, (cellY - coarseRadius) * TPT_CELL_SIZE),
+      right: Math.min(this.width, (cellX + coarseRadius + 1) * TPT_CELL_SIZE),
+      bottom: Math.min(this.height, (cellY + coarseRadius + 1) * TPT_CELL_SIZE),
+    };
+    if (bounds.left >= bounds.right || bounds.top >= bounds.bottom) return;
+    const previous = this.wallDirtyBounds;
+    this.wallDirtyBounds = previous ? {
+      left: Math.min(previous.left, bounds.left),
+      top: Math.min(previous.top, bounds.top),
+      right: Math.max(previous.right, bounds.right),
+      bottom: Math.max(previous.bottom, bounds.bottom),
+    } : bounds;
   }
 }

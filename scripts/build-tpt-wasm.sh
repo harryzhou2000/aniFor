@@ -53,7 +53,7 @@ if [[ ! -f "${BUILD_DIR}/build.ninja" ]]; then
   "${MESON}" setup "${BUILD_DIR}" "${TPT_DIR}" "${setup_args[@]}"
 fi
 "${MESON}" compile -C "${BUILD_DIR}"
-perl -0pi -e 's/[ \t]+$//mg; s/\n+\z/\n/' "${BUILD_DIR}/stillroom_core.js"
+sed -i -e 's/[[:space:]]*$//' -e '${/^$/d;}' "${BUILD_DIR}/stillroom_core.js"
 
 mkdir -p "${PROJECT_ROOT}/public/wasm"
 cp "${BUILD_DIR}/stillroom_core.js" "${PROJECT_ROOT}/public/wasm/stillroom_core.js"

@@ -21,6 +21,7 @@ std::unique_ptr<Simulation> simulation;
 std::vector<char> saveBuffer;
 std::vector<char> loadBuffer;
 uint8_t materialField[FIELD_SIZE];
+uint8_t wallField[FIELD_SIZE];
 uint16_t temperatureField[FIELD_SIZE];
 float pressureField[FIELD_SIZE];
 int8_t velocityField[FIELD_SIZE * 2];
@@ -414,6 +415,7 @@ uint8_t ToStillroomType(int type)
 void ExtractFields()
 {
 	std::fill_n(materialField, FIELD_SIZE, uint8_t(0));
+	std::fill_n(wallField, FIELD_SIZE, uint8_t(0));
 	std::fill_n(temperatureField, FIELD_SIZE, uint16_t(0));
 	std::fill_n(pressureField, FIELD_SIZE, 0.0f);
 	std::fill_n(velocityField, FIELD_SIZE * 2, int8_t(0));
@@ -422,6 +424,7 @@ void ExtractFields()
 		for (int x = 0; x < XRES; ++x)
 		{
 			auto offset = y * XRES + x;
+			wallField[offset] = uint8_t(simulation->bmap[y / CELL][x / CELL]);
 			pressureField[offset] = simulation->pv[y / CELL][x / CELL];
 			auto packed = simulation->pmap[y][x];
 			if (!TYP(packed)) packed = simulation->photons[y][x];
@@ -441,6 +444,7 @@ __attribute__((visibility("default"))) int powder_init() { EnsureSimulation(); E
 __attribute__((visibility("default"))) int powder_width() { return XRES; }
 __attribute__((visibility("default"))) int powder_height() { return YRES; }
 __attribute__((visibility("default"))) uint8_t *powder_cells() { EnsureSimulation(); ExtractFields(); return materialField; }
+__attribute__((visibility("default"))) uint8_t *powder_walls() { EnsureSimulation(); ExtractFields(); return wallField; }
 __attribute__((visibility("default"))) uint16_t *powder_temperature() { EnsureSimulation(); return temperatureField; }
 __attribute__((visibility("default"))) float *powder_pressure() { EnsureSimulation(); return pressureField; }
 __attribute__((visibility("default"))) int8_t *powder_velocity() { EnsureSimulation(); return velocityField; }
@@ -461,6 +465,20 @@ __attribute__((visibility("default"))) void powder_set(int x, int y, int materia
 	if (x < CELL || y < CELL || x >= XRES - CELL || y >= YRES - CELL) return;
 	if (material == 0) simulation->delete_part(x, y);
 	else simulation->create_part(-2, x, y, ToPowderType(material));
+}
+__attribute__((visibility("default"))) void powder_set_wall(int x, int y, int wall, int radius)
+{
+	EnsureSimulation();
+	if (x < 0 || y < 0 || x >= XRES || y >= YRES) return;
+	if (wall < WL_ERASE || wall >= UI_WALLCOUNT || wall == WL_FAN || wall == WL_GRAV || wall == WL_ERASEALL) return;
+	auto const cellRadius = std::max(0, radius) / CELL;
+	auto const centerX = x / CELL;
+	auto const centerY = y / CELL;
+	for (int wallY = std::max(0, centerY - cellRadius); wallY <= std::min(YCELLS - 1, centerY + cellRadius); ++wallY)
+	{
+		for (int wallX = std::max(0, centerX - cellRadius); wallX <= std::min(XCELLS - 1, centerX + cellRadius); ++wallX)
+			simulation->bmap[wallY][wallX] = wall;
+	}
 }
 __attribute__((visibility("default"))) void powder_step()
 {

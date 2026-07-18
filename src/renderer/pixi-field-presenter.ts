@@ -15,6 +15,7 @@ import { LiquidDensityField } from './liquid-density-field';
 import { renderPhase, renderProfile, RenderPhase } from './render-profile';
 import { packSemanticRect } from './semantic-field';
 import { VolumeFieldRefreshSchedule } from './volume-field-refresh';
+import { packWallRect } from './wall-field';
 
 interface SemanticMaterialStyle {
   readonly id: number;
@@ -43,6 +44,7 @@ const FIELD_FRAGMENT = `
 in vec2 vFieldCoord;
 out vec4 finalColor;
 uniform sampler2D uFieldTexture;
+uniform sampler2D uWallTexture;
 uniform sampler2D uAtmosphereTexture;
 uniform sampler2D uEmissionTexture;
 uniform sampler2D uLiquidTexture;
@@ -55,7 +57,9 @@ uniform vec2 uEmissionTexel;
 uniform float uTime;
 uniform float uHighQuality;
 vec4 field(vec2 uv) { return texture(uFieldTexture, clamp(uv, uTexel * 0.5, vec2(1.0) - uTexel * 0.5)); }
+vec4 wallField(vec2 uv) { return texture(uWallTexture, clamp(uv, uTexel * 0.5, vec2(1.0) - uTexel * 0.5)); }
 float materialAt(vec2 uv) { return floor(field(uv).r * 255.0 + 0.5); }
+float wallAt(vec2 uv) { return floor(wallField(uv).r * 255.0 + 0.5); }
 float sameMaterial(vec2 uv, float material) { return 1.0 - step(0.5, abs(materialAt(uv) - material)); }
 float familyFor(float id) { return floor(texture(uStyleTexture, vec2((id + 0.5) / 256.0, 0.5)).r * 255.0 + 0.5); }
 float profileFor(float id) { return floor(texture(uStyleTexture, vec2((id + 0.5) / 256.0, 0.5)).g * 255.0 + 0.5); }
@@ -64,6 +68,10 @@ bool isGas(float id) { return familyFor(id) == 1.0; }
 bool isLiquid(float id) { return familyFor(id) == 2.0; }
 bool isEnergy(float id) { return familyFor(id) == 3.0; }
 bool isEmissive(float id) { return emissionFor(id) > 0.5; }
+vec3 vividColor(vec3 color, float saturation) {
+  float luminance = dot(color, vec3(0.2126, 0.7152, 0.0722));
+  return mix(vec3(luminance), color, saturation);
+}
 float compatibleAt(vec2 uv, float material, float family) {
   float candidate = materialAt(uv);
   if (abs(candidate - material) < 0.5) return 1.0;
@@ -122,6 +130,38 @@ vec3 enclosedSurfaceShape(vec2 uv, float material) {
   float gradientY = (b - t) + (bl + br - tl - tr) * 0.45;
   return vec3(coverage * 0.86, gradientX * 0.14, gradientY * 0.14);
 }
+vec3 wallShape(vec2 uv, float wall) {
+  vec2 grid = uv * uFieldSize - 0.5;
+  vec2 blend = fract(grid);
+  vec2 origin = (floor(grid) + 0.5) * uTexel;
+  float q00 = 1.0 - step(0.5, abs(wallAt(origin) - wall));
+  float q10 = 1.0 - step(0.5, abs(wallAt(origin + vec2(uTexel.x, 0.0)) - wall));
+  float q01 = 1.0 - step(0.5, abs(wallAt(origin + vec2(0.0, uTexel.y)) - wall));
+  float q11 = 1.0 - step(0.5, abs(wallAt(origin + uTexel) - wall));
+  float top = mix(q00, q10, blend.x);
+  float bottom = mix(q01, q11, blend.x);
+  return vec3(mix(top, bottom, blend.y), mix(q10 - q00, q11 - q01, blend.y), mix(q01 - q00, q11 - q10, blend.x));
+}
+vec3 wallColor(float wall) {
+  if (wall == 1.0) return vec3(0.49, 0.55, 0.59);
+  if (wall == 2.0) return vec3(0.36, 0.44, 0.55);
+  if (wall == 3.0) return vec3(0.75, 0.51, 0.24);
+  if (wall == 6.0) return vec3(0.27, 0.57, 0.67);
+  if (wall == 9.0) return vec3(0.44, 0.52, 0.59);
+  if (wall == 10.0) return vec3(0.68, 0.52, 0.29);
+  if (wall == 13.0) return vec3(0.51, 0.43, 0.61);
+  if (wall == 15.0) return vec3(0.80, 0.75, 0.36);
+  if (wall == 16.0) return vec3(0.27, 0.31, 0.36);
+  return vec3(0.41, 0.42, 0.44);
+}
+float wallPattern(float wall, vec2 position) {
+  float checker = mod(floor(position.x / 4.0) + floor(position.y / 4.0), 2.0);
+  float pattern = mix(0.94, 1.04, checker);
+  if (wall == 6.0 || wall == 9.0 || wall == 10.0 || wall == 13.0 || wall == 15.0) {
+    pattern += step(0.72, fract((position.x + position.y) * 0.25)) * 0.12;
+  }
+  return pattern;
+}
 vec2 nearbySurface(vec2 uv) {
   float solid = 0.0;
   float candidate = materialAt(uv - vec2(uTexel.x, 0.0));
@@ -156,6 +196,8 @@ float nearbyLiquid(vec2 uv) {
 void main() {
   vec2 fieldUv = vFieldCoord;
   vec4 state = field(fieldUv);
+  float wall = wallAt(fieldUv);
+  vec3 wallSurface = wall > 0.5 ? wallShape(fieldUv, wall) : vec3(0.0);
   vec4 atmosphereState = texture(uAtmosphereTexture, fieldUv);
   vec4 emissionState = texture(uEmissionTexture, fieldUv);
   float liquidDensity = texture(uLiquidTexture, fieldUv).r;
@@ -165,6 +207,7 @@ void main() {
   float emissionOnly = 0.0;
   float liquidOnly = 0.0;
   float surfaceOnly = 0.0;
+  float wallOnly = 0.0;
   if (material < 0.5) {
     if (liquidDensity > 0.12) {
       material = nearbyLiquid(fieldUv);
@@ -183,16 +226,21 @@ void main() {
         material = nearby.y;
         surfaceOnly = material > 0.5 ? 1.0 : 0.0;
       }
-      if (material < 0.5) { finalColor = vec4(0.0); return; }
+      if (material < 0.5) {
+        if (wall > 0.5) wallOnly = 1.0;
+        else { finalColor = vec4(0.0); return; }
+      }
     }
     halo = 1.0;
   }
   float profile = profileFor(material);
-  vec3 shape = surfaceOnly > 0.5
+  vec3 shape = wallOnly > 0.5
+    ? wallSurface
+    : (surfaceOnly > 0.5
     ? enclosedSurfaceShape(fieldUv, material)
     : ((cloudOnly > 0.5 || emissionOnly > 0.5)
     ? vec3(0.0)
-    : ((isGas(material) || profile == 1.0) ? discreteShape(fieldUv, material) : occupancyShape(fieldUv, material)));
+    : ((isGas(material) || profile == 1.0) ? discreteShape(fieldUv, material) : occupancyShape(fieldUv, material))));
   float density = shape.x;
   float gasVolume = max(cloudOnly, isGas(material) ? 1.0 : 0.0);
   float liquidVolume = max(liquidOnly, isLiquid(material) ? 1.0 : 0.0);
@@ -200,6 +248,11 @@ void main() {
   if (emissionOnly > 0.5) volume = emissionState.a;
   else if (cloudOnly > 0.5) volume = atmosphereState.a;
   else if (liquidVolume > 0.5) volume = max(density, liquidDensity);
+  float gasInterior = cloudOnly > 0.5
+    ? 1.0
+    : (gasVolume > 0.5 ? smoothstep(0.24, 0.56, atmosphereState.a) : 0.0);
+  float liquidInterior = liquidVolume > 0.5 ? smoothstep(0.78, 0.94, liquidDensity) : 0.0;
+  float shapeDetail = 1.0 - max(gasInterior, liquidInterior);
   vec2 volumeSlope = vec2(0.0);
   if (emissionOnly > 0.5) {
     float lightLeft = texture(uEmissionTexture, fieldUv - vec2(uEmissionTexel.x, 0.0)).a;
@@ -220,12 +273,15 @@ void main() {
     float liquidBottom = texture(uLiquidTexture, fieldUv + vec2(0.0, uTexel.y)).r;
     volumeSlope = vec2(liquidRight - liquidLeft, liquidBottom - liquidTop) * 0.65;
   }
-  vec3 normal = normalize(vec3(-shape.y - volumeSlope.x, -shape.z - volumeSlope.y, mix(1.45, 1.15, uHighQuality)));
+  vec2 semanticSlope = shape.yz * shapeDetail;
+  vec3 normal = normalize(vec3(-semanticSlope.x - volumeSlope.x, -semanticSlope.y - volumeSlope.y, mix(1.45, 1.15, uHighQuality)));
   float diffuse = 0.72 + max(0.0, dot(normal, normalize(vec3(-0.48, -0.68, 0.78)))) * 0.42;
   float specular = pow(max(0.0, dot(normal, normalize(vec3(-0.35, -0.55, 0.92)))), 10.0);
-  vec3 base = emissionOnly > 0.5
+  vec3 base = wallOnly > 0.5
+    ? wallColor(wall)
+    : (emissionOnly > 0.5
     ? emissionState.rgb
-    : (cloudOnly > 0.5 ? atmosphereState.rgb : texture(uPaletteTexture, vec2((material + 0.5) / 256.0, 0.5)).rgb);
+    : (cloudOnly > 0.5 ? atmosphereState.rgb : texture(uPaletteTexture, vec2((material + 0.5) / 256.0, 0.5)).rgb));
   vec2 velocity = halo > 0.5 ? vec2(0.0) : state.ba * 2.0 - 1.0;
   vec2 fieldPosition = fieldUv * uFieldSize;
   float grain = fract(sin(dot(floor(fieldPosition), vec2(12.9898, 78.233))) * 43758.5453) - 0.5;
@@ -234,28 +290,33 @@ void main() {
   float heat = smoothstep(0.07, 0.34, state.g);
   float alpha;
   vec3 color;
-  if (emissionOnly > 0.5) {
+  if (wallOnly > 0.5) {
+    alpha = smoothstep(0.30, 0.70, density) * 0.96;
+    color = base * wallPattern(wall, fieldPosition) * (0.76 + diffuse * 0.24);
+    color += vec3(0.08) * specular * 0.18;
+  } else if (emissionOnly > 0.5) {
     float pulse = 0.90 + sin(uTime * 2.1 + fieldPosition.x * 0.025 - fieldPosition.y * 0.018) * 0.10;
     alpha = smoothstep(0.002, 0.28, volume) * (0.07 + volume * 0.30) * pulse;
     color = mix(base * 1.42 + vec3(0.045), base * 0.72, volume) * (0.68 + diffuse * 0.32);
     color += mix(vec3(0.16, 0.19, 0.24), base, 0.56) * specular * 0.30;
   } else if (gasVolume > 0.5) {
     float billow = 0.88 + atmosphere * 0.12;
-    if (cloudOnly > 0.5) {
-      alpha = smoothstep(0.006, 0.46, volume) * (0.07 + volume * 0.20) * billow;
-      color = mix(base * 1.24 + vec3(0.035), base * 0.72, volume) * (0.64 + diffuse * 0.36);
-      color += mix(vec3(0.075, 0.09, 0.11), base, 0.40) * specular * (1.0 - volume) * 0.24;
-    } else {
-      alpha = smoothstep(0.08, 0.72, density) * (0.42 + atmosphere * 0.07);
-      color = mix(base * 0.68, base * 1.24 + vec3(0.05), density) * diffuse;
-      color += vec3(0.06, 0.075, 0.09) * specular;
-    }
+    vec3 gasBase = vividColor(base, 1.18);
+    float gasShadeDensity = mix(density, atmosphereState.a, gasInterior);
+    float particleAlpha = smoothstep(0.08, 0.72, density) * (0.38 + atmosphere * 0.06);
+    float cloudAlpha = smoothstep(0.025, 0.46, atmosphereState.a)
+      * (0.10 + atmosphereState.a * 0.24) * billow;
+    alpha = cloudOnly > 0.5 ? cloudAlpha : mix(particleAlpha, cloudAlpha, gasInterior);
+    color = mix(gasBase * 0.78, gasBase * 1.38 + vec3(0.04), gasShadeDensity) * diffuse;
+    color += mix(vec3(0.07, 0.085, 0.11), gasBase, 0.24) * specular * mix(1.0, 0.35, gasInterior);
   } else if (liquidVolume > 0.5) {
-    float rim = 1.0 - smoothstep(0.30, 0.86, volume);
-    alpha = smoothstep(0.34, 0.62, volume);
-    color = base * mix(1.16, 0.55, volume) * (0.70 + diffuse * 0.30);
-    color += mix(vec3(0.44, 0.67, 0.72), base, 0.20) * specular * (0.62 + rim * 0.72);
-    color += base * atmosphere * 0.03 + vec3(0.045, 0.07, 0.075) * rim;
+    vec3 liquidBase = vividColor(base, 1.16);
+    float rim = (1.0 - smoothstep(0.30, 0.86, volume)) * mix(1.0, 0.25, liquidInterior);
+    float surfaceSpecular = specular * mix(1.0, 0.12, liquidInterior);
+    alpha = smoothstep(0.34, 0.62, volume) * mix(0.64, 0.86, volume);
+    color = liquidBase * mix(1.26, 0.82, volume) * (0.70 + diffuse * 0.30);
+    color += mix(vec3(0.48, 0.74, 0.82), liquidBase, 0.24) * surfaceSpecular * (0.62 + rim * 0.72);
+    color += liquidBase * (0.035 + atmosphere * 0.035) + vec3(0.045, 0.075, 0.085) * rim;
   } else {
     float edgeCenter = 0.49 + (profile == 1.0 ? grain * 0.045 : 0.0);
     alpha = smoothstep(edgeCenter - 0.11, edgeCenter + 0.11, density);
@@ -304,9 +365,16 @@ void main() {
     float lightReach = smoothstep(0.002, 0.42, emissionState.a);
     color += emissionState.rgb * lightReach * (isEmissive(material) ? 0.28 : 0.16);
   }
-  if (halo > 0.5 && emissionOnly < 0.5 && surfaceOnly < 0.5 && gasVolume < 0.5 && liquidVolume < 0.5) alpha = volume * (isEnergy(material) ? 1.35 + heat : 0.52);
+  if (halo > 0.5 && wallOnly < 0.5 && emissionOnly < 0.5 && surfaceOnly < 0.5 && gasVolume < 0.5 && liquidVolume < 0.5) alpha = volume * (isEnergy(material) ? 1.35 + heat : 0.52);
   alpha = clamp(alpha, 0.0, 1.0);
-  finalColor = vec4(clamp(color, 0.0, 1.35) * alpha, alpha);
+  vec3 premultiplied = clamp(color, 0.0, 1.35) * alpha;
+  float compositeAlpha = alpha;
+  if (wall > 0.5 && wallOnly < 0.5) {
+    float backgroundAlpha = smoothstep(0.30, 0.70, wallSurface.x) * 0.94;
+    premultiplied += wallColor(wall) * wallPattern(wall, fieldPosition) * backgroundAlpha * (1.0 - compositeAlpha);
+    compositeAlpha += backgroundAlpha * (1.0 - compositeAlpha);
+  }
+  finalColor = vec4(premultiplied, compositeAlpha);
 }
 `;
 
@@ -316,6 +384,8 @@ export class PixiFieldPresenter {
   private readonly scene = new Container();
   private readonly fieldBytes: Uint8Array;
   private readonly fieldSource: BufferImageSource;
+  private readonly wallBytes: Uint8Array;
+  private readonly wallSource: BufferImageSource;
   private readonly atmosphereField: AtmosphereField;
   private readonly atmosphereSource: BufferImageSource;
   private readonly emissionField: EmissionField;
@@ -326,6 +396,7 @@ export class PixiFieldPresenter {
   private readonly emissiveByMaterial: Uint8Array;
   private readonly liquidByMaterial: Uint8Array;
   private readonly chunks: DirtyChunkGrid;
+  private readonly wallChunks: DirtyChunkGrid;
   private readonly uniforms: UniformGroup;
   private readonly volumeRefresh = new VolumeFieldRefreshSchedule();
   private atmosphereDirty = true;
@@ -344,6 +415,11 @@ export class PixiFieldPresenter {
       alphaMode: 'no-premultiply-alpha', scaleMode: 'nearest', autoGarbageCollect: false,
     });
     const fieldTexture = new Texture({ source: this.fieldSource });
+    this.wallBytes = new Uint8Array(width * height * 4);
+    this.wallSource = new BufferImageSource({
+      resource: this.wallBytes, width, height, format: 'rgba8unorm',
+      alphaMode: 'no-premultiply-alpha', scaleMode: 'nearest', autoGarbageCollect: false,
+    });
     const { paletteTexture, styleTexture, gasByMaterial, liquidByMaterial, emissiveByMaterial, colorByMaterial } = createLookupTextures(materials);
     this.gasByMaterial = gasByMaterial;
     this.liquidByMaterial = liquidByMaterial;
@@ -392,6 +468,8 @@ export class PixiFieldPresenter {
         fieldUniforms: this.uniforms,
         uFieldTexture: this.fieldSource,
         uFieldSampler: this.fieldSource.style,
+        uWallTexture: this.wallSource,
+        uWallSampler: this.wallSource.style,
         uAtmosphereTexture: this.atmosphereSource,
         uAtmosphereSampler: this.atmosphereSource.style,
         uEmissionTexture: this.emissionSource,
@@ -409,7 +487,9 @@ export class PixiFieldPresenter {
     sprite.filters = [filter];
     this.scene.addChild(sprite);
     this.chunks = new DirtyChunkGrid(width, height, 32, 2);
+    this.wallChunks = new DirtyChunkGrid(width, height, 32, 2);
     this.chunks.markAll();
+    this.wallChunks.markAll();
   }
 
   static async create(host: HTMLElement, width: number, height: number, outputScale: 1 | 2, materials: readonly SemanticMaterialStyle[]): Promise<PixiFieldPresenter> {
@@ -454,15 +534,20 @@ export class PixiFieldPresenter {
     if (this.emissiveByMaterial[previousMaterial] || this.emissiveByMaterial[nextMaterial]) this.emissionDirty = true;
   }
 
+  markWallDirty(index: number): void { this.wallChunks.markCell(index); }
+
   visualRefreshDue(time: number): boolean {
     return this.volumeRefresh.due(time, this.atmosphereDirty, this.liquidDirty, this.emissionDirty);
   }
 
-  update(materials: Uint8Array, temperatures: Uint16Array | undefined, velocities: Int8Array | undefined, time: number, refreshDynamicFields: boolean): void {
+  update(materials: Uint8Array, walls: Uint8Array | undefined, temperatures: Uint16Array | undefined, velocities: Int8Array | undefined, time: number, refreshDynamicFields: boolean): void {
     if (refreshDynamicFields) this.chunks.markAll();
     const rectangles = this.chunks.consume();
     for (const rect of rectangles) packSemanticRect(this.fieldBytes, this.fieldSource.width, materials, temperatures, velocities, rect);
     if (rectangles.length) this.fieldSource.update();
+    const wallRectangles = this.wallChunks.consume();
+    if (walls) for (const rect of wallRectangles) packWallRect(this.wallBytes, this.wallSource.width, walls, rect);
+    if (walls && wallRectangles.length) this.wallSource.update();
     const volumeField = this.volumeRefresh.next(time, this.atmosphereDirty, this.liquidDirty, this.emissionDirty);
     if (volumeField === 'atmosphere') {
       this.atmosphereField.update(materials);

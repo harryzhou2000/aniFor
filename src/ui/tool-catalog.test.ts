@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { MATERIALS, Material } from '../shared/materials';
-import { filterTools, isToolAvailable, materialTools, recordRecent, type WallToolInfo } from './tool-catalog';
+import { buildToolCatalog, filterTools, isToolAvailable, materialTools, recordRecent, semanticTools, type WallToolInfo } from './tool-catalog';
 
 describe('tool catalog view model', () => {
   const tools = materialTools(MATERIALS);
@@ -26,6 +26,18 @@ describe('tool catalog view model', () => {
   it('keeps true walls distinct from particle elements', () => {
     const wall: WallToolInfo = { key: 'wall:solid', kind: 'wall', nativeWall: 1, name: 'Solid wall', description: 'Blocks particles', color: '#888', icon: '■', category: 'walls' };
     expect(filterTools([...tools, wall], { mode: 'wall', query: '', favorites: new Set(), recent: [] })).toEqual([wall]);
+    const catalog = buildToolCatalog(MATERIALS, { walls: true });
+    const nativeWalls = catalog.filter((tool) => tool.kind === 'wall');
+    expect(nativeWalls.length).toBeGreaterThanOrEqual(10);
+    expect(nativeWalls.every(isToolAvailable)).toBe(true);
+    expect(catalog.find((tool) => tool.kind === 'element' && tool.id === Material.Wall)?.name).toBe('Diamond');
+  });
+
+  it('exposes unsupported semantics as distinct disabled tools instead of particles', () => {
+    const semantic = semanticTools();
+    expect(new Set(semantic.map(({ kind }) => kind))).toEqual(new Set(['wall', 'source', 'sign', 'force', 'thermal']));
+    expect(semantic.every((tool) => !isToolAvailable(tool))).toBe(true);
+    expect(semantic.every((tool) => tool.limitations?.length)).toBe(true);
   });
 
   it('filters favorites and preserves recent-use order', () => {

@@ -4,6 +4,7 @@ import { clientToViewport, ViewTransform, type Point, type ViewState } from './v
 import type { PixiFieldPresenter } from './pixi-field-presenter';
 import { backingSize, resolveFieldOutputScale } from './render-resolution';
 import { renderPhase, RenderPhase } from './render-profile';
+import { compositePixel } from './rgba-composite';
 import { forceCanvas2D, supportsWebGL } from './webgl-support';
 import { contourLight, materialNeighbourMask, neighbourDensity } from './volumetric-field';
 
@@ -31,6 +32,7 @@ export class MaterialRenderer {
   private readonly fireSurface = document.createElement('canvas');
   private readonly fallbackSurface = document.createElement('canvas');
   private readonly rendered: Uint8Array;
+  private readonly renderedWalls?: Uint8Array;
   private readonly outputScale = resolveFieldOutputScale();
   private presenter?: PixiFieldPresenter;
   private readonly view: ViewTransform;
@@ -47,6 +49,7 @@ export class MaterialRenderer {
 
   constructor(private readonly host: HTMLElement, private readonly simulation: SimulationBackend) {
     this.rendered = new Uint8Array(simulation.width * simulation.height);
+    if (simulation.walls) this.renderedWalls = new Uint8Array(simulation.walls());
     this.view = new ViewTransform(simulation.width, simulation.height);
   }
 
@@ -73,6 +76,12 @@ export class MaterialRenderer {
     for (const cell of this.simulation.consumeDirtyCells()) {
       this.rendered[cell.index] = cell.material;
       this.presenter?.markDirty(cell.index, cell.material);
+      this.changed = true;
+    }
+    for (const cell of this.simulation.consumeDirtyWalls?.() ?? []) {
+      if (!this.renderedWalls) break;
+      this.renderedWalls[cell.index] = cell.wall;
+      this.presenter?.markWallDirty(cell.index);
       this.changed = true;
     }
     const hasDynamicFields = Boolean(this.simulation.temperature || this.simulation.velocity);
@@ -125,7 +134,7 @@ export class MaterialRenderer {
     const temperatures = this.simulation.temperature?.();
     const velocities = this.simulation.velocity?.();
     if (this.presenter) {
-      this.presenter.update(this.rendered, temperatures, velocities, time, refreshDynamicFields);
+      this.presenter.update(this.rendered, this.renderedWalls, temperatures, velocities, time, refreshDynamicFields);
       return;
     }
     const base = this.basePixels.data;
@@ -135,10 +144,12 @@ export class MaterialRenderer {
 
     for (let index = 0; index < this.rendered.length; index++) {
       const material = this.rendered[index] as Material;
-      if (material === Material.Empty) continue;
       const x = index % width;
       const y = Math.floor(index / width);
       const pixel = index * 4;
+      const wall = this.renderedWalls?.[index] ?? 0;
+      if (wall) setWallPixel(base, pixel, wall, x, y);
+      if (material === Material.Empty) continue;
       const top = y === 0 ? Material.Empty : this.rendered[index - width] as Material;
       const left = x === 0 ? Material.Empty : this.rendered[index - 1] as Material;
       const right = x === width - 1 ? Material.Empty : this.rendered[index + 1] as Material;
@@ -149,13 +160,13 @@ export class MaterialRenderer {
       const grain = hash(index) % 23 - 11;
 
       if (material === Material.Sand) {
-        setPixel(base, pixel, 194 + grain + normalLight, 145 + grain * 0.65 + normalLight, 76 + grain * 0.35 + normalLight, 255);
+        compositePixel(base, pixel, 194 + grain + normalLight, 145 + grain * 0.65 + normalLight, 76 + grain * 0.35 + normalLight, 255);
       } else if (material === Material.Dust) {
         const softness = Math.sin(time * 0.0018 + x * 0.17 + y * 0.09) * 4;
-        setPixel(base, pixel, 188 + grain + normalLight + softness, 166 + grain + normalLight + softness, 124 + grain * 0.6 + normalLight, 238);
+        compositePixel(base, pixel, 188 + grain + normalLight + softness, 166 + grain + normalLight + softness, 124 + grain * 0.6 + normalLight, 238);
       } else if (material === Material.Salt) {
         const crystal = (hash(index + 211) & 7) === 0 ? 28 : 0;
-        setPixel(base, pixel, 220 + grain + crystal + normalLight, 216 + grain + crystal + normalLight, 202 + grain + crystal + normalLight, 255);
+        compositePixel(base, pixel, 220 + grain + crystal + normalLight, 216 + grain + crystal + normalLight, 202 + grain + crystal + normalLight, 255);
       } else if (material === Material.Oil) {
         const mask = materialNeighbourMask(this.rendered, width, height, x, y, material);
         const density = neighbourDensity(mask);
@@ -163,14 +174,14 @@ export class MaterialRenderer {
         const flow = velocities ? velocities[index * 2] * 0.12 : 0;
         const sheen = Math.sin(time * 0.0017 + x * 0.055 + y * 0.025 + flow) * 5 + contour;
         const depth = density / 8;
-        setPixel(base, pixel, 91 - depth * 28 + sheen, 67 - depth * 24 + sheen * 0.65, 35 - depth * 14 + sheen * 0.3, 218 + density * 4);
+        compositePixel(base, pixel, 91 - depth * 28 + sheen, 67 - depth * 24 + sheen * 0.65, 35 - depth * 14 + sheen * 0.3, 218 + density * 4);
         if (exposedTop) setPixel(fire, pixel, 172 + sheen, 128 + sheen, 66, 34 + Math.max(0, contour));
       } else if (material === Material.Wood) {
         const ring = ((x + Math.floor(y / 3)) % 9) < 2 ? -20 : 4;
-        setPixel(base, pixel, 132 + grain + ring + normalLight, 76 + grain * 0.45 + ring * 0.5 + normalLight, 40 + ring * 0.25 + normalLight, 255);
+        compositePixel(base, pixel, 132 + grain + ring + normalLight, 76 + grain * 0.45 + ring * 0.5 + normalLight, 40 + ring * 0.25 + normalLight, 255);
       } else if (material === Material.Plant) {
         const leaf = (hash(index + 401) & 3) * 7;
-        setPixel(base, pixel, 62 + leaf + normalLight, 132 + leaf + normalLight, 58 + grain * 0.35 + normalLight, 255);
+        compositePixel(base, pixel, 62 + leaf + normalLight, 132 + leaf + normalLight, 58 + grain * 0.35 + normalLight, 255);
       } else if (material === Material.Lava) {
         const mask = materialNeighbourMask(this.rendered, width, height, x, y, material);
         const density = neighbourDensity(mask);
@@ -179,25 +190,25 @@ export class MaterialRenderer {
         const heat = clamp((kelvin - 700) / 1100, 0, 1);
         const crust = density > 6 ? -52 : 0;
         const pulse = Math.sin(time * 0.003 + x * 0.1 + y * 0.07) * 8;
-        setPixel(base, pixel, 224 + crust + heat * 31 + contour, 48 + pulse + heat * 120 + contour, 8 + heat * 54, 255);
+        compositePixel(base, pixel, 224 + crust + heat * 31 + contour, 48 + pulse + heat * 120 + contour, 8 + heat * 54, 255);
         setPixel(fire, pixel, 255, 54 + heat * 130 + pulse, 8, 135 + heat * 80 + Math.max(0, contour));
       } else if (material === Material.Ice) {
         const facet = (hash(index + 617) & 15) < 3 ? 24 : 0;
-        setPixel(base, pixel, 116 + facet + normalLight, 193 + facet + normalLight, 211 + facet + normalLight, 244);
+        compositePixel(base, pixel, 116 + facet + normalLight, 193 + facet + normalLight, 211 + facet + normalLight, 244);
       } else if (material === Material.Acid) {
         const mask = materialNeighbourMask(this.rendered, width, height, x, y, material);
         const density = neighbourDensity(mask);
         const contour = contourLight(mask);
         const depth = density / 8;
         const shimmer = Math.sin(time * 0.0024 + x * 0.075 + y * 0.035) * 6 + contour;
-        setPixel(base, pixel, 127 - depth * 30 + shimmer, 205 - depth * 38 + shimmer, 58 - depth * 14 + shimmer * 0.45, 202 + density * 6);
+        compositePixel(base, pixel, 127 - depth * 30 + shimmer, 205 - depth * 38 + shimmer, 58 - depth * 14 + shimmer * 0.45, 202 + density * 6);
         if (exposedTop) setPixel(fire, pixel, 137 + shimmer, 236, 72 + shimmer, 42 + Math.max(0, contour));
       } else if (material === Material.Gunpowder) {
         const spark = (hash(index + 911) & 31) === 0 ? 34 : 0;
-        setPixel(base, pixel, 70 + grain + spark + normalLight, 64 + grain + spark * 0.7 + normalLight, 58 + grain + spark * 0.35 + normalLight, 255);
+        compositePixel(base, pixel, 70 + grain + spark + normalLight, 64 + grain + spark * 0.7 + normalLight, 58 + grain + spark * 0.35 + normalLight, 255);
       } else if (material === Material.Wall) {
         const seam = (hash(index + 73) & 31) === 0 ? -22 : 0;
-        setPixel(base, pixel, 105 + grain + seam + normalLight, 98 + grain + seam + normalLight, 88 + grain + seam + normalLight, 255);
+        compositePixel(base, pixel, 105 + grain + seam + normalLight, 98 + grain + seam + normalLight, 88 + grain + seam + normalLight, 255);
       } else if (material === Material.Water) {
         const mask = materialNeighbourMask(this.rendered, width, height, x, y, material);
         const density = neighbourDensity(mask);
@@ -206,7 +217,7 @@ export class MaterialRenderer {
         const flow = velocities ? velocities[index * 2] * 0.18 : 0;
         const shimmer = Math.sin(time * 0.002 + x * 0.065 + y * 0.02 + flow) * 4;
         const light = contour + shimmer;
-        setPixel(base, pixel, 53 - depth * 31 + light * 0.45, 169 - depth * 56 + light, 205 - depth * 40 + light, 198 + density * 7);
+        compositePixel(base, pixel, 53 - depth * 31 + light * 0.45, 169 - depth * 56 + light, 205 - depth * 40 + light, 198 + density * 7);
         if (exposedTop) setPixel(fire, pixel, 129 + light, 232 + light, 245, 44 + Math.max(0, contour));
       } else if (material === Material.Smoke) {
         const mask = materialNeighbourMask(this.rendered, width, height, x, y, material);
@@ -220,7 +231,7 @@ export class MaterialRenderer {
       } else if (material === Material.Fire) {
         const kelvin = temperatures ? temperatures[index] / 10 : 1100;
         const heat = clamp((kelvin - 450) / 1100, 0, 1);
-        setPixel(base, pixel, 255, 115 + heat * 125, 28 + heat * 130, 255);
+        compositePixel(base, pixel, 255, 115 + heat * 125, 28 + heat * 130, 255);
         setPixel(fire, pixel, 255, 92 + heat * 100, 18, 210);
       } else {
         const info = PROJECTED_RENDER_INFO[material];
@@ -239,13 +250,13 @@ export class MaterialRenderer {
           const contour = contourLight(mask);
           const depth = density * 3.2;
           const shimmer = Math.sin(time * 0.0018 + x * 0.055 + y * 0.025) * 4 + contour;
-          setPixel(base, pixel, red - depth + shimmer, green - depth + shimmer, blue - depth + shimmer, 205 + density * 6);
+          compositePixel(base, pixel, red - depth + shimmer, green - depth + shimmer, blue - depth + shimmer, 205 + density * 6);
           if (exposedTop) setPixel(fire, pixel, red + 35, green + 35, blue + 35, 30 + Math.max(0, contour));
         } else if (info.phase === RenderPhase.Energy) {
-          setPixel(base, pixel, red + normalLight, green + normalLight, blue + normalLight, 245);
+          compositePixel(base, pixel, red + normalLight, green + normalLight, blue + normalLight, 245);
           setPixel(fire, pixel, red, green, blue, 180);
         } else {
-          setPixel(base, pixel, red + grain * 0.45 + normalLight, green + grain * 0.45 + normalLight, blue + grain * 0.45 + normalLight, 255);
+          compositePixel(base, pixel, red + grain * 0.45 + normalLight, green + grain * 0.45 + normalLight, blue + grain * 0.45 + normalLight, 255);
         }
         if (info.emissive) setPixel(fire, pixel, red, green, blue, 176);
       }
@@ -291,6 +302,7 @@ export class MaterialRenderer {
     this.fallbackSurface.dataset.renderer = 'semantic-field-canvas2d';
     this.fallbackSurface.dataset.worldSize = `${width}x${height}`;
     this.fallbackSurface.dataset.outputScale = String(this.outputScale);
+    this.fallbackSurface.dataset.backingSize = `${output.width}x${output.height}`;
     const context = this.surface.getContext('2d');
     const smokeContext = this.smokeSurface.getContext('2d');
     const fireContext = this.fireSurface.getContext('2d');
@@ -326,6 +338,18 @@ function setPixel(target: Uint8ClampedArray, offset: number, red: number, green:
   target[offset + 1] = clamp(green, 0, 255);
   target[offset + 2] = clamp(blue, 0, 255);
   target[offset + 3] = clamp(alpha, 0, 255);
+}
+
+function setWallPixel(target: Uint8ClampedArray, offset: number, wall: number, x: number, y: number): void {
+  const colors: Readonly<Record<number, readonly [number, number, number]>> = {
+    1: [125, 139, 150], 2: [91, 111, 139], 3: [191, 130, 60], 6: [68, 145, 170],
+    8: [104, 105, 108], 9: [111, 132, 150], 10: [174, 132, 73], 13: [129, 108, 156],
+    15: [205, 191, 91], 16: [68, 80, 91],
+  };
+  const color = colors[wall] ?? [103, 105, 111];
+  const checker = ((Math.floor(x / 4) + Math.floor(y / 4)) & 1) ? 9 : -4;
+  const filter = [6, 9, 10, 13, 15].includes(wall) && ((x + y) & 3) === 0 ? 22 : 0;
+  setPixel(target, offset, color[0] + checker + filter, color[1] + checker + filter, color[2] + checker + filter, 248);
 }
 
 function hash(value: number): number {

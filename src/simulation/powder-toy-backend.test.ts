@@ -22,6 +22,14 @@ describe('direct Powder Toy backend', () => {
     expect(Array.from(pressure).every(Number.isFinite)).toBe(true);
     expect(simulation.velocity()).toHaveLength(612 * 384 * 2);
     expect(simulation.consumeDirtyCells().length).toBeGreaterThan(0);
+    expect(simulation.walls()).toHaveLength(612 * 384);
+    expect(simulation.consumeDirtyWalls()).toEqual([]);
+    simulation.paintWall(340, 120, 8, 0);
+    expect(simulation.walls()[120 * simulation.width + 340]).toBe(8);
+    expect(simulation.cells()[120 * simulation.width + 340]).toBe(Material.Empty);
+    const dirtyWalls = simulation.consumeDirtyWalls();
+    expect(dirtyWalls).toHaveLength(16);
+    expect(dirtyWalls.every(({ wall }) => wall === 8)).toBe(true);
   });
 
   it('projects every expanded material as its stable frontend ID', async () => {
@@ -76,6 +84,26 @@ describe('direct Powder Toy backend', () => {
     expect(maxVerticalSpeed).toBeLessThanOrEqual(48);
   }, 15000);
 
+  it('uses the native wall field as a physical particle barrier', async () => {
+    const simulation = await PowderToyBackend.load(moduleArtifact.href);
+    const floorY = 220;
+    for (let x = 190; x <= 422; x += 4) simulation.paintWall(x, floorY, 8, 0);
+    simulation.paint(306, 150, Material.Sand, 9);
+
+    for (let index = 0; index < 180; index++) simulation.step();
+    const cells = simulation.cells();
+    let sandAboveWall = 0;
+    let sandBelowWall = 0;
+    for (let index = 0; index < cells.length; index++) {
+      if (cells[index] !== Material.Sand) continue;
+      const y = Math.floor(index / simulation.width);
+      if (y < floorY) sandAboveWall++;
+      if (y >= floorY + 4) sandBelowWall++;
+    }
+    expect(sandAboveWall).toBeGreaterThan(100);
+    expect(sandBelowWall).toBe(0);
+  }, 15000);
+
   it('grows native plants from seeds supplied with soil and water', async () => {
     const simulation = await PowderToyBackend.load(moduleArtifact.href);
     for (let x = 250; x < 360; x++) {
@@ -100,6 +128,7 @@ describe('direct Powder Toy backend', () => {
     source.paint(120, 40, Material.Sand, 4);
     source.paint(150, 42, Material.Water, 4);
     source.paint(180, 100, Material.Fire, 2);
+    source.paintWall(210, 120, 8, 8);
     for (let index = 0; index < 40; index++) source.step();
 
     const saved = source.saveWorld();
@@ -110,10 +139,12 @@ describe('direct Powder Toy backend', () => {
     expect(restored.cells()).toEqual(source.cells());
     expect(restored.temperature()).toEqual(source.temperature());
     expect(restored.velocity()).toEqual(source.velocity());
+    expect(restored.walls()).toEqual(source.walls());
 
     for (let index = 0; index < 15; index++) { source.step(); restored.step(); }
     expect(restored.cells()).toEqual(source.cells());
     expect(restored.temperature()).toEqual(source.temperature());
     expect(restored.velocity()).toEqual(source.velocity());
+    expect(restored.walls()).toEqual(source.walls());
   }, 15000);
 });
