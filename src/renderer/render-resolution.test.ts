@@ -5,6 +5,7 @@ describe('field render resolution', () => {
   it('allocates two backing pixels per axis without changing logical dimensions', () => {
     expect(FIELD_OUTPUT_SCALE).toBe(2);
     expect(backingSize(612, 384)).toEqual({ width: 1224, height: 768 });
+    expect(backingSize(612, 384, 1)).toEqual({ width: 612, height: 384 });
   });
 
   it('rounds non-integral backing sizes deterministically', () => {
@@ -12,6 +13,7 @@ describe('field render resolution', () => {
   });
 
   it('supports explicit one- and two-times diagnostic overrides', () => {
+    expect(resolveFieldOutputScale('')).toBe(FIELD_OUTPUT_SCALE);
     expect(resolveFieldOutputScale('?renderScale=1')).toBe(1);
     expect(resolveFieldOutputScale('?renderScale=2')).toBe(2);
     expect(resolveFieldOutputScale('?renderScale=unexpected')).toBe(FIELD_OUTPUT_SCALE);

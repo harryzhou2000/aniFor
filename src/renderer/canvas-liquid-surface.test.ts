@@ -18,7 +18,7 @@ describe('Canvas liquid surface reconstruction', () => {
     const field = new LiquidDensityField(width, height, lookup.liquidByMaterial, lookup.colorByMaterial);
     field.update(materials);
     const pixels = seedLiquidPixels(materials);
-    reconstructLiquidSurface(pixels, materials, field.bytes, width, height);
+    reconstruct(pixels, materials, field.bytes, width, height);
     expect(materials[4]).toBe(Material.Empty);
     expect(pixels[4 * 4 + 3]).toBeGreaterThan(150);
     expect(pixels[4 * 4 + 2]).toBeGreaterThan(pixels[4 * 4]);
@@ -32,7 +32,7 @@ describe('Canvas liquid surface reconstruction', () => {
     const field = new LiquidDensityField(width, height, lookup.liquidByMaterial, lookup.colorByMaterial);
     field.update(materials);
     const pixels = seedLiquidPixels(materials);
-    reconstructLiquidSurface(pixels, materials, field.bytes, width, height);
+    reconstruct(pixels, materials, field.bytes, width, height);
     expect(Array.from(pixels.slice(16, 20))).toEqual([0, 0, 0, 0]);
   });
 
@@ -44,7 +44,7 @@ describe('Canvas liquid surface reconstruction', () => {
     const field = new LiquidDensityField(width, height, lookup.liquidByMaterial, lookup.colorByMaterial);
     field.update(materials);
     const pixels = seedLiquidPixels(materials);
-    reconstructLiquidSurface(pixels, materials, field.bytes, width, height);
+    reconstruct(pixels, materials, field.bytes, width, height);
     const painted = Array.from({ length: materials.length }, (_, index) => pixels[index * 4 + 3]).filter(Boolean);
     expect(painted).toHaveLength(1);
   });
@@ -55,7 +55,7 @@ describe('Canvas liquid surface reconstruction', () => {
     density.set([70, 120, 190, 90], 0);
     density.set([70, 120, 190, 170], 4);
     const pixels = new Uint8ClampedArray(8);
-    reconstructLiquidSurface(pixels, materials, density, 2, 1);
+    reconstruct(pixels, materials, density, 2, 1);
     expect(pixels[3]).toBeGreaterThan(0);
     expect(pixels[3]).toBeLessThan(96);
     expect(pixels[7]).toBeGreaterThan(pixels[3]);
@@ -72,10 +72,22 @@ describe('Canvas liquid surface reconstruction', () => {
     const field = new LiquidDensityField(width, height, lookup.liquidByMaterial, lookup.colorByMaterial);
     field.update(materials);
     const pixels = seedLiquidPixels(materials);
-    reconstructLiquidSurface(pixels, materials, field.bytes, width, height);
+    for (let index = 0; index < materials.length; index++) {
+      if (materials[index] === Material.Water) {
+        pixels[index * 4] = 245;
+        pixels[index * 4 + 1] = 16;
+        pixels[index * 4 + 2] = 240;
+      } else if (materials[index] === Material.Oil) {
+        pixels[index * 4] = 72;
+        pixels[index * 4 + 1] = 54;
+        pixels[index * 4 + 2] = 28;
+      }
+    }
+    reconstruct(pixels, materials, field.bytes, width, height);
     const center = 4 * 4;
     expect(pixels[center + 3]).toBeGreaterThan(0);
-    expect(pixels[center]).toBeGreaterThan(pixels[center + 2]);
+    expect(pixels[center]).toBeLessThan(120);
+    expect(pixels[center + 2]).toBeLessThan(80);
   });
 
   it('leaves an exact mixed-species tie as a visible interface', () => {
@@ -89,9 +101,61 @@ describe('Canvas liquid surface reconstruction', () => {
     const field = new LiquidDensityField(width, height, lookup.liquidByMaterial, lookup.colorByMaterial);
     field.update(materials);
     const pixels = seedLiquidPixels(materials);
-    reconstructLiquidSurface(pixels, materials, field.bytes, width, height);
+    reconstruct(pixels, materials, field.bytes, width, height);
     expect(pixels[4 * 4 + 3]).toBe(0);
   });
+
+  it('inherits same-species styled pool colour instead of exposing a bright field pixel', () => {
+    const width = 3;
+    const height = 3;
+    const materials = new Uint8Array(9).fill(Material.Water);
+    materials[4] = Material.Empty;
+    const field = new LiquidDensityField(width, height, lookup.liquidByMaterial, lookup.colorByMaterial);
+    field.update(materials);
+    const pixels = seedLiquidPixels(materials);
+    for (let index = 0; index < materials.length; index++) {
+      if (materials[index] !== Material.Water) continue;
+      pixels[index * 4] = 24;
+      pixels[index * 4 + 1] = 112;
+      pixels[index * 4 + 2] = 164;
+    }
+    reconstruct(pixels, materials, field.bytes, width, height);
+    expect(Array.from(pixels.slice(16, 19))).toEqual([24, 112, 164]);
+  });
+
+  it('falls back to styled diagonal donors when they alone cross the field threshold', () => {
+    const width = 3;
+    const height = 3;
+    const materials = new Uint8Array([
+      Material.Water, Material.Empty, Material.Water,
+      Material.Empty, Material.Empty, Material.Empty,
+      Material.Water, Material.Empty, Material.Water,
+    ]);
+    const field = new LiquidDensityField(width, height, lookup.liquidByMaterial, lookup.colorByMaterial);
+    field.update(materials);
+    const pixels = seedLiquidPixels(materials);
+    for (let index = 0; index < materials.length; index++) {
+      if (materials[index] !== Material.Water) continue;
+      pixels[index * 4] = 31;
+      pixels[index * 4 + 1] = 104;
+      pixels[index * 4 + 2] = 158;
+    }
+    reconstruct(pixels, materials, field.bytes, width, height);
+    expect(field.bytes[4 * 4 + 3]).toBeGreaterThanOrEqual(86);
+    expect(Array.from(pixels.slice(16, 19))).toEqual([31, 104, 158]);
+  });
+
+  function reconstruct(
+    pixels: Uint8ClampedArray,
+    materials: Uint8Array,
+    density: Uint8Array,
+    width: number,
+    height: number,
+  ): void {
+    reconstructLiquidSurface(
+      pixels, materials, density, lookup.liquidByMaterial, lookup.colorByMaterial, width, height,
+    );
+  }
 
   function seedLiquidPixels(materials: Uint8Array): Uint8ClampedArray {
     const pixels = new Uint8ClampedArray(materials.length * 4);

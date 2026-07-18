@@ -71,6 +71,7 @@ jobs:
 
       - name: Build WebAssembly, test, and build static site
         env:
+          ANIFORTPT_REVISION: ${{ github.sha }}
           CCACHE_BASEDIR: ${{ github.workspace }}
           CCACHE_COMPRESS: "true"
           CCACHE_DIR: ${{ github.workspace }}/.cache/ccache
@@ -137,7 +138,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Verify deployed runtime asset closure
+      - name: Verify deployed revision and runtime asset closure
         env:
           PAGE_URL: ${{ needs.deploy.outputs.page_url }}
         run: node scripts/verify-live-pages.mjs "${PAGE_URL}" "${GITHUB_SHA}"

@@ -11,7 +11,7 @@ AniforTPT has four distinct spaces. Keep the conversion between each pair explic
 3. **Camera space:** `ViewTransform` applies one uniform fit × zoom scale and one CSS-pixel pan. Resize rescales pan by the fit-scale ratio so an off-center zoom does not slide.
 4. **Backing space:** Canvas/WebGL pixels. The default output scale is 2× per axis, producing 1224×768 backing pixels for 612×384 logical cells. `?renderScale=1` and `?renderScale=2` provide explicit A/B diagnostics. Backing scale must not enter world, brush, pan, or CSS layout math.
 
-At native zoom, the Pixi canvas is a 612×384 logical surface. Presentation is one CSS transform:
+Both presenters expose an untransformed 612×384 logical CSS box. Its responsive displayed rectangle is produced by one presentation transform:
 
 ```text
 translate3d(cameraX, cameraY, 0) scale(uniformCameraScale)
@@ -63,9 +63,12 @@ For any viewport or shader-coordinate change, validate all of the following:
 - Left-drag painting is continuous.
 - An immobile material painted near the upper-left, center, and lower-right appears under the cursor at all three positions.
 - The Canvas2D fallback obeys the same contract.
+- At one fixed desktop CSS viewport, `renderScale=1` and `renderScale=2` produce identical canvas rectangles and pass the same input assertions; only the backing changes between 612×384 and 1224×768.
 - Browser validation cleans up Chrome and Vite even on failure.
 
 The last painted-footprint check is the important regression test for the Pixi pooled-UV bug.
+
+`npm run audit:browser-input` proves the backing-scale invariant in both renderer backends. Its paired pass freshly navigates to 2× and 1× under the same explicit 1280×720 desktop emulation, waits for stable geometry at each scale, paints three radius-zero landmarks, repeats the off-centre wheel anchor, and repeats a 42×27 CSS-pixel middle drag. A reference captured before applying the same device metrics is invalid because Chrome's launch window and emulated CSS viewport are different coordinate spaces.
 
 ## Debugging order
 

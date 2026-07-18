@@ -1,5 +1,6 @@
 const pageUrl = new URL(process.argv[2]);
-const revision = process.argv[3] ?? String(Date.now());
+const revision = process.argv[3];
+if (!revision) throw new Error('Expected deployed revision argument');
 const attempts = 8;
 
 for (let attempt = 1; attempt <= attempts; attempt++) {
@@ -15,6 +16,7 @@ for (let attempt = 1; attempt <= attempts; attempt++) {
 }
 
 async function verify() {
+  await verifyRevision();
   const queue = [withRevision(pageUrl)];
   const seen = new Set();
   while (queue.length) {
@@ -42,6 +44,16 @@ async function verify() {
     if (!seen.has(target.pathname)) throw new Error(`${required} was not present in the live closure`);
   }
   return seen.size;
+}
+
+async function verifyRevision() {
+  const target = withRevision(new URL('revision.txt', pageUrl));
+  const response = await fetch(target, { cache: 'no-store', headers: { 'cache-control': 'no-cache' } });
+  if (!response.ok) throw new Error(`${target.href} returned HTTP ${response.status}`);
+  const deployedRevision = (await response.text()).trim();
+  if (deployedRevision !== revision) {
+    throw new Error(`deployed revision ${deployedRevision || '<empty>'} does not match ${revision}`);
+  }
 }
 
 function references(source, kind) {

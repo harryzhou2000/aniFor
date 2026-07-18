@@ -137,13 +137,22 @@ vec3 enclosedSurfaceShape(vec2 uv, float material) {
   vec2 cell = floor(clamp(uv * uFieldSize, vec2(0.0), uFieldSize - vec2(1.0)));
   float interior = step(1.0, cell.x) * step(1.0, cell.y)
     * step(cell.x, uFieldSize.x - 2.0) * step(cell.y, uFieldSize.y - 2.0);
-  float valid = max(cardinallyEnclosed, denseSupport)
+  float verticalCrackBounds = step(2.0, cell.y) * step(cell.y, uFieldSize.y - 3.0);
+  float horizontalCrackBounds = step(2.0, cell.x) * step(cell.x, uFieldSize.x - 3.0);
+  float crackSideWalls = tl * tr * bl * br;
+  float thinCrack = 0.0;
+  if (l * r * (1.0 - t) * (1.0 - b) * crackSideWalls * verticalCrackBounds > 0.5) {
+    thinCrack = sameMaterial(uv - down * 2.0, material) * sameMaterial(uv + down * 2.0, material);
+  } else if (t * b * (1.0 - l) * (1.0 - r) * crackSideWalls * horizontalCrackBounds > 0.5) {
+    thinCrack = sameMaterial(uv - left * 2.0, material) * sameMaterial(uv + left * 2.0, material);
+  }
+  float valid = max(max(cardinallyEnclosed, denseSupport), thinCrack)
     * (1.0 - step(0.5, foreign)) * interior;
   float support = (l + r + t + b) * 0.12 + (tl + tr + bl + br) * 0.05;
-  float coverage = smoothstep(0.30, 0.60, support) * valid;
+  float coverage = max(smoothstep(0.30, 0.60, support), thinCrack * 0.90) * valid;
   float gradientX = (r - l) + (tr + br - tl - bl) * 0.45;
   float gradientY = (b - t) + (bl + br - tl - tr) * 0.45;
-  return vec3(coverage * 0.86, gradientX * 0.14, gradientY * 0.14);
+  return vec3(coverage * 0.92, gradientX * 0.14, gradientY * 0.14);
 }
 vec3 wallShape(vec2 uv, float wall) {
   vec2 grid = uv * uFieldSize - 0.5;
@@ -273,6 +282,7 @@ void main() {
     : 0.0;
   float shapeDetail = 1.0 - max(gasInterior, liquidInterior);
   vec2 volumeSlope = vec2(0.0);
+  float liquidNeighbourMean = 0.0;
   if (emissionOnly > 0.5) {
     float lightLeft = texture(uEmissionTexture, fieldUv - vec2(uEmissionTexel.x, 0.0)).a;
     float lightRight = texture(uEmissionTexture, fieldUv + vec2(uEmissionTexel.x, 0.0)).a;
@@ -290,6 +300,7 @@ void main() {
     float liquidRight = texture(uLiquidTexture, fieldUv + vec2(uTexel.x, 0.0)).a;
     float liquidTop = texture(uLiquidTexture, fieldUv - vec2(0.0, uTexel.y)).a;
     float liquidBottom = texture(uLiquidTexture, fieldUv + vec2(0.0, uTexel.y)).a;
+    liquidNeighbourMean = (liquidLeft + liquidRight + liquidTop + liquidBottom) * 0.25;
     volumeSlope = vec2(liquidRight - liquidLeft, liquidBottom - liquidTop) * 0.65;
   }
   vec2 semanticSlope = shape.yz * shapeDetail;
@@ -385,14 +396,15 @@ void main() {
     float corrosive = optics == 3.0 ? 1.0 : 0.0;
     float molten = optics == 4.0 ? 1.0 : 0.0;
     vec3 liquidBase = vividColor(base, 1.24 + aqueous * 0.06 + corrosive * 0.08 - oily * 0.05);
-    // Reconstructed density owns silhouette support, while semantic occupancy
-    // owns optical depth so isolated droplets do not become opaque pool cores.
-    float liquidDepth = liquidInterior;
+    // The four already-sampled field neighbours promote only locally supported
+    // pool interiors. This makes reconstructed holes and semantic cells share
+    // one optical depth without turning an isolated droplet into a pool core.
+    float liquidDepth = max(liquidInterior, smoothstep(0.48, 0.90, liquidNeighbourMean));
     float liquidSurfaceDensity = liquidOnly > 0.5 ? liquidDensity : density;
     float rim = (1.0 - smoothstep(0.30, 0.86, liquidSurfaceDensity))
-      * mix(1.0, 0.25, liquidInterior);
+      * mix(1.0, 0.25, liquidDepth);
     float fresnel = pow(1.0 - clamp(normal.z, 0.0, 1.0), 2.0);
-    float surfaceSpecular = specular * mix(1.0, 0.10, liquidInterior);
+    float surfaceSpecular = specular * mix(1.0, 0.10, liquidDepth);
     float broadSheen = 0.5 + 0.5
       * sin(fieldPosition.x * 0.041 + fieldPosition.y * 0.016 + material * 0.83 + uTime * 0.22)
       * sin(fieldPosition.y * 0.029 - fieldPosition.x * 0.012 - uTime * 0.17);
@@ -401,7 +413,7 @@ void main() {
       + sin(fieldPosition.y * 0.037 + uTime * 0.11) * 1.45
       + material * 0.67
     );
-    float caustic = pow(causticWave, 6.0) * liquidInterior;
+    float caustic = pow(causticWave, 6.0) * liquidDepth;
     float topLip = smoothstep(0.02, 0.16, volumeSlope.y);
     float lowerShade = smoothstep(0.02, 0.16, -volumeSlope.y);
     float depthTransmission = 0.66 + aqueous * 0.10 - oily * 0.10

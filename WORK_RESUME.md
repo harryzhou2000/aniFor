@@ -183,6 +183,22 @@ Queued after the renderer checkpoint: revisit desktop/mobile geometry as a dedic
 - WebGL reuses its existing eight semantic samples to enforce the same exact-material/foreign-neighbour gate and a restrained `0.30–0.60` support transition. An explicit interior-cell mask matches Canvas border behavior, native walls take priority before nearby-solid selection, role traits remain disabled on reconstructed empty cells, and mixed solids, liquids, gases, and deep/two-cardinal notches cannot be bridged.
 - The denser Canvas reconstruction raises the pessimistic full-grid solid-surface pass from roughly 1.27 ms to 2.90 ms median on this machine, while combined field storage remains exactly 8,173,320 bytes and no runtime buffer, texture, upload, or pass is added.
 
+## Render-backing scale-invariance follow-up (`72c7801`, committed and pushed)
+
+- The real-browser gate now performs fresh paired 2× and 1× navigations under the same explicit 1280×720 CSS viewport instead of comparing geometry captured under different Chrome device-emulation states.
+- Canvas2D and WebGL both retain the 612×384 logical CSS box and identical 889×557.8 transformed display rectangles while their backing changes only from 1224×768 to 612×384.
+- At 1× both backends paint exactly three requested radius-zero landmark cells, keep the off-centre wheel anchor within 0.14 cell, and translate middle-pan by 42×27 CSS pixels. The paired passes report zero browser errors.
+
+## Material-continuity follow-up
+
+- Canvas and WebGL now close short one-cell-wide solid cracks only when two opposing immediate supports, four exact diagonal side-wall supports, and the same material two cells beyond the missing axis prove that the crack is internal. Sparse crosses, open notches, borders, foreign phases/materials, walls, semantic occupancy, and role traits remain protected.
+- Accepted solid support is more opaque, reducing black perforations in the rigid/organic/device matrix without adding a field or pass. WebGL adds only two conditional distance-two samples for the ambiguous crack case; Canvas continues to read immutable semantics so fills cannot cascade.
+- WebGL reuses its four existing liquid-density neighbours to promote optical depth inside locally supported pools. Isolated droplets remain sparse, while reconstructed holes and adjacent semantic cells no longer alternate as bright particle dots.
+- Canvas filled-liquid holes inherit averaged RGB only from already-styled semantic neighbours of the uniquely supported species. Unlike-liquid ties remain transparent, non-liquid particles remain untouched, and alpha/silhouette ownership is unchanged.
+- The full suite now contains 190 passing tests. The paired Canvas/WebGL browser gate compiles the runtime shader and reports zero browser errors with exact 1×/2× backing, painting, wheel, pan, resize, native source/LIFE, and mobile checks unchanged.
+- Shared field allocation remains exactly 8,173,320 bytes. After preferring four cardinal styled-liquid donors and scanning diagonals only when no cardinal donor exists, the pessimistic full-grid Canvas profile measures solid reconstruction at 2.86 ms median and same-species liquid reconstruction at 3.18 ms median on this machine.
+- CI now writes the built commit to `revision.txt` inside the Pages artifact and requires the live marker to equal `GITHUB_SHA` before checking recursive asset closure. A stale but internally complete deployment can no longer pass merely because the SHA was used as a cache-busting query.
+
 ## Verification completed for the LIFE/optics checkpoint
 
 - `npm run typecheck`
@@ -213,16 +229,16 @@ Queued after the renderer checkpoint: revisit desktop/mobile geometry as a dedic
 - Forced Canvas at 1280×720 and a 390×844 DPR-2 portrait capture retained the 1224×768 backing, square mobile interaction panel with aspect-preserving letterbox, smooth empty-space aura, and crisp material seams. Warm/cool strips visibly reveal profile contours without uniformly whitening block interiors.
 - Native semantic-tool coverage now proves exact scalar deltas, stable typed routing, no vector-to-particle fallthrough, no vector emission during pinch navigation, malformed ABI rejection, Wind response, `WL_BLOCKAIR` isolation, stable-water regression, and unstepped OPS Wind round-tripping.
 
-The configured-source checkpoint `4077b23` is committed, pushed, deployed, and live-verified. The LIFE/optical-response checkpoint `c3bdfd2` and solid-optics checkpoint `20cafb9` are committed and pushed; the current cohesive-solid follow-up passes unit, type, production build, allocation profile, desktop WebGL/Canvas visual, and interaction checks. Its manual cached deployment still needs a valid GitHub CLI login; until then the live closure resolves to `4077b23`.
+The configured-source checkpoint `4077b23` is committed, pushed, deployed, and live-verified. The LIFE/optical-response checkpoint `c3bdfd2`, solid-optics checkpoint `20cafb9`, cohesive-solid checkpoint `2bb36b2`, and render-scale checkpoint `72c7801` are committed and pushed. GitHub CLI authentication is valid again; the current material-continuity follow-up still needs its final commit/push and manual cached `build-and-deploy`, while the live closure remains `4077b23`.
 
 ## Current blockers and risks
 
 - WebGL runtime GLSL is not compiled by TypeScript/Vite; preserve the fresh browser audit for every shader change.
 - The post-deploy verifier proves network asset closure and MIME, but not shader execution or interaction by itself.
-- Cached-HTML compatibility still relies on a small fixed set of historical JS/CSS aliases, and the live verifier does not compare public content hashes to the local artifact. Harden this before treating repeated stale-asset reports as closed.
-- The browser integration gate now automates `MaterialRenderer.screenToWorld`/Pixi bounds/painted footprints, but public Pages browser execution is still distinct from its post-deploy asset-closure verifier.
+- Cached-HTML compatibility still relies on a small fixed set of historical JS/CSS aliases. The live revision marker now proves which artifact reached Pages, but the verifier does not compare every public content hash to the local artifact.
+- The browser integration gate now automates `MaterialRenderer.screenToWorld`, Pixi bounds, and exact semantic landmark placement, but rendered-pixel readback and public Pages browser execution remain distinct from its post-deploy asset-closure verifier.
 - Signs and several special editing semantics remain future work; configured sources and all 24 built-in LIFE presets are implemented through distinct semantic boundaries.
-- GitHub CLI authentication is invalid, so the next manual `build-and-deploy` cannot be dispatched until the user reauthenticates `gh`; ordinary authenticated `git push` still works.
+- Pushes to `main_codex` intentionally do not build or deploy. Dispatch `ci.yml` manually with `operation=build-and-deploy`; the workflow restores the latest compatible ccache/Emscripten cache and saves a new primary ccache key only after a successful build.
 - Newtonian FFT gravity is intentionally omitted from the headless build, so gravity-dependent tools/elements must remain disabled or limited.
 - GPU partial texture upload, long-session allocation behavior, context loss, and full performance budgets need further profiling.
 - Dense role-heavy Canvas scenes remain arithmetic-bound even after eliminating the duplicate pixel write; specialize common masks or move the fallback's semantic accents into a vectorized/field-level presentation path before claiming a 30 FPS worst-case budget.

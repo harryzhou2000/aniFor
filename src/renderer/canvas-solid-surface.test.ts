@@ -51,6 +51,56 @@ describe('Canvas solid surface reconstruction', () => {
     expect(pixels[8 * 4 + 3]).toBeGreaterThan(150);
   });
 
+  it('closes a bounded three-cell internal crack using distance-two support', () => {
+    const width = 7;
+    const height = 7;
+    const materials = new Uint8Array(width * height).fill(Material.Wood);
+    for (let y = 2; y <= 4; y++) materials[y * width + 3] = Material.Empty;
+    const pixels = seed(materials);
+    reconstructSolidSurface(pixels, materials, styles, palette, width, height);
+    for (let y = 2; y <= 4; y++) expect(pixels[(y * width + 3) * 4 + 3]).toBeGreaterThan(190);
+  });
+
+  it('keeps an unbounded thin notch and a distance-two mixed seam open', () => {
+    const width = 7;
+    const height = 7;
+    const open = new Uint8Array(width * height).fill(Material.Wood);
+    for (let y = 0; y <= 3; y++) open[y * width + 3] = Material.Empty;
+    const openPixels = seed(open);
+    reconstructSolidSurface(openPixels, open, styles, palette, width, height);
+    expect(openPixels[(2 * width + 3) * 4 + 3]).toBe(0);
+
+    const mixed = new Uint8Array(width * height).fill(Material.Wood);
+    for (let y = 2; y <= 4; y++) mixed[y * width + 3] = Material.Empty;
+    mixed[1 * width + 3] = Material.Metal;
+    const mixedPixels = seed(mixed);
+    reconstructSolidSurface(mixedPixels, mixed, styles, palette, width, height);
+    expect(mixedPixels[(3 * width + 3) * 4 + 3]).toBe(0);
+  });
+
+  it('rejects sparse crosses without continuous crack side walls', () => {
+    const width = 7;
+    const height = 7;
+    const center = 3 * width + 3;
+    for (const orientation of ['vertical', 'horizontal'] as const) {
+      const materials = new Uint8Array(width * height);
+      if (orientation === 'vertical') {
+        materials[center - 1] = Material.Wood;
+        materials[center + 1] = Material.Wood;
+        materials[center - width * 2] = Material.Wood;
+        materials[center + width * 2] = Material.Wood;
+      } else {
+        materials[center - width] = Material.Wood;
+        materials[center + width] = Material.Wood;
+        materials[center - 2] = Material.Wood;
+        materials[center + 2] = Material.Wood;
+      }
+      const pixels = seed(materials);
+      reconstructSolidSurface(pixels, materials, styles, palette, width, height);
+      expect(pixels[center * 4 + 3]).toBe(0);
+    }
+  });
+
   it('requires three cardinal supports for a shallow cavity', () => {
     const accepted = new Uint8Array([
       Material.Wood, Material.Wood, Material.Empty,

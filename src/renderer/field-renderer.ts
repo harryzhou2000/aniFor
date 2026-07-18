@@ -543,7 +543,8 @@ export class MaterialRenderer {
       base, this.rendered, fields.lookups.styleBytes, fields.lookups.paletteBytes, width, height,
     );
     reconstructLiquidSurface(
-      liquid, this.rendered, fields.liquid.bytes, width, height,
+      liquid, this.rendered, fields.liquid.bytes,
+      fields.lookups.liquidByMaterial, fields.lookups.colorByMaterial, width, height,
     );
     this.liquidContext.putImageData(liquidPixels, 0, 0);
     this.smokeContext.putImageData(smokePixels, 0, 0);

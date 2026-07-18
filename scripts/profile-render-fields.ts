@@ -203,7 +203,9 @@ console.log(JSON.stringify({
     }),
     liquidSurface: sample(() => {
       liquidPixels.set(liquidSeed);
-      reconstructLiquidSurface(liquidPixels, materials, liquid.bytes, width, height);
+      reconstructLiquidSurface(
+        liquidPixels, materials, liquid.bytes, liquidByMaterial, colorByMaterial, width, height,
+      );
     }),
   },
   combinedAllocatedBytes: atmosphere.allocatedByteLength + liquid.allocatedByteLength + emission.allocatedByteLength,

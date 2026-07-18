@@ -4,6 +4,7 @@ set -euo pipefail
 readonly PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 readonly DIST_DIR="${PROJECT_ROOT}/dist"
 readonly ASSETS_DIR="${DIST_DIR}/assets"
+readonly REVISION="${ANIFORTPT_REVISION:-${GITHUB_SHA:-local}}"
 
 if [[ ! -f "${ASSETS_DIR}/app.js" || ! -f "${ASSETS_DIR}/style.css" ]]; then
   echo "Stable Pages entry assets are missing." >&2
@@ -29,6 +30,7 @@ done
 grep -Fq 'src="./assets/app.js"' "${DIST_DIR}/index.html"
 grep -Fq 'href="./assets/style.css"' "${DIST_DIR}/index.html"
 grep -Fq 'id="boot-status"' "${DIST_DIR}/index.html"
+printf '%s\n' "${REVISION}" > "${DIST_DIR}/revision.txt"
 node "${PROJECT_ROOT}/scripts/verify-static-assets.mjs" "${DIST_DIR}"
 
-echo "Pages bundle has stable entries, a visible boot shell, legacy migration aliases, and a complete runtime asset closure"
+echo "Pages bundle has revision ${REVISION}, stable entries, a visible boot shell, legacy migration aliases, and a complete runtime asset closure"

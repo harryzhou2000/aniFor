@@ -551,6 +551,7 @@ async function metrics(cdp) {
     };
     return {
       canvas: box(canvas), viewport: box(viewport), frame: box(frame),
+      logical: { width: canvas.offsetWidth, height: canvas.offsetHeight, worldSize: canvas.dataset.worldSize },
       backing: { width: canvas.width, height: canvas.height },
       outputScale: canvas.dataset.outputScale,
       backend: window.__ANIFOR_INPUT_AUDIT__.backend(),
@@ -566,6 +567,10 @@ async function metrics(cdp) {
 
 function assertGeometry(value, label, outputScale = 2) {
   assert(Math.abs(value.canvas.width / value.canvas.height - WORLD_ASPECT) < 0.0001, `${label}: canvas aspect changed`);
+  assert(value.logical.width === WORLD_WIDTH && value.logical.height === WORLD_HEIGHT,
+    `${label}: logical canvas is ${value.logical.width}x${value.logical.height}`);
+  assert(value.logical.worldSize === `${WORLD_WIDTH}x${WORLD_HEIGHT}`,
+    `${label}: worldSize is ${value.logical.worldSize}`);
   assert(value.backing.width === WORLD_WIDTH * outputScale && value.backing.height === WORLD_HEIGHT * outputScale,
     `${label}: backing is ${value.backing.width}x${value.backing.height}`);
   assert(value.outputScale === String(outputScale), `${label}: outputScale is ${value.outputScale}`);
