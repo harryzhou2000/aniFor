@@ -34,6 +34,26 @@ jobs:
           node-version: 22
           cache: npm
 
+      - name: Install ccache
+        run: |
+          if ! command -v ccache >/dev/null 2>&1; then
+            sudo apt-get update
+            sudo apt-get install --no-install-recommends ccache
+          fi
+          ccache --version
+
+      - name: Restore C++ compiler cache
+        id: ccache-restore
+        uses: actions/cache/restore@v4
+        with:
+          path: .cache/ccache
+          key: >-
+            ccache-${{ runner.os }}-emsdk-6.0.3-${{
+            hashFiles('native/**', 'patches/**', 'scripts/build-tpt-wasm.sh',
+            'scripts/fetch-powder-toy.sh') }}
+          restore-keys: |
+            ccache-${{ runner.os }}-emsdk-6.0.3-
+
       - name: Cache project-local Emscripten
         uses: actions/cache@v4
         with:
@@ -50,7 +70,25 @@ jobs:
         run: npm run setup:build-tools
 
       - name: Build WebAssembly, test, and build static site
-        run: npm run build:all
+        env:
+          CCACHE_BASEDIR: ${{ github.workspace }}
+          CCACHE_COMPRESS: "true"
+          CCACHE_DIR: ${{ github.workspace }}/.cache/ccache
+          CCACHE_MAXSIZE: 1G
+          CCACHE_NOHASHDIR: "true"
+          EM_COMPILER_WRAPPER: ccache
+        run: |
+          mkdir -p "${CCACHE_DIR}"
+          ccache --zero-stats
+          npm run build:all
+          ccache --show-stats
+
+      - name: Save C++ compiler cache after successful build
+        if: success() && steps.ccache-restore.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: .cache/ccache
+          key: ${{ steps.ccache-restore.outputs.cache-primary-key }}
 
       - uses: actions/upload-artifact@v4
         with:
