@@ -17,6 +17,10 @@ export class MaterialRenderer {
   private readonly view: ViewTransform;
   private basePixels!: ImageData;
   private smokePixels!: ImageData;
+  private context!: CanvasRenderingContext2D;
+  private smokeContext!: CanvasRenderingContext2D;
+  private fireContext!: CanvasRenderingContext2D;
+  private waterGradient!: CanvasGradient;
   private firePixels!: ImageData;
   private lastDraw = -Infinity;
   private changed = true;
@@ -36,12 +40,19 @@ export class MaterialRenderer {
     this.surface.style.height = `${this.simulation.height}px`;
     this.surface.style.transformOrigin = '0 0';
     const context = this.surface.getContext('2d');
-    const smoke = this.smokeSurface.getContext('2d');
-    const fire = this.fireSurface.getContext('2d');
-    if (!context || !smoke || !fire) throw new Error('Canvas 2D unavailable');
+    const smokeContext = this.smokeSurface.getContext('2d');
+    const fireContext = this.fireSurface.getContext('2d');
+    if (!context || !smokeContext || !fireContext) throw new Error('Canvas 2D unavailable');
+    this.context = context;
+    this.smokeContext = smokeContext;
+    this.fireContext = fireContext;
     this.basePixels = context.createImageData(this.simulation.width, this.simulation.height);
-    this.smokePixels = smoke.createImageData(this.simulation.width, this.simulation.height);
-    this.firePixels = fire.createImageData(this.simulation.width, this.simulation.height);
+    this.smokePixels = smokeContext.createImageData(this.simulation.width, this.simulation.height);
+    this.firePixels = fireContext.createImageData(this.simulation.width, this.simulation.height);
+    this.waterGradient = context.createLinearGradient(0, 0, 0, this.simulation.height);
+    this.waterGradient.addColorStop(0, 'rgba(125, 229, 239, 0.82)');
+    this.waterGradient.addColorStop(0.42, 'rgba(40, 157, 190, 0.72)');
+    this.waterGradient.addColorStop(1, 'rgba(15, 82, 130, 0.88)');
     if (supportsWebGL()) {
       try {
         const { PixiFieldPresenter } = await import('./pixi-field-presenter');
@@ -59,11 +70,13 @@ export class MaterialRenderer {
   }
 
   render(time: number): void {
+    if (time - this.lastDraw < FRAME_INTERVAL) return;
     for (const cell of this.simulation.consumeDirtyCells()) {
       this.rendered[cell.index] = cell.material;
       this.changed = true;
     }
-    if (!this.changed || time - this.lastDraw < FRAME_INTERVAL) return;
+    const hasDynamicFields = Boolean(this.simulation.temperature || this.simulation.velocity);
+    if (!this.changed && !hasDynamicFields) return;
     this.changed = false;
     this.lastDraw = time;
     this.drawField(time);
@@ -138,11 +151,9 @@ export class MaterialRenderer {
       }
     }
 
-    const context = this.surface.getContext('2d')!;
-    const smokeContext = this.smokeSurface.getContext('2d')!;
-    const fireContext = this.fireSurface.getContext('2d')!;
-    smokeContext.putImageData(this.smokePixels, 0, 0);
-    fireContext.putImageData(this.firePixels, 0, 0);
+    const context = this.context;
+    this.smokeContext.putImageData(this.smokePixels, 0, 0);
+    this.fireContext.putImageData(this.firePixels, 0, 0);
     context.putImageData(this.basePixels, 0, 0);
     this.drawWaterSurface(context);
     context.save();
@@ -164,10 +175,6 @@ export class MaterialRenderer {
   private drawWaterSurface(context: CanvasRenderingContext2D): void {
     const polygons = buildWaterSurface(this.rendered, this.simulation.width, this.simulation.height);
     if (polygons.length === 0) return;
-    const gradient = context.createLinearGradient(0, 0, 0, this.simulation.height);
-    gradient.addColorStop(0, 'rgba(125, 229, 239, 0.82)');
-    gradient.addColorStop(0.42, 'rgba(40, 157, 190, 0.72)');
-    gradient.addColorStop(1, 'rgba(15, 82, 130, 0.88)');
     context.save();
     context.beginPath();
     for (const polygon of polygons) {
@@ -175,7 +182,7 @@ export class MaterialRenderer {
       for (let index = 1; index < polygon.length; index++) context.lineTo(polygon[index].x, polygon[index].y);
       context.closePath();
     }
-    context.fillStyle = gradient;
+    context.fillStyle = this.waterGradient;
     context.globalAlpha = 0.72;
     context.fill();
     context.globalCompositeOperation = 'screen';

@@ -19,6 +19,7 @@ export class PixiFieldPresenter {
       backgroundAlpha: 0,
       antialias: true,
       resolution: Math.min(devicePixelRatio, 2),
+      autoStart: false,
     });
     presenter.app.canvas.className = 'world-canvas';
     presenter.app.stage.addChild(presenter.scene);
@@ -26,10 +27,11 @@ export class PixiFieldPresenter {
   }
 
   mount(): void { this.host.append(this.app.canvas); }
-  update(): void { this.texture.source.update(); }
+  update(): void { this.texture.source.update(); this.app.render(); }
 
   setTransform(scale: number, x: number, y: number): void {
     this.scene.scale.set(scale);
     this.scene.position.set(x, y);
+    this.app.render();
   }
 }
