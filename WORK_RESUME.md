@@ -21,14 +21,14 @@ Immediate priorities are:
 
 - Repository: `/home/harry/projects/aniFor_codex`
 - Branch: `main_codex`
-- Local and remote committed HEAD before the current tranche: `b304f2d Add native walls and vivid volume rendering`
+- Local and remote committed HEAD before the current tranche: `4fef7d6 Add TPT save files and harden mobile Pages runtime`
 - The current tranche is uncommitted and unpushed.
 - GitHub CLI is authenticated as `harryzhou2000` with `repo` and `workflow` scopes.
 - Current live Pages URL: `https://harryzhou2000.github.io/aniFor/`
-- Current live Pages deployment is still `b304f2d` from Actions run `29645391523`.
-- That deployment contains every referenced JS/CSS/WASM asset and serves WASM with `application/wasm`, but a slow/stalled Pixi module startup can leave the static loading shell visible indefinitely. The local fix has not yet been deployed.
+- Current live Pages deployment is `4fef7d6` from Actions run `29646355429`.
+- That deployment contains all 20 referenced resources, serves WASM with `application/wasm`, and boots direct native TPT. It nevertheless selects Canvas2D on a cold load because Pixi presenter initialization takes roughly 1.15–1.22 seconds and crosses the old hard 1.2-second deadline even though WebGL2 and the Pixi asset are both available.
 
-## Committed baseline (`b304f2d`)
+## Committed baseline (`4fef7d6`)
 
 - Pinned official TPT 100.0 native engine, single-threaded 612×384 WebAssembly.
 - 170 stable projected material IDs; 165 particle brushes in the catalog, with 160 enabled and five gravity-dependent entries explicitly disabled.
@@ -40,7 +40,7 @@ Immediate priorities are:
 - Stable desktop viewport aspect and validated desktop pointer/wheel/middle-pan mapping.
 - Manual `build` / `build-and-deploy` workflow; `main_codex` pushes do not auto-build; project-local Emscripten/Meson; successful-build-only `ccache` persistence.
 
-## Current local tranche
+## Committed checkpoint details
 
 ### Native save files
 
@@ -64,12 +64,12 @@ Immediate priorities are:
 
 ### Pages/runtime hardening
 
-- The Pixi module import itself is now time-bounded, not only `Application.init`; a stalled dynamic import falls back to Canvas so `Game.start()` can mount controls and start the native simulation.
-- A late Pixi presenter is destroyed instead of being mounted over the fallback.
+- Canvas mounts synchronously so `Game.start()` can expose controls and start native TPT without waiting for the Pixi module, GPU startup, or shader compilation.
+- WebGL may promote the same viewport for up to ten seconds. The known-good Canvas remains mounted until the candidate has seeded its semantic fields and completed a first render; a failed or timed-out candidate is destroyed without blanking the viewport.
 - `scripts/verify-static-assets.mjs` recursively checks HTML references, nested JS imports, runtime WASM URLs, file existence, and non-empty output.
 - `scripts/verify-live-pages.mjs` performs the same closure check against the deployed URL with retry/cache-busting and validates WASM MIME.
 - A separate least-privilege verification job checks out the verifier and runs it after `actions/deploy-pages`; repository code does not execute with Pages write or OIDC permissions.
-- The current live `b304f2d` deployment passes the new closure verifier for 19 resources; its remaining issue is startup/runtime, not a current 404.
+- The current live `4fef7d6` deployment passes the closure verifier for all 20 referenced resources; its remaining issue is the old cold-start renderer deadline, not a missing asset.
 
 ### Native projection cleanup
 
@@ -77,19 +77,30 @@ Immediate priorities are:
 - Native tests project all 170 IDs and verify Steam as an actual reaction product.
 - The published WASM artifact was rebuilt locally.
 
+## Current local renderer tranche
+
+- The viewport HUD now shows `WebGL` or `Canvas 2D` and exposes a machine-readable fallback reason.
+- Canvas mounts synchronously on WebGL-capable browsers, the game and controls can paint, and Pixi initialization starts on the following frame. A ready presenter promotes the same viewport in place within a bounded ten-second window; failure or timeout keeps the working Canvas renderer.
+- The previous permanent 1.2-second Pixi cutoff is removed. A fresh production browser trace observed Canvas with `webgl-starting` before Pixi, then promoted to WebGL 6.173 seconds later without geometry drift or runtime/network errors.
+- WebGL and Canvas now share canonical phase/color/emission lookups plus the staggered 12 Hz atmosphere, liquid-density, and emission field set.
+- Canvas uses the shared density field to close small empty liquid pinholes while preserving occupied grains and hard particles, then combines a high-quality surface pass with a restrained crisp 2× pass. Gas and emission use the shared widened/color-mixed volume bytes rather than only discrete blurred source cells.
+- An unchanged native scene no longer forces a full Canvas raster rebuild at 30 Hz merely because temperature and velocity arrays exist; dynamic-only refreshes use the existing 12 Hz ceiling.
+
 ## Verification completed for the current local tree
 
 - `npm run typecheck`
-- `npm test -- --run`: 26 files, 98 tests passed
+- `npm test -- --run`: 28 files, 107 tests passed
 - `npm run build`
 - Static build closure: 20 referenced resources verified (including the explicit favicon)
-- Current live Pages closure: 19 resources verified, including `stillroom_core.wasm` with the correct MIME
+- Current live Pages closure: 20 resources verified, including `stillroom_core.wasm` with the correct MIME
 - Real TPT save-file load/reserialize check passed for the user-provided `OPS1` save
 - Earlier desktop browser audit at DPR 1 and 2 proved 612×384 CSS/logical geometry, 1224×768 backing, exact left/center/right painting, continuous drag, middle pan, touch pan/pinch, and wheel anchoring within browser-event quantization.
 - Final rebuilt mobile smoke at 390×844 DPR 2 booted direct native TPT with the Canvas2D compatibility renderer and 1224×768 backing. The 378×378 viewport contained a 378×237.176 canvas at aspect 1.59375012, with no crop or horizontal overflow.
 - The mobile filter row measured exactly 34 px, and all filter buttons measured 28 px high. One-finger painting, two-finger pinch without stray paint, and explicit Eraser restoration passed with zero console, exception, or network failures.
+- Fresh render-lab browser evidence at 1280×720 and `renderScale=2` passed for both forced Canvas and SwiftShader WebGL. Canvas mounted with `webgl-starting`, the HUD appeared, and WebGL promoted 6.173 seconds later. Four WebGL draws completed while the fallback remained connected; only then was Canvas removed and all seven backing stores zeroed. Both retained a 1224×768 backing and 827×518.902 CSS canvas with no console, runtime, HTTP, or network errors.
+- The WebGL and Canvas screenshots show cohesive water/oil/acid/lava columns without black pinholes or cross-family bleeding, continuous mixed gas volumes, and preserved sparse control rows. Canvas deliberately remains softer and more internally speckled than WebGL.
 
-The local integrated browser audit is complete. Do not claim the live site fixed until a new deployment passes and the Pages runtime boots at the deployed URL.
+The new local renderer audit is complete. Do not claim the live renderer-selection issue fixed until a new deployment and a cache-busted live promotion trace pass.
 
 ## Current blockers and risks
 

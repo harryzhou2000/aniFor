@@ -126,7 +126,13 @@ export class Game {
     const pressure = this.simulation.pressure?.()[index];
     const temperature = rawTemperature ? (rawTemperature / 10 - 273.15).toFixed(1) + " °C" : "—";
     const pressureText = pressure === undefined ? "—" : (pressure >= 0 ? "+" : "") + pressure.toFixed(2);
-    this.indicator.innerHTML = "<span><b>Pressure</b>" + pressureText + "</span><span><b>Temperature</b>" + temperature + "</span>";
+    const renderer = this.renderer.getBackendInfo();
+    this.indicator.dataset.renderer = renderer.backend;
+    this.indicator.dataset.rendererReason = renderer.reason ?? '';
+    this.indicator.title = renderer.reason ? rendererReason(renderer.reason) : 'Semantic WebGL renderer';
+    this.indicator.innerHTML = "<span><b>Pressure</b>" + pressureText
+      + "</span><span><b>Temperature</b>" + temperature
+      + "</span><span class=\"renderer-indicator\"><b>Renderer</b>" + renderer.label + "</span>";
   }
 
   private async downloadWorldFile(): Promise<boolean> {
@@ -190,4 +196,12 @@ export class Game {
     this.simulation.paint(Math.floor(this.simulation.width * 0.38), Math.floor(this.simulation.height * 0.18), Material.Sand, 16);
     this.simulation.paint(Math.floor(this.simulation.width * 0.62), Math.floor(this.simulation.height * 0.22), Material.Water, 14);
   }
+}
+
+function rendererReason(reason: NonNullable<ReturnType<MaterialRenderer['getBackendInfo']>['reason']>): string {
+  if (reason === 'forced') return 'Canvas2D forced by the renderer query override';
+  if (reason === 'webgl-unavailable') return 'Canvas2D because WebGL is unavailable';
+  if (reason === 'webgl-starting') return 'Canvas2D while the WebGL renderer starts';
+  if (reason === 'webgl-timeout') return 'Canvas2D because WebGL initialization timed out';
+  return 'Canvas2D because WebGL initialization failed';
 }

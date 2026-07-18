@@ -7,23 +7,10 @@ import {
   Texture,
   UniformGroup,
 } from 'pixi.js';
-import type { MaterialCategory, MaterialPhase } from '../shared/materials';
-import { AtmosphereField } from './atmosphere-field';
 import { DirtyChunkGrid } from './dirty-chunk-grid';
-import { EmissionField } from './emission-field';
-import { LiquidDensityField } from './liquid-density-field';
-import { renderPhase, renderProfile, RenderPhase } from './render-profile';
+import { RenderFieldSet, type RenderMaterialStyle } from './render-field-set';
 import { packSemanticRect } from './semantic-field';
-import { VolumeFieldRefreshSchedule } from './volume-field-refresh';
 import { packWallRect } from './wall-field';
-
-interface SemanticMaterialStyle {
-  readonly id: number;
-  readonly color: string;
-  readonly category: MaterialCategory;
-  readonly phase?: MaterialPhase;
-  readonly emissive?: boolean;
-}
 interface PresenterViewport { readonly width: number; readonly height: number }
 
 const FIELD_VERTEX = `
@@ -385,29 +372,21 @@ export class PixiFieldPresenter {
   private readonly fieldSource: BufferImageSource;
   private readonly wallBytes: Uint8Array;
   private readonly wallSource: BufferImageSource;
-  private readonly atmosphereField: AtmosphereField;
   private readonly atmosphereSource: BufferImageSource;
-  private readonly emissionField: EmissionField;
   private readonly emissionSource: BufferImageSource;
-  private readonly liquidField: LiquidDensityField;
   private readonly liquidSource: BufferImageSource;
-  private readonly gasByMaterial: Uint8Array;
-  private readonly emissiveByMaterial: Uint8Array;
-  private readonly liquidByMaterial: Uint8Array;
+  private readonly fieldSet: RenderFieldSet;
   private readonly chunks: DirtyChunkGrid;
   private readonly wallChunks: DirtyChunkGrid;
   private readonly uniforms: UniformGroup;
-  private readonly volumeRefresh = new VolumeFieldRefreshSchedule();
-  private atmosphereDirty = true;
-  private emissionDirty = true;
-  private liquidDirty = true;
 
   private constructor(
     private readonly app: Application,
     private readonly host: HTMLElement,
     private readonly width: number,
     private readonly height: number,
-    materials: readonly SemanticMaterialStyle[],
+    materials: readonly RenderMaterialStyle[],
+    fieldSet?: RenderFieldSet,
   ) {
     this.fieldBytes = new Uint8Array(width * height * 4);
     this.fieldSource = new BufferImageSource({
@@ -420,33 +399,29 @@ export class PixiFieldPresenter {
       resource: this.wallBytes, width, height, format: 'rgba8unorm',
       alphaMode: 'no-premultiply-alpha', scaleMode: 'nearest', autoGarbageCollect: false,
     });
-    const { paletteTexture, styleTexture, gasByMaterial, liquidByMaterial, emissiveByMaterial, colorByMaterial } = createLookupTextures(materials);
-    this.gasByMaterial = gasByMaterial;
-    this.liquidByMaterial = liquidByMaterial;
-    this.emissiveByMaterial = emissiveByMaterial;
-    this.atmosphereField = new AtmosphereField(width, height, this.gasByMaterial, colorByMaterial);
+    this.fieldSet = fieldSet ?? new RenderFieldSet(width, height, materials);
+    const paletteTexture = textureFromBytes(this.fieldSet.lookups.paletteBytes);
+    const styleTexture = textureFromBytes(this.fieldSet.lookups.styleBytes);
     this.atmosphereSource = new BufferImageSource({
-      resource: this.atmosphereField.bytes,
-      width: this.atmosphereField.width,
-      height: this.atmosphereField.height,
+      resource: this.fieldSet.atmosphere.bytes,
+      width: this.fieldSet.atmosphere.width,
+      height: this.fieldSet.atmosphere.height,
       format: 'rgba8unorm',
       alphaMode: 'no-premultiply-alpha',
       scaleMode: 'linear',
       autoGarbageCollect: false,
     });
-    this.emissionField = new EmissionField(width, height, this.emissiveByMaterial, colorByMaterial);
     this.emissionSource = new BufferImageSource({
-      resource: this.emissionField.bytes,
-      width: this.emissionField.width,
-      height: this.emissionField.height,
+      resource: this.fieldSet.emission.bytes,
+      width: this.fieldSet.emission.width,
+      height: this.fieldSet.emission.height,
       format: 'rgba8unorm',
       alphaMode: 'no-premultiply-alpha',
       scaleMode: 'linear',
       autoGarbageCollect: false,
     });
-    this.liquidField = new LiquidDensityField(width, height, this.liquidByMaterial);
     this.liquidSource = new BufferImageSource({
-      resource: this.liquidField.bytes,
+      resource: this.fieldSet.liquid.bytes,
       width,
       height,
       format: 'rgba8unorm',
@@ -457,8 +432,8 @@ export class PixiFieldPresenter {
     this.uniforms = new UniformGroup({
       uTexel: { value: new Float32Array([1 / width, 1 / height]), type: 'vec2<f32>' },
       uFieldSize: { value: new Float32Array([width, height]), type: 'vec2<f32>' },
-      uAtmosphereTexel: { value: new Float32Array([1 / this.atmosphereField.width, 1 / this.atmosphereField.height]), type: 'vec2<f32>' },
-      uEmissionTexel: { value: new Float32Array([1 / this.emissionField.width, 1 / this.emissionField.height]), type: 'vec2<f32>' },
+      uAtmosphereTexel: { value: new Float32Array([1 / this.fieldSet.atmosphere.width, 1 / this.fieldSet.atmosphere.height]), type: 'vec2<f32>' },
+      uEmissionTexel: { value: new Float32Array([1 / this.fieldSet.emission.width, 1 / this.fieldSet.emission.height]), type: 'vec2<f32>' },
       uTime: { value: 0, type: 'f32' },
       uHighQuality: { value: matchMedia('(min-width: 800px) and (pointer: fine)').matches ? 1 : 0, type: 'f32' },
     });
@@ -492,7 +467,14 @@ export class PixiFieldPresenter {
     this.wallChunks.markAll();
   }
 
-  static async create(host: HTMLElement, width: number, height: number, outputScale: 1 | 2, materials: readonly SemanticMaterialStyle[]): Promise<PixiFieldPresenter> {
+  static async create(
+    host: HTMLElement,
+    width: number,
+    height: number,
+    outputScale: 1 | 2,
+    materials: readonly RenderMaterialStyle[],
+    fieldSet?: RenderFieldSet,
+  ): Promise<PixiFieldPresenter> {
     const app = new Application();
     try {
       await app.init({
@@ -505,7 +487,7 @@ export class PixiFieldPresenter {
       throw error;
     }
     let presenter: PixiFieldPresenter;
-    try { presenter = new PixiFieldPresenter(app, host, width, height, materials); }
+    try { presenter = new PixiFieldPresenter(app, host, width, height, materials, fieldSet); }
     catch (error) { app.destroy(); throw error; }
     presenter.app.canvas.className = 'world-canvas semantic-field-canvas';
     presenter.app.canvas.style.width = width + 'px';
@@ -545,15 +527,13 @@ export class PixiFieldPresenter {
   markDirty(index: number, nextMaterial: number): void {
     const previousMaterial = this.fieldBytes[index * 4];
     this.chunks.markCell(index);
-    if (this.gasByMaterial[previousMaterial] || this.gasByMaterial[nextMaterial]) this.atmosphereDirty = true;
-    if (this.liquidByMaterial[previousMaterial] || this.liquidByMaterial[nextMaterial]) this.liquidDirty = true;
-    if (this.emissiveByMaterial[previousMaterial] || this.emissiveByMaterial[nextMaterial]) this.emissionDirty = true;
+    this.fieldSet.markDirty(previousMaterial, nextMaterial);
   }
 
   markWallDirty(index: number): void { this.wallChunks.markCell(index); }
 
   visualRefreshDue(time: number): boolean {
-    return this.volumeRefresh.due(time, this.atmosphereDirty, this.liquidDirty, this.emissionDirty);
+    return this.fieldSet.due(time);
   }
 
   update(materials: Uint8Array, walls: Uint8Array | undefined, temperatures: Uint16Array | undefined, velocities: Int8Array | undefined, time: number, refreshDynamicFields: boolean): void {
@@ -564,22 +544,13 @@ export class PixiFieldPresenter {
     const wallRectangles = this.wallChunks.consume();
     if (walls) for (const rect of wallRectangles) packWallRect(this.wallBytes, this.wallSource.width, walls, rect);
     if (walls && wallRectangles.length) this.wallSource.update();
-    const volumeField = this.volumeRefresh.next(time, this.atmosphereDirty, this.liquidDirty, this.emissionDirty);
+    const volumeField = this.fieldSet.updateNext(materials, time);
     if (volumeField === 'atmosphere') {
-      this.atmosphereField.update(materials);
       this.atmosphereSource.update();
-      this.atmosphereDirty = false;
-      this.volumeRefresh.refreshed('atmosphere', time);
     } else if (volumeField === 'liquid') {
-      this.liquidField.update(materials);
       this.liquidSource.update();
-      this.liquidDirty = false;
-      this.volumeRefresh.refreshed('liquid', time);
     } else if (volumeField === 'emission') {
-      this.emissionField.update(materials);
       this.emissionSource.update();
-      this.emissionDirty = false;
-      this.volumeRefresh.refreshed('emission', time);
     }
     this.uniforms.uniforms.uTime = time * 0.001;
     this.app.render();
@@ -591,44 +562,6 @@ export class PixiFieldPresenter {
     this.app.canvas.dataset.viewPosition = x + "," + y;
     this.app.render();
   }
-}
-
-function createLookupTextures(materials: readonly SemanticMaterialStyle[]): {
-  paletteTexture: Texture;
-  styleTexture: Texture;
-  gasByMaterial: Uint8Array;
-  liquidByMaterial: Uint8Array;
-  emissiveByMaterial: Uint8Array;
-  colorByMaterial: Uint8Array;
-} {
-  const palette = new Uint8Array(256 * 4);
-  const styles = new Uint8Array(256 * 4);
-  const gasByMaterial = new Uint8Array(256);
-  const liquidByMaterial = new Uint8Array(256);
-  const emissiveByMaterial = new Uint8Array(256);
-  const colorByMaterial = new Uint8Array(256 * 3);
-  for (const material of materials) {
-    const color = Number.parseInt(material.color.slice(1), 16);
-    const offset = material.id * 4;
-    const colorOffset = material.id * 3;
-    const phase = renderPhase(material);
-    palette[offset] = color >>> 16;
-    palette[offset + 1] = (color >>> 8) & 0xFF;
-    palette[offset + 2] = color & 0xFF;
-    palette[offset + 3] = 255;
-    styles[offset] = phase;
-    styles[offset + 1] = renderProfile(material.category);
-    const emissive = material.emissive || phase === RenderPhase.Energy;
-    styles[offset + 2] = emissive ? 255 : 0;
-    styles[offset + 3] = 255;
-    gasByMaterial[material.id] = phase === RenderPhase.Gas ? 1 : 0;
-    liquidByMaterial[material.id] = phase === RenderPhase.Liquid ? 1 : 0;
-    emissiveByMaterial[material.id] = emissive ? 1 : 0;
-    colorByMaterial[colorOffset] = color >>> 16;
-    colorByMaterial[colorOffset + 1] = (color >>> 8) & 0xFF;
-    colorByMaterial[colorOffset + 2] = color & 0xFF;
-  }
-  return { paletteTexture: textureFromBytes(palette), styleTexture: textureFromBytes(styles), gasByMaterial, liquidByMaterial, emissiveByMaterial, colorByMaterial };
 }
 
 function textureFromBytes(bytes: Uint8Array): Texture {

@@ -3,26 +3,12 @@ import { ALL_MATERIALS, Material } from '../src/shared/materials';
 import { AtmosphereField } from '../src/renderer/atmosphere-field';
 import { EmissionField } from '../src/renderer/emission-field';
 import { LiquidDensityField } from '../src/renderer/liquid-density-field';
-import { renderPhase, RenderPhase } from '../src/renderer/render-profile';
+import { createRenderLookups } from '../src/renderer/render-field-set';
 
 const width = 612;
 const height = 384;
 const materials = new Uint8Array(width * height);
-const gasByMaterial = new Uint8Array(256);
-const liquidByMaterial = new Uint8Array(256);
-const emissiveByMaterial = new Uint8Array(256);
-const colorByMaterial = new Uint8Array(256 * 3);
-
-for (const material of ALL_MATERIALS) {
-  const color = Number.parseInt(material.color.slice(1), 16);
-  const phase = renderPhase(material);
-  gasByMaterial[material.id] = phase === RenderPhase.Gas ? 1 : 0;
-  liquidByMaterial[material.id] = phase === RenderPhase.Liquid ? 1 : 0;
-  emissiveByMaterial[material.id] = material.emissive || phase === RenderPhase.Energy ? 1 : 0;
-  colorByMaterial[material.id * 3] = color >>> 16;
-  colorByMaterial[material.id * 3 + 1] = (color >>> 8) & 0xff;
-  colorByMaterial[material.id * 3 + 2] = color & 0xff;
-}
+const { gasByMaterial, liquidByMaterial, emissiveByMaterial, colorByMaterial } = createRenderLookups(ALL_MATERIALS);
 
 // A deterministic mixed workload with dense, sparse, and interleaved regions.
 for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) {

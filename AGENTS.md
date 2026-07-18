@@ -56,4 +56,5 @@ The native wall lab uses the real TPT backend, remains paused, and places ten wa
 - Preserve the manual GitHub Actions build/build-and-deploy controls and successful-build-only ccache persistence.
 - Native save sharing uses raw `GameSave::Serialise()` bytes in `.cps` files. Do not expand new saves into URL hashes or the clipboard; keep `.anifortpt` visibly separate for non-native fallbacks.
 - A successful Pages upload is not enough evidence. Preserve the recursive local and live asset-closure checks, and browser-test the cache-busted deployment because stalled runtime initialization can look like a missing asset.
+- Do not permanently choose Canvas2D from a short Pixi initialization deadline. Pages cold loads can have WebGL2 and a valid Pixi chunk yet take more than 1.2 seconds to initialize. Mount the compatibility canvas promptly, expose the reason in the HUD/data attributes, and promote it in place when WebGL becomes ready.
 - Clean up locally launched Chrome and Vite processes immediately after browser validation.

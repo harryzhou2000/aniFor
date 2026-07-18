@@ -100,9 +100,12 @@ h1 { font-family: inherit; font-size: clamp(26px, 4vw, 44px); font-weight: 500; 
   .material-group summary small { display: none; }
 }
 
-.field-indicator { position: absolute; z-index: 5; top: 16px; right: 18px; display: flex; gap: 14px; padding: 8px 11px; border-radius: 13px; color: #f2e9dc; font: 600 11px/1.2 ui-monospace, SFMono-Regular, Consolas, monospace; pointer-events: none; }
+.field-indicator { position: absolute; z-index: 5; top: 16px; right: 18px; display: flex; flex-wrap: wrap; gap: 6px 14px; padding: 8px 11px; border-radius: 13px; color: #f2e9dc; font: 600 11px/1.2 ui-monospace, SFMono-Regular, Consolas, monospace; pointer-events: none; }
 .field-indicator span { display: grid; gap: 3px; min-width: 68px; }
 .field-indicator b { color: #998f84; font: 600 8px/1 system-ui, sans-serif; letter-spacing: .08em; text-transform: uppercase; }
+.field-indicator .renderer-indicator { flex: 1 0 100%; min-width: 0; display: flex; justify-content: flex-end; align-items: center; gap: 5px; font-size: 9px; }
+.field-indicator[data-renderer='webgl'] .renderer-indicator { color: #9fd9c8; }
+.field-indicator[data-renderer='canvas2d'] .renderer-indicator { color: #e1bf8e; }
 
 @media (max-width: 680px) {
   .field-indicator { top: 12px; right: 12px; gap: 9px; padding: 7px 9px; font-size: 10px; background: rgba(24,22,19,.68); }
