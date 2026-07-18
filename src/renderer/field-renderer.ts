@@ -1,6 +1,7 @@
 import { ALL_MATERIALS, Material } from '../shared/materials';
 import type { SimulationBackend } from '../simulation';
 import { clientToViewport, ViewTransform, type Point, type ViewState } from './view-transform';
+import { contentBoxFromBounds } from './client-coordinate-map';
 import type { PixiFieldPresenter } from './pixi-field-presenter';
 import { backingSize, resolveFieldOutputScale } from './render-resolution';
 import { shadeCanvasAtmosphere } from './canvas-atmosphere-relief';
@@ -142,23 +143,20 @@ export class MaterialRenderer {
 
   resetView(): void { this.view.reset(); this.syncTransform(); }
 
-  screenToCell(clientX: number, clientY: number): { x: number; y: number } {
-    const point = this.presenter
+  screenToWorld(clientX: number, clientY: number): Point {
+    return this.presenter
       ? this.presenter.clientWorldPoint(clientX, clientY)
       : this.view.viewportToWorld(this.viewportPoint(clientX, clientY));
+  }
+
+  screenToCell(clientX: number, clientY: number): { x: number; y: number } {
+    const point = this.screenToWorld(clientX, clientY);
     return { x: Math.floor(point.x), y: Math.floor(point.y) };
   }
 
   private viewportPoint(clientX: number, clientY: number): Point {
     const bounds = this.host.getBoundingClientRect();
-    const scaleX = bounds.width / Math.max(1, this.host.offsetWidth);
-    const scaleY = bounds.height / Math.max(1, this.host.offsetHeight);
-    const content = {
-      left: bounds.left + this.host.clientLeft * scaleX,
-      top: bounds.top + this.host.clientTop * scaleY,
-      width: this.host.clientWidth * scaleX,
-      height: this.host.clientHeight * scaleY,
-    };
+    const content = contentBoxFromBounds(bounds, this.host);
     return clientToViewport({ x: clientX, y: clientY }, content, this.host.clientWidth, this.host.clientHeight);
   }
 

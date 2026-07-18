@@ -8,6 +8,7 @@ import {
   UniformGroup,
 } from 'pixi.js';
 import { DirtyChunkGrid } from './dirty-chunk-grid';
+import { clientToCanvasWorld } from './client-coordinate-map';
 import { RenderFieldSet, type RenderMaterialStyle } from './render-field-set';
 import { packSemanticRect } from './semantic-field';
 import { packWallRect } from './wall-field';
@@ -547,11 +548,9 @@ export class PixiFieldPresenter {
   }
 
   clientWorldPoint(clientX: number, clientY: number): { x: number; y: number } {
-    const rect = this.app.canvas.getBoundingClientRect();
-    return {
-      x: (clientX - rect.left) * this.width / Math.max(1, rect.width),
-      y: (clientY - rect.top) * this.height / Math.max(1, rect.height),
-    };
+    return clientToCanvasWorld(
+      { x: clientX, y: clientY }, this.app.canvas.getBoundingClientRect(), this.width, this.height,
+    );
   }
 
   markDirty(index: number, nextMaterial: number): void {

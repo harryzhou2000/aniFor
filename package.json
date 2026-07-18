@@ -10,6 +10,7 @@
     "preview": "vite preview",
     "typecheck": "tsc -b",
     "test": "vitest run src",
+    "audit:browser-input": "node scripts/verify-browser-input.mjs",
     "profile:render-fields": "vite-node scripts/profile-render-fields.ts",
     "setup:emsdk": "bash scripts/setup-emsdk.sh",
     "setup:build-tools": "bash scripts/setup-build-tools.sh",

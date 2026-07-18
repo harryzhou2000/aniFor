@@ -9,6 +9,7 @@ import { mountControls } from '../ui/controls';
 import { buildToolCatalog, type SimToolInfo, type WallToolInfo } from '../ui/tool-catalog';
 import { WorldInputController } from '../ui/world-input';
 import { drawToolPoint, drawToolSegment } from './tool-dispatch';
+import { browserInputAuditRequested } from './browser-input-audit';
 
 const AUTOSAVE_KEY = 'stillroom-world-v1';
 
@@ -98,7 +99,40 @@ export class Game {
       this.seedIfEmpty();
       window.setInterval(() => this.save(), 4000);
     }
+    if (renderLab && browserInputAuditRequested()) this.installBrowserInputAudit();
     requestAnimationFrame(this.frame);
+  }
+
+  private installBrowserInputAudit(): void {
+    this.material = Material.Sand;
+    this.wallTool = undefined;
+    this.simulationTool = undefined;
+    this.eraseMode = false;
+    this.radius = 0;
+    this.simulation.clear();
+    this.renderer.resetView();
+    this.root.dataset.inputAudit = 'ready';
+    window.__ANIFOR_INPUT_AUDIT__ = {
+      version: 1,
+      width: this.simulation.width,
+      height: this.simulation.height,
+      cell: (x, y) => {
+        if (x < 0 || y < 0 || x >= this.simulation.width || y >= this.simulation.height) return -1;
+        return this.simulation.cells()[y * this.simulation.width + x];
+      },
+      occupiedCells: () => {
+        let occupied = 0;
+        for (const material of this.simulation.cells()) if (material !== Material.Empty) occupied++;
+        return occupied;
+      },
+      clear: () => { this.simulation.clear(); },
+      setRadius: (radius) => { this.radius = Math.max(0, Math.min(64, Math.round(radius))); },
+      resetView: () => { this.renderer.resetView(); },
+      screenToWorld: (clientX, clientY) => this.renderer.screenToWorld(clientX, clientY),
+      screenToCell: (clientX, clientY) => this.renderer.screenToCell(clientX, clientY),
+      viewState: () => this.renderer.getViewState(),
+      backend: () => this.renderer.getBackendInfo(),
+    };
   }
 
   private readonly frame = (time: number): void => {
