@@ -27,7 +27,7 @@ Screenshots created during local review belong in ignored `.artifacts/`, for exa
 - Upper right: overlapping Smoke, Oxygen, and Noble Gas density-falloff clouds plus a sparse gas row. This shows whether gas reads as a continuous volume, whether different gas colours mix, and whether the exterior becomes either point-like or excessively opaque.
 - Lower left: sand entering dense water, with a deliberately mixed patch. This reveals phase-boundary bleeding and whether sparse liquid remains coherent.
 - Lower middle: adjacent wavy columns of water, oil, acid, and lava. This makes over-blur across distinct liquids immediately visible.
-- Lower right: rigid, glass, organic, radioactive liquid/gas, energy, powered, and emissive blocks. Deliberate sparse holes expose each material family's reconstruction behavior.
+- Lower right: a five-column profile matrix. Its rows cover rigid surfaces; organic/growing matter; radioactive solids; then energy, devices, and force/special fields. Deliberate sparse holes expose each family's reconstruction behavior without relying on phase overrides.
 
 ## Review gates
 

@@ -3,6 +3,17 @@ import type { SimulationBackend } from '../simulation';
 
 export const RENDER_LAB_QUERY = 'render-lab';
 
+export const RENDER_LAB_STYLE_SAMPLES = [
+  // Rigid surfaces.
+  Material.Metal, Material.Glass, Material.Coal, Material.Ice, Material.Wall,
+  // Organic and growing matter.
+  Material.Wood, Material.Plant, Material.SEED, Material.YEST, Material.VINE,
+  // Radioactive solids rather than phase overrides.
+  Material.PLUT, Material.URAN, Material.ISZS, Material.VIBR, Material.POLO,
+  // Energy, devices, and force/special fields.
+  Material.NEUT, Material.SPRK, Material.ARAY, Material.ACEL, Material.PRTI,
+] as const;
+
 export function renderLabRequested(search = globalThis.location?.search ?? ''): boolean {
   return new URLSearchParams(search).get('scene') === RENDER_LAB_QUERY;
 }
@@ -46,16 +57,11 @@ export function applyRenderLabScene(simulation: SimulationBackend): void {
   });
   plot.rect(202, 344, 160, 8, Material.Wall, 1, 541);
 
-  // Material-family blocks: rigid, organic, radioactive liquid/gas, and energy.
-  const samples = [
-    Material.Metal, Material.Glass, Material.Plant, Material.Coal,
-    Material.DEUT, Material.WARP, Material.NEUT, Material.SPRK,
-    Material.Lava, Material.CFLM, Material.PHOT, Material.GLOW,
-  ];
-  samples.forEach((material, index) => {
-    const column = index % 4;
-    const row = Math.floor(index / 4);
-    plot.rect(388 + column * 51, 194 + row * 51, 45, 45, material, 0.90, 601 + index);
+  // Profile matrix: five columns each of rigid, organic, radioactive, and device/field cues.
+  RENDER_LAB_STYLE_SAMPLES.forEach((material, index) => {
+    const column = index % 5;
+    const row = Math.floor(index / 5);
+    plot.rect(388 + column * 40, 194 + row * 38, 35, 33, material, 0.90, 601 + index);
   });
   plot.scatterLine(390, 354, 196, Material.PHOT, 0.18, 701);
 }

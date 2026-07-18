@@ -268,16 +268,34 @@ void main() {
       color *= 0.91 + grain * 0.20 + grainFacet * 0.10;
       color += base * max(0.0, 0.6 - subcell.x - subcell.y) * 0.11;
     } else if (profile == 2.0) {
-      color += base * clamp(abs(shape.y) + abs(shape.z), 0.0, 1.0) * 0.09;
+      float bevel = clamp(abs(shape.y) + abs(shape.z), 0.0, 1.0);
+      float strata = sin(fieldPosition.x * 0.16 + fieldPosition.y * 0.055 + material * 0.71);
+      color *= 0.965 + strata * 0.028;
+      color += mix(base, vec3(0.32, 0.36, 0.42), 0.26) * bevel * 0.13;
     } else if (profile == 3.0) {
-      color *= 0.96 + sin(fieldPosition.x * 0.19 + sin(fieldPosition.y * 0.11)) * 0.045;
+      float fibre = sin(fieldPosition.x * 0.20 + sin(fieldPosition.y * 0.115 + material) * 1.45);
+      float pores = sin(fieldPosition.x * 0.083 + fieldPosition.y * 0.157 + material * 0.37)
+        * sin(fieldPosition.y * 0.091 - fieldPosition.x * 0.047);
+      color *= 0.95 + fibre * 0.042 + pores * 0.024;
+      color += mix(base, vec3(0.18, 0.43, 0.13), 0.34) * max(0.0, fibre) * 0.038;
     } else if (profile == 4.0) {
-      color += vec3(0.08, 0.19, 0.055) * (0.72 + 0.28 * sin(uTime * 1.9 + material));
+      float isotope = sin(fieldPosition.x * 0.137 + sin(fieldPosition.y * 0.103 + material) * 1.6)
+        * sin(fieldPosition.y * 0.181 - fieldPosition.x * 0.061);
+      float decayPulse = 0.5 + 0.5 * sin(uTime * 1.55 + material * 0.73 + isotope * 1.8);
+      color *= 0.94 + isotope * 0.055;
+      color += mix(base, vec3(0.19, 0.72, 0.22), 0.56) * (0.045 + decayPulse * 0.065);
     } else if (profile == 5.0) {
-      float trace = max(step(0.94, abs(sin(fieldPosition.x * 0.72))), step(0.94, abs(sin(fieldPosition.y * 0.72))));
-      color += mix(base, vec3(0.38, 0.76, 1.0), 0.52) * trace * 0.13;
+      vec2 circuitCell = abs(fract((fieldPosition + vec2(material * 0.37, material * 0.19)) / 8.0) - 0.5);
+      float trace = max(1.0 - smoothstep(0.055, 0.105, circuitCell.x), 1.0 - smoothstep(0.055, 0.105, circuitCell.y));
+      float node = 1.0 - smoothstep(0.10, 0.22, length(circuitCell));
+      color *= 0.96 + trace * 0.025;
+      color += mix(base, vec3(0.34, 0.76, 1.0), 0.58) * (trace * 0.12 + node * 0.10);
     } else if (profile == 6.0) {
-      color += base * sin(length(fieldPosition) * 0.15 - uTime * 1.4) * 0.07;
+      float planeWave = sin((fieldPosition.x + fieldPosition.y * 0.62) * 0.115 - uTime * 1.15 + material);
+      float radialWave = sin(length(fieldPosition - vec2(material * 1.7)) * 0.14 + uTime * 0.92);
+      float interference = (planeWave + radialWave) * 0.5;
+      color *= 0.95 + interference * 0.045;
+      color += mix(base, vec3(0.48, 0.70, 1.0), 0.42) * (0.045 + max(0.0, interference) * 0.07);
     }
   }
   float emission = isEmissive(material) ? 0.48 + heat * 1.05 : (material == 11.0 ? 0.28 + heat * 0.62 : (profile == 4.0 ? 0.07 : 0.0));

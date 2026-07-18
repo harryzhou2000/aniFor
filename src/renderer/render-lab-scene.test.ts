@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { DeterministicBackend } from '../simulation/deterministic-backend';
-import { Material } from '../shared/materials';
-import { applyRenderLabScene, renderLabRequested } from './render-lab-scene';
+import { ALL_MATERIALS, Material } from '../shared/materials';
+import { renderProfile, RenderProfile } from './render-profile';
+import { applyRenderLabScene, RENDER_LAB_STYLE_SAMPLES, renderLabRequested } from './render-lab-scene';
 
 describe('render lab scene', () => {
   it('is selected only by the explicit query', () => {
@@ -24,7 +25,23 @@ describe('render lab scene', () => {
     expect(counts[Material.Smoke]).toBeGreaterThan(1_000);
     expect(counts[Material.Oxygen]).toBeGreaterThan(700);
     expect(counts[Material.Metal]).toBeGreaterThan(1_000);
-    expect(counts[Material.DEUT]).toBeGreaterThan(1_000);
-    expect(counts[Material.NEUT]).toBeGreaterThan(1_000);
+    expect(counts[Material.PLUT]).toBeGreaterThan(900);
+    expect(counts[Material.SPRK]).toBeGreaterThan(900);
+    expect(counts[Material.ACEL]).toBeGreaterThan(900);
+  });
+
+  it('exercises every non-neutral styled family plus an energy phase', () => {
+    const profiles = new Set(RENDER_LAB_STYLE_SAMPLES.map((id) => {
+      const material = ALL_MATERIALS.find((candidate) => candidate.id === id)!;
+      return renderProfile(material.category);
+    }));
+    expect(profiles).toEqual(new Set([
+      RenderProfile.Rigid,
+      RenderProfile.Organic,
+      RenderProfile.Radioactive,
+      RenderProfile.Device,
+      RenderProfile.Field,
+    ]));
+    expect(RENDER_LAB_STYLE_SAMPLES).toContain(Material.NEUT);
   });
 });
