@@ -32,7 +32,9 @@ export class Game {
         else this.simulation.paint(x, y, this.material, this.radius);
       },
     });
-    mountControls(this.root, {
+    const toolbox = this.root.querySelector<HTMLElement>('.toolbox');
+    if (!toolbox) throw new Error('Missing simulation toolbox');
+    mountControls(toolbox, {
       onMaterial: (material) => { this.material = material; },
       onRadius: (radius) => { this.radius = radius; },
       onPause: () => { this.paused = !this.paused; },

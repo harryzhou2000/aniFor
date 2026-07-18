@@ -11,8 +11,13 @@ root.innerHTML = `
       <div><p class="eyebrow">A PARTICLE PLAYGROUND</p><h1>Stillroom</h1></div>
       <p class="hint">Draw · wheel to zoom · right-click to erase</p>
     </header>
-    <section class="viewport" aria-label="Particle simulation canvas">
-      <div class="ambient ambient-one"></div><div class="ambient ambient-two"></div><p class="touch-hint">Pinch to explore · hold to erase</p>
+    <section class="workspace">
+      <section class="viewport" aria-label="Particle simulation canvas">
+        <div class="ambient ambient-one"></div><div class="ambient ambient-two"></div><p class="touch-hint">Pinch to explore · hold to erase</p>
+      </section>
+      <aside class="toolbox" aria-label="Simulation tools">
+        <div class="toolbox-heading"><p class="eyebrow">MATERIAL LAB</p><p>Shape the world</p></div>
+      </aside>
     </section>
     <footer class="footer"><p class="status">Deterministic simulation · saved on this device</p><a href="./NOTICE.txt" target="_blank" rel="license">GPLv3 · source notice</a></footer>
   </section>`;
