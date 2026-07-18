@@ -6,6 +6,7 @@ export interface BrowserInputAuditApi {
   readonly width: number;
   readonly height: number;
   cell(x: number, y: number): number;
+  sourceTarget(x: number, y: number): number;
   occupiedCells(): number;
   clear(): void;
   setRadius(radius: number): void;

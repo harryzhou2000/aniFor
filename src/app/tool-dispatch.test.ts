@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { Material } from '../shared/materials';
 import { SimulationTool } from '../simulation/simulation-tools';
 import type { SimulationBackend } from '../simulation';
-import type { SimToolInfo } from '../ui/tool-catalog';
+import type { SimToolInfo, SourceToolInfo } from '../ui/tool-catalog';
 import { drawToolPoint, drawToolSegment, type ActiveToolSelection } from './tool-dispatch';
 
 function backend(): SimulationBackend {
@@ -11,6 +11,7 @@ function backend(): SimulationBackend {
     step: vi.fn(), paint: vi.fn(), erase: vi.fn(), clear: vi.fn(),
     cells: () => new Uint8Array(32 * 20), consumeDirtyCells: () => [],
     saveWorld: () => '', loadWorld: vi.fn(), applySimulationTool: vi.fn(),
+    paintConfiguredSource: vi.fn(),
   };
 }
 
@@ -23,6 +24,13 @@ function tool(nativeTool: SimToolInfo['nativeTool'], gesture: SimToolInfo['gestu
 
 function selection(simulationTool?: SimToolInfo): ActiveToolSelection {
   return { material: Material.Sand, radius: 4, simulationTool };
+}
+
+function sourceTool(emitter: SourceToolInfo['emitter']): SourceToolInfo {
+  return {
+    key: `source:${emitter}`, kind: 'source', emitter, requiresTarget: true,
+    name: 'source', description: 'source', color: '#fff', icon: 'x', category: 'sources',
+  };
 }
 
 describe('semantic tool dispatch', () => {
@@ -49,6 +57,39 @@ describe('semantic tool dispatch', () => {
 
     expect(simulation.applySimulationTool).toHaveBeenCalledWith(SimulationTool.Air, 5, 6, 4);
     expect(simulation.erase).toHaveBeenCalledWith(7, 8, 5);
+    expect(simulation.paint).not.toHaveBeenCalled();
+  });
+
+  it('configures a source with the selected material without ordinary paint fallback', () => {
+    const simulation = backend();
+    const active: ActiveToolSelection = {
+      material: Material.Water,
+      radius: 3,
+      sourceTool: sourceTool(Material.PCLN),
+    };
+
+    drawToolPoint(simulation, { x: 9, y: 11 }, active, false);
+
+    expect(simulation.paintConfiguredSource).toHaveBeenCalledWith(
+      9, 11, Material.PCLN, Material.Water, 3,
+    );
+    expect(simulation.paint).not.toHaveBeenCalled();
+  });
+
+  it('keeps source erase semantic and never falls through when the capability is absent', () => {
+    const simulation = backend();
+    const active: ActiveToolSelection = {
+      material: Material.Fire,
+      radius: 2,
+      sourceTool: sourceTool(Material.CONV),
+    };
+
+    drawToolPoint(simulation, { x: 4, y: 6 }, active, true);
+    expect(simulation.erase).toHaveBeenCalledWith(4, 6, 3);
+    expect(simulation.paintConfiguredSource).not.toHaveBeenCalled();
+
+    delete simulation.paintConfiguredSource;
+    drawToolPoint(simulation, { x: 7, y: 8 }, active, false);
     expect(simulation.paint).not.toHaveBeenCalled();
   });
 });

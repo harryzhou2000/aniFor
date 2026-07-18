@@ -19,6 +19,9 @@ interface PowderToyModule {
   _powder_set_tick(tick: number): void;
   _powder_clear(): void;
   _powder_set(x: number, y: number, material: number): void;
+  _powder_set_configured_source(x: number, y: number, source: number, target: number): number;
+  _powder_can_configure_source(source: number, target: number): number;
+  _powder_source_target(x: number, y: number): number;
   _powder_set_wall(x: number, y: number, wall: number, radius: number): void;
   _powder_apply_tool(tool: SimulationToolId, x: number, y: number, radius: number, deltaX: number, deltaY: number): number;
   _powder_step(): void;
@@ -95,6 +98,28 @@ export class PowderToyBackend implements SimulationBackend {
   }
 
   erase(x: number, y: number, radius: number): void { this.paint(x, y, Material.Empty, radius); }
+
+  paintConfiguredSource(cx: number, cy: number, source: Material, target: Material, radius: number): number {
+    const r2 = radius * radius;
+    let applied = 0;
+    for (let y = Math.max(0, cy - radius); y <= Math.min(this.height - 1, cy + radius); y++) {
+      for (let x = Math.max(0, cx - radius); x <= Math.min(this.width - 1, cx + radius); x++) {
+        if ((x - cx) ** 2 + (y - cy) ** 2 > r2) continue;
+        if (this.module._powder_set_configured_source(x, y, source, target) > 0) applied++;
+      }
+    }
+    if (applied) this.dirtyCheck = true;
+    return applied;
+  }
+
+  canConfigureSource(source: Material, target: Material): boolean {
+    return this.module._powder_can_configure_source(source, target) === 1;
+  }
+
+  configuredSourceTargetAt(x: number, y: number): Material | undefined {
+    const target = this.module._powder_source_target(x, y);
+    return target > Material.Empty ? target as Material : undefined;
+  }
 
   paintWall(x: number, y: number, wall: number, radius: number): void {
     this.module._powder_set_wall(x, y, wall, radius);

@@ -26,7 +26,9 @@ root.innerHTML = `
     <footer class="footer"><p class="status">Deterministic simulation · saved on this device</p><a href="./NOTICE.txt" target="_blank" rel="license">GPLv3 · source notice</a></footer>
   </section>`;
 
-const simulation = await createSimulation({ renderLab: renderLabRequested() });
+const query = new URLSearchParams(location.search);
+const nativeLab = query.get('simulation') === 'native';
+const simulation = await createSimulation({ renderLab: renderLabRequested() && !nativeLab });
 const viewportFrame = root.querySelector<HTMLElement>('.viewport-frame');
 const viewport = root.querySelector<HTMLElement>('.viewport');
 if (!viewportFrame || !viewport) throw new Error('Missing simulation viewport');

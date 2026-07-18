@@ -5817,6 +5817,9 @@ var _powder_tick = Module['_powder_tick'] = makeInvalidEarlyAccess('_powder_tick
 var _powder_set_tick = Module['_powder_set_tick'] = makeInvalidEarlyAccess('_powder_set_tick');
 var _powder_clear = Module['_powder_clear'] = makeInvalidEarlyAccess('_powder_clear');
 var _powder_set = Module['_powder_set'] = makeInvalidEarlyAccess('_powder_set');
+var _powder_set_configured_source = Module['_powder_set_configured_source'] = makeInvalidEarlyAccess('_powder_set_configured_source');
+var _powder_can_configure_source = Module['_powder_can_configure_source'] = makeInvalidEarlyAccess('_powder_can_configure_source');
+var _powder_source_target = Module['_powder_source_target'] = makeInvalidEarlyAccess('_powder_source_target');
 var _powder_set_wall = Module['_powder_set_wall'] = makeInvalidEarlyAccess('_powder_set_wall');
 var _powder_apply_tool = Module['_powder_apply_tool'] = makeInvalidEarlyAccess('_powder_apply_tool');
 var _powder_step = Module['_powder_step'] = makeInvalidEarlyAccess('_powder_step');
@@ -5859,6 +5862,9 @@ function assignWasmExports(wasmExports) {
   assert(typeof wasmExports['powder_set_tick'] != 'undefined', 'missing Wasm export: powder_set_tick');
   assert(typeof wasmExports['powder_clear'] != 'undefined', 'missing Wasm export: powder_clear');
   assert(typeof wasmExports['powder_set'] != 'undefined', 'missing Wasm export: powder_set');
+  assert(typeof wasmExports['powder_set_configured_source'] != 'undefined', 'missing Wasm export: powder_set_configured_source');
+  assert(typeof wasmExports['powder_can_configure_source'] != 'undefined', 'missing Wasm export: powder_can_configure_source');
+  assert(typeof wasmExports['powder_source_target'] != 'undefined', 'missing Wasm export: powder_source_target');
   assert(typeof wasmExports['powder_set_wall'] != 'undefined', 'missing Wasm export: powder_set_wall');
   assert(typeof wasmExports['powder_apply_tool'] != 'undefined', 'missing Wasm export: powder_apply_tool');
   assert(typeof wasmExports['powder_step'] != 'undefined', 'missing Wasm export: powder_step');
@@ -5897,6 +5903,9 @@ function assignWasmExports(wasmExports) {
   _powder_set_tick = Module['_powder_set_tick'] = createExportWrapper('powder_set_tick', wasmExports['powder_set_tick'], 1);
   _powder_clear = Module['_powder_clear'] = createExportWrapper('powder_clear', wasmExports['powder_clear'], 0);
   _powder_set = Module['_powder_set'] = createExportWrapper('powder_set', wasmExports['powder_set'], 3);
+  _powder_set_configured_source = Module['_powder_set_configured_source'] = createExportWrapper('powder_set_configured_source', wasmExports['powder_set_configured_source'], 4);
+  _powder_can_configure_source = Module['_powder_can_configure_source'] = createExportWrapper('powder_can_configure_source', wasmExports['powder_can_configure_source'], 2);
+  _powder_source_target = Module['_powder_source_target'] = createExportWrapper('powder_source_target', wasmExports['powder_source_target'], 2);
   _powder_set_wall = Module['_powder_set_wall'] = createExportWrapper('powder_set_wall', wasmExports['powder_set_wall'], 4);
   _powder_apply_tool = Module['_powder_apply_tool'] = createExportWrapper('powder_apply_tool', wasmExports['powder_apply_tool'], 6);
   _powder_step = Module['_powder_step'] = createExportWrapper('powder_step', wasmExports['powder_step'], 0);

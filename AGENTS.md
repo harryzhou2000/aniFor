@@ -19,6 +19,7 @@ The non-negotiable contract is:
 - Pixi filter `vTextureCoord` is not a world UV. The semantic field shader must use the sprite-local `vFieldCoord` supplied by `FIELD_VERTEX`.
 - Native TPT walls are a separate `bmap`-derived field and texture. Never encode a wall ID as a particle/material ID; particles and walls may coexist at the same world cell and must be composited independently.
 - Simulation tools are neither particles nor walls. Brush tools consume sampled points; vector tools consume raw consecutive grid segments and must explicitly no-op in the point path so they never fall through to the selected particle brush.
+- Configured sources are semantic tools, not ordinary source-particle brushes. Keep their emitter and retained target explicit, route them through the native `CtypeDraw` boundary after erase/tool handling and before ordinary paint, and return without fallback even when the capability is absent. Preserve the target as native particle `ctype` in OPS saves; do not mirror it in a JavaScript world map.
 - Headless Wind clears inactive particle-authored coarse `vx`/`vy` when a new gesture epoch begins, writes the authored velocity before `BeforeSim`, enables `AIR_ON` for exactly that update, then restores `AIR_VELOCITYOFF` before particle advection. Never inject Wind after `BeforeSim`: that bypasses diffusion, pressure coupling, clamping, and air-blocking walls. Preserve unstepped Wind through the namespaced optional OPS marker instead of inferring it from ordinary imported-save velocity.
 - The shared liquid texture is species-aware RGBA: RGB is the uniquely supported liquid color and alpha is density. Do not read red as density or choose a liquid halo color by fixed neighbor scan order; exact unlike-liquid ties must remain a visible interface.
 - Canvas gas relief is a presentation-only transform of the shared atmosphere texture: preserve alpha byte-for-byte and multiply RGB channels uniformly so lighting cannot widen the cloud or shift species hue. Dense WebGL gas should blend toward the atmosphere RGB instead of exposing raw semantic-particle dots.
@@ -49,6 +50,7 @@ Use the paused deterministic material atlas before and after material-shader cha
 ```text
 ?scene=render-lab&renderScale=2
 ?scene=render-lab&renderScale=2&renderer=canvas2d
+?scene=render-lab&simulation=native&renderScale=2
 ?scene=wall-lab&renderScale=2
 ?scene=wall-lab&renderScale=2&renderer=canvas2d
 ```

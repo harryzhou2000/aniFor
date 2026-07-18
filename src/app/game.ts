@@ -1,12 +1,12 @@
 import { MaterialRenderer } from '../renderer/field-renderer';
 import { applyRenderLabScene, renderLabRequested } from '../renderer/render-lab-scene';
 import { applyWallLabScene, wallLabRequested } from '../renderer/wall-lab-scene';
-import { MATERIALS, Material } from '../shared/materials';
+import { ALL_MATERIALS, MATERIALS, Material } from '../shared/materials';
 import { decodeSharedWorld } from '../shared/share-codec';
 import { exportWorldFile, importWorldFile, MAX_WORLD_FILE_BYTES, worldFileName } from '../shared/world-file';
 import type { SimulationBackend } from '../simulation';
 import { mountControls } from '../ui/controls';
-import { buildToolCatalog, type SimToolInfo, type WallToolInfo } from '../ui/tool-catalog';
+import { buildToolCatalog, type SimToolInfo, type SourceToolInfo, type WallToolInfo } from '../ui/tool-catalog';
 import { WorldInputController } from '../ui/world-input';
 import { drawToolPoint, drawToolSegment } from './tool-dispatch';
 import { browserInputAuditRequested } from './browser-input-audit';
@@ -19,6 +19,7 @@ export class Game {
   private material = Material.Sand;
   private wallTool?: WallToolInfo;
   private simulationTool?: SimToolInfo;
+  private sourceTool?: SourceToolInfo;
   private radius = 7;
   private eraseMode = false;
   private paused = false;
@@ -58,14 +59,16 @@ export class Game {
         erase ||= this.eraseMode;
         drawToolPoint(this.simulation, { x, y }, {
           material: this.material, wallTool: this.wallTool,
-          simulationTool: this.simulationTool, radius: this.radius,
+          simulationTool: this.simulationTool, sourceTool: this.sourceTool,
+          radius: this.radius,
         }, erase);
       },
       drawSegment: (start, end, erase) => {
         erase ||= this.eraseMode;
         drawToolSegment(this.simulation, start, end, {
           material: this.material, wallTool: this.wallTool,
-          simulationTool: this.simulationTool, radius: this.radius,
+          simulationTool: this.simulationTool, sourceTool: this.sourceTool,
+          radius: this.radius,
         }, erase);
       },
     });
@@ -73,23 +76,42 @@ export class Game {
     const toolbox = this.root.querySelector<HTMLElement>('.toolbox');
     if (!toolbox) throw new Error('Missing simulation toolbox');
     mountControls(toolbox, {
-      onMaterial: (material) => { this.material = material; this.wallTool = undefined; this.simulationTool = undefined; },
+      onMaterial: (material) => {
+        this.material = material;
+        this.wallTool = undefined;
+        this.simulationTool = undefined;
+        this.sourceTool = undefined;
+      },
       onRadius: (radius) => { this.radius = radius; },
       onPause: () => { this.paused = !this.paused; },
       onEraseMode: (erase) => { this.eraseMode = erase; },
+      canConfigureSource: (source, target) => this.simulation.canConfigureSource?.(source, target) ?? false,
       onSaveFile: () => this.downloadWorldFile(),
       onOpenFile: (file) => this.openWorldFile(file),
       onClear: () => { this.simulation.clear(); localStorage.removeItem(AUTOSAVE_KEY); },
       onTool: (tool) => {
-        if (tool.kind === 'wall') { this.wallTool = tool; this.simulationTool = undefined; }
+        if (tool.kind === 'wall') {
+          this.wallTool = tool;
+          this.simulationTool = undefined;
+          this.sourceTool = undefined;
+        }
         else if (tool.kind === 'force' || tool.kind === 'thermal' || tool.kind === 'utility') {
           this.simulationTool = tool;
           this.wallTool = undefined;
+          this.sourceTool = undefined;
+        } else if (tool.kind === 'source') {
+          this.sourceTool = tool;
+          this.wallTool = undefined;
+          this.simulationTool = undefined;
         }
       },
     }, buildToolCatalog(MATERIALS, {
       walls: Boolean(this.simulation.paintWall && this.simulation.eraseWall),
       simulationTools: Boolean(this.simulation.applySimulationTool),
+      configuredSources: Boolean(
+        this.simulation.paintConfiguredSource && this.simulation.canConfigureSource
+          && this.simulation.configuredSourceTargetAt,
+      ),
     }));
     if (renderLab || wallLab) {
       const status = this.root.querySelector('.status');
@@ -107,6 +129,7 @@ export class Game {
     this.material = Material.Sand;
     this.wallTool = undefined;
     this.simulationTool = undefined;
+    this.sourceTool = undefined;
     this.eraseMode = false;
     this.radius = 0;
     this.renderer.resetView();
@@ -119,6 +142,7 @@ export class Game {
         if (x < 0 || y < 0 || x >= this.simulation.width || y >= this.simulation.height) return -1;
         return this.simulation.cells()[y * this.simulation.width + x];
       },
+      sourceTarget: (x, y) => this.simulation.configuredSourceTargetAt?.(x, y) ?? Material.Empty,
       occupiedCells: () => {
         let occupied = 0;
         for (const material of this.simulation.cells()) if (material !== Material.Empty) occupied++;
@@ -176,13 +200,17 @@ export class Game {
     const pressure = this.simulation.pressure?.()[index];
     const temperature = rawTemperature ? (rawTemperature / 10 - 273.15).toFixed(1) + " °C" : "—";
     const pressureText = pressure === undefined ? "—" : (pressure >= 0 ? "+" : "") + pressure.toFixed(2);
+    const sourceTarget = this.simulation.configuredSourceTargetAt?.(this.probeX, this.probeY);
+    const sourceText = sourceTarget === undefined ? ''
+      : `<span class="source-target"><b>Source target</b>${materialLabel(sourceTarget)}</span>`;
     const renderer = this.renderer.getBackendInfo();
     this.indicator.dataset.renderer = renderer.backend;
     this.indicator.dataset.rendererReason = renderer.reason ?? '';
     this.indicator.title = renderer.reason ? rendererReason(renderer.reason) : 'Semantic WebGL renderer';
     this.indicator.innerHTML = "<span><b>Pressure</b>" + pressureText
       + "</span><span><b>Temperature</b>" + temperature
-      + "</span><span class=\"renderer-indicator\"><b>Backend</b>" + rendererStatus(renderer) + "</span>";
+      + "</span><span class=\"renderer-indicator\"><b>Backend</b>" + rendererStatus(renderer) + "</span>"
+      + sourceText;
   }
 
   private async downloadWorldFile(): Promise<boolean> {
@@ -246,6 +274,10 @@ export class Game {
     this.simulation.paint(Math.floor(this.simulation.width * 0.38), Math.floor(this.simulation.height * 0.18), Material.Sand, 16);
     this.simulation.paint(Math.floor(this.simulation.width * 0.62), Math.floor(this.simulation.height * 0.22), Material.Water, 14);
   }
+}
+
+function materialLabel(material: Material): string {
+  return ALL_MATERIALS.find(({ id }) => id === material)?.name ?? `Element ${material}`;
 }
 
 function rendererReason(reason: NonNullable<ReturnType<MaterialRenderer['getBackendInfo']>['reason']>): string {

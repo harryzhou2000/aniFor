@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { MATERIALS } from '../shared/materials';
-import { groupMaterials, toolCountLabel } from './controls';
+import { MATERIALS, Material } from '../shared/materials';
+import { groupMaterials, sourceRejectionLabel, sourceSelectionLabel, toolCountLabel } from './controls';
 
 describe('material controls', () => {
   it('groups every brush once in a stable, named category', () => {
@@ -15,6 +15,11 @@ describe('material controls', () => {
 
   it('formats accessible search result counts', () => {
     expect([0, 1, 165].map(toolCountLabel)).toEqual(['0 tools', '1 tool', '165 tools']);
+  });
+
+  it('describes configured source direction without hiding the target', () => {
+    expect(sourceSelectionLabel(Material.PCLN, Material.Water)).toBe('PCLN → Water');
+    expect(sourceRejectionLabel(Material.PCLN, Material.PSCN)).toBe('PCLN → PSCN unsupported');
   });
 
   it('omits empty categories for filtered catalogs', () => {

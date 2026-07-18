@@ -24,12 +24,12 @@ Queued after the renderer checkpoint: revisit desktop/mobile geometry as a dedic
 
 - Repository: `/home/harry/projects/aniFor_codex`
 - Branch: `main_codex`
-- Remote branch and live Pages revision before the next graphics checkpoint: `c967261 Reconcile graphics deployment notes`; that commit changes only this resume document. Its renderer parent is `a64dde9 Style energy as luminous material volumes`.
-- Current graphics checkpoint: `Style materials by cross-phase roles`, committed and pushed to `main_codex`; its manual Pages deployment is pending GitHub CLI reauthentication.
-- Git pushes currently authenticate, but the saved GitHub CLI token for `harryzhou2000` is invalid. Manual Actions dispatch is blocked until `gh auth login -h github.com` succeeds again.
+- Remote branch and live Pages revision: `be2c9cb Stack desktop tool filters`.
+- The configured-source semantic tranche is included in the current branch checkpoint; its live deployment follows the final local verification gate.
+- Git and GitHub CLI authentication are working. Manual Actions run `29657784967` built, deployed, and live-verified `be2c9cb` after the branch push was independently SHA-checked.
 - Current live Pages URL: `https://harryzhou2000.github.io/aniFor/`
-- Verified live graphics baseline: `a64dde9` from Actions run `29654711283`.
-- Build, deploy, and post-deployment verification all passed. The live closure contains all 20 referenced resources with correct WASM MIME and the exact expected revision. The restored compiler cache produced 269/270 hits (99.63%); the successful primary key already existed, so the save step correctly skipped.
+- Verified live baseline: `be2c9cb` from Actions run `29657784967`.
+- Build, deploy, and post-deployment verification all passed. The live closure contains all referenced resources with correct WASM MIME and the exact expected revision. The successful primary ccache key already existed, so the save step correctly skipped.
 
 ## Committed/live baseline through `a64dde9`
 
@@ -151,10 +151,19 @@ Queued after the renderer checkpoint: revisit desktop/mobile geometry as a dedic
 - The real-browser audit now measures the filter rail, every filter button, palette/actions separation, and document overflow. It fails if a filter escapes vertically, the Brush card overlaps the palette, or the page grows wider than the viewport.
 - Captured evidence at 1024×600, 1440×900, and 390×844 shows 8–12 px palette/actions separation, a compact 132 px mobile HUD, and no viewport/input regression.
 
+## Configured-source semantic tranche (current local tree)
+
+- The source catalog now contains five separate capability-gated tools for CLNE, BCLN, PCLN, PBCN, and CONV. The last selected element is retained as the target, and the search header shows the active `source → target` pair without adding another toolbox row.
+- Point dispatch gives erasure and simulation tools priority, then calls `paintConfiguredSource`; it always returns before ordinary particle paint, including when a fallback backend lacks the capability.
+- The native adapter validates stable IDs and bounds, creates only in an empty matter cell or reconfigures the same source type, delegates restrictions to upstream `CtypeDraw`, and rolls a new particle back when TPT rejects the target. Exact target inspection round-trips through the stable material mapping rather than returning a guessed phase projection.
+- Configured targets are ordinary native `Particle::ctype` state. Raw OPS save/load preserves all five targets without a JavaScript side map or private file extension, and a native behavior test proves CLNE emits the selected target after stepping.
+- The field indicator reports the exact target when probing a configured source. Fallback backends keep source tiles disabled; signs remain disabled pending a dedicated safe text editor and overlay.
+- The real-browser gate can opt the paused render lab into native TPT with `simulation=native`. Its Canvas pass selected Water, selected configured CLNE, placed exactly one source at the requested world cell, and read back emitter 126 / target 2 while retaining the established resize, wheel-anchor, middle-pan, and mobile touch checks.
+
 ## Verification completed for the current local tree
 
 - `npm run typecheck`
-- `npm test -- --run`: 38 files, 156 tests passed
+- `npm test`: 38 files, 163 tests passed
 - `npm run build`
 - Static build closure: 20 referenced resources verified (including the explicit favicon)
 - Current live Pages closure: 20 resources verified, including `stillroom_core.wasm` with the correct MIME
@@ -163,7 +172,7 @@ Queued after the renderer checkpoint: revisit desktop/mobile geometry as a dedic
 - Final rebuilt mobile smoke at 390×844 DPR 2 booted direct native TPT with the Canvas2D compatibility renderer and 1224×768 backing. The 378×378 viewport contained a 378×237.176 canvas at aspect 1.59375012, with no crop or horizontal overflow.
 - The mobile filter row now has a constant 40 px track with a visible thin scrollbar; filter buttons remain 28 px high. One-finger painting, two-finger pinch without stray paint, and explicit Eraser restoration passed with zero console, exception, or network failures.
 - Fresh render-lab browser evidence at 1280×720 and `renderScale=2` passed for both forced Canvas and SwiftShader WebGL. In the final tree, the badge visibly transitioned from `Canvas 2D · starting WebGL` to `WebGL` as promotion completed in 6.029 seconds. The viewport retained a 1224×768 backing and 827×518.902 CSS canvas with no shader, console, runtime, HTTP, or network errors.
-- The automated populated-atlas capture passed for the current energy-core tree in both forced Canvas and SwiftShader WebGL. It then painted the exact three requested radius-zero cells, held wheel-anchor drift to 0.145 cell, produced exact 42×27 CSS-pixel middle-pan movement, returned to the same fitted geometry after `1024×600 → 1440×900 → 1024×600`, and reported zero browser errors. Canvas additionally retained a 378×378 mobile panel, 1.59375 field aspect, 1.431× pinch zoom, no stray pinch cells, and the exact one-touch target cell.
+- The native-backed automated populated-atlas capture passes in both forced Canvas and SwiftShader WebGL. It selects Water then configured CLNE through the visible Sources group, places emitter 126 with exact target 2, rejects `PCLN → PSCN` without activating it, paints the exact three requested radius-zero cells, holds wheel-anchor drift to 0.145 cell, produces exact 42×27 CSS-pixel middle-pan movement, returns to the same fitted geometry after `1024×600 → 1440×900 → 1024×600`, and reports zero browser errors. Canvas additionally retains a 378×378 mobile panel, 1.59375 field aspect, 1.431× pinch zoom, no stray pinch cells, the exact one-touch target cell, and a visible five-tile Sources catalog.
 - The WebGL and Canvas screenshots show cohesive water/oil/acid/lava columns without black pinholes or cross-family bleeding, continuous mixed gas volumes, and preserved sparse control rows. Canvas deliberately remains softer and more internally speckled than WebGL.
 - A retained real-browser interaction audit painted full 3×3 landmark grids before and after promotion. All 18 HUD-selected cells matched; footprint centroid error stayed below 1.5 CSS px, off-center wheel-anchor error was 0.035 CSS px, middle pan was within 0.013 px, and promotion produced zero canvas-rectangle or world-cell drift.
 - A repeated production resize sequence `1280×720 → 1024×600 → 1440×900 → 1024×600` now refits on every transition. The 1024 viewport is 686×430.422 inside its 686.188×470 frame, aspect 1.593785, with subpixel containment and unchanged 1224×768 backing; no stale size, runtime, console, or network error remains.

@@ -10,7 +10,15 @@ interface RawPowderModule {
   _powder_init(): number;
   _powder_cells(): number;
   _powder_pressure(): number;
+  _powder_set(x: number, y: number, material: number): void;
+  _powder_set_configured_source(x: number, y: number, source: number, target: number): number;
+  _powder_can_configure_source(source: number, target: number): number;
+  _powder_source_target(x: number, y: number): number;
   _powder_apply_tool(tool: number, x: number, y: number, radius: number, deltaX: number, deltaY: number): number;
+  _powder_save(): number;
+  _powder_save_size(): number;
+  _powder_load_buffer(size: number): number;
+  _powder_load_commit(): number;
 }
 
 describe('direct Powder Toy backend', () => {
@@ -230,6 +238,112 @@ describe('direct Powder Toy backend', () => {
     const after = pressure();
     expect(after[centerIndex]).toBe(before);
     expect(Array.from(after).every(Number.isFinite)).toBe(true);
+  });
+
+  it('configures only whitelisted native sources and preserves rejected cells atomically', async () => {
+    const imported = await import(moduleArtifact.href) as { default: () => Promise<RawPowderModule> };
+    const module = await imported.default();
+    expect(module._powder_init()).toBe(1);
+    const cells = (): Uint8Array => new Uint8Array(
+      module.HEAPU8.buffer, module._powder_cells(), 612 * 384,
+    );
+    const sources = [Material.CLNE, Material.BCLN, Material.PCLN, Material.PBCN, Material.CONV];
+
+    expect(module._powder_can_configure_source(Material.CLNE, Material.Water)).toBe(1);
+    expect(module._powder_can_configure_source(Material.CLNE, Material.CLNE)).toBe(0);
+    expect(module._powder_can_configure_source(Material.PCLN, Material.PSCN)).toBe(0);
+    expect(module._powder_can_configure_source(Material.PBCN, Material.SPRK)).toBe(0);
+    expect(module._powder_can_configure_source(Material.Sand, Material.Water)).toBe(0);
+
+    sources.forEach((source, index) => {
+      const x = 240 + index * 16;
+      const y = 120;
+      expect(module._powder_set_configured_source(x, y, source, Material.Sand)).toBe(1);
+      expect(cells()[y * 612 + x]).toBe(source);
+      expect(module._powder_source_target(x, y)).toBe(Material.Sand);
+    });
+
+    const reconfigured = { x: 240, y: 120 };
+    expect(module._powder_set_configured_source(
+      reconfigured.x, reconfigured.y, Material.CLNE, Material.Water,
+    )).toBe(1);
+    expect(cells()[reconfigured.y * 612 + reconfigured.x]).toBe(Material.CLNE);
+    expect(module._powder_source_target(reconfigured.x, reconfigured.y)).toBe(Material.Water);
+    expect(module._powder_set_configured_source(
+      reconfigured.x, reconfigured.y, Material.CLNE, Material.BCLN,
+    )).toBe(0);
+    expect(module._powder_source_target(reconfigured.x, reconfigured.y)).toBe(Material.Water);
+
+    const occupied = { x: 360, y: 120 };
+    module._powder_set(occupied.x, occupied.y, Material.Dust);
+    expect(module._powder_set_configured_source(
+      occupied.x, occupied.y, Material.CLNE, Material.Water,
+    )).toBe(0);
+    expect(cells()[occupied.y * 612 + occupied.x]).toBe(Material.Dust);
+    expect(module._powder_source_target(occupied.x, occupied.y)).toBe(Material.Empty);
+
+    const rejected = { x: 380, y: 120 };
+    expect(module._powder_set_configured_source(
+      rejected.x, rejected.y, Material.CLNE, Material.BCLN,
+    )).toBe(0);
+    expect(cells()[rejected.y * 612 + rejected.x]).toBe(Material.Empty);
+    expect(module._powder_source_target(rejected.x, rejected.y)).toBe(Material.Empty);
+
+    expect(module._powder_set_configured_source(400, 120, Material.Sand, Material.Water)).toBe(-1);
+    expect(module._powder_set_configured_source(400, 120, Material.CLNE, Material.Empty)).toBe(-1);
+    expect(module._powder_set_configured_source(0, 120, Material.CLNE, Material.Water)).toBe(-1);
+    expect(module._powder_source_target(-1, 120)).toBe(Material.Empty);
+  });
+
+  it('round-trips representative targets for all configured source types through native OPS bytes', async () => {
+    const imported = await import(moduleArtifact.href) as { default: () => Promise<RawPowderModule> };
+    const source = await imported.default();
+    expect(source._powder_init()).toBe(1);
+    const cases = [
+      [Material.CLNE, Material.Sand],
+      [Material.BCLN, Material.Water],
+      [Material.PCLN, Material.Oil],
+      [Material.PBCN, Material.Wood],
+      [Material.CONV, Material.Fire],
+    ] as const;
+    cases.forEach(([emitter, target], index) => {
+      expect(source._powder_set_configured_source(240 + index * 16, 160, emitter, target)).toBe(1);
+    });
+
+    const savePointer = source._powder_save();
+    const saveSize = source._powder_save_size();
+    expect(savePointer).toBeGreaterThan(0);
+    expect(saveSize).toBeGreaterThan(0);
+    const save = source.HEAPU8.slice(savePointer, savePointer + saveSize);
+
+    const restored = await imported.default();
+    expect(restored._powder_init()).toBe(1);
+    const loadPointer = restored._powder_load_buffer(save.length);
+    expect(loadPointer).toBeGreaterThan(0);
+    restored.HEAPU8.set(save, loadPointer);
+    expect(restored._powder_load_commit()).toBe(1);
+    const restoredCells = new Uint8Array(
+      restored.HEAPU8.buffer, restored._powder_cells(), 612 * 384,
+    );
+    cases.forEach(([emitter, target], index) => {
+      const x = 240 + index * 16;
+      expect(restoredCells[160 * 612 + x]).toBe(emitter);
+      expect(restored._powder_source_target(x, 160)).toBe(target);
+    });
+  });
+
+  it('executes upstream clone behavior for an explicitly configured target', async () => {
+    const simulation = await PowderToyBackend.load(moduleArtifact.href);
+    const point = { x: 306, y: 180 };
+
+    expect(simulation.paintConfiguredSource(
+      point.x, point.y, Material.CLNE, Material.Water, 0,
+    )).toBe(1);
+    expect(simulation.configuredSourceTargetAt(point.x, point.y)).toBe(Material.Water);
+
+    for (let step = 0; step < 12; step++) simulation.step();
+    expect(simulation.cells().filter((material) => material === Material.Water).length).toBeGreaterThan(0);
+    expect(simulation.configuredSourceTargetAt(point.x, point.y)).toBe(Material.Water);
   });
 
   it('settles water without air-driven ejection', async () => {

@@ -241,6 +241,27 @@ int ToPowderType(int material)
 	}
 }
 
+bool IsConfiguredSourceType(int type)
+{
+	return type == PT_CLNE || type == PT_BCLN || type == PT_PCLN
+		|| type == PT_PBCN || type == PT_CONV;
+}
+
+bool CanConfigureSourceType(int sourceType, int targetType)
+{
+	if (!IsConfiguredSourceType(sourceType) || targetType <= PT_NONE || targetType >= PT_NUM)
+		return false;
+	auto const &sourceElement = simulationData->elements[sourceType];
+	auto const &targetElement = simulationData->elements[targetType];
+	if (!sourceElement.Enabled || !sourceElement.CtypeDraw || !targetElement.Enabled
+		|| sourceType == targetType || (targetElement.Properties & PROP_NOCTYPEDRAW))
+		return false;
+	if ((sourceType == PT_PCLN || sourceType == PT_PBCN)
+		&& (targetType == PT_PSCN || targetType == PT_NSCN || targetType == PT_SPRK))
+		return false;
+	return true;
+}
+
 uint8_t ToStillroomType(int type)
 {
 	switch (type)
@@ -496,6 +517,58 @@ __attribute__((visibility("default"))) void powder_set(int x, int y, int materia
 	if (x < CELL || y < CELL || x >= XRES - CELL || y >= YRES - CELL) return;
 	if (material == 0) simulation->delete_part(x, y);
 	else simulation->create_part(-2, x, y, ToPowderType(material));
+}
+__attribute__((visibility("default"))) int powder_set_configured_source(int x, int y, int source, int target)
+{
+	EnsureSimulation();
+	if (x < CELL || y < CELL || x >= XRES - CELL || y >= YRES - CELL) return -1;
+	auto const sourceType = ToPowderType(source);
+	auto const targetType = ToPowderType(target);
+	if (!IsConfiguredSourceType(sourceType) || targetType <= PT_NONE || targetType >= PT_NUM) return -1;
+	auto const &sourceElement = simulationData->elements[sourceType];
+	if (!sourceElement.Enabled || !sourceElement.CtypeDraw || !simulationData->elements[targetType].Enabled) return -1;
+	if (!CanConfigureSourceType(sourceType, targetType)) return 0;
+
+	auto const packed = simulation->pmap[y][x];
+	int sourceIndex = -1;
+	bool created = false;
+	if (TYP(packed))
+	{
+		if (TYP(packed) != sourceType) return 0;
+		sourceIndex = ID(packed);
+	}
+	else
+	{
+		sourceIndex = simulation->create_part(-2, x, y, sourceType);
+		if (sourceIndex < 0) return 0;
+		created = true;
+	}
+
+	if (!sourceElement.CtypeDraw(simulation.get(), sourceIndex, targetType, 0))
+	{
+		if (created) simulation->kill_part(sourceIndex);
+		return 0;
+	}
+	return 1;
+}
+__attribute__((visibility("default"))) int powder_can_configure_source(int source, int target)
+{
+	EnsureSimulation();
+	return CanConfigureSourceType(ToPowderType(source), ToPowderType(target)) ? 1 : 0;
+}
+__attribute__((visibility("default"))) int powder_source_target(int x, int y)
+{
+	EnsureSimulation();
+	if (x < 0 || y < 0 || x >= XRES || y >= YRES) return 0;
+	auto const packed = simulation->pmap[y][x];
+	if (!TYP(packed) || !IsConfiguredSourceType(TYP(packed))) return 0;
+	auto const targetType = TYP(simulation->parts[ID(packed)].ctype);
+	if (targetType <= PT_NONE || targetType >= PT_NUM) return 0;
+	auto const target = ToStillroomType(targetType);
+	// ToStillroomType deliberately phase-projects unknown native products for
+	// rendering. A configured-source query must never report such a projection
+	// as an exact target, so require the public mapping to round-trip.
+	return target && ToPowderType(target) == targetType ? target : 0;
 }
 __attribute__((visibility("default"))) void powder_set_wall(int x, int y, int wall, int radius)
 {

@@ -1,12 +1,13 @@
 import type { Point } from '../renderer/view-transform';
 import type { Material } from '../shared/materials';
 import type { SimulationBackend } from '../simulation';
-import type { SimToolInfo, WallToolInfo } from '../ui/tool-catalog';
+import type { SimToolInfo, SourceToolInfo, WallToolInfo } from '../ui/tool-catalog';
 
 export interface ActiveToolSelection {
   readonly material: Material;
   readonly wallTool?: WallToolInfo;
   readonly simulationTool?: SimToolInfo;
+  readonly sourceTool?: SourceToolInfo;
   readonly radius: number;
 }
 
@@ -36,6 +37,12 @@ export function drawToolPoint(
     }
     // Vector tools act on raw segments only. In particular, they must never
     // fall through and paint the previously selected particle material.
+    return;
+  }
+  if (selection.sourceTool) {
+    simulation.paintConfiguredSource?.(
+      point.x, point.y, selection.sourceTool.emitter, selection.material, selection.radius,
+    );
     return;
   }
   simulation.paint(point.x, point.y, selection.material, selection.radius);

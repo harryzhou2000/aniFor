@@ -26,6 +26,12 @@ export interface SimulationBackend {
   walls?(): Uint8Array;
   paintWall?(x: number, y: number, wall: number, radius: number): void;
   eraseWall?(x: number, y: number, radius: number): void;
+  /** Atomically place a native TPT source with its ctype target. */
+  paintConfiguredSource?(x: number, y: number, source: Material, target: Material, radius: number): number;
+  /** Ask the native element rules whether a source/target ctype pair is valid. */
+  canConfigureSource?(source: Material, target: Material): boolean;
+  /** Read the projected ctype target of a native source at one world cell. */
+  configuredSourceTargetAt?(x: number, y: number): Material | undefined;
   /** Apply a native simulation tool. Vector tools use deltaX/deltaY as the drag vector. */
   applySimulationTool?(tool: SimulationToolId, x: number, y: number, radius: number, deltaX?: number, deltaY?: number): void;
   consumeDirtyCells(): readonly DirtyCell[];

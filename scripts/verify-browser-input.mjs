@@ -43,7 +43,7 @@ async function auditMode(mode) {
   const profile = await mkdtemp(path.join(tmpdir(), `anifor-input-${mode}-`));
   const dpr = mode === 'canvas2d' ? 2 : 1;
   const query = new URLSearchParams({
-    scene: 'render-lab', inputAudit: '1', renderScale: '2',
+    scene: 'render-lab', simulation: 'native', inputAudit: '1', renderScale: '2',
     ...(mode === 'canvas2d' ? { renderer: 'canvas2d' } : {}),
   });
   const chrome = spawn(chromePath, [
@@ -93,6 +93,7 @@ async function auditMode(mode) {
     await waitFor(() => evaluate(cdp, `window.__ANIFOR_INPUT_AUDIT__.backend().backend === ${JSON.stringify(mode)}`), 15_000, `${mode} backend`);
 
     const screenshot = screenshotPath(mode);
+    let configuredSourceScreenshot;
     if (screenshot) {
       await sleep(250);
       const capture = await cdp.send('Page.captureScreenshot', { format: 'png', fromSurface: true });
@@ -123,6 +124,70 @@ async function auditMode(mode) {
       `${mode}: landmark cells did not receive the same material (${painted.cells.join(', ')})`,
     );
     assert(painted.occupied === landmarks.length, `${mode}: expected ${landmarks.length} exact radius-0 cells, got ${painted.occupied}`);
+
+    const sourcePoint = { x: 250, y: 180 };
+    const sourceClient = worldClient(initial.canvas, { x: sourcePoint.x + 0.5, y: sourcePoint.y + 0.5 });
+    const sourceSelection = await evaluate(cdp, `(() => {
+      window.__ANIFOR_INPUT_AUDIT__.clear();
+      const targetButton = document.querySelector('[data-tool-key="material:2"] .material-button');
+      targetButton?.click();
+      document.querySelector('[data-filter="source"]')?.click();
+      const sourceActivator = document.querySelector('[data-tool-key="source:clne"] .material-button');
+      sourceActivator?.click();
+      const sourceButton = document.querySelector('[data-tool-key="source:clne"] .material-button');
+      const output = document.querySelector('.source-selection');
+      const library = document.querySelector('.tool-library');
+      const sourceRect = sourceButton?.getBoundingClientRect();
+      const libraryRect = library?.getBoundingClientRect();
+      return {
+        value: output?.value, hidden: output?.hidden, target: output?.dataset.target,
+        targetButton: { exists: Boolean(targetButton), disabled: targetButton?.disabled },
+        sourceButton: { exists: Boolean(sourceButton), disabled: sourceButton?.disabled },
+        sourceRect: sourceRect && { width: sourceRect.width, height: sourceRect.height, top: sourceRect.top, bottom: sourceRect.bottom },
+        libraryRect: libraryRect && { top: libraryRect.top, bottom: libraryRect.bottom },
+        status: document.querySelector('.status')?.textContent,
+      };
+    })()`);
+    assert(sourceSelection.value === 'CLNE → Water' && sourceSelection.hidden === false,
+      `${mode}: configured-source readout is ${JSON.stringify(sourceSelection)}`);
+    assert(sourceSelection.target === '2', `${mode}: configured-source target metadata is ${sourceSelection.target}`);
+    assert(sourceSelection.sourceRect?.width > 0 && sourceSelection.sourceRect?.height > 0,
+      `${mode}: configured-source tile is not visibly laid out`);
+    assert(sourceSelection.sourceRect.top >= sourceSelection.libraryRect.top - 1
+      && sourceSelection.sourceRect.bottom <= sourceSelection.libraryRect.bottom + 1,
+    `${mode}: configured-source tile escaped the visible library`);
+    if (screenshot) {
+      configuredSourceScreenshot = variantScreenshotPath(screenshot, 'configured-source');
+      const capture = await cdp.send('Page.captureScreenshot', { format: 'png', fromSurface: true });
+      await writeFile(configuredSourceScreenshot, Buffer.from(capture.data, 'base64'));
+    }
+    await mouseClick(cdp, sourceClient.x, sourceClient.y, 'left');
+    await sleep(80);
+    const configuredSource = await evaluate(cdp, `({
+      cell: window.__ANIFOR_INPUT_AUDIT__.cell(${sourcePoint.x}, ${sourcePoint.y}),
+      target: window.__ANIFOR_INPUT_AUDIT__.sourceTarget(${sourcePoint.x}, ${sourcePoint.y}),
+    })`);
+    assert(configuredSource.cell === 126, `${mode}: source cell projected as ${configuredSource.cell}`);
+    assert(configuredSource.target === 2, `${mode}: source target read back as ${configuredSource.target}`);
+    const rejectedSource = await evaluate(cdp, `(() => {
+      document.querySelector('[data-filter="all"]')?.click();
+      document.querySelector('[data-tool-key="material:146"] .material-button')?.click();
+      document.querySelector('[data-filter="source"]')?.click();
+      const button = document.querySelector('[data-tool-key="source:pcln"] .material-button');
+      button?.click();
+      const output = document.querySelector('.source-selection');
+      return { value: output?.value, rejected: output?.classList.contains('rejected'), selected: button?.getAttribute('aria-pressed') };
+    })()`);
+    assert(rejectedSource.value === 'PCLN → PSCN unsupported' && rejectedSource.rejected,
+      `${mode}: rejected source pair feedback is ${JSON.stringify(rejectedSource)}`);
+    assert(rejectedSource.selected === 'false', `${mode}: rejected source pair became active`);
+    await evaluate(cdp, `(() => {
+      document.querySelector('[data-filter="all"]')?.click();
+      document.querySelector('[data-tool-key="material:1"] .material-button')?.click();
+      document.querySelector('[data-filter="source"]')?.click();
+      window.__ANIFOR_INPUT_AUDIT__.clear();
+      return true;
+    })()`);
 
     const wheelMetrics = await metrics(cdp);
     const wheelClient = worldClient(wheelMetrics.canvas, { x: 431.25, y: 117.75 });
@@ -185,12 +250,14 @@ async function auditMode(mode) {
       backend: mode, dpr,
       backing: `${initial.backing.width}x${initial.backing.height}`,
       landmarkCells: landmarks.length,
+      configuredSource: { emitter: configuredSource.cell, target: configuredSource.target },
       wheelAnchorErrorCells: round(wheelAnchorError, 5),
       middlePanDelta: { x: round(afterPan.panX - beforePan.panX, 3), y: round(afterPan.panY - beforePan.panY, 3) },
       toolFilters: { height: round(initial.ui.filters.height), rows: filterRows(initial.ui.filterButtons) },
       resizeMetrics,
       ...(mobile ? { mobile } : {}),
       ...(screenshot ? { screenshot } : {}),
+      ...(configuredSourceScreenshot ? { configuredSourceScreenshot } : {}),
       browserErrors: errors.length,
     };
   } finally {

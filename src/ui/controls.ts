@@ -80,6 +80,7 @@ export interface ControlsCallbacks {
   onRadius(radius: number): void;
   onPause(): void;
   onEraseMode(erase: boolean): void;
+  canConfigureSource?(source: Material, target: Material): boolean;
   onSaveFile(): Promise<boolean>;
   onOpenFile(file: File): Promise<boolean>;
   onClear(): void;
@@ -88,6 +89,15 @@ export interface ControlsCallbacks {
 
 
 export function toolCountLabel(count: number): string { return count + ' ' + (count === 1 ? 'tool' : 'tools'); }
+
+export function sourceSelectionLabel(source: Material, target: Material): string {
+  const name = (material: Material): string => MATERIALS.find(({ id }) => id === material)?.name ?? String(material);
+  return `${name(source)} → ${name(target)}`;
+}
+
+export function sourceRejectionLabel(source: Material, target: Material): string {
+  return `${sourceSelectionLabel(source, target)} unsupported`;
+}
 
 export function mountControls(host: HTMLElement, callbacks: ControlsCallbacks, catalog: readonly CatalogTool[] = materialTools(MATERIALS)): void {
   const tools = document.createElement('nav');
@@ -115,11 +125,20 @@ export function mountControls(host: HTMLElement, callbacks: ControlsCallbacks, c
   results.setAttribute('aria-live', 'polite');
   results.setAttribute('aria-atomic', 'true');
 
+  const sourceSelection = document.createElement('output');
+  sourceSelection.className = 'source-selection';
+  sourceSelection.hidden = true;
+  sourceSelection.setAttribute('aria-live', 'polite');
+  sourceSelection.title = 'Configured source and target element';
+  finder.append(sourceSelection);
+
   const validKeys = new Set(catalog.map(({ key }) => key));
   let favorites = new Set(loadList(FAVORITES_KEY).filter((key) => validKeys.has(key)));
   let recent: readonly string[] = loadList(RECENT_KEY).filter((key) => validKeys.has(key));
   let mode: ToolFilter = 'all';
-  let selectedKey = catalog[0]?.key;
+  let selectedKey = catalog.find((tool) => tool.kind === 'element' && tool.id === Material.Sand)?.key
+    ?? catalog[0]?.key;
+  let sourceTarget = Material.Sand;
 
   const filterChoices: Array<{ mode: ToolFilter; label: string }> = [
     { mode: 'all', label: 'All' },
@@ -146,11 +165,32 @@ export function mountControls(host: HTMLElement, callbacks: ControlsCallbacks, c
     button.classList.toggle('selected', selected);
     button.setAttribute('aria-pressed', String(selected));
     button.addEventListener('click', () => {
+      if (tool.kind === 'source' && callbacks.canConfigureSource?.(tool.emitter, sourceTarget) === false) {
+        sourceSelection.value = sourceRejectionLabel(tool.emitter, sourceTarget);
+        sourceSelection.hidden = false;
+        sourceSelection.classList.add('rejected');
+        sourceSelection.dataset.emitter = String(tool.emitter);
+        sourceSelection.dataset.target = String(sourceTarget);
+        return;
+      }
       selectedKey = tool.key;
       recent = recordRecent(recent, tool.key);
       saveList(RECENT_KEY, recent);
-      if (tool.kind === 'element') callbacks.onMaterial(tool.id);
-      else callbacks.onTool?.(tool);
+      if (tool.kind === 'element') {
+        sourceTarget = tool.id;
+        sourceSelection.hidden = true;
+        sourceSelection.classList.remove('rejected');
+        callbacks.onMaterial(tool.id);
+      } else {
+        sourceSelection.hidden = tool.kind !== 'source';
+        if (tool.kind === 'source') {
+          sourceSelection.value = sourceSelectionLabel(tool.emitter, sourceTarget);
+          sourceSelection.classList.remove('rejected');
+          sourceSelection.dataset.emitter = String(tool.emitter);
+          sourceSelection.dataset.target = String(sourceTarget);
+        }
+        callbacks.onTool?.(tool);
+      }
       renderLibrary();
     });
 

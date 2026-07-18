@@ -51,6 +51,22 @@ describe('tool catalog view model', () => {
     expect(semantic.find((tool) => tool.kind === 'sign')?.available).toBe(false);
   });
 
+  it('exposes every configured source behind the configured-source capability', () => {
+    const disabled = semanticTools().filter((tool) => tool.kind === 'source');
+    expect(disabled.map(({ key }) => key)).toEqual([
+      'source:clne', 'source:bcln', 'source:pcln', 'source:pbcn', 'source:conv',
+    ]);
+    expect(disabled.map(({ emitter }) => emitter)).toEqual([
+      Material.CLNE, Material.BCLN, Material.PCLN, Material.PBCN, Material.CONV,
+    ]);
+    expect(disabled.every((tool) => tool.requiresTarget && !isToolAvailable(tool))).toBe(true);
+    expect(disabled.every((tool) => tool.limitations?.includes('configured-sources-unavailable'))).toBe(true);
+
+    const enabled = semanticTools({ configuredSources: true }).filter((tool) => tool.kind === 'source');
+    expect(enabled).toHaveLength(5);
+    expect(enabled.every(isToolAvailable)).toBe(true);
+  });
+
   it('filters favorites and preserves recent-use order', () => {
     const keys = tools.slice(0, 3).map(({ key }) => key);
     expect(filterTools(tools, { mode: 'favorites', query: '', favorites: new Set([keys[1]]), recent: [] }).map(({ key }) => key)).toEqual([keys[1]]);

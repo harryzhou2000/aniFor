@@ -67,6 +67,14 @@ const WALL_DEFINITIONS = [
   [16, 'Air blocker', 'Blocks air while allowing particles', '#52606d', '▧'],
 ] as const;
 
+const SOURCE_DEFINITIONS = [
+  ['clne', Material.CLNE, 'CLNE source', 'Places a clone configured to emit the selected target element', '#ffd010', '◇'],
+  ['bcln', Material.BCLN, 'BCLN source', 'Places a breakable clone configured to emit the selected target element', '#ffd040', '◇'],
+  ['pcln', Material.PCLN, 'PCLN source', 'Places a powered clone configured to emit the selected target element', '#c4b84a', '▣'],
+  ['pbcn', Material.PBCN, 'PBCN source', 'Places a powered breakable clone configured to emit the selected target element', '#b86f43', '▣'],
+  ['conv', Material.CONV, 'CONV source', 'Places a converter configured to produce the selected target element', '#0aab0a', '◇'],
+] as const;
+
 export function semanticTools(capabilities: ToolCapabilities = {}): readonly Exclude<CatalogTool, ElementToolInfo>[] {
   const unsupported = (available: boolean | undefined, limitation: string): Pick<ToolInfoBase, 'available' | 'limitations'> => (
     available ? { available: true } : { available: false, limitations: [limitation] }
@@ -82,13 +90,21 @@ export function semanticTools(capabilities: ToolCapabilities = {}): readonly Exc
     category: 'walls',
     ...unsupported(capabilities.walls, 'native-walls-unavailable'),
   }));
+  const sources: SourceToolInfo[] = SOURCE_DEFINITIONS.map(([key, emitter, name, description, color, icon]) => ({
+    key: `source:${key}`,
+    kind: 'source',
+    emitter,
+    requiresTarget: true,
+    name,
+    description,
+    color,
+    icon,
+    category: 'sources',
+    ...unsupported(capabilities.configuredSources, 'configured-sources-unavailable'),
+  }));
   return [
     ...walls,
-    {
-      key: 'source:configured', kind: 'source', emitter: Material.CLNE, requiresTarget: true,
-      name: 'Configured source', description: 'Emits a selected target element', color: '#ffd040', icon: '◎', category: 'sources',
-      ...unsupported(capabilities.configuredSources, 'configured-sources-unavailable'),
-    },
+    ...sources,
     {
       key: 'sign:place', kind: 'sign', maximumLength: 45,
       name: 'Sign', description: 'Places a persistent text annotation', color: '#f1e4c8', icon: 'T', category: 'signs',
