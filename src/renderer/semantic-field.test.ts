@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { dynamicFieldRefreshDue, DYNAMIC_FIELD_REFRESH_INTERVAL } from './field-renderer';
-import { packSemanticRect } from './semantic-field';
+import { packSemanticRect, semanticRenderHeat, semanticTemperatureByte } from './semantic-field';
 
 describe('packSemanticRect', () => {
   it('packs material, normalized temperature, and signed velocity', () => {
@@ -22,6 +22,14 @@ describe('packSemanticRect', () => {
     expect([...target.slice(0, 20)]).toEqual(new Array(20).fill(99));
     expect([...target.slice(20, 28)]).toEqual([7, 0, 128, 128, 7, 0, 128, 128]);
     expect([...target.slice(28, 36)]).toEqual(new Array(8).fill(99));
+  });
+
+  it('shares the shader temperature byte and smoothstep fallback with Canvas', () => {
+    expect(semanticTemperatureByte(undefined)).toBe(0);
+    expect(semanticRenderHeat(undefined)).toBe(0);
+    expect(semanticTemperatureByte(0x4080)).toBe(0x40);
+    expect(semanticRenderHeat(0x4080)).toBeCloseTo(0.741, 2);
+    expect(semanticRenderHeat(0xFFFF)).toBe(1);
   });
 });
 

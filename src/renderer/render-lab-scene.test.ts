@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { DeterministicBackend } from '../simulation/deterministic-backend';
 import { ALL_MATERIALS, Material } from '../shared/materials';
-import { renderProfile, RenderProfile } from './render-profile';
-import { applyRenderLabScene, RENDER_LAB_STYLE_SAMPLES, renderLabRequested } from './render-lab-scene';
+import { renderPhase, renderProfile, RenderPhase, RenderProfile } from './render-profile';
+import {
+  applyRenderLabScene, RENDER_LAB_ENERGY_SAMPLES, RENDER_LAB_STYLE_SAMPLES, renderLabRequested,
+} from './render-lab-scene';
 
 describe('render lab scene', () => {
   it('is selected only by the explicit query', () => {
@@ -24,12 +26,15 @@ describe('render lab scene', () => {
     expect(counts[Material.Water]).toBeGreaterThan(8_000);
     expect(counts[Material.Smoke]).toBeGreaterThan(1_000);
     expect(counts[Material.Oxygen]).toBeGreaterThan(700);
-    expect(counts[Material.Metal]).toBeGreaterThan(1_000);
-    expect(counts[Material.PLUT]).toBeGreaterThan(900);
-    expect(counts[Material.SPRK]).toBeGreaterThan(900);
-    expect(counts[Material.ACEL]).toBeGreaterThan(900);
+    expect(counts[Material.Metal]).toBeGreaterThan(500);
+    expect(counts[Material.PLUT]).toBeGreaterThan(500);
+    expect(counts[Material.SPRK]).toBeGreaterThan(500);
+    expect(counts[Material.ACEL]).toBeGreaterThan(500);
     expect(counts[Material.Fire]).toBeGreaterThan(500);
     expect(counts[Material.ELEC]).toBeGreaterThan(500);
+    expect(counts[Material.Plasma]).toBeGreaterThan(500);
+    expect(counts[Material.PHOT]).toBeGreaterThan(500);
+    expect(counts[Material.NEUT]).toBeGreaterThan(500);
   });
 
   it('exercises every non-neutral styled family plus an energy phase', () => {
@@ -38,12 +43,19 @@ describe('render lab scene', () => {
       return renderProfile(material.category);
     }));
     expect(profiles).toEqual(new Set([
+      RenderProfile.Neutral,
+      RenderProfile.Granular,
       RenderProfile.Rigid,
       RenderProfile.Organic,
       RenderProfile.Radioactive,
       RenderProfile.Device,
       RenderProfile.Field,
     ]));
-    expect(RENDER_LAB_STYLE_SAMPLES).toContain(Material.NEUT);
+    expect(RENDER_LAB_ENERGY_SAMPLES).toHaveLength(5);
+    for (const id of RENDER_LAB_ENERGY_SAMPLES) {
+      const material = ALL_MATERIALS.find((candidate) => candidate.id === id)!;
+      expect(renderPhase(material)).toBe(RenderPhase.Energy);
+      expect(RENDER_LAB_STYLE_SAMPLES).toContain(id);
+    }
   });
 });

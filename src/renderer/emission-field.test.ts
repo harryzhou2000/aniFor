@@ -17,6 +17,18 @@ function alphaAt(field: EmissionField, x: number, y: number): number {
 }
 
 describe('emission field', () => {
+  it('tracks whether the packed field contains useful light', () => {
+    const { field, materials } = fixture();
+    field.update(materials);
+    expect(field.hasLight).toBe(false);
+    materials[10 * 21 + 10] = Material.PHOT;
+    field.update(materials);
+    expect(field.hasLight).toBe(true);
+    materials.fill(Material.Empty);
+    field.update(materials);
+    expect(field.hasLight).toBe(false);
+  });
+
   it('widens sparse energy into a coloured falloff', () => {
     const { field, materials } = fixture();
     materials[10 * 21 + 10] = Material.PHOT;

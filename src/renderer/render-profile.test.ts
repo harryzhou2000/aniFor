@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { ALL_MATERIALS, Material } from '../shared/materials';
-import { renderPhase, renderProfile, RenderPhase, RenderProfile } from './render-profile';
+import { receivesSurfaceLight, renderPhase, renderProfile, RenderPhase, RenderProfile } from './render-profile';
 
 describe('render profiles', () => {
   it('groups toolbox categories into stable visual surface families', () => {
@@ -34,5 +34,14 @@ describe('render profiles', () => {
     expect(ALL_MATERIALS.find(({ id }) => id === Material.SPRK)?.emissive).toBe(true);
     expect(renderPhase(ALL_MATERIALS.find(({ id }) => id === Material.CFLM)!)).toBe(RenderPhase.Gas);
     expect(renderPhase(ALL_MATERIALS.find(({ id }) => id === Material.THDR)!)).toBe(RenderPhase.Powder);
+  });
+
+  it('lights coherent matter surfaces without treating volumes as opaque', () => {
+    expect(receivesSurfaceLight(RenderPhase.Solid)).toBe(true);
+    expect(receivesSurfaceLight(RenderPhase.Powder)).toBe(true);
+    expect(receivesSurfaceLight(RenderPhase.Field)).toBe(true);
+    expect(receivesSurfaceLight(RenderPhase.Liquid)).toBe(false);
+    expect(receivesSurfaceLight(RenderPhase.Gas)).toBe(false);
+    expect(receivesSurfaceLight(RenderPhase.Energy)).toBe(false);
   });
 });

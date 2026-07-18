@@ -2,6 +2,7 @@ import { performance } from 'node:perf_hooks';
 import { ALL_MATERIALS, Material } from '../src/shared/materials';
 import { AtmosphereField } from '../src/renderer/atmosphere-field';
 import { shadeCanvasAtmosphere } from '../src/renderer/canvas-atmosphere-relief';
+import { shadeCanvasEnergy } from '../src/renderer/canvas-energy-style';
 import { lightCanvasSurface } from '../src/renderer/canvas-surface-light';
 import { EmissionField } from '../src/renderer/emission-field';
 import { LiquidDensityField } from '../src/renderer/liquid-density-field';
@@ -59,6 +60,8 @@ const solidPixels = new Uint8ClampedArray(solidSeed.length);
 const liquidSeed = seedPixels(materials, liquidByMaterial);
 const liquidPixels = new Uint8ClampedArray(liquidSeed.length);
 const atmospherePixels = new Uint8ClampedArray(atmosphere.bytes.length);
+const energyCore = new Float32Array(3);
+const energyGlow = new Float32Array(3);
 const profileEmission = new Uint8Array(emission.bytes.length);
 for (let offset = 0; offset < profileEmission.length; offset += 4) {
   profileEmission[offset] = 255;
@@ -99,6 +102,14 @@ console.log(JSON.stringify({
     scratchBytes: solidPixels.byteLength + liquidPixels.byteLength,
     atmosphereRelief: sample(() => {
       shadeCanvasAtmosphere(atmospherePixels, atmosphere.bytes, atmosphere.width, atmosphere.height);
+    }),
+    energyCores: sample(() => {
+      for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) {
+        shadeCanvasEnergy(
+          energyCore, energyGlow, 32, 224, 255, RenderProfile.Radioactive,
+          Material.NEUT, x, y, 1_000, 0.4, 24, -8,
+        );
+      }
     }),
     solidSurface: sample(() => {
       solidPixels.set(solidSeed);

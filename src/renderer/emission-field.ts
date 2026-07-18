@@ -12,6 +12,7 @@ export class EmissionField {
   readonly width: number;
   readonly height: number;
   readonly bytes: Uint8Array;
+  hasLight = false;
   private readonly seed: Float32Array;
   private readonly horizontal: Float32Array;
   private readonly blurred: Float32Array;
@@ -129,6 +130,7 @@ export class EmissionField {
   }
 
   private packBytes(): void {
+    this.hasLight = false;
     for (let offset = 0; offset < this.bytes.length; offset += 4) {
       const blurredDensity = this.blurred[offset + 3];
       const density = Math.min(1, Math.max(this.seed[offset + 3] * 0.9, blurredDensity * GLOW_GAIN));
@@ -143,6 +145,7 @@ export class EmissionField {
       this.bytes[offset + 1] = Math.min(255, Math.round(this.blurred[offset + 1] / blurredDensity * 255));
       this.bytes[offset + 2] = Math.min(255, Math.round(this.blurred[offset + 2] / blurredDensity * 255));
       this.bytes[offset + 3] = Math.round(density * 255);
+      this.hasLight ||= this.bytes[offset + 3] > 0;
     }
   }
 }

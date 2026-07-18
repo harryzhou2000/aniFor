@@ -4,14 +4,22 @@ import type { SimulationBackend } from '../simulation';
 export const RENDER_LAB_QUERY = 'render-lab';
 
 export const RENDER_LAB_STYLE_SAMPLES = [
+  // Granular surfaces, including emissive/reactive powders.
+  Material.Sand, Material.Dust, Material.Salt, Material.Gunpowder, Material.Thermite,
   // Rigid surfaces.
   Material.Metal, Material.Glass, Material.Coal, Material.Ice, Material.Wall,
   // Organic and growing matter.
   Material.Wood, Material.Plant, Material.SEED, Material.YEST, Material.VINE,
   // Radioactive solids rather than phase overrides.
   Material.PLUT, Material.URAN, Material.ISZS, Material.VIBR, Material.POLO,
-  // Energy, devices, and force/special fields.
-  Material.NEUT, Material.SPRK, Material.ARAY, Material.ACEL, Material.PRTI,
+  // Emissive devices and force/special fields.
+  Material.SPRK, Material.ARAY, Material.ACEL, Material.PRTI, Material.PCLN,
+  // Neutral and radioactive energy cores.
+  Material.Fire, Material.Plasma, Material.ELEC, Material.PHOT, Material.NEUT,
+] as const;
+
+export const RENDER_LAB_ENERGY_SAMPLES = [
+  Material.Fire, Material.Plasma, Material.ELEC, Material.PHOT, Material.NEUT,
 ] as const;
 
 export function renderLabRequested(search = globalThis.location?.search ?? ''): boolean {
@@ -57,11 +65,12 @@ export function applyRenderLabScene(simulation: SimulationBackend): void {
   });
   plot.rect(202, 344, 160, 8, Material.Wall, 1, 541);
 
-  // Profile matrix: five columns each of rigid, organic, radioactive, and device/field cues.
+  // Profile matrix: six compact rows expose every family plus dedicated neutral
+  // and radioactive energy cores beside warm/cool scene-light sources.
   RENDER_LAB_STYLE_SAMPLES.forEach((material, index) => {
     const column = index % 5;
     const row = Math.floor(index / 5);
-    plot.rect(388 + column * 40, 194 + row * 38, 35, 33, material, 0.90, 601 + index);
+    plot.rect(388 + column * 40, 194 + row * 25, 35, 21, material, 0.90, 601 + index);
   });
   // Equal-height warm/cool sources expose how each family responds to coloured
   // scene light. The centre column remains a lower-light comparison surface.

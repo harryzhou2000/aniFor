@@ -221,6 +221,7 @@ void main() {
     halo = 1.0;
   }
   float profile = profileFor(material);
+  float energyCore = isEnergy(material) ? 1.0 : 0.0;
   vec3 shape = wallOnly > 0.5
     ? wallSurface
     : (surfaceOnly > 0.5
@@ -290,6 +291,38 @@ void main() {
     alpha = smoothstep(0.002, 0.28, volume) * (0.07 + volume * 0.30) * pulse;
     color = mix(base * 1.42 + vec3(0.045), base * 0.72, volume) * (0.68 + diffuse * 0.32);
     color += mix(vec3(0.16, 0.19, 0.24), base, 0.56) * specular * 0.30;
+  } else if (energyCore > 0.5) {
+    // Energy owns a luminous semantic core. The lower-resolution emission field
+    // remains the surrounding aura, so fast particles never inherit its lag or
+    // become radioactive/rigid textured solids.
+    float core = smoothstep(0.36, 0.90, density);
+    float edge = 1.0 - smoothstep(0.34, 0.88, density);
+    float speed = clamp(length(velocity) * 1.45, 0.0, 1.0);
+    float flowWave = sin(
+      fieldPosition.x * (0.15 + speed * 0.08)
+      + fieldPosition.y * (0.09 - velocity.x * 0.035)
+      - uTime * (1.65 + speed * 1.8)
+      + material * 0.41
+    );
+    float pulse = 0.5 + 0.5 * sin(uTime * 2.35 + material * 0.61 + atmosphere * 1.7);
+    float scintillation = fract(sin(dot(floor(fieldPosition * 1.5), vec2(41.73, 19.19)) + material) * 143758.5453);
+    float radioactiveCarrier = profile == 4.0 ? 1.0 : 0.0;
+    vec3 energyBase = vividColor(base, mix(1.18, 1.32, radioactiveCarrier));
+    vec3 auraTint = emissionState.a > 0.002
+      ? mix(energyBase, emissionState.rgb, 0.18 + edge * 0.10)
+      : energyBase;
+    float carrierDetail = mix(
+      0.94 + flowWave * 0.08 + pulse * 0.06,
+      0.92 + flowWave * 0.045 + step(0.84, scintillation) * (0.13 + uHighQuality * 0.09),
+      radioactiveCarrier
+    );
+    alpha = smoothstep(0.18, 0.72, density)
+      * mix(0.58 + pulse * 0.08, 0.94, core)
+      * mix(1.0, carrierDetail, edge * 0.55);
+    color = energyBase * (1.05 + core * 0.48 + heat * 0.30) * carrierDetail;
+    color += auraTint * edge * (0.20 + pulse * 0.16);
+    color += mix(vec3(1.0, 0.72, 0.42), vec3(0.72, 0.90, 1.0), radioactiveCarrier)
+      * core * (0.10 + pulse * 0.08);
   } else if (gasVolume > 0.5) {
     float billow = 0.88 + atmosphere * 0.12;
     // Dense reconstructed gas should read as one mixed volume, not as the raw
@@ -366,9 +399,11 @@ void main() {
       color += mix(base, vec3(0.48, 0.70, 1.0), 0.42) * (0.045 + max(0.0, interference) * 0.07);
     }
   }
-  float emission = isEmissive(material) ? 0.48 + heat * 1.05 : (material == 11.0 ? 0.28 + heat * 0.62 : (profile == 4.0 ? 0.07 : 0.0));
+  float emission = energyCore > 0.5
+    ? 0.0
+    : (isEmissive(material) ? 0.48 + heat * 1.05 : (material == 11.0 ? 0.28 + heat * 0.62 : (profile == 4.0 ? 0.07 : 0.0)));
   color += mix(base, vec3(1.0, 0.52, 0.20), heat) * emission;
-  if (emissionOnly < 0.5 && emissionState.a > 0.002) {
+  if (energyCore < 0.5 && emissionOnly < 0.5 && emissionState.a > 0.002) {
     float lightReach = smoothstep(0.002, 0.42, emissionState.a);
     float volumeResponse = (gasVolume > 0.5 || liquidVolume > 0.5) ? 0.16 : 0.0;
     float contour = 1.0 - smoothstep(0.54, 0.96, density);
@@ -383,7 +418,8 @@ void main() {
     // empty space keeps the separate emission halo, avoiding a flat milky wash.
     color += emissionState.rgb * lightReach * lightResponse;
   }
-  if (halo > 0.5 && wallOnly < 0.5 && emissionOnly < 0.5 && surfaceOnly < 0.5 && gasVolume < 0.5 && liquidVolume < 0.5) alpha = volume * (isEnergy(material) ? 1.35 + heat : 0.52);
+  if (halo > 0.5 && wallOnly < 0.5 && emissionOnly < 0.5 && surfaceOnly < 0.5
+    && gasVolume < 0.5 && liquidVolume < 0.5 && energyCore < 0.5) alpha = volume * 0.52;
   alpha = clamp(alpha, 0.0, 1.0);
   vec3 premultiplied = clamp(color, 0.0, 1.35) * alpha;
   float compositeAlpha = alpha;

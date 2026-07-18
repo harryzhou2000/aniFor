@@ -40,6 +40,11 @@ export function surfaceLightGain(profile: RenderProfile): number {
   return 0.20;
 }
 
+/** Matter phases that expose a coherent surface to the shared emission field. */
+export function receivesSurfaceLight(phase: RenderPhase): boolean {
+  return phase === RenderPhase.Solid || phase === RenderPhase.Powder || phase === RenderPhase.Field;
+}
+
 export function renderPhase(material: Pick<MaterialInfo, 'category' | 'phase'>): RenderPhase {
   const phase = material.phase ?? defaultPhase(material.category);
   if (phase === 'gas') return RenderPhase.Gas;

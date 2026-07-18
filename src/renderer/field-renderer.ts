@@ -6,11 +6,13 @@ import type { PixiFieldPresenter } from './pixi-field-presenter';
 import { backingSize, resolveFieldOutputScale } from './render-resolution';
 import { shadeCanvasAtmosphere } from './canvas-atmosphere-relief';
 import { reconstructLiquidSurface } from './canvas-liquid-surface';
+import { shadeCanvasEnergy } from './canvas-energy-style';
 import { shadeCanvasMaterial } from './canvas-material-style';
 import { lightCanvasSurface } from './canvas-surface-light';
 import { reconstructSolidSurface } from './canvas-solid-surface';
 import { RenderFieldSet } from './render-field-set';
-import { renderPhase, RenderPhase, RenderProfile } from './render-profile';
+import { receivesSurfaceLight, renderPhase, RenderPhase, RenderProfile } from './render-profile';
+import { semanticRenderHeat } from './semantic-field';
 import { compositePixel } from './rgba-composite';
 import { forceCanvas2D, supportsWebGL } from './webgl-support';
 import { contourLight, materialNeighbourMask, neighbourDensity } from './volumetric-field';
@@ -51,6 +53,7 @@ export class MaterialRenderer {
   private readonly rendered: Uint8Array;
   private readonly renderedWalls?: Uint8Array;
   private readonly styledColor = new Float32Array(3);
+  private readonly energyGlowColor = new Float32Array(3);
   private readonly outputScale = resolveFieldOutputScale();
   private presenter?: PixiFieldPresenter;
   private readonly view: ViewTransform;
@@ -304,7 +307,7 @@ export class MaterialRenderer {
       const wall = this.renderedWalls?.[index] ?? 0;
       if (wall) {
         setWallPixel(base, pixel, wall, x, y);
-        if (material === Material.Empty) {
+        if (material === Material.Empty && fields.emission.hasLight) {
           const wallExposure = cardinalExposure(this.renderedWalls, width, height, x, y, wall);
           lightCanvasSurface(
             base, pixel, fields.emission.bytes, fields.emission.width, fields.emission.height,
@@ -325,7 +328,23 @@ export class MaterialRenderer {
         + (exposedTop ? 18 : 0) - (bottom === Material.Empty ? 5 : 0);
       const grain = hash(index) % 23 - 11;
 
-      if (material === Material.Sand) {
+      if (phase === RenderPhase.Energy) {
+        const info = PROJECTED_RENDER_INFO[material];
+        if (!info) continue;
+        const red = info.color >>> 16;
+        const green = (info.color >>> 8) & 0xFF;
+        const blue = info.color & 0xFF;
+        const heat = semanticRenderHeat(temperatures?.[index]);
+        const glowAlpha = shadeCanvasEnergy(
+          this.styledColor, this.energyGlowColor, red, green, blue, profile, material, x, y, time, heat,
+          velocities?.[index * 2] ?? 0, velocities?.[index * 2 + 1] ?? 0,
+        );
+        compositePixel(target, pixel, this.styledColor[0], this.styledColor[1], this.styledColor[2], 245);
+        setPixel(
+          fire, pixel,
+          this.energyGlowColor[0], this.energyGlowColor[1], this.energyGlowColor[2], glowAlpha,
+        );
+      } else if (material === Material.Sand) {
         compositePixel(target, pixel, 194 + grain + normalLight, 145 + grain * 0.65 + normalLight, 76 + grain * 0.35 + normalLight, 255);
       } else if (material === Material.Dust) {
         const softness = Math.sin(time * 0.0018 + x * 0.17 + y * 0.09) * 4;
@@ -394,11 +413,6 @@ export class MaterialRenderer {
         const billow = Math.sin(time * 0.0016 + x * 0.11 + y * 0.065 + drift) * 7;
         const volume = density * 5 + contour * 0.6 + billow;
         setPixel(smoke, pixel, 114 + volume, 118 + volume, 124 + volume, 45 + density * 13 + Math.min(38, speed));
-      } else if (material === Material.Fire) {
-        const kelvin = temperatures ? temperatures[index] / 10 : 1100;
-        const heat = clamp((kelvin - 450) / 1100, 0, 1);
-        compositePixel(target, pixel, 255, 115 + heat * 125, 28 + heat * 130, 255);
-        setPixel(fire, pixel, 255, 92 + heat * 100, 18, 210);
       } else {
         const info = PROJECTED_RENDER_INFO[material];
         if (!info) continue;
@@ -418,9 +432,6 @@ export class MaterialRenderer {
           const shimmer = Math.sin(time * 0.0018 + x * 0.055 + y * 0.025) * 4 + contour;
           compositePixel(target, pixel, red - depth + shimmer, green - depth + shimmer, blue - depth + shimmer, 205 + density * 6);
           if (exposedTop) setPixel(fire, pixel, red + 35, green + 35, blue + 35, 30 + Math.max(0, contour));
-        } else if (info.phase === RenderPhase.Energy) {
-          compositePixel(target, pixel, red + normalLight, green + normalLight, blue + normalLight, 245);
-          setPixel(fire, pixel, red, green, blue, 180);
         } else {
           shadeCanvasMaterial(
             this.styledColor, red, green, blue, fields.lookups.styleBytes[material * 4 + 1],
@@ -434,7 +445,7 @@ export class MaterialRenderer {
         }
         if (info.emissive) setPixel(fire, pixel, red, green, blue, 176);
       }
-      if (phase === RenderPhase.Solid || phase === RenderPhase.Field) {
+      if (fields.emission.hasLight && receivesSurfaceLight(phase)) {
         const exposure = cardinalExposure(this.rendered, width, height, x, y, material);
         lightCanvasSurface(
           target, pixel, fields.emission.bytes, fields.emission.width, fields.emission.height,

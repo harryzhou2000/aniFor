@@ -22,7 +22,8 @@ The non-negotiable contract is:
 - Headless Wind clears inactive particle-authored coarse `vx`/`vy` when a new gesture epoch begins, writes the authored velocity before `BeforeSim`, enables `AIR_ON` for exactly that update, then restores `AIR_VELOCITYOFF` before particle advection. Never inject Wind after `BeforeSim`: that bypasses diffusion, pressure coupling, clamping, and air-blocking walls. Preserve unstepped Wind through the namespaced optional OPS marker instead of inferring it from ordinary imported-save velocity.
 - The shared liquid texture is species-aware RGBA: RGB is the uniquely supported liquid color and alpha is density. Do not read red as density or choose a liquid halo color by fixed neighbor scan order; exact unlike-liquid ties must remain a visible interface.
 - Canvas gas relief is a presentation-only transform of the shared atmosphere texture: preserve alpha byte-for-byte and multiply RGB channels uniformly so lighting cannot widen the cloud or shift species hue. Dense WebGL gas should blend toward the atmosphere RGB instead of exposing raw semantic-particle dots.
-- Treat the emission field as scene light as well as empty-space aura. In Canvas, composite the broad aura behind opaque matter and apply clamped bilinear samples only to exposed solid/field RGB; never change surface alpha or semantic occupancy. Clamp the continuous field coordinate before computing its fractional interpolation weight, matching WebGL's clamp-to-edge sampler at world boundaries.
+- Treat the emission field as scene light as well as empty-space aura. In Canvas, composite the broad aura behind opaque matter and apply clamped bilinear samples only to exposed solid/powder/field RGB when the field contains light; never change surface alpha or semantic occupancy. Clamp the continuous field coordinate before computing its fractional interpolation weight, matching WebGL's clamp-to-edge sampler at world boundaries.
+- Energy is a phase, not a solid texture profile. Keep occupied Fire/Plasma and radioactive carriers in the dedicated luminous-core path, preserve their palette identity at the semantic centre, and let the lower-resolution emission field own only the broader aura. Do not add a new texture or scheduler stage for core animation when the existing semantic/temperature/velocity inputs suffice.
 - Compact portrait layout may use a square interaction panel, but zoom 1 must contain the full 612×384 field with a uniform scale and letterboxing. Do not crop the world merely to fill the square.
 - One touch is the mobile brush and two touches are camera pan/pinch. Defer the initial touch mark until the gesture is known to be single-touch so every two-finger gesture does not leave an accidental dot.
 - Keep a compact bounded mobile catalog with `overscroll-behavior-y: auto`: its inner scroll must chain back to the document, and toolbox bottom padding must remain a safe touch target for page scrolling.
@@ -51,6 +52,14 @@ Use the paused deterministic material atlas before and after material-shader cha
 ```
 
 The render-lab query uses a 612×384 in-memory backend, does not restore or write autosave, and contains powder density ramps, cohesive and sparse liquids, overlapping gas species, sand/water mixtures, adjacent liquid families, and representative rigid/organic/radioactive/emissive blocks. Capture the viewport itself at identical browser dimensions and keep local comparison shots under ignored `.artifacts/`.
+
+Use the automated real-browser capture/interaction gate after shader or mapping changes:
+
+```sh
+mkdir -p .artifacts
+npm run audit:browser-input -- --webgl-only --screenshot=.artifacts/render-lab-webgl.png
+npm run audit:browser-input -- --canvas-only --screenshot=.artifacts/render-lab-canvas2d.png
+```
 
 Read [`docs/render-lab.md`](docs/render-lab.md) before changing reconstruction thresholds or blur radii. A TypeScript or Vite build does not compile Pixi's runtime GLSL; a browser screenshot with a clean shader console is required.
 

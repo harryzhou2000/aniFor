@@ -109,7 +109,6 @@ export class Game {
     this.simulationTool = undefined;
     this.eraseMode = false;
     this.radius = 0;
-    this.simulation.clear();
     this.renderer.resetView();
     this.root.dataset.inputAudit = 'ready';
     window.__ANIFOR_INPUT_AUDIT__ = {

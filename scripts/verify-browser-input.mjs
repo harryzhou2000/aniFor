@@ -1,4 +1,4 @@
-import { access, mkdtemp, rm } from 'node:fs/promises';
+import { access, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { spawn } from 'node:child_process';
@@ -11,6 +11,7 @@ const WORLD_HEIGHT = 384;
 const WORLD_ASPECT = WORLD_WIDTH / WORLD_HEIGHT;
 const modes = process.argv.includes('--canvas-only') ? ['canvas2d']
   : process.argv.includes('--webgl-only') ? ['webgl'] : ['canvas2d', 'webgl'];
+const screenshotRequest = process.argv.find((argument) => argument.startsWith('--screenshot='))?.slice('--screenshot='.length);
 
 async function main() {
   const server = spawn(process.execPath, [
@@ -90,6 +91,13 @@ async function auditMode(mode) {
     await cdp.send('Page.navigate', { url: `${ORIGIN}/?${query}` });
     await waitFor(() => evaluate(cdp, `Boolean(window.__ANIFOR_INPUT_AUDIT__ && document.documentElement)`), 15_000, `input audit API (${mode})`);
     await waitFor(() => evaluate(cdp, `window.__ANIFOR_INPUT_AUDIT__.backend().backend === ${JSON.stringify(mode)}`), 15_000, `${mode} backend`);
+
+    const screenshot = screenshotPath(mode);
+    if (screenshot) {
+      await sleep(250);
+      const capture = await cdp.send('Page.captureScreenshot', { format: 'png', fromSurface: true });
+      await writeFile(screenshot, Buffer.from(capture.data, 'base64'));
+    }
 
     await evaluate(cdp, `window.__ANIFOR_INPUT_AUDIT__.clear(); window.__ANIFOR_INPUT_AUDIT__.setRadius(0); true`);
     const initial = await metrics(cdp);
@@ -172,6 +180,7 @@ async function auditMode(mode) {
       middlePanDelta: { x: round(afterPan.panX - beforePan.panX, 3), y: round(afterPan.panY - beforePan.panY, 3) },
       resizeMetrics,
       ...(mobile ? { mobile } : {}),
+      ...(screenshot ? { screenshot } : {}),
       browserErrors: errors.length,
     };
   } finally {
@@ -316,6 +325,15 @@ async function waitFor(check, timeoutMs, label) {
 function assert(condition, message) { if (!condition) throw new Error(message); }
 function round(value, digits = 2) { const factor = 10 ** digits; return Math.round(value * factor) / factor; }
 function sleep(milliseconds) { return new Promise((resolve) => setTimeout(resolve, milliseconds)); }
+
+function screenshotPath(mode) {
+  if (!screenshotRequest) return undefined;
+  if (modes.length === 1) return screenshotRequest;
+  const extension = path.extname(screenshotRequest);
+  return extension
+    ? `${screenshotRequest.slice(0, -extension.length)}-${mode}${extension}`
+    : `${screenshotRequest}-${mode}.png`;
+}
 
 async function terminate(child) {
   if (!child || child.exitCode !== null || !child.pid) return;
