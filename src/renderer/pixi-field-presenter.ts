@@ -13,6 +13,7 @@ import { DirtyChunkGrid } from './dirty-chunk-grid';
 import { LiquidDensityField } from './liquid-density-field';
 import { renderPhase, renderProfile, RenderPhase } from './render-profile';
 import { packSemanticRect } from './semantic-field';
+import { VolumeFieldRefreshSchedule } from './volume-field-refresh';
 
 interface SemanticMaterialStyle {
   readonly id: number;
@@ -246,6 +247,7 @@ export class PixiFieldPresenter {
   private readonly liquidByMaterial: Uint8Array;
   private readonly chunks: DirtyChunkGrid;
   private readonly uniforms: UniformGroup;
+  private readonly volumeRefresh = new VolumeFieldRefreshSchedule();
   private atmosphereDirty = true;
   private liquidDirty = true;
 
@@ -356,20 +358,26 @@ export class PixiFieldPresenter {
     if (this.liquidByMaterial[previousMaterial] || this.liquidByMaterial[nextMaterial]) this.liquidDirty = true;
   }
 
+  visualRefreshDue(time: number): boolean {
+    return this.volumeRefresh.due(time, this.atmosphereDirty, this.liquidDirty);
+  }
+
   update(materials: Uint8Array, temperatures: Uint16Array | undefined, velocities: Int8Array | undefined, time: number, refreshDynamicFields: boolean): void {
     if (refreshDynamicFields) this.chunks.markAll();
     const rectangles = this.chunks.consume();
     for (const rect of rectangles) packSemanticRect(this.fieldBytes, this.fieldSource.width, materials, temperatures, velocities, rect);
     if (rectangles.length) this.fieldSource.update();
-    if (this.atmosphereDirty) {
+    const volumeField = this.volumeRefresh.next(time, this.atmosphereDirty, this.liquidDirty);
+    if (volumeField === 'atmosphere') {
       this.atmosphereField.update(materials);
       this.atmosphereSource.update();
       this.atmosphereDirty = false;
-    }
-    if (this.liquidDirty) {
+      this.volumeRefresh.refreshed('atmosphere', time);
+    } else if (volumeField === 'liquid') {
       this.liquidField.update(materials);
       this.liquidSource.update();
       this.liquidDirty = false;
+      this.volumeRefresh.refreshed('liquid', time);
     }
     this.uniforms.uniforms.uTime = time * 0.001;
     this.app.render();

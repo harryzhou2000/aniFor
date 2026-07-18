@@ -14,6 +14,12 @@ function densityAt(field: LiquidDensityField, x: number, y: number): number {
 }
 
 describe('liquid density field', () => {
+  it('stays within its explicit 612x384 CPU allocation budget', () => {
+    const { field } = fixture(612, 384);
+    expect(field.allocatedByteLength).toBe(3_760_128);
+    expect(field.allocatedByteLength).toBeLessThan(4 * 1024 * 1024);
+  });
+
   it('keeps a dense core and a tight one-cell edge', () => {
     const { field, materials } = fixture();
     materials[4 * 9 + 4] = Material.Water;

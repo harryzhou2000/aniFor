@@ -36,8 +36,11 @@ export class LiquidDensityField {
     }
   }
 
+  get allocatedByteLength(): number {
+    return this.bytes.byteLength + this.seed.byteLength + this.horizontal.byteLength + this.blurred.byteLength;
+  }
+
   private blurHorizontal(): void {
-    this.horizontal.fill(0);
     for (let y = 0; y < this.height; y++) for (let x = 0; x < this.width; x++) {
       let total = 0;
       let weightSum = 0;
@@ -53,7 +56,6 @@ export class LiquidDensityField {
   }
 
   private blurVertical(): void {
-    this.blurred.fill(0);
     for (let y = 0; y < this.height; y++) for (let x = 0; x < this.width; x++) {
       let total = 0;
       let weightSum = 0;

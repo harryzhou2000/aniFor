@@ -39,6 +39,10 @@ export class AtmosphereField {
     this.packBytes();
   }
 
+  get allocatedByteLength(): number {
+    return this.bytes.byteLength + this.seed.byteLength + this.horizontal.byteLength + this.blurred.byteLength;
+  }
+
   private seedGas(materials: Uint8Array): void {
     for (let ay = 0; ay < this.height; ay++) {
       for (let ax = 0; ax < this.width; ax++) {
@@ -73,39 +77,59 @@ export class AtmosphereField {
   }
 
   private blurHorizontal(): void {
-    this.horizontal.fill(0);
     for (let y = 0; y < this.height; y++) {
       for (let x = 0; x < this.width; x++) {
         const target = (y * this.width + x) * 4;
+        let red = 0;
+        let green = 0;
+        let blue = 0;
+        let density = 0;
         let weightSum = 0;
         for (let kernel = -KERNEL_RADIUS; kernel <= KERNEL_RADIUS; kernel++) {
           const sourceX = x + kernel;
           if (sourceX < 0 || sourceX >= this.width) continue;
           const weight = KERNEL[kernel + KERNEL_RADIUS];
           const source = (y * this.width + sourceX) * 4;
-          for (let channel = 0; channel < 4; channel++) this.horizontal[target + channel] += this.seed[source + channel] * weight;
+          red += this.seed[source] * weight;
+          green += this.seed[source + 1] * weight;
+          blue += this.seed[source + 2] * weight;
+          density += this.seed[source + 3] * weight;
           weightSum += weight;
         }
-        for (let channel = 0; channel < 4; channel++) this.horizontal[target + channel] /= weightSum;
+        const inverseWeight = 1 / weightSum;
+        this.horizontal[target] = red * inverseWeight;
+        this.horizontal[target + 1] = green * inverseWeight;
+        this.horizontal[target + 2] = blue * inverseWeight;
+        this.horizontal[target + 3] = density * inverseWeight;
       }
     }
   }
 
   private blurVertical(): void {
-    this.blurred.fill(0);
     for (let y = 0; y < this.height; y++) {
       for (let x = 0; x < this.width; x++) {
         const target = (y * this.width + x) * 4;
+        let red = 0;
+        let green = 0;
+        let blue = 0;
+        let density = 0;
         let weightSum = 0;
         for (let kernel = -KERNEL_RADIUS; kernel <= KERNEL_RADIUS; kernel++) {
           const sourceY = y + kernel;
           if (sourceY < 0 || sourceY >= this.height) continue;
           const weight = KERNEL[kernel + KERNEL_RADIUS];
           const source = (sourceY * this.width + x) * 4;
-          for (let channel = 0; channel < 4; channel++) this.blurred[target + channel] += this.horizontal[source + channel] * weight;
+          red += this.horizontal[source] * weight;
+          green += this.horizontal[source + 1] * weight;
+          blue += this.horizontal[source + 2] * weight;
+          density += this.horizontal[source + 3] * weight;
           weightSum += weight;
         }
-        for (let channel = 0; channel < 4; channel++) this.blurred[target + channel] /= weightSum;
+        const inverseWeight = 1 / weightSum;
+        this.blurred[target] = red * inverseWeight;
+        this.blurred[target + 1] = green * inverseWeight;
+        this.blurred[target + 2] = blue * inverseWeight;
+        this.blurred[target + 3] = density * inverseWeight;
       }
     }
   }
@@ -115,7 +139,10 @@ export class AtmosphereField {
       const blurredDensity = this.blurred[offset + 3];
       const density = Math.min(1, Math.max(this.seed[offset + 3] * 0.85, blurredDensity * CLOUD_GAIN));
       if (density <= 1 / 255 || blurredDensity <= 1e-6) {
-        this.bytes.fill(0, offset, offset + 4);
+        this.bytes[offset] = 0;
+        this.bytes[offset + 1] = 0;
+        this.bytes[offset + 2] = 0;
+        this.bytes[offset + 3] = 0;
         continue;
       }
       this.bytes[offset] = Math.min(255, Math.round(this.blurred[offset] / blurredDensity * 255));

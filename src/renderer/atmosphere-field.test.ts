@@ -17,6 +17,12 @@ function alphaAt(field: AtmosphereField, x: number, y: number): number {
 }
 
 describe('atmosphere field', () => {
+  it('stays within its explicit 612x384 CPU allocation budget', () => {
+    const { field } = fixture(612, 384);
+    expect(field.allocatedByteLength).toBe(3_055_104);
+    expect(field.allocatedByteLength).toBeLessThan(3 * 1024 * 1024);
+  });
+
   it('widens a sparse gas cell into a soft bounded volume', () => {
     const { field, materials } = fixture();
     materials[10 * 20 + 10] = Material.Smoke;

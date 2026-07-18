@@ -76,7 +76,8 @@ export class MaterialRenderer {
       this.changed = true;
     }
     const hasDynamicFields = Boolean(this.simulation.temperature || this.simulation.velocity);
-    if (!this.changed && !hasDynamicFields) return;
+    const visualRefreshDue = this.presenter?.visualRefreshDue(time) ?? false;
+    if (!this.changed && !hasDynamicFields && !visualRefreshDue) return;
     const refreshDynamicFields = dynamicFieldRefreshDue(time, this.lastDynamicFieldRefresh, hasDynamicFields);
     if (refreshDynamicFields) this.lastDynamicFieldRefresh = time;
     this.changed = false;

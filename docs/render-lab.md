@@ -40,3 +40,17 @@ For every shader or field-reconstruction change:
 5. Keep the previous WebGL crop until the new result has been visually reviewed.
 
 The scene is a visual fixture, not a replacement for real-browser pointer, wheel, pan, and painted-footprint checks.
+
+## Reconstruction budget
+
+The exact semantic texture may update at the renderer's 30 Hz cap. The full-grid atmosphere and liquid reconstructions are separately capped at 12 Hz and, when both are due, are staggered so only one is rebuilt in a frame. A paused brush edit remains pending until its scheduled reconstruction is uploaded, so throttling cannot strand stale liquid or gas volume.
+
+At the fixed 612×384 world size, the preallocated CPU volume-field buffers are 3,055,104 bytes for atmosphere and 3,760,128 bytes for liquid: 6,815,232 bytes combined. Including the 940,032-byte semantic staging buffer, the presenter's known CPU field storage is 7,755,264 bytes. The semantic, liquid, half-resolution atmosphere, palette, and style GPU source textures total 2,117,120 bytes; the 2× RGBA output target is another 3,760,128 bytes. Pixi-managed filter scratch targets are implementation-owned and are not included in those source-texture figures.
+
+Run the allocation check and a local timing sample with:
+
+```bash
+npm run profile:render-fields
+```
+
+Timing output is diagnostic rather than a cross-machine pass/fail threshold. Unit tests enforce the allocation ceilings and scheduling rate; the browser render lab remains the visual and runtime-GLSL gate.
