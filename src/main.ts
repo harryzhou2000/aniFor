@@ -15,7 +15,7 @@ root.innerHTML = `
     <section class="workspace">
       <div class="viewport-frame">
         <section class="viewport" aria-label="Particle simulation canvas">
-          <div class="ambient ambient-one"></div><div class="ambient ambient-two"></div><p class="touch-hint">Pinch to explore · hold to erase</p>
+          <div class="ambient ambient-one"></div><div class="ambient ambient-two"></div><p class="touch-hint">Drag to pan · pinch to zoom</p>
         </section>
       </div>
       <aside class="toolbox" aria-label="Simulation tools">

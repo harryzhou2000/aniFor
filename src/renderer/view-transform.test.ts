@@ -25,6 +25,22 @@ describe('ViewTransform', () => {
     expect(view.position).toEqual({ x: -100, y: -150 });
   });
 
+  it('pans a zoomed view by the pointer translation when ratio stays one', () => {
+    const view = new ViewTransform(1000, 1000);
+    view.resize(500, 500);
+    view.applyGesture(view.snapshot(), { x: 250, y: 250 }, { x: 250, y: 250 }, 2);
+    const start = view.snapshot();
+    view.applyGesture(start, { x: 200, y: 200 }, { x: 260, y: 170 }, 1);
+    expect(view.snapshot()).toEqual({ zoom: 2, panX: 60, panY: -30 });
+  });
+
+  it('combines pinch scaling and center translation in one gesture', () => {
+    const view = new ViewTransform(1000, 1000);
+    view.resize(500, 500);
+    view.applyGesture(view.snapshot(), { x: 200, y: 200 }, { x: 240, y: 230 }, 2);
+    expect(view.snapshot()).toEqual({ zoom: 2, panX: 90, panY: 80 });
+  });
+
   it('keeps an off-center zoom anchored proportionally through viewport resize', () => {
     const view = new ViewTransform(612, 384);
     view.resize(612, 384);

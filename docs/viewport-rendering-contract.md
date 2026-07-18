@@ -9,7 +9,7 @@ AniforTPT has four distinct spaces. Keep the conversion between each pair explic
 1. **World space:** The Powder Toy field is exactly 612×384 cells. Painting and native field extraction both address `pmap[y][x]` directly; TPT's air `CELL` size does not scale particle coordinates.
 2. **Viewport space:** CSS pixels in the `.viewport` content box. The viewport is uniformly aspect-fitted to 612:384 by `fitAspect`.
 3. **Camera space:** `ViewTransform` applies one uniform fit × zoom scale and one CSS-pixel pan. Resize rescales pan by the fit-scale ratio so an off-center zoom does not slide.
-4. **Backing space:** Canvas/WebGL pixels. Device pixel ratio may change backing density, but must not enter world, brush, pan, or CSS layout math.
+4. **Backing space:** Canvas/WebGL pixels. The default output scale is 2× per axis, producing 1224×768 backing pixels for 612×384 logical cells. `?renderScale=1` and `?renderScale=2` provide explicit A/B diagnostics. Backing scale must not enter world, brush, pan, or CSS layout math.
 
 At native zoom, the Pixi canvas is a 612×384 logical surface. Presentation is one CSS transform:
 
@@ -41,7 +41,8 @@ If higher visual resolution is needed, increase backing resolution or render qua
 
 - Pointer events are owned by `.viewport`; canvases have `pointer-events: none`.
 - Use `clientX/clientY` consistently. Do not mix page, offset, backing, and client coordinates.
-- Left, middle, right, mouse, pen, and touch pointer movement all flow through the same `screenToCell` mapping. Button state only selects painting/erasing behavior.
+- Left mouse and primary pen paint; right drag erases; middle-mouse drag pans without touching the simulation.
+- One-finger touch drag pans. Two-finger touch movement pans and pinches through the same camera gesture contract; ending a pinch rebases the remaining finger to pan without a jump.
 - Continuous strokes interpolate between the last and current world cells so sparse pointer events cannot leave gaps.
 - Wheel deltas are normalized by `deltaMode`, and the cursor point is the zoom anchor.
 - Pinch uses the same `ViewTransform.applyGesture` contract.

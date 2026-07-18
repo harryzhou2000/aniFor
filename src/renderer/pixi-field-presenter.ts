@@ -170,19 +170,21 @@ export class PixiFieldPresenter {
     this.chunks.markAll();
   }
 
-  static async create(host: HTMLElement, source: HTMLCanvasElement, materials: readonly SemanticMaterialStyle[]): Promise<PixiFieldPresenter> {
-    const presenter = new PixiFieldPresenter(host, source.width, source.height, materials);
+  static async create(host: HTMLElement, width: number, height: number, outputScale: 1 | 2, materials: readonly SemanticMaterialStyle[]): Promise<PixiFieldPresenter> {
+    const presenter = new PixiFieldPresenter(host, width, height, materials);
     await presenter.app.init({
-      width: source.width, height: source.height,
+      width, height,
       preference: 'webgl', backgroundAlpha: 0, antialias: true,
-      resolution: 1, autoDensity: true, autoStart: false,
+      resolution: outputScale, autoDensity: true, autoStart: false,
     });
     presenter.app.canvas.className = 'world-canvas semantic-field-canvas';
-    presenter.app.canvas.style.width = source.width + 'px';
-    presenter.app.canvas.style.height = source.height + 'px';
+    presenter.app.canvas.style.width = width + 'px';
+    presenter.app.canvas.style.height = height + 'px';
     presenter.app.canvas.style.transformOrigin = '0 0';
     presenter.app.canvas.dataset.renderer = 'semantic-field-webgl';
-    presenter.app.canvas.dataset.worldSize = source.width + 'x' + source.height;
+    presenter.app.canvas.dataset.worldSize = width + 'x' + height;
+    presenter.app.canvas.dataset.outputScale = String(outputScale);
+    presenter.app.canvas.dataset.backingSize = presenter.app.canvas.width + 'x' + presenter.app.canvas.height;
     presenter.app.stage.addChild(presenter.scene);
     return presenter;
   }

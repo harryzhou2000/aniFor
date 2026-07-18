@@ -2,6 +2,7 @@ import { ALL_MATERIALS, Material, type MaterialCategory } from '../shared/materi
 import type { SimulationBackend } from '../simulation';
 import { clientToViewport, ViewTransform, type Point, type ViewState } from './view-transform';
 import type { PixiFieldPresenter } from './pixi-field-presenter';
+import { backingSize, resolveFieldOutputScale } from './render-resolution';
 import { supportsWebGL } from './webgl-support';
 import { contourLight, materialNeighbourMask, neighbourDensity } from './volumetric-field';
 
@@ -23,7 +24,9 @@ export class MaterialRenderer {
   private readonly surface = document.createElement('canvas');
   private readonly smokeSurface = document.createElement('canvas');
   private readonly fireSurface = document.createElement('canvas');
+  private readonly fallbackSurface = document.createElement('canvas');
   private readonly rendered: Uint8Array;
+  private readonly outputScale = resolveFieldOutputScale();
   private presenter?: PixiFieldPresenter;
   private readonly view: ViewTransform;
   private basePixels!: ImageData;
@@ -31,6 +34,7 @@ export class MaterialRenderer {
   private context!: CanvasRenderingContext2D;
   private smokeContext!: CanvasRenderingContext2D;
   private fireContext!: CanvasRenderingContext2D;
+  private fallbackContext!: CanvasRenderingContext2D;
   private firePixels!: ImageData;
   private lastDraw = -Infinity;
   private lastDynamicFieldRefresh = -Infinity;
@@ -39,32 +43,14 @@ export class MaterialRenderer {
   constructor(private readonly host: HTMLElement, private readonly simulation: SimulationBackend) {
     this.rendered = new Uint8Array(simulation.width * simulation.height);
     this.view = new ViewTransform(simulation.width, simulation.height);
-    for (const canvas of [this.surface, this.smokeSurface, this.fireSurface]) {
-      canvas.width = simulation.width;
-      canvas.height = simulation.height;
-    }
   }
 
   async init(): Promise<void> {
-    this.surface.className = 'world-canvas';
-    this.surface.style.width = `${this.simulation.width}px`;
-    this.surface.style.height = `${this.simulation.height}px`;
-    this.surface.style.transformOrigin = '0 0';
-    const context = this.surface.getContext('2d');
-    const smokeContext = this.smokeSurface.getContext('2d');
-    const fireContext = this.fireSurface.getContext('2d');
-    if (!context || !smokeContext || !fireContext) throw new Error('Canvas 2D unavailable');
-    this.context = context;
-    this.smokeContext = smokeContext;
-    this.fireContext = fireContext;
-    this.basePixels = context.createImageData(this.simulation.width, this.simulation.height);
-    this.smokePixels = smokeContext.createImageData(this.simulation.width, this.simulation.height);
-    this.firePixels = fireContext.createImageData(this.simulation.width, this.simulation.height);
     if (supportsWebGL()) {
       try {
         const { PixiFieldPresenter } = await import('./pixi-field-presenter');
         this.presenter = await Promise.race([
-          PixiFieldPresenter.create(this.host, this.surface, ALL_MATERIALS),
+          PixiFieldPresenter.create(this.host, this.simulation.width, this.simulation.height, this.outputScale, ALL_MATERIALS),
           new Promise<undefined>((resolve) => window.setTimeout(() => resolve(undefined), 750)),
         ]);
         this.presenter?.mount();
@@ -72,7 +58,7 @@ export class MaterialRenderer {
         console.warn('Semantic WebGL renderer unavailable; using Canvas fallback.', error);
       }
     }
-    if (!this.presenter) this.host.append(this.surface);
+    if (!this.presenter) this.initFallback();
     this.resize();
     new ResizeObserver(() => this.resize()).observe(this.host);
   }
@@ -128,10 +114,6 @@ export class MaterialRenderer {
   }
 
   private drawField(time: number, refreshDynamicFields: boolean): void {
-    const base = this.basePixels.data;
-    const smoke = this.smokePixels.data;
-    const fire = this.firePixels.data;
-    base.fill(0); smoke.fill(0); fire.fill(0);
     const width = this.simulation.width;
     const height = this.simulation.height;
     const temperatures = this.simulation.temperature?.();
@@ -140,6 +122,10 @@ export class MaterialRenderer {
       this.presenter.update(this.rendered, temperatures, velocities, time, refreshDynamicFields);
       return;
     }
+    const base = this.basePixels.data;
+    const smoke = this.smokePixels.data;
+    const fire = this.firePixels.data;
+    base.fill(0); smoke.fill(0); fire.fill(0);
 
     for (let index = 0; index < this.rendered.length; index++) {
       const material = this.rendered[index] as Material;
@@ -258,23 +244,59 @@ export class MaterialRenderer {
       }
     }
 
-    const context = this.context;
     this.smokeContext.putImageData(this.smokePixels, 0, 0);
     this.fireContext.putImageData(this.firePixels, 0, 0);
-    context.putImageData(this.basePixels, 0, 0);
-    context.save();
-    context.imageSmoothingEnabled = true;
-    context.filter = 'blur(2.2px)';
-    context.globalAlpha = 0.78;
-    context.drawImage(this.smokeSurface, 0, 0);
-    context.globalCompositeOperation = 'lighter';
-    context.filter = 'blur(5px)';
-    context.globalAlpha = 0.72;
-    context.drawImage(this.fireSurface, 0, 0);
-    context.filter = 'none';
-    context.globalAlpha = 0.92;
-    context.drawImage(this.fireSurface, 0, 0);
-    context.restore();
+    this.context.putImageData(this.basePixels, 0, 0);
+    const output = backingSize(width, height, this.outputScale);
+    const fallback = this.fallbackContext;
+    fallback.clearRect(0, 0, output.width, output.height);
+    fallback.imageSmoothingEnabled = false;
+    fallback.drawImage(this.surface, 0, 0, width, height, 0, 0, output.width, output.height);
+    fallback.save();
+    fallback.imageSmoothingEnabled = true;
+    fallback.filter = `blur(${1.25 * this.outputScale}px)`;
+    fallback.globalAlpha = 0.72;
+    fallback.drawImage(this.smokeSurface, 0, 0, width, height, 0, 0, output.width, output.height);
+    fallback.globalCompositeOperation = 'lighter';
+    fallback.filter = `blur(${2 * this.outputScale}px)`;
+    fallback.globalAlpha = 0.62;
+    fallback.drawImage(this.fireSurface, 0, 0, width, height, 0, 0, output.width, output.height);
+    fallback.filter = 'none';
+    fallback.globalAlpha = 0.94;
+    fallback.drawImage(this.fireSurface, 0, 0, width, height, 0, 0, output.width, output.height);
+    fallback.restore();
+  }
+
+  private initFallback(): void {
+    const width = this.simulation.width;
+    const height = this.simulation.height;
+    for (const canvas of [this.surface, this.smokeSurface, this.fireSurface]) {
+      canvas.width = width;
+      canvas.height = height;
+    }
+    const output = backingSize(width, height, this.outputScale);
+    this.fallbackSurface.width = output.width;
+    this.fallbackSurface.height = output.height;
+    this.fallbackSurface.className = 'world-canvas fallback-field-canvas';
+    this.fallbackSurface.style.width = `${width}px`;
+    this.fallbackSurface.style.height = `${height}px`;
+    this.fallbackSurface.style.transformOrigin = '0 0';
+    this.fallbackSurface.dataset.renderer = 'semantic-field-canvas2d';
+    this.fallbackSurface.dataset.worldSize = `${width}x${height}`;
+    this.fallbackSurface.dataset.outputScale = String(this.outputScale);
+    const context = this.surface.getContext('2d');
+    const smokeContext = this.smokeSurface.getContext('2d');
+    const fireContext = this.fireSurface.getContext('2d');
+    const fallbackContext = this.fallbackSurface.getContext('2d');
+    if (!context || !smokeContext || !fireContext || !fallbackContext) throw new Error('Canvas 2D unavailable');
+    this.context = context;
+    this.smokeContext = smokeContext;
+    this.fireContext = fireContext;
+    this.fallbackContext = fallbackContext;
+    this.basePixels = context.createImageData(width, height);
+    this.smokePixels = smokeContext.createImageData(width, height);
+    this.firePixels = fireContext.createImageData(width, height);
+    this.host.append(this.fallbackSurface);
   }
 
 
@@ -288,7 +310,7 @@ export class MaterialRenderer {
   private syncTransform(): void {
     const position = this.view.position;
     if (this.presenter) this.presenter.setTransform(this.view.scale, position.x, position.y);
-    else this.surface.style.transform = `translate3d(${position.x}px, ${position.y}px, 0) scale(${this.view.scale})`;
+    else this.fallbackSurface.style.transform = `translate3d(${position.x}px, ${position.y}px, 0) scale(${this.view.scale})`;
   }
 }
 

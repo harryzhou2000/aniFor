@@ -14,9 +14,10 @@ The non-negotiable contract is:
 - World, brush, and semantic texture coordinates use that same unscaled space.
 - Layout performs one uniform aspect fit; camera zoom/pan performs one presentation transform.
 - Device pixel ratio affects backing resolution only, never world or CSS coordinate math.
+- The default render backing is 2× per axis (1224×768 for the 612×384 world); use `?renderScale=1` only for A/B diagnosis.
 - Pixi filter `vTextureCoord` is not a world UV. The semantic field shader must use the sprite-local `vFieldCoord` supplied by `FIELD_VERTEX`.
 
-Do not add an internal presentation multiplier (including the former 1.5 scale), stretch width and height independently, or introduce a second pointer transform.
+Do not confuse the 2× backing resolution with an internal presentation multiplier. Never add scene scaling such as the former 1.5 multiplier, stretch width and height independently, or introduce a second pointer transform.
 
 After relevant changes, run:
 
@@ -34,4 +35,3 @@ Also validate the actual painted footprint at multiple viewport positions and af
 - Keep heavy toolchains and caches such as emsdk and ccache project-local.
 - Preserve the manual GitHub Actions build/build-and-deploy controls and successful-build-only ccache persistence.
 - Clean up locally launched Chrome and Vite processes immediately after browser validation.
-

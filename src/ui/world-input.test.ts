@@ -1,6 +1,35 @@
 import { describe, expect, it, vi } from 'vitest';
 import { visitGridLine, wheelZoomRatio, WorldInputController } from './world-input';
 
+function inputHarness() {
+  const listeners = new Map<string, (event: any) => void>();
+  const element = {
+    clientHeight: 600,
+    dataset: {} as DOMStringMap,
+    classList: { toggle: vi.fn() },
+    setPointerCapture: vi.fn(),
+    addEventListener(name: string, listener: (event: any) => void) { listeners.set(name, listener); },
+  } as unknown as HTMLElement;
+  const view = { zoom: 1, panX: 0, panY: 0 };
+  const viewport = {
+    screenToCell: vi.fn((x: number, y: number) => ({ x: Math.floor(x / 10), y: Math.floor(y / 10) })),
+    getViewState: vi.fn(() => view),
+    applyGesture: vi.fn(),
+    resetView: vi.fn(),
+  };
+  const draw = vi.fn();
+  new WorldInputController(element, viewport, { draw });
+  const dispatchPointer = (name: string, overrides: Partial<PointerEvent> = {}) => {
+    const event = {
+      pointerId: 1, pointerType: 'mouse', button: 0, clientX: 0, clientY: 0,
+      preventDefault: vi.fn(), stopPropagation: vi.fn(), ...overrides,
+    } as unknown as PointerEvent;
+    listeners.get(name)!(event);
+    return event;
+  };
+  return { listeners, element, view, viewport, draw, dispatchPointer };
+}
+
 describe('wheelZoomRatio', () => {
   it('normalizes pixel, line, and page deltas into a bounded zoom step', () => {
     expect(wheelZoomRatio(-48, 0, 600)).toBeCloseTo(wheelZoomRatio(-3, 1, 600));
@@ -15,20 +44,7 @@ describe('wheelZoomRatio', () => {
 
 describe('WorldInputController wheel handling', () => {
   it('prevents page scrolling and forwards an anchored zoom gesture', () => {
-    const listeners = new Map<string, (event: WheelEvent) => void>();
-    const element = {
-      clientHeight: 600,
-      dataset: {} as DOMStringMap,
-      addEventListener(name: string, listener: (event: WheelEvent) => void) { listeners.set(name, listener); },
-    } as unknown as HTMLElement;
-    const view = { zoom: 1, panX: 0, panY: 0 };
-    const viewport = {
-      screenToCell: vi.fn(),
-      getViewState: vi.fn(() => view),
-      applyGesture: vi.fn(),
-      resetView: vi.fn(),
-    };
-    new WorldInputController(element, viewport, { draw: vi.fn() });
+    const { listeners, element, view, viewport } = inputHarness();
     const event = {
       clientX: 220,
       clientY: 180,
@@ -49,6 +65,73 @@ describe('WorldInputController wheel handling', () => {
       wheelZoomRatio(-120, 0, 600),
     );
     expect(element.dataset.lastWheel).toBeDefined();
+  });
+});
+
+describe('WorldInputController pointer modes', () => {
+  it('uses middle-button drag for camera pan without painting', () => {
+    const { element, view, viewport, draw, dispatchPointer } = inputHarness();
+    const down = dispatchPointer('pointerdown', { pointerId: 4, button: 1, clientX: 120, clientY: 90 });
+    dispatchPointer('pointermove', { pointerId: 4, button: 1, clientX: 170, clientY: 130 });
+
+    expect(down.preventDefault).toHaveBeenCalledOnce();
+    expect(element.setPointerCapture).toHaveBeenCalledWith(4);
+    expect(viewport.applyGesture).toHaveBeenCalledWith(view, { x: 120, y: 90 }, { x: 170, y: 130, pointerType: 'mouse' }, 1);
+    expect(viewport.screenToCell).not.toHaveBeenCalled();
+    expect(draw).not.toHaveBeenCalled();
+  });
+
+  it('uses one touch to pan and two touches to pan and zoom, then rebases smoothly', () => {
+    const { viewport, draw, dispatchPointer } = inputHarness();
+    dispatchPointer('pointerdown', { pointerId: 1, pointerType: 'touch', clientX: 100, clientY: 100 });
+    dispatchPointer('pointermove', { pointerId: 1, pointerType: 'touch', clientX: 120, clientY: 110 });
+    expect(viewport.applyGesture).toHaveBeenLastCalledWith(
+      { zoom: 1, panX: 0, panY: 0 }, { x: 100, y: 100, pointerType: 'touch' }, { x: 120, y: 110, pointerType: 'touch' }, 1,
+    );
+    expect(draw).not.toHaveBeenCalled();
+
+    const pinchView = { zoom: 1.2, panX: 18, panY: 9 };
+    viewport.getViewState.mockReturnValue(pinchView);
+    dispatchPointer('pointerdown', { pointerId: 2, pointerType: 'touch', clientX: 200, clientY: 100 });
+    viewport.applyGesture.mockClear();
+    dispatchPointer('pointermove', { pointerId: 2, pointerType: 'touch', clientX: 240, clientY: 120 });
+    expect(viewport.applyGesture).toHaveBeenCalledWith(
+      pinchView,
+      { x: 160, y: 105 },
+      { x: 180, y: 115 },
+      Math.hypot(120, 10) / Math.hypot(80, -10),
+    );
+
+    const afterPinch = { zoom: 1.5, panX: 30, panY: 20 };
+    viewport.getViewState.mockReturnValue(afterPinch);
+    dispatchPointer('pointerup', { pointerId: 2, pointerType: 'touch', clientX: 240, clientY: 120 });
+    viewport.applyGesture.mockClear();
+    dispatchPointer('pointermove', { pointerId: 1, pointerType: 'touch', clientX: 135, clientY: 125 });
+    expect(viewport.applyGesture).toHaveBeenCalledWith(
+      afterPinch, { x: 120, y: 110, pointerType: 'touch' }, { x: 135, y: 125, pointerType: 'touch' }, 1,
+    );
+  });
+
+  it('keeps primary and secondary drags continuous and semantically separate', () => {
+    const { draw, dispatchPointer } = inputHarness();
+    dispatchPointer('pointerdown', { pointerId: 1, button: 0, clientX: 20, clientY: 30 });
+    dispatchPointer('pointermove', { pointerId: 1, button: 0, clientX: 60, clientY: 50 });
+    dispatchPointer('pointerup', { pointerId: 1, button: 0, clientX: 60, clientY: 50 });
+    expect(draw).toHaveBeenCalledWith({ x: 2, y: 3 }, false);
+    expect(draw).toHaveBeenCalledWith({ x: 6, y: 5 }, false);
+
+    draw.mockClear();
+    dispatchPointer('pointerdown', { pointerId: 2, button: 2, clientX: 80, clientY: 90 });
+    dispatchPointer('pointermove', { pointerId: 2, button: 2, clientX: 100, clientY: 100 });
+    expect(draw.mock.calls.every(([, erase]) => erase === true)).toBe(true);
+  });
+
+  it('stops navigation when pointer capture is lost', () => {
+    const { viewport, dispatchPointer } = inputHarness();
+    dispatchPointer('pointerdown', { pointerId: 7, button: 1, clientX: 40, clientY: 50 });
+    dispatchPointer('lostpointercapture', { pointerId: 7, button: 1, clientX: 40, clientY: 50 });
+    dispatchPointer('pointermove', { pointerId: 7, button: 1, clientX: 90, clientY: 100 });
+    expect(viewport.applyGesture).not.toHaveBeenCalled();
   });
 });
 

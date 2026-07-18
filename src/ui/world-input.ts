@@ -1,16 +1,11 @@
 import type { Point, ViewState } from '../renderer/view-transform';
 
-interface PointerSample extends Point {
-  readonly startX: number;
-  readonly startY: number;
-  readonly pointerType: string;
-}
+interface PointerSample extends Point { readonly pointerType: string }
 
-interface GestureStart {
-  readonly view: ViewState;
-  readonly center: Point;
-  readonly distance: number;
-}
+type Interaction =
+  | { readonly kind: 'paint'; readonly pointerId: number; readonly erase: boolean; lastCell: Point }
+  | { readonly kind: 'pan'; readonly pointerId: number; readonly view: ViewState; readonly start: Point }
+  | { readonly kind: 'pinch'; readonly pointerIds: readonly [number, number]; readonly view: ViewState; readonly center: Point; readonly distance: number };
 
 export interface WorldViewport {
   screenToCell(clientX: number, clientY: number): Point;
@@ -30,11 +25,7 @@ export function wheelZoomRatio(deltaY: number, deltaMode: number, viewportHeight
 
 export class WorldInputController {
   private readonly pointers = new Map<number, PointerSample>();
-  private gesture?: GestureStart;
-  private paintingPointer?: number;
-  private lastPaintCell?: Point;
-  private erasing = false;
-  private longPress?: number;
+  private interaction?: Interaction;
 
   constructor(
     private readonly element: HTMLElement,
@@ -47,38 +38,38 @@ export class WorldInputController {
     element.addEventListener('pointermove', this.onPointerMove);
     element.addEventListener('pointerup', this.onPointerEnd);
     element.addEventListener('pointercancel', this.onPointerEnd);
+    element.addEventListener('lostpointercapture', this.onPointerEnd);
+    element.addEventListener('auxclick', (event) => { if (event.button === 1) event.preventDefault(); });
     element.addEventListener('wheel', this.onWheel, { passive: false });
     element.addEventListener('dblclick', () => viewport.resetView());
   }
 
   private readonly onPointerDown = (event: PointerEvent): void => {
+    const isTouch = event.pointerType === 'touch';
+    const isPan = event.pointerType === 'mouse' && event.button === 1;
+    const isPaint = !isTouch && (event.button === 0 || event.button === 2);
+    if ((!isTouch && !isPan && !isPaint) || (!isTouch && this.interaction)) return;
+
+    event.preventDefault();
     this.element.setPointerCapture(event.pointerId);
     this.pointers.set(event.pointerId, {
       x: event.clientX, y: event.clientY,
-      startX: event.clientX, startY: event.clientY,
       pointerType: event.pointerType,
     });
 
-    if (this.pointers.size >= 2) {
-      this.cancelLongPress();
-      this.paintingPointer = undefined;
-      this.lastPaintCell = undefined;
-      const [a, b] = Array.from(this.pointers.values());
-      this.gesture = { view: this.viewport.getViewState(), center: midpoint(a, b), distance: distance(a, b) };
+    if (isTouch) {
+      const touchCount = Array.from(this.pointers.values()).filter(({ pointerType }) => pointerType === 'touch').length;
+      if (touchCount <= 2) this.rebaseTouchNavigation();
       return;
     }
 
-    this.paintingPointer = event.pointerId;
-    this.erasing = event.button === 2;
-    this.lastPaintCell = this.drawAt(event.clientX, event.clientY);
-    if (event.pointerType === 'touch') {
-      this.longPress = window.setTimeout(() => {
-        const pointer = this.pointers.get(event.pointerId);
-        if (!pointer || this.pointers.size !== 1) return;
-        this.erasing = true;
-        navigator.vibrate?.(15);
-        this.drawAt(pointer.x, pointer.y);
-      }, 480);
+    if (isPan) this.setInteraction({ kind: 'pan', pointerId: event.pointerId, view: this.viewport.getViewState(), start: { x: event.clientX, y: event.clientY } });
+    else {
+      const erase = event.button === 2;
+      this.setInteraction({
+        kind: 'paint', pointerId: event.pointerId, erase,
+        lastCell: this.drawAt(event.clientX, event.clientY, erase),
+      });
     }
   };
 
@@ -88,30 +79,37 @@ export class WorldInputController {
     const current = { ...previous, x: event.clientX, y: event.clientY };
     this.pointers.set(event.pointerId, current);
 
-    if (this.gesture && this.pointers.size >= 2) {
-      const [a, b] = Array.from(this.pointers.values());
+    const interaction = this.interaction;
+    if (!interaction) return;
+    if (interaction.kind === 'pinch') {
+      if (!interaction.pointerIds.includes(event.pointerId)) return;
+      const a = this.pointers.get(interaction.pointerIds[0]);
+      const b = this.pointers.get(interaction.pointerIds[1]);
+      if (!a || !b) return;
       this.viewport.applyGesture(
-        this.gesture.view,
-        this.gesture.center,
+        interaction.view,
+        interaction.center,
         midpoint(a, b),
-        distance(a, b) / Math.max(1, this.gesture.distance),
+        distance(a, b) / Math.max(1, interaction.distance),
       );
       return;
     }
-
-    if (this.paintingPointer !== event.pointerId) return;
-    if (Math.hypot(current.x - current.startX, current.y - current.startY) > 8) this.cancelLongPress();
-    this.drawStrokeTo(current.x, current.y);
+    if (interaction.pointerId !== event.pointerId) return;
+    if (interaction.kind === 'pan') this.viewport.applyGesture(interaction.view, interaction.start, current, 1);
+    else this.drawStrokeTo(current.x, current.y, interaction);
   };
 
   private readonly onPointerEnd = (event: PointerEvent): void => {
+    if (!this.pointers.has(event.pointerId)) return;
     this.pointers.delete(event.pointerId);
-    if (this.paintingPointer === event.pointerId) {
-      this.paintingPointer = undefined;
-      this.lastPaintCell = undefined;
-    }
-    this.cancelLongPress();
-    if (this.pointers.size < 2) this.gesture = undefined;
+    const interaction = this.interaction;
+    if (!interaction) return;
+    const endedActivePointer = interaction.kind === 'pinch'
+      ? interaction.pointerIds.includes(event.pointerId)
+      : interaction.pointerId === event.pointerId;
+    if (!endedActivePointer) return;
+    if (event.pointerType === 'touch' || interaction.kind === 'pinch') this.rebaseTouchNavigation();
+    else this.setInteraction(undefined);
   };
 
   private readonly onWheel = (event: WheelEvent): void => {
@@ -124,22 +122,36 @@ export class WorldInputController {
     this.viewport.applyGesture(view, anchor, anchor, ratio);
   };
 
-  private drawAt(clientX: number, clientY: number): Point {
+  private drawAt(clientX: number, clientY: number, erase: boolean): Point {
     const cell = this.viewport.screenToCell(clientX, clientY);
-    this.callbacks.draw(cell, this.erasing);
+    this.callbacks.draw(cell, erase);
     return cell;
   }
 
-  private drawStrokeTo(clientX: number, clientY: number): void {
+  private drawStrokeTo(clientX: number, clientY: number, interaction: Extract<Interaction, { kind: 'paint' }>): void {
     const end = this.viewport.screenToCell(clientX, clientY);
-    const start = this.lastPaintCell ?? end;
-    visitGridLine(start, end, (cell) => this.callbacks.draw(cell, this.erasing));
-    this.lastPaintCell = end;
+    visitGridLine(interaction.lastCell, end, (cell) => this.callbacks.draw(cell, interaction.erase));
+    interaction.lastCell = end;
   }
 
-  private cancelLongPress(): void {
-    if (this.longPress !== undefined) window.clearTimeout(this.longPress);
-    this.longPress = undefined;
+  private rebaseTouchNavigation(): void {
+    const touches = Array.from(this.pointers, ([pointerId, sample]) => ({ pointerId, sample }))
+      .filter(({ sample }) => sample.pointerType === 'touch');
+    if (touches.length >= 2) {
+      const [a, b] = touches;
+      this.setInteraction({
+        kind: 'pinch', pointerIds: [a.pointerId, b.pointerId], view: this.viewport.getViewState(),
+        center: midpoint(a.sample, b.sample), distance: distance(a.sample, b.sample),
+      });
+    } else if (touches.length === 1) {
+      const [touch] = touches;
+      this.setInteraction({ kind: 'pan', pointerId: touch.pointerId, view: this.viewport.getViewState(), start: touch.sample });
+    } else this.setInteraction(undefined);
+  }
+
+  private setInteraction(interaction: Interaction | undefined): void {
+    this.interaction = interaction;
+    this.element.classList?.toggle('is-panning', interaction?.kind === 'pan' || interaction?.kind === 'pinch');
   }
 }
 
