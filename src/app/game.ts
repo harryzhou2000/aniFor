@@ -80,6 +80,7 @@ export class Game {
       if (cell.x < 0 || cell.y < 0 || cell.x >= this.simulation.width || cell.y >= this.simulation.height) return;
       this.probeX = cell.x;
       this.probeY = cell.y;
+      if (this.indicator) this.indicator.dataset.cell = cell.x + ',' + cell.y;
       this.updateFieldIndicator();
     };
     viewport.addEventListener("pointermove", selectProbe);

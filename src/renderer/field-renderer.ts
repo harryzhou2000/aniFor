@@ -6,6 +6,11 @@ import { supportsWebGL } from './webgl-support';
 import { contourLight, materialNeighbourMask, neighbourDensity } from './volumetric-field';
 
 const FRAME_INTERVAL = 1000 / 30;
+export const DYNAMIC_FIELD_REFRESH_INTERVAL = 1000 / 12;
+
+export function dynamicFieldRefreshDue(time: number, lastRefresh: number, enabled: boolean): boolean {
+  return enabled && time - lastRefresh >= DYNAMIC_FIELD_REFRESH_INTERVAL;
+}
 
 interface ProjectedRenderInfo { readonly color: number; readonly category: MaterialCategory }
 const PROJECTED_RENDER_INFO: Array<ProjectedRenderInfo | undefined> = [];
@@ -28,6 +33,7 @@ export class MaterialRenderer {
   private fireContext!: CanvasRenderingContext2D;
   private firePixels!: ImageData;
   private lastDraw = -Infinity;
+  private lastDynamicFieldRefresh = -Infinity;
   private changed = true;
 
   constructor(private readonly host: HTMLElement, private readonly simulation: SimulationBackend) {
@@ -80,9 +86,11 @@ export class MaterialRenderer {
     }
     const hasDynamicFields = Boolean(this.simulation.temperature || this.simulation.velocity);
     if (!this.changed && !hasDynamicFields) return;
+    const refreshDynamicFields = dynamicFieldRefreshDue(time, this.lastDynamicFieldRefresh, hasDynamicFields);
+    if (refreshDynamicFields) this.lastDynamicFieldRefresh = time;
     this.changed = false;
     this.lastDraw = time;
-    this.drawField(time);
+    this.drawField(time, refreshDynamicFields);
   }
 
   getViewState(): ViewState { return this.view.snapshot(); }
@@ -100,20 +108,26 @@ export class MaterialRenderer {
   resetView(): void { this.view.reset(); this.syncTransform(); }
 
   screenToCell(clientX: number, clientY: number): { x: number; y: number } {
-    const point = this.viewportPoint(clientX, clientY);
-    return {
-      x: Math.floor((point.x - this.view.position.x) / this.view.scale),
-      y: Math.floor((point.y - this.view.position.y) / this.view.scale),
-    };
+    const point = this.presenter
+      ? this.presenter.clientWorldPoint(clientX, clientY)
+      : this.view.viewportToWorld(this.viewportPoint(clientX, clientY));
+    return { x: Math.floor(point.x), y: Math.floor(point.y) };
   }
 
   private viewportPoint(clientX: number, clientY: number): Point {
-    const target = this.presenter ? this.host.querySelector<HTMLElement>(".semantic-field-canvas") : this.host;
-    const rect = (target ?? this.host).getBoundingClientRect();
-    return clientToViewport({ x: clientX, y: clientY }, rect, this.host.clientWidth, this.host.clientHeight);
+    const bounds = this.host.getBoundingClientRect();
+    const scaleX = bounds.width / Math.max(1, this.host.offsetWidth);
+    const scaleY = bounds.height / Math.max(1, this.host.offsetHeight);
+    const content = {
+      left: bounds.left + this.host.clientLeft * scaleX,
+      top: bounds.top + this.host.clientTop * scaleY,
+      width: this.host.clientWidth * scaleX,
+      height: this.host.clientHeight * scaleY,
+    };
+    return clientToViewport({ x: clientX, y: clientY }, content, this.host.clientWidth, this.host.clientHeight);
   }
 
-  private drawField(time: number): void {
+  private drawField(time: number, refreshDynamicFields: boolean): void {
     const base = this.basePixels.data;
     const smoke = this.smokePixels.data;
     const fire = this.firePixels.data;
@@ -123,7 +137,7 @@ export class MaterialRenderer {
     const temperatures = this.simulation.temperature?.();
     const velocities = this.simulation.velocity?.();
     if (this.presenter) {
-      this.presenter.update(this.rendered, temperatures, velocities, time);
+      this.presenter.update(this.rendered, temperatures, velocities, time, refreshDynamicFields);
       return;
     }
 
@@ -267,8 +281,8 @@ export class MaterialRenderer {
   private resize(): void {
     const width = this.host.clientWidth;
     const height = this.host.clientHeight;
-    this.presenter?.resize(width, height);
-    this.view.resize(width, height);
+    const viewport = this.presenter?.resize(width, height) ?? { width, height };
+    this.view.resize(viewport.width, viewport.height);
     this.syncTransform();
   }
   private syncTransform(): void {

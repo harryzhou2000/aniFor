@@ -1,5 +1,6 @@
 import './styles.css';
 import { Game } from './app/game';
+import { fitAspect } from './renderer/view-transform';
 import { createSimulation } from './simulation';
 
 const root = document.querySelector<HTMLElement>('#app');
@@ -12,9 +13,11 @@ root.innerHTML = `
       <p class="hint">Draw · wheel to zoom · right-click to erase</p>
     </header>
     <section class="workspace">
-      <section class="viewport" aria-label="Particle simulation canvas">
-        <div class="ambient ambient-one"></div><div class="ambient ambient-two"></div><p class="touch-hint">Pinch to explore · hold to erase</p>
-      </section>
+      <div class="viewport-frame">
+        <section class="viewport" aria-label="Particle simulation canvas">
+          <div class="ambient ambient-one"></div><div class="ambient ambient-two"></div><p class="touch-hint">Pinch to explore · hold to erase</p>
+        </section>
+      </div>
       <aside class="toolbox" aria-label="Simulation tools">
         <div class="toolbox-heading"><p class="eyebrow">MATERIAL LAB</p><p>Shape the world</p></div>
       </aside>
@@ -23,5 +26,17 @@ root.innerHTML = `
   </section>`;
 
 const simulation = await createSimulation();
+const viewportFrame = root.querySelector<HTMLElement>('.viewport-frame');
+const viewport = root.querySelector<HTMLElement>('.viewport');
+if (!viewportFrame || !viewport) throw new Error('Missing simulation viewport');
+const fitViewport = (): void => {
+  const size = fitAspect(viewportFrame.clientWidth, viewportFrame.clientHeight, simulation.width / simulation.height);
+  viewport.style.width = size.width + 'px';
+  viewport.style.height = size.height + 'px';
+  viewport.dataset.aspect = simulation.width + ':' + simulation.height;
+};
+new ResizeObserver(fitViewport).observe(viewportFrame);
+fitViewport();
+
 root.querySelector('.status')!.textContent = `${simulation.name} · saved on this device`;
 await new Game(root, simulation).start();

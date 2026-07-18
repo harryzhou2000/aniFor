@@ -2,6 +2,15 @@ export interface Point { readonly x: number; readonly y: number }
 export interface ViewState { readonly zoom: number; readonly panX: number; readonly panY: number }
 export interface ViewportRect { readonly left: number; readonly top: number; readonly width: number; readonly height: number }
 
+/** Fits a fixed-aspect surface inside the available viewport without stretching it. */
+export function fitAspect(width: number, height: number, aspect: number): { width: number; height: number } {
+  const availableWidth = Math.max(1, width);
+  const availableHeight = Math.max(1, height);
+  const safeAspect = Math.max(Number.EPSILON, aspect);
+  const fittedWidth = Math.min(availableWidth, availableHeight * safeAspect);
+  return { width: fittedWidth, height: fittedWidth / safeAspect };
+}
+
 export function clientToViewport(point: Point, rect: ViewportRect, viewportWidth: number, viewportHeight: number): Point {
   return {
     x: (point.x - rect.left) * Math.max(1, viewportWidth) / Math.max(1, rect.width),
@@ -18,10 +27,16 @@ export class ViewTransform {
   constructor(private readonly worldWidth: number, private readonly worldHeight: number) {}
 
   resize(width: number, height: number): void {
+    const previousFitScale = this.fitScale;
     this.viewportWidth = Math.max(1, width);
     this.viewportHeight = Math.max(1, height);
     this.fitScale = Math.min(this.viewportWidth / this.worldWidth, this.viewportHeight / this.worldHeight);
-    this.state = this.clamp(this.state);
+    const resizeRatio = this.fitScale / Math.max(Number.EPSILON, previousFitScale);
+    this.state = this.clamp({
+      ...this.state,
+      panX: this.state.panX * resizeRatio,
+      panY: this.state.panY * resizeRatio,
+    });
   }
 
   snapshot(): ViewState { return { ...this.state }; }
@@ -47,6 +62,16 @@ export class ViewTransform {
   reset(): void { this.state = { zoom: 1, panX: 0, panY: 0 }; }
   get scale(): number { return this.fitScale * this.state.zoom; }
   get position(): Point { return this.positionFor(this.state); }
+
+  viewportToWorld(point: Point): Point {
+    const position = this.position;
+    return { x: (point.x - position.x) / this.scale, y: (point.y - position.y) / this.scale };
+  }
+
+  worldToViewport(point: Point): Point {
+    const position = this.position;
+    return { x: position.x + point.x * this.scale, y: position.y + point.y * this.scale };
+  }
 
   private positionFor(state: ViewState): Point {
     const scale = this.fitScale * state.zoom;

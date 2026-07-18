@@ -2,7 +2,6 @@ import {
   Application,
   BufferImageSource,
   Container,
-  defaultFilterVert,
   Filter,
   Sprite,
   Texture,
@@ -12,9 +11,24 @@ import { DirtyChunkGrid } from './dirty-chunk-grid';
 import { packSemanticRect } from './semantic-field';
 
 interface SemanticMaterialStyle { readonly id: number; readonly color: string; readonly category: string }
+interface PresenterViewport { readonly width: number; readonly height: number }
+
+const FIELD_VERTEX = `
+in vec2 aPosition;
+out vec2 vFieldCoord;
+uniform vec4 uOutputFrame;
+uniform vec4 uOutputTexture;
+void main() {
+  vec2 position = aPosition * uOutputFrame.zw + uOutputFrame.xy;
+  position.x = position.x * (2.0 / uOutputTexture.x) - 1.0;
+  position.y = position.y * (2.0 * uOutputTexture.z / uOutputTexture.y) - uOutputTexture.z;
+  gl_Position = vec4(position, 0.0, 1.0);
+  vFieldCoord = aPosition;
+}
+`;
 
 const FIELD_FRAGMENT = `
-in vec2 vTextureCoord;
+in vec2 vFieldCoord;
 out vec4 finalColor;
 uniform sampler2D uFieldTexture;
 uniform sampler2D uPaletteTexture;
@@ -30,6 +44,28 @@ float familyFor(float id) { return floor(texture(uStyleTexture, vec2((id + 0.5) 
 bool isGas(float id) { return familyFor(id) == 1.0; }
 bool isLiquid(float id) { return familyFor(id) == 2.0; }
 bool isEnergy(float id) { return familyFor(id) == 3.0; }
+float compatibleAt(vec2 uv, float material, float family) {
+  float candidate = materialAt(uv);
+  if (abs(candidate - material) < 0.5) return 1.0;
+  if ((family == 1.0 || family == 2.0) && familyFor(candidate) == family) return 1.0;
+  return 0.0;
+}
+vec3 occupancyShape(vec2 uv, float material) {
+  vec2 grid = uv * uFieldSize - 0.5;
+  vec2 blend = fract(grid);
+  vec2 origin = (floor(grid) + 0.5) * uTexel;
+  float family = familyFor(material);
+  float q00 = compatibleAt(origin, material, family);
+  float q10 = compatibleAt(origin + vec2(uTexel.x, 0.0), material, family);
+  float q01 = compatibleAt(origin + vec2(0.0, uTexel.y), material, family);
+  float q11 = compatibleAt(origin + uTexel, material, family);
+  float top = mix(q00, q10, blend.x);
+  float bottom = mix(q01, q11, blend.x);
+  float density = mix(top, bottom, blend.y);
+  float gradientX = mix(q10 - q00, q11 - q01, blend.y);
+  float gradientY = mix(q01 - q00, q11 - q10, blend.x);
+  return vec3(density, gradientX, gradientY);
+}
 float nearbyAtmosphere(vec2 uv) {
   float candidate = materialAt(uv - vec2(uTexel.x, 0.0));
   if (isGas(candidate) || isEnergy(candidate)) return candidate;
@@ -42,36 +78,23 @@ float nearbyAtmosphere(vec2 uv) {
   return 0.0;
 }
 void main() {
-  vec4 state = field(vTextureCoord);
+  vec2 fieldUv = vFieldCoord;
+  vec4 state = field(fieldUv);
   float material = floor(state.r * 255.0 + 0.5);
   float halo = 0.0;
   if (material < 0.5) {
-    material = nearbyAtmosphere(vTextureCoord);
+    material = nearbyAtmosphere(fieldUv);
     if (material < 0.5) { finalColor = vec4(0.0); return; }
     halo = 1.0;
   }
-  vec2 left = vec2(uTexel.x, 0.0);
-  vec2 down = vec2(0.0, uTexel.y);
-  float l = sameMaterial(vTextureCoord - left, material);
-  float r = sameMaterial(vTextureCoord + left, material);
-  float t = sameMaterial(vTextureCoord - down, material);
-  float b = sameMaterial(vTextureCoord + down, material);
-  float tl = sameMaterial(vTextureCoord - left - down, material);
-  float tr = sameMaterial(vTextureCoord + left - down, material);
-  float bl = sameMaterial(vTextureCoord - left + down, material);
-  float br = sameMaterial(vTextureCoord + left + down, material);
-  float center = sameMaterial(vTextureCoord, material);
-  float density = center * mix(0.48, 0.32, uHighQuality)
-    + (l + r + t + b) * mix(0.13, 0.12, uHighQuality)
-    + (tl + tr + bl + br) * 0.05 * uHighQuality;
-  float gx = (r - l) + (tr + br - tl - bl) * 0.45 * uHighQuality;
-  float gy = (b - t) + (bl + br - tl - tr) * 0.45 * uHighQuality;
-  vec3 normal = normalize(vec3(-gx, -gy, 1.25));
+  vec3 shape = occupancyShape(fieldUv, material);
+  float density = shape.x;
+  vec3 normal = normalize(vec3(-shape.y, -shape.z, mix(1.45, 1.15, uHighQuality)));
   float diffuse = 0.72 + max(0.0, dot(normal, normalize(vec3(-0.48, -0.68, 0.78)))) * 0.42;
   float specular = pow(max(0.0, dot(normal, normalize(vec3(-0.35, -0.55, 0.92)))), 10.0);
   vec3 base = texture(uPaletteTexture, vec2((material + 0.5) / 256.0, 0.5)).rgb;
   vec2 velocity = state.ba * 2.0 - 1.0;
-  vec2 fieldPosition = vTextureCoord * uFieldSize;
+  vec2 fieldPosition = fieldUv * uFieldSize;
   float atmosphere = sin(fieldPosition.x * 0.055 + fieldPosition.y * 0.027 + uTime * 0.7 + velocity.x * 2.0)
     * sin(fieldPosition.y * 0.043 - uTime * 0.43 + velocity.y * 1.7);
   float heat = smoothstep(0.07, 0.34, state.g);
@@ -108,7 +131,12 @@ export class PixiFieldPresenter {
   private readonly chunks: DirtyChunkGrid;
   private readonly uniforms: UniformGroup;
 
-  private constructor(private readonly host: HTMLElement, width: number, height: number, materials: readonly SemanticMaterialStyle[]) {
+  private constructor(
+    private readonly host: HTMLElement,
+    private readonly width: number,
+    private readonly height: number,
+    materials: readonly SemanticMaterialStyle[],
+  ) {
     this.fieldBytes = new Uint8Array(width * height * 4);
     this.fieldSource = new BufferImageSource({
       resource: this.fieldBytes, width, height, format: 'rgba8unorm',
@@ -123,7 +151,7 @@ export class PixiFieldPresenter {
       uHighQuality: { value: matchMedia('(min-width: 800px) and (pointer: fine)').matches ? 1 : 0, type: 'f32' },
     });
     const filter = Filter.from({
-      gl: { vertex: defaultFilterVert, fragment: FIELD_FRAGMENT, name: 'semantic-field-filter' },
+      gl: { vertex: FIELD_VERTEX, fragment: FIELD_FRAGMENT, name: 'semantic-field-filter' },
       resources: {
         fieldUniforms: this.uniforms,
         uFieldTexture: this.fieldSource,
@@ -145,10 +173,14 @@ export class PixiFieldPresenter {
   static async create(host: HTMLElement, source: HTMLCanvasElement, materials: readonly SemanticMaterialStyle[]): Promise<PixiFieldPresenter> {
     const presenter = new PixiFieldPresenter(host, source.width, source.height, materials);
     await presenter.app.init({
-      resizeTo: host, preference: 'webgl', backgroundAlpha: 0, antialias: true,
-      resolution: Math.min(devicePixelRatio, 1.5), autoStart: false,
+      width: source.width, height: source.height,
+      preference: 'webgl', backgroundAlpha: 0, antialias: true,
+      resolution: 1, autoDensity: true, autoStart: false,
     });
     presenter.app.canvas.className = 'world-canvas semantic-field-canvas';
+    presenter.app.canvas.style.width = source.width + 'px';
+    presenter.app.canvas.style.height = source.height + 'px';
+    presenter.app.canvas.style.transformOrigin = '0 0';
     presenter.app.canvas.dataset.renderer = 'semantic-field-webgl';
     presenter.app.canvas.dataset.worldSize = source.width + 'x' + source.height;
     presenter.app.stage.addChild(presenter.scene);
@@ -157,15 +189,23 @@ export class PixiFieldPresenter {
 
   mount(): void { this.host.append(this.app.canvas); }
 
-  resize(width: number, height: number): void {
-    this.app.renderer.resize(Math.max(1, width), Math.max(1, height));
+  resize(width: number, height: number): PresenterViewport {
     this.app.canvas.dataset.viewportSize = width + 'x' + height;
-    this.app.render();
+    return { width, height };
   }
+
+  clientWorldPoint(clientX: number, clientY: number): { x: number; y: number } {
+    const rect = this.app.canvas.getBoundingClientRect();
+    return {
+      x: (clientX - rect.left) * this.width / Math.max(1, rect.width),
+      y: (clientY - rect.top) * this.height / Math.max(1, rect.height),
+    };
+  }
+
   markDirty(index: number): void { this.chunks.markCell(index); }
 
-  update(materials: Uint8Array, temperatures: Uint16Array | undefined, velocities: Int8Array | undefined, time: number): void {
-    if (temperatures || velocities) this.chunks.markAll();
+  update(materials: Uint8Array, temperatures: Uint16Array | undefined, velocities: Int8Array | undefined, time: number, refreshDynamicFields: boolean): void {
+    if (refreshDynamicFields) this.chunks.markAll();
     const rectangles = this.chunks.consume();
     for (const rect of rectangles) packSemanticRect(this.fieldBytes, this.fieldSource.width, materials, temperatures, velocities, rect);
     if (rectangles.length) this.fieldSource.update();
@@ -174,8 +214,7 @@ export class PixiFieldPresenter {
   }
 
   setTransform(scale: number, x: number, y: number): void {
-    this.scene.scale.set(scale);
-    this.scene.position.set(x, y);
+    this.app.canvas.style.transform = `translate3d(${x}px, ${y}px, 0) scale(${scale})`;
     this.app.canvas.dataset.viewScale = String(scale);
     this.app.canvas.dataset.viewPosition = x + "," + y;
     this.app.render();

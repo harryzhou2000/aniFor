@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { dynamicFieldRefreshDue, DYNAMIC_FIELD_REFRESH_INTERVAL } from './field-renderer';
 import { packSemanticRect } from './semantic-field';
 
 describe('packSemanticRect', () => {
@@ -21,5 +22,14 @@ describe('packSemanticRect', () => {
     expect([...target.slice(0, 20)]).toEqual(new Array(20).fill(99));
     expect([...target.slice(20, 28)]).toEqual([7, 0, 128, 128, 7, 0, 128, 128]);
     expect([...target.slice(28, 36)]).toEqual(new Array(8).fill(99));
+  });
+});
+
+describe('dynamic field refresh budget', () => {
+  it('caps full temperature and velocity repacks while preserving the first sample', () => {
+    expect(dynamicFieldRefreshDue(0, -Infinity, true)).toBe(true);
+    expect(dynamicFieldRefreshDue(DYNAMIC_FIELD_REFRESH_INTERVAL - 0.01, 0, true)).toBe(false);
+    expect(dynamicFieldRefreshDue(DYNAMIC_FIELD_REFRESH_INTERVAL, 0, true)).toBe(true);
+    expect(dynamicFieldRefreshDue(Infinity, 0, false)).toBe(false);
   });
 });
