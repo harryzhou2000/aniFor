@@ -9,7 +9,8 @@ import { reconstructLiquidSurface } from './canvas-liquid-surface';
 import { shadeCanvasEnergy } from './canvas-energy-style';
 import { shadeCanvasMaterial } from './canvas-material-style';
 import {
-  applicableCanvasRenderTraits, applyCanvasRenderTraits, canvasRenderTraitTarget,
+  applicableCanvasRenderTraits, applyCanvasRenderTraits, CANVAS_RENDER_TRAIT_CLOCK_SIZE,
+  updateCanvasRenderTraitClock,
 } from './canvas-render-traits';
 import { lightCanvasSurface } from './canvas-surface-light';
 import { reconstructSolidSurface } from './canvas-solid-surface';
@@ -57,6 +58,7 @@ export class MaterialRenderer {
   private readonly renderedWalls?: Uint8Array;
   private readonly styledColor = new Float32Array(3);
   private readonly energyGlowColor = new Float32Array(3);
+  private readonly traitClock = new Int32Array(CANVAS_RENDER_TRAIT_CLOCK_SIZE);
   private readonly outputScale = resolveFieldOutputScale();
   private presenter?: PixiFieldPresenter;
   private readonly view: ViewTransform;
@@ -300,6 +302,7 @@ export class MaterialRenderer {
     const liquid = liquidPixels.data;
     const smoke = smokePixels.data;
     const fire = firePixels.data;
+    updateCanvasRenderTraitClock(this.traitClock, time);
     base.fill(0); liquid.fill(0); smoke.fill(0); fire.fill(0);
 
     for (let index = 0; index < this.rendered.length; index++) {
@@ -322,6 +325,7 @@ export class MaterialRenderer {
       const phase = fields.lookups.styleBytes[material * 4] as RenderPhase;
       const profile = fields.lookups.styleBytes[material * 4 + 1] as RenderProfile;
       const traits = fields.lookups.styleBytes[material * 4 + 3];
+      const applicableTraits = applicableCanvasRenderTraits(traits, phase);
       const target = fields.lookups.liquidByMaterial[material] ? liquid : base;
       const top = y === 0 ? Material.Empty : this.rendered[index - width] as Material;
       const left = x === 0 ? Material.Empty : this.rendered[index - 1] as Material;
@@ -331,7 +335,6 @@ export class MaterialRenderer {
       const normalLight = (left === Material.Empty ? 8 : 0) - (right === Material.Empty ? 6 : 0)
         + (exposedTop ? 18 : 0) - (bottom === Material.Empty ? 5 : 0);
       const grain = hash(index) % 23 - 11;
-      let styledEmissive = false;
 
       if (phase === RenderPhase.Energy) {
         const info = PROJECTED_RENDER_INFO[material];
@@ -344,6 +347,9 @@ export class MaterialRenderer {
           this.styledColor, this.energyGlowColor, red, green, blue, profile, traits,
           material, x, y, time, heat,
           velocities?.[index * 2] ?? 0, velocities?.[index * 2 + 1] ?? 0,
+        );
+        if (applicableTraits !== 0) applyCanvasRenderTraits(
+          this.styledColor, applicableTraits, phase, material, x, y, index, this.traitClock,
         );
         compositePixel(target, pixel, this.styledColor[0], this.styledColor[1], this.styledColor[2], 245);
         setPixel(
@@ -369,10 +375,26 @@ export class MaterialRenderer {
         if (exposedTop) setPixel(fire, pixel, 172 + sheen, 128 + sheen, 66, 34 + Math.max(0, contour));
       } else if (material === Material.Wood) {
         const ring = ((x + Math.floor(y / 3)) % 9) < 2 ? -20 : 4;
-        compositePixel(target, pixel, 132 + grain + ring + normalLight, 76 + grain * 0.45 + ring * 0.5 + normalLight, 40 + ring * 0.25 + normalLight, 255);
+        this.styledColor[0] = 132 + grain + ring + normalLight;
+        this.styledColor[1] = 76 + grain * 0.45 + ring * 0.5 + normalLight;
+        this.styledColor[2] = 40 + ring * 0.25 + normalLight;
+        applyCanvasRenderTraits(
+          this.styledColor, applicableTraits, phase, material, x, y, index, this.traitClock,
+        );
+        compositePixel(
+          target, pixel, this.styledColor[0], this.styledColor[1], this.styledColor[2], 255,
+        );
       } else if (material === Material.Plant) {
         const leaf = (hash(index + 401) & 3) * 7;
-        compositePixel(target, pixel, 62 + leaf + normalLight, 132 + leaf + normalLight, 58 + grain * 0.35 + normalLight, 255);
+        this.styledColor[0] = 62 + leaf + normalLight;
+        this.styledColor[1] = 132 + leaf + normalLight;
+        this.styledColor[2] = 58 + grain * 0.35 + normalLight;
+        applyCanvasRenderTraits(
+          this.styledColor, applicableTraits, phase, material, x, y, index, this.traitClock,
+        );
+        compositePixel(
+          target, pixel, this.styledColor[0], this.styledColor[1], this.styledColor[2], 255,
+        );
       } else if (material === Material.Lava) {
         const mask = materialNeighbourMask(this.rendered, width, height, x, y, material);
         const density = neighbourDensity(mask);
@@ -429,19 +451,51 @@ export class MaterialRenderer {
           const mask = materialNeighbourMask(this.rendered, width, height, x, y, material);
           const density = neighbourDensity(mask);
           const volume = density * 4 + contourLight(mask) * 0.5 + Math.sin(time * 0.0014 + x * 0.08 + y * 0.05) * 5;
-          setPixel(smoke, pixel, red + volume, green + volume, blue + volume, 42 + density * 12);
+          if (applicableTraits === 0 && !info.emissive) {
+            setPixel(smoke, pixel, red + volume, green + volume, blue + volume, 42 + density * 12);
+          } else {
+            this.styledColor[0] = red + volume;
+            this.styledColor[1] = green + volume;
+            this.styledColor[2] = blue + volume;
+            if (applicableTraits !== 0) applyCanvasRenderTraits(
+              this.styledColor, applicableTraits, phase, material, x, y, index, this.traitClock,
+            );
+            setPixel(
+              smoke, pixel,
+              this.styledColor[0], this.styledColor[1], this.styledColor[2], 42 + density * 12,
+            );
+          }
         } else if (info.phase === RenderPhase.Liquid) {
           const mask = materialNeighbourMask(this.rendered, width, height, x, y, material);
           const density = neighbourDensity(mask);
           const contour = contourLight(mask);
           const depth = density * 3.2;
           const shimmer = Math.sin(time * 0.0018 + x * 0.055 + y * 0.025) * 4 + contour;
-          compositePixel(target, pixel, red - depth + shimmer, green - depth + shimmer, blue - depth + shimmer, 205 + density * 6);
+          if (applicableTraits === 0 && !info.emissive) {
+            compositePixel(
+              target, pixel, red - depth + shimmer, green - depth + shimmer,
+              blue - depth + shimmer, 205 + density * 6,
+            );
+          } else {
+            this.styledColor[0] = red - depth + shimmer;
+            this.styledColor[1] = green - depth + shimmer;
+            this.styledColor[2] = blue - depth + shimmer;
+            if (applicableTraits !== 0) applyCanvasRenderTraits(
+              this.styledColor, applicableTraits, phase, material, x, y, index, this.traitClock,
+            );
+            compositePixel(
+              target, pixel,
+              this.styledColor[0], this.styledColor[1], this.styledColor[2], 205 + density * 6,
+            );
+          }
           if (exposedTop) setPixel(fire, pixel, red + 35, green + 35, blue + 35, 30 + Math.max(0, contour));
         } else {
           shadeCanvasMaterial(
             this.styledColor, red, green, blue, fields.lookups.styleBytes[material * 4 + 1],
             material, x, y, index, time,
+          );
+          if (applicableTraits !== 0) applyCanvasRenderTraits(
+            this.styledColor, applicableTraits, phase, material, x, y, index, this.traitClock,
           );
           compositePixel(
             target, pixel,
@@ -449,20 +503,15 @@ export class MaterialRenderer {
             255,
           );
         }
-        styledEmissive = info.emissive;
-      }
-      const semanticTarget = canvasRenderTraitTarget(phase, base, liquid, smoke);
-      const applicableTraits = applicableCanvasRenderTraits(traits, phase);
-      if (applicableTraits !== 0) {
-        applyCanvasRenderTraits(
-          semanticTarget, pixel, applicableTraits, phase, material, x, y, index, time,
-        );
-      }
-      if (styledEmissive) {
-        setPixel(
-          fire, pixel,
-          semanticTarget[pixel], semanticTarget[pixel + 1], semanticTarget[pixel + 2], 176,
-        );
+        if (info.emissive) {
+          const light = info.phase === RenderPhase.Gas || info.phase === RenderPhase.Liquid
+            ? 0 : normalLight;
+          setPixel(
+            fire, pixel,
+            this.styledColor[0] + light, this.styledColor[1] + light,
+            this.styledColor[2] + light, 176,
+          );
+        }
       }
       if (fields.emission.hasLight && receivesSurfaceLight(phase)) {
         const exposure = cardinalExposure(this.rendered, width, height, x, y, material);

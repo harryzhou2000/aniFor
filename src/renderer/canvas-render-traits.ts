@@ -1,51 +1,63 @@
 import { RenderPhase } from './render-profile';
 import { RenderTrait } from './render-traits';
 
-/** Allocation-free, RGB-only semantic accents for the Canvas compatibility path. */
+export const CANVAS_RENDER_TRAIT_CLOCK_SIZE = 5;
+
+/** Updates reusable full-range animation clocks once per frame. */
+export function updateCanvasRenderTraitClock(clock: Int32Array, time: number): void {
+  clock[0] = time / 140 | 0;
+  clock[1] = time / 180 | 0;
+  clock[2] = time / 70 | 0;
+  clock[3] = time / 160 | 0;
+  clock[4] = time / 55 | 0;
+}
+
+/** Allocation-free, RGB-only semantic accents applied before the one pixel write. */
 export function applyCanvasRenderTraits(
-  pixels: Uint8ClampedArray,
-  offset: number,
+  rgb: Float32Array,
   traits: number,
   phase: RenderPhase,
   material: number,
   x: number,
   y: number,
   index: number,
-  time: number,
+  clock: Int32Array,
 ): void {
-  if (traits === 0 || pixels[offset + 3] === 0) return;
-  let red = pixels[offset];
-  let green = pixels[offset + 1];
-  let blue = pixels[offset + 2];
+  if (traits === 0) return;
+  let red = rgb[0];
+  let green = rgb[1];
+  let blue = rgb[2];
   const edgePattern = ((x + y * 3 + material) & 7) < 2 ? 1 : 0;
 
   const emitter = traits & RenderTrait.Emitter;
   const sink = traits & RenderTrait.Sink;
   if (emitter || sink) {
-    const roleBand = ((x - y + material + (time / 140 | 0)) % 11 + 11) % 11 < 2 ? 1 : 0;
+    let roleResidue = (x - y + material + clock[0]) % 11;
+    if (roleResidue < 0) roleResidue += 11;
+    const roleBand = roleResidue < 2 ? 1 : 0;
     red += emitter ? 7 + roleBand * 12 : 1;
     green += emitter ? 3 + roleBand * 5 : 5 + roleBand * 6;
     blue += sink ? 10 + roleBand * 13 : 2;
   }
   if (traits & RenderTrait.Channel) {
-    const channel = ((x + y + material + (time / 180 | 0)) & 7) === 0;
+    const channel = ((x + y + material + clock[1]) & 7) === 0;
     red += channel ? 5 : 0;
     green += channel ? 10 : 2;
     blue += channel ? 15 : 4;
   }
   if (traits & RenderTrait.Force) {
-    const wave = ((x * 3 + y * 2 + material + (time / 70 | 0)) & 15) / 15;
+    const wave = ((x * 3 + y * 2 + material + clock[2]) & 15) / 15;
     green += 2 + wave * 7;
     blue += 4 + wave * 12;
   }
   if ((traits & RenderTrait.Radioactive) && phase !== RenderPhase.Energy) {
-    const decay = (hash(index + (time / 160 | 0) * 97 + material) & 15) < 2;
+    const decay = (hash(index + clock[3] * 97 + material) & 15) < 2;
     red += decay ? 3 : 0;
     green += 5 + (decay ? 13 : 0);
     blue += (traits & RenderTrait.Carrier) ? 6 + (decay ? 10 : 0) : 1;
   }
   if (traits & RenderTrait.Organic) {
-    const vein = ((x + (hash(y + material * 17) & 7)) % 13 + 13) % 13 < 3;
+    const vein = (x + (hash(y + material * 17) & 7)) % 13 < 3;
     red += vein ? 1 : 0;
     green += vein ? 8 : 2;
     blue -= vein ? 2 : 0;
@@ -56,15 +68,15 @@ export function applyCanvasRenderTraits(
     blue -= edgePattern ? 2 : 0;
   }
   if ((traits & RenderTrait.Carrier) && phase !== RenderPhase.Energy) {
-    const pulse = ((x * 5 + y * 3 + material + (time / 55 | 0)) & 15) / 15;
+    const pulse = ((x * 5 + y * 3 + material + clock[4]) & 15) / 15;
     red += (traits & RenderTrait.Radioactive) ? 2 + pulse * 4 : 5 + pulse * 9;
     green += 4 + pulse * 8;
     blue += (traits & RenderTrait.Radioactive) ? 7 + pulse * 10 : 3 + pulse * 7;
   }
 
-  pixels[offset] = clamp(red);
-  pixels[offset + 1] = clamp(green);
-  pixels[offset + 2] = clamp(blue);
+  rgb[0] = red;
+  rgb[1] = green;
+  rgb[2] = blue;
 }
 
 export function applicableCanvasRenderTraits(traits: number, phase: RenderPhase): number {
@@ -73,21 +85,8 @@ export function applicableCanvasRenderTraits(traits: number, phase: RenderPhase)
     : traits;
 }
 
-export function canvasRenderTraitTarget(
-  phase: RenderPhase,
-  base: Uint8ClampedArray,
-  liquid: Uint8ClampedArray,
-  smoke: Uint8ClampedArray,
-): Uint8ClampedArray {
-  if (phase === RenderPhase.Gas) return smoke;
-  if (phase === RenderPhase.Liquid) return liquid;
-  return base;
-}
-
 function hash(value: number): number {
   value = Math.imul(value ^ 0x9e3779b9, 0x85ebca6b);
   value ^= value >>> 13;
   return (Math.imul(value, 0xc2b2ae35) ^ (value >>> 16)) >>> 0;
 }
-
-function clamp(value: number): number { return Math.max(0, Math.min(255, value)); }

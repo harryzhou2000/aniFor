@@ -18,6 +18,8 @@ Immediate priorities are:
 6. Commit and push reviewed work to `main_codex`, run the manual cached `build-and-deploy`, and verify the live Pages runtime rather than accepting a successful workflow alone.
 7. Preserve the completed responsive UI geometry pass: visible desktop category scrolling, no short-window card overlap, compact mobile catalog with page-scroll chaining and safe touch whitespace, and a non-obstructive mobile field/backend HUD.
 
+Queued after the renderer checkpoint: revisit desktop/mobile geometry as a dedicated visual pass. Desktop tool categories must not become an unscrollable over-wide row, short windows must never let the Brush card cover the tool library, and constrained scaling must retain usable catalog height. Mobile must keep the material menu conspicuous, compact the pressure/temperature/backend HUD, avoid page-width overflow, and leave deliberate whitespace so touch users can hand page scrolling back from nested tool lists.
+
 ## Repository and deployment snapshot
 
 - Repository: `/home/harry/projects/aniFor_codex`
@@ -126,6 +128,14 @@ Immediate priorities are:
 - The deterministic atlas now includes radioactive solid/liquid/gas/carrier samples, an emitter and paired portal channel, a force actuator, organic/fibrous variants, and neutral/radioactive energy cores while retaining its five-by-six matrix.
 - No field, texture, upload, reconstruction pass, scheduler stage, or persistent allocation was added. Shared volume storage remains exactly 8,173,320 bytes.
 
+## Canvas role-write performance checkpoint
+
+- Canvas role accents are now applied to the renderer's existing three-channel float scratch before the one final pixel write. This removes the former second typed-pixel read, clamp, and write for every styled cell while preserving alpha ownership in the existing compositor.
+- Five full-range integer clocks are updated once per frame and reused by every role cell. They add 20 persistent bytes, avoid per-cell time division, and preserve the established emitter, organic, channel, force, decay, and carrier animation cadence without the short repetition introduced by a packed-clock experiment.
+- Ordinary non-emissive gas and liquid retain the direct pixel/composite fast path; only role-bearing or emissive fluids stage through the RGB scratch.
+- The trait profiler now reports realistic masks, a synthetic all-bits mask, and a representative compositing path, with an observable checksum outside the timed region. On this machine a deliberately dense 612×384 semantic-role kernel still costs roughly 32–44 ms depending on the realistic mask, so mask arithmetic remains a known Canvas worst-case ceiling rather than a solved frame-budget item.
+- The browser resize audit now waits for directionally changed, stable canvas geometry instead of a fixed delay, preventing a stale WebGL resize sample from being accepted under load.
+
 ## Verification completed for the current local tree
 
 - `npm run typecheck`
@@ -144,6 +154,7 @@ Immediate priorities are:
 - A repeated production resize sequence `1280×720 → 1024×600 → 1440×900 → 1024×600` now refits on every transition. The 1024 viewport is 686×430.422 inside its 686.188×470 frame, aspect 1.593785, with subpixel containment and unchanged 1224×768 backing; no stale size, runtime, console, or network error remains.
 - Fresh touch-emulated metrics at 390×844 and 360×640 show compact palette/toolbox sizes of 300/533 px and 230.39/463.39 px, a 132×37.78 HUD with zero touch-hint overlap, no viewport/palette/actions/footer overlap, reachable footer, exact square interaction panels, 1.59375 canvas aspect, symmetric 70.41/64.82 px letterboxing, and 1224×768 backing. With the catalog already at its 241 px inner-scroll maximum, one trusted swipe kept it at max and advanced document scrollY from 0 to 144, proving page-scroll chaining.
 - Current WebGL/Canvas browser acceptance has zero shader/runtime/network errors. Dense WebGL gas is continuous without the prior raw-dot island; Canvas gas has clearer relief/species separation; liquid caps and columns show brighter rims, darker depth, and caustic variation while retaining crisp silhouettes and clean unlike-species seams.
+- The current Canvas role-write checkpoint passes the same two-backend browser gate at 1224×768 backing. Both backends return exactly through `1024×600 → 1440×900 → 1024×600`; wheel-anchor drift is 0.145 cell, middle-pan is 42×27 CSS px, and the Canvas mobile gate retains a 378×378 panel, 1.431× pinch, zero stray cells, and zero browser errors.
 - Latest warmed field profile at 612×384: atmosphere 8.52 ms median, species-aware liquid 11.07 ms, emission 3.26 ms, Canvas atmosphere relief 0.81 ms, solid reconstruction 1.30 ms, surface lighting 5.82 ms, and liquid reconstruction 1.62 ms. Shared volume storage remains 8,173,320 bytes; the presentation passes add no persistent field allocation.
 - The current pessimistic Canvas energy profile shades all 235,008 cells as radioactive energy cores in 19.37 ms median / 19.58 ms p90 on the local machine. Ordinary scenes call it only for actual energy cells. It adds two reusable 3-float vectors and no field/texture allocation; shared volume storage remains exactly 8,173,320 bytes.
 - Repeated surface-light stress profiles at 612×384 measured 5.76–11.20 ms median for the standalone dense-contour Canvas pass under varying local load; the latest p90/maximum were 12.08/12.44 ms. Shared field storage remains exactly 8,173,320 bytes; the diagnostic pass includes its own full-grid scan and reuses existing buffers.
@@ -163,9 +174,11 @@ The `Style materials by cross-phase roles` checkpoint is committed and pushed to
 - GitHub CLI authentication is invalid, so the next manual `build-and-deploy` cannot be dispatched until the user reauthenticates `gh`; ordinary authenticated `git push` still works.
 - Newtonian FFT gravity is intentionally omitted from the headless build, so gravity-dependent tools/elements must remain disabled or limited.
 - GPU partial texture upload, long-session allocation behavior, context loss, and full performance budgets need further profiling.
+- Dense role-heavy Canvas scenes remain arithmetic-bound even after eliminating the duplicate pixel write; specialize common masks or move the fallback's semantic accents into a vectorized/field-level presentation path before claiming a 30 FPS worst-case budget.
 
 ## Next sequence
 
 1. After GitHub CLI reauthentication, dispatch the manual cached `build-and-deploy` on `main_codex` and verify the live closure/revision plus a cache-busted browser runtime.
 2. Return to dynamic native `ctype`/life/pressure-state projection as a separate ABI tranche; static role flags deliberately do not claim current activation/channel/growth state.
-3. Keep the persistent goal active for deeper material-surface aesthetics, interface coverage, and performance work.
+3. Continue the deeper material-surface aesthetics and Canvas performance work, then execute the queued desktop/mobile geometry cleanup recorded above.
+4. Keep the persistent goal active for broader interface coverage, especially configured sources, signs, LIFE presets, forces, radioactive elements, and growing plants.

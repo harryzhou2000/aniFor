@@ -151,21 +151,22 @@ async function auditMode(mode) {
 
     await evaluate(cdp, `window.__ANIFOR_INPUT_AUDIT__.resetView(); true`);
     const resizeMetrics = [];
+    let previousResize = initial;
     for (const [width, height] of [[1024, 600], [1440, 900], [1024, 600]]) {
       await setDesktopMetrics(cdp, width, height, dpr);
-      await waitFor(
-        () => evaluate(cdp, `innerWidth === ${width} && innerHeight === ${height}`),
-        3_000,
-        `${mode} ${width}x${height} browser resize`,
+      const current = await waitForStableCanvas(
+        cdp, width, height, previousResize, 6_000, `${mode} ${width}x${height}`,
       );
-      // The WebGL presenter resizes through ResizeObserver after the responsive
-      // layout has settled; allow that callback and one rendered frame to land.
-      await sleep(400);
-      const current = await metrics(cdp);
       assertGeometry(current, `${mode} ${width}x${height}`);
       assertContained(current, `${mode} ${width}x${height}`);
       resizeMetrics.push({ width, height, canvasWidth: round(current.canvas.width), canvasHeight: round(current.canvas.height) });
+      previousResize = current;
     }
+    assert(resizeMetrics[1].canvasWidth > resizeMetrics[0].canvasWidth + 100,
+      `${mode}: larger desktop resize did not enlarge canvas`);
+    assert(Math.abs(resizeMetrics[2].canvasWidth - resizeMetrics[0].canvasWidth) < 0.1
+      && Math.abs(resizeMetrics[2].canvasHeight - resizeMetrics[0].canvasHeight) < 0.1,
+    `${mode}: desktop resize did not return to fitted geometry`);
 
     let mobile;
     if (mode === 'canvas2d') mobile = await auditMobile(cdp);
@@ -239,6 +240,29 @@ async function setDesktopMetrics(cdp, width, height, dpr) {
     width, height, deviceScaleFactor: dpr, mobile: false,
     screenWidth: width, screenHeight: height,
   });
+}
+
+async function waitForStableCanvas(cdp, width, height, previous, timeoutMs, label) {
+  let last;
+  let stableSamples = 0;
+  return waitFor(async () => {
+    const current = await metrics(cdp);
+    if (current.window.width !== width || current.window.height !== height) return false;
+    const expectedWidth = Math.min(current.viewport.width, current.viewport.height * WORLD_ASPECT);
+    const expectedHeight = expectedWidth / WORLD_ASPECT;
+    if (Math.abs(current.canvas.width - expectedWidth) > 0.75
+      || Math.abs(current.canvas.height - expectedHeight) > 0.75) return false;
+    if (Math.abs(current.canvas.width - previous.canvas.width) <= 1
+      && Math.abs(current.canvas.height - previous.canvas.height) <= 1) return false;
+    if (last
+      && Math.abs(current.canvas.width - last.canvas.width) < 0.05
+      && Math.abs(current.canvas.height - last.canvas.height) < 0.05
+      && Math.abs(current.viewport.width - last.viewport.width) < 0.05
+      && Math.abs(current.viewport.height - last.viewport.height) < 0.05) stableSamples++;
+    else stableSamples = 0;
+    last = current;
+    return stableSamples >= 4 ? current : false;
+  }, timeoutMs, `${label} stable canvas resize`);
 }
 
 async function metrics(cdp) {

@@ -65,6 +65,8 @@ Read [`docs/render-lab.md`](docs/render-lab.md) before changing reconstruction t
 
 The style lookup is an RGBA data texture, not display color: RGB stores phase/profile/emission and alpha stores the static `RenderTrait` mask. Keep nearest sampling and `no-premultiply-alpha`; zero-valued trait alpha must never erase the RGB metadata.
 
+Canvas role styling belongs before the existing final pixel write. Reuse its fixed RGB scratch and per-frame clocks; do not reintroduce a post-composite typed-pixel read/clamp/write pass. Preserve the direct path for zero-trait, non-emissive fluids and keep animation residues/cadence stable when optimizing arithmetic.
+
 The native wall lab uses the real TPT backend, remains paused, and places ten wall types behind deterministic material gradients and mixtures. Use it after wall ABI, wall texture, or compositing changes to prove that native walls remain distinct from particles and survive the same 612×384-to-2× presentation path.
 
 ## Project hygiene

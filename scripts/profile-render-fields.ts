@@ -3,7 +3,9 @@ import { ALL_MATERIALS, Material } from '../src/shared/materials';
 import { AtmosphereField } from '../src/renderer/atmosphere-field';
 import { shadeCanvasAtmosphere } from '../src/renderer/canvas-atmosphere-relief';
 import { shadeCanvasEnergy } from '../src/renderer/canvas-energy-style';
-import { applyCanvasRenderTraits } from '../src/renderer/canvas-render-traits';
+import {
+  applyCanvasRenderTraits, CANVAS_RENDER_TRAIT_CLOCK_SIZE, updateCanvasRenderTraitClock,
+} from '../src/renderer/canvas-render-traits';
 import { lightCanvasSurface } from '../src/renderer/canvas-surface-light';
 import { EmissionField } from '../src/renderer/emission-field';
 import { LiquidDensityField } from '../src/renderer/liquid-density-field';
@@ -11,6 +13,8 @@ import { reconstructLiquidSurface } from '../src/renderer/canvas-liquid-surface'
 import { reconstructSolidSurface } from '../src/renderer/canvas-solid-surface';
 import { createRenderLookups } from '../src/renderer/render-field-set';
 import { RenderPhase, RenderProfile } from '../src/renderer/render-profile';
+import { RenderTrait } from '../src/renderer/render-traits';
+import { compositePixel } from '../src/renderer/rgba-composite';
 
 const width = 612;
 const height = 384;
@@ -63,8 +67,11 @@ const liquidPixels = new Uint8ClampedArray(liquidSeed.length);
 const atmospherePixels = new Uint8ClampedArray(atmosphere.bytes.length);
 const energyCore = new Float32Array(3);
 const energyGlow = new Float32Array(3);
-const traitPixels = new Uint8ClampedArray(width * height * 4).fill(128);
-for (let offset = 3; offset < traitPixels.length; offset += 4) traitPixels[offset] = 255;
+const traitRgb = new Float32Array(3);
+const traitClock = new Int32Array(CANVAS_RENDER_TRAIT_CLOCK_SIZE);
+updateCanvasRenderTraitClock(traitClock, 1_000);
+const traitCompositePixels = new Uint8ClampedArray(width * height * 4);
+let traitChecksum = 0;
 const profileEmission = new Uint8Array(emission.bytes.length);
 for (let offset = 0; offset < profileEmission.length; offset += 4) {
   profileEmission[offset] = 255;
@@ -87,6 +94,52 @@ function seedPixels(source: Uint8Array, include = new Uint8Array(256).fill(1)): 
   return pixels;
 }
 
+function profileTraitMask(traits: number): ReturnType<typeof sample> {
+  const timing = sample(() => {
+    for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) {
+      const index = y * width + x;
+      traitRgb[0] = 128; traitRgb[1] = 128; traitRgb[2] = 128;
+      applyCanvasRenderTraits(
+        traitRgb, traits, RenderPhase.Field,
+        Material.SING, x, y, index, traitClock,
+      );
+    }
+  });
+  traitChecksum += traitRgb[0] + traitRgb[1] + traitRgb[2];
+  return timing;
+}
+
+function profileTraitBaseline(): ReturnType<typeof sample> {
+  const timing = sample(() => {
+    for (let index = 0; index < width * height; index++) {
+      traitRgb[0] = 128; traitRgb[1] = 128; traitRgb[2] = 128;
+    }
+  });
+  traitChecksum += traitRgb[0] + traitRgb[1] + traitRgb[2];
+  return timing;
+}
+
+function profileTraitComposite(traits: number): ReturnType<typeof sample> {
+  const timing = sample(() => {
+    for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) {
+      const index = y * width + x;
+      traitRgb[0] = 128; traitRgb[1] = 128; traitRgb[2] = 128;
+      applyCanvasRenderTraits(
+        traitRgb, traits, RenderPhase.Field,
+        Material.SING, x, y, index, traitClock,
+      );
+      compositePixel(
+        traitCompositePixels, index * 4, traitRgb[0], traitRgb[1], traitRgb[2], 255,
+      );
+    }
+  });
+  for (let offset = 0; offset < traitCompositePixels.length; offset += 4_096) {
+    traitChecksum += traitCompositePixels[offset]
+      + traitCompositePixels[offset + 1] + traitCompositePixels[offset + 2];
+  }
+  return timing;
+}
+
 console.log(JSON.stringify({
   fixture: `${width}x${height}`,
   atmosphere: {
@@ -102,7 +155,9 @@ console.log(JSON.stringify({
     update: sample(() => emission.update(materials)),
   },
   canvasPresentation: {
-    scratchBytes: solidPixels.byteLength + liquidPixels.byteLength,
+    runtimeKnownScratchBytes: solidPixels.byteLength + liquidPixels.byteLength
+      + energyCore.byteLength + energyGlow.byteLength + traitRgb.byteLength + traitClock.byteLength,
+    diagnosticScratchBytes: traitCompositePixels.byteLength,
     atmosphereRelief: sample(() => {
       shadeCanvasAtmosphere(atmospherePixels, atmosphere.bytes, atmosphere.width, atmosphere.height);
     }),
@@ -114,17 +169,14 @@ console.log(JSON.stringify({
         );
       }
     }),
-    traitCores: sample(() => {
-      traitPixels.fill(128);
-      for (let offset = 3; offset < traitPixels.length; offset += 4) traitPixels[offset] = 255;
-      for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) {
-        const index = y * width + x;
-        applyCanvasRenderTraits(
-          traitPixels, index * 4, 0xff, RenderPhase.Field,
-          Material.SING, x, y, index, 1_000,
-        );
-      }
-    }),
+    traitCores: {
+      rgbBaseline: profileTraitBaseline(),
+      emitter: profileTraitMask(RenderTrait.Emitter),
+      organicFibrous: profileTraitMask(RenderTrait.Organic | RenderTrait.Fibrous),
+      sing: profileTraitMask(styleBytes[Material.SING * 4 + 3]),
+      syntheticAllBits: profileTraitMask(0xff),
+      singWithComposite: profileTraitComposite(styleBytes[Material.SING * 4 + 3]),
+    },
     solidSurface: sample(() => {
       solidPixels.set(solidSeed);
       reconstructSolidSurface(solidPixels, solidMaterials, styleBytes, width, height);
@@ -153,4 +205,5 @@ console.log(JSON.stringify({
     }),
   },
   combinedAllocatedBytes: atmosphere.allocatedByteLength + liquid.allocatedByteLength + emission.allocatedByteLength,
+  traitChecksum: Math.round(traitChecksum),
 }, null, 2));
