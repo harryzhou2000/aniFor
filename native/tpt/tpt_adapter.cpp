@@ -4,6 +4,7 @@
 #include "simulation/Air.h"
 #include "simulation/Simulation.h"
 #include "simulation/SimulationData.h"
+#include "simulation/SimulationSettings.h"
 #include "simulation/ElementClasses.h"
 #include "simulation/ElementDefs.h"
 #include <algorithm>
@@ -33,6 +34,8 @@ void EnsureSimulation()
 		simulation->rng.seed(STILLROOM_SEED);
 		simulation->ensureDeterminism = true;
 	}
+	simulation->air->airMode = AIR_VELOCITYOFF;
+	simulation->air->vorticityCoeff = 0.0f;
 }
 
 int ToPowderType(int material)
@@ -138,7 +141,7 @@ __attribute__((visibility("default"))) void powder_set(int x, int y, int materia
 	EnsureSimulation();
 	if (x < CELL || y < CELL || x >= XRES - CELL || y >= YRES - CELL) return;
 	if (material == 0) simulation->delete_part(x, y);
-	else simulation->create_part(-1, x, y, ToPowderType(material));
+	else simulation->create_part(-2, x, y, ToPowderType(material));
 }
 __attribute__((visibility("default"))) void powder_step()
 {

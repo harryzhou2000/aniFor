@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "tsc -b && vite build && bash scripts/finalize-pages-build.sh",
     "preview": "vite preview",
     "typecheck": "tsc -b",
     "test": "vitest run src",

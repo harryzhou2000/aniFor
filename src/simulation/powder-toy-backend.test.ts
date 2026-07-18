@@ -34,6 +34,30 @@ describe('direct Powder Toy backend', () => {
     materials.forEach((material, index) => expect(cells[y * simulation.width + 180 + index * 20]).toBe(material));
   });
 
+  it('settles water without air-driven ejection', async () => {
+    const simulation = await PowderToyBackend.load(moduleArtifact.href);
+    const floorY = 220;
+    for (let x = 30; x < simulation.width - 30; x += 2) simulation.paint(x, floorY, Material.Wall, 1);
+    const centerY = 155;
+    const radius = 12;
+    simulation.paint(Math.floor(simulation.width / 2), centerY, Material.Water, radius);
+    for (let index = 0; index < 180; index++) simulation.step();
+    const cells = simulation.cells();
+    const velocity = simulation.velocity();
+    let waterCount = 0;
+    let airborne = 0;
+    let maxVerticalSpeed = 0;
+    for (let index = 0; index < cells.length; index++) {
+      if (cells[index] !== Material.Water) continue;
+      waterCount++;
+      if (Math.floor(index / simulation.width) < floorY - 30) airborne++;
+      maxVerticalSpeed = Math.max(maxVerticalSpeed, Math.abs(velocity[index * 2 + 1]));
+    }
+    expect(waterCount).toBeGreaterThan(400);
+    expect(airborne).toBeLessThanOrEqual(5);
+    expect(maxVerticalSpeed).toBeLessThanOrEqual(48);
+  }, 15000);
+
   it('restores full native state for deterministic continuation', async () => {
     const source = await PowderToyBackend.load(moduleArtifact.href);
     source.paint(120, 80, Material.Wall, 3);

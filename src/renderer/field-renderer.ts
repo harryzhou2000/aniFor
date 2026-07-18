@@ -1,7 +1,6 @@
 import { Material } from '../shared/materials';
 import type { SimulationBackend } from '../simulation';
 import { ViewTransform, type Point, type ViewState } from './view-transform';
-import { buildWaterSurface } from './materials/water/metaball-surface';
 import type { PixiFieldPresenter } from './pixi-field-presenter';
 import { supportsWebGL } from './webgl-support';
 
@@ -20,7 +19,6 @@ export class MaterialRenderer {
   private context!: CanvasRenderingContext2D;
   private smokeContext!: CanvasRenderingContext2D;
   private fireContext!: CanvasRenderingContext2D;
-  private waterGradient!: CanvasGradient;
   private firePixels!: ImageData;
   private lastDraw = -Infinity;
   private changed = true;
@@ -49,10 +47,6 @@ export class MaterialRenderer {
     this.basePixels = context.createImageData(this.simulation.width, this.simulation.height);
     this.smokePixels = smokeContext.createImageData(this.simulation.width, this.simulation.height);
     this.firePixels = fireContext.createImageData(this.simulation.width, this.simulation.height);
-    this.waterGradient = context.createLinearGradient(0, 0, 0, this.simulation.height);
-    this.waterGradient.addColorStop(0, 'rgba(125, 229, 239, 0.82)');
-    this.waterGradient.addColorStop(0.42, 'rgba(40, 157, 190, 0.72)');
-    this.waterGradient.addColorStop(1, 'rgba(15, 82, 130, 0.88)');
     if (supportsWebGL()) {
       try {
         const { PixiFieldPresenter } = await import('./pixi-field-presenter');
@@ -186,7 +180,6 @@ export class MaterialRenderer {
     this.smokeContext.putImageData(this.smokePixels, 0, 0);
     this.fireContext.putImageData(this.firePixels, 0, 0);
     context.putImageData(this.basePixels, 0, 0);
-    this.drawWaterSurface(context);
     context.save();
     context.imageSmoothingEnabled = true;
     context.filter = 'blur(2.2px)';
@@ -203,26 +196,6 @@ export class MaterialRenderer {
     this.presenter?.update();
   }
 
-  private drawWaterSurface(context: CanvasRenderingContext2D): void {
-    const polygons = buildWaterSurface(this.rendered, this.simulation.width, this.simulation.height);
-    if (polygons.length === 0) return;
-    context.save();
-    context.beginPath();
-    for (const polygon of polygons) {
-      context.moveTo(polygon[0].x, polygon[0].y);
-      for (let index = 1; index < polygon.length; index++) context.lineTo(polygon[index].x, polygon[index].y);
-      context.closePath();
-    }
-    context.fillStyle = this.waterGradient;
-    context.globalAlpha = 0.72;
-    context.fill();
-    context.globalCompositeOperation = 'screen';
-    context.filter = 'blur(0.8px)';
-    context.globalAlpha = 0.16;
-    context.fillStyle = '#d8fdff';
-    context.fill();
-    context.restore();
-  }
 
   private resize(): void { this.view.resize(this.host.clientWidth, this.host.clientHeight); this.syncTransform(); }
   private syncTransform(): void {

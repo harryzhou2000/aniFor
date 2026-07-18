@@ -6,9 +6,28 @@
     <meta name="theme-color" content="#13110f" />
     <meta name="description" content="A tactile, client-side particle playground." />
     <title>Stillroom — a particle playground</title>
+    <style>.boot-shell{position:fixed;inset:0;display:grid;place-content:center;gap:12px;text-align:center;color:#f5eee4;background:radial-gradient(circle at 50% 20%,#29231d 0,#151310 58%);font-family:"Avenir Next","Segoe UI",system-ui,sans-serif}.boot-shell h1,.boot-shell p{margin:0}.boot-shell h1{font-size:clamp(30px,5vw,48px);font-weight:500}.boot-shell p{color:#b8a895;font-size:13px}.boot-shell a{color:#f5d29e}.boot-shell [hidden]{display:none}</style>
   </head>
   <body>
-    <main id="app"></main>
+    <main id="app">
+      <section class="boot-shell" aria-live="polite">
+        <h1>Stillroom</h1><p id="boot-status">Loading the particle engine…</p><a id="boot-retry" href="./" hidden>Retry</a>
+      </section>
+    </main>
+    <script>
+      (() => {
+        const showFailure = (detail) => {
+          if (document.querySelector('.shell')) return;
+          const status = document.querySelector('#boot-status');
+          if (status) status.textContent = `Stillroom could not start. ${detail || 'Please refresh and try again.'}`;
+          const retry = document.querySelector('#boot-retry');
+          if (retry) retry.hidden = false;
+        };
+        window.addEventListener('error', (event) => showFailure(event.message), true);
+        window.addEventListener('unhandledrejection', (event) => showFailure(event.reason?.message));
+        window.setTimeout(() => showFailure('Loading timed out.'), 20000);
+      })();
+    </script>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>
