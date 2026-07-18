@@ -1,0 +1,27 @@
+name: verify-static-game
+
+# GitHub exposes workflow_dispatch controls from the default branch. The full
+# build and deployment implementation lives on the selected development ref.
+on:
+  workflow_dispatch:
+    inputs:
+      operation:
+        description: Choose whether to verify the build or also deploy it to GitHub Pages
+        required: true
+        default: build
+        type: choice
+        options:
+          - build
+          - build-and-deploy
+
+permissions:
+  contents: read
+
+jobs:
+  scaffold:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Explain default-branch scaffold
+        run: |
+          echo "This branch contains only the workflow-dispatch scaffold."
+          echo "Select main_codex in the Run workflow branch selector to build or deploy the game."
