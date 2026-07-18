@@ -16,20 +16,20 @@ Immediate priorities are:
 4. Make save/share file-based instead of clipboard/URL-based, using native TPT files wherever the native backend is active.
 5. Keep desktop tool discovery usable at constrained browser scaling and make the portrait toolbox visible without shrinking the viewport into a strip.
 6. Commit and push reviewed work to `main_codex`, run the manual cached `build-and-deploy`, and verify the live Pages runtime rather than accepting a successful workflow alone.
-7. After the next graphics tranche, fix responsive UI geometry: make the over-wide desktop tool-category row scrollable with an obvious affordance or stack it, prevent brush/tool card overlap in short desktop windows, keep mobile content inside a friendly vertical scroll flow with safe touch whitespace, and shrink the mobile pressure/temperature/backend HUD.
+7. Preserve the completed responsive UI geometry pass: visible desktop category scrolling, no short-window card overlap, compact mobile catalog with page-scroll chaining and safe touch whitespace, and a non-obstructive mobile field/backend HUD.
 
 ## Repository and deployment snapshot
 
 - Repository: `/home/harry/projects/aniFor_codex`
 - Branch: `main_codex`
-- Local and remote committed HEAD before the current semantic-tool tranche: `a56a193 Refine material surfaces and expose renderer status`
-- The Air/Vacuum/Wind/Heat/Cool tranche described below is the next checkpoint after that baseline.
+- Local and remote committed HEAD before the current graphics/UI tranche: `088adba Add native TPT simulation tools`
+- The gas/liquid styling and responsive geometry work described below is the next checkpoint after that baseline.
 - GitHub CLI is authenticated as `harryzhou2000` with `repo` and `workflow` scopes.
 - Current live Pages URL: `https://harryzhou2000.github.io/aniFor/`
-- Verified live baseline before the current local tranche: `a56a193` from Actions run `29648632567`.
-- That deployment contains all 20 referenced resources, serves WASM with `application/wasm`, boots direct native TPT, mounts Canvas immediately, and promotes to WebGL in about six seconds on a fresh SwiftShader profile. Live index/app/Pixi hashes matched the production output exactly, the Pixi bundle contains the liquid-density/surface/gas shader paths, and forced Canvas retains shared liquid/gas/emission effects.
+- Verified live baseline before the current local tranche: `088adba` from Actions run `29650381262`.
+- Build, deploy, and post-deployment verification all passed. The live closure contains all 20 referenced resources with correct WASM MIME; live app, WASM glue, and WASM binary hashes exactly matched the local production artifacts. The restored compiler cache produced 265/270 hits (98.15%) and saved the new successful-build key.
 
-## Committed/live baseline (`a56a193`)
+## Committed/live baseline (`088adba`)
 
 - Pinned official TPT 100.0 native engine, single-threaded 612×384 WebAssembly.
 - 170 stable projected material IDs; 165 particle brushes in the catalog, with 160 enabled and five gravity-dependent entries explicitly disabled.
@@ -40,6 +40,7 @@ Immediate priorities are:
 - Two-times backing resolution: 612×384 logical world to 1224×768 backing, independent of DPR and input math.
 - Stable desktop viewport aspect and validated desktop pointer/wheel/middle-pan mapping.
 - Manual `build` / `build-and-deploy` workflow; `main_codex` pushes do not auto-build; project-local Emscripten/Meson; successful-build-only `ccache` persistence.
+- Native Air, Vacuum, Wind, Heat, and Cool tools with typed point/vector dispatch, wall-aware air processing, safe validation, residual-air isolation, and OPS preservation of pending Wind.
 
 ## Committed checkpoint details
 
@@ -78,7 +79,7 @@ Immediate priorities are:
 - Native tests project all 170 IDs and verify Steam as an actual reaction product.
 - The published WASM artifact was rebuilt locally.
 
-## Current local semantic-tool tranche
+## Native simulation-tool checkpoint (`088adba`)
 
 - Air, Vacuum, Wind, Heat, and Cool are now enabled as true simulation tools with stable project-owned ABI IDs rather than particle aliases.
 - Point and raw-vector dispatch are separated. Wind point samples explicitly no-op, so selecting Wind cannot paint the previously selected material; the un-interpolated drag segment is applied once while ordinary brush tools retain continuous grid interpolation.
@@ -89,40 +90,50 @@ Immediate priorities are:
 - Native validation rejects invalid IDs, coordinates, radii over 64, and oversized vectors. Integer vector arguments prevent NaN/Infinity from contaminating the air arrays.
 - Signs and configured-source targeting remain disabled and distinct; this tranche does not misclassify them as particle brushes.
 
+## Current local graphics and responsive UI tranche
+
+- Canvas gas now passes through an allocation-free directional relief stage at half resolution. It copies atmosphere alpha exactly, preserves RGB channel ordering, and adds density depth without expanding the gas footprint. The Canvas atmosphere blur is tightened from 0.9× to 0.55× output scale.
+- Dense WebGL gas blends semantic particle color toward the shared atmosphere mixture, removing the raw orange/cyan dot island while retaining the intentional sparse control row.
+- WebGL liquids add broad low-frequency sheen, vertical depth, and restrained caustics inside the existing species-aware silhouette. Browser evidence shows brighter rims, darker bodies, and visible internal variation without edge blur or seam bleed.
+- Desktop tool filters retain a constant 40 px track and expose a thin horizontal scrollbar; `Recent` is reachable at every constrained desktop width. Desktop toolbox tracks now reserve space for the palette and actions, with a compact short-height rule and shell scrolling rather than card overlap.
+- Mobile uses a 230–300 px catalog, inner vertical/horizontal scrolling with document overscroll chaining, compact actions, and 24 px toolbox touch whitespace. The HUD is 132 px wide with smaller labels and a truncated backend row; the touch hint moved to the lower-left so overlap is zero.
+- Viewport fitting is animation-frame coalesced across frame observation, window resize, visual-viewport resize, and compact-media changes. This fixed a reproduced stale 1280-wide viewport after resizing to 1024×600.
+
 ## Verification completed for the current local tree
 
 - `npm run typecheck`
-- `npm test -- --run`: 31 files, 124 tests passed
+- `npm test -- --run`: 32 files, 127 tests passed
 - `npm run build`
 - Static build closure: 20 referenced resources verified (including the explicit favicon)
 - Current live Pages closure: 20 resources verified, including `stillroom_core.wasm` with the correct MIME
 - Real TPT save-file load/reserialize check passed for the user-provided `OPS1` save
 - Earlier desktop browser audit at DPR 1 and 2 proved 612×384 CSS/logical geometry, 1224×768 backing, exact left/center/right painting, continuous drag, middle pan, touch pan/pinch, and wheel anchoring within browser-event quantization.
 - Final rebuilt mobile smoke at 390×844 DPR 2 booted direct native TPT with the Canvas2D compatibility renderer and 1224×768 backing. The 378×378 viewport contained a 378×237.176 canvas at aspect 1.59375012, with no crop or horizontal overflow.
-- The mobile filter row measured exactly 34 px, and all filter buttons measured 28 px high. One-finger painting, two-finger pinch without stray paint, and explicit Eraser restoration passed with zero console, exception, or network failures.
+- The mobile filter row now has a constant 40 px track with a visible thin scrollbar; filter buttons remain 28 px high. One-finger painting, two-finger pinch without stray paint, and explicit Eraser restoration passed with zero console, exception, or network failures.
 - Fresh render-lab browser evidence at 1280×720 and `renderScale=2` passed for both forced Canvas and SwiftShader WebGL. In the final tree, the badge visibly transitioned from `Canvas 2D · starting WebGL` to `WebGL` as promotion completed in 6.029 seconds. The viewport retained a 1224×768 backing and 827×518.902 CSS canvas with no shader, console, runtime, HTTP, or network errors.
 - The WebGL and Canvas screenshots show cohesive water/oil/acid/lava columns without black pinholes or cross-family bleeding, continuous mixed gas volumes, and preserved sparse control rows. Canvas deliberately remains softer and more internally speckled than WebGL.
 - A retained real-browser interaction audit painted full 3×3 landmark grids before and after promotion. All 18 HUD-selected cells matched; footprint centroid error stayed below 1.5 CSS px, off-center wheel-anchor error was 0.035 CSS px, middle pan was within 0.013 px, and promotion produced zero canvas-rectangle or world-cell drift.
-- Latest field profile at 612×384: atmosphere 6.61 ms median, species-aware liquid 13.40 ms, emission 3.46 ms, Canvas solid reconstruction 1.40 ms, and Canvas liquid reconstruction 1.74 ms. Shared volume storage is 8,173,320 bytes.
+- A repeated production resize sequence `1280×720 → 1024×600 → 1440×900 → 1024×600` now refits on every transition. The 1024 viewport is 686×430.422 inside its 686.188×470 frame, aspect 1.593785, with subpixel containment and unchanged 1224×768 backing; no stale size, runtime, console, or network error remains.
+- Fresh touch-emulated metrics at 390×844 and 360×640 show compact palette/toolbox sizes of 300/533 px and 230.39/463.39 px, a 132×37.78 HUD with zero touch-hint overlap, no viewport/palette/actions/footer overlap, reachable footer, exact square interaction panels, 1.59375 canvas aspect, symmetric 70.41/64.82 px letterboxing, and 1224×768 backing. With the catalog already at its 241 px inner-scroll maximum, one trusted swipe kept it at max and advanced document scrollY from 0 to 144, proving page-scroll chaining.
+- Current WebGL/Canvas browser acceptance has zero shader/runtime/network errors. Dense WebGL gas is continuous without the prior raw-dot island; Canvas gas has clearer relief/species separation; liquid caps and columns show brighter rims, darker depth, and caustic variation while retaining crisp silhouettes and clean unlike-species seams.
+- Latest warmed field profile at 612×384: atmosphere 6.91 ms median, species-aware liquid 12.03 ms, emission 3.25 ms, Canvas atmosphere relief 1.31 ms median / 1.48 ms p90, solid reconstruction 1.28 ms, and liquid reconstruction 1.69 ms. Shared volume storage remains 8,173,320 bytes; the relief pass adds no persistent allocation.
 - Native semantic-tool coverage now proves exact scalar deltas, stable typed routing, no vector-to-particle fallthrough, no vector emission during pinch navigation, malformed ABI rejection, Wind response, `WL_BLOCKAIR` isolation, stable-water regression, and unstepped OPS Wind round-tripping.
 
-The renderer-selection issue and the `a56a193` graphics checkpoint are fixed and verified live. The current native simulation-tool tranche passes local native/unit/build verification; its remaining handoff is review, commit, manual deployment, and a cache-busted live interaction trace.
+The `088adba` native-tool checkpoint is committed, pushed, and verified live. The current graphics/responsive-UI tranche passes unit, type, build, profile, desktop-resize, visual, and mobile geometry checks; its remaining handoff is final review, commit, manual deployment, and cache-busted live validation.
 
 ## Current blockers and risks
 
-- The current local simulation-tool tranche is not live until it is committed, pushed to `main_codex`, manually deployed, and tested at the Pages URL.
+- The current local graphics/responsive-UI tranche is not live until it is committed, pushed to `main_codex`, manually deployed, and tested at the Pages URL.
 - WebGL runtime GLSL is not compiled by TypeScript/Vite; preserve the fresh browser audit for every shader change.
 - The post-deploy verifier proves network asset closure and MIME, but not shader execution or interaction by itself.
 - Configured sources, signs, LIFE presets, and several special editing semantics remain future work.
 - Newtonian FFT gravity is intentionally omitted from the headless build, so gravity-dependent tools/elements must remain disabled or limited.
 - GPU partial texture upload, long-session allocation behavior, context loss, and full performance budgets need further profiling.
-- Responsive geometry still needs the post-graphics pass requested by the user: desktop category navigation, short-window card overlap, mobile page scrolling/touch whitespace, and a compact mobile field/backend HUD.
 
 ## Next sequence
 
-1. Review `git diff`, ensure no unintended/untracked files, and commit the semantic-tool tranche.
+1. Review `git diff`, ensure no unintended/untracked files, and commit the graphics/responsive-UI tranche.
 2. Push only `main_codex`, then trigger `verify-static-game` manually with `operation=build-and-deploy`.
 3. Inspect ccache restore/save and the local/live asset-closure steps.
-4. Open the cache-busted live Pages URL; confirm native status, backend promotion, Air/Vacuum/Heat/Cool HUD changes, Wind vector behavior without particle paint, wall blocking, mobile selection, and no console/network failures.
-5. Continue the next bounded graphics/performance tranche.
-6. Then resolve the recorded desktop/mobile UI geometry and compact-HUD issues before returning to sources/signs/LIFE expansion.
+4. Open the cache-busted live Pages URL; confirm native status, backend promotion, Canvas/WebGL gas and liquid visuals, repeated desktop resize containment, mobile catalog/HUD geometry, page-scroll chaining, and no console/network failures.
+5. Return to sources/signs/LIFE expansion and the next bounded graphics/performance tranche; keep the persistent goal active.

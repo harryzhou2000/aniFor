@@ -39,8 +39,15 @@ const fitViewport = (): void => {
   viewport.style.height = size.height + 'px';
   viewport.dataset.aspect = simulation.width + ':' + simulation.height;
 };
-new ResizeObserver(fitViewport).observe(viewportFrame);
-compactViewport.addEventListener('change', fitViewport);
+let pendingViewportFit = 0;
+const scheduleViewportFit = (): void => {
+  cancelAnimationFrame(pendingViewportFit);
+  pendingViewportFit = requestAnimationFrame(fitViewport);
+};
+new ResizeObserver(scheduleViewportFit).observe(viewportFrame);
+compactViewport.addEventListener('change', scheduleViewportFit);
+window.addEventListener('resize', scheduleViewportFit, { passive: true });
+window.visualViewport?.addEventListener('resize', scheduleViewportFit, { passive: true });
 fitViewport();
 
 root.querySelector('.status')!.textContent = `${simulation.name} · saved on this device`;

@@ -1,6 +1,7 @@
 import { performance } from 'node:perf_hooks';
 import { ALL_MATERIALS, Material } from '../src/shared/materials';
 import { AtmosphereField } from '../src/renderer/atmosphere-field';
+import { shadeCanvasAtmosphere } from '../src/renderer/canvas-atmosphere-relief';
 import { EmissionField } from '../src/renderer/emission-field';
 import { LiquidDensityField } from '../src/renderer/liquid-density-field';
 import { reconstructLiquidSurface } from '../src/renderer/canvas-liquid-surface';
@@ -31,17 +32,18 @@ for (let iteration = 0; iteration < 4; iteration++) {
 }
 
 function sample(update: () => void): { medianMs: number; p90Ms: number; maximumMs: number } {
+  for (let warmup = 0; warmup < 5; warmup++) update();
   const timings: number[] = [];
-  for (let iteration = 0; iteration < 20; iteration++) {
+  for (let iteration = 0; iteration < 30; iteration++) {
     const start = performance.now();
     update();
     timings.push(performance.now() - start);
   }
   timings.sort((left, right) => left - right);
   return {
-    medianMs: Number(timings[10].toFixed(2)),
-    p90Ms: Number(timings[18].toFixed(2)),
-    maximumMs: Number(timings[19].toFixed(2)),
+    medianMs: Number(timings[Math.floor(timings.length / 2)].toFixed(2)),
+    p90Ms: Number(timings[Math.floor(timings.length * 0.9)].toFixed(2)),
+    maximumMs: Number(timings.at(-1)!.toFixed(2)),
   };
 }
 
@@ -54,6 +56,7 @@ const solidSeed = seedPixels(solidMaterials);
 const solidPixels = new Uint8ClampedArray(solidSeed.length);
 const liquidSeed = seedPixels(materials, liquidByMaterial);
 const liquidPixels = new Uint8ClampedArray(liquidSeed.length);
+const atmospherePixels = new Uint8ClampedArray(atmosphere.bytes.length);
 
 function seedPixels(source: Uint8Array, include = new Uint8Array(256).fill(1)): Uint8ClampedArray {
   const pixels = new Uint8ClampedArray(source.length * 4);
@@ -85,6 +88,9 @@ console.log(JSON.stringify({
   },
   canvasPresentation: {
     scratchBytes: solidPixels.byteLength + liquidPixels.byteLength,
+    atmosphereRelief: sample(() => {
+      shadeCanvasAtmosphere(atmospherePixels, atmosphere.bytes, atmosphere.width, atmosphere.height);
+    }),
     solidSurface: sample(() => {
       solidPixels.set(solidSeed);
       reconstructSolidSurface(solidPixels, solidMaterials, styleBytes, width, height);

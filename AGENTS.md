@@ -13,6 +13,7 @@ The non-negotiable contract is:
 - The simulation world is 612×384 cells.
 - World, brush, and semantic texture coordinates use that same unscaled space.
 - Layout performs one uniform aspect fit; camera zoom/pan performs one presentation transform.
+- Coalesce viewport fitting through `requestAnimationFrame` from the frame `ResizeObserver`, `window.resize`, `visualViewport.resize`, and compact-media changes. A frame can change during an in-place desktop resize without a timely observer delivery; never rely on one resize signal alone.
 - Device pixel ratio affects backing resolution only, never world or CSS coordinate math.
 - The default render backing is 2× per axis (1224×768 for the 612×384 world); use `?renderScale=1` only for A/B diagnosis.
 - Pixi filter `vTextureCoord` is not a world UV. The semantic field shader must use the sprite-local `vFieldCoord` supplied by `FIELD_VERTEX`.
@@ -20,8 +21,10 @@ The non-negotiable contract is:
 - Simulation tools are neither particles nor walls. Brush tools consume sampled points; vector tools consume raw consecutive grid segments and must explicitly no-op in the point path so they never fall through to the selected particle brush.
 - Headless Wind clears inactive particle-authored coarse `vx`/`vy` when a new gesture epoch begins, writes the authored velocity before `BeforeSim`, enables `AIR_ON` for exactly that update, then restores `AIR_VELOCITYOFF` before particle advection. Never inject Wind after `BeforeSim`: that bypasses diffusion, pressure coupling, clamping, and air-blocking walls. Preserve unstepped Wind through the namespaced optional OPS marker instead of inferring it from ordinary imported-save velocity.
 - The shared liquid texture is species-aware RGBA: RGB is the uniquely supported liquid color and alpha is density. Do not read red as density or choose a liquid halo color by fixed neighbor scan order; exact unlike-liquid ties must remain a visible interface.
+- Canvas gas relief is a presentation-only transform of the shared atmosphere texture: preserve alpha byte-for-byte and multiply RGB channels uniformly so lighting cannot widen the cloud or shift species hue. Dense WebGL gas should blend toward the atmosphere RGB instead of exposing raw semantic-particle dots.
 - Compact portrait layout may use a square interaction panel, but zoom 1 must contain the full 612×384 field with a uniform scale and letterboxing. Do not crop the world merely to fill the square.
 - One touch is the mobile brush and two touches are camera pan/pinch. Defer the initial touch mark until the gesture is known to be single-touch so every two-finger gesture does not leave an accidental dot.
+- Keep a compact bounded mobile catalog with `overscroll-behavior-y: auto`: its inner scroll must chain back to the document, and toolbox bottom padding must remain a safe touch target for page scrolling.
 
 Do not confuse the 2× backing resolution with an internal presentation multiplier. Never add scene scaling such as the former 1.5 multiplier, stretch width and height independently, or introduce a second pointer transform.
 

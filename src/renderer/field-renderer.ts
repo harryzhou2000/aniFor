@@ -3,6 +3,7 @@ import type { SimulationBackend } from '../simulation';
 import { clientToViewport, ViewTransform, type Point, type ViewState } from './view-transform';
 import type { PixiFieldPresenter } from './pixi-field-presenter';
 import { backingSize, resolveFieldOutputScale } from './render-resolution';
+import { shadeCanvasAtmosphere } from './canvas-atmosphere-relief';
 import { reconstructLiquidSurface } from './canvas-liquid-surface';
 import { shadeCanvasMaterial } from './canvas-material-style';
 import { reconstructSolidSurface } from './canvas-solid-surface';
@@ -240,7 +241,10 @@ export class MaterialRenderer {
     const fields = this.fallbackFields;
     if (!fields) return;
     if (this.atmospherePixels) {
-      this.atmospherePixels.data.set(fields.atmosphere.bytes);
+      shadeCanvasAtmosphere(
+        this.atmospherePixels.data, fields.atmosphere.bytes,
+        fields.atmosphere.width, fields.atmosphere.height,
+      );
       this.atmosphereContext.putImageData(this.atmospherePixels, 0, 0);
     }
     if (this.emissionPixels) {
@@ -278,7 +282,10 @@ export class MaterialRenderer {
     }
     const rebuiltField = fields.updateNext(this.rendered, time);
     if (rebuiltField === 'atmosphere') {
-      atmospherePixels.data.set(fields.atmosphere.bytes);
+      shadeCanvasAtmosphere(
+        atmospherePixels.data, fields.atmosphere.bytes,
+        fields.atmosphere.width, fields.atmosphere.height,
+      );
       this.atmosphereContext.putImageData(atmospherePixels, 0, 0);
     } else if (rebuiltField === 'emission') {
       emissionPixels.data.set(fields.emission.bytes);
@@ -443,8 +450,8 @@ export class MaterialRenderer {
     fallback.globalAlpha = 0.34;
     fallback.drawImage(this.liquidSurface, 0, 0, width, height, 0, 0, output.width, output.height);
     fallback.imageSmoothingEnabled = true;
-    fallback.filter = `blur(${0.9 * this.outputScale}px)`;
-    fallback.globalAlpha = 0.76;
+    fallback.filter = `blur(${0.55 * this.outputScale}px)`;
+    fallback.globalAlpha = 0.82;
     fallback.drawImage(
       this.atmosphereSurface, 0, 0, this.atmosphereSurface.width, this.atmosphereSurface.height,
       0, 0, output.width, output.height,
