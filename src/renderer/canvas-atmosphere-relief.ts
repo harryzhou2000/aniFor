@@ -36,7 +36,9 @@ export function shadeCanvasAtmosphere(
       const bottom = source[(bottomY * width + x) * 4 + 3] / 255;
       const density = alpha / 255;
       const upperLeftRelief = ((right - left) + (bottom - top)) * 0.5;
-      const shade = clamp(0.82 + density * 0.26 + upperLeftRelief * 0.72, 0.72, 1.16);
+      // Optical depth darkens dense gas while the gradient retains a restrained
+      // upper-left silver lining. Alpha remains the authoritative field support.
+      const shade = clamp(1.10 - density * 0.34 + upperLeftRelief * 0.68, 0.66, 1.16);
 
       target[offset] = Math.round(source[offset] * shade);
       target[offset + 1] = Math.round(source[offset + 1] * shade);

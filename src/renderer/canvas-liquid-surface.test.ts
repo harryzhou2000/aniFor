@@ -49,6 +49,18 @@ describe('Canvas liquid surface reconstruction', () => {
     expect(painted).toHaveLength(1);
   });
 
+  it('ramps reconstructed shoreline alpha from zero instead of jumping opaque', () => {
+    const materials = new Uint8Array(2);
+    const density = new Uint8Array(8);
+    density.set([70, 120, 190, 90], 0);
+    density.set([70, 120, 190, 170], 4);
+    const pixels = new Uint8ClampedArray(8);
+    reconstructLiquidSurface(pixels, materials, density, 2, 1);
+    expect(pixels[3]).toBeGreaterThan(0);
+    expect(pixels[3]).toBeLessThan(96);
+    expect(pixels[7]).toBeGreaterThan(pixels[3]);
+  });
+
   it('prefers cardinal species support over diagonal liquid color', () => {
     const width = 3;
     const height = 3;

@@ -371,7 +371,10 @@ export class MaterialRenderer {
         const flow = velocities ? velocities[index * 2] * 0.12 : 0;
         const sheen = Math.sin(time * 0.0017 + x * 0.055 + y * 0.025 + flow) * 5 + contour;
         const depth = density / 8;
-        compositePixel(target, pixel, 91 - depth * 28 + sheen, 67 - depth * 24 + sheen * 0.65, 35 - depth * 14 + sheen * 0.3, 218 + density * 4);
+        compositePixel(
+          target, pixel, 91 - depth * 28 + sheen, 67 - depth * 24 + sheen * 0.65,
+          35 - depth * 14 + sheen * 0.3, canvasLiquidAlpha(density),
+        );
         if (exposedTop) setPixel(fire, pixel, 172 + sheen, 128 + sheen, 66, 34 + Math.max(0, contour));
       } else if (material === Material.Wood) {
         const ring = ((x + Math.floor(y / 3)) % 9) < 2 ? -20 : 4;
@@ -403,7 +406,10 @@ export class MaterialRenderer {
         const heat = clamp((kelvin - 700) / 1100, 0, 1);
         const crust = density > 6 ? -52 : 0;
         const pulse = Math.sin(time * 0.003 + x * 0.1 + y * 0.07) * 8;
-        compositePixel(target, pixel, 224 + crust + heat * 31 + contour, 48 + pulse + heat * 120 + contour, 8 + heat * 54, 255);
+        compositePixel(
+          target, pixel, 224 + crust + heat * 31 + contour, 48 + pulse + heat * 120 + contour,
+          8 + heat * 54, canvasLiquidAlpha(density),
+        );
         setPixel(fire, pixel, 255, 54 + heat * 130 + pulse, 8, 135 + heat * 80 + Math.max(0, contour));
       } else if (material === Material.Ice) {
         const facet = (hash(index + 617) & 15) < 3 ? 24 : 0;
@@ -414,7 +420,10 @@ export class MaterialRenderer {
         const contour = contourLight(mask);
         const depth = density / 8;
         const shimmer = Math.sin(time * 0.0024 + x * 0.075 + y * 0.035) * 6 + contour;
-        compositePixel(target, pixel, 211 - depth * 30 + shimmer, 94 - depth * 22 + shimmer * 0.7, 232 - depth * 24 + shimmer, 202 + density * 6);
+        compositePixel(
+          target, pixel, 211 - depth * 30 + shimmer, 94 - depth * 22 + shimmer * 0.7,
+          232 - depth * 24 + shimmer, canvasLiquidAlpha(density),
+        );
         if (exposedTop) setPixel(fire, pixel, 238 + shimmer, 148 + shimmer, 255, 38 + Math.max(0, contour));
       } else if (material === Material.Gunpowder) {
         const spark = (hash(index + 911) & 31) === 0 ? 34 : 0;
@@ -430,7 +439,10 @@ export class MaterialRenderer {
         const flow = velocities ? velocities[index * 2] * 0.18 : 0;
         const shimmer = Math.sin(time * 0.002 + x * 0.065 + y * 0.02 + flow) * 4;
         const light = contour + shimmer;
-        compositePixel(target, pixel, 53 - depth * 31 + light * 0.45, 169 - depth * 56 + light, 205 - depth * 40 + light, 198 + density * 7);
+        compositePixel(
+          target, pixel, 53 - depth * 31 + light * 0.45, 169 - depth * 56 + light,
+          205 - depth * 40 + light, canvasLiquidAlpha(density),
+        );
         if (exposedTop) setPixel(fire, pixel, 129 + light, 232 + light, 245, 44 + Math.max(0, contour));
       } else if (material === Material.Smoke) {
         const mask = materialNeighbourMask(this.rendered, width, height, x, y, material);
@@ -474,7 +486,7 @@ export class MaterialRenderer {
           if (applicableTraits === 0 && !info.emissive) {
             compositePixel(
               target, pixel, red - depth + shimmer, green - depth + shimmer,
-              blue - depth + shimmer, 205 + density * 6,
+              blue - depth + shimmer, canvasLiquidAlpha(density),
             );
           } else {
             this.styledColor[0] = red - depth + shimmer;
@@ -485,7 +497,7 @@ export class MaterialRenderer {
             );
             compositePixel(
               target, pixel,
-              this.styledColor[0], this.styledColor[1], this.styledColor[2], 205 + density * 6,
+              this.styledColor[0], this.styledColor[1], this.styledColor[2], canvasLiquidAlpha(density),
             );
           }
           if (exposedTop) setPixel(fire, pixel, red + 35, green + 35, blue + 35, 30 + Math.max(0, contour));
@@ -556,18 +568,18 @@ export class MaterialRenderer {
     // A restrained nearest pass keeps the two-pixel reconstruction crisp while
     // the high-quality pass joins cells into a cohesive liquid surface.
     fallback.imageSmoothingEnabled = false;
-    fallback.globalAlpha = 0.34;
+    fallback.globalAlpha = 0.18;
     fallback.drawImage(this.liquidSurface, 0, 0, width, height, 0, 0, output.width, output.height);
     // Gas remains an independent particle/volume plane above native walls and
     // opaque matter. Only the broad light aura moved behind those surfaces.
     fallback.imageSmoothingEnabled = true;
-    fallback.globalAlpha = 0.82;
-    fallback.filter = `blur(${0.55 * this.outputScale}px)`;
+    fallback.globalAlpha = 0.52;
+    fallback.filter = 'none';
     fallback.drawImage(
       this.atmosphereSurface, 0, 0, this.atmosphereSurface.width, this.atmosphereSurface.height,
       0, 0, output.width, output.height,
     );
-    fallback.filter = `blur(${0.7 * this.outputScale}px)`;
+    fallback.filter = `blur(${0.2 * this.outputScale}px)`;
     fallback.globalAlpha = 0.24;
     fallback.drawImage(this.smokeSurface, 0, 0, width, height, 0, 0, output.width, output.height);
     fallback.globalCompositeOperation = 'lighter';
@@ -668,6 +680,11 @@ function hash(value: number): number {
   value = Math.imul(value ^ 0x9e3779b9, 0x85ebca6b);
   value ^= value >>> 13;
   return (Math.imul(value, 0xc2b2ae35) ^ (value >>> 16)) >>> 0;
+}
+
+/** Matches the WebGL sparse-to-dense liquid opacity endpoints before the restrained nearest overlay. */
+function canvasLiquidAlpha(neighbourCount: number): number {
+  return 143 + neighbourCount * 8.25;
 }
 
 function clamp(value: number, minimum: number, maximum: number): number {

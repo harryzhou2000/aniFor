@@ -27,7 +27,18 @@ describe('Canvas atmosphere relief', () => {
       if (source[offset + 3] === 0) expect(Array.from(target.slice(offset, offset + 4))).toEqual([0, 0, 0, 0]);
       else expect(target[offset]).toBeLessThan(target[offset + 1]);
     }
-    expect(luminance(target, width, 1, 1)).toBeGreaterThan(luminance(target, width, 1, 0));
+  });
+
+  it('uses optical depth to darken a dense gas core without changing alpha', () => {
+    const sparse = new Uint8Array([120, 150, 210, 96]);
+    const dense = new Uint8Array([120, 150, 210, 220]);
+    const sparseTarget = new Uint8ClampedArray(4);
+    const denseTarget = new Uint8ClampedArray(4);
+    shadeCanvasAtmosphere(sparseTarget, sparse, 1, 1);
+    shadeCanvasAtmosphere(denseTarget, dense, 1, 1);
+    expect(luminance(denseTarget, 1, 0, 0)).toBeLessThan(luminance(sparseTarget, 1, 0, 0));
+    expect(denseTarget[3]).toBe(220);
+    expect(sparseTarget[3]).toBe(96);
   });
 
   it('lights the upper-left flank of an equal-density hill', () => {

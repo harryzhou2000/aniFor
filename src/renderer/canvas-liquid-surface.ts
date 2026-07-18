@@ -29,7 +29,7 @@ export function reconstructLiquidSurface(
     target[fieldPixel] = clamp(density[fieldPixel] + light);
     target[fieldPixel + 1] = clamp(density[fieldPixel + 1] + light);
     target[fieldPixel + 2] = clamp(density[fieldPixel + 2] + light);
-    target[fieldPixel + 3] = clamp(118 + amount * 108);
+    target[fieldPixel + 3] = clamp(amount * (96 + amount * 114));
   }
 }
 
