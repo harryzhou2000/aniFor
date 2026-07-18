@@ -4,6 +4,7 @@ export default defineConfig({
   base: './',
   build: {
     target: 'es2022',
+    modulePreload: false,
     cssCodeSplit: false,
     chunkSizeWarningLimit: 550,
     rollupOptions: {
@@ -11,7 +12,9 @@ export default defineConfig({
         entryFileNames: 'assets/app.js',
         chunkFileNames: 'assets/[name].js',
         assetFileNames: 'assets/[name][extname]',
-        inlineDynamicImports: true,
+        manualChunks(id) {
+          if (id.includes('vite/preload-helper')) return 'preload-helper';
+        },
       },
     },
   },

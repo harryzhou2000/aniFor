@@ -1,6 +1,6 @@
 import { ALL_MATERIALS, Material, type MaterialCategory } from '../shared/materials';
 import type { SimulationBackend } from '../simulation';
-import { ViewTransform, type Point, type ViewState } from './view-transform';
+import { clientToViewport, ViewTransform, type Point, type ViewState } from './view-transform';
 import type { PixiFieldPresenter } from './pixi-field-presenter';
 import { supportsWebGL } from './webgl-support';
 import { contourLight, materialNeighbourMask, neighbourDensity } from './volumetric-field';
@@ -58,11 +58,12 @@ export class MaterialRenderer {
       try {
         const { PixiFieldPresenter } = await import('./pixi-field-presenter');
         this.presenter = await Promise.race([
-          PixiFieldPresenter.create(this.host, this.surface),
+          PixiFieldPresenter.create(this.host, this.surface, ALL_MATERIALS),
           new Promise<undefined>((resolve) => window.setTimeout(() => resolve(undefined), 750)),
         ]);
         this.presenter?.mount();
-      } catch { // Canvas presentation remains the compatibility path.
+      } catch (error) { // Canvas presentation remains the compatibility path.
+        console.warn('Semantic WebGL renderer unavailable; using Canvas fallback.', error);
       }
     }
     if (!this.presenter) this.host.append(this.surface);
@@ -74,6 +75,7 @@ export class MaterialRenderer {
     if (time - this.lastDraw < FRAME_INTERVAL) return;
     for (const cell of this.simulation.consumeDirtyCells()) {
       this.rendered[cell.index] = cell.material;
+      this.presenter?.markDirty(cell.index);
       this.changed = true;
     }
     const hasDynamicFields = Boolean(this.simulation.temperature || this.simulation.velocity);
@@ -86,11 +88,10 @@ export class MaterialRenderer {
   getViewState(): ViewState { return this.view.snapshot(); }
 
   applyGesture(start: ViewState, anchorStart: Point, anchorCurrent: Point, ratio: number): void {
-    const rect = this.host.getBoundingClientRect();
     this.view.applyGesture(
       start,
-      { x: anchorStart.x - rect.left, y: anchorStart.y - rect.top },
-      { x: anchorCurrent.x - rect.left, y: anchorCurrent.y - rect.top },
+      this.viewportPoint(anchorStart.x, anchorStart.y),
+      this.viewportPoint(anchorCurrent.x, anchorCurrent.y),
       ratio,
     );
     this.syncTransform();
@@ -99,11 +100,17 @@ export class MaterialRenderer {
   resetView(): void { this.view.reset(); this.syncTransform(); }
 
   screenToCell(clientX: number, clientY: number): { x: number; y: number } {
-    const rect = this.host.getBoundingClientRect();
+    const point = this.viewportPoint(clientX, clientY);
     return {
-      x: Math.floor((clientX - rect.left - this.view.position.x) / this.view.scale),
-      y: Math.floor((clientY - rect.top - this.view.position.y) / this.view.scale),
+      x: Math.floor((point.x - this.view.position.x) / this.view.scale),
+      y: Math.floor((point.y - this.view.position.y) / this.view.scale),
     };
+  }
+
+  private viewportPoint(clientX: number, clientY: number): Point {
+    const target = this.presenter ? this.host.querySelector<HTMLElement>(".semantic-field-canvas") : this.host;
+    const rect = (target ?? this.host).getBoundingClientRect();
+    return clientToViewport({ x: clientX, y: clientY }, rect, this.host.clientWidth, this.host.clientHeight);
   }
 
   private drawField(time: number): void {
@@ -115,6 +122,10 @@ export class MaterialRenderer {
     const height = this.simulation.height;
     const temperatures = this.simulation.temperature?.();
     const velocities = this.simulation.velocity?.();
+    if (this.presenter) {
+      this.presenter.update(this.rendered, temperatures, velocities, time);
+      return;
+    }
 
     for (let index = 0; index < this.rendered.length; index++) {
       const material = this.rendered[index] as Material;
@@ -250,7 +261,6 @@ export class MaterialRenderer {
     context.globalAlpha = 0.92;
     context.drawImage(this.fireSurface, 0, 0);
     context.restore();
-    this.presenter?.update();
   }
 
 

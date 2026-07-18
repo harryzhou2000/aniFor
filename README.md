@@ -1,6 +1,6 @@
 # AniforTPT
 
-A mobile-first particle playground backed by The Powder Toy. It includes 36 selectable brushes in seven responsive categories, reaction and phase-change product rendering, live pressure and particle-temperature inspection, touch/pointer painting, pinch/pan navigation, URL sharing, and local autosave.
+A mobile-first particle playground backed by The Powder Toy. Its searchable, nested catalog exposes 165 particle brushes across powders, liquids, solids, gases, energy, explosives, special, radioactive, force, electronics, powered, sensors, and life. Of those, 160 are enabled in the current headless build and five gravity-dependent entries remain visible but explicitly disabled. Native reactions and phase changes project all 170 supported material IDs, including products that are intentionally not selectable. The interface also includes live pressure and particle-temperature inspection, touch/pointer painting, pinch/pan navigation, favorites and recents, URL sharing, and local autosave.
 
 ## Run locally
 
@@ -21,7 +21,7 @@ The SDK and its compiler caches live under the ignored `.toolchains/emsdk`
 directory; no global emsdk activation is needed. Individual pipeline stages remain
 available as `npm run build:wasm`, `npm run test`, and `npm run build`.
 
-Deploy `dist/` to GitHub Pages, Cloudflare Pages, or Netlify. Vite uses relative asset paths, so subdirectory hosting works. GitHub Actions verifies every push and pull request, uploads the static artifact, and deploys successful `main` builds through the repository's GitHub Pages environment. In the repository settings, choose **GitHub Actions** as the Pages source.
+Deploy `dist/` to GitHub Pages, Cloudflare Pages, or Netlify. Vite uses relative asset paths, so subdirectory hosting works. `.github/workflows/ci.yml` verifies ordinary pushes and pull requests, while pushes to `main_codex` are intentionally manual. Run the **verify-static-game** workflow on `main_codex` and choose either `build` or `build-and-deploy`; successful runs upload the static artifact, and the latter publishes through the GitHub Pages environment. C++ recompilation is accelerated by a project-local ccache directory restored from GitHub Actions cache and saved only after a successful build. In the repository settings, choose **GitHub Actions** as the Pages source.
 
 ## Backend boundary
 
@@ -33,4 +33,4 @@ Run `npm run fetch:tpt` to obtain the pinned official Powder Toy revision in the
 
 ## Rendering
 
-The active renderer turns native simulation fields into a continuous shaded surface rather than drawing particle dots. It uses allocation-free neighbourhood density and contour lighting, smooth liquid depth and specular rims, volumetric gas layers, and temperature-driven fire bloom. Rendering is capped at 30 Hz while physics continues at 60 Hz. Hardware WebGL progressively enables a lazy Pixi presenter; Canvas2D remains the automatic fallback, so deployment does not require WebGPU, WebGL, pthreads, `SharedArrayBuffer`, or custom response headers.
+The active renderer uploads material ID, temperature, and velocity as one compact RGBA semantic field instead of drawing simulation cells. A Pixi/WebGL shader reconstructs local occupancy into softened chunk boundaries, contour normals, cohesive liquid depth and highlights, volumetric gas motion, and emissive heat/energy. Material colors and visual families come from lookup textures, so every projected reaction product remains renderable without shader branches for individual elements. Upload work is coalesced in halo-aware 32-cell dirty chunks, rendering is capped at 30 Hz, and device pixel ratio is capped at 1.5. Canvas2D retains the allocation-free neighborhood-density renderer as the compatibility path, so deployment does not require WebGPU, pthreads, `SharedArrayBuffer`, or custom response headers.

@@ -1,5 +1,13 @@
 export interface Point { readonly x: number; readonly y: number }
 export interface ViewState { readonly zoom: number; readonly panX: number; readonly panY: number }
+export interface ViewportRect { readonly left: number; readonly top: number; readonly width: number; readonly height: number }
+
+export function clientToViewport(point: Point, rect: ViewportRect, viewportWidth: number, viewportHeight: number): Point {
+  return {
+    x: (point.x - rect.left) * Math.max(1, viewportWidth) / Math.max(1, rect.width),
+    y: (point.y - rect.top) * Math.max(1, viewportHeight) / Math.max(1, rect.height),
+  };
+}
 
 export class ViewTransform {
   private viewportWidth = 1;

@@ -27,10 +27,18 @@ describe('direct Powder Toy backend', () => {
   it('projects every expanded material as its stable frontend ID', async () => {
     const simulation = await PowderToyBackend.load(moduleArtifact.href);
     const materials = MATERIALS.map(({ id }) => id);
-    const y = 120;
-    materials.forEach((material, index) => simulation.paint(30 + index * 15, y, material, 0));
+    const point = (index: number) => ({ x: 24 + (index % 32) * 18, y: 24 + Math.floor(index / 32) * 28 });
+    materials.forEach((material, index) => {
+      const { x, y } = point(index);
+      // SPRK is a brush operation on an existing conductor, not a free particle.
+      if (material === Material.SPRK) simulation.paint(x, y, Material.Metal, 0);
+      simulation.paint(x, y, material, 0);
+    });
     const cells = simulation.cells();
-    materials.forEach((material, index) => expect(cells[y * simulation.width + 30 + index * 15]).toBe(material));
+    materials.forEach((material, index) => {
+      const { x, y } = point(index);
+      expect(cells[y * simulation.width + x]).toBe(material);
+    });
   });
 
   it('exposes changing native air pressure', async () => {
@@ -66,6 +74,24 @@ describe('direct Powder Toy backend', () => {
     expect(waterCount).toBeGreaterThan(400);
     expect(airborne).toBeLessThanOrEqual(5);
     expect(maxVerticalSpeed).toBeLessThanOrEqual(48);
+  }, 15000);
+
+  it('grows native plants from seeds supplied with soil and water', async () => {
+    const simulation = await PowderToyBackend.load(moduleArtifact.href);
+    for (let x = 250; x < 360; x++) {
+      for (let y = 250; y < 254; y++) simulation.paint(x, y, Material.Wall, 0);
+    }
+    for (let x = 260; x < 350; x++) {
+      for (let y = 242; y < 250; y++) simulation.paint(x, y, Material.Sand, 0);
+    }
+    for (let x = 270; x < 295; x++) {
+      for (let y = 225; y < 241; y++) simulation.paint(x, y, Material.Water, 0);
+    }
+    for (let x = 305; x <= 325; x += 5) simulation.paint(x, 241, Material.SEED, 0);
+
+    for (let index = 0; index < 900; index++) simulation.step();
+    const grownCells = simulation.cells().filter((material) => material === Material.Wood || material === Material.Plant);
+    expect(grownCells.length).toBeGreaterThan(50);
   }, 15000);
 
   it('restores full native state for deterministic continuation', async () => {

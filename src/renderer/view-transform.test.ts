@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ViewTransform } from './view-transform';
+import { clientToViewport, ViewTransform } from './view-transform';
 
 describe('ViewTransform', () => {
   it('fits and centers the world', () => {
@@ -23,5 +23,14 @@ describe('ViewTransform', () => {
     view.resize(500, 500);
     view.applyGesture(view.snapshot(), { x: 250, y: 250 }, { x: 50_000, y: -50_000 }, 20);
     expect(view.snapshot()).toEqual({ zoom: 5, panX: 1000, panY: -1000 });
+  });
+
+  it('maps CSS client coordinates into the renderer content box', () => {
+    expect(clientToViewport(
+      { x: 310, y: 220 },
+      { left: 10, top: 20, width: 600, height: 400 },
+      1200,
+      800,
+    )).toEqual({ x: 600, y: 400 });
   });
 });
