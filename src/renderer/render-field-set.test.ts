@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { ALL_MATERIALS, Material } from '../shared/materials';
-import { RenderPhase } from './render-profile';
+import { renderPhase, renderProfile, RenderPhase } from './render-profile';
 import { createRenderLookups, RenderFieldSet } from './render-field-set';
 
 describe('shared render field set', () => {
@@ -11,6 +11,27 @@ describe('shared render field set', () => {
     expect(lookup.emissiveByMaterial[Material.PHOT]).toBe(1);
     expect(lookup.styleBytes[Material.Water * 4]).toBe(RenderPhase.Liquid);
     expect(Array.from(lookup.colorByMaterial.slice(Material.Acid * 3, Material.Acid * 3 + 3))).toEqual([0xd3, 0x5e, 0xe8]);
+  });
+
+  it('packs a complete render identity for every projected material', () => {
+    const lookup = createRenderLookups(ALL_MATERIALS);
+    expect(ALL_MATERIALS).toHaveLength(170);
+    expect(new Set(ALL_MATERIALS.map(({ id }) => id)).size).toBe(170);
+    for (const material of ALL_MATERIALS) {
+      const palette = material.id * 4;
+      const color = Number.parseInt(material.color.slice(1), 16);
+      expect(Array.from(lookup.paletteBytes.slice(palette, palette + 4))).toEqual([
+        color >>> 16, (color >>> 8) & 0xff, color & 0xff, 255,
+      ]);
+      expect(lookup.styleBytes[palette]).toBe(renderPhase(material));
+      expect(lookup.styleBytes[palette + 1]).toBe(renderProfile(material.category));
+      expect(lookup.styleBytes[palette + 3]).toBe(255);
+      expect(lookup.gasByMaterial[material.id]).toBe(Number(renderPhase(material) === RenderPhase.Gas));
+      expect(lookup.liquidByMaterial[material.id]).toBe(Number(renderPhase(material) === RenderPhase.Liquid));
+      expect(lookup.emissiveByMaterial[material.id]).toBe(Number(
+        material.emissive === true || renderPhase(material) === RenderPhase.Energy,
+      ));
+    }
   });
 
   it('stages atmosphere, liquid, and emission reconstruction over separate frames', () => {
@@ -26,7 +47,7 @@ describe('shared render field set', () => {
     expect(fields.updateNext(materials, 2)).toBe('emission');
     expect(fields.updateNext(materials, 3)).toBeUndefined();
     expect(fields.atmosphere.bytes.some(Boolean)).toBe(true);
-    expect(fields.liquid.bytes[2 * 4]).toBeGreaterThan(0);
+    expect(fields.liquid.bytes[2 * 4 + 3]).toBeGreaterThan(0);
     expect(fields.emission.bytes.some(Boolean)).toBe(true);
   });
 

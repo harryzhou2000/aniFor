@@ -132,7 +132,7 @@ export class Game {
     this.indicator.title = renderer.reason ? rendererReason(renderer.reason) : 'Semantic WebGL renderer';
     this.indicator.innerHTML = "<span><b>Pressure</b>" + pressureText
       + "</span><span><b>Temperature</b>" + temperature
-      + "</span><span class=\"renderer-indicator\"><b>Renderer</b>" + renderer.label + "</span>";
+      + "</span><span class=\"renderer-indicator\"><b>Backend</b>" + rendererStatus(renderer) + "</span>";
   }
 
   private async downloadWorldFile(): Promise<boolean> {
@@ -204,4 +204,14 @@ function rendererReason(reason: NonNullable<ReturnType<MaterialRenderer['getBack
   if (reason === 'webgl-starting') return 'Canvas2D while the WebGL renderer starts';
   if (reason === 'webgl-timeout') return 'Canvas2D because WebGL initialization timed out';
   return 'Canvas2D because WebGL initialization failed';
+}
+
+function rendererStatus(renderer: ReturnType<MaterialRenderer['getBackendInfo']>): string {
+  if (renderer.backend === 'webgl') return renderer.label;
+  if (renderer.reason === 'webgl-starting') return `${renderer.label} · starting WebGL`;
+  if (renderer.reason === 'webgl-timeout') return `${renderer.label} · WebGL timeout`;
+  if (renderer.reason === 'webgl-unavailable') return `${renderer.label} · WebGL unavailable`;
+  if (renderer.reason === 'webgl-error') return `${renderer.label} · WebGL error`;
+  if (renderer.reason === 'forced') return `${renderer.label} · forced`;
+  return renderer.label;
 }

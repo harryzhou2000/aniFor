@@ -1,18 +1,29 @@
 const KERNEL = [1, 2, 1] as const;
 const KERNEL_RADIUS = 1;
 const EDGE_GAIN = 1.4;
+const NEIGHBOUR_X = new Int8Array([-1, 1, 0, 0, -1, 1, -1, 1]);
+const NEIGHBOUR_Y = new Int8Array([0, 0, -1, 1, -1, -1, 1, 1]);
+const NEIGHBOUR_WEIGHT = new Uint8Array([2, 2, 2, 2, 1, 1, 1, 1]);
 
-/** Full-resolution liquid occupancy with a tight one-cell reconstruction halo. */
+/**
+ * Full-resolution, species-aware liquid occupancy with a tight one-cell
+ * reconstruction halo. RGB stores the locally supported liquid colour and
+ * alpha stores density; ambiguous mixed-species ties remain transparent so a
+ * smoothed surface cannot bleed one liquid through another.
+ */
 export class LiquidDensityField {
   readonly bytes: Uint8Array;
   private readonly seed: Float32Array;
   private readonly horizontal: Float32Array;
   private readonly blurred: Float32Array;
+  private readonly speciesSupport = new Uint8Array(256);
+  private readonly touchedSpecies = new Uint8Array(8);
 
   constructor(
     readonly width: number,
     readonly height: number,
     private readonly liquidByMaterial: Uint8Array,
+    private readonly colorByMaterial: Uint8Array,
   ) {
     const cells = width * height;
     this.bytes = new Uint8Array(cells * 4);
@@ -26,18 +37,66 @@ export class LiquidDensityField {
     for (let index = 0; index < materials.length; index++) this.seed[index] = this.liquidByMaterial[materials[index]] ? 1 : 0;
     this.blurHorizontal();
     this.blurVertical();
-    for (let index = 0; index < this.seed.length; index++) {
+    for (let y = 0; y < this.height; y++) for (let x = 0; x < this.width; x++) {
+      const index = y * this.width + x;
       const density = Math.min(1, Math.max(this.seed[index] * 0.96, this.blurred[index] * EDGE_GAIN));
       const offset = index * 4;
-      this.bytes[offset] = Math.round(density * 255);
-      this.bytes[offset + 1] = 0;
-      this.bytes[offset + 2] = 0;
-      this.bytes[offset + 3] = 255;
+      const exactMaterial = materials[index];
+      const liquid = this.liquidByMaterial[exactMaterial]
+        ? exactMaterial
+        : (density > 0 ? this.supportedLiquid(materials, x, y) : 0);
+      if (liquid) {
+        const color = liquid * 3;
+        this.bytes[offset] = this.colorByMaterial[color];
+        this.bytes[offset + 1] = this.colorByMaterial[color + 1];
+        this.bytes[offset + 2] = this.colorByMaterial[color + 2];
+        this.bytes[offset + 3] = Math.round(density * 255);
+      } else {
+        this.bytes[offset] = 0;
+        this.bytes[offset + 1] = 0;
+        this.bytes[offset + 2] = 0;
+        this.bytes[offset + 3] = 0;
+      }
     }
   }
 
   get allocatedByteLength(): number {
-    return this.bytes.byteLength + this.seed.byteLength + this.horizontal.byteLength + this.blurred.byteLength;
+    return this.bytes.byteLength + this.seed.byteLength + this.horizontal.byteLength + this.blurred.byteLength
+      + this.speciesSupport.byteLength + this.touchedSpecies.byteLength;
+  }
+
+  private supportedLiquid(materials: Uint8Array, x: number, y: number): number {
+    let touchedCount = 0;
+    for (let neighbour = 0; neighbour < 8; neighbour++) {
+      const sampleX = x + NEIGHBOUR_X[neighbour];
+      const sampleY = y + NEIGHBOUR_Y[neighbour];
+      if (sampleX < 0 || sampleY < 0 || sampleX >= this.width || sampleY >= this.height) continue;
+      const material = materials[sampleY * this.width + sampleX];
+      if (!this.liquidByMaterial[material]) continue;
+      if (this.speciesSupport[material] === 0) this.touchedSpecies[touchedCount++] = material;
+      this.speciesSupport[material] += NEIGHBOUR_WEIGHT[neighbour];
+    }
+    if (touchedCount === 1) {
+      const material = this.touchedSpecies[0];
+      this.speciesSupport[material] = 0;
+      return material;
+    }
+    let bestMaterial = 0;
+    let bestSupport = 0;
+    let tied = false;
+    for (let touched = 0; touched < touchedCount; touched++) {
+      const material = this.touchedSpecies[touched];
+      const support = this.speciesSupport[material];
+      if (support > bestSupport) {
+        bestMaterial = material;
+        bestSupport = support;
+        tied = false;
+      } else if (support === bestSupport) tied = true;
+    }
+    for (let touched = 0; touched < touchedCount; touched++) {
+      this.speciesSupport[this.touchedSpecies[touched]] = 0;
+    }
+    return tied ? 0 : bestMaterial;
   }
 
   private blurHorizontal(): void {

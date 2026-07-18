@@ -71,7 +71,9 @@ export class RenderFieldSet {
   constructor(width: number, height: number, materials: readonly RenderMaterialStyle[]) {
     this.lookups = createRenderLookups(materials);
     this.atmosphere = new AtmosphereField(width, height, this.lookups.gasByMaterial, this.lookups.colorByMaterial);
-    this.liquid = new LiquidDensityField(width, height, this.lookups.liquidByMaterial);
+    this.liquid = new LiquidDensityField(
+      width, height, this.lookups.liquidByMaterial, this.lookups.colorByMaterial,
+    );
     this.emission = new EmissionField(width, height, this.lookups.emissiveByMaterial, this.lookups.colorByMaterial);
   }
 

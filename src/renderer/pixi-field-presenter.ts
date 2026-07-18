@@ -169,17 +169,6 @@ vec2 nearbySurface(vec2 uv) {
   if (solid < 0.5 && candidate > 0.5 && family == 0.0) solid = candidate;
   return vec2(0.0, solid);
 }
-float nearbyLiquid(vec2 uv) {
-  float candidate = materialAt(uv - vec2(uTexel.x, 0.0));
-  if (isLiquid(candidate)) return candidate;
-  candidate = materialAt(uv + vec2(uTexel.x, 0.0));
-  if (isLiquid(candidate)) return candidate;
-  candidate = materialAt(uv - vec2(0.0, uTexel.y));
-  if (isLiquid(candidate)) return candidate;
-  candidate = materialAt(uv + vec2(0.0, uTexel.y));
-  if (isLiquid(candidate)) return candidate;
-  return 0.0;
-}
 void main() {
   vec2 fieldUv = vFieldCoord;
   vec4 state = field(fieldUv);
@@ -187,7 +176,8 @@ void main() {
   vec3 wallSurface = wall > 0.5 ? wallShape(fieldUv, wall) : vec3(0.0);
   vec4 atmosphereState = texture(uAtmosphereTexture, fieldUv);
   vec4 emissionState = texture(uEmissionTexture, fieldUv);
-  float liquidDensity = texture(uLiquidTexture, fieldUv).r;
+  vec4 liquidState = texture(uLiquidTexture, fieldUv);
+  float liquidDensity = liquidState.a;
   float material = floor(state.r * 255.0 + 0.5);
   float halo = 0.0;
   float cloudOnly = 0.0;
@@ -196,10 +186,11 @@ void main() {
   float surfaceOnly = 0.0;
   float wallOnly = 0.0;
   if (material < 0.5) {
-    if (liquidDensity > 0.12) {
-      material = nearbyLiquid(fieldUv);
-      liquidOnly = material > 0.5 ? 1.0 : 0.0;
-    }
+    // The reconstructed field already resolves all eight neighbours and keeps
+    // unlike-liquid ties transparent. Its alpha and RGB must stay authoritative;
+    // re-selecting a cardinal semantic neighbour here caused diagonal gaps and
+    // scan-order species bleed that disagreed with the Canvas presenter.
+    if (liquidDensity > 0.28) liquidOnly = 1.0;
     if (liquidOnly > 0.5) {
       halo = 1.0;
     } else if (atmosphereState.a > 0.004) {
@@ -227,7 +218,9 @@ void main() {
     ? enclosedSurfaceShape(fieldUv, material)
     : ((cloudOnly > 0.5 || emissionOnly > 0.5)
     ? vec3(0.0)
-    : ((isGas(material) || profile == 1.0) ? discreteShape(fieldUv, material) : occupancyShape(fieldUv, material))));
+    : (liquidOnly > 0.5
+    ? vec3(liquidDensity, 0.0, 0.0)
+    : ((isGas(material) || profile == 1.0) ? discreteShape(fieldUv, material) : occupancyShape(fieldUv, material)))));
   float density = shape.x;
   float gasVolume = max(cloudOnly, isGas(material) ? 1.0 : 0.0);
   float liquidVolume = max(liquidOnly, isLiquid(material) ? 1.0 : 0.0);
@@ -254,10 +247,10 @@ void main() {
     float cloudBottom = texture(uAtmosphereTexture, fieldUv + vec2(0.0, uAtmosphereTexel.y)).a;
     volumeSlope = vec2(cloudRight - cloudLeft, cloudBottom - cloudTop) * 0.85;
   } else if (liquidVolume > 0.5) {
-    float liquidLeft = texture(uLiquidTexture, fieldUv - vec2(uTexel.x, 0.0)).r;
-    float liquidRight = texture(uLiquidTexture, fieldUv + vec2(uTexel.x, 0.0)).r;
-    float liquidTop = texture(uLiquidTexture, fieldUv - vec2(0.0, uTexel.y)).r;
-    float liquidBottom = texture(uLiquidTexture, fieldUv + vec2(0.0, uTexel.y)).r;
+    float liquidLeft = texture(uLiquidTexture, fieldUv - vec2(uTexel.x, 0.0)).a;
+    float liquidRight = texture(uLiquidTexture, fieldUv + vec2(uTexel.x, 0.0)).a;
+    float liquidTop = texture(uLiquidTexture, fieldUv - vec2(0.0, uTexel.y)).a;
+    float liquidBottom = texture(uLiquidTexture, fieldUv + vec2(0.0, uTexel.y)).a;
     volumeSlope = vec2(liquidRight - liquidLeft, liquidBottom - liquidTop) * 0.65;
   }
   vec2 semanticSlope = shape.yz * shapeDetail;
@@ -268,7 +261,9 @@ void main() {
     ? wallColor(wall)
     : (emissionOnly > 0.5
     ? emissionState.rgb
-    : (cloudOnly > 0.5 ? atmosphereState.rgb : texture(uPaletteTexture, vec2((material + 0.5) / 256.0, 0.5)).rgb));
+    : (cloudOnly > 0.5
+    ? atmosphereState.rgb
+    : (liquidOnly > 0.5 ? liquidState.rgb : texture(uPaletteTexture, vec2((material + 0.5) / 256.0, 0.5)).rgb)));
   vec2 velocity = halo > 0.5 ? vec2(0.0) : state.ba * 2.0 - 1.0;
   vec2 fieldPosition = fieldUv * uFieldSize;
   float grain = fract(sin(dot(floor(fieldPosition), vec2(12.9898, 78.233))) * 43758.5453) - 0.5;

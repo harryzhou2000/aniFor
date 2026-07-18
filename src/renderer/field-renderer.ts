@@ -4,6 +4,8 @@ import { clientToViewport, ViewTransform, type Point, type ViewState } from './v
 import type { PixiFieldPresenter } from './pixi-field-presenter';
 import { backingSize, resolveFieldOutputScale } from './render-resolution';
 import { reconstructLiquidSurface } from './canvas-liquid-surface';
+import { shadeCanvasMaterial } from './canvas-material-style';
+import { reconstructSolidSurface } from './canvas-solid-surface';
 import { RenderFieldSet } from './render-field-set';
 import { renderPhase, RenderPhase } from './render-profile';
 import { compositePixel } from './rgba-composite';
@@ -45,6 +47,7 @@ export class MaterialRenderer {
   private readonly fallbackSurface = document.createElement('canvas');
   private readonly rendered: Uint8Array;
   private readonly renderedWalls?: Uint8Array;
+  private readonly styledColor = new Float32Array(3);
   private readonly outputScale = resolveFieldOutputScale();
   private presenter?: PixiFieldPresenter;
   private readonly view: ViewTransform;
@@ -402,15 +405,23 @@ export class MaterialRenderer {
           compositePixel(target, pixel, red + normalLight, green + normalLight, blue + normalLight, 245);
           setPixel(fire, pixel, red, green, blue, 180);
         } else {
-          compositePixel(target, pixel, red + grain * 0.45 + normalLight, green + grain * 0.45 + normalLight, blue + grain * 0.45 + normalLight, 255);
+          shadeCanvasMaterial(
+            this.styledColor, red, green, blue, fields.lookups.styleBytes[material * 4 + 1],
+            material, x, y, index, time,
+          );
+          compositePixel(
+            target, pixel,
+            this.styledColor[0] + normalLight, this.styledColor[1] + normalLight, this.styledColor[2] + normalLight,
+            255,
+          );
         }
         if (info.emissive) setPixel(fire, pixel, red, green, blue, 176);
       }
     }
 
+    reconstructSolidSurface(base, this.rendered, fields.lookups.styleBytes, width, height);
     reconstructLiquidSurface(
-      liquid, this.rendered, fields.liquid.bytes, fields.lookups.liquidByMaterial,
-      fields.lookups.colorByMaterial, width, height,
+      liquid, this.rendered, fields.liquid.bytes, width, height,
     );
     this.liquidContext.putImageData(liquidPixels, 0, 0);
     this.smokeContext.putImageData(smokePixels, 0, 0);
