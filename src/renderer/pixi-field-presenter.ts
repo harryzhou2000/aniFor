@@ -156,6 +156,12 @@ export class PixiFieldPresenter {
   }
 
   mount(): void { this.host.append(this.app.canvas); }
+
+  resize(width: number, height: number): void {
+    this.app.renderer.resize(Math.max(1, width), Math.max(1, height));
+    this.app.canvas.dataset.viewportSize = width + 'x' + height;
+    this.app.render();
+  }
   markDirty(index: number): void { this.chunks.markCell(index); }
 
   update(materials: Uint8Array, temperatures: Uint16Array | undefined, velocities: Int8Array | undefined, time: number): void {

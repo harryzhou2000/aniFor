@@ -264,7 +264,13 @@ export class MaterialRenderer {
   }
 
 
-  private resize(): void { this.view.resize(this.host.clientWidth, this.host.clientHeight); this.syncTransform(); }
+  private resize(): void {
+    const width = this.host.clientWidth;
+    const height = this.host.clientHeight;
+    this.presenter?.resize(width, height);
+    this.view.resize(width, height);
+    this.syncTransform();
+  }
   private syncTransform(): void {
     const position = this.view.position;
     if (this.presenter) this.presenter.setTransform(this.view.scale, position.x, position.y);
