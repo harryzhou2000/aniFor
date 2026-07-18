@@ -20,8 +20,12 @@ describe('Canvas energy core styling', () => {
     expect(radioactive[2]).toBeGreaterThan(radioactive[0]);
     expect(warmGlow[0]).toBeGreaterThan(warmGlow[2]);
     expect(radioactiveGlow[2]).toBeGreaterThan(radioactiveGlow[0]);
-    expect(warmAlpha).toBeGreaterThan(150);
-    expect(radioactiveAlpha).toBeGreaterThan(150);
+    expect(warmAlpha).toBeGreaterThan(10);
+    expect(radioactiveAlpha).toBeGreaterThan(10);
+    expect(warmAlpha).toBeLessThan(24);
+    expect(radioactiveAlpha).toBeLessThan(24);
+    expect(Math.max(...warm)).toBeLessThanOrEqual(232);
+    expect(Math.max(...radioactive)).toBeLessThanOrEqual(232);
   });
 
   it('is deterministic with reusable scratch storage', () => {

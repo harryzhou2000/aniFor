@@ -3,11 +3,16 @@ import { RenderTrait } from './render-traits';
 
 const WARM_ACCENT = [255, 184, 107] as const;
 const COOL_ACCENT = [184, 230, 255] as const;
+const ENERGY_RADIANCE_KNEE = 176;
+const ENERGY_RADIANCE_CEILING = 232;
+const ENERGY_RADIANCE_SLOPE = 0.30;
+const ENERGY_GLOW_GAIN = 0.08;
 
 /**
  * Allocation-free Canvas counterpart of the WebGL luminous energy core.
  * The semantic particle remains crisp in `core`; `glow` is composited through
- * the existing blurred/lightened energy plane.
+ * the existing blurred and crisp lightened passes. A soft radiance knee keeps
+ * dense cores colourful instead of clipping them into flat white slabs.
  */
 export function shadeCanvasEnergy(
   core: Float32Array,
@@ -41,13 +46,26 @@ export function shadeCanvasEnergy(
   const energy = 1.04 + heat * 0.28 + pulse * 0.10;
   const accentMix = 0.08 + heat * 0.06;
   const glowMix = 0.88 + pulse * 0.14;
-  core[0] = red * energy * detail + accent[0] * accentMix;
-  core[1] = green * energy * detail + accent[1] * accentMix;
-  core[2] = blue * energy * detail + accent[2] * accentMix;
+  core[0] = toneMapEnergyChannel(red * energy * detail + accent[0] * accentMix);
+  core[1] = toneMapEnergyChannel(green * energy * detail + accent[1] * accentMix);
+  core[2] = toneMapEnergyChannel(blue * energy * detail + accent[2] * accentMix);
   glow[0] = red * glowMix + accent[0] * 0.10;
   glow[1] = green * glowMix + accent[1] * 0.10;
   glow[2] = blue * glowMix + accent[2] * 0.10;
-  return Math.round(154 + pulse * 38 + heat * 38 + Number(carrier) * scintillation * 22);
+  // The same glow plane is drawn once blurred and once crisp. Scale its local
+  // alpha here so those passes remain a sparkle around the separate broad
+  // EmissionField aura instead of repainting the semantic core twice.
+  return Math.round(
+    (154 + pulse * 38 + heat * 38 + Number(carrier) * scintillation * 22) * ENERGY_GLOW_GAIN,
+  );
+}
+
+function toneMapEnergyChannel(value: number): number {
+  if (value <= ENERGY_RADIANCE_KNEE) return value;
+  return Math.min(
+    ENERGY_RADIANCE_CEILING,
+    ENERGY_RADIANCE_KNEE + (value - ENERGY_RADIANCE_KNEE) * ENERGY_RADIANCE_SLOPE,
+  );
 }
 
 function noise(x: number, y: number, salt: number): number {

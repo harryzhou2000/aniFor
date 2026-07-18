@@ -5,6 +5,7 @@ import { contentBoxFromBounds } from './client-coordinate-map';
 import type { PixiFieldPresenter } from './pixi-field-presenter';
 import { backingSize, resolveFieldOutputScale } from './render-resolution';
 import { shadeCanvasAtmosphere } from './canvas-atmosphere-relief';
+import { canvasLocalEmissionAlpha } from './canvas-emission-style';
 import { shadeCanvasOpticalVolume } from './canvas-optics-style';
 import { reconstructLiquidSurface } from './canvas-liquid-surface';
 import { shadeCanvasEnergy } from './canvas-energy-style';
@@ -526,7 +527,7 @@ export class MaterialRenderer {
           setPixel(
             fire, pixel,
             this.styledColor[0] + light, this.styledColor[1] + light,
-            this.styledColor[2] + light, 176,
+            this.styledColor[2] + light, canvasLocalEmissionAlpha(info.phase),
           );
         }
       }

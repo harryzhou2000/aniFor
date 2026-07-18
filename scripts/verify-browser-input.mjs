@@ -104,11 +104,36 @@ async function auditMode(mode) {
     assert(canonicalFixture.upperWall === 3 && canonicalFixture.lowerWall === 3,
       `${mode}: canonical render lab signature changed (${JSON.stringify(canonicalFixture)})`);
 
+    // Read the rendered canvas, not semantic cells, so framebuffer clipping and
+    // backend compositing regressions are observable in the browser gate.
+    await sleep(250);
+    const canonicalCapture = await cdp.send('Page.captureScreenshot', { format: 'png', fromSurface: true });
+    const energySamples = await samplePageRegions(cdp, canonicalCapture.data, [
+      { name: 'fire', x: 405, y: 329 },
+      { name: 'plasma', x: 445, y: 329 },
+      { name: 'elec', x: 485, y: 329 },
+      { name: 'phot', x: 525, y: 329 },
+      { name: 'grvt', x: 565, y: 329 },
+    ]);
+    const energy = Object.fromEntries(energySamples.map((sample) => [sample.name, sample]));
+    assert(energySamples.every((sample) => sample.visible >= 32),
+      `${mode}: energy render samples disappeared (${JSON.stringify(energySamples)})`);
+    assert(energySamples.every((sample) => sample.pinnedFraction <= 0.02),
+      `${mode}: dense energy framebuffer clipping returned (${JSON.stringify(energySamples)})`);
+    assert(energy.fire.rgb[0] > energy.fire.rgb[1] && energy.fire.rgb[1] > energy.fire.rgb[2],
+      `${mode}: Fire lost its warm hue (${energy.fire.rgb})`);
+    assert(energy.plasma.rgb[2] > energy.plasma.rgb[0] && energy.plasma.rgb[0] > energy.plasma.rgb[1],
+      `${mode}: Plasma lost its violet hue (${energy.plasma.rgb})`);
+    assert(energy.elec.rgb[2] >= energy.elec.rgb[1] && energy.elec.rgb[1] >= energy.elec.rgb[0],
+      `${mode}: ELEC lost its cool hue (${energy.elec.rgb})`);
+    assert(Math.max(...energy.phot.rgb) - Math.min(...energy.phot.rgb) <= 8,
+      `${mode}: PHOT lost its neutral hue (${energy.phot.rgb})`);
+    assert(energy.grvt.rgb[1] > energy.grvt.rgb[2] && energy.grvt.rgb[2] > energy.grvt.rgb[0],
+      `${mode}: GRVT lost its green-cyan hue (${energy.grvt.rgb})`);
+
     const screenshot = screenshotPath(mode);
     if (screenshot) {
-      await sleep(250);
-      const capture = await cdp.send('Page.captureScreenshot', { format: 'png', fromSurface: true });
-      await writeFile(screenshot, Buffer.from(capture.data, 'base64'));
+      await writeFile(screenshot, Buffer.from(canonicalCapture.data, 'base64'));
     }
 
     await evaluate(cdp, `window.__ANIFOR_INPUT_AUDIT__.clear(); window.__ANIFOR_INPUT_AUDIT__.setRadius(0); true`);
@@ -201,6 +226,7 @@ async function auditMode(mode) {
       backend: mode, dpr,
       backing: `${initial.backing.width}x${initial.backing.height}`,
       canonicalFixture: { occupied: canonicalFixture.occupied, wallSignature: '3,3' },
+      energySamples,
       landmarkCells: landmarks.length,
       configuredSource: nativeSemantics.configuredSource,
       lifePreset: nativeSemantics.lifePreset,
@@ -612,6 +638,50 @@ function worldClient(rect, world) {
 
 async function screenWorld(cdp, point) {
   return evaluate(cdp, `window.__ANIFOR_INPUT_AUDIT__.screenToWorld(${point.x}, ${point.y})`);
+}
+
+async function samplePageRegions(cdp, screenshotBase64, regions) {
+  return evaluate(cdp, `(async () => {
+    const world = document.querySelector('.world-canvas');
+    if (!(world instanceof HTMLCanvasElement)) throw new Error('World canvas unavailable');
+    const image = new Image();
+    image.src = ${JSON.stringify(`data:image/png;base64,${screenshotBase64}`)};
+    await image.decode();
+    const copy = document.createElement('canvas');
+    copy.width = image.naturalWidth;
+    copy.height = image.naturalHeight;
+    const context = copy.getContext('2d', { willReadFrequently: true });
+    if (!context) throw new Error('Screenshot sampler unavailable');
+    context.drawImage(image, 0, 0);
+    const bounds = world.getBoundingClientRect();
+    const pageScaleX = image.naturalWidth / innerWidth;
+    const pageScaleY = image.naturalHeight / innerHeight;
+    return ${JSON.stringify(regions)}.map((region) => {
+      const radius = 3;
+      const worldScaleX = bounds.width / ${WORLD_WIDTH};
+      const worldScaleY = bounds.height / ${WORLD_HEIGHT};
+      const x = Math.floor((bounds.left + (region.x - radius) * worldScaleX) * pageScaleX);
+      const y = Math.floor((bounds.top + (region.y - radius) * worldScaleY) * pageScaleY);
+      const width = Math.max(1, Math.ceil(radius * 2 * worldScaleX * pageScaleX));
+      const height = Math.max(1, Math.ceil(radius * 2 * worldScaleY * pageScaleY));
+      const data = context.getImageData(x, y, width, height).data;
+      const total = [0, 0, 0];
+      let visible = 0;
+      let pinned = 0;
+      for (let offset = 0; offset < data.length; offset += 4) {
+        if (data[offset + 3] < 48 || Math.max(data[offset], data[offset + 1], data[offset + 2]) < 12) continue;
+        total[0] += data[offset]; total[1] += data[offset + 1]; total[2] += data[offset + 2];
+        if (data[offset] === 255 || data[offset + 1] === 255 || data[offset + 2] === 255) pinned++;
+        visible++;
+      }
+      return {
+        name: region.name,
+        rgb: total.map((channel) => Math.round(channel / Math.max(1, visible))),
+        visible,
+        pinnedFraction: Math.round(pinned / Math.max(1, visible) * 1000) / 1000,
+      };
+    });
+  })()`);
 }
 
 async function mouseClick(cdp, x, y, button) {

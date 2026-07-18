@@ -66,6 +66,12 @@ vec3 vividColor(vec3 color, float saturation) {
   float luminance = dot(color, vec3(0.2126, 0.7152, 0.0722));
   return mix(vec3(luminance), color, saturation);
 }
+vec3 toneMapEnergy(vec3 radiance) {
+  const float knee = 0.72;
+  vec3 excess = max(radiance - vec3(knee), vec3(0.0));
+  vec3 mapped = min(vec3(1.0), vec3(knee) + excess * 0.30);
+  return min(radiance, mapped);
+}
 float compatibleAt(vec2 uv, float material, float family) {
   float candidate = materialAt(uv);
   if (abs(candidate - material) < 0.5) return 1.0;
@@ -364,6 +370,10 @@ void main() {
     color += auraTint * edge * (0.20 + pulse * 0.16);
     color += mix(vec3(1.0, 0.72, 0.42), vec3(0.72, 0.90, 1.0), radioactiveCarrier)
       * core * (0.10 + pulse * 0.08);
+    // Preserve sparse aura energy while compressing only the dense semantic
+    // core. This retains hue and flow detail that would otherwise framebuffer-
+    // clip into flat neon slabs after premultiplication.
+    color = mix(color, toneMapEnergy(color), smoothstep(0.08, 0.68, core));
   } else if (gasVolume > 0.5) {
     float billow = 0.92 + atmosphere * 0.08;
     // Dense reconstructed gas should read as one mixed volume, not as the raw

@@ -51,6 +51,10 @@ export function applyRenderLabScene(simulation: SimulationBackend): void {
   plot.ellipse(486, 72, 56, 47, Material.Oxygen, 0.72, 311, 0.64);
   plot.ellipse(544, 88, 45, 39, Material.NobleGas, 0.60, 313, 0.70);
   plot.scatterLine(382, 145, 202, Material.Smoke, 0.12, 317);
+  // Generic soot and emissive gas exercise paths that Smoke and clean gases do
+  // not cover. Their compact volumes also expose over-wide bloom at a glance.
+  plot.ellipse(430, 171, 37, 13, Material.FOG, 0.76, 331, 0.42);
+  plot.ellipse(520, 171, 37, 13, Material.CFLM, 0.70, 337, 0.42);
 
   // Sand entering water: a stable paused mixture and a crisp wall reference.
   plot.rect(18, 192, 165, 154, Material.Water, 0.90, 401);

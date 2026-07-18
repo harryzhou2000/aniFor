@@ -28,6 +28,9 @@ describe('render lab scene', () => {
     expect(counts[Material.Water]).toBeGreaterThan(8_000);
     expect(counts[Material.Smoke]).toBeGreaterThan(1_000);
     expect(counts[Material.Oxygen]).toBeGreaterThan(700);
+    expect(counts[Material.NobleGas]).toBeGreaterThan(400);
+    expect(counts[Material.FOG]).toBeGreaterThan(500);
+    expect(counts[Material.CFLM]).toBeGreaterThan(450);
     expect(counts[Material.Metal]).toBeGreaterThan(500);
     expect(counts[Material.PLUT]).toBeGreaterThan(500);
     expect(counts[Material.CONV]).toBeGreaterThan(500);

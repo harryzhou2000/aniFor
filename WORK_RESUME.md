@@ -199,6 +199,15 @@ Queued after the renderer checkpoint: revisit desktop/mobile geometry as a dedic
 - Shared field allocation remains exactly 8,173,320 bytes. After preferring four cardinal styled-liquid donors and scanning diagonals only when no cardinal donor exists, the pessimistic full-grid Canvas profile measures solid reconstruction at 2.86 ms median and same-species liquid reconstruction at 3.18 ms median on this machine.
 - CI now writes the built commit to `revision.txt` inside the Pages artifact and requires the live marker to equal `GITHUB_SHA` before checking recursive asset closure. A stale but internally complete deployment can no longer pass merely because the SHA was used as a cache-busting query.
 
+## Energy-radiance and emissive-volume follow-up
+
+- Dense WebGL energy cores now pass through a hue-preserving soft radiance knee blended by semantic core density. Sparse edges, alpha, velocity/temperature animation, the shared emission aura, field allocation, and scheduling remain unchanged.
+- Canvas applies the same bounded soft knee before writing its nearly opaque semantic core. Its local energy glow is reduced to a sparkle because that plane is drawn once blurred and once crisp on top of the separate shared aura.
+- Generic emissive gas and liquid now receive phase-bounded local accent alpha; opaque emissive surfaces keep their stronger accent. This removed CFLM's clipped white speckle without changing atmosphere support or species colour.
+- The deterministic atlas now includes compact FOG and CFLM volumes beneath the mixed cloud row. Unit coverage asserts FOG, CFLM, Noble Gas, all five energy families, and allocation-free phase-specific Canvas emission gains.
+- The browser audit captures the composed page and decodes it inside Chrome, avoiding `preserveDrawingBuffer`. It samples Fire, Plasma, ELEC, PHOT, and GRVT display regions and asserts visibility, at most 2% pinned-channel pixels, and stable family hue ordering in both Canvas2D and WebGL.
+- The suite now contains 192 passing tests. Fresh paired browser evidence reports zero pinned pixels in all ten backend/family samples, zero browser errors, unchanged 1×/2× geometry, 0.145-cell wheel anchoring, exact 42×27 middle-pan, repeated resize recovery, and unchanged mobile/native semantic checks.
+
 ## Verification completed for the LIFE/optics checkpoint
 
 - `npm run typecheck`
@@ -223,20 +232,20 @@ Queued after the renderer checkpoint: revisit desktop/mobile geometry as a dedic
 - The cohesive-solid follow-up passes the same full browser gate with the six-row GOL/device/radioactive fixture, zero shader/runtime/network errors, and unchanged transform metrics. Retained WebGL and Canvas captures show dense solid blocks with fewer black perforations while mixed-material seams and the sparse powder controls remain open.
 - The stacked tool-discovery gate reports exactly two desktop filter rows at 68 px, a 40 px mobile filter rail, 8/12/8 px palette-to-actions gaps through the repeated desktop resize sequence, and zero mobile horizontal overflow. The optional browser screenshot path now also retains a DPR-2 portrait capture for direct layout review.
 - Latest warmed field profile at 612×384: atmosphere 7.21 ms median, species-aware liquid 11.40 ms, emission 3.18 ms, Canvas atmosphere relief 0.87 ms, solid reconstruction 1.27 ms, surface lighting 6.00 ms, and liquid reconstruction 1.67 ms. Shared volume storage remains 8,173,320 bytes; optical classes add no field or texture allocation.
-- The current pessimistic Canvas energy profile shades all 235,008 cells as radioactive energy cores in 19.37 ms median / 19.58 ms p90 on the local machine. Ordinary scenes call it only for actual energy cells. It adds two reusable 3-float vectors and no field/texture allocation; shared volume storage remains exactly 8,173,320 bytes.
+- The current pessimistic Canvas energy profile shades all 235,008 cells as radioactive energy cores in 25.20 ms median / 26.47 ms p90 on the local machine with the three-channel soft radiance knee enabled. Ordinary scenes call it only for actual energy cells. It adds two reusable 3-float vectors and no field/texture allocation; shared volume storage remains exactly 8,173,320 bytes.
 - Repeated surface-light stress profiles at 612×384 measured 5.76–11.20 ms median for the standalone dense-contour Canvas pass under varying local load; the latest p90/maximum were 12.08/12.44 ms. Shared field storage remains exactly 8,173,320 bytes; the diagnostic pass includes its own full-grid scan and reuses existing buffers.
 - Fresh local Chrome at 1280×720 promoted the render lab to WebGL with the runtime GLSL compiled. A 1024×600 repeat retained the correct 1.59375 field aspect and backend badge; Chrome logged only Vite connect messages and no shader, WebGL, console, or runtime error.
 - Forced Canvas at 1280×720 and a 390×844 DPR-2 portrait capture retained the 1224×768 backing, square mobile interaction panel with aspect-preserving letterbox, smooth empty-space aura, and crisp material seams. Warm/cool strips visibly reveal profile contours without uniformly whitening block interiors.
 - Native semantic-tool coverage now proves exact scalar deltas, stable typed routing, no vector-to-particle fallthrough, no vector emission during pinch navigation, malformed ABI rejection, Wind response, `WL_BLOCKAIR` isolation, stable-water regression, and unstepped OPS Wind round-tripping.
 
-The configured-source checkpoint `4077b23` is committed, pushed, deployed, and live-verified. The LIFE/optical-response checkpoint `c3bdfd2`, solid-optics checkpoint `20cafb9`, cohesive-solid checkpoint `2bb36b2`, and render-scale checkpoint `72c7801` are committed and pushed. GitHub CLI authentication is valid again; the current material-continuity follow-up still needs its final commit/push and manual cached `build-and-deploy`, while the live closure remains `4077b23`.
+The configured-source checkpoint `4077b23`, LIFE/optical-response checkpoint `c3bdfd2`, solid-optics checkpoint `20cafb9`, cohesive-solid checkpoint `2bb36b2`, render-scale checkpoint `72c7801`, and material-continuity checkpoint `5f1268c` are committed and pushed. `5f1268c` is deployed and live-verified through its exact `revision.txt` plus the 20-resource closure. GitHub CLI authentication is valid. The energy-radiance follow-up has passed local review; treat it as deployed only when CI's live `revision.txt` matches its eventual checkpoint commit and the public runtime check passes.
 
 ## Current blockers and risks
 
 - WebGL runtime GLSL is not compiled by TypeScript/Vite; preserve the fresh browser audit for every shader change.
 - The post-deploy verifier proves network asset closure and MIME, but not shader execution or interaction by itself.
 - Cached-HTML compatibility still relies on a small fixed set of historical JS/CSS aliases. The live revision marker now proves which artifact reached Pages, but the verifier does not compare every public content hash to the local artifact.
-- The browser integration gate now automates `MaterialRenderer.screenToWorld`, Pixi bounds, and exact semantic landmark placement, but rendered-pixel readback and public Pages browser execution remain distinct from its post-deploy asset-closure verifier.
+- The browser integration gate now automates transform/semantic placement and samples composed render-lab pixels through a decoded page screenshot, but public Pages browser execution remains distinct from the post-deploy asset-closure verifier.
 - Signs and several special editing semantics remain future work; configured sources and all 24 built-in LIFE presets are implemented through distinct semantic boundaries.
 - Pushes to `main_codex` intentionally do not build or deploy. Dispatch `ci.yml` manually with `operation=build-and-deploy`; the workflow restores the latest compatible ccache/Emscripten cache and saves a new primary ccache key only after a successful build.
 - Newtonian FFT gravity is intentionally omitted from the headless build, so gravity-dependent tools/elements must remain disabled or limited.
@@ -245,6 +254,6 @@ The configured-source checkpoint `4077b23` is committed, pushed, deployed, and l
 
 ## Next sequence
 
-1. After GitHub CLI reauthentication, dispatch the manual cached `build-and-deploy` for the current `main_codex` tip and verify the live closure/revision plus a cache-busted browser runtime.
-2. Continue deeper material-surface aesthetics and dense Canvas performance work, then revisit the queued desktop/mobile geometry polish.
+1. Continue deeper material-surface aesthetics and dense Canvas performance work, then revisit the queued desktop/mobile geometry polish.
+2. Keep each checkpoint on `main_codex`, dispatch the manual cached `build-and-deploy`, and verify the live revision/closure plus a cache-busted browser runtime.
 3. Keep the persistent goal active for remaining TPT interface coverage, especially signs and special editing semantics, while preserving existing forces, sources, radioactive elements, plants, and LIFE behavior.
