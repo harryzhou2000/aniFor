@@ -102,6 +102,7 @@ async function auditMode(mode) {
     await evaluate(cdp, `window.__ANIFOR_INPUT_AUDIT__.clear(); window.__ANIFOR_INPUT_AUDIT__.setRadius(0); true`);
     const initial = await metrics(cdp);
     assertGeometry(initial, `${mode} initial`);
+    assertToolboxGeometry(initial, `${mode} initial`, 68);
     const landmarks = [{ x: 17, y: 21 }, { x: 306, y: 192 }, { x: 594, y: 361 }];
     for (const landmark of landmarks) {
       // Sample cell centres so floating-point rounding at an exact grid edge
@@ -159,7 +160,12 @@ async function auditMode(mode) {
       );
       assertGeometry(current, `${mode} ${width}x${height}`);
       assertContained(current, `${mode} ${width}x${height}`);
-      resizeMetrics.push({ width, height, canvasWidth: round(current.canvas.width), canvasHeight: round(current.canvas.height) });
+      assertToolboxGeometry(current, `${mode} ${width}x${height}`, 68);
+      resizeMetrics.push({
+        width, height,
+        canvasWidth: round(current.canvas.width), canvasHeight: round(current.canvas.height),
+        toolboxGap: round(current.ui.actions.top - current.ui.palette.bottom),
+      });
       previousResize = current;
     }
     assert(resizeMetrics[1].canvasWidth > resizeMetrics[0].canvasWidth + 100,
@@ -169,7 +175,9 @@ async function auditMode(mode) {
     `${mode}: desktop resize did not return to fitted geometry`);
 
     let mobile;
-    if (mode === 'canvas2d') mobile = await auditMobile(cdp);
+    if (mode === 'canvas2d') {
+      mobile = await auditMobile(cdp, screenshot ? variantScreenshotPath(screenshot, 'mobile') : undefined);
+    }
     await sleep(50);
     assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
     cdp.close();
@@ -179,6 +187,7 @@ async function auditMode(mode) {
       landmarkCells: landmarks.length,
       wheelAnchorErrorCells: round(wheelAnchorError, 5),
       middlePanDelta: { x: round(afterPan.panX - beforePan.panX, 3), y: round(afterPan.panY - beforePan.panY, 3) },
+      toolFilters: { height: round(initial.ui.filters.height), rows: filterRows(initial.ui.filterButtons) },
       resizeMetrics,
       ...(mobile ? { mobile } : {}),
       ...(screenshot ? { screenshot } : {}),
@@ -190,7 +199,7 @@ async function auditMode(mode) {
   }
 }
 
-async function auditMobile(cdp) {
+async function auditMobile(cdp, screenshot) {
   await cdp.send('Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: 2 });
   await cdp.send('Emulation.setDeviceMetricsOverride', {
     width: 390, height: 844, deviceScaleFactor: 2, mobile: true,
@@ -203,7 +212,12 @@ async function auditMobile(cdp) {
   const initial = await metrics(cdp);
   assertGeometry(initial, 'mobile Canvas');
   assertContained(initial, 'mobile Canvas');
+  assertToolboxGeometry(initial, 'mobile Canvas', 40);
   assert(Math.abs(initial.viewport.width - initial.viewport.height) < 1, 'mobile interaction panel is not square');
+  if (screenshot) {
+    const capture = await cdp.send('Page.captureScreenshot', { format: 'png', fromSurface: true });
+    await writeFile(screenshot, Buffer.from(capture.data, 'base64'));
+  }
   const center = { x: initial.viewport.left + initial.viewport.width / 2, y: initial.viewport.top + initial.viewport.height / 2 };
   const start = [touch(1, center.x - 58, center.y), touch(2, center.x + 58, center.y)];
   const moved = [touch(1, center.x - 83, center.y + 16), touch(2, center.x + 83, center.y + 16)];
@@ -231,6 +245,10 @@ async function auditMobile(cdp) {
     pinchZoom: round(pinch.view.zoom, 4),
     pinchStrayCells: pinch.occupied,
     singleTouchCell: `${target.x},${target.y}`,
+    toolFilterHeight: round(initial.ui.filters.height),
+    toolboxGap: round(initial.ui.actions.top - initial.ui.palette.bottom),
+    horizontalOverflow: round(initial.ui.horizontalOverflow),
+    ...(screenshot ? { screenshot } : {}),
   };
 }
 
@@ -271,7 +289,13 @@ async function metrics(cdp) {
       .find((candidate) => candidate.getBoundingClientRect().width > 0);
     const viewport = document.querySelector('.viewport');
     const frame = document.querySelector('.viewport-frame');
-    if (!canvas || !viewport || !frame) throw new Error('Missing browser-audit geometry');
+    const palette = document.querySelector('.palette');
+    const actions = document.querySelector('.actions');
+    const filters = document.querySelector('.tool-filters');
+    const filterButtons = [...document.querySelectorAll('.tool-filter')];
+    if (!canvas || !viewport || !frame || !palette || !actions || !filters || !filterButtons.length) {
+      throw new Error('Missing browser-audit geometry');
+    }
     const box = (element) => {
       const rect = element.getBoundingClientRect();
       return { left: rect.left, top: rect.top, width: rect.width, height: rect.height, right: rect.right, bottom: rect.bottom };
@@ -282,6 +306,11 @@ async function metrics(cdp) {
       outputScale: canvas.dataset.outputScale,
       backend: window.__ANIFOR_INPUT_AUDIT__.backend(),
       dpr: devicePixelRatio, window: { width: innerWidth, height: innerHeight },
+      ui: {
+        palette: box(palette), actions: box(actions), filters: box(filters),
+        filterButtons: filterButtons.map(box),
+        horizontalOverflow: Math.max(0, document.documentElement.scrollWidth - innerWidth),
+      },
     };
   })()`);
 }
@@ -298,6 +327,25 @@ function assertContained(value, label) {
   assert(value.canvas.top >= value.viewport.top - tolerance, `${label}: canvas escaped top`);
   assert(value.canvas.right <= value.viewport.right + tolerance, `${label}: canvas escaped right`);
   assert(value.canvas.bottom <= value.viewport.bottom + tolerance, `${label}: canvas escaped bottom`);
+}
+
+function assertToolboxGeometry(value, label, expectedFilterHeight) {
+  const tolerance = 0.75;
+  const gap = value.ui.actions.top - value.ui.palette.bottom;
+  assert(gap >= -tolerance, `${label}: actions overlap tool palette by ${round(-gap)}px`);
+  assert(Math.abs(value.ui.filters.height - expectedFilterHeight) <= tolerance,
+    `${label}: tool filter rail is ${round(value.ui.filters.height)}px`);
+  for (const button of value.ui.filterButtons) {
+    assert(button.top >= value.ui.filters.top - tolerance
+      && button.bottom <= value.ui.filters.bottom + tolerance,
+    `${label}: a tool filter escaped the fixed-height rail`);
+  }
+  assert(value.ui.horizontalOverflow <= tolerance,
+    `${label}: document has ${round(value.ui.horizontalOverflow)}px horizontal overflow`);
+}
+
+function filterRows(buttons) {
+  return new Set(buttons.map((button) => round(button.top, 1))).size;
 }
 
 function worldClient(rect, world) {
@@ -357,6 +405,13 @@ function screenshotPath(mode) {
   return extension
     ? `${screenshotRequest.slice(0, -extension.length)}-${mode}${extension}`
     : `${screenshotRequest}-${mode}.png`;
+}
+
+function variantScreenshotPath(source, variant) {
+  const extension = path.extname(source);
+  return extension
+    ? `${source.slice(0, -extension.length)}-${variant}${extension}`
+    : `${source}-${variant}`;
 }
 
 async function terminate(child) {

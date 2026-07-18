@@ -28,6 +28,7 @@ The non-negotiable contract is:
 - Compact portrait layout may use a square interaction panel, but zoom 1 must contain the full 612×384 field with a uniform scale and letterboxing. Do not crop the world merely to fill the square.
 - One touch is the mobile brush and two touches are camera pan/pinch. Defer the initial touch mark until the gesture is known to be single-touch so every two-finger gesture does not leave an accidental dot.
 - Keep a compact bounded mobile catalog with `overscroll-behavior-y: auto`: its inner scroll must chain back to the document, and toolbox bottom padding must remain a safe touch target for page scrolling.
+- Desktop tool filters use a fixed 68 px, two-row stacked rail; mobile keeps a fixed 40 px horizontal rail. Preserve those heights, keep every filter vertically contained, and browser-check a non-negative palette/actions gap at short desktop heights so the Brush card cannot cover the library.
 
 Do not confuse the 2× backing resolution with an internal presentation multiplier. Never add scene scaling such as the former 1.5 multiplier, stretch width and height independently, or introduce a second pointer transform.
 

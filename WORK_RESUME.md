@@ -144,6 +144,13 @@ Queued after the renderer checkpoint: revisit desktop/mobile geometry as a dedic
 - Canvas semantic liquids now use the same 143/209 sparse/dense source-alpha endpoints as WebGL. Filled-liquid shoreline alpha ramps continuously from zero, and the redundant nearest overlay is reduced from 0.34 to 0.18. This keeps the two-pixel backing crisp without turning reconstructed support into an opaque fringe.
 - No texture, field, upload, reconstruction stage, or persistent allocation was added. The two presenters intentionally match edge/interior opacity endpoints rather than duplicating each other's implementation detail.
 
+## Stacked tool-discovery geometry follow-up
+
+- Desktop tool filters are now a fixed 68 px two-row stack instead of one clipped over-wide row. All nine filters fit at normal toolbox widths; constrained widths retain a thin horizontal fallback without hiding a second line.
+- Mobile retains the compact 40 px horizontal filter rail and bounded catalog. The square 378×378 interaction panel remains first, followed immediately by the visible Material Lab heading and search/filter controls; the document has zero horizontal overflow and remains vertically scrollable to the Brush/actions card.
+- The real-browser audit now measures the filter rail, every filter button, palette/actions separation, and document overflow. It fails if a filter escapes vertically, the Brush card overlaps the palette, or the page grows wider than the viewport.
+- Captured evidence at 1024×600, 1440×900, and 390×844 shows 8–12 px palette/actions separation, a compact 132 px mobile HUD, and no viewport/input regression.
+
 ## Verification completed for the current local tree
 
 - `npm run typecheck`
@@ -164,6 +171,7 @@ Queued after the renderer checkpoint: revisit desktop/mobile geometry as a dedic
 - Current WebGL/Canvas browser acceptance has zero shader/runtime/network errors. Dense WebGL gas is continuous without the prior raw-dot island; Canvas gas has clearer relief/species separation; liquid caps and columns show brighter rims, darker depth, and caustic variation while retaining crisp silhouettes and clean unlike-species seams.
 - The current Canvas role-write checkpoint passes the same two-backend browser gate at 1224×768 backing. Both backends return exactly through `1024×600 → 1440×900 → 1024×600`; wheel-anchor drift is 0.145 cell, middle-pan is 42×27 CSS px, and the Canvas mobile gate retains a 378×378 panel, 1.431× pinch, zero stray cells, and zero browser errors.
 - The optical-depth tranche passes that same real-browser gate with runtime GLSL compilation and zero browser errors. Retained WebGL/Canvas atlas captures show darker saturated gas cores with readable falloff, cohesive liquid columns with local reflective lips, preserved sparse control rows, and no unlike-species seam bleed.
+- The stacked tool-discovery gate reports exactly two desktop filter rows at 68 px, a 40 px mobile filter rail, 8/12/8 px palette-to-actions gaps through the repeated desktop resize sequence, and zero mobile horizontal overflow. The optional browser screenshot path now also retains a DPR-2 portrait capture for direct layout review.
 - Latest warmed field profile at 612×384: atmosphere 6.71 ms median, species-aware liquid 10.81 ms, emission 5.26 ms, Canvas atmosphere relief 0.88 ms, solid reconstruction 1.26 ms, surface lighting 5.79 ms, and liquid reconstruction 1.62 ms. Shared volume storage remains 8,173,320 bytes; the presentation passes add no persistent field allocation.
 - The current pessimistic Canvas energy profile shades all 235,008 cells as radioactive energy cores in 19.37 ms median / 19.58 ms p90 on the local machine. Ordinary scenes call it only for actual energy cells. It adds two reusable 3-float vectors and no field/texture allocation; shared volume storage remains exactly 8,173,320 bytes.
 - Repeated surface-light stress profiles at 612×384 measured 5.76–11.20 ms median for the standalone dense-contour Canvas pass under varying local load; the latest p90/maximum were 12.08/12.44 ms. Shared field storage remains exactly 8,173,320 bytes; the diagnostic pass includes its own full-grid scan and reuses existing buffers.
