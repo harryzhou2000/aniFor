@@ -36,7 +36,7 @@ For every shader or field-reconstruction change:
 1. Capture WebGL and forced Canvas2D at the same viewport size and `renderScale=2`.
 2. Confirm the canvas remains a 612×384 CSS/logical world with 1224×768 backing pixels.
 3. Confirm the browser console contains no shader, WebGL, runtime, or network-asset failure related to the app.
-4. Compare powder granularity, liquid interior continuity and hard boundary, gas halo/volume, material mixing, and emissive clipping.
+4. Compare powder granularity, liquid interior continuity and hard boundary, gas halo/volume, material mixing, and emissive clipping. Enclosed solid pinholes should close, while exposed notches, silhouettes, and seams between unlike solids must remain visible.
 5. Keep the previous WebGL crop until the new result has been visually reviewed.
 
 The scene is a visual fixture, not a replacement for real-browser pointer, wheel, pan, and painted-footprint checks.

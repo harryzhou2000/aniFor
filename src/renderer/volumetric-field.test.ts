@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   contourLight,
+  enclosedSurfaceCoverage,
   materialNeighbourMask,
   neighbourDensity,
   NEIGHBOUR_BOTTOM,
@@ -37,5 +38,11 @@ describe('volumetric field sampling', () => {
     ]);
     const mask = materialNeighbourMask(cells, 3, 2, 0, 1, 2);
     expect(mask).toBe(0);
+  });
+
+  it('fills an enclosed solid pinhole without expanding an exposed edge', () => {
+    expect(enclosedSurfaceCoverage(0xff)).toBe(1);
+    expect(enclosedSurfaceCoverage(NEIGHBOUR_LEFT | NEIGHBOUR_BOTTOM)).toBe(0);
+    expect(enclosedSurfaceCoverage(NEIGHBOUR_LEFT | NEIGHBOUR_RIGHT)).toBe(0);
   });
 });

@@ -102,16 +102,42 @@ vec3 discreteShape(vec2 uv, float material) {
   float gradientY = (b - t) + (bl + br - tl - tr) * 0.45 * uHighQuality;
   return vec3(density, gradientX, gradientY);
 }
-float nearbyEmission(vec2 uv) {
+vec3 enclosedSurfaceShape(vec2 uv, float material) {
+  vec2 left = vec2(uTexel.x, 0.0);
+  vec2 down = vec2(0.0, uTexel.y);
+  float l = sameMaterial(uv - left, material);
+  float r = sameMaterial(uv + left, material);
+  float t = sameMaterial(uv - down, material);
+  float b = sameMaterial(uv + down, material);
+  float tl = sameMaterial(uv - left - down, material);
+  float tr = sameMaterial(uv + left - down, material);
+  float bl = sameMaterial(uv - left + down, material);
+  float br = sameMaterial(uv + left + down, material);
+  float support = (l + r + t + b) * 0.12 + (tl + tr + bl + br) * 0.05;
+  float coverage = smoothstep(0.34, 0.64, support);
+  float gradientX = (r - l) + (tr + br - tl - bl) * 0.45;
+  float gradientY = (b - t) + (bl + br - tl - tr) * 0.45;
+  return vec3(coverage * 0.86, gradientX * 0.14, gradientY * 0.14);
+}
+vec2 nearbySurface(vec2 uv) {
+  float solid = 0.0;
   float candidate = materialAt(uv - vec2(uTexel.x, 0.0));
-  if (isEnergy(candidate) || isEmissive(candidate)) return candidate;
+  float family = familyFor(candidate);
+  if (family == 3.0 || isEmissive(candidate)) return vec2(candidate, 0.0);
+  if (candidate > 0.5 && family == 0.0) solid = candidate;
   candidate = materialAt(uv + vec2(uTexel.x, 0.0));
-  if (isEnergy(candidate) || isEmissive(candidate)) return candidate;
+  family = familyFor(candidate);
+  if (family == 3.0 || isEmissive(candidate)) return vec2(candidate, 0.0);
+  if (solid < 0.5 && candidate > 0.5 && family == 0.0) solid = candidate;
   candidate = materialAt(uv - vec2(0.0, uTexel.y));
-  if (isEnergy(candidate) || isEmissive(candidate)) return candidate;
+  family = familyFor(candidate);
+  if (family == 3.0 || isEmissive(candidate)) return vec2(candidate, 0.0);
+  if (solid < 0.5 && candidate > 0.5 && family == 0.0) solid = candidate;
   candidate = materialAt(uv + vec2(0.0, uTexel.y));
-  if (isEnergy(candidate) || isEmissive(candidate)) return candidate;
-  return 0.0;
+  family = familyFor(candidate);
+  if (family == 3.0 || isEmissive(candidate)) return vec2(candidate, 0.0);
+  if (solid < 0.5 && candidate > 0.5 && family == 0.0) solid = candidate;
+  return vec2(0.0, solid);
 }
 float nearbyLiquid(vec2 uv) {
   float candidate = materialAt(uv - vec2(uTexel.x, 0.0));
@@ -133,6 +159,7 @@ void main() {
   float halo = 0.0;
   float cloudOnly = 0.0;
   float liquidOnly = 0.0;
+  float surfaceOnly = 0.0;
   if (material < 0.5) {
     if (liquidDensity > 0.12) {
       material = nearbyLiquid(fieldUv);
@@ -143,15 +170,22 @@ void main() {
     } else if (atmosphereState.a > 0.004) {
       cloudOnly = 1.0;
     } else {
-      material = nearbyEmission(fieldUv);
+      vec2 nearby = nearbySurface(fieldUv);
+      material = nearby.x;
+      if (material < 0.5 && nearby.y > 0.5) {
+        material = nearby.y;
+        surfaceOnly = material > 0.5 ? 1.0 : 0.0;
+      }
       if (material < 0.5) { finalColor = vec4(0.0); return; }
     }
     halo = 1.0;
   }
   float profile = profileFor(material);
-  vec3 shape = cloudOnly > 0.5
+  vec3 shape = surfaceOnly > 0.5
+    ? enclosedSurfaceShape(fieldUv, material)
+    : (cloudOnly > 0.5
     ? vec3(0.0)
-    : ((isGas(material) || profile == 1.0) ? discreteShape(fieldUv, material) : occupancyShape(fieldUv, material));
+    : ((isGas(material) || profile == 1.0) ? discreteShape(fieldUv, material) : occupancyShape(fieldUv, material)));
   float density = shape.x;
   float gasVolume = max(cloudOnly, isGas(material) ? 1.0 : 0.0);
   float liquidVolume = max(liquidOnly, isLiquid(material) ? 1.0 : 0.0);
@@ -227,7 +261,7 @@ void main() {
   }
   float emission = isEmissive(material) ? 0.48 + heat * 1.05 : (material == 11.0 ? 0.28 + heat * 0.62 : (profile == 4.0 ? 0.07 : 0.0));
   color += mix(base, vec3(1.0, 0.52, 0.20), heat) * emission;
-  if (halo > 0.5 && gasVolume < 0.5 && liquidVolume < 0.5) alpha = volume * (isEnergy(material) ? 1.35 + heat : 0.52);
+  if (halo > 0.5 && surfaceOnly < 0.5 && gasVolume < 0.5 && liquidVolume < 0.5) alpha = volume * (isEnergy(material) ? 1.35 + heat : 0.52);
   alpha = clamp(alpha, 0.0, 1.0);
   finalColor = vec4(clamp(color, 0.0, 1.35) * alpha, alpha);
 }

@@ -46,6 +46,19 @@ export function materialNeighbourMask(
 
 export function neighbourDensity(mask: number): number { return POPULATION[mask & 0xFF]; }
 
+const CARDINALS = NEIGHBOUR_TOP | NEIGHBOUR_LEFT | NEIGHBOUR_RIGHT | NEIGHBOUR_BOTTOM;
+const DIAGONALS = NEIGHBOUR_TOP_LEFT | NEIGHBOUR_TOP_RIGHT | NEIGHBOUR_BOTTOM_LEFT | NEIGHBOUR_BOTTOM_RIGHT;
+
+/**
+ * Coverage for an empty solid cell. A closed one-cell cavity is reconstructed,
+ * while an exposed edge or a corner remains empty so surfaces do not inflate.
+ */
+export function enclosedSurfaceCoverage(mask: number): number {
+  const support = POPULATION[mask & CARDINALS] * 0.12 + POPULATION[mask & DIAGONALS] * 0.05;
+  const normalized = Math.max(0, Math.min(1, (support - 0.34) / (0.64 - 0.34)));
+  return normalized * normalized * (3 - 2 * normalized);
+}
+
 /** Positive values face the upper-left key light used by the field renderer. */
 export function contourLight(mask: number): number {
   const left = Number(Boolean(mask & NEIGHBOUR_TOP_LEFT))
@@ -62,4 +75,3 @@ export function contourLight(mask: number): number {
     + Number(Boolean(mask & NEIGHBOUR_BOTTOM_RIGHT));
   return (right - left) * 2 + (bottom - top) * 3;
 }
-
