@@ -24,7 +24,7 @@ Queued after the renderer checkpoint: revisit desktop/mobile geometry as a dedic
 
 - Repository: `/home/harry/projects/aniFor_codex`
 - Branch: `main_codex`
-- Remote branch and live Pages revision: `4077b23 Expose configured TPT sources`.
+- Remote `main_codex` includes feature checkpoint `c3bdfd2 Add native LIFE presets and optical material styling`.
 - Manual Actions run `29658718547` built, deployed, and live-verified that exact SHA after the branch push was independently checked with `git ls-remote` and the public GitHub API.
 - Git push authentication is working. GitHub CLI authentication is currently invalid, so another manual workflow dispatch requires `gh auth login -h github.com`.
 - Current live Pages URL: `https://harryzhou2000.github.io/aniFor/`
@@ -160,7 +160,7 @@ Queued after the renderer checkpoint: revisit desktop/mobile geometry as a dedic
 - The field indicator reports the exact target when probing a configured source. Fallback backends keep source tiles disabled; signs remain disabled pending a dedicated safe text editor and overlay.
 - The real-browser gate can opt the paused render lab into native TPT with `simulation=native`. Its Canvas pass selected Water, selected configured CLNE, placed exactly one source at the requested world cell, and read back emitter 126 / target 2 while retaining the established resize, wheel-anchor, middle-pan, and mobile touch checks.
 
-## LIFE and optical-response tranche (current local tree)
+## LIFE and optical-response tranche (`c3bdfd2`, committed and pushed)
 
 - All 24 upstream built-in LIFE presets are exposed as capability-gated semantic tools in native preset order. Stable projection IDs 171–194 encode `PT_LIFE` ctypes 0–23 for rendering only; they remain excluded from the ordinary `MATERIALS` brush catalog and generic `powder_set` path.
 - `powder_set_life` validates active TPT bounds and preset range, creates only in empty matter cells, and never repurposes LIFE drawing as a configured-source shortcut. Erase retains priority, unsupported backends return without ordinary-particle fallback, and switching tool families clears LIFE state.
@@ -170,7 +170,7 @@ Queued after the renderer checkpoint: revisit desktop/mobile geometry as a dedic
 - No texture, field, reconstruction stage, upload, scheduler pass, or persistent volume allocation was added. The local profile still reports exactly 8,173,320 combined field bytes.
 - The browser audit now signature-checks and screenshots the deterministic render-lab backend, then navigates separately to native TPT for configured-source and LIFE UI placement. Both WebGL and Canvas expose 24 LIFE tiles and project GOL as ID 171.
 
-## Verification completed for the current local tree
+## Verification completed for the LIFE/optics checkpoint
 
 - `npm run typecheck`
 - `npm test`: 40 files, 180 tests passed
@@ -198,7 +198,7 @@ Queued after the renderer checkpoint: revisit desktop/mobile geometry as a dedic
 - Forced Canvas at 1280×720 and a 390×844 DPR-2 portrait capture retained the 1224×768 backing, square mobile interaction panel with aspect-preserving letterbox, smooth empty-space aura, and crisp material seams. Warm/cool strips visibly reveal profile contours without uniformly whitening block interiors.
 - Native semantic-tool coverage now proves exact scalar deltas, stable typed routing, no vector-to-particle fallthrough, no vector emission during pinch navigation, malformed ABI rejection, Wind response, `WL_BLOCKAIR` isolation, stable-water regression, and unstepped OPS Wind round-tripping.
 
-The configured-source checkpoint `4077b23` is committed, pushed, deployed, and live-verified. The LIFE/optical-response tranche is the current uncommitted local tree; unit, type, build, native WASM, profile, desktop WebGL/Canvas visual, and interaction checks pass locally. Its manual cached deployment still needs a valid GitHub CLI login after commit/push; until then the live closure resolves to `4077b23`.
+The configured-source checkpoint `4077b23` is committed, pushed, deployed, and live-verified. The LIFE/optical-response checkpoint `c3bdfd2` is committed and pushed; unit, type, build, native WASM, profile, desktop WebGL/Canvas visual, and interaction checks pass. Its manual cached deployment still needs a valid GitHub CLI login; until then the live closure resolves to `4077b23`.
 
 ## Current blockers and risks
 
@@ -214,7 +214,6 @@ The configured-source checkpoint `4077b23` is committed, pushed, deployed, and l
 
 ## Next sequence
 
-1. Review, commit, and push the current LIFE/optical-response tranche to `main_codex`.
-2. After GitHub CLI reauthentication, dispatch the manual cached `build-and-deploy` and verify the live closure/revision plus a cache-busted browser runtime.
-3. Continue deeper material-surface aesthetics and dense Canvas performance work, then revisit the queued desktop/mobile geometry polish.
-4. Keep the persistent goal active for remaining TPT interface coverage, especially signs and special editing semantics, while preserving existing forces, sources, radioactive elements, plants, and LIFE behavior.
+1. After GitHub CLI reauthentication, dispatch the manual cached `build-and-deploy` for the current `main_codex` tip and verify the live closure/revision plus a cache-busted browser runtime.
+2. Continue deeper material-surface aesthetics and dense Canvas performance work, then revisit the queued desktop/mobile geometry polish.
+3. Keep the persistent goal active for remaining TPT interface coverage, especially signs and special editing semantics, while preserving existing forces, sources, radioactive elements, plants, and LIFE behavior.
