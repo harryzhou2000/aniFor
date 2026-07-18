@@ -14,26 +14,29 @@ describe('volume field refresh schedule', () => {
     expect(schedule.next(VOLUME_FIELD_REFRESH_INTERVAL, true, false)).toBe('atmosphere');
   });
 
-  it('stages simultaneous gas and liquid work over separate frames', () => {
+  it('stages simultaneous gas, liquid, and emission work over separate frames', () => {
     const schedule = new VolumeFieldRefreshSchedule();
-    expect(schedule.next(0, true, true)).toBe('atmosphere');
+    expect(schedule.next(0, true, true, true)).toBe('atmosphere');
     schedule.refreshed('atmosphere', 0);
-    expect(schedule.next(1, true, true)).toBe('liquid');
+    expect(schedule.next(1, true, true, true)).toBe('liquid');
     schedule.refreshed('liquid', 1);
-    expect(schedule.next(2, true, true)).toBeUndefined();
+    expect(schedule.next(2, true, true, true)).toBe('emission');
+    schedule.refreshed('emission', 2);
+    expect(schedule.next(3, true, true, true)).toBeUndefined();
   });
 
-  it('never schedules more than one rebuild per frame or over 13 of either field per second', () => {
+  it('never schedules more than one rebuild per frame or over 13 of any field per second', () => {
     const schedule = new VolumeFieldRefreshSchedule();
-    const counts: Record<VolumeFieldKind, number> = { atmosphere: 0, liquid: 0 };
+    const counts: Record<VolumeFieldKind, number> = { atmosphere: 0, liquid: 0, emission: 0 };
     for (let time = 0; time <= 1000; time += 1000 / 30) {
-      const field = schedule.next(time, true, true);
+      const field = schedule.next(time, true, true, true);
       if (!field) continue;
       counts[field]++;
       schedule.refreshed(field, time);
     }
     expect(counts.atmosphere).toBeLessThanOrEqual(13);
     expect(counts.liquid).toBeLessThanOrEqual(13);
-    expect(Math.abs(counts.atmosphere - counts.liquid)).toBeLessThanOrEqual(1);
+    expect(counts.emission).toBeLessThanOrEqual(13);
+    expect(Math.max(...Object.values(counts)) - Math.min(...Object.values(counts))).toBeLessThanOrEqual(1);
   });
 });
