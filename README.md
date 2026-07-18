@@ -1,4 +1,4 @@
-# Stillroom
+# AniforTPT
 
 A mobile-first, deterministic particle playground based on the architecture in [`init.md`](./init.md). The current vertical slice includes sand, water, stone, embers, mist, touch/pointer painting, long-press erase, pinch/pan navigation, compressed URL sharing, pause/clear controls, and local autosave.
 

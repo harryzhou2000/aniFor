@@ -8,7 +8,7 @@ if (!root) throw new Error('Missing app root');
 root.innerHTML = `
   <section class="shell">
     <header class="topbar">
-      <div><p class="eyebrow">A PARTICLE PLAYGROUND</p><h1>Stillroom</h1></div>
+      <div><p class="eyebrow">THE POWDER TOY, REIMAGINED</p><h1>AniforTPT</h1></div>
       <p class="hint">Draw · wheel to zoom · right-click to erase</p>
     </header>
     <section class="workspace">

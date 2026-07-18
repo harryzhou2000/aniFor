@@ -58,3 +58,29 @@ h1 { font-family: inherit; font-size: clamp(26px, 4vw, 44px); font-weight: 500; 
   .status { font-size: 10px; }
   .footer a { font-size: 9px; }
 }
+
+/* Categorized brush library */
+.palette { grid-template-columns: minmax(0, 1fr); align-content: start; gap: 8px; }
+.material-group { min-width: 0; border: 1px solid rgba(255,255,255,.055); border-radius: 15px; background: rgba(255,255,255,.025); overflow: clip; }
+.material-group summary { min-height: 44px; padding: 8px 10px; display: flex; align-items: center; justify-content: space-between; gap: 8px; color: #e3d8cb; cursor: pointer; list-style: none; user-select: none; }
+.material-group summary::-webkit-details-marker { display: none; }
+.material-group summary::before { content: '\203a'; color: #9d9184; font-size: 18px; transform: rotate(0); transition: transform .18s ease; }
+.material-group[open] summary::before { transform: rotate(90deg); }
+.material-group summary > span:first-of-type { min-width: 0; flex: 1; display: grid; gap: 2px; }
+.material-group summary strong { font-size: 11px; font-weight: 650; letter-spacing: .035em; }
+.material-group summary small { color: #958b80; font-size: 9px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.material-count { min-width: 22px; padding: 3px 6px; border-radius: 999px; color: #b9ad9f; background: rgba(255,255,255,.06); font-size: 9px; text-align: center; }
+.material-grid { padding: 0 6px 7px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px; }
+.material-button { min-width: 0; min-height: 51px; }
+.material-button:focus-visible, .action-button:focus-visible, .material-group summary:focus-visible { outline: 2px solid #d5ad76; outline-offset: 2px; }
+
+@media (max-width: 920px) {
+  .palette { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 680px) {
+  .palette { display: flex; gap: 7px; overflow-x: auto; overscroll-behavior-inline: contain; scroll-snap-type: inline proximity; scrollbar-width: thin; }
+  .material-group { flex: 0 0 min(78vw, 310px); scroll-snap-align: start; }
+  .material-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .material-group summary small { display: none; }
+}
