@@ -1,4 +1,5 @@
 import { RenderProfile } from './render-profile';
+import { RenderOptics } from './render-optics';
 
 /** Allocation-free family styling for the Canvas compatibility renderer. */
 export function shadeCanvasMaterial(
@@ -7,6 +8,7 @@ export function shadeCanvasMaterial(
   green: number,
   blue: number,
   profile: number,
+  optics: number,
   material: number,
   x: number,
   y: number,
@@ -18,19 +20,20 @@ export function shadeCanvasMaterial(
   let tintRed = 0;
   let tintGreen = 0;
   let tintBlue = 0;
-  if (profile === RenderProfile.Granular) {
+  const surfaceProfile = solidOpticsProfile(optics, profile);
+  if (surfaceProfile === RenderProfile.Granular) {
     light += noise * 0.72;
     tintRed += Math.max(0, noise) * 0.18;
-  } else if (profile === RenderProfile.Rigid) {
+  } else if (surfaceProfile === RenderProfile.Rigid) {
     light += ((x + Math.floor(y / 3) + material) % 11 < 2 ? 7 : -2);
     tintBlue += 3;
-  } else if (profile === RenderProfile.Organic) {
+  } else if (surfaceProfile === RenderProfile.Organic) {
     const fibre = (x + (hash(y + material * 17) & 7)) % 13 < 3;
     light += fibre ? 6 : -1;
-  } else if (profile === RenderProfile.Radioactive) {
+  } else if (surfaceProfile === RenderProfile.Radioactive) {
     const pulse = hash(index + Math.floor(time / 180) * 97 + material) & 15;
     light += pulse < 3 ? 9 : -1;
-  } else if (profile === RenderProfile.Device) {
+  } else if (surfaceProfile === RenderProfile.Device) {
     const trace = (x + material) % 8 === 0 || (y + material * 3) % 8 === 0;
     light += trace ? 5 : -2;
     tintGreen += trace ? 4 : 0;
@@ -39,9 +42,42 @@ export function shadeCanvasMaterial(
     const wave = (x + y + Math.floor(time / 110) + material) % 12;
     light += wave < 3 ? 7 : -2;
   }
+
+  // The optics byte refines how a canonical profile catches light. It changes
+  // RGB only; alpha and reconstructed silhouettes remain owned by the caller.
+  if (optics === RenderOptics.RoughGranular) {
+    light += noise * 0.20;
+    tintRed += Math.max(0, noise) * 0.10;
+  } else if (optics === RenderOptics.SmoothRigid) {
+    const polish = (hash(index + material * 313) & 15) < 2;
+    light += polish ? 5 : 0;
+    tintBlue += polish ? 3 : 1;
+  } else if (optics === RenderOptics.Organic) {
+    const livingFibre = (x + (hash(y + material * 29) & 7)) % 11 < 3;
+    tintRed += livingFibre ? 1.5 : 0;
+    tintGreen += livingFibre ? 4 : 0.5;
+  } else if (optics === RenderOptics.Device) {
+    const contact = (x + material * 3) % 16 === 0 || (y + material) % 16 === 0;
+    light += contact ? 2 : 0;
+    tintGreen += contact ? 2 : 0;
+    tintBlue += contact ? 5 : 2;
+  } else if (optics === RenderOptics.Radioactive) {
+    const scintillation = hash(index + Math.floor(time / 180) * 97 + material * 11) & 15;
+    tintGreen += scintillation < 3 ? 5 : 1;
+    tintBlue += scintillation < 3 ? 2 : 0;
+  }
   output[0] = clamp(red + light + tintRed);
   output[1] = clamp(green + light + tintGreen);
   output[2] = clamp(blue + light + tintBlue);
+}
+
+function solidOpticsProfile(optics: number, fallback: number): number {
+  if (optics === RenderOptics.RoughGranular) return RenderProfile.Granular;
+  if (optics === RenderOptics.SmoothRigid) return RenderProfile.Rigid;
+  if (optics === RenderOptics.Organic) return RenderProfile.Organic;
+  if (optics === RenderOptics.Device) return RenderProfile.Device;
+  if (optics === RenderOptics.Radioactive) return RenderProfile.Radioactive;
+  return fallback;
 }
 
 function hash(value: number): number {

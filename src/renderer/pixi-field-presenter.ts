@@ -401,37 +401,59 @@ void main() {
       * (broadSheen * mix(0.016, 0.052 * gloss, liquidDepth) + caustic * causticStrength);
     color += liquidBase * (0.025 + atmosphere * 0.030) + vec3(0.055, 0.090, 0.105) * rim;
   } else {
+    float roughSurface = optics == 7.0 ? 1.0 : 0.0;
+    float smoothSurface = optics == 8.0 ? 1.0 : 0.0;
+    float organicSurface = optics == 9.0 ? 1.0 : 0.0;
+    float deviceSurface = optics == 10.0 ? 1.0 : 0.0;
+    float radioactiveSurface = optics == 11.0 ? 1.0 : 0.0;
     float edgeCenter = 0.49 + (profile == 1.0 ? grain * 0.045 : 0.0);
     alpha = smoothstep(edgeCenter - 0.11, edgeCenter + 0.11, density);
     color = base * mix(1.10, 0.78, density) * diffuse;
-    color += vec3(0.12) * specular * 0.28;
+    float solidSpecularGain = 0.28 - roughSurface * 0.13 + smoothSurface * 0.22
+      + organicSurface * 0.02 + deviceSurface * 0.15 + radioactiveSurface * 0.06;
+    vec3 solidSpecularTint = mix(
+      vec3(0.12), vec3(0.16, 0.24, 0.32), smoothSurface * 0.32 + deviceSurface * 0.58
+    );
+    solidSpecularTint = mix(solidSpecularTint, vec3(0.12, 0.24, 0.14), radioactiveSurface * 0.28);
+    color += solidSpecularTint * specular * solidSpecularGain;
+    // Granular coverage remains profile-owned. Optics below selects RGB texture
+    // only, so a metadata/profile disagreement cannot widen the silhouette.
     if (profile == 1.0) {
+      alpha = smoothstep(0.18 + grain * 0.025, 0.72 + grain * 0.035, density);
+    }
+    if (roughSurface > 0.5 || (optics < 0.5 && profile == 1.0)) {
       vec2 subcell = floor(fract(fieldPosition) * 2.0);
       float grainFacet = fract(sin(dot(floor(fieldPosition) * 2.0 + subcell, vec2(12.9898, 78.233))) * 43758.5453) - 0.5;
-      alpha = smoothstep(0.18 + grain * 0.025, 0.72 + grain * 0.035, density);
-      color *= 0.91 + grain * 0.20 + grainFacet * 0.10;
-      color += base * max(0.0, 0.6 - subcell.x - subcell.y) * 0.11;
-    } else if (profile == 2.0) {
+      color *= 0.91 + grain * (0.20 + roughSurface * 0.05)
+        + grainFacet * (0.10 + roughSurface * 0.04);
+      color += base * max(0.0, 0.6 - subcell.x - subcell.y)
+        * (0.11 + roughSurface * 0.035);
+    } else if (smoothSurface > 0.5 || (optics < 0.5 && profile == 2.0)) {
       float bevel = clamp(abs(shape.y) + abs(shape.z), 0.0, 1.0);
       float strata = sin(fieldPosition.x * 0.16 + fieldPosition.y * 0.055 + material * 0.71);
       color *= 0.965 + strata * 0.028;
-      color += mix(base, vec3(0.32, 0.36, 0.42), 0.26) * bevel * 0.13;
-    } else if (profile == 3.0) {
+      color += mix(base, vec3(0.32, 0.36, 0.42), 0.26)
+        * bevel * (0.13 + smoothSurface * 0.07);
+    } else if (organicSurface > 0.5 || (optics < 0.5 && profile == 3.0)) {
       float fibre = sin(fieldPosition.x * 0.20 + sin(fieldPosition.y * 0.115 + material) * 1.45);
       float pores = sin(fieldPosition.x * 0.083 + fieldPosition.y * 0.157 + material * 0.37)
         * sin(fieldPosition.y * 0.091 - fieldPosition.x * 0.047);
-      color *= 0.95 + fibre * 0.042 + pores * 0.024;
-    } else if (profile == 4.0) {
+      color *= 0.95 + fibre * 0.042 + pores * 0.024 + organicSurface * max(0.0, fibre) * 0.018;
+      color += mix(base, vec3(0.19, 0.34, 0.18), 0.38)
+        * organicSurface * max(0.0, 0.6 - abs(pores)) * 0.028;
+    } else if (radioactiveSurface > 0.5 || (optics < 0.5 && profile == 4.0)) {
       float isotope = sin(fieldPosition.x * 0.137 + sin(fieldPosition.y * 0.103 + material) * 1.6)
         * sin(fieldPosition.y * 0.181 - fieldPosition.x * 0.061);
       float decayPulse = 0.5 + 0.5 * sin(uTime * 1.55 + material * 0.73 + isotope * 1.8);
       color *= 0.97 + isotope * 0.038 + decayPulse * 0.012;
-    } else if (profile == 5.0) {
+      color += vec3(0.10, 0.25, 0.13) * radioactiveSurface * decayPulse * 0.035;
+    } else if (deviceSurface > 0.5 || (optics < 0.5 && profile == 5.0)) {
       vec2 circuitCell = abs(fract((fieldPosition + vec2(material * 0.37, material * 0.19)) / 8.0) - 0.5);
       float trace = max(1.0 - smoothstep(0.055, 0.105, circuitCell.x), 1.0 - smoothstep(0.055, 0.105, circuitCell.y));
       float node = 1.0 - smoothstep(0.10, 0.22, length(circuitCell));
       color *= 0.96 + trace * 0.025;
-      color += mix(base, vec3(0.34, 0.76, 1.0), 0.58) * (trace * 0.12 + node * 0.10);
+      color += mix(base, vec3(0.34, 0.76, 1.0), 0.58)
+        * (trace * (0.12 + deviceSurface * 0.035) + node * (0.10 + deviceSurface * 0.045));
     } else if (profile == 6.0) {
       float planeWave = sin((fieldPosition.x + fieldPosition.y * 0.62) * 0.115 - uTime * 1.15 + material);
       float radialWave = sin(length(fieldPosition - vec2(material * 1.7)) * 0.14 + uTime * 0.92);

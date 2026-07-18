@@ -509,7 +509,7 @@ export class MaterialRenderer {
         } else {
           shadeCanvasMaterial(
             this.styledColor, red, green, blue, fields.lookups.styleBytes[material * 4 + 1],
-            material, x, y, index, time,
+            optics, material, x, y, index, time,
           );
           if (applicableTraits !== 0) applyCanvasRenderTraits(
             this.styledColor, applicableTraits, phase, material, x, y, index, this.traitClock,

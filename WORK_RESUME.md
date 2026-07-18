@@ -24,7 +24,7 @@ Queued after the renderer checkpoint: revisit desktop/mobile geometry as a dedic
 
 - Repository: `/home/harry/projects/aniFor_codex`
 - Branch: `main_codex`
-- Remote `main_codex` includes feature checkpoint `c3bdfd2 Add native LIFE presets and optical material styling`.
+- Remote history includes feature checkpoint `c3bdfd2 Add native LIFE presets and optical material styling`; the solid-optics follow-up is documented below.
 - Manual Actions run `29658718547` built, deployed, and live-verified that exact SHA after the branch push was independently checked with `git ls-remote` and the public GitHub API.
 - Git push authentication is working. GitHub CLI authentication is currently invalid, so another manual workflow dispatch requires `gh auth login -h github.com`.
 - Current live Pages URL: `https://harryzhou2000.github.io/aniFor/`
@@ -170,10 +170,16 @@ Queued after the renderer checkpoint: revisit desktop/mobile geometry as a dedic
 - No texture, field, reconstruction stage, upload, scheduler pass, or persistent volume allocation was added. The local profile still reports exactly 8,173,320 combined field bytes.
 - The browser audit now signature-checks and screenshots the deterministic render-lab backend, then navigates separately to native TPT for configured-source and LIFE UI placement. Both WebGL and Canvas expose 24 LIFE tiles and project GOL as ID 171.
 
+## Solid optical-surface follow-up
+
+- WebGL now consumes optics classes 7–11 directly for RGB-only surface response: rough granular facets, smooth rigid bevels, organic fibres, device traces, and radioactive scintillation. Optics selection takes precedence for solid texture while the canonical profile remains the fallback and continues to own field interference.
+- Canvas routes the same five classes through its allocation-free three-channel scratch. A neutral-profile solid such as a LIFE projection now receives its smooth-rigid response from optics; the helper never writes the fourth/alpha channel.
+- The implementation reuses the palette sample and existing shape gradient. It adds no texture fetch, field, upload, reconstruction stage, render pass, or persistent allocation, and leaves every alpha/silhouette expression unchanged.
+
 ## Verification completed for the LIFE/optics checkpoint
 
 - `npm run typecheck`
-- `npm test`: 40 files, 180 tests passed
+- `npm test`: 40 files, 181 tests passed
 - `npm run build`
 - Static build closure: 20 referenced resources verified (including the explicit favicon)
 - Current live Pages closure: 20 resources verified, including `stillroom_core.wasm` with the correct MIME
@@ -190,6 +196,7 @@ Queued after the renderer checkpoint: revisit desktop/mobile geometry as a dedic
 - Current WebGL/Canvas browser acceptance has zero shader/runtime/network errors. Dense WebGL gas is continuous without the prior raw-dot island; Canvas gas has clearer relief/species separation; liquid caps and columns show brighter rims, darker depth, and caustic variation while retaining crisp silhouettes and clean unlike-species seams.
 - The current Canvas role-write checkpoint passes the same two-backend browser gate at 1224×768 backing. Both backends return exactly through `1024×600 → 1440×900 → 1024×600`; wheel-anchor drift is 0.145 cell, middle-pan is 42×27 CSS px, and the Canvas mobile gate retains a 378×378 panel, 1.431× pinch, zero stray cells, and zero browser errors.
 - The optical-depth tranche passes that same real-browser gate with runtime GLSL compilation and zero browser errors. Retained WebGL/Canvas atlas captures show darker saturated gas cores with readable falloff, cohesive liquid columns with local reflective lips, preserved sparse control rows, and no unlike-species seam bleed.
+- The solid-optics follow-up passes the full two-backend browser gate with runtime GLSL compilation and zero browser errors. Canvas and WebGL retain the 1224×768 backing, 1.59375 field aspect, exact landmark painting, 0.145-cell wheel anchoring, 42×27 CSS-pixel middle-pan, repeated resize geometry, 24 LIFE tools, and the mobile one-/two-touch checks. Retained atlases show differentiated solid families without widening their silhouettes.
 - The stacked tool-discovery gate reports exactly two desktop filter rows at 68 px, a 40 px mobile filter rail, 8/12/8 px palette-to-actions gaps through the repeated desktop resize sequence, and zero mobile horizontal overflow. The optional browser screenshot path now also retains a DPR-2 portrait capture for direct layout review.
 - Latest warmed field profile at 612×384: atmosphere 7.21 ms median, species-aware liquid 11.40 ms, emission 3.18 ms, Canvas atmosphere relief 0.87 ms, solid reconstruction 1.27 ms, surface lighting 6.00 ms, and liquid reconstruction 1.67 ms. Shared volume storage remains 8,173,320 bytes; optical classes add no field or texture allocation.
 - The current pessimistic Canvas energy profile shades all 235,008 cells as radioactive energy cores in 19.37 ms median / 19.58 ms p90 on the local machine. Ordinary scenes call it only for actual energy cells. It adds two reusable 3-float vectors and no field/texture allocation; shared volume storage remains exactly 8,173,320 bytes.
@@ -198,7 +205,7 @@ Queued after the renderer checkpoint: revisit desktop/mobile geometry as a dedic
 - Forced Canvas at 1280×720 and a 390×844 DPR-2 portrait capture retained the 1224×768 backing, square mobile interaction panel with aspect-preserving letterbox, smooth empty-space aura, and crisp material seams. Warm/cool strips visibly reveal profile contours without uniformly whitening block interiors.
 - Native semantic-tool coverage now proves exact scalar deltas, stable typed routing, no vector-to-particle fallthrough, no vector emission during pinch navigation, malformed ABI rejection, Wind response, `WL_BLOCKAIR` isolation, stable-water regression, and unstepped OPS Wind round-tripping.
 
-The configured-source checkpoint `4077b23` is committed, pushed, deployed, and live-verified. The LIFE/optical-response checkpoint `c3bdfd2` is committed and pushed; unit, type, build, native WASM, profile, desktop WebGL/Canvas visual, and interaction checks pass. Its manual cached deployment still needs a valid GitHub CLI login; until then the live closure resolves to `4077b23`.
+The configured-source checkpoint `4077b23` is committed, pushed, deployed, and live-verified. The LIFE/optical-response checkpoint `c3bdfd2` is committed and pushed, and the current solid-optics follow-up passes unit, type, production build, allocation profile, desktop WebGL/Canvas visual, and interaction checks. Its manual cached deployment still needs a valid GitHub CLI login; until then the live closure resolves to `4077b23`.
 
 ## Current blockers and risks
 
