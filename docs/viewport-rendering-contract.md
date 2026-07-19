@@ -11,6 +11,12 @@ AniforTPT has four distinct spaces. Keep the conversion between each pair explic
 3. **Camera space:** `ViewTransform` applies one uniform fit × zoom scale and one CSS-pixel pan. Resize rescales pan by the fit-scale ratio so an off-center zoom does not slide.
 4. **Backing space:** Canvas/WebGL pixels. The default output scale is 2× per axis, producing 1224×768 backing pixels for 612×384 logical cells. The in-app Detail control and `?renderScale=1|2|4|8` select real per-axis sampling; canonical 8× is 4896×3072. Backing scale must not enter world, brush, pan, or CSS layout math. WebGL 8× disables redundant MSAA and extra high-quality probes, draws the semantic shader directly on one mesh, and uses only a 2× startup compatibility Canvas. Every temporary Canvas/contour backing is explicitly released after WebGL promotion.
 
+WebGL context loss is a presentation failure, not a simulation reset. Cancel the
+loss event, destroy the failed presenter, and only then recreate the bounded
+Canvas fallback from the authoritative semantic grid. Report
+`webgl-context-lost`, preserve the current camera transform, and never retain a
+permanent duplicate of the 8× backing merely to make this recovery possible.
+
 Both presenters expose an untransformed 612×384 logical CSS box. Its responsive displayed rectangle is produced by one presentation transform:
 
 ```text

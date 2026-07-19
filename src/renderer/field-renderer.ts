@@ -60,7 +60,8 @@ export const DYNAMIC_FIELD_REFRESH_INTERVAL = 1000 / 12;
 export interface RendererBackendInfo {
   readonly backend: 'webgl' | 'canvas2d';
   readonly label: 'WebGL' | 'Canvas 2D';
-  readonly reason?: 'forced' | 'webgl-unavailable' | 'webgl-starting' | 'webgl-timeout' | 'webgl-error';
+  readonly reason?: 'forced' | 'webgl-unavailable' | 'webgl-starting' | 'webgl-timeout'
+    | 'webgl-error' | 'webgl-context-lost';
   readonly requestedOutputScale?: FieldOutputScale;
   readonly outputScale?: FieldOutputScale;
 }
@@ -425,6 +426,7 @@ export class MaterialRenderer {
       }
       this.commitPresenter(presenter);
     } catch (error) {
+      const contextLost = presenter?.isContextLost() ?? false;
       try { presenter?.destroy(); } catch { /* failed presenter is already unusable */ }
       this.presenter = undefined;
       // The candidate and Canvas intentionally share these fields. If the
@@ -433,7 +435,10 @@ export class MaterialRenderer {
       this.syncFallbackVolumeSurfaces();
       this.contourChunks.markAll();
       this.changed = true;
-      this.setBackend({ backend: 'canvas2d', label: 'Canvas 2D', reason: 'webgl-error' });
+      this.setBackend({
+        backend: 'canvas2d', label: 'Canvas 2D',
+        reason: contextLost ? 'webgl-context-lost' : 'webgl-error',
+      });
       console.warn('Semantic WebGL renderer unavailable; keeping Canvas fallback.', error);
     }
   }
@@ -442,19 +447,20 @@ export class MaterialRenderer {
     // Compile the shader and seed every semantic field while the known-good
     // Canvas remains visible. Any failure leaves the fallback fully intact.
     const now = performance.now();
+    presenter.setContextLossHandler(() => this.recoverFromWebGLContextLoss(presenter));
     if (this.webGLPresentationTimingEnabled) presenter.enableWebGLPresentationTiming();
-    presenter.setGasFieldLightingEnabled(this.gasFieldLightingEnabled);
-    presenter.setLiquidFieldLightingEnabled(this.liquidFieldLightingEnabled);
-    presenter.setTranslucentFieldTransmissionEnabled(this.translucentFieldTransmissionEnabled);
-    presenter.setTranslucentBackdropRefractionEnabled(this.translucentBackdropRefractionEnabled);
-    presenter.setSolidContactDepthEnabled(this.solidContactDepthEnabled);
-    presenter.setTranslucentLensShellEnabled(this.translucentLensShellEnabled);
-    presenter.setSolidCurvatureDepthEnabled(this.solidCurvatureDepthEnabled);
-    presenter.setThermalMaterialStylingEnabled(
+    presenter.configurePresentation(
+      this.gasFieldLightingEnabled,
+      this.liquidFieldLightingEnabled,
+      this.translucentFieldTransmissionEnabled,
+      this.translucentBackdropRefractionEnabled,
+      this.solidContactDepthEnabled,
+      this.translucentLensShellEnabled,
+      this.solidCurvatureDepthEnabled,
       this.thermalMaterialStylingEnabled && this.simulation.temperature !== undefined,
+      this.energyCoreReliefEnabled,
+      this.powderRenderStyle,
     );
-    presenter.setEnergyCoreReliefEnabled(this.energyCoreReliefEnabled);
-    presenter.setPowderRenderStyle(this.powderRenderStyle);
     presenter.update(
       this.rendered, this.renderedWalls, this.simulation.temperature?.(), this.simulation.velocity?.(),
       now, now, true,
@@ -462,11 +468,35 @@ export class MaterialRenderer {
     presenter.resize(this.host.clientWidth, this.host.clientHeight);
     const position = this.view.position;
     presenter.setTransform(this.view.scale, position.x, position.y);
+    if (presenter.isContextLost()) throw new Error('WebGL context lost during presenter promotion');
     presenter.mount();
+    if (presenter.isContextLost()) throw new Error('WebGL context lost while mounting presenter');
     this.presenter = presenter;
     this.releaseFallbackStorage();
     this.setBackend({ backend: 'webgl', label: 'WebGL' });
     this.changed = true;
+  }
+
+  private recoverFromWebGLContextLoss(presenter: PixiFieldPresenter): void {
+    if (this.presenter !== presenter) return;
+    this.presenter = undefined;
+    try { presenter.destroy(); }
+    catch { /* the browser has already invalidated the presenter */ }
+
+    // The 8x compatibility Canvas was intentionally released after promotion.
+    // Recreate only the bounded fallback now, after the failed 8x allocation is
+    // gone, so recovery never retains both full presentation backings.
+    if (!this.fallbackFields) this.initFallback();
+    this.contourChunks.markAll();
+    this.powderSurfaceDirty = true;
+    this.lastPowderSurfaceRefresh = -Infinity;
+    this.lastDynamicFieldRefresh = -Infinity;
+    this.lastDraw = -Infinity;
+    this.changed = true;
+    this.syncTransform();
+    this.setBackend({ backend: 'canvas2d', label: 'Canvas 2D', reason: 'webgl-context-lost' });
+    this.render(performance.now());
+    console.warn('Semantic WebGL context lost; restored bounded Canvas fallback.');
   }
 
   private releaseFallbackStorage(): void {

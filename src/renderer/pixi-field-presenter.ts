@@ -22,6 +22,7 @@ import { RenderPhase } from './render-profile';
 import {
   powderRenderStyleValue, type PowderRenderStyle,
 } from './powder-render-style';
+import { installWebGLContextLossHandler } from './webgl-context-loss';
 interface PresenterViewport { readonly width: number; readonly height: number }
 
 interface WebGLTimerQueryExtension {
@@ -1341,6 +1342,9 @@ export class PixiFieldPresenter {
   private webGLTimingSequence = 0;
   private powderSurfaceDirty = true;
   private lastPowderSurfaceRefresh = -Infinity;
+  private contextLost = false;
+  private contextLossHandler?: () => void;
+  private readonly removeContextLossListener: () => void;
 
   private constructor(
     private readonly app: Application,
@@ -1351,6 +1355,12 @@ export class PixiFieldPresenter {
     materials: readonly RenderMaterialStyle[],
     fieldSet?: RenderFieldSet,
   ) {
+    this.removeContextLossListener = installWebGLContextLossHandler(app.canvas, () => {
+      if (this.contextLost) return;
+      this.contextLost = true;
+      this.releaseWebGLTimingQuery();
+      this.contextLossHandler?.();
+    });
     this.fieldBytes = new Uint8Array(width * height * 4);
     this.fieldSource = new BufferImageSource({
       resource: this.fieldBytes, width, height, format: 'rgba8unorm',
@@ -1534,7 +1544,10 @@ export class PixiFieldPresenter {
   mount(): void { this.host.append(this.app.canvas); }
 
   destroy(): void {
+    this.contextLossHandler = undefined;
+    this.removeContextLossListener();
     this.releaseWebGLTimingQuery();
+    this.app.canvas.remove();
     try { this.app.destroy(); }
     catch {
       try { this.scene.destroy({ children: true }); }
@@ -1565,6 +1578,38 @@ export class PixiFieldPresenter {
   markWallDirty(index: number): void {
     this.wallChunks.markCell(index);
     this.powderSurfaceDirty = true;
+  }
+
+  setContextLossHandler(handler: () => void): void {
+    this.contextLossHandler = handler;
+  }
+
+  isContextLost(): boolean { return this.contextLost; }
+
+  /** Seeds every presentation uniform without submitting an intermediate frame. */
+  configurePresentation(
+    gasFieldLightingEnabled: boolean,
+    liquidFieldLightingEnabled: boolean,
+    translucentFieldTransmissionEnabled: boolean,
+    translucentBackdropRefractionEnabled: boolean,
+    solidContactDepthEnabled: boolean,
+    translucentLensShellEnabled: boolean,
+    solidCurvatureDepthEnabled: boolean,
+    thermalMaterialStylingEnabled: boolean,
+    energyCoreReliefEnabled: boolean,
+    powderRenderStyle: PowderRenderStyle,
+  ): void {
+    const uniforms = this.uniforms.uniforms;
+    uniforms.uGasFieldLighting = gasFieldLightingEnabled ? 1 : 0;
+    uniforms.uLiquidFieldLighting = liquidFieldLightingEnabled ? 1 : 0;
+    uniforms.uTranslucentFieldTransmission = translucentFieldTransmissionEnabled ? 1 : 0;
+    uniforms.uTranslucentBackdropRefraction = translucentBackdropRefractionEnabled ? 1 : 0;
+    uniforms.uSolidContactDepth = solidContactDepthEnabled ? 1 : 0;
+    uniforms.uTranslucentLensShell = translucentLensShellEnabled ? 1 : 0;
+    uniforms.uSolidCurvatureDepth = solidCurvatureDepthEnabled ? 1 : 0;
+    uniforms.uThermalMaterialStyling = thermalMaterialStylingEnabled ? 1 : 0;
+    uniforms.uEnergyCoreRelief = energyCoreReliefEnabled ? 1 : 0;
+    uniforms.uPowderStyle = powderRenderStyleValue(powderRenderStyle);
   }
 
   setGasFieldLightingEnabled(enabled: boolean): void {
@@ -1719,7 +1764,6 @@ export class PixiFieldPresenter {
     this.app.canvas.style.transform = `translate3d(${x}px, ${y}px, 0) scale(${scale})`;
     this.app.canvas.dataset.viewScale = String(scale);
     this.app.canvas.dataset.viewPosition = x + "," + y;
-    this.renderApplication();
   }
 
   private powderRelevant(material: number): boolean {

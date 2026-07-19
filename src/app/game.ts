@@ -13,6 +13,7 @@ import {
   blankBrowserInputAuditRequested, browserInputAuditRequested,
   prepareDenseSolidAuditFixture, toggleDenseSolidAuditProbe,
 } from './browser-input-audit';
+import { navigateToRenderScale } from './render-scale-navigation';
 
 const AUTOSAVE_KEY = 'stillroom-world-v1';
 
@@ -93,9 +94,12 @@ export class Game {
       onEraseMode: (erase) => { this.eraseMode = erase; },
       onPowderRenderStyle: (style) => { this.renderer.setPowderRenderStyle(style); },
       onRenderScale: (scale) => {
-        const url = new URL(location.href);
-        url.searchParams.set('renderScale', String(scale));
-        location.assign(url.href);
+        navigateToRenderScale(scale, {
+          currentUrl: location.href,
+          diagnosticScene: renderLab || wallLab,
+          persist: () => this.save(),
+          assign: (href) => { location.assign(href); },
+        });
       },
       canConfigureSource: (source, target) => this.simulation.canConfigureSource?.(source, target) ?? false,
       onSaveFile: () => this.downloadWorldFile(),
@@ -360,6 +364,7 @@ function rendererReason(reason: NonNullable<ReturnType<MaterialRenderer['getBack
   if (reason === 'webgl-unavailable') return 'Canvas2D because WebGL is unavailable';
   if (reason === 'webgl-starting') return 'Canvas2D while the WebGL renderer starts';
   if (reason === 'webgl-timeout') return 'Canvas2D because WebGL initialization timed out';
+  if (reason === 'webgl-context-lost') return 'Canvas2D because the active WebGL context was lost';
   return 'Canvas2D because WebGL initialization failed';
 }
 
@@ -374,6 +379,7 @@ function rendererStatus(renderer: ReturnType<MaterialRenderer['getBackendInfo']>
   if (renderer.reason === 'webgl-timeout') return `${base} · WebGL timeout`;
   if (renderer.reason === 'webgl-unavailable') return `${base} · WebGL unavailable`;
   if (renderer.reason === 'webgl-error') return `${base} · WebGL error`;
+  if (renderer.reason === 'webgl-context-lost') return `${base} · WebGL context lost`;
   if (renderer.reason === 'forced') return `${base} · forced`;
   return base;
 }

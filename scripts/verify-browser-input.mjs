@@ -1942,6 +1942,7 @@ async function auditRenderScaleEight(cdp, dpr) {
     && zoomedSquareGrain.widthRatio >= 0.82 && zoomedSquareGrain.widthRatio <= 1.18
     && zoomedSquareGrain.heightRatio >= 0.82 && zoomedSquareGrain.heightRatio <= 1.18,
   `renderScale=8 Grains cell was not an axis-aligned square (${JSON.stringify(zoomedSquareGrain)})`);
+  const contextLossRecovery = await auditEightXContextLossRecovery(cdp, geometry.canvas);
   return {
     requested: backend.requestedOutputScale,
     effective: backend.outputScale,
@@ -1952,6 +1953,103 @@ async function auditRenderScaleEight(cdp, dpr) {
     powderSupport,
     squareGrain,
     zoomedSquareGrain,
+    contextLossRecovery,
+  };
+}
+
+async function auditEightXContextLossRecovery(cdp, canvasRect) {
+  const recoveryCell = { x: 306, y: 192 };
+  await evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    audit.clear();
+    audit.setRadius(0);
+    audit.setMaterial(164);
+    audit.resetView();
+    return true;
+  })()`);
+  await sleep(350);
+  const point = worldClient(canvasRect, {
+    x: recoveryCell.x + 0.5,
+    y: recoveryCell.y + 0.5,
+  });
+  await mouseClick(cdp, point.x, point.y, 'left');
+  await waitFor(() => evaluate(cdp,
+    `window.__ANIFOR_INPUT_AUDIT__.cell(${recoveryCell.x}, ${recoveryCell.y}) === 164`),
+  5_000, 'renderScale=8 context-loss recovery marker');
+
+  // Keep a non-default camera state across recovery. Backing replacement must
+  // not reset or reinterpret the CSS-pixel transform.
+  await cdp.send('Input.dispatchMouseEvent', {
+    type: 'mouseWheel', x: point.x, y: point.y,
+    deltaX: 0, deltaY: -240, modifiers: 0,
+  });
+  const beforeView = await waitFor(() => evaluate(cdp, `(() => {
+    const view = window.__ANIFOR_INPUT_AUDIT__.viewState();
+    return view.zoom > 1.2 ? view : false;
+  })()`), 5_000, 'renderScale=8 pre-loss camera');
+  const beforeGeometry = await metrics(cdp);
+
+  const loss = await evaluate(cdp, `(() => {
+    const canvas = document.querySelector('canvas[data-renderer="semantic-field-webgl"]');
+    if (!(canvas instanceof HTMLCanvasElement)) return { requested: false, reason: 'missing-canvas' };
+    const context = canvas.getContext('webgl2') || canvas.getContext('webgl');
+    const extension = context?.getExtension('WEBGL_lose_context');
+    if (!extension) return { requested: false, reason: 'missing-extension' };
+    extension.loseContext();
+    return { requested: true };
+  })()`);
+  assert(loss.requested,
+    `renderScale=8 could not exercise WebGL context loss (${JSON.stringify(loss)})`);
+
+  const backend = await waitFor(() => evaluate(cdp, `(() => {
+    const backend = window.__ANIFOR_INPUT_AUDIT__.backend();
+    return backend.backend === 'canvas2d' && backend.reason === 'webgl-context-lost'
+      ? backend : false;
+  })()`), 15_000, 'renderScale=8 bounded Canvas recovery');
+  const recovered = await waitFor(async () => {
+    const current = await metrics(cdp);
+    const view = await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.viewState()');
+    const sameRect = ['left', 'top', 'width', 'height'].every(
+      (key) => Math.abs(current.canvas[key] - beforeGeometry.canvas[key]) < 0.05,
+    );
+    return current.backing.width === WORLD_WIDTH * 2
+      && current.backing.height === WORLD_HEIGHT * 2
+      && current.outputScale === '2'
+      && sameRect
+      && Math.abs(view.zoom - beforeView.zoom) < 1e-9
+      && Math.abs(view.panX - beforeView.panX) < 1e-9
+      && Math.abs(view.panY - beforeView.panY) < 1e-9
+      ? current : false;
+  }, 15_000, 'renderScale=8 context-loss Canvas geometry');
+  assert(backend.requestedOutputScale === 8 && backend.outputScale === 2,
+    `renderScale=8 recovery reported wrong scale (${JSON.stringify(backend)})`);
+  assertGeometry(recovered, 'renderScale=8 context-loss Canvas', 2);
+  assertCanvasRectsEqual(
+    beforeGeometry.canvas, recovered.canvas, 'renderScale=8 context-loss camera geometry',
+  );
+  const after = await evaluate(cdp, `(() => ({
+    cell: window.__ANIFOR_INPUT_AUDIT__.cell(${recoveryCell.x}, ${recoveryCell.y}),
+    occupied: window.__ANIFOR_INPUT_AUDIT__.occupiedCells(),
+    view: window.__ANIFOR_INPUT_AUDIT__.viewState(),
+    renderer: document.querySelector('.world-canvas')?.dataset.renderer,
+  }))()`);
+  assert(after.cell === 164 && after.occupied === 1,
+    `renderScale=8 recovery lost semantic state (${JSON.stringify(after)})`);
+  assert(after.renderer === 'semantic-field-canvas2d',
+    `renderScale=8 recovery did not mount Canvas (${JSON.stringify(after)})`);
+  assert(Math.abs(after.view.zoom - beforeView.zoom) < 1e-9
+    && Math.abs(after.view.panX - beforeView.panX) < 1e-9
+    && Math.abs(after.view.panY - beforeView.panY) < 1e-9,
+  `renderScale=8 recovery changed camera (${JSON.stringify({ beforeView, after: after.view })})`);
+  const footprint = await capturePaintedFootprints(
+    cdp, [recoveryCell], 'renderScale=8 context-loss Canvas', 1.5, 1.25,
+  );
+  return {
+    backend,
+    backing: `${recovered.backing.width}x${recovered.backing.height}`,
+    cssCanvas: `${round(recovered.canvas.width, 2)}x${round(recovered.canvas.height, 2)}`,
+    view: after.view,
+    footprint: footprint[0],
   };
 }
 
