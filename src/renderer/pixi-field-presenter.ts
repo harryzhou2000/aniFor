@@ -230,24 +230,36 @@ float triangleSlope(float value, float period) {
   float phase = mod(mod(value, period) + period, period);
   return mix(4.0 / period, -4.0 / period, step(period * 0.5, phase));
 }
-float solidReliefStrength(float optics, float profile) {
-  if (optics == 8.0) return 8.5;
-  if (optics == 9.0) return 7.5;
-  if (optics == 10.0) return 5.0;
-  if (optics == 11.0) return 6.5;
-  if (profile == 3.0) return 7.0;
-  if (profile == 5.0) return 5.0;
-  if (profile == 4.0) return 6.0;
-  return 6.5;
+vec3 solidReliefParameters(float optics, float profile) {
+  if (optics == 7.0 || profile == 1.0) return vec3(0.0);
+  if (optics == 8.0) return vec3(2.0, 1.0, 7.0);
+  if (optics == 9.0) return vec3(1.0, 4.0, 6.0);
+  if (optics == 10.0) return vec3(4.0, 0.0, 4.5);
+  if (optics == 11.0) return vec3(3.0, -2.0, 5.5);
+  if (profile == 2.0) return vec3(2.0, 1.0, 7.0);
+  if (profile == 3.0) return vec3(1.0, 4.0, 6.0);
+  if (profile == 5.0) return vec3(4.0, 0.0, 4.5);
+  if (profile == 4.0) return vec3(3.0, -2.0, 5.5);
+  return vec3(2.0, 1.0, 6.5);
+}
+float solidInteriorMicroGain(float optics, float profile) {
+  if (optics == 8.0 || (optics < 0.5 && profile == 2.0)) return 0.54;
+  if (optics == 9.0 || (optics < 0.5 && profile == 3.0)) return 0.70;
+  if (optics == 10.0 || (optics < 0.5 && profile == 5.0)) return 0.56;
+  if (optics == 11.0 || (optics < 0.5 && profile == 4.0)) return 0.74;
+  return 0.72;
 }
 vec3 solidReliefSample(vec2 position, float material, float profile, float optics) {
-  float value = position.x * 3.0 + position.y * 2.0 + material * 11.0;
+  vec3 parameters = solidReliefParameters(optics, profile);
+  float value = dot(position, parameters.xy) + material * 11.0;
   float phase = mod(mod(value, 128.0) + 128.0, 128.0);
-  float wave = 1.0 - abs(phase - 64.0) / 32.0;
-  float slopeA = triangleSlope(value, 128.0);
-  vec2 gradient = vec2(slopeA * 3.0, slopeA * 2.0);
-  float strength = solidReliefStrength(optics, profile);
-  return vec3(gradient * strength * 0.18, wave * strength / 255.0);
+  float triangle = 1.0 - abs(phase - 64.0) / 32.0;
+  float wave = triangle * (1.5 - 0.5 * triangle * triangle);
+  float slope = triangleSlope(value, 128.0) * (1.5 - 1.5 * triangle * triangle);
+  return vec3(
+    parameters.xy * slope * parameters.z * 0.18,
+    wave * parameters.z / 255.0
+  );
 }
 void main() {
   vec2 fieldUv = vFieldCoord;
@@ -361,8 +373,11 @@ void main() {
   float cohesiveLiquidInterior = max(liquidInterior, liquidFieldInterior);
   float shapeDetail = 1.0 - max(gasInterior, cohesiveLiquidInterior);
   vec2 semanticSlope = shape.yz * shapeDetail;
+  float granularSurface = (profile == 1.0 || optics == 7.0) ? 1.0 : 0.0;
   float solidInterior = family == 0.0
-    ? smoothstep(0.76, 0.98, density) * (1.0 - smoothstep(0.10, 0.62, length(shape.yz)))
+    ? smoothstep(0.76, 0.98, density)
+      * (1.0 - smoothstep(0.10, 0.62, length(shape.yz)))
+      * (1.0 - granularSurface)
     : 0.0;
   float solidReliefTone = 0.0;
   if (solidInterior > 0.001) {
@@ -514,6 +529,7 @@ void main() {
     float organicSurface = optics == 9.0 ? 1.0 : 0.0;
     float deviceSurface = optics == 10.0 ? 1.0 : 0.0;
     float radioactiveSurface = optics == 11.0 ? 1.0 : 0.0;
+    float interiorMicroGain = mix(1.0, solidInteriorMicroGain(optics, profile), solidInterior);
     float edgeCenter = 0.49 + (profile == 1.0 ? grain * 0.045 : 0.0);
     alpha = smoothstep(edgeCenter - 0.11, edgeCenter + 0.11, density);
     color = base * mix(1.10, 0.78, density) * diffuse;
@@ -548,29 +564,31 @@ void main() {
     } else if (smoothSurface > 0.5 || (optics < 0.5 && profile == 2.0)) {
       float bevel = clamp(abs(shape.y) + abs(shape.z), 0.0, 1.0);
       float strata = sin(fieldPosition.x * 0.16 + fieldPosition.y * 0.055 + material * 0.71);
-      color *= 0.965 + strata * 0.028;
+      color *= 0.965 + strata * 0.028 * interiorMicroGain;
       color += mix(base, vec3(0.32, 0.36, 0.42), 0.26)
         * bevel * (0.13 + smoothSurface * 0.07);
     } else if (organicSurface > 0.5 || (optics < 0.5 && profile == 3.0)) {
       float fibre = sin(fieldPosition.x * 0.20 + sin(fieldPosition.y * 0.115 + material) * 1.45);
       float pores = sin(fieldPosition.x * 0.083 + fieldPosition.y * 0.157 + material * 0.37)
         * sin(fieldPosition.y * 0.091 - fieldPosition.x * 0.047);
-      color *= 0.95 + fibre * 0.042 + pores * 0.024 + organicSurface * max(0.0, fibre) * 0.018;
+      color *= 0.95 + (fibre * 0.042 + pores * 0.024
+        + organicSurface * max(0.0, fibre) * 0.018) * interiorMicroGain;
       color += mix(base, vec3(0.19, 0.34, 0.18), 0.38)
-        * organicSurface * max(0.0, 0.6 - abs(pores)) * 0.028;
+        * organicSurface * max(0.0, 0.6 - abs(pores)) * 0.028 * interiorMicroGain;
     } else if (radioactiveSurface > 0.5 || (optics < 0.5 && profile == 4.0)) {
       float isotope = sin(fieldPosition.x * 0.137 + sin(fieldPosition.y * 0.103 + material) * 1.6)
         * sin(fieldPosition.y * 0.181 - fieldPosition.x * 0.061);
       float decayPulse = 0.5 + 0.5 * sin(uTime * 1.55 + material * 0.73 + isotope * 1.8);
-      color *= 0.97 + isotope * 0.038 + decayPulse * 0.012;
+      color *= 0.97 + isotope * 0.038 * interiorMicroGain + decayPulse * 0.012;
       color += vec3(0.10, 0.25, 0.13) * radioactiveSurface * decayPulse * 0.035;
     } else if (deviceSurface > 0.5 || (optics < 0.5 && profile == 5.0)) {
       vec2 circuitCell = abs(fract((fieldPosition + vec2(material * 0.37, material * 0.19)) / 8.0) - 0.5);
       float trace = max(1.0 - smoothstep(0.055, 0.105, circuitCell.x), 1.0 - smoothstep(0.055, 0.105, circuitCell.y));
       float node = 1.0 - smoothstep(0.10, 0.22, length(circuitCell));
-      color *= 0.96 + trace * 0.025;
+      color *= 0.96 + trace * 0.025 * interiorMicroGain;
       color += mix(base, vec3(0.34, 0.76, 1.0), 0.58)
-        * (trace * (0.12 + deviceSurface * 0.035) + node * (0.10 + deviceSurface * 0.045));
+        * (trace * (0.12 + deviceSurface * 0.035) + node * (0.10 + deviceSurface * 0.045))
+        * interiorMicroGain;
     } else if (profile == 6.0) {
       float planeWave = sin((fieldPosition.x + fieldPosition.y * 0.62) * 0.115 - uTime * 1.15 + material);
       float radialWave = sin(length(fieldPosition - vec2(material * 1.7)) * 0.14 + uTime * 0.92);

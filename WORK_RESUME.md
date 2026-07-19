@@ -24,7 +24,7 @@ Queued after the renderer checkpoint: revisit desktop/mobile geometry as a dedic
 
 - Repository: `/home/harry/projects/aniFor_codex`
 - Branch: `main_codex`
-- Current checkpoint: `debde42 Normalize accepted solid cavity opacity`, based on `cb12872 Add field relief to Canvas liquids` and described below.
+- Current checkpoint: `f117761 Measure dense Canvas presentation`, based on `debde42 Normalize accepted solid cavity opacity`; the uncommitted family-directed solid-mesostructure follow-up is described below.
 - The immediately preceding live baseline was built and verified by manual Actions run `29666585733` at exact SHA `97f5ced40b3f4db1f5c0a0acd477002b661e0f04` after `origin/main_codex` was independently checked with `git ls-remote`.
 - The local GitHub CLI token is currently invalid and must be refreshed with `gh auth login -h github.com` before Actions can be triggered or inspected again. Re-check the remote branch independently after the next push.
 - Current live Pages URL: `https://harryzhou2000.github.io/aniFor/`
@@ -281,6 +281,14 @@ The layout checkpoint `60b033b` and dense-solid relief checkpoint `97f5ced` are 
 ## Current dense Canvas timing follow-up (after `debde42`)
 
 - The browser audit now includes an audit-only full Canvas presentation timer and deterministic full-grid Metal fixture. It warms 10 frames, retains 30 steady-state one-cell-toggle samples, excludes scheduled field-rebuild samples, and reports median/p90/maximum without a pass/fail threshold. The first local run measured `29.9 ms` median / `30.9 ms` p90 / `52.1 ms` maximum; the fresh paired-backend verification measured `27.5 ms` / `29.6 ms` / `30.3 ms`, with no rebuild samples retained in either run. This measures synchronous Canvas submission through final 2× composition; it is stronger evidence than the isolated `2.88 ms` median / `3.13 ms` p90 solid-reconstruction helper profile, but it is still host-specific telemetry rather than a proven cross-run budget.
+
+## Current family-directed solid-mesostructure follow-up (after `f117761`)
+
+- The Canvas semantic traversal now uses nested `y/x` loops with a monotonic index, computes the legacy grain hash only in the seven branches that consume it, reuses the loaded profile byte, and directly writes fully opaque generic solids. Those algebraically equivalent changes improved a same-host dense-Metal run from `27.5/29.6/30.3 ms` median/p90/max to `24.6/26.2/26.6 ms` before styling.
+- Dense exact-material solid interiors now use one cubic-smoothed, module-static macro wave mirrored by an analytic GLSL slope. Family axes/strengths are rigid `(2,1)/7`, organic `(1,4)/6`, device `(4,0)/4.5`, and radioactive `(3,-2)/5.5`; granular profiles return zero. There is no second wave, field, texture, neighbour read, per-frame allocation, or frame-sized buffer.
+- Canvas family-aware cohesion attenuates cell-frequency RGB only behind the existing four-cardinal exact-material and trait/emissive bypass gates. A uniform over-range highlight scale prevents saturated device colors from clipping a channel; the DTEC composed sample returned from `19.1%` pinned pixels in the first candidate capture to `0%` without losing its orange ordering. WebGL attenuates only its existing family micro-patterns in dense interiors and leaves alpha/cavity eligibility unchanged.
+- The final paired browser gate passed with zero browser errors. Canvas Metal/Plant/PLUT/DTEC microcontrast measured `3.23/4.58/3.35/2.01`, with macro luma ranges `56/37/23/57`; dense Sand retained `7.28` microcontrast. The WebGL candidate capture measured `8.16/4.62/2.59/8.14` microcontrast and `27/19/7/20` macro ranges. Both separators, dark-pit bounds, clipping limits, viewport transforms, gestures, and mobile layout stayed green. Two forced-Canvas styled runs measured `27.3/29.2 ms` and `29.9/33.5 ms` median/p90. The spread confirms why this remains host-specific, nonblocking telemetry rather than a hard CI budget; the styling spends part of the reclaimed loop headroom without adding storage or a pass.
+- The final isolated profile kept combined render-field storage at `8,173,320` bytes and runtime-known Canvas scratch at `1,887,464` bytes. The replaced one-wave worst-case helper measured `5.43 ms` median / `5.59 ms` p90, and solid cavity reconstruction measured `2.81 ms` / `3.00 ms`; no new frame-sized runtime buffer or pass was introduced.
 
 ## Current blockers and risks
 

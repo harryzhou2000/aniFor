@@ -141,6 +141,8 @@ async function auditMode(mode) {
       `${mode}: solid render samples disappeared (${JSON.stringify(solidSamples)})`);
     assert(solidSamples.every((sample) => sample.lumaRange >= 6 && sample.lumaRange <= 200),
       `${mode}: solid interior relief is flat or clipped (${JSON.stringify(solidSamples)})`);
+    assert(solidSamples.every((sample) => sample.microContrast <= 9 && sample.macroLumaRange >= 7),
+      `${mode}: solid mesostructure became cell-noisy or macroscopically flat (${JSON.stringify(solidSamples)})`);
     assert(solidSamples.every((sample) => sample.darkFraction <= 0.08),
       `${mode}: accepted solid cavities still read as dark pits (${JSON.stringify(solidSamples)})`);
     assert(solidSamples.every((sample) => sample.pinnedFraction <= 0.15),
@@ -151,6 +153,11 @@ async function auditMode(mode) {
     ]);
     assert(solidSeparatorSamples.every((sample) => Math.max(...sample.rgb) <= 20 && sample.lumaRange <= 5),
       `${mode}: solid reconstruction bridged a matrix separator (${JSON.stringify(solidSeparatorSamples)})`);
+    const powderSamples = await samplePageRegions(cdp, canonicalCapture.data, [
+      { name: 'denseSand', x: 156, y: 78, radius: 8 },
+    ]);
+    assert(powderSamples.every((sample) => sample.visible >= 32 && sample.microContrast >= 3),
+      `${mode}: rough powder lost its granular detail (${JSON.stringify(powderSamples)})`);
     const volumeSamples = await samplePageRegions(cdp, canonicalCapture.data, [
       { name: 'water', x: 238, y: 79, radius: 14 },
       { name: 'oil', x: 289, y: 87, radius: 12 },
@@ -322,6 +329,7 @@ async function auditMode(mode) {
       energySamples,
       solidSamples,
       solidSeparatorSamples,
+      powderSamples,
       volumeSamples,
       liquidColumnSamples,
       liquidReliefSamples,

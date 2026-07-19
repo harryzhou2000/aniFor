@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { Material } from '../shared/materials';
-import { canvasSolidRelief } from './canvas-solid-relief';
+import {
+  applyCanvasSolidLighting, canvasSolidInteriorCohesion, canvasSolidRelief,
+} from './canvas-solid-relief';
 import { RenderOptics } from './render-optics';
 import { RenderProfile } from './render-profile';
 
@@ -10,14 +12,46 @@ describe('Canvas solid relief', () => {
     const adjacent = canvasSolidRelief(13, 9, Material.Metal, RenderProfile.Rigid, RenderOptics.SmoothRigid);
     const distant = canvasSolidRelief(36, 25, Material.Metal, RenderProfile.Rigid, RenderOptics.SmoothRigid);
     expect(canvasSolidRelief(12, 9, Material.Metal, RenderProfile.Rigid, RenderOptics.SmoothRigid)).toBe(first);
-    expect(Math.abs(first)).toBeLessThanOrEqual(8.5);
+    expect(Math.abs(first)).toBeLessThanOrEqual(7);
     expect(Math.abs(adjacent - first)).toBeLessThan(1.5);
     expect(distant).not.toBe(first);
   });
 
-  it('gives polished rigid matter more relief than device surfaces', () => {
-    const rigid = canvasSolidRelief(12, 9, Material.Metal, RenderProfile.Rigid, RenderOptics.SmoothRigid);
-    const device = canvasSolidRelief(12, 9, Material.Metal, RenderProfile.Device, RenderOptics.Device);
-    expect(Math.abs(rigid)).toBeGreaterThan(Math.abs(device));
+  it('uses distinct family-directed macro waves and no dense powder relief', () => {
+    const fingerprints = new Set<string>();
+    for (const [profile, optics] of [
+      [RenderProfile.Rigid, RenderOptics.SmoothRigid],
+      [RenderProfile.Organic, RenderOptics.Organic],
+      [RenderProfile.Device, RenderOptics.Device],
+      [RenderProfile.Radioactive, RenderOptics.Radioactive],
+    ] as const) {
+      fingerprints.add(Array.from({ length: 8 }, (_, offset) => (
+        canvasSolidRelief(12 + offset, 9 + offset * 2, Material.Metal, profile, optics).toFixed(4)
+      )).join(','));
+    }
+    expect(fingerprints.size).toBe(4);
+    expect(canvasSolidRelief(
+      12, 9, Material.Sand, RenderProfile.Granular, RenderOptics.RoughGranular,
+    )).toBe(0);
+  });
+
+  it('makes dense Canvas cohesion family-aware without smoothing granular matter', () => {
+    expect(canvasSolidInteriorCohesion(RenderProfile.Granular, RenderOptics.RoughGranular)).toBe(0);
+    expect(canvasSolidInteriorCohesion(RenderProfile.Rigid, RenderOptics.SmoothRigid))
+      .toBeGreaterThan(canvasSolidInteriorCohesion(RenderProfile.Organic, RenderOptics.Organic));
+    expect(canvasSolidInteriorCohesion(RenderProfile.Device, RenderOptics.Device))
+      .toBeGreaterThan(canvasSolidInteriorCohesion(RenderProfile.Radioactive, RenderOptics.Radioactive));
+  });
+
+  it('compresses over-range solid highlights uniformly instead of clipping a channel', () => {
+    const color = new Float32Array([253, 157, 24]);
+    const litRatio = (253 + 9) / (157 + 9);
+    applyCanvasSolidLighting(color, 9);
+    expect(Math.max(...color)).toBeCloseTo(254, 4);
+    expect(color[0] / color[1]).toBeCloseTo(litRatio, 5);
+
+    const inRange = new Float32Array([80, 100, 120]);
+    applyCanvasSolidLighting(inRange, -5);
+    expect(Array.from(inRange)).toEqual([75, 95, 115]);
   });
 });
