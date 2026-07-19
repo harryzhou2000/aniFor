@@ -10,6 +10,55 @@ export function hermiteDerivative(position: number): number {
   return 6 * bounded * (1 - bounded);
 }
 
+/** Analytic second derivative of hermiteWeight over the unit cell. */
+export function hermiteSecondDerivative(position: number): number {
+  const bounded = Math.max(0, Math.min(1, position));
+  return 6 - 12 * bounded;
+}
+
+/**
+ * Signed curvature of one implicit 2-D density contour. Straight Hermite
+ * half-planes resolve to zero even though their one-axis second derivative is
+ * nonzero. The small-gradient rejection keeps constant interiors finite.
+ */
+export function implicitContourCurvature(
+  gradientX: number,
+  gradientY: number,
+  secondX: number,
+  mixed: number,
+  secondY: number,
+): number {
+  const gradientSquared = gradientX * gradientX + gradientY * gradientY;
+  if (gradientSquared < 1e-4) return 0;
+  const numerator = secondX * gradientY * gradientY
+    - 2 * gradientX * gradientY * mixed
+    + secondY * gradientX * gradientX;
+  const denominator = gradientSquared * Math.sqrt(gradientSquared);
+  return Math.max(-1, Math.min(1, numerator / Math.max(1e-4, denominator)));
+}
+
+/** Four-corner signed contour curvature mirrored by the Canvas/WebGL paths. */
+export function samplePhaseCurvature(
+  q00: number, q10: number, q01: number, q11: number, x: number, y: number,
+): number {
+  const weightX = hermiteWeight(x);
+  const weightY = hermiteWeight(y);
+  const derivativeX = hermiteDerivative(x);
+  const derivativeY = hermiteDerivative(y);
+  const horizontalTop = q10 - q00;
+  const verticalLeft = q01 - q00;
+  const cross = q11 - q10 - q01 + q00;
+  const gradientX = (horizontalTop + cross * weightY) * derivativeX;
+  const gradientY = (verticalLeft + cross * weightX) * derivativeY;
+  return implicitContourCurvature(
+    gradientX,
+    gradientY,
+    (horizontalTop + cross * weightY) * hermiteSecondDerivative(x),
+    cross * derivativeX * derivativeY,
+    (verticalLeft + cross * weightX) * hermiteSecondDerivative(y),
+  );
+}
+
 export interface PhaseCoverageSample {
   readonly density: number;
   readonly gradientX: number;

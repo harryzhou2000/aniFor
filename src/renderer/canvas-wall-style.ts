@@ -37,20 +37,24 @@ export function writeCanvasRefractedWallPixel(
   x: number,
   y: number,
   material: number,
+  edgeX = 0,
+  edgeY = 0,
 ): boolean {
   if (wall === 0 || (material !== Material.Glass && material !== Material.Ice)) return false;
   const color = WALL_COLORS[wall] ?? DEFAULT_WALL_COLOR;
   if (material === Material.Glass) {
-    const phase = (x * 2 + y + material * 11) & 127;
-    const shiftX = phase < 64 ? 2 : -2;
-    const light = canvasWallPatternLight(wall, x + shiftX, y);
+    const shiftX = Math.sign(edgeX) * 3;
+    const shiftY = Math.sign(edgeY) * 3;
+    const light = canvasWallPatternLight(wall, x + shiftX, y + shiftY);
     target[offset] = clampByte(color[0] + light);
     target[offset + 1] = clampByte(color[1] + light);
     target[offset + 2] = clampByte(color[2] + light);
   } else {
     const facet = (Math.floor(x / 4) + Math.floor(y / 4) * 3 + material) & 3;
-    const shiftX = facet === 0 ? 2 : facet === 1 ? -2 : 0;
-    const shiftY = facet === 2 ? 2 : facet === 3 ? -2 : 0;
+    const shiftX = edgeX !== 0 ? Math.sign(edgeX) * 2
+      : facet === 0 ? 2 : facet === 1 ? -2 : 0;
+    const shiftY = edgeY !== 0 ? Math.sign(edgeY) * 2
+      : facet === 2 ? 2 : facet === 3 ? -2 : 0;
     const forward = canvasWallPatternLight(wall, x + shiftX, y + shiftY);
     const reverse = canvasWallPatternLight(wall, x - shiftX, y - shiftY);
     const light = forward * 0.68 + reverse * 0.32;
@@ -63,10 +67,30 @@ export function writeCanvasRefractedWallPixel(
 }
 
 export function canvasWallPatternLight(wall: number, x: number, y: number): number {
+  if (wall === 6) {
+    // One continuous wall ID carries an asymmetric calibration-card pattern.
+    // Refraction moves only this analytic coordinate, so wall identity/support
+    // remain authoritative while irregular fiducials visibly bend.
+    const cellX = Math.floor(x);
+    const cellY = Math.floor(y);
+    const localX = positiveModulo(cellX, 40);
+    const localY = positiveModulo(cellY, 24);
+    const verticalDistance = Math.min(
+      Math.abs(localX - 4), Math.abs(localX - 13), Math.abs(localX - 27),
+    );
+    const vertical = verticalDistance <= 1 ? 28 : 0;
+    const baseline = Math.abs(localY - 12) <= 1 ? 16 : 0;
+    const chevronX = 20 + Math.floor(Math.abs(localY - 12) * 0.55);
+    const chevron = Math.abs(localX - chevronX) <= 1 ? 12 : 0;
+    return -7 + vertical + baseline + chevron;
+  }
   const checker = ((Math.floor(x / 4) + Math.floor(y / 4)) & 1) ? 9 : -4;
-  const patterned = wall === 6 || wall === 9 || wall === 10 || wall === 13 || wall === 15;
+  const patterned = wall === 9 || wall === 10 || wall === 13 || wall === 15;
   const stripe = patterned && ((Math.floor(x) + Math.floor(y)) & 3) === 0 ? 22 : 0;
   return checker + stripe;
 }
 
 function clampByte(value: number): number { return Math.max(0, Math.min(255, value)); }
+function positiveModulo(value: number, divisor: number): number {
+  return ((value % divisor) + divisor) % divisor;
+}

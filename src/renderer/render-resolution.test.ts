@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   backingSize, FIELD_OUTPUT_SCALE, resolveFieldOutputScale, safeWebGLOutputScale,
+  WEBGL_EIGHT_X_PROMOTION_TIMEOUT_MS, WEBGL_PROMOTION_TIMEOUT_MS, webGLPromotionTimeout,
 } from './render-resolution';
 
 describe('field render resolution', () => {
@@ -32,5 +33,13 @@ describe('field render resolution', () => {
     expect(safeWebGLOutputScale(1_200, 800, 8)).toBe(4);
     expect(safeWebGLOutputScale(612, 384, 8, 2_000_000, 2_048)).toBe(2);
     expect(safeWebGLOutputScale(612, 384, 1, 1, 1)).toBe(1);
+  });
+
+  it('allows true 8x a bounded cold-start window without slowing lower scales', () => {
+    expect(webGLPromotionTimeout(1)).toBe(WEBGL_PROMOTION_TIMEOUT_MS);
+    expect(webGLPromotionTimeout(2)).toBe(WEBGL_PROMOTION_TIMEOUT_MS);
+    expect(webGLPromotionTimeout(4)).toBe(WEBGL_PROMOTION_TIMEOUT_MS);
+    expect(webGLPromotionTimeout(8)).toBe(WEBGL_EIGHT_X_PROMOTION_TIMEOUT_MS);
+    expect(WEBGL_EIGHT_X_PROMOTION_TIMEOUT_MS).toBeGreaterThan(WEBGL_PROMOTION_TIMEOUT_MS);
   });
 });

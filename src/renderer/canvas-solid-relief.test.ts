@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { Material } from '../shared/materials';
 import {
   applyCanvasSolidLighting, applyCanvasTranslucentCaustic,
+  applyCanvasTranslucentLensShell,
   canvasSolidInteriorCohesion, canvasSolidRelief,
 } from './canvas-solid-relief';
 import { RenderOptics } from './render-optics';
@@ -79,5 +80,23 @@ describe('Canvas solid relief', () => {
     expect(Math.max(
       Math.abs(glass[0] - 120), Math.abs(glass[1] - 150), Math.abs(glass[2] - 180),
     )).toBeLessThan(8);
+  });
+
+  it('adds a bounded exact-material lens shell while opaque Metal remains unchanged', () => {
+    const glass = new Float32Array([120, 150, 180]);
+    const ice = new Float32Array(glass);
+    const metal = new Float32Array(glass);
+    applyCanvasTranslucentLensShell(glass, 6, 18, Material.Glass);
+    applyCanvasTranslucentLensShell(ice, -6, 18, Material.Ice);
+    applyCanvasTranslucentLensShell(metal, 6, 18, Material.Metal);
+
+    expect(glass[2] - 180).toBeGreaterThan(glass[0] - 120);
+    expect(ice[2] - 180).toBeGreaterThan(ice[0] - 120);
+    expect(glass[2]).toBeGreaterThan(ice[2]);
+    expect(Array.from(metal)).toEqual([120, 150, 180]);
+    expect(Math.max(
+      Math.abs(glass[0] - 120), Math.abs(glass[1] - 150), Math.abs(glass[2] - 180),
+      Math.abs(ice[0] - 120), Math.abs(ice[1] - 150), Math.abs(ice[2] - 180),
+    )).toBeLessThan(18);
   });
 });

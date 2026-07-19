@@ -5,7 +5,7 @@ import { contentBoxFromBounds } from './client-coordinate-map';
 import type { PixiFieldPresenter, WebGLPresentationTiming } from './pixi-field-presenter';
 import {
   backingSize, CANVAS_FALLBACK_DIMENSION_BUDGET, CANVAS_FALLBACK_PIXEL_BUDGET,
-  resolveFieldOutputScale, safeWebGLOutputScale, type FieldOutputScale,
+  resolveFieldOutputScale, safeWebGLOutputScale, webGLPromotionTimeout, type FieldOutputScale,
 } from './render-resolution';
 import { shadeCanvasAtmosphere } from './canvas-atmosphere-relief';
 import { canvasLocalEmissionAlpha } from './canvas-emission-style';
@@ -30,6 +30,7 @@ import { reconstructSolidSurface } from './canvas-solid-surface';
 import { writeCanvasRefractedWallPixel, writeCanvasWallPixel } from './canvas-wall-style';
 import {
   applyCanvasSolidLighting, applyCanvasTranslucentCaustic,
+  applyCanvasTranslucentLensShell,
   canvasSolidInteriorCohesion, canvasSolidRelief,
 } from './canvas-solid-relief';
 import { RenderFieldSet } from './render-field-set';
@@ -49,7 +50,6 @@ import type { PowderRenderStyle } from './powder-render-style';
 
 const FRAME_INTERVAL = 1000 / 30;
 export const DYNAMIC_FIELD_REFRESH_INTERVAL = 1000 / 12;
-const WEBGL_LATE_PROMOTION_MS = 10_000;
 
 export interface RendererBackendInfo {
   readonly backend: 'webgl' | 'canvas2d';
@@ -139,6 +139,8 @@ export class MaterialRenderer {
   private translucentFieldTransmissionEnabled = true;
   private translucentBackdropRefractionEnabled = true;
   private solidContactDepthEnabled = true;
+  private translucentLensShellEnabled = true;
+  private solidCurvatureDepthEnabled = true;
   private powderRenderStyle: PowderRenderStyle = 'smooth';
   private gasFieldLightingDirty = false;
   private canvasPresentationTimingEnabled = false;
@@ -296,6 +298,21 @@ export class MaterialRenderer {
     this.changed = true;
   }
 
+  setTranslucentLensShellEnabled(enabled: boolean): void {
+    if (enabled === this.translucentLensShellEnabled) return;
+    this.translucentLensShellEnabled = enabled;
+    this.presenter?.setTranslucentLensShellEnabled(enabled);
+    this.changed = true;
+  }
+
+  setSolidCurvatureDepthEnabled(enabled: boolean): void {
+    if (enabled === this.solidCurvatureDepthEnabled) return;
+    this.solidCurvatureDepthEnabled = enabled;
+    this.presenter?.setSolidCurvatureDepthEnabled(enabled);
+    this.contourChunks.markAll();
+    this.changed = true;
+  }
+
   setPowderRenderStyle(style: PowderRenderStyle): void {
     if (style === this.powderRenderStyle) return;
     this.powderRenderStyle = style;
@@ -356,7 +373,7 @@ export class MaterialRenderer {
   private async promoteLatePresenter(pending: Promise<PixiFieldPresenter>): Promise<void> {
     let presenter: PixiFieldPresenter | undefined;
     try {
-      presenter = await settleWithin(pending, WEBGL_LATE_PROMOTION_MS);
+      presenter = await settleWithin(pending, webGLPromotionTimeout(this.webGLOutputScale));
       if (!presenter) {
         this.setBackend({ backend: 'canvas2d', label: 'Canvas 2D', reason: 'webgl-timeout' });
         void pending.then((latePresenter) => latePresenter.destroy()).catch(() => undefined);
@@ -387,6 +404,8 @@ export class MaterialRenderer {
     presenter.setTranslucentFieldTransmissionEnabled(this.translucentFieldTransmissionEnabled);
     presenter.setTranslucentBackdropRefractionEnabled(this.translucentBackdropRefractionEnabled);
     presenter.setSolidContactDepthEnabled(this.solidContactDepthEnabled);
+    presenter.setTranslucentLensShellEnabled(this.translucentLensShellEnabled);
+    presenter.setSolidCurvatureDepthEnabled(this.solidCurvatureDepthEnabled);
     presenter.setPowderRenderStyle(this.powderRenderStyle);
     presenter.update(
       this.rendered, this.renderedWalls, this.simulation.temperature?.(), this.simulation.velocity?.(),
@@ -594,9 +613,22 @@ export class MaterialRenderer {
         ? canvasSolidRelief(x, y, material, profile, optics)
         : 0;
       const surfaceLight = normalLight + solidRelief;
-      if (this.translucentBackdropRefractionEnabled && wall && denseSolidInterior
+      if (this.translucentBackdropRefractionEnabled && wall && phase === RenderPhase.Solid
+        && (material === Material.Glass || material === Material.Ice)
         && applicableTraits === 0 && !PROJECTED_RENDER_INFO[material]?.emissive) {
-        writeCanvasRefractedWallPixel(base, pixel, wall, x, y, material);
+        const solidLeft = left !== Material.Empty && left !== Material.Wall
+          && fields.lookups.styleBytes[left * 4] === RenderPhase.Solid;
+        const solidRight = right !== Material.Empty && right !== Material.Wall
+          && fields.lookups.styleBytes[right * 4] === RenderPhase.Solid;
+        const solidTop = top !== Material.Empty && top !== Material.Wall
+          && fields.lookups.styleBytes[top * 4] === RenderPhase.Solid;
+        const solidBottom = bottom !== Material.Empty && bottom !== Material.Wall
+          && fields.lookups.styleBytes[bottom * 4] === RenderPhase.Solid;
+        writeCanvasRefractedWallPixel(
+          base, pixel, wall, x, y, material,
+          (solidRight ? 0 : 1) - (solidLeft ? 0 : 1),
+          (solidBottom ? 0 : 1) - (solidTop ? 0 : 1),
+        );
       }
 
       if (phase === RenderPhase.Energy) {
@@ -695,9 +727,12 @@ export class MaterialRenderer {
         if (this.solidContactDepthEnabled && denseSolidInterior) {
           applyCanvasTranslucentCaustic(this.styledColor, solidRelief, material);
         }
+        if (this.translucentLensShellEnabled) {
+          applyCanvasTranslucentLensShell(this.styledColor, solidRelief, normalLight, material);
+        }
         compositePixel(
           target, pixel,
-          this.styledColor[0], this.styledColor[1], this.styledColor[2], 220,
+          this.styledColor[0], this.styledColor[1], this.styledColor[2], 202,
         );
       } else if (material === Material.Acid) {
         const mask = materialNeighbourMask(this.rendered, width, height, x, y, material);
@@ -829,7 +864,13 @@ export class MaterialRenderer {
             this.styledColor[1] += surfaceLight;
             this.styledColor[2] += surfaceLight;
           }
-          const alpha = optics === RenderOptics.TranslucentRigid ? 218 : 255;
+          if (this.translucentLensShellEnabled && applicableTraits === 0 && !info.emissive) {
+            applyCanvasTranslucentLensShell(
+              this.styledColor, solidRelief, normalLight, material,
+            );
+          }
+          const alpha = material === Material.Glass ? 198
+            : optics === RenderOptics.TranslucentRigid ? 218 : 255;
           if (wall && optics === RenderOptics.TranslucentRigid) {
             // Preserve the independent native-wall plane below translucent
             // matter, matching WebGL's source-over backdrop composition.
@@ -1049,6 +1090,7 @@ export class MaterialRenderer {
           powderStyle: this.powderRenderStyle,
           walls: this.renderedWalls,
           solidContactDepth: this.solidContactDepthEnabled,
+          solidCurvatureDepth: this.solidCurvatureDepthEnabled,
           worldWidth: width,
           worldHeight: height,
           chunkX,

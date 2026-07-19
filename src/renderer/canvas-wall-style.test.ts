@@ -8,9 +8,9 @@ describe('Canvas native-wall style', () => {
   it('moves only the procedural pattern and preserves wall alpha', () => {
     const ordinary = new Uint8ClampedArray(4);
     const glass = new Uint8ClampedArray(4);
-    writeCanvasWallPixel(ordinary, 0, 6, 8, 8);
+    writeCanvasWallPixel(ordinary, 0, 6, 11, 8);
     glass.set(ordinary);
-    expect(writeCanvasRefractedWallPixel(glass, 0, 6, 8, 8, Material.Glass)).toBe(true);
+    expect(writeCanvasRefractedWallPixel(glass, 0, 6, 11, 8, Material.Glass, 1, 0)).toBe(true);
     expect(glass.slice(0, 3)).not.toEqual(ordinary.slice(0, 3));
     expect(glass[3]).toBe(ordinary[3]);
   });
@@ -36,8 +36,19 @@ describe('Canvas native-wall style', () => {
   });
 
   it('keeps the patterned stripe world-anchored and deterministic', () => {
-    expect(canvasWallPatternLight(6, 8, 8)).toBe(18);
-    expect(canvasWallPatternLight(6, 9, 8)).toBe(-4);
+    expect(canvasWallPatternLight(6, 8, 8)).toBe(-7);
+    expect(canvasWallPatternLight(6, 13, 8)).toBe(21);
+    expect(canvasWallPatternLight(6, 20, 12)).toBe(21);
     expect(canvasWallPatternLight(8, 8, 8)).toBe(-4);
+  });
+
+  it('uses opposite semantic shoulders to bend a Glass card in opposite directions', () => {
+    const left = new Uint8ClampedArray(4);
+    const right = new Uint8ClampedArray(4);
+    writeCanvasRefractedWallPixel(left, 0, 6, 10, 12, Material.Glass, -1, 0);
+    writeCanvasRefractedWallPixel(right, 0, 6, 10, 12, Material.Glass, 1, 0);
+    expect(left).not.toEqual(right);
+    expect(left[3]).toBe(248);
+    expect(right[3]).toBe(248);
   });
 });

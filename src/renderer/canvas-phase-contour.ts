@@ -1,12 +1,14 @@
 import {
   phaseContactCompatible,
+  hermiteSecondDerivative,
   hermiteWeight,
+  implicitContourCurvature,
   powderBulkWeight,
   roundGrainCoverage,
   type ContactPhase,
 } from './phase-boundary-coverage';
 import { Material } from '../shared/materials';
-import { RenderPhase } from './render-profile';
+import { RenderPhase, RenderProfile } from './render-profile';
 import { RenderOptics } from './render-optics';
 import type { FieldOutputScale } from './render-resolution';
 import type { PowderRenderStyle } from './powder-render-style';
@@ -34,6 +36,8 @@ export interface CanvasPhaseContourInput {
   readonly walls?: Uint8Array;
   /** Audit-only A/B switch; defaults to the signed exact-solid contact bevel. */
   readonly solidContactDepth?: boolean;
+  /** Audit-only A/B switch; defaults to bounded analytic solid curvature. */
+  readonly solidCurvatureDepth?: boolean;
   readonly worldWidth: number;
   readonly worldHeight: number;
   readonly chunkX: number;
@@ -171,6 +175,14 @@ export class CanvasPhaseContourScratch {
     const exactSolidContact = (input.solidContactDepth ?? true)
       && this.haloMaterials[haloIndex] !== 0 && phase === RenderPhase.Solid
       && this.hasDifferentSolidNearby(cellX + 1, cellY + 1, material);
+    const curvatureGain = solidCurvatureGain(
+      input.styleBytes[material * 4 + 1] ?? RenderProfile.Neutral,
+      input.paletteBytes?.[material * 4 + 3] ?? RenderOptics.Default,
+    );
+    const solidCurvatureDepth = (input.solidCurvatureDepth ?? true)
+      && this.haloMaterials[haloIndex] !== 0 && phase === RenderPhase.Solid
+      && input.styleBytes[material * 4 + 2] === 0 && curvatureGain > 0
+      && this.hasSolidContourNearby(cellX + 1, cellY + 1, material);
     const eligible = !this.isWallAt(haloIndex) && isContourPhase(phase);
     const powderSurfaceDetailGate = phase === RenderPhase.Powder
       && powderStyle === 'smooth' && input.powderSurface
@@ -223,9 +235,31 @@ export class CanvasPhaseContourScratch {
         const top = q00 + (q10 - q00) * weightX;
         const bottom = q01 + (q11 - q01) * weightX;
         const density = top + (bottom - top) * weightY;
+        let derivativeX = 0;
+        let derivativeY = 0;
+        if (solidCurvatureDepth || exactSolidContact) {
+          derivativeX = 6 * blendX * (1 - blendX);
+          derivativeY = 6 * blendY * (1 - blendY);
+        }
+        if (solidCurvatureDepth && density > 0.08 && density < 0.92) {
+          const cross = q11 - q10 - q01 + q00;
+          const horizontal = q10 - q00 + cross * weightY;
+          const vertical = q01 - q00 + cross * weightX;
+          const gradientX = horizontal * derivativeX;
+          const gradientY = vertical * derivativeY;
+          const curvature = implicitContourCurvature(
+            gradientX,
+            gradientY,
+            horizontal * hermiteSecondDerivative(blendX),
+            cross * derivativeX * derivativeY,
+            vertical * hermiteSecondDerivative(blendY),
+          );
+          const response = Math.max(-0.045, Math.min(0.045, curvature * 0.045 * curvatureGain));
+          this.pixels[outputPixel] = clampByte(this.pixels[outputPixel] * (1 + response));
+          this.pixels[outputPixel + 1] = clampByte(this.pixels[outputPixel + 1] * (1 + response));
+          this.pixels[outputPixel + 2] = clampByte(this.pixels[outputPixel + 2] * (1 + response));
+        }
         if (exactSolidContact) {
-          const derivativeX = 6 * blendX * (1 - blendX);
-          const derivativeY = 6 * blendY * (1 - blendY);
           const d00 = this.differentSolidAt(originX, originY, material);
           const d10 = this.differentSolidAt(originX + 1, originY, material);
           const d01 = this.differentSolidAt(originX, originY + 1, material);
@@ -481,6 +515,21 @@ export class CanvasPhaseContourScratch {
     return false;
   }
 
+  private hasSolidContourNearby(
+    haloX: number,
+    haloY: number,
+    ownerMaterial: number,
+  ): boolean {
+    for (let offsetY = -1; offsetY <= 1; offsetY++) {
+      for (let offsetX = -1; offsetX <= 1; offsetX++) {
+        if (this.compatibleAt(
+          haloX + offsetX, haloY + offsetY, ownerMaterial, RenderPhase.Solid,
+        ) === 0) return true;
+      }
+    }
+    return false;
+  }
+
   private isWallAt(index: number): boolean {
     return this.haloWalls[index] !== 0 || this.haloMaterials[index] === Material.Wall;
   }
@@ -494,6 +543,16 @@ function contactPhase(phase: number): ContactPhase {
   if (phase === RenderPhase.Powder) return 'powder';
   if (phase === RenderPhase.Liquid) return 'liquid';
   return 'solid';
+}
+
+function solidCurvatureGain(profile: number, optics: number): number {
+  if (optics === RenderOptics.RoughGranular || profile === RenderProfile.Granular) return 0;
+  if (optics === RenderOptics.SmoothRigid || profile === RenderProfile.Rigid) return 1;
+  if (optics === RenderOptics.Device || profile === RenderProfile.Device) return 0.82;
+  if (optics === RenderOptics.Radioactive || profile === RenderProfile.Radioactive) return 0.70;
+  if (optics === RenderOptics.TranslucentRigid) return 0.62;
+  if (optics === RenderOptics.Organic || profile === RenderProfile.Organic) return 0.58;
+  return 0.72;
 }
 
 function validateInput(input: CanvasPhaseContourInput): void {

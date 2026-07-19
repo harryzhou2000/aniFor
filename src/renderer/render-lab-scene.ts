@@ -89,7 +89,7 @@ export function applyRenderLabScene(simulation: SimulationBackend): void {
   // A real independent wall plane sits behind both halves. Opaque Metal is the
   // matched control; Glass must bend the alternating native-wall pattern while
   // preserving this capsule's exact semantic silhouette.
-  plot.wallStripeRect(116, 164, 50, 17, 6, 10);
+  plot.wallPatternRect(116, 164, 50, 17, 6);
 
   // Isolated controls catch accidental field widening and preserve the visual
   // contract that one powder grain is round while one droplet remains sparse.
@@ -116,7 +116,9 @@ export function applyRenderLabScene(simulation: SimulationBackend): void {
     const row = Math.floor(index / 5);
     const x = 388 + column * 40;
     const y = 194 + row * 25;
-    if (material === Material.Metal) plot.roundedRect(x, y, 35, 21, 6, material);
+    if (material === Material.Metal || material === Material.Plant || material === Material.DTEC) {
+      plot.curvaturePlate(x, y, 35, 21, 6, material);
+    }
     else plot.rect(x, y, 35, 21, material, 0.90, 601 + index);
   });
   // Narrow separator lights prove that dense translucent bodies transmit the
@@ -124,10 +126,13 @@ export function applyRenderLabScene(simulation: SimulationBackend): void {
   // not overlap the Glass/Ice semantic cells or the neighbouring opaque tiles.
   plot.rect(424, 221, 3, 17, Material.Fire, 1, 0);
   plot.rect(544, 221, 3, 17, Material.ELEC, 1, 0);
-  // Dense Glass and Ice plates receive the same alternating background so the
-  // composed gate can separate patterned-scene transmission from emission tint.
-  plot.wallStripeRect(432, 223, 27, 13, 6, 10);
-  plot.wallStripeRect(512, 223, 27, 13, 6, 10);
+  // Glass and Ice receive the same continuous asymmetric calibration card. It
+  // reaches the semantic shoulder so the composed gate can prove that the
+  // material boundary bends the card rather than merely tinting its core. The
+  // earlier Metal/Glass contact capsule supplies the matched opaque control;
+  // keeping this Metal plate wall-free also isolates its curvature proof.
+  plot.wallPatternRect(428, 219, 35, 21, 6);
+  plot.wallPatternRect(508, 219, 35, 21, 6);
   // Equal-height warm/cool sources expose how each family responds to coloured
   // scene light. The centre column remains a lower-light comparison surface.
   plot.rect(377, 194, 5, 147, Material.Fire, 0.78, 677);
@@ -144,15 +149,11 @@ class ScenePlotter {
     }
   }
 
-  wallStripeRect(
-    x: number, y: number, width: number, height: number, firstWall: number, secondWall: number,
-  ): void {
+  wallPatternRect(x: number, y: number, width: number, height: number, wall: number): void {
     if (!this.simulation.paintWall) return;
     const right = x + width;
     const bottom = y + height;
     for (let py = y; py < bottom; py += 4) for (let px = x; px < right; px += 4) {
-      const wall = ((Math.floor((px - x) / 4) + Math.floor((py - y) / 8)) & 1)
-        ? secondWall : firstWall;
       this.simulation.paintWall(px, py, wall, 0);
     }
   }
@@ -220,6 +221,24 @@ class ScenePlotter {
       const dx = px - nearestX;
       const dy = py - nearestY;
       if (dx * dx + dy * dy <= radiusSquared) this.set(px, py, material);
+    }
+  }
+
+  curvaturePlate(
+    x: number, y: number, width: number, height: number, radius: number, material: Material,
+  ): void {
+    this.roundedRect(x, y, width, height, radius, material);
+    const right = x + width - 1;
+    const centreY = y + Math.floor(height / 2);
+    const notchRadius = 5;
+    for (let py = centreY - notchRadius; py <= centreY + notchRadius; py++) {
+      for (let px = right - notchRadius; px <= right; px++) {
+        const dx = px - (right + 1);
+        const dy = py - centreY;
+        if (dx * dx + dy * dy <= notchRadius * notchRadius) {
+          this.simulation.erase(px, py, 0);
+        }
+      }
     }
   }
 

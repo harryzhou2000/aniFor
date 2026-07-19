@@ -65,11 +65,19 @@ describe('render lab scene', () => {
     expect(first.cells()[229 * 612 + 545]).toBe(Material.ELEC);
     expect(first.cells()[229 * 612 + 431]).toBe(Material.Glass);
     expect(first.cells()[229 * 612 + 539]).toBe(Material.Ice);
+    expect(first.cells()[229 * 612 + 405]).toBe(Material.Metal);
+    expect(first.cells()[229 * 612 + 421]).toBe(Material.Empty);
+    expect(first.cells()[254 * 612 + 445]).toBe(Material.Plant);
+    expect(first.cells()[254 * 612 + 461]).toBe(Material.Empty);
+    expect(first.cells()[304 * 612 + 485]).toBe(Material.DTEC);
+    expect(first.cells()[304 * 612 + 501]).toBe(Material.Empty);
     expect(first.walls()[172 * 612 + 128]).not.toBe(0);
     expect(first.walls()[172 * 612 + 160]).not.toBe(0);
+    expect(first.walls()[229 * 612 + 405]).toBe(0);
     expect(first.walls()[229 * 612 + 445]).not.toBe(0);
     expect(first.walls()[229 * 612 + 525]).not.toBe(0);
-    expect(first.walls()[172 * 612 + 128]).not.toBe(first.walls()[172 * 612 + 132]);
+    expect(first.walls()[172 * 612 + 128]).toBe(first.walls()[172 * 612 + 132]);
+    expect(first.walls()[229 * 612 + 445]).toBe(first.walls()[229 * 612 + 525]);
   });
 
   it('exercises every non-neutral styled family plus an energy phase', () => {

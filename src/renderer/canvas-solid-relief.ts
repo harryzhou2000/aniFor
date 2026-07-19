@@ -102,3 +102,34 @@ export function applyCanvasTranslucentCaustic(
   color[1] -= split * 0.176;
   color[2] -= split * 1.20;
 }
+
+/**
+ * Gives exact Glass and Ice a broad body shell without sampling another field.
+ * `relief` is the existing signed macro height and `edgeLight` is the caller's
+ * already-computed semantic contour response. The operation is RGB-only and
+ * intentionally leaves every other translucent-rigid material unchanged.
+ */
+export function applyCanvasTranslucentLensShell(
+  color: Float32Array,
+  relief: number,
+  edgeLight: number,
+  material: number,
+): void {
+  if (material !== Material.Glass && material !== Material.Ice) return;
+  const rim = Math.min(7, Math.abs(edgeLight) * 0.32);
+  const absoluteRelief = Math.abs(relief);
+  if (material === Material.Glass) {
+    const crown = Math.max(0, relief) * 1.15;
+    const valley = Math.max(0, -relief);
+    const scale = 1 - (1.5 + valley * 0.35) / 255;
+    color[0] = color[0] * scale + (rim + crown) * 0.45;
+    color[1] = color[1] * scale + (rim + crown) * 0.78;
+    color[2] = color[2] * scale + rim + crown;
+    return;
+  }
+  const frostedRidge = absoluteRelief * 0.55;
+  const scale = 1 - (2.5 + absoluteRelief * 0.20) / 255;
+  color[0] = color[0] * scale + (rim * 0.70 + frostedRidge) * 0.58;
+  color[1] = color[1] * scale + (rim * 0.70 + frostedRidge) * 0.86;
+  color[2] = color[2] * scale + rim * 0.70 + frostedRidge;
+}

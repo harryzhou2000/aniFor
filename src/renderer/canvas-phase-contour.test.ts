@@ -142,6 +142,33 @@ describe('Canvas 2x phase contour scratch', () => {
     expect(farPeak).toBe(0);
   });
 
+  it('adds bounded solid contour curvature while preserving exact support and flat interiors', () => {
+    const value = fixture(7, 7);
+    for (let y = 1; y <= 5; y++) for (let x = 1; x <= 5; x++) {
+      paint(value, x, y, Material.Metal);
+    }
+    const flat = new CanvasPhaseContourScratch();
+    const curved = new CanvasPhaseContourScratch();
+    flat.rasterize({ ...value.input, solidCurvatureDepth: false });
+    curved.rasterize({ ...value.input, solidCurvatureDepth: true });
+
+    let changed = 0;
+    let peak = 0;
+    for (let index = 0; index < curved.outputWidth * curved.outputHeight; index++) {
+      const pixel = index * 4;
+      expect(curved.coverage[index]).toBe(flat.coverage[index]);
+      expect(curved.pixels[pixel + 3]).toBe(flat.pixels[pixel + 3]);
+      const difference = Math.abs(curved.pixels[pixel] - flat.pixels[pixel]);
+      if (difference > 0) changed++;
+      peak = Math.max(peak, difference);
+    }
+    expect(changed).toBeGreaterThan(0);
+    expect(peak).toBeGreaterThanOrEqual(2);
+    expect(peak).toBeLessThanOrEqual(12);
+    const centre = (6 * curved.outputStride + 6) * 4;
+    expect(curved.pixels.slice(centre, centre + 4)).toEqual(flat.pixels.slice(centre, centre + 4));
+  });
+
   it('uses the shared powder surface to smooth a shallow 4x slope without widening ownership', () => {
     const scale = 4;
     const width = 32;

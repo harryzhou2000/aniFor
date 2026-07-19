@@ -17,6 +17,8 @@ export interface BrowserInputAuditApi {
   setTranslucentFieldTransmission(enabled: boolean): void;
   setTranslucentBackdropRefraction(enabled: boolean): void;
   setSolidContactDepth(enabled: boolean): void;
+  setTranslucentLensShell(enabled: boolean): void;
+  setSolidCurvatureDepth(enabled: boolean): void;
   clear(): void;
   setRadius(radius: number): void;
   setMaterial(material: Material): void;

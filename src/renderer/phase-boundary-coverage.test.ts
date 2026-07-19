@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
-  hermiteDerivative, hermiteWeight, phaseContactCompatible, powderBulkWeight,
-  quadraticCoverageWeights, roundGrainCoverage, samplePhaseCoverage,
+  hermiteDerivative, hermiteSecondDerivative, hermiteWeight, phaseContactCompatible,
+  powderBulkWeight, quadraticCoverageWeights, roundGrainCoverage,
+  samplePhaseCoverage, samplePhaseCurvature,
 } from './phase-boundary-coverage';
 
 describe('phase boundary coverage', () => {
@@ -32,6 +33,23 @@ describe('phase boundary coverage', () => {
     expect(horizontal.density).toBeCloseTo(mirrored.density, 12);
     expect(horizontal.gradientX).toBeCloseTo(-mirrored.gradientX, 12);
     expect(horizontal.gradientY).toBeCloseTo(0, 12);
+  });
+
+  it('derives finite signed curvature while straight Hermite edges remain flat', () => {
+    expect(hermiteSecondDerivative(0)).toBe(6);
+    expect(hermiteSecondDerivative(0.5)).toBe(0);
+    expect(hermiteSecondDerivative(1)).toBe(-6);
+    expect(samplePhaseCurvature(1, 1, 1, 1, 0.25, 0.75)).toBe(0);
+    expect(samplePhaseCurvature(0, 1, 0, 1, 0.25, 0.75)).toBe(0);
+    expect(samplePhaseCurvature(0, 0, 1, 1, 0.75, 0.25)).toBe(0);
+
+    const convex = samplePhaseCurvature(1, 0, 0, 0, 0.35, 0.35);
+    const concave = samplePhaseCurvature(0, 1, 1, 1, 0.35, 0.35);
+    const rotated = samplePhaseCurvature(0, 1, 0, 0, 0.65, 0.35);
+    expect(Math.abs(convex)).toBeGreaterThan(0.1);
+    expect(concave).toBeCloseTo(-convex, 12);
+    expect(Math.abs(rotated)).toBeCloseTo(Math.abs(convex), 12);
+    expect(Number.isFinite(convex)).toBe(true);
   });
 
   it('evaluates every binary corner topology without overshoot', () => {

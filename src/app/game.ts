@@ -182,6 +182,12 @@ export class Game {
       setSolidContactDepth: (enabled) => {
         this.renderer.setSolidContactDepthEnabled(enabled);
       },
+      setTranslucentLensShell: (enabled) => {
+        this.renderer.setTranslucentLensShellEnabled(enabled);
+      },
+      setSolidCurvatureDepth: (enabled) => {
+        this.renderer.setSolidCurvatureDepthEnabled(enabled);
+      },
       clear: () => { this.simulation.clear(); },
       setRadius: (radius) => { this.radius = Math.max(0, Math.min(64, Math.round(radius))); },
       setMaterial: (material) => {

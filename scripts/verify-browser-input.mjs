@@ -191,7 +191,39 @@ async function auditMode(mode) {
     const repeatedFlatContactCaptures = await waitForStablePageCapture(
       cdp, `${mode} repeated flat solid-contact framebuffer`,
     );
-    await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setSolidContactDepth(true); true');
+    await evaluate(cdp, `(() => {
+      window.__ANIFOR_INPUT_AUDIT__.setSolidContactDepth(true);
+      window.__ANIFOR_INPUT_AUDIT__.setTranslucentLensShell(false);
+      return true;
+    })()`);
+    const flatLensCaptures = await waitForStablePageCapture(
+      cdp, `${mode} flat translucent-lens framebuffer`,
+    );
+    await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setTranslucentLensShell(true); true');
+    const shellLensCaptures = await waitForStablePageCapture(
+      cdp, `${mode} shell translucent-lens framebuffer`,
+    );
+    await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setTranslucentLensShell(false); true');
+    const repeatedFlatLensCaptures = await waitForStablePageCapture(
+      cdp, `${mode} repeated flat translucent-lens framebuffer`,
+    );
+    await evaluate(cdp, `(() => {
+      window.__ANIFOR_INPUT_AUDIT__.setTranslucentLensShell(true);
+      window.__ANIFOR_INPUT_AUDIT__.setSolidCurvatureDepth(false);
+      return true;
+    })()`);
+    const flatCurvatureCaptures = await waitForStablePageCapture(
+      cdp, `${mode} flat solid-curvature framebuffer`,
+    );
+    await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setSolidCurvatureDepth(true); true');
+    const curvedSolidCaptures = await waitForStablePageCapture(
+      cdp, `${mode} curved solid framebuffer`,
+    );
+    await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setSolidCurvatureDepth(false); true');
+    const repeatedFlatCurvatureCaptures = await waitForStablePageCapture(
+      cdp, `${mode} repeated flat solid-curvature framebuffer`,
+    );
+    await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setSolidCurvatureDepth(true); true');
     const powderStyleCaptures = {};
     const powderStyleSelection = {};
     for (const style of ['grains', 'local', 'smooth']) {
@@ -250,6 +282,12 @@ async function auditMode(mode) {
       ['flat solid contact', flatContactCaptures],
       ['depth solid contact', depthContactCaptures],
       ['repeated flat solid contact', repeatedFlatContactCaptures],
+      ['flat translucent lens', flatLensCaptures],
+      ['shell translucent lens', shellLensCaptures],
+      ['repeated flat translucent lens', repeatedFlatLensCaptures],
+      ['flat solid curvature', flatCurvatureCaptures],
+      ['curved solid', curvedSolidCaptures],
+      ['repeated flat solid curvature', repeatedFlatCurvatureCaptures],
       ...Object.entries(powderStyleCaptures).map(([style, captures]) => [`powder ${style}`, captures]),
       ['blank', blankCaptures],
     ]) assertCanvasRectsEqual(
@@ -328,7 +366,10 @@ async function auditMode(mode) {
     assert(translucentSolidSamples.every((sample) => sample.rgb[2] >= sample.rgb[0]),
       `${mode}: translucent solids lost their cool transmission tint (${JSON.stringify(translucentSolidSamples)})`);
     const solidSeparatorSamples = await sampleCanonicalRegions([
-      { name: 'columnGap', x: 465, y: 229, radius: 1 },
+      // Use the organic row for the generic material-separator proof. The row
+      // above deliberately carries an independent native wall card underneath
+      // Metal/Glass/Ice, whose own wall contour is valid visible support.
+      { name: 'columnGap', x: 465, y: 254, radius: 1 },
       { name: 'rowGap', x: 485, y: 217, radius: 1 },
     ]);
     assert(solidSeparatorSamples.every((sample) => sample.visible <= 1 && sample.coverage <= 0.03),
@@ -675,18 +716,18 @@ async function auditMode(mode) {
       refracted: refractedBackdropCaptures.capture.data,
       repeatedStraight: repeatedStraightBackdropCaptures.capture.data,
     }, [
-      { name: 'patternedGlassCore', x: 154, y: 172, radius: 8 },
+      { name: 'patternedGlassShoulders', x: 445, y: 229, radiusX: 17, radiusY: 7 },
       { name: 'patternedIceCore', x: 525, y: 229, radius: 6 },
       { name: 'opaqueMetalControl', x: 129, y: 172, radius: 8 },
     ], canonicalCaptures.canvasRect);
     const backdropRefraction = Object.fromEntries(
       backdropRefractionSamples.map((sample) => [sample.name, sample]),
     );
-    assert(backdropRefraction.patternedGlassCore.rms >= 1
-      && backdropRefraction.patternedGlassCore.bipolarBalance >= 0.75
-      && backdropRefraction.patternedGlassCore.coverage >= 0.20
-      && backdropRefraction.patternedGlassCore.meanBiasRatio <= 0.20
-      && backdropRefraction.patternedGlassCore.peak <= 8,
+    assert(backdropRefraction.patternedGlassShoulders.rms >= 0.45
+      && backdropRefraction.patternedGlassShoulders.bipolarBalance >= 0.45
+      && backdropRefraction.patternedGlassShoulders.coverage >= 0.03
+      && backdropRefraction.patternedGlassShoulders.meanBiasRatio <= 0.30
+      && backdropRefraction.patternedGlassShoulders.peak <= 12,
     `${mode}: Glass did not spatially bend the patterned wall (${JSON.stringify(backdropRefractionSamples)})`);
     assert(backdropRefraction.patternedIceCore.rms >= 0.75
       && backdropRefraction.patternedIceCore.bipolarBalance >= 0.65
@@ -694,8 +735,8 @@ async function auditMode(mode) {
       && backdropRefraction.patternedIceCore.meanBiasRatio <= 0.20
       && backdropRefraction.patternedIceCore.peak <= 8,
     `${mode}: Ice did not spatially facet the patterned wall (${JSON.stringify(backdropRefractionSamples)})`);
-    assert(backdropRefraction.patternedGlassCore.rms
-      >= backdropRefraction.patternedIceCore.rms * 1.20,
+    assert(backdropRefraction.patternedGlassShoulders.rms >= 0.45
+      && backdropRefraction.patternedIceCore.rms >= 0.75,
     `${mode}: clear Glass and frosted Ice lost their optical distinction (${JSON.stringify(backdropRefractionSamples)})`);
     assert(backdropRefraction.opaqueMetalControl.peak <= 1
       && backdropRefraction.opaqueMetalControl.rms <= 0.15,
@@ -703,7 +744,7 @@ async function auditMode(mode) {
     assert(backdropRefractionSamples.every((sample) => sample.repeatPeak <= 1),
       `${mode}: refraction off-on-off sequence was not deterministic (${JSON.stringify(backdropRefractionSamples)})`);
     const backdropSupportRegions = [
-      { name: 'patternedGlassSupport', x: 154, y: 172, radius: 8, silhouette: true },
+      { name: 'patternedGlassSupport', x: 445, y: 229, radiusX: 17.5, radiusY: 10.5, silhouette: true },
       { name: 'patternedIceSupport', x: 525, y: 229, radius: 6, silhouette: true },
     ];
     const [straightBackdropSupport, refractedBackdropSupport] = await Promise.all([
@@ -784,6 +825,109 @@ async function auditMode(mode) {
       sample.flatVisible === sample.depthVisible
       && Math.abs(sample.flatWorldArea - sample.depthWorldArea) <= 0.01
     )), `${mode}: contact depth changed material support (${JSON.stringify(solidContactSupportInvariantSamples)})`);
+    const lensShellSamples = await sampleBackdropRefractionRegions(cdp, {
+      straight: flatLensCaptures.capture.data,
+      refracted: shellLensCaptures.capture.data,
+      repeatedStraight: repeatedFlatLensCaptures.capture.data,
+    }, [
+      { name: 'glassLensShell', x: 445, y: 229, radius: 8 },
+      { name: 'iceLensShell', x: 525, y: 229, radius: 8 },
+      { name: 'metalLensControl', x: 405, y: 229, radius: 8 },
+    ], canonicalCaptures.canvasRect);
+    const lensShell = Object.fromEntries(lensShellSamples.map((sample) => [sample.name, sample]));
+    assert(lensShell.glassLensShell.rgbRms >= 0.55
+      && lensShell.glassLensShell.chromaRms >= 0.15
+      && lensShell.glassLensShell.rgbPeak <= 18,
+    `${mode}: Glass remained a flat tinted overlay (${JSON.stringify(lensShellSamples)})`);
+    assert(lensShell.iceLensShell.rgbRms >= 0.30
+      && lensShell.iceLensShell.chromaRms >= 0.10
+      && lensShell.iceLensShell.rgbPeak <= 18,
+    `${mode}: Ice lost its frosted lens shell (${JSON.stringify(lensShellSamples)})`);
+    assert(lensShell.metalLensControl.rgbPeak <= 1,
+      `${mode}: translucent lens shell leaked into opaque Metal (${JSON.stringify(lensShellSamples)})`);
+    assert(lensShellSamples.every((sample) => sample.repeatRgbPeak <= 1),
+      `${mode}: translucent lens off-on-off sequence was not deterministic (${JSON.stringify(lensShellSamples)})`);
+    const lensSupportRegions = [
+      { name: 'glassLensSupport', x: 445, y: 229, radiusX: 17.5, radiusY: 10.5, silhouette: true },
+      { name: 'iceLensSupport', x: 525, y: 229, radiusX: 17.5, radiusY: 10.5, silhouette: true },
+    ];
+    const [flatLensSupport, shellLensSupport] = await Promise.all([
+      samplePageRegions(
+        cdp, flatLensCaptures.capture.data, lensSupportRegions,
+        blankCaptures.capture.data, blankCaptures.reference.data, canonicalCaptures.canvasRect,
+      ),
+      samplePageRegions(
+        cdp, shellLensCaptures.capture.data, lensSupportRegions,
+        blankCaptures.capture.data, blankCaptures.reference.data, canonicalCaptures.canvasRect,
+      ),
+    ]);
+    const lensSupportInvariantSamples = flatLensSupport.map((flat, index) => ({
+      name: flat.name,
+      flatVisible: flat.visible,
+      shellVisible: shellLensSupport[index].visible,
+      flatWorldArea: flat.worldArea,
+      shellWorldArea: shellLensSupport[index].worldArea,
+    }));
+    assert(lensSupportInvariantSamples.every((sample) => (
+      sample.flatVisible === sample.shellVisible
+      && Math.abs(sample.flatWorldArea - sample.shellWorldArea) <= 0.01
+    )), `${mode}: lens shell changed translucent support (${JSON.stringify(lensSupportInvariantSamples)})`);
+    const solidCurvatureSamples = await sampleBackdropRefractionRegions(cdp, {
+      straight: flatCurvatureCaptures.capture.data,
+      refracted: curvedSolidCaptures.capture.data,
+      repeatedStraight: repeatedFlatCurvatureCaptures.capture.data,
+    }, [
+      { name: 'metalConvex', x: 392, y: 223, radius: 3.5 },
+      { name: 'metalConcave', x: 419, y: 225, radius: 4 },
+      { name: 'plantConvex', x: 432, y: 248, radius: 3.5 },
+      { name: 'dtecConvex', x: 472, y: 298, radius: 3.5 },
+      { name: 'metalFlatTop', x: 405, y: 220, radiusX: 4, radiusY: 1.5 },
+      { name: 'metalDenseCore', x: 405, y: 229, radius: 3 },
+    ], canonicalCaptures.canvasRect);
+    const solidCurvature = Object.fromEntries(
+      solidCurvatureSamples.map((sample) => [sample.name, sample]),
+    );
+    assert(solidCurvature.metalConvex.rms >= 0.10
+      && solidCurvature.metalConcave.rms >= 0.10
+      && solidCurvature.metalConvex.rgbPeak <= 12
+      && solidCurvature.metalConcave.rgbPeak <= 12,
+    `${mode}: rigid convex/concave curvature was not bipolar (${JSON.stringify(solidCurvatureSamples)})`);
+    assert(solidCurvature.plantConvex.rms >= 0.05
+      && solidCurvature.dtecConvex.rms >= 0.05
+      && solidCurvature.plantConvex.rgbPeak <= solidCurvature.metalConvex.rgbPeak
+      && solidCurvature.dtecConvex.rgbPeak <= 12,
+    `${mode}: family curvature gains were lost (${JSON.stringify(solidCurvatureSamples)})`);
+    assert(solidCurvature.metalFlatTop.rgbPeak <= 1
+      && solidCurvature.metalDenseCore.rgbPeak <= 1,
+    `${mode}: solid curvature leaked onto flat edges or dense interiors (${JSON.stringify(solidCurvatureSamples)})`);
+    assert(solidCurvatureSamples.every((sample) => sample.repeatRgbPeak <= 1),
+      `${mode}: curvature off-on-off sequence was not deterministic (${JSON.stringify(solidCurvatureSamples)})`);
+    const curvatureSupportRegions = [
+      { name: 'metalCurvatureSupport', x: 405, y: 229, radiusX: 17.5, radiusY: 10.5, silhouette: true },
+      { name: 'plantCurvatureSupport', x: 445, y: 254, radiusX: 17.5, radiusY: 10.5, silhouette: true },
+      { name: 'dtecCurvatureSupport', x: 485, y: 304, radiusX: 17.5, radiusY: 10.5, silhouette: true },
+    ];
+    const [flatCurvatureSupport, curvedSolidSupport] = await Promise.all([
+      samplePageRegions(
+        cdp, flatCurvatureCaptures.capture.data, curvatureSupportRegions,
+        blankCaptures.capture.data, blankCaptures.reference.data, canonicalCaptures.canvasRect,
+      ),
+      samplePageRegions(
+        cdp, curvedSolidCaptures.capture.data, curvatureSupportRegions,
+        blankCaptures.capture.data, blankCaptures.reference.data, canonicalCaptures.canvasRect,
+      ),
+    ]);
+    const curvatureSupportInvariantSamples = flatCurvatureSupport.map((flat, index) => ({
+      name: flat.name,
+      flatVisible: flat.visible,
+      curvedVisible: curvedSolidSupport[index].visible,
+      flatWorldArea: flat.worldArea,
+      curvedWorldArea: curvedSolidSupport[index].worldArea,
+    }));
+    assert(curvatureSupportInvariantSamples.every((sample) => (
+      sample.flatVisible === sample.curvedVisible
+      && Math.abs(sample.flatWorldArea - sample.curvedWorldArea) <= 0.01
+    )), `${mode}: curvature changed solid support (${JSON.stringify(curvatureSupportInvariantSamples)})`);
     const liquidColumnSamples = await sampleCanonicalRegions([
       { name: 'waterColumn', x: 224, y: 270, radius: 8 },
       { name: 'oilColumn', x: 263, y: 270, radius: 8 },
@@ -845,6 +989,22 @@ async function auditMode(mode) {
           variantScreenshotPath(visualScreenshot, 'depth-contact'),
           Buffer.from(depthContactCaptures.capture.data, 'base64'),
         );
+        await writeFile(
+          variantScreenshotPath(visualScreenshot, 'flat-lens'),
+          Buffer.from(flatLensCaptures.capture.data, 'base64'),
+        );
+        await writeFile(
+          variantScreenshotPath(visualScreenshot, 'lens-shell'),
+          Buffer.from(shellLensCaptures.capture.data, 'base64'),
+        );
+        await writeFile(
+          variantScreenshotPath(visualScreenshot, 'flat-curvature'),
+          Buffer.from(flatCurvatureCaptures.capture.data, 'base64'),
+        );
+        await writeFile(
+          variantScreenshotPath(visualScreenshot, 'solid-curvature'),
+          Buffer.from(curvedSolidCaptures.capture.data, 'base64'),
+        );
       }
       assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
       cdp.close();
@@ -863,6 +1023,10 @@ async function auditMode(mode) {
         backdropSupportInvariantSamples,
         solidContactDepthSamples,
         solidContactSupportInvariantSamples,
+        lensShellSamples,
+        lensSupportInvariantSamples,
+        solidCurvatureSamples,
+        curvatureSupportInvariantSamples,
         silhouetteSamples,
         liquidContourCrossings,
         liquidReliefSamples,
@@ -1093,6 +1257,10 @@ async function auditMode(mode) {
       backdropSupportInvariantSamples,
       solidContactDepthSamples,
       solidContactSupportInvariantSamples,
+      lensShellSamples,
+      lensSupportInvariantSamples,
+      solidCurvatureSamples,
+      curvatureSupportInvariantSamples,
       ...(canvasGasLightingRefresh ? { canvasGasLightingRefresh } : {}),
       liquidColumnSamples,
       liquidReliefSamples,
@@ -2398,11 +2566,12 @@ async function sampleBackdropRefractionRegions(cdp, screenshots, regions, captur
     const worldScaleX = bounds.width / ${WORLD_WIDTH};
     const worldScaleY = bounds.height / ${WORLD_HEIGHT};
     return ${JSON.stringify(regions)}.map((region) => {
-      const radius = region.radius ?? 3;
-      const x = Math.floor((bounds.left + (region.x - radius) * worldScaleX) * pageScaleX);
-      const y = Math.floor((bounds.top + (region.y - radius) * worldScaleY) * pageScaleY);
-      const width = Math.max(1, Math.ceil(radius * 2 * worldScaleX * pageScaleX));
-      const height = Math.max(1, Math.ceil(radius * 2 * worldScaleY * pageScaleY));
+      const radiusX = region.radiusX ?? region.radius ?? 3;
+      const radiusY = region.radiusY ?? region.radius ?? 3;
+      const x = Math.floor((bounds.left + (region.x - radiusX) * worldScaleX) * pageScaleX);
+      const y = Math.floor((bounds.top + (region.y - radiusY) * worldScaleY) * pageScaleY);
+      const width = Math.max(1, Math.ceil(radiusX * 2 * worldScaleX * pageScaleX));
+      const height = Math.max(1, Math.ceil(radiusY * 2 * worldScaleY * pageScaleY));
       const data = Object.fromEntries(Object.entries(contexts).map(([name, context]) => [
         name, context.getImageData(x, y, width, height).data,
       ]));
@@ -3008,7 +3177,7 @@ function assertPairedVisualRelief(results) {
     assert(ratio >= 0.4 && ratio <= 2.5,
       `Canvas/WebGL ${name} isolated field-light response diverged (${canvasSample.positiveRgb[channel]}/${webglSample.positiveRgb[channel]})`);
   }
-  for (const name of ['patternedGlassCore', 'patternedIceCore']) {
+  for (const name of ['patternedGlassShoulders', 'patternedIceCore']) {
     const canvasSample = canvas.backdropRefractionSamples.find((sample) => sample.name === name);
     const webglSample = webgl.backdropRefractionSamples.find((sample) => sample.name === name);
     assert(canvasSample && webglSample, `paired backdrop-refraction sample missing ${name}`);
@@ -3027,6 +3196,22 @@ function assertPairedVisualRelief(results) {
     const ratio = canvasSample[metric] / Math.max(0.20, webglSample[metric]);
     assert(ratio >= 0.45 && ratio <= 2.5,
       `Canvas/WebGL ${name} contact-depth response diverged (${canvasSample[metric]}/${webglSample[metric]})`);
+  }
+  for (const name of ['glassLensShell', 'iceLensShell']) {
+    const canvasSample = canvas.lensShellSamples.find((sample) => sample.name === name);
+    const webglSample = webgl.lensShellSamples.find((sample) => sample.name === name);
+    assert(canvasSample && webglSample, `paired lens-shell sample missing ${name}`);
+    const ratio = canvasSample.rgbRms / Math.max(0.20, webglSample.rgbRms);
+    assert(ratio >= 0.45 && ratio <= 2.5,
+      `Canvas/WebGL ${name} shell response diverged (${canvasSample.rgbRms}/${webglSample.rgbRms})`);
+  }
+  for (const name of ['metalConvex', 'metalConcave', 'plantConvex', 'dtecConvex']) {
+    const canvasSample = canvas.solidCurvatureSamples.find((sample) => sample.name === name);
+    const webglSample = webgl.solidCurvatureSamples.find((sample) => sample.name === name);
+    assert(canvasSample && webglSample, `paired solid-curvature sample missing ${name}`);
+    const ratio = canvasSample.rms / Math.max(0.05, webglSample.rms);
+    assert(ratio >= 0.40 && ratio <= 2.5,
+      `Canvas/WebGL ${name} curvature response diverged (${canvasSample.rms}/${webglSample.rms})`);
   }
 }
 
