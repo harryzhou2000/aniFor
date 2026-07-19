@@ -1,7 +1,12 @@
 export const FIELD_OUTPUT_SCALE = 2;
 export type FieldOutputScale = 1 | 2 | 4 | 8;
-export const WEBGL_OUTPUT_PIXEL_BUDGET = 8_388_608;
-export const WEBGL_OUTPUT_DIMENSION_BUDGET = 4_096;
+// 612x384 at true 8x is 15,040,512 pixels and 4,896 pixels wide. Keep the
+// ceiling just above that canonical target while still rejecting accidental
+// larger allocations. High scales disable redundant MSAA in the presenter.
+export const WEBGL_OUTPUT_PIXEL_BUDGET = 16_777_216;
+export const WEBGL_OUTPUT_DIMENSION_BUDGET = 8_192;
+export const CANVAS_FALLBACK_PIXEL_BUDGET = 8_388_608;
+export const CANVAS_FALLBACK_DIMENSION_BUDGET = 4_096;
 
 export interface RenderSize { readonly width: number; readonly height: number }
 
@@ -23,9 +28,9 @@ export function resolveFieldOutputScale(search = globalThis.location?.search ?? 
 }
 
 /**
- * Keeps a single WebGL presentation target below a conservative watchdog and
- * texture-size budget. Small worlds may still use true 8×; the canonical world
- * safely steps 8× down to 4× while Canvas remains able to exercise true 8×.
+ * Keeps a single WebGL presentation target below an explicit watchdog and
+ * texture-size budget. The canonical 612x384 world fits true 8×; larger worlds
+ * still step down deterministically.
  */
 export function safeWebGLOutputScale(
   width: number,

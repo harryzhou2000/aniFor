@@ -54,8 +54,16 @@ describe('render lab scene', () => {
     expect(first.cells()[141 * 612 + 170]).toBe(Material.Sand);
     expect(first.cells()[50 * 612 + 148]).toBe(Material.Clay);
     expect(first.cells()[80 * 612 + 163]).toBe(Material.Concrete);
+    expect(first.cells()[120 * 612 + 148]).toBe(Material.Clay);
+    expect(first.cells()[120 * 612 + 163]).toBe(Material.Concrete);
     expect(first.cells()[62 * 612 + 144]).toBe(Material.Empty);
     expect(first.cells()[73 * 612 + 159]).toBe(Material.Empty);
+    expect(first.cells()[93 * 612 + 152]).toBe(Material.Empty);
+    expect(first.cells()[110 * 612 + 167]).toBe(Material.Empty);
+    expect(first.cells()[229 * 612 + 425]).toBe(Material.Fire);
+    expect(first.cells()[229 * 612 + 545]).toBe(Material.ELEC);
+    expect(first.cells()[229 * 612 + 431]).toBe(Material.Glass);
+    expect(first.cells()[229 * 612 + 539]).toBe(Material.Ice);
   });
 
   it('exercises every non-neutral styled family plus an energy phase', () => {

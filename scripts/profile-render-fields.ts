@@ -6,7 +6,9 @@ import { shadeCanvasEnergy } from '../src/renderer/canvas-energy-style';
 import {
   applyCanvasRenderTraits, CANVAS_RENDER_TRAIT_CLOCK_SIZE, updateCanvasRenderTraitClock,
 } from '../src/renderer/canvas-render-traits';
-import { lightCanvasSurface } from '../src/renderer/canvas-surface-light';
+import {
+  CANVAS_TRANSLUCENT_FIELD_GAIN, canvasTranslucentFieldExposure, lightCanvasSurface,
+} from '../src/renderer/canvas-surface-light';
 import { EmissionField } from '../src/renderer/emission-field';
 import { LiquidDensityField } from '../src/renderer/liquid-density-field';
 import {
@@ -95,6 +97,9 @@ for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) {
 }
 const solidSeed = seedPixels(solidMaterials);
 const solidPixels = new Uint8ClampedArray(solidSeed.length);
+const denseTranslucentMaterials = new Uint8Array(width * height).fill(Material.Glass);
+const denseTranslucentSeed = seedPixels(denseTranslucentMaterials);
+const denseTranslucentPixels = new Uint8ClampedArray(denseTranslucentSeed.length);
 const boundedTwoByTwoMaterials = new Uint8Array(width * height).fill(Material.Wood);
 for (let y = 2; y < height - 2; y += 4) for (let x = 2; x < width - 2; x += 4) {
   boundedTwoByTwoMaterials[y * width + x] = Material.Empty;
@@ -131,6 +136,7 @@ const traitCompositePixels = new Uint8ClampedArray(width * height * 4);
 let traitChecksum = 0;
 let solidReliefChecksum = 0;
 let liquidLightChecksum = 0;
+let translucentLightChecksum = 0;
 const profileEmission = new Uint8Array(emission.bytes.length);
 for (let y = 0; y < emission.height; y++) for (let x = 0; x < emission.width; x++) {
   const offset = (y * emission.width + x) * 4;
@@ -144,6 +150,10 @@ for (let y = 0; y < emission.height; y++) for (let x = 0; x < emission.width; x+
 const profileAtmosphereLight = {
   bytes: profileEmission, width: emission.width, height: emission.height,
 } as const;
+const localizedEmissionMaterials = new Uint8Array(width * height);
+localizedEmissionMaterials[Math.floor(height / 2) * width + Math.floor(width / 2)] = Material.Fire;
+const localizedEmission = new EmissionField(width, height, emissiveByMaterial, colorByMaterial);
+localizedEmission.update(localizedEmissionMaterials);
 
 function seedPixels(source: Uint8Array, include = new Uint8Array(256).fill(1)): Uint8ClampedArray {
   const pixels = new Uint8ClampedArray(source.length * 4);
@@ -205,6 +215,50 @@ function profileTraitComposite(traits: number): ReturnType<typeof sample> {
   return timing;
 }
 
+function profileTranslucentFieldTransmission(): ReturnType<typeof sample> {
+  const optics = paletteBytes[Material.Glass * 4 + 3];
+  const exposure = canvasTranslucentFieldExposure(optics, true, false, true);
+  const timing = sample(() => {
+    denseTranslucentPixels.set(denseTranslucentSeed);
+    for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) {
+      const pixel = (y * width + x) * 4;
+      lightCanvasSurface(
+        denseTranslucentPixels, pixel, profileEmission, emission.width, emission.height,
+        width, height, x, y, RenderProfile.Rigid, exposure, CANVAS_TRANSLUCENT_FIELD_GAIN,
+      );
+    }
+  });
+  // Consume sparse output only after the timed production-shaped loop. This
+  // keeps the benchmark honest while still preventing dead-code elimination.
+  for (let offset = 0; offset < denseTranslucentPixels.length; offset += 4_096) {
+    translucentLightChecksum += denseTranslucentPixels[offset]
+      + denseTranslucentPixels[offset + 1] + denseTranslucentPixels[offset + 2];
+  }
+  return timing;
+}
+
+function profileLocalizedTranslucentFieldTransmission(): ReturnType<typeof sample> {
+  const optics = paletteBytes[Material.Glass * 4 + 3];
+  const exposure = canvasTranslucentFieldExposure(optics, true, false, true);
+  const timing = sample(() => {
+    denseTranslucentPixels.set(denseTranslucentSeed);
+    for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) {
+      if (!localizedEmission.mayLightWorldCell(x, y)) continue;
+      const pixel = (y * width + x) * 4;
+      lightCanvasSurface(
+        denseTranslucentPixels, pixel,
+        localizedEmission.bytes, localizedEmission.width, localizedEmission.height,
+        width, height, x, y, RenderProfile.Rigid, exposure, CANVAS_TRANSLUCENT_FIELD_GAIN,
+      );
+    }
+  });
+  for (let offset = 0; offset < denseTranslucentPixels.length; offset += 4_096) {
+    translucentLightChecksum += denseTranslucentPixels[offset]
+      + denseTranslucentPixels[offset + 1] + denseTranslucentPixels[offset + 2];
+  }
+  return timing;
+}
+
 console.log(JSON.stringify({
   fixture: `${width}x${height}`,
   atmosphere: {
@@ -227,7 +281,8 @@ console.log(JSON.stringify({
     runtimeKnownScratchBytes: solidPixels.byteLength + liquidPixels.byteLength
       + liquidSurfaceScratch.rowBytes.byteLength
       + energyCore.byteLength + energyGlow.byteLength + traitRgb.byteLength + traitClock.byteLength,
-    diagnosticScratchBytes: traitCompositePixels.byteLength,
+    diagnosticScratchBytes: traitCompositePixels.byteLength + denseTranslucentPixels.byteLength
+      + localizedEmissionMaterials.byteLength + localizedEmission.allocatedByteLength,
     atmosphereRelief: sample(() => {
       shadeCanvasAtmosphere(atmospherePixels, atmosphere.bytes, atmosphere.width, atmosphere.height);
     }),
@@ -297,6 +352,8 @@ console.log(JSON.stringify({
         );
       }
     }),
+    translucentFieldTransmissionWorstCase: profileTranslucentFieldTransmission(),
+    translucentFieldTransmissionLocalizedSource: profileLocalizedTranslucentFieldTransmission(),
     liquidSurface: sample(() => {
       liquidPixels.set(liquidSeed);
       reconstructLiquidSurface(
@@ -356,4 +413,5 @@ console.log(JSON.stringify({
   traitChecksum: Math.round(traitChecksum),
   solidReliefChecksum: Math.round(solidReliefChecksum),
   liquidLightChecksum: Math.round(liquidLightChecksum),
+  translucentLightChecksum: Math.round(translucentLightChecksum),
 }, null, 2));

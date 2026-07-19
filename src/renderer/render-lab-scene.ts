@@ -36,9 +36,11 @@ export function applyRenderLabScene(simulation: SimulationBackend): void {
   powderDensity.forEach((density, band) => {
     plot.rect(18 + band * 31, 20, 29, 118, Material.Sand, density, 101 + band);
   });
-  // Replace the densest band's centre with two exact deep powder columns. Side
-  // notches and ledges exercise the Smooth-vs-Local contract for Clay and
-  // Concrete without turning the fixture into an idealized heap.
+  plot.rect(18, 112, 153, 26, Material.Dust, 0.18, 151);
+  plot.rect(112, 112, 59, 26, Material.Salt, 0.22, 157);
+  // Replace the densest band's centre after the crossing Dust/Salt layers so
+  // the full height remains authoritative Clay/Concrete. Side notches and
+  // ledges exercise the Smooth-vs-Local contract without an idealized heap.
   plot.eraseRect(141, 20, 30, 118);
   plot.rect(143, 27, 11, 111, Material.Clay, 1, 0);
   plot.rect(158, 39, 11, 99, Material.Concrete, 1, 0);
@@ -48,8 +50,6 @@ export function applyRenderLabScene(simulation: SimulationBackend): void {
   plot.eraseRect(166, 108, 3, 5);
   plot.rect(140, 132, 17, 6, Material.Clay, 1, 0);
   plot.rect(155, 132, 17, 6, Material.Concrete, 1, 0);
-  plot.rect(18, 112, 153, 26, Material.Dust, 0.18, 151);
-  plot.rect(112, 112, 59, 26, Material.Salt, 0.22, 157);
   // A shallow, exact settled slope exposes one-cell sawtooth silhouettes that
   // round isolated-grain tests and vertical density bands cannot reveal.
   plot.slope(18, 141, 153, 9, Material.Sand);
@@ -115,6 +115,11 @@ export function applyRenderLabScene(simulation: SimulationBackend): void {
     if (material === Material.Metal) plot.roundedRect(x, y, 35, 21, 6, material);
     else plot.rect(x, y, 35, 21, material, 0.90, 601 + index);
   });
+  // Narrow separator lights prove that dense translucent bodies transmit the
+  // existing emission field instead of reading as pale matte tiles. They do
+  // not overlap the Glass/Ice semantic cells or the neighbouring opaque tiles.
+  plot.rect(424, 221, 3, 17, Material.Fire, 1, 0);
+  plot.rect(544, 221, 3, 17, Material.ELEC, 1, 0);
   // Equal-height warm/cool sources expose how each family responds to coloured
   // scene light. The centre column remains a lower-light comparison surface.
   plot.rect(377, 194, 5, 147, Material.Fire, 0.78, 677);

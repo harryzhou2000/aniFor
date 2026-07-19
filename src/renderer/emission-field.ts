@@ -13,6 +13,10 @@ export class EmissionField {
   readonly height: number;
   readonly bytes: Uint8Array;
   hasLight = false;
+  private minimumLightX = 0;
+  private maximumLightX = -1;
+  private minimumLightY = 0;
+  private maximumLightY = -1;
   private readonly seed: Float32Array;
   private readonly horizontal: Float32Array;
   private readonly blurred: Float32Array;
@@ -42,6 +46,23 @@ export class EmissionField {
 
   get allocatedByteLength(): number {
     return this.bytes.byteLength + this.seed.byteLength + this.horizontal.byteLength + this.blurred.byteLength;
+  }
+
+  /** Cheap rejection before a caller pays for a four-tap coloured sample. */
+  mayLightWorldCell(x: number, y: number): boolean {
+    if (!this.hasLight) return false;
+    const fieldX = Math.max(0, Math.min(
+      this.width - 1, (x + 0.5) * this.width / this.worldWidth - 0.5,
+    ));
+    const fieldY = Math.max(0, Math.min(
+      this.height - 1, (y + 0.5) * this.height / this.worldHeight - 0.5,
+    ));
+    const x0 = Math.floor(fieldX);
+    const y0 = Math.floor(fieldY);
+    const x1 = Math.min(this.width - 1, x0 + 1);
+    const y1 = Math.min(this.height - 1, y0 + 1);
+    return x1 >= this.minimumLightX && x0 <= this.maximumLightX
+      && y1 >= this.minimumLightY && y0 <= this.maximumLightY;
   }
 
   private seedSources(materials: Uint8Array): void {
@@ -131,6 +152,10 @@ export class EmissionField {
 
   private packBytes(): void {
     this.hasLight = false;
+    this.minimumLightX = this.width;
+    this.maximumLightX = -1;
+    this.minimumLightY = this.height;
+    this.maximumLightY = -1;
     for (let offset = 0; offset < this.bytes.length; offset += 4) {
       const blurredDensity = this.blurred[offset + 3];
       const density = Math.min(1, Math.max(this.seed[offset + 3] * 0.9, blurredDensity * GLOW_GAIN));
@@ -145,7 +170,16 @@ export class EmissionField {
       this.bytes[offset + 1] = Math.min(255, Math.round(this.blurred[offset + 1] / blurredDensity * 255));
       this.bytes[offset + 2] = Math.min(255, Math.round(this.blurred[offset + 2] / blurredDensity * 255));
       this.bytes[offset + 3] = Math.round(density * 255);
-      this.hasLight ||= this.bytes[offset + 3] > 0;
+      if (this.bytes[offset + 3] > 0) {
+        const sample = offset / 4;
+        const x = sample % this.width;
+        const y = Math.floor(sample / this.width);
+        this.minimumLightX = Math.min(this.minimumLightX, x);
+        this.maximumLightX = Math.max(this.maximumLightX, x);
+        this.minimumLightY = Math.min(this.minimumLightY, y);
+        this.maximumLightY = Math.max(this.maximumLightY, y);
+        this.hasLight = true;
+      }
     }
   }
 }

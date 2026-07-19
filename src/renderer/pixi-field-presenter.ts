@@ -70,6 +70,7 @@ uniform float uTime;
 uniform float uHighQuality;
 uniform float uGasFieldLighting;
 uniform float uLiquidFieldLighting;
+uniform float uTranslucentFieldTransmission;
 uniform float uPowderStyle;
 vec4 field(vec2 uv) { return texture(uFieldTexture, clamp(uv, uTexel * 0.5, vec2(1.0) - uTexel * 0.5)); }
 vec4 wallField(vec2 uv) { return texture(uWallTexture, clamp(uv, uTexel * 0.5, vec2(1.0) - uTexel * 0.5)); }
@@ -909,6 +910,16 @@ void main() {
     }
     if (translucentSurface > 0.5) {
       alpha *= mix(0.74, 0.88, solidDepth);
+      if (uTranslucentFieldTransmission > 0.5 && !materialEmissive
+        && solidInterior > 0.01 && emissionState.a > 0.002) {
+        // Dense glass carries existing coloured scene light through its body.
+        // Reuse the already sampled emission field and screen-blend in place;
+        // support, alpha, ownership, texture count, and pass count are unchanged.
+        float transmittedReach = smoothstep(0.002, 0.42, emissionState.a);
+        float transmittedWeight = solidInterior * mix(0.10, 0.17, solidDepth);
+        vec3 transmittedLight = emissionState.rgb * transmittedReach * transmittedWeight;
+        color += (vec3(1.0) - clamp(color, 0.0, 1.0)) * transmittedLight;
+      }
     }
     if (roughSurface > 0.5 || (optics < 0.5 && profile == 1.0)) {
       vec2 subcell = floor(fract(fieldPosition) * 2.0);
@@ -1080,6 +1091,7 @@ export class PixiFieldPresenter {
     private readonly host: HTMLElement,
     private readonly width: number,
     private readonly height: number,
+    outputScale: FieldOutputScale,
     materials: readonly RenderMaterialStyle[],
     fieldSet?: RenderFieldSet,
   ) {
@@ -1150,11 +1162,15 @@ export class PixiFieldPresenter {
       uAtmosphereTexel: { value: new Float32Array([1 / this.fieldSet.atmosphere.width, 1 / this.fieldSet.atmosphere.height]), type: 'vec2<f32>' },
       uEmissionTexel: { value: new Float32Array([1 / this.fieldSet.emission.width, 1 / this.fieldSet.emission.height]), type: 'vec2<f32>' },
       uTime: { value: 0, type: 'f32' },
-      // Width is deterministic in browsers and in the headless framebuffer gate;
-      // compact/mobile cold loads remain on the zero-extra-probe path.
-      uHighQuality: { value: matchMedia('(min-width: 800px)').matches ? 1 : 0, type: 'f32' },
+      // At 8x, the supersampled analytic boundary already supplies detail. Drop
+      // diagonal/ring probes so the 15M-pixel frame remains watchdog-safe.
+      uHighQuality: {
+        value: matchMedia('(min-width: 800px)').matches && outputScale < 8 ? 1 : 0,
+        type: 'f32',
+      },
       uGasFieldLighting: { value: 1, type: 'f32' },
       uLiquidFieldLighting: { value: 1, type: 'f32' },
+      uTranslucentFieldTransmission: { value: 1, type: 'f32' },
       uPowderStyle: { value: powderRenderStyleValue('smooth'), type: 'f32' },
     });
     const filter = Filter.from({
@@ -1203,7 +1219,9 @@ export class PixiFieldPresenter {
     try {
       await app.init({
         width, height,
-        preference: 'webgl', backgroundAlpha: 0, antialias: true,
+        // MSAA is redundant once every simulation cell owns 4x4 or 8x8 real
+        // samples, and at 8x it would multiply a 60 MiB colour target.
+        preference: 'webgl', backgroundAlpha: 0, antialias: outputScale <= 2,
         resolution: outputScale, autoDensity: true, autoStart: false,
       });
     } catch (error) {
@@ -1211,7 +1229,11 @@ export class PixiFieldPresenter {
       throw error;
     }
     let presenter: PixiFieldPresenter;
-    try { presenter = new PixiFieldPresenter(app, host, width, height, materials, fieldSet); }
+    try {
+      presenter = new PixiFieldPresenter(
+        app, host, width, height, outputScale, materials, fieldSet,
+      );
+    }
     catch (error) { app.destroy(); throw error; }
     presenter.app.canvas.className = 'world-canvas semantic-field-canvas';
     presenter.app.canvas.style.width = width + 'px';
@@ -1268,6 +1290,11 @@ export class PixiFieldPresenter {
 
   setLiquidFieldLightingEnabled(enabled: boolean): void {
     this.uniforms.uniforms.uLiquidFieldLighting = enabled ? 1 : 0;
+    this.renderApplication();
+  }
+
+  setTranslucentFieldTransmissionEnabled(enabled: boolean): void {
+    this.uniforms.uniforms.uTranslucentFieldTransmission = enabled ? 1 : 0;
     this.renderApplication();
   }
 

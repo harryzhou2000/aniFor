@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { lightCanvasSurface } from './canvas-surface-light';
+import {
+  CANVAS_TRANSLUCENT_FIELD_EXPOSURE, CANVAS_TRANSLUCENT_FIELD_GAIN,
+  canvasTranslucentFieldExposure, lightCanvasSurface,
+} from './canvas-surface-light';
 import { RenderProfile, surfaceLightGain } from './render-profile';
+import { RenderOptics } from './render-optics';
 
 function field(): Uint8Array {
   return new Uint8Array([
@@ -37,6 +41,32 @@ describe('Canvas surface lighting', () => {
     expect(reflected[1]).toBeGreaterThan(regular[1]);
     expect(reflected[2]).toBeGreaterThanOrEqual(regular[2]);
     expect(reflected[3]).toBe(173);
+  });
+
+  it('gates coloured body transmission to enabled dense non-emissive translucent solids', () => {
+    expect(canvasTranslucentFieldExposure(
+      RenderOptics.TranslucentRigid, true, false, true,
+    )).toBe(CANVAS_TRANSLUCENT_FIELD_EXPOSURE);
+    expect(canvasTranslucentFieldExposure(RenderOptics.SmoothRigid, true, false, true)).toBe(0);
+    expect(canvasTranslucentFieldExposure(RenderOptics.TranslucentRigid, false, false, true)).toBe(0);
+    expect(canvasTranslucentFieldExposure(RenderOptics.TranslucentRigid, true, true, true)).toBe(0);
+    expect(canvasTranslucentFieldExposure(RenderOptics.TranslucentRigid, true, false, false)).toBe(0);
+  });
+
+  it('screen-blends warm light through a glass body without changing alpha', () => {
+    const target = new Uint8ClampedArray([120, 160, 190, 218]);
+    const original = target.slice();
+    const exposure = canvasTranslucentFieldExposure(
+      RenderOptics.TranslucentRigid, true, false, true,
+    );
+    lightCanvasSurface(
+      target, 0, field(), 2, 2, 4, 4, 0, 0,
+      RenderProfile.Rigid, exposure, CANVAS_TRANSLUCENT_FIELD_GAIN,
+    );
+    expect(target[0] - original[0]).toBeGreaterThan(target[1] - original[1]);
+    expect(target[1]).toBeGreaterThanOrEqual(original[1]);
+    expect(target[3]).toBe(original[3]);
+    expect(Math.max(target[0], target[1], target[2])).toBeLessThan(255);
   });
 
   it('matches numeric bilinear sampling inside the field', () => {

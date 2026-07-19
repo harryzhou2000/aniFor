@@ -169,6 +169,9 @@ export class Game {
       },
       setGasFieldLighting: (enabled) => { this.renderer.setGasFieldLightingEnabled(enabled); },
       setLiquidFieldLighting: (enabled) => { this.renderer.setLiquidFieldLightingEnabled(enabled); },
+      setTranslucentFieldTransmission: (enabled) => {
+        this.renderer.setTranslucentFieldTransmissionEnabled(enabled);
+      },
       clear: () => { this.simulation.clear(); },
       setRadius: (radius) => { this.radius = Math.max(0, Math.min(64, Math.round(radius))); },
       setMaterial: (material) => {

@@ -21,12 +21,18 @@ describe('emission field', () => {
     const { field, materials } = fixture();
     field.update(materials);
     expect(field.hasLight).toBe(false);
+    expect(field.mayLightWorldCell(10, 10)).toBe(false);
     materials[10 * 21 + 10] = Material.PHOT;
     field.update(materials);
     expect(field.hasLight).toBe(true);
+    expect(field.mayLightWorldCell(10, 10)).toBe(true);
+    // The conservative bilinear guard may admit the cell immediately outside
+    // an active field bound, but it must reject the far side of the world.
+    expect(field.mayLightWorldCell(20, 20)).toBe(false);
     materials.fill(Material.Empty);
     field.update(materials);
     expect(field.hasLight).toBe(false);
+    expect(field.mayLightWorldCell(10, 10)).toBe(false);
   });
 
   it('widens sparse energy into a coloured falloff', () => {

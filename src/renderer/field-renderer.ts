@@ -4,7 +4,8 @@ import { clientToViewport, ViewTransform, type Point, type ViewState } from './v
 import { contentBoxFromBounds } from './client-coordinate-map';
 import type { PixiFieldPresenter, WebGLPresentationTiming } from './pixi-field-presenter';
 import {
-  backingSize, resolveFieldOutputScale, safeWebGLOutputScale, type FieldOutputScale,
+  backingSize, CANVAS_FALLBACK_DIMENSION_BUDGET, CANVAS_FALLBACK_PIXEL_BUDGET,
+  resolveFieldOutputScale, safeWebGLOutputScale, type FieldOutputScale,
 } from './render-resolution';
 import { shadeCanvasAtmosphere } from './canvas-atmosphere-relief';
 import { canvasLocalEmissionAlpha } from './canvas-emission-style';
@@ -22,7 +23,9 @@ import {
   applicableCanvasRenderTraits, applyCanvasRenderTraits, CANVAS_RENDER_TRAIT_CLOCK_SIZE,
   updateCanvasRenderTraitClock,
 } from './canvas-render-traits';
-import { lightCanvasSurface } from './canvas-surface-light';
+import {
+  CANVAS_TRANSLUCENT_FIELD_GAIN, canvasTranslucentFieldExposure, lightCanvasSurface,
+} from './canvas-surface-light';
 import { reconstructSolidSurface } from './canvas-solid-surface';
 import {
   applyCanvasSolidLighting, canvasSolidInteriorCohesion, canvasSolidRelief,
@@ -131,6 +134,7 @@ export class MaterialRenderer {
   private powderSurfaceDirty = true;
   private gasFieldLightingEnabled = true;
   private liquidFieldLightingEnabled = true;
+  private translucentFieldTransmissionEnabled = true;
   private powderRenderStyle: PowderRenderStyle = 'smooth';
   private gasFieldLightingDirty = false;
   private canvasPresentationTimingEnabled = false;
@@ -142,10 +146,13 @@ export class MaterialRenderer {
     this.webGLOutputScale = safeWebGLOutputScale(
       simulation.width, simulation.height, this.requestedOutputScale,
     );
-    // Avoid allocating two 60 MiB startup canvases before a canonical 8× WebGL
-    // request is safely capped. Explicit forced-Canvas mode remains a true 8×
-    // diagnostic, while automatic Canvas fallback inherits the robust cap.
-    this.outputScale = forceCanvas2D() ? this.requestedOutputScale : this.webGLOutputScale;
+    // Keep the compatibility canvas at a bounded 4x ceiling while an 8x WebGL
+    // candidate initializes. This avoids duplicating 60 MiB surfaces at startup;
+    // explicit forced-Canvas mode remains a true 8x diagnostic.
+    this.outputScale = forceCanvas2D() ? this.requestedOutputScale : safeWebGLOutputScale(
+      simulation.width, simulation.height, this.requestedOutputScale,
+      CANVAS_FALLBACK_PIXEL_BUDGET, CANVAS_FALLBACK_DIMENSION_BUDGET,
+    );
     this.contourScratch = new CanvasPhaseContourScratch(
       this.outputScale === 1 ? CANVAS_CONTOUR_OUTPUT_SCALE : this.outputScale,
     );
@@ -263,6 +270,13 @@ export class MaterialRenderer {
     this.changed = true;
   }
 
+  setTranslucentFieldTransmissionEnabled(enabled: boolean): void {
+    if (enabled === this.translucentFieldTransmissionEnabled) return;
+    this.translucentFieldTransmissionEnabled = enabled;
+    this.presenter?.setTranslucentFieldTransmissionEnabled(enabled);
+    this.changed = true;
+  }
+
   setPowderRenderStyle(style: PowderRenderStyle): void {
     if (style === this.powderRenderStyle) return;
     this.powderRenderStyle = style;
@@ -351,6 +365,7 @@ export class MaterialRenderer {
     if (this.webGLPresentationTimingEnabled) presenter.enableWebGLPresentationTiming();
     presenter.setGasFieldLightingEnabled(this.gasFieldLightingEnabled);
     presenter.setLiquidFieldLightingEnabled(this.liquidFieldLightingEnabled);
+    presenter.setTranslucentFieldTransmissionEnabled(this.translucentFieldTransmissionEnabled);
     presenter.setPowderRenderStyle(this.powderRenderStyle);
     presenter.update(
       this.rendered, this.renderedWalls, this.simulation.temperature?.(), this.simulation.velocity?.(),
@@ -797,12 +812,23 @@ export class MaterialRenderer {
           target, pixel, fields.emission.bytes, fields.emission.width, fields.emission.height,
           width, height, x, y, profile, liquidEmissionExposure, 4,
         );
-      } else if (fields.emission.hasLight && receivesSurfaceLight(phase)) {
-        const exposure = cardinalExposure(this.rendered, width, height, x, y, material);
-        lightCanvasSurface(
-          target, pixel, fields.emission.bytes, fields.emission.width, fields.emission.height,
-          width, height, x, y, profile, exposure,
+      } else if (fields.emission.hasLight) {
+        const translucentExposure = canvasTranslucentFieldExposure(
+          optics, denseSolidInterior && applicableTraits === 0,
+          PROJECTED_RENDER_INFO[material]?.emissive ?? false,
+          this.translucentFieldTransmissionEnabled,
         );
+        if (translucentExposure > 0 && fields.emission.mayLightWorldCell(x, y)) lightCanvasSurface(
+          target, pixel, fields.emission.bytes, fields.emission.width, fields.emission.height,
+          width, height, x, y, profile, translucentExposure, CANVAS_TRANSLUCENT_FIELD_GAIN,
+        );
+        if (receivesSurfaceLight(phase)) {
+          const exposure = cardinalExposure(this.rendered, width, height, x, y, material);
+          lightCanvasSurface(
+            target, pixel, fields.emission.bytes, fields.emission.width, fields.emission.height,
+            width, height, x, y, profile, exposure,
+          );
+        }
       }
     }
 

@@ -9,7 +9,7 @@ AniforTPT has four distinct spaces. Keep the conversion between each pair explic
 1. **World space:** The Powder Toy field is exactly 612×384 cells. Painting and native field extraction both address `pmap[y][x]` directly; TPT's air `CELL` size does not scale particle coordinates.
 2. **Viewport space:** CSS pixels in the `.viewport` content box. Desktop uses a uniformly aspect-fitted 612:384 viewport. Compact portrait layout uses a square interaction panel, but the 612:384 world remains uniformly contained and centered inside it. The unused vertical space is letterboxed; the world is never stretched or cropped at minimum zoom.
 3. **Camera space:** `ViewTransform` applies one uniform fit × zoom scale and one CSS-pixel pan. Resize rescales pan by the fit-scale ratio so an off-center zoom does not slide.
-4. **Backing space:** Canvas/WebGL pixels. The default output scale is 2× per axis, producing 1224×768 backing pixels for 612×384 logical cells. `?renderScale=1` and `?renderScale=2` provide explicit A/B diagnostics. Backing scale must not enter world, brush, pan, or CSS layout math.
+4. **Backing space:** Canvas/WebGL pixels. The default output scale is 2× per axis, producing 1224×768 backing pixels for 612×384 logical cells. `?renderScale=1|2|4|8` selects real per-axis sampling; canonical 8× is 4896×3072. Backing scale must not enter world, brush, pan, or CSS layout math. WebGL 8× disables redundant MSAA and extra high-quality probes, and its startup compatibility Canvas remains at most 4× so the browser does not duplicate 60 MiB targets.
 
 Both presenters expose an untransformed 612×384 logical CSS box. Its responsive displayed rectangle is produced by one presentation transform:
 
@@ -63,12 +63,12 @@ For any viewport or shader-coordinate change, validate all of the following:
 - Left-drag painting is continuous.
 - An immobile material painted near the upper-left, center, and lower-right appears under the cursor at all three positions.
 - The Canvas2D fallback obeys the same contract.
-- At one fixed desktop CSS viewport, `renderScale=1` and `renderScale=2` produce identical canvas rectangles and pass the same input assertions; only the backing changes between 612×384 and 1224×768.
+- At one fixed desktop CSS viewport, `renderScale=1`, `renderScale=2`, and WebGL `renderScale=8` produce identical canvas rectangles; only the backing changes between 612×384, 1224×768, and 4896×3072. Requested/effective 8× must both be reported as 8 on the supported canonical audit path.
 - Browser validation cleans up Chrome and Vite even on failure.
 
 The last painted-footprint check is the important regression test for the Pixi pooled-UV bug.
 
-`npm run audit:browser-input` proves the backing-scale invariant in both renderer backends. Its paired pass freshly navigates to 2× and 1× under the same explicit 1280×720 desktop emulation, waits for stable geometry at each scale, paints three radius-zero landmarks, repeats the off-centre wheel anchor, and repeats a 42×27 CSS-pixel middle drag. A reference captured before applying the same device metrics is invalid because Chrome's launch window and emulated CSS viewport are different coordinate spaces.
+`npm run audit:browser-input` proves the backing-scale invariant in both renderer backends. Its paired pass freshly navigates to 2× and 1× under the same explicit 1280×720 desktop emulation, waits for stable geometry at each scale, paints three radius-zero landmarks, repeats the off-centre wheel anchor, and repeats a 42×27 CSS-pixel middle drag. The WebGL half then cold-loads a fresh 2× reference and true 8× page under those same metrics, requiring exact CSS-rectangle equality, a 4896×3072 backing, and zero browser errors. `node scripts/verify-browser-input.mjs --scale-eight-only` isolates that expensive proof. A reference captured before applying the same device metrics is invalid because Chrome's launch window and emulated CSS viewport are different coordinate spaces.
 
 The same audit cold-loads both Canvas2D and WebGL after enabling portrait mobile metrics, DPR 2, coarse touch input, and two touch points. This ordering matters because Pixi chooses shader quality when the presenter is constructed; resizing a desktop-created presenter is not a mobile-path test. Each backend must keep the square interaction panel as a letterboxed 612:384 world, translate a two-finger pinch by exactly 22 CSS pixels while preserving its world anchor, paint no stray cell during the gesture, then place and visibly present one radius-zero single-touch mark at the requested cell.
 

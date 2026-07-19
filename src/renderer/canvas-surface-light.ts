@@ -1,4 +1,20 @@
 import { surfaceLightGain, type RenderProfile } from './render-profile';
+import { RenderOptics } from './render-optics';
+
+export const CANVAS_TRANSLUCENT_FIELD_EXPOSURE = 0.38;
+export const CANVAS_TRANSLUCENT_FIELD_GAIN = 1.6;
+
+/** Dense semantic glass may carry scene light through its body, never its alpha. */
+export function canvasTranslucentFieldExposure(
+  optics: number,
+  denseInterior: boolean,
+  emissive: boolean,
+  enabled: boolean,
+): number {
+  return enabled && denseInterior && !emissive && optics === RenderOptics.TranslucentRigid
+    ? CANVAS_TRANSLUCENT_FIELD_EXPOSURE
+    : 0;
+}
 
 /**
  * Applies the shared low-resolution emission field to an exposed Canvas matter

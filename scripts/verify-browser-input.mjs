@@ -13,7 +13,8 @@ const ORIGIN = `http://127.0.0.1:${PORT}`;
 const WORLD_WIDTH = 612;
 const WORLD_HEIGHT = 384;
 const WORLD_ASPECT = WORLD_WIDTH / WORLD_HEIGHT;
-const modes = process.argv.includes('--canvas-only') ? ['canvas2d']
+const scaleEightOnly = process.argv.includes('--scale-eight-only');
+const modes = scaleEightOnly ? ['webgl'] : process.argv.includes('--canvas-only') ? ['canvas2d']
   : process.argv.includes('--webgl-only') ? ['webgl'] : ['canvas2d', 'webgl'];
 const visualOnly = process.argv.includes('--visual-only');
 const screenshotRequest = process.argv.find((argument) => argument.startsWith('--screenshot='))?.slice('--screenshot='.length);
@@ -34,7 +35,7 @@ async function main() {
     }, 15_000, 'Vite browser-audit server');
     const results = [];
     for (const mode of modes) results.push(await auditMode(mode));
-    if (!visualOnly) assertPairedVisualRelief(results);
+    if (!visualOnly && !scaleEightOnly) assertPairedVisualRelief(results);
     console.log(JSON.stringify({ world: `${WORLD_WIDTH}x${WORLD_HEIGHT}`, results }, null, 2));
   } catch (error) {
     if (serverLog.trim()) console.error(serverLog.trim());
@@ -94,6 +95,12 @@ async function auditMode(mode) {
     });
     cdp.on('Log.entryAdded', ({ entry }) => { if (entry.level === 'error') errors.push(entry.text); });
     await Promise.all([cdp.send('Page.enable'), cdp.send('Runtime.enable'), cdp.send('Log.enable')]);
+    if (scaleEightOnly) {
+      const renderScaleEight = await auditRenderScaleEight(cdp, dpr);
+      assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
+      cdp.close();
+      return { backend: mode, renderScaleEight, browserErrors: errors.length };
+    }
     await cdp.send('Page.navigate', { url: `${ORIGIN}/?${query}` });
     await waitFor(() => evaluate(cdp, `(() => {
       const parameters = new URLSearchParams(location.search);
@@ -138,7 +145,15 @@ async function auditMode(mode) {
     const unlitLiquidCaptures = await waitForStablePageCapture(
       cdp, `${mode} unlit liquid framebuffer`,
     );
-    await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setLiquidFieldLighting(true); true');
+    await evaluate(cdp, `(() => {
+      window.__ANIFOR_INPUT_AUDIT__.setLiquidFieldLighting(true);
+      window.__ANIFOR_INPUT_AUDIT__.setTranslucentFieldTransmission(false);
+      return true;
+    })()`);
+    const unlitTranslucentCaptures = await waitForStablePageCapture(
+      cdp, `${mode} unlit translucent framebuffer`,
+    );
+    await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setTranslucentFieldTransmission(true); true');
     const powderStyleCaptures = {};
     const powderStyleSelection = {};
     for (const style of ['grains', 'local', 'smooth']) {
@@ -158,10 +173,39 @@ async function auditMode(mode) {
         cdp, `${mode} powder style ${style} framebuffer`,
       );
     }
+    await evaluate(cdp, `(() => {
+      const button = document.querySelector('[data-powder-render-style="grains"]');
+      if (!(button instanceof HTMLButtonElement)) throw new Error('Missing powder style grains');
+      button.click();
+      window.__ANIFOR_INPUT_AUDIT__.resetView();
+      return true;
+    })()`);
+    const zoomedGrainAnchor = worldClient(
+      canonicalCaptures.canvasRect, { x: 190.5, y: 176.5 },
+    );
+    for (let step = 0; step < 4; step++) await cdp.send('Input.dispatchMouseEvent', {
+      type: 'mouseWheel', x: zoomedGrainAnchor.x, y: zoomedGrainAnchor.y,
+      deltaX: 0, deltaY: -240, modifiers: 0,
+    });
+    const zoomedGrainView = await waitFor(() => evaluate(cdp, `(() => {
+      const view = window.__ANIFOR_INPUT_AUDIT__.viewState();
+      return view.zoom >= 4.9 ? view : false;
+    })()`), 5_000, `${mode} high-zoom grain view`);
+    const zoomedGrainCaptures = await waitForStablePageCapture(
+      cdp, `${mode} high-zoom grain framebuffer`,
+    );
+    await evaluate(cdp, `(() => {
+      window.__ANIFOR_INPUT_AUDIT__.resetView();
+      const button = document.querySelector('[data-powder-render-style="smooth"]');
+      if (!(button instanceof HTMLButtonElement)) throw new Error('Missing powder style smooth');
+      button.click();
+      return true;
+    })()`);
     const blankCaptures = await captureStableBlankPage(cdp, mode);
     for (const [label, captures] of [
       ['unlit gas', unlitGasCaptures],
       ['unlit liquid', unlitLiquidCaptures],
+      ['unlit translucent', unlitTranslucentCaptures],
       ...Object.entries(powderStyleCaptures).map(([style, captures]) => [`powder ${style}`, captures]),
       ['blank', blankCaptures],
     ]) assertCanvasRectsEqual(
@@ -264,12 +308,14 @@ async function auditMode(mode) {
       ))[0];
     }
     const powderColumnRegions = [
-      { name: 'clayUpper', x: 148.5, y: 45, radiusX: 3.5, radiusY: 5 },
-      { name: 'clayMiddle', x: 148.5, y: 78, radiusX: 3.5, radiusY: 5 },
-      { name: 'clayLower', x: 148.5, y: 118, radiusX: 3.5, radiusY: 5 },
-      { name: 'concreteUpper', x: 163.5, y: 53, radiusX: 3.5, radiusY: 5 },
-      { name: 'concreteMiddle', x: 163.5, y: 88, radiusX: 3.5, radiusY: 5 },
-      { name: 'concreteLower', x: 163.5, y: 124, radiusX: 3.5, radiusY: 5 },
+      // Each narrow probe lands in the remaining material immediately beside
+      // an authored notch, where wide-field thinning is easiest to expose.
+      { name: 'clayLeftNotch', x: 149.5, y: 62.5, radiusX: 3.5, radiusY: 1.5 },
+      { name: 'clayRightNotch', x: 146.5, y: 93.5, radiusX: 3.5, radiusY: 1.5 },
+      { name: 'clayLowerColumn', x: 148.5, y: 120.5, radiusX: 3.5, radiusY: 2.5 },
+      { name: 'concreteLeftNotch', x: 164.5, y: 73.5, radiusX: 3.5, radiusY: 1.5 },
+      { name: 'concreteRightNotch', x: 162.5, y: 110.5, radiusX: 3.5, radiusY: 1.5 },
+      { name: 'concreteLowerColumn', x: 163.5, y: 124.5, radiusX: 3.5, radiusY: 2.5 },
     ];
     const powderColumnStyleSamples = {};
     for (const style of ['local', 'smooth']) {
@@ -285,23 +331,77 @@ async function auditMode(mode) {
       blankCaptures.capture.data, blankCaptures.reference.data,
       canonicalCaptures.canvasRect,
     ))[0];
+    const zoomedSquareGrainSample = await sampleZoomedSquareGrain(
+      cdp, zoomedGrainCaptures.capture.data, blankCaptures.capture.data,
+      canonicalCaptures.canvasRect, zoomedGrainAnchor, zoomedGrainView.zoom,
+    );
+    const powderColumnSemanticCells = [];
+    const addColumnCells = (minimumX, maximumX, minimumY, maximumY, holes) => {
+      for (let y = minimumY; y <= maximumY; y++) for (let x = minimumX; x <= maximumX; x++) {
+        const hole = holes.find((candidate) => x >= candidate.x0 && x <= candidate.x1
+          && y >= candidate.y0 && y <= candidate.y1);
+        powderColumnSemanticCells.push({
+          x, y, occupied: !hole,
+          deepHole: Boolean(hole && x === hole.deepX && y > hole.y0 && y < hole.y1),
+        });
+      }
+    };
+    addColumnCells(143, 153, 27, 137, [
+      { x0: 143, x1: 145, y0: 61, y1: 64, deepX: 144 },
+      { x0: 151, x1: 153, y0: 91, y1: 95, deepX: 152 },
+    ]);
+    addColumnCells(158, 168, 39, 137, [
+      { x0: 158, x1: 160, y0: 72, y1: 75, deepX: 159 },
+      { x0: 166, x1: 168, y0: 108, y1: 112, deepX: 167 },
+    ]);
+    const powderColumnSemanticSupport = await sampleSemanticCellSupport(
+      cdp, {
+        local: powderStyleCaptures.local.capture.data,
+        smooth: powderStyleCaptures.smooth.capture.data,
+      }, blankCaptures.capture.data, canonicalCaptures.canvasRect, powderColumnSemanticCells,
+    );
     assert(new Set(Object.values(powderStyleSelection)).size === 3,
       `${mode}: powder style buttons did not expose three exclusive states (${JSON.stringify(powderStyleSelection)})`);
-    assert(powderStyleSamples.grains.signature !== powderStyleSamples.local.signature
-      && powderStyleSamples.local.signature !== powderStyleSamples.smooth.signature,
+    assert(powderStyleSamples.grains.maskSignature !== powderStyleSamples.local.maskSignature
+      && powderStyleSamples.local.maskSignature !== powderStyleSamples.smooth.maskSignature,
     `${mode}: powder render styles did not change the composed slope (${JSON.stringify(powderStyleSamples)})`);
-    assert(powderStyleSamples.smooth.signature === canonicalPowderStyle.signature,
+    assert(powderStyleSamples.smooth.signature === canonicalPowderStyle.signature
+      && powderStyleSamples.smooth.maskSignature === canonicalPowderStyle.maskSignature,
       `${mode}: returning to Smooth did not restore the canonical powder output (${JSON.stringify({ canonicalPowderStyle, powderStyleSamples })})`);
     assert(powderStyleSamples.grains.worldArea < powderStyleSamples.smooth.worldArea * 0.99
       && powderStyleSamples.grains.macroLumaRange + 5 <= powderStyleSamples.smooth.macroLumaRange,
     `${mode}: Grains no longer preserves a visibly discrete reference (${JSON.stringify(powderStyleSamples)})`);
     assert(squareGrainSample.worldArea >= 1.60 && squareGrainSample.worldArea <= 3.10
-      && squareGrainSample.dominantComponent >= 0.95,
+      && squareGrainSample.dominantComponent >= 0.95
+      // A one-cell box spans only a few screenshot pixels, so DPR/CSS rounding
+      // permits one pixel of aspect skew. Full rectangular fill rejects the
+      // previous disc while the unit raster test pins the exact 1×1 square.
+      && squareGrainSample.boundingAspect >= 0.68 && squareGrainSample.boundingAspect <= 1.32
+      && squareGrainSample.rectangularFill >= 0.92,
     `${mode}: Grains did not render one isolated powder cell as a solid square (${JSON.stringify(squareGrainSample)})`);
+    assert(zoomedSquareGrainSample.expectedPixels >= 5
+      && zoomedSquareGrainSample.boundingAspect >= 0.90
+      && zoomedSquareGrainSample.boundingAspect <= 1.10
+      && zoomedSquareGrainSample.rectangularFill >= 0.88
+      && zoomedSquareGrainSample.widthRatio >= 0.70
+      && zoomedSquareGrainSample.widthRatio <= 1.60
+      && zoomedSquareGrainSample.heightRatio >= 0.70
+      && zoomedSquareGrainSample.heightRatio <= 1.60,
+    `${mode}: high-zoom Grains cell was not a filled square (${JSON.stringify(zoomedSquareGrainSample)})`);
     assert(powderColumnStyleSamples.local.every((sample) => sample.coverage >= 0.72)
       && powderColumnStyleSamples.smooth.every((sample, index) => sample.coverage >= 0.72
         && sample.coverage >= powderColumnStyleSamples.local[index].coverage * 0.84),
     `${mode}: Smooth lost occupied Clay/Concrete column sections visible in Local (${JSON.stringify(powderColumnStyleSamples)})`);
+    assert(powderColumnSemanticSupport.local.occupiedRecall >= 0.985
+      && powderColumnSemanticSupport.smooth.occupiedRecall >= 0.985
+      && powderColumnSemanticSupport.smooth.occupiedRecall
+        >= powderColumnSemanticSupport.local.occupiedRecall - 0.01,
+    `${mode}: Smooth dropped semantic powder-column cells retained by Local (${JSON.stringify(powderColumnSemanticSupport)})`);
+    assert(powderColumnSemanticSupport.local.deepHoleLeak <= 0.10
+      && powderColumnSemanticSupport.smooth.deepHoleLeak <= 0.10
+      && powderColumnSemanticSupport.smooth.deepHoleLeak
+        <= powderColumnSemanticSupport.local.deepHoleLeak + 0.10,
+    `${mode}: Smooth filled authored deep holes in a powder column (${JSON.stringify(powderColumnSemanticSupport)})`);
     const silhouetteSamples = await sampleCanonicalRegions([
       {
         name: 'roundedMetal', x: 405.5, y: 229.5,
@@ -319,13 +419,16 @@ async function auditMode(mode) {
     const liquidContourCrossings = await sampleCapsuleContourCrossings(
       cdp, canonicalCapture.data, blankCaptures.capture.data, canonicalCaptures.canvasRect,
     );
-    assert(liquidContourCrossings.rmsError <= 1.15
-      && liquidContourCrossings.maximumError <= 1.85,
+    assert(liquidContourCrossings.rmsError <= 0.65
+      && liquidContourCrossings.maximumError <= 0.85
+      && liquidContourCrossings.rmsError <= liquidContourCrossings.rawRmsError * 0.70,
     `${mode}: liquid endcap no longer follows its analytic curve (${JSON.stringify(liquidContourCrossings)})`);
     assert(liquidContourCrossings.meanTransitionWidth >= 0.12
       && liquidContourCrossings.meanTransitionWidth <= 1.75
-      && liquidContourCrossings.maximumSymmetryError <= 1.50
-      && liquidContourCrossings.monotonicSlack <= 0.45,
+      && liquidContourCrossings.maximumSymmetryError <= 1.0
+      && liquidContourCrossings.monotonicSlack <= 0.20
+      && liquidContourCrossings.meanTangentError
+        <= liquidContourCrossings.rawMeanTangentError * 0.70,
     `${mode}: liquid endcap became hard, blurred, asymmetric, or stair-stepped (${JSON.stringify(liquidContourCrossings)})`);
     const contactSilhouetteSamples = await sampleCanonicalRegions([
       {
@@ -468,6 +571,61 @@ async function auditMode(mode) {
       && liquidLightResponse.warmAcidRim.positiveRgb[1]
         >= liquidLightResponse.warmAcidRim.positiveRgb[2] + 0.12,
     `${mode}: warm emitted-light reflection disappeared from Acid (${JSON.stringify(liquidLightResponseSamples)})`);
+    const translucentLightResponseSamples = await sampleLightingDifferenceRegions(cdp, {
+      lit: canonicalCapture.data,
+      unlit: unlitTranslucentCaptures.capture.data,
+    }, [
+      // Crops remain wholly inside their dense plates. Metal is sampled at the
+      // same source-relative depth as Glass, so a near-light opaque leak fails.
+      { name: 'warmGlassBody', x: 432.5, y: 229.5, radius: 1.5 },
+      { name: 'coolIceBody', x: 539.5, y: 229.5, radius: 1.5 },
+      { name: 'opaqueMetalControl', x: 420.5, y: 229.5, radius: 1.5 },
+    ], canonicalCaptures.canvasRect);
+    const translucentLightResponse = Object.fromEntries(
+      translucentLightResponseSamples.map((sample) => [sample.name, sample]),
+    );
+    assert(translucentLightResponse.warmGlassBody.coverage >= 0.20
+      && translucentLightResponse.warmGlassBody.positiveRgb[0] >= 0.20
+      && translucentLightResponse.warmGlassBody.screenNormalizedPositiveRgb[0]
+        >= translucentLightResponse.warmGlassBody.screenNormalizedPositiveRgb[2] + 0.50
+      && translucentLightResponse.warmGlassBody.peakMagnitude <= 32,
+    `${mode}: warm scene light did not transmit through dense Glass (${JSON.stringify(translucentLightResponseSamples)})`);
+    assert(translucentLightResponse.coolIceBody.coverage >= 0.20
+      && translucentLightResponse.coolIceBody.positiveRgb[2] >= 0.20
+      && translucentLightResponse.coolIceBody.screenNormalizedPositiveRgb[2]
+        >= translucentLightResponse.coolIceBody.screenNormalizedPositiveRgb[0] * 0.80
+      && translucentLightResponse.coolIceBody.screenNormalizedPositiveRgb[1]
+        >= translucentLightResponse.coolIceBody.screenNormalizedPositiveRgb[0] * 0.80
+      && translucentLightResponse.coolIceBody.peakMagnitude <= 32,
+    `${mode}: cool scene light did not transmit through dense Ice (${JSON.stringify(translucentLightResponseSamples)})`);
+    assert(translucentLightResponse.opaqueMetalControl.coverage <= 0.01
+      && translucentLightResponse.opaqueMetalControl.peakMagnitude <= 1,
+    `${mode}: translucent transmission leaked into opaque Metal (${JSON.stringify(translucentLightResponseSamples)})`);
+    const translucentSupportRegions = [
+      { name: 'glassSupport', x: 432.5, y: 229.5, radius: 1.5, silhouette: true },
+      { name: 'iceSupport', x: 539.5, y: 229.5, radius: 1.5, silhouette: true },
+    ];
+    const [litTranslucentSupport, unlitTranslucentSupport] = await Promise.all([
+      samplePageRegions(
+        cdp, canonicalCapture.data, translucentSupportRegions,
+        blankCaptures.capture.data, blankCaptures.reference.data, canonicalCaptures.canvasRect,
+      ),
+      samplePageRegions(
+        cdp, unlitTranslucentCaptures.capture.data, translucentSupportRegions,
+        blankCaptures.capture.data, blankCaptures.reference.data, canonicalCaptures.canvasRect,
+      ),
+    ]);
+    const translucentSupportInvariantSamples = litTranslucentSupport.map((lit, index) => ({
+      name: lit.name,
+      litVisible: lit.visible,
+      unlitVisible: unlitTranslucentSupport[index].visible,
+      litWorldArea: lit.worldArea,
+      unlitWorldArea: unlitTranslucentSupport[index].worldArea,
+    }));
+    assert(translucentSupportInvariantSamples.every((sample) => (
+      sample.litVisible === sample.unlitVisible
+      && Math.abs(sample.litWorldArea - sample.unlitWorldArea) <= 0.01
+    )), `${mode}: scene-light coupling changed translucent support (${JSON.stringify(translucentSupportInvariantSamples)})`);
     const liquidColumnSamples = await sampleCanonicalRegions([
       { name: 'waterColumn', x: 224, y: 270, radius: 8 },
       { name: 'oilColumn', x: 263, y: 270, radius: 8 },
@@ -520,7 +678,11 @@ async function auditMode(mode) {
         powderStyleSamples,
         powderColumnStyleSamples,
         squareGrainSample,
+        zoomedSquareGrainSample,
+        powderColumnSemanticSupport,
         liquidLightResponseSamples,
+        translucentLightResponseSamples,
+        translucentSupportInvariantSamples,
         silhouetteSamples,
         liquidContourCrossings,
         liquidReliefSamples,
@@ -711,7 +873,7 @@ async function auditMode(mode) {
     );
     const renderScaleOne = await auditRenderScaleOne(cdp, mode, dpr);
     const renderScaleEight = mode === 'webgl'
-      ? await auditRenderScaleEightCap(cdp, dpr)
+      ? await auditRenderScaleEight(cdp, dpr)
       : undefined;
     const nativeSemantics = await auditNativeSemantics(cdp, mode, dpr, screenshot);
     await sleep(50);
@@ -731,6 +893,8 @@ async function auditMode(mode) {
       powderStyleSamples,
       powderColumnStyleSamples,
       squareGrainSample,
+      zoomedSquareGrainSample,
+      powderColumnSemanticSupport,
       silhouetteSamples,
       liquidContourCrossings,
       contactSilhouetteSamples,
@@ -742,6 +906,8 @@ async function auditMode(mode) {
       gasLightingSamples,
       gasLightResponseSamples,
       liquidLightResponseSamples,
+      translucentLightResponseSamples,
+      translucentSupportInvariantSamples,
       ...(canvasGasLightingRefresh ? { canvasGasLightingRefresh } : {}),
       liquidColumnSamples,
       liquidReliefSamples,
@@ -1050,30 +1216,49 @@ async function auditRenderScaleOne(cdp, mode, dpr) {
   };
 }
 
-async function auditRenderScaleEightCap(cdp, dpr) {
+async function auditRenderScaleEight(cdp, dpr) {
   await setDesktopMetrics(cdp, 1280, 720, dpr);
+  const referenceQuery = new URLSearchParams({
+    scene: 'render-lab', inputAudit: '1', renderScale: '2', auditStage: 'scale-eight-reference',
+  });
+  await cdp.send('Page.navigate', { url: `${ORIGIN}/?${referenceQuery}` });
+  await waitFor(() => evaluate(cdp, `(() => {
+    const parameters = new URLSearchParams(location.search);
+    return parameters.get('renderScale') === '2'
+      && parameters.get('auditStage') === 'scale-eight-reference'
+      && Boolean(window.__ANIFOR_INPUT_AUDIT__ && document.documentElement);
+  })()`), 15_000, 'renderScale=8 reference input audit API');
+  await waitFor(() => evaluate(cdp,
+    `window.__ANIFOR_INPUT_AUDIT__.backend().backend === 'webgl'`),
+  20_000, 'renderScale=8 reference WebGL backend');
+  const reference = await waitForStableCanvas(
+    cdp, 1280, 720, undefined, 8_000, 'renderScale=8 reference geometry',
+  );
   const query = new URLSearchParams({
-    scene: 'render-lab', inputAudit: '1', renderScale: '8', auditStage: 'scale-eight-cap',
+    scene: 'render-lab', inputAudit: '1', renderScale: '8', auditStage: 'scale-eight',
   });
   await cdp.send('Page.navigate', { url: `${ORIGIN}/?${query}` });
   await waitFor(() => evaluate(cdp, `(() => {
     const parameters = new URLSearchParams(location.search);
     return parameters.get('renderScale') === '8'
-      && parameters.get('auditStage') === 'scale-eight-cap'
+      && parameters.get('auditStage') === 'scale-eight'
       && Boolean(window.__ANIFOR_INPUT_AUDIT__ && document.documentElement);
   })()`), 15_000, 'renderScale=8 input audit API');
   await waitFor(() => evaluate(cdp,
     `window.__ANIFOR_INPUT_AUDIT__.backend().backend === 'webgl'`),
-  20_000, 'renderScale=8 capped WebGL backend');
+  45_000, 'renderScale=8 WebGL backend');
   const geometry = await waitForStableCanvas(
-    cdp, 1280, 720, undefined, 8_000, 'renderScale=8 capped WebGL geometry',
+    cdp, 1280, 720, undefined, 20_000, 'renderScale=8 WebGL geometry',
   );
   const backend = await evaluate(cdp, `window.__ANIFOR_INPUT_AUDIT__.backend()`);
-  assert(backend.requestedOutputScale === 8 && backend.outputScale === 4,
-    `renderScale=8 did not report its safe WebGL cap (${JSON.stringify(backend)})`);
-  assertGeometry(geometry, 'renderScale=8 capped WebGL', 4);
-  assertContained(geometry, 'renderScale=8 capped WebGL');
-  assertToolboxGeometry(geometry, 'renderScale=8 capped WebGL', 68);
+  assert(backend.requestedOutputScale === 8 && backend.outputScale === 8,
+    `renderScale=8 did not remain true 8x WebGL (${JSON.stringify(backend)})`);
+  assertGeometry(geometry, 'renderScale=8 WebGL', 8);
+  assertContained(geometry, 'renderScale=8 WebGL');
+  assertToolboxGeometry(geometry, 'renderScale=8 WebGL', 68);
+  assertCanvasRectsEqual(
+    reference.canvas, geometry.canvas, 'renderScale=2/renderScale=8 CSS geometry',
+  );
   return {
     requested: backend.requestedOutputScale,
     effective: backend.outputScale,
@@ -1814,6 +1999,7 @@ async function sampleCapsuleContourCrossings(
     const pixelForWorldX = (x) => (bounds.left + x * worldScaleX) * pageScaleX;
     const pixelForWorldY = (y) => (bounds.top + y * worldScaleY) * pageScaleY;
     const worldForPixelX = (x) => (x / pageScaleX - bounds.left) / worldScaleX;
+    const worldForPixelY = (y) => (y / pageScaleY - bounds.top) / worldScaleY;
     const signalAt = (x, y) => {
       const rendered = contexts.rendered.getImageData(x, y, 1, 1).data;
       const baseline = contexts.baseline.getImageData(x, y, 1, 1).data;
@@ -1824,15 +2010,23 @@ async function sampleCapsuleContourCrossings(
       );
     };
     const rows = [];
-    for (let worldY = 164; worldY <= 180; worldY++) {
-      const pixelY = Math.max(0, Math.min(imageHeight - 1, Math.round(pixelForWorldY(worldY + 0.5))));
+    const firstPixelY = Math.max(0, Math.ceil(pixelForWorldY(164.25)));
+    const lastPixelY = Math.min(imageHeight - 1, Math.floor(pixelForWorldY(180.75)));
+    for (let pixelY = firstPixelY; pixelY <= lastPixelY; pixelY++) {
+      // Fixture coordinates name semantic cell centres, while screenshot pixels
+      // map through the cell rectangle. Removing the half-cell offset makes the
+      // analytic circle and the authored splitCapsule use the same convention.
+      const worldY = worldForPixelY(pixelY + 0.5) - 0.5;
+      if (worldY < 164 || worldY > 180) continue;
       const startX = Math.max(0, Math.floor(pixelForWorldX(262)));
       const endX = Math.min(imageWidth - 1, Math.ceil(pixelForWorldX(286)));
-      let interiorSignal = 0;
       const interiorStart = Math.max(startX, Math.floor(pixelForWorldX(280)));
+      const interiorSignals = [];
       for (let pixelX = interiorStart; pixelX <= endX; pixelX++) {
-        interiorSignal = Math.max(interiorSignal, signalAt(pixelX, pixelY));
+        interiorSignals.push(signalAt(pixelX, pixelY));
       }
+      interiorSignals.sort((left, right) => left - right);
+      const interiorSignal = interiorSignals[Math.floor((interiorSignals.length - 1) * 0.5)];
       if (interiorSignal <= 8) throw new Error('Capsule contour interior disappeared');
       const samples = [];
       for (let pixelX = startX; pixelX <= endX; pixelX++) {
@@ -1856,37 +2050,60 @@ async function sampleCapsuleContourCrossings(
       const x50 = crossing(0.50);
       const x80 = crossing(0.80);
       const expected = 278 - Math.sqrt(144 - (worldY - 172) ** 2);
-      rows.push({ worldY, x20, x50, x80, expected, error: x50 - expected });
+      const semanticY = Math.floor(worldY + 0.5);
+      const rawExpected = Math.ceil(278 - Math.sqrt(144 - (semanticY - 172) ** 2));
+      rows.push({
+        worldY, x20, x50, x80, expected, rawExpected,
+        error: x50 - expected, rawError: rawExpected - expected,
+      });
     }
     const rmsError = Math.sqrt(rows.reduce((sum, row) => sum + row.error ** 2, 0) / rows.length);
+    const rawRmsError = Math.sqrt(
+      rows.reduce((sum, row) => sum + row.rawError ** 2, 0) / rows.length,
+    );
     const maximumError = Math.max(...rows.map((row) => Math.abs(row.error)));
     const meanTransitionWidth = rows.reduce((sum, row) => sum + row.x80 - row.x20, 0) / rows.length;
     let maximumSymmetryError = 0;
-    for (let offset = 1; offset <= 8; offset++) {
-      maximumSymmetryError = Math.max(
-        maximumSymmetryError,
-        Math.abs(rows[8 - offset].x50 - rows[8 + offset].x50),
-      );
+    for (const row of rows) {
+      const mirrorY = 344 - row.worldY;
+      const mirror = rows.reduce((nearest, candidate) => (
+        Math.abs(candidate.worldY - mirrorY) < Math.abs(nearest.worldY - mirrorY)
+          ? candidate : nearest
+      ), rows[0]);
+      maximumSymmetryError = Math.max(maximumSymmetryError, Math.abs(row.x50 - mirror.x50));
     }
     let monotonicSlack = 0;
-    for (let index = 1; index <= 8; index++) {
-      monotonicSlack = Math.max(monotonicSlack, rows[index].x50 - rows[index - 1].x50);
+    let tangentError = 0;
+    let rawTangentError = 0;
+    for (let index = 1; index < rows.length; index++) {
+      const previous = rows[index - 1];
+      const current = rows[index];
+      const expectedDelta = current.expected - previous.expected;
+      tangentError += Math.abs((current.x50 - previous.x50) - expectedDelta);
+      rawTangentError += Math.abs((current.rawExpected - previous.rawExpected) - expectedDelta);
+      if (current.worldY <= 172) {
+        monotonicSlack = Math.max(monotonicSlack, current.x50 - previous.x50);
+      } else if (previous.worldY >= 172) {
+        monotonicSlack = Math.max(monotonicSlack, previous.x50 - current.x50);
+      }
     }
-    for (let index = 9; index < rows.length; index++) {
-      monotonicSlack = Math.max(monotonicSlack, rows[index - 1].x50 - rows[index].x50);
-    }
+    const meanTangentError = tangentError / Math.max(1, rows.length - 1);
+    const rawMeanTangentError = rawTangentError / Math.max(1, rows.length - 1);
     return {
       rows: rows.map((row) => ({
-        y: row.worldY,
+        y: Math.round(row.worldY * 1000) / 1000,
         x50: Math.round(row.x50 * 1000) / 1000,
         expected: Math.round(row.expected * 1000) / 1000,
         width20to80: Math.round((row.x80 - row.x20) * 1000) / 1000,
       })),
       rmsError: Math.round(rmsError * 1000) / 1000,
+      rawRmsError: Math.round(rawRmsError * 1000) / 1000,
       maximumError: Math.round(maximumError * 1000) / 1000,
       meanTransitionWidth: Math.round(meanTransitionWidth * 1000) / 1000,
       maximumSymmetryError: Math.round(maximumSymmetryError * 1000) / 1000,
       monotonicSlack: Math.round(monotonicSlack * 1000) / 1000,
+      meanTangentError: Math.round(meanTangentError * 1000) / 1000,
+      rawMeanTangentError: Math.round(rawMeanTangentError * 1000) / 1000,
     };
   })()`);
 }
@@ -1934,6 +2151,7 @@ async function sampleLightingDifferenceRegions(cdp, screenshots, regions, captur
       ]));
       const signed = [0, 0, 0];
       const positive = [0, 0, 0];
+      const screenNormalizedPositive = [0, 0, 0];
       let visible = 0;
       let peakMagnitude = 0;
       for (let offset = 0; offset < data.lit.length; offset += 4) {
@@ -1942,6 +2160,8 @@ async function sampleLightingDifferenceRegions(cdp, screenshots, regions, captur
           const response = data.lit[offset + channel] - data.unlit[offset + channel];
           signed[channel] += response;
           positive[channel] += Math.max(0, response);
+          screenNormalizedPositive[channel] += Math.max(0, response)
+            / Math.max(1, 255 - data.unlit[offset + channel]) * 255;
           magnitude = Math.max(magnitude, Math.abs(response));
         }
         if (magnitude >= 4) visible++;
@@ -1952,10 +2172,180 @@ async function sampleLightingDifferenceRegions(cdp, screenshots, regions, captur
         name: region.name,
         responseRgb: signed.map((channel) => Math.round(channel / count * 100) / 100),
         positiveRgb: positive.map((channel) => Math.round(channel / count * 100) / 100),
+        screenNormalizedPositiveRgb: screenNormalizedPositive
+          .map((channel) => Math.round(channel / count * 100) / 100),
         coverage: Math.round(visible / count * 1000) / 1000,
         peakMagnitude,
       };
     });
+  })()`);
+}
+
+async function sampleZoomedSquareGrain(
+  cdp, screenshotBase64, baselineBase64, captureCanvasRect, anchor, zoom,
+) {
+  return evaluate(cdp, `(async () => {
+    const sources = {
+      rendered: ${JSON.stringify(`data:image/png;base64,${screenshotBase64}`)},
+      baseline: ${JSON.stringify(`data:image/png;base64,${baselineBase64}`)},
+    };
+    const contexts = {};
+    let imageWidth = 0;
+    let imageHeight = 0;
+    for (const [name, source] of Object.entries(sources)) {
+      const image = new Image();
+      image.src = source;
+      await image.decode();
+      if (imageWidth && (image.naturalWidth !== imageWidth || image.naturalHeight !== imageHeight)) {
+        throw new Error('Zoomed grain screenshot geometry mismatch');
+      }
+      imageWidth = image.naturalWidth;
+      imageHeight = image.naturalHeight;
+      const copy = document.createElement('canvas');
+      copy.width = imageWidth;
+      copy.height = imageHeight;
+      const context = copy.getContext('2d', { willReadFrequently: true });
+      if (!context) throw new Error('Zoomed grain sampler unavailable');
+      context.drawImage(image, 0, 0);
+      contexts[name] = context;
+    }
+    const bounds = ${JSON.stringify(captureCanvasRect)};
+    const anchor = ${JSON.stringify(anchor)};
+    const pageScaleX = imageWidth / innerWidth;
+    const pageScaleY = imageHeight / innerHeight;
+    const expectedWidth = bounds.width / ${WORLD_WIDTH} * ${zoom} * pageScaleX;
+    const expectedHeight = bounds.height / ${WORLD_HEIGHT} * ${zoom} * pageScaleY;
+    const radiusX = Math.max(5, Math.ceil(expectedWidth * 1.45));
+    const radiusY = Math.max(5, Math.ceil(expectedHeight * 1.45));
+    const centerX = anchor.x * pageScaleX;
+    const centerY = anchor.y * pageScaleY;
+    const x = Math.max(0, Math.floor(centerX - radiusX));
+    const y = Math.max(0, Math.floor(centerY - radiusY));
+    const width = Math.min(imageWidth - x, radiusX * 2 + 1);
+    const height = Math.min(imageHeight - y, radiusY * 2 + 1);
+    const rendered = contexts.rendered.getImageData(x, y, width, height).data;
+    const baseline = contexts.baseline.getImageData(x, y, width, height).data;
+    let visible = 0;
+    let minimumX = width;
+    let minimumY = height;
+    let maximumX = -1;
+    let maximumY = -1;
+    for (let offset = 0; offset < rendered.length; offset += 4) {
+      const signal = Math.max(
+        Math.abs(rendered[offset] - baseline[offset]),
+        Math.abs(rendered[offset + 1] - baseline[offset + 1]),
+        Math.abs(rendered[offset + 2] - baseline[offset + 2]),
+      );
+      if (signal <= 6) continue;
+      const sample = offset / 4;
+      const px = sample % width;
+      const py = Math.floor(sample / width);
+      minimumX = Math.min(minimumX, px);
+      minimumY = Math.min(minimumY, py);
+      maximumX = Math.max(maximumX, px);
+      maximumY = Math.max(maximumY, py);
+      visible++;
+    }
+    const visibleWidth = Math.max(0, maximumX - minimumX + 1);
+    const visibleHeight = Math.max(0, maximumY - minimumY + 1);
+    return {
+      expectedPixels: Math.round(Math.min(expectedWidth, expectedHeight) * 100) / 100,
+      visiblePixels: visible,
+      visibleBounds: [visibleWidth, visibleHeight],
+      boundingAspect: Math.round(
+        (visibleWidth / Math.max(0.001, visibleHeight))
+          / (expectedWidth / Math.max(0.001, expectedHeight)) * 1000,
+      ) / 1000,
+      rectangularFill: Math.round(visible / Math.max(1, visibleWidth * visibleHeight) * 1000) / 1000,
+      widthRatio: Math.round(visibleWidth / Math.max(0.001, expectedWidth) * 1000) / 1000,
+      heightRatio: Math.round(visibleHeight / Math.max(0.001, expectedHeight) * 1000) / 1000,
+    };
+  })()`);
+}
+
+async function sampleSemanticCellSupport(
+  cdp, screenshots, baselineBase64, captureCanvasRect, cells,
+) {
+  return evaluate(cdp, `(async () => {
+    const sources = {
+      ...${JSON.stringify(Object.fromEntries(Object.entries(screenshots).map(([name, data]) => [
+    name, `data:image/png;base64,${data}`,
+  ])))},
+      baseline: ${JSON.stringify(`data:image/png;base64,${baselineBase64}`)},
+    };
+    const images = {};
+    const contexts = {};
+    for (const [name, source] of Object.entries(sources)) {
+      const image = new Image();
+      image.src = source;
+      await image.decode();
+      images[name] = image;
+    }
+    const geometry = Object.values(images).map((image) => [image.naturalWidth, image.naturalHeight]);
+    if (!geometry.every(([width, height]) => width === geometry[0][0] && height === geometry[0][1])) {
+      throw new Error('Semantic support screenshot geometry mismatch');
+    }
+    for (const [name, image] of Object.entries(images)) {
+      const copy = document.createElement('canvas');
+      copy.width = image.naturalWidth;
+      copy.height = image.naturalHeight;
+      const context = copy.getContext('2d', { willReadFrequently: true });
+      if (!context) throw new Error('Semantic support sampler unavailable');
+      context.drawImage(image, 0, 0);
+      contexts[name] = context;
+    }
+    const bounds = ${JSON.stringify(captureCanvasRect)};
+    const pageScaleX = images.baseline.naturalWidth / innerWidth;
+    const pageScaleY = images.baseline.naturalHeight / innerHeight;
+    const worldScaleX = bounds.width / ${WORLD_WIDTH};
+    const worldScaleY = bounds.height / ${WORLD_HEIGHT};
+    const cells = ${JSON.stringify(cells)};
+    const baseline = contexts.baseline;
+    const result = {};
+    for (const [name, context] of Object.entries(contexts)) {
+      if (name === 'baseline') continue;
+      let occupied = 0;
+      let occupiedVisible = 0;
+      let empty = 0;
+      let emptyVisible = 0;
+      let deepEmpty = 0;
+      let deepEmptyVisible = 0;
+      for (const cell of cells) {
+        const pixelX = Math.max(0, Math.min(images[name].naturalWidth - 1, Math.floor(
+          (bounds.left + (cell.x + 0.5) * worldScaleX) * pageScaleX,
+        )));
+        const pixelY = Math.max(0, Math.min(images[name].naturalHeight - 1, Math.floor(
+          (bounds.top + (cell.y + 0.5) * worldScaleY) * pageScaleY,
+        )));
+        const rendered = context.getImageData(pixelX, pixelY, 1, 1).data;
+        const blank = baseline.getImageData(pixelX, pixelY, 1, 1).data;
+        const visible = Math.max(
+          Math.abs(rendered[0] - blank[0]),
+          Math.abs(rendered[1] - blank[1]),
+          Math.abs(rendered[2] - blank[2]),
+        ) > 8;
+        if (cell.occupied) {
+          occupied++;
+          if (visible) occupiedVisible++;
+        } else {
+          empty++;
+          if (visible) emptyVisible++;
+          if (cell.deepHole) {
+            deepEmpty++;
+            if (visible) deepEmptyVisible++;
+          }
+        }
+      }
+      result[name] = {
+        occupiedCells: occupied,
+        occupiedRecall: Math.round(occupiedVisible / Math.max(1, occupied) * 1000) / 1000,
+        emptyCells: empty,
+        emptyLeak: Math.round(emptyVisible / Math.max(1, empty) * 1000) / 1000,
+        deepHoleCells: deepEmpty,
+        deepHoleLeak: Math.round(deepEmptyVisible / Math.max(1, deepEmpty) * 1000) / 1000,
+      };
+    }
+    return result;
   })()`);
 }
 
@@ -2119,6 +2509,10 @@ async function samplePageRegions(
         }
       }
       let dominantComponentPixels = 0;
+      let maskSignature = 2166136261;
+      for (const supported of visiblePixels) {
+        maskSignature = Math.imul(maskSignature ^ supported, 16777619);
+      }
       const visited = new Uint8Array(visiblePixels.length);
       const stack = new Int32Array(visiblePixels.length);
       for (let origin = 0; origin < visiblePixels.length; origin++) {
@@ -2147,10 +2541,18 @@ async function samplePageRegions(
       }
       let boundaryPixels = 0;
       let outerRingPixels = 0;
+      let visibleMinX = width;
+      let visibleMinY = height;
+      let visibleMaxX = -1;
+      let visibleMaxY = -1;
       if (region.silhouette) {
         for (let py = 0; py < height; py++) for (let px = 0; px < width; px++) {
           const sampleIndex = py * width + px;
           if (!visiblePixels[sampleIndex]) continue;
+          visibleMinX = Math.min(visibleMinX, px);
+          visibleMinY = Math.min(visibleMinY, py);
+          visibleMaxX = Math.max(visibleMaxX, px);
+          visibleMaxY = Math.max(visibleMaxY, py);
           if (px === 0 || px + 1 === width || py === 0 || py + 1 === height) outerRingPixels++;
           if (px === 0 || px + 1 === width || py === 0 || py + 1 === height
             || !visiblePixels[sampleIndex - 1] || !visiblePixels[sampleIndex + 1]
@@ -2159,6 +2561,9 @@ async function samplePageRegions(
           }
         }
       }
+      const visibleBoundsWidth = Math.max(0, visibleMaxX - visibleMinX + 1);
+      const visibleBoundsHeight = Math.max(0, visibleMaxY - visibleMinY + 1);
+      const visibleBoundsArea = visibleBoundsWidth * visibleBoundsHeight;
       let longestQuietRun = 0;
       for (let py = 0; py < height; py++) {
         let quietRun = 0;
@@ -2194,8 +2599,16 @@ async function samplePageRegions(
           compactness: Math.round(
             4 * Math.PI * visible / Math.max(1, boundaryPixels * boundaryPixels) * 1000,
           ) / 1000,
+          boundingAspect: Math.round(
+            (visibleBoundsWidth / Math.max(0.0001, worldScaleX * pageScaleX))
+              / Math.max(0.0001, visibleBoundsHeight / (worldScaleY * pageScaleY)) * 1000,
+          ) / 1000,
+          rectangularFill: Math.round(visible / Math.max(1, visibleBoundsArea) * 1000) / 1000,
         } : {}),
-        ...(region.signature ? { signature: signature >>> 0 } : {}),
+        ...(region.signature ? {
+          signature: signature >>> 0,
+          maskSignature: maskSignature >>> 0,
+        } : {}),
         ...(region.locatePeak ? {
           peakLuma: Math.round(Math.max(0, peakLuma)),
           peakWorld: [

@@ -25,10 +25,11 @@ describe('field render resolution', () => {
     expect(resolveFieldOutputScale('?renderScale=unexpected')).toBe(FIELD_OUTPUT_SCALE);
   });
 
-  it('keeps WebGL output below a conservative single-target watchdog budget', () => {
-    expect(safeWebGLOutputScale(612, 384, 8)).toBe(4);
+  it('admits canonical true 8x while respecting explicit target budgets', () => {
+    expect(safeWebGLOutputScale(612, 384, 8)).toBe(8);
     expect(safeWebGLOutputScale(612, 384, 4)).toBe(4);
     expect(safeWebGLOutputScale(320, 200, 8)).toBe(8);
+    expect(safeWebGLOutputScale(1_200, 800, 8)).toBe(4);
     expect(safeWebGLOutputScale(612, 384, 8, 2_000_000, 2_048)).toBe(2);
     expect(safeWebGLOutputScale(612, 384, 1, 1, 1)).toBe(1);
   });
