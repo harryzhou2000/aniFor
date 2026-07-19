@@ -24,11 +24,11 @@ Queued after the renderer checkpoint: revisit desktop/mobile geometry as a dedic
 
 - Repository: `/home/harry/projects/aniFor_codex`
 - Branch: `main_codex`
-- Current deployed checkpoint: `4eee841 Prove smooth powder structure and enable true 8x`. The current local tranche adds patterned native-wall refraction for Glass and Ice without a framebuffer-sized second render target.
-- Manual Actions run `29691508269` built and deployed exact SHA `4eee8412d29f4c6b790840bed845cf2148a9c8a4` after `origin/main_codex` was independently checked.
+- Current deployed checkpoint: `76fb75d Add patterned wall refraction for glass and ice`.
+- Manual Actions run `29693212583` built and deployed exact SHA `76fb75d97b7c0ee4f59ef40e9457fa9a17e966f4` after `origin/main_codex` was independently checked. The C++ cache restored its exact primary key and produced 269/270 cacheable hits (99.63%); saving correctly skipped because that primary key already existed.
 - GitHub CLI authentication was working for that dispatch and inspection. Re-check authentication and the remote branch independently after the next push.
 - Current live Pages URL: `https://harryzhou2000.github.io/aniFor/`
-- Verified live baseline: `4eee841` from Actions run `29691508269`. The live page reported the exact revision and passed the runtime asset-closure/browser verification; the next deployment must repeat that proof for the refraction checkpoint.
+- Verified live baseline: `76fb75d` from Actions run `29693212583`. The workflow verifier and an independent post-run check both matched the exact revision and traversed all 20 referenced runtime resources on the first attempt, including the native WASM assets and MIME checks.
 - Build, deploy, and post-deployment verification all passed. The live closure contains all referenced resources with correct WASM MIME and the exact expected revision. The successful primary ccache key already existed, so the save step correctly skipped.
 
 ## Committed/live history through `8ae8765`
@@ -386,13 +386,13 @@ The layout checkpoint `60b033b` and dense-solid relief checkpoint `97f5ced` were
 
 ## Next sequence
 
-1. Commit, push, deploy, and verify the completed patterned native-wall refraction checkpoint against the exact live revision plus runtime asset closure.
-2. Continue the wider solid/translucent-surface overhaul beyond semantic-wall backdrops, then implement signs and the remaining special editing semantics.
+1. Continue the wider solid/translucent-surface overhaul beyond semantic-wall backdrops, retaining exact support and material ownership under every optical effect.
+2. Implement signs and the remaining special editing semantics after the next graphics checkpoint.
 
-## Patterned native-wall refraction (current uncommitted tranche)
+## Patterned native-wall refraction (`76fb75d`, committed and live)
 
 - The deterministic render-lab backend now owns an independent TPT-shaped 4x4 wall plane, allowing particles and walls to coexist without granting that capability to the ordinary deterministic fallback. Patterned walls sit only inside eroded Glass/Ice/Metal fixture interiors, so the background cannot create support in matrix gaps or rounded-capsule corners.
 - Canvas and WebGL implement zero-fetch semantic refraction for exact Glass and Ice. They move only the allocation-free procedural wall-pattern coordinate; wall ID, wall texture support, wall alpha, particle alpha, material ownership, cavities, and physics remain unchanged. Canvas fixes the prior Glass parity bug by source-over compositing translucent matter onto the existing wall. WebGL changes only its existing final wall-backdrop term. Glass uses one coherent clear-lens phase; Ice averages opposing stable facets. No texture, pass, upload, persistent buffer, or framebuffer backbuffer was added, preserving true-8x memory bounds.
 - Refraction has a separate audit toggle from emission-field transmission. The browser captures off→on→off with all scene light unchanged, samples eroded patterned Glass/Ice interiors, and requires a bipolar low-bias response, bounded peak, clear/frosted magnitude distinction, exact repeated-off stability, matched opaque-Metal zero response, and identical straight/refracted support. The current paired visual-only gate passes with zero browser errors: Canvas/WebGL Glass RMS is `2.18/1.50` with `0.99/0.953` bipolar balance; Ice RMS is `1.54/1.13` with `0.837/0.822` balance; Metal and repeated-off response are exactly zero.
 - The pathological full-612x384 Canvas Glass-over-wall helper profile measures `14.99/15.58/17.05 ms` median/p90/max including diagnostic pixel reset. Production runs it only for exact dense Glass/Ice cells with a coexisting wall and performs no allocation or field sampling.
-- Local validation passes TypeScript, all 50 test files / 264 tests, the 772-module production build, the 20-file static asset closure, script syntax, and complete forced-Canvas and runtime-WebGL browser audits with zero browser errors. Both backends preserve exact straight/refracted support; Canvas retains exact cursor/zoom/pan/mobile semantics, and WebGL proves true requested/effective 8× at 4896×3072 with unchanged CSS geometry. The WebGL SwiftShader timer retained 30 usable samples and zero discarded at `139.54/159.21/185.37 ms`. Canonical captures are `.artifacts/patterned-refraction-canvas2d.png` and `.artifacts/patterned-refraction-webgl.png`, with mobile/configured-source/LIFE companions. Only checkpoint, deploy, and live verification remain pending.
+- Local validation passes TypeScript, all 50 test files / 264 tests, the 772-module production build, the 20-file static asset closure, script syntax, and complete forced-Canvas and runtime-WebGL browser audits with zero browser errors. Both backends preserve exact straight/refracted support; Canvas retains exact cursor/zoom/pan/mobile semantics, and WebGL proves true requested/effective 8× at 4896×3072 with unchanged CSS geometry. The WebGL SwiftShader timer retained 30 usable samples and zero discarded at `139.54/159.21/185.37 ms`. Canonical captures are `.artifacts/patterned-refraction-canvas2d.png` and `.artifacts/patterned-refraction-webgl.png`, with mobile/configured-source/LIFE companions. Actions run `29693212583` built, deployed, and verified the exact checkpoint; the independent live closure check also passed all 20 resources on its first attempt.
