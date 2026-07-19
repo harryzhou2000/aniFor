@@ -24,11 +24,11 @@ Queued after the renderer checkpoint: revisit desktop/mobile geometry as a dedic
 
 - Repository: `/home/harry/projects/aniFor_codex`
 - Branch: `main_codex`
-- Current deployed checkpoint: `820b628 Expand TPT catalog and add semantic field rendering`.
-- Manual Actions run `29697480670` built and deployed exact SHA `820b62821d1f8de4ca8f14903d2b6c6cbaa581c7` after `origin/main_codex` was independently checked.
+- Current deployed renderer checkpoint: `c96dee8 Add coherent liquid refraction at true 8x`.
+- Manual Actions run `29699378042` built and deployed exact SHA `c96dee82d7339d92b0f686220955ee0185fdd0a4` after `origin/main_codex` was independently checked.
 - GitHub CLI authentication was working for that dispatch and inspection. Re-check authentication and the remote branch independently after the next push.
 - Current live Pages URL: `https://harryzhou2000.github.io/aniFor/`
-- Verified live baseline: `820b628` from Actions run `29697480670`. The workflow verifier and an independent post-run check both matched the exact revision and traversed all 20 referenced runtime resources, including the native WASM assets and MIME checks.
+- Verified live renderer baseline: `c96dee8` from Actions run `29699378042`. The workflow verifier and an independent post-run check both matched the exact revision and traversed all 20 referenced runtime resources on the first attempt, including the native WASM assets and MIME checks.
 - Build, deploy, and post-deployment verification all passed. The live closure contains all referenced resources with correct WASM MIME and the exact expected revision. The successful primary ccache key already existed, so the save step correctly skipped.
 
 ## Committed/live history through `8ae8765`
@@ -420,3 +420,4 @@ The layout checkpoint `60b033b` and dense-solid relief checkpoint `97f5ced` were
 - The deterministic atlas now has independent Water/Oil calibration cards and a wall-backed Lava block with one reconstructed pinhole. The off→on→off browser sequence requires Water/Oil response, exact opaque-Metal and molten/pinhole zero controls, repeat stability, unchanged liquid support, and Canvas/WebGL magnitude parity.
 - The path adds no texture, field, lookup allocation, upload, render pass, framebuffer copy, secondary target, time term, or alpha/support mutation. True WebGL 8× therefore retains its single `4896×3072` target and the temporary Canvas compatibility renderer remains capped at 4×. Canvas's pathological all-world wall-backed liquid helper is explicitly profiled against straight wall presentation; production additionally requires authoritative semantic liquid over a native wall.
 - Current local validation passes TypeScript, all 50 test files / 273 tests, the 772-module production build, the 20-file runtime asset closure, script syntax, diff checks, the independent forced-Canvas visual gate, and the complete paired interaction/mobile/native audit with zero browser errors. The WebGL proof reports true requested/effective 8×, a `4896×3072` backing with unchanged `889×557.8` CSS geometry, 30 usable GPU queries with zero discarded at `155.17/172.68/190.27 ms`, exact `42×27` middle pan, and a `378×378` mobile panel with `1.431×` pinch plus 22 px pan and zero stray cells. Retained captures are `.artifacts/liquid-refraction-full-{canvas2d,webgl}.png` with mobile/configured-source/LIFE companions.
+- Commit `c96dee8` is pushed on `main_codex`. Manual cached run `29699378042` completed build in 1m24s, Pages deployment in 12s, and exact-revision verification in 6s. The workflow verifier and an independent post-run invocation both matched all 20 live resources on attempt one. The successful primary ccache key already existed, so the save step correctly skipped; no Chrome or Vite process remains.
