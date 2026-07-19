@@ -7,6 +7,12 @@ const RELIEF_SUPPORT_START_ALPHA = 0.28 * 255;
 const RELIEF_SUPPORT_END_ALPHA = 0.72 * 255;
 const RELIEF_DARK_LIMIT = -0.16;
 const RELIEF_LIGHT_LIMIT = 0.18;
+const INTERFACE_SUPPORT_START_ALPHA = 0.62 * 255;
+const INTERFACE_SUPPORT_END_ALPHA = 0.88 * 255;
+const INTERFACE_CONTRAST_START = 0.06;
+const INTERFACE_CONTRAST_END = 0.28;
+const INTERFACE_RELIEF_X = 0.075;
+const INTERFACE_RELIEF_Y = 0.09;
 
 /**
  * Scales semantic-cell contour light down only where the shared liquid field
@@ -75,6 +81,53 @@ export function canvasLiquidFieldRelief(
     RELIEF_DARK_LIMIT,
     RELIEF_LIGHT_LIMIT,
   );
+}
+
+/**
+ * Dense unlike-liquid neighbours behave as an optical interface even when the
+ * union-density field is flat. RGB is canonical species ownership here, never
+ * shaded presentation colour. Requiring dense alpha on both sides prevents an
+ * empty shore or isolated droplet from being mistaken for a second liquid. The
+ * caller first proves an unlike semantic-liquid neighbour, so ordinary pool
+ * cells keep the original alpha-only hot path.
+ */
+export function canvasLiquidSpeciesRelief(
+  density: Uint8Array,
+  width: number,
+  height: number,
+  x: number,
+  y: number,
+): number {
+  const leftX = Math.max(0, x - 1);
+  const rightX = Math.min(width - 1, x + 1);
+  const topY = Math.max(0, y - 1);
+  const bottomY = Math.min(height - 1, y + 1);
+  const center = (y * width + x) * 4;
+  return clamp(
+    (liquidSpeciesContrast(density, center, (y * width + rightX) * 4)
+      - liquidSpeciesContrast(density, center, (y * width + leftX) * 4))
+      * INTERFACE_RELIEF_X
+    + (liquidSpeciesContrast(density, center, (bottomY * width + x) * 4)
+      - liquidSpeciesContrast(density, center, (topY * width + x) * 4))
+      * INTERFACE_RELIEF_Y,
+    RELIEF_DARK_LIMIT,
+    RELIEF_LIGHT_LIMIT,
+  );
+}
+
+function liquidSpeciesContrast(field: Uint8Array, center: number, neighbour: number): number {
+  const support = smoothstep(
+    INTERFACE_SUPPORT_START_ALPHA,
+    INTERFACE_SUPPORT_END_ALPHA,
+    Math.min(field[center + 3], field[neighbour + 3]),
+  );
+  if (support <= 0) return 0;
+  const contrast = Math.max(
+    Math.abs(field[center] - field[neighbour]),
+    Math.abs(field[center + 1] - field[neighbour + 1]),
+    Math.abs(field[center + 2] - field[neighbour + 2]),
+  ) / 255;
+  return support * smoothstep(INTERFACE_CONTRAST_START, INTERFACE_CONTRAST_END, contrast);
 }
 
 function smoothstep(edge0: number, edge1: number, value: number): number {

@@ -13,7 +13,8 @@ import {
   createLiquidSurfaceScratch, reconstructLiquidSurface, type LiquidSurfaceScratch,
 } from './canvas-liquid-surface';
 import {
-  canvasLiquidContourScale, canvasLiquidFieldRelief, canvasLiquidSurfaceExposure,
+  canvasLiquidContourScale, canvasLiquidFieldRelief, canvasLiquidSpeciesRelief,
+  canvasLiquidSurfaceExposure,
 } from './canvas-liquid-light';
 import { shadeCanvasEnergy } from './canvas-energy-style';
 import { shadeCanvasMaterial } from './canvas-material-style';
@@ -504,8 +505,17 @@ export class MaterialRenderer {
           fields.liquid.bytes, width, x, y, top === Material.Empty,
         )
         : 0;
+      const liquidSpeciesContact = phase === RenderPhase.Liquid && (
+        (top !== material && fields.lookups.liquidByMaterial[top] !== 0)
+        || (left !== material && fields.lookups.liquidByMaterial[left] !== 0)
+        || (right !== material && fields.lookups.liquidByMaterial[right] !== 0)
+        || (bottom !== material && fields.lookups.liquidByMaterial[bottom] !== 0)
+      );
       const liquidReliefScale = phase === RenderPhase.Liquid
-        ? 1 + canvasLiquidFieldRelief(fields.liquid.bytes, width, height, x, y)
+        ? 1 + (canvasLiquidFieldRelief(fields.liquid.bytes, width, height, x, y)
+          + (liquidSpeciesContact
+            ? canvasLiquidSpeciesRelief(fields.liquid.bytes, width, height, x, y)
+            : 0))
           * (this.outputScale >= CANVAS_CONTOUR_OUTPUT_SCALE
             ? (optics === RenderOptics.Aqueous ? 1.35 : 1.18)
             : 1)

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
-  canvasLiquidContourScale, canvasLiquidFieldRelief, canvasLiquidSurfaceExposure,
+  canvasLiquidContourScale, canvasLiquidFieldRelief, canvasLiquidSpeciesRelief,
+  canvasLiquidSurfaceExposure,
 } from './canvas-liquid-light';
 
 describe('Canvas liquid field-owned light', () => {
@@ -63,6 +64,36 @@ describe('Canvas liquid field-owned light', () => {
     expect(canvasLiquidFieldRelief(droplet, width, height, 1, 1)).toBe(0);
     expect(crown).toEqual(original);
   });
+
+  it('adds mirrored optical relief at a dense unlike-liquid interface', () => {
+    const width = 3;
+    const height = 3;
+    const rightField = rgbaField(width, height, [42, 166, 205], 255);
+    setColor(rightField, width, 2, 1, [91, 67, 35]);
+    const rightOriginal = rightField.slice();
+    const rightInterface = canvasLiquidSpeciesRelief(rightField, width, height, 1, 1);
+
+    const leftField = rgbaField(width, height, [42, 166, 205], 255);
+    setColor(leftField, width, 0, 1, [91, 67, 35]);
+    const leftOriginal = leftField.slice();
+    const leftInterface = canvasLiquidSpeciesRelief(leftField, width, height, 1, 1);
+
+    expect(rightInterface).toBeGreaterThan(0);
+    expect(leftInterface).toBeLessThan(0);
+    expect(rightInterface).toBeCloseTo(-leftInterface, 6);
+    expect(rightField).toEqual(rightOriginal);
+    expect(leftField).toEqual(leftOriginal);
+  });
+
+  it('does not turn low-alpha colour changes into liquid interfaces', () => {
+    const width = 3;
+    const height = 3;
+    const field = rgbaField(width, height, [42, 166, 205], 120);
+    setColor(field, width, 2, 1, [91, 67, 35]);
+    const original = field.slice();
+    expect(canvasLiquidSpeciesRelief(field, width, height, 1, 1)).toBe(0);
+    expect(field).toEqual(original);
+  });
 });
 
 function alphaField(width: number, height: number, alpha: number): Uint8Array {
@@ -73,4 +104,33 @@ function alphaField(width: number, height: number, alpha: number): Uint8Array {
 
 function setAlpha(field: Uint8Array, width: number, x: number, y: number, alpha: number): void {
   field[(y * width + x) * 4 + 3] = alpha;
+}
+
+function rgbaField(
+  width: number,
+  height: number,
+  color: readonly [number, number, number],
+  alpha: number,
+): Uint8Array {
+  const result = new Uint8Array(width * height * 4);
+  for (let offset = 0; offset < result.length; offset += 4) {
+    result[offset] = color[0];
+    result[offset + 1] = color[1];
+    result[offset + 2] = color[2];
+    result[offset + 3] = alpha;
+  }
+  return result;
+}
+
+function setColor(
+  field: Uint8Array,
+  width: number,
+  x: number,
+  y: number,
+  color: readonly [number, number, number],
+): void {
+  const offset = (y * width + x) * 4;
+  field[offset] = color[0];
+  field[offset + 1] = color[1];
+  field[offset + 2] = color[2];
 }

@@ -412,6 +412,14 @@ vec3 solidReliefSample(vec2 position, float material, float profile, float optic
     wave * parameters.z / 255.0
   );
 }
+float liquidSpeciesContrast(vec4 center, vec4 neighbour) {
+  float support = smoothstep(0.62, 0.88, min(center.a, neighbour.a));
+  float contrast = max(
+    max(abs(center.r - neighbour.r), abs(center.g - neighbour.g)),
+    abs(center.b - neighbour.b)
+  );
+  return support * smoothstep(0.06, 0.28, contrast);
+}
 void main() {
   vec2 fieldUv = vFieldCoord;
   vec4 state = field(fieldUv);
@@ -521,6 +529,7 @@ void main() {
       : smoothstep(0.42, 0.90, density))
     : 0.0;
   vec2 volumeSlope = vec2(0.0);
+  vec2 liquidSpeciesSlope = vec2(0.0);
   float cloudNeighbourMean = 0.0;
   float liquidNeighbourMean = 0.0;
   if (emissionOnly > 0.5) {
@@ -537,12 +546,24 @@ void main() {
     cloudNeighbourMean = (cloudLeft + cloudRight + cloudTop + cloudBottom) * 0.25;
     volumeSlope = vec2(cloudRight - cloudLeft, cloudBottom - cloudTop) * 0.85;
   } else if (liquidVolume > 0.5) {
-    float liquidLeft = texture(uLiquidTexture, fieldUv - vec2(uTexel.x, 0.0)).a;
-    float liquidRight = texture(uLiquidTexture, fieldUv + vec2(uTexel.x, 0.0)).a;
-    float liquidTop = texture(uLiquidTexture, fieldUv - vec2(0.0, uTexel.y)).a;
-    float liquidBottom = texture(uLiquidTexture, fieldUv + vec2(0.0, uTexel.y)).a;
-    liquidNeighbourMean = (liquidLeft + liquidRight + liquidTop + liquidBottom) * 0.25;
-    volumeSlope = vec2(liquidRight - liquidLeft, liquidBottom - liquidTop) * 0.65;
+    vec4 liquidLeft = texture(uLiquidTexture, fieldUv - vec2(uTexel.x, 0.0));
+    vec4 liquidRight = texture(uLiquidTexture, fieldUv + vec2(uTexel.x, 0.0));
+    vec4 liquidTop = texture(uLiquidTexture, fieldUv - vec2(0.0, uTexel.y));
+    vec4 liquidBottom = texture(uLiquidTexture, fieldUv + vec2(0.0, uTexel.y));
+    liquidNeighbourMean = (liquidLeft.a + liquidRight.a + liquidTop.a + liquidBottom.a) * 0.25;
+    volumeSlope = vec2(
+      liquidRight.a - liquidLeft.a, liquidBottom.a - liquidTop.a
+    ) * 0.65;
+    // Union liquid alpha stays flat at a dense unlike-species contact. Canonical
+    // field RGB therefore supplies a bounded optical normal at that interface.
+    // Dense support on both samples rejects empty shores and isolated droplets;
+    // the four texture reads above already existed, so this adds no probes.
+    liquidSpeciesSlope = vec2(
+      liquidSpeciesContrast(liquidState, liquidRight)
+        - liquidSpeciesContrast(liquidState, liquidLeft),
+      liquidSpeciesContrast(liquidState, liquidBottom)
+        - liquidSpeciesContrast(liquidState, liquidTop)
+    );
   }
   // Promote only a field-supported pool interior. Requiring both centre and
   // cardinal mean prevents an isolated droplet from becoming a flat opaque
@@ -710,8 +731,8 @@ void main() {
     // while retaining a positive z component so the liquid never resembles a
     // chrome cut-out. Coverage and species support remain separate below.
     vec3 liquidNormal = normalize(vec3(
-      -(semanticSlope.x + volumeSlope.x) * 1.65,
-      -(semanticSlope.y + volumeSlope.y) * 1.65,
+      -(semanticSlope.x + volumeSlope.x + liquidSpeciesSlope.x * 0.16) * 1.65,
+      -(semanticSlope.y + volumeSlope.y + liquidSpeciesSlope.y * 0.18) * 1.65,
       0.88
     ));
     vec3 liquidLightDirection = normalize(vec3(-0.48, -0.68, 0.78));
@@ -746,6 +767,9 @@ void main() {
     float liquidMacroRelief = liquidDepth * (
       (broadSheen - 0.5) * macroSheenGain + broadCaustic * macroCausticGain
     );
+    float liquidInterfaceRelief = clamp(
+      dot(liquidSpeciesSlope, vec2(0.075, 0.09)), -0.12, 0.12
+    );
     float topLip = smoothstep(0.02, 0.16, volumeSlope.y);
     float lowerShade = smoothstep(0.02, 0.16, -volumeSlope.y);
     float depthTransmission = 0.66 + aqueous * 0.10 - oily * 0.10
@@ -773,7 +797,10 @@ void main() {
     ) * mix(0.56, 0.82, liquidDepth);
     color = liquidBase * mix(1.24, depthTransmission, liquidDepth)
       * liquidDiffuse * mix(1.0, liquidBodyExposure, liquidDepth);
-    color *= 1.0 + liquidMacroRelief;
+    // The normal bends reflection across unlike liquids; this small signed
+    // body term keeps the same meniscus readable at ordinary zoom. It mirrors
+    // Canvas and remains well below a dark separator or emissive highlight.
+    color *= 1.0 + liquidMacroRelief + liquidInterfaceRelief;
     color += edgeTint
       * (surfaceSpecular * gloss * (0.72 + rim * 0.86) + fresnel * rim * (0.18 + aqueous * 0.08));
     color += reflectedEnvironment

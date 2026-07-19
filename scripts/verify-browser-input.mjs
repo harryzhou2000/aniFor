@@ -129,9 +129,30 @@ async function auditMode(mode) {
     const canvasGasLightingRefresh = mode === 'canvas2d'
       ? await auditCanvasGasLightingRefresh(cdp)
       : undefined;
+    const powderStyleCaptures = {};
+    const powderStyleSelection = {};
+    for (const style of ['grains', 'local', 'smooth']) {
+      await evaluate(cdp, `(() => {
+        const button = document.querySelector('[data-powder-render-style="${style}"]');
+        if (!(button instanceof HTMLButtonElement)) throw new Error('Missing powder style ${style}');
+        button.click();
+        return true;
+      })()`);
+      powderStyleSelection[style] = await waitFor(() => evaluate(cdp, `(() => {
+        const buttons = [...document.querySelectorAll('[data-powder-render-style]')];
+        const selected = buttons.filter((button) => button.getAttribute('aria-pressed') === 'true');
+        return selected.length === 1 && selected[0].getAttribute('data-powder-render-style') === '${style}'
+          ? selected[0].textContent.trim() : false;
+      })()`), 5_000, `${mode} powder style ${style}`);
+      powderStyleCaptures[style] = await waitForStablePageCapture(
+        cdp, `${mode} powder style ${style} framebuffer`,
+      );
+    }
     const blankCaptures = await captureStableBlankPage(cdp, mode);
     for (const [label, captures] of [
-      ['unlit gas', unlitGasCaptures], ['blank', blankCaptures],
+      ['unlit gas', unlitGasCaptures],
+      ...Object.entries(powderStyleCaptures).map(([style, captures]) => [`powder ${style}`, captures]),
+      ['blank', blankCaptures],
     ]) assertCanvasRectsEqual(
       canonicalCaptures.canvasRect, captures.canvasRect, `${mode} canonical/${label} framebuffer`,
     );
@@ -218,6 +239,29 @@ async function auditMode(mode) {
     ]);
     assert(powderSamples.every((sample) => sample.visible >= 32 && sample.microContrast >= 3),
       `${mode}: rough powder lost its granular detail (${JSON.stringify(powderSamples)})`);
+    const powderStyleRegion = [{
+      name: 'shallowSandSlope', x: 94.5, y: 145,
+      radiusX: 77, radiusY: 7, topology: true, silhouette: true, signature: true,
+    }];
+    const canonicalPowderStyle = (await sampleCanonicalRegions(powderStyleRegion))[0];
+    const powderStyleSamples = {};
+    for (const style of ['grains', 'local', 'smooth']) {
+      powderStyleSamples[style] = (await samplePageRegions(
+        cdp, powderStyleCaptures[style].capture.data, powderStyleRegion,
+        blankCaptures.capture.data, blankCaptures.reference.data,
+        canonicalCaptures.canvasRect,
+      ))[0];
+    }
+    assert(new Set(Object.values(powderStyleSelection)).size === 3,
+      `${mode}: powder style buttons did not expose three exclusive states (${JSON.stringify(powderStyleSelection)})`);
+    assert(powderStyleSamples.grains.signature !== powderStyleSamples.local.signature
+      && powderStyleSamples.local.signature !== powderStyleSamples.smooth.signature,
+    `${mode}: powder render styles did not change the composed slope (${JSON.stringify(powderStyleSamples)})`);
+    assert(powderStyleSamples.smooth.signature === canonicalPowderStyle.signature,
+      `${mode}: returning to Smooth did not restore the canonical powder output (${JSON.stringify({ canonicalPowderStyle, powderStyleSamples })})`);
+    assert(powderStyleSamples.grains.worldArea < powderStyleSamples.smooth.worldArea * 0.99
+      && powderStyleSamples.grains.macroLumaRange + 5 <= powderStyleSamples.smooth.macroLumaRange,
+    `${mode}: Grains no longer preserves a visibly discrete reference (${JSON.stringify(powderStyleSamples)})`);
     const silhouetteSamples = await sampleCanonicalRegions([
       {
         name: 'roundedMetal', x: 405.5, y: 229.5,
@@ -278,6 +322,26 @@ async function auditMode(mode) {
     assert(liquidSeamSamples[0].rgb[1] > liquidSeamSamples[0].rgb[0]
       && liquidSeamSamples[2].rgb[0] > liquidSeamSamples[2].rgb[2],
     `${mode}: split-liquid capsule lost species ordering (${JSON.stringify(liquidSeamSamples)})`);
+    const oilInterfaceX = mode === 'canvas2d' ? 303.5 : 304.5;
+    const liquidInterfaceSamples = await sampleCanonicalRegions([
+      { name: 'waterInterior', x: 298.5, y: 172, radiusX: 0.30, radiusY: 5 },
+      { name: 'waterInterface', x: 302.5, y: 172, radiusX: 0.30, radiusY: 5 },
+      { name: 'oilInterface', x: oilInterfaceX, y: 172, radiusX: 0.30, radiusY: 5 },
+      { name: 'oilInterior', x: 308.5, y: 172, radiusX: 0.30, radiusY: 5 },
+    ]);
+    const liquidInterface = Object.fromEntries(
+      liquidInterfaceSamples.map((sample) => [sample.name, sample]),
+    );
+    assert(liquidInterfaceSamples.every((sample) => sample.visible >= 8
+      && sample.coverage >= 0.90 && sample.darkFraction <= 0.35),
+    `${mode}: unlike-liquid optical interface opened a dark gap (${JSON.stringify(liquidInterfaceSamples)})`);
+    const waterInterfaceResponse = liquidInterface.waterInterface.meanLuma
+      - liquidInterface.waterInterior.meanLuma;
+    const oilInterfaceResponse = liquidInterface.oilInterface.meanLuma
+      - liquidInterface.oilInterior.meanLuma;
+    assert(waterInterfaceResponse >= 1 && waterInterfaceResponse <= 20
+      && Math.abs(oilInterfaceResponse) >= 1 && Math.abs(oilInterfaceResponse) <= 20,
+    `${mode}: unlike-liquid interface lost its bounded meniscus light (${JSON.stringify(liquidInterfaceSamples)})`);
     const volumeSamples = await sampleCanonicalRegions([
       { name: 'water', x: 238, y: 79, radius: 14 },
       { name: 'oil', x: 289, y: 87, radius: 12 },
@@ -574,11 +638,13 @@ async function auditMode(mode) {
       translucentSolidSamples,
       solidSeparatorSamples,
       powderSamples,
+      powderStyleSamples,
       silhouetteSamples,
       contactSilhouetteSamples,
       contactMaterialSamples,
       isolatedMaterialSamples,
       liquidSeamSamples,
+      liquidInterfaceSamples,
       volumeSamples,
       gasLightingSamples,
       gasLightResponseSamples,
@@ -1768,9 +1834,16 @@ async function samplePageRegions(
       let peakLuma = -1;
       let peakPixelX = 0;
       let peakPixelY = 0;
+      let signature = 2166136261;
       const lumaValues = new Float32Array(width * height);
       const visiblePixels = new Uint8Array(width * height);
       for (let offset = 0; offset < data.length; offset += 4) {
+        if (region.signature) {
+          signature = Math.imul(signature ^ data[offset], 16777619);
+          signature = Math.imul(signature ^ data[offset + 1], 16777619);
+          signature = Math.imul(signature ^ data[offset + 2], 16777619);
+          signature = Math.imul(signature ^ data[offset + 3], 16777619);
+        }
         if (baselineData) {
           const signal = Math.max(
             Math.abs(data[offset] - baselineData[offset]),
@@ -1915,6 +1988,7 @@ async function samplePageRegions(
             4 * Math.PI * visible / Math.max(1, boundaryPixels * boundaryPixels) * 1000,
           ) / 1000,
         } : {}),
+        ...(region.signature ? { signature: signature >>> 0 } : {}),
         ...(region.locatePeak ? {
           peakLuma: Math.round(Math.max(0, peakLuma)),
           peakWorld: [
