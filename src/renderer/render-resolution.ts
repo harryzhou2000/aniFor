@@ -1,5 +1,7 @@
 export const FIELD_OUTPUT_SCALE = 2;
 export type FieldOutputScale = 1 | 2 | 4 | 8;
+export const WEBGL_OUTPUT_PIXEL_BUDGET = 8_388_608;
+export const WEBGL_OUTPUT_DIMENSION_BUDGET = 4_096;
 
 export interface RenderSize { readonly width: number; readonly height: number }
 
@@ -18,4 +20,26 @@ export function resolveFieldOutputScale(search = globalThis.location?.search ?? 
     return Number(requested) as FieldOutputScale;
   }
   return FIELD_OUTPUT_SCALE;
+}
+
+/**
+ * Keeps a single WebGL presentation target below a conservative watchdog and
+ * texture-size budget. Small worlds may still use true 8×; the canonical world
+ * safely steps 8× down to 4× while Canvas remains able to exercise true 8×.
+ */
+export function safeWebGLOutputScale(
+  width: number,
+  height: number,
+  requested: FieldOutputScale,
+  maxPixels = WEBGL_OUTPUT_PIXEL_BUDGET,
+  maxDimension = WEBGL_OUTPUT_DIMENSION_BUDGET,
+): FieldOutputScale {
+  const candidates: readonly FieldOutputScale[] = [8, 4, 2, 1];
+  for (const scale of candidates) {
+    if (scale > requested) continue;
+    const size = backingSize(width, height, scale);
+    if (size.width <= maxDimension && size.height <= maxDimension
+      && size.width * size.height <= maxPixels) return scale;
+  }
+  return 1;
 }

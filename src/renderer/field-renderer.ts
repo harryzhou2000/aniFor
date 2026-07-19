@@ -3,7 +3,9 @@ import type { SimulationBackend } from '../simulation';
 import { clientToViewport, ViewTransform, type Point, type ViewState } from './view-transform';
 import { contentBoxFromBounds } from './client-coordinate-map';
 import type { PixiFieldPresenter, WebGLPresentationTiming } from './pixi-field-presenter';
-import { backingSize, resolveFieldOutputScale } from './render-resolution';
+import {
+  backingSize, resolveFieldOutputScale, safeWebGLOutputScale, type FieldOutputScale,
+} from './render-resolution';
 import { shadeCanvasAtmosphere } from './canvas-atmosphere-relief';
 import { canvasLocalEmissionAlpha } from './canvas-emission-style';
 import { shadeCanvasOpticalVolume } from './canvas-optics-style';
@@ -36,6 +38,8 @@ import {
   CANVAS_CONTOUR_CHUNK_SIZE, CANVAS_CONTOUR_OUTPUT_SCALE, CanvasPhaseContourScratch,
 } from './canvas-phase-contour';
 import { DirtyChunkGrid } from './dirty-chunk-grid';
+import { POWDER_SURFACE_REFRESH_INTERVAL } from './powder-surface-field';
+import type { PowderRenderStyle } from './powder-render-style';
 
 const FRAME_INTERVAL = 1000 / 30;
 export const DYNAMIC_FIELD_REFRESH_INTERVAL = 1000 / 12;
@@ -45,6 +49,8 @@ export interface RendererBackendInfo {
   readonly backend: 'webgl' | 'canvas2d';
   readonly label: 'WebGL' | 'Canvas 2D';
   readonly reason?: 'forced' | 'webgl-unavailable' | 'webgl-starting' | 'webgl-timeout' | 'webgl-error';
+  readonly requestedOutputScale?: FieldOutputScale;
+  readonly outputScale?: FieldOutputScale;
 }
 
 export interface CanvasPresentationTiming {
@@ -85,11 +91,17 @@ export class MaterialRenderer {
   private readonly traitClock = new Int32Array(CANVAS_RENDER_TRAIT_CLOCK_SIZE);
   private readonly boundaryStability: Uint8Array;
   private readonly boundaryStabilityOwners: Uint8Array;
-  private readonly outputScale = resolveFieldOutputScale();
-  private readonly contourScratch = new CanvasPhaseContourScratch(
-    this.outputScale === 1 ? CANVAS_CONTOUR_OUTPUT_SCALE : this.outputScale,
-  );
+  private readonly requestedOutputScale: FieldOutputScale;
+  private readonly outputScale: FieldOutputScale;
+  private readonly webGLOutputScale: FieldOutputScale;
+  private readonly contourScratch: CanvasPhaseContourScratch;
   private readonly contourChunks: DirtyChunkGrid;
+  private readonly boundaryDirtyMarker = {
+    markCell: (index: number): void => {
+      this.contourChunks.markCell(index);
+      this.powderSurfaceDirty = true;
+    },
+  };
   private presenter?: PixiFieldPresenter;
   private readonly view: ViewTransform;
   private basePixels?: ImageData;
@@ -113,14 +125,28 @@ export class MaterialRenderer {
   private backend: RendererBackendInfo = { backend: 'canvas2d', label: 'Canvas 2D', reason: 'webgl-starting' };
   private lastDraw = -Infinity;
   private lastDynamicFieldRefresh = -Infinity;
+  private lastPowderSurfaceRefresh = -Infinity;
   private changed = true;
+  private powderSurfaceDirty = true;
   private gasFieldLightingEnabled = true;
+  private powderRenderStyle: PowderRenderStyle = 'smooth';
   private gasFieldLightingDirty = false;
   private canvasPresentationTimingEnabled = false;
   private canvasPresentationTiming?: CanvasPresentationTiming;
   private webGLPresentationTimingEnabled = false;
 
   constructor(private readonly host: HTMLElement, private readonly simulation: SimulationBackend) {
+    this.requestedOutputScale = resolveFieldOutputScale();
+    this.webGLOutputScale = safeWebGLOutputScale(
+      simulation.width, simulation.height, this.requestedOutputScale,
+    );
+    // Avoid allocating two 60 MiB startup canvases before a canonical 8× WebGL
+    // request is safely capped. Explicit forced-Canvas mode remains a true 8×
+    // diagnostic, while automatic Canvas fallback inherits the robust cap.
+    this.outputScale = forceCanvas2D() ? this.requestedOutputScale : this.webGLOutputScale;
+    this.contourScratch = new CanvasPhaseContourScratch(
+      this.outputScale === 1 ? CANVAS_CONTOUR_OUTPUT_SCALE : this.outputScale,
+    );
     this.rendered = new Uint8Array(simulation.width * simulation.height);
     this.boundaryStability = new Uint8Array(this.rendered.length);
     this.boundaryStabilityOwners = new Uint8Array(this.rendered.length);
@@ -158,8 +184,17 @@ export class MaterialRenderer {
     for (const cell of this.simulation.consumeDirtyCells()) {
       const previous = this.rendered[cell.index];
       this.rendered[cell.index] = cell.material;
-      this.fallbackFields?.markDirty(previous, cell.material);
+      const fallbackFields = this.fallbackFields;
+      fallbackFields?.markDirty(previous, cell.material);
       this.contourChunks.markCell(cell.index);
+      if (fallbackFields) {
+        const previousPhase = fallbackFields.lookups.styleBytes[previous * 4];
+        const nextPhase = fallbackFields.lookups.styleBytes[cell.material * 4];
+        if (previousPhase === RenderPhase.Solid || previousPhase === RenderPhase.Powder
+          || nextPhase === RenderPhase.Solid || nextPhase === RenderPhase.Powder) {
+          this.powderSurfaceDirty = true;
+        }
+      }
       this.presenter?.markDirty(cell.index, cell.material);
       this.changed = true;
     }
@@ -168,11 +203,15 @@ export class MaterialRenderer {
       this.renderedWalls[cell.index] = cell.wall;
       this.presenter?.markWallDirty(cell.index);
       this.contourChunks.markCell(cell.index);
+      this.powderSurfaceDirty = true;
       this.changed = true;
     }
     const hasDynamicFields = Boolean(this.simulation.temperature || this.simulation.velocity);
     const refreshDynamicFields = dynamicFieldRefreshDue(time, this.lastDynamicFieldRefresh, hasDynamicFields);
-    const visualRefreshDue = this.presenter?.visualRefreshDue(time) ?? this.fallbackFields?.due(time) ?? false;
+    const powderRefreshDue = this.powderSurfaceDirty
+      && time - this.lastPowderSurfaceRefresh >= POWDER_SURFACE_REFRESH_INTERVAL;
+    const visualRefreshDue = this.presenter?.visualRefreshDue(time)
+      ?? ((this.fallbackFields?.due(time) ?? false) || powderRefreshDue);
     if (!this.changed && !refreshDynamicFields && !visualRefreshDue) return;
     if (refreshDynamicFields) this.lastDynamicFieldRefresh = time;
     this.changed = false;
@@ -182,7 +221,13 @@ export class MaterialRenderer {
 
   getViewState(): ViewState { return this.view.snapshot(); }
 
-  getBackendInfo(): RendererBackendInfo { return this.backend; }
+  getBackendInfo(): RendererBackendInfo {
+    return {
+      ...this.backend,
+      requestedOutputScale: this.requestedOutputScale,
+      outputScale: this.backend.backend === 'webgl' ? this.webGLOutputScale : this.outputScale,
+    };
+  }
 
   enableCanvasPresentationTiming(): void { this.canvasPresentationTimingEnabled = true; }
 
@@ -206,6 +251,14 @@ export class MaterialRenderer {
     this.gasFieldLightingEnabled = enabled;
     this.presenter?.setGasFieldLightingEnabled(enabled);
     if (this.fallbackFields) this.gasFieldLightingDirty = true;
+    this.changed = true;
+  }
+
+  setPowderRenderStyle(style: PowderRenderStyle): void {
+    if (style === this.powderRenderStyle) return;
+    this.powderRenderStyle = style;
+    this.presenter?.setPowderRenderStyle(style);
+    this.contourChunks.markAll();
     this.changed = true;
   }
 
@@ -253,7 +306,7 @@ export class MaterialRenderer {
   private async createWebGLPresenter(): Promise<PixiFieldPresenter> {
     const module = await import('./pixi-field-presenter');
     return module.PixiFieldPresenter.create(
-      this.host, this.simulation.width, this.simulation.height, this.outputScale, ALL_MATERIALS,
+      this.host, this.simulation.width, this.simulation.height, this.webGLOutputScale, ALL_MATERIALS,
       this.fallbackFields,
     );
   }
@@ -275,6 +328,7 @@ export class MaterialRenderer {
       // candidate rebuilt one before its first render failed, mirror those
       // bytes back into the still-mounted Canvas surfaces before resuming it.
       this.syncFallbackVolumeSurfaces();
+      this.contourChunks.markAll();
       this.changed = true;
       this.setBackend({ backend: 'canvas2d', label: 'Canvas 2D', reason: 'webgl-error' });
       console.warn('Semantic WebGL renderer unavailable; keeping Canvas fallback.', error);
@@ -287,6 +341,7 @@ export class MaterialRenderer {
     const now = performance.now();
     if (this.webGLPresentationTimingEnabled) presenter.enableWebGLPresentationTiming();
     presenter.setGasFieldLightingEnabled(this.gasFieldLightingEnabled);
+    presenter.setPowderRenderStyle(this.powderRenderStyle);
     presenter.update(
       this.rendered, this.renderedWalls, this.simulation.temperature?.(), this.simulation.velocity?.(),
       now, now, true,
@@ -341,7 +396,10 @@ export class MaterialRenderer {
 
   private setBackend(backend: RendererBackendInfo): void {
     this.backend = backend;
+    const effectiveScale = backend.backend === 'webgl' ? this.webGLOutputScale : this.outputScale;
     this.host.dataset.rendererBackend = backend.backend;
+    this.host.dataset.requestedOutputScale = String(this.requestedOutputScale);
+    this.host.dataset.outputScale = String(effectiveScale);
     if (backend.reason) this.host.dataset.rendererReason = backend.reason;
     else delete this.host.dataset.rendererReason;
     this.fallbackSurface.dataset.rendererReason = backend.reason ?? '';
@@ -373,8 +431,17 @@ export class MaterialRenderer {
     }
     updateBoundaryStabilityRect(
       this.boundaryStability, this.boundaryStabilityOwners, this.rendered, velocities,
-      fields.lookups.styleBytes, width, { x: 0, y: 0, width, height }, this.contourChunks,
+      fields.lookups.styleBytes, width, { x: 0, y: 0, width, height }, this.boundaryDirtyMarker,
     );
+    if (this.powderSurfaceDirty
+      && scheduleTime - this.lastPowderSurfaceRefresh >= POWDER_SURFACE_REFRESH_INTERVAL) {
+      const powderSurfaceChanged = fields.powderSurface.update(
+        this.rendered, this.boundaryStability, this.renderedWalls,
+      );
+      this.powderSurfaceDirty = false;
+      this.lastPowderSurfaceRefresh = scheduleTime;
+      if (powderSurfaceChanged) this.contourChunks.markAll();
+    }
     const timingStart = this.canvasPresentationTimingEnabled ? performance.now() : undefined;
     const rebuiltField = fields.updateNext(this.rendered, scheduleTime);
     if (rebuiltField === 'emission') {
@@ -861,6 +928,8 @@ export class MaterialRenderer {
           sourcePixels,
           styleBytes,
           powderStability: this.boundaryStability,
+          powderSurface: this.fallbackFields?.powderSurface.bytes,
+          powderStyle: this.powderRenderStyle,
           walls: this.renderedWalls,
           worldWidth: width,
           worldHeight: height,

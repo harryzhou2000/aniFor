@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { MATERIALS, Material } from '../shared/materials';
-import { groupMaterials, sourceRejectionLabel, sourceSelectionLabel, toolCountLabel } from './controls';
+import { groupMaterials, POWDER_RENDER_STYLE_OPTIONS, sourceRejectionLabel, sourceSelectionLabel, toolCountLabel } from './controls';
 
 describe('material controls', () => {
   it('groups every brush once in a stable, named category', () => {
@@ -15,6 +15,14 @@ describe('material controls', () => {
 
   it('formats accessible search result counts', () => {
     expect([0, 1, 170].map(toolCountLabel)).toEqual(['0 tools', '1 tool', '170 tools']);
+  });
+
+  it('offers the three powder looks in increasing cohesion order', () => {
+    expect(POWDER_RENDER_STYLE_OPTIONS).toEqual([
+      { style: 'grains', label: 'Grains' },
+      { style: 'local', label: 'Local' },
+      { style: 'smooth', label: 'Smooth' },
+    ]);
   });
 
   it('describes configured source direction without hiding the target', () => {

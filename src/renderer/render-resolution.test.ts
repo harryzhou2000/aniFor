@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { backingSize, FIELD_OUTPUT_SCALE, resolveFieldOutputScale } from './render-resolution';
+import {
+  backingSize, FIELD_OUTPUT_SCALE, resolveFieldOutputScale, safeWebGLOutputScale,
+} from './render-resolution';
 
 describe('field render resolution', () => {
   it('allocates two backing pixels per axis without changing logical dimensions', () => {
@@ -21,5 +23,13 @@ describe('field render resolution', () => {
     expect(backingSize(612, 384, 4)).toEqual({ width: 2448, height: 1536 });
     expect(backingSize(612, 384, 8)).toEqual({ width: 4896, height: 3072 });
     expect(resolveFieldOutputScale('?renderScale=unexpected')).toBe(FIELD_OUTPUT_SCALE);
+  });
+
+  it('keeps WebGL output below a conservative single-target watchdog budget', () => {
+    expect(safeWebGLOutputScale(612, 384, 8)).toBe(4);
+    expect(safeWebGLOutputScale(612, 384, 4)).toBe(4);
+    expect(safeWebGLOutputScale(320, 200, 8)).toBe(8);
+    expect(safeWebGLOutputScale(612, 384, 8, 2_000_000, 2_048)).toBe(2);
+    expect(safeWebGLOutputScale(612, 384, 1, 1, 1)).toBe(1);
   });
 });

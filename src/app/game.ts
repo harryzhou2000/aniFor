@@ -91,6 +91,7 @@ export class Game {
       onRadius: (radius) => { this.radius = radius; },
       onPause: () => { this.paused = !this.paused; },
       onEraseMode: (erase) => { this.eraseMode = erase; },
+      onPowderRenderStyle: (style) => { this.renderer.setPowderRenderStyle(style); },
       canConfigureSource: (source, target) => this.simulation.canConfigureSource?.(source, target) ?? false,
       onSaveFile: () => this.downloadWorldFile(),
       onOpenFile: (file) => this.openWorldFile(file),
@@ -239,7 +240,13 @@ export class Game {
     const renderer = this.renderer.getBackendInfo();
     this.indicator.dataset.renderer = renderer.backend;
     this.indicator.dataset.rendererReason = renderer.reason ?? '';
-    this.indicator.title = renderer.reason ? rendererReason(renderer.reason) : 'Semantic WebGL renderer';
+    const scaleCapped = renderer.outputScale !== undefined
+      && renderer.requestedOutputScale !== undefined
+      && renderer.outputScale < renderer.requestedOutputScale;
+    this.indicator.title = renderer.reason ? rendererReason(renderer.reason)
+      : scaleCapped
+        ? `Semantic WebGL renderer; ${renderer.requestedOutputScale}× request safely capped to ${renderer.outputScale}×`
+        : 'Semantic WebGL renderer';
     this.indicator.innerHTML = "<span><b>Pressure</b>" + pressureText
       + "</span><span><b>Temperature</b>" + temperature
       + "</span><span class=\"renderer-indicator\"><b>Backend</b>" + rendererStatus(renderer) + "</span>"
@@ -322,11 +329,16 @@ function rendererReason(reason: NonNullable<ReturnType<MaterialRenderer['getBack
 }
 
 function rendererStatus(renderer: ReturnType<MaterialRenderer['getBackendInfo']>): string {
-  if (renderer.backend === 'webgl') return renderer.label;
-  if (renderer.reason === 'webgl-starting') return `${renderer.label} · starting WebGL`;
-  if (renderer.reason === 'webgl-timeout') return `${renderer.label} · WebGL timeout`;
-  if (renderer.reason === 'webgl-unavailable') return `${renderer.label} · WebGL unavailable`;
-  if (renderer.reason === 'webgl-error') return `${renderer.label} · WebGL error`;
-  if (renderer.reason === 'forced') return `${renderer.label} · forced`;
-  return renderer.label;
+  const scale = renderer.outputScale === undefined ? '' : ` · ${renderer.outputScale}×`;
+  const capped = renderer.outputScale !== undefined && renderer.requestedOutputScale !== undefined
+    && renderer.outputScale < renderer.requestedOutputScale
+    ? ` (${renderer.requestedOutputScale}× capped)` : '';
+  const base = renderer.label + scale + capped;
+  if (renderer.backend === 'webgl') return base;
+  if (renderer.reason === 'webgl-starting') return `${base} · starting WebGL`;
+  if (renderer.reason === 'webgl-timeout') return `${base} · WebGL timeout`;
+  if (renderer.reason === 'webgl-unavailable') return `${base} · WebGL unavailable`;
+  if (renderer.reason === 'webgl-error') return `${base} · WebGL error`;
+  if (renderer.reason === 'forced') return `${base} · forced`;
+  return base;
 }

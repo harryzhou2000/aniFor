@@ -1,4 +1,5 @@
 import { MATERIALS, Material, type MaterialCategory, type MaterialInfo } from '../shared/materials';
+import type { PowderRenderStyle } from '../renderer/powder-render-style';
 import { filterTools, isToolAvailable, materialTools, recordRecent, type CatalogTool, type ElementToolInfo, type ToolFilter, type ToolKind } from './tool-catalog';
 
 const FAVORITES_KEY = 'anifortpt-favorite-tools-v1';
@@ -38,6 +39,14 @@ const MATERIAL_GROUP_DEFINITIONS: ReadonlyArray<{ readonly id: string; readonly 
 const KIND_LABELS: Readonly<Record<ToolKind, string>> = {
   element: 'Elements', wall: 'Walls', force: 'Forces', thermal: 'Thermal', source: 'Sources', life: 'Life', sign: 'Signs', utility: 'Tools',
 };
+
+export const POWDER_RENDER_STYLE_OPTIONS = [
+  { style: 'grains', label: 'Grains' },
+  { style: 'local', label: 'Local' },
+  { style: 'smooth', label: 'Smooth' },
+] as const satisfies ReadonlyArray<{ readonly style: PowderRenderStyle; readonly label: string }>;
+
+const DEFAULT_POWDER_RENDER_STYLE: PowderRenderStyle = 'smooth';
 
 export function groupMaterials(materials: readonly MaterialInfo[] = MATERIALS): readonly MaterialGroup[] {
   const definitions = new Map<string, { label: string; description: string }>(
@@ -80,6 +89,7 @@ export interface ControlsCallbacks {
   onRadius(radius: number): void;
   onPause(): void;
   onEraseMode(erase: boolean): void;
+  onPowderRenderStyle(style: PowderRenderStyle): void;
   canConfigureSource?(source: Material, target: Material): boolean;
   onSaveFile(): Promise<boolean>;
   onOpenFile(file: File): Promise<boolean>;
@@ -270,6 +280,13 @@ export function mountControls(host: HTMLElement, callbacks: ControlsCallbacks, c
   actions.className = 'actions glass';
   actions.innerHTML = `
     <label class="brush-size"><span>Brush</span><input aria-label="Brush size" type="range" min="2" max="24" value="7" /></label>
+    <div class="powder-render-style" role="group" aria-label="Powder look">
+      <span class="powder-render-style-label">Powder look</span>
+      ${POWDER_RENDER_STYLE_OPTIONS.map(({ style, label }) => `
+        <button class="action-button powder-render-style-button${style === DEFAULT_POWDER_RENDER_STYLE ? ' selected' : ''}"
+          type="button" data-powder-render-style="${style}"
+          aria-pressed="${String(style === DEFAULT_POWDER_RENDER_STYLE)}">${label}</button>`).join('')}
+    </div>
     <button class="action-button pause" aria-label="Pause simulation">Pause</button>
     <button class="action-button save-file" aria-label="Save or share world as a file">Save / share</button>
     <button class="action-button open-file" aria-label="Open a world file">Open file</button>
@@ -282,6 +299,19 @@ export function mountControls(host: HTMLElement, callbacks: ControlsCallbacks, c
   actions.append(filePicker);
   const radius = actions.querySelector('input') as HTMLInputElement;
   radius.addEventListener('input', () => callbacks.onRadius(Number(radius.value)));
+  const powderStyleButtons = actions.querySelectorAll<HTMLButtonElement>('.powder-render-style-button');
+  for (const powderStyleButton of powderStyleButtons) {
+    powderStyleButton.addEventListener('click', () => {
+      const style = powderStyleButton.dataset.powderRenderStyle as PowderRenderStyle;
+      for (const button of powderStyleButtons) {
+        const selected = button === powderStyleButton;
+        button.classList.toggle('selected', selected);
+        button.setAttribute('aria-pressed', String(selected));
+      }
+      callbacks.onPowderRenderStyle(style);
+    });
+  }
+  callbacks.onPowderRenderStyle(DEFAULT_POWDER_RENDER_STYLE);
 
   const brushModes = document.createElement('div');
   brushModes.className = 'brush-modes brush-mode-bar glass';

@@ -8,6 +8,7 @@ import {
 import { Material } from '../shared/materials';
 import { RenderPhase } from './render-profile';
 import type { FieldOutputScale } from './render-resolution';
+import type { PowderRenderStyle } from './powder-render-style';
 
 export const CANVAS_CONTOUR_CHUNK_SIZE = 32;
 export const CANVAS_CONTOUR_OUTPUT_SCALE = 2;
@@ -22,6 +23,10 @@ export interface CanvasPhaseContourInput {
   readonly styleBytes: Uint8Array;
   /** Caller-maintained temporal stability: 0 is moving, 255 is settled. */
   readonly powderStability: Uint8Array;
+  /** Optional shared RGBA powder density/gradient/support field. */
+  readonly powderSurface?: Uint8Array;
+  /** Comparison mode; defaults to the slope-aware smooth presentation. */
+  readonly powderStyle?: PowderRenderStyle;
   /** Optional native wall occupancy. Walls pass through but never support contours. */
   readonly walls?: Uint8Array;
   readonly worldWidth: number;
@@ -94,7 +99,7 @@ export class CanvasPhaseContourScratch {
 
     for (let cellY = 0; cellY < input.chunkHeight; cellY++) {
       for (let cellX = 0; cellX < input.chunkWidth; cellX++) {
-        this.rasterizeCell(cellX, cellY);
+        this.rasterizeCell(cellX, cellY, input);
       }
     }
   }
@@ -127,7 +132,8 @@ export class CanvasPhaseContourScratch {
     }
   }
 
-  private rasterizeCell(cellX: number, cellY: number): void {
+  private rasterizeCell(cellX: number, cellY: number, input: CanvasPhaseContourInput): void {
+    const powderStyle = input.powderStyle ?? 'smooth';
     const haloIndex = (cellY + 1) * HALO_SIZE + cellX + 1;
     let material = this.haloMaterials[haloIndex];
     let phase = this.haloPhases[haloIndex];
@@ -137,7 +143,7 @@ export class CanvasPhaseContourScratch {
     let sourceAlpha = this.haloPixels[haloIndex * 4 + 3];
     let emptyPowderStability = 0;
     let emptyPowderSupport = 0;
-    if (material === 0 && !this.isWallAt(haloIndex)) {
+    if (material === 0 && powderStyle !== 'grains' && !this.isWallAt(haloIndex)) {
       const owner = this.resolveEmptyPowderOwner(cellX + 1, cellY + 1);
       if (owner.material !== 0) {
         material = owner.material;
@@ -147,11 +153,20 @@ export class CanvasPhaseContourScratch {
         sourceBlue = owner.blue;
         sourceAlpha = 255;
         emptyPowderStability = owner.stability;
-        emptyPowderSupport = this.powderSupport3x3(cellX + 1, cellY + 1, material);
+        const worldIndex = (input.chunkY + cellY) * input.worldWidth + input.chunkX + cellX;
+        emptyPowderSupport = input.powderSurface
+          ? input.powderSurface[worldIndex * 4 + 3] / 255 * 9
+          : this.powderSupport3x3(cellX + 1, cellY + 1, material);
       }
     }
     const emptyPowder = this.haloMaterials[haloIndex] === 0 && material !== 0;
     const eligible = !this.isWallAt(haloIndex) && isContourPhase(phase);
+    const powderSurfaceDetailGate = phase === RenderPhase.Powder
+      && powderStyle === 'smooth' && input.powderSurface
+      ? this.powderSurfaceBulkDepth(
+        input, input.chunkX + cellX, input.chunkY + cellY, material, emptyPowder,
+      )
+      : 0;
 
     for (let subY = 0; subY < this.outputScale; subY++) {
       for (let subX = 0; subX < this.outputScale; subX++) {
@@ -199,24 +214,51 @@ export class CanvasPhaseContourScratch {
         const density = top + (bottom - top) * weightY;
         let amount: number;
         if (phase === RenderPhase.Powder) {
-          const heapDensity = this.quadraticPowderDensity(
-            cellX + 1, cellY + 1, material, localX - 0.5, localY - 0.5,
-          );
-          const heap = smoothstep(0.18, 0.58, heapDensity);
-          if (emptyPowder) {
-            amount = emptyPowderStability
-              * smoothstep(2.5, 4, emptyPowderSupport)
-              * heap;
+          const seed = hash2(cellX + material * 37, cellY + material * 53);
+          const offsetX = (((seed & 0xffff) / 0xffff) - 0.5) * 0.15;
+          const offsetY = ((((seed >>> 16) & 0xffff) / 0xffff) - 0.5) * 0.15;
+          const grain = roundGrainCoverage(localX, localY, offsetX, offsetY);
+          if (powderStyle === 'grains') {
+            amount = emptyPowder ? 0 : grain;
           } else {
-            const support = q00 + q10 + q01 + q11;
-            const stability = this.haloStability[haloIndex] / 255;
-            const motion = (1 - stability) * 0.10;
-            const bulk = powderBulkWeight(support, motion);
-            const seed = hash2(cellX + material * 37, cellY + material * 53);
-            const offsetX = (((seed & 0xffff) / 0xffff) - 0.5) * 0.15;
-            const offsetY = ((((seed >>> 16) & 0xffff) / 0xffff) - 0.5) * 0.15;
-            const grain = roundGrainCoverage(localX, localY, offsetX, offsetY);
-            amount = grain + (heap - grain) * bulk;
+            const heapDensity = this.quadraticPowderDensity(
+              cellX + 1, cellY + 1, material, localX - 0.5, localY - 0.5,
+            );
+            let surfaceDensity = heapDensity;
+            let slopeAware = 0;
+            if (powderStyle === 'smooth' && input.powderSurface) {
+              const worldX = input.chunkX + cellX + localX;
+              const worldY = input.chunkY + cellY + localY;
+              const wideDensity = samplePowderByte(
+                input.powderSurface, input.worldWidth, input.worldHeight, worldX, worldY, 0,
+              ) / 255;
+              const gradientX = (samplePowderByte(
+                input.powderSurface, input.worldWidth, input.worldHeight, worldX, worldY, 1,
+              ) - 128) / 508;
+              const gradientY = (samplePowderByte(
+                input.powderSurface, input.worldWidth, input.worldHeight, worldX, worldY, 2,
+              ) - 128) / 508;
+              const verticalShare = Math.abs(gradientY)
+                / (Math.abs(gradientX) + Math.abs(gradientY) + 1e-6);
+              slopeAware = smoothstep(0.42, 0.70, verticalShare)
+                * smoothstep(0.006, 0.030, Math.abs(gradientY))
+                * powderSurfaceDetailGate;
+              surfaceDensity += (wideDensity - surfaceDensity) * slopeAware;
+            }
+            const heapStart = 0.18 + (0.40 - 0.18) * slopeAware;
+            const heapEnd = 0.58 + (0.60 - 0.58) * slopeAware;
+            const heap = smoothstep(heapStart, heapEnd, surfaceDensity);
+            if (emptyPowder) {
+              amount = emptyPowderStability
+                * smoothstep(2.5, 4, emptyPowderSupport)
+                * heap;
+            } else {
+              const support = q00 + q10 + q01 + q11;
+              const stability = this.haloStability[haloIndex] / 255;
+              const motion = (1 - stability) * 0.10;
+              const bulk = powderBulkWeight(support, motion);
+              amount = grain + (heap - grain) * bulk;
+            }
           }
         } else if (phase === RenderPhase.Liquid) {
           // Retain a fractional 2x edge on an isolated or unlike-species side;
@@ -290,6 +332,42 @@ export class CanvasPhaseContourScratch {
     return support;
   }
 
+  /**
+   * Wide gravity smoothing belongs only to a genuinely deep heap. Requiring
+   * two exact stable cells below and an exact horizontal neighbour preserve
+   * narrow ridges and branches; an empty projection needs one
+   * additional depth cell because it is not itself part of the material.
+   * Exact material checks keep unlike powder seams on the local contour.
+   */
+  private powderSurfaceBulkDepth(
+    input: CanvasPhaseContourInput,
+    worldX: number,
+    worldY: number,
+    material: number,
+    emptyPowder: boolean,
+  ): number {
+    const requiredDepth = emptyPowder ? 3 : 2;
+    for (let depth = 1; depth <= requiredDepth; depth++) {
+      const y = worldY + depth;
+      if (y >= input.worldHeight) return 0;
+      const index = y * input.worldWidth + worldX;
+      if (input.materials[index] !== material
+        || input.powderStability[index] < 192
+        || (input.walls?.[index] ?? 0) !== 0) return 0;
+    }
+    if (worldX <= 0 || worldX + 1 >= input.worldWidth) return 0;
+    const anchorY = worldY + (emptyPowder ? 1 : 0);
+    const anchor = anchorY * input.worldWidth + worldX;
+    let lateralSupport = false;
+    for (const offset of [-1, 1]) {
+      const index = anchor + offset;
+      lateralSupport ||= input.materials[index] === material
+        && input.powderStability[index] >= 192
+        && (input.walls?.[index] ?? 0) === 0;
+    }
+    return lateralSupport ? 1 : 0;
+  }
+
   private quadraticPowderDensity(
     haloX: number,
     haloY: number,
@@ -358,6 +436,7 @@ function validateInput(input: CanvasPhaseContourInput): void {
     || input.materials.length !== cells
     || input.sourcePixels.length !== cells * 4
     || input.powderStability.length !== cells
+    || (input.powderSurface !== undefined && input.powderSurface.length !== cells * 4)
     || input.styleBytes.length < 256 * 4
     || (input.walls !== undefined && input.walls.length !== cells)
     || !Number.isInteger(input.chunkX) || !Number.isInteger(input.chunkY)
@@ -370,6 +449,31 @@ function validateInput(input: CanvasPhaseContourInput): void {
     || input.chunkY + input.chunkHeight > input.worldHeight) {
     throw new Error('Canvas phase contour size mismatch');
   }
+}
+
+function samplePowderByte(
+  bytes: Uint8Array,
+  width: number,
+  height: number,
+  worldX: number,
+  worldY: number,
+  channel: number,
+): number {
+  const gridX = worldX - 0.5;
+  const gridY = worldY - 0.5;
+  const left = Math.max(0, Math.min(width - 1, Math.floor(gridX)));
+  const top = Math.max(0, Math.min(height - 1, Math.floor(gridY)));
+  const right = Math.max(0, Math.min(width - 1, left + 1));
+  const bottom = Math.max(0, Math.min(height - 1, top + 1));
+  const blendX = Math.max(0, Math.min(1, gridX - Math.floor(gridX)));
+  const blendY = Math.max(0, Math.min(1, gridY - Math.floor(gridY)));
+  const topLeft = bytes[(top * width + left) * 4 + channel];
+  const topRight = bytes[(top * width + right) * 4 + channel];
+  const bottomLeft = bytes[(bottom * width + left) * 4 + channel];
+  const bottomRight = bytes[(bottom * width + right) * 4 + channel];
+  const topValue = topLeft + (topRight - topLeft) * blendX;
+  const bottomValue = bottomLeft + (bottomRight - bottomLeft) * blendX;
+  return topValue + (bottomValue - topValue) * blendY;
 }
 
 function smoothstep(edge0: number, edge1: number, value: number): number {

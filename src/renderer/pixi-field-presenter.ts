@@ -9,11 +9,16 @@ import {
 } from 'pixi.js';
 import { DirtyChunkGrid } from './dirty-chunk-grid';
 import type { FieldOutputScale } from './render-resolution';
+import { POWDER_SURFACE_REFRESH_INTERVAL } from './powder-surface-field';
 import { updateBoundaryStabilityRect } from './boundary-stability-field';
 import { clientToCanvasWorld } from './client-coordinate-map';
 import { RenderFieldSet, type RenderMaterialStyle } from './render-field-set';
 import { packSemanticRect } from './semantic-field';
 import { packWallRect } from './wall-field';
+import { RenderPhase } from './render-profile';
+import {
+  powderRenderStyleValue, type PowderRenderStyle,
+} from './powder-render-style';
 interface PresenterViewport { readonly width: number; readonly height: number }
 
 interface WebGLTimerQueryExtension {
@@ -54,6 +59,7 @@ uniform sampler2D uAtmosphereTexture;
 uniform sampler2D uEmissionTexture;
 uniform sampler2D uLiquidTexture;
 uniform sampler2D uBoundaryStabilityTexture;
+uniform sampler2D uPowderSurfaceTexture;
 uniform sampler2D uPaletteTexture;
 uniform sampler2D uStyleTexture;
 uniform vec2 uTexel;
@@ -63,6 +69,7 @@ uniform vec2 uEmissionTexel;
 uniform float uTime;
 uniform float uHighQuality;
 uniform float uGasFieldLighting;
+uniform float uPowderStyle;
 vec4 field(vec2 uv) { return texture(uFieldTexture, clamp(uv, uTexel * 0.5, vec2(1.0) - uTexel * 0.5)); }
 vec4 wallField(vec2 uv) { return texture(uWallTexture, clamp(uv, uTexel * 0.5, vec2(1.0) - uTexel * 0.5)); }
 float materialAt(vec2 uv) { return floor(field(uv).r * 255.0 + 0.5); }
@@ -128,35 +135,33 @@ vec4 occupancyShape(vec2 uv, float material, float family, float contourSmoothin
   float gradientY = mix(q01 - q00, q11 - q10, weight.x) * weightDerivative.y;
   return vec4(density, gradientX, gradientY, q00 + q10 + q01 + q11);
 }
-vec4 quadraticPowderShape(vec2 uv, float material) {
-  vec2 grid = uv * uFieldSize - 0.5;
-  vec2 centre = floor(grid + 0.5);
-  vec2 delta = clamp(grid - centre, vec2(-0.5), vec2(0.5));
-  vec3 wx = vec3(
-    0.5 * (0.5 - delta.x) * (0.5 - delta.x),
-    0.75 - delta.x * delta.x,
-    0.5 * (0.5 + delta.x) * (0.5 + delta.x)
+vec4 powderSurfaceShape(vec2 uv) {
+  vec4 state = texture(uPowderSurfaceTexture, uv);
+  return vec4(
+    state.r,
+    (state.g * 255.0 - 128.0) / 508.0,
+    (state.b * 255.0 - 128.0) / 508.0,
+    state.a * 9.0
   );
-  vec3 wy = vec3(
-    0.5 * (0.5 - delta.y) * (0.5 - delta.y),
-    0.75 - delta.y * delta.y,
-    0.5 * (0.5 + delta.y) * (0.5 + delta.y)
-  );
-  vec3 dx = vec3(delta.x - 0.5, -2.0 * delta.x, delta.x + 0.5);
-  vec3 dy = vec3(delta.y - 0.5, -2.0 * delta.y, delta.y + 0.5);
-  float density = 0.0;
-  float gradientX = 0.0;
-  float gradientY = 0.0;
-  float support = 0.0;
-  for (int y = 0; y < 3; y++) for (int x = 0; x < 3; x++) {
-    vec2 sampleUv = (centre + vec2(float(x - 1), float(y - 1)) + 0.5) * uTexel;
-    float occupied = compatibleAt(sampleUv, material, 4.0);
-    density += occupied * wx[x] * wy[y];
-    gradientX += occupied * dx[x] * wy[y];
-    gradientY += occupied * wx[x] * dy[y];
-    support += occupied;
+}
+float powderSurfaceBulkDepth(vec2 uv, float material, float surfaceOnly) {
+  vec2 cell = (floor(uv * uFieldSize) + 0.5) * uTexel;
+  if (cell.x < uTexel.x * 1.5 - 0.000001
+    || cell.x > 1.0 - uTexel.x * 1.5 + 0.000001) return 0.0;
+  float requiredDepth = surfaceOnly > 0.5 ? 3.0 : 2.0;
+  float lastCellY = 1.0 - uTexel.y * 0.5;
+  if (cell.y + uTexel.y * requiredDepth > lastCellY + 0.000001) return 0.0;
+  float bulk = sameMaterial(cell + vec2(0.0, uTexel.y), material)
+    * sameMaterial(cell + vec2(0.0, uTexel.y * 2.0), material);
+  if (surfaceOnly > 0.5) {
+    bulk *= sameMaterial(cell + vec2(0.0, uTexel.y * 3.0), material);
   }
-  return vec4(density, gradientX, gradientY, support);
+  vec2 anchor = cell + vec2(0.0, surfaceOnly > 0.5 ? uTexel.y : 0.0);
+  bulk *= max(
+    sameMaterial(anchor - vec2(uTexel.x, 0.0), material),
+    sameMaterial(anchor + vec2(uTexel.x, 0.0), material)
+  );
+  return bulk;
 }
 vec3 discreteShape(vec2 uv, float material) {
   vec2 left = vec2(uTexel.x, 0.0);
@@ -480,13 +485,20 @@ void main() {
         (family == 0.0 || family == 2.0 || profile == 1.0) ? 1.0 : 0.0
       )))));
   float boundaryStability = 0.0;
+  float powderSurfaceBlend = 0.0;
   if (family == 4.0) {
     boundaryStability = surfaceOnly > 0.5
       ? nearbyPowderStability(fieldUv, material)
       : (halo < 0.5 ? boundaryStabilityAt(fieldUv) : 0.0);
   }
-  if (family == 4.0 && boundaryStability > 0.001 && surfaceOnly < 0.5) {
-    shape = mix(shape, quadraticPowderShape(fieldUv, material), boundaryStability);
+  if (family == 4.0 && boundaryStability > 0.001 && uPowderStyle > 1.5) {
+    vec4 widePowderShape = powderSurfaceShape(fieldUv);
+    float verticalShare = abs(widePowderShape.z)
+      / (abs(widePowderShape.y) + abs(widePowderShape.z) + 0.000001);
+    powderSurfaceBlend = smoothstep(0.42, 0.70, verticalShare)
+      * smoothstep(0.006, 0.030, abs(widePowderShape.z))
+      * powderSurfaceBulkDepth(fieldUv, material, surfaceOnly);
+    shape = mix(shape, widePowderShape, boundaryStability * powderSurfaceBlend);
   }
   // Powder may extend into an empty presentation fragment only when at least
   // three compatible powder samples prove a bulk contact. Loose/moving grains
@@ -833,10 +845,16 @@ void main() {
       vec2 grainCentre = vec2(grain, grainOffsetY) * 0.075;
       float grainDistance = length(fract(fieldPosition) - 0.5 - grainCentre);
       float roundGrainAlpha = 1.0 - smoothstep(0.34, 0.56, grainDistance);
-      float heapAlpha = smoothstep(0.10 + grain * 0.020, 0.62 + grain * 0.030, density);
-      alpha = surfaceOnly > 0.5
-        ? heapAlpha * boundaryStability * smoothstep(2.5, 4.0, shape.w)
-        : mix(roundGrainAlpha, heapAlpha, powderBulk);
+      float heapStart = mix(0.10 + grain * 0.020, 0.40 + grain * 0.012, powderSurfaceBlend);
+      float heapEnd = mix(0.62 + grain * 0.030, 0.60 + grain * 0.018, powderSurfaceBlend);
+      float heapAlpha = smoothstep(heapStart, heapEnd, density);
+      if (uPowderStyle < 0.5) {
+        alpha = surfaceOnly > 0.5 ? 0.0 : roundGrainAlpha;
+      } else {
+        alpha = surfaceOnly > 0.5
+          ? heapAlpha * boundaryStability * smoothstep(2.5, 4.0, shape.w)
+          : mix(roundGrainAlpha, heapAlpha, powderBulk);
+      }
     }
     // surfaceOnly names a nearby exact solid, but density is nonzero only when
     // enclosedSurfaceShape proved the cavity. Decouple that conservative shape
@@ -995,9 +1013,13 @@ export class PixiFieldPresenter {
   private readonly boundaryStabilityBytes: Uint8Array;
   private readonly boundaryStabilityOwners: Uint8Array;
   private readonly boundaryStabilitySource: BufferImageSource;
+  private readonly powderSurfaceSource: BufferImageSource;
   private readonly fieldSet: RenderFieldSet;
   private readonly chunks: DirtyChunkGrid;
   private readonly wallChunks: DirtyChunkGrid;
+  private readonly boundaryDirtyMarker = {
+    markCell: (): void => { this.powderSurfaceDirty = true; },
+  };
   private readonly uniforms: UniformGroup;
   private webGLTimingEnabled = false;
   private webGLTimingRequested = false;
@@ -1007,6 +1029,8 @@ export class PixiFieldPresenter {
   private readonly webGLTimingSamples: number[] = [];
   private webGLTimingDiscarded = 0;
   private webGLTimingSequence = 0;
+  private powderSurfaceDirty = true;
+  private lastPowderSurfaceRefresh = -Infinity;
 
   private constructor(
     private readonly app: Application,
@@ -1068,6 +1092,15 @@ export class PixiFieldPresenter {
       scaleMode: 'nearest',
       autoGarbageCollect: false,
     });
+    this.powderSurfaceSource = new BufferImageSource({
+      resource: this.fieldSet.powderSurface.bytes,
+      width,
+      height,
+      format: 'rgba8unorm',
+      alphaMode: 'no-premultiply-alpha',
+      scaleMode: 'linear',
+      autoGarbageCollect: false,
+    });
     this.uniforms = new UniformGroup({
       uTexel: { value: new Float32Array([1 / width, 1 / height]), type: 'vec2<f32>' },
       uFieldSize: { value: new Float32Array([width, height]), type: 'vec2<f32>' },
@@ -1078,6 +1111,7 @@ export class PixiFieldPresenter {
       // compact/mobile cold loads remain on the zero-extra-probe path.
       uHighQuality: { value: matchMedia('(min-width: 800px)').matches ? 1 : 0, type: 'f32' },
       uGasFieldLighting: { value: 1, type: 'f32' },
+      uPowderStyle: { value: powderRenderStyleValue('smooth'), type: 'f32' },
     });
     const filter = Filter.from({
       gl: { vertex: FIELD_VERTEX, fragment: FIELD_FRAGMENT, name: 'semantic-field-filter' },
@@ -1095,6 +1129,8 @@ export class PixiFieldPresenter {
         uLiquidSampler: this.liquidSource.style,
         uBoundaryStabilityTexture: this.boundaryStabilitySource,
         uBoundaryStabilitySampler: this.boundaryStabilitySource.style,
+        uPowderSurfaceTexture: this.powderSurfaceSource,
+        uPowderSurfaceSampler: this.powderSurfaceSource.style,
         uPaletteTexture: paletteTexture.source,
         uPaletteSampler: paletteTexture.source.style,
         uStyleTexture: styleTexture.source,
@@ -1171,12 +1207,23 @@ export class PixiFieldPresenter {
     const previousMaterial = this.fieldBytes[index * 4];
     this.chunks.markCell(index);
     this.fieldSet.markDirty(previousMaterial, nextMaterial);
+    if (this.powderRelevant(previousMaterial) || this.powderRelevant(nextMaterial)) {
+      this.powderSurfaceDirty = true;
+    }
   }
 
-  markWallDirty(index: number): void { this.wallChunks.markCell(index); }
+  markWallDirty(index: number): void {
+    this.wallChunks.markCell(index);
+    this.powderSurfaceDirty = true;
+  }
 
   setGasFieldLightingEnabled(enabled: boolean): void {
     this.uniforms.uniforms.uGasFieldLighting = enabled ? 1 : 0;
+    this.renderApplication();
+  }
+
+  setPowderRenderStyle(style: PowderRenderStyle): void {
+    this.uniforms.uniforms.uPowderStyle = powderRenderStyleValue(style);
     this.renderApplication();
   }
 
@@ -1217,7 +1264,9 @@ export class PixiFieldPresenter {
   }
 
   visualRefreshDue(time: number): boolean {
-    return this.fieldSet.due(time);
+    return this.fieldSet.due(time)
+      || (this.powderSurfaceDirty
+        && time - this.lastPowderSurfaceRefresh >= POWDER_SURFACE_REFRESH_INTERVAL);
   }
 
   update(
@@ -1234,7 +1283,7 @@ export class PixiFieldPresenter {
     for (const rect of rectangles) {
       updateBoundaryStabilityRect(
         this.boundaryStabilityBytes, this.boundaryStabilityOwners, materials, velocities,
-        this.fieldSet.lookups.styleBytes, this.fieldSource.width, rect,
+        this.fieldSet.lookups.styleBytes, this.fieldSource.width, rect, this.boundaryDirtyMarker,
       );
       packSemanticRect(this.fieldBytes, this.fieldSource.width, materials, temperatures, velocities, rect);
     }
@@ -1245,6 +1294,15 @@ export class PixiFieldPresenter {
     const wallRectangles = this.wallChunks.consume();
     if (walls) for (const rect of wallRectangles) packWallRect(this.wallBytes, this.wallSource.width, walls, rect);
     if (walls && wallRectangles.length) this.wallSource.update();
+    if (this.powderSurfaceDirty
+      && scheduleTime - this.lastPowderSurfaceRefresh >= POWDER_SURFACE_REFRESH_INTERVAL) {
+      const changed = this.fieldSet.powderSurface.update(
+        materials, this.boundaryStabilityBytes, walls,
+      );
+      this.powderSurfaceDirty = false;
+      this.lastPowderSurfaceRefresh = scheduleTime;
+      if (changed) this.powderSurfaceSource.update();
+    }
     const volumeField = this.fieldSet.updateNext(materials, scheduleTime);
     if (volumeField === 'atmosphere') {
       this.atmosphereSource.update();
@@ -1262,6 +1320,12 @@ export class PixiFieldPresenter {
     this.app.canvas.dataset.viewScale = String(scale);
     this.app.canvas.dataset.viewPosition = x + "," + y;
     this.renderApplication();
+  }
+
+  private powderRelevant(material: number): boolean {
+    if (material === 0) return false;
+    const phase = this.fieldSet.lookups.styleBytes[material * 4];
+    return phase === RenderPhase.Solid || phase === RenderPhase.Powder;
   }
 
   private renderApplication(): void {

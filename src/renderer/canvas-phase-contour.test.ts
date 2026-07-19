@@ -6,6 +6,7 @@ import {
   CanvasPhaseContourScratch,
   type CanvasPhaseContourInput,
 } from './canvas-phase-contour';
+import { PowderSurfaceField } from './powder-surface-field';
 import { createRenderLookups } from './render-field-set';
 
 const lookups = createRenderLookups(ALL_MATERIALS);
@@ -106,6 +107,145 @@ describe('Canvas 2x phase contour scratch', () => {
       }
       expect(alphaLevels.size).toBeGreaterThan(2);
     }
+  });
+
+  it('uses the shared powder surface to smooth a shallow 4x slope without widening ownership', () => {
+    const scale = 4;
+    const width = 32;
+    const height = 20;
+    const value = fixture(width, height);
+    for (let x = 2; x < width - 2; x++) {
+      const top = 14 - Math.round((x - 2) * 3 / (width - 5));
+      for (let y = top; y < height; y++) paint(value, x, y, Material.Sand);
+    }
+
+    const field = new PowderSurfaceField(width, height, lookups.styleBytes);
+    expect(field.update(value.materials, value.stability, value.walls)).toBe(true);
+
+    const localOnly = new CanvasPhaseContourScratch(scale);
+    localOnly.rasterize(value.input);
+    const sharedSurface = new CanvasPhaseContourScratch(scale);
+    sharedSurface.rasterize({ ...value.input, powderSurface: field.bytes });
+
+    const localProfile = groupMeans(
+      alphaColumnMass(localOnly, 6 * scale, (width - 6) * scale), scale,
+    );
+    const sharedProfile = groupMeans(
+      alphaColumnMass(sharedSurface, 6 * scale, (width - 6) * scale), scale,
+    );
+    expect(secondDifferenceEnergy(sharedProfile)).toBeLessThan(
+      secondDifferenceEnergy(localProfile) * 0.96,
+    );
+    expect(sharedProfile).not.toEqual(localProfile);
+
+    for (let outputY = 0; outputY < height * scale; outputY++) {
+      for (let outputX = 0; outputX < width * scale; outputX++) {
+        const output = outputY * sharedSurface.outputStride + outputX;
+        if (sharedSurface.coverage[output] === 0) continue;
+        expect(sharedSurface.ownerMaterials[output]).toBe(Material.Sand);
+        const cellX = Math.floor(outputX / scale);
+        const cellY = Math.floor(outputY / scale);
+        if (value.materials[cellY * width + cellX] !== 0) continue;
+        const hasCardinalOwner = (cellX > 0
+          && value.materials[cellY * width + cellX - 1] === Material.Sand)
+          || (cellX + 1 < width
+            && value.materials[cellY * width + cellX + 1] === Material.Sand)
+          || (cellY > 0
+            && value.materials[(cellY - 1) * width + cellX] === Material.Sand)
+          || (cellY + 1 < height
+            && value.materials[(cellY + 1) * width + cellX] === Material.Sand);
+        expect(hasCardinalOwner).toBe(true);
+      }
+    }
+  });
+
+  it('keeps narrow settled Clay and Concrete ridges on their exact local 4x contour', () => {
+    const scale = 4;
+    const width = 32;
+    const height = 20;
+    const value = fixture(width, height);
+    for (let x = 3; x <= 14; x++) paint(value, x, 7, Material.Clay);
+    for (let y = 3; y < 7; y++) paint(value, 8, y, Material.Clay);
+    for (let x = 17; x <= 29; x++) paint(value, x, 14, Material.Concrete);
+    for (let y = 11; y < 14; y++) paint(value, 24, y, Material.Concrete);
+
+    const field = new PowderSurfaceField(width, height, lookups.styleBytes);
+    field.update(value.materials, value.stability, value.walls);
+    const localOnly = new CanvasPhaseContourScratch(scale);
+    localOnly.rasterize(value.input);
+    const sharedSurface = new CanvasPhaseContourScratch(scale);
+    sharedSurface.rasterize({ ...value.input, powderSurface: field.bytes });
+
+    const detailCells = [
+      ...Array.from({ length: 12 }, (_, offset) => [3 + offset, 7] as const),
+      ...Array.from({ length: 4 }, (_, offset) => [8, 3 + offset] as const),
+      ...Array.from({ length: 13 }, (_, offset) => [17 + offset, 14] as const),
+      ...Array.from({ length: 3 }, (_, offset) => [24, 11 + offset] as const),
+    ];
+    for (const [cellX, cellY] of detailCells) {
+      for (let subY = 0; subY < scale; subY++) for (let subX = 0; subX < scale; subX++) {
+        const output = (cellY * scale + subY) * sharedSurface.outputStride
+          + cellX * scale + subX;
+        expect(
+          sharedSurface.coverage[output], `${cellX},${cellY}:${subX},${subY}`,
+        ).toBe(localOnly.coverage[output]);
+        expect(sharedSurface.ownerMaterials[output]).toBe(value.materials[cellY * width + cellX]);
+      }
+    }
+
+    for (let outputY = 0; outputY < height * scale; outputY++) {
+      for (let outputX = 0; outputX < width * scale; outputX++) {
+        const output = outputY * sharedSurface.outputStride + outputX;
+        if (sharedSurface.coverage[output] === 0) continue;
+        const owner = sharedSurface.ownerMaterials[output];
+        expect(owner === Material.Clay || owner === Material.Concrete).toBe(true);
+        const cellX = Math.floor(outputX / scale);
+        const cellY = Math.floor(outputY / scale);
+        if (value.materials[cellY * width + cellX] !== 0) continue;
+        const hasExactCardinalOwner = (cellX > 0
+          && value.materials[cellY * width + cellX - 1] === owner)
+          || (cellX + 1 < width && value.materials[cellY * width + cellX + 1] === owner)
+          || (cellY > 0 && value.materials[(cellY - 1) * width + cellX] === owner)
+          || (cellY + 1 < height && value.materials[(cellY + 1) * width + cellX] === owner);
+        expect(hasExactCardinalOwner).toBe(true);
+      }
+    }
+  });
+
+  it('offers grains, local, and slope-aware powder comparison modes at 4x', () => {
+    const scale = 4;
+    const value = fixture(9, 9);
+    for (let y = 4; y <= 7; y++) for (let x = 2; x <= 6; x++) {
+      paint(value, x, y, Material.Sand);
+    }
+    const field = new PowderSurfaceField(9, 9, lookups.styleBytes);
+    field.update(value.materials, value.stability, value.walls);
+
+    const grains = new CanvasPhaseContourScratch(scale);
+    grains.rasterize({ ...value.input, powderSurface: field.bytes, powderStyle: 'grains' });
+    const localWithField = new CanvasPhaseContourScratch(scale);
+    localWithField.rasterize({ ...value.input, powderSurface: field.bytes, powderStyle: 'local' });
+    const localWithoutField = new CanvasPhaseContourScratch(scale);
+    localWithoutField.rasterize({ ...value.input, powderStyle: 'local' });
+    const smooth = new CanvasPhaseContourScratch(scale);
+    smooth.rasterize({ ...value.input, powderSurface: field.bytes, powderStyle: 'smooth' });
+
+    expect(Array.from(localWithField.coverage)).toEqual(Array.from(localWithoutField.coverage));
+    const cellCoverage = (scratch: CanvasPhaseContourScratch, cellX: number, cellY: number): number => {
+      let total = 0;
+      for (let subY = 0; subY < scale; subY++) for (let subX = 0; subX < scale; subX++) {
+        total += scratch.coverage[(cellY * scale + subY) * scratch.outputStride
+          + cellX * scale + subX];
+      }
+      return total;
+    };
+    expect(cellCoverage(grains, 4, 3)).toBe(0);
+    expect(cellCoverage(localWithField, 4, 3)).toBeGreaterThan(0);
+    expect(cellCoverage(smooth, 4, 3)).toBeLessThanOrEqual(cellCoverage(localWithField, 4, 3));
+    const grainBody = cellCoverage(grains, 4, 4);
+    expect(grainBody).toBeGreaterThan(0);
+    expect(grainBody).toBeLessThan(255 * scale * scale);
+    expect(cellCoverage(smooth, 4, 4)).toBeGreaterThan(0);
   });
 
   it('handles every local neighbour topology with mirror-symmetric categorical solid support', () => {
@@ -300,3 +440,37 @@ describe('Canvas 2x phase contour scratch', () => {
     }
   });
 });
+
+function secondDifferenceEnergy(values: readonly number[]): number {
+  let energy = 0;
+  for (let index = 1; index < values.length - 1; index++) {
+    energy += Math.abs(values[index - 1] - values[index] * 2 + values[index + 1]);
+  }
+  return energy;
+}
+
+function alphaColumnMass(
+  scratch: CanvasPhaseContourScratch,
+  startX: number,
+  endX: number,
+): number[] {
+  const masses: number[] = [];
+  for (let x = startX; x < endX; x++) {
+    let mass = 0;
+    for (let y = 0; y < scratch.outputHeight; y++) {
+      mass += scratch.coverage[y * scratch.outputStride + x] / 255;
+    }
+    masses.push(mass);
+  }
+  return masses;
+}
+
+function groupMeans(values: readonly number[], size: number): number[] {
+  const result: number[] = [];
+  for (let start = 0; start < values.length; start += size) {
+    let total = 0;
+    for (let offset = 0; offset < size; offset++) total += values[start + offset];
+    result.push(total / size);
+  }
+  return result;
+}

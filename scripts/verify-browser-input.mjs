@@ -556,6 +556,9 @@ async function auditMode(mode) {
       cdp, mode, screenshot ? variantScreenshotPath(screenshot, 'mobile') : undefined,
     );
     const renderScaleOne = await auditRenderScaleOne(cdp, mode, dpr);
+    const renderScaleEight = mode === 'webgl'
+      ? await auditRenderScaleEightCap(cdp, dpr)
+      : undefined;
     const nativeSemantics = await auditNativeSemantics(cdp, mode, dpr, screenshot);
     await sleep(50);
     assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
@@ -594,6 +597,7 @@ async function auditMode(mode) {
       middlePanDelta: { x: round(afterPan.panX - beforePan.panX, 3), y: round(afterPan.panY - beforePan.panY, 3) },
       zoomedResizeAnchorErrorCells: round(zoomedResizeAnchorError, 5),
       renderScaleOne,
+      ...(renderScaleEight ? { renderScaleEight } : {}),
       toolFilters: { height: round(initial.ui.filters.height), rows: filterRows(initial.ui.filterButtons) },
       resizeMetrics,
       shortDesktop,
@@ -883,6 +887,38 @@ async function auditRenderScaleOne(cdp, mode, dpr) {
     paintedFootprints,
     wheelAnchorErrorCells: round(wheelAnchorError, 5),
     middlePanDelta: { x: round(panX, 3), y: round(panY, 3) },
+  };
+}
+
+async function auditRenderScaleEightCap(cdp, dpr) {
+  await setDesktopMetrics(cdp, 1280, 720, dpr);
+  const query = new URLSearchParams({
+    scene: 'render-lab', inputAudit: '1', renderScale: '8', auditStage: 'scale-eight-cap',
+  });
+  await cdp.send('Page.navigate', { url: `${ORIGIN}/?${query}` });
+  await waitFor(() => evaluate(cdp, `(() => {
+    const parameters = new URLSearchParams(location.search);
+    return parameters.get('renderScale') === '8'
+      && parameters.get('auditStage') === 'scale-eight-cap'
+      && Boolean(window.__ANIFOR_INPUT_AUDIT__ && document.documentElement);
+  })()`), 15_000, 'renderScale=8 input audit API');
+  await waitFor(() => evaluate(cdp,
+    `window.__ANIFOR_INPUT_AUDIT__.backend().backend === 'webgl'`),
+  20_000, 'renderScale=8 capped WebGL backend');
+  const geometry = await waitForStableCanvas(
+    cdp, 1280, 720, undefined, 8_000, 'renderScale=8 capped WebGL geometry',
+  );
+  const backend = await evaluate(cdp, `window.__ANIFOR_INPUT_AUDIT__.backend()`);
+  assert(backend.requestedOutputScale === 8 && backend.outputScale === 4,
+    `renderScale=8 did not report its safe WebGL cap (${JSON.stringify(backend)})`);
+  assertGeometry(geometry, 'renderScale=8 capped WebGL', 4);
+  assertContained(geometry, 'renderScale=8 capped WebGL');
+  assertToolboxGeometry(geometry, 'renderScale=8 capped WebGL', 68);
+  return {
+    requested: backend.requestedOutputScale,
+    effective: backend.outputScale,
+    backing: `${geometry.backing.width}x${geometry.backing.height}`,
+    cssCanvas: `${round(geometry.canvas.width, 2)}x${round(geometry.canvas.height, 2)}`,
   };
 }
 

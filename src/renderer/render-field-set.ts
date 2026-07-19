@@ -5,6 +5,7 @@ import { LiquidDensityField } from './liquid-density-field';
 import { renderOptics } from './render-optics';
 import { renderPhase, renderProfile, RenderPhase } from './render-profile';
 import { renderTraits } from './render-traits';
+import { PowderSurfaceField } from './powder-surface-field';
 import { VolumeFieldRefreshSchedule, type VolumeFieldKind } from './volume-field-refresh';
 
 export interface RenderMaterialStyle {
@@ -57,14 +58,16 @@ export function createRenderLookups(materials: readonly RenderMaterialStyle[]): 
 }
 
 /**
- * Bounded full-grid reconstructions shared by both presenters. At most one field
- * is rebuilt per frame, and each field retains the existing 12 Hz ceiling.
+ * Bounded full-grid reconstructions shared by both presenters. At most one
+ * atmosphere/liquid/emission field is rebuilt per frame at the existing 12 Hz
+ * ceiling; the independently dirtied powder surface has its own lower cadence.
  */
 export class RenderFieldSet {
   readonly lookups: RenderLookups;
   readonly atmosphere: AtmosphereField;
   readonly liquid: LiquidDensityField;
   readonly emission: EmissionField;
+  readonly powderSurface: PowderSurfaceField;
   private readonly schedule = new VolumeFieldRefreshSchedule();
   private atmosphereDirty = true;
   private liquidDirty = true;
@@ -77,6 +80,7 @@ export class RenderFieldSet {
       width, height, this.lookups.liquidByMaterial, this.lookups.colorByMaterial,
     );
     this.emission = new EmissionField(width, height, this.lookups.emissiveByMaterial, this.lookups.colorByMaterial);
+    this.powderSurface = new PowderSurfaceField(width, height, this.lookups.styleBytes);
   }
 
   markDirty(previousMaterial: number, nextMaterial: number): void {
@@ -114,6 +118,7 @@ export class RenderFieldSet {
       + this.lookups.colorByMaterial.byteLength
       + this.atmosphere.allocatedByteLength
       + this.liquid.allocatedByteLength
-      + this.emission.allocatedByteLength;
+      + this.emission.allocatedByteLength
+      + this.powderSurface.allocatedByteLength;
   }
 }

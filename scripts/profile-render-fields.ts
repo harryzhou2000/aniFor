@@ -18,6 +18,7 @@ import {
   canvasLiquidContourScale, canvasLiquidFieldRelief, canvasLiquidSurfaceExposure,
 } from '../src/renderer/canvas-liquid-light';
 import { createRenderLookups } from '../src/renderer/render-field-set';
+import { PowderSurfaceField } from '../src/renderer/powder-surface-field';
 import { RenderPhase, RenderProfile } from '../src/renderer/render-profile';
 import { RenderTrait } from '../src/renderer/render-traits';
 import { compositePixel } from '../src/renderer/rgba-composite';
@@ -46,6 +47,29 @@ for (let iteration = 0; iteration < 4; iteration++) {
   liquid.update(materials);
   emission.update(materials);
 }
+
+// A settled shallow heap forces the full-width slope reconstruction path. Toggle
+// one stability threshold per sample so every timing includes the complete
+// state scan, two horizontal box passes, vertical pass, and RGBA packing.
+const powderMaterials = new Uint8Array(width * height);
+const powderStability = new Uint8Array(width * height);
+for (let x = 0; x < width; x++) {
+  const surfaceY = Math.floor(height * 0.22 + x * 0.18);
+  for (let y = surfaceY; y < height; y++) {
+    const index = y * width + x;
+    powderMaterials[index] = Material.Sand;
+    powderStability[index] = 255;
+  }
+}
+const powderSurface = new PowderSurfaceField(width, height, styleBytes);
+const powderToggleIndex = (height - 2) * width + Math.floor(width / 2);
+let powderToggle = false;
+const updatePowderSurface = (): void => {
+  powderToggle = !powderToggle;
+  powderStability[powderToggleIndex] = powderToggle ? 191 : 255;
+  powderSurface.update(powderMaterials, powderStability);
+};
+updatePowderSurface();
 
 function sample(update: () => void): { medianMs: number; p90Ms: number; maximumMs: number } {
   for (let warmup = 0; warmup < 5; warmup++) update();
@@ -193,6 +217,10 @@ console.log(JSON.stringify({
   emission: {
     allocatedBytes: emission.allocatedByteLength,
     update: sample(() => emission.update(materials)),
+  },
+  powderSurface: {
+    allocatedBytes: powderSurface.allocatedByteLength,
+    update: sample(updatePowderSurface),
   },
   canvasPresentation: {
     runtimeKnownScratchBytes: solidPixels.byteLength + liquidPixels.byteLength
