@@ -48,7 +48,7 @@ async function auditMode(mode) {
   const profile = await mkdtemp(path.join(tmpdir(), `anifor-input-${mode}-`));
   const dpr = mode === 'canvas2d' ? 2 : 1;
   const query = new URLSearchParams({
-    scene: 'render-lab', inputAudit: '1', renderScale: '2',
+    scene: 'render-lab', inputAudit: '1', renderScale: '2', auditStage: 'canonical',
     ...(mode === 'canvas2d' ? { renderer: 'canvas2d' } : {}),
   });
   const chrome = spawn(chromePath, [
@@ -94,7 +94,15 @@ async function auditMode(mode) {
     cdp.on('Log.entryAdded', ({ entry }) => { if (entry.level === 'error') errors.push(entry.text); });
     await Promise.all([cdp.send('Page.enable'), cdp.send('Runtime.enable'), cdp.send('Log.enable')]);
     await cdp.send('Page.navigate', { url: `${ORIGIN}/?${query}` });
-    await waitFor(() => evaluate(cdp, `Boolean(window.__ANIFOR_INPUT_AUDIT__ && document.documentElement)`), 15_000, `input audit API (${mode})`);
+    await waitFor(() => evaluate(cdp, `(() => {
+      const parameters = new URLSearchParams(location.search);
+      return parameters.get('scene') === 'render-lab'
+        && parameters.get('inputAudit') === '1'
+        && parameters.get('renderScale') === '2'
+        && parameters.get('auditStage') === 'canonical'
+        && !parameters.has('blankAudit')
+        && Boolean(window.__ANIFOR_INPUT_AUDIT__ && document.documentElement);
+    })()`), 15_000, `input audit API (${mode})`);
     await waitFor(() => evaluate(cdp, `window.__ANIFOR_INPUT_AUDIT__.backend().backend === ${JSON.stringify(mode)}`), 15_000, `${mode} backend`);
     const canonicalFixture = await evaluate(cdp, `({
       status: document.querySelector('.status')?.textContent,
@@ -111,10 +119,22 @@ async function auditMode(mode) {
 
     // Read the rendered canvas, not semantic cells, so framebuffer clipping and
     // backend compositing regressions are observable in the browser gate.
-    const canonicalCapture = await waitForStablePageCapture(cdp, `${mode} canonical framebuffer`);
+    const canonicalCaptures = await waitForStablePageCapture(cdp, `${mode} canonical framebuffer`);
+    const canonicalCapture = canonicalCaptures.capture;
+    await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setGasFieldLighting(false); true');
+    const unlitGasCaptures = await waitForStablePageCapture(cdp, `${mode} unlit gas framebuffer`);
+    const canvasGasLightingRefresh = mode === 'canvas2d'
+      ? await auditCanvasGasLightingRefresh(cdp)
+      : undefined;
     const blankCaptures = await captureStableBlankPage(cdp, mode);
+    for (const [label, captures] of [
+      ['unlit gas', unlitGasCaptures], ['blank', blankCaptures],
+    ]) assertCanvasRectsEqual(
+      canonicalCaptures.canvasRect, captures.canvasRect, `${mode} canonical/${label} framebuffer`,
+    );
     const sampleCanonicalRegions = (regions) => samplePageRegions(
       cdp, canonicalCapture.data, regions, blankCaptures.capture.data, blankCaptures.reference.data,
+      canonicalCaptures.canvasRect,
     );
     const energySamples = await sampleCanonicalRegions([
       { name: 'fire', x: 405, y: 329 },
@@ -141,6 +161,24 @@ async function auditMode(mode) {
       `${mode}: PHOT lost its neutral hue (${energy.phot.rgb})`);
     assert(energy.grvt.rgb[1] > energy.grvt.rgb[2] && energy.grvt.rgb[2] > energy.grvt.rgb[0],
       `${mode}: GRVT lost its green-cyan hue (${energy.grvt.rgb})`);
+    const energyTopologySamples = await sampleCanonicalRegions([
+      { name: 'fireChunk', x: 405.5, y: 329.5, radiusX: 17.5, radiusY: 10.5, topology: true },
+      { name: 'plasmaChunk', x: 445.5, y: 329.5, radiusX: 17.5, radiusY: 10.5, topology: true },
+      { name: 'elecChunk', x: 485.5, y: 329.5, radiusX: 17.5, radiusY: 10.5, topology: true },
+      { name: 'photChunk', x: 525.5, y: 329.5, radiusX: 17.5, radiusY: 10.5, topology: true },
+      { name: 'grvtChunk', x: 565.5, y: 329.5, radiusX: 17.5, radiusY: 10.5, topology: true },
+    ]);
+    assert(energyTopologySamples.every((sample) => sample.coverage >= 0.72
+      && sample.dominantComponent >= 0.92),
+    `${mode}: dense energy body lost whole-chunk cohesion (${JSON.stringify(energyTopologySamples)})`);
+    const sparseEnergySamples = await sampleCanonicalRegions([
+      // Ignore the deliberately soft aura and prove that high-energy semantic
+      // carriers retain quiet gaps instead of becoming one bright core slab.
+      { name: 'photSparseStrip', x: 488, y: 354, radiusX: 98, radiusY: 3.5, signalFloor: 96, topology: true },
+    ]);
+    assert(sparseEnergySamples[0].coverage <= 0.92
+      && sparseEnergySamples[0].quietRunFraction >= 0.01,
+    `${mode}: sparse energy strip was filled into a continuous slab (${JSON.stringify(sparseEnergySamples)})`);
     const solidSamples = await sampleCanonicalRegions([
       { name: 'metal', x: 405, y: 229, radius: 8 },
       { name: 'plant', x: 445, y: 254, radius: 8 },
@@ -161,7 +199,7 @@ async function auditMode(mode) {
       { name: 'columnGap', x: 465, y: 229, radius: 1 },
       { name: 'rowGap', x: 485, y: 217, radius: 1 },
     ]);
-    assert(solidSeparatorSamples.every((sample) => Math.max(...sample.rgb) <= 20 && sample.lumaRange <= 5),
+    assert(solidSeparatorSamples.every((sample) => sample.visible <= 1 && sample.coverage <= 0.03),
       `${mode}: solid reconstruction bridged a matrix separator (${JSON.stringify(solidSeparatorSamples)})`);
     const powderSamples = await sampleCanonicalRegions([
       { name: 'denseSand', x: 156, y: 78, radius: 8 },
@@ -200,21 +238,27 @@ async function auditMode(mode) {
       { name: 'coolMid', x: 582, y: 88, radius: 2 },
       { name: 'coolCore', x: 574, y: 88, radius: 2 },
     ]);
-    const gasLighting = Object.fromEntries(gasLightingSamples.map((sample) => [sample.name, sample]));
-    assert(gasLighting.warmRim.rgb[0] - gasLighting.warmRim.rgb[1] >= 3
-      && gasLighting.warmRim.rgb[0] - gasLighting.warmRim.rgb[2] >= 8,
-    `${mode}: warm gas rim lost its source hue (${JSON.stringify(gasLightingSamples)})`);
-    assert(gasLighting.coolRim.rgb[2] > gasLighting.coolRim.rgb[1]
-      && gasLighting.coolRim.rgb[1] >= gasLighting.coolRim.rgb[0],
-    `${mode}: cool gas rim lost its source hue (${JSON.stringify(gasLightingSamples)})`);
-    assert(gasLighting.warmRim.rgb[0] - gasLighting.warmRim.rgb[2]
-      >= gasLighting.warmCore.rgb[0] - gasLighting.warmCore.rgb[2] + 4,
-    `${mode}: warm field light no longer distinguishes the facing gas flank (${JSON.stringify(gasLightingSamples)})`);
-    assert(gasLighting.warmRim.meanLuma >= gasLighting.warmMid.meanLuma * 0.75
-      && gasLighting.coolRim.meanLuma >= gasLighting.coolMid.meanLuma * 0.75,
-    `${mode}: field-lit gas rims became too dark (${JSON.stringify(gasLightingSamples)})`);
     assert(gasLightingSamples.every((sample) => sample.pinnedFraction === 0),
       `${mode}: field-lit gas clipped a colour channel (${JSON.stringify(gasLightingSamples)})`);
+    const gasLightResponseSamples = await sampleLightingDifferenceRegions(cdp, {
+      lit: canonicalCapture.data,
+      unlit: unlitGasCaptures.capture.data,
+    }, [
+      { name: 'warmRim', x: 368, y: 76, radius: 3 },
+      { name: 'coolRim', x: 587, y: 88, radius: 3 },
+    ], canonicalCaptures.canvasRect);
+    const gasLightResponse = Object.fromEntries(
+      gasLightResponseSamples.map((sample) => [sample.name, sample]),
+    );
+    assert(gasLightResponse.warmRim.coverage >= 0.12
+      && gasLightResponse.warmRim.positiveRgb[0] >= 1.5
+      && gasLightResponse.warmRim.positiveRgb[0] >= gasLightResponse.warmRim.positiveRgb[1] + 0.6
+      && gasLightResponse.warmRim.positiveRgb[0] >= gasLightResponse.warmRim.positiveRgb[2] + 1.2,
+    `${mode}: isolated warm gas-light response disappeared (${JSON.stringify(gasLightResponseSamples)})`);
+    assert(gasLightResponse.coolRim.coverage >= 0.12
+      && gasLightResponse.coolRim.positiveRgb[1] >= 1.5
+      && gasLightResponse.coolRim.positiveRgb[1] >= gasLightResponse.coolRim.positiveRgb[0] + 0.8,
+    `${mode}: isolated cool gas-light response disappeared (${JSON.stringify(gasLightResponseSamples)})`);
     const liquidColumnSamples = await sampleCanonicalRegions([
       { name: 'waterColumn', x: 224, y: 270, radius: 8 },
       { name: 'oilColumn', x: 263, y: 270, radius: 8 },
@@ -449,11 +493,15 @@ async function auditMode(mode) {
       backing: `${initial.backing.width}x${initial.backing.height}`,
       canonicalFixture: { occupied: canonicalFixture.occupied, wallSignature: '3,3' },
       energySamples,
+      energyTopologySamples,
+      sparseEnergySamples,
       solidSamples,
       solidSeparatorSamples,
       powderSamples,
       volumeSamples,
       gasLightingSamples,
+      gasLightResponseSamples,
+      ...(canvasGasLightingRefresh ? { canvasGasLightingRefresh } : {}),
       liquidColumnSamples,
       liquidReliefSamples,
       ...(denseCanvasPresentation ? { denseCanvasPresentation } : {}),
@@ -479,6 +527,30 @@ async function auditMode(mode) {
     await terminate(chrome);
     await rm(profile, { recursive: true, force: true });
   }
+}
+
+async function auditCanvasGasLightingRefresh(cdp) {
+  let timing = await evaluate(cdp,
+    'window.__ANIFOR_INPUT_AUDIT__.canvasPresentationTiming()');
+  assert(timing, 'Canvas gas-light refresh timing is unavailable');
+  const durations = [];
+  for (let sample = 0; sample < 20; sample++) {
+    await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setGasFieldLighting(true); true');
+    timing = await waitForCanvasPresentation(cdp, timing.sequence, `Canvas gas-light refresh ${sample + 1}`);
+    assert(timing.rebuiltField === undefined,
+      `Canvas gas-light refresh unexpectedly rebuilt ${timing.rebuiltField}`);
+    durations.push(timing.durationMs);
+    await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setGasFieldLighting(false); true');
+    timing = await waitForCanvasPresentation(cdp, timing.sequence, `Canvas gas-light reset ${sample + 1}`);
+  }
+  durations.sort((left, right) => left - right);
+  return {
+    fixture: 'canonical atmosphere + emission field',
+    samples: durations.length,
+    medianMs: round(durations[Math.floor(durations.length / 2)]),
+    p90Ms: round(durations[Math.floor((durations.length - 1) * 0.9)]),
+    maximumMs: round(durations.at(-1)),
+  };
 }
 
 async function auditDenseCanvasPresentation(cdp) {
@@ -832,11 +904,19 @@ async function auditMobile(cdp, mode, screenshot) {
     screenOrientation: { type: 'portraitPrimary', angle: 0 },
   });
   const query = new URLSearchParams({
-    scene: 'render-lab', inputAudit: '1', blankAudit: '1', renderScale: '2',
+    scene: 'render-lab', inputAudit: '1', blankAudit: '1', renderScale: '2', auditStage: 'mobile',
     ...(mode === 'canvas2d' ? { renderer: 'canvas2d' } : {}),
   });
   await cdp.send('Page.navigate', { url: `${ORIGIN}/?${query}` });
-  await waitFor(() => evaluate(cdp, `Boolean(window.__ANIFOR_INPUT_AUDIT__ && document.documentElement)`),
+  await waitFor(() => evaluate(cdp, `(() => {
+    const parameters = new URLSearchParams(location.search);
+    return parameters.get('scene') === 'render-lab'
+      && parameters.get('inputAudit') === '1'
+      && parameters.get('blankAudit') === '1'
+      && parameters.get('renderScale') === '2'
+      && parameters.get('auditStage') === 'mobile'
+      && Boolean(window.__ANIFOR_INPUT_AUDIT__ && document.documentElement);
+  })()`),
     15_000, `mobile input audit API (${mode})`);
   await waitFor(() => evaluate(cdp, `window.__ANIFOR_INPUT_AUDIT__.backend().backend === ${JSON.stringify(mode)}`),
     15_000, `mobile ${mode} backend`);
@@ -1132,6 +1212,18 @@ function rectsOverlap(left, right) {
     && left.top < right.bottom && left.bottom > right.top;
 }
 
+function canvasRectsEqual(left, right, tolerance = 0.05) {
+  return Math.abs(left.left - right.left) <= tolerance
+    && Math.abs(left.top - right.top) <= tolerance
+    && Math.abs(left.width - right.width) <= tolerance
+    && Math.abs(left.height - right.height) <= tolerance;
+}
+
+function assertCanvasRectsEqual(left, right, label) {
+  assert(canvasRectsEqual(left, right),
+    `${label}: canvas geometry changed (${JSON.stringify({ canonical: left, blank: right })})`);
+}
+
 function filterRows(buttons) {
   return new Set(buttons.map((button) => round(button.top, 1))).size;
 }
@@ -1155,33 +1247,119 @@ async function waitForStablePageCaptures(cdp, label) {
     // captures can agree briefly while another staggered field is still due.
     await sleep(100);
     const capture = await cdp.send('Page.captureScreenshot', { format: 'png', fromSurface: true });
+    const canvasRect = await evaluate(cdp, `(() => {
+      const canvas = document.querySelector('.world-canvas');
+      if (!(canvas instanceof HTMLCanvasElement)) return undefined;
+      const rect = canvas.getBoundingClientRect();
+      return { left: rect.left, top: rect.top, width: rect.width, height: rect.height };
+    })()`);
+    if (!canvasRect) return false;
     const reference = previous;
-    if (reference?.data === capture.data) stableSamples++;
+    if (reference?.capture.data === capture.data
+      && canvasRectsEqual(reference.canvasRect, canvasRect)) stableSamples++;
     else stableSamples = 0;
-    previous = capture;
-    return stableSamples >= 2 ? { capture, reference } : false;
+    previous = { capture, canvasRect };
+    return stableSamples >= 2
+      ? { capture, reference: reference.capture, canvasRect, referenceCanvasRect: reference.canvasRect }
+      : false;
   }, 8_000, label);
 }
 
 async function waitForStablePageCapture(cdp, label) {
-  return (await waitForStablePageCaptures(cdp, label)).capture;
+  return waitForStablePageCaptures(cdp, label);
 }
 
 async function captureStableBlankPage(cdp, mode) {
   const query = new URLSearchParams({
-    scene: 'render-lab', inputAudit: '1', blankAudit: '1', renderScale: '2',
+    scene: 'render-lab', inputAudit: '1', blankAudit: '1', renderScale: '2', auditStage: 'blank',
     ...(mode === 'canvas2d' ? { renderer: 'canvas2d' } : {}),
   });
   await cdp.send('Page.navigate', { url: `${ORIGIN}/?${query}` });
-  await waitFor(() => evaluate(cdp, `Boolean(window.__ANIFOR_INPUT_AUDIT__ && document.documentElement)`),
+  await waitFor(() => evaluate(cdp, `(() => {
+    const parameters = new URLSearchParams(location.search);
+    return parameters.get('scene') === 'render-lab'
+      && parameters.get('inputAudit') === '1'
+      && parameters.get('blankAudit') === '1'
+      && parameters.get('renderScale') === '2'
+      && parameters.get('auditStage') === 'blank'
+      && Boolean(window.__ANIFOR_INPUT_AUDIT__ && document.documentElement);
+  })()`),
     15_000, `blank input audit API (${mode})`);
   await waitFor(() => evaluate(cdp, `window.__ANIFOR_INPUT_AUDIT__.backend().backend === ${JSON.stringify(mode)}`),
     15_000, `blank ${mode} backend`);
   return waitForStablePageCaptures(cdp, `${mode} blank framebuffer`);
 }
 
+async function sampleLightingDifferenceRegions(cdp, screenshots, regions, captureCanvasRect) {
+  return evaluate(cdp, `(async () => {
+    const sources = ${JSON.stringify(Object.fromEntries(
+    Object.entries(screenshots).map(([name, data]) => [name, `data:image/png;base64,${data}`]),
+  ))};
+    const images = {};
+    const contexts = {};
+    for (const [name, source] of Object.entries(sources)) {
+      const image = new Image();
+      image.src = source;
+      await image.decode();
+      images[name] = image;
+    }
+    const geometry = [images.lit, images.unlit]
+      .map((image) => [image.naturalWidth, image.naturalHeight]);
+    if (!geometry.every(([width, height]) => width === geometry[0][0] && height === geometry[0][1])) {
+      throw new Error('Lighting screenshot geometry mismatch');
+    }
+    for (const [name, image] of Object.entries(images)) {
+      const copy = document.createElement('canvas');
+      copy.width = image.naturalWidth;
+      copy.height = image.naturalHeight;
+      const context = copy.getContext('2d', { willReadFrequently: true });
+      if (!context) throw new Error('Lighting screenshot sampler unavailable');
+      context.drawImage(image, 0, 0);
+      contexts[name] = context;
+    }
+    const bounds = ${JSON.stringify(captureCanvasRect)};
+    const pageScaleX = images.lit.naturalWidth / innerWidth;
+    const pageScaleY = images.lit.naturalHeight / innerHeight;
+    const worldScaleX = bounds.width / ${WORLD_WIDTH};
+    const worldScaleY = bounds.height / ${WORLD_HEIGHT};
+    return ${JSON.stringify(regions)}.map((region) => {
+      const radius = region.radius ?? 3;
+      const x = Math.floor((bounds.left + (region.x - radius) * worldScaleX) * pageScaleX);
+      const y = Math.floor((bounds.top + (region.y - radius) * worldScaleY) * pageScaleY);
+      const width = Math.max(1, Math.ceil(radius * 2 * worldScaleX * pageScaleX));
+      const height = Math.max(1, Math.ceil(radius * 2 * worldScaleY * pageScaleY));
+      const data = Object.fromEntries(Object.entries(contexts).map(([name, context]) => [
+        name, context.getImageData(x, y, width, height).data,
+      ]));
+      const signed = [0, 0, 0];
+      const positive = [0, 0, 0];
+      let visible = 0;
+      let peakMagnitude = 0;
+      for (let offset = 0; offset < data.lit.length; offset += 4) {
+        let magnitude = 0;
+        for (let channel = 0; channel < 3; channel++) {
+          const response = data.lit[offset + channel] - data.unlit[offset + channel];
+          signed[channel] += response;
+          positive[channel] += Math.max(0, response);
+          magnitude = Math.max(magnitude, Math.abs(response));
+        }
+        if (magnitude >= 4) visible++;
+        peakMagnitude = Math.max(peakMagnitude, magnitude);
+      }
+      const count = Math.max(1, width * height);
+      return {
+        name: region.name,
+        responseRgb: signed.map((channel) => Math.round(channel / count * 100) / 100),
+        positiveRgb: positive.map((channel) => Math.round(channel / count * 100) / 100),
+        coverage: Math.round(visible / count * 1000) / 1000,
+        peakMagnitude,
+      };
+    });
+  })()`);
+}
+
 async function samplePageRegions(
-  cdp, screenshotBase64, regions, baselineBase64, baselineReferenceBase64,
+  cdp, screenshotBase64, regions, baselineBase64, baselineReferenceBase64, captureCanvasRect,
 ) {
   return evaluate(cdp, `(async () => {
     const world = document.querySelector('.world-canvas');
@@ -1220,17 +1398,23 @@ async function samplePageRegions(
       baselineContext.drawImage(baselineImage, 0, 0);
       baselineReferenceContext.drawImage(baselineReferenceImage, 0, 0);
     }
-    const bounds = world.getBoundingClientRect();
+    const liveBounds = world.getBoundingClientRect();
+    const suppliedBounds = ${captureCanvasRect ? JSON.stringify(captureCanvasRect) : 'null'};
+    const bounds = suppliedBounds ?? {
+      left: liveBounds.left, top: liveBounds.top, width: liveBounds.width, height: liveBounds.height,
+    };
     const pageScaleX = image.naturalWidth / innerWidth;
     const pageScaleY = image.naturalHeight / innerHeight;
     return ${JSON.stringify(regions)}.map((region) => {
       const radius = region.radius ?? 3;
+      const radiusX = region.radiusX ?? radius;
+      const radiusY = region.radiusY ?? radius;
       const worldScaleX = bounds.width / ${WORLD_WIDTH};
       const worldScaleY = bounds.height / ${WORLD_HEIGHT};
-      const x = Math.floor((bounds.left + (region.x - radius) * worldScaleX) * pageScaleX);
-      const y = Math.floor((bounds.top + (region.y - radius) * worldScaleY) * pageScaleY);
-      const width = Math.max(1, Math.ceil(radius * 2 * worldScaleX * pageScaleX));
-      const height = Math.max(1, Math.ceil(radius * 2 * worldScaleY * pageScaleY));
+      const x = Math.floor((bounds.left + (region.x - radiusX) * worldScaleX) * pageScaleX);
+      const y = Math.floor((bounds.top + (region.y - radiusY) * worldScaleY) * pageScaleY);
+      const width = Math.max(1, Math.ceil(radiusX * 2 * worldScaleX * pageScaleX));
+      const height = Math.max(1, Math.ceil(radiusY * 2 * worldScaleY * pageScaleY));
       const data = context.getImageData(x, y, width, height).data;
       const baselineData = baselineContext?.getImageData(x, y, width, height).data;
       const baselineReferenceData = baselineReferenceContext?.getImageData(x, y, width, height).data;
@@ -1247,6 +1431,7 @@ async function samplePageRegions(
         noise.sort();
         signalThreshold = Math.max(4, noise[Math.floor((noise.length - 1) * 0.99)] + 3);
       }
+      signalThreshold = Math.max(signalThreshold, region.signalFloor ?? 0);
       const total = [0, 0, 0];
       let visible = 0;
       let pinned = 0;
@@ -1325,6 +1510,44 @@ async function samplePageRegions(
           macroSamples++;
         }
       }
+      let dominantComponentPixels = 0;
+      const visited = new Uint8Array(visiblePixels.length);
+      const stack = new Int32Array(visiblePixels.length);
+      for (let origin = 0; origin < visiblePixels.length; origin++) {
+        if (!visiblePixels[origin] || visited[origin]) continue;
+        let stackLength = 1;
+        let componentPixels = 0;
+        stack[0] = origin;
+        visited[origin] = 1;
+        while (stackLength > 0) {
+          const current = stack[--stackLength];
+          componentPixels++;
+          const px = current % width;
+          const py = Math.floor(current / width);
+          for (const neighbour of [
+            px > 0 ? current - 1 : -1,
+            px + 1 < width ? current + 1 : -1,
+            py > 0 ? current - width : -1,
+            py + 1 < height ? current + width : -1,
+          ]) {
+            if (neighbour < 0 || !visiblePixels[neighbour] || visited[neighbour]) continue;
+            visited[neighbour] = 1;
+            stack[stackLength++] = neighbour;
+          }
+        }
+        dominantComponentPixels = Math.max(dominantComponentPixels, componentPixels);
+      }
+      let longestQuietRun = 0;
+      for (let py = 0; py < height; py++) {
+        let quietRun = 0;
+        for (let px = 0; px < width; px++) {
+          if (visiblePixels[py * width + px]) quietRun = 0;
+          else {
+            quietRun++;
+            longestQuietRun = Math.max(longestQuietRun, quietRun);
+          }
+        }
+      }
       return {
         name: region.name,
         rgb: total.map((channel) => Math.round(channel / Math.max(1, visible))),
@@ -1336,6 +1559,10 @@ async function samplePageRegions(
         darkFraction: Math.round(darkPixels / Math.max(1, visible) * 1000) / 1000,
         pinnedFraction: Math.round(pinned / Math.max(1, visible) * 1000) / 1000,
         lumaRange: visible ? Math.round(maximumLuma - minimumLuma) : 0,
+        ...(region.topology ? {
+          dominantComponent: Math.round(dominantComponentPixels / Math.max(1, visible) * 1000) / 1000,
+          quietRunFraction: Math.round(longestQuietRun / Math.max(1, width) * 1000) / 1000,
+        } : {}),
         ...(region.locatePeak ? {
           peakLuma: Math.round(Math.max(0, peakLuma)),
           peakWorld: [
@@ -1432,12 +1659,13 @@ function assertPairedVisualRelief(results) {
       `Canvas ${canvasSample.name} macro depth became excessive (${canvasSample.macroLumaRange}/${webglSample.macroLumaRange})`);
   }
   for (const name of ['warmRim', 'coolRim']) {
-    const canvasSample = canvas.gasLightingSamples.find((sample) => sample.name === name);
-    const webglSample = webgl.gasLightingSamples.find((sample) => sample.name === name);
+    const canvasSample = canvas.gasLightResponseSamples.find((sample) => sample.name === name);
+    const webglSample = webgl.gasLightResponseSamples.find((sample) => sample.name === name);
     assert(canvasSample && webglSample, `paired gas-light sample missing ${name}`);
-    const ratio = canvasSample.meanLuma / Math.max(1, webglSample.meanLuma);
-    assert(ratio >= 0.5 && ratio <= 5.5,
-      `Canvas/WebGL ${name} field-light response diverged (${canvasSample.meanLuma}/${webglSample.meanLuma})`);
+    const channel = name === 'warmRim' ? 0 : 2;
+    const ratio = canvasSample.positiveRgb[channel] / Math.max(0.25, webglSample.positiveRgb[channel]);
+    assert(ratio >= 0.4 && ratio <= 2.5,
+      `Canvas/WebGL ${name} isolated field-light response diverged (${canvasSample.positiveRgb[channel]}/${webglSample.positiveRgb[channel]})`);
   }
 }
 

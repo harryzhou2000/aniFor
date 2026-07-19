@@ -165,6 +165,7 @@ export class Game {
         for (const material of this.simulation.cells()) if (material !== Material.Empty) occupied++;
         return occupied;
       },
+      setGasFieldLighting: (enabled) => { this.renderer.setGasFieldLightingEnabled(enabled); },
       clear: () => { this.simulation.clear(); },
       setRadius: (radius) => { this.radius = Math.max(0, Math.min(64, Math.round(radius))); },
       setMaterial: (material) => {

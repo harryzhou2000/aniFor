@@ -107,12 +107,18 @@ let traitChecksum = 0;
 let solidReliefChecksum = 0;
 let liquidLightChecksum = 0;
 const profileEmission = new Uint8Array(emission.bytes.length);
-for (let offset = 0; offset < profileEmission.length; offset += 4) {
+for (let y = 0; y < emission.height; y++) for (let x = 0; x < emission.width; x++) {
+  const offset = (y * emission.width + x) * 4;
   profileEmission[offset] = 255;
   profileEmission[offset + 1] = 112;
   profileEmission[offset + 2] = 36;
-  profileEmission[offset + 3] = 196;
+  // Stay nonzero everywhere while forcing cardinal gradients throughout the
+  // field so the atmosphere-lighting profile pays its normalization path.
+  profileEmission[offset + 3] = 96 + ((x * 5 + y * 3) & 127);
 }
+const profileAtmosphereLight = {
+  bytes: profileEmission, width: emission.width, height: emission.height,
+} as const;
 
 function seedPixels(source: Uint8Array, include = new Uint8Array(256).fill(1)): Uint8ClampedArray {
   const pixels = new Uint8ClampedArray(source.length * 4);
@@ -198,7 +204,8 @@ console.log(JSON.stringify({
     }),
     atmosphereFieldLighting: sample(() => {
       shadeCanvasAtmosphere(
-        atmospherePixels, atmosphere.bytes, atmosphere.width, atmosphere.height, emission,
+        atmospherePixels, atmosphere.bytes, atmosphere.width, atmosphere.height,
+        profileAtmosphereLight,
       );
     }),
     energyCores: sample(() => {

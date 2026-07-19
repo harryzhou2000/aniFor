@@ -50,11 +50,10 @@ export function applyRenderLabScene(simulation: SimulationBackend): void {
   plot.ellipse(420, 76, 55, 51, Material.Smoke, 0.84, 307, 0.58);
   plot.ellipse(486, 72, 56, 47, Material.Oxygen, 0.72, 311, 0.64);
   plot.ellipse(544, 88, 45, 39, Material.NobleGas, 0.60, 313, 0.70);
-  // Warm and cool field lights graze opposite cloud flanks. Their narrow,
-  // separated semantic cores make directional gas scattering and unlit dense
-  // centres observable without changing the gas reconstruction itself.
-  plot.rect(362, 48, 4, 57, Material.Fire, 0.82, 315);
-  plot.rect(590, 61, 4, 55, Material.ELEC, 0.82, 316);
+  // Compact warm and cool field lights graze opposite cloud flanks without
+  // reading as full-height UI rails in the canonical visual fixture.
+  plot.rect(360, 68, 2, 17, Material.Fire, 0.82, 315);
+  plot.rect(592, 80, 2, 17, Material.GRVT, 0.82, 316);
   plot.scatterLine(382, 145, 202, Material.Smoke, 0.12, 317);
   // Generic soot and emissive gas exercise paths that Smoke and clean gases do
   // not cover. Their compact volumes also expose over-wide bloom at a glance.

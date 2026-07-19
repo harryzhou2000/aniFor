@@ -44,6 +44,7 @@ uniform vec2 uAtmosphereTexel;
 uniform vec2 uEmissionTexel;
 uniform float uTime;
 uniform float uHighQuality;
+uniform float uGasFieldLighting;
 vec4 field(vec2 uv) { return texture(uFieldTexture, clamp(uv, uTexel * 0.5, vec2(1.0) - uTexel * 0.5)); }
 vec4 wallField(vec2 uv) { return texture(uWallTexture, clamp(uv, uTexel * 0.5, vec2(1.0) - uTexel * 0.5)); }
 float materialAt(vec2 uv) { return floor(field(uv).r * 255.0 + 0.5); }
@@ -381,7 +382,6 @@ void main() {
       : smoothstep(0.42, 0.90, density))
     : 0.0;
   vec2 volumeSlope = vec2(0.0);
-  vec2 gasLightSlope = vec2(0.0);
   float cloudNeighbourMean = 0.0;
   float liquidNeighbourMean = 0.0;
   if (emissionOnly > 0.5) {
@@ -395,13 +395,8 @@ void main() {
     float cloudRight = texture(uAtmosphereTexture, fieldUv + vec2(uAtmosphereTexel.x, 0.0)).a;
     float cloudTop = texture(uAtmosphereTexture, fieldUv - vec2(0.0, uAtmosphereTexel.y)).a;
     float cloudBottom = texture(uAtmosphereTexture, fieldUv + vec2(0.0, uAtmosphereTexel.y)).a;
-    float gasLightLeft = texture(uEmissionTexture, fieldUv - vec2(uEmissionTexel.x, 0.0)).a;
-    float gasLightRight = texture(uEmissionTexture, fieldUv + vec2(uEmissionTexel.x, 0.0)).a;
-    float gasLightTop = texture(uEmissionTexture, fieldUv - vec2(0.0, uEmissionTexel.y)).a;
-    float gasLightBottom = texture(uEmissionTexture, fieldUv + vec2(0.0, uEmissionTexel.y)).a;
     cloudNeighbourMean = (cloudLeft + cloudRight + cloudTop + cloudBottom) * 0.25;
     volumeSlope = vec2(cloudRight - cloudLeft, cloudBottom - cloudTop) * 0.85;
-    gasLightSlope = vec2(gasLightRight - gasLightLeft, gasLightBottom - gasLightTop);
   } else if (liquidVolume > 0.5) {
     float liquidLeft = texture(uLiquidTexture, fieldUv - vec2(uTexel.x, 0.0)).a;
     float liquidRight = texture(uLiquidTexture, fieldUv + vec2(uTexel.x, 0.0)).a;
@@ -540,15 +535,26 @@ void main() {
     color += mix(vec3(0.10, 0.12, 0.16), gasBase, 0.34)
       * specular * mix(0.62, 0.18, gasInterior);
     float gasLightReach = smoothstep(0.002, 0.42, emissionState.a);
+    vec3 gasLightColor = emissionState.rgb;
     float gasNormalLength = length(normal.xy);
-    float gasLightSlopeLength = length(gasLightSlope);
-    float gasLightIncidence = gasNormalLength > 0.0001 && gasLightSlopeLength > 0.0001
-      ? max(0.0, dot(normal.xy / gasNormalLength, gasLightSlope / gasLightSlopeLength))
-      : 0.0;
+    float gasLightIncidence = 0.0;
+    // One high-quality probe follows the already reconstructed outward gas
+    // normal. A brighter field sample in that direction proves a facing light;
+    // compact/mobile quality keeps the bounded centre-field scatter below and
+    // performs no additional directional texture fetch.
+    if (uGasFieldLighting > 0.5 && uHighQuality > 0.5 && gasNormalLength > 0.0001) {
+      vec2 gasOutward = normal.xy / gasNormalLength;
+      vec4 outwardLight = texture(
+        uEmissionTexture, fieldUv + gasOutward * uEmissionTexel * 2.0
+      );
+      gasLightIncidence = smoothstep(0.0, 0.12, outwardLight.a - emissionState.a);
+      if (outwardLight.a > emissionState.a) gasLightColor = outwardLight.rgb;
+      gasLightReach = max(gasLightReach, smoothstep(0.002, 0.42, outwardLight.a) * 0.86);
+    }
     float gasLightScatter = gasLightReach
       * (0.060 + gasLightIncidence * 0.78 + silverLining * 0.040)
-      * (1.0 - opticalDepth * 0.48);
-    color += vividColor(emissionState.rgb, 1.12) * gasLightScatter;
+      * (1.0 - opticalDepth * 0.48) * uGasFieldLighting;
+    color += vividColor(gasLightColor, 1.12) * gasLightScatter;
   } else if (liquidVolume > 0.5) {
     float aqueous = optics == 1.0 ? 1.0 : 0.0;
     float oily = optics == 2.0 ? 1.0 : 0.0;
@@ -834,7 +840,10 @@ export class PixiFieldPresenter {
       uAtmosphereTexel: { value: new Float32Array([1 / this.fieldSet.atmosphere.width, 1 / this.fieldSet.atmosphere.height]), type: 'vec2<f32>' },
       uEmissionTexel: { value: new Float32Array([1 / this.fieldSet.emission.width, 1 / this.fieldSet.emission.height]), type: 'vec2<f32>' },
       uTime: { value: 0, type: 'f32' },
-      uHighQuality: { value: matchMedia('(min-width: 800px) and (pointer: fine)').matches ? 1 : 0, type: 'f32' },
+      // Width is deterministic in browsers and in the headless framebuffer gate;
+      // compact/mobile cold loads remain on the zero-extra-probe path.
+      uHighQuality: { value: matchMedia('(min-width: 800px)').matches ? 1 : 0, type: 'f32' },
+      uGasFieldLighting: { value: 1, type: 'f32' },
     });
     const filter = Filter.from({
       gl: { vertex: FIELD_VERTEX, fragment: FIELD_FRAGMENT, name: 'semantic-field-filter' },
@@ -928,6 +937,11 @@ export class PixiFieldPresenter {
   }
 
   markWallDirty(index: number): void { this.wallChunks.markCell(index); }
+
+  setGasFieldLightingEnabled(enabled: boolean): void {
+    this.uniforms.uniforms.uGasFieldLighting = enabled ? 1 : 0;
+    this.app.render();
+  }
 
   visualRefreshDue(time: number): boolean {
     return this.fieldSet.due(time);

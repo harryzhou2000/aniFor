@@ -98,6 +98,8 @@ export class MaterialRenderer {
   private lastDraw = -Infinity;
   private lastDynamicFieldRefresh = -Infinity;
   private changed = true;
+  private gasFieldLightingEnabled = true;
+  private gasFieldLightingDirty = false;
   private canvasPresentationTimingEnabled = false;
   private canvasPresentationTiming?: CanvasPresentationTiming;
 
@@ -160,6 +162,14 @@ export class MaterialRenderer {
   getBackendInfo(): RendererBackendInfo { return this.backend; }
 
   enableCanvasPresentationTiming(): void { this.canvasPresentationTimingEnabled = true; }
+
+  setGasFieldLightingEnabled(enabled: boolean): void {
+    if (enabled === this.gasFieldLightingEnabled) return;
+    this.gasFieldLightingEnabled = enabled;
+    this.presenter?.setGasFieldLightingEnabled(enabled);
+    if (this.fallbackFields) this.gasFieldLightingDirty = true;
+    this.changed = true;
+  }
 
   getCanvasPresentationTiming(): CanvasPresentationTiming | undefined {
     return this.canvasPresentationTiming;
@@ -237,6 +247,7 @@ export class MaterialRenderer {
     // Compile the shader and seed every semantic field while the known-good
     // Canvas remains visible. Any failure leaves the fallback fully intact.
     const now = performance.now();
+    presenter.setGasFieldLightingEnabled(this.gasFieldLightingEnabled);
     presenter.update(
       this.rendered, this.renderedWalls, this.simulation.temperature?.(), this.simulation.velocity?.(),
       now, now, true,
@@ -278,7 +289,8 @@ export class MaterialRenderer {
     if (this.atmospherePixels) {
       shadeCanvasAtmosphere(
         this.atmospherePixels.data, fields.atmosphere.bytes,
-        fields.atmosphere.width, fields.atmosphere.height, fields.emission,
+        fields.atmosphere.width, fields.atmosphere.height,
+        this.gasFieldLightingEnabled ? fields.emission : undefined,
       );
       this.atmosphereContext.putImageData(this.atmospherePixels, 0, 0);
     }
@@ -322,20 +334,18 @@ export class MaterialRenderer {
     }
     const timingStart = this.canvasPresentationTimingEnabled ? performance.now() : undefined;
     const rebuiltField = fields.updateNext(this.rendered, scheduleTime);
-    if (rebuiltField === 'atmosphere') {
-      shadeCanvasAtmosphere(
-        atmospherePixels.data, fields.atmosphere.bytes,
-        fields.atmosphere.width, fields.atmosphere.height, fields.emission,
-      );
-      this.atmosphereContext.putImageData(atmospherePixels, 0, 0);
-    } else if (rebuiltField === 'emission') {
+    if (rebuiltField === 'emission') {
       emissionPixels.data.set(fields.emission.bytes);
       this.emissionContext.putImageData(emissionPixels, 0, 0);
+    }
+    if (rebuiltField === 'atmosphere' || rebuiltField === 'emission' || this.gasFieldLightingDirty) {
       shadeCanvasAtmosphere(
         atmospherePixels.data, fields.atmosphere.bytes,
-        fields.atmosphere.width, fields.atmosphere.height, fields.emission,
+        fields.atmosphere.width, fields.atmosphere.height,
+        this.gasFieldLightingEnabled ? fields.emission : undefined,
       );
       this.atmosphereContext.putImageData(atmospherePixels, 0, 0);
+      this.gasFieldLightingDirty = false;
     }
     const base = basePixels.data;
     const liquid = liquidPixels.data;

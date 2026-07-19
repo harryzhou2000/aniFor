@@ -10,6 +10,7 @@ export interface BrowserInputAuditApi {
   cell(x: number, y: number): number;
   sourceTarget(x: number, y: number): number;
   occupiedCells(): number;
+  setGasFieldLighting(enabled: boolean): void;
   clear(): void;
   setRadius(radius: number): void;
   setMaterial(material: Material): void;

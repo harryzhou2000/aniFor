@@ -72,27 +72,41 @@ export function shadeCanvasAtmosphere(
         const lightRightX = Math.min(light.width - 1, lightX + 1);
         const lightTopY = Math.max(0, lightY - 1);
         const lightBottomY = Math.min(light.height - 1, lightY + 1);
-        const lightOffset = (lightY * light.width + lightX) * 4;
-        const lightDensity = light.bytes[lightOffset + 3] / 255;
+        let lightOffset = (lightY * light.width + lightX) * 4;
+        let lightDensity = light.bytes[lightOffset + 3] / 255;
+        const lightLeftOffset = (lightY * light.width + lightLeftX) * 4;
+        const lightRightOffset = (lightY * light.width + lightRightX) * 4;
+        const lightTopOffset = (lightTopY * light.width + lightX) * 4;
+        const lightBottomOffset = (lightBottomY * light.width + lightX) * 4;
+        const lightLeft = light.bytes[lightLeftOffset + 3] / 255;
+        const lightRight = light.bytes[lightRightOffset + 3] / 255;
+        const lightTop = light.bytes[lightTopOffset + 3] / 255;
+        const lightBottom = light.bytes[lightBottomOffset + 3] / 255;
+        const normalX = left - right;
+        const normalY = top - bottom;
+        const lightSlopeX = lightRight - lightLeft;
+        const lightSlopeY = lightBottom - lightTop;
+        const normalLength = Math.hypot(normalX, normalY);
+        const lightSlopeLength = Math.hypot(lightSlopeX, lightSlopeY);
+        const incidence = normalLength > 1e-6 && lightSlopeLength > 1e-6
+          ? Math.max(0, (normalX * lightSlopeX + normalY * lightSlopeY)
+            / (normalLength * lightSlopeLength))
+          : 0;
+        if (normalLength > 1e-6) {
+          const outwardOffset = Math.abs(normalX) >= Math.abs(normalY)
+            ? (normalX < 0 ? lightLeftOffset : lightRightOffset)
+            : (normalY < 0 ? lightTopOffset : lightBottomOffset);
+          const outwardDensity = light.bytes[outwardOffset + 3] / 255;
+          if (outwardDensity > lightDensity) {
+            lightOffset = outwardOffset;
+            lightDensity = outwardDensity * 0.86;
+          }
+        }
         if (lightDensity > 0) {
-          const lightLeft = light.bytes[(lightY * light.width + lightLeftX) * 4 + 3] / 255;
-          const lightRight = light.bytes[(lightY * light.width + lightRightX) * 4 + 3] / 255;
-          const lightTop = light.bytes[(lightTopY * light.width + lightX) * 4 + 3] / 255;
-          const lightBottom = light.bytes[(lightBottomY * light.width + lightX) * 4 + 3] / 255;
-          const normalX = left - right;
-          const normalY = top - bottom;
-          const lightSlopeX = lightRight - lightLeft;
-          const lightSlopeY = lightBottom - lightTop;
-          const normalLength = Math.hypot(normalX, normalY);
-          const lightSlopeLength = Math.hypot(lightSlopeX, lightSlopeY);
-          const incidence = normalLength > 1e-6 && lightSlopeLength > 1e-6
-            ? Math.max(0, (normalX * lightSlopeX + normalY * lightSlopeY)
-              / (normalLength * lightSlopeLength))
-            : 0;
           const lightReach = smoothstep(0.01, 0.55, lightDensity);
           const rim = 1 - smoothstep(0.18, 0.74, density);
-          const scatter = lightReach * (0.025 + incidence * 0.18 + rim * 0.025)
-            * (1 - density * 0.48);
+          const scatter = lightReach * (0.025 + incidence * 0.24 + rim * 0.035)
+            * (1 - density * 0.48) * 2.2;
           red += light.bytes[lightOffset] * scatter;
           green += light.bytes[lightOffset + 1] * scatter;
           blue += light.bytes[lightOffset + 2] * scatter;

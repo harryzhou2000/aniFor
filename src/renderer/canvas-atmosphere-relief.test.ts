@@ -108,6 +108,26 @@ describe('Canvas atmosphere relief', () => {
     for (let offset = 3; offset < source.length; offset += 4) expect(lit[offset]).toBe(source[offset]);
   });
 
+  it('reaches one field texel toward an external light without widening gas support', () => {
+    const width = 5;
+    const source = new Uint8Array(width * width * 4);
+    pixel(source, width, 1, 2, [90, 120, 160, 112]);
+    pixel(source, width, 2, 2, [90, 120, 160, 220]);
+    const light = new Uint8Array(source.length);
+    pixel(light, width, 0, 2, [255, 112, 36, 255]);
+    const baseline = new Uint8ClampedArray(source.length);
+    const lit = new Uint8ClampedArray(source.length);
+
+    shadeCanvasAtmosphere(baseline, source, width, width);
+    shadeCanvasAtmosphere(lit, source, width, width, { bytes: light, width, height: width });
+
+    const flankOffset = (2 * width + 1) * 4;
+    expect(lit[flankOffset]).toBeGreaterThan(baseline[flankOffset]);
+    expect(lit[flankOffset] - baseline[flankOffset])
+      .toBeGreaterThan(lit[flankOffset + 2] - baseline[flankOffset + 2]);
+    for (let offset = 3; offset < source.length; offset += 4) expect(lit[offset]).toBe(source[offset]);
+  });
+
   it('is byte-identical to unlit relief when the emission field is dark', () => {
     const width = 3;
     const source = new Uint8Array(width * width * 4);
