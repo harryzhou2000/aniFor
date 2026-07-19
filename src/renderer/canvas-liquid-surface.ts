@@ -1,3 +1,5 @@
+import { canvasLiquidFieldRelief } from './canvas-liquid-light';
+
 const LIQUID_HOLE_THRESHOLD = 86;
 const LIQUID_INTERIOR_FIELD_ALPHA = 224;
 const LIQUID_INTERIOR_PIXEL_ALPHA = 176;
@@ -70,11 +72,7 @@ export function reconstructLiquidSurface(
     if (materials[index] !== 0 || density[fieldPixel + 3] < LIQUID_HOLE_THRESHOLD) continue;
     const amount = smoothstep(0.30, 0.68, density[fieldPixel + 3] / 255);
     if (amount <= 0) continue;
-    const left = density[(y * width + Math.max(0, x - 1)) * 4 + 3] / 255;
-    const right = density[(y * width + Math.min(width - 1, x + 1)) * 4 + 3] / 255;
-    const top = density[(Math.max(0, y - 1) * width + x) * 4 + 3] / 255;
-    const bottom = density[(Math.min(height - 1, y + 1) * width + x) * 4 + 3] / 255;
-    const light = (left - right) * 28 + (top - bottom) * 36;
+    const reliefScale = 1 + canvasLiquidFieldRelief(density, width, height, x, y);
     let red = 0;
     let green = 0;
     let blue = 0;
@@ -105,9 +103,9 @@ export function reconstructLiquidSurface(
       blue += target[neighbourPixel + 2];
       samples++;
     }
-    target[fieldPixel] = clamp((samples ? red / samples : density[fieldPixel]) + light);
-    target[fieldPixel + 1] = clamp((samples ? green / samples : density[fieldPixel + 1]) + light);
-    target[fieldPixel + 2] = clamp((samples ? blue / samples : density[fieldPixel + 2]) + light);
+    target[fieldPixel] = clamp((samples ? red / samples : density[fieldPixel]) * reliefScale);
+    target[fieldPixel + 1] = clamp((samples ? green / samples : density[fieldPixel + 1]) * reliefScale);
+    target[fieldPixel + 2] = clamp((samples ? blue / samples : density[fieldPixel + 2]) * reliefScale);
     target[fieldPixel + 3] = clamp(amount * (96 + amount * 114));
   }
 

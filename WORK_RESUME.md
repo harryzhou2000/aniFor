@@ -24,7 +24,7 @@ Queued after the renderer checkpoint: revisit desktop/mobile geometry as a dedic
 
 - Repository: `/home/harry/projects/aniFor_codex`
 - Branch: `main_codex`
-- Current checkpoint: the field-owned liquid-lighting follow-up described below, based on `55f55b3 Add curvature depth to gas volumes`.
+- Current checkpoint: the Canvas liquid-field-relief follow-up described below, based on `f022ec8 Make dense liquid lighting field-owned`.
 - The immediately preceding live baseline was built and verified by manual Actions run `29666585733` at exact SHA `97f5ced40b3f4db1f5c0a0acd477002b661e0f04` after `origin/main_codex` was independently checked with `git ls-remote`.
 - The local GitHub CLI token is currently invalid and must be refreshed with `gh auth login -h github.com` before Actions can be triggered or inspected again. Re-check the remote branch independently after the next push.
 - Current live Pages URL: `https://harryzhou2000.github.io/aniFor/`
@@ -262,6 +262,13 @@ The layout checkpoint `60b033b` and dense-solid relief checkpoint `97f5ced` are 
 - Canvas Lava keeps its continuous body glow in the shared emission field and moves the twice-composited local light accent to the field-owned top surface. Its homogeneous column changed from fully pinned yellow (`255,246,44`, pinned fraction `1`) to unclipped warm orange (`157,104,35`, pinned fraction `0`) without changing material or alpha semantics.
 - The browser gate now measures mean adjacent-pixel luma delta for homogeneous lower Water/Oil/Acid/Lava columns, with a ceiling of `4`, non-flat luma range, at least `90%` coverage, at most `15%` pinned pixels, and explicit family-hue assertions. Final Canvas values were `0.42/0.34/0.34/0.48`; the retained WebGL values were `1.24/0.85/0.61/0.39`.
 - Shared field storage remains exactly `8,173,320` bytes and runtime-known Canvas scratch remains `1,887,464` bytes. The pessimistic all-235,008-cell liquid-light helper profile measured `6.51 ms` median / `6.63 ms` p90; ordinary dense interiors short-circuit the top-exposure field read because their semantic top is occupied.
+
+## Current Canvas liquid-field-relief follow-up
+
+- Canvas semantic liquids and reconstructed holes now share an allocation-free hue-preserving RGB relief sampled from the existing liquid field's centre and four cardinal alpha bytes. Upper-left slope, convex crowns, and concave pockets create coherent volume; centre/cardinal connectivity disables the effect for isolated droplets. No alpha, support, material, species RGB, trait, emission-plane, field, texture, pass, or scheduler ownership changed.
+- The browser sampler now separates cell-frequency contrast from five-by-five low-pass macro contrast. Canvas Water/Oil/Acid/Lava columns retained micro-contrast below `0.5` while producing macro ranges around `12/7/8/11`; paired WebGL values were around `4/2/7/3`, and a broad ratio gate prevents either fallback flatness or excessive relief. A dedicated Canvas Water probe requires at least `12` macro levels at the upper-left field edge, at least twice its core range, while core adjacent contrast stays at or below `1`.
+- Smoke, Oxygen, and Noble Gas now have explicit composed-output hue assertions in both backends: neutral warm-grey, ordered cool blue, and ordered violet respectively. This proves the documented hue invariant through the final compositor rather than only through scalar curvature math.
+- Shared field storage remains exactly `8,173,320` bytes and runtime-known Canvas scratch remains `1,887,464` bytes. The final pessimistic all-235,008-cell contour/top/relief helper profile measured `9.71 ms` median / `11.42 ms` p90 after byte-space normalization and exact low-density/uniform-neighbour early exits; ordinary frames call relief only for actual liquid semantic cells plus supported reconstructed holes. This is an isolated helper bound, not yet an end-to-end dense-scene frame budget.
 
 ## Current blockers and risks
 

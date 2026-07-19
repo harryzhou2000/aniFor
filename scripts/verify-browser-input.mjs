@@ -29,6 +29,7 @@ async function main() {
     }, 15_000, 'Vite browser-audit server');
     const results = [];
     for (const mode of modes) results.push(await auditMode(mode));
+    assertPairedLiquidRelief(results);
     console.log(JSON.stringify({ world: `${WORLD_WIDTH}x${WORLD_HEIGHT}`, results }, null, 2));
   } catch (error) {
     if (serverLog.trim()) console.error(serverLog.trim());
@@ -155,6 +156,17 @@ async function auditMode(mode) {
       `${mode}: fluid depth is flat or clipped (${JSON.stringify(volumeSamples)})`);
     assert(volumeSamples.every((sample) => sample.pinnedFraction <= 0.05),
       `${mode}: fluid framebuffer clipping returned (${JSON.stringify(volumeSamples)})`);
+    const volumes = Object.fromEntries(volumeSamples.map((sample) => [sample.name, sample]));
+    assert(Math.abs(volumes.smoke.rgb[0] - volumes.smoke.rgb[1]) <= 5
+      && volumes.smoke.rgb[0] > volumes.smoke.rgb[2]
+      && volumes.smoke.rgb[1] > volumes.smoke.rgb[2],
+    `${mode}: Smoke lost its neutral warm-grey hue (${volumes.smoke.rgb})`);
+    assert(volumes.oxygen.rgb[2] > volumes.oxygen.rgb[1]
+      && volumes.oxygen.rgb[1] > volumes.oxygen.rgb[0],
+    `${mode}: Oxygen lost its cool-blue hue (${volumes.oxygen.rgb})`);
+    assert(volumes.nobleGas.rgb[2] > volumes.nobleGas.rgb[0]
+      && volumes.nobleGas.rgb[0] > volumes.nobleGas.rgb[1],
+    `${mode}: Noble Gas lost its violet hue (${volumes.nobleGas.rgb})`);
     const liquidColumnSamples = await samplePageRegions(cdp, canonicalCapture.data, [
       { name: 'waterColumn', x: 224, y: 270, radius: 8 },
       { name: 'oilColumn', x: 263, y: 270, radius: 8 },
@@ -165,6 +177,8 @@ async function auditMode(mode) {
       `${mode}: a dense liquid column became perforated (${JSON.stringify(liquidColumnSamples)})`);
     assert(liquidColumnSamples.every((sample) => sample.microContrast <= 4),
       `${mode}: dense liquid cell-frequency contrast returned (${JSON.stringify(liquidColumnSamples)})`);
+    assert(liquidColumnSamples.every((sample) => sample.macroLumaRange >= 2),
+      `${mode}: dense liquid lost its low-frequency depth (${JSON.stringify(liquidColumnSamples)})`);
     assert(liquidColumnSamples.every((sample) => sample.lumaRange >= 8 && sample.lumaRange <= 120),
       `${mode}: dense liquid depth is flat or clipped (${JSON.stringify(liquidColumnSamples)})`);
     assert(liquidColumnSamples.every((sample) => sample.pinnedFraction <= 0.15),
@@ -182,6 +196,19 @@ async function auditMode(mode) {
     assert(liquidColumns.lavaColumn.rgb[0] > liquidColumns.lavaColumn.rgb[1]
       && liquidColumns.lavaColumn.rgb[1] > liquidColumns.lavaColumn.rgb[2],
     `${mode}: Lava column lost its warm hue (${liquidColumns.lavaColumn.rgb})`);
+    const liquidReliefSamples = await samplePageRegions(cdp, canonicalCapture.data, [
+      { name: 'waterUpperLeft', x: 210, y: 45, radius: 5 },
+      { name: 'waterCore', x: 238, y: 79, radius: 5 },
+      { name: 'waterLowerLeft', x: 210, y: 113, radius: 5 },
+    ]);
+    if (mode === 'canvas2d') {
+      const liquidRelief = Object.fromEntries(liquidReliefSamples.map((sample) => [sample.name, sample]));
+      assert(liquidRelief.waterUpperLeft.macroLumaRange >= 12
+        && liquidRelief.waterUpperLeft.macroLumaRange >= liquidRelief.waterCore.macroLumaRange * 2,
+      `Canvas Water lost coherent upper-left field relief (${JSON.stringify(liquidReliefSamples)})`);
+      assert(liquidRelief.waterCore.microContrast <= 1,
+        `Canvas Water core relief became cell-grained (${JSON.stringify(liquidReliefSamples)})`);
+    }
 
     const screenshot = screenshotPath(mode);
     if (screenshot) {
@@ -284,6 +311,7 @@ async function auditMode(mode) {
       solidSamples,
       volumeSamples,
       liquidColumnSamples,
+      liquidReliefSamples,
       landmarkCells: landmarks.length,
       configuredSource: nativeSemantics.configuredSource,
       lifePreset: nativeSemantics.lifePreset,
@@ -930,12 +958,35 @@ async function samplePageRegions(cdp, screenshotBase64, regions) {
           adjacentPairs++;
         }
       }
+      let minimumMacroLuma = 255;
+      let maximumMacroLuma = 0;
+      let macroSamples = 0;
+      const macroRadius = 2;
+      for (let py = macroRadius; py < height - macroRadius; py++) {
+        for (let px = macroRadius; px < width - macroRadius; px++) {
+          let sum = 0;
+          let supported = true;
+          for (let oy = -macroRadius; oy <= macroRadius && supported; oy++) {
+            for (let ox = -macroRadius; ox <= macroRadius; ox++) {
+              const neighbour = (py + oy) * width + px + ox;
+              if (!visiblePixels[neighbour]) { supported = false; break; }
+              sum += lumaValues[neighbour];
+            }
+          }
+          if (!supported) continue;
+          const macroLuma = sum / 25;
+          minimumMacroLuma = Math.min(minimumMacroLuma, macroLuma);
+          maximumMacroLuma = Math.max(maximumMacroLuma, macroLuma);
+          macroSamples++;
+        }
+      }
       return {
         name: region.name,
         rgb: total.map((channel) => Math.round(channel / Math.max(1, visible))),
         visible,
         coverage: Math.round(visible / Math.max(1, width * height) * 1000) / 1000,
         microContrast: Math.round(adjacentContrast / Math.max(1, adjacentPairs) * 100) / 100,
+        macroLumaRange: macroSamples ? Math.round(maximumMacroLuma - minimumMacroLuma) : 0,
         pinnedFraction: Math.round(pinned / Math.max(1, visible) * 1000) / 1000,
         lumaRange: visible ? Math.round(maximumLuma - minimumLuma) : 0,
       };
@@ -979,6 +1030,22 @@ async function waitFor(check, timeoutMs, label) {
 }
 
 function assert(condition, message) { if (!condition) throw new Error(message); }
+
+function assertPairedLiquidRelief(results) {
+  if (results.length !== 2) return;
+  const canvas = results.find((result) => result.backend === 'canvas2d');
+  const webgl = results.find((result) => result.backend === 'webgl');
+  if (!canvas || !webgl) return;
+  for (const canvasSample of canvas.liquidColumnSamples) {
+    const webglSample = webgl.liquidColumnSamples.find((sample) => sample.name === canvasSample.name);
+    assert(webglSample, `paired liquid sample missing ${canvasSample.name}`);
+    assert(canvasSample.macroLumaRange >= Math.max(2, webglSample.macroLumaRange * 0.45),
+      `Canvas ${canvasSample.name} macro depth fell behind WebGL (${canvasSample.macroLumaRange}/${webglSample.macroLumaRange})`);
+    assert(canvasSample.macroLumaRange <= webglSample.macroLumaRange * 5 + 4,
+      `Canvas ${canvasSample.name} macro depth became excessive (${canvasSample.macroLumaRange}/${webglSample.macroLumaRange})`);
+  }
+}
+
 function round(value, digits = 2) { const factor = 10 ** digits; return Math.round(value * factor) / factor; }
 function sleep(milliseconds) { return new Promise((resolve) => setTimeout(resolve, milliseconds)); }
 

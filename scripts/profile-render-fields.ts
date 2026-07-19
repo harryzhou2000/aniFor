@@ -14,7 +14,9 @@ import {
 } from '../src/renderer/canvas-liquid-surface';
 import { reconstructSolidSurface } from '../src/renderer/canvas-solid-surface';
 import { canvasSolidRelief } from '../src/renderer/canvas-solid-relief';
-import { canvasLiquidContourScale, canvasLiquidSurfaceExposure } from '../src/renderer/canvas-liquid-light';
+import {
+  canvasLiquidContourScale, canvasLiquidFieldRelief, canvasLiquidSurfaceExposure,
+} from '../src/renderer/canvas-liquid-light';
 import { createRenderLookups } from '../src/renderer/render-field-set';
 import { RenderPhase, RenderProfile } from '../src/renderer/render-profile';
 import { RenderTrait } from '../src/renderer/render-traits';
@@ -269,6 +271,9 @@ console.log(JSON.stringify({
         checksum += canvasLiquidSurfaceExposure(
           denseLiquidField.bytes, width, x, y, true,
         );
+        checksum += Math.abs(canvasLiquidFieldRelief(
+          denseLiquidField.bytes, width, height, x, y,
+        ));
       }
       liquidLightChecksum = checksum;
     }),
