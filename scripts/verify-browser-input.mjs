@@ -223,6 +223,10 @@ async function auditMode(mode) {
       await writeFile(screenshot, Buffer.from(canonicalCapture.data, 'base64'));
     }
 
+    const denseCanvasPresentation = mode === 'canvas2d'
+      ? await auditDenseCanvasPresentation(cdp)
+      : undefined;
+
     await evaluate(cdp, `window.__ANIFOR_INPUT_AUDIT__.clear(); window.__ANIFOR_INPUT_AUDIT__.setRadius(0); true`);
     const initial = await metrics(cdp);
     assertGeometry(initial, `${mode} initial`);
@@ -321,6 +325,7 @@ async function auditMode(mode) {
       volumeSamples,
       liquidColumnSamples,
       liquidReliefSamples,
+      ...(denseCanvasPresentation ? { denseCanvasPresentation } : {}),
       landmarkCells: landmarks.length,
       configuredSource: nativeSemantics.configuredSource,
       lifePreset: nativeSemantics.lifePreset,
@@ -339,6 +344,51 @@ async function auditMode(mode) {
     await terminate(chrome);
     await rm(profile, { recursive: true, force: true });
   }
+}
+
+async function auditDenseCanvasPresentation(cdp) {
+  const initialSequence = await evaluate(cdp,
+    `window.__ANIFOR_INPUT_AUDIT__.canvasPresentationTiming()?.sequence ?? 0`);
+  await evaluate(cdp, `window.__ANIFOR_INPUT_AUDIT__.prepareDenseSolidFixture(); true`);
+  let timing = await waitForCanvasPresentation(cdp, initialSequence, 'dense Canvas fixture');
+
+  const warmupFrames = 10;
+  for (let warmup = 0; warmup < warmupFrames; warmup++) {
+    await evaluate(cdp, `window.__ANIFOR_INPUT_AUDIT__.toggleDenseSolidProbe(); true`);
+    timing = await waitForCanvasPresentation(cdp, timing.sequence, `dense Canvas warmup ${warmup + 1}`);
+  }
+
+  const targetSamples = 30;
+  const durations = [];
+  let discardedFieldRebuilds = 0;
+  for (let attempt = 0; durations.length < targetSamples && attempt < targetSamples + 15; attempt++) {
+    await evaluate(cdp, `window.__ANIFOR_INPUT_AUDIT__.toggleDenseSolidProbe(); true`);
+    timing = await waitForCanvasPresentation(cdp, timing.sequence, `dense Canvas sample ${attempt + 1}`);
+    if (timing.rebuiltField !== undefined) {
+      discardedFieldRebuilds++;
+      continue;
+    }
+    durations.push(timing.durationMs);
+  }
+  assert(durations.length === targetSamples,
+    `Canvas dense presentation produced only ${durations.length}/${targetSamples} steady-state samples`);
+  durations.sort((left, right) => left - right);
+  return {
+    fixture: `${WORLD_WIDTH}x${WORLD_HEIGHT} Metal`,
+    warmupFrames,
+    samples: durations.length,
+    discardedFieldRebuilds,
+    medianMs: round(durations[Math.floor(durations.length / 2)]),
+    p90Ms: round(durations[Math.floor(durations.length * 0.9)]),
+    maximumMs: round(durations.at(-1)),
+  };
+}
+
+function waitForCanvasPresentation(cdp, afterSequence, label) {
+  return waitFor(() => evaluate(cdp, `(() => {
+    const timing = window.__ANIFOR_INPUT_AUDIT__.canvasPresentationTiming();
+    return timing && timing.sequence > ${afterSequence} ? timing : null;
+  })()`), 5_000, label);
 }
 
 async function auditShortDesktop(cdp, mode, dpr, previous) {

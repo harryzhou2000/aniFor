@@ -40,6 +40,12 @@ export interface RendererBackendInfo {
   readonly reason?: 'forced' | 'webgl-unavailable' | 'webgl-starting' | 'webgl-timeout' | 'webgl-error';
 }
 
+export interface CanvasPresentationTiming {
+  readonly sequence: number;
+  readonly durationMs: number;
+  readonly rebuiltField?: 'atmosphere' | 'liquid' | 'emission';
+}
+
 export function dynamicFieldRefreshDue(time: number, lastRefresh: number, enabled: boolean): boolean {
   return enabled && time - lastRefresh >= DYNAMIC_FIELD_REFRESH_INTERVAL;
 }
@@ -90,6 +96,8 @@ export class MaterialRenderer {
   private lastDraw = -Infinity;
   private lastDynamicFieldRefresh = -Infinity;
   private changed = true;
+  private canvasPresentationTimingEnabled = false;
+  private canvasPresentationTiming?: CanvasPresentationTiming;
 
   constructor(private readonly host: HTMLElement, private readonly simulation: SimulationBackend) {
     this.rendered = new Uint8Array(simulation.width * simulation.height);
@@ -148,6 +156,12 @@ export class MaterialRenderer {
   getViewState(): ViewState { return this.view.snapshot(); }
 
   getBackendInfo(): RendererBackendInfo { return this.backend; }
+
+  enableCanvasPresentationTiming(): void { this.canvasPresentationTimingEnabled = true; }
+
+  getCanvasPresentationTiming(): CanvasPresentationTiming | undefined {
+    return this.canvasPresentationTiming;
+  }
 
   applyGesture(start: ViewState, anchorStart: Point, anchorCurrent: Point, ratio: number): void {
     this.view.applyGesture(
@@ -300,6 +314,7 @@ export class MaterialRenderer {
       || !atmospherePixels || !emissionPixels || !liquidSurfaceScratch) {
       throw new Error('Canvas render fields unavailable');
     }
+    const timingStart = this.canvasPresentationTimingEnabled ? performance.now() : undefined;
     const rebuiltField = fields.updateNext(this.rendered, time);
     if (rebuiltField === 'atmosphere') {
       shadeCanvasAtmosphere(
@@ -658,6 +673,13 @@ export class MaterialRenderer {
     fallback.globalAlpha = 0.88;
     fallback.drawImage(this.fireSurface, 0, 0, width, height, 0, 0, output.width, output.height);
     fallback.restore();
+    if (timingStart !== undefined) {
+      this.canvasPresentationTiming = {
+        sequence: (this.canvasPresentationTiming?.sequence ?? 0) + 1,
+        durationMs: performance.now() - timingStart,
+        rebuiltField,
+      };
+    }
   }
 
   private initFallback(): void {

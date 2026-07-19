@@ -24,7 +24,7 @@ Queued after the renderer checkpoint: revisit desktop/mobile geometry as a dedic
 
 - Repository: `/home/harry/projects/aniFor_codex`
 - Branch: `main_codex`
-- Current checkpoint: the Canvas liquid-field-relief follow-up described below, based on `f022ec8 Make dense liquid lighting field-owned`.
+- Current checkpoint: `debde42 Normalize accepted solid cavity opacity`, based on `cb12872 Add field relief to Canvas liquids` and described below.
 - The immediately preceding live baseline was built and verified by manual Actions run `29666585733` at exact SHA `97f5ced40b3f4db1f5c0a0acd477002b661e0f04` after `origin/main_codex` was independently checked with `git ls-remote`.
 - The local GitHub CLI token is currently invalid and must be refreshed with `gh auth login -h github.com` before Actions can be triggered or inspected again. Re-check the remote branch independently after the next push.
 - Current live Pages URL: `https://harryzhou2000.github.io/aniFor/`
@@ -247,7 +247,7 @@ Queued after the renderer checkpoint: revisit desktop/mobile geometry as a dedic
 - Forced Canvas at 1280×720 and a 390×844 DPR-2 portrait capture retained the 1224×768 backing, square mobile interaction panel with aspect-preserving letterbox, smooth empty-space aura, and crisp material seams. Warm/cool strips visibly reveal profile contours without uniformly whitening block interiors.
 - Native semantic-tool coverage now proves exact scalar deltas, stable typed routing, no vector-to-particle fallthrough, no vector emission during pinch navigation, malformed ABI rejection, Wind response, `WL_BLOCKAIR` isolation, stable-water regression, and unstepped OPS Wind round-tripping.
 
-The layout checkpoint `60b033b` and dense-solid relief checkpoint `97f5ced` are committed, pushed, and deployed. Run `29666585733` restored the compatible ccache, built the exact branch SHA, deployed it, and passed the live revision plus runtime-asset-closure verifier. The gas-curvature follow-up below is the current checkpoint; its verification evidence is recorded independently of deployment state so the next handoff can reconcile the exact workflow run.
+The layout checkpoint `60b033b` and dense-solid relief checkpoint `97f5ced` are committed, pushed, and deployed. Run `29666585733` restored the compatible ccache, built the exact branch SHA, deployed it, and passed the live revision plus runtime-asset-closure verifier. The later gas-curvature, field-owned liquid-lighting, Canvas liquid-field-relief, and solid-cavity opacity checkpoints are recorded independently of deployment state so the next handoff can reconcile the exact workflow run.
 
 ## Current gas-curvature follow-up
 
@@ -269,6 +269,18 @@ The layout checkpoint `60b033b` and dense-solid relief checkpoint `97f5ced` are 
 - The browser sampler now separates cell-frequency contrast from five-by-five low-pass macro contrast. Canvas Water/Oil/Acid/Lava columns retained micro-contrast below `0.5` while producing macro ranges around `12/7/8/11`; paired WebGL values were around `4/2/7/3`, and a broad ratio gate prevents either fallback flatness or excessive relief. A dedicated Canvas Water probe requires at least `12` macro levels at the upper-left field edge, at least twice its core range, while core adjacent contrast stays at or below `1`.
 - Smoke, Oxygen, and Noble Gas now have explicit composed-output hue assertions in both backends: neutral warm-grey, ordered cool blue, and ordered violet respectively. This proves the documented hue invariant through the final compositor rather than only through scalar curvature math.
 - Shared field storage remains exactly `8,173,320` bytes and runtime-known Canvas scratch remains `1,887,464` bytes. The final pessimistic all-235,008-cell contour/top/relief helper profile measured `9.71 ms` median / `11.42 ms` p90 after byte-space normalization and exact low-density/uniform-neighbour early exits; ordinary frames call relief only for actual liquid semantic cells plus supported reconstructed holes. This is an isolated helper bound, not yet an end-to-end dense-scene frame budget.
+
+## Current solid-cavity opacity follow-up (`debde42`)
+
+- The conservative exact-material eligibility proof is unchanged: zero different nonempty immediate neighbours plus four-cardinal enclosure or at least five of eight matches with three cardinal supports; the narrow two-cardinal crack case still requires all four matching diagonals and explicit same-material distance-two bounds. This remains presentation-only and cannot cascade through Canvas reconstruction.
+- Once that proof accepts a cavity, Canvas maps support monotonically into the near-opaque `0.90–0.98` band. WebGL normalizes the same candidate only when `surfaceOnly` is set and reconstructed `density` is nonzero, so a nearby exact solid cannot make a rejected candidate visible. No semantic occupancy, field support, scheduler stage, texture, or pass changed.
+- Powders, unlike- or mixed-material seams, native walls, world borders, sparse crosses, open notches, and unbounded cracks remain transparent. Trait-bearing accepted support uses canonical palette RGB without extending semantic role traits into the reconstructed cell.
+- The composed browser gate now limits the relative dark-pit fraction to `0.08` in each of four solid-family interiors and separately requires the vertical and horizontal solid-matrix gaps to keep every RGB channel at or below `20` with luma range at or below `5`. Run these assertions in both Canvas and WebGL so stronger accepted-cavity opacity cannot silently bridge a separator.
+- This checkpoint makes proven cavities join their material chunk instead of reading as black cell-sized pits. It deliberately does not claim that all solid cellularity is solved: ambiguous clusters and every conservatively rejected notch or seam remain visible, alongside intentional material relief and granular texture.
+
+## Current dense Canvas timing follow-up (after `debde42`)
+
+- The browser audit now includes an audit-only full Canvas presentation timer and deterministic full-grid Metal fixture. It warms 10 frames, retains 30 steady-state one-cell-toggle samples, excludes scheduled field-rebuild samples, and reports median/p90/maximum without a pass/fail threshold. The first local run measured `29.9 ms` median / `30.9 ms` p90 / `52.1 ms` maximum; the fresh paired-backend verification measured `27.5 ms` / `29.6 ms` / `30.3 ms`, with no rebuild samples retained in either run. This measures synchronous Canvas submission through final 2× composition; it is stronger evidence than the isolated `2.88 ms` median / `3.13 ms` p90 solid-reconstruction helper profile, but it is still host-specific telemetry rather than a proven cross-run budget.
 
 ## Current blockers and risks
 

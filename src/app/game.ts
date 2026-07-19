@@ -9,7 +9,9 @@ import { mountControls } from '../ui/controls';
 import { buildToolCatalog, type LifeToolInfo, type SimToolInfo, type SourceToolInfo, type WallToolInfo } from '../ui/tool-catalog';
 import { WorldInputController } from '../ui/world-input';
 import { drawToolPoint, drawToolSegment } from './tool-dispatch';
-import { browserInputAuditRequested } from './browser-input-audit';
+import {
+  browserInputAuditRequested, prepareDenseSolidAuditFixture, toggleDenseSolidAuditProbe,
+} from './browser-input-audit';
 
 const AUTOSAVE_KEY = 'stillroom-world-v1';
 
@@ -145,6 +147,7 @@ export class Game {
     this.eraseMode = false;
     this.radius = 0;
     this.renderer.resetView();
+    this.renderer.enableCanvasPresentationTiming();
     this.root.dataset.inputAudit = 'ready';
     window.__ANIFOR_INPUT_AUDIT__ = {
       version: 1,
@@ -167,6 +170,9 @@ export class Game {
       screenToCell: (clientX, clientY) => this.renderer.screenToCell(clientX, clientY),
       viewState: () => this.renderer.getViewState(),
       backend: () => this.renderer.getBackendInfo(),
+      prepareDenseSolidFixture: () => { prepareDenseSolidAuditFixture(this.simulation); },
+      toggleDenseSolidProbe: () => { toggleDenseSolidAuditProbe(this.simulation); },
+      canvasPresentationTiming: () => this.renderer.getCanvasPresentationTiming(),
     };
   }
 

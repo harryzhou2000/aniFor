@@ -1,4 +1,6 @@
-import type { RendererBackendInfo } from '../renderer/field-renderer';
+import type { CanvasPresentationTiming, RendererBackendInfo } from '../renderer/field-renderer';
+import { Material } from '../shared/materials';
+import type { SimulationBackend } from '../simulation';
 import type { Point, ViewState } from '../renderer/view-transform';
 
 export interface BrowserInputAuditApi {
@@ -15,6 +17,9 @@ export interface BrowserInputAuditApi {
   screenToCell(clientX: number, clientY: number): Point;
   viewState(): ViewState;
   backend(): RendererBackendInfo;
+  prepareDenseSolidFixture(): void;
+  toggleDenseSolidProbe(): void;
+  canvasPresentationTiming(): CanvasPresentationTiming | undefined;
 }
 
 declare global {
@@ -23,4 +28,25 @@ declare global {
 
 export function browserInputAuditRequested(search = globalThis.location?.search ?? ''): boolean {
   return new URLSearchParams(search).get('inputAudit') === '1';
+}
+
+/** Builds the full-grid steady-state Canvas workload used only by the browser audit. */
+export function prepareDenseSolidAuditFixture(simulation: SimulationBackend): void {
+  if (simulation.name !== 'TypeScript deterministic fallback') {
+    throw new Error('Dense Canvas audit fixture requires the deterministic backend');
+  }
+  // DeterministicBackend.clear() marks every index dirty before this direct
+  // fill, so the renderer observes the completed fixture on its next frame.
+  simulation.clear();
+  simulation.cells().fill(Material.Metal);
+}
+
+/** Changes one cell so a paused dense fixture presents another complete frame. */
+export function toggleDenseSolidAuditProbe(simulation: SimulationBackend): void {
+  const x = Math.floor(simulation.width / 2);
+  const y = Math.floor(simulation.height / 2);
+  const material = simulation.cells()[y * simulation.width + x] === Material.Metal
+    ? Material.Glass
+    : Material.Metal;
+  simulation.paint(x, y, material, 0);
 }
