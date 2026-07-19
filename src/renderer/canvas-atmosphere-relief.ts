@@ -8,6 +8,47 @@ export interface CanvasAtmosphereLightField {
   readonly height: number;
 }
 
+const CANVAS_ATMOSPHERE_LIGHT_GAIN = 3.6;
+
+/** Allocation-free linear sampling matching the WebGL atmosphere texture. */
+export function canvasAtmosphereAlphaAtWorldCell(
+  source: Uint8Array,
+  fieldWidth: number,
+  fieldHeight: number,
+  worldWidth: number,
+  worldHeight: number,
+  x: number,
+  y: number,
+): number {
+  if (fieldWidth <= 0 || fieldHeight <= 0 || worldWidth <= 0 || worldHeight <= 0
+    || source.length !== fieldWidth * fieldHeight * 4) return 0;
+  const fieldX = clamp((x + 0.5) / worldWidth * fieldWidth - 0.5, 0, fieldWidth - 1);
+  const fieldY = clamp((y + 0.5) / worldHeight * fieldHeight - 0.5, 0, fieldHeight - 1);
+  const left = Math.floor(fieldX);
+  const top = Math.floor(fieldY);
+  const right = Math.min(fieldWidth - 1, left + 1);
+  const bottom = Math.min(fieldHeight - 1, top + 1);
+  const blendX = fieldX - left;
+  const blendY = fieldY - top;
+  const topAlpha = source[(top * fieldWidth + left) * 4 + 3] * (1 - blendX)
+    + source[(top * fieldWidth + right) * 4 + 3] * blendX;
+  const bottomAlpha = source[(bottom * fieldWidth + left) * 4 + 3] * (1 - blendX)
+    + source[(bottom * fieldWidth + right) * 4 + 3] * blendX;
+  return (topAlpha * (1 - blendY) + bottomAlpha * blendY) / 255;
+}
+
+/** Keeps a restrained species accent while the continuous atmosphere owns gas mass. */
+export function canvasGasSemanticAccentAlpha(
+  atmosphereAlpha: number,
+  neighbourDensity: number,
+  emissive: boolean,
+): number {
+  const fieldSupport = smoothstep(0.015, 0.30, atmosphereAlpha);
+  const semanticAlpha = 42 + clamp(neighbourDensity, 0, 8) * 12;
+  const accentShare = 0.50 - fieldSupport * 0.34 + (emissive ? 0.05 : 0);
+  return Math.round(clamp(semanticAlpha * accentShare, 12, 68));
+}
+
 export function shadeCanvasAtmosphere(
   target: Uint8ClampedArray,
   source: Uint8Array,
@@ -106,7 +147,7 @@ export function shadeCanvasAtmosphere(
           const lightReach = smoothstep(0.01, 0.55, lightDensity);
           const rim = 1 - smoothstep(0.18, 0.74, density);
           const scatter = lightReach * (0.025 + incidence * 0.24 + rim * 0.035)
-            * (1 - density * 0.48) * 2.2;
+            * (1 - density * 0.48) * CANVAS_ATMOSPHERE_LIGHT_GAIN;
           red += light.bytes[lightOffset] * scatter;
           green += light.bytes[lightOffset + 1] * scatter;
           blue += light.bytes[lightOffset + 2] * scatter;

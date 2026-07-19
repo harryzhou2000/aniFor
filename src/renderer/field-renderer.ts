@@ -7,7 +7,9 @@ import {
   backingSize, CANVAS_FALLBACK_DIMENSION_BUDGET, CANVAS_FALLBACK_PIXEL_BUDGET,
   resolveFieldOutputScale, safeWebGLOutputScale, webGLPromotionTimeout, type FieldOutputScale,
 } from './render-resolution';
-import { shadeCanvasAtmosphere } from './canvas-atmosphere-relief';
+import {
+  canvasAtmosphereAlphaAtWorldCell, canvasGasSemanticAccentAlpha, shadeCanvasAtmosphere,
+} from './canvas-atmosphere-relief';
 import { canvasLocalEmissionAlpha } from './canvas-emission-style';
 import { shadeCanvasOpticalVolume } from './canvas-optics-style';
 import {
@@ -581,6 +583,12 @@ export class MaterialRenderer {
       const traits = fields.lookups.styleBytes[material * 4 + 3];
       const optics = fields.lookups.paletteBytes[material * 4 + 3] as RenderOptics;
       const applicableTraits = applicableCanvasRenderTraits(traits, phase);
+      const gasAtmosphereAlpha = phase === RenderPhase.Gas
+        ? canvasAtmosphereAlphaAtWorldCell(
+          fields.atmosphere.bytes, fields.atmosphere.width, fields.atmosphere.height,
+          width, height, x, y,
+        )
+        : 0;
       if (phase === RenderPhase.Liquid || phase === RenderPhase.Energy
         || applicableTraits !== 0 || material === Material.Dust) {
         this.contourChunks.markCell(index);
@@ -812,7 +820,11 @@ export class MaterialRenderer {
         const drift = velocities ? velocities[index * 2] * 0.025 : 0;
         const billow = Math.sin(visualTime * 0.0016 + x * 0.11 + y * 0.065 + drift) * 7;
         const volume = density * 5 + contour * 0.6 + billow;
-        setPixel(smoke, pixel, 114 + volume, 118 + volume, 124 + volume, 45 + density * 13 + Math.min(38, speed));
+        setPixel(
+          smoke, pixel, 114 + volume, 118 + volume, 124 + volume,
+          canvasGasSemanticAccentAlpha(gasAtmosphereAlpha, density, false)
+            + Math.min(8, speed),
+        );
       } else {
         const info = PROJECTED_RENDER_INFO[material];
         if (!info) continue;
@@ -829,7 +841,8 @@ export class MaterialRenderer {
           if (applicableTraits === 0 && !info.emissive) {
             setPixel(
               smoke, pixel,
-              this.styledColor[0], this.styledColor[1], this.styledColor[2], 42 + density * 12,
+              this.styledColor[0], this.styledColor[1], this.styledColor[2],
+              canvasGasSemanticAccentAlpha(gasAtmosphereAlpha, density, false),
             );
           } else {
             if (applicableTraits !== 0) applyCanvasRenderTraits(
@@ -837,7 +850,8 @@ export class MaterialRenderer {
             );
             setPixel(
               smoke, pixel,
-              this.styledColor[0], this.styledColor[1], this.styledColor[2], 42 + density * 12,
+              this.styledColor[0], this.styledColor[1], this.styledColor[2],
+              canvasGasSemanticAccentAlpha(gasAtmosphereAlpha, density, info.emissive),
             );
           }
         } else if (info.phase === RenderPhase.Liquid) {

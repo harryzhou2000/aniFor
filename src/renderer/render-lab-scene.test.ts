@@ -81,6 +81,16 @@ describe('render lab scene', () => {
     expect(first.cells()[231 * 612 + 340]).toBe(Material.Empty);
     expect(first.walls()[230 * 612 + 339]).not.toBe(0);
     expect(first.walls()[231 * 612 + 340]).not.toBe(0);
+    for (const [start, material] of [
+      [382, Material.Smoke], [449, Material.FOG], [516, Material.CFLM],
+    ] as const) {
+      for (const offset of [0, 4, 8, 12, 16, 20, 36, 40, 44, 48, 52, 56]) {
+        expect(first.cells()[145 * 612 + start + offset]).toBe(material);
+      }
+      for (const gapX of [start + 27, start + 28, start + 29]) {
+        expect(first.cells()[145 * 612 + gapX]).toBe(Material.Empty);
+      }
+    }
     expect(first.walls()[229 * 612 + 405]).toBe(0);
     expect(first.walls()[229 * 612 + 445]).not.toBe(0);
     expect(first.walls()[229 * 612 + 525]).not.toBe(0);
@@ -89,6 +99,8 @@ describe('render lab scene', () => {
   });
 
   it('exercises every non-neutral styled family plus an energy phase', () => {
+    expect(renderPhase(ALL_MATERIALS.find(({ id }) => id === Material.CFLM)!))
+      .toBe(RenderPhase.Gas);
     const profiles = new Set(RENDER_LAB_STYLE_SAMPLES.map((id) => {
       const material = ALL_MATERIALS.find((candidate) => candidate.id === id)!;
       return renderProfile(material.category);

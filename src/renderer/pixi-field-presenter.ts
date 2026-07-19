@@ -605,7 +605,7 @@ void main() {
   else if (liquidVolume > 0.5) volume = max(density, liquidDensity);
   float gasInterior = cloudOnly > 0.5
     ? 1.0
-    : (gasVolume > 0.5 ? smoothstep(0.14, 0.42, atmosphereState.a) : 0.0);
+    : (gasVolume > 0.5 ? smoothstep(0.02, 0.16, atmosphereState.a) : 0.0);
   float liquidInterior = liquidVolume > 0.5
     ? (liquidOnly > 0.5
       ? smoothstep(0.48, 0.92, liquidDensity)
@@ -749,12 +749,16 @@ void main() {
     // clip into flat neon slabs after premultiplication.
     color = mix(color, toneMapEnergy(color), smoothstep(0.08, 0.68, core));
   } else if (gasVolume > 0.5) {
-    float billow = 0.92 + atmosphere * 0.08;
+    float billow = 0.92 + atmosphere * 0.08 * (1.0 - gasInterior * 0.50);
     // Dense reconstructed gas should read as one mixed volume, not as the raw
     // palette colour of whichever semantic particle occupies this fragment.
-    float sootyGas = optics == 5.0 ? 1.0 : 0.0;
-    float cleanGas = optics == 6.0 ? 1.0 : 0.0;
-    vec3 gasMixture = mix(base, atmosphereState.rgb, gasInterior * 0.98);
+    float semanticGasDetail = 1.0 - gasInterior;
+    float sootyGas = (optics == 5.0 ? 1.0 : 0.0) * semanticGasDetail;
+    float cleanGas = (optics == 6.0 ? 1.0 : 0.0) * semanticGasDetail;
+    float gasFieldSupport = smoothstep(0.006, 0.12, atmosphereState.a);
+    vec3 gasMixture = mix(
+      base, atmosphereState.rgb, max(gasInterior * 0.98, gasFieldSupport * 0.88)
+    );
     vec3 gasBase = vividColor(gasMixture, 1.20 + cleanGas * 0.10 - sootyGas * 0.08);
     float gasShadeDensity = mix(density, atmosphereState.a, gasInterior);
     float gasCurvature = clamp((atmosphereState.a - cloudNeighbourMean) * 8.0, -1.0, 1.0);
@@ -764,9 +768,14 @@ void main() {
     float silverLining = (1.0 - smoothstep(0.10, 0.58, gasShadeDensity))
       * smoothstep(0.73, 1.08, diffuse);
     float particleAlpha = smoothstep(0.08, 0.72, density) * (0.38 + atmosphere * 0.06);
-    float cloudAlpha = smoothstep(0.025, 0.46, atmosphereState.a)
-      * (0.105 + atmosphereState.a * 0.32) * billow;
-    alpha = cloudOnly > 0.5 ? cloudAlpha : mix(particleAlpha, cloudAlpha, gasInterior);
+    float cloudAlpha = smoothstep(0.004, 0.22, atmosphereState.a)
+      * (0.085 + atmosphereState.a * 0.36) * billow;
+    float semanticAccentShare = mix(0.22, 0.055, gasFieldSupport)
+      + (materialEmissive ? 0.035 : 0.0);
+    float semanticAccentAlpha = particleAlpha * semanticAccentShare;
+    alpha = cloudOnly > 0.5
+      ? cloudAlpha
+      : cloudAlpha + semanticAccentAlpha * (1.0 - cloudAlpha);
     // Beer-like optical depth keeps the core saturated and translucent while a
     // directional silver lining gives the boundary volume without a hard edge.
     float gasCoreTransmission = 0.74 + cleanGas * 0.08 - sootyGas * 0.13;

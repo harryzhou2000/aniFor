@@ -7,7 +7,7 @@ import { RenderPhase } from './render-profile';
  */
 export function canvasLocalEmissionAlpha(phase: RenderPhase): number {
   if (phase === RenderPhase.Energy) return 0;
-  if (phase === RenderPhase.Gas) return 64;
+  if (phase === RenderPhase.Gas) return 32;
   if (phase === RenderPhase.Liquid) return 96;
   return 176;
 }

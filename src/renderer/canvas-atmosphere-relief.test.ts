@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { shadeCanvasAtmosphere } from './canvas-atmosphere-relief';
+import {
+  canvasAtmosphereAlphaAtWorldCell, canvasGasSemanticAccentAlpha, shadeCanvasAtmosphere,
+} from './canvas-atmosphere-relief';
 
 function pixel(source: Uint8Array, width: number, x: number, y: number, rgba: readonly number[]): void {
   source.set(rgba, (y * width + x) * 4);
@@ -11,6 +13,27 @@ function luminance(source: Uint8ClampedArray, width: number, x: number, y: numbe
 }
 
 describe('Canvas atmosphere relief', () => {
+  it('samples atmosphere alpha linearly in world-cell coordinates', () => {
+    const source = new Uint8Array(2 * 2 * 4);
+    source[3] = 0;
+    source[7] = 255;
+    source[11] = 255;
+    source[15] = 0;
+    const centre = canvasAtmosphereAlphaAtWorldCell(source, 2, 2, 4, 4, 1.5, 1.5);
+    expect(centre).toBeCloseTo(0.5, 5);
+    expect(canvasAtmosphereAlphaAtWorldCell(source, 2, 2, 4, 4, 0, 0)).toBe(0);
+  });
+
+  it('hands dense gas mass to the atmosphere while retaining a bounded species accent', () => {
+    const sparse = canvasGasSemanticAccentAlpha(0.01, 4, false);
+    const dense = canvasGasSemanticAccentAlpha(0.7, 4, false);
+    const emissive = canvasGasSemanticAccentAlpha(0.7, 4, true);
+    expect(dense).toBeLessThan(sparse);
+    expect(emissive).toBeGreaterThan(dense);
+    expect(dense).toBeGreaterThanOrEqual(12);
+    expect(sparse).toBeLessThanOrEqual(68);
+  });
+
   it('preserves alpha, transparency, hue ordering, and source bytes', () => {
     const width = 3;
     const source = new Uint8Array(width * 2 * 4);

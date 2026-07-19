@@ -72,7 +72,12 @@ export function applyRenderLabScene(simulation: SimulationBackend): void {
   plot.rect(180, 68, 2, 17, Material.GRVT, 0.82, 314);
   plot.rect(357, 68, 5, 17, Material.Fire, 0.82, 315);
   plot.rect(592, 80, 2, 17, Material.GRVT, 0.82, 316);
-  plot.scatterLine(382, 145, 202, Material.Smoke, 0.12, 317);
+  // Sparse pitch-four gas chains must merge into wisps without filling their
+  // authored 16-cell centre gap. Separate families keep colour ownership and
+  // let the composed gate distinguish volume continuity from semantic beads.
+  plot.sparseGasChain(382, 145, Material.Smoke);
+  plot.sparseGasChain(449, 145, Material.FOG);
+  plot.sparseGasChain(516, 145, Material.CFLM);
   // Generic soot and emissive gas exercise paths that Smoke and clean gases do
   // not cover. Their compact volumes also expose over-wide bloom at a glance.
   plot.ellipse(430, 171, 37, 13, Material.FOG, 0.76, 331, 0.42);
@@ -206,6 +211,12 @@ class ScenePlotter {
       const value = noise(px, py, salt);
       if (value > density) continue;
       this.set(px, py, noise(px, py, salt + 97) < 0.5 ? first : second);
+    }
+  }
+
+  sparseGasChain(x: number, y: number, material: Material): void {
+    for (const offset of [0, 4, 8, 12, 16, 20, 36, 40, 44, 48, 52, 56]) {
+      this.set(x + offset, y, material);
     }
   }
 

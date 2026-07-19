@@ -1,7 +1,9 @@
 import { performance } from 'node:perf_hooks';
 import { ALL_MATERIALS, Material } from '../src/shared/materials';
 import { AtmosphereField } from '../src/renderer/atmosphere-field';
-import { shadeCanvasAtmosphere } from '../src/renderer/canvas-atmosphere-relief';
+import {
+  canvasAtmosphereAlphaAtWorldCell, canvasGasSemanticAccentAlpha, shadeCanvasAtmosphere,
+} from '../src/renderer/canvas-atmosphere-relief';
 import { shadeCanvasEnergy } from '../src/renderer/canvas-energy-style';
 import {
   applyCanvasRenderTraits, CANVAS_RENDER_TRAIT_CLOCK_SIZE, updateCanvasRenderTraitClock,
@@ -149,6 +151,7 @@ let translucentLightChecksum = 0;
 let translucentBackdropChecksum = 0;
 let translucentCausticChecksum = 0;
 let translucentLensChecksum = 0;
+let gasSemanticAccentChecksum = 0;
 const profileEmission = new Uint8Array(emission.bytes.length);
 for (let y = 0; y < emission.height; y++) for (let x = 0; x < emission.width; x++) {
   const offset = (y * emission.width + x) * 4;
@@ -309,6 +312,16 @@ console.log(JSON.stringify({
         atmospherePixels, atmosphere.bytes, atmosphere.width, atmosphere.height,
         profileAtmosphereLight,
       );
+    }),
+    gasSemanticAccentWorstCase: sample(() => {
+      let checksum = 0;
+      for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) {
+        const atmosphereAlpha = canvasAtmosphereAlphaAtWorldCell(
+          atmosphere.bytes, atmosphere.width, atmosphere.height, width, height, x, y,
+        );
+        checksum += canvasGasSemanticAccentAlpha(atmosphereAlpha, 8, false);
+      }
+      gasSemanticAccentChecksum = checksum;
     }),
     energyCores: sample(() => {
       for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) {
@@ -493,4 +506,5 @@ console.log(JSON.stringify({
   translucentBackdropChecksum: Math.round(translucentBackdropChecksum),
   translucentCausticChecksum: Math.round(translucentCausticChecksum),
   translucentLensChecksum: Math.round(translucentLensChecksum),
+  gasSemanticAccentChecksum: Math.round(gasSemanticAccentChecksum),
 }, null, 2));

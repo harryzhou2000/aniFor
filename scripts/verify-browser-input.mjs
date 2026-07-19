@@ -35,7 +35,7 @@ async function main() {
     }, 15_000, 'Vite browser-audit server');
     const results = [];
     for (const mode of modes) results.push(await auditMode(mode));
-    if (!visualOnly && !scaleEightOnly) assertPairedVisualRelief(results);
+    if (!scaleEightOnly) assertPairedVisualRelief(results);
     console.log(JSON.stringify({ world: `${WORLD_WIDTH}x${WORLD_HEIGHT}`, results }, null, 2));
   } catch (error) {
     if (serverLog.trim()) console.error(serverLog.trim());
@@ -140,11 +140,15 @@ async function auditMode(mode) {
     // backend compositing regressions are observable in the browser gate.
     const canonicalCaptures = await waitForStablePageCapture(cdp, `${mode} canonical framebuffer`);
     const canonicalCapture = canonicalCaptures.capture;
+    await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setGasFieldLighting(false); true');
+    const unlitGasCaptures = await waitForStablePageCapture(cdp, `${mode} unlit gas framebuffer`);
+    // Keep the paired lit/unlit captures adjacent. The presentation benchmark
+    // intentionally advances many frames, while emissive field accents have a
+    // clocked pulse; inserting it between captures made their difference depend
+    // on benchmark duration instead of only the lighting toggle.
     const webGLPresentationTiming = mode === 'webgl' && !visualOnly
       ? await auditWebGLPresentationTiming(cdp)
       : undefined;
-    await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setGasFieldLighting(false); true');
-    const unlitGasCaptures = await waitForStablePageCapture(cdp, `${mode} unlit gas framebuffer`);
     const canvasGasLightingRefresh = mode === 'canvas2d' && !visualOnly
       ? await auditCanvasGasLightingRefresh(cdp)
       : undefined;
@@ -595,7 +599,9 @@ async function auditMode(mode) {
     ]);
     assert(volumeSamples.every((sample) => sample.coverage >= 0.90),
       `${mode}: a dense fluid core became visibly perforated (${JSON.stringify(volumeSamples)})`);
-    assert(volumeSamples.every((sample) => sample.lumaRange >= 8 && sample.lumaRange <= 200),
+    assert(volumeSamples.every((sample) => sample.lumaRange <= 200
+      && sample.lumaRange >= (['smoke', 'oxygen', 'nobleGas'].includes(sample.name) ? 5 : 8)
+      && (!['smoke', 'oxygen', 'nobleGas'].includes(sample.name) || sample.macroLumaRange >= 4)),
       `${mode}: fluid depth is flat or clipped (${JSON.stringify(volumeSamples)})`);
     assert(volumeSamples.every((sample) => sample.pinnedFraction <= 0.05),
       `${mode}: fluid framebuffer clipping returned (${JSON.stringify(volumeSamples)})`);
@@ -610,6 +616,44 @@ async function auditMode(mode) {
     assert(volumes.nobleGas.rgb[2] > volumes.nobleGas.rgb[0]
       && volumes.nobleGas.rgb[0] > volumes.nobleGas.rgb[1],
     `${mode}: Noble Gas lost its violet hue (${volumes.nobleGas.rgb})`);
+    const compactGasSamples = await sampleCanonicalRegions([
+      { name: 'compactFog', x: 430, y: 171, radiusX: 30, radiusY: 10, topology: true },
+      { name: 'compactCflm', x: 520, y: 171, radiusX: 30, radiusY: 10, topology: true },
+    ]);
+    const compactGas = Object.fromEntries(compactGasSamples.map((sample) => [sample.name, sample]));
+    assert(compactGasSamples.every((sample) => sample.coverage >= 0.45
+      && sample.dominantComponent >= 0.90 && sample.microContrast <= 18)
+      && compactGas.compactFog.pinnedFraction <= 0.02
+      && compactGas.compactCflm.pinnedFraction <= 0.30,
+    `${mode}: compact gas returned to disconnected beads or clipping (${JSON.stringify(compactGasSamples)})`);
+    assert(Math.max(...compactGas.compactFog.rgb) - Math.min(...compactGas.compactFog.rgb) <= 18,
+      `${mode}: compact FOG lost its neutral hue (${compactGas.compactFog.rgb})`);
+    assert(compactGas.compactCflm.rgb[2] >= compactGas.compactCflm.rgb[0] + 12
+      && compactGas.compactCflm.rgb[2] >= compactGas.compactCflm.rgb[1] + 12,
+    `${mode}: compact CFLM lost its blue-violet hue (${compactGas.compactCflm.rgb})`);
+    const sparseGasSamples = await sampleCanonicalRegions([
+      { name: 'smokeCentre', x: 386, y: 145, radius: 1.5 },
+      { name: 'smokeMidpoint', x: 384, y: 145, radius: 1.5 },
+      { name: 'smokeGap', x: 410, y: 145, radius: 1.5 },
+      { name: 'fogCentre', x: 453, y: 145, radius: 1.5 },
+      { name: 'fogMidpoint', x: 451, y: 145, radius: 1.5 },
+      { name: 'fogGap', x: 477, y: 145, radius: 1.5 },
+      { name: 'cflmCentre', x: 520, y: 145, radius: 1.5 },
+      { name: 'cflmMidpoint', x: 518, y: 145, radius: 1.5 },
+      { name: 'cflmGap', x: 544, y: 145, radius: 1.5 },
+    ]);
+    const sparseGas = Object.fromEntries(sparseGasSamples.map((sample) => [sample.name, sample]));
+    for (const family of ['smoke', 'fog', 'cflm']) {
+      const centre = sparseGas[`${family}Centre`];
+      const midpoint = sparseGas[`${family}Midpoint`];
+      assert(midpoint.coverage >= 0.12 && midpoint.visible >= 2,
+        `${mode}: sparse ${family} did not bridge pitch-four particles (${JSON.stringify(sparseGasSamples)})`);
+      assert(centre.meanLuma / Math.max(1, midpoint.meanLuma) <= (family === 'cflm' ? 2.8 : 2.3),
+        `${mode}: sparse ${family} still reads as semantic beads (${JSON.stringify(sparseGasSamples)})`);
+    }
+    assert(sparseGas.smokeGap.coverage <= 0.35 && sparseGas.fogGap.coverage <= 0.35
+      && sparseGas.cflmGap.coverage <= 0.75,
+    `${mode}: sparse gas filled its authored quiet gap (${JSON.stringify(sparseGasSamples)})`);
     const gasLightingSamples = await sampleCanonicalRegions([
       { name: 'warmRim', x: 368, y: 76, radius: 2 },
       { name: 'warmMid', x: 373, y: 76, radius: 2 },
@@ -1043,6 +1087,7 @@ async function auditMode(mode) {
         squareGrainSample,
         zoomedSquareGrainSample,
         powderColumnSemanticSupport,
+        gasLightResponseSamples,
         liquidLightResponseSamples,
         translucentLightResponseSamples,
         translucentSupportInvariantSamples,
@@ -1056,7 +1101,10 @@ async function auditMode(mode) {
         curvatureSupportInvariantSamples,
         silhouetteSamples,
         liquidContourCrossings,
+        liquidColumnSamples,
         liquidReliefSamples,
+        compactGasSamples,
+        sparseGasSamples,
         ...(visualScreenshot ? { screenshot: visualScreenshot } : {}),
         browserErrors: errors.length,
       };
@@ -1291,6 +1339,8 @@ async function auditMode(mode) {
       ...(canvasGasLightingRefresh ? { canvasGasLightingRefresh } : {}),
       liquidColumnSamples,
       liquidReliefSamples,
+      compactGasSamples,
+      sparseGasSamples,
       ...(webGLPresentationTiming ? { webGLPresentationTiming } : {}),
       ...(denseCanvasPresentation ? { denseCanvasPresentation } : {}),
       landmarkCells: landmarks.length,
@@ -3203,6 +3253,28 @@ function assertPairedVisualRelief(results) {
     const ratio = canvasSample.positiveRgb[channel] / Math.max(0.25, webglSample.positiveRgb[channel]);
     assert(ratio >= 0.4 && ratio <= 2.5,
       `Canvas/WebGL ${name} isolated field-light response diverged (${canvasSample.positiveRgb[channel]}/${webglSample.positiveRgb[channel]})`);
+  }
+  for (const name of ['compactFog', 'compactCflm']) {
+    const canvasSample = canvas.compactGasSamples.find((sample) => sample.name === name);
+    const webglSample = webgl.compactGasSamples.find((sample) => sample.name === name);
+    assert(canvasSample && webglSample, `paired compact-gas sample missing ${name}`);
+    const exposureRatio = canvasSample.meanLuma / Math.max(1, webglSample.meanLuma);
+    assert(exposureRatio >= 0.65 && exposureRatio <= 1.75,
+      `Canvas/WebGL ${name} exposure diverged (${canvasSample.meanLuma}/${webglSample.meanLuma})`);
+    assert(Math.abs(canvasSample.dominantComponent - webglSample.dominantComponent) <= 0.08,
+      `Canvas/WebGL ${name} connectivity diverged (${canvasSample.dominantComponent}/${webglSample.dominantComponent})`);
+  }
+  for (const family of ['smoke', 'fog', 'cflm']) {
+    const canvasCentre = canvas.sparseGasSamples.find((sample) => sample.name === `${family}Centre`);
+    const canvasMidpoint = canvas.sparseGasSamples.find((sample) => sample.name === `${family}Midpoint`);
+    const webglCentre = webgl.sparseGasSamples.find((sample) => sample.name === `${family}Centre`);
+    const webglMidpoint = webgl.sparseGasSamples.find((sample) => sample.name === `${family}Midpoint`);
+    assert(canvasCentre && canvasMidpoint && webglCentre && webglMidpoint,
+      `paired sparse-gas sample missing ${family}`);
+    const canvasRatio = canvasCentre.meanLuma / Math.max(1, canvasMidpoint.meanLuma);
+    const webglRatio = webglCentre.meanLuma / Math.max(1, webglMidpoint.meanLuma);
+    assert(Math.abs(canvasRatio - webglRatio) <= 0.35,
+      `Canvas/WebGL ${family} bead contrast diverged (${canvasRatio}/${webglRatio})`);
   }
   for (const name of [
     'patternedGlassShoulders', 'patternedIceCore',
