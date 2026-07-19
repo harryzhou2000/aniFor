@@ -55,6 +55,31 @@ describe('Canvas atmosphere relief', () => {
     expect(luminance(target, width, 2, 1)).toBeGreaterThan(luminance(target, width, 2, 3));
   });
 
+  it('lights a rounded crown and self-shadows a concave pocket without changing support', () => {
+    const width = 5;
+    const fixture = (neighbourAlpha: number) => {
+      const source = new Uint8Array(width * width * 4);
+      pixel(source, width, 2, 2, [130, 160, 205, 128]);
+      for (const [x, y] of [[1, 2], [3, 2], [2, 1], [2, 3]] as const) {
+        pixel(source, width, x, y, [130, 160, 205, neighbourAlpha]);
+      }
+      const target = new Uint8ClampedArray(source.length);
+      shadeCanvasAtmosphere(target, source, width, width);
+      return { source, target };
+    };
+    const crown = fixture(64);
+    const flat = fixture(128);
+    const pocket = fixture(220);
+
+    expect(luminance(crown.target, width, 2, 2)).toBeGreaterThan(luminance(flat.target, width, 2, 2));
+    expect(luminance(flat.target, width, 2, 2)).toBeGreaterThan(luminance(pocket.target, width, 2, 2));
+    for (const result of [crown, flat, pocket]) {
+      for (let offset = 3; offset < result.source.length; offset += 4) {
+        expect(result.target[offset]).toBe(result.source[offset]);
+      }
+    }
+  });
+
   it('rejects invalid dimensions and mismatched buffers', () => {
     expect(() => shadeCanvasAtmosphere(new Uint8ClampedArray(4), new Uint8Array(4), 0, 1)).toThrow('Invalid');
     expect(() => shadeCanvasAtmosphere(new Uint8ClampedArray(8), new Uint8Array(4), 1, 1)).toThrow('size');

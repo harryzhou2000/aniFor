@@ -24,14 +24,14 @@ Queued after the renderer checkpoint: revisit desktop/mobile geometry as a dedic
 
 - Repository: `/home/harry/projects/aniFor_codex`
 - Branch: `main_codex`
-- Remote history includes feature checkpoint `c3bdfd2 Add native LIFE presets and optical material styling`; the solid-optics follow-up is documented below.
-- Manual Actions run `29658718547` built, deployed, and live-verified that exact SHA after the branch push was independently checked with `git ls-remote` and the public GitHub API.
-- Git push authentication is working. GitHub CLI authentication is currently invalid, so another manual workflow dispatch requires `gh auth login -h github.com`.
+- Current checkpoint: the gas-curvature follow-up described below, based on `97f5ced Add restrained relief to dense solids`.
+- The immediately preceding live baseline was built and verified by manual Actions run `29666585733` at exact SHA `97f5ced40b3f4db1f5c0a0acd477002b661e0f04` after `origin/main_codex` was independently checked with `git ls-remote`.
+- Git push and GitHub CLI authentication are working.
 - Current live Pages URL: `https://harryzhou2000.github.io/aniFor/`
-- Verified live baseline: `4077b23` from Actions run `29658718547`.
+- Previous verified live baseline: `97f5ced` from Actions run `29666585733`; accept the current checkpoint only after its own manual workflow and live revision/closure verifier pass.
 - Build, deploy, and post-deployment verification all passed. The live closure contains all referenced resources with correct WASM MIME and the exact expected revision. The successful primary ccache key already existed, so the save step correctly skipped.
 
-## Committed/live baseline through `a64dde9`
+## Committed/live baseline through `97f5ced`
 
 - Pinned official TPT 100.0 native engine, single-threaded 612×384 WebAssembly.
 - 170 stable projected material IDs; 165 particle brushes in the catalog, with 160 enabled and five gravity-dependent entries explicitly disabled.
@@ -247,7 +247,13 @@ Queued after the renderer checkpoint: revisit desktop/mobile geometry as a dedic
 - Forced Canvas at 1280×720 and a 390×844 DPR-2 portrait capture retained the 1224×768 backing, square mobile interaction panel with aspect-preserving letterbox, smooth empty-space aura, and crisp material seams. Warm/cool strips visibly reveal profile contours without uniformly whitening block interiors.
 - Native semantic-tool coverage now proves exact scalar deltas, stable typed routing, no vector-to-particle fallthrough, no vector emission during pinch navigation, malformed ABI rejection, Wind response, `WL_BLOCKAIR` isolation, stable-water regression, and unstepped OPS Wind round-tripping.
 
-The configured-source checkpoint `4077b23`, LIFE/optical-response checkpoint `c3bdfd2`, solid-optics checkpoint `20cafb9`, cohesive-solid checkpoint `2bb36b2`, render-scale checkpoint `72c7801`, material-continuity checkpoint `5f1268c`, energy-radiance checkpoint `65f4d6e`, and dense-liquid checkpoint `b549149` are committed and pushed. `65f4d6e` remains the deployed live revision; it was verified through its exact `revision.txt`, 20-resource closure, and live browser smoke. The dense-liquid checkpoint is locally verified and pushed but not yet deployed. The saved `gh` CLI token is currently invalid; HTTPS Git push still works, but manual Actions dispatch requires `gh auth login` or a valid replacement token.
+The layout checkpoint `60b033b` and dense-solid relief checkpoint `97f5ced` are committed, pushed, and deployed. Run `29666585733` restored the compatible ccache, built the exact branch SHA, deployed it, and passed the live revision plus runtime-asset-closure verifier. The gas-curvature follow-up below is the current checkpoint; its verification evidence is recorded independently of deployment state so the next handoff can reconcile the exact workflow run.
+
+## Current gas-curvature follow-up
+
+- Canvas and WebGL reuse the four atmosphere alpha samples already required for density slope to derive signed local curvature. Convex cloud crowns receive bounded broad light and concave overlap pockets self-shadow; RGB changes uniformly, while every field alpha/support byte and species hue ordering remains unchanged.
+- The change adds no field, texture, texture fetch, upload, pass, or persistent allocation. On the local 612×384 profile, Canvas atmosphere relief measured `0.95 ms` median / `1.33 ms` p90 after simplifying the signed response, versus the prior roughly `0.86 ms` median.
+- The browser screenshot gate now samples Water, Oil, Smoke, Oxygen, and Noble Gas in addition to energy and solid families. Fresh WebGL and Canvas captures retained full dense-core coverage, bounded non-flat luma, zero pinned fluid channels, exact `1224×768` backing, stable repeated resize geometry, `0.06`-cell 2× wheel anchoring, exact `42×27` middle-pan, and zero browser errors. Canvas mobile retained its `378×378` viewport, `1.431×` pinch, and zero stray cells.
 
 ## Current blockers and risks
 

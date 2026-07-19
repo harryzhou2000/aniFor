@@ -327,6 +327,7 @@ void main() {
     : 0.0;
   float shapeDetail = 1.0 - max(gasInterior, liquidInterior);
   vec2 volumeSlope = vec2(0.0);
+  float cloudNeighbourMean = 0.0;
   float liquidNeighbourMean = 0.0;
   if (emissionOnly > 0.5) {
     float lightLeft = texture(uEmissionTexture, fieldUv - vec2(uEmissionTexel.x, 0.0)).a;
@@ -339,6 +340,7 @@ void main() {
     float cloudRight = texture(uAtmosphereTexture, fieldUv + vec2(uAtmosphereTexel.x, 0.0)).a;
     float cloudTop = texture(uAtmosphereTexture, fieldUv - vec2(0.0, uAtmosphereTexel.y)).a;
     float cloudBottom = texture(uAtmosphereTexture, fieldUv + vec2(0.0, uAtmosphereTexel.y)).a;
+    cloudNeighbourMean = (cloudLeft + cloudRight + cloudTop + cloudBottom) * 0.25;
     volumeSlope = vec2(cloudRight - cloudLeft, cloudBottom - cloudTop) * 0.85;
   } else if (liquidVolume > 0.5) {
     float liquidLeft = texture(uLiquidTexture, fieldUv - vec2(uTexel.x, 0.0)).a;
@@ -430,6 +432,9 @@ void main() {
     vec3 gasMixture = mix(base, atmosphereState.rgb, gasInterior * 0.98);
     vec3 gasBase = vividColor(gasMixture, 1.20 + cleanGas * 0.10 - sootyGas * 0.08);
     float gasShadeDensity = mix(density, atmosphereState.a, gasInterior);
+    float gasCurvature = clamp((atmosphereState.a - cloudNeighbourMean) * 8.0, -1.0, 1.0);
+    float gasCrown = max(gasCurvature, 0.0);
+    float gasPocket = max(-gasCurvature, 0.0);
     float opticalDepth = smoothstep(0.035, 0.62, gasShadeDensity);
     float silverLining = (1.0 - smoothstep(0.10, 0.58, gasShadeDensity))
       * smoothstep(0.73, 1.08, diffuse);
@@ -443,6 +448,7 @@ void main() {
     float gasScatter = 0.26 + cleanGas * 0.10 - sootyGas * 0.08;
     color = gasBase * mix(1.08 + cleanGas * 0.04, gasCoreTransmission, opticalDepth)
       * (0.76 + diffuse * 0.28) * billow;
+    color *= 1.0 + gasCrown * 0.18 - gasPocket * 0.11;
     color += mix(vec3(0.16, 0.19, 0.24), gasBase, 0.30 + cleanGas * 0.12)
       * silverLining * gasScatter;
     color += mix(vec3(0.10, 0.12, 0.16), gasBase, 0.34)

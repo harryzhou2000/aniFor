@@ -36,9 +36,19 @@ export function shadeCanvasAtmosphere(
       const bottom = source[(bottomY * width + x) * 4 + 3] / 255;
       const density = alpha / 255;
       const upperLeftRelief = ((right - left) + (bottom - top)) * 0.5;
+      const neighbourMean = (left + right + top + bottom) * 0.25;
+      // Signed local curvature separates rounded density crowns from concave
+      // overlap pockets using samples that the gradient already needs. A crown
+      // catches restrained broad light while a pocket self-shadows, making the
+      // reconstructed field read as joined billows rather than a flat wash.
+      const curvature = density - neighbourMean;
+      const curvatureLight = curvature >= 0 ? curvature * 0.28 : curvature * 0.18;
       // Optical depth darkens dense gas while the gradient retains a restrained
       // upper-left silver lining. Alpha remains the authoritative field support.
-      const shade = clamp(1.10 - density * 0.34 + upperLeftRelief * 0.68, 0.66, 1.16);
+      const shade = clamp(
+        1.10 - density * 0.34 + upperLeftRelief * 0.68 + curvatureLight,
+        0.64, 1.18,
+      );
 
       target[offset] = Math.round(source[offset] * shade);
       target[offset + 1] = Math.round(source[offset + 1] * shade);

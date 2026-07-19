@@ -142,6 +142,19 @@ async function auditMode(mode) {
       `${mode}: solid interior relief is flat or clipped (${JSON.stringify(solidSamples)})`);
     assert(solidSamples.every((sample) => sample.pinnedFraction <= 0.15),
       `${mode}: solid interior framebuffer clipping returned (${JSON.stringify(solidSamples)})`);
+    const volumeSamples = await samplePageRegions(cdp, canonicalCapture.data, [
+      { name: 'water', x: 238, y: 79, radius: 14 },
+      { name: 'oil', x: 289, y: 87, radius: 12 },
+      { name: 'smoke', x: 420, y: 76, radius: 16 },
+      { name: 'oxygen', x: 486, y: 72, radius: 16 },
+      { name: 'nobleGas', x: 544, y: 88, radius: 14 },
+    ]);
+    assert(volumeSamples.every((sample) => sample.coverage >= 0.90),
+      `${mode}: a dense fluid core became visibly perforated (${JSON.stringify(volumeSamples)})`);
+    assert(volumeSamples.every((sample) => sample.lumaRange >= 8 && sample.lumaRange <= 200),
+      `${mode}: fluid depth is flat or clipped (${JSON.stringify(volumeSamples)})`);
+    assert(volumeSamples.every((sample) => sample.pinnedFraction <= 0.05),
+      `${mode}: fluid framebuffer clipping returned (${JSON.stringify(volumeSamples)})`);
 
     const screenshot = screenshotPath(mode);
     if (screenshot) {
@@ -242,6 +255,7 @@ async function auditMode(mode) {
       canonicalFixture: { occupied: canonicalFixture.occupied, wallSignature: '3,3' },
       energySamples,
       solidSamples,
+      volumeSamples,
       landmarkCells: landmarks.length,
       configuredSource: nativeSemantics.configuredSource,
       lifePreset: nativeSemantics.lifePreset,
@@ -873,6 +887,7 @@ async function samplePageRegions(cdp, screenshotBase64, regions) {
         name: region.name,
         rgb: total.map((channel) => Math.round(channel / Math.max(1, visible))),
         visible,
+        coverage: Math.round(visible / Math.max(1, width * height) * 1000) / 1000,
         pinnedFraction: Math.round(pinned / Math.max(1, visible) * 1000) / 1000,
         lumaRange: visible ? Math.round(maximumLuma - minimumLuma) : 0,
       };
