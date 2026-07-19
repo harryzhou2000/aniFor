@@ -278,7 +278,7 @@ export class MaterialRenderer {
     if (this.atmospherePixels) {
       shadeCanvasAtmosphere(
         this.atmospherePixels.data, fields.atmosphere.bytes,
-        fields.atmosphere.width, fields.atmosphere.height,
+        fields.atmosphere.width, fields.atmosphere.height, fields.emission,
       );
       this.atmosphereContext.putImageData(this.atmospherePixels, 0, 0);
     }
@@ -325,12 +325,17 @@ export class MaterialRenderer {
     if (rebuiltField === 'atmosphere') {
       shadeCanvasAtmosphere(
         atmospherePixels.data, fields.atmosphere.bytes,
-        fields.atmosphere.width, fields.atmosphere.height,
+        fields.atmosphere.width, fields.atmosphere.height, fields.emission,
       );
       this.atmosphereContext.putImageData(atmospherePixels, 0, 0);
     } else if (rebuiltField === 'emission') {
       emissionPixels.data.set(fields.emission.bytes);
       this.emissionContext.putImageData(emissionPixels, 0, 0);
+      shadeCanvasAtmosphere(
+        atmospherePixels.data, fields.atmosphere.bytes,
+        fields.atmosphere.width, fields.atmosphere.height, fields.emission,
+      );
+      this.atmosphereContext.putImageData(atmospherePixels, 0, 0);
     }
     const base = basePixels.data;
     const liquid = liquidPixels.data;

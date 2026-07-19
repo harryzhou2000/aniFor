@@ -24,7 +24,7 @@ Queued after the renderer checkpoint: revisit desktop/mobile geometry as a dedic
 
 - Repository: `/home/harry/projects/aniFor_codex`
 - Branch: `main_codex`
-- Current checkpoint: `f117761 Measure dense Canvas presentation`, based on `debde42 Normalize accepted solid cavity opacity`; the uncommitted family-directed solid-mesostructure follow-up is described below.
+- Current pushed checkpoint: `b0cbd93 Prove viewport input across render scales`. Local work after that checkpoint adds dense-energy cohesion, matched emission-field lighting through gas, stable blank-differenced visual gates, and cold-loaded mobile WebGL coverage; it remains uncommitted until the final paired audit and review complete.
 - The immediately preceding live baseline was built and verified by manual Actions run `29666585733` at exact SHA `97f5ced40b3f4db1f5c0a0acd477002b661e0f04` after `origin/main_codex` was independently checked with `git ls-remote`.
 - The local GitHub CLI token is currently invalid and must be refreshed with `gh auth login -h github.com` before Actions can be triggered or inspected again. Re-check the remote branch independently after the next push.
 - Current live Pages URL: `https://harryzhou2000.github.io/aniFor/`
@@ -94,6 +94,13 @@ Queued after the renderer checkpoint: revisit desktop/mobile geometry as a dedic
 - That historical simulation-tool checkpoint deliberately left signs and configured-source targeting disabled and distinct; configured sources were enabled later through their dedicated semantic tranche.
 
 ## Current local graphics and responsive UI tranche
+
+- Dense WebGL energy chunks use the existing emission-field density only as a gate for calming carrier micro-modulation and normalizing semantic-shape opacity. The field cannot manufacture a body without semantic shape support. Measured Fire/Plasma/ELEC/PHOT/GRVT microcontrast fell by roughly 6–24% while hue, macro relief, sparse aura ownership, and clipping gates remained intact.
+- Canvas and WebGL gas now receive directional warm/cool scatter from the already existing emission field. Canvas preserves atmosphere alpha byte-for-byte and re-styles the same atmosphere plane when either atmosphere or emission rebuilds; WebGL reads four cardinal emission-alpha samples only in gas fragments. No field, pass, persistent buffer, or simulation state was added.
+- The deterministic gas atlas has narrow Fire/ELEC strips directly beside opposite cloud flanks. Composed probes require correct warm/cool rim hue, a source-distinguished warm flank, bounded rim luminance relative to adjacent gas, and zero pinned channels in both backends.
+- Canonical visual sampling waits for three identical frames separated by at least one 12 Hz field interval, then repeats against a same-geometry blank audit. Coverage and colour metrics count only pixels exceeding a per-region threshold derived from the stable blank-frame noise, so opaque page background no longer counts as material.
+- The real-browser mobile gate now cold-loads both Canvas2D and WebGL after enabling DPR-2 portrait/touch emulation. Both prove 1.431× two-finger zoom, exactly 22 CSS-pixel pan, sub-0.001-cell anchor drift, zero stray paint, exact single-touch semantics, and a composed footprint within half a cell.
+- Latest local field-light profile: baseline atmosphere relief `1.20 ms` p90 and atmosphere plus emission lighting `1.55 ms` p90 over the full 306×192 plane. Combined shared-field allocation remains exactly `8,173,320` bytes.
 
 - Canvas gas now passes through an allocation-free directional relief stage at half resolution. It copies atmosphere alpha exactly, preserves RGB channel ordering, and adds density depth without expanding the gas footprint. The Canvas atmosphere blur is tightened from 0.9× to 0.55× output scale.
 - Dense WebGL gas blends semantic particle color toward the shared atmosphere mixture, removing the raw orange/cyan dot island while retaining the intentional sparse control row.

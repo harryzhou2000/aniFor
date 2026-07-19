@@ -80,8 +80,53 @@ describe('Canvas atmosphere relief', () => {
     }
   });
 
+  it('scatters coloured field light onto the facing gas flank without changing alpha', () => {
+    const width = 5;
+    const source = new Uint8Array(width * width * 4);
+    for (const [x, alpha] of [[1, 112], [2, 220], [3, 112]] as const) {
+      pixel(source, width, x, 2, [90, 120, 160, alpha]);
+    }
+    const light = new Uint8Array(source.length);
+    pixel(light, width, 0, 2, [255, 112, 36, 255]);
+    pixel(light, width, 1, 2, [255, 112, 36, 200]);
+    pixel(light, width, 2, 2, [255, 112, 36, 70]);
+    const baseline = new Uint8ClampedArray(source.length);
+    const lit = new Uint8ClampedArray(source.length);
+
+    shadeCanvasAtmosphere(baseline, source, width, width);
+    shadeCanvasAtmosphere(lit, source, width, width, { bytes: light, width, height: width });
+
+    const leftOffset = (2 * width + 1) * 4;
+    const coreOffset = (2 * width + 2) * 4;
+    const rightOffset = (2 * width + 3) * 4;
+    const leftGain = lit[leftOffset] - baseline[leftOffset];
+    const coreGain = lit[coreOffset] - baseline[coreOffset];
+    expect(leftGain).toBeGreaterThan(coreGain);
+    expect(leftGain).toBeGreaterThan(lit[leftOffset + 2] - baseline[leftOffset + 2]);
+    expect(luminance(lit, width, 1, 2)).toBeGreaterThan(luminance(baseline, width, 1, 2));
+    expect(lit.slice(rightOffset, rightOffset + 4)).toEqual(baseline.slice(rightOffset, rightOffset + 4));
+    for (let offset = 3; offset < source.length; offset += 4) expect(lit[offset]).toBe(source[offset]);
+  });
+
+  it('is byte-identical to unlit relief when the emission field is dark', () => {
+    const width = 3;
+    const source = new Uint8Array(width * width * 4);
+    pixel(source, width, 1, 1, [70, 130, 200, 180]);
+    const baseline = new Uint8ClampedArray(source.length);
+    const darkLit = new Uint8ClampedArray(source.length);
+    shadeCanvasAtmosphere(baseline, source, width, width);
+    shadeCanvasAtmosphere(darkLit, source, width, width, {
+      bytes: new Uint8Array(2 * 2 * 4), width: 2, height: 2,
+    });
+    expect(darkLit).toEqual(baseline);
+  });
+
   it('rejects invalid dimensions and mismatched buffers', () => {
     expect(() => shadeCanvasAtmosphere(new Uint8ClampedArray(4), new Uint8Array(4), 0, 1)).toThrow('Invalid');
     expect(() => shadeCanvasAtmosphere(new Uint8ClampedArray(8), new Uint8Array(4), 1, 1)).toThrow('size');
+    expect(() => shadeCanvasAtmosphere(
+      new Uint8ClampedArray(4), new Uint8Array(4), 1, 1,
+      { bytes: new Uint8Array(4), width: 0, height: 1 },
+    )).toThrow('light');
   });
 });

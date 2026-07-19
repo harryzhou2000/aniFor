@@ -381,6 +381,7 @@ void main() {
       : smoothstep(0.42, 0.90, density))
     : 0.0;
   vec2 volumeSlope = vec2(0.0);
+  vec2 gasLightSlope = vec2(0.0);
   float cloudNeighbourMean = 0.0;
   float liquidNeighbourMean = 0.0;
   if (emissionOnly > 0.5) {
@@ -394,8 +395,13 @@ void main() {
     float cloudRight = texture(uAtmosphereTexture, fieldUv + vec2(uAtmosphereTexel.x, 0.0)).a;
     float cloudTop = texture(uAtmosphereTexture, fieldUv - vec2(0.0, uAtmosphereTexel.y)).a;
     float cloudBottom = texture(uAtmosphereTexture, fieldUv + vec2(0.0, uAtmosphereTexel.y)).a;
+    float gasLightLeft = texture(uEmissionTexture, fieldUv - vec2(uEmissionTexel.x, 0.0)).a;
+    float gasLightRight = texture(uEmissionTexture, fieldUv + vec2(uEmissionTexel.x, 0.0)).a;
+    float gasLightTop = texture(uEmissionTexture, fieldUv - vec2(0.0, uEmissionTexel.y)).a;
+    float gasLightBottom = texture(uEmissionTexture, fieldUv + vec2(0.0, uEmissionTexel.y)).a;
     cloudNeighbourMean = (cloudLeft + cloudRight + cloudTop + cloudBottom) * 0.25;
     volumeSlope = vec2(cloudRight - cloudLeft, cloudBottom - cloudTop) * 0.85;
+    gasLightSlope = vec2(gasLightRight - gasLightLeft, gasLightBottom - gasLightTop);
   } else if (liquidVolume > 0.5) {
     float liquidLeft = texture(uLiquidTexture, fieldUv - vec2(uTexel.x, 0.0)).a;
     float liquidRight = texture(uLiquidTexture, fieldUv + vec2(uTexel.x, 0.0)).a;
@@ -480,10 +486,22 @@ void main() {
       0.92 + flowWave * 0.045 + step(0.84, scintillation) * (0.13 + uHighQuality * 0.09),
       directedCarrier
     );
-    alpha = smoothstep(0.18, 0.72, density)
+    // The emission field is already a bounded, low-frequency reconstruction of
+    // nearby emissive particles. Use it only to calm dense semantic energy
+    // blocks; sparse carriers keep their exact animated detail and silhouette.
+    float denseEnergyField = smoothstep(0.12, 0.48, emissionState.a);
+    float cohesiveEnergy = denseEnergyField * smoothstep(0.18, 0.66, density);
+    float cohesiveCarrierDetail = mix(
+      carrierDetail,
+      1.0 + flowWave * 0.022 + pulse * 0.018,
+      cohesiveEnergy * 0.72
+    );
+    float semanticAlpha = smoothstep(0.18, 0.72, density)
       * mix(0.58 + pulse * 0.08, 0.94, core)
       * mix(1.0, carrierDetail, edge * 0.55);
-    color = energyBase * (1.05 + core * 0.48 + heat * 0.30) * carrierDetail;
+    float cohesiveAlpha = smoothstep(0.10, 0.58, density) * mix(0.72, 0.96, core);
+    alpha = mix(semanticAlpha, cohesiveAlpha, cohesiveEnergy * 0.72);
+    color = energyBase * (1.05 + core * 0.48 + heat * 0.30) * cohesiveCarrierDetail;
     color += auraTint * edge * (0.20 + pulse * 0.16);
     color += mix(vec3(1.0, 0.72, 0.42), vec3(0.72, 0.90, 1.0), radioactiveCarrier)
       * core * (0.10 + pulse * 0.08);
@@ -521,6 +539,16 @@ void main() {
       * silverLining * gasScatter;
     color += mix(vec3(0.10, 0.12, 0.16), gasBase, 0.34)
       * specular * mix(0.62, 0.18, gasInterior);
+    float gasLightReach = smoothstep(0.002, 0.42, emissionState.a);
+    float gasNormalLength = length(normal.xy);
+    float gasLightSlopeLength = length(gasLightSlope);
+    float gasLightIncidence = gasNormalLength > 0.0001 && gasLightSlopeLength > 0.0001
+      ? max(0.0, dot(normal.xy / gasNormalLength, gasLightSlope / gasLightSlopeLength))
+      : 0.0;
+    float gasLightScatter = gasLightReach
+      * (0.060 + gasLightIncidence * 0.78 + silverLining * 0.040)
+      * (1.0 - opticalDepth * 0.48);
+    color += vividColor(emissionState.rgb, 1.12) * gasLightScatter;
   } else if (liquidVolume > 0.5) {
     float aqueous = optics == 1.0 ? 1.0 : 0.0;
     float oily = optics == 2.0 ? 1.0 : 0.0;
@@ -708,15 +736,16 @@ void main() {
   color += mix(base, vec3(1.0, 0.52, 0.20), heat) * emission;
   if (energyCore < 0.5 && emissionOnly < 0.5 && emissionState.a > 0.002) {
     float lightReach = smoothstep(0.002, 0.42, emissionState.a);
-    float volumeResponse = (gasVolume > 0.5 || liquidVolume > 0.5) ? 0.16 : 0.0;
+    float volumeResponse = liquidVolume > 0.5 ? 0.16 : 0.0;
     float contour = 1.0 - smoothstep(0.54, 0.96, density);
     float relief = clamp((diffuse - 0.72) / 0.42 + specular * 0.18, 0.0, 1.0);
     float lightProfile = wallOnly > 0.5 ? 2.0 : profile;
     float surfaceResponse = surfaceLightGain(lightProfile)
       * mix(0.14, 1.0, contour)
       * mix(0.76, 1.16, relief);
-    float lightResponse = materialEmissive ? 0.24
-      : (volumeResponse > 0.0 ? volumeResponse : surfaceResponse);
+    float lightResponse = gasVolume > 0.5 ? 0.0
+      : (materialEmissive ? 0.24
+      : (volumeResponse > 0.0 ? volumeResponse : surfaceResponse));
     // Opaque matter receives coloured light through its reconstructed relief;
     // empty space keeps the separate emission halo, avoiding a flat milky wash.
     color += emissionState.rgb * lightReach * lightResponse;

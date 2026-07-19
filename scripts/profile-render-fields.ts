@@ -196,6 +196,11 @@ console.log(JSON.stringify({
     atmosphereRelief: sample(() => {
       shadeCanvasAtmosphere(atmospherePixels, atmosphere.bytes, atmosphere.width, atmosphere.height);
     }),
+    atmosphereFieldLighting: sample(() => {
+      shadeCanvasAtmosphere(
+        atmospherePixels, atmosphere.bytes, atmosphere.width, atmosphere.height, emission,
+      );
+    }),
     energyCores: sample(() => {
       for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) {
         shadeCanvasEnergy(

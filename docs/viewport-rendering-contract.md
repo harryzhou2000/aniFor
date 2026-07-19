@@ -70,6 +70,10 @@ The last painted-footprint check is the important regression test for the Pixi p
 
 `npm run audit:browser-input` proves the backing-scale invariant in both renderer backends. Its paired pass freshly navigates to 2× and 1× under the same explicit 1280×720 desktop emulation, waits for stable geometry at each scale, paints three radius-zero landmarks, repeats the off-centre wheel anchor, and repeats a 42×27 CSS-pixel middle drag. A reference captured before applying the same device metrics is invalid because Chrome's launch window and emulated CSS viewport are different coordinate spaces.
 
+The same audit cold-loads both Canvas2D and WebGL after enabling portrait mobile metrics, DPR 2, coarse touch input, and two touch points. This ordering matters because Pixi chooses shader quality when the presenter is constructed; resizing a desktop-created presenter is not a mobile-path test. Each backend must keep the square interaction panel as a letterboxed 612:384 world, translate a two-finger pinch by exactly 22 CSS pixels while preserving its world anchor, paint no stray cell during the gesture, then place and visibly present one radius-zero single-touch mark at the requested cell.
+
+Audit screenshots freeze only the presentation clock; frame throttling and atmosphere/liquid/emission scheduling continue to use real monotonic time. Blank scale/mobile audit routes start without the material atlas so stale reconstructed fields cannot contaminate composed footprint checks. Production rendering still defaults presentation time to the real frame time.
+
 ## Debugging order
 
 When alignment regresses, isolate the spaces in this order:
