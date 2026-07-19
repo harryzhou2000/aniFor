@@ -154,7 +154,50 @@ vec3 enclosedSurfaceShape(vec2 uv, float material) {
   } else if (t * b * (1.0 - l) * (1.0 - r) * crackSideWalls * horizontalCrackBounds > 0.5) {
     thinCrack = sameMaterial(uv - left * 2.0, material) * sameMaterial(uv + left * 2.0, material);
   }
-  float valid = max(max(cardinallyEnclosed, denseSupport), thinCrack)
+  float localValid = max(max(cardinallyEnclosed, denseSupport), thinCrack);
+  float boundedBlock = 0.0;
+  // A true 2x2 cavity presents five exact immediate supports, two adjacent
+  // cardinal supports, and an empty diagonal opposite their shared corner.
+  // In high quality only, prove the seven remaining cells of that block's
+  // outer perimeter in stages. Any notch, seam, separator, or border breaks
+  // the exact-material ring before it can contribute presentation support.
+  if (uHighQuality > 0.5 && localValid < 0.5 && foreign < 0.5
+    && matches == 5.0 && cardinal == 2.0) {
+    vec2 inward = vec2(0.0);
+    if (l * t * (1.0 - r) * (1.0 - b) > 0.5 && brm < 0.5) {
+      inward = vec2(1.0, 1.0);
+    } else if (r * t * (1.0 - l) * (1.0 - b) > 0.5 && blm < 0.5) {
+      inward = vec2(-1.0, 1.0);
+    } else if (l * b * (1.0 - r) * (1.0 - t) > 0.5 && trm < 0.5) {
+      inward = vec2(1.0, -1.0);
+    } else if (r * b * (1.0 - l) * (1.0 - t) > 0.5 && tlm < 0.5) {
+      inward = vec2(-1.0, -1.0);
+    }
+    vec2 farCell = cell + inward * 2.0;
+    vec2 outerCell = cell - inward;
+    float blockBounds = step(0.0, farCell.x) * step(farCell.x, uFieldSize.x - 1.0)
+      * step(0.0, farCell.y) * step(farCell.y, uFieldSize.y - 1.0)
+      * step(0.0, outerCell.x) * step(outerCell.x, uFieldSize.x - 1.0)
+      * step(0.0, outerCell.y) * step(outerCell.y, uFieldSize.y - 1.0)
+      * step(0.5, abs(inward.x)) * step(0.5, abs(inward.y));
+    if (blockBounds > 0.5) {
+      vec2 inwardX = vec2(inward.x * uTexel.x, 0.0);
+      vec2 inwardY = vec2(0.0, inward.y * uTexel.y);
+      float perimeter = sameMaterial(uv + inwardX * 2.0, material)
+        * sameMaterial(uv + inwardY * 2.0, material);
+      if (perimeter > 0.5) {
+        perimeter *= sameMaterial(uv + (inwardX + inwardY) * 2.0, material);
+        if (perimeter > 0.5) {
+          perimeter *= sameMaterial(uv + inwardX * 2.0 - inwardY, material)
+            * sameMaterial(uv - inwardX + inwardY * 2.0, material)
+            * sameMaterial(uv + inwardX + inwardY * 2.0, material)
+            * sameMaterial(uv + inwardX * 2.0 + inwardY, material);
+        }
+      }
+      boundedBlock = perimeter;
+    }
+  }
+  float valid = max(localValid, boundedBlock)
     * (1.0 - step(0.5, foreign)) * interior;
   float support = (l + r + t + b) * 0.12 + (tl + tr + bl + br) * 0.05;
   float coverage = max(smoothstep(0.30, 0.60, support), thinCrack * 0.90) * valid;

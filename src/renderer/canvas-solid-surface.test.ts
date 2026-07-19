@@ -68,6 +68,148 @@ describe('Canvas solid surface reconstruction', () => {
     for (let y = 2; y <= 4; y++) expect(pixels[(y * width + 3) * 4 + 3]).toBeGreaterThan(190);
   });
 
+  it('closes an exactly bounded 2x2 cavity from every corner orientation without changing semantics', () => {
+    const width = 9;
+    const height = 9;
+    const centerX = 4;
+    const centerY = 4;
+    for (const [directionX, directionY] of [[1, 1], [-1, 1], [1, -1], [-1, -1]] as const) {
+      const materials = new Uint8Array(width * height).fill(Material.Wood);
+      const holes = [
+        centerY * width + centerX,
+        centerY * width + centerX + directionX,
+        (centerY + directionY) * width + centerX,
+        (centerY + directionY) * width + centerX + directionX,
+      ];
+      for (const hole of holes) materials[hole] = Material.Empty;
+      const semantics = materials.slice();
+      const pixels = seed(materials);
+      reconstructSolidSurface(pixels, materials, styles, palette, width, height);
+      expect(materials).toEqual(semantics);
+      for (const hole of holes) expect(pixels[hole * 4 + 3]).toBeGreaterThan(190);
+    }
+  });
+
+  it('keeps an unsupported L elbow open while closing its locally supported arms', () => {
+    const width = 7;
+    const height = 7;
+    const center = 3 * width + 3;
+    const materials = new Uint8Array(width * height).fill(Material.Wood);
+    materials[center] = Material.Empty;
+    materials[center + 1] = Material.Empty;
+    materials[center + width] = Material.Empty;
+    const pixels = seed(materials);
+    reconstructSolidSurface(pixels, materials, styles, palette, width, height);
+    expect(pixels[center * 4 + 3]).toBe(0);
+    expect(pixels[(center + 1) * 4 + 3]).toBeGreaterThan(190);
+    expect(pixels[(center + width) * 4 + 3]).toBeGreaterThan(190);
+  });
+
+  it('does not close a 3x3 cavity', () => {
+    const width = 9;
+    const height = 9;
+    const materials = new Uint8Array(width * height).fill(Material.Wood);
+    const holes: number[] = [];
+    for (let y = 3; y <= 5; y++) for (let x = 3; x <= 5; x++) {
+      const index = y * width + x;
+      materials[index] = Material.Empty;
+      holes.push(index);
+    }
+    const pixels = seed(materials);
+    reconstructSolidSurface(pixels, materials, styles, palette, width, height);
+    for (const hole of holes) expect(pixels[hole * 4 + 3]).toBe(0);
+  });
+
+  it('rejects a 2x2 cavity with an open channel or missing perimeter segment', () => {
+    const width = 9;
+    const height = 9;
+    const target = 3 * width + 3;
+    const open = new Uint8Array(width * height).fill(Material.Wood);
+    for (let y = 3; y <= 4; y++) for (let x = 3; x <= 4; x++) open[y * width + x] = Material.Empty;
+    for (let x = 5; x < width; x++) open[3 * width + x] = Material.Empty;
+    const openPixels = seed(open);
+    reconstructSolidSurface(openPixels, open, styles, palette, width, height);
+    expect(openPixels[target * 4 + 3]).toBe(0);
+
+    for (const opening of [
+      [5, 4], // side continuation
+      [5, 5], // far diagonal
+    ] as const) {
+      const materials = new Uint8Array(width * height).fill(Material.Wood);
+      for (let y = 3; y <= 4; y++) for (let x = 3; x <= 4; x++) materials[y * width + x] = Material.Empty;
+      materials[opening[1] * width + opening[0]] = Material.Empty;
+      const pixels = seed(materials);
+      reconstructSolidSurface(pixels, materials, styles, palette, width, height);
+      expect(pixels[target * 4 + 3]).toBe(0);
+    }
+  });
+
+  it('rejects a 2x2 cavity with a mixed-material outer ring', () => {
+    const width = 9;
+    const height = 9;
+    const target = 3 * width + 3;
+    const materials = new Uint8Array(width * height).fill(Material.Wood);
+    for (let y = 3; y <= 4; y++) for (let x = 3; x <= 4; x++) materials[y * width + x] = Material.Empty;
+    materials[4 * width + 5] = Material.Metal;
+    const pixels = seed(materials);
+    reconstructSolidSurface(pixels, materials, styles, palette, width, height);
+    expect(pixels[target * 4 + 3]).toBe(0);
+  });
+
+  it('does not reconstruct a border 2x2 cavity or a powder-surrounded cavity', () => {
+    const width = 7;
+    const height = 7;
+    const border = new Uint8Array(width * height).fill(Material.Wood);
+    for (let y = 0; y <= 1; y++) for (let x = 0; x <= 1; x++) border[y * width + x] = Material.Empty;
+    const borderPixels = seed(border);
+    reconstructSolidSurface(borderPixels, border, styles, palette, width, height);
+    for (let y = 0; y <= 1; y++) for (let x = 0; x <= 1; x++) {
+      expect(borderPixels[(y * width + x) * 4 + 3]).toBe(0);
+    }
+
+    const powder = new Uint8Array(width * height).fill(Material.Sand);
+    for (let y = 3; y <= 4; y++) for (let x = 3; x <= 4; x++) powder[y * width + x] = Material.Empty;
+    const powderPixels = seed(powder);
+    reconstructSolidSurface(powderPixels, powder, styles, palette, width, height);
+    for (let y = 3; y <= 4; y++) for (let x = 3; x <= 4; x++) {
+      expect(powderPixels[(y * width + x) * 4 + 3]).toBe(0);
+    }
+  });
+
+  it('preserves a native-wall target inside an otherwise bounded 2x2 cavity', () => {
+    const width = 7;
+    const height = 7;
+    const target = 3 * width + 3;
+    const materials = new Uint8Array(width * height).fill(Material.Wood);
+    for (let y = 3; y <= 4; y++) for (let x = 3; x <= 4; x++) materials[y * width + x] = Material.Empty;
+    const pixels = seed(materials);
+    pixels.set([30, 40, 50, 255], target * 4);
+    reconstructSolidSurface(pixels, materials, styles, palette, width, height);
+    expect(Array.from(pixels.slice(target * 4, target * 4 + 4))).toEqual([30, 40, 50, 255]);
+  });
+
+  it('uses canonical RGB for trait-bearing 2x2 cavity support', () => {
+    const width = 7;
+    const height = 7;
+    const materials = new Uint8Array(width * height).fill(Material.PLUT);
+    const holes: number[] = [];
+    for (let y = 3; y <= 4; y++) for (let x = 3; x <= 4; x++) {
+      const index = y * width + x;
+      materials[index] = Material.Empty;
+      holes.push(index);
+    }
+    const semantics = materials.slice();
+    const pixels = seed(materials);
+    reconstructSolidSurface(pixels, materials, styles, palette, width, height);
+    const paletteOffset = Material.PLUT * 4;
+    expect(styles[paletteOffset + 3]).toBeGreaterThan(0);
+    expect(materials).toEqual(semantics);
+    for (const hole of holes) {
+      expect(Array.from(pixels.slice(hole * 4, hole * 4 + 3)))
+        .toEqual(Array.from(palette.slice(paletteOffset, paletteOffset + 3)));
+    }
+  });
+
   it('keeps an unbounded thin notch and a distance-two mixed seam open', () => {
     const width = 7;
     const height = 7;

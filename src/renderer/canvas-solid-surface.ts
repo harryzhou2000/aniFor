@@ -22,6 +22,59 @@ export function reconstructSolidSurface(
     if (materials[index] !== 0) continue;
     const pixel = index * 4;
     if (target[pixel + 3] !== 0) continue;
+    // Recognize a fully empty 2x2 block once, at its top-left cell. Proving
+    // the complete 12-cell perimeter here avoids repeating the general
+    // neighbourhood scan and seven distance-two reads for all four holes.
+    if (x < width - 2 && y < height - 2
+      && materials[index + 1] === 0
+      && materials[index + width] === 0
+      && materials[index + width + 1] === 0
+      && target[pixel + 7] === 0
+      && target[pixel + width * 4 + 3] === 0
+      && target[pixel + width * 4 + 7] === 0) {
+      const topLeft = index - width - 1;
+      const material = materials[topLeft];
+      const bottomLeft = index + width * 2 - 1;
+      if (material !== 0 && styleBytes[material * 4] === RenderPhase.Solid
+        && materials[topLeft + 1] === material
+        && materials[topLeft + 2] === material
+        && materials[topLeft + 3] === material
+        && materials[index - 1] === material
+        && materials[index + 2] === material
+        && materials[index + width - 1] === material
+        && materials[index + width + 2] === material
+        && materials[bottomLeft] === material
+        && materials[bottomLeft + 1] === material
+        && materials[bottomLeft + 2] === material
+        && materials[bottomLeft + 3] === material) {
+        const topRight = topLeft + 3;
+        const bottomRight = bottomLeft + 3;
+        const donorTopLeft = topLeft * 4;
+        const donorTopRight = topRight * 4;
+        const donorBottomLeft = bottomLeft * 4;
+        const donorBottomRight = bottomRight * 4;
+        const materialOffset = material * 4;
+        const hasSemanticTraits = styleBytes[materialOffset + 3] !== 0;
+        const red = hasSemanticTraits ? paletteBytes[materialOffset]
+          : (target[donorTopLeft] + target[donorTopRight]
+            + target[donorBottomLeft] + target[donorBottomRight]) * 0.25;
+        const green = hasSemanticTraits ? paletteBytes[materialOffset + 1]
+          : (target[donorTopLeft + 1] + target[donorTopRight + 1]
+            + target[donorBottomLeft + 1] + target[donorBottomRight + 1]) * 0.25;
+        const blue = hasSemanticTraits ? paletteBytes[materialOffset + 2]
+          : (target[donorTopLeft + 2] + target[donorTopRight + 2]
+            + target[donorBottomLeft + 2] + target[donorBottomRight + 2]) * 0.25;
+        const alpha = (target[donorTopLeft + 3] + target[donorTopRight + 3]
+          + target[donorBottomLeft + 3] + target[donorBottomRight + 3]) * 0.25 * 0.92;
+        if (alpha > 0) {
+          compositePixel(target, pixel, red, green, blue, alpha);
+          compositePixel(target, pixel + 4, red, green, blue, alpha);
+          compositePixel(target, pixel + width * 4, red, green, blue, alpha);
+          compositePixel(target, pixel + width * 4 + 4, red, green, blue, alpha);
+          continue;
+        }
+      }
+    }
     let material = 0;
     let neighbours = 0;
     let cardinal = 0;
@@ -69,7 +122,8 @@ export function reconstructSolidSurface(
     const horizontalCrack = cardinalMask === 9 && neighbours === 6 && x >= 2 && x < width - 2
       && materials[index - 2] === material && materials[index + 2] === material;
     const thinCrack = verticalCrack || horizontalCrack;
-    if (foreign || !material || (!cardinallyEnclosed && !denseSupport && !thinCrack) || alpha <= 0) continue;
+    const localSupport = cardinallyEnclosed || denseSupport || thinCrack;
+    if (foreign || !material || !localSupport || alpha <= 0) continue;
     // Eligibility remains conservative, but once the exact-material enclosure
     // is proven it is presentation support, not translucent confidence. Keep a
     // narrow monotonic band only for subtle depth so black cannot show through

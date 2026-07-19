@@ -70,6 +70,14 @@ for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) {
 }
 const solidSeed = seedPixels(solidMaterials);
 const solidPixels = new Uint8ClampedArray(solidSeed.length);
+const boundedTwoByTwoMaterials = new Uint8Array(width * height).fill(Material.Wood);
+for (let y = 2; y < height - 2; y += 4) for (let x = 2; x < width - 2; x += 4) {
+  boundedTwoByTwoMaterials[y * width + x] = Material.Empty;
+  boundedTwoByTwoMaterials[y * width + x + 1] = Material.Empty;
+  boundedTwoByTwoMaterials[(y + 1) * width + x] = Material.Empty;
+  boundedTwoByTwoMaterials[(y + 1) * width + x + 1] = Material.Empty;
+}
+const boundedTwoByTwoSeed = seedPixels(boundedTwoByTwoMaterials);
 const liquidSeed = seedPixels(materials, liquidByMaterial);
 const liquidPixels = new Uint8ClampedArray(liquidSeed.length);
 const liquidSurfaceScratch = createLiquidSurfaceScratch(liquidPixels, width);
@@ -207,6 +215,12 @@ console.log(JSON.stringify({
     solidSurface: sample(() => {
       solidPixels.set(solidSeed);
       reconstructSolidSurface(solidPixels, solidMaterials, styleBytes, paletteBytes, width, height);
+    }),
+    solidSurfaceBoundedTwoByTwoWorstCase: sample(() => {
+      solidPixels.set(boundedTwoByTwoSeed);
+      reconstructSolidSurface(
+        solidPixels, boundedTwoByTwoMaterials, styleBytes, paletteBytes, width, height,
+      );
     }),
     solidReliefLoopBaseline: sample(() => {
       for (let y = 1; y < height - 1; y++) for (let x = 1; x < width - 1; x++) {
