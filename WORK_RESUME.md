@@ -34,8 +34,8 @@ Queued after the renderer checkpoint: revisit desktop/mobile geometry as a dedic
 ## Committed/live history through `8ae8765`
 
 - Pinned official TPT 100.0 native engine, single-threaded 612×384 WebAssembly.
-- 170 stable projected material IDs; 165 particle brushes in the catalog, with 160 enabled and five gravity-dependent entries explicitly disabled.
-- Reaction-only Steam, Salt Water, Gas, Snow, and Plasma are bidirectionally projected and renderable.
+- 170 stable ordinary projected material IDs and all 170 particle brushes in the catalog, with 165 enabled and five gravity-dependent entries explicitly disabled.
+- Steam, Salt Water, Gas, Snow, and Plasma are bidirectionally projected, renderable, directly paintable, and still produced by native phase changes/reactions.
 - Ten true native TPT wall-grid tools with separate ABI, physics, rendering, dirty tracking, and save/load preservation.
 - Searchable nested catalog, filters, favorites, recents, hazards/limitations, pressure/temperature HUD, and explicit disabled semantic tools.
 - Pixi/WebGL semantic-field renderer with independent particle/wall fields, volumetric gas/liquid/emission fields, material-family styles, 30 Hz render cap, bounded dirty chunks, and Canvas2D fallback.
@@ -78,7 +78,7 @@ Queued after the renderer checkpoint: revisit desktop/mobile geometry as a dedic
 
 ### Native projection cleanup
 
-- The five reaction-only material IDs now map in both directions in `tpt_adapter.cpp`.
+- The five native phase-product material IDs map in both directions in `tpt_adapter.cpp` and are exposed as ordinary brushes as well as reaction outputs.
 - Native tests project all 170 IDs and verify Steam as an actual reaction product.
 - The published WASM artifact was rebuilt locally.
 
@@ -318,7 +318,14 @@ The layout checkpoint `60b033b` and dense-solid relief checkpoint `97f5ced` were
 - Powder has a contact- and velocity-aware WebGL presentation. Sparse/moving particles use deterministic slightly offset analytic discs; compatible powder/solid support and low speed fade continuously into a Hermite heap contour. Unlike powders share categorical phase coverage at contact but exact material RGB remains exclusive, and ambiguous empty-side candidates are rejected rather than scan-order selected. A solid accepts only solid support, so gas, liquid, and moving powder cannot wobble its edge. The dense-Sand browser probe retains `15.12` mean adjacent-pixel microcontrast. A separate bounded Canvas powder plane or equivalent contour scratch remains required before claiming rounded-grain backend parity; do not blur the combined Canvas solid plane.
 - The render lab now has an exact rounded Metal body, exact split Water/Oil capsule, curved unlike-material contact capsules, and isolated Water/Sand controls. The browser audit blank-differences the silhouettes, asserts one dominant component and bounded compactness, normalizes contact area into world-cell units, rejects signal reaching a padded outer ring, directly samples the Water/Oil seam, and explicitly gates Glass/Ice visibility, cool tint, macro relief, and clipping. Compactness remains a secondary fragmentation check; edge-distance/stair-energy and full backend contour parity remain queued proof.
 - Fresh WebGL and forced-Canvas 2× browser audits passed runtime shader compilation, the new visual/contact probes, exact landmark painting, wheel anchoring, middle pan, repeated resize, 1× diagnostics, configured sources, all 24 LIFE presets, mobile draw/eraser and two-touch pan/pinch, and zero browser errors. The atlas now includes curved Sand/Salt and Metal/Glass contact capsules whose sides remain exclusive and whose body remains one connected component. Retained captures are `.artifacts/webgl-contact-fixtures.png` and `.artifacts/canvas-contact-fixtures.png`. The latest WebGL timer reported 30 usable SwiftShader GPU queries and zero discarded; `125.30/137.31/160.08 ms` median/p90/max is treated as diagnostic telemetry, not a regression threshold. Canvas dense Metal presentation measured `24.0/26.2/34.7 ms`.
-- Commit `de2dcdf` checkpointed and pushed the first contact/optics tranche. Final review then removed powder Quartz from the translucent class, restored the conservative isolated-liquid promotion threshold, added isolated-particle and normalized contact-area/outer-ring browser controls, and corrected Canvas/Hermite and transmission/refraction claims. TypeScript, all 44 test files / 225 tests, the 765-module production build and 20-file asset closure pass. The full paired browser audit also passes with zero browser errors; its WebGL diagnostic timer reported 30/30 usable GPU queries at `125.67/148.08/157.07 ms` median/p90/max. Commit and dispatch a replacement manual deployment after final review.
+- Commit `de2dcdf` checkpointed and pushed the first contact/optics tranche. Final review then removed powder Quartz from the translucent class, restored the conservative isolated-liquid promotion threshold, added isolated-particle and normalized contact-area/outer-ring browser controls, and corrected Canvas/Hermite and transmission/refraction claims. Commit `3d89a11` passed TypeScript, all 44 test files / 225 tests, the 765-module production build, 20-file asset closure, and the paired browser audit with zero errors. Manual cached run `29678840242` deployed that exact SHA and verified its live revision and runtime asset closure.
+
+## Current complete-catalog/mobile-control tranche (after `3d89a11`)
+
+- Steam, Salt Water, Gas, Snow, and Plasma are no longer hidden reaction-only projections. Native exhaustive paint/projection already covered IDs 1–170; all 170 ordinary projected particles now have catalog tiles, 165 are enabled, and only GRVT, GBMB, NBHL, NWHL, and GPMP remain explicitly disabled because Newtonian FFT gravity is absent. LIFE projections 171–194 remain correctly excluded from generic brushes and available through all 24 semantic preset tools.
+- The Forces filter now returns Air/Vacuum/Wind together with all force-category elements; Life returns the five growth materials together with 24 automata; Radioactive has a direct filter for all 17 projected elements. Nested groups preserve category boundaries rather than flattening unlike semantic tools into particle buttons.
+- The one shared Draw/Eraser group moved out of the below-fold actions card into a compact mobile-only quick bar above the catalog. It owns the existing callback and `aria-pressed` state without duplication. At initial `scrollY=0`, the paired browser gate proves the complete `374×48` bar and tool search fit at 390×844; a second 360×640 check proves the `344×48` bar and search remain visible. Eraser deletes the exact painted cell without scripted scrolling, Draw restores a continuous 25-cell one-touch stroke, two-finger pinch/pan leaves zero cells, and horizontal overflow remains zero.
+- TypeScript, all 44 test files / 226 tests, the 765-module production build, and 20-file asset closure pass. The final paired Canvas/WebGL browser audit passes desktop filter geometry/overflow, short-window scroll reach, nested LIFE selection, all existing viewport/render checks, both mobile sizes, runtime GLSL compilation, and zero browser errors. Canvas dense-Metal diagnostic timing was `22.8/24.6/26.0 ms`; WebGL retained 30/30 GPU-query samples at `122.06/155.97/165.53 ms` median/p90/max. These remain host-specific telemetry.
 
 ## Current blockers and risks
 
@@ -334,6 +341,6 @@ The layout checkpoint `60b033b` and dense-solid relief checkpoint `97f5ced` were
 
 ## Next sequence
 
-1. Continue deeper material-surface aesthetics and dense Canvas performance work, then revisit the queued desktop/mobile geometry polish.
+1. Implement the queued bounded Canvas 2× boundary-chunk compositor so the cold-load/permanent fallback shares phase-aware curved solid/liquid/powder contours without a frame-sized blur or buffer; measure allocation and full presentation cost.
 2. Keep each checkpoint on `main_codex`, dispatch the manual cached `build-and-deploy`, and verify the live revision/closure plus a cache-busted browser runtime.
 3. Keep the persistent goal active for remaining TPT interface coverage, especially signs and special editing semantics, while preserving existing forces, sources, radioactive elements, plants, and LIFE behavior.

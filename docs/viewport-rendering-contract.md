@@ -44,7 +44,7 @@ If higher visual resolution is needed, increase backing resolution or render qua
 - Left mouse and primary pen paint; right drag erases; middle-mouse drag pans without touching the simulation.
 - One-finger touch paints continuously. A short tap paints once, but painting is deferred until the gesture is known to be single-touch so starting a two-finger gesture cannot leave a dot.
 - Two-finger touch movement pans and pinches through the same camera gesture contract without painting; ending a pinch rebases the remaining finger without a jump or connecting stroke.
-- Compact layout exposes explicit Draw and Eraser buttons; the selected mode applies to the one-finger brush and to particle or wall tools consistently.
+- Compact layout exposes one shared Draw/Eraser group as a quick bar above the catalog. It is fully visible with the search entry at initial `scrollY=0` at 390×844 and 360×640, is hidden on desktop, and is not duplicated in the lower actions card. The selected mode applies to the one-finger brush and to particle or wall tools consistently.
 - Continuous strokes interpolate between the last and current world cells so sparse pointer events cannot leave gaps.
 - Wheel deltas are normalized by `deltaMode`, and the cursor point is the zoom anchor.
 - Pinch uses the same `ViewTransform.applyGesture` contract.

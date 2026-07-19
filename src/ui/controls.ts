@@ -143,6 +143,8 @@ export function mountControls(host: HTMLElement, callbacks: ControlsCallbacks, c
   const filterChoices: Array<{ mode: ToolFilter; label: string }> = [
     { mode: 'all', label: 'All' },
     ...Array.from(new Set(catalog.map(({ kind }) => kind)), (kind) => ({ mode: kind, label: KIND_LABELS[kind] })),
+    ...(catalog.some((tool) => tool.kind === 'element' && tool.category === 'radioactive')
+      ? [{ mode: 'radioactive' as const, label: 'Radioactive' }] : []),
     { mode: 'favorites', label: 'Favorites' },
     { mode: 'recent', label: 'Recent' },
   ];
@@ -268,10 +270,6 @@ export function mountControls(host: HTMLElement, callbacks: ControlsCallbacks, c
   actions.className = 'actions glass';
   actions.innerHTML = `
     <label class="brush-size"><span>Brush</span><input aria-label="Brush size" type="range" min="2" max="24" value="7" /></label>
-    <div class="brush-modes" role="group" aria-label="Mobile brush mode">
-      <button class="action-button brush-mode selected" type="button" data-erase="false" aria-pressed="true">Draw</button>
-      <button class="action-button brush-mode" type="button" data-erase="true" aria-pressed="false">Eraser</button>
-    </div>
     <button class="action-button pause" aria-label="Pause simulation">Pause</button>
     <button class="action-button save-file" aria-label="Save or share world as a file">Save / share</button>
     <button class="action-button open-file" aria-label="Open a world file">Open file</button>
@@ -284,10 +282,18 @@ export function mountControls(host: HTMLElement, callbacks: ControlsCallbacks, c
   actions.append(filePicker);
   const radius = actions.querySelector('input') as HTMLInputElement;
   radius.addEventListener('input', () => callbacks.onRadius(Number(radius.value)));
-  for (const brushMode of actions.querySelectorAll<HTMLButtonElement>('.brush-mode')) {
+
+  const brushModes = document.createElement('div');
+  brushModes.className = 'brush-modes brush-mode-bar glass';
+  brushModes.setAttribute('role', 'group');
+  brushModes.ariaLabel = 'Mobile brush mode';
+  brushModes.innerHTML = `
+    <button class="action-button brush-mode selected" type="button" data-erase="false" aria-pressed="true">Draw</button>
+    <button class="action-button brush-mode" type="button" data-erase="true" aria-pressed="false">Eraser</button>`;
+  for (const brushMode of brushModes.querySelectorAll<HTMLButtonElement>('.brush-mode')) {
     brushMode.addEventListener('click', () => {
       const erase = brushMode.dataset.erase === 'true';
-      for (const button of actions.querySelectorAll<HTMLButtonElement>('.brush-mode')) {
+      for (const button of brushModes.querySelectorAll<HTMLButtonElement>('.brush-mode')) {
         const selected = button === brushMode;
         button.classList.toggle('selected', selected);
         button.setAttribute('aria-pressed', String(selected));
@@ -315,7 +321,7 @@ export function mountControls(host: HTMLElement, callbacks: ControlsCallbacks, c
     window.setTimeout(() => { openFile.disabled = false; openFile.textContent = 'Open file'; }, 1600);
   });
   actions.querySelector('.clear')?.addEventListener('click', callbacks.onClear);
-  host.append(tools, actions);
+  host.append(brushModes, tools, actions);
 }
 
 function loadList(key: string): string[] {

@@ -2,7 +2,7 @@ import { LIFE_PRESETS, Material, type MaterialCategory, type MaterialInfo } from
 import { SimulationTool, type SimulationToolId } from '../simulation/simulation-tools';
 
 export type ToolKind = 'element' | 'wall' | 'force' | 'thermal' | 'source' | 'life' | 'sign' | 'utility';
-export type ToolFilter = 'all' | 'favorites' | 'recent' | ToolKind;
+export type ToolFilter = 'all' | 'favorites' | 'recent' | 'radioactive' | ToolKind;
 
 interface ToolInfoBase {
   readonly key: string;
@@ -194,7 +194,13 @@ export function filterTools(tools: readonly CatalogTool[], state: CatalogFilterS
   return tools.filter((tool) => {
     if (state.mode === 'favorites' && !state.favorites.has(tool.key)) return false;
     if (state.mode === 'recent' && !recent.has(tool.key)) return false;
-    if (!['all', 'favorites', 'recent'].includes(state.mode) && tool.kind !== state.mode) return false;
+    const categoryElement = tool.kind === 'element' && (
+      (state.mode === 'force' && tool.category === 'force')
+      || (state.mode === 'life' && tool.category === 'life')
+      || (state.mode === 'radioactive' && tool.category === 'radioactive')
+    );
+    if (!['all', 'favorites', 'recent'].includes(state.mode)
+      && tool.kind !== state.mode && !categoryElement) return false;
     if (!query) return true;
     return `${tool.name} ${tool.description} ${tool.category} ${tool.kind} ${tool.hazard ?? ''} ${tool.limitations?.join(' ') ?? ''}`.toLocaleLowerCase().includes(query);
   }).sort((a, b) => state.mode === 'recent' ? state.recent.indexOf(a.key) - state.recent.indexOf(b.key) : 0);

@@ -29,7 +29,8 @@ h1 { font-family: inherit; font-size: clamp(26px, 4vw, 44px); font-weight: 500; 
 .actions { flex: 0 0 auto; width: 100%; padding: 13px; border-radius: 19px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; }
 .brush-size { grid-column: 1 / -1; color: #aaa096; font-size: 10px; display: grid; gap: 7px; }
 .brush-size input { width: 100%; accent-color: #d5ad76; }
-.brush-modes { display: none; grid-column: 1 / -1; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; }
+.brush-modes { display: none; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; }
+.brush-mode-bar { flex: 0 0 auto; width: 100%; padding: 6px; border-radius: 14px; }
 .action-button { padding: 8px; border-radius: 10px; font-size: 11px; background: rgba(255,255,255,.045); }
 .action-button:hover, .action-button.active { color: #fff; background: rgba(255,255,255,.1); }
 .world-file-input { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
@@ -62,7 +63,7 @@ h1 { font-family: inherit; font-size: clamp(26px, 4vw, 44px); font-weight: 500; 
   .viewport-frame { width: 100%; aspect-ratio: 1; }
   .viewport { border-radius: 24px; }
   .touch-hint { display: block; top: auto; bottom: 10px; left: 10px; padding: 5px 7px; font-size: 9px; }
-  .toolbox { max-height: none; overflow: visible; padding: 0 2px 24px; grid-template-columns: minmax(0, 1fr); grid-template-rows: auto auto auto; gap: 8px; touch-action: pan-x pan-y; }
+  .toolbox { max-height: none; overflow: visible; padding: 0 2px 24px; grid-template-columns: minmax(0, 1fr); grid-template-rows: auto auto auto auto; gap: 8px; touch-action: pan-x pan-y; }
   .toolbox-heading { display: flex; align-items: baseline; justify-content: space-between; padding: 5px 8px 0; }
   .toolbox-heading .eyebrow { margin: 0; }
   .toolbox-heading p:last-child { font-size: 13px; }
@@ -70,7 +71,8 @@ h1 { font-family: inherit; font-size: clamp(26px, 4vw, 44px); font-weight: 500; 
   .material-button { min-width: 0; padding-inline: 3px; }
   .actions { width: 100%; padding: 10px; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; }
   .action-button { padding: 7px; }
-  .brush-modes { display: grid; }
+  .brush-mode-bar { display: grid; position: sticky; top: 4px; z-index: 6; background: rgba(35,32,28,.90); backdrop-filter: blur(14px); }
+  .brush-mode-bar .brush-mode { min-height: 34px; padding: 6px; }
   .brush-size { grid-column: 1 / -1; }
   .status { font-size: 10px; }
   .footer a { font-size: 9px; }

@@ -33,6 +33,25 @@ describe('tool catalog view model', () => {
     expect(catalog.find((tool) => tool.kind === 'element' && tool.id === Material.Wall)?.name).toBe('Diamond');
   });
 
+  it('keeps priority element families visible beside their semantic tools', () => {
+    const catalog = buildToolCatalog(MATERIALS, { simulationTools: true, lifePresets: true });
+    const state = { query: '', favorites: new Set<string>(), recent: [] as string[] };
+    const forces = filterTools(catalog, { ...state, mode: 'force' });
+    expect(forces.some((tool) => tool.kind === 'force' && tool.key === 'tool:wind')).toBe(true);
+    expect(forces.some((tool) => tool.kind === 'element' && tool.id === Material.FRAY)).toBe(true);
+    expect(forces.every((tool) => tool.kind === 'force'
+      || (tool.kind === 'element' && tool.category === 'force'))).toBe(true);
+
+    const life = filterTools(catalog, { ...state, mode: 'life' });
+    expect(life).toHaveLength(LIFE_PRESETS.length + 5);
+    expect(life.some((tool) => tool.kind === 'life' && tool.preset === 0)).toBe(true);
+    expect(life.some((tool) => tool.kind === 'element' && tool.id === Material.Plant)).toBe(true);
+
+    const radioactive = filterTools(catalog, { ...state, mode: 'radioactive' });
+    expect(radioactive).toHaveLength(MATERIALS.filter(({ category }) => category === 'radioactive').length);
+    expect(radioactive.every((tool) => tool.kind === 'element' && tool.category === 'radioactive')).toBe(true);
+  });
+
   it('exposes unsupported semantics as distinct disabled tools instead of particles', () => {
     const semantic = semanticTools();
     expect(new Set(semantic.map(({ kind }) => kind))).toEqual(new Set(['wall', 'source', 'life', 'sign', 'force', 'thermal']));

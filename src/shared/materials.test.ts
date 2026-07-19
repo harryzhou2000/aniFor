@@ -8,9 +8,7 @@ describe('material catalog', () => {
     expect(new Set(ids).size).toBe(ids.length);
     expect(ids).toEqual(Array.from({ length: 194 }, (_, index) => index + 1));
     expect(ids.every((id) => id > Material.Empty && id <= 0xFF)).toBe(true);
-    expect(MATERIALS.map(({ id }) => id)).toEqual(
-      Array.from({ length: 170 }, (_, index) => index + 1).filter((id) => ![15, 16, 17, 18, 20].includes(id)),
-    );
+    expect(MATERIALS.map(({ id }) => id)).toEqual(Array.from({ length: 170 }, (_, index) => index + 1));
   });
 
   it('pins all native LIFE preset indexes, projections, rules, and colors', () => {
@@ -61,7 +59,7 @@ describe('material catalog', () => {
     for (const material of ALL_MATERIALS) expect(cellStyle(material.id)).toBeDefined();
   });
 
-  it('keeps native reaction products out of the selectable brush catalog', () => {
+  it('exposes native phase products as ordinary brushes as well as reaction outputs', () => {
     expect([
       Material.Steam,
       Material.SaltWater,
@@ -70,7 +68,7 @@ describe('material catalog', () => {
       Material.Plasma,
     ]).toEqual([15, 16, 17, 18, 20]);
     const selectable = new Set(MATERIALS.map(({ id }) => id));
-    for (const id of [15, 16, 17, 18, 20]) expect(selectable.has(id)).toBe(false);
+    for (const id of [15, 16, 17, 18, 20]) expect(selectable.has(id)).toBe(true);
     expect(selectable.has(Material.Coal)).toBe(true);
   });
 

@@ -14,7 +14,7 @@ describe('material controls', () => {
   });
 
   it('formats accessible search result counts', () => {
-    expect([0, 1, 165].map(toolCountLabel)).toEqual(['0 tools', '1 tool', '165 tools']);
+    expect([0, 1, 170].map(toolCountLabel)).toEqual(['0 tools', '1 tool', '170 tools']);
   });
 
   it('describes configured source direction without hiding the target', () => {

@@ -972,7 +972,14 @@ async function auditNativeSemantics(cdp, mode, dpr, screenshot) {
     const activator = document.querySelector('[data-tool-key="life:gol"] .material-button');
     activator?.click();
     const button = document.querySelector('[data-tool-key="life:gol"] .material-button');
+    const group = button?.closest('details');
+    if (group instanceof HTMLDetailsElement) group.open = true;
     const library = document.querySelector('.tool-library');
+    if (button instanceof HTMLElement && library instanceof HTMLElement) {
+      const buttonRect = button.getBoundingClientRect();
+      const libraryRect = library.getBoundingClientRect();
+      library.scrollTop += buttonRect.top - libraryRect.top - library.clientHeight / 2;
+    }
     const buttonRect = button?.getBoundingClientRect();
     const libraryRect = library?.getBoundingClientRect();
     return {
@@ -1055,6 +1062,12 @@ async function auditMobile(cdp, mode, screenshot) {
     `mobile toolbox has only ${round(initial.ui.toolboxPaddingBottom)}px bottom swipe space`);
   assert(initial.ui.document.scrollHeight > initial.window.height + 40,
     'mobile document has no usable vertical scroll range');
+  assert(initial.ui.document.scrollY === 0
+    && initial.ui.brushModes.left >= 0 && initial.ui.brushModes.right <= initial.window.width
+    && initial.ui.brushModes.top >= 0 && initial.ui.brushModes.bottom <= initial.window.height,
+  `mobile Draw/Eraser quick bar is not initially visible (${JSON.stringify(initial.ui.brushModes)})`);
+  assert(initial.ui.toolSearch.top >= 0 && initial.ui.toolSearch.bottom <= initial.window.height,
+    `mobile tool search is not visible with the quick bar (${JSON.stringify(initial.ui.toolSearch)})`);
   const mobileFilterReach = await evaluate(cdp, `(() => {
     const filters = document.querySelector('.tool-filters');
     const lastFilter = filters?.querySelector('.tool-filter:last-child');
@@ -1128,11 +1141,9 @@ async function auditMobile(cdp, mode, screenshot) {
   assert(tap.cell > 0 && tap.occupied === 1, `mobile single-touch tap missed exact cell (${tap.cell}, ${tap.occupied})`);
   const paintedFootprints = await capturePaintedFootprints(cdp, [target], `mobile ${mode}`, 1);
 
-  const eraserButton = await evaluate(cdp, `(async () => {
-    const button = document.querySelector('.brush-mode[data-erase="true"]');
+  const eraserButton = await evaluate(cdp, `(() => {
+    const button = document.querySelector('.brush-mode-bar .brush-mode[data-erase="true"]');
     if (!(button instanceof HTMLButtonElement)) throw new Error('Missing mobile Eraser button');
-    button.scrollIntoView({ block: 'center' });
-    await new Promise(requestAnimationFrame);
     const rect = button.getBoundingClientRect();
     return {
       x: rect.left + rect.width / 2,
@@ -1172,11 +1183,9 @@ async function auditMobile(cdp, mode, screenshot) {
   assert(erased.cell === 0 && erased.occupied === 0,
     `mobile Eraser touch left cell ${target.x},${target.y} occupied (${JSON.stringify(erased)})`);
 
-  const drawButton = await evaluate(cdp, `(async () => {
-    const button = document.querySelector('.brush-mode[data-erase="false"]');
+  const drawButton = await evaluate(cdp, `(() => {
+    const button = document.querySelector('.brush-mode-bar .brush-mode[data-erase="false"]');
     if (!(button instanceof HTMLButtonElement)) throw new Error('Missing mobile Draw button');
-    button.scrollIntoView({ block: 'center' });
-    await new Promise(requestAnimationFrame);
     const rect = button.getBoundingClientRect();
     return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
   })()`);
@@ -1305,6 +1314,23 @@ async function auditMobile(cdp, mode, screenshot) {
   })()`);
   assert(footer && footer.top >= -1 && footer.bottom <= initial.window.height + 1,
     `mobile footer is not reachable (${JSON.stringify(footer)})`);
+  await cdp.send('Emulation.setDeviceMetricsOverride', {
+    width: 360, height: 640, deviceScaleFactor: 2, mobile: true,
+    screenWidth: 360, screenHeight: 640,
+    screenOrientation: { type: 'portraitPrimary', angle: 0 },
+  });
+  await evaluate(cdp, 'window.scrollTo(0, 0); true');
+  const compact = await waitFor(async () => {
+    const current = await metrics(cdp);
+    return current.window.width === 360 && current.window.height === 640 ? current : false;
+  }, 5_000, `compact mobile geometry (${mode})`);
+  assertGeometry(compact, `compact mobile ${mode}`);
+  assertContained(compact, `compact mobile ${mode}`);
+  assert(compact.ui.brushModes.left >= 0 && compact.ui.brushModes.right <= compact.window.width
+    && compact.ui.brushModes.top >= 0 && compact.ui.brushModes.bottom <= compact.window.height,
+  `compact mobile Draw/Eraser quick bar is not initially visible (${JSON.stringify(compact.ui.brushModes)})`);
+  assert(compact.ui.toolSearch.top >= 0 && compact.ui.toolSearch.bottom <= compact.window.height,
+    `compact mobile tool search is not visible with the quick bar (${JSON.stringify(compact.ui.toolSearch)})`);
   return {
     viewport: `${round(initial.viewport.width, 2)}x${round(initial.viewport.height, 2)}`,
     canvasAspect: round(initial.canvas.width / initial.canvas.height, 6),
@@ -1317,6 +1343,8 @@ async function auditMobile(cdp, mode, screenshot) {
     continuousTouchCells: continuousTouch.occupied,
     continuousTouchLandmarks: strokeLandmarks.map(({ x, y }) => `${x},${y}`),
     eraserTouchCell: `${target.x},${target.y}`,
+    quickModeBar: `${round(initial.ui.brushModes.width)}x${round(initial.ui.brushModes.height)}`,
+    compactQuickModeBar: `${round(compact.ui.brushModes.width)}x${round(compact.ui.brushModes.height)}`,
     mobileFilterScroll: `${round(mobileFilterReach.reached)}/${round(mobileFilterReach.maximum)}`,
     toolFilterHeight: round(initial.ui.filters.height),
     toolboxGap: round(initial.ui.actions.top - initial.ui.palette.bottom),
@@ -1400,9 +1428,11 @@ async function metrics(cdp) {
     const footer = document.querySelector('.footer');
     const fieldIndicator = document.querySelector('.field-indicator');
     const touchHint = document.querySelector('.touch-hint');
+    const brushModes = document.querySelector('.brush-mode-bar');
+    const toolSearch = document.querySelector('.tool-search');
     const filterButtons = [...document.querySelectorAll('.tool-filter')];
     if (!canvas || !viewport || !frame || !palette || !actions || !filters || !shell || !workspace || !toolbox
-      || !library || !footer || !fieldIndicator || !touchHint || !filterButtons.length) {
+      || !library || !footer || !fieldIndicator || !touchHint || !brushModes || !toolSearch || !filterButtons.length) {
       throw new Error('Missing browser-audit geometry');
     }
     const box = (element) => {
@@ -1419,6 +1449,7 @@ async function metrics(cdp) {
       ui: {
         shell: box(shell), workspace: box(workspace), toolbox: box(toolbox), palette: box(palette), actions: box(actions), filters: box(filters),
         library: box(library), footer: box(footer), fieldIndicator: box(fieldIndicator), touchHint: box(touchHint),
+        brushModes: box(brushModes), toolSearch: box(toolSearch),
         filterButtons: filterButtons.map(box),
         horizontalOverflow: Math.max(0, document.documentElement.scrollWidth - innerWidth),
         toolboxPaddingBottom: Number.parseFloat(getComputedStyle(toolbox).paddingBottom) || 0,

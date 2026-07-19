@@ -14,8 +14,8 @@ export const enum Material {
   Ice = 12,
   Acid = 13,
   Gunpowder = 14,
-  // Native reaction products. These IDs are part of the rendering ABI but are
-  // intentionally omitted from MATERIALS, so they do not become brush tools.
+  // Native phase/reaction products. These IDs are also valid ordinary TPT
+  // particles and remain part of both the rendering and brush-tool ABIs.
   Steam = 15,
   SaltWater = 16,
   Gas = 17,
@@ -276,12 +276,12 @@ export const ALL_MATERIALS: readonly MaterialInfo[] = [
   { id: Material.Ice, name: 'Ice', description: 'Frozen water', color: '#a7e5ec', icon: '◇', category: 'solids', selectable: true },
   { id: Material.Acid, name: 'Acid', description: 'Corrodes many materials', color: '#d35ee8', icon: '●', category: 'liquids', selectable: true },
   { id: Material.Gunpowder, name: 'Gunpowder', description: 'Explodes when ignited', color: '#5d554d', icon: '⁙', category: 'explosives', selectable: true },
-  { id: Material.Steam, name: 'Steam', description: 'Hot water vapour', color: '#b9dce2', icon: '○', category: 'gases', selectable: false },
-  { id: Material.SaltWater, name: 'Salt Water', description: 'Conductive saline water', color: '#5c9fb6', icon: '●', category: 'liquids', selectable: false },
-  { id: Material.Gas, name: 'Gas', description: 'Flammable hydrocarbon gas', color: '#c6b35d', icon: '○', category: 'gases', selectable: false },
-  { id: Material.Snow, name: 'Snow', description: 'Powdered ice', color: '#e4f5f7', icon: '·', category: 'powders', selectable: false },
+  { id: Material.Steam, name: 'Steam', description: 'Hot water vapour', color: '#b9dce2', icon: '○', category: 'gases', selectable: true },
+  { id: Material.SaltWater, name: 'Salt Water', description: 'Conductive saline water', color: '#5c9fb6', icon: '●', category: 'liquids', selectable: true },
+  { id: Material.Gas, name: 'Gas', description: 'Flammable hydrocarbon gas', color: '#c6b35d', icon: '○', category: 'gases', selectable: true },
+  { id: Material.Snow, name: 'Snow', description: 'Powdered ice', color: '#e4f5f7', icon: '·', category: 'powders', selectable: true },
   { id: Material.Coal, name: 'Coal', description: 'Slow-burning carbon', color: '#2d2926', icon: '■', category: 'solids', selectable: true },
-  { id: Material.Plasma, name: 'Plasma', description: 'Extremely hot ionized gas', color: '#d879ff', icon: '◆', category: 'energy', selectable: false },
+  { id: Material.Plasma, name: 'Plasma', description: 'Extremely hot ionized gas', color: '#d879ff', icon: '◆', category: 'energy', selectable: true },
   { id: Material.Stone, name: 'Stone', description: 'Heavy breakable stone', color: '#77736d', icon: '■', category: 'powders', selectable: true },
   { id: Material.Brick, name: 'Brick', description: 'Rigid breakable brick', color: '#a65e4b', icon: '▦', category: 'solids', selectable: true },
   { id: Material.Metal, name: 'Metal', description: 'Conductive meltable solid', color: '#667086', icon: '■', category: 'solids', selectable: true },
