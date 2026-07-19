@@ -155,6 +155,33 @@ async function auditMode(mode) {
       `${mode}: fluid depth is flat or clipped (${JSON.stringify(volumeSamples)})`);
     assert(volumeSamples.every((sample) => sample.pinnedFraction <= 0.05),
       `${mode}: fluid framebuffer clipping returned (${JSON.stringify(volumeSamples)})`);
+    const liquidColumnSamples = await samplePageRegions(cdp, canonicalCapture.data, [
+      { name: 'waterColumn', x: 224, y: 270, radius: 8 },
+      { name: 'oilColumn', x: 263, y: 270, radius: 8 },
+      { name: 'acidColumn', x: 302, y: 270, radius: 8 },
+      { name: 'lavaColumn', x: 341, y: 270, radius: 8 },
+    ]);
+    assert(liquidColumnSamples.every((sample) => sample.coverage >= 0.90),
+      `${mode}: a dense liquid column became perforated (${JSON.stringify(liquidColumnSamples)})`);
+    assert(liquidColumnSamples.every((sample) => sample.microContrast <= 4),
+      `${mode}: dense liquid cell-frequency contrast returned (${JSON.stringify(liquidColumnSamples)})`);
+    assert(liquidColumnSamples.every((sample) => sample.lumaRange >= 8 && sample.lumaRange <= 120),
+      `${mode}: dense liquid depth is flat or clipped (${JSON.stringify(liquidColumnSamples)})`);
+    assert(liquidColumnSamples.every((sample) => sample.pinnedFraction <= 0.15),
+      `${mode}: dense liquid framebuffer clipping returned (${JSON.stringify(liquidColumnSamples)})`);
+    const liquidColumns = Object.fromEntries(liquidColumnSamples.map((sample) => [sample.name, sample]));
+    assert(liquidColumns.waterColumn.rgb[2] > liquidColumns.waterColumn.rgb[1]
+      && liquidColumns.waterColumn.rgb[1] > liquidColumns.waterColumn.rgb[0],
+    `${mode}: Water column lost its cyan-blue hue (${liquidColumns.waterColumn.rgb})`);
+    assert(liquidColumns.oilColumn.rgb[0] > liquidColumns.oilColumn.rgb[1]
+      && liquidColumns.oilColumn.rgb[1] > liquidColumns.oilColumn.rgb[2],
+    `${mode}: Oil column lost its warm-brown hue (${liquidColumns.oilColumn.rgb})`);
+    assert(liquidColumns.acidColumn.rgb[2] > liquidColumns.acidColumn.rgb[0]
+      && liquidColumns.acidColumn.rgb[0] > liquidColumns.acidColumn.rgb[1],
+    `${mode}: Acid column lost its violet hue (${liquidColumns.acidColumn.rgb})`);
+    assert(liquidColumns.lavaColumn.rgb[0] > liquidColumns.lavaColumn.rgb[1]
+      && liquidColumns.lavaColumn.rgb[1] > liquidColumns.lavaColumn.rgb[2],
+    `${mode}: Lava column lost its warm hue (${liquidColumns.lavaColumn.rgb})`);
 
     const screenshot = screenshotPath(mode);
     if (screenshot) {
@@ -256,6 +283,7 @@ async function auditMode(mode) {
       energySamples,
       solidSamples,
       volumeSamples,
+      liquidColumnSamples,
       landmarkCells: landmarks.length,
       configuredSource: nativeSemantics.configuredSource,
       lifePreset: nativeSemantics.lifePreset,
@@ -874,20 +902,40 @@ async function samplePageRegions(cdp, screenshotBase64, regions) {
       let pinned = 0;
       let minimumLuma = 255;
       let maximumLuma = 0;
+      const lumaValues = new Float32Array(width * height);
+      const visiblePixels = new Uint8Array(width * height);
       for (let offset = 0; offset < data.length; offset += 4) {
         if (data[offset + 3] < 48 || Math.max(data[offset], data[offset + 1], data[offset + 2]) < 12) continue;
         total[0] += data[offset]; total[1] += data[offset + 1]; total[2] += data[offset + 2];
         if (data[offset] === 255 || data[offset + 1] === 255 || data[offset + 2] === 255) pinned++;
         const luma = (data[offset] * 54 + data[offset + 1] * 183 + data[offset + 2] * 19) / 256;
+        const sampleIndex = offset / 4;
+        lumaValues[sampleIndex] = luma;
+        visiblePixels[sampleIndex] = 1;
         minimumLuma = Math.min(minimumLuma, luma);
         maximumLuma = Math.max(maximumLuma, luma);
         visible++;
+      }
+      let adjacentContrast = 0;
+      let adjacentPairs = 0;
+      for (let py = 0; py < height; py++) for (let px = 0; px < width; px++) {
+        const sampleIndex = py * width + px;
+        if (!visiblePixels[sampleIndex]) continue;
+        if (px + 1 < width && visiblePixels[sampleIndex + 1]) {
+          adjacentContrast += Math.abs(lumaValues[sampleIndex] - lumaValues[sampleIndex + 1]);
+          adjacentPairs++;
+        }
+        if (py + 1 < height && visiblePixels[sampleIndex + width]) {
+          adjacentContrast += Math.abs(lumaValues[sampleIndex] - lumaValues[sampleIndex + width]);
+          adjacentPairs++;
+        }
       }
       return {
         name: region.name,
         rgb: total.map((channel) => Math.round(channel / Math.max(1, visible))),
         visible,
         coverage: Math.round(visible / Math.max(1, width * height) * 1000) / 1000,
+        microContrast: Math.round(adjacentContrast / Math.max(1, adjacentPairs) * 100) / 100,
         pinnedFraction: Math.round(pinned / Math.max(1, visible) * 1000) / 1000,
         lumaRange: visible ? Math.round(maximumLuma - minimumLuma) : 0,
       };

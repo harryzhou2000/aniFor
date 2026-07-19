@@ -14,6 +14,7 @@ import {
 } from '../src/renderer/canvas-liquid-surface';
 import { reconstructSolidSurface } from '../src/renderer/canvas-solid-surface';
 import { canvasSolidRelief } from '../src/renderer/canvas-solid-relief';
+import { canvasLiquidContourScale, canvasLiquidSurfaceExposure } from '../src/renderer/canvas-liquid-light';
 import { createRenderLookups } from '../src/renderer/render-field-set';
 import { RenderPhase, RenderProfile } from '../src/renderer/render-profile';
 import { RenderTrait } from '../src/renderer/render-traits';
@@ -94,6 +95,7 @@ updateCanvasRenderTraitClock(traitClock, 1_000);
 const traitCompositePixels = new Uint8ClampedArray(width * height * 4);
 let traitChecksum = 0;
 let solidReliefChecksum = 0;
+let liquidLightChecksum = 0;
 const profileEmission = new Uint8Array(emission.bytes.length);
 for (let offset = 0; offset < profileEmission.length; offset += 4) {
   profileEmission[offset] = 255;
@@ -259,8 +261,20 @@ console.log(JSON.stringify({
         liquidByMaterial, colorByMaterial, styleBytes, splitLiquidSurfaceScratch, width, height,
       );
     }),
+    liquidFieldOwnedLightWorstCase: sample(() => {
+      let checksum = 0;
+      for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) {
+        const pixel = (y * width + x) * 4;
+        checksum += canvasLiquidContourScale(denseLiquidField.bytes[pixel + 3]);
+        checksum += canvasLiquidSurfaceExposure(
+          denseLiquidField.bytes, width, x, y, true,
+        );
+      }
+      liquidLightChecksum = checksum;
+    }),
   },
   combinedAllocatedBytes: atmosphere.allocatedByteLength + liquid.allocatedByteLength + emission.allocatedByteLength,
   traitChecksum: Math.round(traitChecksum),
   solidReliefChecksum: Math.round(solidReliefChecksum),
+  liquidLightChecksum: Math.round(liquidLightChecksum),
 }, null, 2));

@@ -325,7 +325,6 @@ void main() {
       ? smoothstep(0.48, 0.92, liquidDensity)
       : smoothstep(0.42, 0.90, density))
     : 0.0;
-  float shapeDetail = 1.0 - max(gasInterior, liquidInterior);
   vec2 volumeSlope = vec2(0.0);
   float cloudNeighbourMean = 0.0;
   float liquidNeighbourMean = 0.0;
@@ -350,6 +349,17 @@ void main() {
     liquidNeighbourMean = (liquidLeft + liquidRight + liquidTop + liquidBottom) * 0.25;
     volumeSlope = vec2(liquidRight - liquidLeft, liquidBottom - liquidTop) * 0.65;
   }
+  // Promote only a field-supported pool interior. Requiring both centre and
+  // cardinal mean prevents an isolated droplet from becoming a flat opaque
+  // blob while suppressing semantic-cell micro normals inside cohesive liquid.
+  float liquidFieldInterior = liquidVolume > 0.5
+    ? min(
+      smoothstep(0.48, 0.90, liquidDensity),
+      smoothstep(0.48, 0.90, liquidNeighbourMean)
+    )
+    : 0.0;
+  float cohesiveLiquidInterior = max(liquidInterior, liquidFieldInterior);
+  float shapeDetail = 1.0 - max(gasInterior, cohesiveLiquidInterior);
   vec2 semanticSlope = shape.yz * shapeDetail;
   float solidInterior = family == 0.0
     ? smoothstep(0.76, 0.98, density) * (1.0 - smoothstep(0.10, 0.62, length(shape.yz)))
@@ -462,7 +472,7 @@ void main() {
     // The four already-sampled field neighbours promote only locally supported
     // pool interiors. This makes reconstructed holes and semantic cells share
     // one optical depth without turning an isolated droplet into a pool core.
-    float liquidDepth = max(liquidInterior, smoothstep(0.48, 0.90, liquidNeighbourMean));
+    float liquidDepth = max(cohesiveLiquidInterior, smoothstep(0.48, 0.90, liquidNeighbourMean));
     float liquidSurfaceDensity = liquidOnly > 0.5 ? liquidDensity : density;
     float rim = (1.0 - smoothstep(0.30, 0.86, liquidSurfaceDensity))
       * mix(1.0, 0.25, liquidDepth);

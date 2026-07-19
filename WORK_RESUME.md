@@ -24,9 +24,9 @@ Queued after the renderer checkpoint: revisit desktop/mobile geometry as a dedic
 
 - Repository: `/home/harry/projects/aniFor_codex`
 - Branch: `main_codex`
-- Current checkpoint: the gas-curvature follow-up described below, based on `97f5ced Add restrained relief to dense solids`.
+- Current checkpoint: the field-owned liquid-lighting follow-up described below, based on `55f55b3 Add curvature depth to gas volumes`.
 - The immediately preceding live baseline was built and verified by manual Actions run `29666585733` at exact SHA `97f5ced40b3f4db1f5c0a0acd477002b661e0f04` after `origin/main_codex` was independently checked with `git ls-remote`.
-- Git push and GitHub CLI authentication are working.
+- The local GitHub CLI token is currently invalid and must be refreshed with `gh auth login -h github.com` before Actions can be triggered or inspected again. Re-check the remote branch independently after the next push.
 - Current live Pages URL: `https://harryzhou2000.github.io/aniFor/`
 - Previous verified live baseline: `97f5ced` from Actions run `29666585733`; accept the current checkpoint only after its own manual workflow and live revision/closure verifier pass.
 - Build, deploy, and post-deployment verification all passed. The live closure contains all referenced resources with correct WASM MIME and the exact expected revision. The successful primary ccache key already existed, so the save step correctly skipped.
@@ -254,6 +254,14 @@ The layout checkpoint `60b033b` and dense-solid relief checkpoint `97f5ced` are 
 - Canvas and WebGL reuse the four atmosphere alpha samples already required for density slope to derive signed local curvature. Convex cloud crowns receive bounded broad light and concave overlap pockets self-shadow; RGB changes uniformly, while every field alpha/support byte and species hue ordering remains unchanged.
 - The change adds no field, texture, texture fetch, upload, pass, or persistent allocation. On the local 612×384 profile, Canvas atmosphere relief measured `0.95 ms` median / `1.33 ms` p90 after simplifying the signed response, versus the prior roughly `0.86 ms` median.
 - The browser screenshot gate now samples Water, Oil, Smoke, Oxygen, and Noble Gas in addition to energy and solid families. Fresh WebGL and Canvas captures retained full dense-core coverage, bounded non-flat luma, zero pinned fluid channels, exact `1224×768` backing, stable repeated resize geometry, `0.06`-cell 2× wheel anchoring, exact `42×27` middle-pan, and zero browser errors. Canvas mobile retained its `378×378` viewport, `1.431×` pinch, and zero stray cells.
+
+## Current field-owned liquid-lighting follow-up
+
+- Canvas dense liquids no longer derive full-strength contour and local glint from raw semantic holes after the shared field has reconstructed a continuous body. Field centre alpha attenuates cell-neighbour contour noise, while only empty semantic air with low field alpha above qualifies as a top-surface highlight. Unlike materials remain visible seams and sparse droplets keep their exact contour.
+- WebGL reuses its existing centre and four-cardinal liquid alpha samples to promote lighting depth and suppress semantic micro-normals only inside connected pools. Alpha/support, field RGB, texture-fetch count, scheduler work, and storage remain unchanged.
+- Canvas Lava keeps its continuous body glow in the shared emission field and moves the twice-composited local light accent to the field-owned top surface. Its homogeneous column changed from fully pinned yellow (`255,246,44`, pinned fraction `1`) to unclipped warm orange (`157,104,35`, pinned fraction `0`) without changing material or alpha semantics.
+- The browser gate now measures mean adjacent-pixel luma delta for homogeneous lower Water/Oil/Acid/Lava columns, with a ceiling of `4`, non-flat luma range, at least `90%` coverage, at most `15%` pinned pixels, and explicit family-hue assertions. Final Canvas values were `0.42/0.34/0.34/0.48`; the retained WebGL values were `1.24/0.85/0.61/0.39`.
+- Shared field storage remains exactly `8,173,320` bytes and runtime-known Canvas scratch remains `1,887,464` bytes. The pessimistic all-235,008-cell liquid-light helper profile measured `6.51 ms` median / `6.63 ms` p90; ordinary dense interiors short-circuit the top-exposure field read because their semantic top is occupied.
 
 ## Current blockers and risks
 
