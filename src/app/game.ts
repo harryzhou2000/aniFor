@@ -170,6 +170,10 @@ export class Game {
         if (x < 0 || y < 0 || x >= this.simulation.width || y >= this.simulation.height) return -1;
         return this.simulation.walls?.()[y * this.simulation.width + x] ?? 0;
       },
+      temperature: (x, y) => {
+        if (x < 0 || y < 0 || x >= this.simulation.width || y >= this.simulation.height) return -1;
+        return this.simulation.temperature?.()[y * this.simulation.width + x] ?? -1;
+      },
       sourceTarget: (x, y) => this.simulation.configuredSourceTargetAt?.(x, y) ?? Material.Empty,
       occupiedCells: () => {
         let occupied = 0;
@@ -192,6 +196,9 @@ export class Game {
       },
       setSolidCurvatureDepth: (enabled) => {
         this.renderer.setSolidCurvatureDepthEnabled(enabled);
+      },
+      setThermalMaterialStyling: (enabled) => {
+        this.renderer.setThermalMaterialStylingEnabled(enabled);
       },
       clear: () => { this.simulation.clear(); },
       setRadius: (radius) => { this.radius = Math.max(0, Math.min(64, Math.round(radius))); },

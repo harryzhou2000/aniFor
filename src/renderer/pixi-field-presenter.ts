@@ -92,6 +92,7 @@ uniform float uTranslucentBackdropRefraction;
 uniform float uSolidContactDepth;
 uniform float uTranslucentLensShell;
 uniform float uSolidCurvatureDepth;
+uniform float uThermalMaterialStyling;
 uniform float uPowderStyle;
 vec4 field(vec2 uv) { return texture(uFieldTexture, clamp(uv, uTexel * 0.5, vec2(1.0) - uTexel * 0.5)); }
 vec4 wallField(vec2 uv) { return texture(uWallTexture, clamp(uv, uTexel * 0.5, vec2(1.0) - uTexel * 0.5)); }
@@ -113,6 +114,28 @@ float surfaceLightGain(float profile) {
 vec3 vividColor(vec3 color, float saturation) {
   float luminance = dot(color, vec3(0.2126, 0.7152, 0.0722));
   return mix(vec3(luminance), color, saturation);
+}
+float thermalOpticsGain(float optics) {
+  if (optics == 7.0) return 0.72;
+  if (optics == 8.0) return 1.0;
+  if (optics == 9.0) return 0.88;
+  if (optics == 10.0) return 1.08;
+  if (optics == 11.0) return 0.92;
+  if (optics == 12.0) return 0.86;
+  return 0.90;
+}
+vec3 thermalMaterialTint(float temperatureByte, float optics) {
+  // Room temperature (2952 dK) quantizes to byte 11. The asymmetric knees
+  // mirror thermal-material-style.ts and retain a one-byte ambient dead band.
+  float cold = smoothstep(1.0, 7.0, 11.0 - temperatureByte);
+  float warm = smoothstep(2.0, 55.0, temperatureByte - 11.0);
+  float incandescent = smoothstep(0.55, 1.0, warm);
+  float gain = thermalOpticsGain(optics) / 255.0;
+  return vec3(
+    -3.0 * cold + 17.0 * warm + 9.0 * incandescent,
+    2.0 * cold + 4.0 * warm + 6.0 * incandescent,
+    14.0 * cold - 7.0 * warm + incandescent
+  ) * gain;
 }
 vec3 toneMapEnergy(vec3 radiance) {
   const float knee = 0.72;
@@ -392,50 +415,80 @@ float refractedWallPattern(float wall, vec2 position, float material, vec2 bound
   return wallPattern(wall, cell + offset) * 0.68
     + wallPattern(wall, cell - offset) * 0.32;
 }
-vec2 nearbySurface(vec2 uv) {
+vec3 nearbySurface(vec2 uv) {
   float solid = 0.0;
   float ambiguousSolid = 0.0;
-  float candidate = materialAt(uv - vec2(uTexel.x, 0.0));
+  float solidTemperature = 0.0;
+  float solidSamples = 0.0;
+  vec4 candidateState = field(uv - vec2(uTexel.x, 0.0));
+  float candidate = floor(candidateState.r * 255.0 + 0.5);
   if (candidate > 0.5) {
     vec4 style = texture(uStyleTexture, vec2((candidate + 0.5) / 256.0, 0.5));
     float family = floor(style.r * 255.0 + 0.5);
-    if (family == 3.0 || style.b > 0.5) return vec2(candidate, 0.0);
+    if (family == 3.0 || style.b > 0.5) return vec3(candidate, 0.0, candidateState.g);
     if (family == 0.0 || family == 4.0) {
-      if (solid < 0.5) solid = candidate;
+      if (solid < 0.5) {
+        solid = candidate;
+        solidTemperature = candidateState.g;
+        solidSamples = 1.0;
+      }
       else if (abs(solid - candidate) > 0.5) ambiguousSolid = 1.0;
+      else { solidTemperature += candidateState.g; solidSamples += 1.0; }
     }
   }
-  candidate = materialAt(uv + vec2(uTexel.x, 0.0));
+  candidateState = field(uv + vec2(uTexel.x, 0.0));
+  candidate = floor(candidateState.r * 255.0 + 0.5);
   if (candidate > 0.5) {
     vec4 style = texture(uStyleTexture, vec2((candidate + 0.5) / 256.0, 0.5));
     float family = floor(style.r * 255.0 + 0.5);
-    if (family == 3.0 || style.b > 0.5) return vec2(candidate, 0.0);
+    if (family == 3.0 || style.b > 0.5) return vec3(candidate, 0.0, candidateState.g);
     if (family == 0.0 || family == 4.0) {
-      if (solid < 0.5) solid = candidate;
+      if (solid < 0.5) {
+        solid = candidate;
+        solidTemperature = candidateState.g;
+        solidSamples = 1.0;
+      }
       else if (abs(solid - candidate) > 0.5) ambiguousSolid = 1.0;
+      else { solidTemperature += candidateState.g; solidSamples += 1.0; }
     }
   }
-  candidate = materialAt(uv - vec2(0.0, uTexel.y));
+  candidateState = field(uv - vec2(0.0, uTexel.y));
+  candidate = floor(candidateState.r * 255.0 + 0.5);
   if (candidate > 0.5) {
     vec4 style = texture(uStyleTexture, vec2((candidate + 0.5) / 256.0, 0.5));
     float family = floor(style.r * 255.0 + 0.5);
-    if (family == 3.0 || style.b > 0.5) return vec2(candidate, 0.0);
+    if (family == 3.0 || style.b > 0.5) return vec3(candidate, 0.0, candidateState.g);
     if (family == 0.0 || family == 4.0) {
-      if (solid < 0.5) solid = candidate;
+      if (solid < 0.5) {
+        solid = candidate;
+        solidTemperature = candidateState.g;
+        solidSamples = 1.0;
+      }
       else if (abs(solid - candidate) > 0.5) ambiguousSolid = 1.0;
+      else { solidTemperature += candidateState.g; solidSamples += 1.0; }
     }
   }
-  candidate = materialAt(uv + vec2(0.0, uTexel.y));
+  candidateState = field(uv + vec2(0.0, uTexel.y));
+  candidate = floor(candidateState.r * 255.0 + 0.5);
   if (candidate > 0.5) {
     vec4 style = texture(uStyleTexture, vec2((candidate + 0.5) / 256.0, 0.5));
     float family = floor(style.r * 255.0 + 0.5);
-    if (family == 3.0 || style.b > 0.5) return vec2(candidate, 0.0);
+    if (family == 3.0 || style.b > 0.5) return vec3(candidate, 0.0, candidateState.g);
     if (family == 0.0 || family == 4.0) {
-      if (solid < 0.5) solid = candidate;
+      if (solid < 0.5) {
+        solid = candidate;
+        solidTemperature = candidateState.g;
+        solidSamples = 1.0;
+      }
       else if (abs(solid - candidate) > 0.5) ambiguousSolid = 1.0;
+      else { solidTemperature += candidateState.g; solidSamples += 1.0; }
     }
   }
-  return vec2(0.0, ambiguousSolid > 0.5 ? 0.0 : solid);
+  return vec3(
+    0.0,
+    ambiguousSolid > 0.5 ? 0.0 : solid,
+    solidSamples > 0.5 ? solidTemperature / solidSamples : 0.0
+  );
 }
 float nearbyPowderStability(vec2 uv, float material) {
   float stability = 0.0;
@@ -527,6 +580,7 @@ void main() {
   vec4 liquidState = texture(uLiquidTexture, fieldUv);
   float liquidDensity = liquidState.a;
   float material = floor(state.r * 255.0 + 0.5);
+  float materialTemperature = state.g;
   float halo = 0.0;
   float cloudOnly = 0.0;
   float emissionOnly = 0.0;
@@ -549,10 +603,12 @@ void main() {
     } else if (wall > 0.5) {
       wallOnly = 1.0;
     } else {
-      vec2 nearby = nearbySurface(fieldUv);
+      vec3 nearby = nearbySurface(fieldUv);
       material = nearby.x;
+      if (material > 0.5) materialTemperature = nearby.z;
       if (material < 0.5 && nearby.y > 0.5) {
         material = nearby.y;
+        materialTemperature = nearby.z;
         surfaceOnly = material > 0.5 ? 1.0 : 0.0;
       }
       if (material < 0.5) {
@@ -1126,6 +1182,18 @@ void main() {
       float interference = (planeWave + radialWave) * 0.5;
       color *= 0.95 + interference * 0.045;
     }
+    if (uThermalMaterialStyling > 0.5 && !materialEmissive && traits < 0.5
+      && material != 3.0 && (family == 0.0 || family == 4.0)) {
+      // Scalar, RGB-only response: temperature cannot widen a contour, alter
+      // phase ownership, or create an emissive aura. Reconstructed cavities use
+      // the averaged temperature of their already-sampled compatible donors.
+      float temperatureByte = floor(materialTemperature * 255.0 + 0.5);
+      // Most matter rests in the ambient dead band. Skip all smoothstep and
+      // optics dispatch work there, which matters at a 15M-fragment 8x frame.
+      if (abs(temperatureByte - 11.0) > 1.0) {
+        color += thermalMaterialTint(temperatureByte, optics);
+      }
+    }
   }
   // Static role accents cross phase boundaries without widening semantic
   // silhouettes. Empty-space volume reconstruction intentionally remains free
@@ -1270,7 +1338,7 @@ export class PixiFieldPresenter {
     private readonly host: HTMLElement,
     private readonly width: number,
     private readonly height: number,
-    outputScale: FieldOutputScale,
+    private readonly outputScale: FieldOutputScale,
     materials: readonly RenderMaterialStyle[],
     fieldSet?: RenderFieldSet,
   ) {
@@ -1354,6 +1422,9 @@ export class PixiFieldPresenter {
       uSolidContactDepth: { value: 1, type: 'f32' },
       uTranslucentLensShell: { value: 1, type: 'f32' },
       uSolidCurvatureDepth: { value: 1, type: 'f32' },
+      // FieldRenderer turns this on only for backends that expose temperature;
+      // byte zero must therefore never make legacy backends look frozen.
+      uThermalMaterialStyling: { value: 0, type: 'f32' },
       uPowderStyle: { value: powderRenderStyleValue('smooth'), type: 'f32' },
     });
     const resources = {
@@ -1521,6 +1592,11 @@ export class PixiFieldPresenter {
     this.renderApplication();
   }
 
+  setThermalMaterialStylingEnabled(enabled: boolean): void {
+    this.uniforms.uniforms.uThermalMaterialStyling = enabled ? 1 : 0;
+    this.renderApplication();
+  }
+
   setPowderRenderStyle(style: PowderRenderStyle): void {
     this.uniforms.uniforms.uPowderStyle = powderRenderStyleValue(style);
     this.renderApplication();
@@ -1530,7 +1606,13 @@ export class PixiFieldPresenter {
     if (this.webGLTimingEnabled) return;
     this.webGLTimingEnabled = true;
     const gl = this.webGLContext();
-    const extension = gl?.getExtension('EXT_disjoint_timer_query_webgl2') as
+    // Giant SwiftShader/driver timer queries can remain unavailable forever
+    // after an otherwise successful 15M-fragment frame. At true 8x use the
+    // bounded synchronous submission measurement; framebuffer captures and the
+    // presentation ceiling still guard completion. Smaller targets retain the
+    // more precise elapsed-GPU query.
+    const extension = (this.outputScale === 8 ? null
+      : gl?.getExtension('EXT_disjoint_timer_query_webgl2')) as
       WebGLTimerQueryExtension | null | undefined;
     this.webGLTimingExtension = extension ?? undefined;
     this.webGLTimingSource = extension ? 'gpu-query' : 'cpu-submission';
@@ -1541,6 +1623,10 @@ export class PixiFieldPresenter {
     this.pollWebGLTimingQuery();
     if (this.webGLTimingRequested || this.webGLTimingPending) return false;
     this.webGLTimingRequested = true;
+    // Timing requests are audit-only and must own the frame they measure. A
+    // paused/static scene may otherwise have no later update to consume the
+    // request, leaving a correct renderer looking like a hung timer query.
+    this.renderApplication();
     return true;
   }
 
@@ -1664,6 +1750,10 @@ export class PixiFieldPresenter {
 
     try {
       gl.endQuery(extension.TIME_ELAPSED_EXT);
+      // A paused/static render lab may not submit another frame after this one.
+      // Explicitly flush audit-requested work so QUERY_RESULT_AVAILABLE can
+      // advance without relying on unrelated animation or field refreshes.
+      gl.flush();
       this.webGLTimingPending = query;
     } catch {
       try { gl.deleteQuery(query); } catch { /* context may already be invalid */ }

@@ -5,7 +5,9 @@ import { renderPhase, renderProfile, RenderPhase, RenderProfile } from './render
 import { renderOptics, RenderOptics } from './render-optics';
 import { hasRenderTrait, renderTraits, RenderTrait } from './render-traits';
 import {
-  applyRenderLabScene, RENDER_LAB_ENERGY_SAMPLES, RENDER_LAB_STYLE_SAMPLES, renderLabRequested,
+  applyRenderLabScene, RENDER_LAB_AMBIENT_TEMPERATURE, RENDER_LAB_COLD_TEMPERATURE,
+  RENDER_LAB_ENERGY_SAMPLES, RENDER_LAB_HOT_TEMPERATURE, RENDER_LAB_STYLE_SAMPLES,
+  renderLabRequested,
 } from './render-lab-scene';
 
 describe('render lab scene', () => {
@@ -22,6 +24,7 @@ describe('render lab scene', () => {
     applyRenderLabScene(second);
     expect(first.cells()).toEqual(second.cells());
     expect(first.walls()).toEqual(second.walls());
+    expect(first.temperature()).toEqual(second.temperature());
 
     const counts = new Uint32Array(256);
     for (const material of first.cells()) counts[material]++;
@@ -96,6 +99,23 @@ describe('render lab scene', () => {
     expect(first.walls()[229 * 612 + 525]).not.toBe(0);
     expect(first.walls()[172 * 612 + 128]).toBe(first.walls()[172 * 612 + 132]);
     expect(first.walls()[229 * 612 + 445]).toBe(first.walls()[229 * 612 + 525]);
+
+    const thermalFixtures = [
+      [30, Material.Metal, RENDER_LAB_COLD_TEMPERATURE],
+      [70, Material.Metal, RENDER_LAB_AMBIENT_TEMPERATURE],
+      [110, Material.Metal, RENDER_LAB_HOT_TEMPERATURE],
+      [166, Material.Sand, RENDER_LAB_COLD_TEMPERATURE],
+      [206, Material.Sand, RENDER_LAB_AMBIENT_TEMPERATURE],
+      [246, Material.Sand, RENDER_LAB_HOT_TEMPERATURE],
+    ] as const;
+    for (const [x, material, temperature] of thermalFixtures) {
+      expect(first.cells()[370 * 612 + x]).toBe(material);
+      expect(first.temperature()[370 * 612 + x]).toBe(temperature);
+    }
+    expect(first.temperature()[229 * 612 + 445]).toBe(RENDER_LAB_HOT_TEMPERATURE);
+    expect(first.temperature()[229 * 612 + 539]).toBe(RENDER_LAB_COLD_TEMPERATURE);
+    expect(second.temperature()[229 * 612 + 445]).toBe(RENDER_LAB_HOT_TEMPERATURE);
+    expect(second.temperature()[229 * 612 + 539]).toBe(RENDER_LAB_COLD_TEMPERATURE);
   });
 
   it('exercises every non-neutral styled family plus an energy phase', () => {

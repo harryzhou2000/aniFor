@@ -15,6 +15,8 @@ export interface SimulationBackend {
   readonly width: number;
   readonly height: number;
   readonly name: string;
+  /** Whether temperature/velocity may change without a material dirty-cell update. */
+  readonly presentationFieldsDynamic?: boolean;
   step(): void;
   paint(x: number, y: number, material: Material, radius: number): void;
   erase(x: number, y: number, radius: number): void;

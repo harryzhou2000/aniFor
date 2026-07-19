@@ -1,7 +1,11 @@
 import { Material } from '../shared/materials';
 import type { SimulationBackend } from '../simulation';
+import { RENDER_LAB_AMBIENT_TEMPERATURE } from '../simulation/render-lab-backend';
 
 export const RENDER_LAB_QUERY = 'render-lab';
+export const RENDER_LAB_COLD_TEMPERATURE = 1200;
+export { RENDER_LAB_AMBIENT_TEMPERATURE };
+export const RENDER_LAB_HOT_TEMPERATURE = 18000;
 
 export const RENDER_LAB_STYLE_SAMPLES = [
   // Granular surfaces, including emissive/reactive powders.
@@ -156,6 +160,40 @@ export function applyRenderLabScene(simulation: SimulationBackend): void {
   plot.rect(377, 194, 5, 147, Material.Fire, 0.78, 677);
   plot.rect(592, 194, 5, 147, Material.ELEC, 0.78, 683);
   plot.scatterLine(390, 354, 196, Material.PHOT, 0.18, 701);
+
+  // Paired cold/ambient/hot interiors exercise temperature styling without
+  // coupling the native semantic smoke tests to this deterministic fixture.
+  if (supportsFixtureTemperatures(simulation)) {
+    const temperatures = [
+      RENDER_LAB_COLD_TEMPERATURE,
+      RENDER_LAB_AMBIENT_TEMPERATURE,
+      RENDER_LAB_HOT_TEMPERATURE,
+    ] as const;
+    for (let state = 0; state < temperatures.length; state++) {
+      const metalX = 18 + state * 40;
+      const sandX = 154 + state * 40;
+      plot.rect(metalX, 362, 24, 17, Material.Metal, 1, 0);
+      plot.rect(sandX, 362, 24, 17, Material.Sand, 1, 0);
+      simulation.setFixtureTemperatureRect(metalX, 362, 24, 17, temperatures[state]);
+      simulation.setFixtureTemperatureRect(sandX, 362, 24, 17, temperatures[state]);
+    }
+    // Existing native-wall Glass/Ice cards also prove that Canvas and WebGL
+    // apply the same source-alpha-weighted tint over an independent backdrop.
+    simulation.setFixtureTemperatureRect(428, 219, 35, 21, RENDER_LAB_HOT_TEMPERATURE);
+    simulation.setFixtureTemperatureRect(508, 219, 35, 21, RENDER_LAB_COLD_TEMPERATURE);
+  }
+}
+
+interface FixtureTemperatureBackend {
+  setFixtureTemperatureRect(
+    x: number, y: number, width: number, height: number, temperature: number,
+  ): void;
+}
+
+function supportsFixtureTemperatures(
+  simulation: SimulationBackend,
+): simulation is SimulationBackend & FixtureTemperatureBackend {
+  return typeof (simulation as Partial<FixtureTemperatureBackend>).setFixtureTemperatureRect === 'function';
 }
 
 class ScenePlotter {

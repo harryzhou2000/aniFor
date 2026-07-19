@@ -2,6 +2,8 @@
 
 The render lab is a deterministic, paused 612×384 material atlas for evaluating renderer changes without waiting for physics or reconstructing an ad-hoc brush scene.
 
+Its temperature plane is static at room temperature (`2952` decikelvin) unless a fixture overrides it, so the paused atlas uploads temperature once rather than repainting a true-8× target at the dynamic-field cadence. Six isolated lower-strip blocks compare cold/ambient/hot Metal and Sand; hot Glass and cold Ice reuse native-wall cards to prove correct pre-composite translucent response. The browser gate captures thermal off→on→off, requires exact ambient and repeat no-ops, opposed bounded cold/hot chroma, unchanged blank-differenced support, and Canvas/WebGL magnitude parity. Ordinary thermal styling is RGB-only and excludes walls, gas, liquid, energy, field, emissive, and role-bearing matter.
+
 ## Open the scene
 
 Start the development server and use:

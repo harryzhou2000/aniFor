@@ -131,6 +131,14 @@ async function auditMode(mode) {
       patternedOilWall: window.__ANIFOR_INPUT_AUDIT__.wall(314, 172),
       patternedLavaWall: window.__ANIFOR_INPUT_AUDIT__.wall(340, 231),
       patternedIceWall: window.__ANIFOR_INPUT_AUDIT__.wall(525, 229),
+      thermal: [
+        [30, 370], [70, 370], [110, 370],
+        [166, 370], [206, 370], [246, 370],
+        [445, 229], [539, 229],
+      ].map(([x, y]) => ({
+        material: window.__ANIFOR_INPUT_AUDIT__.cell(x, y),
+        temperature: window.__ANIFOR_INPUT_AUDIT__.temperature(x, y),
+      })),
     })`);
     assert(canonicalFixture.status?.includes('TypeScript deterministic fallback'),
       `${mode}: canonical render lab used ${canonicalFixture.status}`);
@@ -143,11 +151,31 @@ async function auditMode(mode) {
       && canonicalFixture.patternedLavaWall > 0
       && canonicalFixture.patternedIceWall > 0,
     `${mode}: patterned translucent wall fixture is missing (${JSON.stringify(canonicalFixture)})`);
+    assert(canonicalFixture.thermal.map(({ material }) => material).join(',')
+        === '23,23,23,1,1,1,24,12'
+      && canonicalFixture.thermal.map(({ temperature }) => temperature).join(',')
+        === '1200,2952,18000,1200,2952,18000,18000,1200',
+    `${mode}: thermal material fixture signature changed (${JSON.stringify(canonicalFixture.thermal)})`);
 
     // Read the rendered canvas, not semantic cells, so framebuffer clipping and
     // backend compositing regressions are observable in the browser gate.
     const canonicalCaptures = await waitForStablePageCapture(cdp, `${mode} canonical framebuffer`);
-    const canonicalCapture = canonicalCaptures.capture;
+    await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setThermalMaterialStyling(false); true');
+    const neutralThermalCaptures = await waitForStablePageCapture(
+      cdp, `${mode} neutral thermal-material framebuffer`,
+    );
+    await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setThermalMaterialStyling(true); true');
+    const styledThermalCaptures = await waitForStablePageCapture(
+      cdp, `${mode} styled thermal-material framebuffer`,
+    );
+    await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setThermalMaterialStyling(false); true');
+    const repeatedNeutralThermalCaptures = await waitForStablePageCapture(
+      cdp, `${mode} repeated neutral thermal-material framebuffer`,
+    );
+    await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setThermalMaterialStyling(true); true');
+    // Use the freshly restored styled frame as the canonical lit image for all
+    // following comparisons. This keeps adjacent toggle captures close in time.
+    const canonicalCapture = styledThermalCaptures.capture;
     await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setGasFieldLighting(false); true');
     const unlitGasCaptures = await waitForStablePageCapture(cdp, `${mode} unlit gas framebuffer`);
     // Keep the paired lit/unlit captures adjacent. The presentation benchmark
@@ -290,6 +318,9 @@ async function auditMode(mode) {
     })()`);
     const blankCaptures = await captureStableBlankPage(cdp, mode);
     for (const [label, captures] of [
+      ['neutral thermal material', neutralThermalCaptures],
+      ['styled thermal material', styledThermalCaptures],
+      ['repeated neutral thermal material', repeatedNeutralThermalCaptures],
       ['unlit gas', unlitGasCaptures],
       ['unlit liquid', unlitLiquidCaptures],
       ['unlit translucent', unlitTranslucentCaptures],
@@ -314,6 +345,77 @@ async function auditMode(mode) {
       cdp, canonicalCapture.data, regions, blankCaptures.capture.data, blankCaptures.reference.data,
       canonicalCaptures.canvasRect,
     );
+    const thermalRegions = [
+      { name: 'metalCold', x: 30, y: 370, radiusX: 9, radiusY: 5 },
+      { name: 'metalAmbient', x: 70, y: 370, radiusX: 9, radiusY: 5 },
+      { name: 'metalHot', x: 110, y: 370, radiusX: 9, radiusY: 5 },
+      { name: 'sandCold', x: 166, y: 370, radiusX: 9, radiusY: 5 },
+      { name: 'sandAmbient', x: 206, y: 370, radiusX: 9, radiusY: 5 },
+      { name: 'sandHot', x: 246, y: 370, radiusX: 9, radiusY: 5 },
+      { name: 'glassHotBackdrop', x: 445, y: 229, radiusX: 7, radiusY: 5 },
+      { name: 'iceColdBackdrop', x: 539, y: 229, radiusX: 3, radiusY: 5 },
+    ];
+    const thermalResponseSamples = await sampleLightingDifferenceRegions(cdp, {
+      lit: styledThermalCaptures.capture.data,
+      unlit: neutralThermalCaptures.capture.data,
+    }, thermalRegions, canonicalCaptures.canvasRect);
+    const thermalResponse = Object.fromEntries(
+      thermalResponseSamples.map((sample) => [sample.name, sample]),
+    );
+    for (const family of ['metal', 'sand']) {
+      const cold = thermalResponse[`${family}Cold`];
+      const ambient = thermalResponse[`${family}Ambient`];
+      const hot = thermalResponse[`${family}Hot`];
+      assert(ambient.peakMagnitude <= 1,
+        `${mode}: ambient ${family} is not a thermal no-op (${JSON.stringify(ambient)})`);
+      assert(cold.coverage >= 0.70 && cold.responseRgb[2] >= 4
+        && cold.responseRgb[2] >= cold.responseRgb[0] + 8 && cold.peakMagnitude <= 32,
+      `${mode}: cold ${family} lost its bounded blue response (${JSON.stringify(cold)})`);
+      assert(hot.coverage >= 0.70 && hot.responseRgb[0] >= 5
+        && hot.responseRgb[0] >= hot.responseRgb[2] + 12 && hot.peakMagnitude <= 32,
+      `${mode}: hot ${family} lost its bounded warm response (${JSON.stringify(hot)})`);
+    }
+    assert(thermalResponse.glassHotBackdrop.coverage >= 0.55
+      && thermalResponse.glassHotBackdrop.responseRgb[0] >= 2.5
+      && thermalResponse.glassHotBackdrop.responseRgb[0]
+        >= thermalResponse.glassHotBackdrop.responseRgb[2] + 7
+      && thermalResponse.glassHotBackdrop.peakMagnitude <= 32,
+    `${mode}: hot wall-backed Glass lost its source-weighted response (${JSON.stringify(thermalResponse.glassHotBackdrop)})`);
+    assert(thermalResponse.iceColdBackdrop.coverage >= 0.55
+      && thermalResponse.iceColdBackdrop.responseRgb[2] >= 2.5
+      && thermalResponse.iceColdBackdrop.responseRgb[2]
+        >= thermalResponse.iceColdBackdrop.responseRgb[0] + 7
+      && thermalResponse.iceColdBackdrop.peakMagnitude <= 32,
+    `${mode}: cold wall-backed Ice lost its source-weighted response (${JSON.stringify(thermalResponse.iceColdBackdrop)})`);
+    const thermalRepeatSamples = await sampleBackdropRefractionRegions(cdp, {
+      straight: neutralThermalCaptures.capture.data,
+      refracted: styledThermalCaptures.capture.data,
+      repeatedStraight: repeatedNeutralThermalCaptures.capture.data,
+    }, thermalRegions, canonicalCaptures.canvasRect);
+    assert(thermalRepeatSamples.every((sample) => sample.repeatRgbPeak <= 1),
+      `${mode}: thermal off-on-off sequence was not deterministic (${JSON.stringify(thermalRepeatSamples)})`);
+    const thermalSupportRegions = thermalRegions.map((region) => ({ ...region, silhouette: true }));
+    const [neutralThermalSupport, styledThermalSupport] = await Promise.all([
+      samplePageRegions(
+        cdp, neutralThermalCaptures.capture.data, thermalSupportRegions,
+        blankCaptures.capture.data, blankCaptures.reference.data, canonicalCaptures.canvasRect,
+      ),
+      samplePageRegions(
+        cdp, styledThermalCaptures.capture.data, thermalSupportRegions,
+        blankCaptures.capture.data, blankCaptures.reference.data, canonicalCaptures.canvasRect,
+      ),
+    ]);
+    const thermalSupportInvariantSamples = neutralThermalSupport.map((neutral, index) => ({
+      name: neutral.name,
+      neutralVisible: neutral.visible,
+      styledVisible: styledThermalSupport[index].visible,
+      neutralWorldArea: neutral.worldArea,
+      styledWorldArea: styledThermalSupport[index].worldArea,
+    }));
+    assert(thermalSupportInvariantSamples.every((sample) => (
+      sample.neutralVisible === sample.styledVisible
+      && Math.abs(sample.neutralWorldArea - sample.styledWorldArea) <= 0.01
+    )), `${mode}: thermal styling changed material support (${JSON.stringify(thermalSupportInvariantSamples)})`);
     const energySamples = await sampleCanonicalRegions([
       { name: 'fire', x: 405, y: 329 },
       { name: 'plasma', x: 445, y: 329 },
@@ -1036,6 +1138,14 @@ async function auditMode(mode) {
       const visualScreenshot = screenshotPath(mode);
       if (visualScreenshot) {
         await writeFile(
+          variantScreenshotPath(visualScreenshot, 'thermal-neutral'),
+          Buffer.from(neutralThermalCaptures.capture.data, 'base64'),
+        );
+        await writeFile(
+          variantScreenshotPath(visualScreenshot, 'thermal-styled'),
+          Buffer.from(styledThermalCaptures.capture.data, 'base64'),
+        );
+        await writeFile(
           visualScreenshot, Buffer.from(refractedBackdropCaptures.capture.data, 'base64'),
         );
         await writeFile(
@@ -1077,6 +1187,9 @@ async function auditMode(mode) {
         squareGrainSample,
         zoomedSquareGrainSample,
         powderColumnSemanticSupport,
+        thermalResponseSamples,
+        thermalRepeatSamples,
+        thermalSupportInvariantSamples,
         gasLightResponseSamples,
         liquidLightResponseSamples,
         translucentLightResponseSamples,
@@ -1305,6 +1418,9 @@ async function auditMode(mode) {
       squareGrainSample,
       zoomedSquareGrainSample,
       powderColumnSemanticSupport,
+      thermalResponseSamples,
+      thermalRepeatSamples,
+      thermalSupportInvariantSamples,
       silhouetteSamples,
       liquidContourCrossings,
       contactSilhouetteSamples,
@@ -1358,14 +1474,13 @@ async function auditMode(mode) {
   }
 }
 
-async function auditWebGLPresentationTiming(cdp) {
+async function auditWebGLPresentationTiming(cdp, targetSamples = 30, sampleTimeout = 5_000) {
   let timing = await evaluate(cdp,
     'window.__ANIFOR_INPUT_AUDIT__.webGLPresentationTiming()');
   assert(timing, 'WebGL presentation timing is unavailable');
   assert(timing.source === 'gpu-query' || timing.source === 'cpu-submission',
     `Unknown WebGL timing source ${timing.source}`);
 
-  const targetSamples = 30;
   const maximumAttempts = targetSamples + 45;
   for (let attempt = 0; timing.usableSamples < targetSamples && attempt < maximumAttempts; attempt++) {
     const before = timing;
@@ -1376,7 +1491,7 @@ async function auditWebGLPresentationTiming(cdp) {
       const next = window.__ANIFOR_INPUT_AUDIT__.webGLPresentationTiming();
       return next && (next.source !== ${JSON.stringify(before.source)}
         || next.sequence > ${before.sequence}) ? next : null;
-    })()`), 5_000, `WebGL presentation sample ${attempt + 1}`);
+    })()`), sampleTimeout, `WebGL presentation sample ${attempt + 1}`);
   }
 
   assert(timing.usableSamples >= targetSamples,
@@ -1668,7 +1783,7 @@ async function auditRenderScaleEight(cdp, dpr) {
     `window.__ANIFOR_INPUT_AUDIT__.backend().backend === 'webgl'`),
   45_000, 'renderScale=8 WebGL backend');
   const geometry = await waitForStableCanvas(
-    cdp, 1280, 720, undefined, 20_000, 'renderScale=8 WebGL geometry',
+    cdp, 1280, 720, undefined, 45_000, 'renderScale=8 WebGL geometry',
   );
   const backend = await evaluate(cdp, `window.__ANIFOR_INPUT_AUDIT__.backend()`);
   assert(backend.requestedOutputScale === 8 && backend.outputScale === 8,
@@ -1690,6 +1805,10 @@ async function auditRenderScaleEight(cdp, dpr) {
   assert(JSON.stringify(resolutionControl.options) === JSON.stringify([1, 2, 4, 8])
     && resolutionControl.selected === 8,
   `renderScale=8 control did not expose/select true 8x (${JSON.stringify(resolutionControl)})`);
+
+  const presentationTiming = await auditWebGLPresentationTiming(cdp, 8, 12_000);
+  assert(presentationTiming.p90Ms <= 1500 && presentationTiming.maximumMs <= 2500,
+    `renderScale=8 presentation exceeded its watchdog budget (${JSON.stringify(presentationTiming)})`);
 
   const smoothCapture = await captureSettledPage(cdp, 'renderScale=8 smooth powder framebuffer');
   const styleCaptures = { smooth: smoothCapture.capture.data };
@@ -1761,6 +1880,7 @@ async function auditRenderScaleEight(cdp, dpr) {
     backing: `${geometry.backing.width}x${geometry.backing.height}`,
     cssCanvas: `${round(geometry.canvas.width, 2)}x${round(geometry.canvas.height, 2)}`,
     resolutionControl,
+    presentationTiming,
     powderSupport,
     squareGrain,
     zoomedSquareGrain,
@@ -3367,6 +3487,19 @@ function assertPairedVisualRelief(results) {
   const canvas = results.find((result) => result.backend === 'canvas2d');
   const webgl = results.find((result) => result.backend === 'webgl');
   if (!canvas || !webgl) return;
+  for (const [name, channel] of [
+    ['metalCold', 2], ['metalHot', 0], ['sandCold', 2], ['sandHot', 0],
+    ['glassHotBackdrop', 0], ['iceColdBackdrop', 2],
+  ]) {
+    const canvasSample = canvas.thermalResponseSamples.find((sample) => sample.name === name);
+    const webglSample = webgl.thermalResponseSamples.find((sample) => sample.name === name);
+    assert(canvasSample && webglSample, `paired thermal sample missing ${name}`);
+    const canvasResponse = Math.abs(canvasSample.responseRgb[channel]);
+    const webglResponse = Math.abs(webglSample.responseRgb[channel]);
+    const ratio = canvasResponse / Math.max(0.5, webglResponse);
+    assert(ratio >= 0.4 && ratio <= 2.5,
+      `Canvas/WebGL ${name} thermal response diverged (${canvasResponse}/${webglResponse})`);
+  }
   for (const canvasSample of canvas.liquidColumnSamples) {
     const webglSample = webgl.liquidColumnSamples.find((sample) => sample.name === canvasSample.name);
     assert(webglSample, `paired liquid sample missing ${canvasSample.name}`);

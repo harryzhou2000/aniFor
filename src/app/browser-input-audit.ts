@@ -10,6 +10,7 @@ export interface BrowserInputAuditApi {
   readonly height: number;
   cell(x: number, y: number): number;
   wall(x: number, y: number): number;
+  temperature(x: number, y: number): number;
   sourceTarget(x: number, y: number): number;
   occupiedCells(): number;
   setGasFieldLighting(enabled: boolean): void;
@@ -19,6 +20,7 @@ export interface BrowserInputAuditApi {
   setSolidContactDepth(enabled: boolean): void;
   setTranslucentLensShell(enabled: boolean): void;
   setSolidCurvatureDepth(enabled: boolean): void;
+  setThermalMaterialStyling(enabled: boolean): void;
   clear(): void;
   setRadius(radius: number): void;
   setMaterial(material: Material): void;

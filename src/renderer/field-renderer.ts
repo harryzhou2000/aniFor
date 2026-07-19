@@ -52,6 +52,7 @@ import {
 import { DirtyChunkGrid } from './dirty-chunk-grid';
 import { POWDER_SURFACE_REFRESH_INTERVAL } from './powder-surface-field';
 import type { PowderRenderStyle } from './powder-render-style';
+import { receivesThermalMaterialStyle, thermalMaterialDelta } from './thermal-material-style';
 
 const FRAME_INTERVAL = 1000 / 30;
 export const DYNAMIC_FIELD_REFRESH_INTERVAL = 1000 / 12;
@@ -98,6 +99,7 @@ export class MaterialRenderer {
   private readonly rendered: Uint8Array;
   private readonly renderedWalls?: Uint8Array;
   private readonly styledColor = new Float32Array(3);
+  private readonly thermalDelta = new Float32Array(3);
   private readonly energyGlowColor = new Float32Array(3);
   private readonly traitClock = new Int32Array(CANVAS_RENDER_TRAIT_CLOCK_SIZE);
   private readonly boundaryStability: Uint8Array;
@@ -146,6 +148,7 @@ export class MaterialRenderer {
   private solidContactDepthEnabled = true;
   private translucentLensShellEnabled = true;
   private solidCurvatureDepthEnabled = true;
+  private thermalMaterialStylingEnabled = true;
   private powderRenderStyle: PowderRenderStyle = 'smooth';
   private gasFieldLightingDirty = false;
   private canvasPresentationTimingEnabled = false;
@@ -229,7 +232,8 @@ export class MaterialRenderer {
       this.powderSurfaceDirty = true;
       this.changed = true;
     }
-    const hasDynamicFields = Boolean(this.simulation.temperature || this.simulation.velocity);
+    const hasDynamicFields = this.simulation.presentationFieldsDynamic !== false
+      && Boolean(this.simulation.temperature || this.simulation.velocity);
     const refreshDynamicFields = dynamicFieldRefreshDue(time, this.lastDynamicFieldRefresh, hasDynamicFields);
     const powderRefreshDue = this.powderSurfaceDirty
       && time - this.lastPowderSurfaceRefresh >= POWDER_SURFACE_REFRESH_INTERVAL;
@@ -260,9 +264,7 @@ export class MaterialRenderer {
   }
 
   requestWebGLPresentationTimingSample(): boolean {
-    const requested = this.presenter?.requestWebGLPresentationTimingSample() ?? false;
-    if (requested) this.changed = true;
-    return requested;
+    return this.presenter?.requestWebGLPresentationTimingSample() ?? false;
   }
 
   getWebGLPresentationTiming(): WebGLPresentationTiming | undefined {
@@ -321,6 +323,16 @@ export class MaterialRenderer {
     this.changed = true;
   }
 
+  setThermalMaterialStylingEnabled(enabled: boolean): void {
+    if (enabled === this.thermalMaterialStylingEnabled) return;
+    this.thermalMaterialStylingEnabled = enabled;
+    this.presenter?.setThermalMaterialStylingEnabled(
+      enabled && this.simulation.temperature !== undefined,
+    );
+    this.contourChunks.markAll();
+    this.changed = true;
+  }
+
   setPowderRenderStyle(style: PowderRenderStyle): void {
     if (style === this.powderRenderStyle) return;
     this.powderRenderStyle = style;
@@ -331,6 +343,22 @@ export class MaterialRenderer {
 
   getCanvasPresentationTiming(): CanvasPresentationTiming | undefined {
     return this.canvasPresentationTiming;
+  }
+
+  private applyThermalMaterialStyle(
+    phase: RenderPhase,
+    material: Material,
+    emissive: boolean,
+    traits: number,
+    temperature: number | undefined,
+    optics: RenderOptics,
+  ): void {
+    if (!this.thermalMaterialStylingEnabled || temperature === undefined
+      || !receivesThermalMaterialStyle(phase, material, emissive, traits)) return;
+    thermalMaterialDelta(this.thermalDelta, temperature, optics);
+    this.styledColor[0] += this.thermalDelta[0];
+    this.styledColor[1] += this.thermalDelta[1];
+    this.styledColor[2] += this.thermalDelta[2];
   }
 
   applyGesture(start: ViewState, anchorStart: Point, anchorCurrent: Point, ratio: number): void {
@@ -414,6 +442,9 @@ export class MaterialRenderer {
     presenter.setSolidContactDepthEnabled(this.solidContactDepthEnabled);
     presenter.setTranslucentLensShellEnabled(this.translucentLensShellEnabled);
     presenter.setSolidCurvatureDepthEnabled(this.solidCurvatureDepthEnabled);
+    presenter.setThermalMaterialStylingEnabled(
+      this.thermalMaterialStylingEnabled && this.simulation.temperature !== undefined,
+    );
     presenter.setPowderRenderStyle(this.powderRenderStyle);
     presenter.update(
       this.rendered, this.renderedWalls, this.simulation.temperature?.(), this.simulation.velocity?.(),
@@ -696,15 +727,39 @@ export class MaterialRenderer {
         );
       } else if (material === Material.Sand) {
         const grain = hash(index) % 23 - 11;
-        compositePixel(target, pixel, 194 + grain + surfaceLight, 145 + grain * 0.65 + surfaceLight, 76 + grain * 0.35 + surfaceLight, 255);
+        this.styledColor[0] = 194 + grain + surfaceLight;
+        this.styledColor[1] = 145 + grain * 0.65 + surfaceLight;
+        this.styledColor[2] = 76 + grain * 0.35 + surfaceLight;
+        this.applyThermalMaterialStyle(
+          phase, material, false, applicableTraits, temperatures?.[index], optics,
+        );
+        compositePixel(
+          target, pixel, this.styledColor[0], this.styledColor[1], this.styledColor[2], 255,
+        );
       } else if (material === Material.Dust) {
         const grain = hash(index) % 23 - 11;
         const softness = Math.sin(visualTime * 0.0018 + x * 0.17 + y * 0.09) * 4;
-        compositePixel(target, pixel, 188 + grain + surfaceLight + softness, 166 + grain + surfaceLight + softness, 124 + grain * 0.6 + surfaceLight, 238);
+        this.styledColor[0] = 188 + grain + surfaceLight + softness;
+        this.styledColor[1] = 166 + grain + surfaceLight + softness;
+        this.styledColor[2] = 124 + grain * 0.6 + surfaceLight;
+        this.applyThermalMaterialStyle(
+          phase, material, false, applicableTraits, temperatures?.[index], optics,
+        );
+        compositePixel(
+          target, pixel, this.styledColor[0], this.styledColor[1], this.styledColor[2], 238,
+        );
       } else if (material === Material.Salt) {
         const grain = hash(index) % 23 - 11;
         const crystal = (hash(index + 211) & 7) === 0 ? 28 : 0;
-        compositePixel(target, pixel, 220 + grain + crystal + surfaceLight, 216 + grain + crystal + surfaceLight, 202 + grain + crystal + surfaceLight, 255);
+        this.styledColor[0] = 220 + grain + crystal + surfaceLight;
+        this.styledColor[1] = 216 + grain + crystal + surfaceLight;
+        this.styledColor[2] = 202 + grain + crystal + surfaceLight;
+        this.applyThermalMaterialStyle(
+          phase, material, false, applicableTraits, temperatures?.[index], optics,
+        );
+        compositePixel(
+          target, pixel, this.styledColor[0], this.styledColor[1], this.styledColor[2], 255,
+        );
       } else if (material === Material.Oil) {
         const mask = materialNeighbourMask(this.rendered, width, height, x, y, material);
         const density = neighbourDensity(mask);
@@ -730,6 +785,9 @@ export class MaterialRenderer {
         applyCanvasRenderTraits(
           this.styledColor, applicableTraits, phase, material, x, y, index, this.traitClock,
         );
+        this.applyThermalMaterialStyle(
+          phase, material, false, applicableTraits, temperatures?.[index], optics,
+        );
         compositePixel(
           target, pixel, this.styledColor[0], this.styledColor[1], this.styledColor[2], 255,
         );
@@ -741,6 +799,9 @@ export class MaterialRenderer {
         this.styledColor[2] = 58 + grain * 0.35 + surfaceLight;
         applyCanvasRenderTraits(
           this.styledColor, applicableTraits, phase, material, x, y, index, this.traitClock,
+        );
+        this.applyThermalMaterialStyle(
+          phase, material, false, applicableTraits, temperatures?.[index], optics,
         );
         compositePixel(
           target, pixel, this.styledColor[0], this.styledColor[1], this.styledColor[2], 255,
@@ -773,6 +834,9 @@ export class MaterialRenderer {
         if (this.translucentLensShellEnabled) {
           applyCanvasTranslucentLensShell(this.styledColor, solidRelief, normalLight, material);
         }
+        this.applyThermalMaterialStyle(
+          phase, material, false, applicableTraits, temperatures?.[index], optics,
+        );
         compositePixel(
           target, pixel,
           this.styledColor[0], this.styledColor[1], this.styledColor[2], 202,
@@ -795,7 +859,15 @@ export class MaterialRenderer {
       } else if (material === Material.Gunpowder) {
         const grain = hash(index) % 23 - 11;
         const spark = (hash(index + 911) & 31) === 0 ? 34 : 0;
-        compositePixel(target, pixel, 70 + grain + spark + surfaceLight, 64 + grain + spark * 0.7 + surfaceLight, 58 + grain + spark * 0.35 + surfaceLight, 255);
+        this.styledColor[0] = 70 + grain + spark + surfaceLight;
+        this.styledColor[1] = 64 + grain + spark * 0.7 + surfaceLight;
+        this.styledColor[2] = 58 + grain + spark * 0.35 + surfaceLight;
+        this.applyThermalMaterialStyle(
+          phase, material, false, applicableTraits, temperatures?.[index], optics,
+        );
+        compositePixel(
+          target, pixel, this.styledColor[0], this.styledColor[1], this.styledColor[2], 255,
+        );
       } else if (material === Material.Wall) {
         const grain = hash(index) % 23 - 11;
         const seam = (hash(index + 73) & 31) === 0 ? -22 : 0;
@@ -918,6 +990,9 @@ export class MaterialRenderer {
               this.styledColor, solidRelief, normalLight, material,
             );
           }
+          this.applyThermalMaterialStyle(
+            phase, material, info.emissive, applicableTraits, temperatures?.[index], optics,
+          );
           const alpha = material === Material.Glass ? 198
             : optics === RenderOptics.TranslucentRigid ? 218 : 255;
           if (wall && optics === RenderOptics.TranslucentRigid) {

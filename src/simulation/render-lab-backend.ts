@@ -1,5 +1,8 @@
 import type { DirtyWallCell } from './types';
 import { DeterministicBackend } from './deterministic-backend';
+import { ROOM_TEMPERATURE_DECIKELVIN } from '../shared/temperature';
+
+export const RENDER_LAB_AMBIENT_TEMPERATURE = ROOM_TEMPERATURE_DECIKELVIN;
 
 /**
  * Deterministic screenshot backend with a TPT-shaped independent wall plane.
@@ -7,15 +10,36 @@ import { DeterministicBackend } from './deterministic-backend';
  * paintable so the render lab can prove compositing and transmission semantics.
  */
 export class RenderLabBackend extends DeterministicBackend {
+  readonly presentationFieldsDynamic = false;
   private readonly wallWorld: Uint8Array;
+  private readonly temperatureWorld: Uint16Array;
   private readonly dirtyWalls = new Set<number>();
 
   constructor(width = 612, height = 384) {
     super(width, height);
     this.wallWorld = new Uint8Array(width * height);
+    this.temperatureWorld = new Uint16Array(width * height);
+    this.temperatureWorld.fill(RENDER_LAB_AMBIENT_TEMPERATURE);
   }
 
   walls(): Uint8Array { return this.wallWorld; }
+  temperature(): Uint16Array { return this.temperatureWorld; }
+
+  /** Sets an immutable diagnostic temperature region before the paused scene is presented. */
+  setFixtureTemperatureRect(
+    x: number, y: number, width: number, height: number, temperature: number,
+  ): void {
+    if (width <= 0 || height <= 0) return;
+    const left = Math.max(0, Math.floor(x));
+    const top = Math.max(0, Math.floor(y));
+    const right = Math.min(this.width, Math.ceil(x + width));
+    const bottom = Math.min(this.height, Math.ceil(y + height));
+    if (right <= left || bottom <= top) return;
+    const value = Math.max(0, Math.min(0xFFFF, Math.round(temperature)));
+    for (let py = top; py < bottom; py++) {
+      this.temperatureWorld.fill(value, py * this.width + left, py * this.width + right);
+    }
+  }
 
   paintWall(x: number, y: number, wall: number, radius: number): void {
     const blockRadius = Math.max(0, Math.ceil(radius / 4));
@@ -39,6 +63,7 @@ export class RenderLabBackend extends DeterministicBackend {
 
   override clear(): void {
     super.clear();
+    this.temperatureWorld?.fill(RENDER_LAB_AMBIENT_TEMPERATURE);
     if (!this.wallWorld) return;
     for (let index = 0; index < this.wallWorld.length; index++) {
       if (this.wallWorld[index] === 0) continue;
