@@ -161,6 +161,10 @@ export class Game {
         if (x < 0 || y < 0 || x >= this.simulation.width || y >= this.simulation.height) return -1;
         return this.simulation.cells()[y * this.simulation.width + x];
       },
+      wall: (x, y) => {
+        if (x < 0 || y < 0 || x >= this.simulation.width || y >= this.simulation.height) return -1;
+        return this.simulation.walls?.()[y * this.simulation.width + x] ?? 0;
+      },
       sourceTarget: (x, y) => this.simulation.configuredSourceTargetAt?.(x, y) ?? Material.Empty,
       occupiedCells: () => {
         let occupied = 0;
@@ -171,6 +175,9 @@ export class Game {
       setLiquidFieldLighting: (enabled) => { this.renderer.setLiquidFieldLightingEnabled(enabled); },
       setTranslucentFieldTransmission: (enabled) => {
         this.renderer.setTranslucentFieldTransmissionEnabled(enabled);
+      },
+      setTranslucentBackdropRefraction: (enabled) => {
+        this.renderer.setTranslucentBackdropRefractionEnabled(enabled);
       },
       clear: () => { this.simulation.clear(); },
       setRadius: (radius) => { this.radius = Math.max(0, Math.min(64, Math.round(radius))); },

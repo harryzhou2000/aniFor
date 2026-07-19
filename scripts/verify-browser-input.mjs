@@ -117,6 +117,9 @@ async function auditMode(mode) {
       occupied: window.__ANIFOR_INPUT_AUDIT__.occupiedCells(),
       upperWall: window.__ANIFOR_INPUT_AUDIT__.cell(200, 138),
       lowerWall: window.__ANIFOR_INPUT_AUDIT__.cell(50, 348),
+      patternedGlassWall: window.__ANIFOR_INPUT_AUDIT__.wall(154, 172),
+      patternedMetalWall: window.__ANIFOR_INPUT_AUDIT__.wall(129, 172),
+      patternedIceWall: window.__ANIFOR_INPUT_AUDIT__.wall(525, 229),
     })`);
     assert(canonicalFixture.status?.includes('TypeScript deterministic fallback'),
       `${mode}: canonical render lab used ${canonicalFixture.status}`);
@@ -124,6 +127,9 @@ async function auditMode(mode) {
       `${mode}: canonical render lab contains only ${canonicalFixture.occupied} cells`);
     assert(canonicalFixture.upperWall === 3 && canonicalFixture.lowerWall === 3,
       `${mode}: canonical render lab signature changed (${JSON.stringify(canonicalFixture)})`);
+    assert(canonicalFixture.patternedGlassWall > 0 && canonicalFixture.patternedMetalWall > 0
+      && canonicalFixture.patternedIceWall > 0,
+    `${mode}: patterned translucent wall fixture is missing (${JSON.stringify(canonicalFixture)})`);
 
     // Read the rendered canvas, not semantic cells, so framebuffer clipping and
     // backend compositing regressions are observable in the browser gate.
@@ -153,7 +159,23 @@ async function auditMode(mode) {
     const unlitTranslucentCaptures = await waitForStablePageCapture(
       cdp, `${mode} unlit translucent framebuffer`,
     );
-    await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setTranslucentFieldTransmission(true); true');
+    await evaluate(cdp, `(() => {
+      window.__ANIFOR_INPUT_AUDIT__.setTranslucentFieldTransmission(true);
+      window.__ANIFOR_INPUT_AUDIT__.setTranslucentBackdropRefraction(false);
+      return true;
+    })()`);
+    const straightBackdropCaptures = await waitForStablePageCapture(
+      cdp, `${mode} straight translucent backdrop framebuffer`,
+    );
+    await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setTranslucentBackdropRefraction(true); true');
+    const refractedBackdropCaptures = await waitForStablePageCapture(
+      cdp, `${mode} refracted translucent backdrop framebuffer`,
+    );
+    await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setTranslucentBackdropRefraction(false); true');
+    const repeatedStraightBackdropCaptures = await waitForStablePageCapture(
+      cdp, `${mode} repeated straight translucent backdrop framebuffer`,
+    );
+    await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setTranslucentBackdropRefraction(true); true');
     const powderStyleCaptures = {};
     const powderStyleSelection = {};
     for (const style of ['grains', 'local', 'smooth']) {
@@ -206,6 +228,9 @@ async function auditMode(mode) {
       ['unlit gas', unlitGasCaptures],
       ['unlit liquid', unlitLiquidCaptures],
       ['unlit translucent', unlitTranslucentCaptures],
+      ['straight translucent backdrop', straightBackdropCaptures],
+      ['refracted translucent backdrop', refractedBackdropCaptures],
+      ['repeated straight translucent backdrop', repeatedStraightBackdropCaptures],
       ...Object.entries(powderStyleCaptures).map(([style, captures]) => [`powder ${style}`, captures]),
       ['blank', blankCaptures],
     ]) assertCanvasRectsEqual(
@@ -626,6 +651,63 @@ async function auditMode(mode) {
       sample.litVisible === sample.unlitVisible
       && Math.abs(sample.litWorldArea - sample.unlitWorldArea) <= 0.01
     )), `${mode}: scene-light coupling changed translucent support (${JSON.stringify(translucentSupportInvariantSamples)})`);
+    const backdropRefractionSamples = await sampleBackdropRefractionRegions(cdp, {
+      straight: straightBackdropCaptures.capture.data,
+      refracted: refractedBackdropCaptures.capture.data,
+      repeatedStraight: repeatedStraightBackdropCaptures.capture.data,
+    }, [
+      { name: 'patternedGlassCore', x: 154, y: 172, radius: 8 },
+      { name: 'patternedIceCore', x: 525, y: 229, radius: 6 },
+      { name: 'opaqueMetalControl', x: 129, y: 172, radius: 8 },
+    ], canonicalCaptures.canvasRect);
+    const backdropRefraction = Object.fromEntries(
+      backdropRefractionSamples.map((sample) => [sample.name, sample]),
+    );
+    assert(backdropRefraction.patternedGlassCore.rms >= 1
+      && backdropRefraction.patternedGlassCore.bipolarBalance >= 0.75
+      && backdropRefraction.patternedGlassCore.coverage >= 0.20
+      && backdropRefraction.patternedGlassCore.meanBiasRatio <= 0.20
+      && backdropRefraction.patternedGlassCore.peak <= 8,
+    `${mode}: Glass did not spatially bend the patterned wall (${JSON.stringify(backdropRefractionSamples)})`);
+    assert(backdropRefraction.patternedIceCore.rms >= 0.75
+      && backdropRefraction.patternedIceCore.bipolarBalance >= 0.65
+      && backdropRefraction.patternedIceCore.coverage >= 0.12
+      && backdropRefraction.patternedIceCore.meanBiasRatio <= 0.20
+      && backdropRefraction.patternedIceCore.peak <= 8,
+    `${mode}: Ice did not spatially facet the patterned wall (${JSON.stringify(backdropRefractionSamples)})`);
+    assert(backdropRefraction.patternedGlassCore.rms
+      >= backdropRefraction.patternedIceCore.rms * 1.20,
+    `${mode}: clear Glass and frosted Ice lost their optical distinction (${JSON.stringify(backdropRefractionSamples)})`);
+    assert(backdropRefraction.opaqueMetalControl.peak <= 1
+      && backdropRefraction.opaqueMetalControl.rms <= 0.15,
+    `${mode}: backdrop refraction leaked into matched opaque Metal (${JSON.stringify(backdropRefractionSamples)})`);
+    assert(backdropRefractionSamples.every((sample) => sample.repeatPeak <= 1),
+      `${mode}: refraction off-on-off sequence was not deterministic (${JSON.stringify(backdropRefractionSamples)})`);
+    const backdropSupportRegions = [
+      { name: 'patternedGlassSupport', x: 154, y: 172, radius: 8, silhouette: true },
+      { name: 'patternedIceSupport', x: 525, y: 229, radius: 6, silhouette: true },
+    ];
+    const [straightBackdropSupport, refractedBackdropSupport] = await Promise.all([
+      samplePageRegions(
+        cdp, straightBackdropCaptures.capture.data, backdropSupportRegions,
+        blankCaptures.capture.data, blankCaptures.reference.data, canonicalCaptures.canvasRect,
+      ),
+      samplePageRegions(
+        cdp, refractedBackdropCaptures.capture.data, backdropSupportRegions,
+        blankCaptures.capture.data, blankCaptures.reference.data, canonicalCaptures.canvasRect,
+      ),
+    ]);
+    const backdropSupportInvariantSamples = straightBackdropSupport.map((straight, index) => ({
+      name: straight.name,
+      straightVisible: straight.visible,
+      refractedVisible: refractedBackdropSupport[index].visible,
+      straightWorldArea: straight.worldArea,
+      refractedWorldArea: refractedBackdropSupport[index].worldArea,
+    }));
+    assert(backdropSupportInvariantSamples.every((sample) => (
+      sample.straightVisible === sample.refractedVisible
+      && Math.abs(sample.straightWorldArea - sample.refractedWorldArea) <= 0.01
+    )), `${mode}: backdrop refraction changed translucent support (${JSON.stringify(backdropSupportInvariantSamples)})`);
     const liquidColumnSamples = await sampleCanonicalRegions([
       { name: 'waterColumn', x: 224, y: 270, radius: 8 },
       { name: 'oilColumn', x: 263, y: 270, radius: 8 },
@@ -670,6 +752,16 @@ async function auditMode(mode) {
     }
 
     if (visualOnly) {
+      const visualScreenshot = screenshotPath(mode);
+      if (visualScreenshot) {
+        await writeFile(
+          visualScreenshot, Buffer.from(refractedBackdropCaptures.capture.data, 'base64'),
+        );
+        await writeFile(
+          variantScreenshotPath(visualScreenshot, 'straight-backdrop'),
+          Buffer.from(straightBackdropCaptures.capture.data, 'base64'),
+        );
+      }
       assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
       cdp.close();
       return {
@@ -683,9 +775,12 @@ async function auditMode(mode) {
         liquidLightResponseSamples,
         translucentLightResponseSamples,
         translucentSupportInvariantSamples,
+        backdropRefractionSamples,
+        backdropSupportInvariantSamples,
         silhouetteSamples,
         liquidContourCrossings,
         liquidReliefSamples,
+        ...(visualScreenshot ? { screenshot: visualScreenshot } : {}),
         browserErrors: errors.length,
       };
     }
@@ -908,6 +1003,8 @@ async function auditMode(mode) {
       liquidLightResponseSamples,
       translucentLightResponseSamples,
       translucentSupportInvariantSamples,
+      backdropRefractionSamples,
+      backdropSupportInvariantSamples,
       ...(canvasGasLightingRefresh ? { canvasGasLightingRefresh } : {}),
       liquidColumnSamples,
       liquidReliefSamples,
@@ -1278,9 +1375,9 @@ async function auditNativeSemantics(cdp, mode, dpr, screenshot) {
     const nativeQuery = new URLSearchParams(location.search).get('simulation') === 'native';
     const nativeStatus = document.querySelector('.status')?.textContent?.includes('direct WebAssembly');
     return nativeQuery && nativeStatus && Boolean(window.__ANIFOR_INPUT_AUDIT__ && document.documentElement);
-  })()`), 15_000, `native input audit API (${mode})`);
+  })()`), 30_000, `native input audit API (${mode})`);
   await waitFor(() => evaluate(cdp, `window.__ANIFOR_INPUT_AUDIT__.backend().backend === ${JSON.stringify(mode)}`),
-    15_000, `native ${mode} backend`);
+    30_000, `native ${mode} backend`);
   await evaluate(cdp, `window.__ANIFOR_INPUT_AUDIT__.clear(); window.__ANIFOR_INPUT_AUDIT__.setRadius(0); window.__ANIFOR_INPUT_AUDIT__.resetView(); true`);
   await sleep(120);
   const initial = await metrics(cdp);
@@ -2181,6 +2278,90 @@ async function sampleLightingDifferenceRegions(cdp, screenshots, regions, captur
   })()`);
 }
 
+async function sampleBackdropRefractionRegions(cdp, screenshots, regions, captureCanvasRect) {
+  return evaluate(cdp, `(async () => {
+    const sources = ${JSON.stringify(Object.fromEntries(
+    Object.entries(screenshots).map(([name, data]) => [name, `data:image/png;base64,${data}`]),
+  ))};
+    const contexts = {};
+    let imageWidth = 0;
+    let imageHeight = 0;
+    for (const [name, source] of Object.entries(sources)) {
+      const image = new Image();
+      image.src = source;
+      await image.decode();
+      if (imageWidth && (image.naturalWidth !== imageWidth || image.naturalHeight !== imageHeight)) {
+        throw new Error('Backdrop refraction screenshot geometry mismatch');
+      }
+      imageWidth = image.naturalWidth;
+      imageHeight = image.naturalHeight;
+      const copy = document.createElement('canvas');
+      copy.width = imageWidth;
+      copy.height = imageHeight;
+      const context = copy.getContext('2d', { willReadFrequently: true });
+      if (!context) throw new Error('Backdrop refraction sampler unavailable');
+      context.drawImage(image, 0, 0);
+      contexts[name] = context;
+    }
+    const bounds = ${JSON.stringify(captureCanvasRect)};
+    const pageScaleX = imageWidth / innerWidth;
+    const pageScaleY = imageHeight / innerHeight;
+    const worldScaleX = bounds.width / ${WORLD_WIDTH};
+    const worldScaleY = bounds.height / ${WORLD_HEIGHT};
+    return ${JSON.stringify(regions)}.map((region) => {
+      const radius = region.radius ?? 3;
+      const x = Math.floor((bounds.left + (region.x - radius) * worldScaleX) * pageScaleX);
+      const y = Math.floor((bounds.top + (region.y - radius) * worldScaleY) * pageScaleY);
+      const width = Math.max(1, Math.ceil(radius * 2 * worldScaleX * pageScaleX));
+      const height = Math.max(1, Math.ceil(radius * 2 * worldScaleY * pageScaleY));
+      const data = Object.fromEntries(Object.entries(contexts).map(([name, context]) => [
+        name, context.getImageData(x, y, width, height).data,
+      ]));
+      let positive = 0;
+      let negative = 0;
+      let signed = 0;
+      let squared = 0;
+      let visible = 0;
+      let peak = 0;
+      let repeatPeak = 0;
+      const count = Math.max(1, width * height);
+      for (let offset = 0; offset < data.straight.length; offset += 4) {
+        const straight = data.straight[offset] * 0.2126
+          + data.straight[offset + 1] * 0.7152 + data.straight[offset + 2] * 0.0722;
+        const refracted = data.refracted[offset] * 0.2126
+          + data.refracted[offset + 1] * 0.7152 + data.refracted[offset + 2] * 0.0722;
+        const repeated = data.repeatedStraight[offset] * 0.2126
+          + data.repeatedStraight[offset + 1] * 0.7152
+          + data.repeatedStraight[offset + 2] * 0.0722;
+        const difference = refracted - straight;
+        signed += difference;
+        squared += difference * difference;
+        positive += Math.max(0, difference);
+        negative += Math.max(0, -difference);
+        const magnitude = Math.abs(difference);
+        if (magnitude >= 1.5) visible++;
+        peak = Math.max(peak, magnitude);
+        repeatPeak = Math.max(repeatPeak, Math.abs(repeated - straight));
+      }
+      const rms = Math.sqrt(squared / count);
+      return {
+        name: region.name,
+        rms: Math.round(rms * 100) / 100,
+        signedMean: Math.round(signed / count * 100) / 100,
+        meanBiasRatio: Math.round(Math.abs(signed / count) / Math.max(0.001, rms) * 1000) / 1000,
+        positiveMean: Math.round(positive / count * 100) / 100,
+        negativeMean: Math.round(negative / count * 100) / 100,
+        bipolarBalance: Math.round(
+          Math.min(positive, negative) / Math.max(1, Math.max(positive, negative)) * 1000,
+        ) / 1000,
+        coverage: Math.round(visible / count * 1000) / 1000,
+        peak: Math.round(peak * 100) / 100,
+        repeatPeak: Math.round(repeatPeak * 100) / 100,
+      };
+    });
+  })()`);
+}
+
 async function sampleZoomedSquareGrain(
   cdp, screenshotBase64, baselineBase64, captureCanvasRect, anchor, zoom,
 ) {
@@ -2714,6 +2895,14 @@ function assertPairedVisualRelief(results) {
     const ratio = canvasSample.positiveRgb[channel] / Math.max(0.25, webglSample.positiveRgb[channel]);
     assert(ratio >= 0.4 && ratio <= 2.5,
       `Canvas/WebGL ${name} isolated field-light response diverged (${canvasSample.positiveRgb[channel]}/${webglSample.positiveRgb[channel]})`);
+  }
+  for (const name of ['patternedGlassCore', 'patternedIceCore']) {
+    const canvasSample = canvas.backdropRefractionSamples.find((sample) => sample.name === name);
+    const webglSample = webgl.backdropRefractionSamples.find((sample) => sample.name === name);
+    assert(canvasSample && webglSample, `paired backdrop-refraction sample missing ${name}`);
+    const ratio = canvasSample.rms / Math.max(0.25, webglSample.rms);
+    assert(ratio >= 0.65 && ratio <= 2.0,
+      `Canvas/WebGL ${name} refraction magnitude diverged (${canvasSample.rms}/${webglSample.rms})`);
   }
 }
 

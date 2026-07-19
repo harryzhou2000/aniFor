@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DeterministicBackend } from '../simulation/deterministic-backend';
+import { RenderLabBackend } from '../simulation/render-lab-backend';
 import { ALL_MATERIALS, Material } from '../shared/materials';
 import { renderPhase, renderProfile, RenderPhase, RenderProfile } from './render-profile';
 import { renderOptics, RenderOptics } from './render-optics';
@@ -16,11 +16,12 @@ describe('render lab scene', () => {
   });
 
   it('builds a deterministic atlas with representative material families', () => {
-    const first = new DeterministicBackend(612, 384);
-    const second = new DeterministicBackend(612, 384);
+    const first = new RenderLabBackend(612, 384);
+    const second = new RenderLabBackend(612, 384);
     applyRenderLabScene(first);
     applyRenderLabScene(second);
     expect(first.cells()).toEqual(second.cells());
+    expect(first.walls()).toEqual(second.walls());
 
     const counts = new Uint32Array(256);
     for (const material of first.cells()) counts[material]++;
@@ -64,6 +65,11 @@ describe('render lab scene', () => {
     expect(first.cells()[229 * 612 + 545]).toBe(Material.ELEC);
     expect(first.cells()[229 * 612 + 431]).toBe(Material.Glass);
     expect(first.cells()[229 * 612 + 539]).toBe(Material.Ice);
+    expect(first.walls()[172 * 612 + 128]).not.toBe(0);
+    expect(first.walls()[172 * 612 + 160]).not.toBe(0);
+    expect(first.walls()[229 * 612 + 445]).not.toBe(0);
+    expect(first.walls()[229 * 612 + 525]).not.toBe(0);
+    expect(first.walls()[172 * 612 + 128]).not.toBe(first.walls()[172 * 612 + 132]);
   });
 
   it('exercises every non-neutral styled family plus an energy phase', () => {

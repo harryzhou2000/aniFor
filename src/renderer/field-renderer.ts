@@ -27,6 +27,7 @@ import {
   CANVAS_TRANSLUCENT_FIELD_GAIN, canvasTranslucentFieldExposure, lightCanvasSurface,
 } from './canvas-surface-light';
 import { reconstructSolidSurface } from './canvas-solid-surface';
+import { writeCanvasRefractedWallPixel, writeCanvasWallPixel } from './canvas-wall-style';
 import {
   applyCanvasSolidLighting, canvasSolidInteriorCohesion, canvasSolidRelief,
 } from './canvas-solid-relief';
@@ -135,6 +136,7 @@ export class MaterialRenderer {
   private gasFieldLightingEnabled = true;
   private liquidFieldLightingEnabled = true;
   private translucentFieldTransmissionEnabled = true;
+  private translucentBackdropRefractionEnabled = true;
   private powderRenderStyle: PowderRenderStyle = 'smooth';
   private gasFieldLightingDirty = false;
   private canvasPresentationTimingEnabled = false;
@@ -277,6 +279,13 @@ export class MaterialRenderer {
     this.changed = true;
   }
 
+  setTranslucentBackdropRefractionEnabled(enabled: boolean): void {
+    if (enabled === this.translucentBackdropRefractionEnabled) return;
+    this.translucentBackdropRefractionEnabled = enabled;
+    this.presenter?.setTranslucentBackdropRefractionEnabled(enabled);
+    this.changed = true;
+  }
+
   setPowderRenderStyle(style: PowderRenderStyle): void {
     if (style === this.powderRenderStyle) return;
     this.powderRenderStyle = style;
@@ -366,6 +375,7 @@ export class MaterialRenderer {
     presenter.setGasFieldLightingEnabled(this.gasFieldLightingEnabled);
     presenter.setLiquidFieldLightingEnabled(this.liquidFieldLightingEnabled);
     presenter.setTranslucentFieldTransmissionEnabled(this.translucentFieldTransmissionEnabled);
+    presenter.setTranslucentBackdropRefractionEnabled(this.translucentBackdropRefractionEnabled);
     presenter.setPowderRenderStyle(this.powderRenderStyle);
     presenter.update(
       this.rendered, this.renderedWalls, this.simulation.temperature?.(), this.simulation.velocity?.(),
@@ -496,7 +506,7 @@ export class MaterialRenderer {
       const pixel = index * 4;
       const wall = this.renderedWalls?.[index] ?? 0;
       if (wall) {
-        setWallPixel(base, pixel, wall, x, y);
+        writeCanvasWallPixel(base, pixel, wall, x, y);
         if (material === Material.Empty && fields.emission.hasLight) {
           const wallExposure = cardinalExposure(this.renderedWalls, width, height, x, y, wall);
           lightCanvasSurface(
@@ -572,6 +582,10 @@ export class MaterialRenderer {
       const surfaceLight = normalLight + (denseSolidInterior
         ? canvasSolidRelief(x, y, material, profile, optics)
         : 0);
+      if (this.translucentBackdropRefractionEnabled && wall && denseSolidInterior
+        && applicableTraits === 0 && !PROJECTED_RENDER_INFO[material]?.emissive) {
+        writeCanvasRefractedWallPixel(base, pixel, wall, x, y, material);
+      }
 
       if (phase === RenderPhase.Energy) {
         const info = PROJECTED_RENDER_INFO[material];
@@ -790,11 +804,20 @@ export class MaterialRenderer {
             this.styledColor[1] += surfaceLight;
             this.styledColor[2] += surfaceLight;
           }
-          setPixel(
-            target, pixel,
-            this.styledColor[0], this.styledColor[1], this.styledColor[2],
-            optics === RenderOptics.TranslucentRigid ? 218 : 255,
-          );
+          const alpha = optics === RenderOptics.TranslucentRigid ? 218 : 255;
+          if (wall && optics === RenderOptics.TranslucentRigid) {
+            // Preserve the independent native-wall plane below translucent
+            // matter, matching WebGL's source-over backdrop composition.
+            compositePixel(
+              target, pixel,
+              this.styledColor[0], this.styledColor[1], this.styledColor[2], alpha,
+            );
+          } else {
+            setPixel(
+              target, pixel,
+              this.styledColor[0], this.styledColor[1], this.styledColor[2], alpha,
+            );
+          }
         }
         if (info.emissive) {
           const light = info.phase === RenderPhase.Gas || info.phase === RenderPhase.Liquid
@@ -1046,18 +1069,6 @@ function setPixel(target: Uint8ClampedArray, offset: number, red: number, green:
   target[offset + 1] = clamp(green, 0, 255);
   target[offset + 2] = clamp(blue, 0, 255);
   target[offset + 3] = clamp(alpha, 0, 255);
-}
-
-function setWallPixel(target: Uint8ClampedArray, offset: number, wall: number, x: number, y: number): void {
-  const colors: Readonly<Record<number, readonly [number, number, number]>> = {
-    1: [125, 139, 150], 2: [91, 111, 139], 3: [191, 130, 60], 6: [68, 145, 170],
-    8: [104, 105, 108], 9: [111, 132, 150], 10: [174, 132, 73], 13: [129, 108, 156],
-    15: [205, 191, 91], 16: [68, 80, 91],
-  };
-  const color = colors[wall] ?? [103, 105, 111];
-  const checker = ((Math.floor(x / 4) + Math.floor(y / 4)) & 1) ? 9 : -4;
-  const filter = [6, 9, 10, 13, 15].includes(wall) && ((x + y) & 3) === 0 ? 22 : 0;
-  setPixel(target, offset, color[0] + checker + filter, color[1] + checker + filter, color[2] + checker + filter, 248);
 }
 
 function hash(value: number): number {

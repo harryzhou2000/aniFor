@@ -71,6 +71,7 @@ uniform float uHighQuality;
 uniform float uGasFieldLighting;
 uniform float uLiquidFieldLighting;
 uniform float uTranslucentFieldTransmission;
+uniform float uTranslucentBackdropRefraction;
 uniform float uPowderStyle;
 vec4 field(vec2 uv) { return texture(uFieldTexture, clamp(uv, uTexel * 0.5, vec2(1.0) - uTexel * 0.5)); }
 vec4 wallField(vec2 uv) { return texture(uWallTexture, clamp(uv, uTexel * 0.5, vec2(1.0) - uTexel * 0.5)); }
@@ -303,12 +304,31 @@ vec3 wallColor(float wall) {
   return vec3(0.41, 0.42, 0.44);
 }
 float wallPattern(float wall, vec2 position) {
-  float checker = mod(floor(position.x / 4.0) + floor(position.y / 4.0), 2.0);
+  vec2 cell = floor(position);
+  float checker = mod(floor(cell.x / 4.0) + floor(cell.y / 4.0), 2.0);
   float pattern = mix(0.94, 1.04, checker);
   if (wall == 6.0 || wall == 9.0 || wall == 10.0 || wall == 13.0 || wall == 15.0) {
-    pattern += step(0.72, fract((position.x + position.y) * 0.25)) * 0.12;
+    float stripe = 1.0 - step(0.5, mod(cell.x + cell.y, 4.0));
+    pattern += stripe * 0.12;
   }
   return pattern;
+}
+float refractedWallPattern(float wall, vec2 position, float material) {
+  vec2 cell = floor(position);
+  // Exact projected IDs: ICE=12 is stable faceted/frosted; GLAS=24 keeps one
+  // coherent lens shift. Only analytic pattern coordinates move—wall ID and
+  // wall texture support are never sampled from a neighbouring cell.
+  if (material == 24.0) {
+    float phase = mod(cell.x * 2.0 + cell.y + material * 11.0, 128.0);
+    vec2 offset = vec2(phase < 64.0 ? 2.0 : -2.0, 0.0);
+    return wallPattern(wall, cell + offset);
+  }
+  float facet = mod(floor(cell.x / 4.0) + floor(cell.y / 4.0) * 3.0 + material, 4.0);
+  vec2 offset = facet == 0.0 ? vec2(2.0, 0.0)
+    : (facet == 1.0 ? vec2(-2.0, 0.0)
+    : (facet == 2.0 ? vec2(0.0, 2.0) : vec2(0.0, -2.0)));
+  return wallPattern(wall, cell + offset) * 0.68
+    + wallPattern(wall, cell - offset) * 0.32;
 }
 vec2 nearbySurface(vec2 uv) {
   float solid = 0.0;
@@ -917,7 +937,10 @@ void main() {
         // support, alpha, ownership, texture count, and pass count are unchanged.
         float transmittedReach = smoothstep(0.002, 0.42, emissionState.a);
         float transmittedWeight = solidInterior * mix(0.10, 0.17, solidDepth);
-        vec3 transmittedLight = emissionState.rgb * transmittedReach * transmittedWeight;
+        vec3 transmissionTint = material == 12.0
+          ? vec3(0.88, 1.02, 1.12) : vec3(1.0);
+        vec3 transmittedLight = emissionState.rgb * transmissionTint
+          * transmittedReach * transmittedWeight;
         color += (vec3(1.0) - clamp(color, 0.0, 1.0)) * transmittedLight;
       }
     }
@@ -1047,7 +1070,15 @@ void main() {
   float compositeAlpha = alpha;
   if (wall > 0.5 && wallOnly < 0.5) {
     float backgroundAlpha = smoothstep(0.30, 0.70, wallSurface.x) * 0.94;
-    premultiplied += wallColor(wall) * wallPattern(wall, fieldPosition) * backgroundAlpha * (1.0 - compositeAlpha);
+    float backdropPattern = wallPattern(wall, fieldPosition);
+    float exactRefractor = (material == 12.0 || material == 24.0) ? 1.0 : 0.0;
+    float refractedInterior = uTranslucentBackdropRefraction * exactRefractor
+      * (1.0 - step(0.5, abs(optics - 12.0))) * step(0.01, solidInterior)
+      * step(0.72, wallSurface.x) * (1.0 - surfaceOnly);
+    backdropPattern = mix(
+      backdropPattern, refractedWallPattern(wall, fieldPosition, material), refractedInterior
+    );
+    premultiplied += wallColor(wall) * backdropPattern * backgroundAlpha * (1.0 - compositeAlpha);
     compositeAlpha += backgroundAlpha * (1.0 - compositeAlpha);
   }
   finalColor = vec4(premultiplied, compositeAlpha);
@@ -1171,6 +1202,7 @@ export class PixiFieldPresenter {
       uGasFieldLighting: { value: 1, type: 'f32' },
       uLiquidFieldLighting: { value: 1, type: 'f32' },
       uTranslucentFieldTransmission: { value: 1, type: 'f32' },
+      uTranslucentBackdropRefraction: { value: 1, type: 'f32' },
       uPowderStyle: { value: powderRenderStyleValue('smooth'), type: 'f32' },
     });
     const filter = Filter.from({
@@ -1295,6 +1327,11 @@ export class PixiFieldPresenter {
 
   setTranslucentFieldTransmissionEnabled(enabled: boolean): void {
     this.uniforms.uniforms.uTranslucentFieldTransmission = enabled ? 1 : 0;
+    this.renderApplication();
+  }
+
+  setTranslucentBackdropRefractionEnabled(enabled: boolean): void {
+    this.uniforms.uniforms.uTranslucentBackdropRefraction = enabled ? 1 : 0;
     this.renderApplication();
   }
 

@@ -86,6 +86,10 @@ export function applyRenderLabScene(simulation: SimulationBackend): void {
   // shared curved phase silhouette and a deliberately curved internal seam.
   plot.contactCapsule(18, 160, 74, 25, 12, 54, Material.Sand, Material.Salt);
   plot.contactCapsule(104, 160, 74, 25, 12, 140, Material.Metal, Material.Glass);
+  // A real independent wall plane sits behind both halves. Opaque Metal is the
+  // matched control; Glass must bend the alternating native-wall pattern while
+  // preserving this capsule's exact semantic silhouette.
+  plot.wallStripeRect(116, 164, 50, 17, 6, 10);
 
   // Isolated controls catch accidental field widening and preserve the visual
   // contract that one powder grain is round while one droplet remains sparse.
@@ -120,6 +124,10 @@ export function applyRenderLabScene(simulation: SimulationBackend): void {
   // not overlap the Glass/Ice semantic cells or the neighbouring opaque tiles.
   plot.rect(424, 221, 3, 17, Material.Fire, 1, 0);
   plot.rect(544, 221, 3, 17, Material.ELEC, 1, 0);
+  // Dense Glass and Ice plates receive the same alternating background so the
+  // composed gate can separate patterned-scene transmission from emission tint.
+  plot.wallStripeRect(432, 223, 27, 13, 6, 10);
+  plot.wallStripeRect(512, 223, 27, 13, 6, 10);
   // Equal-height warm/cool sources expose how each family responds to coloured
   // scene light. The centre column remains a lower-light comparison surface.
   plot.rect(377, 194, 5, 147, Material.Fire, 0.78, 677);
@@ -133,6 +141,19 @@ class ScenePlotter {
   eraseRect(x: number, y: number, width: number, height: number): void {
     for (let py = y; py < y + height; py++) for (let px = x; px < x + width; px++) {
       this.simulation.erase(px, py, 0);
+    }
+  }
+
+  wallStripeRect(
+    x: number, y: number, width: number, height: number, firstWall: number, secondWall: number,
+  ): void {
+    if (!this.simulation.paintWall) return;
+    const right = x + width;
+    const bottom = y + height;
+    for (let py = y; py < bottom; py += 4) for (let px = x; px < right; px += 4) {
+      const wall = ((Math.floor((px - x) / 4) + Math.floor((py - y) / 8)) & 1)
+        ? secondWall : firstWall;
+      this.simulation.paintWall(px, py, wall, 0);
     }
   }
 

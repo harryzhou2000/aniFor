@@ -25,6 +25,9 @@ import { PowderSurfaceField } from '../src/renderer/powder-surface-field';
 import { RenderPhase, RenderProfile } from '../src/renderer/render-profile';
 import { RenderTrait } from '../src/renderer/render-traits';
 import { compositePixel } from '../src/renderer/rgba-composite';
+import {
+  writeCanvasRefractedWallPixel, writeCanvasWallPixel,
+} from '../src/renderer/canvas-wall-style';
 
 const width = 612;
 const height = 384;
@@ -137,6 +140,7 @@ let traitChecksum = 0;
 let solidReliefChecksum = 0;
 let liquidLightChecksum = 0;
 let translucentLightChecksum = 0;
+let translucentBackdropChecksum = 0;
 const profileEmission = new Uint8Array(emission.bytes.length);
 for (let y = 0; y < emission.height; y++) for (let x = 0; x < emission.width; x++) {
   const offset = (y * emission.width + x) * 4;
@@ -154,6 +158,11 @@ const localizedEmissionMaterials = new Uint8Array(width * height);
 localizedEmissionMaterials[Math.floor(height / 2) * width + Math.floor(width / 2)] = Material.Fire;
 const localizedEmission = new EmissionField(width, height, emissiveByMaterial, colorByMaterial);
 localizedEmission.update(localizedEmissionMaterials);
+const translucentBackdropSeed = new Uint8ClampedArray(width * height * 4);
+const translucentBackdropPixels = new Uint8ClampedArray(translucentBackdropSeed.length);
+for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) {
+  writeCanvasWallPixel(translucentBackdropSeed, (y * width + x) * 4, 6, x, y);
+}
 
 function seedPixels(source: Uint8Array, include = new Uint8Array(256).fill(1)): Uint8ClampedArray {
   const pixels = new Uint8ClampedArray(source.length * 4);
@@ -354,6 +363,16 @@ console.log(JSON.stringify({
     }),
     translucentFieldTransmissionWorstCase: profileTranslucentFieldTransmission(),
     translucentFieldTransmissionLocalizedSource: profileLocalizedTranslucentFieldTransmission(),
+    translucentBackdropRefractionWorstCase: sample(() => {
+      translucentBackdropPixels.set(translucentBackdropSeed);
+      for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) {
+        writeCanvasRefractedWallPixel(
+          translucentBackdropPixels, (y * width + x) * 4, 6, x, y, Material.Glass,
+        );
+      }
+      translucentBackdropChecksum = translucentBackdropPixels[0]
+        + translucentBackdropPixels[translucentBackdropPixels.length - 4];
+    }),
     liquidSurface: sample(() => {
       liquidPixels.set(liquidSeed);
       reconstructLiquidSurface(
@@ -414,4 +433,5 @@ console.log(JSON.stringify({
   solidReliefChecksum: Math.round(solidReliefChecksum),
   liquidLightChecksum: Math.round(liquidLightChecksum),
   translucentLightChecksum: Math.round(translucentLightChecksum),
+  translucentBackdropChecksum: Math.round(translucentBackdropChecksum),
 }, null, 2));

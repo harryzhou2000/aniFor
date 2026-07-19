@@ -1,12 +1,13 @@
 import { DeterministicBackend } from './deterministic-backend';
 import { PowderToyBackend } from './powder-toy-backend';
+import { RenderLabBackend } from './render-lab-backend';
 import type { SimulationBackend } from './types';
 import { WasmBackend } from './wasm-backend';
 
 // The UI depends only on SimulationBackend. A future Powder Toy module can be
 // selected here without leaking its memory layout into rendering or controls.
 export async function createSimulation(options: { readonly renderLab?: boolean } = {}): Promise<SimulationBackend> {
-  if (options.renderLab) return new DeterministicBackend(612, 384);
+  if (options.renderLab) return new RenderLabBackend(612, 384);
   try {
     return await loadWithin(PowderToyBackend.load(), 7000, 'Powder Toy startup timed out');
   } catch {

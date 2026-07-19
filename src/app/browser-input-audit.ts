@@ -9,11 +9,13 @@ export interface BrowserInputAuditApi {
   readonly width: number;
   readonly height: number;
   cell(x: number, y: number): number;
+  wall(x: number, y: number): number;
   sourceTarget(x: number, y: number): number;
   occupiedCells(): number;
   setGasFieldLighting(enabled: boolean): void;
   setLiquidFieldLighting(enabled: boolean): void;
   setTranslucentFieldTransmission(enabled: boolean): void;
+  setTranslucentBackdropRefraction(enabled: boolean): void;
   clear(): void;
   setRadius(radius: number): void;
   setMaterial(material: Material): void;
