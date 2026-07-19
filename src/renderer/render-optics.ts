@@ -50,7 +50,6 @@ export function renderOptics(material: RenderOpticsMaterial): RenderOptics {
       return RenderOptics.SootyGas;
     case Material.Ice:
     case Material.Glass:
-    case Material.Quartz:
     case Material.DRIC:
     case Material.NICE:
     case Material.QRTZ:

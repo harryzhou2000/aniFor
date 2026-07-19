@@ -42,6 +42,7 @@ describe('render optics', () => {
     expect(optics(Material.Oxygen)).toBe(RenderOptics.CleanGas);
     expect(optics(Material.RFRG)).toBe(RenderOptics.CleanGas);
     expect(optics(Material.Sand)).toBe(RenderOptics.RoughGranular);
+    expect(optics(Material.Quartz)).toBe(RenderOptics.RoughGranular);
     expect(optics(Material.THDR)).toBe(RenderOptics.RoughGranular);
     expect(optics(Material.Wall)).toBe(RenderOptics.SmoothRigid);
     expect(optics(Material.LIFE_GOL)).toBe(RenderOptics.SmoothRigid);

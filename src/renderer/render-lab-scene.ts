@@ -69,6 +69,11 @@ export function applyRenderLabScene(simulation: SimulationBackend): void {
   plot.contactCapsule(18, 160, 74, 25, 12, 54, Material.Sand, Material.Salt);
   plot.contactCapsule(104, 160, 74, 25, 12, 140, Material.Metal, Material.Glass);
 
+  // Isolated controls catch accidental field widening and preserve the visual
+  // contract that one powder grain is round while one droplet remains sparse.
+  plot.rect(190, 164, 1, 1, Material.Water, 1, 0);
+  plot.rect(190, 176, 1, 1, Material.Sand, 1, 0);
+
   // Sand entering water: a stable paused mixture and a crisp wall reference.
   plot.rect(18, 192, 165, 154, Material.Water, 0.90, 401);
   plot.gradientRect(18, 192, 165, 86, Material.Sand, 0.86, 0.12, 409);

@@ -113,10 +113,10 @@ vec4 occupancyShape(vec2 uv, float material, float family, float contourSmoothin
   float q10 = compatibleAt(origin + vec2(uTexel.x, 0.0), material, family);
   float q01 = compatibleAt(origin + vec2(0.0, uTexel.y), material, family);
   float q11 = compatibleAt(origin + uTexel, material, family);
-  // Monotone Hermite weights retain the bilinear field's exact 0.5 integral,
-  // but make its first derivative meet continuously at cell centres. At the
-  // fixed 2x output this rounds chunk contours without a blur, extra sample,
-  // mesh, field, or systematic silhouette-area growth.
+  // Monotone Hermite weights retain the linear weight's exact 0.5 integral and
+  // make its first derivative meet continuously at cell centres. That reference
+  // property does not by itself prove final raster area, which is guarded by
+  // the composed fixture audit below this shader contract.
   float top = mix(q00, q10, weight.x);
   float bottom = mix(q01, q11, weight.x);
   float density = mix(top, bottom, weight.y);
@@ -372,7 +372,10 @@ void main() {
     // unlike-liquid ties transparent. Its alpha and RGB must stay authoritative;
     // re-selecting a cardinal semantic neighbour here caused diagonal gaps and
     // scan-order species bleed that disagreed with the Canvas presenter.
-    if (liquidDensity > 0.22) liquidOnly = 1.0;
+    // Keep the empty-cell promotion threshold above the semantic-cell-centred
+    // halo of one isolated droplet. Connected pools still cross it, while one
+    // liquid particle cannot manufacture a broad reconstructed footprint.
+    if (liquidDensity > 0.28) liquidOnly = 1.0;
     if (liquidOnly > 0.5) {
       halo = 1.0;
     } else if (atmosphereState.a > 0.004) {
@@ -754,9 +757,9 @@ void main() {
       color * vec3(0.88, 0.97, 1.08) + solidEnvironment * (0.16 + solidFresnel * 0.34),
       translucentSurface * mix(0.18, 0.34, solidDepth)
     );
-    // Moving/loose powder stays a deterministic soft grain. Only low-velocity
-    // contact with at least two other compatible powder samples fades into the
-    // shared Hermite heap contour. The transition is continuous, so small TPT
+    // Moving/loose powder stays a deterministic soft grain. At low velocity,
+    // rising compatible contact support fades into the shared Hermite heap
+    // contour. The transition is continuous, so small TPT
     // velocity changes do not flip between unrelated boundary modes.
     if (profile == 1.0) {
       float powderContact = smoothstep(1.55, 2.85, shape.w);

@@ -243,7 +243,9 @@ async function auditMode(mode) {
       },
     ]);
     assert(contactSilhouetteSamples.every((sample) => sample.dominantComponent >= 0.94
-      && sample.compactness >= 0.18),
+      && sample.compactness >= 0.18
+      && sample.worldArea / 1666 >= 0.70 && sample.worldArea / 1666 <= 1.40
+      && sample.outerRingFraction <= 0.03),
     `${mode}: unlike-material contact body fragmented or became rough (${JSON.stringify(contactSilhouetteSamples)})`);
     const contactMaterialSamples = await sampleCanonicalRegions([
       { name: 'contactSand', x: 42, y: 172, radius: 5 },
@@ -257,6 +259,15 @@ async function auditMode(mode) {
       && contactMaterialSamples[1].rgb[2] > contactMaterialSamples[0].rgb[2]
       && contactMaterialSamples[3].rgb[2] > contactMaterialSamples[2].rgb[2],
     `${mode}: unlike-material contact lost exclusive material ordering (${JSON.stringify(contactMaterialSamples)})`);
+    const isolatedMaterialSamples = await sampleCanonicalRegions([
+      { name: 'isolatedWater', x: 190.5, y: 164.5, radius: 3, topology: true, silhouette: true },
+      { name: 'isolatedSand', x: 190.5, y: 176.5, radius: 3, topology: true, silhouette: true },
+    ]);
+    assert(isolatedMaterialSamples.every((sample) => sample.visible > 0
+      && sample.dominantComponent >= 0.90
+      && sample.worldArea >= 0.20 && sample.worldArea <= (mode === 'canvas2d' ? 6.0 : 4.0)
+      && sample.outerRingFraction <= 0.05),
+    `${mode}: isolated droplet or powder grain widened, vanished, or fragmented (${JSON.stringify(isolatedMaterialSamples)})`);
     const liquidSeamSamples = await sampleCanonicalRegions([
       { name: 'capsuleWater', x: 289, y: 172, radius: 6 },
       { name: 'capsuleSeam', x: 302.5, y: 172, radiusX: 1.5, radiusY: 7 },
@@ -563,6 +574,7 @@ async function auditMode(mode) {
       silhouetteSamples,
       contactSilhouetteSamples,
       contactMaterialSamples,
+      isolatedMaterialSamples,
       liquidSeamSamples,
       volumeSamples,
       gasLightingSamples,
@@ -1787,10 +1799,12 @@ async function samplePageRegions(
         dominantComponentPixels = Math.max(dominantComponentPixels, componentPixels);
       }
       let boundaryPixels = 0;
+      let outerRingPixels = 0;
       if (region.silhouette) {
         for (let py = 0; py < height; py++) for (let px = 0; px < width; px++) {
           const sampleIndex = py * width + px;
           if (!visiblePixels[sampleIndex]) continue;
+          if (px === 0 || px + 1 === width || py === 0 || py + 1 === height) outerRingPixels++;
           if (px === 0 || px + 1 === width || py === 0 || py + 1 === height
             || !visiblePixels[sampleIndex - 1] || !visiblePixels[sampleIndex + 1]
             || !visiblePixels[sampleIndex - width] || !visiblePixels[sampleIndex + width]) {
@@ -1826,6 +1840,10 @@ async function samplePageRegions(
         } : {}),
         ...(region.silhouette ? {
           boundaryPixels,
+          worldArea: Math.round(visible
+            / Math.max(0.0001, worldScaleX * pageScaleX * worldScaleY * pageScaleY) * 100) / 100,
+          outerRingFraction: Math.round(outerRingPixels
+            / Math.max(1, width * 2 + height * 2 - 4) * 1000) / 1000,
           compactness: Math.round(
             4 * Math.PI * visible / Math.max(1, boundaryPixels * boundaryPixels) * 1000,
           ) / 1000,
