@@ -1,4 +1,4 @@
-import { RenderOptics } from './render-optics';
+import { RENDER_OPTICS_CLASS_COUNT, RenderOptics } from './render-optics';
 import { RenderProfile } from './render-profile';
 
 const SMOOTH_TRIANGLE_128 = Float32Array.from({ length: 128 }, (_, phase) => {
@@ -6,7 +6,7 @@ const SMOOTH_TRIANGLE_128 = Float32Array.from({ length: 128 }, (_, phase) => {
   return triangle * (1.5 - 0.5 * triangle * triangle);
 });
 const PROFILE_COUNT = 7;
-const OPTICS_PROFILE_COUNT = 12 * PROFILE_COUNT;
+const OPTICS_PROFILE_COUNT = RENDER_OPTICS_CLASS_COUNT * PROFILE_COUNT;
 const RELIEF_X = new Int8Array(OPTICS_PROFILE_COUNT);
 const RELIEF_Y = new Int8Array(OPTICS_PROFILE_COUNT);
 const RELIEF_STRENGTH = new Float32Array(OPTICS_PROFILE_COUNT);
@@ -28,6 +28,8 @@ for (let index = 0; index < OPTICS_PROFILE_COUNT; index++) {
     axisX = 4; axisY = 0; strength = 4.5; cohesion = 0.40;
   } else if (optics === RenderOptics.Radioactive) {
     axisX = 3; axisY = -2; strength = 5.5; cohesion = 0.26;
+  } else if (optics === RenderOptics.TranslucentRigid) {
+    axisX = 2; axisY = 1; strength = 6.0; cohesion = 0.50;
   } else if (profile === RenderProfile.Rigid) {
     axisX = 2; axisY = 1; strength = 7.0; cohesion = 0.46;
   } else if (profile === RenderProfile.Organic) {

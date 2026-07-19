@@ -24,12 +24,13 @@ describe('Canvas solid relief', () => {
       [RenderProfile.Organic, RenderOptics.Organic],
       [RenderProfile.Device, RenderOptics.Device],
       [RenderProfile.Radioactive, RenderOptics.Radioactive],
+      [RenderProfile.Rigid, RenderOptics.TranslucentRigid],
     ] as const) {
       fingerprints.add(Array.from({ length: 8 }, (_, offset) => (
         canvasSolidRelief(12 + offset, 9 + offset * 2, Material.Metal, profile, optics).toFixed(4)
       )).join(','));
     }
-    expect(fingerprints.size).toBe(4);
+    expect(fingerprints.size).toBe(5);
     expect(canvasSolidRelief(
       12, 9, Material.Sand, RenderProfile.Granular, RenderOptics.RoughGranular,
     )).toBe(0);
@@ -41,6 +42,8 @@ describe('Canvas solid relief', () => {
       .toBeGreaterThan(canvasSolidInteriorCohesion(RenderProfile.Organic, RenderOptics.Organic));
     expect(canvasSolidInteriorCohesion(RenderProfile.Device, RenderOptics.Device))
       .toBeGreaterThan(canvasSolidInteriorCohesion(RenderProfile.Radioactive, RenderOptics.Radioactive));
+    expect(canvasSolidInteriorCohesion(RenderProfile.Rigid, RenderOptics.TranslucentRigid))
+      .toBeGreaterThan(canvasSolidInteriorCohesion(RenderProfile.Rigid, RenderOptics.SmoothRigid));
   });
 
   it('compresses over-range solid highlights uniformly instead of clipping a channel', () => {

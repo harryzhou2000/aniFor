@@ -198,6 +198,15 @@ async function auditMode(mode) {
       `${mode}: accepted solid cavities still read as dark pits (${JSON.stringify(solidSamples)})`);
     assert(solidSamples.every((sample) => sample.pinnedFraction <= 0.15),
       `${mode}: solid interior framebuffer clipping returned (${JSON.stringify(solidSamples)})`);
+    const translucentSolidSamples = await sampleCanonicalRegions([
+      { name: 'glass', x: 445, y: 229, radius: 8 },
+      { name: 'ice', x: 525, y: 229, radius: 8 },
+    ]);
+    assert(translucentSolidSamples.every((sample) => sample.visible >= 32
+      && sample.macroLumaRange >= 7 && sample.pinnedFraction <= 0.05),
+    `${mode}: translucent solids lost their body relief or clipped (${JSON.stringify(translucentSolidSamples)})`);
+    assert(translucentSolidSamples.every((sample) => sample.rgb[2] >= sample.rgb[0]),
+      `${mode}: translucent solids lost their cool transmission tint (${JSON.stringify(translucentSolidSamples)})`);
     const solidSeparatorSamples = await sampleCanonicalRegions([
       { name: 'columnGap', x: 465, y: 229, radius: 1 },
       { name: 'rowGap', x: 485, y: 217, radius: 1 },
@@ -209,6 +218,55 @@ async function auditMode(mode) {
     ]);
     assert(powderSamples.every((sample) => sample.visible >= 32 && sample.microContrast >= 3),
       `${mode}: rough powder lost its granular detail (${JSON.stringify(powderSamples)})`);
+    const silhouetteSamples = await sampleCanonicalRegions([
+      {
+        name: 'roundedMetal', x: 405.5, y: 229.5,
+        radiusX: 21, radiusY: 14, topology: true, silhouette: true,
+      },
+      {
+        name: 'splitLiquidCapsule', x: 302.5, y: 172,
+        radiusX: 40, radiusY: 16, topology: true, silhouette: true,
+      },
+    ]);
+    assert(silhouetteSamples.every((sample) => sample.dominantComponent >= 0.94),
+      `${mode}: reconstructed silhouettes fragmented (${JSON.stringify(silhouetteSamples)})`);
+    assert(silhouetteSamples.every((sample) => sample.compactness >= 0.18),
+      `${mode}: reconstructed silhouettes became excessively rough (${JSON.stringify(silhouetteSamples)})`);
+    const contactSilhouetteSamples = await sampleCanonicalRegions([
+      {
+        name: 'powderContactCapsule', x: 54.5, y: 172,
+        radiusX: 40, radiusY: 16, topology: true, silhouette: true,
+      },
+      {
+        name: 'solidContactCapsule', x: 140.5, y: 172,
+        radiusX: 40, radiusY: 16, topology: true, silhouette: true,
+      },
+    ]);
+    assert(contactSilhouetteSamples.every((sample) => sample.dominantComponent >= 0.94
+      && sample.compactness >= 0.18),
+    `${mode}: unlike-material contact body fragmented or became rough (${JSON.stringify(contactSilhouetteSamples)})`);
+    const contactMaterialSamples = await sampleCanonicalRegions([
+      { name: 'contactSand', x: 42, y: 172, radius: 5 },
+      { name: 'contactSalt', x: 67, y: 172, radius: 5 },
+      { name: 'contactMetal', x: 128, y: 172, radius: 5 },
+      { name: 'contactGlass', x: 153, y: 172, radius: 5 },
+    ]);
+    assert(contactMaterialSamples.every((sample) => sample.visible >= 12),
+      `${mode}: an unlike-material contact side disappeared (${JSON.stringify(contactMaterialSamples)})`);
+    assert(contactMaterialSamples[0].rgb[0] > contactMaterialSamples[0].rgb[2]
+      && contactMaterialSamples[1].rgb[2] > contactMaterialSamples[0].rgb[2]
+      && contactMaterialSamples[3].rgb[2] > contactMaterialSamples[2].rgb[2],
+    `${mode}: unlike-material contact lost exclusive material ordering (${JSON.stringify(contactMaterialSamples)})`);
+    const liquidSeamSamples = await sampleCanonicalRegions([
+      { name: 'capsuleWater', x: 289, y: 172, radius: 6 },
+      { name: 'capsuleSeam', x: 302.5, y: 172, radiusX: 1.5, radiusY: 7 },
+      { name: 'capsuleOil', x: 316, y: 172, radius: 6 },
+    ]);
+    assert(liquidSeamSamples.every((sample) => sample.visible >= 12),
+      `${mode}: split-liquid capsule disappeared (${JSON.stringify(liquidSeamSamples)})`);
+    assert(liquidSeamSamples[0].rgb[1] > liquidSeamSamples[0].rgb[0]
+      && liquidSeamSamples[2].rgb[0] > liquidSeamSamples[2].rgb[2],
+    `${mode}: split-liquid capsule lost species ordering (${JSON.stringify(liquidSeamSamples)})`);
     const volumeSamples = await sampleCanonicalRegions([
       { name: 'water', x: 238, y: 79, radius: 14 },
       { name: 'oil', x: 289, y: 87, radius: 12 },
@@ -499,8 +557,13 @@ async function auditMode(mode) {
       energyTopologySamples,
       sparseEnergySamples,
       solidSamples,
+      translucentSolidSamples,
       solidSeparatorSamples,
       powderSamples,
+      silhouetteSamples,
+      contactSilhouetteSamples,
+      contactMaterialSamples,
+      liquidSeamSamples,
       volumeSamples,
       gasLightingSamples,
       gasLightResponseSamples,
@@ -1723,6 +1786,18 @@ async function samplePageRegions(
         }
         dominantComponentPixels = Math.max(dominantComponentPixels, componentPixels);
       }
+      let boundaryPixels = 0;
+      if (region.silhouette) {
+        for (let py = 0; py < height; py++) for (let px = 0; px < width; px++) {
+          const sampleIndex = py * width + px;
+          if (!visiblePixels[sampleIndex]) continue;
+          if (px === 0 || px + 1 === width || py === 0 || py + 1 === height
+            || !visiblePixels[sampleIndex - 1] || !visiblePixels[sampleIndex + 1]
+            || !visiblePixels[sampleIndex - width] || !visiblePixels[sampleIndex + width]) {
+            boundaryPixels++;
+          }
+        }
+      }
       let longestQuietRun = 0;
       for (let py = 0; py < height; py++) {
         let quietRun = 0;
@@ -1748,6 +1823,12 @@ async function samplePageRegions(
         ...(region.topology ? {
           dominantComponent: Math.round(dominantComponentPixels / Math.max(1, visible) * 1000) / 1000,
           quietRunFraction: Math.round(longestQuietRun / Math.max(1, width) * 1000) / 1000,
+        } : {}),
+        ...(region.silhouette ? {
+          boundaryPixels,
+          compactness: Math.round(
+            4 * Math.PI * visible / Math.max(1, boundaryPixels * boundaryPixels) * 1000,
+          ) / 1000,
         } : {}),
         ...(region.locatePeak ? {
           peakLuma: Math.round(Math.max(0, peakLuma)),

@@ -79,6 +79,7 @@ describe('render lab scene', () => {
       RenderOptics.Organic,
       RenderOptics.Device,
       RenderOptics.Radioactive,
+      RenderOptics.TranslucentRigid,
     ]) expect(optics.has(opticalClass)).toBe(true);
     for (const trait of [
       RenderTrait.Emitter, RenderTrait.Sink, RenderTrait.Channel, RenderTrait.Force,

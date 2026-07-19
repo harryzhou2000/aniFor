@@ -23,6 +23,7 @@ describe('render optics', () => {
       RenderOptics.Organic,
       RenderOptics.Device,
       RenderOptics.Radioactive,
+      RenderOptics.TranslucentRigid,
     ]).toEqual(Array.from({ length: RENDER_OPTICS_CLASS_COUNT }, (_, index) => index));
   });
 
@@ -47,6 +48,9 @@ describe('render optics', () => {
     expect(optics(Material.Plant)).toBe(RenderOptics.Organic);
     expect(optics(Material.SPRK)).toBe(RenderOptics.Device);
     expect(optics(Material.PLUT)).toBe(RenderOptics.Radioactive);
+    expect(optics(Material.Glass)).toBe(RenderOptics.TranslucentRigid);
+    expect(optics(Material.Ice)).toBe(RenderOptics.TranslucentRigid);
+    expect(optics(Material.QRTZ)).toBe(RenderOptics.TranslucentRigid);
   });
 
   it('respects explicit physical phases before toolbox-family fallbacks', () => {

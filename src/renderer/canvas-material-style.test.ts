@@ -49,6 +49,7 @@ describe('Canvas material-family styling', () => {
       RenderOptics.Organic,
       RenderOptics.Device,
       RenderOptics.Radioactive,
+      RenderOptics.TranslucentRigid,
     ]) {
       const output = new Float32Array([0, 0, 0, 173]);
       const fingerprint: number[] = [];
@@ -61,6 +62,6 @@ describe('Canvas material-family styling', () => {
       }
       colors.add(fingerprint.join(','));
     }
-    expect(colors.size).toBe(5);
+    expect(colors.size).toBe(6);
   });
 });

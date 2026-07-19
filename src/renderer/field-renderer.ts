@@ -511,7 +511,7 @@ export class MaterialRenderer {
         );
       } else if (material === Material.Ice) {
         const facet = (hash(index + 617) & 15) < 3 ? 24 : 0;
-        compositePixel(target, pixel, 116 + facet + surfaceLight, 193 + facet + surfaceLight, 211 + facet + surfaceLight, 244);
+        compositePixel(target, pixel, 116 + facet + surfaceLight, 193 + facet + surfaceLight, 211 + facet + surfaceLight, 220);
       } else if (material === Material.Acid) {
         const mask = materialNeighbourMask(this.rendered, width, height, x, y, material);
         const density = neighbourDensity(mask);
@@ -641,7 +641,7 @@ export class MaterialRenderer {
           setPixel(
             target, pixel,
             this.styledColor[0], this.styledColor[1], this.styledColor[2],
-            255,
+            optics === RenderOptics.TranslucentRigid ? 218 : 255,
           );
         }
         if (info.emissive) {

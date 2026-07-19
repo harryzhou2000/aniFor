@@ -52,6 +52,12 @@ export function shadeCanvasMaterial(
     const polish = (hash(index + material * 313) & 15) < 2;
     light += polish ? 5 : 0;
     tintBlue += polish ? 3 : 1;
+  } else if (optics === RenderOptics.TranslucentRigid) {
+    const internalFacet = (hash(index + material * 349) & 15) < 3;
+    const reflectionBand = (x * 2 + y + material) % 17 < 3;
+    light += internalFacet ? 4 : reflectionBand ? 2 : -1;
+    tintGreen += internalFacet ? 3 : 1;
+    tintBlue += internalFacet ? 7 : reflectionBand ? 5 : 2;
   } else if (optics === RenderOptics.Organic) {
     const livingFibre = (x + (hash(y + material * 29) & 7)) % 11 < 3;
     tintRed += livingFibre ? 1.5 : 0;
@@ -73,7 +79,9 @@ export function shadeCanvasMaterial(
 
 function solidOpticsProfile(optics: number, fallback: number): number {
   if (optics === RenderOptics.RoughGranular) return RenderProfile.Granular;
-  if (optics === RenderOptics.SmoothRigid) return RenderProfile.Rigid;
+  if (optics === RenderOptics.SmoothRigid || optics === RenderOptics.TranslucentRigid) {
+    return RenderProfile.Rigid;
+  }
   if (optics === RenderOptics.Organic) return RenderProfile.Organic;
   if (optics === RenderOptics.Device) return RenderProfile.Device;
   if (optics === RenderOptics.Radioactive) return RenderProfile.Radioactive;

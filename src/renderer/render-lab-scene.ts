@@ -60,6 +60,15 @@ export function applyRenderLabScene(simulation: SimulationBackend): void {
   plot.ellipse(430, 171, 37, 13, Material.FOG, 0.76, 331, 0.42);
   plot.ellipse(520, 171, 37, 13, Material.CFLM, 0.70, 337, 0.42);
 
+  // Exact split capsule: deterministic curved liquid endcaps plus an unlike-
+  // species seam, isolated from the stochastic ellipses and wavy columns.
+  plot.splitCapsule(266, 160, 74, 25, 12, 302, Material.Water, Material.Oil);
+
+  // Contact capsules keep unlike materials exclusive while exercising one
+  // shared curved phase silhouette and a deliberately curved internal seam.
+  plot.contactCapsule(18, 160, 74, 25, 12, 54, Material.Sand, Material.Salt);
+  plot.contactCapsule(104, 160, 74, 25, 12, 140, Material.Metal, Material.Glass);
+
   // Sand entering water: a stable paused mixture and a crisp wall reference.
   plot.rect(18, 192, 165, 154, Material.Water, 0.90, 401);
   plot.gradientRect(18, 192, 165, 86, Material.Sand, 0.86, 0.12, 409);
@@ -78,7 +87,10 @@ export function applyRenderLabScene(simulation: SimulationBackend): void {
   RENDER_LAB_STYLE_SAMPLES.forEach((material, index) => {
     const column = index % 5;
     const row = Math.floor(index / 5);
-    plot.rect(388 + column * 40, 194 + row * 25, 35, 21, material, 0.90, 601 + index);
+    const x = 388 + column * 40;
+    const y = 194 + row * 25;
+    if (material === Material.Metal) plot.roundedRect(x, y, 35, 21, 6, material);
+    else plot.rect(x, y, 35, 21, material, 0.90, 601 + index);
   });
   // Equal-height warm/cool sources expose how each family responds to coloured
   // scene light. The centre column remains a lower-light comparison surface.
@@ -126,6 +138,68 @@ class ScenePlotter {
       const inset = Math.round(2.5 + Math.sin(py * 0.13 + salt) * 2.5);
       for (let px = x + inset; px < x + width - inset; px++) {
         if (noise(px, py, salt) <= 0.94) this.set(px, py, material);
+      }
+    }
+  }
+
+  roundedRect(
+    x: number, y: number, width: number, height: number, radius: number, material: Material,
+  ): void {
+    const right = x + width - 1;
+    const bottom = y + height - 1;
+    const innerLeft = x + radius;
+    const innerRight = right - radius;
+    const innerTop = y + radius;
+    const innerBottom = bottom - radius;
+    const radiusSquared = radius * radius;
+    for (let py = y; py <= bottom; py++) for (let px = x; px <= right; px++) {
+      const nearestX = Math.max(innerLeft, Math.min(innerRight, px));
+      const nearestY = Math.max(innerTop, Math.min(innerBottom, py));
+      const dx = px - nearestX;
+      const dy = py - nearestY;
+      if (dx * dx + dy * dy <= radiusSquared) this.set(px, py, material);
+    }
+  }
+
+  splitCapsule(
+    x: number, y: number, width: number, height: number, radius: number, splitX: number,
+    leftMaterial: Material, rightMaterial: Material,
+  ): void {
+    const right = x + width - 1;
+    const bottom = y + height - 1;
+    const innerLeft = x + radius;
+    const innerRight = right - radius;
+    const centerY = y + Math.floor((height - 1) / 2);
+    const radiusSquared = radius * radius;
+    for (let py = y; py <= bottom; py++) for (let px = x; px <= right; px++) {
+      const nearestX = Math.max(innerLeft, Math.min(innerRight, px));
+      const dx = px - nearestX;
+      const dy = py - centerY;
+      if (dx * dx + dy * dy <= radiusSquared) {
+        this.set(px, py, px <= splitX ? leftMaterial : rightMaterial);
+      }
+    }
+  }
+
+  contactCapsule(
+    x: number, y: number, width: number, height: number, radius: number, splitX: number,
+    leftMaterial: Material, rightMaterial: Material,
+  ): void {
+    const right = x + width - 1;
+    const bottom = y + height - 1;
+    const innerLeft = x + radius;
+    const innerRight = right - radius;
+    const centerY = y + Math.floor((height - 1) / 2);
+    const radiusSquared = radius * radius;
+    for (let py = y; py <= bottom; py++) {
+      const contactX = splitX + Math.round(Math.sin((py - centerY) * 0.42) * 3);
+      for (let px = x; px <= right; px++) {
+        const nearestX = Math.max(innerLeft, Math.min(innerRight, px));
+        const dx = px - nearestX;
+        const dy = py - centerY;
+        if (dx * dx + dy * dy <= radiusSquared) {
+          this.set(px, py, px <= contactX ? leftMaterial : rightMaterial);
+        }
       }
     }
   }

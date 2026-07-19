@@ -90,23 +90,39 @@ float compatibleAt(vec2 uv, float material, float family) {
   float candidate = materialAt(uv);
   if (abs(candidate - material) < 0.5) return 1.0;
   if (candidate < 0.5) return 0.0;
-  if ((family == 1.0 || family == 2.0) && familyFor(candidate) == family) return 1.0;
+  float candidateFamily = familyFor(candidate);
+  // Contact coverage is phase-categorical, while palette/material selection
+  // stays exact. Unlike solids and unlike powders therefore partition one
+  // continuous occupied surface without alpha overlap or a black contact seam.
+  // Powder may rest against a solid, but a solid deliberately does not borrow
+  // moving powder support, so gas/liquid/powder contact cannot wobble its edge.
+  if (family == 0.0 && candidateFamily == 0.0) return 1.0;
+  if (family == 4.0 && (candidateFamily == 4.0 || candidateFamily == 0.0)) return 1.0;
+  if ((family == 1.0 || family == 2.0) && candidateFamily == family) return 1.0;
   return 0.0;
 }
-vec3 occupancyShape(vec2 uv, float material, float family) {
+vec4 occupancyShape(vec2 uv, float material, float family, float contourSmoothing) {
   vec2 grid = uv * uFieldSize - 0.5;
   vec2 blend = fract(grid);
+  vec2 hermite = blend * blend * (3.0 - 2.0 * blend);
+  vec2 hermiteDerivative = 6.0 * blend * (1.0 - blend);
+  vec2 weight = mix(blend, hermite, contourSmoothing);
+  vec2 weightDerivative = mix(vec2(1.0), hermiteDerivative, contourSmoothing);
   vec2 origin = (floor(grid) + 0.5) * uTexel;
   float q00 = compatibleAt(origin, material, family);
   float q10 = compatibleAt(origin + vec2(uTexel.x, 0.0), material, family);
   float q01 = compatibleAt(origin + vec2(0.0, uTexel.y), material, family);
   float q11 = compatibleAt(origin + uTexel, material, family);
-  float top = mix(q00, q10, blend.x);
-  float bottom = mix(q01, q11, blend.x);
-  float density = mix(top, bottom, blend.y);
-  float gradientX = mix(q10 - q00, q11 - q01, blend.y);
-  float gradientY = mix(q01 - q00, q11 - q10, blend.x);
-  return vec3(density, gradientX, gradientY);
+  // Monotone Hermite weights retain the bilinear field's exact 0.5 integral,
+  // but make its first derivative meet continuously at cell centres. At the
+  // fixed 2x output this rounds chunk contours without a blur, extra sample,
+  // mesh, field, or systematic silhouette-area growth.
+  float top = mix(q00, q10, weight.x);
+  float bottom = mix(q01, q11, weight.x);
+  float density = mix(top, bottom, weight.y);
+  float gradientX = mix(q10 - q00, q11 - q01, weight.y) * weightDerivative.x;
+  float gradientY = mix(q01 - q00, q11 - q10, weight.x) * weightDerivative.y;
+  return vec4(density, gradientX, gradientY, q00 + q10 + q01 + q11);
 }
 vec3 discreteShape(vec2 uv, float material) {
   vec2 left = vec2(uTexel.x, 0.0);
@@ -255,35 +271,48 @@ float wallPattern(float wall, vec2 position) {
 }
 vec2 nearbySurface(vec2 uv) {
   float solid = 0.0;
+  float ambiguousSolid = 0.0;
   float candidate = materialAt(uv - vec2(uTexel.x, 0.0));
   if (candidate > 0.5) {
     vec4 style = texture(uStyleTexture, vec2((candidate + 0.5) / 256.0, 0.5));
     float family = floor(style.r * 255.0 + 0.5);
     if (family == 3.0 || style.b > 0.5) return vec2(candidate, 0.0);
-    if (family == 0.0) solid = candidate;
+    if (family == 0.0 || family == 4.0) {
+      if (solid < 0.5) solid = candidate;
+      else if (abs(solid - candidate) > 0.5) ambiguousSolid = 1.0;
+    }
   }
   candidate = materialAt(uv + vec2(uTexel.x, 0.0));
   if (candidate > 0.5) {
     vec4 style = texture(uStyleTexture, vec2((candidate + 0.5) / 256.0, 0.5));
     float family = floor(style.r * 255.0 + 0.5);
     if (family == 3.0 || style.b > 0.5) return vec2(candidate, 0.0);
-    if (solid < 0.5 && family == 0.0) solid = candidate;
+    if (family == 0.0 || family == 4.0) {
+      if (solid < 0.5) solid = candidate;
+      else if (abs(solid - candidate) > 0.5) ambiguousSolid = 1.0;
+    }
   }
   candidate = materialAt(uv - vec2(0.0, uTexel.y));
   if (candidate > 0.5) {
     vec4 style = texture(uStyleTexture, vec2((candidate + 0.5) / 256.0, 0.5));
     float family = floor(style.r * 255.0 + 0.5);
     if (family == 3.0 || style.b > 0.5) return vec2(candidate, 0.0);
-    if (solid < 0.5 && family == 0.0) solid = candidate;
+    if (family == 0.0 || family == 4.0) {
+      if (solid < 0.5) solid = candidate;
+      else if (abs(solid - candidate) > 0.5) ambiguousSolid = 1.0;
+    }
   }
   candidate = materialAt(uv + vec2(0.0, uTexel.y));
   if (candidate > 0.5) {
     vec4 style = texture(uStyleTexture, vec2((candidate + 0.5) / 256.0, 0.5));
     float family = floor(style.r * 255.0 + 0.5);
     if (family == 3.0 || style.b > 0.5) return vec2(candidate, 0.0);
-    if (solid < 0.5 && family == 0.0) solid = candidate;
+    if (family == 0.0 || family == 4.0) {
+      if (solid < 0.5) solid = candidate;
+      else if (abs(solid - candidate) > 0.5) ambiguousSolid = 1.0;
+    }
   }
-  return vec2(0.0, solid);
+  return vec2(0.0, ambiguousSolid > 0.5 ? 0.0 : solid);
 }
 float triangleSlope(float value, float period) {
   float phase = mod(mod(value, period) + period, period);
@@ -295,6 +324,7 @@ vec3 solidReliefParameters(float optics, float profile) {
   if (optics == 9.0) return vec3(1.0, 4.0, 6.0);
   if (optics == 10.0) return vec3(4.0, 0.0, 4.5);
   if (optics == 11.0) return vec3(3.0, -2.0, 5.5);
+  if (optics == 12.0) return vec3(2.0, 1.0, 6.0);
   if (profile == 2.0) return vec3(2.0, 1.0, 7.0);
   if (profile == 3.0) return vec3(1.0, 4.0, 6.0);
   if (profile == 5.0) return vec3(4.0, 0.0, 4.5);
@@ -306,6 +336,7 @@ float solidInteriorMicroGain(float optics, float profile) {
   if (optics == 9.0 || (optics < 0.5 && profile == 3.0)) return 0.70;
   if (optics == 10.0 || (optics < 0.5 && profile == 5.0)) return 0.56;
   if (optics == 11.0 || (optics < 0.5 && profile == 4.0)) return 0.74;
+  if (optics == 12.0) return 0.48;
   return 0.72;
 }
 vec3 solidReliefSample(vec2 position, float material, float profile, float optics) {
@@ -341,7 +372,7 @@ void main() {
     // unlike-liquid ties transparent. Its alpha and RGB must stay authoritative;
     // re-selecting a cardinal semantic neighbour here caused diagonal gaps and
     // scan-order species bleed that disagreed with the Canvas presenter.
-    if (liquidDensity > 0.28) liquidOnly = 1.0;
+    if (liquidDensity > 0.22) liquidOnly = 1.0;
     if (liquidOnly > 0.5) {
       halo = 1.0;
     } else if (atmosphereState.a > 0.004) {
@@ -371,17 +402,30 @@ void main() {
   float traits = floor(materialStyle.a * 255.0 + 0.5);
   float optics = floor(paletteSample.a * 255.0 + 0.5);
   float energyCore = family == 3.0 ? 1.0 : 0.0;
-  vec3 shape = wallOnly > 0.5
-    ? wallSurface
-    : (surfaceOnly > 0.5
-    ? enclosedSurfaceShape(fieldUv, material)
-    : ((cloudOnly > 0.5 || emissionOnly > 0.5)
-    ? vec3(0.0)
-    : (liquidOnly > 0.5
-    ? vec3(liquidDensity, 0.0, 0.0)
-    : ((family == 1.0 || profile == 1.0) ? discreteShape(fieldUv, material) : occupancyShape(fieldUv, material, family)))));
-  float density = shape.x;
   vec2 fieldPosition = fieldUv * uFieldSize;
+  vec2 velocity = halo > 0.5 ? vec2(0.0) : state.ba * 2.0 - 1.0;
+  vec4 shape = wallOnly > 0.5
+    ? vec4(wallSurface, 0.0)
+    : (surfaceOnly > 0.5
+    ? (profile == 1.0
+      ? occupancyShape(fieldUv, material, family, 1.0)
+      : vec4(enclosedSurfaceShape(fieldUv, material), 0.0))
+    : ((cloudOnly > 0.5 || emissionOnly > 0.5)
+    ? vec4(0.0)
+    : (liquidOnly > 0.5
+    ? vec4(liquidDensity, 0.0, 0.0, 4.0)
+    : (family == 1.0
+      ? vec4(discreteShape(fieldUv, material), 0.0)
+      : occupancyShape(
+        fieldUv, material, family,
+        (family == 0.0 || family == 2.0 || profile == 1.0) ? 1.0 : 0.0
+      )))));
+  // Powder may extend into an empty presentation fragment only when at least
+  // three compatible powder samples prove a bulk contact. Loose/moving grains
+  // stay inside their semantic cell, and ambiguous unlike-species candidates
+  // were rejected by nearbySurface before reaching this estimator.
+  if (surfaceOnly > 0.5 && profile == 1.0 && shape.w < 2.5) shape = vec4(0.0);
+  float density = shape.x;
   float gasVolume = max(cloudOnly, family == 1.0 ? 1.0 : 0.0);
   float liquidVolume = max(liquidOnly, family == 2.0 ? 1.0 : 0.0);
   float volume = density;
@@ -454,7 +498,6 @@ void main() {
     : (cloudOnly > 0.5
     ? atmosphereState.rgb
     : (liquidOnly > 0.5 ? liquidState.rgb : paletteSample.rgb)));
-  vec2 velocity = halo > 0.5 ? vec2(0.0) : state.ba * 2.0 - 1.0;
   float grain = fract(sin(dot(floor(fieldPosition), vec2(12.9898, 78.233))) * 43758.5453) - 0.5;
   float atmosphere = sin(fieldPosition.x * 0.055 + fieldPosition.y * 0.027 + uTime * 0.7 + velocity.x * 2.0)
     * sin(fieldPosition.y * 0.043 - uTime * 0.43 + velocity.y * 1.7);
@@ -583,8 +626,23 @@ void main() {
     float liquidSurfaceDensity = liquidOnly > 0.5 ? liquidDensity : density;
     float rim = (1.0 - smoothstep(0.30, 0.86, liquidSurfaceDensity))
       * mix(1.0, 0.25, liquidDepth);
-    float fresnel = pow(1.0 - clamp(normal.z, 0.0, 1.0), 2.0);
-    float surfaceSpecular = specular * mix(1.0, 0.10, liquidDepth);
+    // Give the field-owned slope enough leverage to read as an optical surface,
+    // while retaining a positive z component so the liquid never resembles a
+    // chrome cut-out. Coverage and species support remain separate below.
+    vec3 liquidNormal = normalize(vec3(
+      -(semanticSlope.x + volumeSlope.x) * 1.65,
+      -(semanticSlope.y + volumeSlope.y) * 1.65,
+      0.88
+    ));
+    vec3 liquidLightDirection = normalize(vec3(-0.48, -0.68, 0.78));
+    vec3 liquidFillDirection = normalize(vec3(0.62, 0.24, 0.72));
+    float liquidDiffuse = 0.54
+      + max(0.0, dot(liquidNormal, liquidLightDirection)) * 0.54
+      + max(0.0, dot(liquidNormal, liquidFillDirection)) * 0.10;
+    float fresnel = pow(1.0 - clamp(liquidNormal.z, 0.0, 1.0), 1.65);
+    float surfaceSpecular = pow(
+      max(0.0, dot(liquidNormal, normalize(vec3(-0.35, -0.55, 0.92)))), 12.0
+    ) * mix(1.0, 0.16, liquidDepth);
     float broadSheen = 0.5 + 0.5
       * sin(fieldPosition.x * 0.041 + fieldPosition.y * 0.016 + material * 0.83 + uTime * 0.22)
       * sin(fieldPosition.y * 0.029 - fieldPosition.x * 0.012 - uTime * 0.17);
@@ -622,12 +680,24 @@ void main() {
     edgeTint = mix(edgeTint, vec3(0.72, 0.92, 1.0), aqueous * 0.18);
     edgeTint = mix(edgeTint, vec3(0.94, 0.72, 0.34), oily * 0.12 + molten * 0.20);
     edgeTint = mix(edgeTint, vec3(0.72, 1.0, 0.76), corrosive * 0.18);
-    alpha = smoothstep(0.34, 0.62, volume) * mix(0.56, 0.82, liquidDepth);
+    vec3 reflectedEnvironment = mix(
+      vec3(0.055, 0.085, 0.115),
+      vec3(0.16, 0.12, 0.075),
+      clamp(0.5 - liquidNormal.y * 0.65 + liquidNormal.x * 0.15, 0.0, 1.0)
+    );
+    float liquidEdgeHalfWidth = mix(
+      0.13, 0.17, clamp(length(volumeSlope) * 2.4, 0.0, 1.0)
+    );
+    alpha = smoothstep(
+      0.48 - liquidEdgeHalfWidth, 0.48 + liquidEdgeHalfWidth, volume
+    ) * mix(0.56, 0.82, liquidDepth);
     color = liquidBase * mix(1.24, depthTransmission, liquidDepth)
-      * (0.70 + diffuse * 0.30) * mix(1.0, liquidBodyExposure, liquidDepth);
+      * liquidDiffuse * mix(1.0, liquidBodyExposure, liquidDepth);
     color *= 1.0 + liquidMacroRelief;
     color += edgeTint
       * (surfaceSpecular * gloss * (0.72 + rim * 0.86) + fresnel * rim * (0.18 + aqueous * 0.08));
+    color += reflectedEnvironment
+      * (fresnel * (0.22 + gloss * 0.10) + surfaceSpecular * (0.035 + oily * 0.035));
     color *= 1.0 + topLip * 0.08 - lowerShade * 0.05;
     color += mix(vec3(0.52, 0.68, 0.76), liquidBase, 0.50)
       * (broadSheen * mix(0.016, 0.052 * gloss, liquidDepth) + caustic * causticStrength);
@@ -638,37 +708,79 @@ void main() {
     float organicSurface = optics == 9.0 ? 1.0 : 0.0;
     float deviceSurface = optics == 10.0 ? 1.0 : 0.0;
     float radioactiveSurface = optics == 11.0 ? 1.0 : 0.0;
+    float translucentSurface = optics == 12.0 ? 1.0 : 0.0;
     float interiorMicroGain = mix(1.0, solidInteriorMicroGain(optics, profile), solidInterior);
     // The bilinear solid field peaks below one for isolated and one-cell-thick
     // semantic strokes. Use a wider iso shoulder so those cells
     // remain visibly brush-sized while the same density field rounds chunk
     // boundaries; rejected empty-space support still has zero density.
     float edgeCenter = 0.42 + (profile == 1.0 ? grain * 0.045 : 0.0);
-    alpha = smoothstep(edgeCenter - 0.16, edgeCenter + 0.16, density);
-    color = base * mix(1.10, 0.78, density) * diffuse;
-    color += vec3(solidReliefTone);
+    float edgeHalfWidth = mix(0.13, 0.17, clamp(length(shape.yz) * 0.75, 0.0, 1.0));
+    alpha = smoothstep(edgeCenter - edgeHalfWidth, edgeCenter + edgeHalfWidth, density);
+    float solidDepth = smoothstep(0.34, 0.94, density);
+    vec3 solidLightDirection = normalize(vec3(-0.48, -0.68, 0.78));
+    vec3 solidFillDirection = normalize(vec3(0.62, 0.24, 0.72));
+    float solidKey = max(0.0, dot(normal, solidLightDirection));
+    float solidFill = max(0.0, dot(normal, solidFillDirection));
+    float solidDiffuse = 0.51 + solidKey * 0.58 + solidFill * 0.11;
+    color = base * mix(1.10, 0.82, solidDepth) * solidDiffuse;
+    color += vec3(solidReliefTone * 1.35);
     float solidSpecularGain = 0.28 - roughSurface * 0.13 + smoothSurface * 0.22
-      + organicSurface * 0.02 + deviceSurface * 0.15 + radioactiveSurface * 0.06;
+      + organicSurface * 0.02 + deviceSurface * 0.15 + radioactiveSurface * 0.06
+      + translucentSurface * 0.30;
     vec3 solidSpecularTint = mix(
       vec3(0.12), vec3(0.16, 0.24, 0.32), smoothSurface * 0.32 + deviceSurface * 0.58
     );
     solidSpecularTint = mix(solidSpecularTint, vec3(0.12, 0.24, 0.14), radioactiveSurface * 0.28);
-    color += solidSpecularTint * specular * solidSpecularGain;
-    // Granular coverage remains profile-owned. Optics below selects RGB texture
-    // only, so a metadata/profile disagreement cannot widen the silhouette.
+    solidSpecularTint = mix(
+      solidSpecularTint, vec3(0.30, 0.50, 0.62), translucentSurface * 0.64
+    );
+    float broadSolidSpecular = pow(
+      max(0.0, dot(normal, normalize(vec3(-0.34, -0.50, 0.80)))),
+      mix(7.0, 4.0, clamp(smoothSurface + deviceSurface * 0.65 + translucentSurface * 0.92, 0.0, 1.0))
+    );
+    float solidFresnel = pow(1.0 - clamp(normal.z, 0.0, 1.0), 2.0);
+    vec3 solidEnvironment = mix(
+      vec3(0.035, 0.055, 0.080), vec3(0.10, 0.070, 0.040),
+      clamp(0.48 - normal.y * 0.55 + normal.x * 0.12, 0.0, 1.0)
+    );
+    color += solidSpecularTint
+      * (specular * solidSpecularGain + broadSolidSpecular * (0.035 + smoothSurface * 0.055));
+    color += solidEnvironment * solidFresnel
+      * (0.12 + smoothSurface * 0.24 + deviceSurface * 0.16
+        + radioactiveSurface * 0.08 + translucentSurface * 0.40);
+    color = mix(
+      color,
+      color * vec3(0.88, 0.97, 1.08) + solidEnvironment * (0.16 + solidFresnel * 0.34),
+      translucentSurface * mix(0.18, 0.34, solidDepth)
+    );
+    // Moving/loose powder stays a deterministic soft grain. Only low-velocity
+    // contact with at least two other compatible powder samples fades into the
+    // shared Hermite heap contour. The transition is continuous, so small TPT
+    // velocity changes do not flip between unrelated boundary modes.
     if (profile == 1.0) {
-      // A high-quality isolated powder cell has 0.32 discrete support. Keep it
-      // visibly brush-sized after premultiplication and CSS downsampling while
-      // retaining a broad stochastic ramp for loose granular boundaries.
-      alpha = smoothstep(0.10 + grain * 0.020, 0.62 + grain * 0.030, density);
+      float powderContact = smoothstep(1.55, 2.85, shape.w);
+      float powderStill = 1.0 - smoothstep(0.025, 0.095, length(velocity));
+      float powderBulk = powderContact * powderStill;
+      float grainOffsetY = fract(sin(dot(floor(fieldPosition), vec2(39.346, 11.135))) * 24634.6345) - 0.5;
+      vec2 grainCentre = vec2(grain, grainOffsetY) * 0.075;
+      float grainDistance = length(fract(fieldPosition) - 0.5 - grainCentre);
+      float roundGrainAlpha = 1.0 - smoothstep(0.34, 0.56, grainDistance);
+      float heapAlpha = smoothstep(0.10 + grain * 0.020, 0.62 + grain * 0.030, density);
+      alpha = surfaceOnly > 0.5
+        ? heapAlpha * powderBulk
+        : mix(roundGrainAlpha, heapAlpha, powderBulk);
     }
     // surfaceOnly names a nearby exact solid, but density is nonzero only when
     // enclosedSurfaceShape proved the cavity. Decouple that conservative shape
     // confidence from display opacity so accepted support joins the chunk while
     // rejected notches, seams, powders, walls, and borders remain transparent.
-    if (surfaceOnly > 0.5 && density > 0.001) {
+    if (surfaceOnly > 0.5 && family == 0.0 && density > 0.001) {
       float cavityConfidence = smoothstep(0.30, 0.92, density);
       alpha = max(alpha, mix(0.90, 0.98, cavityConfidence));
+    }
+    if (translucentSurface > 0.5) {
+      alpha *= mix(0.74, 0.88, solidDepth);
     }
     if (roughSurface > 0.5 || (optics < 0.5 && profile == 1.0)) {
       vec2 subcell = floor(fract(fieldPosition) * 2.0);
@@ -677,12 +789,13 @@ void main() {
         + grainFacet * (0.10 + roughSurface * 0.04);
       color += base * max(0.0, 0.6 - subcell.x - subcell.y)
         * (0.11 + roughSurface * 0.035);
-    } else if (smoothSurface > 0.5 || (optics < 0.5 && profile == 2.0)) {
+    } else if (smoothSurface > 0.5 || translucentSurface > 0.5
+      || (optics < 0.5 && profile == 2.0)) {
       float bevel = clamp(abs(shape.y) + abs(shape.z), 0.0, 1.0);
       float strata = sin(fieldPosition.x * 0.16 + fieldPosition.y * 0.055 + material * 0.71);
       color *= 0.965 + strata * 0.028 * interiorMicroGain;
       color += mix(base, vec3(0.32, 0.36, 0.42), 0.26)
-        * bevel * (0.13 + smoothSurface * 0.07);
+        * bevel * (0.13 + smoothSurface * 0.07 + translucentSurface * 0.10);
     } else if (organicSurface > 0.5 || (optics < 0.5 && profile == 3.0)) {
       float fibre = sin(fieldPosition.x * 0.20 + sin(fieldPosition.y * 0.115 + material) * 1.45);
       float pores = sin(fieldPosition.x * 0.083 + fieldPosition.y * 0.157 + material * 0.37)

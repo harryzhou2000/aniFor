@@ -14,9 +14,10 @@ export const enum RenderOptics {
   Organic = 9,
   Device = 10,
   Radioactive = 11,
+  TranslucentRigid = 12,
 }
 
-export const RENDER_OPTICS_CLASS_COUNT = 12;
+export const RENDER_OPTICS_CLASS_COUNT = 13;
 
 export interface RenderOpticsMaterial {
   readonly id: number;
@@ -47,6 +48,14 @@ export function renderOptics(material: RenderOpticsMaterial): RenderOptics {
     case Material.Gas:
     case Material.FOG:
       return RenderOptics.SootyGas;
+    case Material.Ice:
+    case Material.Glass:
+    case Material.Quartz:
+    case Material.DRIC:
+    case Material.NICE:
+    case Material.QRTZ:
+    case Material.RIME:
+      return RenderOptics.TranslucentRigid;
   }
 
   if (material.category === 'life') return RenderOptics.Organic;

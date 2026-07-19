@@ -1,6 +1,9 @@
 import { canvasLiquidFieldRelief } from './canvas-liquid-light';
 
-const LIQUID_HOLE_THRESHOLD = 86;
+// The 3x3 density kernel gives an isolated droplet's strongest empty neighbour
+// 45/255 support. Staying above that value admits connected curved shores while
+// keeping a lone semantic cell inside its original presentation footprint.
+const LIQUID_HOLE_THRESHOLD = 56;
 const LIQUID_INTERIOR_FIELD_ALPHA = 224;
 const LIQUID_INTERIOR_PIXEL_ALPHA = 176;
 const LIQUID_DONOR_PIXEL_ALPHA = 96;
@@ -70,7 +73,7 @@ export function reconstructLiquidSurface(
     const index = y * width + x;
     const fieldPixel = index * 4;
     if (materials[index] !== 0 || density[fieldPixel + 3] < LIQUID_HOLE_THRESHOLD) continue;
-    const amount = smoothstep(0.30, 0.68, density[fieldPixel + 3] / 255);
+    const amount = smoothstep(0.22, 0.68, density[fieldPixel + 3] / 255);
     if (amount <= 0) continue;
     const reliefScale = 1 + canvasLiquidFieldRelief(density, width, height, x, y);
     let red = 0;
