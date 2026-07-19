@@ -579,6 +579,20 @@ void main() {
       + material * 0.67
     );
     float caustic = pow(causticWave, 6.0) * liquidDepth;
+    // Reuse the existing analytic sheen and caustic signals as a centred,
+    // low-frequency body relief. Optics alter only the gain: Water carries a
+    // soft caustic, Oil a broader sheen, Acid a restrained sharper response,
+    // and self-luminous Lava keeps the weakest reflected modulation. This is
+    // RGB-only and field-depth-gated, so sparse droplets, species seams, and
+    // reconstructed support remain authoritative.
+    float macroSheenGain = 0.075 + aqueous * 0.055 + oily * 0.085
+      + corrosive * 0.225 - molten * 0.015;
+    float macroCausticGain = 0.055 + aqueous * 0.065 - oily * 0.025
+      + corrosive * 0.195 - molten * 0.035;
+    float broadCaustic = smoothstep(0.18, 0.88, causticWave) - 0.5;
+    float liquidMacroRelief = liquidDepth * (
+      (broadSheen - 0.5) * macroSheenGain + broadCaustic * macroCausticGain
+    );
     float topLip = smoothstep(0.02, 0.16, volumeSlope.y);
     float lowerShade = smoothstep(0.02, 0.16, -volumeSlope.y);
     float depthTransmission = 0.66 + aqueous * 0.10 - oily * 0.10
@@ -587,16 +601,19 @@ void main() {
       + corrosive * 0.12 - molten * 0.20;
     float causticStrength = 0.085 + aqueous * 0.055 - oily * 0.045
       + corrosive * 0.025 - molten * 0.055;
+    float liquidBodyExposure = 1.0 - aqueous * 0.04 - oily * 0.10
+      + corrosive * 0.05 + molten * 0.20;
     vec3 edgeTint = mix(vec3(0.66, 0.82, 0.88), liquidBase, 0.20);
     edgeTint = mix(edgeTint, vec3(0.72, 0.92, 1.0), aqueous * 0.18);
     edgeTint = mix(edgeTint, vec3(0.94, 0.72, 0.34), oily * 0.12 + molten * 0.20);
     edgeTint = mix(edgeTint, vec3(0.72, 1.0, 0.76), corrosive * 0.18);
     alpha = smoothstep(0.34, 0.62, volume) * mix(0.56, 0.82, liquidDepth);
-    color = liquidBase * mix(1.24, depthTransmission, liquidDepth) * (0.70 + diffuse * 0.30);
+    color = liquidBase * mix(1.24, depthTransmission, liquidDepth)
+      * (0.70 + diffuse * 0.30) * mix(1.0, liquidBodyExposure, liquidDepth);
+    color *= 1.0 + liquidMacroRelief;
     color += edgeTint
       * (surfaceSpecular * gloss * (0.72 + rim * 0.86) + fresnel * rim * (0.18 + aqueous * 0.08));
-    color *= (1.0 + topLip * 0.08 - lowerShade * 0.05)
-      * (0.94 + broadSheen * mix(0.035, 0.13, liquidDepth));
+    color *= 1.0 + topLip * 0.08 - lowerShade * 0.05;
     color += mix(vec3(0.52, 0.68, 0.76), liquidBase, 0.50)
       * (broadSheen * mix(0.016, 0.052 * gloss, liquidDepth) + caustic * causticStrength);
     color += liquidBase * (0.025 + atmosphere * 0.030) + vec3(0.055, 0.090, 0.105) * rim;

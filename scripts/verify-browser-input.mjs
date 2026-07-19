@@ -936,6 +936,37 @@ async function auditMobile(cdp, mode, screenshot) {
     `mobile toolbox has only ${round(initial.ui.toolboxPaddingBottom)}px bottom swipe space`);
   assert(initial.ui.document.scrollHeight > initial.window.height + 40,
     'mobile document has no usable vertical scroll range');
+  const mobileFilterReach = await evaluate(cdp, `(() => {
+    const filters = document.querySelector('.tool-filters');
+    const lastFilter = filters?.querySelector('.tool-filter:last-child');
+    if (!(filters instanceof HTMLElement) || !(lastFilter instanceof HTMLElement)) {
+      throw new Error('Missing mobile filter rail');
+    }
+    const before = filters.scrollLeft;
+    const maximum = Math.max(0, filters.scrollWidth - filters.clientWidth);
+    filters.scrollLeft = filters.scrollWidth;
+    const railRect = filters.getBoundingClientRect();
+    const lastRect = lastFilter.getBoundingClientRect();
+    const result = {
+      overflow: getComputedStyle(filters).overflowX,
+      maximum,
+      reached: filters.scrollLeft,
+      lastLeft: lastRect.left,
+      lastRight: lastRect.right,
+      railLeft: railRect.left,
+      railRight: railRect.right,
+    };
+    filters.scrollLeft = before;
+    return result;
+  })()`);
+  assert(mobileFilterReach.overflow === 'auto',
+    `mobile filter rail does not scroll horizontally (${mobileFilterReach.overflow})`);
+  assert(mobileFilterReach.maximum > 1
+    && mobileFilterReach.reached >= mobileFilterReach.maximum - 1,
+  `mobile filter rail cannot reach its end (${JSON.stringify(mobileFilterReach)})`);
+  assert(mobileFilterReach.lastLeft >= mobileFilterReach.railLeft - 1
+    && mobileFilterReach.lastRight <= mobileFilterReach.railRight + 1,
+  `mobile filter rail cannot reveal its last filter (${JSON.stringify(mobileFilterReach)})`);
   if (screenshot) {
     const capture = await cdp.send('Page.captureScreenshot', { format: 'png', fromSurface: true });
     await writeFile(screenshot, Buffer.from(capture.data, 'base64'));
@@ -977,6 +1008,106 @@ async function auditMobile(cdp, mode, screenshot) {
   const tap = await evaluate(cdp, `({ cell: window.__ANIFOR_INPUT_AUDIT__.cell(${target.x}, ${target.y}), occupied: window.__ANIFOR_INPUT_AUDIT__.occupiedCells() })`);
   assert(tap.cell > 0 && tap.occupied === 1, `mobile single-touch tap missed exact cell (${tap.cell}, ${tap.occupied})`);
   const paintedFootprints = await capturePaintedFootprints(cdp, [target], `mobile ${mode}`, 1);
+
+  const eraserButton = await evaluate(cdp, `(async () => {
+    const button = document.querySelector('.brush-mode[data-erase="true"]');
+    if (!(button instanceof HTMLButtonElement)) throw new Error('Missing mobile Eraser button');
+    button.scrollIntoView({ block: 'center' });
+    await new Promise(requestAnimationFrame);
+    const rect = button.getBoundingClientRect();
+    return {
+      x: rect.left + rect.width / 2,
+      y: rect.top + rect.height / 2,
+      left: rect.left, top: rect.top, right: rect.right, bottom: rect.bottom,
+      disabled: button.disabled,
+    };
+  })()`);
+  assert(!eraserButton.disabled && eraserButton.left >= 0 && eraserButton.right <= initial.window.width
+    && eraserButton.top >= 0 && eraserButton.bottom <= initial.window.height,
+  `mobile Eraser button is not reachable (${JSON.stringify(eraserButton)})`);
+  await mouseClick(cdp, eraserButton.x, eraserButton.y, 'left');
+  const eraserSelected = await evaluate(cdp, `(() => {
+    const erase = document.querySelector('.brush-mode[data-erase="true"]');
+    const draw = document.querySelector('.brush-mode[data-erase="false"]');
+    return {
+      erase: erase?.getAttribute('aria-pressed'),
+      draw: draw?.getAttribute('aria-pressed'),
+    };
+  })()`);
+  assert(eraserSelected.erase === 'true' && eraserSelected.draw === 'false',
+    `mobile Eraser mode did not select (${JSON.stringify(eraserSelected)})`);
+
+  await evaluate(cdp, 'window.scrollTo(0, 0); true');
+  await sleep(60);
+  const eraseGeometry = await metrics(cdp);
+  const eraseClient = worldClient(eraseGeometry.canvas, { x: target.x + 0.5, y: target.y + 0.5 });
+  await cdp.send('Input.dispatchTouchEvent', {
+    type: 'touchStart', touchPoints: [touch(4, eraseClient.x, eraseClient.y)],
+  });
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+  await sleep(100);
+  const erased = await evaluate(cdp, `({
+    cell: window.__ANIFOR_INPUT_AUDIT__.cell(${target.x}, ${target.y}),
+    occupied: window.__ANIFOR_INPUT_AUDIT__.occupiedCells(),
+  })`);
+  assert(erased.cell === 0 && erased.occupied === 0,
+    `mobile Eraser touch left cell ${target.x},${target.y} occupied (${JSON.stringify(erased)})`);
+
+  const drawButton = await evaluate(cdp, `(async () => {
+    const button = document.querySelector('.brush-mode[data-erase="false"]');
+    if (!(button instanceof HTMLButtonElement)) throw new Error('Missing mobile Draw button');
+    button.scrollIntoView({ block: 'center' });
+    await new Promise(requestAnimationFrame);
+    const rect = button.getBoundingClientRect();
+    return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+  })()`);
+  await mouseClick(cdp, drawButton.x, drawButton.y, 'left');
+  const drawSelected = await evaluate(cdp, `(() => {
+    const erase = document.querySelector('.brush-mode[data-erase="true"]');
+    const draw = document.querySelector('.brush-mode[data-erase="false"]');
+    window.scrollTo(0, 0);
+    return {
+      erase: erase?.getAttribute('aria-pressed'),
+      draw: draw?.getAttribute('aria-pressed'),
+    };
+  })()`);
+  assert(drawSelected.draw === 'true' && drawSelected.erase === 'false',
+    `mobile Draw mode was not restored (${JSON.stringify(drawSelected)})`);
+
+  await evaluate(cdp, `window.__ANIFOR_INPUT_AUDIT__.clear(); window.__ANIFOR_INPUT_AUDIT__.resetView(); true`);
+  await sleep(60);
+  const strokeGeometry = await metrics(cdp);
+  const strokeLandmarks = [{ x: 96, y: 92 }, { x: 108, y: 92 }, { x: 120, y: 92 }];
+  const strokeClients = strokeLandmarks.map((landmark) => worldClient(
+    strokeGeometry.canvas, { x: landmark.x + 0.5, y: landmark.y + 0.5 },
+  ));
+  await cdp.send('Input.dispatchTouchEvent', {
+    type: 'touchStart', touchPoints: [touch(5, strokeClients[0].x, strokeClients[0].y)],
+  });
+  for (const point of strokeClients.slice(1)) {
+    await cdp.send('Input.dispatchTouchEvent', {
+      type: 'touchMove', touchPoints: [touch(5, point.x, point.y)],
+    });
+  }
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+  await sleep(100);
+  const continuousTouch = await evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    const row = [];
+    for (let x = 96; x <= 120; x++) row.push(audit.cell(x, 92));
+    return {
+      landmarks: ${JSON.stringify([{ x: 96, y: 92 }, { x: 108, y: 92 }, { x: 120, y: 92 }])}
+        .map(({ x, y }) => audit.cell(x, y)),
+      row,
+      occupied: audit.occupiedCells(),
+    };
+  })()`);
+  assert(continuousTouch.landmarks.every((cell) => cell > 0)
+    && continuousTouch.row.every((cell) => cell > 0),
+  `mobile continuous touch missed semantic landmarks (${JSON.stringify(continuousTouch)})`);
+  assert(continuousTouch.occupied >= 25 && continuousTouch.occupied <= 27,
+    `mobile continuous touch painted an unbounded footprint (${continuousTouch.occupied} cells)`);
+
   const mobileLibrary = await evaluate(cdp, `(() => {
     const library = document.querySelector('.tool-library');
     const group = library?.querySelector('.material-group[open]');
@@ -1014,28 +1145,34 @@ async function auditMobile(cdp, mode, screenshot) {
     && mobileLibrary.tileBottom <= mobileLibrary.libraryBottom + 1,
   'mobile tool library cannot reveal the last tile in an open group');
   const scrollStart = await evaluate(cdp, `(() => {
-    const toolboxHeading = document.querySelector('.toolbox-heading');
     const library = document.querySelector('.tool-library');
-    if (!(toolboxHeading instanceof HTMLElement) || !(library instanceof HTMLElement)) {
-      throw new Error('Missing mobile toolbox');
-    }
+    if (!(library instanceof HTMLElement)) throw new Error('Missing mobile tool library');
     window.scrollTo(0, document.documentElement.scrollHeight);
     library.scrollTop = 0;
-    const rect = toolboxHeading.getBoundingClientRect();
+    const rect = library.getBoundingClientRect();
+    const visibleTop = Math.max(0, rect.top);
+    const visibleBottom = Math.min(innerHeight, rect.bottom);
+    const minimumY = visibleTop + 6;
+    const maximumY = Math.min(visibleBottom - 6, innerHeight - 130);
+    if (maximumY < minimumY) throw new Error('Mobile tool library has no visible swipe target');
     return {
-      x: Math.max(12, Math.min(innerWidth - 12, rect.left + rect.width / 2)),
-      y: Math.max(80, Math.min(innerHeight - 140, rect.top + rect.height / 2)),
+      x: Math.max(rect.left + 6, Math.min(rect.right - 6, rect.left + rect.width / 2)),
+      y: Math.max(minimumY, Math.min(maximumY, (visibleTop + visibleBottom) / 2)),
+      library: { left: rect.left, top: rect.top, right: rect.right, bottom: rect.bottom },
       scrollY,
     };
   })()`);
   const availablePageScroll = scrollStart.scrollY;
   assert(availablePageScroll > 30,
     `mobile palette exposes only ${round(availablePageScroll)}px upward page-scroll range`);
+  assert(scrollStart.x >= scrollStart.library.left && scrollStart.x <= scrollStart.library.right
+    && scrollStart.y >= scrollStart.library.top && scrollStart.y <= scrollStart.library.bottom,
+  `mobile nested-scroll swipe did not start inside the tool library (${JSON.stringify(scrollStart)})`);
   await cdp.send('Input.dispatchTouchEvent', {
-    type: 'touchStart', touchPoints: [touch(4, scrollStart.x, scrollStart.y)],
+    type: 'touchStart', touchPoints: [touch(6, scrollStart.x, scrollStart.y)],
   });
   await cdp.send('Input.dispatchTouchEvent', {
-    type: 'touchMove', touchPoints: [touch(4, scrollStart.x, scrollStart.y + 120)],
+    type: 'touchMove', touchPoints: [touch(6, scrollStart.x, scrollStart.y + 120)],
   });
   await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
   await sleep(320);
@@ -1058,12 +1195,17 @@ async function auditMobile(cdp, mode, screenshot) {
     pinchStrayCells: pinch.occupied,
     singleTouchCell: `${target.x},${target.y}`,
     paintedFootprints,
+    continuousTouchCells: continuousTouch.occupied,
+    continuousTouchLandmarks: strokeLandmarks.map(({ x, y }) => `${x},${y}`),
+    eraserTouchCell: `${target.x},${target.y}`,
+    mobileFilterScroll: `${round(mobileFilterReach.reached)}/${round(mobileFilterReach.maximum)}`,
     toolFilterHeight: round(initial.ui.filters.height),
     toolboxGap: round(initial.ui.actions.top - initial.ui.palette.bottom),
     horizontalOverflow: round(initial.ui.horizontalOverflow),
     fieldIndicator: `${round(initial.ui.fieldIndicator.width)}x${round(initial.ui.fieldIndicator.height)}`,
     libraryScroll: `${round(mobileLibrary.scrollTop)}/${round(mobileLibrary.scrollHeight - mobileLibrary.clientHeight)}`,
     touchScroll: `${round(scrollStart.scrollY)}->${round(touchScrollY)}`,
+    nestedScrollStart: `${round(scrollStart.x)},${round(scrollStart.y)}`,
     footerScrollY: round(footer.scrollY),
     ...(screenshot ? { screenshot } : {}),
   };
@@ -1653,10 +1795,12 @@ function assertPairedVisualRelief(results) {
   for (const canvasSample of canvas.liquidColumnSamples) {
     const webglSample = webgl.liquidColumnSamples.find((sample) => sample.name === canvasSample.name);
     assert(webglSample, `paired liquid sample missing ${canvasSample.name}`);
-    assert(canvasSample.macroLumaRange >= Math.max(2, webglSample.macroLumaRange * 0.45),
-      `Canvas ${canvasSample.name} macro depth fell behind WebGL (${canvasSample.macroLumaRange}/${webglSample.macroLumaRange})`);
-    assert(canvasSample.macroLumaRange <= webglSample.macroLumaRange * 5 + 4,
-      `Canvas ${canvasSample.name} macro depth became excessive (${canvasSample.macroLumaRange}/${webglSample.macroLumaRange})`);
+    const macroRatio = webglSample.macroLumaRange / Math.max(1, canvasSample.macroLumaRange);
+    assert(macroRatio >= 0.65 && macroRatio <= 2.0,
+      `Canvas/WebGL ${canvasSample.name} macro depth diverged (${canvasSample.macroLumaRange}/${webglSample.macroLumaRange})`);
+    const exposureRatio = webglSample.meanLuma / Math.max(1, canvasSample.meanLuma);
+    assert(exposureRatio >= 0.65 && exposureRatio <= 1.6,
+      `Canvas/WebGL ${canvasSample.name} mean exposure diverged (${canvasSample.meanLuma}/${webglSample.meanLuma})`);
   }
   for (const name of ['warmRim', 'coolRim']) {
     const canvasSample = canvas.gasLightResponseSamples.find((sample) => sample.name === name);
