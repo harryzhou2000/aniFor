@@ -93,6 +93,7 @@ uniform float uSolidContactDepth;
 uniform float uTranslucentLensShell;
 uniform float uSolidCurvatureDepth;
 uniform float uThermalMaterialStyling;
+uniform float uEnergyCoreRelief;
 uniform float uPowderStyle;
 vec4 field(vec2 uv) { return texture(uFieldTexture, clamp(uv, uTexel * 0.5, vec2(1.0) - uTexel * 0.5)); }
 vec4 wallField(vec2 uv) { return texture(uWallTexture, clamp(uv, uTexel * 0.5, vec2(1.0) - uTexel * 0.5)); }
@@ -817,6 +818,14 @@ void main() {
     color += auraTint * edge * (0.20 + pulse * 0.16);
     color += mix(vec3(1.0, 0.72, 0.42), vec3(0.72, 0.90, 1.0), radioactiveCarrier)
       * core * (0.10 + pulse * 0.08);
+    // Dense exact carriers share the already available low-frequency flow
+    // signal as one hue-preserving radiance body. Sparse particles remain
+    // exact, and this adds no texture read, field, pass, or alpha change.
+    float energySurfaceRelief = (diffuse - 0.93) * 0.28 * mix(0.20, 1.0, edge);
+    float energyRelief = clamp(
+      flowWave * cohesiveEnergy * 0.075 + energySurfaceRelief, -0.10, 0.10
+    );
+    color *= 1.0 + energyRelief * uEnergyCoreRelief;
     // Preserve sparse aura energy while compressing only the dense semantic
     // core. This retains hue and flow detail that would otherwise framebuffer-
     // clip into flat neon slabs after premultiplication.
@@ -1425,6 +1434,7 @@ export class PixiFieldPresenter {
       // FieldRenderer turns this on only for backends that expose temperature;
       // byte zero must therefore never make legacy backends look frozen.
       uThermalMaterialStyling: { value: 0, type: 'f32' },
+      uEnergyCoreRelief: { value: 1, type: 'f32' },
       uPowderStyle: { value: powderRenderStyleValue('smooth'), type: 'f32' },
     });
     const resources = {
@@ -1594,6 +1604,11 @@ export class PixiFieldPresenter {
 
   setThermalMaterialStylingEnabled(enabled: boolean): void {
     this.uniforms.uniforms.uThermalMaterialStyling = enabled ? 1 : 0;
+    this.renderApplication();
+  }
+
+  setEnergyCoreReliefEnabled(enabled: boolean): void {
+    this.uniforms.uniforms.uEnergyCoreRelief = enabled ? 1 : 0;
     this.renderApplication();
   }
 

@@ -149,6 +149,7 @@ export class MaterialRenderer {
   private translucentLensShellEnabled = true;
   private solidCurvatureDepthEnabled = true;
   private thermalMaterialStylingEnabled = true;
+  private energyCoreReliefEnabled = true;
   private powderRenderStyle: PowderRenderStyle = 'smooth';
   private gasFieldLightingDirty = false;
   private canvasPresentationTimingEnabled = false;
@@ -333,6 +334,13 @@ export class MaterialRenderer {
     this.changed = true;
   }
 
+  setEnergyCoreReliefEnabled(enabled: boolean): void {
+    if (enabled === this.energyCoreReliefEnabled) return;
+    this.energyCoreReliefEnabled = enabled;
+    this.presenter?.setEnergyCoreReliefEnabled(enabled);
+    this.changed = true;
+  }
+
   setPowderRenderStyle(style: PowderRenderStyle): void {
     if (style === this.powderRenderStyle) return;
     this.powderRenderStyle = style;
@@ -445,6 +453,7 @@ export class MaterialRenderer {
     presenter.setThermalMaterialStylingEnabled(
       this.thermalMaterialStylingEnabled && this.simulation.temperature !== undefined,
     );
+    presenter.setEnergyCoreReliefEnabled(this.energyCoreReliefEnabled);
     presenter.setPowderRenderStyle(this.powderRenderStyle);
     presenter.update(
       this.rendered, this.renderedWalls, this.simulation.temperature?.(), this.simulation.velocity?.(),
@@ -708,6 +717,11 @@ export class MaterialRenderer {
       if (phase === RenderPhase.Energy) {
         const info = PROJECTED_RENDER_INFO[material];
         if (!info) continue;
+        const energyNeighbourCount = Number(top === material) + Number(left === material)
+          + Number(right === material) + Number(bottom === material);
+        const energyFieldSupport = energyNeighbourCount === 4
+          ? 255
+          : energyNeighbourCount >= 2 ? 96 : fields.emission.bytes[pixel + 3];
         const red = info.color >>> 16;
         const green = (info.color >>> 8) & 0xFF;
         const blue = info.color & 0xFF;
@@ -716,6 +730,7 @@ export class MaterialRenderer {
           this.styledColor, this.energyGlowColor, red, green, blue, profile, traits,
           material, x, y, visualTime, heat,
           velocities?.[index * 2] ?? 0, velocities?.[index * 2 + 1] ?? 0,
+          energyFieldSupport, this.energyCoreReliefEnabled, normalLight,
         );
         if (applicableTraits !== 0) applyCanvasRenderTraits(
           this.styledColor, applicableTraits, phase, material, x, y, index, this.traitClock,

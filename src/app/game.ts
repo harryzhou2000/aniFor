@@ -200,6 +200,9 @@ export class Game {
       setThermalMaterialStyling: (enabled) => {
         this.renderer.setThermalMaterialStylingEnabled(enabled);
       },
+      setEnergyCoreRelief: (enabled) => {
+        this.renderer.setEnergyCoreReliefEnabled(enabled);
+      },
       clear: () => { this.simulation.clear(); },
       setRadius: (radius) => { this.radius = Math.max(0, Math.min(64, Math.round(radius))); },
       setMaterial: (material) => {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { shadeCanvasEnergy } from './canvas-energy-style';
+import { canvasEnergyCoreReliefScale, shadeCanvasEnergy } from './canvas-energy-style';
 import { RenderProfile } from './render-profile';
 import { RenderTrait } from './render-traits';
 
@@ -59,5 +59,36 @@ describe('Canvas energy core styling', () => {
     );
     expect(isotope[2] - isotope[0]).toBeGreaterThan(carrier[2] - carrier[0]);
     expect(carrier).not.toEqual(isotope);
+  });
+
+  it('adds opposed bounded macro relief only to a dense energy field', () => {
+    expect(canvasEnergyCoreReliefScale(1, 0)).toBe(1);
+    expect(canvasEnergyCoreReliefScale(1, 255)).toBeGreaterThan(1.07);
+    expect(canvasEnergyCoreReliefScale(-1, 255)).toBeLessThan(0.93);
+    expect(canvasEnergyCoreReliefScale(1, 255, 18))
+      .toBeGreaterThan(canvasEnergyCoreReliefScale(1, 255, -18));
+    for (let wave = -1.5; wave <= 1.5; wave += 0.05) {
+      const scale = canvasEnergyCoreReliefScale(wave, 255);
+      expect(scale).toBeGreaterThanOrEqual(0.925);
+      expect(scale).toBeLessThanOrEqual(1.075);
+    }
+    expect(canvasEnergyCoreReliefScale(1, 255, 18)).toBeLessThanOrEqual(1.10);
+    expect(canvasEnergyCoreReliefScale(-1, 255, -18)).toBeGreaterThanOrEqual(0.90);
+  });
+
+  it('changes dense core RGB without changing glow or alpha', () => {
+    const flat = new Float32Array(3), flatGlow = new Float32Array(3);
+    const relieved = new Float32Array(3), relievedGlow = new Float32Array(3);
+    const flatAlpha = shadeCanvasEnergy(
+      flat, flatGlow, 110, 70, 40, RenderProfile.Neutral, 0,
+      4, 10, 50, 0, 0.2, 0, 0, 255, false,
+    );
+    const relievedAlpha = shadeCanvasEnergy(
+      relieved, relievedGlow, 110, 70, 40, RenderProfile.Neutral, 0,
+      4, 10, 50, 0, 0.2, 0, 0, 255, true,
+    );
+    expect(relieved).not.toEqual(flat);
+    expect(relievedGlow).toEqual(flatGlow);
+    expect(relievedAlpha).toBe(flatAlpha);
   });
 });

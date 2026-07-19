@@ -323,11 +323,21 @@ console.log(JSON.stringify({
       }
       gasSemanticAccentChecksum = checksum;
     }),
+    energyCoresFlat: sample(() => {
+      for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) {
+        shadeCanvasEnergy(
+          energyCore, energyGlow, 32, 224, 255, RenderProfile.Radioactive,
+          styleBytes[Material.NEUT * 4 + 3], Material.NEUT, x, y, 1_000, 0.4, 24, -8,
+          255, false, 18,
+        );
+      }
+    }),
     energyCores: sample(() => {
       for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) {
         shadeCanvasEnergy(
           energyCore, energyGlow, 32, 224, 255, RenderProfile.Radioactive,
           styleBytes[Material.NEUT * 4 + 3], Material.NEUT, x, y, 1_000, 0.4, 24, -8,
+          255, true, 18,
         );
       }
     }),

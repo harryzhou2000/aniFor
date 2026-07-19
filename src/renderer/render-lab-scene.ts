@@ -138,7 +138,12 @@ export function applyRenderLabScene(simulation: SimulationBackend): void {
     const row = Math.floor(index / 5);
     const x = 388 + column * 40;
     const y = 194 + row * 25;
-    if (material === Material.Metal || material === Material.Plant || material === Material.DTEC) {
+    if (RENDER_LAB_ENERGY_SAMPLES.some((candidate) => candidate === material)) {
+      // Dense energy remains authoritative at the existing sample centres, but
+      // rounded shoulders now expose core/silhouette styling without a box edge.
+      plot.roundedRect(x, y, 35, 21, 8, material);
+    }
+    else if (material === Material.Metal || material === Material.Plant || material === Material.DTEC) {
       plot.curvaturePlate(x, y, 35, 21, 6, material);
     }
     else plot.rect(x, y, 35, 21, material, 0.90, 601 + index);

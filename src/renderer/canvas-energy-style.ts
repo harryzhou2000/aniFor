@@ -29,6 +29,9 @@ export function shadeCanvasEnergy(
   heat: number,
   velocityX: number,
   velocityY: number,
+  emissionAlpha = 0,
+  reliefEnabled = true,
+  edgeLight = 0,
 ): number {
   const radioactive = (traits & RenderTrait.Radioactive) !== 0;
   const carrier = (traits & RenderTrait.Carrier) !== 0;
@@ -46,9 +49,15 @@ export function shadeCanvasEnergy(
   const energy = 1.04 + heat * 0.28 + pulse * 0.10;
   const accentMix = 0.08 + heat * 0.06;
   const glowMix = 0.88 + pulse * 0.14;
-  core[0] = toneMapEnergyChannel(red * energy * detail + accent[0] * accentMix);
-  core[1] = toneMapEnergyChannel(green * energy * detail + accent[1] * accentMix);
-  core[2] = toneMapEnergyChannel(blue * energy * detail + accent[2] * accentMix);
+  // The already-rebuilt emission field proves when many exact energy carriers
+  // form one body. Reuse it to reveal a slow, chunk-scale radiance relief while
+  // leaving sparse particles, glow, alpha, and semantic support untouched.
+  const relief = reliefEnabled
+    ? canvasEnergyCoreReliefScale(wave, emissionAlpha, edgeLight)
+    : 1;
+  core[0] = toneMapEnergyChannel((red * energy * detail + accent[0] * accentMix) * relief);
+  core[1] = toneMapEnergyChannel((green * energy * detail + accent[1] * accentMix) * relief);
+  core[2] = toneMapEnergyChannel((blue * energy * detail + accent[2] * accentMix) * relief);
   glow[0] = red * glowMix + accent[0] * 0.10;
   glow[1] = green * glowMix + accent[1] * 0.10;
   glow[2] = blue * glowMix + accent[2] * 0.10;
@@ -60,12 +69,34 @@ export function shadeCanvasEnergy(
   );
 }
 
+/**
+ * Hue-preserving dense-energy relief shared conceptually with the WebGL path.
+ * It performs no allocation and is bounded to +/-10% before tone mapping.
+ */
+export function canvasEnergyCoreReliefScale(
+  macroWave: number,
+  emissionAlpha: number,
+  edgeLight = 0,
+): number {
+  const support = smoothstep(31, 122, emissionAlpha);
+  if (support <= 0) return 1;
+  const surface = Math.max(-1, Math.min(1, edgeLight / 18)) * 0.035;
+  return 1 + Math.max(
+    -0.10, Math.min(0.10, (Math.max(-1, Math.min(1, macroWave)) * 0.075 + surface) * support),
+  );
+}
+
 function toneMapEnergyChannel(value: number): number {
   if (value <= ENERGY_RADIANCE_KNEE) return value;
   return Math.min(
     ENERGY_RADIANCE_CEILING,
     ENERGY_RADIANCE_KNEE + (value - ENERGY_RADIANCE_KNEE) * ENERGY_RADIANCE_SLOPE,
   );
+}
+
+function smoothstep(minimum: number, maximum: number, value: number): number {
+  const normalized = Math.max(0, Math.min(1, (value - minimum) / (maximum - minimum)));
+  return normalized * normalized * (3 - 2 * normalized);
 }
 
 function noise(x: number, y: number, salt: number): number {

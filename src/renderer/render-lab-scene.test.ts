@@ -116,6 +116,16 @@ describe('render lab scene', () => {
     expect(first.temperature()[229 * 612 + 539]).toBe(RENDER_LAB_COLD_TEMPERATURE);
     expect(second.temperature()[229 * 612 + 445]).toBe(RENDER_LAB_HOT_TEMPERATURE);
     expect(second.temperature()[229 * 612 + 539]).toBe(RENDER_LAB_COLD_TEMPERATURE);
+
+    for (const [column, material] of RENDER_LAB_ENERGY_SAMPLES.entries()) {
+      const left = 388 + column * 40;
+      const top = 319;
+      expect(first.cells()[(top + 10) * 612 + left + 17]).toBe(material);
+      expect(first.cells()[top * 612 + left + 17]).toBe(material);
+      expect(first.cells()[(top + 10) * 612 + left]).toBe(material);
+      expect(first.cells()[top * 612 + left]).toBe(Material.Empty);
+      expect(first.cells()[(top + 20) * 612 + left + 34]).toBe(Material.Empty);
+    }
   });
 
   it('exercises every non-neutral styled family plus an energy phase', () => {

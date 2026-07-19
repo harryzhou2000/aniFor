@@ -173,9 +173,22 @@ async function auditMode(mode) {
       cdp, `${mode} repeated neutral thermal-material framebuffer`,
     );
     await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setThermalMaterialStyling(true); true');
-    // Use the freshly restored styled frame as the canonical lit image for all
-    // following comparisons. This keeps adjacent toggle captures close in time.
-    const canonicalCapture = styledThermalCaptures.capture;
+    await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setEnergyCoreRelief(false); true');
+    const flatEnergyCaptures = await waitForStablePageCapture(
+      cdp, `${mode} flat energy-core framebuffer`,
+    );
+    await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setEnergyCoreRelief(true); true');
+    const relievedEnergyCaptures = await waitForStablePageCapture(
+      cdp, `${mode} relieved energy-core framebuffer`,
+    );
+    await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setEnergyCoreRelief(false); true');
+    const repeatedFlatEnergyCaptures = await waitForStablePageCapture(
+      cdp, `${mode} repeated flat energy-core framebuffer`,
+    );
+    await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setEnergyCoreRelief(true); true');
+    // Use the freshly restored relieved frame as the canonical lit image for
+    // all following comparisons. This keeps adjacent toggle captures close.
+    const canonicalCapture = relievedEnergyCaptures.capture;
     await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setGasFieldLighting(false); true');
     const unlitGasCaptures = await waitForStablePageCapture(cdp, `${mode} unlit gas framebuffer`);
     // Keep the paired lit/unlit captures adjacent. The presentation benchmark
@@ -321,6 +334,9 @@ async function auditMode(mode) {
       ['neutral thermal material', neutralThermalCaptures],
       ['styled thermal material', styledThermalCaptures],
       ['repeated neutral thermal material', repeatedNeutralThermalCaptures],
+      ['flat energy core', flatEnergyCaptures],
+      ['relieved energy core', relievedEnergyCaptures],
+      ['repeated flat energy core', repeatedFlatEnergyCaptures],
       ['unlit gas', unlitGasCaptures],
       ['unlit liquid', unlitLiquidCaptures],
       ['unlit translucent', unlitTranslucentCaptures],
@@ -416,6 +432,45 @@ async function auditMode(mode) {
       sample.neutralVisible === sample.styledVisible
       && Math.abs(sample.neutralWorldArea - sample.styledWorldArea) <= 0.01
     )), `${mode}: thermal styling changed material support (${JSON.stringify(thermalSupportInvariantSamples)})`);
+    const energyCoreReliefRegions = [
+      { name: 'energyRow', x: 485.5, y: 329.5, radiusX: 97.5, radiusY: 10.5 },
+    ];
+    const energyCoreReliefSamples = await sampleBackdropRefractionRegions(cdp, {
+      straight: flatEnergyCaptures.capture.data,
+      refracted: relievedEnergyCaptures.capture.data,
+      repeatedStraight: repeatedFlatEnergyCaptures.capture.data,
+    }, energyCoreReliefRegions, canonicalCaptures.canvasRect);
+    const energyCoreRelief = energyCoreReliefSamples[0];
+    assert(energyCoreRelief.rgbRms >= 0.45
+      && energyCoreRelief.bipolarBalance >= 0.08
+      && energyCoreRelief.meanBiasRatio <= 0.90
+      && energyCoreRelief.rgbPeak <= 24,
+    `${mode}: dense Energy lost bounded chunk-scale radiance relief (${JSON.stringify(energyCoreRelief)})`);
+    assert(energyCoreRelief.repeatRgbPeak <= 1,
+      `${mode}: Energy relief off-on-off sequence was not deterministic (${JSON.stringify(energyCoreRelief)})`);
+    const energyCoreSupportRegions = energyCoreReliefRegions.map((region) => ({
+      ...region, silhouette: true,
+    }));
+    const [flatEnergySupport, relievedEnergySupport] = await Promise.all([
+      samplePageRegions(
+        cdp, flatEnergyCaptures.capture.data, energyCoreSupportRegions,
+        blankCaptures.capture.data, blankCaptures.reference.data, canonicalCaptures.canvasRect,
+      ),
+      samplePageRegions(
+        cdp, relievedEnergyCaptures.capture.data, energyCoreSupportRegions,
+        blankCaptures.capture.data, blankCaptures.reference.data, canonicalCaptures.canvasRect,
+      ),
+    ]);
+    const energyCoreReliefSupport = flatEnergySupport.map((flat, index) => ({
+      name: flat.name,
+      flatVisible: flat.visible,
+      relievedVisible: relievedEnergySupport[index].visible,
+      flatWorldArea: flat.worldArea,
+      relievedWorldArea: relievedEnergySupport[index].worldArea,
+    }));
+    assert(energyCoreReliefSupport.every((sample) => sample.flatVisible === sample.relievedVisible
+      && Math.abs(sample.flatWorldArea - sample.relievedWorldArea) <= 0.01),
+    `${mode}: Energy radiance relief changed semantic support (${JSON.stringify(energyCoreReliefSupport)})`);
     const energySamples = await sampleCanonicalRegions([
       { name: 'fire', x: 405, y: 329 },
       { name: 'plasma', x: 445, y: 329 },
@@ -428,9 +483,9 @@ async function auditMode(mode) {
       `${mode}: energy render samples disappeared (${JSON.stringify(energySamples)})`);
     assert(energySamples.every((sample) => sample.pinnedFraction <= 0.02),
       `${mode}: dense energy framebuffer clipping returned (${JSON.stringify(energySamples)})`);
-    assert(energySamples.every((sample) => sample.microContrast <= 32
-      && sample.macroLumaRange >= 9 && sample.lumaRange >= 50),
-    `${mode}: energy chunks became cell-noisy or lost broad relief (${JSON.stringify(energySamples)})`);
+    assert(energySamples.every((sample) => sample.microContrast <= 8
+      && sample.lumaRange >= 1),
+    `${mode}: energy cores became cell-noisy or perfectly flat (${JSON.stringify(energySamples)})`);
     assert(energy.fire.rgb[0] > energy.fire.rgb[1] && energy.fire.rgb[1] > energy.fire.rgb[2],
       `${mode}: Fire lost its warm hue (${energy.fire.rgb})`);
     assert(energy.plasma.rgb[2] > energy.plasma.rgb[0] && energy.plasma.rgb[0] > energy.plasma.rgb[1],
@@ -449,8 +504,9 @@ async function auditMode(mode) {
       { name: 'grvtChunk', x: 565.5, y: 329.5, radiusX: 17.5, radiusY: 10.5, topology: true },
     ]);
     assert(energyTopologySamples.every((sample) => sample.coverage >= 0.72
-      && sample.dominantComponent >= 0.92),
-    `${mode}: dense energy body lost whole-chunk cohesion (${JSON.stringify(energyTopologySamples)})`);
+      && sample.dominantComponent >= 0.92
+      && sample.macroLumaRange >= 5 && sample.lumaRange >= 10),
+    `${mode}: dense energy body lost whole-chunk cohesion or relief (${JSON.stringify(energyTopologySamples)})`);
     const sparseEnergySamples = await sampleCanonicalRegions([
       // Ignore the deliberately soft aura and prove that high-energy semantic
       // carriers retain quiet gaps instead of becoming one bright core slab.
@@ -1146,6 +1202,14 @@ async function auditMode(mode) {
           Buffer.from(styledThermalCaptures.capture.data, 'base64'),
         );
         await writeFile(
+          variantScreenshotPath(visualScreenshot, 'flat-energy'),
+          Buffer.from(flatEnergyCaptures.capture.data, 'base64'),
+        );
+        await writeFile(
+          variantScreenshotPath(visualScreenshot, 'energy-relief'),
+          Buffer.from(relievedEnergyCaptures.capture.data, 'base64'),
+        );
+        await writeFile(
           visualScreenshot, Buffer.from(refractedBackdropCaptures.capture.data, 'base64'),
         );
         await writeFile(
@@ -1190,6 +1254,8 @@ async function auditMode(mode) {
         thermalResponseSamples,
         thermalRepeatSamples,
         thermalSupportInvariantSamples,
+        energyCoreReliefSamples,
+        energyCoreReliefSupport,
         gasLightResponseSamples,
         liquidLightResponseSamples,
         translucentLightResponseSamples,
@@ -1421,6 +1487,8 @@ async function auditMode(mode) {
       thermalResponseSamples,
       thermalRepeatSamples,
       thermalSupportInvariantSamples,
+      energyCoreReliefSamples,
+      energyCoreReliefSupport,
       silhouetteSamples,
       liquidContourCrossings,
       contactSilhouetteSamples,
@@ -3500,6 +3568,16 @@ function assertPairedVisualRelief(results) {
     assert(ratio >= 0.4 && ratio <= 2.5,
       `Canvas/WebGL ${name} thermal response diverged (${canvasResponse}/${webglResponse})`);
   }
+  const canvasEnergyRelief = canvas.energyCoreReliefSamples.find(
+    (sample) => sample.name === 'energyRow',
+  );
+  const webglEnergyRelief = webgl.energyCoreReliefSamples.find(
+    (sample) => sample.name === 'energyRow',
+  );
+  assert(canvasEnergyRelief && webglEnergyRelief, 'paired dense-energy relief sample missing');
+  const energyReliefRatio = canvasEnergyRelief.rgbRms / Math.max(0.25, webglEnergyRelief.rgbRms);
+  assert(energyReliefRatio >= 0.4 && energyReliefRatio <= 2.5,
+    `Canvas/WebGL dense-energy relief diverged (${canvasEnergyRelief.rgbRms}/${webglEnergyRelief.rgbRms})`);
   for (const canvasSample of canvas.liquidColumnSamples) {
     const webglSample = webgl.liquidColumnSamples.find((sample) => sample.name === canvasSample.name);
     assert(webglSample, `paired liquid sample missing ${canvasSample.name}`);
