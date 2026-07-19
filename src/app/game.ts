@@ -168,6 +168,7 @@ export class Game {
         return occupied;
       },
       setGasFieldLighting: (enabled) => { this.renderer.setGasFieldLightingEnabled(enabled); },
+      setLiquidFieldLighting: (enabled) => { this.renderer.setLiquidFieldLightingEnabled(enabled); },
       clear: () => { this.simulation.clear(); },
       setRadius: (radius) => { this.radius = Math.max(0, Math.min(64, Math.round(radius))); },
       setMaterial: (material) => {

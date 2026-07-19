@@ -18,6 +18,7 @@ export function lightCanvasSurface(
   y: number,
   profile: RenderProfile,
   exposure: number,
+  responseGain = 1,
 ): void {
   if (exposure <= 0 || target[offset + 3] === 0) return;
   if (emissionWidth <= 0 || emissionHeight <= 0
@@ -39,7 +40,11 @@ export function lightCanvasSurface(
   const alpha = bilinear(emission, topLeft + 3, topRight + 3, bottomLeft + 3, bottomRight + 3, mixX, mixY) / 255;
   if (alpha <= 1 / 255) return;
 
-  const response = alpha * surfaceLightGain(profile) * Math.max(0, Math.min(1, exposure));
+  const response = Math.min(
+    1,
+    alpha * surfaceLightGain(profile) * Math.max(0, Math.min(1, exposure))
+      * Math.max(0, responseGain),
+  );
   for (let channel = 0; channel < 3; channel++) {
     const light = bilinear(
       emission, topLeft + channel, topRight + channel, bottomLeft + channel, bottomRight + channel, mixX, mixY,

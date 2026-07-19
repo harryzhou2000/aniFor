@@ -243,9 +243,44 @@ describe('Canvas 2x phase contour scratch', () => {
     expect(cellCoverage(localWithField, 4, 3)).toBeGreaterThan(0);
     expect(cellCoverage(smooth, 4, 3)).toBeLessThanOrEqual(cellCoverage(localWithField, 4, 3));
     const grainBody = cellCoverage(grains, 4, 4);
-    expect(grainBody).toBeGreaterThan(0);
-    expect(grainBody).toBeLessThan(255 * scale * scale);
+    expect(grainBody).toBe(255 * scale * scale);
     expect(cellCoverage(smooth, 4, 4)).toBeGreaterThan(0);
+  });
+
+  it('never erases Local coverage from occupied Clay and Concrete columns', () => {
+    const scale = 4;
+    const width = 24;
+    const height = 24;
+    const value = fixture(width, height);
+    // Deep columns with asymmetric ledges and notches exercise the vertical
+    // slope gate that previously let the wide field thin occupied sections.
+    for (let y = 3; y <= 20; y++) for (let x = 4; x <= 8; x++) {
+      if ((y === 8 || y === 15) && x === 4) continue;
+      paint(value, x, y, Material.Clay);
+    }
+    for (let y = 5; y <= 20; y++) for (let x = 14; x <= 18; x++) {
+      if ((y === 11 || y === 17) && x === 18) continue;
+      paint(value, x, y, Material.Concrete);
+    }
+    for (let x = 2; x <= 10; x++) paint(value, x, 20, Material.Clay);
+    for (let x = 12; x <= 20; x++) paint(value, x, 20, Material.Concrete);
+
+    const field = new PowderSurfaceField(width, height, lookups.styleBytes);
+    field.update(value.materials, value.stability, value.walls);
+    const local = new CanvasPhaseContourScratch(scale);
+    local.rasterize({ ...value.input, powderStyle: 'local' });
+    const smooth = new CanvasPhaseContourScratch(scale);
+    smooth.rasterize({ ...value.input, powderSurface: field.bytes, powderStyle: 'smooth' });
+
+    for (let cellY = 0; cellY < height; cellY++) for (let cellX = 0; cellX < width; cellX++) {
+      if (value.materials[cellY * width + cellX] === Material.Empty) continue;
+      for (let subY = 0; subY < scale; subY++) for (let subX = 0; subX < scale; subX++) {
+        const output = (cellY * scale + subY) * smooth.outputStride + cellX * scale + subX;
+        expect(
+          smooth.coverage[output], `${cellX},${cellY}:${subX},${subY}`,
+        ).toBeGreaterThanOrEqual(Math.floor(local.coverage[output] * 0.38));
+      }
+    }
   });
 
   it('handles every local neighbour topology with mirror-symmetric categorical solid support', () => {

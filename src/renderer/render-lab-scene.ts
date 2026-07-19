@@ -36,6 +36,18 @@ export function applyRenderLabScene(simulation: SimulationBackend): void {
   powderDensity.forEach((density, band) => {
     plot.rect(18 + band * 31, 20, 29, 118, Material.Sand, density, 101 + band);
   });
+  // Replace the densest band's centre with two exact deep powder columns. Side
+  // notches and ledges exercise the Smooth-vs-Local contract for Clay and
+  // Concrete without turning the fixture into an idealized heap.
+  plot.eraseRect(141, 20, 30, 118);
+  plot.rect(143, 27, 11, 111, Material.Clay, 1, 0);
+  plot.rect(158, 39, 11, 99, Material.Concrete, 1, 0);
+  plot.eraseRect(143, 61, 3, 4);
+  plot.eraseRect(151, 91, 3, 5);
+  plot.eraseRect(158, 72, 3, 4);
+  plot.eraseRect(166, 108, 3, 5);
+  plot.rect(140, 132, 17, 6, Material.Clay, 1, 0);
+  plot.rect(155, 132, 17, 6, Material.Concrete, 1, 0);
   plot.rect(18, 112, 153, 26, Material.Dust, 0.18, 151);
   plot.rect(112, 112, 59, 26, Material.Salt, 0.22, 157);
   // A shallow, exact settled slope exposes one-cell sawtooth silhouettes that
@@ -55,7 +67,10 @@ export function applyRenderLabScene(simulation: SimulationBackend): void {
   plot.ellipse(544, 88, 45, 39, Material.NobleGas, 0.60, 313, 0.70);
   // Compact warm and cool field lights graze opposite cloud flanks without
   // reading as full-height UI rails in the canonical visual fixture.
-  plot.rect(360, 68, 2, 17, Material.Fire, 0.82, 315);
+  // The second cool strip also gives Water a deterministic reflected-light
+  // flank while the existing warm strip lights Acid from the opposite side.
+  plot.rect(180, 68, 2, 17, Material.GRVT, 0.82, 314);
+  plot.rect(357, 68, 5, 17, Material.Fire, 0.82, 315);
   plot.rect(592, 80, 2, 17, Material.GRVT, 0.82, 316);
   plot.scatterLine(382, 145, 202, Material.Smoke, 0.12, 317);
   // Generic soot and emissive gas exercise paths that Smoke and clean gases do
@@ -109,6 +124,12 @@ export function applyRenderLabScene(simulation: SimulationBackend): void {
 
 class ScenePlotter {
   constructor(private readonly simulation: SimulationBackend) {}
+
+  eraseRect(x: number, y: number, width: number, height: number): void {
+    for (let py = y; py < y + height; py++) for (let px = x; px < x + width; px++) {
+      this.simulation.erase(px, py, 0);
+    }
+  }
 
   rect(x: number, y: number, width: number, height: number, material: Material, density: number, salt: number): void {
     for (let py = y; py < y + height; py++) for (let px = x; px < x + width; px++) {

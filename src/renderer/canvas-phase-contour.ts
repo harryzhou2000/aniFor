@@ -219,11 +219,15 @@ export class CanvasPhaseContourScratch {
           const offsetY = ((((seed >>> 16) & 0xffff) / 0xffff) - 0.5) * 0.15;
           const grain = roundGrainCoverage(localX, localY, offsetX, offsetY);
           if (powderStyle === 'grains') {
-            amount = emptyPowder ? 0 : grain;
+            // The comparison mode is the intentionally unsmoothed, TPT-like
+            // reference: one occupied semantic powder cell is one exact square.
+            // Local and Smooth retain analytic round grains for loose matter.
+            amount = emptyPowder ? 0 : 1;
           } else {
             const heapDensity = this.quadraticPowderDensity(
               cellX + 1, cellY + 1, material, localX - 0.5, localY - 0.5,
             );
+            const localHeap = smoothstep(0.18, 0.58, heapDensity);
             let surfaceDensity = heapDensity;
             let slopeAware = 0;
             if (powderStyle === 'smooth' && input.powderSurface) {
@@ -247,7 +251,12 @@ export class CanvasPhaseContourScratch {
             }
             const heapStart = 0.18 + (0.40 - 0.18) * slopeAware;
             const heapEnd = 0.58 + (0.60 - 0.58) * slopeAware;
-            const heap = smoothstep(heapStart, heapEnd, surfaceDensity);
+            let heap = smoothstep(heapStart, heapEnd, surfaceDensity);
+            // A wide slope estimate may redistribute boundary opacity into a
+            // smoother tangent, but every Local-visible occupied subpixel keeps
+            // a substantial floor. This prevents holes in columns and ledges
+            // without forcing Smooth back to the exact Local staircase.
+            if (!emptyPowder) heap = Math.max(heap, localHeap * 0.40);
             if (emptyPowder) {
               amount = emptyPowderStability
                 * smoothstep(2.5, 4, emptyPowderSupport)

@@ -13,8 +13,8 @@ import {
   createLiquidSurfaceScratch, reconstructLiquidSurface, type LiquidSurfaceScratch,
 } from './canvas-liquid-surface';
 import {
-  canvasLiquidContourScale, canvasLiquidFieldRelief, canvasLiquidSpeciesRelief,
-  canvasLiquidSurfaceExposure,
+  canvasLiquidContourScale, canvasLiquidEmissionExposure, canvasLiquidFieldRelief,
+  canvasLiquidEmissionSurfaceExposure, canvasLiquidSpeciesRelief, canvasLiquidSurfaceExposure,
 } from './canvas-liquid-light';
 import { shadeCanvasEnergy } from './canvas-energy-style';
 import { shadeCanvasMaterial } from './canvas-material-style';
@@ -130,6 +130,7 @@ export class MaterialRenderer {
   private changed = true;
   private powderSurfaceDirty = true;
   private gasFieldLightingEnabled = true;
+  private liquidFieldLightingEnabled = true;
   private powderRenderStyle: PowderRenderStyle = 'smooth';
   private gasFieldLightingDirty = false;
   private canvasPresentationTimingEnabled = false;
@@ -255,6 +256,13 @@ export class MaterialRenderer {
     this.changed = true;
   }
 
+  setLiquidFieldLightingEnabled(enabled: boolean): void {
+    if (enabled === this.liquidFieldLightingEnabled) return;
+    this.liquidFieldLightingEnabled = enabled;
+    this.presenter?.setLiquidFieldLightingEnabled(enabled);
+    this.changed = true;
+  }
+
   setPowderRenderStyle(style: PowderRenderStyle): void {
     if (style === this.powderRenderStyle) return;
     this.powderRenderStyle = style;
@@ -342,6 +350,7 @@ export class MaterialRenderer {
     const now = performance.now();
     if (this.webGLPresentationTimingEnabled) presenter.enableWebGLPresentationTiming();
     presenter.setGasFieldLightingEnabled(this.gasFieldLightingEnabled);
+    presenter.setLiquidFieldLightingEnabled(this.liquidFieldLightingEnabled);
     presenter.setPowderRenderStyle(this.powderRenderStyle);
     presenter.update(
       this.rendered, this.renderedWalls, this.simulation.temperature?.(), this.simulation.velocity?.(),
@@ -511,11 +520,14 @@ export class MaterialRenderer {
         || (right !== material && fields.lookups.liquidByMaterial[right] !== 0)
         || (bottom !== material && fields.lookups.liquidByMaterial[bottom] !== 0)
       );
-      const liquidReliefScale = phase === RenderPhase.Liquid
-        ? 1 + (canvasLiquidFieldRelief(fields.liquid.bytes, width, height, x, y)
+      const liquidFieldRelief = phase === RenderPhase.Liquid
+        ? canvasLiquidFieldRelief(fields.liquid.bytes, width, height, x, y)
           + (liquidSpeciesContact
             ? canvasLiquidSpeciesRelief(fields.liquid.bytes, width, height, x, y)
-            : 0))
+            : 0)
+        : 0;
+      const liquidReliefScale = phase === RenderPhase.Liquid
+        ? 1 + liquidFieldRelief
           * (this.outputScale >= CANVAS_CONTOUR_OUTPUT_SCALE
             ? (optics === RenderOptics.Aqueous ? 1.35 : 1.18)
             : 1)
@@ -524,6 +536,20 @@ export class MaterialRenderer {
               : optics === RenderOptics.Corrosive ? 1.0
                 : optics === RenderOptics.Molten ? 0.76 : 0.92)
         : 1;
+      const liquidEmissionExposure = phase === RenderPhase.Liquid
+        && this.liquidFieldLightingEnabled && fields.emission.hasLight
+        && !PROJECTED_RENDER_INFO[material]?.emissive
+        && (top === Material.Empty || left === Material.Empty
+          || right === Material.Empty || bottom === Material.Empty)
+        ? canvasLiquidEmissionExposure(
+          canvasLiquidEmissionSurfaceExposure(
+            fields.liquid.bytes, width, height, x, y,
+            top === Material.Empty, left === Material.Empty,
+            right === Material.Empty, bottom === Material.Empty,
+          ),
+          liquidFieldRelief,
+        )
+        : 0;
       const normalLight = (left === Material.Empty ? 8 : 0) - (right === Material.Empty ? 6 : 0)
         + (exposedTop ? 18 : 0) - (bottom === Material.Empty ? 5 : 0);
       const denseSolidInterior = phase === RenderPhase.Solid
@@ -765,7 +791,13 @@ export class MaterialRenderer {
           );
         }
       }
-      if (fields.emission.hasLight && receivesSurfaceLight(phase)) {
+      if (fields.emission.hasLight && liquidEmissionExposure > 0
+        && phase === RenderPhase.Liquid && !PROJECTED_RENDER_INFO[material]?.emissive) {
+        lightCanvasSurface(
+          target, pixel, fields.emission.bytes, fields.emission.width, fields.emission.height,
+          width, height, x, y, profile, liquidEmissionExposure, 4,
+        );
+      } else if (fields.emission.hasLight && receivesSurfaceLight(phase)) {
         const exposure = cardinalExposure(this.rendered, width, height, x, y, material);
         lightCanvasSurface(
           target, pixel, fields.emission.bytes, fields.emission.width, fields.emission.height,

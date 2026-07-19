@@ -69,6 +69,7 @@ uniform vec2 uEmissionTexel;
 uniform float uTime;
 uniform float uHighQuality;
 uniform float uGasFieldLighting;
+uniform float uLiquidFieldLighting;
 uniform float uPowderStyle;
 vec4 field(vec2 uv) { return texture(uFieldTexture, clamp(uv, uTexel * 0.5, vec2(1.0) - uTexel * 0.5)); }
 vec4 wallField(vec2 uv) { return texture(uWallTexture, clamp(uv, uTexel * 0.5, vec2(1.0) - uTexel * 0.5)); }
@@ -494,6 +495,7 @@ void main() {
       )))));
   float boundaryStability = 0.0;
   float powderSurfaceBlend = 0.0;
+  vec4 localPowderShape = shape;
   if (family == 4.0) {
     boundaryStability = surfaceOnly > 0.5
       ? nearbyPowderStability(fieldUv, material)
@@ -605,6 +607,7 @@ void main() {
   float heat = smoothstep(0.07, 0.34, state.g);
   float alpha;
   vec3 color;
+  float liquidLightResponse = 0.0;
   if (wallOnly > 0.5) {
     alpha = smoothstep(0.30, 0.70, density) * 0.96;
     color = base * wallPattern(wall, fieldPosition) * (0.76 + diffuse * 0.24);
@@ -772,6 +775,11 @@ void main() {
     );
     float topLip = smoothstep(0.02, 0.16, volumeSlope.y);
     float lowerShade = smoothstep(0.02, 0.16, -volumeSlope.y);
+    liquidLightResponse = mix(
+      0.055,
+      0.30,
+      clamp(topLip * 0.48 + rim * 0.30 + surfaceSpecular * 0.22 + fresnel * 0.26, 0.0, 1.0)
+    );
     float depthTransmission = 0.66 + aqueous * 0.10 - oily * 0.10
       + corrosive * 0.04 - molten * 0.15;
     float gloss = 1.0 + aqueous * 0.18 + oily * 0.30
@@ -867,6 +875,8 @@ void main() {
     // TPT velocity samples from flipping the boundary mode every frame.
     if (profile == 1.0) {
       float powderContact = smoothstep(1.55, 2.85, shape.w);
+      float localPowderContact = smoothstep(1.55, 2.85, localPowderShape.w);
+      powderContact = max(powderContact, localPowderContact);
       float powderBulk = powderContact * boundaryStability;
       float grainOffsetY = fract(sin(dot(floor(fieldPosition), vec2(39.346, 11.135))) * 24634.6345) - 0.5;
       vec2 grainCentre = vec2(grain, grainOffsetY) * 0.075;
@@ -875,8 +885,14 @@ void main() {
       float heapStart = mix(0.10 + grain * 0.020, 0.40 + grain * 0.012, powderSurfaceBlend);
       float heapEnd = mix(0.62 + grain * 0.030, 0.60 + grain * 0.018, powderSurfaceBlend);
       float heapAlpha = smoothstep(heapStart, heapEnd, density);
+      float localHeapAlpha = smoothstep(
+        0.10 + grain * 0.020, 0.62 + grain * 0.030, localPowderShape.x
+      );
+      if (surfaceOnly < 0.5) heapAlpha = max(heapAlpha, localHeapAlpha * 0.40);
       if (uPowderStyle < 0.5) {
-        alpha = surfaceOnly > 0.5 ? 0.0 : roundGrainAlpha;
+        // Grains is the exact unsmoothed reference: one semantic cell becomes
+        // one square pixel-cell, with no empty-side reconstruction.
+        alpha = surfaceOnly > 0.5 ? 0.0 : 1.0;
       } else {
         alpha = surfaceOnly > 0.5
           ? heapAlpha * boundaryStability * smoothstep(2.5, 4.0, shape.w)
@@ -999,7 +1015,6 @@ void main() {
   color += mix(base, vec3(1.0, 0.52, 0.20), heat) * emission;
   if (energyCore < 0.5 && emissionOnly < 0.5 && emissionState.a > 0.002) {
     float lightReach = smoothstep(0.002, 0.42, emissionState.a);
-    float volumeResponse = liquidVolume > 0.5 ? 0.16 : 0.0;
     float contour = 1.0 - smoothstep(0.54, 0.96, density);
     float relief = clamp((diffuse - 0.72) / 0.42 + specular * 0.18, 0.0, 1.0);
     float lightProfile = wallOnly > 0.5 ? 2.0 : profile;
@@ -1007,8 +1022,9 @@ void main() {
       * mix(0.14, 1.0, contour)
       * mix(0.76, 1.16, relief);
     float lightResponse = gasVolume > 0.5 ? 0.0
-      : (materialEmissive ? 0.24
-      : (volumeResponse > 0.0 ? volumeResponse : surfaceResponse));
+      : (liquidVolume > 0.5
+      ? (materialEmissive ? 0.0 : liquidLightResponse * uLiquidFieldLighting)
+      : (materialEmissive ? 0.24 : surfaceResponse));
     // Opaque matter receives coloured light through its reconstructed relief;
     // empty space keeps the separate emission halo, avoiding a flat milky wash.
     color += emissionState.rgb * lightReach * lightResponse;
@@ -1138,6 +1154,7 @@ export class PixiFieldPresenter {
       // compact/mobile cold loads remain on the zero-extra-probe path.
       uHighQuality: { value: matchMedia('(min-width: 800px)').matches ? 1 : 0, type: 'f32' },
       uGasFieldLighting: { value: 1, type: 'f32' },
+      uLiquidFieldLighting: { value: 1, type: 'f32' },
       uPowderStyle: { value: powderRenderStyleValue('smooth'), type: 'f32' },
     });
     const filter = Filter.from({
@@ -1246,6 +1263,11 @@ export class PixiFieldPresenter {
 
   setGasFieldLightingEnabled(enabled: boolean): void {
     this.uniforms.uniforms.uGasFieldLighting = enabled ? 1 : 0;
+    this.renderApplication();
+  }
+
+  setLiquidFieldLightingEnabled(enabled: boolean): void {
+    this.uniforms.uniforms.uLiquidFieldLighting = enabled ? 1 : 0;
     this.renderApplication();
   }
 

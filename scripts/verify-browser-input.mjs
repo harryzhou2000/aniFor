@@ -15,6 +15,7 @@ const WORLD_HEIGHT = 384;
 const WORLD_ASPECT = WORLD_WIDTH / WORLD_HEIGHT;
 const modes = process.argv.includes('--canvas-only') ? ['canvas2d']
   : process.argv.includes('--webgl-only') ? ['webgl'] : ['canvas2d', 'webgl'];
+const visualOnly = process.argv.includes('--visual-only');
 const screenshotRequest = process.argv.find((argument) => argument.startsWith('--screenshot='))?.slice('--screenshot='.length);
 
 async function main() {
@@ -33,7 +34,7 @@ async function main() {
     }, 15_000, 'Vite browser-audit server');
     const results = [];
     for (const mode of modes) results.push(await auditMode(mode));
-    assertPairedVisualRelief(results);
+    if (!visualOnly) assertPairedVisualRelief(results);
     console.log(JSON.stringify({ world: `${WORLD_WIDTH}x${WORLD_HEIGHT}`, results }, null, 2));
   } catch (error) {
     if (serverLog.trim()) console.error(serverLog.trim());
@@ -121,14 +122,23 @@ async function auditMode(mode) {
     // backend compositing regressions are observable in the browser gate.
     const canonicalCaptures = await waitForStablePageCapture(cdp, `${mode} canonical framebuffer`);
     const canonicalCapture = canonicalCaptures.capture;
-    const webGLPresentationTiming = mode === 'webgl'
+    const webGLPresentationTiming = mode === 'webgl' && !visualOnly
       ? await auditWebGLPresentationTiming(cdp)
       : undefined;
     await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setGasFieldLighting(false); true');
     const unlitGasCaptures = await waitForStablePageCapture(cdp, `${mode} unlit gas framebuffer`);
-    const canvasGasLightingRefresh = mode === 'canvas2d'
+    const canvasGasLightingRefresh = mode === 'canvas2d' && !visualOnly
       ? await auditCanvasGasLightingRefresh(cdp)
       : undefined;
+    await evaluate(cdp, `(() => {
+      window.__ANIFOR_INPUT_AUDIT__.setGasFieldLighting(true);
+      window.__ANIFOR_INPUT_AUDIT__.setLiquidFieldLighting(false);
+      return true;
+    })()`);
+    const unlitLiquidCaptures = await waitForStablePageCapture(
+      cdp, `${mode} unlit liquid framebuffer`,
+    );
+    await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setLiquidFieldLighting(true); true');
     const powderStyleCaptures = {};
     const powderStyleSelection = {};
     for (const style of ['grains', 'local', 'smooth']) {
@@ -151,6 +161,7 @@ async function auditMode(mode) {
     const blankCaptures = await captureStableBlankPage(cdp, mode);
     for (const [label, captures] of [
       ['unlit gas', unlitGasCaptures],
+      ['unlit liquid', unlitLiquidCaptures],
       ...Object.entries(powderStyleCaptures).map(([style, captures]) => [`powder ${style}`, captures]),
       ['blank', blankCaptures],
     ]) assertCanvasRectsEqual(
@@ -252,6 +263,28 @@ async function auditMode(mode) {
         canonicalCaptures.canvasRect,
       ))[0];
     }
+    const powderColumnRegions = [
+      { name: 'clayUpper', x: 148.5, y: 45, radiusX: 3.5, radiusY: 5 },
+      { name: 'clayMiddle', x: 148.5, y: 78, radiusX: 3.5, radiusY: 5 },
+      { name: 'clayLower', x: 148.5, y: 118, radiusX: 3.5, radiusY: 5 },
+      { name: 'concreteUpper', x: 163.5, y: 53, radiusX: 3.5, radiusY: 5 },
+      { name: 'concreteMiddle', x: 163.5, y: 88, radiusX: 3.5, radiusY: 5 },
+      { name: 'concreteLower', x: 163.5, y: 124, radiusX: 3.5, radiusY: 5 },
+    ];
+    const powderColumnStyleSamples = {};
+    for (const style of ['local', 'smooth']) {
+      powderColumnStyleSamples[style] = await samplePageRegions(
+        cdp, powderStyleCaptures[style].capture.data, powderColumnRegions,
+        blankCaptures.capture.data, blankCaptures.reference.data,
+        canonicalCaptures.canvasRect,
+      );
+    }
+    const squareGrainSample = (await samplePageRegions(
+      cdp, powderStyleCaptures.grains.capture.data,
+      [{ name: 'squareGrain', x: 190.5, y: 176.5, radiusX: 1.5, radiusY: 1.5, topology: true, silhouette: true }],
+      blankCaptures.capture.data, blankCaptures.reference.data,
+      canonicalCaptures.canvasRect,
+    ))[0];
     assert(new Set(Object.values(powderStyleSelection)).size === 3,
       `${mode}: powder style buttons did not expose three exclusive states (${JSON.stringify(powderStyleSelection)})`);
     assert(powderStyleSamples.grains.signature !== powderStyleSamples.local.signature
@@ -262,6 +295,13 @@ async function auditMode(mode) {
     assert(powderStyleSamples.grains.worldArea < powderStyleSamples.smooth.worldArea * 0.99
       && powderStyleSamples.grains.macroLumaRange + 5 <= powderStyleSamples.smooth.macroLumaRange,
     `${mode}: Grains no longer preserves a visibly discrete reference (${JSON.stringify(powderStyleSamples)})`);
+    assert(squareGrainSample.worldArea >= 1.60 && squareGrainSample.worldArea <= 3.10
+      && squareGrainSample.dominantComponent >= 0.95,
+    `${mode}: Grains did not render one isolated powder cell as a solid square (${JSON.stringify(squareGrainSample)})`);
+    assert(powderColumnStyleSamples.local.every((sample) => sample.coverage >= 0.72)
+      && powderColumnStyleSamples.smooth.every((sample, index) => sample.coverage >= 0.72
+        && sample.coverage >= powderColumnStyleSamples.local[index].coverage * 0.84),
+    `${mode}: Smooth lost occupied Clay/Concrete column sections visible in Local (${JSON.stringify(powderColumnStyleSamples)})`);
     const silhouetteSamples = await sampleCanonicalRegions([
       {
         name: 'roundedMetal', x: 405.5, y: 229.5,
@@ -276,6 +316,17 @@ async function auditMode(mode) {
       `${mode}: reconstructed silhouettes fragmented (${JSON.stringify(silhouetteSamples)})`);
     assert(silhouetteSamples.every((sample) => sample.compactness >= 0.18),
       `${mode}: reconstructed silhouettes became excessively rough (${JSON.stringify(silhouetteSamples)})`);
+    const liquidContourCrossings = await sampleCapsuleContourCrossings(
+      cdp, canonicalCapture.data, blankCaptures.capture.data, canonicalCaptures.canvasRect,
+    );
+    assert(liquidContourCrossings.rmsError <= 1.15
+      && liquidContourCrossings.maximumError <= 1.85,
+    `${mode}: liquid endcap no longer follows its analytic curve (${JSON.stringify(liquidContourCrossings)})`);
+    assert(liquidContourCrossings.meanTransitionWidth >= 0.12
+      && liquidContourCrossings.meanTransitionWidth <= 1.75
+      && liquidContourCrossings.maximumSymmetryError <= 1.50
+      && liquidContourCrossings.monotonicSlack <= 0.45,
+    `${mode}: liquid endcap became hard, blurred, asymmetric, or stair-stepped (${JSON.stringify(liquidContourCrossings)})`);
     const contactSilhouetteSamples = await sampleCanonicalRegions([
       {
         name: 'powderContactCapsule', x: 54.5, y: 172,
@@ -395,6 +446,28 @@ async function auditMode(mode) {
       && gasLightResponse.coolRim.positiveRgb[1] >= 1.5
       && gasLightResponse.coolRim.positiveRgb[1] >= gasLightResponse.coolRim.positiveRgb[0] + 0.8,
     `${mode}: isolated cool gas-light response disappeared (${JSON.stringify(gasLightResponseSamples)})`);
+    const liquidLightResponseSamples = await sampleLightingDifferenceRegions(cdp, {
+      lit: canonicalCapture.data,
+      unlit: unlitLiquidCaptures.capture.data,
+    }, [
+      { name: 'coolWaterRim', x: 188, y: 68, radius: 3 },
+      { name: 'warmAcidRim', x: 353, y: 62, radius: 4 },
+    ], canonicalCaptures.canvasRect);
+    const liquidLightResponse = Object.fromEntries(
+      liquidLightResponseSamples.map((sample) => [sample.name, sample]),
+    );
+    assert(liquidLightResponse.coolWaterRim.coverage >= 0.08
+      && liquidLightResponse.coolWaterRim.positiveRgb[1] >= 0.8
+      && liquidLightResponse.coolWaterRim.positiveRgb[1]
+        >= liquidLightResponse.coolWaterRim.positiveRgb[0] + 0.50,
+    `${mode}: cool emitted-light reflection disappeared from Water (${JSON.stringify(liquidLightResponseSamples)})`);
+    assert(liquidLightResponse.warmAcidRim.coverage >= 0.025
+      && liquidLightResponse.warmAcidRim.positiveRgb[0] >= 0.12
+      && liquidLightResponse.warmAcidRim.positiveRgb[0]
+        >= liquidLightResponse.warmAcidRim.positiveRgb[2] + 0.08
+      && liquidLightResponse.warmAcidRim.positiveRgb[1]
+        >= liquidLightResponse.warmAcidRim.positiveRgb[2] + 0.12,
+    `${mode}: warm emitted-light reflection disappeared from Acid (${JSON.stringify(liquidLightResponseSamples)})`);
     const liquidColumnSamples = await sampleCanonicalRegions([
       { name: 'waterColumn', x: 224, y: 270, radius: 8 },
       { name: 'oilColumn', x: 263, y: 270, radius: 8 },
@@ -436,6 +509,23 @@ async function auditMode(mode) {
       `Canvas Water lost coherent upper-left field relief (${JSON.stringify(liquidReliefSamples)})`);
       assert(liquidRelief.waterCore.microContrast <= 1,
         `Canvas Water core relief became cell-grained (${JSON.stringify(liquidReliefSamples)})`);
+    }
+
+    if (visualOnly) {
+      assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
+      cdp.close();
+      return {
+        backend: mode,
+        canonicalFixture,
+        powderStyleSamples,
+        powderColumnStyleSamples,
+        squareGrainSample,
+        liquidLightResponseSamples,
+        silhouetteSamples,
+        liquidContourCrossings,
+        liquidReliefSamples,
+        browserErrors: errors.length,
+      };
     }
 
     const screenshot = screenshotPath(mode);
@@ -639,7 +729,10 @@ async function auditMode(mode) {
       solidSeparatorSamples,
       powderSamples,
       powderStyleSamples,
+      powderColumnStyleSamples,
+      squareGrainSample,
       silhouetteSamples,
+      liquidContourCrossings,
       contactSilhouetteSamples,
       contactMaterialSamples,
       isolatedMaterialSamples,
@@ -648,6 +741,7 @@ async function auditMode(mode) {
       volumeSamples,
       gasLightingSamples,
       gasLightResponseSamples,
+      liquidLightResponseSamples,
       ...(canvasGasLightingRefresh ? { canvasGasLightingRefresh } : {}),
       liquidColumnSamples,
       liquidReliefSamples,
@@ -1682,6 +1776,119 @@ async function captureStableBlankPage(cdp, mode) {
   await waitFor(() => evaluate(cdp, `window.__ANIFOR_INPUT_AUDIT__.backend().backend === ${JSON.stringify(mode)}`),
     15_000, `blank ${mode} backend`);
   return waitForStablePageCaptures(cdp, `${mode} blank framebuffer`);
+}
+
+async function sampleCapsuleContourCrossings(
+  cdp, screenshotBase64, baselineBase64, captureCanvasRect,
+) {
+  return evaluate(cdp, `(async () => {
+    const sources = {
+      rendered: ${JSON.stringify(`data:image/png;base64,${screenshotBase64}`)},
+      baseline: ${JSON.stringify(`data:image/png;base64,${baselineBase64}`)},
+    };
+    const contexts = {};
+    let imageWidth = 0;
+    let imageHeight = 0;
+    for (const [name, source] of Object.entries(sources)) {
+      const image = new Image();
+      image.src = source;
+      await image.decode();
+      if (imageWidth && (image.naturalWidth !== imageWidth || image.naturalHeight !== imageHeight)) {
+        throw new Error('Contour screenshot geometry mismatch');
+      }
+      imageWidth = image.naturalWidth;
+      imageHeight = image.naturalHeight;
+      const copy = document.createElement('canvas');
+      copy.width = imageWidth;
+      copy.height = imageHeight;
+      const context = copy.getContext('2d', { willReadFrequently: true });
+      if (!context) throw new Error('Contour sampler unavailable');
+      context.drawImage(image, 0, 0);
+      contexts[name] = context;
+    }
+    const bounds = ${JSON.stringify(captureCanvasRect)};
+    const pageScaleX = imageWidth / innerWidth;
+    const pageScaleY = imageHeight / innerHeight;
+    const worldScaleX = bounds.width / ${WORLD_WIDTH};
+    const worldScaleY = bounds.height / ${WORLD_HEIGHT};
+    const pixelForWorldX = (x) => (bounds.left + x * worldScaleX) * pageScaleX;
+    const pixelForWorldY = (y) => (bounds.top + y * worldScaleY) * pageScaleY;
+    const worldForPixelX = (x) => (x / pageScaleX - bounds.left) / worldScaleX;
+    const signalAt = (x, y) => {
+      const rendered = contexts.rendered.getImageData(x, y, 1, 1).data;
+      const baseline = contexts.baseline.getImageData(x, y, 1, 1).data;
+      return Math.max(
+        Math.abs(rendered[0] - baseline[0]),
+        Math.abs(rendered[1] - baseline[1]),
+        Math.abs(rendered[2] - baseline[2]),
+      );
+    };
+    const rows = [];
+    for (let worldY = 164; worldY <= 180; worldY++) {
+      const pixelY = Math.max(0, Math.min(imageHeight - 1, Math.round(pixelForWorldY(worldY + 0.5))));
+      const startX = Math.max(0, Math.floor(pixelForWorldX(262)));
+      const endX = Math.min(imageWidth - 1, Math.ceil(pixelForWorldX(286)));
+      let interiorSignal = 0;
+      const interiorStart = Math.max(startX, Math.floor(pixelForWorldX(280)));
+      for (let pixelX = interiorStart; pixelX <= endX; pixelX++) {
+        interiorSignal = Math.max(interiorSignal, signalAt(pixelX, pixelY));
+      }
+      if (interiorSignal <= 8) throw new Error('Capsule contour interior disappeared');
+      const samples = [];
+      for (let pixelX = startX; pixelX <= endX; pixelX++) {
+        samples.push({
+          pixelX,
+          amount: Math.max(0, Math.min(1, (signalAt(pixelX, pixelY) - 4) / (interiorSignal - 4))),
+        });
+      }
+      const crossing = (level) => {
+        for (let index = 1; index < samples.length; index++) {
+          if (samples[index].amount < level) continue;
+          const previous = samples[index - 1];
+          const current = samples[index];
+          const span = Math.max(0.000001, current.amount - previous.amount);
+          const pixelX = previous.pixelX + (level - previous.amount) / span;
+          return worldForPixelX(pixelX);
+        }
+        throw new Error('Capsule contour crossing disappeared');
+      };
+      const x20 = crossing(0.20);
+      const x50 = crossing(0.50);
+      const x80 = crossing(0.80);
+      const expected = 278 - Math.sqrt(144 - (worldY - 172) ** 2);
+      rows.push({ worldY, x20, x50, x80, expected, error: x50 - expected });
+    }
+    const rmsError = Math.sqrt(rows.reduce((sum, row) => sum + row.error ** 2, 0) / rows.length);
+    const maximumError = Math.max(...rows.map((row) => Math.abs(row.error)));
+    const meanTransitionWidth = rows.reduce((sum, row) => sum + row.x80 - row.x20, 0) / rows.length;
+    let maximumSymmetryError = 0;
+    for (let offset = 1; offset <= 8; offset++) {
+      maximumSymmetryError = Math.max(
+        maximumSymmetryError,
+        Math.abs(rows[8 - offset].x50 - rows[8 + offset].x50),
+      );
+    }
+    let monotonicSlack = 0;
+    for (let index = 1; index <= 8; index++) {
+      monotonicSlack = Math.max(monotonicSlack, rows[index].x50 - rows[index - 1].x50);
+    }
+    for (let index = 9; index < rows.length; index++) {
+      monotonicSlack = Math.max(monotonicSlack, rows[index - 1].x50 - rows[index].x50);
+    }
+    return {
+      rows: rows.map((row) => ({
+        y: row.worldY,
+        x50: Math.round(row.x50 * 1000) / 1000,
+        expected: Math.round(row.expected * 1000) / 1000,
+        width20to80: Math.round((row.x80 - row.x20) * 1000) / 1000,
+      })),
+      rmsError: Math.round(rmsError * 1000) / 1000,
+      maximumError: Math.round(maximumError * 1000) / 1000,
+      meanTransitionWidth: Math.round(meanTransitionWidth * 1000) / 1000,
+      maximumSymmetryError: Math.round(maximumSymmetryError * 1000) / 1000,
+      monotonicSlack: Math.round(monotonicSlack * 1000) / 1000,
+    };
+  })()`);
 }
 
 async function sampleLightingDifferenceRegions(cdp, screenshots, regions, captureCanvasRect) {

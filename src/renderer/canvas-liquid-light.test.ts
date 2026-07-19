@@ -1,10 +1,38 @@
 import { describe, expect, it } from 'vitest';
 import {
-  canvasLiquidContourScale, canvasLiquidFieldRelief, canvasLiquidSpeciesRelief,
+  canvasLiquidContourScale, canvasLiquidEmissionExposure,
+  canvasLiquidEmissionSurfaceExposure, canvasLiquidFieldRelief, canvasLiquidSpeciesRelief,
   canvasLiquidSurfaceExposure,
 } from './canvas-liquid-light';
 
 describe('Canvas liquid field-owned light', () => {
+  it('shapes emission reflection only on exposed, light-facing liquid relief', () => {
+    expect(canvasLiquidEmissionExposure(0, 0.18)).toBe(0);
+    expect(canvasLiquidEmissionExposure(1, -0.16)).toBeCloseTo(0.46);
+    expect(canvasLiquidEmissionExposure(1, 0)).toBeCloseTo(0.46);
+    expect(canvasLiquidEmissionExposure(1, 0.12)).toBeGreaterThan(0.70);
+    expect(canvasLiquidEmissionExposure(4, 2)).toBe(1);
+  });
+
+  it('finds side-facing liquid exposure but rejects a field-dense pinhole', () => {
+    const width = 3;
+    const height = 3;
+    const edge = alphaField(width, height, 0);
+    setAlpha(edge, width, 1, 1, 255);
+    setAlpha(edge, width, 2, 1, 40);
+    expect(canvasLiquidEmissionSurfaceExposure(
+      edge, width, height, 1, 1, false, false, true, false,
+    )).toBeCloseTo(0.82);
+
+    setAlpha(edge, width, 2, 1, 224);
+    expect(canvasLiquidEmissionSurfaceExposure(
+      edge, width, height, 1, 1, false, false, true, false,
+    )).toBe(0);
+    expect(canvasLiquidEmissionSurfaceExposure(
+      edge, width, height, 1, 1, false, false, false, false,
+    )).toBe(0);
+  });
+
   it('suppresses cell contour noise only in a field-dense liquid body', () => {
     expect(canvasLiquidContourScale(0)).toBe(1);
     expect(canvasLiquidContourScale(160)).toBe(1);

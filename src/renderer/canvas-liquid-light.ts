@@ -13,6 +13,8 @@ const INTERFACE_CONTRAST_START = 0.06;
 const INTERFACE_CONTRAST_END = 0.28;
 const INTERFACE_RELIEF_X = 0.075;
 const INTERFACE_RELIEF_Y = 0.09;
+const EMISSION_BASE_EXPOSURE = 0.46;
+const EMISSION_RELIEF_GAIN = 2.4;
 
 /**
  * Scales semantic-cell contour light down only where the shared liquid field
@@ -37,6 +39,29 @@ export function canvasLiquidSurfaceExposure(
   if (!semanticTopEmpty) return 0;
   const topAlpha = y === 0 ? 0 : density[((y - 1) * width + x) * 4 + 3];
   return 1 - smoothstep(SURFACE_TOP_START_ALPHA, SURFACE_TOP_END_ALPHA, topAlpha);
+}
+
+/** Field-validated exposed contour used only for coloured emission reflection. */
+export function canvasLiquidEmissionSurfaceExposure(
+  density: Uint8Array,
+  width: number,
+  height: number,
+  x: number,
+  y: number,
+  semanticTopEmpty: boolean,
+  semanticLeftEmpty: boolean,
+  semanticRightEmpty: boolean,
+  semanticBottomEmpty: boolean,
+): number {
+  const center = (y * width + x) * 4;
+  if (density[center + 3] <= RELIEF_SUPPORT_START_ALPHA) return 0;
+  const exposure = (
+    neighbourExposure(density, width, x, Math.max(0, y - 1), semanticTopEmpty) * 1.0
+    + neighbourExposure(density, width, Math.max(0, x - 1), y, semanticLeftEmpty) * 0.82
+    + neighbourExposure(density, width, Math.min(width - 1, x + 1), y, semanticRightEmpty) * 0.82
+    + neighbourExposure(density, width, x, Math.min(height - 1, y + 1), semanticBottomEmpty) * 0.46
+  );
+  return Math.min(1, exposure);
 }
 
 /**
@@ -115,6 +140,25 @@ export function canvasLiquidSpeciesRelief(
   );
 }
 
+/**
+ * Converts an exposed liquid top and its already-computed signed field relief
+ * into a bounded reflection response. Only positive, light-facing relief adds
+ * gain: a shadowed meniscus stays translucent instead of becoming an emission
+ * halo. The caller still owns RGB and alpha and skips this path for emissive
+ * liquids, so the helper cannot widen a surface or create feedback.
+ */
+export function canvasLiquidEmissionExposure(
+  surfaceExposure: number,
+  signedRelief: number,
+): number {
+  if (surfaceExposure <= 0) return 0;
+  return clamp(
+    surfaceExposure * (EMISSION_BASE_EXPOSURE + Math.max(0, signedRelief) * EMISSION_RELIEF_GAIN),
+    0,
+    1,
+  );
+}
+
 function liquidSpeciesContrast(field: Uint8Array, center: number, neighbour: number): number {
   const support = smoothstep(
     INTERFACE_SUPPORT_START_ALPHA,
@@ -128,6 +172,21 @@ function liquidSpeciesContrast(field: Uint8Array, center: number, neighbour: num
     Math.abs(field[center + 2] - field[neighbour + 2]),
   ) / 255;
   return support * smoothstep(INTERFACE_CONTRAST_START, INTERFACE_CONTRAST_END, contrast);
+}
+
+function neighbourExposure(
+  density: Uint8Array,
+  width: number,
+  x: number,
+  y: number,
+  semanticEmpty: boolean,
+): number {
+  if (!semanticEmpty) return 0;
+  return 1 - smoothstep(
+    SURFACE_TOP_START_ALPHA,
+    SURFACE_TOP_END_ALPHA,
+    density[(y * width + x) * 4 + 3],
+  );
 }
 
 function smoothstep(edge0: number, edge1: number, value: number): number {

@@ -28,6 +28,17 @@ describe('Canvas surface lighting', () => {
     expect(target[3]).toBe(173);
   });
 
+  it('supports a bounded liquid-reflection gain without changing alpha', () => {
+    const regular = new Uint8ClampedArray([70, 90, 110, 173]);
+    const reflected = regular.slice();
+    lightCanvasSurface(regular, 0, field(), 2, 2, 4, 4, 0, 0, RenderProfile.Neutral, 1);
+    lightCanvasSurface(reflected, 0, field(), 2, 2, 4, 4, 0, 0, RenderProfile.Neutral, 1, 3);
+    expect(reflected[0]).toBeGreaterThan(regular[0]);
+    expect(reflected[1]).toBeGreaterThan(regular[1]);
+    expect(reflected[2]).toBeGreaterThanOrEqual(regular[2]);
+    expect(reflected[3]).toBe(173);
+  });
+
   it('matches numeric bilinear sampling inside the field', () => {
     const emission = new Uint8Array([
       0, 0, 0, 255, 100, 0, 0, 255,

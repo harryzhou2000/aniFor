@@ -15,7 +15,8 @@ import {
 import { reconstructSolidSurface } from '../src/renderer/canvas-solid-surface';
 import { canvasSolidRelief } from '../src/renderer/canvas-solid-relief';
 import {
-  canvasLiquidContourScale, canvasLiquidFieldRelief, canvasLiquidSurfaceExposure,
+  canvasLiquidContourScale, canvasLiquidEmissionExposure,
+  canvasLiquidEmissionSurfaceExposure, canvasLiquidFieldRelief, canvasLiquidSurfaceExposure,
 } from '../src/renderer/canvas-liquid-light';
 import { createRenderLookups } from '../src/renderer/render-field-set';
 import { PowderSurfaceField } from '../src/renderer/powder-surface-field';
@@ -328,6 +329,25 @@ console.log(JSON.stringify({
         checksum += Math.abs(canvasLiquidFieldRelief(
           denseLiquidField.bytes, width, height, x, y,
         ));
+      }
+      liquidLightChecksum = checksum;
+    }),
+    liquidFieldReflectionExposedWorstCase: sample(() => {
+      liquidPixels.set(liquidSeed);
+      let checksum = 0;
+      for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) {
+        const pixel = (y * width + x) * 4;
+        const exposure = canvasLiquidEmissionSurfaceExposure(
+          liquid.bytes, width, height, x, y, true, true, true, true,
+        );
+        if (exposure <= 0) continue;
+        const relief = canvasLiquidFieldRelief(liquid.bytes, width, height, x, y);
+        const response = canvasLiquidEmissionExposure(exposure, relief);
+        lightCanvasSurface(
+          liquidPixels, pixel, profileEmission, emission.width, emission.height,
+          width, height, x, y, RenderProfile.Neutral, response, 4,
+        );
+        checksum += liquidPixels[pixel] + liquidPixels[pixel + 1] + liquidPixels[pixel + 2];
       }
       liquidLightChecksum = checksum;
     }),

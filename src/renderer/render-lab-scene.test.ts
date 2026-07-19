@@ -25,6 +25,8 @@ describe('render lab scene', () => {
     const counts = new Uint32Array(256);
     for (const material of first.cells()) counts[material]++;
     expect(counts[Material.Sand]).toBeGreaterThan(8_000);
+    expect(counts[Material.Clay]).toBeGreaterThan(1_000);
+    expect(counts[Material.Concrete]).toBeGreaterThan(900);
     expect(counts[Material.Water]).toBeGreaterThan(8_000);
     expect(counts[Material.Smoke]).toBeGreaterThan(1_000);
     expect(counts[Material.Oxygen]).toBeGreaterThan(700);
@@ -50,6 +52,10 @@ describe('render lab scene', () => {
     expect(first.cells()[149 * 612 + 18]).toBe(Material.Sand);
     expect(first.cells()[141 * 612 + 18]).toBe(Material.Empty);
     expect(first.cells()[141 * 612 + 170]).toBe(Material.Sand);
+    expect(first.cells()[50 * 612 + 148]).toBe(Material.Clay);
+    expect(first.cells()[80 * 612 + 163]).toBe(Material.Concrete);
+    expect(first.cells()[62 * 612 + 144]).toBe(Material.Empty);
+    expect(first.cells()[73 * 612 + 159]).toBe(Material.Empty);
   });
 
   it('exercises every non-neutral styled family plus an energy phase', () => {
