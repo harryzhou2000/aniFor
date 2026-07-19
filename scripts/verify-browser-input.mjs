@@ -141,8 +141,16 @@ async function auditMode(mode) {
       `${mode}: solid render samples disappeared (${JSON.stringify(solidSamples)})`);
     assert(solidSamples.every((sample) => sample.lumaRange >= 6 && sample.lumaRange <= 200),
       `${mode}: solid interior relief is flat or clipped (${JSON.stringify(solidSamples)})`);
+    assert(solidSamples.every((sample) => sample.darkFraction <= 0.08),
+      `${mode}: accepted solid cavities still read as dark pits (${JSON.stringify(solidSamples)})`);
     assert(solidSamples.every((sample) => sample.pinnedFraction <= 0.15),
       `${mode}: solid interior framebuffer clipping returned (${JSON.stringify(solidSamples)})`);
+    const solidSeparatorSamples = await samplePageRegions(cdp, canonicalCapture.data, [
+      { name: 'columnGap', x: 465, y: 229, radius: 1 },
+      { name: 'rowGap', x: 485, y: 217, radius: 1 },
+    ]);
+    assert(solidSeparatorSamples.every((sample) => Math.max(...sample.rgb) <= 20 && sample.lumaRange <= 5),
+      `${mode}: solid reconstruction bridged a matrix separator (${JSON.stringify(solidSeparatorSamples)})`);
     const volumeSamples = await samplePageRegions(cdp, canonicalCapture.data, [
       { name: 'water', x: 238, y: 79, radius: 14 },
       { name: 'oil', x: 289, y: 87, radius: 12 },
@@ -309,6 +317,7 @@ async function auditMode(mode) {
       canonicalFixture: { occupied: canonicalFixture.occupied, wallSignature: '3,3' },
       energySamples,
       solidSamples,
+      solidSeparatorSamples,
       volumeSamples,
       liquidColumnSamples,
       liquidReliefSamples,
@@ -958,6 +967,13 @@ async function samplePageRegions(cdp, screenshotBase64, regions) {
           adjacentPairs++;
         }
       }
+      const meanLuma = (total[0] * 54 + total[1] * 183 + total[2] * 19)
+        / (256 * Math.max(1, visible));
+      let darkPixels = 0;
+      const darkThreshold = meanLuma * 0.70;
+      for (let sampleIndex = 0; sampleIndex < lumaValues.length; sampleIndex++) {
+        if (visiblePixels[sampleIndex] && lumaValues[sampleIndex] < darkThreshold) darkPixels++;
+      }
       let minimumMacroLuma = 255;
       let maximumMacroLuma = 0;
       let macroSamples = 0;
@@ -987,6 +1003,7 @@ async function samplePageRegions(cdp, screenshotBase64, regions) {
         coverage: Math.round(visible / Math.max(1, width * height) * 1000) / 1000,
         microContrast: Math.round(adjacentContrast / Math.max(1, adjacentPairs) * 100) / 100,
         macroLumaRange: macroSamples ? Math.round(maximumMacroLuma - minimumMacroLuma) : 0,
+        darkFraction: Math.round(darkPixels / Math.max(1, visible) * 1000) / 1000,
         pinnedFraction: Math.round(pinned / Math.max(1, visible) * 1000) / 1000,
         lumaRange: visible ? Math.round(maximumLuma - minimumLuma) : 0,
       };

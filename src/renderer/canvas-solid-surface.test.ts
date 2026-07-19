@@ -20,7 +20,7 @@ describe('Canvas solid surface reconstruction', () => {
     expect(pixels[4 * 4 + 3]).toBeGreaterThan(150);
   });
 
-  it('increases enclosed fill opacity monotonically with diagonal support', () => {
+  it('keeps accepted fill near opaque and monotonic with diagonal support', () => {
     const alphaFor = (materials: Uint8Array): number => {
       const pixels = seed(materials);
       reconstructSolidSurface(pixels, materials, styles, palette, 3, 3);
@@ -33,10 +33,17 @@ describe('Canvas solid surface reconstruction', () => {
     ]);
     const oneDiagonal = cardinalOnly.slice();
     oneDiagonal[0] = Material.Wood;
+    const twoDiagonals = oneDiagonal.slice();
+    twoDiagonals[2] = Material.Wood;
+    const threeDiagonals = twoDiagonals.slice();
+    threeDiagonals[6] = Material.Wood;
     const fullySupported = new Uint8Array(9).fill(Material.Wood);
     fullySupported[4] = Material.Empty;
-    expect(alphaFor(oneDiagonal)).toBeGreaterThan(alphaFor(cardinalOnly));
-    expect(alphaFor(fullySupported)).toBeGreaterThan(alphaFor(oneDiagonal));
+    const alphas = [cardinalOnly, oneDiagonal, twoDiagonals, threeDiagonals, fullySupported].map(alphaFor);
+    expect(alphas.every((alpha) => alpha >= 225)).toBe(true);
+    for (let index = 1; index < alphas.length; index++) {
+      expect(alphas[index]).toBeGreaterThan(alphas[index - 1]);
+    }
   });
 
   it('closes a two-cell cavity without propagating through reconstructed pixels', () => {
@@ -164,6 +171,12 @@ describe('Canvas solid surface reconstruction', () => {
     const liquidPixels = seed(liquid);
     reconstructSolidSurface(liquidPixels, liquid, styles, palette, 3, 3);
     expect(liquidPixels[4 * 4 + 3]).toBe(0);
+
+    const powder = new Uint8Array(9).fill(Material.Sand);
+    powder[4] = Material.Empty;
+    const powderPixels = seed(powder);
+    reconstructSolidSurface(powderPixels, powder, styles, palette, 3, 3);
+    expect(powderPixels[4 * 4 + 3]).toBe(0);
   });
 
   it('does not overwrite an occupied particle or reconstruct field edges', () => {

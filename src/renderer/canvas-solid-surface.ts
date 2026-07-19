@@ -70,11 +70,11 @@ export function reconstructSolidSurface(
       && materials[index - 2] === material && materials[index + 2] === material;
     const thinCrack = verticalCrack || horizontalCrack;
     if (foreign || !material || (!cardinallyEnclosed && !denseSupport && !thinCrack) || alpha <= 0) continue;
-    const opacity = thinCrack
-      ? 0.82
-      : (cardinallyEnclosed
-        ? 0.78 + 0.05 * (neighbours - 4)
-        : 0.62 + 0.12 * (neighbours - 5));
+    // Eligibility remains conservative, but once the exact-material enclosure
+    // is proven it is presentation support, not translucent confidence. Keep a
+    // narrow monotonic band only for subtle depth so black cannot show through
+    // an otherwise accepted cavity as a cell-sized pit.
+    const opacity = 0.90 + 0.02 * (neighbours - 4);
     const materialOffset = material * 4;
     const hasSemanticTraits = styleBytes[materialOffset + 3] !== 0;
     compositePixel(

@@ -530,6 +530,14 @@ void main() {
     if (profile == 1.0) {
       alpha = smoothstep(0.18 + grain * 0.025, 0.72 + grain * 0.035, density);
     }
+    // surfaceOnly names a nearby exact solid, but density is nonzero only when
+    // enclosedSurfaceShape proved the cavity. Decouple that conservative shape
+    // confidence from display opacity so accepted support joins the chunk while
+    // rejected notches, seams, powders, walls, and borders remain transparent.
+    if (surfaceOnly > 0.5 && density > 0.001) {
+      float cavityConfidence = smoothstep(0.30, 0.92, density);
+      alpha = max(alpha, mix(0.90, 0.98, cavityConfidence));
+    }
     if (roughSurface > 0.5 || (optics < 0.5 && profile == 1.0)) {
       vec2 subcell = floor(fract(fieldPosition) * 2.0);
       float grainFacet = fract(sin(dot(floor(fieldPosition) * 2.0 + subcell, vec2(12.9898, 78.233))) * 43758.5453) - 0.5;
