@@ -31,6 +31,11 @@ import { semanticRenderHeat } from './semantic-field';
 import { compositePixel } from './rgba-composite';
 import { forceCanvas2D, supportsWebGL } from './webgl-support';
 import { contourLight, materialNeighbourMask, neighbourDensity } from './volumetric-field';
+import { updateBoundaryStabilityRect } from './boundary-stability-field';
+import {
+  CANVAS_CONTOUR_CHUNK_SIZE, CANVAS_CONTOUR_OUTPUT_SCALE, CanvasPhaseContourScratch,
+} from './canvas-phase-contour';
+import { DirtyChunkGrid } from './dirty-chunk-grid';
 
 const FRAME_INTERVAL = 1000 / 30;
 export const DYNAMIC_FIELD_REFRESH_INTERVAL = 1000 / 12;
@@ -71,11 +76,17 @@ export class MaterialRenderer {
   private readonly atmosphereSurface = document.createElement('canvas');
   private readonly emissionSurface = document.createElement('canvas');
   private readonly fallbackSurface = document.createElement('canvas');
+  private readonly contourSurface = document.createElement('canvas');
+  private readonly contourChunkSurface = document.createElement('canvas');
   private readonly rendered: Uint8Array;
   private readonly renderedWalls?: Uint8Array;
   private readonly styledColor = new Float32Array(3);
   private readonly energyGlowColor = new Float32Array(3);
   private readonly traitClock = new Int32Array(CANVAS_RENDER_TRAIT_CLOCK_SIZE);
+  private readonly boundaryStability: Uint8Array;
+  private readonly boundaryStabilityOwners: Uint8Array;
+  private readonly contourScratch = new CanvasPhaseContourScratch();
+  private readonly contourChunks: DirtyChunkGrid;
   private readonly outputScale = resolveFieldOutputScale();
   private presenter?: PixiFieldPresenter;
   private readonly view: ViewTransform;
@@ -92,6 +103,9 @@ export class MaterialRenderer {
   private atmosphereContext!: CanvasRenderingContext2D;
   private emissionContext!: CanvasRenderingContext2D;
   private fallbackContext!: CanvasRenderingContext2D;
+  private contourContext!: CanvasRenderingContext2D;
+  private contourChunkContext!: CanvasRenderingContext2D;
+  private contourChunkPixels?: ImageData;
   private firePixels?: ImageData;
   private fallbackFields?: RenderFieldSet;
   private backend: RendererBackendInfo = { backend: 'canvas2d', label: 'Canvas 2D', reason: 'webgl-starting' };
@@ -106,6 +120,10 @@ export class MaterialRenderer {
 
   constructor(private readonly host: HTMLElement, private readonly simulation: SimulationBackend) {
     this.rendered = new Uint8Array(simulation.width * simulation.height);
+    this.boundaryStability = new Uint8Array(this.rendered.length);
+    this.boundaryStabilityOwners = new Uint8Array(this.rendered.length);
+    this.contourChunks = new DirtyChunkGrid(simulation.width, simulation.height, CANVAS_CONTOUR_CHUNK_SIZE, 1);
+    this.contourChunks.markAll();
     if (simulation.walls) this.renderedWalls = new Uint8Array(simulation.walls());
     this.view = new ViewTransform(simulation.width, simulation.height);
   }
@@ -139,6 +157,7 @@ export class MaterialRenderer {
       const previous = this.rendered[cell.index];
       this.rendered[cell.index] = cell.material;
       this.fallbackFields?.markDirty(previous, cell.material);
+      this.contourChunks.markCell(cell.index);
       this.presenter?.markDirty(cell.index, cell.material);
       this.changed = true;
     }
@@ -146,6 +165,7 @@ export class MaterialRenderer {
       if (!this.renderedWalls) break;
       this.renderedWalls[cell.index] = cell.wall;
       this.presenter?.markWallDirty(cell.index);
+      this.contourChunks.markCell(cell.index);
       this.changed = true;
     }
     const hasDynamicFields = Boolean(this.simulation.temperature || this.simulation.velocity);
@@ -349,9 +369,14 @@ export class MaterialRenderer {
       || !atmospherePixels || !emissionPixels || !liquidSurfaceScratch) {
       throw new Error('Canvas render fields unavailable');
     }
+    updateBoundaryStabilityRect(
+      this.boundaryStability, this.boundaryStabilityOwners, this.rendered, velocities,
+      fields.lookups.styleBytes, width, { x: 0, y: 0, width, height }, this.contourChunks,
+    );
     const timingStart = this.canvasPresentationTimingEnabled ? performance.now() : undefined;
     const rebuiltField = fields.updateNext(this.rendered, scheduleTime);
     if (rebuiltField === 'emission') {
+      this.contourChunks.markAll();
       emissionPixels.data.set(fields.emission.bytes);
       this.emissionContext.putImageData(emissionPixels, 0, 0);
     }
@@ -392,6 +417,10 @@ export class MaterialRenderer {
       const traits = fields.lookups.styleBytes[material * 4 + 3];
       const optics = fields.lookups.paletteBytes[material * 4 + 3] as RenderOptics;
       const applicableTraits = applicableCanvasRenderTraits(traits, phase);
+      if (phase === RenderPhase.Liquid || phase === RenderPhase.Energy
+        || applicableTraits !== 0 || material === Material.Dust) {
+        this.contourChunks.markCell(index);
+      }
       const target = fields.lookups.liquidByMaterial[material] ? liquid : base;
       const top = y === 0 ? Material.Empty : this.rendered[index - width] as Material;
       const left = x === 0 ? Material.Empty : this.rendered[index - 1] as Material;
@@ -408,6 +437,9 @@ export class MaterialRenderer {
         : 0;
       const liquidReliefScale = phase === RenderPhase.Liquid
         ? 1 + canvasLiquidFieldRelief(fields.liquid.bytes, width, height, x, y)
+          * (this.outputScale === CANVAS_CONTOUR_OUTPUT_SCALE
+            ? (optics === RenderOptics.Aqueous ? 1.35 : 1.18)
+            : 1)
           * (optics === RenderOptics.Aqueous ? 1.08
             : optics === RenderOptics.Oily ? 0.84
               : optics === RenderOptics.Corrosive ? 1.0
@@ -671,6 +703,15 @@ export class MaterialRenderer {
       fields.lookups.liquidByMaterial, fields.lookups.colorByMaterial, fields.lookups.styleBytes,
       liquidSurfaceScratch, width, height,
     );
+    if (this.outputScale === CANVAS_CONTOUR_OUTPUT_SCALE) {
+      for (let pixel = 0; pixel < base.length; pixel += 4) {
+        if (liquid[pixel + 3] === 0) continue;
+        compositePixel(
+          base, pixel, liquid[pixel], liquid[pixel + 1], liquid[pixel + 2], liquid[pixel + 3],
+        );
+      }
+      this.rasterizeCanvasMatterContours(base, fields.lookups.styleBytes, width, height);
+    }
     this.liquidContext.putImageData(liquidPixels, 0, 0);
     this.smokeContext.putImageData(smokePixels, 0, 0);
     this.fireContext.putImageData(firePixels, 0, 0);
@@ -695,14 +736,16 @@ export class MaterialRenderer {
     fallback.filter = 'none';
     fallback.globalAlpha = 1;
     fallback.imageSmoothingEnabled = false;
-    fallback.drawImage(this.surface, 0, 0, width, height, 0, 0, output.width, output.height);
-    fallback.imageSmoothingEnabled = true;
-    fallback.drawImage(this.liquidSurface, 0, 0, width, height, 0, 0, output.width, output.height);
-    // A restrained nearest pass keeps the two-pixel reconstruction crisp while
-    // the high-quality pass joins cells into a cohesive liquid surface.
-    fallback.imageSmoothingEnabled = false;
-    fallback.globalAlpha = 0.18;
-    fallback.drawImage(this.liquidSurface, 0, 0, width, height, 0, 0, output.width, output.height);
+    if (this.outputScale === CANVAS_CONTOUR_OUTPUT_SCALE) {
+      fallback.drawImage(this.contourSurface, 0, 0);
+    } else {
+      fallback.drawImage(this.surface, 0, 0, width, height, 0, 0, output.width, output.height);
+      fallback.imageSmoothingEnabled = true;
+      fallback.drawImage(this.liquidSurface, 0, 0, width, height, 0, 0, output.width, output.height);
+      fallback.imageSmoothingEnabled = false;
+      fallback.globalAlpha = 0.18;
+      fallback.drawImage(this.liquidSurface, 0, 0, width, height, 0, 0, output.width, output.height);
+    }
     // Gas remains an independent particle/volume plane above native walls and
     // opaque matter. Only the broad light aura moved behind those surfaces.
     fallback.imageSmoothingEnabled = true;
@@ -747,6 +790,10 @@ export class MaterialRenderer {
     const output = backingSize(width, height, this.outputScale);
     this.fallbackSurface.width = output.width;
     this.fallbackSurface.height = output.height;
+    this.contourSurface.width = output.width;
+    this.contourSurface.height = output.height;
+    this.contourChunkSurface.width = CANVAS_CONTOUR_CHUNK_SIZE * CANVAS_CONTOUR_OUTPUT_SCALE;
+    this.contourChunkSurface.height = CANVAS_CONTOUR_CHUNK_SIZE * CANVAS_CONTOUR_OUTPUT_SCALE;
     this.fallbackSurface.className = 'world-canvas fallback-field-canvas';
     this.fallbackSurface.style.width = `${width}px`;
     this.fallbackSurface.style.height = `${height}px`;
@@ -763,7 +810,10 @@ export class MaterialRenderer {
     const atmosphereContext = this.atmosphereSurface.getContext('2d');
     const emissionContext = this.emissionSurface.getContext('2d');
     const fallbackContext = this.fallbackSurface.getContext('2d');
-    if (!context || !liquidContext || !smokeContext || !fireContext || !atmosphereContext || !emissionContext || !fallbackContext) {
+    const contourContext = this.contourSurface.getContext('2d');
+    const contourChunkContext = this.contourChunkSurface.getContext('2d');
+    if (!context || !liquidContext || !smokeContext || !fireContext || !atmosphereContext
+      || !emissionContext || !fallbackContext || !contourContext || !contourChunkContext) {
       throw new Error('Canvas 2D unavailable');
     }
     this.context = context;
@@ -773,6 +823,13 @@ export class MaterialRenderer {
     this.atmosphereContext = atmosphereContext;
     this.emissionContext = emissionContext;
     this.fallbackContext = fallbackContext;
+    this.contourContext = contourContext;
+    this.contourChunkContext = contourChunkContext;
+    this.contourChunkPixels = new ImageData(
+      this.contourScratch.pixels,
+      CANVAS_CONTOUR_CHUNK_SIZE * CANVAS_CONTOUR_OUTPUT_SCALE,
+      CANVAS_CONTOUR_CHUNK_SIZE * CANVAS_CONTOUR_OUTPUT_SCALE,
+    );
     this.basePixels = context.createImageData(width, height);
     this.liquidPixels = liquidContext.createImageData(width, height);
     this.smokePixels = smokeContext.createImageData(width, height);
@@ -781,6 +838,53 @@ export class MaterialRenderer {
     this.emissionPixels = emissionContext.createImageData(this.emissionSurface.width, this.emissionSurface.height);
     this.liquidSurfaceScratch = createLiquidSurfaceScratch(this.liquidPixels.data, width);
     this.host.append(this.fallbackSurface);
+  }
+
+  private rasterizeCanvasMatterContours(
+    sourcePixels: Uint8ClampedArray,
+    styleBytes: Uint8Array,
+    width: number,
+    height: number,
+  ): void {
+    const chunkPixels = this.contourChunkPixels;
+    if (!chunkPixels) return;
+    const dirtyRectangles = this.contourChunks.consume();
+    for (const dirty of dirtyRectangles) {
+      for (let chunkY = dirty.y; chunkY < dirty.y + dirty.height; chunkY += CANVAS_CONTOUR_CHUNK_SIZE) {
+        const chunkHeight = Math.min(CANVAS_CONTOUR_CHUNK_SIZE, height - chunkY);
+        for (let chunkX = dirty.x; chunkX < dirty.x + dirty.width; chunkX += CANVAS_CONTOUR_CHUNK_SIZE) {
+        const chunkWidth = Math.min(CANVAS_CONTOUR_CHUNK_SIZE, width - chunkX);
+        this.contourScratch.rasterize({
+          materials: this.rendered,
+          sourcePixels,
+          styleBytes,
+          powderStability: this.boundaryStability,
+          walls: this.renderedWalls,
+          worldWidth: width,
+          worldHeight: height,
+          chunkX,
+          chunkY,
+          chunkWidth,
+          chunkHeight,
+        });
+        this.contourChunkContext.putImageData(chunkPixels, 0, 0);
+        this.contourContext.clearRect(
+          chunkX * CANVAS_CONTOUR_OUTPUT_SCALE,
+          chunkY * CANVAS_CONTOUR_OUTPUT_SCALE,
+          this.contourScratch.outputWidth,
+          this.contourScratch.outputHeight,
+        );
+        this.contourContext.drawImage(
+          this.contourChunkSurface,
+          0, 0, this.contourScratch.outputWidth, this.contourScratch.outputHeight,
+          chunkX * CANVAS_CONTOUR_OUTPUT_SCALE,
+          chunkY * CANVAS_CONTOUR_OUTPUT_SCALE,
+          this.contourScratch.outputWidth,
+          this.contourScratch.outputHeight,
+        );
+        }
+      }
+    }
   }
 
 

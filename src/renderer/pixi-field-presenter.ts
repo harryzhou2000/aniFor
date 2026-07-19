@@ -8,6 +8,7 @@ import {
   UniformGroup,
 } from 'pixi.js';
 import { DirtyChunkGrid } from './dirty-chunk-grid';
+import { updateBoundaryStabilityRect } from './boundary-stability-field';
 import { clientToCanvasWorld } from './client-coordinate-map';
 import { RenderFieldSet, type RenderMaterialStyle } from './render-field-set';
 import { packSemanticRect } from './semantic-field';
@@ -51,6 +52,7 @@ uniform sampler2D uWallTexture;
 uniform sampler2D uAtmosphereTexture;
 uniform sampler2D uEmissionTexture;
 uniform sampler2D uLiquidTexture;
+uniform sampler2D uBoundaryStabilityTexture;
 uniform sampler2D uPaletteTexture;
 uniform sampler2D uStyleTexture;
 uniform vec2 uTexel;
@@ -64,6 +66,7 @@ vec4 field(vec2 uv) { return texture(uFieldTexture, clamp(uv, uTexel * 0.5, vec2
 vec4 wallField(vec2 uv) { return texture(uWallTexture, clamp(uv, uTexel * 0.5, vec2(1.0) - uTexel * 0.5)); }
 float materialAt(vec2 uv) { return floor(field(uv).r * 255.0 + 0.5); }
 float wallAt(vec2 uv) { return floor(wallField(uv).r * 255.0 + 0.5); }
+float boundaryStabilityAt(vec2 uv) { return texture(uBoundaryStabilityTexture, clamp(uv, uTexel * 0.5, vec2(1.0) - uTexel * 0.5)).r; }
 float sameMaterial(vec2 uv, float material) { return 1.0 - step(0.5, abs(materialAt(uv) - material)); }
 float familyFor(float id) { return floor(texture(uStyleTexture, vec2((id + 0.5) / 256.0, 0.5)).r * 255.0 + 0.5); }
 float traitFlag(float traits, float mask) { return mod(floor(traits / mask), 2.0); }
@@ -123,6 +126,36 @@ vec4 occupancyShape(vec2 uv, float material, float family, float contourSmoothin
   float gradientX = mix(q10 - q00, q11 - q01, weight.y) * weightDerivative.x;
   float gradientY = mix(q01 - q00, q11 - q10, weight.x) * weightDerivative.y;
   return vec4(density, gradientX, gradientY, q00 + q10 + q01 + q11);
+}
+vec4 quadraticPowderShape(vec2 uv, float material) {
+  vec2 grid = uv * uFieldSize - 0.5;
+  vec2 centre = floor(grid + 0.5);
+  vec2 delta = clamp(grid - centre, vec2(-0.5), vec2(0.5));
+  vec3 wx = vec3(
+    0.5 * (0.5 - delta.x) * (0.5 - delta.x),
+    0.75 - delta.x * delta.x,
+    0.5 * (0.5 + delta.x) * (0.5 + delta.x)
+  );
+  vec3 wy = vec3(
+    0.5 * (0.5 - delta.y) * (0.5 - delta.y),
+    0.75 - delta.y * delta.y,
+    0.5 * (0.5 + delta.y) * (0.5 + delta.y)
+  );
+  vec3 dx = vec3(delta.x - 0.5, -2.0 * delta.x, delta.x + 0.5);
+  vec3 dy = vec3(delta.y - 0.5, -2.0 * delta.y, delta.y + 0.5);
+  float density = 0.0;
+  float gradientX = 0.0;
+  float gradientY = 0.0;
+  float support = 0.0;
+  for (int y = 0; y < 3; y++) for (int x = 0; x < 3; x++) {
+    vec2 sampleUv = (centre + vec2(float(x - 1), float(y - 1)) + 0.5) * uTexel;
+    float occupied = compatibleAt(sampleUv, material, 4.0);
+    density += occupied * wx[x] * wy[y];
+    gradientX += occupied * dx[x] * wy[y];
+    gradientY += occupied * wx[x] * dy[y];
+    support += occupied;
+  }
+  return vec4(density, gradientX, gradientY, support);
 }
 vec3 discreteShape(vec2 uv, float material) {
   vec2 left = vec2(uTexel.x, 0.0);
@@ -423,6 +456,12 @@ void main() {
         fieldUv, material, family,
         (family == 0.0 || family == 2.0 || profile == 1.0) ? 1.0 : 0.0
       )))));
+  float boundaryStability = family == 4.0 && halo < 0.5
+    ? boundaryStabilityAt(fieldUv)
+    : 0.0;
+  if (family == 4.0 && boundaryStability > 0.001 && surfaceOnly < 0.5) {
+    shape = mix(shape, quadraticPowderShape(fieldUv, material), boundaryStability);
+  }
   // Powder may extend into an empty presentation fragment only when at least
   // three compatible powder samples prove a bulk contact. Loose/moving grains
   // stay inside their semantic cell, and ambiguous unlike-species candidates
@@ -757,14 +796,13 @@ void main() {
       color * vec3(0.88, 0.97, 1.08) + solidEnvironment * (0.16 + solidFresnel * 0.34),
       translucentSurface * mix(0.18, 0.34, solidDepth)
     );
-    // Moving/loose powder stays a deterministic soft grain. At low velocity,
-    // rising compatible contact support fades into the shared Hermite heap
-    // contour. The transition is continuous, so small TPT
-    // velocity changes do not flip between unrelated boundary modes.
+    // Moving/loose powder stays a deterministic soft grain. The CPU-owned
+    // stability field requires persistent low velocity and compatible contact,
+    // with a hold band between settle and release thresholds. This keeps noisy
+    // TPT velocity samples from flipping the boundary mode every frame.
     if (profile == 1.0) {
       float powderContact = smoothstep(1.55, 2.85, shape.w);
-      float powderStill = 1.0 - smoothstep(0.025, 0.095, length(velocity));
-      float powderBulk = powderContact * powderStill;
+      float powderBulk = powderContact * boundaryStability;
       float grainOffsetY = fract(sin(dot(floor(fieldPosition), vec2(39.346, 11.135))) * 24634.6345) - 0.5;
       vec2 grainCentre = vec2(grain, grainOffsetY) * 0.075;
       float grainDistance = length(fract(fieldPosition) - 0.5 - grainCentre);
@@ -928,6 +966,9 @@ export class PixiFieldPresenter {
   private readonly atmosphereSource: BufferImageSource;
   private readonly emissionSource: BufferImageSource;
   private readonly liquidSource: BufferImageSource;
+  private readonly boundaryStabilityBytes: Uint8Array;
+  private readonly boundaryStabilityOwners: Uint8Array;
+  private readonly boundaryStabilitySource: BufferImageSource;
   private readonly fieldSet: RenderFieldSet;
   private readonly chunks: DirtyChunkGrid;
   private readonly wallChunks: DirtyChunkGrid;
@@ -990,6 +1031,17 @@ export class PixiFieldPresenter {
       scaleMode: 'linear',
       autoGarbageCollect: false,
     });
+    this.boundaryStabilityBytes = new Uint8Array(width * height);
+    this.boundaryStabilityOwners = new Uint8Array(width * height);
+    this.boundaryStabilitySource = new BufferImageSource({
+      resource: this.boundaryStabilityBytes,
+      width,
+      height,
+      format: 'r8unorm',
+      alphaMode: 'no-premultiply-alpha',
+      scaleMode: 'nearest',
+      autoGarbageCollect: false,
+    });
     this.uniforms = new UniformGroup({
       uTexel: { value: new Float32Array([1 / width, 1 / height]), type: 'vec2<f32>' },
       uFieldSize: { value: new Float32Array([width, height]), type: 'vec2<f32>' },
@@ -1015,6 +1067,8 @@ export class PixiFieldPresenter {
         uEmissionSampler: this.emissionSource.style,
         uLiquidTexture: this.liquidSource,
         uLiquidSampler: this.liquidSource.style,
+        uBoundaryStabilityTexture: this.boundaryStabilitySource,
+        uBoundaryStabilitySampler: this.boundaryStabilitySource.style,
         uPaletteTexture: paletteTexture.source,
         uPaletteSampler: paletteTexture.source.style,
         uStyleTexture: styleTexture.source,
@@ -1151,8 +1205,17 @@ export class PixiFieldPresenter {
   ): void {
     if (refreshDynamicFields) this.chunks.markAll();
     const rectangles = this.chunks.consume();
-    for (const rect of rectangles) packSemanticRect(this.fieldBytes, this.fieldSource.width, materials, temperatures, velocities, rect);
-    if (rectangles.length) this.fieldSource.update();
+    for (const rect of rectangles) {
+      updateBoundaryStabilityRect(
+        this.boundaryStabilityBytes, this.boundaryStabilityOwners, materials, velocities,
+        this.fieldSet.lookups.styleBytes, this.fieldSource.width, rect,
+      );
+      packSemanticRect(this.fieldBytes, this.fieldSource.width, materials, temperatures, velocities, rect);
+    }
+    if (rectangles.length) {
+      this.fieldSource.update();
+      this.boundaryStabilitySource.update();
+    }
     const wallRectangles = this.wallChunks.consume();
     if (walls) for (const rect of wallRectangles) packWallRect(this.wallBytes, this.wallSource.width, walls, rect);
     if (walls && wallRectangles.length) this.wallSource.update();

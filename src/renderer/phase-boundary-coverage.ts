@@ -56,6 +56,16 @@ export function roundGrainCoverage(
   return 1 - smoothstep(0.34, 0.56, distance);
 }
 
+/** Three normalized quadratic B-spline weights around the nearest cell. */
+export function quadraticCoverageWeights(offset: number): readonly [number, number, number] {
+  const bounded = Math.max(-0.5, Math.min(0.5, offset));
+  return [
+    0.5 * (0.5 - bounded) * (0.5 - bounded),
+    0.75 - bounded * bounded,
+    0.5 * (0.5 + bounded) * (0.5 + bounded),
+  ];
+}
+
 function smoothstep(edge0: number, edge1: number, value: number): number {
   const amount = Math.max(0, Math.min(1, (value - edge0) / (edge1 - edge0)));
   return amount * amount * (3 - 2 * amount);

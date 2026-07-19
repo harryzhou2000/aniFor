@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   hermiteDerivative, hermiteWeight, phaseContactCompatible, powderBulkWeight,
-  roundGrainCoverage, samplePhaseCoverage,
+  quadraticCoverageWeights, roundGrainCoverage, samplePhaseCoverage,
 } from './phase-boundary-coverage';
 
 describe('phase boundary coverage', () => {
@@ -71,5 +71,16 @@ describe('phase boundary coverage', () => {
     expect(roundGrainCoverage(0.25, 0.25)).toBeCloseTo(
       roundGrainCoverage(0.75, 0.75), 12,
     );
+  });
+
+  it('uses a normalized symmetric three-cell kernel for settled powder slopes', () => {
+    for (const offset of [-0.5, -0.25, 0, 0.25, 0.5]) {
+      const weights = quadraticCoverageWeights(offset);
+      expect(weights[0] + weights[1] + weights[2]).toBeCloseTo(1, 12);
+      expect(weights.every((weight) => weight >= 0 && weight <= 1)).toBe(true);
+      const mirrored = quadraticCoverageWeights(-offset);
+      expect(weights[0]).toBeCloseTo(mirrored[2], 12);
+      expect(weights[1]).toBeCloseTo(mirrored[1], 12);
+    }
   });
 });

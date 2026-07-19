@@ -47,6 +47,9 @@ describe('render lab scene', () => {
     expect(counts[Material.DTEC]).toBeGreaterThan(500);
     expect(counts[Material.URAN]).toBeGreaterThan(500);
     expect(counts[Material.VIBR]).toBeGreaterThan(500);
+    expect(first.cells()[149 * 612 + 18]).toBe(Material.Sand);
+    expect(first.cells()[141 * 612 + 18]).toBe(Material.Empty);
+    expect(first.cells()[141 * 612 + 170]).toBe(Material.Sand);
   });
 
   it('exercises every non-neutral styled family plus an energy phase', () => {

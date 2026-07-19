@@ -38,6 +38,9 @@ export function applyRenderLabScene(simulation: SimulationBackend): void {
   });
   plot.rect(18, 112, 153, 26, Material.Dust, 0.18, 151);
   plot.rect(112, 112, 59, 26, Material.Salt, 0.22, 157);
+  // A shallow, exact settled slope exposes one-cell sawtooth silhouettes that
+  // round isolated-grain tests and vertical density bands cannot reveal.
+  plot.slope(18, 141, 153, 9, Material.Sand);
 
   // Liquids: dense cores, sparse shores, a second liquid, and a hard solid boundary.
   plot.ellipse(238, 79, 56, 58, Material.Water, 0.98, 211, 0.17);
@@ -118,6 +121,13 @@ class ScenePlotter {
       const progress = (py - y) / Math.max(1, height - 1);
       const density = dense + (sparse - dense) * progress;
       for (let px = x; px < x + width; px++) if (noise(px, py, salt) <= density) this.set(px, py, material);
+    }
+  }
+
+  slope(x: number, y: number, width: number, height: number, material: Material): void {
+    for (let offsetX = 0; offsetX < width; offsetX++) {
+      const top = y + height - 1 - Math.round(offsetX * (height - 1) / Math.max(1, width - 1));
+      for (let py = top; py < y + height; py++) this.set(x + offsetX, py, material);
     }
   }
 
