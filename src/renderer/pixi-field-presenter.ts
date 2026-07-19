@@ -573,8 +573,12 @@ void main() {
     float deviceSurface = optics == 10.0 ? 1.0 : 0.0;
     float radioactiveSurface = optics == 11.0 ? 1.0 : 0.0;
     float interiorMicroGain = mix(1.0, solidInteriorMicroGain(optics, profile), solidInterior);
-    float edgeCenter = 0.49 + (profile == 1.0 ? grain * 0.045 : 0.0);
-    alpha = smoothstep(edgeCenter - 0.11, edgeCenter + 0.11, density);
+    // The bilinear solid field peaks below one for isolated and one-cell-thick
+    // semantic strokes. Use a wider iso shoulder so those cells
+    // remain visibly brush-sized while the same density field rounds chunk
+    // boundaries; rejected empty-space support still has zero density.
+    float edgeCenter = 0.42 + (profile == 1.0 ? grain * 0.045 : 0.0);
+    alpha = smoothstep(edgeCenter - 0.16, edgeCenter + 0.16, density);
     color = base * mix(1.10, 0.78, density) * diffuse;
     color += vec3(solidReliefTone);
     float solidSpecularGain = 0.28 - roughSurface * 0.13 + smoothSurface * 0.22
@@ -587,7 +591,10 @@ void main() {
     // Granular coverage remains profile-owned. Optics below selects RGB texture
     // only, so a metadata/profile disagreement cannot widen the silhouette.
     if (profile == 1.0) {
-      alpha = smoothstep(0.18 + grain * 0.025, 0.72 + grain * 0.035, density);
+      // A high-quality isolated powder cell has 0.32 discrete support. Keep it
+      // visibly brush-sized after premultiplication and CSS downsampling while
+      // retaining a broad stochastic ramp for loose granular boundaries.
+      alpha = smoothstep(0.10 + grain * 0.020, 0.62 + grain * 0.030, density);
     }
     // surfaceOnly names a nearby exact solid, but density is nonzero only when
     // enclosedSurfaceShape proved the cavity. Decouple that conservative shape
@@ -897,7 +904,15 @@ export class PixiFieldPresenter {
     return this.fieldSet.due(time);
   }
 
-  update(materials: Uint8Array, walls: Uint8Array | undefined, temperatures: Uint16Array | undefined, velocities: Int8Array | undefined, time: number, refreshDynamicFields: boolean): void {
+  update(
+    materials: Uint8Array,
+    walls: Uint8Array | undefined,
+    temperatures: Uint16Array | undefined,
+    velocities: Int8Array | undefined,
+    scheduleTime: number,
+    visualTime: number,
+    refreshDynamicFields: boolean,
+  ): void {
     if (refreshDynamicFields) this.chunks.markAll();
     const rectangles = this.chunks.consume();
     for (const rect of rectangles) packSemanticRect(this.fieldBytes, this.fieldSource.width, materials, temperatures, velocities, rect);
@@ -905,7 +920,7 @@ export class PixiFieldPresenter {
     const wallRectangles = this.wallChunks.consume();
     if (walls) for (const rect of wallRectangles) packWallRect(this.wallBytes, this.wallSource.width, walls, rect);
     if (walls && wallRectangles.length) this.wallSource.update();
-    const volumeField = this.fieldSet.updateNext(materials, time);
+    const volumeField = this.fieldSet.updateNext(materials, scheduleTime);
     if (volumeField === 'atmosphere') {
       this.atmosphereSource.update();
     } else if (volumeField === 'liquid') {
@@ -913,7 +928,7 @@ export class PixiFieldPresenter {
     } else if (volumeField === 'emission') {
       this.emissionSource.update();
     }
-    this.uniforms.uniforms.uTime = time * 0.001;
+    this.uniforms.uniforms.uTime = visualTime * 0.001;
     this.app.render();
   }
 

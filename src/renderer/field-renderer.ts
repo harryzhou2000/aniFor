@@ -130,7 +130,7 @@ export class MaterialRenderer {
     }
   }
 
-  render(time: number): void {
+  render(time: number, visualTime = time): void {
     if (time - this.lastDraw < FRAME_INTERVAL) return;
     for (const cell of this.simulation.consumeDirtyCells()) {
       const previous = this.rendered[cell.index];
@@ -152,7 +152,7 @@ export class MaterialRenderer {
     if (refreshDynamicFields) this.lastDynamicFieldRefresh = time;
     this.changed = false;
     this.lastDraw = time;
-    this.drawField(time, refreshDynamicFields);
+    this.drawField(time, visualTime, refreshDynamicFields);
   }
 
   getViewState(): ViewState { return this.view.snapshot(); }
@@ -236,9 +236,10 @@ export class MaterialRenderer {
   private commitPresenter(presenter: PixiFieldPresenter): void {
     // Compile the shader and seed every semantic field while the known-good
     // Canvas remains visible. Any failure leaves the fallback fully intact.
+    const now = performance.now();
     presenter.update(
       this.rendered, this.renderedWalls, this.simulation.temperature?.(), this.simulation.velocity?.(),
-      performance.now(), true,
+      now, now, true,
     );
     presenter.resize(this.host.clientWidth, this.host.clientHeight);
     const position = this.view.position;
@@ -295,13 +296,16 @@ export class MaterialRenderer {
     this.fallbackSurface.dataset.rendererReason = backend.reason ?? '';
   }
 
-  private drawField(time: number, refreshDynamicFields: boolean): void {
+  private drawField(scheduleTime: number, visualTime: number, refreshDynamicFields: boolean): void {
     const width = this.simulation.width;
     const height = this.simulation.height;
     const temperatures = this.simulation.temperature?.();
     const velocities = this.simulation.velocity?.();
     if (this.presenter) {
-      this.presenter.update(this.rendered, this.renderedWalls, temperatures, velocities, time, refreshDynamicFields);
+      this.presenter.update(
+        this.rendered, this.renderedWalls, temperatures, velocities,
+        scheduleTime, visualTime, refreshDynamicFields,
+      );
       return;
     }
     const fields = this.fallbackFields;
@@ -317,7 +321,7 @@ export class MaterialRenderer {
       throw new Error('Canvas render fields unavailable');
     }
     const timingStart = this.canvasPresentationTimingEnabled ? performance.now() : undefined;
-    const rebuiltField = fields.updateNext(this.rendered, time);
+    const rebuiltField = fields.updateNext(this.rendered, scheduleTime);
     if (rebuiltField === 'atmosphere') {
       shadeCanvasAtmosphere(
         atmospherePixels.data, fields.atmosphere.bytes,
@@ -332,7 +336,7 @@ export class MaterialRenderer {
     const liquid = liquidPixels.data;
     const smoke = smokePixels.data;
     const fire = firePixels.data;
-    updateCanvasRenderTraitClock(this.traitClock, time);
+    updateCanvasRenderTraitClock(this.traitClock, visualTime);
     base.fill(0); liquid.fill(0); smoke.fill(0); fire.fill(0);
 
     let index = 0;
@@ -394,7 +398,7 @@ export class MaterialRenderer {
         const heat = semanticRenderHeat(temperatures?.[index]);
         const glowAlpha = shadeCanvasEnergy(
           this.styledColor, this.energyGlowColor, red, green, blue, profile, traits,
-          material, x, y, time, heat,
+          material, x, y, visualTime, heat,
           velocities?.[index * 2] ?? 0, velocities?.[index * 2 + 1] ?? 0,
         );
         if (applicableTraits !== 0) applyCanvasRenderTraits(
@@ -410,7 +414,7 @@ export class MaterialRenderer {
         compositePixel(target, pixel, 194 + grain + surfaceLight, 145 + grain * 0.65 + surfaceLight, 76 + grain * 0.35 + surfaceLight, 255);
       } else if (material === Material.Dust) {
         const grain = hash(index) % 23 - 11;
-        const softness = Math.sin(time * 0.0018 + x * 0.17 + y * 0.09) * 4;
+        const softness = Math.sin(visualTime * 0.0018 + x * 0.17 + y * 0.09) * 4;
         compositePixel(target, pixel, 188 + grain + surfaceLight + softness, 166 + grain + surfaceLight + softness, 124 + grain * 0.6 + surfaceLight, 238);
       } else if (material === Material.Salt) {
         const grain = hash(index) % 23 - 11;
@@ -421,7 +425,7 @@ export class MaterialRenderer {
         const density = neighbourDensity(mask);
         const contour = contourLight(mask) * liquidContourScale;
         const flow = velocities ? velocities[index * 2] * 0.12 : 0;
-        const sheen = Math.sin(time * 0.0017 + x * 0.055 + y * 0.025 + flow) * 5 + contour;
+        const sheen = Math.sin(visualTime * 0.0017 + x * 0.055 + y * 0.025 + flow) * 5 + contour;
         const depth = density / 8;
         compositePixel(
           target, pixel, (91 - depth * 28 + sheen) * liquidReliefScale,
@@ -463,7 +467,7 @@ export class MaterialRenderer {
         const kelvin = temperatures ? temperatures[index] / 10 : 1450;
         const heat = clamp((kelvin - 700) / 1100, 0, 1);
         const crust = density > 6 ? -52 : 0;
-        const pulse = Math.sin(time * 0.003 + x * 0.1 + y * 0.07) * 8;
+        const pulse = Math.sin(visualTime * 0.003 + x * 0.1 + y * 0.07) * 8;
         compositePixel(
           target, pixel, (216 + crust + heat * 26 + contour * 0.35) * liquidReliefScale,
           (48 + pulse + heat * 110 + contour * 0.5) * liquidReliefScale,
@@ -481,7 +485,7 @@ export class MaterialRenderer {
         const density = neighbourDensity(mask);
         const contour = contourLight(mask) * liquidContourScale;
         const depth = density / 8;
-        const shimmer = Math.sin(time * 0.0024 + x * 0.075 + y * 0.035) * 6 + contour;
+        const shimmer = Math.sin(visualTime * 0.0024 + x * 0.075 + y * 0.035) * 6 + contour;
         compositePixel(
           target, pixel, (211 - depth * 30 + shimmer) * liquidReliefScale,
           (94 - depth * 22 + shimmer * 0.7) * liquidReliefScale,
@@ -505,7 +509,7 @@ export class MaterialRenderer {
         const contour = contourLight(mask) * liquidContourScale;
         const depth = density / 8;
         const flow = velocities ? velocities[index * 2] * 0.18 : 0;
-        const shimmer = Math.sin(time * 0.002 + x * 0.065 + y * 0.02 + flow) * 4;
+        const shimmer = Math.sin(visualTime * 0.002 + x * 0.065 + y * 0.02 + flow) * 4;
         const light = contour + shimmer;
         compositePixel(
           target, pixel, (53 - depth * 31 + light * 0.45) * liquidReliefScale,
@@ -522,7 +526,7 @@ export class MaterialRenderer {
         const contour = contourLight(mask);
         const speed = velocities ? Math.abs(velocities[index * 2 + 1]) : 0;
         const drift = velocities ? velocities[index * 2] * 0.025 : 0;
-        const billow = Math.sin(time * 0.0016 + x * 0.11 + y * 0.065 + drift) * 7;
+        const billow = Math.sin(visualTime * 0.0016 + x * 0.11 + y * 0.065 + drift) * 7;
         const volume = density * 5 + contour * 0.6 + billow;
         setPixel(smoke, pixel, 114 + volume, 118 + volume, 124 + volume, 45 + density * 13 + Math.min(38, speed));
       } else {
@@ -534,7 +538,7 @@ export class MaterialRenderer {
         if (info.phase === RenderPhase.Gas) {
           const mask = materialNeighbourMask(this.rendered, width, height, x, y, material);
           const density = neighbourDensity(mask);
-          const volume = contourLight(mask) * 0.5 + Math.sin(time * 0.0014 + x * 0.08 + y * 0.05) * 5;
+          const volume = contourLight(mask) * 0.5 + Math.sin(visualTime * 0.0014 + x * 0.08 + y * 0.05) * 5;
           shadeCanvasOpticalVolume(
             this.styledColor, red, green, blue, optics, 'gas', density, volume,
           );
@@ -556,7 +560,7 @@ export class MaterialRenderer {
           const mask = materialNeighbourMask(this.rendered, width, height, x, y, material);
           const density = neighbourDensity(mask);
           const contour = contourLight(mask) * liquidContourScale;
-          const shimmer = Math.sin(time * 0.0018 + x * 0.055 + y * 0.025) * 4 + contour;
+          const shimmer = Math.sin(visualTime * 0.0018 + x * 0.055 + y * 0.025) * 4 + contour;
           shadeCanvasOpticalVolume(
             this.styledColor, red, green, blue, optics, 'liquid', density, shimmer,
           );
@@ -584,7 +588,7 @@ export class MaterialRenderer {
         } else {
           shadeCanvasMaterial(
             this.styledColor, red, green, blue, profile,
-            optics, material, x, y, index, time,
+            optics, material, x, y, index, visualTime,
           );
           if (denseSolidInterior && applicableTraits === 0 && !info.emissive) {
             const cohesion = canvasSolidInteriorCohesion(profile, optics);

@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { DeterministicBackend } from '../simulation/deterministic-backend';
 import { Material } from '../shared/materials';
 import {
-  browserInputAuditRequested, prepareDenseSolidAuditFixture, toggleDenseSolidAuditProbe,
+  blankBrowserInputAuditRequested, browserInputAuditRequested,
+  prepareDenseSolidAuditFixture, toggleDenseSolidAuditProbe,
 } from './browser-input-audit';
 
 describe('browser input audit gate', () => {
@@ -10,6 +11,12 @@ describe('browser input audit gate', () => {
     expect(browserInputAuditRequested('?scene=render-lab&inputAudit=1')).toBe(true);
     expect(browserInputAuditRequested('?scene=render-lab')).toBe(false);
     expect(browserInputAuditRequested('?inputAudit=0')).toBe(false);
+  });
+
+  it('allows a blank startup only inside the explicit input audit', () => {
+    expect(blankBrowserInputAuditRequested('?scene=render-lab&inputAudit=1&blankAudit=1')).toBe(true);
+    expect(blankBrowserInputAuditRequested('?scene=render-lab&blankAudit=1')).toBe(false);
+    expect(blankBrowserInputAuditRequested('?inputAudit=1')).toBe(false);
   });
 
   it('builds and advances the deterministic dense-solid timing fixture', () => {

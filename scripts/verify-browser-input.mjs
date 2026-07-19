@@ -4,7 +4,11 @@ import path from 'node:path';
 import { spawn } from 'node:child_process';
 
 const ROOT = process.cwd();
-const PORT = 5178;
+const requestedPort = Number.parseInt(process.env.ANIFORTPT_AUDIT_PORT ?? '5178', 10);
+if (!Number.isInteger(requestedPort) || requestedPort < 1024 || requestedPort > 65_535) {
+  throw new Error('ANIFORTPT_AUDIT_PORT must be an integer from 1024 through 65535');
+}
+const PORT = requestedPort;
 const ORIGIN = `http://127.0.0.1:${PORT}`;
 const WORLD_WIDTH = 612;
 const WORLD_HEIGHT = 384;
@@ -234,7 +238,8 @@ async function auditMode(mode) {
       ? await auditDenseCanvasPresentation(cdp)
       : undefined;
 
-    await evaluate(cdp, `window.__ANIFOR_INPUT_AUDIT__.clear(); window.__ANIFOR_INPUT_AUDIT__.setRadius(0); true`);
+    await evaluate(cdp, `window.__ANIFOR_INPUT_AUDIT__.clear(); window.__ANIFOR_INPUT_AUDIT__.setRadius(0); window.__ANIFOR_INPUT_AUDIT__.setMaterial(164); true`);
+    await sleep(350);
     const initial = await metrics(cdp);
     assertGeometry(initial, `${mode} initial`);
     assertToolboxGeometry(initial, `${mode} initial`, 68);
@@ -259,7 +264,40 @@ async function auditMode(mode) {
       `${mode}: landmark cells did not receive the same material (${painted.cells.join(', ')})`,
     );
     assert(painted.occupied === landmarks.length, `${mode}: expected ${landmarks.length} exact radius-0 cells, got ${painted.occupied}`);
+    const paintedFootprints = await capturePaintedFootprints(cdp, landmarks, `${mode} renderScale=2`);
 
+    await evaluate(cdp, `window.__ANIFOR_INPUT_AUDIT__.clear(); true`);
+    const dragY = 88;
+    const dragStartCell = 96;
+    const dragEndCell = 120;
+    const dragStart = worldClient(initial.canvas, { x: dragStartCell + 0.5, y: dragY + 0.5 });
+    const dragEnd = worldClient(initial.canvas, { x: dragEndCell + 0.5, y: dragY + 0.5 });
+    await cdp.send('Input.dispatchMouseEvent', {
+      type: 'mousePressed', x: dragStart.x, y: dragStart.y,
+      button: 'left', buttons: 1, clickCount: 1,
+    });
+    await cdp.send('Input.dispatchMouseEvent', {
+      type: 'mouseMoved', x: dragEnd.x, y: dragEnd.y, button: 'left', buttons: 1,
+    });
+    await cdp.send('Input.dispatchMouseEvent', {
+      type: 'mouseReleased', x: dragEnd.x, y: dragEnd.y,
+      button: 'left', buttons: 0, clickCount: 1,
+    });
+    await sleep(80);
+    const dragPainted = await evaluate(cdp, `(() => {
+      const audit = window.__ANIFOR_INPUT_AUDIT__;
+      const cells = [];
+      for (let x = ${dragStartCell}; x <= ${dragEndCell}; x++) cells.push(audit.cell(x, ${dragY}));
+      return { cells, occupied: audit.occupiedCells() };
+    })()`);
+    const dragCellCount = dragEndCell - dragStartCell + 1;
+    assert(dragPainted.cells.every((cell) => cell > 0) && dragPainted.occupied === dragCellCount,
+      `${mode}: sparse-event left drag did not paint a continuous ${dragCellCount}-cell stroke`);
+    const dragFootprints = await capturePaintedFootprints(cdp, [
+      { x: dragStartCell, y: dragY },
+      { x: Math.floor((dragStartCell + dragEndCell) / 2), y: dragY },
+      { x: dragEndCell, y: dragY },
+    ], `${mode} continuous drag`, 1.5, 1.6);
     await evaluate(cdp, `window.__ANIFOR_INPUT_AUDIT__.clear(); true`);
 
     const wheelMetrics = await metrics(cdp);
@@ -288,9 +326,65 @@ async function auditMode(mode) {
     assert(Math.abs((afterPan.panX - beforePan.panX) - 42) < 0.12, `${mode}: middle-pan X mismatch`);
     assert(Math.abs((afterPan.panY - beforePan.panY) - 27) < 0.12, `${mode}: middle-pan Y mismatch`);
 
+    // Exercise the actual ResizeObserver/rAF/presenter chain while the camera
+    // is zoomed and off-centre, then require an exact round-trip at the same
+    // CSS viewport. Zoom-one geometry alone cannot prove camera preservation.
+    const zoomedResizeClient = { x: panStart.x + 42, y: panStart.y + 27 };
+    await cdp.send('Input.dispatchMouseEvent', {
+      type: 'mouseWheel', x: zoomedResizeClient.x, y: zoomedResizeClient.y,
+      deltaX: 0, deltaY: -240, modifiers: 0,
+    });
+    await sleep(100);
+    const resizeStartView = await evaluate(cdp, `window.__ANIFOR_INPUT_AUDIT__.viewState()`);
+    assert(resizeStartView.zoom > 1.8, `${mode}: resize proof did not reach a stable deep zoom`);
+    const zoomedResizeAnchorBefore = await screenWorld(cdp, zoomedResizeClient);
+    const zoomedGeometry = await metrics(cdp);
+    await setDesktopMetrics(cdp, 1024, 600, dpr);
+    const compactZoomedGeometry = await waitForStableZoomedCamera(
+      cdp, 1024, 600, zoomedGeometry, resizeStartView.zoom, 6_000, `${mode} zoomed 1024x600`,
+    );
+    const compactZoomedView = await evaluate(cdp, `window.__ANIFOR_INPUT_AUDIT__.viewState()`);
+    assert(Math.abs(compactZoomedView.zoom - resizeStartView.zoom) < 0.001,
+      `${mode}: zoom changed during compact resize`);
+    await setDesktopMetrics(cdp, 1280, 720, dpr);
+    const returnedZoomedGeometry = await waitForStableZoomedCamera(
+      cdp, 1280, 720, compactZoomedGeometry, resizeStartView.zoom, 6_000, `${mode} zoomed 1280x720 return`,
+    );
+    const returnedZoomedView = await evaluate(cdp, `window.__ANIFOR_INPUT_AUDIT__.viewState()`);
+    const relativeAnchor = {
+      x: (zoomedResizeClient.x - zoomedGeometry.viewport.left) / zoomedGeometry.viewport.width,
+      y: (zoomedResizeClient.y - zoomedGeometry.viewport.top) / zoomedGeometry.viewport.height,
+    };
+    const returnedResizeClient = {
+      x: returnedZoomedGeometry.viewport.left + relativeAnchor.x * returnedZoomedGeometry.viewport.width,
+      y: returnedZoomedGeometry.viewport.top + relativeAnchor.y * returnedZoomedGeometry.viewport.height,
+    };
+    const zoomedResizeAnchorAfter = await screenWorld(cdp, returnedResizeClient);
+    const zoomedResizeAnchorError = Math.hypot(
+      zoomedResizeAnchorAfter.x - zoomedResizeAnchorBefore.x,
+      zoomedResizeAnchorAfter.y - zoomedResizeAnchorBefore.y,
+    );
+    const normalizedPanBefore = {
+      x: resizeStartView.panX / (zoomedGeometry.canvas.width / resizeStartView.zoom),
+      y: resizeStartView.panY / (zoomedGeometry.canvas.height / resizeStartView.zoom),
+    };
+    const normalizedPanAfter = {
+      x: returnedZoomedView.panX / (returnedZoomedGeometry.canvas.width / returnedZoomedView.zoom),
+      y: returnedZoomedView.panY / (returnedZoomedGeometry.canvas.height / returnedZoomedView.zoom),
+    };
+    assert(Math.abs(returnedZoomedView.zoom - resizeStartView.zoom) < 0.001
+      && Math.abs(normalizedPanAfter.x - normalizedPanBefore.x) < 0.0002
+      && Math.abs(normalizedPanAfter.y - normalizedPanBefore.y) < 0.0002,
+    `${mode}: zoomed camera did not survive resize round-trip (${JSON.stringify({ before: resizeStartView, compact: compactZoomedView, returned: returnedZoomedView })})`);
+    assert(zoomedResizeAnchorError < 0.2,
+      `${mode}: zoomed resize anchor drifted ${zoomedResizeAnchorError.toFixed(4)} cells`);
+
     await evaluate(cdp, `window.__ANIFOR_INPUT_AUDIT__.resetView(); true`);
+    const resetGeometry = await waitForStableCanvas(
+      cdp, 1280, 720, undefined, 6_000, `${mode} reset-view 1280x720`,
+    );
     const resizeMetrics = [];
-    let previousResize = initial;
+    let previousResize = resetGeometry;
     for (const [width, height] of [[1024, 600], [1440, 900], [1024, 600]]) {
       await setDesktopMetrics(cdp, width, height, dpr);
       const current = await waitForStableCanvas(
@@ -310,7 +404,7 @@ async function auditMode(mode) {
       `${mode}: larger desktop resize did not enlarge canvas`);
     assert(Math.abs(resizeMetrics[2].canvasWidth - resizeMetrics[0].canvasWidth) < 0.1
       && Math.abs(resizeMetrics[2].canvasHeight - resizeMetrics[0].canvasHeight) < 0.1,
-    `${mode}: desktop resize did not return to fitted geometry`);
+    `${mode}: desktop resize did not return to fitted geometry (${JSON.stringify(resizeMetrics)})`);
     const shortDesktop = await auditShortDesktop(cdp, mode, dpr, previousResize);
 
     let mobile;
@@ -335,10 +429,14 @@ async function auditMode(mode) {
       liquidReliefSamples,
       ...(denseCanvasPresentation ? { denseCanvasPresentation } : {}),
       landmarkCells: landmarks.length,
+      paintedFootprints,
+      continuousDragCells: dragCellCount,
+      dragFootprints,
       configuredSource: nativeSemantics.configuredSource,
       lifePreset: nativeSemantics.lifePreset,
       wheelAnchorErrorCells: round(wheelAnchorError, 5),
       middlePanDelta: { x: round(afterPan.panX - beforePan.panX, 3), y: round(afterPan.panY - beforePan.panY, 3) },
+      zoomedResizeAnchorErrorCells: round(zoomedResizeAnchorError, 5),
       renderScaleOne,
       toolFilters: { height: round(initial.ui.filters.height), rows: filterRows(initial.ui.filterButtons) },
       resizeMetrics,
@@ -470,7 +568,7 @@ async function auditRenderScaleOne(cdp, mode, dpr) {
   await setDesktopMetrics(cdp, 1280, 720, dpr);
   const navigateScale = async (outputScale) => {
     const query = new URLSearchParams({
-      scene: 'render-lab', inputAudit: '1', renderScale: String(outputScale),
+      scene: 'render-lab', inputAudit: '1', blankAudit: '1', renderScale: String(outputScale),
       ...(mode === 'canvas2d' ? { renderer: 'canvas2d' } : {}),
     });
     await cdp.send('Page.navigate', { url: `${ORIGIN}/?${query}` });
@@ -481,7 +579,8 @@ async function auditRenderScaleOne(cdp, mode, dpr) {
     })()`), 15_000, `renderScale=${outputScale} input audit API (${mode})`);
     await waitFor(() => evaluate(cdp, `window.__ANIFOR_INPUT_AUDIT__.backend().backend === ${JSON.stringify(mode)}`),
       15_000, `renderScale=${outputScale} ${mode} backend`);
-    await evaluate(cdp, `window.__ANIFOR_INPUT_AUDIT__.clear(); window.__ANIFOR_INPUT_AUDIT__.setRadius(0); window.__ANIFOR_INPUT_AUDIT__.resetView(); true`);
+    await evaluate(cdp, `window.__ANIFOR_INPUT_AUDIT__.clear(); window.__ANIFOR_INPUT_AUDIT__.setRadius(0); window.__ANIFOR_INPUT_AUDIT__.setMaterial(164); window.__ANIFOR_INPUT_AUDIT__.resetView(); true`);
+    await sleep(350);
     let previous;
     let stableSamples = 0;
     return waitFor(async () => {
@@ -526,6 +625,7 @@ async function auditRenderScaleOne(cdp, mode, dpr) {
     `${mode}: renderScale=1 landmark cells mismatch (${painted.cells.join(', ')})`);
   assert(painted.occupied === landmarks.length,
     `${mode}: renderScale=1 expected ${landmarks.length} exact cells, got ${painted.occupied}`);
+  const paintedFootprints = await capturePaintedFootprints(cdp, landmarks, `${mode} renderScale=1`);
 
   await evaluate(cdp, `window.__ANIFOR_INPUT_AUDIT__.clear(); true`);
   const anchor = worldClient(initial.canvas, { x: 431.25, y: 117.75 });
@@ -560,6 +660,7 @@ async function auditRenderScaleOne(cdp, mode, dpr) {
     backing: `${initial.backing.width}x${initial.backing.height}`,
     cssCanvas: `${round(initial.canvas.width, 2)}x${round(initial.canvas.height, 2)}`,
     landmarkCells: landmarks.length,
+    paintedFootprints,
     wheelAnchorErrorCells: round(wheelAnchorError, 5),
     middlePanDelta: { x: round(panX, 3), y: round(panY, 3) },
   };
@@ -703,7 +804,7 @@ async function auditMobile(cdp, screenshot) {
   });
   await sleep(240);
   await evaluate(cdp, `window.scrollTo(0, 0); window.__ANIFOR_INPUT_AUDIT__.clear(); window.__ANIFOR_INPUT_AUDIT__.resetView(); true`);
-  await sleep(80);
+  await sleep(350);
   const initial = await metrics(cdp);
   assertGeometry(initial, 'mobile Canvas');
   assertContained(initial, 'mobile Canvas');
@@ -723,14 +824,29 @@ async function auditMobile(cdp, screenshot) {
     await writeFile(screenshot, Buffer.from(capture.data, 'base64'));
   }
   const center = { x: initial.viewport.left + initial.viewport.width / 2, y: initial.viewport.top + initial.viewport.height / 2 };
+  const pinchTranslation = 22;
   const start = [touch(1, center.x - 58, center.y), touch(2, center.x + 58, center.y)];
-  const moved = [touch(1, center.x - 83, center.y + 16), touch(2, center.x + 83, center.y + 16)];
+  const movedCenter = { x: center.x + pinchTranslation, y: center.y };
+  const moved = [
+    touch(1, movedCenter.x - 83, movedCenter.y),
+    touch(2, movedCenter.x + 83, movedCenter.y),
+  ];
+  const pinchAnchorBefore = await screenWorld(cdp, center);
   await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: start });
   await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: moved });
   await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
   await sleep(100);
   const pinch = await evaluate(cdp, `({ view: window.__ANIFOR_INPUT_AUDIT__.viewState(), occupied: window.__ANIFOR_INPUT_AUDIT__.occupiedCells() })`);
+  const pinchAnchorAfter = await screenWorld(cdp, movedCenter);
+  const pinchAnchorError = Math.hypot(
+    pinchAnchorAfter.x - pinchAnchorBefore.x,
+    pinchAnchorAfter.y - pinchAnchorBefore.y,
+  );
   assert(pinch.view.zoom > 1.35, 'mobile pinch did not zoom');
+  assert(Math.abs(pinch.view.panX - pinchTranslation) < 0.2,
+    `mobile pinch-pan X mismatch (${pinch.view.panX})`);
+  assert(pinchAnchorError < 0.2,
+    `mobile pinch anchor drifted ${pinchAnchorError.toFixed(4)} cells`);
   assert(pinch.occupied === 0, `mobile pinch painted ${pinch.occupied} stray cells`);
 
   await evaluate(cdp, `window.__ANIFOR_INPUT_AUDIT__.clear(); window.__ANIFOR_INPUT_AUDIT__.resetView(); true`);
@@ -743,6 +859,7 @@ async function auditMobile(cdp, screenshot) {
   await sleep(100);
   const tap = await evaluate(cdp, `({ cell: window.__ANIFOR_INPUT_AUDIT__.cell(${target.x}, ${target.y}), occupied: window.__ANIFOR_INPUT_AUDIT__.occupiedCells() })`);
   assert(tap.cell > 0 && tap.occupied === 1, `mobile single-touch tap missed exact cell (${tap.cell}, ${tap.occupied})`);
+  const paintedFootprints = await capturePaintedFootprints(cdp, [target], 'mobile Canvas', 1);
   const mobileLibrary = await evaluate(cdp, `(() => {
     const library = document.querySelector('.tool-library');
     const group = library?.querySelector('.material-group[open]');
@@ -819,8 +936,11 @@ async function auditMobile(cdp, screenshot) {
     viewport: `${round(initial.viewport.width, 2)}x${round(initial.viewport.height, 2)}`,
     canvasAspect: round(initial.canvas.width / initial.canvas.height, 6),
     pinchZoom: round(pinch.view.zoom, 4),
+    pinchPanX: round(pinch.view.panX, 3),
+    pinchAnchorErrorCells: round(pinchAnchorError, 5),
     pinchStrayCells: pinch.occupied,
     singleTouchCell: `${target.x},${target.y}`,
+    paintedFootprints,
     toolFilterHeight: round(initial.ui.filters.height),
     toolboxGap: round(initial.ui.actions.top - initial.ui.palette.bottom),
     horizontalOverflow: round(initial.ui.horizontalOverflow),
@@ -850,7 +970,7 @@ async function waitForStableCanvas(cdp, width, height, previous, timeoutMs, labe
     const expectedHeight = expectedWidth / WORLD_ASPECT;
     if (Math.abs(current.canvas.width - expectedWidth) > 0.75
       || Math.abs(current.canvas.height - expectedHeight) > 0.75) return false;
-    if (Math.abs(current.canvas.width - previous.canvas.width) <= 1
+    if (previous && Math.abs(current.canvas.width - previous.canvas.width) <= 1
       && Math.abs(current.canvas.height - previous.canvas.height) <= 1) return false;
     if (last
       && Math.abs(current.canvas.width - last.canvas.width) < 0.05
@@ -861,6 +981,29 @@ async function waitForStableCanvas(cdp, width, height, previous, timeoutMs, labe
     last = current;
     return stableSamples >= 4 ? current : false;
   }, timeoutMs, `${label} stable canvas resize`);
+}
+
+async function waitForStableZoomedCamera(cdp, width, height, previous, expectedZoom, timeoutMs, label) {
+  let last;
+  let stableSamples = 0;
+  return waitFor(async () => {
+    const current = await metrics(cdp);
+    if (current.window.width !== width || current.window.height !== height) return false;
+    if (Math.abs(current.viewport.width - previous.viewport.width) <= 1
+      && Math.abs(current.viewport.height - previous.viewport.height) <= 1) return false;
+    const view = await evaluate(cdp, `window.__ANIFOR_INPUT_AUDIT__.viewState()`);
+    if (Math.abs(view.zoom - expectedZoom) > 0.001) return false;
+    if (last
+      && Math.abs(current.canvas.width - last.canvas.width) < 0.05
+      && Math.abs(current.canvas.height - last.canvas.height) < 0.05
+      && Math.abs(current.viewport.width - last.viewport.width) < 0.05
+      && Math.abs(current.viewport.height - last.viewport.height) < 0.05
+      && Math.abs(view.panX - last.view.panX) < 0.05
+      && Math.abs(view.panY - last.view.panY) < 0.05) stableSamples++;
+    else stableSamples = 0;
+    last = { ...current, view };
+    return stableSamples >= 4 ? current : false;
+  }, timeoutMs, `${label} stable zoomed resize`);
 }
 
 async function metrics(cdp) {
@@ -997,6 +1140,9 @@ async function samplePageRegions(cdp, screenshotBase64, regions) {
       let pinned = 0;
       let minimumLuma = 255;
       let maximumLuma = 0;
+      let peakLuma = -1;
+      let peakPixelX = 0;
+      let peakPixelY = 0;
       const lumaValues = new Float32Array(width * height);
       const visiblePixels = new Uint8Array(width * height);
       for (let offset = 0; offset < data.length; offset += 4) {
@@ -1007,6 +1153,11 @@ async function samplePageRegions(cdp, screenshotBase64, regions) {
         const sampleIndex = offset / 4;
         lumaValues[sampleIndex] = luma;
         visiblePixels[sampleIndex] = 1;
+        if (luma > peakLuma) {
+          peakLuma = luma;
+          peakPixelX = sampleIndex % width;
+          peakPixelY = Math.floor(sampleIndex / width);
+        }
         minimumLuma = Math.min(minimumLuma, luma);
         maximumLuma = Math.max(maximumLuma, luma);
         visible++;
@@ -1064,9 +1215,49 @@ async function samplePageRegions(cdp, screenshotBase64, regions) {
         darkFraction: Math.round(darkPixels / Math.max(1, visible) * 1000) / 1000,
         pinnedFraction: Math.round(pinned / Math.max(1, visible) * 1000) / 1000,
         lumaRange: visible ? Math.round(maximumLuma - minimumLuma) : 0,
+        ...(region.locatePeak ? {
+          peakLuma: Math.round(Math.max(0, peakLuma)),
+          peakWorld: [
+            ((x + peakPixelX + 0.5) / pageScaleX - bounds.left) / worldScaleX,
+            ((y + peakPixelY + 0.5) / pageScaleY - bounds.top) / worldScaleY,
+          ],
+        } : {}),
       };
     });
   })()`);
+}
+
+async function capturePaintedFootprints(cdp, landmarks, label, radius = 1.5, maximumError = 1) {
+  // Semantic cell assertions alone cannot catch a presenter transform that
+  // draws the accepted mark somewhere else. Sample the composed framebuffer at
+  // each requested cell and at a nearby empty control after the paint frame.
+  const capture = await cdp.send('Page.captureScreenshot', { format: 'png', fromSurface: true });
+  const regions = landmarks.flatMap((landmark, index) => {
+    const controlOffset = landmark.y < WORLD_HEIGHT - 8 ? 6 : -6;
+    return [
+      { name: `target-${index}`, x: landmark.x + 0.5, y: landmark.y + 0.5, radius, locatePeak: true },
+      { name: `control-${index}`, x: landmark.x + 0.5, y: landmark.y + controlOffset + 0.5, radius, locatePeak: true },
+    ];
+  });
+  const samples = await samplePageRegions(cdp, capture.data, regions);
+  return landmarks.map((landmark, index) => {
+    const target = samples[index * 2];
+    const control = samples[index * 2 + 1];
+    const peakLumaDelta = target.peakLuma - control.peakLuma;
+    const peakWorldError = Math.hypot(
+      target.peakWorld[0] - landmark.x - 0.5,
+      target.peakWorld[1] - landmark.y - 0.5,
+    );
+    assert(peakLumaDelta >= 20,
+      `${label}: painted footprint at ${landmark.x},${landmark.y} is not visible (${peakLumaDelta} peak luma over control)`);
+    assert(peakWorldError < maximumError,
+      `${label}: painted footprint at ${landmark.x},${landmark.y} is offset ${peakWorldError.toFixed(3)} cells`);
+    return {
+      cell: `${landmark.x},${landmark.y}`,
+      peakLumaDelta,
+      peakWorldErrorCells: round(peakWorldError, 4),
+    };
+  });
 }
 
 async function mouseClick(cdp, x, y, button) {

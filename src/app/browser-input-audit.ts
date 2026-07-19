@@ -12,6 +12,7 @@ export interface BrowserInputAuditApi {
   occupiedCells(): number;
   clear(): void;
   setRadius(radius: number): void;
+  setMaterial(material: Material): void;
   resetView(): void;
   screenToWorld(clientX: number, clientY: number): Point;
   screenToCell(clientX: number, clientY: number): Point;
@@ -28,6 +29,11 @@ declare global {
 
 export function browserInputAuditRequested(search = globalThis.location?.search ?? ''): boolean {
   return new URLSearchParams(search).get('inputAudit') === '1';
+}
+
+export function blankBrowserInputAuditRequested(search = globalThis.location?.search ?? ''): boolean {
+  const parameters = new URLSearchParams(search);
+  return parameters.get('inputAudit') === '1' && parameters.get('blankAudit') === '1';
 }
 
 /** Builds the full-grid steady-state Canvas workload used only by the browser audit. */

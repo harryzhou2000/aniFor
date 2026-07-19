@@ -10,7 +10,8 @@ import { buildToolCatalog, type LifeToolInfo, type SimToolInfo, type SourceToolI
 import { WorldInputController } from '../ui/world-input';
 import { drawToolPoint, drawToolSegment } from './tool-dispatch';
 import {
-  browserInputAuditRequested, prepareDenseSolidAuditFixture, toggleDenseSolidAuditProbe,
+  blankBrowserInputAuditRequested, browserInputAuditRequested,
+  prepareDenseSolidAuditFixture, toggleDenseSolidAuditProbe,
 } from './browser-input-audit';
 
 const AUTOSAVE_KEY = 'stillroom-world-v1';
@@ -46,7 +47,8 @@ export class Game {
     const renderLab = renderLabRequested();
     const wallLab = wallLabRequested();
     if (renderLab) {
-      applyRenderLabScene(this.simulation);
+      if (blankBrowserInputAuditRequested()) this.simulation.clear();
+      else applyRenderLabScene(this.simulation);
       this.paused = true;
       this.root.dataset.scene = 'render-lab';
     } else if (wallLab) {
@@ -165,6 +167,15 @@ export class Game {
       },
       clear: () => { this.simulation.clear(); },
       setRadius: (radius) => { this.radius = Math.max(0, Math.min(64, Math.round(radius))); },
+      setMaterial: (material) => {
+        if (!ALL_MATERIALS.some(({ id }) => id === material)) throw new Error(`Unknown audit material ${material}`);
+        this.material = material;
+        this.wallTool = undefined;
+        this.simulationTool = undefined;
+        this.sourceTool = undefined;
+        this.lifeTool = undefined;
+        this.eraseMode = false;
+      },
       resetView: () => { this.renderer.resetView(); },
       screenToWorld: (clientX, clientY) => this.renderer.screenToWorld(clientX, clientY),
       screenToCell: (clientX, clientY) => this.renderer.screenToCell(clientX, clientY),
@@ -183,7 +194,7 @@ export class Game {
       this.accumulator += elapsed;
       while (this.accumulator >= 1000 / 60) { this.simulation.step(); this.accumulator -= 1000 / 60; }
     }
-    this.renderer.render(time);
+    this.renderer.render(time, this.root.dataset.inputAudit === 'ready' ? 1_000 : time);
     if (time - this.lastIndicatorUpdate >= 100) {
       this.lastIndicatorUpdate = time;
       this.updateFieldIndicator();
