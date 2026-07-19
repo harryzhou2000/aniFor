@@ -2,7 +2,7 @@ import { ALL_MATERIALS, Material } from '../shared/materials';
 import type { SimulationBackend } from '../simulation';
 import { clientToViewport, ViewTransform, type Point, type ViewState } from './view-transform';
 import { contentBoxFromBounds } from './client-coordinate-map';
-import type { PixiFieldPresenter } from './pixi-field-presenter';
+import type { PixiFieldPresenter, WebGLPresentationTiming } from './pixi-field-presenter';
 import { backingSize, resolveFieldOutputScale } from './render-resolution';
 import { shadeCanvasAtmosphere } from './canvas-atmosphere-relief';
 import { canvasLocalEmissionAlpha } from './canvas-emission-style';
@@ -102,6 +102,7 @@ export class MaterialRenderer {
   private gasFieldLightingDirty = false;
   private canvasPresentationTimingEnabled = false;
   private canvasPresentationTiming?: CanvasPresentationTiming;
+  private webGLPresentationTimingEnabled = false;
 
   constructor(private readonly host: HTMLElement, private readonly simulation: SimulationBackend) {
     this.rendered = new Uint8Array(simulation.width * simulation.height);
@@ -162,6 +163,21 @@ export class MaterialRenderer {
   getBackendInfo(): RendererBackendInfo { return this.backend; }
 
   enableCanvasPresentationTiming(): void { this.canvasPresentationTimingEnabled = true; }
+
+  enableWebGLPresentationTiming(): void {
+    this.webGLPresentationTimingEnabled = true;
+    this.presenter?.enableWebGLPresentationTiming();
+  }
+
+  requestWebGLPresentationTimingSample(): boolean {
+    const requested = this.presenter?.requestWebGLPresentationTimingSample() ?? false;
+    if (requested) this.changed = true;
+    return requested;
+  }
+
+  getWebGLPresentationTiming(): WebGLPresentationTiming | undefined {
+    return this.presenter?.getWebGLPresentationTiming();
+  }
 
   setGasFieldLightingEnabled(enabled: boolean): void {
     if (enabled === this.gasFieldLightingEnabled) return;
@@ -247,6 +263,7 @@ export class MaterialRenderer {
     // Compile the shader and seed every semantic field while the known-good
     // Canvas remains visible. Any failure leaves the fallback fully intact.
     const now = performance.now();
+    if (this.webGLPresentationTimingEnabled) presenter.enableWebGLPresentationTiming();
     presenter.setGasFieldLightingEnabled(this.gasFieldLightingEnabled);
     presenter.update(
       this.rendered, this.renderedWalls, this.simulation.temperature?.(), this.simulation.velocity?.(),

@@ -1,4 +1,5 @@
 import type { CanvasPresentationTiming, RendererBackendInfo } from '../renderer/field-renderer';
+import type { WebGLPresentationTiming } from '../renderer/pixi-field-presenter';
 import { Material } from '../shared/materials';
 import type { SimulationBackend } from '../simulation';
 import type { Point, ViewState } from '../renderer/view-transform';
@@ -22,6 +23,8 @@ export interface BrowserInputAuditApi {
   prepareDenseSolidFixture(): void;
   toggleDenseSolidProbe(): void;
   canvasPresentationTiming(): CanvasPresentationTiming | undefined;
+  requestWebGLPresentationTimingSample(): boolean;
+  webGLPresentationTiming(): WebGLPresentationTiming | undefined;
 }
 
 declare global {

@@ -14,6 +14,21 @@ import { packSemanticRect } from './semantic-field';
 import { packWallRect } from './wall-field';
 interface PresenterViewport { readonly width: number; readonly height: number }
 
+interface WebGLTimerQueryExtension {
+  readonly TIME_ELAPSED_EXT: number;
+  readonly GPU_DISJOINT_EXT: number;
+}
+
+export interface WebGLPresentationTiming {
+  readonly source: 'gpu-query' | 'cpu-submission';
+  readonly sequence: number;
+  readonly usableSamples: number;
+  readonly discardedSamples: number;
+  readonly medianMs: number;
+  readonly p90Ms: number;
+  readonly maximumMs: number;
+}
+
 const FIELD_VERTEX = `
 in vec2 aPosition;
 out vec2 vFieldCoord;
@@ -801,6 +816,14 @@ export class PixiFieldPresenter {
   private readonly chunks: DirtyChunkGrid;
   private readonly wallChunks: DirtyChunkGrid;
   private readonly uniforms: UniformGroup;
+  private webGLTimingEnabled = false;
+  private webGLTimingRequested = false;
+  private webGLTimingSource: WebGLPresentationTiming['source'] = 'cpu-submission';
+  private webGLTimingExtension?: WebGLTimerQueryExtension;
+  private webGLTimingPending?: WebGLQuery;
+  private readonly webGLTimingSamples: number[] = [];
+  private webGLTimingDiscarded = 0;
+  private webGLTimingSequence = 0;
 
   private constructor(
     private readonly app: Application,
@@ -929,6 +952,7 @@ export class PixiFieldPresenter {
   mount(): void { this.host.append(this.app.canvas); }
 
   destroy(): void {
+    this.releaseWebGLTimingQuery();
     try { this.app.destroy(); }
     catch {
       try { this.scene.destroy({ children: true }); }
@@ -957,7 +981,43 @@ export class PixiFieldPresenter {
 
   setGasFieldLightingEnabled(enabled: boolean): void {
     this.uniforms.uniforms.uGasFieldLighting = enabled ? 1 : 0;
-    this.app.render();
+    this.renderApplication();
+  }
+
+  enableWebGLPresentationTiming(): void {
+    if (this.webGLTimingEnabled) return;
+    this.webGLTimingEnabled = true;
+    const gl = this.webGLContext();
+    const extension = gl?.getExtension('EXT_disjoint_timer_query_webgl2') as
+      WebGLTimerQueryExtension | null | undefined;
+    this.webGLTimingExtension = extension ?? undefined;
+    this.webGLTimingSource = extension ? 'gpu-query' : 'cpu-submission';
+  }
+
+  requestWebGLPresentationTimingSample(): boolean {
+    if (!this.webGLTimingEnabled) return false;
+    this.pollWebGLTimingQuery();
+    if (this.webGLTimingRequested || this.webGLTimingPending) return false;
+    this.webGLTimingRequested = true;
+    return true;
+  }
+
+  getWebGLPresentationTiming(): WebGLPresentationTiming | undefined {
+    if (!this.webGLTimingEnabled) return undefined;
+    this.pollWebGLTimingQuery();
+    const sorted = [...this.webGLTimingSamples].sort((left, right) => left - right);
+    const percentile = (ratio: number): number => sorted.length
+      ? sorted[Math.floor((sorted.length - 1) * ratio)]
+      : 0;
+    return {
+      source: this.webGLTimingSource,
+      sequence: this.webGLTimingSequence,
+      usableSamples: sorted.length,
+      discardedSamples: this.webGLTimingDiscarded,
+      medianMs: percentile(0.5),
+      p90Ms: percentile(0.9),
+      maximumMs: sorted.at(-1) ?? 0,
+    };
   }
 
   visualRefreshDue(time: number): boolean {
@@ -989,14 +1049,125 @@ export class PixiFieldPresenter {
       this.emissionSource.update();
     }
     this.uniforms.uniforms.uTime = visualTime * 0.001;
-    this.app.render();
+    this.renderApplication();
   }
 
   setTransform(scale: number, x: number, y: number): void {
     this.app.canvas.style.transform = `translate3d(${x}px, ${y}px, 0) scale(${scale})`;
     this.app.canvas.dataset.viewScale = String(scale);
     this.app.canvas.dataset.viewPosition = x + "," + y;
+    this.renderApplication();
+  }
+
+  private renderApplication(): void {
+    if (!this.webGLTimingEnabled || !this.webGLTimingRequested) {
+      this.app.render();
+      return;
+    }
+    this.webGLTimingRequested = false;
+    const gl = this.webGLContext();
+    const extension = this.webGLTimingExtension;
+    let query: WebGLQuery | null = null;
+    try { query = extension && gl ? gl.createQuery() : null; }
+    catch { /* a lost/invalid context falls through to labelled CPU timing */ }
+    if (!query || !extension || !gl) {
+      this.useCpuTimingFallback();
+      this.renderAndRecordCpuTiming();
+      return;
+    }
+
+    try {
+      gl.beginQuery(extension.TIME_ELAPSED_EXT, query);
+    } catch {
+      try { gl.deleteQuery(query); } catch { /* context may already be invalid */ }
+      this.useCpuTimingFallback();
+      this.renderAndRecordCpuTiming();
+      return;
+    }
+
+    const started = performance.now();
+    try {
+      this.app.render();
+    } catch (error) {
+      try { gl.endQuery(extension.TIME_ELAPSED_EXT); } catch { /* query is already invalid */ }
+      try { gl.deleteQuery(query); } catch { /* preserve the original render error */ }
+      throw error;
+    }
+
+    try {
+      gl.endQuery(extension.TIME_ELAPSED_EXT);
+      this.webGLTimingPending = query;
+    } catch {
+      try { gl.deleteQuery(query); } catch { /* context may already be invalid */ }
+      this.useCpuTimingFallback();
+      this.recordWebGLTimingSample(performance.now() - started);
+    }
+  }
+
+  private pollWebGLTimingQuery(): void {
+    const query = this.webGLTimingPending;
+    const extension = this.webGLTimingExtension;
+    const gl = this.webGLContext();
+    if (!query || !extension || !gl) return;
+    let disjoint: boolean;
+    let nanoseconds: number;
+    try {
+      if (!gl.getQueryParameter(query, gl.QUERY_RESULT_AVAILABLE)) return;
+      disjoint = Boolean(gl.getParameter(extension.GPU_DISJOINT_EXT));
+      nanoseconds = Number(gl.getQueryParameter(query, gl.QUERY_RESULT));
+    } catch {
+      try { gl.deleteQuery(query); } catch { /* context may already be invalid */ }
+      this.webGLTimingPending = undefined;
+      this.useCpuTimingFallback();
+      return;
+    }
+    try { gl.deleteQuery(query); } catch { /* result is already consumed */ }
+    this.webGLTimingPending = undefined;
+    this.webGLTimingSequence++;
+    if (disjoint || !Number.isFinite(nanoseconds) || nanoseconds < 0) {
+      this.webGLTimingDiscarded++;
+      return;
+    }
+    this.webGLTimingSamples.push(nanoseconds / 1_000_000);
+  }
+
+  private recordWebGLTimingSample(durationMs: number): void {
+    this.webGLTimingSequence++;
+    if (!Number.isFinite(durationMs) || durationMs < 0) {
+      this.webGLTimingDiscarded++;
+      return;
+    }
+    this.webGLTimingSamples.push(durationMs);
+  }
+
+  private renderAndRecordCpuTiming(): void {
+    const started = performance.now();
     this.app.render();
+    this.recordWebGLTimingSample(performance.now() - started);
+  }
+
+  private useCpuTimingFallback(): void {
+    this.webGLTimingExtension = undefined;
+    if (this.webGLTimingSource === 'cpu-submission') return;
+    // CPU submission and elapsed GPU time answer different questions. Never
+    // publish a percentile assembled from both sources after a driver failure.
+    this.webGLTimingSource = 'cpu-submission';
+    this.webGLTimingSamples.length = 0;
+    this.webGLTimingDiscarded = 0;
+    this.webGLTimingSequence = 0;
+  }
+
+  private releaseWebGLTimingQuery(): void {
+    const query = this.webGLTimingPending;
+    const gl = this.webGLContext();
+    if (query && gl) {
+      try { gl.deleteQuery(query); } catch { /* context may already be invalid */ }
+    }
+    this.webGLTimingPending = undefined;
+  }
+
+  private webGLContext(): WebGL2RenderingContext | undefined {
+    return (this.app.renderer as { gl?: WebGL2RenderingContext }).gl;
   }
 }
 

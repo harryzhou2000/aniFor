@@ -121,6 +121,9 @@ async function auditMode(mode) {
     // backend compositing regressions are observable in the browser gate.
     const canonicalCaptures = await waitForStablePageCapture(cdp, `${mode} canonical framebuffer`);
     const canonicalCapture = canonicalCaptures.capture;
+    const webGLPresentationTiming = mode === 'webgl'
+      ? await auditWebGLPresentationTiming(cdp)
+      : undefined;
     await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setGasFieldLighting(false); true');
     const unlitGasCaptures = await waitForStablePageCapture(cdp, `${mode} unlit gas framebuffer`);
     const canvasGasLightingRefresh = mode === 'canvas2d'
@@ -504,6 +507,7 @@ async function auditMode(mode) {
       ...(canvasGasLightingRefresh ? { canvasGasLightingRefresh } : {}),
       liquidColumnSamples,
       liquidReliefSamples,
+      ...(webGLPresentationTiming ? { webGLPresentationTiming } : {}),
       ...(denseCanvasPresentation ? { denseCanvasPresentation } : {}),
       landmarkCells: landmarks.length,
       paintedFootprints,
@@ -527,6 +531,46 @@ async function auditMode(mode) {
     await terminate(chrome);
     await rm(profile, { recursive: true, force: true });
   }
+}
+
+async function auditWebGLPresentationTiming(cdp) {
+  let timing = await evaluate(cdp,
+    'window.__ANIFOR_INPUT_AUDIT__.webGLPresentationTiming()');
+  assert(timing, 'WebGL presentation timing is unavailable');
+  assert(timing.source === 'gpu-query' || timing.source === 'cpu-submission',
+    `Unknown WebGL timing source ${timing.source}`);
+
+  const targetSamples = 30;
+  const maximumAttempts = targetSamples + 45;
+  for (let attempt = 0; timing.usableSamples < targetSamples && attempt < maximumAttempts; attempt++) {
+    const before = timing;
+    const requested = await evaluate(cdp,
+      'window.__ANIFOR_INPUT_AUDIT__.requestWebGLPresentationTimingSample()');
+    assert(requested, `WebGL timing sample ${attempt + 1} was not accepted`);
+    timing = await waitFor(() => evaluate(cdp, `(() => {
+      const next = window.__ANIFOR_INPUT_AUDIT__.webGLPresentationTiming();
+      return next && (next.source !== ${JSON.stringify(before.source)}
+        || next.sequence > ${before.sequence}) ? next : null;
+    })()`), 5_000, `WebGL presentation sample ${attempt + 1}`);
+  }
+
+  assert(timing.usableSamples >= targetSamples,
+    `WebGL presentation produced only ${timing.usableSamples}/${targetSamples} usable samples`
+      + ` (${timing.discardedSamples} discarded, ${timing.source})`);
+  for (const [label, value] of [
+    ['median', timing.medianMs], ['p90', timing.p90Ms], ['maximum', timing.maximumMs],
+  ]) assert(Number.isFinite(value) && value >= 0,
+    `WebGL ${label} timing is invalid (${value}, ${timing.source})`);
+
+  return {
+    fixture: 'canonical render lab',
+    source: timing.source,
+    samples: timing.usableSamples,
+    discardedSamples: timing.discardedSamples,
+    medianMs: round(timing.medianMs),
+    p90Ms: round(timing.p90Ms),
+    maximumMs: round(timing.maximumMs),
+  };
 }
 
 async function auditCanvasGasLightingRefresh(cdp) {

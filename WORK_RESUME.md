@@ -24,14 +24,14 @@ Queued after the renderer checkpoint: revisit desktop/mobile geometry as a dedic
 
 - Repository: `/home/harry/projects/aniFor_codex`
 - Branch: `main_codex`
-- Current pushed checkpoint: `476715a Prove field-lit gas and cohesive energy`. Local work after that checkpoint adds optics-specific WebGL liquid macro relief, tighter Canvas/WebGL depth and exposure parity gates, and end-to-end mobile browser proofs for continuous drawing, Eraser/Draw, filter reach, and nested-scroll chaining; it remains uncommitted until review completes.
-- The immediately preceding live baseline was built and verified by manual Actions run `29666585733` at exact SHA `97f5ced40b3f4db1f5c0a0acd477002b661e0f04` after `origin/main_codex` was independently checked with `git ls-remote`.
-- The local GitHub CLI token is currently invalid and must be refreshed with `gh auth login -h github.com` before Actions can be triggered or inspected again. Re-check the remote branch independently after the next push.
+- Current deployed checkpoint: `8ae8765 Deepen liquid relief and prove mobile controls`. Current branch work adds an audit-only WebGL elapsed-time harness with a labelled CPU-submission fallback and a 30-sample canonical browser probe.
+- Manual Actions run `29675483452` built and deployed exact SHA `8ae8765082d6962b1dcebc9a8d06f0115a850465` after `origin/main_codex` was independently checked. Its ccache restore succeeded; the save step correctly skipped because the exact primary key already existed.
+- GitHub CLI authentication was working for that dispatch and inspection. Re-check authentication and the remote branch independently after the next push.
 - Current live Pages URL: `https://harryzhou2000.github.io/aniFor/`
-- Previous verified live baseline: `97f5ced` from Actions run `29666585733`; accept the current checkpoint only after its own manual workflow and live revision/closure verifier pass.
+- Verified live baseline: `8ae8765` from Actions run `29675483452`. The live page reported exact revision, direct native TPT WASM, WebGL, 612×384 world size, 2× output, 1224×768 backing, correct 1.59375 aspect, zero failed resources, and zero browser errors.
 - Build, deploy, and post-deployment verification all passed. The live closure contains all referenced resources with correct WASM MIME and the exact expected revision. The successful primary ccache key already existed, so the save step correctly skipped.
 
-## Committed/live baseline through `97f5ced`
+## Committed/live history through `8ae8765`
 
 - Pinned official TPT 100.0 native engine, single-threaded 612×384 WebAssembly.
 - 170 stable projected material IDs; 165 particle brushes in the catalog, with 160 enabled and five gravity-dependent entries explicitly disabled.
@@ -254,7 +254,7 @@ Queued after the renderer checkpoint: revisit desktop/mobile geometry as a dedic
 - Forced Canvas at 1280×720 and a 390×844 DPR-2 portrait capture retained the 1224×768 backing, square mobile interaction panel with aspect-preserving letterbox, smooth empty-space aura, and crisp material seams. Warm/cool strips visibly reveal profile contours without uniformly whitening block interiors.
 - Native semantic-tool coverage now proves exact scalar deltas, stable typed routing, no vector-to-particle fallthrough, no vector emission during pinch navigation, malformed ABI rejection, Wind response, `WL_BLOCKAIR` isolation, stable-water regression, and unstepped OPS Wind round-tripping.
 
-The layout checkpoint `60b033b` and dense-solid relief checkpoint `97f5ced` are committed, pushed, and deployed. Run `29666585733` restored the compatible ccache, built the exact branch SHA, deployed it, and passed the live revision plus runtime-asset-closure verifier. The later gas-curvature, field-owned liquid-lighting, Canvas liquid-field-relief, and solid-cavity opacity checkpoints are recorded independently of deployment state so the next handoff can reconcile the exact workflow run.
+The layout checkpoint `60b033b` and dense-solid relief checkpoint `97f5ced` were first deployed by run `29666585733`. The later gas-curvature, field-owned liquid-lighting, Canvas liquid-field-relief, solid-cavity opacity, field-lit gas/energy, WebGL liquid macro-relief, and mobile-control proofs culminated in deployed checkpoint `8ae8765`; run `29675483452` built that exact SHA and passed revision, runtime-asset-closure, and live browser validation.
 
 ## Current gas-curvature follow-up
 
@@ -297,6 +297,13 @@ The layout checkpoint `60b033b` and dense-solid relief checkpoint `97f5ced` are 
 - The final paired browser gate passed with zero browser errors. Canvas Metal/Plant/PLUT/DTEC microcontrast measured `3.23/4.58/3.35/2.01`, with macro luma ranges `56/37/23/57`; dense Sand retained `7.28` microcontrast. The WebGL candidate capture measured `8.16/4.62/2.59/8.14` microcontrast and `27/19/7/20` macro ranges. Both separators, dark-pit bounds, clipping limits, viewport transforms, gestures, and mobile layout stayed green. Two forced-Canvas styled runs measured `27.3/29.2 ms` and `29.9/33.5 ms` median/p90. The spread confirms why this remains host-specific, nonblocking telemetry rather than a hard CI budget; the styling spends part of the reclaimed loop headroom without adding storage or a pass.
 - The final isolated profile kept combined render-field storage at `8,173,320` bytes and runtime-known Canvas scratch at `1,887,464` bytes. The replaced one-wave worst-case helper measured `5.43 ms` median / `5.59 ms` p90, and solid cavity reconstruction measured `2.81 ms` / `3.00 ms`; no new frame-sized runtime buffer or pass was introduced.
 
+## Current WebGL presentation timing follow-up (after `8ae8765`)
+
+- The input-audit API can now request one composed WebGL presentation sample at a time. The presenter uses `EXT_disjoint_timer_query_webgl2` when available, retains only one pending query, rejects disjoint/invalid values, and deletes the query on completion, failure, teardown, or render error. If the extension is absent or fails, it reports an explicit `cpu-submission` source and clears any earlier GPU distribution before recording the fallback.
+- The browser gate samples the warmed canonical render lab until it has 30 usable frames and reports source, discarded count, median, p90, and maximum without imposing a cross-machine threshold. The first SwiftShader run used real GPU queries and measured `109.49/123.57/134.96 ms` median/p90/maximum; a fresh full paired rerun measured `104.10/112.09/140.95 ms`. Both retained 30 usable samples and zero discarded. This is a software-GPU baseline, not a production-hardware budget.
+- Instrumentation is enabled only under `inputAudit=1`. Normal render paths issue no query or timing calls and add only the disabled boolean branch. The WebGL-only browser gate passed all shader, visual, 1×/2× viewport, desktop/mobile gesture, catalog, configured-source, LIFE, and native-semantics checks with zero browser errors.
+- TypeScript, all 43 test files / 220 tests, the 765-module production build with 20-file static closure, and the allocation/profile gate pass. Shared render-field storage remains `8,173,320` bytes. Latest isolated p90 values include atmosphere relief `1.17 ms`, atmosphere field lighting `3.58 ms`, liquid reconstruction `5.09 ms`, dense-liquid worst case `7.68 ms`, and field-owned liquid light worst case `8.78 ms`.
+
 ## Current blockers and risks
 
 - WebGL runtime GLSL is not compiled by TypeScript/Vite; preserve the fresh browser audit for every shader change.
@@ -306,7 +313,7 @@ The layout checkpoint `60b033b` and dense-solid relief checkpoint `97f5ced` are 
 - Signs and several special editing semantics remain future work; configured sources and all 24 built-in LIFE presets are implemented through distinct semantic boundaries.
 - Pushes to `main_codex` intentionally do not build or deploy. Dispatch `ci.yml` manually with `operation=build-and-deploy`; the workflow restores the latest compatible ccache/Emscripten cache and saves a new primary ccache key only after a successful build.
 - Newtonian FFT gravity is intentionally omitted from the headless build, so gravity-dependent tools/elements must remain disabled or limited.
-- GPU partial texture upload, long-session allocation behavior, context loss, and full performance budgets need further profiling.
+- GPU partial texture upload, long-session allocation behavior, context loss, production-hardware timing, and stable cross-checkpoint performance budgets need further profiling; the current SwiftShader elapsed-time distribution is only a repeatable software-GPU baseline.
 - Dense role-heavy Canvas scenes remain arithmetic-bound even after eliminating the duplicate pixel write; specialize common masks or move the fallback's semantic accents into a vectorized/field-level presentation path before claiming a 30 FPS worst-case budget.
 
 ## Next sequence

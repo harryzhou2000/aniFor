@@ -150,6 +150,7 @@ export class Game {
     this.radius = 0;
     this.renderer.resetView();
     this.renderer.enableCanvasPresentationTiming();
+    this.renderer.enableWebGLPresentationTiming();
     this.root.dataset.inputAudit = 'ready';
     window.__ANIFOR_INPUT_AUDIT__ = {
       version: 1,
@@ -185,6 +186,8 @@ export class Game {
       prepareDenseSolidFixture: () => { prepareDenseSolidAuditFixture(this.simulation); },
       toggleDenseSolidProbe: () => { toggleDenseSolidAuditProbe(this.simulation); },
       canvasPresentationTiming: () => this.renderer.getCanvasPresentationTiming(),
+      requestWebGLPresentationTimingSample: () => this.renderer.requestWebGLPresentationTimingSample(),
+      webGLPresentationTiming: () => this.renderer.getWebGLPresentationTiming(),
     };
   }
 
