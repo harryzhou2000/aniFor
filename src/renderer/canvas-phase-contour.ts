@@ -165,8 +165,12 @@ export class CanvasPhaseContourScratch {
       }
     }
     const emptyPowder = this.haloMaterials[haloIndex] === 0 && material !== 0;
+    // Reject uniform solid interiors once per world cell. At 8x, entering the
+    // subpixel path unconditionally would repeat four semantic classifications
+    // 64 times even though their signed contact derivative must be zero.
     const exactSolidContact = (input.solidContactDepth ?? true)
-      && this.haloMaterials[haloIndex] !== 0 && phase === RenderPhase.Solid;
+      && this.haloMaterials[haloIndex] !== 0 && phase === RenderPhase.Solid
+      && this.hasDifferentSolidNearby(cellX + 1, cellY + 1, material);
     const eligible = !this.isWallAt(haloIndex) && isContourPhase(phase);
     const powderSurfaceDetailGate = phase === RenderPhase.Powder
       && powderStyle === 'smooth' && input.powderSurface
@@ -462,6 +466,19 @@ export class CanvasPhaseContourScratch {
     const candidate = this.haloMaterials[index];
     return candidate !== 0 && candidate !== ownerMaterial
       && this.haloPhases[index] === RenderPhase.Solid ? 1 : 0;
+  }
+
+  private hasDifferentSolidNearby(
+    haloX: number,
+    haloY: number,
+    ownerMaterial: number,
+  ): boolean {
+    for (let offsetY = -1; offsetY <= 1; offsetY++) {
+      for (let offsetX = -1; offsetX <= 1; offsetX++) {
+        if (this.differentSolidAt(haloX + offsetX, haloY + offsetY, ownerMaterial)) return true;
+      }
+    }
+    return false;
   }
 
   private isWallAt(index: number): boolean {
