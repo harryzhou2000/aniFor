@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { Material } from '../shared/materials';
 import {
-  applyCanvasSolidLighting, canvasSolidInteriorCohesion, canvasSolidRelief,
+  applyCanvasSolidLighting, applyCanvasTranslucentCaustic,
+  canvasSolidInteriorCohesion, canvasSolidRelief,
 } from './canvas-solid-relief';
 import { RenderOptics } from './render-optics';
 import { RenderProfile } from './render-profile';
@@ -56,5 +57,27 @@ describe('Canvas solid relief', () => {
     const inRange = new Float32Array([80, 100, 120]);
     applyCanvasSolidLighting(inRange, -5);
     expect(Array.from(inRange)).toEqual([75, 95, 115]);
+  });
+
+  it('gives Glass and Ice bounded opposing low-bias spectral bands only', () => {
+    const glass = new Float32Array([120, 150, 180]);
+    const ice = new Float32Array(glass);
+    const metal = new Float32Array(glass);
+    applyCanvasTranslucentCaustic(glass, 6, Material.Glass);
+    applyCanvasTranslucentCaustic(ice, 6, Material.Ice);
+    applyCanvasTranslucentCaustic(metal, 6, Material.Metal);
+
+    expect(glass[0]).toBeGreaterThan(120);
+    expect(glass[2]).toBeLessThan(180);
+    expect(ice[0]).toBeLessThan(120);
+    expect(ice[2]).toBeGreaterThan(180);
+    expect(Array.from(metal)).toEqual([120, 150, 180]);
+    const luma = (color: Float32Array) => color[0] * 0.2126
+      + color[1] * 0.7152 + color[2] * 0.0722;
+    expect(Math.abs(luma(glass) - luma(metal))).toBeLessThan(0.01);
+    expect(Math.abs(luma(ice) - luma(metal))).toBeLessThan(0.01);
+    expect(Math.max(
+      Math.abs(glass[0] - 120), Math.abs(glass[1] - 150), Math.abs(glass[2] - 180),
+    )).toBeLessThan(8);
   });
 });

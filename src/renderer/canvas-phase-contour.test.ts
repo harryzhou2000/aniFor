@@ -33,6 +33,7 @@ function fixture(width = 5, height = 5): Fixture {
       materials,
       sourcePixels: pixels,
       styleBytes: lookups.styleBytes,
+      paletteBytes: lookups.paletteBytes,
       powderStability: stability,
       walls,
       worldWidth: width,
@@ -107,6 +108,38 @@ describe('Canvas 2x phase contour scratch', () => {
       }
       expect(alphaLevels.size).toBeGreaterThan(2);
     }
+  });
+
+  it('adds a bounded bipolar unlike-solid contact bevel without changing support', () => {
+    const value = fixture(7, 5);
+    for (let y = 1; y <= 3; y++) for (let x = 1; x <= 5; x++) {
+      paint(value, x, y, x <= 2 ? Material.Metal : Material.Glass);
+    }
+    const flat = new CanvasPhaseContourScratch();
+    const depth = new CanvasPhaseContourScratch();
+    flat.rasterize({ ...value.input, solidContactDepth: false });
+    depth.rasterize({ ...value.input, solidContactDepth: true });
+
+    let positive = 0;
+    let negative = 0;
+    let peak = 0;
+    let farPeak = 0;
+    for (let y = 0; y < depth.outputHeight; y++) for (let x = 0; x < depth.outputWidth; x++) {
+      const index = y * depth.outputStride + x;
+      const pixel = index * 4;
+      expect(depth.coverage[index]).toBe(flat.coverage[index]);
+      expect(depth.pixels[pixel + 3]).toBe(flat.pixels[pixel + 3]);
+      const difference = depth.pixels[pixel] - flat.pixels[pixel];
+      if (difference > 0) positive++;
+      if (difference < 0) negative++;
+      peak = Math.max(peak, Math.abs(difference));
+      if (x <= 2 || x >= 11) farPeak = Math.max(farPeak, Math.abs(difference));
+    }
+    expect(positive).toBeGreaterThan(0);
+    expect(negative).toBeGreaterThan(0);
+    expect(peak).toBeGreaterThanOrEqual(2);
+    expect(peak).toBeLessThanOrEqual(9);
+    expect(farPeak).toBe(0);
   });
 
   it('uses the shared powder surface to smooth a shallow 4x slope without widening ownership', () => {
@@ -334,8 +367,19 @@ describe('Canvas 2x phase contour scratch', () => {
     scratch.rasterize(value.input);
     const metal = rgbaAt(scratch, 3, 3);
     const glass = rgbaAt(scratch, 4, 3);
-    expect(metal.slice(0, 3)).toEqual(Array.from(lookups.colorByMaterial.slice(Material.Metal * 3, Material.Metal * 3 + 3)));
-    expect(glass.slice(0, 3)).toEqual(Array.from(lookups.colorByMaterial.slice(Material.Glass * 3, Material.Glass * 3 + 3)));
+    const metalBase = Array.from(
+      lookups.colorByMaterial.slice(Material.Metal * 3, Material.Metal * 3 + 3),
+    );
+    const glassBase = Array.from(
+      lookups.colorByMaterial.slice(Material.Glass * 3, Material.Glass * 3 + 3),
+    );
+    expect(metal.slice(0, 3).every((channel, index) => (
+      Math.abs(channel - metalBase[index]) <= 9
+    ))).toBe(true);
+    expect(glass.slice(0, 3).every((channel, index) => (
+      Math.abs(channel - glassBase[index]) <= 9
+    ))).toBe(true);
+    expect(metal[2]).toBeLessThan(glass[2]);
     expect(metal[3]).toBeGreaterThan(0);
     expect(glass[3]).toBeGreaterThan(0);
     expect(scratch.ownerMaterials[outputIndex(3, 3)]).toBe(Material.Metal);

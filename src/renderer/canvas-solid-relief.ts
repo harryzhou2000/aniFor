@@ -1,5 +1,6 @@
 import { RENDER_OPTICS_CLASS_COUNT, RenderOptics } from './render-optics';
 import { RenderProfile } from './render-profile';
+import { Material } from '../shared/materials';
 
 const SMOOTH_TRIANGLE_128 = Float32Array.from({ length: 128 }, (_, phase) => {
   const triangle = 1 - Math.abs(phase - 64) / 32;
@@ -79,4 +80,25 @@ export function applyCanvasSolidLighting(color: Float32Array, light: number): vo
   color[0] *= scale;
   color[1] *= scale;
   color[2] *= scale;
+}
+
+/**
+ * Adds a broad, signed, nearly luminance-neutral spectral band inside exact
+ * Glass and Ice. The caller supplies the already computed solid relief, so the
+ * effect adds no pattern lookup, field sample, allocation, or animation. Glass
+ * keeps one coherent band while Ice reverses and softens it like a frosted
+ * facet. RGB changes only; alpha and reconstructed support remain authoritative.
+ */
+export function applyCanvasTranslucentCaustic(
+  color: Float32Array,
+  relief: number,
+  material: number,
+): void {
+  const gain = material === Material.Glass ? 1.0
+    : material === Material.Ice ? -0.42 : 0;
+  if (gain === 0 || relief === 0) return;
+  const split = relief * gain;
+  color[0] += split;
+  color[1] -= split * 0.176;
+  color[2] -= split * 1.20;
 }

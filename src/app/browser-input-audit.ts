@@ -16,6 +16,7 @@ export interface BrowserInputAuditApi {
   setLiquidFieldLighting(enabled: boolean): void;
   setTranslucentFieldTransmission(enabled: boolean): void;
   setTranslucentBackdropRefraction(enabled: boolean): void;
+  setSolidContactDepth(enabled: boolean): void;
   clear(): void;
   setRadius(radius: number): void;
   setMaterial(material: Material): void;

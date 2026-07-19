@@ -15,7 +15,9 @@ import {
   createLiquidSurfaceScratch, reconstructLiquidSurface,
 } from '../src/renderer/canvas-liquid-surface';
 import { reconstructSolidSurface } from '../src/renderer/canvas-solid-surface';
-import { canvasSolidRelief } from '../src/renderer/canvas-solid-relief';
+import {
+  applyCanvasTranslucentCaustic, canvasSolidRelief,
+} from '../src/renderer/canvas-solid-relief';
 import {
   canvasLiquidContourScale, canvasLiquidEmissionExposure,
   canvasLiquidEmissionSurfaceExposure, canvasLiquidFieldRelief, canvasLiquidSurfaceExposure,
@@ -133,6 +135,7 @@ const atmospherePixels = new Uint8ClampedArray(atmosphere.bytes.length);
 const energyCore = new Float32Array(3);
 const energyGlow = new Float32Array(3);
 const traitRgb = new Float32Array(3);
+const translucentCausticRgb = new Float32Array(3);
 const traitClock = new Int32Array(CANVAS_RENDER_TRAIT_CLOCK_SIZE);
 updateCanvasRenderTraitClock(traitClock, 1_000);
 const traitCompositePixels = new Uint8ClampedArray(width * height * 4);
@@ -141,6 +144,7 @@ let solidReliefChecksum = 0;
 let liquidLightChecksum = 0;
 let translucentLightChecksum = 0;
 let translucentBackdropChecksum = 0;
+let translucentCausticChecksum = 0;
 const profileEmission = new Uint8Array(emission.bytes.length);
 for (let y = 0; y < emission.height; y++) for (let x = 0; x < emission.width; x++) {
   const offset = (y * emission.width + x) * 4;
@@ -343,6 +347,18 @@ console.log(JSON.stringify({
         );
       }
     }),
+    translucentCausticWorstCase: sample(() => {
+      for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) {
+        translucentCausticRgb[0] = 120;
+        translucentCausticRgb[1] = 150;
+        translucentCausticRgb[2] = 180;
+        applyCanvasTranslucentCaustic(
+          translucentCausticRgb, ((x * 2 + y) & 15) - 7.5, Material.Glass,
+        );
+      }
+      translucentCausticChecksum = translucentCausticRgb[0]
+        + translucentCausticRgb[1] + translucentCausticRgb[2];
+    }),
     surfaceLighting: sample(() => {
       solidPixels.set(solidSeed);
       for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) {
@@ -434,4 +450,5 @@ console.log(JSON.stringify({
   liquidLightChecksum: Math.round(liquidLightChecksum),
   translucentLightChecksum: Math.round(translucentLightChecksum),
   translucentBackdropChecksum: Math.round(translucentBackdropChecksum),
+  translucentCausticChecksum: Math.round(translucentCausticChecksum),
 }, null, 2));

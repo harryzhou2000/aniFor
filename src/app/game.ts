@@ -179,6 +179,9 @@ export class Game {
       setTranslucentBackdropRefraction: (enabled) => {
         this.renderer.setTranslucentBackdropRefractionEnabled(enabled);
       },
+      setSolidContactDepth: (enabled) => {
+        this.renderer.setSolidContactDepthEnabled(enabled);
+      },
       clear: () => { this.simulation.clear(); },
       setRadius: (radius) => { this.radius = Math.max(0, Math.min(64, Math.round(radius))); },
       setMaterial: (material) => {

@@ -7,6 +7,7 @@ import {
 } from './phase-boundary-coverage';
 import { Material } from '../shared/materials';
 import { RenderPhase } from './render-profile';
+import { RenderOptics } from './render-optics';
 import type { FieldOutputScale } from './render-resolution';
 import type { PowderRenderStyle } from './powder-render-style';
 
@@ -21,6 +22,8 @@ export interface CanvasPhaseContourInput {
   readonly sourcePixels: Uint8ClampedArray;
   /** Canonical render lookup: phase/profile/emissive/traits by material ID. */
   readonly styleBytes: Uint8Array;
+  /** Canonical palette lookup; alpha stores the optical-response class. */
+  readonly paletteBytes?: Uint8Array;
   /** Caller-maintained temporal stability: 0 is moving, 255 is settled. */
   readonly powderStability: Uint8Array;
   /** Optional shared RGBA powder density/gradient/support field. */
@@ -29,6 +32,8 @@ export interface CanvasPhaseContourInput {
   readonly powderStyle?: PowderRenderStyle;
   /** Optional native wall occupancy. Walls pass through but never support contours. */
   readonly walls?: Uint8Array;
+  /** Audit-only A/B switch; defaults to the signed exact-solid contact bevel. */
+  readonly solidContactDepth?: boolean;
   readonly worldWidth: number;
   readonly worldHeight: number;
   readonly chunkX: number;
@@ -160,6 +165,8 @@ export class CanvasPhaseContourScratch {
       }
     }
     const emptyPowder = this.haloMaterials[haloIndex] === 0 && material !== 0;
+    const exactSolidContact = (input.solidContactDepth ?? true)
+      && this.haloMaterials[haloIndex] !== 0 && phase === RenderPhase.Solid;
     const eligible = !this.isWallAt(haloIndex) && isContourPhase(phase);
     const powderSurfaceDetailGate = phase === RenderPhase.Powder
       && powderStyle === 'smooth' && input.powderSurface
@@ -212,6 +219,31 @@ export class CanvasPhaseContourScratch {
         const top = q00 + (q10 - q00) * weightX;
         const bottom = q01 + (q11 - q01) * weightX;
         const density = top + (bottom - top) * weightY;
+        if (exactSolidContact) {
+          const derivativeX = 6 * blendX * (1 - blendX);
+          const derivativeY = 6 * blendY * (1 - blendY);
+          const d00 = this.differentSolidAt(originX, originY, material);
+          const d10 = this.differentSolidAt(originX + 1, originY, material);
+          const d01 = this.differentSolidAt(originX, originY + 1, material);
+          const d11 = this.differentSolidAt(originX + 1, originY + 1, material);
+          const contactX = ((d10 - d00) * (1 - weightY)
+            + (d11 - d01) * weightY) * derivativeX;
+          const contactY = ((d01 - d00) * (1 - weightX)
+            + (d11 - d10) * weightX) * derivativeY;
+          const contactTone = Math.max(-6, Math.min(7, (-contactX * 0.55 - contactY * 0.80) * 7));
+          const optics = input.paletteBytes?.[material * 4 + 3] ?? RenderOptics.Default;
+          const lensAccent = optics === RenderOptics.TranslucentRigid
+            ? Math.max(0, contactTone) * 0.35 : 0;
+          this.pixels[outputPixel] = clampByte(
+            this.pixels[outputPixel] + contactTone - lensAccent * 0.20,
+          );
+          this.pixels[outputPixel + 1] = clampByte(
+            this.pixels[outputPixel + 1] + contactTone + lensAccent * 0.35,
+          );
+          this.pixels[outputPixel + 2] = clampByte(
+            this.pixels[outputPixel + 2] + contactTone + lensAccent * 0.70,
+          );
+        }
         let amount: number;
         if (phase === RenderPhase.Powder) {
           const seed = hash2(cellX + material * 37, cellY + material * 53);
@@ -423,6 +455,15 @@ export class CanvasPhaseContourScratch {
     ) ? 1 : 0;
   }
 
+  private differentSolidAt(haloX: number, haloY: number, ownerMaterial: number): number {
+    if (haloX < 0 || haloY < 0 || haloX >= HALO_SIZE || haloY >= HALO_SIZE) return 0;
+    const index = haloY * HALO_SIZE + haloX;
+    if (this.isWallAt(index)) return 0;
+    const candidate = this.haloMaterials[index];
+    return candidate !== 0 && candidate !== ownerMaterial
+      && this.haloPhases[index] === RenderPhase.Solid ? 1 : 0;
+  }
+
   private isWallAt(index: number): boolean {
     return this.haloWalls[index] !== 0 || this.haloMaterials[index] === Material.Wall;
   }
@@ -447,6 +488,7 @@ function validateInput(input: CanvasPhaseContourInput): void {
     || input.powderStability.length !== cells
     || (input.powderSurface !== undefined && input.powderSurface.length !== cells * 4)
     || input.styleBytes.length < 256 * 4
+    || (input.paletteBytes !== undefined && input.paletteBytes.length < 256 * 4)
     || (input.walls !== undefined && input.walls.length !== cells)
     || !Number.isInteger(input.chunkX) || !Number.isInteger(input.chunkY)
     || !Number.isInteger(input.chunkWidth) || !Number.isInteger(input.chunkHeight)

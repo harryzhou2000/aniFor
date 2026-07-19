@@ -175,7 +175,23 @@ async function auditMode(mode) {
     const repeatedStraightBackdropCaptures = await waitForStablePageCapture(
       cdp, `${mode} repeated straight translucent backdrop framebuffer`,
     );
-    await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setTranslucentBackdropRefraction(true); true');
+    await evaluate(cdp, `(() => {
+      window.__ANIFOR_INPUT_AUDIT__.setTranslucentBackdropRefraction(true);
+      window.__ANIFOR_INPUT_AUDIT__.setSolidContactDepth(false);
+      return true;
+    })()`);
+    const flatContactCaptures = await waitForStablePageCapture(
+      cdp, `${mode} flat solid-contact framebuffer`,
+    );
+    await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setSolidContactDepth(true); true');
+    const depthContactCaptures = await waitForStablePageCapture(
+      cdp, `${mode} depth solid-contact framebuffer`,
+    );
+    await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setSolidContactDepth(false); true');
+    const repeatedFlatContactCaptures = await waitForStablePageCapture(
+      cdp, `${mode} repeated flat solid-contact framebuffer`,
+    );
+    await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setSolidContactDepth(true); true');
     const powderStyleCaptures = {};
     const powderStyleSelection = {};
     for (const style of ['grains', 'local', 'smooth']) {
@@ -231,6 +247,9 @@ async function auditMode(mode) {
       ['straight translucent backdrop', straightBackdropCaptures],
       ['refracted translucent backdrop', refractedBackdropCaptures],
       ['repeated straight translucent backdrop', repeatedStraightBackdropCaptures],
+      ['flat solid contact', flatContactCaptures],
+      ['depth solid contact', depthContactCaptures],
+      ['repeated flat solid contact', repeatedFlatContactCaptures],
       ...Object.entries(powderStyleCaptures).map(([style, captures]) => [`powder ${style}`, captures]),
       ['blank', blankCaptures],
     ]) assertCanvasRectsEqual(
@@ -708,6 +727,63 @@ async function auditMode(mode) {
       sample.straightVisible === sample.refractedVisible
       && Math.abs(sample.straightWorldArea - sample.refractedWorldArea) <= 0.01
     )), `${mode}: backdrop refraction changed translucent support (${JSON.stringify(backdropSupportInvariantSamples)})`);
+    const solidContactDepthSamples = await sampleBackdropRefractionRegions(cdp, {
+      straight: flatContactCaptures.capture.data,
+      refracted: depthContactCaptures.capture.data,
+      repeatedStraight: repeatedFlatContactCaptures.capture.data,
+    }, [
+      { name: 'metalGlassSeam', x: 140, y: 172, radiusX: 6, radiusY: 10 },
+      { name: 'glassCaustic', x: 154, y: 172, radius: 6 },
+      { name: 'iceCaustic', x: 525, y: 229, radius: 6 },
+      { name: 'opaqueMetalInterior', x: 125, y: 172, radius: 4 },
+    ], canonicalCaptures.canvasRect);
+    const solidContactDepth = Object.fromEntries(
+      solidContactDepthSamples.map((sample) => [sample.name, sample]),
+    );
+    assert(solidContactDepth.metalGlassSeam.rgbRms >= 0.75
+      && solidContactDepth.metalGlassSeam.rms >= 0.15
+      && solidContactDepth.metalGlassSeam.bipolarBalance >= 0.20
+      && solidContactDepth.metalGlassSeam.rgbPeak <= 18,
+    `${mode}: Metal/Glass contact remained a flat palette cut (${JSON.stringify(solidContactDepthSamples)})`);
+    assert(solidContactDepth.glassCaustic.chromaRms >= 0.20
+      && solidContactDepth.iceCaustic.chromaRms >= 0.12
+      && solidContactDepth.glassCaustic.chromaRms
+        >= solidContactDepth.iceCaustic.chromaRms * 1.02
+      && solidContactDepth.glassCaustic.rgbPeak <= 18
+      && solidContactDepth.iceCaustic.rgbPeak <= 18,
+    `${mode}: Glass/Ice lost their distinct bounded prismatic depth (${JSON.stringify(solidContactDepthSamples)})`);
+    assert(solidContactDepth.opaqueMetalInterior.rgbPeak <= 1,
+      `${mode}: translucent caustics leaked into opaque Metal (${JSON.stringify(solidContactDepthSamples)})`);
+    assert(solidContactDepthSamples.every((sample) => sample.repeatRgbPeak <= 1),
+      `${mode}: solid-contact off-on-off sequence was not deterministic (${JSON.stringify(solidContactDepthSamples)})`);
+    const solidContactSupportRegions = [
+      {
+        name: 'metalGlassContactSupport', x: 140.5, y: 172,
+        radiusX: 40, radiusY: 16, silhouette: true,
+      },
+      { name: 'iceCausticSupport', x: 525, y: 229, radius: 8, silhouette: true },
+    ];
+    const [flatContactSupport, depthContactSupport] = await Promise.all([
+      samplePageRegions(
+        cdp, flatContactCaptures.capture.data, solidContactSupportRegions,
+        blankCaptures.capture.data, blankCaptures.reference.data, canonicalCaptures.canvasRect,
+      ),
+      samplePageRegions(
+        cdp, depthContactCaptures.capture.data, solidContactSupportRegions,
+        blankCaptures.capture.data, blankCaptures.reference.data, canonicalCaptures.canvasRect,
+      ),
+    ]);
+    const solidContactSupportInvariantSamples = flatContactSupport.map((flat, index) => ({
+      name: flat.name,
+      flatVisible: flat.visible,
+      depthVisible: depthContactSupport[index].visible,
+      flatWorldArea: flat.worldArea,
+      depthWorldArea: depthContactSupport[index].worldArea,
+    }));
+    assert(solidContactSupportInvariantSamples.every((sample) => (
+      sample.flatVisible === sample.depthVisible
+      && Math.abs(sample.flatWorldArea - sample.depthWorldArea) <= 0.01
+    )), `${mode}: contact depth changed material support (${JSON.stringify(solidContactSupportInvariantSamples)})`);
     const liquidColumnSamples = await sampleCanonicalRegions([
       { name: 'waterColumn', x: 224, y: 270, radius: 8 },
       { name: 'oilColumn', x: 263, y: 270, radius: 8 },
@@ -761,6 +837,14 @@ async function auditMode(mode) {
           variantScreenshotPath(visualScreenshot, 'straight-backdrop'),
           Buffer.from(straightBackdropCaptures.capture.data, 'base64'),
         );
+        await writeFile(
+          variantScreenshotPath(visualScreenshot, 'flat-contact'),
+          Buffer.from(flatContactCaptures.capture.data, 'base64'),
+        );
+        await writeFile(
+          variantScreenshotPath(visualScreenshot, 'depth-contact'),
+          Buffer.from(depthContactCaptures.capture.data, 'base64'),
+        );
       }
       assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
       cdp.close();
@@ -777,6 +861,8 @@ async function auditMode(mode) {
         translucentSupportInvariantSamples,
         backdropRefractionSamples,
         backdropSupportInvariantSamples,
+        solidContactDepthSamples,
+        solidContactSupportInvariantSamples,
         silhouetteSamples,
         liquidContourCrossings,
         liquidReliefSamples,
@@ -1005,6 +1091,8 @@ async function auditMode(mode) {
       translucentSupportInvariantSamples,
       backdropRefractionSamples,
       backdropSupportInvariantSamples,
+      solidContactDepthSamples,
+      solidContactSupportInvariantSamples,
       ...(canvasGasLightingRefresh ? { canvasGasLightingRefresh } : {}),
       liquidColumnSamples,
       liquidReliefSamples,
@@ -2238,11 +2326,12 @@ async function sampleLightingDifferenceRegions(cdp, screenshots, regions, captur
     const worldScaleX = bounds.width / ${WORLD_WIDTH};
     const worldScaleY = bounds.height / ${WORLD_HEIGHT};
     return ${JSON.stringify(regions)}.map((region) => {
-      const radius = region.radius ?? 3;
-      const x = Math.floor((bounds.left + (region.x - radius) * worldScaleX) * pageScaleX);
-      const y = Math.floor((bounds.top + (region.y - radius) * worldScaleY) * pageScaleY);
-      const width = Math.max(1, Math.ceil(radius * 2 * worldScaleX * pageScaleX));
-      const height = Math.max(1, Math.ceil(radius * 2 * worldScaleY * pageScaleY));
+      const radiusX = region.radiusX ?? region.radius ?? 3;
+      const radiusY = region.radiusY ?? region.radius ?? 3;
+      const x = Math.floor((bounds.left + (region.x - radiusX) * worldScaleX) * pageScaleX);
+      const y = Math.floor((bounds.top + (region.y - radiusY) * worldScaleY) * pageScaleY);
+      const width = Math.max(1, Math.ceil(radiusX * 2 * worldScaleX * pageScaleX));
+      const height = Math.max(1, Math.ceil(radiusY * 2 * worldScaleY * pageScaleY));
       const data = Object.fromEntries(Object.entries(contexts).map(([name, context]) => [
         name, context.getImageData(x, y, width, height).data,
       ]));
@@ -2324,6 +2413,10 @@ async function sampleBackdropRefractionRegions(cdp, screenshots, regions, captur
       let visible = 0;
       let peak = 0;
       let repeatPeak = 0;
+      let chromaSquared = 0;
+      let rgbSquared = 0;
+      let rgbPeak = 0;
+      let repeatRgbPeak = 0;
       const count = Math.max(1, width * height);
       for (let offset = 0; offset < data.straight.length; offset += 4) {
         const straight = data.straight[offset] * 0.2126
@@ -2334,19 +2427,36 @@ async function sampleBackdropRefractionRegions(cdp, screenshots, regions, captur
           + data.repeatedStraight[offset + 1] * 0.7152
           + data.repeatedStraight[offset + 2] * 0.0722;
         const difference = refracted - straight;
+        const redDifference = data.refracted[offset] - data.straight[offset];
+        const greenDifference = data.refracted[offset + 1] - data.straight[offset + 1];
+        const blueDifference = data.refracted[offset + 2] - data.straight[offset + 2];
+        const repeatedRed = data.repeatedStraight[offset] - data.straight[offset];
+        const repeatedGreen = data.repeatedStraight[offset + 1] - data.straight[offset + 1];
+        const repeatedBlue = data.repeatedStraight[offset + 2] - data.straight[offset + 2];
         signed += difference;
         squared += difference * difference;
+        rgbSquared += redDifference * redDifference
+          + greenDifference * greenDifference + blueDifference * blueDifference;
+        chromaSquared += (redDifference - difference) * (redDifference - difference)
+          + (greenDifference - difference) * (greenDifference - difference)
+          + (blueDifference - difference) * (blueDifference - difference);
         positive += Math.max(0, difference);
         negative += Math.max(0, -difference);
         const magnitude = Math.abs(difference);
         if (magnitude >= 1.5) visible++;
         peak = Math.max(peak, magnitude);
+        rgbPeak = Math.max(rgbPeak, Math.abs(redDifference), Math.abs(greenDifference), Math.abs(blueDifference));
         repeatPeak = Math.max(repeatPeak, Math.abs(repeated - straight));
+        repeatRgbPeak = Math.max(
+          repeatRgbPeak, Math.abs(repeatedRed), Math.abs(repeatedGreen), Math.abs(repeatedBlue),
+        );
       }
       const rms = Math.sqrt(squared / count);
       return {
         name: region.name,
         rms: Math.round(rms * 100) / 100,
+        rgbRms: Math.round(Math.sqrt(rgbSquared / (count * 3)) * 100) / 100,
+        chromaRms: Math.round(Math.sqrt(chromaSquared / (count * 3)) * 100) / 100,
         signedMean: Math.round(signed / count * 100) / 100,
         meanBiasRatio: Math.round(Math.abs(signed / count) / Math.max(0.001, rms) * 1000) / 1000,
         positiveMean: Math.round(positive / count * 100) / 100,
@@ -2356,7 +2466,9 @@ async function sampleBackdropRefractionRegions(cdp, screenshots, regions, captur
         ) / 1000,
         coverage: Math.round(visible / count * 1000) / 1000,
         peak: Math.round(peak * 100) / 100,
+        rgbPeak: Math.round(rgbPeak * 100) / 100,
         repeatPeak: Math.round(repeatPeak * 100) / 100,
+        repeatRgbPeak: Math.round(repeatRgbPeak * 100) / 100,
       };
     });
   })()`);
@@ -2903,6 +3015,18 @@ function assertPairedVisualRelief(results) {
     const ratio = canvasSample.rms / Math.max(0.25, webglSample.rms);
     assert(ratio >= 0.65 && ratio <= 2.0,
       `Canvas/WebGL ${name} refraction magnitude diverged (${canvasSample.rms}/${webglSample.rms})`);
+  }
+  for (const [name, metric] of [
+    ['metalGlassSeam', 'rgbRms'],
+    ['glassCaustic', 'chromaRms'],
+    ['iceCaustic', 'chromaRms'],
+  ]) {
+    const canvasSample = canvas.solidContactDepthSamples.find((sample) => sample.name === name);
+    const webglSample = webgl.solidContactDepthSamples.find((sample) => sample.name === name);
+    assert(canvasSample && webglSample, `paired solid-contact sample missing ${name}`);
+    const ratio = canvasSample[metric] / Math.max(0.20, webglSample[metric]);
+    assert(ratio >= 0.45 && ratio <= 2.5,
+      `Canvas/WebGL ${name} contact-depth response diverged (${canvasSample[metric]}/${webglSample[metric]})`);
   }
 }
 

@@ -72,6 +72,7 @@ uniform float uGasFieldLighting;
 uniform float uLiquidFieldLighting;
 uniform float uTranslucentFieldTransmission;
 uniform float uTranslucentBackdropRefraction;
+uniform float uSolidContactDepth;
 uniform float uPowderStyle;
 vec4 field(vec2 uv) { return texture(uFieldTexture, clamp(uv, uTexel * 0.5, vec2(1.0) - uTexel * 0.5)); }
 vec4 wallField(vec2 uv) { return texture(uWallTexture, clamp(uv, uTexel * 0.5, vec2(1.0) - uTexel * 0.5)); }
@@ -100,20 +101,20 @@ vec3 toneMapEnergy(vec3 radiance) {
   vec3 mapped = min(vec3(1.0), vec3(knee) + excess * 0.30);
   return min(radiance, mapped);
 }
-float compatibleAt(vec2 uv, float material, float family) {
+vec2 contactSample(vec2 uv, float material, float family) {
   float candidate = materialAt(uv);
-  if (abs(candidate - material) < 0.5) return 1.0;
-  if (candidate < 0.5) return 0.0;
+  if (abs(candidate - material) < 0.5) return vec2(1.0, 0.0);
+  if (candidate < 0.5) return vec2(0.0);
   float candidateFamily = familyFor(candidate);
   // Contact coverage is phase-categorical, while palette/material selection
   // stays exact. Unlike solids and unlike powders therefore partition one
   // continuous occupied surface without alpha overlap or a black contact seam.
   // Powder may rest against a solid, but a solid deliberately does not borrow
   // moving powder support, so gas/liquid/powder contact cannot wobble its edge.
-  if (family == 0.0 && candidateFamily == 0.0) return 1.0;
-  if (family == 4.0 && (candidateFamily == 4.0 || candidateFamily == 0.0)) return 1.0;
-  if ((family == 1.0 || family == 2.0) && candidateFamily == family) return 1.0;
-  return 0.0;
+  if (family == 0.0 && candidateFamily == 0.0) return vec2(1.0, 1.0);
+  if (family == 4.0 && (candidateFamily == 4.0 || candidateFamily == 0.0)) return vec2(1.0, 0.0);
+  if ((family == 1.0 || family == 2.0) && candidateFamily == family) return vec2(1.0, 0.0);
+  return vec2(0.0);
 }
 vec4 occupancyShape(vec2 uv, float material, float family, float contourSmoothing) {
   vec2 grid = uv * uFieldSize - 0.5;
@@ -123,10 +124,14 @@ vec4 occupancyShape(vec2 uv, float material, float family, float contourSmoothin
   vec2 weight = mix(blend, hermite, contourSmoothing);
   vec2 weightDerivative = mix(vec2(1.0), hermiteDerivative, contourSmoothing);
   vec2 origin = (floor(grid) + 0.5) * uTexel;
-  float q00 = compatibleAt(origin, material, family);
-  float q10 = compatibleAt(origin + vec2(uTexel.x, 0.0), material, family);
-  float q01 = compatibleAt(origin + vec2(0.0, uTexel.y), material, family);
-  float q11 = compatibleAt(origin + uTexel, material, family);
+  vec2 s00 = contactSample(origin, material, family);
+  vec2 s10 = contactSample(origin + vec2(uTexel.x, 0.0), material, family);
+  vec2 s01 = contactSample(origin + vec2(0.0, uTexel.y), material, family);
+  vec2 s11 = contactSample(origin + uTexel, material, family);
+  float q00 = s00.x;
+  float q10 = s10.x;
+  float q01 = s01.x;
+  float q11 = s11.x;
   // Monotone Hermite weights retain the linear weight's exact 0.5 integral and
   // make its first derivative meet continuously at cell centres. That reference
   // property does not by itself prove final raster area, which is guarded by
@@ -136,7 +141,13 @@ vec4 occupancyShape(vec2 uv, float material, float family, float contourSmoothin
   float density = mix(top, bottom, weight.y);
   float gradientX = mix(q10 - q00, q11 - q01, weight.y) * weightDerivative.x;
   float gradientY = mix(q01 - q00, q11 - q10, weight.x) * weightDerivative.y;
-  return vec4(density, gradientX, gradientY, q00 + q10 + q01 + q11);
+  float supportOrContact = q00 + q10 + q01 + q11;
+  if (family == 0.0) {
+    float contactX = mix(s10.y - s00.y, s11.y - s01.y, weight.y) * weightDerivative.x;
+    float contactY = mix(s01.y - s00.y, s11.y - s10.y, weight.x) * weightDerivative.y;
+    supportOrContact = dot(vec2(contactX, contactY), vec2(-0.55, -0.80));
+  }
+  return vec4(density, gradientX, gradientY, supportOrContact);
 }
 vec4 powderSurfaceShape(vec2 uv) {
   vec4 state = texture(uPowderSurfaceTexture, uv);
@@ -861,6 +872,9 @@ void main() {
     float solidDiffuse = 0.51 + solidKey * 0.58 + solidFill * 0.11;
     color = base * mix(1.10, 0.82, solidDepth) * solidDiffuse;
     color += vec3(solidReliefTone * 1.35);
+    float solidContactTone = family == 0.0 && surfaceOnly < 0.5
+      ? clamp(shape.w * 0.072, -0.060, 0.070) * uSolidContactDepth : 0.0;
+    color *= 1.0 + solidContactTone;
     float solidSpecularGain = 0.28 - roughSurface * 0.13 + smoothSurface * 0.22
       + organicSurface * 0.02 + deviceSurface * 0.15 + radioactiveSurface * 0.06
       + translucentSurface * 0.30;
@@ -929,6 +943,12 @@ void main() {
       alpha = max(alpha, mix(0.90, 0.98, cavityConfidence));
     }
     if (translucentSurface > 0.5) {
+      float exactPrismatic = (material == 12.0 || material == 24.0) ? 1.0 : 0.0;
+      float prismGain = material == 24.0 ? 1.0 : -0.42;
+      float prism = solidReliefTone * prismGain * exactPrismatic
+        * (1.0 - surfaceOnly) * uSolidContactDepth;
+      color += vec3(1.0, -0.176, -1.20) * prism;
+      color += solidSpecularTint * max(solidContactTone, 0.0) * 0.24;
       alpha *= mix(0.74, 0.88, solidDepth);
       if (uTranslucentFieldTransmission > 0.5 && !materialEmissive
         && solidInterior > 0.01 && emissionState.a > 0.002) {
@@ -1203,6 +1223,7 @@ export class PixiFieldPresenter {
       uLiquidFieldLighting: { value: 1, type: 'f32' },
       uTranslucentFieldTransmission: { value: 1, type: 'f32' },
       uTranslucentBackdropRefraction: { value: 1, type: 'f32' },
+      uSolidContactDepth: { value: 1, type: 'f32' },
       uPowderStyle: { value: powderRenderStyleValue('smooth'), type: 'f32' },
     });
     const filter = Filter.from({
@@ -1332,6 +1353,11 @@ export class PixiFieldPresenter {
 
   setTranslucentBackdropRefractionEnabled(enabled: boolean): void {
     this.uniforms.uniforms.uTranslucentBackdropRefraction = enabled ? 1 : 0;
+    this.renderApplication();
+  }
+
+  setSolidContactDepthEnabled(enabled: boolean): void {
+    this.uniforms.uniforms.uSolidContactDepth = enabled ? 1 : 0;
     this.renderApplication();
   }
 

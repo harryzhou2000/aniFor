@@ -29,7 +29,8 @@ import {
 import { reconstructSolidSurface } from './canvas-solid-surface';
 import { writeCanvasRefractedWallPixel, writeCanvasWallPixel } from './canvas-wall-style';
 import {
-  applyCanvasSolidLighting, canvasSolidInteriorCohesion, canvasSolidRelief,
+  applyCanvasSolidLighting, applyCanvasTranslucentCaustic,
+  canvasSolidInteriorCohesion, canvasSolidRelief,
 } from './canvas-solid-relief';
 import { RenderFieldSet } from './render-field-set';
 import { RenderOptics } from './render-optics';
@@ -137,6 +138,7 @@ export class MaterialRenderer {
   private liquidFieldLightingEnabled = true;
   private translucentFieldTransmissionEnabled = true;
   private translucentBackdropRefractionEnabled = true;
+  private solidContactDepthEnabled = true;
   private powderRenderStyle: PowderRenderStyle = 'smooth';
   private gasFieldLightingDirty = false;
   private canvasPresentationTimingEnabled = false;
@@ -286,6 +288,14 @@ export class MaterialRenderer {
     this.changed = true;
   }
 
+  setSolidContactDepthEnabled(enabled: boolean): void {
+    if (enabled === this.solidContactDepthEnabled) return;
+    this.solidContactDepthEnabled = enabled;
+    this.presenter?.setSolidContactDepthEnabled(enabled);
+    this.contourChunks.markAll();
+    this.changed = true;
+  }
+
   setPowderRenderStyle(style: PowderRenderStyle): void {
     if (style === this.powderRenderStyle) return;
     this.powderRenderStyle = style;
@@ -376,6 +386,7 @@ export class MaterialRenderer {
     presenter.setLiquidFieldLightingEnabled(this.liquidFieldLightingEnabled);
     presenter.setTranslucentFieldTransmissionEnabled(this.translucentFieldTransmissionEnabled);
     presenter.setTranslucentBackdropRefractionEnabled(this.translucentBackdropRefractionEnabled);
+    presenter.setSolidContactDepthEnabled(this.solidContactDepthEnabled);
     presenter.setPowderRenderStyle(this.powderRenderStyle);
     presenter.update(
       this.rendered, this.renderedWalls, this.simulation.temperature?.(), this.simulation.velocity?.(),
@@ -579,9 +590,10 @@ export class MaterialRenderer {
         + (exposedTop ? 18 : 0) - (bottom === Material.Empty ? 5 : 0);
       const denseSolidInterior = phase === RenderPhase.Solid
         && top === material && left === material && right === material && bottom === material;
-      const surfaceLight = normalLight + (denseSolidInterior
+      const solidRelief = denseSolidInterior
         ? canvasSolidRelief(x, y, material, profile, optics)
-        : 0);
+        : 0;
+      const surfaceLight = normalLight + solidRelief;
       if (this.translucentBackdropRefractionEnabled && wall && denseSolidInterior
         && applicableTraits === 0 && !PROJECTED_RENDER_INFO[material]?.emissive) {
         writeCanvasRefractedWallPixel(base, pixel, wall, x, y, material);
@@ -677,7 +689,16 @@ export class MaterialRenderer {
         );
       } else if (material === Material.Ice) {
         const facet = (hash(index + 617) & 15) < 3 ? 24 : 0;
-        compositePixel(target, pixel, 116 + facet + surfaceLight, 193 + facet + surfaceLight, 211 + facet + surfaceLight, 220);
+        this.styledColor[0] = 116 + facet + surfaceLight;
+        this.styledColor[1] = 193 + facet + surfaceLight;
+        this.styledColor[2] = 211 + facet + surfaceLight;
+        if (this.solidContactDepthEnabled && denseSolidInterior) {
+          applyCanvasTranslucentCaustic(this.styledColor, solidRelief, material);
+        }
+        compositePixel(
+          target, pixel,
+          this.styledColor[0], this.styledColor[1], this.styledColor[2], 220,
+        );
       } else if (material === Material.Acid) {
         const mask = materialNeighbourMask(this.rendered, width, height, x, y, material);
         const density = neighbourDensity(mask);
@@ -793,6 +814,10 @@ export class MaterialRenderer {
             this.styledColor[0] += (red - this.styledColor[0]) * cohesion;
             this.styledColor[1] += (green - this.styledColor[1]) * cohesion;
             this.styledColor[2] += (blue - this.styledColor[2]) * cohesion;
+          }
+          if (this.solidContactDepthEnabled && denseSolidInterior
+            && applicableTraits === 0 && !info.emissive) {
+            applyCanvasTranslucentCaustic(this.styledColor, solidRelief, material);
           }
           if (applicableTraits !== 0) applyCanvasRenderTraits(
             this.styledColor, applicableTraits, phase, material, x, y, index, this.traitClock,
@@ -1018,10 +1043,12 @@ export class MaterialRenderer {
           materials: this.rendered,
           sourcePixels,
           styleBytes,
+          paletteBytes: this.fallbackFields?.lookups.paletteBytes,
           powderStability: this.boundaryStability,
           powderSurface: this.fallbackFields?.powderSurface.bytes,
           powderStyle: this.powderRenderStyle,
           walls: this.renderedWalls,
+          solidContactDepth: this.solidContactDepthEnabled,
           worldWidth: width,
           worldHeight: height,
           chunkX,
