@@ -18,6 +18,7 @@ import {
 } from './canvas-render-traits';
 import { lightCanvasSurface } from './canvas-surface-light';
 import { reconstructSolidSurface } from './canvas-solid-surface';
+import { canvasSolidRelief } from './canvas-solid-relief';
 import { RenderFieldSet } from './render-field-set';
 import { RenderOptics } from './render-optics';
 import { receivesSurfaceLight, renderPhase, RenderPhase, RenderProfile } from './render-profile';
@@ -345,6 +346,11 @@ export class MaterialRenderer {
       const normalLight = (left === Material.Empty ? 8 : 0) - (right === Material.Empty ? 6 : 0)
         + (exposedTop ? 18 : 0) - (bottom === Material.Empty ? 5 : 0);
       const grain = hash(index) % 23 - 11;
+      const denseSolidInterior = phase === RenderPhase.Solid
+        && top === material && left === material && right === material && bottom === material;
+      const surfaceLight = normalLight + (denseSolidInterior
+        ? canvasSolidRelief(x, y, material, profile, optics)
+        : 0);
 
       if (phase === RenderPhase.Energy) {
         const info = PROJECTED_RENDER_INFO[material];
@@ -367,13 +373,13 @@ export class MaterialRenderer {
           this.energyGlowColor[0], this.energyGlowColor[1], this.energyGlowColor[2], glowAlpha,
         );
       } else if (material === Material.Sand) {
-        compositePixel(target, pixel, 194 + grain + normalLight, 145 + grain * 0.65 + normalLight, 76 + grain * 0.35 + normalLight, 255);
+        compositePixel(target, pixel, 194 + grain + surfaceLight, 145 + grain * 0.65 + surfaceLight, 76 + grain * 0.35 + surfaceLight, 255);
       } else if (material === Material.Dust) {
         const softness = Math.sin(time * 0.0018 + x * 0.17 + y * 0.09) * 4;
-        compositePixel(target, pixel, 188 + grain + normalLight + softness, 166 + grain + normalLight + softness, 124 + grain * 0.6 + normalLight, 238);
+        compositePixel(target, pixel, 188 + grain + surfaceLight + softness, 166 + grain + surfaceLight + softness, 124 + grain * 0.6 + surfaceLight, 238);
       } else if (material === Material.Salt) {
         const crystal = (hash(index + 211) & 7) === 0 ? 28 : 0;
-        compositePixel(target, pixel, 220 + grain + crystal + normalLight, 216 + grain + crystal + normalLight, 202 + grain + crystal + normalLight, 255);
+        compositePixel(target, pixel, 220 + grain + crystal + surfaceLight, 216 + grain + crystal + surfaceLight, 202 + grain + crystal + surfaceLight, 255);
       } else if (material === Material.Oil) {
         const mask = materialNeighbourMask(this.rendered, width, height, x, y, material);
         const density = neighbourDensity(mask);
@@ -388,9 +394,9 @@ export class MaterialRenderer {
         if (exposedTop) setPixel(fire, pixel, 172 + sheen, 128 + sheen, 66, 34 + Math.max(0, contour));
       } else if (material === Material.Wood) {
         const ring = ((x + Math.floor(y / 3)) % 9) < 2 ? -20 : 4;
-        this.styledColor[0] = 132 + grain + ring + normalLight;
-        this.styledColor[1] = 76 + grain * 0.45 + ring * 0.5 + normalLight;
-        this.styledColor[2] = 40 + ring * 0.25 + normalLight;
+        this.styledColor[0] = 132 + grain + ring + surfaceLight;
+        this.styledColor[1] = 76 + grain * 0.45 + ring * 0.5 + surfaceLight;
+        this.styledColor[2] = 40 + ring * 0.25 + surfaceLight;
         applyCanvasRenderTraits(
           this.styledColor, applicableTraits, phase, material, x, y, index, this.traitClock,
         );
@@ -399,9 +405,9 @@ export class MaterialRenderer {
         );
       } else if (material === Material.Plant) {
         const leaf = (hash(index + 401) & 3) * 7;
-        this.styledColor[0] = 62 + leaf + normalLight;
-        this.styledColor[1] = 132 + leaf + normalLight;
-        this.styledColor[2] = 58 + grain * 0.35 + normalLight;
+        this.styledColor[0] = 62 + leaf + surfaceLight;
+        this.styledColor[1] = 132 + leaf + surfaceLight;
+        this.styledColor[2] = 58 + grain * 0.35 + surfaceLight;
         applyCanvasRenderTraits(
           this.styledColor, applicableTraits, phase, material, x, y, index, this.traitClock,
         );
@@ -423,7 +429,7 @@ export class MaterialRenderer {
         setPixel(fire, pixel, 255, 54 + heat * 130 + pulse, 8, 135 + heat * 80 + Math.max(0, contour));
       } else if (material === Material.Ice) {
         const facet = (hash(index + 617) & 15) < 3 ? 24 : 0;
-        compositePixel(target, pixel, 116 + facet + normalLight, 193 + facet + normalLight, 211 + facet + normalLight, 244);
+        compositePixel(target, pixel, 116 + facet + surfaceLight, 193 + facet + surfaceLight, 211 + facet + surfaceLight, 244);
       } else if (material === Material.Acid) {
         const mask = materialNeighbourMask(this.rendered, width, height, x, y, material);
         const density = neighbourDensity(mask);
@@ -437,10 +443,10 @@ export class MaterialRenderer {
         if (exposedTop) setPixel(fire, pixel, 238 + shimmer, 148 + shimmer, 255, 38 + Math.max(0, contour));
       } else if (material === Material.Gunpowder) {
         const spark = (hash(index + 911) & 31) === 0 ? 34 : 0;
-        compositePixel(target, pixel, 70 + grain + spark + normalLight, 64 + grain + spark * 0.7 + normalLight, 58 + grain + spark * 0.35 + normalLight, 255);
+        compositePixel(target, pixel, 70 + grain + spark + surfaceLight, 64 + grain + spark * 0.7 + surfaceLight, 58 + grain + spark * 0.35 + surfaceLight, 255);
       } else if (material === Material.Wall) {
         const seam = (hash(index + 73) & 31) === 0 ? -22 : 0;
-        compositePixel(target, pixel, 105 + grain + seam + normalLight, 98 + grain + seam + normalLight, 88 + grain + seam + normalLight, 255);
+        compositePixel(target, pixel, 105 + grain + seam + surfaceLight, 98 + grain + seam + surfaceLight, 88 + grain + seam + surfaceLight, 255);
       } else if (material === Material.Water) {
         const mask = materialNeighbourMask(this.rendered, width, height, x, y, material);
         const density = neighbourDensity(mask);
@@ -518,18 +524,24 @@ export class MaterialRenderer {
             this.styledColor, red, green, blue, fields.lookups.styleBytes[material * 4 + 1],
             optics, material, x, y, index, time,
           );
+          if (denseSolidInterior && applicableTraits === 0 && !info.emissive) {
+            const cohesion = 0.28;
+            this.styledColor[0] += (red - this.styledColor[0]) * cohesion;
+            this.styledColor[1] += (green - this.styledColor[1]) * cohesion;
+            this.styledColor[2] += (blue - this.styledColor[2]) * cohesion;
+          }
           if (applicableTraits !== 0) applyCanvasRenderTraits(
             this.styledColor, applicableTraits, phase, material, x, y, index, this.traitClock,
           );
           compositePixel(
             target, pixel,
-            this.styledColor[0] + normalLight, this.styledColor[1] + normalLight, this.styledColor[2] + normalLight,
+            this.styledColor[0] + surfaceLight, this.styledColor[1] + surfaceLight, this.styledColor[2] + surfaceLight,
             255,
           );
         }
         if (info.emissive) {
           const light = info.phase === RenderPhase.Gas || info.phase === RenderPhase.Liquid
-            ? 0 : normalLight;
+            ? 0 : surfaceLight;
           setPixel(
             fire, pixel,
             this.styledColor[0] + light, this.styledColor[1] + light,

@@ -130,6 +130,18 @@ async function auditMode(mode) {
       `${mode}: PHOT lost its neutral hue (${energy.phot.rgb})`);
     assert(energy.grvt.rgb[1] > energy.grvt.rgb[2] && energy.grvt.rgb[2] > energy.grvt.rgb[0],
       `${mode}: GRVT lost its green-cyan hue (${energy.grvt.rgb})`);
+    const solidSamples = await samplePageRegions(cdp, canonicalCapture.data, [
+      { name: 'metal', x: 405, y: 229, radius: 8 },
+      { name: 'plant', x: 445, y: 254, radius: 8 },
+      { name: 'plut', x: 405, y: 279, radius: 8 },
+      { name: 'dtec', x: 485, y: 304, radius: 8 },
+    ]);
+    assert(solidSamples.every((sample) => sample.visible >= 32),
+      `${mode}: solid render samples disappeared (${JSON.stringify(solidSamples)})`);
+    assert(solidSamples.every((sample) => sample.lumaRange >= 6 && sample.lumaRange <= 200),
+      `${mode}: solid interior relief is flat or clipped (${JSON.stringify(solidSamples)})`);
+    assert(solidSamples.every((sample) => sample.pinnedFraction <= 0.15),
+      `${mode}: solid interior framebuffer clipping returned (${JSON.stringify(solidSamples)})`);
 
     const screenshot = screenshotPath(mode);
     if (screenshot) {
@@ -229,6 +241,7 @@ async function auditMode(mode) {
       backing: `${initial.backing.width}x${initial.backing.height}`,
       canonicalFixture: { occupied: canonicalFixture.occupied, wallSignature: '3,3' },
       energySamples,
+      solidSamples,
       landmarkCells: landmarks.length,
       configuredSource: nativeSemantics.configuredSource,
       lifePreset: nativeSemantics.lifePreset,
@@ -834,7 +847,7 @@ async function samplePageRegions(cdp, screenshotBase64, regions) {
     const pageScaleX = image.naturalWidth / innerWidth;
     const pageScaleY = image.naturalHeight / innerHeight;
     return ${JSON.stringify(regions)}.map((region) => {
-      const radius = 3;
+      const radius = region.radius ?? 3;
       const worldScaleX = bounds.width / ${WORLD_WIDTH};
       const worldScaleY = bounds.height / ${WORLD_HEIGHT};
       const x = Math.floor((bounds.left + (region.x - radius) * worldScaleX) * pageScaleX);
@@ -845,10 +858,15 @@ async function samplePageRegions(cdp, screenshotBase64, regions) {
       const total = [0, 0, 0];
       let visible = 0;
       let pinned = 0;
+      let minimumLuma = 255;
+      let maximumLuma = 0;
       for (let offset = 0; offset < data.length; offset += 4) {
         if (data[offset + 3] < 48 || Math.max(data[offset], data[offset + 1], data[offset + 2]) < 12) continue;
         total[0] += data[offset]; total[1] += data[offset + 1]; total[2] += data[offset + 2];
         if (data[offset] === 255 || data[offset + 1] === 255 || data[offset + 2] === 255) pinned++;
+        const luma = (data[offset] * 54 + data[offset + 1] * 183 + data[offset + 2] * 19) / 256;
+        minimumLuma = Math.min(minimumLuma, luma);
+        maximumLuma = Math.max(maximumLuma, luma);
         visible++;
       }
       return {
@@ -856,6 +874,7 @@ async function samplePageRegions(cdp, screenshotBase64, regions) {
         rgb: total.map((channel) => Math.round(channel / Math.max(1, visible))),
         visible,
         pinnedFraction: Math.round(pinned / Math.max(1, visible) * 1000) / 1000,
+        lumaRange: visible ? Math.round(maximumLuma - minimumLuma) : 0,
       };
     });
   })()`);

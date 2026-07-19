@@ -50,7 +50,6 @@ float materialAt(vec2 uv) { return floor(field(uv).r * 255.0 + 0.5); }
 float wallAt(vec2 uv) { return floor(wallField(uv).r * 255.0 + 0.5); }
 float sameMaterial(vec2 uv, float material) { return 1.0 - step(0.5, abs(materialAt(uv) - material)); }
 float familyFor(float id) { return floor(texture(uStyleTexture, vec2((id + 0.5) / 256.0, 0.5)).r * 255.0 + 0.5); }
-float emissionFor(float id) { return texture(uStyleTexture, vec2((id + 0.5) / 256.0, 0.5)).b; }
 float traitFlag(float traits, float mask) { return mod(floor(traits / mask), 2.0); }
 float surfaceLightGain(float profile) {
   if (profile == 2.0) return 0.32;
@@ -61,7 +60,6 @@ float surfaceLightGain(float profile) {
   if (profile == 4.0) return 0.16;
   return 0.20;
 }
-bool isEmissive(float id) { return emissionFor(id) > 0.5; }
 vec3 vividColor(vec3 color, float saturation) {
   float luminance = dot(color, vec3(0.2126, 0.7152, 0.0722));
   return mix(vec3(luminance), color, saturation);
@@ -75,14 +73,14 @@ vec3 toneMapEnergy(vec3 radiance) {
 float compatibleAt(vec2 uv, float material, float family) {
   float candidate = materialAt(uv);
   if (abs(candidate - material) < 0.5) return 1.0;
+  if (candidate < 0.5) return 0.0;
   if ((family == 1.0 || family == 2.0) && familyFor(candidate) == family) return 1.0;
   return 0.0;
 }
-vec3 occupancyShape(vec2 uv, float material) {
+vec3 occupancyShape(vec2 uv, float material, float family) {
   vec2 grid = uv * uFieldSize - 0.5;
   vec2 blend = fract(grid);
   vec2 origin = (floor(grid) + 0.5) * uTexel;
-  float family = familyFor(material);
   float q00 = compatibleAt(origin, material, family);
   float q10 = compatibleAt(origin + vec2(uTexel.x, 0.0), material, family);
   float q01 = compatibleAt(origin + vec2(0.0, uTexel.y), material, family);
@@ -101,11 +99,15 @@ vec3 discreteShape(vec2 uv, float material) {
   float r = sameMaterial(uv + left, material);
   float t = sameMaterial(uv - down, material);
   float b = sameMaterial(uv + down, material);
+  float center = sameMaterial(uv, material);
+  if (uHighQuality < 0.5) {
+    float density = center * 0.48 + (l + r + t + b) * 0.13;
+    return vec3(density, r - l, b - t);
+  }
   float tl = sameMaterial(uv - left - down, material);
   float tr = sameMaterial(uv + left - down, material);
   float bl = sameMaterial(uv - left + down, material);
   float br = sameMaterial(uv + left + down, material);
-  float center = sameMaterial(uv, material);
   float density = center * mix(0.48, 0.32, uHighQuality)
     + (l + r + t + b) * mix(0.13, 0.12, uHighQuality)
     + (tl + tr + bl + br) * 0.05 * uHighQuality;
@@ -195,22 +197,57 @@ float wallPattern(float wall, vec2 position) {
 vec2 nearbySurface(vec2 uv) {
   float solid = 0.0;
   float candidate = materialAt(uv - vec2(uTexel.x, 0.0));
-  float family = familyFor(candidate);
-  if (family == 3.0 || isEmissive(candidate)) return vec2(candidate, 0.0);
-  if (candidate > 0.5 && family == 0.0) solid = candidate;
+  if (candidate > 0.5) {
+    vec4 style = texture(uStyleTexture, vec2((candidate + 0.5) / 256.0, 0.5));
+    float family = floor(style.r * 255.0 + 0.5);
+    if (family == 3.0 || style.b > 0.5) return vec2(candidate, 0.0);
+    if (family == 0.0) solid = candidate;
+  }
   candidate = materialAt(uv + vec2(uTexel.x, 0.0));
-  family = familyFor(candidate);
-  if (family == 3.0 || isEmissive(candidate)) return vec2(candidate, 0.0);
-  if (solid < 0.5 && candidate > 0.5 && family == 0.0) solid = candidate;
+  if (candidate > 0.5) {
+    vec4 style = texture(uStyleTexture, vec2((candidate + 0.5) / 256.0, 0.5));
+    float family = floor(style.r * 255.0 + 0.5);
+    if (family == 3.0 || style.b > 0.5) return vec2(candidate, 0.0);
+    if (solid < 0.5 && family == 0.0) solid = candidate;
+  }
   candidate = materialAt(uv - vec2(0.0, uTexel.y));
-  family = familyFor(candidate);
-  if (family == 3.0 || isEmissive(candidate)) return vec2(candidate, 0.0);
-  if (solid < 0.5 && candidate > 0.5 && family == 0.0) solid = candidate;
+  if (candidate > 0.5) {
+    vec4 style = texture(uStyleTexture, vec2((candidate + 0.5) / 256.0, 0.5));
+    float family = floor(style.r * 255.0 + 0.5);
+    if (family == 3.0 || style.b > 0.5) return vec2(candidate, 0.0);
+    if (solid < 0.5 && family == 0.0) solid = candidate;
+  }
   candidate = materialAt(uv + vec2(0.0, uTexel.y));
-  family = familyFor(candidate);
-  if (family == 3.0 || isEmissive(candidate)) return vec2(candidate, 0.0);
-  if (solid < 0.5 && candidate > 0.5 && family == 0.0) solid = candidate;
+  if (candidate > 0.5) {
+    vec4 style = texture(uStyleTexture, vec2((candidate + 0.5) / 256.0, 0.5));
+    float family = floor(style.r * 255.0 + 0.5);
+    if (family == 3.0 || style.b > 0.5) return vec2(candidate, 0.0);
+    if (solid < 0.5 && family == 0.0) solid = candidate;
+  }
   return vec2(0.0, solid);
+}
+float triangleSlope(float value, float period) {
+  float phase = mod(mod(value, period) + period, period);
+  return mix(4.0 / period, -4.0 / period, step(period * 0.5, phase));
+}
+float solidReliefStrength(float optics, float profile) {
+  if (optics == 8.0) return 8.5;
+  if (optics == 9.0) return 7.5;
+  if (optics == 10.0) return 5.0;
+  if (optics == 11.0) return 6.5;
+  if (profile == 3.0) return 7.0;
+  if (profile == 5.0) return 5.0;
+  if (profile == 4.0) return 6.0;
+  return 6.5;
+}
+vec3 solidReliefSample(vec2 position, float material, float profile, float optics) {
+  float value = position.x * 3.0 + position.y * 2.0 + material * 11.0;
+  float phase = mod(mod(value, 128.0) + 128.0, 128.0);
+  float wave = 1.0 - abs(phase - 64.0) / 32.0;
+  float slopeA = triangleSlope(value, 128.0);
+  vec2 gradient = vec2(slopeA * 3.0, slopeA * 2.0);
+  float strength = solidReliefStrength(optics, profile);
+  return vec3(gradient * strength * 0.18, wave * strength / 255.0);
 }
 void main() {
   vec2 fieldUv = vFieldCoord;
@@ -259,6 +296,7 @@ void main() {
   vec4 paletteSample = texture(uPaletteTexture, vec2((material + 0.5) / 256.0, 0.5));
   float family = floor(materialStyle.r * 255.0 + 0.5);
   float profile = floor(materialStyle.g * 255.0 + 0.5);
+  bool materialEmissive = materialStyle.b > 0.5;
   float traits = floor(materialStyle.a * 255.0 + 0.5);
   float optics = floor(paletteSample.a * 255.0 + 0.5);
   float energyCore = family == 3.0 ? 1.0 : 0.0;
@@ -270,8 +308,9 @@ void main() {
     ? vec3(0.0)
     : (liquidOnly > 0.5
     ? vec3(liquidDensity, 0.0, 0.0)
-    : ((family == 1.0 || profile == 1.0) ? discreteShape(fieldUv, material) : occupancyShape(fieldUv, material)))));
+    : ((family == 1.0 || profile == 1.0) ? discreteShape(fieldUv, material) : occupancyShape(fieldUv, material, family)))));
   float density = shape.x;
+  vec2 fieldPosition = fieldUv * uFieldSize;
   float gasVolume = max(cloudOnly, family == 1.0 ? 1.0 : 0.0);
   float liquidVolume = max(liquidOnly, family == 2.0 ? 1.0 : 0.0);
   float volume = density;
@@ -310,6 +349,15 @@ void main() {
     volumeSlope = vec2(liquidRight - liquidLeft, liquidBottom - liquidTop) * 0.65;
   }
   vec2 semanticSlope = shape.yz * shapeDetail;
+  float solidInterior = family == 0.0
+    ? smoothstep(0.76, 0.98, density) * (1.0 - smoothstep(0.10, 0.62, length(shape.yz)))
+    : 0.0;
+  float solidReliefTone = 0.0;
+  if (solidInterior > 0.001) {
+    vec3 solidRelief = solidReliefSample(fieldPosition, material, profile, optics);
+    semanticSlope += solidRelief.xy * solidInterior;
+    solidReliefTone = solidRelief.z * solidInterior;
+  }
   vec3 normal = normalize(vec3(-semanticSlope.x - volumeSlope.x, -semanticSlope.y - volumeSlope.y, mix(1.45, 1.15, uHighQuality)));
   float diffuse = 0.72 + max(0.0, dot(normal, normalize(vec3(-0.48, -0.68, 0.78)))) * 0.42;
   float specular = pow(max(0.0, dot(normal, normalize(vec3(-0.35, -0.55, 0.92)))), 10.0);
@@ -321,7 +369,6 @@ void main() {
     ? atmosphereState.rgb
     : (liquidOnly > 0.5 ? liquidState.rgb : paletteSample.rgb)));
   vec2 velocity = halo > 0.5 ? vec2(0.0) : state.ba * 2.0 - 1.0;
-  vec2 fieldPosition = fieldUv * uFieldSize;
   float grain = fract(sin(dot(floor(fieldPosition), vec2(12.9898, 78.233))) * 43758.5453) - 0.5;
   float atmosphere = sin(fieldPosition.x * 0.055 + fieldPosition.y * 0.027 + uTime * 0.7 + velocity.x * 2.0)
     * sin(fieldPosition.y * 0.043 - uTime * 0.43 + velocity.y * 1.7);
@@ -454,6 +501,7 @@ void main() {
     float edgeCenter = 0.49 + (profile == 1.0 ? grain * 0.045 : 0.0);
     alpha = smoothstep(edgeCenter - 0.11, edgeCenter + 0.11, density);
     color = base * mix(1.10, 0.78, density) * diffuse;
+    color += vec3(solidReliefTone);
     float solidSpecularGain = 0.28 - roughSurface * 0.13 + smoothSurface * 0.22
       + organicSurface * 0.02 + deviceSurface * 0.15 + radioactiveSurface * 0.06;
     vec3 solidSpecularTint = mix(
@@ -564,7 +612,7 @@ void main() {
   }
   float emission = energyCore > 0.5
     ? 0.0
-    : (isEmissive(material) ? 0.48 + heat * 1.05 : (material == 11.0 ? 0.28 + heat * 0.62 : 0.0));
+    : (materialEmissive ? 0.48 + heat * 1.05 : (material == 11.0 ? 0.28 + heat * 0.62 : 0.0));
   color += mix(base, vec3(1.0, 0.52, 0.20), heat) * emission;
   if (energyCore < 0.5 && emissionOnly < 0.5 && emissionState.a > 0.002) {
     float lightReach = smoothstep(0.002, 0.42, emissionState.a);
@@ -575,7 +623,7 @@ void main() {
     float surfaceResponse = surfaceLightGain(lightProfile)
       * mix(0.14, 1.0, contour)
       * mix(0.76, 1.16, relief);
-    float lightResponse = isEmissive(material) ? 0.24
+    float lightResponse = materialEmissive ? 0.24
       : (volumeResponse > 0.0 ? volumeResponse : surfaceResponse);
     // Opaque matter receives coloured light through its reconstructed relief;
     // empty space keeps the separate emission halo, avoiding a flat milky wash.

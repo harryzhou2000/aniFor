@@ -13,6 +13,7 @@ import {
   createLiquidSurfaceScratch, reconstructLiquidSurface,
 } from '../src/renderer/canvas-liquid-surface';
 import { reconstructSolidSurface } from '../src/renderer/canvas-solid-surface';
+import { canvasSolidRelief } from '../src/renderer/canvas-solid-relief';
 import { createRenderLookups } from '../src/renderer/render-field-set';
 import { RenderPhase, RenderProfile } from '../src/renderer/render-profile';
 import { RenderTrait } from '../src/renderer/render-traits';
@@ -92,6 +93,7 @@ const traitClock = new Int32Array(CANVAS_RENDER_TRAIT_CLOCK_SIZE);
 updateCanvasRenderTraitClock(traitClock, 1_000);
 const traitCompositePixels = new Uint8ClampedArray(width * height * 4);
 let traitChecksum = 0;
+let solidReliefChecksum = 0;
 const profileEmission = new Uint8Array(emission.bytes.length);
 for (let offset = 0; offset < profileEmission.length; offset += 4) {
   profileEmission[offset] = 255;
@@ -202,6 +204,22 @@ console.log(JSON.stringify({
       solidPixels.set(solidSeed);
       reconstructSolidSurface(solidPixels, solidMaterials, styleBytes, paletteBytes, width, height);
     }),
+    solidReliefLoopBaseline: sample(() => {
+      for (let y = 1; y < height - 1; y++) for (let x = 1; x < width - 1; x++) {
+        const material = solidMaterials[y * width + x];
+        if (!material) continue;
+        solidReliefChecksum = styleBytes[material * 4 + 1] + paletteBytes[material * 4 + 3];
+      }
+    }),
+    solidReliefInlineWorstCase: sample(() => {
+      for (let y = 1; y < height - 1; y++) for (let x = 1; x < width - 1; x++) {
+        const material = solidMaterials[y * width + x];
+        if (!material) continue;
+        solidReliefChecksum = canvasSolidRelief(
+          x, y, material, styleBytes[material * 4 + 1], paletteBytes[material * 4 + 3],
+        );
+      }
+    }),
     surfaceLighting: sample(() => {
       solidPixels.set(solidSeed);
       for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) {
@@ -244,4 +262,5 @@ console.log(JSON.stringify({
   },
   combinedAllocatedBytes: atmosphere.allocatedByteLength + liquid.allocatedByteLength + emission.allocatedByteLength,
   traitChecksum: Math.round(traitChecksum),
+  solidReliefChecksum: Math.round(solidReliefChecksum),
 }, null, 2));

@@ -15,6 +15,7 @@ describe('shared render field set', () => {
     expect(lookup.paletteBytes[Material.Water * 4 + 3]).toBe(RenderOptics.Aqueous);
     expect(lookup.styleBytes[Material.PRTI * 4 + 3]).toBe(RenderTrait.Sink | RenderTrait.Channel);
     expect(Array.from(lookup.colorByMaterial.slice(Material.Acid * 3, Material.Acid * 3 + 3))).toEqual([0xd3, 0x5e, 0xe8]);
+    expect(Array.from(lookup.styleBytes.slice(0, 4))).toEqual([0, 0, 0, 0]);
   });
 
   it('packs a complete render identity for every projected material', () => {
