@@ -182,6 +182,12 @@ export function applyRenderLabScene(simulation: SimulationBackend): void {
       simulation.setFixtureTemperatureRect(metalX, 362, 24, 17, temperatures[state]);
       simulation.setFixtureTemperatureRect(sandX, 362, 24, 17, temperatures[state]);
     }
+    // Wall-free ambient translucent plates isolate body exposure and macro
+    // relief from the independent patterned-backdrop/refraction fixtures.
+    plot.rect(278, 362, 24, 17, Material.Glass, 1, 0);
+    plot.rect(318, 362, 24, 17, Material.Ice, 1, 0);
+    simulation.setFixtureTemperatureRect(278, 362, 24, 17, RENDER_LAB_AMBIENT_TEMPERATURE);
+    simulation.setFixtureTemperatureRect(318, 362, 24, 17, RENDER_LAB_AMBIENT_TEMPERATURE);
     // Existing native-wall Glass/Ice cards also prove that Canvas and WebGL
     // apply the same source-alpha-weighted tint over an independent backdrop.
     simulation.setFixtureTemperatureRect(428, 219, 35, 21, RENDER_LAB_HOT_TEMPERATURE);

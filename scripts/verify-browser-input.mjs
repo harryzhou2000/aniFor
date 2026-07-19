@@ -532,8 +532,8 @@ async function auditMode(mode) {
     assert(solidSamples.every((sample) => sample.pinnedFraction <= 0.15),
       `${mode}: solid interior framebuffer clipping returned (${JSON.stringify(solidSamples)})`);
     const translucentSolidSamples = await sampleCanonicalRegions([
-      { name: 'glass', x: 445, y: 229, radius: 8 },
-      { name: 'ice', x: 525, y: 229, radius: 8 },
+      { name: 'glass', x: 290, y: 370, radiusX: 8, radiusY: 5 },
+      { name: 'ice', x: 330, y: 370, radiusX: 8, radiusY: 5 },
     ]);
     assert(translucentSolidSamples.every((sample) => sample.visible >= 32
       && sample.macroLumaRange >= 7 && sample.pinnedFraction <= 0.05),
@@ -1256,6 +1256,8 @@ async function auditMode(mode) {
         thermalSupportInvariantSamples,
         energyCoreReliefSamples,
         energyCoreReliefSupport,
+        solidSamples,
+        translucentSolidSamples,
         gasLightResponseSamples,
         liquidLightResponseSamples,
         translucentLightResponseSamples,
@@ -3676,6 +3678,53 @@ function assertPairedVisualRelief(results) {
   const energyReliefRatio = canvasEnergyRelief.rgbRms / Math.max(0.25, webglEnergyRelief.rgbRms);
   assert(energyReliefRatio >= 0.4 && energyReliefRatio <= 2.5,
     `Canvas/WebGL dense-energy relief diverged (${canvasEnergyRelief.rgbRms}/${webglEnergyRelief.rgbRms})`);
+  const solidHueOrder = {
+    metal: [2, 1, 0],
+    plant: [1, 0, 2],
+    plut: [1, 0, 2],
+    dtec: [0, 1, 2],
+  };
+  for (const [name, order] of Object.entries(solidHueOrder)) {
+    const canvasSample = canvas.solidSamples.find((sample) => sample.name === name);
+    const webglSample = webgl.solidSamples.find((sample) => sample.name === name);
+    assert(canvasSample && webglSample, `paired canonical solid sample missing ${name}`);
+    const meanRatio = webglSample.meanLuma / Math.max(1, canvasSample.meanLuma);
+    const macroRatio = webglSample.macroLumaRange / Math.max(1, canvasSample.macroLumaRange);
+    assert(meanRatio >= 0.70 && meanRatio <= 1.45,
+      `Canvas/WebGL ${name} solid exposure diverged (${canvasSample.meanLuma}/${webglSample.meanLuma})`);
+    assert(macroRatio >= 0.60 && macroRatio <= 1.80,
+      `Canvas/WebGL ${name} solid macro relief diverged (${canvasSample.macroLumaRange}/${webglSample.macroLumaRange})`);
+    assert(Math.abs(canvasSample.microContrast - webglSample.microContrast) <= 3,
+      `Canvas/WebGL ${name} solid micro detail diverged (${canvasSample.microContrast}/${webglSample.microContrast})`);
+    assert(Math.abs(canvasSample.pinnedFraction - webglSample.pinnedFraction) <= 0.05,
+      `Canvas/WebGL ${name} solid clipping diverged (${canvasSample.pinnedFraction}/${webglSample.pinnedFraction})`);
+    assert(Math.abs(canvasSample.darkFraction - webglSample.darkFraction) <= 0.04,
+      `Canvas/WebGL ${name} solid dark-pit response diverged (${canvasSample.darkFraction}/${webglSample.darkFraction})`);
+    assert(Math.abs(canvasSample.coverage - webglSample.coverage) <= 0.03,
+      `Canvas/WebGL ${name} solid coverage diverged (${canvasSample.coverage}/${webglSample.coverage})`);
+    for (const sample of [canvasSample, webglSample]) {
+      assert(sample.rgb[order[0]] >= sample.rgb[order[1]]
+        && sample.rgb[order[1]] >= sample.rgb[order[2]],
+      `${sample === canvasSample ? 'Canvas' : 'WebGL'} ${name} lost family hue order (${sample.rgb})`);
+    }
+  }
+  for (const name of ['glass', 'ice']) {
+    const canvasSample = canvas.translucentSolidSamples.find((sample) => sample.name === name);
+    const webglSample = webgl.translucentSolidSamples.find((sample) => sample.name === name);
+    assert(canvasSample && webglSample, `paired translucent solid sample missing ${name}`);
+    const meanRatio = webglSample.meanLuma / Math.max(1, canvasSample.meanLuma);
+    const macroRatio = webglSample.macroLumaRange / Math.max(1, canvasSample.macroLumaRange);
+    assert(meanRatio >= 0.65 && meanRatio <= 1.55,
+      `Canvas/WebGL ${name} translucent exposure diverged (${canvasSample.meanLuma}/${webglSample.meanLuma})`);
+    assert(macroRatio >= 0.55 && macroRatio <= 1.85,
+      `Canvas/WebGL ${name} translucent macro relief diverged (${canvasSample.macroLumaRange}/${webglSample.macroLumaRange})`);
+    assert(Math.abs(canvasSample.coverage - webglSample.coverage) <= 0.03,
+      `Canvas/WebGL ${name} translucent coverage diverged (${canvasSample.coverage}/${webglSample.coverage})`);
+    assert(canvasSample.rgb[2] >= canvasSample.rgb[0] && webglSample.rgb[2] >= webglSample.rgb[0],
+      `Canvas/WebGL ${name} lost cool transmission hue (${canvasSample.rgb}/${webglSample.rgb})`);
+    assert(canvasSample.pinnedFraction <= 0.05 && webglSample.pinnedFraction <= 0.05,
+      `Canvas/WebGL ${name} translucent clipping returned (${canvasSample.pinnedFraction}/${webglSample.pinnedFraction})`);
+  }
   for (const canvasSample of canvas.liquidColumnSamples) {
     const webglSample = webgl.liquidColumnSamples.find((sample) => sample.name === canvasSample.name);
     assert(webglSample, `paired liquid sample missing ${canvasSample.name}`);

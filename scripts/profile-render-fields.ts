@@ -18,6 +18,7 @@ import {
 } from '../src/renderer/canvas-liquid-surface';
 import { reconstructSolidSurface } from '../src/renderer/canvas-solid-surface';
 import {
+  applyCanvasSolidBodyOptics, applyCanvasSolidLighting,
   applyCanvasTranslucentCaustic, applyCanvasTranslucentLensShell, canvasSolidRelief,
 } from '../src/renderer/canvas-solid-relief';
 import {
@@ -141,11 +142,13 @@ const energyGlow = new Float32Array(3);
 const traitRgb = new Float32Array(3);
 const translucentCausticRgb = new Float32Array(3);
 const translucentLensRgb = new Float32Array(3);
+const solidBodyRgb = new Float32Array(3);
 const traitClock = new Int32Array(CANVAS_RENDER_TRAIT_CLOCK_SIZE);
 updateCanvasRenderTraitClock(traitClock, 1_000);
 const traitCompositePixels = new Uint8ClampedArray(width * height * 4);
 let traitChecksum = 0;
 let solidReliefChecksum = 0;
+let solidBodyChecksum = 0;
 let liquidLightChecksum = 0;
 let translucentLightChecksum = 0;
 let translucentBackdropChecksum = 0;
@@ -303,7 +306,8 @@ console.log(JSON.stringify({
       + energyCore.byteLength + energyGlow.byteLength + traitRgb.byteLength + traitClock.byteLength,
     liquidRefractionLookupBytes: CANVAS_LIQUID_REFRACTION_LOOKUP_BYTES,
     diagnosticScratchBytes: traitCompositePixels.byteLength + denseTranslucentPixels.byteLength
-      + localizedEmissionMaterials.byteLength + localizedEmission.allocatedByteLength,
+      + localizedEmissionMaterials.byteLength + localizedEmission.allocatedByteLength
+      + solidBodyRgb.byteLength,
     atmosphereRelief: sample(() => {
       shadeCanvasAtmosphere(atmospherePixels, atmosphere.bytes, atmosphere.width, atmosphere.height);
     }),
@@ -374,6 +378,42 @@ console.log(JSON.stringify({
           x, y, material, styleBytes[material * 4 + 1], paletteBytes[material * 4 + 3],
         );
       }
+    }),
+    solidBodyDepthLoopBaseline: sample(() => {
+      const material = Material.Metal;
+      const profile = styleBytes[material * 4 + 1];
+      const optics = paletteBytes[material * 4 + 3];
+      const color = material * 3;
+      for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) {
+        const dense = x > 0 && x < width - 1 && y > 0 && y < height - 1;
+        const normalLight = (x === 0 ? 8 : 0) - (x === width - 1 ? 6 : 0)
+          + (y === 0 ? 18 : 0) - (y === height - 1 ? 5 : 0);
+        const relief = dense ? canvasSolidRelief(x, y, material, profile, optics) : 0;
+        solidBodyRgb[0] = colorByMaterial[color];
+        solidBodyRgb[1] = colorByMaterial[color + 1];
+        solidBodyRgb[2] = colorByMaterial[color + 2];
+        applyCanvasSolidLighting(solidBodyRgb, normalLight + relief);
+      }
+      solidBodyChecksum = solidBodyRgb[0] + solidBodyRgb[1] + solidBodyRgb[2];
+    }),
+    solidBodyDepthWorstCase: sample(() => {
+      const material = Material.Metal;
+      const profile = styleBytes[material * 4 + 1];
+      const optics = paletteBytes[material * 4 + 3];
+      const color = material * 3;
+      for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) {
+        const dense = x > 0 && x < width - 1 && y > 0 && y < height - 1;
+        const normalLight = (x === 0 ? 8 : 0) - (x === width - 1 ? 6 : 0)
+          + (y === 0 ? 18 : 0) - (y === height - 1 ? 5 : 0);
+        const relief = dense ? canvasSolidRelief(x, y, material, profile, optics) : 0;
+        solidBodyRgb[0] = colorByMaterial[color];
+        solidBodyRgb[1] = colorByMaterial[color + 1];
+        solidBodyRgb[2] = colorByMaterial[color + 2];
+        applyCanvasSolidBodyOptics(
+          solidBodyRgb, normalLight + relief, normalLight, relief, dense, profile, optics,
+        );
+      }
+      solidBodyChecksum = solidBodyRgb[0] + solidBodyRgb[1] + solidBodyRgb[2];
     }),
     translucentCausticWorstCase: sample(() => {
       for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) {
@@ -511,6 +551,7 @@ console.log(JSON.stringify({
   combinedAllocatedBytes: atmosphere.allocatedByteLength + liquid.allocatedByteLength + emission.allocatedByteLength,
   traitChecksum: Math.round(traitChecksum),
   solidReliefChecksum: Math.round(solidReliefChecksum),
+  solidBodyChecksum: Math.round(solidBodyChecksum),
   liquidLightChecksum: Math.round(liquidLightChecksum),
   translucentLightChecksum: Math.round(translucentLightChecksum),
   translucentBackdropChecksum: Math.round(translucentBackdropChecksum),

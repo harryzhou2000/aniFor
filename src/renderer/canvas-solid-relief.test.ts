@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { Material } from '../shared/materials';
 import {
-  applyCanvasSolidLighting, applyCanvasTranslucentCaustic,
+  applyCanvasSolidBodyOptics, applyCanvasSolidLighting, applyCanvasTranslucentCaustic,
   applyCanvasTranslucentLensShell,
   canvasSolidInteriorCohesion, canvasSolidRelief,
 } from './canvas-solid-relief';
@@ -58,6 +58,61 @@ describe('Canvas solid relief', () => {
     const inRange = new Float32Array([80, 100, 120]);
     applyCanvasSolidLighting(inRange, -5);
     expect(Array.from(inRange)).toEqual([75, 95, 115]);
+  });
+
+  it('adds bounded deterministic family-aware body depth without granular over-styling', () => {
+    const families = [
+      [RenderProfile.Rigid, RenderOptics.SmoothRigid],
+      [RenderProfile.Organic, RenderOptics.Organic],
+      [RenderProfile.Device, RenderOptics.Device],
+      [RenderProfile.Radioactive, RenderOptics.Radioactive],
+      [RenderProfile.Rigid, RenderOptics.TranslucentRigid],
+    ] as const;
+    const fingerprints = new Set<string>();
+    for (const [profile, optics] of families) {
+      const color = new Float32Array([168, 132, 96]);
+      applyCanvasSolidBodyOptics(color, 4, 0, 4, true, profile, optics);
+      expect(Math.max(...color)).toBeLessThanOrEqual(254);
+      expect(Math.max(
+        Math.abs(color[0] - 172), Math.abs(color[1] - 136), Math.abs(color[2] - 100),
+      )).toBeLessThanOrEqual(24);
+      const repeated = new Float32Array([168, 132, 96]);
+      applyCanvasSolidBodyOptics(repeated, 4, 0, 4, true, profile, optics);
+      expect(repeated).toEqual(color);
+      fingerprints.add(Array.from(color, (channel) => channel.toFixed(3)).join(','));
+    }
+    expect(fingerprints.size).toBe(families.length);
+
+    const rough = new Float32Array([168, 132, 96]);
+    applyCanvasSolidBodyOptics(
+      rough, 4, 0, 0, true, RenderProfile.Granular, RenderOptics.RoughGranular,
+    );
+    expect(Math.max(
+      Math.abs(rough[0] - 172), Math.abs(rough[1] - 136), Math.abs(rough[2] - 100),
+    )).toBeLessThan(5);
+  });
+
+  it('changes body response gradually with relief and keeps exposed rims restrained', () => {
+    const low = new Float32Array([120, 150, 180]);
+    const adjacent = new Float32Array(low);
+    applyCanvasSolidBodyOptics(
+      low, 1, 0, 2, true, RenderProfile.Device, RenderOptics.Device,
+    );
+    applyCanvasSolidBodyOptics(
+      adjacent, 1.5, 0, 2.5, true, RenderProfile.Device, RenderOptics.Device,
+    );
+    expect(Math.max(
+      Math.abs(low[0] - adjacent[0]),
+      Math.abs(low[1] - adjacent[1]),
+      Math.abs(low[2] - adjacent[2]),
+    )).toBeLessThanOrEqual(3);
+
+    const edge = new Float32Array([120, 150, 180]);
+    applyCanvasSolidBodyOptics(
+      edge, 18, 18, 0, false, RenderProfile.Device, RenderOptics.Device,
+    );
+    expect(edge[2] - edge[0]).toBeGreaterThan(60);
+    expect(Math.max(...edge)).toBeLessThanOrEqual(254);
   });
 
   it('gives Glass and Ice bounded opposing low-bias spectral bands only', () => {

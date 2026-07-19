@@ -34,7 +34,7 @@ import {
   writeCanvasWallPixel,
 } from './canvas-wall-style';
 import {
-  applyCanvasSolidLighting, applyCanvasTranslucentCaustic,
+  applyCanvasSolidBodyOptics, applyCanvasTranslucentCaustic,
   applyCanvasTranslucentLensShell,
   canvasSolidInteriorCohesion, canvasSolidRelief,
 } from './canvas-solid-relief';
@@ -824,9 +824,13 @@ export class MaterialRenderer {
       } else if (material === Material.Wood) {
         const grain = hash(index) % 23 - 11;
         const ring = ((x + Math.floor(y / 3)) % 9) < 2 ? -20 : 4;
-        this.styledColor[0] = 132 + grain + ring + surfaceLight;
-        this.styledColor[1] = 76 + grain * 0.45 + ring * 0.5 + surfaceLight;
-        this.styledColor[2] = 40 + ring * 0.25 + surfaceLight;
+        this.styledColor[0] = 132 + grain + ring;
+        this.styledColor[1] = 76 + grain * 0.45 + ring * 0.5;
+        this.styledColor[2] = 40 + ring * 0.25;
+        applyCanvasSolidBodyOptics(
+          this.styledColor, surfaceLight, normalLight, solidRelief,
+          denseSolidInterior, profile, optics,
+        );
         applyCanvasRenderTraits(
           this.styledColor, applicableTraits, phase, material, x, y, index, this.traitClock,
         );
@@ -839,9 +843,13 @@ export class MaterialRenderer {
       } else if (material === Material.Plant) {
         const grain = hash(index) % 23 - 11;
         const leaf = (hash(index + 401) & 3) * 7;
-        this.styledColor[0] = 62 + leaf + surfaceLight;
-        this.styledColor[1] = 132 + leaf + surfaceLight;
-        this.styledColor[2] = 58 + grain * 0.35 + surfaceLight;
+        this.styledColor[0] = 62 + leaf;
+        this.styledColor[1] = 132 + leaf;
+        this.styledColor[2] = 58 + grain * 0.35;
+        applyCanvasSolidBodyOptics(
+          this.styledColor, surfaceLight, normalLight, solidRelief,
+          denseSolidInterior, profile, optics,
+        );
         applyCanvasRenderTraits(
           this.styledColor, applicableTraits, phase, material, x, y, index, this.traitClock,
         );
@@ -870,9 +878,13 @@ export class MaterialRenderer {
         );
       } else if (material === Material.Ice) {
         const facet = (hash(index + 617) & 15) < 3 ? 24 : 0;
-        this.styledColor[0] = 116 + facet + surfaceLight;
-        this.styledColor[1] = 193 + facet + surfaceLight;
-        this.styledColor[2] = 211 + facet + surfaceLight;
+        this.styledColor[0] = 116 + facet;
+        this.styledColor[1] = 193 + facet;
+        this.styledColor[2] = 211 + facet;
+        applyCanvasSolidBodyOptics(
+          this.styledColor, surfaceLight, normalLight, solidRelief,
+          denseSolidInterior, profile, optics,
+        );
         if (this.solidContactDepthEnabled && denseSolidInterior) {
           applyCanvasTranslucentCaustic(this.styledColor, solidRelief, material);
         }
@@ -916,7 +928,16 @@ export class MaterialRenderer {
       } else if (material === Material.Wall) {
         const grain = hash(index) % 23 - 11;
         const seam = (hash(index + 73) & 31) === 0 ? -22 : 0;
-        compositePixel(target, pixel, 105 + grain + seam + surfaceLight, 98 + grain + seam + surfaceLight, 88 + grain + seam + surfaceLight, 255);
+        this.styledColor[0] = 105 + grain + seam;
+        this.styledColor[1] = 98 + grain + seam;
+        this.styledColor[2] = 88 + grain + seam;
+        applyCanvasSolidBodyOptics(
+          this.styledColor, surfaceLight, normalLight, solidRelief,
+          denseSolidInterior, profile, optics,
+        );
+        compositePixel(
+          target, pixel, this.styledColor[0], this.styledColor[1], this.styledColor[2], 255,
+        );
       } else if (material === Material.Water) {
         const mask = materialNeighbourMask(this.rendered, width, height, x, y, material);
         const density = neighbourDensity(mask);
@@ -1016,6 +1037,10 @@ export class MaterialRenderer {
             this.styledColor[1] += (green - this.styledColor[1]) * cohesion;
             this.styledColor[2] += (blue - this.styledColor[2]) * cohesion;
           }
+          applyCanvasSolidBodyOptics(
+            this.styledColor, surfaceLight, normalLight, solidRelief,
+            denseSolidInterior, profile, optics,
+          );
           if (this.solidContactDepthEnabled && denseSolidInterior
             && applicableTraits === 0 && !info.emissive) {
             applyCanvasTranslucentCaustic(this.styledColor, solidRelief, material);
@@ -1023,13 +1048,6 @@ export class MaterialRenderer {
           if (applicableTraits !== 0) applyCanvasRenderTraits(
             this.styledColor, applicableTraits, phase, material, x, y, index, this.traitClock,
           );
-          if (red > 200 || green > 200 || blue > 200) {
-            applyCanvasSolidLighting(this.styledColor, surfaceLight);
-          } else {
-            this.styledColor[0] += surfaceLight;
-            this.styledColor[1] += surfaceLight;
-            this.styledColor[2] += surfaceLight;
-          }
           if (this.translucentLensShellEnabled && applicableTraits === 0 && !info.emissive) {
             applyCanvasTranslucentLensShell(
               this.styledColor, solidRelief, normalLight, material,

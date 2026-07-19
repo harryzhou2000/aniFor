@@ -116,6 +116,12 @@ describe('render lab scene', () => {
     expect(first.temperature()[229 * 612 + 539]).toBe(RENDER_LAB_COLD_TEMPERATURE);
     expect(second.temperature()[229 * 612 + 445]).toBe(RENDER_LAB_HOT_TEMPERATURE);
     expect(second.temperature()[229 * 612 + 539]).toBe(RENDER_LAB_COLD_TEMPERATURE);
+    expect(first.cells()[370 * 612 + 290]).toBe(Material.Glass);
+    expect(first.cells()[370 * 612 + 330]).toBe(Material.Ice);
+    expect(first.walls()[370 * 612 + 290]).toBe(0);
+    expect(first.walls()[370 * 612 + 330]).toBe(0);
+    expect(first.temperature()[370 * 612 + 290]).toBe(RENDER_LAB_AMBIENT_TEMPERATURE);
+    expect(first.temperature()[370 * 612 + 330]).toBe(RENDER_LAB_AMBIENT_TEMPERATURE);
 
     for (const [column, material] of RENDER_LAB_ENERGY_SAMPLES.entries()) {
       const left = 388 + column * 40;

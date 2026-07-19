@@ -37,9 +37,11 @@ export function shadeCanvasMaterial(
     light += pulse < 3 ? 9 : -1;
   } else if (surfaceProfile === RenderProfile.Device) {
     const trace = (x + material) % 8 === 0 || (y + material * 3) % 8 === 0;
-    light += trace ? 5 : -2;
-    tintGreen += trace ? 4 : 0;
-    tintBlue += trace ? 10 : 2;
+    // Retain a fine circuit lattice after dense-body absorption and 2x
+    // supersampled composition. This remains below the broader body relief.
+    light += trace ? 10 : -4;
+    tintGreen += trace ? 7 : 0;
+    tintBlue += trace ? 18 : 2;
   } else if (profile === RenderProfile.Field) {
     const wave = (x + y + Math.floor(time / 110) + material) % 12;
     light += wave < 3 ? 7 : -2;

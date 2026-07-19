@@ -80,4 +80,20 @@ describe('Canvas material-family styling', () => {
     }
     expect(maximum - minimum).toBeGreaterThan(24);
   });
+
+  it('keeps the device circuit lattice visible beneath broad body depth', () => {
+    const trace = new Float32Array(3);
+    const substrate = new Float32Array(3);
+    shadeCanvasMaterial(
+      trace, 120, 150, 180, RenderProfile.Device, RenderOptics.Device,
+      37, 3, 4, 2_451, 0,
+    );
+    shadeCanvasMaterial(
+      substrate, 120, 150, 180, RenderProfile.Device, RenderOptics.Device,
+      37, 4, 4, 2_451, 0,
+    );
+    expect(trace[0] - substrate[0]).toBeGreaterThanOrEqual(14);
+    expect(trace[1] - substrate[1]).toBeGreaterThanOrEqual(21);
+    expect(trace[2] - substrate[2]).toBeGreaterThanOrEqual(30);
+  });
 });
