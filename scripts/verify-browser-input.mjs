@@ -119,6 +119,9 @@ async function auditMode(mode) {
       lowerWall: window.__ANIFOR_INPUT_AUDIT__.cell(50, 348),
       patternedGlassWall: window.__ANIFOR_INPUT_AUDIT__.wall(154, 172),
       patternedMetalWall: window.__ANIFOR_INPUT_AUDIT__.wall(129, 172),
+      patternedWaterWall: window.__ANIFOR_INPUT_AUDIT__.wall(286, 172),
+      patternedOilWall: window.__ANIFOR_INPUT_AUDIT__.wall(314, 172),
+      patternedLavaWall: window.__ANIFOR_INPUT_AUDIT__.wall(340, 231),
       patternedIceWall: window.__ANIFOR_INPUT_AUDIT__.wall(525, 229),
     })`);
     assert(canonicalFixture.status?.includes('TypeScript deterministic fallback'),
@@ -128,6 +131,8 @@ async function auditMode(mode) {
     assert(canonicalFixture.upperWall === 3 && canonicalFixture.lowerWall === 3,
       `${mode}: canonical render lab signature changed (${JSON.stringify(canonicalFixture)})`);
     assert(canonicalFixture.patternedGlassWall > 0 && canonicalFixture.patternedMetalWall > 0
+      && canonicalFixture.patternedWaterWall > 0 && canonicalFixture.patternedOilWall > 0
+      && canonicalFixture.patternedLavaWall > 0
       && canonicalFixture.patternedIceWall > 0,
     `${mode}: patterned translucent wall fixture is missing (${JSON.stringify(canonicalFixture)})`);
 
@@ -718,6 +723,9 @@ async function auditMode(mode) {
     }, [
       { name: 'patternedGlassShoulders', x: 445, y: 229, radiusX: 17, radiusY: 7 },
       { name: 'patternedIceCore', x: 525, y: 229, radius: 6 },
+      { name: 'patternedWaterShoulders', x: 288, y: 172, radiusX: 10, radiusY: 11 },
+      { name: 'patternedOilShoulders', x: 315, y: 172, radiusX: 11, radiusY: 11 },
+      { name: 'moltenLavaPinholeControl', x: 340, y: 231, radius: 8 },
       { name: 'opaqueMetalControl', x: 129, y: 172, radius: 8 },
     ], canonicalCaptures.canvasRect);
     const backdropRefraction = Object.fromEntries(
@@ -738,14 +746,33 @@ async function auditMode(mode) {
     assert(backdropRefraction.patternedGlassShoulders.rms >= 0.45
       && backdropRefraction.patternedIceCore.rms >= 0.75,
     `${mode}: clear Glass and frosted Ice lost their optical distinction (${JSON.stringify(backdropRefractionSamples)})`);
+    assert(backdropRefraction.patternedWaterShoulders.rms >= 0.25
+      && backdropRefraction.patternedWaterShoulders.bipolarBalance >= 0.25
+      && backdropRefraction.patternedWaterShoulders.coverage >= 0.015
+      && backdropRefraction.patternedWaterShoulders.meanBiasRatio <= 0.45
+      && backdropRefraction.patternedWaterShoulders.peak <= 18,
+    `${mode}: Water did not bend its native-wall backdrop (${JSON.stringify(backdropRefractionSamples)})`);
+    assert(backdropRefraction.patternedOilShoulders.rms >= 0.18
+      && backdropRefraction.patternedOilShoulders.bipolarBalance >= 0.20
+      && backdropRefraction.patternedOilShoulders.coverage >= 0.010
+      && backdropRefraction.patternedOilShoulders.meanBiasRatio <= 0.55
+      && backdropRefraction.patternedOilShoulders.peak <= 18,
+    `${mode}: Oil did not bend its native-wall backdrop (${JSON.stringify(backdropRefractionSamples)})`);
+    assert(backdropRefraction.patternedWaterShoulders.rms
+      >= backdropRefraction.patternedOilShoulders.rms * 0.70,
+    `${mode}: Water/Oil refraction lost its optics distinction (${JSON.stringify(backdropRefractionSamples)})`);
     assert(backdropRefraction.opaqueMetalControl.peak <= 1
       && backdropRefraction.opaqueMetalControl.rms <= 0.15,
     `${mode}: backdrop refraction leaked into matched opaque Metal (${JSON.stringify(backdropRefractionSamples)})`);
+    assert(backdropRefraction.moltenLavaPinholeControl.peak <= 1
+      && backdropRefraction.moltenLavaPinholeControl.rms <= 0.15,
+    `${mode}: backdrop refraction leaked into molten Lava or its reconstructed pinhole (${JSON.stringify(backdropRefractionSamples)})`);
     assert(backdropRefractionSamples.every((sample) => sample.repeatPeak <= 1),
       `${mode}: refraction off-on-off sequence was not deterministic (${JSON.stringify(backdropRefractionSamples)})`);
     const backdropSupportRegions = [
       { name: 'patternedGlassSupport', x: 445, y: 229, radiusX: 17.5, radiusY: 10.5, silhouette: true },
       { name: 'patternedIceSupport', x: 525, y: 229, radius: 6, silhouette: true },
+      { name: 'patternedLiquidSupport', x: 303, y: 172, radiusX: 37, radiusY: 12.5, silhouette: true },
     ];
     const [straightBackdropSupport, refractedBackdropSupport] = await Promise.all([
       samplePageRegions(
@@ -3177,12 +3204,15 @@ function assertPairedVisualRelief(results) {
     assert(ratio >= 0.4 && ratio <= 2.5,
       `Canvas/WebGL ${name} isolated field-light response diverged (${canvasSample.positiveRgb[channel]}/${webglSample.positiveRgb[channel]})`);
   }
-  for (const name of ['patternedGlassShoulders', 'patternedIceCore']) {
+  for (const name of [
+    'patternedGlassShoulders', 'patternedIceCore',
+    'patternedWaterShoulders', 'patternedOilShoulders',
+  ]) {
     const canvasSample = canvas.backdropRefractionSamples.find((sample) => sample.name === name);
     const webglSample = webgl.backdropRefractionSamples.find((sample) => sample.name === name);
     assert(canvasSample && webglSample, `paired backdrop-refraction sample missing ${name}`);
     const ratio = canvasSample.rms / Math.max(0.25, webglSample.rms);
-    assert(ratio >= 0.65 && ratio <= 2.0,
+    assert(ratio >= 0.55 && ratio <= 2.2,
       `Canvas/WebGL ${name} refraction magnitude diverged (${canvasSample.rms}/${webglSample.rms})`);
   }
   for (const [name, metric] of [

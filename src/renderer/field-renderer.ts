@@ -27,7 +27,10 @@ import {
   CANVAS_TRANSLUCENT_FIELD_GAIN, canvasTranslucentFieldExposure, lightCanvasSurface,
 } from './canvas-surface-light';
 import { reconstructSolidSurface } from './canvas-solid-surface';
-import { writeCanvasRefractedWallPixel, writeCanvasWallPixel } from './canvas-wall-style';
+import {
+  writeCanvasLiquidRefractedWallPixel, writeCanvasRefractedWallPixel,
+  writeCanvasWallPixel,
+} from './canvas-wall-style';
 import {
   applyCanvasSolidLighting, applyCanvasTranslucentCaustic,
   applyCanvasTranslucentLensShell,
@@ -536,7 +539,34 @@ export class MaterialRenderer {
       const pixel = index * 4;
       const wall = this.renderedWalls?.[index] ?? 0;
       if (wall) {
-        writeCanvasWallPixel(base, pixel, wall, x, y);
+        let refractedLiquid = false;
+        if (this.translucentBackdropRefractionEnabled
+          && fields.lookups.liquidByMaterial[material] !== 0
+          && fields.lookups.styleBytes[material * 4 + 2] === 0) {
+          const liquidOptics = fields.lookups.paletteBytes[material * 4 + 3] as RenderOptics;
+          const leftLiquid = x > 0
+            && (fields.lookups.liquidByMaterial[this.rendered[index - 1]] !== 0
+              || (this.rendered[index - 1] === Material.Empty
+                && fields.liquid.bytes[pixel - 4 + 3] >= 128));
+          const rightLiquid = x < width - 1
+            && (fields.lookups.liquidByMaterial[this.rendered[index + 1]] !== 0
+              || (this.rendered[index + 1] === Material.Empty
+                && fields.liquid.bytes[pixel + 4 + 3] >= 128));
+          const topLiquid = y > 0
+            && (fields.lookups.liquidByMaterial[this.rendered[index - width]] !== 0
+              || (this.rendered[index - width] === Material.Empty
+                && fields.liquid.bytes[pixel - width * 4 + 3] >= 128));
+          const bottomLiquid = y < height - 1
+            && (fields.lookups.liquidByMaterial[this.rendered[index + width]] !== 0
+              || (this.rendered[index + width] === Material.Empty
+                && fields.liquid.bytes[pixel + width * 4 + 3] >= 128));
+          const liquidEdgeX = Number(leftLiquid) - Number(rightLiquid);
+          const liquidEdgeY = Number(topLiquid) - Number(bottomLiquid);
+          refractedLiquid = writeCanvasLiquidRefractedWallPixel(
+            base, pixel, wall, x, y, liquidOptics, liquidEdgeX, liquidEdgeY,
+          );
+        }
+        if (!refractedLiquid) writeCanvasWallPixel(base, pixel, wall, x, y);
         if (material === Material.Empty && fields.emission.hasLight) {
           const wallExposure = cardinalExposure(this.renderedWalls, width, height, x, y, wall);
           lightCanvasSurface(

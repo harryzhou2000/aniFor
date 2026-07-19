@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { Material } from '../shared/materials';
 import {
-  canvasWallPatternLight, writeCanvasRefractedWallPixel, writeCanvasWallPixel,
+  canvasWallPatternLight, writeCanvasLiquidRefractedWallPixel,
+  writeCanvasRefractedWallPixel, writeCanvasWallPixel,
 } from './canvas-wall-style';
+import { RenderOptics } from './render-optics';
 
 describe('Canvas native-wall style', () => {
   it('moves only the procedural pattern and preserves wall alpha', () => {
@@ -50,5 +52,29 @@ describe('Canvas native-wall style', () => {
     expect(left).not.toEqual(right);
     expect(left[3]).toBe(248);
     expect(right[3]).toBe(248);
+  });
+
+  it('bends only the procedural wall pattern through a supported liquid slope', () => {
+    const straight = new Uint8ClampedArray(4);
+    const refracted = new Uint8ClampedArray(4);
+    writeCanvasWallPixel(straight, 0, 6, 2, 1);
+    expect(writeCanvasLiquidRefractedWallPixel(
+      refracted, 0, 6, 2, 1, RenderOptics.Aqueous, 1, 0,
+    )).toBe(true);
+    expect([...refracted]).not.toEqual([...straight]);
+    expect(refracted[3]).toBe(straight[3]);
+  });
+
+  it('gives a flat pool one coherent lens shift while molten remains an exact no-op', () => {
+    const target = new Uint8ClampedArray([11, 22, 33, 44]);
+    expect(writeCanvasLiquidRefractedWallPixel(
+      target, 0, 6, 1, 1, RenderOptics.Aqueous,
+    )).toBe(true);
+    expect(target[3]).toBe(248);
+    const molten = new Uint8ClampedArray([11, 22, 33, 44]);
+    expect(writeCanvasLiquidRefractedWallPixel(
+      molten, 0, 6, 1, 1, RenderOptics.Molten,
+    )).toBe(false);
+    expect([...molten]).toEqual([11, 22, 33, 44]);
   });
 });

@@ -28,8 +28,10 @@ import { RenderPhase, RenderProfile } from '../src/renderer/render-profile';
 import { RenderTrait } from '../src/renderer/render-traits';
 import { compositePixel } from '../src/renderer/rgba-composite';
 import {
+  CANVAS_LIQUID_REFRACTION_LOOKUP_BYTES, writeCanvasLiquidRefractedWallPixel,
   writeCanvasRefractedWallPixel, writeCanvasWallPixel,
 } from '../src/renderer/canvas-wall-style';
+import { RenderOptics } from '../src/renderer/render-optics';
 
 const width = 612;
 const height = 384;
@@ -296,6 +298,7 @@ console.log(JSON.stringify({
     runtimeKnownScratchBytes: solidPixels.byteLength + liquidPixels.byteLength
       + liquidSurfaceScratch.rowBytes.byteLength
       + energyCore.byteLength + energyGlow.byteLength + traitRgb.byteLength + traitClock.byteLength,
+    liquidRefractionLookupBytes: CANVAS_LIQUID_REFRACTION_LOOKUP_BYTES,
     diagnosticScratchBytes: traitCompositePixels.byteLength + denseTranslucentPixels.byteLength
       + localizedEmissionMaterials.byteLength + localizedEmission.allocatedByteLength,
     atmosphereRelief: sample(() => {
@@ -399,6 +402,29 @@ console.log(JSON.stringify({
       for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) {
         writeCanvasRefractedWallPixel(
           translucentBackdropPixels, (y * width + x) * 4, 6, x, y, Material.Glass,
+        );
+      }
+      translucentBackdropChecksum = translucentBackdropPixels[0]
+        + translucentBackdropPixels[translucentBackdropPixels.length - 4];
+    }),
+    liquidBackdropStraightWorstCase: sample(() => {
+      translucentBackdropPixels.set(translucentBackdropSeed);
+      for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) {
+        writeCanvasWallPixel(
+          translucentBackdropPixels, (y * width + x) * 4, 6, x, y,
+        );
+      }
+      translucentBackdropChecksum = translucentBackdropPixels[0]
+        + translucentBackdropPixels[translucentBackdropPixels.length - 4];
+    }),
+    liquidBackdropRefractionWorstCase: sample(() => {
+      translucentBackdropPixels.set(translucentBackdropSeed);
+      for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) {
+        const edgeX = (x & 7) === 0 ? 1 : 0;
+        const edgeY = (y & 7) === 0 ? 1 : 0;
+        writeCanvasLiquidRefractedWallPixel(
+          translucentBackdropPixels, (y * width + x) * 4, 6, x, y,
+          RenderOptics.Aqueous, edgeX, edgeY,
         );
       }
       translucentBackdropChecksum = translucentBackdropPixels[0]

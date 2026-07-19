@@ -446,6 +446,10 @@ float triangleSlope(float value, float period) {
   float phase = mod(mod(value, period) + period, period);
   return mix(4.0 / period, -4.0 / period, step(period * 0.5, phase));
 }
+float triangleWave(float value, float period) {
+  float phase = fract(value / period);
+  return 1.0 - abs(phase * 2.0 - 1.0) * 2.0;
+}
 vec3 solidReliefParameters(float optics, float profile) {
   if (optics == 7.0 || profile == 1.0) return vec3(0.0);
   if (optics == 8.0) return vec3(2.0, 1.0, 7.0);
@@ -685,6 +689,7 @@ void main() {
   float alpha;
   vec3 color;
   float liquidLightResponse = 0.0;
+  vec2 liquidBackdropOffset = vec2(0.0);
   if (wallOnly > 0.5) {
     alpha = smoothstep(0.30, 0.70, density) * 0.96;
     color = base * wallPattern(wall, fieldPosition) * (0.76 + diffuse * 0.24);
@@ -815,6 +820,28 @@ void main() {
       -(semanticSlope.y + volumeSlope.y + liquidSpeciesSlope.y * 0.18) * 1.65,
       0.88
     ));
+    // Reuse the field-owned optical normal to bend only a coexisting native
+    // wall's analytic pattern. The offset is world-cell bounded and molten or
+    // emissive liquids remain exact no-ops in the final backdrop branch.
+    if (wall > 0.5 && uTranslucentBackdropRefraction > 0.5
+      && family == 2.0 && !materialEmissive) {
+      vec2 liquidBackdropSlope = semanticSlope + volumeSlope;
+      vec2 liquidBackdropRawOffset = aqueous > 0.5 ? vec2(2.0, -1.0)
+        : (oily > 0.5 ? vec2(-1.0, 1.0)
+        : (corrosive > 0.5 ? vec2(2.0, 1.0) : vec2(1.0, 0.0)));
+      if (dot(liquidBackdropSlope, liquidBackdropSlope) > 0.0004) {
+        float liquidRefractionStrength = 2.6 + aqueous * 0.55 - oily * 0.25 + corrosive * 0.25;
+        vec2 liquidBackdropNormal = normalize(vec3(
+          -liquidBackdropSlope.x * 1.65, -liquidBackdropSlope.y * 1.65, 0.88
+        )).xy;
+        liquidBackdropRawOffset += liquidBackdropNormal * liquidRefractionStrength
+          * mix(1.0, 0.72, cohesiveLiquidInterior);
+      }
+      liquidBackdropRawOffset = clamp(liquidBackdropRawOffset, vec2(-3.0), vec2(3.0))
+        * (1.0 - molten);
+      liquidBackdropOffset = sign(liquidBackdropRawOffset)
+        * floor(abs(liquidBackdropRawOffset) + vec2(0.5));
+    }
     vec3 liquidLightDirection = normalize(vec3(-0.48, -0.68, 0.78));
     vec3 liquidFillDirection = normalize(vec3(0.62, 0.24, 0.72));
     float liquidDiffuse = 0.54
@@ -1157,14 +1184,22 @@ void main() {
   float compositeAlpha = alpha;
   if (wall > 0.5 && wallOnly < 0.5) {
     float backgroundAlpha = smoothstep(0.30, 0.70, wallSurface.x) * 0.94;
-    float backdropPattern = wallPattern(wall, fieldPosition);
     float exactRefractor = (material == 12.0 || material == 24.0) ? 1.0 : 0.0;
     float refractedInterior = uTranslucentBackdropRefraction * exactRefractor
       * (1.0 - step(0.5, abs(optics - 12.0))) * step(0.20, density)
       * step(0.72, wallSurface.x) * (1.0 - surfaceOnly);
-    backdropPattern = mix(
-    backdropPattern, refractedWallPattern(wall, fieldPosition, material, shape.yz), refractedInterior
-    );
+    float refractedLiquid = uTranslucentBackdropRefraction
+      * (family == 2.0 ? 1.0 : 0.0) * (materialEmissive ? 0.0 : 1.0)
+      * step(0.20, volume) * step(0.72, wallSurface.x)
+      * step(0.20, abs(liquidBackdropOffset.x) + abs(liquidBackdropOffset.y));
+    float backdropPattern;
+    if (refractedInterior > 0.5) {
+      backdropPattern = refractedWallPattern(wall, fieldPosition, material, shape.yz);
+    } else if (refractedLiquid > 0.5) {
+      backdropPattern = wallPattern(wall, fieldPosition + liquidBackdropOffset);
+    } else {
+      backdropPattern = wallPattern(wall, fieldPosition);
+    }
     premultiplied += wallColor(wall) * backdropPattern * backgroundAlpha * (1.0 - compositeAlpha);
     compositeAlpha += backgroundAlpha * (1.0 - compositeAlpha);
   }

@@ -1,4 +1,5 @@
 import { Material } from '../shared/materials';
+import { RenderOptics } from './render-optics';
 
 const WALL_COLORS: Readonly<Record<number, readonly [number, number, number]>> = {
   1: [125, 139, 150], 2: [91, 111, 139], 3: [191, 130, 60], 6: [68, 145, 170],
@@ -6,6 +7,7 @@ const WALL_COLORS: Readonly<Record<number, readonly [number, number, number]>> =
   15: [205, 191, 91], 16: [68, 80, 91],
 };
 const DEFAULT_WALL_COLOR = [103, 105, 111] as const;
+export const CANVAS_LIQUID_REFRACTION_LOOKUP_BYTES = 0;
 
 /** Writes one native-wall backdrop while allowing only its procedural pattern coordinate to move. */
 export function writeCanvasWallPixel(
@@ -66,6 +68,38 @@ export function writeCanvasRefractedWallPixel(
   return true;
 }
 
+/**
+ * Rewrites only a coexisting wall's procedural pattern through a supported
+ * non-emissive liquid surface. Phase-categorical neighbours supply the outer
+ * slope on top of one coherent family-specific lens displacement. Dense
+ * interiors therefore bend as a stable body instead of sliding the discrete
+ * wall pattern in visible tiles. Native wall ID, wall alpha, liquid alpha, and
+ * both semantic planes remain unchanged.
+ */
+export function writeCanvasLiquidRefractedWallPixel(
+  target: Uint8ClampedArray,
+  offset: number,
+  wall: number,
+  x: number,
+  y: number,
+  optics: RenderOptics,
+  edgeX = 0,
+  edgeY = 0,
+): boolean {
+  if (wall === 0 || optics === RenderOptics.Molten) return false;
+  const strength = optics === RenderOptics.Aqueous || optics === RenderOptics.Corrosive
+    ? 3 : 2;
+  const coherentX = optics === RenderOptics.Aqueous || optics === RenderOptics.Corrosive
+    ? 2 : optics === RenderOptics.Oily ? -1 : 1;
+  const coherentY = optics === RenderOptics.Aqueous ? -1
+    : optics === RenderOptics.Oily || optics === RenderOptics.Corrosive ? 1 : 0;
+  const shiftX = clampShift(coherentX + edgeX * strength);
+  const shiftY = clampShift(coherentY + edgeY * strength);
+  if (shiftX === 0 && shiftY === 0) return false;
+  writeCanvasWallPixel(target, offset, wall, x, y, x + shiftX, y + shiftY);
+  return true;
+}
+
 export function canvasWallPatternLight(wall: number, x: number, y: number): number {
   if (wall === 6) {
     // One continuous wall ID carries an asymmetric calibration-card pattern.
@@ -91,6 +125,7 @@ export function canvasWallPatternLight(wall: number, x: number, y: number): numb
 }
 
 function clampByte(value: number): number { return Math.max(0, Math.min(255, value)); }
+function clampShift(value: number): number { return Math.max(-3, Math.min(3, value)); }
 function positiveModulo(value: number, divisor: number): number {
   return ((value % divisor) + divisor) % divisor;
 }

@@ -81,6 +81,13 @@ export function applyRenderLabScene(simulation: SimulationBackend): void {
   // Exact split capsule: deterministic curved liquid endcaps plus an unlike-
   // species seam, isolated from the stochastic ellipses and wavy columns.
   plot.splitCapsule(266, 160, 74, 25, 12, 302, Material.Water, Material.Oil);
+  // Matched native-wall calibration cards stay wholly inside the exact capsule
+  // shoulders while leaving the unlike-liquid seam on its original neutral
+  // backdrop. Water and Oil may bend only the analytic pattern coordinate; the
+  // contour, species interface, wall ID, and both semantic planes remain
+  // authoritative and independently testable.
+  plot.wallPatternRect(278, 160, 18, 25, 6);
+  plot.wallPatternRect(309, 160, 19, 25, 6);
 
   // Contact capsules keep unlike materials exclusive while exercising one
   // shared curved phase silhouette and a deliberately curved internal seam.
@@ -107,6 +114,12 @@ export function applyRenderLabScene(simulation: SimulationBackend): void {
   liquids.forEach((material, column) => {
     plot.wavyColumn(205 + column * 39, 194, 38, 151, material, 503 + column * 7);
   });
+  // Authoritative Lava plus one reconstructed empty pinhole is an exact optical
+  // no-op control. It catches accidental inheritance of generic liquid optics
+  // where the density field cannot prove molten/emissive species ownership.
+  plot.rect(329, 220, 22, 22, Material.Lava, 1, 0);
+  plot.eraseRect(340, 231, 1, 1);
+  plot.wallPatternRect(329, 220, 22, 22, 6);
   plot.rect(202, 344, 160, 8, Material.Wall, 1, 541);
 
   // Profile matrix: six compact rows expose every family plus dedicated neutral

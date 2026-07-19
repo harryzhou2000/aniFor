@@ -73,6 +73,14 @@ describe('render lab scene', () => {
     expect(first.cells()[304 * 612 + 501]).toBe(Material.Empty);
     expect(first.walls()[172 * 612 + 128]).not.toBe(0);
     expect(first.walls()[172 * 612 + 160]).not.toBe(0);
+    expect(first.cells()[172 * 612 + 286]).toBe(Material.Water);
+    expect(first.cells()[172 * 612 + 314]).toBe(Material.Oil);
+    expect(first.walls()[172 * 612 + 286]).not.toBe(0);
+    expect(first.walls()[172 * 612 + 314]).not.toBe(0);
+    expect(first.cells()[230 * 612 + 339]).toBe(Material.Lava);
+    expect(first.cells()[231 * 612 + 340]).toBe(Material.Empty);
+    expect(first.walls()[230 * 612 + 339]).not.toBe(0);
+    expect(first.walls()[231 * 612 + 340]).not.toBe(0);
     expect(first.walls()[229 * 612 + 405]).toBe(0);
     expect(first.walls()[229 * 612 + 445]).not.toBe(0);
     expect(first.walls()[229 * 612 + 525]).not.toBe(0);
