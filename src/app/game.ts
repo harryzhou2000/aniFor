@@ -92,6 +92,11 @@ export class Game {
       onPause: () => { this.paused = !this.paused; },
       onEraseMode: (erase) => { this.eraseMode = erase; },
       onPowderRenderStyle: (style) => { this.renderer.setPowderRenderStyle(style); },
+      onRenderScale: (scale) => {
+        const url = new URL(location.href);
+        url.searchParams.set('renderScale', String(scale));
+        location.assign(url.href);
+      },
       canConfigureSource: (source, target) => this.simulation.canConfigureSource?.(source, target) ?? false,
       onSaveFile: () => this.downloadWorldFile(),
       onOpenFile: (file) => this.openWorldFile(file),

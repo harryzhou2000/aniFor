@@ -93,6 +93,7 @@ describe('Canvas 2x phase contour scratch', () => {
   it('creates real four- and eight-times contour samples with matching strides', () => {
     for (const scale of [4, 8] as const) {
       const scratch = new CanvasPhaseContourScratch(scale);
+      expect(scratch.allocatedByteLength).toBe(scale === 4 ? 107_552 : 402_464);
       const value = fixture();
       paint(value, 2, 2, Material.Sand);
       scratch.rasterize(value.input);
@@ -107,6 +108,27 @@ describe('Canvas 2x phase contour scratch', () => {
         }
       }
       expect(alphaLevels.size).toBeGreaterThan(2);
+    }
+  });
+
+  it('renders one Grains cell as one exact axis-aligned square at true 8x', () => {
+    const scale = 8;
+    const scratch = new CanvasPhaseContourScratch(scale);
+    const value = fixture();
+    paint(value, 2, 2, Material.Sand);
+    scratch.rasterize({ ...value.input, powderStyle: 'grains' });
+
+    for (let outputY = 0; outputY < value.input.worldHeight * scale; outputY++) {
+      for (let outputX = 0; outputX < value.input.worldWidth * scale; outputX++) {
+        const output = outputY * scratch.outputStride + outputX;
+        const inside = outputX >= 2 * scale && outputX < 3 * scale
+          && outputY >= 2 * scale && outputY < 3 * scale;
+        expect(scratch.coverage[output], `${outputX},${outputY}`).toBe(inside ? 255 : 0);
+        expect(scratch.pixels[output * 4 + 3], `${outputX},${outputY} alpha`).toBe(inside ? 255 : 0);
+        expect(scratch.ownerMaterials[output], `${outputX},${outputY} owner`).toBe(
+          inside ? Material.Sand : Material.Empty,
+        );
+      }
     }
   });
 
@@ -307,8 +329,7 @@ describe('Canvas 2x phase contour scratch', () => {
     expect(cellCoverage(smooth, 4, 4)).toBeGreaterThan(0);
   });
 
-  it('never erases Local coverage from occupied Clay and Concrete columns', () => {
-    const scale = 4;
+  it('never erases Local coverage from occupied Clay and Concrete columns at 4x or 8x', () => {
     const width = 24;
     const height = 24;
     const value = fixture(width, height);
@@ -327,18 +348,20 @@ describe('Canvas 2x phase contour scratch', () => {
 
     const field = new PowderSurfaceField(width, height, lookups.styleBytes);
     field.update(value.materials, value.stability, value.walls);
-    const local = new CanvasPhaseContourScratch(scale);
-    local.rasterize({ ...value.input, powderStyle: 'local' });
-    const smooth = new CanvasPhaseContourScratch(scale);
-    smooth.rasterize({ ...value.input, powderSurface: field.bytes, powderStyle: 'smooth' });
+    for (const scale of [4, 8] as const) {
+      const local = new CanvasPhaseContourScratch(scale);
+      local.rasterize({ ...value.input, powderStyle: 'local' });
+      const smooth = new CanvasPhaseContourScratch(scale);
+      smooth.rasterize({ ...value.input, powderSurface: field.bytes, powderStyle: 'smooth' });
 
-    for (let cellY = 0; cellY < height; cellY++) for (let cellX = 0; cellX < width; cellX++) {
-      if (value.materials[cellY * width + cellX] === Material.Empty) continue;
-      for (let subY = 0; subY < scale; subY++) for (let subX = 0; subX < scale; subX++) {
-        const output = (cellY * scale + subY) * smooth.outputStride + cellX * scale + subX;
-        expect(
-          smooth.coverage[output], `${cellX},${cellY}:${subX},${subY}`,
-        ).toBeGreaterThanOrEqual(Math.floor(local.coverage[output] * 0.38));
+      for (let cellY = 0; cellY < height; cellY++) for (let cellX = 0; cellX < width; cellX++) {
+        if (value.materials[cellY * width + cellX] === Material.Empty) continue;
+        for (let subY = 0; subY < scale; subY++) for (let subX = 0; subX < scale; subX++) {
+          const output = (cellY * scale + subY) * smooth.outputStride + cellX * scale + subX;
+          expect(
+            smooth.coverage[output], `${scale}x ${cellX},${cellY}:${subX},${subY}`,
+          ).toBeGreaterThanOrEqual(Math.floor(local.coverage[output] * 0.38));
+        }
       }
     }
   });

@@ -157,11 +157,14 @@ export class MaterialRenderer {
     this.webGLOutputScale = safeWebGLOutputScale(
       simulation.width, simulation.height, this.requestedOutputScale,
     );
-    // Keep the compatibility canvas at a bounded 4x ceiling while an 8x WebGL
-    // candidate initializes. This avoids duplicating 60 MiB surfaces at startup;
-    // explicit forced-Canvas mode remains a true 8x diagnostic.
+    // A true 8x WebGL target already approaches 60 MiB. Keep its temporary
+    // compatibility view at 2x so cold promotion does not also retain two 4x
+    // Canvas colour targets. Explicit forced-Canvas mode remains a true 8x
+    // diagnostic; ordinary 1x/2x/4x requests use the bounded fallback policy.
+    const fallbackRequestedScale = !forceCanvas2D() && this.requestedOutputScale === 8
+      ? 2 : this.requestedOutputScale;
     this.outputScale = forceCanvas2D() ? this.requestedOutputScale : safeWebGLOutputScale(
-      simulation.width, simulation.height, this.requestedOutputScale,
+      simulation.width, simulation.height, fallbackRequestedScale,
       CANVAS_FALLBACK_PIXEL_BUDGET, CANVAS_FALLBACK_DIMENSION_BUDGET,
     );
     this.contourScratch = new CanvasPhaseContourScratch(
@@ -432,7 +435,8 @@ export class MaterialRenderer {
     this.fallbackSurface.height = 0;
     for (const canvas of [
       this.surface, this.liquidSurface, this.smokeSurface, this.fireSurface,
-      this.atmosphereSurface, this.emissionSurface,
+      this.atmosphereSurface, this.emissionSurface, this.contourSurface,
+      this.contourChunkSurface,
     ]) {
       canvas.width = 0;
       canvas.height = 0;
@@ -445,6 +449,7 @@ export class MaterialRenderer {
     this.atmospherePixels = undefined;
     this.emissionPixels = undefined;
     this.liquidSurfaceScratch = undefined;
+    this.contourChunkPixels = undefined;
   }
 
   private syncFallbackVolumeSurfaces(): void {

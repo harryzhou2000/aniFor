@@ -17,6 +17,7 @@ const scaleEightOnly = process.argv.includes('--scale-eight-only');
 const modes = scaleEightOnly ? ['webgl'] : process.argv.includes('--canvas-only') ? ['canvas2d']
   : process.argv.includes('--webgl-only') ? ['webgl'] : ['canvas2d', 'webgl'];
 const visualOnly = process.argv.includes('--visual-only');
+const layoutOnly = process.argv.includes('--layout-only');
 const screenshotRequest = process.argv.find((argument) => argument.startsWith('--screenshot='))?.slice('--screenshot='.length);
 
 async function main() {
@@ -112,6 +113,13 @@ async function auditMode(mode) {
         && Boolean(window.__ANIFOR_INPUT_AUDIT__ && document.documentElement);
     })()`), 15_000, `input audit API (${mode})`);
     await waitFor(() => evaluate(cdp, `window.__ANIFOR_INPUT_AUDIT__.backend().backend === ${JSON.stringify(mode)}`), 15_000, `${mode} backend`);
+    if (layoutOnly) {
+      const layout = await metrics(cdp);
+      assertGeometry(layout, `${mode} layout-only`);
+      assertToolboxGeometry(layout, `${mode} layout-only`, 68);
+      cdp.close();
+      return { backend: mode, layout, browserErrors: errors.length };
+    }
     const canonicalFixture = await evaluate(cdp, `({
       status: document.querySelector('.status')?.textContent,
       occupied: window.__ANIFOR_INPUT_AUDIT__.occupiedCells(),
@@ -429,25 +437,7 @@ async function auditMode(mode) {
       cdp, zoomedGrainCaptures.capture.data, blankCaptures.capture.data,
       canonicalCaptures.canvasRect, zoomedGrainAnchor, zoomedGrainView.zoom,
     );
-    const powderColumnSemanticCells = [];
-    const addColumnCells = (minimumX, maximumX, minimumY, maximumY, holes) => {
-      for (let y = minimumY; y <= maximumY; y++) for (let x = minimumX; x <= maximumX; x++) {
-        const hole = holes.find((candidate) => x >= candidate.x0 && x <= candidate.x1
-          && y >= candidate.y0 && y <= candidate.y1);
-        powderColumnSemanticCells.push({
-          x, y, occupied: !hole,
-          deepHole: Boolean(hole && x === hole.deepX && y > hole.y0 && y < hole.y1),
-        });
-      }
-    };
-    addColumnCells(143, 153, 27, 137, [
-      { x0: 143, x1: 145, y0: 61, y1: 64, deepX: 144 },
-      { x0: 151, x1: 153, y0: 91, y1: 95, deepX: 152 },
-    ]);
-    addColumnCells(158, 168, 39, 137, [
-      { x0: 158, x1: 160, y0: 72, y1: 75, deepX: 159 },
-      { x0: 166, x1: 168, y0: 108, y1: 112, deepX: 167 },
-    ]);
+    const powderColumnSemanticCells = powderColumnCells();
     const powderColumnSemanticSupport = await sampleSemanticCellSupport(
       cdp, {
         local: powderStyleCaptures.local.capture.data,
@@ -1689,12 +1679,121 @@ async function auditRenderScaleEight(cdp, dpr) {
   assertCanvasRectsEqual(
     reference.canvas, geometry.canvas, 'renderScale=2/renderScale=8 CSS geometry',
   );
+  const resolutionControl = await evaluate(cdp, `(() => {
+    const select = document.querySelector('.render-scale-select');
+    if (!(select instanceof HTMLSelectElement)) return { options: [], selected: 0 };
+    return {
+      options: [...select.options].map((option) => Number(option.value)),
+      selected: Number(select.value),
+    };
+  })()`);
+  assert(JSON.stringify(resolutionControl.options) === JSON.stringify([1, 2, 4, 8])
+    && resolutionControl.selected === 8,
+  `renderScale=8 control did not expose/select true 8x (${JSON.stringify(resolutionControl)})`);
+
+  const smoothCapture = await captureSettledPage(cdp, 'renderScale=8 smooth powder framebuffer');
+  const styleCaptures = { smooth: smoothCapture.capture.data };
+  for (const style of ['local', 'grains']) {
+    await evaluate(cdp, `(() => {
+      const button = document.querySelector('[data-powder-render-style="${style}"]');
+      if (!(button instanceof HTMLButtonElement)) throw new Error('Missing powder style ${style}');
+      button.click();
+      return true;
+    })()`);
+    styleCaptures[style] = (await captureSettledPage(
+      cdp, `renderScale=8 ${style} powder framebuffer`, 450,
+    )).capture.data;
+  }
+  const grainAnchor = worldClient(geometry.canvas, { x: 190.5, y: 176.5 });
+  for (let step = 0; step < 4; step++) await cdp.send('Input.dispatchMouseEvent', {
+    type: 'mouseWheel', x: grainAnchor.x, y: grainAnchor.y,
+    deltaX: 0, deltaY: -240, modifiers: 0,
+  });
+  const grainView = await waitFor(() => evaluate(cdp, `(() => {
+    const view = window.__ANIFOR_INPUT_AUDIT__.viewState();
+    return view.zoom >= 4.9 ? view : false;
+  })()`), 5_000, 'renderScale=8 high-zoom grain view');
+  const zoomedGrainCapture = await captureSettledPage(
+    cdp, 'renderScale=8 high-zoom grain framebuffer', 450,
+  );
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.resetView(); true');
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.clear(); true');
+  const blankCapture = await captureSettledPage(cdp, 'renderScale=8 blank framebuffer');
+  assertCanvasRectsEqual(
+    geometry.canvas, blankCapture.canvasRect, 'renderScale=8 scene/blank CSS geometry',
+  );
+  const powderSupport = await sampleSemanticCellSupport(
+    cdp, { local: styleCaptures.local, smooth: styleCaptures.smooth },
+    blankCapture.capture.data, geometry.canvas, powderColumnCells(),
+  );
+  assert(powderSupport.local.occupiedRecall === 1
+    && powderSupport.smooth.occupiedRecall === 1
+    && powderSupport.local.missingOccupiedCells.length === 0
+    && powderSupport.smooth.missingOccupiedCells.length === 0
+    && powderSupport.local.minimumOccupiedSignal > 8
+    && powderSupport.smooth.minimumOccupiedSignal > 8,
+  `renderScale=8 Smooth dropped occupied Clay/Concrete cells (${JSON.stringify(powderSupport)})`);
+  assert(powderSupport.local.deepHoleLeak <= 0.10
+    && powderSupport.smooth.deepHoleLeak <= 0.10,
+  `renderScale=8 powder styling filled authored column holes (${JSON.stringify(powderSupport)})`);
+  const squareGrain = (await samplePageRegions(
+    cdp, styleCaptures.grains,
+    [{ name: 'squareGrain8x', x: 190.5, y: 176.5, radiusX: 1.5, radiusY: 1.5,
+      topology: true, silhouette: true }],
+    blankCapture.capture.data, blankCapture.reference.data, geometry.canvas,
+  ))[0];
+  const zoomedSquareGrain = await sampleZoomedSquareGrain(
+    cdp, zoomedGrainCapture.capture.data, blankCapture.capture.data,
+    geometry.canvas, grainAnchor, grainView.zoom,
+  );
+  assert(squareGrain.dominantComponent >= 0.95 && squareGrain.rectangularFill >= 0.92,
+    `renderScale=8 Grains cell fragmented at fit view (${JSON.stringify(squareGrain)})`);
+  assert(zoomedSquareGrain.expectedPixels >= 5
+    && zoomedSquareGrain.boundingAspect >= 0.90
+    && zoomedSquareGrain.boundingAspect <= 1.10
+    && zoomedSquareGrain.rectangularFill >= 0.94
+    && zoomedSquareGrain.widthRatio >= 0.82 && zoomedSquareGrain.widthRatio <= 1.18
+    && zoomedSquareGrain.heightRatio >= 0.82 && zoomedSquareGrain.heightRatio <= 1.18,
+  `renderScale=8 Grains cell was not an axis-aligned square (${JSON.stringify(zoomedSquareGrain)})`);
   return {
     requested: backend.requestedOutputScale,
     effective: backend.outputScale,
     backing: `${geometry.backing.width}x${geometry.backing.height}`,
     cssCanvas: `${round(geometry.canvas.width, 2)}x${round(geometry.canvas.height, 2)}`,
+    resolutionControl,
+    powderSupport,
+    squareGrain,
+    zoomedSquareGrain,
   };
+}
+
+function powderColumnCells() {
+  const cells = new Map();
+  const add = (minimumX, maximumX, minimumY, maximumY, holes) => {
+    for (let y = minimumY; y <= maximumY; y++) for (let x = minimumX; x <= maximumX; x++) {
+      const hole = holes.find((candidate) => x >= candidate.x0 && x <= candidate.x1
+        && y >= candidate.y0 && y <= candidate.y1);
+      cells.set(`${x},${y}`, {
+        x, y, occupied: !hole,
+        deepHole: Boolean(hole && x === hole.deepX && y > hole.y0 && y < hole.y1),
+      });
+    }
+  };
+  add(143, 153, 27, 137, [
+    { x0: 143, x1: 145, y0: 61, y1: 64, deepX: 144 },
+    { x0: 151, x1: 153, y0: 91, y1: 95, deepX: 152 },
+  ]);
+  add(158, 168, 39, 137, [
+    { x0: 158, x1: 160, y0: 72, y1: 75, deepX: 159 },
+    { x0: 166, x1: 168, y0: 108, y1: 112, deepX: 167 },
+  ]);
+  // The authored foot ledges are deliberately wider than either column. They
+  // are one of the fine structures most likely to disappear under a wide
+  // powder field, so include their exact final ownership in the cell proof.
+  for (let y = 132; y <= 137; y++) for (let x = 140; x <= 171; x++) {
+    cells.set(`${x},${y}`, { x, y, occupied: true, deepHole: false });
+  }
+  return [...cells.values()];
 }
 
 async function auditNativeSemantics(cdp, mode, dpr, screenshot) {
@@ -2342,7 +2441,7 @@ async function screenWorld(cdp, point) {
   return evaluate(cdp, `window.__ANIFOR_INPUT_AUDIT__.screenToWorld(${point.x}, ${point.y})`);
 }
 
-async function waitForStablePageCaptures(cdp, label) {
+async function waitForStablePageCaptures(cdp, label, timeoutMs = 8_000) {
   let previous;
   let stableSamples = 0;
   return waitFor(async () => {
@@ -2365,11 +2464,31 @@ async function waitForStablePageCaptures(cdp, label) {
     return stableSamples >= 2
       ? { capture, reference: reference.capture, canvasRect, referenceCanvasRect: reference.canvasRect }
       : false;
-  }, 8_000, label);
+  }, timeoutMs, label);
 }
 
-async function waitForStablePageCapture(cdp, label) {
-  return waitForStablePageCaptures(cdp, label);
+async function waitForStablePageCapture(cdp, label, timeoutMs) {
+  return waitForStablePageCaptures(cdp, label, timeoutMs);
+}
+
+async function captureSettledPage(cdp, label, delayMs = 900) {
+  // SwiftShader's 15M-fragment 8x target can dither otherwise identical page
+  // captures by a byte, so exact whole-frame equality is not a useful settle
+  // criterion here. Wait through every staggered 12 Hz field rebuild, then take
+  // two bounded captures; downstream blank-differenced material metrics tolerate
+  // sub-byte noise and prove the actual fixture instead.
+  await sleep(delayMs);
+  const capture = await cdp.send('Page.captureScreenshot', { format: 'png', fromSurface: true });
+  await sleep(150);
+  const reference = await cdp.send('Page.captureScreenshot', { format: 'png', fromSurface: true });
+  const canvasRect = await evaluate(cdp, `(() => {
+    const canvas = document.querySelector('.world-canvas');
+    if (!(canvas instanceof HTMLCanvasElement)) return undefined;
+    const rect = canvas.getBoundingClientRect();
+    return { left: rect.left, top: rect.top, width: rect.width, height: rect.height };
+  })()`);
+  if (!canvasRect) throw new Error(`${label}: world canvas unavailable`);
+  return { capture, reference, canvasRect, referenceCanvasRect: canvasRect };
 }
 
 async function captureStableBlankPage(cdp, mode) {
@@ -2849,23 +2968,34 @@ async function sampleSemanticCellSupport(
       let emptyVisible = 0;
       let deepEmpty = 0;
       let deepEmptyVisible = 0;
+      const missingOccupiedCells = [];
+      let minimumOccupiedSignal = 255;
       for (const cell of cells) {
-        const pixelX = Math.max(0, Math.min(images[name].naturalWidth - 1, Math.floor(
-          (bounds.left + (cell.x + 0.5) * worldScaleX) * pageScaleX,
-        )));
-        const pixelY = Math.max(0, Math.min(images[name].naturalHeight - 1, Math.floor(
-          (bounds.top + (cell.y + 0.5) * worldScaleY) * pageScaleY,
-        )));
-        const rendered = context.getImageData(pixelX, pixelY, 1, 1).data;
-        const blank = baseline.getImageData(pixelX, pixelY, 1, 1).data;
-        const visible = Math.max(
-          Math.abs(rendered[0] - blank[0]),
-          Math.abs(rendered[1] - blank[1]),
-          Math.abs(rendered[2] - blank[2]),
-        ) > 8;
+        // One world cell is only ~1.45 screenshot pixels at the fit view. A
+        // single floored centre coordinate can therefore land on an AA fringe.
+        // Sample a small inset cross that remains strictly inside the semantic
+        // cell and use its strongest blank-differenced signal.
+        let signal = 0;
+        for (const [offsetX, offsetY] of [[0, 0], [-0.22, 0], [0.22, 0], [0, -0.22], [0, 0.22]]) {
+          const pixelX = Math.max(0, Math.min(images[name].naturalWidth - 1, Math.floor(
+            (bounds.left + (cell.x + 0.5 + offsetX) * worldScaleX) * pageScaleX,
+          )));
+          const pixelY = Math.max(0, Math.min(images[name].naturalHeight - 1, Math.floor(
+            (bounds.top + (cell.y + 0.5 + offsetY) * worldScaleY) * pageScaleY,
+          )));
+          const rendered = context.getImageData(pixelX, pixelY, 1, 1).data;
+          const blank = baseline.getImageData(pixelX, pixelY, 1, 1).data;
+          signal = Math.max(signal,
+            Math.abs(rendered[0] - blank[0]),
+            Math.abs(rendered[1] - blank[1]),
+            Math.abs(rendered[2] - blank[2]));
+        }
+        const visible = signal > 8;
         if (cell.occupied) {
           occupied++;
           if (visible) occupiedVisible++;
+          else if (missingOccupiedCells.length < 64) missingOccupiedCells.push([cell.x, cell.y]);
+          minimumOccupiedSignal = Math.min(minimumOccupiedSignal, signal);
         } else {
           empty++;
           if (visible) emptyVisible++;
@@ -2878,6 +3008,8 @@ async function sampleSemanticCellSupport(
       result[name] = {
         occupiedCells: occupied,
         occupiedRecall: Math.round(occupiedVisible / Math.max(1, occupied) * 1000) / 1000,
+        missingOccupiedCells,
+        minimumOccupiedSignal,
         emptyCells: empty,
         emptyLeak: Math.round(emptyVisible / Math.max(1, empty) * 1000) / 1000,
         deepHoleCells: deepEmpty,

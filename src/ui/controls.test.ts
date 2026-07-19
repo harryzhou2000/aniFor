@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { MATERIALS, Material } from '../shared/materials';
-import { groupMaterials, POWDER_RENDER_STYLE_OPTIONS, sourceRejectionLabel, sourceSelectionLabel, toolCountLabel } from './controls';
+import { groupMaterials, POWDER_RENDER_STYLE_OPTIONS, RENDER_SCALE_OPTIONS, sourceRejectionLabel, sourceSelectionLabel, toolCountLabel } from './controls';
 
 describe('material controls', () => {
   it('groups every brush once in a stable, named category', () => {
@@ -23,6 +23,10 @@ describe('material controls', () => {
       { style: 'local', label: 'Local' },
       { style: 'smooth', label: 'Smooth' },
     ]);
+  });
+
+  it('offers every supported per-cell render resolution, including true 8x', () => {
+    expect(RENDER_SCALE_OPTIONS).toEqual([1, 2, 4, 8]);
   });
 
   it('describes configured source direction without hiding the target', () => {

@@ -1,5 +1,6 @@
 import { MATERIALS, Material, type MaterialCategory, type MaterialInfo } from '../shared/materials';
 import type { PowderRenderStyle } from '../renderer/powder-render-style';
+import { resolveFieldOutputScale, type FieldOutputScale } from '../renderer/render-resolution';
 import { filterTools, isToolAvailable, materialTools, recordRecent, type CatalogTool, type ElementToolInfo, type ToolFilter, type ToolKind } from './tool-catalog';
 
 const FAVORITES_KEY = 'anifortpt-favorite-tools-v1';
@@ -46,6 +47,8 @@ export const POWDER_RENDER_STYLE_OPTIONS = [
   { style: 'smooth', label: 'Smooth' },
 ] as const satisfies ReadonlyArray<{ readonly style: PowderRenderStyle; readonly label: string }>;
 
+export const RENDER_SCALE_OPTIONS = [1, 2, 4, 8] as const satisfies readonly FieldOutputScale[];
+
 const DEFAULT_POWDER_RENDER_STYLE: PowderRenderStyle = 'smooth';
 
 export function groupMaterials(materials: readonly MaterialInfo[] = MATERIALS): readonly MaterialGroup[] {
@@ -90,6 +93,7 @@ export interface ControlsCallbacks {
   onPause(): void;
   onEraseMode(erase: boolean): void;
   onPowderRenderStyle(style: PowderRenderStyle): void;
+  onRenderScale(scale: FieldOutputScale): void;
   canConfigureSource?(source: Material, target: Material): boolean;
   onSaveFile(): Promise<boolean>;
   onOpenFile(file: File): Promise<boolean>;
@@ -110,6 +114,7 @@ export function sourceRejectionLabel(source: Material, target: Material): string
 }
 
 export function mountControls(host: HTMLElement, callbacks: ControlsCallbacks, catalog: readonly CatalogTool[] = materialTools(MATERIALS)): void {
+  const activeRenderScale = resolveFieldOutputScale();
   const tools = document.createElement('nav');
   tools.className = 'palette glass';
   tools.ariaLabel = 'Tool library';
@@ -279,7 +284,16 @@ export function mountControls(host: HTMLElement, callbacks: ControlsCallbacks, c
   const actions = document.createElement('div');
   actions.className = 'actions glass';
   actions.innerHTML = `
-    <label class="brush-size"><span>Brush</span><input aria-label="Brush size" type="range" min="2" max="24" value="7" /></label>
+    <label class="brush-size">
+      <span class="brush-size-heading"><span>Brush</span><span class="render-scale">
+        <span>Detail</span>
+        <select class="render-scale-select" aria-label="Render resolution">
+          ${RENDER_SCALE_OPTIONS.map((scale) => `
+            <option value="${scale}"${scale === activeRenderScale ? ' selected' : ''}>${scale}×</option>`).join('')}
+        </select>
+      </span></span>
+      <input aria-label="Brush size" type="range" min="2" max="24" value="7" />
+    </label>
     <div class="powder-render-style" role="group" aria-label="Powder look">
       <span class="powder-render-style-label">Powder look</span>
       ${POWDER_RENDER_STYLE_OPTIONS.map(({ style, label }) => `
@@ -312,6 +326,11 @@ export function mountControls(host: HTMLElement, callbacks: ControlsCallbacks, c
     });
   }
   callbacks.onPowderRenderStyle(DEFAULT_POWDER_RENDER_STYLE);
+  const renderScale = actions.querySelector<HTMLSelectElement>('.render-scale-select');
+  renderScale?.addEventListener('change', () => {
+    const scale = Number(renderScale.value) as FieldOutputScale;
+    if (scale !== activeRenderScale) callbacks.onRenderScale(scale);
+  });
 
   const brushModes = document.createElement('div');
   brushModes.className = 'brush-modes brush-mode-bar glass';

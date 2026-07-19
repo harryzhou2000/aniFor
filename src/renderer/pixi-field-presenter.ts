@@ -3,6 +3,9 @@ import {
   BufferImageSource,
   Container,
   Filter,
+  Mesh,
+  MeshGeometry,
+  Shader,
   Sprite,
   Texture,
   UniformGroup,
@@ -37,6 +40,20 @@ export interface WebGLPresentationTiming {
 }
 
 const FIELD_VERTEX = `
+in vec2 aPosition;
+in vec2 aUV;
+out vec2 vFieldCoord;
+uniform mat3 uProjectionMatrix;
+uniform mat3 uWorldTransformMatrix;
+uniform mat3 uTransformMatrix;
+void main() {
+  mat3 modelViewProjection = uProjectionMatrix * uWorldTransformMatrix * uTransformMatrix;
+  gl_Position = vec4((modelViewProjection * vec3(aPosition, 1.0)).xy, 0.0, 1.0);
+  vFieldCoord = aUV;
+}
+`;
+
+const FIELD_FILTER_VERTEX = `
 in vec2 aPosition;
 out vec2 vFieldCoord;
 uniform vec4 uOutputFrame;
@@ -1339,34 +1356,54 @@ export class PixiFieldPresenter {
       uSolidCurvatureDepth: { value: 1, type: 'f32' },
       uPowderStyle: { value: powderRenderStyleValue('smooth'), type: 'f32' },
     });
-    const filter = Filter.from({
-      gl: { vertex: FIELD_VERTEX, fragment: FIELD_FRAGMENT, name: 'semantic-field-filter' },
-      resources: {
-        fieldUniforms: this.uniforms,
-        uFieldTexture: this.fieldSource,
-        uFieldSampler: this.fieldSource.style,
-        uWallTexture: this.wallSource,
-        uWallSampler: this.wallSource.style,
-        uAtmosphereTexture: this.atmosphereSource,
-        uAtmosphereSampler: this.atmosphereSource.style,
-        uEmissionTexture: this.emissionSource,
-        uEmissionSampler: this.emissionSource.style,
-        uLiquidTexture: this.liquidSource,
-        uLiquidSampler: this.liquidSource.style,
-        uBoundaryStabilityTexture: this.boundaryStabilitySource,
-        uBoundaryStabilitySampler: this.boundaryStabilitySource.style,
-        uPowderSurfaceTexture: this.powderSurfaceSource,
-        uPowderSurfaceSampler: this.powderSurfaceSource.style,
-        uPaletteTexture: paletteTexture.source,
-        uPaletteSampler: paletteTexture.source.style,
-        uStyleTexture: styleTexture.source,
-        uStyleSampler: styleTexture.source.style,
-      },
-      antialias: 'inherit',
-    });
-    const sprite = new Sprite(fieldTexture);
-    sprite.filters = [filter];
-    this.scene.addChild(sprite);
+    const resources = {
+      fieldUniforms: this.uniforms,
+      uFieldTexture: this.fieldSource,
+      uFieldSampler: this.fieldSource.style,
+      uWallTexture: this.wallSource,
+      uWallSampler: this.wallSource.style,
+      uAtmosphereTexture: this.atmosphereSource,
+      uAtmosphereSampler: this.atmosphereSource.style,
+      uEmissionTexture: this.emissionSource,
+      uEmissionSampler: this.emissionSource.style,
+      uLiquidTexture: this.liquidSource,
+      uLiquidSampler: this.liquidSource.style,
+      uBoundaryStabilityTexture: this.boundaryStabilitySource,
+      uBoundaryStabilitySampler: this.boundaryStabilitySource.style,
+      uPowderSurfaceTexture: this.powderSurfaceSource,
+      uPowderSurfaceSampler: this.powderSurfaceSource.style,
+      uPaletteTexture: paletteTexture.source,
+      uPaletteSampler: paletteTexture.source.style,
+      uStyleTexture: styleTexture.source,
+      uStyleSampler: styleTexture.source.style,
+    };
+    if (outputScale === 8) {
+      // Draw the semantic shader directly on one world-sized quad. A Pixi
+      // Filter first renders its source sprite into an implementation-owned
+      // target even though this shader never samples that source. At true 8x
+      // the redundant target approaches 60 MiB and repeats 15M fragments.
+      const shader = Shader.from({
+        gl: { vertex: FIELD_VERTEX, fragment: FIELD_FRAGMENT, name: 'semantic-field-mesh' },
+        resources,
+      });
+      const geometry = new MeshGeometry({
+        positions: new Float32Array([0, 0, width, 0, width, height, 0, height]),
+        uvs: new Float32Array([0, 0, 1, 0, 1, 1, 0, 1]),
+        indices: new Uint32Array([0, 1, 2, 0, 2, 3]),
+      });
+      this.scene.addChild(new Mesh({ geometry, shader, texture: fieldTexture }));
+    } else {
+      // Keep the established 1x–4x filter response, whose logical source pass
+      // supplies the deliberately broad low-resolution material relief.
+      const filter = Filter.from({
+        gl: { vertex: FIELD_FILTER_VERTEX, fragment: FIELD_FRAGMENT, name: 'semantic-field-filter' },
+        resources,
+        antialias: 'inherit',
+      });
+      const sprite = new Sprite(fieldTexture);
+      sprite.filters = [filter];
+      this.scene.addChild(sprite);
+    }
     this.chunks = new DirtyChunkGrid(width, height, 32, 2);
     this.wallChunks = new DirtyChunkGrid(width, height, 32, 2);
     this.chunks.markAll();
