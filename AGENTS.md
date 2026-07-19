@@ -15,7 +15,7 @@ The non-negotiable contract is:
 - Layout performs one uniform aspect fit; camera zoom/pan performs one presentation transform.
 - Coalesce viewport fitting through `requestAnimationFrame` from the frame `ResizeObserver`, `window.resize`, `visualViewport.resize`, and compact-media changes. A frame can change during an in-place desktop resize without a timely observer delivery; never rely on one resize signal alone.
 - Device pixel ratio affects backing resolution only, never world or CSS coordinate math.
-- The default render backing is 2× per axis (1224×768 for the 612×384 world); use `?renderScale=1` only for A/B diagnosis.
+- The default render backing is 2× per axis (1224×768 for the 612×384 world). `?renderScale=1` remains the low-resolution A/B diagnostic; `?renderScale=4` and `?renderScale=8` request true Canvas/WebGL contour supersampling for high-end visual inspection (2448×1536 and 4896×3072 for the canonical world).
 - Pixi filter `vTextureCoord` is not a world UV. The semantic field shader must use the sprite-local `vFieldCoord` supplied by `FIELD_VERTEX`.
 - Native TPT walls are a separate `bmap`-derived field and texture. Never encode a wall ID as a particle/material ID; particles and walls may coexist at the same world cell and must be composited independently.
 - Simulation tools are neither particles nor walls. Brush tools consume sampled points; vector tools consume raw consecutive grid segments and must explicitly no-op in the point path so they never fall through to the selected particle brush.

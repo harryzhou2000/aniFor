@@ -12,10 +12,14 @@ describe('field render resolution', () => {
     expect(backingSize(10.25, 7.75, 2)).toEqual({ width: 21, height: 16 });
   });
 
-  it('supports explicit one- and two-times diagnostic overrides', () => {
+  it('supports explicit one-, two-, four-, and eight-times diagnostic overrides', () => {
     expect(resolveFieldOutputScale('')).toBe(FIELD_OUTPUT_SCALE);
     expect(resolveFieldOutputScale('?renderScale=1')).toBe(1);
     expect(resolveFieldOutputScale('?renderScale=2')).toBe(2);
+    expect(resolveFieldOutputScale('?renderScale=4')).toBe(4);
+    expect(resolveFieldOutputScale('?renderScale=8')).toBe(8);
+    expect(backingSize(612, 384, 4)).toEqual({ width: 2448, height: 1536 });
+    expect(backingSize(612, 384, 8)).toEqual({ width: 4896, height: 3072 });
     expect(resolveFieldOutputScale('?renderScale=unexpected')).toBe(FIELD_OUTPUT_SCALE);
   });
 });

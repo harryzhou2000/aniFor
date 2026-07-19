@@ -64,4 +64,20 @@ describe('Canvas material-family styling', () => {
     }
     expect(colors.size).toBe(6);
   });
+
+  it('keeps rough-granular albedo variation visible independently of alpha', () => {
+    const output = new Float32Array([0, 0, 0, 191]);
+    let minimum = Infinity;
+    let maximum = -Infinity;
+    for (let index = 0; index < 64; index++) {
+      shadeCanvasMaterial(
+        output, 180, 140, 80, RenderProfile.Granular, RenderOptics.RoughGranular,
+        1, index, 3, index, 0,
+      );
+      minimum = Math.min(minimum, output[1]);
+      maximum = Math.max(maximum, output[1]);
+      expect(output[3]).toBe(191);
+    }
+    expect(maximum - minimum).toBeGreaterThan(24);
+  });
 });

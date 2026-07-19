@@ -1,4 +1,5 @@
 export const FIELD_OUTPUT_SCALE = 2;
+export type FieldOutputScale = 1 | 2 | 4 | 8;
 
 export interface RenderSize { readonly width: number; readonly height: number }
 
@@ -10,8 +11,11 @@ export function backingSize(width: number, height: number, scale = FIELD_OUTPUT_
   };
 }
 
-/** Allows direct 1×/2× A/B testing without changing world or camera math. */
-export function resolveFieldOutputScale(search = globalThis.location?.search ?? ''): 1 | 2 {
+/** Allows direct 1×/2×/4×/8× A/B testing without changing world or camera math. */
+export function resolveFieldOutputScale(search = globalThis.location?.search ?? ''): FieldOutputScale {
   const requested = new URLSearchParams(search).get('renderScale');
-  return requested === '1' ? 1 : requested === '2' ? 2 : FIELD_OUTPUT_SCALE;
+  if (requested === '1' || requested === '2' || requested === '4' || requested === '8') {
+    return Number(requested) as FieldOutputScale;
+  }
+  return FIELD_OUTPUT_SCALE;
 }

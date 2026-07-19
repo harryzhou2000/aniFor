@@ -2,17 +2,16 @@ import {
   phaseContactCompatible,
   hermiteWeight,
   powderBulkWeight,
-  quadraticCoverageWeights,
   roundGrainCoverage,
   type ContactPhase,
 } from './phase-boundary-coverage';
 import { Material } from '../shared/materials';
 import { RenderPhase } from './render-profile';
+import type { FieldOutputScale } from './render-resolution';
 
 export const CANVAS_CONTOUR_CHUNK_SIZE = 32;
 export const CANVAS_CONTOUR_OUTPUT_SCALE = 2;
 const HALO_SIZE = CANVAS_CONTOUR_CHUNK_SIZE + 2;
-const OUTPUT_SIZE = CANVAS_CONTOUR_CHUNK_SIZE * CANVAS_CONTOUR_OUTPUT_SCALE;
 const EMPTY_PHASE = 255;
 
 export interface CanvasPhaseContourInput {
@@ -34,29 +33,39 @@ export interface CanvasPhaseContourInput {
 }
 
 /**
- * Reusable fixed-2x raster scratch for one 32x32 world chunk plus a one-cell
+ * Reusable supersampled raster scratch for one 32x32 world chunk plus a one-cell
  * semantic halo. Outputs remain class-owned so rasterize() creates no typed
  * views or buffers. The caller consumes only outputWidth * outputHeight pixels.
  */
 export class CanvasPhaseContourScratch {
-  readonly pixels = new Uint8ClampedArray(OUTPUT_SIZE * OUTPUT_SIZE * 4);
-  readonly coverage = new Uint8Array(OUTPUT_SIZE * OUTPUT_SIZE);
-  readonly ownerMaterials = new Uint8Array(OUTPUT_SIZE * OUTPUT_SIZE);
+  readonly pixels: Uint8ClampedArray<ArrayBuffer>;
+  readonly coverage: Uint8Array;
+  readonly ownerMaterials: Uint8Array;
 
   private readonly haloMaterials = new Uint8Array(HALO_SIZE * HALO_SIZE);
   private readonly haloPhases = new Uint8Array(HALO_SIZE * HALO_SIZE);
   private readonly haloWalls = new Uint8Array(HALO_SIZE * HALO_SIZE);
   private readonly haloStability = new Uint8Array(HALO_SIZE * HALO_SIZE);
   private readonly haloPixels = new Uint8ClampedArray(HALO_SIZE * HALO_SIZE * 4);
+  private readonly emptyPowderOwner = {
+    material: 0, stability: 0, red: 0, green: 0, blue: 0,
+  };
   private usedWidth = 0;
   private usedHeight = 0;
+
+  constructor(readonly outputScale: FieldOutputScale = CANVAS_CONTOUR_OUTPUT_SCALE) {
+    const outputSize = CANVAS_CONTOUR_CHUNK_SIZE * outputScale;
+    this.pixels = new Uint8ClampedArray(outputSize * outputSize * 4);
+    this.coverage = new Uint8Array(outputSize * outputSize);
+    this.ownerMaterials = new Uint8Array(outputSize * outputSize);
+  }
 
   get outputWidth(): number { return this.usedWidth; }
 
   get outputHeight(): number { return this.usedHeight; }
 
   /** Fixed pixel stride of pixels/coverage/ownerMaterials, including edge chunks. */
-  get outputStride(): number { return OUTPUT_SIZE; }
+  get outputStride(): number { return CANVAS_CONTOUR_CHUNK_SIZE * this.outputScale; }
 
   get allocatedByteLength(): number {
     return this.pixels.byteLength
@@ -71,8 +80,8 @@ export class CanvasPhaseContourScratch {
 
   rasterize(input: CanvasPhaseContourInput): void {
     validateInput(input);
-    this.usedWidth = input.chunkWidth * CANVAS_CONTOUR_OUTPUT_SCALE;
-    this.usedHeight = input.chunkHeight * CANVAS_CONTOUR_OUTPUT_SCALE;
+    this.usedWidth = input.chunkWidth * this.outputScale;
+    this.usedHeight = input.chunkHeight * this.outputScale;
     this.pixels.fill(0);
     this.coverage.fill(0);
     this.ownerMaterials.fill(0);
@@ -120,31 +129,59 @@ export class CanvasPhaseContourScratch {
 
   private rasterizeCell(cellX: number, cellY: number): void {
     const haloIndex = (cellY + 1) * HALO_SIZE + cellX + 1;
-    const material = this.haloMaterials[haloIndex];
-    const phase = this.haloPhases[haloIndex];
-    const source = haloIndex * 4;
+    let material = this.haloMaterials[haloIndex];
+    let phase = this.haloPhases[haloIndex];
+    let sourceRed = this.haloPixels[haloIndex * 4];
+    let sourceGreen = this.haloPixels[haloIndex * 4 + 1];
+    let sourceBlue = this.haloPixels[haloIndex * 4 + 2];
+    let sourceAlpha = this.haloPixels[haloIndex * 4 + 3];
+    let emptyPowderStability = 0;
+    let emptyPowderSupport = 0;
+    if (material === 0 && !this.isWallAt(haloIndex)) {
+      const owner = this.resolveEmptyPowderOwner(cellX + 1, cellY + 1);
+      if (owner.material !== 0) {
+        material = owner.material;
+        phase = RenderPhase.Powder;
+        sourceRed = owner.red;
+        sourceGreen = owner.green;
+        sourceBlue = owner.blue;
+        sourceAlpha = 255;
+        emptyPowderStability = owner.stability;
+        emptyPowderSupport = this.powderSupport3x3(cellX + 1, cellY + 1, material);
+      }
+    }
+    const emptyPowder = this.haloMaterials[haloIndex] === 0 && material !== 0;
     const eligible = !this.isWallAt(haloIndex) && isContourPhase(phase);
 
-    for (let subY = 0; subY < CANVAS_CONTOUR_OUTPUT_SCALE; subY++) {
-      for (let subX = 0; subX < CANVAS_CONTOUR_OUTPUT_SCALE; subX++) {
-        const outputX = cellX * CANVAS_CONTOUR_OUTPUT_SCALE + subX;
-        const outputY = cellY * CANVAS_CONTOUR_OUTPUT_SCALE + subY;
-        const outputIndex = outputY * OUTPUT_SIZE + outputX;
+    for (let subY = 0; subY < this.outputScale; subY++) {
+      for (let subX = 0; subX < this.outputScale; subX++) {
+        const outputX = cellX * this.outputScale + subX;
+        const outputY = cellY * this.outputScale + subY;
+        const outputIndex = outputY * this.outputStride + outputX;
         const outputPixel = outputIndex * 4;
         this.ownerMaterials[outputIndex] = material;
-        this.pixels[outputPixel] = this.haloPixels[source];
-        this.pixels[outputPixel + 1] = this.haloPixels[source + 1];
-        this.pixels[outputPixel + 2] = this.haloPixels[source + 2];
+        let grainFacet = 0;
+        if (phase === RenderPhase.Powder && !emptyPowder) {
+          // Preserve a stable 2x2 material facet pattern even when the contour
+          // is evaluated at 4x/8x. Higher supersampling refines the silhouette;
+          // it must not turn bulk powder into flat paint or pixel-frequency noise.
+          const facetX = Math.min(1, Math.floor(subX * 2 / this.outputScale));
+          const facetY = Math.min(1, Math.floor(subY * 2 / this.outputScale));
+          const facetHash = hash2(cellX * 2 + facetX + material * 17, cellY * 2 + facetY);
+          grainFacet = ((facetHash & 15) - 7.5) * 0.72;
+        }
+        this.pixels[outputPixel] = clampByte(sourceRed + grainFacet);
+        this.pixels[outputPixel + 1] = clampByte(sourceGreen + grainFacet);
+        this.pixels[outputPixel + 2] = clampByte(sourceBlue + grainFacet);
 
         if (!eligible) {
-          const alpha = this.haloPixels[source + 3];
-          this.coverage[outputIndex] = alpha === 0 ? 0 : 255;
-          this.pixels[outputPixel + 3] = alpha;
+          this.coverage[outputIndex] = sourceAlpha === 0 ? 0 : 255;
+          this.pixels[outputPixel + 3] = sourceAlpha;
           continue;
         }
 
-        const localX = (subX + 0.5) / CANVAS_CONTOUR_OUTPUT_SCALE;
-        const localY = (subY + 0.5) / CANVAS_CONTOUR_OUTPUT_SCALE;
+        const localX = (subX + 0.5) / this.outputScale;
+        const localY = (subY + 0.5) / this.outputScale;
         const originX = cellX + (localX < 0.5 ? 0 : 1);
         const originY = cellY + (localY < 0.5 ? 0 : 1);
         const blendX = localX < 0.5 ? localX + 0.5 : localX - 0.5;
@@ -162,19 +199,25 @@ export class CanvasPhaseContourScratch {
         const density = top + (bottom - top) * weightY;
         let amount: number;
         if (phase === RenderPhase.Powder) {
-          const support = q00 + q10 + q01 + q11;
-          const stability = this.haloStability[haloIndex] / 255;
-          const motion = (1 - stability) * 0.10;
-          const bulk = powderBulkWeight(support, motion);
-          const seed = hash2(cellX + material * 37, cellY + material * 53);
-          const offsetX = (((seed & 0xffff) / 0xffff) - 0.5) * 0.15;
-          const offsetY = ((((seed >>> 16) & 0xffff) / 0xffff) - 0.5) * 0.15;
-          const grain = roundGrainCoverage(localX, localY, offsetX, offsetY);
           const heapDensity = this.quadraticPowderDensity(
             cellX + 1, cellY + 1, material, localX - 0.5, localY - 0.5,
           );
           const heap = smoothstep(0.18, 0.58, heapDensity);
-          amount = grain + (heap - grain) * bulk;
+          if (emptyPowder) {
+            amount = emptyPowderStability
+              * smoothstep(2.5, 4, emptyPowderSupport)
+              * heap;
+          } else {
+            const support = q00 + q10 + q01 + q11;
+            const stability = this.haloStability[haloIndex] / 255;
+            const motion = (1 - stability) * 0.10;
+            const bulk = powderBulkWeight(support, motion);
+            const seed = hash2(cellX + material * 37, cellY + material * 53);
+            const offsetX = (((seed & 0xffff) / 0xffff) - 0.5) * 0.15;
+            const offsetY = ((((seed >>> 16) & 0xffff) / 0xffff) - 0.5) * 0.15;
+            const grain = roundGrainCoverage(localX, localY, offsetX, offsetY);
+            amount = grain + (heap - grain) * bulk;
+          }
         } else if (phase === RenderPhase.Liquid) {
           // Retain a fractional 2x edge on an isolated or unlike-species side;
           // exact same-species support reaches the fully opaque interior.
@@ -184,9 +227,67 @@ export class CanvasPhaseContourScratch {
         }
         const coverage = clampByte(amount * 255);
         this.coverage[outputIndex] = coverage;
-        this.pixels[outputPixel + 3] = clampByte(this.haloPixels[source + 3] * amount);
+        this.pixels[outputPixel + 3] = clampByte(sourceAlpha * amount);
       }
     }
+  }
+
+  /**
+   * Claims at most one empty cardinal cell for one exact, stable powder owner.
+   * Any unlike solid/powder contact is deliberately ambiguous, matching WebGL's
+   * nearby-surface selection and preventing presentation ownership overlap.
+   */
+  private resolveEmptyPowderOwner(
+    haloX: number,
+    haloY: number,
+  ): { material: number; stability: number; red: number; green: number; blue: number } {
+    const owner = this.emptyPowderOwner;
+    owner.material = 0;
+    owner.stability = 0;
+    owner.red = 0;
+    owner.green = 0;
+    owner.blue = 0;
+    let material = 0;
+    let stability = 0;
+    let powderDonors = 0;
+    let red = 0;
+    let green = 0;
+    let blue = 0;
+    for (let cardinal = 0; cardinal < 4; cardinal++) {
+      const x = haloX + (cardinal === 0 ? -1 : cardinal === 1 ? 1 : 0);
+      const y = haloY + (cardinal === 2 ? -1 : cardinal === 3 ? 1 : 0);
+      const index = y * HALO_SIZE + x;
+      if (this.isWallAt(index)) continue;
+      const candidate = this.haloMaterials[index];
+      const phase = this.haloPhases[index];
+      if (candidate === 0 || (phase !== RenderPhase.Solid && phase !== RenderPhase.Powder)) continue;
+      if (material !== 0 && material !== candidate) return owner;
+      material = candidate;
+      if (phase !== RenderPhase.Powder) continue;
+      powderDonors++;
+      stability = Math.max(stability, this.haloStability[index] / 255);
+      const pixel = index * 4;
+      red += this.haloPixels[pixel];
+      green += this.haloPixels[pixel + 1];
+      blue += this.haloPixels[pixel + 2];
+    }
+    if (material === 0 || powderDonors === 0 || stability <= 0) return owner;
+    owner.material = material;
+    owner.stability = stability;
+    owner.red = Math.round(red / powderDonors);
+    owner.green = Math.round(green / powderDonors);
+    owner.blue = Math.round(blue / powderDonors);
+    return owner;
+  }
+
+  private powderSupport3x3(haloX: number, haloY: number, material: number): number {
+    let support = 0;
+    for (let y = -1; y <= 1; y++) for (let x = -1; x <= 1; x++) {
+      support += this.compatibleAt(
+        haloX + x, haloY + y, material, RenderPhase.Powder,
+      );
+    }
+    return support;
   }
 
   private quadraticPowderDensity(
@@ -196,13 +297,21 @@ export class CanvasPhaseContourScratch {
     offsetX: number,
     offsetY: number,
   ): number {
-    const weightsX = quadraticCoverageWeights(offsetX);
-    const weightsY = quadraticCoverageWeights(offsetY);
+    const boundedX = Math.max(-0.5, Math.min(0.5, offsetX));
+    const boundedY = Math.max(-0.5, Math.min(0.5, offsetY));
+    const leftX = 0.5 * (0.5 - boundedX) * (0.5 - boundedX);
+    const middleX = 0.75 - boundedX * boundedX;
+    const rightX = 0.5 * (0.5 + boundedX) * (0.5 + boundedX);
+    const topY = 0.5 * (0.5 - boundedY) * (0.5 - boundedY);
+    const middleY = 0.75 - boundedY * boundedY;
+    const bottomY = 0.5 * (0.5 + boundedY) * (0.5 + boundedY);
     let density = 0;
     for (let y = 0; y < 3; y++) for (let x = 0; x < 3; x++) {
+      const weightX = x === 0 ? leftX : x === 1 ? middleX : rightX;
+      const weightY = y === 0 ? topY : y === 1 ? middleY : bottomY;
       density += this.compatibleAt(
         haloX + x - 1, haloY + y - 1, material, RenderPhase.Powder,
-      ) * weightsX[x] * weightsY[y];
+      ) * weightX * weightY;
     }
     return density;
   }

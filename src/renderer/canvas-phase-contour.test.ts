@@ -88,6 +88,26 @@ describe('Canvas 2x phase contour scratch', () => {
     expect(scratch.outputStride).toBe(64);
   });
 
+  it('creates real four- and eight-times contour samples with matching strides', () => {
+    for (const scale of [4, 8] as const) {
+      const scratch = new CanvasPhaseContourScratch(scale);
+      const value = fixture();
+      paint(value, 2, 2, Material.Sand);
+      scratch.rasterize(value.input);
+      expect(scratch.outputScale).toBe(scale);
+      expect(scratch.outputWidth).toBe(5 * scale);
+      expect(scratch.outputHeight).toBe(5 * scale);
+      expect(scratch.outputStride).toBe(CANVAS_CONTOUR_CHUNK_SIZE * scale);
+      const alphaLevels = new Set<number>();
+      for (let y = 2 * scale; y < 3 * scale; y++) {
+        for (let x = 2 * scale; x < 3 * scale; x++) {
+          alphaLevels.add(scratch.pixels[(y * scratch.outputStride + x) * 4 + 3]);
+        }
+      }
+      expect(alphaLevels.size).toBeGreaterThan(2);
+    }
+  });
+
   it('handles every local neighbour topology with mirror-symmetric categorical solid support', () => {
     const scratch = new CanvasPhaseContourScratch();
     const neighbours = [
@@ -226,6 +246,38 @@ describe('Canvas 2x phase contour scratch', () => {
     scratch.rasterize(solidOnly.input);
     for (let y = 4; y <= 5; y++) for (let x = 4; x <= 5; x++) {
       expect(scratch.coverage[outputIndex(x, y)]).toBe(baseline[outputIndex(x, y)]);
+    }
+  });
+
+  it('extends only stable unambiguous powder into one curved empty-side band', () => {
+    const scratch = new CanvasPhaseContourScratch();
+    const value = fixture(7, 6);
+    for (let y = 3; y <= 4; y++) for (let x = 2; x <= 4; x++) {
+      paint(value, x, y, Material.Sand);
+    }
+    scratch.rasterize(value.input);
+    const boundaryAlpha = [
+      alphaAt(scratch, 6, 4), alphaAt(scratch, 6, 5),
+    ];
+    expect(Math.max(...boundaryAlpha)).toBeGreaterThan(0);
+    expect(Math.min(...boundaryAlpha)).toBeLessThan(Math.max(...boundaryAlpha));
+    expect(alphaAt(scratch, 6, 3)).toBe(0);
+    expect(scratch.ownerMaterials[outputIndex(6, 5)]).toBe(Material.Sand);
+
+    value.stability.fill(0);
+    scratch.rasterize(value.input);
+    expect(alphaAt(scratch, 6, 4)).toBe(0);
+    expect(alphaAt(scratch, 6, 5)).toBe(0);
+
+    const mixed = fixture();
+    paint(mixed, 1, 2, Material.Sand);
+    paint(mixed, 3, 2, Material.Salt);
+    paint(mixed, 1, 1, Material.Sand);
+    paint(mixed, 3, 1, Material.Salt);
+    scratch.rasterize(mixed.input);
+    for (let y = 4; y <= 5; y++) for (let x = 4; x <= 5; x++) {
+      expect(alphaAt(scratch, x, y)).toBe(0);
+      expect(scratch.ownerMaterials[outputIndex(x, y)]).toBe(0);
     }
   });
 

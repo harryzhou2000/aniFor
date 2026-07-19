@@ -22,7 +22,9 @@ export function shadeCanvasMaterial(
   let tintBlue = 0;
   const surfaceProfile = solidOpticsProfile(optics, profile);
   if (surfaceProfile === RenderProfile.Granular) {
-    light += noise * 0.72;
+    // Keep grain-scale albedo legible after supersampled contour coverage is
+    // composited; this is RGB-only and does not sharpen the silhouette.
+    light += noise * 0.82;
     tintRed += Math.max(0, noise) * 0.18;
   } else if (surfaceProfile === RenderProfile.Rigid) {
     light += ((x + Math.floor(y / 3) + material) % 11 < 2 ? 7 : -2);

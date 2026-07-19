@@ -85,9 +85,11 @@ export class MaterialRenderer {
   private readonly traitClock = new Int32Array(CANVAS_RENDER_TRAIT_CLOCK_SIZE);
   private readonly boundaryStability: Uint8Array;
   private readonly boundaryStabilityOwners: Uint8Array;
-  private readonly contourScratch = new CanvasPhaseContourScratch();
-  private readonly contourChunks: DirtyChunkGrid;
   private readonly outputScale = resolveFieldOutputScale();
+  private readonly contourScratch = new CanvasPhaseContourScratch(
+    this.outputScale === 1 ? CANVAS_CONTOUR_OUTPUT_SCALE : this.outputScale,
+  );
+  private readonly contourChunks: DirtyChunkGrid;
   private presenter?: PixiFieldPresenter;
   private readonly view: ViewTransform;
   private basePixels?: ImageData;
@@ -437,7 +439,7 @@ export class MaterialRenderer {
         : 0;
       const liquidReliefScale = phase === RenderPhase.Liquid
         ? 1 + canvasLiquidFieldRelief(fields.liquid.bytes, width, height, x, y)
-          * (this.outputScale === CANVAS_CONTOUR_OUTPUT_SCALE
+          * (this.outputScale >= CANVAS_CONTOUR_OUTPUT_SCALE
             ? (optics === RenderOptics.Aqueous ? 1.35 : 1.18)
             : 1)
           * (optics === RenderOptics.Aqueous ? 1.08
@@ -703,7 +705,7 @@ export class MaterialRenderer {
       fields.lookups.liquidByMaterial, fields.lookups.colorByMaterial, fields.lookups.styleBytes,
       liquidSurfaceScratch, width, height,
     );
-    if (this.outputScale === CANVAS_CONTOUR_OUTPUT_SCALE) {
+    if (this.outputScale >= CANVAS_CONTOUR_OUTPUT_SCALE) {
       for (let pixel = 0; pixel < base.length; pixel += 4) {
         if (liquid[pixel + 3] === 0) continue;
         compositePixel(
@@ -736,7 +738,7 @@ export class MaterialRenderer {
     fallback.filter = 'none';
     fallback.globalAlpha = 1;
     fallback.imageSmoothingEnabled = false;
-    if (this.outputScale === CANVAS_CONTOUR_OUTPUT_SCALE) {
+    if (this.outputScale >= CANVAS_CONTOUR_OUTPUT_SCALE) {
       fallback.drawImage(this.contourSurface, 0, 0);
     } else {
       fallback.drawImage(this.surface, 0, 0, width, height, 0, 0, output.width, output.height);
@@ -792,8 +794,8 @@ export class MaterialRenderer {
     this.fallbackSurface.height = output.height;
     this.contourSurface.width = output.width;
     this.contourSurface.height = output.height;
-    this.contourChunkSurface.width = CANVAS_CONTOUR_CHUNK_SIZE * CANVAS_CONTOUR_OUTPUT_SCALE;
-    this.contourChunkSurface.height = CANVAS_CONTOUR_CHUNK_SIZE * CANVAS_CONTOUR_OUTPUT_SCALE;
+    this.contourChunkSurface.width = CANVAS_CONTOUR_CHUNK_SIZE * this.contourScratch.outputScale;
+    this.contourChunkSurface.height = CANVAS_CONTOUR_CHUNK_SIZE * this.contourScratch.outputScale;
     this.fallbackSurface.className = 'world-canvas fallback-field-canvas';
     this.fallbackSurface.style.width = `${width}px`;
     this.fallbackSurface.style.height = `${height}px`;
@@ -827,8 +829,8 @@ export class MaterialRenderer {
     this.contourChunkContext = contourChunkContext;
     this.contourChunkPixels = new ImageData(
       this.contourScratch.pixels,
-      CANVAS_CONTOUR_CHUNK_SIZE * CANVAS_CONTOUR_OUTPUT_SCALE,
-      CANVAS_CONTOUR_CHUNK_SIZE * CANVAS_CONTOUR_OUTPUT_SCALE,
+      CANVAS_CONTOUR_CHUNK_SIZE * this.contourScratch.outputScale,
+      CANVAS_CONTOUR_CHUNK_SIZE * this.contourScratch.outputScale,
     );
     this.basePixels = context.createImageData(width, height);
     this.liquidPixels = liquidContext.createImageData(width, height);
@@ -869,16 +871,16 @@ export class MaterialRenderer {
         });
         this.contourChunkContext.putImageData(chunkPixels, 0, 0);
         this.contourContext.clearRect(
-          chunkX * CANVAS_CONTOUR_OUTPUT_SCALE,
-          chunkY * CANVAS_CONTOUR_OUTPUT_SCALE,
+          chunkX * this.contourScratch.outputScale,
+          chunkY * this.contourScratch.outputScale,
           this.contourScratch.outputWidth,
           this.contourScratch.outputHeight,
         );
         this.contourContext.drawImage(
           this.contourChunkSurface,
           0, 0, this.contourScratch.outputWidth, this.contourScratch.outputHeight,
-          chunkX * CANVAS_CONTOUR_OUTPUT_SCALE,
-          chunkY * CANVAS_CONTOUR_OUTPUT_SCALE,
+          chunkX * this.contourScratch.outputScale,
+          chunkY * this.contourScratch.outputScale,
           this.contourScratch.outputWidth,
           this.contourScratch.outputHeight,
         );

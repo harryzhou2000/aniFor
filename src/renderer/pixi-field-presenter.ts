@@ -8,6 +8,7 @@ import {
   UniformGroup,
 } from 'pixi.js';
 import { DirtyChunkGrid } from './dirty-chunk-grid';
+import type { FieldOutputScale } from './render-resolution';
 import { updateBoundaryStabilityRect } from './boundary-stability-field';
 import { clientToCanvasWorld } from './client-coordinate-map';
 import { RenderFieldSet, type RenderMaterialStyle } from './render-field-set';
@@ -347,6 +348,28 @@ vec2 nearbySurface(vec2 uv) {
   }
   return vec2(0.0, ambiguousSolid > 0.5 ? 0.0 : solid);
 }
+float nearbyPowderStability(vec2 uv, float material) {
+  float stability = 0.0;
+  vec2 offset = vec2(uTexel.x, 0.0);
+  vec2 candidateUv = uv - offset;
+  if (abs(materialAt(candidateUv) - material) < 0.5) {
+    stability = max(stability, boundaryStabilityAt(candidateUv));
+  }
+  candidateUv = uv + offset;
+  if (abs(materialAt(candidateUv) - material) < 0.5) {
+    stability = max(stability, boundaryStabilityAt(candidateUv));
+  }
+  offset = vec2(0.0, uTexel.y);
+  candidateUv = uv - offset;
+  if (abs(materialAt(candidateUv) - material) < 0.5) {
+    stability = max(stability, boundaryStabilityAt(candidateUv));
+  }
+  candidateUv = uv + offset;
+  if (abs(materialAt(candidateUv) - material) < 0.5) {
+    stability = max(stability, boundaryStabilityAt(candidateUv));
+  }
+  return stability;
+}
 float triangleSlope(float value, float period) {
   float phase = mod(mod(value, period) + period, period);
   return mix(4.0 / period, -4.0 / period, step(period * 0.5, phase));
@@ -456,9 +479,12 @@ void main() {
         fieldUv, material, family,
         (family == 0.0 || family == 2.0 || profile == 1.0) ? 1.0 : 0.0
       )))));
-  float boundaryStability = family == 4.0 && halo < 0.5
-    ? boundaryStabilityAt(fieldUv)
-    : 0.0;
+  float boundaryStability = 0.0;
+  if (family == 4.0) {
+    boundaryStability = surfaceOnly > 0.5
+      ? nearbyPowderStability(fieldUv, material)
+      : (halo < 0.5 ? boundaryStabilityAt(fieldUv) : 0.0);
+  }
   if (family == 4.0 && boundaryStability > 0.001 && surfaceOnly < 0.5) {
     shape = mix(shape, quadraticPowderShape(fieldUv, material), boundaryStability);
   }
@@ -809,7 +835,7 @@ void main() {
       float roundGrainAlpha = 1.0 - smoothstep(0.34, 0.56, grainDistance);
       float heapAlpha = smoothstep(0.10 + grain * 0.020, 0.62 + grain * 0.030, density);
       alpha = surfaceOnly > 0.5
-        ? heapAlpha * powderBulk
+        ? heapAlpha * boundaryStability * smoothstep(2.5, 4.0, shape.w)
         : mix(roundGrainAlpha, heapAlpha, powderBulk);
     }
     // surfaceOnly names a nearby exact solid, but density is nonzero only when
@@ -1089,7 +1115,7 @@ export class PixiFieldPresenter {
     host: HTMLElement,
     width: number,
     height: number,
-    outputScale: 1 | 2,
+    outputScale: FieldOutputScale,
     materials: readonly RenderMaterialStyle[],
     fieldSet?: RenderFieldSet,
   ): Promise<PixiFieldPresenter> {
