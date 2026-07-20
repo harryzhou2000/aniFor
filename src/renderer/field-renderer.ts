@@ -24,6 +24,7 @@ import {
 } from './canvas-liquid-light';
 import { shadeCanvasEnergy } from './canvas-energy-style';
 import { shadeCanvasMaterial } from './canvas-material-style';
+import { applyCanvasBotanicalMorphology } from './canvas-botanical-style';
 import {
   applyCanvasReconstructedSuspensionStyle, applyCanvasSemanticSuspensionStyle,
 } from './canvas-suspension-style';
@@ -1094,6 +1095,7 @@ export class MaterialRenderer {
         this.styledColor[0] = 132 + grain + ring;
         this.styledColor[1] = 76 + grain * 0.45 + ring * 0.5;
         this.styledColor[2] = 40 + ring * 0.25;
+        applyCanvasBotanicalMorphology(this.styledColor, material, x, y, index);
         applyCanvasSolidBodyOptics(
           this.styledColor, surfaceLight, normalLight, solidRelief,
           denseSolidInterior, profile, optics, solidOpticalDepth, this.solidOpticalDepthEnabled,
@@ -1113,6 +1115,7 @@ export class MaterialRenderer {
         this.styledColor[0] = 62 + leaf;
         this.styledColor[1] = 132 + leaf;
         this.styledColor[2] = 58 + grain * 0.35;
+        applyCanvasBotanicalMorphology(this.styledColor, material, x, y, index);
         applyCanvasSolidBodyOptics(
           this.styledColor, surfaceLight, normalLight, solidRelief,
           denseSolidInterior, profile, optics, solidOpticalDepth, this.solidOpticalDepthEnabled,
@@ -1339,6 +1342,9 @@ export class MaterialRenderer {
             this.styledColor, red, green, blue, profile,
             optics, material, x, y, index, visualTime,
           );
+          if (material === Material.VINE || material === Material.SEED || material === Material.YEST) {
+            applyCanvasBotanicalMorphology(this.styledColor, material, x, y, index);
+          }
           if (phase === RenderPhase.Powder) applyCanvasPowderBulkCellStyle(
             this.styledColor, powderCanonicalColor, this.boundaryStability[index],
             fields.powderSurface.bytes, pixel, powderBulkDepth, this.powderBodyDepthEnabled, optics,

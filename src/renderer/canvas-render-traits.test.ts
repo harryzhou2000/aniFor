@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { Material } from '../shared/materials';
 import {
   applicableCanvasRenderTraits, applyCanvasRenderTraits, CANVAS_RENDER_TRAIT_CLOCK_SIZE,
   updateCanvasRenderTraitClock,
@@ -37,6 +38,24 @@ describe('Canvas render traits', () => {
     const organic = shade(RenderTrait.Organic | RenderTrait.Fibrous);
     expect(emitter).not.toEqual(sinkChannel);
     expect(organic).not.toEqual(emitter);
+  });
+
+  it('leaves botanical identity to morphology without suppressing virus traits', () => {
+    const clock = new Int32Array(CANVAS_RENDER_TRAIT_CLOCK_SIZE);
+    updateCanvasRenderTraitClock(clock, 420);
+    const wood = new Float32Array([90, 100, 110]);
+    applyCanvasRenderTraits(
+      wood, RenderTrait.Organic | RenderTrait.Fibrous, RenderPhase.Solid,
+      Material.Wood, 12, 7, 440, clock,
+    );
+    expect(Array.from(wood)).toEqual([90, 100, 110]);
+
+    const virus = new Float32Array([90, 100, 110]);
+    applyCanvasRenderTraits(
+      virus, RenderTrait.Organic, RenderPhase.Liquid,
+      Material.VIRS, 12, 7, 440, clock,
+    );
+    expect(Array.from(virus)).not.toEqual([90, 100, 110]);
   });
 
   it('leaves the existing Energy core authoritative for carrier styling', () => {

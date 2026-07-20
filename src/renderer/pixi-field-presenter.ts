@@ -1773,6 +1773,16 @@ void main() {
       } else if (optics == 15.0) {
         color += vec3(1.00, 0.68, 0.32) * brightFacet * 0.060;
       }
+      // SEED and YEST retain granular topology while their existing grain and
+      // facet signals describe husk and colony identity. No additional wave,
+      // sample, or output-scale state is required.
+      if (material == 50.0) {
+        float husk = clamp(grain * 0.55 + grainFacet * 0.45, -0.5, 0.5);
+        color *= vec3(1.0 + husk * 0.035, 1.0 + husk * 0.012, 1.0 - husk * 0.028);
+      } else if (material == 52.0) {
+        float colony = clamp(grain * 0.35 + grainFacet * 0.22, -0.4, 0.4);
+        color *= vec3(1.0 + colony * 0.026, 1.0 + colony * 0.018, 1.0 - colony * 0.010);
+      }
       color *= 1.0 + powderMacroRelief;
       float powderContourChroma = localPowderShape.x < 0.92
         ? surfaceChromaResponse(density, widePowderShape.yz, optics)
@@ -1800,6 +1810,20 @@ void main() {
         + organicSurface * max(0.0, fibre) * 0.018) * interiorMicroGain;
       color += mix(color, vec3(0.19, 0.34, 0.18), 0.38)
         * organicSurface * max(0.0, 0.6 - abs(pores)) * 0.028 * interiorMicroGain;
+      // Exact botanical identity reuses the same family waves: Wood favours
+      // warm longitudinal grain, Plant broad green veins, and VINE a narrow
+      // axial strand. The later generic Organic/Fibrous decal is suppressed
+      // for these materials only.
+      if (material == 9.0) {
+        color *= vec3(1.0 + fibre * 0.020, 1.0 + fibre * 0.010, 1.0 - fibre * 0.012);
+        color += vec3(0.055, 0.022, 0.006) * max(0.0, -pores) * interiorMicroGain;
+      } else if (material == 10.0) {
+        float leafVein = max(0.0, fibre * 0.72 + pores * 0.28);
+        color *= vec3(1.0 - leafVein * 0.018, 1.0 + leafVein * 0.032, 1.0 - leafVein * 0.014);
+      } else if (material == 83.0) {
+        float vineStrand = max(0.0, fibre);
+        color *= vec3(1.0 - vineStrand * 0.020, 1.0 + vineStrand * 0.045, 1.0 - vineStrand * 0.018);
+      }
     } else if (radioactiveSurface > 0.5 || (optics < 0.5 && profile == 4.0)) {
       float isotope = sin(fieldPosition.x * 0.137 + sin(fieldPosition.y * 0.103 + material) * 1.6)
         * sin(fieldPosition.y * 0.181 - fieldPosition.x * 0.061);
@@ -1889,7 +1913,9 @@ void main() {
       vec3 isotopeTint = mix(vec3(0.20, 0.72, 0.18), vec3(0.36, 0.82, 1.0), carrier);
       color += isotopeTint * (0.008 + decay * 0.034 + traitEdge * 0.010);
     }
-    if (organic > 0.5) {
+    float botanicalIdentity = (material == 9.0 || material == 10.0 || material == 50.0
+      || material == 52.0 || material == 83.0) ? 1.0 : 0.0;
+    if (organic > 0.5 && botanicalIdentity < 0.5) {
       float fibre = 0.5 + 0.5 * sin(
         fieldPosition.x * 0.18 + sin(fieldPosition.y * 0.11 + material) * 1.4
       );

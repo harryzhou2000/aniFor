@@ -1,5 +1,6 @@
 import { RenderPhase } from './render-profile';
 import { RenderTrait } from './render-traits';
+import { isBotanicalMaterial } from './canvas-botanical-style';
 
 export const CANVAS_RENDER_TRAIT_CLOCK_SIZE = 5;
 
@@ -56,13 +57,14 @@ export function applyCanvasRenderTraits(
     green += 5 + (decay ? 13 : 0);
     blue += (traits & RenderTrait.Carrier) ? 6 + (decay ? 10 : 0) : 1;
   }
-  if (traits & RenderTrait.Organic) {
+  const botanical = isBotanicalMaterial(material);
+  if ((traits & RenderTrait.Organic) && !botanical) {
     const vein = (x + (hash(y + material * 17) & 7)) % 13 < 3;
     red += vein ? 1 : 0;
     green += vein ? 8 : 2;
     blue -= vein ? 2 : 0;
   }
-  if (traits & RenderTrait.Fibrous) {
+  if ((traits & RenderTrait.Fibrous) && !botanical) {
     red += edgePattern ? 7 : -2;
     green += edgePattern ? 3 : -1;
     blue -= edgePattern ? 2 : 0;
