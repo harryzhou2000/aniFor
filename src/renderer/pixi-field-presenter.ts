@@ -1815,8 +1815,8 @@ void main() {
       // axial strand. The later generic Organic/Fibrous decal is suppressed
       // for these materials only.
       if (material == 9.0) {
-        color *= vec3(1.0 + fibre * 0.020, 1.0 + fibre * 0.010, 1.0 - fibre * 0.012);
-        color += vec3(0.055, 0.022, 0.006) * max(0.0, -pores) * interiorMicroGain;
+        color *= vec3(1.0 + fibre * 0.012, 1.0 + fibre * 0.007, 1.0 - fibre * 0.008);
+        color += vec3(0.025, 0.010, 0.003) * max(0.0, -pores) * interiorMicroGain;
       } else if (material == 10.0) {
         float leafVein = max(0.0, fibre * 0.72 + pores * 0.28);
         color *= vec3(1.0 - leafVein * 0.018, 1.0 + leafVein * 0.032, 1.0 - leafVein * 0.014);

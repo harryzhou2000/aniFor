@@ -1091,10 +1091,9 @@ export class MaterialRenderer {
         );
       } else if (material === Material.Wood) {
         const grain = hash(index) % 23 - 11;
-        const ring = ((x + Math.floor(y / 3)) % 9) < 2 ? -20 : 4;
-        this.styledColor[0] = 132 + grain + ring;
-        this.styledColor[1] = 76 + grain * 0.45 + ring * 0.5;
-        this.styledColor[2] = 40 + ring * 0.25;
+        this.styledColor[0] = 132 + grain;
+        this.styledColor[1] = 76 + grain * 0.45;
+        this.styledColor[2] = 40;
         applyCanvasBotanicalMorphology(this.styledColor, material, x, y, index);
         applyCanvasSolidBodyOptics(
           this.styledColor, surfaceLight, normalLight, solidRelief,

@@ -40,22 +40,46 @@ describe('Canvas render traits', () => {
     expect(organic).not.toEqual(emitter);
   });
 
-  it('leaves botanical identity to morphology without suppressing virus traits', () => {
+  it('leaves botanical identity to morphology while preserving every other trait', () => {
     const clock = new Int32Array(CANVAS_RENDER_TRAIT_CLOCK_SIZE);
     updateCanvasRenderTraitClock(clock, 420);
-    const wood = new Float32Array([90, 100, 110]);
-    applyCanvasRenderTraits(
-      wood, RenderTrait.Organic | RenderTrait.Fibrous, RenderPhase.Solid,
-      Material.Wood, 12, 7, 440, clock,
-    );
-    expect(Array.from(wood)).toEqual([90, 100, 110]);
+    const retained = RenderTrait.Emitter | RenderTrait.Sink | RenderTrait.Channel
+      | RenderTrait.Force | RenderTrait.Radioactive | RenderTrait.Carrier;
+    for (const material of [
+      Material.Wood, Material.Plant, Material.VINE, Material.SEED, Material.YEST,
+    ]) {
+      const rolesOnly = new Float32Array([90, 100, 110]);
+      applyCanvasRenderTraits(
+        rolesOnly, retained, RenderPhase.Solid, material, 12, 7, 440, clock,
+      );
+      const botanicalTraits = new Float32Array([90, 100, 110]);
+      applyCanvasRenderTraits(
+        botanicalTraits, retained | RenderTrait.Organic | RenderTrait.Fibrous,
+        RenderPhase.Solid, material, 12, 7, 440, clock,
+      );
+      expect(Array.from(botanicalTraits)).toEqual(Array.from(rolesOnly));
+      expect(Array.from(rolesOnly)).not.toEqual([90, 100, 110]);
+    }
+  });
 
-    const virus = new Float32Array([90, 100, 110]);
-    applyCanvasRenderTraits(
-      virus, RenderTrait.Organic, RenderPhase.Liquid,
-      Material.VIRS, 12, 7, 440, clock,
-    );
-    expect(Array.from(virus)).not.toEqual([90, 100, 110]);
+  it('does not suppress organic identity on viruses or actors', () => {
+    const clock = new Int32Array(CANVAS_RENDER_TRAIT_CLOCK_SIZE);
+    updateCanvasRenderTraitClock(clock, 420);
+    for (const [material, phase] of [
+      [Material.VIRS, RenderPhase.Liquid],
+      [Material.VRSG, RenderPhase.Gas],
+      [Material.VRSS, RenderPhase.Solid],
+      [Material.FIGH, RenderPhase.Solid],
+      [Material.STKM, RenderPhase.Solid],
+      [Material.STKM2, RenderPhase.Solid],
+    ] as const) {
+      const styled = new Float32Array([90, 100, 110]);
+      applyCanvasRenderTraits(
+        styled, RenderTrait.Organic | RenderTrait.Fibrous,
+        phase, material, 12, 7, 440, clock,
+      );
+      expect(Array.from(styled)).not.toEqual([90, 100, 110]);
+    }
   });
 
   it('leaves the existing Energy core authoritative for carrier styling', () => {
