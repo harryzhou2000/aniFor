@@ -344,6 +344,22 @@ async function auditMode(mode) {
     );
     await evaluate(cdp, `(() => {
       window.__ANIFOR_INPUT_AUDIT__.setSurfaceContourLighting(true);
+      window.__ANIFOR_INPUT_AUDIT__.setSolidFieldLighting(false);
+      return true;
+    })()`);
+    const unlitSolidFieldCaptures = await waitForStablePageCapture(
+      cdp, `${mode} unlit solid-field framebuffer`,
+    );
+    await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setSolidFieldLighting(true); true');
+    const litSolidFieldCaptures = await waitForStablePageCapture(
+      cdp, `${mode} lit solid-field framebuffer`,
+    );
+    await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setSolidFieldLighting(false); true');
+    const repeatedUnlitSolidFieldCaptures = await waitForStablePageCapture(
+      cdp, `${mode} repeated unlit solid-field framebuffer`,
+    );
+    await evaluate(cdp, `(() => {
+      window.__ANIFOR_INPUT_AUDIT__.setSolidFieldLighting(true);
       window.__ANIFOR_INPUT_AUDIT__.setPhaseContactLighting(false);
       return true;
     })()`);
@@ -432,6 +448,9 @@ async function auditMode(mode) {
       ['flat surface contour', flatSurfaceContourCaptures],
       ['lit surface contour', litSurfaceContourCaptures],
       ['repeated flat surface contour', repeatedFlatSurfaceContourCaptures],
+      ['unlit solid field', unlitSolidFieldCaptures],
+      ['lit solid field', litSolidFieldCaptures],
+      ['repeated unlit solid field', repeatedUnlitSolidFieldCaptures],
       ['flat phase contact', flatPhaseContactCaptures],
       ['grounded phase contact', groundedPhaseContactCaptures],
       ['repeated flat phase contact', repeatedFlatPhaseContactCaptures],
@@ -1304,6 +1323,72 @@ async function auditMode(mode) {
       sample.flatVisible === sample.litVisible
       && Math.abs(sample.flatWorldArea - sample.litWorldArea) <= 0.01
     )), `${mode}: surface contour lighting changed solid support (${JSON.stringify(surfaceContourSupportInvariantSamples)})`);
+    const solidFieldRegions = [
+      { name: 'warmMetalFacing', x: 389.5, y: 229, radiusX: 2, radiusY: 5 },
+      { name: 'coolMetalFacing', x: 421.5, y: 229, radiusX: 1.5, radiusY: 5 },
+      { name: 'metalFieldCore', x: 405, y: 229, radius: 3 },
+      { name: 'powderFieldControl', x: 405, y: 204, radius: 3 },
+    ];
+    const solidFieldResponseSamples = await sampleLightingDifferenceRegions(cdp, {
+      unlit: unlitSolidFieldCaptures.capture.data,
+      lit: litSolidFieldCaptures.capture.data,
+    }, solidFieldRegions, canonicalCaptures.canvasRect);
+    const solidFieldLightingSamples = await sampleBackdropRefractionRegions(cdp, {
+      straight: unlitSolidFieldCaptures.capture.data,
+      refracted: litSolidFieldCaptures.capture.data,
+      repeatedStraight: repeatedUnlitSolidFieldCaptures.capture.data,
+    }, solidFieldRegions, canonicalCaptures.canvasRect);
+    const solidFieldResponse = Object.fromEntries(
+      solidFieldResponseSamples.map((sample) => [sample.name, sample]),
+    );
+    const solidFieldLighting = Object.fromEntries(
+      solidFieldLightingSamples.map((sample) => [sample.name, sample]),
+    );
+    assert(solidFieldResponse.warmMetalFacing.positiveRgb[0] >= 0.08
+      && solidFieldResponse.warmMetalFacing.positiveRgb[0]
+        >= solidFieldResponse.warmMetalFacing.positiveRgb[2] + 0.04
+      && solidFieldResponse.warmMetalFacing.peakMagnitude <= 32
+      && solidFieldLighting.warmMetalFacing.rgbRms >= 0.08,
+    `${mode}: warm source lost its coloured solid-contour response (${JSON.stringify({
+      response: solidFieldResponse.warmMetalFacing,
+      repeat: solidFieldLighting.warmMetalFacing,
+    })})`);
+    assert(Math.max(...solidFieldResponse.coolMetalFacing.positiveRgb) >= 0.02
+      && solidFieldResponse.coolMetalFacing.peakMagnitude <= 32
+      && solidFieldLighting.coolMetalFacing.rgbRms >= 0.08
+      && solidFieldLighting.metalFieldCore.rgbPeak <= 1
+      && solidFieldLighting.powderFieldControl.rgbPeak <= 1,
+    `${mode}: second source-facing solid contour lost its bounded response or leaked into a core/powder (${JSON.stringify({
+      response: solidFieldResponseSamples,
+      repeat: solidFieldLightingSamples,
+    })})`);
+    assert(solidFieldLightingSamples.every((sample) => sample.repeatRgbPeak <= 1),
+      `${mode}: solid-field off-on-off sequence was not deterministic (${JSON.stringify(solidFieldLightingSamples)})`);
+    const solidFieldSupportRegions = [
+      { name: 'warmMetalFieldSupport', x: 405, y: 229, radiusX: 17.5, radiusY: 10.5,
+        silhouette: true },
+    ];
+    const [unlitSolidFieldSupport, litSolidFieldSupport] = await Promise.all([
+      samplePageRegions(
+        cdp, unlitSolidFieldCaptures.capture.data, solidFieldSupportRegions,
+        blankCaptures.capture.data, blankCaptures.reference.data, canonicalCaptures.canvasRect,
+      ),
+      samplePageRegions(
+        cdp, litSolidFieldCaptures.capture.data, solidFieldSupportRegions,
+        blankCaptures.capture.data, blankCaptures.reference.data, canonicalCaptures.canvasRect,
+      ),
+    ]);
+    const solidFieldSupportInvariantSamples = unlitSolidFieldSupport.map((unlit, index) => ({
+      name: unlit.name,
+      unlitVisible: unlit.visible,
+      litVisible: litSolidFieldSupport[index].visible,
+      unlitWorldArea: unlit.worldArea,
+      litWorldArea: litSolidFieldSupport[index].worldArea,
+    }));
+    assert(solidFieldSupportInvariantSamples.every((sample) => (
+      sample.unlitVisible === sample.litVisible
+      && Math.abs(sample.unlitWorldArea - sample.litWorldArea) <= 0.01
+    )), `${mode}: solid field lighting changed material support (${JSON.stringify(solidFieldSupportInvariantSamples)})`);
     const phaseContactLightingSamples = await sampleBackdropRefractionRegions(cdp, {
       straight: flatPhaseContactCaptures.capture.data,
       refracted: groundedPhaseContactCaptures.capture.data,
@@ -1483,6 +1568,9 @@ async function auditMode(mode) {
         curvatureSupportInvariantSamples,
         surfaceContourLightingSamples,
         surfaceContourSupportInvariantSamples,
+        solidFieldResponseSamples,
+        solidFieldLightingSamples,
+        solidFieldSupportInvariantSamples,
         phaseContactLightingSamples,
         phaseContactSupportInvariantSamples,
         silhouetteSamples,
@@ -1778,6 +1866,9 @@ async function auditMode(mode) {
       curvatureSupportInvariantSamples,
       surfaceContourLightingSamples,
       surfaceContourSupportInvariantSamples,
+      solidFieldResponseSamples,
+      solidFieldLightingSamples,
+      solidFieldSupportInvariantSamples,
       phaseContactLightingSamples,
       phaseContactSupportInvariantSamples,
       ...(canvasGasLightingRefresh ? { canvasGasLightingRefresh } : {}),
@@ -4873,6 +4964,14 @@ function assertPairedVisualRelief(results) {
     const ratio = canvasSample.rms / Math.max(0.03, webglSample.rms);
     assert(ratio >= 0.35 && ratio <= 3.0,
       `Canvas/WebGL ${name} contour-light response diverged (${canvasSample.rms}/${webglSample.rms})`);
+  }
+  for (const name of ['warmMetalFacing']) {
+    const canvasSample = canvas.solidFieldLightingSamples.find((sample) => sample.name === name);
+    const webglSample = webgl.solidFieldLightingSamples.find((sample) => sample.name === name);
+    assert(canvasSample && webglSample, `paired solid-field sample missing ${name}`);
+    const ratio = canvasSample.rgbRms / Math.max(0.03, webglSample.rgbRms);
+    assert(ratio >= 0.35 && ratio <= 3.0,
+      `Canvas/WebGL ${name} solid-field response diverged (${canvasSample.rgbRms}/${webglSample.rgbRms})`);
   }
   for (const name of ['waterMetalContact', 'oilGlassContact', 'sandWaterContact']) {
     const canvasSample = canvas.phaseContactLightingSamples.find((sample) => sample.name === name);

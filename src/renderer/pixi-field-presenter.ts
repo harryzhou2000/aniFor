@@ -96,6 +96,7 @@ uniform float uTranslucentLensShell;
 uniform float uSolidCurvatureDepth;
 uniform float uSurfaceContourLighting;
 uniform float uPhaseContactLighting;
+uniform float uSolidFieldLighting;
 uniform float uThermalMaterialStyling;
 uniform float uEnergyCoreRelief;
 uniform float uPowderStyle;
@@ -1112,6 +1113,43 @@ void main() {
         -0.080, 0.080
       ) * uSurfaceContourLighting;
     }
+    // Give only an authoritative opaque solid contour a coloured response to
+    // the shared emission field. High-quality desktop follows the existing
+    // analytic outward normal for one directional probe; compact/mobile and
+    // true 8x reuse the centre sample already required by the composed shader,
+    // so the 15M-fragment path still gains the effect without another texture
+    // fetch. Alpha, support, and ownership never depend on this term.
+    if (uSolidFieldLighting > 0.5 && family == 0.0 && halo < 0.5
+      && surfaceOnly < 0.5 && wall < 0.5 && material != 3.0
+      && traits < 0.5 && !materialEmissive && optics != 12.0
+      && density > 0.08 && density < 0.92 && emissionState.a > 0.002) {
+      float solidFieldContour = smoothstep(0.08, 0.46, density)
+        * (1.0 - smoothstep(0.54, 0.92, density));
+      float solidFieldNormalLength = length(normal.xy);
+      if (solidFieldContour > 0.0 && solidFieldNormalLength > 0.0001) {
+        float solidFieldIncidence = 0.0;
+        vec3 solidFieldColor = emissionState.rgb;
+        if (uHighQuality > 0.5) {
+          vec2 solidOutward = normal.xy / solidFieldNormalLength;
+          vec4 outwardEmission = texture(
+            uEmissionTexture, fieldUv + solidOutward * uEmissionTexel * 2.0
+          );
+          float outwardReach = smoothstep(0.002, 0.42, outwardEmission.a);
+          float outwardIncidence = smoothstep(
+            0.0, 0.12, outwardEmission.a - emissionState.a
+          );
+          solidFieldIncidence = outwardReach * outwardIncidence * 0.12;
+          if (outwardEmission.a > emissionState.a) solidFieldColor = outwardEmission.rgb;
+        } else {
+          float solidFieldReach = smoothstep(0.002, 0.42, emissionState.a);
+          solidFieldIncidence = solidFieldReach
+            * mix(0.030, 0.050, clamp(solidFieldNormalLength * 1.6, 0.0, 1.0));
+        }
+        float solidFieldResponse = solidFieldContour * solidFieldIncidence;
+        color += (vec3(1.0) - clamp(color, 0.0, 1.0))
+          * vividColor(solidFieldColor, 1.10) * solidFieldResponse;
+      }
+    }
     if (!materialEmissive && surfaceOnly < 0.5) {
       float curvatureResponse = clamp(
         contourCurvature * 0.045 * solidCurvatureGain(optics, profile), -0.045, 0.045
@@ -1589,6 +1627,7 @@ export class PixiFieldPresenter {
       uSolidCurvatureDepth: { value: 1, type: 'f32' },
       uSurfaceContourLighting: { value: 1, type: 'f32' },
       uPhaseContactLighting: { value: 1, type: 'f32' },
+      uSolidFieldLighting: { value: 1, type: 'f32' },
       // FieldRenderer turns this on only for backends that expose temperature;
       // byte zero must therefore never make legacy backends look frozen.
       uThermalMaterialStyling: { value: 0, type: 'f32' },
@@ -1785,6 +1824,7 @@ export class PixiFieldPresenter {
     powderRenderStyle: PowderRenderStyle,
     surfaceContourLightingEnabled = true,
     phaseContactLightingEnabled = true,
+    solidFieldLightingEnabled = true,
   ): void {
     const uniforms = this.uniforms.uniforms;
     uniforms.uGasFieldLighting = gasFieldLightingEnabled ? 1 : 0;
@@ -1796,6 +1836,7 @@ export class PixiFieldPresenter {
     uniforms.uSolidCurvatureDepth = solidCurvatureDepthEnabled ? 1 : 0;
     uniforms.uSurfaceContourLighting = surfaceContourLightingEnabled ? 1 : 0;
     uniforms.uPhaseContactLighting = phaseContactLightingEnabled ? 1 : 0;
+    uniforms.uSolidFieldLighting = solidFieldLightingEnabled ? 1 : 0;
     uniforms.uThermalMaterialStyling = thermalMaterialStylingEnabled ? 1 : 0;
     uniforms.uEnergyCoreRelief = energyCoreReliefEnabled ? 1 : 0;
     uniforms.uPowderStyle = powderRenderStyleValue(powderRenderStyle);
@@ -1843,6 +1884,11 @@ export class PixiFieldPresenter {
 
   setPhaseContactLightingEnabled(enabled: boolean): void {
     this.uniforms.uniforms.uPhaseContactLighting = enabled ? 1 : 0;
+    this.renderApplication();
+  }
+
+  setSolidFieldLightingEnabled(enabled: boolean): void {
+    this.uniforms.uniforms.uSolidFieldLighting = enabled ? 1 : 0;
     this.renderApplication();
   }
 

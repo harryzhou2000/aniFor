@@ -34,6 +34,7 @@ import {
 } from './canvas-render-traits';
 import {
   CANVAS_TRANSLUCENT_FIELD_GAIN, canvasTranslucentFieldExposure, lightCanvasSurface,
+  canvasSolidFieldLightingGain,
 } from './canvas-surface-light';
 import { reconstructSolidSurface } from './canvas-solid-surface';
 import {
@@ -157,6 +158,7 @@ export class MaterialRenderer {
   private translucentLensShellEnabled = true;
   private solidCurvatureDepthEnabled = true;
   private surfaceContourLightingEnabled = true;
+  private solidFieldLightingEnabled = true;
   private phaseContactLightingEnabled = true;
   private thermalMaterialStylingEnabled = true;
   private energyCoreReliefEnabled = true;
@@ -342,6 +344,13 @@ export class MaterialRenderer {
     this.changed = true;
   }
 
+  setSolidFieldLightingEnabled(enabled: boolean): void {
+    if (enabled === this.solidFieldLightingEnabled) return;
+    this.solidFieldLightingEnabled = enabled;
+    this.presenter?.setSolidFieldLightingEnabled(enabled);
+    this.changed = true;
+  }
+
   setPhaseContactLightingEnabled(enabled: boolean): void {
     if (enabled === this.phaseContactLightingEnabled) return;
     this.phaseContactLightingEnabled = enabled;
@@ -520,6 +529,7 @@ export class MaterialRenderer {
       this.powderRenderStyle,
       this.surfaceContourLightingEnabled,
       this.phaseContactLightingEnabled,
+      this.solidFieldLightingEnabled,
     );
     // Route subsequent dirty cells to the candidate while its first expensive
     // frame is in flight. The known-good Canvas remains mounted underneath;
@@ -791,6 +801,23 @@ export class MaterialRenderer {
         : 0;
       const surfaceLight = normalLight + solidRelief;
       const projectedInfo = PROJECTED_RENDER_INFO[material];
+      let solidFieldGain = canvasSolidFieldLightingGain(
+        phase, optics, traits, projectedInfo?.emissive ?? false,
+        denseSolidInterior, wall !== 0, this.solidFieldLightingEnabled,
+      );
+      if (solidFieldGain > 0 && (!fields.emission.hasLight || !fields.emission.mayLightWorldCell(x, y))) {
+        solidFieldGain = 0;
+      }
+      let solidFieldNormalX = 0;
+      let solidFieldNormalY = 0;
+      if (solidFieldGain > 0) {
+        const leftSolid = ordinarySolidNeighbour(fields.lookups.styleBytes, left);
+        const rightSolid = ordinarySolidNeighbour(fields.lookups.styleBytes, right);
+        const topSolid = ordinarySolidNeighbour(fields.lookups.styleBytes, top);
+        const bottomSolid = ordinarySolidNeighbour(fields.lookups.styleBytes, bottom);
+        solidFieldNormalX = Number(!rightSolid) - Number(!leftSolid);
+        solidFieldNormalY = Number(!bottomSolid) - Number(!topSolid);
+      }
       const powderBulkDepth = phase === RenderPhase.Powder
         && this.powderRenderStyle === 'smooth' && applicableTraits === 0
         && !projectedInfo?.emissive
@@ -1202,7 +1229,8 @@ export class MaterialRenderer {
           const exposure = cardinalExposure(this.rendered, width, height, x, y, material);
           lightCanvasSurface(
             target, pixel, fields.emission.bytes, fields.emission.width, fields.emission.height,
-            width, height, x, y, profile, exposure,
+            width, height, x, y, profile, exposure, 1,
+            solidFieldNormalX, solidFieldNormalY, solidFieldGain,
           );
         }
       }
@@ -1493,6 +1521,11 @@ function cardinalExposure(
   if (y === 0 || values[(y - 1) * width + x] !== value) exposed++;
   if (y === height - 1 || values[(y + 1) * width + x] !== value) exposed++;
   return Math.min(1, exposed * 0.34);
+}
+
+function ordinarySolidNeighbour(styleBytes: Uint8Array, material: Material): boolean {
+  return material !== Material.Empty && material !== Material.Wall
+    && styleBytes[material * 4] === RenderPhase.Solid;
 }
 
 function settleWithin<T>(promise: Promise<T>, milliseconds: number): Promise<T | undefined> {

@@ -665,6 +665,27 @@ console.log(JSON.stringify({
         );
       }
     }),
+    solidFieldLightingWorstCase: sample(() => {
+      solidPixels.set(solidSeed);
+      for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) {
+        const index = y * width + x;
+        const material = solidMaterials[index];
+        if (!material) continue;
+        const leftSolid = x > 0 && solidMaterials[index - 1] !== Material.Empty;
+        const rightSolid = x < width - 1 && solidMaterials[index + 1] !== Material.Empty;
+        const topSolid = y > 0 && solidMaterials[index - width] !== Material.Empty;
+        const bottomSolid = y < height - 1 && solidMaterials[index + width] !== Material.Empty;
+        const normalX = Number(!rightSolid) - Number(!leftSolid);
+        const normalY = Number(!bottomSolid) - Number(!topSolid);
+        if (normalX === 0 && normalY === 0) continue;
+        lightCanvasSurface(
+          solidPixels, index * 4, profileEmission, emission.width, emission.height,
+          width, height, x, y, styleBytes[material * 4 + 1] as RenderProfile,
+          Math.min(1, (Math.abs(normalX) + Math.abs(normalY)) * 0.34),
+          1, normalX, normalY, 1.25,
+        );
+      }
+    }),
     translucentFieldTransmissionWorstCase: profileTranslucentFieldTransmission(),
     translucentFieldTransmissionLocalizedSource: profileLocalizedTranslucentFieldTransmission(),
     translucentBackdropRefractionWorstCase: sample(() => {

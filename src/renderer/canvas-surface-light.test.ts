@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import {
+  CANVAS_SOLID_FIELD_DIRECTION_GAIN,
+  CANVAS_SOLID_FIELD_DIRECTION_LIMIT,
   CANVAS_TRANSLUCENT_FIELD_EXPOSURE, CANVAS_TRANSLUCENT_FIELD_GAIN,
-  canvasTranslucentFieldExposure, lightCanvasSurface,
+  canvasSolidFieldLightingGain, canvasTranslucentFieldExposure, lightCanvasSurface,
 } from './canvas-surface-light';
-import { RenderProfile, surfaceLightGain } from './render-profile';
+import { RenderPhase, RenderProfile, surfaceLightGain } from './render-profile';
 import { RenderOptics } from './render-optics';
 
 function field(): Uint8Array {
@@ -41,6 +43,79 @@ describe('Canvas surface lighting', () => {
     expect(reflected[1]).toBeGreaterThan(regular[1]);
     expect(reflected[2]).toBeGreaterThanOrEqual(regular[2]);
     expect(reflected[3]).toBe(173);
+  });
+
+  it('adds source-facing solid contour light from the four existing field taps', () => {
+    const emission = new Uint8Array([
+      255, 48, 12, 24, 255, 48, 12, 224,
+      255, 48, 12, 24, 255, 48, 12, 224,
+    ]);
+    const baseline = new Uint8ClampedArray([58, 78, 98, 231]);
+    const facing = baseline.slice();
+    const away = baseline.slice();
+    lightCanvasSurface(
+      baseline, 0, emission, 2, 2, 4, 4, 1, 1, RenderProfile.Rigid, 1,
+    );
+    lightCanvasSurface(
+      facing, 0, emission, 2, 2, 4, 4, 1, 1, RenderProfile.Rigid, 1, 1,
+      1, 0, CANVAS_SOLID_FIELD_DIRECTION_GAIN,
+    );
+    lightCanvasSurface(
+      away, 0, emission, 2, 2, 4, 4, 1, 1, RenderProfile.Rigid, 1, 1,
+      -1, 0, CANVAS_SOLID_FIELD_DIRECTION_GAIN,
+    );
+    expect(facing[0]).toBeGreaterThan(baseline[0]);
+    expect(facing[0] - baseline[0]).toBeGreaterThan(facing[1] - baseline[1]);
+    expect(Math.max(
+      facing[0] - baseline[0], facing[1] - baseline[1], facing[2] - baseline[2],
+    )).toBeLessThanOrEqual(Math.ceil(255 * CANVAS_SOLID_FIELD_DIRECTION_LIMIT));
+    expect(away).toEqual(baseline);
+    expect(facing[3]).toBe(231);
+  });
+
+  it('keeps directional response exact for a flat field or disabled solid class', () => {
+    const uniform = new Uint8Array([
+      220, 90, 30, 160, 220, 90, 30, 160,
+      220, 90, 30, 160, 220, 90, 30, 160,
+    ]);
+    const baseline = new Uint8ClampedArray([68, 88, 108, 205]);
+    const directed = baseline.slice();
+    lightCanvasSurface(
+      baseline, 0, uniform, 2, 2, 4, 4, 1, 1, RenderProfile.Rigid, 1,
+    );
+    lightCanvasSurface(
+      directed, 0, uniform, 2, 2, 4, 4, 1, 1, RenderProfile.Rigid, 1, 1,
+      1, 0, CANVAS_SOLID_FIELD_DIRECTION_GAIN,
+    );
+    expect(directed).toEqual(baseline);
+
+    expect(canvasSolidFieldLightingGain(
+      RenderPhase.Solid, RenderOptics.SmoothRigid, 0, false, false, false, true,
+    )).toBe(CANVAS_SOLID_FIELD_DIRECTION_GAIN);
+    expect(canvasSolidFieldLightingGain(
+      RenderPhase.Solid, RenderOptics.SmoothRigid, 0, false, false, false, false,
+    )).toBe(0);
+    expect(canvasSolidFieldLightingGain(
+      RenderPhase.Solid, RenderOptics.SmoothRigid, 0, false, true, false, true,
+    )).toBe(0);
+    expect(canvasSolidFieldLightingGain(
+      RenderPhase.Solid, RenderOptics.TranslucentRigid, 0, false, false, false, true,
+    )).toBe(0);
+    expect(canvasSolidFieldLightingGain(
+      RenderPhase.Solid, RenderOptics.SmoothRigid, 1, false, false, false, true,
+    )).toBe(0);
+    expect(canvasSolidFieldLightingGain(
+      RenderPhase.Solid, RenderOptics.SmoothRigid, 0, true, false, false, true,
+    )).toBe(0);
+    expect(canvasSolidFieldLightingGain(
+      RenderPhase.Solid, RenderOptics.SmoothRigid, 0, false, false, true, true,
+    )).toBe(0);
+    for (const phase of [
+      RenderPhase.Powder, RenderPhase.Liquid, RenderPhase.Gas,
+      RenderPhase.Energy, RenderPhase.Field,
+    ]) expect(canvasSolidFieldLightingGain(
+      phase, RenderOptics.SmoothRigid, 0, false, false, false, true,
+    )).toBe(0);
   });
 
   it('gates coloured body transmission to enabled dense non-emissive translucent solids', () => {

@@ -1,8 +1,30 @@
-import { surfaceLightGain, type RenderProfile } from './render-profile';
+import { RenderPhase, surfaceLightGain, type RenderProfile } from './render-profile';
 import { RenderOptics } from './render-optics';
 
 export const CANVAS_TRANSLUCENT_FIELD_EXPOSURE = 0.38;
 export const CANVAS_TRANSLUCENT_FIELD_GAIN = 1.6;
+export const CANVAS_SOLID_FIELD_DIRECTION_GAIN = 1.25;
+export const CANVAS_SOLID_FIELD_DIRECTION_LIMIT = 0.12;
+
+/**
+ * Eligibility for the directional part of shared-field light. The ordinary
+ * scalar response remains independent; this addition belongs only to a real,
+ * opaque solid contour and therefore cannot leak into reconstructed support.
+ */
+export function canvasSolidFieldLightingGain(
+  phase: RenderPhase,
+  optics: RenderOptics,
+  traits: number,
+  emissive: boolean,
+  denseInterior: boolean,
+  hasNativeWall: boolean,
+  enabled: boolean,
+): number {
+  return enabled && phase === RenderPhase.Solid
+    && optics !== RenderOptics.TranslucentRigid
+    && traits === 0 && !emissive && !denseInterior && !hasNativeWall
+    ? CANVAS_SOLID_FIELD_DIRECTION_GAIN : 0;
+}
 
 /** Dense semantic glass may carry scene light through its body, never its alpha. */
 export function canvasTranslucentFieldExposure(
@@ -35,6 +57,9 @@ export function lightCanvasSurface(
   profile: RenderProfile,
   exposure: number,
   responseGain = 1,
+  outwardNormalX = 0,
+  outwardNormalY = 0,
+  directionalGain = 0,
 ): void {
   if (exposure <= 0 || target[offset + 3] === 0) return;
   if (emissionWidth <= 0 || emissionHeight <= 0
@@ -53,14 +78,49 @@ export function lightCanvasSurface(
   const topRight = (y0 * emissionWidth + x1) * 4;
   const bottomLeft = (y1 * emissionWidth + x0) * 4;
   const bottomRight = (y1 * emissionWidth + x1) * 4;
-  const alpha = bilinear(emission, topLeft + 3, topRight + 3, bottomLeft + 3, bottomRight + 3, mixX, mixY) / 255;
+  const alphaTopLeft = emission[topLeft + 3];
+  const alphaTopRight = emission[topRight + 3];
+  const alphaBottomLeft = emission[bottomLeft + 3];
+  const alphaBottomRight = emission[bottomRight + 3];
+  const alpha = bilinearValues(
+    alphaTopLeft, alphaTopRight, alphaBottomLeft, alphaBottomRight, mixX, mixY,
+  ) / 255;
   if (alpha <= 1 / 255) return;
 
-  const response = Math.min(
+  let response = Math.min(
     1,
     alpha * surfaceLightGain(profile) * Math.max(0, Math.min(1, exposure))
       * Math.max(0, responseGain),
   );
+  if (directionalGain > 0 && (outwardNormalX !== 0 || outwardNormalY !== 0)) {
+    // The four alpha values were already required by the bilinear sample. Their
+    // analytic slope points toward the local emitter, so its positive dot with
+    // the outward material normal is the source-facing fraction. Normalization
+    // keeps the response independent of the field's downsample resolution.
+    const gradientX = (
+      alphaTopRight - alphaTopLeft
+        + (alphaBottomRight - alphaBottomLeft - alphaTopRight + alphaTopLeft) * mixY
+    ) / 255;
+    const gradientY = (
+      alphaBottomLeft - alphaTopLeft
+        + (alphaBottomRight - alphaTopRight - alphaBottomLeft + alphaTopLeft) * mixX
+    ) / 255;
+    const gradientLength = Math.hypot(gradientX, gradientY);
+    const normalLength = Math.hypot(outwardNormalX, outwardNormalY);
+    if (gradientLength > 1 / 255 && normalLength > 0) {
+      const facing = Math.max(0, Math.min(
+        1,
+        (gradientX * outwardNormalX + gradientY * outwardNormalY)
+          / (gradientLength * normalLength),
+      ));
+      response = Math.min(
+        1,
+        response + Math.min(
+          CANVAS_SOLID_FIELD_DIRECTION_LIMIT, response * facing * directionalGain,
+        ),
+      );
+    }
+  }
   for (let channel = 0; channel < 3; channel++) {
     const light = bilinear(
       emission, topLeft + channel, topRight + channel, bottomLeft + channel, bottomRight + channel, mixX, mixY,
@@ -68,6 +128,19 @@ export function lightCanvasSurface(
     const base = target[offset + channel];
     target[offset + channel] = base + (255 - base) * light * response;
   }
+}
+
+function bilinearValues(
+  topLeft: number,
+  topRight: number,
+  bottomLeft: number,
+  bottomRight: number,
+  mixX: number,
+  mixY: number,
+): number {
+  const top = topLeft + (topRight - topLeft) * mixX;
+  const bottom = bottomLeft + (bottomRight - bottomLeft) * mixX;
+  return top + (bottom - top) * mixY;
 }
 
 function bilinear(
@@ -79,7 +152,7 @@ function bilinear(
   mixX: number,
   mixY: number,
 ): number {
-  const top = bytes[topLeft] + (bytes[topRight] - bytes[topLeft]) * mixX;
-  const bottom = bytes[bottomLeft] + (bytes[bottomRight] - bytes[bottomLeft]) * mixX;
-  return top + (bottom - top) * mixY;
+  return bilinearValues(
+    bytes[topLeft], bytes[topRight], bytes[bottomLeft], bytes[bottomRight], mixX, mixY,
+  );
 }

@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { readFileSync } from 'node:fs';
 import { PixiFieldPresenter } from './pixi-field-presenter';
 import { powderRenderStyleValue } from './powder-render-style';
 import { WEBGL_EIGHT_X_FRAME_STALL_MS } from './render-resolution';
@@ -14,6 +15,7 @@ interface PresenterHarness {
   setGasFieldLightingEnabled: PixiFieldPresenter['setGasFieldLightingEnabled'];
   setSurfaceContourLightingEnabled: PixiFieldPresenter['setSurfaceContourLightingEnabled'];
   setPhaseContactLightingEnabled: PixiFieldPresenter['setPhaseContactLightingEnabled'];
+  setSolidFieldLightingEnabled: PixiFieldPresenter['setSolidFieldLightingEnabled'];
   setRenderStallHandler: PixiFieldPresenter['setRenderStallHandler'];
   setTransform: PixiFieldPresenter['setTransform'];
   waitForFirstFrame: PixiFieldPresenter['waitForFirstFrame'];
@@ -57,6 +59,7 @@ describe('Pixi presenter startup configuration', () => {
       uSolidCurvatureDepth: 0,
       uSurfaceContourLighting: 1,
       uPhaseContactLighting: 1,
+      uSolidFieldLighting: 1,
       uThermalMaterialStyling: 1,
       uEnergyCoreRelief: 0,
       uPowderStyle: powderRenderStyleValue('grains'),
@@ -91,6 +94,39 @@ describe('Pixi presenter startup configuration', () => {
     presenter.setPhaseContactLightingEnabled(true);
     expect(presenter.uniforms.uniforms.uPhaseContactLighting).toBe(1);
     expect(presenter.app.render).toHaveBeenCalledOnce();
+  });
+
+  it('seeds and redraws optional-last solid field lighting', () => {
+    const presenter = presenterHarness();
+
+    presenter.configurePresentation(
+      true, true, true, true, true, true, true, true, true, 'smooth', true, true, false,
+    );
+    expect(presenter.uniforms.uniforms.uPhaseContactLighting).toBe(1);
+    expect(presenter.uniforms.uniforms.uSolidFieldLighting).toBe(0);
+    expect(presenter.app.render).not.toHaveBeenCalled();
+
+    presenter.setSolidFieldLightingEnabled(true);
+    expect(presenter.uniforms.uniforms.uSolidFieldLighting).toBe(1);
+    expect(presenter.app.render).toHaveBeenCalledOnce();
+  });
+
+  it('keeps the solid field-light probe bounded behind strict contour eligibility', () => {
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const start = source.indexOf('// Give only an authoritative opaque solid contour');
+    const end = source.indexOf('    if (!materialEmissive && surfaceOnly < 0.5)', start);
+    const solidFieldBlock = source.slice(start, end);
+
+    expect(start).toBeGreaterThan(0);
+    expect(end).toBeGreaterThan(start);
+    expect(source).toContain('uniform float uSolidFieldLighting;');
+    expect(solidFieldBlock).toContain('uSolidFieldLighting > 0.5 && family == 0.0 && halo < 0.5');
+    expect(solidFieldBlock).toContain('surfaceOnly < 0.5 && wall < 0.5 && material != 3.0');
+    expect(solidFieldBlock).toContain('traits < 0.5 && !materialEmissive && optics != 12.0');
+    expect(solidFieldBlock).toContain('density > 0.08 && density < 0.92');
+    expect(solidFieldBlock).toContain('if (uHighQuality > 0.5)');
+    expect(solidFieldBlock.match(/texture\(\s*uEmissionTexture/g)).toHaveLength(1);
+    expect(solidFieldBlock).not.toMatch(/\balpha\s*[+*]?=/);
   });
 
   it('keeps CSS camera transforms render-free while public style toggles redraw', () => {
