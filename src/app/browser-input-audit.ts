@@ -44,6 +44,7 @@ export interface BrowserInputAuditApi {
   backend(): RendererBackendInfo;
   prepareDenseSolidFixture(): void;
   prepareSolidOpticalDepthFixture(): void;
+  prepareSolidFieldLightingFixture(): void;
   prepareContourStressFixture(): void;
   toggleDenseSolidProbe(): void;
   materialAtlas(): readonly MaterialAtlasEntry[];
@@ -100,6 +101,38 @@ export function prepareSolidOpticalDepthAuditFixture(simulation: SimulationBacke
   rect(46, 158, 20, 8, Material.Empty);
   rect(356, 130, 36, 64, Material.Metal);
   for (const [x, material] of blocks) rect(x, 326, 72, 1, material);
+}
+
+/** Thick material families beside isolated warm/cool sources and strict controls. */
+export function prepareSolidFieldLightingAuditFixture(simulation: SimulationBackend): void {
+  if (simulation.name !== 'TypeScript deterministic fallback') {
+    throw new Error('Solid field-lighting audit fixture requires the deterministic backend');
+  }
+  simulation.clear();
+  const cells = simulation.cells();
+  const rect = (x: number, y: number, width: number, height: number, material: Material): void => {
+    for (let py = y; py < y + height; py++) cells.fill(
+      material, py * simulation.width + x, py * simulation.width + x + width,
+    );
+  };
+  const bodyBlocks = [
+    [32, Material.Metal, Material.Fire],
+    [132, Material.Plant, Material.Fire],
+    [232, Material.VIBR, Material.Fire],
+    [332, Material.DTEC, Material.ELEC],
+    [432, Material.Metal, Material.ELEC],
+  ] as const;
+  for (const [x, material, source] of bodyBlocks) {
+    rect(x, 80, 60, 60, material);
+    rect(x - 5, 80, 3, 60, source);
+  }
+  const controls = [
+    [32, Material.Sand], [132, Material.Glass], [232, Material.CLNE],
+  ] as const;
+  for (const [x, material] of controls) {
+    rect(x, 220, 60, 60, material);
+    rect(x - 5, 220, 3, 60, Material.Fire);
+  }
 }
 
 /**

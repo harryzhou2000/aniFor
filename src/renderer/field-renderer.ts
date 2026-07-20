@@ -36,7 +36,7 @@ import {
 } from './canvas-render-traits';
 import {
   CANVAS_TRANSLUCENT_FIELD_GAIN, canvasTranslucentFieldExposure, lightCanvasSurface,
-  canvasSolidFieldLightingGain, sampleCanvasFieldAlpha,
+  canvasSolidBodyFieldExposure, canvasSolidFieldLightingGain, sampleCanvasFieldAlpha,
 } from './canvas-surface-light';
 import { reconstructSolidSurface } from './canvas-solid-surface';
 import {
@@ -433,6 +433,10 @@ export class MaterialRenderer {
     if (enabled === this.solidFieldLightingEnabled) return;
     this.solidFieldLightingEnabled = enabled;
     this.presenter?.setSolidFieldLightingEnabled(enabled);
+    // The supersampled contour plane is opaque over authoritative solid cells
+    // and samples the lit base RGB. Rebuild it whenever this light term changes
+    // or its cached pixels conceal an otherwise correct Canvas body response.
+    this.contourChunks.markAll();
     this.changed = true;
   }
 
@@ -936,13 +940,17 @@ export class MaterialRenderer {
       const solidOpticalDepth = phase === RenderPhase.Solid && material !== Material.Wall
         && !projectedInfo?.emissive
         ? this.boundaryStability[index] : 0;
-      let solidFieldGain = canvasSolidFieldLightingGain(
+      const solidFieldReachable = phase === RenderPhase.Solid && wall === 0
+        && !(projectedInfo?.emissive ?? false) && this.solidFieldLightingEnabled
+        && fields.emission.hasLight && fields.emission.mayLightWorldCell(x, y);
+      const solidFieldGain = solidFieldReachable ? canvasSolidFieldLightingGain(
         phase, optics, traits, projectedInfo?.emissive ?? false,
-        denseSolidInterior, wall !== 0, this.solidFieldLightingEnabled,
-      );
-      if (solidFieldGain > 0 && (!fields.emission.hasLight || !fields.emission.mayLightWorldCell(x, y))) {
-        solidFieldGain = 0;
-      }
+        denseSolidInterior, wall !== 0, true,
+      ) : 0;
+      const solidBodyFieldExposure = solidFieldReachable ? canvasSolidBodyFieldExposure(
+        phase, profile, optics, applicableTraits, projectedInfo?.emissive ?? false,
+        denseSolidInterior, wall !== 0, solidOpticalDepth, solidRelief, true,
+      ) : 0;
       let solidFieldNormalX = 0;
       let solidFieldNormalY = 0;
       if (solidFieldGain > 0) {
@@ -1399,6 +1407,10 @@ export class MaterialRenderer {
         if (translucentExposure > 0 && fields.emission.mayLightWorldCell(x, y)) lightCanvasSurface(
           target, pixel, fields.emission.bytes, fields.emission.width, fields.emission.height,
           width, height, x, y, profile, translucentExposure, CANVAS_TRANSLUCENT_FIELD_GAIN,
+        );
+        if (solidBodyFieldExposure > 0) lightCanvasSurface(
+          target, pixel, fields.emission.bytes, fields.emission.width, fields.emission.height,
+          width, height, x, y, profile, solidBodyFieldExposure,
         );
         if (receivesSurfaceLight(phase)) {
           const exposure = cardinalExposure(this.rendered, width, height, x, y, material);

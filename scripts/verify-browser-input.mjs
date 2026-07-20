@@ -28,7 +28,25 @@ const liquidDepthOnly = process.argv.includes('--liquid-depth-only');
 const solidDepthOnly = process.argv.includes('--solid-depth-only');
 const gasChromaOnly = process.argv.includes('--gas-chroma-only');
 const surfaceContourOnly = process.argv.includes('--surface-contour-only');
+const solidFieldOnly = process.argv.includes('--solid-field-only');
 const screenshotRequest = process.argv.find((argument) => argument.startsWith('--screenshot='))?.slice('--screenshot='.length);
+const SOLID_FIELD_REGIONS = [
+  { name: 'warmMetalFacing', x: 389.5, y: 229, radiusX: 2, radiusY: 5 },
+  { name: 'coolMetalFacing', x: 421.5, y: 229, radiusX: 1.5, radiusY: 5 },
+  { name: 'metalFieldCore', x: 405, y: 229, radius: 3 },
+  { name: 'powderFieldControl', x: 405, y: 204, radius: 3 },
+];
+const FOCUSED_SOLID_FIELD_REGIONS = [
+  { name: 'warmMetalFacing', x: 32.5, y: 110, radiusX: 1, radiusY: 8 },
+  { name: 'coolMetalFacing', x: 432.5, y: 110, radiusX: 1, radiusY: 8 },
+  { name: 'metalFieldCore', x: 36, y: 110, radius: 2 },
+  { name: 'organicFieldCore', x: 136, y: 110, radius: 2 },
+  { name: 'radioactiveFieldCore', x: 236, y: 110, radius: 2 },
+  { name: 'deviceFieldCore', x: 336, y: 110, radius: 2 },
+  { name: 'powderFieldControl', x: 36, y: 250, radius: 2 },
+  { name: 'glassFieldControl', x: 136, y: 250, radius: 2 },
+  { name: 'traitFieldControl', x: 236, y: 250, radius: 2 },
+];
 
 async function main() {
   const server = spawn(process.execPath, [
@@ -48,12 +66,13 @@ async function main() {
     for (const mode of modes) results.push(await auditMode(mode));
     const reducedAudit = quickScreenshot || layoutOnly || mobileOnly
       || desktopInputOnly || visualScaleMatrixOnly || powderBodyOnly || liquidDepthOnly
-      || solidDepthOnly || gasChromaOnly || surfaceContourOnly;
+      || solidDepthOnly || gasChromaOnly || surfaceContourOnly || solidFieldOnly;
     if (powderBodyOnly) assertPairedPowderBodyDepth(results);
     if (liquidDepthOnly) assertPairedLiquidOpticalDepth(results);
     if (solidDepthOnly) assertPairedSolidOpticalDepth(results);
     if (gasChromaOnly) assertPairedGasSpectralScattering(results);
     if (surfaceContourOnly) assertPairedSurfaceContourLighting(results);
+    if (solidFieldOnly) assertPairedSolidFieldLighting(results);
     if (!scaleEightOnly && !materialAtlasOnly && !reducedAudit) assertPairedVisualRelief(results);
     if (!scaleEightOnly && !reducedAudit) assertPairedMaterialAtlas(results);
     compactMaterialAtlasResults(results);
@@ -224,6 +243,75 @@ async function auditMode(mode) {
     // Read the rendered canvas, not semantic cells, so framebuffer clipping and
     // backend compositing regressions are observable in the browser gate.
     const canonicalCaptures = await waitForStablePageCapture(cdp, `${mode} canonical framebuffer`);
+    if (solidFieldOnly) {
+      await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.prepareSolidFieldLightingFixture(); true');
+      await waitFor(() => evaluate(cdp,
+        'window.__ANIFOR_INPUT_AUDIT__.cell(36, 110) === 23'
+          + ' && window.__ANIFOR_INPUT_AUDIT__.presentationAuxiliary(36, 110) > 6'),
+      15_000, `${mode} solid-field fixture`);
+      // RenderFieldSet intentionally refreshes at most one atmosphere/liquid/
+      // emission field per 12 Hz slot. Let the replacement scene reach its
+      // emission turn before treating a stable framebuffer as authoritative.
+      await sleep(400);
+      await waitForStablePageCapture(cdp, `${mode} focused solid-field fixture framebuffer`);
+      const probeState = await evaluate(cdp, `(${JSON.stringify(FOCUSED_SOLID_FIELD_REGIONS)}).map(({ name, x, y }) => ({
+        name,
+        material: window.__ANIFOR_INPUT_AUDIT__.cell(Math.floor(x), Math.floor(y)),
+        wall: window.__ANIFOR_INPUT_AUDIT__.wall(Math.floor(x), Math.floor(y)),
+        auxiliary: window.__ANIFOR_INPUT_AUDIT__.presentationAuxiliary(Math.floor(x), Math.floor(y)),
+      }))`);
+      await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setSolidFieldLighting(false); true');
+      const unlit = await waitForStablePageCapture(cdp, `${mode} focused unlit solid-field framebuffer`);
+      await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setSolidFieldLighting(true); true');
+      const lit = await waitForStablePageCapture(cdp, `${mode} focused lit solid-field framebuffer`);
+      await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setSolidFieldLighting(false); true');
+      const repeated = await waitForStablePageCapture(cdp, `${mode} focused repeated unlit solid-field framebuffer`);
+      const solidFieldResponseSamples = await sampleLightingDifferenceRegions(cdp, {
+        unlit: unlit.capture.data,
+        lit: lit.capture.data,
+      }, FOCUSED_SOLID_FIELD_REGIONS, canonicalCaptures.canvasRect);
+      const solidFieldLightingSamples = await sampleBackdropRefractionRegions(cdp, {
+        straight: unlit.capture.data,
+        refracted: lit.capture.data,
+        repeatedStraight: repeated.capture.data,
+      }, FOCUSED_SOLID_FIELD_REGIONS, canonicalCaptures.canvasRect);
+      assertSolidFieldLightingSamples(
+        solidFieldResponseSamples, solidFieldLightingSamples,
+        `${mode} focused ${JSON.stringify(probeState)}`,
+      );
+      const blank = await captureStableBlankPage(cdp, mode);
+      const supportRegions = [{
+        name: 'metalFieldSupport', x: 62, y: 110,
+        radiusX: 30, radiusY: 30, silhouette: true,
+      }];
+      const [unlitSupport, litSupport] = await Promise.all([
+        samplePageRegions(
+          cdp, unlit.capture.data, supportRegions,
+          blank.capture.data, blank.reference.data, canonicalCaptures.canvasRect,
+        ),
+        samplePageRegions(
+          cdp, lit.capture.data, supportRegions,
+          blank.capture.data, blank.reference.data, canonicalCaptures.canvasRect,
+        ),
+      ]);
+      const supportInvariantSamples = unlitSupport.map((sample, index) => ({
+        name: sample.name,
+        unlitVisible: sample.visible,
+        litVisible: litSupport[index].visible,
+        unlitWorldArea: sample.worldArea,
+        litWorldArea: litSupport[index].worldArea,
+      }));
+      assert(supportInvariantSamples.every((sample) => (
+        sample.unlitVisible === sample.litVisible
+        && Math.abs(sample.unlitWorldArea - sample.litWorldArea) <= 0.01
+      )), `${mode}: focused solid-field lighting changed support (${JSON.stringify(supportInvariantSamples)})`);
+      assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
+      cdp.close();
+      return {
+        backend: mode, solidFieldResponseSamples, solidFieldLightingSamples,
+        supportInvariantSamples, probeState, browserErrors: errors.length,
+      };
+    }
     if (surfaceContourOnly) {
       await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setSurfaceContourLighting(false); true');
       const flat = await waitForStablePageCapture(cdp, `${mode} focused flat surface-contour framebuffer`);
@@ -1803,47 +1891,18 @@ async function auditMode(mode) {
       && Math.abs(sample.flatWorldArea - sample.litWorldArea)
         / Math.max(0.001, sample.flatWorldArea) <= 0.001
     )), `${mode}: surface contour lighting changed solid support (${JSON.stringify(surfaceContourSupportInvariantSamples)})`);
-    const solidFieldRegions = [
-      { name: 'warmMetalFacing', x: 389.5, y: 229, radiusX: 2, radiusY: 5 },
-      { name: 'coolMetalFacing', x: 421.5, y: 229, radiusX: 1.5, radiusY: 5 },
-      { name: 'metalFieldCore', x: 405, y: 229, radius: 3 },
-      { name: 'powderFieldControl', x: 405, y: 204, radius: 3 },
-    ];
     const solidFieldResponseSamples = await sampleLightingDifferenceRegions(cdp, {
       unlit: unlitSolidFieldCaptures.capture.data,
       lit: litSolidFieldCaptures.capture.data,
-    }, solidFieldRegions, canonicalCaptures.canvasRect);
+    }, SOLID_FIELD_REGIONS, canonicalCaptures.canvasRect);
     const solidFieldLightingSamples = await sampleBackdropRefractionRegions(cdp, {
       straight: unlitSolidFieldCaptures.capture.data,
       refracted: litSolidFieldCaptures.capture.data,
       repeatedStraight: repeatedUnlitSolidFieldCaptures.capture.data,
-    }, solidFieldRegions, canonicalCaptures.canvasRect);
-    const solidFieldResponse = Object.fromEntries(
-      solidFieldResponseSamples.map((sample) => [sample.name, sample]),
+    }, SOLID_FIELD_REGIONS, canonicalCaptures.canvasRect);
+    assertCanonicalSolidFieldLightingSamples(
+      solidFieldResponseSamples, solidFieldLightingSamples, mode,
     );
-    const solidFieldLighting = Object.fromEntries(
-      solidFieldLightingSamples.map((sample) => [sample.name, sample]),
-    );
-    assert(solidFieldResponse.warmMetalFacing.positiveRgb[0] >= 0.08
-      && solidFieldResponse.warmMetalFacing.positiveRgb[0]
-        >= solidFieldResponse.warmMetalFacing.positiveRgb[2] + 0.04
-      && solidFieldResponse.warmMetalFacing.peakMagnitude <= 32
-      && solidFieldLighting.warmMetalFacing.rgbRms >= 0.08,
-    `${mode}: warm source lost its coloured solid-contour response (${JSON.stringify({
-      response: solidFieldResponse.warmMetalFacing,
-      repeat: solidFieldLighting.warmMetalFacing,
-    })})`);
-    assert(Math.max(...solidFieldResponse.coolMetalFacing.positiveRgb) >= 0.02
-      && solidFieldResponse.coolMetalFacing.peakMagnitude <= 32
-      && solidFieldLighting.coolMetalFacing.rgbRms >= 0.08
-      && solidFieldLighting.metalFieldCore.rgbPeak <= 1
-      && solidFieldLighting.powderFieldControl.rgbPeak <= 1,
-    `${mode}: second source-facing solid contour lost its bounded response or leaked into a core/powder (${JSON.stringify({
-      response: solidFieldResponseSamples,
-      repeat: solidFieldLightingSamples,
-    })})`);
-    assert(solidFieldLightingSamples.every((sample) => sample.repeatRgbPeak <= 1),
-      `${mode}: solid-field off-on-off sequence was not deterministic (${JSON.stringify(solidFieldLightingSamples)})`);
     const solidFieldSupportRegions = [
       { name: 'warmMetalFieldSupport', x: 405, y: 229, radiusX: 17.5, radiusY: 10.5,
         silhouette: true },
@@ -3348,6 +3407,68 @@ function assertPairedSurfaceContourLighting(results) {
     const ratio = canvasSample.rgbRms / Math.max(0.02, webglSample.rgbRms);
     assert(ratio >= 0.25 && ratio <= 4.0,
       `focused Canvas/WebGL ${name} Fresnel response diverged (${canvasSample.rgbRms}/${webglSample.rgbRms})`);
+  }
+}
+
+function assertCanonicalSolidFieldLightingSamples(responseSamples, lightingSamples, label) {
+  const response = Object.fromEntries(responseSamples.map((sample) => [sample.name, sample]));
+  const lighting = Object.fromEntries(lightingSamples.map((sample) => [sample.name, sample]));
+  assert(response.warmMetalFacing.positiveRgb[0] >= 0.08
+    && response.warmMetalFacing.positiveRgb[0]
+      >= response.warmMetalFacing.positiveRgb[2] + 0.04
+    && response.warmMetalFacing.peakMagnitude <= 32
+    && lighting.warmMetalFacing.rgbRms >= 0.08,
+  `${label}: warm source lost its coloured solid-contour response (${JSON.stringify({
+    response: response.warmMetalFacing, repeat: lighting.warmMetalFacing,
+  })})`);
+  assert(Math.max(...response.coolMetalFacing.positiveRgb) >= 0.02
+    && response.coolMetalFacing.peakMagnitude <= 32
+    && lighting.coolMetalFacing.rgbRms >= 0.08
+    && lighting.powderFieldControl.rgbPeak <= 1,
+  `${label}: canonical solid-field contour lost its response or leaked into powder (${JSON.stringify({
+    response: responseSamples, repeat: lightingSamples,
+  })})`);
+  assert(lightingSamples.every((sample) => sample.repeatRgbPeak <= 1),
+    `${label}: canonical solid-field off-on-off sequence was not deterministic (${JSON.stringify(lightingSamples)})`);
+}
+
+function assertSolidFieldLightingSamples(responseSamples, lightingSamples, label) {
+  const response = Object.fromEntries(responseSamples.map((sample) => [sample.name, sample]));
+  const lighting = Object.fromEntries(lightingSamples.map((sample) => [sample.name, sample]));
+  for (const name of [
+    'metalFieldCore', 'organicFieldCore', 'radioactiveFieldCore', 'deviceFieldCore',
+  ]) {
+    assert(lighting[name].rgbRms >= 0.08 && lighting[name].rgbPeak <= 12,
+      `${label}: ${name} lost its bounded thick-body field response (${JSON.stringify({
+        response: response[name], repeat: lighting[name],
+      })})`);
+  }
+  assert(response.metalFieldCore.positiveRgb[0]
+    >= response.metalFieldCore.positiveRgb[2] + 0.02,
+  `${label}: warm solid-body light lost source chroma (${JSON.stringify(response.metalFieldCore)})`);
+  for (const name of ['powderFieldControl', 'glassFieldControl', 'traitFieldControl']) {
+    assert(lighting[name].rgbPeak <= 1,
+      `${label}: solid-body field lighting leaked into ${name} (${JSON.stringify(lighting[name])})`);
+  }
+  assert(lightingSamples.every((sample) => sample.repeatRgbPeak <= 1),
+    `${label}: solid-field off-on-off sequence was not deterministic (${JSON.stringify(lightingSamples)})`);
+}
+
+function assertPairedSolidFieldLighting(results) {
+  const canvas = results.find((result) => result.backend === 'canvas2d')
+    ?.solidFieldLightingSamples;
+  const webgl = results.find((result) => result.backend === 'webgl')
+    ?.solidFieldLightingSamples;
+  if (!canvas || !webgl) return;
+  for (const name of [
+    'metalFieldCore', 'organicFieldCore', 'radioactiveFieldCore', 'deviceFieldCore',
+  ]) {
+    const canvasSample = canvas.find((sample) => sample.name === name);
+    const webglSample = webgl.find((sample) => sample.name === name);
+    assert(canvasSample && webglSample, `focused paired solid-field sample missing ${name}`);
+    const ratio = canvasSample.rgbRms / Math.max(0.03, webglSample.rgbRms);
+    assert(ratio >= 0.35 && ratio <= 3.0,
+      `focused Canvas/WebGL ${name} solid-field response diverged (${canvasSample.rgbRms}/${webglSample.rgbRms})`);
   }
 }
 

@@ -18,21 +18,21 @@ function alphaAt(field: EmissionField, x: number, y: number): number {
 
 describe('emission field', () => {
   it('tracks whether the packed field contains useful light', () => {
-    const { field, materials } = fixture();
+    const { field, materials } = fixture(60, 60);
     field.update(materials);
     expect(field.hasLight).toBe(false);
-    expect(field.mayLightWorldCell(10, 10)).toBe(false);
-    materials[10 * 21 + 10] = Material.PHOT;
+    expect(field.mayLightWorldCell(30, 30)).toBe(false);
+    materials[30 * 60 + 30] = Material.PHOT;
     field.update(materials);
     expect(field.hasLight).toBe(true);
-    expect(field.mayLightWorldCell(10, 10)).toBe(true);
+    expect(field.mayLightWorldCell(30, 30)).toBe(true);
     // The conservative bilinear guard may admit the cell immediately outside
     // an active field bound, but it must reject the far side of the world.
-    expect(field.mayLightWorldCell(20, 20)).toBe(false);
+    expect(field.mayLightWorldCell(59, 59)).toBe(false);
     materials.fill(Material.Empty);
     field.update(materials);
     expect(field.hasLight).toBe(false);
-    expect(field.mayLightWorldCell(10, 10)).toBe(false);
+    expect(field.mayLightWorldCell(30, 30)).toBe(false);
   });
 
   it('widens sparse energy into a coloured falloff', () => {
@@ -41,8 +41,8 @@ describe('emission field', () => {
     field.update(materials);
     expect(alphaAt(field, 3, 3)).toBeGreaterThan(alphaAt(field, 4, 3));
     expect(alphaAt(field, 4, 3)).toBeGreaterThan(alphaAt(field, 5, 3));
-    expect(alphaAt(field, 5, 3)).toBeGreaterThan(0);
-    expect(alphaAt(field, 6, 3)).toBe(0);
+    expect(alphaAt(field, 5, 3)).toBeGreaterThan(alphaAt(field, 6, 3));
+    expect(alphaAt(field, 6, 3)).toBeGreaterThan(0);
   });
 
   it('blends nearby energy colours and ignores ordinary matter', () => {

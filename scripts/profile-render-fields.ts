@@ -10,7 +10,8 @@ import {
   applyCanvasRenderTraits, CANVAS_RENDER_TRAIT_CLOCK_SIZE, updateCanvasRenderTraitClock,
 } from '../src/renderer/canvas-render-traits';
 import {
-  CANVAS_TRANSLUCENT_FIELD_GAIN, canvasTranslucentFieldExposure, lightCanvasSurface,
+  CANVAS_TRANSLUCENT_FIELD_GAIN, canvasSolidBodyFieldExposure,
+  canvasTranslucentFieldExposure, lightCanvasSurface,
 } from '../src/renderer/canvas-surface-light';
 import { EmissionField } from '../src/renderer/emission-field';
 import { LiquidDensityField } from '../src/renderer/liquid-density-field';
@@ -786,6 +787,40 @@ console.log(JSON.stringify({
           width, height, x, y, styleBytes[material * 4 + 1] as RenderProfile,
           Math.min(1, (Math.abs(normalX) + Math.abs(normalY)) * 0.34),
           1, normalX, normalY, 1.25,
+        );
+      }
+    }),
+    solidBodyFieldLightingWorstCase: sample(() => {
+      solidPixels.set(solidSeed);
+      for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) {
+        const index = y * width + x;
+        const exposure = canvasSolidBodyFieldExposure(
+          RenderPhase.Solid, RenderProfile.Rigid, RenderOptics.SmoothRigid,
+          0, false, true, false, liquidAuxiliary[index],
+          // Production reuses the relief already charged to solid styling.
+          0, true,
+        );
+        if (exposure <= 0) continue;
+        lightCanvasSurface(
+          solidPixels, index * 4, profileEmission, emission.width, emission.height,
+          width, height, x, y, RenderProfile.Rigid, exposure,
+        );
+      }
+    }),
+    solidBodyFieldLightingLocalizedSource: sample(() => {
+      solidPixels.set(solidSeed);
+      for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) {
+        if (!localizedEmission.mayLightWorldCell(x, y)) continue;
+        const index = y * width + x;
+        const exposure = canvasSolidBodyFieldExposure(
+          RenderPhase.Solid, RenderProfile.Rigid, RenderOptics.SmoothRigid,
+          0, false, true, false, liquidAuxiliary[index], 0, true,
+        );
+        if (exposure <= 0) continue;
+        lightCanvasSurface(
+          solidPixels, index * 4,
+          localizedEmission.bytes, localizedEmission.width, localizedEmission.height,
+          width, height, x, y, RenderProfile.Rigid, exposure,
         );
       }
     }),

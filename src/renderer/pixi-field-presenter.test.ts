@@ -340,7 +340,7 @@ describe('Pixi presenter startup configuration', () => {
     const helperEnd = source.indexOf('vec3 vividColor', helperStart);
     const helpers = source.slice(helperStart, helperEnd);
     const solidStart = source.indexOf('// Reuse the semantic Hermite normal as a small family-coloured');
-    const solidEnd = source.indexOf('// Give only an authoritative opaque solid contour', solidStart);
+    const solidEnd = source.indexOf('// Give an authoritative opaque solid a coloured response', solidStart);
     const solid = source.slice(solidStart, solidEnd);
     const powderStart = source.indexOf('float powderContourChroma = localPowderShape.x');
     const powderEnd = source.indexOf('} else if (smoothSurface', powderStart);
@@ -513,9 +513,9 @@ describe('Pixi presenter startup configuration', () => {
     expect(presenter.app.render).toHaveBeenCalledOnce();
   });
 
-  it('keeps the solid field-light probe bounded behind strict contour eligibility', () => {
+  it('keeps contour and thick-body solid field light bounded behind strict eligibility', () => {
     const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
-    const start = source.indexOf('// Give only an authoritative opaque solid contour');
+    const start = source.indexOf('// Give an authoritative opaque solid a coloured response');
     const end = source.indexOf('    if (!materialEmissive && surfaceOnly < 0.5)', start);
     const solidFieldBlock = source.slice(start, end);
 
@@ -524,8 +524,15 @@ describe('Pixi presenter startup configuration', () => {
     expect(source).toContain('uniform float uSolidFieldLighting;');
     expect(solidFieldBlock).toContain('uSolidFieldLighting > 0.5 && family == 0.0 && halo < 0.5');
     expect(solidFieldBlock).toContain('surfaceOnly < 0.5 && wall < 0.5 && material != 3.0');
-    expect(solidFieldBlock).toContain('traits < 0.5 && !materialEmissive && optics != 12.0');
-    expect(solidFieldBlock).toContain('density > 0.08 && density < 0.92');
+    expect(solidFieldBlock).toContain('!materialEmissive && optics != 12.0');
+    expect(solidFieldBlock).toContain('traits < 0.5 && density > 0.08 && density < 0.92');
+    expect(solidFieldBlock).toContain('solidOpticalDepth > 6.0 / 255.0');
+    expect(solidFieldBlock).toContain('solidBodyFieldTraitEligibility(traits) > 0.5');
+    expect(source).toContain('float solidBodyFieldTraitEligibility(float traits)');
+    expect(source).toContain('mod(floor(traits / 128.0), 2.0)');
+    expect(solidFieldBlock).toContain('solidBodyFieldExposure(');
+    expect(solidFieldBlock).toContain('12.0 / 255.0');
+    expect(solidFieldBlock).toContain('emissionState.a * surfaceLightGain(profile) * bodyExposure');
     expect(solidFieldBlock).toContain('if (uHighQuality > 0.5)');
     expect(solidFieldBlock.match(/texture\(\s*uEmissionTexture/g)).toHaveLength(1);
     expect(solidFieldBlock).not.toMatch(/\balpha\s*[+*]?=/);

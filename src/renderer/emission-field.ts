@@ -1,6 +1,10 @@
 const DOWNSAMPLE = 3;
-const KERNEL = [1, 4, 6, 4, 1] as const;
-const KERNEL_RADIUS = 2;
+// A nine-tap binomial field reaches twelve world cells from a sparse source.
+// That is broad enough for thick material shoulders to receive the same shared
+// scene light as their contours, while the existing downsample keeps the field
+// compact and the shader still performs exactly its established centre sample.
+const KERNEL = [1, 8, 28, 56, 70, 56, 28, 8, 1] as const;
+const KERNEL_RADIUS = 4;
 const GLOW_GAIN = 8;
 
 /**

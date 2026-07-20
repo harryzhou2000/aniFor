@@ -3,7 +3,8 @@ import { DeterministicBackend } from '../simulation/deterministic-backend';
 import { Material } from '../shared/materials';
 import {
   blankBrowserInputAuditRequested, browserInputAuditRequested,
-  prepareContourStressAuditFixture, prepareDenseSolidAuditFixture, toggleDenseSolidAuditProbe,
+  prepareContourStressAuditFixture, prepareDenseSolidAuditFixture,
+  prepareSolidFieldLightingAuditFixture, toggleDenseSolidAuditProbe,
 } from './browser-input-audit';
 
 describe('browser input audit gate', () => {
@@ -43,5 +44,23 @@ describe('browser input audit gate', () => {
         x % 3 < 2 && y % 3 < 2 ? Material.Water : Material.Empty,
       );
     }
+  });
+
+  it('builds isolated thick material-lighting bodies and protected controls', () => {
+    const simulation = new DeterministicBackend(612, 384);
+    prepareSolidFieldLightingAuditFixture(simulation);
+    const cells = simulation.cells();
+    const cell = (x: number, y: number): Material => cells[y * simulation.width + x] as Material;
+
+    expect(cell(36, 110)).toBe(Material.Metal);
+    expect(cell(136, 110)).toBe(Material.Plant);
+    expect(cell(236, 110)).toBe(Material.VIBR);
+    expect(cell(336, 110)).toBe(Material.DTEC);
+    expect(cell(436, 110)).toBe(Material.Metal);
+    expect(cell(29, 110)).toBe(Material.Fire);
+    expect(cell(329, 110)).toBe(Material.ELEC);
+    expect(cell(36, 250)).toBe(Material.Sand);
+    expect(cell(136, 250)).toBe(Material.Glass);
+    expect(cell(236, 250)).toBe(Material.CLNE);
   });
 });

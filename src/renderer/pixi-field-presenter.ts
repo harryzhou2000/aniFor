@@ -720,6 +720,39 @@ float solidBodyMacroGain(float optics) {
   if (optics == 10.0 || optics == 12.0) return 10.0 / 255.0;
   return 7.40 / 255.0;
 }
+float solidBodyFieldExposure(
+  float optics, float profile, float opticalDepth, float reliefTone
+) {
+  float familyExposure = 0.34;
+  float reliefStrength = 6.5;
+  if (optics == 8.0 || profile == 2.0) {
+    familyExposure = 0.42; reliefStrength = 7.0;
+  }
+  if (optics == 9.0 || profile == 3.0) {
+    familyExposure = 0.36; reliefStrength = 6.0;
+  }
+  if (optics == 10.0 || profile == 5.0) {
+    familyExposure = 0.50; reliefStrength = 4.5;
+  }
+  if (optics == 11.0 || profile == 4.0) {
+    familyExposure = 0.40; reliefStrength = 5.5;
+  }
+  float depthSupport = smoothstep(6.0 / 255.0, 42.0 / 255.0, opticalDepth);
+  float coreAttenuation = 1.0
+    - smoothstep(150.0 / 255.0, 1.0, opticalDepth) * 0.35;
+  float macroRelief = clamp(reliefTone * 255.0 / reliefStrength, -1.0, 1.0);
+  return familyExposure * depthSupport * coreAttenuation * (0.85 + macroRelief * 0.15);
+}
+float solidBodyFieldTraitEligibility(float traits) {
+  // Passive radioactive/organic/fibrous identity remains eligible. Active
+  // emitter, sink, channel, force, and carrier roles keep their exact styling.
+  float blocked = mod(floor(traits / 1.0), 2.0)
+    + mod(floor(traits / 2.0), 2.0)
+    + mod(floor(traits / 4.0), 2.0)
+    + mod(floor(traits / 8.0), 2.0)
+    + mod(floor(traits / 128.0), 2.0);
+  return 1.0 - step(0.5, blocked);
+}
 float solidInteriorMicroGain(float optics, float profile) {
   if (optics == 8.0 || (optics < 0.5 && profile == 2.0)) return 0.54;
   if (optics == 9.0 || (optics < 0.5 && profile == 3.0)) return 0.70;
@@ -1451,41 +1484,54 @@ void main() {
         * uSurfaceContourLighting;
       color = applySurfaceChroma(color, solidContourChroma, optics);
     }
-    // Give only an authoritative opaque solid contour a coloured response to
-    // the shared emission field. High-quality desktop follows the existing
-    // analytic outward normal for one directional probe; compact/mobile and
-    // true 8x reuse the centre sample already required by the composed shader,
-    // so the 15M-fragment path still gains the effect without another texture
-    // fetch. Alpha, support, and ownership never depend on this term.
+    // Give an authoritative opaque solid a coloured response to the shared
+    // emission field. The contour may take one high-quality outward probe;
+    // thick bodies always reuse the centre sample, relief, and optical depth
+    // already required by the composed shader. True 8x therefore adds only
+    // arithmetic. Alpha, support, and ownership never depend on this term.
     if (uSolidFieldLighting > 0.5 && family == 0.0 && halo < 0.5
       && surfaceOnly < 0.5 && wall < 0.5 && material != 3.0
-      && traits < 0.5 && !materialEmissive && optics != 12.0
-      && density > 0.08 && density < 0.92 && emissionState.a > 0.002) {
-      float solidFieldContour = smoothstep(0.08, 0.46, density)
-        * (1.0 - smoothstep(0.54, 0.92, density));
-      float solidFieldNormalLength = length(normal.xy);
-      if (solidFieldContour > 0.0 && solidFieldNormalLength > 0.0001) {
-        float solidFieldIncidence = 0.0;
-        vec3 solidFieldColor = emissionState.rgb;
-        if (uHighQuality > 0.5) {
-          vec2 solidOutward = normal.xy / solidFieldNormalLength;
-          vec4 outwardEmission = texture(
-            uEmissionTexture, fieldUv + solidOutward * uEmissionTexel * 2.0
-          );
-          float outwardReach = smoothstep(0.002, 0.42, outwardEmission.a);
-          float outwardIncidence = smoothstep(
-            0.0, 0.12, outwardEmission.a - emissionState.a
-          );
-          solidFieldIncidence = outwardReach * outwardIncidence * 0.12;
-          if (outwardEmission.a > emissionState.a) solidFieldColor = outwardEmission.rgb;
-        } else {
-          float solidFieldReach = smoothstep(0.002, 0.42, emissionState.a);
-          solidFieldIncidence = solidFieldReach
-            * mix(0.030, 0.050, clamp(solidFieldNormalLength * 1.6, 0.0, 1.0));
+      && !materialEmissive && optics != 12.0
+      && emissionState.a > 0.002) {
+      if (traits < 0.5 && density > 0.08 && density < 0.92) {
+        float solidFieldContour = smoothstep(0.08, 0.46, density)
+          * (1.0 - smoothstep(0.54, 0.92, density));
+        float solidFieldNormalLength = length(normal.xy);
+        if (solidFieldContour > 0.0 && solidFieldNormalLength > 0.0001) {
+          float solidFieldIncidence = 0.0;
+          vec3 solidFieldColor = emissionState.rgb;
+          if (uHighQuality > 0.5) {
+            vec2 solidOutward = normal.xy / solidFieldNormalLength;
+            vec4 outwardEmission = texture(
+              uEmissionTexture, fieldUv + solidOutward * uEmissionTexel * 2.0
+            );
+            float outwardReach = smoothstep(0.002, 0.42, outwardEmission.a);
+            float outwardIncidence = smoothstep(
+              0.0, 0.12, outwardEmission.a - emissionState.a
+            );
+            solidFieldIncidence = outwardReach * outwardIncidence * 0.12;
+            if (outwardEmission.a > emissionState.a) solidFieldColor = outwardEmission.rgb;
+          } else {
+            float solidFieldReach = smoothstep(0.002, 0.42, emissionState.a);
+            solidFieldIncidence = solidFieldReach
+              * mix(0.030, 0.050, clamp(solidFieldNormalLength * 1.6, 0.0, 1.0));
+          }
+          float solidFieldResponse = solidFieldContour * solidFieldIncidence;
+          color += (vec3(1.0) - clamp(color, 0.0, 1.0))
+            * vividColor(solidFieldColor, 1.10) * solidFieldResponse;
         }
-        float solidFieldResponse = solidFieldContour * solidFieldIncidence;
+      }
+      if (solidInterior > 0.001 && solidOpticalDepth > 6.0 / 255.0
+        && optics != 7.0 && solidBodyFieldTraitEligibility(traits) > 0.5) {
+        float bodyExposure = solidBodyFieldExposure(
+          optics, profile, solidOpticalDepth, solidReliefTone
+        );
+        float bodyFieldResponse = min(
+          12.0 / 255.0,
+          emissionState.a * surfaceLightGain(profile) * bodyExposure
+        );
         color += (vec3(1.0) - clamp(color, 0.0, 1.0))
-          * vividColor(solidFieldColor, 1.10) * solidFieldResponse;
+          * vividColor(emissionState.rgb, 1.08) * bodyFieldResponse;
       }
     }
     if (!materialEmissive && surfaceOnly < 0.5) {

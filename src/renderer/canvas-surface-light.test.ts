@@ -3,11 +3,13 @@ import {
   CANVAS_SOLID_FIELD_DIRECTION_GAIN,
   CANVAS_SOLID_FIELD_DIRECTION_LIMIT,
   CANVAS_TRANSLUCENT_FIELD_EXPOSURE, CANVAS_TRANSLUCENT_FIELD_GAIN,
-  canvasSolidFieldLightingGain, canvasTranslucentFieldExposure, lightCanvasSurface,
+  canvasSolidBodyFieldExposure, canvasSolidFieldLightingGain,
+  canvasTranslucentFieldExposure, lightCanvasSurface,
   sampleCanvasFieldAlpha,
 } from './canvas-surface-light';
 import { RenderPhase, RenderProfile, surfaceLightGain } from './render-profile';
 import { RenderOptics } from './render-optics';
+import { RenderTrait } from './render-traits';
 
 function field(): Uint8Array {
   return new Uint8Array([
@@ -127,6 +129,47 @@ describe('Canvas surface lighting', () => {
     expect(canvasTranslucentFieldExposure(RenderOptics.TranslucentRigid, false, false, true)).toBe(0);
     expect(canvasTranslucentFieldExposure(RenderOptics.TranslucentRigid, true, true, true)).toBe(0);
     expect(canvasTranslucentFieldExposure(RenderOptics.TranslucentRigid, true, false, false)).toBe(0);
+  });
+
+  it('gates and differentiates thick opaque solid scene-light exposure', () => {
+    const exposure = (profile: RenderProfile, optics: RenderOptics, depth = 120, relief = 0) => (
+      canvasSolidBodyFieldExposure(
+        RenderPhase.Solid, profile, optics, 0, false, true, false,
+        depth, relief, true,
+      )
+    );
+    const rigid = exposure(RenderProfile.Rigid, RenderOptics.SmoothRigid);
+    const organic = exposure(RenderProfile.Organic, RenderOptics.Organic);
+    const device = exposure(RenderProfile.Device, RenderOptics.Device);
+    const radioactive = exposure(RenderProfile.Radioactive, RenderOptics.Radioactive);
+    expect(device).toBeGreaterThan(rigid);
+    expect(rigid).toBeGreaterThan(organic);
+    expect(organic).toBeGreaterThan(0);
+    expect(radioactive).toBeGreaterThan(0);
+    expect(canvasSolidBodyFieldExposure(
+      RenderPhase.Solid, RenderProfile.Organic, RenderOptics.Organic,
+      RenderTrait.Organic, false, true, false, 120, 0, true,
+    )).toBe(organic);
+    expect(canvasSolidBodyFieldExposure(
+      RenderPhase.Solid, RenderProfile.Radioactive, RenderOptics.Radioactive,
+      RenderTrait.Radioactive, false, true, false, 120, 0, true,
+    )).toBe(radioactive);
+    expect(exposure(RenderProfile.Rigid, RenderOptics.SmoothRigid, 120, 7))
+      .toBeGreaterThan(exposure(RenderProfile.Rigid, RenderOptics.SmoothRigid, 120, -7));
+    expect(exposure(RenderProfile.Rigid, RenderOptics.SmoothRigid, 255))
+      .toBeLessThan(exposure(RenderProfile.Rigid, RenderOptics.SmoothRigid, 120));
+
+    const rejected: ReadonlyArray<Parameters<typeof canvasSolidBodyFieldExposure>> = [
+      [RenderPhase.Powder, RenderProfile.Granular, RenderOptics.RoughGranular, 0, false, true, false, 120, 0, true],
+      [RenderPhase.Solid, RenderProfile.Rigid, RenderOptics.TranslucentRigid, 0, false, true, false, 120, 0, true],
+      [RenderPhase.Solid, RenderProfile.Rigid, RenderOptics.SmoothRigid, 1, false, true, false, 120, 0, true],
+      [RenderPhase.Solid, RenderProfile.Rigid, RenderOptics.SmoothRigid, 0, true, true, false, 120, 0, true],
+      [RenderPhase.Solid, RenderProfile.Rigid, RenderOptics.SmoothRigid, 0, false, false, false, 120, 0, true],
+      [RenderPhase.Solid, RenderProfile.Rigid, RenderOptics.SmoothRigid, 0, false, true, true, 120, 0, true],
+      [RenderPhase.Solid, RenderProfile.Rigid, RenderOptics.SmoothRigid, 0, false, true, false, 6, 0, true],
+      [RenderPhase.Solid, RenderProfile.Rigid, RenderOptics.SmoothRigid, 0, false, true, false, 120, 0, false],
+    ];
+    for (const parameters of rejected) expect(canvasSolidBodyFieldExposure(...parameters)).toBe(0);
   });
 
   it('screen-blends warm light through a glass body without changing alpha', () => {

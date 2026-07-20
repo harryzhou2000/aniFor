@@ -16,7 +16,8 @@ import { drawToolPoint, drawToolSegment } from './tool-dispatch';
 import {
   blankBrowserInputAuditRequested, browserInputAuditRequested,
   prepareContourStressAuditFixture, prepareDenseSolidAuditFixture,
-  prepareSolidOpticalDepthAuditFixture, toggleDenseSolidAuditProbe,
+  prepareSolidFieldLightingAuditFixture, prepareSolidOpticalDepthAuditFixture,
+  toggleDenseSolidAuditProbe,
 } from './browser-input-audit';
 import { navigateToRenderScale } from './render-scale-navigation';
 import {
@@ -291,6 +292,9 @@ export class Game {
       prepareDenseSolidFixture: () => { prepareDenseSolidAuditFixture(this.simulation); },
       prepareSolidOpticalDepthFixture: () => {
         prepareSolidOpticalDepthAuditFixture(this.simulation);
+      },
+      prepareSolidFieldLightingFixture: () => {
+        prepareSolidFieldLightingAuditFixture(this.simulation);
       },
       prepareContourStressFixture: () => { prepareContourStressAuditFixture(this.simulation); },
       toggleDenseSolidProbe: () => { toggleDenseSolidAuditProbe(this.simulation); },

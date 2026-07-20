@@ -406,8 +406,9 @@ The layout checkpoint `60b033b` and dense-solid relief checkpoint `97f5ced` were
 
 ## Next sequence
 
-1. Continue wider curvature-dependent surface depth and stronger scene-refraction evidence while retaining the proven true-8× single-target budget.
-2. Implement signs and the remaining special editing semantics after the next graphics checkpoint.
+1. Make material identity and graphics the primary effort after the current correctness checkpoint: deepen family-specific solid/powder surfaces first, then liquid/gas/energy optics, while retaining exact topology and Canvas/WebGL parity.
+2. Preserve viewport/input correctness and robust true 8× as regression invariants rather than reopening their architecture during visual work.
+3. Expand remaining TPT editing/catalog semantics after the next material-graphics checkpoint, without displacing the visual priority.
 
 ## Patterned native-wall refraction (`76fb75d`, committed and live)
 
@@ -449,3 +450,11 @@ The layout checkpoint `60b033b` and dense-solid relief checkpoint `97f5ced` were
 - The render lab now has deterministic pitch-four Smoke, FOG, and CFLM chains split by a 16-cell centre gap, plus compact FOG/CFLM bodies. Unit tests pin all authored carriers and gaps. The browser gate measures carrier/midpoint continuity, gap emptiness, compact connectivity, microcontrast, hue, clipping, and Canvas/WebGL exposure. Its reduced `--visual-only` result now includes all fields consumed by the paired comparator instead of silently skipping cross-backend assertions.
 - Final strict paired visual validation passes with zero browser errors. Canvas warm gas-rim response is `5.16` red against WebGL `12.44`, within the established parity range; compact FOG stays neutral, compact CFLM stays blue and connected, and every sparse centre gap is empty in both backends. All 50 test files / 275 tests, TypeScript, the 772-module production build, 20-file static closure, script syntax, diff checks, and the allocation/profile diagnostic pass.
 - True 8× remains enabled and robust: the focused WebGL browser proof reports requested/effective `8/8`, a `4896×3072` backing, unchanged `889×557.8` CSS geometry, and zero errors. No new 8× resource class exists; the temporary Canvas compatibility renderer remains bounded below the 60 MiB WebGL target. Two complete browser runs reached every per-backend visual, input, resize, mobile, native-source, LIFE, and true-8× assertion before the then-final paired gas-light calibration; the corrected strict paired visual run subsequently passed.
+
+## Current family-aware solid scene-light follow-up
+
+- Thick authoritative opaque solids now receive a bounded family-aware response from the existing coloured emission field. Exact-species optical depth protects the first layer and thin structures; the existing macro relief modulates broad reflection. Metal/rigid, organic, radioactive, and device bodies share the same scalar architecture but keep distinct response strengths and source chroma.
+- Passive Organic, Radioactive, and Fibrous identity traits remain eligible. Active emitter, sink, channel, force, and carrier roles remain exact no-ops, as do powder, translucent rigid, walls, emissive matter, reconstructed support, and depth at or below one six-byte layer. RGB changes only; alpha, material ownership, support, fields, textures, passes, targets, uploads, and allocations are unchanged.
+- The compact emission field uses a nine-tap binomial kernel at its established one-third resolution, expanding smooth world-space reach without a shader fetch or supersampled-output cost. Canvas also invalidates its existing supersampled contour cache when solid-field lighting changes; otherwise the cached opaque contour plane conceals the correctly relit base RGB.
+- A dedicated deterministic browser fixture places thick Metal, Plant, VIBR, and DTEC blocks beside isolated warm/cool sources and keeps Sand, Glass, and CLNE as controls. The focused off→on→off gate passes with zero browser errors. Canvas/WebGL RGB RMS is `2.34/2.53` Metal, `1.57/1.39` organic, `1.87/1.43` radioactive, and `3.44/3.81` device; peaks are 4–9 bytes, every control and repeated-off sample is exactly zero, support/world area is identical, and backend ratios remain bounded.
+- Canvas rejects world cells outside the emission field's localized bounds before evaluating body exposure or bilinear light. The production-shaped localized-source profile is `2.95/3.43/3.61 ms` median/p90/max; the deliberately pathological all-world/all-field ceiling is `72.04/81.36/90.88 ms`. Emission-field rebuild is `4.56/4.67/6.44 ms`, its allocation remains `1,357,824` bytes, and combined render-field allocation is `12,051,464` bytes.

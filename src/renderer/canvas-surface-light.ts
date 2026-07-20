@@ -1,5 +1,6 @@
-import { RenderPhase, surfaceLightGain, type RenderProfile } from './render-profile';
+import { RenderPhase, RenderProfile, surfaceLightGain } from './render-profile';
 import { RenderOptics } from './render-optics';
+import { RenderTrait } from './render-traits';
 
 export const CANVAS_TRANSLUCENT_FIELD_EXPOSURE = 0.38;
 export const CANVAS_TRANSLUCENT_FIELD_GAIN = 1.6;
@@ -63,6 +64,53 @@ export function canvasSolidFieldLightingGain(
     && optics !== RenderOptics.TranslucentRigid
     && traits === 0 && !emissive && !denseInterior && !hasNativeWall
     ? CANVAS_SOLID_FIELD_DIRECTION_GAIN : 0;
+}
+
+/**
+ * Exposure of an authoritative thick opaque body to the shared scene-light
+ * field. Exact-species optical depth protects the first layer and thin authored
+ * structures; the existing macro relief modulates how much of the local field
+ * becomes a broad reflection. The return value is scalar and allocation-free.
+ */
+export function canvasSolidBodyFieldExposure(
+  phase: RenderPhase,
+  profile: RenderProfile,
+  optics: RenderOptics,
+  traits: number,
+  emissive: boolean,
+  denseInterior: boolean,
+  hasNativeWall: boolean,
+  opticalDepthByte: number,
+  relief: number,
+  enabled: boolean,
+): number {
+  const blockingTraits = RenderTrait.Emitter | RenderTrait.Sink | RenderTrait.Channel
+    | RenderTrait.Force | RenderTrait.Carrier;
+  if (!enabled || phase !== RenderPhase.Solid || (traits & blockingTraits) !== 0 || emissive
+    || !denseInterior || hasNativeWall || opticalDepthByte <= 6
+    || optics === RenderOptics.RoughGranular || optics === RenderOptics.TranslucentRigid) return 0;
+
+  let familyExposure = 0.34;
+  let reliefStrength = 6.5;
+  if (optics === RenderOptics.SmoothRigid || profile === RenderProfile.Rigid) {
+    familyExposure = 0.42; reliefStrength = 7;
+  }
+  if (optics === RenderOptics.Organic || profile === RenderProfile.Organic) {
+    familyExposure = 0.36; reliefStrength = 6;
+  }
+  if (optics === RenderOptics.Device || profile === RenderProfile.Device) {
+    familyExposure = 0.50; reliefStrength = 4.5;
+  }
+  if (optics === RenderOptics.Radioactive || profile === RenderProfile.Radioactive) {
+    familyExposure = 0.40; reliefStrength = 5.5;
+  }
+
+  const depthProgress = clamp01((opticalDepthByte - 6) / 36);
+  const depthSupport = depthProgress * depthProgress * (3 - 2 * depthProgress);
+  const coreProgress = clamp01((opticalDepthByte - 150) / 105);
+  const coreAttenuation = 1 - 0.35 * coreProgress * coreProgress * (3 - 2 * coreProgress);
+  const macroRelief = Math.max(-1, Math.min(1, relief / reliefStrength));
+  return familyExposure * depthSupport * coreAttenuation * (0.85 + macroRelief * 0.15);
 }
 
 /** Dense semantic glass may carry scene light through its body, never its alpha. */
@@ -181,6 +229,8 @@ function bilinearValues(
   const bottom = bottomLeft + (bottomRight - bottomLeft) * mixX;
   return top + (bottom - top) * mixY;
 }
+
+function clamp01(value: number): number { return Math.max(0, Math.min(1, value)); }
 
 function bilinear(
   bytes: Uint8Array,
