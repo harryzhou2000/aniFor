@@ -1,4 +1,4 @@
-import { RenderOptics } from './render-optics';
+import { isGranularOptics, RenderOptics } from './render-optics';
 import { RenderPhase } from './render-profile';
 
 export const SUSPENSION_FIELD_SCALE = 2;
@@ -818,7 +818,7 @@ export class SuspensionField {
       && this.styleBytes[offset] === RenderPhase.Powder
       && this.styleBytes[offset + 2] === 0
       && this.styleBytes[offset + 3] === 0
-      && this.paletteBytes[offset + 3] === RenderOptics.RoughGranular;
+      && isGranularOptics(this.paletteBytes[offset + 3]);
   }
 
   private isAqueousLiquid(material: number): boolean {

@@ -119,6 +119,9 @@ float wallAt(vec2 uv) { return floor(wallField(uv).r * 255.0 + 0.5); }
 float boundaryStabilityAt(vec2 uv) { return texture(uBoundaryStabilityTexture, clamp(uv, uTexel * 0.5, vec2(1.0) - uTexel * 0.5)).r; }
 float sameMaterial(vec2 uv, float material) { return 1.0 - step(0.5, abs(materialAt(uv) - material)); }
 float traitFlag(float traits, float mask) { return mod(floor(traits / mask), 2.0); }
+float granularOptics(float optics) {
+  return optics == 7.0 || optics == 13.0 || optics == 14.0 || optics == 15.0 ? 1.0 : 0.0;
+}
 float surfaceLightGain(float profile) {
   if (profile == 2.0) return 0.32;
   if (profile == 5.0) return 0.30;
@@ -135,6 +138,9 @@ vec3 surfaceChromaKey(float optics) {
   if (optics == 10.0) return vec3(0.60, 0.88, 1.00);
   if (optics == 11.0) return vec3(0.62, 1.00, 0.72);
   if (optics == 12.0) return vec3(0.70, 0.90, 1.00);
+  if (optics == 13.0) return vec3(0.72, 0.92, 1.00);
+  if (optics == 14.0) return vec3(0.78, 0.72, 0.62);
+  if (optics == 15.0) return vec3(1.00, 0.78, 0.42);
   return vec3(0.92, 0.86, 0.72);
 }
 vec3 surfaceChromaShadow(float optics) {
@@ -144,6 +150,9 @@ vec3 surfaceChromaShadow(float optics) {
   if (optics == 10.0) return vec3(0.96, 0.70, 0.38);
   if (optics == 11.0) return vec3(0.74, 0.62, 0.42);
   if (optics == 12.0) return vec3(0.90, 0.72, 0.50);
+  if (optics == 13.0) return vec3(0.86, 0.72, 0.62);
+  if (optics == 14.0) return vec3(0.92, 0.86, 0.78);
+  if (optics == 15.0) return vec3(0.82, 0.70, 0.60);
   return vec3(0.86, 0.70, 0.48);
 }
 float surfaceChromaResponse(float density, vec2 gradient, float optics) {
@@ -152,12 +161,15 @@ float surfaceChromaResponse(float density, vec2 gradient, float optics) {
   if (gradientLength <= 0.0001) return 0.0;
   float band = smoothstep(0.02, 0.42, density)
     * (1.0 - smoothstep(0.58, 0.98, density));
-  float familyGain = optics == 12.0 ? 1.0
+  float familyGain = optics == 13.0 ? 0.98
+    : (optics == 14.0 ? 0.58
+    : (optics == 15.0 ? 1.0
+    : (optics == 12.0 ? 1.0
     : (optics == 8.0 ? 0.94
     : (optics == 10.0 ? 0.90
     : (optics == 11.0 ? 0.86
     : (optics == 9.0 ? 0.82
-    : (optics == 7.0 ? 0.92 : 0.78)))));
+    : (optics == 7.0 ? 0.92 : 0.78))))))));
   float directional = clamp(dot(gradient / gradientLength, vec2(0.48, 0.68)), -1.0, 1.0);
   return clamp(directional * band * 0.065 * familyGain, -0.065, 0.065);
 }
@@ -243,6 +255,9 @@ vec3 vividColor(vec3 color, float saturation) {
   return mix(vec3(luminance), color, saturation);
 }
 float thermalOpticsGain(float optics) {
+  if (optics == 13.0) return 0.82;
+  if (optics == 14.0) return 0.62;
+  if (optics == 15.0) return 0.90;
   if (optics == 7.0) return 0.72;
   if (optics == 8.0) return 1.0;
   if (optics == 9.0) return 0.88;
@@ -686,7 +701,7 @@ float triangleWave(float value, float period) {
   return 1.0 - abs(phase * 2.0 - 1.0) * 2.0;
 }
 vec3 solidReliefParameters(float optics, float profile) {
-  if (optics == 7.0 || profile == 1.0) return vec3(0.0);
+  if (granularOptics(optics) > 0.5 || profile == 1.0) return vec3(0.0);
   if (optics == 8.0) return vec3(2.0, 1.0, 7.0);
   if (optics == 9.0) return vec3(1.0, 4.0, 6.0);
   if (optics == 10.0) return vec3(4.0, 0.0, 4.5);
@@ -762,7 +777,7 @@ float solidInteriorMicroGain(float optics, float profile) {
   return 0.72;
 }
 float solidCurvatureGain(float optics, float profile) {
-  if (optics == 7.0 || profile == 1.0) return 0.0;
+  if (granularOptics(optics) > 0.5 || profile == 1.0) return 0.0;
   // Runtime WebGL samples the curve at a different composed footprint from the
   // fixed Canvas contour tiles. The small rigid-only calibration keeps the
   // measured convex/concave response inside the paired visual contract.
@@ -871,7 +886,7 @@ void main() {
   vec4 shape = wallOnly > 0.5
     ? vec4(wallSurface, 0.0)
     : (surfaceOnly > 0.5
-    ? (profile == 1.0
+    ? (family == 4.0
       ? occupancyShape(
         fieldUv, material, family, 1.0, contourCurvature, phaseContactLight,
         foreignMatterContact, unlikeMaterialContact
@@ -885,7 +900,7 @@ void main() {
       ? vec4(discreteShape(fieldUv, material), 0.0)
       : occupancyShape(
         fieldUv, material, family,
-        (family == 0.0 || family == 2.0 || profile == 1.0) ? 1.0 : 0.0,
+        (family == 0.0 || family == 2.0 || family == 4.0) ? 1.0 : 0.0,
         contourCurvature, phaseContactLight, foreignMatterContact, unlikeMaterialContact
       )))));
   float boundaryStability = 0.0;
@@ -925,7 +940,7 @@ void main() {
   // three compatible powder samples prove a bulk contact. Loose/moving grains
   // stay inside their semantic cell, and ambiguous unlike-species candidates
   // were rejected by nearbySurface before reaching this estimator.
-  if (surfaceOnly > 0.5 && profile == 1.0
+  if (surfaceOnly > 0.5 && family == 4.0
     && (shape.w < 2.5 || projectedSurfaceSamples > 2.5
       || exteriorPowderAir < 0.5)) shape = vec4(0.0);
   float density = shape.x;
@@ -1011,7 +1026,7 @@ void main() {
   float cohesiveLiquidInterior = max(liquidInterior, liquidFieldInterior);
   float shapeDetail = 1.0 - max(gasInterior, cohesiveLiquidInterior);
   vec2 semanticSlope = shape.yz * shapeDetail;
-  float granularSurface = (profile == 1.0 || optics == 7.0) ? 1.0 : 0.0;
+  float granularSurface = (family == 4.0 || granularOptics(optics) > 0.5) ? 1.0 : 0.0;
   float solidInterior = family == 0.0
     ? smoothstep(0.76, 0.98, density)
       * (1.0 - smoothstep(0.10, 0.62, length(shape.yz)))
@@ -1401,13 +1416,14 @@ void main() {
     float powderMacroRelief = 0.0;
     float powderBodyChroma = 0.0;
     float powderSuspensionCohesion = 0.0;
-    float roughSurface = optics == 7.0 ? 1.0 : 0.0;
+    float roughSurface = granularOptics(optics);
     float smoothSurface = optics == 8.0 ? 1.0 : 0.0;
     float organicSurface = optics == 9.0 ? 1.0 : 0.0;
     float deviceSurface = optics == 10.0 ? 1.0 : 0.0;
     float radioactiveSurface = optics == 11.0 ? 1.0 : 0.0;
     float translucentSurface = optics == 12.0 ? 1.0 : 0.0;
-    if (profile == 1.0 && optics == 7.0 && traits < 0.5 && !materialEmissive) {
+    if (family == 4.0 && granularOptics(optics) > 0.5
+      && traits < 0.5 && !materialEmissive) {
       float suspensionColorDistance = length(suspensionState.rgb - paletteSample.rgb);
       powderSuspensionCohesion = smoothstep(0.05, 0.62, suspensionState.a)
         * (1.0 - smoothstep(0.08, 0.24, suspensionColorDistance));
@@ -1417,7 +1433,7 @@ void main() {
     // semantic strokes. Use a wider iso shoulder so those cells
     // remain visibly brush-sized while the same density field rounds chunk
     // boundaries; rejected empty-space support still has zero density.
-    float edgeCenter = 0.42 + (profile == 1.0 ? grain * 0.045 : 0.0);
+    float edgeCenter = 0.42 + (family == 4.0 ? grain * 0.045 : 0.0);
     float edgeHalfWidth = mix(0.13, 0.17, clamp(length(shape.yz) * 0.75, 0.0, 1.0));
     alpha = smoothstep(edgeCenter - edgeHalfWidth, edgeCenter + edgeHalfWidth, density);
     float solidDepth = smoothstep(0.34, 0.94, density);
@@ -1522,7 +1538,7 @@ void main() {
         }
       }
       if (solidInterior > 0.001 && solidOpticalDepth > 6.0 / 255.0
-        && optics != 7.0 && solidBodyFieldTraitEligibility(traits) > 0.5) {
+        && granularOptics(optics) < 0.5 && solidBodyFieldTraitEligibility(traits) > 0.5) {
         float bodyExposure = solidBodyFieldExposure(
           optics, profile, solidOpticalDepth, solidReliefTone
         );
@@ -1576,7 +1592,7 @@ void main() {
     // stability field requires persistent low velocity and compatible contact,
     // with a hold band between settle and release thresholds. This keeps noisy
     // TPT velocity samples from flipping the boundary mode every frame.
-    if (profile == 1.0) {
+    if (family == 4.0) {
       float powderContact = smoothstep(1.55, 2.85, shape.w);
       float localPowderContact = smoothstep(1.55, 2.85, localPowderShape.w);
       powderContact = max(powderContact, localPowderContact);
@@ -1593,7 +1609,7 @@ void main() {
           ? powderDirectedSlope * 0.070
           : powderDirectedSlope * 0.080;
         powderMacroRelief = powderDirectedRelief * powderVisualCohesion;
-        // Stable two-dimensional bulk gets a coherent mineral volume from the
+        // Stable two-dimensional bulk gets a coherent family-aware volume from the
         // existing powder field: upper-left key, opposing fill, and dense-core
         // absorption. Exact semantic depth and lateral support remain
         // authoritative, so narrow columns, ledges, holes, and moving grains
@@ -1614,7 +1630,8 @@ void main() {
         powderBodyChroma = clamp(
           powderDirectedSlope * powderBodyDirectionalGain + powderBodyDepthTone,
           -0.080, 0.085
-        ) * powderBodyGate;
+        ) * powderBodyGate * (optics == 13.0 ? 0.98
+          : (optics == 14.0 ? 0.58 : (optics == 15.0 ? 1.08 : 1.0)));
       }
       float grainOffsetY = fract(sin(dot(floor(fieldPosition), vec2(39.346, 11.135))) * 24634.6345) - 0.5;
       vec2 grainCentre = vec2(grain, grainOffsetY) * 0.075;
@@ -1686,12 +1703,22 @@ void main() {
     if (roughSurface > 0.5 || (optics < 0.5 && profile == 1.0)) {
       vec2 subcell = floor(fract(fieldPosition) * 2.0);
       float grainFacet = fract(sin(dot(floor(fieldPosition) * 2.0 + subcell, vec2(12.9898, 78.233))) * 43758.5453) - 0.5;
+      float facetGain = optics == 13.0 ? 1.12
+        : (optics == 14.0 ? 0.35 : (optics == 15.0 ? 0.90 : 1.0));
       float cellGrainRetention = mix(1.0, 0.28, powderVisualCohesion);
       float facetRetention = mix(1.0, 0.62, powderVisualCohesion);
-      color *= 0.91 + grain * (0.20 + roughSurface * 0.05) * cellGrainRetention
-        + grainFacet * (0.10 + roughSurface * 0.04) * facetRetention;
+      color *= 0.91 + grain * (0.20 + roughSurface * 0.05) * cellGrainRetention * facetGain
+        + grainFacet * (0.10 + roughSurface * 0.04) * facetRetention * facetGain;
       color += base * max(0.0, 0.6 - subcell.x - subcell.y)
-        * (0.11 + roughSurface * 0.035) * facetRetention;
+        * (0.11 + roughSurface * 0.035) * facetRetention * facetGain;
+      float brightFacet = max(0.0, grainFacet - 0.18) * facetRetention;
+      if (optics == 13.0) {
+        color += vec3(0.52, 0.78, 1.00) * brightFacet * 0.085;
+      } else if (optics == 14.0) {
+        color *= 0.97;
+      } else if (optics == 15.0) {
+        color += vec3(1.00, 0.68, 0.32) * brightFacet * 0.060;
+      }
       color *= 1.0 + powderMacroRelief;
       float powderContourChroma = localPowderShape.x < 0.92
         ? surfaceChromaResponse(density, widePowderShape.yz, optics)
@@ -1843,7 +1870,7 @@ void main() {
   // their phase and scene lighting. A bounded luma offset keeps macro relief
   // while removing high-frequency cyan/ochre semantic phase contrast.
   float suspensionColorDistance = length(suspensionState.rgb - paletteSample.rgb);
-  float suspensionPowder = profile == 1.0 && optics == 7.0 && traits < 0.5
+  float suspensionPowder = family == 4.0 && granularOptics(optics) > 0.5 && traits < 0.5
     && !materialEmissive
     ? 1.0 - smoothstep(0.08, 0.24, suspensionColorDistance) : 0.0;
   float suspensionLiquid = liquidVolume > 0.5 && optics == 1.0 && traits < 0.5

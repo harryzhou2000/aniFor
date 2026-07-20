@@ -1,4 +1,4 @@
-import { RenderOptics } from './render-optics';
+import { isGranularOptics, RenderOptics } from './render-optics';
 import { semanticTemperatureByte } from './semantic-field';
 import { ROOM_TEMPERATURE_DECIKELVIN } from '../shared/temperature';
 import { Material } from '../shared/materials';
@@ -37,7 +37,12 @@ export function thermalMaterialDelta(
 }
 
 export function thermalOpticsGain(optics: RenderOptics): number {
-  if (optics === RenderOptics.RoughGranular) return 0.72;
+  if (isGranularOptics(optics)) {
+    if (optics === RenderOptics.CrystallineGranular) return 0.82;
+    if (optics === RenderOptics.SootyGranular) return 0.62;
+    if (optics === RenderOptics.MetallicGranular) return 0.90;
+    return 0.72;
+  }
   if (optics === RenderOptics.SmoothRigid) return 1;
   if (optics === RenderOptics.Organic) return 0.88;
   if (optics === RenderOptics.Device) return 1.08;

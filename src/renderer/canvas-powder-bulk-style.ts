@@ -1,3 +1,5 @@
+import { RenderOptics } from './render-optics';
+
 const STABILITY_MINIMUM = 224;
 const DENSITY_MINIMUM = 0.66 * 255;
 const SUPPORT_MINIMUM = 5.5;
@@ -48,7 +50,7 @@ export function canvasPowderBulkDepth(
 /**
  * Pulls stable, field-supported powder bulk toward its canonical albedo, then
  * applies a small directional scalar relief from the shared signed gradients.
- * A restrained mineral key/fill then separates the field-supported shoulder
+ * A restrained family key/fill then separates the field-supported shoulder
  * from the dense core without changing coverage, ownership, or fine structures.
  * This is an allocation-free RGB-only presentation transform.
  */
@@ -64,6 +66,7 @@ export function applyCanvasPowderBulkStyle(
   supportByte: number,
   bulkDepth: number,
   bodyDepthEnabled = true,
+  optics: RenderOptics = RenderOptics.RoughGranular,
 ): void {
   // Temporal hysteresis already happens in BoundaryStabilityField. A second
   // trio of smoothsteps here made a fully powder-filled Canvas several
@@ -72,7 +75,10 @@ export function applyCanvasPowderBulkStyle(
     || densityByte <= DENSITY_MINIMUM
     || supportByte * SUPPORT_BYTE_TO_COUNT <= SUPPORT_MINIMUM) return;
 
-  const blend = CANONICAL_BLEND_MAX;
+  const crystalline = optics === RenderOptics.CrystallineGranular;
+  const sooty = optics === RenderOptics.SootyGranular;
+  const metallic = optics === RenderOptics.MetallicGranular;
+  const blend = crystalline ? 0.56 : sooty ? 0.72 : metallic ? 0.58 : CANONICAL_BLEND_MAX;
   color[0] += (canonicalRed - color[0]) * blend;
   color[1] += (canonicalGreen - color[1]) * blend;
   color[2] += (canonicalBlue - color[2]) * blend;
@@ -91,11 +97,26 @@ export function applyCanvasPowderBulkStyle(
   color[1] *= scale;
   color[2] *= scale;
 
-  // The packed field supplies a broad mineral volume: low-density shoulders
+  // The packed field supplies a broad family-aware volume: low-density shoulders
   // receive an upper-left key, the opposing slope becomes a warm fill/shadow,
   // and the densest supported core absorbs light. Existing cell/facet detail is
   // applied later, so the bulk remains powder rather than becoming wax.
   if (bodyDepthEnabled) {
+    const shoulderLight = crystalline ? 0.040 : sooty ? 0.012 : metallic ? 0.036
+      : BODY_SHOULDER_LIGHT;
+    const coreAbsorption = crystalline ? -0.044 : sooty ? -0.070 : metallic ? -0.058
+      : BODY_CORE_ABSORPTION;
+    const directionalShoulder = crystalline ? 0.065 : sooty ? 0.030 : metallic ? 0.072
+      : BODY_DIRECTIONAL_SHOULDER;
+    const directionalCore = crystalline ? 0.040 : sooty ? 0.025 : metallic ? 0.050
+      : BODY_DIRECTIONAL_CORE;
+    const keyRed = crystalline ? 0.72 : sooty ? 0.78 : metallic ? 1.00 : BODY_KEY_RED;
+    const keyGreen = crystalline ? 0.92 : sooty ? 0.72 : metallic ? 0.78 : BODY_KEY_GREEN;
+    const keyBlue = crystalline ? 1.00 : sooty ? 0.62 : metallic ? 0.42 : BODY_KEY_BLUE;
+    const shadowRed = crystalline ? 0.86 : sooty ? 0.92 : metallic ? 0.82 : BODY_SHADOW_RED;
+    const shadowGreen = crystalline ? 0.72 : sooty ? 0.86 : metallic ? 0.70 : BODY_SHADOW_GREEN;
+    const shadowBlue = crystalline ? 0.62 : sooty ? 0.78 : metallic ? 0.60 : BODY_SHADOW_BLUE;
+    const familyResponse = crystalline ? 0.98 : sooty ? 0.58 : metallic ? 1.08 : 1;
     const bodyDensity = clamp(
       (densityByte - DENSITY_MINIMUM) / (255 - DENSITY_MINIMUM), 0, 1,
     );
@@ -103,25 +124,25 @@ export function applyCanvasPowderBulkStyle(
       (supportByte * SUPPORT_BYTE_TO_COUNT - SUPPORT_MINIMUM) / (9 - SUPPORT_MINIMUM), 0, 1,
     );
     const volumeDepth = Math.max(bodyDensity, supportDepth * 0.88);
-    const depthTone = BODY_SHOULDER_LIGHT
-      + (BODY_CORE_ABSORPTION - BODY_SHOULDER_LIGHT) * volumeDepth;
-    const directionalGain = BODY_DIRECTIONAL_SHOULDER
-      + (BODY_DIRECTIONAL_CORE - BODY_DIRECTIONAL_SHOULDER) * volumeDepth;
+    const depthTone = shoulderLight
+      + (coreAbsorption - shoulderLight) * volumeDepth;
+    const directionalGain = directionalShoulder
+      + (directionalCore - directionalShoulder) * volumeDepth;
     const bodyResponse = clamp(
       directedSlope * directionalGain + depthTone,
       BODY_CHROMA_DARK_LIMIT,
       BODY_CHROMA_LIGHT_LIMIT,
-    );
+    ) * familyResponse;
     if (bodyResponse > 0) {
       const amount = bodyResponse * BODY_KEY_EXPOSURE;
-      color[0] += (255 - color[0]) * BODY_KEY_RED * amount;
-      color[1] += (255 - color[1]) * BODY_KEY_GREEN * amount;
-      color[2] += (255 - color[2]) * BODY_KEY_BLUE * amount;
+      color[0] += (255 - color[0]) * keyRed * amount;
+      color[1] += (255 - color[1]) * keyGreen * amount;
+      color[2] += (255 - color[2]) * keyBlue * amount;
     } else if (bodyResponse < 0) {
       const amount = -bodyResponse * BODY_SHADOW_EXPOSURE;
-      color[0] *= 1 - BODY_SHADOW_RED * amount;
-      color[1] *= 1 - BODY_SHADOW_GREEN * amount;
-      color[2] *= 1 - BODY_SHADOW_BLUE * amount;
+      color[0] *= 1 - shadowRed * amount;
+      color[1] *= 1 - shadowGreen * amount;
+      color[2] *= 1 - shadowBlue * amount;
     }
   }
 

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { applyCanvasPowderBulkStyle, canvasPowderBulkDepth } from './canvas-powder-bulk-style';
+import { RenderOptics } from './render-optics';
 
 describe('Canvas powder bulk style', () => {
   it('accepts only two-cell-deep material with a same-row lateral support', () => {
@@ -103,6 +104,27 @@ describe('Canvas powder bulk style', () => {
     expect(shaded[1]).toBeGreaterThan(shaded[2]);
   });
 
+  it('separates crystalline, sooty, metallic, and mineral bulk optics', () => {
+    const canonical = [140, 140, 140] as const;
+    const render = (optics: RenderOptics): Float32Array => {
+      const color = new Float32Array(canonical);
+      applyCanvasPowderBulkStyle(
+        color, ...canonical, 255, 169, 0, 0, 160, 1, true, optics,
+      );
+      return color;
+    };
+    const mineral = render(RenderOptics.RoughGranular);
+    const crystal = render(RenderOptics.CrystallineGranular);
+    const soot = render(RenderOptics.SootyGranular);
+    const metal = render(RenderOptics.MetallicGranular);
+
+    expect(crystal[2] - crystal[0]).toBeGreaterThan(1);
+    expect(metal[0] - metal[2]).toBeGreaterThan(2);
+    expect(luma(soot) - luma(canonical)).toBeLessThan(luma(crystal) - luma(canonical));
+    expect(new Set([mineral, crystal, soot, metal].map((color) => Array.from(color).join(','))).size)
+      .toBe(4);
+  });
+
   it('separates a flat supported shoulder from its dense core without a slope', () => {
     const canonical = [180, 140, 90] as const;
     const shoulder = new Float32Array(canonical);
@@ -201,4 +223,8 @@ function applyLegacyScalarRelief(
   color[0] *= headroomScale;
   color[1] *= headroomScale;
   color[2] *= headroomScale;
+}
+
+function luma(color: ArrayLike<number>): number {
+  return color[0] * 0.2126 + color[1] * 0.7152 + color[2] * 0.0722;
 }

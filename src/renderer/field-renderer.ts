@@ -1021,7 +1021,7 @@ export class MaterialRenderer {
         this.styledColor[2] = 76 + grain * 0.35 + surfaceLight;
         applyCanvasPowderBulkCellStyle(
           this.styledColor, powderCanonicalColor, this.boundaryStability[index],
-          fields.powderSurface.bytes, pixel, powderBulkDepth, this.powderBodyDepthEnabled,
+          fields.powderSurface.bytes, pixel, powderBulkDepth, this.powderBodyDepthEnabled, optics,
         );
         this.applyThermalMaterialStyle(
           phase, material, false, applicableTraits, temperatures?.[index], optics,
@@ -1037,7 +1037,7 @@ export class MaterialRenderer {
         this.styledColor[2] = 124 + grain * 0.6 + surfaceLight;
         applyCanvasPowderBulkCellStyle(
           this.styledColor, powderCanonicalColor, this.boundaryStability[index],
-          fields.powderSurface.bytes, pixel, powderBulkDepth, this.powderBodyDepthEnabled,
+          fields.powderSurface.bytes, pixel, powderBulkDepth, this.powderBodyDepthEnabled, optics,
         );
         this.applyThermalMaterialStyle(
           phase, material, false, applicableTraits, temperatures?.[index], optics,
@@ -1053,7 +1053,7 @@ export class MaterialRenderer {
         this.styledColor[2] = 202 + grain + crystal + surfaceLight;
         applyCanvasPowderBulkCellStyle(
           this.styledColor, powderCanonicalColor, this.boundaryStability[index],
-          fields.powderSurface.bytes, pixel, powderBulkDepth, this.powderBodyDepthEnabled,
+          fields.powderSurface.bytes, pixel, powderBulkDepth, this.powderBodyDepthEnabled, optics,
         );
         this.applyThermalMaterialStyle(
           phase, material, false, applicableTraits, temperatures?.[index], optics,
@@ -1199,13 +1199,15 @@ export class MaterialRenderer {
         );
       } else if (material === Material.Gunpowder) {
         const grain = hash(index) % 23 - 11;
-        const spark = (hash(index + 911) & 31) === 0 ? 34 : 0;
+        // Sooty powder keeps an occasional reactive fleck, but not a mineral-
+        // bright cell that makes a settled bulk read as glitter.
+        const spark = (hash(index + 911) & 31) === 0 ? 12 : 0;
         this.styledColor[0] = 70 + grain + spark + surfaceLight;
         this.styledColor[1] = 64 + grain + spark * 0.7 + surfaceLight;
         this.styledColor[2] = 58 + grain + spark * 0.35 + surfaceLight;
         applyCanvasPowderBulkCellStyle(
           this.styledColor, powderCanonicalColor, this.boundaryStability[index],
-          fields.powderSurface.bytes, pixel, powderBulkDepth, this.powderBodyDepthEnabled,
+          fields.powderSurface.bytes, pixel, powderBulkDepth, this.powderBodyDepthEnabled, optics,
         );
         this.applyThermalMaterialStyle(
           phase, material, false, applicableTraits, temperatures?.[index], optics,
@@ -1339,7 +1341,7 @@ export class MaterialRenderer {
           );
           if (phase === RenderPhase.Powder) applyCanvasPowderBulkCellStyle(
             this.styledColor, powderCanonicalColor, this.boundaryStability[index],
-            fields.powderSurface.bytes, pixel, powderBulkDepth, this.powderBodyDepthEnabled,
+            fields.powderSurface.bytes, pixel, powderBulkDepth, this.powderBodyDepthEnabled, optics,
           );
           if (denseSolidInterior && applicableTraits === 0 && !info.emissive) {
             const cohesion = canvasSolidInteriorCohesion(profile, optics);
@@ -1661,6 +1663,7 @@ function applyCanvasPowderBulkCellStyle(
   pixel: number,
   bulkDepth: number,
   bodyDepthEnabled: boolean,
+  optics: RenderOptics,
 ): void {
   applyCanvasPowderBulkStyle(
     color,
@@ -1674,6 +1677,7 @@ function applyCanvasPowderBulkCellStyle(
     powderSurface[pixel + 3],
     bulkDepth,
     bodyDepthEnabled,
+    optics,
   );
 }
 

@@ -222,7 +222,7 @@ describe('Pixi presenter startup configuration', () => {
     const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
     const nearbyStart = source.indexOf('vec4 nearbySurface(');
     const nearbyEnd = source.indexOf('float nearbyPowderStability(', nearbyStart);
-    const projectionStart = source.indexOf('if (surfaceOnly > 0.5 && profile == 1.0');
+    const projectionStart = source.indexOf('if (surfaceOnly > 0.5 && family == 4.0');
     const projectionEnd = source.indexOf('float density = shape.x;', projectionStart);
 
     expect(nearbyStart).toBeGreaterThan(0);
@@ -231,6 +231,9 @@ describe('Pixi presenter startup configuration', () => {
     expect(source.slice(projectionStart, projectionEnd)).toContain('projectedSurfaceSamples > 2.5');
     expect(source.slice(projectionStart, projectionEnd)).toContain('shape.w < 2.5');
     expect(source.slice(projectionStart, projectionEnd)).toContain('exteriorPowderAir < 0.5');
+    expect(source).toContain('float granularOptics(float optics)');
+    expect(source).toContain('if (family == 4.0) {');
+    expect(source).toContain('(family == 0.0 || family == 2.0 || family == 4.0)');
   });
 
   it('seeds and redraws optional-last gas volume chroma', () => {

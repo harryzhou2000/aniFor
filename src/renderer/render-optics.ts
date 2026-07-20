@@ -15,9 +15,20 @@ export const enum RenderOptics {
   Device = 10,
   Radioactive = 11,
   TranslucentRigid = 12,
+  CrystallineGranular = 13,
+  SootyGranular = 14,
+  MetallicGranular = 15,
 }
 
-export const RENDER_OPTICS_CLASS_COUNT = 13;
+export const RENDER_OPTICS_CLASS_COUNT = 16;
+
+/** Powder-like roughness classes that share topology but not material response. */
+export function isGranularOptics(optics: number): boolean {
+  return optics === RenderOptics.RoughGranular
+    || optics === RenderOptics.CrystallineGranular
+    || optics === RenderOptics.SootyGranular
+    || optics === RenderOptics.MetallicGranular;
+}
 
 export interface RenderOpticsMaterial {
   readonly id: number;
@@ -58,6 +69,21 @@ export function renderOptics(material: RenderOpticsMaterial): RenderOptics {
     case Material.QRTZ:
     case Material.RIME:
       return RenderOptics.TranslucentRigid;
+    case Material.Salt:
+    case Material.Snow:
+    case Material.Quartz:
+    case Material.BGLA:
+    case Material.FRZZ:
+    case Material.SLCN:
+      return RenderOptics.CrystallineGranular;
+    case Material.Gunpowder:
+    case Material.Coal:
+    case Material.BCOL:
+      return RenderOptics.SootyGranular;
+    case Material.Thermite:
+    case Material.BREC:
+    case Material.BRMT:
+      return RenderOptics.MetallicGranular;
   }
 
   if (material.category === 'life') return RenderOptics.Organic;

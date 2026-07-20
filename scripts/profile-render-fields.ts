@@ -672,6 +672,24 @@ console.log(JSON.stringify({
       }
       powderBulkStyleChecksum = solidBodyRgb[0] + solidBodyRgb[1] + solidBodyRgb[2];
     }),
+    powderFamilyOpticsWorstCase: sample(() => {
+      const color = Material.Sand * 3;
+      for (let index = 0; index < width * height; index++) {
+        solidBodyRgb[0] = colorByMaterial[color] + 11;
+        solidBodyRgb[1] = colorByMaterial[color + 1] + 7;
+        solidBodyRgb[2] = colorByMaterial[color + 2] + 4;
+        const optics = index % 4 === 0 ? RenderOptics.RoughGranular
+          : index % 4 === 1 ? RenderOptics.CrystallineGranular
+          : index % 4 === 2 ? RenderOptics.SootyGranular
+          : RenderOptics.MetallicGranular;
+        applyCanvasPowderBulkStyle(
+          solidBodyRgb,
+          colorByMaterial[color], colorByMaterial[color + 1], colorByMaterial[color + 2],
+          255, 255, 148, 164, 255, 1, true, optics,
+        );
+      }
+      powderBulkStyleChecksum = solidBodyRgb[0] + solidBodyRgb[1] + solidBodyRgb[2];
+    }),
     liquidBodyOpticsLoopBaseline: sample(() => {
       const color = Material.Water * 3;
       const oldReliefScale = 1 + 0.18 * 1.35 * 1.08;

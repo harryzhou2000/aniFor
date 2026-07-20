@@ -1,4 +1,4 @@
-import { RenderOptics } from './render-optics';
+import { isGranularOptics, RenderOptics } from './render-optics';
 import { RenderPhase } from './render-profile';
 import type { SuspensionField } from './suspension-field';
 
@@ -62,7 +62,7 @@ export function applyCanvasSemanticSuspensionStyle(
   const ordinary = styleBytes[lookup + 2] === 0 && styleBytes[lookup + 3] === 0;
   if (!ordinary) return;
   if (phase === RenderPhase.Powder) {
-    if (paletteBytes[lookup + 3] !== RenderOptics.RoughGranular
+    if (!isGranularOptics(paletteBytes[lookup + 3])
       || field.bytes[fieldPixel] !== paletteBytes[lookup]
       || field.bytes[fieldPixel + 1] !== paletteBytes[lookup + 1]
       || field.bytes[fieldPixel + 2] !== paletteBytes[lookup + 2]) return;

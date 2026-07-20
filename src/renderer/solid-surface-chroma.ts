@@ -1,4 +1,4 @@
-import { RenderOptics } from './render-optics';
+import { RENDER_OPTICS_CLASS_COUNT, RenderOptics } from './render-optics';
 
 const LIGHT_X = 0.48;
 const LIGHT_Y = 0.68;
@@ -21,6 +21,9 @@ const KEY = new Float32Array([
   0.60, 0.88, 1.00, // Device
   0.62, 1.00, 0.72, // Radioactive
   0.70, 0.90, 1.00, // TranslucentRigid
+  0.72, 0.92, 1.00, // CrystallineGranular
+  0.78, 0.72, 0.62, // SootyGranular
+  1.00, 0.78, 0.42, // MetallicGranular
 ]);
 
 const SHADOW = new Float32Array([
@@ -37,6 +40,9 @@ const SHADOW = new Float32Array([
   0.96, 0.70, 0.38,
   0.74, 0.62, 0.42,
   0.90, 0.72, 0.50,
+  0.86, 0.72, 0.62,
+  0.92, 0.86, 0.78,
+  0.82, 0.70, 0.60,
 ]);
 
 /** Signed analytic key/fill response; dense cores and empty support are exact no-ops. */
@@ -60,6 +66,9 @@ export function canvasSurfaceChromaResponse(
     : optics === RenderOptics.Device ? 0.90
     : optics === RenderOptics.Radioactive ? 0.86
     : optics === RenderOptics.Organic ? 0.82
+    : optics === RenderOptics.CrystallineGranular ? 0.98
+    : optics === RenderOptics.SootyGranular ? 0.58
+    : optics === RenderOptics.MetallicGranular ? 1
     : optics === RenderOptics.RoughGranular ? 0.92
     : 0.78;
   return Math.max(-MAX_RESPONSE, Math.min(
@@ -75,7 +84,7 @@ export function applyCanvasSurfaceChroma(
   optics: number,
 ): void {
   if (response === 0) return;
-  const family = Math.max(0, Math.min(RenderOptics.TranslucentRigid, optics | 0));
+  const family = Math.max(0, Math.min(RENDER_OPTICS_CLASS_COUNT - 1, optics | 0));
   const table = response > 0 ? KEY : SHADOW;
   // Canvas starts from the already-quantized one-cell material plane, while
   // WebGL applies the same shell before its final float composition. This

@@ -3101,6 +3101,11 @@ async function auditPowderBodyDepth(cdp, mode, dpr) {
     { name: 'isolatedSand', x: 190.5, y: 176.5, radiusX: 1.5, radiusY: 1.5 },
     { name: 'clayDeepHole', x: 144.5, y: 62.5, radiusX: 0.45, radiusY: 0.45 },
     { name: 'concreteDeepHole', x: 159.5, y: 73.5, radiusX: 0.45, radiusY: 0.45 },
+    { name: 'mineralPowderOptics', x: 405.5, y: 204.5, radiusX: 10, radiusY: 5 },
+    { name: 'dustPowderOptics', x: 445.5, y: 204.5, radiusX: 10, radiusY: 5 },
+    { name: 'crystalPowderOptics', x: 485.5, y: 204.5, radiusX: 10, radiusY: 5 },
+    { name: 'sootyPowderOptics', x: 525.5, y: 204.5, radiusX: 10, radiusY: 5 },
+    { name: 'metallicPowderOptics', x: 565.5, y: 204.5, radiusX: 10, radiusY: 5 },
   ], geometry.canvas);
   const byName = Object.fromEntries(samples.map((sample) => [sample.name, sample]));
   for (const name of ['clayBodyDepth', 'concreteBodyDepth']) {
@@ -3115,6 +3120,22 @@ async function auditPowderBodyDepth(cdp, mode, dpr) {
     assert(byName[name].rgbPeak <= 1,
       `${mode}: focused powder depth changed ${name} (${JSON.stringify(samples)})`);
   }
+  for (const name of [
+    'mineralPowderOptics', 'dustPowderOptics', 'crystalPowderOptics',
+    'sootyPowderOptics', 'metallicPowderOptics',
+  ]) {
+    assert(byName[name].rgbRms >= 0.08 && byName[name].rgbPeak <= 24,
+      `${mode}: ${name} lost bounded family bulk optics (${JSON.stringify(samples)})`);
+  }
+  assert(byName.crystalPowderOptics.responseRgb[2]
+      >= byName.crystalPowderOptics.responseRgb[0] + 0.08,
+  `${mode}: crystalline bulk lost its cool spectral retention (${JSON.stringify(samples)})`);
+  assert(byName.metallicPowderOptics.responseRgb[2]
+      >= byName.metallicPowderOptics.responseRgb[0] + 0.08,
+  `${mode}: metallic bulk lost its warm-key/cool-shadow split (${JSON.stringify(samples)})`);
+  assert(byName.sootyPowderOptics.rgbRms
+      <= byName.mineralPowderOptics.rgbRms * 0.92,
+  `${mode}: sooty bulk became as reflective as mineral powder (${JSON.stringify(samples)})`);
   assert(samples.every((sample) => sample.repeatRgbPeak <= 1),
     `${mode}: focused powder-body sequence was not deterministic (${JSON.stringify(samples)})`);
   await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.clear(); true');
@@ -3130,11 +3151,28 @@ async function auditPowderBodyDepth(cdp, mode, dpr) {
   assert(semanticSupport.flat.deepHoleLeak <= 0.10
     && semanticSupport.relieved.deepHoleLeak <= 0.10,
   `${mode}: focused powder body depth filled authored holes (${JSON.stringify(semanticSupport)})`);
+  const supportRegions = [
+    { name: 'powderFamilySupport', x: 485.5, y: 204.5, radiusX: 98, radiusY: 11, silhouette: true },
+  ];
+  const [flatSupport, relievedSupport] = await Promise.all([
+    samplePageRegions(
+      cdp, flat.capture.data, supportRegions,
+      blank.capture.data, blank.reference.data, geometry.canvas,
+    ),
+    samplePageRegions(
+      cdp, relieved.capture.data, supportRegions,
+      blank.capture.data, blank.reference.data, geometry.canvas,
+    ),
+  ]);
+  assert(flatSupport[0].visible === relievedSupport[0].visible
+    && Math.abs(flatSupport[0].worldArea - relievedSupport[0].worldArea) <= 0.001,
+  `${mode}: powder-family optics changed composed support (${JSON.stringify({ flatSupport, relievedSupport })})`);
   return {
     backing: `${geometry.backing.width}x${geometry.backing.height}`,
     cssCanvas: `${round(geometry.canvas.width, 2)}x${round(geometry.canvas.height, 2)}`,
     samples,
     semanticSupport,
+    familySupport: { flat: flatSupport[0], relieved: relievedSupport[0] },
   };
 }
 
@@ -3148,6 +3186,17 @@ function assertPairedPowderBodyDepth(results) {
     assert(canvasSample && webglSample, `focused paired powder-body sample missing ${name}`);
     const ratio = canvasSample.rgbRms / Math.max(0.04, webglSample.rgbRms);
     assert(ratio >= 0.30 && ratio <= 3.5,
+      `focused Canvas/WebGL ${name} response diverged (${canvasSample.rgbRms}/${webglSample.rgbRms})`);
+  }
+  for (const name of [
+    'mineralPowderOptics', 'dustPowderOptics', 'crystalPowderOptics',
+    'sootyPowderOptics', 'metallicPowderOptics',
+  ]) {
+    const canvasSample = canvas.samples.find((sample) => sample.name === name);
+    const webglSample = webgl.samples.find((sample) => sample.name === name);
+    assert(canvasSample && webglSample, `focused paired powder-family sample missing ${name}`);
+    const ratio = canvasSample.rgbRms / Math.max(0.04, webglSample.rgbRms);
+    assert(ratio >= 0.30 && ratio <= 3.0,
       `focused Canvas/WebGL ${name} response diverged (${canvasSample.rgbRms}/${webglSample.rgbRms})`);
   }
 }

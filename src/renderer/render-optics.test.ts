@@ -24,6 +24,9 @@ describe('render optics', () => {
       RenderOptics.Device,
       RenderOptics.Radioactive,
       RenderOptics.TranslucentRigid,
+      RenderOptics.CrystallineGranular,
+      RenderOptics.SootyGranular,
+      RenderOptics.MetallicGranular,
     ]).toEqual(Array.from({ length: RENDER_OPTICS_CLASS_COUNT }, (_, index) => index));
   });
 
@@ -42,8 +45,12 @@ describe('render optics', () => {
     expect(optics(Material.Oxygen)).toBe(RenderOptics.CleanGas);
     expect(optics(Material.RFRG)).toBe(RenderOptics.CleanGas);
     expect(optics(Material.Sand)).toBe(RenderOptics.RoughGranular);
-    expect(optics(Material.Quartz)).toBe(RenderOptics.RoughGranular);
-    expect(optics(Material.BCOL)).toBe(RenderOptics.RoughGranular);
+    expect(optics(Material.Salt)).toBe(RenderOptics.CrystallineGranular);
+    expect(optics(Material.Quartz)).toBe(RenderOptics.CrystallineGranular);
+    expect(optics(Material.BCOL)).toBe(RenderOptics.SootyGranular);
+    expect(optics(Material.Gunpowder)).toBe(RenderOptics.SootyGranular);
+    expect(optics(Material.Thermite)).toBe(RenderOptics.MetallicGranular);
+    expect(optics(Material.BRMT)).toBe(RenderOptics.MetallicGranular);
     expect(optics(Material.THDR)).toBe(RenderOptics.RoughGranular);
     expect(optics(Material.Wall)).toBe(RenderOptics.SmoothRigid);
     expect(optics(Material.LIFE_GOL)).toBe(RenderOptics.SmoothRigid);

@@ -1,4 +1,4 @@
-import { RENDER_OPTICS_CLASS_COUNT, RenderOptics } from './render-optics';
+import { isGranularOptics, RENDER_OPTICS_CLASS_COUNT, RenderOptics } from './render-optics';
 import { RenderProfile } from './render-profile';
 import { Material } from '../shared/materials';
 
@@ -41,7 +41,7 @@ for (let index = 0; index < OPTICS_PROFILE_COUNT; index++) {
   let absorbRed = 0.88;
   let absorbGreen = 0.80;
   let absorbBlue = 0.68;
-  if (optics === RenderOptics.RoughGranular || profile === RenderProfile.Granular) {
+  if (isGranularOptics(optics) || profile === RenderProfile.Granular) {
     axisX = 0; axisY = 0; strength = 0; cohesion = 0;
     bodyDepth = 4; bodyRelief = 0.20; bodySpecular = 0.35; bodyEdge = 0.50;
     tintRed = 0.90; tintGreen = 0.90; tintBlue = 0.85;

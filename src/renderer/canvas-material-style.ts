@@ -1,5 +1,5 @@
 import { RenderProfile } from './render-profile';
-import { RenderOptics } from './render-optics';
+import { isGranularOptics, RenderOptics } from './render-optics';
 
 /** Allocation-free family styling for the Canvas compatibility renderer. */
 export function shadeCanvasMaterial(
@@ -23,9 +23,23 @@ export function shadeCanvasMaterial(
   const surfaceProfile = solidOpticsProfile(optics, profile);
   if (surfaceProfile === RenderProfile.Granular) {
     // Keep grain-scale albedo legible after supersampled contour coverage is
-    // composited; this is RGB-only and does not sharpen the silhouette.
-    light += noise * 0.82;
-    tintRed += Math.max(0, noise) * 0.18;
+    // composited, while each rough family retains its own optical character.
+    const variation = optics === RenderOptics.CrystallineGranular ? 0.56
+      : optics === RenderOptics.SootyGranular ? 0.28
+      : optics === RenderOptics.MetallicGranular ? 0.50 : 0.82;
+    light += noise * variation;
+    if (optics === RenderOptics.CrystallineGranular) {
+      tintGreen += Math.max(0, noise) * 0.14;
+      tintBlue += Math.max(0, noise) * 0.30 + 1;
+    } else if (optics === RenderOptics.SootyGranular) {
+      light -= 2.5;
+      tintRed += Math.max(0, noise) * 0.04;
+    } else if (optics === RenderOptics.MetallicGranular) {
+      tintRed += Math.max(0, noise) * 0.24;
+      tintBlue += Math.max(0, -noise) * 0.16;
+    } else {
+      tintRed += Math.max(0, noise) * 0.18;
+    }
   } else if (surfaceProfile === RenderProfile.Rigid) {
     light += ((x + Math.floor(y / 3) + material) % 11 < 2 ? 7 : -2);
     tintBlue += 3;
@@ -52,6 +66,18 @@ export function shadeCanvasMaterial(
   if (optics === RenderOptics.RoughGranular) {
     light += noise * 0.20;
     tintRed += Math.max(0, noise) * 0.10;
+  } else if (optics === RenderOptics.CrystallineGranular) {
+    const glint = (hash(index + material * 367) & 31) < 3;
+    light += glint ? 6 : -0.5;
+    tintGreen += glint ? 3 : 0;
+    tintBlue += glint ? 7 : 1;
+  } else if (optics === RenderOptics.SootyGranular) {
+    light -= Math.max(0, noise) * 0.08;
+  } else if (optics === RenderOptics.MetallicGranular) {
+    const facet = (hash(index + material * 397) & 15) < 3;
+    light += facet ? 5 : -1;
+    tintRed += facet ? 4 : 0;
+    tintBlue += facet ? 2 : 1;
   } else if (optics === RenderOptics.SmoothRigid) {
     const polish = (hash(index + material * 313) & 15) < 2;
     light += polish ? 5 : 0;
@@ -82,7 +108,7 @@ export function shadeCanvasMaterial(
 }
 
 function solidOpticsProfile(optics: number, fallback: number): number {
-  if (optics === RenderOptics.RoughGranular) return RenderProfile.Granular;
+  if (isGranularOptics(optics)) return RenderProfile.Granular;
   if (optics === RenderOptics.SmoothRigid || optics === RenderOptics.TranslucentRigid) {
     return RenderProfile.Rigid;
   }

@@ -1,5 +1,5 @@
 import { RenderPhase, RenderProfile, surfaceLightGain } from './render-profile';
-import { RenderOptics } from './render-optics';
+import { isGranularOptics, RenderOptics } from './render-optics';
 import { RenderTrait } from './render-traits';
 
 export const CANVAS_TRANSLUCENT_FIELD_EXPOSURE = 0.38;
@@ -88,7 +88,7 @@ export function canvasSolidBodyFieldExposure(
     | RenderTrait.Force | RenderTrait.Carrier;
   if (!enabled || phase !== RenderPhase.Solid || (traits & blockingTraits) !== 0 || emissive
     || !denseInterior || hasNativeWall || opticalDepthByte <= 6
-    || optics === RenderOptics.RoughGranular || optics === RenderOptics.TranslucentRigid) return 0;
+    || isGranularOptics(optics) || optics === RenderOptics.TranslucentRigid) return 0;
 
   let familyExposure = 0.34;
   let reliefStrength = 6.5;

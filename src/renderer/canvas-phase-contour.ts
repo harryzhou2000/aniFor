@@ -9,7 +9,7 @@ import {
 } from './phase-boundary-coverage';
 import { Material } from '../shared/materials';
 import { RenderPhase, RenderProfile } from './render-profile';
-import { RenderOptics } from './render-optics';
+import { isGranularOptics, RenderOptics } from './render-optics';
 import { applyCanvasSurfaceChroma, canvasSurfaceChromaResponse } from './solid-surface-chroma';
 import type { FieldOutputScale } from './render-resolution';
 import type { PowderRenderStyle } from './powder-render-style';
@@ -942,7 +942,7 @@ function contactPhase(phase: number): ContactPhase {
 }
 
 function solidCurvatureGain(profile: number, optics: number): number {
-  if (optics === RenderOptics.RoughGranular || profile === RenderProfile.Granular) return 0;
+  if (isGranularOptics(optics) || profile === RenderProfile.Granular) return 0;
   if (optics === RenderOptics.SmoothRigid || profile === RenderProfile.Rigid) return 1;
   if (optics === RenderOptics.Device || profile === RenderProfile.Device) return 0.82;
   if (optics === RenderOptics.Radioactive || profile === RenderProfile.Radioactive) return 0.70;

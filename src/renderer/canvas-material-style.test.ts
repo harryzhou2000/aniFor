@@ -50,6 +50,9 @@ describe('Canvas material-family styling', () => {
       RenderOptics.Device,
       RenderOptics.Radioactive,
       RenderOptics.TranslucentRigid,
+      RenderOptics.CrystallineGranular,
+      RenderOptics.SootyGranular,
+      RenderOptics.MetallicGranular,
     ]) {
       const output = new Float32Array([0, 0, 0, 173]);
       const fingerprint: number[] = [];
@@ -62,7 +65,7 @@ describe('Canvas material-family styling', () => {
       }
       colors.add(fingerprint.join(','));
     }
-    expect(colors.size).toBe(6);
+    expect(colors.size).toBe(9);
   });
 
   it('keeps rough-granular albedo variation visible independently of alpha', () => {
