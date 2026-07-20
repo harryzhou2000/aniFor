@@ -112,6 +112,8 @@ export interface CanvasPhaseContourInput {
   readonly powderStability: Uint8Array;
   /** Optional shared RGBA powder density/gradient/support field. */
   readonly powderSurface?: Uint8Array;
+  /** Optional shared full-resolution species-aware liquid RGBA field. */
+  readonly liquidField?: Uint8Array;
   /** Comparison mode; defaults to the slope-aware smooth presentation. */
   readonly powderStyle?: PowderRenderStyle;
   /** Optional native wall occupancy. Walls pass through but never support contours. */
@@ -124,6 +126,8 @@ export interface CanvasPhaseContourInput {
   readonly surfaceContourLighting?: boolean;
   /** Audit-only A/B switch; defaults to bounded liquid/matter contact lighting. */
   readonly phaseContactLighting?: boolean;
+  /** Audit-only A/B switch; defaults to connected liquid-shore cohesion. */
+  readonly liquidSilhouetteCohesion?: boolean;
   readonly worldWidth: number;
   readonly worldHeight: number;
   readonly chunkX: number;
@@ -394,6 +398,15 @@ export class CanvasPhaseContourScratch {
       && input.styleBytes[material * 4 + 3] === 0
       && materialOptics !== RenderOptics.Molten
       && this.isExposedConnectedLiquid(cellX + 1, cellY + 1, material);
+    const liquidSilhouetteCohesion = (input.liquidSilhouetteCohesion ?? true)
+      && input.liquidField !== undefined
+      && input.paletteBytes !== undefined
+      && this.haloMaterials[haloIndex] !== 0
+      && phase === RenderPhase.Liquid
+      && input.styleBytes[material * 4 + 2] === 0
+      && input.styleBytes[material * 4 + 3] === 0
+      && materialOptics !== RenderOptics.Molten
+      && this.isConnectedLiquidAirShore(cellX + 1, cellY + 1, material);
     const solidSurfaceBevel = (input.surfaceContourLighting ?? true)
       && this.haloMaterials[haloIndex] !== 0
       && phase === RenderPhase.Solid
@@ -616,6 +629,21 @@ export class CanvasPhaseContourScratch {
           // Retain a fractional 2x edge on an isolated or unlike-species side;
           // exact same-species support reaches the fully opaque interior.
           amount = smoothstep(0.35, 0.75, density);
+          if (liquidSilhouetteCohesion) {
+            const worldX = input.chunkX + cellX + localX;
+            const worldY = input.chunkY + cellY + localY;
+            const palette = material * 4;
+            const fieldDensity = sampleSpeciesLiquidDensity(
+              input.liquidField!, input.worldWidth, input.worldHeight, worldX, worldY,
+              input.paletteBytes![palette], input.paletteBytes![palette + 1],
+              input.paletteBytes![palette + 2],
+            );
+            // The shared field supplies a stable curved shore, but it may only
+            // trim the existing categorical fringe. Real semantic cells keep
+            // their centre, and Canvas never claims an empty owner cell.
+            const fieldAmount = smoothstep(0.58, 0.90, fieldDensity);
+            if (fieldAmount < amount) amount += (fieldAmount - amount) * 0.62;
+          }
         } else {
           amount = smoothstep(0.27, 0.57, density);
         }
@@ -855,6 +883,40 @@ export class CanvasPhaseContourScratch {
     return sameSpecies && exposed;
   }
 
+  /**
+   * Cohesion is restricted to a two-dimensional exact-species body beside
+   * actual air/gas. Any contact or one-axis filament keeps categorical pixels.
+   */
+  private isConnectedLiquidAirShore(
+    haloX: number,
+    haloY: number,
+    ownerMaterial: number,
+  ): boolean {
+    let horizontalSupport = false;
+    let verticalSupport = false;
+    let exposed = false;
+    for (let direction = 0; direction < 4; direction++) {
+      const horizontal = direction < 2;
+      const x = haloX + (direction === 0 ? -1 : direction === 1 ? 1 : 0);
+      const y = haloY + (direction === 2 ? -1 : direction === 3 ? 1 : 0);
+      const index = y * HALO_SIZE + x;
+      if (this.isWallAt(index)) return false;
+      const candidate = this.haloMaterials[index];
+      const candidatePhase = this.haloPhases[index];
+      if (candidate === ownerMaterial && candidatePhase === RenderPhase.Liquid) {
+        if (horizontal) horizontalSupport = true;
+        else verticalSupport = true;
+      } else if (candidate === 0 || candidatePhase === RenderPhase.Gas) {
+        exposed = true;
+      } else {
+        // Unlike liquid, solid, powder, energy, and field contacts are not an
+        // air shore and must not borrow the liquid field's silhouette.
+        return false;
+      }
+    }
+    return horizontalSupport && verticalSupport && exposed;
+  }
+
   private isWallAt(index: number): boolean {
     return this.haloWalls[index] !== 0 || this.haloMaterials[index] === Material.Wall;
   }
@@ -888,6 +950,7 @@ function validateInput(input: CanvasPhaseContourInput): void {
     || input.sourcePixels.length !== cells * 4
     || input.powderStability.length !== cells
     || (input.powderSurface !== undefined && input.powderSurface.length !== cells * 4)
+    || (input.liquidField !== undefined && input.liquidField.length !== cells * 4)
     || input.styleBytes.length < 256 * 4
     || (input.paletteBytes !== undefined && input.paletteBytes.length < 256 * 4)
     || (input.walls !== undefined && input.walls.length !== cells)
@@ -901,6 +964,50 @@ function validateInput(input: CanvasPhaseContourInput): void {
     || input.chunkY + input.chunkHeight > input.worldHeight) {
     throw new Error('Canvas phase contour size mismatch');
   }
+}
+
+function sampleSpeciesLiquidDensity(
+  bytes: Uint8Array,
+  width: number,
+  height: number,
+  worldX: number,
+  worldY: number,
+  red: number,
+  green: number,
+  blue: number,
+): number {
+  const gridX = worldX - 0.5;
+  const gridY = worldY - 0.5;
+  const floorX = Math.floor(gridX);
+  const floorY = Math.floor(gridY);
+  const left = Math.max(0, Math.min(width - 1, floorX));
+  const top = Math.max(0, Math.min(height - 1, floorY));
+  const right = Math.max(0, Math.min(width - 1, left + 1));
+  const bottom = Math.max(0, Math.min(height - 1, top + 1));
+  const blendX = Math.max(0, Math.min(1, gridX - floorX));
+  const blendY = Math.max(0, Math.min(1, gridY - floorY));
+  const topLeft = (top * width + left) * 4;
+  const topRight = (top * width + right) * 4;
+  const bottomLeft = (bottom * width + left) * 4;
+  const bottomRight = (bottom * width + right) * 4;
+  const q00 = speciesLiquidAlpha(bytes, topLeft, red, green, blue);
+  const q10 = speciesLiquidAlpha(bytes, topRight, red, green, blue);
+  const q01 = speciesLiquidAlpha(bytes, bottomLeft, red, green, blue);
+  const q11 = speciesLiquidAlpha(bytes, bottomRight, red, green, blue);
+  const topDensity = q00 + (q10 - q00) * blendX;
+  const bottomDensity = q01 + (q11 - q01) * blendX;
+  return (topDensity + (bottomDensity - topDensity) * blendY) / 255;
+}
+
+function speciesLiquidAlpha(
+  bytes: Uint8Array,
+  offset: number,
+  red: number,
+  green: number,
+  blue: number,
+): number {
+  return bytes[offset] === red && bytes[offset + 1] === green && bytes[offset + 2] === blue
+    ? bytes[offset + 3] : 0;
 }
 
 function samplePowderByte(

@@ -256,6 +256,22 @@ async function auditMode(mode) {
     );
     await evaluate(cdp, `(() => {
       window.__ANIFOR_INPUT_AUDIT__.setLiquidFieldLighting(true);
+      window.__ANIFOR_INPUT_AUDIT__.setLiquidSilhouetteCohesion(false);
+      return true;
+    })()`);
+    const categoricalLiquidCaptures = await waitForStablePageCapture(
+      cdp, `${mode} categorical liquid-silhouette framebuffer`,
+    );
+    await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setLiquidSilhouetteCohesion(true); true');
+    const cohesiveLiquidCaptures = await waitForStablePageCapture(
+      cdp, `${mode} cohesive liquid-silhouette framebuffer`,
+    );
+    await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setLiquidSilhouetteCohesion(false); true');
+    const repeatedCategoricalLiquidCaptures = await waitForStablePageCapture(
+      cdp, `${mode} repeated categorical liquid-silhouette framebuffer`,
+    );
+    await evaluate(cdp, `(() => {
+      window.__ANIFOR_INPUT_AUDIT__.setLiquidSilhouetteCohesion(true);
       window.__ANIFOR_INPUT_AUDIT__.setTranslucentFieldTransmission(false);
       return true;
     })()`);
@@ -432,6 +448,9 @@ async function auditMode(mode) {
       ['repeated flat energy core', repeatedFlatEnergyCaptures],
       ['unlit gas', unlitGasCaptures],
       ['unlit liquid', unlitLiquidCaptures],
+      ['categorical liquid silhouette', categoricalLiquidCaptures],
+      ['cohesive liquid silhouette', cohesiveLiquidCaptures],
+      ['repeated categorical liquid silhouette', repeatedCategoricalLiquidCaptures],
       ['unlit translucent', unlitTranslucentCaptures],
       ['straight translucent backdrop', straightBackdropCaptures],
       ['refracted translucent backdrop', refractedBackdropCaptures],
@@ -790,8 +809,85 @@ async function auditMode(mode) {
       && liquidContourCrossings.maximumSymmetryError <= 1.0
       && liquidContourCrossings.monotonicSlack <= 0.20
       && liquidContourCrossings.meanTangentError
-        <= liquidContourCrossings.rawMeanTangentError * 0.70,
+      <= liquidContourCrossings.rawMeanTangentError * 0.70,
     `${mode}: liquid endcap became hard, blurred, asymmetric, or stair-stepped (${JSON.stringify(liquidContourCrossings)})`);
+    const connectedLiquidFringeRegions = [{
+      name: 'connectedLiquidFringe', x: 267, y: 82,
+      radiusX: 82, radiusY: 52, topology: true, silhouette: true,
+    }];
+    const [categoricalLiquidFringeSamples, cohesiveLiquidFringeSamples,
+      repeatedCategoricalLiquidFringeSamples] = await Promise.all([
+      samplePageRegions(
+        cdp, categoricalLiquidCaptures.capture.data, connectedLiquidFringeRegions,
+        blankCaptures.capture.data, blankCaptures.reference.data, canonicalCaptures.canvasRect,
+      ),
+      samplePageRegions(
+        cdp, cohesiveLiquidCaptures.capture.data, connectedLiquidFringeRegions,
+        blankCaptures.capture.data, blankCaptures.reference.data, canonicalCaptures.canvasRect,
+      ),
+      samplePageRegions(
+        cdp, repeatedCategoricalLiquidCaptures.capture.data, connectedLiquidFringeRegions,
+        blankCaptures.capture.data, blankCaptures.reference.data, canonicalCaptures.canvasRect,
+      ),
+    ]);
+    const categoricalLiquidFringe = categoricalLiquidFringeSamples[0];
+    const cohesiveLiquidFringe = cohesiveLiquidFringeSamples[0];
+    const repeatedCategoricalLiquidFringe = repeatedCategoricalLiquidFringeSamples[0];
+    const liquidFringeResponse = {
+      boundaryRatio: cohesiveLiquidFringe.boundaryPixels
+        / Math.max(1, categoricalLiquidFringe.boundaryPixels),
+      compactnessRatio: cohesiveLiquidFringe.compactness
+        / Math.max(0.001, categoricalLiquidFringe.compactness),
+      areaRatio: cohesiveLiquidFringe.worldArea
+        / Math.max(0.001, categoricalLiquidFringe.worldArea),
+      microContrastRatio: cohesiveLiquidFringe.microContrast
+        / Math.max(0.01, categoricalLiquidFringe.microContrast),
+    };
+    assert(liquidFringeResponse.boundaryRatio <= 1.02
+      && liquidFringeResponse.compactnessRatio >= 0.98
+      && (liquidFringeResponse.boundaryRatio <= 0.99
+        || liquidFringeResponse.compactnessRatio >= 1.01
+        || (liquidFringeResponse.boundaryRatio <= 0.999
+          && liquidFringeResponse.compactnessRatio >= 1.001
+          && cohesiveLiquidFringe.macroLumaRange < categoricalLiquidFringe.macroLumaRange)
+        || (liquidFringeResponse.microContrastRatio <= 0.995
+          && cohesiveLiquidFringe.macroLumaRange < categoricalLiquidFringe.macroLumaRange))
+      && liquidFringeResponse.areaRatio >= 0.92
+      && liquidFringeResponse.areaRatio <= 1.02
+      && cohesiveLiquidFringe.dominantComponent >= 0.94,
+    `${mode}: connected-liquid cohesion did not reduce fringe roughness within a bounded area (${JSON.stringify({
+      categoricalLiquidFringe, cohesiveLiquidFringe, liquidFringeResponse,
+    })})`);
+    assert(categoricalLiquidFringe.signature === repeatedCategoricalLiquidFringe.signature
+      && categoricalLiquidFringe.maskSignature === repeatedCategoricalLiquidFringe.maskSignature,
+    `${mode}: liquid-silhouette off-on-off sequence was not deterministic (${JSON.stringify({
+      categoricalLiquidFringe, repeatedCategoricalLiquidFringe,
+    })})`);
+    const liquidCohesionControlSamples = await sampleBackdropRefractionRegions(cdp, {
+      straight: categoricalLiquidCaptures.capture.data,
+      refracted: cohesiveLiquidCaptures.capture.data,
+      repeatedStraight: repeatedCategoricalLiquidCaptures.capture.data,
+    }, [
+      { name: 'isolatedDroplet', x: 190.5, y: 164.5, radius: 2 },
+      { name: 'sparseLiquidRow', x: 224, y: 153, radiusX: 28, radiusY: 2 },
+      { name: 'unlikeLiquidSeam', x: 302.5, y: 172, radiusX: 2, radiusY: 6 },
+      { name: 'denseWaterCore', x: 217, y: 80, radius: 4 },
+      { name: 'lavaPinhole', x: 340.5, y: 231.5, radius: 2 },
+    ], canonicalCaptures.canvasRect);
+    const sparseLiquidControl = liquidCohesionControlSamples.find(
+      (sample) => sample.name === 'sparseLiquidRow',
+    );
+    const exactLiquidControls = liquidCohesionControlSamples.filter(
+      (sample) => sample.name !== 'sparseLiquidRow',
+    );
+    assert(exactLiquidControls.every((sample) => (
+      sample.rgbPeak <= 1 && sample.repeatRgbPeak <= 1
+    )) && sparseLiquidControl
+      && sparseLiquidControl.coverage <= 0.02
+      && sparseLiquidControl.rgbRms <= 2
+      && sparseLiquidControl.rgbPeak <= 48
+      && sparseLiquidControl.repeatRgbPeak <= 1,
+    `${mode}: liquid cohesion escaped its bounded sparse strand or changed an exact isolated/seam/core/molten control (${JSON.stringify(liquidCohesionControlSamples)})`);
     const contactSilhouetteSamples = await sampleCanonicalRegions([
       {
         name: 'powderContactCapsule', x: 54.5, y: 172,
@@ -1504,6 +1600,14 @@ async function auditMode(mode) {
           Buffer.from(relievedEnergyCaptures.capture.data, 'base64'),
         );
         await writeFile(
+          variantScreenshotPath(visualScreenshot, 'liquid-categorical'),
+          Buffer.from(categoricalLiquidCaptures.capture.data, 'base64'),
+        );
+        await writeFile(
+          variantScreenshotPath(visualScreenshot, 'liquid-cohesive'),
+          Buffer.from(cohesiveLiquidCaptures.capture.data, 'base64'),
+        );
+        await writeFile(
           visualScreenshot, Buffer.from(refractedBackdropCaptures.capture.data, 'base64'),
         );
         await writeFile(
@@ -1575,6 +1679,11 @@ async function auditMode(mode) {
         phaseContactSupportInvariantSamples,
         silhouetteSamples,
         liquidContourCrossings,
+        categoricalLiquidFringe,
+        cohesiveLiquidFringe,
+        repeatedCategoricalLiquidFringe,
+        liquidFringeResponse,
+        liquidCohesionControlSamples,
         liquidColumnSamples,
         liquidReliefSamples,
         compactGasSamples,
@@ -1845,6 +1954,11 @@ async function auditMode(mode) {
       energyCoreReliefSupport,
       silhouetteSamples,
       liquidContourCrossings,
+      categoricalLiquidFringe,
+      cohesiveLiquidFringe,
+      repeatedCategoricalLiquidFringe,
+      liquidFringeResponse,
+      liquidCohesionControlSamples,
       contactSilhouetteSamples,
       contactMaterialSamples,
       isolatedMaterialSamples,
@@ -2522,6 +2636,10 @@ async function auditRenderScaleEight(cdp, dpr) {
       baselineBase64: zoomedInputBlank.data,
       baselineReferenceBase64: zoomedInputBlankReference.data,
       captureCanvasRect: zoomedInputGeometry.canvas,
+      // True 8x keeps one 15-million-fragment frame behind a GPU fence and
+      // coalesces later mutations. Wait for that latest queued frame rather
+      // than treating the previously completed framebuffer as a missed click.
+      settleTimeoutMs: 2_500,
     },
   ))[0];
   await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.resetView(); true');
@@ -4666,7 +4784,6 @@ async function capturePaintedFootprints(
   // each requested cell and a nearby empty control. Critical transformed calls
   // additionally provide two same-camera blank frames so page/canvas luminance
   // cannot satisfy the painted-support or peak-location checks.
-  const capture = await cdp.send('Page.captureScreenshot', { format: 'png', fromSurface: true });
   const regions = landmarks.flatMap((landmark, index) => {
     const controlOffset = landmark.y < WORLD_HEIGHT - 8 ? 6 : -6;
     return [
@@ -4674,32 +4791,47 @@ async function capturePaintedFootprints(
       { name: `control-${index}`, x: landmark.x + 0.5, y: landmark.y + controlOffset + 0.5, radius, locatePeak: true },
     ];
   });
-  const samples = await samplePageRegions(
-    cdp,
-    capture.data,
-    regions,
-    baseline?.baselineBase64,
-    baseline?.baselineReferenceBase64,
-    baseline?.captureCanvasRect,
-  );
-  return landmarks.map((landmark, index) => {
-    const target = samples[index * 2];
-    const control = samples[index * 2 + 1];
-    const peakLumaDelta = target.peakLuma - control.peakLuma;
-    const peakWorldError = Math.hypot(
-      target.peakWorld[0] - landmark.x - 0.5,
-      target.peakWorld[1] - landmark.y - 0.5,
+  const started = performance.now();
+  const settleTimeoutMs = Math.max(0, baseline?.settleTimeoutMs ?? 0);
+  let lastFailure;
+  do {
+    const capture = await cdp.send('Page.captureScreenshot', { format: 'png', fromSurface: true });
+    const samples = await samplePageRegions(
+      cdp,
+      capture.data,
+      regions,
+      baseline?.baselineBase64,
+      baseline?.baselineReferenceBase64,
+      baseline?.captureCanvasRect,
     );
-    assert(peakLumaDelta >= 20,
-      `${label}: painted footprint at ${landmark.x},${landmark.y} is not visible (${peakLumaDelta} peak luma over control)`);
-    assert(peakWorldError < maximumError,
-      `${label}: painted footprint at ${landmark.x},${landmark.y} is offset ${peakWorldError.toFixed(3)} cells`);
-    return {
-      cell: `${landmark.x},${landmark.y}`,
-      peakLumaDelta,
-      peakWorldErrorCells: round(peakWorldError, 4),
-    };
-  });
+    const footprints = landmarks.map((landmark, index) => {
+      const target = samples[index * 2];
+      const control = samples[index * 2 + 1];
+      const peakLumaDelta = target.peakLuma - control.peakLuma;
+      const peakWorldError = Math.hypot(
+        target.peakWorld[0] - landmark.x - 0.5,
+        target.peakWorld[1] - landmark.y - 0.5,
+      );
+      return {
+        cell: `${landmark.x},${landmark.y}`,
+        peakLumaDelta,
+        peakWorldErrorCells: round(peakWorldError, 4),
+        waitedMs: round(performance.now() - started, 1),
+      };
+    });
+    lastFailure = footprints.find((footprint) => (
+      footprint.peakLumaDelta < 20 || footprint.peakWorldErrorCells >= maximumError
+    ));
+    if (!lastFailure) return footprints;
+    if (performance.now() - started >= settleTimeoutMs) break;
+    await sleep(50);
+  } while (true);
+
+  assert(lastFailure.peakLumaDelta >= 20,
+    `${label}: painted footprint at ${lastFailure.cell} is not visible (${lastFailure.peakLumaDelta} peak luma over control after ${lastFailure.waitedMs} ms)`);
+  assert(lastFailure.peakWorldErrorCells < maximumError,
+    `${label}: painted footprint at ${lastFailure.cell} is offset ${lastFailure.peakWorldErrorCells.toFixed(3)} cells`);
+  throw new Error(`${label}: unreachable footprint validation state`);
 }
 
 async function mouseClick(cdp, x, y, button) {
@@ -4885,6 +5017,16 @@ function assertPairedVisualRelief(results) {
     assert(Math.abs(canvasSample.pinnedFraction - webglSample.pinnedFraction) <= 0.05,
       `Canvas/WebGL ${canvasSample.name} liquid clipping diverged (${canvasSample.pinnedFraction}/${webglSample.pinnedFraction})`);
   }
+  const liquidBoundaryResponseRatio = canvas.liquidFringeResponse.boundaryRatio
+    / Math.max(0.01, webgl.liquidFringeResponse.boundaryRatio);
+  const liquidCompactnessResponseRatio = canvas.liquidFringeResponse.compactnessRatio
+    / Math.max(0.01, webgl.liquidFringeResponse.compactnessRatio);
+  assert(liquidBoundaryResponseRatio >= 0.70 && liquidBoundaryResponseRatio <= 1.35
+    && liquidCompactnessResponseRatio >= 0.70 && liquidCompactnessResponseRatio <= 1.35,
+  `Canvas/WebGL liquid-fringe cohesion diverged (${JSON.stringify({
+    canvas: canvas.liquidFringeResponse,
+    webgl: webgl.liquidFringeResponse,
+  })})`);
   for (const name of ['warmRim', 'coolRim']) {
     const canvasSample = canvas.gasLightResponseSamples.find((sample) => sample.name === name);
     const webglSample = webgl.gasLightResponseSamples.find((sample) => sample.name === name);

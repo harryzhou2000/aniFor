@@ -16,6 +16,7 @@ interface PresenterHarness {
   setSurfaceContourLightingEnabled: PixiFieldPresenter['setSurfaceContourLightingEnabled'];
   setPhaseContactLightingEnabled: PixiFieldPresenter['setPhaseContactLightingEnabled'];
   setSolidFieldLightingEnabled: PixiFieldPresenter['setSolidFieldLightingEnabled'];
+  setLiquidSilhouetteCohesionEnabled: PixiFieldPresenter['setLiquidSilhouetteCohesionEnabled'];
   setRenderStallHandler: PixiFieldPresenter['setRenderStallHandler'];
   setTransform: PixiFieldPresenter['setTransform'];
   waitForFirstFrame: PixiFieldPresenter['waitForFirstFrame'];
@@ -60,6 +61,7 @@ describe('Pixi presenter startup configuration', () => {
       uSurfaceContourLighting: 1,
       uPhaseContactLighting: 1,
       uSolidFieldLighting: 1,
+      uLiquidSilhouetteCohesion: 1,
       uThermalMaterialStyling: 1,
       uEnergyCoreRelief: 0,
       uPowderStyle: powderRenderStyleValue('grains'),
@@ -127,6 +129,52 @@ describe('Pixi presenter startup configuration', () => {
     expect(solidFieldBlock).toContain('if (uHighQuality > 0.5)');
     expect(solidFieldBlock.match(/texture\(\s*uEmissionTexture/g)).toHaveLength(1);
     expect(solidFieldBlock).not.toMatch(/\balpha\s*[+*]?=/);
+  });
+
+  it('seeds and redraws optional-last liquid silhouette cohesion', () => {
+    const presenter = presenterHarness();
+
+    presenter.configurePresentation(
+      true, true, true, true, true, true, true, true, true, 'smooth',
+      true, true, true, false,
+    );
+    expect(presenter.uniforms.uniforms.uSolidFieldLighting).toBe(1);
+    expect(presenter.uniforms.uniforms.uLiquidSilhouetteCohesion).toBe(0);
+    expect(presenter.app.render).not.toHaveBeenCalled();
+
+    presenter.setLiquidSilhouetteCohesionEnabled(true);
+    expect(presenter.uniforms.uniforms.uLiquidSilhouetteCohesion).toBe(1);
+    expect(presenter.app.render).toHaveBeenCalledOnce();
+  });
+
+  it('coheres only connected ordinary liquid-air contours with existing samples', () => {
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const start = source.indexOf('// Semantic density previously won every liquid fringe');
+    const end = source.indexOf('    alpha = smoothstep(', start);
+    const cohesionBlock = source.slice(start, end);
+    const contactStart = source.indexOf('vec4 contactSample(');
+    const contactEnd = source.indexOf('\n}\nvec4 occupancyShape(', contactStart) + 2;
+    const contactBlock = source.slice(contactStart, contactEnd);
+    const resourcesStart = source.indexOf('    const resources = {');
+    const resourcesEnd = source.indexOf('    };', resourcesStart);
+    const resourcesBlock = source.slice(resourcesStart, resourcesEnd);
+
+    expect(start).toBeGreaterThan(0);
+    expect(end).toBeGreaterThan(start);
+    expect(source).toContain('uniform float uLiquidSilhouetteCohesion;');
+    expect(source).toContain('float liquidSupportTop = step(0.68, liquidTop.a);');
+    expect(cohesionBlock).toContain('liquidOnly < 0.5 && halo < 0.5');
+    expect(cohesionBlock).toContain('family == 2.0 && wall < 0.5 && traits < 0.5 && !materialEmissive');
+    expect(cohesionBlock).toContain('molten < 0.5 && foreignMatterContact < 0.5 && unlikeMaterialContact < 0.5');
+    expect(cohesionBlock).toContain('density > 0.08 && density < 0.92');
+    expect(cohesionBlock).toContain('adjacentLiquidSupport * exposedLiquidSide');
+    expect(cohesionBlock).toContain('min(\n        volume, max(density * 0.65, min(liquidDensity, liquidNeighbourMean) * 0.45)');
+    expect(cohesionBlock).not.toContain('texture(');
+    expect(cohesionBlock).not.toMatch(/\bcolor\s*[+*]?=/);
+    expect(contactBlock.match(/materialAt\(/g)).toHaveLength(1);
+    expect(contactBlock.match(/texture\(/g)).toHaveLength(1);
+    expect(resourcesBlock).not.toContain('uLiquidSilhouetteCohesion');
+    expect(source).not.toContain('sampler2D uLiquidSilhouetteCohesion');
   });
 
   it('keeps CSS camera transforms render-free while public style toggles redraw', () => {

@@ -152,6 +152,7 @@ export class MaterialRenderer {
   private powderSurfaceDirty = true;
   private gasFieldLightingEnabled = true;
   private liquidFieldLightingEnabled = true;
+  private liquidSilhouetteCohesionEnabled = true;
   private translucentFieldTransmissionEnabled = true;
   private translucentBackdropRefractionEnabled = true;
   private solidContactDepthEnabled = true;
@@ -296,6 +297,14 @@ export class MaterialRenderer {
     if (enabled === this.liquidFieldLightingEnabled) return;
     this.liquidFieldLightingEnabled = enabled;
     this.presenter?.setLiquidFieldLightingEnabled(enabled);
+    this.changed = true;
+  }
+
+  setLiquidSilhouetteCohesionEnabled(enabled: boolean): void {
+    if (enabled === this.liquidSilhouetteCohesionEnabled) return;
+    this.liquidSilhouetteCohesionEnabled = enabled;
+    this.presenter?.setLiquidSilhouetteCohesionEnabled(enabled);
+    this.contourChunks.markAll();
     this.changed = true;
   }
 
@@ -530,6 +539,7 @@ export class MaterialRenderer {
       this.surfaceContourLightingEnabled,
       this.phaseContactLightingEnabled,
       this.solidFieldLightingEnabled,
+      this.liquidSilhouetteCohesionEnabled,
     );
     // Route subsequent dirty cells to the candidate while its first expensive
     // frame is in flight. The known-good Canvas remains mounted underneath;
@@ -671,6 +681,9 @@ export class MaterialRenderer {
     const timingStart = this.canvasPresentationTimingEnabled ? performance.now() : undefined;
     const rebuiltField = fields.updateNext(this.rendered, scheduleTime);
     fields.refreshSuspension(this.rendered, scheduleTime, this.renderedWalls);
+    if (rebuiltField === 'liquid' && this.liquidSilhouetteCohesionEnabled) {
+      this.contourChunks.markAll();
+    }
     if (rebuiltField === 'emission') {
       this.contourChunks.markAll();
       emissionPixels.data.set(fields.emission.bytes);
@@ -1414,12 +1427,14 @@ export class MaterialRenderer {
           paletteBytes: this.fallbackFields?.lookups.paletteBytes,
           powderStability: this.boundaryStability,
           powderSurface: this.fallbackFields?.powderSurface.bytes,
+          liquidField: this.fallbackFields?.liquid.bytes,
           powderStyle: this.powderRenderStyle,
           walls: this.renderedWalls,
           solidContactDepth: this.solidContactDepthEnabled,
           solidCurvatureDepth: this.solidCurvatureDepthEnabled,
           surfaceContourLighting: this.surfaceContourLightingEnabled,
           phaseContactLighting: this.phaseContactLightingEnabled,
+          liquidSilhouetteCohesion: this.liquidSilhouetteCohesionEnabled,
           worldWidth: width,
           worldHeight: height,
           chunkX,

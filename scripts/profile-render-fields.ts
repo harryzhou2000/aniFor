@@ -117,6 +117,10 @@ for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) {
   if (x % 3 < 2 && y % 3 < 2) contourLiquidMaterials[y * width + x] = Material.Water;
 }
 const contourLiquidPixels = seedPixels(contourLiquidMaterials);
+const contourLiquidField = new LiquidDensityField(
+  width, height, liquidByMaterial, colorByMaterial,
+);
+contourLiquidField.update(contourLiquidMaterials);
 const contourPowderStability = new Uint8Array(width * height);
 const contourFlatStyleBytes = styleBytes.slice();
 contourFlatStyleBytes[Material.Water * 4 + 3] = 1;
@@ -133,7 +137,10 @@ const contourPhaseContactPixels = seedPixels(contourPhaseContactMaterials);
 const contourScratch = new CanvasPhaseContourScratch();
 let contourChecksum = 0;
 
-function profileLiquidContour(styles: Uint8Array): ReturnType<typeof sample> {
+function profileLiquidContour(
+  styles: Uint8Array,
+  liquidSilhouetteCohesion = false,
+): ReturnType<typeof sample> {
   const timing = sample(() => {
     let checksum = 0;
     for (let chunkY = 0; chunkY < height; chunkY += CANVAS_CONTOUR_CHUNK_SIZE) {
@@ -144,6 +151,8 @@ function profileLiquidContour(styles: Uint8Array): ReturnType<typeof sample> {
           powderStability: contourPowderStability,
           styleBytes: styles,
           paletteBytes,
+          liquidField: contourLiquidField.bytes,
+          liquidSilhouetteCohesion,
           worldWidth: width,
           worldHeight: height,
           chunkX,
@@ -459,6 +468,10 @@ console.log(JSON.stringify({
       fixture: 'repeating connected 2x2 Water islands',
       flatRgb: profileLiquidContour(contourFlatStyleBytes),
       meniscusRgb: profileLiquidContour(styleBytes),
+      liquidSilhouetteCohesion: {
+        categorical: profileLiquidContour(styleBytes, false),
+        cohesive: profileLiquidContour(styleBytes, true),
+      },
       solidBevel: {
         fixture: 'repeating connected 2x2 Metal islands',
         flatRgb: profileSolidContour(false),

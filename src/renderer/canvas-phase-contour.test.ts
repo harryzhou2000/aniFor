@@ -11,6 +11,7 @@ import {
   type CanvasPhaseContourInput,
 } from './canvas-phase-contour';
 import { RenderOptics } from './render-optics';
+import { LiquidDensityField } from './liquid-density-field';
 import { PowderSurfaceField } from './powder-surface-field';
 import { createRenderLookups } from './render-field-set';
 
@@ -82,6 +83,34 @@ function contourSignature(scratch: CanvasPhaseContourScratch): string {
     for (const byte of bytes) hash = Math.imul(hash ^ byte, 0x01000193) >>> 0;
   }
   return hash.toString(16).padStart(8, '0');
+}
+
+function contourOutputsEqual(
+  left: CanvasPhaseContourScratch,
+  right: CanvasPhaseContourScratch,
+): boolean {
+  if (left.outputWidth !== right.outputWidth || left.outputHeight !== right.outputHeight) return false;
+  for (let y = 0; y < left.outputHeight; y++) for (let x = 0; x < left.outputWidth; x++) {
+    const leftOutput = y * left.outputStride + x;
+    const rightOutput = y * right.outputStride + x;
+    if (left.coverage[leftOutput] !== right.coverage[rightOutput]
+      || left.ownerMaterials[leftOutput] !== right.ownerMaterials[rightOutput]) return false;
+    const leftPixel = leftOutput * 4;
+    const rightPixel = rightOutput * 4;
+    for (let channel = 0; channel < 4; channel++) {
+      if (left.pixels[leftPixel + channel] !== right.pixels[rightPixel + channel]) return false;
+    }
+  }
+  return true;
+}
+
+function liquidField(value: Fixture): Uint8Array {
+  const field = new LiquidDensityField(
+    value.input.worldWidth, value.input.worldHeight,
+    lookups.liquidByMaterial, lookups.colorByMaterial,
+  );
+  field.update(value.materials);
+  return field.bytes;
 }
 
 describe('Canvas 2x phase contour scratch', () => {
@@ -735,6 +764,141 @@ describe('Canvas 2x phase contour scratch', () => {
         if (x >= 4 && x < 8 && y >= 2 && y < 8) {
           expect(rgbaAt(contactStyled, x, y), `unlike seam ${x},${y}`).toEqual(
             rgbaAt(contactFlat, x, y),
+          );
+        }
+      }
+    }
+  });
+
+  it('coheres connected exact-species air shores without widening or losing authored centres', () => {
+    const value = fixture(9, 9);
+    for (let y = 2; y <= 6; y++) for (let x = 2; x <= 6; x++) {
+      // One stepped corner makes the field/categorical fringe visibly differ.
+      if (x === 2 && y === 2) continue;
+      paint(value, x, y, Material.Water);
+    }
+    const field = liquidField(value);
+    for (const scale of [1, 2, 4, 8] as const) {
+      const cohesive = new CanvasPhaseContourScratch(scale);
+      const categorical = new CanvasPhaseContourScratch(scale);
+      cohesive.rasterize({ ...value.input, liquidField: field });
+      categorical.rasterize({
+        ...value.input, liquidField: field, liquidSilhouetteCohesion: false,
+      });
+
+      expect(cohesive.ownerMaterials).toEqual(categorical.ownerMaterials);
+      let reduced = 0;
+      for (let y = 0; y < value.input.worldHeight * scale; y++) {
+        for (let x = 0; x < value.input.worldWidth * scale; x++) {
+          const output = y * cohesive.outputStride + x;
+          expect(cohesive.coverage[output], `${scale}x ${x},${y} no widening`).toBeLessThanOrEqual(
+            categorical.coverage[output],
+          );
+          if (cohesive.coverage[output] < categorical.coverage[output]) reduced++;
+          const pixel = output * 4;
+          expect(
+            Array.from(cohesive.pixels.slice(pixel, pixel + 3)),
+            `${scale}x ${x},${y} RGB`,
+          ).toEqual(Array.from(categorical.pixels.slice(pixel, pixel + 3)));
+          if (cohesive.coverage[output] > 0) {
+            const cellX = Math.floor(x / scale);
+            const cellY = Math.floor(y / scale);
+            expect(value.materials[cellY * value.input.worldWidth + cellX]).toBe(Material.Water);
+            expect(cohesive.ownerMaterials[output]).toBe(Material.Water);
+          }
+        }
+      }
+      if (scale === 1) expect(reduced).toBe(0);
+      else expect(reduced, `${scale}x cohesive fringe`).toBeGreaterThan(0);
+
+      for (let cellY = 0; cellY < value.input.worldHeight; cellY++) {
+        for (let cellX = 0; cellX < value.input.worldWidth; cellX++) {
+          if (value.materials[cellY * value.input.worldWidth + cellX] !== Material.Water) continue;
+          let maximum = 0;
+          for (let subY = 0; subY < scale; subY++) for (let subX = 0; subX < scale; subX++) {
+            const output = (cellY * scale + subY) * cohesive.outputStride
+              + cellX * scale + subX;
+            maximum = Math.max(maximum, cohesive.coverage[output]);
+          }
+          expect(maximum, `${scale}x authored centre ${cellX},${cellY}`).toBeGreaterThan(127);
+        }
+      }
+
+      // The fully surrounded centre is an exact dense-core no-op.
+      for (let subY = 0; subY < scale; subY++) for (let subX = 0; subX < scale; subX++) {
+        const output = (4 * scale + subY) * cohesive.outputStride + 4 * scale + subX;
+        expect(cohesive.coverage[output]).toBe(categorical.coverage[output]);
+        expect(cohesive.pixels.slice(output * 4, output * 4 + 4)).toEqual(
+          categorical.pixels.slice(output * 4, output * 4 + 4),
+        );
+      }
+    }
+  });
+
+  it('keeps isolated, one-axis, decorated, molten, and contacted liquids categorical at every scale', () => {
+    const cases: Array<{ value: Fixture; styleBytes?: Uint8Array; target?: readonly [number, number] }> = [];
+
+    const isolated = fixture(7, 7);
+    paint(isolated, 3, 3, Material.Water);
+    cases.push({ value: isolated });
+
+    const sparseRow = fixture(7, 7);
+    for (let x = 1; x <= 5; x++) paint(sparseRow, x, 3, Material.Water);
+    cases.push({ value: sparseRow });
+
+    const molten = fixture(7, 7);
+    for (let y = 2; y <= 4; y++) for (let x = 2; x <= 4; x++) {
+      paint(molten, x, y, Material.Lava);
+    }
+    cases.push({ value: molten });
+
+    for (const channel of [2, 3] as const) {
+      const decorated = fixture(7, 7);
+      for (let y = 2; y <= 4; y++) for (let x = 2; x <= 4; x++) {
+        paint(decorated, x, y, Material.Water);
+      }
+      const styleBytes = lookups.styleBytes.slice();
+      styleBytes[Material.Water * 4 + channel] = 255;
+      cases.push({ value: decorated, styleBytes });
+    }
+
+    for (const contact of [Material.Oil, Material.Metal, Material.Sand] as const) {
+      const contacted = fixture(7, 7);
+      for (let y = 2; y <= 4; y++) for (let x = 2; x <= 4; x++) {
+        paint(contacted, x, y, Material.Water);
+      }
+      paint(contacted, 3, 2, contact);
+      cases.push({ value: contacted, target: [3, 3] });
+    }
+    const walled = fixture(7, 7);
+    for (let y = 2; y <= 4; y++) for (let x = 2; x <= 4; x++) {
+      paint(walled, x, y, Material.Water);
+    }
+    walled.walls[2 * 7 + 3] = 1;
+    cases.push({ value: walled, target: [3, 3] });
+
+    for (const scale of [1, 2, 4, 8] as const) for (const testCase of cases) {
+      const field = liquidField(testCase.value);
+      const cohesive = new CanvasPhaseContourScratch(scale);
+      const categorical = new CanvasPhaseContourScratch(scale);
+      const common = {
+        ...testCase.value.input,
+        ...(testCase.styleBytes ? { styleBytes: testCase.styleBytes } : {}),
+        liquidField: field,
+      };
+      cohesive.rasterize(common);
+      categorical.rasterize({ ...common, liquidSilhouetteCohesion: false });
+      if (!testCase.target) {
+        expect(contourOutputsEqual(cohesive, categorical)).toBe(true);
+      } else {
+        const [cellX, cellY] = testCase.target;
+        for (let subY = 0; subY < scale; subY++) for (let subX = 0; subX < scale; subX++) {
+          const output = (cellY * scale + subY) * cohesive.outputStride
+            + cellX * scale + subX;
+          expect(cohesive.coverage[output]).toBe(categorical.coverage[output]);
+          expect(cohesive.ownerMaterials[output]).toBe(categorical.ownerMaterials[output]);
+          expect(cohesive.pixels.slice(output * 4, output * 4 + 4)).toEqual(
+            categorical.pixels.slice(output * 4, output * 4 + 4),
           );
         }
       }

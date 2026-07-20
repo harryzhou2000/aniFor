@@ -97,6 +97,7 @@ uniform float uSolidCurvatureDepth;
 uniform float uSurfaceContourLighting;
 uniform float uPhaseContactLighting;
 uniform float uSolidFieldLighting;
+uniform float uLiquidSilhouetteCohesion;
 uniform float uThermalMaterialStyling;
 uniform float uEnergyCoreRelief;
 uniform float uPowderStyle;
@@ -149,10 +150,10 @@ vec3 toneMapEnergy(vec3 radiance) {
   vec3 mapped = min(vec3(1.0), vec3(knee) + excess * 0.30);
   return min(radiance, mapped);
 }
-vec3 contactSample(vec2 uv, float material, float family) {
+vec4 contactSample(vec2 uv, float material, float family) {
   float candidate = materialAt(uv);
-  if (abs(candidate - material) < 0.5) return vec3(1.0, 0.0, 0.0);
-  if (candidate < 0.5) return vec3(0.0);
+  if (abs(candidate - material) < 0.5) return vec4(1.0, 0.0, 0.0, 0.0);
+  if (candidate < 0.5) return vec4(0.0);
   vec4 candidateStyle = texture(
     uStyleTexture, vec2((candidate + 0.5) / 256.0, 0.5)
   );
@@ -160,6 +161,7 @@ vec3 contactSample(vec2 uv, float material, float family) {
   float candidateTraits = floor(candidateStyle.a * 255.0 + 0.5);
   float ordinaryCandidate = candidateStyle.b < 0.5 && candidateTraits < 0.5
     && candidate != 3.0 ? 1.0 : 0.0;
+  float foreignMatter = candidateFamily != family ? 1.0 : 0.0;
   // The third component marks only cross-phase contacts that can be lit without
   // another semantic/style probe. A solid deliberately does not mark powder:
   // its neighbour stability is unavailable here, so only the authoritative
@@ -175,21 +177,26 @@ vec3 contactSample(vec2 uv, float material, float family) {
   // continuous occupied surface without alpha overlap or a black contact seam.
   // Powder may rest against a solid, but a solid deliberately does not borrow
   // moving powder support, so gas/liquid/powder contact cannot wobble its edge.
-  if (family == 0.0 && candidateFamily == 0.0) return vec3(1.0, 1.0, 0.0);
+  if (family == 0.0 && candidateFamily == 0.0) return vec4(1.0, 1.0, 0.0, 0.0);
   if (family == 4.0 && (candidateFamily == 4.0 || candidateFamily == 0.0)) {
-    return vec3(1.0, 0.0, crossPhase);
+    return vec4(1.0, 0.0, crossPhase, foreignMatter);
   }
   if ((family == 1.0 || family == 2.0) && candidateFamily == family) {
-    return vec3(1.0, 0.0, 0.0);
+    // The second component is otherwise solid-contact-only. Liquid consumes it
+    // as an exact unlike-species marker, avoiding an RGB-distance heuristic.
+    return vec4(1.0, 1.0, 0.0, 0.0);
   }
-  return vec3(0.0, 0.0, crossPhase);
+  return vec4(0.0, 0.0, crossPhase, foreignMatter);
 }
 vec4 occupancyShape(
   vec2 uv, float material, float family, float contourSmoothing,
-  out float contourCurvature, out float phaseContactLight
+  out float contourCurvature, out float phaseContactLight,
+  out float foreignMatterContact, out float unlikeMaterialContact
 ) {
   contourCurvature = 0.0;
   phaseContactLight = 0.0;
+  foreignMatterContact = 0.0;
+  unlikeMaterialContact = 0.0;
   vec2 grid = uv * uFieldSize - 0.5;
   vec2 blend = fract(grid);
   vec2 hermite = blend * blend * (3.0 - 2.0 * blend);
@@ -197,10 +204,10 @@ vec4 occupancyShape(
   vec2 weight = mix(blend, hermite, contourSmoothing);
   vec2 weightDerivative = mix(vec2(1.0), hermiteDerivative, contourSmoothing);
   vec2 origin = (floor(grid) + 0.5) * uTexel;
-  vec3 s00 = contactSample(origin, material, family);
-  vec3 s10 = contactSample(origin + vec2(uTexel.x, 0.0), material, family);
-  vec3 s01 = contactSample(origin + vec2(0.0, uTexel.y), material, family);
-  vec3 s11 = contactSample(origin + uTexel, material, family);
+  vec4 s00 = contactSample(origin, material, family);
+  vec4 s10 = contactSample(origin + vec2(uTexel.x, 0.0), material, family);
+  vec4 s01 = contactSample(origin + vec2(0.0, uTexel.y), material, family);
+  vec4 s11 = contactSample(origin + uTexel, material, family);
   float q00 = s00.x;
   float q10 = s10.x;
   float q01 = s01.x;
@@ -221,6 +228,8 @@ vec4 occupancyShape(
   // The Hermite derivative is itself the contact-local band: it is exactly
   // zero in dense cores, air silhouettes, and same-phase seams.
   phaseContactLight = dot(vec2(phaseContactX, phaseContactY), vec2(-0.55, -0.80));
+  foreignMatterContact = max(max(s00.w, s10.w), max(s01.w, s11.w));
+  unlikeMaterialContact = max(max(s00.y, s10.y), max(s01.y, s11.y));
   float supportOrContact = q00 + q10 + q01 + q11;
   if (family == 0.0) {
     float contactX = mix(s10.y - s00.y, s11.y - s01.y, weight.y) * weightDerivative.x;
@@ -677,12 +686,15 @@ void main() {
   vec2 velocity = halo > 0.5 ? vec2(0.0) : state.ba * 2.0 - 1.0;
   float contourCurvature = 0.0;
   float phaseContactLight = 0.0;
+  float foreignMatterContact = 0.0;
+  float unlikeMaterialContact = 0.0;
   vec4 shape = wallOnly > 0.5
     ? vec4(wallSurface, 0.0)
     : (surfaceOnly > 0.5
     ? (profile == 1.0
       ? occupancyShape(
-        fieldUv, material, family, 1.0, contourCurvature, phaseContactLight
+        fieldUv, material, family, 1.0, contourCurvature, phaseContactLight,
+        foreignMatterContact, unlikeMaterialContact
       )
       : vec4(enclosedSurfaceShape(fieldUv, material), 0.0))
     : ((cloudOnly > 0.5 || emissionOnly > 0.5)
@@ -694,7 +706,7 @@ void main() {
       : occupancyShape(
         fieldUv, material, family,
         (family == 0.0 || family == 2.0 || profile == 1.0) ? 1.0 : 0.0,
-        contourCurvature, phaseContactLight
+        contourCurvature, phaseContactLight, foreignMatterContact, unlikeMaterialContact
       )))));
   float boundaryStability = 0.0;
   float powderSurfaceBlend = 0.0;
@@ -740,6 +752,8 @@ void main() {
   vec2 liquidSpeciesSlope = vec2(0.0);
   float cloudNeighbourMean = 0.0;
   float liquidNeighbourMean = 0.0;
+  float adjacentLiquidSupport = 0.0;
+  float exposedLiquidSide = 0.0;
   if (emissionOnly > 0.5) {
     float lightLeft = texture(uEmissionTexture, fieldUv - vec2(uEmissionTexel.x, 0.0)).a;
     float lightRight = texture(uEmissionTexture, fieldUv + vec2(uEmissionTexel.x, 0.0)).a;
@@ -759,6 +773,21 @@ void main() {
     vec4 liquidTop = texture(uLiquidTexture, fieldUv - vec2(0.0, uTexel.y));
     vec4 liquidBottom = texture(uLiquidTexture, fieldUv + vec2(0.0, uTexel.y));
     liquidNeighbourMean = (liquidLeft.a + liquidRight.a + liquidTop.a + liquidBottom.a) * 0.25;
+    // The field deliberately owns a one-cell reconstruction halo. Directional
+    // support keeps isolated droplets exact while allowing a bounded amount of
+    // cohesion on a connected sparse strand, matching the shared fluid style.
+    float liquidSupportLeft = step(0.68, liquidLeft.a);
+    float liquidSupportRight = step(0.68, liquidRight.a);
+    float liquidSupportTop = step(0.68, liquidTop.a);
+    float liquidSupportBottom = step(0.68, liquidBottom.a);
+    adjacentLiquidSupport = max(
+      max(liquidSupportLeft * liquidSupportTop, liquidSupportTop * liquidSupportRight),
+      max(liquidSupportRight * liquidSupportBottom, liquidSupportBottom * liquidSupportLeft)
+    );
+    exposedLiquidSide = max(
+      max(1.0 - liquidSupportLeft, 1.0 - liquidSupportRight),
+      max(1.0 - liquidSupportTop, 1.0 - liquidSupportBottom)
+    );
     volumeSlope = vec2(
       liquidRight.a - liquidLeft.a, liquidBottom.a - liquidTop.a
     ) * 0.65;
@@ -1046,8 +1075,28 @@ void main() {
     float liquidEdgeHalfWidth = mix(
       0.13, 0.17, clamp(length(volumeSlope) * 2.4, 0.0, 1.0)
     );
+    float liquidSilhouetteDensity = volume;
+    // Semantic density previously won every liquid fringe through max(density,
+    // liquidDensity). Replace only an ordinary connected liquid-air contour
+    // with a bounded move toward the existing species-aware field. Adjacent
+    // cardinal support rejects isolated droplets while allowing slight cohesion
+    // on connected sparse strands; the exact contact markers above reject unlike
+    // liquids and non-liquid matter without another fetch. The target never
+    // exceeds the old density, and a semantic cell centre remains authoritative.
+    if (uLiquidSilhouetteCohesion > 0.5 && liquidOnly < 0.5 && halo < 0.5
+      && family == 2.0 && wall < 0.5 && traits < 0.5 && !materialEmissive
+      && molten < 0.5 && foreignMatterContact < 0.5 && unlikeMaterialContact < 0.5
+      && density > 0.08 && density < 0.92) {
+      float liquidAirContour = adjacentLiquidSupport * exposedLiquidSide;
+      float connectedFieldDensity = min(
+        volume, max(density * 0.65, min(liquidDensity, liquidNeighbourMean) * 0.45)
+      );
+      liquidSilhouetteDensity = mix(
+        volume, connectedFieldDensity, liquidAirContour * 0.86
+      );
+    }
     alpha = smoothstep(
-      0.48 - liquidEdgeHalfWidth, 0.48 + liquidEdgeHalfWidth, volume
+      0.48 - liquidEdgeHalfWidth, 0.48 + liquidEdgeHalfWidth, liquidSilhouetteDensity
     ) * mix(0.56, 0.82, liquidDepth);
     color = liquidBase * mix(1.24, depthTransmission, liquidDepth)
       * liquidDiffuse * mix(1.0, liquidBodyExposure, liquidDepth);
@@ -1628,6 +1677,7 @@ export class PixiFieldPresenter {
       uSurfaceContourLighting: { value: 1, type: 'f32' },
       uPhaseContactLighting: { value: 1, type: 'f32' },
       uSolidFieldLighting: { value: 1, type: 'f32' },
+      uLiquidSilhouetteCohesion: { value: 1, type: 'f32' },
       // FieldRenderer turns this on only for backends that expose temperature;
       // byte zero must therefore never make legacy backends look frozen.
       uThermalMaterialStyling: { value: 0, type: 'f32' },
@@ -1825,6 +1875,7 @@ export class PixiFieldPresenter {
     surfaceContourLightingEnabled = true,
     phaseContactLightingEnabled = true,
     solidFieldLightingEnabled = true,
+    liquidSilhouetteCohesionEnabled = true,
   ): void {
     const uniforms = this.uniforms.uniforms;
     uniforms.uGasFieldLighting = gasFieldLightingEnabled ? 1 : 0;
@@ -1837,6 +1888,7 @@ export class PixiFieldPresenter {
     uniforms.uSurfaceContourLighting = surfaceContourLightingEnabled ? 1 : 0;
     uniforms.uPhaseContactLighting = phaseContactLightingEnabled ? 1 : 0;
     uniforms.uSolidFieldLighting = solidFieldLightingEnabled ? 1 : 0;
+    uniforms.uLiquidSilhouetteCohesion = liquidSilhouetteCohesionEnabled ? 1 : 0;
     uniforms.uThermalMaterialStyling = thermalMaterialStylingEnabled ? 1 : 0;
     uniforms.uEnergyCoreRelief = energyCoreReliefEnabled ? 1 : 0;
     uniforms.uPowderStyle = powderRenderStyleValue(powderRenderStyle);
@@ -1889,6 +1941,11 @@ export class PixiFieldPresenter {
 
   setSolidFieldLightingEnabled(enabled: boolean): void {
     this.uniforms.uniforms.uSolidFieldLighting = enabled ? 1 : 0;
+    this.renderApplication();
+  }
+
+  setLiquidSilhouetteCohesionEnabled(enabled: boolean): void {
+    this.uniforms.uniforms.uLiquidSilhouetteCohesion = enabled ? 1 : 0;
     this.renderApplication();
   }
 
