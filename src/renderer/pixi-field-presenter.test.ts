@@ -17,6 +17,7 @@ interface PresenterHarness {
   setEmissionVolumeChromaEnabled: PixiFieldPresenter['setEmissionVolumeChromaEnabled'];
   setLiquidVolumeChromaEnabled: PixiFieldPresenter['setLiquidVolumeChromaEnabled'];
   setLiquidOpticalDepthEnabled: PixiFieldPresenter['setLiquidOpticalDepthEnabled'];
+  setSolidOpticalDepthEnabled: PixiFieldPresenter['setSolidOpticalDepthEnabled'];
   setPowderBodyDepthEnabled: PixiFieldPresenter['setPowderBodyDepthEnabled'];
   setSurfaceContourLightingEnabled: PixiFieldPresenter['setSurfaceContourLightingEnabled'];
   setPhaseContactLightingEnabled: PixiFieldPresenter['setPhaseContactLightingEnabled'];
@@ -80,6 +81,7 @@ describe('Pixi presenter startup configuration', () => {
       uLiquidFieldLighting: 1,
       uLiquidVolumeChroma: 1,
       uLiquidOpticalDepth: 1,
+      uSolidOpticalDepth: 1,
       uTranslucentFieldTransmission: 0,
       uTranslucentBackdropRefraction: 1,
       uSolidContactDepth: 0,
@@ -356,6 +358,40 @@ describe('Pixi presenter startup configuration', () => {
     presenter.setPowderBodyDepthEnabled(true);
     expect(presenter.uniforms.uniforms.uPowderBodyDepth).toBe(1);
     expect(presenter.app.render).toHaveBeenCalledTimes(2);
+  });
+
+  it('keeps solid optical thickness on the existing phase-local byte and RGB-only', () => {
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const sampleStart = source.indexOf('// Solid thickness is the third phase-exclusive occupant');
+    const sampleEnd = source.indexOf('if (family == 4.0 && boundaryStability', sampleStart);
+    const shadingStart = source.indexOf('if (uSolidOpticalDepth > 0.5');
+    const shadingEnd = source.indexOf('color += vec3(solidReliefTone', shadingStart);
+    const sample = source.slice(sampleStart, sampleEnd);
+    const shading = source.slice(shadingStart, shadingEnd);
+
+    expect(sampleStart).toBeGreaterThan(0);
+    expect(sample).toContain('solidOpticalDepth = boundaryStabilityAt(fieldUv)');
+    expect(sample).not.toContain('uSolidOpticalDepthTexture');
+    expect(shading).toContain('(solidOpticalDepth * 255.0 - 6.0) / 249.0');
+    expect(shading).toContain('thicknessAbsorption');
+    expect(shading).not.toContain('texture(');
+    expect(shading).not.toMatch(/\balpha\s*[+*]?=/);
+    expect(source).not.toContain('uSolidOpticalDepthTexture');
+    expect(source.match(/this\.boundaryStabilitySource\.update\(\)/g)).toHaveLength(1);
+  });
+
+  it('seeds and redraws solid optical depth independently', () => {
+    const presenter = presenterHarness();
+    presenter.configurePresentation(
+      true, true, true, true, true, true, true, true, true, 'smooth',
+      true, true, true, true, true, true, true, true, true, false,
+    );
+    expect(presenter.uniforms.uniforms.uSolidOpticalDepth).toBe(0);
+    expect(presenter.app.render).not.toHaveBeenCalled();
+
+    presenter.setSolidOpticalDepthEnabled(true);
+    expect(presenter.uniforms.uniforms.uSolidOpticalDepth).toBe(1);
+    expect(presenter.app.render).toHaveBeenCalledOnce();
   });
 
   it('redraws when audit emission volume chroma changes', () => {

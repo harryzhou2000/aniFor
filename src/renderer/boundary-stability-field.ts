@@ -7,13 +7,14 @@ export const POWDER_RELEASE_SPEED = 10;
 export const POWDER_SETTLE_SUPPORT = 2;
 
 /**
- * Advances presentation-only powder settling with temporal hysteresis.
+ * Advances presentation-only powder settling with temporal hysteresis while
+ * preserving same-owner Liquid/Solid bytes for their independent depth scans.
  *
  * A powder cell must keep both its semantic owner and compatible contact while
  * slow for several refreshes before it joins a bulk contour. Intermediate
  * velocity preserves the previous state; definite motion, lost contact, or an
- * owner change releases it immediately. Solids and fluids never contribute to
- * each other's state, so nearby gas/liquid motion cannot perturb a rigid edge.
+ * owner change releases it immediately. Phase/owner changes clear depth bytes,
+ * so nearby gas/liquid motion cannot perturb a rigid edge or retain stale depth.
  */
 export function updateBoundaryStabilityRect(
   target: Uint8Array,
@@ -37,7 +38,7 @@ export function updateBoundaryStabilityRect(
     const index = y * fieldWidth + x;
     const material = materials[index];
     const phase = material ? styleBytes[material * 4] : -1;
-    if (phase === RenderPhase.Liquid) {
+    if (phase === RenderPhase.Liquid || phase === RenderPhase.Solid) {
       if (previousMaterials[index] !== material) {
         if (target[index] !== 0) dirty?.markCell(index);
         target[index] = 0;

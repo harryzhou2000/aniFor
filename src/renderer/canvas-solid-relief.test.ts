@@ -92,6 +92,40 @@ describe('Canvas solid relief', () => {
     )).toBeLessThan(5);
   });
 
+  it('adds family-coloured thickness only beyond the protected first interior layer', () => {
+    const base = [168, 132, 96] as const;
+    const surface = new Float32Array(base);
+    const firstLayer = new Float32Array(base);
+    const deepMetal = new Float32Array(base);
+    const deepOrganic = new Float32Array(base);
+    applyCanvasSolidBodyOptics(
+      surface, 0, 0, 0, true, RenderProfile.Rigid, RenderOptics.SmoothRigid, 0,
+    );
+    applyCanvasSolidBodyOptics(
+      firstLayer, 0, 0, 0, true, RenderProfile.Rigid, RenderOptics.SmoothRigid, 6,
+    );
+    applyCanvasSolidBodyOptics(
+      deepMetal, 0, 0, 0, true, RenderProfile.Rigid, RenderOptics.SmoothRigid, 255,
+    );
+    applyCanvasSolidBodyOptics(
+      deepOrganic, 0, 0, 0, true, RenderProfile.Organic, RenderOptics.Organic, 255,
+    );
+
+    expect(firstLayer).toEqual(surface);
+    expect(deepMetal[0]).toBeLessThan(surface[0]);
+    expect(deepMetal[1]).toBeLessThan(surface[1]);
+    expect(deepMetal[2]).toBeLessThan(surface[2]);
+    expect(deepMetal[0] / surface[0]).toBeLessThan(deepMetal[2] / surface[2]);
+    expect(deepOrganic[1] / surface[1]).toBeGreaterThan(deepOrganic[0] / surface[0]);
+    expect(Array.from(deepOrganic)).not.toEqual(Array.from(deepMetal));
+
+    const disabled = new Float32Array(base);
+    applyCanvasSolidBodyOptics(
+      disabled, 0, 0, 0, true, RenderProfile.Rigid, RenderOptics.SmoothRigid, 255, false,
+    );
+    expect(disabled).toEqual(surface);
+  });
+
   it('changes body response gradually with relief and keeps exposed rims restrained', () => {
     const low = new Float32Array([120, 150, 180]);
     const adjacent = new Float32Array(low);

@@ -19,6 +19,10 @@ const BODY_EDGE = new Float32Array(OPTICS_PROFILE_COUNT);
 const BODY_TINT_RED = new Float32Array(OPTICS_PROFILE_COUNT);
 const BODY_TINT_GREEN = new Float32Array(OPTICS_PROFILE_COUNT);
 const BODY_TINT_BLUE = new Float32Array(OPTICS_PROFILE_COUNT);
+const BODY_THICKNESS = new Float32Array(OPTICS_PROFILE_COUNT);
+const BODY_ABSORB_RED = new Float32Array(OPTICS_PROFILE_COUNT);
+const BODY_ABSORB_GREEN = new Float32Array(OPTICS_PROFILE_COUNT);
+const BODY_ABSORB_BLUE = new Float32Array(OPTICS_PROFILE_COUNT);
 for (let index = 0; index < OPTICS_PROFILE_COUNT; index++) {
   const optics = Math.floor(index / PROFILE_COUNT);
   const profile = index % PROFILE_COUNT;
@@ -33,48 +37,62 @@ for (let index = 0; index < OPTICS_PROFILE_COUNT; index++) {
   let tintRed = 0.80;
   let tintGreen = 0.90;
   let tintBlue = 1.0;
+  let bodyThickness = 16;
+  let absorbRed = 0.88;
+  let absorbGreen = 0.80;
+  let absorbBlue = 0.68;
   if (optics === RenderOptics.RoughGranular || profile === RenderProfile.Granular) {
     axisX = 0; axisY = 0; strength = 0; cohesion = 0;
     bodyDepth = 4; bodyRelief = 0.20; bodySpecular = 0.35; bodyEdge = 0.50;
     tintRed = 0.90; tintGreen = 0.90; tintBlue = 0.85;
+    bodyThickness = 10; absorbRed = 0.82; absorbGreen = 0.78; absorbBlue = 0.72;
   } else if (optics === RenderOptics.SmoothRigid) {
     axisX = 2; axisY = 1; strength = 7.0; cohesion = 0.46;
     bodyDepth = 15; bodyRelief = 0.65; bodySpecular = 2.4; bodyEdge = 1.8;
     tintRed = 0.50; tintGreen = 0.90; tintBlue = 1.35;
+    bodyThickness = 23; absorbRed = 0.94; absorbGreen = 0.84; absorbBlue = 0.70;
   } else if (optics === RenderOptics.Organic) {
     axisX = 1; axisY = 4; strength = 6.0; cohesion = 0.30;
     bodyDepth = 11; bodyRelief = 0.45; bodySpecular = 1.5; bodyEdge = 1.2;
     tintRed = 0.65; tintGreen = 1.20; tintBlue = 0.55;
+    bodyThickness = 18; absorbRed = 0.94; absorbGreen = 0.72; absorbBlue = 0.96;
   } else if (optics === RenderOptics.Device) {
     axisX = 4; axisY = 0; strength = 4.5; cohesion = 0.40;
     bodyDepth = 17; bodyRelief = 0.60; bodySpecular = 3.0; bodyEdge = 2.2;
     tintRed = 0.40; tintGreen = 1.15; tintBlue = 1.65;
+    bodyThickness = 25; absorbRed = 1.00; absorbGreen = 0.84; absorbBlue = 0.62;
   } else if (optics === RenderOptics.Radioactive) {
     axisX = 3; axisY = -2; strength = 5.5; cohesion = 0.26;
     bodyDepth = 14; bodyRelief = 0.55; bodySpecular = 2.4; bodyEdge = 1.7;
     tintRed = 0.35; tintGreen = 1.45; tintBlue = 0.70;
+    bodyThickness = 21; absorbRed = 0.96; absorbGreen = 0.62; absorbBlue = 0.92;
   } else if (optics === RenderOptics.TranslucentRigid) {
     axisX = 2; axisY = 1; strength = 6.0; cohesion = 0.50;
     // Keep the body absorption restrained so Ice's low-alpha wall facets retain
     // their signed positive/negative redistribution after Uint8 composition.
     bodyDepth = 8; bodyRelief = 0.35; bodySpecular = 3.4; bodyEdge = 2.8;
     tintRed = 0.45; tintGreen = 1.05; tintBlue = 1.70;
+    bodyThickness = 13; absorbRed = 1.00; absorbGreen = 0.78; absorbBlue = 0.54;
   } else if (profile === RenderProfile.Rigid) {
     axisX = 2; axisY = 1; strength = 7.0; cohesion = 0.46;
     bodyDepth = 15; bodyRelief = 0.65; bodySpecular = 2.4; bodyEdge = 1.8;
     tintRed = 0.50; tintGreen = 0.90; tintBlue = 1.35;
+    bodyThickness = 23; absorbRed = 0.94; absorbGreen = 0.84; absorbBlue = 0.70;
   } else if (profile === RenderProfile.Organic) {
     axisX = 1; axisY = 4; strength = 6.0; cohesion = 0.30;
     bodyDepth = 11; bodyRelief = 0.45; bodySpecular = 1.5; bodyEdge = 1.2;
     tintRed = 0.65; tintGreen = 1.20; tintBlue = 0.55;
+    bodyThickness = 18; absorbRed = 0.94; absorbGreen = 0.72; absorbBlue = 0.96;
   } else if (profile === RenderProfile.Device) {
     axisX = 4; axisY = 0; strength = 4.5; cohesion = 0.40;
     bodyDepth = 17; bodyRelief = 0.60; bodySpecular = 3.0; bodyEdge = 2.2;
     tintRed = 0.40; tintGreen = 1.15; tintBlue = 1.65;
+    bodyThickness = 25; absorbRed = 1.00; absorbGreen = 0.84; absorbBlue = 0.62;
   } else if (profile === RenderProfile.Radioactive) {
     axisX = 3; axisY = -2; strength = 5.5; cohesion = 0.26;
     bodyDepth = 14; bodyRelief = 0.55; bodySpecular = 2.4; bodyEdge = 1.7;
     tintRed = 0.35; tintGreen = 1.45; tintBlue = 0.70;
+    bodyThickness = 21; absorbRed = 0.96; absorbGreen = 0.62; absorbBlue = 0.92;
   }
   RELIEF_X[index] = axisX;
   RELIEF_Y[index] = axisY;
@@ -87,6 +105,10 @@ for (let index = 0; index < OPTICS_PROFILE_COUNT; index++) {
   BODY_TINT_RED[index] = tintRed;
   BODY_TINT_GREEN[index] = tintGreen;
   BODY_TINT_BLUE[index] = tintBlue;
+  BODY_THICKNESS[index] = bodyThickness;
+  BODY_ABSORB_RED[index] = absorbRed;
+  BODY_ABSORB_GREEN[index] = absorbGreen;
+  BODY_ABSORB_BLUE[index] = absorbBlue;
 }
 
 /**
@@ -136,6 +158,8 @@ export function applyCanvasSolidBodyOptics(
   denseInterior: boolean,
   profile: number,
   optics: number,
+  opticalDepthByte = 0,
+  opticalDepthEnabled = true,
 ): void {
   applyCanvasSolidLighting(color, surfaceLight);
   const index = optics * PROFILE_COUNT + profile;
@@ -157,6 +181,18 @@ export function applyCanvasSolidBodyOptics(
   color[0] += BODY_TINT_RED[index] * reflection;
   color[1] += BODY_TINT_GREEN[index] * reflection;
   color[2] += BODY_TINT_BLUE[index] * reflection;
+  // Depth zero is an exact surface and six is only one cell below it. Begin
+  // absorption after that first protected layer so narrow strokes, holes, and
+  // small authored details retain their established RGB while genuinely thick
+  // bodies gain a coherent surface-to-core falloff.
+  if (opticalDepthEnabled && opticalDepthByte > 6) {
+    const linearDepth = (opticalDepthByte - 6) / 249;
+    const shapedDepth = linearDepth * (1.4 - linearDepth * 0.4);
+    const thickness = BODY_THICKNESS[index] / 255 * shapedDepth;
+    color[0] *= 1 - BODY_ABSORB_RED[index] * thickness;
+    color[1] *= 1 - BODY_ABSORB_GREEN[index] * thickness;
+    color[2] *= 1 - BODY_ABSORB_BLUE[index] * thickness;
+  }
   compressSolidPeak(color);
 }
 

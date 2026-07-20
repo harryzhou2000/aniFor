@@ -41,6 +41,7 @@ import {
 } from '../src/renderer/canvas-wall-style';
 import { RenderOptics } from '../src/renderer/render-optics';
 import { SuspensionField } from '../src/renderer/suspension-field';
+import { writeSolidOpticalDepth } from '../src/renderer/solid-optical-depth-field';
 import {
   CANVAS_CONTOUR_CHUNK_SIZE, CANVAS_CONTOUR_GEOMETRY_LOOKUP_BYTES,
   CanvasPhaseContourScratch,
@@ -67,6 +68,7 @@ const liquid = new LiquidDensityField(width, height, liquidByMaterial, colorByMa
 // Models the already allocated phase-exclusive presenter byte, not a new
 // LiquidDensityField allocation.
 const liquidAuxiliary = new Uint8Array(width * height);
+const solidDepthMaterials = new Uint8Array(width * height).fill(Material.Metal);
 const emission = new EmissionField(width, height, emissiveByMaterial, colorByMaterial);
 for (let iteration = 0; iteration < 4; iteration++) {
   atmosphere.update(materials);
@@ -443,6 +445,12 @@ console.log(JSON.stringify({
     allocatedBytes: liquid.allocatedByteLength,
     update: sample(() => liquid.update(materials)),
     opticalDepthScan: sample(() => liquid.writeVerticalOpticalDepth(materials, liquidAuxiliary)),
+  },
+  solid: {
+    additionalAllocatedBytes: 0,
+    opticalDepthScan: sample(() => writeSolidOpticalDepth(
+      solidDepthMaterials, liquidAuxiliary, styleBytes, width,
+    )),
   },
   emission: {
     allocatedBytes: emission.allocatedByteLength,

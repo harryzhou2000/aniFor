@@ -25,6 +25,7 @@ import {
   powderRenderStyleValue, type PowderRenderStyle,
 } from './powder-render-style';
 import { installWebGLContextLossHandler } from './webgl-context-loss';
+import { writeSolidOpticalDepth } from './solid-optical-depth-field';
 interface PresenterViewport { readonly width: number; readonly height: number }
 
 interface WebGLTimerQueryExtension {
@@ -96,6 +97,7 @@ uniform float uEmissionVolumeChroma;
 uniform float uLiquidFieldLighting;
 uniform float uLiquidVolumeChroma;
 uniform float uLiquidOpticalDepth;
+uniform float uSolidOpticalDepth;
 uniform float uTranslucentFieldTransmission;
 uniform float uTranslucentBackdropRefraction;
 uniform float uSolidContactDepth;
@@ -810,6 +812,7 @@ void main() {
       )))));
   float boundaryStability = 0.0;
   float liquidOpticalDepth = 0.0;
+  float solidOpticalDepth = 0.0;
   float powderSurfaceBlend = 0.0;
   float powderBulkDepth = 0.0;
   vec4 localPowderShape = shape;
@@ -822,6 +825,13 @@ void main() {
     // Powder stability and liquid column depth are phase-exclusive occupants
     // of the same already allocated r8 auxiliary texture.
     liquidOpticalDepth = boundaryStabilityAt(fieldUv);
+  } else if (family == 0.0 && surfaceOnly < 0.5 && halo < 0.5
+    && wall < 0.5 && material != 3.0 && !materialEmissive) {
+    // Solid thickness is the third phase-exclusive occupant of the existing
+    // r8 auxiliary byte. It is sampled only for authoritative non-emissive
+    // solid fragments, never reconstructed support, walls, or energy; role
+    // traits remain a later RGB layer and therefore stay legible.
+    solidOpticalDepth = boundaryStabilityAt(fieldUv);
   }
   if (family == 4.0 && boundaryStability > 0.001 && uPowderStyle > 1.5) {
     widePowderShape = powderSurfaceShape(fieldUv);
@@ -1296,6 +1306,33 @@ void main() {
     float solidFill = max(0.0, dot(normal, solidFillDirection));
     float solidDiffuse = 0.51 + solidKey * 0.58 + solidFill * 0.11;
     color = base * mix(1.10, 0.82, solidDepth) * solidDiffuse;
+    if (uSolidOpticalDepth > 0.5 && solidOpticalDepth > 6.0 / 255.0
+      && solidInterior > 0.001) {
+      float linearThickness = clamp(
+        (solidOpticalDepth * 255.0 - 6.0) / 249.0, 0.0, 1.0
+      );
+      float shapedThickness = linearThickness * (1.4 - linearThickness * 0.4);
+      float thicknessGain = 16.0;
+      vec3 thicknessAbsorption = vec3(0.88, 0.80, 0.68);
+      if (optics == 8.0) {
+        thicknessGain = 23.0;
+        thicknessAbsorption = vec3(0.94, 0.84, 0.70);
+      } else if (optics == 9.0) {
+        thicknessGain = 18.0;
+        thicknessAbsorption = vec3(0.94, 0.72, 0.96);
+      } else if (optics == 10.0) {
+        thicknessGain = 25.0;
+        thicknessAbsorption = vec3(1.00, 0.84, 0.62);
+      } else if (optics == 11.0) {
+        thicknessGain = 21.0;
+        thicknessAbsorption = vec3(0.96, 0.62, 0.92);
+      } else if (optics == 12.0) {
+        thicknessGain = 13.0;
+        thicknessAbsorption = vec3(1.00, 0.78, 0.54);
+      }
+      color *= vec3(1.0) - thicknessAbsorption
+        * (thicknessGain / 255.0 * shapedThickness * solidInterior);
+    }
     color += vec3(solidReliefTone * 1.35);
     // Reuse the semantic Hermite normal as a small family-coloured key/fill
     // shell. Unlike-solid contacts retain a dense union, so no internal seam
@@ -1731,8 +1768,10 @@ export class PixiFieldPresenter {
   private webGLTimingDiscarded = 0;
   private webGLTimingSequence = 0;
   private powderSurfaceDirty = true;
+  private solidOpticalDepthDirty = true;
   private liquidOpticalDepthHydrated = false;
   private lastPowderSurfaceRefresh = -Infinity;
+  private lastSolidOpticalDepthRefresh = -Infinity;
   private contextLost = false;
   private destroyed = false;
   private renderFence?: WebGLSync;
@@ -1860,6 +1899,7 @@ export class PixiFieldPresenter {
       uLiquidFieldLighting: { value: 1, type: 'f32' },
       uLiquidVolumeChroma: { value: 1, type: 'f32' },
       uLiquidOpticalDepth: { value: 1, type: 'f32' },
+      uSolidOpticalDepth: { value: 1, type: 'f32' },
       uTranslucentFieldTransmission: { value: 1, type: 'f32' },
       uTranslucentBackdropRefraction: { value: 1, type: 'f32' },
       uSolidContactDepth: { value: 1, type: 'f32' },
@@ -2012,6 +2052,11 @@ export class PixiFieldPresenter {
     );
   }
 
+  presentationAuxiliaryAt(x: number, y: number): number {
+    if (x < 0 || y < 0 || x >= this.width || y >= this.height) return -1;
+    return this.boundaryStabilityBytes[y * this.width + x];
+  }
+
   markDirty(index: number, nextMaterial: number): void {
     const previousMaterial = this.fieldBytes[index * 4];
     this.chunks.markCell(index);
@@ -2019,11 +2064,15 @@ export class PixiFieldPresenter {
     if (this.powderRelevant(previousMaterial) || this.powderRelevant(nextMaterial)) {
       this.powderSurfaceDirty = true;
     }
+    if (this.solidRelevant(previousMaterial) || this.solidRelevant(nextMaterial)) {
+      this.solidOpticalDepthDirty = true;
+    }
   }
 
   markWallDirty(index: number): void {
     this.wallChunks.markCell(index);
     this.powderSurfaceDirty = true;
+    this.solidOpticalDepthDirty = true;
   }
 
   setContextLossHandler(handler: () => void): void {
@@ -2107,6 +2156,7 @@ export class PixiFieldPresenter {
     powderBodyDepthEnabled = true,
     emissionVolumeChromaEnabled = true,
     liquidOpticalDepthEnabled = true,
+    solidOpticalDepthEnabled = true,
   ): void {
     const uniforms = this.uniforms.uniforms;
     uniforms.uGasFieldLighting = gasFieldLightingEnabled ? 1 : 0;
@@ -2124,6 +2174,7 @@ export class PixiFieldPresenter {
     uniforms.uEmissionVolumeChroma = emissionVolumeChromaEnabled ? 1 : 0;
     uniforms.uLiquidVolumeChroma = liquidVolumeChromaEnabled ? 1 : 0;
     uniforms.uLiquidOpticalDepth = liquidOpticalDepthEnabled ? 1 : 0;
+    uniforms.uSolidOpticalDepth = solidOpticalDepthEnabled ? 1 : 0;
     uniforms.uPowderBodyDepth = powderBodyDepthEnabled ? 1 : 0;
     uniforms.uThermalMaterialStyling = thermalMaterialStylingEnabled ? 1 : 0;
     uniforms.uEnergyCoreRelief = energyCoreReliefEnabled ? 1 : 0;
@@ -2157,6 +2208,11 @@ export class PixiFieldPresenter {
 
   setLiquidOpticalDepthEnabled(enabled: boolean): void {
     this.uniforms.uniforms.uLiquidOpticalDepth = enabled ? 1 : 0;
+    this.renderApplication();
+  }
+
+  setSolidOpticalDepthEnabled(enabled: boolean): void {
+    this.uniforms.uniforms.uSolidOpticalDepth = enabled ? 1 : 0;
     this.renderApplication();
   }
 
@@ -2277,7 +2333,9 @@ export class PixiFieldPresenter {
   visualRefreshDue(time: number): boolean {
     return this.fieldSet.due(time)
       || (this.powderSurfaceDirty
-        && time - this.lastPowderSurfaceRefresh >= POWDER_SURFACE_REFRESH_INTERVAL);
+        && time - this.lastPowderSurfaceRefresh >= POWDER_SURFACE_REFRESH_INTERVAL)
+      || (this.solidOpticalDepthDirty
+        && time - this.lastSolidOpticalDepthRefresh >= POWDER_SURFACE_REFRESH_INTERVAL);
   }
 
   update(
@@ -2315,6 +2373,16 @@ export class PixiFieldPresenter {
       this.lastPowderSurfaceRefresh = scheduleTime;
       if (changed) this.powderSurfaceSource.update();
     }
+    if (this.solidOpticalDepthDirty
+      && scheduleTime - this.lastSolidOpticalDepthRefresh >= POWDER_SURFACE_REFRESH_INTERVAL) {
+      writeSolidOpticalDepth(
+        materials, this.boundaryStabilityBytes, this.fieldSet.lookups.styleBytes,
+        this.fieldSource.width, walls,
+      );
+      this.solidOpticalDepthDirty = false;
+      this.lastSolidOpticalDepthRefresh = scheduleTime;
+      boundaryTextureDirty = true;
+    }
     const volumeField = this.fieldSet.updateNext(materials, scheduleTime);
     if (volumeField === 'liquid' || !this.liquidOpticalDepthHydrated) {
       this.fieldSet.liquid.writeVerticalOpticalDepth(materials, this.boundaryStabilityBytes);
@@ -2351,6 +2419,11 @@ export class PixiFieldPresenter {
     if (material === 0) return false;
     const phase = this.fieldSet.lookups.styleBytes[material * 4];
     return phase === RenderPhase.Solid || phase === RenderPhase.Powder;
+  }
+
+  private solidRelevant(material: number): boolean {
+    return material !== 0
+      && this.fieldSet.lookups.styleBytes[material * 4] === RenderPhase.Solid;
   }
 
   private renderApplication(): void {

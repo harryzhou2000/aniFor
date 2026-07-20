@@ -15,7 +15,8 @@ import { WorldInputController } from '../ui/world-input';
 import { drawToolPoint, drawToolSegment } from './tool-dispatch';
 import {
   blankBrowserInputAuditRequested, browserInputAuditRequested,
-  prepareContourStressAuditFixture, prepareDenseSolidAuditFixture, toggleDenseSolidAuditProbe,
+  prepareContourStressAuditFixture, prepareDenseSolidAuditFixture,
+  prepareSolidOpticalDepthAuditFixture, toggleDenseSolidAuditProbe,
 } from './browser-input-audit';
 import { navigateToRenderScale } from './render-scale-navigation';
 import {
@@ -213,6 +214,7 @@ export class Game {
         return this.simulation.temperature?.()[y * this.simulation.width + x] ?? -1;
       },
       sourceTarget: (x, y) => this.simulation.configuredSourceTargetAt?.(x, y) ?? Material.Empty,
+      presentationAuxiliary: (x, y) => this.renderer.presentationAuxiliaryAt(x, y),
       occupiedCells: () => {
         let occupied = 0;
         for (const material of this.simulation.cells()) if (material !== Material.Empty) occupied++;
@@ -232,6 +234,9 @@ export class Game {
       },
       setLiquidOpticalDepth: (enabled) => {
         this.renderer.setLiquidOpticalDepthEnabled(enabled);
+      },
+      setSolidOpticalDepth: (enabled) => {
+        this.renderer.setSolidOpticalDepthEnabled(enabled);
       },
       setTranslucentFieldTransmission: (enabled) => {
         this.renderer.setTranslucentFieldTransmissionEnabled(enabled);
@@ -284,6 +289,9 @@ export class Game {
       viewState: () => this.renderer.getViewState(),
       backend: () => this.renderer.getBackendInfo(),
       prepareDenseSolidFixture: () => { prepareDenseSolidAuditFixture(this.simulation); },
+      prepareSolidOpticalDepthFixture: () => {
+        prepareSolidOpticalDepthAuditFixture(this.simulation);
+      },
       prepareContourStressFixture: () => { prepareContourStressAuditFixture(this.simulation); },
       toggleDenseSolidProbe: () => { toggleDenseSolidAuditProbe(this.simulation); },
       materialAtlas: () => MATERIAL_ATLAS,

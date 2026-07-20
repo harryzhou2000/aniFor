@@ -13,6 +13,7 @@ export interface BrowserInputAuditApi {
   wall(x: number, y: number): number;
   temperature(x: number, y: number): number;
   sourceTarget(x: number, y: number): number;
+  presentationAuxiliary(x: number, y: number): number;
   occupiedCells(): number;
   setGasFieldLighting(enabled: boolean): void;
   setGasVolumeChroma(enabled: boolean): void;
@@ -21,6 +22,7 @@ export interface BrowserInputAuditApi {
   setLiquidSilhouetteCohesion(enabled: boolean): void;
   setLiquidVolumeChroma(enabled: boolean): void;
   setLiquidOpticalDepth(enabled: boolean): void;
+  setSolidOpticalDepth(enabled: boolean): void;
   setTranslucentFieldTransmission(enabled: boolean): void;
   setTranslucentBackdropRefraction(enabled: boolean): void;
   setSolidContactDepth(enabled: boolean): void;
@@ -41,6 +43,7 @@ export interface BrowserInputAuditApi {
   viewState(): ViewState;
   backend(): RendererBackendInfo;
   prepareDenseSolidFixture(): void;
+  prepareSolidOpticalDepthFixture(): void;
   prepareContourStressFixture(): void;
   toggleDenseSolidProbe(): void;
   materialAtlas(): readonly MaterialAtlasEntry[];
@@ -73,6 +76,30 @@ export function prepareDenseSolidAuditFixture(simulation: SimulationBackend): vo
   // fill, so the renderer observes the completed fixture on its next frame.
   simulation.clear();
   simulation.cells().fill(Material.Metal);
+}
+
+/** Dense exact-species columns plus protected fine-structure controls. */
+export function prepareSolidOpticalDepthAuditFixture(simulation: SimulationBackend): void {
+  if (simulation.name !== 'TypeScript deterministic fallback') {
+    throw new Error('Solid optical-depth audit fixture requires the deterministic backend');
+  }
+  simulation.clear();
+  const cells = simulation.cells();
+  const rect = (x: number, y: number, width: number, height: number, material: Material): void => {
+    for (let py = y; py < y + height; py++) cells.fill(
+      material, py * simulation.width + x, py * simulation.width + x + width,
+    );
+  };
+  const blocks = [
+    [20, Material.Metal], [120, Material.Wood], [220, Material.Plant],
+    [320, Material.DTEC], [420, Material.PLUT], [520, Material.Glass],
+  ] as const;
+  for (const [x, material] of blocks) rect(x, 32, 72, 260, material);
+  // Exact holes and unlike contacts reset thickness rather than becoming dark
+  // presentation seams. The bottom lines remain one-cell categorical controls.
+  rect(46, 158, 20, 8, Material.Empty);
+  rect(356, 130, 36, 64, Material.Metal);
+  for (const [x, material] of blocks) rect(x, 326, 72, 1, material);
 }
 
 /**

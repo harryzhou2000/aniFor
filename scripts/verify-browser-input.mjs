@@ -25,6 +25,7 @@ const layoutOnly = process.argv.includes('--layout-only');
 const visualScaleMatrixOnly = process.argv.includes('--visual-scale-matrix-only');
 const powderBodyOnly = process.argv.includes('--powder-body-only');
 const liquidDepthOnly = process.argv.includes('--liquid-depth-only');
+const solidDepthOnly = process.argv.includes('--solid-depth-only');
 const screenshotRequest = process.argv.find((argument) => argument.startsWith('--screenshot='))?.slice('--screenshot='.length);
 
 async function main() {
@@ -44,9 +45,11 @@ async function main() {
     const results = [];
     for (const mode of modes) results.push(await auditMode(mode));
     const reducedAudit = quickScreenshot || layoutOnly || mobileOnly
-      || desktopInputOnly || visualScaleMatrixOnly || powderBodyOnly || liquidDepthOnly;
+      || desktopInputOnly || visualScaleMatrixOnly || powderBodyOnly || liquidDepthOnly
+      || solidDepthOnly;
     if (powderBodyOnly) assertPairedPowderBodyDepth(results);
     if (liquidDepthOnly) assertPairedLiquidOpticalDepth(results);
+    if (solidDepthOnly) assertPairedSolidOpticalDepth(results);
     if (!scaleEightOnly && !materialAtlasOnly && !reducedAudit) assertPairedVisualRelief(results);
     if (!scaleEightOnly && !reducedAudit) assertPairedMaterialAtlas(results);
     compactMaterialAtlasResults(results);
@@ -149,6 +152,12 @@ async function auditMode(mode) {
       assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
       cdp.close();
       return { backend: mode, liquidOpticalDepth, browserErrors: errors.length };
+    }
+    if (solidDepthOnly) {
+      const solidOpticalDepth = await auditSolidOpticalDepth(cdp, mode, dpr);
+      assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
+      cdp.close();
+      return { backend: mode, solidOpticalDepth, browserErrors: errors.length };
     }
     if (mobileOnly) {
       const mobile = await auditMobile(
@@ -3042,6 +3051,118 @@ function assertPairedLiquidOpticalDepth(results) {
     assert(canvasSample && webglSample, `focused paired liquid-depth sample missing ${name}`);
     const ratio = canvasSample.rgbRms / Math.max(0.04, webglSample.rgbRms);
     assert(ratio >= 0.45 && ratio <= 2.2,
+      `focused Canvas/WebGL ${name} depth diverged (${canvasSample.rgbRms}/${webglSample.rgbRms})`);
+  }
+}
+
+async function auditSolidOpticalDepth(cdp, mode, dpr) {
+  await setDesktopMetrics(cdp, 1280, 720, dpr);
+  const geometry = await waitForStableCanvas(
+    cdp, 1280, 720, undefined, 20_000, `${mode} solid-depth geometry`,
+  );
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.prepareSolidOpticalDepthFixture(); true');
+  await waitFor(() => evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    return audit.cell(56, 238) === 23 && audit.cell(556, 238) === 24
+      && audit.presentationAuxiliary(56, 238) > 6
+      && audit.presentationAuxiliary(556, 238) > 6;
+  })()`), 20_000, `${mode} solid-depth auxiliary hydration`);
+  const auxiliary = await evaluate(cdp, `({
+    surface: window.__ANIFOR_INPUT_AUDIT__.presentationAuxiliary(56, 32),
+    metal: window.__ANIFOR_INPUT_AUDIT__.presentationAuxiliary(56, 238),
+    wood: window.__ANIFOR_INPUT_AUDIT__.presentationAuxiliary(156, 238),
+    plant: window.__ANIFOR_INPUT_AUDIT__.presentationAuxiliary(256, 238),
+    device: window.__ANIFOR_INPUT_AUDIT__.presentationAuxiliary(340, 238),
+    radioactive: window.__ANIFOR_INPUT_AUDIT__.presentationAuxiliary(456, 238),
+    glass: window.__ANIFOR_INPUT_AUDIT__.presentationAuxiliary(556, 238),
+    thin: window.__ANIFOR_INPUT_AUDIT__.presentationAuxiliary(56, 326),
+  })`);
+  await waitForStablePageCapture(cdp, `${mode} settled solid-depth fixture`, 20_000);
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setSolidOpticalDepth(false); true');
+  const flat = await waitForStablePageCapture(cdp, `${mode} focused flat solid depth`, 20_000);
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setSolidOpticalDepth(true); true');
+  const relieved = await waitForStablePageCapture(cdp, `${mode} focused optical solid depth`, 20_000);
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setSolidOpticalDepth(false); true');
+  const repeatedFlat = await waitForStablePageCapture(
+    cdp, `${mode} focused repeated flat solid depth`, 20_000,
+  );
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setSolidOpticalDepth(true); true');
+  const samples = await sampleBackdropRefractionRegions(cdp, {
+    straight: flat.capture.data,
+    refracted: relieved.capture.data,
+    repeatedStraight: repeatedFlat.capture.data,
+  }, [
+    { name: 'metalSurfaceDepth', x: 56, y: 32.5, radiusX: 8, radiusY: 0.35 },
+    { name: 'metalDeepDepth', x: 56, y: 238, radius: 8 },
+    { name: 'woodDeepDepth', x: 156, y: 238, radius: 8 },
+    { name: 'plantDeepDepth', x: 256, y: 238, radius: 8 },
+    { name: 'deviceDeepDepth', x: 340, y: 238, radius: 8 },
+    { name: 'radioactiveDeepDepth', x: 456, y: 238, radius: 8 },
+    { name: 'glassDeepDepth', x: 556, y: 238, radius: 8 },
+    { name: 'thinSolidDepthControl', x: 56, y: 326.5, radiusX: 8, radiusY: 0.35 },
+    { name: 'solidHoleDepthControl', x: 45.5, y: 162, radiusX: 0.35, radiusY: 4 },
+    { name: 'unlikeSolidDepthControl', x: 355.5, y: 162, radiusX: 0.35, radiusY: 8 },
+  ], geometry.canvas);
+  const byName = Object.fromEntries(samples.map((sample) => [sample.name, sample]));
+  for (const name of [
+    'metalDeepDepth', 'woodDeepDepth', 'plantDeepDepth', 'deviceDeepDepth',
+    'radioactiveDeepDepth', 'glassDeepDepth',
+  ]) {
+    const minimumRms = name === 'glassDeepDepth' ? 1.0 : 1.5;
+    assert(byName[name].rgbRms >= minimumRms && byName[name].rgbPeak <= 28
+      && byName[name].signedMean <= -0.5,
+    `${mode}: ${name} lost bounded solid thickness absorption (${JSON.stringify(samples)})`);
+  }
+  for (const name of [
+    'metalSurfaceDepth', 'thinSolidDepthControl', 'solidHoleDepthControl',
+    'unlikeSolidDepthControl',
+  ]) assert(byName[name].rgbPeak <= 1,
+    `${mode}: solid optical depth changed protected ${name} (${JSON.stringify(samples)})`);
+  assert(samples.every((sample) => sample.repeatRgbPeak <= 1),
+    `${mode}: solid optical-depth off-on-off sequence was not deterministic (${JSON.stringify(samples)})`);
+
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.clear(); true');
+  const blank = await waitForStablePageCapture(cdp, `${mode} focused blank solid-depth fixture`, 20_000);
+  const supportRegions = [
+    { name: 'solidDepthSupport', x: 306, y: 180, radiusX: 286, radiusY: 148, silhouette: true },
+  ];
+  const [flatSupport, relievedSupport] = await Promise.all([
+    samplePageRegions(
+      cdp, flat.capture.data, supportRegions,
+      blank.capture.data, blank.reference.data, geometry.canvas,
+    ),
+    samplePageRegions(
+      cdp, relieved.capture.data, supportRegions,
+      blank.capture.data, blank.reference.data, geometry.canvas,
+    ),
+  ]);
+  assert(Math.abs(flatSupport[0].visible - relievedSupport[0].visible)
+      / Math.max(1, flatSupport[0].visible) <= 0.001
+    && Math.abs(flatSupport[0].worldArea - relievedSupport[0].worldArea)
+      / Math.max(0.001, flatSupport[0].worldArea) <= 0.001,
+  `${mode}: solid optical depth changed composed support (${JSON.stringify({ flatSupport, relievedSupport })})`);
+  return {
+    backing: `${geometry.backing.width}x${geometry.backing.height}`,
+    cssCanvas: `${round(geometry.canvas.width, 2)}x${round(geometry.canvas.height, 2)}`,
+    samples,
+    auxiliary,
+    support: { flat: flatSupport[0], relieved: relievedSupport[0] },
+  };
+}
+
+function assertPairedSolidOpticalDepth(results) {
+  const canvas = results.find((result) => result.backend === 'canvas2d')?.solidOpticalDepth;
+  const webgl = results.find((result) => result.backend === 'webgl')?.solidOpticalDepth;
+  if (!canvas || !webgl) return;
+  for (const name of [
+    'metalDeepDepth', 'woodDeepDepth', 'plantDeepDepth', 'deviceDeepDepth',
+    'radioactiveDeepDepth', 'glassDeepDepth',
+  ]) {
+    const canvasSample = canvas.samples.find((sample) => sample.name === name);
+    const webglSample = webgl.samples.find((sample) => sample.name === name);
+    assert(canvasSample && webglSample, `focused paired solid-depth sample missing ${name}`);
+    const ratio = canvasSample.rgbRms / Math.max(0.04, webglSample.rgbRms);
+    assert(ratio >= 0.30 && ratio <= 3.5,
       `focused Canvas/WebGL ${name} depth diverged (${canvasSample.rgbRms}/${webglSample.rgbRms})`);
   }
 }

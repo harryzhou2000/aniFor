@@ -63,6 +63,7 @@ import { DirtyChunkGrid } from './dirty-chunk-grid';
 import { POWDER_SURFACE_REFRESH_INTERVAL } from './powder-surface-field';
 import type { PowderRenderStyle } from './powder-render-style';
 import { receivesThermalMaterialStyle, thermalMaterialDelta } from './thermal-material-style';
+import { writeSolidOpticalDepth } from './solid-optical-depth-field';
 
 const FRAME_INTERVAL = 1000 / 30;
 export const DYNAMIC_FIELD_REFRESH_INTERVAL = 1000 / 12;
@@ -151,8 +152,10 @@ export class MaterialRenderer {
   private lastDraw = -Infinity;
   private lastDynamicFieldRefresh = -Infinity;
   private lastPowderSurfaceRefresh = -Infinity;
+  private lastSolidOpticalDepthRefresh = -Infinity;
   private changed = true;
   private powderSurfaceDirty = true;
+  private solidOpticalDepthDirty = true;
   private canvasLiquidOpticalDepthHydrated = false;
   private gasFieldLightingEnabled = true;
   private gasVolumeChromaEnabled = true;
@@ -161,6 +164,7 @@ export class MaterialRenderer {
   private liquidSilhouetteCohesionEnabled = true;
   private liquidVolumeChromaEnabled = true;
   private liquidOpticalDepthEnabled = true;
+  private solidOpticalDepthEnabled = true;
   private translucentFieldTransmissionEnabled = true;
   private translucentBackdropRefractionEnabled = true;
   private solidContactDepthEnabled = true;
@@ -249,6 +253,9 @@ export class MaterialRenderer {
           || nextPhase === RenderPhase.Solid || nextPhase === RenderPhase.Powder) {
           this.powderSurfaceDirty = true;
         }
+        if (previousPhase === RenderPhase.Solid || nextPhase === RenderPhase.Solid) {
+          this.solidOpticalDepthDirty = true;
+        }
       }
       this.presenter?.markDirty(cell.index, cell.material);
       this.changed = true;
@@ -259,6 +266,7 @@ export class MaterialRenderer {
       this.presenter?.markWallDirty(cell.index);
       this.contourChunks.markCell(cell.index);
       this.powderSurfaceDirty = true;
+      this.solidOpticalDepthDirty = true;
       this.changed = true;
     }
     const hasDynamicFields = this.simulation.presentationFieldsDynamic !== false
@@ -266,8 +274,10 @@ export class MaterialRenderer {
     const refreshDynamicFields = dynamicFieldRefreshDue(time, this.lastDynamicFieldRefresh, hasDynamicFields);
     const powderRefreshDue = this.powderSurfaceDirty
       && time - this.lastPowderSurfaceRefresh >= POWDER_SURFACE_REFRESH_INTERVAL;
+    const solidDepthRefreshDue = this.solidOpticalDepthDirty
+      && time - this.lastSolidOpticalDepthRefresh >= POWDER_SURFACE_REFRESH_INTERVAL;
     const visualRefreshDue = this.presenter?.visualRefreshDue(time)
-      ?? ((this.fallbackFields?.due(time) ?? false) || powderRefreshDue);
+      ?? ((this.fallbackFields?.due(time) ?? false) || powderRefreshDue || solidDepthRefreshDue);
     if (!this.changed && !refreshDynamicFields && !visualRefreshDue) return;
     if (refreshDynamicFields) this.lastDynamicFieldRefresh = time;
     this.changed = false;
@@ -283,6 +293,13 @@ export class MaterialRenderer {
       requestedOutputScale: this.requestedOutputScale,
       outputScale: this.backend.backend === 'webgl' ? this.webGLOutputScale : this.outputScale,
     };
+  }
+
+  /** Audit-only read of the phase-local presentation byte at one world cell. */
+  presentationAuxiliaryAt(x: number, y: number): number {
+    if (x < 0 || y < 0 || x >= this.simulation.width || y >= this.simulation.height) return -1;
+    return this.presenter?.presentationAuxiliaryAt(x, y)
+      ?? this.boundaryStability[y * this.simulation.width + x];
   }
 
   enableCanvasPresentationTiming(): void { this.canvasPresentationTimingEnabled = true; }
@@ -355,6 +372,14 @@ export class MaterialRenderer {
     if (enabled === this.liquidOpticalDepthEnabled) return;
     this.liquidOpticalDepthEnabled = enabled;
     this.presenter?.setLiquidOpticalDepthEnabled(enabled);
+    this.changed = true;
+  }
+
+  setSolidOpticalDepthEnabled(enabled: boolean): void {
+    if (enabled === this.solidOpticalDepthEnabled) return;
+    this.solidOpticalDepthEnabled = enabled;
+    this.presenter?.setSolidOpticalDepthEnabled(enabled);
+    this.contourChunks.markAll();
     this.changed = true;
   }
 
@@ -603,6 +628,7 @@ export class MaterialRenderer {
       this.powderBodyDepthEnabled,
       this.emissionVolumeChromaEnabled,
       this.liquidOpticalDepthEnabled,
+      this.solidOpticalDepthEnabled,
     );
     // Route subsequent dirty cells to the candidate while its first expensive
     // frame is in flight. The known-good Canvas remains mounted underneath;
@@ -641,7 +667,9 @@ export class MaterialRenderer {
     if (!this.fallbackFields) this.initFallback();
     this.contourChunks.markAll();
     this.powderSurfaceDirty = true;
+    this.solidOpticalDepthDirty = true;
     this.lastPowderSurfaceRefresh = -Infinity;
+    this.lastSolidOpticalDepthRefresh = -Infinity;
     this.lastDynamicFieldRefresh = -Infinity;
     this.lastDraw = -Infinity;
     this.changed = true;
@@ -745,6 +773,16 @@ export class MaterialRenderer {
       this.powderSurfaceDirty = false;
       this.lastPowderSurfaceRefresh = scheduleTime;
       if (powderSurfaceChanged) this.contourChunks.markAll();
+    }
+    if (this.solidOpticalDepthDirty
+      && scheduleTime - this.lastSolidOpticalDepthRefresh >= POWDER_SURFACE_REFRESH_INTERVAL) {
+      writeSolidOpticalDepth(
+        this.rendered, this.boundaryStability, fields.lookups.styleBytes,
+        width, this.renderedWalls,
+      );
+      this.solidOpticalDepthDirty = false;
+      this.lastSolidOpticalDepthRefresh = scheduleTime;
+      this.contourChunks.markAll();
     }
     const timingStart = this.canvasPresentationTimingEnabled ? performance.now() : undefined;
     const rebuiltField = fields.updateNext(this.rendered, scheduleTime);
@@ -891,6 +929,9 @@ export class MaterialRenderer {
         : 0;
       const surfaceLight = normalLight + solidRelief;
       const projectedInfo = PROJECTED_RENDER_INFO[material];
+      const solidOpticalDepth = phase === RenderPhase.Solid && material !== Material.Wall
+        && !projectedInfo?.emissive
+        ? this.boundaryStability[index] : 0;
       let solidFieldGain = canvasSolidFieldLightingGain(
         phase, optics, traits, projectedInfo?.emissive ?? false,
         denseSolidInterior, wall !== 0, this.solidFieldLightingEnabled,
@@ -1043,7 +1084,7 @@ export class MaterialRenderer {
         this.styledColor[2] = 40 + ring * 0.25;
         applyCanvasSolidBodyOptics(
           this.styledColor, surfaceLight, normalLight, solidRelief,
-          denseSolidInterior, profile, optics,
+          denseSolidInterior, profile, optics, solidOpticalDepth, this.solidOpticalDepthEnabled,
         );
         applyCanvasRenderTraits(
           this.styledColor, applicableTraits, phase, material, x, y, index, this.traitClock,
@@ -1062,7 +1103,7 @@ export class MaterialRenderer {
         this.styledColor[2] = 58 + grain * 0.35;
         applyCanvasSolidBodyOptics(
           this.styledColor, surfaceLight, normalLight, solidRelief,
-          denseSolidInterior, profile, optics,
+          denseSolidInterior, profile, optics, solidOpticalDepth, this.solidOpticalDepthEnabled,
         );
         applyCanvasRenderTraits(
           this.styledColor, applicableTraits, phase, material, x, y, index, this.traitClock,
@@ -1103,7 +1144,7 @@ export class MaterialRenderer {
         this.styledColor[2] = 211 + facet;
         applyCanvasSolidBodyOptics(
           this.styledColor, surfaceLight, normalLight, solidRelief,
-          denseSolidInterior, profile, optics,
+          denseSolidInterior, profile, optics, solidOpticalDepth, this.solidOpticalDepthEnabled,
         );
         if (this.solidContactDepthEnabled && denseSolidInterior) {
           applyCanvasTranslucentCaustic(this.styledColor, solidRelief, material);
@@ -1296,7 +1337,7 @@ export class MaterialRenderer {
           }
           applyCanvasSolidBodyOptics(
             this.styledColor, surfaceLight, normalLight, solidRelief,
-            denseSolidInterior, profile, optics,
+            denseSolidInterior, profile, optics, solidOpticalDepth, this.solidOpticalDepthEnabled,
           );
           if (this.solidContactDepthEnabled && denseSolidInterior
             && applicableTraits === 0 && !info.emissive) {

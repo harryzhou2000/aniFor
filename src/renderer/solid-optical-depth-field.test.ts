@@ -1,0 +1,80 @@
+import { describe, expect, it } from 'vitest';
+import { RenderPhase } from './render-profile';
+import { SOLID_OPTICAL_DEPTH_STEP, writeSolidOpticalDepth } from './solid-optical-depth-field';
+
+function styles(): Uint8Array {
+  const bytes = new Uint8Array(256 * 4);
+  bytes[1 * 4] = RenderPhase.Solid;
+  bytes[2 * 4] = RenderPhase.Solid;
+  bytes[3 * 4] = RenderPhase.Powder;
+  bytes[4 * 4] = RenderPhase.Liquid;
+  return bytes;
+}
+
+describe('solid optical depth field', () => {
+  it('measures exact-species surface-to-core thickness in both axes', () => {
+    const width = 7;
+    const materials = new Uint8Array(width * width).fill(1);
+    const target = new Uint8Array(materials.length);
+    writeSolidOpticalDepth(materials, target, styles(), width);
+
+    expect(target[0]).toBe(0);
+    expect(target[1 * width + 1]).toBe(SOLID_OPTICAL_DEPTH_STEP);
+    expect(target[2 * width + 2]).toBe(SOLID_OPTICAL_DEPTH_STEP * 2);
+    expect(target[3 * width + 3]).toBe(SOLID_OPTICAL_DEPTH_STEP * 3);
+    expect(target[5 * width + 5]).toBe(SOLID_OPTICAL_DEPTH_STEP);
+  });
+
+  it('resets at unlike solids, holes, and native walls', () => {
+    const width = 7;
+    const materials = new Uint8Array(width * width).fill(1);
+    const walls = new Uint8Array(materials.length);
+    materials[3 * width + 3] = 2;
+    materials[1 * width + 5] = 0;
+    walls[5 * width + 1] = 1;
+    const target = new Uint8Array(materials.length);
+    writeSolidOpticalDepth(materials, target, styles(), width, walls);
+
+    expect(target[3 * width + 3]).toBe(0);
+    expect(target[3 * width + 2]).toBe(0);
+    expect(target[1 * width + 4]).toBe(0);
+    expect(target[5 * width + 1]).toBe(0);
+    expect(target[4 * width + 1]).toBe(0);
+  });
+
+  it('preserves powder, liquid, empty, and other phase-local bytes', () => {
+    const width = 5;
+    const materials = new Uint8Array([
+      0, 0, 0, 0, 0,
+      0, 3, 3, 4, 0,
+      0, 3, 1, 4, 0,
+      0, 3, 3, 4, 0,
+      0, 0, 0, 0, 0,
+    ]);
+    const target = Uint8Array.from({ length: materials.length }, (_, index) => index + 10);
+    const original = target.slice();
+    writeSolidOpticalDepth(materials, target, styles(), width);
+
+    for (let index = 0; index < materials.length; index++) {
+      if (materials[index] !== 1) expect(target[index]).toBe(original[index]);
+    }
+    expect(target[2 * width + 2]).toBe(0);
+  });
+
+  it('saturates deep solids without wrapping', () => {
+    const width = 101;
+    const materials = new Uint8Array(width * width).fill(1);
+    const target = new Uint8Array(materials.length);
+    writeSolidOpticalDepth(materials, target, styles(), width);
+    expect(target[50 * width + 50]).toBe(255);
+  });
+
+  it('rejects malformed dimensions and planes', () => {
+    expect(() => writeSolidOpticalDepth(
+      new Uint8Array(5), new Uint8Array(5), styles(), 2,
+    )).toThrow('Solid optical depth field size mismatch');
+    expect(() => writeSolidOpticalDepth(
+      new Uint8Array(4), new Uint8Array(3), styles(), 2,
+    )).toThrow('Solid optical depth field size mismatch');
+  });
+});
