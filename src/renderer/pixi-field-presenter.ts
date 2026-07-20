@@ -1383,10 +1383,11 @@ void main() {
           ? powderDirectedSlope * 0.070
           : powderDirectedSlope * 0.080;
         powderMacroRelief = powderDirectedRelief * powderVisualCohesion;
-        // Stable two-dimensional bulk gets a restrained mineral shoulder/core
-        // cue from the existing powder field. Exact semantic depth and lateral
-        // support remain authoritative, so narrow columns, ledges, holes, and
-        // moving grains cannot acquire or lose display support here.
+        // Stable two-dimensional bulk gets a coherent mineral volume from the
+        // existing powder field: upper-left key, opposing fill, and dense-core
+        // absorption. Exact semantic depth and lateral support remain
+        // authoritative, so narrow columns, ledges, holes, and moving grains
+        // cannot acquire or lose display support here.
         float powderBodyGate = uPowderBodyDepth * powderBulkDepth
           * step(224.0 / 255.0, boundaryStability)
           * step(0.66, widePowderShape.x)
@@ -1394,9 +1395,15 @@ void main() {
         float powderBodyDensity = clamp(
           (widePowderShape.x - 0.66) * 2.94117647, 0.0, 1.0
         );
+        float powderBodySupportDepth = clamp((widePowderShape.w - 5.5) / 3.5, 0.0, 1.0);
+        float powderBodyVolumeDepth = max(
+          powderBodyDensity, powderBodySupportDepth * 0.88
+        );
+        float powderBodyDepthTone = mix(0.030, -0.052, powderBodyVolumeDepth);
+        float powderBodyDirectionalGain = mix(0.060, 0.045, powderBodyVolumeDepth);
         powderBodyChroma = clamp(
-          powderDirectedRelief * 0.35 + (0.5 - powderBodyDensity) * 0.028,
-          -0.035, 0.040
+          powderDirectedSlope * powderBodyDirectionalGain + powderBodyDepthTone,
+          -0.080, 0.085
         ) * powderBodyGate;
       }
       float grainOffsetY = fract(sin(dot(floor(fieldPosition), vec2(39.346, 11.135))) * 24634.6345) - 0.5;
@@ -1481,7 +1488,7 @@ void main() {
           * powderChromaCohesion * uSurfaceContourLighting
         : 0.0;
       color = applySurfaceChroma(
-        color, clamp(powderContourChroma + powderBodyChroma, -0.065, 0.065), optics
+        color, clamp(powderContourChroma + powderBodyChroma, -0.085, 0.090), optics
       );
     } else if (smoothSurface > 0.5 || translucentSurface > 0.5
       || (optics < 0.5 && profile == 2.0)) {

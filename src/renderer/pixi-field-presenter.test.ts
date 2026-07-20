@@ -316,7 +316,7 @@ describe('Pixi presenter startup configuration', () => {
 
   it('keeps Smooth powder body depth gated, bounded, and topology-neutral', () => {
     const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
-    const start = source.indexOf('// Stable two-dimensional bulk gets a restrained');
+    const start = source.indexOf('// Stable two-dimensional bulk gets a coherent');
     const end = source.indexOf('float grainOffsetY', start);
     const block = source.slice(start, end);
 
@@ -326,9 +326,12 @@ describe('Pixi presenter startup configuration', () => {
     expect(block).toContain('step(224.0 / 255.0, boundaryStability)');
     expect(block).toContain('step(0.66, widePowderShape.x)');
     expect(block).toContain('step(5.5, widePowderShape.w)');
-    expect(block).toContain('powderDirectedRelief * 0.35');
+    expect(block).toContain('powderDirectedSlope * powderBodyDirectionalGain');
     expect(block).not.toContain('powderMacroRelief * 0.35');
-    expect(block).toContain('-0.035, 0.040');
+    expect(block).toContain('(widePowderShape.w - 5.5) / 3.5');
+    expect(block).toContain('powderBodySupportDepth * 0.88');
+    expect(block).toContain('mix(0.030, -0.052, powderBodyVolumeDepth)');
+    expect(block).toContain('-0.080, 0.085');
     expect(block).not.toContain('texture(');
     expect(block).not.toMatch(/\balpha\s*[+*]?=/);
     expect(block).not.toMatch(/\b(?:sin|pow|normalize|length|sqrt)\s*\(/);

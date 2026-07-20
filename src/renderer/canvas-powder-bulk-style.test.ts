@@ -69,9 +69,9 @@ describe('Canvas powder bulk style', () => {
     const canonical = [215, 170, 104] as const;
     const original = [173, 136, 83] as const;
     const color = new Float32Array(original);
-    // Density 212 is the neutral shoulder/core midpoint, so this isolates the
-    // established canonical-albedo convergence from the new body response.
-    applyCanvasPowderBulkStyle(color, ...canonical, 255, 212, 128, 128, 255, 1);
+    // Disable only the volume cue to isolate established canonical-albedo
+    // convergence from the mineral body response.
+    applyCanvasPowderBulkStyle(color, ...canonical, 255, 212, 128, 128, 255, 1, false);
 
     for (let channel = 0; channel < 3; channel++) {
       expect(Math.abs(color[channel] - canonical[channel])).toBeLessThan(
@@ -86,7 +86,7 @@ describe('Canvas powder bulk style', () => {
     expect(color[1]).toBeGreaterThan(color[2]);
   });
 
-  it('adds bounded mineral key and fill to the established directional relief', () => {
+  it('adds a bounded upper-left mineral key and opposing fill', () => {
     const canonical = [180, 140, 90] as const;
     const lit = new Float32Array(canonical);
     const shaded = new Float32Array(canonical);
@@ -107,7 +107,7 @@ describe('Canvas powder bulk style', () => {
     const canonical = [180, 140, 90] as const;
     const shoulder = new Float32Array(canonical);
     const core = new Float32Array(canonical);
-    applyCanvasPowderBulkStyle(shoulder, ...canonical, 255, 169, 128, 128, 255, 1);
+    applyCanvasPowderBulkStyle(shoulder, ...canonical, 255, 169, 128, 128, 160, 1);
     applyCanvasPowderBulkStyle(core, ...canonical, 255, 255, 128, 128, 255, 1);
 
     expect(shoulder[0]).toBeGreaterThan(canonical[0]);
@@ -139,7 +139,7 @@ describe('Canvas powder bulk style', () => {
     expect(Array.from(enabled)).not.toEqual(Array.from(disabled));
   });
 
-  it('keeps the incremental body chroma within twelve output bytes', () => {
+  it('keeps the stronger mineral volume within twenty-four output bytes', () => {
     const canonical = [180, 140, 90] as const;
     for (const density of [169, 212, 255]) for (const [gradientX, gradientY] of [
       [0, 0], [128, 128], [255, 255],
@@ -154,7 +154,7 @@ describe('Canvas powder bulk style', () => {
         Math.abs(actual[0] - scalarOnly[0]),
         Math.abs(actual[1] - scalarOnly[1]),
         Math.abs(actual[2] - scalarOnly[2]),
-      )).toBeLessThanOrEqual(12);
+      )).toBeLessThanOrEqual(24);
     }
   });
 

@@ -8,12 +8,12 @@ const RELIEF_DARK_LIMIT = -0.07;
 const RELIEF_LIGHT_LIMIT = 0.08;
 const RELIEF_X = -0.55 * 4;
 const RELIEF_Y = -0.80 * 4;
-const BODY_DEPTH_MIDPOINT = 212;
-const BODY_DEPTH_TONE_LIMIT = 0.014;
-const BODY_DEPTH_TONE_PER_BYTE = BODY_DEPTH_TONE_LIMIT / (255 - BODY_DEPTH_MIDPOINT);
-const BODY_SLOPE_CHROMA_SHARE = 0.35;
-const BODY_CHROMA_DARK_LIMIT = -0.035;
-const BODY_CHROMA_LIGHT_LIMIT = 0.040;
+const BODY_SHOULDER_LIGHT = 0.030;
+const BODY_CORE_ABSORPTION = -0.052;
+const BODY_DIRECTIONAL_SHOULDER = 0.060;
+const BODY_DIRECTIONAL_CORE = 0.045;
+const BODY_CHROMA_DARK_LIMIT = -0.080;
+const BODY_CHROMA_LIGHT_LIMIT = 0.085;
 const BODY_KEY_EXPOSURE = 1.15;
 const BODY_SHADOW_EXPOSURE = 0.85;
 const BODY_KEY_RED = 1.00;
@@ -91,18 +91,24 @@ export function applyCanvasPowderBulkStyle(
   color[1] *= scale;
   color[2] *= scale;
 
-  // The packed field density supplies one broad depth coordinate even where a
-  // flat heap has no directional slope. Keep this response deliberately below
-  // the existing relief: it gives a settled body a warm shoulder and absorbing
-  // core while the retained per-cell/facet variation still reads as powder.
+  // The packed field supplies a broad mineral volume: low-density shoulders
+  // receive an upper-left key, the opposing slope becomes a warm fill/shadow,
+  // and the densest supported core absorbs light. Existing cell/facet detail is
+  // applied later, so the bulk remains powder rather than becoming wax.
   if (bodyDepthEnabled) {
-    const depthTone = clamp(
-      (BODY_DEPTH_MIDPOINT - densityByte) * BODY_DEPTH_TONE_PER_BYTE,
-      -BODY_DEPTH_TONE_LIMIT,
-      BODY_DEPTH_TONE_LIMIT,
+    const bodyDensity = clamp(
+      (densityByte - DENSITY_MINIMUM) / (255 - DENSITY_MINIMUM), 0, 1,
     );
+    const supportDepth = clamp(
+      (supportByte * SUPPORT_BYTE_TO_COUNT - SUPPORT_MINIMUM) / (9 - SUPPORT_MINIMUM), 0, 1,
+    );
+    const volumeDepth = Math.max(bodyDensity, supportDepth * 0.88);
+    const depthTone = BODY_SHOULDER_LIGHT
+      + (BODY_CORE_ABSORPTION - BODY_SHOULDER_LIGHT) * volumeDepth;
+    const directionalGain = BODY_DIRECTIONAL_SHOULDER
+      + (BODY_DIRECTIONAL_CORE - BODY_DIRECTIONAL_SHOULDER) * volumeDepth;
     const bodyResponse = clamp(
-      relief * BODY_SLOPE_CHROMA_SHARE + depthTone,
+      directedSlope * directionalGain + depthTone,
       BODY_CHROMA_DARK_LIMIT,
       BODY_CHROMA_LIGHT_LIMIT,
     );

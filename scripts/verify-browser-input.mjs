@@ -893,8 +893,11 @@ async function auditMode(mode) {
     );
     for (const name of ['clayBodyDepth', 'concreteBodyDepth']) {
       const sample = powderBodyDepth[name];
-      assert(sample.rgbRms >= 0.04 && sample.chromaRms >= 0.015 && sample.rgbPeak <= 12,
+      assert(sample.rgbRms >= 0.35 && sample.chromaRms >= 0.08 && sample.rgbPeak <= 24,
         `${mode}: ${name} lost bounded powder body depth (${JSON.stringify(powderBodyDepthSamples)})`);
+      const maximumCoreMean = name === 'clayBodyDepth' ? -0.5 : -0.08;
+      assert(sample.signedMean <= maximumCoreMean,
+        `${mode}: ${name} lost dense-core absorption (${JSON.stringify(powderBodyDepthSamples)})`);
     }
     for (const name of ['isolatedSand', 'clayDeepHole', 'concreteDeepHole']) {
       assert(powderBodyDepth[name].rgbPeak <= 1,
@@ -2897,8 +2900,11 @@ async function auditPowderBodyDepth(cdp, mode, dpr) {
   const byName = Object.fromEntries(samples.map((sample) => [sample.name, sample]));
   for (const name of ['clayBodyDepth', 'concreteBodyDepth']) {
     const sample = byName[name];
-    assert(sample.rgbRms >= 0.04 && sample.chromaRms >= 0.015 && sample.rgbPeak <= 12,
+    assert(sample.rgbRms >= 0.35 && sample.chromaRms >= 0.08 && sample.rgbPeak <= 24,
       `${mode}: ${name} lost focused powder body depth (${JSON.stringify(samples)})`);
+    const maximumCoreMean = name === 'clayBodyDepth' ? -0.5 : -0.08;
+    assert(sample.signedMean <= maximumCoreMean,
+      `${mode}: ${name} lost focused dense-core absorption (${JSON.stringify(samples)})`);
   }
   for (const name of ['isolatedSand', 'clayDeepHole', 'concreteDeepHole']) {
     assert(byName[name].rgbPeak <= 1,
@@ -3386,8 +3392,11 @@ async function auditRenderScaleEight(cdp, dpr) {
   );
   for (const name of ['clayBodyDepth8x', 'concreteBodyDepth8x']) {
     const sample = powderBodyDepth[name];
-    assert(sample.rgbRms >= 0.04 && sample.chromaRms >= 0.015 && sample.rgbPeak <= 12,
+    assert(sample.rgbRms >= 0.35 && sample.chromaRms >= 0.08 && sample.rgbPeak <= 24,
       `renderScale=8 ${name} lost bounded powder body depth (${JSON.stringify(powderBodyDepthSamples)})`);
+    const maximumCoreMean = name === 'clayBodyDepth8x' ? -0.5 : -0.08;
+    assert(sample.signedMean <= maximumCoreMean,
+      `renderScale=8 ${name} lost dense-core absorption (${JSON.stringify(powderBodyDepthSamples)})`);
   }
   assert(powderBodyDepth.isolatedSand8x.rgbPeak <= 1
     && powderBodyDepth.clayDeepHole8x.rgbPeak <= 1
