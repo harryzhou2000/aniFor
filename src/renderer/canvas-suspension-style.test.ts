@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { ALL_MATERIALS, Material } from '../shared/materials';
-import { applyCanvasSuspensionStyle } from './canvas-suspension-style';
+import {
+  applyCanvasReconstructedSuspensionStyle,
+  applyCanvasSemanticSuspensionStyle,
+  applyCanvasSuspensionStyle,
+} from './canvas-suspension-style';
 import { RenderFieldSet } from './render-field-set';
 
 function fixture(): {
@@ -95,6 +99,69 @@ describe('Canvas suspension styling', () => {
       );
       expect(base).toEqual(baseBefore);
       expect(liquid).toEqual(liquidBefore);
+    }
+  });
+
+  it('rejects non-aqueous, trait-bearing, and stale semantic liquid pixels', () => {
+    const { fields, liquid } = fixture();
+    const index = 2 * 8 + 3;
+    const pixel = index * 4;
+    const before = new Uint8ClampedArray([91, 72, 38, 210]);
+    for (const material of [Material.Oil, Material.Acid, Material.Lava]) {
+      const target = before.slice();
+      applyCanvasSemanticSuspensionStyle(
+        target, 0, material, 3, 2,
+        fields.lookups.styleBytes, fields.lookups.paletteBytes,
+        fields.suspension, fields.liquid.bytes,
+      );
+      expect(target).toEqual(before);
+    }
+
+    const styledTarget = liquid.slice();
+    const traitStyles = fields.lookups.styleBytes.slice();
+    traitStyles[Material.Water * 4 + 3] = 1;
+    applyCanvasSemanticSuspensionStyle(
+      styledTarget, pixel, Material.Water, 3, 2,
+      traitStyles, fields.lookups.paletteBytes, fields.suspension,
+      fields.liquid.bytes,
+    );
+    expect(styledTarget).toEqual(liquid);
+
+    const staleDensity = fields.liquid.bytes.slice();
+    staleDensity[pixel] ^= 1;
+    const staleTarget = liquid.slice();
+    applyCanvasSemanticSuspensionStyle(
+      staleTarget, pixel, Material.Water, 3, 2,
+      fields.lookups.styleBytes, fields.lookups.paletteBytes,
+      fields.suspension, staleDensity,
+    );
+    expect(staleTarget).toEqual(liquid);
+  });
+
+  it('limits the post-reconstruction pass to aqueous and reconstructed Empty liquid RGB', () => {
+    const { fields, materials, liquid } = fixture();
+    const emptyIndex = 3 * 8 + 3;
+    materials[emptyIndex] = Material.Empty;
+    const emptyPixel = emptyIndex * 4;
+    liquid.set([42, 126, 194, 160], emptyPixel);
+    const before = liquid.slice();
+    const waterPixel = (2 * 8 + 3) * 4;
+
+    applyCanvasReconstructedSuspensionStyle(
+      liquid, materials, fields.lookups.styleBytes, fields.lookups.paletteBytes,
+      fields.suspension, fields.liquid.bytes, 'smooth',
+    );
+
+    expect(Array.from(liquid.slice(emptyPixel, emptyPixel + 3)))
+      .not.toEqual(Array.from(before.slice(emptyPixel, emptyPixel + 3)));
+    expect(Array.from(liquid.slice(waterPixel, waterPixel + 3)))
+      .not.toEqual(Array.from(before.slice(waterPixel, waterPixel + 3)));
+    for (let index = 0; index < materials.length; index++) {
+      const pixel = index * 4;
+      expect(liquid[pixel + 3]).toBe(before[pixel + 3]);
+      if (materials[index] !== Material.Empty && materials[index] !== Material.Water) {
+        expect(liquid.slice(pixel, pixel + 4)).toEqual(before.slice(pixel, pixel + 4));
+      }
     }
   });
 });

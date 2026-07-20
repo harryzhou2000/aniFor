@@ -161,13 +161,30 @@ async function auditMode(mode) {
     // Read the rendered canvas, not semantic cells, so framebuffer clipping and
     // backend compositing regressions are observable in the browser gate.
     const canonicalCaptures = await waitForStablePageCapture(cdp, `${mode} canonical framebuffer`);
+    // captureStableBlankPage navigates the live audit backend to an empty scene.
+    // Preserve the canonical semantic owners now so later framebuffer-only
+    // colour comparisons remain paired with the scene that produced them.
+    const suspensionPhaseCells = await captureMaterialCells(
+      cdp, { left: 74, top: 251, right: 138, bottom: 315 }, 1, 2,
+    );
     if (quickScreenshot) {
       const screenshot = screenshotPath(mode);
       if (!screenshot) throw new Error('--quick-screenshot requires --screenshot=<path>');
       await writeFile(screenshot, Buffer.from(canonicalCaptures.capture.data, 'base64'));
+      const suspensionPhaseContrast = await sampleMaterialPhaseContrast(
+        cdp, canonicalCaptures.capture.data, canonicalCaptures.canvasRect,
+        suspensionPhaseCells, 1, 2,
+      );
+      assert(suspensionPhaseContrast.leftCount >= 500
+        && suspensionPhaseContrast.rightCount >= 500
+        && suspensionPhaseContrast.distance <= 24,
+      `${mode}: dense Sand/Water still reads as two semantic colours (${JSON.stringify(suspensionPhaseContrast)})`);
       assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
       cdp.close();
-      return { backend: mode, canonicalFixture, screenshot, browserErrors: errors.length };
+      return {
+        backend: mode, canonicalFixture, screenshot, suspensionPhaseContrast,
+        browserErrors: errors.length,
+      };
     }
     await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setThermalMaterialStyling(false); true');
     const neutralThermalCaptures = await waitForStablePageCapture(
@@ -573,6 +590,14 @@ async function auditMode(mode) {
     `${mode}: powder-in-water did not form one bounded continuous body (${JSON.stringify(suspensionSamples)})`);
     assert(suspensionSamples.every((sample) => sample.macroLumaRange >= 6),
       `${mode}: suspension body lost its broad density relief (${JSON.stringify(suspensionSamples)})`);
+    const suspensionPhaseContrast = await sampleMaterialPhaseContrast(
+      cdp, canonicalCaptures.capture.data, canonicalCaptures.canvasRect,
+      suspensionPhaseCells, 1, 2,
+    );
+    assert(suspensionPhaseContrast.leftCount >= 500
+      && suspensionPhaseContrast.rightCount >= 500
+      && suspensionPhaseContrast.distance <= 24,
+    `${mode}: dense Sand/Water still reads as two semantic colours (${JSON.stringify(suspensionPhaseContrast)})`);
     const powderStyleRegion = [{
       name: 'shallowSandSlope', x: 94.5, y: 145,
       radiusX: 77, radiusY: 7, topology: true, silhouette: true, signature: true,
@@ -1266,6 +1291,7 @@ async function auditMode(mode) {
         backend: mode,
         canonicalFixture,
         suspensionSamples,
+        suspensionPhaseContrast,
         powderStyleSamples,
         powderColumnStyleSamples,
         squareGrainSample,
@@ -1538,6 +1564,7 @@ async function auditMode(mode) {
       solidSeparatorSamples,
       powderSamples,
       suspensionSamples,
+      suspensionPhaseContrast,
       powderStyleSamples,
       powderColumnStyleSamples,
       squareGrainSample,
@@ -3401,6 +3428,84 @@ async function sampleSemanticCellSupport(
   })()`);
 }
 
+async function captureMaterialCells(cdp, region, leftMaterial, rightMaterial) {
+  return evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    if (!audit) throw new Error('Input audit API unavailable');
+    const region = ${JSON.stringify(region)};
+    const cells = [];
+    for (let y = region.top; y < region.bottom; y++) for (let x = region.left; x < region.right; x++) {
+      const material = audit.cell(x, y);
+      if (material === ${leftMaterial} || material === ${rightMaterial}) {
+        cells.push([x, y, material]);
+      }
+    }
+    return cells;
+  })()`);
+}
+
+async function sampleMaterialPhaseContrast(
+  cdp, screenshotBase64, captureCanvasRect, semanticCells, leftMaterial, rightMaterial,
+) {
+  return evaluate(cdp, `(async () => {
+    const image = new Image();
+    image.src = ${JSON.stringify(`data:image/png;base64,${screenshotBase64}`)};
+    await image.decode();
+    const copy = document.createElement('canvas');
+    copy.width = image.naturalWidth;
+    copy.height = image.naturalHeight;
+    const context = copy.getContext('2d', { willReadFrequently: true });
+    if (!context) throw new Error('Material phase sampler unavailable');
+    context.drawImage(image, 0, 0);
+    const pixels = context.getImageData(0, 0, copy.width, copy.height).data;
+    const bounds = ${JSON.stringify(captureCanvasRect)};
+    const semanticCells = ${JSON.stringify(semanticCells)};
+    const pageScaleX = image.naturalWidth / innerWidth;
+    const pageScaleY = image.naturalHeight / innerHeight;
+    const worldScaleX = bounds.width / ${WORLD_WIDTH};
+    const worldScaleY = bounds.height / ${WORLD_HEIGHT};
+    const leftTotal = [0, 0, 0];
+    const rightTotal = [0, 0, 0];
+    let leftCount = 0;
+    let rightCount = 0;
+    for (const [x, y, material] of semanticCells) {
+      const pixelX = Math.max(0, Math.min(copy.width - 1, Math.floor(
+        (bounds.left + (x + 0.5) * worldScaleX) * pageScaleX,
+      )));
+      const pixelY = Math.max(0, Math.min(copy.height - 1, Math.floor(
+        (bounds.top + (y + 0.5) * worldScaleY) * pageScaleY,
+      )));
+      const pixel = (pixelY * copy.width + pixelX) * 4;
+      const total = material === ${leftMaterial} ? leftTotal : rightTotal;
+      total[0] += pixels[pixel];
+      total[1] += pixels[pixel + 1];
+      total[2] += pixels[pixel + 2];
+      if (material === ${leftMaterial}) leftCount++;
+      else rightCount++;
+    }
+    const left = leftTotal.map((value) => value / Math.max(1, leftCount));
+    const right = rightTotal.map((value) => value / Math.max(1, rightCount));
+    const leftSum = Math.max(1, left[0] + left[1] + left[2]);
+    const rightSum = Math.max(1, right[0] + right[1] + right[2]);
+    const leftChroma = left.map((value) => value / leftSum * 255);
+    const rightChroma = right.map((value) => value / rightSum * 255);
+    return {
+      leftCount,
+      rightCount,
+      left: left.map((value) => Math.round(value * 100) / 100),
+      right: right.map((value) => Math.round(value * 100) / 100),
+      rawDistance: Math.round(Math.hypot(
+        left[0] - right[0], left[1] - right[1], left[2] - right[2],
+      ) * 100) / 100,
+      distance: Math.round(Math.hypot(
+        leftChroma[0] - rightChroma[0],
+        leftChroma[1] - rightChroma[1],
+        leftChroma[2] - rightChroma[2],
+      ) * 100) / 100,
+    };
+  })()`);
+}
+
 async function samplePageRegions(
   cdp, screenshotBase64, regions, baselineBase64, baselineReferenceBase64, captureCanvasRect,
 ) {
@@ -3759,6 +3864,10 @@ function assertPairedVisualRelief(results) {
   const canvas = results.find((result) => result.backend === 'canvas2d');
   const webgl = results.find((result) => result.backend === 'webgl');
   if (!canvas || !webgl) return;
+  assert(Math.abs(
+    canvas.suspensionPhaseContrast.distance - webgl.suspensionPhaseContrast.distance,
+  ) <= 10,
+  `Canvas/WebGL wet-material phase contrast diverged (${canvas.suspensionPhaseContrast.distance}/${webgl.suspensionPhaseContrast.distance})`);
   for (const [name, channel] of [
     ['metalCold', 2], ['metalHot', 0], ['sandCold', 2], ['sandHot', 0],
     ['glassHotBackdrop', 0], ['iceColdBackdrop', 2],

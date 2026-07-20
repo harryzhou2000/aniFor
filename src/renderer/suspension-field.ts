@@ -4,7 +4,11 @@ import { RenderPhase } from './render-profile';
 export const SUSPENSION_FIELD_SCALE = 2;
 const LIQUID_SUPPORT_ALPHA = 64;
 const CLUSTER_GAIN = 1.6;
+const NON_AQUEOUS_OWNER = 0x100;
+const LIQUID_OWNER_MASK = 0x1ff;
+const ORDINARY_POWDER_BIT = 0x200;
 const AMBIGUOUS_OWNER = 0xffff;
+const FOUR_CELL_DENSITY = Uint8Array.of(0, 64, 128, 191, 255);
 
 /**
  * Half-resolution, presentation-only sediment clusters. RGB is always one
@@ -21,6 +25,7 @@ export class SuspensionField {
   private readonly horizontal: Uint8Array;
   private readonly seedOwner: Uint16Array;
   private readonly ownerHorizontal: Uint16Array;
+  private readonly materialClass: Uint16Array;
 
   constructor(
     readonly worldWidth: number,
@@ -42,6 +47,16 @@ export class SuspensionField {
     this.horizontal = new Uint8Array(cells);
     this.seedOwner = new Uint16Array(cells);
     this.ownerHorizontal = new Uint16Array(cells);
+    this.materialClass = new Uint16Array(256);
+    for (let material = 1; material < 256; material++) {
+      const offset = material * 4;
+      let classification = 0;
+      if (styleBytes[offset] === RenderPhase.Liquid) {
+        classification = this.isAqueousLiquid(material) ? material : NON_AQUEOUS_OWNER;
+      }
+      if (this.isOrdinaryPowder(material)) classification |= ORDINARY_POWDER_BIT;
+      this.materialClass[material] = classification;
+    }
   }
 
   /** Rebuilds into existing storage and reports whether packed output changed. */
@@ -51,20 +66,309 @@ export class SuspensionField {
       || (walls !== undefined && walls.length !== worldCells)) {
       throw new Error('Suspension field size mismatch');
     }
-    this.buildSeeds(materials, liquidBytes, walls);
+    const evenTwoByTwo = (this.worldWidth & 1) === 0 && (this.worldHeight & 1) === 0;
+    if (evenTwoByTwo) {
+      if (walls === undefined) this.buildSeedsEvenNoWalls(materials, liquidBytes);
+      else this.buildSeedsEvenWithWalls(materials, liquidBytes, walls);
+    } else {
+      this.buildSeedsGeneric(materials, liquidBytes, walls);
+    }
     this.blurHorizontal();
     this.blurVertical();
     this.blurOwnersHorizontal();
     this.blurOwnersVertical();
-    return this.pack(liquidBytes, walls);
+    if (!evenTwoByTwo) return this.packGeneric(liquidBytes, walls);
+    return walls === undefined
+      ? this.packEvenNoWalls(liquidBytes)
+      : this.packEvenWithWalls(liquidBytes, walls);
   }
 
   get allocatedByteLength(): number {
     return this.bytes.byteLength + this.seed.byteLength + this.horizontal.byteLength
-      + this.seedOwner.byteLength + this.ownerHorizontal.byteLength;
+      + this.seedOwner.byteLength + this.ownerHorizontal.byteLength
+      + this.materialClass.byteLength;
   }
 
-  private buildSeeds(
+  /** Canonical 612x384 path with no per-cell optional-wall branch. */
+  private buildSeedsEvenNoWalls(materials: Uint8Array, liquidBytes: Uint8Array): void {
+    const width = this.worldWidth;
+    const materialClass = this.materialClass;
+    const seed = this.seed;
+    const seedOwner = this.seedOwner;
+    const contactOwner = this.ownerHorizontal;
+    let fieldIndex = 0;
+    for (let top = 0; top < this.worldHeight; top += SUSPENSION_FIELD_SCALE) {
+      let worldIndex = top * width;
+      for (let left = 0; left < width; left += SUSPENSION_FIELD_SCALE) {
+        const material0 = materials[worldIndex];
+        const material1 = materials[worldIndex + 1];
+        const material2 = materials[worldIndex + width];
+        const material3 = materials[worldIndex + width + 1];
+        const class0 = materialClass[material0];
+        const class1 = materialClass[material1];
+        const class2 = materialClass[material2];
+        const class3 = materialClass[material3];
+
+        let contact = class0 & LIQUID_OWNER_MASK;
+        let candidate = class1 & LIQUID_OWNER_MASK;
+        if (candidate !== 0) {
+          contact = contact === 0 ? candidate
+            : contact === candidate ? contact : NON_AQUEOUS_OWNER;
+        }
+        candidate = class2 & LIQUID_OWNER_MASK;
+        if (candidate !== 0) {
+          contact = contact === 0 ? candidate
+            : contact === candidate ? contact : NON_AQUEOUS_OWNER;
+        }
+        candidate = class3 & LIQUID_OWNER_MASK;
+        if (candidate !== 0) {
+          contact = contact === 0 ? candidate
+            : contact === candidate ? contact : NON_AQUEOUS_OWNER;
+        }
+
+        let powder = 0;
+        let powderCells = 0;
+        let ambiguous = false;
+        if ((class0 & ORDINARY_POWDER_BIT) !== 0) {
+          powder = material0;
+          powderCells++;
+        }
+        if ((class1 & ORDINARY_POWDER_BIT) !== 0) {
+          if (powder !== 0 && powder !== material1) ambiguous = true;
+          else {
+            powder = material1;
+            powderCells++;
+          }
+        }
+        if ((class2 & ORDINARY_POWDER_BIT) !== 0) {
+          if (powder !== 0 && powder !== material2) ambiguous = true;
+          else {
+            powder = material2;
+            powderCells++;
+          }
+        }
+        if ((class3 & ORDINARY_POWDER_BIT) !== 0) {
+          if (powder !== 0 && powder !== material3) ambiguous = true;
+          else {
+            powder = material3;
+            powderCells++;
+          }
+        }
+
+        if (ambiguous || powder === 0) {
+          seed[fieldIndex] = 0;
+          seedOwner[fieldIndex] = 0;
+        } else {
+          seed[fieldIndex] = FOUR_CELL_DENSITY[powderCells];
+          seedOwner[fieldIndex] = powder;
+        }
+        contactOwner[fieldIndex] = contact;
+        fieldIndex++;
+        worldIndex += SUSPENSION_FIELD_SCALE;
+      }
+    }
+    this.propagateContactsHorizontal();
+    this.propagateContactsVertical();
+    this.validateSeedsEvenNoWalls(materials, liquidBytes);
+  }
+
+  /** Canonical wall-aware path; the wall plane is read directly without unions. */
+  private buildSeedsEvenWithWalls(
+    materials: Uint8Array,
+    liquidBytes: Uint8Array,
+    walls: Uint8Array,
+  ): void {
+    const width = this.worldWidth;
+    const materialClass = this.materialClass;
+    const seed = this.seed;
+    const seedOwner = this.seedOwner;
+    const contactOwner = this.ownerHorizontal;
+    let fieldIndex = 0;
+    for (let top = 0; top < this.worldHeight; top += SUSPENSION_FIELD_SCALE) {
+      let worldIndex = top * width;
+      for (let left = 0; left < width; left += SUSPENSION_FIELD_SCALE) {
+        const index1 = worldIndex + 1;
+        const index2 = worldIndex + width;
+        const index3 = index2 + 1;
+        const material0 = materials[worldIndex];
+        const material1 = materials[index1];
+        const material2 = materials[index2];
+        const material3 = materials[index3];
+        const class0 = materialClass[material0];
+        const class1 = materialClass[material1];
+        const class2 = materialClass[material2];
+        const class3 = materialClass[material3];
+
+        let contact = class0 & LIQUID_OWNER_MASK;
+        let candidate = class1 & LIQUID_OWNER_MASK;
+        if (candidate !== 0) {
+          contact = contact === 0 ? candidate
+            : contact === candidate ? contact : NON_AQUEOUS_OWNER;
+        }
+        candidate = class2 & LIQUID_OWNER_MASK;
+        if (candidate !== 0) {
+          contact = contact === 0 ? candidate
+            : contact === candidate ? contact : NON_AQUEOUS_OWNER;
+        }
+        candidate = class3 & LIQUID_OWNER_MASK;
+        if (candidate !== 0) {
+          contact = contact === 0 ? candidate
+            : contact === candidate ? contact : NON_AQUEOUS_OWNER;
+        }
+
+        let powder = 0;
+        let powderCells = 0;
+        let ambiguous = false;
+        if (walls[worldIndex] === 0 && (class0 & ORDINARY_POWDER_BIT) !== 0) {
+          powder = material0;
+          powderCells++;
+        }
+        if (walls[index1] === 0 && (class1 & ORDINARY_POWDER_BIT) !== 0) {
+          if (powder !== 0 && powder !== material1) ambiguous = true;
+          else {
+            powder = material1;
+            powderCells++;
+          }
+        }
+        if (walls[index2] === 0 && (class2 & ORDINARY_POWDER_BIT) !== 0) {
+          if (powder !== 0 && powder !== material2) ambiguous = true;
+          else {
+            powder = material2;
+            powderCells++;
+          }
+        }
+        if (walls[index3] === 0 && (class3 & ORDINARY_POWDER_BIT) !== 0) {
+          if (powder !== 0 && powder !== material3) ambiguous = true;
+          else {
+            powder = material3;
+            powderCells++;
+          }
+        }
+
+        if (ambiguous || powder === 0) {
+          seed[fieldIndex] = 0;
+          seedOwner[fieldIndex] = 0;
+        } else {
+          seed[fieldIndex] = FOUR_CELL_DENSITY[powderCells];
+          seedOwner[fieldIndex] = powder;
+        }
+        contactOwner[fieldIndex] = contact;
+        fieldIndex++;
+        worldIndex += SUSPENSION_FIELD_SCALE;
+      }
+    }
+    this.propagateContactsHorizontal();
+    this.propagateContactsVertical();
+    this.validateSeedsEvenWithWalls(materials, liquidBytes, walls);
+  }
+
+  private validateSeedsEvenNoWalls(materials: Uint8Array, liquidBytes: Uint8Array): void {
+    const width = this.worldWidth;
+    const paletteBytes = this.paletteBytes;
+    let fieldIndex = 0;
+    for (let top = 0; top < this.worldHeight; top += SUSPENSION_FIELD_SCALE) {
+      let worldIndex = top * width;
+      for (let left = 0; left < width; left += SUSPENSION_FIELD_SCALE) {
+        const powder = this.seedOwner[fieldIndex] & 0xff;
+        const expected = this.ownerHorizontal[fieldIndex];
+        let supported = 0;
+        if (powder !== 0 && expected !== 0 && expected !== NON_AQUEOUS_OWNER
+          && expected !== AMBIGUOUS_OWNER) {
+          const palette = expected * 4;
+          const red = paletteBytes[palette];
+          const green = paletteBytes[palette + 1];
+          const blue = paletteBytes[palette + 2];
+          const index1 = worldIndex + 1;
+          const index2 = worldIndex + width;
+          const index3 = index2 + 1;
+          let pixel = worldIndex * 4;
+          if (materials[worldIndex] === powder && liquidBytes[pixel + 3] >= LIQUID_SUPPORT_ALPHA
+            && liquidBytes[pixel] === red && liquidBytes[pixel + 1] === green
+            && liquidBytes[pixel + 2] === blue) supported++;
+          pixel += 4;
+          if (materials[index1] === powder && liquidBytes[pixel + 3] >= LIQUID_SUPPORT_ALPHA
+            && liquidBytes[pixel] === red && liquidBytes[pixel + 1] === green
+            && liquidBytes[pixel + 2] === blue) supported++;
+          pixel = index2 * 4;
+          if (materials[index2] === powder && liquidBytes[pixel + 3] >= LIQUID_SUPPORT_ALPHA
+            && liquidBytes[pixel] === red && liquidBytes[pixel + 1] === green
+            && liquidBytes[pixel + 2] === blue) supported++;
+          pixel += 4;
+          if (materials[index3] === powder && liquidBytes[pixel + 3] >= LIQUID_SUPPORT_ALPHA
+            && liquidBytes[pixel] === red && liquidBytes[pixel + 1] === green
+            && liquidBytes[pixel + 2] === blue) supported++;
+        }
+        if (supported > 0) {
+          this.seed[fieldIndex] = FOUR_CELL_DENSITY[supported];
+          this.seedOwner[fieldIndex] = powder | (expected << 8);
+        } else {
+          this.seed[fieldIndex] = 0;
+          this.seedOwner[fieldIndex] = 0;
+        }
+        fieldIndex++;
+        worldIndex += SUSPENSION_FIELD_SCALE;
+      }
+    }
+  }
+
+  private validateSeedsEvenWithWalls(
+    materials: Uint8Array,
+    liquidBytes: Uint8Array,
+    walls: Uint8Array,
+  ): void {
+    const width = this.worldWidth;
+    const paletteBytes = this.paletteBytes;
+    let fieldIndex = 0;
+    for (let top = 0; top < this.worldHeight; top += SUSPENSION_FIELD_SCALE) {
+      let worldIndex = top * width;
+      for (let left = 0; left < width; left += SUSPENSION_FIELD_SCALE) {
+        const powder = this.seedOwner[fieldIndex] & 0xff;
+        const expected = this.ownerHorizontal[fieldIndex];
+        let supported = 0;
+        if (powder !== 0 && expected !== 0 && expected !== NON_AQUEOUS_OWNER
+          && expected !== AMBIGUOUS_OWNER) {
+          const palette = expected * 4;
+          const red = paletteBytes[palette];
+          const green = paletteBytes[palette + 1];
+          const blue = paletteBytes[palette + 2];
+          const index1 = worldIndex + 1;
+          const index2 = worldIndex + width;
+          const index3 = index2 + 1;
+          let pixel = worldIndex * 4;
+          if (walls[worldIndex] === 0 && materials[worldIndex] === powder
+            && liquidBytes[pixel + 3] >= LIQUID_SUPPORT_ALPHA
+            && liquidBytes[pixel] === red && liquidBytes[pixel + 1] === green
+            && liquidBytes[pixel + 2] === blue) supported++;
+          pixel += 4;
+          if (walls[index1] === 0 && materials[index1] === powder
+            && liquidBytes[pixel + 3] >= LIQUID_SUPPORT_ALPHA
+            && liquidBytes[pixel] === red && liquidBytes[pixel + 1] === green
+            && liquidBytes[pixel + 2] === blue) supported++;
+          pixel = index2 * 4;
+          if (walls[index2] === 0 && materials[index2] === powder
+            && liquidBytes[pixel + 3] >= LIQUID_SUPPORT_ALPHA
+            && liquidBytes[pixel] === red && liquidBytes[pixel + 1] === green
+            && liquidBytes[pixel + 2] === blue) supported++;
+          pixel += 4;
+          if (walls[index3] === 0 && materials[index3] === powder
+            && liquidBytes[pixel + 3] >= LIQUID_SUPPORT_ALPHA
+            && liquidBytes[pixel] === red && liquidBytes[pixel + 1] === green
+            && liquidBytes[pixel + 2] === blue) supported++;
+        }
+        if (supported > 0) {
+          this.seed[fieldIndex] = FOUR_CELL_DENSITY[supported];
+          this.seedOwner[fieldIndex] = powder | (expected << 8);
+        } else {
+          this.seed[fieldIndex] = 0;
+          this.seedOwner[fieldIndex] = 0;
+        }
+        fieldIndex++;
+        worldIndex += SUSPENSION_FIELD_SCALE;
+      }
+    }
+  }
+
+  private buildSeedsGeneric(
     materials: Uint8Array,
     liquidBytes: Uint8Array,
     walls: Uint8Array | undefined,
@@ -89,10 +393,10 @@ export class SuspensionField {
             if (this.styleBytes[material * 4] === RenderPhase.Liquid) {
               if (!this.isAqueousLiquid(material)
                 || (contactLiquid !== 0 && contactLiquid !== material)) {
-                // 256 is a temporary unlike/non-aqueous sentinel. The owner
+                // NON_AQUEOUS_OWNER is a temporary unlike/non-aqueous sentinel. The owner
                 // scratch carries it only until seed validation, then becomes
                 // the propagated powder-owner scratch without extra allocation.
-                contactLiquid = 256;
+                contactLiquid = NON_AQUEOUS_OWNER;
               } else if (contactLiquid === 0) contactLiquid = material;
             }
             if ((walls?.[worldIndex] ?? 0) !== 0 || !this.isOrdinaryPowder(material)) continue;
@@ -122,7 +426,7 @@ export class SuspensionField {
   private mergeContact(left: number, right: number): number {
     if (left === 0) return right;
     if (right === 0) return left;
-    if (left === 256 || right === 256 || left === AMBIGUOUS_OWNER
+    if (left === NON_AQUEOUS_OWNER || right === NON_AQUEOUS_OWNER || left === AMBIGUOUS_OWNER
       || right === AMBIGUOUS_OWNER || left !== right) return AMBIGUOUS_OWNER;
     return left;
   }
@@ -175,7 +479,7 @@ export class SuspensionField {
       const powder = this.seedOwner[index] & 0xff;
       if (powder === 0) continue;
       const expected = this.ownerHorizontal[index];
-      const valid = expected !== AMBIGUOUS_OWNER && expected !== 256;
+      const valid = expected !== AMBIGUOUS_OWNER && expected !== NON_AQUEOUS_OWNER;
       let supported = 0;
       let blockCells = 0;
       if (valid && expected !== 0) {
@@ -282,7 +586,159 @@ export class SuspensionField {
     }
   }
 
-  private pack(
+  private packEvenNoWalls(liquidBytes: Uint8Array): boolean {
+    const width = this.worldWidth;
+    const paletteBytes = this.paletteBytes;
+    let changed = false;
+    let hasSuspension = false;
+    let fieldIndex = 0;
+    for (let top = 0; top < this.worldHeight; top += SUSPENSION_FIELD_SCALE) {
+      let worldIndex = top * width;
+      for (let left = 0; left < width; left += SUSPENSION_FIELD_SCALE) {
+        const fieldPixel = fieldIndex * 4;
+        let red = 0;
+        let green = 0;
+        let blue = 0;
+        let alpha = 0;
+        const density = Math.min(255, Math.round(this.seed[fieldIndex] * CLUSTER_GAIN));
+        const owner = this.seedOwner[fieldIndex];
+        if (density > 0 && owner !== AMBIGUOUS_OWNER) {
+          const powder = owner & 0xff;
+          const expected = owner >>> 8;
+          if (powder !== 0 && expected !== 0) {
+            const liquidPalette = expected * 4;
+            const liquidRed = paletteBytes[liquidPalette];
+            const liquidGreen = paletteBytes[liquidPalette + 1];
+            const liquidBlue = paletteBytes[liquidPalette + 2];
+            const pixel0 = worldIndex * 4;
+            const pixel1 = pixel0 + 4;
+            const pixel2 = pixel0 + width * 4;
+            const pixel3 = pixel2 + 4;
+            const supported = (
+              liquidBytes[pixel0 + 3] >= LIQUID_SUPPORT_ALPHA
+                && liquidBytes[pixel0] === liquidRed
+                && liquidBytes[pixel0 + 1] === liquidGreen
+                && liquidBytes[pixel0 + 2] === liquidBlue
+            ) || (
+              liquidBytes[pixel1 + 3] >= LIQUID_SUPPORT_ALPHA
+                && liquidBytes[pixel1] === liquidRed
+                && liquidBytes[pixel1 + 1] === liquidGreen
+                && liquidBytes[pixel1 + 2] === liquidBlue
+            ) || (
+              liquidBytes[pixel2 + 3] >= LIQUID_SUPPORT_ALPHA
+                && liquidBytes[pixel2] === liquidRed
+                && liquidBytes[pixel2 + 1] === liquidGreen
+                && liquidBytes[pixel2 + 2] === liquidBlue
+            ) || (
+              liquidBytes[pixel3 + 3] >= LIQUID_SUPPORT_ALPHA
+                && liquidBytes[pixel3] === liquidRed
+                && liquidBytes[pixel3 + 1] === liquidGreen
+                && liquidBytes[pixel3 + 2] === liquidBlue
+            );
+            if (supported) {
+              const powderPalette = powder * 4;
+              red = paletteBytes[powderPalette];
+              green = paletteBytes[powderPalette + 1];
+              blue = paletteBytes[powderPalette + 2];
+              alpha = density;
+              hasSuspension = true;
+            }
+          }
+        }
+        if (this.bytes[fieldPixel] !== red || this.bytes[fieldPixel + 1] !== green
+          || this.bytes[fieldPixel + 2] !== blue
+          || this.bytes[fieldPixel + 3] !== alpha) changed = true;
+        this.bytes[fieldPixel] = red;
+        this.bytes[fieldPixel + 1] = green;
+        this.bytes[fieldPixel + 2] = blue;
+        this.bytes[fieldPixel + 3] = alpha;
+        fieldIndex++;
+        worldIndex += SUSPENSION_FIELD_SCALE;
+      }
+    }
+    this.hasSuspension = hasSuspension;
+    return changed;
+  }
+
+  private packEvenWithWalls(liquidBytes: Uint8Array, walls: Uint8Array): boolean {
+    const width = this.worldWidth;
+    const paletteBytes = this.paletteBytes;
+    let changed = false;
+    let hasSuspension = false;
+    let fieldIndex = 0;
+    for (let top = 0; top < this.worldHeight; top += SUSPENSION_FIELD_SCALE) {
+      let worldIndex = top * width;
+      for (let left = 0; left < width; left += SUSPENSION_FIELD_SCALE) {
+        const fieldPixel = fieldIndex * 4;
+        let red = 0;
+        let green = 0;
+        let blue = 0;
+        let alpha = 0;
+        const density = Math.min(255, Math.round(this.seed[fieldIndex] * CLUSTER_GAIN));
+        const owner = this.seedOwner[fieldIndex];
+        if (density > 0 && owner !== AMBIGUOUS_OWNER) {
+          const powder = owner & 0xff;
+          const expected = owner >>> 8;
+          const index1 = worldIndex + 1;
+          const index2 = worldIndex + width;
+          const index3 = index2 + 1;
+          if (powder !== 0 && expected !== 0
+            && (walls[worldIndex] | walls[index1] | walls[index2] | walls[index3]) === 0) {
+            const liquidPalette = expected * 4;
+            const liquidRed = paletteBytes[liquidPalette];
+            const liquidGreen = paletteBytes[liquidPalette + 1];
+            const liquidBlue = paletteBytes[liquidPalette + 2];
+            const pixel0 = worldIndex * 4;
+            const pixel1 = pixel0 + 4;
+            const pixel2 = pixel0 + width * 4;
+            const pixel3 = pixel2 + 4;
+            const supported = (
+              liquidBytes[pixel0 + 3] >= LIQUID_SUPPORT_ALPHA
+                && liquidBytes[pixel0] === liquidRed
+                && liquidBytes[pixel0 + 1] === liquidGreen
+                && liquidBytes[pixel0 + 2] === liquidBlue
+            ) || (
+              liquidBytes[pixel1 + 3] >= LIQUID_SUPPORT_ALPHA
+                && liquidBytes[pixel1] === liquidRed
+                && liquidBytes[pixel1 + 1] === liquidGreen
+                && liquidBytes[pixel1 + 2] === liquidBlue
+            ) || (
+              liquidBytes[pixel2 + 3] >= LIQUID_SUPPORT_ALPHA
+                && liquidBytes[pixel2] === liquidRed
+                && liquidBytes[pixel2 + 1] === liquidGreen
+                && liquidBytes[pixel2 + 2] === liquidBlue
+            ) || (
+              liquidBytes[pixel3 + 3] >= LIQUID_SUPPORT_ALPHA
+                && liquidBytes[pixel3] === liquidRed
+                && liquidBytes[pixel3 + 1] === liquidGreen
+                && liquidBytes[pixel3 + 2] === liquidBlue
+            );
+            if (supported) {
+              const powderPalette = powder * 4;
+              red = paletteBytes[powderPalette];
+              green = paletteBytes[powderPalette + 1];
+              blue = paletteBytes[powderPalette + 2];
+              alpha = density;
+              hasSuspension = true;
+            }
+          }
+        }
+        if (this.bytes[fieldPixel] !== red || this.bytes[fieldPixel + 1] !== green
+          || this.bytes[fieldPixel + 2] !== blue
+          || this.bytes[fieldPixel + 3] !== alpha) changed = true;
+        this.bytes[fieldPixel] = red;
+        this.bytes[fieldPixel + 1] = green;
+        this.bytes[fieldPixel + 2] = blue;
+        this.bytes[fieldPixel + 3] = alpha;
+        fieldIndex++;
+        worldIndex += SUSPENSION_FIELD_SCALE;
+      }
+    }
+    this.hasSuspension = hasSuspension;
+    return changed;
+  }
+
+  private packGeneric(
     liquidBytes: Uint8Array,
     walls: Uint8Array | undefined,
   ): boolean {

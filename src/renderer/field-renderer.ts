@@ -22,7 +22,9 @@ import {
 } from './canvas-liquid-light';
 import { shadeCanvasEnergy } from './canvas-energy-style';
 import { shadeCanvasMaterial } from './canvas-material-style';
-import { applyCanvasSuspensionStyle } from './canvas-suspension-style';
+import {
+  applyCanvasReconstructedSuspensionStyle, applyCanvasSemanticSuspensionStyle,
+} from './canvas-suspension-style';
 import {
   applyCanvasPowderBulkStyle, canvasPowderBulkDepth,
 } from './canvas-powder-bulk-style';
@@ -615,6 +617,8 @@ export class MaterialRenderer {
     const fire = firePixels.data;
     updateCanvasRenderTraitClock(this.traitClock, visualTime);
     base.fill(0); liquid.fill(0); smoke.fill(0); fire.fill(0);
+    const suspensionSemanticActive = this.powderRenderStyle === 'smooth'
+      && fields.suspension.hasSuspension;
 
     let index = 0;
     for (let y = 0; y < height; y++) for (let x = 0; x < width; x++, index++) {
@@ -1138,6 +1142,14 @@ export class MaterialRenderer {
           );
         }
       }
+      if (suspensionSemanticActive
+        && phase === RenderPhase.Powder) {
+        applyCanvasSemanticSuspensionStyle(
+          target, pixel, material, x, y,
+          fields.lookups.styleBytes, fields.lookups.paletteBytes,
+          fields.suspension, fields.liquid.bytes,
+        );
+      }
     }
 
     reconstructSolidSurface(
@@ -1148,8 +1160,8 @@ export class MaterialRenderer {
       fields.lookups.liquidByMaterial, fields.lookups.colorByMaterial, fields.lookups.styleBytes,
       liquidSurfaceScratch, width, height,
     );
-    applyCanvasSuspensionStyle(
-      base, liquid, this.rendered, fields.lookups.styleBytes, fields.lookups.paletteBytes,
+    applyCanvasReconstructedSuspensionStyle(
+      liquid, this.rendered, fields.lookups.styleBytes, fields.lookups.paletteBytes,
       fields.suspension, fields.liquid.bytes, this.powderRenderStyle,
     );
     if (this.outputScale >= CANVAS_CONTOUR_OUTPUT_SCALE) {

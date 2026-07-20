@@ -96,7 +96,11 @@ const suspensionLiquid = new LiquidDensityField(
 );
 suspensionLiquid.update(suspensionMaterials);
 const suspension = new SuspensionField(width, height, styleBytes, paletteBytes);
-suspension.update(suspensionMaterials, suspensionLiquid.bytes);
+// Both real presenters pass a native-wall plane, even when it is empty. Keep
+// this profile production-shaped so optional-argument JIT behaviour cannot hide
+// a wall-aware suspension regression.
+const suspensionWalls = new Uint8Array(width * height);
+suspension.update(suspensionMaterials, suspensionLiquid.bytes, suspensionWalls);
 const suspensionBasePixels = seedPixels(suspensionMaterials);
 const suspensionLiquidPixels = seedPixels(suspensionMaterials, liquidByMaterial);
 
@@ -321,7 +325,9 @@ console.log(JSON.stringify({
   },
   suspension: {
     allocatedBytes: suspension.allocatedByteLength,
-    update: sample(() => suspension.update(suspensionMaterials, suspensionLiquid.bytes)),
+    update: sample(() => suspension.update(
+      suspensionMaterials, suspensionLiquid.bytes, suspensionWalls,
+    )),
     canvasRgbPass: sample(() => applyCanvasSuspensionStyle(
       suspensionBasePixels, suspensionLiquidPixels, suspensionMaterials,
       styleBytes, paletteBytes, suspension, suspensionLiquid.bytes, 'smooth',

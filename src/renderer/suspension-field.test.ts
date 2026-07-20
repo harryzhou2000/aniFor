@@ -15,7 +15,7 @@ describe('SuspensionField', () => {
 
     expect(field.width).toBe(4);
     expect(field.height).toBe(3);
-    expect(field.allocatedByteLength).toBe(field.width * field.height * 10);
+    expect(field.allocatedByteLength).toBe(field.width * field.height * 10 + 256 * 2);
     expect(field.update(materials, liquid.bytes)).toBe(true);
     expect(field.update(materials, liquid.bytes)).toBe(false);
     expect(field.hasSuspension).toBe(true);
@@ -26,6 +26,39 @@ describe('SuspensionField', () => {
     expect(field.hasSuspension).toBe(false);
     expect(field.bytes.some(Boolean)).toBe(false);
     expect(field.update(materials, liquid.bytes)).toBe(false);
+  });
+
+  it('keeps the separate even-grid wall and no-wall kernels byte-identical', () => {
+    const width = 12;
+    const height = 10;
+    const materials = new Uint8Array(width * height).fill(Material.Water);
+    for (let y = 1; y < height - 1; y++) for (let x = 1; x < width - 1; x++) {
+      if ((x + y * 3) % 5 < 2) materials[y * width + x] = Material.Sand;
+    }
+    const liquid = liquidField(width, height, materials);
+    const noWalls = createField(width, height);
+    const zeroWalls = createField(width, height);
+    const genericNoWalls = createField(width, height);
+    forceGenericEvenPath(genericNoWalls);
+
+    expect(noWalls.update(materials, liquid.bytes)).toBe(true);
+    expect(genericNoWalls.update(materials, liquid.bytes)).toBe(true);
+    expect(genericNoWalls.bytes).toEqual(noWalls.bytes);
+    expect(zeroWalls.update(
+      materials, liquid.bytes, new Uint8Array(width * height),
+    )).toBe(true);
+    expect(zeroWalls.hasSuspension).toBe(noWalls.hasSuspension);
+    expect(zeroWalls.bytes).toEqual(noWalls.bytes);
+
+    const sparseWalls = new Uint8Array(width * height);
+    sparseWalls[width + 2] = 1;
+    const wallFast = createField(width, height);
+    const wallGeneric = createField(width, height);
+    forceGenericEvenPath(wallGeneric);
+    wallFast.update(materials, liquid.bytes, sparseWalls);
+    wallGeneric.update(materials, liquid.bytes, sparseWalls);
+    expect(wallFast.hasSuspension).toBe(wallGeneric.hasSuspension);
+    expect(wallFast.bytes).toEqual(wallGeneric.bytes);
   });
 
   it('preserves one exact powder hue across a tight one-half-cell cluster', () => {
@@ -164,6 +197,29 @@ describe('SuspensionField', () => {
 
 function createField(width: number, height: number): SuspensionField {
   return new SuspensionField(width, height, lookups.styleBytes, lookups.paletteBytes);
+}
+
+function forceGenericEvenPath(field: SuspensionField): void {
+  const internal = field as unknown as {
+    buildSeedsEvenNoWalls(materials: Uint8Array, liquid: Uint8Array): void;
+    buildSeedsEvenWithWalls(
+      materials: Uint8Array, liquid: Uint8Array, walls: Uint8Array,
+    ): void;
+    buildSeedsGeneric(
+      materials: Uint8Array, liquid: Uint8Array, walls?: Uint8Array,
+    ): void;
+    packEvenNoWalls(liquid: Uint8Array): boolean;
+    packEvenWithWalls(liquid: Uint8Array, walls: Uint8Array): boolean;
+    packGeneric(liquid: Uint8Array, walls?: Uint8Array): boolean;
+  };
+  internal.buildSeedsEvenNoWalls = (materials, liquid) => {
+    internal.buildSeedsGeneric(materials, liquid);
+  };
+  internal.buildSeedsEvenWithWalls = (materials, liquid, walls) => {
+    internal.buildSeedsGeneric(materials, liquid, walls);
+  };
+  internal.packEvenNoWalls = (liquid) => internal.packGeneric(liquid);
+  internal.packEvenWithWalls = (liquid, walls) => internal.packGeneric(liquid, walls);
 }
 
 function liquidField(width: number, height: number, materials: Uint8Array): LiquidDensityField {

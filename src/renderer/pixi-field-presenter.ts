@@ -910,12 +910,6 @@ void main() {
     float corrosive = optics == 3.0 ? 1.0 : 0.0;
     float molten = optics == 4.0 ? 1.0 : 0.0;
     vec3 liquidBase = vividColor(base, 1.24 + aqueous * 0.06 + corrosive * 0.08 - oily * 0.05);
-    float suspensionBody = aqueous * (1.0 - molten)
-      * smoothstep(0.08, 0.82, suspensionState.a);
-    vec3 suspensionTint = vividColor(
-      mix(liquidState.rgb, suspensionState.rgb, 0.48), 1.10
-    );
-    liquidBase = mix(liquidBase, suspensionTint, suspensionBody * 0.94);
     // The four already-sampled field neighbours promote only locally supported
     // pool interiors. This makes reconstructed holes and semantic cells share
     // one optical depth without turning an isolated droplet into a pool core.
@@ -1044,7 +1038,7 @@ void main() {
     float translucentSurface = optics == 12.0 ? 1.0 : 0.0;
     if (profile == 1.0 && optics == 7.0 && traits < 0.5 && !materialEmissive) {
       float suspensionColorDistance = length(suspensionState.rgb - paletteSample.rgb);
-      powderSuspensionCohesion = smoothstep(0.08, 0.82, suspensionState.a)
+      powderSuspensionCohesion = smoothstep(0.05, 0.62, suspensionState.a)
         * (1.0 - smoothstep(0.08, 0.24, suspensionColorDistance));
     }
     float interiorMicroGain = mix(1.0, solidInteriorMicroGain(optics, profile), solidInterior);
@@ -1198,15 +1192,6 @@ void main() {
       color += base * max(0.0, 0.6 - subcell.x - subcell.y)
         * (0.11 + roughSurface * 0.035) * facetRetention;
       color *= 1.0 + powderMacroRelief;
-      vec3 wetSediment = vividColor(
-        mix(liquidState.rgb, suspensionState.rgb, 0.48), 1.10
-      );
-      float wetRelief = clamp(
-        dot(color, vec3(0.2126, 0.7152, 0.0722))
-          / max(0.02, dot(base, vec3(0.2126, 0.7152, 0.0722))),
-        0.94, 1.06
-      );
-      color = mix(color, wetSediment * wetRelief, powderSuspensionCohesion * 0.96);
     } else if (smoothSurface > 0.5 || translucentSurface > 0.5
       || (optics < 0.5 && profile == 2.0)) {
       float bevel = clamp(abs(shape.y) + abs(shape.z), 0.0, 1.0);
@@ -1330,6 +1315,26 @@ void main() {
     // Opaque matter receives coloured light through its reconstructed relief;
     // empty space keeps the separate emission halo, avoiding a flat milky wash.
     color += emissionState.rgb * lightReach * lightResponse;
+  }
+  // Converge eligible aqueous liquid and exact-owner granular powder only after
+  // their phase and scene lighting. A bounded luma offset keeps macro relief
+  // while removing high-frequency cyan/ochre semantic phase contrast.
+  float suspensionColorDistance = length(suspensionState.rgb - paletteSample.rgb);
+  float suspensionPowder = profile == 1.0 && optics == 7.0 && traits < 0.5
+    && !materialEmissive
+    ? 1.0 - smoothstep(0.08, 0.24, suspensionColorDistance) : 0.0;
+  float suspensionLiquid = liquidVolume > 0.5 && optics == 1.0 && traits < 0.5
+    && !materialEmissive ? 1.0 : 0.0;
+  float lateSuspension = max(suspensionPowder, suspensionLiquid)
+    * smoothstep(0.05, 0.62, suspensionState.a) * 0.98;
+  if (lateSuspension > 0.001) {
+    vec3 wetSediment = vividColor(
+      mix(liquidState.rgb, suspensionState.rgb, 0.48), 1.10
+    );
+    float currentLuma = dot(color, vec3(0.2126, 0.7152, 0.0722));
+    float wetLuma = dot(wetSediment, vec3(0.2126, 0.7152, 0.0722));
+    float relief = clamp(currentLuma - wetLuma, -8.0 / 255.0, 8.0 / 255.0);
+    color = mix(color, wetSediment + vec3(relief), lateSuspension);
   }
   if (halo > 0.5 && wallOnly < 0.5 && emissionOnly < 0.5 && surfaceOnly < 0.5
     && gasVolume < 0.5 && liquidVolume < 0.5 && energyCore < 0.5) alpha = volume * 0.52;
@@ -1511,7 +1516,10 @@ export class PixiFieldPresenter {
       uThermalMaterialStyling: { value: 0, type: 'f32' },
       uEnergyCoreRelief: { value: 1, type: 'f32' },
       uPowderStyle: { value: powderRenderStyleValue('smooth'), type: 'f32' },
-      uSuspensionActive: { value: 0, type: 'f32' },
+      uSuspensionActive: {
+        value: this.fieldSet.suspension.hasSuspension ? 1 : 0,
+        type: 'f32',
+      },
     });
     const resources = {
       fieldUniforms: this.uniforms,
@@ -1822,9 +1830,10 @@ export class PixiFieldPresenter {
     {
       const suspensionChanged = this.fieldSet.refreshSuspension(materials, scheduleTime, walls);
       if (suspensionChanged) this.suspensionSource.update();
-      if (suspensionChanged !== undefined) {
-        this.uniforms.uniforms.uSuspensionActive = this.fieldSet.suspension.hasSuspension ? 1 : 0;
-      }
+      // A promoted presenter may share a field that Canvas already refreshed.
+      // Hydrate state even when no rebuild is due, or a paused scene can leave
+      // the pre-populated suspension texture permanently disabled.
+      this.uniforms.uniforms.uSuspensionActive = this.fieldSet.suspension.hasSuspension ? 1 : 0;
     }
     if (volumeField === 'atmosphere') {
       this.atmosphereSource.update();
