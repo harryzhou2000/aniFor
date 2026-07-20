@@ -6,6 +6,7 @@ import { renderOptics } from './render-optics';
 import { renderPhase, renderProfile, RenderPhase } from './render-profile';
 import { renderTraits } from './render-traits';
 import { PowderSurfaceField } from './powder-surface-field';
+import { SuspensionField } from './suspension-field';
 import { VolumeFieldRefreshSchedule, type VolumeFieldKind } from './volume-field-refresh';
 
 export interface RenderMaterialStyle {
@@ -24,6 +25,9 @@ export interface RenderLookups {
   readonly emissiveByMaterial: Uint8Array;
   readonly colorByMaterial: Uint8Array;
 }
+
+/** Suspension is a soft visual volume and can trail exact semantics slightly. */
+export const SUSPENSION_FIELD_REFRESH_INTERVAL = 1000 / 6;
 
 /** Canonical render metadata shared by the WebGL and Canvas2D presenters. */
 export function createRenderLookups(materials: readonly RenderMaterialStyle[]): RenderLookups {
@@ -68,10 +72,13 @@ export class RenderFieldSet {
   readonly liquid: LiquidDensityField;
   readonly emission: EmissionField;
   readonly powderSurface: PowderSurfaceField;
+  readonly suspension: SuspensionField;
   private readonly schedule = new VolumeFieldRefreshSchedule();
   private atmosphereDirty = true;
   private liquidDirty = true;
   private emissionDirty = true;
+  private suspensionDirty = true;
+  private lastSuspensionRefresh = -Infinity;
 
   constructor(width: number, height: number, materials: readonly RenderMaterialStyle[]) {
     this.lookups = createRenderLookups(materials);
@@ -81,16 +88,27 @@ export class RenderFieldSet {
     );
     this.emission = new EmissionField(width, height, this.lookups.emissiveByMaterial, this.lookups.colorByMaterial);
     this.powderSurface = new PowderSurfaceField(width, height, this.lookups.styleBytes);
+    this.suspension = new SuspensionField(
+      width, height, this.lookups.styleBytes, this.lookups.paletteBytes,
+    );
   }
 
   markDirty(previousMaterial: number, nextMaterial: number): void {
     if (this.lookups.gasByMaterial[previousMaterial] || this.lookups.gasByMaterial[nextMaterial]) this.atmosphereDirty = true;
     if (this.lookups.liquidByMaterial[previousMaterial] || this.lookups.liquidByMaterial[nextMaterial]) this.liquidDirty = true;
     if (this.lookups.emissiveByMaterial[previousMaterial] || this.lookups.emissiveByMaterial[nextMaterial]) this.emissionDirty = true;
+    const previousPhase = this.lookups.styleBytes[previousMaterial * 4];
+    const nextPhase = this.lookups.styleBytes[nextMaterial * 4];
+    if (previousPhase === RenderPhase.Powder || previousPhase === RenderPhase.Liquid
+      || nextPhase === RenderPhase.Powder || nextPhase === RenderPhase.Liquid) {
+      this.suspensionDirty = true;
+    }
   }
 
   due(time: number): boolean {
-    return this.schedule.due(time, this.atmosphereDirty, this.liquidDirty, this.emissionDirty);
+    return this.schedule.due(time, this.atmosphereDirty, this.liquidDirty, this.emissionDirty)
+      || (this.suspensionDirty
+        && time - this.lastSuspensionRefresh >= SUSPENSION_FIELD_REFRESH_INTERVAL);
   }
 
   updateNext(materials: Uint8Array, time: number): VolumeFieldKind | undefined {
@@ -101,12 +119,30 @@ export class RenderFieldSet {
     } else if (field === 'liquid') {
       this.liquid.update(materials);
       this.liquidDirty = false;
+      this.suspensionDirty = true;
     } else if (field === 'emission') {
       this.emission.update(materials);
       this.emissionDirty = false;
     }
     if (field) this.schedule.refreshed(field, time);
     return field;
+  }
+
+  /** Rebuilds the RGB-only powder-in-liquid presentation field. */
+  updateSuspension(materials: Uint8Array, walls?: Uint8Array): boolean {
+    return this.suspension.update(materials, this.liquid.bytes, walls);
+  }
+
+  /** Refreshes the soft suspension body at a bounded 6 Hz cadence. */
+  refreshSuspension(
+    materials: Uint8Array, time: number, walls?: Uint8Array,
+  ): boolean | undefined {
+    if (!this.suspensionDirty
+      || time - this.lastSuspensionRefresh < SUSPENSION_FIELD_REFRESH_INTERVAL) return undefined;
+    const changed = this.updateSuspension(materials, walls);
+    this.suspensionDirty = false;
+    this.lastSuspensionRefresh = time;
+    return changed;
   }
 
   get allocatedByteLength(): number {
@@ -119,6 +155,7 @@ export class RenderFieldSet {
       + this.atmosphere.allocatedByteLength
       + this.liquid.allocatedByteLength
       + this.emission.allocatedByteLength
-      + this.powderSurface.allocatedByteLength;
+      + this.powderSurface.allocatedByteLength
+      + this.suspension.allocatedByteLength;
   }
 }

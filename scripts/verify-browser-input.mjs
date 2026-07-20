@@ -17,6 +17,7 @@ const scaleEightOnly = process.argv.includes('--scale-eight-only');
 const modes = scaleEightOnly ? ['webgl'] : process.argv.includes('--canvas-only') ? ['canvas2d']
   : process.argv.includes('--webgl-only') ? ['webgl'] : ['canvas2d', 'webgl'];
 const visualOnly = process.argv.includes('--visual-only');
+const quickScreenshot = process.argv.includes('--quick-screenshot');
 const layoutOnly = process.argv.includes('--layout-only');
 const screenshotRequest = process.argv.find((argument) => argument.startsWith('--screenshot='))?.slice('--screenshot='.length);
 
@@ -160,6 +161,14 @@ async function auditMode(mode) {
     // Read the rendered canvas, not semantic cells, so framebuffer clipping and
     // backend compositing regressions are observable in the browser gate.
     const canonicalCaptures = await waitForStablePageCapture(cdp, `${mode} canonical framebuffer`);
+    if (quickScreenshot) {
+      const screenshot = screenshotPath(mode);
+      if (!screenshot) throw new Error('--quick-screenshot requires --screenshot=<path>');
+      await writeFile(screenshot, Buffer.from(canonicalCaptures.capture.data, 'base64'));
+      assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
+      cdp.close();
+      return { backend: mode, canonicalFixture, screenshot, browserErrors: errors.length };
+    }
     await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setThermalMaterialStyling(false); true');
     const neutralThermalCaptures = await waitForStablePageCapture(
       cdp, `${mode} neutral thermal-material framebuffer`,
@@ -554,6 +563,16 @@ async function auditMode(mode) {
     ]);
     assert(powderSamples.every((sample) => sample.visible >= 32 && sample.microContrast >= 3),
       `${mode}: rough powder lost its granular detail (${JSON.stringify(powderSamples)})`);
+    const suspensionSamples = await sampleCanonicalRegions([
+      { name: 'suspensionPlume', x: 106, y: 225, radius: 18, topology: true },
+      { name: 'denseSuspension', x: 106, y: 283, radius: 18, topology: true },
+    ]);
+    assert(suspensionSamples.every((sample) => sample.visible >= 900
+      && sample.coverage >= 0.80 && sample.dominantComponent >= 0.98
+      && sample.microContrast <= 22 && sample.pinnedFraction <= 0.08),
+    `${mode}: powder-in-water did not form one bounded continuous body (${JSON.stringify(suspensionSamples)})`);
+    assert(suspensionSamples.every((sample) => sample.macroLumaRange >= 6),
+      `${mode}: suspension body lost its broad density relief (${JSON.stringify(suspensionSamples)})`);
     const powderStyleRegion = [{
       name: 'shallowSandSlope', x: 94.5, y: 145,
       radiusX: 77, radiusY: 7, topology: true, silhouette: true, signature: true,
@@ -1246,6 +1265,7 @@ async function auditMode(mode) {
       return {
         backend: mode,
         canonicalFixture,
+        suspensionSamples,
         powderStyleSamples,
         powderColumnStyleSamples,
         squareGrainSample,
@@ -1387,6 +1407,13 @@ async function auditMode(mode) {
       transformedGeometry.canvas,
       { x: transformedLandmark.x + 0.5, y: transformedLandmark.y + 0.5 },
     );
+    const transformedBlank = await cdp.send('Page.captureScreenshot', {
+      format: 'png', fromSurface: true,
+    });
+    await sleep(80);
+    const transformedBlankReference = await cdp.send('Page.captureScreenshot', {
+      format: 'png', fromSurface: true,
+    });
     await mouseClick(cdp, transformedClient.x, transformedClient.y, 'left');
     await sleep(80);
     const transformedPainted = await evaluate(cdp, `(() => {
@@ -1399,7 +1426,11 @@ async function auditMode(mode) {
     assert(transformedPainted.cell > 0 && transformedPainted.occupied === 1,
       `${mode}: transformed radius-0 paint missed its exact semantic cell (${JSON.stringify(transformedPainted)})`);
     const transformedPaintedFootprint = (await capturePaintedFootprints(
-      cdp, [transformedLandmark], `${mode} post-wheel/post-pan`, 1.5, 0.8,
+      cdp, [transformedLandmark], `${mode} post-wheel/post-pan`, 1.5, 0.8, {
+        baselineBase64: transformedBlank.data,
+        baselineReferenceBase64: transformedBlankReference.data,
+        captureCanvasRect: transformedGeometry.canvas,
+      },
     ))[0];
     await evaluate(cdp, `window.__ANIFOR_INPUT_AUDIT__.clear(); true`);
 
@@ -1506,6 +1537,7 @@ async function auditMode(mode) {
       translucentSolidSamples,
       solidSeparatorSamples,
       powderSamples,
+      suspensionSamples,
       powderStyleSamples,
       powderColumnStyleSamples,
       squareGrainSample,
@@ -2555,6 +2587,39 @@ async function auditMobile(cdp, mode, screenshot) {
   `compact mobile Draw/Eraser quick bar is not initially visible (${JSON.stringify(compact.ui.brushModes)})`);
   assert(compact.ui.toolSearch.top >= 0 && compact.ui.toolSearch.bottom <= compact.window.height,
     `compact mobile tool search is not visible with the quick bar (${JSON.stringify(compact.ui.toolSearch)})`);
+  await evaluate(cdp, `window.__ANIFOR_INPUT_AUDIT__.clear(); window.__ANIFOR_INPUT_AUDIT__.resetView(); true`);
+  await sleep(60);
+  const compactPaintGeometry = await metrics(cdp);
+  assertGeometry(compactPaintGeometry, `compact mobile paint ${mode}`);
+  assertContained(compactPaintGeometry, `compact mobile paint ${mode}`);
+  const compactTarget = { x: 487, y: 274 };
+  const compactClient = worldClient(
+    compactPaintGeometry.canvas,
+    { x: compactTarget.x + 0.5, y: compactTarget.y + 0.5 },
+  );
+  const compactBlank = await cdp.send('Page.captureScreenshot', { format: 'png', fromSurface: true });
+  await sleep(80);
+  const compactBlankReference = await cdp.send('Page.captureScreenshot', {
+    format: 'png', fromSurface: true,
+  });
+  await cdp.send('Input.dispatchTouchEvent', {
+    type: 'touchStart', touchPoints: [touch(7, compactClient.x, compactClient.y)],
+  });
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+  await sleep(100);
+  const compactTap = await evaluate(cdp, `({
+    cell: window.__ANIFOR_INPUT_AUDIT__.cell(${compactTarget.x}, ${compactTarget.y}),
+    occupied: window.__ANIFOR_INPUT_AUDIT__.occupiedCells(),
+  })`);
+  assert(compactTap.cell > 0 && compactTap.occupied === 1,
+    `compact mobile single-touch tap missed exact cell (${JSON.stringify(compactTap)})`);
+  const compactPaintedFootprint = (await capturePaintedFootprints(
+    cdp, [compactTarget], `compact mobile ${mode}`, 1.5, 0.9, {
+      baselineBase64: compactBlank.data,
+      baselineReferenceBase64: compactBlankReference.data,
+      captureCanvasRect: compactPaintGeometry.canvas,
+    },
+  ))[0];
   return {
     viewport: `${round(initial.viewport.width, 2)}x${round(initial.viewport.height, 2)}`,
     canvasAspect: round(initial.canvas.width / initial.canvas.height, 6),
@@ -2569,6 +2634,8 @@ async function auditMobile(cdp, mode, screenshot) {
     eraserTouchCell: `${target.x},${target.y}`,
     quickModeBar: `${round(initial.ui.brushModes.width)}x${round(initial.ui.brushModes.height)}`,
     compactQuickModeBar: `${round(compact.ui.brushModes.width)}x${round(compact.ui.brushModes.height)}`,
+    compactSingleTouchCell: `${compactTarget.x},${compactTarget.y}`,
+    compactPaintedFootprint,
     mobileFilterScroll: `${round(mobileFilterReach.reached)}/${round(mobileFilterReach.maximum)}`,
     toolFilterHeight: round(initial.ui.filters.height),
     toolboxGap: round(initial.ui.actions.top - initial.ui.palette.bottom),
@@ -3606,10 +3673,14 @@ async function samplePageRegions(
   })()`);
 }
 
-async function capturePaintedFootprints(cdp, landmarks, label, radius = 1.5, maximumError = 1) {
+async function capturePaintedFootprints(
+  cdp, landmarks, label, radius = 1.5, maximumError = 1, baseline,
+) {
   // Semantic cell assertions alone cannot catch a presenter transform that
   // draws the accepted mark somewhere else. Sample the composed framebuffer at
-  // each requested cell and at a nearby empty control after the paint frame.
+  // each requested cell and a nearby empty control. Critical transformed calls
+  // additionally provide two same-camera blank frames so page/canvas luminance
+  // cannot satisfy the painted-support or peak-location checks.
   const capture = await cdp.send('Page.captureScreenshot', { format: 'png', fromSurface: true });
   const regions = landmarks.flatMap((landmark, index) => {
     const controlOffset = landmark.y < WORLD_HEIGHT - 8 ? 6 : -6;
@@ -3618,7 +3689,14 @@ async function capturePaintedFootprints(cdp, landmarks, label, radius = 1.5, max
       { name: `control-${index}`, x: landmark.x + 0.5, y: landmark.y + controlOffset + 0.5, radius, locatePeak: true },
     ];
   });
-  const samples = await samplePageRegions(cdp, capture.data, regions);
+  const samples = await samplePageRegions(
+    cdp,
+    capture.data,
+    regions,
+    baseline?.baselineBase64,
+    baseline?.baselineReferenceBase64,
+    baseline?.captureCanvasRect,
+  );
   return landmarks.map((landmark, index) => {
     const target = samples[index * 2];
     const control = samples[index * 2 + 1];

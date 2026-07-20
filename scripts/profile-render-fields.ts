@@ -26,6 +26,7 @@ import {
   canvasLiquidEmissionSurfaceExposure, canvasLiquidFieldRelief, canvasLiquidSurfaceExposure,
 } from '../src/renderer/canvas-liquid-light';
 import { applyCanvasPowderBulkStyle } from '../src/renderer/canvas-powder-bulk-style';
+import { applyCanvasSuspensionStyle } from '../src/renderer/canvas-suspension-style';
 import { createRenderLookups } from '../src/renderer/render-field-set';
 import { PowderSurfaceField } from '../src/renderer/powder-surface-field';
 import { RenderPhase, RenderProfile } from '../src/renderer/render-profile';
@@ -36,6 +37,7 @@ import {
   writeCanvasRefractedWallPixel, writeCanvasWallPixel,
 } from '../src/renderer/canvas-wall-style';
 import { RenderOptics } from '../src/renderer/render-optics';
+import { SuspensionField } from '../src/renderer/suspension-field';
 
 const width = 612;
 const height = 384;
@@ -84,6 +86,19 @@ const updatePowderSurface = (): void => {
   powderSurface.update(powderMaterials, powderStability);
 };
 updatePowderSurface();
+
+const suspensionMaterials = new Uint8Array(width * height).fill(Material.Water);
+for (let y = 1; y < height - 1; y++) for (let x = 1; x < width - 1; x++) {
+  if ((x + y * 3) % 5 < 2) suspensionMaterials[y * width + x] = Material.Sand;
+}
+const suspensionLiquid = new LiquidDensityField(
+  width, height, liquidByMaterial, colorByMaterial,
+);
+suspensionLiquid.update(suspensionMaterials);
+const suspension = new SuspensionField(width, height, styleBytes, paletteBytes);
+suspension.update(suspensionMaterials, suspensionLiquid.bytes);
+const suspensionBasePixels = seedPixels(suspensionMaterials);
+const suspensionLiquidPixels = seedPixels(suspensionMaterials, liquidByMaterial);
 
 function sample(update: () => void): { medianMs: number; p90Ms: number; maximumMs: number } {
   for (let warmup = 0; warmup < 5; warmup++) update();
@@ -303,6 +318,14 @@ console.log(JSON.stringify({
   powderSurface: {
     allocatedBytes: powderSurface.allocatedByteLength,
     update: sample(updatePowderSurface),
+  },
+  suspension: {
+    allocatedBytes: suspension.allocatedByteLength,
+    update: sample(() => suspension.update(suspensionMaterials, suspensionLiquid.bytes)),
+    canvasRgbPass: sample(() => applyCanvasSuspensionStyle(
+      suspensionBasePixels, suspensionLiquidPixels, suspensionMaterials,
+      styleBytes, paletteBytes, suspension, suspensionLiquid.bytes, 'smooth',
+    )),
   },
   canvasPresentation: {
     runtimeKnownScratchBytes: solidPixels.byteLength + liquidPixels.byteLength
@@ -597,7 +620,9 @@ console.log(JSON.stringify({
       liquidLightChecksum = checksum;
     }),
   },
-  combinedAllocatedBytes: atmosphere.allocatedByteLength + liquid.allocatedByteLength + emission.allocatedByteLength,
+  combinedAllocatedBytes: atmosphere.allocatedByteLength + liquid.allocatedByteLength
+    + emission.allocatedByteLength + powderSurface.allocatedByteLength
+    + suspension.allocatedByteLength,
   traitChecksum: Math.round(traitChecksum),
   solidReliefChecksum: Math.round(solidReliefChecksum),
   solidBodyChecksum: Math.round(solidBodyChecksum),

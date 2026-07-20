@@ -78,6 +78,7 @@ uniform sampler2D uEmissionTexture;
 uniform sampler2D uLiquidTexture;
 uniform sampler2D uBoundaryStabilityTexture;
 uniform sampler2D uPowderSurfaceTexture;
+uniform sampler2D uSuspensionTexture;
 uniform sampler2D uPaletteTexture;
 uniform sampler2D uStyleTexture;
 uniform vec2 uTexel;
@@ -96,6 +97,7 @@ uniform float uSolidCurvatureDepth;
 uniform float uThermalMaterialStyling;
 uniform float uEnergyCoreRelief;
 uniform float uPowderStyle;
+uniform float uSuspensionActive;
 vec4 field(vec2 uv) { return texture(uFieldTexture, clamp(uv, uTexel * 0.5, vec2(1.0) - uTexel * 0.5)); }
 vec4 wallField(vec2 uv) { return texture(uWallTexture, clamp(uv, uTexel * 0.5, vec2(1.0) - uTexel * 0.5)); }
 float materialAt(vec2 uv) { return floor(field(uv).r * 255.0 + 0.5); }
@@ -629,6 +631,14 @@ void main() {
   float traits = floor(materialStyle.a * 255.0 + 0.5);
   float optics = floor(paletteSample.a * 255.0 + 0.5);
   float energyCore = family == 3.0 ? 1.0 : 0.0;
+  vec4 suspensionState = vec4(0.0);
+  // The half-resolution RGB field is presentation-only and optional. Keeping
+  // this fetch behind both a scene-wide uniform and eligible phase branches is
+  // important at true 8x, where an unconditional sample would run 15M times.
+  if (uSuspensionActive > 0.5 && uPowderStyle > 1.5
+    && (liquidOnly > 0.5 || family == 2.0 || family == 4.0)) {
+    suspensionState = texture(uSuspensionTexture, fieldUv);
+  }
   vec2 fieldPosition = fieldUv * uFieldSize;
   vec2 velocity = halo > 0.5 ? vec2(0.0) : state.ba * 2.0 - 1.0;
   float contourCurvature = 0.0;
@@ -900,6 +910,14 @@ void main() {
     float corrosive = optics == 3.0 ? 1.0 : 0.0;
     float molten = optics == 4.0 ? 1.0 : 0.0;
     vec3 liquidBase = vividColor(base, 1.24 + aqueous * 0.06 + corrosive * 0.08 - oily * 0.05);
+    float suspensionBody = aqueous * (1.0 - molten)
+      * smoothstep(0.015, 0.72, suspensionState.a);
+    vec3 suspensionTint = vividColor(
+      mix(liquidState.rgb, suspensionState.rgb, 0.48), 1.10
+    );
+    liquidBase = mix(
+      liquidBase, mix(liquidBase, suspensionTint, 0.82), suspensionBody * 0.78
+    );
     // The four already-sampled field neighbours promote only locally supported
     // pool interiors. This makes reconstructed holes and semantic cells share
     // one optical depth without turning an isolated droplet into a pool core.
@@ -1019,12 +1037,18 @@ void main() {
   } else {
     float powderVisualCohesion = 0.0;
     float powderMacroRelief = 0.0;
+    float powderSuspensionCohesion = 0.0;
     float roughSurface = optics == 7.0 ? 1.0 : 0.0;
     float smoothSurface = optics == 8.0 ? 1.0 : 0.0;
     float organicSurface = optics == 9.0 ? 1.0 : 0.0;
     float deviceSurface = optics == 10.0 ? 1.0 : 0.0;
     float radioactiveSurface = optics == 11.0 ? 1.0 : 0.0;
     float translucentSurface = optics == 12.0 ? 1.0 : 0.0;
+    if (profile == 1.0 && optics == 7.0 && traits < 0.5 && !materialEmissive) {
+      float suspensionColorDistance = length(suspensionState.rgb - paletteSample.rgb);
+      powderSuspensionCohesion = smoothstep(0.015, 0.72, suspensionState.a)
+        * (1.0 - smoothstep(0.08, 0.24, suspensionColorDistance));
+    }
     float interiorMicroGain = mix(1.0, solidInteriorMicroGain(optics, profile), solidInterior);
     // The bilinear solid field peaks below one for isolated and one-cell-thick
     // semantic strokes. Use a wider iso shoulder so those cells
@@ -1176,6 +1200,11 @@ void main() {
       color += base * max(0.0, 0.6 - subcell.x - subcell.y)
         * (0.11 + roughSurface * 0.035) * facetRetention;
       color *= 1.0 + powderMacroRelief;
+      color = mix(
+        color,
+        mix(color, mix(liquidState.rgb, suspensionState.rgb, 0.48) * 0.70, 0.90),
+        powderSuspensionCohesion * 0.92
+      );
     } else if (smoothSurface > 0.5 || translucentSurface > 0.5
       || (optics < 0.5 && profile == 2.0)) {
       float bevel = clamp(abs(shape.y) + abs(shape.z), 0.0, 1.0);
@@ -1344,6 +1373,7 @@ export class PixiFieldPresenter {
   private readonly boundaryStabilityOwners: Uint8Array;
   private readonly boundaryStabilitySource: BufferImageSource;
   private readonly powderSurfaceSource: BufferImageSource;
+  private readonly suspensionSource: BufferImageSource;
   private readonly fieldSet: RenderFieldSet;
   private readonly chunks: DirtyChunkGrid;
   private readonly wallChunks: DirtyChunkGrid;
@@ -1441,6 +1471,15 @@ export class PixiFieldPresenter {
       scaleMode: 'linear',
       autoGarbageCollect: false,
     });
+    this.suspensionSource = new BufferImageSource({
+      resource: this.fieldSet.suspension.bytes,
+      width: this.fieldSet.suspension.width,
+      height: this.fieldSet.suspension.height,
+      format: 'rgba8unorm',
+      alphaMode: 'no-premultiply-alpha',
+      scaleMode: 'linear',
+      autoGarbageCollect: false,
+    });
     this.uniforms = new UniformGroup({
       uTexel: { value: new Float32Array([1 / width, 1 / height]), type: 'vec2<f32>' },
       uFieldSize: { value: new Float32Array([width, height]), type: 'vec2<f32>' },
@@ -1465,6 +1504,7 @@ export class PixiFieldPresenter {
       uThermalMaterialStyling: { value: 0, type: 'f32' },
       uEnergyCoreRelief: { value: 1, type: 'f32' },
       uPowderStyle: { value: powderRenderStyleValue('smooth'), type: 'f32' },
+      uSuspensionActive: { value: 0, type: 'f32' },
     });
     const resources = {
       fieldUniforms: this.uniforms,
@@ -1482,6 +1522,8 @@ export class PixiFieldPresenter {
       uBoundaryStabilitySampler: this.boundaryStabilitySource.style,
       uPowderSurfaceTexture: this.powderSurfaceSource,
       uPowderSurfaceSampler: this.powderSurfaceSource.style,
+      uSuspensionTexture: this.suspensionSource,
+      uSuspensionSampler: this.suspensionSource.style,
       uPaletteTexture: paletteTexture.source,
       uPaletteSampler: paletteTexture.source.style,
       uStyleTexture: styleTexture.source,
@@ -1768,6 +1810,13 @@ export class PixiFieldPresenter {
       if (changed) this.powderSurfaceSource.update();
     }
     const volumeField = this.fieldSet.updateNext(materials, scheduleTime);
+    {
+      const suspensionChanged = this.fieldSet.refreshSuspension(materials, scheduleTime, walls);
+      if (suspensionChanged) this.suspensionSource.update();
+      if (suspensionChanged !== undefined) {
+        this.uniforms.uniforms.uSuspensionActive = this.fieldSet.suspension.hasSuspension ? 1 : 0;
+      }
+    }
     if (volumeField === 'atmosphere') {
       this.atmosphereSource.update();
     } else if (volumeField === 'liquid') {

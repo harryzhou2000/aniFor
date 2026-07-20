@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { ALL_MATERIALS, Material } from '../shared/materials';
 import { renderPhase, renderProfile, RenderPhase } from './render-profile';
-import { createRenderLookups, RenderFieldSet } from './render-field-set';
+import {
+  createRenderLookups, RenderFieldSet, SUSPENSION_FIELD_REFRESH_INTERVAL,
+} from './render-field-set';
 import { renderOptics, RenderOptics } from './render-optics';
 import { renderTraits, RenderTrait } from './render-traits';
 
@@ -67,6 +69,20 @@ describe('shared render field set', () => {
     expect(fields.updateNext(materials, 101)).toBeUndefined();
   });
 
+  it('paces the soft suspension field independently at six hertz', () => {
+    const materials = new Uint8Array(16);
+    const fields = new RenderFieldSet(4, 4, ALL_MATERIALS);
+    fields.updateNext(materials, 0);
+    fields.updateNext(materials, 1);
+    fields.updateNext(materials, 2);
+    expect(fields.refreshSuspension(materials, 2)).toBe(false);
+    fields.markDirty(Material.Empty, Material.Sand);
+    expect(fields.refreshSuspension(materials, 2 + SUSPENSION_FIELD_REFRESH_INTERVAL - 1))
+      .toBeUndefined();
+    expect(fields.due(2 + SUSPENSION_FIELD_REFRESH_INTERVAL)).toBe(true);
+    expect(fields.refreshSuspension(materials, 2 + SUSPENSION_FIELD_REFRESH_INTERVAL)).toBe(false);
+  });
+
   it('keeps shared field memory bounded at the native world size', () => {
     const fields = new RenderFieldSet(612, 384, ALL_MATERIALS);
     const lookupBytes = fields.lookups.paletteBytes.byteLength
@@ -76,6 +92,7 @@ describe('shared render field set', () => {
       + fields.lookups.emissiveByMaterial.byteLength
       + fields.lookups.colorByMaterial.byteLength;
     expect(lookupBytes).toBe(3_584);
-    expect(fields.allocatedByteLength).toBeLessThan(11_300_000);
+    expect(fields.suspension.allocatedByteLength).toBe(822_528);
+    expect(fields.allocatedByteLength).toBeLessThan(12_100_000);
   });
 });

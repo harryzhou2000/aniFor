@@ -22,6 +22,7 @@ import {
 } from './canvas-liquid-light';
 import { shadeCanvasEnergy } from './canvas-energy-style';
 import { shadeCanvasMaterial } from './canvas-material-style';
+import { applyCanvasSuspensionStyle } from './canvas-suspension-style';
 import {
   applyCanvasPowderBulkStyle, canvasPowderBulkDepth,
 } from './canvas-powder-bulk-style';
@@ -593,6 +594,7 @@ export class MaterialRenderer {
     }
     const timingStart = this.canvasPresentationTimingEnabled ? performance.now() : undefined;
     const rebuiltField = fields.updateNext(this.rendered, scheduleTime);
+    fields.refreshSuspension(this.rendered, scheduleTime, this.renderedWalls);
     if (rebuiltField === 'emission') {
       this.contourChunks.markAll();
       emissionPixels.data.set(fields.emission.bytes);
@@ -1145,6 +1147,10 @@ export class MaterialRenderer {
       liquid, this.rendered, fields.liquid.bytes,
       fields.lookups.liquidByMaterial, fields.lookups.colorByMaterial, fields.lookups.styleBytes,
       liquidSurfaceScratch, width, height,
+    );
+    applyCanvasSuspensionStyle(
+      base, liquid, this.rendered, fields.lookups.styleBytes, fields.lookups.paletteBytes,
+      fields.suspension, fields.liquid.bytes, this.powderRenderStyle,
     );
     if (this.outputScale >= CANVAS_CONTOUR_OUTPUT_SCALE) {
       for (let pixel = 0; pixel < base.length; pixel += 4) {
