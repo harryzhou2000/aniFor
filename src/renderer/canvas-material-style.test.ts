@@ -99,4 +99,40 @@ describe('Canvas material-family styling', () => {
     expect(trace[1] - substrate[1]).toBeGreaterThanOrEqual(21);
     expect(trace[2] - substrate[2]).toBeGreaterThanOrEqual(30);
   });
+
+  it('retains a stable radioactive grain beneath changing decay scintillation', () => {
+    const early: number[] = [];
+    const late: number[] = [];
+    const output = new Float32Array(3);
+    for (let index = 0; index < 256; index++) {
+      const x = index & 31;
+      const y = index >>> 5;
+      shadeCanvasMaterial(
+        output, 110, 120, 130, RenderProfile.Radioactive, RenderOptics.Radioactive,
+        37, x, y, index, 0,
+      );
+      early.push(output[0]);
+      shadeCanvasMaterial(
+        output, 110, 120, 130, RenderProfile.Radioactive, RenderOptics.Radioactive,
+        37, x, y, index, 180,
+      );
+      late.push(output[0]);
+    }
+    const mean = (values: number[]) => values.reduce((sum, value) => sum + value, 0) / values.length;
+    const earlyMean = mean(early);
+    const lateMean = mean(late);
+    let covariance = 0;
+    let earlyVariance = 0;
+    let lateVariance = 0;
+    for (let index = 0; index < early.length; index++) {
+      const earlyDelta = early[index] - earlyMean;
+      const lateDelta = late[index] - lateMean;
+      covariance += earlyDelta * lateDelta;
+      earlyVariance += earlyDelta * earlyDelta;
+      lateVariance += lateDelta * lateDelta;
+    }
+    const correlation = covariance / Math.sqrt(earlyVariance * lateVariance);
+    expect(correlation).toBeGreaterThan(0.08);
+    expect(early.some((value, index) => value !== late[index])).toBe(true);
+  });
 });

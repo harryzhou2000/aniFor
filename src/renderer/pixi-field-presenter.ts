@@ -1786,7 +1786,11 @@ void main() {
       float bevel = clamp(abs(shape.y) + abs(shape.z), 0.0, 1.0);
       float strata = sin(fieldPosition.x * 0.16 + fieldPosition.y * 0.055 + material * 0.71);
       color *= 0.965 + strata * 0.028 * interiorMicroGain;
-      color += mix(base, vec3(0.32, 0.36, 0.42), 0.26)
+      // Source embedded structure from the already lit/absorbed body rather
+      // than the untouched palette. Strata and bevels now follow body depth,
+      // scene light, contact shading, and specular response without another
+      // signal, sample, or long-lived shader register.
+      color += mix(color, vec3(0.32, 0.36, 0.42), 0.26)
         * bevel * (0.13 + smoothSurface * 0.07 + translucentSurface * 0.10);
     } else if (organicSurface > 0.5 || (optics < 0.5 && profile == 3.0)) {
       float fibre = sin(fieldPosition.x * 0.20 + sin(fieldPosition.y * 0.115 + material) * 1.45);
@@ -1794,7 +1798,7 @@ void main() {
         * sin(fieldPosition.y * 0.091 - fieldPosition.x * 0.047);
       color *= 0.95 + (fibre * 0.042 + pores * 0.024
         + organicSurface * max(0.0, fibre) * 0.018) * interiorMicroGain;
-      color += mix(base, vec3(0.19, 0.34, 0.18), 0.38)
+      color += mix(color, vec3(0.19, 0.34, 0.18), 0.38)
         * organicSurface * max(0.0, 0.6 - abs(pores)) * 0.028 * interiorMicroGain;
     } else if (radioactiveSurface > 0.5 || (optics < 0.5 && profile == 4.0)) {
       float isotope = sin(fieldPosition.x * 0.137 + sin(fieldPosition.y * 0.103 + material) * 1.6)
@@ -1807,7 +1811,7 @@ void main() {
       float trace = max(1.0 - smoothstep(0.055, 0.105, circuitCell.x), 1.0 - smoothstep(0.055, 0.105, circuitCell.y));
       float node = 1.0 - smoothstep(0.10, 0.22, length(circuitCell));
       color *= 0.96 + trace * 0.025 * interiorMicroGain;
-      color += mix(base, vec3(0.34, 0.76, 1.0), 0.58)
+      color += mix(color, vec3(0.34, 0.76, 1.0), 0.58)
         * (trace * (0.12 + deviceSurface * 0.035) + node * (0.10 + deviceSurface * 0.045))
         * interiorMicroGain;
     } else if (profile == 6.0) {

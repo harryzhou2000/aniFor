@@ -48,7 +48,11 @@ export function shadeCanvasMaterial(
     light += fibre ? 6 : -1;
   } else if (surfaceProfile === RenderProfile.Radioactive) {
     const pulse = hash(index + Math.floor(time / 180) * 97 + material) & 15;
-    light += pulse < 3 ? 9 : -1;
+    // Keep a static isotope grain beneath the sparse decay pulse. The caller
+    // applies solid body optics after this helper, so the stable component is
+    // absorbed and reflected with the chunk instead of reading as a flashing
+    // decal. Reuse the noise already computed above: no second hash is needed.
+    light += noise * 0.16 + (pulse < 3 ? 7 : -1);
   } else if (surfaceProfile === RenderProfile.Device) {
     const trace = (x + material) % 8 === 0 || (y + material * 3) % 8 === 0;
     // Retain a fine circuit lattice after dense-body absorption and 2x
@@ -99,7 +103,7 @@ export function shadeCanvasMaterial(
     tintBlue += contact ? 5 : 2;
   } else if (optics === RenderOptics.Radioactive) {
     const scintillation = hash(index + Math.floor(time / 180) * 97 + material * 11) & 15;
-    tintGreen += scintillation < 3 ? 5 : 1;
+    tintGreen += Math.max(0, noise) * 0.10 + (scintillation < 3 ? 4 : 1);
     tintBlue += scintillation < 3 ? 2 : 0;
   }
   output[0] = clamp(red + light + tintRed);
