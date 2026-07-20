@@ -26,6 +26,7 @@ const visualScaleMatrixOnly = process.argv.includes('--visual-scale-matrix-only'
 const powderBodyOnly = process.argv.includes('--powder-body-only');
 const liquidDepthOnly = process.argv.includes('--liquid-depth-only');
 const solidDepthOnly = process.argv.includes('--solid-depth-only');
+const gasChromaOnly = process.argv.includes('--gas-chroma-only');
 const screenshotRequest = process.argv.find((argument) => argument.startsWith('--screenshot='))?.slice('--screenshot='.length);
 
 async function main() {
@@ -46,10 +47,11 @@ async function main() {
     for (const mode of modes) results.push(await auditMode(mode));
     const reducedAudit = quickScreenshot || layoutOnly || mobileOnly
       || desktopInputOnly || visualScaleMatrixOnly || powderBodyOnly || liquidDepthOnly
-      || solidDepthOnly;
+      || solidDepthOnly || gasChromaOnly;
     if (powderBodyOnly) assertPairedPowderBodyDepth(results);
     if (liquidDepthOnly) assertPairedLiquidOpticalDepth(results);
     if (solidDepthOnly) assertPairedSolidOpticalDepth(results);
+    if (gasChromaOnly) assertPairedGasSpectralScattering(results);
     if (!scaleEightOnly && !materialAtlasOnly && !reducedAudit) assertPairedVisualRelief(results);
     if (!scaleEightOnly && !reducedAudit) assertPairedMaterialAtlas(results);
     compactMaterialAtlasResults(results);
@@ -220,6 +222,46 @@ async function auditMode(mode) {
     // Read the rendered canvas, not semantic cells, so framebuffer clipping and
     // backend compositing regressions are observable in the browser gate.
     const canonicalCaptures = await waitForStablePageCapture(cdp, `${mode} canonical framebuffer`);
+    if (gasChromaOnly) {
+      await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setGasVolumeChroma(false); true');
+      const flat = await waitForStablePageCapture(cdp, `${mode} focused flat gas-volume framebuffer`);
+      await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setGasVolumeChroma(true); true');
+      const spectral = await waitForStablePageCapture(cdp, `${mode} focused spectral gas-volume framebuffer`);
+      await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setGasVolumeChroma(false); true');
+      const repeated = await waitForStablePageCapture(cdp, `${mode} focused repeated flat gas-volume framebuffer`);
+      const gasVolumeChromaSamples = await sampleBackdropRefractionRegions(cdp, {
+        straight: flat.capture.data,
+        refracted: spectral.capture.data,
+        repeatedStraight: repeated.capture.data,
+      }, [
+        { name: 'smokeBillowChroma', x: 382, y: 40, radius: 9 },
+        { name: 'oxygenBillowChroma', x: 486, y: 32, radius: 10 },
+        { name: 'nobleBillowChroma', x: 544, y: 54, radius: 9 },
+        { name: 'compactFogBillowChroma', x: 430, y: 171, radiusX: 30, radiusY: 10 },
+        { name: 'waterGasChromaControl', x: 238, y: 79, radius: 10 },
+        { name: 'metalGasChromaControl', x: 405, y: 229, radius: 6 },
+      ], canonicalCaptures.canvasRect);
+      const byName = Object.fromEntries(gasVolumeChromaSamples.map((sample) => [sample.name, sample]));
+      for (const name of [
+        'smokeBillowChroma', 'oxygenBillowChroma', 'nobleBillowChroma',
+        'compactFogBillowChroma',
+      ]) {
+        const sample = byName[name];
+        assert(sample.rgbRms >= 0.04 && sample.chromaRms >= 0.015 && sample.rgbPeak <= 16,
+          `${mode}: ${name} lost bounded spectral billow depth (${JSON.stringify(gasVolumeChromaSamples)})`);
+      }
+      assert(byName.waterGasChromaControl.rgbPeak <= 1
+        && byName.metalGasChromaControl.rgbPeak <= 1,
+      `${mode}: focused gas scattering leaked into matter (${JSON.stringify(gasVolumeChromaSamples)})`);
+      assert(gasVolumeChromaSamples.every((sample) => sample.repeatRgbPeak <= 1),
+        `${mode}: focused gas off-on-off sequence was not deterministic (${JSON.stringify(gasVolumeChromaSamples)})`);
+      assertGasSpectralResponseVectors(gasVolumeChromaSamples, `${mode} focused gas`);
+      const screenshot = screenshotPath(mode);
+      if (screenshot) await writeFile(screenshot, Buffer.from(spectral.capture.data, 'base64'));
+      assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
+      cdp.close();
+      return { backend: mode, gasVolumeChromaSamples, screenshot, browserErrors: errors.length };
+    }
     // captureStableBlankPage navigates the live audit backend to an empty scene.
     // Preserve the canonical semantic owners now so later framebuffer-only
     // colour comparisons remain paired with the scene that produced them.
@@ -1126,6 +1168,7 @@ async function auditMode(mode) {
     }, [
       { name: 'smokeBillowChroma', x: 382, y: 40, radius: 9 },
       { name: 'oxygenBillowChroma', x: 486, y: 32, radius: 10 },
+      { name: 'nobleBillowChroma', x: 544, y: 54, radius: 9 },
       { name: 'compactFogBillowChroma', x: 430, y: 171, radiusX: 30, radiusY: 10 },
       { name: 'waterGasChromaControl', x: 238, y: 79, radius: 10 },
       { name: 'metalGasChromaControl', x: 405, y: 229, radius: 6 },
@@ -1133,7 +1176,10 @@ async function auditMode(mode) {
     const gasVolumeChroma = Object.fromEntries(
       gasVolumeChromaSamples.map((sample) => [sample.name, sample]),
     );
-    for (const name of ['smokeBillowChroma', 'oxygenBillowChroma', 'compactFogBillowChroma']) {
+    for (const name of [
+      'smokeBillowChroma', 'oxygenBillowChroma', 'nobleBillowChroma',
+      'compactFogBillowChroma',
+    ]) {
       const sample = gasVolumeChroma[name];
       assert(sample.rgbRms >= 0.04 && sample.chromaRms >= 0.015 && sample.rgbPeak <= 16,
         `${mode}: ${name} lost bounded chromatic billow depth (${JSON.stringify(gasVolumeChromaSamples)})`);
@@ -1143,6 +1189,7 @@ async function auditMode(mode) {
     `${mode}: gas chroma leaked into liquid or solid matter (${JSON.stringify(gasVolumeChromaSamples)})`);
     assert(gasVolumeChromaSamples.every((sample) => sample.repeatRgbPeak <= 1),
       `${mode}: gas-volume chroma off-on-off sequence was not deterministic (${JSON.stringify(gasVolumeChromaSamples)})`);
+    assertGasSpectralResponseVectors(gasVolumeChromaSamples, `${mode} gas`);
     const gasVolumeSupportRegions = [
       { name: 'denseGasVolumeSupport', x: 486, y: 76, radiusX: 110, radiusY: 58, silhouette: true },
       { name: 'compactGasVolumeSupport', x: 475, y: 171, radiusX: 85, radiusY: 13, silhouette: true },
@@ -3167,6 +3214,42 @@ function assertPairedSolidOpticalDepth(results) {
   }
 }
 
+function assertPairedGasSpectralScattering(results) {
+  const canvas = results.find((result) => result.backend === 'canvas2d')?.gasVolumeChromaSamples;
+  const webgl = results.find((result) => result.backend === 'webgl')?.gasVolumeChromaSamples;
+  if (!canvas || !webgl) return;
+  for (const name of [
+    'smokeBillowChroma', 'oxygenBillowChroma', 'nobleBillowChroma',
+    'compactFogBillowChroma',
+  ]) {
+    const canvasSample = canvas.find((sample) => sample.name === name);
+    const webglSample = webgl.find((sample) => sample.name === name);
+    assert(canvasSample && webglSample, `focused paired gas-scattering sample missing ${name}`);
+    const ratio = canvasSample.rgbRms / Math.max(0.04, webglSample.rgbRms);
+    assert(ratio >= 0.35 && ratio <= 3.0,
+      `focused Canvas/WebGL ${name} scattering diverged (${canvasSample.rgbRms}/${webglSample.rgbRms})`);
+  }
+}
+
+function assertGasSpectralResponseVectors(samples, label, suffix = '') {
+  const byName = Object.fromEntries(samples.map((sample) => [sample.name, sample]));
+  const smoke = byName[`smokeBillowChroma${suffix}`]?.responseRgb;
+  const oxygen = byName[`oxygenBillowChroma${suffix}`]?.responseRgb;
+  const noble = byName[`nobleBillowChroma${suffix}`]?.responseRgb;
+  assert(smoke && oxygen && noble, `${label}: spectral gas response vector is missing`);
+  assert(oxygen[2] >= oxygen[0] + 0.01,
+    `${label}: Oxygen lost blue-forward scattering (${JSON.stringify({ smoke, oxygen, noble })})`);
+  assert(noble[0] >= noble[1] + 0.01
+    && noble[0] + noble[2] >= noble[1] * 2 + 0.02,
+  `${label}: Noble Gas lost violet scattering (${JSON.stringify({ smoke, oxygen, noble })})`);
+  const vectorDistance = (left, right) => left.reduce(
+    (sum, channel, index) => sum + Math.abs(channel - right[index]), 0,
+  );
+  assert(vectorDistance(smoke, oxygen) >= 0.03
+    && vectorDistance(oxygen, noble) >= 0.03,
+  `${label}: gas families collapsed to one scattering response (${JSON.stringify({ smoke, oxygen, noble })})`);
+}
+
 async function auditVisualScaleMatrix(cdp, mode, dpr) {
   await setDesktopMetrics(cdp, 1280, 720, dpr);
   const scales = mode === 'webgl' ? [1, 2, 4, 8] : [1, 2, 4];
@@ -3661,6 +3744,7 @@ async function auditRenderScaleEight(cdp, dpr) {
   }, [
     { name: 'smokeBillowChroma8x', x: 382, y: 40, radius: 9 },
     { name: 'oxygenBillowChroma8x', x: 486, y: 32, radius: 10 },
+    { name: 'nobleBillowChroma8x', x: 544, y: 54, radius: 9 },
     { name: 'compactFogBillowChroma8x', x: 430, y: 171, radiusX: 30, radiusY: 10 },
     { name: 'waterGasChromaControl8x', x: 238, y: 79, radius: 10 },
     { name: 'metalGasChromaControl8x', x: 405, y: 229, radius: 6 },
@@ -3669,7 +3753,8 @@ async function auditRenderScaleEight(cdp, dpr) {
     gasVolumeChromaSamples.map((sample) => [sample.name, sample]),
   );
   for (const name of [
-    'smokeBillowChroma8x', 'oxygenBillowChroma8x', 'compactFogBillowChroma8x',
+    'smokeBillowChroma8x', 'oxygenBillowChroma8x', 'nobleBillowChroma8x',
+    'compactFogBillowChroma8x',
   ]) {
     const sample = gasVolumeChroma[name];
     assert(sample.rgbRms >= 0.04 && sample.chromaRms >= 0.015 && sample.rgbPeak <= 16,
@@ -5296,6 +5381,8 @@ async function sampleBackdropRefractionRegions(cdp, screenshots, regions, captur
       let repeatPeak = 0;
       let chromaSquared = 0;
       let rgbSquared = 0;
+      const responseRgb = [0, 0, 0];
+      const absoluteRgb = [0, 0, 0];
       let rgbPeak = 0;
       let repeatRgbPeak = 0;
       const count = Math.max(1, width * height);
@@ -5311,6 +5398,12 @@ async function sampleBackdropRefractionRegions(cdp, screenshots, regions, captur
         const redDifference = data.refracted[offset] - data.straight[offset];
         const greenDifference = data.refracted[offset + 1] - data.straight[offset + 1];
         const blueDifference = data.refracted[offset + 2] - data.straight[offset + 2];
+        responseRgb[0] += redDifference;
+        responseRgb[1] += greenDifference;
+        responseRgb[2] += blueDifference;
+        absoluteRgb[0] += Math.abs(redDifference);
+        absoluteRgb[1] += Math.abs(greenDifference);
+        absoluteRgb[2] += Math.abs(blueDifference);
         const repeatedRed = data.repeatedStraight[offset] - data.straight[offset];
         const repeatedGreen = data.repeatedStraight[offset + 1] - data.straight[offset + 1];
         const repeatedBlue = data.repeatedStraight[offset + 2] - data.straight[offset + 2];
@@ -5338,6 +5431,8 @@ async function sampleBackdropRefractionRegions(cdp, screenshots, regions, captur
         rms: Math.round(rms * 100) / 100,
         rgbRms: Math.round(Math.sqrt(rgbSquared / (count * 3)) * 100) / 100,
         chromaRms: Math.round(Math.sqrt(chromaSquared / (count * 3)) * 100) / 100,
+        responseRgb: responseRgb.map((channel) => Math.round(channel / count * 100) / 100),
+        absoluteRgb: absoluteRgb.map((channel) => Math.round(channel / count * 100) / 100),
         signedMean: Math.round(signed / count * 100) / 100,
         meanBiasRatio: Math.round(Math.abs(signed / count) / Math.max(0.001, rms) * 1000) / 1000,
         positiveMean: Math.round(positive / count * 100) / 100,
@@ -6183,7 +6278,8 @@ function assertPairedVisualRelief(results) {
       `Canvas/WebGL ${family} bead contrast diverged (${canvasRatio}/${webglRatio})`);
   }
   for (const name of [
-    'smokeBillowChroma', 'oxygenBillowChroma', 'compactFogBillowChroma',
+    'smokeBillowChroma', 'oxygenBillowChroma', 'nobleBillowChroma',
+    'compactFogBillowChroma',
   ]) {
     const canvasSample = canvas.gasVolumeChromaSamples.find((sample) => sample.name === name);
     const webglSample = webgl.gasVolumeChromaSamples.find((sample) => sample.name === name);

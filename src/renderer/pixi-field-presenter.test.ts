@@ -231,6 +231,8 @@ describe('Pixi presenter startup configuration', () => {
     expect(block).toContain('(volumeSlope.x + volumeSlope.y) * 0.5882353');
     expect(block).toContain('gasCurvature * 0.125');
     expect(block).toContain('* uGasVolumeChroma');
+    expect(helpers).toContain('dot(source, vec3(0.2126, 0.7152, 0.0722))');
+    expect(helpers).toContain('vec3(0.88) - hue * 0.43');
     expect(`${helpers}${block}`).not.toContain('texture(');
     expect(`${helpers}${block}`).not.toMatch(/\balpha\s*[+*]?=/);
     expect(`${helpers}${block}`).not.toMatch(/\b(?:sin|pow|normalize|length)\s*\(/);

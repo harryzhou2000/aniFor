@@ -168,19 +168,37 @@ vec3 applySurfaceChroma(vec3 color, float response, float optics) {
   return color * (vec3(1.0) - surfaceChromaShadow(optics) * (-response) * 0.85);
 }
 float gasVolumeChromaResponse(
-  float opticalDepth, float directionalRelief, float curvature
+  float density, float opticalDepth, float directionalRelief, float curvature
 ) {
   float relief = clamp(directionalRelief * 1.20 + curvature * 2.50, -1.0, 1.0);
+  float shell = smoothstep(0.008, 0.12, density)
+    * (1.0 - smoothstep(0.18, 0.58, density)) * 0.012;
   return clamp(
-    relief * (0.025 + (1.0 - opticalDepth) * 0.035), -0.060, 0.060
+    relief * (0.040 + (1.0 - opticalDepth) * 0.055) + shell, -0.060, 0.060
   );
 }
 vec3 applyGasVolumeChroma(vec3 color, vec3 source, float response) {
+  float maximum = max(source.r, max(source.g, source.b));
+  float minimum = min(source.r, min(source.g, source.b));
+  float chroma = maximum - minimum;
+  float luma = dot(source, vec3(0.2126, 0.7152, 0.0722));
+  float spectral = clamp(chroma / max(0.18, maximum), 0.0, 1.0);
+  float spectralMix = smoothstep(0.04, 0.62, spectral)
+    * (0.72 + smoothstep(0.08, 0.92, luma) * 0.22);
+  vec3 hue = clamp(
+    (source - vec3(minimum)) / max(chroma, 1.0 / 255.0),
+    vec3(0.0), vec3(1.0)
+  );
   if (response > 0.0) {
-    vec3 key = vec3(0.58, 0.80, 1.00) * 0.65 + source * 0.35;
+    vec3 key = mix(
+      vec3(0.58, 0.80, 1.00), vec3(0.45) + hue * 0.55, spectralMix
+    );
     return color + key * response * 0.80;
   }
-  return color * (vec3(1.0) - vec3(1.00, 0.72, 0.45) * (-response));
+  vec3 fill = mix(
+    vec3(1.00, 0.72, 0.45), vec3(0.88) - hue * 0.43, spectralMix
+  );
+  return color * (vec3(1.0) - fill * (-response));
 }
 float liquidVolumeChromaResponse(
   float depth, vec2 slope, float centreDensity, float neighbourDensity,
@@ -1109,7 +1127,7 @@ void main() {
     // resource, pass, or 8x-scaled allocation.
     float gasDirectionalRelief = (volumeSlope.x + volumeSlope.y) * 0.5882353;
     float gasChroma = gasVolumeChromaResponse(
-      opticalDepth, gasDirectionalRelief, gasCurvature * 0.125
+      gasShadeDensity, opticalDepth, gasDirectionalRelief, gasCurvature * 0.125
     ) * uGasVolumeChroma;
     color = applyGasVolumeChroma(color, gasBase, gasChroma);
   } else if (liquidVolume > 0.5) {

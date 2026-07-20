@@ -516,6 +516,7 @@ console.log(JSON.stringify({
       }),
     },
     gasVolumeChroma: {
+      additionalAllocatedBytes: 0,
       flat: sample(() => {
         shadeCanvasAtmosphere(
           atmospherePixels, atmosphere.bytes, atmosphere.width, atmosphere.height,
