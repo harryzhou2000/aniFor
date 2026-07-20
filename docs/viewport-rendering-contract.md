@@ -66,6 +66,7 @@ For any viewport or shader-coordinate change, validate all of the following:
 - A cell occupies square screen pixels before and after zoom.
 - A stationary cursor maps to the same world cell through wheel zoom.
 - A zoomed view retains its camera anchor after page resize.
+- While already zoomed and panned, changing DPR and browser page scale in the same session preserves zoom and world-space pan, repeats cursor-anchored wheel zoom, and paints one exact semantic/visible landmark. CSS-pixel pan is expected to scale by the fitted-canvas resize ratio; absolute rectangles may reflow.
 - Left-drag painting is continuous.
 - An immobile material painted near the upper-left, center, and lower-right appears under the cursor at all three positions.
 - After an off-centre wheel zoom and middle-button pan, paint one radius-zero off-centre landmark and compare its semantic cell with the actual blank-differenced framebuffer peak. Transform-state equality alone is insufficient.
@@ -74,6 +75,8 @@ For any viewport or shader-coordinate change, validate all of the following:
 - Browser validation cleans up Chrome and Vite even on failure.
 
 The last painted-footprint check is the important regression test for the Pixi pooled-UV bug.
+
+The desktop audit also performs a live scale transition without navigation: Canvas uses DPR 2→1→2 and WebGL uses 1→2→1, while page scale runs 1→1.2→1. Chrome device emulation can change the responsive CSS viewport even when DPR returns to its starting value, so the gate compares camera pan in fit-normalized space rather than requiring absolute geometry equality. Screenshot sampling during page zoom uses the visual viewport dimensions and offsets; layout `innerWidth` alone points at the wrong composed pixels.
 
 `npm run audit:browser-input` proves the backing-scale invariant in both renderer backends. Its paired pass freshly navigates to 2× and 1× under the same explicit 1280×720 desktop emulation, waits for stable geometry at each scale, paints three radius-zero landmarks, repeats the off-centre wheel anchor, and repeats a 42×27 CSS-pixel middle drag. It then paints an off-centre radius-zero landmark after both transforms and requires the composed framebuffer peak to agree with the exact semantic cell before testing a zoomed resize. The WebGL half cold-loads a fresh 2× reference and true 8× page under those same metrics, requiring exact CSS-rectangle equality, a 4896×3072 backing, and zero browser errors. `node scripts/verify-browser-input.mjs --scale-eight-only` isolates that expensive proof. A reference captured before applying the same device metrics is invalid because Chrome's launch window and emulated CSS viewport are different coordinate spaces.
 

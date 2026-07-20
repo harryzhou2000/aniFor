@@ -17,6 +17,8 @@ export const CANVAS_CONTOUR_CHUNK_SIZE = 32;
 export const CANVAS_CONTOUR_OUTPUT_SCALE = 2;
 const HALO_SIZE = CANVAS_CONTOUR_CHUNK_SIZE + 2;
 const EMPTY_PHASE = 255;
+const LIQUID_LIGHT_X = 0.48;
+const LIQUID_LIGHT_Y = 0.68;
 
 export interface CanvasPhaseContourInput {
   readonly materials: Uint8Array;
@@ -44,6 +46,35 @@ export interface CanvasPhaseContourInput {
   readonly chunkY: number;
   readonly chunkWidth: number;
   readonly chunkHeight: number;
+}
+
+/**
+ * Hue-preserving light response for one already-qualified liquid contour sample.
+ * The caller owns semantic/free-surface eligibility; this helper deliberately
+ * returns an exact no-op away from the fractional Hermite boundary.
+ */
+export function canvasLiquidMeniscusScale(
+  density: number,
+  gradientX: number,
+  gradientY: number,
+  optics: number,
+): number {
+  if (optics === RenderOptics.Molten) return 1;
+  if (density <= 0.08 || density >= 0.92) return 1;
+  const gradientLengthSquared = gradientX * gradientX + gradientY * gradientY;
+  if (gradientLengthSquared <= 1e-8) return 1;
+  const contourBand = smoothstep(0.08, 0.46, density)
+    * (1 - smoothstep(0.54, 0.92, density));
+  if (contourBand <= 0) return 1;
+  const directional = Math.max(-1, Math.min(1,
+    (gradientX * LIQUID_LIGHT_X + gradientY * LIQUID_LIGHT_Y)
+      / Math.sqrt(gradientLengthSquared),
+  ));
+  const gain = optics === RenderOptics.Aqueous ? 0.055
+    : optics === RenderOptics.Oily ? 0.045
+    : optics === RenderOptics.Corrosive ? 0.052
+    : 0.042;
+  return 1 + Math.max(-0.06, Math.min(0.06, directional * contourBand * gain));
 }
 
 /**
@@ -175,14 +206,21 @@ export class CanvasPhaseContourScratch {
     const exactSolidContact = (input.solidContactDepth ?? true)
       && this.haloMaterials[haloIndex] !== 0 && phase === RenderPhase.Solid
       && this.hasDifferentSolidNearby(cellX + 1, cellY + 1, material);
+    const materialOptics = input.paletteBytes?.[material * 4 + 3] ?? RenderOptics.Default;
     const curvatureGain = solidCurvatureGain(
       input.styleBytes[material * 4 + 1] ?? RenderProfile.Neutral,
-      input.paletteBytes?.[material * 4 + 3] ?? RenderOptics.Default,
+      materialOptics,
     );
     const solidCurvatureDepth = (input.solidCurvatureDepth ?? true)
       && this.haloMaterials[haloIndex] !== 0 && phase === RenderPhase.Solid
       && input.styleBytes[material * 4 + 2] === 0 && curvatureGain > 0
       && this.hasSolidContourNearby(cellX + 1, cellY + 1, material);
+    const liquidMeniscus = this.haloMaterials[haloIndex] !== 0
+      && phase === RenderPhase.Liquid
+      && input.styleBytes[material * 4 + 2] === 0
+      && input.styleBytes[material * 4 + 3] === 0
+      && materialOptics !== RenderOptics.Molten
+      && this.isExposedConnectedLiquid(cellX + 1, cellY + 1, material);
     const eligible = !this.isWallAt(haloIndex) && isContourPhase(phase);
     const powderSurfaceDetailGate = phase === RenderPhase.Powder
       && powderStyle === 'smooth' && input.powderSurface
@@ -237,9 +275,26 @@ export class CanvasPhaseContourScratch {
         const density = top + (bottom - top) * weightY;
         let derivativeX = 0;
         let derivativeY = 0;
-        if (solidCurvatureDepth || exactSolidContact) {
+        if (solidCurvatureDepth || exactSolidContact || liquidMeniscus) {
           derivativeX = 6 * blendX * (1 - blendX);
           derivativeY = 6 * blendY * (1 - blendY);
+        }
+        if (liquidMeniscus) {
+          const gradientX = ((q10 - q00) * (1 - weightY)
+            + (q11 - q01) * weightY) * derivativeX;
+          const gradientY = ((q01 - q00) * (1 - weightX)
+            + (q11 - q10) * weightX) * derivativeY;
+          const scale = canvasLiquidMeniscusScale(
+            density,
+            gradientX,
+            gradientY,
+            materialOptics,
+          );
+          if (scale !== 1) {
+            this.pixels[outputPixel] = clampByte(this.pixels[outputPixel] * scale);
+            this.pixels[outputPixel + 1] = clampByte(this.pixels[outputPixel + 1] * scale);
+            this.pixels[outputPixel + 2] = clampByte(this.pixels[outputPixel + 2] * scale);
+          }
         }
         if (solidCurvatureDepth && density > 0.08 && density < 0.92) {
           const cross = q11 - q10 - q01 + q00;
@@ -500,6 +555,36 @@ export class CanvasPhaseContourScratch {
     const candidate = this.haloMaterials[index];
     return candidate !== 0 && candidate !== ownerMaterial
       && this.haloPhases[index] === RenderPhase.Solid ? 1 : 0;
+  }
+
+  /**
+   * A meniscus needs same-species continuity and a real cardinal free surface.
+   * Unlike liquid, solids, and native walls are contacts rather than air rims.
+   * This classification happens once per world cell, never per subpixel.
+   */
+  private isExposedConnectedLiquid(
+    haloX: number,
+    haloY: number,
+    ownerMaterial: number,
+  ): boolean {
+    let sameSpecies = false;
+    let exposed = false;
+    for (let direction = 0; direction < 4; direction++) {
+      const x = haloX + (direction === 0 ? -1 : direction === 1 ? 1 : 0);
+      const y = haloY + (direction === 2 ? -1 : direction === 3 ? 1 : 0);
+      const index = y * HALO_SIZE + x;
+      if (this.isWallAt(index)) continue;
+      const candidate = this.haloMaterials[index];
+      const candidatePhase = this.haloPhases[index];
+      if (candidate === ownerMaterial && candidatePhase === RenderPhase.Liquid) {
+        sameSpecies = true;
+      } else if (candidate !== 0 && candidatePhase === RenderPhase.Liquid) {
+        return false;
+      } else if (candidate === 0 || candidatePhase === RenderPhase.Gas) {
+        exposed = true;
+      }
+    }
+    return sameSpecies && exposed;
   }
 
   private hasDifferentSolidNearby(

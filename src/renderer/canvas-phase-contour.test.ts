@@ -4,8 +4,10 @@ import {
   CANVAS_CONTOUR_CHUNK_SIZE,
   CANVAS_CONTOUR_OUTPUT_SCALE,
   CanvasPhaseContourScratch,
+  canvasLiquidMeniscusScale,
   type CanvasPhaseContourInput,
 } from './canvas-phase-contour';
+import { RenderOptics } from './render-optics';
 import { PowderSurfaceField } from './powder-surface-field';
 import { createRenderLookups } from './render-field-set';
 
@@ -458,6 +460,116 @@ describe('Canvas 2x phase contour scratch', () => {
     paint(unlikeSupport, 3, 2, Material.Water);
     scratch.rasterize(unlikeSupport.input);
     expect(scratch.coverage[outputIndex(5, 4)]).toBeGreaterThan(unlikeEdge);
+  });
+
+  it('adds bounded bipolar meniscus light without changing liquid support or interiors', () => {
+    expect(canvasLiquidMeniscusScale(1, 1, 1, RenderOptics.Aqueous)).toBe(1);
+    expect(canvasLiquidMeniscusScale(0.5, 1, 1, RenderOptics.Aqueous)).toBeGreaterThan(1);
+    expect(canvasLiquidMeniscusScale(0.5, -1, -1, RenderOptics.Aqueous)).toBeLessThan(1);
+
+    for (const material of [Material.Water, Material.Oil, Material.Acid, Material.Lava]) {
+      const value = fixture(7, 7);
+      for (let y = 2; y <= 4; y++) for (let x = 2; x <= 4; x++) {
+        paint(value, x, y, material);
+      }
+      const flatStyle = lookups.styleBytes.slice();
+      flatStyle[material * 4 + 3] = 1;
+      const styled = new CanvasPhaseContourScratch();
+      const flat = new CanvasPhaseContourScratch();
+      styled.rasterize(value.input);
+      flat.rasterize({ ...value.input, styleBytes: flatStyle });
+
+      let brighter = 0;
+      let darker = 0;
+      let maximumDelta = 0;
+      for (let y = 0; y < value.input.worldHeight * styled.outputScale; y++) {
+        for (let x = 0; x < value.input.worldWidth * styled.outputScale; x++) {
+          const output = y * styled.outputStride + x;
+          expect(styled.coverage[output], `${material} ${x},${y} coverage`).toBe(flat.coverage[output]);
+          expect(styled.ownerMaterials[output], `${material} ${x},${y} owner`).toBe(
+            flat.ownerMaterials[output],
+          );
+          const pixel = output * 4;
+          expect(styled.pixels[pixel + 3], `${material} ${x},${y} alpha`).toBe(
+            flat.pixels[pixel + 3],
+          );
+          for (let channel = 0; channel < 3; channel++) {
+            const delta = styled.pixels[pixel + channel] - flat.pixels[pixel + channel];
+            if (delta > 0) brighter++;
+            if (delta < 0) darker++;
+            maximumDelta = Math.max(maximumDelta, Math.abs(delta));
+          }
+        }
+      }
+
+      if (material === Material.Lava) {
+        expect(brighter + darker).toBe(0);
+      } else {
+        expect(brighter, `${material} brighter rim`).toBeGreaterThan(0);
+        expect(darker, `${material} darker rim`).toBeGreaterThan(0);
+        expect(maximumDelta, `${material} bounded rim`).toBeLessThanOrEqual(14);
+      }
+      for (let y = 6; y <= 7; y++) for (let x = 6; x <= 7; x++) {
+        expect(rgbaAt(styled, x, y), `${material} dense interior ${x},${y}`).toEqual(
+          rgbaAt(flat, x, y),
+        );
+      }
+    }
+  });
+
+  it('keeps liquid meniscus light off traits, isolated droplets, and unlike contacts', () => {
+    const isolated = fixture();
+    paint(isolated, 2, 2, Material.Water);
+    const isolatedStyled = new CanvasPhaseContourScratch();
+    const isolatedFlat = new CanvasPhaseContourScratch();
+    const isolatedTraitStyle = lookups.styleBytes.slice();
+    isolatedTraitStyle[Material.Water * 4 + 3] = 1;
+    isolatedStyled.rasterize(isolated.input);
+    isolatedFlat.rasterize({ ...isolated.input, styleBytes: isolatedTraitStyle });
+    expect(isolatedStyled.pixels).toEqual(isolatedFlat.pixels);
+
+    const emissive = fixture();
+    for (let y = 2; y <= 3; y++) for (let x = 2; x <= 3; x++) {
+      paint(emissive, x, y, Material.Water);
+    }
+    const emissiveStyle = lookups.styleBytes.slice();
+    emissiveStyle[Material.Water * 4 + 2] = 255;
+    const traitStyle = lookups.styleBytes.slice();
+    traitStyle[Material.Water * 4 + 3] = 1;
+    const emissiveScratch = new CanvasPhaseContourScratch();
+    const traitScratch = new CanvasPhaseContourScratch();
+    emissiveScratch.rasterize({ ...emissive.input, styleBytes: emissiveStyle });
+    traitScratch.rasterize({ ...emissive.input, styleBytes: traitStyle });
+    expect(emissiveScratch.pixels).toEqual(traitScratch.pixels);
+
+    const contact = fixture(6, 5);
+    for (let y = 1; y <= 3; y++) for (let x = 0; x < 6; x++) {
+      paint(contact, x, y, x < 3 ? Material.Water : Material.Oil);
+    }
+    const contactStyled = new CanvasPhaseContourScratch();
+    const contactFlat = new CanvasPhaseContourScratch();
+    const contactTraitStyle = lookups.styleBytes.slice();
+    contactTraitStyle[Material.Water * 4 + 3] = 1;
+    contactTraitStyle[Material.Oil * 4 + 3] = 1;
+    contactStyled.rasterize(contact.input);
+    contactFlat.rasterize({ ...contact.input, styleBytes: contactTraitStyle });
+    for (let y = 0; y < contact.input.worldHeight * 2; y++) {
+      for (let x = 0; x < contact.input.worldWidth * 2; x++) {
+        const output = y * contactStyled.outputStride + x;
+        expect(contactStyled.coverage[output], `${x},${y} coverage`).toBe(contactFlat.coverage[output]);
+        expect(contactStyled.ownerMaterials[output], `${x},${y} owner`).toBe(
+          contactFlat.ownerMaterials[output],
+        );
+        expect(contactStyled.pixels[output * 4 + 3], `${x},${y} alpha`).toBe(
+          contactFlat.pixels[output * 4 + 3],
+        );
+        if (x >= 4 && x < 8 && y >= 2 && y < 8) {
+          expect(rgbaAt(contactStyled, x, y), `unlike seam ${x},${y}`).toEqual(
+            rgbaAt(contactFlat, x, y),
+          );
+        }
+      }
+    }
   });
 
   it('keeps isolated powder round and an isolated liquid inside its owner cell', () => {

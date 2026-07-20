@@ -1460,6 +1460,10 @@ async function auditMode(mode) {
     ))[0];
     await evaluate(cdp, `window.__ANIFOR_INPUT_AUDIT__.clear(); true`);
 
+    const liveScaleTransition = await auditLiveScaleTransition(
+      cdp, mode, dpr, transformedGeometry, afterPan,
+    );
+
     // Exercise the actual ResizeObserver/rAF/presenter chain while the camera
     // is zoomed and off-centre, then require an exact round-trip at the same
     // CSS viewport. Zoom-one geometry alone cannot prove camera preservation.
@@ -1612,6 +1616,7 @@ async function auditMode(mode) {
       wheelAnchorErrorCells: round(wheelAnchorError, 5),
       middlePanDelta: { x: round(afterPan.panX - beforePan.panX, 3), y: round(afterPan.panY - beforePan.panY, 3) },
       transformedPaintedFootprint,
+      liveScaleTransition,
       zoomedResizeAnchorErrorCells: round(zoomedResizeAnchorError, 5),
       renderScaleOne,
       ...(renderScaleEight ? { renderScaleEight } : {}),
@@ -2684,6 +2689,138 @@ async function setDesktopMetrics(cdp, width, height, dpr) {
   });
 }
 
+async function auditLiveScaleTransition(cdp, mode, initialDpr, beforeGeometry, beforeView) {
+  const transitionedDpr = initialDpr === 1 ? 2 : 1;
+  const transitionedPageScale = 1.2;
+  assert(beforeView.zoom > 1.2,
+    `${mode}: live scale transition did not start with an active zoomed camera`);
+
+  await setDesktopMetrics(cdp, 1280, 720, transitionedDpr);
+  const dprTransitioned = await waitForStableScaleTransition(
+    cdp, transitionedDpr, 1, 5_000, `${mode} live DPR transition`,
+  );
+  assertGeometry(dprTransitioned.geometry, `${mode} live DPR transition`);
+  assertResizeAdjustedViewState(
+    beforeView, beforeGeometry.canvas,
+    dprTransitioned.view, dprTransitioned.geometry.canvas,
+    `${mode} live DPR camera preservation`,
+  );
+
+  await cdp.send('Emulation.setPageScaleFactor', { pageScaleFactor: transitionedPageScale });
+  const transitioned = await waitForStableScaleTransition(
+    cdp, transitionedDpr, transitionedPageScale, 5_000, `${mode} live DPR/page-scale transition`,
+  );
+  assertGeometry(transitioned.geometry, `${mode} live DPR/page-scale transition`);
+  assertResizeAdjustedViewState(
+    dprTransitioned.view, dprTransitioned.geometry.canvas,
+    transitioned.view, transitioned.geometry.canvas,
+    `${mode} live DPR/page-scale camera preservation`,
+  );
+
+  const anchor = {
+    x: transitioned.geometry.viewport.left + transitioned.geometry.viewport.width * 0.46,
+    y: transitioned.geometry.viewport.top + transitioned.geometry.viewport.height * 0.43,
+  };
+  const anchorBefore = await screenWorld(cdp, anchor);
+  await cdp.send('Input.dispatchMouseEvent', {
+    type: 'mouseWheel', x: anchor.x, y: anchor.y,
+    deltaX: 0, deltaY: -80, modifiers: 0,
+  });
+  await sleep(100);
+  const anchorAfter = await screenWorld(cdp, anchor);
+  const zoomedView = await evaluate(cdp, `window.__ANIFOR_INPUT_AUDIT__.viewState()`);
+  const anchorError = Math.hypot(
+    anchorAfter.x - anchorBefore.x,
+    anchorAfter.y - anchorBefore.y,
+  );
+  assert(zoomedView.zoom > transitioned.view.zoom,
+    `${mode}: wheel did not zoom after the live DPR/page-scale transition`);
+  assert(anchorError < 0.2,
+    `${mode}: post-transition wheel anchor drifted ${anchorError.toFixed(4)} cells`);
+
+  const zoomedGeometry = await metrics(cdp);
+  assertGeometry(zoomedGeometry, `${mode} post-transition zoom`);
+  const landmark = {
+    x: Math.max(8, Math.min(WORLD_WIDTH - 9, Math.floor(anchorAfter.x))),
+    y: Math.max(8, Math.min(WORLD_HEIGHT - 9, Math.floor(anchorAfter.y))),
+  };
+  const landmarkClient = worldClient(
+    zoomedGeometry.canvas, { x: landmark.x + 0.5, y: landmark.y + 0.5 },
+  );
+  const blank = await cdp.send('Page.captureScreenshot', { format: 'png', fromSurface: true });
+  await sleep(80);
+  const blankReference = await cdp.send('Page.captureScreenshot', {
+    format: 'png', fromSurface: true,
+  });
+  await mouseClick(cdp, landmarkClient.x, landmarkClient.y, 'left');
+  await sleep(80);
+  const painted = await evaluate(cdp, `({
+    cell: window.__ANIFOR_INPUT_AUDIT__.cell(${landmark.x}, ${landmark.y}),
+    occupied: window.__ANIFOR_INPUT_AUDIT__.occupiedCells(),
+  })`);
+  assert(painted.cell > 0 && painted.occupied === 1,
+    `${mode}: live DPR/page-scale transition missed its semantic landmark (${JSON.stringify(painted)})`);
+  const footprint = (await capturePaintedFootprints(
+    cdp, [landmark], `${mode} live DPR/page-scale transition`, 1.5, 0.8, {
+      baselineBase64: blank.data,
+      baselineReferenceBase64: blankReference.data,
+      captureCanvasRect: zoomedGeometry.canvas,
+    },
+  ))[0];
+  await evaluate(cdp, `window.__ANIFOR_INPUT_AUDIT__.clear(); true`);
+
+  await cdp.send('Emulation.setPageScaleFactor', { pageScaleFactor: 1 });
+  await cdp.send('Emulation.clearDeviceMetricsOverride');
+  await cdp.send('Emulation.setTouchEmulationEnabled', { enabled: false });
+  const restored = await waitForStableScaleTransition(
+    cdp, initialDpr, 1, 5_000, `${mode} restored DPR/page scale`,
+  );
+  assertGeometry(restored.geometry, `${mode} restored DPR/page scale`);
+  assertResizeAdjustedViewState(
+    zoomedView, zoomedGeometry.canvas,
+    restored.view, restored.geometry.canvas,
+    `${mode} restored DPR/page-scale camera preservation`,
+  );
+
+  return {
+    dpr: `${initialDpr}->${transitionedDpr}->${initialDpr}`,
+    pageScale: `1->${transitionedPageScale}->1`,
+    cameraZoom: round(transitioned.view.zoom, 4),
+    wheelAnchorErrorCells: round(anchorError, 5),
+    landmark: `${landmark.x},${landmark.y}`,
+    footprint,
+  };
+}
+
+async function waitForStableScaleTransition(cdp, dpr, pageScale, timeoutMs, label) {
+  let previous;
+  let stableSamples = 0;
+  return waitFor(async () => {
+    const geometry = await metrics(cdp);
+    if (Math.abs(geometry.dpr - dpr) > 0.001
+      || Math.abs(geometry.pageScale - pageScale) > 0.001) return false;
+    const view = await evaluate(cdp, `window.__ANIFOR_INPUT_AUDIT__.viewState()`);
+    if (previous
+      && canvasRectsEqual(previous.geometry.canvas, geometry.canvas)
+      && Math.abs(previous.view.zoom - view.zoom) < 0.001
+      && Math.abs(previous.view.panX - view.panX) < 0.05
+      && Math.abs(previous.view.panY - view.panY) < 0.05) stableSamples++;
+    else stableSamples = 0;
+    previous = { geometry, view };
+    return stableSamples >= 2 ? previous : false;
+  }, timeoutMs, `${label} stable geometry`);
+}
+
+function assertResizeAdjustedViewState(expected, expectedCanvas, actual, actualCanvas, label) {
+  const widthRatio = actualCanvas.width / expectedCanvas.width;
+  const heightRatio = actualCanvas.height / expectedCanvas.height;
+  assert(Math.abs(widthRatio - heightRatio) < 0.001
+    && Math.abs(actual.zoom - expected.zoom) < 0.001
+    && Math.abs(actual.panX - expected.panX * widthRatio) < 0.05
+    && Math.abs(actual.panY - expected.panY * heightRatio) < 0.05,
+  `${label}: ${JSON.stringify({ expected, actual, widthRatio, heightRatio })}`);
+}
+
 async function waitForStableCanvas(cdp, width, height, previous, timeoutMs, label) {
   let last;
   let stableSamples = 0;
@@ -2763,7 +2900,9 @@ async function metrics(cdp) {
       backing: { width: canvas.width, height: canvas.height },
       outputScale: canvas.dataset.outputScale,
       backend: window.__ANIFOR_INPUT_AUDIT__.backend(),
-      dpr: devicePixelRatio, window: { width: innerWidth, height: innerHeight },
+      dpr: devicePixelRatio,
+      pageScale: window.visualViewport?.scale ?? 1,
+      window: { width: innerWidth, height: innerHeight },
       ui: {
         shell: box(shell), workspace: box(workspace), toolbox: box(toolbox), palette: box(palette), actions: box(actions), filters: box(filters),
         library: box(library), footer: box(footer), fieldIndicator: box(fieldIndicator), touchHint: box(touchHint),
@@ -3551,16 +3690,20 @@ async function samplePageRegions(
     const bounds = suppliedBounds ?? {
       left: liveBounds.left, top: liveBounds.top, width: liveBounds.width, height: liveBounds.height,
     };
-    const pageScaleX = image.naturalWidth / innerWidth;
-    const pageScaleY = image.naturalHeight / innerHeight;
+    const visualWidth = window.visualViewport?.width ?? innerWidth;
+    const visualHeight = window.visualViewport?.height ?? innerHeight;
+    const visualOffsetX = window.visualViewport?.offsetLeft ?? 0;
+    const visualOffsetY = window.visualViewport?.offsetTop ?? 0;
+    const pageScaleX = image.naturalWidth / Math.max(1, visualWidth);
+    const pageScaleY = image.naturalHeight / Math.max(1, visualHeight);
     return ${JSON.stringify(regions)}.map((region) => {
       const radius = region.radius ?? 3;
       const radiusX = region.radiusX ?? radius;
       const radiusY = region.radiusY ?? radius;
       const worldScaleX = bounds.width / ${WORLD_WIDTH};
       const worldScaleY = bounds.height / ${WORLD_HEIGHT};
-      const x = Math.floor((bounds.left + (region.x - radiusX) * worldScaleX) * pageScaleX);
-      const y = Math.floor((bounds.top + (region.y - radiusY) * worldScaleY) * pageScaleY);
+      const x = Math.floor((bounds.left + (region.x - radiusX) * worldScaleX - visualOffsetX) * pageScaleX);
+      const y = Math.floor((bounds.top + (region.y - radiusY) * worldScaleY - visualOffsetY) * pageScaleY);
       const width = Math.max(1, Math.ceil(radiusX * 2 * worldScaleX * pageScaleX));
       const height = Math.max(1, Math.ceil(radiusY * 2 * worldScaleY * pageScaleY));
       const data = context.getImageData(x, y, width, height).data;
@@ -3769,8 +3912,8 @@ async function samplePageRegions(
         ...(region.locatePeak ? {
           peakLuma: Math.round(Math.max(0, peakLuma)),
           peakWorld: [
-            ((x + peakPixelX + 0.5) / pageScaleX - bounds.left) / worldScaleX,
-            ((y + peakPixelY + 0.5) / pageScaleY - bounds.top) / worldScaleY,
+            ((x + peakPixelX + 0.5) / pageScaleX + visualOffsetX - bounds.left) / worldScaleX,
+            ((y + peakPixelY + 0.5) / pageScaleY + visualOffsetY - bounds.top) / worldScaleY,
           ],
         } : {}),
       };
