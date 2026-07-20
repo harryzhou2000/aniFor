@@ -38,6 +38,19 @@ describe('native-only render projections', () => {
     }
   });
 
+  it('keeps menu-visible BCOL distinct from Coal across the native ABI', () => {
+    expect(byId.get(Material.BCOL)).toMatchObject({ selectable: true, phase: 'powder' });
+    const selectable = new Set(MATERIALS.map(({ id }) => id));
+    expect(selectable.has(Material.BCOL)).toBe(true);
+
+    const adapter = readFileSync(new URL('../../native/tpt/tpt_adapter.cpp', import.meta.url), 'utf8');
+    const brushMapping = adapter.slice(adapter.indexOf('int ToPowderType'), adapter.indexOf('bool IsConfiguredSourceType'));
+    const renderMapping = adapter.slice(adapter.indexOf('uint8_t ToStillroomType'), adapter.indexOf('void ExtractFields'));
+    expect(brushMapping).toContain('case 217: return PT_BCOL;');
+    expect(renderMapping).toContain('case PT_COAL: return 19;');
+    expect(renderMapping).toContain('case PT_BCOL: return 217;');
+  });
+
   it('gives every identity a distinguishable stable visual signature', () => {
     const signatures = NATIVE_PROJECTIONS.map((material) => [
       material.color,

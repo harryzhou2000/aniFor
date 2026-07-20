@@ -258,9 +258,10 @@ int ToPowderType(int material)
 	case 166: return PT_LDTC;
 	case 167: return PT_LSNS;
 	case 168: return PT_PSNS;
-	case 169: return PT_TSNS;
-	case 170: return PT_VSNS;
-	default: return PT_NONE;
+		case 169: return PT_TSNS;
+		case 170: return PT_VSNS;
+		case 217: return PT_BCOL;
+		default: return PT_NONE;
 	}
 }
 
@@ -312,9 +313,8 @@ uint8_t ToStillroomType(int type)
 	case PT_SLTW: return 16;
 	case PT_GAS: return 17;
 	case PT_SNOW: return 18;
-	case PT_BCOL:
-	case PT_COAL:
-		return 19;
+		case PT_COAL: return 19;
+		case PT_BCOL: return 217;
 	case PT_PLSM: return 20;
 	case PT_STNE: return 21;
 	case PT_BRCK: return 22;

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ALL_MATERIALS, Material } from '../shared/materials';
+import { MATERIALS, Material } from '../shared/materials';
 import { PowderToyBackend } from './powder-toy-backend';
 import { SimulationTool } from './simulation-tools';
 
@@ -55,7 +55,7 @@ describe('direct Powder Toy backend', () => {
 
   it('projects every generic native material as its stable frontend ID', async () => {
     const simulation = await PowderToyBackend.load(moduleArtifact.href);
-    const materials = ALL_MATERIALS.map(({ id }) => id).filter((id) => id <= Material.VSNS);
+    const materials = MATERIALS.map(({ id }) => id);
     const point = (index: number) => ({ x: 24 + (index % 32) * 18, y: 24 + Math.floor(index / 32) * 28 });
     materials.forEach((material, index) => {
       const { x, y } = point(index);
@@ -68,6 +68,19 @@ describe('direct Powder Toy backend', () => {
       const { x, y } = point(index);
       expect(cells[y * simulation.width + x]).toBe(material);
     });
+  });
+
+  it('keeps Coal and broken-coal particles distinct through native OPS bytes', async () => {
+    const source = await PowderToyBackend.load(moduleArtifact.href);
+    source.paint(280, 150, Material.Coal, 0);
+    source.paint(300, 150, Material.BCOL, 0);
+    expect(source.cells()[150 * source.width + 280]).toBe(Material.Coal);
+    expect(source.cells()[150 * source.width + 300]).toBe(Material.BCOL);
+
+    const restored = await PowderToyBackend.load(moduleArtifact.href);
+    restored.loadFile(source.saveFile());
+    expect(restored.cells()[150 * restored.width + 280]).toBe(Material.Coal);
+    expect(restored.cells()[150 * restored.width + 300]).toBe(Material.BCOL);
   });
 
   it('projects native reaction-only phase products', async () => {
@@ -254,6 +267,7 @@ describe('direct Powder Toy backend', () => {
     const sources = [Material.CLNE, Material.BCLN, Material.PCLN, Material.PBCN, Material.CONV];
 
     expect(module._powder_can_configure_source(Material.CLNE, Material.Water)).toBe(1);
+    expect(module._powder_can_configure_source(Material.CLNE, Material.BCOL)).toBe(1);
     expect(module._powder_can_configure_source(Material.CLNE, Material.CLNE)).toBe(0);
     expect(module._powder_can_configure_source(Material.PCLN, Material.PSCN)).toBe(0);
     expect(module._powder_can_configure_source(Material.PBCN, Material.SPRK)).toBe(0);
@@ -308,7 +322,7 @@ describe('direct Powder Toy backend', () => {
       [Material.BCLN, Material.Water],
       [Material.PCLN, Material.Oil],
       [Material.PBCN, Material.Wood],
-      [Material.CONV, Material.Fire],
+      [Material.CONV, Material.BCOL],
     ] as const;
     cases.forEach(([emitter, target], index) => {
       expect(source._powder_set_configured_source(240 + index * 16, 160, emitter, target)).toBe(1);

@@ -191,7 +191,7 @@ describe('Canvas solid surface reconstruction', () => {
   it('uses canonical RGB for trait-bearing 2x2 cavity support', () => {
     const width = 7;
     const height = 7;
-    const materials = new Uint8Array(width * height).fill(Material.PLUT);
+    const materials = new Uint8Array(width * height).fill(Material.VIBR);
     const holes: number[] = [];
     for (let y = 3; y <= 4; y++) for (let x = 3; x <= 4; x++) {
       const index = y * width + x;
@@ -201,7 +201,7 @@ describe('Canvas solid surface reconstruction', () => {
     const semantics = materials.slice();
     const pixels = seed(materials);
     reconstructSolidSurface(pixels, materials, styles, palette, width, height);
-    const paletteOffset = Material.PLUT * 4;
+    const paletteOffset = Material.VIBR * 4;
     expect(styles[paletteOffset + 3]).toBeGreaterThan(0);
     expect(materials).toEqual(semantics);
     for (const hole of holes) {
@@ -271,11 +271,11 @@ describe('Canvas solid surface reconstruction', () => {
   });
 
   it('keeps semantic role accents out of reconstructed empty cells', () => {
-    const materials = new Uint8Array(9).fill(Material.PLUT);
+    const materials = new Uint8Array(9).fill(Material.VIBR);
     materials[4] = Material.Empty;
     const pixels = seed(materials);
     reconstructSolidSurface(pixels, materials, styles, palette, 3, 3);
-    const offset = Material.PLUT * 4;
+    const offset = Material.VIBR * 4;
     expect(styles[offset + 3]).toBeGreaterThan(0);
     expect(Array.from(pixels.slice(16, 19))).toEqual(Array.from(palette.slice(offset, offset + 3)));
   });

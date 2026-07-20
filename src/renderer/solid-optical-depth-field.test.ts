@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest';
+import { ALL_MATERIALS, Material } from '../shared/materials';
+import { createRenderLookups } from './render-field-set';
 import { RenderPhase } from './render-profile';
 import { SOLID_OPTICAL_DEPTH_STEP, writeSolidOpticalDepth } from './solid-optical-depth-field';
 
@@ -59,6 +61,20 @@ describe('solid optical depth field', () => {
       if (materials[index] !== 1) expect(target[index]).toBe(original[index]);
     }
     expect(target[2 * width + 2]).toBe(0);
+  });
+
+  it('routes native VIBR through solid depth while leaving powder PLUT untouched', () => {
+    const width = 7;
+    const lookups = createRenderLookups(ALL_MATERIALS);
+    const plut = new Uint8Array(width * width).fill(Material.PLUT);
+    const powderTarget = new Uint8Array(plut.length).fill(77);
+    writeSolidOpticalDepth(plut, powderTarget, lookups.styleBytes, width);
+    expect(powderTarget[3 * width + 3]).toBe(77);
+
+    const vibr = new Uint8Array(width * width).fill(Material.VIBR);
+    const solidTarget = new Uint8Array(vibr.length);
+    writeSolidOpticalDepth(vibr, solidTarget, lookups.styleBytes, width);
+    expect(solidTarget[3 * width + 3]).toBe(SOLID_OPTICAL_DEPTH_STEP * 3);
   });
 
   it('saturates deep solids without wrapping', () => {

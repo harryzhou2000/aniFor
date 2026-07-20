@@ -792,7 +792,7 @@ async function auditMode(mode) {
     const solidSamples = await sampleCanonicalRegions([
       { name: 'metal', x: 405, y: 229, radius: 8 },
       { name: 'plant', x: 445, y: 254, radius: 8 },
-      { name: 'plut', x: 405, y: 279, radius: 8 },
+      { name: 'vibr', x: 485, y: 279, radius: 8 },
       { name: 'dtec', x: 485, y: 304, radius: 8 },
     ]);
     assert(solidSamples.every((sample) => sample.visible >= 32),
@@ -6176,7 +6176,7 @@ function assertPairedVisualRelief(results) {
   const solidHueOrder = {
     metal: [2, 1, 0],
     plant: [1, 0, 2],
-    plut: [1, 0, 2],
+    vibr: [1, 0, 2],
     dtec: [0, 1, 2],
   };
   for (const [name, order] of Object.entries(solidHueOrder)) {

@@ -14,7 +14,7 @@ export const RENDER_LAB_STYLE_SAMPLES = [
   Material.Metal, Material.Glass, Material.LIFE_GOL, Material.Ice, Material.Wall,
   // Organic and growing matter.
   Material.Wood, Material.Plant, Material.SEED, Material.YEST, Material.VINE,
-  // Radioactive solid families plus sink and carrier semantics.
+  // Radioactive powders and a true solid plus sink and carrier semantics.
   Material.PLUT, Material.URAN, Material.VIBR, Material.CONV, Material.NEUT,
   // Emitter, powered/sensor devices, portal channel, and force actuator.
   Material.CLNE, Material.PCLN, Material.DTEC, Material.PRTI, Material.ACEL,

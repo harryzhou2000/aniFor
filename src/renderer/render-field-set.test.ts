@@ -20,10 +20,34 @@ describe('shared render field set', () => {
     expect(Array.from(lookup.styleBytes.slice(0, 4))).toEqual([0, 0, 0, 0]);
   });
 
+  it('packs native state separately from material-family profile and traits', () => {
+    const lookup = createRenderLookups(ALL_MATERIALS);
+    for (const id of [
+      Material.SEED, Material.YEST,
+      Material.BVBR, Material.PLUT, Material.POLO, Material.SING, Material.URAN,
+      Material.DMG, Material.GBMB, Material.BCOL,
+    ]) expect(lookup.styleBytes[id * 4]).toBe(RenderPhase.Powder);
+    for (const id of [
+      Material.ACEL, Material.DCEL, Material.FRAY, Material.FRME, Material.PIPE,
+      Material.PSTN, Material.RPEL,
+      Material.BCLN, Material.BHOL, Material.CLNE, Material.CONV, Material.NBHL,
+      Material.NWHL, Material.PRTI, Material.PRTO, Material.TRON, Material.VOID,
+      Material.WHOL,
+    ]) expect(lookup.styleBytes[id * 4]).toBe(RenderPhase.Solid);
+
+    expect(lookup.styleBytes[Material.SEED * 4 + 1]).toBe(renderProfile('life'));
+    expect(lookup.styleBytes[Material.PLUT * 4 + 1]).toBe(renderProfile('radioactive'));
+    expect(lookup.styleBytes[Material.ACEL * 4 + 1]).toBe(renderProfile('force'));
+    expect(lookup.styleBytes[Material.CLNE * 4 + 1]).toBe(renderProfile('special'));
+    expect(lookup.styleBytes[Material.SEED * 4 + 3]).toBe(RenderTrait.Organic);
+    expect(lookup.styleBytes[Material.PLUT * 4 + 3]).toBe(RenderTrait.Radioactive);
+    expect(lookup.styleBytes[Material.CLNE * 4 + 3]).toBe(RenderTrait.Emitter);
+  });
+
   it('packs a complete render identity for every projected material', () => {
     const lookup = createRenderLookups(ALL_MATERIALS);
-    expect(ALL_MATERIALS).toHaveLength(216);
-    expect(new Set(ALL_MATERIALS.map(({ id }) => id)).size).toBe(216);
+    expect(ALL_MATERIALS).toHaveLength(217);
+    expect(new Set(ALL_MATERIALS.map(({ id }) => id)).size).toBe(217);
     for (const material of ALL_MATERIALS) {
       const palette = material.id * 4;
       const color = Number.parseInt(material.color.slice(1), 16);

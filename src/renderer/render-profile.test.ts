@@ -38,6 +38,27 @@ describe('render profiles', () => {
     expect(renderPhase(ALL_MATERIALS.find(({ id }) => id === Material.THDR)!)).toBe(RenderPhase.Powder);
   });
 
+  it('uses native particle state for growable, radioactive, force, and source families', () => {
+    const byId = new Map(ALL_MATERIALS.map((material) => [material.id, material]));
+    for (const id of [
+      Material.SEED, Material.YEST,
+      Material.BVBR, Material.PLUT, Material.POLO, Material.SING, Material.URAN,
+      Material.DMG, Material.GBMB, Material.BCOL,
+    ]) expect(renderPhase(byId.get(id)!)).toBe(RenderPhase.Powder);
+    for (const id of [
+      Material.ACEL, Material.DCEL, Material.FRAY, Material.FRME, Material.PIPE,
+      Material.PSTN, Material.RPEL,
+      Material.BCLN, Material.BHOL, Material.CLNE, Material.CONV, Material.NBHL,
+      Material.NWHL, Material.PRTI, Material.PRTO, Material.TRON, Material.VOID,
+      Material.WHOL,
+    ]) expect(renderPhase(byId.get(id)!)).toBe(RenderPhase.Solid);
+
+    expect(renderProfile(byId.get(Material.SEED)!.category)).toBe(RenderProfile.Organic);
+    expect(renderProfile(byId.get(Material.PLUT)!.category)).toBe(RenderProfile.Radioactive);
+    expect(renderProfile(byId.get(Material.ACEL)!.category)).toBe(RenderProfile.Field);
+    expect(renderProfile(byId.get(Material.CLNE)!.category)).toBe(RenderProfile.Field);
+  });
+
   it('lights coherent matter surfaces without treating volumes as opaque', () => {
     expect(receivesSurfaceLight(RenderPhase.Solid)).toBe(true);
     expect(receivesSurfaceLight(RenderPhase.Powder)).toBe(true);

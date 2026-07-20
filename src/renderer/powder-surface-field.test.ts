@@ -56,6 +56,26 @@ describe('slope-aware powder surface field', () => {
     expect(field.bytes.some(Boolean)).toBe(false);
   });
 
+  it('routes native PLUT through powder reconstruction but excludes solid VIBR', () => {
+    const width = 9;
+    const height = 7;
+    const materials = new Uint8Array(width * height);
+    const stability = new Uint8Array(width * height);
+    const field = new PowderSurfaceField(width, height, lookups.styleBytes);
+    const index = 3 * width + 4;
+    stability[index] = 255;
+
+    materials[index] = Material.PLUT;
+    field.update(materials, stability);
+    expect(field.hasSurface).toBe(true);
+    expect(field.bytes[index * 4 + 3]).toBeGreaterThan(0);
+
+    materials[index] = Material.VIBR;
+    field.update(materials, stability);
+    expect(field.hasSurface).toBe(false);
+    expect(field.bytes.some(Boolean)).toBe(false);
+  });
+
   it('uses bounded preallocated storage and stable output buffers', () => {
     const field = new PowderSurfaceField(612, 384, lookups.styleBytes);
     expect(field.allocatedByteLength).toBe(3_055_104);

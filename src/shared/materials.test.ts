@@ -6,9 +6,12 @@ describe('material catalog', () => {
   it('uses unique stable byte IDs', () => {
     const ids = ALL_MATERIALS.map(({ id }) => id);
     expect(new Set(ids).size).toBe(ids.length);
-    expect(ids).toEqual(Array.from({ length: 216 }, (_, index) => index + 1));
+    expect(ids).toEqual(Array.from({ length: 217 }, (_, index) => index + 1));
     expect(ids.every((id) => id > Material.Empty && id <= 0xFF)).toBe(true);
-    expect(MATERIALS.map(({ id }) => id)).toEqual(Array.from({ length: 170 }, (_, index) => index + 1));
+    expect(MATERIALS.map(({ id }) => id)).toEqual([
+      ...Array.from({ length: 170 }, (_, index) => index + 1),
+      Material.BCOL,
+    ]);
   });
 
   it('pins all native LIFE preset indexes, projections, rules, and colors', () => {
@@ -70,6 +73,9 @@ describe('material catalog', () => {
     const selectable = new Set(MATERIALS.map(({ id }) => id));
     for (const id of [15, 16, 17, 18, 20]) expect(selectable.has(id)).toBe(true);
     expect(selectable.has(Material.Coal)).toBe(true);
+    expect(ALL_MATERIALS.find(({ id }) => id === Material.BCOL)).toMatchObject({
+      category: 'powders', phase: 'powder', selectable: true,
+    });
   });
 
   it('flags native limitations instead of silently exposing unavailable physics', () => {
@@ -79,5 +85,25 @@ describe('material catalog', () => {
       expect(material.limitations).toContain('newtonian-gravity-unavailable');
     }
     expect(ALL_MATERIALS.find(({ id }) => id === Material.WHOL)?.limitations).toContain('air-velocity-limited');
+  });
+
+  it('records native physical state independently from toolbox family', () => {
+    const byId = new Map(ALL_MATERIALS.map((material) => [material.id, material]));
+    for (const id of [
+      Material.SEED, Material.YEST,
+      Material.BVBR, Material.PLUT, Material.POLO, Material.SING, Material.URAN,
+      Material.DMG, Material.GBMB,
+    ]) expect(byId.get(id)?.phase).toBe('powder');
+    for (const id of [
+      Material.ACEL, Material.DCEL, Material.FRAY, Material.FRME, Material.PIPE,
+      Material.PSTN, Material.RPEL,
+      Material.BCLN, Material.BHOL, Material.CLNE, Material.CONV, Material.NBHL,
+      Material.NWHL, Material.PRTI, Material.PRTO, Material.TRON, Material.VOID,
+      Material.WHOL,
+    ]) expect(byId.get(id)?.phase).toBe('solid');
+    expect(byId.get(Material.SEED)?.category).toBe('life');
+    expect(byId.get(Material.PLUT)?.category).toBe('radioactive');
+    expect(byId.get(Material.ACEL)?.category).toBe('force');
+    expect(byId.get(Material.CLNE)?.category).toBe('special');
   });
 });

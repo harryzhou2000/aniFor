@@ -103,9 +103,9 @@ export class PowderToyBackend implements SimulationBackend {
   clear(): void { this.module._powder_clear(); this.dirtyCheck = true; this.wallDirtyAll = true; this.wallDirtyBounds = undefined; }
 
   paint(cx: number, cy: number, material: Material, radius: number): void {
-    // Projection-only IDs (currently native LIFE presets) are deliberately not
-    // generic particles. They must cross their semantic ABI so TPT receives ctype.
-    if (material > Material.VSNS) return;
+    // LIFE and native render projections are deliberately not generic particles.
+    // BCOL is an ordinary native brush whose stable ID follows that reserved range.
+    if (material > Material.VSNS && material !== Material.BCOL) return;
     const r2 = radius * radius;
     for (let y = Math.max(0, cy - radius); y <= Math.min(this.height - 1, cy + radius); y++) {
       for (let x = Math.max(0, cx - radius); x <= Math.min(this.width - 1, cx + radius); x++) {

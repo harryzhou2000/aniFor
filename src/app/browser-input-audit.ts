@@ -92,7 +92,7 @@ export function prepareSolidOpticalDepthAuditFixture(simulation: SimulationBacke
   };
   const blocks = [
     [20, Material.Metal], [120, Material.Wood], [220, Material.Plant],
-    [320, Material.DTEC], [420, Material.PLUT], [520, Material.Glass],
+    [320, Material.DTEC], [420, Material.VIBR], [520, Material.Glass],
   ] as const;
   for (const [x, material] of blocks) rect(x, 32, 72, 260, material);
   // Exact holes and unlike contacts reset thickness rather than becoming dark
