@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { renderOptics } from '../renderer/render-optics';
+import { renderOptics, RenderOptics } from '../renderer/render-optics';
 import { renderPhase, renderProfile, RenderPhase, RenderProfile } from '../renderer/render-profile';
 import { renderTraits, RenderTrait } from '../renderer/render-traits';
 import { ALL_MATERIALS, MATERIALS, Material, NATIVE_PROJECTIONS } from './materials';
@@ -96,5 +96,22 @@ describe('native-only render projections', () => {
     }
     expect(renderTraits(byId.get(Material.VRSG)!)).toBe(RenderTrait.Organic);
     expect(renderTraits(byId.get(Material.VRSS)!)).toBe(RenderTrait.Organic);
+  });
+
+  it('keeps reaction families phase-optical while preserving semantic traits', () => {
+    expect(renderOptics(byId.get(Material.BIZR)!)).toBe(RenderOptics.ViscousLiquid);
+    expect(renderOptics(byId.get(Material.BIZRG)!)).toBe(RenderOptics.CleanGas);
+    expect(renderOptics(byId.get(Material.BIZRS)!)).toBe(RenderOptics.SmoothRigid);
+
+    expect(renderOptics(byId.get(Material.VIRS)!)).toBe(RenderOptics.ViscousLiquid);
+    expect(renderOptics(byId.get(Material.VRSG)!)).toBe(RenderOptics.CleanGas);
+    expect(renderOptics(byId.get(Material.VRSS)!)).toBe(RenderOptics.SmoothRigid);
+    for (const id of [Material.VIRS, Material.VRSG, Material.VRSS]) {
+      expect(renderTraits(byId.get(id)!)).toBe(RenderTrait.Organic);
+    }
+
+    expect(renderOptics(byId.get(Material.YEST)!)).toBe(RenderOptics.RoughGranular);
+    expect(renderOptics(byId.get(Material.DYST)!)).toBe(RenderOptics.RoughGranular);
+    expect(renderTraits(byId.get(Material.YEST)!)).toBe(RenderTrait.Organic);
   });
 });

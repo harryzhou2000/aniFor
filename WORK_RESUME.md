@@ -48,6 +48,16 @@ Queued after the renderer checkpoint: revisit desktop/mobile geometry as a dedic
 - The WebGL material atlas keeps all `217/217` projections visible. A fresh fit-view capture was visually inspected, retaining the liquid/gas/powder/energy composition and distinct rigid, organic, radioactive, device, Glass, and Ice material cards.
 - True 8× remains exact at `4896×3072`: eight GPU-fence samples completed at `3580.6/3625.4/3674.8 ms` median/p90/max with zero discarded samples and zero browser errors. All `217` atlas projections remained visible; wheel-anchor error stayed zero; forced-stall and context-loss recovery both preserved the camera and returned to Canvas 2× with `0.0159`-cell footprint error.
 
+## Current phase-composed material-optics follow-up
+
+- Optical family now describes physical presentation while the independent trait byte preserves semantic identity. Radioactive and life categories no longer force their gas, liquid, or powder members through solid-only optics.
+- `AMTR` and `WARP` use sooty volumetric gas optics; `CAUS` uses clean gas optics. `DEUT` uses aqueous depth, while `BIZR`, `GLOW`, `VIRS`, `EXOT`, and `ISOZ` use viscous-liquid transmission. `BVBR`, `PLUT`, `POLO`, and `URAN` use metallic grains; `SING` uses sooty grains; `SEED` and `YEST` use ordinary rough-grain topology.
+- Solid `ISZS`/`VIBR` retain radioactive body optics, radioactive energy carriers retain their dedicated core renderer, and Wood/Plant/VINE remain organic solids. Every remapped nuclear material still carries `RenderTrait.Radioactive`; Seed/Yeast and all virus phases still carry `RenderTrait.Organic`.
+- Reaction families are now phase-continuous: liquid/gas/solid BIZR and VIRS products receive liquid/gas/solid optical response without losing their exact native identities. YEST and its DYST product both use granular topology.
+- Classification remains build-time lookup work. No optics enum, texture, field, sampler, shader branch, pass, target, upload, persistent byte, or output-scale allocation was added; shared lookup allocation remains exactly `3,584` bytes.
+- Focused packed-lookup and native-projection tests pass. Fresh Canvas and WebGL real-browser atlases keep all `217/217` materials visible with zero browser errors, and the canonical fit-view WebGL scene was visually inspected.
+- Post-remap true 8× remains exact at `4896×3072`. Eight GPU-fence samples completed at `3497.7/3615.2/3631.9 ms` median/p90/max with zero discarded samples; all 217 atlas identities remained visible, powder support and square Grains mode remained exact, wheel anchoring stayed zero, and forced-stall/context-loss recovery retained the camera with `0.0159`-cell footprint error.
+
 ## Repository and deployment snapshot
 
 - Repository: `/home/harry/projects/aniFor_codex`

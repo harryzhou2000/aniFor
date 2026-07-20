@@ -42,6 +42,15 @@ describe('shared render field set', () => {
     expect(lookup.styleBytes[Material.SEED * 4 + 3]).toBe(RenderTrait.Organic);
     expect(lookup.styleBytes[Material.PLUT * 4 + 3]).toBe(RenderTrait.Radioactive);
     expect(lookup.styleBytes[Material.CLNE * 4 + 3]).toBe(RenderTrait.Emitter);
+
+    expect(lookup.paletteBytes[Material.SEED * 4 + 3]).toBe(RenderOptics.RoughGranular);
+    expect(lookup.paletteBytes[Material.URAN * 4 + 3]).toBe(RenderOptics.MetallicGranular);
+    expect(lookup.paletteBytes[Material.AMTR * 4 + 3]).toBe(RenderOptics.SootyGas);
+    expect(lookup.paletteBytes[Material.DEUT * 4 + 3]).toBe(RenderOptics.Aqueous);
+    expect(lookup.styleBytes[Material.AMTR * 4]).toBe(RenderPhase.Gas);
+    expect(lookup.styleBytes[Material.DEUT * 4]).toBe(RenderPhase.Liquid);
+    expect(lookup.styleBytes[Material.URAN * 4 + 1]).toBe(renderProfile('radioactive'));
+    expect(lookup.styleBytes[Material.URAN * 4 + 3]).toBe(RenderTrait.Radioactive);
   });
 
   it('packs a complete render identity for every projected material', () => {

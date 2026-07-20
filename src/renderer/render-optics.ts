@@ -46,6 +46,7 @@ export function renderOptics(material: RenderOpticsMaterial): RenderOptics {
     case Material.SaltWater:
     case Material.DistilledWater:
     case Material.CBNW:
+    case Material.DEUT:
       return RenderOptics.Aqueous;
     case Material.Oil:
     case Material.Diesel:
@@ -53,7 +54,6 @@ export function renderOptics(material: RenderOpticsMaterial): RenderOptics {
       return RenderOptics.Oily;
     case Material.Acid:
     case Material.BASE:
-    case Material.CAUS:
       return RenderOptics.Corrosive;
     case Material.Lava:
       return RenderOptics.Molten;
@@ -75,7 +75,11 @@ export function renderOptics(material: RenderOpticsMaterial): RenderOptics {
     case Material.Gas:
     case Material.FOG:
     case Material.MORT:
+    case Material.AMTR:
+    case Material.WARP:
       return RenderOptics.SootyGas;
+    case Material.CAUS:
+      return RenderOptics.CleanGas;
     case Material.Ice:
     case Material.Glass:
     case Material.DRIC:
@@ -97,18 +101,33 @@ export function renderOptics(material: RenderOpticsMaterial): RenderOptics {
     case Material.Thermite:
     case Material.BREC:
     case Material.BRMT:
+    case Material.BVBR:
+    case Material.PLUT:
+    case Material.POLO:
+    case Material.URAN:
       return RenderOptics.MetallicGranular;
+    case Material.SING:
+      return RenderOptics.SootyGranular;
+    case Material.BIZR:
+    case Material.GLOW:
+    case Material.EXOT:
+    case Material.VIRS:
+    case Material.ISOZ:
+      return RenderOptics.ViscousLiquid;
   }
 
+  const phase = physicalPhase(material);
+  if (phase === 'gas') return RenderOptics.CleanGas;
+  if (phase === 'powder') return RenderOptics.RoughGranular;
+  // Category traits are packed independently, so a radioactive gas/liquid or
+  // an organic powder keeps its semantic accent after taking the optical
+  // family appropriate to its physical phase. Category optics are therefore
+  // reserved for solid/device bodies rather than overriding phase topology.
   if (material.category === 'life') return RenderOptics.Organic;
   if (material.category === 'electronics' || material.category === 'powered' || material.category === 'sensors') {
     return RenderOptics.Device;
   }
   if (material.category === 'radioactive') return RenderOptics.Radioactive;
-
-  const phase = physicalPhase(material);
-  if (phase === 'gas') return RenderOptics.CleanGas;
-  if (phase === 'powder') return RenderOptics.RoughGranular;
   if (phase === 'solid' && (material.category === 'solids' || material.category === 'automata')) {
     return RenderOptics.SmoothRigid;
   }
