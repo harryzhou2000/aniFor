@@ -13,6 +13,7 @@ interface PresenterHarness {
   configurePresentation: PixiFieldPresenter['configurePresentation'];
   setGasFieldLightingEnabled: PixiFieldPresenter['setGasFieldLightingEnabled'];
   setSurfaceContourLightingEnabled: PixiFieldPresenter['setSurfaceContourLightingEnabled'];
+  setPhaseContactLightingEnabled: PixiFieldPresenter['setPhaseContactLightingEnabled'];
   setRenderStallHandler: PixiFieldPresenter['setRenderStallHandler'];
   setTransform: PixiFieldPresenter['setTransform'];
   waitForFirstFrame: PixiFieldPresenter['waitForFirstFrame'];
@@ -55,6 +56,7 @@ describe('Pixi presenter startup configuration', () => {
       uTranslucentLensShell: 1,
       uSolidCurvatureDepth: 0,
       uSurfaceContourLighting: 1,
+      uPhaseContactLighting: 1,
       uThermalMaterialStyling: 1,
       uEnergyCoreRelief: 0,
       uPowderStyle: powderRenderStyleValue('grains'),
@@ -73,6 +75,21 @@ describe('Pixi presenter startup configuration', () => {
 
     presenter.setSurfaceContourLightingEnabled(true);
     expect(presenter.uniforms.uniforms.uSurfaceContourLighting).toBe(1);
+    expect(presenter.app.render).toHaveBeenCalledOnce();
+  });
+
+  it('seeds and redraws optional-last cross-phase contact lighting', () => {
+    const presenter = presenterHarness();
+
+    presenter.configurePresentation(
+      true, true, true, true, true, true, true, true, true, 'smooth', true, false,
+    );
+    expect(presenter.uniforms.uniforms.uSurfaceContourLighting).toBe(1);
+    expect(presenter.uniforms.uniforms.uPhaseContactLighting).toBe(0);
+    expect(presenter.app.render).not.toHaveBeenCalled();
+
+    presenter.setPhaseContactLightingEnabled(true);
+    expect(presenter.uniforms.uniforms.uPhaseContactLighting).toBe(1);
     expect(presenter.app.render).toHaveBeenCalledOnce();
   });
 

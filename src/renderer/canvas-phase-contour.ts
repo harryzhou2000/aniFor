@@ -30,6 +30,8 @@ interface SubpixelAxisGeometry {
   readonly quadraticLeft: Float64Array;
   readonly quadraticMiddle: Float64Array;
   readonly quadraticRight: Float64Array;
+  /** RGB tone for each 4-bit contact-corner pattern and subpixel coordinate. */
+  readonly phaseContactTone: Float64Array;
 }
 
 function createSubpixelAxisGeometry(scale: FieldOutputScale): SubpixelAxisGeometry {
@@ -54,9 +56,35 @@ function createSubpixelAxisGeometry(scale: FieldOutputScale): SubpixelAxisGeomet
     quadraticMiddle[subpixel] = 0.75 - powderOffset * powderOffset;
     quadraticRight[subpixel] = 0.5 * (0.5 + powderOffset) * (0.5 + powderOffset);
   }
+  // Contact density is categorical and therefore has only sixteen possible
+  // four-corner patterns. Cache that tiny, shared geometry result once instead
+  // of repeating smoothsteps and a square root for every contacted output
+  // sample. This is 10,880 bytes across all four render scales, not a world-
+  // sized field, and preserves the exact scalar helper's Float64 result.
+  const phaseContactTone = new Float64Array(16 * scale * scale);
+  for (let pattern = 0; pattern < 16; pattern++) {
+    const q00 = pattern & 1;
+    const q10 = (pattern >>> 1) & 1;
+    const q01 = (pattern >>> 2) & 1;
+    const q11 = (pattern >>> 3) & 1;
+    for (let subY = 0; subY < scale; subY++) for (let subX = 0; subX < scale; subX++) {
+      const weightX = weight[subX];
+      const weightY = weight[subY];
+      const top = q00 + (q10 - q00) * weightX;
+      const bottom = q01 + (q11 - q01) * weightX;
+      const density = top + (bottom - top) * weightY;
+      const gradientX = ((q10 - q00) * (1 - weightY)
+        + (q11 - q01) * weightY) * derivative[subX];
+      const gradientY = ((q01 - q00) * (1 - weightX)
+        + (q11 - q10) * weightX) * derivative[subY];
+      phaseContactTone[(pattern * scale + subY) * scale + subX] = canvasPhaseContactTone(
+        density, gradientX, gradientY,
+      );
+    }
+  }
   return {
     local, side, weight, derivative, secondDerivative,
-    quadraticLeft, quadraticMiddle, quadraticRight,
+    quadraticLeft, quadraticMiddle, quadraticRight, phaseContactTone,
   };
 }
 
@@ -69,7 +97,8 @@ const SUBPIXEL_AXIS_GEOMETRY: Record<FieldOutputScale, SubpixelAxisGeometry> = {
 
 /** Typed payload of the shared 1×/2×/4×/8× axis lookup; object headers are engine-owned. */
 export const CANVAS_CONTOUR_GEOMETRY_LOOKUP_BYTES = (1 + 2 + 4 + 8)
-  * (8 * Float64Array.BYTES_PER_ELEMENT + Uint8Array.BYTES_PER_ELEMENT);
+  * (8 * Float64Array.BYTES_PER_ELEMENT + Uint8Array.BYTES_PER_ELEMENT)
+  + (1 * 1 + 2 * 2 + 4 * 4 + 8 * 8) * 16 * Float64Array.BYTES_PER_ELEMENT;
 
 export interface CanvasPhaseContourInput {
   readonly materials: Uint8Array;
@@ -93,6 +122,8 @@ export interface CanvasPhaseContourInput {
   readonly solidCurvatureDepth?: boolean;
   /** Audit-only A/B switch; defaults to contour-local solid lighting. */
   readonly surfaceContourLighting?: boolean;
+  /** Audit-only A/B switch; defaults to bounded liquid/matter contact lighting. */
+  readonly phaseContactLighting?: boolean;
   readonly worldWidth: number;
   readonly worldHeight: number;
   readonly chunkX: number;
@@ -139,6 +170,32 @@ export function canvasSolidContourScale(
     : optics === RenderOptics.Organic ? 0.052
     : 0.046;
   return contourSurfaceLightScale(density, gradientX, gradientY, gain);
+}
+
+/**
+ * Signed RGB-only grounding at an authoritative liquid/matter contact. The
+ * contact mask belongs to the other phase, so its gradient points through the
+ * interface without changing either phase's analytic support.
+ */
+export function canvasPhaseContactTone(
+  density: number,
+  gradientX: number,
+  gradientY: number,
+): number {
+  if (density <= 0.08 || density >= 0.92) return 0;
+  const gradientLengthSquared = gradientX * gradientX + gradientY * gradientY;
+  if (gradientLengthSquared <= 1e-8) return 0;
+  const contactBand = smoothstep(0.08, 0.46, density)
+    * (1 - smoothstep(0.54, 0.92, density));
+  if (contactBand <= 0) return 0;
+  const directional = Math.max(-1, Math.min(1,
+    (-gradientX * LIQUID_LIGHT_X - gradientY * LIQUID_LIGHT_Y)
+      / Math.sqrt(gradientLengthSquared),
+  ));
+  // The 2x straight-edge samples land near density 0.156/0.844, where the
+  // narrow band is intentionally small. A bounded 12-byte pre-clamp gain keeps
+  // that canonical contact visible after Uint8 rounding without dark seams.
+  return Math.max(-6, Math.min(6, directional * contactBand * 12));
 }
 
 function contourSurfaceLightScale(
@@ -288,8 +345,22 @@ export class CanvasPhaseContourScratch {
     // Every supersample around one semantic cell draws from this same 3x3
     // categorical stencil. Classify it once, then bit-extract the four corners
     // needed by each quadrant instead of repeating halo/phase/wall checks.
-    const compatibilityMask = eligible
-      ? this.compatibilityMask(cellX + 1, cellY + 1, material, phase) : 0;
+    const phaseContactEligible = (input.phaseContactLighting ?? true)
+      && this.haloMaterials[haloIndex] !== 0
+      && input.styleBytes[material * 4 + 2] === 0
+      && input.styleBytes[material * 4 + 3] === 0
+      && (phase === RenderPhase.Solid || phase === RenderPhase.Liquid
+        || (phase === RenderPhase.Powder && !emptyPowder && powderStyle !== 'grains'
+          && this.haloStability[haloIndex] >= 192));
+    // Contact lighting and contour coverage classify the same 3x3 halo. Pack
+    // both masks in one traversal when contact lighting is eligible, avoiding a
+    // second nine-neighbour scan on every cell along a mixed-phase interface.
+    const packedMasks = eligible
+      ? phaseContactEligible
+        ? this.compatibilityAndContactMasks(cellX + 1, cellY + 1, material, phase, input)
+        : this.compatibilityMask(cellX + 1, cellY + 1, material, phase)
+      : 0;
+    const compatibilityMask = packedMasks & FULL_COMPATIBILITY_MASK;
     let emptyPowderSupport = 0;
     if (emptyPowder) {
       const worldIndex = (input.chunkY + cellY) * input.worldWidth + input.chunkX + cellX;
@@ -328,6 +399,7 @@ export class CanvasPhaseContourScratch {
       && phase === RenderPhase.Solid
       && input.styleBytes[material * 4 + 2] === 0
       && input.styleBytes[material * 4 + 3] === 0;
+    const phaseContactMask = phaseContactEligible ? packedMasks >>> 9 : 0;
     const powderSurfaceDetailGate = phase === RenderPhase.Powder
       && powderStyle === 'smooth' && input.powderSurface
       ? this.powderSurfaceBulkDepth(
@@ -385,7 +457,8 @@ export class CanvasPhaseContourScratch {
         const density = top + (bottom - top) * weightY;
         let derivativeX = 0;
         let derivativeY = 0;
-        if (solidCurvatureDepth || exactSolidContact || liquidMeniscus || solidSurfaceBevel) {
+        if (solidCurvatureDepth || exactSolidContact || liquidMeniscus
+          || solidSurfaceBevel || phaseContactMask !== 0) {
           derivativeX = this.axisGeometry.derivative[subX];
           derivativeY = this.axisGeometry.derivative[subY];
         }
@@ -466,6 +539,21 @@ export class CanvasPhaseContourScratch {
           this.pixels[outputPixel + 2] = clampByte(
             this.pixels[outputPixel + 2] + contactTone + lensAccent * 0.70,
           );
+        }
+        if (phaseContactMask !== 0) {
+          const p00 = (phaseContactMask >>> stencilOrigin) & 1;
+          const p10 = (phaseContactMask >>> (stencilOrigin + 1)) & 1;
+          const p01 = (phaseContactMask >>> (stencilOrigin + 3)) & 1;
+          const p11 = (phaseContactMask >>> (stencilOrigin + 4)) & 1;
+          const pattern = p00 | (p10 << 1) | (p01 << 2) | (p11 << 3);
+          const contactTone = this.axisGeometry.phaseContactTone[
+            (pattern * this.outputScale + subY) * this.outputScale + subX
+          ];
+          if (contactTone !== 0) {
+            this.pixels[outputPixel] = clampByte(this.pixels[outputPixel] + contactTone);
+            this.pixels[outputPixel + 1] = clampByte(this.pixels[outputPixel + 1] + contactTone);
+            this.pixels[outputPixel + 2] = clampByte(this.pixels[outputPixel + 2] + contactTone);
+          }
         }
         let amount: number;
         if (phase === RenderPhase.Powder) {
@@ -687,6 +775,54 @@ export class CanvasPhaseContourScratch {
       }
     }
     return mask;
+  }
+
+  /**
+   * Marks only direct liquid/solid or liquid/stable-powder contacts. Diagonal
+   * proximity alone cannot ground an interface, and semantic traits/emission
+   * remain legible because either decorated side rejects the whole candidate.
+   */
+  private compatibilityAndContactMasks(
+    centreX: number,
+    centreY: number,
+    ownerMaterial: number,
+    ownerPhase: number,
+    input: CanvasPhaseContourInput,
+  ): number {
+    let compatibilityMask = 0;
+    let contactMask = 0;
+    let bit = 1;
+    for (let offsetY = -1; offsetY <= 1; offsetY++) {
+      for (let offsetX = -1; offsetX <= 1; offsetX++, bit <<= 1) {
+        const index = (centreY + offsetY) * HALO_SIZE + centreX + offsetX;
+        if (this.isWallAt(index)) continue;
+        const candidate = this.haloMaterials[index];
+        const candidatePhase = this.haloPhases[index];
+        if (candidate === 0 || !isContourPhase(candidatePhase)) continue;
+        if (ownerPhase === RenderPhase.Liquid) {
+          if (candidatePhase === RenderPhase.Liquid && candidate === ownerMaterial) {
+            compatibilityMask |= bit;
+          }
+        } else if (ownerPhase === RenderPhase.Solid
+          ? candidatePhase === RenderPhase.Solid
+          : candidatePhase === RenderPhase.Powder || candidatePhase === RenderPhase.Solid) {
+          compatibilityMask |= bit;
+        }
+        if (input.styleBytes[candidate * 4 + 2] !== 0
+          || input.styleBytes[candidate * 4 + 3] !== 0) continue;
+        const liquidMatterContact = ownerPhase === RenderPhase.Solid
+          ? candidatePhase === RenderPhase.Liquid
+          : ownerPhase === RenderPhase.Liquid
+            ? candidatePhase === RenderPhase.Solid
+              || (candidatePhase === RenderPhase.Powder && this.haloStability[index] >= 192)
+            : ownerPhase === RenderPhase.Powder
+              && (candidatePhase === RenderPhase.Liquid || candidatePhase === RenderPhase.Solid);
+        if (liquidMatterContact) contactMask |= bit;
+      }
+    }
+    const cardinalMask = (1 << 1) | (1 << 3) | (1 << 5) | (1 << 7);
+    if ((contactMask & cardinalMask) === 0) contactMask = 0;
+    return compatibilityMask | (contactMask << 9);
   }
 
   /**

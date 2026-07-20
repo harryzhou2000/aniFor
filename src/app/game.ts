@@ -238,6 +238,9 @@ export class Game {
       setSurfaceContourLighting: (enabled) => {
         this.renderer.setSurfaceContourLightingEnabled(enabled);
       },
+      setPhaseContactLighting: (enabled) => {
+        this.renderer.setPhaseContactLightingEnabled(enabled);
+      },
       setThermalMaterialStyling: (enabled) => {
         this.renderer.setThermalMaterialStylingEnabled(enabled);
       },

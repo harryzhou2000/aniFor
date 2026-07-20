@@ -95,6 +95,7 @@ uniform float uSolidContactDepth;
 uniform float uTranslucentLensShell;
 uniform float uSolidCurvatureDepth;
 uniform float uSurfaceContourLighting;
+uniform float uPhaseContactLighting;
 uniform float uThermalMaterialStyling;
 uniform float uEnergyCoreRelief;
 uniform float uPowderStyle;
@@ -105,7 +106,6 @@ float materialAt(vec2 uv) { return floor(field(uv).r * 255.0 + 0.5); }
 float wallAt(vec2 uv) { return floor(wallField(uv).r * 255.0 + 0.5); }
 float boundaryStabilityAt(vec2 uv) { return texture(uBoundaryStabilityTexture, clamp(uv, uTexel * 0.5, vec2(1.0) - uTexel * 0.5)).r; }
 float sameMaterial(vec2 uv, float material) { return 1.0 - step(0.5, abs(materialAt(uv) - material)); }
-float familyFor(float id) { return floor(texture(uStyleTexture, vec2((id + 0.5) / 256.0, 0.5)).r * 255.0 + 0.5); }
 float traitFlag(float traits, float mask) { return mod(floor(traits / mask), 2.0); }
 float surfaceLightGain(float profile) {
   if (profile == 2.0) return 0.32;
@@ -148,25 +148,47 @@ vec3 toneMapEnergy(vec3 radiance) {
   vec3 mapped = min(vec3(1.0), vec3(knee) + excess * 0.30);
   return min(radiance, mapped);
 }
-vec2 contactSample(vec2 uv, float material, float family) {
+vec3 contactSample(vec2 uv, float material, float family) {
   float candidate = materialAt(uv);
-  if (abs(candidate - material) < 0.5) return vec2(1.0, 0.0);
-  if (candidate < 0.5) return vec2(0.0);
-  float candidateFamily = familyFor(candidate);
+  if (abs(candidate - material) < 0.5) return vec3(1.0, 0.0, 0.0);
+  if (candidate < 0.5) return vec3(0.0);
+  vec4 candidateStyle = texture(
+    uStyleTexture, vec2((candidate + 0.5) / 256.0, 0.5)
+  );
+  float candidateFamily = floor(candidateStyle.r * 255.0 + 0.5);
+  float candidateTraits = floor(candidateStyle.a * 255.0 + 0.5);
+  float ordinaryCandidate = candidateStyle.b < 0.5 && candidateTraits < 0.5
+    && candidate != 3.0 ? 1.0 : 0.0;
+  // The third component marks only cross-phase contacts that can be lit without
+  // another semantic/style probe. A solid deliberately does not mark powder:
+  // its neighbour stability is unavailable here, so only the authoritative
+  // stable-powder side may opt into that contact below.
+  float crossPhase = ordinaryCandidate * (
+    (family == 0.0 && candidateFamily == 2.0)
+    || (family == 2.0 && candidateFamily == 0.0)
+    || (family == 4.0 && (candidateFamily == 0.0 || candidateFamily == 2.0))
+    ? 1.0 : 0.0
+  );
   // Contact coverage is phase-categorical, while palette/material selection
   // stays exact. Unlike solids and unlike powders therefore partition one
   // continuous occupied surface without alpha overlap or a black contact seam.
   // Powder may rest against a solid, but a solid deliberately does not borrow
   // moving powder support, so gas/liquid/powder contact cannot wobble its edge.
-  if (family == 0.0 && candidateFamily == 0.0) return vec2(1.0, 1.0);
-  if (family == 4.0 && (candidateFamily == 4.0 || candidateFamily == 0.0)) return vec2(1.0, 0.0);
-  if ((family == 1.0 || family == 2.0) && candidateFamily == family) return vec2(1.0, 0.0);
-  return vec2(0.0);
+  if (family == 0.0 && candidateFamily == 0.0) return vec3(1.0, 1.0, 0.0);
+  if (family == 4.0 && (candidateFamily == 4.0 || candidateFamily == 0.0)) {
+    return vec3(1.0, 0.0, crossPhase);
+  }
+  if ((family == 1.0 || family == 2.0) && candidateFamily == family) {
+    return vec3(1.0, 0.0, 0.0);
+  }
+  return vec3(0.0, 0.0, crossPhase);
 }
 vec4 occupancyShape(
-  vec2 uv, float material, float family, float contourSmoothing, out float contourCurvature
+  vec2 uv, float material, float family, float contourSmoothing,
+  out float contourCurvature, out float phaseContactLight
 ) {
   contourCurvature = 0.0;
+  phaseContactLight = 0.0;
   vec2 grid = uv * uFieldSize - 0.5;
   vec2 blend = fract(grid);
   vec2 hermite = blend * blend * (3.0 - 2.0 * blend);
@@ -174,10 +196,10 @@ vec4 occupancyShape(
   vec2 weight = mix(blend, hermite, contourSmoothing);
   vec2 weightDerivative = mix(vec2(1.0), hermiteDerivative, contourSmoothing);
   vec2 origin = (floor(grid) + 0.5) * uTexel;
-  vec2 s00 = contactSample(origin, material, family);
-  vec2 s10 = contactSample(origin + vec2(uTexel.x, 0.0), material, family);
-  vec2 s01 = contactSample(origin + vec2(0.0, uTexel.y), material, family);
-  vec2 s11 = contactSample(origin + uTexel, material, family);
+  vec3 s00 = contactSample(origin, material, family);
+  vec3 s10 = contactSample(origin + vec2(uTexel.x, 0.0), material, family);
+  vec3 s01 = contactSample(origin + vec2(0.0, uTexel.y), material, family);
+  vec3 s11 = contactSample(origin + uTexel, material, family);
   float q00 = s00.x;
   float q10 = s10.x;
   float q01 = s01.x;
@@ -191,6 +213,13 @@ vec4 occupancyShape(
   float density = mix(top, bottom, weight.y);
   float gradientX = mix(q10 - q00, q11 - q01, weight.y) * weightDerivative.x;
   float gradientY = mix(q01 - q00, q11 - q10, weight.x) * weightDerivative.y;
+  float phaseContactX = mix(s10.z - s00.z, s11.z - s01.z, weight.y)
+    * weightDerivative.x;
+  float phaseContactY = mix(s01.z - s00.z, s11.z - s10.z, weight.x)
+    * weightDerivative.y;
+  // The Hermite derivative is itself the contact-local band: it is exactly
+  // zero in dense cores, air silhouettes, and same-phase seams.
+  phaseContactLight = dot(vec2(phaseContactX, phaseContactY), vec2(-0.55, -0.80));
   float supportOrContact = q00 + q10 + q01 + q11;
   if (family == 0.0) {
     float contactX = mix(s10.y - s00.y, s11.y - s01.y, weight.y) * weightDerivative.x;
@@ -646,11 +675,14 @@ void main() {
   vec2 fieldPosition = fieldUv * uFieldSize;
   vec2 velocity = halo > 0.5 ? vec2(0.0) : state.ba * 2.0 - 1.0;
   float contourCurvature = 0.0;
+  float phaseContactLight = 0.0;
   vec4 shape = wallOnly > 0.5
     ? vec4(wallSurface, 0.0)
     : (surfaceOnly > 0.5
     ? (profile == 1.0
-      ? occupancyShape(fieldUv, material, family, 1.0, contourCurvature)
+      ? occupancyShape(
+        fieldUv, material, family, 1.0, contourCurvature, phaseContactLight
+      )
       : vec4(enclosedSurfaceShape(fieldUv, material), 0.0))
     : ((cloudOnly > 0.5 || emissionOnly > 0.5)
     ? vec4(0.0)
@@ -661,7 +693,7 @@ void main() {
       : occupancyShape(
         fieldUv, material, family,
         (family == 0.0 || family == 2.0 || profile == 1.0) ? 1.0 : 0.0,
-        contourCurvature
+        contourCurvature, phaseContactLight
       )))));
   float boundaryStability = 0.0;
   float powderSurfaceBlend = 0.0;
@@ -1263,6 +1295,21 @@ void main() {
       }
     }
   }
+  // Ground unlike phases without adding a separator or widening either body.
+  // Only an authoritative ordinary owner participates. Powder additionally
+  // needs settled support and a contour style; Grains remains the exact visual
+  // reference. Four existing semantic/style contact probes supply the signed
+  // Hermite band, so true 8x gains arithmetic only, never another texture read.
+  float phaseContactOwner = halo < 0.5 && surfaceOnly < 0.5 && wall < 0.5
+    && traits < 0.5 && !materialEmissive && material != 3.0
+    && (family == 0.0 || family == 2.0 || family == 4.0)
+    ? 1.0 : 0.0;
+  float stablePhaseContact = family == 4.0
+    ? step(0.75, boundaryStability) * step(0.5, uPowderStyle) : 1.0;
+  float phaseContactTone = clamp(
+    phaseContactLight * (4.0 / 255.0), -6.0 / 255.0, 6.0 / 255.0
+  ) * phaseContactOwner * stablePhaseContact * uPhaseContactLighting;
+  color += vec3(phaseContactTone);
   // Static role accents cross phase boundaries without widening semantic
   // silhouettes. Empty-space volume reconstruction intentionally remains free
   // of role metadata because it no longer has an authoritative material ID.
@@ -1541,6 +1588,7 @@ export class PixiFieldPresenter {
       uTranslucentLensShell: { value: 1, type: 'f32' },
       uSolidCurvatureDepth: { value: 1, type: 'f32' },
       uSurfaceContourLighting: { value: 1, type: 'f32' },
+      uPhaseContactLighting: { value: 1, type: 'f32' },
       // FieldRenderer turns this on only for backends that expose temperature;
       // byte zero must therefore never make legacy backends look frozen.
       uThermalMaterialStyling: { value: 0, type: 'f32' },
@@ -1736,6 +1784,7 @@ export class PixiFieldPresenter {
     energyCoreReliefEnabled: boolean,
     powderRenderStyle: PowderRenderStyle,
     surfaceContourLightingEnabled = true,
+    phaseContactLightingEnabled = true,
   ): void {
     const uniforms = this.uniforms.uniforms;
     uniforms.uGasFieldLighting = gasFieldLightingEnabled ? 1 : 0;
@@ -1746,6 +1795,7 @@ export class PixiFieldPresenter {
     uniforms.uTranslucentLensShell = translucentLensShellEnabled ? 1 : 0;
     uniforms.uSolidCurvatureDepth = solidCurvatureDepthEnabled ? 1 : 0;
     uniforms.uSurfaceContourLighting = surfaceContourLightingEnabled ? 1 : 0;
+    uniforms.uPhaseContactLighting = phaseContactLightingEnabled ? 1 : 0;
     uniforms.uThermalMaterialStyling = thermalMaterialStylingEnabled ? 1 : 0;
     uniforms.uEnergyCoreRelief = energyCoreReliefEnabled ? 1 : 0;
     uniforms.uPowderStyle = powderRenderStyleValue(powderRenderStyle);
@@ -1788,6 +1838,11 @@ export class PixiFieldPresenter {
 
   setSurfaceContourLightingEnabled(enabled: boolean): void {
     this.uniforms.uniforms.uSurfaceContourLighting = enabled ? 1 : 0;
+    this.renderApplication();
+  }
+
+  setPhaseContactLightingEnabled(enabled: boolean): void {
+    this.uniforms.uniforms.uPhaseContactLighting = enabled ? 1 : 0;
     this.renderApplication();
   }
 

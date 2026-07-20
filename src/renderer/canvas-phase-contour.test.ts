@@ -6,6 +6,7 @@ import {
   CANVAS_CONTOUR_OUTPUT_SCALE,
   CanvasPhaseContourScratch,
   canvasLiquidMeniscusScale,
+  canvasPhaseContactTone,
   canvasSolidContourScale,
   type CanvasPhaseContourInput,
 } from './canvas-phase-contour';
@@ -124,20 +125,20 @@ describe('Canvas 2x phase contour scratch', () => {
       '1-grains': 'c912c4b1',
       '1-local': '1cc9387d',
       '1-smooth': '1a84d947',
-      '2-grains': '969d5516',
-      '2-local': '14bdcae4',
-      '2-smooth': '8edc7c70',
-      '4-grains': 'f3b3924b',
-      '4-local': '134d7941',
-      '4-smooth': 'a18b22cb',
-      '8-grains': '4c41e7cd',
-      '8-local': '7a09bb53',
-      '8-smooth': '05b7100d',
+      '2-grains': 'a975b034',
+      '2-local': '5110044c',
+      '2-smooth': '8d1aefc0',
+      '4-grains': 'adeecc99',
+      '4-local': '9b797b4d',
+      '4-smooth': '6a9a6ecb',
+      '8-grains': 'a072803c',
+      '8-local': '0925cb8a',
+      '8-smooth': '664153e8',
     });
   });
 
   it('owns one bounded 32x32 chunk, one-cell halo, and stable output buffers', () => {
-    expect(CANVAS_CONTOUR_GEOMETRY_LOOKUP_BYTES).toBe(975);
+    expect(CANVAS_CONTOUR_GEOMETRY_LOOKUP_BYTES).toBe(11_855);
     const scratch = new CanvasPhaseContourScratch();
     expect(scratch.allocatedByteLength).toBe(33_824);
     const pixels = scratch.pixels;
@@ -738,6 +739,92 @@ describe('Canvas 2x phase contour scratch', () => {
         }
       }
     }
+  });
+
+  it('grounds liquid/matter contacts with bounded RGB-only bipolar light', () => {
+    expect(canvasPhaseContactTone(1, 1, 0)).toBe(0);
+    expect(canvasPhaseContactTone(0.5, -1, -1)).toBeGreaterThan(0);
+    expect(canvasPhaseContactTone(0.5, 1, 1)).toBeLessThan(0);
+
+    const value = fixture(7, 5);
+    for (let y = 1; y <= 3; y++) for (let x = 1; x <= 5; x++) {
+      paint(value, x, y, x <= 3 ? Material.Water : Material.Metal);
+    }
+    const lit = new CanvasPhaseContourScratch();
+    const flat = new CanvasPhaseContourScratch();
+    const repeatedFlat = new CanvasPhaseContourScratch();
+    lit.rasterize(value.input);
+    flat.rasterize({ ...value.input, phaseContactLighting: false });
+    repeatedFlat.rasterize({ ...value.input, phaseContactLighting: false });
+    expect(repeatedFlat.pixels).toEqual(flat.pixels);
+
+    let brighter = 0;
+    let darker = 0;
+    let maximumDelta = 0;
+    for (let y = 0; y < value.input.worldHeight * lit.outputScale; y++) {
+      for (let x = 0; x < value.input.worldWidth * lit.outputScale; x++) {
+        const output = y * lit.outputStride + x;
+        expect(lit.coverage[output], `${x},${y} coverage`).toBe(flat.coverage[output]);
+        expect(lit.ownerMaterials[output], `${x},${y} owner`).toBe(flat.ownerMaterials[output]);
+        const pixel = output * 4;
+        expect(lit.pixels[pixel + 3], `${x},${y} alpha`).toBe(flat.pixels[pixel + 3]);
+        for (let channel = 0; channel < 3; channel++) {
+          const delta = lit.pixels[pixel + channel] - flat.pixels[pixel + channel];
+          if (delta > 0) brighter++;
+          if (delta < 0) darker++;
+          maximumDelta = Math.max(maximumDelta, Math.abs(delta));
+        }
+      }
+    }
+    expect(brighter).toBeGreaterThan(0);
+    expect(darker).toBeGreaterThan(0);
+    expect(maximumDelta).toBeLessThanOrEqual(6);
+  });
+
+  it('rejects air, same-phase seams, decoration, and moving powder from phase-contact light', () => {
+    const expectNoPhaseContact = (value: Fixture, styleBytes = lookups.styleBytes): void => {
+      const lit = new CanvasPhaseContourScratch();
+      const flat = new CanvasPhaseContourScratch();
+      lit.rasterize({ ...value.input, styleBytes });
+      flat.rasterize({ ...value.input, styleBytes, phaseContactLighting: false });
+      expect(lit.pixels).toEqual(flat.pixels);
+    };
+
+    const air = fixture();
+    paint(air, 2, 2, Material.Water);
+    paint(air, 2, 3, Material.Water);
+    expectNoPhaseContact(air);
+
+    const liquidSeam = fixture();
+    paint(liquidSeam, 2, 2, Material.Water);
+    paint(liquidSeam, 3, 2, Material.Oil);
+    expectNoPhaseContact(liquidSeam);
+
+    const decorated = fixture();
+    paint(decorated, 2, 2, Material.Water);
+    paint(decorated, 3, 2, Material.Metal);
+    const decoratedStyle = lookups.styleBytes.slice();
+    decoratedStyle[Material.Metal * 4 + 3] = 1;
+    expectNoPhaseContact(decorated, decoratedStyle);
+
+    const movingPowder = fixture();
+    paint(movingPowder, 2, 2, Material.Sand);
+    paint(movingPowder, 3, 2, Material.Water);
+    movingPowder.stability[2 * movingPowder.input.worldWidth + 2] = 0;
+    expectNoPhaseContact(movingPowder);
+
+    const settledPowder = fixture();
+    paint(settledPowder, 2, 2, Material.Sand);
+    paint(settledPowder, 2, 3, Material.Sand);
+    paint(settledPowder, 3, 2, Material.Water);
+    paint(settledPowder, 3, 3, Material.Water);
+    const lit = new CanvasPhaseContourScratch();
+    const flat = new CanvasPhaseContourScratch();
+    lit.rasterize(settledPowder.input);
+    flat.rasterize({ ...settledPowder.input, phaseContactLighting: false });
+    expect(lit.pixels).not.toEqual(flat.pixels);
+    expect(lit.coverage).toEqual(flat.coverage);
+    expect(lit.ownerMaterials).toEqual(flat.ownerMaterials);
   });
 
   it('keeps isolated powder round and an isolated liquid inside its owner cell', () => {

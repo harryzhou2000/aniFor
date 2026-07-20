@@ -18,6 +18,7 @@ const modes = scaleEightOnly ? ['webgl'] : process.argv.includes('--canvas-only'
   : process.argv.includes('--webgl-only') ? ['webgl'] : ['canvas2d', 'webgl'];
 const visualOnly = process.argv.includes('--visual-only');
 const materialAtlasOnly = process.argv.includes('--material-atlas-only');
+const mobileOnly = process.argv.includes('--mobile-only');
 const quickScreenshot = process.argv.includes('--quick-screenshot');
 const layoutOnly = process.argv.includes('--layout-only');
 const screenshotRequest = process.argv.find((argument) => argument.startsWith('--screenshot='))?.slice('--screenshot='.length);
@@ -38,7 +39,7 @@ async function main() {
     }, 15_000, 'Vite browser-audit server');
     const results = [];
     for (const mode of modes) results.push(await auditMode(mode));
-    const reducedAudit = quickScreenshot || layoutOnly;
+    const reducedAudit = quickScreenshot || layoutOnly || mobileOnly;
     if (!scaleEightOnly && !materialAtlasOnly && !reducedAudit) assertPairedVisualRelief(results);
     if (!scaleEightOnly && !reducedAudit) assertPairedMaterialAtlas(results);
     compactMaterialAtlasResults(results);
@@ -118,6 +119,14 @@ async function auditMode(mode) {
         && Boolean(window.__ANIFOR_INPUT_AUDIT__ && document.documentElement);
     })()`), 15_000, `input audit API (${mode})`);
     await waitFor(() => evaluate(cdp, `window.__ANIFOR_INPUT_AUDIT__.backend().backend === ${JSON.stringify(mode)}`), 15_000, `${mode} backend`);
+    if (mobileOnly) {
+      const mobile = await auditMobile(
+        cdp, mode, screenshotRequest ? variantScreenshotPath(screenshotRequest, `${mode}-mobile`) : undefined,
+      );
+      assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
+      cdp.close();
+      return { backend: mode, mobile, browserErrors: errors.length };
+    }
     if (materialAtlasOnly) {
       const materialAtlas = await auditMaterialAtlas(cdp, mode, dpr, screenshotPath(mode));
       assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
@@ -333,7 +342,23 @@ async function auditMode(mode) {
     const repeatedFlatSurfaceContourCaptures = await waitForStablePageCapture(
       cdp, `${mode} repeated flat surface-contour framebuffer`,
     );
-    await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setSurfaceContourLighting(true); true');
+    await evaluate(cdp, `(() => {
+      window.__ANIFOR_INPUT_AUDIT__.setSurfaceContourLighting(true);
+      window.__ANIFOR_INPUT_AUDIT__.setPhaseContactLighting(false);
+      return true;
+    })()`);
+    const flatPhaseContactCaptures = await waitForStablePageCapture(
+      cdp, `${mode} flat phase-contact framebuffer`,
+    );
+    await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setPhaseContactLighting(true); true');
+    const groundedPhaseContactCaptures = await waitForStablePageCapture(
+      cdp, `${mode} grounded phase-contact framebuffer`,
+    );
+    await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setPhaseContactLighting(false); true');
+    const repeatedFlatPhaseContactCaptures = await waitForStablePageCapture(
+      cdp, `${mode} repeated flat phase-contact framebuffer`,
+    );
+    await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setPhaseContactLighting(true); true');
     const powderStyleCaptures = {};
     const powderStyleSelection = {};
     for (const style of ['grains', 'local', 'smooth']) {
@@ -404,6 +429,12 @@ async function auditMode(mode) {
       ['flat solid curvature', flatCurvatureCaptures],
       ['curved solid', curvedSolidCaptures],
       ['repeated flat solid curvature', repeatedFlatCurvatureCaptures],
+      ['flat surface contour', flatSurfaceContourCaptures],
+      ['lit surface contour', litSurfaceContourCaptures],
+      ['repeated flat surface contour', repeatedFlatSurfaceContourCaptures],
+      ['flat phase contact', flatPhaseContactCaptures],
+      ['grounded phase contact', groundedPhaseContactCaptures],
+      ['repeated flat phase contact', repeatedFlatPhaseContactCaptures],
       ...Object.entries(powderStyleCaptures).map(([style, captures]) => [`powder ${style}`, captures]),
       ['blank', blankCaptures],
     ]) assertCanvasRectsEqual(
@@ -1273,6 +1304,58 @@ async function auditMode(mode) {
       sample.flatVisible === sample.litVisible
       && Math.abs(sample.flatWorldArea - sample.litWorldArea) <= 0.01
     )), `${mode}: surface contour lighting changed solid support (${JSON.stringify(surfaceContourSupportInvariantSamples)})`);
+    const phaseContactLightingSamples = await sampleBackdropRefractionRegions(cdp, {
+      straight: flatPhaseContactCaptures.capture.data,
+      refracted: groundedPhaseContactCaptures.capture.data,
+      repeatedStraight: repeatedFlatPhaseContactCaptures.capture.data,
+    }, [
+      { name: 'waterMetalContact', x: 393.5, y: 369, radiusX: 4, radiusY: 6 },
+      { name: 'oilGlassContact', x: 473.5, y: 369, radiusX: 4, radiusY: 6 },
+      { name: 'sandWaterContact', x: 553.5, y: 369, radiusX: 4, radiusY: 6 },
+      { name: 'waterAirMeniscusControl', x: 224, y: 194, radiusX: 5, radiusY: 1.5 },
+      { name: 'unlikeLiquidControl', x: 302.5, y: 172, radius: 2.5 },
+      { name: 'waterMetalCoreControl', x: 377, y: 369, radius: 3 },
+    ], canonicalCaptures.canvasRect);
+    const phaseContactLighting = Object.fromEntries(
+      phaseContactLightingSamples.map((sample) => [sample.name, sample]),
+    );
+    for (const name of ['waterMetalContact', 'oilGlassContact', 'sandWaterContact']) {
+      const sample = phaseContactLighting[name];
+      assert(sample.rgbRms >= 0.08 && sample.rgbPeak <= 12,
+        `${mode}: ${name} lost bounded cross-phase grounding (${JSON.stringify(sample)})`);
+    }
+    assert(phaseContactLighting.waterAirMeniscusControl.rgbPeak <= 1
+      && phaseContactLighting.unlikeLiquidControl.rgbPeak <= 1
+      && phaseContactLighting.waterMetalCoreControl.rgbPeak <= 1,
+    `${mode}: phase-contact light leaked beyond a direct interface (${JSON.stringify(phaseContactLightingSamples)})`);
+    assert(phaseContactLightingSamples.every((sample) => sample.repeatRgbPeak <= 1),
+      `${mode}: phase-contact off-on-off sequence was not deterministic (${JSON.stringify(phaseContactLightingSamples)})`);
+    const phaseContactSupportRegions = [
+      { name: 'waterMetalContactSupport', x: 393, y: 369, radiusX: 35, radiusY: 9.5, silhouette: true },
+      { name: 'oilGlassContactSupport', x: 473, y: 369, radiusX: 35, radiusY: 9.5, silhouette: true },
+      { name: 'sandWaterContactSupport', x: 553, y: 369, radiusX: 35, radiusY: 9.5, silhouette: true },
+    ];
+    const [flatPhaseContactSupport, groundedPhaseContactSupport] = await Promise.all([
+      samplePageRegions(
+        cdp, flatPhaseContactCaptures.capture.data, phaseContactSupportRegions,
+        blankCaptures.capture.data, blankCaptures.reference.data, canonicalCaptures.canvasRect,
+      ),
+      samplePageRegions(
+        cdp, groundedPhaseContactCaptures.capture.data, phaseContactSupportRegions,
+        blankCaptures.capture.data, blankCaptures.reference.data, canonicalCaptures.canvasRect,
+      ),
+    ]);
+    const phaseContactSupportInvariantSamples = flatPhaseContactSupport.map((flat, index) => ({
+      name: flat.name,
+      flatVisible: flat.visible,
+      groundedVisible: groundedPhaseContactSupport[index].visible,
+      flatWorldArea: flat.worldArea,
+      groundedWorldArea: groundedPhaseContactSupport[index].worldArea,
+    }));
+    assert(phaseContactSupportInvariantSamples.every((sample) => (
+      sample.flatVisible === sample.groundedVisible
+      && Math.abs(sample.flatWorldArea - sample.groundedWorldArea) <= 0.01
+    )), `${mode}: phase-contact lighting changed material support (${JSON.stringify(phaseContactSupportInvariantSamples)})`);
     const liquidColumnSamples = await sampleCanonicalRegions([
       { name: 'waterColumn', x: 224, y: 270, radius: 8 },
       { name: 'oilColumn', x: 263, y: 270, radius: 8 },
@@ -1400,6 +1483,8 @@ async function auditMode(mode) {
         curvatureSupportInvariantSamples,
         surfaceContourLightingSamples,
         surfaceContourSupportInvariantSamples,
+        phaseContactLightingSamples,
+        phaseContactSupportInvariantSamples,
         silhouetteSamples,
         liquidContourCrossings,
         liquidColumnSamples,
@@ -1564,9 +1649,10 @@ async function auditMode(mode) {
     assert(resizeStartView.zoom > 1.8, `${mode}: resize proof did not reach a stable deep zoom`);
     const zoomedResizeAnchorBefore = await screenWorld(cdp, zoomedResizeClient);
     const zoomedGeometry = await metrics(cdp);
-    await setDesktopMetrics(cdp, 1024, 600, dpr);
+    // Cross the 920px desktop/toolbox breakpoint while the camera is active.
+    await setDesktopMetrics(cdp, 880, 600, dpr);
     const compactZoomedGeometry = await waitForStableZoomedCamera(
-      cdp, 1024, 600, zoomedGeometry, resizeStartView.zoom, 6_000, `${mode} zoomed 1024x600`,
+      cdp, 880, 600, zoomedGeometry, resizeStartView.zoom, 6_000, `${mode} zoomed 880x600`,
     );
     const compactZoomedView = await evaluate(cdp, `window.__ANIFOR_INPUT_AUDIT__.viewState()`);
     assert(Math.abs(compactZoomedView.zoom - resizeStartView.zoom) < 0.001,
@@ -1692,6 +1778,8 @@ async function auditMode(mode) {
       curvatureSupportInvariantSamples,
       surfaceContourLightingSamples,
       surfaceContourSupportInvariantSamples,
+      phaseContactLightingSamples,
+      phaseContactSupportInvariantSamples,
       ...(canvasGasLightingRefresh ? { canvasGasLightingRefresh } : {}),
       liquidColumnSamples,
       liquidReliefSamples,
@@ -2306,6 +2394,45 @@ async function auditRenderScaleEight(cdp, dpr) {
   const zoomedGrainCapture = await captureSettledPage(
     cdp, 'renderScale=8 high-zoom grain framebuffer', 450,
   );
+  await evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    audit.clear();
+    audit.setRadius(0);
+    audit.setMaterial(164);
+    return true;
+  })()`);
+  await sleep(120);
+  const zoomedInputGeometry = await metrics(cdp);
+  const zoomedInputTarget = { x: 205, y: 188 };
+  const zoomedInputClient = worldClient(
+    zoomedInputGeometry.canvas,
+    { x: zoomedInputTarget.x + 0.5, y: zoomedInputTarget.y + 0.5 },
+  );
+  const zoomedInputBlank = await cdp.send('Page.captureScreenshot', {
+    format: 'png', fromSurface: true,
+  });
+  await sleep(80);
+  const zoomedInputBlankReference = await cdp.send('Page.captureScreenshot', {
+    format: 'png', fromSurface: true,
+  });
+  await mouseClick(cdp, zoomedInputClient.x, zoomedInputClient.y, 'left');
+  await sleep(100);
+  const zoomedInputSemantic = await evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    return {
+      cell: audit.cell(${zoomedInputTarget.x}, ${zoomedInputTarget.y}),
+      occupied: audit.occupiedCells(),
+    };
+  })()`);
+  assert(zoomedInputSemantic.cell === 164 && zoomedInputSemantic.occupied === 1,
+    `renderScale=8 high-zoom input missed its exact cell (${JSON.stringify(zoomedInputSemantic)})`);
+  const zoomedInputFootprint = (await capturePaintedFootprints(
+    cdp, [zoomedInputTarget], 'renderScale=8 high-zoom input', 1.5, 0.8, {
+      baselineBase64: zoomedInputBlank.data,
+      baselineReferenceBase64: zoomedInputBlankReference.data,
+      captureCanvasRect: zoomedInputGeometry.canvas,
+    },
+  ))[0];
   await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.resetView(); true');
   await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.clear(); true');
   const blankCapture = await captureSettledPage(cdp, 'renderScale=8 blank framebuffer');
@@ -2359,6 +2486,10 @@ async function auditRenderScaleEight(cdp, dpr) {
     powderSupport,
     squareGrain,
     zoomedSquareGrain,
+    zoomedInput: {
+      cell: `${zoomedInputTarget.x},${zoomedInputTarget.y}`,
+      footprint: zoomedInputFootprint,
+    },
     materialAtlasStress,
     contextLossRecovery,
   };
@@ -2768,7 +2899,6 @@ async function auditMobile(cdp, mode, screenshot) {
   const pinchAnchorBefore = await screenWorld(cdp, center);
   await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: start });
   await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: moved });
-  await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
   await sleep(100);
   const pinch = await evaluate(cdp, `({ view: window.__ANIFOR_INPUT_AUDIT__.viewState(), occupied: window.__ANIFOR_INPUT_AUDIT__.occupiedCells() })`);
   const pinchAnchorAfter = await screenWorld(cdp, movedCenter);
@@ -2782,6 +2912,146 @@ async function auditMobile(cdp, mode, screenshot) {
   assert(pinchAnchorError < 0.2,
     `mobile pinch anchor drifted ${pinchAnchorError.toFixed(4)} cells`);
   assert(pinch.occupied === 0, `mobile pinch painted ${pinch.occupied} stray cells`);
+
+  // Keep the first contact down while releasing the second. This exercises the
+  // production pinch -> one-finger-brush rebase against the live zoomed/panned
+  // presenter; the unit harness cannot prove the composed coordinate mapping.
+  const handoffStart = moved[0];
+  await cdp.send('Input.dispatchTouchEvent', {
+    type: 'touchEnd', touchPoints: [moved[1]],
+  });
+  await sleep(60);
+  const handoffStartState = await evaluate(cdp, `({
+    cell: window.__ANIFOR_INPUT_AUDIT__.screenToCell(${handoffStart.x}, ${handoffStart.y}),
+    occupied: window.__ANIFOR_INPUT_AUDIT__.occupiedCells(),
+  })`);
+  assert(handoffStartState.occupied === 0,
+    `mobile pinch handoff painted before the remaining finger moved (${handoffStartState.occupied} cells)`);
+
+  const handoffEnd = { x: handoffStart.x + 16, y: handoffStart.y };
+  const handoffEndCell = await evaluate(
+    cdp,
+    `window.__ANIFOR_INPUT_AUDIT__.screenToCell(${handoffEnd.x}, ${handoffEnd.y})`,
+  );
+  assert(handoffEndCell.y === handoffStartState.cell.y
+    && handoffEndCell.x > handoffStartState.cell.x,
+  `mobile pinch handoff did not resolve to a horizontal transformed line (${JSON.stringify({
+    start: handoffStartState.cell, end: handoffEndCell,
+  })})`);
+  const handoffGeometry = await metrics(cdp);
+  const handoffBlank = await cdp.send('Page.captureScreenshot', { format: 'png', fromSurface: true });
+  await sleep(80);
+  const handoffBlankReference = await cdp.send('Page.captureScreenshot', {
+    format: 'png', fromSurface: true,
+  });
+  await cdp.send('Input.dispatchTouchEvent', {
+    type: 'touchMove', touchPoints: [touch(1, handoffEnd.x, handoffEnd.y)],
+  });
+  await sleep(100);
+  const handoffLine = await evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    const start = ${JSON.stringify(handoffStartState.cell)};
+    const end = ${JSON.stringify(handoffEndCell)};
+    const row = [];
+    for (let x = start.x; x <= end.x; x++) row.push(audit.cell(x, start.y));
+    return {
+      start, end, row,
+      guards: [
+        audit.cell(start.x - 1, start.y), audit.cell(end.x + 1, start.y),
+        audit.cell(start.x, start.y - 1), audit.cell(start.x, start.y + 1),
+        audit.cell(end.x, end.y - 1), audit.cell(end.x, end.y + 1),
+      ],
+      occupied: audit.occupiedCells(),
+    };
+  })()`);
+  const handoffExpectedCells = handoffEndCell.x - handoffStartState.cell.x + 1;
+  assert(handoffLine.row.length === handoffExpectedCells
+    && handoffLine.row.every((cell) => cell > 0),
+  `mobile pinch handoff missed its transformed line (${JSON.stringify(handoffLine)})`);
+  assert(handoffLine.occupied === handoffExpectedCells
+    && handoffLine.guards.every((cell) => cell === 0),
+  `mobile pinch handoff added an extra footprint (${JSON.stringify(handoffLine)})`);
+  const handoffLandmarks = [
+    handoffLine.start,
+    { x: Math.floor((handoffLine.start.x + handoffLine.end.x) / 2), y: handoffLine.start.y },
+    handoffLine.end,
+  ];
+  const handoffPaintedFootprints = await capturePaintedFootprints(
+    cdp, handoffLandmarks, `mobile ${mode} pinch-to-brush handoff`, 0.8, 1.25, {
+      baselineBase64: handoffBlank.data,
+      baselineReferenceBase64: handoffBlankReference.data,
+      captureCanvasRect: handoffGeometry.canvas,
+    },
+  );
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+
+  // Preserve the composed pinch/pan camera across the 680px mobile layout
+  // breakpoint. This catches responsive geometry changes that a reset-view
+  // resize cannot expose because pan is stored in CSS-pixel camera space.
+  const mobileResizeStartGeometry = await metrics(cdp);
+  const mobileResizeStartView = await evaluate(
+    cdp, 'window.__ANIFOR_INPUT_AUDIT__.viewState()',
+  );
+  const mobileResizeRelativeAnchor = { x: 0.62, y: 0.44 };
+  const mobileResizeStartClient = {
+    x: mobileResizeStartGeometry.viewport.left
+      + mobileResizeRelativeAnchor.x * mobileResizeStartGeometry.viewport.width,
+    y: mobileResizeStartGeometry.viewport.top
+      + mobileResizeRelativeAnchor.y * mobileResizeStartGeometry.viewport.height,
+  };
+  const mobileResizeAnchorBefore = await screenWorld(cdp, mobileResizeStartClient);
+  await cdp.send('Emulation.setDeviceMetricsOverride', {
+    width: 700, height: 840, deviceScaleFactor: 2, mobile: true,
+    screenWidth: 700, screenHeight: 840,
+    screenOrientation: { type: 'portraitPrimary', angle: 0 },
+  });
+  const wideMobileGeometry = await waitForStableZoomedCamera(
+    cdp, 700, 840, mobileResizeStartGeometry, mobileResizeStartView.zoom,
+    6_000, `mobile ${mode} zoomed 700x840`,
+  );
+  await cdp.send('Emulation.setDeviceMetricsOverride', {
+    width: 390, height: 844, deviceScaleFactor: 2, mobile: true,
+    screenWidth: 390, screenHeight: 844,
+    screenOrientation: { type: 'portraitPrimary', angle: 0 },
+  });
+  const returnedMobileGeometry = await waitForStableZoomedCamera(
+    cdp, 390, 844, wideMobileGeometry, mobileResizeStartView.zoom,
+    6_000, `mobile ${mode} zoomed 390x844 return`,
+  );
+  const returnedMobileView = await evaluate(
+    cdp, 'window.__ANIFOR_INPUT_AUDIT__.viewState()',
+  );
+  const returnedMobileClient = {
+    x: returnedMobileGeometry.viewport.left
+      + mobileResizeRelativeAnchor.x * returnedMobileGeometry.viewport.width,
+    y: returnedMobileGeometry.viewport.top
+      + mobileResizeRelativeAnchor.y * returnedMobileGeometry.viewport.height,
+  };
+  const mobileResizeAnchorAfter = await screenWorld(cdp, returnedMobileClient);
+  const mobileResizeAnchorError = Math.hypot(
+    mobileResizeAnchorAfter.x - mobileResizeAnchorBefore.x,
+    mobileResizeAnchorAfter.y - mobileResizeAnchorBefore.y,
+  );
+  const mobileNormalizedPanBefore = {
+    x: mobileResizeStartView.panX
+      / (mobileResizeStartGeometry.canvas.width / mobileResizeStartView.zoom),
+    y: mobileResizeStartView.panY
+      / (mobileResizeStartGeometry.canvas.height / mobileResizeStartView.zoom),
+  };
+  const mobileNormalizedPanAfter = {
+    x: returnedMobileView.panX
+      / (returnedMobileGeometry.canvas.width / returnedMobileView.zoom),
+    y: returnedMobileView.panY
+      / (returnedMobileGeometry.canvas.height / returnedMobileView.zoom),
+  };
+  assert(Math.abs(returnedMobileView.zoom - mobileResizeStartView.zoom) < 0.001
+    && Math.abs(mobileNormalizedPanAfter.x - mobileNormalizedPanBefore.x) < 0.0002
+    && Math.abs(mobileNormalizedPanAfter.y - mobileNormalizedPanBefore.y) < 0.0002,
+  `mobile ${mode} camera changed across the 680px breakpoint (${JSON.stringify({
+    before: mobileResizeStartView, returned: returnedMobileView,
+  })})`);
+  assert(mobileResizeAnchorError < 0.2,
+    `mobile ${mode} responsive camera anchor drifted ${mobileResizeAnchorError.toFixed(4)} cells`);
 
   await evaluate(cdp, `window.__ANIFOR_INPUT_AUDIT__.clear(); window.__ANIFOR_INPUT_AUDIT__.resetView(); true`);
   await sleep(60);
@@ -3025,6 +3295,16 @@ async function auditMobile(cdp, mode, screenshot) {
     pinchPanX: round(pinch.view.panX, 3),
     pinchAnchorErrorCells: round(pinchAnchorError, 5),
     pinchStrayCells: pinch.occupied,
+    pinchBrushHandoff: `${handoffLine.start.x},${handoffLine.start.y}->${handoffLine.end.x},${handoffLine.end.y}`,
+    pinchBrushHandoffCells: handoffLine.occupied,
+    pinchBrushHandoffFootprints: handoffPaintedFootprints,
+    responsiveCamera: {
+      breakpoint: '390->700->390',
+      zoom: round(returnedMobileView.zoom, 4),
+      normalizedPanX: round(mobileNormalizedPanAfter.x, 5),
+      normalizedPanY: round(mobileNormalizedPanAfter.y, 5),
+      anchorErrorCells: round(mobileResizeAnchorError, 5),
+    },
     singleTouchCell: `${target.x},${target.y}`,
     paintedFootprints,
     continuousTouchCells: continuousTouch.occupied,
@@ -4593,6 +4873,14 @@ function assertPairedVisualRelief(results) {
     const ratio = canvasSample.rms / Math.max(0.03, webglSample.rms);
     assert(ratio >= 0.35 && ratio <= 3.0,
       `Canvas/WebGL ${name} contour-light response diverged (${canvasSample.rms}/${webglSample.rms})`);
+  }
+  for (const name of ['waterMetalContact', 'oilGlassContact', 'sandWaterContact']) {
+    const canvasSample = canvas.phaseContactLightingSamples.find((sample) => sample.name === name);
+    const webglSample = webgl.phaseContactLightingSamples.find((sample) => sample.name === name);
+    assert(canvasSample && webglSample, `paired phase-contact sample missing ${name}`);
+    const ratio = canvasSample.rgbRms / Math.max(0.03, webglSample.rgbRms);
+    assert(ratio >= 0.35 && ratio <= 3.0,
+      `Canvas/WebGL ${name} phase-contact response diverged (${canvasSample.rgbRms}/${webglSample.rgbRms})`);
   }
 }
 

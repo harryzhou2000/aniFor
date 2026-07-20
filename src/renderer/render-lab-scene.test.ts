@@ -123,6 +123,17 @@ describe('render lab scene', () => {
     expect(first.temperature()[370 * 612 + 290]).toBe(RENDER_LAB_AMBIENT_TEMPERATURE);
     expect(first.temperature()[370 * 612 + 330]).toBe(RENDER_LAB_AMBIENT_TEMPERATURE);
 
+    for (const [leftX, rightX, leftMaterial, rightMaterial] of [
+      [380, 408, Material.Water, Material.Metal],
+      [460, 488, Material.Oil, Material.Glass],
+      [540, 568, Material.Sand, Material.Water],
+    ] as const) {
+      expect(first.cells()[369 * 612 + leftX]).toBe(leftMaterial);
+      expect(first.cells()[369 * 612 + rightX]).toBe(rightMaterial);
+      expect(first.walls()[369 * 612 + leftX]).toBe(0);
+      expect(first.walls()[369 * 612 + rightX]).toBe(0);
+    }
+
     for (const [column, material] of RENDER_LAB_ENERGY_SAMPLES.entries()) {
       const left = 388 + column * 40;
       const top = 319;

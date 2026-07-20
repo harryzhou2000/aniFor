@@ -166,6 +166,13 @@ export function applyRenderLabScene(simulation: SimulationBackend): void {
   plot.rect(592, 194, 5, 147, Material.ELEC, 0.78, 683);
   plot.scatterLine(390, 354, 196, Material.PHOT, 0.18, 701);
 
+  // Exact cross-phase contacts isolate presentation grounding from bulk-field
+  // lighting. Their curved internal seams exercise liquid/rigid, oily/glassy,
+  // and settled-powder/liquid pairs without changing either material's support.
+  plot.contactCapsule(358, 360, 70, 19, 9, 393, Material.Water, Material.Metal);
+  plot.contactCapsule(438, 360, 70, 19, 9, 473, Material.Oil, Material.Glass);
+  plot.contactCapsule(518, 360, 70, 19, 9, 553, Material.Sand, Material.Water);
+
   // Paired cold/ambient/hot interiors exercise temperature styling without
   // coupling the native semantic smoke tests to this deterministic fixture.
   if (supportsFixtureTemperatures(simulation)) {
