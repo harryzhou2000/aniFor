@@ -6,6 +6,7 @@ import {
   CANVAS_CONTOUR_OUTPUT_SCALE,
   CanvasPhaseContourScratch,
   canvasLiquidMeniscusScale,
+  canvasSolidContourScale,
   type CanvasPhaseContourInput,
 } from './canvas-phase-contour';
 import { RenderOptics } from './render-optics';
@@ -123,15 +124,15 @@ describe('Canvas 2x phase contour scratch', () => {
       '1-grains': 'c912c4b1',
       '1-local': '1cc9387d',
       '1-smooth': '1a84d947',
-      '2-grains': 'c0fd7bd8',
-      '2-local': '7afefd06',
-      '2-smooth': '67658212',
-      '4-grains': '7779eba4',
-      '4-local': '10f53536',
-      '4-smooth': 'd74577d8',
-      '8-grains': '565a944a',
-      '8-local': 'f437399c',
-      '8-smooth': 'd8425e1e',
+      '2-grains': '969d5516',
+      '2-local': '14bdcae4',
+      '2-smooth': '8edc7c70',
+      '4-grains': 'f3b3924b',
+      '4-local': '134d7941',
+      '4-smooth': 'a18b22cb',
+      '8-grains': '4c41e7cd',
+      '8-local': '7a09bb53',
+      '8-smooth': '05b7100d',
     });
   });
 
@@ -261,6 +262,103 @@ describe('Canvas 2x phase contour scratch', () => {
     expect(peak).toBeLessThanOrEqual(12);
     const centre = (6 * curved.outputStride + 6) * 4;
     expect(curved.pixels.slice(centre, centre + 4)).toEqual(flat.pixels.slice(centre, centre + 4));
+  });
+
+  it('adds a signed family-aware solid contour bevel without changing support or interiors', () => {
+    expect(canvasSolidContourScale(1, 1, 1, RenderOptics.SmoothRigid)).toBe(1);
+    expect(canvasSolidContourScale(0.5, 1, 1, RenderOptics.SmoothRigid)).toBeGreaterThan(1);
+    expect(canvasSolidContourScale(0.5, -1, -1, RenderOptics.SmoothRigid)).toBeLessThan(1);
+    expect(canvasSolidContourScale(0.5, 1, 1, RenderOptics.TranslucentRigid)).toBeGreaterThan(
+      canvasSolidContourScale(0.5, 1, 1, RenderOptics.Organic),
+    );
+
+    const value = fixture(7, 7);
+    for (let y = 1; y <= 5; y++) for (let x = 1; x <= 5; x++) {
+      paint(value, x, y, Material.Metal);
+    }
+    const flat = new CanvasPhaseContourScratch();
+    const bevelled = new CanvasPhaseContourScratch();
+    flat.rasterize({
+      ...value.input, surfaceContourLighting: false,
+      solidContactDepth: false, solidCurvatureDepth: false,
+    });
+    bevelled.rasterize({
+      ...value.input, surfaceContourLighting: true,
+      solidContactDepth: false, solidCurvatureDepth: false,
+    });
+
+    let positive = 0;
+    let negative = 0;
+    let peak = 0;
+    for (let y = 0; y < bevelled.outputHeight; y++) for (let x = 0; x < bevelled.outputWidth; x++) {
+      const output = y * bevelled.outputStride + x;
+      const pixel = output * 4;
+      expect(bevelled.coverage[output]).toBe(flat.coverage[output]);
+      expect(bevelled.ownerMaterials[output]).toBe(flat.ownerMaterials[output]);
+      expect(bevelled.pixels[pixel + 3]).toBe(flat.pixels[pixel + 3]);
+      const delta = bevelled.pixels[pixel] - flat.pixels[pixel];
+      if (delta > 0) positive++;
+      if (delta < 0) negative++;
+      peak = Math.max(peak, Math.abs(delta));
+    }
+    expect(positive).toBeGreaterThan(0);
+    expect(negative).toBeGreaterThan(0);
+    expect(peak).toBeGreaterThanOrEqual(2);
+    expect(peak).toBeLessThanOrEqual(12);
+    for (let y = 6; y <= 7; y++) for (let x = 6; x <= 7; x++) {
+      expect(rgbaAt(bevelled, x, y)).toEqual(rgbaAt(flat, x, y));
+    }
+
+    bevelled.rasterize({
+      ...value.input, surfaceContourLighting: false,
+      solidContactDepth: false, solidCurvatureDepth: false,
+    });
+    expect(bevelled.pixels).toEqual(flat.pixels);
+    expect(bevelled.coverage).toEqual(flat.coverage);
+    expect(bevelled.ownerMaterials).toEqual(flat.ownerMaterials);
+  });
+
+  it('keeps the solid contour bevel off unlike seams, traits, emissive matter, and other phases', () => {
+    const seam = fixture(7, 5);
+    for (let y = 1; y <= 3; y++) for (let x = 1; x <= 5; x++) {
+      paint(seam, x, y, x <= 2 ? Material.Metal : Material.Glass);
+    }
+    const seamFlat = new CanvasPhaseContourScratch();
+    const seamBevelled = new CanvasPhaseContourScratch();
+    seamFlat.rasterize({
+      ...seam.input, surfaceContourLighting: false,
+      solidContactDepth: false, solidCurvatureDepth: false,
+    });
+    seamBevelled.rasterize({
+      ...seam.input, surfaceContourLighting: true,
+      solidContactDepth: false, solidCurvatureDepth: false,
+    });
+    for (let y = 4; y <= 5; y++) for (let x = 3; x <= 8; x++) {
+      expect(rgbaAt(seamBevelled, x, y), `unlike seam ${x},${y}`).toEqual(
+        rgbaAt(seamFlat, x, y),
+      );
+    }
+
+    for (const [material, byte] of [
+      [Material.Metal, 3],
+      [Material.Metal, 2],
+      [Material.Sand, -1],
+      [Material.Water, -1],
+      [Material.Smoke, -1],
+      [Material.Fire, -1],
+    ] as const) {
+      const value = fixture(5, 5);
+      for (let y = 1; y <= 3; y++) for (let x = 1; x <= 3; x++) paint(value, x, y, material);
+      const styleBytes = lookups.styleBytes.slice();
+      if (byte >= 0) styleBytes[material * 4 + byte] = 1;
+      const off = new CanvasPhaseContourScratch();
+      const on = new CanvasPhaseContourScratch();
+      off.rasterize({ ...value.input, styleBytes, surfaceContourLighting: false });
+      on.rasterize({ ...value.input, styleBytes, surfaceContourLighting: true });
+      expect(on.pixels, `${material}/${byte} pixels`).toEqual(off.pixels);
+      expect(on.coverage, `${material}/${byte} coverage`).toEqual(off.coverage);
+      expect(on.ownerMaterials, `${material}/${byte} owners`).toEqual(off.ownerMaterials);
+    }
   });
 
   it('uses the shared powder surface to smooth a shallow 4x slope without widening ownership', () => {

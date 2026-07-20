@@ -12,6 +12,7 @@ interface PresenterHarness {
   };
   configurePresentation: PixiFieldPresenter['configurePresentation'];
   setGasFieldLightingEnabled: PixiFieldPresenter['setGasFieldLightingEnabled'];
+  setSurfaceContourLightingEnabled: PixiFieldPresenter['setSurfaceContourLightingEnabled'];
   setRenderStallHandler: PixiFieldPresenter['setRenderStallHandler'];
   setTransform: PixiFieldPresenter['setTransform'];
   waitForFirstFrame: PixiFieldPresenter['waitForFirstFrame'];
@@ -53,11 +54,26 @@ describe('Pixi presenter startup configuration', () => {
       uSolidContactDepth: 0,
       uTranslucentLensShell: 1,
       uSolidCurvatureDepth: 0,
+      uSurfaceContourLighting: 1,
       uThermalMaterialStyling: 1,
       uEnergyCoreRelief: 0,
       uPowderStyle: powderRenderStyleValue('grains'),
     });
     expect(presenter.app.render).not.toHaveBeenCalled();
+  });
+
+  it('seeds and redraws the audit-settable surface contour light', () => {
+    const presenter = presenterHarness();
+
+    presenter.configurePresentation(
+      true, true, true, true, true, true, true, true, true, 'smooth', false,
+    );
+    expect(presenter.uniforms.uniforms.uSurfaceContourLighting).toBe(0);
+    expect(presenter.app.render).not.toHaveBeenCalled();
+
+    presenter.setSurfaceContourLightingEnabled(true);
+    expect(presenter.uniforms.uniforms.uSurfaceContourLighting).toBe(1);
+    expect(presenter.app.render).toHaveBeenCalledOnce();
   });
 
   it('keeps CSS camera transforms render-free while public style toggles redraw', () => {

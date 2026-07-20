@@ -156,6 +156,7 @@ export class MaterialRenderer {
   private solidContactDepthEnabled = true;
   private translucentLensShellEnabled = true;
   private solidCurvatureDepthEnabled = true;
+  private surfaceContourLightingEnabled = true;
   private thermalMaterialStylingEnabled = true;
   private energyCoreReliefEnabled = true;
   private powderRenderStyle: PowderRenderStyle = 'smooth';
@@ -332,6 +333,14 @@ export class MaterialRenderer {
     this.changed = true;
   }
 
+  setSurfaceContourLightingEnabled(enabled: boolean): void {
+    if (enabled === this.surfaceContourLightingEnabled) return;
+    this.surfaceContourLightingEnabled = enabled;
+    this.presenter?.setSurfaceContourLightingEnabled(enabled);
+    this.contourChunks.markAll();
+    this.changed = true;
+  }
+
   setThermalMaterialStylingEnabled(enabled: boolean): void {
     if (enabled === this.thermalMaterialStylingEnabled) return;
     this.thermalMaterialStylingEnabled = enabled;
@@ -500,6 +509,7 @@ export class MaterialRenderer {
       this.thermalMaterialStylingEnabled && this.simulation.temperature !== undefined,
       this.energyCoreReliefEnabled,
       this.powderRenderStyle,
+      this.surfaceContourLightingEnabled,
     );
     // Route subsequent dirty cells to the candidate while its first expensive
     // frame is in flight. The known-good Canvas remains mounted underneath;
@@ -1370,6 +1380,7 @@ export class MaterialRenderer {
           walls: this.renderedWalls,
           solidContactDepth: this.solidContactDepthEnabled,
           solidCurvatureDepth: this.solidCurvatureDepthEnabled,
+          surfaceContourLighting: this.surfaceContourLightingEnabled,
           worldWidth: width,
           worldHeight: height,
           chunkX,

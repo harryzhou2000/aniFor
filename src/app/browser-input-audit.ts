@@ -21,6 +21,7 @@ export interface BrowserInputAuditApi {
   setSolidContactDepth(enabled: boolean): void;
   setTranslucentLensShell(enabled: boolean): void;
   setSolidCurvatureDepth(enabled: boolean): void;
+  setSurfaceContourLighting(enabled: boolean): void;
   setThermalMaterialStyling(enabled: boolean): void;
   setEnergyCoreRelief(enabled: boolean): void;
   clear(): void;

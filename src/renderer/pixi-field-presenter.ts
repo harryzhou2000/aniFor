@@ -94,6 +94,7 @@ uniform float uTranslucentBackdropRefraction;
 uniform float uSolidContactDepth;
 uniform float uTranslucentLensShell;
 uniform float uSolidCurvatureDepth;
+uniform float uSurfaceContourLighting;
 uniform float uThermalMaterialStyling;
 uniform float uEnergyCoreRelief;
 uniform float uPowderStyle;
@@ -547,7 +548,10 @@ float solidInteriorMicroGain(float optics, float profile) {
 }
 float solidCurvatureGain(float optics, float profile) {
   if (optics == 7.0 || profile == 1.0) return 0.0;
-  if (optics == 8.0 || profile == 2.0) return 1.0;
+  // Runtime WebGL samples the curve at a different composed footprint from the
+  // fixed Canvas contour tiles. The small rigid-only calibration keeps the
+  // measured convex/concave response inside the paired visual contract.
+  if (optics == 8.0 || profile == 2.0) return 1.25;
   if (optics == 10.0 || profile == 5.0) return 0.82;
   if (optics == 11.0 || profile == 4.0) return 0.70;
   if (optics == 12.0) return 0.62;
@@ -1057,6 +1061,25 @@ void main() {
     float solidDiffuse = 0.51 + solidKey * 0.58 + solidFill * 0.11;
     color = base * mix(1.10, 0.82, solidDepth) * solidDiffuse;
     color += vec3(solidReliefTone * 1.35);
+    // Reuse the semantic Hermite normal as a small upper-left contour bevel.
+    // Phase-compatible unlike solids retain a dense union at their contact, so
+    // the contour band is zero there. RGB is the only affected output.
+    if (family == 0.0 && surfaceOnly < 0.5 && traits < 0.5 && !materialEmissive) {
+      float solidContourBand = smoothstep(0.08, 0.46, density)
+        * (1.0 - smoothstep(0.54, 0.92, density));
+      float solidContourFacing = clamp(
+        dot(normal.xy, vec2(-0.48, -0.68)), -1.0, 1.0
+      );
+      float solidContourGain = optics == 12.0 ? 0.078
+        : (optics == 8.0 ? 0.068
+        : (optics == 10.0 ? 0.064
+        : (optics == 11.0 ? 0.058
+        : (optics == 9.0 ? 0.052 : 0.046))));
+      color *= 1.0 + clamp(
+        solidContourFacing * solidContourBand * solidContourGain,
+        -0.080, 0.080
+      ) * uSurfaceContourLighting;
+    }
     if (!materialEmissive && surfaceOnly < 0.5) {
       float curvatureResponse = clamp(
         contourCurvature * 0.045 * solidCurvatureGain(optics, profile), -0.045, 0.045
@@ -1517,6 +1540,7 @@ export class PixiFieldPresenter {
       uSolidContactDepth: { value: 1, type: 'f32' },
       uTranslucentLensShell: { value: 1, type: 'f32' },
       uSolidCurvatureDepth: { value: 1, type: 'f32' },
+      uSurfaceContourLighting: { value: 1, type: 'f32' },
       // FieldRenderer turns this on only for backends that expose temperature;
       // byte zero must therefore never make legacy backends look frozen.
       uThermalMaterialStyling: { value: 0, type: 'f32' },
@@ -1711,6 +1735,7 @@ export class PixiFieldPresenter {
     thermalMaterialStylingEnabled: boolean,
     energyCoreReliefEnabled: boolean,
     powderRenderStyle: PowderRenderStyle,
+    surfaceContourLightingEnabled = true,
   ): void {
     const uniforms = this.uniforms.uniforms;
     uniforms.uGasFieldLighting = gasFieldLightingEnabled ? 1 : 0;
@@ -1720,6 +1745,7 @@ export class PixiFieldPresenter {
     uniforms.uSolidContactDepth = solidContactDepthEnabled ? 1 : 0;
     uniforms.uTranslucentLensShell = translucentLensShellEnabled ? 1 : 0;
     uniforms.uSolidCurvatureDepth = solidCurvatureDepthEnabled ? 1 : 0;
+    uniforms.uSurfaceContourLighting = surfaceContourLightingEnabled ? 1 : 0;
     uniforms.uThermalMaterialStyling = thermalMaterialStylingEnabled ? 1 : 0;
     uniforms.uEnergyCoreRelief = energyCoreReliefEnabled ? 1 : 0;
     uniforms.uPowderStyle = powderRenderStyleValue(powderRenderStyle);
@@ -1757,6 +1783,11 @@ export class PixiFieldPresenter {
 
   setSolidCurvatureDepthEnabled(enabled: boolean): void {
     this.uniforms.uniforms.uSolidCurvatureDepth = enabled ? 1 : 0;
+    this.renderApplication();
+  }
+
+  setSurfaceContourLightingEnabled(enabled: boolean): void {
+    this.uniforms.uniforms.uSurfaceContourLighting = enabled ? 1 : 0;
     this.renderApplication();
   }
 

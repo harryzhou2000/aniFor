@@ -235,6 +235,9 @@ export class Game {
       setSolidCurvatureDepth: (enabled) => {
         this.renderer.setSolidCurvatureDepthEnabled(enabled);
       },
+      setSurfaceContourLighting: (enabled) => {
+        this.renderer.setSurfaceContourLightingEnabled(enabled);
+      },
       setThermalMaterialStyling: (enabled) => {
         this.renderer.setThermalMaterialStylingEnabled(enabled);
       },

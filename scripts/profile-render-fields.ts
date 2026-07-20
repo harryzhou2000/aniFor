@@ -120,6 +120,11 @@ const contourLiquidPixels = seedPixels(contourLiquidMaterials);
 const contourPowderStability = new Uint8Array(width * height);
 const contourFlatStyleBytes = styleBytes.slice();
 contourFlatStyleBytes[Material.Water * 4 + 3] = 1;
+const contourSolidMaterials = new Uint8Array(width * height);
+for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) {
+  if (x % 3 < 2 && y % 3 < 2) contourSolidMaterials[y * width + x] = Material.Metal;
+}
+const contourSolidPixels = seedPixels(contourSolidMaterials);
 const contourScratch = new CanvasPhaseContourScratch();
 let contourChecksum = 0;
 
@@ -140,6 +145,34 @@ function profileLiquidContour(styles: Uint8Array): ReturnType<typeof sample> {
           chunkY,
           chunkWidth: Math.min(CANVAS_CONTOUR_CHUNK_SIZE, width - chunkX),
           chunkHeight: Math.min(CANVAS_CONTOUR_CHUNK_SIZE, height - chunkY),
+        });
+        checksum += contourScratch.pixels[0]
+          + contourScratch.pixels[contourScratch.pixels.length - 4];
+      }
+    }
+    contourChecksum = checksum;
+  });
+  return timing;
+}
+
+function profileSolidContour(surfaceContourLighting: boolean): ReturnType<typeof sample> {
+  const timing = sample(() => {
+    let checksum = 0;
+    for (let chunkY = 0; chunkY < height; chunkY += CANVAS_CONTOUR_CHUNK_SIZE) {
+      for (let chunkX = 0; chunkX < width; chunkX += CANVAS_CONTOUR_CHUNK_SIZE) {
+        contourScratch.rasterize({
+          materials: contourSolidMaterials,
+          sourcePixels: contourSolidPixels,
+          powderStability: contourPowderStability,
+          styleBytes,
+          paletteBytes,
+          worldWidth: width,
+          worldHeight: height,
+          chunkX,
+          chunkY,
+          chunkWidth: Math.min(CANVAS_CONTOUR_CHUNK_SIZE, width - chunkX),
+          chunkHeight: Math.min(CANVAS_CONTOUR_CHUNK_SIZE, height - chunkY),
+          surfaceContourLighting,
         });
         checksum += contourScratch.pixels[0]
           + contourScratch.pixels[contourScratch.pixels.length - 4];
@@ -393,6 +426,11 @@ console.log(JSON.stringify({
       fixture: 'repeating connected 2x2 Water islands',
       flatRgb: profileLiquidContour(contourFlatStyleBytes),
       meniscusRgb: profileLiquidContour(styleBytes),
+      solidBevel: {
+        fixture: 'repeating connected 2x2 Metal islands',
+        flatRgb: profileSolidContour(false),
+        bevelRgb: profileSolidContour(true),
+      },
     },
     atmosphereRelief: sample(() => {
       shadeCanvasAtmosphere(atmospherePixels, atmosphere.bytes, atmosphere.width, atmosphere.height);

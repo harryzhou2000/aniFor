@@ -91,6 +91,8 @@ export interface CanvasPhaseContourInput {
   readonly solidContactDepth?: boolean;
   /** Audit-only A/B switch; defaults to bounded analytic solid curvature. */
   readonly solidCurvatureDepth?: boolean;
+  /** Audit-only A/B switch; defaults to contour-local solid lighting. */
+  readonly surfaceContourLighting?: boolean;
   readonly worldWidth: number;
   readonly worldHeight: number;
   readonly chunkX: number;
@@ -111,7 +113,41 @@ export function canvasLiquidMeniscusScale(
   optics: number,
 ): number {
   if (optics === RenderOptics.Molten) return 1;
-  if (density <= 0.08 || density >= 0.92) return 1;
+  const gain = optics === RenderOptics.Aqueous ? 0.055
+    : optics === RenderOptics.Oily ? 0.045
+    : optics === RenderOptics.Corrosive ? 0.052
+    : 0.042;
+  return contourSurfaceLightScale(density, gradientX, gradientY, gain);
+}
+
+/**
+ * Bounded hue-preserving bevel for a solid's actual analytic silhouette.
+ * Unlike-solid contacts remain a full compatible field, so they cannot become
+ * an internal separator. Powder, wall, trait, and emissive eligibility belongs
+ * to the caller and therefore never reaches this scalar helper.
+ */
+export function canvasSolidContourScale(
+  density: number,
+  gradientX: number,
+  gradientY: number,
+  optics: number,
+): number {
+  const gain = optics === RenderOptics.TranslucentRigid ? 0.078
+    : optics === RenderOptics.SmoothRigid ? 0.068
+    : optics === RenderOptics.Device ? 0.064
+    : optics === RenderOptics.Radioactive ? 0.058
+    : optics === RenderOptics.Organic ? 0.052
+    : 0.046;
+  return contourSurfaceLightScale(density, gradientX, gradientY, gain);
+}
+
+function contourSurfaceLightScale(
+  density: number,
+  gradientX: number,
+  gradientY: number,
+  gain: number,
+): number {
+  if (density <= 0.08 || density >= 0.92 || gain <= 0) return 1;
   const gradientLengthSquared = gradientX * gradientX + gradientY * gradientY;
   if (gradientLengthSquared <= 1e-8) return 1;
   const contourBand = smoothstep(0.08, 0.46, density)
@@ -121,11 +157,7 @@ export function canvasLiquidMeniscusScale(
     (gradientX * LIQUID_LIGHT_X + gradientY * LIQUID_LIGHT_Y)
       / Math.sqrt(gradientLengthSquared),
   ));
-  const gain = optics === RenderOptics.Aqueous ? 0.055
-    : optics === RenderOptics.Oily ? 0.045
-    : optics === RenderOptics.Corrosive ? 0.052
-    : 0.042;
-  return 1 + Math.max(-0.06, Math.min(0.06, directional * contourBand * gain));
+  return 1 + Math.max(-0.08, Math.min(0.08, directional * contourBand * gain));
 }
 
 /**
@@ -291,6 +323,11 @@ export class CanvasPhaseContourScratch {
       && input.styleBytes[material * 4 + 3] === 0
       && materialOptics !== RenderOptics.Molten
       && this.isExposedConnectedLiquid(cellX + 1, cellY + 1, material);
+    const solidSurfaceBevel = (input.surfaceContourLighting ?? true)
+      && this.haloMaterials[haloIndex] !== 0
+      && phase === RenderPhase.Solid
+      && input.styleBytes[material * 4 + 2] === 0
+      && input.styleBytes[material * 4 + 3] === 0;
     const powderSurfaceDetailGate = phase === RenderPhase.Powder
       && powderStyle === 'smooth' && input.powderSurface
       ? this.powderSurfaceBulkDepth(
@@ -348,7 +385,7 @@ export class CanvasPhaseContourScratch {
         const density = top + (bottom - top) * weightY;
         let derivativeX = 0;
         let derivativeY = 0;
-        if (solidCurvatureDepth || exactSolidContact || liquidMeniscus) {
+        if (solidCurvatureDepth || exactSolidContact || liquidMeniscus || solidSurfaceBevel) {
           derivativeX = this.axisGeometry.derivative[subX];
           derivativeY = this.axisGeometry.derivative[subY];
         }
@@ -369,18 +406,38 @@ export class CanvasPhaseContourScratch {
             this.pixels[outputPixel + 2] = clampByte(this.pixels[outputPixel + 2] * scale);
           }
         }
+        let solidCross = 0;
+        let solidHorizontal = 0;
+        let solidVertical = 0;
+        let solidGradientX = 0;
+        let solidGradientY = 0;
+        if (solidSurfaceBevel || solidCurvatureDepth) {
+          solidCross = q11 - q10 - q01 + q00;
+          solidHorizontal = q10 - q00 + solidCross * weightY;
+          solidVertical = q01 - q00 + solidCross * weightX;
+          solidGradientX = solidHorizontal * derivativeX;
+          solidGradientY = solidVertical * derivativeY;
+        }
+        if (solidSurfaceBevel) {
+          const scale = canvasSolidContourScale(
+            density,
+            solidGradientX,
+            solidGradientY,
+            materialOptics,
+          );
+          if (scale !== 1) {
+            this.pixels[outputPixel] = clampByte(this.pixels[outputPixel] * scale);
+            this.pixels[outputPixel + 1] = clampByte(this.pixels[outputPixel + 1] * scale);
+            this.pixels[outputPixel + 2] = clampByte(this.pixels[outputPixel + 2] * scale);
+          }
+        }
         if (solidCurvatureDepth && density > 0.08 && density < 0.92) {
-          const cross = q11 - q10 - q01 + q00;
-          const horizontal = q10 - q00 + cross * weightY;
-          const vertical = q01 - q00 + cross * weightX;
-          const gradientX = horizontal * derivativeX;
-          const gradientY = vertical * derivativeY;
           const curvature = implicitContourCurvature(
-            gradientX,
-            gradientY,
-            horizontal * this.axisGeometry.secondDerivative[subX],
-            cross * derivativeX * derivativeY,
-            vertical * this.axisGeometry.secondDerivative[subY],
+            solidGradientX,
+            solidGradientY,
+            solidHorizontal * this.axisGeometry.secondDerivative[subX],
+            solidCross * derivativeX * derivativeY,
+            solidVertical * this.axisGeometry.secondDerivative[subY],
           );
           const response = Math.max(-0.045, Math.min(0.045, curvature * 0.045 * curvatureGain));
           this.pixels[outputPixel] = clampByte(this.pixels[outputPixel] * (1 + response));

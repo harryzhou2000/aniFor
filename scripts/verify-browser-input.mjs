@@ -38,8 +38,9 @@ async function main() {
     }, 15_000, 'Vite browser-audit server');
     const results = [];
     for (const mode of modes) results.push(await auditMode(mode));
-    if (!scaleEightOnly && !materialAtlasOnly) assertPairedVisualRelief(results);
-    if (!scaleEightOnly) assertPairedMaterialAtlas(results);
+    const reducedAudit = quickScreenshot || layoutOnly;
+    if (!scaleEightOnly && !materialAtlasOnly && !reducedAudit) assertPairedVisualRelief(results);
+    if (!scaleEightOnly && !reducedAudit) assertPairedMaterialAtlas(results);
     compactMaterialAtlasResults(results);
     console.log(JSON.stringify({ world: `${WORLD_WIDTH}x${WORLD_HEIGHT}`, results }, null, 2));
   } catch (error) {
@@ -316,7 +317,23 @@ async function auditMode(mode) {
     const repeatedFlatCurvatureCaptures = await waitForStablePageCapture(
       cdp, `${mode} repeated flat solid-curvature framebuffer`,
     );
-    await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setSolidCurvatureDepth(true); true');
+    await evaluate(cdp, `(() => {
+      window.__ANIFOR_INPUT_AUDIT__.setSolidCurvatureDepth(true);
+      window.__ANIFOR_INPUT_AUDIT__.setSurfaceContourLighting(false);
+      return true;
+    })()`);
+    const flatSurfaceContourCaptures = await waitForStablePageCapture(
+      cdp, `${mode} flat surface-contour framebuffer`,
+    );
+    await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setSurfaceContourLighting(true); true');
+    const litSurfaceContourCaptures = await waitForStablePageCapture(
+      cdp, `${mode} lit surface-contour framebuffer`,
+    );
+    await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setSurfaceContourLighting(false); true');
+    const repeatedFlatSurfaceContourCaptures = await waitForStablePageCapture(
+      cdp, `${mode} repeated flat surface-contour framebuffer`,
+    );
+    await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setSurfaceContourLighting(true); true');
     const powderStyleCaptures = {};
     const powderStyleSelection = {};
     for (const style of ['grains', 'local', 'smooth']) {
@@ -1200,6 +1217,62 @@ async function auditMode(mode) {
       sample.flatVisible === sample.curvedVisible
       && Math.abs(sample.flatWorldArea - sample.curvedWorldArea) <= 0.01
     )), `${mode}: curvature changed solid support (${JSON.stringify(curvatureSupportInvariantSamples)})`);
+    const surfaceContourLightingSamples = await sampleBackdropRefractionRegions(cdp, {
+      straight: flatSurfaceContourCaptures.capture.data,
+      refracted: litSurfaceContourCaptures.capture.data,
+      repeatedStraight: repeatedFlatSurfaceContourCaptures.capture.data,
+    }, [
+      { name: 'metalContourTop', x: 405, y: 219.5, radiusX: 6, radiusY: 1.5 },
+      { name: 'metalContourBottom', x: 405, y: 238.5, radiusX: 6, radiusY: 1.5 },
+      { name: 'glassContourTop', x: 158, y: 160.5, radiusX: 6, radiusY: 1.5 },
+      { name: 'dtecContourTop', x: 485, y: 294.5, radiusX: 6, radiusY: 1.5 },
+      { name: 'metalContourCore', x: 405, y: 229, radius: 3 },
+      { name: 'metalGlassContourSeam', x: 140, y: 172, radius: 2.5 },
+    ], canonicalCaptures.canvasRect);
+    const surfaceContourLighting = Object.fromEntries(
+      surfaceContourLightingSamples.map((sample) => [sample.name, sample]),
+    );
+    assert(surfaceContourLighting.metalContourTop.rms >= 0.05
+      && surfaceContourLighting.metalContourBottom.rms >= 0.05
+      && surfaceContourLighting.metalContourTop.signedMean > 0
+      && surfaceContourLighting.metalContourBottom.signedMean < 0
+      && surfaceContourLighting.metalContourTop.rgbPeak <= 18
+      && surfaceContourLighting.metalContourBottom.rgbPeak <= 18,
+    `${mode}: solid contour light lost its bipolar straight-edge bevel (${JSON.stringify(surfaceContourLightingSamples)})`);
+    assert(surfaceContourLighting.glassContourTop.rms >= 0.03
+      && surfaceContourLighting.dtecContourTop.rms >= 0.03,
+    `${mode}: family contour-light gains were lost (${JSON.stringify(surfaceContourLightingSamples)})`);
+    assert(surfaceContourLighting.metalContourCore.rgbPeak <= 1
+      && surfaceContourLighting.metalGlassContourSeam.rgbPeak <= 1,
+    `${mode}: solid contour light leaked into an interior or unlike seam (${JSON.stringify(surfaceContourLightingSamples)})`);
+    assert(surfaceContourLightingSamples.every((sample) => sample.repeatRgbPeak <= 1),
+      `${mode}: surface contour off-on-off sequence was not deterministic (${JSON.stringify(surfaceContourLightingSamples)})`);
+    const surfaceContourSupportRegions = [
+      { name: 'metalContourSupport', x: 405, y: 229, radiusX: 17.5, radiusY: 10.5, silhouette: true },
+      { name: 'dtecContourSupport', x: 485, y: 304, radiusX: 17.5, radiusY: 10.5, silhouette: true },
+      { name: 'metalGlassContourSupport', x: 141, y: 172, radiusX: 37, radiusY: 12.5, silhouette: true },
+    ];
+    const [flatSurfaceContourSupport, litSurfaceContourSupport] = await Promise.all([
+      samplePageRegions(
+        cdp, flatSurfaceContourCaptures.capture.data, surfaceContourSupportRegions,
+        blankCaptures.capture.data, blankCaptures.reference.data, canonicalCaptures.canvasRect,
+      ),
+      samplePageRegions(
+        cdp, litSurfaceContourCaptures.capture.data, surfaceContourSupportRegions,
+        blankCaptures.capture.data, blankCaptures.reference.data, canonicalCaptures.canvasRect,
+      ),
+    ]);
+    const surfaceContourSupportInvariantSamples = flatSurfaceContourSupport.map((flat, index) => ({
+      name: flat.name,
+      flatVisible: flat.visible,
+      litVisible: litSurfaceContourSupport[index].visible,
+      flatWorldArea: flat.worldArea,
+      litWorldArea: litSurfaceContourSupport[index].worldArea,
+    }));
+    assert(surfaceContourSupportInvariantSamples.every((sample) => (
+      sample.flatVisible === sample.litVisible
+      && Math.abs(sample.flatWorldArea - sample.litWorldArea) <= 0.01
+    )), `${mode}: surface contour lighting changed solid support (${JSON.stringify(surfaceContourSupportInvariantSamples)})`);
     const liquidColumnSamples = await sampleCanonicalRegions([
       { name: 'waterColumn', x: 224, y: 270, radius: 8 },
       { name: 'oilColumn', x: 263, y: 270, radius: 8 },
@@ -1325,6 +1398,8 @@ async function auditMode(mode) {
         lensSupportInvariantSamples,
         solidCurvatureSamples,
         curvatureSupportInvariantSamples,
+        surfaceContourLightingSamples,
+        surfaceContourSupportInvariantSamples,
         silhouetteSamples,
         liquidContourCrossings,
         liquidColumnSamples,
@@ -1615,6 +1690,8 @@ async function auditMode(mode) {
       lensSupportInvariantSamples,
       solidCurvatureSamples,
       curvatureSupportInvariantSamples,
+      surfaceContourLightingSamples,
+      surfaceContourSupportInvariantSamples,
       ...(canvasGasLightingRefresh ? { canvasGasLightingRefresh } : {}),
       liquidColumnSamples,
       liquidReliefSamples,
@@ -4506,6 +4583,16 @@ function assertPairedVisualRelief(results) {
     const ratio = canvasSample.rms / Math.max(0.05, webglSample.rms);
     assert(ratio >= 0.40 && ratio <= 2.5,
       `Canvas/WebGL ${name} curvature response diverged (${canvasSample.rms}/${webglSample.rms})`);
+  }
+  for (const name of [
+    'metalContourTop', 'metalContourBottom', 'glassContourTop', 'dtecContourTop',
+  ]) {
+    const canvasSample = canvas.surfaceContourLightingSamples.find((sample) => sample.name === name);
+    const webglSample = webgl.surfaceContourLightingSamples.find((sample) => sample.name === name);
+    assert(canvasSample && webglSample, `paired surface-contour sample missing ${name}`);
+    const ratio = canvasSample.rms / Math.max(0.03, webglSample.rms);
+    assert(ratio >= 0.35 && ratio <= 3.0,
+      `Canvas/WebGL ${name} contour-light response diverged (${canvasSample.rms}/${webglSample.rms})`);
   }
 }
 
