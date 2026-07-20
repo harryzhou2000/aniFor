@@ -149,6 +149,34 @@ describe('Canvas solid relief', () => {
     expect(Math.max(...edge)).toBeLessThanOrEqual(254);
   });
 
+  it('replaces neutral deep-body relief with bounded family-coloured crowns and pockets', () => {
+    const body = (relief: number, enabled = true, depth = 255) => {
+      const color = new Float32Array([120, 150, 180]);
+      applyCanvasSolidBodyOptics(
+        color, relief, 0, relief, true,
+        RenderProfile.Rigid, RenderOptics.SmoothRigid, depth, enabled,
+      );
+      return color;
+    };
+    const neutral = body(0);
+    const crown = body(7);
+    const pocket = body(-7);
+    const disabled = body(7, false);
+    const firstLayer = body(7, true, 6);
+    const firstLayerDisabled = body(7, false, 6);
+
+    expect(crown[2] - neutral[2]).toBeGreaterThan(crown[0] - neutral[0]);
+    expect(pocket[0] / neutral[0]).toBeLessThan(pocket[2] / neutral[2]);
+    expect(Math.max(...Array.from(crown, (channel, index) => Math.abs(channel - neutral[index]))))
+      .toBeLessThanOrEqual(10);
+    expect(Math.max(...Array.from(pocket, (channel, index) => Math.abs(channel - neutral[index]))))
+      .toBeLessThanOrEqual(10);
+    expect(crown).not.toEqual(disabled);
+    expect(Math.max(...Array.from(crown, (channel, index) => Math.abs(channel - disabled[index]))))
+      .toBeLessThanOrEqual(10);
+    expect(firstLayer).toEqual(firstLayerDisabled);
+  });
+
   it('gives Glass and Ice bounded opposing low-bias spectral bands only', () => {
     const glass = new Float32Array([120, 150, 180]);
     const ice = new Float32Array(glass);

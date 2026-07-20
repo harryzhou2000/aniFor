@@ -698,6 +698,28 @@ vec3 solidReliefParameters(float optics, float profile) {
   if (profile == 4.0) return vec3(3.0, -2.0, 5.5);
   return vec3(2.0, 1.0, 6.5);
 }
+vec3 solidBodyMacroKey(float optics) {
+  if (optics == 8.0) return vec3(0.3704, 0.6667, 1.0);
+  if (optics == 9.0) return vec3(0.5417, 1.0, 0.4583);
+  if (optics == 10.0) return vec3(0.2424, 0.6970, 1.0);
+  if (optics == 11.0) return vec3(0.2414, 1.0, 0.4828);
+  if (optics == 12.0) return vec3(0.2647, 0.6176, 1.0);
+  return vec3(0.80, 0.90, 1.0);
+}
+vec3 solidBodyMacroShadow(float optics) {
+  if (optics == 8.0) return vec3(0.94, 0.84, 0.70);
+  if (optics == 9.0) return vec3(0.94, 0.72, 0.96);
+  if (optics == 10.0) return vec3(1.00, 0.84, 0.62);
+  if (optics == 11.0) return vec3(0.96, 0.62, 0.92);
+  if (optics == 12.0) return vec3(1.00, 0.78, 0.54);
+  return vec3(0.88, 0.80, 0.68);
+}
+float solidBodyMacroGain(float optics) {
+  if (optics == 8.0 || optics == 11.0) return 9.36 / 255.0;
+  if (optics == 9.0) return 8.10 / 255.0;
+  if (optics == 10.0 || optics == 12.0) return 10.0 / 255.0;
+  return 7.40 / 255.0;
+}
 float solidInteriorMicroGain(float optics, float profile) {
   if (optics == 8.0 || (optics < 0.5 && profile == 2.0)) return 0.54;
   if (optics == 9.0 || (optics < 0.5 && profile == 3.0)) return 0.70;
@@ -1399,7 +1421,28 @@ void main() {
       color *= vec3(1.0) - thicknessAbsorption
         * (thicknessGain / 255.0 * shapedThickness * solidInterior);
     }
-    color += vec3(solidReliefTone * 1.35);
+    // Replace the old neutral macro-height band with a family-coloured crown
+    // reflection and pocket absorption. This reuses the existing relief and
+    // exact-species depth byte, changes RGB only, and adds no sample or target.
+    // The first interior layer and reconstructed cavity support remain exact.
+    if (uSolidOpticalDepth > 0.5 && solidOpticalDepth > 6.0 / 255.0
+      && solidInterior > 0.001 && surfaceOnly < 0.5) {
+      float macroStrength = solidReliefParameters(optics, profile).z;
+      if (macroStrength > 0.0) {
+        float macroDepth = smoothstep(6.0 / 255.0, 42.0 / 255.0, solidOpticalDepth);
+        float macroResponse = clamp(
+          solidReliefTone * 255.0 / macroStrength, -1.0, 1.0
+        ) * macroDepth;
+        float macroGain = solidBodyMacroGain(optics);
+        if (macroResponse > 0.0) {
+          color += (vec3(1.0) - clamp(color, 0.0, 1.0))
+            * solidBodyMacroKey(optics) * macroResponse * macroGain * 0.55;
+        } else {
+          color *= vec3(1.0) - solidBodyMacroShadow(optics)
+            * (-macroResponse) * macroGain;
+        }
+      }
+    }
     // Reuse the semantic Hermite normal as a small family-coloured key/fill
     // shell. Unlike-solid contacts retain a dense union, so no internal seam
     // enters the contour band. This changes RGB only and adds no field sample.

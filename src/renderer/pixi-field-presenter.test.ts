@@ -400,7 +400,7 @@ describe('Pixi presenter startup configuration', () => {
     const sampleStart = source.indexOf('// Solid thickness is the third phase-exclusive occupant');
     const sampleEnd = source.indexOf('if (family == 4.0 && boundaryStability', sampleStart);
     const shadingStart = source.indexOf('if (uSolidOpticalDepth > 0.5');
-    const shadingEnd = source.indexOf('color += vec3(solidReliefTone', shadingStart);
+    const shadingEnd = source.indexOf('// Reuse the semantic Hermite normal', shadingStart);
     const sample = source.slice(sampleStart, sampleEnd);
     const shading = source.slice(shadingStart, shadingEnd);
 
@@ -409,6 +409,10 @@ describe('Pixi presenter startup configuration', () => {
     expect(sample).not.toContain('uSolidOpticalDepthTexture');
     expect(shading).toContain('(solidOpticalDepth * 255.0 - 6.0) / 249.0');
     expect(shading).toContain('thicknessAbsorption');
+    expect(shading).toContain('solidBodyMacroKey(optics)');
+    expect(shading).toContain('solidBodyMacroShadow(optics)');
+    expect(shading).toContain('solidReliefTone * 255.0 / macroStrength');
+    expect(shading).toContain('surfaceOnly < 0.5');
     expect(shading).not.toContain('texture(');
     expect(shading).not.toMatch(/\balpha\s*[+*]?=/);
     expect(source).not.toContain('uSolidOpticalDepthTexture');

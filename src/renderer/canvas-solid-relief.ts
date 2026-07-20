@@ -161,8 +161,10 @@ export function applyCanvasSolidBodyOptics(
   opticalDepthByte = 0,
   opticalDepthEnabled = true,
 ): void {
-  applyCanvasSolidLighting(color, surfaceLight);
   const index = optics * PROFILE_COUNT + profile;
+  // Dense bodies replace the old neutral macro band with the family-coloured
+  // response below. Exposed contours keep their established scalar light.
+  applyCanvasSolidLighting(color, denseInterior ? surfaceLight - relief : surfaceLight);
   if (!denseInterior) {
     const rim = Math.max(0, Math.min(1, normalLight / 18)) * BODY_EDGE[index];
     color[0] += BODY_TINT_RED[index] * rim;
@@ -192,6 +194,37 @@ export function applyCanvasSolidBodyOptics(
     color[0] *= 1 - BODY_ABSORB_RED[index] * thickness;
     color[1] *= 1 - BODY_ABSORB_GREEN[index] * thickness;
     color[2] *= 1 - BODY_ABSORB_BLUE[index] * thickness;
+
+    // Turn the existing signed, family-directed macro height into a restrained
+    // chromatic reflection on crowns and spectral absorption in pockets. The
+    // response starts beyond the protected first layer and reaches full weight
+    // after seven exact-species cells. Screen-like highlights and multiplicative
+    // shadows each remain below ten bytes, so this reads at fit view without
+    // flattening material texture or clipping a channel.
+    const reliefStrength = RELIEF_STRENGTH[index];
+    if (reliefStrength > 0 && relief !== 0) {
+      const depthProgress = Math.min(1, Math.max(0, (opticalDepthByte - 6) / 36));
+      const depthSupport = depthProgress * depthProgress * (3 - 2 * depthProgress);
+      const signedResponse = Math.max(-1, Math.min(1, relief / reliefStrength)) * depthSupport;
+      const responseBytes = Math.min(10, 6 + BODY_SPECULAR[index] * 1.4);
+      if (signedResponse > 0) {
+        const tintPeak = Math.max(
+          BODY_TINT_RED[index], BODY_TINT_GREEN[index], BODY_TINT_BLUE[index],
+        );
+        // A crown is a reflected fill, not emitted light. Keep it below the
+        // pocket response so deep radioactive/device bodies still read as
+        // optically thick across a complete macro wave.
+        const highlight = signedResponse * responseBytes * 0.55;
+        color[0] += (255 - color[0]) / 255 * BODY_TINT_RED[index] / tintPeak * highlight;
+        color[1] += (255 - color[1]) / 255 * BODY_TINT_GREEN[index] / tintPeak * highlight;
+        color[2] += (255 - color[2]) / 255 * BODY_TINT_BLUE[index] / tintPeak * highlight;
+      } else if (signedResponse < 0) {
+        const shadow = -signedResponse * responseBytes / 255;
+        color[0] *= 1 - BODY_ABSORB_RED[index] * shadow;
+        color[1] *= 1 - BODY_ABSORB_GREEN[index] * shadow;
+        color[2] *= 1 - BODY_ABSORB_BLUE[index] * shadow;
+      }
+    }
   }
   compressSolidPeak(color);
 }
