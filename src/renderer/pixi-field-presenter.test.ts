@@ -22,6 +22,7 @@ interface PresenterHarness {
   setSolidFieldLightingEnabled: PixiFieldPresenter['setSolidFieldLightingEnabled'];
   setLiquidSilhouetteCohesionEnabled: PixiFieldPresenter['setLiquidSilhouetteCohesionEnabled'];
   setRenderStallHandler: PixiFieldPresenter['setRenderStallHandler'];
+  forceEightXRenderStallForAudit: PixiFieldPresenter['forceEightXRenderStallForAudit'];
   setTransform: PixiFieldPresenter['setTransform'];
   waitForFirstFrame: PixiFieldPresenter['waitForFirstFrame'];
   enableWebGLPresentationTiming: PixiFieldPresenter['enableWebGLPresentationTiming'];
@@ -51,6 +52,9 @@ function presenterHarness(): PresenterHarness {
     webGLTimingSequence: 0,
     webGLTimingFenceStartedAt: 0,
     webGLTimingFencePoll: 0,
+    renderFencePoll: 0,
+    renderQueued: false,
+    renderFenceStallForcedForAudit: false,
   });
   return presenter;
 }
@@ -621,5 +625,45 @@ describe('Pixi presenter startup configuration', () => {
     expect(gl.deleteSync).toHaveBeenCalledWith(fence);
     expect(gl.clientWaitSync).not.toHaveBeenCalled();
     expect(presenter.app.render).not.toHaveBeenCalled();
+  });
+
+  it('lets the explicit browser audit exercise the production 8x stall branch', () => {
+    let scheduled: FrameRequestCallback | undefined;
+    vi.stubGlobal('requestAnimationFrame', vi.fn((callback: FrameRequestCallback) => {
+      scheduled = callback;
+      return 31;
+    }));
+    vi.stubGlobal('cancelAnimationFrame', vi.fn());
+    const healthyFence = {} as WebGLSync;
+    const fence = {} as WebGLSync;
+    const gl = {
+      SYNC_GPU_COMMANDS_COMPLETE: 0x9117,
+      fenceSync: vi.fn(() => fence),
+      deleteSync: vi.fn(),
+    };
+    const stalled = vi.fn();
+    const presenter = presenterHarness();
+    Object.assign(presenter, {
+      outputScale: 8,
+      firstFrameReady: true,
+      renderFence: healthyFence,
+      renderFenceStartedAt: performance.now(),
+      app: { ...presenter.app, renderer: { gl } },
+    });
+    presenter.setRenderStallHandler(stalled);
+
+    expect(presenter.forceEightXRenderStallForAudit()).toBe(true);
+    expect(gl.fenceSync).toHaveBeenCalledWith(gl.SYNC_GPU_COMMANDS_COMPLETE, 0);
+    expect(gl.deleteSync).toHaveBeenNthCalledWith(1, healthyFence);
+    expect(gl.deleteSync).toHaveBeenCalledTimes(1);
+    expect(stalled).not.toHaveBeenCalled();
+
+    scheduled?.(performance.now());
+
+    expect(gl.deleteSync).toHaveBeenNthCalledWith(2, fence);
+    expect(stalled).toHaveBeenCalledOnce();
+
+    Object.assign(presenter, { outputScale: 4 });
+    expect(presenter.forceEightXRenderStallForAudit()).toBe(false);
   });
 });

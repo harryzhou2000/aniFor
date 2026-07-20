@@ -1713,6 +1713,7 @@ export class PixiFieldPresenter {
   private renderFenceStartedAt = 0;
   private renderQueued = false;
   private renderFencePoll = 0;
+  private renderFenceStallForcedForAudit = false;
   private firstFrameReady = false;
   private firstFrameFailed = false;
   private readonly firstFrameWaiters = new Set<(ready: boolean) => void>();
@@ -2004,6 +2005,33 @@ export class PixiFieldPresenter {
 
   setRenderStallHandler(handler: () => void): void {
     this.renderStallHandler = handler;
+  }
+
+  /**
+   * Exercises the real true-8x stalled-fence recovery branch for the explicit
+   * browser audit. The production watchdog is otherwise impractical to prove
+   * deterministically: a healthy GPU normally signals long before 30 seconds.
+   */
+  forceEightXRenderStallForAudit(): boolean {
+    if (this.outputScale !== 8 || !this.firstFrameReady
+      || this.destroyed || this.contextLost) return false;
+    const gl = this.webGLContext();
+    if (!gl) return false;
+    // The audit may arrive while the latest-wins path still owns a healthy
+    // fence. Removing a sync object does not cancel submitted GPU commands;
+    // replace it with the forced-stall audit fence so the same recovery
+    // branch is deterministic regardless of capture timing.
+    if (this.renderFence) this.releaseRenderFence();
+    let fence: WebGLSync | null = null;
+    try { fence = gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE, 0); }
+    catch { return false; }
+    if (!fence) return false;
+    this.renderFence = fence;
+    this.renderFenceStartedAt = performance.now();
+    this.renderFenceStallForcedForAudit = true;
+    this.renderQueued = true;
+    this.scheduleEightXRenderPoll();
+    return true;
   }
 
   isContextLost(): boolean { return this.contextLost; }
@@ -2353,8 +2381,9 @@ export class PixiFieldPresenter {
   private prepareEightXRender(): boolean {
     const fence = this.renderFence;
     if (!fence) return true;
-    if (this.firstFrameReady && this.renderFenceStartedAt > 0
-      && performance.now() - this.renderFenceStartedAt >= WEBGL_EIGHT_X_FRAME_STALL_MS) {
+    if (this.firstFrameReady && (this.renderFenceStallForcedForAudit
+      || (this.renderFenceStartedAt > 0
+        && performance.now() - this.renderFenceStartedAt >= WEBGL_EIGHT_X_FRAME_STALL_MS))) {
       this.releaseRenderFence();
       this.renderStallHandler?.();
       return false;
@@ -2442,6 +2471,7 @@ export class PixiFieldPresenter {
     }
     this.renderFence = undefined;
     this.renderFenceStartedAt = 0;
+    this.renderFenceStallForcedForAudit = false;
     this.renderQueued = false;
   }
 

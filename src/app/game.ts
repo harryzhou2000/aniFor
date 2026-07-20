@@ -288,6 +288,7 @@ export class Game {
       canvasPresentationTiming: () => this.renderer.getCanvasPresentationTiming(),
       requestWebGLPresentationTimingSample: () => this.renderer.requestWebGLPresentationTimingSample(),
       webGLPresentationTiming: () => this.renderer.getWebGLPresentationTiming(),
+      forceEightXRenderStall: () => this.renderer.forceEightXRenderStallForAudit(),
     };
   }
 

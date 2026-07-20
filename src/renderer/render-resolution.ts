@@ -15,6 +15,12 @@ export const WEBGL_EIGHT_X_PROMOTION_TIMEOUT_MS = 30_000;
 export const WEBGL_EIGHT_X_FRAME_STALL_MS = 30_000;
 
 export interface RenderSize { readonly width: number; readonly height: number }
+export interface WebGLTargetLimits {
+  readonly maxRenderbufferSize: number;
+  readonly maxViewportWidth: number;
+  readonly maxViewportHeight: number;
+  readonly maxTextureSize: number;
+}
 
 /** Returns backing pixels without changing the logical simulation dimensions. */
 export function backingSize(width: number, height: number, scale = FIELD_OUTPUT_SCALE): RenderSize {
@@ -51,6 +57,37 @@ export function safeWebGLOutputScale(
     const size = backingSize(width, height, scale);
     if (size.width <= maxDimension && size.height <= maxDimension
       && size.width * size.height <= maxPixels) return scale;
+  }
+  return 1;
+}
+
+/**
+ * Applies real device limits without collapsing asymmetric viewport axes.
+ * True 8× uses the direct screen mesh; 1×–4× additionally require a Pixi
+ * filter texture, so those candidates must fit MAX_TEXTURE_SIZE as well.
+ */
+export function safeDeviceWebGLOutputScale(
+  width: number,
+  height: number,
+  requested: FieldOutputScale,
+  limits: WebGLTargetLimits,
+  maxPixels = WEBGL_OUTPUT_PIXEL_BUDGET,
+  maxDimension = WEBGL_OUTPUT_DIMENSION_BUDGET,
+): FieldOutputScale {
+  const maxWidth = Math.min(
+    maxDimension, limits.maxRenderbufferSize, limits.maxViewportWidth,
+  );
+  const maxHeight = Math.min(
+    maxDimension, limits.maxRenderbufferSize, limits.maxViewportHeight,
+  );
+  const candidates: readonly FieldOutputScale[] = [8, 4, 2, 1];
+  for (const scale of candidates) {
+    if (scale > requested) continue;
+    const size = backingSize(width, height, scale);
+    const filterTextureFits = scale === 8
+      || (size.width <= limits.maxTextureSize && size.height <= limits.maxTextureSize);
+    if (size.width <= maxWidth && size.height <= maxHeight
+      && size.width * size.height <= maxPixels && filterTextureFits) return scale;
   }
   return 1;
 }

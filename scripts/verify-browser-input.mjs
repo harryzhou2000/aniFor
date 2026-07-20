@@ -3348,7 +3348,7 @@ async function auditRenderScaleEight(cdp, dpr) {
       // True 8x keeps one 15-million-fragment frame behind a GPU fence and
       // coalesces later mutations. Wait for that latest queued frame rather
       // than treating the previously completed framebuffer as a missed click.
-      settleTimeoutMs: 2_500,
+      settleTimeoutMs: 12_000,
     },
   ))[0];
   await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.resetView(); true');
@@ -3482,7 +3482,14 @@ async function auditRenderScaleEight(cdp, dpr) {
   const materialAtlasStress = await auditEightXMaterialAtlasStress(
     cdp, blankCapture.capture.data, geometry.canvas,
   );
-  const contextLossRecovery = await auditEightXContextLossRecovery(cdp, geometry.canvas);
+  const forcedStallRecovery = await auditEightXFailureRecovery(cdp, geometry.canvas, 'stall');
+  const contextLossGeometry = await navigateEightXRecoveryPage(cdp, 'context-loss-recovery');
+  assertCanvasRectsEqual(
+    geometry.canvas, contextLossGeometry.canvas, 'renderScale=8 recovery reload CSS geometry',
+  );
+  const contextLossRecovery = await auditEightXFailureRecovery(
+    cdp, contextLossGeometry.canvas, 'context-loss',
+  );
   return {
     requested: backend.requestedOutputScale,
     effective: backend.outputScale,
@@ -3503,6 +3510,7 @@ async function auditRenderScaleEight(cdp, dpr) {
       wheelAnchorError: round(grainAnchorError, 4),
     },
     materialAtlasStress,
+    forcedStallRecovery,
     contextLossRecovery,
   };
 }
@@ -3558,7 +3566,28 @@ async function auditEightXMaterialAtlasStress(cdp, blankBase64, canvasRect) {
   };
 }
 
-async function auditEightXContextLossRecovery(cdp, canvasRect) {
+async function navigateEightXRecoveryPage(cdp, auditStage) {
+  const query = new URLSearchParams({
+    scene: 'render-lab', inputAudit: '1', renderScale: '8', auditStage,
+  });
+  await cdp.send('Page.navigate', { url: `${ORIGIN}/?${query}` });
+  await waitFor(() => evaluate(cdp, `(() => {
+    const parameters = new URLSearchParams(location.search);
+    return parameters.get('renderScale') === '8'
+      && parameters.get('auditStage') === ${JSON.stringify(auditStage)}
+      && Boolean(window.__ANIFOR_INPUT_AUDIT__ && document.documentElement);
+  })()`), 15_000, `renderScale=8 ${auditStage} input audit API`);
+  await waitFor(() => evaluate(cdp,
+    `window.__ANIFOR_INPUT_AUDIT__.backend().backend === 'webgl'`),
+  45_000, `renderScale=8 ${auditStage} WebGL backend`);
+  return waitForStableCanvas(
+    cdp, 1280, 720, undefined, 45_000, `renderScale=8 ${auditStage} geometry`,
+  );
+}
+
+async function auditEightXFailureRecovery(cdp, canvasRect, failure) {
+  const failureLabel = failure === 'stall' ? 'forced-stall' : 'context-loss';
+  const expectedReason = failure === 'stall' ? 'webgl-timeout' : 'webgl-context-lost';
   const recoveryCell = { x: 306, y: 192 };
   await evaluate(cdp, `(() => {
     const audit = window.__ANIFOR_INPUT_AUDIT__;
@@ -3576,7 +3605,7 @@ async function auditEightXContextLossRecovery(cdp, canvasRect) {
   await mouseClick(cdp, point.x, point.y, 'left');
   await waitFor(() => evaluate(cdp,
     `window.__ANIFOR_INPUT_AUDIT__.cell(${recoveryCell.x}, ${recoveryCell.y}) === 164`),
-  5_000, 'renderScale=8 context-loss recovery marker');
+  5_000, `renderScale=8 ${failureLabel} recovery marker`);
 
   // Keep a non-default camera state across recovery. Backing replacement must
   // not reset or reinterpret the CSS-pixel transform.
@@ -3587,26 +3616,30 @@ async function auditEightXContextLossRecovery(cdp, canvasRect) {
   const beforeView = await waitFor(() => evaluate(cdp, `(() => {
     const view = window.__ANIFOR_INPUT_AUDIT__.viewState();
     return view.zoom > 1.2 ? view : false;
-  })()`), 5_000, 'renderScale=8 pre-loss camera');
+  })()`), 5_000, `renderScale=8 ${failureLabel} pre-failure camera`);
   const beforeGeometry = await metrics(cdp);
 
-  const loss = await evaluate(cdp, `(() => {
-    const canvas = document.querySelector('canvas[data-renderer="semantic-field-webgl"]');
-    if (!(canvas instanceof HTMLCanvasElement)) return { requested: false, reason: 'missing-canvas' };
-    const context = canvas.getContext('webgl2') || canvas.getContext('webgl');
-    const extension = context?.getExtension('WEBGL_lose_context');
-    if (!extension) return { requested: false, reason: 'missing-extension' };
-    extension.loseContext();
-    return { requested: true };
-  })()`);
-  assert(loss.requested,
-    `renderScale=8 could not exercise WebGL context loss (${JSON.stringify(loss)})`);
+  const failureRequest = failure === 'stall'
+    ? await evaluate(cdp, `(() => ({
+      requested: window.__ANIFOR_INPUT_AUDIT__.forceEightXRenderStall(),
+    }))()`)
+    : await evaluate(cdp, `(() => {
+      const canvas = document.querySelector('canvas[data-renderer="semantic-field-webgl"]');
+      if (!(canvas instanceof HTMLCanvasElement)) return { requested: false, reason: 'missing-canvas' };
+      const context = canvas.getContext('webgl2') || canvas.getContext('webgl');
+      const extension = context?.getExtension('WEBGL_lose_context');
+      if (!extension) return { requested: false, reason: 'missing-extension' };
+      extension.loseContext();
+      return { requested: true };
+    })()`);
+  assert(failureRequest.requested,
+    `renderScale=8 could not exercise ${failureLabel} (${JSON.stringify(failureRequest)})`);
 
   const backend = await waitFor(() => evaluate(cdp, `(() => {
     const backend = window.__ANIFOR_INPUT_AUDIT__.backend();
-    return backend.backend === 'canvas2d' && backend.reason === 'webgl-context-lost'
+    return backend.backend === 'canvas2d' && backend.reason === ${JSON.stringify(expectedReason)}
       ? backend : false;
-  })()`), 15_000, 'renderScale=8 bounded Canvas recovery');
+  })()`), 15_000, `renderScale=8 ${failureLabel} bounded Canvas recovery`);
   const recovered = await waitFor(async () => {
     const current = await metrics(cdp);
     const view = await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.viewState()');
@@ -3621,12 +3654,12 @@ async function auditEightXContextLossRecovery(cdp, canvasRect) {
       && Math.abs(view.panX - beforeView.panX) < 1e-9
       && Math.abs(view.panY - beforeView.panY) < 1e-9
       ? current : false;
-  }, 15_000, 'renderScale=8 context-loss Canvas geometry');
+  }, 15_000, `renderScale=8 ${failureLabel} Canvas geometry`);
   assert(backend.requestedOutputScale === 8 && backend.outputScale === 2,
     `renderScale=8 recovery reported wrong scale (${JSON.stringify(backend)})`);
-  assertGeometry(recovered, 'renderScale=8 context-loss Canvas', 2);
+  assertGeometry(recovered, `renderScale=8 ${failureLabel} Canvas`, 2);
   assertCanvasRectsEqual(
-    beforeGeometry.canvas, recovered.canvas, 'renderScale=8 context-loss camera geometry',
+    beforeGeometry.canvas, recovered.canvas, `renderScale=8 ${failureLabel} camera geometry`,
   );
   const after = await evaluate(cdp, `(() => ({
     cell: window.__ANIFOR_INPUT_AUDIT__.cell(${recoveryCell.x}, ${recoveryCell.y}),
@@ -3643,7 +3676,7 @@ async function auditEightXContextLossRecovery(cdp, canvasRect) {
     && Math.abs(after.view.panY - beforeView.panY) < 1e-9,
   `renderScale=8 recovery changed camera (${JSON.stringify({ beforeView, after: after.view })})`);
   const footprint = await capturePaintedFootprints(
-    cdp, [recoveryCell], 'renderScale=8 context-loss Canvas', 1.5, 1.25,
+    cdp, [recoveryCell], `renderScale=8 ${failureLabel} Canvas`, 1.5, 1.25,
   );
   return {
     backend,

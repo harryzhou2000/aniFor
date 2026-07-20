@@ -5,7 +5,8 @@ import { contentBoxFromBounds, viewportToClient } from './client-coordinate-map'
 import type { PixiFieldPresenter, WebGLPresentationTiming } from './pixi-field-presenter';
 import {
   backingSize, CANVAS_FALLBACK_DIMENSION_BUDGET, CANVAS_FALLBACK_PIXEL_BUDGET,
-  resolveFieldOutputScale, safeWebGLOutputScale, webGLPromotionTimeout, type FieldOutputScale,
+  resolveFieldOutputScale, safeDeviceWebGLOutputScale, safeWebGLOutputScale,
+  webGLPromotionTimeout, type FieldOutputScale,
 } from './render-resolution';
 import {
   canvasAtmosphereAlphaAtWorldCell, canvasGasSemanticAccentAlpha, shadeCanvasAtmosphere,
@@ -52,7 +53,7 @@ import { RenderOptics } from './render-optics';
 import { receivesSurfaceLight, renderPhase, RenderPhase, RenderProfile } from './render-profile';
 import { semanticRenderHeat } from './semantic-field';
 import { compositePixel } from './rgba-composite';
-import { forceCanvas2D, supportsWebGL } from './webgl-support';
+import { forceCanvas2D, probeWebGLCapabilities } from './webgl-support';
 import { contourLight, materialNeighbourMask, neighbourDensity } from './volumetric-field';
 import { updateBoundaryStabilityRect } from './boundary-stability-field';
 import {
@@ -117,6 +118,7 @@ export class MaterialRenderer {
   private readonly requestedOutputScale: FieldOutputScale;
   private readonly outputScale: FieldOutputScale;
   private readonly webGLOutputScale: FieldOutputScale;
+  private readonly webGLAvailable: boolean;
   private readonly contourScratch: CanvasPhaseContourScratch;
   private readonly contourChunks: DirtyChunkGrid;
   private readonly boundaryDirtyMarker = {
@@ -177,16 +179,21 @@ export class MaterialRenderer {
 
   constructor(private readonly host: HTMLElement, private readonly simulation: SimulationBackend) {
     this.requestedOutputScale = resolveFieldOutputScale();
-    this.webGLOutputScale = safeWebGLOutputScale(
-      simulation.width, simulation.height, this.requestedOutputScale,
-    );
+    const forcedCanvas = forceCanvas2D();
+    const webGLCapabilities = forcedCanvas ? undefined : probeWebGLCapabilities();
+    this.webGLAvailable = webGLCapabilities?.supported === true;
+    this.webGLOutputScale = webGLCapabilities?.supported
+      ? safeDeviceWebGLOutputScale(
+        simulation.width, simulation.height, this.requestedOutputScale, webGLCapabilities,
+      )
+      : 1;
     // A true 8x WebGL target already approaches 60 MiB. Keep its temporary
     // compatibility view at 2x so cold promotion does not also retain two 4x
     // Canvas colour targets. Explicit forced-Canvas mode remains a true 8x
     // diagnostic; ordinary 1x/2x/4x requests use the bounded fallback policy.
-    const fallbackRequestedScale = !forceCanvas2D() && this.requestedOutputScale === 8
+    const fallbackRequestedScale = !forcedCanvas && this.requestedOutputScale === 8
       ? 2 : this.requestedOutputScale;
-    this.outputScale = forceCanvas2D() ? this.requestedOutputScale : safeWebGLOutputScale(
+    this.outputScale = forcedCanvas ? this.requestedOutputScale : safeWebGLOutputScale(
       simulation.width, simulation.height, fallbackRequestedScale,
       CANVAS_FALLBACK_PIXEL_BUDGET, CANVAS_FALLBACK_DIMENSION_BUDGET,
     );
@@ -204,7 +211,7 @@ export class MaterialRenderer {
 
   async init(): Promise<void> {
     const forcedCanvas = forceCanvas2D();
-    const webglAvailable = !forcedCanvas && supportsWebGL();
+    const webglAvailable = !forcedCanvas && this.webGLAvailable;
     if (webglAvailable) {
       this.setBackend({ backend: 'canvas2d', label: 'Canvas 2D', reason: 'webgl-starting' });
       this.initFallback();
@@ -289,6 +296,10 @@ export class MaterialRenderer {
 
   getWebGLPresentationTiming(): WebGLPresentationTiming | undefined {
     return this.presenter?.getWebGLPresentationTiming();
+  }
+
+  forceEightXRenderStallForAudit(): boolean {
+    return this.presenter?.forceEightXRenderStallForAudit() ?? false;
   }
 
   setGasFieldLightingEnabled(enabled: boolean): void {

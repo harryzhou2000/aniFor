@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
-  backingSize, FIELD_OUTPUT_SCALE, resolveFieldOutputScale, safeWebGLOutputScale,
+  backingSize, FIELD_OUTPUT_SCALE, resolveFieldOutputScale, safeDeviceWebGLOutputScale,
+  safeWebGLOutputScale,
   WEBGL_EIGHT_X_FRAME_STALL_MS, WEBGL_EIGHT_X_PROMOTION_TIMEOUT_MS,
-  WEBGL_PROMOTION_TIMEOUT_MS, webGLPromotionTimeout,
+  WEBGL_OUTPUT_PIXEL_BUDGET, WEBGL_PROMOTION_TIMEOUT_MS, webGLPromotionTimeout,
 } from './render-resolution';
 
 describe('field render resolution', () => {
@@ -34,6 +35,30 @@ describe('field render resolution', () => {
     expect(safeWebGLOutputScale(1_200, 800, 8)).toBe(4);
     expect(safeWebGLOutputScale(612, 384, 8, 2_000_000, 2_048)).toBe(2);
     expect(safeWebGLOutputScale(612, 384, 1, 1, 1)).toBe(1);
+  });
+
+  it('selects 4x immediately on a 4096-limited device instead of attempting 8x', () => {
+    expect(safeWebGLOutputScale(612, 384, 8, WEBGL_OUTPUT_PIXEL_BUDGET, 4096)).toBe(4);
+    expect(safeWebGLOutputScale(612, 384, 8, WEBGL_OUTPUT_PIXEL_BUDGET, 8192)).toBe(8);
+  });
+
+  it('respects asymmetric viewport axes and lower-scale filter texture limits', () => {
+    const base = {
+      maxRenderbufferSize: 8192,
+      maxViewportWidth: 8192,
+      maxViewportHeight: 4096,
+      maxTextureSize: 4096,
+    };
+    expect(safeDeviceWebGLOutputScale(612, 384, 8, base)).toBe(8);
+    expect(safeDeviceWebGLOutputScale(612, 384, 8, {
+      ...base, maxViewportWidth: 4096, maxViewportHeight: 8192,
+    })).toBe(4);
+    expect(safeDeviceWebGLOutputScale(612, 384, 4, {
+      ...base, maxTextureSize: 2048,
+    })).toBe(2);
+    expect(safeDeviceWebGLOutputScale(612, 384, 8, {
+      ...base, maxTextureSize: 2048,
+    })).toBe(8);
   });
 
   it('allows true 8x a bounded cold-start window without slowing lower scales', () => {

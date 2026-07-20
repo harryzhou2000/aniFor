@@ -47,6 +47,7 @@ export interface BrowserInputAuditApi {
   canvasPresentationTiming(): CanvasPresentationTiming | undefined;
   requestWebGLPresentationTimingSample(): boolean;
   webGLPresentationTiming(): WebGLPresentationTiming | undefined;
+  forceEightXRenderStall(): boolean;
 }
 
 declare global {
