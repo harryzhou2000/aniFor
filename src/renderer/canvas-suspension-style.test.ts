@@ -55,6 +55,33 @@ describe('Canvas suspension styling', () => {
     }
     expect(changedBase).toBe(true);
     expect(changedLiquid).toBe(true);
+
+    const centroid = (pixels: Uint8ClampedArray, material: Material): number[] => {
+      const total = [0, 0, 0];
+      let count = 0;
+      for (let y = 2; y <= 5; y++) for (let x = 2; x <= 5; x++) {
+        const index = y * 8 + x;
+        if (materials[index] !== material) continue;
+        const pixel = index * 4;
+        total[0] += pixels[pixel];
+        total[1] += pixels[pixel + 1];
+        total[2] += pixels[pixel + 2];
+        count++;
+      }
+      return total.map((value) => value / count);
+    };
+    const distance = (left: number[], right: number[]): number => Math.hypot(
+      left[0] - right[0], left[1] - right[1], left[2] - right[2],
+    );
+    const beforeDistance = distance(
+      centroid(baseBefore, Material.Sand), centroid(liquidBefore, Material.Water),
+    );
+    const afterDistance = distance(
+      centroid(base, Material.Sand), centroid(liquid, Material.Water),
+    );
+    // This tiny 4x4 checker includes the sparse knee; even there the semantic
+    // phase contrast must fall substantially without flattening it completely.
+    expect(afterDistance).toBeLessThan(beforeDistance * 0.6);
   });
 
   it('is an exact no-op for the Grains and Local reference styles', () => {

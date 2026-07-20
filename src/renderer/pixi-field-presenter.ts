@@ -911,13 +911,11 @@ void main() {
     float molten = optics == 4.0 ? 1.0 : 0.0;
     vec3 liquidBase = vividColor(base, 1.24 + aqueous * 0.06 + corrosive * 0.08 - oily * 0.05);
     float suspensionBody = aqueous * (1.0 - molten)
-      * smoothstep(0.015, 0.72, suspensionState.a);
+      * smoothstep(0.08, 0.82, suspensionState.a);
     vec3 suspensionTint = vividColor(
       mix(liquidState.rgb, suspensionState.rgb, 0.48), 1.10
     );
-    liquidBase = mix(
-      liquidBase, mix(liquidBase, suspensionTint, 0.82), suspensionBody * 0.78
-    );
+    liquidBase = mix(liquidBase, suspensionTint, suspensionBody * 0.94);
     // The four already-sampled field neighbours promote only locally supported
     // pool interiors. This makes reconstructed holes and semantic cells share
     // one optical depth without turning an isolated droplet into a pool core.
@@ -1046,7 +1044,7 @@ void main() {
     float translucentSurface = optics == 12.0 ? 1.0 : 0.0;
     if (profile == 1.0 && optics == 7.0 && traits < 0.5 && !materialEmissive) {
       float suspensionColorDistance = length(suspensionState.rgb - paletteSample.rgb);
-      powderSuspensionCohesion = smoothstep(0.015, 0.72, suspensionState.a)
+      powderSuspensionCohesion = smoothstep(0.08, 0.82, suspensionState.a)
         * (1.0 - smoothstep(0.08, 0.24, suspensionColorDistance));
     }
     float interiorMicroGain = mix(1.0, solidInteriorMicroGain(optics, profile), solidInterior);
@@ -1200,11 +1198,15 @@ void main() {
       color += base * max(0.0, 0.6 - subcell.x - subcell.y)
         * (0.11 + roughSurface * 0.035) * facetRetention;
       color *= 1.0 + powderMacroRelief;
-      color = mix(
-        color,
-        mix(color, mix(liquidState.rgb, suspensionState.rgb, 0.48) * 0.70, 0.90),
-        powderSuspensionCohesion * 0.92
+      vec3 wetSediment = vividColor(
+        mix(liquidState.rgb, suspensionState.rgb, 0.48), 1.10
       );
+      float wetRelief = clamp(
+        dot(color, vec3(0.2126, 0.7152, 0.0722))
+          / max(0.02, dot(base, vec3(0.2126, 0.7152, 0.0722))),
+        0.94, 1.06
+      );
+      color = mix(color, wetSediment * wetRelief, powderSuspensionCohesion * 0.96);
     } else if (smoothSurface > 0.5 || translucentSurface > 0.5
       || (optics < 0.5 && profile == 2.0)) {
       float bevel = clamp(abs(shape.y) + abs(shape.z), 0.0, 1.0);
@@ -1392,6 +1394,10 @@ export class PixiFieldPresenter {
   private powderSurfaceDirty = true;
   private lastPowderSurfaceRefresh = -Infinity;
   private contextLost = false;
+  private destroyed = false;
+  private renderFence?: WebGLSync;
+  private renderQueued = false;
+  private renderFencePoll = 0;
   private contextLossHandler?: () => void;
   private readonly removeContextLossListener: () => void;
 
@@ -1407,6 +1413,7 @@ export class PixiFieldPresenter {
     this.removeContextLossListener = installWebGLContextLossHandler(app.canvas, () => {
       if (this.contextLost) return;
       this.contextLost = true;
+      this.releaseRenderFence();
       this.releaseWebGLTimingQuery();
       this.contextLossHandler?.();
     });
@@ -1605,8 +1612,10 @@ export class PixiFieldPresenter {
   mount(): void { this.host.append(this.app.canvas); }
 
   destroy(): void {
+    this.destroyed = true;
     this.contextLossHandler = undefined;
     this.removeContextLossListener();
+    this.releaseRenderFence();
     this.releaseWebGLTimingQuery();
     this.app.canvas.remove();
     try { this.app.destroy(); }
@@ -1841,6 +1850,12 @@ export class PixiFieldPresenter {
   }
 
   private renderApplication(): void {
+    if (this.outputScale === 8 && !this.prepareEightXRender()) return;
+    this.renderApplicationNow();
+    if (this.outputScale === 8) this.insertEightXRenderFence();
+  }
+
+  private renderApplicationNow(): void {
     if (!this.webGLTimingEnabled || !this.webGLTimingRequested) {
       this.app.render();
       return;
@@ -1887,6 +1902,70 @@ export class PixiFieldPresenter {
       this.useCpuTimingFallback();
       this.recordWebGLTimingSample(performance.now() - started);
     }
+  }
+
+  /**
+   * True 8x submits 15,040,512 fragments per frame. Keep exactly one frame in
+   * flight and let texture/uniform mutations coalesce while the GPU catches up.
+   */
+  private prepareEightXRender(): boolean {
+    const fence = this.renderFence;
+    if (!fence) return true;
+    const gl = this.webGLContext();
+    if (!gl || this.contextLost || this.destroyed) {
+      this.releaseRenderFence();
+      return !this.contextLost && !this.destroyed;
+    }
+    let status: number;
+    try { status = gl.clientWaitSync(fence, 0, 0); }
+    catch {
+      this.releaseRenderFence();
+      return true;
+    }
+    if (status === gl.ALREADY_SIGNALED || status === gl.CONDITION_SATISFIED
+      || status === gl.WAIT_FAILED) {
+      this.releaseRenderFence();
+      return true;
+    }
+    this.renderQueued = true;
+    this.scheduleEightXRenderPoll();
+    return false;
+  }
+
+  private insertEightXRenderFence(): void {
+    const gl = this.webGLContext();
+    if (!gl || this.contextLost || this.destroyed) return;
+    try {
+      const fence = gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE, 0);
+      if (!fence) return;
+      this.renderFence = fence;
+      gl.flush();
+    } catch { /* context loss will promote the Canvas fallback */ }
+  }
+
+  private scheduleEightXRenderPoll(): void {
+    if (this.renderFencePoll !== 0 || this.destroyed || this.contextLost) return;
+    this.renderFencePoll = requestAnimationFrame(() => {
+      this.renderFencePoll = 0;
+      if (!this.renderQueued || this.destroyed || this.contextLost) return;
+      if (!this.prepareEightXRender()) return;
+      this.renderQueued = false;
+      this.renderApplication();
+    });
+  }
+
+  private releaseRenderFence(): void {
+    if (this.renderFencePoll !== 0) {
+      cancelAnimationFrame(this.renderFencePoll);
+      this.renderFencePoll = 0;
+    }
+    const fence = this.renderFence;
+    const gl = this.webGLContext();
+    if (fence && gl) {
+      try { gl.deleteSync(fence); } catch { /* context may already be invalid */ }
+    }
+    this.renderFence = undefined;
+    this.renderQueued = false;
   }
 
   private pollWebGLTimingQuery(): void {

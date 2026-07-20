@@ -4,9 +4,7 @@ import { RenderPhase } from './render-profile';
 export const SUSPENSION_FIELD_SCALE = 2;
 const LIQUID_SUPPORT_ALPHA = 64;
 const CLUSTER_GAIN = 1.6;
-const KERNEL_RADIUS = 1;
-const KERNEL_0 = 1;
-const KERNEL_1 = 2;
+const AMBIGUOUS_OWNER = 0xffff;
 
 /**
  * Half-resolution, presentation-only sediment clusters. RGB is always one
@@ -19,9 +17,10 @@ export class SuspensionField {
   readonly bytes: Uint8Array;
   hasSuspension = false;
 
-  private readonly seed: Float32Array;
-  private readonly horizontal: Float32Array;
+  private readonly seed: Uint8Array;
+  private readonly horizontal: Uint8Array;
   private readonly seedOwner: Uint16Array;
+  private readonly ownerHorizontal: Uint16Array;
 
   constructor(
     readonly worldWidth: number,
@@ -39,9 +38,10 @@ export class SuspensionField {
     this.height = Math.ceil(worldHeight / SUSPENSION_FIELD_SCALE);
     const cells = this.width * this.height;
     this.bytes = new Uint8Array(cells * 4);
-    this.seed = new Float32Array(cells);
-    this.horizontal = new Float32Array(cells);
+    this.seed = new Uint8Array(cells);
+    this.horizontal = new Uint8Array(cells);
     this.seedOwner = new Uint16Array(cells);
+    this.ownerHorizontal = new Uint16Array(cells);
   }
 
   /** Rebuilds into existing storage and reports whether packed output changed. */
@@ -54,12 +54,14 @@ export class SuspensionField {
     this.buildSeeds(materials, liquidBytes, walls);
     this.blurHorizontal();
     this.blurVertical();
+    this.blurOwnersHorizontal();
+    this.blurOwnersVertical();
     return this.pack(liquidBytes, walls);
   }
 
   get allocatedByteLength(): number {
     return this.bytes.byteLength + this.seed.byteLength + this.horizontal.byteLength
-      + this.seedOwner.byteLength;
+      + this.seedOwner.byteLength + this.ownerHorizontal.byteLength;
   }
 
   private buildSeeds(
@@ -87,9 +89,9 @@ export class SuspensionField {
             if (this.styleBytes[material * 4] === RenderPhase.Liquid) {
               if (!this.isAqueousLiquid(material)
                 || (contactLiquid !== 0 && contactLiquid !== material)) {
-                // 256 is a temporary unlike/non-aqueous sentinel. The Float32
-                // horizontal buffer carries it only until seed validation, then
-                // becomes the blur scratch again without extra allocation.
+                // 256 is a temporary unlike/non-aqueous sentinel. The owner
+                // scratch carries it only until seed validation, then becomes
+                // the propagated powder-owner scratch without extra allocation.
                 contactLiquid = 256;
               } else if (contactLiquid === 0) contactLiquid = material;
             }
@@ -106,13 +108,61 @@ export class SuspensionField {
           this.seed[fieldIndex] = 0;
           this.seedOwner[fieldIndex] = 0;
         } else {
-          this.seed[fieldIndex] = powderCells / blockCells;
+          this.seed[fieldIndex] = Math.round(powderCells / blockCells * 255);
           this.seedOwner[fieldIndex] = powder;
         }
-        this.horizontal[fieldIndex] = contactLiquid;
+        this.ownerHorizontal[fieldIndex] = contactLiquid;
       }
     }
+    this.propagateContactsHorizontal();
+    this.propagateContactsVertical();
     this.validateSeedContacts(materials, liquidBytes, walls);
+  }
+
+  private mergeContact(left: number, right: number): number {
+    if (left === 0) return right;
+    if (right === 0) return left;
+    if (left === 256 || right === 256 || left === AMBIGUOUS_OWNER
+      || right === AMBIGUOUS_OWNER || left !== right) return AMBIGUOUS_OWNER;
+    return left;
+  }
+
+  /** Expands exact liquid ownership by one half-resolution cell in-place. */
+  private propagateContactsHorizontal(): void {
+    if (this.width === 1) return;
+    for (let y = 0; y < this.height; y++) {
+      const row = y * this.width;
+      let previous = 0;
+      let current = this.ownerHorizontal[row];
+      for (let x = 0; x < this.width; x++) {
+        const next = x + 1 < this.width ? this.ownerHorizontal[row + x + 1] : 0;
+        this.ownerHorizontal[row + x] = this.mergeContact(
+          this.mergeContact(previous, current), next,
+        );
+        previous = current;
+        current = next;
+      }
+    }
+  }
+
+  /** Completes the exact 3x3 ownership expansion without another allocation. */
+  private propagateContactsVertical(): void {
+    if (this.height === 1) return;
+    for (let x = 0; x < this.width; x++) {
+      let previous = 0;
+      let current = this.ownerHorizontal[x];
+      for (let y = 0; y < this.height; y++) {
+        const next = y + 1 < this.height
+          ? this.ownerHorizontal[(y + 1) * this.width + x]
+          : 0;
+        const index = y * this.width + x;
+        this.ownerHorizontal[index] = this.mergeContact(
+          this.mergeContact(previous, current), next,
+        );
+        previous = current;
+        current = next;
+      }
+    }
   }
 
   private validateSeedContacts(
@@ -124,16 +174,8 @@ export class SuspensionField {
       const index = y * this.width + x;
       const powder = this.seedOwner[index] & 0xff;
       if (powder === 0) continue;
-      let expected = 0;
-      let valid = true;
-      for (let sampleY = Math.max(0, y - 1); sampleY <= Math.min(this.height - 1, y + 1); sampleY++) {
-        for (let sampleX = Math.max(0, x - 1); sampleX <= Math.min(this.width - 1, x + 1); sampleX++) {
-          const candidate = this.horizontal[sampleY * this.width + sampleX];
-          if (candidate === 0) continue;
-          if (candidate === 256 || (expected !== 0 && candidate !== expected)) valid = false;
-          else expected = candidate;
-        }
-      }
+      const expected = this.ownerHorizontal[index];
+      const valid = expected !== AMBIGUOUS_OWNER && expected !== 256;
       let supported = 0;
       let blockCells = 0;
       if (valid && expected !== 0) {
@@ -149,7 +191,7 @@ export class SuspensionField {
         }
       }
       if (supported > 0) {
-        this.seed[index] = supported / blockCells;
+        this.seed[index] = Math.round(supported / blockCells * 255);
         this.seedOwner[index] = powder | (expected << 8);
       } else {
         this.seed[index] = 0;
@@ -159,32 +201,84 @@ export class SuspensionField {
   }
 
   private blurHorizontal(): void {
-    for (let y = 0; y < this.height; y++) for (let x = 0; x < this.width; x++) {
-      let total = 0;
-      let weightSum = 0;
-      for (let offset = -KERNEL_RADIUS; offset <= KERNEL_RADIUS; offset++) {
-        const sampleX = x + offset;
-        if (sampleX < 0 || sampleX >= this.width) continue;
-        const weight = offset === 0 ? KERNEL_1 : KERNEL_0;
-        total += this.seed[y * this.width + sampleX] * weight;
-        weightSum += weight;
+    if (this.width === 1) {
+      this.horizontal.set(this.seed);
+      return;
+    }
+    for (let y = 0; y < this.height; y++) {
+      const row = y * this.width;
+      for (let x = 0; x < this.width; x++) {
+        const index = row + x;
+        const centre = this.seed[index] * 2;
+        if (x === 0) {
+          this.horizontal[index] = Math.round((centre + this.seed[index + 1]) / 3);
+        } else if (x === this.width - 1) {
+          this.horizontal[index] = Math.round((this.seed[index - 1] + centre) / 3);
+        } else {
+          this.horizontal[index] = (this.seed[index - 1] + centre + this.seed[index + 1] + 2) >> 2;
+        }
       }
-      this.horizontal[y * this.width + x] = total / weightSum;
     }
   }
 
   private blurVertical(): void {
+    if (this.height === 1) {
+      this.seed.set(this.horizontal);
+      return;
+    }
     for (let y = 0; y < this.height; y++) for (let x = 0; x < this.width; x++) {
-      let total = 0;
-      let weightSum = 0;
-      for (let offset = -KERNEL_RADIUS; offset <= KERNEL_RADIUS; offset++) {
-        const sampleY = y + offset;
-        if (sampleY < 0 || sampleY >= this.height) continue;
-        const weight = offset === 0 ? KERNEL_1 : KERNEL_0;
-        total += this.horizontal[sampleY * this.width + x] * weight;
-        weightSum += weight;
+      const index = y * this.width + x;
+      const centre = this.horizontal[index] * 2;
+      if (y === 0) {
+        this.seed[index] = Math.round((centre + this.horizontal[index + this.width]) / 3);
+      } else if (y === this.height - 1) {
+        this.seed[index] = Math.round((this.horizontal[index - this.width] + centre) / 3);
+      } else {
+        this.seed[index] = (
+          this.horizontal[index - this.width] + centre
+          + this.horizontal[index + this.width] + 2
+        ) >> 2;
       }
-      this.seed[y * this.width + x] = total / weightSum;
+    }
+  }
+
+  private blurOwnersHorizontal(): void {
+    for (let y = 0; y < this.height; y++) for (let x = 0; x < this.width; x++) {
+      const index = y * this.width + x;
+      let owner = 0;
+      let ambiguous = false;
+      const left = Math.max(0, x - 1);
+      const right = Math.min(this.width - 1, x + 1);
+      for (let sampleX = left; sampleX <= right; sampleX++) {
+        const candidate = this.seedOwner[y * this.width + sampleX];
+        if (candidate === 0) continue;
+        if (candidate === AMBIGUOUS_OWNER || (owner !== 0 && owner !== candidate)) {
+          ambiguous = true;
+          break;
+        }
+        owner = candidate;
+      }
+      this.ownerHorizontal[index] = ambiguous ? AMBIGUOUS_OWNER : owner;
+    }
+  }
+
+  private blurOwnersVertical(): void {
+    for (let y = 0; y < this.height; y++) for (let x = 0; x < this.width; x++) {
+      const index = y * this.width + x;
+      let owner = 0;
+      let ambiguous = false;
+      const top = Math.max(0, y - 1);
+      const bottom = Math.min(this.height - 1, y + 1);
+      for (let sampleY = top; sampleY <= bottom; sampleY++) {
+        const candidate = this.ownerHorizontal[sampleY * this.width + x];
+        if (candidate === 0) continue;
+        if (candidate === AMBIGUOUS_OWNER || (owner !== 0 && owner !== candidate)) {
+          ambiguous = true;
+          break;
+        }
+        owner = candidate;
+      }
+      this.seedOwner[index] = ambiguous ? AMBIGUOUS_OWNER : owner;
     }
   }
 
@@ -201,20 +295,21 @@ export class SuspensionField {
       let green = 0;
       let blue = 0;
       let alpha = 0;
-      const density = Math.min(1, this.seed[fieldIndex] * CLUSTER_GAIN);
+      const density = Math.min(255, Math.round(this.seed[fieldIndex] * CLUSTER_GAIN));
       if (density > 0) {
-        const owner = this.uniqueSeedValue(this.seedOwner, fieldX, fieldY);
+        const owner = this.seedOwner[fieldIndex];
         const powder = owner & 0xff;
         const seededLiquid = owner >>> 8;
         const supportedLiquid = this.outputAqueousLiquid(
           liquidBytes, walls, fieldX, fieldY, seededLiquid,
         );
-        if (powder !== 0 && seededLiquid !== 0 && supportedLiquid === seededLiquid) {
+        if (owner !== AMBIGUOUS_OWNER && powder !== 0 && seededLiquid !== 0
+          && supportedLiquid === seededLiquid) {
           const palette = powder * 4;
           red = this.paletteBytes[palette];
           green = this.paletteBytes[palette + 1];
           blue = this.paletteBytes[palette + 2];
-          alpha = Math.round(density * 255);
+          alpha = density;
           hasSuspension = alpha > 0 || hasSuspension;
         }
       }
@@ -251,19 +346,6 @@ export class SuspensionField {
       }
     }
     return liquid;
-  }
-
-  private uniqueSeedValue(source: Uint16Array, x: number, y: number): number {
-    let value = 0;
-    for (let sampleY = Math.max(0, y - 1); sampleY <= Math.min(this.height - 1, y + 1); sampleY++) {
-      for (let sampleX = Math.max(0, x - 1); sampleX <= Math.min(this.width - 1, x + 1); sampleX++) {
-        const candidate = source[sampleY * this.width + sampleX];
-        if (candidate === 0) continue;
-        if (value !== 0 && value !== candidate) return 0;
-        value = candidate;
-      }
-    }
-    return value;
   }
 
   private liquidFieldMatches(bytes: Uint8Array, pixel: number, material: number): boolean {

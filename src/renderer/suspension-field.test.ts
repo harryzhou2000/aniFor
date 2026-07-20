@@ -15,7 +15,7 @@ describe('SuspensionField', () => {
 
     expect(field.width).toBe(4);
     expect(field.height).toBe(3);
-    expect(field.allocatedByteLength).toBe(field.width * field.height * 14);
+    expect(field.allocatedByteLength).toBe(field.width * field.height * 10);
     expect(field.update(materials, liquid.bytes)).toBe(true);
     expect(field.update(materials, liquid.bytes)).toBe(false);
     expect(field.hasSuspension).toBe(true);

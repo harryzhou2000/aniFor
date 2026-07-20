@@ -2,11 +2,16 @@ import { RenderOptics } from './render-optics';
 import { RenderPhase } from './render-profile';
 import type { SuspensionField } from './suspension-field';
 
-const LIQUID_TINT_GAIN = 0.78;
-const POWDER_COHESION_GAIN = 0.92;
+const LIQUID_TINT_GAIN = 0.94;
+const POWDER_COHESION_GAIN = 0.96;
 
 function clampByte(value: number): number {
   return Math.max(0, Math.min(255, Math.round(value)));
+}
+
+function suspensionKnee(alpha: number): number {
+  const t = Math.max(0, Math.min(1, (alpha - 0.08) / 0.74));
+  return t * t * (3 - 2 * t);
 }
 
 /**
@@ -40,8 +45,9 @@ export function applyCanvasSuspensionStyle(
       const fieldPixel = (fieldY * field.width + fieldX) * 4;
       const alpha = field.bytes[fieldPixel + 3] / 255;
       if (alpha <= 1 / 255) continue;
-      const liquidAmount = alpha * LIQUID_TINT_GAIN;
-      const powderAmount = alpha * POWDER_COHESION_GAIN;
+      const cohesion = suspensionKnee(alpha);
+      const liquidAmount = cohesion * LIQUID_TINT_GAIN;
+      const powderAmount = cohesion * POWDER_COHESION_GAIN;
       const top = fieldY * 2;
       const left = fieldX * 2;
       for (let offsetY = 0; offsetY < 2 && top + offsetY < height; offsetY++) {
@@ -73,12 +79,14 @@ export function applyCanvasSuspensionStyle(
             || field.bytes[fieldPixel] !== paletteBytes[lookup]
             || field.bytes[fieldPixel + 1] !== paletteBytes[lookup + 1]
             || field.bytes[fieldPixel + 2] !== paletteBytes[lookup + 2]) continue;
-          base[pixel] = clampByte(base[pixel] + (red * 0.70 - base[pixel]) * powderAmount);
+          // The residual 4% of the already-lit source carries the bounded facet
+          // relief while both semantic phases otherwise meet at one albedo.
+          base[pixel] = clampByte(base[pixel] + (red - base[pixel]) * powderAmount);
           base[pixel + 1] = clampByte(
-            base[pixel + 1] + (green * 0.70 - base[pixel + 1]) * powderAmount,
+            base[pixel + 1] + (green - base[pixel + 1]) * powderAmount,
           );
           base[pixel + 2] = clampByte(
-            base[pixel + 2] + (blue * 0.70 - base[pixel + 2]) * powderAmount,
+            base[pixel + 2] + (blue - base[pixel + 2]) * powderAmount,
           );
         }
       }
