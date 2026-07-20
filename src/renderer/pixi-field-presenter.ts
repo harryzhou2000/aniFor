@@ -19,7 +19,7 @@ import { updateBoundaryStabilityRect } from './boundary-stability-field';
 import { clientToCanvasWorld } from './client-coordinate-map';
 import { RenderFieldSet, type RenderMaterialStyle } from './render-field-set';
 import { packSemanticRect } from './semantic-field';
-import { packWallRect } from './wall-field';
+import { packExteriorAir, packWallRect } from './wall-field';
 import { RenderPhase } from './render-profile';
 import {
   powderRenderStyleValue, type PowderRenderStyle,
@@ -579,7 +579,7 @@ float refractedWallPattern(float wall, vec2 position, float material, vec2 bound
   return wallPattern(wall, cell + offset) * 0.68
     + wallPattern(wall, cell - offset) * 0.32;
 }
-vec3 nearbySurface(vec2 uv) {
+vec4 nearbySurface(vec2 uv) {
   float solid = 0.0;
   float ambiguousSolid = 0.0;
   float solidTemperature = 0.0;
@@ -589,7 +589,7 @@ vec3 nearbySurface(vec2 uv) {
   if (candidate > 0.5) {
     vec4 style = texture(uStyleTexture, vec2((candidate + 0.5) / 256.0, 0.5));
     float family = floor(style.r * 255.0 + 0.5);
-    if (family == 3.0 || style.b > 0.5) return vec3(candidate, 0.0, candidateState.g);
+    if (family == 3.0 || style.b > 0.5) return vec4(candidate, 0.0, candidateState.g, 1.0);
     if (family == 0.0 || family == 4.0) {
       if (solid < 0.5) {
         solid = candidate;
@@ -605,7 +605,7 @@ vec3 nearbySurface(vec2 uv) {
   if (candidate > 0.5) {
     vec4 style = texture(uStyleTexture, vec2((candidate + 0.5) / 256.0, 0.5));
     float family = floor(style.r * 255.0 + 0.5);
-    if (family == 3.0 || style.b > 0.5) return vec3(candidate, 0.0, candidateState.g);
+    if (family == 3.0 || style.b > 0.5) return vec4(candidate, 0.0, candidateState.g, 1.0);
     if (family == 0.0 || family == 4.0) {
       if (solid < 0.5) {
         solid = candidate;
@@ -621,7 +621,7 @@ vec3 nearbySurface(vec2 uv) {
   if (candidate > 0.5) {
     vec4 style = texture(uStyleTexture, vec2((candidate + 0.5) / 256.0, 0.5));
     float family = floor(style.r * 255.0 + 0.5);
-    if (family == 3.0 || style.b > 0.5) return vec3(candidate, 0.0, candidateState.g);
+    if (family == 3.0 || style.b > 0.5) return vec4(candidate, 0.0, candidateState.g, 1.0);
     if (family == 0.0 || family == 4.0) {
       if (solid < 0.5) {
         solid = candidate;
@@ -637,7 +637,7 @@ vec3 nearbySurface(vec2 uv) {
   if (candidate > 0.5) {
     vec4 style = texture(uStyleTexture, vec2((candidate + 0.5) / 256.0, 0.5));
     float family = floor(style.r * 255.0 + 0.5);
-    if (family == 3.0 || style.b > 0.5) return vec3(candidate, 0.0, candidateState.g);
+    if (family == 3.0 || style.b > 0.5) return vec4(candidate, 0.0, candidateState.g, 1.0);
     if (family == 0.0 || family == 4.0) {
       if (solid < 0.5) {
         solid = candidate;
@@ -648,10 +648,11 @@ vec3 nearbySurface(vec2 uv) {
       else { solidTemperature += candidateState.g; solidSamples += 1.0; }
     }
   }
-  return vec3(
+  return vec4(
     0.0,
     ambiguousSolid > 0.5 ? 0.0 : solid,
-    solidSamples > 0.5 ? solidTemperature / solidSamples : 0.0
+    solidSamples > 0.5 ? solidTemperature / solidSamples : 0.0,
+    solidSamples
   );
 }
 float nearbyPowderStability(vec2 uv, float material) {
@@ -740,7 +741,9 @@ float liquidSpeciesContrast(vec4 center, vec4 neighbour) {
 void main() {
   vec2 fieldUv = vFieldCoord;
   vec4 state = field(fieldUv);
-  float wall = wallAt(fieldUv);
+  vec4 wallState = wallField(fieldUv);
+  float wall = floor(wallState.r * 255.0 + 0.5);
+  float exteriorPowderAir = wallState.g;
   vec3 wallSurface = wall > 0.5 ? wallShape(fieldUv, wall) : vec3(0.0);
   vec4 atmosphereState = texture(uAtmosphereTexture, fieldUv);
   vec4 emissionState = texture(uEmissionTexture, fieldUv);
@@ -753,6 +756,7 @@ void main() {
   float emissionOnly = 0.0;
   float liquidOnly = 0.0;
   float surfaceOnly = 0.0;
+  float projectedSurfaceSamples = 0.0;
   float wallOnly = 0.0;
   if (material < 0.5) {
     // The reconstructed field already resolves all eight neighbours and keeps
@@ -770,13 +774,14 @@ void main() {
     } else if (wall > 0.5) {
       wallOnly = 1.0;
     } else {
-      vec3 nearby = nearbySurface(fieldUv);
+      vec4 nearby = nearbySurface(fieldUv);
       material = nearby.x;
       if (material > 0.5) materialTemperature = nearby.z;
       if (material < 0.5 && nearby.y > 0.5) {
         material = nearby.y;
         materialTemperature = nearby.z;
         surfaceOnly = material > 0.5 ? 1.0 : 0.0;
+        projectedSurfaceSamples = nearby.w;
       }
       if (material < 0.5) {
         if (wall > 0.5) wallOnly = 1.0;
@@ -865,7 +870,9 @@ void main() {
   // three compatible powder samples prove a bulk contact. Loose/moving grains
   // stay inside their semantic cell, and ambiguous unlike-species candidates
   // were rejected by nearbySurface before reaching this estimator.
-  if (surfaceOnly > 0.5 && profile == 1.0 && shape.w < 2.5) shape = vec4(0.0);
+  if (surfaceOnly > 0.5 && profile == 1.0
+    && (shape.w < 2.5 || projectedSurfaceSamples > 2.5
+      || exteriorPowderAir < 0.5)) shape = vec4(0.0);
   float density = shape.x;
   float gasVolume = max(cloudOnly, family == 1.0 ? 1.0 : 0.0);
   float liquidVolume = max(liquidOnly, family == 2.0 ? 1.0 : 0.0);
@@ -1232,6 +1239,43 @@ void main() {
       vec3(0.16, 0.12, 0.075),
       clamp(0.5 - liquidNormal.y * 0.65 + liquidNormal.x * 0.15, 0.0, 1.0)
     );
+    vec3 liquidFresnelKey = vec3(0.65, 0.82, 1.0);
+    vec3 liquidFresnelShadow = vec3(0.72, 0.64, 0.50);
+    if (aqueous > 0.5) liquidFresnelKey = vec3(0.42, 0.82, 1.0);
+    if (aqueous > 0.5) liquidFresnelShadow = vec3(1.0, 0.62, 0.36);
+    else if (oily > 0.5) {
+      liquidFresnelKey = vec3(1.0, 0.72, 0.28);
+      // Oil's warm reflected key remains the family cue. Keep its opposite
+      // contour shadow nearly neutral so absolute blue absorption cannot read
+      // stronger than the amber highlight at ordinary zoom.
+      liquidFresnelShadow = vec3(0.08);
+    } else if (corrosive > 0.5) {
+      liquidFresnelKey = vec3(0.44, 1.0, 0.68);
+      liquidFresnelShadow = vec3(0.72, 0.38, 0.62);
+    }
+    // Restrict reflection to the connected air-facing shell. The earlier
+    // whole-body specular term washed dense cores and even molten Lava; Canvas
+    // already keeps those exact no-ops. This arithmetic-only gate aligns both
+    // backends without changing alpha, support, samples, or resources.
+    vec2 liquidFresnelSlope = semanticSlope + volumeSlope;
+    float liquidFresnelSlopeLength = length(liquidFresnelSlope);
+    float liquidFresnelContour = smoothstep(0.08, 0.46, liquidSurfaceDensity)
+      * (1.0 - smoothstep(0.54, 0.92, liquidSurfaceDensity));
+    float liquidFresnelDirectional = liquidFresnelSlopeLength > 0.0001
+      ? dot(liquidFresnelSlope / liquidFresnelSlopeLength, normalize(vec2(-0.58, -0.815)))
+      : 0.0;
+    float liquidFresnelGrazing = 1.0 - abs(liquidFresnelDirectional);
+    float liquidFresnelReflection = liquidFresnelContour
+      * (0.018 + liquidFresnelGrazing * 0.022);
+    float liquidFresnelKeyResponse = max(0.0, liquidFresnelDirectional)
+      * liquidFresnelContour * 0.060 + liquidFresnelReflection;
+    float liquidFresnelShadowResponse = max(0.0, -liquidFresnelDirectional)
+      * liquidFresnelContour * 0.048;
+    // An empty reconstructed fringe has no semantic material/optics byte, so it
+    // cannot safely distinguish Lava from an ordinary liquid. Preserve that
+    // fringe's geometry but shade only authoritative liquid fragments here.
+    float liquidFresnelGate = (1.0 - liquidOnly) * (1.0 - molten)
+      * uSurfaceContourLighting;
     float liquidEdgeHalfWidth = mix(
       0.13, 0.17, clamp(length(volumeSlope) * 2.4, 0.0, 1.0)
     );
@@ -1264,10 +1308,14 @@ void main() {
     // body term keeps the same meniscus readable at ordinary zoom. It mirrors
     // Canvas and remains well below a dark separator or emissive highlight.
     color *= 1.0 + liquidMacroRelief + liquidInterfaceRelief;
-    color += edgeTint
-      * (surfaceSpecular * gloss * (0.72 + rim * 0.86) + fresnel * rim * (0.18 + aqueous * 0.08));
-    color += reflectedEnvironment
-      * (fresnel * (0.22 + gloss * 0.10) + surfaceSpecular * (0.035 + oily * 0.035));
+    float liquidFresnelStrength = liquidFresnelGate * liquidFresnelKeyResponse
+      * 0.75 * (1.0 + oily * 0.35);
+    color += (vec3(1.0) - clamp(color, 0.0, 1.0))
+      * liquidFresnelKey * liquidFresnelStrength;
+    color += mix(reflectedEnvironment, edgeTint, 0.42)
+      * liquidFresnelStrength * (0.18 + oily * 0.04);
+    color -= color * liquidFresnelShadow
+      * liquidFresnelGate * liquidFresnelShadowResponse;
     color *= 1.0 + topLip * 0.08 - lowerShade * 0.05;
     color += mix(vec3(0.52, 0.68, 0.76), liquidBase, 0.50)
       * (broadSheen * mix(0.016, 0.052 * gloss, liquidDepth) + caustic * causticStrength);
@@ -2079,7 +2127,8 @@ export class PixiFieldPresenter {
     const previousMaterial = this.fieldBytes[index * 4];
     this.chunks.markCell(index);
     this.fieldSet.markDirty(previousMaterial, nextMaterial);
-    if (this.powderRelevant(previousMaterial) || this.powderRelevant(nextMaterial)) {
+    if (this.powderRelevant(previousMaterial) || this.powderRelevant(nextMaterial)
+      || this.powderAirBlocker(previousMaterial) !== this.powderAirBlocker(nextMaterial)) {
       this.powderSurfaceDirty = true;
     }
     if (this.solidRelevant(previousMaterial) || this.solidRelevant(nextMaterial)) {
@@ -2389,7 +2438,11 @@ export class PixiFieldPresenter {
       );
       this.powderSurfaceDirty = false;
       this.lastPowderSurfaceRefresh = scheduleTime;
-      if (changed) this.powderSurfaceSource.update();
+      if (changed) {
+        this.powderSurfaceSource.update();
+        packExteriorAir(this.wallBytes, this.fieldSet.powderSurface.exteriorAirBytes);
+        this.wallSource.update();
+      }
     }
     if (this.solidOpticalDepthDirty
       && scheduleTime - this.lastSolidOpticalDepthRefresh >= POWDER_SURFACE_REFRESH_INTERVAL) {
@@ -2437,6 +2490,12 @@ export class PixiFieldPresenter {
     if (material === 0) return false;
     const phase = this.fieldSet.lookups.styleBytes[material * 4];
     return phase === RenderPhase.Solid || phase === RenderPhase.Powder;
+  }
+
+  private powderAirBlocker(material: number): boolean {
+    if (material === 0) return false;
+    const phase = this.fieldSet.lookups.styleBytes[material * 4];
+    return phase !== RenderPhase.Gas && phase !== RenderPhase.Energy;
   }
 
   private solidRelevant(material: number): boolean {

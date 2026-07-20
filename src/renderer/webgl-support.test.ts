@@ -57,6 +57,18 @@ describe('WebGL capability probe', () => {
     expect(probeWebGLCapabilities().supported).toBe(false);
     expect(loseContext).toHaveBeenCalledOnce();
   });
+
+  it('rejects a WebGL1-only implementation before presenter promotion', () => {
+    const webGL1 = { isContextLost: () => false };
+    const getContext = vi.fn((kind: string) => kind === 'webgl' ? webGL1 : null);
+    vi.stubGlobal('document', {
+      createElement: vi.fn(() => ({ getContext })),
+    });
+
+    expect(probeWebGLCapabilities().supported).toBe(false);
+    expect(getContext).toHaveBeenCalledOnce();
+    expect(getContext).toHaveBeenCalledWith('webgl2');
+  });
 });
 
 describe('renderer diagnostics', () => {

@@ -20,7 +20,11 @@ const UNSUPPORTED_WEBGL: WebGLCapabilities = {
  */
 export function probeWebGLCapabilities(): WebGLCapabilities {
   const probe = document.createElement('canvas');
-  const context = probe.getContext('webgl2') ?? probe.getContext('webgl');
+  // The presenter uses WebGL2 fenceSync/clientWaitSync for bounded promotion,
+  // latest-wins frame scheduling, and 8x stall recovery. A WebGL1 context could
+  // draw some shaders but cannot satisfy that lifecycle contract, so reject it
+  // here instead of timing out after allocating the candidate renderer.
+  const context = probe.getContext('webgl2');
   if (!context || context.isContextLost()) return UNSUPPORTED_WEBGL;
   try {
     const maxRenderbufferSize = Number(context.getParameter(context.MAX_RENDERBUFFER_SIZE));

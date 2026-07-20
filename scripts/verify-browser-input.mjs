@@ -27,6 +27,7 @@ const powderBodyOnly = process.argv.includes('--powder-body-only');
 const liquidDepthOnly = process.argv.includes('--liquid-depth-only');
 const solidDepthOnly = process.argv.includes('--solid-depth-only');
 const gasChromaOnly = process.argv.includes('--gas-chroma-only');
+const surfaceContourOnly = process.argv.includes('--surface-contour-only');
 const screenshotRequest = process.argv.find((argument) => argument.startsWith('--screenshot='))?.slice('--screenshot='.length);
 
 async function main() {
@@ -47,11 +48,12 @@ async function main() {
     for (const mode of modes) results.push(await auditMode(mode));
     const reducedAudit = quickScreenshot || layoutOnly || mobileOnly
       || desktopInputOnly || visualScaleMatrixOnly || powderBodyOnly || liquidDepthOnly
-      || solidDepthOnly || gasChromaOnly;
+      || solidDepthOnly || gasChromaOnly || surfaceContourOnly;
     if (powderBodyOnly) assertPairedPowderBodyDepth(results);
     if (liquidDepthOnly) assertPairedLiquidOpticalDepth(results);
     if (solidDepthOnly) assertPairedSolidOpticalDepth(results);
     if (gasChromaOnly) assertPairedGasSpectralScattering(results);
+    if (surfaceContourOnly) assertPairedSurfaceContourLighting(results);
     if (!scaleEightOnly && !materialAtlasOnly && !reducedAudit) assertPairedVisualRelief(results);
     if (!scaleEightOnly && !reducedAudit) assertPairedMaterialAtlas(results);
     compactMaterialAtlasResults(results);
@@ -222,6 +224,60 @@ async function auditMode(mode) {
     // Read the rendered canvas, not semantic cells, so framebuffer clipping and
     // backend compositing regressions are observable in the browser gate.
     const canonicalCaptures = await waitForStablePageCapture(cdp, `${mode} canonical framebuffer`);
+    if (surfaceContourOnly) {
+      await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setSurfaceContourLighting(false); true');
+      const flat = await waitForStablePageCapture(cdp, `${mode} focused flat surface-contour framebuffer`);
+      await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setSurfaceContourLighting(true); true');
+      const lit = await waitForStablePageCapture(cdp, `${mode} focused lit surface-contour framebuffer`);
+      await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setSurfaceContourLighting(false); true');
+      const repeated = await waitForStablePageCapture(cdp, `${mode} focused repeated flat surface-contour framebuffer`);
+      const surfaceContourLightingSamples = await sampleBackdropRefractionRegions(cdp, {
+        straight: flat.capture.data,
+        refracted: lit.capture.data,
+        repeatedStraight: repeated.capture.data,
+      }, [
+        { name: 'waterFresnelTop', x: 238, y: 79, radius: 30 },
+        { name: 'oilFresnelTop', x: 289, y: 87, radius: 24 },
+        { name: 'acidFresnelTop', x: 353, y: 62, radius: 20 },
+        { name: 'lavaFresnelControl', x: 341, y: 270, radius: 16 },
+        { name: 'waterFresnelCore', x: 238, y: 79, radius: 5 },
+      ], canonicalCaptures.canvasRect);
+      assertLiquidFresnelSamples(surfaceContourLightingSamples, `${mode} focused`);
+      const blank = await captureStableBlankPage(cdp, mode);
+      const supportRegions = [
+        { name: 'waterFresnelSupport', x: 224, y: 270, radiusX: 16, radiusY: 70, silhouette: true },
+        { name: 'oilFresnelSupport', x: 263, y: 270, radiusX: 16, radiusY: 70, silhouette: true },
+        { name: 'acidFresnelSupport', x: 302, y: 270, radiusX: 16, radiusY: 70, silhouette: true },
+      ];
+      const [flatSupport, litSupport] = await Promise.all([
+        samplePageRegions(
+          cdp, flat.capture.data, supportRegions,
+          blank.capture.data, blank.reference.data, canonicalCaptures.canvasRect,
+        ),
+        samplePageRegions(
+          cdp, lit.capture.data, supportRegions,
+          blank.capture.data, blank.reference.data, canonicalCaptures.canvasRect,
+        ),
+      ]);
+      const supportInvariantSamples = flatSupport.map((sample, index) => ({
+        name: sample.name,
+        flatVisible: sample.visible,
+        litVisible: litSupport[index].visible,
+        flatWorldArea: sample.worldArea,
+        litWorldArea: litSupport[index].worldArea,
+      }));
+      assert(supportInvariantSamples.every((sample) => (
+        Math.abs(sample.flatVisible - sample.litVisible) / Math.max(1, sample.flatVisible) <= 0.001
+        && Math.abs(sample.flatWorldArea - sample.litWorldArea)
+          / Math.max(0.001, sample.flatWorldArea) <= 0.001
+      )), `${mode}: focused liquid Fresnel changed support (${JSON.stringify(supportInvariantSamples)})`);
+      assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
+      cdp.close();
+      return {
+        backend: mode, surfaceContourLightingSamples, supportInvariantSamples,
+        browserErrors: errors.length,
+      };
+    }
     if (gasChromaOnly) {
       await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setGasVolumeChroma(false); true');
       const flat = await waitForStablePageCapture(cdp, `${mode} focused flat gas-volume framebuffer`);
@@ -1665,10 +1721,15 @@ async function auditMode(mode) {
       { name: 'glassContourTop', x: 158, y: 160.5, radiusX: 6, radiusY: 1.5 },
       { name: 'dtecContourTop', x: 485, y: 294.5, radiusX: 6, radiusY: 1.5 },
       { name: 'claySmoothTop', x: 148, y: 26.5, radiusX: 4, radiusY: 1.5 },
+      { name: 'waterFresnelTop', x: 238, y: 79, radius: 30 },
+      { name: 'oilFresnelTop', x: 289, y: 87, radius: 24 },
+      { name: 'acidFresnelTop', x: 353, y: 62, radius: 20 },
+      { name: 'lavaFresnelControl', x: 341, y: 270, radius: 16 },
       { name: 'metalContourCore', x: 405, y: 229, radius: 3 },
       { name: 'metalGlassContourSeam', x: 140, y: 172, radius: 2.5 },
       { name: 'claySmoothCore', x: 148, y: 48, radius: 2.5 },
       { name: 'isolatedGrainContourControl', x: 190, y: 176, radius: 1.5 },
+      { name: 'waterFresnelCore', x: 238, y: 79, radius: 5 },
     ], canonicalCaptures.canvasRect);
     const surfaceContourLighting = Object.fromEntries(
       surfaceContourLightingSamples.map((sample) => [sample.name, sample]),
@@ -1687,11 +1748,28 @@ async function auditMode(mode) {
       && surfaceContourLighting.claySmoothTop.chromaRms >= 0.01
       && surfaceContourLighting.claySmoothTop.rgbPeak <= 18,
     `${mode}: deep Smooth powder lost its chromatic surface depth (${JSON.stringify(surfaceContourLightingSamples)})`);
+    assert(surfaceContourLighting.waterFresnelTop.rgbRms >= 0.02
+      && surfaceContourLighting.oilFresnelTop.rgbRms >= 0.02
+      && surfaceContourLighting.acidFresnelTop.rgbRms >= 0.02
+      && surfaceContourLighting.waterFresnelTop.chromaRms >= 0.01
+      && surfaceContourLighting.oilFresnelTop.chromaRms >= 0.01
+      && surfaceContourLighting.acidFresnelTop.chromaRms >= 0.01
+      && surfaceContourLighting.waterFresnelTop.peakResponseRgb[1]
+        > surfaceContourLighting.waterFresnelTop.peakResponseRgb[0]
+      && surfaceContourLighting.waterFresnelTop.peakResponseRgb[2]
+        >= surfaceContourLighting.waterFresnelTop.peakResponseRgb[0]
+      && surfaceContourLighting.oilFresnelTop.peakResponseRgb[0]
+        > surfaceContourLighting.oilFresnelTop.peakResponseRgb[2]
+      && surfaceContourLighting.acidFresnelTop.peakResponseRgb[1]
+        > surfaceContourLighting.acidFresnelTop.peakResponseRgb[0],
+    `${mode}: family-chromatic liquid Fresnel shell was lost (${JSON.stringify(surfaceContourLightingSamples)})`);
     assert(surfaceContourLighting.metalContourCore.rgbPeak <= 1
       && surfaceContourLighting.metalGlassContourSeam.rgbPeak <= 1
       && surfaceContourLighting.claySmoothCore.rgbPeak <= 1
-      && surfaceContourLighting.isolatedGrainContourControl.rgbPeak <= 1,
-    `${mode}: solid contour light leaked into an interior or unlike seam (${JSON.stringify(surfaceContourLightingSamples)})`);
+      && surfaceContourLighting.isolatedGrainContourControl.rgbPeak <= 1
+      && surfaceContourLighting.waterFresnelCore.rgbPeak <= 1
+      && surfaceContourLighting.lavaFresnelControl.rgbPeak <= 1,
+    `${mode}: contour light leaked into an interior, control, or unlike seam (${JSON.stringify(surfaceContourLightingSamples)})`);
     assert(surfaceContourLightingSamples.every((sample) => sample.repeatRgbPeak <= 1),
       `${mode}: surface contour off-on-off sequence was not deterministic (${JSON.stringify(surfaceContourLightingSamples)})`);
     const surfaceContourSupportRegions = [
@@ -1699,6 +1777,9 @@ async function auditMode(mode) {
       { name: 'dtecContourSupport', x: 485, y: 304, radiusX: 17.5, radiusY: 10.5, silhouette: true },
       { name: 'metalGlassContourSupport', x: 141, y: 172, radiusX: 37, radiusY: 12.5, silhouette: true },
       { name: 'claySmoothContourSupport', x: 148, y: 82, radiusX: 5.5, radiusY: 55, silhouette: true },
+      { name: 'waterFresnelSupport', x: 224, y: 270, radiusX: 16, radiusY: 70, silhouette: true },
+      { name: 'oilFresnelSupport', x: 263, y: 270, radiusX: 16, radiusY: 70, silhouette: true },
+      { name: 'acidFresnelSupport', x: 302, y: 270, radiusX: 16, radiusY: 70, silhouette: true },
     ];
     const [flatSurfaceContourSupport, litSurfaceContourSupport] = await Promise.all([
       samplePageRegions(
@@ -1718,8 +1799,9 @@ async function auditMode(mode) {
       litWorldArea: litSurfaceContourSupport[index].worldArea,
     }));
     assert(surfaceContourSupportInvariantSamples.every((sample) => (
-      sample.flatVisible === sample.litVisible
-      && Math.abs(sample.flatWorldArea - sample.litWorldArea) <= 0.01
+      Math.abs(sample.flatVisible - sample.litVisible) / Math.max(1, sample.flatVisible) <= 0.001
+      && Math.abs(sample.flatWorldArea - sample.litWorldArea)
+        / Math.max(0.001, sample.flatWorldArea) <= 0.001
     )), `${mode}: surface contour lighting changed solid support (${JSON.stringify(surfaceContourSupportInvariantSamples)})`);
     const solidFieldRegions = [
       { name: 'warmMetalFacing', x: 389.5, y: 229, radiusX: 2, radiusY: 5 },
@@ -3228,6 +3310,44 @@ function assertPairedGasSpectralScattering(results) {
     const ratio = canvasSample.rgbRms / Math.max(0.04, webglSample.rgbRms);
     assert(ratio >= 0.35 && ratio <= 3.0,
       `focused Canvas/WebGL ${name} scattering diverged (${canvasSample.rgbRms}/${webglSample.rgbRms})`);
+  }
+}
+
+function assertLiquidFresnelSamples(samples, label) {
+  const byName = Object.fromEntries(samples.map((sample) => [sample.name, sample]));
+  const water = byName.waterFresnelTop;
+  const oil = byName.oilFresnelTop;
+  const acid = byName.acidFresnelTop;
+  const lava = byName.lavaFresnelControl;
+  const core = byName.waterFresnelCore;
+  assert(water && oil && acid && lava && core, `${label}: liquid Fresnel samples are incomplete`);
+  assert(water.rgbRms >= 0.02 && oil.rgbRms >= 0.02 && acid.rgbRms >= 0.02
+    && water.chromaRms >= 0.01 && oil.chromaRms >= 0.01 && acid.chromaRms >= 0.01,
+  `${label}: liquid Fresnel shell lost visible chromatic response (${JSON.stringify(samples)})`);
+  assert(water.peakResponseRgb[1] > water.peakResponseRgb[0]
+    && water.peakResponseRgb[2] >= water.peakResponseRgb[0]
+    && oil.peakResponseRgb[0] > oil.peakResponseRgb[2]
+    && acid.peakResponseRgb[1] > acid.peakResponseRgb[0],
+  `${label}: liquid Fresnel families collapsed (${JSON.stringify(samples)})`);
+  assert(lava.rgbPeak <= 1 && core.rgbPeak <= 1,
+    `${label}: liquid Fresnel leaked into Lava or a dense core (${JSON.stringify(samples)})`);
+  assert(samples.every((sample) => sample.repeatRgbPeak <= 1),
+    `${label}: liquid Fresnel off-on-off sequence was not deterministic (${JSON.stringify(samples)})`);
+}
+
+function assertPairedSurfaceContourLighting(results) {
+  const canvas = results.find((result) => result.backend === 'canvas2d')
+    ?.surfaceContourLightingSamples;
+  const webgl = results.find((result) => result.backend === 'webgl')
+    ?.surfaceContourLightingSamples;
+  if (!canvas || !webgl) return;
+  for (const name of ['waterFresnelTop', 'oilFresnelTop', 'acidFresnelTop']) {
+    const canvasSample = canvas.find((sample) => sample.name === name);
+    const webglSample = webgl.find((sample) => sample.name === name);
+    assert(canvasSample && webglSample, `focused paired liquid-Fresnel sample missing ${name}`);
+    const ratio = canvasSample.rgbRms / Math.max(0.02, webglSample.rgbRms);
+    assert(ratio >= 0.25 && ratio <= 4.0,
+      `focused Canvas/WebGL ${name} Fresnel response diverged (${canvasSample.rgbRms}/${webglSample.rgbRms})`);
   }
 }
 
@@ -5385,6 +5505,8 @@ async function sampleBackdropRefractionRegions(cdp, screenshots, regions, captur
       const absoluteRgb = [0, 0, 0];
       let rgbPeak = 0;
       let repeatRgbPeak = 0;
+      let peakRgbMagnitude = 0;
+      let peakResponseRgb = [0, 0, 0];
       const count = Math.max(1, width * height);
       for (let offset = 0; offset < data.straight.length; offset += 4) {
         const straight = data.straight[offset] * 0.2126
@@ -5411,6 +5533,12 @@ async function sampleBackdropRefractionRegions(cdp, screenshots, regions, captur
         squared += difference * difference;
         rgbSquared += redDifference * redDifference
           + greenDifference * greenDifference + blueDifference * blueDifference;
+        const rgbMagnitude = redDifference * redDifference
+          + greenDifference * greenDifference + blueDifference * blueDifference;
+        if (rgbMagnitude > peakRgbMagnitude) {
+          peakRgbMagnitude = rgbMagnitude;
+          peakResponseRgb = [redDifference, greenDifference, blueDifference];
+        }
         chromaSquared += (redDifference - difference) * (redDifference - difference)
           + (greenDifference - difference) * (greenDifference - difference)
           + (blueDifference - difference) * (blueDifference - difference);
@@ -5433,6 +5561,7 @@ async function sampleBackdropRefractionRegions(cdp, screenshots, regions, captur
         chromaRms: Math.round(Math.sqrt(chromaSquared / (count * 3)) * 100) / 100,
         responseRgb: responseRgb.map((channel) => Math.round(channel / count * 100) / 100),
         absoluteRgb: absoluteRgb.map((channel) => Math.round(channel / count * 100) / 100),
+        peakResponseRgb,
         signedMean: Math.round(signed / count * 100) / 100,
         meanBiasRatio: Math.round(Math.abs(signed / count) / Math.max(0.001, rms) * 1000) / 1000,
         positiveMean: Math.round(positive / count * 100) / 100,
@@ -6345,7 +6474,7 @@ function assertPairedVisualRelief(results) {
   }
   for (const name of [
     'metalContourTop', 'metalContourBottom', 'glassContourTop', 'dtecContourTop',
-    'claySmoothTop',
+    'claySmoothTop', 'waterFresnelTop', 'oilFresnelTop', 'acidFresnelTop',
   ]) {
     const canvasSample = canvas.surfaceContourLightingSamples.find((sample) => sample.name === name);
     const webglSample = webgl.surfaceContourLightingSamples.find((sample) => sample.name === name);

@@ -250,7 +250,8 @@ export class MaterialRenderer {
         const previousPhase = fallbackFields.lookups.styleBytes[previous * 4];
         const nextPhase = fallbackFields.lookups.styleBytes[cell.material * 4];
         if (previousPhase === RenderPhase.Solid || previousPhase === RenderPhase.Powder
-          || nextPhase === RenderPhase.Solid || nextPhase === RenderPhase.Powder) {
+          || nextPhase === RenderPhase.Solid || nextPhase === RenderPhase.Powder
+          || powderAirBlocker(previous, previousPhase) !== powderAirBlocker(cell.material, nextPhase)) {
           this.powderSurfaceDirty = true;
         }
         if (previousPhase === RenderPhase.Solid || nextPhase === RenderPhase.Solid) {
@@ -564,9 +565,7 @@ export class MaterialRenderer {
         void pending.then((latePresenter) => latePresenter.destroy()).catch(() => undefined);
         return;
       }
-      const ready = await this.commitPresenter(
-        presenter, Math.max(0, promotionDeadline - performance.now()),
-      );
+      const ready = await this.commitPresenter(presenter, promotionDeadline);
       if (!ready) {
         const contextLost = presenter.isContextLost();
         if (this.presenter === presenter) this.presenter = undefined;
@@ -600,7 +599,7 @@ export class MaterialRenderer {
 
   private async commitPresenter(
     presenter: PixiFieldPresenter,
-    firstFrameTimeoutMs: number,
+    promotionDeadline: number,
   ): Promise<boolean> {
     // Compile the shader and seed every semantic field while the known-good
     // Canvas remains visible. Any failure leaves the fallback fully intact.
@@ -644,6 +643,11 @@ export class MaterialRenderer {
     if (presenter.isContextLost()) throw new Error('WebGL context lost during presenter promotion');
     presenter.mount();
     if (presenter.isContextLost()) throw new Error('WebGL context lost while mounting presenter');
+    // update() may synchronously compile the large composed shader. Charge that
+    // elapsed work to the original promotion window instead of starting a fresh
+    // full wait after compilation returns. JavaScript cannot interrupt a driver
+    // call mid-compile, but it can avoid extending the deadline a second time.
+    const firstFrameTimeoutMs = Math.max(0, promotionDeadline - performance.now());
     if (!await presenter.waitForFirstFrame(firstFrameTimeoutMs)) return false;
     if (presenter.isContextLost() || this.presenter !== presenter) return false;
     this.releaseFallbackStorage();
@@ -1586,6 +1590,7 @@ export class MaterialRenderer {
           paletteBytes: this.fallbackFields?.lookups.paletteBytes,
           powderStability: this.boundaryStability,
           powderSurface: this.fallbackFields?.powderSurface.bytes,
+          powderExteriorAir: this.fallbackFields?.powderSurface.exteriorAirBytes,
           liquidField: this.fallbackFields?.liquid.bytes,
           powderStyle: this.powderRenderStyle,
           walls: this.renderedWalls,
@@ -1702,6 +1707,10 @@ function cardinalExposure(
 function ordinarySolidNeighbour(styleBytes: Uint8Array, material: Material): boolean {
   return material !== Material.Empty && material !== Material.Wall
     && styleBytes[material * 4] === RenderPhase.Solid;
+}
+
+function powderAirBlocker(material: number, phase: RenderPhase): boolean {
+  return material !== 0 && phase !== RenderPhase.Gas && phase !== RenderPhase.Energy;
 }
 
 function settleWithin<T>(promise: Promise<T>, milliseconds: number): Promise<T | undefined> {

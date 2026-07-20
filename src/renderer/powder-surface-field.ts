@@ -19,7 +19,9 @@ const VERTICAL_CENTRE_WEIGHT = 6 / 16;
  */
 export class PowderSurfaceField {
   readonly bytes: Uint8Array<ArrayBuffer>;
-  /** Bit 0 is stable powder density; bit 1 is local powder/solid support. */
+  /** 255 only for passable cells connected to a world edge by cardinal air. */
+  readonly exteriorAirBytes: Uint8Array<ArrayBuffer>;
+  /** Bit 0 is stable density, bit 1 local support, bit 2 an exterior-air blocker. */
   private readonly seed: Uint8Array<ArrayBuffer>;
   private readonly horizontal: Float32Array<ArrayBuffer>;
   private readonly blurred: Float32Array<ArrayBuffer>;
@@ -32,6 +34,7 @@ export class PowderSurfaceField {
   ) {
     const cells = width * height;
     this.bytes = new Uint8Array(cells * 4);
+    this.exteriorAirBytes = new Uint8Array(cells);
     this.seed = new Uint8Array(cells);
     this.horizontal = new Float32Array(cells);
     this.blurred = new Float32Array(cells);
@@ -54,13 +57,14 @@ export class PowderSurfaceField {
         if (material !== 0 && material !== Material.Wall) {
           const phase = styleBytes[material * 4];
           if (phase === RenderPhase.Powder) {
-            state = 2;
+            state = 6;
             if (stability[index] >= 192) {
-              state = 3;
+              state = 7;
               hasSurface = true;
             }
-          } else if (phase === RenderPhase.Solid) state = 2;
-        }
+          } else if (phase === RenderPhase.Solid) state = 6;
+          else if (phase !== RenderPhase.Gas && phase !== RenderPhase.Energy) state = 4;
+        } else if (material === Material.Wall) state = 4;
         if (seed[index] !== state) changed = true;
         seed[index] = state;
       }
@@ -71,13 +75,14 @@ export class PowderSurfaceField {
         if (walls[index] === 0 && material !== 0 && material !== Material.Wall) {
           const phase = styleBytes[material * 4];
           if (phase === RenderPhase.Powder) {
-            state = 2;
+            state = 6;
             if (stability[index] >= 192) {
-              state = 3;
+              state = 7;
               hasSurface = true;
             }
-          } else if (phase === RenderPhase.Solid) state = 2;
-        }
+          } else if (phase === RenderPhase.Solid) state = 6;
+          else if (phase !== RenderPhase.Gas && phase !== RenderPhase.Energy) state = 4;
+        } else if (walls[index] !== 0 || material === Material.Wall) state = 4;
         if (seed[index] !== state) changed = true;
         seed[index] = state;
       }
@@ -88,6 +93,7 @@ export class PowderSurfaceField {
         this.bytes.fill(0);
         this.horizontal.fill(0);
         this.blurred.fill(0);
+        this.rebuildExteriorAir();
       }
       return changed;
     }
@@ -95,11 +101,12 @@ export class PowderSurfaceField {
     this.blurHorizontalTwice();
     this.blurVertical();
     this.packBytes();
+    this.rebuildExteriorAir();
     return true;
   }
 
   get allocatedByteLength(): number {
-    return this.bytes.byteLength + this.seed.byteLength
+    return this.bytes.byteLength + this.exteriorAirBytes.byteLength + this.seed.byteLength
       + this.horizontal.byteLength + this.blurred.byteLength;
   }
 
@@ -197,7 +204,7 @@ export class PowderSurfaceField {
       for (let supportY = 0; supportY < supportRows; supportY++) {
         let supportIndex = supportFirstRow + supportY * width;
         for (let supportX = 0; supportX < initialColumns; supportX++) {
-          support += seed[supportIndex + supportX] >>> 1;
+          support += (seed[supportIndex + supportX] & 2) >>> 1;
         }
       }
       for (let x = 0; x < width; x++) {
@@ -217,16 +224,81 @@ export class PowderSurfaceField {
         const addX = x + 2;
         if (removeX >= 0) {
           const supportIndex = supportFirstRow + removeX;
-          support -= seed[supportIndex] >>> 1;
-          if (supportRows > 1) support -= seed[supportIndex + width] >>> 1;
-          if (supportRows > 2) support -= seed[supportIndex + doubleWidth] >>> 1;
+          support -= (seed[supportIndex] & 2) >>> 1;
+          if (supportRows > 1) support -= (seed[supportIndex + width] & 2) >>> 1;
+          if (supportRows > 2) support -= (seed[supportIndex + doubleWidth] & 2) >>> 1;
         }
         if (addX < width) {
           const supportIndex = supportFirstRow + addX;
-          support += seed[supportIndex] >>> 1;
-          if (supportRows > 1) support += seed[supportIndex + width] >>> 1;
-          if (supportRows > 2) support += seed[supportIndex + doubleWidth] >>> 1;
+          support += (seed[supportIndex] & 2) >>> 1;
+          if (supportRows > 1) support += (seed[supportIndex + width] & 2) >>> 1;
+          if (supportRows > 2) support += (seed[supportIndex + doubleWidth] & 2) >>> 1;
         }
+      }
+    }
+  }
+
+  /**
+   * Exact four-neighbour exterior classification. The completed blur scratch is
+   * reused as an integer queue, so the only persistent cost is one byte/cell and
+   * the result is independent of output scale.
+   */
+  private rebuildExteriorAir(): void {
+    const width = this.width;
+    const height = this.height;
+    const cells = width * height;
+    const seed = this.seed;
+    const exterior = this.exteriorAirBytes;
+    const queue = this.blurred;
+    exterior.fill(0);
+    let tail = 0;
+    for (let x = 0; x < width; x++) {
+      const top = x;
+      if ((seed[top] & 4) === 0 && exterior[top] === 0) {
+        exterior[top] = 255;
+        queue[tail++] = top;
+      }
+      const bottom = (height - 1) * width + x;
+      if ((seed[bottom] & 4) === 0 && exterior[bottom] === 0) {
+        exterior[bottom] = 255;
+        queue[tail++] = bottom;
+      }
+    }
+    for (let y = 1; y + 1 < height; y++) {
+      const left = y * width;
+      if ((seed[left] & 4) === 0 && exterior[left] === 0) {
+        exterior[left] = 255;
+        queue[tail++] = left;
+      }
+      const right = left + width - 1;
+      if ((seed[right] & 4) === 0 && exterior[right] === 0) {
+        exterior[right] = 255;
+        queue[tail++] = right;
+      }
+    }
+    let head = 0;
+    while (head < tail) {
+      const index = queue[head++];
+      const x = index % width;
+      const left = index - 1;
+      const right = index + 1;
+      const top = index - width;
+      const bottom = index + width;
+      if (x > 0 && exterior[left] === 0 && (seed[left] & 4) === 0) {
+        exterior[left] = 255;
+        queue[tail++] = left;
+      }
+      if (x + 1 < width && exterior[right] === 0 && (seed[right] & 4) === 0) {
+        exterior[right] = 255;
+        queue[tail++] = right;
+      }
+      if (top >= 0 && exterior[top] === 0 && (seed[top] & 4) === 0) {
+        exterior[top] = 255;
+        queue[tail++] = top;
+      }
+      if (bottom < cells && exterior[bottom] === 0 && (seed[bottom] & 4) === 0) {
+        exterior[bottom] = 255;
+        queue[tail++] = bottom;
       }
     }
   }

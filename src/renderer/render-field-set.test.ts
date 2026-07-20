@@ -116,7 +116,8 @@ describe('shared render field set', () => {
       + fields.lookups.emissiveByMaterial.byteLength
       + fields.lookups.colorByMaterial.byteLength;
     expect(lookupBytes).toBe(3_584);
+    expect(fields.powderSurface.allocatedByteLength).toBe(3_290_112);
     expect(fields.suspension.allocatedByteLength).toBe(588_032);
-    expect(fields.allocatedByteLength).toBeLessThan(11_900_000);
+    expect(fields.allocatedByteLength).toBeLessThan(12_100_000);
   });
 });

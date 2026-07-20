@@ -76,9 +76,44 @@ describe('slope-aware powder surface field', () => {
     expect(field.bytes.some(Boolean)).toBe(false);
   });
 
+  it('marks only border-connected air and preserves sealed multi-cell cavities', () => {
+    const width = 9;
+    const height = 9;
+    const materials = new Uint8Array(width * height);
+    const stability = new Uint8Array(width * height).fill(255);
+    const walls = new Uint8Array(width * height);
+    const field = new PowderSurfaceField(width, height, lookups.styleBytes);
+    for (let y = 2; y <= 5; y++) for (let x = 2; x <= 5; x++) {
+      if ((x === 3 || x === 4) && (y === 3 || y === 4)) continue;
+      materials[y * width + x] = Material.Clay;
+    }
+
+    field.update(materials, stability, walls);
+    for (let y = 3; y <= 4; y++) for (let x = 3; x <= 4; x++) {
+      expect(field.exteriorAirBytes[y * width + x], `sealed ${x},${y}`).toBe(0);
+    }
+    expect(field.exteriorAirBytes[0]).toBe(255);
+
+    // Open the same local cavity through a winding cardinal corridor.
+    materials[3 * width + 2] = Material.Empty;
+    materials[3 * width + 1] = Material.Empty;
+    field.update(materials, stability, walls);
+    for (let y = 3; y <= 4; y++) for (let x = 3; x <= 4; x++) {
+      expect(field.exteriorAirBytes[y * width + x], `open ${x},${y}`).toBe(255);
+    }
+
+    materials[3 * width + 2] = Material.Water;
+    field.update(materials, stability, walls);
+    expect(field.exteriorAirBytes[3 * width + 3]).toBe(0);
+    materials[3 * width + 2] = Material.Empty;
+    walls[3 * width + 2] = 1;
+    field.update(materials, stability, walls);
+    expect(field.exteriorAirBytes[3 * width + 3]).toBe(0);
+  });
+
   it('uses bounded preallocated storage and stable output buffers', () => {
     const field = new PowderSurfaceField(612, 384, lookups.styleBytes);
-    expect(field.allocatedByteLength).toBe(3_055_104);
+    expect(field.allocatedByteLength).toBe(3_290_112);
     const bytes = field.bytes;
     const materials = new Uint8Array(612 * 384);
     const stability = new Uint8Array(materials.length);

@@ -200,6 +200,39 @@ describe('Pixi presenter startup configuration', () => {
     expect(presenter.app.render).toHaveBeenCalledOnce();
   });
 
+  it('gates the liquid Fresnel shell with the shared RGB-only contour uniform', () => {
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const liquidStart = source.indexOf('  } else if (liquidVolume > 0.5)');
+    const liquidEnd = source.indexOf('  } else {', liquidStart);
+    const liquid = source.slice(liquidStart, liquidEnd);
+
+    expect(liquidStart).toBeGreaterThan(0);
+    expect(liquidEnd).toBeGreaterThan(liquidStart);
+    expect(liquid).toContain('edgeTint');
+    expect(liquid).toContain('reflectedEnvironment');
+    expect(liquid).toContain('(1.0 - liquidOnly) * (1.0 - molten)');
+    expect(liquid).toContain('liquidFresnelKey');
+    expect(liquid).toContain('liquidFresnelShadow');
+    expect(liquid).toContain('liquidFresnelContour');
+    expect(liquid).toContain('liquidFresnelStrength');
+    expect(liquid).not.toMatch(/uSurfaceContourLighting[^;]*\balpha\b/);
+  });
+
+  it('rejects concave powder projection while preserving exterior smoothing', () => {
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const nearbyStart = source.indexOf('vec4 nearbySurface(');
+    const nearbyEnd = source.indexOf('float nearbyPowderStability(', nearbyStart);
+    const projectionStart = source.indexOf('if (surfaceOnly > 0.5 && profile == 1.0');
+    const projectionEnd = source.indexOf('float density = shape.x;', projectionStart);
+
+    expect(nearbyStart).toBeGreaterThan(0);
+    expect(nearbyEnd).toBeGreaterThan(nearbyStart);
+    expect(source.slice(nearbyStart, nearbyEnd)).toContain('solidSamples');
+    expect(source.slice(projectionStart, projectionEnd)).toContain('projectedSurfaceSamples > 2.5');
+    expect(source.slice(projectionStart, projectionEnd)).toContain('shape.w < 2.5');
+    expect(source.slice(projectionStart, projectionEnd)).toContain('exteriorPowderAir < 0.5');
+  });
+
   it('seeds and redraws optional-last gas volume chroma', () => {
     const presenter = presenterHarness();
 

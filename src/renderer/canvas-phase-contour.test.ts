@@ -5,7 +5,7 @@ import {
   CANVAS_CONTOUR_GEOMETRY_LOOKUP_BYTES,
   CANVAS_CONTOUR_OUTPUT_SCALE,
   CanvasPhaseContourScratch,
-  canvasLiquidMeniscusScale,
+  applyCanvasLiquidFresnelShell,
   canvasPhaseContactTone,
   type CanvasPhaseContourInput,
 } from './canvas-phase-contour';
@@ -340,7 +340,7 @@ describe('Canvas 2x phase contour scratch', () => {
     expect(bevelled.ownerMaterials).toEqual(flat.ownerMaterials);
   });
 
-  it('keeps the solid contour bevel off unlike seams, traits, emissive matter, and other phases', () => {
+  it('keeps the solid contour bevel off unlike seams, traits, emissive matter, and non-liquid phases', () => {
     const seam = fixture(7, 5);
     for (let y = 1; y <= 3; y++) for (let x = 1; x <= 5; x++) {
       paint(seam, x, y, x <= 2 ? Material.Metal : Material.Glass);
@@ -365,7 +365,6 @@ describe('Canvas 2x phase contour scratch', () => {
       [Material.Metal, 3],
       [Material.Metal, 2],
       [Material.Sand, -1],
-      [Material.Water, -1],
       [Material.Smoke, -1],
       [Material.Fire, -1],
     ] as const) {
@@ -627,6 +626,37 @@ describe('Canvas 2x phase contour scratch', () => {
     }
   });
 
+  it('preserves sealed multi-cell powder cavities in Smooth mode at every high-resolution scale', () => {
+    const width = 12;
+    const height = 12;
+    const value = fixture(width, height);
+    for (let y = 2; y <= 10; y++) for (let x = 2; x <= 9; x++) {
+      if ((x === 5 || x === 6) && (y === 5 || y === 6)) continue;
+      paint(value, x, y, Material.Clay);
+    }
+    const field = new PowderSurfaceField(width, height, lookups.styleBytes);
+    field.update(value.materials, value.stability, value.walls);
+
+    for (const scale of [2, 4, 8] as const) {
+      const smooth = new CanvasPhaseContourScratch(scale);
+      smooth.rasterize({
+        ...value.input,
+        powderSurface: field.bytes,
+        powderExteriorAir: field.exteriorAirBytes,
+        powderStyle: 'smooth',
+      });
+
+      for (let cellY = 5; cellY <= 6; cellY++) for (let cellX = 5; cellX <= 6; cellX++) {
+        for (let subY = 0; subY < scale; subY++) for (let subX = 0; subX < scale; subX++) {
+          const pore = (cellY * scale + subY) * smooth.outputStride
+            + cellX * scale + subX;
+          expect(smooth.coverage[pore], `${scale}x pore ${cellX},${cellY}`).toBe(0);
+          expect(smooth.pixels[pore * 4 + 3], `${scale}x pore alpha ${cellX},${cellY}`).toBe(0);
+        }
+      }
+    }
+  });
+
   it('handles every local neighbour topology with mirror-symmetric categorical solid support', () => {
     const scratch = new CanvasPhaseContourScratch();
     const neighbours = [
@@ -721,10 +751,26 @@ describe('Canvas 2x phase contour scratch', () => {
     expect(scratch.coverage[outputIndex(5, 4)]).toBeGreaterThan(unlikeEdge);
   });
 
-  it('adds bounded bipolar meniscus light without changing liquid support or interiors', () => {
-    expect(canvasLiquidMeniscusScale(1, 1, 1, RenderOptics.Aqueous)).toBe(1);
-    expect(canvasLiquidMeniscusScale(0.5, 1, 1, RenderOptics.Aqueous)).toBeGreaterThan(1);
-    expect(canvasLiquidMeniscusScale(0.5, -1, -1, RenderOptics.Aqueous)).toBeLessThan(1);
+  it('adds a bounded family-chromatic Fresnel shell without changing support or interiors', () => {
+    const baseline = [80, 110, 140, 177];
+    const lit = new Map<RenderOptics, number[]>();
+    for (const optics of [RenderOptics.Aqueous, RenderOptics.Oily, RenderOptics.Corrosive]) {
+      const sample = new Uint8ClampedArray(baseline);
+      applyCanvasLiquidFresnelShell(sample, 0, 0.5, 1, 1, optics);
+      expect(sample[3]).toBe(baseline[3]);
+      expect(Array.from(sample.slice(0, 3))).not.toEqual(baseline.slice(0, 3));
+      lit.set(optics, Array.from(sample.slice(0, 3), (channel, index) => channel - baseline[index]));
+    }
+    expect(lit.get(RenderOptics.Aqueous)![2]).toBeGreaterThan(lit.get(RenderOptics.Aqueous)![0]);
+    expect(lit.get(RenderOptics.Oily)![0]).toBeGreaterThan(lit.get(RenderOptics.Oily)![2]);
+    expect(lit.get(RenderOptics.Corrosive)![1]).toBeGreaterThan(lit.get(RenderOptics.Corrosive)![0]);
+
+    const dense = new Uint8ClampedArray(baseline);
+    applyCanvasLiquidFresnelShell(dense, 0, 1, 1, 1, RenderOptics.Aqueous);
+    expect(Array.from(dense)).toEqual(baseline);
+    const molten = new Uint8ClampedArray(baseline);
+    applyCanvasLiquidFresnelShell(molten, 0, 0.5, 1, 1, RenderOptics.Molten);
+    expect(Array.from(molten)).toEqual(baseline);
 
     for (const material of [Material.Water, Material.Oil, Material.Acid, Material.Lava]) {
       const value = fixture(7, 7);
@@ -766,7 +812,7 @@ describe('Canvas 2x phase contour scratch', () => {
       } else {
         expect(brighter, `${material} brighter rim`).toBeGreaterThan(0);
         expect(darker, `${material} darker rim`).toBeGreaterThan(0);
-        expect(maximumDelta, `${material} bounded rim`).toBeLessThanOrEqual(14);
+        expect(maximumDelta, `${material} bounded rim`).toBeLessThanOrEqual(18);
       }
       for (let y = 6; y <= 7; y++) for (let x = 6; x <= 7; x++) {
         expect(rgbaAt(styled, x, y), `${material} dense interior ${x},${y}`).toEqual(

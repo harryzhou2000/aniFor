@@ -113,6 +113,8 @@ export interface CanvasPhaseContourInput {
   readonly powderStability: Uint8Array;
   /** Optional shared RGBA powder density/gradient/support field. */
   readonly powderSurface?: Uint8Array;
+  /** Optional exact border-connected air classification from the shared powder field. */
+  readonly powderExteriorAir?: Uint8Array;
   /** Optional shared full-resolution species-aware liquid RGBA field. */
   readonly liquidField?: Uint8Array;
   /** Comparison mode; defaults to the slope-aware smooth presentation. */
@@ -138,22 +140,63 @@ export interface CanvasPhaseContourInput {
 }
 
 /**
- * Hue-preserving light response for one already-qualified liquid contour sample.
- * The caller owns semantic/free-surface eligibility; this helper deliberately
- * returns an exact no-op away from the fractional Hermite boundary.
+ * Family-coloured reflection/transmission shell for one already-qualified
+ * liquid/air contour sample. The Hermite boundary already supplies density and
+ * its analytic normal; this changes RGB only, allocates nothing, and remains an
+ * exact no-op for dense interiors and molten liquids.
  */
-export function canvasLiquidMeniscusScale(
+export function applyCanvasLiquidFresnelShell(
+  pixels: Uint8ClampedArray,
+  offset: number,
   density: number,
   gradientX: number,
   gradientY: number,
   optics: number,
-): number {
-  if (optics === RenderOptics.Molten) return 1;
-  const gain = optics === RenderOptics.Aqueous ? 0.055
-    : optics === RenderOptics.Oily ? 0.045
-    : optics === RenderOptics.Corrosive ? 0.052
-    : 0.042;
-  return contourSurfaceLightScale(density, gradientX, gradientY, gain);
+): void {
+  if (optics === RenderOptics.Molten || density <= 0.08 || density >= 0.92) return;
+  const gradientLengthSquared = gradientX * gradientX + gradientY * gradientY;
+  if (gradientLengthSquared <= 1e-8) return;
+  const contourBand = smoothstep(0.08, 0.46, density)
+    * (1 - smoothstep(0.54, 0.92, density));
+  if (contourBand <= 0) return;
+  const directional = Math.max(-1, Math.min(1,
+    (gradientX * LIQUID_LIGHT_X + gradientY * LIQUID_LIGHT_Y)
+      / Math.sqrt(gradientLengthSquared),
+  ));
+  const grazing = 1 - Math.abs(directional);
+  const reflection = contourBand * (0.018 + grazing * 0.022);
+  const key = Math.max(0, directional) * contourBand * 0.060 + reflection;
+  const shadow = Math.max(0, -directional) * contourBand * 0.048;
+
+  let keyRed = 0.65, keyGreen = 0.82, keyBlue = 1.0;
+  let shadowRed = 0.72, shadowGreen = 0.64, shadowBlue = 0.50;
+  if (optics === RenderOptics.Aqueous) {
+    keyRed = 0.42; keyGreen = 0.82; keyBlue = 1.0;
+    shadowRed = 1.0; shadowGreen = 0.62; shadowBlue = 0.36;
+  } else if (optics === RenderOptics.Oily) {
+    keyRed = 1.0; keyGreen = 0.72; keyBlue = 0.28;
+    shadowRed = 0.40; shadowGreen = 0.68; shadowBlue = 1.0;
+  } else if (optics === RenderOptics.Corrosive) {
+    keyRed = 0.44; keyGreen = 1.0; keyBlue = 0.68;
+    shadowRed = 0.72; shadowGreen = 0.38; shadowBlue = 0.62;
+  }
+
+  const originalRed = pixels[offset];
+  const originalGreen = pixels[offset + 1];
+  const originalBlue = pixels[offset + 2];
+  const red = originalRed + (255 - originalRed) * keyRed * key
+    - originalRed * shadowRed * shadow;
+  const green = originalGreen + (255 - originalGreen) * keyGreen * key
+    - originalGreen * shadowGreen * shadow;
+  const blue = originalBlue + (255 - originalBlue) * keyBlue * key
+    - originalBlue * shadowBlue * shadow;
+  pixels[offset] = clampByte(Math.max(originalRed - 18, Math.min(originalRed + 18, red)));
+  pixels[offset + 1] = clampByte(
+    Math.max(originalGreen - 18, Math.min(originalGreen + 18, green)),
+  );
+  pixels[offset + 2] = clampByte(
+    Math.max(originalBlue - 18, Math.min(originalBlue + 18, blue)),
+  );
 }
 
 /**
@@ -180,25 +223,6 @@ export function canvasPhaseContactTone(
   // narrow band is intentionally small. A bounded 12-byte pre-clamp gain keeps
   // that canonical contact visible after Uint8 rounding without dark seams.
   return Math.max(-6, Math.min(6, directional * contactBand * 12));
-}
-
-function contourSurfaceLightScale(
-  density: number,
-  gradientX: number,
-  gradientY: number,
-  gain: number,
-): number {
-  if (density <= 0.08 || density >= 0.92 || gain <= 0) return 1;
-  const gradientLengthSquared = gradientX * gradientX + gradientY * gradientY;
-  if (gradientLengthSquared <= 1e-8) return 1;
-  const contourBand = smoothstep(0.08, 0.46, density)
-    * (1 - smoothstep(0.54, 0.92, density));
-  if (contourBand <= 0) return 1;
-  const directional = Math.max(-1, Math.min(1,
-    (gradientX * LIQUID_LIGHT_X + gradientY * LIQUID_LIGHT_Y)
-      / Math.sqrt(gradientLengthSquared),
-  ));
-  return 1 + Math.max(-0.08, Math.min(0.08, directional * contourBand * gain));
 }
 
 /**
@@ -308,7 +332,11 @@ export class CanvasPhaseContourScratch {
     let sourceBlue = this.haloPixels[haloIndex * 4 + 2];
     let sourceAlpha = this.haloPixels[haloIndex * 4 + 3];
     let emptyPowderStability = 0;
-    if (material === 0 && powderStyle !== 'grains' && !this.isWallAt(haloIndex)) {
+    const worldIndex = (input.chunkY + cellY) * input.worldWidth + input.chunkX + cellX;
+    const exteriorPowderAir = input.powderExteriorAir === undefined
+      || input.powderExteriorAir[worldIndex] !== 0;
+    if (material === 0 && powderStyle !== 'grains' && !this.isWallAt(haloIndex)
+      && exteriorPowderAir) {
       const owner = this.resolveEmptyPowderOwner(cellX + 1, cellY + 1);
       if (owner.material !== 0) {
         material = owner.material;
@@ -347,7 +375,6 @@ export class CanvasPhaseContourScratch {
     const compatibilityMask = packedMasks & FULL_COMPATIBILITY_MASK;
     let emptyPowderSupport = 0;
     if (emptyPowder) {
-      const worldIndex = (input.chunkY + cellY) * input.worldWidth + input.chunkX + cellX;
       emptyPowderSupport = input.powderSurface
         ? input.powderSurface[worldIndex * 4 + 3] / 255 * 9
         : bitCount(compatibilityMask);
@@ -372,7 +399,8 @@ export class CanvasPhaseContourScratch {
       );
       solidCurvatureDepth = curvatureGain > 0;
     }
-    const liquidMeniscus = this.haloMaterials[haloIndex] !== 0
+    const liquidMeniscus = (input.surfaceContourLighting ?? true)
+      && this.haloMaterials[haloIndex] !== 0
       && phase === RenderPhase.Liquid
       && input.styleBytes[material * 4 + 2] === 0
       && input.styleBytes[material * 4 + 3] === 0
@@ -460,17 +488,9 @@ export class CanvasPhaseContourScratch {
             + (q11 - q01) * weightY) * derivativeX;
           const gradientY = ((q01 - q00) * (1 - weightX)
             + (q11 - q10) * weightX) * derivativeY;
-          const scale = canvasLiquidMeniscusScale(
-            density,
-            gradientX,
-            gradientY,
-            materialOptics,
+          applyCanvasLiquidFresnelShell(
+            this.pixels, outputPixel, density, gradientX, gradientY, materialOptics,
           );
-          if (scale !== 1) {
-            this.pixels[outputPixel] = clampByte(this.pixels[outputPixel] * scale);
-            this.pixels[outputPixel + 1] = clampByte(this.pixels[outputPixel + 1] * scale);
-            this.pixels[outputPixel + 2] = clampByte(this.pixels[outputPixel + 2] * scale);
-          }
         }
         let solidCross = 0;
         let solidHorizontal = 0;
@@ -679,7 +699,10 @@ export class CanvasPhaseContourScratch {
       green += this.haloPixels[pixel + 1];
       blue += this.haloPixels[pixel + 2];
     }
-    if (material === 0 || powderDonors === 0 || stability <= 0) return owner;
+    // Three or four cardinal donors identify a concave authored void rather
+    // than exterior air. Keep that pore/notch empty; convex exterior shoulders
+    // still have at most two donors and remain eligible for rounded projection.
+    if (material === 0 || powderDonors === 0 || powderDonors > 2 || stability <= 0) return owner;
     owner.material = material;
     owner.stability = stability;
     owner.red = Math.round(red / powderDonors);
@@ -936,6 +959,7 @@ function validateInput(input: CanvasPhaseContourInput): void {
     || input.sourcePixels.length !== cells * 4
     || input.powderStability.length !== cells
     || (input.powderSurface !== undefined && input.powderSurface.length !== cells * 4)
+    || (input.powderExteriorAir !== undefined && input.powderExteriorAir.length !== cells)
     || (input.liquidField !== undefined && input.liquidField.length !== cells * 4)
     || input.styleBytes.length < 256 * 4
     || (input.paletteBytes !== undefined && input.paletteBytes.length < 256 * 4)
