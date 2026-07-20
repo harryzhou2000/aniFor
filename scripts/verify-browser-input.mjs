@@ -1344,6 +1344,9 @@ async function auditMode(mode) {
     const denseCanvasPresentation = mode === 'canvas2d'
       ? await auditDenseCanvasPresentation(cdp)
       : undefined;
+    const contourCanvasPresentation = mode === 'canvas2d'
+      ? await auditContourCanvasPresentation(cdp, denseCanvasPresentation)
+      : undefined;
 
     await evaluate(cdp, `window.__ANIFOR_INPUT_AUDIT__.clear(); window.__ANIFOR_INPUT_AUDIT__.setRadius(0); window.__ANIFOR_INPUT_AUDIT__.setMaterial(164); true`);
     await sleep(350);
@@ -1619,6 +1622,7 @@ async function auditMode(mode) {
       sparseGasSamples,
       ...(webGLPresentationTiming ? { webGLPresentationTiming } : {}),
       ...(denseCanvasPresentation ? { denseCanvasPresentation } : {}),
+      ...(contourCanvasPresentation ? { contourCanvasPresentation } : {}),
       landmarkCells: landmarks.length,
       paintedFootprints,
       continuousDragCells: dragCellCount,
@@ -1907,6 +1911,61 @@ async function auditDenseCanvasPresentation(cdp) {
     medianMs: round(durations[Math.floor(durations.length / 2)]),
     p90Ms: round(durations[Math.floor(durations.length * 0.9)]),
     maximumMs: round(durations.at(-1)),
+  };
+}
+
+async function auditContourCanvasPresentation(cdp, denseTiming) {
+  const initialSequence = await evaluate(cdp,
+    `window.__ANIFOR_INPUT_AUDIT__.canvasPresentationTiming()?.sequence ?? 0`);
+  await evaluate(cdp, `window.__ANIFOR_INPUT_AUDIT__.prepareContourStressFixture(); true`);
+  let timing = await waitForCanvasPresentation(cdp, initialSequence, 'Canvas contour fixture');
+
+  // The fixture's liquid cells make every one of the 20x12 contour chunks
+  // dirty during ordinary production styling. Toggle an RGB-only presentation
+  // control to request repeat frames without manufacturing semantic churn.
+  const warmupFrames = 10;
+  let lightingEnabled = true;
+  for (let warmup = 0; warmup < warmupFrames; warmup++) {
+    lightingEnabled = !lightingEnabled;
+    await evaluate(cdp,
+      `window.__ANIFOR_INPUT_AUDIT__.setLiquidFieldLighting(${lightingEnabled}); true`);
+    timing = await waitForCanvasPresentation(cdp, timing.sequence,
+      `Canvas contour warmup ${warmup + 1}`);
+  }
+
+  const targetSamples = 30;
+  const durations = [];
+  let discardedFieldRebuilds = 0;
+  for (let attempt = 0; durations.length < targetSamples && attempt < targetSamples + 30; attempt++) {
+    lightingEnabled = !lightingEnabled;
+    await evaluate(cdp,
+      `window.__ANIFOR_INPUT_AUDIT__.setLiquidFieldLighting(${lightingEnabled}); true`);
+    timing = await waitForCanvasPresentation(cdp, timing.sequence,
+      `Canvas contour sample ${attempt + 1}`);
+    if (timing.rebuiltField !== undefined) {
+      discardedFieldRebuilds++;
+      continue;
+    }
+    durations.push(timing.durationMs);
+  }
+  assert(durations.length === targetSamples,
+    `Canvas contour presentation produced only ${durations.length}/${targetSamples} steady-state samples`);
+  durations.sort((left, right) => left - right);
+  const medianMs = durations[Math.floor(durations.length / 2)];
+  const p90Ms = durations[Math.floor(durations.length * 0.9)];
+  const maximumMs = durations.at(-1);
+  return {
+    fixture: '612x384 repeating connected 2x2 Water islands',
+    expectedContourChunks: Math.ceil(WORLD_WIDTH / 32) * Math.ceil(WORLD_HEIGHT / 32),
+    warmupFrames,
+    samples: durations.length,
+    discardedFieldRebuilds,
+    medianMs: round(medianMs),
+    p90Ms: round(p90Ms),
+    maximumMs: round(maximumMs),
+    // Same-process normalization is more useful than a host-specific absolute
+    // number. Keep it diagnostic until repeated CI runs establish its variance.
+    p90VsDense: round(p90Ms / Math.max(0.001, denseTiming.p90Ms)),
   };
 }
 

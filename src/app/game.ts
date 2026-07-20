@@ -15,7 +15,7 @@ import { WorldInputController } from '../ui/world-input';
 import { drawToolPoint, drawToolSegment } from './tool-dispatch';
 import {
   blankBrowserInputAuditRequested, browserInputAuditRequested,
-  prepareDenseSolidAuditFixture, toggleDenseSolidAuditProbe,
+  prepareContourStressAuditFixture, prepareDenseSolidAuditFixture, toggleDenseSolidAuditProbe,
 } from './browser-input-audit';
 import { navigateToRenderScale } from './render-scale-navigation';
 import {
@@ -259,6 +259,7 @@ export class Game {
       viewState: () => this.renderer.getViewState(),
       backend: () => this.renderer.getBackendInfo(),
       prepareDenseSolidFixture: () => { prepareDenseSolidAuditFixture(this.simulation); },
+      prepareContourStressFixture: () => { prepareContourStressAuditFixture(this.simulation); },
       toggleDenseSolidProbe: () => { toggleDenseSolidAuditProbe(this.simulation); },
       materialAtlas: () => MATERIAL_ATLAS,
       prepareMaterialAtlas: () => { prepareMaterialAtlasAuditFixture(this.simulation); },

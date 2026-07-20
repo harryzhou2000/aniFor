@@ -32,6 +32,7 @@ export interface BrowserInputAuditApi {
   viewState(): ViewState;
   backend(): RendererBackendInfo;
   prepareDenseSolidFixture(): void;
+  prepareContourStressFixture(): void;
   toggleDenseSolidProbe(): void;
   materialAtlas(): readonly MaterialAtlasEntry[];
   prepareMaterialAtlas(): void;
@@ -62,6 +63,22 @@ export function prepareDenseSolidAuditFixture(simulation: SimulationBackend): vo
   // fill, so the renderer observes the completed fixture on its next frame.
   simulation.clear();
   simulation.cells().fill(Material.Metal);
+}
+
+/**
+ * Builds the production Canvas contour worst case used by the browser timer.
+ * Every 32x32 chunk contains connected liquid while one-cell gaps keep the
+ * analytic boundary path active instead of degenerating into a dense interior.
+ */
+export function prepareContourStressAuditFixture(simulation: SimulationBackend): void {
+  if (simulation.name !== 'TypeScript deterministic fallback') {
+    throw new Error('Canvas contour audit fixture requires the deterministic backend');
+  }
+  simulation.clear();
+  const cells = simulation.cells();
+  for (let y = 0; y < simulation.height; y++) for (let x = 0; x < simulation.width; x++) {
+    if (x % 3 < 2 && y % 3 < 2) cells[y * simulation.width + x] = Material.Water;
+  }
 }
 
 /** Changes one cell so a paused dense fixture presents another complete frame. */

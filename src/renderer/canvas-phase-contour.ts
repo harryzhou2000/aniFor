@@ -19,6 +19,57 @@ const HALO_SIZE = CANVAS_CONTOUR_CHUNK_SIZE + 2;
 const EMPTY_PHASE = 255;
 const LIQUID_LIGHT_X = 0.48;
 const LIQUID_LIGHT_Y = 0.68;
+const FULL_COMPATIBILITY_MASK = 0x1ff;
+
+interface SubpixelAxisGeometry {
+  readonly local: Float64Array;
+  readonly side: Uint8Array;
+  readonly weight: Float64Array;
+  readonly derivative: Float64Array;
+  readonly secondDerivative: Float64Array;
+  readonly quadraticLeft: Float64Array;
+  readonly quadraticMiddle: Float64Array;
+  readonly quadraticRight: Float64Array;
+}
+
+function createSubpixelAxisGeometry(scale: FieldOutputScale): SubpixelAxisGeometry {
+  const local = new Float64Array(scale);
+  const side = new Uint8Array(scale);
+  const weight = new Float64Array(scale);
+  const derivative = new Float64Array(scale);
+  const secondDerivative = new Float64Array(scale);
+  const quadraticLeft = new Float64Array(scale);
+  const quadraticMiddle = new Float64Array(scale);
+  const quadraticRight = new Float64Array(scale);
+  for (let subpixel = 0; subpixel < scale; subpixel++) {
+    const position = (subpixel + 0.5) / scale;
+    const contourPosition = position < 0.5 ? position + 0.5 : position - 0.5;
+    const powderOffset = Math.max(-0.5, Math.min(0.5, position - 0.5));
+    local[subpixel] = position;
+    side[subpixel] = position < 0.5 ? 0 : 1;
+    weight[subpixel] = hermiteWeight(contourPosition);
+    derivative[subpixel] = 6 * contourPosition * (1 - contourPosition);
+    secondDerivative[subpixel] = hermiteSecondDerivative(contourPosition);
+    quadraticLeft[subpixel] = 0.5 * (0.5 - powderOffset) * (0.5 - powderOffset);
+    quadraticMiddle[subpixel] = 0.75 - powderOffset * powderOffset;
+    quadraticRight[subpixel] = 0.5 * (0.5 + powderOffset) * (0.5 + powderOffset);
+  }
+  return {
+    local, side, weight, derivative, secondDerivative,
+    quadraticLeft, quadraticMiddle, quadraticRight,
+  };
+}
+
+const SUBPIXEL_AXIS_GEOMETRY: Record<FieldOutputScale, SubpixelAxisGeometry> = {
+  1: createSubpixelAxisGeometry(1),
+  2: createSubpixelAxisGeometry(2),
+  4: createSubpixelAxisGeometry(4),
+  8: createSubpixelAxisGeometry(8),
+};
+
+/** Typed payload of the shared 1×/2×/4×/8× axis lookup; object headers are engine-owned. */
+export const CANVAS_CONTOUR_GEOMETRY_LOOKUP_BYTES = (1 + 2 + 4 + 8)
+  * (8 * Float64Array.BYTES_PER_ELEMENT + Uint8Array.BYTES_PER_ELEMENT);
 
 export interface CanvasPhaseContourInput {
   readonly materials: Uint8Array;
@@ -95,10 +146,12 @@ export class CanvasPhaseContourScratch {
   private readonly emptyPowderOwner = {
     material: 0, stability: 0, red: 0, green: 0, blue: 0,
   };
+  private readonly axisGeometry: SubpixelAxisGeometry;
   private usedWidth = 0;
   private usedHeight = 0;
 
   constructor(readonly outputScale: FieldOutputScale = CANVAS_CONTOUR_OUTPUT_SCALE) {
+    this.axisGeometry = SUBPIXEL_AXIS_GEOMETRY[outputScale];
     const outputSize = CANVAS_CONTOUR_CHUNK_SIZE * outputScale;
     this.pixels = new Uint8ClampedArray(outputSize * outputSize * 4);
     this.coverage = new Uint8Array(outputSize * outputSize);
@@ -182,7 +235,6 @@ export class CanvasPhaseContourScratch {
     let sourceBlue = this.haloPixels[haloIndex * 4 + 2];
     let sourceAlpha = this.haloPixels[haloIndex * 4 + 3];
     let emptyPowderStability = 0;
-    let emptyPowderSupport = 0;
     if (material === 0 && powderStyle !== 'grains' && !this.isWallAt(haloIndex)) {
       const owner = this.resolveEmptyPowderOwner(cellX + 1, cellY + 1);
       if (owner.material !== 0) {
@@ -193,35 +245,52 @@ export class CanvasPhaseContourScratch {
         sourceBlue = owner.blue;
         sourceAlpha = 255;
         emptyPowderStability = owner.stability;
-        const worldIndex = (input.chunkY + cellY) * input.worldWidth + input.chunkX + cellX;
-        emptyPowderSupport = input.powderSurface
-          ? input.powderSurface[worldIndex * 4 + 3] / 255 * 9
-          : this.powderSupport3x3(cellX + 1, cellY + 1, material);
       }
     }
     const emptyPowder = this.haloMaterials[haloIndex] === 0 && material !== 0;
+    // The output planes were cleared once for the chunk. A truly empty source
+    // with no projected powder owner therefore has no per-supersample work.
+    if (material === 0 && sourceRed === 0 && sourceGreen === 0
+      && sourceBlue === 0 && sourceAlpha === 0) return;
+    const eligible = !this.isWallAt(haloIndex) && isContourPhase(phase);
+    // Every supersample around one semantic cell draws from this same 3x3
+    // categorical stencil. Classify it once, then bit-extract the four corners
+    // needed by each quadrant instead of repeating halo/phase/wall checks.
+    const compatibilityMask = eligible
+      ? this.compatibilityMask(cellX + 1, cellY + 1, material, phase) : 0;
+    let emptyPowderSupport = 0;
+    if (emptyPowder) {
+      const worldIndex = (input.chunkY + cellY) * input.worldWidth + input.chunkX + cellX;
+      emptyPowderSupport = input.powderSurface
+        ? input.powderSurface[worldIndex * 4 + 3] / 255 * 9
+        : bitCount(compatibilityMask);
+    }
     // Reject uniform solid interiors once per world cell. At 8x, entering the
     // subpixel path unconditionally would repeat four semantic classifications
     // 64 times even though their signed contact derivative must be zero.
-    const exactSolidContact = (input.solidContactDepth ?? true)
+    const differentSolidMask = (input.solidContactDepth ?? true)
       && this.haloMaterials[haloIndex] !== 0 && phase === RenderPhase.Solid
-      && this.hasDifferentSolidNearby(cellX + 1, cellY + 1, material);
+      ? this.differentSolidMask(cellX + 1, cellY + 1, material) : 0;
+    const exactSolidContact = differentSolidMask !== 0;
     const materialOptics = input.paletteBytes?.[material * 4 + 3] ?? RenderOptics.Default;
-    const curvatureGain = solidCurvatureGain(
-      input.styleBytes[material * 4 + 1] ?? RenderProfile.Neutral,
-      materialOptics,
-    );
-    const solidCurvatureDepth = (input.solidCurvatureDepth ?? true)
+    let curvatureGain = 0;
+    let solidCurvatureDepth = false;
+    if ((input.solidCurvatureDepth ?? true)
       && this.haloMaterials[haloIndex] !== 0 && phase === RenderPhase.Solid
-      && input.styleBytes[material * 4 + 2] === 0 && curvatureGain > 0
-      && this.hasSolidContourNearby(cellX + 1, cellY + 1, material);
+      && input.styleBytes[material * 4 + 2] === 0
+      && compatibilityMask !== FULL_COMPATIBILITY_MASK) {
+      curvatureGain = solidCurvatureGain(
+        input.styleBytes[material * 4 + 1] ?? RenderProfile.Neutral,
+        materialOptics,
+      );
+      solidCurvatureDepth = curvatureGain > 0;
+    }
     const liquidMeniscus = this.haloMaterials[haloIndex] !== 0
       && phase === RenderPhase.Liquid
       && input.styleBytes[material * 4 + 2] === 0
       && input.styleBytes[material * 4 + 3] === 0
       && materialOptics !== RenderOptics.Molten
       && this.isExposedConnectedLiquid(cellX + 1, cellY + 1, material);
-    const eligible = !this.isWallAt(haloIndex) && isContourPhase(phase);
     const powderSurfaceDetailGate = phase === RenderPhase.Powder
       && powderStyle === 'smooth' && input.powderSurface
       ? this.powderSurfaceBulkDepth(
@@ -246,9 +315,15 @@ export class CanvasPhaseContourScratch {
           const facetHash = hash2(cellX * 2 + facetX + material * 17, cellY * 2 + facetY);
           grainFacet = ((facetHash & 15) - 7.5) * 0.72;
         }
-        this.pixels[outputPixel] = clampByte(sourceRed + grainFacet);
-        this.pixels[outputPixel + 1] = clampByte(sourceGreen + grainFacet);
-        this.pixels[outputPixel + 2] = clampByte(sourceBlue + grainFacet);
+        if (grainFacet === 0) {
+          this.pixels[outputPixel] = sourceRed;
+          this.pixels[outputPixel + 1] = sourceGreen;
+          this.pixels[outputPixel + 2] = sourceBlue;
+        } else {
+          this.pixels[outputPixel] = clampByte(sourceRed + grainFacet);
+          this.pixels[outputPixel + 1] = clampByte(sourceGreen + grainFacet);
+          this.pixels[outputPixel + 2] = clampByte(sourceBlue + grainFacet);
+        }
 
         if (!eligible) {
           this.coverage[outputIndex] = sourceAlpha === 0 ? 0 : 255;
@@ -256,28 +331,26 @@ export class CanvasPhaseContourScratch {
           continue;
         }
 
-        const localX = (subX + 0.5) / this.outputScale;
-        const localY = (subY + 0.5) / this.outputScale;
-        const originX = cellX + (localX < 0.5 ? 0 : 1);
-        const originY = cellY + (localY < 0.5 ? 0 : 1);
-        const blendX = localX < 0.5 ? localX + 0.5 : localX - 0.5;
-        const blendY = localY < 0.5 ? localY + 0.5 : localY - 0.5;
-        const q00 = this.compatibleAt(originX, originY, material, phase);
-        const q10 = this.compatibleAt(originX + 1, originY, material, phase);
-        const q01 = this.compatibleAt(originX, originY + 1, material, phase);
-        const q11 = this.compatibleAt(originX + 1, originY + 1, material, phase);
+        const localX = this.axisGeometry.local[subX];
+        const localY = this.axisGeometry.local[subY];
+        const stencilOrigin = this.axisGeometry.side[subY] * 3
+          + this.axisGeometry.side[subX];
+        const q00 = (compatibilityMask >>> stencilOrigin) & 1;
+        const q10 = (compatibilityMask >>> (stencilOrigin + 1)) & 1;
+        const q01 = (compatibilityMask >>> (stencilOrigin + 3)) & 1;
+        const q11 = (compatibilityMask >>> (stencilOrigin + 4)) & 1;
         // Inline the shared Hermite reference's scalar density so the hot loop
         // does not allocate its small diagnostic result object per subpixel.
-        const weightX = hermiteWeight(blendX);
-        const weightY = hermiteWeight(blendY);
+        const weightX = this.axisGeometry.weight[subX];
+        const weightY = this.axisGeometry.weight[subY];
         const top = q00 + (q10 - q00) * weightX;
         const bottom = q01 + (q11 - q01) * weightX;
         const density = top + (bottom - top) * weightY;
         let derivativeX = 0;
         let derivativeY = 0;
         if (solidCurvatureDepth || exactSolidContact || liquidMeniscus) {
-          derivativeX = 6 * blendX * (1 - blendX);
-          derivativeY = 6 * blendY * (1 - blendY);
+          derivativeX = this.axisGeometry.derivative[subX];
+          derivativeY = this.axisGeometry.derivative[subY];
         }
         if (liquidMeniscus) {
           const gradientX = ((q10 - q00) * (1 - weightY)
@@ -305,9 +378,9 @@ export class CanvasPhaseContourScratch {
           const curvature = implicitContourCurvature(
             gradientX,
             gradientY,
-            horizontal * hermiteSecondDerivative(blendX),
+            horizontal * this.axisGeometry.secondDerivative[subX],
             cross * derivativeX * derivativeY,
-            vertical * hermiteSecondDerivative(blendY),
+            vertical * this.axisGeometry.secondDerivative[subY],
           );
           const response = Math.max(-0.045, Math.min(0.045, curvature * 0.045 * curvatureGain));
           this.pixels[outputPixel] = clampByte(this.pixels[outputPixel] * (1 + response));
@@ -315,10 +388,10 @@ export class CanvasPhaseContourScratch {
           this.pixels[outputPixel + 2] = clampByte(this.pixels[outputPixel + 2] * (1 + response));
         }
         if (exactSolidContact) {
-          const d00 = this.differentSolidAt(originX, originY, material);
-          const d10 = this.differentSolidAt(originX + 1, originY, material);
-          const d01 = this.differentSolidAt(originX, originY + 1, material);
-          const d11 = this.differentSolidAt(originX + 1, originY + 1, material);
+          const d00 = (differentSolidMask >>> stencilOrigin) & 1;
+          const d10 = (differentSolidMask >>> (stencilOrigin + 1)) & 1;
+          const d01 = (differentSolidMask >>> (stencilOrigin + 3)) & 1;
+          const d11 = (differentSolidMask >>> (stencilOrigin + 4)) & 1;
           const contactX = ((d10 - d00) * (1 - weightY)
             + (d11 - d01) * weightY) * derivativeX;
           const contactY = ((d01 - d00) * (1 - weightX)
@@ -350,7 +423,7 @@ export class CanvasPhaseContourScratch {
             amount = emptyPowder ? 0 : 1;
           } else {
             const heapDensity = this.quadraticPowderDensity(
-              cellX + 1, cellY + 1, material, localX - 0.5, localY - 0.5,
+              compatibilityMask, subX, subY,
             );
             const localHeap = smoothstep(0.18, 0.58, heapDensity);
             let surfaceDensity = heapDensity;
@@ -456,16 +529,6 @@ export class CanvasPhaseContourScratch {
     return owner;
   }
 
-  private powderSupport3x3(haloX: number, haloY: number, material: number): number {
-    let support = 0;
-    for (let y = -1; y <= 1; y++) for (let x = -1; x <= 1; x++) {
-      support += this.compatibleAt(
-        haloX + x, haloY + y, material, RenderPhase.Powder,
-      );
-    }
-    return support;
-  }
-
   /**
    * Wide gravity smoothing belongs only to a genuinely deep heap. Requiring
    * two exact stable cells below and an exact horizontal neighbour preserve
@@ -503,58 +566,70 @@ export class CanvasPhaseContourScratch {
   }
 
   private quadraticPowderDensity(
-    haloX: number,
-    haloY: number,
-    material: number,
-    offsetX: number,
-    offsetY: number,
+    compatibilityMask: number,
+    subX: number,
+    subY: number,
   ): number {
-    const boundedX = Math.max(-0.5, Math.min(0.5, offsetX));
-    const boundedY = Math.max(-0.5, Math.min(0.5, offsetY));
-    const leftX = 0.5 * (0.5 - boundedX) * (0.5 - boundedX);
-    const middleX = 0.75 - boundedX * boundedX;
-    const rightX = 0.5 * (0.5 + boundedX) * (0.5 + boundedX);
-    const topY = 0.5 * (0.5 - boundedY) * (0.5 - boundedY);
-    const middleY = 0.75 - boundedY * boundedY;
-    const bottomY = 0.5 * (0.5 + boundedY) * (0.5 + boundedY);
+    const leftX = this.axisGeometry.quadraticLeft[subX];
+    const middleX = this.axisGeometry.quadraticMiddle[subX];
+    const rightX = this.axisGeometry.quadraticRight[subX];
+    const topY = this.axisGeometry.quadraticLeft[subY];
+    const middleY = this.axisGeometry.quadraticMiddle[subY];
+    const bottomY = this.axisGeometry.quadraticRight[subY];
     let density = 0;
     for (let y = 0; y < 3; y++) for (let x = 0; x < 3; x++) {
       const weightX = x === 0 ? leftX : x === 1 ? middleX : rightX;
       const weightY = y === 0 ? topY : y === 1 ? middleY : bottomY;
-      density += this.compatibleAt(
-        haloX + x - 1, haloY + y - 1, material, RenderPhase.Powder,
-      ) * weightX * weightY;
+      density += ((compatibilityMask >>> (y * 3 + x)) & 1) * weightX * weightY;
     }
     return density;
   }
 
-  private compatibleAt(
-    haloX: number,
-    haloY: number,
+  private compatibilityMask(
+    centreX: number,
+    centreY: number,
     ownerMaterial: number,
     ownerPhase: number,
   ): number {
-    if (haloX < 0 || haloY < 0 || haloX >= HALO_SIZE || haloY >= HALO_SIZE) return 0;
-    const index = haloY * HALO_SIZE + haloX;
-    if (this.isWallAt(index)) return 0;
-    const candidateMaterial = this.haloMaterials[index];
-    const candidatePhase = this.haloPhases[index];
-    if (candidateMaterial === 0 || !isContourPhase(candidatePhase)) return 0;
-    if (ownerPhase === RenderPhase.Liquid) {
-      return candidatePhase === RenderPhase.Liquid && candidateMaterial === ownerMaterial ? 1 : 0;
+    const ownerContactPhase = contactPhase(ownerPhase);
+    let mask = 0;
+    let bit = 1;
+    for (let offsetY = -1; offsetY <= 1; offsetY++) {
+      for (let offsetX = -1; offsetX <= 1; offsetX++, bit <<= 1) {
+        const index = (centreY + offsetY) * HALO_SIZE + centreX + offsetX;
+        if (this.isWallAt(index)) continue;
+        const candidateMaterial = this.haloMaterials[index];
+        const candidatePhase = this.haloPhases[index];
+        if (candidateMaterial === 0 || !isContourPhase(candidatePhase)) continue;
+        if (ownerPhase === RenderPhase.Liquid) {
+          if (candidatePhase === RenderPhase.Liquid && candidateMaterial === ownerMaterial) {
+            mask |= bit;
+          }
+        } else if (phaseContactCompatible(ownerContactPhase, contactPhase(candidatePhase))) {
+          mask |= bit;
+        }
+      }
     }
-    return phaseContactCompatible(
-      contactPhase(ownerPhase), contactPhase(candidatePhase),
-    ) ? 1 : 0;
+    return mask;
   }
 
-  private differentSolidAt(haloX: number, haloY: number, ownerMaterial: number): number {
-    if (haloX < 0 || haloY < 0 || haloX >= HALO_SIZE || haloY >= HALO_SIZE) return 0;
-    const index = haloY * HALO_SIZE + haloX;
-    if (this.isWallAt(index)) return 0;
-    const candidate = this.haloMaterials[index];
-    return candidate !== 0 && candidate !== ownerMaterial
-      && this.haloPhases[index] === RenderPhase.Solid ? 1 : 0;
+  private differentSolidMask(
+    centreX: number,
+    centreY: number,
+    ownerMaterial: number,
+  ): number {
+    let mask = 0;
+    let bit = 1;
+    for (let offsetY = -1; offsetY <= 1; offsetY++) {
+      for (let offsetX = -1; offsetX <= 1; offsetX++, bit <<= 1) {
+        const index = (centreY + offsetY) * HALO_SIZE + centreX + offsetX;
+        if (this.isWallAt(index)) continue;
+        const candidate = this.haloMaterials[index];
+        if (candidate !== 0 && candidate !== ownerMaterial
+          && this.haloPhases[index] === RenderPhase.Solid) mask |= bit;
+      }
+    }
+    return mask;
   }
 
   /**
@@ -585,34 +660,6 @@ export class CanvasPhaseContourScratch {
       }
     }
     return sameSpecies && exposed;
-  }
-
-  private hasDifferentSolidNearby(
-    haloX: number,
-    haloY: number,
-    ownerMaterial: number,
-  ): boolean {
-    for (let offsetY = -1; offsetY <= 1; offsetY++) {
-      for (let offsetX = -1; offsetX <= 1; offsetX++) {
-        if (this.differentSolidAt(haloX + offsetX, haloY + offsetY, ownerMaterial)) return true;
-      }
-    }
-    return false;
-  }
-
-  private hasSolidContourNearby(
-    haloX: number,
-    haloY: number,
-    ownerMaterial: number,
-  ): boolean {
-    for (let offsetY = -1; offsetY <= 1; offsetY++) {
-      for (let offsetX = -1; offsetX <= 1; offsetX++) {
-        if (this.compatibleAt(
-          haloX + offsetX, haloY + offsetY, ownerMaterial, RenderPhase.Solid,
-        ) === 0) return true;
-      }
-    }
-    return false;
   }
 
   private isWallAt(index: number): boolean {
@@ -695,6 +742,12 @@ function smoothstep(edge0: number, edge1: number, value: number): number {
 
 function clampByte(value: number): number {
   return Math.max(0, Math.min(255, Math.round(value)));
+}
+
+function bitCount(value: number): number {
+  let count = 0;
+  for (let remaining = value; remaining !== 0; remaining &= remaining - 1) count++;
+  return count;
 }
 
 function hash2(x: number, y: number): number {

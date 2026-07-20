@@ -39,7 +39,8 @@ import {
 import { RenderOptics } from '../src/renderer/render-optics';
 import { SuspensionField } from '../src/renderer/suspension-field';
 import {
-  CANVAS_CONTOUR_CHUNK_SIZE, CanvasPhaseContourScratch,
+  CANVAS_CONTOUR_CHUNK_SIZE, CANVAS_CONTOUR_GEOMETRY_LOOKUP_BYTES,
+  CanvasPhaseContourScratch,
 } from '../src/renderer/canvas-phase-contour';
 
 const width = 612;
@@ -388,6 +389,7 @@ console.log(JSON.stringify({
       + solidBodyRgb.byteLength + liquidBodyRgb.byteLength,
     phaseContour: {
       allocatedBytes: contourScratch.allocatedByteLength,
+      sharedGeometryLookupBytes: CANVAS_CONTOUR_GEOMETRY_LOOKUP_BYTES,
       fixture: 'repeating connected 2x2 Water islands',
       flatRgb: profileLiquidContour(contourFlatStyleBytes),
       meniscusRgb: profileLiquidContour(styleBytes),

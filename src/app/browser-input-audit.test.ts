@@ -3,7 +3,7 @@ import { DeterministicBackend } from '../simulation/deterministic-backend';
 import { Material } from '../shared/materials';
 import {
   blankBrowserInputAuditRequested, browserInputAuditRequested,
-  prepareDenseSolidAuditFixture, toggleDenseSolidAuditProbe,
+  prepareContourStressAuditFixture, prepareDenseSolidAuditFixture, toggleDenseSolidAuditProbe,
 } from './browser-input-audit';
 
 describe('browser input audit gate', () => {
@@ -32,5 +32,16 @@ describe('browser input audit gate', () => {
     expect(simulation.consumeDirtyCells()).toEqual([
       { index: 3 * 8 + 4, material: Material.Glass },
     ]);
+  });
+
+  it('builds repeating connected liquid islands across the full contour grid', () => {
+    const simulation = new DeterministicBackend(67, 35);
+    prepareContourStressAuditFixture(simulation);
+    const cells = simulation.cells();
+    for (let y = 0; y < simulation.height; y++) for (let x = 0; x < simulation.width; x++) {
+      expect(cells[y * simulation.width + x]).toBe(
+        x % 3 < 2 && y % 3 < 2 ? Material.Water : Material.Empty,
+      );
+    }
   });
 });

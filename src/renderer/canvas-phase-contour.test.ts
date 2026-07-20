@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { ALL_MATERIALS, Material } from '../shared/materials';
 import {
   CANVAS_CONTOUR_CHUNK_SIZE,
+  CANVAS_CONTOUR_GEOMETRY_LOOKUP_BYTES,
   CANVAS_CONTOUR_OUTPUT_SCALE,
   CanvasPhaseContourScratch,
   canvasLiquidMeniscusScale,
@@ -73,8 +74,69 @@ function rgbaAt(scratch: CanvasPhaseContourScratch, x: number, y: number): numbe
   return Array.from(scratch.pixels.slice(pixel, pixel + 4));
 }
 
+function contourSignature(scratch: CanvasPhaseContourScratch): string {
+  let hash = 0x811c9dc5;
+  for (const bytes of [scratch.pixels, scratch.coverage, scratch.ownerMaterials]) {
+    for (const byte of bytes) hash = Math.imul(hash ^ byte, 0x01000193) >>> 0;
+  }
+  return hash.toString(16).padStart(8, '0');
+}
+
 describe('Canvas 2x phase contour scratch', () => {
+  it('pins complete mixed-phase output across every scale and powder style', () => {
+    const value = fixture(17, 13);
+    const materials = [
+      Material.Empty, Material.Metal, Material.Glass, Material.Sand,
+      Material.Clay, Material.Water, Material.Oil, Material.Smoke,
+      Material.Fire, Material.Plant,
+    ] as const;
+    for (let y = 0; y < value.input.worldHeight; y++) {
+      for (let x = 0; x < value.input.worldWidth; x++) {
+        const material = materials[(x * 5 + y * 7 + Math.floor(x / 3)) % materials.length];
+        if (material !== Material.Empty) paint(value, x, y, material);
+        const index = y * value.input.worldWidth + x;
+        value.stability[index] = (x * 31 + y * 47) & 255;
+        if ((x + y * 3) % 29 === 0) value.walls[index] = 1;
+      }
+    }
+    for (let y = 6; y < value.input.worldHeight; y++) {
+      for (let x = 1; x <= 8; x++) {
+        paint(value, x, y, Material.Sand);
+        const index = y * value.input.worldWidth + x;
+        value.stability[index] = 255;
+        value.walls[index] = 0;
+      }
+    }
+    const powder = new PowderSurfaceField(
+      value.input.worldWidth, value.input.worldHeight, lookups.styleBytes,
+    );
+    powder.update(value.materials, value.stability, value.walls);
+    const signatures: Record<string, string> = {};
+    for (const scale of [1, 2, 4, 8] as const) {
+      for (const powderStyle of ['grains', 'local', 'smooth'] as const) {
+        const scratch = new CanvasPhaseContourScratch(scale);
+        scratch.rasterize({ ...value.input, powderStyle, powderSurface: powder.bytes });
+        signatures[`${scale}-${powderStyle}`] = contourSignature(scratch);
+      }
+    }
+    expect(signatures).toEqual({
+      '1-grains': 'c912c4b1',
+      '1-local': '1cc9387d',
+      '1-smooth': '1a84d947',
+      '2-grains': 'c0fd7bd8',
+      '2-local': '7afefd06',
+      '2-smooth': '67658212',
+      '4-grains': '7779eba4',
+      '4-local': '10f53536',
+      '4-smooth': 'd74577d8',
+      '8-grains': '565a944a',
+      '8-local': 'f437399c',
+      '8-smooth': 'd8425e1e',
+    });
+  });
+
   it('owns one bounded 32x32 chunk, one-cell halo, and stable output buffers', () => {
+    expect(CANVAS_CONTOUR_GEOMETRY_LOOKUP_BYTES).toBe(975);
     const scratch = new CanvasPhaseContourScratch();
     expect(scratch.allocatedByteLength).toBe(33_824);
     const pixels = scratch.pixels;
@@ -90,6 +152,14 @@ describe('Canvas 2x phase contour scratch', () => {
     expect(scratch.outputWidth).toBe(10);
     expect(scratch.outputHeight).toBe(10);
     expect(scratch.outputStride).toBe(64);
+  });
+
+  it('preserves transparent RGB payloads while skipping only true zero empty cells', () => {
+    const value = fixture(1, 1);
+    value.pixels.set([7, 11, 13, 0]);
+    const scratch = new CanvasPhaseContourScratch(1);
+    scratch.rasterize(value.input);
+    expect(rgbaAt(scratch, 0, 0)).toEqual([7, 11, 13, 0]);
   });
 
   it('creates real four- and eight-times contour samples with matching strides', () => {
