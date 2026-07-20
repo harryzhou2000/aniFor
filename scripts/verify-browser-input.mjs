@@ -21,6 +21,7 @@ const materialAtlasOnly = process.argv.includes('--material-atlas-only');
 const mobileOnly = process.argv.includes('--mobile-only');
 const quickScreenshot = process.argv.includes('--quick-screenshot');
 const layoutOnly = process.argv.includes('--layout-only');
+const visualScaleMatrixOnly = process.argv.includes('--visual-scale-matrix-only');
 const screenshotRequest = process.argv.find((argument) => argument.startsWith('--screenshot='))?.slice('--screenshot='.length);
 
 async function main() {
@@ -39,7 +40,7 @@ async function main() {
     }, 15_000, 'Vite browser-audit server');
     const results = [];
     for (const mode of modes) results.push(await auditMode(mode));
-    const reducedAudit = quickScreenshot || layoutOnly || mobileOnly;
+    const reducedAudit = quickScreenshot || layoutOnly || mobileOnly || visualScaleMatrixOnly;
     if (!scaleEightOnly && !materialAtlasOnly && !reducedAudit) assertPairedVisualRelief(results);
     if (!scaleEightOnly && !reducedAudit) assertPairedMaterialAtlas(results);
     compactMaterialAtlasResults(results);
@@ -107,6 +108,12 @@ async function auditMode(mode) {
       assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
       cdp.close();
       return { backend: mode, renderScaleEight, browserErrors: errors.length };
+    }
+    if (visualScaleMatrixOnly) {
+      const visualScaleMatrix = await auditVisualScaleMatrix(cdp, mode, dpr);
+      assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
+      cdp.close();
+      return { backend: mode, visualScaleMatrix, browserErrors: errors.length };
     }
     await cdp.send('Page.navigate', { url: `${ORIGIN}/?${query}` });
     await waitFor(() => evaluate(cdp, `(() => {
@@ -2343,7 +2350,8 @@ async function auditWebGLPresentationTiming(cdp, targetSamples = 30, sampleTimeo
   let timing = await evaluate(cdp,
     'window.__ANIFOR_INPUT_AUDIT__.webGLPresentationTiming()');
   assert(timing, 'WebGL presentation timing is unavailable');
-  assert(timing.source === 'gpu-query' || timing.source === 'cpu-submission',
+  assert(timing.source === 'gpu-query' || timing.source === 'gpu-fence'
+    || timing.source === 'cpu-submission',
     `Unknown WebGL timing source ${timing.source}`);
 
   const maximumAttempts = targetSamples + 45;
@@ -2376,6 +2384,22 @@ async function auditWebGLPresentationTiming(cdp, targetSamples = 30, sampleTimeo
     p90Ms: round(timing.p90Ms),
     maximumMs: round(timing.maximumMs),
   };
+}
+
+async function waitForNextWebGLPresentation(cdp, label, timeoutMs = 12_000) {
+  const before = await evaluate(cdp,
+    'window.__ANIFOR_INPUT_AUDIT__.webGLPresentationTiming()');
+  assert(before, `${label}: WebGL presentation timing is unavailable`);
+  await waitFor(() => evaluate(cdp,
+    'window.__ANIFOR_INPUT_AUDIT__.requestWebGLPresentationTimingSample()'),
+  timeoutMs, `${label} accepted completed-frame request`);
+  return waitFor(() => evaluate(cdp, `(() => {
+    const next = window.__ANIFOR_INPUT_AUDIT__.webGLPresentationTiming();
+    return next && next.usableSamples > 0
+      && (next.source !== ${JSON.stringify(before.source)}
+        || (next.sequence > ${before.sequence}
+          && next.usableSamples > ${before.usableSamples})) ? next : null;
+  })()`), timeoutMs, `${label} completed WebGL frame`);
 }
 
 async function auditCanvasGasLightingRefresh(cdp) {
@@ -2569,6 +2593,117 @@ async function auditShortDesktop(cdp, mode, dpr, previous) {
   return samples;
 }
 
+async function auditVisualScaleMatrix(cdp, mode, dpr) {
+  await setDesktopMetrics(cdp, 1280, 720, dpr);
+  const scales = mode === 'webgl' ? [1, 2, 4, 8] : [1, 2, 4];
+  const regions = [
+    { name: 'metalScaleBody', x: 405, y: 229, radius: 8, silhouette: true },
+    { name: 'glassScaleBody', x: 290, y: 370, radiusX: 8, radiusY: 5, silhouette: true },
+    { name: 'waterScaleBody', x: 224, y: 270, radius: 8, silhouette: true },
+    { name: 'oilScaleBody', x: 263, y: 270, radius: 8, silhouette: true },
+  ];
+  const rows = [];
+
+  const navigate = async (scale, blank) => {
+    const stage = `visual-scale-${scale}-${blank ? 'blank' : 'scene'}`;
+    const query = new URLSearchParams({
+      scene: 'render-lab', inputAudit: '1', renderScale: String(scale), auditStage: stage,
+      ...(blank ? { blankAudit: '1' } : {}),
+      ...(mode === 'canvas2d' ? { renderer: 'canvas2d' } : {}),
+    });
+    await cdp.send('Page.navigate', { url: `${ORIGIN}/?${query}` });
+    const timeout = scale === 8 ? 45_000 : 20_000;
+    await waitFor(() => evaluate(cdp, `(() => {
+      const parameters = new URLSearchParams(location.search);
+      return parameters.get('auditStage') === ${JSON.stringify(stage)}
+        && parameters.get('renderScale') === ${JSON.stringify(String(scale))}
+        && Boolean(window.__ANIFOR_INPUT_AUDIT__ && document.documentElement);
+    })()`), timeout, `${mode} ${stage} audit API`);
+    await waitFor(() => evaluate(cdp,
+      `window.__ANIFOR_INPUT_AUDIT__.backend().backend === ${JSON.stringify(mode)}`),
+    timeout, `${mode} ${stage} backend`);
+    const geometry = await waitForStableCanvas(
+      cdp, 1280, 720, undefined, timeout, `${mode} ${stage} geometry`,
+    );
+    const backend = await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.backend()');
+    assert(backend.requestedOutputScale === scale && backend.outputScale === scale,
+      `${mode} renderScale=${scale} did not remain exact (${JSON.stringify(backend)})`);
+    assertGeometry(geometry, `${mode} renderScale=${scale}`, scale);
+    assertContained(geometry, `${mode} renderScale=${scale}`);
+    let timing;
+    if (mode === 'webgl') {
+      timing = await auditWebGLPresentationTiming(cdp, 1, scale === 8 ? 12_000 : 5_000);
+      assert(timing.source === 'gpu-query' || timing.source === 'gpu-fence',
+        `${mode} renderScale=${scale} did not prove completed GPU work (${JSON.stringify(timing)})`);
+    }
+    const captures = scale === 8
+      ? await captureSettledPage(cdp, `${mode} ${stage} completed framebuffer`, 450)
+      : await waitForStablePageCapture(cdp, `${mode} ${stage} stable framebuffer`, timeout);
+    assertCanvasRectsEqual(
+      geometry.canvas, captures.canvasRect, `${mode} renderScale=${scale} geometry/capture`,
+    );
+    return { backend, geometry, captures, timing };
+  };
+
+  for (const scale of scales) {
+    const blank = await navigate(scale, true);
+    const scene = await navigate(scale, false);
+    assertCanvasRectsEqual(
+      blank.geometry.canvas, scene.geometry.canvas, `${mode} renderScale=${scale} blank/scene`,
+    );
+    const samples = await samplePageRegions(
+      cdp, scene.captures.capture.data, regions,
+      blank.captures.capture.data, blank.captures.reference.data, scene.captures.canvasRect,
+    );
+    assert(samples.every((sample) => sample.visible >= 16 && sample.coverage >= 0.45
+      && sample.worldArea >= 40 && sample.pinnedFraction <= 0.20),
+    `${mode} renderScale=${scale} lost bounded solid/liquid support (${JSON.stringify(samples)})`);
+    const byName = Object.fromEntries(samples.map((sample) => [sample.name, sample]));
+    assert(byName.metalScaleBody.macroLumaRange >= 4
+      && byName.metalScaleBody.microContrast <= 12,
+    `${mode} renderScale=${scale} lost smooth solid body depth (${JSON.stringify(samples)})`);
+    assert(byName.glassScaleBody.macroLumaRange >= 3
+      && byName.glassScaleBody.rgb[2] >= byName.glassScaleBody.rgb[0],
+    `${mode} renderScale=${scale} lost translucent solid depth/tint (${JSON.stringify(samples)})`);
+    for (const name of ['waterScaleBody', 'oilScaleBody']) assert(
+      byName[name].macroLumaRange >= 1 && byName[name].microContrast <= 6,
+      `${mode} renderScale=${scale} lost cohesive liquid depth (${JSON.stringify(samples)})`,
+    );
+    assert(byName.waterScaleBody.rgb[2] > byName.waterScaleBody.rgb[1]
+      && byName.waterScaleBody.rgb[1] > byName.waterScaleBody.rgb[0],
+    `${mode} renderScale=${scale} Water lost cyan-blue ordering (${byName.waterScaleBody.rgb})`);
+    assert(byName.oilScaleBody.rgb[0] > byName.oilScaleBody.rgb[1]
+      && byName.oilScaleBody.rgb[1] > byName.oilScaleBody.rgb[2],
+    `${mode} renderScale=${scale} Oil lost warm ordering (${byName.oilScaleBody.rgb})`);
+    rows.push({
+      scale,
+      backing: `${scene.geometry.backing.width}x${scene.geometry.backing.height}`,
+      cssCanvas: `${round(scene.geometry.canvas.width, 2)}x${round(scene.geometry.canvas.height, 2)}`,
+      ...(scene.timing ? { timing: scene.timing } : {}),
+      samples,
+    });
+  }
+
+  const reference = rows.find(({ scale }) => scale === 2);
+  assert(reference, `${mode}: visual scale matrix has no 2x reference`);
+  for (const row of rows) {
+    assert(row.cssCanvas === reference.cssCanvas,
+      `${mode}: renderScale changed CSS canvas geometry (${reference.cssCanvas} -> ${row.cssCanvas})`);
+    for (const sample of row.samples) {
+      const baseline = reference.samples.find(({ name }) => name === sample.name);
+      assert(baseline, `${mode}: missing 2x scale reference for ${sample.name}`);
+      const areaRatio = sample.worldArea / Math.max(0.01, baseline.worldArea);
+      const rgbDistance = Math.hypot(...sample.rgb.map((value, index) => value - baseline.rgb[index]));
+      assert(areaRatio >= 0.75 && areaRatio <= 1.25
+        && Math.abs(sample.meanLuma - baseline.meanLuma) <= 30 && rgbDistance <= 60,
+      `${mode} renderScale=${row.scale} changed ${sample.name} materially (${JSON.stringify({
+        areaRatio: round(areaRatio), rgbDistance: round(rgbDistance), sample, baseline,
+      })})`);
+    }
+  }
+  return rows;
+}
+
 async function auditRenderScaleOne(cdp, mode, dpr) {
   await setDesktopMetrics(cdp, 1280, 720, dpr);
   const navigateScale = async (outputScale) => {
@@ -2727,7 +2862,13 @@ async function auditRenderScaleEight(cdp, dpr) {
   `renderScale=8 control did not expose/select true 8x (${JSON.stringify(resolutionControl)})`);
 
   const presentationTiming = await auditWebGLPresentationTiming(cdp, 8, 12_000);
-  assert(presentationTiming.p90Ms <= 1500 && presentationTiming.maximumMs <= 2500,
+  assert(presentationTiming.source === 'gpu-query' || presentationTiming.source === 'gpu-fence',
+    `renderScale=8 timing did not prove completed GPU work (${JSON.stringify(presentationTiming)})`);
+  // Completion-fence timing includes bounded rAF polling and, unlike the old
+  // CPU-submission fallback, measures the actual 15M-fragment SwiftShader
+  // frame. Keep a strict release ceiling well below the 30-second production
+  // stall watchdog while allowing the current ~3-second software-GPU path.
+  assert(presentationTiming.p90Ms <= 8_000 && presentationTiming.maximumMs <= 12_000,
     `renderScale=8 presentation exceeded its watchdog budget (${JSON.stringify(presentationTiming)})`);
 
   const smoothCapture = await captureSettledPage(cdp, 'renderScale=8 smooth powder framebuffer');
@@ -4119,6 +4260,10 @@ async function captureSettledPage(cdp, label, delayMs = 900) {
   // two bounded captures; downstream blank-differenced material metrics tolerate
   // sub-byte noise and prove the actual fixture instead.
   await sleep(delayMs);
+  // Every use of this helper is a true-8x WebGL capture. Own one audit frame
+  // and wait for its completion fence before sampling; a fixed sleep cannot
+  // prove that a 15-million-fragment latest-wins redraw reached the framebuffer.
+  await waitForNextWebGLPresentation(cdp, label);
   const capture = await cdp.send('Page.captureScreenshot', { format: 'png', fromSurface: true });
   await sleep(150);
   const reference = await cdp.send('Page.captureScreenshot', { format: 'png', fromSurface: true });

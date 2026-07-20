@@ -11,7 +11,9 @@ import {
   UniformGroup,
 } from 'pixi.js';
 import { DirtyChunkGrid } from './dirty-chunk-grid';
-import { WEBGL_EIGHT_X_FRAME_STALL_MS, type FieldOutputScale } from './render-resolution';
+import {
+  WEBGL_EIGHT_X_FRAME_STALL_MS, webGLPromotionTimeout, type FieldOutputScale,
+} from './render-resolution';
 import { POWDER_SURFACE_REFRESH_INTERVAL } from './powder-surface-field';
 import { updateBoundaryStabilityRect } from './boundary-stability-field';
 import { clientToCanvasWorld } from './client-coordinate-map';
@@ -31,7 +33,7 @@ interface WebGLTimerQueryExtension {
 }
 
 export interface WebGLPresentationTiming {
-  readonly source: 'gpu-query' | 'cpu-submission';
+  readonly source: 'gpu-query' | 'gpu-fence' | 'cpu-submission';
   readonly sequence: number;
   readonly usableSamples: number;
   readonly discardedSamples: number;
@@ -87,6 +89,7 @@ uniform vec2 uAtmosphereTexel;
 uniform vec2 uEmissionTexel;
 uniform float uTime;
 uniform float uHighQuality;
+uniform float uAnalyticLightingQuality;
 uniform float uGasFieldLighting;
 uniform float uGasVolumeChroma;
 uniform float uLiquidFieldLighting;
@@ -910,7 +913,11 @@ void main() {
     semanticSlope += solidRelief.xy * solidInterior;
     solidReliefTone = solidRelief.z * solidInterior;
   }
-  vec3 normal = normalize(vec3(-semanticSlope.x - volumeSlope.x, -semanticSlope.y - volumeSlope.y, mix(1.45, 1.15, uHighQuality)));
+  vec3 normal = normalize(vec3(
+    -semanticSlope.x - volumeSlope.x,
+    -semanticSlope.y - volumeSlope.y,
+    mix(1.45, 1.15, uAnalyticLightingQuality)
+  ));
   float diffuse = 0.72 + max(0.0, dot(normal, normalize(vec3(-0.48, -0.68, 0.78)))) * 0.42;
   float specular = pow(max(0.0, dot(normal, normalize(vec3(-0.35, -0.55, 0.92)))), 10.0);
   vec3 base = wallOnly > 0.5
@@ -1211,7 +1218,8 @@ void main() {
     // change alpha, reconstruction support, species ownership, or refraction.
     if (uLiquidVolumeChroma > 0.5 && liquidOnly < 0.5 && halo < 0.5
       && wall < 0.5 && family == 2.0 && traits < 0.5 && !materialEmissive
-      && molten < 0.5 && foreignMatterContact < 0.5 && unlikeMaterialContact < 0.5) {
+      && molten < 0.5 && foreignMatterContact < 0.5 && unlikeMaterialContact < 0.5
+      && liquidDepth > 0.38 && liquidNeighbourMean > 0.48) {
       // The species field supplies a wider interface band than the exact
       // categorical contact flag. Keep that entire mixing meniscus neutral so
       // adjacent family keys cannot flicker as either liquid moves by one cell.
@@ -1656,6 +1664,9 @@ export class PixiFieldPresenter {
   private webGLTimingSource: WebGLPresentationTiming['source'] = 'cpu-submission';
   private webGLTimingExtension?: WebGLTimerQueryExtension;
   private webGLTimingPending?: WebGLQuery;
+  private webGLTimingFence?: WebGLSync;
+  private webGLTimingFenceStartedAt = 0;
+  private webGLTimingFencePoll = 0;
   private readonly webGLTimingSamples: number[] = [];
   private webGLTimingDiscarded = 0;
   private webGLTimingSequence = 0;
@@ -1689,6 +1700,7 @@ export class PixiFieldPresenter {
       this.resolveFirstFrame(false);
       this.releaseRenderFence();
       this.releaseWebGLTimingQuery();
+      this.releaseWebGLTimingFence();
       this.contextLossHandler?.();
     });
     this.fieldBytes = new Uint8Array(width * height * 4);
@@ -1773,6 +1785,13 @@ export class PixiFieldPresenter {
         value: matchMedia('(min-width: 800px)').matches && outputScale < 8 ? 1 : 0,
         type: 'f32',
       },
+      // True 8x drops expensive diagonal and directional probes, but its dense
+      // body lighting should retain the same analytic normal response as the
+      // desktop 1x-4x path. This scalar changes no sample or resource count.
+      uAnalyticLightingQuality: {
+        value: matchMedia('(min-width: 800px)').matches || outputScale === 8 ? 1 : 0,
+        type: 'f32',
+      },
       uGasFieldLighting: { value: 1, type: 'f32' },
       uGasVolumeChroma: { value: 1, type: 'f32' },
       uLiquidFieldLighting: { value: 1, type: 'f32' },
@@ -1833,7 +1852,13 @@ export class PixiFieldPresenter {
         uvs: new Float32Array([0, 0, 1, 0, 1, 1, 0, 1]),
         indices: new Uint32Array([0, 1, 2, 0, 2, 3]),
       });
-      this.scene.addChild(new Mesh({ geometry, shader, texture: fieldTexture }));
+      // MeshPipe derives its blend equation from mesh.texture.alphaMode. The
+      // semantic field must remain no-premultiply for byte-exact material data,
+      // but FIELD_FRAGMENT already emits premultiplied display colour. Use a
+      // neutral premultiplied marker texture for pipe state so translucent
+      // matter is not multiplied by alpha a second time at true 8x; the shader
+      // still samples the explicit uFieldTexture resource above.
+      this.scene.addChild(new Mesh({ geometry, shader, texture: Texture.WHITE }));
     } else {
       // Keep the established 1x–4x filter response, whose logical source pass
       // supplies the deliberately broad low-resolution material relief.
@@ -1902,6 +1927,7 @@ export class PixiFieldPresenter {
     this.removeContextLossListener();
     this.releaseRenderFence();
     this.releaseWebGLTimingQuery();
+    this.releaseWebGLTimingFence();
     this.app.canvas.remove();
     try { this.app.destroy(); }
     catch {
@@ -2091,21 +2117,23 @@ export class PixiFieldPresenter {
     this.webGLTimingEnabled = true;
     const gl = this.webGLContext();
     // Giant SwiftShader/driver timer queries can remain unavailable forever
-    // after an otherwise successful 15M-fragment frame. At true 8x use the
-    // bounded synchronous submission measurement; framebuffer captures and the
-    // presentation ceiling still guard completion. Smaller targets retain the
-    // more precise elapsed-GPU query.
+    // after an otherwise successful 15M-fragment frame. At true 8x use an
+    // audit-only completion fence instead. It is less precise than elapsed GPU
+    // time because requestAnimationFrame polling contributes bounded latency,
+    // but its sequence cannot advance before the submitted frame completes.
+    // Smaller targets retain the more precise elapsed-GPU query when available.
     const extension = (this.outputScale === 8 ? null
       : gl?.getExtension('EXT_disjoint_timer_query_webgl2')) as
       WebGLTimerQueryExtension | null | undefined;
     this.webGLTimingExtension = extension ?? undefined;
-    this.webGLTimingSource = extension ? 'gpu-query' : 'cpu-submission';
+    this.webGLTimingSource = extension ? 'gpu-query' : gl ? 'gpu-fence' : 'cpu-submission';
   }
 
   requestWebGLPresentationTimingSample(): boolean {
     if (!this.webGLTimingEnabled) return false;
     this.pollWebGLTimingQuery();
-    if (this.webGLTimingRequested || this.webGLTimingPending) return false;
+    this.pollWebGLTimingFence();
+    if (this.webGLTimingRequested || this.webGLTimingPending || this.webGLTimingFence) return false;
     this.webGLTimingRequested = true;
     // Timing requests are audit-only and must own the frame they measure. A
     // paused/static scene may otherwise have no later update to consume the
@@ -2117,6 +2145,7 @@ export class PixiFieldPresenter {
   getWebGLPresentationTiming(): WebGLPresentationTiming | undefined {
     if (!this.webGLTimingEnabled) return undefined;
     this.pollWebGLTimingQuery();
+    this.pollWebGLTimingFence();
     const sorted = [...this.webGLTimingSamples].sort((left, right) => left - right);
     const percentile = (ratio: number): number => sorted.length
       ? sorted[Math.floor((sorted.length - 1) * ratio)]
@@ -2225,8 +2254,11 @@ export class PixiFieldPresenter {
     try { query = extension && gl ? gl.createQuery() : null; }
     catch { /* a lost/invalid context falls through to labelled CPU timing */ }
     if (!query || !extension || !gl) {
-      this.useCpuTimingFallback();
-      this.renderAndRecordCpuTiming();
+      if (gl) this.renderAndRecordFenceTiming(gl);
+      else {
+        this.useCpuTimingFallback();
+        this.renderAndRecordCpuTiming();
+      }
       return;
     }
 
@@ -2234,8 +2266,7 @@ export class PixiFieldPresenter {
       gl.beginQuery(extension.TIME_ELAPSED_EXT, query);
     } catch {
       try { gl.deleteQuery(query); } catch { /* context may already be invalid */ }
-      this.useCpuTimingFallback();
-      this.renderAndRecordCpuTiming();
+      this.renderAndRecordFenceTiming(gl);
       return;
     }
 
@@ -2257,8 +2288,10 @@ export class PixiFieldPresenter {
       this.webGLTimingPending = query;
     } catch {
       try { gl.deleteQuery(query); } catch { /* context may already be invalid */ }
-      this.useCpuTimingFallback();
-      this.recordWebGLTimingSample(performance.now() - started);
+      if (!this.insertWebGLTimingFence(gl, started)) {
+        this.useCpuTimingFallback();
+        this.recordWebGLTimingSample(performance.now() - started);
+      }
     }
   }
 
@@ -2375,7 +2408,8 @@ export class PixiFieldPresenter {
     } catch {
       try { gl.deleteQuery(query); } catch { /* context may already be invalid */ }
       this.webGLTimingPending = undefined;
-      this.useCpuTimingFallback();
+      this.useFenceTimingFallback();
+      this.recordWebGLTimingSample(Number.NaN);
       return;
     }
     try { gl.deleteQuery(query); } catch { /* result is already consumed */ }
@@ -2386,6 +2420,85 @@ export class PixiFieldPresenter {
       return;
     }
     this.webGLTimingSamples.push(nanoseconds / 1_000_000);
+  }
+
+  private renderAndRecordFenceTiming(gl: WebGL2RenderingContext): void {
+    const started = performance.now();
+    this.app.render();
+    if (this.insertWebGLTimingFence(gl, started)) return;
+    this.useCpuTimingFallback();
+    this.recordWebGLTimingSample(performance.now() - started);
+  }
+
+  private insertWebGLTimingFence(gl: WebGL2RenderingContext, started: number): boolean {
+    let fence: WebGLSync | null = null;
+    try { fence = gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE, 0); }
+    catch { /* context loss or an incomplete WebGL2 implementation */ }
+    if (!fence) return false;
+    this.useFenceTimingFallback();
+    this.webGLTimingFence = fence;
+    this.webGLTimingFenceStartedAt = started;
+    try { gl.flush(); }
+    catch {
+      this.releaseWebGLTimingFence();
+      return false;
+    }
+    this.scheduleWebGLTimingFencePoll();
+    return true;
+  }
+
+  private scheduleWebGLTimingFencePoll(): void {
+    if (this.webGLTimingFencePoll !== 0 || !this.webGLTimingFence
+      || this.destroyed || this.contextLost) return;
+    this.webGLTimingFencePoll = requestAnimationFrame(() => {
+      this.webGLTimingFencePoll = 0;
+      if (!this.pollWebGLTimingFence() && this.webGLTimingFence) {
+        this.scheduleWebGLTimingFencePoll();
+      }
+    });
+  }
+
+  private pollWebGLTimingFence(): boolean {
+    const fence = this.webGLTimingFence;
+    if (!fence) return false;
+    if (performance.now() - this.webGLTimingFenceStartedAt
+      >= webGLPromotionTimeout(this.outputScale)) {
+      this.releaseWebGLTimingFence();
+      this.recordWebGLTimingSample(Number.NaN);
+      return true;
+    }
+    const gl = this.webGLContext();
+    if (!gl || this.contextLost || this.destroyed) {
+      this.releaseWebGLTimingFence();
+      this.recordWebGLTimingSample(Number.NaN);
+      return true;
+    }
+    let status: number;
+    try { status = gl.clientWaitSync(fence, 0, 0); }
+    catch { status = gl.WAIT_FAILED; }
+    if (status === gl.TIMEOUT_EXPIRED) return false;
+    const started = this.webGLTimingFenceStartedAt;
+    this.releaseWebGLTimingFence();
+    this.recordWebGLTimingSample(
+      status === gl.ALREADY_SIGNALED || status === gl.CONDITION_SATISFIED
+        ? performance.now() - started
+        : Number.NaN,
+    );
+    return true;
+  }
+
+  private releaseWebGLTimingFence(): void {
+    if (this.webGLTimingFencePoll !== 0) {
+      cancelAnimationFrame(this.webGLTimingFencePoll);
+      this.webGLTimingFencePoll = 0;
+    }
+    const fence = this.webGLTimingFence;
+    const gl = this.webGLContext();
+    if (fence && gl) {
+      try { gl.deleteSync(fence); } catch { /* context may already be invalid */ }
+    }
+    this.webGLTimingFence = undefined;
+    this.webGLTimingFenceStartedAt = 0;
   }
 
   private recordWebGLTimingSample(durationMs: number): void {
@@ -2401,6 +2514,15 @@ export class PixiFieldPresenter {
     const started = performance.now();
     this.app.render();
     this.recordWebGLTimingSample(performance.now() - started);
+  }
+
+  private useFenceTimingFallback(): void {
+    this.webGLTimingExtension = undefined;
+    if (this.webGLTimingSource === 'gpu-fence') return;
+    this.webGLTimingSource = 'gpu-fence';
+    this.webGLTimingSamples.length = 0;
+    this.webGLTimingDiscarded = 0;
+    this.webGLTimingSequence = 0;
   }
 
   private useCpuTimingFallback(): void {

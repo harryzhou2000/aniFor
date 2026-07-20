@@ -22,6 +22,10 @@ interface PresenterHarness {
   setRenderStallHandler: PixiFieldPresenter['setRenderStallHandler'];
   setTransform: PixiFieldPresenter['setTransform'];
   waitForFirstFrame: PixiFieldPresenter['waitForFirstFrame'];
+  enableWebGLPresentationTiming: PixiFieldPresenter['enableWebGLPresentationTiming'];
+  requestWebGLPresentationTimingSample: PixiFieldPresenter['requestWebGLPresentationTimingSample'];
+  getWebGLPresentationTiming: PixiFieldPresenter['getWebGLPresentationTiming'];
+  webGLTimingSequence: number;
 }
 
 function presenterHarness(): PresenterHarness {
@@ -35,6 +39,16 @@ function presenterHarness(): PresenterHarness {
     firstFrameReady: false,
     firstFrameFailed: false,
     firstFrameWaiters: new Set(),
+    outputScale: 2,
+    destroyed: false,
+    contextLost: false,
+    webGLTimingEnabled: false,
+    webGLTimingRequested: false,
+    webGLTimingSamples: [],
+    webGLTimingDiscarded: 0,
+    webGLTimingSequence: 0,
+    webGLTimingFenceStartedAt: 0,
+    webGLTimingFencePoll: 0,
   });
   return presenter;
 }
@@ -71,6 +85,93 @@ describe('Pixi presenter startup configuration', () => {
       uPowderStyle: powderRenderStyleValue('grains'),
     });
     expect(presenter.app.render).not.toHaveBeenCalled();
+  });
+
+  it('advances fallback presentation timing only after its GPU fence signals', () => {
+    const callbacks: FrameRequestCallback[] = [];
+    vi.stubGlobal('requestAnimationFrame', vi.fn((callback: FrameRequestCallback) => {
+      callbacks.push(callback);
+      return callbacks.length;
+    }));
+    vi.stubGlobal('cancelAnimationFrame', vi.fn());
+    const fence = {} as WebGLSync;
+    const gl = {
+      SYNC_GPU_COMMANDS_COMPLETE: 0x9117,
+      TIMEOUT_EXPIRED: 0x911b,
+      WAIT_FAILED: 0x911d,
+      ALREADY_SIGNALED: 0x911a,
+      CONDITION_SATISFIED: 0x911c,
+      getExtension: vi.fn(() => null),
+      fenceSync: vi.fn(() => fence),
+      flush: vi.fn(),
+      clientWaitSync: vi.fn()
+        .mockReturnValueOnce(0x911b)
+        .mockReturnValue(0x911a),
+      deleteSync: vi.fn(),
+    } as unknown as WebGL2RenderingContext;
+    const presenter = presenterHarness();
+    Object.assign(presenter.app, { renderer: { gl } });
+
+    presenter.enableWebGLPresentationTiming();
+    expect(presenter.getWebGLPresentationTiming()?.source).toBe('gpu-fence');
+    expect(presenter.requestWebGLPresentationTimingSample()).toBe(true);
+    expect(presenter.app.render).toHaveBeenCalledOnce();
+    expect(presenter.webGLTimingSequence).toBe(0);
+
+    callbacks.shift()?.(0);
+    expect(presenter.webGLTimingSequence).toBe(0);
+    callbacks.shift()?.(16);
+
+    const timing = presenter.getWebGLPresentationTiming();
+    expect(timing?.source).toBe('gpu-fence');
+    expect(timing?.sequence).toBe(1);
+    expect(timing?.usableSamples).toBe(1);
+    expect(gl.deleteSync).toHaveBeenCalledWith(fence);
+  });
+
+  it('bounds an unsignalled audit fence and accepts the next completed sample', () => {
+    const callbacks: FrameRequestCallback[] = [];
+    vi.stubGlobal('requestAnimationFrame', vi.fn((callback: FrameRequestCallback) => {
+      callbacks.push(callback);
+      return callbacks.length;
+    }));
+    vi.stubGlobal('cancelAnimationFrame', vi.fn());
+    const fences = [{} as WebGLSync, {} as WebGLSync];
+    const gl = {
+      SYNC_GPU_COMMANDS_COMPLETE: 0x9117,
+      TIMEOUT_EXPIRED: 0x911b,
+      WAIT_FAILED: 0x911d,
+      ALREADY_SIGNALED: 0x911a,
+      CONDITION_SATISFIED: 0x911c,
+      getExtension: vi.fn(() => null),
+      fenceSync: vi.fn().mockReturnValueOnce(fences[0]).mockReturnValue(fences[1]),
+      flush: vi.fn(),
+      clientWaitSync: vi.fn().mockReturnValue(0x911a),
+      deleteSync: vi.fn(),
+    } as unknown as WebGL2RenderingContext;
+    const presenter = presenterHarness();
+    Object.assign(presenter.app, { renderer: { gl } });
+    vi.spyOn(performance, 'now')
+      .mockReturnValueOnce(0)
+      .mockReturnValueOnce(10_001)
+      .mockReturnValue(10_002);
+
+    presenter.enableWebGLPresentationTiming();
+    expect(presenter.requestWebGLPresentationTimingSample()).toBe(true);
+    callbacks.shift()?.(0);
+    let timing = presenter.getWebGLPresentationTiming();
+    expect(timing).toMatchObject({
+      source: 'gpu-fence', sequence: 1, usableSamples: 0, discardedSamples: 1,
+    });
+    expect(gl.deleteSync).toHaveBeenCalledWith(fences[0]);
+
+    expect(presenter.requestWebGLPresentationTimingSample()).toBe(true);
+    callbacks.shift()?.(16);
+    timing = presenter.getWebGLPresentationTiming();
+    expect(timing).toMatchObject({
+      source: 'gpu-fence', sequence: 2, usableSamples: 1, discardedSamples: 1,
+    });
+    expect(gl.deleteSync).toHaveBeenCalledWith(fences[1]);
   });
 
   it('seeds and redraws the audit-settable surface contour light', () => {
@@ -154,6 +255,7 @@ describe('Pixi presenter startup configuration', () => {
     expect(block).toContain('uLiquidVolumeChroma > 0.5 && liquidOnly < 0.5');
     expect(block).toContain('molten < 0.5 && foreignMatterContact < 0.5');
     expect(block).toContain('unlikeMaterialContact < 0.5');
+    expect(block).toContain('liquidDepth > 0.38 && liquidNeighbourMean > 0.48');
     expect(block).toContain('dot(liquidSpeciesSlope, liquidSpeciesSlope) < 0.0025');
     expect(block).toContain('liquidDepth, volumeSlope, liquidDensity, liquidNeighbourMean');
     expect(`${helpers}${block}`).not.toContain('texture(');
@@ -161,6 +263,22 @@ describe('Pixi presenter startup configuration', () => {
     expect(`${helpers}${block}`).not.toMatch(/\b(?:sin|pow|normalize|length)\s*\(/);
     expect(source.match(/texture\(uLiquidTexture/g)).toHaveLength(5);
     expect(source).not.toContain('sampler2D uLiquidVolumeChroma');
+  });
+
+  it('keeps true-8x analytic body lighting independent of expensive probes', () => {
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    expect(source).toContain("uHighQuality: {\n        value: matchMedia('(min-width: 800px)').matches && outputScale < 8 ? 1 : 0");
+    expect(source).toContain("uAnalyticLightingQuality: {\n        value: matchMedia('(min-width: 800px)').matches || outputScale === 8 ? 1 : 0");
+    expect(source).toContain('mix(1.45, 1.15, uAnalyticLightingQuality)');
+    expect(source).toContain('if (uHighQuality > 0.5)');
+  });
+
+  it('keeps true-8x premultiplied output independent of semantic texture alpha mode', () => {
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    expect(source).toContain('uFieldTexture: this.fieldSource');
+    expect(source).toContain('new Mesh({ geometry, shader, texture: Texture.WHITE })');
+    expect(source).not.toContain('new Mesh({ geometry, shader, texture: fieldTexture })');
+    expect(source).toContain('vec3 premultiplied = clamp(color, 0.0, 1.35) * alpha;');
   });
 
   it('keeps chromatic surface depth arithmetic-only and RGB-only', () => {
