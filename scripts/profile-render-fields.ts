@@ -486,6 +486,20 @@ console.log(JSON.stringify({
     atmosphereRelief: sample(() => {
       shadeCanvasAtmosphere(atmospherePixels, atmosphere.bytes, atmosphere.width, atmosphere.height);
     }),
+    gasVolumeChroma: {
+      flat: sample(() => {
+        shadeCanvasAtmosphere(
+          atmospherePixels, atmosphere.bytes, atmosphere.width, atmosphere.height,
+          undefined, false,
+        );
+      }),
+      chromatic: sample(() => {
+        shadeCanvasAtmosphere(
+          atmospherePixels, atmosphere.bytes, atmosphere.width, atmosphere.height,
+          undefined, true,
+        );
+      }),
+    },
     atmosphereFieldLighting: sample(() => {
       shadeCanvasAtmosphere(
         atmospherePixels, atmosphere.bytes, atmosphere.width, atmosphere.height,

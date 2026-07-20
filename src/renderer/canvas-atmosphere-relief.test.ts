@@ -103,6 +103,36 @@ describe('Canvas atmosphere relief', () => {
     }
   });
 
+  it('adds chromatic billow depth without changing alpha or flat gas', () => {
+    const width = 5;
+    const source = new Uint8Array(width * width * 4);
+    pixel(source, width, 2, 2, [90, 130, 190, 132]);
+    pixel(source, width, 1, 2, [90, 130, 190, 52]);
+    pixel(source, width, 3, 2, [90, 130, 190, 180]);
+    pixel(source, width, 2, 1, [90, 130, 190, 52]);
+    pixel(source, width, 2, 3, [90, 130, 190, 180]);
+    const flat = new Uint8ClampedArray(source.length);
+    const chromatic = new Uint8ClampedArray(source.length);
+
+    shadeCanvasAtmosphere(flat, source, width, width, undefined, false);
+    shadeCanvasAtmosphere(chromatic, source, width, width, undefined, true);
+
+    const offset = (2 * width + 2) * 4;
+    expect(chromatic[offset + 2] - flat[offset + 2])
+      .toBeGreaterThan(chromatic[offset] - flat[offset]);
+    for (let alpha = 3; alpha < source.length; alpha += 4) {
+      expect(chromatic[alpha]).toBe(source[alpha]);
+      expect(flat[alpha]).toBe(source[alpha]);
+    }
+
+    const uniform = new Uint8Array([90, 130, 190, 132]);
+    const uniformFlat = new Uint8ClampedArray(4);
+    const uniformChromatic = new Uint8ClampedArray(4);
+    shadeCanvasAtmosphere(uniformFlat, uniform, 1, 1, undefined, false);
+    shadeCanvasAtmosphere(uniformChromatic, uniform, 1, 1, undefined, true);
+    expect(uniformChromatic).toEqual(uniformFlat);
+  });
+
   it('scatters coloured field light onto the facing gas flank without changing alpha', () => {
     const width = 5;
     const source = new Uint8Array(width * width * 4);

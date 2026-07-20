@@ -2,6 +2,11 @@
  * Adds bounded upper-left relief and density depth to the shared gas volume.
  * Alpha is copied exactly, so this presentation pass cannot widen or blur gas.
  */
+import {
+  applyCanvasGasVolumeChroma,
+  canvasGasVolumeChromaResponse,
+} from './gas-volume-chroma';
+
 export interface CanvasAtmosphereLightField {
   readonly bytes: Uint8Array;
   readonly width: number;
@@ -55,6 +60,7 @@ export function shadeCanvasAtmosphere(
   width: number,
   height: number,
   light?: CanvasAtmosphereLightField,
+  volumeChroma = true,
 ): void {
   if (!Number.isInteger(width) || !Number.isInteger(height) || width <= 0 || height <= 0) {
     throw new Error('Invalid atmosphere dimensions');
@@ -158,6 +164,14 @@ export function shadeCanvasAtmosphere(
       target[offset + 1] = Math.round(clamp(green, 0, 255));
       target[offset + 2] = Math.round(clamp(blue, 0, 255));
       target[offset + 3] = alpha;
+      if (volumeChroma) applyCanvasGasVolumeChroma(
+        target,
+        offset,
+        canvasGasVolumeChromaResponse(density, upperLeftRelief, curvature),
+        source[offset],
+        source[offset + 1],
+        source[offset + 2],
+      );
     }
   }
 }

@@ -13,6 +13,7 @@ interface PresenterHarness {
   };
   configurePresentation: PixiFieldPresenter['configurePresentation'];
   setGasFieldLightingEnabled: PixiFieldPresenter['setGasFieldLightingEnabled'];
+  setGasVolumeChromaEnabled: PixiFieldPresenter['setGasVolumeChromaEnabled'];
   setSurfaceContourLightingEnabled: PixiFieldPresenter['setSurfaceContourLightingEnabled'];
   setPhaseContactLightingEnabled: PixiFieldPresenter['setPhaseContactLightingEnabled'];
   setSolidFieldLightingEnabled: PixiFieldPresenter['setSolidFieldLightingEnabled'];
@@ -52,6 +53,7 @@ describe('Pixi presenter startup configuration', () => {
 
     expect(presenter.uniforms.uniforms).toMatchObject({
       uGasFieldLighting: 0,
+      uGasVolumeChroma: 1,
       uLiquidFieldLighting: 1,
       uTranslucentFieldTransmission: 0,
       uTranslucentBackdropRefraction: 1,
@@ -81,6 +83,42 @@ describe('Pixi presenter startup configuration', () => {
     presenter.setSurfaceContourLightingEnabled(true);
     expect(presenter.uniforms.uniforms.uSurfaceContourLighting).toBe(1);
     expect(presenter.app.render).toHaveBeenCalledOnce();
+  });
+
+  it('seeds and redraws optional-last gas volume chroma', () => {
+    const presenter = presenterHarness();
+
+    presenter.configurePresentation(
+      true, true, true, true, true, true, true, true, true, 'smooth',
+      true, true, true, true, false,
+    );
+    expect(presenter.uniforms.uniforms.uGasVolumeChroma).toBe(0);
+    expect(presenter.app.render).not.toHaveBeenCalled();
+
+    presenter.setGasVolumeChromaEnabled(true);
+    expect(presenter.uniforms.uniforms.uGasVolumeChroma).toBe(1);
+    expect(presenter.app.render).toHaveBeenCalledOnce();
+  });
+
+  it('keeps gas volume chroma arithmetic-only and RGB-only', () => {
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const helperStart = source.indexOf('float gasVolumeChromaResponse(');
+    const helperEnd = source.indexOf('vec3 vividColor', helperStart);
+    const helpers = source.slice(helperStart, helperEnd);
+    const blockStart = source.indexOf("// The atmosphere's existing cardinal field samples");
+    const blockEnd = source.indexOf('  } else if (liquidVolume > 0.5)', blockStart);
+    const block = source.slice(blockStart, blockEnd);
+
+    expect(helperStart).toBeGreaterThan(0);
+    expect(helperEnd).toBeGreaterThan(helperStart);
+    expect(blockStart).toBeGreaterThan(0);
+    expect(blockEnd).toBeGreaterThan(blockStart);
+    expect(block).toContain('(volumeSlope.x + volumeSlope.y) * 0.5882353');
+    expect(block).toContain('gasCurvature * 0.125');
+    expect(block).toContain('* uGasVolumeChroma');
+    expect(`${helpers}${block}`).not.toContain('texture(');
+    expect(`${helpers}${block}`).not.toMatch(/\balpha\s*[+*]?=/);
+    expect(`${helpers}${block}`).not.toMatch(/\b(?:sin|pow|normalize|length)\s*\(/);
   });
 
   it('keeps chromatic surface depth arithmetic-only and RGB-only', () => {

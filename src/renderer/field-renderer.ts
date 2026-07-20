@@ -151,6 +151,7 @@ export class MaterialRenderer {
   private changed = true;
   private powderSurfaceDirty = true;
   private gasFieldLightingEnabled = true;
+  private gasVolumeChromaEnabled = true;
   private liquidFieldLightingEnabled = true;
   private liquidSilhouetteCohesionEnabled = true;
   private translucentFieldTransmissionEnabled = true;
@@ -165,6 +166,7 @@ export class MaterialRenderer {
   private energyCoreReliefEnabled = true;
   private powderRenderStyle: PowderRenderStyle = 'smooth';
   private gasFieldLightingDirty = false;
+  private gasVolumeChromaDirty = false;
   private canvasPresentationTimingEnabled = false;
   private canvasPresentationTiming?: CanvasPresentationTiming;
   private webGLPresentationTimingEnabled = false;
@@ -290,6 +292,14 @@ export class MaterialRenderer {
     this.gasFieldLightingEnabled = enabled;
     this.presenter?.setGasFieldLightingEnabled(enabled);
     if (this.fallbackFields) this.gasFieldLightingDirty = true;
+    this.changed = true;
+  }
+
+  setGasVolumeChromaEnabled(enabled: boolean): void {
+    if (enabled === this.gasVolumeChromaEnabled) return;
+    this.gasVolumeChromaEnabled = enabled;
+    this.presenter?.setGasVolumeChromaEnabled(enabled);
+    if (this.fallbackFields) this.gasVolumeChromaDirty = true;
     this.changed = true;
   }
 
@@ -540,6 +550,7 @@ export class MaterialRenderer {
       this.phaseContactLightingEnabled,
       this.solidFieldLightingEnabled,
       this.liquidSilhouetteCohesionEnabled,
+      this.gasVolumeChromaEnabled,
     );
     // Route subsequent dirty cells to the candidate while its first expensive
     // frame is in flight. The known-good Canvas remains mounted underneath;
@@ -621,6 +632,7 @@ export class MaterialRenderer {
         this.atmospherePixels.data, fields.atmosphere.bytes,
         fields.atmosphere.width, fields.atmosphere.height,
         this.gasFieldLightingEnabled ? fields.emission : undefined,
+        this.gasVolumeChromaEnabled,
       );
       this.atmosphereContext.putImageData(this.atmospherePixels, 0, 0);
     }
@@ -689,14 +701,17 @@ export class MaterialRenderer {
       emissionPixels.data.set(fields.emission.bytes);
       this.emissionContext.putImageData(emissionPixels, 0, 0);
     }
-    if (rebuiltField === 'atmosphere' || rebuiltField === 'emission' || this.gasFieldLightingDirty) {
+    if (rebuiltField === 'atmosphere' || rebuiltField === 'emission'
+      || this.gasFieldLightingDirty || this.gasVolumeChromaDirty) {
       shadeCanvasAtmosphere(
         atmospherePixels.data, fields.atmosphere.bytes,
         fields.atmosphere.width, fields.atmosphere.height,
         this.gasFieldLightingEnabled ? fields.emission : undefined,
+        this.gasVolumeChromaEnabled,
       );
       this.atmosphereContext.putImageData(atmospherePixels, 0, 0);
       this.gasFieldLightingDirty = false;
+      this.gasVolumeChromaDirty = false;
     }
     const base = basePixels.data;
     const liquid = liquidPixels.data;

@@ -88,6 +88,7 @@ uniform vec2 uEmissionTexel;
 uniform float uTime;
 uniform float uHighQuality;
 uniform float uGasFieldLighting;
+uniform float uGasVolumeChroma;
 uniform float uLiquidFieldLighting;
 uniform float uTranslucentFieldTransmission;
 uniform float uTranslucentBackdropRefraction;
@@ -156,6 +157,21 @@ vec3 applySurfaceChroma(vec3 color, float response, float optics) {
     return color + (vec3(1.0) - color) * surfaceChromaKey(optics) * response * 1.15;
   }
   return color * (vec3(1.0) - surfaceChromaShadow(optics) * (-response) * 0.85);
+}
+float gasVolumeChromaResponse(
+  float opticalDepth, float directionalRelief, float curvature
+) {
+  float relief = clamp(directionalRelief * 1.20 + curvature * 2.50, -1.0, 1.0);
+  return clamp(
+    relief * (0.025 + (1.0 - opticalDepth) * 0.035), -0.060, 0.060
+  );
+}
+vec3 applyGasVolumeChroma(vec3 color, vec3 source, float response) {
+  if (response > 0.0) {
+    vec3 key = vec3(0.58, 0.80, 1.00) * 0.65 + source * 0.35;
+    return color + key * response * 0.80;
+  }
+  return color * (vec3(1.0) - vec3(1.00, 0.72, 0.45) * (-response));
 }
 vec3 vividColor(vec3 color, float saturation) {
   float luminance = dot(color, vec3(0.2126, 0.7152, 0.0722));
@@ -1009,6 +1025,15 @@ void main() {
       * (0.060 + gasLightIncidence * 0.78 + silverLining * 0.040)
       * (1.0 - opticalDepth * 0.48) * uGasFieldLighting;
     color += vividColor(gasLightColor, 1.12) * gasLightScatter;
+    // The atmosphere's existing cardinal field samples also supply a signed
+    // billow normal and curvature. Reuse them as a restrained hue-aware
+    // key/fill after scene lighting: RGB only, with no new sampler, field,
+    // resource, pass, or 8x-scaled allocation.
+    float gasDirectionalRelief = (volumeSlope.x + volumeSlope.y) * 0.5882353;
+    float gasChroma = gasVolumeChromaResponse(
+      opticalDepth, gasDirectionalRelief, gasCurvature * 0.125
+    ) * uGasVolumeChroma;
+    color = applyGasVolumeChroma(color, gasBase, gasChroma);
   } else if (liquidVolume > 0.5) {
     float aqueous = optics == 1.0 ? 1.0 : 0.0;
     float oily = optics == 2.0 ? 1.0 : 0.0;
@@ -1703,6 +1728,7 @@ export class PixiFieldPresenter {
         type: 'f32',
       },
       uGasFieldLighting: { value: 1, type: 'f32' },
+      uGasVolumeChroma: { value: 1, type: 'f32' },
       uLiquidFieldLighting: { value: 1, type: 'f32' },
       uTranslucentFieldTransmission: { value: 1, type: 'f32' },
       uTranslucentBackdropRefraction: { value: 1, type: 'f32' },
@@ -1911,6 +1937,7 @@ export class PixiFieldPresenter {
     phaseContactLightingEnabled = true,
     solidFieldLightingEnabled = true,
     liquidSilhouetteCohesionEnabled = true,
+    gasVolumeChromaEnabled = true,
   ): void {
     const uniforms = this.uniforms.uniforms;
     uniforms.uGasFieldLighting = gasFieldLightingEnabled ? 1 : 0;
@@ -1924,6 +1951,7 @@ export class PixiFieldPresenter {
     uniforms.uPhaseContactLighting = phaseContactLightingEnabled ? 1 : 0;
     uniforms.uSolidFieldLighting = solidFieldLightingEnabled ? 1 : 0;
     uniforms.uLiquidSilhouetteCohesion = liquidSilhouetteCohesionEnabled ? 1 : 0;
+    uniforms.uGasVolumeChroma = gasVolumeChromaEnabled ? 1 : 0;
     uniforms.uThermalMaterialStyling = thermalMaterialStylingEnabled ? 1 : 0;
     uniforms.uEnergyCoreRelief = energyCoreReliefEnabled ? 1 : 0;
     uniforms.uPowderStyle = powderRenderStyleValue(powderRenderStyle);
@@ -1931,6 +1959,11 @@ export class PixiFieldPresenter {
 
   setGasFieldLightingEnabled(enabled: boolean): void {
     this.uniforms.uniforms.uGasFieldLighting = enabled ? 1 : 0;
+    this.renderApplication();
+  }
+
+  setGasVolumeChromaEnabled(enabled: boolean): void {
+    this.uniforms.uniforms.uGasVolumeChroma = enabled ? 1 : 0;
     this.renderApplication();
   }
 

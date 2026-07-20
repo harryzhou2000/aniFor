@@ -219,6 +219,7 @@ export class Game {
         return occupied;
       },
       setGasFieldLighting: (enabled) => { this.renderer.setGasFieldLightingEnabled(enabled); },
+      setGasVolumeChroma: (enabled) => { this.renderer.setGasVolumeChromaEnabled(enabled); },
       setLiquidFieldLighting: (enabled) => { this.renderer.setLiquidFieldLightingEnabled(enabled); },
       setLiquidSilhouetteCohesion: (enabled) => {
         this.renderer.setLiquidSilhouetteCohesionEnabled(enabled);

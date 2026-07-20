@@ -15,6 +15,7 @@ export interface BrowserInputAuditApi {
   sourceTarget(x: number, y: number): number;
   occupiedCells(): number;
   setGasFieldLighting(enabled: boolean): void;
+  setGasVolumeChroma(enabled: boolean): void;
   setLiquidFieldLighting(enabled: boolean): void;
   setLiquidSilhouetteCohesion(enabled: boolean): void;
   setTranslucentFieldTransmission(enabled: boolean): void;

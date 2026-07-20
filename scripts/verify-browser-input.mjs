@@ -234,6 +234,19 @@ async function auditMode(mode) {
     // Use the freshly restored relieved frame as the canonical lit image for
     // all following comparisons. This keeps adjacent toggle captures close.
     const canonicalCapture = relievedEnergyCaptures.capture;
+    await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setGasVolumeChroma(false); true');
+    const flatGasVolumeCaptures = await waitForStablePageCapture(
+      cdp, `${mode} flat gas-volume framebuffer`,
+    );
+    await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setGasVolumeChroma(true); true');
+    const chromaticGasVolumeCaptures = await waitForStablePageCapture(
+      cdp, `${mode} chromatic gas-volume framebuffer`,
+    );
+    await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setGasVolumeChroma(false); true');
+    const repeatedFlatGasVolumeCaptures = await waitForStablePageCapture(
+      cdp, `${mode} repeated flat gas-volume framebuffer`,
+    );
+    await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setGasVolumeChroma(true); true');
     await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setGasFieldLighting(false); true');
     const unlitGasCaptures = await waitForStablePageCapture(cdp, `${mode} unlit gas framebuffer`);
     // Keep the paired lit/unlit captures adjacent. The presentation benchmark
@@ -447,6 +460,9 @@ async function auditMode(mode) {
       ['relieved energy core', relievedEnergyCaptures],
       ['repeated flat energy core', repeatedFlatEnergyCaptures],
       ['unlit gas', unlitGasCaptures],
+      ['flat gas volume', flatGasVolumeCaptures],
+      ['chromatic gas volume', chromaticGasVolumeCaptures],
+      ['repeated flat gas volume', repeatedFlatGasVolumeCaptures],
       ['unlit liquid', unlitLiquidCaptures],
       ['categorical liquid silhouette', categoricalLiquidCaptures],
       ['cohesive liquid silhouette', cohesiveLiquidCaptures],
@@ -980,6 +996,57 @@ async function auditMode(mode) {
     assert(volumes.nobleGas.rgb[2] > volumes.nobleGas.rgb[0]
       && volumes.nobleGas.rgb[0] > volumes.nobleGas.rgb[1],
     `${mode}: Noble Gas lost its violet hue (${volumes.nobleGas.rgb})`);
+    const gasVolumeChromaSamples = await sampleBackdropRefractionRegions(cdp, {
+      straight: flatGasVolumeCaptures.capture.data,
+      refracted: chromaticGasVolumeCaptures.capture.data,
+      repeatedStraight: repeatedFlatGasVolumeCaptures.capture.data,
+    }, [
+      { name: 'smokeBillowChroma', x: 382, y: 40, radius: 9 },
+      { name: 'oxygenBillowChroma', x: 486, y: 32, radius: 10 },
+      { name: 'compactFogBillowChroma', x: 430, y: 171, radiusX: 30, radiusY: 10 },
+      { name: 'waterGasChromaControl', x: 238, y: 79, radius: 10 },
+      { name: 'metalGasChromaControl', x: 405, y: 229, radius: 6 },
+    ], canonicalCaptures.canvasRect);
+    const gasVolumeChroma = Object.fromEntries(
+      gasVolumeChromaSamples.map((sample) => [sample.name, sample]),
+    );
+    for (const name of ['smokeBillowChroma', 'oxygenBillowChroma', 'compactFogBillowChroma']) {
+      const sample = gasVolumeChroma[name];
+      assert(sample.rgbRms >= 0.04 && sample.chromaRms >= 0.015 && sample.rgbPeak <= 16,
+        `${mode}: ${name} lost bounded chromatic billow depth (${JSON.stringify(gasVolumeChromaSamples)})`);
+    }
+    assert(gasVolumeChroma.waterGasChromaControl.rgbPeak <= 1
+      && gasVolumeChroma.metalGasChromaControl.rgbPeak <= 1,
+    `${mode}: gas chroma leaked into liquid or solid matter (${JSON.stringify(gasVolumeChromaSamples)})`);
+    assert(gasVolumeChromaSamples.every((sample) => sample.repeatRgbPeak <= 1),
+      `${mode}: gas-volume chroma off-on-off sequence was not deterministic (${JSON.stringify(gasVolumeChromaSamples)})`);
+    const gasVolumeSupportRegions = [
+      { name: 'denseGasVolumeSupport', x: 486, y: 76, radiusX: 110, radiusY: 58, silhouette: true },
+      { name: 'compactGasVolumeSupport', x: 475, y: 171, radiusX: 85, radiusY: 13, silhouette: true },
+    ];
+    const [flatGasVolumeSupport, chromaticGasVolumeSupport] = await Promise.all([
+      samplePageRegions(
+        cdp, flatGasVolumeCaptures.capture.data, gasVolumeSupportRegions,
+        blankCaptures.capture.data, blankCaptures.reference.data, canonicalCaptures.canvasRect,
+      ),
+      samplePageRegions(
+        cdp, chromaticGasVolumeCaptures.capture.data, gasVolumeSupportRegions,
+        blankCaptures.capture.data, blankCaptures.reference.data, canonicalCaptures.canvasRect,
+      ),
+    ]);
+    const gasVolumeSupportInvariantSamples = flatGasVolumeSupport.map((flat, index) => ({
+      name: flat.name,
+      flatVisible: flat.visible,
+      chromaticVisible: chromaticGasVolumeSupport[index].visible,
+      flatWorldArea: flat.worldArea,
+      chromaticWorldArea: chromaticGasVolumeSupport[index].worldArea,
+    }));
+    assert(gasVolumeSupportInvariantSamples.every((sample) => (
+      Math.abs(sample.flatVisible - sample.chromaticVisible)
+        / Math.max(1, sample.flatVisible) <= 0.001
+      && Math.abs(sample.flatWorldArea - sample.chromaticWorldArea)
+        / Math.max(0.001, sample.flatWorldArea) <= 0.001
+    )), `${mode}: gas chroma changed atmosphere support (${JSON.stringify(gasVolumeSupportInvariantSamples)})`);
     const compactGasSamples = await sampleCanonicalRegions([
       { name: 'compactFog', x: 430, y: 171, radiusX: 30, radiusY: 10, topology: true },
       { name: 'compactCflm', x: 520, y: 171, radiusX: 30, radiusY: 10, topology: true },
@@ -1669,6 +1736,8 @@ async function auditMode(mode) {
         solidSamples,
         translucentSolidSamples,
         gasLightResponseSamples,
+        gasVolumeChromaSamples,
+        gasVolumeSupportInvariantSamples,
         liquidLightResponseSamples,
         translucentLightResponseSamples,
         translucentSupportInvariantSamples,
@@ -1977,6 +2046,8 @@ async function auditMode(mode) {
       volumeSamples,
       gasLightingSamples,
       gasLightResponseSamples,
+      gasVolumeChromaSamples,
+      gasVolumeSupportInvariantSamples,
       liquidLightResponseSamples,
       translucentLightResponseSamples,
       translucentSupportInvariantSamples,
@@ -2585,6 +2656,19 @@ async function auditRenderScaleEight(cdp, dpr) {
     `renderScale=8 presentation exceeded its watchdog budget (${JSON.stringify(presentationTiming)})`);
 
   const smoothCapture = await captureSettledPage(cdp, 'renderScale=8 smooth powder framebuffer');
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setGasVolumeChroma(false); true');
+  const flatGasVolumeCapture = await captureSettledPage(
+    cdp, 'renderScale=8 flat gas-volume framebuffer', 450,
+  );
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setGasVolumeChroma(true); true');
+  const chromaticGasVolumeCapture = await captureSettledPage(
+    cdp, 'renderScale=8 chromatic gas-volume framebuffer', 450,
+  );
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setGasVolumeChroma(false); true');
+  const repeatedFlatGasVolumeCapture = await captureSettledPage(
+    cdp, 'renderScale=8 repeated flat gas-volume framebuffer', 450,
+  );
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setGasVolumeChroma(true); true');
   const styleCaptures = { smooth: smoothCapture.capture.data };
   for (const style of ['local', 'grains']) {
     await evaluate(cdp, `(() => {
@@ -2691,6 +2775,31 @@ async function auditRenderScaleEight(cdp, dpr) {
     && zoomedSquareGrain.widthRatio >= 0.82 && zoomedSquareGrain.widthRatio <= 1.18
     && zoomedSquareGrain.heightRatio >= 0.82 && zoomedSquareGrain.heightRatio <= 1.18,
   `renderScale=8 Grains cell was not an axis-aligned square (${JSON.stringify(zoomedSquareGrain)})`);
+  const gasVolumeChromaSamples = await sampleBackdropRefractionRegions(cdp, {
+    straight: flatGasVolumeCapture.capture.data,
+    refracted: chromaticGasVolumeCapture.capture.data,
+    repeatedStraight: repeatedFlatGasVolumeCapture.capture.data,
+  }, [
+    { name: 'smokeBillowChroma8x', x: 382, y: 40, radius: 9 },
+    { name: 'oxygenBillowChroma8x', x: 486, y: 32, radius: 10 },
+    { name: 'compactFogBillowChroma8x', x: 430, y: 171, radiusX: 30, radiusY: 10 },
+    { name: 'waterGasChromaControl8x', x: 238, y: 79, radius: 10 },
+    { name: 'metalGasChromaControl8x', x: 405, y: 229, radius: 6 },
+  ], geometry.canvas);
+  const gasVolumeChroma = Object.fromEntries(
+    gasVolumeChromaSamples.map((sample) => [sample.name, sample]),
+  );
+  for (const name of [
+    'smokeBillowChroma8x', 'oxygenBillowChroma8x', 'compactFogBillowChroma8x',
+  ]) {
+    const sample = gasVolumeChroma[name];
+    assert(sample.rgbRms >= 0.04 && sample.chromaRms >= 0.015 && sample.rgbPeak <= 16,
+      `renderScale=8 ${name} lost bounded chromatic billow depth (${JSON.stringify(gasVolumeChromaSamples)})`);
+  }
+  assert(gasVolumeChroma.waterGasChromaControl8x.rgbPeak <= 1
+    && gasVolumeChroma.metalGasChromaControl8x.rgbPeak <= 1
+    && gasVolumeChromaSamples.every((sample) => sample.repeatRgbPeak <= 1),
+  `renderScale=8 gas chroma changed a control or was nondeterministic (${JSON.stringify(gasVolumeChromaSamples)})`);
   const materialAtlasStress = await auditEightXMaterialAtlasStress(
     cdp, blankCapture.capture.data, geometry.canvas,
   );
@@ -2705,6 +2814,7 @@ async function auditRenderScaleEight(cdp, dpr) {
     powderSupport,
     squareGrain,
     zoomedSquareGrain,
+    gasVolumeChromaSamples,
     zoomedInput: {
       cell: `${zoomedInputTarget.x},${zoomedInputTarget.y}`,
       footprint: zoomedInputFootprint,
@@ -5067,6 +5177,16 @@ function assertPairedVisualRelief(results) {
     const webglRatio = webglCentre.meanLuma / Math.max(1, webglMidpoint.meanLuma);
     assert(Math.abs(canvasRatio - webglRatio) <= 0.35,
       `Canvas/WebGL ${family} bead contrast diverged (${canvasRatio}/${webglRatio})`);
+  }
+  for (const name of [
+    'smokeBillowChroma', 'oxygenBillowChroma', 'compactFogBillowChroma',
+  ]) {
+    const canvasSample = canvas.gasVolumeChromaSamples.find((sample) => sample.name === name);
+    const webglSample = webgl.gasVolumeChromaSamples.find((sample) => sample.name === name);
+    assert(canvasSample && webglSample, `paired gas-volume chroma sample missing ${name}`);
+    const ratio = canvasSample.rgbRms / Math.max(0.04, webglSample.rgbRms);
+    assert(ratio >= 0.35 && ratio <= 3.0,
+      `Canvas/WebGL ${name} chroma response diverged (${canvasSample.rgbRms}/${webglSample.rgbRms})`);
   }
   for (const name of [
     'patternedGlassShoulders', 'patternedIceCore',
