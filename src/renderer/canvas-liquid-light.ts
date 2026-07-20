@@ -1,3 +1,5 @@
+import { RENDER_OPTICS_CLASS_COUNT, RenderOptics } from './render-optics';
+
 const COHESION_START_ALPHA = 160;
 const COHESION_END_ALPHA = 240;
 const DENSE_CONTOUR_FLOOR = 0.18;
@@ -15,6 +17,55 @@ const INTERFACE_RELIEF_X = 0.075;
 const INTERFACE_RELIEF_Y = 0.09;
 const EMISSION_BASE_EXPOSURE = 0.46;
 const EMISSION_RELIEF_GAIN = 2.4;
+const BODY_ALPHA_SUPPORT = Float32Array.from(
+  { length: 256 }, (_, alpha) => smoothstep(COHESION_START_ALPHA, COHESION_END_ALPHA, alpha),
+);
+const BODY_NEIGHBOUR_SUPPORT = Float32Array.from(
+  { length: 9 }, (_, neighbours) => smoothstep(2, 6, neighbours),
+);
+const BODY_PARAMETER_COUNT = 5;
+const BODY_PARAMETERS = new Float32Array(RENDER_OPTICS_CLASS_COUNT * BODY_PARAMETER_COUNT);
+for (let optics = 0; optics < RENDER_OPTICS_CLASS_COUNT; optics++) {
+  setBodyParameters(optics, 0.05, 0.90, 8, 12, 15);
+}
+setBodyParameters(RenderOptics.Aqueous, 0.055, 2.55, 5, 14, 18);
+setBodyParameters(RenderOptics.Oily, 0.085, 0.85, 16, 9, 3);
+setBodyParameters(RenderOptics.Corrosive, 0.065, 1.0, 15, 8, 18);
+setBodyParameters(RenderOptics.Molten, 0.025, 0.38, 2, 0.7, 0.2);
+
+/**
+ * Gives an authoritative Canvas liquid cell field-owned body depth and a
+ * continuous exposed meniscus. Every input is already computed by the caller;
+ * this helper changes RGB only and performs no sampling or allocation.
+ */
+export function applyCanvasLiquidBodyOptics(
+  color: Float32Array,
+  optics: RenderOptics,
+  fieldAlpha: number,
+  neighbourCount: number,
+  signedRelief: number,
+  surfaceExposure: number,
+): void {
+  const support = BODY_ALPHA_SUPPORT[fieldAlpha] * BODY_NEIGHBOUR_SUPPORT[neighbourCount];
+  if (support <= 0) return;
+  const parameter = optics * BODY_PARAMETER_COUNT;
+  const absorption = BODY_PARAMETERS[parameter];
+  const reliefGain = BODY_PARAMETERS[parameter + 1];
+
+  const depth = support * (0.35 + neighbourCount * 0.08125);
+  const boundedRelief = signedRelief < RELIEF_DARK_LIMIT ? RELIEF_DARK_LIMIT
+    : signedRelief > RELIEF_LIGHT_LIMIT ? RELIEF_LIGHT_LIMIT : signedRelief;
+  const relief = boundedRelief * reliefGain * support;
+  const bodyScale = 1 - absorption * depth + relief;
+  color[0] *= bodyScale;
+  color[1] *= bodyScale;
+  color[2] *= bodyScale;
+  const rim = surfaceExposure * support;
+  color[0] += BODY_PARAMETERS[parameter + 2] * rim;
+  color[1] += BODY_PARAMETERS[parameter + 3] * rim;
+  color[2] += BODY_PARAMETERS[parameter + 4] * rim;
+  compressPeak(color);
+}
 
 /**
  * Scales semantic-cell contour light down only where the shared liquid field
@@ -196,4 +247,32 @@ function smoothstep(edge0: number, edge1: number, value: number): number {
 
 function clamp(value: number, minimum: number, maximum: number): number {
   return Math.max(minimum, Math.min(maximum, value));
+}
+
+function compressPeak(color: Float32Array): void {
+  const red = color[0];
+  const green = color[1];
+  const blue = color[2];
+  if (red <= 254 && green <= 254 && blue <= 254) return;
+  const peak = red > green ? (red > blue ? red : blue) : (green > blue ? green : blue);
+  const scale = 254 / peak;
+  color[0] *= scale;
+  color[1] *= scale;
+  color[2] *= scale;
+}
+
+function setBodyParameters(
+  optics: number,
+  absorption: number,
+  relief: number,
+  red: number,
+  green: number,
+  blue: number,
+): void {
+  const offset = optics * BODY_PARAMETER_COUNT;
+  BODY_PARAMETERS[offset] = absorption;
+  BODY_PARAMETERS[offset + 1] = relief;
+  BODY_PARAMETERS[offset + 2] = red;
+  BODY_PARAMETERS[offset + 3] = green;
+  BODY_PARAMETERS[offset + 4] = blue;
 }

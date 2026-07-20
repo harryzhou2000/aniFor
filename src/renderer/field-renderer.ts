@@ -16,7 +16,8 @@ import {
   createLiquidSurfaceScratch, reconstructLiquidSurface, type LiquidSurfaceScratch,
 } from './canvas-liquid-surface';
 import {
-  canvasLiquidContourScale, canvasLiquidEmissionExposure, canvasLiquidFieldRelief,
+  applyCanvasLiquidBodyOptics, canvasLiquidContourScale,
+  canvasLiquidEmissionExposure, canvasLiquidFieldRelief,
   canvasLiquidEmissionSurfaceExposure, canvasLiquidSpeciesRelief, canvasLiquidSurfaceExposure,
 } from './canvas-liquid-light';
 import { shadeCanvasEnergy } from './canvas-energy-style';
@@ -694,16 +695,6 @@ export class MaterialRenderer {
             ? canvasLiquidSpeciesRelief(fields.liquid.bytes, width, height, x, y)
             : 0)
         : 0;
-      const liquidReliefScale = phase === RenderPhase.Liquid
-        ? 1 + liquidFieldRelief
-          * (this.outputScale >= CANVAS_CONTOUR_OUTPUT_SCALE
-            ? (optics === RenderOptics.Aqueous ? 1.35 : 1.18)
-            : 1)
-          * (optics === RenderOptics.Aqueous ? 1.08
-            : optics === RenderOptics.Oily ? 0.84
-              : optics === RenderOptics.Corrosive ? 1.0
-                : optics === RenderOptics.Molten ? 0.76 : 0.92)
-        : 1;
       const liquidEmissionExposure = phase === RenderPhase.Liquid
         && this.liquidFieldLightingEnabled && fields.emission.hasLight
         && !PROJECTED_RENDER_INFO[material]?.emissive
@@ -812,14 +803,16 @@ export class MaterialRenderer {
         const flow = velocities ? velocities[index * 2] * 0.12 : 0;
         const sheen = Math.sin(visualTime * 0.0017 + x * 0.055 + y * 0.025 + flow) * 5 + contour;
         const depth = density / 8;
-        compositePixel(
-          target, pixel, (91 - depth * 28 + sheen) * liquidReliefScale,
-          (67 - depth * 24 + sheen * 0.65) * liquidReliefScale,
-          (35 - depth * 14 + sheen * 0.3) * liquidReliefScale, canvasLiquidAlpha(density),
+        this.styledColor[0] = 100 - depth * 28 + sheen;
+        this.styledColor[1] = 74 - depth * 24 + sheen * 0.65;
+        this.styledColor[2] = 39 - depth * 14 + sheen * 0.3;
+        applyCanvasLiquidBodyOptics(
+          this.styledColor, optics, fields.liquid.bytes[pixel + 3], density,
+          liquidFieldRelief, liquidSurfaceExposure,
         );
-        if (liquidSurfaceExposure > 0) setPixel(
-          fire, pixel, 172 + sheen, 128 + sheen, 66,
-          (34 + Math.max(0, contour)) * liquidSurfaceExposure,
+        compositePixel(
+          target, pixel,
+          this.styledColor[0], this.styledColor[1], this.styledColor[2], canvasLiquidAlpha(density),
         );
       } else if (material === Material.Wood) {
         const grain = hash(index) % 23 - 11;
@@ -867,10 +860,16 @@ export class MaterialRenderer {
         const heat = clamp((kelvin - 700) / 1100, 0, 1);
         const crust = density > 6 ? -52 : 0;
         const pulse = Math.sin(visualTime * 0.003 + x * 0.1 + y * 0.07) * 8;
+        this.styledColor[0] = 216 + crust + heat * 26 + contour * 0.35;
+        this.styledColor[1] = 48 + pulse + heat * 110 + contour * 0.5;
+        this.styledColor[2] = 8 + heat * 48;
+        applyCanvasLiquidBodyOptics(
+          this.styledColor, optics, fields.liquid.bytes[pixel + 3], density,
+          liquidFieldRelief, liquidSurfaceExposure,
+        );
         compositePixel(
-          target, pixel, (216 + crust + heat * 26 + contour * 0.35) * liquidReliefScale,
-          (48 + pulse + heat * 110 + contour * 0.5) * liquidReliefScale,
-          (8 + heat * 48) * liquidReliefScale, canvasLiquidAlpha(density),
+          target, pixel,
+          this.styledColor[0], this.styledColor[1], this.styledColor[2], canvasLiquidAlpha(density),
         );
         if (liquidSurfaceExposure > 0) setPixel(
           fire, pixel, 255, 72 + heat * 112 + pulse, 12,
@@ -904,14 +903,16 @@ export class MaterialRenderer {
         const contour = contourLight(mask) * liquidContourScale;
         const depth = density / 8;
         const shimmer = Math.sin(visualTime * 0.0024 + x * 0.075 + y * 0.035) * 6 + contour;
-        compositePixel(
-          target, pixel, (211 - depth * 30 + shimmer) * liquidReliefScale,
-          (94 - depth * 22 + shimmer * 0.7) * liquidReliefScale,
-          (232 - depth * 24 + shimmer) * liquidReliefScale, canvasLiquidAlpha(density),
+        this.styledColor[0] = 211 - depth * 30 + shimmer;
+        this.styledColor[1] = 94 - depth * 22 + shimmer * 0.7;
+        this.styledColor[2] = 232 - depth * 24 + shimmer;
+        applyCanvasLiquidBodyOptics(
+          this.styledColor, optics, fields.liquid.bytes[pixel + 3], density,
+          liquidFieldRelief, liquidSurfaceExposure,
         );
-        if (liquidSurfaceExposure > 0) setPixel(
-          fire, pixel, 238 + shimmer, 148 + shimmer, 255,
-          (38 + Math.max(0, contour)) * liquidSurfaceExposure,
+        compositePixel(
+          target, pixel,
+          this.styledColor[0], this.styledColor[1], this.styledColor[2], canvasLiquidAlpha(density),
         );
       } else if (material === Material.Gunpowder) {
         const grain = hash(index) % 23 - 11;
@@ -946,14 +947,16 @@ export class MaterialRenderer {
         const flow = velocities ? velocities[index * 2] * 0.18 : 0;
         const shimmer = Math.sin(visualTime * 0.002 + x * 0.065 + y * 0.02 + flow) * 4;
         const light = contour + shimmer;
-        compositePixel(
-          target, pixel, (53 - depth * 31 + light * 0.45) * liquidReliefScale,
-          (169 - depth * 56 + light) * liquidReliefScale,
-          (205 - depth * 40 + light) * liquidReliefScale, canvasLiquidAlpha(density),
+        this.styledColor[0] = 53 - depth * 31 + light * 0.45;
+        this.styledColor[1] = 169 - depth * 56 + light;
+        this.styledColor[2] = 205 - depth * 40 + light;
+        applyCanvasLiquidBodyOptics(
+          this.styledColor, optics, fields.liquid.bytes[pixel + 3], density,
+          liquidFieldRelief, liquidSurfaceExposure,
         );
-        if (liquidSurfaceExposure > 0) setPixel(
-          fire, pixel, 129 + light, 232 + light, 245,
-          (44 + Math.max(0, contour)) * liquidSurfaceExposure,
+        compositePixel(
+          target, pixel,
+          this.styledColor[0], this.styledColor[1], this.styledColor[2], canvasLiquidAlpha(density),
         );
       } else if (material === Material.Smoke) {
         const mask = materialNeighbourMask(this.rendered, width, height, x, y, material);
@@ -1005,9 +1008,10 @@ export class MaterialRenderer {
           shadeCanvasOpticalVolume(
             this.styledColor, red, green, blue, optics, 'liquid', density, shimmer,
           );
-          this.styledColor[0] *= liquidReliefScale;
-          this.styledColor[1] *= liquidReliefScale;
-          this.styledColor[2] *= liquidReliefScale;
+          applyCanvasLiquidBodyOptics(
+            this.styledColor, optics, fields.liquid.bytes[pixel + 3], density,
+            liquidFieldRelief, liquidSurfaceExposure,
+          );
           if (applicableTraits === 0 && !info.emissive) {
             compositePixel(
               target, pixel,
@@ -1022,10 +1026,6 @@ export class MaterialRenderer {
               this.styledColor[0], this.styledColor[1], this.styledColor[2], canvasLiquidAlpha(density),
             );
           }
-          if (liquidSurfaceExposure > 0) setPixel(
-            fire, pixel, red + 35, green + 35, blue + 35,
-            (30 + Math.max(0, contour)) * liquidSurfaceExposure,
-          );
         } else {
           shadeCanvasMaterial(
             this.styledColor, red, green, blue, profile,

@@ -1,11 +1,70 @@
 import { describe, expect, it } from 'vitest';
 import {
-  canvasLiquidContourScale, canvasLiquidEmissionExposure,
+  applyCanvasLiquidBodyOptics, canvasLiquidContourScale, canvasLiquidEmissionExposure,
   canvasLiquidEmissionSurfaceExposure, canvasLiquidFieldRelief, canvasLiquidSpeciesRelief,
   canvasLiquidSurfaceExposure,
 } from './canvas-liquid-light';
+import { RenderOptics } from './render-optics';
 
 describe('Canvas liquid field-owned light', () => {
+  it('adds bounded deterministic family-specific body optics without changing hue ownership', () => {
+    const families = [
+      { optics: RenderOptics.Aqueous, base: [42, 166, 205], order: [2, 1, 0] },
+      { optics: RenderOptics.Oily, base: [91, 67, 35], order: [0, 1, 2] },
+      { optics: RenderOptics.Corrosive, base: [211, 94, 232], order: [2, 0, 1] },
+      { optics: RenderOptics.Molten, base: [230, 100, 32], order: [0, 1, 2] },
+    ] as const;
+    const fingerprints = new Set<string>();
+    for (const { optics, base, order } of families) {
+      const color = new Float32Array(base);
+      applyCanvasLiquidBodyOptics(color, optics, 255, 8, 0.08, 1);
+      expect(Math.max(...color)).toBeLessThanOrEqual(254);
+      expect(color[order[0]]).toBeGreaterThan(color[order[1]]);
+      expect(color[order[1]]).toBeGreaterThan(color[order[2]]);
+      const repeated = new Float32Array(base);
+      applyCanvasLiquidBodyOptics(repeated, optics, 255, 8, 0.08, 1);
+      expect(repeated).toEqual(color);
+      fingerprints.add(Array.from(color, (channel) => channel.toFixed(3)).join(','));
+    }
+    expect(fingerprints.size).toBe(families.length);
+  });
+
+  it('leaves isolated or field-sparse droplets unchanged and restrains molten reflection', () => {
+    for (const [fieldAlpha, neighbours] of [[255, 0], [160, 8], [220, 1]] as const) {
+      const color = new Float32Array([80, 120, 160]);
+      applyCanvasLiquidBodyOptics(
+        color, RenderOptics.Aqueous, fieldAlpha, neighbours, 0.18, 1,
+      );
+      expect(Array.from(color)).toEqual([80, 120, 160]);
+    }
+
+    const water = new Float32Array([100, 130, 160]);
+    const molten = new Float32Array(water);
+    applyCanvasLiquidBodyOptics(water, RenderOptics.Aqueous, 255, 8, 0.12, 1);
+    applyCanvasLiquidBodyOptics(molten, RenderOptics.Molten, 255, 8, 0.12, 1);
+    const response = (color: Float32Array) => Array.from(color)
+      .reduce((sum, channel, index) => sum + Math.abs(channel - [100, 130, 160][index]), 0);
+    expect(response(molten)).toBeLessThan(response(water) * 0.5);
+  });
+
+  it('keeps macro variation gradual and preserves highlight headroom', () => {
+    const first = new Float32Array([120, 150, 180]);
+    const adjacent = new Float32Array(first);
+    applyCanvasLiquidBodyOptics(first, RenderOptics.Aqueous, 255, 8, 0.04, 0.7);
+    applyCanvasLiquidBodyOptics(adjacent, RenderOptics.Aqueous, 255, 8, 0.045, 0.7);
+    expect(Math.max(
+      Math.abs(first[0] - adjacent[0]),
+      Math.abs(first[1] - adjacent[1]),
+      Math.abs(first[2] - adjacent[2]),
+    )).toBeLessThanOrEqual(3);
+
+    const bright = new Float32Array([252, 253, 254]);
+    applyCanvasLiquidBodyOptics(bright, RenderOptics.Aqueous, 255, 8, 0.18, 1);
+    expect(Math.max(...bright)).toBeLessThanOrEqual(254);
+    expect(bright[2] + 1).toBeGreaterThanOrEqual(bright[1]);
+    expect(bright[1]).toBeGreaterThan(bright[0]);
+  });
+
   it('shapes emission reflection only on exposed, light-facing liquid relief', () => {
     expect(canvasLiquidEmissionExposure(0, 0.18)).toBe(0);
     expect(canvasLiquidEmissionExposure(1, -0.16)).toBeCloseTo(0.46);

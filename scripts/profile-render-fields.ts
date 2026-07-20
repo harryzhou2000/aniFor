@@ -22,7 +22,7 @@ import {
   applyCanvasTranslucentCaustic, applyCanvasTranslucentLensShell, canvasSolidRelief,
 } from '../src/renderer/canvas-solid-relief';
 import {
-  canvasLiquidContourScale, canvasLiquidEmissionExposure,
+  applyCanvasLiquidBodyOptics, canvasLiquidContourScale, canvasLiquidEmissionExposure,
   canvasLiquidEmissionSurfaceExposure, canvasLiquidFieldRelief, canvasLiquidSurfaceExposure,
 } from '../src/renderer/canvas-liquid-light';
 import { createRenderLookups } from '../src/renderer/render-field-set';
@@ -143,12 +143,14 @@ const traitRgb = new Float32Array(3);
 const translucentCausticRgb = new Float32Array(3);
 const translucentLensRgb = new Float32Array(3);
 const solidBodyRgb = new Float32Array(3);
+const liquidBodyRgb = new Float32Array(3);
 const traitClock = new Int32Array(CANVAS_RENDER_TRAIT_CLOCK_SIZE);
 updateCanvasRenderTraitClock(traitClock, 1_000);
 const traitCompositePixels = new Uint8ClampedArray(width * height * 4);
 let traitChecksum = 0;
 let solidReliefChecksum = 0;
 let solidBodyChecksum = 0;
+let liquidBodyChecksum = 0;
 let liquidLightChecksum = 0;
 let translucentLightChecksum = 0;
 let translucentBackdropChecksum = 0;
@@ -307,7 +309,7 @@ console.log(JSON.stringify({
     liquidRefractionLookupBytes: CANVAS_LIQUID_REFRACTION_LOOKUP_BYTES,
     diagnosticScratchBytes: traitCompositePixels.byteLength + denseTranslucentPixels.byteLength
       + localizedEmissionMaterials.byteLength + localizedEmission.allocatedByteLength
-      + solidBodyRgb.byteLength,
+      + solidBodyRgb.byteLength + liquidBodyRgb.byteLength,
     atmosphereRelief: sample(() => {
       shadeCanvasAtmosphere(atmospherePixels, atmosphere.bytes, atmosphere.width, atmosphere.height);
     }),
@@ -414,6 +416,28 @@ console.log(JSON.stringify({
         );
       }
       solidBodyChecksum = solidBodyRgb[0] + solidBodyRgb[1] + solidBodyRgb[2];
+    }),
+    liquidBodyOpticsLoopBaseline: sample(() => {
+      const color = Material.Water * 3;
+      const oldReliefScale = 1 + 0.18 * 1.35 * 1.08;
+      for (let index = 0; index < width * height; index++) {
+        liquidBodyRgb[0] = colorByMaterial[color] * oldReliefScale;
+        liquidBodyRgb[1] = colorByMaterial[color + 1] * oldReliefScale;
+        liquidBodyRgb[2] = colorByMaterial[color + 2] * oldReliefScale;
+      }
+      liquidBodyChecksum = liquidBodyRgb[0] + liquidBodyRgb[1] + liquidBodyRgb[2];
+    }),
+    liquidBodyOpticsWorstCase: sample(() => {
+      const color = Material.Water * 3;
+      for (let index = 0; index < width * height; index++) {
+        liquidBodyRgb[0] = colorByMaterial[color];
+        liquidBodyRgb[1] = colorByMaterial[color + 1];
+        liquidBodyRgb[2] = colorByMaterial[color + 2];
+        applyCanvasLiquidBodyOptics(
+          liquidBodyRgb, RenderOptics.Aqueous, 255, 8, 0.18, 1,
+        );
+      }
+      liquidBodyChecksum = liquidBodyRgb[0] + liquidBodyRgb[1] + liquidBodyRgb[2];
     }),
     translucentCausticWorstCase: sample(() => {
       for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) {
@@ -552,6 +576,7 @@ console.log(JSON.stringify({
   traitChecksum: Math.round(traitChecksum),
   solidReliefChecksum: Math.round(solidReliefChecksum),
   solidBodyChecksum: Math.round(solidBodyChecksum),
+  liquidBodyChecksum: Math.round(liquidBodyChecksum),
   liquidLightChecksum: Math.round(liquidLightChecksum),
   translucentLightChecksum: Math.round(translucentLightChecksum),
   translucentBackdropChecksum: Math.round(translucentBackdropChecksum),

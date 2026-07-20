@@ -3734,6 +3734,12 @@ function assertPairedVisualRelief(results) {
     const exposureRatio = webglSample.meanLuma / Math.max(1, canvasSample.meanLuma);
     assert(exposureRatio >= 0.65 && exposureRatio <= 1.6,
       `Canvas/WebGL ${canvasSample.name} mean exposure diverged (${canvasSample.meanLuma}/${webglSample.meanLuma})`);
+    assert(Math.abs(canvasSample.microContrast - webglSample.microContrast) <= 2.5,
+      `Canvas/WebGL ${canvasSample.name} liquid micro detail diverged (${canvasSample.microContrast}/${webglSample.microContrast})`);
+    assert(Math.abs(canvasSample.coverage - webglSample.coverage) <= 0.03,
+      `Canvas/WebGL ${canvasSample.name} liquid coverage diverged (${canvasSample.coverage}/${webglSample.coverage})`);
+    assert(Math.abs(canvasSample.pinnedFraction - webglSample.pinnedFraction) <= 0.05,
+      `Canvas/WebGL ${canvasSample.name} liquid clipping diverged (${canvasSample.pinnedFraction}/${webglSample.pinnedFraction})`);
   }
   for (const name of ['warmRim', 'coolRim']) {
     const canvasSample = canvas.gasLightResponseSamples.find((sample) => sample.name === name);
