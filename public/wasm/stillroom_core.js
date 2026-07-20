@@ -5823,6 +5823,16 @@ var _powder_can_configure_source = Module['_powder_can_configure_source'] = make
 var _powder_source_target = Module['_powder_source_target'] = makeInvalidEarlyAccess('_powder_source_target');
 var _powder_set_wall = Module['_powder_set_wall'] = makeInvalidEarlyAccess('_powder_set_wall');
 var _powder_apply_tool = Module['_powder_apply_tool'] = makeInvalidEarlyAccess('_powder_apply_tool');
+var _powder_sign_count = Module['_powder_sign_count'] = makeInvalidEarlyAccess('_powder_sign_count');
+var _powder_sign_x = Module['_powder_sign_x'] = makeInvalidEarlyAccess('_powder_sign_x');
+var _powder_sign_y = Module['_powder_sign_y'] = makeInvalidEarlyAccess('_powder_sign_y');
+var _powder_sign_justification = Module['_powder_sign_justification'] = makeInvalidEarlyAccess('_powder_sign_justification');
+var _powder_sign_text = Module['_powder_sign_text'] = makeInvalidEarlyAccess('_powder_sign_text');
+var _powder_sign_display_text = Module['_powder_sign_display_text'] = makeInvalidEarlyAccess('_powder_sign_display_text');
+var _powder_sign_text_size = Module['_powder_sign_text_size'] = makeInvalidEarlyAccess('_powder_sign_text_size');
+var _powder_sign_buffer = Module['_powder_sign_buffer'] = makeInvalidEarlyAccess('_powder_sign_buffer');
+var _powder_sign_upsert = Module['_powder_sign_upsert'] = makeInvalidEarlyAccess('_powder_sign_upsert');
+var _powder_sign_remove = Module['_powder_sign_remove'] = makeInvalidEarlyAccess('_powder_sign_remove');
 var _powder_step = Module['_powder_step'] = makeInvalidEarlyAccess('_powder_step');
 var _powder_save = Module['_powder_save'] = makeInvalidEarlyAccess('_powder_save');
 var _powder_save_size = Module['_powder_save_size'] = makeInvalidEarlyAccess('_powder_save_size');
@@ -5869,6 +5879,16 @@ function assignWasmExports(wasmExports) {
   assert(typeof wasmExports['powder_source_target'] != 'undefined', 'missing Wasm export: powder_source_target');
   assert(typeof wasmExports['powder_set_wall'] != 'undefined', 'missing Wasm export: powder_set_wall');
   assert(typeof wasmExports['powder_apply_tool'] != 'undefined', 'missing Wasm export: powder_apply_tool');
+  assert(typeof wasmExports['powder_sign_count'] != 'undefined', 'missing Wasm export: powder_sign_count');
+  assert(typeof wasmExports['powder_sign_x'] != 'undefined', 'missing Wasm export: powder_sign_x');
+  assert(typeof wasmExports['powder_sign_y'] != 'undefined', 'missing Wasm export: powder_sign_y');
+  assert(typeof wasmExports['powder_sign_justification'] != 'undefined', 'missing Wasm export: powder_sign_justification');
+  assert(typeof wasmExports['powder_sign_text'] != 'undefined', 'missing Wasm export: powder_sign_text');
+  assert(typeof wasmExports['powder_sign_display_text'] != 'undefined', 'missing Wasm export: powder_sign_display_text');
+  assert(typeof wasmExports['powder_sign_text_size'] != 'undefined', 'missing Wasm export: powder_sign_text_size');
+  assert(typeof wasmExports['powder_sign_buffer'] != 'undefined', 'missing Wasm export: powder_sign_buffer');
+  assert(typeof wasmExports['powder_sign_upsert'] != 'undefined', 'missing Wasm export: powder_sign_upsert');
+  assert(typeof wasmExports['powder_sign_remove'] != 'undefined', 'missing Wasm export: powder_sign_remove');
   assert(typeof wasmExports['powder_step'] != 'undefined', 'missing Wasm export: powder_step');
   assert(typeof wasmExports['powder_save'] != 'undefined', 'missing Wasm export: powder_save');
   assert(typeof wasmExports['powder_save_size'] != 'undefined', 'missing Wasm export: powder_save_size');
@@ -5911,6 +5931,16 @@ function assignWasmExports(wasmExports) {
   _powder_source_target = Module['_powder_source_target'] = createExportWrapper('powder_source_target', wasmExports['powder_source_target'], 2);
   _powder_set_wall = Module['_powder_set_wall'] = createExportWrapper('powder_set_wall', wasmExports['powder_set_wall'], 4);
   _powder_apply_tool = Module['_powder_apply_tool'] = createExportWrapper('powder_apply_tool', wasmExports['powder_apply_tool'], 6);
+  _powder_sign_count = Module['_powder_sign_count'] = createExportWrapper('powder_sign_count', wasmExports['powder_sign_count'], 0);
+  _powder_sign_x = Module['_powder_sign_x'] = createExportWrapper('powder_sign_x', wasmExports['powder_sign_x'], 1);
+  _powder_sign_y = Module['_powder_sign_y'] = createExportWrapper('powder_sign_y', wasmExports['powder_sign_y'], 1);
+  _powder_sign_justification = Module['_powder_sign_justification'] = createExportWrapper('powder_sign_justification', wasmExports['powder_sign_justification'], 1);
+  _powder_sign_text = Module['_powder_sign_text'] = createExportWrapper('powder_sign_text', wasmExports['powder_sign_text'], 1);
+  _powder_sign_display_text = Module['_powder_sign_display_text'] = createExportWrapper('powder_sign_display_text', wasmExports['powder_sign_display_text'], 1);
+  _powder_sign_text_size = Module['_powder_sign_text_size'] = createExportWrapper('powder_sign_text_size', wasmExports['powder_sign_text_size'], 0);
+  _powder_sign_buffer = Module['_powder_sign_buffer'] = createExportWrapper('powder_sign_buffer', wasmExports['powder_sign_buffer'], 1);
+  _powder_sign_upsert = Module['_powder_sign_upsert'] = createExportWrapper('powder_sign_upsert', wasmExports['powder_sign_upsert'], 5);
+  _powder_sign_remove = Module['_powder_sign_remove'] = createExportWrapper('powder_sign_remove', wasmExports['powder_sign_remove'], 1);
   _powder_step = Module['_powder_step'] = createExportWrapper('powder_step', wasmExports['powder_step'], 0);
   _powder_save = Module['_powder_save'] = createExportWrapper('powder_save', wasmExports['powder_save'], 0);
   _powder_save_size = Module['_powder_save_size'] = createExportWrapper('powder_save_size', wasmExports['powder_save_size'], 0);
@@ -6061,6 +6091,17 @@ function invoke_ii(index,a1) {
   }
 }
 
+function invoke_viiiiiiiii(index,a1,a2,a3,a4,a5,a6,a7,a8,a9) {
+  var sp = stackSave();
+  try {
+    getWasmTableEntry(index)(a1,a2,a3,a4,a5,a6,a7,a8,a9);
+  } catch(e) {
+    stackRestore(sp);
+    if (!(e instanceof EmscriptenEH)) throw e;
+    _setThrew(1, 0);
+  }
+}
+
 function invoke_iiii(index,a1,a2,a3) {
   var sp = stackSave();
   try {
@@ -6083,43 +6124,10 @@ function invoke_vii(index,a1,a2) {
   }
 }
 
-function invoke_i(index) {
-  var sp = stackSave();
-  try {
-    return getWasmTableEntry(index)();
-  } catch(e) {
-    stackRestore(sp);
-    if (!(e instanceof EmscriptenEH)) throw e;
-    _setThrew(1, 0);
-  }
-}
-
 function invoke_viiii(index,a1,a2,a3,a4) {
   var sp = stackSave();
   try {
     getWasmTableEntry(index)(a1,a2,a3,a4);
-  } catch(e) {
-    stackRestore(sp);
-    if (!(e instanceof EmscriptenEH)) throw e;
-    _setThrew(1, 0);
-  }
-}
-
-function invoke_v(index) {
-  var sp = stackSave();
-  try {
-    getWasmTableEntry(index)();
-  } catch(e) {
-    stackRestore(sp);
-    if (!(e instanceof EmscriptenEH)) throw e;
-    _setThrew(1, 0);
-  }
-}
-
-function invoke_iii(index,a1,a2) {
-  var sp = stackSave();
-  try {
-    return getWasmTableEntry(index)(a1,a2);
   } catch(e) {
     stackRestore(sp);
     if (!(e instanceof EmscriptenEH)) throw e;
@@ -6138,10 +6146,10 @@ function invoke_viii(index,a1,a2,a3) {
   }
 }
 
-function invoke_vi(index,a1) {
+function invoke_viiiiii(index,a1,a2,a3,a4,a5,a6) {
   var sp = stackSave();
   try {
-    getWasmTableEntry(index)(a1);
+    getWasmTableEntry(index)(a1,a2,a3,a4,a5,a6);
   } catch(e) {
     stackRestore(sp);
     if (!(e instanceof EmscriptenEH)) throw e;
@@ -6160,10 +6168,43 @@ function invoke_iiiiii(index,a1,a2,a3,a4,a5) {
   }
 }
 
-function invoke_viiiiii(index,a1,a2,a3,a4,a5,a6) {
+function invoke_v(index) {
   var sp = stackSave();
   try {
-    getWasmTableEntry(index)(a1,a2,a3,a4,a5,a6);
+    getWasmTableEntry(index)();
+  } catch(e) {
+    stackRestore(sp);
+    if (!(e instanceof EmscriptenEH)) throw e;
+    _setThrew(1, 0);
+  }
+}
+
+function invoke_i(index) {
+  var sp = stackSave();
+  try {
+    return getWasmTableEntry(index)();
+  } catch(e) {
+    stackRestore(sp);
+    if (!(e instanceof EmscriptenEH)) throw e;
+    _setThrew(1, 0);
+  }
+}
+
+function invoke_iii(index,a1,a2) {
+  var sp = stackSave();
+  try {
+    return getWasmTableEntry(index)(a1,a2);
+  } catch(e) {
+    stackRestore(sp);
+    if (!(e instanceof EmscriptenEH)) throw e;
+    _setThrew(1, 0);
+  }
+}
+
+function invoke_vi(index,a1) {
+  var sp = stackSave();
+  try {
+    getWasmTableEntry(index)(a1);
   } catch(e) {
     stackRestore(sp);
     if (!(e instanceof EmscriptenEH)) throw e;
@@ -6175,17 +6216,6 @@ function invoke_viiiii(index,a1,a2,a3,a4,a5) {
   var sp = stackSave();
   try {
     getWasmTableEntry(index)(a1,a2,a3,a4,a5);
-  } catch(e) {
-    stackRestore(sp);
-    if (!(e instanceof EmscriptenEH)) throw e;
-    _setThrew(1, 0);
-  }
-}
-
-function invoke_viiiiiiiii(index,a1,a2,a3,a4,a5,a6,a7,a8,a9) {
-  var sp = stackSave();
-  try {
-    getWasmTableEntry(index)(a1,a2,a3,a4,a5,a6,a7,a8,a9);
   } catch(e) {
     stackRestore(sp);
     if (!(e instanceof EmscriptenEH)) throw e;

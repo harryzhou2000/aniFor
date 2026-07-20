@@ -6,7 +6,11 @@ import { decodeSharedWorld } from '../shared/share-codec';
 import { exportWorldFile, importWorldFile, MAX_WORLD_FILE_BYTES, worldFileName } from '../shared/world-file';
 import type { SimulationBackend } from '../simulation';
 import { mountControls } from '../ui/controls';
-import { buildToolCatalog, type LifeToolInfo, type SimToolInfo, type SourceToolInfo, type WallToolInfo } from '../ui/tool-catalog';
+import { NativeSignEditor, NativeSignOverlay, hitTestNativeSign } from '../ui/native-signs';
+import {
+  buildToolCatalog, type LifeToolInfo, type SignToolInfo, type SimToolInfo,
+  type SourceToolInfo, type WallToolInfo,
+} from '../ui/tool-catalog';
 import { WorldInputController } from '../ui/world-input';
 import { drawToolPoint, drawToolSegment } from './tool-dispatch';
 import {
@@ -14,6 +18,9 @@ import {
   prepareDenseSolidAuditFixture, toggleDenseSolidAuditProbe,
 } from './browser-input-audit';
 import { navigateToRenderScale } from './render-scale-navigation';
+import {
+  MATERIAL_ATLAS, materialAtlasAuditRequested, prepareMaterialAtlasAuditFixture,
+} from './material-atlas-audit';
 
 const AUTOSAVE_KEY = 'stillroom-world-v1';
 
@@ -25,6 +32,9 @@ export class Game {
   private simulationTool?: SimToolInfo;
   private sourceTool?: SourceToolInfo;
   private lifeTool?: LifeToolInfo;
+  private signTool?: SignToolInfo;
+  private signOverlay?: NativeSignOverlay;
+  private signEditor?: NativeSignEditor;
   private radius = 7;
   private eraseMode = false;
   private paused = false;
@@ -48,7 +58,8 @@ export class Game {
     const renderLab = renderLabRequested();
     const wallLab = wallLabRequested();
     if (renderLab) {
-      if (blankBrowserInputAuditRequested()) this.simulation.clear();
+      if (materialAtlasAuditRequested()) prepareMaterialAtlasAuditFixture(this.simulation);
+      else if (blankBrowserInputAuditRequested()) this.simulation.clear();
       else applyRenderLabScene(this.simulation);
       this.paused = true;
       this.root.dataset.scene = 'render-lab';
@@ -60,12 +71,21 @@ export class Game {
       await this.restore();
     }
     const viewport = this.root.querySelector('.viewport') as HTMLElement;
+    if (this.simulation.signs && this.simulation.upsertSign && this.simulation.removeSign) {
+      this.signOverlay = new NativeSignOverlay(viewport, this.simulation, this.renderer);
+      this.signEditor = new NativeSignEditor(this.simulation);
+    }
     new WorldInputController(viewport, this.renderer, {
       draw: ({ x, y }, erase) => {
         erase ||= this.eraseMode;
+        if (this.signTool) {
+          this.handleSignPoint({ x, y }, erase);
+          return;
+        }
         drawToolPoint(this.simulation, { x, y }, {
           material: this.material, wallTool: this.wallTool,
-          simulationTool: this.simulationTool, sourceTool: this.sourceTool, lifeTool: this.lifeTool,
+          simulationTool: this.simulationTool, sourceTool: this.sourceTool,
+          lifeTool: this.lifeTool, signTool: this.signTool,
           radius: this.radius,
         }, erase);
       },
@@ -73,7 +93,8 @@ export class Game {
         erase ||= this.eraseMode;
         drawToolSegment(this.simulation, start, end, {
           material: this.material, wallTool: this.wallTool,
-          simulationTool: this.simulationTool, sourceTool: this.sourceTool, lifeTool: this.lifeTool,
+          simulationTool: this.simulationTool, sourceTool: this.sourceTool,
+          lifeTool: this.lifeTool, signTool: this.signTool,
           radius: this.radius,
         }, erase);
       },
@@ -88,6 +109,7 @@ export class Game {
         this.simulationTool = undefined;
         this.sourceTool = undefined;
         this.lifeTool = undefined;
+        this.signTool = undefined;
       },
       onRadius: (radius) => { this.radius = radius; },
       onPause: () => { this.paused = !this.paused; },
@@ -111,22 +133,32 @@ export class Game {
           this.simulationTool = undefined;
           this.sourceTool = undefined;
           this.lifeTool = undefined;
+          this.signTool = undefined;
         }
         else if (tool.kind === 'force' || tool.kind === 'thermal' || tool.kind === 'utility') {
           this.simulationTool = tool;
           this.wallTool = undefined;
           this.sourceTool = undefined;
           this.lifeTool = undefined;
+          this.signTool = undefined;
         } else if (tool.kind === 'source') {
           this.sourceTool = tool;
           this.wallTool = undefined;
           this.simulationTool = undefined;
           this.lifeTool = undefined;
+          this.signTool = undefined;
         } else if (tool.kind === 'life') {
           this.lifeTool = tool;
           this.wallTool = undefined;
           this.simulationTool = undefined;
           this.sourceTool = undefined;
+          this.signTool = undefined;
+        } else if (tool.kind === 'sign') {
+          this.signTool = tool;
+          this.wallTool = undefined;
+          this.simulationTool = undefined;
+          this.sourceTool = undefined;
+          this.lifeTool = undefined;
         }
       },
     }, buildToolCatalog(MATERIALS, {
@@ -137,6 +169,7 @@ export class Game {
           && this.simulation.configuredSourceTargetAt,
       ),
       lifePresets: Boolean(this.simulation.paintLifePreset),
+      signs: Boolean(this.simulation.signs && this.simulation.upsertSign && this.simulation.removeSign),
     }));
     if (renderLab || wallLab) {
       const status = this.root.querySelector('.status');
@@ -156,6 +189,7 @@ export class Game {
     this.simulationTool = undefined;
     this.sourceTool = undefined;
     this.lifeTool = undefined;
+    this.signTool = undefined;
     this.eraseMode = false;
     this.radius = 0;
     this.renderer.resetView();
@@ -216,6 +250,7 @@ export class Game {
         this.simulationTool = undefined;
         this.sourceTool = undefined;
         this.lifeTool = undefined;
+        this.signTool = undefined;
         this.eraseMode = false;
       },
       resetView: () => { this.renderer.resetView(); },
@@ -225,6 +260,8 @@ export class Game {
       backend: () => this.renderer.getBackendInfo(),
       prepareDenseSolidFixture: () => { prepareDenseSolidAuditFixture(this.simulation); },
       toggleDenseSolidProbe: () => { toggleDenseSolidAuditProbe(this.simulation); },
+      materialAtlas: () => MATERIAL_ATLAS,
+      prepareMaterialAtlas: () => { prepareMaterialAtlasAuditFixture(this.simulation); },
       canvasPresentationTiming: () => this.renderer.getCanvasPresentationTiming(),
       requestWebGLPresentationTimingSample: () => this.renderer.requestWebGLPresentationTimingSample(),
       webGLPresentationTiming: () => this.renderer.getWebGLPresentationTiming(),
@@ -239,12 +276,25 @@ export class Game {
       while (this.accumulator >= 1000 / 60) { this.simulation.step(); this.accumulator -= 1000 / 60; }
     }
     this.renderer.render(time, this.root.dataset.inputAudit === 'ready' ? 1_000 : time);
+    this.signOverlay?.render(time);
     if (time - this.lastIndicatorUpdate >= 100) {
       this.lastIndicatorUpdate = time;
       this.updateFieldIndicator();
     }
     requestAnimationFrame(this.frame);
   };
+
+  private handleSignPoint(point: { x: number; y: number }, erase: boolean): void {
+    if (!this.signEditor || this.signEditor.isOpen) return;
+    if (point.x < 0 || point.y < 0
+      || point.x >= this.simulation.width || point.y >= this.simulation.height) return;
+    const existing = hitTestNativeSign(this.simulation.signs?.() ?? [], point);
+    if (erase) {
+      if (existing) this.simulation.removeSign?.(existing.index);
+      return;
+    }
+    this.signEditor.open(point, existing);
+  }
 
 
   private mountFieldIndicator(viewport: HTMLElement): void {

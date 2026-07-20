@@ -198,6 +198,32 @@ export const enum Material {
   LIFE_STAR = 192,
   LIFE_FROG = 193,
   LIFE_BRAN = 194,
+  // Render-only projections for enabled native products whose placement or
+  // lifecycle cannot be represented by the ordinary particle-brush ABI.
+  // Keep these stable: they are bytes in the renderer-facing material field,
+  // never replacements for the native PT_* identity retained by OPS saves.
+  BIZRG = 195,
+  BIZRS = 196,
+  BRAY = 197,
+  DYST = 198,
+  E116 = 199,
+  EMBR = 200,
+  FIGH = 201,
+  FRZW = 202,
+  LOLZ = 203,
+  LOVE = 204,
+  MORT = 205,
+  PSTS = 206,
+  RFGL = 207,
+  SHLD2 = 208,
+  SHLD3 = 209,
+  SHLD4 = 210,
+  SPAWN = 211,
+  SPAWN2 = 212,
+  STKM = 213,
+  STKM2 = 214,
+  VRSG = 215,
+  VRSS = 216,
 }
 
 export type MaterialCategory = 'powders' | 'liquids' | 'solids' | 'gases' | 'energy' | 'explosives' | 'special' | 'radioactive' | 'force' | 'electronics' | 'powered' | 'sensors' | 'life' | 'automata';
@@ -260,6 +286,37 @@ export const LIFE_PRESETS = [
   { preset: 22, material: Material.LIFE_FROG, code: 'FROG', name: 'Frogs', rule: 'B34/S12/3', color: '#006400' },
   { preset: 23, material: Material.LIFE_BRAN, code: 'BRAN', name: 'Brian 6', rule: 'B246/S6/3', color: '#ffff00' },
 ] as const satisfies readonly LifePresetInfo[];
+
+/**
+ * Native reaction/lifecycle products that need a stable visual identity but
+ * must not fall through the ordinary brush path. Colours and physical phases
+ * follow the pinned TPT element definitions; a few otherwise identical actors
+ * use a restrained tint so their projections remain distinguishable.
+ */
+export const NATIVE_PROJECTIONS = [
+  { id: Material.BIZRG, name: 'BIZG', description: 'Gaseous form of bizarre matter.', color: '#00ffbb', icon: '○', category: 'gases', selectable: false },
+  { id: Material.BIZRS, name: 'BIZS', description: 'Solid form of bizarre matter.', color: '#00e455', icon: '■', category: 'solids', selectable: false },
+  { id: Material.BRAY, name: 'BRAY', description: 'Short-lived ray point created by ARAY.', color: '#ffffff', icon: '✦', category: 'electronics', phase: 'energy', emissive: true, selectable: false },
+  { id: Material.DYST, name: 'DYST', description: 'Dead yeast.', color: '#bbb0a0', icon: '·', category: 'powders', selectable: false },
+  { id: Material.E116, name: 'EQVE', description: 'Legacy shared-velocity test particle.', color: '#ffe0a0', icon: '·', category: 'powders', selectable: false },
+  { id: Material.EMBR, name: 'EMBR', description: 'Hot sparks formed by explosions.', color: '#fff288', icon: '✦', category: 'energy', emissive: true, selectable: false },
+  { id: Material.FIGH, name: 'FIGH', description: 'Fighter actor that pursues stickmen.', color: '#ffad78', icon: '☻', category: 'life', phase: 'solid', selectable: false },
+  { id: Material.FRZW, name: 'FRZW', description: 'Cold liquid formed when freeze powder melts.', color: '#1020c0', icon: '●', category: 'liquids', selectable: false },
+  { id: Material.LOLZ, name: 'LOLZ', description: 'Persistent LOLZ pattern matter.', color: '#569212', icon: '▦', category: 'special', phase: 'solid', selectable: false },
+  { id: Material.LOVE, name: 'LOVE', description: 'Persistent LOVE pattern matter.', color: '#ff30ff', icon: '♥', category: 'special', phase: 'solid', selectable: false },
+  { id: Material.MORT, name: 'MORT', description: 'Steam-train exhaust gas.', color: '#e0e0e0', icon: '○', category: 'gases', selectable: false },
+  { id: Material.PSTS, name: 'PSTS', description: 'Pressure-hardened solid paste.', color: '#776677', icon: '■', category: 'solids', selectable: false },
+  { id: Material.RFGL, name: 'RFGL', description: 'Liquid refrigerant.', color: '#84c2cf', icon: '●', category: 'liquids', selectable: false, hazard: 'danger' },
+  { id: Material.SHLD2, name: 'SHD2', description: 'Second-stage growing shield.', color: '#777777', icon: '■', category: 'solids', selectable: false },
+  { id: Material.SHLD3, name: 'SHD3', description: 'Third-stage growing shield.', color: '#444444', icon: '■', category: 'solids', selectable: false },
+  { id: Material.SHLD4, name: 'SHD4', description: 'Fourth-stage growing shield.', color: '#212121', icon: '■', category: 'solids', selectable: false },
+  { id: Material.SPAWN, name: 'SPWN', description: 'Retained STKM spawn point.', color: '#aaa18f', icon: '◇', category: 'special', phase: 'solid', selectable: false },
+  { id: Material.SPAWN2, name: 'SPWN2', description: 'Retained STK2 spawn point.', color: '#8f96b8', icon: '◇', category: 'special', phase: 'solid', selectable: false },
+  { id: Material.STKM, name: 'STKM', description: 'Primary stickman actor.', color: '#ffe0a0', icon: '☺', category: 'life', phase: 'solid', selectable: false },
+  { id: Material.STKM2, name: 'STK2', description: 'Secondary stickman actor.', color: '#6464ff', icon: '☺', category: 'life', phase: 'solid', selectable: false },
+  { id: Material.VRSG, name: 'VRSG', description: 'Gaseous virus that infects contacted matter.', color: '#fe68fe', icon: '○', category: 'gases', selectable: false, hazard: 'danger' },
+  { id: Material.VRSS, name: 'VRSS', description: 'Solid virus that infects contacted matter.', color: '#d408cd', icon: '■', category: 'solids', selectable: false, hazard: 'danger' },
+] as const satisfies readonly MaterialInfo[];
 
 export const ALL_MATERIALS: readonly MaterialInfo[] = [
   { id: Material.Sand, name: 'Sand', description: 'Pours and settles', color: '#d7aa68', icon: '●', category: 'powders', selectable: true },
@@ -441,6 +498,7 @@ export const ALL_MATERIALS: readonly MaterialInfo[] = [
     category: 'automata' as const,
     selectable: false,
   })),
+  ...NATIVE_PROJECTIONS,
 ];
 
 export const MATERIALS: readonly MaterialInfo[] = ALL_MATERIALS.filter(({ selectable }) => selectable);

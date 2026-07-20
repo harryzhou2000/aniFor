@@ -1,7 +1,7 @@
 import type { Point } from '../renderer/view-transform';
 import type { Material } from '../shared/materials';
 import type { SimulationBackend } from '../simulation';
-import type { LifeToolInfo, SimToolInfo, SourceToolInfo, WallToolInfo } from '../ui/tool-catalog';
+import type { LifeToolInfo, SignToolInfo, SimToolInfo, SourceToolInfo, WallToolInfo } from '../ui/tool-catalog';
 
 export interface ActiveToolSelection {
   readonly material: Material;
@@ -9,6 +9,7 @@ export interface ActiveToolSelection {
   readonly simulationTool?: SimToolInfo;
   readonly sourceTool?: SourceToolInfo;
   readonly lifeTool?: LifeToolInfo;
+  readonly signTool?: SignToolInfo;
   readonly radius: number;
 }
 
@@ -19,6 +20,9 @@ export function drawToolPoint(
   selection: ActiveToolSelection,
   erase: boolean,
 ): void {
+  // Sign gestures are handled by Game's native annotation editor. They must
+  // never erase or paint the matter plane when that editor is unavailable.
+  if (selection.signTool) return;
   if (selection.wallTool) {
     if (simulation.paintWall && simulation.eraseWall) {
       if (erase) simulation.eraseWall(point.x, point.y, selection.radius + 1);

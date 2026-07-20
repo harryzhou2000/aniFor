@@ -17,6 +17,7 @@ const scaleEightOnly = process.argv.includes('--scale-eight-only');
 const modes = scaleEightOnly ? ['webgl'] : process.argv.includes('--canvas-only') ? ['canvas2d']
   : process.argv.includes('--webgl-only') ? ['webgl'] : ['canvas2d', 'webgl'];
 const visualOnly = process.argv.includes('--visual-only');
+const materialAtlasOnly = process.argv.includes('--material-atlas-only');
 const quickScreenshot = process.argv.includes('--quick-screenshot');
 const layoutOnly = process.argv.includes('--layout-only');
 const screenshotRequest = process.argv.find((argument) => argument.startsWith('--screenshot='))?.slice('--screenshot='.length);
@@ -37,7 +38,9 @@ async function main() {
     }, 15_000, 'Vite browser-audit server');
     const results = [];
     for (const mode of modes) results.push(await auditMode(mode));
-    if (!scaleEightOnly) assertPairedVisualRelief(results);
+    if (!scaleEightOnly && !materialAtlasOnly) assertPairedVisualRelief(results);
+    if (!scaleEightOnly) assertPairedMaterialAtlas(results);
+    compactMaterialAtlasResults(results);
     console.log(JSON.stringify({ world: `${WORLD_WIDTH}x${WORLD_HEIGHT}`, results }, null, 2));
   } catch (error) {
     if (serverLog.trim()) console.error(serverLog.trim());
@@ -114,6 +117,12 @@ async function auditMode(mode) {
         && Boolean(window.__ANIFOR_INPUT_AUDIT__ && document.documentElement);
     })()`), 15_000, `input audit API (${mode})`);
     await waitFor(() => evaluate(cdp, `window.__ANIFOR_INPUT_AUDIT__.backend().backend === ${JSON.stringify(mode)}`), 15_000, `${mode} backend`);
+    if (materialAtlasOnly) {
+      const materialAtlas = await auditMaterialAtlas(cdp, mode, dpr, screenshotPath(mode));
+      assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
+      cdp.close();
+      return { backend: mode, materialAtlas, browserErrors: errors.length };
+    }
     if (layoutOnly) {
       const layout = await metrics(cdp);
       assertGeometry(layout, `${mode} layout-only`);
@@ -1553,6 +1562,9 @@ async function auditMode(mode) {
       ? await auditRenderScaleEight(cdp, dpr)
       : undefined;
     const nativeSemantics = await auditNativeSemantics(cdp, mode, dpr, screenshot);
+    const materialAtlas = await auditMaterialAtlas(
+      cdp, mode, dpr, screenshot ? variantScreenshotPath(screenshot, 'material-atlas') : undefined,
+    );
     await sleep(50);
     assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
     cdp.close();
@@ -1613,6 +1625,7 @@ async function auditMode(mode) {
       dragFootprints,
       configuredSource: nativeSemantics.configuredSource,
       lifePreset: nativeSemantics.lifePreset,
+      materialAtlas,
       wheelAnchorErrorCells: round(wheelAnchorError, 5),
       middlePanDelta: { x: round(afterPan.panX - beforePan.panX, 3), y: round(afterPan.panY - beforePan.panY, 3) },
       transformedPaintedFootprint,
@@ -1632,6 +1645,168 @@ async function auditMode(mode) {
     await terminate(chrome);
     await rm(profile, { recursive: true, force: true });
   }
+}
+
+async function auditMaterialAtlas(cdp, mode, dpr, screenshot) {
+  await cdp.send('Emulation.setTouchEmulationEnabled', { enabled: false });
+  await setDesktopMetrics(cdp, 1280, 720, dpr);
+  const blankQuery = new URLSearchParams({
+    scene: 'render-lab', inputAudit: '1', blankAudit: '1', renderScale: '2',
+    auditStage: 'material-atlas-blank',
+    ...(mode === 'canvas2d' ? { renderer: 'canvas2d' } : {}),
+  });
+  await cdp.send('Page.navigate', { url: `${ORIGIN}/?${blankQuery}` });
+  await waitFor(() => evaluate(cdp, `(() => {
+    const parameters = new URLSearchParams(location.search);
+    return parameters.get('auditStage') === 'material-atlas-blank'
+      && Boolean(window.__ANIFOR_INPUT_AUDIT__?.prepareMaterialAtlas);
+  })()`), 15_000, `${mode} material-atlas blank audit API`);
+  await waitFor(() => evaluate(cdp,
+    `window.__ANIFOR_INPUT_AUDIT__.backend().backend === ${JSON.stringify(mode)}`),
+  15_000, `${mode} material-atlas blank backend`);
+
+  const baseline = await waitForStablePageCapture(cdp, `${mode} material-atlas blank framebuffer`);
+  const query = new URLSearchParams({
+    scene: 'render-lab', inputAudit: '1', renderScale: '2', auditStage: 'material-atlas',
+    ...(mode === 'canvas2d' ? { renderer: 'canvas2d' } : {}),
+  });
+  await cdp.send('Page.navigate', { url: `${ORIGIN}/?${query}` });
+  await waitFor(() => evaluate(cdp, `(() => {
+    const parameters = new URLSearchParams(location.search);
+    return parameters.get('auditStage') === 'material-atlas'
+      && Boolean(window.__ANIFOR_INPUT_AUDIT__?.prepareMaterialAtlas);
+  })()`), 15_000, `${mode} material-atlas audit API`);
+  await waitFor(() => evaluate(cdp,
+    `window.__ANIFOR_INPUT_AUDIT__.backend().backend === ${JSON.stringify(mode)}`),
+  15_000, `${mode} material-atlas backend`);
+  const manifest = await evaluate(cdp, `window.__ANIFOR_INPUT_AUDIT__.materialAtlas()`);
+  assert(manifest.length > 0, `${mode}: material atlas is empty`);
+  assert(new Set(manifest.map(({ id }) => id)).size === manifest.length,
+    `${mode}: material atlas contains duplicate IDs`);
+  const ownership = await evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    return audit.materialAtlas().map((entry) => {
+      let owned = 0;
+      let foreign = 0;
+      let guardOccupied = 0;
+      for (let y = entry.y - entry.radius; y <= entry.y + entry.radius; y++) {
+        for (let x = entry.x - entry.radius; x <= entry.x + entry.radius; x++) {
+          const material = audit.cell(x, y);
+          if (material === entry.id) owned++;
+          else foreign++;
+        }
+      }
+      const guard = entry.radius + 2;
+      for (let offset = -guard; offset <= guard; offset++) {
+        guardOccupied += Number(audit.cell(entry.x + offset, entry.y - guard) !== 0);
+        guardOccupied += Number(audit.cell(entry.x + offset, entry.y + guard) !== 0);
+        guardOccupied += Number(audit.cell(entry.x - guard, entry.y + offset) !== 0);
+        guardOccupied += Number(audit.cell(entry.x + guard, entry.y + offset) !== 0);
+      }
+      return { id: entry.id, owned, foreign, guardOccupied };
+    });
+  })()`);
+  const expectedOwned = (manifest[0].radius * 2 + 1) ** 2;
+  const invalidOwners = ownership.filter((entry) => (
+    entry.owned !== expectedOwned || entry.foreign !== 0 || entry.guardOccupied !== 0
+  ));
+  assert(invalidOwners.length === 0,
+    `${mode}: material-atlas semantic ownership failed (${JSON.stringify(invalidOwners.slice(0, 8))})`);
+
+  const rendered = await waitForStablePageCapture(cdp, `${mode} material-atlas framebuffer`, 12_000);
+  assertCanvasRectsEqual(baseline.canvasRect, rendered.canvasRect, `${mode} material-atlas blank/rendered`);
+  const samples = await sampleMaterialAtlas(
+    cdp, rendered.capture.data, baseline.capture.data, rendered.canvasRect, manifest,
+  );
+  const invisible = samples.filter((sample) => {
+    const canonical = Number.parseInt(sample.expectedColor.slice(1), 16);
+    const darkestCanonical = Math.max(canonical >> 16, canonical >> 8 & 0xff, canonical & 0xff) <= 36;
+    return darkestCanonical
+      ? sample.changedFraction < 0.45 || sample.meanDifference < 2 || sample.peakDifference < 3
+      : sample.changedFraction < 0.70 || sample.meanDifference < 4 || sample.peakDifference < 5;
+  });
+  assert(invisible.length === 0,
+    `${mode}: projected materials disappeared from composed output (${JSON.stringify(invisible)})`);
+  if (screenshot) await writeFile(screenshot, Buffer.from(rendered.capture.data, 'base64'));
+  return {
+    projections: manifest.length,
+    semanticCellsPerProjection: expectedOwned,
+    visible: samples.length - invisible.length,
+    minimumChangedFraction: round(Math.min(...samples.map(({ changedFraction }) => changedFraction)), 3),
+    minimumMeanDifference: round(Math.min(...samples.map(({ meanDifference }) => meanDifference)), 3),
+    minimumPeakDifference: Math.min(...samples.map(({ peakDifference }) => peakDifference)),
+    samples,
+    ...(screenshot ? { screenshot } : {}),
+  };
+}
+
+async function sampleMaterialAtlas(cdp, renderedBase64, baselineBase64, canvasRect, manifest) {
+  return evaluate(cdp, `(async () => {
+    const load = async (data) => {
+      const image = new Image();
+      image.src = 'data:image/png;base64,' + data;
+      await image.decode();
+      const canvas = document.createElement('canvas');
+      canvas.width = image.naturalWidth;
+      canvas.height = image.naturalHeight;
+      const context = canvas.getContext('2d', { willReadFrequently: true });
+      if (!context) throw new Error('Material-atlas screenshot sampler unavailable');
+      context.drawImage(image, 0, 0);
+      return { image, context };
+    };
+    const rendered = await load(${JSON.stringify(renderedBase64)});
+    const baseline = await load(${JSON.stringify(baselineBase64)});
+    if (rendered.image.naturalWidth !== baseline.image.naturalWidth
+      || rendered.image.naturalHeight !== baseline.image.naturalHeight) {
+      throw new Error('Material-atlas screenshot geometry mismatch');
+    }
+    const bounds = ${JSON.stringify(canvasRect)};
+    const scaleX = rendered.image.naturalWidth / innerWidth;
+    const scaleY = rendered.image.naturalHeight / innerHeight;
+    const worldScaleX = bounds.width / ${WORLD_WIDTH};
+    const worldScaleY = bounds.height / ${WORLD_HEIGHT};
+    return ${JSON.stringify(manifest)}.map((entry) => {
+      const worldLeft = entry.x - entry.radius;
+      const worldTop = entry.y - entry.radius;
+      const worldSize = entry.radius * 2 + 1;
+      const x = Math.max(0, Math.floor((bounds.left + worldLeft * worldScaleX) * scaleX));
+      const y = Math.max(0, Math.floor((bounds.top + worldTop * worldScaleY) * scaleY));
+      const width = Math.max(1, Math.ceil(worldSize * worldScaleX * scaleX));
+      const height = Math.max(1, Math.ceil(worldSize * worldScaleY * scaleY));
+      const foreground = rendered.context.getImageData(x, y, width, height).data;
+      const empty = baseline.context.getImageData(x, y, width, height).data;
+      let changed = 0;
+      let difference = 0;
+      let peakDifference = 0;
+      const rgb = [0, 0, 0];
+      let rgbCount = 0;
+      for (let offset = 0; offset < foreground.length; offset += 4) {
+        const delta = Math.max(
+          Math.abs(foreground[offset] - empty[offset]),
+          Math.abs(foreground[offset + 1] - empty[offset + 1]),
+          Math.abs(foreground[offset + 2] - empty[offset + 2]),
+        );
+        difference += delta;
+        peakDifference = Math.max(peakDifference, delta);
+        if (delta < 3) continue;
+        changed++;
+        rgb[0] += foreground[offset];
+        rgb[1] += foreground[offset + 1];
+        rgb[2] += foreground[offset + 2];
+        rgbCount++;
+      }
+      const pixels = Math.max(1, width * height);
+      return {
+        id: entry.id,
+        name: entry.name,
+        expectedColor: entry.color,
+        changedFraction: Math.round(changed / pixels * 1000) / 1000,
+        meanDifference: Math.round(difference / pixels * 1000) / 1000,
+        peakDifference,
+        composedRgb: rgb.map((value) => Math.round(value / Math.max(1, rgbCount))),
+      };
+    });
+  })()`);
 }
 
 async function auditWebGLPresentationTiming(cdp, targetSamples = 30, sampleTimeout = 5_000) {
@@ -2034,6 +2209,9 @@ async function auditRenderScaleEight(cdp, dpr) {
     && zoomedSquareGrain.widthRatio >= 0.82 && zoomedSquareGrain.widthRatio <= 1.18
     && zoomedSquareGrain.heightRatio >= 0.82 && zoomedSquareGrain.heightRatio <= 1.18,
   `renderScale=8 Grains cell was not an axis-aligned square (${JSON.stringify(zoomedSquareGrain)})`);
+  const materialAtlasStress = await auditEightXMaterialAtlasStress(
+    cdp, blankCapture.capture.data, geometry.canvas,
+  );
   const contextLossRecovery = await auditEightXContextLossRecovery(cdp, geometry.canvas);
   return {
     requested: backend.requestedOutputScale,
@@ -2045,7 +2223,59 @@ async function auditRenderScaleEight(cdp, dpr) {
     powderSupport,
     squareGrain,
     zoomedSquareGrain,
+    materialAtlasStress,
     contextLossRecovery,
+  };
+}
+
+async function auditEightXMaterialAtlasStress(cdp, blankBase64, canvasRect) {
+  const manifest = await evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    audit.prepareMaterialAtlas();
+    return audit.materialAtlas();
+  })()`);
+  assert(manifest.length >= 200,
+    `renderScale=8 material stress atlas is unexpectedly small (${manifest.length})`);
+  const ownership = await evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    return audit.materialAtlas().map((entry) => {
+      let owned = 0;
+      for (let y = entry.y - entry.radius; y <= entry.y + entry.radius; y++) {
+        for (let x = entry.x - entry.radius; x <= entry.x + entry.radius; x++) {
+          owned += Number(audit.cell(x, y) === entry.id);
+        }
+      }
+      return { id: entry.id, owned };
+    });
+  })()`);
+  const expectedOwned = (manifest[0].radius * 2 + 1) ** 2;
+  const invalidOwners = ownership.filter(({ owned }) => owned !== expectedOwned);
+  assert(invalidOwners.length === 0,
+    `renderScale=8 material stress lost semantic owners (${JSON.stringify(invalidOwners.slice(0, 8))})`);
+
+  const rendered = await waitForStablePageCapture(
+    cdp, 'renderScale=8 material-atlas stress framebuffer', 20_000,
+  );
+  assertCanvasRectsEqual(canvasRect, rendered.canvasRect, 'renderScale=8 material-atlas stress');
+  const samples = await sampleMaterialAtlas(
+    cdp, rendered.capture.data, blankBase64, rendered.canvasRect, manifest,
+  );
+  const invisible = samples.filter((sample) => {
+    const canonical = Number.parseInt(sample.expectedColor.slice(1), 16);
+    const darkestCanonical = Math.max(canonical >> 16, canonical >> 8 & 0xff, canonical & 0xff) <= 36;
+    return darkestCanonical
+      ? sample.changedFraction < 0.45 || sample.meanDifference < 2 || sample.peakDifference < 3
+      : sample.changedFraction < 0.70 || sample.meanDifference < 4 || sample.peakDifference < 5;
+  });
+  assert(invisible.length === 0,
+    `renderScale=8 material stress lost composed projections (${JSON.stringify(invisible)})`);
+  return {
+    projections: manifest.length,
+    semanticCellsPerProjection: expectedOwned,
+    visible: samples.length - invisible.length,
+    minimumChangedFraction: round(Math.min(...samples.map(({ changedFraction }) => changedFraction)), 3),
+    minimumMeanDifference: round(Math.min(...samples.map(({ meanDifference }) => meanDifference)), 3),
+    minimumPeakDifference: Math.min(...samples.map(({ peakDifference }) => peakDifference)),
   };
 }
 
@@ -4001,6 +4231,57 @@ async function waitFor(check, timeoutMs, label) {
 }
 
 function assert(condition, message) { if (!condition) throw new Error(message); }
+
+function assertPairedMaterialAtlas(results) {
+  const canvas = results.find(({ backend }) => backend === 'canvas2d')?.materialAtlas;
+  const webgl = results.find(({ backend }) => backend === 'webgl')?.materialAtlas;
+  if (!canvas || !webgl) return;
+  assert(canvas.projections === webgl.projections,
+    `Canvas/WebGL material-atlas projection counts differ (${canvas.projections}/${webgl.projections})`);
+  const webglById = new Map(webgl.samples.map((sample) => [sample.id, sample]));
+  const mismatches = [];
+  for (const canvasSample of canvas.samples) {
+    const webglSample = webglById.get(canvasSample.id);
+    if (!webglSample) {
+      mismatches.push({ id: canvasSample.id, reason: 'missing-webgl' });
+      continue;
+    }
+    const canvasStrength = Math.max(1, canvasSample.meanDifference);
+    const webglStrength = Math.max(1, webglSample.meanDifference);
+    const strengthRatio = canvasStrength / webglStrength;
+    const canvasRgb = canvasSample.composedRgb;
+    const webglRgb = webglSample.composedRgb;
+    const rgbDistance = Math.hypot(
+      canvasRgb[0] - webglRgb[0], canvasRgb[1] - webglRgb[1], canvasRgb[2] - webglRgb[2],
+    );
+    // The backends deliberately use different relief and volume integrations.
+    // This bound catches missing/wrong-owner tiles while permitting their
+    // intended lighting-depth difference.
+    if (strengthRatio < 0.12 || strengthRatio > 8.5 || rgbDistance > 155) {
+      mismatches.push({
+        id: canvasSample.id, name: canvasSample.name,
+        strengthRatio: round(strengthRatio, 3), rgbDistance: round(rgbDistance, 1),
+        canvasRgb, webglRgb,
+      });
+    }
+  }
+  assert(mismatches.length === 0,
+    `Canvas/WebGL material-atlas ownership diverged (${JSON.stringify(mismatches.slice(0, 12))})`);
+}
+
+function compactMaterialAtlasResults(results) {
+  for (const result of results) {
+    const atlas = result.materialAtlas;
+    if (!atlas?.samples) continue;
+    const weakest = [...atlas.samples]
+      .sort((left, right) => left.meanDifference - right.meanDifference)
+      .slice(0, 8)
+      .map(({ id, name, expectedColor, changedFraction, meanDifference, peakDifference }) => ({
+        id, name, expectedColor, changedFraction, meanDifference, peakDifference,
+      }));
+    result.materialAtlas = { ...atlas, samples: undefined, weakest };
+  }
+}
 
 function assertPairedVisualRelief(results) {
   if (results.length !== 2) return;

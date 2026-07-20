@@ -1,6 +1,7 @@
 // Stillroom headless adapter for The Powder Toy (GPL-3.0-only).
 // Upstream internals and numeric IDs stop at this C ABI.
 #include "client/GameSave.h"
+#include "Format.h"
 #include "simulation/Air.h"
 #include "simulation/Simulation.h"
 #include "simulation/SimulationData.h"
@@ -23,12 +24,31 @@ std::unique_ptr<SimulationData> simulationData;
 std::unique_ptr<Simulation> simulation;
 std::vector<char> saveBuffer;
 std::vector<char> loadBuffer;
+std::vector<char> signInputBuffer;
+std::vector<char> signTextBuffer;
 uint8_t materialField[FIELD_SIZE];
 uint8_t wallField[FIELD_SIZE];
 uint16_t temperatureField[FIELD_SIZE];
 float pressureField[FIELD_SIZE];
 int8_t velocityField[FIELD_SIZE * 2];
 bool windPending = false;
+
+uint8_t *CacheSignText(int index, bool display)
+{
+	signTextBuffer.clear();
+	if (!simulation || index < 0 || size_t(index) >= simulation->signs.size())
+		return nullptr;
+	auto const &nativeSign = simulation->signs[size_t(index)];
+	String text = nativeSign.text;
+	if (display)
+	{
+		int x = 0, y = 0, width = 0, height = 0;
+		text = nativeSign.getDisplayText(simulation.get(), x, y, width, height, false);
+	}
+	auto encoded = text.ToUtf8();
+	signTextBuffer.assign(encoded.begin(), encoded.end());
+	return signTextBuffer.empty() ? nullptr : reinterpret_cast<uint8_t *>(signTextBuffer.data());
+}
 
 constexpr int STILLROOM_TOOL_AIR = 1;
 constexpr int STILLROOM_TOOL_VACUUM = 2;
@@ -446,6 +466,31 @@ uint8_t ToStillroomType(int type)
 	case PT_PSNS: return 168;
 	case PT_TSNS: return 169;
 	case PT_VSNS: return 170;
+	// Stable render-only projections. The native particle type remains in TPT's
+	// particle array and OPS save; these byte IDs only prevent enabled reaction
+	// and lifecycle products from collapsing into a generic phase appearance.
+	case PT_BIZRG: return 195;
+	case PT_BIZRS: return 196;
+	case PT_BRAY: return 197;
+	case PT_DYST: return 198;
+	case PT_E116: return 199;
+	case PT_EMBR: return 200;
+	case PT_FIGH: return 201;
+	case PT_FRZW: return 202;
+	case PT_LOLZ: return 203;
+	case PT_LOVE: return 204;
+	case PT_MORT: return 205;
+	case PT_PSTS: return 206;
+	case PT_RFGL: return 207;
+	case PT_SHLD2: return 208;
+	case PT_SHLD3: return 209;
+	case PT_SHLD4: return 210;
+	case PT_SPAWN: return 211;
+	case PT_SPAWN2: return 212;
+	case PT_STKM: return 213;
+	case PT_STKM2: return 214;
+	case PT_VRSG: return 215;
+	case PT_VRSS: return 216;
 	default: break;
 	}
 
@@ -664,6 +709,72 @@ __attribute__((visibility("default"))) int powder_apply_tool(int tool, int x, in
 		simulation->air->airMode = AIR_ON;
 	}
 	return applied;
+}
+__attribute__((visibility("default"))) int powder_sign_count()
+{
+	EnsureSimulation();
+	return int(simulation->signs.size());
+}
+__attribute__((visibility("default"))) int powder_sign_x(int index)
+{
+	EnsureSimulation();
+	return index >= 0 && size_t(index) < simulation->signs.size() ? simulation->signs[size_t(index)].x : -1;
+}
+__attribute__((visibility("default"))) int powder_sign_y(int index)
+{
+	EnsureSimulation();
+	return index >= 0 && size_t(index) < simulation->signs.size() ? simulation->signs[size_t(index)].y : -1;
+}
+__attribute__((visibility("default"))) int powder_sign_justification(int index)
+{
+	EnsureSimulation();
+	return index >= 0 && size_t(index) < simulation->signs.size()
+		? int(simulation->signs[size_t(index)].ju) : -1;
+}
+__attribute__((visibility("default"))) uint8_t *powder_sign_text(int index)
+{
+	EnsureSimulation();
+	return CacheSignText(index, false);
+}
+__attribute__((visibility("default"))) uint8_t *powder_sign_display_text(int index)
+{
+	EnsureSimulation();
+	return CacheSignText(index, true);
+}
+__attribute__((visibility("default"))) int powder_sign_text_size() { return int(signTextBuffer.size()); }
+__attribute__((visibility("default"))) uint8_t *powder_sign_buffer(int size)
+{
+	if (size <= 0 || size > 1024) return nullptr;
+	signInputBuffer.resize(size_t(size));
+	return reinterpret_cast<uint8_t *>(signInputBuffer.data());
+}
+__attribute__((visibility("default"))) int powder_sign_upsert(int index, int x, int y, int justification, int size)
+{
+	EnsureSimulation();
+	if (x < 0 || y < 0 || x >= XRES || y >= YRES
+		|| justification < int(sign::Left) || justification >= int(sign::Max)
+		|| size <= 0 || size_t(size) != signInputBuffer.size())
+		return -1;
+	auto text = format::CleanString(
+		ByteString(signInputBuffer.data(), signInputBuffer.size()).FromUtf8(), false, true, true
+	).Substr(0, 45);
+	if (text.empty()) return -1;
+	if (index == -1)
+	{
+		if (simulation->signs.size() >= MAXSIGNS) return -1;
+		simulation->signs.emplace_back(std::move(text), x, y, sign::Justification(justification));
+		return int(simulation->signs.size() - 1);
+	}
+	if (index < 0 || size_t(index) >= simulation->signs.size()) return -1;
+	simulation->signs[size_t(index)] = sign(std::move(text), x, y, sign::Justification(justification));
+	return index;
+}
+__attribute__((visibility("default"))) int powder_sign_remove(int index)
+{
+	EnsureSimulation();
+	if (index < 0 || size_t(index) >= simulation->signs.size()) return 0;
+	simulation->signs.erase(simulation->signs.begin() + index);
+	return 1;
 }
 __attribute__((visibility("default"))) void powder_step()
 {

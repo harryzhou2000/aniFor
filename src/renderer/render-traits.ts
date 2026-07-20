@@ -15,7 +15,7 @@ export const enum RenderTrait {
 export function renderTraits(material: Pick<MaterialInfo, 'id' | 'category'>): number {
   let traits = 0;
   if (material.category === 'radioactive') traits |= RenderTrait.Radioactive;
-  if (material.category === 'life') traits |= RenderTrait.Organic;
+  if (material.category === 'life' || isOrganic(material.id)) traits |= RenderTrait.Organic;
   if (isFibrous(material.id)) traits |= RenderTrait.Fibrous;
   if (isEmitter(material.id)) traits |= RenderTrait.Emitter;
   if (isSink(material.id)) traits |= RenderTrait.Sink;
@@ -31,6 +31,10 @@ export function hasRenderTrait(traits: number, trait: RenderTrait): boolean {
 
 function isFibrous(id: Material): boolean {
   return id === Material.Wood || id === Material.VINE;
+}
+
+function isOrganic(id: Material): boolean {
+  return id === Material.VIRS || id === Material.VRSG || id === Material.VRSS;
 }
 
 function isEmitter(id: Material): boolean {
@@ -77,6 +81,7 @@ function isCarrier(id: Material): boolean {
   switch (id) {
     case Material.ELEC: case Material.GRVT: case Material.NEUT: case Material.PHOT:
     case Material.PROT: case Material.SPRK: case Material.CFLM: case Material.LIGH: case Material.THDR:
+    case Material.BRAY: case Material.EMBR:
       return true;
     default: return false;
   }

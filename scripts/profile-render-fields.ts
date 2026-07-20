@@ -38,6 +38,9 @@ import {
 } from '../src/renderer/canvas-wall-style';
 import { RenderOptics } from '../src/renderer/render-optics';
 import { SuspensionField } from '../src/renderer/suspension-field';
+import {
+  CANVAS_CONTOUR_CHUNK_SIZE, CanvasPhaseContourScratch,
+} from '../src/renderer/canvas-phase-contour';
 
 const width = 612;
 const height = 384;
@@ -103,6 +106,48 @@ const suspensionWalls = new Uint8Array(width * height);
 suspension.update(suspensionMaterials, suspensionLiquid.bytes, suspensionWalls);
 const suspensionBasePixels = seedPixels(suspensionMaterials);
 const suspensionLiquidPixels = seedPixels(suspensionMaterials, liquidByMaterial);
+
+// Repeating 2x2 Water islands expose every connected liquid cell while keeping
+// enough same-species support for the subpixel meniscus path. Profile the same
+// full-world chunk traversal with one synthetic trait bit to isolate the added
+// RGB-only contour work without changing its coverage reconstruction.
+const contourLiquidMaterials = new Uint8Array(width * height);
+for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) {
+  if (x % 3 < 2 && y % 3 < 2) contourLiquidMaterials[y * width + x] = Material.Water;
+}
+const contourLiquidPixels = seedPixels(contourLiquidMaterials);
+const contourPowderStability = new Uint8Array(width * height);
+const contourFlatStyleBytes = styleBytes.slice();
+contourFlatStyleBytes[Material.Water * 4 + 3] = 1;
+const contourScratch = new CanvasPhaseContourScratch();
+let contourChecksum = 0;
+
+function profileLiquidContour(styles: Uint8Array): ReturnType<typeof sample> {
+  const timing = sample(() => {
+    let checksum = 0;
+    for (let chunkY = 0; chunkY < height; chunkY += CANVAS_CONTOUR_CHUNK_SIZE) {
+      for (let chunkX = 0; chunkX < width; chunkX += CANVAS_CONTOUR_CHUNK_SIZE) {
+        contourScratch.rasterize({
+          materials: contourLiquidMaterials,
+          sourcePixels: contourLiquidPixels,
+          powderStability: contourPowderStability,
+          styleBytes: styles,
+          paletteBytes,
+          worldWidth: width,
+          worldHeight: height,
+          chunkX,
+          chunkY,
+          chunkWidth: Math.min(CANVAS_CONTOUR_CHUNK_SIZE, width - chunkX),
+          chunkHeight: Math.min(CANVAS_CONTOUR_CHUNK_SIZE, height - chunkY),
+        });
+        checksum += contourScratch.pixels[0]
+          + contourScratch.pixels[contourScratch.pixels.length - 4];
+      }
+    }
+    contourChecksum = checksum;
+  });
+  return timing;
+}
 
 function sample(update: () => void): { medianMs: number; p90Ms: number; maximumMs: number } {
   for (let warmup = 0; warmup < 5; warmup++) update();
@@ -341,6 +386,12 @@ console.log(JSON.stringify({
     diagnosticScratchBytes: traitCompositePixels.byteLength + denseTranslucentPixels.byteLength
       + localizedEmissionMaterials.byteLength + localizedEmission.allocatedByteLength
       + solidBodyRgb.byteLength + liquidBodyRgb.byteLength,
+    phaseContour: {
+      allocatedBytes: contourScratch.allocatedByteLength,
+      fixture: 'repeating connected 2x2 Water islands',
+      flatRgb: profileLiquidContour(contourFlatStyleBytes),
+      meniscusRgb: profileLiquidContour(styleBytes),
+    },
     atmosphereRelief: sample(() => {
       shadeCanvasAtmosphere(atmospherePixels, atmosphere.bytes, atmosphere.width, atmosphere.height);
     }),
@@ -640,4 +691,5 @@ console.log(JSON.stringify({
   translucentCausticChecksum: Math.round(translucentCausticChecksum),
   translucentLensChecksum: Math.round(translucentLensChecksum),
   gasSemanticAccentChecksum: Math.round(gasSemanticAccentChecksum),
+  contourChecksum: Math.round(contourChecksum),
 }, null, 2));

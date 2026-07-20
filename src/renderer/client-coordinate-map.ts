@@ -33,3 +33,16 @@ export function clientToCanvasWorld(
     y: (point.y - canvasBounds.top) * worldHeight / Math.max(1, canvasBounds.height),
   };
 }
+
+/** Projects one logical viewport point back into the transformed CSS content box. */
+export function viewportToClient(
+  point: Point,
+  contentBounds: ViewportRect,
+  viewportWidth: number,
+  viewportHeight: number,
+): Point {
+  return {
+    x: contentBounds.left + point.x * contentBounds.width / Math.max(1, viewportWidth),
+    y: contentBounds.top + point.y * contentBounds.height / Math.max(1, viewportHeight),
+  };
+}

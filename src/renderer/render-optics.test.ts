@@ -52,6 +52,14 @@ describe('render optics', () => {
     expect(optics(Material.Glass)).toBe(RenderOptics.TranslucentRigid);
     expect(optics(Material.Ice)).toBe(RenderOptics.TranslucentRigid);
     expect(optics(Material.QRTZ)).toBe(RenderOptics.TranslucentRigid);
+    expect(optics(Material.FRZW)).toBe(RenderOptics.Aqueous);
+    expect(optics(Material.RFGL)).toBe(RenderOptics.Aqueous);
+    expect(optics(Material.BIZRG)).toBe(RenderOptics.CleanGas);
+    expect(optics(Material.MORT)).toBe(RenderOptics.SootyGas);
+    expect(optics(Material.BIZRS)).toBe(RenderOptics.SmoothRigid);
+    expect(optics(Material.DYST)).toBe(RenderOptics.RoughGranular);
+    expect(optics(Material.FIGH)).toBe(RenderOptics.Organic);
+    expect(optics(Material.BRAY)).toBe(RenderOptics.Device);
   });
 
   it('respects explicit physical phases before toolbox-family fallbacks', () => {

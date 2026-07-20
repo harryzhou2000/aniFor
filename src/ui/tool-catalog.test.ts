@@ -70,6 +70,13 @@ describe('tool catalog view model', () => {
     expect(semantic.find((tool) => tool.kind === 'sign')?.available).toBe(false);
   });
 
+  it('enables the native sign editor only behind its dedicated capability', () => {
+    const sign = semanticTools({ signs: true }).find((tool) => tool.kind === 'sign');
+    expect(sign).toMatchObject({ key: 'sign:place', maximumLength: 45, available: true });
+    expect(isToolAvailable(sign!)).toBe(true);
+    expect(semanticTools({ signs: true }).find((tool) => tool.kind === 'wall')?.available).toBe(false);
+  });
+
   it('exposes every configured source behind the configured-source capability', () => {
     const disabled = semanticTools().filter((tool) => tool.kind === 'source');
     expect(disabled.map(({ key }) => key)).toEqual([

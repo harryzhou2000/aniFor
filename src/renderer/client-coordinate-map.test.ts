@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { clientToCanvasWorld, contentBoxFromBounds } from './client-coordinate-map';
+import { clientToCanvasWorld, contentBoxFromBounds, viewportToClient } from './client-coordinate-map';
 
 describe('production client-coordinate mapping', () => {
   it('resolves a fractional scaled content box from actual element metrics', () => {
@@ -34,5 +34,14 @@ describe('production client-coordinate mapping', () => {
     const rect = { left: 17.2, top: 28.6, width: 612.75, height: 384.4705882353 };
     const client = { x: rect.left + rect.width * 0.73, y: rect.top + rect.height * 0.21 };
     expect(clientToCanvasWorld(client, rect, 612, 384)).toEqual({ x: 446.76, y: 80.64 });
+  });
+
+  it('projects logical viewport coordinates through a page-scaled content box', () => {
+    expect(viewportToClient(
+      { x: 306, y: 192 },
+      { left: 40, top: 80, width: 918, height: 576 },
+      612,
+      384,
+    )).toEqual({ x: 499, y: 368 });
   });
 });

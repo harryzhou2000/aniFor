@@ -1,7 +1,9 @@
 import { base64UrlToBytes, bytesToBase64Url } from '../shared/base64-url';
 import { Material } from '../shared/materials';
 import type { SimulationToolId } from './simulation-tools';
-import type { DirtyCell, DirtyWallCell, SimulationBackend } from './types';
+import type {
+  DirtyCell, DirtyWallCell, NativeSign, NativeSignDraft, NativeSignJustification, SimulationBackend,
+} from './types';
 
 interface PowderToyModule {
   HEAPU8: Uint8Array;
@@ -25,6 +27,16 @@ interface PowderToyModule {
   _powder_set_life(x: number, y: number, preset: number): number;
   _powder_set_wall(x: number, y: number, wall: number, radius: number): void;
   _powder_apply_tool(tool: SimulationToolId, x: number, y: number, radius: number, deltaX: number, deltaY: number): number;
+  _powder_sign_count(): number;
+  _powder_sign_x(index: number): number;
+  _powder_sign_y(index: number): number;
+  _powder_sign_justification(index: number): number;
+  _powder_sign_text(index: number): number;
+  _powder_sign_display_text(index: number): number;
+  _powder_sign_text_size(): number;
+  _powder_sign_buffer(size: number): number;
+  _powder_sign_upsert(index: number, x: number, y: number, justification: number, size: number): number;
+  _powder_sign_remove(index: number): number;
   _powder_step(): void;
   _powder_save(): number;
   _powder_save_size(): number;
@@ -35,6 +47,8 @@ interface PowderToyModule {
 type PowderToyFactory = () => Promise<PowderToyModule>;
 interface DirtyBounds { left: number; top: number; right: number; bottom: number }
 const TPT_CELL_SIZE = 4;
+const SIGN_TEXT_ENCODER = new TextEncoder();
+const SIGN_TEXT_DECODER = new TextDecoder();
 
 /** Owns the official Powder Toy Emscripten module and its curated field ABI. */
 export class PowderToyBackend implements SimulationBackend {
@@ -152,6 +166,37 @@ export class PowderToyBackend implements SimulationBackend {
     if (applied > 0) this.dirtyCheck = true;
   }
 
+  signs(): readonly NativeSign[] {
+    const signs: NativeSign[] = [];
+    const count = Math.max(0, Math.min(16, this.module._powder_sign_count()));
+    for (let index = 0; index < count; index++) {
+      signs.push({
+        index,
+        x: this.module._powder_sign_x(index),
+        y: this.module._powder_sign_y(index),
+        justification: this.module._powder_sign_justification(index) as NativeSignJustification,
+        text: this.readSignText(index, false),
+        displayText: this.readSignText(index, true),
+      });
+    }
+    return signs;
+  }
+
+  upsertSign(sign: NativeSignDraft, index?: number): number {
+    const bytes = SIGN_TEXT_ENCODER.encode(sign.text);
+    if (!bytes.length || bytes.length > 1024) return -1;
+    const pointer = this.module._powder_sign_buffer(bytes.length);
+    if (!pointer) return -1;
+    this.module.HEAPU8.set(bytes, pointer);
+    return this.module._powder_sign_upsert(
+      index ?? -1, sign.x, sign.y, sign.justification, bytes.length,
+    );
+  }
+
+  removeSign(index: number): boolean {
+    return this.module._powder_sign_remove(index) === 1;
+  }
+
   consumeDirtyCells(): readonly DirtyCell[] {
     if (!this.dirtyCheck) return [];
     this.dirtyCheck = false;
@@ -232,5 +277,14 @@ export class PowderToyBackend implements SimulationBackend {
       right: Math.max(previous.right, bounds.right),
       bottom: Math.max(previous.bottom, bounds.bottom),
     } : bounds;
+  }
+
+  private readSignText(index: number, display: boolean): string {
+    const pointer = display
+      ? this.module._powder_sign_display_text(index)
+      : this.module._powder_sign_text(index);
+    const size = this.module._powder_sign_text_size();
+    if (!pointer || size <= 0) return '';
+    return SIGN_TEXT_DECODER.decode(this.module.HEAPU8.subarray(pointer, pointer + size));
   }
 }

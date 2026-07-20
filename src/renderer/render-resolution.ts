@@ -9,6 +9,10 @@ export const CANVAS_FALLBACK_PIXEL_BUDGET = 8_388_608;
 export const CANVAS_FALLBACK_DIMENSION_BUDGET = 4_096;
 export const WEBGL_PROMOTION_TIMEOUT_MS = 10_000;
 export const WEBGL_EIGHT_X_PROMOTION_TIMEOUT_MS = 30_000;
+// A later 8x frame that remains unsignalled for this long is no longer merely
+// slow: without an explicit recovery path the latest-wins fence loop would
+// leave a permanently frozen WebGL canvas even when no context-loss event fires.
+export const WEBGL_EIGHT_X_FRAME_STALL_MS = 30_000;
 
 export interface RenderSize { readonly width: number; readonly height: number }
 

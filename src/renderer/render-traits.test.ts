@@ -55,12 +55,15 @@ describe('static render traits', () => {
       Material.VIBR, Material.WARP,
     ]);
     expect(idsFor(RenderTrait.Organic)).toEqual([
-      Material.Wood, Material.Plant, Material.SEED, Material.YEST, Material.VINE,
+      Material.Wood, Material.Plant, Material.SEED, Material.YEST, Material.VIRS,
+      Material.VINE, Material.FIGH, Material.STKM, Material.STKM2, Material.VRSG,
+      Material.VRSS,
     ]);
     expect(idsFor(RenderTrait.Fibrous)).toEqual([Material.Wood, Material.VINE]);
     expect(idsFor(RenderTrait.Carrier)).toEqual([
       Material.CFLM, Material.LIGH, Material.THDR, Material.ELEC, Material.GRVT,
-      Material.NEUT, Material.PHOT, Material.PROT, Material.SPRK,
+      Material.NEUT, Material.PHOT, Material.PROT, Material.SPRK, Material.BRAY,
+      Material.EMBR,
     ]);
   });
 

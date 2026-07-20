@@ -11,7 +11,7 @@ import {
   UniformGroup,
 } from 'pixi.js';
 import { DirtyChunkGrid } from './dirty-chunk-grid';
-import type { FieldOutputScale } from './render-resolution';
+import { WEBGL_EIGHT_X_FRAME_STALL_MS, type FieldOutputScale } from './render-resolution';
 import { POWDER_SURFACE_REFRESH_INTERVAL } from './powder-surface-field';
 import { updateBoundaryStabilityRect } from './boundary-stability-field';
 import { clientToCanvasWorld } from './client-coordinate-map';
@@ -1401,9 +1401,14 @@ export class PixiFieldPresenter {
   private contextLost = false;
   private destroyed = false;
   private renderFence?: WebGLSync;
+  private renderFenceStartedAt = 0;
   private renderQueued = false;
   private renderFencePoll = 0;
+  private firstFrameReady = false;
+  private firstFrameFailed = false;
+  private readonly firstFrameWaiters = new Set<(ready: boolean) => void>();
   private contextLossHandler?: () => void;
+  private renderStallHandler?: () => void;
   private readonly removeContextLossListener: () => void;
 
   private constructor(
@@ -1418,6 +1423,7 @@ export class PixiFieldPresenter {
     this.removeContextLossListener = installWebGLContextLossHandler(app.canvas, () => {
       if (this.contextLost) return;
       this.contextLost = true;
+      this.resolveFirstFrame(false);
       this.releaseRenderFence();
       this.releaseWebGLTimingQuery();
       this.contextLossHandler?.();
@@ -1621,7 +1627,9 @@ export class PixiFieldPresenter {
 
   destroy(): void {
     this.destroyed = true;
+    this.resolveFirstFrame(false);
     this.contextLossHandler = undefined;
+    this.renderStallHandler = undefined;
     this.removeContextLossListener();
     this.releaseRenderFence();
     this.releaseWebGLTimingQuery();
@@ -1662,7 +1670,34 @@ export class PixiFieldPresenter {
     this.contextLossHandler = handler;
   }
 
+  setRenderStallHandler(handler: () => void): void {
+    this.renderStallHandler = handler;
+  }
+
   isContextLost(): boolean { return this.contextLost; }
+
+  /**
+   * Waits for the first true-8x GPU frame while the bounded Canvas fallback
+   * remains mounted. Application.render() only proves submission; the fence
+   * proves that the 15-million-fragment frame actually completed.
+   */
+  waitForFirstFrame(timeoutMs: number): Promise<boolean> {
+    if (this.outputScale !== 8 || this.firstFrameReady) return Promise.resolve(true);
+    if (this.destroyed || this.contextLost || this.firstFrameFailed || timeoutMs <= 0) {
+      return Promise.resolve(false);
+    }
+    return new Promise((resolve) => {
+      let timeout: ReturnType<typeof setTimeout> | undefined;
+      const finish = (ready: boolean): void => {
+        if (timeout !== undefined) clearTimeout(timeout);
+        this.firstFrameWaiters.delete(finish);
+        resolve(ready);
+      };
+      this.firstFrameWaiters.add(finish);
+      timeout = setTimeout(() => finish(false), timeoutMs);
+      this.scheduleEightXRenderPoll();
+    });
+  }
 
   /** Seeds every presentation uniform without submitting an intermediate frame. */
   configurePresentation(
@@ -1859,7 +1894,10 @@ export class PixiFieldPresenter {
   }
 
   private renderApplication(): void {
-    if (this.outputScale === 8 && !this.prepareEightXRender()) return;
+    if (this.outputScale === 8 && this.renderFence) {
+      this.renderQueued = true;
+      if (!this.prepareEightXRender()) return;
+    }
     this.renderApplicationNow();
     if (this.outputScale === 8) this.insertEightXRenderFence();
   }
@@ -1920,23 +1958,47 @@ export class PixiFieldPresenter {
   private prepareEightXRender(): boolean {
     const fence = this.renderFence;
     if (!fence) return true;
+    if (this.firstFrameReady && this.renderFenceStartedAt > 0
+      && performance.now() - this.renderFenceStartedAt >= WEBGL_EIGHT_X_FRAME_STALL_MS) {
+      this.releaseRenderFence();
+      this.renderStallHandler?.();
+      return false;
+    }
     const gl = this.webGLContext();
     if (!gl || this.contextLost || this.destroyed) {
       this.releaseRenderFence();
-      return !this.contextLost && !this.destroyed;
+      if (!this.firstFrameReady) {
+        this.firstFrameFailed = true;
+        this.resolveFirstFrame(false);
+      } else if (!this.contextLost && !this.destroyed) {
+        this.renderStallHandler?.();
+      }
+      return false;
     }
     let status: number;
     try { status = gl.clientWaitSync(fence, 0, 0); }
     catch {
       this.releaseRenderFence();
+      if (!this.firstFrameReady) {
+        this.firstFrameFailed = true;
+        this.resolveFirstFrame(false);
+        return false;
+      }
       return true;
     }
-    if (status === gl.ALREADY_SIGNALED || status === gl.CONDITION_SATISFIED
-      || status === gl.WAIT_FAILED) {
+    if (status === gl.WAIT_FAILED) {
+      this.releaseRenderFence();
+      if (!this.firstFrameReady) {
+        this.firstFrameFailed = true;
+        this.resolveFirstFrame(false);
+        return false;
+      }
+      return true;
+    }
+    if (status === gl.ALREADY_SIGNALED || status === gl.CONDITION_SATISFIED) {
       this.releaseRenderFence();
       return true;
     }
-    this.renderQueued = true;
     this.scheduleEightXRenderPoll();
     return false;
   }
@@ -1948,7 +2010,11 @@ export class PixiFieldPresenter {
       const fence = gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE, 0);
       if (!fence) return;
       this.renderFence = fence;
+      this.renderFenceStartedAt = performance.now();
       gl.flush();
+      // Poll even when no second redraw has arrived. Promotion must not remove
+      // the visible Canvas merely because the first 8x frame was submitted.
+      this.scheduleEightXRenderPoll();
     } catch { /* context loss will promote the Canvas fallback */ }
   }
 
@@ -1956,11 +2022,17 @@ export class PixiFieldPresenter {
     if (this.renderFencePoll !== 0 || this.destroyed || this.contextLost) return;
     this.renderFencePoll = requestAnimationFrame(() => {
       this.renderFencePoll = 0;
-      if (!this.renderQueued || this.destroyed || this.contextLost) return;
+      if (!this.renderFence || this.destroyed || this.contextLost) return;
+      const redraw = this.renderQueued;
       if (!this.prepareEightXRender()) return;
-      this.renderQueued = false;
-      this.renderApplication();
+      this.resolveFirstFrame(true);
+      if (redraw) this.renderApplication();
     });
+  }
+
+  private resolveFirstFrame(ready: boolean): void {
+    if (ready) this.firstFrameReady = true;
+    for (const waiter of [...this.firstFrameWaiters]) waiter(ready);
   }
 
   private releaseRenderFence(): void {
@@ -1974,6 +2046,7 @@ export class PixiFieldPresenter {
       try { gl.deleteSync(fence); } catch { /* context may already be invalid */ }
     }
     this.renderFence = undefined;
+    this.renderFenceStartedAt = 0;
     this.renderQueued = false;
   }
 

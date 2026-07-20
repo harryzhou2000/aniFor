@@ -6,7 +6,7 @@ describe('material catalog', () => {
   it('uses unique stable byte IDs', () => {
     const ids = ALL_MATERIALS.map(({ id }) => id);
     expect(new Set(ids).size).toBe(ids.length);
-    expect(ids).toEqual(Array.from({ length: 194 }, (_, index) => index + 1));
+    expect(ids).toEqual(Array.from({ length: 216 }, (_, index) => index + 1));
     expect(ids.every((id) => id > Material.Empty && id <= 0xFF)).toBe(true);
     expect(MATERIALS.map(({ id }) => id)).toEqual(Array.from({ length: 170 }, (_, index) => index + 1));
   });

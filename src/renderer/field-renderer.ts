@@ -1,7 +1,7 @@
 import { ALL_MATERIALS, Material } from '../shared/materials';
 import type { SimulationBackend } from '../simulation';
 import { clientToViewport, ViewTransform, type Point, type ViewState } from './view-transform';
-import { contentBoxFromBounds } from './client-coordinate-map';
+import { contentBoxFromBounds, viewportToClient } from './client-coordinate-map';
 import type { PixiFieldPresenter, WebGLPresentationTiming } from './pixi-field-presenter';
 import {
   backingSize, CANVAS_FALLBACK_DIMENSION_BUDGET, CANVAS_FALLBACK_PIXEL_BUDGET,
@@ -400,6 +400,18 @@ export class MaterialRenderer {
     return { x: Math.floor(point.x), y: Math.floor(point.y) };
   }
 
+  /** Projects a world anchor into the same CSS-pixel space used by picking. */
+  worldToScreen(x: number, y: number): Point {
+    const bounds = this.host.getBoundingClientRect();
+    const content = contentBoxFromBounds(bounds, this.host);
+    return viewportToClient(
+      this.view.worldToViewport({ x, y }),
+      content,
+      this.host.clientWidth,
+      this.host.clientHeight,
+    );
+  }
+
   private viewportPoint(clientX: number, clientY: number): Point {
     const bounds = this.host.getBoundingClientRect();
     const content = contentBoxFromBounds(bounds, this.host);
@@ -424,14 +436,31 @@ export class MaterialRenderer {
 
   private async promoteLatePresenter(pending: Promise<PixiFieldPresenter>): Promise<void> {
     let presenter: PixiFieldPresenter | undefined;
+    const promotionTimeout = webGLPromotionTimeout(this.webGLOutputScale);
+    const promotionDeadline = performance.now() + promotionTimeout;
     try {
-      presenter = await settleWithin(pending, webGLPromotionTimeout(this.webGLOutputScale));
+      presenter = await settleWithin(pending, promotionTimeout);
       if (!presenter) {
         this.setBackend({ backend: 'canvas2d', label: 'Canvas 2D', reason: 'webgl-timeout' });
         void pending.then((latePresenter) => latePresenter.destroy()).catch(() => undefined);
         return;
       }
-      this.commitPresenter(presenter);
+      const ready = await this.commitPresenter(
+        presenter, Math.max(0, promotionDeadline - performance.now()),
+      );
+      if (!ready) {
+        const contextLost = presenter.isContextLost();
+        if (this.presenter === presenter) this.presenter = undefined;
+        try { presenter.destroy(); } catch { /* timed-out candidate is already unusable */ }
+        this.syncFallbackVolumeSurfaces();
+        this.contourChunks.markAll();
+        this.changed = true;
+        this.setBackend({
+          backend: 'canvas2d', label: 'Canvas 2D',
+          reason: contextLost ? 'webgl-context-lost' : 'webgl-timeout',
+        });
+        return;
+      }
     } catch (error) {
       const contextLost = presenter?.isContextLost() ?? false;
       try { presenter?.destroy(); } catch { /* failed presenter is already unusable */ }
@@ -450,11 +479,15 @@ export class MaterialRenderer {
     }
   }
 
-  private commitPresenter(presenter: PixiFieldPresenter): void {
+  private async commitPresenter(
+    presenter: PixiFieldPresenter,
+    firstFrameTimeoutMs: number,
+  ): Promise<boolean> {
     // Compile the shader and seed every semantic field while the known-good
     // Canvas remains visible. Any failure leaves the fallback fully intact.
     const now = performance.now();
-    presenter.setContextLossHandler(() => this.recoverFromWebGLContextLoss(presenter));
+    presenter.setContextLossHandler(() => this.recoverFromWebGLFailure(presenter, 'webgl-context-lost'));
+    presenter.setRenderStallHandler(() => this.recoverFromWebGLFailure(presenter, 'webgl-timeout'));
     if (this.webGLPresentationTimingEnabled) presenter.enableWebGLPresentationTiming();
     presenter.configurePresentation(
       this.gasFieldLightingEnabled,
@@ -468,6 +501,10 @@ export class MaterialRenderer {
       this.energyCoreReliefEnabled,
       this.powderRenderStyle,
     );
+    // Route subsequent dirty cells to the candidate while its first expensive
+    // frame is in flight. The known-good Canvas remains mounted underneath;
+    // latest semantic/field mutations coalesce behind the presenter's fence.
+    this.presenter = presenter;
     presenter.update(
       this.rendered, this.renderedWalls, this.simulation.temperature?.(), this.simulation.velocity?.(),
       now, now, true,
@@ -478,13 +515,18 @@ export class MaterialRenderer {
     if (presenter.isContextLost()) throw new Error('WebGL context lost during presenter promotion');
     presenter.mount();
     if (presenter.isContextLost()) throw new Error('WebGL context lost while mounting presenter');
-    this.presenter = presenter;
+    if (!await presenter.waitForFirstFrame(firstFrameTimeoutMs)) return false;
+    if (presenter.isContextLost() || this.presenter !== presenter) return false;
     this.releaseFallbackStorage();
     this.setBackend({ backend: 'webgl', label: 'WebGL' });
     this.changed = true;
+    return true;
   }
 
-  private recoverFromWebGLContextLoss(presenter: PixiFieldPresenter): void {
+  private recoverFromWebGLFailure(
+    presenter: PixiFieldPresenter,
+    reason: 'webgl-context-lost' | 'webgl-timeout',
+  ): void {
     if (this.presenter !== presenter) return;
     this.presenter = undefined;
     try { presenter.destroy(); }
@@ -501,9 +543,11 @@ export class MaterialRenderer {
     this.lastDraw = -Infinity;
     this.changed = true;
     this.syncTransform();
-    this.setBackend({ backend: 'canvas2d', label: 'Canvas 2D', reason: 'webgl-context-lost' });
+    this.setBackend({ backend: 'canvas2d', label: 'Canvas 2D', reason });
     this.render(performance.now());
-    console.warn('Semantic WebGL context lost; restored bounded Canvas fallback.');
+    console.warn(reason === 'webgl-context-lost'
+      ? 'Semantic WebGL context lost; restored bounded Canvas fallback.'
+      : 'Semantic WebGL render stalled; restored bounded Canvas fallback.');
   }
 
   private releaseFallbackStorage(): void {

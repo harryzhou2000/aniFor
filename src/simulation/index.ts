@@ -20,7 +20,9 @@ export async function createSimulation(options: { readonly renderLab?: boolean }
   }
 }
 
-export type { SimulationBackend } from './types';
+export type {
+  NativeSign, NativeSignDraft, NativeSignJustification, SimulationBackend,
+} from './types';
 
 function loadWithin<T>(promise: Promise<T>, milliseconds: number, message: string): Promise<T> {
   return new Promise<T>((resolve, reject) => {

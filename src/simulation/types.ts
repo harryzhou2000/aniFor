@@ -11,6 +11,27 @@ export interface DirtyWallCell {
   readonly wall: number;
 }
 
+/** Native TPT sign pointer alignment. `None` is retained for imported saves. */
+export type NativeSignJustification = 0 | 1 | 2 | 3;
+
+export interface NativeSign {
+  readonly index: number;
+  readonly x: number;
+  readonly y: number;
+  readonly justification: NativeSignJustification;
+  /** Authoritative text serialized into OPS saves. */
+  readonly text: string;
+  /** Native TPT expansion of placeholders such as `{p}`, `{temp}`, and `{type}`. */
+  readonly displayText: string;
+}
+
+export interface NativeSignDraft {
+  readonly x: number;
+  readonly y: number;
+  readonly justification: NativeSignJustification;
+  readonly text: string;
+}
+
 export interface SimulationBackend {
   readonly width: number;
   readonly height: number;
@@ -38,6 +59,12 @@ export interface SimulationBackend {
   paintLifePreset?(x: number, y: number, preset: number, radius: number): number;
   /** Apply a native simulation tool. Vector tools use deltaX/deltaY as the drag vector. */
   applySimulationTool?(tool: SimulationToolId, x: number, y: number, radius: number, deltaX?: number, deltaY?: number): void;
+  /** Snapshot native annotations without projecting them into particle or wall fields. */
+  signs?(): readonly NativeSign[];
+  /** Create a sign, or replace the native sign at `index`; returns its native index or -1. */
+  upsertSign?(sign: NativeSignDraft, index?: number): number;
+  /** Remove one native sign by index. */
+  removeSign?(index: number): boolean;
   consumeDirtyCells(): readonly DirtyCell[];
   consumeDirtyWalls?(): readonly DirtyWallCell[];
   /** Raw TPT save bytes when the active backend supports native file exchange. */

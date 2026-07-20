@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { Material } from '../shared/materials';
 import { SimulationTool } from '../simulation/simulation-tools';
 import type { SimulationBackend } from '../simulation';
-import type { LifeToolInfo, SimToolInfo, SourceToolInfo } from '../ui/tool-catalog';
+import type { LifeToolInfo, SignToolInfo, SimToolInfo, SourceToolInfo } from '../ui/tool-catalog';
 import { drawToolPoint, drawToolSegment, type ActiveToolSelection } from './tool-dispatch';
 
 function backend(): SimulationBackend {
@@ -39,6 +39,13 @@ function lifeTool(preset = 0): LifeToolInfo {
     key: `life:${preset}`, kind: 'life', preset, projection: Material.LIFE_GOL,
     name: 'GOL', description: 'Game of Life B3/S23', color: '#0cac00', icon: '◫',
     category: 'automata',
+  };
+}
+
+function signTool(): SignToolInfo {
+  return {
+    key: 'sign:place', kind: 'sign', maximumLength: 45,
+    name: 'Sign', description: 'Sign', color: '#fff', icon: 'T', category: 'signs',
   };
 }
 
@@ -131,5 +138,20 @@ describe('semantic tool dispatch', () => {
     delete simulation.paintLifePreset;
     drawToolPoint(simulation, { x: 7, y: 8 }, active, false);
     expect(simulation.paint).not.toHaveBeenCalled();
+  });
+
+  it('never treats a sign gesture as particle paint or erasure', () => {
+    const simulation = backend();
+    const active: ActiveToolSelection = {
+      material: Material.Water,
+      radius: 3,
+      signTool: signTool(),
+    };
+
+    drawToolPoint(simulation, { x: 9, y: 11 }, active, false);
+    drawToolPoint(simulation, { x: 9, y: 11 }, active, true);
+
+    expect(simulation.paint).not.toHaveBeenCalled();
+    expect(simulation.erase).not.toHaveBeenCalled();
   });
 });

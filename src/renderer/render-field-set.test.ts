@@ -22,8 +22,8 @@ describe('shared render field set', () => {
 
   it('packs a complete render identity for every projected material', () => {
     const lookup = createRenderLookups(ALL_MATERIALS);
-    expect(ALL_MATERIALS).toHaveLength(194);
-    expect(new Set(ALL_MATERIALS.map(({ id }) => id)).size).toBe(194);
+    expect(ALL_MATERIALS).toHaveLength(216);
+    expect(new Set(ALL_MATERIALS.map(({ id }) => id)).size).toBe(216);
     for (const material of ALL_MATERIALS) {
       const palette = material.id * 4;
       const color = Number.parseInt(material.color.slice(1), 16);

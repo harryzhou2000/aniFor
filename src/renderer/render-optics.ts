@@ -33,6 +33,8 @@ export function renderOptics(material: RenderOpticsMaterial): RenderOptics {
     case Material.DistilledWater:
     case Material.CBNW:
     case Material.Soap:
+    case Material.FRZW:
+    case Material.RFGL:
       return RenderOptics.Aqueous;
     case Material.Oil:
     case Material.Diesel:
@@ -47,6 +49,7 @@ export function renderOptics(material: RenderOpticsMaterial): RenderOptics {
     case Material.Smoke:
     case Material.Gas:
     case Material.FOG:
+    case Material.MORT:
       return RenderOptics.SootyGas;
     case Material.Ice:
     case Material.Glass:

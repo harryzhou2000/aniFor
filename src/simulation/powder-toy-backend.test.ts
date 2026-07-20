@@ -409,6 +409,53 @@ describe('direct Powder Toy backend', () => {
     }
   });
 
+  it('creates, expands, edits, removes, and OPS-round-trips native signs outside matter fields', async () => {
+    const source = await PowderToyBackend.load(moduleArtifact.href);
+    const occupied = { x: 306, y: 180 };
+    source.paint(occupied.x, occupied.y, Material.Water, 0);
+    const cellsBeforeSigns = source.cells().slice();
+
+    expect(source.upsertSign({
+      x: occupied.x, y: occupied.y, justification: 1, text: 'Water: {type}',
+    })).toBe(0);
+    expect(source.upsertSign({
+      x: 260, y: 120, justification: 0, text: 'Air {temp}',
+    })).toBe(1);
+    expect(source.cells()).toEqual(cellsBeforeSigns);
+    expect(source.signs()).toEqual([
+      expect.objectContaining({
+        index: 0, x: occupied.x, y: occupied.y, justification: 1,
+        text: 'Water: {type}', displayText: 'Water: WATR',
+      }),
+      expect.objectContaining({
+        index: 1, x: 260, y: 120, justification: 0, text: 'Air {temp}',
+      }),
+    ]);
+
+    const file = source.saveFile();
+    const restored = await PowderToyBackend.load(moduleArtifact.href);
+    restored.loadFile(file);
+    expect(restored.signs().map(({ index: _index, displayText: _display, ...sign }) => sign)).toEqual([
+      { x: occupied.x, y: occupied.y, justification: 1, text: 'Water: {type}' },
+      { x: 260, y: 120, justification: 0, text: 'Air {temp}' },
+    ]);
+    expect(restored.cells()).toEqual(source.cells());
+
+    expect(restored.upsertSign({
+      x: 264, y: 124, justification: 2, text: 'Edited',
+    }, 1)).toBe(1);
+    expect(restored.signs()[1]).toMatchObject({
+      index: 1, x: 264, y: 124, justification: 2, text: 'Edited', displayText: 'Edited',
+    });
+    expect(restored.removeSign(0)).toBe(true);
+    expect(restored.removeSign(8)).toBe(false);
+    expect(restored.signs()).toEqual([
+      expect.objectContaining({ index: 0, x: 264, y: 124, text: 'Edited' }),
+    ]);
+    restored.clear();
+    expect(restored.signs()).toEqual([]);
+  });
+
   it('evolves the built-in GOL preset through one blinker generation', async () => {
     const imported = await import(moduleArtifact.href) as { default: () => Promise<RawPowderModule> };
     const module = await imported.default();

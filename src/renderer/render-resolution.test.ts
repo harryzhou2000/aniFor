@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
   backingSize, FIELD_OUTPUT_SCALE, resolveFieldOutputScale, safeWebGLOutputScale,
-  WEBGL_EIGHT_X_PROMOTION_TIMEOUT_MS, WEBGL_PROMOTION_TIMEOUT_MS, webGLPromotionTimeout,
+  WEBGL_EIGHT_X_FRAME_STALL_MS, WEBGL_EIGHT_X_PROMOTION_TIMEOUT_MS,
+  WEBGL_PROMOTION_TIMEOUT_MS, webGLPromotionTimeout,
 } from './render-resolution';
 
 describe('field render resolution', () => {
@@ -41,5 +42,6 @@ describe('field render resolution', () => {
     expect(webGLPromotionTimeout(4)).toBe(WEBGL_PROMOTION_TIMEOUT_MS);
     expect(webGLPromotionTimeout(8)).toBe(WEBGL_EIGHT_X_PROMOTION_TIMEOUT_MS);
     expect(WEBGL_EIGHT_X_PROMOTION_TIMEOUT_MS).toBeGreaterThan(WEBGL_PROMOTION_TIMEOUT_MS);
+    expect(WEBGL_EIGHT_X_FRAME_STALL_MS).toBe(WEBGL_EIGHT_X_PROMOTION_TIMEOUT_MS);
   });
 });
