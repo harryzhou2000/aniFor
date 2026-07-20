@@ -14,15 +14,16 @@ describe('Canvas optical volume styling', () => {
     expect(soot[3]).toBe(91);
   });
 
-  it('gives aqueous, oily, corrosive, and molten liquids distinct RGB responses', () => {
+  it('gives all authored liquid optics families distinct RGB responses', () => {
     const signatures = [
       RenderOptics.Aqueous, RenderOptics.Oily, RenderOptics.Corrosive, RenderOptics.Molten,
+      RenderOptics.CryogenicLiquid, RenderOptics.MetallicLiquid, RenderOptics.ViscousLiquid,
     ].map((optics) => {
       const output = new Float32Array(3);
       shadeCanvasOpticalVolume(output, 120, 135, 150, optics, 'liquid', 5, 4);
       return Array.from(output).map(Math.round).join(',');
     });
-    expect(new Set(signatures).size).toBe(4);
+    expect(new Set(signatures).size).toBe(7);
   });
 
   it('keeps every optics class finite without allocating a result object', () => {

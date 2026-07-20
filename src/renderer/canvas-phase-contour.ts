@@ -156,40 +156,70 @@ export function applyCanvasLiquidFresnelShell(
   if (optics === RenderOptics.Molten || density <= 0.08 || density >= 0.92) return;
   const gradientLengthSquared = gradientX * gradientX + gradientY * gradientY;
   if (gradientLengthSquared <= 1e-8) return;
+  // Split the meniscus into two stable optical zones. The outer band catches
+  // the environment like a thin reflected lip; the inner band absorbs through
+  // a little more liquid before the dense core becomes an exact no-op. Keeping
+  // both bands density-owned avoids animated highlights when the liquid rests.
   const contourBand = smoothstep(0.08, 0.46, density)
     * (1 - smoothstep(0.54, 0.92, density));
-  if (contourBand <= 0) return;
+  const outerBand = contourBand
+    * (1 - smoothstep(0.42, 0.78, density) * 0.42);
+  const innerBand = contourBand * smoothstep(0.36, 0.70, density);
+  if (outerBand <= 0 && innerBand <= 0) return;
   const directional = Math.max(-1, Math.min(1,
     (gradientX * LIQUID_LIGHT_X + gradientY * LIQUID_LIGHT_Y)
       / Math.sqrt(gradientLengthSquared),
   ));
   const grazing = 1 - Math.abs(directional);
-  const reflection = contourBand * (0.018 + grazing * 0.022);
-  const key = Math.max(0, directional) * contourBand * 0.060 + reflection;
-  const shadow = Math.max(0, -directional) * contourBand * 0.048;
+  const reflection = outerBand * (0.032 + grazing * 0.042);
+  const key = Math.max(0, directional) * outerBand * 0.080 + reflection;
+  const outerShadow = Math.max(0, -directional) * outerBand * 0.024;
+  const innerTransmission = Math.max(0, directional) * innerBand * 0.018;
+  const absorption = innerBand * (0.014 + Math.max(0, -directional) * 0.030);
 
   let keyRed = 0.65, keyGreen = 0.82, keyBlue = 1.0;
   let shadowRed = 0.72, shadowGreen = 0.64, shadowBlue = 0.50;
+  let absorptionRed = 0.76, absorptionGreen = 0.54, absorptionBlue = 0.34;
   if (optics === RenderOptics.Aqueous) {
-    keyRed = 0.42; keyGreen = 0.82; keyBlue = 1.0;
+    keyRed = 0.18; keyGreen = 0.84; keyBlue = 1.0;
     shadowRed = 1.0; shadowGreen = 0.62; shadowBlue = 0.36;
+    absorptionRed = 1.0; absorptionGreen = 0.42; absorptionBlue = 0.16;
   } else if (optics === RenderOptics.Oily) {
     keyRed = 1.0; keyGreen = 0.72; keyBlue = 0.28;
-    shadowRed = 0.40; shadowGreen = 0.68; shadowBlue = 1.0;
+    shadowRed = 0.20; shadowGreen = 0.28; shadowBlue = 0.42;
+    absorptionRed = 0.18; absorptionGreen = 0.48; absorptionBlue = 1.0;
   } else if (optics === RenderOptics.Corrosive) {
     keyRed = 0.44; keyGreen = 1.0; keyBlue = 0.68;
     shadowRed = 0.72; shadowGreen = 0.38; shadowBlue = 0.62;
+    absorptionRed = 0.82; absorptionGreen = 0.20; absorptionBlue = 0.66;
+  } else if (optics === RenderOptics.CryogenicLiquid) {
+    keyRed = 0.62; keyGreen = 0.90; keyBlue = 1.0;
+    shadowRed = 0.78; shadowGreen = 0.86; shadowBlue = 1.0;
+    absorptionRed = 1.0; absorptionGreen = 0.50; absorptionBlue = 0.26;
+  } else if (optics === RenderOptics.MetallicLiquid) {
+    keyRed = 1.0; keyGreen = 0.98; keyBlue = 0.94;
+    shadowRed = 0.58; shadowGreen = 0.62; shadowBlue = 0.70;
+    absorptionRed = 0.58; absorptionGreen = 0.62; absorptionBlue = 0.70;
+  } else if (optics === RenderOptics.ViscousLiquid) {
+    keyRed = 0.82; keyGreen = 0.92; keyBlue = 1.0;
+    shadowRed = 0.70; shadowGreen = 0.64; shadowBlue = 0.58;
+    absorptionRed = 0.85; absorptionGreen = 0.60; absorptionBlue = 0.35;
   }
 
   const originalRed = pixels[offset];
   const originalGreen = pixels[offset + 1];
   const originalBlue = pixels[offset + 2];
-  const red = originalRed + (255 - originalRed) * keyRed * key
-    - originalRed * shadowRed * shadow;
-  const green = originalGreen + (255 - originalGreen) * keyGreen * key
-    - originalGreen * shadowGreen * shadow;
-  const blue = originalBlue + (255 - originalBlue) * keyBlue * key
-    - originalBlue * shadowBlue * shadow;
+  const familyKeyGain = optics === RenderOptics.Aqueous ? 1.65
+    : optics === RenderOptics.CryogenicLiquid ? 1.25
+    : optics === RenderOptics.MetallicLiquid ? 1.4
+    : optics === RenderOptics.ViscousLiquid ? 1.1 : 1;
+  const keyResponse = (key + innerTransmission) * familyKeyGain;
+  const red = originalRed + (255 - originalRed) * keyRed * keyResponse
+    - originalRed * (shadowRed * outerShadow + absorptionRed * absorption);
+  const green = originalGreen + (255 - originalGreen) * keyGreen * keyResponse
+    - originalGreen * (shadowGreen * outerShadow + absorptionGreen * absorption);
+  const blue = originalBlue + (255 - originalBlue) * keyBlue * keyResponse
+    - originalBlue * (shadowBlue * outerShadow + absorptionBlue * absorption);
   pixels[offset] = clampByte(Math.max(originalRed - 18, Math.min(originalRed + 18, red)));
   pixels[offset + 1] = clampByte(
     Math.max(originalGreen - 18, Math.min(originalGreen + 18, green)),

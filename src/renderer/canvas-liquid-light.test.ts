@@ -14,6 +14,9 @@ describe('Canvas liquid field-owned light', () => {
       { optics: RenderOptics.Oily, base: [91, 67, 35], order: [0, 1, 2] },
       { optics: RenderOptics.Corrosive, base: [211, 94, 232], order: [2, 0, 1] },
       { optics: RenderOptics.Molten, base: [230, 100, 32], order: [0, 1, 2] },
+      { optics: RenderOptics.CryogenicLiquid, base: [110, 190, 230], order: [2, 1, 0] },
+      { optics: RenderOptics.MetallicLiquid, base: [168, 175, 186], order: [2, 1, 0] },
+      { optics: RenderOptics.ViscousLiquid, base: [168, 216, 188], order: [1, 2, 0] },
     ] as const;
     const fingerprints = new Set<string>();
     for (const { optics, base, order } of families) {
@@ -71,6 +74,9 @@ describe('Canvas liquid field-owned light', () => {
       { optics: RenderOptics.Aqueous, keyOrder: [2, 1, 0], shadowOrder: [0, 1, 2] },
       { optics: RenderOptics.Oily, keyOrder: [0, 1, 2], shadowOrder: [2, 1, 0] },
       { optics: RenderOptics.Corrosive, keyOrder: [1, 2, 0], shadowOrder: [0, 2, 1] },
+      { optics: RenderOptics.CryogenicLiquid, keyOrder: [2, 1, 0], shadowOrder: [0, 1, 2] },
+      { optics: RenderOptics.MetallicLiquid, keyOrder: [0, 1, 2], shadowOrder: [2, 1, 0] },
+      { optics: RenderOptics.ViscousLiquid, keyOrder: [2, 1, 0], shadowOrder: [0, 1, 2] },
     ] as const;
     for (const { optics, keyOrder, shadowOrder } of families) {
       const positive = canvasLiquidVolumeChromaResponse(optics, 255, 8, 0.18, 1);
@@ -99,6 +105,8 @@ describe('Canvas liquid field-owned light', () => {
   it('adds monotone family-coloured absorption only below the liquid surface', () => {
     for (const optics of [
       RenderOptics.Aqueous, RenderOptics.Oily, RenderOptics.Corrosive,
+      RenderOptics.CryogenicLiquid, RenderOptics.MetallicLiquid,
+      RenderOptics.ViscousLiquid,
     ]) {
       const surface = new Float32Array([112, 138, 176, 91]);
       const middle = surface.slice();

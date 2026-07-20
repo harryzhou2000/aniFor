@@ -18,9 +18,12 @@ export const enum RenderOptics {
   CrystallineGranular = 13,
   SootyGranular = 14,
   MetallicGranular = 15,
+  CryogenicLiquid = 16,
+  MetallicLiquid = 17,
+  ViscousLiquid = 18,
 }
 
-export const RENDER_OPTICS_CLASS_COUNT = 16;
+export const RENDER_OPTICS_CLASS_COUNT = 19;
 
 /** Powder-like roughness classes that share topology but not material response. */
 export function isGranularOptics(optics: number): boolean {
@@ -43,20 +46,31 @@ export function renderOptics(material: RenderOpticsMaterial): RenderOptics {
     case Material.SaltWater:
     case Material.DistilledWater:
     case Material.CBNW:
-    case Material.Soap:
-    case Material.FRZW:
-    case Material.RFGL:
       return RenderOptics.Aqueous;
     case Material.Oil:
     case Material.Diesel:
+    case Material.Nitro:
       return RenderOptics.Oily;
     case Material.Acid:
     case Material.BASE:
     case Material.CAUS:
       return RenderOptics.Corrosive;
     case Material.Lava:
-    case Material.MWAX:
       return RenderOptics.Molten;
+    case Material.LiquidNitrogen:
+    case Material.LO2:
+    case Material.FRZW:
+    case Material.RFGL:
+      return RenderOptics.CryogenicLiquid;
+    case Material.Mercury:
+    case Material.LRBD:
+      return RenderOptics.MetallicLiquid;
+    case Material.Soap:
+    case Material.GEL:
+    case Material.MWAX:
+    case Material.PSTE:
+    case Material.RSST:
+      return RenderOptics.ViscousLiquid;
     case Material.Smoke:
     case Material.Gas:
     case Material.FOG:

@@ -772,7 +772,10 @@ describe('Canvas 2x phase contour scratch', () => {
     applyCanvasLiquidFresnelShell(molten, 0, 0.5, 1, 1, RenderOptics.Molten);
     expect(Array.from(molten)).toEqual(baseline);
 
-    for (const material of [Material.Water, Material.Oil, Material.Acid, Material.Lava]) {
+    for (const material of [
+      Material.Water, Material.Oil, Material.Acid, Material.Lava,
+      Material.LiquidNitrogen, Material.Mercury, Material.Soap, Material.MWAX,
+    ]) {
       const value = fixture(7, 7);
       for (let y = 2; y <= 4; y++) for (let x = 2; x <= 4; x++) {
         paint(value, x, y, material);
@@ -819,6 +822,42 @@ describe('Canvas 2x phase contour scratch', () => {
           rgbaAt(flat, x, y),
         );
       }
+    }
+  });
+
+  it('separates a reflected outer lip from a family-coloured inner absorption shoulder', () => {
+    const source = [80, 110, 140, 177] as const;
+    const families = [
+      { optics: RenderOptics.Aqueous, absorbed: 0, retained: 2, neutral: false },
+      { optics: RenderOptics.Oily, absorbed: 2, retained: 0, neutral: false },
+      { optics: RenderOptics.Corrosive, absorbed: 0, retained: 1, neutral: false },
+      { optics: RenderOptics.CryogenicLiquid, absorbed: 0, retained: 2, neutral: false },
+      { optics: RenderOptics.MetallicLiquid, absorbed: 2, retained: 0, neutral: true },
+      { optics: RenderOptics.ViscousLiquid, absorbed: 0, retained: 2, neutral: false },
+    ] as const;
+
+    for (const { optics, absorbed, retained, neutral } of families) {
+      const outer = new Uint8ClampedArray(source);
+      applyCanvasLiquidFresnelShell(outer, 0, 0.28, 0.48, 0.68, optics);
+      expect(Math.max(...Array.from(outer.slice(0, 3), (value, channel) => (
+        value - source[channel]
+      ))), `${optics} reflected lip`).toBeGreaterThan(0);
+
+      const innerSource = [220, 220, 220, 177] as const;
+      const inner = new Uint8ClampedArray(innerSource);
+      applyCanvasLiquidFresnelShell(inner, 0, 0.78, -0.48, -0.68, optics);
+      const innerDelta = Array.from(inner.slice(0, 3), (value, channel) => (
+        value - innerSource[channel]
+      ));
+      expect(innerDelta[absorbed], `${optics} absorption`).toBeLessThan(0);
+      if (neutral) {
+        expect(Math.max(...innerDelta) - Math.min(...innerDelta)).toBeLessThanOrEqual(1);
+      } else {
+        expect(innerDelta[absorbed], `${optics} spectral retention`).toBeLessThan(
+          innerDelta[retained],
+        );
+      }
+      expect(inner[3]).toBe(innerSource[3]);
     }
   });
 

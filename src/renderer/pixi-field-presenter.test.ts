@@ -211,10 +211,17 @@ describe('Pixi presenter startup configuration', () => {
     expect(liquid).toContain('edgeTint');
     expect(liquid).toContain('reflectedEnvironment');
     expect(liquid).toContain('(1.0 - liquidOnly) * (1.0 - molten)');
+    expect(liquid).toContain('step(1.5, shape.w)');
     expect(liquid).toContain('liquidFresnelKey');
     expect(liquid).toContain('liquidFresnelShadow');
     expect(liquid).toContain('liquidFresnelContour');
+    expect(liquid).toContain('liquidFresnelInnerContour');
+    expect(liquid).toContain('liquidFresnelAbsorption');
+    expect(liquid).toContain('liquidFresnelAbsorptionResponse');
     expect(liquid).toContain('liquidFresnelStrength');
+    expect(liquid).toContain('float cryogenic = optics == 16.0');
+    expect(liquid).toContain('float metallicLiquid = optics == 17.0');
+    expect(liquid).toContain('float viscousLiquid = optics == 18.0');
     expect(liquid).not.toMatch(/uSurfaceContourLighting[^;]*\balpha\b/);
   });
 

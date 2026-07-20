@@ -236,6 +236,15 @@ vec3 applyLiquidVolumeChroma(
   } else if (optics == 3.0) {
     key = vec3(0.44, 1.00, 0.68);
     shadow = vec3(0.72, 0.38, 0.62);
+  } else if (optics == 16.0) {
+    key = vec3(0.62, 0.90, 1.00);
+    shadow = vec3(1.00, 0.55, 0.28);
+  } else if (optics == 17.0) {
+    key = vec3(1.00, 0.98, 0.94);
+    shadow = vec3(0.58, 0.62, 0.70);
+  } else if (optics == 18.0) {
+    key = vec3(0.82, 0.92, 1.00);
+    shadow = vec3(0.70, 0.64, 0.58);
   }
   if (response > 0.0) {
     color += (vec3(1.0) - color) * key * response * 0.90;
@@ -246,7 +255,9 @@ vec3 applyLiquidVolumeChroma(
   // shoulders, so Water/Oil need calibrated column absorption for composed
   // surface-to-core parity rather than numeric helper parity.
   float columnGain = optics == 1.0 ? 0.14
-    : (optics == 2.0 ? 0.18 : (optics == 3.0 ? 0.09 : 0.06));
+    : (optics == 2.0 ? 0.18 : (optics == 3.0 ? 0.09
+    : (optics == 16.0 ? 0.10 : (optics == 17.0 ? 0.22
+    : (optics == 18.0 ? 0.20 : 0.06)))));
   if (optics == 4.0) columnGain = 0.0;
   return color * (vec3(1.0) - shadow * columnDepth * columnGain * uLiquidOpticalDepth);
 }
@@ -1212,7 +1223,14 @@ void main() {
     float oily = optics == 2.0 ? 1.0 : 0.0;
     float corrosive = optics == 3.0 ? 1.0 : 0.0;
     float molten = optics == 4.0 ? 1.0 : 0.0;
-    vec3 liquidBase = vividColor(base, 1.24 + aqueous * 0.06 + corrosive * 0.08 - oily * 0.05);
+    float cryogenic = optics == 16.0 ? 1.0 : 0.0;
+    float metallicLiquid = optics == 17.0 ? 1.0 : 0.0;
+    float viscousLiquid = optics == 18.0 ? 1.0 : 0.0;
+    vec3 liquidBase = vividColor(
+      base,
+      1.24 + aqueous * 0.06 + corrosive * 0.08 - oily * 0.05
+        + cryogenic * 0.04 - metallicLiquid * 0.16 - viscousLiquid * 0.04
+    );
     // The four already-sampled field neighbours promote only locally supported
     // pool interiors. This makes reconstructed holes and semantic cells share
     // one optical depth without turning an isolated droplet into a pool core.
@@ -1275,9 +1293,11 @@ void main() {
     // RGB-only and field-depth-gated, so sparse droplets, species seams, and
     // reconstructed support remain authoritative.
     float macroSheenGain = 0.075 + aqueous * 0.055 + oily * 0.085
-      + corrosive * 0.225 - molten * 0.015;
+      + corrosive * 0.225 - molten * 0.015 + cryogenic * 0.06
+      + metallicLiquid * 0.15 + viscousLiquid * 0.11;
     float macroCausticGain = 0.055 + aqueous * 0.065 - oily * 0.025
-      + corrosive * 0.195 - molten * 0.035;
+      + corrosive * 0.195 - molten * 0.035 + cryogenic * 0.08
+      - metallicLiquid * 0.04 - viscousLiquid * 0.03;
     float broadCaustic = smoothstep(0.18, 0.88, causticWave) - 0.5;
     float liquidMacroRelief = liquidDepth * (
       (broadSheen - 0.5) * macroSheenGain + broadCaustic * macroCausticGain
@@ -1293,17 +1313,24 @@ void main() {
       clamp(topLip * 0.48 + rim * 0.30 + surfaceSpecular * 0.22 + fresnel * 0.26, 0.0, 1.0)
     );
     float depthTransmission = 0.66 + aqueous * 0.10 - oily * 0.10
-      + corrosive * 0.04 - molten * 0.15;
+      + corrosive * 0.04 - molten * 0.15 + cryogenic * 0.14
+      - metallicLiquid * 0.18 - viscousLiquid * 0.10;
     float gloss = 1.0 + aqueous * 0.18 + oily * 0.30
-      + corrosive * 0.12 - molten * 0.20;
+      + corrosive * 0.12 - molten * 0.20 + cryogenic * 0.24
+      + metallicLiquid * 0.55 + viscousLiquid * 0.18;
     float causticStrength = 0.085 + aqueous * 0.055 - oily * 0.045
-      + corrosive * 0.025 - molten * 0.055;
+      + corrosive * 0.025 - molten * 0.055 + cryogenic * 0.04
+      - metallicLiquid * 0.07 - viscousLiquid * 0.03;
     float liquidBodyExposure = 1.0 - aqueous * 0.04 - oily * 0.10
-      + corrosive * 0.05 + molten * 0.20;
+      + corrosive * 0.05 + molten * 0.20 - cryogenic * 0.02
+      - metallicLiquid * 0.16 - viscousLiquid * 0.09;
     vec3 edgeTint = mix(vec3(0.66, 0.82, 0.88), liquidBase, 0.20);
     edgeTint = mix(edgeTint, vec3(0.72, 0.92, 1.0), aqueous * 0.18);
     edgeTint = mix(edgeTint, vec3(0.94, 0.72, 0.34), oily * 0.12 + molten * 0.20);
     edgeTint = mix(edgeTint, vec3(0.72, 1.0, 0.76), corrosive * 0.18);
+    edgeTint = mix(edgeTint, vec3(0.70, 0.94, 1.0), cryogenic * 0.24);
+    edgeTint = mix(edgeTint, vec3(0.92, 0.95, 1.0), metallicLiquid * 0.30);
+    edgeTint = mix(edgeTint, vec3(0.82, 0.90, 0.96), viscousLiquid * 0.18);
     vec3 reflectedEnvironment = mix(
       vec3(0.055, 0.085, 0.115),
       vec3(0.16, 0.12, 0.075),
@@ -1311,41 +1338,64 @@ void main() {
     );
     vec3 liquidFresnelKey = vec3(0.65, 0.82, 1.0);
     vec3 liquidFresnelShadow = vec3(0.72, 0.64, 0.50);
-    if (aqueous > 0.5) liquidFresnelKey = vec3(0.42, 0.82, 1.0);
-    if (aqueous > 0.5) liquidFresnelShadow = vec3(1.0, 0.62, 0.36);
+    vec3 liquidFresnelAbsorption = vec3(0.76, 0.54, 0.34);
+    if (aqueous > 0.5) liquidFresnelKey = vec3(0.18, 0.84, 1.0);
+    if (aqueous > 0.5) {
+      liquidFresnelShadow = vec3(1.0, 0.62, 0.36);
+      liquidFresnelAbsorption = vec3(1.0, 0.42, 0.16);
+    }
     else if (oily > 0.5) {
       liquidFresnelKey = vec3(1.0, 0.72, 0.28);
-      // Oil's warm reflected key remains the family cue. Keep its opposite
-      // contour shadow nearly neutral so absolute blue absorption cannot read
-      // stronger than the amber highlight at ordinary zoom.
-      liquidFresnelShadow = vec3(0.08);
+      liquidFresnelShadow = vec3(0.20, 0.28, 0.42);
+      liquidFresnelAbsorption = vec3(0.18, 0.48, 1.0);
     } else if (corrosive > 0.5) {
       liquidFresnelKey = vec3(0.44, 1.0, 0.68);
       liquidFresnelShadow = vec3(0.72, 0.38, 0.62);
+      liquidFresnelAbsorption = vec3(0.82, 0.20, 0.66);
+    } else if (cryogenic > 0.5) {
+      liquidFresnelKey = vec3(0.62, 0.90, 1.0);
+      liquidFresnelShadow = vec3(0.78, 0.86, 1.0);
+      liquidFresnelAbsorption = vec3(1.0, 0.50, 0.26);
+    } else if (metallicLiquid > 0.5) {
+      liquidFresnelKey = vec3(1.0, 0.98, 0.94);
+      liquidFresnelShadow = vec3(0.58, 0.62, 0.70);
+      liquidFresnelAbsorption = vec3(0.58, 0.62, 0.70);
+    } else if (viscousLiquid > 0.5) {
+      liquidFresnelKey = vec3(0.82, 0.92, 1.0);
+      liquidFresnelShadow = vec3(0.70, 0.64, 0.58);
+      liquidFresnelAbsorption = vec3(0.85, 0.60, 0.35);
     }
-    // Restrict reflection to the connected air-facing shell. The earlier
-    // whole-body specular term washed dense cores and even molten Lava; Canvas
-    // already keeps those exact no-ops. This arithmetic-only gate aligns both
-    // backends without changing alpha, support, samples, or resources.
+    // Split the connected air-facing shell into a reflected outer lip and a
+    // deeper absorption shoulder. Both are derived from the existing Hermite
+    // density and slope, so the meniscus remains stable at rest and adds no
+    // sampler, field, pass, or output-scale allocation.
     vec2 liquidFresnelSlope = semanticSlope + volumeSlope;
     float liquidFresnelSlopeLength = length(liquidFresnelSlope);
-    float liquidFresnelContour = smoothstep(0.08, 0.46, liquidSurfaceDensity)
+    float liquidFresnelShell = smoothstep(0.08, 0.46, liquidSurfaceDensity)
       * (1.0 - smoothstep(0.54, 0.92, liquidSurfaceDensity));
+    float liquidFresnelContour = liquidFresnelShell
+      * (1.0 - smoothstep(0.42, 0.78, liquidSurfaceDensity) * 0.42);
+    float liquidFresnelInnerContour = liquidFresnelShell
+      * smoothstep(0.36, 0.70, liquidSurfaceDensity);
     float liquidFresnelDirectional = liquidFresnelSlopeLength > 0.0001
       ? dot(liquidFresnelSlope / liquidFresnelSlopeLength, normalize(vec2(-0.58, -0.815)))
       : 0.0;
     float liquidFresnelGrazing = 1.0 - abs(liquidFresnelDirectional);
     float liquidFresnelReflection = liquidFresnelContour
-      * (0.018 + liquidFresnelGrazing * 0.022);
+      * (0.032 + liquidFresnelGrazing * 0.042);
     float liquidFresnelKeyResponse = max(0.0, liquidFresnelDirectional)
-      * liquidFresnelContour * 0.060 + liquidFresnelReflection;
+      * liquidFresnelContour * 0.080 + liquidFresnelReflection;
     float liquidFresnelShadowResponse = max(0.0, -liquidFresnelDirectional)
-      * liquidFresnelContour * 0.048;
+      * liquidFresnelContour * 0.024;
+    float liquidFresnelTransmissionResponse = max(0.0, liquidFresnelDirectional)
+      * liquidFresnelInnerContour * 0.018;
+    float liquidFresnelAbsorptionResponse = liquidFresnelInnerContour
+      * (0.014 + max(0.0, -liquidFresnelDirectional) * 0.030);
     // An empty reconstructed fringe has no semantic material/optics byte, so it
     // cannot safely distinguish Lava from an ordinary liquid. Preserve that
     // fringe's geometry but shade only authoritative liquid fragments here.
     float liquidFresnelGate = (1.0 - liquidOnly) * (1.0 - molten)
-      * uSurfaceContourLighting;
+      * step(1.5, shape.w) * uSurfaceContourLighting;
     float liquidEdgeHalfWidth = mix(
       0.13, 0.17, clamp(length(volumeSlope) * 2.4, 0.0, 1.0)
     );
@@ -1378,14 +1428,18 @@ void main() {
     // body term keeps the same meniscus readable at ordinary zoom. It mirrors
     // Canvas and remains well below a dark separator or emissive highlight.
     color *= 1.0 + liquidMacroRelief + liquidInterfaceRelief;
-    float liquidFresnelStrength = liquidFresnelGate * liquidFresnelKeyResponse
-      * 0.75 * (1.0 + oily * 0.35);
+    float liquidFresnelStrength = liquidFresnelGate
+      * (liquidFresnelKeyResponse + liquidFresnelTransmissionResponse)
+      * 0.75 * (1.0 + aqueous * 0.65 + oily * 0.35 + cryogenic * 0.25
+        + metallicLiquid * 0.40 + viscousLiquid * 0.10);
     color += (vec3(1.0) - clamp(color, 0.0, 1.0))
       * liquidFresnelKey * liquidFresnelStrength;
     color += mix(reflectedEnvironment, edgeTint, 0.42)
       * liquidFresnelStrength * (0.18 + oily * 0.04);
-    color -= color * liquidFresnelShadow
-      * liquidFresnelGate * liquidFresnelShadowResponse;
+    color -= color * liquidFresnelGate * (
+      liquidFresnelShadow * liquidFresnelShadowResponse
+      + liquidFresnelAbsorption * liquidFresnelAbsorptionResponse
+    );
     color *= 1.0 + topLip * 0.08 - lowerShade * 0.05;
     color += mix(vec3(0.52, 0.68, 0.76), liquidBase, 0.50)
       * (broadSheen * mix(0.016, 0.052 * gloss, liquidDepth) + caustic * causticStrength);

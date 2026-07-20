@@ -329,6 +329,9 @@ async function auditMode(mode) {
         { name: 'acidFresnelTop', x: 353, y: 62, radius: 20 },
         { name: 'lavaFresnelControl', x: 341, y: 270, radius: 16 },
         { name: 'waterFresnelCore', x: 238, y: 79, radius: 5 },
+        { name: 'isolatedWaterFresnelControl', x: 190.5, y: 164.5, radius: 2 },
+        { name: 'waterOilFresnelSeamControl', x: 302.5, y: 172, radiusX: 0.45, radiusY: 6 },
+        { name: 'lavaPinholeFresnelControl', x: 340.5, y: 231.5, radius: 2 },
       ], canonicalCaptures.canvasRect);
       assertLiquidFresnelSamples(surfaceContourLightingSamples, `${mode} focused`);
       const blank = await captureStableBlankPage(cdp, mode);
@@ -1818,6 +1821,9 @@ async function auditMode(mode) {
       { name: 'claySmoothCore', x: 148, y: 48, radius: 2.5 },
       { name: 'isolatedGrainContourControl', x: 190, y: 176, radius: 1.5 },
       { name: 'waterFresnelCore', x: 238, y: 79, radius: 5 },
+      { name: 'isolatedWaterFresnelControl', x: 190.5, y: 164.5, radius: 2 },
+      { name: 'waterOilFresnelSeamControl', x: 302.5, y: 172, radiusX: 0.45, radiusY: 6 },
+      { name: 'lavaPinholeFresnelControl', x: 340.5, y: 231.5, radius: 2 },
     ], canonicalCaptures.canvasRect);
     const surfaceContourLighting = Object.fromEntries(
       surfaceContourLightingSamples.map((sample) => [sample.name, sample]),
@@ -1856,7 +1862,10 @@ async function auditMode(mode) {
       && surfaceContourLighting.claySmoothCore.rgbPeak <= 1
       && surfaceContourLighting.isolatedGrainContourControl.rgbPeak <= 1
       && surfaceContourLighting.waterFresnelCore.rgbPeak <= 1
-      && surfaceContourLighting.lavaFresnelControl.rgbPeak <= 1,
+      && surfaceContourLighting.lavaFresnelControl.rgbPeak <= 1
+      && surfaceContourLighting.isolatedWaterFresnelControl.rgbPeak <= 1
+      && surfaceContourLighting.waterOilFresnelSeamControl.rgbPeak <= 1
+      && surfaceContourLighting.lavaPinholeFresnelControl.rgbPeak <= 1,
     `${mode}: contour light leaked into an interior, control, or unlike seam (${JSON.stringify(surfaceContourLightingSamples)})`);
     assert(surfaceContourLightingSamples.every((sample) => sample.repeatRgbPeak <= 1),
       `${mode}: surface contour off-on-off sequence was not deterministic (${JSON.stringify(surfaceContourLightingSamples)})`);
@@ -3428,7 +3437,11 @@ function assertLiquidFresnelSamples(samples, label) {
   const acid = byName.acidFresnelTop;
   const lava = byName.lavaFresnelControl;
   const core = byName.waterFresnelCore;
-  assert(water && oil && acid && lava && core, `${label}: liquid Fresnel samples are incomplete`);
+  const isolated = byName.isolatedWaterFresnelControl;
+  const seam = byName.waterOilFresnelSeamControl;
+  const pinhole = byName.lavaPinholeFresnelControl;
+  assert(water && oil && acid && lava && core && isolated && seam && pinhole,
+    `${label}: liquid Fresnel samples are incomplete`);
   assert(water.rgbRms >= 0.02 && oil.rgbRms >= 0.02 && acid.rgbRms >= 0.02
     && water.chromaRms >= 0.01 && oil.chromaRms >= 0.01 && acid.chromaRms >= 0.01,
   `${label}: liquid Fresnel shell lost visible chromatic response (${JSON.stringify(samples)})`);
@@ -3437,7 +3450,8 @@ function assertLiquidFresnelSamples(samples, label) {
     && oil.peakResponseRgb[0] > oil.peakResponseRgb[2]
     && acid.peakResponseRgb[1] > acid.peakResponseRgb[0],
   `${label}: liquid Fresnel families collapsed (${JSON.stringify(samples)})`);
-  assert(lava.rgbPeak <= 1 && core.rgbPeak <= 1,
+  assert(lava.rgbPeak <= 1 && core.rgbPeak <= 1 && isolated.rgbPeak <= 1
+    && seam.rgbPeak <= 1 && pinhole.rgbPeak <= 1,
     `${label}: liquid Fresnel leaked into Lava or a dense core (${JSON.stringify(samples)})`);
   assert(samples.every((sample) => sample.repeatRgbPeak <= 1),
     `${label}: liquid Fresnel off-on-off sequence was not deterministic (${JSON.stringify(samples)})`);

@@ -34,10 +34,16 @@ for (let optics = 0; optics < RENDER_OPTICS_CLASS_COUNT; optics++) {
 setVolumeChromaParameters(RenderOptics.Aqueous, 0.52, 0.88, 1.00, 1.00, 0.62, 0.36);
 setVolumeChromaParameters(RenderOptics.Oily, 1.00, 0.72, 0.28, 0.40, 0.68, 1.00);
 setVolumeChromaParameters(RenderOptics.Corrosive, 0.44, 1.00, 0.68, 0.72, 0.38, 0.62);
+setVolumeChromaParameters(RenderOptics.CryogenicLiquid, 0.62, 0.90, 1.00, 1.00, 0.55, 0.28);
+setVolumeChromaParameters(RenderOptics.MetallicLiquid, 1.00, 0.98, 0.94, 0.58, 0.62, 0.70);
+setVolumeChromaParameters(RenderOptics.ViscousLiquid, 0.82, 0.92, 1.00, 0.70, 0.64, 0.58);
 COLUMN_DEPTH_ABSORPTION[RenderOptics.Aqueous] = 0.14;
 COLUMN_DEPTH_ABSORPTION[RenderOptics.Oily] = 0.18;
 COLUMN_DEPTH_ABSORPTION[RenderOptics.Corrosive] = 0.09;
 COLUMN_DEPTH_ABSORPTION[RenderOptics.Molten] = 0;
+COLUMN_DEPTH_ABSORPTION[RenderOptics.CryogenicLiquid] = 0.10;
+COLUMN_DEPTH_ABSORPTION[RenderOptics.MetallicLiquid] = 0.22;
+COLUMN_DEPTH_ABSORPTION[RenderOptics.ViscousLiquid] = 0.20;
 const BODY_PARAMETER_COUNT = 5;
 const BODY_PARAMETERS = new Float32Array(RENDER_OPTICS_CLASS_COUNT * BODY_PARAMETER_COUNT);
 for (let optics = 0; optics < RENDER_OPTICS_CLASS_COUNT; optics++) {
@@ -47,6 +53,9 @@ setBodyParameters(RenderOptics.Aqueous, 0.055, 2.55, 5, 14, 18);
 setBodyParameters(RenderOptics.Oily, 0.085, 0.85, 16, 9, 3);
 setBodyParameters(RenderOptics.Corrosive, 0.065, 1.0, 15, 8, 18);
 setBodyParameters(RenderOptics.Molten, 0.025, 0.38, 2, 0.7, 0.2);
+setBodyParameters(RenderOptics.CryogenicLiquid, 0.045, 2.8, 8, 16, 20);
+setBodyParameters(RenderOptics.MetallicLiquid, 0.10, 1.2, 20, 20, 19);
+setBodyParameters(RenderOptics.ViscousLiquid, 0.095, 0.72, 13, 15, 16);
 
 /**
  * Gives an authoritative Canvas liquid cell field-owned body depth and a

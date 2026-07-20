@@ -49,6 +49,22 @@ export function shadeCanvasOpticalVolume(
     scatter = 0.62;
     redLift = 9;
     greenLift = 3;
+  } else if (optics === RenderOptics.CryogenicLiquid) {
+    absorption = 1.6;
+    scatter = 1.65;
+    greenLift = 3;
+    blueLift = 7;
+  } else if (optics === RenderOptics.MetallicLiquid) {
+    absorption = 3.8;
+    scatter = 1.82;
+    redLift = 3;
+    greenLift = 3;
+    blueLift = 3;
+  } else if (optics === RenderOptics.ViscousLiquid) {
+    absorption = 4.2;
+    scatter = 1.25;
+    greenLift = 1;
+    blueLift = 3;
   }
 
   const depth = density * absorption;

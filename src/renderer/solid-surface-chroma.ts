@@ -24,6 +24,9 @@ const KEY = new Float32Array([
   0.72, 0.92, 1.00, // CrystallineGranular
   0.78, 0.72, 0.62, // SootyGranular
   1.00, 0.78, 0.42, // MetallicGranular
+  0.62, 0.90, 1.00, // CryogenicLiquid (defensive; matter callers exclude liquids)
+  1.00, 0.98, 0.94, // MetallicLiquid
+  0.82, 0.92, 1.00, // ViscousLiquid
 ]);
 
 const SHADOW = new Float32Array([
@@ -43,6 +46,9 @@ const SHADOW = new Float32Array([
   0.86, 0.72, 0.62,
   0.92, 0.86, 0.78,
   0.82, 0.70, 0.60,
+  0.78, 0.86, 1.00,
+  0.58, 0.62, 0.70,
+  0.70, 0.64, 0.58,
 ]);
 
 /** Signed analytic key/fill response; dense cores and empty support are exact no-ops. */
