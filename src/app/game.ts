@@ -220,6 +220,9 @@ export class Game {
       },
       setGasFieldLighting: (enabled) => { this.renderer.setGasFieldLightingEnabled(enabled); },
       setGasVolumeChroma: (enabled) => { this.renderer.setGasVolumeChromaEnabled(enabled); },
+      setEmissionVolumeChroma: (enabled) => {
+        this.renderer.setEmissionVolumeChromaEnabled(enabled);
+      },
       setLiquidFieldLighting: (enabled) => { this.renderer.setLiquidFieldLightingEnabled(enabled); },
       setLiquidSilhouetteCohesion: (enabled) => {
         this.renderer.setLiquidSilhouetteCohesionEnabled(enabled);

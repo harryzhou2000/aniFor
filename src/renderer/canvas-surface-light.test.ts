@@ -4,6 +4,7 @@ import {
   CANVAS_SOLID_FIELD_DIRECTION_LIMIT,
   CANVAS_TRANSLUCENT_FIELD_EXPOSURE, CANVAS_TRANSLUCENT_FIELD_GAIN,
   canvasSolidFieldLightingGain, canvasTranslucentFieldExposure, lightCanvasSurface,
+  sampleCanvasFieldAlpha,
 } from './canvas-surface-light';
 import { RenderPhase, RenderProfile, surfaceLightGain } from './render-profile';
 import { RenderOptics } from './render-optics';
@@ -152,6 +153,35 @@ describe('Canvas surface lighting', () => {
     const target = new Uint8ClampedArray([0, 0, 0, 211]);
     lightCanvasSurface(target, 0, emission, 2, 2, 4, 4, 1, 1, RenderProfile.Rigid, 1);
     expect(Array.from(target)).toEqual([23, 0, 0, 211]);
+  });
+
+  it('samples world-cell alpha with the same clamped bilinear mapping', () => {
+    const alphaField = new Uint8Array([
+      0, 0, 0, 0, 0, 0, 0, 100,
+      0, 0, 0, 200, 0, 0, 0, 255,
+    ]);
+    expect(sampleCanvasFieldAlpha(alphaField, 2, 2, 4, 4, 1, 1)).toBeCloseTo(72.1875);
+    expect(sampleCanvasFieldAlpha(alphaField, 2, 2, 4, 4, -20, -20)).toBe(0);
+    expect(sampleCanvasFieldAlpha(alphaField, 2, 2, 4, 4, 20, 20)).toBe(255);
+  });
+
+  it('samples a far 612x384 Energy cell from the compact emission plane', () => {
+    const emission = new Uint8Array(204 * 128 * 4);
+    emission[emission.length - 1] = 211;
+
+    expect(sampleCanvasFieldAlpha(emission, 204, 128, 612, 384, 611, 383)).toBe(211);
+    expect(Number.isFinite(
+      sampleCanvasFieldAlpha(emission, 204, 128, 612, 384, 485, 329),
+    )).toBe(true);
+  });
+
+  it('rejects malformed fields before bilinear alpha sampling', () => {
+    expect(() => sampleCanvasFieldAlpha(
+      new Uint8Array(15), 2, 2, 4, 4, 1, 1,
+    )).toThrow('Canvas surface light field size mismatch');
+    expect(() => sampleCanvasFieldAlpha(
+      new Uint8Array(16), 2, 2, 0, 4, 1, 1,
+    )).toThrow('Canvas surface light field size mismatch');
   });
 
   it('clamps the far right and bottom before calculating interpolation weight', () => {

@@ -5,6 +5,7 @@ import {
   canvasAtmosphereAlphaAtWorldCell, canvasGasSemanticAccentAlpha, shadeCanvasAtmosphere,
 } from '../src/renderer/canvas-atmosphere-relief';
 import { shadeCanvasEnergy } from '../src/renderer/canvas-energy-style';
+import { shadeCanvasEmissionVolume } from '../src/renderer/canvas-emission-style';
 import {
   applyCanvasRenderTraits, CANVAS_RENDER_TRAIT_CLOCK_SIZE, updateCanvasRenderTraitClock,
 } from '../src/renderer/canvas-render-traits';
@@ -280,6 +281,7 @@ const splitLiquidPixels = new Uint8ClampedArray(splitLiquidSeed.length);
 const denseLiquidSurfaceScratch = createLiquidSurfaceScratch(denseLiquidPixels, width);
 const splitLiquidSurfaceScratch = createLiquidSurfaceScratch(splitLiquidPixels, width);
 const atmospherePixels = new Uint8ClampedArray(atmosphere.bytes.length);
+const emissionPixels = new Uint8ClampedArray(emission.bytes.length);
 const energyCore = new Float32Array(3);
 const energyGlow = new Float32Array(3);
 const traitRgb = new Float32Array(3);
@@ -488,6 +490,19 @@ console.log(JSON.stringify({
     atmosphereRelief: sample(() => {
       shadeCanvasAtmosphere(atmospherePixels, atmosphere.bytes, atmosphere.width, atmosphere.height);
     }),
+    emissionVolumeChroma: {
+      additionalAllocatedBytes: 0,
+      flat: sample(() => {
+        shadeCanvasEmissionVolume(
+          emissionPixels, emission.bytes, emission.width, emission.height, false,
+        );
+      }),
+      chromatic: sample(() => {
+        shadeCanvasEmissionVolume(
+          emissionPixels, emission.bytes, emission.width, emission.height, true,
+        );
+      }),
+    },
     gasVolumeChroma: {
       flat: sample(() => {
         shadeCanvasAtmosphere(

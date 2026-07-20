@@ -14,6 +14,7 @@ interface PresenterHarness {
   configurePresentation: PixiFieldPresenter['configurePresentation'];
   setGasFieldLightingEnabled: PixiFieldPresenter['setGasFieldLightingEnabled'];
   setGasVolumeChromaEnabled: PixiFieldPresenter['setGasVolumeChromaEnabled'];
+  setEmissionVolumeChromaEnabled: PixiFieldPresenter['setEmissionVolumeChromaEnabled'];
   setLiquidVolumeChromaEnabled: PixiFieldPresenter['setLiquidVolumeChromaEnabled'];
   setPowderBodyDepthEnabled: PixiFieldPresenter['setPowderBodyDepthEnabled'];
   setSurfaceContourLightingEnabled: PixiFieldPresenter['setSurfaceContourLightingEnabled'];
@@ -70,6 +71,7 @@ describe('Pixi presenter startup configuration', () => {
     expect(presenter.uniforms.uniforms).toMatchObject({
       uGasFieldLighting: 0,
       uGasVolumeChroma: 1,
+      uEmissionVolumeChroma: 1,
       uLiquidFieldLighting: 1,
       uLiquidVolumeChroma: 1,
       uTranslucentFieldTransmission: 0,
@@ -339,6 +341,44 @@ describe('Pixi presenter startup configuration', () => {
     presenter.setPowderBodyDepthEnabled(true);
     expect(presenter.uniforms.uniforms.uPowderBodyDepth).toBe(1);
     expect(presenter.app.render).toHaveBeenCalledTimes(2);
+  });
+
+  it('redraws when audit emission volume chroma changes', () => {
+    const presenter = presenterHarness();
+
+    presenter.setEmissionVolumeChromaEnabled(false);
+    expect(presenter.uniforms.uniforms.uEmissionVolumeChroma).toBe(0);
+    expect(presenter.app.render).toHaveBeenCalledOnce();
+
+    presenter.setEmissionVolumeChromaEnabled(true);
+    expect(presenter.uniforms.uniforms.uEmissionVolumeChroma).toBe(1);
+    expect(presenter.app.render).toHaveBeenCalledTimes(2);
+  });
+
+  it('hydrates disabled emission volume chroma without an intermediate frame', () => {
+    const presenter = presenterHarness();
+
+    presenter.configurePresentation(
+      true, true, true, true, true, true, true, true, true, 'smooth',
+      true, true, true, true, true, true, true, false,
+    );
+
+    expect(presenter.uniforms.uniforms.uEmissionVolumeChroma).toBe(0);
+    expect(presenter.app.render).not.toHaveBeenCalled();
+  });
+
+  it('keeps emission volume shading RGB-only and reuses existing aura samples', () => {
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const start = source.indexOf('// Reuse the four aura samples already needed');
+    const end = source.indexOf('} else if (energyCore > 0.5)', start);
+    const block = source.slice(start, end);
+
+    expect(start).toBeGreaterThan(0);
+    expect(end).toBeGreaterThan(start);
+    expect(block).toContain('uEmissionVolumeChroma');
+    expect(block).toContain('emissionNeighbourMean');
+    expect(block).not.toContain('texture(');
+    expect(block).not.toMatch(/\balpha\s*[+*]?=/);
   });
 
   it('hydrates disabled powder body depth without an intermediate frame', () => {

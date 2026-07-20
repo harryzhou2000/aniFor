@@ -73,6 +73,20 @@ describe('ViewTransform', () => {
     expect(view.snapshot()).toEqual({ zoom: 5, panX: 1000, panY: -1000 });
   });
 
+  it('keeps an off-center anchor exact when requested zoom clamps at five', () => {
+    const view = new ViewTransform(612, 384);
+    view.resize(900, 600);
+    const anchor = { x: 281, y: 337 };
+    const worldBefore = view.viewportToWorld(anchor);
+
+    view.applyGesture(view.snapshot(), anchor, anchor, 20);
+
+    const worldAfter = view.viewportToWorld(anchor);
+    expect(view.snapshot().zoom).toBe(5);
+    expect(worldAfter.x).toBeCloseTo(worldBefore.x, 10);
+    expect(worldAfter.y).toBeCloseTo(worldBefore.y, 10);
+  });
+
   it('maps CSS client coordinates into the renderer content box', () => {
     expect(clientToViewport(
       { x: 310, y: 220 },

@@ -10,7 +10,7 @@ import {
 import {
   canvasAtmosphereAlphaAtWorldCell, canvasGasSemanticAccentAlpha, shadeCanvasAtmosphere,
 } from './canvas-atmosphere-relief';
-import { canvasLocalEmissionAlpha } from './canvas-emission-style';
+import { canvasLocalEmissionAlpha, shadeCanvasEmissionVolume } from './canvas-emission-style';
 import { shadeCanvasOpticalVolume } from './canvas-optics-style';
 import {
   createLiquidSurfaceScratch, reconstructLiquidSurface, type LiquidSurfaceScratch,
@@ -35,7 +35,7 @@ import {
 } from './canvas-render-traits';
 import {
   CANVAS_TRANSLUCENT_FIELD_GAIN, canvasTranslucentFieldExposure, lightCanvasSurface,
-  canvasSolidFieldLightingGain,
+  canvasSolidFieldLightingGain, sampleCanvasFieldAlpha,
 } from './canvas-surface-light';
 import { reconstructSolidSurface } from './canvas-solid-surface';
 import {
@@ -153,6 +153,7 @@ export class MaterialRenderer {
   private powderSurfaceDirty = true;
   private gasFieldLightingEnabled = true;
   private gasVolumeChromaEnabled = true;
+  private emissionVolumeChromaEnabled = true;
   private liquidFieldLightingEnabled = true;
   private liquidSilhouetteCohesionEnabled = true;
   private liquidVolumeChromaEnabled = true;
@@ -303,6 +304,14 @@ export class MaterialRenderer {
     this.gasVolumeChromaEnabled = enabled;
     this.presenter?.setGasVolumeChromaEnabled(enabled);
     if (this.fallbackFields) this.gasVolumeChromaDirty = true;
+    this.changed = true;
+  }
+
+  setEmissionVolumeChromaEnabled(enabled: boolean): void {
+    if (enabled === this.emissionVolumeChromaEnabled) return;
+    this.emissionVolumeChromaEnabled = enabled;
+    this.presenter?.setEmissionVolumeChromaEnabled(enabled);
+    this.syncFallbackVolumeSurfaces();
     this.changed = true;
   }
 
@@ -572,6 +581,7 @@ export class MaterialRenderer {
       this.gasVolumeChromaEnabled,
       this.liquidVolumeChromaEnabled,
       this.powderBodyDepthEnabled,
+      this.emissionVolumeChromaEnabled,
     );
     // Route subsequent dirty cells to the candidate while its first expensive
     // frame is in flight. The known-good Canvas remains mounted underneath;
@@ -658,7 +668,11 @@ export class MaterialRenderer {
       this.atmosphereContext.putImageData(this.atmospherePixels, 0, 0);
     }
     if (this.emissionPixels) {
-      this.emissionPixels.data.set(fields.emission.bytes);
+      shadeCanvasEmissionVolume(
+        this.emissionPixels.data, fields.emission.bytes,
+        fields.emission.width, fields.emission.height,
+        this.emissionVolumeChromaEnabled,
+      );
       this.emissionContext.putImageData(this.emissionPixels, 0, 0);
     }
   }
@@ -719,7 +733,11 @@ export class MaterialRenderer {
     }
     if (rebuiltField === 'emission') {
       this.contourChunks.markAll();
-      emissionPixels.data.set(fields.emission.bytes);
+      shadeCanvasEmissionVolume(
+        emissionPixels.data, fields.emission.bytes,
+        fields.emission.width, fields.emission.height,
+        this.emissionVolumeChromaEnabled,
+      );
       this.emissionContext.putImageData(emissionPixels, 0, 0);
     }
     if (rebuiltField === 'atmosphere' || rebuiltField === 'emission'
@@ -898,7 +916,10 @@ export class MaterialRenderer {
           + Number(right === material) + Number(bottom === material);
         const energyFieldSupport = energyNeighbourCount === 4
           ? 255
-          : energyNeighbourCount >= 2 ? 96 : fields.emission.bytes[pixel + 3];
+          : energyNeighbourCount >= 2 ? 96 : sampleCanvasFieldAlpha(
+            fields.emission.bytes, fields.emission.width, fields.emission.height,
+            width, height, x, y,
+          );
         const red = info.color >>> 16;
         const green = (info.color >>> 8) & 0xFF;
         const blue = info.color & 0xFF;

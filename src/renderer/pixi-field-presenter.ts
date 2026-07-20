@@ -92,6 +92,7 @@ uniform float uHighQuality;
 uniform float uAnalyticLightingQuality;
 uniform float uGasFieldLighting;
 uniform float uGasVolumeChroma;
+uniform float uEmissionVolumeChroma;
 uniform float uLiquidFieldLighting;
 uniform float uLiquidVolumeChroma;
 uniform float uTranslucentFieldTransmission;
@@ -839,6 +840,7 @@ void main() {
   vec2 volumeSlope = vec2(0.0);
   vec2 liquidSpeciesSlope = vec2(0.0);
   float cloudNeighbourMean = 0.0;
+  float emissionNeighbourMean = 0.0;
   float liquidNeighbourMean = 0.0;
   float adjacentLiquidSupport = 0.0;
   float exposedLiquidSide = 0.0;
@@ -847,6 +849,7 @@ void main() {
     float lightRight = texture(uEmissionTexture, fieldUv + vec2(uEmissionTexel.x, 0.0)).a;
     float lightTop = texture(uEmissionTexture, fieldUv - vec2(0.0, uEmissionTexel.y)).a;
     float lightBottom = texture(uEmissionTexture, fieldUv + vec2(0.0, uEmissionTexel.y)).a;
+    emissionNeighbourMean = (lightLeft + lightRight + lightTop + lightBottom) * 0.25;
     volumeSlope = vec2(lightRight - lightLeft, lightBottom - lightTop) * 0.72;
   } else if (gasVolume > 0.5) {
     float cloudLeft = texture(uAtmosphereTexture, fieldUv - vec2(uAtmosphereTexel.x, 0.0)).a;
@@ -945,6 +948,18 @@ void main() {
     alpha = smoothstep(0.002, 0.28, volume) * (0.07 + volume * 0.30) * pulse;
     color = mix(base * 1.42 + vec3(0.045), base * 0.72, volume) * (0.68 + diffuse * 0.32);
     color += mix(vec3(0.16, 0.19, 0.24), base, 0.56) * specular * 0.30;
+    // Reuse the four aura samples already needed by the analytic normal. A
+    // small signed crown/pocket term and directional key/fill keep the volume
+    // readable without changing its alpha, support, topology, or 8x resources.
+    float emissionCurvature = clamp((volume - emissionNeighbourMean) * 8.0, -1.0, 1.0);
+    float emissionDirection = clamp(
+      dot(volumeSlope, normalize(vec2(-0.48, -0.68))) * 2.0,
+      -1.0, 1.0
+    );
+    float emissionVolumeTone = (
+      emissionCurvature * 0.048 + emissionDirection * 0.028
+    ) * uEmissionVolumeChroma;
+    color += (base * 0.80 + vec3(0.035, 0.045, 0.060)) * emissionVolumeTone;
   } else if (energyCore > 0.5) {
     // Energy owns a luminous semantic core. The lower-resolution emission field
     // remains the surrounding aura, so fast particles never inherit its lag or
@@ -1814,6 +1829,7 @@ export class PixiFieldPresenter {
       },
       uGasFieldLighting: { value: 1, type: 'f32' },
       uGasVolumeChroma: { value: 1, type: 'f32' },
+      uEmissionVolumeChroma: { value: 1, type: 'f32' },
       uLiquidFieldLighting: { value: 1, type: 'f32' },
       uLiquidVolumeChroma: { value: 1, type: 'f32' },
       uTranslucentFieldTransmission: { value: 1, type: 'f32' },
@@ -2034,6 +2050,7 @@ export class PixiFieldPresenter {
     gasVolumeChromaEnabled = true,
     liquidVolumeChromaEnabled = true,
     powderBodyDepthEnabled = true,
+    emissionVolumeChromaEnabled = true,
   ): void {
     const uniforms = this.uniforms.uniforms;
     uniforms.uGasFieldLighting = gasFieldLightingEnabled ? 1 : 0;
@@ -2048,6 +2065,7 @@ export class PixiFieldPresenter {
     uniforms.uSolidFieldLighting = solidFieldLightingEnabled ? 1 : 0;
     uniforms.uLiquidSilhouetteCohesion = liquidSilhouetteCohesionEnabled ? 1 : 0;
     uniforms.uGasVolumeChroma = gasVolumeChromaEnabled ? 1 : 0;
+    uniforms.uEmissionVolumeChroma = emissionVolumeChromaEnabled ? 1 : 0;
     uniforms.uLiquidVolumeChroma = liquidVolumeChromaEnabled ? 1 : 0;
     uniforms.uPowderBodyDepth = powderBodyDepthEnabled ? 1 : 0;
     uniforms.uThermalMaterialStyling = thermalMaterialStylingEnabled ? 1 : 0;
@@ -2062,6 +2080,11 @@ export class PixiFieldPresenter {
 
   setGasVolumeChromaEnabled(enabled: boolean): void {
     this.uniforms.uniforms.uGasVolumeChroma = enabled ? 1 : 0;
+    this.renderApplication();
+  }
+
+  setEmissionVolumeChromaEnabled(enabled: boolean): void {
+    this.uniforms.uniforms.uEmissionVolumeChroma = enabled ? 1 : 0;
     this.renderApplication();
   }
 

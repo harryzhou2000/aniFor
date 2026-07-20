@@ -7,6 +7,45 @@ export const CANVAS_SOLID_FIELD_DIRECTION_GAIN = 1.25;
 export const CANVAS_SOLID_FIELD_DIRECTION_LIMIT = 0.12;
 
 /**
+ * Samples one RGBA field's alpha at a world-cell centre. The return value stays
+ * in byte space so callers can use the same thresholds as the backing field.
+ * This is deliberately scalar: the Canvas hot loop gets bilinear support
+ * without allocating a coordinate or colour tuple for every world cell.
+ */
+export function sampleCanvasFieldAlpha(
+  field: Uint8Array,
+  fieldWidth: number,
+  fieldHeight: number,
+  worldWidth: number,
+  worldHeight: number,
+  x: number,
+  y: number,
+): number {
+  if (fieldWidth <= 0 || fieldHeight <= 0
+    || field.length !== fieldWidth * fieldHeight * 4 || worldWidth <= 0 || worldHeight <= 0) {
+    throw new Error('Canvas surface light field size mismatch');
+  }
+  const fieldX = Math.max(0, Math.min(
+    fieldWidth - 1, (x + 0.5) * fieldWidth / worldWidth - 0.5,
+  ));
+  const fieldY = Math.max(0, Math.min(
+    fieldHeight - 1, (y + 0.5) * fieldHeight / worldHeight - 0.5,
+  ));
+  const x0 = Math.floor(fieldX);
+  const y0 = Math.floor(fieldY);
+  const x1 = Math.min(fieldWidth - 1, x0 + 1);
+  const y1 = Math.min(fieldHeight - 1, y0 + 1);
+  return bilinearValues(
+    field[(y0 * fieldWidth + x0) * 4 + 3],
+    field[(y0 * fieldWidth + x1) * 4 + 3],
+    field[(y1 * fieldWidth + x0) * 4 + 3],
+    field[(y1 * fieldWidth + x1) * 4 + 3],
+    fieldX - x0,
+    fieldY - y0,
+  );
+}
+
+/**
  * Eligibility for the directional part of shared-field light. The ordinary
  * scalar response remains independent; this addition belongs only to a real,
  * opaque solid contour and therefore cannot leak into reconstructed support.

@@ -16,6 +16,7 @@ export interface BrowserInputAuditApi {
   occupiedCells(): number;
   setGasFieldLighting(enabled: boolean): void;
   setGasVolumeChroma(enabled: boolean): void;
+  setEmissionVolumeChroma(enabled: boolean): void;
   setLiquidFieldLighting(enabled: boolean): void;
   setLiquidSilhouetteCohesion(enabled: boolean): void;
   setLiquidVolumeChroma(enabled: boolean): void;

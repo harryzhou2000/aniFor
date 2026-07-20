@@ -24,11 +24,11 @@ Queued after the renderer checkpoint: revisit desktop/mobile geometry as a dedic
 
 - Repository: `/home/harry/projects/aniFor_codex`
 - Branch: `main_codex`
-- Current local base before the pending stable-powder checkpoint: `dcc5e52 Add Canvas liquid body optics` on `main_codex`.
-- Manual Actions run `29709956074` built, tested, and uploaded the Pages artifact for exact SHA `dcc5e52b1ff5858cdba7b2aaf21037a296bd4273`, but `actions/deploy-pages` failed while creating the deployment because GitHub Pages returned HTTP 503. The verifier was correctly skipped.
-- Local GitHub CLI authentication is currently invalid. Re-authenticate before dispatching the next manual `build-and-deploy`, and do not confuse a successful artifact build with a live deployment.
+- Current committed base: `249cd84 Add topology-safe powder body depth` on `main_codex`; the default-on volumetric Energy-aura checkpoint described below is pending commit.
+- Manual Actions run `29751234815` built and deployed the `249cd84` checkpoint successfully, and the live Pages runtime was verified after deployment.
+- Local GitHub CLI authentication was restored for that deployment. Recheck `gh auth status` before dispatching the pending checkpoint, and do not confuse a successful artifact build with a live deployment.
 - Current live Pages URL: `https://harryzhou2000.github.io/aniFor/`
-- Live `revision.txt` remains `603b609ab88ab71904f118fefb365a606efc7603` because the newer deployment never existed. Re-run the manual deployment after the pending checkpoint is pushed, then require exact revision and recursive asset closure before calling Pages current.
+- Live `revision.txt` is current through the committed `249cd84` checkpoint. Re-run the manual deployment after the pending Energy checkpoint is pushed, then require its exact revision and recursive asset closure before calling Pages current.
 
 ## Committed/live history through `8ae8765`
 
@@ -94,11 +94,17 @@ Queued after the renderer checkpoint: revisit desktop/mobile geometry as a dedic
 
 ## Current local graphics and responsive UI tranche
 
+- The compact one-third-linear-resolution emission plane now receives a default-on RGB-only crown/pocket plus directional key/fill treatment. Canvas applies it in both normal 12 Hz rebuild and fallback-resync paths, preserves every authoritative alpha/support byte, and adds no buffer. WebGL reuses the four cardinal aura samples already needed by its analytic normal and adds no texture read, pass, target, upload, or output-scale resource.
+- Canvas Energy cores no longer index compact emission bytes with a full-world RGBA offset. A shared allocation-free clamped bilinear alpha sampler now maps any 612×384 world cell, including the far bottom-right cell, into the 204×128 field with finite support.
+- The Canvas reshape measures `0.22/0.27/0.54 ms` median/p90/max with zero additional bytes. The paired Canvas/WebGL visual gate passes all prior visual controls and the new deterministic aura comparison with zero browser errors.
+- True 8× remains exact at `4896×3072`; completed-frame timing is `2945.2/2963.6/2975.4 ms` median/p90/max, the new Energy aura is `0.74` RGB RMS with a six-byte peak, wheel-anchor error is exactly zero, all 216 atlas identities remain visible, and context-loss recovery preserves the camera.
+- A focused `--desktop-input-only` browser route now proves the 2× camera contract without replaying the full visual atlas: three exact off-centre cells, a 25-cell continuous left stroke, anchored wheel (`0/0.00001` cell Canvas/WebGL), exact `42×27` middle pan, post-transform semantic/framebuffer paint, zero breakpoint-resize anchor drift, and live DPR+page-scale repaint. Paired mobile cold loads still pass one-touch brush, two-touch pan/pinch, retained-finger drawing, eraser, and responsive camera round trips.
+
 - Smooth powder now treats only proven deep, stable, authoritative bulk as a coherent material body: Canvas blends cell-scale colour variation toward canonical albedo and both backends add bounded hue-preserving macro slope relief from the existing powder field. Local and Grains are exact bypasses; shallow/unstable/trait/emissive matter, thin columns, ridges, branches, authored holes, seams, alpha, and support remain unchanged.
 - The full 612×384 Canvas deep-Sand helper measures `7.44/7.54 ms` median/p90 including a `1.22 ms` loop baseline, adds no persistent bytes, and runs once per world cell rather than per supersampled output pixel.
 - True WebGL 8× remains enabled and verified: requested/effective scale `8`, exact `4896×3072` backing, all `2316/2316` Local and Smooth powder-column cells retained, all ten deep holes empty, exact `8×8` zoomed Grains square, zero browser errors, and deterministic context-loss recovery to Canvas 2× with `0.0159`-cell footprint error while preserving the camera.
 - The interaction audit now paints and blank-differences a real off-centre framebuffer landmark after wheel zoom plus middle pan. Canvas/WebGL peak errors are `0.0620/0.4662` cell; zoomed-resize anchor errors are `0.00681/0.03681` cell. This closes the former state-only proof gap for the upper-left-anchored cursor/render mismatch.
-- Current validation: 301 tests, production TypeScript/Vite build, 19-file static asset closure, forced Canvas and WebGL visual captures, full Canvas and WebGL interaction audits, and the dedicated true-8×/context-loss audit all pass.
+- Current validation: 387/387 tests, production TypeScript/Vite build, 19-file static asset closure, paired Canvas/WebGL visual captures, focused desktop and mobile interaction audits, and the dedicated true-8×/context-loss audit all pass with zero browser errors.
 
 - Dense WebGL energy chunks use the existing emission-field density only as a gate for calming carrier micro-modulation and normalizing semantic-shape opacity. The field cannot manufacture a body without semantic shape support. Measured Fire/Plasma/ELEC/PHOT/GRVT microcontrast fell by roughly 6–24% while hue, macro relief, sparse aura ownership, and clipping gates remained intact.
 - Canvas and WebGL gas now receive directional warm/cool scatter from the already existing emission field. Canvas preserves atmosphere alpha byte-for-byte and selects among the four emission neighbours it already reads; desktop WebGL takes at most one outward-normal emission sample and compact/mobile takes none. No field, pass, persistent buffer, or simulation state was added.

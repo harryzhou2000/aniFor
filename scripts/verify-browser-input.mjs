@@ -19,6 +19,7 @@ const modes = scaleEightOnly ? ['webgl'] : process.argv.includes('--canvas-only'
 const visualOnly = process.argv.includes('--visual-only');
 const materialAtlasOnly = process.argv.includes('--material-atlas-only');
 const mobileOnly = process.argv.includes('--mobile-only');
+const desktopInputOnly = process.argv.includes('--desktop-input-only');
 const quickScreenshot = process.argv.includes('--quick-screenshot');
 const layoutOnly = process.argv.includes('--layout-only');
 const visualScaleMatrixOnly = process.argv.includes('--visual-scale-matrix-only');
@@ -42,7 +43,7 @@ async function main() {
     const results = [];
     for (const mode of modes) results.push(await auditMode(mode));
     const reducedAudit = quickScreenshot || layoutOnly || mobileOnly
-      || visualScaleMatrixOnly || powderBodyOnly;
+      || desktopInputOnly || visualScaleMatrixOnly || powderBodyOnly;
     if (powderBodyOnly) assertPairedPowderBodyDepth(results);
     if (!scaleEightOnly && !materialAtlasOnly && !reducedAudit) assertPairedVisualRelief(results);
     if (!scaleEightOnly && !reducedAudit) assertPairedMaterialAtlas(results);
@@ -129,6 +130,12 @@ async function auditMode(mode) {
         && Boolean(window.__ANIFOR_INPUT_AUDIT__ && document.documentElement);
     })()`), 15_000, `input audit API (${mode})`);
     await waitFor(() => evaluate(cdp, `window.__ANIFOR_INPUT_AUDIT__.backend().backend === ${JSON.stringify(mode)}`), 15_000, `${mode} backend`);
+    if (desktopInputOnly) {
+      const desktopInput = await auditDesktopInput(cdp, mode, dpr);
+      assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
+      cdp.close();
+      return { backend: mode, desktopInput, browserErrors: errors.length };
+    }
     if (powderBodyOnly) {
       const powderBodyDepth = await auditPowderBodyDepth(cdp, mode, dpr);
       assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
@@ -250,6 +257,19 @@ async function auditMode(mode) {
     // Use the freshly restored relieved frame as the canonical lit image for
     // all following comparisons. This keeps adjacent toggle captures close.
     const canonicalCapture = relievedEnergyCaptures.capture;
+    await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setEmissionVolumeChroma(false); true');
+    const flatEmissionVolumeCaptures = await waitForStablePageCapture(
+      cdp, `${mode} flat emission-volume framebuffer`,
+    );
+    await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setEmissionVolumeChroma(true); true');
+    const chromaticEmissionVolumeCaptures = await waitForStablePageCapture(
+      cdp, `${mode} chromatic emission-volume framebuffer`,
+    );
+    await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setEmissionVolumeChroma(false); true');
+    const repeatedFlatEmissionVolumeCaptures = await waitForStablePageCapture(
+      cdp, `${mode} repeated flat emission-volume framebuffer`,
+    );
+    await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setEmissionVolumeChroma(true); true');
     await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setGasVolumeChroma(false); true');
     const flatGasVolumeCaptures = await waitForStablePageCapture(
       cdp, `${mode} flat gas-volume framebuffer`,
@@ -653,6 +673,19 @@ async function auditMode(mode) {
     assert(energyCoreReliefSupport.every((sample) => sample.flatVisible === sample.relievedVisible
       && Math.abs(sample.flatWorldArea - sample.relievedWorldArea) <= 0.01),
     `${mode}: Energy radiance relief changed semantic support (${JSON.stringify(energyCoreReliefSupport)})`);
+    const emissionVolumeChromaSamples = await sampleBackdropRefractionRegions(cdp, {
+      straight: flatEmissionVolumeCaptures.capture.data,
+      refracted: chromaticEmissionVolumeCaptures.capture.data,
+      repeatedStraight: repeatedFlatEmissionVolumeCaptures.capture.data,
+    }, energyCoreReliefRegions, canonicalCaptures.canvasRect);
+    const emissionVolumeChroma = emissionVolumeChromaSamples[0];
+    assert(emissionVolumeChroma.rgbRms >= 0.25
+      && emissionVolumeChroma.bipolarBalance >= 0.03
+      && emissionVolumeChroma.meanBiasRatio <= 0.95
+      && emissionVolumeChroma.rgbPeak <= 24,
+    `${mode}: Energy aura lost bounded volumetric key/fill (${JSON.stringify(emissionVolumeChroma)})`);
+    assert(emissionVolumeChroma.repeatRgbPeak <= 1,
+      `${mode}: emission-volume off-on-off sequence was not deterministic (${JSON.stringify(emissionVolumeChroma)})`);
     const energySamples = await sampleCanonicalRegions([
       { name: 'fire', x: 405, y: 329 },
       { name: 'plasma', x: 445, y: 329 },
@@ -1859,6 +1892,7 @@ async function auditMode(mode) {
         thermalSupportInvariantSamples,
         energyCoreReliefSamples,
         energyCoreReliefSupport,
+        emissionVolumeChromaSamples,
         solidSamples,
         translucentSolidSamples,
         gasLightResponseSamples,
@@ -2159,6 +2193,7 @@ async function auditMode(mode) {
       thermalSupportInvariantSamples,
       energyCoreReliefSamples,
       energyCoreReliefSupport,
+      emissionVolumeChromaSamples,
       silhouetteSamples,
       liquidContourCrossings,
       categoricalLiquidFringe,
@@ -2230,6 +2265,198 @@ async function auditMode(mode) {
     await terminate(chrome);
     await rm(profile, { recursive: true, force: true });
   }
+}
+
+/** Focused release proof for the CSS-pixel camera/input contract. */
+async function auditDesktopInput(cdp, mode, dpr) {
+  await setDesktopMetrics(cdp, 1280, 720, dpr);
+  await waitForStableCanvas(cdp, 1280, 720, undefined, 6_000, `${mode} desktop-input geometry`);
+  await evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    audit.clear();
+    audit.resetView();
+    audit.setRadius(0);
+    audit.setMaterial(164);
+    return true;
+  })()`);
+  await sleep(100);
+  const initial = await metrics(cdp);
+  assertGeometry(initial, `${mode} desktop-input initial`);
+  assertContained(initial, `${mode} desktop-input initial`);
+
+  const landmarks = [{ x: 17, y: 21 }, { x: 306, y: 192 }, { x: 594, y: 361 }];
+  for (const landmark of landmarks) {
+    const point = worldClient(initial.canvas, { x: landmark.x + 0.5, y: landmark.y + 0.5 });
+    await mouseClick(cdp, point.x, point.y, 'left');
+  }
+  await sleep(100);
+  const landmarkResult = await evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    return {
+      cells: ${JSON.stringify(landmarks)}.map(({ x, y }) => audit.cell(x, y)),
+      occupied: audit.occupiedCells(),
+    };
+  })()`);
+  assert(landmarkResult.cells.every((cell) => cell === 164)
+    && landmarkResult.occupied === landmarks.length,
+  `${mode}: desktop radius-zero landmarks missed (${JSON.stringify(landmarkResult)})`);
+  const landmarkFootprints = await capturePaintedFootprints(
+    cdp, landmarks, `${mode} focused desktop landmarks`, 1.5, 1.2,
+  );
+
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.clear(); true');
+  const drag = { y: 88, start: 96, end: 120 };
+  const dragStart = worldClient(initial.canvas, { x: drag.start + 0.5, y: drag.y + 0.5 });
+  const dragEnd = worldClient(initial.canvas, { x: drag.end + 0.5, y: drag.y + 0.5 });
+  await cdp.send('Input.dispatchMouseEvent', {
+    type: 'mousePressed', x: dragStart.x, y: dragStart.y,
+    button: 'left', buttons: 1, clickCount: 1,
+  });
+  await cdp.send('Input.dispatchMouseEvent', {
+    type: 'mouseMoved', x: dragEnd.x, y: dragEnd.y, button: 'left', buttons: 1,
+  });
+  await cdp.send('Input.dispatchMouseEvent', {
+    type: 'mouseReleased', x: dragEnd.x, y: dragEnd.y,
+    button: 'left', buttons: 0, clickCount: 1,
+  });
+  await sleep(100);
+  const dragResult = await evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    const cells = [];
+    for (let x = ${drag.start}; x <= ${drag.end}; x++) cells.push(audit.cell(x, ${drag.y}));
+    return { cells, occupied: audit.occupiedCells() };
+  })()`);
+  const dragCells = drag.end - drag.start + 1;
+  assert(dragResult.cells.every((cell) => cell === 164) && dragResult.occupied === dragCells,
+    `${mode}: focused desktop left drag was discontinuous (${JSON.stringify(dragResult)})`);
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.clear(); true');
+
+  const wheelGeometry = await metrics(cdp);
+  const rawWheelAnchor = worldClient(wheelGeometry.canvas, { x: 431.25, y: 117.75 });
+  const wheelAnchor = { x: Math.round(rawWheelAnchor.x), y: Math.round(rawWheelAnchor.y) };
+  const wheelBefore = await screenWorld(cdp, wheelAnchor);
+  await cdp.send('Input.dispatchMouseEvent', {
+    type: 'mouseWheel', x: wheelAnchor.x, y: wheelAnchor.y,
+    deltaX: 0, deltaY: -120, modifiers: 0,
+  });
+  await sleep(100);
+  const wheelAfter = await screenWorld(cdp, wheelAnchor);
+  const beforePan = await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.viewState()');
+  const wheelAnchorError = Math.hypot(
+    wheelAfter.x - wheelBefore.x, wheelAfter.y - wheelBefore.y,
+  );
+  assert(beforePan.zoom > 1.2 && wheelAnchorError < 0.2,
+    `${mode}: focused desktop wheel anchor failed (${wheelAnchorError.toFixed(4)} cells)`);
+
+  await cdp.send('Input.dispatchMouseEvent', {
+    type: 'mousePressed', x: wheelAnchor.x, y: wheelAnchor.y,
+    button: 'middle', buttons: 4, clickCount: 1,
+  });
+  await cdp.send('Input.dispatchMouseEvent', {
+    type: 'mouseMoved', x: wheelAnchor.x + 42, y: wheelAnchor.y + 27,
+    button: 'middle', buttons: 4,
+  });
+  await cdp.send('Input.dispatchMouseEvent', {
+    type: 'mouseReleased', x: wheelAnchor.x + 42, y: wheelAnchor.y + 27,
+    button: 'middle', buttons: 0, clickCount: 1,
+  });
+  await sleep(100);
+  const afterPan = await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.viewState()');
+  assert(Math.abs(afterPan.panX - beforePan.panX - 42) < 0.12
+    && Math.abs(afterPan.panY - beforePan.panY - 27) < 0.12,
+  `${mode}: focused desktop middle pan mismatch (${JSON.stringify({ beforePan, afterPan })})`);
+
+  const transformedGeometry = await metrics(cdp);
+  const transformedCell = { x: 431, y: 118 };
+  const transformedClient = worldClient(
+    transformedGeometry.canvas,
+    { x: transformedCell.x + 0.5, y: transformedCell.y + 0.5 },
+  );
+  const transformedBlank = await cdp.send('Page.captureScreenshot', {
+    format: 'png', fromSurface: true,
+  });
+  await sleep(80);
+  const transformedBlankReference = await cdp.send('Page.captureScreenshot', {
+    format: 'png', fromSurface: true,
+  });
+  await mouseClick(cdp, transformedClient.x, transformedClient.y, 'left');
+  await sleep(100);
+  const transformedResult = await evaluate(cdp, `({
+    cell: window.__ANIFOR_INPUT_AUDIT__.cell(${transformedCell.x}, ${transformedCell.y}),
+    occupied: window.__ANIFOR_INPUT_AUDIT__.occupiedCells(),
+  })`);
+  assert(transformedResult.cell === 164 && transformedResult.occupied === 1,
+    `${mode}: focused transformed paint missed (${JSON.stringify(transformedResult)})`);
+  const transformedFootprint = (await capturePaintedFootprints(
+    cdp, [transformedCell], `${mode} focused post-wheel/post-pan`, 1.5, 0.8, {
+      baselineBase64: transformedBlank.data,
+      baselineReferenceBase64: transformedBlankReference.data,
+      captureCanvasRect: transformedGeometry.canvas,
+    },
+  ))[0];
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.clear(); true');
+
+  const resizeAnchor = { x: wheelAnchor.x + 42, y: wheelAnchor.y + 27 };
+  const resizeAnchorBefore = await screenWorld(cdp, resizeAnchor);
+  const resizeStartView = afterPan;
+  await setDesktopMetrics(cdp, 880, 600, dpr);
+  const compactGeometry = await waitForStableZoomedCamera(
+    cdp, 880, 600, transformedGeometry, resizeStartView.zoom,
+    6_000, `${mode} focused zoomed compact`,
+  );
+  await setDesktopMetrics(cdp, 1280, 720, dpr);
+  const returnedGeometry = await waitForStableZoomedCamera(
+    cdp, 1280, 720, compactGeometry, resizeStartView.zoom,
+    6_000, `${mode} focused zoomed return`,
+  );
+  const returnedView = await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.viewState()');
+  const relativeAnchor = {
+    x: (resizeAnchor.x - transformedGeometry.viewport.left) / transformedGeometry.viewport.width,
+    y: (resizeAnchor.y - transformedGeometry.viewport.top) / transformedGeometry.viewport.height,
+  };
+  const returnedAnchor = {
+    x: returnedGeometry.viewport.left + relativeAnchor.x * returnedGeometry.viewport.width,
+    y: returnedGeometry.viewport.top + relativeAnchor.y * returnedGeometry.viewport.height,
+  };
+  const resizeAnchorAfter = await screenWorld(cdp, returnedAnchor);
+  const resizeAnchorError = Math.hypot(
+    resizeAnchorAfter.x - resizeAnchorBefore.x,
+    resizeAnchorAfter.y - resizeAnchorBefore.y,
+  );
+  assertResizeAdjustedViewState(
+    resizeStartView, transformedGeometry.canvas,
+    returnedView, returnedGeometry.canvas,
+    `${mode} focused breakpoint camera preservation`,
+  );
+  assert(resizeAnchorError < 0.2,
+    `${mode}: focused breakpoint anchor drifted ${resizeAnchorError.toFixed(4)} cells`);
+
+  const liveScaleTransition = await auditLiveScaleTransition(
+    cdp, mode, dpr, returnedGeometry, returnedView,
+  );
+  await setDesktopMetrics(cdp, 1280, 720, dpr);
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.resetView(); true');
+  const resetGeometry = await waitForStableCanvas(
+    cdp, 1280, 720, undefined, 6_000, `${mode} focused reset geometry`,
+  );
+  const shortDesktop = await auditShortDesktop(cdp, mode, dpr, resetGeometry);
+
+  return {
+    backing: `${initial.backing.width}x${initial.backing.height}`,
+    landmarkCells: landmarks.length,
+    landmarkFootprints,
+    continuousDragCells: dragCells,
+    wheelAnchorErrorCells: round(wheelAnchorError, 5),
+    middlePanDelta: {
+      x: round(afterPan.panX - beforePan.panX, 3),
+      y: round(afterPan.panY - beforePan.panY, 3),
+    },
+    transformedCell: `${transformedCell.x},${transformedCell.y}`,
+    transformedFootprint,
+    breakpointResizeAnchorErrorCells: round(resizeAnchorError, 5),
+    liveScaleTransition,
+    shortDesktop,
+  };
 }
 
 async function auditMaterialAtlas(cdp, mode, dpr, screenshot) {
@@ -3006,6 +3233,19 @@ async function auditRenderScaleEight(cdp, dpr) {
     cdp, 'renderScale=8 repeated flat gas-volume framebuffer', 450,
   );
   await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setGasVolumeChroma(true); true');
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setEmissionVolumeChroma(false); true');
+  const flatEmissionVolumeCapture = await captureSettledPage(
+    cdp, 'renderScale=8 flat emission-volume framebuffer', 450,
+  );
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setEmissionVolumeChroma(true); true');
+  const chromaticEmissionVolumeCapture = await captureSettledPage(
+    cdp, 'renderScale=8 chromatic emission-volume framebuffer', 450,
+  );
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setEmissionVolumeChroma(false); true');
+  const repeatedFlatEmissionVolumeCapture = await captureSettledPage(
+    cdp, 'renderScale=8 repeated flat emission-volume framebuffer', 450,
+  );
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setEmissionVolumeChroma(true); true');
   await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setLiquidVolumeChroma(false); true');
   const flatLiquidVolumeCapture = await captureSettledPage(
     cdp, 'renderScale=8 flat liquid-volume framebuffer', 450,
@@ -3045,14 +3285,26 @@ async function auditRenderScaleEight(cdp, dpr) {
     )).capture.data;
   }
   const grainAnchor = worldClient(geometry.canvas, { x: 190.5, y: 176.5 });
+  // CDP dispatches mouse input at device-pixel coordinates even when the
+  // protocol receives fractional CSS values. Measure the exact coordinate it
+  // dispatches so audit quantization is not mistaken for camera-anchor drift.
+  const grainWheelAnchor = { x: Math.round(grainAnchor.x), y: Math.round(grainAnchor.y) };
+  const grainAnchorBefore = await screenWorld(cdp, grainWheelAnchor);
   for (let step = 0; step < 4; step++) await cdp.send('Input.dispatchMouseEvent', {
-    type: 'mouseWheel', x: grainAnchor.x, y: grainAnchor.y,
+    type: 'mouseWheel', x: grainWheelAnchor.x, y: grainWheelAnchor.y,
     deltaX: 0, deltaY: -240, modifiers: 0,
   });
   const grainView = await waitFor(() => evaluate(cdp, `(() => {
     const view = window.__ANIFOR_INPUT_AUDIT__.viewState();
     return view.zoom >= 4.9 ? view : false;
   })()`), 5_000, 'renderScale=8 high-zoom grain view');
+  const grainAnchorAfter = await screenWorld(cdp, grainWheelAnchor);
+  const grainAnchorError = Math.hypot(
+    grainAnchorAfter.x - grainAnchorBefore.x,
+    grainAnchorAfter.y - grainAnchorBefore.y,
+  );
+  assert(grainAnchorError < 0.2,
+    `renderScale=8 wheel anchor drifted ${grainAnchorError.toFixed(4)} cells`);
   const zoomedGrainCapture = await captureSettledPage(
     cdp, 'renderScale=8 high-zoom grain framebuffer', 450,
   );
@@ -3185,6 +3437,18 @@ async function auditRenderScaleEight(cdp, dpr) {
     && gasVolumeChroma.metalGasChromaControl8x.rgbPeak <= 1
     && gasVolumeChromaSamples.every((sample) => sample.repeatRgbPeak <= 1),
   `renderScale=8 gas chroma changed a control or was nondeterministic (${JSON.stringify(gasVolumeChromaSamples)})`);
+  const emissionVolumeChromaSamples = await sampleBackdropRefractionRegions(cdp, {
+    straight: flatEmissionVolumeCapture.capture.data,
+    refracted: chromaticEmissionVolumeCapture.capture.data,
+    repeatedStraight: repeatedFlatEmissionVolumeCapture.capture.data,
+  }, [
+    { name: 'energyAuraChroma8x', x: 485.5, y: 329.5, radiusX: 97.5, radiusY: 10.5 },
+  ], geometry.canvas);
+  const emissionVolumeChroma = emissionVolumeChromaSamples[0];
+  assert(emissionVolumeChroma.rgbRms >= 0.04
+    && emissionVolumeChroma.rgbPeak <= 24
+    && emissionVolumeChroma.repeatRgbPeak <= 1,
+  `renderScale=8 Energy aura lost bounded deterministic volume depth (${JSON.stringify(emissionVolumeChroma)})`);
   const liquidVolumeChromaSamples = await sampleBackdropRefractionRegions(cdp, {
     straight: flatLiquidVolumeCapture.capture.data,
     refracted: chromaticLiquidVolumeCapture.capture.data,
@@ -3231,10 +3495,12 @@ async function auditRenderScaleEight(cdp, dpr) {
     squareGrain,
     zoomedSquareGrain,
     gasVolumeChromaSamples,
+    emissionVolumeChromaSamples,
     liquidVolumeChromaSamples,
     zoomedInput: {
       cell: `${zoomedInputTarget.x},${zoomedInputTarget.y}`,
       footprint: zoomedInputFootprint,
+      wheelAnchorError: round(grainAnchorError, 4),
     },
     materialAtlasStress,
     contextLossRecovery,
@@ -5495,6 +5761,16 @@ function assertPairedVisualRelief(results) {
   const energyReliefRatio = canvasEnergyRelief.rgbRms / Math.max(0.25, webglEnergyRelief.rgbRms);
   assert(energyReliefRatio >= 0.4 && energyReliefRatio <= 2.5,
     `Canvas/WebGL dense-energy relief diverged (${canvasEnergyRelief.rgbRms}/${webglEnergyRelief.rgbRms})`);
+  const canvasEmissionVolume = canvas.emissionVolumeChromaSamples.find(
+    (sample) => sample.name === 'energyRow',
+  );
+  const webglEmissionVolume = webgl.emissionVolumeChromaSamples.find(
+    (sample) => sample.name === 'energyRow',
+  );
+  assert(canvasEmissionVolume && webglEmissionVolume, 'paired emission-volume sample missing');
+  const emissionVolumeRatio = canvasEmissionVolume.rgbRms / Math.max(0.25, webglEmissionVolume.rgbRms);
+  assert(emissionVolumeRatio >= 0.4 && emissionVolumeRatio <= 2.5,
+    `Canvas/WebGL emission-volume response diverged (${canvasEmissionVolume.rgbRms}/${webglEmissionVolume.rgbRms})`);
   const solidHueOrder = {
     metal: [2, 1, 0],
     plant: [1, 0, 2],
