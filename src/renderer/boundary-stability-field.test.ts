@@ -90,6 +90,24 @@ describe('boundary stability field', () => {
     expect(target[1 * WIDTH + 1]).toBe(0);
   });
 
+  it('preserves same-owner liquid depth and clears a changed liquid owner', () => {
+    const materials = new Uint8Array([
+      0, 0, 0,
+      0, 4, 0,
+      0, 0, 0,
+    ]);
+    const previous = previousField(materials);
+    const target = new Uint8Array(materials.length);
+    const center = 1 * WIDTH + 1;
+    target[center] = 84;
+    updateBoundaryStabilityRect(target, previous, materials, undefined, styles(), WIDTH, FULL_RECT);
+    expect(target[center]).toBe(84);
+
+    previous[center] = 0;
+    updateBoundaryStabilityRect(target, previous, materials, undefined, styles(), WIDTH, FULL_RECT);
+    expect(target[center]).toBe(0);
+  });
+
   it('invalidates only cells whose presentation stability changes', () => {
     const materials = new Uint8Array([
       0, 1, 0,

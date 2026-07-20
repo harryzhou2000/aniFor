@@ -27,6 +27,32 @@ describe('liquid density field', () => {
     expect(field.allocatedByteLength).toBeLessThan(4 * 1024 * 1024);
   });
 
+  it('stores bounded species-safe depth below an exposed liquid surface', () => {
+    const { field, materials } = fixture(5, 50);
+    for (let y = 1; y < 28; y++) materials[y * 5 + 2] = Material.Water;
+    materials[12 * 5 + 2] = Material.Oil;
+    for (let y = 0; y < 50; y++) materials[y * 5 + 3] = Material.Water;
+    for (let y = 1; y < 18; y++) materials[y * 5 + 1] = Material.Water;
+    materials[11 * 5 + 1] = Material.Wall;
+    field.update(materials);
+    const opticalDepth = new Uint8Array(materials.length);
+    opticalDepth[0] = 173;
+    field.writeVerticalOpticalDepth(materials, opticalDepth);
+
+    expect(opticalDepth[0]).toBe(173);
+    expect(opticalDepth[1 * 5 + 2]).toBe(0);
+    expect(opticalDepth[2 * 5 + 2]).toBe(6);
+    expect(opticalDepth[11 * 5 + 2]).toBe(60);
+    expect(opticalDepth[12 * 5 + 2]).toBe(0);
+    expect(opticalDepth[13 * 5 + 2]).toBe(0);
+    expect(opticalDepth[27 * 5 + 2]).toBe(84);
+    expect(opticalDepth[10 * 5 + 1]).toBe(54);
+    expect(opticalDepth[11 * 5 + 1]).toBe(0);
+    expect(opticalDepth[12 * 5 + 1]).toBe(0);
+    expect(opticalDepth[43 * 5 + 3]).toBe(255);
+    expect(opticalDepth[49 * 5 + 3]).toBe(255);
+  });
+
   it('keeps a dense core and a tight one-cell edge', () => {
     const { field, materials } = fixture();
     materials[4 * 9 + 4] = Material.Water;

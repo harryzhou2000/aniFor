@@ -27,12 +27,17 @@ const VOLUME_CHROMA_PARAMETER_COUNT = 6;
 const VOLUME_CHROMA_PARAMETERS = new Float32Array(
   RENDER_OPTICS_CLASS_COUNT * VOLUME_CHROMA_PARAMETER_COUNT,
 );
+const COLUMN_DEPTH_ABSORPTION = new Float32Array(RENDER_OPTICS_CLASS_COUNT).fill(0.06);
 for (let optics = 0; optics < RENDER_OPTICS_CLASS_COUNT; optics++) {
   setVolumeChromaParameters(optics, 0.72, 0.84, 1.00, 0.72, 0.68, 0.58);
 }
 setVolumeChromaParameters(RenderOptics.Aqueous, 0.52, 0.88, 1.00, 1.00, 0.62, 0.36);
 setVolumeChromaParameters(RenderOptics.Oily, 1.00, 0.72, 0.28, 0.40, 0.68, 1.00);
 setVolumeChromaParameters(RenderOptics.Corrosive, 0.44, 1.00, 0.68, 0.72, 0.38, 0.62);
+COLUMN_DEPTH_ABSORPTION[RenderOptics.Aqueous] = 0.14;
+COLUMN_DEPTH_ABSORPTION[RenderOptics.Oily] = 0.18;
+COLUMN_DEPTH_ABSORPTION[RenderOptics.Corrosive] = 0.09;
+COLUMN_DEPTH_ABSORPTION[RenderOptics.Molten] = 0;
 const BODY_PARAMETER_COUNT = 5;
 const BODY_PARAMETERS = new Float32Array(RENDER_OPTICS_CLASS_COUNT * BODY_PARAMETER_COUNT);
 for (let optics = 0; optics < RENDER_OPTICS_CLASS_COUNT; optics++) {
@@ -105,8 +110,9 @@ export function applyCanvasLiquidVolumeChroma(
   color: Float32Array,
   optics: RenderOptics,
   response: number,
+  opticalDepthByte = 0,
 ): void {
-  if (response === 0 || optics === RenderOptics.Molten) return;
+  if ((response === 0 && opticalDepthByte === 0) || optics === RenderOptics.Molten) return;
   const preserveLuminance = optics === RenderOptics.Corrosive;
   const luminance = preserveLuminance
     ? color[0] * 0.2126 + color[1] * 0.7152 + color[2] * 0.0722 : 0;
@@ -130,6 +136,15 @@ export function applyCanvasLiquidVolumeChroma(
     color[0] += correction;
     color[1] += correction;
     color[2] += correction;
+  }
+  // The existing liquid refresh supplies species-safe vertical depth. Reuse
+  // the family shadow tint so deep pools absorb light while their exposed top
+  // remains clear; this changes RGB only and adds no per-cell sampling.
+  const columnAbsorption = opticalDepthByte / 255 * COLUMN_DEPTH_ABSORPTION[optics];
+  if (columnAbsorption > 0) {
+    color[0] *= 1 - VOLUME_CHROMA_PARAMETERS[parameter + 3] * columnAbsorption;
+    color[1] *= 1 - VOLUME_CHROMA_PARAMETERS[parameter + 4] * columnAbsorption;
+    color[2] *= 1 - VOLUME_CHROMA_PARAMETERS[parameter + 5] * columnAbsorption;
   }
   compressPeak(color);
 }

@@ -95,6 +95,7 @@ uniform float uGasVolumeChroma;
 uniform float uEmissionVolumeChroma;
 uniform float uLiquidFieldLighting;
 uniform float uLiquidVolumeChroma;
+uniform float uLiquidOpticalDepth;
 uniform float uTranslucentFieldTransmission;
 uniform float uTranslucentBackdropRefraction;
 uniform float uSolidContactDepth;
@@ -189,7 +190,9 @@ float liquidVolumeChromaResponse(
   );
   return clamp(geometric * 0.28 * depth + macroRelief * 0.55, -0.055, 0.065);
 }
-vec3 applyLiquidVolumeChroma(vec3 color, float response, float optics) {
+vec3 applyLiquidVolumeChroma(
+  vec3 color, float response, float optics, float columnDepth
+) {
   vec3 key = vec3(0.72, 0.84, 1.00);
   vec3 shadow = vec3(0.72, 0.68, 0.58);
   if (optics == 1.0) {
@@ -203,9 +206,17 @@ vec3 applyLiquidVolumeChroma(vec3 color, float response, float optics) {
     shadow = vec3(0.72, 0.38, 0.62);
   }
   if (response > 0.0) {
-    return color + (vec3(1.0) - color) * key * response * 0.90;
+    color += (vec3(1.0) - color) * key * response * 0.90;
+  } else {
+    color *= vec3(1.0) - shadow * (-response) * 0.85;
   }
-  return color * (vec3(1.0) - shadow * (-response) * 0.85);
+  // WebGL's existing macro chroma is stronger than Canvas at some broad
+  // shoulders, so Water/Oil need calibrated column absorption for composed
+  // surface-to-core parity rather than numeric helper parity.
+  float columnGain = optics == 1.0 ? 0.14
+    : (optics == 2.0 ? 0.18 : (optics == 3.0 ? 0.09 : 0.06));
+  if (optics == 4.0) columnGain = 0.0;
+  return color * (vec3(1.0) - shadow * columnDepth * columnGain * uLiquidOpticalDepth);
 }
 vec3 vividColor(vec3 color, float saturation) {
   float luminance = dot(color, vec3(0.2126, 0.7152, 0.0722));
@@ -798,6 +809,7 @@ void main() {
         contourCurvature, phaseContactLight, foreignMatterContact, unlikeMaterialContact
       )))));
   float boundaryStability = 0.0;
+  float liquidOpticalDepth = 0.0;
   float powderSurfaceBlend = 0.0;
   float powderBulkDepth = 0.0;
   vec4 localPowderShape = shape;
@@ -806,6 +818,10 @@ void main() {
     boundaryStability = surfaceOnly > 0.5
       ? nearbyPowderStability(fieldUv, material)
       : (halo < 0.5 ? boundaryStabilityAt(fieldUv) : 0.0);
+  } else if (family == 2.0 && liquidOnly < 0.5 && halo < 0.5) {
+    // Powder stability and liquid column depth are phase-exclusive occupants
+    // of the same already allocated r8 auxiliary texture.
+    liquidOpticalDepth = boundaryStabilityAt(fieldUv);
   }
   if (family == 4.0 && boundaryStability > 0.001 && uPowderStyle > 1.5) {
     widePowderShape = powderSurfaceShape(fieldUv);
@@ -1243,7 +1259,9 @@ void main() {
         float liquidVolumeChroma = liquidVolumeChromaResponse(
           liquidDepth, volumeSlope, liquidDensity, liquidNeighbourMean, liquidMacroRelief
         );
-        color = applyLiquidVolumeChroma(color, liquidVolumeChroma, optics);
+        color = applyLiquidVolumeChroma(
+          color, liquidVolumeChroma, optics, liquidOpticalDepth
+        );
       }
     }
   } else {
@@ -1713,6 +1731,7 @@ export class PixiFieldPresenter {
   private webGLTimingDiscarded = 0;
   private webGLTimingSequence = 0;
   private powderSurfaceDirty = true;
+  private liquidOpticalDepthHydrated = false;
   private lastPowderSurfaceRefresh = -Infinity;
   private contextLost = false;
   private destroyed = false;
@@ -1840,6 +1859,7 @@ export class PixiFieldPresenter {
       uEmissionVolumeChroma: { value: 1, type: 'f32' },
       uLiquidFieldLighting: { value: 1, type: 'f32' },
       uLiquidVolumeChroma: { value: 1, type: 'f32' },
+      uLiquidOpticalDepth: { value: 1, type: 'f32' },
       uTranslucentFieldTransmission: { value: 1, type: 'f32' },
       uTranslucentBackdropRefraction: { value: 1, type: 'f32' },
       uSolidContactDepth: { value: 1, type: 'f32' },
@@ -2086,6 +2106,7 @@ export class PixiFieldPresenter {
     liquidVolumeChromaEnabled = true,
     powderBodyDepthEnabled = true,
     emissionVolumeChromaEnabled = true,
+    liquidOpticalDepthEnabled = true,
   ): void {
     const uniforms = this.uniforms.uniforms;
     uniforms.uGasFieldLighting = gasFieldLightingEnabled ? 1 : 0;
@@ -2102,6 +2123,7 @@ export class PixiFieldPresenter {
     uniforms.uGasVolumeChroma = gasVolumeChromaEnabled ? 1 : 0;
     uniforms.uEmissionVolumeChroma = emissionVolumeChromaEnabled ? 1 : 0;
     uniforms.uLiquidVolumeChroma = liquidVolumeChromaEnabled ? 1 : 0;
+    uniforms.uLiquidOpticalDepth = liquidOpticalDepthEnabled ? 1 : 0;
     uniforms.uPowderBodyDepth = powderBodyDepthEnabled ? 1 : 0;
     uniforms.uThermalMaterialStyling = thermalMaterialStylingEnabled ? 1 : 0;
     uniforms.uEnergyCoreRelief = energyCoreReliefEnabled ? 1 : 0;
@@ -2130,6 +2152,11 @@ export class PixiFieldPresenter {
 
   setLiquidVolumeChromaEnabled(enabled: boolean): void {
     this.uniforms.uniforms.uLiquidVolumeChroma = enabled ? 1 : 0;
+    this.renderApplication();
+  }
+
+  setLiquidOpticalDepthEnabled(enabled: boolean): void {
+    this.uniforms.uniforms.uLiquidOpticalDepth = enabled ? 1 : 0;
     this.renderApplication();
   }
 
@@ -2264,6 +2291,7 @@ export class PixiFieldPresenter {
   ): void {
     if (refreshDynamicFields) this.chunks.markAll();
     const rectangles = this.chunks.consume();
+    let boundaryTextureDirty = false;
     for (const rect of rectangles) {
       updateBoundaryStabilityRect(
         this.boundaryStabilityBytes, this.boundaryStabilityOwners, materials, velocities,
@@ -2273,7 +2301,7 @@ export class PixiFieldPresenter {
     }
     if (rectangles.length) {
       this.fieldSource.update();
-      this.boundaryStabilitySource.update();
+      boundaryTextureDirty = true;
     }
     const wallRectangles = this.wallChunks.consume();
     if (walls) for (const rect of wallRectangles) packWallRect(this.wallBytes, this.wallSource.width, walls, rect);
@@ -2288,6 +2316,11 @@ export class PixiFieldPresenter {
       if (changed) this.powderSurfaceSource.update();
     }
     const volumeField = this.fieldSet.updateNext(materials, scheduleTime);
+    if (volumeField === 'liquid' || !this.liquidOpticalDepthHydrated) {
+      this.fieldSet.liquid.writeVerticalOpticalDepth(materials, this.boundaryStabilityBytes);
+      this.liquidOpticalDepthHydrated = true;
+      boundaryTextureDirty = true;
+    }
     {
       const suspensionChanged = this.fieldSet.refreshSuspension(materials, scheduleTime, walls);
       if (suspensionChanged) this.suspensionSource.update();
@@ -2303,6 +2336,7 @@ export class PixiFieldPresenter {
     } else if (volumeField === 'emission') {
       this.emissionSource.update();
     }
+    if (boundaryTextureDirty) this.boundaryStabilitySource.update();
     this.uniforms.uniforms.uTime = visualTime * 0.001;
     this.renderApplication();
   }

@@ -153,12 +153,14 @@ export class MaterialRenderer {
   private lastPowderSurfaceRefresh = -Infinity;
   private changed = true;
   private powderSurfaceDirty = true;
+  private canvasLiquidOpticalDepthHydrated = false;
   private gasFieldLightingEnabled = true;
   private gasVolumeChromaEnabled = true;
   private emissionVolumeChromaEnabled = true;
   private liquidFieldLightingEnabled = true;
   private liquidSilhouetteCohesionEnabled = true;
   private liquidVolumeChromaEnabled = true;
+  private liquidOpticalDepthEnabled = true;
   private translucentFieldTransmissionEnabled = true;
   private translucentBackdropRefractionEnabled = true;
   private solidContactDepthEnabled = true;
@@ -346,6 +348,13 @@ export class MaterialRenderer {
     this.liquidVolumeChromaEnabled = enabled;
     this.presenter?.setLiquidVolumeChromaEnabled(enabled);
     this.contourChunks.markAll();
+    this.changed = true;
+  }
+
+  setLiquidOpticalDepthEnabled(enabled: boolean): void {
+    if (enabled === this.liquidOpticalDepthEnabled) return;
+    this.liquidOpticalDepthEnabled = enabled;
+    this.presenter?.setLiquidOpticalDepthEnabled(enabled);
     this.changed = true;
   }
 
@@ -593,6 +602,7 @@ export class MaterialRenderer {
       this.liquidVolumeChromaEnabled,
       this.powderBodyDepthEnabled,
       this.emissionVolumeChromaEnabled,
+      this.liquidOpticalDepthEnabled,
     );
     // Route subsequent dirty cells to the candidate while its first expensive
     // frame is in flight. The known-good Canvas remains mounted underneath;
@@ -739,8 +749,10 @@ export class MaterialRenderer {
     const timingStart = this.canvasPresentationTimingEnabled ? performance.now() : undefined;
     const rebuiltField = fields.updateNext(this.rendered, scheduleTime);
     fields.refreshSuspension(this.rendered, scheduleTime, this.renderedWalls);
-    if (rebuiltField === 'liquid' && this.liquidSilhouetteCohesionEnabled) {
-      this.contourChunks.markAll();
+    if (rebuiltField === 'liquid' || !this.canvasLiquidOpticalDepthHydrated) {
+      fields.liquid.writeVerticalOpticalDepth(this.rendered, this.boundaryStability);
+      this.canvasLiquidOpticalDepthHydrated = true;
+      if (this.liquidSilhouetteCohesionEnabled) this.contourChunks.markAll();
     }
     if (rebuiltField === 'emission') {
       this.contourChunks.markAll();
@@ -1016,6 +1028,7 @@ export class MaterialRenderer {
               optics, fields.liquid.bytes[pixel + 3], density,
               liquidFieldRelief, (sheen - contour) / 5,
             ),
+            this.liquidOpticalDepthEnabled ? this.boundaryStability[index] : 0,
           );
         }
         compositePixel(
@@ -1124,6 +1137,7 @@ export class MaterialRenderer {
               optics, fields.liquid.bytes[pixel + 3], density,
               liquidFieldRelief, (shimmer - contour) / 6,
             ),
+            this.liquidOpticalDepthEnabled ? this.boundaryStability[index] : 0,
           );
         }
         compositePixel(
@@ -1180,6 +1194,7 @@ export class MaterialRenderer {
               optics, fields.liquid.bytes[pixel + 3], density,
               liquidFieldRelief, shimmer / 4,
             ),
+            this.liquidOpticalDepthEnabled ? this.boundaryStability[index] : 0,
           );
         }
         compositePixel(
@@ -1247,6 +1262,7 @@ export class MaterialRenderer {
                 optics, fields.liquid.bytes[pixel + 3], density,
                 liquidFieldRelief, (shimmer - contour) / 4,
               ),
+              this.liquidOpticalDepthEnabled ? this.boundaryStability[index] : 0,
             );
           }
           if (applicableTraits === 0 && !info.emissive) {
@@ -1446,6 +1462,7 @@ export class MaterialRenderer {
     const width = this.simulation.width;
     const height = this.simulation.height;
     this.fallbackFields = new RenderFieldSet(width, height, ALL_MATERIALS);
+    this.canvasLiquidOpticalDepthHydrated = false;
     for (const canvas of [this.surface, this.liquidSurface, this.smokeSurface, this.fireSurface]) {
       canvas.width = width;
       canvas.height = height;

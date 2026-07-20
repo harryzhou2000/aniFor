@@ -36,7 +36,16 @@ export function updateBoundaryStabilityRect(
   for (let y = top; y < bottom; y++) for (let x = left; x < right; x++) {
     const index = y * fieldWidth + x;
     const material = materials[index];
-    if (!material || styleBytes[material * 4] !== RenderPhase.Powder) {
+    const phase = material ? styleBytes[material * 4] : -1;
+    if (phase === RenderPhase.Liquid) {
+      if (previousMaterials[index] !== material) {
+        if (target[index] !== 0) dirty?.markCell(index);
+        target[index] = 0;
+      }
+      previousMaterials[index] = material;
+      continue;
+    }
+    if (phase !== RenderPhase.Powder) {
       if (target[index] !== 0) dirty?.markCell(index);
       target[index] = 0;
       previousMaterials[index] = material;

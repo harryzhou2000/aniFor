@@ -20,6 +20,7 @@ export interface BrowserInputAuditApi {
   setLiquidFieldLighting(enabled: boolean): void;
   setLiquidSilhouetteCohesion(enabled: boolean): void;
   setLiquidVolumeChroma(enabled: boolean): void;
+  setLiquidOpticalDepth(enabled: boolean): void;
   setTranslucentFieldTransmission(enabled: boolean): void;
   setTranslucentBackdropRefraction(enabled: boolean): void;
   setSolidContactDepth(enabled: boolean): void;

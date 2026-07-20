@@ -16,6 +16,7 @@ interface PresenterHarness {
   setGasVolumeChromaEnabled: PixiFieldPresenter['setGasVolumeChromaEnabled'];
   setEmissionVolumeChromaEnabled: PixiFieldPresenter['setEmissionVolumeChromaEnabled'];
   setLiquidVolumeChromaEnabled: PixiFieldPresenter['setLiquidVolumeChromaEnabled'];
+  setLiquidOpticalDepthEnabled: PixiFieldPresenter['setLiquidOpticalDepthEnabled'];
   setPowderBodyDepthEnabled: PixiFieldPresenter['setPowderBodyDepthEnabled'];
   setSurfaceContourLightingEnabled: PixiFieldPresenter['setSurfaceContourLightingEnabled'];
   setPhaseContactLightingEnabled: PixiFieldPresenter['setPhaseContactLightingEnabled'];
@@ -78,6 +79,7 @@ describe('Pixi presenter startup configuration', () => {
       uEmissionVolumeChroma: 1,
       uLiquidFieldLighting: 1,
       uLiquidVolumeChroma: 1,
+      uLiquidOpticalDepth: 1,
       uTranslucentFieldTransmission: 0,
       uTranslucentBackdropRefraction: 1,
       uSolidContactDepth: 0,
@@ -247,7 +249,7 @@ describe('Pixi presenter startup configuration', () => {
     expect(presenter.app.render).toHaveBeenCalledOnce();
   });
 
-  it('keeps liquid volume chroma arithmetic-only, RGB-only, and resource-free', () => {
+  it('keeps liquid volume depth RGB-only and reuses the existing auxiliary resource', () => {
     const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
     const helperStart = source.indexOf('float liquidVolumeChromaResponse(');
     const helperEnd = source.indexOf('vec3 vividColor', helperStart);
@@ -266,11 +268,17 @@ describe('Pixi presenter startup configuration', () => {
     expect(block).toContain('liquidDepth > 0.38 && liquidNeighbourMean > 0.48');
     expect(block).toContain('dot(liquidSpeciesSlope, liquidSpeciesSlope) < 0.0025');
     expect(block).toContain('liquidDepth, volumeSlope, liquidDensity, liquidNeighbourMean');
+    expect(block).toContain('liquidOpticalDepth');
+    expect(source).toContain('liquidOpticalDepth = boundaryStabilityAt(fieldUv)');
+    expect(source).toContain('writeVerticalOpticalDepth(materials, this.boundaryStabilityBytes)');
+    expect(source).toContain('if (boundaryTextureDirty) this.boundaryStabilitySource.update()');
+    expect(source.match(/boundaryStabilitySource\.update\(\)/g)).toHaveLength(1);
     expect(`${helpers}${block}`).not.toContain('texture(');
     expect(`${helpers}${block}`).not.toMatch(/\balpha\s*[+*]?=/);
     expect(`${helpers}${block}`).not.toMatch(/\b(?:sin|pow|normalize|length)\s*\(/);
     expect(source.match(/texture\(uLiquidTexture/g)).toHaveLength(5);
     expect(source).not.toContain('sampler2D uLiquidVolumeChroma');
+    expect(source).not.toContain('sampler2D uLiquidOpticalDepth');
   });
 
   it('keeps true-8x analytic body lighting independent of expensive probes', () => {

@@ -64,6 +64,9 @@ for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) {
 
 const atmosphere = new AtmosphereField(width, height, gasByMaterial, colorByMaterial);
 const liquid = new LiquidDensityField(width, height, liquidByMaterial, colorByMaterial);
+// Models the already allocated phase-exclusive presenter byte, not a new
+// LiquidDensityField allocation.
+const liquidAuxiliary = new Uint8Array(width * height);
 const emission = new EmissionField(width, height, emissiveByMaterial, colorByMaterial);
 for (let iteration = 0; iteration < 4; iteration++) {
   atmosphere.update(materials);
@@ -439,6 +442,7 @@ console.log(JSON.stringify({
   liquid: {
     allocatedBytes: liquid.allocatedByteLength,
     update: sample(() => liquid.update(materials)),
+    opticalDepthScan: sample(() => liquid.writeVerticalOpticalDepth(materials, liquidAuxiliary)),
   },
   emission: {
     allocatedBytes: emission.allocatedByteLength,

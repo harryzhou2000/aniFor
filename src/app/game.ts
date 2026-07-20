@@ -230,6 +230,9 @@ export class Game {
       setLiquidVolumeChroma: (enabled) => {
         this.renderer.setLiquidVolumeChromaEnabled(enabled);
       },
+      setLiquidOpticalDepth: (enabled) => {
+        this.renderer.setLiquidOpticalDepthEnabled(enabled);
+      },
       setTranslucentFieldTransmission: (enabled) => {
         this.renderer.setTranslucentFieldTransmissionEnabled(enabled);
       },

@@ -1,6 +1,7 @@
 const KERNEL = [1, 2, 1] as const;
 const KERNEL_RADIUS = 1;
 const EDGE_GAIN = 1.4;
+const OPTICAL_DEPTH_STEP = 6;
 const NEIGHBOUR_X = new Int8Array([-1, 1, 0, 0, -1, 1, -1, 1]);
 const NEIGHBOUR_Y = new Int8Array([0, 0, -1, 1, -1, -1, 1, 1]);
 const NEIGHBOUR_WEIGHT = new Uint8Array([2, 2, 2, 2, 1, 1, 1, 1]);
@@ -63,6 +64,25 @@ export class LiquidDensityField {
   get allocatedByteLength(): number {
     return this.bytes.byteLength + this.seed.byteLength + this.horizontal.byteLength + this.blurred.byteLength
       + this.speciesSupport.byteLength + this.touchedSpecies.byteLength;
+  }
+
+  /**
+   * Writes vertical exact-species optical depth into a caller-owned auxiliary
+   * plane. Non-liquid bytes are preserved for phase-local uses such as powder
+   * stability, so this adds no persistent allocation.
+   */
+  writeVerticalOpticalDepth(materials: Uint8Array, target: Uint8Array): void {
+    if (materials.length !== this.seed.length || target.length !== materials.length) {
+      throw new Error('Liquid optical depth field size mismatch');
+    }
+    for (let y = 0; y < this.height; y++) for (let x = 0; x < this.width; x++) {
+      const index = y * this.width + x;
+      const material = materials[index];
+      if (!this.liquidByMaterial[material]) continue;
+      target[index] = y > 0 && materials[index - this.width] === material
+        ? Math.min(255, target[index - this.width] + OPTICAL_DEPTH_STEP)
+        : 0;
+    }
   }
 
   private supportedLiquid(materials: Uint8Array, x: number, y: number): number {

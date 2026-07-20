@@ -24,6 +24,7 @@ const quickScreenshot = process.argv.includes('--quick-screenshot');
 const layoutOnly = process.argv.includes('--layout-only');
 const visualScaleMatrixOnly = process.argv.includes('--visual-scale-matrix-only');
 const powderBodyOnly = process.argv.includes('--powder-body-only');
+const liquidDepthOnly = process.argv.includes('--liquid-depth-only');
 const screenshotRequest = process.argv.find((argument) => argument.startsWith('--screenshot='))?.slice('--screenshot='.length);
 
 async function main() {
@@ -43,8 +44,9 @@ async function main() {
     const results = [];
     for (const mode of modes) results.push(await auditMode(mode));
     const reducedAudit = quickScreenshot || layoutOnly || mobileOnly
-      || desktopInputOnly || visualScaleMatrixOnly || powderBodyOnly;
+      || desktopInputOnly || visualScaleMatrixOnly || powderBodyOnly || liquidDepthOnly;
     if (powderBodyOnly) assertPairedPowderBodyDepth(results);
+    if (liquidDepthOnly) assertPairedLiquidOpticalDepth(results);
     if (!scaleEightOnly && !materialAtlasOnly && !reducedAudit) assertPairedVisualRelief(results);
     if (!scaleEightOnly && !reducedAudit) assertPairedMaterialAtlas(results);
     compactMaterialAtlasResults(results);
@@ -141,6 +143,12 @@ async function auditMode(mode) {
       assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
       cdp.close();
       return { backend: mode, powderBodyDepth, browserErrors: errors.length };
+    }
+    if (liquidDepthOnly) {
+      const liquidOpticalDepth = await auditLiquidOpticalDepth(cdp, mode, dpr);
+      assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
+      cdp.close();
+      return { backend: mode, liquidOpticalDepth, browserErrors: errors.length };
     }
     if (mobileOnly) {
       const mobile = await auditMobile(
@@ -2947,6 +2955,97 @@ function assertPairedPowderBodyDepth(results) {
   }
 }
 
+async function auditLiquidOpticalDepth(cdp, mode, dpr) {
+  await setDesktopMetrics(cdp, 1280, 720, dpr);
+  const geometry = await waitForStableCanvas(
+    cdp, 1280, 720, undefined, 20_000, `${mode} liquid-depth geometry`,
+  );
+  await waitForStablePageCapture(cdp, `${mode} settled liquid-depth fixture`, 20_000);
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setLiquidOpticalDepth(false); true');
+  const flat = await waitForStablePageCapture(cdp, `${mode} focused flat liquid depth`, 20_000);
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setLiquidOpticalDepth(true); true');
+  const relieved = await waitForStablePageCapture(cdp, `${mode} focused optical liquid depth`, 20_000);
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setLiquidOpticalDepth(false); true');
+  const repeatedFlat = await waitForStablePageCapture(
+    cdp, `${mode} focused repeated flat liquid depth`, 20_000,
+  );
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setLiquidOpticalDepth(true); true');
+  const samples = await sampleBackdropRefractionRegions(cdp, {
+    straight: flat.capture.data,
+    refracted: relieved.capture.data,
+    repeatedStraight: repeatedFlat.capture.data,
+  }, [
+    { name: 'waterSurfaceDepth', x: 224, y: 202, radiusX: 5, radiusY: 4 },
+    { name: 'oilSurfaceDepth', x: 263, y: 202, radiusX: 5, radiusY: 4 },
+    { name: 'acidSurfaceDepth', x: 302, y: 202, radiusX: 5, radiusY: 4 },
+    { name: 'waterDeepDepth', x: 224, y: 315, radiusX: 6, radiusY: 10 },
+    { name: 'oilDeepDepth', x: 263, y: 315, radiusX: 6, radiusY: 10 },
+    { name: 'acidDeepDepth', x: 302, y: 315, radiusX: 6, radiusY: 10 },
+    { name: 'lavaDepthControl', x: 341, y: 315, radiusX: 6, radiusY: 10 },
+    { name: 'isolatedLiquidDepthControl', x: 190.5, y: 164.5, radius: 2 },
+    { name: 'unlikeLiquidDepthControl', x: 302.5, y: 172, radiusX: 0.45, radiusY: 6 },
+  ], geometry.canvas);
+  const byName = Object.fromEntries(samples.map((sample) => [sample.name, sample]));
+  for (const family of ['water', 'oil', 'acid']) {
+    const surface = byName[`${family}SurfaceDepth`];
+    const deep = byName[`${family}DeepDepth`];
+    const minimumRms = family === 'acid' ? 2.0 : (family === 'water' ? 1.5 : 1.2);
+    assert(deep.rgbRms >= minimumRms && deep.rgbPeak <= 24 && deep.signedMean <= -0.8,
+      `${mode}: ${family} lost bounded deep optical absorption (${JSON.stringify(samples)})`);
+    assert(deep.signedMean <= surface.signedMean - 0.30,
+      `${mode}: ${family} core no longer absorbs more than its surface (${JSON.stringify(samples)})`);
+  }
+  for (const name of ['lavaDepthControl', 'isolatedLiquidDepthControl']) {
+    assert(byName[name].rgbPeak <= 1,
+    `${mode}: liquid optical depth changed ${name} (${JSON.stringify(samples)})`);
+  }
+  assert(byName.unlikeLiquidDepthControl.rgbPeak <= 3,
+    `${mode}: liquid optical depth over-darkened an unlike seam (${JSON.stringify(samples)})`);
+  assert(samples.every((sample) => sample.repeatRgbPeak <= 1),
+    `${mode}: liquid optical-depth off-on-off sequence was not deterministic (${JSON.stringify(samples)})`);
+
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.clear(); true');
+  const blank = await waitForStablePageCapture(cdp, `${mode} focused blank liquid-depth fixture`, 20_000);
+  const supportRegions = [
+    { name: 'liquidDepthSupport', x: 282, y: 270, radiusX: 78, radiusY: 58, silhouette: true },
+  ];
+  const [flatSupport, relievedSupport] = await Promise.all([
+    samplePageRegions(
+      cdp, flat.capture.data, supportRegions,
+      blank.capture.data, blank.reference.data, geometry.canvas,
+    ),
+    samplePageRegions(
+      cdp, relieved.capture.data, supportRegions,
+      blank.capture.data, blank.reference.data, geometry.canvas,
+    ),
+  ]);
+  assert(Math.abs(flatSupport[0].visible - relievedSupport[0].visible)
+      / Math.max(1, flatSupport[0].visible) <= 0.001
+    && Math.abs(flatSupport[0].worldArea - relievedSupport[0].worldArea)
+      / Math.max(0.001, flatSupport[0].worldArea) <= 0.001,
+  `${mode}: liquid optical depth changed composed support (${JSON.stringify({ flatSupport, relievedSupport })})`);
+  return {
+    backing: `${geometry.backing.width}x${geometry.backing.height}`,
+    cssCanvas: `${round(geometry.canvas.width, 2)}x${round(geometry.canvas.height, 2)}`,
+    samples,
+    support: { flat: flatSupport[0], relieved: relievedSupport[0] },
+  };
+}
+
+function assertPairedLiquidOpticalDepth(results) {
+  const canvas = results.find((result) => result.backend === 'canvas2d')?.liquidOpticalDepth;
+  const webgl = results.find((result) => result.backend === 'webgl')?.liquidOpticalDepth;
+  if (!canvas || !webgl) return;
+  for (const name of ['waterDeepDepth', 'oilDeepDepth', 'acidDeepDepth']) {
+    const canvasSample = canvas.samples.find((sample) => sample.name === name);
+    const webglSample = webgl.samples.find((sample) => sample.name === name);
+    assert(canvasSample && webglSample, `focused paired liquid-depth sample missing ${name}`);
+    const ratio = canvasSample.rgbRms / Math.max(0.04, webglSample.rgbRms);
+    assert(ratio >= 0.45 && ratio <= 2.2,
+      `focused Canvas/WebGL ${name} depth diverged (${canvasSample.rgbRms}/${webglSample.rgbRms})`);
+  }
+}
+
 async function auditVisualScaleMatrix(cdp, mode, dpr) {
   await setDesktopMetrics(cdp, 1280, 720, dpr);
   const scales = mode === 'webgl' ? [1, 2, 4, 8] : [1, 2, 4];
@@ -3265,6 +3364,19 @@ async function auditRenderScaleEight(cdp, dpr) {
     cdp, 'renderScale=8 repeated flat liquid-volume framebuffer', 450,
   );
   await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setLiquidVolumeChroma(true); true');
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setLiquidOpticalDepth(false); true');
+  const flatLiquidOpticalDepthCapture = await captureSettledPage(
+    cdp, 'renderScale=8 flat liquid optical-depth framebuffer', 450,
+  );
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setLiquidOpticalDepth(true); true');
+  const liquidOpticalDepthCapture = await captureSettledPage(
+    cdp, 'renderScale=8 liquid optical-depth framebuffer', 450,
+  );
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setLiquidOpticalDepth(false); true');
+  const repeatedFlatLiquidOpticalDepthCapture = await captureSettledPage(
+    cdp, 'renderScale=8 repeated flat liquid optical-depth framebuffer', 450,
+  );
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setLiquidOpticalDepth(true); true');
   await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setPowderBodyDepth(false); true');
   const flatPowderBodyCapture = await captureSettledPage(
     cdp, 'renderScale=8 flat powder-body framebuffer', 450,
@@ -3488,6 +3600,37 @@ async function auditRenderScaleEight(cdp, dpr) {
     `renderScale=8 liquid chroma changed ${name} (${JSON.stringify(liquidVolumeChromaSamples)})`);
   assert(liquidVolumeChromaSamples.every((sample) => sample.repeatRgbPeak <= 1),
     `renderScale=8 liquid chroma was nondeterministic (${JSON.stringify(liquidVolumeChromaSamples)})`);
+  const liquidOpticalDepthSamples = await sampleBackdropRefractionRegions(cdp, {
+    straight: flatLiquidOpticalDepthCapture.capture.data,
+    refracted: liquidOpticalDepthCapture.capture.data,
+    repeatedStraight: repeatedFlatLiquidOpticalDepthCapture.capture.data,
+  }, [
+    { name: 'waterSurfaceDepth8x', x: 224, y: 202, radiusX: 5, radiusY: 4 },
+    { name: 'oilSurfaceDepth8x', x: 263, y: 202, radiusX: 5, radiusY: 4 },
+    { name: 'acidSurfaceDepth8x', x: 302, y: 202, radiusX: 5, radiusY: 4 },
+    { name: 'waterDeepDepth8x', x: 224, y: 315, radiusX: 6, radiusY: 10 },
+    { name: 'oilDeepDepth8x', x: 263, y: 315, radiusX: 6, radiusY: 10 },
+    { name: 'acidDeepDepth8x', x: 302, y: 315, radiusX: 6, radiusY: 10 },
+    { name: 'lavaDepthControl8x', x: 341, y: 315, radiusX: 6, radiusY: 10 },
+    { name: 'isolatedLiquidDepthControl8x', x: 190.5, y: 164.5, radius: 2 },
+    { name: 'unlikeLiquidDepthControl8x', x: 302.5, y: 172, radiusX: 0.45, radiusY: 6 },
+  ], geometry.canvas);
+  const liquidOpticalDepth = Object.fromEntries(
+    liquidOpticalDepthSamples.map((sample) => [sample.name, sample]),
+  );
+  for (const family of ['water', 'oil', 'acid']) {
+    const surface = liquidOpticalDepth[`${family}SurfaceDepth8x`];
+    const deep = liquidOpticalDepth[`${family}DeepDepth8x`];
+    const minimumRms = family === 'acid' ? 2.0 : (family === 'water' ? 1.5 : 1.2);
+    assert(deep.rgbRms >= minimumRms && deep.rgbPeak <= 24 && deep.signedMean <= -0.8
+      && deep.signedMean <= surface.signedMean - 0.30,
+    `renderScale=8 ${family} lost surface-to-core optical depth (${JSON.stringify(liquidOpticalDepthSamples)})`);
+  }
+  assert(liquidOpticalDepth.lavaDepthControl8x.rgbPeak <= 1
+    && liquidOpticalDepth.isolatedLiquidDepthControl8x.rgbPeak <= 1
+    && liquidOpticalDepth.unlikeLiquidDepthControl8x.rgbPeak <= 3
+    && liquidOpticalDepthSamples.every((sample) => sample.repeatRgbPeak <= 1),
+  `renderScale=8 liquid optical depth changed a control or was nondeterministic (${JSON.stringify(liquidOpticalDepthSamples)})`);
   const materialAtlasStress = await auditEightXMaterialAtlasStress(
     cdp, blankCapture.capture.data, geometry.canvas,
   );
@@ -3513,6 +3656,7 @@ async function auditRenderScaleEight(cdp, dpr) {
     gasVolumeChromaSamples,
     emissionVolumeChromaSamples,
     liquidVolumeChromaSamples,
+    liquidOpticalDepthSamples,
     zoomedInput: {
       cell: `${zoomedInputTarget.x},${zoomedInputTarget.y}`,
       footprint: zoomedInputFootprint,

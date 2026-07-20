@@ -96,6 +96,30 @@ describe('Canvas liquid field-owned light', () => {
     }
   });
 
+  it('adds monotone family-coloured absorption only below the liquid surface', () => {
+    for (const optics of [
+      RenderOptics.Aqueous, RenderOptics.Oily, RenderOptics.Corrosive,
+    ]) {
+      const surface = new Float32Array([112, 138, 176, 91]);
+      const middle = surface.slice();
+      const deep = surface.slice();
+      applyCanvasLiquidVolumeChroma(surface, optics, 0, 0);
+      applyCanvasLiquidVolumeChroma(middle, optics, 0, 128);
+      applyCanvasLiquidVolumeChroma(deep, optics, 0, 255);
+      expect(Array.from(surface)).toEqual([112, 138, 176, 91]);
+      for (let channel = 0; channel < 3; channel++) {
+        expect(deep[channel]).toBeLessThanOrEqual(middle[channel]);
+        expect(middle[channel]).toBeLessThan(surface[channel]);
+      }
+      expect(deep[3]).toBe(91);
+    }
+
+    const molten = new Float32Array([220, 84, 22, 91]);
+    const original = molten.slice();
+    applyCanvasLiquidVolumeChroma(molten, RenderOptics.Molten, 0, 255);
+    expect(molten).toEqual(original);
+  });
+
   it('keeps sparse and molten liquid volume chroma exact no-ops', () => {
     expect(canvasLiquidVolumeChromaResponse(RenderOptics.Aqueous, 255, 2, 0.18, 1)).toBe(0);
     expect(canvasLiquidVolumeChromaResponse(RenderOptics.Aqueous, 160, 8, 0.18, 1)).toBe(0);
