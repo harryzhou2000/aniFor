@@ -83,6 +83,30 @@ describe('Pixi presenter startup configuration', () => {
     expect(presenter.app.render).toHaveBeenCalledOnce();
   });
 
+  it('keeps chromatic surface depth arithmetic-only and RGB-only', () => {
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const helperStart = source.indexOf('vec3 surfaceChromaKey');
+    const helperEnd = source.indexOf('vec3 vividColor', helperStart);
+    const helpers = source.slice(helperStart, helperEnd);
+    const solidStart = source.indexOf('// Reuse the semantic Hermite normal as a small family-coloured');
+    const solidEnd = source.indexOf('// Give only an authoritative opaque solid contour', solidStart);
+    const solid = source.slice(solidStart, solidEnd);
+    const powderStart = source.indexOf('float powderContourChroma = localPowderShape.x');
+    const powderEnd = source.indexOf('} else if (smoothSurface', powderStart);
+    const powder = source.slice(powderStart, powderEnd);
+
+    expect(helperStart).toBeGreaterThan(0);
+    expect(helperEnd).toBeGreaterThan(helperStart);
+    expect(helpers).toContain('return color + (vec3(1.0) - color)');
+    expect(helpers).not.toContain('texture(');
+    expect(solid).toContain('surfaceChromaResponse(density, shape.yz, optics)');
+    expect(powder).toContain('localPowderShape.x < 0.92');
+    expect(powder).toContain('density, widePowderShape.yz, optics');
+    expect(powder).toContain('* powderChromaCohesion * uSurfaceContourLighting');
+    expect(`${solid}${powder}`).not.toMatch(/\balpha\s*[+*]?=/);
+    expect(`${solid}${powder}`).not.toContain('texture(');
+  });
+
   it('seeds and redraws optional-last cross-phase contact lighting', () => {
     const presenter = presenterHarness();
 

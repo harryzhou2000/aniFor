@@ -7,7 +7,6 @@ import {
   CanvasPhaseContourScratch,
   canvasLiquidMeniscusScale,
   canvasPhaseContactTone,
-  canvasSolidContourScale,
   type CanvasPhaseContourInput,
 } from './canvas-phase-contour';
 import { RenderOptics } from './render-optics';
@@ -153,16 +152,16 @@ describe('Canvas 2x phase contour scratch', () => {
     expect(signatures).toEqual({
       '1-grains': 'c912c4b1',
       '1-local': '1cc9387d',
-      '1-smooth': '1a84d947',
-      '2-grains': 'a975b034',
-      '2-local': '5110044c',
-      '2-smooth': '8d1aefc0',
-      '4-grains': 'adeecc99',
-      '4-local': '9b797b4d',
-      '4-smooth': '6a9a6ecb',
-      '8-grains': 'a072803c',
-      '8-local': '0925cb8a',
-      '8-smooth': '664153e8',
+      '1-smooth': '65ee7cf4',
+      '2-grains': 'af6d5941',
+      '2-local': 'a50b1c45',
+      '2-smooth': 'c693c39d',
+      '4-grains': '88dcd447',
+      '4-local': 'f23096fb',
+      '4-smooth': 'd067da6c',
+      '8-grains': 'b2fef6b7',
+      '8-local': '2419d011',
+      '8-smooth': 'd4821ecc',
     });
   });
 
@@ -295,13 +294,6 @@ describe('Canvas 2x phase contour scratch', () => {
   });
 
   it('adds a signed family-aware solid contour bevel without changing support or interiors', () => {
-    expect(canvasSolidContourScale(1, 1, 1, RenderOptics.SmoothRigid)).toBe(1);
-    expect(canvasSolidContourScale(0.5, 1, 1, RenderOptics.SmoothRigid)).toBeGreaterThan(1);
-    expect(canvasSolidContourScale(0.5, -1, -1, RenderOptics.SmoothRigid)).toBeLessThan(1);
-    expect(canvasSolidContourScale(0.5, 1, 1, RenderOptics.TranslucentRigid)).toBeGreaterThan(
-      canvasSolidContourScale(0.5, 1, 1, RenderOptics.Organic),
-    );
-
     const value = fixture(7, 7);
     for (let y = 1; y <= 5; y++) for (let x = 1; x <= 5; x++) {
       paint(value, x, y, Material.Metal);
@@ -527,6 +519,75 @@ describe('Canvas 2x phase contour scratch', () => {
     const grainBody = cellCoverage(grains, 4, 4);
     expect(grainBody).toBe(255 * scale * scale);
     expect(cellCoverage(smooth, 4, 4)).toBeGreaterThan(0);
+  });
+
+  it('adds chromatic depth only to deep stable Smooth powder without changing topology', () => {
+    const scale = 4;
+    const value = fixture(11, 11);
+    for (let y = 3; y <= 9; y++) for (let x = 2; x <= 8; x++) {
+      paint(value, x, y, Material.Sand);
+    }
+    const field = new PowderSurfaceField(11, 11, lookups.styleBytes);
+    field.update(value.materials, value.stability, value.walls);
+    const flat = new CanvasPhaseContourScratch(scale);
+    flat.rasterize({
+      ...value.input, powderSurface: field.bytes, powderStyle: 'smooth',
+      surfaceContourLighting: false,
+    });
+    const chromatic = new CanvasPhaseContourScratch(scale);
+    chromatic.rasterize({
+      ...value.input, powderSurface: field.bytes, powderStyle: 'smooth',
+      surfaceContourLighting: true,
+    });
+
+    expect(chromatic.coverage).toEqual(flat.coverage);
+    expect(chromatic.ownerMaterials).toEqual(flat.ownerMaterials);
+    let changed = 0;
+    let chromaticPixels = 0;
+    let peak = 0;
+    for (let index = 0; index < chromatic.outputWidth * chromatic.outputHeight; index++) {
+      const pixel = index * 4;
+      expect(chromatic.pixels[pixel + 3]).toBe(flat.pixels[pixel + 3]);
+      const differences = [0, 1, 2].map((channel) => (
+        chromatic.pixels[pixel + channel] - flat.pixels[pixel + channel]
+      ));
+      if (differences.some((difference) => difference !== 0)) changed++;
+      if (differences[0] !== differences[1] || differences[1] !== differences[2]) chromaticPixels++;
+      peak = Math.max(peak, ...differences.map(Math.abs));
+    }
+    expect(changed).toBeGreaterThan(0);
+    expect(chromaticPixels).toBeGreaterThan(0);
+    expect(peak).toBeLessThanOrEqual(18);
+
+    for (const style of ['grains', 'local'] as const) {
+      const disabled = new CanvasPhaseContourScratch(scale);
+      const enabled = new CanvasPhaseContourScratch(scale);
+      disabled.rasterize({
+        ...value.input, powderSurface: field.bytes, powderStyle: style,
+        surfaceContourLighting: false,
+      });
+      enabled.rasterize({
+        ...value.input, powderSurface: field.bytes, powderStyle: style,
+        surfaceContourLighting: true,
+      });
+      expect(enabled.pixels).toEqual(disabled.pixels);
+      expect(enabled.coverage).toEqual(disabled.coverage);
+    }
+
+    value.stability.fill(191);
+    field.update(value.materials, value.stability, value.walls);
+    const unsettledFlat = new CanvasPhaseContourScratch(scale);
+    const unsettledLit = new CanvasPhaseContourScratch(scale);
+    unsettledFlat.rasterize({
+      ...value.input, powderSurface: field.bytes, powderStyle: 'smooth',
+      surfaceContourLighting: false,
+    });
+    unsettledLit.rasterize({
+      ...value.input, powderSurface: field.bytes, powderStyle: 'smooth',
+      surfaceContourLighting: true,
+    });
+    expect(unsettledLit.pixels).toEqual(unsettledFlat.pixels);
+    expect(unsettledLit.coverage).toEqual(unsettledFlat.coverage);
   });
 
   it('never erases Local coverage from occupied Clay and Concrete columns at 4x or 8x', () => {

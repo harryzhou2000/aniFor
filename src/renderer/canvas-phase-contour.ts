@@ -10,6 +10,7 @@ import {
 import { Material } from '../shared/materials';
 import { RenderPhase, RenderProfile } from './render-profile';
 import { RenderOptics } from './render-optics';
+import { applyCanvasSurfaceChroma, canvasSurfaceChromaResponse } from './solid-surface-chroma';
 import type { FieldOutputScale } from './render-resolution';
 import type { PowderRenderStyle } from './powder-render-style';
 
@@ -152,27 +153,6 @@ export function canvasLiquidMeniscusScale(
     : optics === RenderOptics.Oily ? 0.045
     : optics === RenderOptics.Corrosive ? 0.052
     : 0.042;
-  return contourSurfaceLightScale(density, gradientX, gradientY, gain);
-}
-
-/**
- * Bounded hue-preserving bevel for a solid's actual analytic silhouette.
- * Unlike-solid contacts remain a full compatible field, so they cannot become
- * an internal separator. Powder, wall, trait, and emissive eligibility belongs
- * to the caller and therefore never reaches this scalar helper.
- */
-export function canvasSolidContourScale(
-  density: number,
-  gradientX: number,
-  gradientY: number,
-  optics: number,
-): number {
-  const gain = optics === RenderOptics.TranslucentRigid ? 0.078
-    : optics === RenderOptics.SmoothRigid ? 0.068
-    : optics === RenderOptics.Device ? 0.064
-    : optics === RenderOptics.Radioactive ? 0.058
-    : optics === RenderOptics.Organic ? 0.052
-    : 0.046;
   return contourSurfaceLightScale(density, gradientX, gradientY, gain);
 }
 
@@ -505,17 +485,13 @@ export class CanvasPhaseContourScratch {
           solidGradientY = solidVertical * derivativeY;
         }
         if (solidSurfaceBevel) {
-          const scale = canvasSolidContourScale(
+          const response = canvasSurfaceChromaResponse(
             density,
             solidGradientX,
             solidGradientY,
             materialOptics,
           );
-          if (scale !== 1) {
-            this.pixels[outputPixel] = clampByte(this.pixels[outputPixel] * scale);
-            this.pixels[outputPixel + 1] = clampByte(this.pixels[outputPixel + 1] * scale);
-            this.pixels[outputPixel + 2] = clampByte(this.pixels[outputPixel + 2] * scale);
-          }
+          applyCanvasSurfaceChroma(this.pixels, outputPixel, response, materialOptics);
         }
         if (solidCurvatureDepth && density > 0.08 && density < 0.92) {
           const curvature = implicitContourCurvature(
@@ -604,6 +580,16 @@ export class CanvasPhaseContourScratch {
                 * smoothstep(0.006, 0.030, Math.abs(gradientY))
                 * powderSurfaceDetailGate;
               surfaceDensity += (wideDensity - surfaceDensity) * slopeAware;
+              if (!emptyPowder && (input.surfaceContourLighting ?? true)
+                && this.haloStability[haloIndex] >= 192
+                && input.styleBytes[material * 4 + 2] === 0
+                && input.styleBytes[material * 4 + 3] === 0
+                && powderSurfaceDetailGate > 0 && heapDensity < 0.92) {
+                const response = canvasSurfaceChromaResponse(
+                  surfaceDensity, gradientX, gradientY, materialOptics,
+                ) * powderSurfaceDetailGate;
+                applyCanvasSurfaceChroma(this.pixels, outputPixel, response, materialOptics);
+              }
             }
             const heapStart = 0.18 + (0.40 - 0.18) * slopeAware;
             const heapEnd = 0.58 + (0.60 - 0.58) * slopeAware;

@@ -118,6 +118,45 @@ float surfaceLightGain(float profile) {
   if (profile == 4.0) return 0.16;
   return 0.20;
 }
+vec3 surfaceChromaKey(float optics) {
+  if (optics == 7.0) return vec3(1.00, 0.82, 0.56);
+  if (optics == 8.0) return vec3(0.76, 0.91, 1.00);
+  if (optics == 9.0) return vec3(0.82, 1.00, 0.66);
+  if (optics == 10.0) return vec3(0.60, 0.88, 1.00);
+  if (optics == 11.0) return vec3(0.62, 1.00, 0.72);
+  if (optics == 12.0) return vec3(0.70, 0.90, 1.00);
+  return vec3(0.92, 0.86, 0.72);
+}
+vec3 surfaceChromaShadow(float optics) {
+  if (optics == 7.0) return vec3(0.72, 0.62, 0.50);
+  if (optics == 8.0) return vec3(0.95, 0.72, 0.44);
+  if (optics == 9.0) return vec3(0.78, 0.66, 0.45);
+  if (optics == 10.0) return vec3(0.96, 0.70, 0.38);
+  if (optics == 11.0) return vec3(0.74, 0.62, 0.42);
+  if (optics == 12.0) return vec3(0.90, 0.72, 0.50);
+  return vec3(0.86, 0.70, 0.48);
+}
+float surfaceChromaResponse(float density, vec2 gradient, float optics) {
+  if (density <= 0.02 || density >= 0.98) return 0.0;
+  float gradientLength = length(gradient);
+  if (gradientLength <= 0.0001) return 0.0;
+  float band = smoothstep(0.02, 0.42, density)
+    * (1.0 - smoothstep(0.58, 0.98, density));
+  float familyGain = optics == 12.0 ? 1.0
+    : (optics == 8.0 ? 0.94
+    : (optics == 10.0 ? 0.90
+    : (optics == 11.0 ? 0.86
+    : (optics == 9.0 ? 0.82
+    : (optics == 7.0 ? 0.92 : 0.78)))));
+  float directional = clamp(dot(gradient / gradientLength, vec2(0.48, 0.68)), -1.0, 1.0);
+  return clamp(directional * band * 0.065 * familyGain, -0.065, 0.065);
+}
+vec3 applySurfaceChroma(vec3 color, float response, float optics) {
+  if (response > 0.0) {
+    return color + (vec3(1.0) - color) * surfaceChromaKey(optics) * response * 1.15;
+  }
+  return color * (vec3(1.0) - surfaceChromaShadow(optics) * (-response) * 0.85);
+}
 vec3 vividColor(vec3 color, float saturation) {
   float luminance = dot(color, vec3(0.2126, 0.7152, 0.0722));
   return mix(vec3(luminance), color, saturation);
@@ -1114,6 +1153,7 @@ void main() {
     color += liquidBase * (0.025 + atmosphere * 0.030) + vec3(0.055, 0.090, 0.105) * rim;
   } else {
     float powderVisualCohesion = 0.0;
+    float powderChromaCohesion = 0.0;
     float powderMacroRelief = 0.0;
     float powderSuspensionCohesion = 0.0;
     float roughSurface = optics == 7.0 ? 1.0 : 0.0;
@@ -1143,24 +1183,13 @@ void main() {
     float solidDiffuse = 0.51 + solidKey * 0.58 + solidFill * 0.11;
     color = base * mix(1.10, 0.82, solidDepth) * solidDiffuse;
     color += vec3(solidReliefTone * 1.35);
-    // Reuse the semantic Hermite normal as a small upper-left contour bevel.
-    // Phase-compatible unlike solids retain a dense union at their contact, so
-    // the contour band is zero there. RGB is the only affected output.
+    // Reuse the semantic Hermite normal as a small family-coloured key/fill
+    // shell. Unlike-solid contacts retain a dense union, so no internal seam
+    // enters the contour band. This changes RGB only and adds no field sample.
     if (family == 0.0 && surfaceOnly < 0.5 && traits < 0.5 && !materialEmissive) {
-      float solidContourBand = smoothstep(0.08, 0.46, density)
-        * (1.0 - smoothstep(0.54, 0.92, density));
-      float solidContourFacing = clamp(
-        dot(normal.xy, vec2(-0.48, -0.68)), -1.0, 1.0
-      );
-      float solidContourGain = optics == 12.0 ? 0.078
-        : (optics == 8.0 ? 0.068
-        : (optics == 10.0 ? 0.064
-        : (optics == 11.0 ? 0.058
-        : (optics == 9.0 ? 0.052 : 0.046))));
-      color *= 1.0 + clamp(
-        solidContourFacing * solidContourBand * solidContourGain,
-        -0.080, 0.080
-      ) * uSurfaceContourLighting;
+      float solidContourChroma = surfaceChromaResponse(density, shape.yz, optics)
+        * uSurfaceContourLighting;
+      color = applySurfaceChroma(color, solidContourChroma, optics);
     }
     // Give only an authoritative opaque solid contour a coloured response to
     // the shared emission field. High-quality desktop follows the existing
@@ -1247,8 +1276,9 @@ void main() {
       powderContact = max(powderContact, localPowderContact);
       float powderBulk = powderContact * boundaryStability;
       if (uPowderStyle > 1.5 && surfaceOnly < 0.5 && traits < 0.5 && !materialEmissive) {
-        powderVisualCohesion = powderBulkDepth
-          * smoothstep(0.75, 1.0, boundaryStability)
+        powderChromaCohesion = powderBulkDepth
+          * smoothstep(0.75, 1.0, boundaryStability);
+        powderVisualCohesion = powderChromaCohesion
           * smoothstep(0.55, 0.85, widePowderShape.x);
         float powderDirectedSlope = clamp(
           widePowderShape.y * -2.20 + widePowderShape.z * -3.20, -1.0, 1.0
@@ -1334,6 +1364,11 @@ void main() {
       color += base * max(0.0, 0.6 - subcell.x - subcell.y)
         * (0.11 + roughSurface * 0.035) * facetRetention;
       color *= 1.0 + powderMacroRelief;
+      float powderContourChroma = localPowderShape.x < 0.92
+        ? surfaceChromaResponse(density, widePowderShape.yz, optics)
+          * powderChromaCohesion * uSurfaceContourLighting
+        : 0.0;
+      color = applySurfaceChroma(color, powderContourChroma, optics);
     } else if (smoothSurface > 0.5 || translucentSurface > 0.5
       || (optics < 0.5 && profile == 2.0)) {
       float bevel = clamp(abs(shape.y) + abs(shape.z), 0.0, 1.0);

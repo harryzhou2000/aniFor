@@ -1372,8 +1372,11 @@ async function auditMode(mode) {
       { name: 'metalContourBottom', x: 405, y: 238.5, radiusX: 6, radiusY: 1.5 },
       { name: 'glassContourTop', x: 158, y: 160.5, radiusX: 6, radiusY: 1.5 },
       { name: 'dtecContourTop', x: 485, y: 294.5, radiusX: 6, radiusY: 1.5 },
+      { name: 'claySmoothTop', x: 148, y: 26.5, radiusX: 4, radiusY: 1.5 },
       { name: 'metalContourCore', x: 405, y: 229, radius: 3 },
       { name: 'metalGlassContourSeam', x: 140, y: 172, radius: 2.5 },
+      { name: 'claySmoothCore', x: 148, y: 48, radius: 2.5 },
+      { name: 'isolatedGrainContourControl', x: 190, y: 176, radius: 1.5 },
     ], canonicalCaptures.canvasRect);
     const surfaceContourLighting = Object.fromEntries(
       surfaceContourLightingSamples.map((sample) => [sample.name, sample]),
@@ -1388,8 +1391,14 @@ async function auditMode(mode) {
     assert(surfaceContourLighting.glassContourTop.rms >= 0.03
       && surfaceContourLighting.dtecContourTop.rms >= 0.03,
     `${mode}: family contour-light gains were lost (${JSON.stringify(surfaceContourLightingSamples)})`);
+    assert(surfaceContourLighting.claySmoothTop.rgbRms >= 0.02
+      && surfaceContourLighting.claySmoothTop.chromaRms >= 0.01
+      && surfaceContourLighting.claySmoothTop.rgbPeak <= 18,
+    `${mode}: deep Smooth powder lost its chromatic surface depth (${JSON.stringify(surfaceContourLightingSamples)})`);
     assert(surfaceContourLighting.metalContourCore.rgbPeak <= 1
-      && surfaceContourLighting.metalGlassContourSeam.rgbPeak <= 1,
+      && surfaceContourLighting.metalGlassContourSeam.rgbPeak <= 1
+      && surfaceContourLighting.claySmoothCore.rgbPeak <= 1
+      && surfaceContourLighting.isolatedGrainContourControl.rgbPeak <= 1,
     `${mode}: solid contour light leaked into an interior or unlike seam (${JSON.stringify(surfaceContourLightingSamples)})`);
     assert(surfaceContourLightingSamples.every((sample) => sample.repeatRgbPeak <= 1),
       `${mode}: surface contour off-on-off sequence was not deterministic (${JSON.stringify(surfaceContourLightingSamples)})`);
@@ -1397,6 +1406,7 @@ async function auditMode(mode) {
       { name: 'metalContourSupport', x: 405, y: 229, radiusX: 17.5, radiusY: 10.5, silhouette: true },
       { name: 'dtecContourSupport', x: 485, y: 304, radiusX: 17.5, radiusY: 10.5, silhouette: true },
       { name: 'metalGlassContourSupport', x: 141, y: 172, radiusX: 37, radiusY: 12.5, silhouette: true },
+      { name: 'claySmoothContourSupport', x: 148, y: 82, radiusX: 5.5, radiusY: 55, silhouette: true },
     ];
     const [flatSurfaceContourSupport, litSurfaceContourSupport] = await Promise.all([
       samplePageRegions(
@@ -5099,6 +5109,7 @@ function assertPairedVisualRelief(results) {
   }
   for (const name of [
     'metalContourTop', 'metalContourBottom', 'glassContourTop', 'dtecContourTop',
+    'claySmoothTop',
   ]) {
     const canvasSample = canvas.surfaceContourLightingSamples.find((sample) => sample.name === name);
     const webglSample = webgl.surfaceContourLightingSamples.find((sample) => sample.name === name);
