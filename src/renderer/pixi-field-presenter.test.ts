@@ -15,6 +15,7 @@ interface PresenterHarness {
   setGasFieldLightingEnabled: PixiFieldPresenter['setGasFieldLightingEnabled'];
   setGasVolumeChromaEnabled: PixiFieldPresenter['setGasVolumeChromaEnabled'];
   setLiquidVolumeChromaEnabled: PixiFieldPresenter['setLiquidVolumeChromaEnabled'];
+  setPowderBodyDepthEnabled: PixiFieldPresenter['setPowderBodyDepthEnabled'];
   setSurfaceContourLightingEnabled: PixiFieldPresenter['setSurfaceContourLightingEnabled'];
   setPhaseContactLightingEnabled: PixiFieldPresenter['setPhaseContactLightingEnabled'];
   setSolidFieldLightingEnabled: PixiFieldPresenter['setSolidFieldLightingEnabled'];
@@ -83,6 +84,7 @@ describe('Pixi presenter startup configuration', () => {
       uThermalMaterialStyling: 1,
       uEnergyCoreRelief: 0,
       uPowderStyle: powderRenderStyleValue('grains'),
+      uPowderBodyDepth: 1,
     });
     expect(presenter.app.render).not.toHaveBeenCalled();
   });
@@ -301,8 +303,54 @@ describe('Pixi presenter startup configuration', () => {
     expect(powder).toContain('localPowderShape.x < 0.92');
     expect(powder).toContain('density, widePowderShape.yz, optics');
     expect(powder).toContain('* powderChromaCohesion * uSurfaceContourLighting');
+    expect(powder).toContain('powderContourChroma + powderBodyChroma');
     expect(`${solid}${powder}`).not.toMatch(/\balpha\s*[+*]?=/);
     expect(`${solid}${powder}`).not.toContain('texture(');
+  });
+
+  it('keeps Smooth powder body depth gated, bounded, and topology-neutral', () => {
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const start = source.indexOf('// Stable two-dimensional bulk gets a restrained');
+    const end = source.indexOf('float grainOffsetY', start);
+    const block = source.slice(start, end);
+
+    expect(start).toBeGreaterThan(0);
+    expect(end).toBeGreaterThan(start);
+    expect(block).toContain('uPowderBodyDepth * powderBulkDepth');
+    expect(block).toContain('step(224.0 / 255.0, boundaryStability)');
+    expect(block).toContain('step(0.66, widePowderShape.x)');
+    expect(block).toContain('step(5.5, widePowderShape.w)');
+    expect(block).toContain('powderDirectedRelief * 0.35');
+    expect(block).not.toContain('powderMacroRelief * 0.35');
+    expect(block).toContain('-0.035, 0.040');
+    expect(block).not.toContain('texture(');
+    expect(block).not.toMatch(/\balpha\s*[+*]?=/);
+    expect(block).not.toMatch(/\b(?:sin|pow|normalize|length|sqrt)\s*\(/);
+    expect(source.match(/texture\(uPowderSurfaceTexture/g)).toHaveLength(1);
+  });
+
+  it('redraws when audit powder body depth changes', () => {
+    const presenter = presenterHarness();
+
+    presenter.setPowderBodyDepthEnabled(false);
+    expect(presenter.uniforms.uniforms.uPowderBodyDepth).toBe(0);
+    expect(presenter.app.render).toHaveBeenCalledOnce();
+
+    presenter.setPowderBodyDepthEnabled(true);
+    expect(presenter.uniforms.uniforms.uPowderBodyDepth).toBe(1);
+    expect(presenter.app.render).toHaveBeenCalledTimes(2);
+  });
+
+  it('hydrates disabled powder body depth without an intermediate frame', () => {
+    const presenter = presenterHarness();
+
+    presenter.configurePresentation(
+      true, true, true, true, true, true, true, true, true, 'smooth',
+      true, true, true, true, true, true, false,
+    );
+
+    expect(presenter.uniforms.uniforms.uPowderBodyDepth).toBe(0);
+    expect(presenter.app.render).not.toHaveBeenCalled();
   });
 
   it('seeds and redraws optional-last cross-phase contact lighting', () => {

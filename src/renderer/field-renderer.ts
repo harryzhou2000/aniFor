@@ -166,6 +166,7 @@ export class MaterialRenderer {
   private phaseContactLightingEnabled = true;
   private thermalMaterialStylingEnabled = true;
   private energyCoreReliefEnabled = true;
+  private powderBodyDepthEnabled = true;
   private powderRenderStyle: PowderRenderStyle = 'smooth';
   private gasFieldLightingDirty = false;
   private gasVolumeChromaDirty = false;
@@ -405,6 +406,14 @@ export class MaterialRenderer {
     this.changed = true;
   }
 
+  setPowderBodyDepthEnabled(enabled: boolean): void {
+    if (enabled === this.powderBodyDepthEnabled) return;
+    this.powderBodyDepthEnabled = enabled;
+    this.presenter?.setPowderBodyDepthEnabled(enabled);
+    this.contourChunks.markAll();
+    this.changed = true;
+  }
+
   setPowderRenderStyle(style: PowderRenderStyle): void {
     if (style === this.powderRenderStyle) return;
     this.powderRenderStyle = style;
@@ -562,6 +571,7 @@ export class MaterialRenderer {
       this.liquidSilhouetteCohesionEnabled,
       this.gasVolumeChromaEnabled,
       this.liquidVolumeChromaEnabled,
+      this.powderBodyDepthEnabled,
     );
     // Route subsequent dirty cells to the candidate while its first expensive
     // frame is in flight. The known-good Canvas remains mounted underneath;
@@ -914,7 +924,7 @@ export class MaterialRenderer {
         this.styledColor[2] = 76 + grain * 0.35 + surfaceLight;
         applyCanvasPowderBulkCellStyle(
           this.styledColor, powderCanonicalColor, this.boundaryStability[index],
-          fields.powderSurface.bytes, pixel, powderBulkDepth,
+          fields.powderSurface.bytes, pixel, powderBulkDepth, this.powderBodyDepthEnabled,
         );
         this.applyThermalMaterialStyle(
           phase, material, false, applicableTraits, temperatures?.[index], optics,
@@ -930,7 +940,7 @@ export class MaterialRenderer {
         this.styledColor[2] = 124 + grain * 0.6 + surfaceLight;
         applyCanvasPowderBulkCellStyle(
           this.styledColor, powderCanonicalColor, this.boundaryStability[index],
-          fields.powderSurface.bytes, pixel, powderBulkDepth,
+          fields.powderSurface.bytes, pixel, powderBulkDepth, this.powderBodyDepthEnabled,
         );
         this.applyThermalMaterialStyle(
           phase, material, false, applicableTraits, temperatures?.[index], optics,
@@ -946,7 +956,7 @@ export class MaterialRenderer {
         this.styledColor[2] = 202 + grain + crystal + surfaceLight;
         applyCanvasPowderBulkCellStyle(
           this.styledColor, powderCanonicalColor, this.boundaryStability[index],
-          fields.powderSurface.bytes, pixel, powderBulkDepth,
+          fields.powderSurface.bytes, pixel, powderBulkDepth, this.powderBodyDepthEnabled,
         );
         this.applyThermalMaterialStyle(
           phase, material, false, applicableTraits, temperatures?.[index], optics,
@@ -1096,7 +1106,7 @@ export class MaterialRenderer {
         this.styledColor[2] = 58 + grain + spark * 0.35 + surfaceLight;
         applyCanvasPowderBulkCellStyle(
           this.styledColor, powderCanonicalColor, this.boundaryStability[index],
-          fields.powderSurface.bytes, pixel, powderBulkDepth,
+          fields.powderSurface.bytes, pixel, powderBulkDepth, this.powderBodyDepthEnabled,
         );
         this.applyThermalMaterialStyle(
           phase, material, false, applicableTraits, temperatures?.[index], optics,
@@ -1228,7 +1238,7 @@ export class MaterialRenderer {
           );
           if (phase === RenderPhase.Powder) applyCanvasPowderBulkCellStyle(
             this.styledColor, powderCanonicalColor, this.boundaryStability[index],
-            fields.powderSurface.bytes, pixel, powderBulkDepth,
+            fields.powderSurface.bytes, pixel, powderBulkDepth, this.powderBodyDepthEnabled,
           );
           if (denseSolidInterior && applicableTraits === 0 && !info.emissive) {
             const cohesion = canvasSolidInteriorCohesion(profile, optics);
@@ -1543,6 +1553,7 @@ function applyCanvasPowderBulkCellStyle(
   powderSurface: Uint8Array,
   pixel: number,
   bulkDepth: number,
+  bodyDepthEnabled: boolean,
 ): void {
   applyCanvasPowderBulkStyle(
     color,
@@ -1555,6 +1566,7 @@ function applyCanvasPowderBulkCellStyle(
     powderSurface[pixel + 2],
     powderSurface[pixel + 3],
     bulkDepth,
+    bodyDepthEnabled,
   );
 }
 

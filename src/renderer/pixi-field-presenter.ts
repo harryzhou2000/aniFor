@@ -106,6 +106,7 @@ uniform float uLiquidSilhouetteCohesion;
 uniform float uThermalMaterialStyling;
 uniform float uEnergyCoreRelief;
 uniform float uPowderStyle;
+uniform float uPowderBodyDepth;
 uniform float uSuspensionActive;
 vec4 field(vec2 uv) { return texture(uFieldTexture, clamp(uv, uTexel * 0.5, vec2(1.0) - uTexel * 0.5)); }
 vec4 wallField(vec2 uv) { return texture(uWallTexture, clamp(uv, uTexel * 0.5, vec2(1.0) - uTexel * 0.5)); }
@@ -1234,6 +1235,7 @@ void main() {
     float powderVisualCohesion = 0.0;
     float powderChromaCohesion = 0.0;
     float powderMacroRelief = 0.0;
+    float powderBodyChroma = 0.0;
     float powderSuspensionCohesion = 0.0;
     float roughSurface = optics == 7.0 ? 1.0 : 0.0;
     float smoothSurface = optics == 8.0 ? 1.0 : 0.0;
@@ -1362,9 +1364,25 @@ void main() {
         float powderDirectedSlope = clamp(
           widePowderShape.y * -2.20 + widePowderShape.z * -3.20, -1.0, 1.0
         );
-        powderMacroRelief = (powderDirectedSlope < 0.0
+        float powderDirectedRelief = powderDirectedSlope < 0.0
           ? powderDirectedSlope * 0.070
-          : powderDirectedSlope * 0.080) * powderVisualCohesion;
+          : powderDirectedSlope * 0.080;
+        powderMacroRelief = powderDirectedRelief * powderVisualCohesion;
+        // Stable two-dimensional bulk gets a restrained mineral shoulder/core
+        // cue from the existing powder field. Exact semantic depth and lateral
+        // support remain authoritative, so narrow columns, ledges, holes, and
+        // moving grains cannot acquire or lose display support here.
+        float powderBodyGate = uPowderBodyDepth * powderBulkDepth
+          * step(224.0 / 255.0, boundaryStability)
+          * step(0.66, widePowderShape.x)
+          * step(5.5, widePowderShape.w);
+        float powderBodyDensity = clamp(
+          (widePowderShape.x - 0.66) * 2.94117647, 0.0, 1.0
+        );
+        powderBodyChroma = clamp(
+          powderDirectedRelief * 0.35 + (0.5 - powderBodyDensity) * 0.028,
+          -0.035, 0.040
+        ) * powderBodyGate;
       }
       float grainOffsetY = fract(sin(dot(floor(fieldPosition), vec2(39.346, 11.135))) * 24634.6345) - 0.5;
       vec2 grainCentre = vec2(grain, grainOffsetY) * 0.075;
@@ -1447,7 +1465,9 @@ void main() {
         ? surfaceChromaResponse(density, widePowderShape.yz, optics)
           * powderChromaCohesion * uSurfaceContourLighting
         : 0.0;
-      color = applySurfaceChroma(color, powderContourChroma, optics);
+      color = applySurfaceChroma(
+        color, clamp(powderContourChroma + powderBodyChroma, -0.065, 0.065), optics
+      );
     } else if (smoothSurface > 0.5 || translucentSurface > 0.5
       || (optics < 0.5 && profile == 2.0)) {
       float bevel = clamp(abs(shape.y) + abs(shape.z), 0.0, 1.0);
@@ -1810,6 +1830,7 @@ export class PixiFieldPresenter {
       uThermalMaterialStyling: { value: 0, type: 'f32' },
       uEnergyCoreRelief: { value: 1, type: 'f32' },
       uPowderStyle: { value: powderRenderStyleValue('smooth'), type: 'f32' },
+      uPowderBodyDepth: { value: 1, type: 'f32' },
       uSuspensionActive: {
         value: this.fieldSet.suspension.hasSuspension ? 1 : 0,
         type: 'f32',
@@ -2012,6 +2033,7 @@ export class PixiFieldPresenter {
     liquidSilhouetteCohesionEnabled = true,
     gasVolumeChromaEnabled = true,
     liquidVolumeChromaEnabled = true,
+    powderBodyDepthEnabled = true,
   ): void {
     const uniforms = this.uniforms.uniforms;
     uniforms.uGasFieldLighting = gasFieldLightingEnabled ? 1 : 0;
@@ -2027,6 +2049,7 @@ export class PixiFieldPresenter {
     uniforms.uLiquidSilhouetteCohesion = liquidSilhouetteCohesionEnabled ? 1 : 0;
     uniforms.uGasVolumeChroma = gasVolumeChromaEnabled ? 1 : 0;
     uniforms.uLiquidVolumeChroma = liquidVolumeChromaEnabled ? 1 : 0;
+    uniforms.uPowderBodyDepth = powderBodyDepthEnabled ? 1 : 0;
     uniforms.uThermalMaterialStyling = thermalMaterialStylingEnabled ? 1 : 0;
     uniforms.uEnergyCoreRelief = energyCoreReliefEnabled ? 1 : 0;
     uniforms.uPowderStyle = powderRenderStyleValue(powderRenderStyle);
@@ -2104,6 +2127,11 @@ export class PixiFieldPresenter {
 
   setEnergyCoreReliefEnabled(enabled: boolean): void {
     this.uniforms.uniforms.uEnergyCoreRelief = enabled ? 1 : 0;
+    this.renderApplication();
+  }
+
+  setPowderBodyDepthEnabled(enabled: boolean): void {
+    this.uniforms.uniforms.uPowderBodyDepth = enabled ? 1 : 0;
     this.renderApplication();
   }
 

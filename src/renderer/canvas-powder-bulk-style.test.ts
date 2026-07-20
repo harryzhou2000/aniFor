@@ -69,7 +69,9 @@ describe('Canvas powder bulk style', () => {
     const canonical = [215, 170, 104] as const;
     const original = [173, 136, 83] as const;
     const color = new Float32Array(original);
-    applyCanvasPowderBulkStyle(color, ...canonical, 255, 255, 128, 128, 255, 1);
+    // Density 212 is the neutral shoulder/core midpoint, so this isolates the
+    // established canonical-albedo convergence from the new body response.
+    applyCanvasPowderBulkStyle(color, ...canonical, 255, 212, 128, 128, 255, 1);
 
     for (let channel = 0; channel < 3; channel++) {
       expect(Math.abs(color[channel] - canonical[channel])).toBeLessThan(
@@ -84,21 +86,76 @@ describe('Canvas powder bulk style', () => {
     expect(color[1]).toBeGreaterThan(color[2]);
   });
 
-  it('adds nonzero mirrored directional relief with one hue-preserving scale', () => {
+  it('adds bounded mineral key and fill to the established directional relief', () => {
     const canonical = [180, 140, 90] as const;
     const lit = new Float32Array(canonical);
     const shaded = new Float32Array(canonical);
-    applyCanvasPowderBulkStyle(lit, ...canonical, 255, 255, 0, 0, 255, 1);
-    applyCanvasPowderBulkStyle(shaded, ...canonical, 255, 255, 255, 255, 255, 1);
+    applyCanvasPowderBulkStyle(lit, ...canonical, 255, 212, 0, 0, 255, 1);
+    applyCanvasPowderBulkStyle(shaded, ...canonical, 255, 212, 255, 255, 255, 1);
 
     expect(lit[0]).toBeGreaterThan(canonical[0]);
     expect(shaded[0]).toBeLessThan(canonical[0]);
-    expect(lit[0] / canonical[0]).toBeCloseTo(lit[1] / canonical[1], 6);
-    expect(lit[1] / canonical[1]).toBeCloseTo(lit[2] / canonical[2], 6);
-    expect(shaded[0] / canonical[0]).toBeCloseTo(shaded[1] / canonical[1], 6);
-    expect(shaded[1] / canonical[1]).toBeCloseTo(shaded[2] / canonical[2], 6);
-    expect(lit[0] / canonical[0]).toBeLessThanOrEqual(1.080001);
-    expect(shaded[0] / canonical[0]).toBeGreaterThanOrEqual(0.929999);
+    expect(lit[0] / canonical[0]).not.toBeCloseTo(lit[1] / canonical[1], 4);
+    expect(shaded[0] / canonical[0]).not.toBeCloseTo(shaded[1] / canonical[1], 4);
+    expect(lit[0]).toBeGreaterThan(lit[1]);
+    expect(lit[1]).toBeGreaterThan(lit[2]);
+    expect(shaded[0]).toBeGreaterThan(shaded[1]);
+    expect(shaded[1]).toBeGreaterThan(shaded[2]);
+  });
+
+  it('separates a flat supported shoulder from its dense core without a slope', () => {
+    const canonical = [180, 140, 90] as const;
+    const shoulder = new Float32Array(canonical);
+    const core = new Float32Array(canonical);
+    applyCanvasPowderBulkStyle(shoulder, ...canonical, 255, 169, 128, 128, 255, 1);
+    applyCanvasPowderBulkStyle(core, ...canonical, 255, 255, 128, 128, 255, 1);
+
+    expect(shoulder[0]).toBeGreaterThan(canonical[0]);
+    expect(shoulder[1]).toBeGreaterThan(canonical[1]);
+    expect(shoulder[2]).toBeGreaterThan(canonical[2]);
+    expect(core[0]).toBeLessThan(canonical[0]);
+    expect(core[1]).toBeLessThan(canonical[1]);
+    expect(core[2]).toBeLessThan(canonical[2]);
+    expect(shoulder[0] - canonical[0]).not.toBeCloseTo(
+      shoulder[1] - canonical[1],
+      4,
+    );
+  });
+
+  it('can disable only body chroma while retaining canonical blend and scalar relief', () => {
+    const canonical = [180, 140, 90] as const;
+    const disabled = new Float32Array(canonical);
+    const scalarOnly = new Float32Array(canonical);
+    const enabled = new Float32Array(canonical);
+    applyCanvasPowderBulkStyle(
+      disabled, ...canonical, 255, 255, 0, 0, 255, 1, false,
+    );
+    applyLegacyScalarRelief(scalarOnly, 255, 0, 0);
+    applyCanvasPowderBulkStyle(
+      enabled, ...canonical, 255, 255, 0, 0, 255, 1, true,
+    );
+
+    expect(Array.from(disabled)).toEqual(Array.from(scalarOnly));
+    expect(Array.from(enabled)).not.toEqual(Array.from(disabled));
+  });
+
+  it('keeps the incremental body chroma within twelve output bytes', () => {
+    const canonical = [180, 140, 90] as const;
+    for (const density of [169, 212, 255]) for (const [gradientX, gradientY] of [
+      [0, 0], [128, 128], [255, 255],
+    ] as const) {
+      const actual = new Float32Array(canonical);
+      const scalarOnly = new Float32Array(canonical);
+      applyCanvasPowderBulkStyle(
+        actual, ...canonical, 255, density, gradientX, gradientY, 255, 1,
+      );
+      applyLegacyScalarRelief(scalarOnly, density, gradientX, gradientY);
+      expect(Math.max(
+        Math.abs(actual[0] - scalarOnly[0]),
+        Math.abs(actual[1] - scalarOnly[1]),
+        Math.abs(actual[2] - scalarOnly[2]),
+      )).toBeLessThanOrEqual(12);
+    }
   });
 
   it('keeps bright relief below the output peak without changing channel order', () => {
@@ -108,8 +165,8 @@ describe('Canvas powder bulk style', () => {
     expect(Math.max(...color)).toBeLessThanOrEqual(254);
     expect(color[0]).toBeGreaterThan(color[1]);
     expect(color[1]).toBeGreaterThan(color[2]);
-    expect(color[0] / color[1]).toBeCloseTo(254 / 250, 5);
-    expect(color[1] / color[2]).toBeCloseTo(250 / 245, 5);
+    expect(Math.abs(color[0] / color[1] - 254 / 250)).toBeLessThan(0.002);
+    expect(Math.abs(color[1] / color[2] - 250 / 245)).toBeLessThan(0.002);
   });
 });
 
@@ -121,4 +178,27 @@ function setMaterial(
   material: number,
 ): void {
   materials[y * width + x] = material;
+}
+
+function applyLegacyScalarRelief(
+  color: Float32Array,
+  _density: number,
+  gradientX: number,
+  gradientY: number,
+): void {
+  const directedSlope = Math.max(-1, Math.min(1,
+    (gradientX - 128) / 508 * (-0.55 * 4)
+      + (gradientY - 128) / 508 * (-0.80 * 4),
+  ));
+  const relief = directedSlope < 0 ? directedSlope * 0.07 : directedSlope * 0.08;
+  const scale = 1 + relief;
+  color[0] *= scale;
+  color[1] *= scale;
+  color[2] *= scale;
+  const peak = Math.max(color[0], color[1], color[2]);
+  if (peak <= 254) return;
+  const headroomScale = 254 / peak;
+  color[0] *= headroomScale;
+  color[1] *= headroomScale;
+  color[2] *= headroomScale;
 }

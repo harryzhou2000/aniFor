@@ -22,6 +22,7 @@ const mobileOnly = process.argv.includes('--mobile-only');
 const quickScreenshot = process.argv.includes('--quick-screenshot');
 const layoutOnly = process.argv.includes('--layout-only');
 const visualScaleMatrixOnly = process.argv.includes('--visual-scale-matrix-only');
+const powderBodyOnly = process.argv.includes('--powder-body-only');
 const screenshotRequest = process.argv.find((argument) => argument.startsWith('--screenshot='))?.slice('--screenshot='.length);
 
 async function main() {
@@ -40,7 +41,9 @@ async function main() {
     }, 15_000, 'Vite browser-audit server');
     const results = [];
     for (const mode of modes) results.push(await auditMode(mode));
-    const reducedAudit = quickScreenshot || layoutOnly || mobileOnly || visualScaleMatrixOnly;
+    const reducedAudit = quickScreenshot || layoutOnly || mobileOnly
+      || visualScaleMatrixOnly || powderBodyOnly;
+    if (powderBodyOnly) assertPairedPowderBodyDepth(results);
     if (!scaleEightOnly && !materialAtlasOnly && !reducedAudit) assertPairedVisualRelief(results);
     if (!scaleEightOnly && !reducedAudit) assertPairedMaterialAtlas(results);
     compactMaterialAtlasResults(results);
@@ -126,6 +129,12 @@ async function auditMode(mode) {
         && Boolean(window.__ANIFOR_INPUT_AUDIT__ && document.documentElement);
     })()`), 15_000, `input audit API (${mode})`);
     await waitFor(() => evaluate(cdp, `window.__ANIFOR_INPUT_AUDIT__.backend().backend === ${JSON.stringify(mode)}`), 15_000, `${mode} backend`);
+    if (powderBodyOnly) {
+      const powderBodyDepth = await auditPowderBodyDepth(cdp, mode, dpr);
+      assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
+      cdp.close();
+      return { backend: mode, powderBodyDepth, browserErrors: errors.length };
+    }
     if (mobileOnly) {
       const mobile = await auditMobile(
         cdp, mode, screenshotRequest ? variantScreenshotPath(screenshotRequest, `${mode}-mobile`) : undefined,
@@ -267,6 +276,19 @@ async function auditMode(mode) {
       cdp, `${mode} repeated flat liquid-volume framebuffer`,
     );
     await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setLiquidVolumeChroma(true); true');
+    await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setPowderBodyDepth(false); true');
+    const flatPowderBodyCaptures = await waitForStablePageCapture(
+      cdp, `${mode} flat powder-body framebuffer`,
+    );
+    await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setPowderBodyDepth(true); true');
+    const relievedPowderBodyCaptures = await waitForStablePageCapture(
+      cdp, `${mode} relieved powder-body framebuffer`,
+    );
+    await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setPowderBodyDepth(false); true');
+    const repeatedFlatPowderBodyCaptures = await waitForStablePageCapture(
+      cdp, `${mode} repeated flat powder-body framebuffer`,
+    );
+    await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setPowderBodyDepth(true); true');
     await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setGasFieldLighting(false); true');
     const unlitGasCaptures = await waitForStablePageCapture(cdp, `${mode} unlit gas framebuffer`);
     // Keep the paired lit/unlit captures adjacent. The presentation benchmark
@@ -822,6 +844,31 @@ async function auditMode(mode) {
       && powderColumnSemanticSupport.smooth.deepHoleLeak
         <= powderColumnSemanticSupport.local.deepHoleLeak + 0.10,
     `${mode}: Smooth filled authored deep holes in a powder column (${JSON.stringify(powderColumnSemanticSupport)})`);
+    const powderBodyDepthSamples = await sampleBackdropRefractionRegions(cdp, {
+      straight: flatPowderBodyCaptures.capture.data,
+      refracted: relievedPowderBodyCaptures.capture.data,
+      repeatedStraight: repeatedFlatPowderBodyCaptures.capture.data,
+    }, [
+      { name: 'clayBodyDepth', x: 148, y: 80, radiusX: 4, radiusY: 18 },
+      { name: 'concreteBodyDepth', x: 163, y: 90, radiusX: 4, radiusY: 18 },
+      { name: 'isolatedSand', x: 190.5, y: 176.5, radiusX: 1.5, radiusY: 1.5 },
+      { name: 'clayDeepHole', x: 144.5, y: 62.5, radiusX: 0.45, radiusY: 0.45 },
+      { name: 'concreteDeepHole', x: 159.5, y: 73.5, radiusX: 0.45, radiusY: 0.45 },
+    ], canonicalCaptures.canvasRect);
+    const powderBodyDepth = Object.fromEntries(
+      powderBodyDepthSamples.map((sample) => [sample.name, sample]),
+    );
+    for (const name of ['clayBodyDepth', 'concreteBodyDepth']) {
+      const sample = powderBodyDepth[name];
+      assert(sample.rgbRms >= 0.04 && sample.chromaRms >= 0.015 && sample.rgbPeak <= 12,
+        `${mode}: ${name} lost bounded powder body depth (${JSON.stringify(powderBodyDepthSamples)})`);
+    }
+    for (const name of ['isolatedSand', 'clayDeepHole', 'concreteDeepHole']) {
+      assert(powderBodyDepth[name].rgbPeak <= 1,
+        `${mode}: powder body depth changed fine or empty structure ${name} (${JSON.stringify(powderBodyDepthSamples)})`);
+    }
+    assert(powderBodyDepthSamples.every((sample) => sample.repeatRgbPeak <= 1),
+      `${mode}: powder-body off-on-off sequence was not deterministic (${JSON.stringify(powderBodyDepthSamples)})`);
     const silhouetteSamples = await sampleCanonicalRegions([
       {
         name: 'roundedMetal', x: 405.5, y: 229.5,
@@ -1806,6 +1853,7 @@ async function auditMode(mode) {
         squareGrainSample,
         zoomedSquareGrainSample,
         powderColumnSemanticSupport,
+        powderBodyDepthSamples,
         thermalResponseSamples,
         thermalRepeatSamples,
         thermalSupportInvariantSamples,
@@ -2593,6 +2641,79 @@ async function auditShortDesktop(cdp, mode, dpr, previous) {
   return samples;
 }
 
+async function auditPowderBodyDepth(cdp, mode, dpr) {
+  await setDesktopMetrics(cdp, 1280, 720, dpr);
+  const geometry = await waitForStableCanvas(
+    cdp, 1280, 720, undefined, 20_000, `${mode} powder-body geometry`,
+  );
+  await waitForStablePageCapture(cdp, `${mode} settled powder-body fixture`, 20_000);
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setPowderBodyDepth(false); true');
+  const flat = await waitForStablePageCapture(cdp, `${mode} focused flat powder body`, 20_000);
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setPowderBodyDepth(true); true');
+  const relieved = await waitForStablePageCapture(cdp, `${mode} focused relieved powder body`, 20_000);
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setPowderBodyDepth(false); true');
+  const repeatedFlat = await waitForStablePageCapture(
+    cdp, `${mode} focused repeated flat powder body`, 20_000,
+  );
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setPowderBodyDepth(true); true');
+  const samples = await sampleBackdropRefractionRegions(cdp, {
+    straight: flat.capture.data,
+    refracted: relieved.capture.data,
+    repeatedStraight: repeatedFlat.capture.data,
+  }, [
+    { name: 'clayBodyDepth', x: 148, y: 80, radiusX: 4, radiusY: 18 },
+    { name: 'concreteBodyDepth', x: 163, y: 90, radiusX: 4, radiusY: 18 },
+    { name: 'isolatedSand', x: 190.5, y: 176.5, radiusX: 1.5, radiusY: 1.5 },
+    { name: 'clayDeepHole', x: 144.5, y: 62.5, radiusX: 0.45, radiusY: 0.45 },
+    { name: 'concreteDeepHole', x: 159.5, y: 73.5, radiusX: 0.45, radiusY: 0.45 },
+  ], geometry.canvas);
+  const byName = Object.fromEntries(samples.map((sample) => [sample.name, sample]));
+  for (const name of ['clayBodyDepth', 'concreteBodyDepth']) {
+    const sample = byName[name];
+    assert(sample.rgbRms >= 0.04 && sample.chromaRms >= 0.015 && sample.rgbPeak <= 12,
+      `${mode}: ${name} lost focused powder body depth (${JSON.stringify(samples)})`);
+  }
+  for (const name of ['isolatedSand', 'clayDeepHole', 'concreteDeepHole']) {
+    assert(byName[name].rgbPeak <= 1,
+      `${mode}: focused powder depth changed ${name} (${JSON.stringify(samples)})`);
+  }
+  assert(samples.every((sample) => sample.repeatRgbPeak <= 1),
+    `${mode}: focused powder-body sequence was not deterministic (${JSON.stringify(samples)})`);
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.clear(); true');
+  const blank = await waitForStablePageCapture(cdp, `${mode} focused blank powder fixture`, 20_000);
+  const semanticSupport = await sampleSemanticCellSupport(cdp, {
+    flat: flat.capture.data,
+    relieved: relieved.capture.data,
+  }, blank.capture.data, geometry.canvas, powderColumnCells());
+  assert(semanticSupport.flat.occupiedRecall >= 0.985
+    && semanticSupport.relieved.occupiedRecall >= 0.985
+    && semanticSupport.relieved.occupiedRecall >= semanticSupport.flat.occupiedRecall - 0.01,
+  `${mode}: focused powder body depth dropped notched-column cells (${JSON.stringify(semanticSupport)})`);
+  assert(semanticSupport.flat.deepHoleLeak <= 0.10
+    && semanticSupport.relieved.deepHoleLeak <= 0.10,
+  `${mode}: focused powder body depth filled authored holes (${JSON.stringify(semanticSupport)})`);
+  return {
+    backing: `${geometry.backing.width}x${geometry.backing.height}`,
+    cssCanvas: `${round(geometry.canvas.width, 2)}x${round(geometry.canvas.height, 2)}`,
+    samples,
+    semanticSupport,
+  };
+}
+
+function assertPairedPowderBodyDepth(results) {
+  const canvas = results.find((result) => result.backend === 'canvas2d')?.powderBodyDepth;
+  const webgl = results.find((result) => result.backend === 'webgl')?.powderBodyDepth;
+  if (!canvas || !webgl) return;
+  for (const name of ['clayBodyDepth', 'concreteBodyDepth']) {
+    const canvasSample = canvas.samples.find((sample) => sample.name === name);
+    const webglSample = webgl.samples.find((sample) => sample.name === name);
+    assert(canvasSample && webglSample, `focused paired powder-body sample missing ${name}`);
+    const ratio = canvasSample.rgbRms / Math.max(0.04, webglSample.rgbRms);
+    assert(ratio >= 0.30 && ratio <= 3.5,
+      `focused Canvas/WebGL ${name} response diverged (${canvasSample.rgbRms}/${webglSample.rgbRms})`);
+  }
+}
+
 async function auditVisualScaleMatrix(cdp, mode, dpr) {
   await setDesktopMetrics(cdp, 1280, 720, dpr);
   const scales = mode === 'webgl' ? [1, 2, 4, 8] : [1, 2, 4];
@@ -2898,6 +3019,19 @@ async function auditRenderScaleEight(cdp, dpr) {
     cdp, 'renderScale=8 repeated flat liquid-volume framebuffer', 450,
   );
   await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setLiquidVolumeChroma(true); true');
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setPowderBodyDepth(false); true');
+  const flatPowderBodyCapture = await captureSettledPage(
+    cdp, 'renderScale=8 flat powder-body framebuffer', 450,
+  );
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setPowderBodyDepth(true); true');
+  const relievedPowderBodyCapture = await captureSettledPage(
+    cdp, 'renderScale=8 relieved powder-body framebuffer', 450,
+  );
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setPowderBodyDepth(false); true');
+  const repeatedFlatPowderBodyCapture = await captureSettledPage(
+    cdp, 'renderScale=8 repeated flat powder-body framebuffer', 450,
+  );
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setPowderBodyDepth(true); true');
   const styleCaptures = { smooth: smoothCapture.capture.data };
   for (const style of ['local', 'grains']) {
     await evaluate(cdp, `(() => {
@@ -2985,6 +3119,28 @@ async function auditRenderScaleEight(cdp, dpr) {
   assert(powderSupport.local.deepHoleLeak <= 0.10
     && powderSupport.smooth.deepHoleLeak <= 0.10,
   `renderScale=8 powder styling filled authored column holes (${JSON.stringify(powderSupport)})`);
+  const powderBodyDepthSamples = await sampleBackdropRefractionRegions(cdp, {
+    straight: flatPowderBodyCapture.capture.data,
+    refracted: relievedPowderBodyCapture.capture.data,
+    repeatedStraight: repeatedFlatPowderBodyCapture.capture.data,
+  }, [
+    { name: 'clayBodyDepth8x', x: 148, y: 80, radiusX: 4, radiusY: 18 },
+    { name: 'concreteBodyDepth8x', x: 163, y: 90, radiusX: 4, radiusY: 18 },
+    { name: 'isolatedSand8x', x: 190.5, y: 176.5, radiusX: 1.5, radiusY: 1.5 },
+    { name: 'clayDeepHole8x', x: 144.5, y: 62.5, radiusX: 0.45, radiusY: 0.45 },
+  ], geometry.canvas);
+  const powderBodyDepth = Object.fromEntries(
+    powderBodyDepthSamples.map((sample) => [sample.name, sample]),
+  );
+  for (const name of ['clayBodyDepth8x', 'concreteBodyDepth8x']) {
+    const sample = powderBodyDepth[name];
+    assert(sample.rgbRms >= 0.04 && sample.chromaRms >= 0.015 && sample.rgbPeak <= 12,
+      `renderScale=8 ${name} lost bounded powder body depth (${JSON.stringify(powderBodyDepthSamples)})`);
+  }
+  assert(powderBodyDepth.isolatedSand8x.rgbPeak <= 1
+    && powderBodyDepth.clayDeepHole8x.rgbPeak <= 1
+    && powderBodyDepthSamples.every((sample) => sample.repeatRgbPeak <= 1),
+  `renderScale=8 powder depth changed fine/empty support or was nondeterministic (${JSON.stringify(powderBodyDepthSamples)})`);
   const squareGrain = (await samplePageRegions(
     cdp, styleCaptures.grains,
     [{ name: 'squareGrain8x', x: 190.5, y: 176.5, radiusX: 1.5, radiusY: 1.5,
@@ -3071,6 +3227,7 @@ async function auditRenderScaleEight(cdp, dpr) {
     resolutionControl,
     presentationTiming,
     powderSupport,
+    powderBodyDepthSamples,
     squareGrain,
     zoomedSquareGrain,
     gasVolumeChromaSamples,
@@ -5459,6 +5616,14 @@ function assertPairedVisualRelief(results) {
     const ratio = canvasSample.rgbRms / Math.max(0.04, webglSample.rgbRms);
     assert(ratio >= 0.35 && ratio <= 3.0,
       `Canvas/WebGL ${name} chroma response diverged (${canvasSample.rgbRms}/${webglSample.rgbRms})`);
+  }
+  for (const name of ['clayBodyDepth', 'concreteBodyDepth']) {
+    const canvasSample = canvas.powderBodyDepthSamples.find((sample) => sample.name === name);
+    const webglSample = webgl.powderBodyDepthSamples.find((sample) => sample.name === name);
+    assert(canvasSample && webglSample, `paired powder-body sample missing ${name}`);
+    const ratio = canvasSample.rgbRms / Math.max(0.04, webglSample.rgbRms);
+    assert(ratio >= 0.30 && ratio <= 3.5,
+      `Canvas/WebGL ${name} powder-body response diverged (${canvasSample.rgbRms}/${webglSample.rgbRms})`);
   }
   for (const name of [
     'patternedGlassShoulders', 'patternedIceCore',

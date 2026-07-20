@@ -615,6 +615,20 @@ console.log(JSON.stringify({
       }
       powderBulkStyleChecksum = solidBodyRgb[0] + solidBodyRgb[1] + solidBodyRgb[2];
     }),
+    powderBulkStyleWithoutBodyDepth: sample(() => {
+      const color = Material.Sand * 3;
+      for (let index = 0; index < width * height; index++) {
+        solidBodyRgb[0] = colorByMaterial[color] + 11;
+        solidBodyRgb[1] = colorByMaterial[color + 1] + 7;
+        solidBodyRgb[2] = colorByMaterial[color + 2] + 4;
+        applyCanvasPowderBulkStyle(
+          solidBodyRgb,
+          colorByMaterial[color], colorByMaterial[color + 1], colorByMaterial[color + 2],
+          255, 255, 148, 164, 255, 1, false,
+        );
+      }
+      powderBulkStyleChecksum = solidBodyRgb[0] + solidBodyRgb[1] + solidBodyRgb[2];
+    }),
     powderBulkStyleWorstCase: sample(() => {
       const color = Material.Sand * 3;
       for (let index = 0; index < width * height; index++) {

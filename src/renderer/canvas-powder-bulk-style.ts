@@ -8,6 +8,20 @@ const RELIEF_DARK_LIMIT = -0.07;
 const RELIEF_LIGHT_LIMIT = 0.08;
 const RELIEF_X = -0.55 * 4;
 const RELIEF_Y = -0.80 * 4;
+const BODY_DEPTH_MIDPOINT = 212;
+const BODY_DEPTH_TONE_LIMIT = 0.014;
+const BODY_DEPTH_TONE_PER_BYTE = BODY_DEPTH_TONE_LIMIT / (255 - BODY_DEPTH_MIDPOINT);
+const BODY_SLOPE_CHROMA_SHARE = 0.35;
+const BODY_CHROMA_DARK_LIMIT = -0.035;
+const BODY_CHROMA_LIGHT_LIMIT = 0.040;
+const BODY_KEY_EXPOSURE = 1.15;
+const BODY_SHADOW_EXPOSURE = 0.85;
+const BODY_KEY_RED = 1.00;
+const BODY_KEY_GREEN = 0.82;
+const BODY_KEY_BLUE = 0.56;
+const BODY_SHADOW_RED = 0.72;
+const BODY_SHADOW_GREEN = 0.62;
+const BODY_SHADOW_BLUE = 0.50;
 const OUTPUT_PEAK = 254;
 
 /**
@@ -34,6 +48,8 @@ export function canvasPowderBulkDepth(
 /**
  * Pulls stable, field-supported powder bulk toward its canonical albedo, then
  * applies a small directional scalar relief from the shared signed gradients.
+ * A restrained mineral key/fill then separates the field-supported shoulder
+ * from the dense core without changing coverage, ownership, or fine structures.
  * This is an allocation-free RGB-only presentation transform.
  */
 export function applyCanvasPowderBulkStyle(
@@ -47,6 +63,7 @@ export function applyCanvasPowderBulkStyle(
   gradientYByte: number,
   supportByte: number,
   bulkDepth: number,
+  bodyDepthEnabled = true,
 ): void {
   // Temporal hysteresis already happens in BoundaryStabilityField. A second
   // trio of smoothsteps here made a fully powder-filled Canvas several
@@ -73,6 +90,34 @@ export function applyCanvasPowderBulkStyle(
   color[0] *= scale;
   color[1] *= scale;
   color[2] *= scale;
+
+  // The packed field density supplies one broad depth coordinate even where a
+  // flat heap has no directional slope. Keep this response deliberately below
+  // the existing relief: it gives a settled body a warm shoulder and absorbing
+  // core while the retained per-cell/facet variation still reads as powder.
+  if (bodyDepthEnabled) {
+    const depthTone = clamp(
+      (BODY_DEPTH_MIDPOINT - densityByte) * BODY_DEPTH_TONE_PER_BYTE,
+      -BODY_DEPTH_TONE_LIMIT,
+      BODY_DEPTH_TONE_LIMIT,
+    );
+    const bodyResponse = clamp(
+      relief * BODY_SLOPE_CHROMA_SHARE + depthTone,
+      BODY_CHROMA_DARK_LIMIT,
+      BODY_CHROMA_LIGHT_LIMIT,
+    );
+    if (bodyResponse > 0) {
+      const amount = bodyResponse * BODY_KEY_EXPOSURE;
+      color[0] += (255 - color[0]) * BODY_KEY_RED * amount;
+      color[1] += (255 - color[1]) * BODY_KEY_GREEN * amount;
+      color[2] += (255 - color[2]) * BODY_KEY_BLUE * amount;
+    } else if (bodyResponse < 0) {
+      const amount = -bodyResponse * BODY_SHADOW_EXPOSURE;
+      color[0] *= 1 - BODY_SHADOW_RED * amount;
+      color[1] *= 1 - BODY_SHADOW_GREEN * amount;
+      color[2] *= 1 - BODY_SHADOW_BLUE * amount;
+    }
+  }
 
   const peak = Math.max(color[0], color[1], color[2]);
   if (peak > OUTPUT_PEAK) {

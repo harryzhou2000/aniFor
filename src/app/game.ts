@@ -257,6 +257,9 @@ export class Game {
       setEnergyCoreRelief: (enabled) => {
         this.renderer.setEnergyCoreReliefEnabled(enabled);
       },
+      setPowderBodyDepth: (enabled) => {
+        this.renderer.setPowderBodyDepthEnabled(enabled);
+      },
       clear: () => { this.simulation.clear(); },
       setRadius: (radius) => { this.radius = Math.max(0, Math.min(64, Math.round(radius))); },
       setMaterial: (material) => {
