@@ -24,11 +24,11 @@ Queued after the renderer checkpoint: revisit desktop/mobile geometry as a dedic
 
 - Repository: `/home/harry/projects/aniFor_codex`
 - Branch: `main_codex`
-- Current committed base: `249cd84 Add topology-safe powder body depth` on `main_codex`; the default-on volumetric Energy-aura checkpoint described below is pending commit.
-- Manual Actions run `29751234815` built and deployed the `249cd84` checkpoint successfully, and the live Pages runtime was verified after deployment.
-- Local GitHub CLI authentication was restored for that deployment. Recheck `gh auth status` before dispatching the pending checkpoint, and do not confuse a successful artifact build with a live deployment.
+- Current committed base: `fcd504a Add volumetric energy aura depth` on `main_codex`.
+- Manual Actions run `29756120034` restored the compiler/tool caches, built, tested, deployed `fcd504a`, and passed the separate post-deploy revision/runtime-asset verifier.
+- Local GitHub CLI authentication is valid. Recheck `gh auth status` before the next manual deployment, and do not confuse a successful artifact build with a live deployment.
 - Current live Pages URL: `https://harryzhou2000.github.io/aniFor/`
-- Live `revision.txt` is current through the committed `249cd84` checkpoint. Re-run the manual deployment after the pending Energy checkpoint is pushed, then require its exact revision and recursive asset closure before calling Pages current.
+- Live `revision.txt` is `fcd504a8479ece00f212bc833d2aaa72609dbd08`; an independent local verifier confirmed the exact revision, all 19 recursive assets, and WASM MIME on its first attempt.
 
 ## Committed/live history through `8ae8765`
 
