@@ -1378,6 +1378,31 @@ async function auditMode(mode) {
     assert(Math.abs((afterPan.panX - beforePan.panX) - 42) < 0.12, `${mode}: middle-pan X mismatch`);
     assert(Math.abs((afterPan.panY - beforePan.panY) - 27) < 0.12, `${mode}: middle-pan Y mismatch`);
 
+    // Coordinate-state equality alone cannot prove that the transformed
+    // presenter paints where its input mapping says it will. Place and inspect
+    // one off-centre semantic cell after both wheel zoom and middle-pan.
+    const transformedLandmark = { x: 431, y: 118 };
+    const transformedGeometry = await metrics(cdp);
+    const transformedClient = worldClient(
+      transformedGeometry.canvas,
+      { x: transformedLandmark.x + 0.5, y: transformedLandmark.y + 0.5 },
+    );
+    await mouseClick(cdp, transformedClient.x, transformedClient.y, 'left');
+    await sleep(80);
+    const transformedPainted = await evaluate(cdp, `(() => {
+      const audit = window.__ANIFOR_INPUT_AUDIT__;
+      return {
+        cell: audit.cell(${transformedLandmark.x}, ${transformedLandmark.y}),
+        occupied: audit.occupiedCells(),
+      };
+    })()`);
+    assert(transformedPainted.cell > 0 && transformedPainted.occupied === 1,
+      `${mode}: transformed radius-0 paint missed its exact semantic cell (${JSON.stringify(transformedPainted)})`);
+    const transformedPaintedFootprint = (await capturePaintedFootprints(
+      cdp, [transformedLandmark], `${mode} post-wheel/post-pan`, 1.5, 0.8,
+    ))[0];
+    await evaluate(cdp, `window.__ANIFOR_INPUT_AUDIT__.clear(); true`);
+
     // Exercise the actual ResizeObserver/rAF/presenter chain while the camera
     // is zoomed and off-centre, then require an exact round-trip at the same
     // CSS viewport. Zoom-one geometry alone cannot prove camera preservation.
@@ -1527,6 +1552,7 @@ async function auditMode(mode) {
       lifePreset: nativeSemantics.lifePreset,
       wheelAnchorErrorCells: round(wheelAnchorError, 5),
       middlePanDelta: { x: round(afterPan.panX - beforePan.panX, 3), y: round(afterPan.panY - beforePan.panY, 3) },
+      transformedPaintedFootprint,
       zoomedResizeAnchorErrorCells: round(zoomedResizeAnchorError, 5),
       renderScaleOne,
       ...(renderScaleEight ? { renderScaleEight } : {}),

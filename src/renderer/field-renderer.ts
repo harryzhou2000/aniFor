@@ -23,6 +23,9 @@ import {
 import { shadeCanvasEnergy } from './canvas-energy-style';
 import { shadeCanvasMaterial } from './canvas-material-style';
 import {
+  applyCanvasPowderBulkStyle, canvasPowderBulkDepth,
+} from './canvas-powder-bulk-style';
+import {
   applicableCanvasRenderTraits, applyCanvasRenderTraits, CANVAS_RENDER_TRAIT_CLOCK_SIZE,
   updateCanvasRenderTraitClock,
 } from './canvas-render-traits';
@@ -717,6 +720,13 @@ export class MaterialRenderer {
         ? canvasSolidRelief(x, y, material, profile, optics)
         : 0;
       const surfaceLight = normalLight + solidRelief;
+      const projectedInfo = PROJECTED_RENDER_INFO[material];
+      const powderBulkDepth = phase === RenderPhase.Powder
+        && this.powderRenderStyle === 'smooth' && applicableTraits === 0
+        && !projectedInfo?.emissive
+        ? canvasPowderBulkDepth(this.rendered, width, height, x, y, material)
+        : 0;
+      const powderCanonicalColor = powderBulkDepth > 0 ? projectedInfo?.color ?? 0 : 0;
       if (this.translucentBackdropRefractionEnabled && wall && phase === RenderPhase.Solid
         && (material === Material.Glass || material === Material.Ice)
         && applicableTraits === 0 && !PROJECTED_RENDER_INFO[material]?.emissive) {
@@ -766,6 +776,10 @@ export class MaterialRenderer {
         this.styledColor[0] = 194 + grain + surfaceLight;
         this.styledColor[1] = 145 + grain * 0.65 + surfaceLight;
         this.styledColor[2] = 76 + grain * 0.35 + surfaceLight;
+        applyCanvasPowderBulkCellStyle(
+          this.styledColor, powderCanonicalColor, this.boundaryStability[index],
+          fields.powderSurface.bytes, pixel, powderBulkDepth,
+        );
         this.applyThermalMaterialStyle(
           phase, material, false, applicableTraits, temperatures?.[index], optics,
         );
@@ -778,6 +792,10 @@ export class MaterialRenderer {
         this.styledColor[0] = 188 + grain + surfaceLight + softness;
         this.styledColor[1] = 166 + grain + surfaceLight + softness;
         this.styledColor[2] = 124 + grain * 0.6 + surfaceLight;
+        applyCanvasPowderBulkCellStyle(
+          this.styledColor, powderCanonicalColor, this.boundaryStability[index],
+          fields.powderSurface.bytes, pixel, powderBulkDepth,
+        );
         this.applyThermalMaterialStyle(
           phase, material, false, applicableTraits, temperatures?.[index], optics,
         );
@@ -790,6 +808,10 @@ export class MaterialRenderer {
         this.styledColor[0] = 220 + grain + crystal + surfaceLight;
         this.styledColor[1] = 216 + grain + crystal + surfaceLight;
         this.styledColor[2] = 202 + grain + crystal + surfaceLight;
+        applyCanvasPowderBulkCellStyle(
+          this.styledColor, powderCanonicalColor, this.boundaryStability[index],
+          fields.powderSurface.bytes, pixel, powderBulkDepth,
+        );
         this.applyThermalMaterialStyle(
           phase, material, false, applicableTraits, temperatures?.[index], optics,
         );
@@ -920,6 +942,10 @@ export class MaterialRenderer {
         this.styledColor[0] = 70 + grain + spark + surfaceLight;
         this.styledColor[1] = 64 + grain + spark * 0.7 + surfaceLight;
         this.styledColor[2] = 58 + grain + spark * 0.35 + surfaceLight;
+        applyCanvasPowderBulkCellStyle(
+          this.styledColor, powderCanonicalColor, this.boundaryStability[index],
+          fields.powderSurface.bytes, pixel, powderBulkDepth,
+        );
         this.applyThermalMaterialStyle(
           phase, material, false, applicableTraits, temperatures?.[index], optics,
         );
@@ -1030,6 +1056,10 @@ export class MaterialRenderer {
           shadeCanvasMaterial(
             this.styledColor, red, green, blue, profile,
             optics, material, x, y, index, visualTime,
+          );
+          if (phase === RenderPhase.Powder) applyCanvasPowderBulkCellStyle(
+            this.styledColor, powderCanonicalColor, this.boundaryStability[index],
+            fields.powderSurface.bytes, pixel, powderBulkDepth,
           );
           if (denseSolidInterior && applicableTraits === 0 && !info.emissive) {
             const cohesion = canvasSolidInteriorCohesion(profile, optics);
@@ -1318,6 +1348,28 @@ export class MaterialRenderer {
     if (this.presenter) this.presenter.setTransform(this.view.scale, position.x, position.y);
     else this.fallbackSurface.style.transform = `translate3d(${position.x}px, ${position.y}px, 0) scale(${this.view.scale})`;
   }
+}
+
+function applyCanvasPowderBulkCellStyle(
+  color: Float32Array,
+  canonicalColor: number,
+  stability: number,
+  powderSurface: Uint8Array,
+  pixel: number,
+  bulkDepth: number,
+): void {
+  applyCanvasPowderBulkStyle(
+    color,
+    canonicalColor >>> 16,
+    (canonicalColor >>> 8) & 0xff,
+    canonicalColor & 0xff,
+    stability,
+    powderSurface[pixel],
+    powderSurface[pixel + 1],
+    powderSurface[pixel + 2],
+    powderSurface[pixel + 3],
+    bulkDepth,
+  );
 }
 
 function setPixel(target: Uint8ClampedArray, offset: number, red: number, green: number, blue: number, alpha: number): void {

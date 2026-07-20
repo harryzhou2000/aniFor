@@ -651,19 +651,22 @@ void main() {
       )))));
   float boundaryStability = 0.0;
   float powderSurfaceBlend = 0.0;
+  float powderBulkDepth = 0.0;
   vec4 localPowderShape = shape;
+  vec4 widePowderShape = shape;
   if (family == 4.0) {
     boundaryStability = surfaceOnly > 0.5
       ? nearbyPowderStability(fieldUv, material)
       : (halo < 0.5 ? boundaryStabilityAt(fieldUv) : 0.0);
   }
   if (family == 4.0 && boundaryStability > 0.001 && uPowderStyle > 1.5) {
-    vec4 widePowderShape = powderSurfaceShape(fieldUv);
+    widePowderShape = powderSurfaceShape(fieldUv);
+    powderBulkDepth = powderSurfaceBulkDepth(fieldUv, material, surfaceOnly);
     float verticalShare = abs(widePowderShape.z)
       / (abs(widePowderShape.y) + abs(widePowderShape.z) + 0.000001);
     powderSurfaceBlend = smoothstep(0.42, 0.70, verticalShare)
       * smoothstep(0.006, 0.030, abs(widePowderShape.z))
-      * powderSurfaceBulkDepth(fieldUv, material, surfaceOnly);
+      * powderBulkDepth;
     shape = mix(shape, widePowderShape, boundaryStability * powderSurfaceBlend);
   }
   // Powder may extend into an empty presentation fragment only when at least
@@ -1014,6 +1017,8 @@ void main() {
       * (broadSheen * mix(0.016, 0.052 * gloss, liquidDepth) + caustic * causticStrength);
     color += liquidBase * (0.025 + atmosphere * 0.030) + vec3(0.055, 0.090, 0.105) * rim;
   } else {
+    float powderVisualCohesion = 0.0;
+    float powderMacroRelief = 0.0;
     float roughSurface = optics == 7.0 ? 1.0 : 0.0;
     float smoothSurface = optics == 8.0 ? 1.0 : 0.0;
     float organicSurface = optics == 9.0 ? 1.0 : 0.0;
@@ -1083,6 +1088,17 @@ void main() {
       float localPowderContact = smoothstep(1.55, 2.85, localPowderShape.w);
       powderContact = max(powderContact, localPowderContact);
       float powderBulk = powderContact * boundaryStability;
+      if (uPowderStyle > 1.5 && surfaceOnly < 0.5 && traits < 0.5 && !materialEmissive) {
+        powderVisualCohesion = powderBulkDepth
+          * smoothstep(0.75, 1.0, boundaryStability)
+          * smoothstep(0.55, 0.85, widePowderShape.x);
+        float powderDirectedSlope = clamp(
+          widePowderShape.y * -2.20 + widePowderShape.z * -3.20, -1.0, 1.0
+        );
+        powderMacroRelief = (powderDirectedSlope < 0.0
+          ? powderDirectedSlope * 0.070
+          : powderDirectedSlope * 0.080) * powderVisualCohesion;
+      }
       float grainOffsetY = fract(sin(dot(floor(fieldPosition), vec2(39.346, 11.135))) * 24634.6345) - 0.5;
       vec2 grainCentre = vec2(grain, grainOffsetY) * 0.075;
       float grainDistance = length(fract(fieldPosition) - 0.5 - grainCentre);
@@ -1153,10 +1169,13 @@ void main() {
     if (roughSurface > 0.5 || (optics < 0.5 && profile == 1.0)) {
       vec2 subcell = floor(fract(fieldPosition) * 2.0);
       float grainFacet = fract(sin(dot(floor(fieldPosition) * 2.0 + subcell, vec2(12.9898, 78.233))) * 43758.5453) - 0.5;
-      color *= 0.91 + grain * (0.20 + roughSurface * 0.05)
-        + grainFacet * (0.10 + roughSurface * 0.04);
+      float cellGrainRetention = mix(1.0, 0.28, powderVisualCohesion);
+      float facetRetention = mix(1.0, 0.62, powderVisualCohesion);
+      color *= 0.91 + grain * (0.20 + roughSurface * 0.05) * cellGrainRetention
+        + grainFacet * (0.10 + roughSurface * 0.04) * facetRetention;
       color += base * max(0.0, 0.6 - subcell.x - subcell.y)
-        * (0.11 + roughSurface * 0.035);
+        * (0.11 + roughSurface * 0.035) * facetRetention;
+      color *= 1.0 + powderMacroRelief;
     } else if (smoothSurface > 0.5 || translucentSurface > 0.5
       || (optics < 0.5 && profile == 2.0)) {
       float bevel = clamp(abs(shape.y) + abs(shape.z), 0.0, 1.0);

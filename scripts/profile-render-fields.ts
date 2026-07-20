@@ -25,6 +25,7 @@ import {
   applyCanvasLiquidBodyOptics, canvasLiquidContourScale, canvasLiquidEmissionExposure,
   canvasLiquidEmissionSurfaceExposure, canvasLiquidFieldRelief, canvasLiquidSurfaceExposure,
 } from '../src/renderer/canvas-liquid-light';
+import { applyCanvasPowderBulkStyle } from '../src/renderer/canvas-powder-bulk-style';
 import { createRenderLookups } from '../src/renderer/render-field-set';
 import { PowderSurfaceField } from '../src/renderer/powder-surface-field';
 import { RenderPhase, RenderProfile } from '../src/renderer/render-profile';
@@ -150,6 +151,7 @@ const traitCompositePixels = new Uint8ClampedArray(width * height * 4);
 let traitChecksum = 0;
 let solidReliefChecksum = 0;
 let solidBodyChecksum = 0;
+let powderBulkStyleChecksum = 0;
 let liquidBodyChecksum = 0;
 let liquidLightChecksum = 0;
 let translucentLightChecksum = 0;
@@ -417,6 +419,29 @@ console.log(JSON.stringify({
       }
       solidBodyChecksum = solidBodyRgb[0] + solidBodyRgb[1] + solidBodyRgb[2];
     }),
+    powderBulkStyleLoopBaseline: sample(() => {
+      const color = Material.Sand * 3;
+      for (let index = 0; index < width * height; index++) {
+        solidBodyRgb[0] = colorByMaterial[color] + 11;
+        solidBodyRgb[1] = colorByMaterial[color + 1] + 7;
+        solidBodyRgb[2] = colorByMaterial[color + 2] + 4;
+      }
+      powderBulkStyleChecksum = solidBodyRgb[0] + solidBodyRgb[1] + solidBodyRgb[2];
+    }),
+    powderBulkStyleWorstCase: sample(() => {
+      const color = Material.Sand * 3;
+      for (let index = 0; index < width * height; index++) {
+        solidBodyRgb[0] = colorByMaterial[color] + 11;
+        solidBodyRgb[1] = colorByMaterial[color + 1] + 7;
+        solidBodyRgb[2] = colorByMaterial[color + 2] + 4;
+        applyCanvasPowderBulkStyle(
+          solidBodyRgb,
+          colorByMaterial[color], colorByMaterial[color + 1], colorByMaterial[color + 2],
+          255, 255, 148, 164, 255, 1,
+        );
+      }
+      powderBulkStyleChecksum = solidBodyRgb[0] + solidBodyRgb[1] + solidBodyRgb[2];
+    }),
     liquidBodyOpticsLoopBaseline: sample(() => {
       const color = Material.Water * 3;
       const oldReliefScale = 1 + 0.18 * 1.35 * 1.08;
@@ -576,6 +601,7 @@ console.log(JSON.stringify({
   traitChecksum: Math.round(traitChecksum),
   solidReliefChecksum: Math.round(solidReliefChecksum),
   solidBodyChecksum: Math.round(solidBodyChecksum),
+  powderBulkStyleChecksum: Math.round(powderBulkStyleChecksum),
   liquidBodyChecksum: Math.round(liquidBodyChecksum),
   liquidLightChecksum: Math.round(liquidLightChecksum),
   translucentLightChecksum: Math.round(translucentLightChecksum),

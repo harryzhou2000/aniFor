@@ -24,12 +24,11 @@ Queued after the renderer checkpoint: revisit desktop/mobile geometry as a dedic
 
 - Repository: `/home/harry/projects/aniFor_codex`
 - Branch: `main_codex`
-- Current deployed renderer checkpoint: `c96dee8 Add coherent liquid refraction at true 8x`.
-- Manual Actions run `29699378042` built and deployed exact SHA `c96dee82d7339d92b0f686220955ee0185fdd0a4` after `origin/main_codex` was independently checked.
-- GitHub CLI authentication was working for that dispatch and inspection. Re-check authentication and the remote branch independently after the next push.
+- Current local base before the pending stable-powder checkpoint: `dcc5e52 Add Canvas liquid body optics` on `main_codex`.
+- Manual Actions run `29709956074` built, tested, and uploaded the Pages artifact for exact SHA `dcc5e52b1ff5858cdba7b2aaf21037a296bd4273`, but `actions/deploy-pages` failed while creating the deployment because GitHub Pages returned HTTP 503. The verifier was correctly skipped.
+- Local GitHub CLI authentication is currently invalid. Re-authenticate before dispatching the next manual `build-and-deploy`, and do not confuse a successful artifact build with a live deployment.
 - Current live Pages URL: `https://harryzhou2000.github.io/aniFor/`
-- Verified live renderer baseline: `c96dee8` from Actions run `29699378042`. The workflow verifier and an independent post-run check both matched the exact revision and traversed all 20 referenced runtime resources on the first attempt, including the native WASM assets and MIME checks.
-- Build, deploy, and post-deployment verification all passed. The live closure contains all referenced resources with correct WASM MIME and the exact expected revision. The successful primary ccache key already existed, so the save step correctly skipped.
+- Live `revision.txt` remains `603b609ab88ab71904f118fefb365a606efc7603` because the newer deployment never existed. Re-run the manual deployment after the pending checkpoint is pushed, then require exact revision and recursive asset closure before calling Pages current.
 
 ## Committed/live history through `8ae8765`
 
@@ -94,6 +93,12 @@ Queued after the renderer checkpoint: revisit desktop/mobile geometry as a dedic
 - That historical simulation-tool checkpoint deliberately left signs and configured-source targeting disabled and distinct; configured sources were enabled later through their dedicated semantic tranche.
 
 ## Current local graphics and responsive UI tranche
+
+- Smooth powder now treats only proven deep, stable, authoritative bulk as a coherent material body: Canvas blends cell-scale colour variation toward canonical albedo and both backends add bounded hue-preserving macro slope relief from the existing powder field. Local and Grains are exact bypasses; shallow/unstable/trait/emissive matter, thin columns, ridges, branches, authored holes, seams, alpha, and support remain unchanged.
+- The full 612×384 Canvas deep-Sand helper measures `7.44/7.54 ms` median/p90 including a `1.22 ms` loop baseline, adds no persistent bytes, and runs once per world cell rather than per supersampled output pixel.
+- True WebGL 8× remains enabled and verified: requested/effective scale `8`, exact `4896×3072` backing, all `2316/2316` Local and Smooth powder-column cells retained, all ten deep holes empty, exact `8×8` zoomed Grains square, zero browser errors, and deterministic context-loss recovery to Canvas 2× with `0.0159`-cell footprint error while preserving the camera.
+- The interaction audit now paints and blank-differences a real off-centre framebuffer landmark after wheel zoom plus middle pan. Canvas/WebGL peak errors are `0.0620/0.4662` cell; zoomed-resize anchor errors are `0.00681/0.03681` cell. This closes the former state-only proof gap for the upper-left-anchored cursor/render mismatch.
+- Current validation: 301 tests, production TypeScript/Vite build, 19-file static asset closure, forced Canvas and WebGL visual captures, full Canvas and WebGL interaction audits, and the dedicated true-8×/context-loss audit all pass.
 
 - Dense WebGL energy chunks use the existing emission-field density only as a gate for calming carrier micro-modulation and normalizing semantic-shape opacity. The field cannot manufacture a body without semantic shape support. Measured Fire/Plasma/ELEC/PHOT/GRVT microcontrast fell by roughly 6–24% while hue, macro relief, sparse aura ownership, and clipping gates remained intact.
 - Canvas and WebGL gas now receive directional warm/cool scatter from the already existing emission field. Canvas preserves atmosphere alpha byte-for-byte and selects among the four emission neighbours it already reads; desktop WebGL takes at most one outward-normal emission sample and compact/mobile takes none. No field, pass, persistent buffer, or simulation state was added.
