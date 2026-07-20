@@ -22,8 +22,10 @@ import {
   applyCanvasTranslucentCaustic, applyCanvasTranslucentLensShell, canvasSolidRelief,
 } from '../src/renderer/canvas-solid-relief';
 import {
-  applyCanvasLiquidBodyOptics, canvasLiquidContourScale, canvasLiquidEmissionExposure,
+  applyCanvasLiquidBodyOptics, applyCanvasLiquidVolumeChroma,
+  canvasLiquidContourScale, canvasLiquidEmissionExposure,
   canvasLiquidEmissionSurfaceExposure, canvasLiquidFieldRelief, canvasLiquidSurfaceExposure,
+  canvasLiquidVolumeChromaResponse,
 } from '../src/renderer/canvas-liquid-light';
 import { applyCanvasPowderBulkStyle } from '../src/renderer/canvas-powder-bulk-style';
 import { applyCanvasSuspensionStyle } from '../src/renderer/canvas-suspension-style';
@@ -649,6 +651,38 @@ console.log(JSON.stringify({
       }
       liquidBodyChecksum = liquidBodyRgb[0] + liquidBodyRgb[1] + liquidBodyRgb[2];
     }),
+    liquidVolumeChroma: {
+      flat: sample(() => {
+        const color = Material.Water * 3;
+        for (let index = 0; index < width * height; index++) {
+          liquidBodyRgb[0] = colorByMaterial[color];
+          liquidBodyRgb[1] = colorByMaterial[color + 1];
+          liquidBodyRgb[2] = colorByMaterial[color + 2];
+          applyCanvasLiquidBodyOptics(
+            liquidBodyRgb, RenderOptics.Aqueous, 255, 8, 0.18, 1,
+          );
+        }
+        liquidBodyChecksum = liquidBodyRgb[0] + liquidBodyRgb[1] + liquidBodyRgb[2];
+      }),
+      chromatic: sample(() => {
+        const color = Material.Water * 3;
+        for (let index = 0; index < width * height; index++) {
+          liquidBodyRgb[0] = colorByMaterial[color];
+          liquidBodyRgb[1] = colorByMaterial[color + 1];
+          liquidBodyRgb[2] = colorByMaterial[color + 2];
+          applyCanvasLiquidBodyOptics(
+            liquidBodyRgb, RenderOptics.Aqueous, 255, 8, 0.18, 1,
+          );
+          applyCanvasLiquidVolumeChroma(
+            liquidBodyRgb, RenderOptics.Aqueous,
+            canvasLiquidVolumeChromaResponse(
+              RenderOptics.Aqueous, 255, 8, 0.18, ((index & 31) - 15.5) / 15.5,
+            ),
+          );
+        }
+        liquidBodyChecksum = liquidBodyRgb[0] + liquidBodyRgb[1] + liquidBodyRgb[2];
+      }),
+    },
     translucentCausticWorstCase: sample(() => {
       for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) {
         translucentCausticRgb[0] = 120;

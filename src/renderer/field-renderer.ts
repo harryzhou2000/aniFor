@@ -16,7 +16,8 @@ import {
   createLiquidSurfaceScratch, reconstructLiquidSurface, type LiquidSurfaceScratch,
 } from './canvas-liquid-surface';
 import {
-  applyCanvasLiquidBodyOptics, canvasLiquidContourScale,
+  applyCanvasLiquidBodyOptics, applyCanvasLiquidVolumeChroma,
+  canvasLiquidContourScale, canvasLiquidVolumeChromaResponse,
   canvasLiquidEmissionExposure, canvasLiquidFieldRelief,
   canvasLiquidEmissionSurfaceExposure, canvasLiquidSpeciesRelief, canvasLiquidSurfaceExposure,
 } from './canvas-liquid-light';
@@ -154,6 +155,7 @@ export class MaterialRenderer {
   private gasVolumeChromaEnabled = true;
   private liquidFieldLightingEnabled = true;
   private liquidSilhouetteCohesionEnabled = true;
+  private liquidVolumeChromaEnabled = true;
   private translucentFieldTransmissionEnabled = true;
   private translucentBackdropRefractionEnabled = true;
   private solidContactDepthEnabled = true;
@@ -314,6 +316,14 @@ export class MaterialRenderer {
     if (enabled === this.liquidSilhouetteCohesionEnabled) return;
     this.liquidSilhouetteCohesionEnabled = enabled;
     this.presenter?.setLiquidSilhouetteCohesionEnabled(enabled);
+    this.contourChunks.markAll();
+    this.changed = true;
+  }
+
+  setLiquidVolumeChromaEnabled(enabled: boolean): void {
+    if (enabled === this.liquidVolumeChromaEnabled) return;
+    this.liquidVolumeChromaEnabled = enabled;
+    this.presenter?.setLiquidVolumeChromaEnabled(enabled);
     this.contourChunks.markAll();
     this.changed = true;
   }
@@ -551,6 +561,7 @@ export class MaterialRenderer {
       this.solidFieldLightingEnabled,
       this.liquidSilhouetteCohesionEnabled,
       this.gasVolumeChromaEnabled,
+      this.liquidVolumeChromaEnabled,
     );
     // Route subsequent dirty cells to the candidate while its first expensive
     // frame is in flight. The known-good Canvas remains mounted underneath;
@@ -957,6 +968,14 @@ export class MaterialRenderer {
           this.styledColor, optics, fields.liquid.bytes[pixel + 3], density,
           liquidFieldRelief, liquidSurfaceExposure,
         );
+        if (this.liquidVolumeChromaEnabled && !liquidSpeciesContact) {
+          applyCanvasLiquidVolumeChroma(
+            this.styledColor, optics, canvasLiquidVolumeChromaResponse(
+              optics, fields.liquid.bytes[pixel + 3], density,
+              liquidFieldRelief, (sheen - contour) / 5,
+            ),
+          );
+        }
         compositePixel(
           target, pixel,
           this.styledColor[0], this.styledColor[1], this.styledColor[2], canvasLiquidAlpha(density),
@@ -1057,6 +1076,14 @@ export class MaterialRenderer {
           this.styledColor, optics, fields.liquid.bytes[pixel + 3], density,
           liquidFieldRelief, liquidSurfaceExposure,
         );
+        if (this.liquidVolumeChromaEnabled && !liquidSpeciesContact) {
+          applyCanvasLiquidVolumeChroma(
+            this.styledColor, optics, canvasLiquidVolumeChromaResponse(
+              optics, fields.liquid.bytes[pixel + 3], density,
+              liquidFieldRelief, (shimmer - contour) / 6,
+            ),
+          );
+        }
         compositePixel(
           target, pixel,
           this.styledColor[0], this.styledColor[1], this.styledColor[2], canvasLiquidAlpha(density),
@@ -1105,6 +1132,14 @@ export class MaterialRenderer {
           this.styledColor, optics, fields.liquid.bytes[pixel + 3], density,
           liquidFieldRelief, liquidSurfaceExposure,
         );
+        if (this.liquidVolumeChromaEnabled && !liquidSpeciesContact) {
+          applyCanvasLiquidVolumeChroma(
+            this.styledColor, optics, canvasLiquidVolumeChromaResponse(
+              optics, fields.liquid.bytes[pixel + 3], density,
+              liquidFieldRelief, shimmer / 4,
+            ),
+          );
+        }
         compositePixel(
           target, pixel,
           this.styledColor[0], this.styledColor[1], this.styledColor[2], canvasLiquidAlpha(density),
@@ -1163,6 +1198,15 @@ export class MaterialRenderer {
             this.styledColor, optics, fields.liquid.bytes[pixel + 3], density,
             liquidFieldRelief, liquidSurfaceExposure,
           );
+          if (this.liquidVolumeChromaEnabled && applicableTraits === 0
+            && !info.emissive && !liquidSpeciesContact) {
+            applyCanvasLiquidVolumeChroma(
+              this.styledColor, optics, canvasLiquidVolumeChromaResponse(
+                optics, fields.liquid.bytes[pixel + 3], density,
+                liquidFieldRelief, (shimmer - contour) / 4,
+              ),
+            );
+          }
           if (applicableTraits === 0 && !info.emissive) {
             compositePixel(
               target, pixel,

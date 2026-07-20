@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
-  applyCanvasLiquidBodyOptics, canvasLiquidContourScale, canvasLiquidEmissionExposure,
+  applyCanvasLiquidBodyOptics, applyCanvasLiquidVolumeChroma,
+  canvasLiquidContourScale, canvasLiquidEmissionExposure,
   canvasLiquidEmissionSurfaceExposure, canvasLiquidFieldRelief, canvasLiquidSpeciesRelief,
-  canvasLiquidSurfaceExposure,
+  canvasLiquidSurfaceExposure, canvasLiquidVolumeChromaResponse,
 } from './canvas-liquid-light';
 import { RenderOptics } from './render-optics';
 
@@ -63,6 +64,55 @@ describe('Canvas liquid field-owned light', () => {
     expect(Math.max(...bright)).toBeLessThanOrEqual(254);
     expect(bright[2] + 1).toBeGreaterThanOrEqual(bright[1]);
     expect(bright[1]).toBeGreaterThan(bright[0]);
+  });
+
+  it('adds bounded family-coloured liquid volume key and fill without changing alpha', () => {
+    const families = [
+      { optics: RenderOptics.Aqueous, keyOrder: [2, 1, 0], shadowOrder: [0, 1, 2] },
+      { optics: RenderOptics.Oily, keyOrder: [0, 1, 2], shadowOrder: [2, 1, 0] },
+      { optics: RenderOptics.Corrosive, keyOrder: [1, 2, 0], shadowOrder: [0, 2, 1] },
+    ] as const;
+    for (const { optics, keyOrder, shadowOrder } of families) {
+      const positive = canvasLiquidVolumeChromaResponse(optics, 255, 8, 0.18, 1);
+      const negative = canvasLiquidVolumeChromaResponse(optics, 255, 8, -0.16, -1);
+      expect(positive).toBeGreaterThan(0);
+      expect(positive).toBeLessThanOrEqual(0.065);
+      expect(negative).toBeLessThan(0);
+      expect(negative).toBeGreaterThanOrEqual(-0.055);
+
+      const source = [112, 112, 112, 73] as const;
+      const key = new Float32Array(source);
+      const fill = new Float32Array(source);
+      applyCanvasLiquidVolumeChroma(key, optics, positive);
+      applyCanvasLiquidVolumeChroma(fill, optics, negative);
+      const keyDelta = [key[0] - source[0], key[1] - source[1], key[2] - source[2]];
+      const fillDelta = [fill[0] - source[0], fill[1] - source[1], fill[2] - source[2]];
+      expect(keyDelta[keyOrder[0]]).toBeGreaterThan(keyDelta[keyOrder[1]]);
+      expect(keyDelta[keyOrder[1]]).toBeGreaterThan(keyDelta[keyOrder[2]]);
+      expect(fillDelta[shadowOrder[0]]).toBeLessThan(fillDelta[shadowOrder[1]]);
+      expect(fillDelta[shadowOrder[1]]).toBeLessThan(fillDelta[shadowOrder[2]]);
+      expect(key[3]).toBe(source[3]);
+      expect(fill[3]).toBe(source[3]);
+    }
+  });
+
+  it('keeps sparse and molten liquid volume chroma exact no-ops', () => {
+    expect(canvasLiquidVolumeChromaResponse(RenderOptics.Aqueous, 255, 2, 0.18, 1)).toBe(0);
+    expect(canvasLiquidVolumeChromaResponse(RenderOptics.Aqueous, 160, 8, 0.18, 1)).toBe(0);
+    expect(canvasLiquidVolumeChromaResponse(RenderOptics.Molten, 255, 8, 0.18, 1)).toBe(0);
+    const molten = new Float32Array([220, 84, 22, 91]);
+    const original = molten.slice();
+    applyCanvasLiquidVolumeChroma(molten, RenderOptics.Molten, 0.065);
+    expect(molten).toEqual(original);
+  });
+
+  it('strengthens corrosive channel separation without adding scalar macro light', () => {
+    const color = new Float32Array([127, 50, 143]);
+    const before = color[0] * 0.2126 + color[1] * 0.7152 + color[2] * 0.0722;
+    applyCanvasLiquidVolumeChroma(color, RenderOptics.Corrosive, -0.03);
+    const after = color[0] * 0.2126 + color[1] * 0.7152 + color[2] * 0.0722;
+    expect(after).toBeCloseTo(before, 4);
+    expect(Array.from(color)).not.toEqual([127, 50, 143]);
   });
 
   it('shapes emission reflection only on exposed, light-facing liquid relief', () => {

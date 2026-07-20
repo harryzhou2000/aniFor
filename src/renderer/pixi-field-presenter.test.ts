@@ -14,6 +14,7 @@ interface PresenterHarness {
   configurePresentation: PixiFieldPresenter['configurePresentation'];
   setGasFieldLightingEnabled: PixiFieldPresenter['setGasFieldLightingEnabled'];
   setGasVolumeChromaEnabled: PixiFieldPresenter['setGasVolumeChromaEnabled'];
+  setLiquidVolumeChromaEnabled: PixiFieldPresenter['setLiquidVolumeChromaEnabled'];
   setSurfaceContourLightingEnabled: PixiFieldPresenter['setSurfaceContourLightingEnabled'];
   setPhaseContactLightingEnabled: PixiFieldPresenter['setPhaseContactLightingEnabled'];
   setSolidFieldLightingEnabled: PixiFieldPresenter['setSolidFieldLightingEnabled'];
@@ -55,6 +56,7 @@ describe('Pixi presenter startup configuration', () => {
       uGasFieldLighting: 0,
       uGasVolumeChroma: 1,
       uLiquidFieldLighting: 1,
+      uLiquidVolumeChroma: 1,
       uTranslucentFieldTransmission: 0,
       uTranslucentBackdropRefraction: 1,
       uSolidContactDepth: 0,
@@ -119,6 +121,46 @@ describe('Pixi presenter startup configuration', () => {
     expect(`${helpers}${block}`).not.toContain('texture(');
     expect(`${helpers}${block}`).not.toMatch(/\balpha\s*[+*]?=/);
     expect(`${helpers}${block}`).not.toMatch(/\b(?:sin|pow|normalize|length)\s*\(/);
+  });
+
+  it('seeds and redraws optional-last liquid volume chroma', () => {
+    const presenter = presenterHarness();
+
+    presenter.configurePresentation(
+      true, true, true, true, true, true, true, true, true, 'smooth',
+      true, true, true, true, true, false,
+    );
+    expect(presenter.uniforms.uniforms.uLiquidVolumeChroma).toBe(0);
+    expect(presenter.app.render).not.toHaveBeenCalled();
+
+    presenter.setLiquidVolumeChromaEnabled(true);
+    expect(presenter.uniforms.uniforms.uLiquidVolumeChroma).toBe(1);
+    expect(presenter.app.render).toHaveBeenCalledOnce();
+  });
+
+  it('keeps liquid volume chroma arithmetic-only, RGB-only, and resource-free', () => {
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const helperStart = source.indexOf('float liquidVolumeChromaResponse(');
+    const helperEnd = source.indexOf('vec3 vividColor', helperStart);
+    const helpers = source.slice(helperStart, helperEnd);
+    const blockStart = source.indexOf('// Family-coloured absorption and reflection');
+    const blockEnd = source.indexOf('  } else {', blockStart);
+    const block = source.slice(blockStart, blockEnd);
+
+    expect(helperStart).toBeGreaterThan(0);
+    expect(helperEnd).toBeGreaterThan(helperStart);
+    expect(blockStart).toBeGreaterThan(0);
+    expect(blockEnd).toBeGreaterThan(blockStart);
+    expect(block).toContain('uLiquidVolumeChroma > 0.5 && liquidOnly < 0.5');
+    expect(block).toContain('molten < 0.5 && foreignMatterContact < 0.5');
+    expect(block).toContain('unlikeMaterialContact < 0.5');
+    expect(block).toContain('dot(liquidSpeciesSlope, liquidSpeciesSlope) < 0.0025');
+    expect(block).toContain('liquidDepth, volumeSlope, liquidDensity, liquidNeighbourMean');
+    expect(`${helpers}${block}`).not.toContain('texture(');
+    expect(`${helpers}${block}`).not.toMatch(/\balpha\s*[+*]?=/);
+    expect(`${helpers}${block}`).not.toMatch(/\b(?:sin|pow|normalize|length)\s*\(/);
+    expect(source.match(/texture\(uLiquidTexture/g)).toHaveLength(5);
+    expect(source).not.toContain('sampler2D uLiquidVolumeChroma');
   });
 
   it('keeps chromatic surface depth arithmetic-only and RGB-only', () => {

@@ -23,6 +23,16 @@ const BODY_ALPHA_SUPPORT = Float32Array.from(
 const BODY_NEIGHBOUR_SUPPORT = Float32Array.from(
   { length: 9 }, (_, neighbours) => smoothstep(2, 6, neighbours),
 );
+const VOLUME_CHROMA_PARAMETER_COUNT = 6;
+const VOLUME_CHROMA_PARAMETERS = new Float32Array(
+  RENDER_OPTICS_CLASS_COUNT * VOLUME_CHROMA_PARAMETER_COUNT,
+);
+for (let optics = 0; optics < RENDER_OPTICS_CLASS_COUNT; optics++) {
+  setVolumeChromaParameters(optics, 0.72, 0.84, 1.00, 0.72, 0.68, 0.58);
+}
+setVolumeChromaParameters(RenderOptics.Aqueous, 0.52, 0.88, 1.00, 1.00, 0.62, 0.36);
+setVolumeChromaParameters(RenderOptics.Oily, 1.00, 0.72, 0.28, 0.40, 0.68, 1.00);
+setVolumeChromaParameters(RenderOptics.Corrosive, 0.44, 1.00, 0.68, 0.72, 0.38, 0.62);
 const BODY_PARAMETER_COUNT = 5;
 const BODY_PARAMETERS = new Float32Array(RENDER_OPTICS_CLASS_COUNT * BODY_PARAMETER_COUNT);
 for (let optics = 0; optics < RENDER_OPTICS_CLASS_COUNT; optics++) {
@@ -64,6 +74,63 @@ export function applyCanvasLiquidBodyOptics(
   color[0] += BODY_PARAMETERS[parameter + 2] * rim;
   color[1] += BODY_PARAMETERS[parameter + 3] * rim;
   color[2] += BODY_PARAMETERS[parameter + 4] * rim;
+  compressPeak(color);
+}
+
+/**
+ * Signed family-coloured key/fill for an already qualified liquid body.
+ * Inputs are values the semantic styling pass has already computed. The
+ * response is RGB-only and allocation-free; support and opacity stay owned by
+ * the liquid field and the supersampled contour reconstruction.
+ */
+export function canvasLiquidVolumeChromaResponse(
+  optics: RenderOptics,
+  fieldAlpha: number,
+  neighbourCount: number,
+  signedRelief: number,
+  macroWave: number,
+): number {
+  if (optics === RenderOptics.Molten) return 0;
+  const support = BODY_ALPHA_SUPPORT[fieldAlpha] * BODY_NEIGHBOUR_SUPPORT[neighbourCount];
+  if (support <= 0) return 0;
+  const boundedRelief = clamp(signedRelief, RELIEF_DARK_LIMIT, RELIEF_LIGHT_LIMIT);
+  const macroGain = optics === RenderOptics.Corrosive ? 0.45 : 1;
+  const response = (
+    boundedRelief * 0.28 + clamp(macroWave, -1, 1) * 0.035 * macroGain
+  ) * support;
+  return clamp(response, -0.055, 0.065);
+}
+
+export function applyCanvasLiquidVolumeChroma(
+  color: Float32Array,
+  optics: RenderOptics,
+  response: number,
+): void {
+  if (response === 0 || optics === RenderOptics.Molten) return;
+  const preserveLuminance = optics === RenderOptics.Corrosive;
+  const luminance = preserveLuminance
+    ? color[0] * 0.2126 + color[1] * 0.7152 + color[2] * 0.0722 : 0;
+  response = clamp(
+    response * (preserveLuminance ? 2.70 : 1), -0.055, 0.065,
+  );
+  const parameter = optics * VOLUME_CHROMA_PARAMETER_COUNT;
+  if (response > 0) {
+    color[0] += (255 - color[0]) * VOLUME_CHROMA_PARAMETERS[parameter] * response * 0.90;
+    color[1] += (255 - color[1]) * VOLUME_CHROMA_PARAMETERS[parameter + 1] * response * 0.90;
+    color[2] += (255 - color[2]) * VOLUME_CHROMA_PARAMETERS[parameter + 2] * response * 0.90;
+  } else {
+    const amount = -response * 0.85;
+    color[0] *= 1 - VOLUME_CHROMA_PARAMETERS[parameter + 3] * amount;
+    color[1] *= 1 - VOLUME_CHROMA_PARAMETERS[parameter + 4] * amount;
+    color[2] *= 1 - VOLUME_CHROMA_PARAMETERS[parameter + 5] * amount;
+  }
+  if (preserveLuminance) {
+    const correction = luminance
+      - (color[0] * 0.2126 + color[1] * 0.7152 + color[2] * 0.0722);
+    color[0] += correction;
+    color[1] += correction;
+    color[2] += correction;
+  }
   compressPeak(color);
 }
 
@@ -275,4 +342,22 @@ function setBodyParameters(
   BODY_PARAMETERS[offset + 2] = red;
   BODY_PARAMETERS[offset + 3] = green;
   BODY_PARAMETERS[offset + 4] = blue;
+}
+
+function setVolumeChromaParameters(
+  optics: number,
+  keyRed: number,
+  keyGreen: number,
+  keyBlue: number,
+  shadowRed: number,
+  shadowGreen: number,
+  shadowBlue: number,
+): void {
+  const offset = optics * VOLUME_CHROMA_PARAMETER_COUNT;
+  VOLUME_CHROMA_PARAMETERS[offset] = keyRed;
+  VOLUME_CHROMA_PARAMETERS[offset + 1] = keyGreen;
+  VOLUME_CHROMA_PARAMETERS[offset + 2] = keyBlue;
+  VOLUME_CHROMA_PARAMETERS[offset + 3] = shadowRed;
+  VOLUME_CHROMA_PARAMETERS[offset + 4] = shadowGreen;
+  VOLUME_CHROMA_PARAMETERS[offset + 5] = shadowBlue;
 }

@@ -224,6 +224,9 @@ export class Game {
       setLiquidSilhouetteCohesion: (enabled) => {
         this.renderer.setLiquidSilhouetteCohesionEnabled(enabled);
       },
+      setLiquidVolumeChroma: (enabled) => {
+        this.renderer.setLiquidVolumeChromaEnabled(enabled);
+      },
       setTranslucentFieldTransmission: (enabled) => {
         this.renderer.setTranslucentFieldTransmissionEnabled(enabled);
       },

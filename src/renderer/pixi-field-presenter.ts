@@ -90,6 +90,7 @@ uniform float uHighQuality;
 uniform float uGasFieldLighting;
 uniform float uGasVolumeChroma;
 uniform float uLiquidFieldLighting;
+uniform float uLiquidVolumeChroma;
 uniform float uTranslucentFieldTransmission;
 uniform float uTranslucentBackdropRefraction;
 uniform float uSolidContactDepth;
@@ -172,6 +173,34 @@ vec3 applyGasVolumeChroma(vec3 color, vec3 source, float response) {
     return color + key * response * 0.80;
   }
   return color * (vec3(1.0) - vec3(1.00, 0.72, 0.45) * (-response));
+}
+float liquidVolumeChromaResponse(
+  float depth, vec2 slope, float centreDensity, float neighbourDensity,
+  float macroRelief
+) {
+  float geometric = clamp(
+    dot(slope, vec2(0.22, 0.30)) + (centreDensity - neighbourDensity) * 0.38,
+    -0.16, 0.18
+  );
+  return clamp(geometric * 0.28 * depth + macroRelief * 0.55, -0.055, 0.065);
+}
+vec3 applyLiquidVolumeChroma(vec3 color, float response, float optics) {
+  vec3 key = vec3(0.72, 0.84, 1.00);
+  vec3 shadow = vec3(0.72, 0.68, 0.58);
+  if (optics == 1.0) {
+    key = vec3(0.52, 0.88, 1.00);
+    shadow = vec3(1.00, 0.62, 0.36);
+  } else if (optics == 2.0) {
+    key = vec3(1.00, 0.72, 0.28);
+    shadow = vec3(0.40, 0.68, 1.00);
+  } else if (optics == 3.0) {
+    key = vec3(0.44, 1.00, 0.68);
+    shadow = vec3(0.72, 0.38, 0.62);
+  }
+  if (response > 0.0) {
+    return color + (vec3(1.0) - color) * key * response * 0.90;
+  }
+  return color * (vec3(1.0) - shadow * (-response) * 0.85);
 }
 vec3 vividColor(vec3 color, float saturation) {
   float luminance = dot(color, vec3(0.2126, 0.7152, 0.0722));
@@ -1176,6 +1205,23 @@ void main() {
     color += mix(vec3(0.52, 0.68, 0.76), liquidBase, 0.50)
       * (broadSheen * mix(0.016, 0.052 * gloss, liquidDepth) + caustic * causticStrength);
     color += liquidBase * (0.025 + atmosphere * 0.030) + vec3(0.055, 0.090, 0.105) * rim;
+    // Family-coloured absorption and reflection make one cohesive liquid body
+    // read as volume instead of a hue-neutral cut-out. All inputs above are
+    // already live for body lighting; this adds arithmetic only and cannot
+    // change alpha, reconstruction support, species ownership, or refraction.
+    if (uLiquidVolumeChroma > 0.5 && liquidOnly < 0.5 && halo < 0.5
+      && wall < 0.5 && family == 2.0 && traits < 0.5 && !materialEmissive
+      && molten < 0.5 && foreignMatterContact < 0.5 && unlikeMaterialContact < 0.5) {
+      // The species field supplies a wider interface band than the exact
+      // categorical contact flag. Keep that entire mixing meniscus neutral so
+      // adjacent family keys cannot flicker as either liquid moves by one cell.
+      if (dot(liquidSpeciesSlope, liquidSpeciesSlope) < 0.0025) {
+        float liquidVolumeChroma = liquidVolumeChromaResponse(
+          liquidDepth, volumeSlope, liquidDensity, liquidNeighbourMean, liquidMacroRelief
+        );
+        color = applyLiquidVolumeChroma(color, liquidVolumeChroma, optics);
+      }
+    }
   } else {
     float powderVisualCohesion = 0.0;
     float powderChromaCohesion = 0.0;
@@ -1730,6 +1776,7 @@ export class PixiFieldPresenter {
       uGasFieldLighting: { value: 1, type: 'f32' },
       uGasVolumeChroma: { value: 1, type: 'f32' },
       uLiquidFieldLighting: { value: 1, type: 'f32' },
+      uLiquidVolumeChroma: { value: 1, type: 'f32' },
       uTranslucentFieldTransmission: { value: 1, type: 'f32' },
       uTranslucentBackdropRefraction: { value: 1, type: 'f32' },
       uSolidContactDepth: { value: 1, type: 'f32' },
@@ -1938,6 +1985,7 @@ export class PixiFieldPresenter {
     solidFieldLightingEnabled = true,
     liquidSilhouetteCohesionEnabled = true,
     gasVolumeChromaEnabled = true,
+    liquidVolumeChromaEnabled = true,
   ): void {
     const uniforms = this.uniforms.uniforms;
     uniforms.uGasFieldLighting = gasFieldLightingEnabled ? 1 : 0;
@@ -1952,6 +2000,7 @@ export class PixiFieldPresenter {
     uniforms.uSolidFieldLighting = solidFieldLightingEnabled ? 1 : 0;
     uniforms.uLiquidSilhouetteCohesion = liquidSilhouetteCohesionEnabled ? 1 : 0;
     uniforms.uGasVolumeChroma = gasVolumeChromaEnabled ? 1 : 0;
+    uniforms.uLiquidVolumeChroma = liquidVolumeChromaEnabled ? 1 : 0;
     uniforms.uThermalMaterialStyling = thermalMaterialStylingEnabled ? 1 : 0;
     uniforms.uEnergyCoreRelief = energyCoreReliefEnabled ? 1 : 0;
     uniforms.uPowderStyle = powderRenderStyleValue(powderRenderStyle);
@@ -1969,6 +2018,11 @@ export class PixiFieldPresenter {
 
   setLiquidFieldLightingEnabled(enabled: boolean): void {
     this.uniforms.uniforms.uLiquidFieldLighting = enabled ? 1 : 0;
+    this.renderApplication();
+  }
+
+  setLiquidVolumeChromaEnabled(enabled: boolean): void {
+    this.uniforms.uniforms.uLiquidVolumeChroma = enabled ? 1 : 0;
     this.renderApplication();
   }
 
