@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ALL_MATERIALS, Material } from '../shared/materials';
+import { ALL_MATERIALS, LIFE_PRESETS, Material } from '../shared/materials';
 import { renderPhase, renderProfile, RenderPhase } from './render-profile';
 import {
   createRenderLookups, RenderFieldSet, SUSPENSION_FIELD_REFRESH_INTERVAL,
@@ -47,6 +47,9 @@ describe('shared render field set', () => {
     expect(lookup.paletteBytes[Material.URAN * 4 + 3]).toBe(RenderOptics.MetallicGranular);
     expect(lookup.paletteBytes[Material.AMTR * 4 + 3]).toBe(RenderOptics.SootyGas);
     expect(lookup.paletteBytes[Material.DEUT * 4 + 3]).toBe(RenderOptics.Aqueous);
+    for (const { material } of LIFE_PRESETS) {
+      expect(lookup.paletteBytes[material * 4 + 3]).toBe(RenderOptics.Cellular);
+    }
     expect(lookup.styleBytes[Material.AMTR * 4]).toBe(RenderPhase.Gas);
     expect(lookup.styleBytes[Material.DEUT * 4]).toBe(RenderPhase.Liquid);
     expect(lookup.styleBytes[Material.URAN * 4 + 1]).toBe(renderProfile('radioactive'));

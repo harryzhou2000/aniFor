@@ -3,7 +3,9 @@ import { describe, expect, it } from 'vitest';
 import { renderOptics, RenderOptics } from '../renderer/render-optics';
 import { renderPhase, renderProfile, RenderPhase, RenderProfile } from '../renderer/render-profile';
 import { renderTraits, RenderTrait } from '../renderer/render-traits';
-import { ALL_MATERIALS, MATERIALS, Material, NATIVE_PROJECTIONS } from './materials';
+import {
+  ALL_MATERIALS, LIFE_PRESETS, MATERIALS, Material, NATIVE_PROJECTIONS,
+} from './materials';
 
 const PROJECTION_CASES = [
   ['BIZRG', Material.BIZRG], ['BIZRS', Material.BIZRS], ['BRAY', Material.BRAY],
@@ -113,5 +115,15 @@ describe('native-only render projections', () => {
     expect(renderOptics(byId.get(Material.YEST)!)).toBe(RenderOptics.RoughGranular);
     expect(renderOptics(byId.get(Material.DYST)!)).toBe(RenderOptics.RoughGranular);
     expect(renderTraits(byId.get(Material.YEST)!)).toBe(RenderTrait.Organic);
+  });
+
+  it('keeps native LIFE ctypes in one distinct cellular optical family', () => {
+    for (const { preset, material } of LIFE_PRESETS) {
+      expect(material).toBe(Material.LIFE_GOL + preset);
+      expect(renderPhase(byId.get(material)!)).toBe(RenderPhase.Solid);
+      expect(renderProfile(byId.get(material)!.category)).toBe(RenderProfile.Neutral);
+      expect(renderOptics(byId.get(material)!)).toBe(RenderOptics.Cellular);
+      expect(renderTraits(byId.get(material)!)).toBe(0);
+    }
   });
 });

@@ -973,7 +973,8 @@ function contactPhase(phase: number): ContactPhase {
 
 function solidCurvatureGain(profile: number, optics: number): number {
   if (isGranularOptics(optics) || profile === RenderProfile.Granular) return 0;
-  if (optics === RenderOptics.SmoothRigid || profile === RenderProfile.Rigid) return 1;
+  if (optics === RenderOptics.SmoothRigid || optics === RenderOptics.Cellular
+    || profile === RenderProfile.Rigid) return 1;
   if (optics === RenderOptics.Device || profile === RenderProfile.Device) return 0.82;
   if (optics === RenderOptics.Radioactive || profile === RenderProfile.Radioactive) return 0.70;
   if (optics === RenderOptics.TranslucentRigid) return 0.62;

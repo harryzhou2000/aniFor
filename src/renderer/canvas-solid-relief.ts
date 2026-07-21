@@ -46,7 +46,7 @@ for (let index = 0; index < OPTICS_PROFILE_COUNT; index++) {
     bodyDepth = 4; bodyRelief = 0.20; bodySpecular = 0.35; bodyEdge = 0.50;
     tintRed = 0.90; tintGreen = 0.90; tintBlue = 0.85;
     bodyThickness = 10; absorbRed = 0.82; absorbGreen = 0.78; absorbBlue = 0.72;
-  } else if (optics === RenderOptics.SmoothRigid) {
+  } else if (optics === RenderOptics.SmoothRigid || optics === RenderOptics.Cellular) {
     axisX = 2; axisY = 1; strength = 7.0; cohesion = 0.46;
     bodyDepth = 15; bodyRelief = 0.65; bodySpecular = 2.4; bodyEdge = 1.8;
     tintRed = 0.50; tintGreen = 0.90; tintBlue = 1.35;

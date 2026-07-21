@@ -68,7 +68,7 @@ export function canvasSurfaceChromaResponse(
     (gradientX * LIGHT_X + gradientY * LIGHT_Y) / Math.sqrt(gradientLengthSquared),
   ));
   const familyGain = optics === RenderOptics.TranslucentRigid ? 1
-    : optics === RenderOptics.SmoothRigid ? 0.94
+    : optics === RenderOptics.SmoothRigid || optics === RenderOptics.Cellular ? 0.94
     : optics === RenderOptics.Device ? 0.90
     : optics === RenderOptics.Radioactive ? 0.86
     : optics === RenderOptics.Organic ? 0.82

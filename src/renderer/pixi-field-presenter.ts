@@ -107,6 +107,7 @@ uniform float uSurfaceContourLighting;
 uniform float uPhaseContactLighting;
 uniform float uSolidFieldLighting;
 uniform float uRoleMaterialStyling;
+uniform float uCellularMaterialStyling;
 uniform float uLiquidSilhouetteCohesion;
 uniform float uThermalMaterialStyling;
 uniform float uEnergyCoreRelief;
@@ -134,7 +135,7 @@ float surfaceLightGain(float profile) {
 }
 vec3 surfaceChromaKey(float optics) {
   if (optics == 7.0) return vec3(1.00, 0.82, 0.56);
-  if (optics == 8.0) return vec3(0.76, 0.91, 1.00);
+  if (optics == 8.0 || optics == 19.0) return vec3(0.76, 0.91, 1.00);
   if (optics == 9.0) return vec3(0.82, 1.00, 0.66);
   if (optics == 10.0) return vec3(0.60, 0.88, 1.00);
   if (optics == 11.0) return vec3(0.62, 1.00, 0.72);
@@ -146,7 +147,7 @@ vec3 surfaceChromaKey(float optics) {
 }
 vec3 surfaceChromaShadow(float optics) {
   if (optics == 7.0) return vec3(0.72, 0.62, 0.50);
-  if (optics == 8.0) return vec3(0.95, 0.72, 0.44);
+  if (optics == 8.0 || optics == 19.0) return vec3(0.95, 0.72, 0.44);
   if (optics == 9.0) return vec3(0.78, 0.66, 0.45);
   if (optics == 10.0) return vec3(0.96, 0.70, 0.38);
   if (optics == 11.0) return vec3(0.74, 0.62, 0.42);
@@ -166,7 +167,7 @@ float surfaceChromaResponse(float density, vec2 gradient, float optics) {
     : (optics == 14.0 ? 0.58
     : (optics == 15.0 ? 1.0
     : (optics == 12.0 ? 1.0
-    : (optics == 8.0 ? 0.94
+    : (optics == 8.0 || optics == 19.0 ? 0.94
     : (optics == 10.0 ? 0.90
     : (optics == 11.0 ? 0.86
     : (optics == 9.0 ? 0.82
@@ -271,7 +272,7 @@ float thermalOpticsGain(float optics) {
   if (optics == 14.0) return 0.62;
   if (optics == 15.0) return 0.90;
   if (optics == 7.0) return 0.72;
-  if (optics == 8.0) return 1.0;
+  if (optics == 8.0 || optics == 19.0) return 1.0;
   if (optics == 9.0) return 0.88;
   if (optics == 10.0) return 1.08;
   if (optics == 11.0) return 0.92;
@@ -714,7 +715,7 @@ float triangleWave(float value, float period) {
 }
 vec3 solidReliefParameters(float optics, float profile) {
   if (granularOptics(optics) > 0.5 || profile == 1.0) return vec3(0.0);
-  if (optics == 8.0) return vec3(2.0, 1.0, 7.0);
+  if (optics == 8.0 || optics == 19.0) return vec3(2.0, 1.0, 7.0);
   if (optics == 9.0) return vec3(1.0, 4.0, 6.0);
   if (optics == 10.0) return vec3(4.0, 0.0, 4.5);
   if (optics == 11.0) return vec3(3.0, -2.0, 5.5);
@@ -726,7 +727,7 @@ vec3 solidReliefParameters(float optics, float profile) {
   return vec3(2.0, 1.0, 6.5);
 }
 vec3 solidBodyMacroKey(float optics) {
-  if (optics == 8.0) return vec3(0.3704, 0.6667, 1.0);
+  if (optics == 8.0 || optics == 19.0) return vec3(0.3704, 0.6667, 1.0);
   if (optics == 9.0) return vec3(0.5417, 1.0, 0.4583);
   if (optics == 10.0) return vec3(0.2424, 0.6970, 1.0);
   if (optics == 11.0) return vec3(0.2414, 1.0, 0.4828);
@@ -734,7 +735,7 @@ vec3 solidBodyMacroKey(float optics) {
   return vec3(0.80, 0.90, 1.0);
 }
 vec3 solidBodyMacroShadow(float optics) {
-  if (optics == 8.0) return vec3(0.94, 0.84, 0.70);
+  if (optics == 8.0 || optics == 19.0) return vec3(0.94, 0.84, 0.70);
   if (optics == 9.0) return vec3(0.94, 0.72, 0.96);
   if (optics == 10.0) return vec3(1.00, 0.84, 0.62);
   if (optics == 11.0) return vec3(0.96, 0.62, 0.92);
@@ -742,7 +743,7 @@ vec3 solidBodyMacroShadow(float optics) {
   return vec3(0.88, 0.80, 0.68);
 }
 float solidBodyMacroGain(float optics) {
-  if (optics == 8.0 || optics == 11.0) return 9.36 / 255.0;
+  if (optics == 8.0 || optics == 19.0 || optics == 11.0) return 9.36 / 255.0;
   if (optics == 9.0) return 8.10 / 255.0;
   if (optics == 10.0 || optics == 12.0) return 10.0 / 255.0;
   return 7.40 / 255.0;
@@ -752,7 +753,7 @@ float solidBodyFieldExposure(
 ) {
   float familyExposure = 0.34;
   float reliefStrength = 6.5;
-  if (optics == 8.0 || profile == 2.0) {
+  if (optics == 8.0 || optics == 19.0 || profile == 2.0) {
     familyExposure = 0.42; reliefStrength = 7.0;
   }
   if (optics == 9.0 || profile == 3.0) {
@@ -781,7 +782,7 @@ float solidBodyFieldTraitEligibility(float traits) {
   return 1.0 - step(0.5, blocked);
 }
 float solidInteriorMicroGain(float optics, float profile) {
-  if (optics == 8.0 || (optics < 0.5 && profile == 2.0)) return 0.54;
+  if (optics == 8.0 || optics == 19.0 || (optics < 0.5 && profile == 2.0)) return 0.54;
   if (optics == 9.0 || (optics < 0.5 && profile == 3.0)) return 0.70;
   if (optics == 10.0 || (optics < 0.5 && profile == 5.0)) return 0.56;
   if (optics == 11.0 || (optics < 0.5 && profile == 4.0)) return 0.74;
@@ -793,7 +794,7 @@ float solidCurvatureGain(float optics, float profile) {
   // Runtime WebGL samples the curve at a different composed footprint from the
   // fixed Canvas contour tiles. The small rigid-only calibration keeps the
   // measured convex/concave response inside the paired visual contract.
-  if (optics == 8.0 || profile == 2.0) return 1.25;
+  if (optics == 8.0 || optics == 19.0 || profile == 2.0) return 1.25;
   if (optics == 10.0 || profile == 5.0) return 0.82;
   if (optics == 11.0 || profile == 4.0) return 0.70;
   if (optics == 12.0) return 0.62;
@@ -1472,11 +1473,12 @@ void main() {
     float powderBodyChroma = 0.0;
     float powderSuspensionCohesion = 0.0;
     float roughSurface = granularOptics(optics);
-    float smoothSurface = optics == 8.0 ? 1.0 : 0.0;
+    float smoothSurface = optics == 8.0 || optics == 19.0 ? 1.0 : 0.0;
     float organicSurface = optics == 9.0 ? 1.0 : 0.0;
     float deviceSurface = optics == 10.0 ? 1.0 : 0.0;
     float radioactiveSurface = optics == 11.0 ? 1.0 : 0.0;
     float translucentSurface = optics == 12.0 ? 1.0 : 0.0;
+    float cellularSurface = optics == 19.0 ? 1.0 : 0.0;
     if (family == 4.0 && granularOptics(optics) > 0.5
       && traits < 0.5 && !materialEmissive) {
       float suspensionColorDistance = length(suspensionState.rgb - paletteSample.rgb);
@@ -1506,7 +1508,7 @@ void main() {
       float shapedThickness = linearThickness * (1.4 - linearThickness * 0.4);
       float thicknessGain = 16.0;
       vec3 thicknessAbsorption = vec3(0.88, 0.80, 0.68);
-      if (optics == 8.0) {
+      if (optics == 8.0 || optics == 19.0) {
         thicknessGain = 23.0;
         thicknessAbsorption = vec3(0.94, 0.84, 0.70);
       } else if (optics == 9.0) {
@@ -1792,6 +1794,34 @@ void main() {
       color = applySurfaceChroma(
         color, clamp(powderContourChroma + powderBodyChroma, -0.085, 0.090), optics
       );
+    } else if (cellularSurface > 0.5) {
+      // Static ctype-derived colony motifs distinguish all 24 native LIFE
+      // presets without inventing age/state or changing semantic support.
+      if (uCellularMaterialStyling > 0.5 && surfaceOnly < 0.5) {
+        float preset = material - 171.0;
+        float motif = mod(preset, 4.0);
+        float period = 3.0 + mod(floor(preset / 4.0), 4.0);
+        float phase = mod(preset * 5.0 + floor(preset / 16.0) * 3.0, period);
+        vec2 cellularCell = floor(fieldPosition);
+        float coordinate = motif < 0.5 ? cellularCell.x + cellularCell.y
+          : (motif < 1.5 ? cellularCell.x + floor(cellularCell.y * 0.5)
+          : (motif < 2.5 ? cellularCell.x * 2.0 + cellularCell.y * 3.0
+          : cellularCell.x - cellularCell.y));
+        float bandWidth = 1.0 + floor(preset / 16.0);
+        float band = 1.0 - step(bandWidth, mod(mod(coordinate + phase, period) + period, period));
+        float nodePeriod = 11.0 + mod(preset, 3.0);
+        float node = 1.0 - step(
+          0.5, mod(cellularCell.x * 3.0 + cellularCell.y * 5.0 + preset * 7.0, nodePeriod)
+        );
+        float scalar = mix(-2.0 - mod(preset, 2.0), 4.0 + mod(floor(preset / 4.0), 2.0) * 2.0, band)
+          + node * 2.0;
+        vec3 cellularDelta = vec3(scalar);
+        if (motif < 0.5) cellularDelta += vec3(0.0, band * 2.0, node * 2.0);
+        else if (motif < 1.5) cellularDelta += vec3(band * 2.0, 0.0, -band);
+        else if (motif < 2.5) cellularDelta += vec3(-band, node * 2.0, 0.0);
+        else cellularDelta += vec3(0.0, -node, band * 2.0);
+        color = clamp(color + cellularDelta / 255.0, 0.0, 1.0);
+      }
     } else if (smoothSurface > 0.5 || translucentSurface > 0.5
       || (optics < 0.5 && profile == 2.0)) {
       float bevel = clamp(abs(shape.y) + abs(shape.z), 0.0, 1.0);
@@ -2199,6 +2229,7 @@ export class PixiFieldPresenter {
       uPhaseContactLighting: { value: 1, type: 'f32' },
       uSolidFieldLighting: { value: 1, type: 'f32' },
       uRoleMaterialStyling: { value: 1, type: 'f32' },
+      uCellularMaterialStyling: { value: 1, type: 'f32' },
       uLiquidSilhouetteCohesion: { value: 1, type: 'f32' },
       // FieldRenderer turns this on only for backends that expose temperature;
       // byte zero must therefore never make legacy backends look frozen.
@@ -2450,6 +2481,7 @@ export class PixiFieldPresenter {
     liquidOpticalDepthEnabled = true,
     solidOpticalDepthEnabled = true,
     roleMaterialStylingEnabled = true,
+    cellularMaterialStylingEnabled = true,
   ): void {
     const uniforms = this.uniforms.uniforms;
     uniforms.uGasFieldLighting = gasFieldLightingEnabled ? 1 : 0;
@@ -2469,6 +2501,7 @@ export class PixiFieldPresenter {
     uniforms.uLiquidOpticalDepth = liquidOpticalDepthEnabled ? 1 : 0;
     uniforms.uSolidOpticalDepth = solidOpticalDepthEnabled ? 1 : 0;
     uniforms.uRoleMaterialStyling = roleMaterialStylingEnabled ? 1 : 0;
+    uniforms.uCellularMaterialStyling = cellularMaterialStylingEnabled ? 1 : 0;
     uniforms.uPowderBodyDepth = powderBodyDepthEnabled ? 1 : 0;
     uniforms.uThermalMaterialStyling = thermalMaterialStylingEnabled ? 1 : 0;
     uniforms.uEnergyCoreRelief = energyCoreReliefEnabled ? 1 : 0;
@@ -2552,6 +2585,11 @@ export class PixiFieldPresenter {
 
   setRoleMaterialStylingEnabled(enabled: boolean): void {
     this.uniforms.uniforms.uRoleMaterialStyling = enabled ? 1 : 0;
+    this.renderApplication();
+  }
+
+  setCellularMaterialStylingEnabled(enabled: boolean): void {
+    this.uniforms.uniforms.uCellularMaterialStyling = enabled ? 1 : 0;
     this.renderApplication();
   }
 

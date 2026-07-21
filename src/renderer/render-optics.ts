@@ -21,9 +21,10 @@ export const enum RenderOptics {
   CryogenicLiquid = 16,
   MetallicLiquid = 17,
   ViscousLiquid = 18,
+  Cellular = 19,
 }
 
-export const RENDER_OPTICS_CLASS_COUNT = 19;
+export const RENDER_OPTICS_CLASS_COUNT = 20;
 
 /** Powder-like roughness classes that share topology but not material response. */
 export function isGranularOptics(optics: number): boolean {
@@ -119,6 +120,7 @@ export function renderOptics(material: RenderOpticsMaterial): RenderOptics {
   const phase = physicalPhase(material);
   if (phase === 'gas') return RenderOptics.CleanGas;
   if (phase === 'powder') return RenderOptics.RoughGranular;
+  if (material.category === 'automata') return RenderOptics.Cellular;
   // Category traits are packed independently, so a radioactive gas/liquid or
   // an organic powder keeps its semantic accent after taking the optical
   // family appropriate to its physical phase. Category optics are therefore
@@ -128,7 +130,7 @@ export function renderOptics(material: RenderOpticsMaterial): RenderOptics {
     return RenderOptics.Device;
   }
   if (material.category === 'radioactive') return RenderOptics.Radioactive;
-  if (phase === 'solid' && (material.category === 'solids' || material.category === 'automata')) {
+  if (phase === 'solid' && material.category === 'solids') {
     return RenderOptics.SmoothRigid;
   }
   return RenderOptics.Default;

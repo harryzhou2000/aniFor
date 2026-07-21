@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ALL_MATERIALS, Material } from '../shared/materials';
+import { ALL_MATERIALS, LIFE_PRESETS, Material } from '../shared/materials';
 import { renderOptics, RENDER_OPTICS_CLASS_COUNT, RenderOptics } from './render-optics';
 
 function optics(id: Material): RenderOptics {
@@ -30,6 +30,7 @@ describe('render optics', () => {
       RenderOptics.CryogenicLiquid,
       RenderOptics.MetallicLiquid,
       RenderOptics.ViscousLiquid,
+      RenderOptics.Cellular,
     ]).toEqual(Array.from({ length: RENDER_OPTICS_CLASS_COUNT }, (_, index) => index));
   });
 
@@ -75,7 +76,7 @@ describe('render optics', () => {
     expect(optics(Material.SING)).toBe(RenderOptics.SootyGranular);
     expect(optics(Material.THDR)).toBe(RenderOptics.RoughGranular);
     expect(optics(Material.Wall)).toBe(RenderOptics.SmoothRigid);
-    expect(optics(Material.LIFE_GOL)).toBe(RenderOptics.SmoothRigid);
+    expect(optics(Material.LIFE_GOL)).toBe(RenderOptics.Cellular);
     expect(optics(Material.Plant)).toBe(RenderOptics.Organic);
     expect(optics(Material.SPRK)).toBe(RenderOptics.Device);
     expect(optics(Material.VIBR)).toBe(RenderOptics.Radioactive);
@@ -90,6 +91,12 @@ describe('render optics', () => {
     expect(optics(Material.DYST)).toBe(RenderOptics.RoughGranular);
     expect(optics(Material.FIGH)).toBe(RenderOptics.Organic);
     expect(optics(Material.BRAY)).toBe(RenderOptics.Device);
+  });
+
+  it('classifies every native LIFE projection as cellular', () => {
+    for (const { material } of LIFE_PRESETS) {
+      expect(optics(material)).toBe(RenderOptics.Cellular);
+    }
   });
 
   it('respects explicit physical phases before toolbox-family fallbacks', () => {

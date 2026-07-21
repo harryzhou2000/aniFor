@@ -31,6 +31,7 @@ export interface BrowserInputAuditApi {
   setSurfaceContourLighting(enabled: boolean): void;
   setSolidFieldLighting(enabled: boolean): void;
   setRoleMaterialStyling(enabled: boolean): void;
+  setCellularMaterialStyling(enabled: boolean): void;
   setPhaseContactLighting(enabled: boolean): void;
   setThermalMaterialStyling(enabled: boolean): void;
   setEnergyCoreRelief(enabled: boolean): void;

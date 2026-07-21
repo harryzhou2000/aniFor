@@ -23,6 +23,7 @@ interface PresenterHarness {
   setPhaseContactLightingEnabled: PixiFieldPresenter['setPhaseContactLightingEnabled'];
   setSolidFieldLightingEnabled: PixiFieldPresenter['setSolidFieldLightingEnabled'];
   setRoleMaterialStylingEnabled: PixiFieldPresenter['setRoleMaterialStylingEnabled'];
+  setCellularMaterialStylingEnabled: PixiFieldPresenter['setCellularMaterialStylingEnabled'];
   setLiquidSilhouetteCohesionEnabled: PixiFieldPresenter['setLiquidSilhouetteCohesionEnabled'];
   setRenderStallHandler: PixiFieldPresenter['setRenderStallHandler'];
   forceEightXRenderStallForAudit: PixiFieldPresenter['forceEightXRenderStallForAudit'];
@@ -92,6 +93,7 @@ describe('Pixi presenter startup configuration', () => {
       uPhaseContactLighting: 1,
       uSolidFieldLighting: 1,
       uRoleMaterialStyling: 1,
+      uCellularMaterialStyling: 1,
       uLiquidSilhouetteCohesion: 1,
       uThermalMaterialStyling: 1,
       uEnergyCoreRelief: 0,
@@ -553,6 +555,35 @@ describe('Pixi presenter startup configuration', () => {
     expect(roleBlock).toContain('uRoleMaterialStyling > 0.5');
     expect(roleBlock).not.toMatch(/texture\s*\(/);
     expect(roleBlock).not.toMatch(/\balpha\s*[+*]?=/);
+  });
+
+  it('seeds, redraws, and bounds cellular styling to RGB-only authoritative LIFE matter', () => {
+    const presenter = presenterHarness();
+
+    presenter.configurePresentation(
+      true, true, true, true, true, true, true, true, true, 'smooth',
+      true, true, true, true, true, true, true, true, true, true, true, false,
+    );
+    expect(presenter.uniforms.uniforms.uCellularMaterialStyling).toBe(0);
+    expect(presenter.app.render).not.toHaveBeenCalled();
+
+    presenter.setCellularMaterialStylingEnabled(true);
+    expect(presenter.uniforms.uniforms.uCellularMaterialStyling).toBe(1);
+    expect(presenter.app.render).toHaveBeenCalledOnce();
+
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const start = source.indexOf('// Static ctype-derived colony motifs');
+    const end = source.indexOf('    } else if (smoothSurface > 0.5', start);
+    const cellularBlock = source.slice(start, end);
+    expect(start).toBeGreaterThan(0);
+    expect(end).toBeGreaterThan(start);
+    expect(source).toContain('uniform float uCellularMaterialStyling;');
+    expect(source).toContain('float smoothSurface = optics == 8.0 || optics == 19.0 ? 1.0 : 0.0;');
+    expect(source).toContain('if (optics == 8.0 || optics == 19.0) return vec3(2.0, 1.0, 7.0);');
+    expect(source).toContain('if (optics == 8.0 || optics == 19.0) {\n        thicknessGain = 23.0;');
+    expect(cellularBlock).toContain('uCellularMaterialStyling > 0.5 && surfaceOnly < 0.5');
+    expect(cellularBlock).not.toMatch(/texture\s*\(/);
+    expect(cellularBlock).not.toMatch(/\balpha\s*[+*]?=/);
   });
 
   it('keeps contour and thick-body solid field light bounded behind strict eligibility', () => {

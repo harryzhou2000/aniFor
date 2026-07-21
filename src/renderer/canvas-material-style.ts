@@ -82,7 +82,7 @@ export function shadeCanvasMaterial(
     light += facet ? 5 : -1;
     tintRed += facet ? 4 : 0;
     tintBlue += facet ? 2 : 1;
-  } else if (optics === RenderOptics.SmoothRigid) {
+  } else if (optics === RenderOptics.SmoothRigid || optics === RenderOptics.Cellular) {
     const polish = (hash(index + material * 313) & 15) < 2;
     light += polish ? 5 : 0;
     tintBlue += polish ? 3 : 1;
@@ -113,7 +113,8 @@ export function shadeCanvasMaterial(
 
 function solidOpticsProfile(optics: number, fallback: number): number {
   if (isGranularOptics(optics)) return RenderProfile.Granular;
-  if (optics === RenderOptics.SmoothRigid || optics === RenderOptics.TranslucentRigid) {
+  if (optics === RenderOptics.SmoothRigid || optics === RenderOptics.Cellular
+    || optics === RenderOptics.TranslucentRigid) {
     return RenderProfile.Rigid;
   }
   if (optics === RenderOptics.Organic) return RenderProfile.Organic;

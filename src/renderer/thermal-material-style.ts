@@ -43,7 +43,7 @@ export function thermalOpticsGain(optics: RenderOptics): number {
     if (optics === RenderOptics.MetallicGranular) return 0.90;
     return 0.72;
   }
-  if (optics === RenderOptics.SmoothRigid) return 1;
+  if (optics === RenderOptics.SmoothRigid || optics === RenderOptics.Cellular) return 1;
   if (optics === RenderOptics.Organic) return 0.88;
   if (optics === RenderOptics.Device) return 1.08;
   if (optics === RenderOptics.Radioactive) return 0.92;

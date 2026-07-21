@@ -263,6 +263,9 @@ export class Game {
       setRoleMaterialStyling: (enabled) => {
         this.renderer.setRoleMaterialStylingEnabled(enabled);
       },
+      setCellularMaterialStyling: (enabled) => {
+        this.renderer.setCellularMaterialStylingEnabled(enabled);
+      },
       setPhaseContactLighting: (enabled) => {
         this.renderer.setPhaseContactLightingEnabled(enabled);
       },
