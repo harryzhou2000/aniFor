@@ -584,6 +584,7 @@ describe('Pixi presenter startup configuration', () => {
     expect(cellularBlock).toContain('uCellularMaterialStyling > 0.5 && surfaceOnly < 0.5');
     expect(cellularBlock).not.toMatch(/texture\s*\(/);
     expect(cellularBlock).not.toMatch(/\balpha\s*[+*]?=/);
+    expect(source).toContain('if (cellularSurface > 0.5 && surfaceOnly > 0.5) alpha = 0.0;');
   });
 
   it('keeps contour and thick-body solid field light bounded behind strict eligibility', () => {

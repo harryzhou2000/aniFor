@@ -1,4 +1,5 @@
 import { RenderPhase } from './render-profile';
+import { RenderOptics } from './render-optics';
 import { compositePixel } from './rgba-composite';
 
 /**
@@ -36,6 +37,7 @@ export function reconstructSolidSurface(
       const material = materials[topLeft];
       const bottomLeft = index + width * 2 - 1;
       if (material !== 0 && styleBytes[material * 4] === RenderPhase.Solid
+        && paletteBytes[material * 4 + 3] !== RenderOptics.Cellular
         && materials[topLeft + 1] === material
         && materials[topLeft + 2] === material
         && materials[topLeft + 3] === material
@@ -124,6 +126,7 @@ export function reconstructSolidSurface(
     const thinCrack = verticalCrack || horizontalCrack;
     const localSupport = cardinallyEnclosed || denseSupport || thinCrack;
     if (foreign || !material || !localSupport || alpha <= 0) continue;
+    if (paletteBytes[material * 4 + 3] === RenderOptics.Cellular) continue;
     // Eligibility remains conservative, but once the exact-material enclosure
     // is proven it is presentation support, not translucent confidence. Keep a
     // narrow monotonic band only for subtle depth so black cannot show through

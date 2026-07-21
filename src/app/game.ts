@@ -23,6 +23,9 @@ import { navigateToRenderScale } from './render-scale-navigation';
 import {
   MATERIAL_ATLAS, materialAtlasAuditRequested, prepareMaterialAtlasAuditFixture,
 } from './material-atlas-audit';
+import {
+  CELLULAR_GRAPHICS_AUDIT, prepareCellularGraphicsAuditFixture,
+} from './cellular-graphics-audit';
 
 const AUTOSAVE_KEY = 'stillroom-world-v1';
 
@@ -306,6 +309,10 @@ export class Game {
       toggleDenseSolidProbe: () => { toggleDenseSolidAuditProbe(this.simulation); },
       materialAtlas: () => MATERIAL_ATLAS,
       prepareMaterialAtlas: () => { prepareMaterialAtlasAuditFixture(this.simulation); },
+      cellularGraphicsAtlas: () => CELLULAR_GRAPHICS_AUDIT,
+      prepareCellularGraphicsFixture: () => {
+        prepareCellularGraphicsAuditFixture(this.simulation);
+      },
       canvasPresentationTiming: () => this.renderer.getCanvasPresentationTiming(),
       requestWebGLPresentationTimingSample: () => this.renderer.requestWebGLPresentationTimingSample(),
       webGLPresentationTiming: () => this.renderer.getWebGLPresentationTiming(),

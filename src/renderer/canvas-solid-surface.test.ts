@@ -90,6 +90,23 @@ describe('Canvas solid surface reconstruction', () => {
     }
   });
 
+  it('keeps native LIFE dead cells exact instead of reconstructing automata cavities', () => {
+    const width = 7;
+    const height = 7;
+    for (const size of [1, 2]) {
+      const materials = new Uint8Array(width * height).fill(Material.LIFE_GOL);
+      const holes: number[] = [];
+      for (let y = 3; y < 3 + size; y++) for (let x = 3; x < 3 + size; x++) {
+        const index = y * width + x;
+        materials[index] = Material.Empty;
+        holes.push(index);
+      }
+      const pixels = seed(materials);
+      reconstructSolidSurface(pixels, materials, styles, palette, width, height);
+      for (const hole of holes) expect(pixels[hole * 4 + 3]).toBe(0);
+    }
+  });
+
   it('keeps an unsupported L elbow open while closing its locally supported arms', () => {
     const width = 7;
     const height = 7;

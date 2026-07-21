@@ -2,6 +2,7 @@ import { access, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { spawn } from 'node:child_process';
+import { pathToFileURL } from 'node:url';
 
 const ROOT = process.cwd();
 const requestedPort = Number.parseInt(process.env.ANIFORTPT_AUDIT_PORT ?? '5178', 10);
@@ -10,9 +11,16 @@ if (!Number.isInteger(requestedPort) || requestedPort < 1024 || requestedPort > 
 }
 const PORT = requestedPort;
 const ORIGIN = `http://127.0.0.1:${PORT}`;
+const PRODUCTION_BUNDLE_URL = pathToFileURL(path.join(ROOT, 'dist/index.html')).href;
 const WORLD_WIDTH = 612;
 const WORLD_HEIGHT = 384;
 const WORLD_ASPECT = WORLD_WIDTH / WORLD_HEIGHT;
+// A wedged renderer must not leave the audit process, detached Chrome tree, and
+// temporary profile alive forever. This exceeds the production 30-second 8x
+// presentation deadline while still turning an unresponsive CDP target into a
+// bounded gate failure that reaches auditMode's cleanup.
+const CDP_COMMAND_TIMEOUT_MS = 45_000;
+const CDP_CONNECT_TIMEOUT_MS = 10_000;
 const scaleEightOnly = process.argv.includes('--scale-eight-only');
 const modes = scaleEightOnly ? ['webgl'] : process.argv.includes('--canvas-only') ? ['canvas2d']
   : process.argv.includes('--webgl-only') ? ['webgl'] : ['canvas2d', 'webgl'];
@@ -30,6 +38,9 @@ const gasChromaOnly = process.argv.includes('--gas-chroma-only');
 const surfaceContourOnly = process.argv.includes('--surface-contour-only');
 const solidFieldOnly = process.argv.includes('--solid-field-only');
 const roleGraphicsOnly = process.argv.includes('--role-graphics-only');
+const cellularGraphicsOnly = process.argv.includes('--cellular-graphics-only');
+const usesProductionBundle = cellularGraphicsOnly || scaleEightOnly;
+const AUDIT_BASE_URL = usesProductionBundle ? PRODUCTION_BUNDLE_URL : ORIGIN + '/';
 const screenshotRequest = process.argv.find((argument) => argument.startsWith('--screenshot='))?.slice('--screenshot='.length);
 const SOLID_FIELD_REGIONS = [
   { name: 'warmMetalFacing', x: 389.5, y: 229, radiusX: 2, radiusY: 5 },
@@ -69,25 +80,26 @@ const ROLE_GRAPHICS_REGIONS = [
 ];
 
 async function main() {
-  const server = spawn(process.execPath, [
+  const server = usesProductionBundle ? undefined : spawn(process.execPath, [
     path.join(ROOT, 'node_modules/vite/bin/vite.js'), '--host', '127.0.0.1',
     '--port', String(PORT), '--strictPort',
   ], { cwd: ROOT, detached: true, stdio: ['ignore', 'pipe', 'pipe'] });
   let serverLog = '';
-  server.stdout.on('data', (chunk) => { serverLog += chunk; });
-  server.stderr.on('data', (chunk) => { serverLog += chunk; });
+  server?.stdout.on('data', (chunk) => { serverLog += chunk; });
+  server?.stderr.on('data', (chunk) => { serverLog += chunk; });
 
   try {
-    await waitFor(async () => {
-      const response = await fetch(ORIGIN);
-      return response.ok;
-    }, 15_000, 'Vite browser-audit server');
+    if (usesProductionBundle) await access(path.join(ROOT, 'dist/index.html'));
+    else await waitFor(async () => {
+        const response = await fetch(ORIGIN);
+        return response.ok;
+      }, 15_000, 'Vite browser-audit server');
     const results = [];
     for (const mode of modes) results.push(await auditMode(mode));
     const reducedAudit = quickScreenshot || layoutOnly || mobileOnly
       || desktopInputOnly || visualScaleMatrixOnly || powderBodyOnly || liquidDepthOnly
       || solidDepthOnly || gasChromaOnly || surfaceContourOnly || solidFieldOnly
-      || roleGraphicsOnly;
+      || roleGraphicsOnly || cellularGraphicsOnly;
     if (powderBodyOnly) assertPairedPowderBodyDepth(results);
     if (liquidDepthOnly) assertPairedLiquidOpticalDepth(results);
     if (solidDepthOnly) assertPairedSolidOpticalDepth(results);
@@ -95,6 +107,7 @@ async function main() {
     if (surfaceContourOnly) assertPairedSurfaceContourLighting(results);
     if (solidFieldOnly) assertPairedSolidFieldLighting(results);
     if (roleGraphicsOnly) assertPairedRoleGraphics(results);
+    if (cellularGraphicsOnly) assertPairedCellularGraphics(results);
     if (!scaleEightOnly && !materialAtlasOnly && !reducedAudit) assertPairedVisualRelief(results);
     if (!scaleEightOnly && !reducedAudit) assertPairedMaterialAtlas(results);
     compactMaterialAtlasResults(results);
@@ -111,21 +124,31 @@ async function auditMode(mode) {
   const chromePath = await resolveChrome();
   const profile = await mkdtemp(path.join(tmpdir(), `anifor-input-${mode}-`));
   const dpr = mode === 'canvas2d' ? 2 : 1;
+  const startsBlank = cellularGraphicsOnly;
   const query = new URLSearchParams({
-    scene: 'render-lab', inputAudit: '1', renderScale: '2', auditStage: 'canonical',
+    scene: 'render-lab', inputAudit: '1', renderScale: '2',
+    auditStage: startsBlank ? 'blank' : 'canonical',
+    ...(startsBlank ? { blankAudit: '1' } : {}),
     ...(mode === 'canvas2d' ? { renderer: 'canvas2d' } : {}),
   });
+  const auditUrl = `${AUDIT_BASE_URL}?${query}`;
+  const initialUrl = usesProductionBundle ? auditUrl : 'about:blank';
   const chrome = spawn(chromePath, [
     '--headless=new', '--no-sandbox', '--disable-dev-shm-usage',
+    // The audit serves only a project-local Vite origin. Do not let an inherited
+    // shell/system proxy turn loopback navigation into an unbounded external hop.
+    '--no-proxy-server',
+    ...(usesProductionBundle ? ['--allow-file-access-from-files'] : []),
     '--remote-debugging-port=0', `--user-data-dir=${profile}`,
     '--window-size=1280,720', `--force-device-scale-factor=${dpr}`,
     '--disable-background-timer-throttling', '--disable-renderer-backgrounding',
     ...(mode === 'canvas2d'
       ? ['--disable-gpu']
       : ['--use-angle=swiftshader', '--enable-unsafe-swiftshader']),
-    'about:blank',
+    initialUrl,
   ], { detached: true, stdio: ['ignore', 'ignore', 'pipe'] });
   let chromeLog = '';
+  let cdp;
   try {
     const browserSocket = await new Promise((resolve, reject) => {
       const timeout = setTimeout(() => reject(new Error(`Chrome DevTools timeout (${mode})\n${chromeLog}`)), 15_000);
@@ -145,9 +168,11 @@ async function auditMode(mode) {
     const target = await waitFor(async () => {
       const response = await fetch(`http://127.0.0.1:${port}/json/list`);
       const targets = await response.json();
-      return targets.find((candidate) => candidate.type === 'page' && candidate.webSocketDebuggerUrl);
+      return targets.find((candidate) => candidate.type === 'page'
+        && candidate.webSocketDebuggerUrl
+        && (!usesProductionBundle || candidate.url.startsWith(PRODUCTION_BUNDLE_URL)));
     }, 8_000, `Chrome page target (${mode})`);
-    const cdp = await Cdp.connect(target.webSocketDebuggerUrl);
+    cdp = await Cdp.connect(target.webSocketDebuggerUrl);
     const errors = [];
     cdp.on('Runtime.exceptionThrown', ({ exceptionDetails }) => {
       errors.push(exceptionDetails?.exception?.description ?? exceptionDetails?.text ?? 'Runtime exception');
@@ -169,15 +194,24 @@ async function auditMode(mode) {
       cdp.close();
       return { backend: mode, visualScaleMatrix, browserErrors: errors.length };
     }
-    await cdp.send('Page.navigate', { url: `${ORIGIN}/?${query}` });
+    if (!usesProductionBundle) {
+      await cdp.send('Page.navigate', { url: auditUrl });
+    }
     await waitFor(() => evaluate(cdp, `(() => {
       const parameters = new URLSearchParams(location.search);
-      return parameters.get('scene') === 'render-lab'
+      const ready = parameters.get('scene') === 'render-lab'
         && parameters.get('inputAudit') === '1'
         && parameters.get('renderScale') === '2'
-        && parameters.get('auditStage') === 'canonical'
-        && !parameters.has('blankAudit')
+        && parameters.get('auditStage') === ${JSON.stringify(startsBlank ? 'blank' : 'canonical')}
+        && parameters.has('blankAudit') === ${startsBlank}
         && Boolean(window.__ANIFOR_INPUT_AUDIT__ && document.documentElement);
+      if (!ready) throw new Error('Audit page not ready: ' + JSON.stringify({
+        href: location.href,
+        readyState: document.readyState,
+        title: document.title,
+        hasAuditApi: Boolean(window.__ANIFOR_INPUT_AUDIT__),
+      }));
+      return true;
     })()`), 15_000, `input audit API (${mode})`);
     await waitFor(() => evaluate(cdp, `window.__ANIFOR_INPUT_AUDIT__.backend().backend === ${JSON.stringify(mode)}`), 15_000, `${mode} backend`);
     if (desktopInputOnly) {
@@ -203,6 +237,12 @@ async function auditMode(mode) {
       assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
       cdp.close();
       return { backend: mode, solidOpticalDepth, browserErrors: errors.length };
+    }
+    if (cellularGraphicsOnly) {
+      const cellularGraphics = await auditCellularGraphics(cdp, mode);
+      assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
+      cdp.close();
+      return { backend: mode, cellularGraphics, browserErrors: errors.length };
     }
     if (mobileOnly) {
       const mobile = await auditMobile(
@@ -2553,9 +2593,401 @@ async function auditMode(mode) {
       browserErrors: errors.length,
     };
   } finally {
+    cdp?.close();
     await terminate(chrome);
     await rm(profile, { recursive: true, force: true });
   }
+}
+
+/** Focused RGB-only proof for all 24 native LIFE projections. */
+async function auditCellularGraphics(cdp, mode) {
+  const started = performance.now();
+  const stage = (name) => console.error(
+    `[cellular-graphics:${mode}] ${name} ${Math.round(performance.now() - started)}ms`,
+  );
+  const blank = await waitForStablePageCapture(cdp, `${mode} initial blank cellular framebuffer`);
+  stage('blank-ready');
+  await evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    if (typeof audit.prepareCellularGraphicsFixture !== 'function'
+      || typeof audit.cellularGraphicsAtlas !== 'function'
+      || typeof audit.setCellularMaterialStyling !== 'function') {
+      throw new Error('Cellular graphics audit API unavailable');
+    }
+    audit.prepareCellularGraphicsFixture();
+    return true;
+  })()`);
+  const rawAtlas = await waitFor(() => evaluate(cdp, `(() => {
+    const atlas = window.__ANIFOR_INPUT_AUDIT__.cellularGraphicsAtlas();
+    const cards = Array.isArray(atlas) ? atlas : atlas?.cards;
+    return cards?.length === 24 ? atlas : false;
+  })()`), 15_000, `${mode} cellular graphics fixture`);
+  const atlas = normalizeCellularGraphicsAtlas(rawAtlas);
+  assert(atlas.cards.length === 24,
+    `${mode}: cellular graphics atlas contains ${atlas.cards.length} cards`);
+  assert(new Set(atlas.cards.map(({ preset }) => preset)).size === 24,
+    `${mode}: cellular graphics atlas does not expose all 24 LIFE presets`);
+  assert(atlas.cards.every(({ material, preset }) => material === 171 + preset),
+    `${mode}: cellular graphics material/ctype projection changed (${JSON.stringify(atlas.cards)})`);
+
+  const semanticState = await evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    const snapshot = audit.cellularGraphicsAtlas();
+    const cards = Array.isArray(snapshot) ? snapshot : snapshot.cards;
+    const empty = (rect) => {
+      for (let y = rect.y; y < rect.y + rect.height; y++) {
+        for (let x = rect.x; x < rect.x + rect.width; x++) {
+          if (audit.cell(x, y) !== 0) return false;
+        }
+      }
+      return true;
+    };
+    return cards.map((entry) => ({
+      preset: entry.preset,
+      material: entry.material,
+      body: audit.cell(entry.body.x + 1, entry.body.y + 1),
+      holeEmpty: empty(entry.hole),
+      guardedBlankEmpty: empty(entry.guardedBlank),
+      tendrilExact: entry.tendril.every(({ x, y }) => audit.cell(x, y) === entry.material),
+      isolated: audit.cell(entry.isolated.x, entry.isolated.y),
+    }));
+  })()`);
+  assert(semanticState.every((entry) => entry.body === entry.material
+      && entry.holeEmpty && entry.guardedBlankEmpty && entry.tendrilExact
+      && entry.isolated === entry.material),
+  `${mode}: cellular fixture lost authored body/hole/tendril/isolated semantics (${JSON.stringify(semanticState)})`);
+  stage('fixture-ready');
+
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setCellularMaterialStyling(false); true');
+  const flat = await waitForStablePageCapture(cdp, `${mode} flat cellular framebuffer`);
+  const flatBacking = await sampleCellularBackingTopology(cdp);
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setCellularMaterialStyling(true); true');
+  const styled = await waitForStablePageCapture(cdp, `${mode} styled cellular framebuffer`);
+  const styledBacking = await sampleCellularBackingTopology(cdp);
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setCellularMaterialStyling(false); true');
+  const repeated = await waitForStablePageCapture(cdp, `${mode} repeated flat cellular framebuffer`);
+  const repeatedBacking = await sampleCellularBackingTopology(cdp);
+  stage('captures-ready');
+  for (const [state, backing] of [
+    ['flat', flatBacking], ['styled', styledBacking], ['repeated-flat', repeatedBacking],
+  ]) {
+    assert(backing.width % WORLD_WIDTH === 0 && backing.height % WORLD_HEIGHT === 0,
+      `${mode}: ${state} cellular backing does not preserve integral world scaling (${JSON.stringify(backing)})`);
+    assert(backing.holes.length === atlas.holes.length
+        && backing.holes.every(({ alphaPeak }) => alphaPeak === 0),
+    `${mode}: ${state} cellular backing filled an authored LIFE hole (${JSON.stringify(backing.holes)})`);
+    assert(backing.isolated.length === atlas.isolated.length
+        && backing.isolated.every(({ alphaPeak }) => alphaPeak > 0),
+    `${mode}: ${state} cellular backing lost an isolated LIFE cell (${JSON.stringify(backing.isolated)})`);
+  }
+  const backingResponses = summarizeCellularBackingResponses(
+    flatBacking, styledBacking, repeatedBacking,
+  );
+
+  const cardRegions = atlas.cards.map((entry) => ({
+    name: `cellular-${entry.preset}`,
+    x: entry.card.x + entry.card.width / 2,
+    y: entry.card.y + entry.card.height / 2,
+    radiusX: entry.card.width / 2,
+    radiusY: entry.card.height / 2,
+    signature: true,
+    silhouette: true,
+    fastSupport: true,
+  }));
+  const atlasBounds = containingCellularRegion(atlas.cards.map(({ card }) => card));
+  const responseRegions = [
+    ...cardRegions,
+    { name: 'cellular-atlas', ...atlasBounds },
+  ];
+  const responses = await sampleBackdropRefractionRegions(cdp, {
+    straight: flat.capture.data,
+    refracted: styled.capture.data,
+    repeatedStraight: repeated.capture.data,
+  }, responseRegions, flat.canvasRect);
+  const atlasResponse = responses.at(-1);
+  assert(atlasResponse.repeatRgbPeak === 0,
+    `${mode}: cellular flat→styled→flat framebuffer was not exact (${JSON.stringify(atlasResponse)})`);
+  assert(responses.slice(0, 24).every((sample) => sample.rgbRms > 0),
+    `${mode}: at least one LIFE card has no cellular styling response (${JSON.stringify(responses)})`);
+  stage('responses-sampled');
+
+  const guardedBlankRegions = atlas.cards.map((entry) => ({
+    name: `guarded-blank-${entry.preset}`,
+    x: entry.guardedBlank.x + entry.guardedBlank.width / 2,
+    y: entry.guardedBlank.y + entry.guardedBlank.height / 2,
+    radiusX: entry.guardedBlank.width / 2,
+    radiusY: entry.guardedBlank.height / 2,
+    signature: true,
+    fastSupport: true,
+  }));
+  const isolatedRegions = atlas.cards.map((entry) => ({
+    name: `isolated-${entry.preset}`,
+    x: entry.isolated.x + 0.5,
+    y: entry.isolated.y + 0.5,
+    radius: 0.48,
+    signature: true,
+    fastSupport: true,
+  }));
+  const holeRegions = atlas.holes.map((point, index) => ({
+    name: `hole-${index}`,
+    x: point.x + 0.5,
+    y: point.y + 0.5,
+    // Stay strictly inside the authored cell so neighbouring body AA cannot
+    // masquerade as reconstructed support at ordinary fit view.
+    radius: 0.22,
+    signature: true,
+    fastSupport: true,
+  }));
+  const supportRegions = [...cardRegions, ...guardedBlankRegions, ...isolatedRegions, ...holeRegions];
+  const [flatSupport, styledSupport] = await Promise.all([
+    samplePageRegions(
+      cdp, flat.capture.data, supportRegions,
+      blank.capture.data, blank.reference.data, flat.canvasRect,
+    ),
+    samplePageRegions(
+      cdp, styled.capture.data, supportRegions,
+      blank.capture.data, blank.reference.data, flat.canvasRect,
+    ),
+  ]);
+  stage('support-sampled');
+  for (let index = 0; index < supportRegions.length; index++) {
+    const before = flatSupport[index];
+    const after = styledSupport[index];
+    const visibleDelta = Math.abs(before.visible - after.visible);
+    const worldAreaDelta = Number.isFinite(before.worldArea) && Number.isFinite(after.worldArea)
+      ? Math.abs(before.worldArea - after.worldArea) : 0;
+    // The page capture is already composited onto the dark backdrop, so its
+    // blank-difference mask is colour-thresholded rather than a raw alpha read.
+    // A bounded RGB motif can move a handful of antialiased edge pixels across
+    // that threshold without changing shader/Canvas support. Exact semantic
+    // hole and isolated-cell backing probes above remain the authoritative
+    // topology checks. At fit view, dark motif pixels can cross the screenshot
+    // colour threshold without changing alpha; bound that composed drift to
+    // one half-percent of the card rather than pretending it is raw support.
+    const visibleLimit = Math.max(16, Math.ceil(before.visible * 0.005));
+    const worldAreaLimit = Number.isFinite(before.worldArea)
+      ? Math.max(10, before.worldArea * 0.005) : 10;
+    assert(visibleDelta <= visibleLimit && worldAreaDelta <= worldAreaLimit,
+    `${mode}: cellular styling changed blank-differenced support in ${before.name} (${JSON.stringify({ before, after })})`);
+  }
+  const flatCards = flatSupport.slice(0, 24);
+  const styledCards = styledSupport.slice(0, 24);
+  assert(flatCards.every((sample) => sample.visible > 0 && sample.worldArea > 0)
+      && styledCards.every((sample) => sample.visible > 0 && sample.worldArea > 0),
+  `${mode}: at least one LIFE card is not visible (${JSON.stringify({ flatCards, styledCards })})`);
+  const guardedStart = 24;
+  const isolatedStart = guardedStart + 24;
+  assert(flatSupport.slice(guardedStart, isolatedStart).every((sample) => sample.visible === 0)
+      && styledSupport.slice(guardedStart, isolatedStart).every((sample) => sample.visible === 0),
+  `${mode}: cellular matter leaked into a guarded blank (${JSON.stringify({ flatSupport, styledSupport })})`);
+  const holeStart = isolatedStart + 24;
+  assert(flatSupport.slice(isolatedStart, holeStart).every((sample) => sample.visible > 0)
+      && styledSupport.slice(isolatedStart, holeStart).every((sample) => sample.visible > 0),
+  `${mode}: a LIFE isolated-particle control disappeared (${JSON.stringify({ flatSupport, styledSupport })})`);
+  // Exact topology is asserted against the integral renderer backing above.
+  // Tiny page probes are deliberately not authoritative here: CSS transforms
+  // and screenshot resampling can mix a bright body edge into a 2x2-cell hole.
+
+  const cardSignatures = atlas.cards.map((entry, index) => ({
+    preset: entry.preset,
+    material: entry.material,
+    code: entry.code,
+    flatSignature: flatCards[index].signature,
+    styledSignature: styledCards[index].signature,
+    flatMaskSignature: flatCards[index].maskSignature,
+    styledMaskSignature: styledCards[index].maskSignature,
+    flatVisible: flatCards[index].visible,
+    styledVisible: styledCards[index].visible,
+    worldArea: styledCards[index].worldArea,
+    rgbRms: responses[index].rgbRms,
+    rgbPeak: responses[index].rgbPeak,
+    responseSignature: responses[index].responseSignature,
+    backingRgbRms: backingResponses[index].rgbRms,
+    backingRgbPeak: backingResponses[index].rgbPeak,
+    backingRepeatRgbPeak: backingResponses[index].repeatRgbPeak,
+    backingResponseSignature: backingResponses[index].responseSignature,
+    backingResponseProfile: backingResponses[index].responseProfile,
+  }));
+  return {
+    cards: cardSignatures.length,
+    authoredHoleCells: atlas.holes.length,
+    isolatedControls: atlas.isolated.length,
+    exactRepeatedOff: atlasResponse.repeatRgbPeak === 0,
+    cardSignatures,
+  };
+}
+
+async function sampleCellularBackingTopology(cdp) {
+  return evaluate(cdp, `(() => {
+    const world = document.querySelector('.world-canvas');
+    if (!(world instanceof HTMLCanvasElement)) throw new Error('World canvas unavailable');
+    const copy = document.createElement('canvas');
+    copy.width = world.width;
+    copy.height = world.height;
+    const context = copy.getContext('2d', { willReadFrequently: true });
+    if (!context) throw new Error('Cellular backing sampler unavailable');
+    context.drawImage(world, 0, 0);
+    const pixels = context.getImageData(0, 0, copy.width, copy.height).data;
+    const scaleX = copy.width / ${WORLD_WIDTH};
+    const scaleY = copy.height / ${WORLD_HEIGHT};
+    const sampleCell = ({ x, y }) => {
+      const left = Math.floor(x * scaleX);
+      const top = Math.floor(y * scaleY);
+      const right = Math.max(left + 1, Math.floor((x + 1) * scaleX));
+      const bottom = Math.max(top + 1, Math.floor((y + 1) * scaleY));
+      let alphaPeak = 0;
+      for (let py = top; py < bottom; py++) for (let px = left; px < right; px++) {
+        alphaPeak = Math.max(alphaPeak, pixels[(py * copy.width + px) * 4 + 3]);
+      }
+      return { alphaPeak };
+    };
+    const sampleBody = (body) => {
+      const rgb = [];
+      for (let y = body.y; y < body.y + body.height; y++) {
+        for (let x = body.x; x < body.x + body.width; x++) {
+          const px = Math.min(copy.width - 1, Math.floor((x + 0.5) * scaleX));
+          const py = Math.min(copy.height - 1, Math.floor((y + 0.5) * scaleY));
+          const offset = (py * copy.width + px) * 4;
+          rgb.push(pixels[offset], pixels[offset + 1], pixels[offset + 2]);
+        }
+      }
+      return { width: body.width, height: body.height, rgb };
+    };
+    const snapshot = window.__ANIFOR_INPUT_AUDIT__.cellularGraphicsAtlas();
+    const cards = Array.isArray(snapshot) ? snapshot : snapshot.cards;
+    const holes = cards.flatMap(({ hole }) => {
+      const points = [];
+      for (let y = hole.y; y < hole.y + hole.height; y++) {
+        for (let x = hole.x; x < hole.x + hole.width; x++) points.push(sampleCell({ x, y }));
+      }
+      return points;
+    });
+    return {
+      width: copy.width,
+      height: copy.height,
+      holes,
+      isolated: cards.map(({ isolated }) => sampleCell(isolated)),
+      cards: cards.map(({ preset, material, body }) => ({
+        preset, material, ...sampleBody(body),
+      })),
+    };
+  })()`);
+}
+
+function summarizeCellularBackingResponses(flat, styled, repeated) {
+  assert(flat.cards.length === 24 && styled.cards.length === 24 && repeated.cards.length === 24,
+    'Cellular backing response atlas is incomplete');
+  return flat.cards.map((base, cardIndex) => {
+    const changed = styled.cards[cardIndex];
+    const returned = repeated.cards[cardIndex];
+    assert(changed.preset === base.preset && returned.preset === base.preset
+        && changed.material === base.material && returned.material === base.material
+        && changed.width === base.width && returned.width === base.width
+        && changed.height === base.height && returned.height === base.height
+        && changed.rgb.length === base.rgb.length && returned.rgb.length === base.rgb.length,
+    `Cellular backing response geometry changed for preset ${base.preset}`);
+    let squared = 0;
+    let rgbPeak = 0;
+    let repeatRgbPeak = 0;
+    let responseSignature = 2166136261;
+    const buckets = new Float64Array(16);
+    for (let offset = 0; offset < base.rgb.length; offset += 3) {
+      const cell = offset / 3;
+      const x = cell % base.width;
+      const y = Math.floor(cell / base.width);
+      const bucket = Math.min(3, Math.floor(y * 4 / base.height)) * 4
+        + Math.min(3, Math.floor(x * 4 / base.width));
+      for (let channel = 0; channel < 3; channel++) {
+        const delta = changed.rgb[offset + channel] - base.rgb[offset + channel];
+        const repeat = returned.rgb[offset + channel] - base.rgb[offset + channel];
+        squared += delta * delta;
+        rgbPeak = Math.max(rgbPeak, Math.abs(delta));
+        repeatRgbPeak = Math.max(repeatRgbPeak, Math.abs(repeat));
+        buckets[bucket] += Math.abs(delta);
+        responseSignature = Math.imul(responseSignature ^ (delta + 255), 16777619) >>> 0;
+      }
+    }
+    const total = Math.max(1, buckets.reduce((sum, value) => sum + value, 0));
+    return {
+      preset: base.preset,
+      rgbRms: round(Math.sqrt(squared / Math.max(1, base.rgb.length)), 4),
+      rgbPeak,
+      repeatRgbPeak,
+      responseSignature,
+      responseProfile: Array.from(buckets, (value) => round(value / total, 5)),
+    };
+  });
+}
+
+function normalizeCellularGraphicsAtlas(snapshot) {
+  const cards = (Array.isArray(snapshot) ? snapshot : snapshot?.cards ?? []).map((entry) => {
+    const card = cellularRect(entry.card ?? entry);
+    return {
+      ...entry,
+      card,
+      body: cellularRect(entry.body),
+      hole: cellularRect(entry.hole),
+      guardedBlank: cellularRect(entry.guardedBlank),
+      isolated: cellularPoint(entry.isolated),
+      tendril: cellularPoints(entry.tendril),
+    };
+  });
+  const holes = Array.isArray(snapshot)
+    ? cards.flatMap(({ hole }) => cellularRectPoints(hole))
+    : cellularPoints(snapshot?.holes);
+  const isolated = cellularPoints(
+    Array.isArray(snapshot) ? cards.map((entry) => entry.isolated) : snapshot?.isolated,
+  );
+  return { cards, holes, isolated };
+}
+
+function cellularRect(value) {
+  assert(value && typeof value === 'object', `Invalid cellular graphics rectangle ${JSON.stringify(value)}`);
+  const x = value.x ?? value.left;
+  const y = value.y ?? value.top;
+  const width = value.width ?? (value.right !== undefined ? value.right - x : undefined);
+  const height = value.height ?? (value.bottom !== undefined ? value.bottom - y : undefined);
+  assert([x, y, width, height].every(Number.isFinite)
+      && width > 0 && height > 0,
+  `Invalid cellular graphics rectangle ${JSON.stringify(value)}`);
+  return { x, y, width, height };
+}
+
+function cellularPoint(value) {
+  const x = Array.isArray(value) ? value[0] : value?.x;
+  const y = Array.isArray(value) ? value[1] : value?.y;
+  assert(Number.isFinite(x) && Number.isFinite(y),
+    `Invalid cellular graphics point ${JSON.stringify(value)}`);
+  return { x, y };
+}
+
+function cellularPoints(value) {
+  if (!value) return [];
+  if (Array.isArray(value) && value.length >= 2 && value.slice(0, 2).every(Number.isFinite)) {
+    return [cellularPoint(value)];
+  }
+  return (Array.isArray(value) ? value : [value]).map(cellularPoint);
+}
+
+function cellularRectPoints(rect) {
+  const points = [];
+  for (let y = rect.y; y < rect.y + rect.height; y++) {
+    for (let x = rect.x; x < rect.x + rect.width; x++) points.push({ x, y });
+  }
+  return points;
+}
+
+function containingCellularRegion(rectangles) {
+  const left = Math.min(...rectangles.map(({ x }) => x));
+  const top = Math.min(...rectangles.map(({ y }) => y));
+  const right = Math.max(...rectangles.map(({ x, width }) => x + width));
+  const bottom = Math.max(...rectangles.map(({ y, height }) => y + height));
+  return {
+    x: (left + right) / 2,
+    y: (top + bottom) / 2,
+    radiusX: (right - left) / 2,
+    radiusY: (bottom - top) / 2,
+  };
 }
 
 /** Focused release proof for the CSS-pixel camera/input contract. */
@@ -2773,7 +3205,7 @@ async function auditMaterialAtlas(cdp, mode, dpr, screenshot) {
     scene: 'render-lab', inputAudit: '1', renderScale: '2', auditStage: 'material-atlas',
     ...(mode === 'canvas2d' ? { renderer: 'canvas2d' } : {}),
   });
-  await cdp.send('Page.navigate', { url: `${ORIGIN}/?${query}` });
+  await cdp.send('Page.navigate', { url: `${AUDIT_BASE_URL}?${query}` });
   await waitFor(() => evaluate(cdp, `(() => {
     const parameters = new URLSearchParams(location.search);
     return parameters.get('auditStage') === 'material-atlas'
@@ -3680,6 +4112,53 @@ function assertPairedRoleGraphics(results) {
   }
 }
 
+function assertPairedCellularGraphics(results) {
+  const canvas = results.find((result) => result.backend === 'canvas2d')?.cellularGraphics;
+  const webgl = results.find((result) => result.backend === 'webgl')?.cellularGraphics;
+  if (!canvas || !webgl) return;
+  assert(canvas.cards === 24 && webgl.cards === 24,
+    `paired cellular graphics atlas is incomplete (${canvas.cards}/${webgl.cards})`);
+  for (const result of [canvas, webgl]) {
+    assert(new Set(result.cardSignatures.map(
+      ({ backingResponseSignature }) => backingResponseSignature,
+    )).size === 24,
+      `cellular motif responses are not distinct in all 24 cards (${JSON.stringify(result.cardSignatures)})`);
+    const byPreset = new Map(result.cardSignatures.map((entry) => [entry.preset, entry]));
+    for (const [left, right] of [[1, 19], [3, 23]]) {
+      assert(byPreset.get(left)?.backingResponseSignature
+          !== byPreset.get(right)?.backingResponseSignature,
+        `same-palette LIFE presets ${left}/${right} lost distinct motif responses`);
+    }
+    assert(result.cardSignatures.every(({ backingRepeatRgbPeak }) => backingRepeatRgbPeak === 0),
+      `cellular backing off→on→off sequence was not exact (${JSON.stringify(result.cardSignatures)})`);
+  }
+  const webglByPreset = new Map(webgl.cardSignatures.map((entry) => [entry.preset, entry]));
+  for (const canvasEntry of canvas.cardSignatures) {
+    const webglEntry = webglByPreset.get(canvasEntry.preset);
+    assert(webglEntry && webglEntry.material === canvasEntry.material,
+      `paired cellular projection missing preset ${canvasEntry.preset}`);
+    assert(Number.isInteger(canvasEntry.flatSignature)
+        && Number.isInteger(canvasEntry.styledSignature)
+        && Number.isInteger(webglEntry.flatSignature)
+        && Number.isInteger(webglEntry.styledSignature)
+        && Number.isInteger(canvasEntry.responseSignature)
+        && Number.isInteger(webglEntry.responseSignature),
+    `paired cellular signatures missing preset ${canvasEntry.preset}`);
+    const responseRatio = canvasEntry.backingRgbRms
+      / Math.max(0.01, webglEntry.backingRgbRms);
+    // Canvas styles in display-byte space while WebGL applies the same bounded
+    // motif before its linear-to-display transfer. Compare a broad bounded
+    // amplitude here and use the normalized spatial profile below for shape.
+    assert(responseRatio >= 0.20 && responseRatio <= 5.0,
+      `Canvas/WebGL LIFE preset ${canvasEntry.preset} backing response diverged (${canvasEntry.backingRgbRms}/${webglEntry.backingRgbRms})`);
+    const profileDistance = Math.max(...canvasEntry.backingResponseProfile.map(
+      (value, index) => Math.abs(value - webglEntry.backingResponseProfile[index]),
+    ));
+    assert(profileDistance <= 0.12,
+      `Canvas/WebGL LIFE preset ${canvasEntry.preset} spatial response diverged (${profileDistance})`);
+  }
+}
+
 function assertGasSpectralResponseVectors(samples, label, suffix = '') {
   const byName = Object.fromEntries(samples.map((sample) => [sample.name, sample]));
   const smoke = byName[`smokeBillowChroma${suffix}`]?.responseRgb;
@@ -3913,11 +4392,15 @@ async function auditRenderScaleOne(cdp, mode, dpr) {
 }
 
 async function auditRenderScaleEight(cdp, dpr) {
+  const started = performance.now();
+  const stage = (name) => console.error(
+    `[render-scale-eight] ${name} ${Math.round(performance.now() - started)}ms`,
+  );
   await setDesktopMetrics(cdp, 1280, 720, dpr);
   const referenceQuery = new URLSearchParams({
     scene: 'render-lab', inputAudit: '1', renderScale: '2', auditStage: 'scale-eight-reference',
   });
-  await cdp.send('Page.navigate', { url: `${ORIGIN}/?${referenceQuery}` });
+  await cdp.send('Page.navigate', { url: `${AUDIT_BASE_URL}?${referenceQuery}` });
   await waitFor(() => evaluate(cdp, `(() => {
     const parameters = new URLSearchParams(location.search);
     return parameters.get('renderScale') === '2'
@@ -3930,10 +4413,11 @@ async function auditRenderScaleEight(cdp, dpr) {
   const reference = await waitForStableCanvas(
     cdp, 1280, 720, undefined, 8_000, 'renderScale=8 reference geometry',
   );
+  stage('reference-ready');
   const query = new URLSearchParams({
     scene: 'render-lab', inputAudit: '1', renderScale: '8', auditStage: 'scale-eight',
   });
-  await cdp.send('Page.navigate', { url: `${ORIGIN}/?${query}` });
+  await cdp.send('Page.navigate', { url: `${AUDIT_BASE_URL}?${query}` });
   await waitFor(() => evaluate(cdp, `(() => {
     const parameters = new URLSearchParams(location.search);
     return parameters.get('renderScale') === '8'
@@ -3966,6 +4450,7 @@ async function auditRenderScaleEight(cdp, dpr) {
   assert(JSON.stringify(resolutionControl.options) === JSON.stringify([1, 2, 4, 8])
     && resolutionControl.selected === 8,
   `renderScale=8 control did not expose/select true 8x (${JSON.stringify(resolutionControl)})`);
+  stage('eight-ready');
 
   const presentationTiming = await auditWebGLPresentationTiming(cdp, 8, 12_000);
   assert(presentationTiming.source === 'gpu-query' || presentationTiming.source === 'gpu-fence',
@@ -3976,6 +4461,7 @@ async function auditRenderScaleEight(cdp, dpr) {
   // stall watchdog while allowing the current ~3-second software-GPU path.
   assert(presentationTiming.p90Ms <= 8_000 && presentationTiming.maximumMs <= 12_000,
     `renderScale=8 presentation exceeded its watchdog budget (${JSON.stringify(presentationTiming)})`);
+  stage('timing-ready');
 
   const smoothCapture = await captureSettledPage(cdp, 'renderScale=8 smooth powder framebuffer');
   await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setGasVolumeChroma(false); true');
@@ -4043,6 +4529,7 @@ async function auditRenderScaleEight(cdp, dpr) {
     cdp, 'renderScale=8 repeated flat powder-body framebuffer', 450,
   );
   await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setPowderBodyDepth(true); true');
+  stage('toggle-captures-ready');
   const styleCaptures = { smooth: smoothCapture.capture.data };
   for (const style of ['local', 'grains']) {
     await evaluate(cdp, `(() => {
@@ -4122,6 +4609,7 @@ async function auditRenderScaleEight(cdp, dpr) {
       settleTimeoutMs: 12_000,
     },
   ))[0];
+  stage('zoom-input-ready');
   await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.resetView(); true');
   await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.clear(); true');
   const blankCapture = await captureSettledPage(cdp, 'renderScale=8 blank framebuffer');
@@ -4142,6 +4630,7 @@ async function auditRenderScaleEight(cdp, dpr) {
   assert(powderSupport.local.deepHoleLeak <= 0.10
     && powderSupport.smooth.deepHoleLeak <= 0.10,
   `renderScale=8 powder styling filled authored column holes (${JSON.stringify(powderSupport)})`);
+  stage('powder-support-ready');
   const powderBodyDepthSamples = await sampleBackdropRefractionRegions(cdp, {
     straight: flatPowderBodyCapture.capture.data,
     refracted: relievedPowderBodyCapture.capture.data,
@@ -4286,10 +4775,13 @@ async function auditRenderScaleEight(cdp, dpr) {
     && liquidOpticalDepth.unlikeLiquidDepthControl8x.rgbPeak <= 3
     && liquidOpticalDepthSamples.every((sample) => sample.repeatRgbPeak <= 1),
   `renderScale=8 liquid optical depth changed a control or was nondeterministic (${JSON.stringify(liquidOpticalDepthSamples)})`);
+  stage('visual-analysis-ready');
   const materialAtlasStress = await auditEightXMaterialAtlasStress(
     cdp, blankCapture.capture.data, geometry.canvas,
   );
+  stage('atlas-stress-ready');
   const forcedStallRecovery = await auditEightXFailureRecovery(cdp, geometry.canvas, 'stall');
+  stage('stall-recovery-ready');
   const contextLossGeometry = await navigateEightXRecoveryPage(cdp, 'context-loss-recovery');
   assertCanvasRectsEqual(
     geometry.canvas, contextLossGeometry.canvas, 'renderScale=8 recovery reload CSS geometry',
@@ -4297,6 +4789,7 @@ async function auditRenderScaleEight(cdp, dpr) {
   const contextLossRecovery = await auditEightXFailureRecovery(
     cdp, contextLossGeometry.canvas, 'context-loss',
   );
+  stage('context-loss-recovery-ready');
   return {
     requested: backend.requestedOutputScale,
     effective: backend.outputScale,
@@ -4378,7 +4871,7 @@ async function navigateEightXRecoveryPage(cdp, auditStage) {
   const query = new URLSearchParams({
     scene: 'render-lab', inputAudit: '1', renderScale: '8', auditStage,
   });
-  await cdp.send('Page.navigate', { url: `${ORIGIN}/?${query}` });
+  await cdp.send('Page.navigate', { url: `${AUDIT_BASE_URL}?${query}` });
   await waitFor(() => evaluate(cdp, `(() => {
     const parameters = new URLSearchParams(location.search);
     return parameters.get('renderScale') === '8'
@@ -5836,6 +6329,7 @@ async function sampleBackdropRefractionRegions(cdp, screenshots, regions, captur
       let repeatRgbPeak = 0;
       let peakRgbMagnitude = 0;
       let peakResponseRgb = [0, 0, 0];
+      let responseSignature = 2166136261;
       const count = Math.max(1, width * height);
       for (let offset = 0; offset < data.straight.length; offset += 4) {
         const straight = data.straight[offset] * 0.2126
@@ -5849,6 +6343,9 @@ async function sampleBackdropRefractionRegions(cdp, screenshots, regions, captur
         const redDifference = data.refracted[offset] - data.straight[offset];
         const greenDifference = data.refracted[offset + 1] - data.straight[offset + 1];
         const blueDifference = data.refracted[offset + 2] - data.straight[offset + 2];
+        responseSignature = Math.imul(responseSignature ^ (redDifference + 255), 16777619);
+        responseSignature = Math.imul(responseSignature ^ (greenDifference + 255), 16777619);
+        responseSignature = Math.imul(responseSignature ^ (blueDifference + 255), 16777619);
         responseRgb[0] += redDifference;
         responseRgb[1] += greenDifference;
         responseRgb[2] += blueDifference;
@@ -5903,6 +6400,7 @@ async function sampleBackdropRefractionRegions(cdp, screenshots, regions, captur
         rgbPeak: Math.round(rgbPeak * 100) / 100,
         repeatPeak: Math.round(repeatPeak * 100) / 100,
         repeatRgbPeak: Math.round(repeatRgbPeak * 100) / 100,
+        responseSignature: responseSignature >>> 0,
       };
     });
   })()`);
@@ -6287,32 +6785,35 @@ async function samplePageRegions(
         maximumLuma = Math.max(maximumLuma, luma);
         visible++;
       }
+      const fastSupport = region.fastSupport === true;
       let adjacentContrast = 0;
       let adjacentPairs = 0;
-      for (let py = 0; py < height; py++) for (let px = 0; px < width; px++) {
-        const sampleIndex = py * width + px;
-        if (!visiblePixels[sampleIndex]) continue;
-        if (px + 1 < width && visiblePixels[sampleIndex + 1]) {
-          adjacentContrast += Math.abs(lumaValues[sampleIndex] - lumaValues[sampleIndex + 1]);
-          adjacentPairs++;
-        }
-        if (py + 1 < height && visiblePixels[sampleIndex + width]) {
-          adjacentContrast += Math.abs(lumaValues[sampleIndex] - lumaValues[sampleIndex + width]);
-          adjacentPairs++;
+      if (!fastSupport) {
+        for (let py = 0; py < height; py++) for (let px = 0; px < width; px++) {
+          const sampleIndex = py * width + px;
+          if (!visiblePixels[sampleIndex]) continue;
+          if (px + 1 < width && visiblePixels[sampleIndex + 1]) {
+            adjacentContrast += Math.abs(lumaValues[sampleIndex] - lumaValues[sampleIndex + 1]);
+            adjacentPairs++;
+          }
+          if (py + 1 < height && visiblePixels[sampleIndex + width]) {
+            adjacentContrast += Math.abs(lumaValues[sampleIndex] - lumaValues[sampleIndex + width]);
+            adjacentPairs++;
+          }
         }
       }
       const meanLuma = (total[0] * 54 + total[1] * 183 + total[2] * 19)
         / (256 * Math.max(1, visible));
       let darkPixels = 0;
       const darkThreshold = meanLuma * 0.70;
-      for (let sampleIndex = 0; sampleIndex < lumaValues.length; sampleIndex++) {
+      if (!fastSupport) for (let sampleIndex = 0; sampleIndex < lumaValues.length; sampleIndex++) {
         if (visiblePixels[sampleIndex] && lumaValues[sampleIndex] < darkThreshold) darkPixels++;
       }
       let minimumMacroLuma = 255;
       let maximumMacroLuma = 0;
       let macroSamples = 0;
       const macroRadius = 2;
-      for (let py = macroRadius; py < height - macroRadius; py++) {
+      for (let py = macroRadius; !fastSupport && py < height - macroRadius; py++) {
         for (let px = macroRadius; px < width - macroRadius; px++) {
           let sum = 0;
           let supported = true;
@@ -6335,9 +6836,9 @@ async function samplePageRegions(
       for (const supported of visiblePixels) {
         maskSignature = Math.imul(maskSignature ^ supported, 16777619);
       }
-      const visited = new Uint8Array(visiblePixels.length);
-      const stack = new Int32Array(visiblePixels.length);
-      for (let origin = 0; origin < visiblePixels.length; origin++) {
+      const visited = region.topology ? new Uint8Array(visiblePixels.length) : undefined;
+      const stack = region.topology ? new Int32Array(visiblePixels.length) : undefined;
+      for (let origin = 0; region.topology && origin < visiblePixels.length; origin++) {
         if (!visiblePixels[origin] || visited[origin]) continue;
         let stackLength = 1;
         let componentPixels = 0;
@@ -6387,7 +6888,7 @@ async function samplePageRegions(
       const visibleBoundsHeight = Math.max(0, visibleMaxY - visibleMinY + 1);
       const visibleBoundsArea = visibleBoundsWidth * visibleBoundsHeight;
       let longestQuietRun = 0;
-      for (let py = 0; py < height; py++) {
+      for (let py = 0; region.topology && py < height; py++) {
         let quietRun = 0;
         for (let px = 0; px < width; px++) {
           if (visiblePixels[py * width + px]) quietRun = 0;
@@ -6858,11 +7359,32 @@ async function terminate(child) {
 }
 
 class Cdp {
-  static async connect(url) {
+  static async connect(url, timeoutMs = CDP_CONNECT_TIMEOUT_MS) {
     const socket = new WebSocket(url);
     await new Promise((resolve, reject) => {
-      socket.addEventListener('open', resolve, { once: true });
-      socket.addEventListener('error', reject, { once: true });
+      const cleanup = () => {
+        clearTimeout(timeout);
+        socket.removeEventListener('open', opened);
+        socket.removeEventListener('error', failed);
+        socket.removeEventListener('close', closed);
+      };
+      const opened = () => { cleanup(); resolve(); };
+      const failed = () => {
+        cleanup();
+        reject(new Error(`CDP WebSocket failed to connect to ${url}`));
+      };
+      const closed = () => {
+        cleanup();
+        reject(new Error(`CDP WebSocket closed while connecting to ${url}`));
+      };
+      const timeout = setTimeout(() => {
+        cleanup();
+        try { socket.close(); } catch { /* connection never opened */ }
+        reject(new Error(`CDP WebSocket connection timed out after ${timeoutMs}ms`));
+      }, timeoutMs);
+      socket.addEventListener('open', opened, { once: true });
+      socket.addEventListener('error', failed, { once: true });
+      socket.addEventListener('close', closed, { once: true });
     });
     return new Cdp(socket);
   }
@@ -6872,25 +7394,53 @@ class Cdp {
     this.nextId = 1;
     this.pending = new Map();
     this.listeners = new Map();
+    this.closed = false;
     socket.addEventListener('message', ({ data }) => {
-      const message = JSON.parse(data);
+      let message;
+      try { message = JSON.parse(data); }
+      catch (error) {
+        this.fail(error instanceof Error ? error : new Error(String(error)));
+        return;
+      }
       if (message.id) {
         const pending = this.pending.get(message.id);
         if (!pending) return;
         this.pending.delete(message.id);
+        clearTimeout(pending.timeout);
         if (message.error) pending.reject(new Error(`${message.error.message}: ${JSON.stringify(message.error.data ?? {})}`));
         else pending.resolve(message.result ?? {});
         return;
       }
       for (const listener of this.listeners.get(message.method) ?? []) listener(message.params ?? {});
     });
+    socket.addEventListener('error', () => {
+      this.closed = true;
+      this.fail(new Error('CDP WebSocket error'));
+    });
+    socket.addEventListener('close', () => {
+      this.closed = true;
+      this.fail(new Error('CDP WebSocket closed'));
+    });
   }
 
-  send(method, params = {}) {
+  send(method, params = {}, timeoutMs = CDP_COMMAND_TIMEOUT_MS) {
     const id = this.nextId++;
     return new Promise((resolve, reject) => {
-      this.pending.set(id, { resolve, reject });
-      this.socket.send(JSON.stringify({ id, method, params }));
+      if (this.closed || this.socket.readyState !== WebSocket.OPEN) {
+        reject(new Error(`Cannot send ${method}: CDP WebSocket is not open`));
+        return;
+      }
+      const timeout = setTimeout(() => {
+        if (!this.pending.delete(id)) return;
+        reject(new Error(`CDP ${method} timed out after ${timeoutMs}ms`));
+      }, timeoutMs);
+      this.pending.set(id, { resolve, reject, timeout });
+      try { this.socket.send(JSON.stringify({ id, method, params })); }
+      catch (error) {
+        this.pending.delete(id);
+        clearTimeout(timeout);
+        reject(error);
+      }
     });
   }
 
@@ -6900,7 +7450,20 @@ class Cdp {
     this.listeners.set(method, listeners);
   }
 
-  close() { this.socket.close(); }
+  fail(error) {
+    for (const { reject, timeout } of this.pending.values()) {
+      clearTimeout(timeout);
+      reject(error);
+    }
+    this.pending.clear();
+  }
+
+  close() {
+    if (this.closed) return;
+    this.closed = true;
+    this.fail(new Error('CDP connection closed by audit'));
+    try { this.socket.close(); } catch { /* already closed */ }
+  }
 }
 
 await main();

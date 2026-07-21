@@ -4,6 +4,7 @@ import { Material } from '../shared/materials';
 import type { SimulationBackend } from '../simulation';
 import type { Point, ViewState } from '../renderer/view-transform';
 import type { MaterialAtlasEntry } from './material-atlas-audit';
+import type { CellularGraphicsAuditSnapshot } from './cellular-graphics-audit';
 
 export interface BrowserInputAuditApi {
   readonly version: 1;
@@ -51,6 +52,8 @@ export interface BrowserInputAuditApi {
   toggleDenseSolidProbe(): void;
   materialAtlas(): readonly MaterialAtlasEntry[];
   prepareMaterialAtlas(): void;
+  cellularGraphicsAtlas(): CellularGraphicsAuditSnapshot;
+  prepareCellularGraphicsFixture(): void;
   canvasPresentationTiming(): CanvasPresentationTiming | undefined;
   requestWebGLPresentationTimingSample(): boolean;
   webGLPresentationTiming(): WebGLPresentationTiming | undefined;

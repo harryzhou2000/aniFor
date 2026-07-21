@@ -41,23 +41,27 @@ export function shadeCanvasCellularMaterial(
   const band = positiveModulo(coordinate + phase, period) < bandWidth;
   const nodePeriod = 11 + preset % 3;
   const node = positiveModulo(x * 3 + y * 5 + preset * 7, nodePeriod) === 0;
-  const scalar = (band ? 4 + ((preset >>> 2) & 1) * 2 : -2 - (preset & 1))
-    + (node ? 2 : 0);
+  // Engrave the dominant band instead of relying on a bright-only accent.
+  // Saturated LIFE palettes (white, yellow, cyan, magenta) otherwise clip the
+  // motif in Canvas byte space, while very dark palettes still retain the
+  // restrained positive interstice and node response.
+  const scalar = (band ? -4 - ((preset >>> 2) & 1) * 2 : 2 + (preset & 1))
+    + (node ? (band ? -2 : 2) : 0);
 
   let red = scalar;
   let green = scalar;
   let blue = scalar;
   if (motif === 0) {
-    if (band) green += 2;
+    if (band) green -= 2;
     if (node) blue += 2;
   } else if (motif === 1) {
-    if (band) red += 2;
-    if (band) blue -= 1;
+    if (band) red -= 2;
+    if (band) blue += 1;
   } else if (motif === 2) {
     if (node) green += 2;
-    if (band) red -= 1;
+    if (band) red += 1;
   } else {
-    if (band) blue += 2;
+    if (band) blue -= 2;
     if (node) green -= 1;
   }
 

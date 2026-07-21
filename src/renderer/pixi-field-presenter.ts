@@ -1719,6 +1719,10 @@ void main() {
       float cavityConfidence = smoothstep(0.30, 0.92, density);
       alpha = max(alpha, mix(0.90, 0.98, cavityConfidence));
     }
+    // Native LIFE topology is the automaton state itself. Nearby live cells may
+    // smooth their own contours, but presentation must never resurrect a dead
+    // semantic cell as generic solid cavity support.
+    if (cellularSurface > 0.5 && surfaceOnly > 0.5) alpha = 0.0;
     if (translucentSurface > 0.5) {
       float exactPrismatic = (material == 12.0 || material == 24.0) ? 1.0 : 0.0;
       float prismGain = material == 24.0 ? 1.0 : -0.42;
@@ -1813,13 +1817,16 @@ void main() {
         float node = 1.0 - step(
           0.5, mod(cellularCell.x * 3.0 + cellularCell.y * 5.0 + preset * 7.0, nodePeriod)
         );
-        float scalar = mix(-2.0 - mod(preset, 2.0), 4.0 + mod(floor(preset / 4.0), 2.0) * 2.0, band)
-          + node * 2.0;
+        float scalar = mix(
+          2.0 + mod(preset, 2.0),
+          -4.0 - mod(floor(preset / 4.0), 2.0) * 2.0,
+          band
+        ) + node * mix(2.0, -2.0, band);
         vec3 cellularDelta = vec3(scalar);
-        if (motif < 0.5) cellularDelta += vec3(0.0, band * 2.0, node * 2.0);
-        else if (motif < 1.5) cellularDelta += vec3(band * 2.0, 0.0, -band);
-        else if (motif < 2.5) cellularDelta += vec3(-band, node * 2.0, 0.0);
-        else cellularDelta += vec3(0.0, -node, band * 2.0);
+        if (motif < 0.5) cellularDelta += vec3(0.0, -band * 2.0, node * 2.0);
+        else if (motif < 1.5) cellularDelta += vec3(-band * 2.0, 0.0, band);
+        else if (motif < 2.5) cellularDelta += vec3(band, node * 2.0, 0.0);
+        else cellularDelta += vec3(0.0, -node, -band * 2.0);
         color = clamp(color + cellularDelta / 255.0, 0.0, 1.0);
       }
     } else if (smoothSurface > 0.5 || translucentSurface > 0.5
@@ -2319,6 +2326,12 @@ export class PixiFieldPresenter {
         // MSAA is redundant once every simulation cell owns 4x4 or 8x8 real
         // samples, and at 8x it would multiply a 60 MiB colour target.
         preference: 'webgl', backgroundAlpha: 0, antialias: outputScale <= 2,
+        // Production keeps the cheaper discardable default. The browser audit
+        // preserves only its diagnostic framebuffer so exact material topology
+        // can be read after Chrome has composited a screenshot.
+        preserveDrawingBuffer: typeof location !== 'undefined'
+          && new URLSearchParams(location.search).get('inputAudit') === '1'
+          && new URLSearchParams(location.search).get('blankAudit') === '1',
         resolution: outputScale, autoDensity: true, autoStart: false,
       });
     } catch (error) {

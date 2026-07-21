@@ -192,6 +192,57 @@ describe('Canvas 2x phase contour scratch', () => {
     expect(rgbaAt(scratch, 0, 0)).toEqual([7, 11, 13, 0]);
   });
 
+  it('rejects reconstructed LIFE dead-cell coverage without rejecting a powder owner', () => {
+    const deadCell = fixture(3, 3);
+    paint(deadCell, 1, 0, Material.LIFE_GOL);
+    paint(deadCell, 0, 1, Material.LIFE_GOL);
+    paint(deadCell, 2, 1, Material.LIFE_GOL);
+    paint(deadCell, 1, 2, Material.LIFE_GOL);
+    const deadIndex = (1 * deadCell.input.worldWidth + 1) * 4;
+    const lifeColor = Material.LIFE_GOL * 3;
+    deadCell.pixels.set([
+      lookups.colorByMaterial[lifeColor],
+      lookups.colorByMaterial[lifeColor + 1],
+      lookups.colorByMaterial[lifeColor + 2],
+      224,
+    ], deadIndex);
+
+    const deadScratch = new CanvasPhaseContourScratch();
+    deadScratch.rasterize(deadCell.input);
+    for (let subY = 0; subY < deadScratch.outputScale; subY++) {
+      for (let subX = 0; subX < deadScratch.outputScale; subX++) {
+        const output = (deadScratch.outputScale + subY) * deadScratch.outputStride
+          + deadScratch.outputScale + subX;
+        expect(deadScratch.coverage[output]).toBe(0);
+        expect(deadScratch.ownerMaterials[output]).toBe(Material.Empty);
+        expect(deadScratch.pixels[output * 4 + 3]).toBe(0);
+      }
+    }
+
+    const powderProjection = fixture(3, 3);
+    paint(powderProjection, 0, 2, Material.Sand);
+    paint(powderProjection, 1, 2, Material.Sand);
+    paint(powderProjection, 2, 2, Material.Sand);
+    powderProjection.pixels.set([
+      lookups.colorByMaterial[lifeColor],
+      lookups.colorByMaterial[lifeColor + 1],
+      lookups.colorByMaterial[lifeColor + 2],
+      224,
+    ], deadIndex);
+    const powderScratch = new CanvasPhaseContourScratch();
+    powderScratch.rasterize({ ...powderProjection.input, powderStyle: 'local' });
+    let ownedPowderSamples = 0;
+    for (let subY = 0; subY < powderScratch.outputScale; subY++) {
+      for (let subX = 0; subX < powderScratch.outputScale; subX++) {
+        const output = (powderScratch.outputScale + subY) * powderScratch.outputStride
+          + powderScratch.outputScale + subX;
+        if (powderScratch.coverage[output] !== 0
+          && powderScratch.ownerMaterials[output] === Material.Sand) ownedPowderSamples++;
+      }
+    }
+    expect(ownedPowderSamples).toBeGreaterThan(0);
+  });
+
   it('creates real four- and eight-times contour samples with matching strides', () => {
     for (const scale of [4, 8] as const) {
       const scratch = new CanvasPhaseContourScratch(scale);

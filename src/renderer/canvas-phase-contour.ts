@@ -379,6 +379,10 @@ export class CanvasPhaseContourScratch {
       }
     }
     const emptyPowder = this.haloMaterials[haloIndex] === 0 && material !== 0;
+    // Presentation-only reconstruction may prefill sourcePixels for a semantic
+    // empty cell. Only a resolved powder owner may turn that payload into
+    // coverage; otherwise a non-zero source alpha must not claim the cell.
+    if (material === 0 && sourceAlpha !== 0) return;
     // The output planes were cleared once for the chunk. A truly empty source
     // with no projected powder owner therefore has no per-supersample work.
     if (material === 0 && sourceRed === 0 && sourceGreen === 0
