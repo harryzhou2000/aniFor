@@ -22,6 +22,7 @@ import {
   canvasLiquidEmissionExposure, canvasLiquidFieldRelief,
   canvasLiquidEmissionSurfaceExposure, canvasLiquidSpeciesRelief, canvasLiquidSurfaceExposure,
 } from './canvas-liquid-light';
+import { applyCanvasLiquidIdentityStyle } from './canvas-liquid-identity-style';
 import { shadeCanvasEnergy } from './canvas-energy-style';
 import { shadeCanvasMaterial } from './canvas-material-style';
 import { shadeCanvasCellularMaterial } from './canvas-cellular-style';
@@ -182,6 +183,7 @@ export class MaterialRenderer {
   private sensorMaterialStylingEnabled = true;
   private unusualPowderStylingEnabled = true;
   private unusualSolidStylingEnabled = true;
+  private liquidIdentityStylingEnabled = true;
   private phaseContactLightingEnabled = true;
   private thermalMaterialStylingEnabled = true;
   private energyCoreReliefEnabled = true;
@@ -490,6 +492,14 @@ export class MaterialRenderer {
     this.changed = true;
   }
 
+  setLiquidIdentityStylingEnabled(enabled: boolean): void {
+    if (enabled === this.liquidIdentityStylingEnabled) return;
+    this.liquidIdentityStylingEnabled = enabled;
+    this.presenter?.setLiquidIdentityStylingEnabled(enabled);
+    this.contourChunks.markAll();
+    this.changed = true;
+  }
+
   setPhaseContactLightingEnabled(enabled: boolean): void {
     if (enabled === this.phaseContactLightingEnabled) return;
     this.phaseContactLightingEnabled = enabled;
@@ -687,6 +697,7 @@ export class MaterialRenderer {
       this.sensorMaterialStylingEnabled,
       this.unusualPowderStylingEnabled,
       this.unusualSolidStylingEnabled,
+      this.liquidIdentityStylingEnabled,
     );
     // Route subsequent dirty cells to the candidate while its first expensive
     // frame is in flight. The known-good Canvas remains mounted underneath;
@@ -1380,6 +1391,11 @@ export class MaterialRenderer {
               this.liquidOpticalDepthEnabled ? this.boundaryStability[index] : 0,
             );
           }
+          if (this.liquidIdentityStylingEnabled && wall === 0) applyCanvasLiquidIdentityStyle(
+            this.styledColor, material, x, y, density,
+            fields.liquid.bytes[pixel + 3], liquidFieldRelief,
+            liquidSurfaceExposure, this.boundaryStability[index],
+          );
           if (applicableTraits === 0 && !info.emissive) {
             compositePixel(
               target, pixel,

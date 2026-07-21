@@ -16,6 +16,7 @@ interface PresenterHarness {
   setGasVolumeChromaEnabled: PixiFieldPresenter['setGasVolumeChromaEnabled'];
   setEmissionVolumeChromaEnabled: PixiFieldPresenter['setEmissionVolumeChromaEnabled'];
   setLiquidVolumeChromaEnabled: PixiFieldPresenter['setLiquidVolumeChromaEnabled'];
+  setLiquidIdentityStylingEnabled: PixiFieldPresenter['setLiquidIdentityStylingEnabled'];
   setLiquidOpticalDepthEnabled: PixiFieldPresenter['setLiquidOpticalDepthEnabled'];
   setSolidOpticalDepthEnabled: PixiFieldPresenter['setSolidOpticalDepthEnabled'];
   setPowderBodyDepthEnabled: PixiFieldPresenter['setPowderBodyDepthEnabled'];
@@ -85,6 +86,7 @@ describe('Pixi presenter startup configuration', () => {
       uEmissionVolumeChroma: 1,
       uLiquidFieldLighting: 1,
       uLiquidVolumeChroma: 1,
+      uLiquidIdentityStyling: 1,
       uLiquidOpticalDepth: 1,
       uSolidOpticalDepth: 1,
       uTranslucentFieldTransmission: 0,
@@ -336,6 +338,63 @@ describe('Pixi presenter startup configuration', () => {
     expect(source.match(/texture\(uLiquidTexture/g)).toHaveLength(5);
     expect(source).not.toContain('sampler2D uLiquidVolumeChroma');
     expect(source).not.toContain('sampler2D uLiquidOpticalDepth');
+  });
+
+  it('seeds and redraws optional-last liquid material identity styling', () => {
+    const presenter = presenterHarness();
+
+    presenter.configurePresentation(
+      true, true, true, true, true, true, true, true, true, 'smooth',
+      true, true, true, true, true, true, true, true, true, true,
+      true, true, true, true, true, false,
+    );
+    expect(presenter.uniforms.uniforms.uLiquidIdentityStyling).toBe(0);
+    expect(presenter.app.render).not.toHaveBeenCalled();
+
+    presenter.setLiquidIdentityStylingEnabled(true);
+    expect(presenter.uniforms.uniforms.uLiquidIdentityStyling).toBe(1);
+    expect(presenter.app.render).toHaveBeenCalledOnce();
+  });
+
+  it('styles exactly eight authoritative liquid identities with bounded static RGB arithmetic', () => {
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const helperStart = source.indexOf('vec3 liquidMaterialIdentityDelta(');
+    const helperEnd = source.indexOf('vec3 vividColor', helperStart);
+    const helper = source.slice(helperStart, helperEnd);
+    const blockStart = source.indexOf('// Eight unusual liquids retain a small world-anchored material signature');
+    const blockEnd = source.indexOf('  } else {', blockStart);
+    const block = source.slice(blockStart, blockEnd);
+    const ids = [...helper.matchAll(/material == (\d+)\.0/g)].map((match) => Number(match[1]));
+    const dispatchStart = helper.indexOf('  if (material == 38.0)');
+    const commonSetup = helper.slice(helper.indexOf(') {') + 3, dispatchStart);
+
+    expect(helperStart).toBeGreaterThan(0);
+    expect(helperEnd).toBeGreaterThan(helperStart);
+    expect(blockStart).toBeGreaterThan(0);
+    expect(blockEnd).toBeGreaterThan(blockStart);
+    expect(dispatchStart).toBeGreaterThan(0);
+    expect(ids).toEqual([38, 54, 55, 56, 57, 62, 202, 207]);
+    for (const motif of [
+      'thinFilm', 'prism', 'bubbles', 'foldCrease',
+      'ringBand', 'membrane', 'frost', 'ribbon',
+    ]) expect(helper).toContain(motif);
+    expect(commonSetup).toContain('smoothstep(0.08, 0.72, density)');
+    expect(commonSetup).toContain('(0.45 + depth * 0.55)');
+    expect(commonSetup).not.toMatch(/\b(?:fract|floor|abs|clamp)\s*\(/);
+    expect(commonSetup).not.toMatch(/\b(?:tile|Saw|Fold|slopeKey)/);
+    expect(helper).toContain('return clamp(identity * support, vec3(-0.055), vec3(0.055));');
+    expect(block).toContain('uLiquidIdentityStyling > 0.5 && liquidOnly < 0.5 && halo < 0.5');
+    expect(block).toContain('surfaceOnly < 0.5 && wall < 0.5 && emissionOnly < 0.5');
+    expect(block).toContain('family == 2.0 && !materialEmissive');
+    expect(block).toContain('(material == 38.0 || (material >= 54.0 && material <= 57.0)');
+    expect(block).toContain('|| material == 62.0 || material == 202.0 || material == 207.0');
+    expect(block).not.toContain('material == 54.0 || material == 55.0');
+    expect(block).toContain('semanticSlope + volumeSlope');
+    expect(`${helper}${block}`).not.toContain('texture(');
+    expect(`${helper}${block}`).not.toMatch(/\balpha\s*[+*]?=/);
+    expect(`${helper}${block}`).not.toMatch(/\b(?:sin|pow)\s*\(/);
+    expect(`${helper}${block}`).not.toContain('uTime');
+    expect(source).not.toContain('sampler2D uLiquidIdentityStyling');
   });
 
   it('keeps true-8x analytic body lighting independent of expensive probes', () => {

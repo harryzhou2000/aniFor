@@ -96,6 +96,7 @@ uniform float uGasVolumeChroma;
 uniform float uEmissionVolumeChroma;
 uniform float uLiquidFieldLighting;
 uniform float uLiquidVolumeChroma;
+uniform float uLiquidIdentityStyling;
 uniform float uLiquidOpticalDepth;
 uniform float uSolidOpticalDepth;
 uniform float uTranslucentFieldTransmission;
@@ -265,6 +266,87 @@ vec3 applyLiquidVolumeChroma(
     : (optics == 18.0 ? 0.20 : 0.06)))));
   if (optics == 4.0) columnGain = 0.0;
   return color * (vec3(1.0) - shadow * columnDepth * columnGain * uLiquidOpticalDepth);
+}
+vec3 liquidMaterialIdentityDelta(
+  float material, vec2 worldPosition, float density, float depth, vec2 slope
+) {
+  float support = smoothstep(0.08, 0.72, density) * (0.45 + depth * 0.55);
+  vec3 identity = vec3(0.0);
+  if (material == 38.0) {
+    // SOAP: crossed thin-film bands split the spectral key by channel.
+    float diagonalSaw = fract(
+      (worldPosition.x + worldPosition.y) * 0.09375
+    ) * 2.0 - 1.0;
+    float antiSaw = fract(
+      (worldPosition.x - worldPosition.y) * 0.078125
+    ) * 2.0 - 1.0;
+    float diagonalFold = 1.0 - abs(diagonalSaw);
+    float antiFold = 1.0 - abs(antiSaw);
+    float thinFilm = (diagonalFold - antiFold) * 0.5;
+    identity = vec3(thinFilm * 0.045, thinFilm * -0.020, thinFilm * -0.050);
+  } else if (material == 54.0) {
+    // BIZR: hard diagonal prism facets retain bizarre matter's spectral shift.
+    float prism = fract(worldPosition.x * 0.125
+      + floor(worldPosition.y * 0.125) * 0.25) * 2.0 - 1.0;
+    identity = vec3(prism * 0.050, (0.5 - abs(prism)) * 0.024, prism * -0.040);
+  } else if (material == 55.0) {
+    // CBNW: stable cellular bubble rims, independent of simulation motion.
+    vec2 tile8 = fract(worldPosition / 8.0);
+    float bubbleRadius = max(abs(tile8.x - 0.5), abs(tile8.y - 0.5));
+    float bubbles = 1.0 - smoothstep(0.04, 0.13, abs(bubbleRadius - 0.31));
+    identity = (bubbles - 0.24) * vec3(0.035, 0.045, 0.055);
+  } else if (material == 56.0) {
+    // GEL: broad nested folds read as a viscous, elastic body.
+    float diagonalSaw = fract(
+      (worldPosition.x + worldPosition.y) * 0.09375
+    ) * 2.0 - 1.0;
+    float diagonalFold = 1.0 - abs(diagonalSaw);
+    float fold = 1.0 - abs(
+      fract(worldPosition.y * 0.085 + diagonalFold * 0.18) * 2.0 - 1.0
+    );
+    float foldCrease = smoothstep(0.62, 0.92, fold) - 0.28;
+    identity = foldCrease * vec3(0.040, 0.025, -0.018);
+  } else if (material == 57.0) {
+    // GLOW: low-frequency diamond rings reinforce its pressure-lit identity.
+    vec2 tile12 = fract(worldPosition / 12.0);
+    float ringRadius = abs(tile12.x - 0.5) + abs(tile12.y - 0.5);
+    float rings = 1.0 - abs(fract(ringRadius * 3.0) * 2.0 - 1.0);
+    float ringBand = smoothstep(0.68, 0.94, rings) - 0.26;
+    identity = ringBand * vec3(0.018, 0.048, 0.035);
+  } else if (material == 62.0) {
+    // VIRS: a quiet reticulated membrane leaves the later Organic trait clear.
+    vec2 tile8 = fract(worldPosition / 8.0);
+    float membraneDistance = min(
+      min(tile8.x, 1.0 - tile8.x), min(tile8.y, 1.0 - tile8.y)
+    );
+    float membrane = 1.0 - smoothstep(0.06, 0.16, membraneDistance);
+    identity = (membrane - 0.16) * vec3(0.050, -0.014, 0.045);
+  } else if (material == 202.0) {
+    // FRZW: crossed frost branches keep the phase-change product crystalline.
+    float diagonalSaw = fract(
+      (worldPosition.x + worldPosition.y) * 0.09375
+    ) * 2.0 - 1.0;
+    float antiSaw = fract(
+      (worldPosition.x - worldPosition.y) * 0.078125
+    ) * 2.0 - 1.0;
+    float frostDistance = min(abs(diagonalSaw), abs(antiSaw));
+    float frost = 1.0 - smoothstep(0.04, 0.16, frostDistance);
+    identity = (frost - 0.18) * vec3(0.025, 0.042, 0.055);
+  } else if (material == 207.0) {
+    // RFGL: refrigerant bubble cells share a restrained flowing ribbon.
+    vec2 tile12 = fract(worldPosition / 12.0);
+    float antiSaw = fract(
+      (worldPosition.x - worldPosition.y) * 0.078125
+    ) * 2.0 - 1.0;
+    float antiFold = 1.0 - abs(antiSaw);
+    float slopeKey = clamp((slope.x + slope.y) * 1.75, -1.0, 1.0);
+    float bubbleRadius = max(abs(tile12.x - 0.5), abs(tile12.y - 0.5));
+    float bubble = 1.0 - smoothstep(0.04, 0.12, abs(bubbleRadius - 0.30));
+    float ribbon = antiFold - 0.5 + slopeKey * 0.12;
+    identity = (bubble - 0.22) * vec3(0.028, 0.035, 0.042)
+      + ribbon * vec3(-0.018, 0.010, 0.022);
+  }
+  return clamp(identity * support, vec3(-0.055), vec3(0.055));
 }
 vec3 vividColor(vec3 color, float saturation) {
   float luminance = dot(color, vec3(0.2126, 0.7152, 0.0722));
@@ -1469,6 +1551,20 @@ void main() {
         );
       }
     }
+    // Eight unusual liquids retain a small world-anchored material signature
+    // after generic body optics. The authoritative semantic fragment is the
+    // only owner: reconstructed support, walls, halos, and emissive projections
+    // remain exact. This changes RGB only and adds no sample or resource.
+    if (uLiquidIdentityStyling > 0.5 && liquidOnly < 0.5 && halo < 0.5
+      && surfaceOnly < 0.5 && wall < 0.5 && emissionOnly < 0.5
+      && family == 2.0 && !materialEmissive
+      && (material == 38.0 || (material >= 54.0 && material <= 57.0)
+        || material == 62.0 || material == 202.0 || material == 207.0)) {
+      color += liquidMaterialIdentityDelta(
+        material, fieldPosition, liquidSurfaceDensity, liquidDepth,
+        semanticSlope + volumeSlope
+      ) * uLiquidIdentityStyling;
+    }
   } else {
     float powderVisualCohesion = 0.0;
     float powderChromaCohesion = 0.0;
@@ -2465,6 +2561,7 @@ export class PixiFieldPresenter {
       uEmissionVolumeChroma: { value: 1, type: 'f32' },
       uLiquidFieldLighting: { value: 1, type: 'f32' },
       uLiquidVolumeChroma: { value: 1, type: 'f32' },
+      uLiquidIdentityStyling: { value: 1, type: 'f32' },
       uLiquidOpticalDepth: { value: 1, type: 'f32' },
       uSolidOpticalDepth: { value: 1, type: 'f32' },
       uTranslucentFieldTransmission: { value: 1, type: 'f32' },
@@ -2741,6 +2838,7 @@ export class PixiFieldPresenter {
     sensorMaterialStylingEnabled = true,
     unusualPowderStylingEnabled = true,
     unusualSolidStylingEnabled = true,
+    liquidIdentityStylingEnabled = true,
   ): void {
     const uniforms = this.uniforms.uniforms;
     uniforms.uGasFieldLighting = gasFieldLightingEnabled ? 1 : 0;
@@ -2764,6 +2862,7 @@ export class PixiFieldPresenter {
     uniforms.uSensorMaterialStyling = sensorMaterialStylingEnabled ? 1 : 0;
     uniforms.uUnusualPowderStyling = unusualPowderStylingEnabled ? 1 : 0;
     uniforms.uUnusualSolidStyling = unusualSolidStylingEnabled ? 1 : 0;
+    uniforms.uLiquidIdentityStyling = liquidIdentityStylingEnabled ? 1 : 0;
     uniforms.uPowderBodyDepth = powderBodyDepthEnabled ? 1 : 0;
     uniforms.uThermalMaterialStyling = thermalMaterialStylingEnabled ? 1 : 0;
     uniforms.uEnergyCoreRelief = energyCoreReliefEnabled ? 1 : 0;
@@ -2792,6 +2891,11 @@ export class PixiFieldPresenter {
 
   setLiquidVolumeChromaEnabled(enabled: boolean): void {
     this.uniforms.uniforms.uLiquidVolumeChroma = enabled ? 1 : 0;
+    this.renderApplication();
+  }
+
+  setLiquidIdentityStylingEnabled(enabled: boolean): void {
+    this.uniforms.uniforms.uLiquidIdentityStyling = enabled ? 1 : 0;
     this.renderApplication();
   }
 

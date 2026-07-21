@@ -9,6 +9,7 @@ import type { CellularGraphicsAuditSnapshot } from './cellular-graphics-audit';
 import type { SensorGraphicsAuditSnapshot } from './sensor-graphics-audit';
 import type { UnusualPowderGraphicsAuditSnapshot } from './unusual-powder-graphics-audit';
 import type { UnusualSolidGraphicsAuditSnapshot } from './unusual-solid-graphics-audit';
+import type { LiquidIdentityGraphicsAuditSnapshot } from './liquid-identity-graphics-audit';
 
 export interface BrowserInputAuditApi {
   readonly version: 1;
@@ -40,6 +41,7 @@ export interface BrowserInputAuditApi {
   setSensorMaterialStyling(enabled: boolean): void;
   setUnusualPowderStyling(enabled: boolean): void;
   setUnusualSolidStyling(enabled: boolean): void;
+  setLiquidIdentityStyling(enabled: boolean): void;
   setPhaseContactLighting(enabled: boolean): void;
   setThermalMaterialStyling(enabled: boolean): void;
   setEnergyCoreRelief(enabled: boolean): void;
@@ -68,6 +70,8 @@ export interface BrowserInputAuditApi {
   prepareUnusualPowderGraphicsFixture(): void;
   unusualSolidGraphicsAtlas(): UnusualSolidGraphicsAuditSnapshot;
   prepareUnusualSolidGraphicsFixture(): void;
+  liquidIdentityGraphicsAtlas(): LiquidIdentityGraphicsAuditSnapshot;
+  prepareLiquidIdentityGraphicsFixture(): void;
   canvasPresentationTiming(): CanvasPresentationTiming | undefined;
   requestWebGLPresentationTimingSample(): boolean;
   webGLPresentationTiming(): WebGLPresentationTiming | undefined;

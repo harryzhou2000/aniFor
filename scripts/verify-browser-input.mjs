@@ -42,8 +42,10 @@ const cellularGraphicsOnly = process.argv.includes('--cellular-graphics-only');
 const sensorGraphicsOnly = process.argv.includes('--sensor-graphics-only');
 const unusualPowderGraphicsOnly = process.argv.includes('--unusual-powder-graphics-only');
 const unusualSolidGraphicsOnly = process.argv.includes('--unusual-solid-graphics-only');
+const liquidIdentityGraphicsOnly = process.argv.includes('--liquid-identity-graphics-only');
 const usesProductionBundle = cellularGraphicsOnly || sensorGraphicsOnly
-  || unusualPowderGraphicsOnly || unusualSolidGraphicsOnly || scaleEightOnly;
+  || unusualPowderGraphicsOnly || unusualSolidGraphicsOnly
+  || liquidIdentityGraphicsOnly || scaleEightOnly;
 const AUDIT_BASE_URL = usesProductionBundle ? PRODUCTION_BUNDLE_URL : ORIGIN + '/';
 const screenshotRequest = process.argv.find((argument) => argument.startsWith('--screenshot='))?.slice('--screenshot='.length);
 const SOLID_FIELD_REGIONS = [
@@ -104,7 +106,7 @@ async function main() {
       || desktopInputOnly || visualScaleMatrixOnly || powderBodyOnly || liquidDepthOnly
       || solidDepthOnly || gasChromaOnly || surfaceContourOnly || solidFieldOnly
       || roleGraphicsOnly || cellularGraphicsOnly || sensorGraphicsOnly
-      || unusualPowderGraphicsOnly || unusualSolidGraphicsOnly;
+      || unusualPowderGraphicsOnly || unusualSolidGraphicsOnly || liquidIdentityGraphicsOnly;
     if (powderBodyOnly) assertPairedPowderBodyDepth(results);
     if (liquidDepthOnly) assertPairedLiquidOpticalDepth(results);
     if (solidDepthOnly) assertPairedSolidOpticalDepth(results);
@@ -116,6 +118,7 @@ async function main() {
     if (sensorGraphicsOnly) assertPairedSensorGraphics(results);
     if (unusualPowderGraphicsOnly) assertPairedUnusualPowderGraphics(results);
     if (unusualSolidGraphicsOnly) assertPairedUnusualSolidGraphics(results);
+    if (liquidIdentityGraphicsOnly) assertPairedLiquidIdentityGraphics(results);
     if (!scaleEightOnly && !materialAtlasOnly && !reducedAudit) assertPairedVisualRelief(results);
     if (!scaleEightOnly && !reducedAudit) assertPairedMaterialAtlas(results);
     compactMaterialAtlasResults(results);
@@ -133,7 +136,7 @@ async function auditMode(mode) {
   const profile = await mkdtemp(path.join(tmpdir(), `anifor-input-${mode}-`));
   const dpr = mode === 'canvas2d' ? 2 : 1;
   const startsBlank = cellularGraphicsOnly || sensorGraphicsOnly
-    || unusualPowderGraphicsOnly || unusualSolidGraphicsOnly;
+    || unusualPowderGraphicsOnly || unusualSolidGraphicsOnly || liquidIdentityGraphicsOnly;
   const query = new URLSearchParams({
     scene: 'render-lab', inputAudit: '1', renderScale: '2',
     auditStage: startsBlank ? 'blank' : 'canonical',
@@ -270,6 +273,12 @@ async function auditMode(mode) {
       assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
       cdp.close();
       return { backend: mode, unusualSolidGraphics, browserErrors: errors.length };
+    }
+    if (liquidIdentityGraphicsOnly) {
+      const liquidIdentityGraphics = await auditLiquidIdentityGraphics(cdp, mode);
+      assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
+      cdp.close();
+      return { backend: mode, liquidIdentityGraphics, browserErrors: errors.length };
     }
     if (mobileOnly) {
       const mobile = await auditMobile(
@@ -4009,6 +4018,481 @@ function normalizeUnusualSolidGraphicsAtlas(snapshot) {
   };
 }
 
+/** Focused topology and RGB-identity proof for eight liquid families. */
+async function auditLiquidIdentityGraphics(cdp, mode) {
+  const started = performance.now();
+  const stage = (name) => console.error(
+    `[liquid-identity-graphics:${mode}] ${name} ${Math.round(performance.now() - started)}ms`,
+  );
+  const blank = await waitForStablePageCapture(cdp, `${mode} initial blank liquid-identity framebuffer`);
+  await evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    if (typeof audit.prepareLiquidIdentityGraphicsFixture !== 'function'
+      || typeof audit.liquidIdentityGraphicsAtlas !== 'function'
+      || typeof audit.setLiquidIdentityStyling !== 'function') {
+      throw new Error('Liquid identity graphics audit API unavailable');
+    }
+    audit.prepareLiquidIdentityGraphicsFixture();
+    return true;
+  })()`);
+  const rawAtlas = await waitFor(() => evaluate(cdp, `(() => {
+    const atlas = window.__ANIFOR_INPUT_AUDIT__.liquidIdentityGraphicsAtlas();
+    const cards = Array.isArray(atlas) ? atlas : atlas?.cards;
+    return cards?.length === 8 ? atlas : false;
+  })()`), 15_000, `${mode} liquid identity graphics fixture`);
+  const atlas = normalizeLiquidIdentityGraphicsAtlas(rawAtlas);
+  const expectedMaterials = [38, 54, 55, 56, 57, 62, 202, 207];
+  const expectedCodes = ['SOAP', 'BIZR', 'CBNW', 'GEL', 'GLOW', 'VIRS', 'FRZW', 'RFGL'];
+  assert(atlas.cards.length === 8
+      && atlas.cards.every(({ material, code }, index) => (
+        material === expectedMaterials[index] && code === expectedCodes[index]
+      )),
+  `${mode}: liquid identity atlas order changed (${JSON.stringify(atlas.cards.map(
+    ({ code, material }) => ({ code, material }),
+  ))})`);
+
+  const semanticState = await evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    const snapshot = audit.liquidIdentityGraphicsAtlas();
+    const cards = Array.isArray(snapshot) ? snapshot : snapshot.cards;
+    const inside = (x, y, rect) => x >= rect.x && x < rect.x + rect.width
+      && y >= rect.y && y < rect.y + rect.height;
+    const exactRect = (rect, material) => {
+      for (let y = rect.y; y < rect.y + rect.height; y++) {
+        for (let x = rect.x; x < rect.x + rect.width; x++) {
+          if (audit.cell(x, y) !== material) return false;
+        }
+      }
+      return true;
+    };
+    return cards.map((entry) => {
+      let bodyExact = true;
+      for (let y = entry.body.y; y < entry.body.y + entry.body.height; y++) {
+        for (let x = entry.body.x; x < entry.body.x + entry.body.width; x++) {
+          const empty = inside(x, y, entry.cavity) || inside(x, y, entry.openChimney);
+          bodyExact = bodyExact && audit.cell(x, y) === (empty ? 0 : entry.material);
+        }
+      }
+      return {
+        code: entry.code,
+        material: entry.material,
+        bodyExact,
+        surfaceProbeExact: exactRect(entry.surfaceProbe, entry.material),
+        coreProbeExact: exactRect(entry.coreProbe, entry.material),
+        cavityEmpty: exactRect(entry.cavity, 0),
+        chimneyEmpty: exactRect(entry.openChimney, 0),
+        strandExact: exactRect(entry.strand, entry.material),
+        isolated: audit.cell(entry.isolated.x, entry.isolated.y),
+        guardedBlankEmpty: exactRect(entry.guardedBlank, 0),
+        liquidOwnerExact: exactRect(entry.liquidContact.owner, entry.material),
+        liquidUnlikeExact: exactRect(
+          entry.liquidContact.unlike, entry.liquidContact.unlikeMaterial,
+        ),
+        liquidUnlikeMaterial: entry.liquidContact.unlikeMaterial,
+        solidOwnerExact: exactRect(entry.solidContact.owner, entry.material),
+        solidUnlikeExact: exactRect(
+          entry.solidContact.unlike, entry.solidContact.unlikeMaterial,
+        ),
+        solidUnlikeMaterial: entry.solidContact.unlikeMaterial,
+      };
+    });
+  })()`);
+  assert(semanticState.every((entry) => entry.bodyExact && entry.surfaceProbeExact
+      && entry.coreProbeExact && entry.cavityEmpty && entry.chimneyEmpty
+      && entry.strandExact && entry.isolated === entry.material && entry.guardedBlankEmpty
+      && entry.liquidOwnerExact && entry.liquidUnlikeExact && entry.liquidUnlikeMaterial === 2
+      && entry.solidOwnerExact && entry.solidUnlikeExact && entry.solidUnlikeMaterial === 23),
+  `${mode}: liquid identity fixture lost authored semantics (${JSON.stringify(semanticState)})`);
+  stage('fixture-ready');
+
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setLiquidIdentityStyling(false); true');
+  const flat = await waitForStablePageCapture(cdp, `${mode} flat liquid-identity framebuffer`);
+  const flatBacking = await sampleLiquidIdentityBackingTopology(cdp);
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setLiquidIdentityStyling(true); true');
+  const styled = await waitForStablePageCapture(cdp, `${mode} styled liquid-identity framebuffer`);
+  const styledBacking = await sampleLiquidIdentityBackingTopology(cdp);
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setLiquidIdentityStyling(false); true');
+  const repeated = await waitForStablePageCapture(cdp, `${mode} repeated flat liquid-identity framebuffer`);
+  const repeatedBacking = await sampleLiquidIdentityBackingTopology(cdp);
+  for (const [state, backing] of [
+    ['flat', flatBacking], ['styled', styledBacking], ['repeated-flat', repeatedBacking],
+  ]) assertLiquidIdentityBackingTopology(backing, `${mode} ${state}`);
+
+  assert(flatBacking.cards.every((card, index) => (
+    card.alphaSignature === styledBacking.cards[index].alphaSignature
+      && card.alphaSignature === repeatedBacking.cards[index].alphaSignature
+      && card.supportSignature === styledBacking.cards[index].supportSignature
+      && card.supportSignature === repeatedBacking.cards[index].supportSignature
+  )), `${mode}: liquid identity styling changed backing alpha/support (${JSON.stringify({
+    flat: compactLiquidIdentityTopology(flatBacking),
+    styled: compactLiquidIdentityTopology(styledBacking),
+    repeated: compactLiquidIdentityTopology(repeatedBacking),
+  })})`);
+  const contactLeaks = flatBacking.cards.flatMap((card, index) => {
+    const changed = styledBacking.cards[index];
+    const returned = repeatedBacking.cards[index];
+    const leaks = [];
+    if (!arraysEqual(card.liquidUnlikeRgb, changed.liquidUnlikeRgb)
+      || !arraysEqual(card.liquidUnlikeRgb, returned.liquidUnlikeRgb)) leaks.push('Water');
+    if (!arraysEqual(card.solidUnlikeRgb, changed.solidUnlikeRgb)
+      || !arraysEqual(card.solidUnlikeRgb, returned.solidUnlikeRgb)) leaks.push('Metal');
+    return leaks.map((control) => ({ code: card.code, control }));
+  });
+  assert(contactLeaks.length === 0,
+    `${mode}: liquid identity styling leaked into contact controls (${JSON.stringify(contactLeaks)})`);
+
+  const backingResponses = summarizeLiquidIdentityBackingResponses(
+    flatBacking, styledBacking, repeatedBacking,
+  );
+  assert(backingResponses.every(({ rgbRms, rgbPeak, repeatRgbPeak }) => (
+    rgbRms >= 0.05 && rgbRms <= 12 && rgbPeak > 0 && rgbPeak <= 18 && repeatRgbPeak === 0
+  )), `${mode}: liquid identity response is absent, unbounded, or non-repeatable (${JSON.stringify(backingResponses)})`);
+  assert(backingResponses.every(({ responseProfile }) => (
+    responseProfile.length === 16
+      && Math.abs(responseProfile.reduce((sum, value) => sum + value, 0) - 1) <= 0.001
+  )), `${mode}: liquid identity response profiles are not normalized 4x4 fields (${JSON.stringify(backingResponses)})`);
+  assert(new Set(backingResponses.map(({ responseSignature }) => responseSignature)).size === 8,
+    `${mode}: liquid identities do not have eight distinct backing responses (${JSON.stringify(backingResponses)})`);
+
+  const bodyRegions = atlas.cards.map((entry) => ({
+    name: `liquid-identity-${entry.code}`,
+    x: entry.body.x + entry.body.width / 2,
+    y: entry.body.y + entry.body.height / 2,
+    radiusX: entry.body.width / 2,
+    radiusY: entry.body.height / 2,
+    signature: true,
+    silhouette: true,
+    fastSupport: true,
+  }));
+  const atlasBounds = containingCellularRegion(atlas.cards.map(({ card }) => card));
+  const responses = await sampleBackdropRefractionRegions(cdp, {
+    straight: flat.capture.data,
+    refracted: styled.capture.data,
+    repeatedStraight: repeated.capture.data,
+  }, [...bodyRegions, { name: 'liquid-identity-atlas', ...atlasBounds }], flat.canvasRect);
+  const atlasResponse = responses.at(-1);
+  assert(atlasResponse.repeatRgbPeak === 0,
+    `${mode}: liquid identity flat→styled→flat framebuffer was not exact (${JSON.stringify(atlasResponse)})`);
+  assert(responses.slice(0, 8).every((sample) => (
+    sample.rgbRms > 0 && sample.rgbRms <= 12 && sample.rgbPeak > 0 && sample.rgbPeak <= 20
+      && sample.repeatRgbPeak === 0
+  )), `${mode}: a liquid identity has no bounded composed response (${JSON.stringify(responses.slice(0, 8))})`);
+  const [flatSupport, styledSupport] = await Promise.all([
+    samplePageRegions(
+      cdp, flat.capture.data, bodyRegions,
+      blank.capture.data, blank.reference.data, flat.canvasRect,
+    ),
+    samplePageRegions(
+      cdp, styled.capture.data, bodyRegions,
+      blank.capture.data, blank.reference.data, flat.canvasRect,
+    ),
+  ]);
+  assert(flatSupport.every((sample) => sample.visible > 0 && sample.worldArea > 0)
+      && styledSupport.every((sample) => sample.visible > 0 && sample.worldArea > 0),
+  `${mode}: a liquid identity body is not visible (${JSON.stringify({ flatSupport, styledSupport })})`);
+  stage('responses-ready');
+
+  const cardSignatures = atlas.cards.map((entry, index) => ({
+    index: entry.index,
+    material: entry.material,
+    code: entry.code,
+    flatSignature: flatSupport[index].signature,
+    styledSignature: styledSupport[index].signature,
+    flatVisible: flatSupport[index].visible,
+    styledVisible: styledSupport[index].visible,
+    rgbRms: responses[index].rgbRms,
+    rgbPeak: responses[index].rgbPeak,
+    responseSignature: responses[index].responseSignature,
+    backingRgbRms: backingResponses[index].rgbRms,
+    backingRgbPeak: backingResponses[index].rgbPeak,
+    backingChangedSampleRatio: backingResponses[index].changedSampleRatio,
+    backingRepeatRgbPeak: backingResponses[index].repeatRgbPeak,
+    backingResponseSignature: backingResponses[index].responseSignature,
+    backingResponseProfile: backingResponses[index].responseProfile,
+  }));
+  return {
+    cards: cardSignatures.length,
+    centralCavityCells: atlas.cards.length * 16,
+    chimneyShaftCells: atlas.cards.reduce((sum, { openChimney }) => (
+      sum + openChimney.height
+    ), 0),
+    strandCells: atlas.strands.length,
+    isolatedControls: atlas.isolated.length,
+    guardedBlanks: atlas.guardedBlanks.length,
+    unlikeWaterContacts: atlas.liquidContacts.length,
+    unlikeMetalContacts: atlas.solidContacts.length,
+    exactRepeatedOff: atlasResponse.repeatRgbPeak === 0,
+    cardSignatures,
+  };
+}
+
+async function sampleLiquidIdentityBackingTopology(cdp) {
+  return evaluate(cdp, `(() => {
+    const world = document.querySelector('.world-canvas');
+    if (!(world instanceof HTMLCanvasElement)) throw new Error('World canvas unavailable');
+    const copy = document.createElement('canvas');
+    copy.width = world.width;
+    copy.height = world.height;
+    const context = copy.getContext('2d', { willReadFrequently: true });
+    if (!context) throw new Error('Liquid identity backing sampler unavailable');
+    context.drawImage(world, 0, 0);
+    const pixels = context.getImageData(0, 0, copy.width, copy.height).data;
+    const scaleX = copy.width / ${WORLD_WIDTH};
+    const scaleY = copy.height / ${WORLD_HEIGHT};
+    const cellAlpha = ({ x, y }) => {
+      const left = Math.floor(x * scaleX);
+      const top = Math.floor(y * scaleY);
+      const right = Math.max(left + 1, Math.floor((x + 1) * scaleX));
+      const bottom = Math.max(top + 1, Math.floor((y + 1) * scaleY));
+      let peak = 0;
+      const values = [];
+      for (let py = top; py < bottom; py++) for (let px = left; px < right; px++) {
+        const alpha = pixels[(py * copy.width + px) * 4 + 3];
+        peak = Math.max(peak, alpha);
+        values.push(alpha);
+      }
+      return { peak, values };
+    };
+    const rectPoints = (rect) => {
+      const points = [];
+      for (let y = rect.y; y < rect.y + rect.height; y++) {
+        for (let x = rect.x; x < rect.x + rect.width; x++) points.push({ x, y });
+      }
+      return points;
+    };
+    const sampleRect = (rect) => {
+      const left = Math.floor(rect.x * scaleX);
+      const top = Math.floor(rect.y * scaleY);
+      const right = Math.max(left + 1, Math.floor((rect.x + rect.width) * scaleX));
+      const bottom = Math.max(top + 1, Math.floor((rect.y + rect.height) * scaleY));
+      const rgb = [];
+      // Enumerate every backing sample, not only the centre of each world cell.
+      // This makes toggle exactness and response bounds cover the actual 2x/4x/8x
+      // presentation footprint with the same rigor as the alpha/support proof.
+      for (let py = top; py < bottom; py++) {
+        for (let px = left; px < right; px++) {
+          const offset = (py * copy.width + px) * 4;
+          rgb.push(pixels[offset], pixels[offset + 1], pixels[offset + 2]);
+        }
+      }
+      return { width: right - left, height: bottom - top, rgb };
+    };
+    const snapshot = window.__ANIFOR_INPUT_AUDIT__.liquidIdentityGraphicsAtlas();
+    const cards = Array.isArray(snapshot) ? snapshot : snapshot.cards;
+    return {
+      width: copy.width,
+      height: copy.height,
+      scaleX,
+      scaleY,
+      cards: cards.map((entry) => {
+        const key = ({ x, y }) => x + ',' + y;
+        const cavityPoints = rectPoints(entry.cavity);
+        const centralCavity = rectPoints({
+          x: entry.cavity.x + 1,
+          y: entry.cavity.y + 1,
+          width: entry.cavity.width - 2,
+          height: entry.cavity.height - 2,
+        });
+        const chimneyPoints = rectPoints(entry.openChimney);
+        const chimneyShaft = Array.from({ length: entry.openChimney.height }, (_, offset) => ({
+          x: entry.openChimney.x + Math.floor(entry.openChimney.width / 2),
+          y: entry.openChimney.y + offset,
+        }));
+        const emptyKeys = new Set([...cavityPoints, ...chimneyPoints].map(key));
+        const bodyPoints = rectPoints(entry.body).filter((point) => !emptyKeys.has(key(point)));
+        const strandPoints = rectPoints(entry.strand);
+        const guardPoints = rectPoints(entry.guardedBlank);
+        const liquidOwner = rectPoints(entry.liquidContact.owner);
+        const liquidUnlike = rectPoints(entry.liquidContact.unlike);
+        const solidOwner = rectPoints(entry.solidContact.owner);
+        const solidUnlike = rectPoints(entry.solidContact.unlike);
+        const signatureMap = new Map();
+        for (const point of [
+          ...rectPoints(entry.body), ...strandPoints, entry.isolated, ...guardPoints,
+          ...liquidOwner, ...liquidUnlike, ...solidOwner, ...solidUnlike,
+        ]) signatureMap.set(key(point), point);
+        let alphaSignature = 2166136261;
+        let supportSignature = 2166136261;
+        for (const point of signatureMap.values()) {
+          const alpha = cellAlpha(point);
+          for (const value of alpha.values) {
+            alphaSignature = Math.imul(alphaSignature ^ value, 16777619) >>> 0;
+          }
+          supportSignature = Math.imul(
+            supportSignature ^ Number(alpha.peak > 0), 16777619,
+          ) >>> 0;
+        }
+        return {
+          index: entry.index,
+          material: entry.material,
+          code: entry.code,
+          bodyExpected: bodyPoints.length,
+          bodySupported: bodyPoints.filter((point) => cellAlpha(point).peak > 0).length,
+          centralCavityExpected: centralCavity.length,
+          centralCavityTransparent: centralCavity.filter(
+            (point) => cellAlpha(point).peak === 0,
+          ).length,
+          chimneyShaftExpected: chimneyShaft.length,
+          chimneyShaftTransparent: chimneyShaft.filter(
+            (point) => cellAlpha(point).peak === 0,
+          ).length,
+          strandExpected: strandPoints.length,
+          strandSupported: strandPoints.filter((point) => cellAlpha(point).peak > 0).length,
+          isolatedAlphaPeak: cellAlpha(entry.isolated).peak,
+          guardedBlankExpected: guardPoints.length,
+          guardedBlankTransparent: guardPoints.filter(
+            (point) => cellAlpha(point).peak === 0,
+          ).length,
+          liquidOwnerExpected: liquidOwner.length,
+          liquidOwnerSupported: liquidOwner.filter((point) => cellAlpha(point).peak > 0).length,
+          liquidUnlikeExpected: liquidUnlike.length,
+          liquidUnlikeSupported: liquidUnlike.filter((point) => cellAlpha(point).peak > 0).length,
+          solidOwnerExpected: solidOwner.length,
+          solidOwnerSupported: solidOwner.filter((point) => cellAlpha(point).peak > 0).length,
+          solidUnlikeExpected: solidUnlike.length,
+          solidUnlikeSupported: solidUnlike.filter((point) => cellAlpha(point).peak > 0).length,
+          alphaSignature,
+          supportSignature,
+          ...sampleRect(entry.body),
+          liquidUnlikeRgb: sampleRect(entry.liquidContact.unlike).rgb,
+          solidUnlikeRgb: sampleRect(entry.solidContact.unlike).rgb,
+        };
+      }),
+    };
+  })()`);
+}
+
+function assertLiquidIdentityBackingTopology(backing, label) {
+  assert(Number.isInteger(backing.scaleX) && Number.isInteger(backing.scaleY)
+      && backing.scaleX > 0 && backing.scaleY > 0,
+  `${label}: backing does not preserve integral world scaling (${backing.scaleX}x${backing.scaleY})`);
+  const valid = backing.cards.length === 8 && backing.cards.every((card) => (
+    card.bodySupported === card.bodyExpected
+    && card.centralCavityTransparent === card.centralCavityExpected
+    && card.centralCavityExpected === 16
+    // The closed inner endpoint may receive one antialiased contour cell. The
+    // remaining centre shaft must stay fully transparent, preserving a visibly
+    // continuous air path from the body's exterior.
+    && card.chimneyShaftTransparent >= card.chimneyShaftExpected - 1
+    && card.strandSupported === card.strandExpected
+    && card.isolatedAlphaPeak > 0
+    && card.guardedBlankTransparent === card.guardedBlankExpected
+    && card.liquidOwnerSupported === card.liquidOwnerExpected
+    && card.liquidUnlikeSupported === card.liquidUnlikeExpected
+    && card.solidOwnerSupported === card.solidOwnerExpected
+    && card.solidUnlikeSupported === card.solidUnlikeExpected
+  ));
+  assert(valid,
+    `${label}: backing changed liquid topology (${JSON.stringify(compactLiquidIdentityTopology(backing))})`);
+}
+
+function compactLiquidIdentityTopology(backing) {
+  return {
+    scale: `${backing.scaleX}x${backing.scaleY}`,
+    cards: backing.cards.map(({
+      rgb: _rgb, liquidUnlikeRgb: _liquidUnlikeRgb, solidUnlikeRgb: _solidUnlikeRgb,
+      width: _width, height: _height, ...card
+    }) => card),
+  };
+}
+
+function summarizeLiquidIdentityBackingResponses(flat, styled, repeated) {
+  assert(flat.cards.length === 8 && styled.cards.length === 8 && repeated.cards.length === 8,
+    'Liquid identity backing response atlas is incomplete');
+  return flat.cards.map((base, cardIndex) => {
+    const changed = styled.cards[cardIndex];
+    const returned = repeated.cards[cardIndex];
+    assert(changed.material === base.material && returned.material === base.material
+        && changed.width === base.width && returned.width === base.width
+        && changed.height === base.height && returned.height === base.height
+        && changed.rgb.length === base.rgb.length && returned.rgb.length === base.rgb.length,
+    `Liquid identity backing response geometry changed for ${base.code}`);
+    let squared = 0;
+    let rgbPeak = 0;
+    let repeatRgbPeak = 0;
+    let changedSamples = 0;
+    let responseSignature = 2166136261;
+    const buckets = new Float64Array(16);
+    for (let offset = 0; offset < base.rgb.length; offset += 3) {
+      const cell = offset / 3;
+      const x = cell % base.width;
+      const y = Math.floor(cell / base.width);
+      const bucket = Math.min(3, Math.floor(y * 4 / base.height)) * 4
+        + Math.min(3, Math.floor(x * 4 / base.width));
+      let cellChanged = false;
+      for (let channel = 0; channel < 3; channel++) {
+        const delta = changed.rgb[offset + channel] - base.rgb[offset + channel];
+        const repeat = returned.rgb[offset + channel] - base.rgb[offset + channel];
+        squared += delta * delta;
+        rgbPeak = Math.max(rgbPeak, Math.abs(delta));
+        repeatRgbPeak = Math.max(repeatRgbPeak, Math.abs(repeat));
+        buckets[bucket] += Math.abs(delta);
+        cellChanged ||= delta !== 0;
+        responseSignature = Math.imul(responseSignature ^ (delta + 255), 16777619) >>> 0;
+      }
+      changedSamples += Number(cellChanged);
+    }
+    const total = Math.max(1, buckets.reduce((sum, value) => sum + value, 0));
+    return {
+      material: base.material,
+      code: base.code,
+      rgbRms: round(Math.sqrt(squared / Math.max(1, base.rgb.length)), 4),
+      rgbPeak,
+      changedSampleRatio: round(changedSamples / Math.max(1, base.width * base.height), 5),
+      repeatRgbPeak,
+      responseSignature,
+      responseProfile: Array.from(buckets, (value) => round(value / total, 5)),
+    };
+  });
+}
+
+function normalizeLiquidIdentityGraphicsAtlas(snapshot) {
+  const cards = (Array.isArray(snapshot) ? snapshot : snapshot?.cards ?? []).map((entry) => ({
+    ...entry,
+    card: cellularRect(entry.card ?? entry),
+    body: cellularRect(entry.body),
+    surfaceProbe: cellularRect(entry.surfaceProbe),
+    coreProbe: cellularRect(entry.coreProbe),
+    cavity: cellularRect(entry.cavity),
+    openChimney: cellularRect(entry.openChimney),
+    strand: cellularRect(entry.strand),
+    isolated: cellularPoint(entry.isolated),
+    guardedBlank: cellularRect(entry.guardedBlank),
+    liquidContact: {
+      ...entry.liquidContact,
+      owner: cellularRect(entry.liquidContact.owner),
+      unlike: cellularRect(entry.liquidContact.unlike),
+    },
+    solidContact: {
+      ...entry.solidContact,
+      owner: cellularRect(entry.solidContact.owner),
+      unlike: cellularRect(entry.solidContact.unlike),
+    },
+  }));
+  return {
+    cards,
+    cavities: Array.isArray(snapshot)
+      ? cards.flatMap(({ cavity }) => cellularRectPoints(cavity))
+      : cellularPoints(snapshot?.cavities),
+    openChimneys: Array.isArray(snapshot)
+      ? cards.flatMap(({ openChimney }) => cellularRectPoints(openChimney))
+      : cellularPoints(snapshot?.openChimneys),
+    strands: Array.isArray(snapshot)
+      ? cards.flatMap(({ strand }) => cellularRectPoints(strand))
+      : cellularPoints(snapshot?.strands),
+    isolated: cellularPoints(
+      Array.isArray(snapshot) ? cards.map(({ isolated }) => isolated) : snapshot?.isolated,
+    ),
+    guardedBlanks: Array.isArray(snapshot)
+      ? cards.map(({ guardedBlank }) => guardedBlank)
+      : (snapshot?.guardedBlanks ?? []).map(cellularRect),
+    liquidContacts: Array.isArray(snapshot)
+      ? cards.map(({ liquidContact }) => liquidContact) : snapshot?.liquidContacts ?? [],
+    solidContacts: Array.isArray(snapshot)
+      ? cards.map(({ solidContact }) => solidContact) : snapshot?.solidContacts ?? [],
+  };
+}
+
 async function sampleCellularBackingTopology(cdp) {
   return evaluate(cdp, `(() => {
     const world = document.querySelector('.world-canvas');
@@ -5456,6 +5940,37 @@ function assertPairedUnusualSolidGraphics(results) {
     ));
     assert(profileDistance <= 0.15,
       `Canvas/WebGL unusual solid ${canvasEntry.code} spatial response diverged (${profileDistance})`);
+  }
+}
+
+function assertPairedLiquidIdentityGraphics(results) {
+  const canvas = results.find((result) => result.backend === 'canvas2d')?.liquidIdentityGraphics;
+  const webgl = results.find((result) => result.backend === 'webgl')?.liquidIdentityGraphics;
+  if (!canvas || !webgl) return;
+  assert(canvas.cards === 8 && webgl.cards === 8,
+    `paired liquid identity atlas is incomplete (${canvas.cards}/${webgl.cards})`);
+  for (const result of [canvas, webgl]) {
+    assert(new Set(result.cardSignatures.map(
+      ({ backingResponseSignature }) => backingResponseSignature,
+    )).size === 8,
+    `liquid identity responses are not distinct in all eight cards (${JSON.stringify(result.cardSignatures)})`);
+    assert(result.cardSignatures.every(({ backingRepeatRgbPeak }) => backingRepeatRgbPeak === 0),
+      `liquid identity backing off→on→off sequence was not exact (${JSON.stringify(result.cardSignatures)})`);
+  }
+  const webglByMaterial = new Map(webgl.cardSignatures.map((entry) => [entry.material, entry]));
+  for (const canvasEntry of canvas.cardSignatures) {
+    const webglEntry = webglByMaterial.get(canvasEntry.material);
+    assert(webglEntry && webglEntry.code === canvasEntry.code,
+      `paired liquid identity missing ${canvasEntry.code}/${canvasEntry.material}`);
+    const responseRatio = canvasEntry.backingRgbRms
+      / Math.max(0.01, webglEntry.backingRgbRms);
+    assert(responseRatio >= 0.20 && responseRatio <= 5.0,
+      `Canvas/WebGL liquid identity ${canvasEntry.code} response diverged (${canvasEntry.backingRgbRms}/${webglEntry.backingRgbRms})`);
+    const profileDistance = Math.max(...canvasEntry.backingResponseProfile.map(
+      (value, index) => Math.abs(value - webglEntry.backingResponseProfile[index]),
+    ));
+    assert(profileDistance <= 0.15,
+      `Canvas/WebGL liquid identity ${canvasEntry.code} spatial response diverged (${profileDistance})`);
   }
 }
 

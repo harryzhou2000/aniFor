@@ -29,6 +29,9 @@ import {
   canvasLiquidEmissionSurfaceExposure, canvasLiquidFieldRelief, canvasLiquidSurfaceExposure,
   canvasLiquidVolumeChromaResponse,
 } from '../src/renderer/canvas-liquid-light';
+import {
+  applyCanvasLiquidIdentityStyle, CANVAS_LIQUID_IDENTITY_LOOKUP_BYTES,
+} from '../src/renderer/canvas-liquid-identity-style';
 import { applyCanvasPowderBulkStyle } from '../src/renderer/canvas-powder-bulk-style';
 import { applyCanvasSuspensionStyle } from '../src/renderer/canvas-suspension-style';
 import { createRenderLookups } from '../src/renderer/render-field-set';
@@ -303,6 +306,8 @@ let solidReliefChecksum = 0;
 let solidBodyChecksum = 0;
 let powderBulkStyleChecksum = 0;
 let liquidBodyChecksum = 0;
+let liquidIdentityChecksum = 0;
+let liquidIdentityInputSink = 0;
 let liquidLightChecksum = 0;
 let translucentLightChecksum = 0;
 let translucentBackdropChecksum = 0;
@@ -358,6 +363,50 @@ function profileTraitMask(traits: number): ReturnType<typeof sample> {
     }
   });
   traitChecksum += traitRgb[0] + traitRgb[1] + traitRgb[2];
+  return timing;
+}
+
+const LIQUID_IDENTITY_PROFILE_MATERIALS = [
+  Material.Soap,
+  Material.BIZR,
+  Material.CBNW,
+  Material.GEL,
+  Material.GLOW,
+  Material.VIRS,
+  Material.FRZW,
+  Material.RFGL,
+] as const;
+
+/** Full semantic-grid loop matching the Canvas presenter's reusable RGB path. */
+function profileLiquidIdentityStyle(styled: boolean): ReturnType<typeof sample> {
+  const timing = sample(() => {
+    for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) {
+      const index = y * width + x;
+      const material = LIQUID_IDENTITY_PROFILE_MATERIALS[
+        ((x >> 6) + (y >> 6) * 3) & 7
+      ];
+      const color = material * 3;
+      const neighbourDensity = (x + y * 3) % 9;
+      const fieldAlpha = 48 + ((x * 5 + y * 3) % 208);
+      const signedRelief = ((x * 7 + y * 11) % 35 - 17) / 100;
+      const surfaceExposure = ((x + y * 2) % 11) / 10;
+      const columnDepthByte = Math.floor(y * 255 / (height - 1));
+      liquidBodyRgb[0] = colorByMaterial[color];
+      liquidBodyRgb[1] = colorByMaterial[color + 1];
+      liquidBodyRgb[2] = colorByMaterial[color + 2];
+      // Keep the matched input/setup path observable in the loop-only sample.
+      liquidIdentityInputSink = index + material + neighbourDensity + fieldAlpha
+        + signedRelief + surfaceExposure + columnDepthByte;
+      if (styled) applyCanvasLiquidIdentityStyle(
+        liquidBodyRgb, material, x, y, neighbourDensity, fieldAlpha,
+        signedRelief, surfaceExposure, columnDepthByte,
+      );
+    }
+  });
+  // Consume the final reusable colour only after timing, matching the existing
+  // renderer profiles without charging diagnostic checksum work to the helper.
+  liquidIdentityChecksum += liquidBodyRgb[0] + liquidBodyRgb[1] + liquidBodyRgb[2]
+    + liquidIdentityInputSink;
   return timing;
 }
 
@@ -744,6 +793,12 @@ console.log(JSON.stringify({
         liquidBodyChecksum = liquidBodyRgb[0] + liquidBodyRgb[1] + liquidBodyRgb[2];
       }),
     },
+    liquidIdentityStyle: {
+      additionalAllocatedBytes: CANVAS_LIQUID_IDENTITY_LOOKUP_BYTES,
+      fixture: '612x384 eight-material 64-cell liquid-body distribution',
+      loopBaseline: profileLiquidIdentityStyle(false),
+      styled: profileLiquidIdentityStyle(true),
+    },
     translucentCausticWorstCase: sample(() => {
       for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) {
         translucentCausticRgb[0] = 120;
@@ -940,6 +995,7 @@ console.log(JSON.stringify({
   solidBodyChecksum: Math.round(solidBodyChecksum),
   powderBulkStyleChecksum: Math.round(powderBulkStyleChecksum),
   liquidBodyChecksum: Math.round(liquidBodyChecksum),
+  liquidIdentityChecksum: Math.round(liquidIdentityChecksum),
   liquidLightChecksum: Math.round(liquidLightChecksum),
   translucentLightChecksum: Math.round(translucentLightChecksum),
   translucentBackdropChecksum: Math.round(translucentBackdropChecksum),
