@@ -91,4 +91,23 @@ describe('Canvas energy core styling', () => {
     expect(relievedGlow).toEqual(flatGlow);
     expect(relievedAlpha).toBe(flatAlpha);
   });
+
+  it('toggles exact identity RGB off-on-off without changing glow or alpha', () => {
+    const render = (enabled: boolean) => {
+      const core = new Float32Array(3), glow = new Float32Array(3);
+      const alpha = shadeCanvasEnergy(
+        core, glow, 255, 255, 255, RenderProfile.Radioactive,
+        RenderTrait.Radioactive | RenderTrait.Carrier,
+        107, 13, 21, 960, 0.35, 18, -9, 128, true, 0, enabled,
+      );
+      return { core, glow, alpha };
+    };
+    const flat = render(false);
+    const styled = render(true);
+    const flatAgain = render(false);
+    expect(styled.core).not.toEqual(flat.core);
+    expect(styled.glow).toEqual(flat.glow);
+    expect(styled.alpha).toBe(flat.alpha);
+    expect(flatAgain).toEqual(flat);
+  });
 });

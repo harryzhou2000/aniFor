@@ -123,6 +123,7 @@ uniform float uUnusualSolidStyling;
 uniform float uLiquidSilhouetteCohesion;
 uniform float uThermalMaterialStyling;
 uniform float uEnergyCoreRelief;
+uniform float uEnergyIdentityStyling;
 uniform float uPowderStyle;
 uniform float uPowderBodyDepth;
 uniform float uSuspensionActive;
@@ -371,6 +372,31 @@ vec3 liquidMaterialIdentityDelta(
     float ribbon = antiFold - 0.5 + slopeKey * 0.12;
     identity = (bubble - 0.22) * vec3(0.028, 0.035, 0.042)
       + ribbon * vec3(-0.018, 0.010, 0.022);
+  } else if (material == 100.0) {
+    // DEUT: deep concentration bands separated by lifted cool seams.
+    float band = fract((worldPosition.y + floor(worldPosition.x / 8.0) * 2.0) / 16.0);
+    float seam = 1.0 - smoothstep(0.10, 0.22, min(band, 1.0 - band));
+    float deepBand = smoothstep(0.54, 0.78, band) * (1.0 - smoothstep(0.78, 0.92, band));
+    identity = seam * vec3(-0.014, 0.028, 0.052)
+      + deepBand * vec3(-0.020, -0.010, 0.026);
+  } else if (material == 102.0) {
+    // EXOT: sheared interference diamonds and displaced violet vertices.
+    vec2 tile16 = fract(worldPosition / 16.0);
+    float diamond = abs(tile16.x - 0.5) + abs(tile16.y - 0.5);
+    float rim = 1.0 - smoothstep(0.035, 0.105, abs(diamond - 0.43));
+    float shear = 1.0 - smoothstep(0.04, 0.14, abs(
+      fract(worldPosition.x * 0.1875 - worldPosition.y * 0.125) - 0.5
+    ));
+    identity = rim * vec3(0.020, -0.018, 0.052)
+      + shear * vec3(0.030, 0.004, 0.018);
+  } else if (material == 104.0) {
+    // ISOZ: stable decay rings foreshadow its faceted ISZS phase partner.
+    vec2 tile16 = fract(worldPosition / 16.0) - 0.5;
+    float radiusSquared = dot(tile16, tile16);
+    float outerRing = 1.0 - smoothstep(0.018, 0.052, abs(radiusSquared - 0.116));
+    float coreRing = 1.0 - smoothstep(0.001, 0.010, radiusSquared);
+    identity = outerRing * vec3(0.036, -0.016, 0.046)
+      + coreRing * vec3(-0.014, 0.026, 0.032);
   }
   return clamp(identity * support, vec3(-0.055), vec3(0.055));
 }
@@ -408,6 +434,109 @@ vec3 toneMapEnergy(vec3 radiance) {
   vec3 excess = max(radiance - vec3(knee), vec3(0.0));
   vec3 mapped = min(vec3(1.0), vec3(knee) + excess * 0.30);
   return min(radiance, mapped);
+}
+vec3 energyIdentityDelta(float material, vec2 position, float time, vec2 velocity) {
+  // Exact native energy identities share the Canvas integer motifs. The
+  // function changes RGB only and adds no texture, pass, or render-scale state.
+  float x = floor(position.x);
+  float y = floor(position.y);
+  float frame = floor(time * 8.333333);
+  float driftX = sign(velocity.x);
+  float driftY = sign(velocity.y);
+  vec3 delta = vec3(0.0);
+  if (material == 4.0) {
+    float tongue = mod(x * 3.0 + y + frame + driftX, 16.0);
+    float crest = mod(y - frame + driftY, 8.0);
+    delta = tongue < 5.0
+      ? vec3(9.0, 5.0 + (crest < 2.0 ? 3.0 : 0.0), -4.0)
+      : vec3(-2.0, -2.0, 1.0);
+  } else if (material == 20.0) {
+    float localX = mod(x + frame + driftX, 8.0);
+    float localY = mod(y - frame + driftY, 8.0);
+    float membrane = abs(localX - 4.0) + abs(localY - 4.0);
+    delta = vec3(
+      membrane >= 4.0 && membrane <= 6.0 ? 8.0 : -2.0,
+      membrane >= 4.0 && membrane <= 6.0 ? 3.0 : 0.0,
+      membrane <= 2.0 ? 8.0 : 2.0
+    );
+  } else if (material == 101.0) {
+    float branch = mod(x * 3.0 + y * 5.0 + frame * 2.0, 16.0);
+    float node = mod(x + y + frame, 8.0);
+    delta = branch <= 2.0
+      ? vec3(8.0, 11.0, 13.0)
+      : vec3(-2.0, 1.0, 4.0 + (node < 0.5 ? 5.0 : 0.0));
+  } else if (material == 103.0) {
+    float localX = mod(x, 16.0) - 8.0;
+    float localY = mod(y, 16.0) - 8.0;
+    float ring = mod(localX * localX + localY * localY + frame, 32.0);
+    delta = ring >= 10.0 && ring <= 16.0 ? vec3(-5.0, 3.0, 11.0) : vec3(3.0, -2.0, 5.0);
+  } else if (material == 106.0) {
+    float track = mod(x * 5.0 - y * 3.0 + frame, 16.0);
+    float gap = mod(x + y * 2.0, 8.0);
+    delta = track <= 1.0 && gap > 1.0 ? vec3(4.0, 9.0, 8.0) : vec3(-3.0, 1.0, 2.0);
+  } else if (material == 107.0) {
+    float band = mod(x + y + frame * 2.0, 16.0);
+    delta = band <= 2.0 ? vec3(11.0, 10.0, 4.0)
+      : (band >= 8.0 && band <= 10.0 ? vec3(-4.0, 1.0, 10.0) : vec3(1.0, 3.0, 2.0));
+  } else if (material == 110.0) {
+    float rail = mod(x * 2.0 - y + frame, 8.0);
+    float bead = mod(x + y * 3.0 + frame * 2.0, 16.0);
+    delta = rail <= 1.0
+      ? vec3(12.0, 5.0 + (bead <= 2.0 ? 5.0 : 0.0), 2.0)
+      : vec3(-2.0, 1.0, 5.0);
+  } else if (material == 197.0) {
+    float rail = abs(mod(x - y, 16.0) - 8.0);
+    float node = mod(x + y - frame * 2.0, 16.0);
+    delta = rail <= 1.0
+      ? vec3(10.0, 8.0 + (node <= 2.0 ? 5.0 : 0.0), 5.0 + (node <= 2.0 ? 7.0 : 0.0))
+      : vec3(-2.0, 0.0, 3.0);
+  } else if (material == 200.0) {
+    float spark = mod(
+      x * 17.0 + y * 31.0 + floor(x * y * 0.125)
+        + floor(frame * 0.5) * 7.0 + material,
+      32.0
+    );
+    delta = spark < 4.0 ? vec3(13.0, 8.0, -2.0) : vec3(-3.0, -1.0, 2.0);
+  }
+  return clamp(delta, vec3(-14.0), vec3(14.0)) / 255.0;
+}
+vec3 radioactiveBodyIdentityDelta(float material, vec2 position) {
+  float x = floor(position.x);
+  float y = floor(position.y);
+  vec3 delta = vec3(0.0);
+  if (material == 99.0) {
+    float crackA = step(mod(x * 3.0 + y * 5.0, 16.0), 1.0);
+    float crackB = 1.0 - step(0.5, abs(mod(x - y * 2.0, 16.0)));
+    delta = max(crackA, crackB) > 0.5 ? vec3(-3.0, 10.0, 7.0) : vec3(1.0, 2.0, 0.0);
+  } else if (material == 108.0) {
+    float inclusion = mod(x * 17.0 + y * 31.0 + floor(x * y * 0.125) + material, 32.0);
+    delta = inclusion < 4.0 ? vec3(10.0, 8.0, -2.0) : vec3(-3.0, 1.0, -1.0);
+  } else if (material == 109.0) {
+    vec2 local = mod(vec2(x, y), 8.0) - 4.0;
+    float radiusSquared = dot(local, local);
+    delta = radiusSquared >= 6.0 && radiusSquared <= 11.0
+      ? vec3(8.0, 10.0, 3.0) : vec3(-2.0, 1.0, -1.0);
+  } else if (material == 111.0) {
+    vec2 local = mod(vec2(x, y), 16.0) - 8.0;
+    float radiusSquared = dot(local, local);
+    delta = radiusSquared >= 35.0 && radiusSquared <= 58.0
+      ? vec3(2.0, 5.0, 11.0) : vec3(-8.0, -7.0, -5.0);
+  } else if (material == 112.0) {
+    float band = mod(x * 2.0 + y + floor(y / 8.0), 16.0);
+    delta = band <= 3.0 ? vec3(6.0, 9.0, -2.0) : vec3(-3.0, 1.0, 0.0);
+  } else if (material == 105.0) {
+    vec2 local = mod(vec2(x, y), 8.0) - 4.0;
+    float facet = abs(local.x) + abs(local.y);
+    delta = facet >= 3.0 && facet <= 4.0
+      ? vec3(9.0, -2.0, 11.0) : vec3(-2.0, 3.0, 4.0);
+  } else if (material == 113.0) {
+    float horizontal = 1.0 - step(0.5, abs(mod(y, 8.0)));
+    float vertical = 1.0 - step(0.5, abs(mod(x + floor(y / 8.0) * 3.0, 8.0)));
+    delta = max(horizontal, vertical) > 0.5
+      ? vec3(-2.0, 11.0, horizontal * vertical > 0.5 ? 12.0 : 6.0)
+      : vec3(1.0, 2.0, 0.0);
+  }
+  return clamp(delta, vec3(-12.0), vec3(12.0)) / 255.0;
 }
 vec4 contactSample(vec2 uv, float material, float family) {
   float candidate = materialAt(uv);
@@ -1262,6 +1391,10 @@ void main() {
     // core. This retains hue and flow detail that would otherwise framebuffer-
     // clip into flat neon slabs after premultiplication.
     color = mix(color, toneMapEnergy(color), smoothstep(0.08, 0.68, core));
+    color = min(vec3(232.0 / 255.0), max(
+      color + energyIdentityDelta(material, fieldPosition, uTime, velocity) * uEnergyIdentityStyling,
+      vec3(0.0)
+    ));
   } else if (gasVolume > 0.5) {
     float billow = 0.92 + atmosphere * 0.08 * (1.0 - gasInterior * 0.50);
     // Dense reconstructed gas should read as one mixed volume, not as the raw
@@ -1586,7 +1719,7 @@ void main() {
         );
       }
     }
-    // Eight unusual liquids retain a small world-anchored material signature
+    // Eleven unusual/radioactive liquids retain a world-anchored material signature
     // after generic body optics. The authoritative semantic fragment is the
     // only owner: reconstructed support, walls, halos, and emissive projections
     // remain exact. This changes RGB only and adds no sample or resource.
@@ -1594,7 +1727,8 @@ void main() {
       && surfaceOnly < 0.5 && wall < 0.5 && emissionOnly < 0.5
       && family == 2.0 && !materialEmissive
       && (material == 38.0 || (material >= 54.0 && material <= 57.0)
-        || material == 62.0 || material == 202.0 || material == 207.0)) {
+        || material == 62.0 || material == 100.0 || material == 102.0
+        || material == 104.0 || material == 202.0 || material == 207.0)) {
       color += liquidMaterialIdentityDelta(
         material, fieldPosition, liquidSurfaceDensity, liquidDepth,
         semanticSlope + volumeSlope
@@ -2338,6 +2472,8 @@ void main() {
       }
     }
     if (radioactive > 0.5 && energyCore < 0.5) {
+      color += radioactiveBodyIdentityDelta(material, fieldPosition)
+        * uEnergyIdentityStyling;
       float isotopeNoise = fract(sin(
         dot(floor(fieldPosition), vec2(12.9898, 78.233)) + material * 0.31
       ) * 43758.5453);
@@ -2637,6 +2773,7 @@ export class PixiFieldPresenter {
       // byte zero must therefore never make legacy backends look frozen.
       uThermalMaterialStyling: { value: 0, type: 'f32' },
       uEnergyCoreRelief: { value: 1, type: 'f32' },
+      uEnergyIdentityStyling: { value: 1, type: 'f32' },
       uPowderStyle: { value: powderRenderStyleValue('smooth'), type: 'f32' },
       uPowderBodyDepth: { value: 1, type: 'f32' },
       uSuspensionActive: {
@@ -2910,6 +3047,7 @@ export class PixiFieldPresenter {
     unusualSolidStylingEnabled = true,
     liquidIdentityStylingEnabled = true,
     gasIdentityStylingEnabled = true,
+    energyIdentityStylingEnabled = true,
   ): void {
     const uniforms = this.uniforms.uniforms;
     uniforms.uGasFieldLighting = gasFieldLightingEnabled ? 1 : 0;
@@ -2938,6 +3076,7 @@ export class PixiFieldPresenter {
     uniforms.uPowderBodyDepth = powderBodyDepthEnabled ? 1 : 0;
     uniforms.uThermalMaterialStyling = thermalMaterialStylingEnabled ? 1 : 0;
     uniforms.uEnergyCoreRelief = energyCoreReliefEnabled ? 1 : 0;
+    uniforms.uEnergyIdentityStyling = energyIdentityStylingEnabled ? 1 : 0;
     uniforms.uPowderStyle = powderRenderStyleValue(powderRenderStyle);
   }
 
@@ -3063,6 +3202,11 @@ export class PixiFieldPresenter {
 
   setEnergyCoreReliefEnabled(enabled: boolean): void {
     this.uniforms.uniforms.uEnergyCoreRelief = enabled ? 1 : 0;
+    this.renderApplication();
+  }
+
+  setEnergyIdentityStylingEnabled(enabled: boolean): void {
+    this.uniforms.uniforms.uEnergyIdentityStyling = enabled ? 1 : 0;
     this.renderApplication();
   }
 

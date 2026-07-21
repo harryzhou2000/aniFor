@@ -1,5 +1,6 @@
 import { RenderProfile } from './render-profile';
 import { RenderTrait } from './render-traits';
+import { applyCanvasEnergyIdentityStyle } from './canvas-energy-identity-style';
 
 const WARM_ACCENT = [255, 184, 107] as const;
 const COOL_ACCENT = [184, 230, 255] as const;
@@ -32,6 +33,7 @@ export function shadeCanvasEnergy(
   emissionAlpha = 0,
   reliefEnabled = true,
   edgeLight = 0,
+  identityEnabled = true,
 ): number {
   const radioactive = (traits & RenderTrait.Radioactive) !== 0;
   const carrier = (traits & RenderTrait.Carrier) !== 0;
@@ -58,6 +60,12 @@ export function shadeCanvasEnergy(
   core[0] = toneMapEnergyChannel((red * energy * detail + accent[0] * accentMix) * relief);
   core[1] = toneMapEnergyChannel((green * energy * detail + accent[1] * accentMix) * relief);
   core[2] = toneMapEnergyChannel((blue * energy * detail + accent[2] * accentMix) * relief);
+  if (identityEnabled) {
+    applyCanvasEnergyIdentityStyle(core, material, x, y, time, velocityX, velocityY);
+  }
+  core[0] = Math.min(ENERGY_RADIANCE_CEILING, core[0]);
+  core[1] = Math.min(ENERGY_RADIANCE_CEILING, core[1]);
+  core[2] = Math.min(ENERGY_RADIANCE_CEILING, core[2]);
   glow[0] = red * glowMix + accent[0] * 0.10;
   glow[1] = green * glowMix + accent[1] * 0.10;
   glow[2] = blue * glowMix + accent[2] * 0.10;

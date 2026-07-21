@@ -2,6 +2,7 @@ import { RenderPhase } from './render-profile';
 import { RenderTrait } from './render-traits';
 import { isBotanicalMaterial } from './canvas-botanical-style';
 import { applyCanvasRoleMaterialStyle } from './canvas-role-material-style';
+import { applyCanvasRadioactiveIdentityStyle } from './canvas-radioactive-identity-style';
 
 export const CANVAS_RENDER_TRAIT_CLOCK_SIZE = 5;
 
@@ -25,6 +26,7 @@ export function applyCanvasRenderTraits(
   index: number,
   clock: Int32Array,
   roleMaterialStylingEnabled = true,
+  radioactiveIdentityStylingEnabled = true,
 ): void {
   if (traits === 0) return;
   let red = rgb[0];
@@ -32,7 +34,8 @@ export function applyCanvasRenderTraits(
   let blue = rgb[2];
   const edgePattern = ((x + y * 3 + material) & 7) < 2 ? 1 : 0;
 
-  if ((traits & RenderTrait.Radioactive) && phase !== RenderPhase.Energy) {
+  if (radioactiveIdentityStylingEnabled
+    && (traits & RenderTrait.Radioactive) && phase !== RenderPhase.Energy) {
     const decay = (hash(index + clock[3] * 97 + material) & 15) < 2;
     red += decay ? 3 : 0;
     green += 5 + (decay ? 13 : 0);
@@ -60,6 +63,9 @@ export function applyCanvasRenderTraits(
   rgb[0] = red;
   rgb[1] = green;
   rgb[2] = blue;
+  if ((traits & RenderTrait.Radioactive) && phase !== RenderPhase.Energy) {
+    applyCanvasRadioactiveIdentityStyle(rgb, material, x, y);
+  }
   if (roleMaterialStylingEnabled) applyCanvasRoleMaterialStyle(rgb, traits, material, x, y);
 }
 

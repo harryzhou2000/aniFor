@@ -58,6 +58,23 @@ describe('Canvas render traits', () => {
     expect(Array.from(radioactive)).not.toEqual([90, 100, 110]);
   });
 
+  it('toggles exact radioactive body identity without suppressing generic isotope tint', () => {
+    const clock = new Int32Array(CANVAS_RENDER_TRAIT_CLOCK_SIZE);
+    updateCanvasRenderTraitClock(clock, 420);
+    const flat = new Float32Array([90, 100, 110]);
+    applyCanvasRenderTraits(
+      flat, RenderTrait.Radioactive, RenderPhase.Solid,
+      Material.VIBR, 12, 7, 440, clock, false, false,
+    );
+    const styled = new Float32Array([90, 100, 110]);
+    applyCanvasRenderTraits(
+      styled, RenderTrait.Radioactive, RenderPhase.Solid,
+      Material.VIBR, 12, 7, 440, clock, false, true,
+    );
+    expect(Array.from(flat)).not.toEqual([90, 100, 110]);
+    expect(styled).not.toEqual(flat);
+  });
+
   it('leaves botanical identity to morphology while preserving every other trait', () => {
     const clock = new Int32Array(CANVAS_RENDER_TRAIT_CLOCK_SIZE);
     updateCanvasRenderTraitClock(clock, 420);

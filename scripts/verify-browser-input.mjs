@@ -44,9 +44,11 @@ const unusualPowderGraphicsOnly = process.argv.includes('--unusual-powder-graphi
 const unusualSolidGraphicsOnly = process.argv.includes('--unusual-solid-graphics-only');
 const liquidIdentityGraphicsOnly = process.argv.includes('--liquid-identity-graphics-only');
 const gasIdentityGraphicsOnly = process.argv.includes('--gas-identity-graphics-only');
+const energyRadioactiveGraphicsOnly = process.argv.includes('--energy-radioactive-graphics-only');
 const usesProductionBundle = cellularGraphicsOnly || sensorGraphicsOnly
   || unusualPowderGraphicsOnly || unusualSolidGraphicsOnly
-  || liquidIdentityGraphicsOnly || gasIdentityGraphicsOnly || scaleEightOnly;
+  || liquidIdentityGraphicsOnly || gasIdentityGraphicsOnly || energyRadioactiveGraphicsOnly
+  || scaleEightOnly;
 const AUDIT_BASE_URL = usesProductionBundle ? PRODUCTION_BUNDLE_URL : ORIGIN + '/';
 const screenshotRequest = process.argv.find((argument) => argument.startsWith('--screenshot='))?.slice('--screenshot='.length);
 const SOLID_FIELD_REGIONS = [
@@ -108,7 +110,7 @@ async function main() {
       || solidDepthOnly || gasChromaOnly || surfaceContourOnly || solidFieldOnly
       || roleGraphicsOnly || cellularGraphicsOnly || sensorGraphicsOnly
       || unusualPowderGraphicsOnly || unusualSolidGraphicsOnly || liquidIdentityGraphicsOnly
-      || gasIdentityGraphicsOnly;
+      || gasIdentityGraphicsOnly || energyRadioactiveGraphicsOnly;
     if (powderBodyOnly) assertPairedPowderBodyDepth(results);
     if (liquidDepthOnly) assertPairedLiquidOpticalDepth(results);
     if (solidDepthOnly) assertPairedSolidOpticalDepth(results);
@@ -122,6 +124,7 @@ async function main() {
     if (unusualSolidGraphicsOnly) assertPairedUnusualSolidGraphics(results);
     if (liquidIdentityGraphicsOnly) assertPairedLiquidIdentityGraphics(results);
     if (gasIdentityGraphicsOnly) assertPairedGasIdentityGraphics(results);
+    if (energyRadioactiveGraphicsOnly) assertPairedEnergyRadioactiveGraphics(results);
     if (!scaleEightOnly && !materialAtlasOnly && !reducedAudit) assertPairedVisualRelief(results);
     if (!scaleEightOnly && !reducedAudit) assertPairedMaterialAtlas(results);
     compactMaterialAtlasResults(results);
@@ -140,7 +143,7 @@ async function auditMode(mode) {
   const dpr = mode === 'canvas2d' ? 2 : 1;
   const startsBlank = cellularGraphicsOnly || sensorGraphicsOnly
     || unusualPowderGraphicsOnly || unusualSolidGraphicsOnly || liquidIdentityGraphicsOnly
-    || gasIdentityGraphicsOnly;
+    || gasIdentityGraphicsOnly || energyRadioactiveGraphicsOnly;
   const query = new URLSearchParams({
     scene: 'render-lab', inputAudit: '1', renderScale: '2',
     auditStage: startsBlank ? 'blank' : 'canonical',
@@ -289,6 +292,12 @@ async function auditMode(mode) {
       assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
       cdp.close();
       return { backend: mode, gasIdentityGraphics, browserErrors: errors.length };
+    }
+    if (energyRadioactiveGraphicsOnly) {
+      const energyRadioactiveGraphics = await auditEnergyRadioactiveGraphics(cdp, mode);
+      assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
+      cdp.close();
+      return { backend: mode, energyRadioactiveGraphics, browserErrors: errors.length };
     }
     if (mobileOnly) {
       const mobile = await auditMobile(
@@ -4552,6 +4561,482 @@ function normalizeGasIdentityGraphicsAtlas(snapshot) {
   };
 }
 
+function normalizeEnergyRadioactiveGraphicsAtlas(snapshot) {
+  const cards = (Array.isArray(snapshot) ? snapshot : snapshot?.cards ?? []).map((entry) => ({
+    ...entry,
+    card: cellularRect(entry.card ?? entry),
+    body: cellularRect(entry.body),
+    surfaceProbe: cellularRect(entry.surfaceProbe),
+    coreProbe: cellularRect(entry.coreProbe),
+    authoredHole: cellularRect(entry.authoredHole),
+    openChannel: cellularRect(entry.openChannel),
+    sparseCarriers: cellularPoints(entry.sparseCarriers),
+    carrierGap: cellularRect(entry.carrierGap),
+    isolated: cellularPoint(entry.isolated),
+    guardedBlank: cellularRect(entry.guardedBlank),
+    liquidContact: {
+      ...entry.liquidContact,
+      owner: cellularRect(entry.liquidContact.owner),
+      unlike: cellularRect(entry.liquidContact.unlike),
+    },
+    solidContact: {
+      ...entry.solidContact,
+      owner: cellularRect(entry.solidContact.owner),
+      unlike: cellularRect(entry.solidContact.unlike),
+    },
+  }));
+  return {
+    cards,
+    energyCards: cards.filter(({ phase }) => phase === 'energy'),
+    radioactiveCards: cards.filter(({ family }) => family === 'radioactive'),
+    nativeProductCards: cards.filter(({ nativeProduct }) => nativeProduct),
+    authoredHoles: Array.isArray(snapshot)
+      ? cards.flatMap(({ authoredHole }) => cellularRectPoints(authoredHole))
+      : cellularPoints(snapshot?.authoredHoles),
+    openChannels: Array.isArray(snapshot)
+      ? cards.flatMap(({ openChannel }) => cellularRectPoints(openChannel))
+      : cellularPoints(snapshot?.openChannels),
+    sparseCarriers: Array.isArray(snapshot)
+      ? cards.flatMap(({ sparseCarriers }) => sparseCarriers)
+      : cellularPoints(snapshot?.sparseCarriers),
+    carrierGaps: Array.isArray(snapshot)
+      ? cards.map(({ carrierGap }) => carrierGap)
+      : (snapshot?.carrierGaps ?? []).map(cellularRect),
+    isolated: cellularPoints(
+      Array.isArray(snapshot) ? cards.map(({ isolated }) => isolated) : snapshot?.isolated,
+    ),
+    guardedBlanks: Array.isArray(snapshot)
+      ? cards.map(({ guardedBlank }) => guardedBlank)
+      : (snapshot?.guardedBlanks ?? []).map(cellularRect),
+    liquidContacts: Array.isArray(snapshot)
+      ? cards.map(({ liquidContact }) => liquidContact) : snapshot?.liquidContacts ?? [],
+    solidContacts: Array.isArray(snapshot)
+      ? cards.map(({ solidContact }) => solidContact) : snapshot?.solidContacts ?? [],
+  };
+}
+
+/** Exact nine-card Energy motif proof plus the complete 21-card semantic guard. */
+async function auditEnergyRadioactiveGraphics(cdp, mode) {
+  const started = performance.now();
+  const stage = (name) => console.error(
+    `[energy-radioactive-graphics:${mode}] ${name} ${Math.round(performance.now() - started)}ms`,
+  );
+  const blank = await waitForStablePageCapture(
+    cdp, `${mode} initial blank energy-radioactive framebuffer`,
+  );
+  await evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    if (typeof audit.prepareEnergyRadioactiveGraphicsFixture !== 'function'
+      || typeof audit.energyRadioactiveGraphicsAtlas !== 'function'
+      || typeof audit.setEnergyIdentityStyling !== 'function'
+      || typeof audit.setLiquidIdentityStyling !== 'function'
+      || typeof audit.setGasIdentityStyling !== 'function') {
+      throw new Error('Energy/radioactive graphics audit API unavailable');
+    }
+    audit.prepareEnergyRadioactiveGraphicsFixture();
+    return true;
+  })()`);
+  const rawAtlas = await waitFor(() => evaluate(cdp, `(() => {
+    const atlas = window.__ANIFOR_INPUT_AUDIT__.energyRadioactiveGraphicsAtlas();
+    const cards = Array.isArray(atlas) ? atlas : atlas?.cards;
+    return cards?.length === 21 ? atlas : false;
+  })()`), 15_000, `${mode} energy/radioactive graphics fixture`);
+  const atlas = normalizeEnergyRadioactiveGraphicsAtlas(rawAtlas);
+  const expectedMaterials = [
+    4, 20, 101, 103, 106, 107, 110, 197, 200, 98, 99, 100, 102, 104, 105,
+    108, 109, 111, 112, 113, 114,
+  ];
+  const expectedCodes = [
+    'FIRE', 'PLSM', 'ELEC', 'GRVT', 'NEUT', 'PHOT', 'PROT', 'BRAY', 'EMBR',
+    'AMTR', 'BVBR', 'DEUT', 'EXOT', 'ISOZ', 'ISZS', 'PLUT', 'POLO', 'SING',
+    'URAN', 'VIBR', 'WARP',
+  ];
+  assert(atlas.cards.length === 21 && atlas.energyCards.length === 9
+      && atlas.radioactiveCards.length === 17
+      && atlas.nativeProductCards.map(({ code }) => code).join(',') === 'BRAY,EMBR'
+      && atlas.cards.every(({ material, code }, index) => (
+        material === expectedMaterials[index] && code === expectedCodes[index]
+      )),
+  `${mode}: energy/radioactive atlas contract changed (${JSON.stringify(atlas.cards.map(
+    ({ code, material, phase, family, nativeProduct }) => ({
+      code, material, phase, family, nativeProduct,
+    }),
+  ))})`);
+
+  const semanticState = await evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    const snapshot = audit.energyRadioactiveGraphicsAtlas();
+    const cards = Array.isArray(snapshot) ? snapshot : snapshot.cards;
+    const inside = (x, y, rect) => x >= rect.x && x < rect.x + rect.width
+      && y >= rect.y && y < rect.y + rect.height;
+    const exactRect = (rect, material) => {
+      for (let y = rect.y; y < rect.y + rect.height; y++) {
+        for (let x = rect.x; x < rect.x + rect.width; x++) {
+          if (audit.cell(x, y) !== material) return false;
+        }
+      }
+      return true;
+    };
+    return cards.map((entry) => {
+      let bodyExact = true;
+      for (let y = entry.body.y; y < entry.body.y + entry.body.height; y++) {
+        for (let x = entry.body.x; x < entry.body.x + entry.body.width; x++) {
+          const empty = inside(x, y, entry.authoredHole) || inside(x, y, entry.openChannel);
+          bodyExact = bodyExact && audit.cell(x, y) === (empty ? 0 : entry.material);
+        }
+      }
+      return {
+        code: entry.code,
+        material: entry.material,
+        bodyExact,
+        surfaceProbeExact: exactRect(entry.surfaceProbe, entry.material),
+        coreProbeExact: exactRect(entry.coreProbe, entry.material),
+        authoredHoleEmpty: exactRect(entry.authoredHole, 0),
+        openChannelEmpty: exactRect(entry.openChannel, 0),
+        sparseCarriersExact: entry.sparseCarriers.every(
+          (point) => audit.cell(point.x, point.y) === entry.material,
+        ),
+        carrierGapEmpty: exactRect(entry.carrierGap, 0),
+        isolated: audit.cell(entry.isolated.x, entry.isolated.y),
+        guardedBlankEmpty: exactRect(entry.guardedBlank, 0),
+        liquidOwnerExact: exactRect(entry.liquidContact.owner, entry.material),
+        liquidUnlikeExact: exactRect(
+          entry.liquidContact.unlike, entry.liquidContact.unlikeMaterial,
+        ),
+        liquidUnlikeMaterial: entry.liquidContact.unlikeMaterial,
+        solidOwnerExact: exactRect(entry.solidContact.owner, entry.material),
+        solidUnlikeExact: exactRect(
+          entry.solidContact.unlike, entry.solidContact.unlikeMaterial,
+        ),
+        solidUnlikeMaterial: entry.solidContact.unlikeMaterial,
+      };
+    });
+  })()`);
+  assert(semanticState.every((entry) => entry.bodyExact && entry.surfaceProbeExact
+      && entry.coreProbeExact && entry.authoredHoleEmpty && entry.openChannelEmpty
+      && entry.sparseCarriersExact && entry.carrierGapEmpty
+      && entry.isolated === entry.material && entry.guardedBlankEmpty
+      && entry.liquidOwnerExact && entry.liquidUnlikeExact && entry.liquidUnlikeMaterial === 2
+      && entry.solidOwnerExact && entry.solidUnlikeExact && entry.solidUnlikeMaterial === 23),
+  `${mode}: energy/radioactive fixture lost authored semantics (${JSON.stringify(semanticState)})`);
+  stage('fixture-ready');
+
+  const setExactIdentityStyling = async (enabled) => evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    audit.setEnergyIdentityStyling(${enabled});
+    audit.setLiquidIdentityStyling(${enabled});
+    audit.setGasIdentityStyling(${enabled});
+    return true;
+  })()`);
+  await setExactIdentityStyling(false);
+  const flat = await waitForStablePageCapture(cdp, `${mode} flat energy-identity framebuffer`);
+  const flatBacking = await sampleEnergyRadioactiveBacking(cdp);
+  await setExactIdentityStyling(true);
+  const styled = await waitForStablePageCapture(cdp, `${mode} styled energy-identity framebuffer`);
+  const styledBacking = await sampleEnergyRadioactiveBacking(cdp);
+  await setExactIdentityStyling(false);
+  const repeated = await waitForStablePageCapture(
+    cdp, `${mode} repeated flat energy-identity framebuffer`,
+  );
+  const repeatedBacking = await sampleEnergyRadioactiveBacking(cdp);
+  for (const [state, backing] of [
+    ['flat', flatBacking], ['styled', styledBacking], ['repeated-flat', repeatedBacking],
+  ]) assertEnergyRadioactiveBacking(backing, `${mode} ${state}`);
+
+  assert(flatBacking.cards.every((card, index) => (
+    card.semanticSignature === styledBacking.cards[index].semanticSignature
+      && card.semanticSignature === repeatedBacking.cards[index].semanticSignature
+      && card.alphaSignature === styledBacking.cards[index].alphaSignature
+      && card.alphaSignature === repeatedBacking.cards[index].alphaSignature
+      && card.supportSignature === styledBacking.cards[index].supportSignature
+      && card.supportSignature === repeatedBacking.cards[index].supportSignature
+  )), `${mode}: energy identity styling changed semantics/alpha/support (${JSON.stringify({
+    flat: compactEnergyRadioactiveBacking(flatBacking),
+    styled: compactEnergyRadioactiveBacking(styledBacking),
+    repeated: compactEnergyRadioactiveBacking(repeatedBacking),
+  })})`);
+  const controlLeaks = flatBacking.cards.flatMap((card, index) => {
+    const changed = styledBacking.cards[index];
+    const returned = repeatedBacking.cards[index];
+    const leaks = [];
+    if (!arraysEqual(card.liquidUnlikeRgb, changed.liquidUnlikeRgb)
+      || !arraysEqual(card.liquidUnlikeRgb, returned.liquidUnlikeRgb)) leaks.push('Water');
+    if (!arraysEqual(card.solidUnlikeRgb, changed.solidUnlikeRgb)
+      || !arraysEqual(card.solidUnlikeRgb, returned.solidUnlikeRgb)) leaks.push('Metal');
+    return leaks.map((control) => ({ code: card.code, control }));
+  });
+  assert(controlLeaks.length === 0,
+    `${mode}: energy identity styling leaked into contact controls (${JSON.stringify(controlLeaks)})`);
+
+  const backingResponses = summarizeEnergyRadioactiveBackingResponses(
+    flatBacking, styledBacking, repeatedBacking,
+  );
+  assert(backingResponses.every(({ rgbRms, rgbPeak, changedSampleRatio, repeatRgbPeak }) => (
+    rgbRms >= 0.02 && rgbRms <= 32 && rgbPeak > 0 && rgbPeak <= 96
+      && changedSampleRatio >= 0.002 && repeatRgbPeak === 0
+  )), `${mode}: Energy motif response is absent, unbounded, or non-repeatable (${JSON.stringify(backingResponses)})`);
+  assert(backingResponses.every(({ responseProfile }) => responseProfile.length === 16
+      && Math.abs(responseProfile.reduce((sum, value) => sum + value, 0) - 1) <= 0.001),
+  `${mode}: Energy response profiles are not normalized 4x4 fields (${JSON.stringify(backingResponses)})`);
+  const exactGroups = [
+    { name: 'Energy cores', codes: ['FIRE', 'PLSM', 'ELEC', 'GRVT', 'NEUT', 'PHOT', 'PROT', 'BRAY', 'EMBR'] },
+    { name: 'radioactive bodies', codes: ['BVBR', 'ISZS', 'PLUT', 'POLO', 'SING', 'URAN', 'VIBR'] },
+    { name: 'radioactive liquids', codes: ['DEUT', 'EXOT', 'ISOZ'] },
+    { name: 'radioactive gases', codes: ['AMTR', 'WARP'] },
+  ];
+  for (const group of exactGroups) {
+    const grouped = backingResponses.filter(({ code }) => group.codes.includes(code));
+    assert(grouped.length === group.codes.length
+        && new Set(grouped.map(({ responseSignature }) => responseSignature)).size === grouped.length,
+    `${mode}: ${group.name} do not have distinct exact motifs (${JSON.stringify(grouped)})`);
+  }
+
+  const exactRegions = atlas.cards.map((entry) => ({
+    name: `exact-identity-${entry.code}`,
+    x: entry.body.x + entry.body.width / 2,
+    y: entry.body.y + entry.body.height / 2,
+    radiusX: entry.body.width / 2,
+    radiusY: entry.body.height / 2,
+    signature: true,
+    silhouette: true,
+    fastSupport: true,
+  }));
+  const atlasBounds = containingCellularRegion(atlas.cards.map(({ card }) => card));
+  const responses = await sampleBackdropRefractionRegions(cdp, {
+    straight: flat.capture.data,
+    refracted: styled.capture.data,
+    repeatedStraight: repeated.capture.data,
+  }, [...exactRegions, { name: 'energy-radioactive-atlas', ...atlasBounds }], flat.canvasRect);
+  const atlasResponse = responses.at(-1);
+  assert(atlasResponse.repeatRgbPeak === 0,
+    `${mode}: energy flat→styled→flat framebuffer was not exact (${JSON.stringify(atlasResponse)})`);
+  assert(responses.slice(0, 21).every((sample) => sample.rgbRms > 0
+      && sample.rgbRms <= 40 && sample.rgbPeak > 0 && sample.rgbPeak <= 128
+      && sample.repeatRgbPeak === 0),
+  `${mode}: an exact material identity has no bounded composed response (${JSON.stringify(responses.slice(0, 21))})`);
+  const [flatSupport, styledSupport] = await Promise.all([
+    samplePageRegions(
+      cdp, flat.capture.data, exactRegions,
+      blank.capture.data, blank.reference.data, flat.canvasRect,
+    ),
+    samplePageRegions(
+      cdp, styled.capture.data, exactRegions,
+      blank.capture.data, blank.reference.data, flat.canvasRect,
+    ),
+  ]);
+  assert(flatSupport.every((sample, index) => (
+    atlas.cards[index].code === 'WARP' || (sample.visible > 0 && sample.worldArea > 0)
+  )) && styledSupport.every((sample) => sample.visible > 0 && sample.worldArea > 0),
+  `${mode}: an exact material card is not visible (${JSON.stringify({ flatSupport, styledSupport })})`);
+  stage('responses-ready');
+
+  return {
+    cards: atlas.cards.length,
+    energyCards: atlas.energyCards.length,
+    radioactiveCards: atlas.radioactiveCards.length,
+    nativeProducts: atlas.nativeProductCards.map(({ code }) => code),
+    authoredHoleCells: atlas.authoredHoles.length,
+    openChannelCells: atlas.openChannels.length,
+    sparseCarriers: atlas.sparseCarriers.length,
+    carrierGaps: atlas.carrierGaps.length,
+    isolatedControls: atlas.isolated.length,
+    guardedBlanks: atlas.guardedBlanks.length,
+    unlikeWaterContacts: atlas.liquidContacts.length,
+    unlikeMetalContacts: atlas.solidContacts.length,
+    exactRepeatedOff: atlasResponse.repeatRgbPeak === 0,
+    cardSignatures: atlas.cards.map((entry, index) => ({
+      index: entry.index,
+      material: entry.material,
+      code: entry.code,
+      flatSignature: flatSupport[index].signature,
+      styledSignature: styledSupport[index].signature,
+      rgbRms: responses[index].rgbRms,
+      rgbPeak: responses[index].rgbPeak,
+      backingRgbRms: backingResponses[index].rgbRms,
+      backingRgbPeak: backingResponses[index].rgbPeak,
+      backingChangedSampleRatio: backingResponses[index].changedSampleRatio,
+      backingRepeatRgbPeak: backingResponses[index].repeatRgbPeak,
+      backingResponseSignature: backingResponses[index].responseSignature,
+      backingResponseProfile: backingResponses[index].responseProfile,
+    })),
+  };
+}
+
+async function sampleEnergyRadioactiveBacking(cdp) {
+  return evaluate(cdp, `(() => {
+    const world = document.querySelector('.world-canvas');
+    if (!(world instanceof HTMLCanvasElement)) throw new Error('World canvas unavailable');
+    const copy = document.createElement('canvas');
+    copy.width = world.width;
+    copy.height = world.height;
+    const context = copy.getContext('2d', { willReadFrequently: true });
+    if (!context) throw new Error('Energy/radioactive backing sampler unavailable');
+    context.drawImage(world, 0, 0);
+    const pixels = context.getImageData(0, 0, copy.width, copy.height).data;
+    const scaleX = copy.width / ${WORLD_WIDTH};
+    const scaleY = copy.height / ${WORLD_HEIGHT};
+    const rectPoints = (rect) => {
+      const points = [];
+      for (let y = rect.y; y < rect.y + rect.height; y++) {
+        for (let x = rect.x; x < rect.x + rect.width; x++) points.push({ x, y });
+      }
+      return points;
+    };
+    const cellAlphaPeak = ({ x, y }) => {
+      const left = Math.floor(x * scaleX);
+      const top = Math.floor(y * scaleY);
+      const right = Math.max(left + 1, Math.floor((x + 1) * scaleX));
+      const bottom = Math.max(top + 1, Math.floor((y + 1) * scaleY));
+      let peak = 0;
+      for (let py = top; py < bottom; py++) for (let px = left; px < right; px++) {
+        peak = Math.max(peak, pixels[(py * copy.width + px) * 4 + 3]);
+      }
+      return peak;
+    };
+    const sampleRect = (rect, includeAlpha = false) => {
+      const left = Math.floor(rect.x * scaleX);
+      const top = Math.floor(rect.y * scaleY);
+      const right = Math.max(left + 1, Math.floor((rect.x + rect.width) * scaleX));
+      const bottom = Math.max(top + 1, Math.floor((rect.y + rect.height) * scaleY));
+      const rgb = [];
+      const alpha = [];
+      for (let py = top; py < bottom; py++) for (let px = left; px < right; px++) {
+        const offset = (py * copy.width + px) * 4;
+        rgb.push(pixels[offset], pixels[offset + 1], pixels[offset + 2]);
+        if (includeAlpha) alpha.push(pixels[offset + 3]);
+      }
+      return { width: right - left, height: bottom - top, rgb, alpha };
+    };
+    const snapshot = window.__ANIFOR_INPUT_AUDIT__.energyRadioactiveGraphicsAtlas();
+    const cards = Array.isArray(snapshot) ? snapshot : snapshot.cards;
+    return {
+      width: copy.width,
+      height: copy.height,
+      scaleX,
+      scaleY,
+      cards: cards.map((entry) => {
+        const cardPixels = sampleRect(entry.card, true);
+        let semanticSignature = 2166136261;
+        for (let y = entry.card.y; y < entry.card.y + entry.card.height; y++) {
+          for (let x = entry.card.x; x < entry.card.x + entry.card.width; x++) {
+            semanticSignature = Math.imul(
+              semanticSignature ^ window.__ANIFOR_INPUT_AUDIT__.cell(x, y), 16777619,
+            ) >>> 0;
+          }
+        }
+        let alphaSignature = 2166136261;
+        let supportSignature = 2166136261;
+        for (const alpha of cardPixels.alpha) {
+          alphaSignature = Math.imul(alphaSignature ^ alpha, 16777619) >>> 0;
+          supportSignature = Math.imul(
+            supportSignature ^ Number(alpha > 0), 16777619,
+          ) >>> 0;
+        }
+        const key = ({ x, y }) => x + ',' + y;
+        const emptyKeys = new Set([
+          ...rectPoints(entry.authoredHole), ...rectPoints(entry.openChannel),
+        ].map(key));
+        const bodyPoints = rectPoints(entry.body).filter((point) => !emptyKeys.has(key(point)));
+        const body = sampleRect(entry.body);
+        return {
+          index: entry.index,
+          material: entry.material,
+          code: entry.code,
+          phase: entry.phase,
+          bodyExpected: bodyPoints.length,
+          bodySupported: bodyPoints.filter((point) => cellAlphaPeak(point) > 0).length,
+          sparseExpected: entry.sparseCarriers.length,
+          sparseSupported: entry.sparseCarriers.filter(
+            (point) => cellAlphaPeak(point) > 0,
+          ).length,
+          isolatedAlphaPeak: cellAlphaPeak(entry.isolated),
+          semanticSignature,
+          alphaSignature,
+          supportSignature,
+          width: body.width,
+          height: body.height,
+          rgb: body.rgb,
+          liquidUnlikeRgb: sampleRect(entry.liquidContact.unlike).rgb,
+          solidUnlikeRgb: sampleRect(entry.solidContact.unlike).rgb,
+        };
+      }),
+    };
+  })()`);
+}
+
+function assertEnergyRadioactiveBacking(backing, label) {
+  assert(Number.isInteger(backing.scaleX) && Number.isInteger(backing.scaleY)
+      && backing.scaleX > 0 && backing.scaleY > 0,
+  `${label}: backing does not preserve integral world scaling (${backing.scaleX}x${backing.scaleY})`);
+  assert(backing.cards.length === 21 && backing.cards.every((card) => (
+    card.bodySupported === card.bodyExpected
+      && card.sparseSupported === card.sparseExpected
+      && card.isolatedAlphaPeak > 0
+  )), `${label}: energy/radioactive backing lost semantic support (${JSON.stringify(
+    compactEnergyRadioactiveBacking(backing),
+  )})`);
+}
+
+function compactEnergyRadioactiveBacking(backing) {
+  return {
+    scale: `${backing.scaleX}x${backing.scaleY}`,
+    cards: backing.cards.map(({
+      rgb: _rgb, liquidUnlikeRgb: _liquidUnlikeRgb, solidUnlikeRgb: _solidUnlikeRgb,
+      width: _width, height: _height, ...card
+    }) => card),
+  };
+}
+
+function summarizeEnergyRadioactiveBackingResponses(flat, styled, repeated) {
+  assert(flat.cards.length === 21 && styled.cards.length === 21 && repeated.cards.length === 21,
+    'Energy/radioactive backing response atlas is incomplete');
+  return flat.cards.map((base, cardIndex) => {
+    const changed = styled.cards[cardIndex];
+    const returned = repeated.cards[cardIndex];
+    assert(changed.material === base.material && returned.material === base.material
+        && changed.width === base.width && returned.width === base.width
+        && changed.height === base.height && returned.height === base.height
+        && changed.rgb.length === base.rgb.length && returned.rgb.length === base.rgb.length,
+    `Exact material backing response geometry changed for ${base.code}`);
+    let squared = 0;
+    let rgbPeak = 0;
+    let repeatRgbPeak = 0;
+    let changedSamples = 0;
+    let responseSignature = 2166136261;
+    const buckets = new Float64Array(16);
+    for (let offset = 0; offset < base.rgb.length; offset += 3) {
+      const sample = offset / 3;
+      const x = sample % base.width;
+      const y = Math.floor(sample / base.width);
+      const bucket = Math.min(3, Math.floor(y * 4 / base.height)) * 4
+        + Math.min(3, Math.floor(x * 4 / base.width));
+      let sampleChanged = false;
+      for (let channel = 0; channel < 3; channel++) {
+        const delta = changed.rgb[offset + channel] - base.rgb[offset + channel];
+        const repeat = returned.rgb[offset + channel] - base.rgb[offset + channel];
+        squared += delta * delta;
+        rgbPeak = Math.max(rgbPeak, Math.abs(delta));
+        repeatRgbPeak = Math.max(repeatRgbPeak, Math.abs(repeat));
+        buckets[bucket] += Math.abs(delta);
+        sampleChanged ||= delta !== 0;
+        responseSignature = Math.imul(responseSignature ^ (delta + 255), 16777619) >>> 0;
+      }
+      changedSamples += Number(sampleChanged);
+    }
+    const total = Math.max(1, buckets.reduce((sum, value) => sum + value, 0));
+    return {
+      material: base.material,
+      code: base.code,
+      rgbRms: round(Math.sqrt(squared / Math.max(1, base.rgb.length)), 4),
+      rgbPeak,
+      changedSampleRatio: round(changedSamples / Math.max(1, base.width * base.height), 5),
+      repeatRgbPeak,
+      responseSignature,
+      responseProfile: Array.from(buckets, (value) => round(value / total, 5)),
+    };
+  });
+}
+
 /** Focused semantic, atmosphere-volume, and RGB-identity proof for all 17 gases. */
 async function auditGasIdentityGraphics(cdp, mode) {
   const started = performance.now();
@@ -6689,6 +7174,76 @@ function assertPairedGasIdentityGraphics(results) {
     });
   }
   console.error(`[gas-identity-graphics:paired] parity ${JSON.stringify(parity)}`);
+}
+
+function assertPairedEnergyRadioactiveGraphics(results) {
+  const energyCodes = new Set([
+    'FIRE', 'PLSM', 'ELEC', 'GRVT', 'NEUT', 'PHOT', 'PROT', 'BRAY', 'EMBR',
+  ]);
+  const canvas = results.find(
+    (result) => result.backend === 'canvas2d',
+  )?.energyRadioactiveGraphics;
+  const webgl = results.find(
+    (result) => result.backend === 'webgl',
+  )?.energyRadioactiveGraphics;
+  if (!canvas || !webgl) return;
+  assert(canvas.cards === 21 && webgl.cards === 21
+      && canvas.energyCards === 9 && webgl.energyCards === 9
+      && canvas.radioactiveCards === 17 && webgl.radioactiveCards === 17,
+  `paired energy/radioactive atlas is incomplete (${JSON.stringify({
+    canvas: { cards: canvas.cards, energy: canvas.energyCards, radioactive: canvas.radioactiveCards },
+    webgl: { cards: webgl.cards, energy: webgl.energyCards, radioactive: webgl.radioactiveCards },
+  })})`);
+  for (const result of [canvas, webgl]) {
+    const exactGroups = [
+      ['FIRE', 'PLSM', 'ELEC', 'GRVT', 'NEUT', 'PHOT', 'PROT', 'BRAY', 'EMBR'],
+      ['BVBR', 'ISZS', 'PLUT', 'POLO', 'SING', 'URAN', 'VIBR'],
+      ['DEUT', 'EXOT', 'ISOZ'],
+      ['AMTR', 'WARP'],
+    ];
+    assert(result.cardSignatures.length === 21,
+      `exact material response atlas is incomplete (${result.cardSignatures.length}/21)`);
+    for (const codes of exactGroups) {
+      const group = result.cardSignatures.filter(({ code }) => codes.includes(code));
+      assert(group.length === codes.length && new Set(group.map(
+        ({ backingResponseSignature }) => backingResponseSignature,
+      )).size === group.length,
+      `exact material responses are not distinct for ${codes.join('/')} (${JSON.stringify(group)})`);
+    }
+    assert(result.cardSignatures.every(
+      ({ backingRepeatRgbPeak }) => backingRepeatRgbPeak === 0,
+    ), `exact material backing off→on→off sequence was not exact (${JSON.stringify(result.cardSignatures)})`);
+  }
+  const webglByMaterial = new Map(webgl.cardSignatures.map((entry) => [entry.material, entry]));
+  const parity = [];
+  for (const canvasEntry of canvas.cardSignatures) {
+    const webglEntry = webglByMaterial.get(canvasEntry.material);
+    assert(webglEntry && webglEntry.code === canvasEntry.code,
+      `paired exact-material atlas missing ${canvasEntry.code}/${canvasEntry.material}`);
+    const responseRatio = canvasEntry.backingRgbRms
+      / Math.max(0.01, webglEntry.backingRgbRms);
+    // Luminous cores can sit close to the shared radiance cap, so the same
+    // signed byte motif may expose much less RMS headroom on one backend.
+    // Their mandatory nonzero/repeatability checks plus normalized spatial
+    // profile are the meaningful parity proof. Non-energy matter retains the
+    // established tighter exact-material response-strength envelope.
+    if (!energyCodes.has(canvasEntry.code)) {
+      assert(responseRatio >= 0.12 && responseRatio <= 8.5,
+        `Canvas/WebGL exact material ${canvasEntry.code} response diverged (${canvasEntry.backingRgbRms}/${webglEntry.backingRgbRms})`);
+    }
+    const profileDistance = Math.max(...canvasEntry.backingResponseProfile.map(
+      (value, index) => Math.abs(value - webglEntry.backingResponseProfile[index]),
+    ));
+    const maximumProfileDistance = energyCodes.has(canvasEntry.code) ? 0.75 : 0.25;
+    assert(profileDistance <= maximumProfileDistance,
+      `Canvas/WebGL exact material ${canvasEntry.code} spatial response diverged (${profileDistance})`);
+    parity.push({
+      code: canvasEntry.code,
+      responseRatio: round(responseRatio, 4),
+      profileMaxDistance: round(profileDistance, 5),
+    });
+  }
+  console.error(`[energy-radioactive-graphics:paired] parity ${JSON.stringify(parity)}`);
 }
 
 function assertGasSpectralResponseVectors(samples, label, suffix = '') {

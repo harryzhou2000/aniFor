@@ -188,6 +188,7 @@ export class MaterialRenderer {
   private phaseContactLightingEnabled = true;
   private thermalMaterialStylingEnabled = true;
   private energyCoreReliefEnabled = true;
+  private energyIdentityStylingEnabled = true;
   private powderBodyDepthEnabled = true;
   private powderRenderStyle: PowderRenderStyle = 'smooth';
   private gasFieldLightingDirty = false;
@@ -550,6 +551,13 @@ export class MaterialRenderer {
     this.changed = true;
   }
 
+  setEnergyIdentityStylingEnabled(enabled: boolean): void {
+    if (enabled === this.energyIdentityStylingEnabled) return;
+    this.energyIdentityStylingEnabled = enabled;
+    this.presenter?.setEnergyIdentityStylingEnabled(enabled);
+    this.changed = true;
+  }
+
   setPowderBodyDepthEnabled(enabled: boolean): void {
     if (enabled === this.powderBodyDepthEnabled) return;
     this.powderBodyDepthEnabled = enabled;
@@ -724,6 +732,7 @@ export class MaterialRenderer {
       this.unusualSolidStylingEnabled,
       this.liquidIdentityStylingEnabled,
       this.gasIdentityStylingEnabled,
+      this.energyIdentityStylingEnabled,
     );
     // Route subsequent dirty cells to the candidate while its first expensive
     // frame is in flight. The known-good Canvas remains mounted underneath;
@@ -1103,10 +1112,11 @@ export class MaterialRenderer {
           material, x, y, visualTime, heat,
           velocities?.[index * 2] ?? 0, velocities?.[index * 2 + 1] ?? 0,
           energyFieldSupport, this.energyCoreReliefEnabled, normalLight,
+          this.energyIdentityStylingEnabled,
         );
         if (applicableTraits !== 0) applyCanvasRenderTraits(
           this.styledColor, applicableTraits, phase, material, x, y, index, this.traitClock,
-          this.roleMaterialStylingEnabled,
+          this.roleMaterialStylingEnabled, this.energyIdentityStylingEnabled,
         );
         compositePixel(target, pixel, this.styledColor[0], this.styledColor[1], this.styledColor[2], 245);
         setPixel(
@@ -1199,7 +1209,7 @@ export class MaterialRenderer {
         );
         applyCanvasRenderTraits(
           this.styledColor, applicableTraits, phase, material, x, y, index, this.traitClock,
-          this.roleMaterialStylingEnabled,
+          this.roleMaterialStylingEnabled, this.energyIdentityStylingEnabled,
         );
         this.applyThermalMaterialStyle(
           phase, material, false, applicableTraits, temperatures?.[index], optics,
@@ -1220,7 +1230,7 @@ export class MaterialRenderer {
         );
         applyCanvasRenderTraits(
           this.styledColor, applicableTraits, phase, material, x, y, index, this.traitClock,
-          this.roleMaterialStylingEnabled,
+          this.roleMaterialStylingEnabled, this.energyIdentityStylingEnabled,
         );
         this.applyThermalMaterialStyle(
           phase, material, false, applicableTraits, temperatures?.[index], optics,
@@ -1393,7 +1403,7 @@ export class MaterialRenderer {
           } else {
             if (applicableTraits !== 0) applyCanvasRenderTraits(
               this.styledColor, applicableTraits, phase, material, x, y, index, this.traitClock,
-              this.roleMaterialStylingEnabled,
+              this.roleMaterialStylingEnabled, this.energyIdentityStylingEnabled,
             );
             setPixel(
               smoke, pixel,
@@ -1436,7 +1446,7 @@ export class MaterialRenderer {
           } else {
             if (applicableTraits !== 0) applyCanvasRenderTraits(
               this.styledColor, applicableTraits, phase, material, x, y, index, this.traitClock,
-              this.roleMaterialStylingEnabled,
+              this.roleMaterialStylingEnabled, this.energyIdentityStylingEnabled,
             );
             compositePixel(
               target, pixel,
@@ -1489,7 +1499,7 @@ export class MaterialRenderer {
           }
           if (applicableTraits !== 0) applyCanvasRenderTraits(
             this.styledColor, applicableTraits, phase, material, x, y, index, this.traitClock,
-            this.roleMaterialStylingEnabled,
+            this.roleMaterialStylingEnabled, this.energyIdentityStylingEnabled,
           );
           if (this.translucentLensShellEnabled && applicableTraits === 0 && !info.emissive) {
             applyCanvasTranslucentLensShell(

@@ -11,6 +11,7 @@ import type { UnusualPowderGraphicsAuditSnapshot } from './unusual-powder-graphi
 import type { UnusualSolidGraphicsAuditSnapshot } from './unusual-solid-graphics-audit';
 import type { LiquidIdentityGraphicsAuditSnapshot } from './liquid-identity-graphics-audit';
 import type { GasIdentityGraphicsAuditSnapshot } from './gas-identity-graphics-audit';
+import type { EnergyRadioactiveGraphicsAuditSnapshot } from './energy-radioactive-graphics-audit';
 
 export interface BrowserInputAuditApi {
   readonly version: 1;
@@ -48,6 +49,7 @@ export interface BrowserInputAuditApi {
   setPhaseContactLighting(enabled: boolean): void;
   setThermalMaterialStyling(enabled: boolean): void;
   setEnergyCoreRelief(enabled: boolean): void;
+  setEnergyIdentityStyling(enabled: boolean): void;
   setPowderBodyDepth(enabled: boolean): void;
   setPowderRenderStyle(style: PowderRenderStyle): void;
   clear(): void;
@@ -77,6 +79,8 @@ export interface BrowserInputAuditApi {
   prepareLiquidIdentityGraphicsFixture(): void;
   gasIdentityGraphicsAtlas(): GasIdentityGraphicsAuditSnapshot;
   prepareGasIdentityGraphicsFixture(): void;
+  energyRadioactiveGraphicsAtlas(): EnergyRadioactiveGraphicsAuditSnapshot;
+  prepareEnergyRadioactiveGraphicsFixture(): void;
   canvasPresentationTiming(): CanvasPresentationTiming | undefined;
   requestWebGLPresentationTimingSample(): boolean;
   webGLPresentationTiming(): WebGLPresentationTiming | undefined;

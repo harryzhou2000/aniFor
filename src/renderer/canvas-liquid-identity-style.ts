@@ -1,6 +1,6 @@
 import { Material } from '../shared/materials';
 
-const STYLE_COUNT = 8;
+const STYLE_COUNT = 11;
 const TILE_SHIFT = 5;
 const TILE_SIZE = 1 << TILE_SHIFT;
 const TILE_MASK = TILE_SIZE - 1;
@@ -18,14 +18,21 @@ STYLE_BY_MATERIAL[Material.GLOW] = 4;
 STYLE_BY_MATERIAL[Material.VIRS] = 5;
 STYLE_BY_MATERIAL[Material.FRZW] = 6;
 STYLE_BY_MATERIAL[Material.RFGL] = 7;
+STYLE_BY_MATERIAL[Material.DEUT] = 8;
+STYLE_BY_MATERIAL[Material.EXOT] = 9;
+STYLE_BY_MATERIAL[Material.ISOZ] = 10;
 
 /** Static signed RGB motif, tiled in world space at 32×32 cells per identity. */
 const MOTIF_RGB = new Int8Array(STYLE_COUNT * TILE_CELLS * CHANNELS);
 
 // Existing surface exposure strengthens only film/facet identities. Depth may
 // attenuate or reverse a motif, while the RGB coefficients supply absorption.
-const SURFACE_SCALE = new Float32Array([0.34, 0, 0.22, 0, 0, 0, 0.24, 0.20]);
-const DEPTH_SCALE = new Float32Array([-0.18, -1.55, -0.12, -0.10, 0.12, -0.08, -0.08, -0.12]);
+const SURFACE_SCALE = new Float32Array([
+  0.34, 0, 0.22, 0, 0, 0, 0.24, 0.20, 0.08, 0.12, 0.18,
+]);
+const DEPTH_SCALE = new Float32Array([
+  -0.18, -1.55, -0.12, -0.10, 0.12, -0.08, -0.08, -0.12, 0.20, -0.16, -0.10,
+]);
 const DEPTH_RGB = new Int8Array([
   0, 0, 0,
   2, -2, 2,
@@ -35,6 +42,9 @@ const DEPTH_RGB = new Int8Array([
   -2, -3, 0,
   -2, 0, 2,
   -2, 0, -2,
+  -2, 1, 4,
+  2, -2, 4,
+  3, -2, 3,
 ]);
 
 buildMotifLookup();
@@ -160,7 +170,7 @@ function buildMotifLookup(): void {
           || localX === localY || localX === -localY;
         if (arm) { red = 5; green = 8; blue = 11; }
         else { red = -1; green = 1; blue = 3; }
-      } else {
+      } else if (style === 7) {
         // RFGL: large bubble films crossed by coherent diagonal ribbons.
         const localX = (x & TILE_MASK) - 16;
         const localY = (y & 15) - 8;
@@ -170,6 +180,29 @@ function buildMotifLookup(): void {
         if (radiusSquared >= 104 && radiusSquared <= 157) { red = 5; green = 9; blue = 10; }
         else if (ribbon) { red = -2; green = 6; blue = 8; }
         else { green = 2; blue = 3; }
+      } else if (style === 8) {
+        // DEUT: deep horizontal concentration bands with cool lifted seams.
+        const band = (y + ((x >> 3) & 3)) & 15;
+        if (band <= 2) { red = -3; green = 5; blue = 11; }
+        else if (band >= 9 && band <= 12) { red = -4; green = -2; blue = 5; }
+        else { red = -2; green = 1; blue = 3; }
+      } else if (style === 9) {
+        // EXOT: opposed interference diamonds and displaced hot vertices.
+        const localX = (x & 15) - 8;
+        const localY = (y & 15) - 8;
+        const diamond = Math.abs(localX) + Math.abs(localY);
+        const shear = (x * 3 - y * 2) & 15;
+        if (diamond >= 6 && diamond <= 9) { red = 4; green = -3; blue = 11; }
+        else if (shear <= 2) { red = 8; green = 2; blue = 6; }
+        else { red = -2; green = 1; blue = 3; }
+      } else {
+        // ISOZ: coherent decay rings matching its solid ISZS phase partner.
+        const localX = (x & 15) - 8;
+        const localY = (y & 15) - 8;
+        const radiusSquared = localX * localX + localY * localY;
+        if (radiusSquared >= 31 && radiusSquared <= 52) { red = 8; green = -3; blue = 10; }
+        else if (radiusSquared <= 10) { red = -3; green = 5; blue = 7; }
+        else { red = 2; green = -1; blue = 3; }
       }
       const offset = (style * TILE_CELLS + y * TILE_SIZE + x) * CHANNELS;
       MOTIF_RGB[offset] = red;

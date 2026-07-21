@@ -33,6 +33,9 @@ import {
   applyCanvasLiquidIdentityStyle, CANVAS_LIQUID_IDENTITY_LOOKUP_BYTES,
 } from '../src/renderer/canvas-liquid-identity-style';
 import { CANVAS_GAS_IDENTITY_LOOKUP_BYTES } from '../src/renderer/canvas-gas-identity-style';
+import {
+  applyCanvasRadioactiveIdentityStyle, CANVAS_RADIOACTIVE_IDENTITY_LOOKUP_BYTES,
+} from '../src/renderer/canvas-radioactive-identity-style';
 import { applyCanvasPowderBulkStyle } from '../src/renderer/canvas-powder-bulk-style';
 import { applyCanvasSuspensionStyle } from '../src/renderer/canvas-suspension-style';
 import { createRenderLookups } from '../src/renderer/render-field-set';
@@ -311,6 +314,7 @@ let solidBodyChecksum = 0;
 let powderBulkStyleChecksum = 0;
 let liquidBodyChecksum = 0;
 let liquidIdentityChecksum = 0;
+let radioactiveIdentityChecksum = 0;
 let liquidIdentityInputSink = 0;
 let liquidLightChecksum = 0;
 let translucentLightChecksum = 0;
@@ -379,6 +383,9 @@ const LIQUID_IDENTITY_PROFILE_MATERIALS = [
   Material.VIRS,
   Material.FRZW,
   Material.RFGL,
+  Material.DEUT,
+  Material.EXOT,
+  Material.ISOZ,
 ] as const;
 
 /** Full semantic-grid loop matching the Canvas presenter's reusable RGB path. */
@@ -387,7 +394,7 @@ function profileLiquidIdentityStyle(styled: boolean): ReturnType<typeof sample> 
     for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) {
       const index = y * width + x;
       const material = LIQUID_IDENTITY_PROFILE_MATERIALS[
-        ((x >> 6) + (y >> 6) * 3) & 7
+        ((x >> 6) + (y >> 6) * 3) % LIQUID_IDENTITY_PROFILE_MATERIALS.length
       ];
       const color = material * 3;
       const neighbourDensity = (x + y * 3) % 9;
@@ -411,6 +418,28 @@ function profileLiquidIdentityStyle(styled: boolean): ReturnType<typeof sample> 
   // renderer profiles without charging diagnostic checksum work to the helper.
   liquidIdentityChecksum += liquidBodyRgb[0] + liquidBodyRgb[1] + liquidBodyRgb[2]
     + liquidIdentityInputSink;
+  return timing;
+}
+
+const RADIOACTIVE_BODY_PROFILE_MATERIALS = [
+  Material.BVBR, Material.PLUT, Material.POLO, Material.SING,
+  Material.URAN, Material.ISZS, Material.VIBR,
+] as const;
+
+function profileRadioactiveIdentityStyle(styled: boolean): ReturnType<typeof sample> {
+  const timing = sample(() => {
+    for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) {
+      const material = RADIOACTIVE_BODY_PROFILE_MATERIALS[
+        ((x >> 6) + (y >> 6) * 3) % RADIOACTIVE_BODY_PROFILE_MATERIALS.length
+      ];
+      const color = material * 3;
+      traitRgb[0] = colorByMaterial[color];
+      traitRgb[1] = colorByMaterial[color + 1];
+      traitRgb[2] = colorByMaterial[color + 2];
+      if (styled) applyCanvasRadioactiveIdentityStyle(traitRgb, material, x, y);
+    }
+  });
+  radioactiveIdentityChecksum += traitRgb[0] + traitRgb[1] + traitRgb[2];
   return timing;
 }
 
@@ -621,7 +650,16 @@ console.log(JSON.stringify({
         shadeCanvasEnergy(
           energyCore, energyGlow, 32, 224, 255, RenderProfile.Radioactive,
           styleBytes[Material.NEUT * 4 + 3], Material.NEUT, x, y, 1_000, 0.4, 24, -8,
-          255, false, 18,
+          255, false, 18, false,
+        );
+      }
+    }),
+    energyCoreRelief: sample(() => {
+      for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) {
+        shadeCanvasEnergy(
+          energyCore, energyGlow, 32, 224, 255, RenderProfile.Radioactive,
+          styleBytes[Material.NEUT * 4 + 3], Material.NEUT, x, y, 1_000, 0.4, 24, -8,
+          255, true, 18, false,
         );
       }
     }),
@@ -641,6 +679,12 @@ console.log(JSON.stringify({
       sing: profileTraitMask(styleBytes[Material.SING * 4 + 3]),
       syntheticAllBits: profileTraitMask(0xff),
       singWithComposite: profileTraitComposite(styleBytes[Material.SING * 4 + 3]),
+    },
+    radioactiveIdentityStyle: {
+      additionalAllocatedBytes: CANVAS_RADIOACTIVE_IDENTITY_LOOKUP_BYTES,
+      fixture: '612x384 seven-material 64-cell radioactive-body distribution',
+      loopBaseline: profileRadioactiveIdentityStyle(false),
+      styled: profileRadioactiveIdentityStyle(true),
     },
     solidSurface: sample(() => {
       solidPixels.set(solidSeed);
@@ -815,7 +859,7 @@ console.log(JSON.stringify({
     },
     liquidIdentityStyle: {
       additionalAllocatedBytes: CANVAS_LIQUID_IDENTITY_LOOKUP_BYTES,
-      fixture: '612x384 eight-material 64-cell liquid-body distribution',
+      fixture: '612x384 eleven-material 64-cell liquid-body distribution',
       loopBaseline: profileLiquidIdentityStyle(false),
       styled: profileLiquidIdentityStyle(true),
     },
@@ -1016,6 +1060,7 @@ console.log(JSON.stringify({
   powderBulkStyleChecksum: Math.round(powderBulkStyleChecksum),
   liquidBodyChecksum: Math.round(liquidBodyChecksum),
   liquidIdentityChecksum: Math.round(liquidIdentityChecksum),
+  radioactiveIdentityChecksum: Math.round(radioactiveIdentityChecksum),
   liquidLightChecksum: Math.round(liquidLightChecksum),
   translucentLightChecksum: Math.round(translucentLightChecksum),
   translucentBackdropChecksum: Math.round(translucentBackdropChecksum),

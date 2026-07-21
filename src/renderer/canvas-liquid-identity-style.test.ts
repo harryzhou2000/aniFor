@@ -15,6 +15,9 @@ const IDENTITY_LIQUIDS = [
   Material.VIRS,
   Material.FRZW,
   Material.RFGL,
+  Material.DEUT,
+  Material.EXOT,
+  Material.ISOZ,
 ] as const;
 
 function style(
@@ -36,11 +39,11 @@ function style(
 
 describe('Canvas liquid identity styling', () => {
   it('keeps its world-independent lookup below 25 KiB', () => {
-    expect(CANVAS_LIQUID_IDENTITY_LOOKUP_BYTES).toBe(24_920);
-    expect(CANVAS_LIQUID_IDENTITY_LOOKUP_BYTES).toBeLessThan(25 * 1024);
+    expect(CANVAS_LIQUID_IDENTITY_LOOKUP_BYTES).toBe(34_169);
+    expect(CANVAS_LIQUID_IDENTITY_LOOKUP_BYTES).toBeLessThan(34 * 1024);
   });
 
-  it('covers exactly the eight requested non-contiguous identities', () => {
+  it('covers the eight unusual and three radioactive exact liquid identities', () => {
     for (const material of IDENTITY_LIQUIDS) {
       expect(hasCanvasLiquidIdentityStyle(material)).toBe(true);
     }
@@ -91,7 +94,7 @@ describe('Canvas liquid identity styling', () => {
     }
   });
 
-  it('gives all eight materials unique coherent bulk fingerprints', () => {
+  it('gives all eleven materials unique coherent bulk fingerprints', () => {
     const fingerprints = new Set<string>();
     for (const material of IDENTITY_LIQUIDS) {
       let fingerprint = 2166136261;
@@ -136,6 +139,9 @@ describe('Canvas liquid identity styling', () => {
     expect(style(Material.VIRS, 0, 7)).not.toEqual(style(Material.VIRS, 7, 7));
     expect(style(Material.FRZW, 8, 1)).not.toEqual(style(Material.FRZW, 4, 3));
     expect(style(Material.RFGL, 10, 1)).not.toEqual(style(Material.RFGL, 10, 8));
+    expect(style(Material.DEUT, 1, 1)).not.toEqual(style(Material.DEUT, 1, 8));
+    expect(style(Material.EXOT, 1, 1)).not.toEqual(style(Material.EXOT, 6, 7));
+    expect(style(Material.ISOZ, 8, 8)).not.toEqual(style(Material.ISOZ, 8, 2));
   });
 
   it('responds to existing volume inputs without changing topology state', () => {

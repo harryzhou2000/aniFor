@@ -41,6 +41,9 @@ import {
 import {
   GAS_IDENTITY_GRAPHICS_AUDIT, prepareGasIdentityGraphicsAuditFixture,
 } from './gas-identity-graphics-audit';
+import {
+  ENERGY_RADIOACTIVE_GRAPHICS_AUDIT, prepareEnergyRadioactiveGraphicsAuditFixture,
+} from './energy-radioactive-graphics-audit';
 
 const AUTOSAVE_KEY = 'stillroom-world-v1';
 
@@ -309,6 +312,9 @@ export class Game {
       setEnergyCoreRelief: (enabled) => {
         this.renderer.setEnergyCoreReliefEnabled(enabled);
       },
+      setEnergyIdentityStyling: (enabled) => {
+        this.renderer.setEnergyIdentityStylingEnabled(enabled);
+      },
       setPowderBodyDepth: (enabled) => {
         this.renderer.setPowderBodyDepthEnabled(enabled);
       },
@@ -366,6 +372,10 @@ export class Game {
       gasIdentityGraphicsAtlas: () => GAS_IDENTITY_GRAPHICS_AUDIT,
       prepareGasIdentityGraphicsFixture: () => {
         prepareGasIdentityGraphicsAuditFixture(this.simulation);
+      },
+      energyRadioactiveGraphicsAtlas: () => ENERGY_RADIOACTIVE_GRAPHICS_AUDIT,
+      prepareEnergyRadioactiveGraphicsFixture: () => {
+        prepareEnergyRadioactiveGraphicsAuditFixture(this.simulation);
       },
       canvasPresentationTiming: () => this.renderer.getCanvasPresentationTiming(),
       requestWebGLPresentationTimingSample: () => this.renderer.requestWebGLPresentationTimingSample(),

@@ -29,6 +29,7 @@ interface PresenterHarness {
   setSensorMaterialStylingEnabled: PixiFieldPresenter['setSensorMaterialStylingEnabled'];
   setUnusualPowderStylingEnabled: PixiFieldPresenter['setUnusualPowderStylingEnabled'];
   setUnusualSolidStylingEnabled: PixiFieldPresenter['setUnusualSolidStylingEnabled'];
+  setEnergyIdentityStylingEnabled: PixiFieldPresenter['setEnergyIdentityStylingEnabled'];
   setLiquidSilhouetteCohesionEnabled: PixiFieldPresenter['setLiquidSilhouetteCohesionEnabled'];
   setRenderStallHandler: PixiFieldPresenter['setRenderStallHandler'];
   forceEightXRenderStallForAudit: PixiFieldPresenter['forceEightXRenderStallForAudit'];
@@ -401,12 +402,12 @@ describe('Pixi presenter startup configuration', () => {
     expect(presenter.app.render).toHaveBeenCalledOnce();
   });
 
-  it('styles exactly eight authoritative liquid identities with bounded static RGB arithmetic', () => {
+  it('styles exactly eleven authoritative unusual/radioactive liquids with bounded RGB arithmetic', () => {
     const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
     const helperStart = source.indexOf('vec3 liquidMaterialIdentityDelta(');
     const helperEnd = source.indexOf('vec3 vividColor', helperStart);
     const helper = source.slice(helperStart, helperEnd);
-    const blockStart = source.indexOf('// Eight unusual liquids retain a small world-anchored material signature');
+    const blockStart = source.indexOf('// Eleven unusual/radioactive liquids retain a world-anchored material signature');
     const blockEnd = source.indexOf('  } else {', blockStart);
     const block = source.slice(blockStart, blockEnd);
     const ids = [...helper.matchAll(/material == (\d+)\.0/g)].map((match) => Number(match[1]));
@@ -418,10 +419,10 @@ describe('Pixi presenter startup configuration', () => {
     expect(blockStart).toBeGreaterThan(0);
     expect(blockEnd).toBeGreaterThan(blockStart);
     expect(dispatchStart).toBeGreaterThan(0);
-    expect(ids).toEqual([38, 54, 55, 56, 57, 62, 202, 207]);
+    expect(ids).toEqual([38, 54, 55, 56, 57, 62, 202, 207, 100, 102, 104]);
     for (const motif of [
       'thinFilm', 'prism', 'bubbles', 'foldCrease',
-      'ringBand', 'membrane', 'frost', 'ribbon',
+      'ringBand', 'membrane', 'frost', 'ribbon', 'deepBand', 'shear', 'outerRing',
     ]) expect(helper).toContain(motif);
     expect(commonSetup).toContain('smoothstep(0.08, 0.72, density)');
     expect(commonSetup).toContain('(0.45 + depth * 0.55)');
@@ -432,7 +433,8 @@ describe('Pixi presenter startup configuration', () => {
     expect(block).toContain('surfaceOnly < 0.5 && wall < 0.5 && emissionOnly < 0.5');
     expect(block).toContain('family == 2.0 && !materialEmissive');
     expect(block).toContain('(material == 38.0 || (material >= 54.0 && material <= 57.0)');
-    expect(block).toContain('|| material == 62.0 || material == 202.0 || material == 207.0');
+    expect(block).toContain('|| material == 62.0 || material == 100.0 || material == 102.0');
+    expect(block).toContain('|| material == 104.0 || material == 202.0 || material == 207.0');
     expect(block).not.toContain('material == 54.0 || material == 55.0');
     expect(block).toContain('semanticSlope + volumeSlope');
     expect(`${helper}${block}`).not.toContain('texture(');
@@ -579,6 +581,41 @@ describe('Pixi presenter startup configuration', () => {
 
     expect(presenter.uniforms.uniforms.uEmissionVolumeChroma).toBe(0);
     expect(presenter.app.render).not.toHaveBeenCalled();
+  });
+
+  it('redraws exact energy identity styling and keeps its shader block RGB-only', () => {
+    const presenter = presenterHarness();
+    presenter.setEnergyIdentityStylingEnabled(false);
+    expect(presenter.uniforms.uniforms.uEnergyIdentityStyling).toBe(0);
+    presenter.setEnergyIdentityStylingEnabled(true);
+    expect(presenter.uniforms.uniforms.uEnergyIdentityStyling).toBe(1);
+    expect(presenter.app.render).toHaveBeenCalledTimes(2);
+
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const start = source.indexOf('vec3 energyIdentityDelta(');
+    const end = source.indexOf('vec4 contactSample(', start);
+    const block = source.slice(start, end);
+    expect(start).toBeGreaterThan(0);
+    expect(end).toBeGreaterThan(start);
+    expect(source).toContain('uniform float uEnergyIdentityStyling;');
+    expect(block).not.toContain('texture(');
+    expect(block).not.toMatch(/\balpha\s*[+*]?=/);
+  });
+
+  it('styles exactly seven authoritative radioactive bodies without GPU samples', () => {
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const start = source.indexOf('vec3 radioactiveBodyIdentityDelta(');
+    const end = source.indexOf('vec4 contactSample(', start);
+    const block = source.slice(start, end);
+    const ids = [...block.matchAll(/material == (\d+)\.0/g)].map((match) => Number(match[1]));
+    expect(start).toBeGreaterThan(0);
+    expect(end).toBeGreaterThan(start);
+    expect(ids).toEqual([99, 108, 109, 111, 112, 105, 113]);
+    expect(block).not.toContain('texture(');
+    expect(block).not.toMatch(/\b(?:sin|pow|normalize|length)\s*\(/);
+    expect(block).not.toMatch(/\balpha\s*[+*]?=/);
+    expect(source).toContain('radioactiveBodyIdentityDelta(material, fieldPosition)');
+    expect(source).toContain('* uEnergyIdentityStyling;');
   });
 
   it('keeps emission volume shading RGB-only and reuses existing aura samples', () => {
