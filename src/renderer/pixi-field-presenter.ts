@@ -109,6 +109,7 @@ uniform float uSolidFieldLighting;
 uniform float uRoleMaterialStyling;
 uniform float uCellularMaterialStyling;
 uniform float uSensorMaterialStyling;
+uniform float uUnusualPowderStyling;
 uniform float uLiquidSilhouetteCohesion;
 uniform float uThermalMaterialStyling;
 uniform float uEnergyCoreRelief;
@@ -1781,6 +1782,96 @@ void main() {
       } else if (optics == 15.0) {
         color += vec3(1.00, 0.68, 0.32) * brightFacet * 0.060;
       }
+      // Ten unusual native powders share the existing deterministic grain and
+      // half-cell facet signals, then select one small identity motif. The
+      // branch is authoritative-matter RGB arithmetic only: it adds no sample,
+      // field, pass, allocation, clock term, or output-scale resource.
+      float unusualPowder = material == 43.0 || material == 44.0
+        || material == 45.0 || material == 46.0 || material == 47.0
+        || material == 48.0 || material == 49.0 || material == 51.0
+        || material == 198.0 || material == 217.0 ? 1.0 : 0.0;
+      if (uUnusualPowderStyling > 0.5 && unusualPowder > 0.5
+        && family == 4.0 && traits < 0.5 && !materialEmissive
+        && surfaceOnly < 0.5 && halo < 0.5 && wall < 0.5
+        && wallOnly < 0.5 && emissionOnly < 0.5) {
+        vec2 motifCell = floor(fieldPosition);
+        float diagonalBand = 1.0 - step(
+          1.0, mod(mod(motifCell.x + motifCell.y * 2.0, 7.0) + 7.0, 7.0)
+        );
+        float counterBand = 1.0 - step(
+          1.0, mod(mod(motifCell.x * 2.0 - motifCell.y, 9.0) + 9.0, 9.0)
+        );
+        float coarseNode = 1.0 - step(
+          1.0, mod(motifCell.x * 3.0 + motifCell.y * 5.0, 13.0)
+        );
+        if (material == 43.0) {
+          // ANAR: pale feather shafts with restrained barbs.
+          float feather = max(diagonalBand, counterBand * step(0.18, grain));
+          color += vec3(0.052, 0.042, 0.025) * feather;
+          color *= 1.0 - max(0.0, -grainFacet) * 0.028;
+        } else if (material == 44.0) {
+          // BGLA: cool angular glass splinters.
+          float splinter = max(diagonalBand, counterBand) * step(-0.12, grainFacet);
+          color += vec3(0.025, 0.052, 0.070) * splinter;
+          color *= 1.0 - counterBand * step(grainFacet, -0.22) * 0.035;
+        } else if (material == 45.0) {
+          // BREC: dark PCB fragments crossed by copper traces and pads.
+          float pcbTrace = max(
+            1.0 - step(1.0, mod(motifCell.x, 6.0)),
+            1.0 - step(1.0, mod(motifCell.y + 3.0, 7.0))
+          );
+          color *= 1.0 - pcbTrace * 0.040;
+          color += vec3(0.080, 0.038, 0.010) * max(pcbTrace, coarseNode);
+        } else if (material == 46.0) {
+          // BRMT: oxidized plates with dark seams and muted patina.
+          float plateSeam = max(
+            1.0 - step(1.0, mod(motifCell.x + 2.0, 8.0)),
+            1.0 - step(1.0, mod(motifCell.y + 4.0, 6.0))
+          );
+          color *= 1.0 - plateSeam * 0.060;
+          color += vec3(0.014, 0.044, 0.035) * step(0.12, grain);
+        } else if (material == 47.0) {
+          // FRZZ: compact frost stars cut into the loose crystal field.
+          vec2 frostCell = abs(mod(motifCell + vec2(3.0), 7.0) - 3.0);
+          float frostStar = max(
+            1.0 - step(0.5, min(frostCell.x, frostCell.y)),
+            1.0 - step(0.5, abs(frostCell.x - frostCell.y))
+          ) * (1.0 - step(3.1, max(frostCell.x, frostCell.y)));
+          color += vec3(0.016, 0.026, 0.034) * frostStar;
+        } else if (material == 48.0) {
+          // GRAV: bands align to the already sampled particle velocity.
+          vec2 gravDirection = length(velocity) > 0.08
+            ? normalize(velocity) : vec2(0.70710678, -0.70710678);
+          float gravBand = 1.0 - step(
+            1.25, mod(mod(dot(motifCell, gravDirection) + 32.0, 6.0) + 6.0, 6.0)
+          );
+          color += vec3(0.055, 0.032, 0.072) * gravBand;
+        } else if (material == 49.0) {
+          // SAWD: warm fibres run in staggered longitudinal bundles.
+          float fibre = 1.0 - step(
+            1.0, mod(motifCell.x + floor(motifCell.y * 0.25) * 2.0, 9.0)
+          );
+          color += vec3(0.062, 0.030, 0.008) * fibre;
+          color *= 1.0 + grainFacet * 0.022;
+        } else if (material == 51.0) {
+          // SLCN: crossed cleavage planes catch a cold edge light.
+          float cleavage = max(diagonalBand, counterBand * step(0.0, grainFacet));
+          color += vec3(0.030, 0.050, 0.075) * cleavage;
+          color *= 1.0 - coarseNode * 0.028;
+        } else if (material == 198.0) {
+          // DYST: dead-colony clumps retain sparse ochre islands.
+          float clump = step(0.08, grain) * step(-0.10, grainFacet);
+          color *= 1.0 - (1.0 - clump) * 0.038;
+          color += vec3(0.036, 0.028, 0.009) * clump * max(coarseNode, diagonalBand);
+        } else {
+          // BCOL: fractured carbon with sparse warm mineral inclusions.
+          float fracture = max(diagonalBand, counterBand);
+          float inclusion = coarseNode * step(0.10, grainFacet);
+          color *= 1.0 - fracture * 0.055;
+          color += vec3(0.090, 0.038, 0.010) * inclusion;
+        }
+        color = clamp(color, 0.0, 1.0);
+      }
       // SEED and YEST retain granular topology while their existing grain and
       // facet signals describe husk and colony identity. No additional wave,
       // sample, or output-scale state is required.
@@ -2325,6 +2416,7 @@ export class PixiFieldPresenter {
       uRoleMaterialStyling: { value: 1, type: 'f32' },
       uCellularMaterialStyling: { value: 1, type: 'f32' },
       uSensorMaterialStyling: { value: 1, type: 'f32' },
+      uUnusualPowderStyling: { value: 1, type: 'f32' },
       uLiquidSilhouetteCohesion: { value: 1, type: 'f32' },
       // FieldRenderer turns this on only for backends that expose temperature;
       // byte zero must therefore never make legacy backends look frozen.
@@ -2584,6 +2676,7 @@ export class PixiFieldPresenter {
     roleMaterialStylingEnabled = true,
     cellularMaterialStylingEnabled = true,
     sensorMaterialStylingEnabled = true,
+    unusualPowderStylingEnabled = true,
   ): void {
     const uniforms = this.uniforms.uniforms;
     uniforms.uGasFieldLighting = gasFieldLightingEnabled ? 1 : 0;
@@ -2605,6 +2698,7 @@ export class PixiFieldPresenter {
     uniforms.uRoleMaterialStyling = roleMaterialStylingEnabled ? 1 : 0;
     uniforms.uCellularMaterialStyling = cellularMaterialStylingEnabled ? 1 : 0;
     uniforms.uSensorMaterialStyling = sensorMaterialStylingEnabled ? 1 : 0;
+    uniforms.uUnusualPowderStyling = unusualPowderStylingEnabled ? 1 : 0;
     uniforms.uPowderBodyDepth = powderBodyDepthEnabled ? 1 : 0;
     uniforms.uThermalMaterialStyling = thermalMaterialStylingEnabled ? 1 : 0;
     uniforms.uEnergyCoreRelief = energyCoreReliefEnabled ? 1 : 0;
@@ -2698,6 +2792,11 @@ export class PixiFieldPresenter {
 
   setSensorMaterialStylingEnabled(enabled: boolean): void {
     this.uniforms.uniforms.uSensorMaterialStyling = enabled ? 1 : 0;
+    this.renderApplication();
+  }
+
+  setUnusualPowderStylingEnabled(enabled: boolean): void {
+    this.uniforms.uniforms.uUnusualPowderStyling = enabled ? 1 : 0;
     this.renderApplication();
   }
 

@@ -25,6 +25,7 @@ interface PresenterHarness {
   setRoleMaterialStylingEnabled: PixiFieldPresenter['setRoleMaterialStylingEnabled'];
   setCellularMaterialStylingEnabled: PixiFieldPresenter['setCellularMaterialStylingEnabled'];
   setSensorMaterialStylingEnabled: PixiFieldPresenter['setSensorMaterialStylingEnabled'];
+  setUnusualPowderStylingEnabled: PixiFieldPresenter['setUnusualPowderStylingEnabled'];
   setLiquidSilhouetteCohesionEnabled: PixiFieldPresenter['setLiquidSilhouetteCohesionEnabled'];
   setRenderStallHandler: PixiFieldPresenter['setRenderStallHandler'];
   forceEightXRenderStallForAudit: PixiFieldPresenter['forceEightXRenderStallForAudit'];
@@ -96,6 +97,7 @@ describe('Pixi presenter startup configuration', () => {
       uRoleMaterialStyling: 1,
       uCellularMaterialStyling: 1,
       uSensorMaterialStyling: 1,
+      uUnusualPowderStyling: 1,
       uLiquidSilhouetteCohesion: 1,
       uThermalMaterialStyling: 1,
       uEnergyCoreRelief: 0,
@@ -629,6 +631,51 @@ describe('Pixi presenter startup configuration', () => {
     expect(sensorBlock).not.toMatch(/texture\s*\(/);
     expect(sensorBlock).not.toMatch(/\balpha\s*[+*]?=/);
     expect(sensorBlock).not.toContain('uTime');
+  });
+
+  it('seeds, redraws, and bounds unusual powder identities to granular RGB arithmetic', () => {
+    const presenter = presenterHarness();
+
+    presenter.configurePresentation(
+      true, true, true, true, true, true, true, true, true, 'smooth',
+      true, true, true, true, true, true, true, true, true, true, true, true, true, false,
+    );
+    expect(presenter.uniforms.uniforms.uUnusualPowderStyling).toBe(0);
+    expect(presenter.app.render).not.toHaveBeenCalled();
+
+    presenter.setUnusualPowderStylingEnabled(true);
+    expect(presenter.uniforms.uniforms.uUnusualPowderStyling).toBe(1);
+    expect(presenter.app.render).toHaveBeenCalledOnce();
+
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const start = source.indexOf('// Ten unusual native powders share the existing deterministic grain');
+    const end = source.indexOf('// SEED and YEST retain granular topology', start);
+    const unusualBlock = source.slice(start, end);
+    expect(start).toBeGreaterThan(0);
+    expect(end).toBeGreaterThan(start);
+    expect(source).toContain('uniform float uUnusualPowderStyling;');
+    expect(unusualBlock).toContain('uUnusualPowderStyling > 0.5 && unusualPowder > 0.5');
+    expect(unusualBlock).toContain('family == 4.0 && traits < 0.5 && !materialEmissive');
+    expect(unusualBlock).toContain('surfaceOnly < 0.5 && halo < 0.5 && wall < 0.5');
+    expect(unusualBlock).toContain('wallOnly < 0.5 && emissionOnly < 0.5');
+    for (const material of [43, 44, 45, 46, 47, 48, 49, 51, 198, 217]) {
+      expect(unusualBlock).toContain(`material == ${material}.0`);
+    }
+    expect(unusualBlock).toContain('// ANAR: pale feather shafts with restrained barbs.');
+    expect(unusualBlock).toContain('// BGLA: cool angular glass splinters.');
+    expect(unusualBlock).toContain('// BREC: dark PCB fragments crossed by copper traces and pads.');
+    expect(unusualBlock).toContain('// BRMT: oxidized plates with dark seams and muted patina.');
+    expect(unusualBlock).toContain('// FRZZ: compact frost stars cut into the loose crystal field.');
+    expect(unusualBlock).toContain('// GRAV: bands align to the already sampled particle velocity.');
+    expect(unusualBlock).toContain('// SAWD: warm fibres run in staggered longitudinal bundles.');
+    expect(unusualBlock).toContain('// SLCN: crossed cleavage planes catch a cold edge light.');
+    expect(unusualBlock).toContain('// DYST: dead-colony clumps retain sparse ochre islands.');
+    expect(unusualBlock).toContain('// BCOL: fractured carbon with sparse warm mineral inclusions.');
+    expect(unusualBlock).toContain('normalize(velocity)');
+    expect(unusualBlock).not.toMatch(/texture\s*\(/);
+    expect(unusualBlock).not.toMatch(/\balpha\s*[+*]?=/);
+    expect(unusualBlock).not.toContain('uTime');
+    expect(unusualBlock).not.toContain('sin(');
   });
 
   it('keeps contour and thick-body solid field light bounded behind strict eligibility', () => {

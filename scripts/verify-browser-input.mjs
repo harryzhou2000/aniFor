@@ -40,7 +40,9 @@ const solidFieldOnly = process.argv.includes('--solid-field-only');
 const roleGraphicsOnly = process.argv.includes('--role-graphics-only');
 const cellularGraphicsOnly = process.argv.includes('--cellular-graphics-only');
 const sensorGraphicsOnly = process.argv.includes('--sensor-graphics-only');
-const usesProductionBundle = cellularGraphicsOnly || sensorGraphicsOnly || scaleEightOnly;
+const unusualPowderGraphicsOnly = process.argv.includes('--unusual-powder-graphics-only');
+const usesProductionBundle = cellularGraphicsOnly || sensorGraphicsOnly
+  || unusualPowderGraphicsOnly || scaleEightOnly;
 const AUDIT_BASE_URL = usesProductionBundle ? PRODUCTION_BUNDLE_URL : ORIGIN + '/';
 const screenshotRequest = process.argv.find((argument) => argument.startsWith('--screenshot='))?.slice('--screenshot='.length);
 const SOLID_FIELD_REGIONS = [
@@ -100,7 +102,8 @@ async function main() {
     const reducedAudit = quickScreenshot || layoutOnly || mobileOnly
       || desktopInputOnly || visualScaleMatrixOnly || powderBodyOnly || liquidDepthOnly
       || solidDepthOnly || gasChromaOnly || surfaceContourOnly || solidFieldOnly
-      || roleGraphicsOnly || cellularGraphicsOnly || sensorGraphicsOnly;
+      || roleGraphicsOnly || cellularGraphicsOnly || sensorGraphicsOnly
+      || unusualPowderGraphicsOnly;
     if (powderBodyOnly) assertPairedPowderBodyDepth(results);
     if (liquidDepthOnly) assertPairedLiquidOpticalDepth(results);
     if (solidDepthOnly) assertPairedSolidOpticalDepth(results);
@@ -110,6 +113,7 @@ async function main() {
     if (roleGraphicsOnly) assertPairedRoleGraphics(results);
     if (cellularGraphicsOnly) assertPairedCellularGraphics(results);
     if (sensorGraphicsOnly) assertPairedSensorGraphics(results);
+    if (unusualPowderGraphicsOnly) assertPairedUnusualPowderGraphics(results);
     if (!scaleEightOnly && !materialAtlasOnly && !reducedAudit) assertPairedVisualRelief(results);
     if (!scaleEightOnly && !reducedAudit) assertPairedMaterialAtlas(results);
     compactMaterialAtlasResults(results);
@@ -126,7 +130,7 @@ async function auditMode(mode) {
   const chromePath = await resolveChrome();
   const profile = await mkdtemp(path.join(tmpdir(), `anifor-input-${mode}-`));
   const dpr = mode === 'canvas2d' ? 2 : 1;
-  const startsBlank = cellularGraphicsOnly || sensorGraphicsOnly;
+  const startsBlank = cellularGraphicsOnly || sensorGraphicsOnly || unusualPowderGraphicsOnly;
   const query = new URLSearchParams({
     scene: 'render-lab', inputAudit: '1', renderScale: '2',
     auditStage: startsBlank ? 'blank' : 'canonical',
@@ -251,6 +255,12 @@ async function auditMode(mode) {
       assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
       cdp.close();
       return { backend: mode, sensorGraphics, browserErrors: errors.length };
+    }
+    if (unusualPowderGraphicsOnly) {
+      const unusualPowderGraphics = await auditUnusualPowderGraphics(cdp, mode);
+      assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
+      cdp.close();
+      return { backend: mode, unusualPowderGraphics, browserErrors: errors.length };
     }
     if (mobileOnly) {
       const mobile = await auditMobile(
@@ -3148,6 +3158,400 @@ function normalizeSensorGraphicsAtlas(snapshot) {
   };
 }
 
+/** Focused topology and RGB-identity proof for ten unusual native powders. */
+async function auditUnusualPowderGraphics(cdp, mode) {
+  const started = performance.now();
+  const stage = (name) => console.error(
+    `[unusual-powder-graphics:${mode}] ${name} ${Math.round(performance.now() - started)}ms`,
+  );
+  const blank = await waitForStablePageCapture(cdp, `${mode} initial blank unusual-powder framebuffer`);
+  await evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    if (typeof audit.prepareUnusualPowderGraphicsFixture !== 'function'
+      || typeof audit.unusualPowderGraphicsAtlas !== 'function'
+      || typeof audit.setUnusualPowderStyling !== 'function'
+      || typeof audit.setPowderRenderStyle !== 'function') {
+      throw new Error('Unusual powder graphics audit API unavailable');
+    }
+    audit.prepareUnusualPowderGraphicsFixture();
+    audit.setPowderRenderStyle('smooth');
+    return true;
+  })()`);
+  const rawAtlas = await waitFor(() => evaluate(cdp, `(() => {
+    const atlas = window.__ANIFOR_INPUT_AUDIT__.unusualPowderGraphicsAtlas();
+    const cards = Array.isArray(atlas) ? atlas : atlas?.cards;
+    return cards?.length === 10 ? atlas : false;
+  })()`), 15_000, `${mode} unusual powder graphics fixture`);
+  const atlas = normalizeUnusualPowderGraphicsAtlas(rawAtlas);
+  const expectedMaterials = [43, 44, 45, 46, 47, 48, 49, 51, 198, 217];
+  assert(atlas.cards.length === 10
+      && atlas.cards.every(({ material }, index) => material === expectedMaterials[index]),
+  `${mode}: unusual powder atlas identity changed (${JSON.stringify(atlas.cards)})`);
+
+  const semanticState = await evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    const snapshot = audit.unusualPowderGraphicsAtlas();
+    const cards = Array.isArray(snapshot) ? snapshot : snapshot.cards;
+    const key = ({ x, y }) => x + ',' + y;
+    const exactRect = (rect, material) => {
+      for (let y = rect.y; y < rect.y + rect.height; y++) {
+        for (let x = rect.x; x < rect.x + rect.width; x++) {
+          if (audit.cell(x, y) !== material) return false;
+        }
+      }
+      return true;
+    };
+    return cards.map((entry) => {
+      const empty = new Set([
+        ...Array.from({ length: entry.hole.height }, (_, dy) =>
+          Array.from({ length: entry.hole.width }, (_, dx) => key({ x: entry.hole.x + dx, y: entry.hole.y + dy }))),
+        entry.openNotch.map(key),
+      ].flat());
+      let bodyExact = true;
+      for (let y = entry.body.y; y < entry.body.y + entry.body.height; y++) {
+        for (let x = entry.body.x; x < entry.body.x + entry.body.width; x++) {
+          const expected = empty.has(x + ',' + y) ? 0 : entry.material;
+          bodyExact = bodyExact && audit.cell(x, y) === expected;
+        }
+      }
+      return {
+        material: entry.material,
+        code: entry.code,
+        bodyExact,
+        thinColumnExact: exactRect(entry.thinColumn, entry.material),
+        isolated: audit.cell(entry.isolated.x, entry.isolated.y),
+        guardedBlankEmpty: exactRect(entry.guardedBlank, 0),
+        contactOwnerExact: exactRect(entry.contact.owner, entry.material),
+        contactUnlikeExact: exactRect(entry.contact.unlike, entry.contact.unlikeMaterial),
+        unlikeMaterial: entry.contact.unlikeMaterial,
+      };
+    });
+  })()`);
+  assert(semanticState.every((entry) => entry.bodyExact && entry.thinColumnExact
+      && entry.isolated === entry.material && entry.guardedBlankEmpty
+      && entry.contactOwnerExact && entry.contactUnlikeExact && entry.unlikeMaterial === 1),
+  `${mode}: unusual powder fixture lost body/hole/notch/column/isolated/blank/contact semantics (${JSON.stringify(semanticState)})`);
+  stage('fixture-ready');
+
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setUnusualPowderStyling(false); true');
+  const flat = await waitForStablePageCapture(cdp, `${mode} flat smooth unusual-powder framebuffer`);
+  const flatBacking = await sampleUnusualPowderBackingTopology(cdp);
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setUnusualPowderStyling(true); true');
+  const styled = await waitForStablePageCapture(cdp, `${mode} styled smooth unusual-powder framebuffer`);
+  const styledBacking = await sampleUnusualPowderBackingTopology(cdp);
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setUnusualPowderStyling(false); true');
+  const repeated = await waitForStablePageCapture(cdp, `${mode} repeated flat smooth unusual-powder framebuffer`);
+  const repeatedBacking = await sampleUnusualPowderBackingTopology(cdp);
+  for (const [state, backing] of [
+    ['flat', flatBacking], ['styled', styledBacking], ['repeated-flat', repeatedBacking],
+  ]) assertUnusualPowderBackingTopology(backing, `${mode} ${state} Smooth`, false);
+
+  const backingResponses = summarizeUnusualPowderBackingResponses(
+    flatBacking, styledBacking, repeatedBacking,
+  );
+  assert(backingResponses.every(({ rgbRms, rgbPeak, repeatRgbPeak }) => (
+    rgbRms >= 0.05 && rgbRms <= 32 && rgbPeak > 0 && rgbPeak <= 64 && repeatRgbPeak === 0
+  )), `${mode}: unusual powder response is absent, unbounded, or non-repeatable (${JSON.stringify(backingResponses)})`);
+  assert(new Set(backingResponses.map(({ responseSignature }) => responseSignature)).size === 10,
+    `${mode}: unusual powders do not have ten distinct response signatures (${JSON.stringify(backingResponses)})`);
+
+  const bodyRegions = atlas.cards.map((entry) => ({
+    name: `unusual-powder-${entry.code}`,
+    x: entry.body.x + entry.body.width / 2,
+    y: entry.body.y + entry.body.height / 2,
+    radiusX: entry.body.width / 2,
+    radiusY: entry.body.height / 2,
+    signature: true,
+    silhouette: true,
+    fastSupport: true,
+  }));
+  const atlasBounds = containingCellularRegion(atlas.cards.map(({ card }) => card));
+  const responses = await sampleBackdropRefractionRegions(cdp, {
+    straight: flat.capture.data,
+    refracted: styled.capture.data,
+    repeatedStraight: repeated.capture.data,
+  }, [...bodyRegions, { name: 'unusual-powder-atlas', ...atlasBounds }], flat.canvasRect);
+  const atlasResponse = responses.at(-1);
+  assert(atlasResponse.repeatRgbPeak === 0,
+    `${mode}: unusual powder flat→styled→flat framebuffer was not exact (${JSON.stringify(atlasResponse)})`);
+  assert(responses.slice(0, 10).every((sample) => sample.rgbRms > 0 && sample.rgbPeak <= 64),
+    `${mode}: at least one unusual powder has no bounded composed response (${JSON.stringify(responses)})`);
+  const [flatSupport, styledSupport] = await Promise.all([
+    samplePageRegions(
+      cdp, flat.capture.data, bodyRegions,
+      blank.capture.data, blank.reference.data, flat.canvasRect,
+    ),
+    samplePageRegions(
+      cdp, styled.capture.data, bodyRegions,
+      blank.capture.data, blank.reference.data, flat.canvasRect,
+    ),
+  ]);
+  assert(flatSupport.every((sample) => sample.visible > 0 && sample.worldArea > 0)
+      && styledSupport.every((sample) => sample.visible > 0 && sample.worldArea > 0),
+  `${mode}: at least one unusual powder body is not visible (${JSON.stringify({ flatSupport, styledSupport })})`);
+  stage('smooth-response-ready');
+
+  await evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    audit.setUnusualPowderStyling(true);
+    audit.setPowderRenderStyle('grains');
+    return true;
+  })()`);
+  await waitForStablePageCapture(cdp, `${mode} Grains unusual-powder framebuffer`);
+  const grainsBacking = await sampleUnusualPowderBackingTopology(cdp);
+  assertUnusualPowderBackingTopology(grainsBacking, `${mode} Grains`, true);
+  await evaluate(cdp, "window.__ANIFOR_INPUT_AUDIT__.setPowderRenderStyle('local'); true");
+  await waitForStablePageCapture(cdp, `${mode} Local unusual-powder framebuffer`);
+  const localBacking = await sampleUnusualPowderBackingTopology(cdp);
+  assertUnusualPowderBackingTopology(localBacking, `${mode} Local`, false);
+  stage('style-controls-ready');
+
+  const cardSignatures = atlas.cards.map((entry, index) => ({
+    index: entry.index,
+    material: entry.material,
+    code: entry.code,
+    flatSignature: flatSupport[index].signature,
+    styledSignature: styledSupport[index].signature,
+    flatVisible: flatSupport[index].visible,
+    styledVisible: styledSupport[index].visible,
+    rgbRms: responses[index].rgbRms,
+    rgbPeak: responses[index].rgbPeak,
+    responseSignature: responses[index].responseSignature,
+    backingRgbRms: backingResponses[index].rgbRms,
+    backingRgbPeak: backingResponses[index].rgbPeak,
+    backingChangedCellRatio: backingResponses[index].changedCellRatio,
+    backingRepeatRgbPeak: backingResponses[index].repeatRgbPeak,
+    backingResponseSignature: backingResponses[index].responseSignature,
+    backingResponseProfile: backingResponses[index].responseProfile,
+  }));
+  return {
+    cards: cardSignatures.length,
+    holeCells: atlas.holes.length,
+    openNotchCells: atlas.openNotches.length,
+    thinColumnCells: atlas.thinColumns.length,
+    isolatedControls: atlas.isolated.length,
+    unlikeSandContacts: atlas.contacts.length,
+    exactRepeatedOff: atlasResponse.repeatRgbPeak === 0,
+    grainsBackingScale: `${grainsBacking.scaleX}x${grainsBacking.scaleY}`,
+    grainsExactSquareCells: grainsBacking.cards.reduce(
+      (total, card) => total + card.allOccupiedFullySupported, 0,
+    ),
+    localFineControls: localBacking.cards.reduce(
+      (total, card) => total + card.thinColumnSupported + Number(card.isolatedAlphaPeak > 0), 0,
+    ),
+    cardSignatures,
+  };
+}
+
+async function sampleUnusualPowderBackingTopology(cdp) {
+  return evaluate(cdp, `(() => {
+    const world = document.querySelector('.world-canvas');
+    if (!(world instanceof HTMLCanvasElement)) throw new Error('World canvas unavailable');
+    const copy = document.createElement('canvas');
+    copy.width = world.width;
+    copy.height = world.height;
+    const context = copy.getContext('2d', { willReadFrequently: true });
+    if (!context) throw new Error('Unusual powder backing sampler unavailable');
+    context.drawImage(world, 0, 0);
+    const pixels = context.getImageData(0, 0, copy.width, copy.height).data;
+    const scaleX = copy.width / ${WORLD_WIDTH};
+    const scaleY = copy.height / ${WORLD_HEIGHT};
+    const cellAlpha = ({ x, y }) => {
+      const left = Math.floor(x * scaleX);
+      const top = Math.floor(y * scaleY);
+      const right = Math.max(left + 1, Math.floor((x + 1) * scaleX));
+      const bottom = Math.max(top + 1, Math.floor((y + 1) * scaleY));
+      let minimum = 255;
+      let peak = 0;
+      let supported = 0;
+      let pixelsInCell = 0;
+      for (let py = top; py < bottom; py++) for (let px = left; px < right; px++) {
+        const alpha = pixels[(py * copy.width + px) * 4 + 3];
+        minimum = Math.min(minimum, alpha);
+        peak = Math.max(peak, alpha);
+        supported += Number(alpha === 255);
+        pixelsInCell++;
+      }
+      return { minimum, peak, supported, pixels: pixelsInCell };
+    };
+    const rectPoints = (rect) => {
+      const points = [];
+      for (let y = rect.y; y < rect.y + rect.height; y++) {
+        for (let x = rect.x; x < rect.x + rect.width; x++) points.push({ x, y });
+      }
+      return points;
+    };
+    const sampleBody = (body) => {
+      const rgb = [];
+      for (let y = body.y; y < body.y + body.height; y++) {
+        for (let x = body.x; x < body.x + body.width; x++) {
+          const px = Math.min(copy.width - 1, Math.floor((x + 0.5) * scaleX));
+          const py = Math.min(copy.height - 1, Math.floor((y + 0.5) * scaleY));
+          const offset = (py * copy.width + px) * 4;
+          rgb.push(pixels[offset], pixels[offset + 1], pixels[offset + 2]);
+        }
+      }
+      return { width: body.width, height: body.height, rgb };
+    };
+    const snapshot = window.__ANIFOR_INPUT_AUDIT__.unusualPowderGraphicsAtlas();
+    const cards = Array.isArray(snapshot) ? snapshot : snapshot.cards;
+    return {
+      width: copy.width,
+      height: copy.height,
+      scaleX,
+      scaleY,
+      cards: cards.map((entry) => {
+        const key = ({ x, y }) => x + ',' + y;
+        const holePoints = rectPoints(entry.hole);
+        const emptyKeys = new Set([...holePoints, ...entry.openNotch].map(key));
+        const bodyPoints = rectPoints(entry.body).filter((point) => !emptyKeys.has(key(point)));
+        const thinPoints = rectPoints(entry.thinColumn);
+        const guardPoints = rectPoints(entry.guardedBlank);
+        const ownerContact = rectPoints(entry.contact.owner);
+        const unlikeContact = rectPoints(entry.contact.unlike);
+        const occupied = [...bodyPoints, ...thinPoints, entry.isolated, ...ownerContact, ...unlikeContact];
+        return {
+          index: entry.index,
+          material: entry.material,
+          code: entry.code,
+          bodyExpected: bodyPoints.length,
+          bodySupported: bodyPoints.filter((point) => cellAlpha(point).peak > 0).length,
+          holesExpected: holePoints.length,
+          holesTransparent: holePoints.filter((point) => cellAlpha(point).peak === 0).length,
+          openNotchesExpected: entry.openNotch.length,
+          openNotchesTransparent: entry.openNotch.filter((point) => cellAlpha(point).peak === 0).length,
+          openNotchesOpen: entry.openNotch.filter((point) => cellAlpha(point).minimum === 0).length,
+          thinColumnExpected: thinPoints.length,
+          thinColumnSupported: thinPoints.filter((point) => cellAlpha(point).peak > 0).length,
+          isolatedAlphaPeak: cellAlpha(entry.isolated).peak,
+          guardedBlankExpected: guardPoints.length,
+          guardedBlankTransparent: guardPoints.filter((point) => cellAlpha(point).peak === 0).length,
+          contactOwnerExpected: ownerContact.length,
+          contactOwnerSupported: ownerContact.filter((point) => cellAlpha(point).peak > 0).length,
+          contactUnlikeExpected: unlikeContact.length,
+          contactUnlikeSupported: unlikeContact.filter((point) => cellAlpha(point).peak > 0).length,
+          allOccupiedExpected: occupied.length,
+          allOccupiedFullySupported: occupied.filter((point) => {
+            const alpha = cellAlpha(point);
+            return alpha.minimum === 255 && alpha.supported === alpha.pixels
+              && alpha.pixels === scaleX * scaleY;
+          }).length,
+          ...sampleBody(entry.body),
+        };
+      }),
+    };
+  })()`);
+}
+
+function assertUnusualPowderBackingTopology(backing, label, exactSquares) {
+  assert(Number.isInteger(backing.scaleX) && Number.isInteger(backing.scaleY)
+      && backing.scaleX > 0 && backing.scaleY > 0,
+  `${label}: backing does not preserve integral world scaling (${JSON.stringify(backing)})`);
+  if (exactSquares) assert(backing.scaleX === backing.scaleY,
+    `${label}: Grains backing cells are not square (${backing.scaleX}x${backing.scaleY})`);
+  assert(backing.cards.length === 10 && backing.cards.every((card) => (
+    card.bodySupported === card.bodyExpected
+    && card.holesTransparent === card.holesExpected
+    // Smooth/Local deliberately antialias a curved pile boundary into its
+    // neighbouring cell. Each authored notch cell must still retain genuine
+    // transparent backing samples; Grains remains the exact square reference.
+    && (exactSquares
+      ? card.openNotchesTransparent === card.openNotchesExpected
+      : card.openNotchesOpen === card.openNotchesExpected)
+    && card.thinColumnSupported === card.thinColumnExpected
+    && card.isolatedAlphaPeak > 0
+    && card.guardedBlankTransparent === card.guardedBlankExpected
+    && card.contactOwnerSupported === card.contactOwnerExpected
+    && card.contactUnlikeSupported === card.contactUnlikeExpected
+    && (!exactSquares || card.allOccupiedFullySupported === card.allOccupiedExpected)
+  )), `${label}: backing changed body/hole/notch/column/isolated/blank/contact topology (${JSON.stringify(backing.cards)})`);
+}
+
+function summarizeUnusualPowderBackingResponses(flat, styled, repeated) {
+  assert(flat.cards.length === 10 && styled.cards.length === 10 && repeated.cards.length === 10,
+    'Unusual powder backing response atlas is incomplete');
+  return flat.cards.map((base, cardIndex) => {
+    const changed = styled.cards[cardIndex];
+    const returned = repeated.cards[cardIndex];
+    assert(changed.material === base.material && returned.material === base.material
+        && changed.width === base.width && returned.width === base.width
+        && changed.height === base.height && returned.height === base.height
+        && changed.rgb.length === base.rgb.length && returned.rgb.length === base.rgb.length,
+    `Unusual powder backing response geometry changed for ${base.code}`);
+    let squared = 0;
+    let rgbPeak = 0;
+    let repeatRgbPeak = 0;
+    let changedCells = 0;
+    let responseSignature = 2166136261;
+    const buckets = new Float64Array(16);
+    for (let offset = 0; offset < base.rgb.length; offset += 3) {
+      const cell = offset / 3;
+      const x = cell % base.width;
+      const y = Math.floor(cell / base.width);
+      const bucket = Math.min(3, Math.floor(y * 4 / base.height)) * 4
+        + Math.min(3, Math.floor(x * 4 / base.width));
+      let cellChanged = false;
+      for (let channel = 0; channel < 3; channel++) {
+        const delta = changed.rgb[offset + channel] - base.rgb[offset + channel];
+        const repeat = returned.rgb[offset + channel] - base.rgb[offset + channel];
+        squared += delta * delta;
+        rgbPeak = Math.max(rgbPeak, Math.abs(delta));
+        repeatRgbPeak = Math.max(repeatRgbPeak, Math.abs(repeat));
+        buckets[bucket] += Math.abs(delta);
+        cellChanged ||= delta !== 0;
+        responseSignature = Math.imul(responseSignature ^ (delta + 255), 16777619) >>> 0;
+      }
+      changedCells += Number(cellChanged);
+    }
+    const total = Math.max(1, buckets.reduce((sum, value) => sum + value, 0));
+    return {
+      material: base.material,
+      code: base.code,
+      rgbRms: round(Math.sqrt(squared / Math.max(1, base.rgb.length)), 4),
+      rgbPeak,
+      changedCellRatio: round(changedCells / Math.max(1, base.width * base.height), 5),
+      repeatRgbPeak,
+      responseSignature,
+      responseProfile: Array.from(buckets, (value) => round(value / total, 5)),
+    };
+  });
+}
+
+function normalizeUnusualPowderGraphicsAtlas(snapshot) {
+  const cards = (Array.isArray(snapshot) ? snapshot : snapshot?.cards ?? []).map((entry) => ({
+    ...entry,
+    card: cellularRect(entry.card ?? entry),
+    body: cellularRect(entry.body),
+    hole: cellularRect(entry.hole),
+    openNotch: cellularPoints(entry.openNotch),
+    thinColumn: cellularRect(entry.thinColumn),
+    isolated: cellularPoint(entry.isolated),
+    guardedBlank: cellularRect(entry.guardedBlank),
+    contact: {
+      ...entry.contact,
+      owner: cellularRect(entry.contact.owner),
+      unlike: cellularRect(entry.contact.unlike),
+    },
+  }));
+  return {
+    cards,
+    holes: Array.isArray(snapshot)
+      ? cards.flatMap(({ hole }) => cellularRectPoints(hole)) : cellularPoints(snapshot?.holes),
+    openNotches: Array.isArray(snapshot)
+      ? cards.flatMap(({ openNotch }) => openNotch) : cellularPoints(snapshot?.openNotches),
+    thinColumns: Array.isArray(snapshot)
+      ? cards.flatMap(({ thinColumn }) => cellularRectPoints(thinColumn))
+      : cellularPoints(snapshot?.thinColumns),
+    isolated: cellularPoints(
+      Array.isArray(snapshot) ? cards.map(({ isolated }) => isolated) : snapshot?.isolated,
+    ),
+    guardedBlanks: Array.isArray(snapshot)
+      ? cards.map(({ guardedBlank }) => guardedBlank)
+      : (snapshot?.guardedBlanks ?? []).map(cellularRect),
+    contacts: Array.isArray(snapshot) ? cards.map(({ contact }) => contact) : snapshot?.contacts ?? [],
+  };
+}
+
 async function sampleCellularBackingTopology(cdp) {
   return evaluate(cdp, `(() => {
     const world = document.querySelector('.world-canvas');
@@ -4528,6 +4932,37 @@ function assertPairedSensorGraphics(results) {
     ));
     assert(profileDistance <= 0.12,
       `Canvas/WebGL sensor ${canvasEntry.code} spatial response diverged (${profileDistance})`);
+  }
+}
+
+function assertPairedUnusualPowderGraphics(results) {
+  const canvas = results.find((result) => result.backend === 'canvas2d')?.unusualPowderGraphics;
+  const webgl = results.find((result) => result.backend === 'webgl')?.unusualPowderGraphics;
+  if (!canvas || !webgl) return;
+  assert(canvas.cards === 10 && webgl.cards === 10,
+    `paired unusual powder atlas is incomplete (${canvas.cards}/${webgl.cards})`);
+  for (const result of [canvas, webgl]) {
+    assert(new Set(result.cardSignatures.map(
+      ({ backingResponseSignature }) => backingResponseSignature,
+    )).size === 10,
+    `unusual powder responses are not distinct in all ten cards (${JSON.stringify(result.cardSignatures)})`);
+    assert(result.cardSignatures.every(({ backingRepeatRgbPeak }) => backingRepeatRgbPeak === 0),
+      `unusual powder backing off→on→off sequence was not exact (${JSON.stringify(result.cardSignatures)})`);
+  }
+  const webglByMaterial = new Map(webgl.cardSignatures.map((entry) => [entry.material, entry]));
+  for (const canvasEntry of canvas.cardSignatures) {
+    const webglEntry = webglByMaterial.get(canvasEntry.material);
+    assert(webglEntry && webglEntry.code === canvasEntry.code,
+      `paired unusual powder projection missing ${canvasEntry.code}/${canvasEntry.material}`);
+    const responseRatio = canvasEntry.backingRgbRms
+      / Math.max(0.01, webglEntry.backingRgbRms);
+    assert(responseRatio >= 0.20 && responseRatio <= 5.0,
+      `Canvas/WebGL unusual powder ${canvasEntry.code} response diverged (${canvasEntry.backingRgbRms}/${webglEntry.backingRgbRms})`);
+    const profileDistance = Math.max(...canvasEntry.backingResponseProfile.map(
+      (value, index) => Math.abs(value - webglEntry.backingResponseProfile[index]),
+    ));
+    assert(profileDistance <= 0.12,
+      `Canvas/WebGL unusual powder ${canvasEntry.code} spatial response diverged (${profileDistance})`);
   }
 }
 

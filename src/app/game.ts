@@ -29,6 +29,9 @@ import {
 import {
   SENSOR_GRAPHICS_AUDIT, prepareSensorGraphicsAuditFixture,
 } from './sensor-graphics-audit';
+import {
+  UNUSUAL_POWDER_GRAPHICS_AUDIT, prepareUnusualPowderGraphicsAuditFixture,
+} from './unusual-powder-graphics-audit';
 
 const AUTOSAVE_KEY = 'stillroom-world-v1';
 
@@ -275,6 +278,9 @@ export class Game {
       setSensorMaterialStyling: (enabled) => {
         this.renderer.setSensorMaterialStylingEnabled(enabled);
       },
+      setUnusualPowderStyling: (enabled) => {
+        this.renderer.setUnusualPowderStylingEnabled(enabled);
+      },
       setPhaseContactLighting: (enabled) => {
         this.renderer.setPhaseContactLightingEnabled(enabled);
       },
@@ -286,6 +292,9 @@ export class Game {
       },
       setPowderBodyDepth: (enabled) => {
         this.renderer.setPowderBodyDepthEnabled(enabled);
+      },
+      setPowderRenderStyle: (style) => {
+        this.renderer.setPowderRenderStyle(style);
       },
       clear: () => { this.simulation.clear(); },
       setRadius: (radius) => { this.radius = Math.max(0, Math.min(64, Math.round(radius))); },
@@ -322,6 +331,10 @@ export class Game {
       sensorGraphicsAtlas: () => SENSOR_GRAPHICS_AUDIT,
       prepareSensorGraphicsFixture: () => {
         prepareSensorGraphicsAuditFixture(this.simulation);
+      },
+      unusualPowderGraphicsAtlas: () => UNUSUAL_POWDER_GRAPHICS_AUDIT,
+      prepareUnusualPowderGraphicsFixture: () => {
+        prepareUnusualPowderGraphicsAuditFixture(this.simulation);
       },
       canvasPresentationTiming: () => this.renderer.getCanvasPresentationTiming(),
       requestWebGLPresentationTimingSample: () => this.renderer.requestWebGLPresentationTimingSample(),

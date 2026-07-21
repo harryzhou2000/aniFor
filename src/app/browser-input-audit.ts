@@ -1,11 +1,13 @@
 import type { CanvasPresentationTiming, RendererBackendInfo } from '../renderer/field-renderer';
 import type { WebGLPresentationTiming } from '../renderer/pixi-field-presenter';
+import type { PowderRenderStyle } from '../renderer/powder-render-style';
 import { Material } from '../shared/materials';
 import type { SimulationBackend } from '../simulation';
 import type { Point, ViewState } from '../renderer/view-transform';
 import type { MaterialAtlasEntry } from './material-atlas-audit';
 import type { CellularGraphicsAuditSnapshot } from './cellular-graphics-audit';
 import type { SensorGraphicsAuditSnapshot } from './sensor-graphics-audit';
+import type { UnusualPowderGraphicsAuditSnapshot } from './unusual-powder-graphics-audit';
 
 export interface BrowserInputAuditApi {
   readonly version: 1;
@@ -35,10 +37,12 @@ export interface BrowserInputAuditApi {
   setRoleMaterialStyling(enabled: boolean): void;
   setCellularMaterialStyling(enabled: boolean): void;
   setSensorMaterialStyling(enabled: boolean): void;
+  setUnusualPowderStyling(enabled: boolean): void;
   setPhaseContactLighting(enabled: boolean): void;
   setThermalMaterialStyling(enabled: boolean): void;
   setEnergyCoreRelief(enabled: boolean): void;
   setPowderBodyDepth(enabled: boolean): void;
+  setPowderRenderStyle(style: PowderRenderStyle): void;
   clear(): void;
   setRadius(radius: number): void;
   setMaterial(material: Material): void;
@@ -58,6 +62,8 @@ export interface BrowserInputAuditApi {
   prepareCellularGraphicsFixture(): void;
   sensorGraphicsAtlas(): SensorGraphicsAuditSnapshot;
   prepareSensorGraphicsFixture(): void;
+  unusualPowderGraphicsAtlas(): UnusualPowderGraphicsAuditSnapshot;
+  prepareUnusualPowderGraphicsFixture(): void;
   canvasPresentationTiming(): CanvasPresentationTiming | undefined;
   requestWebGLPresentationTimingSample(): boolean;
   webGLPresentationTiming(): WebGLPresentationTiming | undefined;
