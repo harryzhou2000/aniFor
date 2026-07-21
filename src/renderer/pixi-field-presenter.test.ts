@@ -30,6 +30,7 @@ interface PresenterHarness {
   setUnusualPowderStylingEnabled: PixiFieldPresenter['setUnusualPowderStylingEnabled'];
   setUnusualSolidStylingEnabled: PixiFieldPresenter['setUnusualSolidStylingEnabled'];
   setEnergyIdentityStylingEnabled: PixiFieldPresenter['setEnergyIdentityStylingEnabled'];
+  setBotanicalIdentityStylingEnabled: PixiFieldPresenter['setBotanicalIdentityStylingEnabled'];
   setLiquidSilhouetteCohesionEnabled: PixiFieldPresenter['setLiquidSilhouetteCohesionEnabled'];
   setRenderStallHandler: PixiFieldPresenter['setRenderStallHandler'];
   forceEightXRenderStallForAudit: PixiFieldPresenter['forceEightXRenderStallForAudit'];
@@ -315,7 +316,7 @@ describe('Pixi presenter startup configuration', () => {
   it('uses one propagated style sample and one shared motif sample without changing gas support', () => {
     const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
     const helperStart = source.indexOf('vec3 gasIdentityVolumeDelta(');
-    const helperEnd = source.indexOf('vec3 vividColor', helperStart);
+    const helperEnd = source.indexOf('float liquidVolumeChromaResponse', helperStart);
     const blockStart = source.indexOf('    if (uGasIdentityStyling > 0.5) {');
     const blockEnd = source.indexOf('  } else if (liquidVolume > 0.5)', blockStart);
     const helper = source.slice(helperStart, helperEnd);
@@ -405,7 +406,7 @@ describe('Pixi presenter startup configuration', () => {
   it('styles exactly eleven authoritative unusual/radioactive liquids with bounded RGB arithmetic', () => {
     const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
     const helperStart = source.indexOf('vec3 liquidMaterialIdentityDelta(');
-    const helperEnd = source.indexOf('vec3 vividColor', helperStart);
+    const helperEnd = source.indexOf('vec3 botanicalIdentityDelta', helperStart);
     const helper = source.slice(helperStart, helperEnd);
     const blockStart = source.indexOf('// Eleven unusual/radioactive liquids retain a world-anchored material signature');
     const blockEnd = source.indexOf('  } else {', blockStart);
@@ -792,7 +793,7 @@ describe('Pixi presenter startup configuration', () => {
 
     const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
     const start = source.indexOf('// Ten unusual native powders share the existing deterministic grain');
-    const end = source.indexOf('// SEED and YEST retain granular topology', start);
+    const end = source.indexOf('      color *= 1.0 + powderMacroRelief;', start);
     const unusualBlock = source.slice(start, end);
     expect(start).toBeGreaterThan(0);
     expect(end).toBeGreaterThan(start);
@@ -819,6 +820,35 @@ describe('Pixi presenter startup configuration', () => {
     expect(unusualBlock).not.toMatch(/\balpha\s*[+*]?=/);
     expect(unusualBlock).not.toContain('uTime');
     expect(unusualBlock).not.toContain('sin(');
+  });
+
+  it('seeds, redraws, and aligns exact botanical identity with bounded RGB arithmetic', () => {
+    const presenter = presenterHarness();
+    presenter.setBotanicalIdentityStylingEnabled(false);
+    expect(presenter.uniforms.uniforms.uBotanicalIdentityStyling).toBe(0);
+    expect(presenter.app.render).toHaveBeenCalledOnce();
+    presenter.app.render.mockClear();
+    presenter.setBotanicalIdentityStylingEnabled(true);
+    expect(presenter.uniforms.uniforms.uBotanicalIdentityStyling).toBe(1);
+    expect(presenter.app.render).toHaveBeenCalledOnce();
+
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const start = source.indexOf('vec3 botanicalIdentityDelta(');
+    const end = source.indexOf('vec3 vividColor', start);
+    const helper = source.slice(start, end);
+    const ids = [...helper.matchAll(/material == (\d+)\.0/g)].map((match) => Number(match[1]));
+    expect(start).toBeGreaterThan(0);
+    expect(end).toBeGreaterThan(start);
+    expect(ids).toEqual([9, 10, 83, 50, 52]);
+    for (const motif of ['ring', 'axial', 'vein', 'strand', 'node', 'husk', 'embryo', 'cellRim', 'bud']) {
+      expect(helper).toContain(motif);
+    }
+    expect(helper).toContain('clamp(delta, vec3(-12.0), vec3(12.0)) / 255.0');
+    expect(helper).not.toContain('texture(');
+    expect(helper).not.toContain('uTime');
+    expect(helper).not.toMatch(/\balpha\s*[+*]?=/);
+    expect(source).toContain('botanicalIdentity > 0.5 && uBotanicalIdentityStyling > 0.5');
+    expect(source).toContain('color += botanicalIdentityDelta(material, fieldPosition);');
   });
 
   it('seeds, redraws, and bounds unusual solid identities to authoritative RGB arithmetic', () => {

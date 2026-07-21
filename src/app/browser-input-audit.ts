@@ -51,6 +51,7 @@ export interface BrowserInputAuditApi {
   setThermalMaterialStyling(enabled: boolean): void;
   setEnergyCoreRelief(enabled: boolean): void;
   setEnergyIdentityStyling(enabled: boolean): void;
+  setBotanicalIdentityStyling(enabled: boolean): void;
   setPowderBodyDepth(enabled: boolean): void;
   setPowderRenderStyle(style: PowderRenderStyle): void;
   clear(): void;

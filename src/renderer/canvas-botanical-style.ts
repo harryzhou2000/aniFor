@@ -15,24 +15,23 @@ export function applyCanvasBotanicalMorphology(
   material: number,
   x: number,
   y: number,
-  index: number,
+  _index: number,
 ): void {
   if (material === Material.Wood) {
-    const signedGrain = ((hash(index + 0x5a17) & 31) - 15) / 15;
     const ring = positiveModulo(x + Math.floor(y / 3) + material, 11) < 2 ? -7 : 2;
     const axial = positiveModulo(x + Math.floor(y / 7) + material, 9) < 2;
-    rgb[0] += ring + signedGrain * 1.8 + (axial ? 3 : 0);
-    rgb[1] += ring * 0.48 + signedGrain * 0.9 + (axial ? 1.5 : 0);
+    rgb[0] += ring + (axial ? 3 : 0);
+    rgb[1] += ring * 0.48 + (axial ? 1.5 : 0);
     rgb[2] += ring * 0.22 - (axial ? 1.5 : 0);
   } else if (material === Material.Plant) {
-    const leaf = (hash(index + 0x2c11) & 7) / 7;
-    const vein = positiveModulo(x * 2 + y + (hash(y + material * 19) & 7), 13) < 3;
+    const leaf = positiveModulo(x * 5 + y * 3 + material, 8) / 7;
+    const vein = positiveModulo(x * 2 + y + positiveModulo(y * 5 + 3, 8), 13) < 3;
     rgb[0] += leaf * 1.5 - (vein ? 3 : 0);
     rgb[1] += leaf * 3.5 + (vein ? 6 : 0);
     rgb[2] += leaf - (vein ? 2.5 : 0);
   } else if (material === Material.VINE) {
     const strand = positiveModulo(x + Math.floor(y / 4) + material, 7) < 2;
-    const node = (hash(index + 0x713) & 15) < 2;
+    const node = positiveModulo(x * 3 + y * 5 + material, 16) < 2;
     rgb[0] += strand ? -3 : 1;
     rgb[1] += strand ? 7 : -1;
     rgb[2] += strand ? -2 : 0;
@@ -42,26 +41,27 @@ export function applyCanvasBotanicalMorphology(
       rgb[2] += 1;
     }
   } else if (material === Material.SEED) {
-    const husk = (hash(index + 0x4eed) & 7) < 2;
-    rgb[0] += husk ? 5 : -2;
-    rgb[1] += husk ? 2 : -1;
-    rgb[2] += husk ? -3 : 1;
+    const localX = positiveModulo(x, 8) - 4;
+    const localY = positiveModulo(y, 8) - 4;
+    const radiusSquared = localX * localX + localY * localY;
+    const husk = radiusSquared >= 5 && radiusSquared <= 13;
+    const embryo = localX >= 0 && localX <= 2 && localY >= -1 && localY <= 1;
+    rgb[0] += (husk ? 5 : -2) + (embryo ? 2 : 0);
+    rgb[1] += (husk ? 2 : -1) + (embryo ? 5 : 0);
+    rgb[2] += (husk ? -3 : 1) + (embryo ? 1 : 0);
   } else if (material === Material.YEST) {
-    const colony = hash(index + 0x7e57) & 15;
-    const speckle = colony < 3;
-    rgb[0] += speckle ? 4 : -1;
-    rgb[1] += speckle ? 3 : -0.5;
-    rgb[2] += speckle ? 1 : -1.5;
+    const localX = positiveModulo(x, 8) - 4;
+    const localY = positiveModulo(y, 8) - 4;
+    const radiusSquared = localX * localX + localY * localY;
+    const cellRim = radiusSquared >= 5 && radiusSquared <= 13;
+    const bud = (localX - 1) * (localX - 1) + (localY + 1) * (localY + 1) <= 2;
+    rgb[0] += (cellRim ? 3 : -1) + (bud ? 3 : 0);
+    rgb[1] += (cellRim ? 2 : -0.5) + (bud ? 4 : 0);
+    rgb[2] += (cellRim ? 1 : -1.5) + (bud ? 2 : 0);
   }
 }
 
 function positiveModulo(value: number, divisor: number): number {
   const remainder = value % divisor;
   return remainder < 0 ? remainder + divisor : remainder;
-}
-
-function hash(value: number): number {
-  value = Math.imul(value ^ 0x9e3779b9, 0x85ebca6b);
-  value ^= value >>> 13;
-  return (Math.imul(value, 0xc2b2ae35) ^ (value >>> 16)) >>> 0;
 }

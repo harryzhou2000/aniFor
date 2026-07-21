@@ -45,9 +45,11 @@ const unusualSolidGraphicsOnly = process.argv.includes('--unusual-solid-graphics
 const liquidIdentityGraphicsOnly = process.argv.includes('--liquid-identity-graphics-only');
 const gasIdentityGraphicsOnly = process.argv.includes('--gas-identity-graphics-only');
 const energyRadioactiveGraphicsOnly = process.argv.includes('--energy-radioactive-graphics-only');
+const organicPlantGraphicsOnly = process.argv.includes('--organic-plant-graphics-only');
 const usesProductionBundle = cellularGraphicsOnly || sensorGraphicsOnly
   || unusualPowderGraphicsOnly || unusualSolidGraphicsOnly
   || liquidIdentityGraphicsOnly || gasIdentityGraphicsOnly || energyRadioactiveGraphicsOnly
+  || organicPlantGraphicsOnly
   || scaleEightOnly;
 const AUDIT_BASE_URL = usesProductionBundle ? PRODUCTION_BUNDLE_URL : ORIGIN + '/';
 const screenshotRequest = process.argv.find((argument) => argument.startsWith('--screenshot='))?.slice('--screenshot='.length);
@@ -110,7 +112,7 @@ async function main() {
       || solidDepthOnly || gasChromaOnly || surfaceContourOnly || solidFieldOnly
       || roleGraphicsOnly || cellularGraphicsOnly || sensorGraphicsOnly
       || unusualPowderGraphicsOnly || unusualSolidGraphicsOnly || liquidIdentityGraphicsOnly
-      || gasIdentityGraphicsOnly || energyRadioactiveGraphicsOnly;
+      || gasIdentityGraphicsOnly || energyRadioactiveGraphicsOnly || organicPlantGraphicsOnly;
     if (powderBodyOnly) assertPairedPowderBodyDepth(results);
     if (liquidDepthOnly) assertPairedLiquidOpticalDepth(results);
     if (solidDepthOnly) assertPairedSolidOpticalDepth(results);
@@ -125,6 +127,7 @@ async function main() {
     if (liquidIdentityGraphicsOnly) assertPairedLiquidIdentityGraphics(results);
     if (gasIdentityGraphicsOnly) assertPairedGasIdentityGraphics(results);
     if (energyRadioactiveGraphicsOnly) assertPairedEnergyRadioactiveGraphics(results);
+    if (organicPlantGraphicsOnly) assertPairedOrganicPlantGraphics(results);
     if (!scaleEightOnly && !materialAtlasOnly && !reducedAudit) assertPairedVisualRelief(results);
     if (!scaleEightOnly && !reducedAudit) assertPairedMaterialAtlas(results);
     compactMaterialAtlasResults(results);
@@ -143,7 +146,7 @@ async function auditMode(mode) {
   const dpr = mode === 'canvas2d' ? 2 : 1;
   const startsBlank = cellularGraphicsOnly || sensorGraphicsOnly
     || unusualPowderGraphicsOnly || unusualSolidGraphicsOnly || liquidIdentityGraphicsOnly
-    || gasIdentityGraphicsOnly || energyRadioactiveGraphicsOnly;
+    || gasIdentityGraphicsOnly || energyRadioactiveGraphicsOnly || organicPlantGraphicsOnly;
   const query = new URLSearchParams({
     scene: 'render-lab', inputAudit: '1', renderScale: '2',
     auditStage: startsBlank ? 'blank' : 'canonical',
@@ -298,6 +301,12 @@ async function auditMode(mode) {
       assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
       cdp.close();
       return { backend: mode, energyRadioactiveGraphics, browserErrors: errors.length };
+    }
+    if (organicPlantGraphicsOnly) {
+      const organicPlantGraphics = await auditOrganicPlantGraphics(cdp, mode);
+      assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
+      cdp.close();
+      return { backend: mode, organicPlantGraphics, browserErrors: errors.length };
     }
     if (mobileOnly) {
       const mobile = await auditMobile(
@@ -4615,6 +4624,66 @@ function normalizeEnergyRadioactiveGraphicsAtlas(snapshot) {
   };
 }
 
+function normalizeOrganicPlantGraphicsAtlas(snapshot) {
+  const cards = (Array.isArray(snapshot) ? snapshot : snapshot?.cards ?? []).map((entry) => ({
+    ...entry,
+    card: cellularRect(entry.card ?? entry),
+    body: cellularRect(entry.body),
+    surfaceProbe: cellularRect(entry.surfaceProbe),
+    coreProbe: cellularRect(entry.coreProbe),
+    authoredCavity: cellularRect(entry.authoredCavity),
+    openGap: cellularRect(entry.openGap),
+    stem: cellularRect(entry.stem),
+    branches: cellularPoints(entry.branches),
+    leaves: cellularPoints(entry.leaves),
+    canopyGap: cellularRect(entry.canopyGap),
+    isolatedSeedProduct: cellularPoint(entry.isolatedSeedProduct),
+    guardedBlank: cellularRect(entry.guardedBlank),
+    soilContact: {
+      ...entry.soilContact,
+      owner: cellularRect(entry.soilContact.owner),
+      neighbour: cellularRect(entry.soilContact.neighbour),
+    },
+    waterContact: {
+      ...entry.waterContact,
+      owner: cellularRect(entry.waterContact.owner),
+      neighbour: cellularRect(entry.waterContact.neighbour),
+    },
+  }));
+  return {
+    cards,
+    solidCards: cards.filter(({ phase }) => phase === 'solid'),
+    powderCards: cards.filter(({ phase }) => phase === 'powder'),
+    nativeProductCards: cards.filter(({ nativeProduct }) => nativeProduct),
+    cavities: Array.isArray(snapshot)
+      ? cards.flatMap(({ authoredCavity }) => cellularRectPoints(authoredCavity))
+      : cellularPoints(snapshot?.cavities),
+    openGaps: Array.isArray(snapshot)
+      ? cards.flatMap(({ openGap }) => cellularRectPoints(openGap))
+      : cellularPoints(snapshot?.openGaps),
+    growthTopology: Array.isArray(snapshot)
+      ? cards.flatMap(({ stem, branches, leaves }) => [
+        ...cellularRectPoints(stem), ...branches, ...leaves,
+      ])
+      : cellularPoints(snapshot?.growthTopology),
+    canopyGaps: Array.isArray(snapshot)
+      ? cards.map(({ canopyGap }) => canopyGap)
+      : (snapshot?.canopyGaps ?? []).map(cellularRect),
+    isolatedSeedProducts: cellularPoints(
+      Array.isArray(snapshot)
+        ? cards.map(({ isolatedSeedProduct }) => isolatedSeedProduct)
+        : snapshot?.isolatedSeedProducts,
+    ),
+    guardedBlanks: Array.isArray(snapshot)
+      ? cards.map(({ guardedBlank }) => guardedBlank)
+      : (snapshot?.guardedBlanks ?? []).map(cellularRect),
+    soilContacts: Array.isArray(snapshot)
+      ? cards.map(({ soilContact }) => soilContact) : snapshot?.soilContacts ?? [],
+    waterContacts: Array.isArray(snapshot)
+      ? cards.map(({ waterContact }) => waterContact) : snapshot?.waterContacts ?? [],
+  };
+}
+
 /** Exact nine-card Energy motif proof plus the complete 21-card semantic guard. */
 async function auditEnergyRadioactiveGraphics(cdp, mode) {
   const started = performance.now();
@@ -5030,6 +5099,471 @@ function summarizeEnergyRadioactiveBackingResponses(flat, styled, repeated) {
       rgbRms: round(Math.sqrt(squared / Math.max(1, base.rgb.length)), 4),
       rgbPeak,
       changedSampleRatio: round(changedSamples / Math.max(1, base.width * base.height), 5),
+      repeatRgbPeak,
+      responseSignature,
+      responseProfile: Array.from(buckets, (value) => round(value / total, 5)),
+    };
+  });
+}
+
+/** Paired exact-material, growth-topology, and RGB-identity proof for six native organics. */
+async function auditOrganicPlantGraphics(cdp, mode) {
+  const started = performance.now();
+  const stage = (name) => console.error(
+    `[organic-plant-graphics:${mode}] ${name} ${Math.round(performance.now() - started)}ms`,
+  );
+  const blank = await waitForStablePageCapture(
+    cdp, `${mode} initial blank organic/plant framebuffer`,
+  );
+  await evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    if (typeof audit.prepareOrganicPlantGraphicsFixture !== 'function'
+      || typeof audit.organicPlantGraphicsAtlas !== 'function'
+      || typeof audit.setBotanicalIdentityStyling !== 'function'
+      || typeof audit.setUnusualPowderStyling !== 'function') {
+      throw new Error('Organic/plant graphics audit API unavailable');
+    }
+    audit.prepareOrganicPlantGraphicsFixture();
+    if (typeof audit.setPowderRenderStyle === 'function') audit.setPowderRenderStyle('smooth');
+    return true;
+  })()`);
+  const rawAtlas = await waitFor(() => evaluate(cdp, `(() => {
+    const atlas = window.__ANIFOR_INPUT_AUDIT__.organicPlantGraphicsAtlas();
+    const cards = Array.isArray(atlas) ? atlas : atlas?.cards;
+    return cards?.length === 6 ? atlas : false;
+  })()`), 15_000, `${mode} organic/plant graphics fixture`);
+  const atlas = normalizeOrganicPlantGraphicsAtlas(rawAtlas);
+  const expectedMaterials = [9, 10, 50, 52, 83, 198];
+  const expectedCodes = ['WOOD', 'PLNT', 'SEED', 'YEST', 'VINE', 'DYST'];
+  assert(atlas.cards.length === 6 && atlas.solidCards.length === 3
+      && atlas.powderCards.length === 3
+      && atlas.nativeProductCards.map(({ code }) => code).join(',') === 'DYST'
+      && atlas.cards.every(({ material, code }, index) => (
+        material === expectedMaterials[index] && code === expectedCodes[index]
+      )),
+  `${mode}: organic/plant atlas contract changed (${JSON.stringify(atlas.cards.map(
+    ({ code, material, phase, nativeProduct }) => ({ code, material, phase, nativeProduct }),
+  ))})`);
+
+  const semanticState = await evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    const snapshot = audit.organicPlantGraphicsAtlas();
+    const cards = Array.isArray(snapshot) ? snapshot : snapshot.cards;
+    const inside = (x, y, rect) => x >= rect.x && x < rect.x + rect.width
+      && y >= rect.y && y < rect.y + rect.height;
+    const exactRect = (rect, material) => {
+      for (let y = rect.y; y < rect.y + rect.height; y++) {
+        for (let x = rect.x; x < rect.x + rect.width; x++) {
+          if (audit.cell(x, y) !== material) return false;
+        }
+      }
+      return true;
+    };
+    return cards.map((entry) => {
+      let bodyExact = true;
+      for (let y = entry.body.y; y < entry.body.y + entry.body.height; y++) {
+        for (let x = entry.body.x; x < entry.body.x + entry.body.width; x++) {
+          const empty = inside(x, y, entry.authoredCavity) || inside(x, y, entry.openGap);
+          bodyExact = bodyExact && audit.cell(x, y) === (empty ? 0 : entry.material);
+        }
+      }
+      return {
+        code: entry.code,
+        material: entry.material,
+        bodyExact,
+        surfaceProbeExact: exactRect(entry.surfaceProbe, entry.material),
+        coreProbeExact: exactRect(entry.coreProbe, entry.material),
+        authoredCavityEmpty: exactRect(entry.authoredCavity, 0),
+        openGapEmpty: exactRect(entry.openGap, 0),
+        stemExact: exactRect(entry.stem, entry.material),
+        branchesExact: entry.branches.every(
+          (point) => audit.cell(point.x, point.y) === entry.material,
+        ),
+        leavesExact: entry.leaves.every(
+          (point) => audit.cell(point.x, point.y) === entry.material,
+        ),
+        canopyGapEmpty: exactRect(entry.canopyGap, 0),
+        isolated: audit.cell(entry.isolatedSeedProduct.x, entry.isolatedSeedProduct.y),
+        guardedBlankEmpty: exactRect(entry.guardedBlank, 0),
+        soilOwnerExact: exactRect(entry.soilContact.owner, entry.material),
+        soilNeighbourExact: exactRect(
+          entry.soilContact.neighbour, entry.soilContact.neighbourMaterial,
+        ),
+        soilNeighbourMaterial: entry.soilContact.neighbourMaterial,
+        waterOwnerExact: exactRect(entry.waterContact.owner, entry.material),
+        waterNeighbourExact: exactRect(
+          entry.waterContact.neighbour, entry.waterContact.neighbourMaterial,
+        ),
+        waterNeighbourMaterial: entry.waterContact.neighbourMaterial,
+      };
+    });
+  })()`);
+  assert(semanticState.every((entry) => entry.bodyExact && entry.surfaceProbeExact
+      && entry.coreProbeExact && entry.authoredCavityEmpty && entry.openGapEmpty
+      && entry.stemExact && entry.branchesExact && entry.leavesExact
+      && entry.canopyGapEmpty && entry.isolated === entry.material
+      && entry.guardedBlankEmpty && entry.soilOwnerExact && entry.soilNeighbourExact
+      && entry.soilNeighbourMaterial === 1 && entry.waterOwnerExact
+      && entry.waterNeighbourExact && entry.waterNeighbourMaterial === 2),
+  `${mode}: organic/plant fixture lost authored body/growth/gap/contact semantics (${JSON.stringify(semanticState)})`);
+  stage('fixture-ready');
+
+  const setOrganicIdentityStyling = async (enabled) => evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    audit.setBotanicalIdentityStyling(${enabled});
+    audit.setUnusualPowderStyling(${enabled});
+    return true;
+  })()`);
+  await setOrganicIdentityStyling(false);
+  const flat = await waitForStablePageCapture(cdp, `${mode} flat organic/plant framebuffer`);
+  const flatBacking = await sampleOrganicPlantBacking(cdp);
+  await setOrganicIdentityStyling(true);
+  const styled = await waitForStablePageCapture(cdp, `${mode} styled organic/plant framebuffer`);
+  const styledBacking = await sampleOrganicPlantBacking(cdp);
+  await setOrganicIdentityStyling(false);
+  const repeated = await waitForStablePageCapture(
+    cdp, `${mode} repeated flat organic/plant framebuffer`,
+  );
+  const repeatedBacking = await sampleOrganicPlantBacking(cdp);
+  for (const [state, backing] of [
+    ['flat', flatBacking], ['styled', styledBacking], ['repeated-flat', repeatedBacking],
+  ]) assertOrganicPlantBacking(backing, `${mode} ${state}`);
+
+  assert(flatBacking.cards.every((card, index) => (
+    card.semanticSignature === styledBacking.cards[index].semanticSignature
+      && card.semanticSignature === repeatedBacking.cards[index].semanticSignature
+      && card.alphaSignature === styledBacking.cards[index].alphaSignature
+      && card.alphaSignature === repeatedBacking.cards[index].alphaSignature
+      && card.supportSignature === styledBacking.cards[index].supportSignature
+      && card.supportSignature === repeatedBacking.cards[index].supportSignature
+  )), `${mode}: organic identity styling changed semantics/alpha/support (${JSON.stringify({
+    flat: compactOrganicPlantBacking(flatBacking),
+    styled: compactOrganicPlantBacking(styledBacking),
+    repeated: compactOrganicPlantBacking(repeatedBacking),
+  })})`);
+  const controlLeaks = flatBacking.cards.flatMap((card, index) => {
+    const changed = styledBacking.cards[index];
+    const returned = repeatedBacking.cards[index];
+    const leaks = [];
+    if (!arraysEqual(card.soilNeighbourRgb, changed.soilNeighbourRgb)
+      || !arraysEqual(card.soilNeighbourRgb, returned.soilNeighbourRgb)) leaks.push('Sand');
+    if (!arraysEqual(card.waterNeighbourRgb, changed.waterNeighbourRgb)
+      || !arraysEqual(card.waterNeighbourRgb, returned.waterNeighbourRgb)) leaks.push('Water');
+    return leaks.map((control) => ({ code: card.code, control }));
+  });
+  assert(controlLeaks.length === 0,
+    `${mode}: organic identity styling leaked into contact controls (${JSON.stringify(controlLeaks)})`);
+
+  const backingResponses = summarizeOrganicPlantBackingResponses(
+    flatBacking, styledBacking, repeatedBacking,
+  );
+  assert(backingResponses.every(({
+    rgbRms, rgbPeak, changedSampleRatio, growthRgbRms, growthChangedSampleRatio, repeatRgbPeak,
+  }) => (
+    rgbRms >= 0.02 && rgbRms <= 32 && rgbPeak > 0 && rgbPeak <= 96
+      && changedSampleRatio >= 0.002 && growthRgbRms > 0
+      && growthChangedSampleRatio > 0 && repeatRgbPeak === 0
+  )), `${mode}: organic identity response is absent, unbounded, or non-repeatable (${JSON.stringify(backingResponses)})`);
+  assert(new Set(backingResponses.map(({ responseSignature }) => responseSignature)).size === 6,
+    `${mode}: organic materials do not have six distinct identity signatures (${JSON.stringify(backingResponses)})`);
+  assert(backingResponses.every(({ responseProfile }) => responseProfile.length === 16
+      && Math.abs(responseProfile.reduce((sum, value) => sum + value, 0) - 1) <= 0.001),
+  `${mode}: organic response profiles are not normalized 4x4 fields (${JSON.stringify(backingResponses)})`);
+
+  const bodyRegions = atlas.cards.map((entry) => ({
+    name: `organic-identity-${entry.code}`,
+    x: entry.body.x + entry.body.width / 2,
+    y: entry.body.y + entry.body.height / 2,
+    radiusX: entry.body.width / 2,
+    radiusY: entry.body.height / 2,
+    signature: true,
+    silhouette: true,
+    fastSupport: true,
+  }));
+  const atlasBounds = containingCellularRegion(atlas.cards.map(({ card }) => card));
+  const responses = await sampleBackdropRefractionRegions(cdp, {
+    straight: flat.capture.data,
+    refracted: styled.capture.data,
+    repeatedStraight: repeated.capture.data,
+  }, [...bodyRegions, { name: 'organic-plant-atlas', ...atlasBounds }], flat.canvasRect);
+  const atlasResponse = responses.at(-1);
+  assert(atlasResponse.repeatRgbPeak === 0,
+    `${mode}: organic flat→styled→flat framebuffer was not exact (${JSON.stringify(atlasResponse)})`);
+  assert(responses.slice(0, 6).every((sample) => sample.rgbRms > 0
+      && sample.rgbRms <= 40 && sample.rgbPeak > 0 && sample.rgbPeak <= 128
+      && sample.repeatRgbPeak === 0),
+  `${mode}: an organic material has no bounded composed response (${JSON.stringify(responses.slice(0, 6))})`);
+  const [flatSupport, styledSupport] = await Promise.all([
+    samplePageRegions(
+      cdp, flat.capture.data, bodyRegions,
+      blank.capture.data, blank.reference.data, flat.canvasRect,
+    ),
+    samplePageRegions(
+      cdp, styled.capture.data, bodyRegions,
+      blank.capture.data, blank.reference.data, flat.canvasRect,
+    ),
+  ]);
+  assert(flatSupport.every((sample) => sample.visible > 0 && sample.worldArea > 0)
+      && styledSupport.every((sample) => sample.visible > 0 && sample.worldArea > 0),
+  `${mode}: an organic material body is not visible (${JSON.stringify({ flatSupport, styledSupport })})`);
+  stage('responses-ready');
+
+  return {
+    cards: atlas.cards.length,
+    solidCards: atlas.solidCards.length,
+    powderCards: atlas.powderCards.length,
+    nativeProducts: atlas.nativeProductCards.map(({ code }) => code),
+    authoredCavityCells: atlas.cavities.length,
+    openGapCells: atlas.openGaps.length,
+    growthTopologyCells: atlas.growthTopology.length,
+    canopyGaps: atlas.canopyGaps.length,
+    isolatedProducts: atlas.isolatedSeedProducts.length,
+    guardedBlanks: atlas.guardedBlanks.length,
+    sandContacts: atlas.soilContacts.length,
+    waterContacts: atlas.waterContacts.length,
+    exactRepeatedOff: atlasResponse.repeatRgbPeak === 0,
+    cardSignatures: atlas.cards.map((entry, index) => ({
+      index: entry.index,
+      material: entry.material,
+      code: entry.code,
+      flatSignature: flatSupport[index].signature,
+      styledSignature: styledSupport[index].signature,
+      rgbRms: responses[index].rgbRms,
+      rgbPeak: responses[index].rgbPeak,
+      backingRgbRms: backingResponses[index].rgbRms,
+      backingRgbPeak: backingResponses[index].rgbPeak,
+      backingChangedSampleRatio: backingResponses[index].changedSampleRatio,
+      growthRgbRms: backingResponses[index].growthRgbRms,
+      growthChangedSampleRatio: backingResponses[index].growthChangedSampleRatio,
+      backingRepeatRgbPeak: backingResponses[index].repeatRgbPeak,
+      backingResponseSignature: backingResponses[index].responseSignature,
+      backingResponseProfile: backingResponses[index].responseProfile,
+    })),
+  };
+}
+
+async function sampleOrganicPlantBacking(cdp) {
+  return evaluate(cdp, `(() => {
+    const world = document.querySelector('.world-canvas');
+    if (!(world instanceof HTMLCanvasElement)) throw new Error('World canvas unavailable');
+    const copy = document.createElement('canvas');
+    copy.width = world.width;
+    copy.height = world.height;
+    const context = copy.getContext('2d', { willReadFrequently: true });
+    if (!context) throw new Error('Organic/plant backing sampler unavailable');
+    context.drawImage(world, 0, 0);
+    const pixels = context.getImageData(0, 0, copy.width, copy.height).data;
+    const scaleX = copy.width / ${WORLD_WIDTH};
+    const scaleY = copy.height / ${WORLD_HEIGHT};
+    const rectPoints = (rect) => {
+      const points = [];
+      for (let y = rect.y; y < rect.y + rect.height; y++) {
+        for (let x = rect.x; x < rect.x + rect.width; x++) points.push({ x, y });
+      }
+      return points;
+    };
+    const cellAlpha = ({ x, y }) => {
+      const left = Math.floor(x * scaleX);
+      const top = Math.floor(y * scaleY);
+      const right = Math.max(left + 1, Math.floor((x + 1) * scaleX));
+      const bottom = Math.max(top + 1, Math.floor((y + 1) * scaleY));
+      let minimum = 255;
+      let peak = 0;
+      for (let py = top; py < bottom; py++) for (let px = left; px < right; px++) {
+        const alpha = pixels[(py * copy.width + px) * 4 + 3];
+        minimum = Math.min(minimum, alpha);
+        peak = Math.max(peak, alpha);
+      }
+      return { minimum, peak };
+    };
+    const sampleRect = (rect, includeAlpha = false) => {
+      const left = Math.floor(rect.x * scaleX);
+      const top = Math.floor(rect.y * scaleY);
+      const right = Math.max(left + 1, Math.floor((rect.x + rect.width) * scaleX));
+      const bottom = Math.max(top + 1, Math.floor((rect.y + rect.height) * scaleY));
+      const rgb = [];
+      const alpha = [];
+      for (let py = top; py < bottom; py++) for (let px = left; px < right; px++) {
+        const offset = (py * copy.width + px) * 4;
+        rgb.push(pixels[offset], pixels[offset + 1], pixels[offset + 2]);
+        if (includeAlpha) alpha.push(pixels[offset + 3]);
+      }
+      return { width: right - left, height: bottom - top, rgb, alpha };
+    };
+    const samplePointRgb = (points) => {
+      const rgb = [];
+      for (const { x, y } of points) {
+        const px = Math.min(copy.width - 1, Math.floor((x + 0.5) * scaleX));
+        const py = Math.min(copy.height - 1, Math.floor((y + 0.5) * scaleY));
+        const offset = (py * copy.width + px) * 4;
+        rgb.push(pixels[offset], pixels[offset + 1], pixels[offset + 2]);
+      }
+      return rgb;
+    };
+    const snapshot = window.__ANIFOR_INPUT_AUDIT__.organicPlantGraphicsAtlas();
+    const cards = Array.isArray(snapshot) ? snapshot : snapshot.cards;
+    return {
+      width: copy.width,
+      height: copy.height,
+      scaleX,
+      scaleY,
+      cards: cards.map((entry) => {
+        const key = ({ x, y }) => x + ',' + y;
+        const cavityPoints = rectPoints(entry.authoredCavity);
+        const openGapPoints = rectPoints(entry.openGap);
+        const emptyKeys = new Set([...cavityPoints, ...openGapPoints].map(key));
+        const bodyPoints = rectPoints(entry.body).filter((point) => !emptyKeys.has(key(point)));
+        const growthPoints = [...rectPoints(entry.stem), ...entry.branches, ...entry.leaves];
+        const canopyGapPoints = rectPoints(entry.canopyGap);
+        const guardPoints = rectPoints(entry.guardedBlank);
+        const soilOwner = rectPoints(entry.soilContact.owner);
+        const soilNeighbour = rectPoints(entry.soilContact.neighbour);
+        const waterOwner = rectPoints(entry.waterContact.owner);
+        const waterNeighbour = rectPoints(entry.waterContact.neighbour);
+        const cardPixels = sampleRect(entry.card, true);
+        let semanticSignature = 2166136261;
+        for (let y = entry.card.y; y < entry.card.y + entry.card.height; y++) {
+          for (let x = entry.card.x; x < entry.card.x + entry.card.width; x++) {
+            semanticSignature = Math.imul(
+              semanticSignature ^ window.__ANIFOR_INPUT_AUDIT__.cell(x, y), 16777619,
+            ) >>> 0;
+          }
+        }
+        let alphaSignature = 2166136261;
+        let supportSignature = 2166136261;
+        for (const alpha of cardPixels.alpha) {
+          alphaSignature = Math.imul(alphaSignature ^ alpha, 16777619) >>> 0;
+          supportSignature = Math.imul(supportSignature ^ Number(alpha > 0), 16777619) >>> 0;
+        }
+        const body = sampleRect(entry.body);
+        return {
+          index: entry.index,
+          material: entry.material,
+          code: entry.code,
+          phase: entry.phase,
+          bodyExpected: bodyPoints.length,
+          bodySupported: bodyPoints.filter((point) => cellAlpha(point).peak > 0).length,
+          cavityExpected: cavityPoints.length,
+          cavityTransparent: cavityPoints.filter((point) => cellAlpha(point).peak === 0).length,
+          openGapExpected: openGapPoints.length,
+          openGapOpen: openGapPoints.filter((point) => cellAlpha(point).minimum === 0).length,
+          growthExpected: growthPoints.length,
+          growthSupported: growthPoints.filter((point) => cellAlpha(point).peak > 0).length,
+          canopyGapExpected: canopyGapPoints.length,
+          canopyGapTransparent: canopyGapPoints.filter((point) => cellAlpha(point).peak === 0).length,
+          isolatedAlphaPeak: cellAlpha(entry.isolatedSeedProduct).peak,
+          guardedBlankExpected: guardPoints.length,
+          guardedBlankTransparent: guardPoints.filter((point) => cellAlpha(point).peak === 0).length,
+          soilOwnerExpected: soilOwner.length,
+          soilOwnerSupported: soilOwner.filter((point) => cellAlpha(point).peak > 0).length,
+          waterOwnerExpected: waterOwner.length,
+          waterOwnerSupported: waterOwner.filter((point) => cellAlpha(point).peak > 0).length,
+          semanticSignature,
+          alphaSignature,
+          supportSignature,
+          width: body.width,
+          height: body.height,
+          rgb: body.rgb,
+          growthRgb: samplePointRgb(growthPoints),
+          soilNeighbourRgb: samplePointRgb(soilNeighbour),
+          waterNeighbourRgb: samplePointRgb(waterNeighbour),
+        };
+      }),
+    };
+  })()`);
+}
+
+function assertOrganicPlantBacking(backing, label) {
+  assert(Number.isInteger(backing.scaleX) && Number.isInteger(backing.scaleY)
+      && backing.scaleX > 0 && backing.scaleY > 0,
+  `${label}: backing does not preserve integral world scaling (${backing.scaleX}x${backing.scaleY})`);
+  assert(backing.cards.length === 6 && backing.cards.every((card) => (
+    card.bodySupported === card.bodyExpected
+      && card.cavityTransparent === card.cavityExpected
+      && card.openGapOpen === card.openGapExpected
+      && card.growthSupported === card.growthExpected
+      && card.canopyGapTransparent === card.canopyGapExpected
+      && card.isolatedAlphaPeak > 0
+      && card.guardedBlankTransparent === card.guardedBlankExpected
+      && card.soilOwnerSupported === card.soilOwnerExpected
+      && card.waterOwnerSupported === card.waterOwnerExpected
+  )), `${label}: organic backing changed body/cavity/gap/growth/blank/contact topology (${JSON.stringify(
+    compactOrganicPlantBacking(backing),
+  )})`);
+}
+
+function compactOrganicPlantBacking(backing) {
+  return {
+    scale: `${backing.scaleX}x${backing.scaleY}`,
+    cards: backing.cards.map(({
+      rgb: _rgb, growthRgb: _growthRgb, soilNeighbourRgb: _soilNeighbourRgb,
+      waterNeighbourRgb: _waterNeighbourRgb, width: _width, height: _height, ...card
+    }) => card),
+  };
+}
+
+function summarizeOrganicPlantBackingResponses(flat, styled, repeated) {
+  assert(flat.cards.length === 6 && styled.cards.length === 6 && repeated.cards.length === 6,
+    'Organic/plant backing response atlas is incomplete');
+  return flat.cards.map((base, cardIndex) => {
+    const changed = styled.cards[cardIndex];
+    const returned = repeated.cards[cardIndex];
+    assert(changed.material === base.material && returned.material === base.material
+        && changed.width === base.width && returned.width === base.width
+        && changed.height === base.height && returned.height === base.height
+        && changed.rgb.length === base.rgb.length && returned.rgb.length === base.rgb.length
+        && changed.growthRgb.length === base.growthRgb.length
+        && returned.growthRgb.length === base.growthRgb.length,
+    `Organic/plant backing response geometry changed for ${base.code}`);
+    let squared = 0;
+    let rgbPeak = 0;
+    let repeatRgbPeak = 0;
+    let changedSamples = 0;
+    let responseSignature = 2166136261;
+    const buckets = new Float64Array(16);
+    for (let offset = 0; offset < base.rgb.length; offset += 3) {
+      const sample = offset / 3;
+      const x = sample % base.width;
+      const y = Math.floor(sample / base.width);
+      const bucket = Math.min(3, Math.floor(y * 4 / base.height)) * 4
+        + Math.min(3, Math.floor(x * 4 / base.width));
+      let sampleChanged = false;
+      for (let channel = 0; channel < 3; channel++) {
+        const delta = changed.rgb[offset + channel] - base.rgb[offset + channel];
+        const repeat = returned.rgb[offset + channel] - base.rgb[offset + channel];
+        squared += delta * delta;
+        rgbPeak = Math.max(rgbPeak, Math.abs(delta));
+        repeatRgbPeak = Math.max(repeatRgbPeak, Math.abs(repeat));
+        buckets[bucket] += Math.abs(delta);
+        sampleChanged ||= delta !== 0;
+        responseSignature = Math.imul(responseSignature ^ (delta + 255), 16777619) >>> 0;
+      }
+      changedSamples += Number(sampleChanged);
+    }
+    let growthSquared = 0;
+    let growthChangedSamples = 0;
+    for (let offset = 0; offset < base.growthRgb.length; offset += 3) {
+      let sampleChanged = false;
+      for (let channel = 0; channel < 3; channel++) {
+        const delta = changed.growthRgb[offset + channel] - base.growthRgb[offset + channel];
+        const repeat = returned.growthRgb[offset + channel] - base.growthRgb[offset + channel];
+        growthSquared += delta * delta;
+        repeatRgbPeak = Math.max(repeatRgbPeak, Math.abs(repeat));
+        sampleChanged ||= delta !== 0;
+      }
+      growthChangedSamples += Number(sampleChanged);
+    }
+    const total = Math.max(1, buckets.reduce((sum, value) => sum + value, 0));
+    return {
+      material: base.material,
+      code: base.code,
+      rgbRms: round(Math.sqrt(squared / Math.max(1, base.rgb.length)), 4),
+      rgbPeak,
+      changedSampleRatio: round(changedSamples / Math.max(1, base.width * base.height), 5),
+      growthRgbRms: round(Math.sqrt(growthSquared / Math.max(1, base.growthRgb.length)), 4),
+      growthChangedSampleRatio: round(
+        growthChangedSamples / Math.max(1, base.growthRgb.length / 3), 5,
+      ),
       repeatRgbPeak,
       responseSignature,
       responseProfile: Array.from(buckets, (value) => round(value / total, 5)),
@@ -7244,6 +7778,60 @@ function assertPairedEnergyRadioactiveGraphics(results) {
     });
   }
   console.error(`[energy-radioactive-graphics:paired] parity ${JSON.stringify(parity)}`);
+}
+
+function assertPairedOrganicPlantGraphics(results) {
+  const canvas = results.find(
+    (result) => result.backend === 'canvas2d',
+  )?.organicPlantGraphics;
+  const webgl = results.find(
+    (result) => result.backend === 'webgl',
+  )?.organicPlantGraphics;
+  if (!canvas || !webgl) return;
+  assert(canvas.cards === 6 && webgl.cards === 6
+      && canvas.solidCards === 3 && webgl.solidCards === 3
+      && canvas.powderCards === 3 && webgl.powderCards === 3,
+  `paired organic/plant atlas is incomplete (${JSON.stringify({
+    canvas: { cards: canvas.cards, solid: canvas.solidCards, powder: canvas.powderCards },
+    webgl: { cards: webgl.cards, solid: webgl.solidCards, powder: webgl.powderCards },
+  })})`);
+  for (const result of [canvas, webgl]) {
+    assert(result.cardSignatures.length === 6 && new Set(result.cardSignatures.map(
+      ({ backingResponseSignature }) => backingResponseSignature,
+    )).size === 6,
+    `organic/plant responses are not distinct in all six cards (${JSON.stringify(result.cardSignatures)})`);
+    assert(result.cardSignatures.every(({
+      backingRepeatRgbPeak, growthRgbRms, growthChangedSampleRatio,
+    }) => backingRepeatRgbPeak === 0 && growthRgbRms > 0 && growthChangedSampleRatio > 0),
+    `organic/plant growth response or off→on→off repeatability failed (${JSON.stringify(result.cardSignatures)})`);
+  }
+  const webglByMaterial = new Map(webgl.cardSignatures.map((entry) => [entry.material, entry]));
+  const parity = [];
+  for (const canvasEntry of canvas.cardSignatures) {
+    const webglEntry = webglByMaterial.get(canvasEntry.material);
+    assert(webglEntry && webglEntry.code === canvasEntry.code,
+      `paired organic/plant atlas missing ${canvasEntry.code}/${canvasEntry.material}`);
+    const responseRatio = canvasEntry.backingRgbRms
+      / Math.max(0.01, webglEntry.backingRgbRms);
+    assert(responseRatio >= 0.12 && responseRatio <= 8.5,
+      `Canvas/WebGL organic ${canvasEntry.code} response diverged (${canvasEntry.backingRgbRms}/${webglEntry.backingRgbRms})`);
+    const growthResponseRatio = canvasEntry.growthRgbRms
+      / Math.max(0.01, webglEntry.growthRgbRms);
+    assert(growthResponseRatio >= 0.12 && growthResponseRatio <= 8.5,
+      `Canvas/WebGL organic ${canvasEntry.code} growth response diverged (${canvasEntry.growthRgbRms}/${webglEntry.growthRgbRms})`);
+    const profileDistance = Math.max(...canvasEntry.backingResponseProfile.map(
+      (value, index) => Math.abs(value - webglEntry.backingResponseProfile[index]),
+    ));
+    assert(profileDistance <= 0.30,
+      `Canvas/WebGL organic ${canvasEntry.code} spatial response diverged (${profileDistance})`);
+    parity.push({
+      code: canvasEntry.code,
+      responseRatio: round(responseRatio, 4),
+      growthResponseRatio: round(growthResponseRatio, 4),
+      profileMaxDistance: round(profileDistance, 5),
+    });
+  }
+  console.error(`[organic-plant-graphics:paired] parity ${JSON.stringify(parity)}`);
 }
 
 function assertGasSpectralResponseVectors(samples, label, suffix = '') {

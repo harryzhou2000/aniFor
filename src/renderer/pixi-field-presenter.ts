@@ -124,6 +124,7 @@ uniform float uLiquidSilhouetteCohesion;
 uniform float uThermalMaterialStyling;
 uniform float uEnergyCoreRelief;
 uniform float uEnergyIdentityStyling;
+uniform float uBotanicalIdentityStyling;
 uniform float uPowderStyle;
 uniform float uPowderBodyDepth;
 uniform float uSuspensionActive;
@@ -399,6 +400,44 @@ vec3 liquidMaterialIdentityDelta(
       + coreRing * vec3(-0.014, 0.026, 0.032);
   }
   return clamp(identity * support, vec3(-0.055), vec3(0.055));
+}
+vec3 botanicalIdentityDelta(float material, vec2 position) {
+  float x = floor(position.x);
+  float y = floor(position.y);
+  vec3 delta = vec3(0.0);
+  if (material == 9.0) {
+    float ring = mod(x + floor(y / 3.0) + material, 11.0) < 2.0 ? -7.0 : 2.0;
+    float axial = mod(x + floor(y / 7.0) + material, 9.0) < 2.0 ? 1.0 : 0.0;
+    delta = vec3(ring + axial * 3.0, ring * 0.48 + axial * 1.5,
+      ring * 0.22 - axial * 1.5);
+  } else if (material == 10.0) {
+    float leaf = mod(x * 5.0 + y * 3.0 + material, 8.0) / 7.0;
+    float vein = mod(x * 2.0 + y + mod(y * 5.0 + 3.0, 8.0), 13.0) < 3.0 ? 1.0 : 0.0;
+    delta = vec3(leaf * 1.5 - vein * 3.0, leaf * 3.5 + vein * 6.0,
+      leaf - vein * 2.5);
+  } else if (material == 83.0) {
+    float strand = mod(x + floor(y / 4.0) + material, 7.0) < 2.0 ? 1.0 : 0.0;
+    float node = mod(x * 3.0 + y * 5.0 + material, 16.0) < 2.0 ? 1.0 : 0.0;
+    delta = vec3(mix(1.0, -3.0, strand), mix(-1.0, 7.0, strand), mix(0.0, -2.0, strand))
+      + node * vec3(2.0, 4.0, 1.0);
+  } else if (material == 50.0) {
+    vec2 local = mod(vec2(x, y), 8.0) - 4.0;
+    float radiusSquared = dot(local, local);
+    float husk = radiusSquared >= 5.0 && radiusSquared <= 13.0 ? 1.0 : 0.0;
+    float embryo = local.x >= 0.0 && local.x <= 2.0
+      && local.y >= -1.0 && local.y <= 1.0 ? 1.0 : 0.0;
+    delta = mix(vec3(-2.0, -1.0, 1.0), vec3(5.0, 2.0, -3.0), husk)
+      + embryo * vec3(2.0, 5.0, 1.0);
+  } else if (material == 52.0) {
+    vec2 local = mod(vec2(x, y), 8.0) - 4.0;
+    float radiusSquared = dot(local, local);
+    float cellRim = radiusSquared >= 5.0 && radiusSquared <= 13.0 ? 1.0 : 0.0;
+    vec2 budOffset = local - vec2(1.0, -1.0);
+    float bud = dot(budOffset, budOffset) <= 2.0 ? 1.0 : 0.0;
+    delta = mix(vec3(-1.0, -0.5, -1.5), vec3(3.0, 2.0, 1.0), cellRim)
+      + bud * vec3(3.0, 4.0, 2.0);
+  }
+  return clamp(delta, vec3(-12.0), vec3(12.0)) / 255.0;
 }
 vec3 vividColor(vec3 color, float saturation) {
   float luminance = dot(color, vec3(0.2126, 0.7152, 0.0722));
@@ -2138,16 +2177,6 @@ void main() {
         }
         color = clamp(color, 0.0, 1.0);
       }
-      // SEED and YEST retain granular topology while their existing grain and
-      // facet signals describe husk and colony identity. No additional wave,
-      // sample, or output-scale state is required.
-      if (material == 50.0) {
-        float husk = clamp(grain * 0.55 + grainFacet * 0.45, -0.5, 0.5);
-        color *= vec3(1.0 + husk * 0.035, 1.0 + husk * 0.012, 1.0 - husk * 0.028);
-      } else if (material == 52.0) {
-        float colony = clamp(grain * 0.35 + grainFacet * 0.22, -0.4, 0.4);
-        color *= vec3(1.0 + colony * 0.026, 1.0 + colony * 0.018, 1.0 - colony * 0.010);
-      }
       color *= 1.0 + powderMacroRelief;
       float powderContourChroma = localPowderShape.x < 0.92
         ? surfaceChromaResponse(density, widePowderShape.yz, optics)
@@ -2206,20 +2235,6 @@ void main() {
         + organicSurface * max(0.0, fibre) * 0.018) * interiorMicroGain;
       color += mix(color, vec3(0.19, 0.34, 0.18), 0.38)
         * organicSurface * max(0.0, 0.6 - abs(pores)) * 0.028 * interiorMicroGain;
-      // Exact botanical identity reuses the same family waves: Wood favours
-      // warm longitudinal grain, Plant broad green veins, and VINE a narrow
-      // axial strand. The later generic Organic/Fibrous decal is suppressed
-      // for these materials only.
-      if (material == 9.0) {
-        color *= vec3(1.0 + fibre * 0.012, 1.0 + fibre * 0.007, 1.0 - fibre * 0.008);
-        color += vec3(0.025, 0.010, 0.003) * max(0.0, -pores) * interiorMicroGain;
-      } else if (material == 10.0) {
-        float leafVein = max(0.0, fibre * 0.72 + pores * 0.28);
-        color *= vec3(1.0 - leafVein * 0.018, 1.0 + leafVein * 0.032, 1.0 - leafVein * 0.014);
-      } else if (material == 83.0) {
-        float vineStrand = max(0.0, fibre);
-        color *= vec3(1.0 - vineStrand * 0.020, 1.0 + vineStrand * 0.045, 1.0 - vineStrand * 0.018);
-      }
     } else if (radioactiveSurface > 0.5 || (optics < 0.5 && profile == 4.0)) {
       float isotope = sin(fieldPosition.x * 0.137 + sin(fieldPosition.y * 0.103 + material) * 1.6)
         * sin(fieldPosition.y * 0.181 - fieldPosition.x * 0.061);
@@ -2483,6 +2498,9 @@ void main() {
     }
     float botanicalIdentity = (material == 9.0 || material == 10.0 || material == 50.0
       || material == 52.0 || material == 83.0) ? 1.0 : 0.0;
+    if (botanicalIdentity > 0.5 && uBotanicalIdentityStyling > 0.5) {
+      color += botanicalIdentityDelta(material, fieldPosition);
+    }
     if (organic > 0.5 && botanicalIdentity < 0.5) {
       float fibre = 0.5 + 0.5 * sin(
         fieldPosition.x * 0.18 + sin(fieldPosition.y * 0.11 + material) * 1.4
@@ -2774,6 +2792,7 @@ export class PixiFieldPresenter {
       uThermalMaterialStyling: { value: 0, type: 'f32' },
       uEnergyCoreRelief: { value: 1, type: 'f32' },
       uEnergyIdentityStyling: { value: 1, type: 'f32' },
+      uBotanicalIdentityStyling: { value: 1, type: 'f32' },
       uPowderStyle: { value: powderRenderStyleValue('smooth'), type: 'f32' },
       uPowderBodyDepth: { value: 1, type: 'f32' },
       uSuspensionActive: {
@@ -3048,6 +3067,7 @@ export class PixiFieldPresenter {
     liquidIdentityStylingEnabled = true,
     gasIdentityStylingEnabled = true,
     energyIdentityStylingEnabled = true,
+    botanicalIdentityStylingEnabled = true,
   ): void {
     const uniforms = this.uniforms.uniforms;
     uniforms.uGasFieldLighting = gasFieldLightingEnabled ? 1 : 0;
@@ -3077,6 +3097,7 @@ export class PixiFieldPresenter {
     uniforms.uThermalMaterialStyling = thermalMaterialStylingEnabled ? 1 : 0;
     uniforms.uEnergyCoreRelief = energyCoreReliefEnabled ? 1 : 0;
     uniforms.uEnergyIdentityStyling = energyIdentityStylingEnabled ? 1 : 0;
+    uniforms.uBotanicalIdentityStyling = botanicalIdentityStylingEnabled ? 1 : 0;
     uniforms.uPowderStyle = powderRenderStyleValue(powderRenderStyle);
   }
 
@@ -3207,6 +3228,11 @@ export class PixiFieldPresenter {
 
   setEnergyIdentityStylingEnabled(enabled: boolean): void {
     this.uniforms.uniforms.uEnergyIdentityStyling = enabled ? 1 : 0;
+    this.renderApplication();
+  }
+
+  setBotanicalIdentityStylingEnabled(enabled: boolean): void {
+    this.uniforms.uniforms.uBotanicalIdentityStyling = enabled ? 1 : 0;
     this.renderApplication();
   }
 

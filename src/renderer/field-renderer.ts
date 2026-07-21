@@ -189,6 +189,7 @@ export class MaterialRenderer {
   private thermalMaterialStylingEnabled = true;
   private energyCoreReliefEnabled = true;
   private energyIdentityStylingEnabled = true;
+  private botanicalIdentityStylingEnabled = true;
   private powderBodyDepthEnabled = true;
   private powderRenderStyle: PowderRenderStyle = 'smooth';
   private gasFieldLightingDirty = false;
@@ -558,6 +559,14 @@ export class MaterialRenderer {
     this.changed = true;
   }
 
+  setBotanicalIdentityStylingEnabled(enabled: boolean): void {
+    if (enabled === this.botanicalIdentityStylingEnabled) return;
+    this.botanicalIdentityStylingEnabled = enabled;
+    this.presenter?.setBotanicalIdentityStylingEnabled(enabled);
+    this.contourChunks.markAll();
+    this.changed = true;
+  }
+
   setPowderBodyDepthEnabled(enabled: boolean): void {
     if (enabled === this.powderBodyDepthEnabled) return;
     this.powderBodyDepthEnabled = enabled;
@@ -733,6 +742,7 @@ export class MaterialRenderer {
       this.liquidIdentityStylingEnabled,
       this.gasIdentityStylingEnabled,
       this.energyIdentityStylingEnabled,
+      this.botanicalIdentityStylingEnabled,
     );
     // Route subsequent dirty cells to the candidate while its first expensive
     // frame is in flight. The known-good Canvas remains mounted underneath;
@@ -1198,11 +1208,10 @@ export class MaterialRenderer {
           this.styledColor[0], this.styledColor[1], this.styledColor[2], canvasLiquidAlpha(density),
         );
       } else if (material === Material.Wood) {
-        const grain = hash(index) % 23 - 11;
-        this.styledColor[0] = 132 + grain;
-        this.styledColor[1] = 76 + grain * 0.45;
-        this.styledColor[2] = 40;
-        applyCanvasBotanicalMorphology(this.styledColor, material, x, y, index);
+        const canonical = projectedInfo?.color ?? 0x9b6038;
+        this.styledColor[0] = canonical >>> 16;
+        this.styledColor[1] = canonical >>> 8 & 0xff;
+        this.styledColor[2] = canonical & 0xff;
         applyCanvasSolidBodyOptics(
           this.styledColor, surfaceLight, normalLight, solidRelief,
           denseSolidInterior, profile, optics, solidOpticalDepth, this.solidOpticalDepthEnabled,
@@ -1214,16 +1223,17 @@ export class MaterialRenderer {
         this.applyThermalMaterialStyle(
           phase, material, false, applicableTraits, temperatures?.[index], optics,
         );
+        if (this.botanicalIdentityStylingEnabled) {
+          applyCanvasBotanicalMorphology(this.styledColor, material, x, y, index);
+        }
         compositePixel(
           target, pixel, this.styledColor[0], this.styledColor[1], this.styledColor[2], 255,
         );
       } else if (material === Material.Plant) {
-        const grain = hash(index) % 23 - 11;
-        const leaf = (hash(index + 401) & 3) * 7;
-        this.styledColor[0] = 62 + leaf;
-        this.styledColor[1] = 132 + leaf;
-        this.styledColor[2] = 58 + grain * 0.35;
-        applyCanvasBotanicalMorphology(this.styledColor, material, x, y, index);
+        const canonical = projectedInfo?.color ?? 0x65a95f;
+        this.styledColor[0] = canonical >>> 16;
+        this.styledColor[1] = canonical >>> 8 & 0xff;
+        this.styledColor[2] = canonical & 0xff;
         applyCanvasSolidBodyOptics(
           this.styledColor, surfaceLight, normalLight, solidRelief,
           denseSolidInterior, profile, optics, solidOpticalDepth, this.solidOpticalDepthEnabled,
@@ -1235,6 +1245,9 @@ export class MaterialRenderer {
         this.applyThermalMaterialStyle(
           phase, material, false, applicableTraits, temperatures?.[index], optics,
         );
+        if (this.botanicalIdentityStylingEnabled) {
+          applyCanvasBotanicalMorphology(this.styledColor, material, x, y, index);
+        }
         compositePixel(
           target, pixel, this.styledColor[0], this.styledColor[1], this.styledColor[2], 255,
         );
@@ -1476,9 +1489,6 @@ export class MaterialRenderer {
           if (this.unusualSolidStylingEnabled && phase === RenderPhase.Solid) {
             applyCanvasUnusualSolidMorphology(this.styledColor, material, x, y, index);
           }
-          if (material === Material.VINE || material === Material.SEED || material === Material.YEST) {
-            applyCanvasBotanicalMorphology(this.styledColor, material, x, y, index);
-          }
           if (phase === RenderPhase.Powder) applyCanvasPowderBulkCellStyle(
             this.styledColor, powderCanonicalColor, this.boundaryStability[index],
             fields.powderSurface.bytes, pixel, powderBulkDepth, this.powderBodyDepthEnabled, optics,
@@ -1509,6 +1519,10 @@ export class MaterialRenderer {
           this.applyThermalMaterialStyle(
             phase, material, info.emissive, applicableTraits, temperatures?.[index], optics,
           );
+          if (this.botanicalIdentityStylingEnabled
+            && (material === Material.VINE || material === Material.SEED || material === Material.YEST)) {
+            applyCanvasBotanicalMorphology(this.styledColor, material, x, y, index);
+          }
           const alpha = material === Material.Glass ? 198
             : optics === RenderOptics.TranslucentRigid ? 218 : 255;
           if (wall && optics === RenderOptics.TranslucentRigid) {

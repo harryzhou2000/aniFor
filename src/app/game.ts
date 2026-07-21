@@ -318,6 +318,9 @@ export class Game {
       setEnergyIdentityStyling: (enabled) => {
         this.renderer.setEnergyIdentityStylingEnabled(enabled);
       },
+      setBotanicalIdentityStyling: (enabled) => {
+        this.renderer.setBotanicalIdentityStylingEnabled(enabled);
+      },
       setPowderBodyDepth: (enabled) => {
         this.renderer.setPowderBodyDepthEnabled(enabled);
       },
