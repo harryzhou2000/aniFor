@@ -40,6 +40,24 @@ describe('Canvas render traits', () => {
     expect(organic).not.toEqual(emitter);
   });
 
+  it('can isolate role graphics without suppressing unrelated traits', () => {
+    const clock = new Int32Array(CANVAS_RENDER_TRAIT_CLOCK_SIZE);
+    updateCanvasRenderTraitClock(clock, 420);
+    const disabled = new Float32Array([90, 100, 110]);
+    applyCanvasRenderTraits(
+      disabled, RenderTrait.Emitter | RenderTrait.Channel,
+      RenderPhase.Solid, Material.CLNE, 12, 7, 440, clock, false,
+    );
+    expect(Array.from(disabled)).toEqual([90, 100, 110]);
+
+    const radioactive = new Float32Array([90, 100, 110]);
+    applyCanvasRenderTraits(
+      radioactive, RenderTrait.Emitter | RenderTrait.Radioactive,
+      RenderPhase.Solid, Material.VIBR, 12, 7, 440, clock, false,
+    );
+    expect(Array.from(radioactive)).not.toEqual([90, 100, 110]);
+  });
+
   it('leaves botanical identity to morphology while preserving every other trait', () => {
     const clock = new Int32Array(CANVAS_RENDER_TRAIT_CLOCK_SIZE);
     updateCanvasRenderTraitClock(clock, 420);

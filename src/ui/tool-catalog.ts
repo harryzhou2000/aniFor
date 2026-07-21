@@ -1,5 +1,6 @@
 import { LIFE_PRESETS, Material, type MaterialCategory, type MaterialInfo } from '../shared/materials';
 import { SimulationTool, type SimulationToolId } from '../simulation/simulation-tools';
+import { isForceMaterial } from '../renderer/render-traits';
 
 export type ToolKind = 'element' | 'wall' | 'force' | 'thermal' | 'source' | 'life' | 'sign' | 'utility';
 export type ToolFilter = 'all' | 'favorites' | 'recent' | 'radioactive' | ToolKind;
@@ -195,7 +196,7 @@ export function filterTools(tools: readonly CatalogTool[], state: CatalogFilterS
     if (state.mode === 'favorites' && !state.favorites.has(tool.key)) return false;
     if (state.mode === 'recent' && !recent.has(tool.key)) return false;
     const categoryElement = tool.kind === 'element' && (
-      (state.mode === 'force' && tool.category === 'force')
+      (state.mode === 'force' && isForceMaterial(tool.id))
       || (state.mode === 'life' && tool.category === 'life')
       || (state.mode === 'radioactive' && tool.category === 'radioactive')
     );

@@ -260,6 +260,9 @@ export class Game {
       setSolidFieldLighting: (enabled) => {
         this.renderer.setSolidFieldLightingEnabled(enabled);
       },
+      setRoleMaterialStyling: (enabled) => {
+        this.renderer.setRoleMaterialStylingEnabled(enabled);
+      },
       setPhaseContactLighting: (enabled) => {
         this.renderer.setPhaseContactLightingEnabled(enabled);
       },

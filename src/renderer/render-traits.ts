@@ -20,7 +20,7 @@ export function renderTraits(material: Pick<MaterialInfo, 'id' | 'category'>): n
   if (isEmitter(material.id)) traits |= RenderTrait.Emitter;
   if (isSink(material.id)) traits |= RenderTrait.Sink;
   if (isChannel(material.id)) traits |= RenderTrait.Channel;
-  if (isForce(material.id)) traits |= RenderTrait.Force;
+  if (isForceMaterial(material.id)) traits |= RenderTrait.Force;
   if (isCarrier(material.id)) traits |= RenderTrait.Carrier;
   return traits;
 }
@@ -66,7 +66,8 @@ function isChannel(id: Material): boolean {
   }
 }
 
-function isForce(id: Material): boolean {
+/** Material identities whose native behavior applies or represents force. */
+export function isForceMaterial(id: Material): boolean {
   switch (id) {
     case Material.ACEL: case Material.DCEL: case Material.DMG: case Material.FRAY:
     case Material.GBMB: case Material.PSTN: case Material.RPEL: case Material.BHOL: case Material.NBHL:

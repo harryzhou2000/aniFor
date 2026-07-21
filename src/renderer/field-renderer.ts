@@ -173,6 +173,7 @@ export class MaterialRenderer {
   private solidCurvatureDepthEnabled = true;
   private surfaceContourLightingEnabled = true;
   private solidFieldLightingEnabled = true;
+  private roleMaterialStylingEnabled = true;
   private phaseContactLightingEnabled = true;
   private thermalMaterialStylingEnabled = true;
   private energyCoreReliefEnabled = true;
@@ -441,6 +442,14 @@ export class MaterialRenderer {
     this.changed = true;
   }
 
+  setRoleMaterialStylingEnabled(enabled: boolean): void {
+    if (enabled === this.roleMaterialStylingEnabled) return;
+    this.roleMaterialStylingEnabled = enabled;
+    this.presenter?.setRoleMaterialStylingEnabled(enabled);
+    this.contourChunks.markAll();
+    this.changed = true;
+  }
+
   setPhaseContactLightingEnabled(enabled: boolean): void {
     if (enabled === this.phaseContactLightingEnabled) return;
     this.phaseContactLightingEnabled = enabled;
@@ -633,6 +642,7 @@ export class MaterialRenderer {
       this.emissionVolumeChromaEnabled,
       this.liquidOpticalDepthEnabled,
       this.solidOpticalDepthEnabled,
+      this.roleMaterialStylingEnabled,
     );
     // Route subsequent dirty cells to the candidate while its first expensive
     // frame is in flight. The known-good Canvas remains mounted underneath;
@@ -1009,6 +1019,7 @@ export class MaterialRenderer {
         );
         if (applicableTraits !== 0) applyCanvasRenderTraits(
           this.styledColor, applicableTraits, phase, material, x, y, index, this.traitClock,
+          this.roleMaterialStylingEnabled,
         );
         compositePixel(target, pixel, this.styledColor[0], this.styledColor[1], this.styledColor[2], 245);
         setPixel(
@@ -1101,6 +1112,7 @@ export class MaterialRenderer {
         );
         applyCanvasRenderTraits(
           this.styledColor, applicableTraits, phase, material, x, y, index, this.traitClock,
+          this.roleMaterialStylingEnabled,
         );
         this.applyThermalMaterialStyle(
           phase, material, false, applicableTraits, temperatures?.[index], optics,
@@ -1121,6 +1133,7 @@ export class MaterialRenderer {
         );
         applyCanvasRenderTraits(
           this.styledColor, applicableTraits, phase, material, x, y, index, this.traitClock,
+          this.roleMaterialStylingEnabled,
         );
         this.applyThermalMaterialStyle(
           phase, material, false, applicableTraits, temperatures?.[index], optics,
@@ -1293,6 +1306,7 @@ export class MaterialRenderer {
           } else {
             if (applicableTraits !== 0) applyCanvasRenderTraits(
               this.styledColor, applicableTraits, phase, material, x, y, index, this.traitClock,
+              this.roleMaterialStylingEnabled,
             );
             setPixel(
               smoke, pixel,
@@ -1330,6 +1344,7 @@ export class MaterialRenderer {
           } else {
             if (applicableTraits !== 0) applyCanvasRenderTraits(
               this.styledColor, applicableTraits, phase, material, x, y, index, this.traitClock,
+              this.roleMaterialStylingEnabled,
             );
             compositePixel(
               target, pixel,
@@ -1364,6 +1379,7 @@ export class MaterialRenderer {
           }
           if (applicableTraits !== 0) applyCanvasRenderTraits(
             this.styledColor, applicableTraits, phase, material, x, y, index, this.traitClock,
+            this.roleMaterialStylingEnabled,
           );
           if (this.translucentLensShellEnabled && applicableTraits === 0 && !info.emissive) {
             applyCanvasTranslucentLensShell(

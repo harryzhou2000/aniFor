@@ -29,6 +29,7 @@ const solidDepthOnly = process.argv.includes('--solid-depth-only');
 const gasChromaOnly = process.argv.includes('--gas-chroma-only');
 const surfaceContourOnly = process.argv.includes('--surface-contour-only');
 const solidFieldOnly = process.argv.includes('--solid-field-only');
+const roleGraphicsOnly = process.argv.includes('--role-graphics-only');
 const screenshotRequest = process.argv.find((argument) => argument.startsWith('--screenshot='))?.slice('--screenshot='.length);
 const SOLID_FIELD_REGIONS = [
   { name: 'warmMetalFacing', x: 389.5, y: 229, radiusX: 2, radiusY: 5 },
@@ -46,6 +47,14 @@ const FOCUSED_SOLID_FIELD_REGIONS = [
   { name: 'powderFieldControl', x: 36, y: 250, radius: 2 },
   { name: 'glassFieldControl', x: 136, y: 250, radius: 2 },
   { name: 'traitFieldControl', x: 236, y: 250, radius: 2 },
+];
+const ROLE_GRAPHICS_REGIONS = [
+  { name: 'converter', x: 526, y: 279, radiusX: 12, radiusY: 7 },
+  { name: 'cloneEmitter', x: 405, y: 304, radiusX: 12, radiusY: 7 },
+  { name: 'poweredCloneEmitter', x: 445, y: 304, radiusX: 12, radiusY: 7 },
+  { name: 'deviceControl', x: 485, y: 304, radiusX: 12, radiusY: 7 },
+  { name: 'portalSinkChannel', x: 525, y: 304, radiusX: 12, radiusY: 7 },
+  { name: 'acceleratorForce', x: 565, y: 304, radiusX: 12, radiusY: 7 },
 ];
 
 async function main() {
@@ -66,13 +75,15 @@ async function main() {
     for (const mode of modes) results.push(await auditMode(mode));
     const reducedAudit = quickScreenshot || layoutOnly || mobileOnly
       || desktopInputOnly || visualScaleMatrixOnly || powderBodyOnly || liquidDepthOnly
-      || solidDepthOnly || gasChromaOnly || surfaceContourOnly || solidFieldOnly;
+      || solidDepthOnly || gasChromaOnly || surfaceContourOnly || solidFieldOnly
+      || roleGraphicsOnly;
     if (powderBodyOnly) assertPairedPowderBodyDepth(results);
     if (liquidDepthOnly) assertPairedLiquidOpticalDepth(results);
     if (solidDepthOnly) assertPairedSolidOpticalDepth(results);
     if (gasChromaOnly) assertPairedGasSpectralScattering(results);
     if (surfaceContourOnly) assertPairedSurfaceContourLighting(results);
     if (solidFieldOnly) assertPairedSolidFieldLighting(results);
+    if (roleGraphicsOnly) assertPairedRoleGraphics(results);
     if (!scaleEightOnly && !materialAtlasOnly && !reducedAudit) assertPairedVisualRelief(results);
     if (!scaleEightOnly && !reducedAudit) assertPairedMaterialAtlas(results);
     compactMaterialAtlasResults(results);
@@ -243,6 +254,54 @@ async function auditMode(mode) {
     // Read the rendered canvas, not semantic cells, so framebuffer clipping and
     // backend compositing regressions are observable in the browser gate.
     const canonicalCaptures = await waitForStablePageCapture(cdp, `${mode} canonical framebuffer`);
+    if (roleGraphicsOnly) {
+      const probeState = await evaluate(cdp, `(${JSON.stringify(ROLE_GRAPHICS_REGIONS)}).map(({ name, x, y }) => ({
+        name, material: window.__ANIFOR_INPUT_AUDIT__.cell(x, y),
+        wall: window.__ANIFOR_INPUT_AUDIT__.wall(x, y),
+      }))`);
+      await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setRoleMaterialStyling(false); true');
+      const flat = await waitForStablePageCapture(cdp, `${mode} flat semantic-role framebuffer`);
+      await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setRoleMaterialStyling(true); true');
+      const styled = await waitForStablePageCapture(cdp, `${mode} styled semantic-role framebuffer`);
+      await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setRoleMaterialStyling(false); true');
+      const repeated = await waitForStablePageCapture(cdp, `${mode} repeated flat semantic-role framebuffer`);
+      const roleGraphicsSamples = await sampleBackdropRefractionRegions(cdp, {
+        straight: flat.capture.data,
+        refracted: styled.capture.data,
+        repeatedStraight: repeated.capture.data,
+      }, ROLE_GRAPHICS_REGIONS, canonicalCaptures.canvasRect);
+      assertRoleGraphicsSamples(roleGraphicsSamples, `${mode} ${JSON.stringify(probeState)}`);
+      const blank = await captureStableBlankPage(cdp, mode);
+      const supportRegions = [{
+        name: 'semanticRoleSupport', x: 486, y: 291,
+        radiusX: 100, radiusY: 28, silhouette: true,
+      }];
+      const [flatSupport, styledSupport] = await Promise.all([
+        samplePageRegions(
+          cdp, flat.capture.data, supportRegions,
+          blank.capture.data, blank.reference.data, canonicalCaptures.canvasRect,
+        ),
+        samplePageRegions(
+          cdp, styled.capture.data, supportRegions,
+          blank.capture.data, blank.reference.data, canonicalCaptures.canvasRect,
+        ),
+      ]);
+      const supportInvariant = {
+        flatVisible: flatSupport[0].visible,
+        styledVisible: styledSupport[0].visible,
+        flatWorldArea: flatSupport[0].worldArea,
+        styledWorldArea: styledSupport[0].worldArea,
+      };
+      assert(supportInvariant.flatVisible === supportInvariant.styledVisible
+        && Math.abs(supportInvariant.flatWorldArea - supportInvariant.styledWorldArea) <= 0.01,
+      `${mode}: semantic role styling changed support (${JSON.stringify(supportInvariant)})`);
+      assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
+      cdp.close();
+      return {
+        backend: mode, roleGraphicsSamples, supportInvariant, probeState,
+        browserErrors: errors.length,
+      };
+    }
     if (solidFieldOnly) {
       await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.prepareSolidFieldLightingFixture(); true');
       await waitFor(() => evaluate(cdp,
@@ -3532,6 +3591,50 @@ function assertPairedSolidFieldLighting(results) {
     const ratio = canvasSample.rgbRms / Math.max(0.03, webglSample.rgbRms);
     assert(ratio >= 0.35 && ratio <= 3.0,
       `focused Canvas/WebGL ${name} solid-field response diverged (${canvasSample.rgbRms}/${webglSample.rgbRms})`);
+  }
+}
+
+function assertRoleGraphicsSamples(samples, label) {
+  const byName = Object.fromEntries(samples.map((sample) => [sample.name, sample]));
+  for (const name of [
+    'converter', 'cloneEmitter', 'poweredCloneEmitter',
+    'portalSinkChannel', 'acceleratorForce',
+  ]) {
+    assert(byName[name].rgbRms >= 0.35 && byName[name].rgbPeak <= 32,
+      `${label}: ${name} lost bounded fit-view role structure (${JSON.stringify(samples)})`);
+  }
+  assert(byName.cloneEmitter.responseRgb[0] > byName.cloneEmitter.responseRgb[2] + 0.2
+    && byName.poweredCloneEmitter.responseRgb[0]
+      > byName.poweredCloneEmitter.responseRgb[2] + 0.2,
+  `${label}: emitter roles lost warm outward identity (${JSON.stringify(samples)})`);
+  assert(byName.portalSinkChannel.responseRgb[2]
+      > byName.portalSinkChannel.responseRgb[0] + 0.2,
+  `${label}: sink/channel role lost cool inward identity (${JSON.stringify(samples)})`);
+  assert(byName.acceleratorForce.responseRgb[2]
+      > byName.acceleratorForce.responseRgb[0] + 0.2,
+  `${label}: force role lost cool ring identity (${JSON.stringify(samples)})`);
+  assert(byName.converter.responseRgb[0] >= 0.2 && byName.converter.responseRgb[2] >= 0.2,
+    `${label}: converter lost composed emitter/sink identity (${JSON.stringify(samples)})`);
+  assert(byName.deviceControl.rgbPeak <= 1,
+    `${label}: role styling leaked into neutral device control (${JSON.stringify(samples)})`);
+  assert(samples.every((sample) => sample.repeatRgbPeak <= 1),
+    `${label}: semantic role off-on-off sequence was not deterministic (${JSON.stringify(samples)})`);
+}
+
+function assertPairedRoleGraphics(results) {
+  const canvas = results.find((result) => result.backend === 'canvas2d')?.roleGraphicsSamples;
+  const webgl = results.find((result) => result.backend === 'webgl')?.roleGraphicsSamples;
+  if (!canvas || !webgl) return;
+  for (const name of [
+    'converter', 'cloneEmitter', 'poweredCloneEmitter',
+    'portalSinkChannel', 'acceleratorForce',
+  ]) {
+    const canvasSample = canvas.find((sample) => sample.name === name);
+    const webglSample = webgl.find((sample) => sample.name === name);
+    assert(canvasSample && webglSample, `paired semantic-role sample missing ${name}`);
+    const ratio = canvasSample.rgbRms / Math.max(0.05, webglSample.rgbRms);
+    assert(ratio >= 0.25 && ratio <= 4.0,
+      `Canvas/WebGL ${name} role response diverged (${canvasSample.rgbRms}/${webglSample.rgbRms})`);
   }
 }
 

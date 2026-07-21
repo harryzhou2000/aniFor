@@ -22,6 +22,7 @@ interface PresenterHarness {
   setSurfaceContourLightingEnabled: PixiFieldPresenter['setSurfaceContourLightingEnabled'];
   setPhaseContactLightingEnabled: PixiFieldPresenter['setPhaseContactLightingEnabled'];
   setSolidFieldLightingEnabled: PixiFieldPresenter['setSolidFieldLightingEnabled'];
+  setRoleMaterialStylingEnabled: PixiFieldPresenter['setRoleMaterialStylingEnabled'];
   setLiquidSilhouetteCohesionEnabled: PixiFieldPresenter['setLiquidSilhouetteCohesionEnabled'];
   setRenderStallHandler: PixiFieldPresenter['setRenderStallHandler'];
   forceEightXRenderStallForAudit: PixiFieldPresenter['forceEightXRenderStallForAudit'];
@@ -90,6 +91,7 @@ describe('Pixi presenter startup configuration', () => {
       uSurfaceContourLighting: 1,
       uPhaseContactLighting: 1,
       uSolidFieldLighting: 1,
+      uRoleMaterialStyling: 1,
       uLiquidSilhouetteCohesion: 1,
       uThermalMaterialStyling: 1,
       uEnergyCoreRelief: 0,
@@ -521,6 +523,36 @@ describe('Pixi presenter startup configuration', () => {
     presenter.setSolidFieldLightingEnabled(true);
     expect(presenter.uniforms.uniforms.uSolidFieldLighting).toBe(1);
     expect(presenter.app.render).toHaveBeenCalledOnce();
+  });
+
+  it('seeds and redraws optional-last semantic role styling', () => {
+    const presenter = presenterHarness();
+
+    presenter.configurePresentation(
+      true, true, true, true, true, true, true, true, true, 'smooth',
+      true, true, true, true, true, true, true, true, true, true, false,
+    );
+    expect(presenter.uniforms.uniforms.uRoleMaterialStyling).toBe(0);
+    expect(presenter.app.render).not.toHaveBeenCalled();
+
+    presenter.setRoleMaterialStylingEnabled(true);
+    expect(presenter.uniforms.uniforms.uRoleMaterialStyling).toBe(1);
+    expect(presenter.app.render).toHaveBeenCalledOnce();
+  });
+
+  it('keeps role glyphs RGB-only and off reconstructed support', () => {
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const start = source.indexOf('// Static role accents cross phase boundaries');
+    const end = source.indexOf('  float emission = energyCore > 0.5', start);
+    const roleBlock = source.slice(start, end);
+
+    expect(start).toBeGreaterThan(0);
+    expect(end).toBeGreaterThan(start);
+    expect(source).toContain('uniform float uRoleMaterialStyling;');
+    expect(roleBlock).toContain('&& surfaceOnly < 0.5');
+    expect(roleBlock).toContain('uRoleMaterialStyling > 0.5');
+    expect(roleBlock).not.toMatch(/texture\s*\(/);
+    expect(roleBlock).not.toMatch(/\balpha\s*[+*]?=/);
   });
 
   it('keeps contour and thick-body solid field light bounded behind strict eligibility', () => {

@@ -39,8 +39,13 @@ describe('tool catalog view model', () => {
     const forces = filterTools(catalog, { ...state, mode: 'force' });
     expect(forces.some((tool) => tool.kind === 'force' && tool.key === 'tool:wind')).toBe(true);
     expect(forces.some((tool) => tool.kind === 'element' && tool.id === Material.FRAY)).toBe(true);
-    expect(forces.every((tool) => tool.kind === 'force'
-      || (tool.kind === 'element' && tool.category === 'force'))).toBe(true);
+    for (const id of [
+      Material.ACEL, Material.DCEL, Material.DMG, Material.FRAY, Material.GBMB,
+      Material.PSTN, Material.RPEL, Material.BHOL, Material.NBHL, Material.NWHL,
+      Material.WHOL, Material.GPMP, Material.PUMP, Material.GRVT, Material.SING,
+    ]) expect(forces.some((tool) => tool.kind === 'element' && tool.id === id)).toBe(true);
+    expect(forces.some((tool) => tool.kind === 'element' && tool.id === Material.FRME)).toBe(false);
+    expect(forces.some((tool) => tool.kind === 'element' && tool.id === Material.PIPE)).toBe(false);
 
     const life = filterTools(catalog, { ...state, mode: 'life' });
     expect(life).toHaveLength(LIFE_PRESETS.length + 5);

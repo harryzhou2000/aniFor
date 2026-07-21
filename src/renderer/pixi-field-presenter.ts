@@ -106,6 +106,7 @@ uniform float uSolidCurvatureDepth;
 uniform float uSurfaceContourLighting;
 uniform float uPhaseContactLighting;
 uniform float uSolidFieldLighting;
+uniform float uRoleMaterialStyling;
 uniform float uLiquidSilhouetteCohesion;
 uniform float uThermalMaterialStyling;
 uniform float uEnergyCoreRelief;
@@ -1875,7 +1876,8 @@ void main() {
   // Static role accents cross phase boundaries without widening semantic
   // silhouettes. Empty-space volume reconstruction intentionally remains free
   // of role metadata because it no longer has an authoritative material ID.
-  if (traits > 0.5 && halo < 0.5 && wallOnly < 0.5 && emissionOnly < 0.5) {
+  if (traits > 0.5 && halo < 0.5 && wallOnly < 0.5 && emissionOnly < 0.5
+    && surfaceOnly < 0.5) {
     float emitter = traitFlag(traits, 1.0);
     float sink = traitFlag(traits, 2.0);
     float channel = traitFlag(traits, 4.0);
@@ -1888,22 +1890,41 @@ void main() {
     float roleWave = 0.5 + 0.5 * sin(
       dot(fieldPosition, vec2(0.137, 0.083)) + material * 0.619 - uTime * 0.92
     );
-    if (emitter + sink > 0.5) {
-      vec3 roleTint = (emitter * vec3(1.0, 0.48, 0.16) + sink * vec3(0.18, 0.52, 1.0))
-        / max(1.0, emitter + sink);
-      color += roleTint * (0.012 + roleWave * 0.035) * (0.45 + traitEdge * 0.55);
-    }
-    if (channel > 0.5) {
-      float band = pow(0.5 + 0.5 * sin(
-        (fieldPosition.x - fieldPosition.y) * 0.18 + uTime * (emitter - sink) * 0.90 + material
-      ), 6.0);
-      color += vec3(0.42, 0.72, 1.0) * (0.009 + band * 0.040);
-    }
-    if (forceRole > 0.5) {
-      float radial = 0.5 + 0.5 * sin(
-        length(fract((fieldPosition + vec2(material)) / 12.0) - 0.5) * 20.0 - uTime * 1.10 + material
-      );
-      color += vec3(0.18, 0.65, 1.0) * (0.012 + radial * 0.040) * (0.55 + traitEdge * 0.45);
+    if (uRoleMaterialStyling > 0.5 && emitter + sink + channel + forceRole > 0.5) {
+      // One stable 24-cell mechanism glyph family replaces the former narrow,
+      // animated backend-specific decals. It remains readable at fit view and
+      // costs only branch-local arithmetic at true 8x.
+      vec2 roleTile = fract(
+        (fieldPosition + vec2(material * 3.0, material * 5.0)) / 24.0
+      ) - 0.5;
+      float roleRadius = length(roleTile);
+      float core = 1.0 - smoothstep(0.12, 0.18, roleRadius);
+      float ring = 1.0 - smoothstep(0.045, 0.075, abs(roleRadius - 0.31));
+      if (emitter > 0.5) {
+        color += vec3(1.0, 0.46, 0.13)
+          * (0.012 + core * 0.058 + ring * 0.034) * (0.72 + traitEdge * 0.28);
+      }
+      if (sink > 0.5) {
+        color *= 1.0 - core * 0.018;
+        color += vec3(0.18, 0.55, 1.0)
+          * (0.010 + core * 0.042 + ring * 0.040) * (0.72 + traitEdge * 0.28);
+      }
+      if (channel > 0.5) {
+        float railCoordinate = abs(fract(
+          (fieldPosition.x - fieldPosition.y + material * 2.0) / 14.0
+        ) - 0.5);
+        float rail = 1.0 - smoothstep(0.055, 0.13, railCoordinate);
+        float node = rail * (1.0 - smoothstep(0.08, 0.18, abs(fract(
+          (fieldPosition.x + fieldPosition.y + material) / 12.0
+        ) - 0.5)));
+        color += vec3(0.32, 0.72, 1.0) * (0.008 + rail * 0.038 + node * 0.018);
+      }
+      if (forceRole > 0.5) {
+        float innerRing = 1.0 - smoothstep(0.040, 0.070, abs(roleRadius - 0.21));
+        float outerRing = 1.0 - smoothstep(0.035, 0.065, abs(roleRadius - 0.39));
+        color += vec3(0.16, 0.68, 1.0)
+          * (0.010 + max(innerRing, outerRing) * 0.055) * (0.74 + traitEdge * 0.26);
+      }
     }
     if (radioactive > 0.5 && energyCore < 0.5) {
       float isotopeNoise = fract(sin(
@@ -2174,6 +2195,7 @@ export class PixiFieldPresenter {
       uSurfaceContourLighting: { value: 1, type: 'f32' },
       uPhaseContactLighting: { value: 1, type: 'f32' },
       uSolidFieldLighting: { value: 1, type: 'f32' },
+      uRoleMaterialStyling: { value: 1, type: 'f32' },
       uLiquidSilhouetteCohesion: { value: 1, type: 'f32' },
       // FieldRenderer turns this on only for backends that expose temperature;
       // byte zero must therefore never make legacy backends look frozen.
@@ -2424,6 +2446,7 @@ export class PixiFieldPresenter {
     emissionVolumeChromaEnabled = true,
     liquidOpticalDepthEnabled = true,
     solidOpticalDepthEnabled = true,
+    roleMaterialStylingEnabled = true,
   ): void {
     const uniforms = this.uniforms.uniforms;
     uniforms.uGasFieldLighting = gasFieldLightingEnabled ? 1 : 0;
@@ -2442,6 +2465,7 @@ export class PixiFieldPresenter {
     uniforms.uLiquidVolumeChroma = liquidVolumeChromaEnabled ? 1 : 0;
     uniforms.uLiquidOpticalDepth = liquidOpticalDepthEnabled ? 1 : 0;
     uniforms.uSolidOpticalDepth = solidOpticalDepthEnabled ? 1 : 0;
+    uniforms.uRoleMaterialStyling = roleMaterialStylingEnabled ? 1 : 0;
     uniforms.uPowderBodyDepth = powderBodyDepthEnabled ? 1 : 0;
     uniforms.uThermalMaterialStyling = thermalMaterialStylingEnabled ? 1 : 0;
     uniforms.uEnergyCoreRelief = energyCoreReliefEnabled ? 1 : 0;
@@ -2520,6 +2544,11 @@ export class PixiFieldPresenter {
 
   setSolidFieldLightingEnabled(enabled: boolean): void {
     this.uniforms.uniforms.uSolidFieldLighting = enabled ? 1 : 0;
+    this.renderApplication();
+  }
+
+  setRoleMaterialStylingEnabled(enabled: boolean): void {
+    this.uniforms.uniforms.uRoleMaterialStyling = enabled ? 1 : 0;
     this.renderApplication();
   }
 

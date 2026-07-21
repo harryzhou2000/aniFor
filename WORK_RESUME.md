@@ -68,6 +68,16 @@ Queued after the renderer checkpoint: revisit desktop/mobile geometry as a dedic
 - The full renderer profile remains allocation-stable at `12,051,464` combined bytes. Botanical work is once per authoritative Canvas cell and branch-local WebGL arithmetic, independent of presentation scale.
 - The post-botanical true-8× gate passes at requested/effective `8/8` with one `4896×3072` WebGL target, all `217/217` material projections visible, zero browser errors, and exact zero wheel-anchor error. Eight retained GPU-fence samples completed at `3608.8/3615.6/3619.9 ms` median/p90/max. Forced-stall and context-loss recovery both retained the camera and returned to bounded Canvas 2× with `0.0159`-cell footprint error.
 
+## Current semantic mechanism graphics follow-up
+
+- Emitter, sink, channel, and force traits now use broad stable 24-cell mechanism glyphs instead of narrow backend-divergent animated stripes. Emitters carry a warm core and outward ring, sinks a cool inward core/ring, channels diagonal rails and nodes, and force materials paired cyan rings. Composite roles such as CONV and FRAY retain all of their meanings without being promoted to emissive matter.
+- Canvas owns the same bounded role vocabulary in one allocation-free RGB helper. WebGL replaces the former role `sin`/`pow` decals with branch-local `fract`, distance, and `smoothstep` arithmetic. No field, texture lookup, sampler, upload, pass, framebuffer target, persistent allocation, alpha mutation, or output-scale resource was added.
+- WebGL role and semantic trait styling now explicitly rejects `surfaceOnly` reconstruction. Nearby authoritative material can still stabilize an ordinary contour, but its emitter/sink/channel/force/organic/radioactive/carrier metadata can no longer leak into a reconstructed cavity or unsupported fringe.
+- The dedicated default-on audit toggle captures flat→styled→flat role frames in the canonical fit-view scene. Paired Canvas/WebGL gates prove warm CLNE/PCLN, cool PRTI channel/sink, cool ACEL force rings, dual-channel CONV response, an exact DTEC no-op, byte-stable repeated-off frames, identical composed support, and zero browser errors. Canvas/WebGL RGB RMS respectively measures `5.85/4.36` CONV, `2.57/2.57` CLNE, `4.30/3.12` PCLN, `8.32/6.12` PRTI, and `7.15/5.44` ACEL.
+- The Forces toolbox filter now follows the same exported native-behavior role classifier as rendering. It includes cross-category force materials such as GRVT, SING, BHOL/NBHL/NWHL/WHOL, GPMP, and PUMP, while leaving non-force FRME and channel-only PIPE discoverable through their ordinary groups/search rather than mislabelling them.
+- Full unit/native validation passes all 66 files / 435 tests, including native seed growth, save/load, projections, role toggle isolation, shader source guards, and catalog membership. Production build and the 19-file static asset closure pass. Shared render-field allocation remains exactly `12,051,464` bytes; the pathological all-world Canvas emitter diagnostic is `57.18/58.02/58.29 ms` median/p90/max.
+- True 8× remains exact at requested/effective `8/8` and `4896×3072`. Eight retained GPU-fence frames completed at `3592.7/3618.8/3674.6 ms` median/p90/max with zero discarded samples and zero browser errors; all `217/217` materials remained visible, wheel anchoring stayed exact, and forced-stall/context-loss fallback retained the camera with `0.0159`-cell footprint error.
+
 ## Repository and deployment snapshot
 
 - Repository: `/home/harry/projects/aniFor_codex`
@@ -445,9 +455,9 @@ The layout checkpoint `60b033b` and dense-solid relief checkpoint `97f5ced` were
 
 ## Next sequence
 
-1. Make material identity and graphics the primary effort after the current correctness checkpoint: deepen family-specific solid/powder surfaces first, then liquid/gas/energy optics, while retaining exact topology and Canvas/WebGL parity.
-2. Preserve viewport/input correctness and robust true 8× as regression invariants rather than reopening their architecture during visual work.
-3. Expand remaining TPT editing/catalog semantics after the next material-graphics checkpoint, without displacing the visual priority.
+1. Continue material identity and graphics as the primary effort: give LIFE/cellular projections and currently palette-only device/sensor subfamilies their own coherent fit-view structure, then deepen remaining liquid/gas/energy optics.
+2. Expand remaining TPT editing/catalog semantics—especially channel/portal discovery and unusual reaction products—without collapsing sources, walls, signs, simulation tools, or native LIFE into ordinary particles.
+3. Preserve viewport/input correctness, authoritative topology, Canvas/WebGL parity, bounded allocation, and robust true 8× as regression invariants rather than reopening their architecture during visual work.
 
 ## Patterned native-wall refraction (`76fb75d`, committed and live)
 

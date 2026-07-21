@@ -1,6 +1,7 @@
 import { RenderPhase } from './render-profile';
 import { RenderTrait } from './render-traits';
 import { isBotanicalMaterial } from './canvas-botanical-style';
+import { applyCanvasRoleMaterialStyle } from './canvas-role-material-style';
 
 export const CANVAS_RENDER_TRAIT_CLOCK_SIZE = 5;
 
@@ -23,6 +24,7 @@ export function applyCanvasRenderTraits(
   y: number,
   index: number,
   clock: Int32Array,
+  roleMaterialStylingEnabled = true,
 ): void {
   if (traits === 0) return;
   let red = rgb[0];
@@ -30,27 +32,6 @@ export function applyCanvasRenderTraits(
   let blue = rgb[2];
   const edgePattern = ((x + y * 3 + material) & 7) < 2 ? 1 : 0;
 
-  const emitter = traits & RenderTrait.Emitter;
-  const sink = traits & RenderTrait.Sink;
-  if (emitter || sink) {
-    let roleResidue = (x - y + material + clock[0]) % 11;
-    if (roleResidue < 0) roleResidue += 11;
-    const roleBand = roleResidue < 2 ? 1 : 0;
-    red += emitter ? 7 + roleBand * 12 : 1;
-    green += emitter ? 3 + roleBand * 5 : 5 + roleBand * 6;
-    blue += sink ? 10 + roleBand * 13 : 2;
-  }
-  if (traits & RenderTrait.Channel) {
-    const channel = ((x + y + material + clock[1]) & 7) === 0;
-    red += channel ? 5 : 0;
-    green += channel ? 10 : 2;
-    blue += channel ? 15 : 4;
-  }
-  if (traits & RenderTrait.Force) {
-    const wave = ((x * 3 + y * 2 + material + clock[2]) & 15) / 15;
-    green += 2 + wave * 7;
-    blue += 4 + wave * 12;
-  }
   if ((traits & RenderTrait.Radioactive) && phase !== RenderPhase.Energy) {
     const decay = (hash(index + clock[3] * 97 + material) & 15) < 2;
     red += decay ? 3 : 0;
@@ -79,6 +60,7 @@ export function applyCanvasRenderTraits(
   rgb[0] = red;
   rgb[1] = green;
   rgb[2] = blue;
+  if (roleMaterialStylingEnabled) applyCanvasRoleMaterialStyle(rgb, traits, material, x, y);
 }
 
 export function applicableCanvasRenderTraits(traits: number, phase: RenderPhase): number {
