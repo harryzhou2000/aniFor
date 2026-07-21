@@ -27,6 +27,7 @@ import { shadeCanvasMaterial } from './canvas-material-style';
 import { shadeCanvasCellularMaterial } from './canvas-cellular-style';
 import { applyCanvasSensorMorphology } from './canvas-sensor-style';
 import { applyCanvasUnusualPowderStyle } from './canvas-unusual-powder-style';
+import { applyCanvasUnusualSolidMorphology } from './canvas-unusual-solid-style';
 import { applyCanvasBotanicalMorphology } from './canvas-botanical-style';
 import {
   applyCanvasReconstructedSuspensionStyle, applyCanvasSemanticSuspensionStyle,
@@ -180,6 +181,7 @@ export class MaterialRenderer {
   private cellularMaterialStylingEnabled = true;
   private sensorMaterialStylingEnabled = true;
   private unusualPowderStylingEnabled = true;
+  private unusualSolidStylingEnabled = true;
   private phaseContactLightingEnabled = true;
   private thermalMaterialStylingEnabled = true;
   private energyCoreReliefEnabled = true;
@@ -480,6 +482,14 @@ export class MaterialRenderer {
     this.changed = true;
   }
 
+  setUnusualSolidStylingEnabled(enabled: boolean): void {
+    if (enabled === this.unusualSolidStylingEnabled) return;
+    this.unusualSolidStylingEnabled = enabled;
+    this.presenter?.setUnusualSolidStylingEnabled(enabled);
+    this.contourChunks.markAll();
+    this.changed = true;
+  }
+
   setPhaseContactLightingEnabled(enabled: boolean): void {
     if (enabled === this.phaseContactLightingEnabled) return;
     this.phaseContactLightingEnabled = enabled;
@@ -676,6 +686,7 @@ export class MaterialRenderer {
       this.cellularMaterialStylingEnabled,
       this.sensorMaterialStylingEnabled,
       this.unusualPowderStylingEnabled,
+      this.unusualSolidStylingEnabled,
     );
     // Route subsequent dirty cells to the candidate while its first expensive
     // frame is in flight. The known-good Canvas remains mounted underneath;
@@ -1403,6 +1414,9 @@ export class MaterialRenderer {
               velocities?.[index * 2] ?? 0,
               velocities?.[index * 2 + 1] ?? 0,
             );
+          }
+          if (this.unusualSolidStylingEnabled && phase === RenderPhase.Solid) {
+            applyCanvasUnusualSolidMorphology(this.styledColor, material, x, y, index);
           }
           if (material === Material.VINE || material === Material.SEED || material === Material.YEST) {
             applyCanvasBotanicalMorphology(this.styledColor, material, x, y, index);

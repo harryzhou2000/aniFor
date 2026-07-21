@@ -8,6 +8,7 @@ import type { MaterialAtlasEntry } from './material-atlas-audit';
 import type { CellularGraphicsAuditSnapshot } from './cellular-graphics-audit';
 import type { SensorGraphicsAuditSnapshot } from './sensor-graphics-audit';
 import type { UnusualPowderGraphicsAuditSnapshot } from './unusual-powder-graphics-audit';
+import type { UnusualSolidGraphicsAuditSnapshot } from './unusual-solid-graphics-audit';
 
 export interface BrowserInputAuditApi {
   readonly version: 1;
@@ -38,6 +39,7 @@ export interface BrowserInputAuditApi {
   setCellularMaterialStyling(enabled: boolean): void;
   setSensorMaterialStyling(enabled: boolean): void;
   setUnusualPowderStyling(enabled: boolean): void;
+  setUnusualSolidStyling(enabled: boolean): void;
   setPhaseContactLighting(enabled: boolean): void;
   setThermalMaterialStyling(enabled: boolean): void;
   setEnergyCoreRelief(enabled: boolean): void;
@@ -64,6 +66,8 @@ export interface BrowserInputAuditApi {
   prepareSensorGraphicsFixture(): void;
   unusualPowderGraphicsAtlas(): UnusualPowderGraphicsAuditSnapshot;
   prepareUnusualPowderGraphicsFixture(): void;
+  unusualSolidGraphicsAtlas(): UnusualSolidGraphicsAuditSnapshot;
+  prepareUnusualSolidGraphicsFixture(): void;
   canvasPresentationTiming(): CanvasPresentationTiming | undefined;
   requestWebGLPresentationTimingSample(): boolean;
   webGLPresentationTiming(): WebGLPresentationTiming | undefined;

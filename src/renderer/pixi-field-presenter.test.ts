@@ -26,6 +26,7 @@ interface PresenterHarness {
   setCellularMaterialStylingEnabled: PixiFieldPresenter['setCellularMaterialStylingEnabled'];
   setSensorMaterialStylingEnabled: PixiFieldPresenter['setSensorMaterialStylingEnabled'];
   setUnusualPowderStylingEnabled: PixiFieldPresenter['setUnusualPowderStylingEnabled'];
+  setUnusualSolidStylingEnabled: PixiFieldPresenter['setUnusualSolidStylingEnabled'];
   setLiquidSilhouetteCohesionEnabled: PixiFieldPresenter['setLiquidSilhouetteCohesionEnabled'];
   setRenderStallHandler: PixiFieldPresenter['setRenderStallHandler'];
   forceEightXRenderStallForAudit: PixiFieldPresenter['forceEightXRenderStallForAudit'];
@@ -98,6 +99,7 @@ describe('Pixi presenter startup configuration', () => {
       uCellularMaterialStyling: 1,
       uSensorMaterialStyling: 1,
       uUnusualPowderStyling: 1,
+      uUnusualSolidStyling: 1,
       uLiquidSilhouetteCohesion: 1,
       uThermalMaterialStyling: 1,
       uEnergyCoreRelief: 0,
@@ -676,6 +678,46 @@ describe('Pixi presenter startup configuration', () => {
     expect(unusualBlock).not.toMatch(/\balpha\s*[+*]?=/);
     expect(unusualBlock).not.toContain('uTime');
     expect(unusualBlock).not.toContain('sin(');
+  });
+
+  it('seeds, redraws, and bounds unusual solid identities to authoritative RGB arithmetic', () => {
+    const presenter = presenterHarness();
+
+    presenter.configurePresentation(
+      true, true, true, true, true, true, true, true, true, 'smooth',
+      true, true, true, true, true, true, true, true, true, true, true, true, true, true, false,
+    );
+    expect(presenter.uniforms.uniforms.uUnusualSolidStyling).toBe(0);
+    expect(presenter.app.render).not.toHaveBeenCalled();
+
+    presenter.setUnusualSolidStylingEnabled(true);
+    expect(presenter.uniforms.uniforms.uUnusualSolidStyling).toBe(1);
+    expect(presenter.app.render).toHaveBeenCalledOnce();
+
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const start = source.indexOf('// Seven uncommon solids layer one static identity');
+    const end = source.indexOf('    if (uThermalMaterialStyling > 0.5', start);
+    const unusualSolidBlock = source.slice(start, end);
+    expect(start).toBeGreaterThan(0);
+    expect(end).toBeGreaterThan(start);
+    expect(source).toContain('uniform float uUnusualSolidStyling;');
+    expect(unusualSolidBlock).toContain('uUnusualSolidStyling > 0.5 && unusualSolid > 0.5');
+    expect(unusualSolidBlock).toContain('family == 0.0 && !materialEmissive');
+    expect(unusualSolidBlock).toContain('surfaceOnly < 0.5 && halo < 0.5 && wall < 0.5');
+    expect(unusualSolidBlock).toContain('wallOnly < 0.5 && emissionOnly < 0.5');
+    for (const material of [80, 196, 206, 208, 209, 210, 216]) {
+      expect(unusualSolidBlock).toContain(`material == ${material}.0`);
+    }
+    expect(unusualSolidBlock).toContain('// BIZRS: angular prismatic facets split cool and warm reflections.');
+    expect(unusualSolidBlock).toContain('// PSTS: compressed strata tighten with body depth.');
+    expect(unusualSolidBlock).toContain('// SHLD1-4: one coherent shell gains progressively nested armour bands.');
+    expect(unusualSolidBlock).toContain('// VRSS: a membrane ring carries sparse capsid nodes and a dim core.');
+    expect(unusualSolidBlock).toContain('solidDepth');
+    expect(unusualSolidBlock).toContain('solidReliefTone');
+    expect(unusualSolidBlock).not.toMatch(/texture\s*\(/);
+    expect(unusualSolidBlock).not.toMatch(/\balpha\s*[+*]?=/);
+    expect(unusualSolidBlock).not.toContain('uTime');
+    expect(unusualSolidBlock).not.toContain('sin(');
   });
 
   it('keeps contour and thick-body solid field light bounded behind strict eligibility', () => {

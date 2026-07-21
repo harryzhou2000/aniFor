@@ -32,6 +32,9 @@ import {
 import {
   UNUSUAL_POWDER_GRAPHICS_AUDIT, prepareUnusualPowderGraphicsAuditFixture,
 } from './unusual-powder-graphics-audit';
+import {
+  UNUSUAL_SOLID_GRAPHICS_AUDIT, prepareUnusualSolidGraphicsAuditFixture,
+} from './unusual-solid-graphics-audit';
 
 const AUTOSAVE_KEY = 'stillroom-world-v1';
 
@@ -281,6 +284,9 @@ export class Game {
       setUnusualPowderStyling: (enabled) => {
         this.renderer.setUnusualPowderStylingEnabled(enabled);
       },
+      setUnusualSolidStyling: (enabled) => {
+        this.renderer.setUnusualSolidStylingEnabled(enabled);
+      },
       setPhaseContactLighting: (enabled) => {
         this.renderer.setPhaseContactLightingEnabled(enabled);
       },
@@ -335,6 +341,10 @@ export class Game {
       unusualPowderGraphicsAtlas: () => UNUSUAL_POWDER_GRAPHICS_AUDIT,
       prepareUnusualPowderGraphicsFixture: () => {
         prepareUnusualPowderGraphicsAuditFixture(this.simulation);
+      },
+      unusualSolidGraphicsAtlas: () => UNUSUAL_SOLID_GRAPHICS_AUDIT,
+      prepareUnusualSolidGraphicsFixture: () => {
+        prepareUnusualSolidGraphicsAuditFixture(this.simulation);
       },
       canvasPresentationTiming: () => this.renderer.getCanvasPresentationTiming(),
       requestWebGLPresentationTimingSample: () => this.renderer.requestWebGLPresentationTimingSample(),

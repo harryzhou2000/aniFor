@@ -1,0 +1,110 @@
+import { Material } from '../shared/materials';
+
+/** Returns whether a material has a native unusual-solid morphology. */
+export function isCanvasUnusualSolidMaterial(material: number): boolean {
+  switch (material) {
+    case Material.BIZRS:
+    case Material.PSTS:
+    case Material.SHLD1:
+    case Material.SHLD2:
+    case Material.SHLD3:
+    case Material.SHLD4:
+    case Material.VRSS:
+      return true;
+    default:
+      return false;
+  }
+}
+
+/**
+ * Applies a static, allocation-free morphology to one unusual solid cell.
+ *
+ * Only RGB is changed. Semantic support, alpha, ownership, reconstruction, and
+ * lighting remain the caller's responsibility. The motifs use world-anchored
+ * lattices rather than independent noise, so large bodies read as coherent
+ * material instead of collections of random dots.
+ */
+export function applyCanvasUnusualSolidMorphology(
+  output: Float32Array,
+  material: number,
+  x: number,
+  y: number,
+  _index: number,
+): void {
+  if (!isCanvasUnusualSolidMaterial(material)) return;
+
+  let red = 0;
+  let green = 0;
+  let blue = 0;
+
+  if (material === Material.BIZRS) {
+    // Contradictory prismatic planes: two angular facet families pull the
+    // green/cyan solid in opposing warm and cool directions.
+    const rising = positiveModulo(x * 2 + y, 13) <= 1;
+    const falling = positiveModulo(x - y * 2, 17) <= 1;
+    const hinge = rising && falling;
+    red = hinge ? 10 : rising ? -3 : falling ? 6 : 1;
+    green = hinge ? -4 : rising ? 7 : falling ? -2 : 2;
+    blue = hinge ? 12 : rising ? 9 : falling ? 4 : 3;
+  } else if (material === Material.PSTS) {
+    // Pressure-hardened paste forms compressed horizontal sediment strata.
+    // Long staggered runs keep the bands from looking like a screen overlay.
+    const stagger = Math.floor(x / 13) & 1;
+    const layer = positiveModulo(y + stagger, 6);
+    const compressionSeam = layer === 0;
+    const pressedLip = layer === 1 && positiveModulo(x, 9) < 7;
+    red = compressionSeam ? -7 : pressedLip ? 5 : 1;
+    green = compressionSeam ? -6 : pressedLip ? 3 : 0;
+    blue = compressionSeam ? -4 : pressedLip ? 6 : 2;
+  } else if (material === Material.VRSS) {
+    // A repeating viral membrane with an inner capsid and four attachment
+    // nodes. The whole cell family receives a violet cast, so even an isolated
+    // semantic cell retains its identity away from a lattice feature.
+    const localX = positiveModulo(x, 15) - 7;
+    const localY = positiveModulo(y, 15) - 7;
+    const radiusSquared = localX * localX + localY * localY;
+    const membrane = radiusSquared >= 32 && radiusSquared <= 53;
+    const capsid = radiusSquared >= 8 && radiusSquared <= 17;
+    const node = (Math.abs(localX) === 7 && Math.abs(localY) <= 1)
+      || (Math.abs(localY) === 7 && Math.abs(localX) <= 1);
+    red = node ? 12 : membrane ? 8 : capsid ? -3 : 3;
+    green = node ? 2 : membrane ? -4 : capsid ? 5 : -2;
+    blue = node ? 10 : membrane ? 11 : capsid ? 9 : 4;
+  } else {
+    // SHLD1-4 share one nested shell language. Each stage retains every plate
+    // from the prior stage and adds a denser inner shell, making native growth
+    // legible without animation, neighbour reads, or a stage-specific decal.
+    const stage = material === Material.SHLD1 ? 1
+      : material === Material.SHLD2 ? 2
+        : material === Material.SHLD3 ? 3 : 4;
+    const localX = positiveModulo(x, 16) - 8;
+    const localY = positiveModulo(y, 16) - 8;
+    const shellRadius = Math.max(Math.abs(localX), Math.abs(localY));
+    const shell = shellRadius === 7
+      || (stage >= 2 && shellRadius === 5)
+      || (stage >= 3 && shellRadius === 3)
+      || (stage >= 4 && shellRadius <= 1);
+    const joint = shell && ((localX + localY + stage) & 3) === 0;
+    const stageShade = stage - 2.5;
+    red = stageShade + (shell ? (joint ? 10 : 6) : -1);
+    green = stageShade + (shell ? (joint ? 11 : 7) : 0);
+    blue = stageShade + (shell ? (joint ? 13 : 9) : 2);
+  }
+
+  output[0] = clampByte(output[0] + clamp(red, -14, 14));
+  output[1] = clampByte(output[1] + clamp(green, -14, 14));
+  output[2] = clampByte(output[2] + clamp(blue, -14, 14));
+}
+
+function positiveModulo(value: number, divisor: number): number {
+  const remainder = value % divisor;
+  return remainder < 0 ? remainder + divisor : remainder;
+}
+
+function clamp(value: number, minimum: number, maximum: number): number {
+  return value < minimum ? minimum : value > maximum ? maximum : value;
+}
+
+function clampByte(value: number): number {
+  return value < 0 ? 0 : value > 255 ? 255 : value;
+}

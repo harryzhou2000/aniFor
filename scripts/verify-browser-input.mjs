@@ -41,8 +41,9 @@ const roleGraphicsOnly = process.argv.includes('--role-graphics-only');
 const cellularGraphicsOnly = process.argv.includes('--cellular-graphics-only');
 const sensorGraphicsOnly = process.argv.includes('--sensor-graphics-only');
 const unusualPowderGraphicsOnly = process.argv.includes('--unusual-powder-graphics-only');
+const unusualSolidGraphicsOnly = process.argv.includes('--unusual-solid-graphics-only');
 const usesProductionBundle = cellularGraphicsOnly || sensorGraphicsOnly
-  || unusualPowderGraphicsOnly || scaleEightOnly;
+  || unusualPowderGraphicsOnly || unusualSolidGraphicsOnly || scaleEightOnly;
 const AUDIT_BASE_URL = usesProductionBundle ? PRODUCTION_BUNDLE_URL : ORIGIN + '/';
 const screenshotRequest = process.argv.find((argument) => argument.startsWith('--screenshot='))?.slice('--screenshot='.length);
 const SOLID_FIELD_REGIONS = [
@@ -103,7 +104,7 @@ async function main() {
       || desktopInputOnly || visualScaleMatrixOnly || powderBodyOnly || liquidDepthOnly
       || solidDepthOnly || gasChromaOnly || surfaceContourOnly || solidFieldOnly
       || roleGraphicsOnly || cellularGraphicsOnly || sensorGraphicsOnly
-      || unusualPowderGraphicsOnly;
+      || unusualPowderGraphicsOnly || unusualSolidGraphicsOnly;
     if (powderBodyOnly) assertPairedPowderBodyDepth(results);
     if (liquidDepthOnly) assertPairedLiquidOpticalDepth(results);
     if (solidDepthOnly) assertPairedSolidOpticalDepth(results);
@@ -114,6 +115,7 @@ async function main() {
     if (cellularGraphicsOnly) assertPairedCellularGraphics(results);
     if (sensorGraphicsOnly) assertPairedSensorGraphics(results);
     if (unusualPowderGraphicsOnly) assertPairedUnusualPowderGraphics(results);
+    if (unusualSolidGraphicsOnly) assertPairedUnusualSolidGraphics(results);
     if (!scaleEightOnly && !materialAtlasOnly && !reducedAudit) assertPairedVisualRelief(results);
     if (!scaleEightOnly && !reducedAudit) assertPairedMaterialAtlas(results);
     compactMaterialAtlasResults(results);
@@ -130,7 +132,8 @@ async function auditMode(mode) {
   const chromePath = await resolveChrome();
   const profile = await mkdtemp(path.join(tmpdir(), `anifor-input-${mode}-`));
   const dpr = mode === 'canvas2d' ? 2 : 1;
-  const startsBlank = cellularGraphicsOnly || sensorGraphicsOnly || unusualPowderGraphicsOnly;
+  const startsBlank = cellularGraphicsOnly || sensorGraphicsOnly
+    || unusualPowderGraphicsOnly || unusualSolidGraphicsOnly;
   const query = new URLSearchParams({
     scene: 'render-lab', inputAudit: '1', renderScale: '2',
     auditStage: startsBlank ? 'blank' : 'canonical',
@@ -261,6 +264,12 @@ async function auditMode(mode) {
       assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
       cdp.close();
       return { backend: mode, unusualPowderGraphics, browserErrors: errors.length };
+    }
+    if (unusualSolidGraphicsOnly) {
+      const unusualSolidGraphics = await auditUnusualSolidGraphics(cdp, mode);
+      assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
+      cdp.close();
+      return { backend: mode, unusualSolidGraphics, browserErrors: errors.length };
     }
     if (mobileOnly) {
       const mobile = await auditMobile(
@@ -3552,6 +3561,454 @@ function normalizeUnusualPowderGraphicsAtlas(snapshot) {
   };
 }
 
+/** Focused topology and RGB-identity proof for seven unusual native solids. */
+async function auditUnusualSolidGraphics(cdp, mode) {
+  const started = performance.now();
+  const stage = (name) => console.error(
+    `[unusual-solid-graphics:${mode}] ${name} ${Math.round(performance.now() - started)}ms`,
+  );
+  const blank = await waitForStablePageCapture(cdp, `${mode} initial blank unusual-solid framebuffer`);
+  await evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    if (typeof audit.prepareUnusualSolidGraphicsFixture !== 'function'
+      || typeof audit.unusualSolidGraphicsAtlas !== 'function'
+      || typeof audit.setUnusualSolidStyling !== 'function') {
+      throw new Error('Unusual solid graphics audit API unavailable');
+    }
+    audit.prepareUnusualSolidGraphicsFixture();
+    return true;
+  })()`);
+  const rawAtlas = await waitFor(() => evaluate(cdp, `(() => {
+    const atlas = window.__ANIFOR_INPUT_AUDIT__.unusualSolidGraphicsAtlas();
+    const cards = Array.isArray(atlas) ? atlas : atlas?.cards;
+    return cards?.length === 7 ? atlas : false;
+  })()`), 15_000, `${mode} unusual solid graphics fixture`);
+  const atlas = normalizeUnusualSolidGraphicsAtlas(rawAtlas);
+  const expectedMaterials = [196, 206, 80, 208, 209, 210, 216];
+  assert(atlas.cards.length === 7
+      && atlas.cards.every(({ material }, index) => material === expectedMaterials[index]),
+  `${mode}: unusual solid atlas identity/order changed (${JSON.stringify(atlas.cards.map(({ code, material }) => ({ code, material })))})`);
+  const shieldCards = atlas.cards.filter(({ code }) => code.startsWith('SHLD'));
+  assert(shieldCards.map(({ code }) => code).join(',') === 'SHLD1,SHLD2,SHLD3,SHLD4'
+      && shieldCards.map(({ material }) => material).join(',') === '80,208,209,210',
+  `${mode}: shield stage order changed (${JSON.stringify(shieldCards.map(({ code, material }) => ({ code, material })))})`);
+
+  const semanticState = await evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    const snapshot = audit.unusualSolidGraphicsAtlas();
+    const cards = Array.isArray(snapshot) ? snapshot : snapshot.cards;
+    const key = ({ x, y }) => x + ',' + y;
+    const exactRect = (rect, material) => {
+      for (let y = rect.y; y < rect.y + rect.height; y++) {
+        for (let x = rect.x; x < rect.x + rect.width; x++) {
+          if (audit.cell(x, y) !== material) return false;
+        }
+      }
+      return true;
+    };
+    return cards.map((entry) => {
+      const hole = [];
+      for (let y = entry.hole.y; y < entry.hole.y + entry.hole.height; y++) {
+        for (let x = entry.hole.x; x < entry.hole.x + entry.hole.width; x++) hole.push({ x, y });
+      }
+      const empty = new Set([...hole, ...entry.openNotch].map(key));
+      let bodyExact = true;
+      for (let y = entry.body.y; y < entry.body.y + entry.body.height; y++) {
+        for (let x = entry.body.x; x < entry.body.x + entry.body.width; x++) {
+          const expected = empty.has(x + ',' + y) ? 0 : entry.material;
+          bodyExact = bodyExact && audit.cell(x, y) === expected;
+        }
+      }
+      let shellExact = true;
+      for (let y = entry.shell.outer.y; y < entry.shell.outer.y + entry.shell.outer.height; y++) {
+        for (let x = entry.shell.outer.x; x < entry.shell.outer.x + entry.shell.outer.width; x++) {
+          const inside = x >= entry.shell.interior.x
+            && x < entry.shell.interior.x + entry.shell.interior.width
+            && y >= entry.shell.interior.y
+            && y < entry.shell.interior.y + entry.shell.interior.height;
+          shellExact = shellExact && audit.cell(x, y) === (inside ? 0 : entry.material);
+        }
+      }
+      return {
+        code: entry.code,
+        material: entry.material,
+        bodyExact,
+        shellExact,
+        spurExact: exactRect(entry.spur, entry.material),
+        isolated: audit.cell(entry.isolated.x, entry.isolated.y),
+        guardedBlankEmpty: exactRect(entry.guardedBlank, 0),
+        contactOwnerExact: exactRect(entry.contact.owner, entry.material),
+        contactUnlikeExact: exactRect(entry.contact.unlike, entry.contact.unlikeMaterial),
+        unlikeMaterial: entry.contact.unlikeMaterial,
+      };
+    });
+  })()`);
+  assert(semanticState.every((entry) => entry.bodyExact && entry.shellExact
+      && entry.spurExact && entry.isolated === entry.material && entry.guardedBlankEmpty
+      && entry.contactOwnerExact && entry.contactUnlikeExact && entry.unlikeMaterial === 23),
+  `${mode}: unusual solid fixture lost authored semantics (${JSON.stringify(semanticState)})`);
+  stage('fixture-ready');
+
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setUnusualSolidStyling(false); true');
+  const flat = await waitForStablePageCapture(cdp, `${mode} flat unusual-solid framebuffer`);
+  const flatBacking = await sampleUnusualSolidBackingTopology(cdp);
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setUnusualSolidStyling(true); true');
+  const styled = await waitForStablePageCapture(cdp, `${mode} styled unusual-solid framebuffer`);
+  const styledBacking = await sampleUnusualSolidBackingTopology(cdp);
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setUnusualSolidStyling(false); true');
+  const repeated = await waitForStablePageCapture(cdp, `${mode} repeated flat unusual-solid framebuffer`);
+  const repeatedBacking = await sampleUnusualSolidBackingTopology(cdp);
+  for (const [state, backing] of [
+    ['flat', flatBacking], ['styled', styledBacking], ['repeated-flat', repeatedBacking],
+  ]) assertUnusualSolidBackingTopology(backing, `${mode} ${state}`);
+  assert(flatBacking.cards.every((card, index) => (
+    card.alphaSignature === styledBacking.cards[index].alphaSignature
+      && card.alphaSignature === repeatedBacking.cards[index].alphaSignature
+  )), `${mode}: unusual solid styling changed raw backing support (${JSON.stringify({
+    flat: compactUnusualSolidTopology(flatBacking),
+    styled: compactUnusualSolidTopology(styledBacking),
+    repeated: compactUnusualSolidTopology(repeatedBacking),
+  })})`);
+  assert(flatBacking.cards.every((card, index) => (
+    arraysEqual(card.contactUnlikeRgb, styledBacking.cards[index].contactUnlikeRgb)
+      && arraysEqual(card.contactUnlikeRgb, repeatedBacking.cards[index].contactUnlikeRgb)
+  )), `${mode}: unusual solid styling leaked into an unlike-Metal contact`);
+
+  const backingResponses = summarizeUnusualSolidBackingResponses(
+    flatBacking, styledBacking, repeatedBacking,
+  );
+  assert(backingResponses.every(({ rgbRms, rgbPeak, repeatRgbPeak }) => (
+    rgbRms >= 0.05 && rgbRms <= 32 && rgbPeak > 0 && rgbPeak <= 64 && repeatRgbPeak === 0
+  )), `${mode}: unusual solid response is absent, unbounded, or non-repeatable (${JSON.stringify(backingResponses)})`);
+  assert(new Set(backingResponses.map(({ responseSignature }) => responseSignature)).size === 7,
+    `${mode}: unusual solids do not have seven distinct response signatures (${JSON.stringify(backingResponses)})`);
+  const shieldResponses = backingResponses.filter(({ code }) => code.startsWith('SHLD'));
+  assert(shieldResponses.map(({ code }) => code).join(',') === 'SHLD1,SHLD2,SHLD3,SHLD4'
+      && new Set(shieldResponses.map(({ responseSignature }) => responseSignature)).size === 4,
+  `${mode}: SHLD1-4 lost ordered distinct stage responses (${JSON.stringify(shieldResponses)})`);
+
+  const bodyRegions = atlas.cards.map((entry) => ({
+    name: `unusual-solid-${entry.code}`,
+    x: entry.body.x + entry.body.width / 2,
+    y: entry.body.y + entry.body.height / 2,
+    radiusX: entry.body.width / 2,
+    radiusY: entry.body.height / 2,
+    signature: true,
+    silhouette: true,
+    fastSupport: true,
+  }));
+  const atlasBounds = containingCellularRegion(atlas.cards.map(({ card }) => card));
+  const responses = await sampleBackdropRefractionRegions(cdp, {
+    straight: flat.capture.data,
+    refracted: styled.capture.data,
+    repeatedStraight: repeated.capture.data,
+  }, [...bodyRegions, { name: 'unusual-solid-atlas', ...atlasBounds }], flat.canvasRect);
+  const atlasResponse = responses.at(-1);
+  assert(atlasResponse.repeatRgbPeak === 0,
+    `${mode}: unusual solid flat→styled→flat framebuffer was not exact (${JSON.stringify(atlasResponse)})`);
+  assert(responses.slice(0, 7).every((sample) => sample.rgbRms > 0 && sample.rgbPeak <= 64),
+    `${mode}: at least one unusual solid has no bounded composed response (${JSON.stringify(responses)})`);
+  const [flatSupport, styledSupport] = await Promise.all([
+    samplePageRegions(
+      cdp, flat.capture.data, bodyRegions,
+      blank.capture.data, blank.reference.data, flat.canvasRect,
+    ),
+    samplePageRegions(
+      cdp, styled.capture.data, bodyRegions,
+      blank.capture.data, blank.reference.data, flat.canvasRect,
+    ),
+  ]);
+  assert(flatSupport.every((sample) => sample.visible > 0 && sample.worldArea > 0)
+      && styledSupport.every((sample) => sample.visible > 0 && sample.worldArea > 0),
+  `${mode}: at least one unusual solid body is not visible (${JSON.stringify({ flatSupport, styledSupport })})`);
+  stage('responses-ready');
+
+  const cardSignatures = atlas.cards.map((entry, index) => ({
+    index: entry.index,
+    material: entry.material,
+    code: entry.code,
+    flatSignature: flatSupport[index].signature,
+    styledSignature: styledSupport[index].signature,
+    flatVisible: flatSupport[index].visible,
+    styledVisible: styledSupport[index].visible,
+    rgbRms: responses[index].rgbRms,
+    rgbPeak: responses[index].rgbPeak,
+    responseSignature: responses[index].responseSignature,
+    backingRgbRms: backingResponses[index].rgbRms,
+    backingRgbPeak: backingResponses[index].rgbPeak,
+    backingChangedCellRatio: backingResponses[index].changedCellRatio,
+    backingRepeatRgbPeak: backingResponses[index].repeatRgbPeak,
+    backingResponseSignature: backingResponses[index].responseSignature,
+    backingResponseProfile: backingResponses[index].responseProfile,
+  }));
+  return {
+    cards: cardSignatures.length,
+    holeCells: atlas.holes.length,
+    centralProtectedHoleCells: atlas.cards.length * 16,
+    openNotchCells: atlas.openNotches.length,
+    shellCells: atlas.shellCells.length,
+    shellInteriorCells: atlas.shellInteriors.length,
+    spurCells: atlas.spurs.length,
+    isolatedControls: atlas.isolated.length,
+    unlikeMetalContacts: atlas.contacts.length,
+    exactRepeatedOff: atlasResponse.repeatRgbPeak === 0,
+    shieldStages: shieldCards.map(({ code, material }, stage) => ({ stage: stage + 1, code, material })),
+    cardSignatures,
+  };
+}
+
+async function sampleUnusualSolidBackingTopology(cdp) {
+  return evaluate(cdp, `(() => {
+    const world = document.querySelector('.world-canvas');
+    if (!(world instanceof HTMLCanvasElement)) throw new Error('World canvas unavailable');
+    const copy = document.createElement('canvas');
+    copy.width = world.width;
+    copy.height = world.height;
+    const context = copy.getContext('2d', { willReadFrequently: true });
+    if (!context) throw new Error('Unusual solid backing sampler unavailable');
+    context.drawImage(world, 0, 0);
+    const pixels = context.getImageData(0, 0, copy.width, copy.height).data;
+    const scaleX = copy.width / ${WORLD_WIDTH};
+    const scaleY = copy.height / ${WORLD_HEIGHT};
+    const cellAlpha = ({ x, y }) => {
+      const left = Math.floor(x * scaleX);
+      const top = Math.floor(y * scaleY);
+      const right = Math.max(left + 1, Math.floor((x + 1) * scaleX));
+      const bottom = Math.max(top + 1, Math.floor((y + 1) * scaleY));
+      let peak = 0;
+      const values = [];
+      for (let py = top; py < bottom; py++) for (let px = left; px < right; px++) {
+        const alpha = pixels[(py * copy.width + px) * 4 + 3];
+        peak = Math.max(peak, alpha);
+        values.push(alpha);
+      }
+      return { peak, values };
+    };
+    const rectPoints = (rect) => {
+      const points = [];
+      for (let y = rect.y; y < rect.y + rect.height; y++) {
+        for (let x = rect.x; x < rect.x + rect.width; x++) points.push({ x, y });
+      }
+      return points;
+    };
+    const shellPoints = (shell) => rectPoints(shell.outer).filter(({ x, y }) => (
+      x < shell.interior.x || x >= shell.interior.x + shell.interior.width
+        || y < shell.interior.y || y >= shell.interior.y + shell.interior.height
+    ));
+    const sampleBody = (body) => {
+      const rgb = [];
+      for (let y = body.y; y < body.y + body.height; y++) {
+        for (let x = body.x; x < body.x + body.width; x++) {
+          const px = Math.min(copy.width - 1, Math.floor((x + 0.5) * scaleX));
+          const py = Math.min(copy.height - 1, Math.floor((y + 0.5) * scaleY));
+          const offset = (py * copy.width + px) * 4;
+          rgb.push(pixels[offset], pixels[offset + 1], pixels[offset + 2]);
+        }
+      }
+      return { width: body.width, height: body.height, rgb };
+    };
+    const snapshot = window.__ANIFOR_INPUT_AUDIT__.unusualSolidGraphicsAtlas();
+    const cards = Array.isArray(snapshot) ? snapshot : snapshot.cards;
+    return {
+      width: copy.width,
+      height: copy.height,
+      scaleX,
+      scaleY,
+      cards: cards.map((entry) => {
+        const key = ({ x, y }) => x + ',' + y;
+        const holePoints = rectPoints(entry.hole);
+        const centralHole = rectPoints({
+          x: entry.hole.x + 1, y: entry.hole.y + 1,
+          width: entry.hole.width - 2, height: entry.hole.height - 2,
+        });
+        const emptyKeys = new Set([...holePoints, ...entry.openNotch].map(key));
+        const bodyPoints = rectPoints(entry.body).filter((point) => !emptyKeys.has(key(point)));
+        const ringPoints = shellPoints(entry.shell);
+        const shellInterior = rectPoints(entry.shell.interior);
+        const centralShellInterior = rectPoints({
+          x: entry.shell.interior.x + 1, y: entry.shell.interior.y + 1,
+          width: entry.shell.interior.width - 2, height: entry.shell.interior.height - 2,
+        });
+        const spurPoints = rectPoints(entry.spur);
+        const guardPoints = rectPoints(entry.guardedBlank);
+        const ownerContact = rectPoints(entry.contact.owner);
+        const unlikeContact = rectPoints(entry.contact.unlike);
+        const signatureMap = new Map();
+        for (const point of [
+          ...rectPoints(entry.body), ...rectPoints(entry.shell.outer), ...spurPoints,
+          entry.isolated, ...guardPoints, ...ownerContact, ...unlikeContact,
+        ]) signatureMap.set(key(point), point);
+        let alphaSignature = 2166136261;
+        for (const point of signatureMap.values()) for (const alpha of cellAlpha(point).values) {
+          alphaSignature = Math.imul(alphaSignature ^ alpha, 16777619) >>> 0;
+        }
+        return {
+          index: entry.index,
+          material: entry.material,
+          code: entry.code,
+          bodyExpected: bodyPoints.length,
+          bodySupported: bodyPoints.filter((point) => cellAlpha(point).peak > 0).length,
+          holeExpected: holePoints.length,
+          holeTransparent: holePoints.filter((point) => cellAlpha(point).peak === 0).length,
+          centralHoleExpected: centralHole.length,
+          centralHoleTransparent: centralHole.filter((point) => cellAlpha(point).peak === 0).length,
+          openNotchesExpected: entry.openNotch.length,
+          openNotchesTransparent: entry.openNotch.filter((point) => cellAlpha(point).peak === 0).length,
+          shellExpected: ringPoints.length,
+          shellSupported: ringPoints.filter((point) => cellAlpha(point).peak > 0).length,
+          shellInteriorExpected: shellInterior.length,
+          shellInteriorTransparent: shellInterior.filter((point) => cellAlpha(point).peak === 0).length,
+          centralShellInteriorExpected: centralShellInterior.length,
+          centralShellInteriorTransparent: centralShellInterior.filter(
+            (point) => cellAlpha(point).peak === 0,
+          ).length,
+          spurExpected: spurPoints.length,
+          spurSupported: spurPoints.filter((point) => cellAlpha(point).peak > 0).length,
+          isolatedAlphaPeak: cellAlpha(entry.isolated).peak,
+          guardedBlankExpected: guardPoints.length,
+          guardedBlankTransparent: guardPoints.filter((point) => cellAlpha(point).peak === 0).length,
+          contactOwnerExpected: ownerContact.length,
+          contactOwnerSupported: ownerContact.filter((point) => cellAlpha(point).peak > 0).length,
+          contactUnlikeExpected: unlikeContact.length,
+          contactUnlikeSupported: unlikeContact.filter((point) => cellAlpha(point).peak > 0).length,
+          alphaSignature,
+          ...sampleBody(entry.body),
+          contactUnlikeRgb: sampleBody(entry.contact.unlike).rgb,
+        };
+      }),
+    };
+  })()`);
+}
+
+function assertUnusualSolidBackingTopology(backing, label) {
+  assert(Number.isInteger(backing.scaleX) && Number.isInteger(backing.scaleY)
+      && backing.scaleX > 0 && backing.scaleY > 0,
+  `${label}: backing does not preserve integral world scaling (${backing.scaleX}x${backing.scaleY})`);
+  const valid = backing.cards.length === 7 && backing.cards.every((card) => (
+    card.bodySupported === card.bodyExpected
+    && card.holeTransparent >= card.centralHoleExpected
+    && card.centralHoleTransparent === card.centralHoleExpected
+    && card.openNotchesTransparent === card.openNotchesExpected
+    && card.shellSupported === card.shellExpected
+    && card.shellInteriorTransparent >= card.centralShellInteriorExpected
+    && card.centralShellInteriorTransparent === card.centralShellInteriorExpected
+    && card.spurSupported === card.spurExpected
+    && card.isolatedAlphaPeak > 0
+    && card.guardedBlankTransparent === card.guardedBlankExpected
+    && card.contactOwnerSupported === card.contactOwnerExpected
+    && card.contactUnlikeSupported === card.contactUnlikeExpected
+  ));
+  assert(valid,
+    `${label}: backing changed solid topology (${JSON.stringify(compactUnusualSolidTopology(backing))})`);
+}
+
+function compactUnusualSolidTopology(backing) {
+  return {
+    scale: `${backing.scaleX}x${backing.scaleY}`,
+    cards: backing.cards.map(({
+      rgb: _rgb, contactUnlikeRgb: _contactUnlikeRgb,
+      width: _width, height: _height, ...card
+    }) => card),
+  };
+}
+
+function summarizeUnusualSolidBackingResponses(flat, styled, repeated) {
+  assert(flat.cards.length === 7 && styled.cards.length === 7 && repeated.cards.length === 7,
+    'Unusual solid backing response atlas is incomplete');
+  return flat.cards.map((base, cardIndex) => {
+    const changed = styled.cards[cardIndex];
+    const returned = repeated.cards[cardIndex];
+    assert(changed.material === base.material && returned.material === base.material
+        && changed.width === base.width && returned.width === base.width
+        && changed.height === base.height && returned.height === base.height
+        && changed.rgb.length === base.rgb.length && returned.rgb.length === base.rgb.length,
+    `Unusual solid backing response geometry changed for ${base.code}`);
+    let squared = 0;
+    let rgbPeak = 0;
+    let repeatRgbPeak = 0;
+    let changedCells = 0;
+    let responseSignature = 2166136261;
+    const buckets = new Float64Array(16);
+    for (let offset = 0; offset < base.rgb.length; offset += 3) {
+      const cell = offset / 3;
+      const x = cell % base.width;
+      const y = Math.floor(cell / base.width);
+      const bucket = Math.min(3, Math.floor(y * 4 / base.height)) * 4
+        + Math.min(3, Math.floor(x * 4 / base.width));
+      let cellChanged = false;
+      for (let channel = 0; channel < 3; channel++) {
+        const delta = changed.rgb[offset + channel] - base.rgb[offset + channel];
+        const repeat = returned.rgb[offset + channel] - base.rgb[offset + channel];
+        squared += delta * delta;
+        rgbPeak = Math.max(rgbPeak, Math.abs(delta));
+        repeatRgbPeak = Math.max(repeatRgbPeak, Math.abs(repeat));
+        buckets[bucket] += Math.abs(delta);
+        cellChanged ||= delta !== 0;
+        responseSignature = Math.imul(responseSignature ^ (delta + 255), 16777619) >>> 0;
+      }
+      changedCells += Number(cellChanged);
+    }
+    const total = Math.max(1, buckets.reduce((sum, value) => sum + value, 0));
+    return {
+      material: base.material,
+      code: base.code,
+      rgbRms: round(Math.sqrt(squared / Math.max(1, base.rgb.length)), 4),
+      rgbPeak,
+      changedCellRatio: round(changedCells / Math.max(1, base.width * base.height), 5),
+      repeatRgbPeak,
+      responseSignature,
+      responseProfile: Array.from(buckets, (value) => round(value / total, 5)),
+    };
+  });
+}
+
+function normalizeUnusualSolidGraphicsAtlas(snapshot) {
+  const cards = (Array.isArray(snapshot) ? snapshot : snapshot?.cards ?? []).map((entry) => ({
+    ...entry,
+    card: cellularRect(entry.card ?? entry),
+    body: cellularRect(entry.body),
+    hole: cellularRect(entry.hole),
+    openNotch: cellularPoints(entry.openNotch),
+    shell: {
+      outer: cellularRect(entry.shell.outer),
+      interior: cellularRect(entry.shell.interior),
+    },
+    spur: cellularRect(entry.spur),
+    isolated: cellularPoint(entry.isolated),
+    guardedBlank: cellularRect(entry.guardedBlank),
+    contact: {
+      ...entry.contact,
+      owner: cellularRect(entry.contact.owner),
+      unlike: cellularRect(entry.contact.unlike),
+    },
+  }));
+  const shellPoints = ({ outer, interior }) => cellularRectPoints(outer).filter(({ x, y }) => (
+    x < interior.x || x >= interior.x + interior.width
+      || y < interior.y || y >= interior.y + interior.height
+  ));
+  return {
+    cards,
+    holes: Array.isArray(snapshot)
+      ? cards.flatMap(({ hole }) => cellularRectPoints(hole)) : cellularPoints(snapshot?.holes),
+    openNotches: Array.isArray(snapshot)
+      ? cards.flatMap(({ openNotch }) => openNotch) : cellularPoints(snapshot?.openNotches),
+    shellCells: Array.isArray(snapshot)
+      ? cards.flatMap(({ shell }) => shellPoints(shell)) : cellularPoints(snapshot?.shellCells),
+    shellInteriors: Array.isArray(snapshot)
+      ? cards.flatMap(({ shell }) => cellularRectPoints(shell.interior))
+      : cellularPoints(snapshot?.shellInteriors),
+    spurs: Array.isArray(snapshot)
+      ? cards.flatMap(({ spur }) => cellularRectPoints(spur)) : cellularPoints(snapshot?.spurs),
+    isolated: cellularPoints(
+      Array.isArray(snapshot) ? cards.map(({ isolated }) => isolated) : snapshot?.isolated,
+    ),
+    guardedBlanks: Array.isArray(snapshot)
+      ? cards.map(({ guardedBlank }) => guardedBlank)
+      : (snapshot?.guardedBlanks ?? []).map(cellularRect),
+    contacts: Array.isArray(snapshot) ? cards.map(({ contact }) => contact) : snapshot?.contacts ?? [],
+  };
+}
+
 async function sampleCellularBackingTopology(cdp) {
   return evaluate(cdp, `(() => {
     const world = document.querySelector('.world-canvas');
@@ -4963,6 +5420,42 @@ function assertPairedUnusualPowderGraphics(results) {
     ));
     assert(profileDistance <= 0.12,
       `Canvas/WebGL unusual powder ${canvasEntry.code} spatial response diverged (${profileDistance})`);
+  }
+}
+
+function assertPairedUnusualSolidGraphics(results) {
+  const canvas = results.find((result) => result.backend === 'canvas2d')?.unusualSolidGraphics;
+  const webgl = results.find((result) => result.backend === 'webgl')?.unusualSolidGraphics;
+  if (!canvas || !webgl) return;
+  assert(canvas.cards === 7 && webgl.cards === 7,
+    `paired unusual solid atlas is incomplete (${canvas.cards}/${webgl.cards})`);
+  for (const result of [canvas, webgl]) {
+    assert(new Set(result.cardSignatures.map(
+      ({ backingResponseSignature }) => backingResponseSignature,
+    )).size === 7,
+    `unusual solid responses are not distinct in all seven cards (${JSON.stringify(result.cardSignatures)})`);
+    assert(result.cardSignatures.every(({ backingRepeatRgbPeak }) => backingRepeatRgbPeak === 0),
+      `unusual solid backing off→on→off sequence was not exact (${JSON.stringify(result.cardSignatures)})`);
+    const shields = result.cardSignatures.filter(({ code }) => code.startsWith('SHLD'));
+    assert(shields.map(({ code }) => code).join(',') === 'SHLD1,SHLD2,SHLD3,SHLD4'
+        && shields.map(({ material }) => material).join(',') === '80,208,209,210'
+        && new Set(shields.map(({ backingResponseSignature }) => backingResponseSignature)).size === 4,
+    `paired unusual solid result lost ordered distinct shield stages (${JSON.stringify(shields)})`);
+  }
+  const webglByMaterial = new Map(webgl.cardSignatures.map((entry) => [entry.material, entry]));
+  for (const canvasEntry of canvas.cardSignatures) {
+    const webglEntry = webglByMaterial.get(canvasEntry.material);
+    assert(webglEntry && webglEntry.code === canvasEntry.code,
+      `paired unusual solid projection missing ${canvasEntry.code}/${canvasEntry.material}`);
+    const responseRatio = canvasEntry.backingRgbRms
+      / Math.max(0.01, webglEntry.backingRgbRms);
+    assert(responseRatio >= 0.20 && responseRatio <= 5.0,
+      `Canvas/WebGL unusual solid ${canvasEntry.code} response diverged (${canvasEntry.backingRgbRms}/${webglEntry.backingRgbRms})`);
+    const profileDistance = Math.max(...canvasEntry.backingResponseProfile.map(
+      (value, index) => Math.abs(value - webglEntry.backingResponseProfile[index]),
+    ));
+    assert(profileDistance <= 0.15,
+      `Canvas/WebGL unusual solid ${canvasEntry.code} spatial response diverged (${profileDistance})`);
   }
 }
 
@@ -7845,6 +8338,14 @@ async function waitFor(check, timeoutMs, label) {
 }
 
 function assert(condition, message) { if (!condition) throw new Error(message); }
+
+function arraysEqual(left, right) {
+  if (left.length !== right.length) return false;
+  for (let index = 0; index < left.length; index++) {
+    if (left[index] !== right[index]) return false;
+  }
+  return true;
+}
 
 function assertPairedMaterialAtlas(results) {
   const canvas = results.find(({ backend }) => backend === 'canvas2d')?.materialAtlas;

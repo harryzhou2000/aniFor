@@ -110,6 +110,7 @@ uniform float uRoleMaterialStyling;
 uniform float uCellularMaterialStyling;
 uniform float uSensorMaterialStyling;
 uniform float uUnusualPowderStyling;
+uniform float uUnusualSolidStyling;
 uniform float uLiquidSilhouetteCohesion;
 uniform float uThermalMaterialStyling;
 uniform float uEnergyCoreRelief;
@@ -2060,6 +2061,67 @@ void main() {
       float interference = (planeWave + radialWave) * 0.5;
       color *= 0.95 + interference * 0.045;
     }
+    // Seven uncommon solids layer one static identity over the generic body
+    // structure above. Only authoritative semantic matter participates; this
+    // RGB arithmetic adds no sample, pass, field, allocation, clock term, or
+    // output-scale resource, and leaves later trait decals independent.
+    float unusualSolid = material == 80.0 || material == 196.0
+      || material == 206.0 || material == 208.0 || material == 209.0
+      || material == 210.0 || material == 216.0 ? 1.0 : 0.0;
+    if (uUnusualSolidStyling > 0.5 && unusualSolid > 0.5
+      && family == 0.0 && !materialEmissive
+      && surfaceOnly < 0.5 && halo < 0.5 && wall < 0.5
+      && wallOnly < 0.5 && emissionOnly < 0.5) {
+      vec2 solidCell = floor(fieldPosition);
+      if (material == 196.0) {
+        // BIZRS: angular prismatic facets split cool and warm reflections.
+        vec2 prismTile = abs(fract((fieldPosition + vec2(3.0, 1.0)) / 11.0) - 0.5);
+        float prismEdge = 1.0 - smoothstep(
+          0.025, 0.070, min(abs(prismTile.x - prismTile.y), abs(prismTile.x + prismTile.y - 0.5))
+        );
+        float prismFace = step(prismTile.y, prismTile.x);
+        color += mix(vec3(0.018, 0.045, 0.070), vec3(0.070, 0.026, 0.052), prismFace)
+          * prismEdge * mix(0.62, 1.0, solidDepth);
+      } else if (material == 206.0) {
+        // PSTS: compressed strata tighten with body depth.
+        float stratum = 1.0 - step(
+          mix(1.0, 2.0, solidDepth),
+          mod(solidCell.y + floor(solidCell.x / 9.0), mix(7.0, 5.0, solidDepth))
+        );
+        color *= 1.0 - stratum * (0.038 + solidDepth * 0.026);
+        color += vec3(0.046, 0.034, 0.022) * stratum * max(0.0, solidReliefTone * 9.0);
+      } else if (material == 80.0 || material == 208.0
+        || material == 209.0 || material == 210.0) {
+        // SHLD1-4: one coherent shell gains progressively nested armour bands.
+        float shieldStage = material == 80.0 ? 1.0 : material - 206.0;
+        vec2 shieldTile = abs(fract(fieldPosition / 24.0) - 0.5) * 2.0;
+        float shieldRadius = max(shieldTile.x, shieldTile.y);
+        float outerShell = 1.0 - smoothstep(0.025, 0.070, abs(shieldRadius - 0.82));
+        float nestedShell = 1.0 - smoothstep(
+          0.045, 0.105,
+          abs(fract(shieldRadius * shieldStage + 0.18) - 0.5)
+        );
+        float shieldNode = (1.0 - step(1.0, mod(solidCell.x * 3.0 + solidCell.y * 5.0, 17.0)))
+          * step(0.42, shieldRadius);
+        float shellWeight = max(outerShell, nestedShell * mix(0.34, 0.82, shieldStage / 4.0));
+        color *= 1.0 - shellWeight * mix(0.020, 0.052, shieldStage / 4.0);
+        color += vec3(0.025, 0.052, 0.080) * shellWeight
+          + vec3(0.060, 0.080, 0.095) * shieldNode * shieldStage * 0.012;
+      } else {
+        // VRSS: a membrane ring carries sparse capsid nodes and a dim core.
+        vec2 virusTile = fract((fieldPosition + vec2(2.0, 5.0)) / 14.0) - 0.5;
+        vec2 virusAbs = abs(virusTile);
+        float virusRadius = length(virusTile);
+        float membrane = 1.0 - smoothstep(0.025, 0.060, abs(virusRadius - 0.31));
+        float capsidAxis = 1.0 - smoothstep(0.025, 0.070, min(virusAbs.x, virusAbs.y));
+        float capsidNode = membrane * capsidAxis;
+        float virusCore = 1.0 - smoothstep(0.10, 0.19, virusRadius);
+        color *= 1.0 - membrane * 0.034 - virusCore * 0.018;
+        color += vec3(0.030, 0.072, 0.048) * membrane
+          + vec3(0.070, 0.105, 0.060) * capsidNode;
+      }
+      color = clamp(color, 0.0, 1.0);
+    }
     if (uThermalMaterialStyling > 0.5 && !materialEmissive && traits < 0.5
       && material != 3.0 && (family == 0.0 || family == 4.0)) {
       // Scalar, RGB-only response: temperature cannot widen a contour, alter
@@ -2417,6 +2479,7 @@ export class PixiFieldPresenter {
       uCellularMaterialStyling: { value: 1, type: 'f32' },
       uSensorMaterialStyling: { value: 1, type: 'f32' },
       uUnusualPowderStyling: { value: 1, type: 'f32' },
+      uUnusualSolidStyling: { value: 1, type: 'f32' },
       uLiquidSilhouetteCohesion: { value: 1, type: 'f32' },
       // FieldRenderer turns this on only for backends that expose temperature;
       // byte zero must therefore never make legacy backends look frozen.
@@ -2677,6 +2740,7 @@ export class PixiFieldPresenter {
     cellularMaterialStylingEnabled = true,
     sensorMaterialStylingEnabled = true,
     unusualPowderStylingEnabled = true,
+    unusualSolidStylingEnabled = true,
   ): void {
     const uniforms = this.uniforms.uniforms;
     uniforms.uGasFieldLighting = gasFieldLightingEnabled ? 1 : 0;
@@ -2699,6 +2763,7 @@ export class PixiFieldPresenter {
     uniforms.uCellularMaterialStyling = cellularMaterialStylingEnabled ? 1 : 0;
     uniforms.uSensorMaterialStyling = sensorMaterialStylingEnabled ? 1 : 0;
     uniforms.uUnusualPowderStyling = unusualPowderStylingEnabled ? 1 : 0;
+    uniforms.uUnusualSolidStyling = unusualSolidStylingEnabled ? 1 : 0;
     uniforms.uPowderBodyDepth = powderBodyDepthEnabled ? 1 : 0;
     uniforms.uThermalMaterialStyling = thermalMaterialStylingEnabled ? 1 : 0;
     uniforms.uEnergyCoreRelief = energyCoreReliefEnabled ? 1 : 0;
@@ -2797,6 +2862,11 @@ export class PixiFieldPresenter {
 
   setUnusualPowderStylingEnabled(enabled: boolean): void {
     this.uniforms.uniforms.uUnusualPowderStyling = enabled ? 1 : 0;
+    this.renderApplication();
+  }
+
+  setUnusualSolidStylingEnabled(enabled: boolean): void {
+    this.uniforms.uniforms.uUnusualSolidStyling = enabled ? 1 : 0;
     this.renderApplication();
   }
 
