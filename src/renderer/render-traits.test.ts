@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { ALL_MATERIALS, Material } from '../shared/materials';
-import { hasRenderTrait, renderTraits, RenderTrait } from './render-traits';
+import { hasRenderTrait, isForceMaterial, renderTraits, RenderTrait } from './render-traits';
 
 function traits(id: Material): number {
   const material = ALL_MATERIALS.find((candidate) => candidate.id === id);
@@ -28,6 +28,13 @@ describe('static render traits', () => {
     expect(hasRenderTrait(traits(Material.FRME), RenderTrait.Force)).toBe(false);
     expect(hasRenderTrait(traits(Material.PIPE), RenderTrait.Force)).toBe(false);
     expect(hasRenderTrait(traits(Material.PSTN), RenderTrait.Force)).toBe(true);
+  });
+
+  it('requires every native force-category material to be classified or explicitly passive', () => {
+    const passive = new Set<Material>([Material.FRME, Material.PIPE]);
+    for (const material of ALL_MATERIALS.filter(({ category }) => category === 'force')) {
+      expect(isForceMaterial(material.id) || passive.has(material.id), material.name).toBe(true);
+    }
   });
 
   it('keeps every role assignment explicit and exhaustive', () => {

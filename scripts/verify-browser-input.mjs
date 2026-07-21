@@ -55,6 +55,17 @@ const ROLE_GRAPHICS_REGIONS = [
   { name: 'deviceControl', x: 485, y: 304, radiusX: 12, radiusY: 7 },
   { name: 'portalSinkChannel', x: 525, y: 304, radiusX: 12, radiusY: 7 },
   { name: 'acceleratorForce', x: 565, y: 304, radiusX: 12, radiusY: 7 },
+  { name: 'emitterCore', x: 447, y: 297, radius: 0.35 },
+  { name: 'emitterRing', x: 454, y: 297, radius: 0.35 },
+  { name: 'emitterBackground', x: 451, y: 307, radius: 0.35 },
+  // These three PRTI probes share the same sink-ring radius, isolating the
+  // channel node/rail/off-rail contribution from its independent Sink glyph.
+  { name: 'channelNode', x: 514, y: 304, radius: 0.35 },
+  { name: 'channelRail', x: 517, y: 295, radius: 0.35 },
+  { name: 'channelOffRail', x: 529, y: 304, radius: 0.35 },
+  { name: 'forceInnerRing', x: 560, y: 301, radius: 0.35 },
+  { name: 'forceOuterRing', x: 564, y: 301, radius: 0.35 },
+  { name: 'forceGap', x: 557, y: 301, radius: 0.35 },
 ];
 
 async function main() {
@@ -259,6 +270,10 @@ async function auditMode(mode) {
         name, material: window.__ANIFOR_INPUT_AUDIT__.cell(x, y),
         wall: window.__ANIFOR_INPUT_AUDIT__.wall(x, y),
       }))`);
+      const expectedRoleMaterials = [127, 126, 159, 164, 130, 115];
+      assert(probeState.slice(0, expectedRoleMaterials.length).every((probe, index) => (
+        probe.material === expectedRoleMaterials[index] && probe.wall === 0
+      )), `${mode}: semantic role fixture signature changed (${JSON.stringify(probeState)})`);
       await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setRoleMaterialStyling(false); true');
       const flat = await waitForStablePageCapture(cdp, `${mode} flat semantic-role framebuffer`);
       await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setRoleMaterialStyling(true); true');
@@ -3619,6 +3634,15 @@ function assertRoleGraphicsSamples(samples, label) {
     `${label}: role styling leaked into neutral device control (${JSON.stringify(samples)})`);
   assert(samples.every((sample) => sample.repeatRgbPeak <= 1),
     `${label}: semantic role off-on-off sequence was not deterministic (${JSON.stringify(samples)})`);
+  assert(byName.emitterCore.rgbRms >= byName.emitterBackground.rgbRms + 0.5
+    && byName.emitterRing.rgbRms >= byName.emitterBackground.rgbRms + 0.5,
+  `${label}: emitter core/annulus geometry collapsed (${JSON.stringify(samples)})`);
+  assert(byName.channelNode.rgbRms >= byName.channelRail.rgbRms + 0.2
+    && byName.channelRail.rgbRms >= byName.channelOffRail.rgbRms + 0.5,
+  `${label}: channel node/rail geometry collapsed (${JSON.stringify(samples)})`);
+  assert(byName.forceInnerRing.rgbRms >= byName.forceGap.rgbRms + 0.5
+    && byName.forceOuterRing.rgbRms >= byName.forceGap.rgbRms + 0.5,
+  `${label}: force ring geometry collapsed (${JSON.stringify(samples)})`);
 }
 
 function assertPairedRoleGraphics(results) {
@@ -3635,6 +3659,24 @@ function assertPairedRoleGraphics(results) {
     const ratio = canvasSample.rgbRms / Math.max(0.05, webglSample.rgbRms);
     assert(ratio >= 0.25 && ratio <= 4.0,
       `Canvas/WebGL ${name} role response diverged (${canvasSample.rgbRms}/${webglSample.rgbRms})`);
+  }
+  for (const names of [
+    ['emitterCore', 'emitterRing', 'emitterBackground'],
+    ['channelNode', 'channelRail', 'channelOffRail'],
+    ['forceInnerRing', 'forceOuterRing', 'forceGap'],
+  ]) {
+    const normalized = (samples) => {
+      const values = names.map((name) => samples.find((sample) => sample.name === name)?.rgbRms ?? 0);
+      const sum = Math.max(0.01, values.reduce((total, value) => total + value, 0));
+      return values.map((value) => value / sum);
+    };
+    const canvasSignature = normalized(canvas);
+    const webglSignature = normalized(webgl);
+    const maximumDistance = Math.max(...canvasSignature.map(
+      (value, index) => Math.abs(value - webglSignature[index]),
+    ));
+    assert(maximumDistance <= 0.20,
+      `Canvas/WebGL ${names.join('/')} spatial signature diverged (${canvasSignature}/${webglSignature})`);
   }
 }
 
