@@ -12,6 +12,7 @@ import type { UnusualSolidGraphicsAuditSnapshot } from './unusual-solid-graphics
 import type { LiquidIdentityGraphicsAuditSnapshot } from './liquid-identity-graphics-audit';
 import type { GasIdentityGraphicsAuditSnapshot } from './gas-identity-graphics-audit';
 import type { EnergyRadioactiveGraphicsAuditSnapshot } from './energy-radioactive-graphics-audit';
+import type { OrganicPlantGraphicsAuditSnapshot } from './organic-plant-graphics-audit';
 
 export interface BrowserInputAuditApi {
   readonly version: 1;
@@ -81,6 +82,8 @@ export interface BrowserInputAuditApi {
   prepareGasIdentityGraphicsFixture(): void;
   energyRadioactiveGraphicsAtlas(): EnergyRadioactiveGraphicsAuditSnapshot;
   prepareEnergyRadioactiveGraphicsFixture(): void;
+  organicPlantGraphicsAtlas(): OrganicPlantGraphicsAuditSnapshot;
+  prepareOrganicPlantGraphicsFixture(): void;
   canvasPresentationTiming(): CanvasPresentationTiming | undefined;
   requestWebGLPresentationTimingSample(): boolean;
   webGLPresentationTiming(): WebGLPresentationTiming | undefined;

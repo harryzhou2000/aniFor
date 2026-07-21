@@ -44,6 +44,9 @@ import {
 import {
   ENERGY_RADIOACTIVE_GRAPHICS_AUDIT, prepareEnergyRadioactiveGraphicsAuditFixture,
 } from './energy-radioactive-graphics-audit';
+import {
+  ORGANIC_PLANT_GRAPHICS_AUDIT, prepareOrganicPlantGraphicsAuditFixture,
+} from './organic-plant-graphics-audit';
 
 const AUTOSAVE_KEY = 'stillroom-world-v1';
 
@@ -376,6 +379,10 @@ export class Game {
       energyRadioactiveGraphicsAtlas: () => ENERGY_RADIOACTIVE_GRAPHICS_AUDIT,
       prepareEnergyRadioactiveGraphicsFixture: () => {
         prepareEnergyRadioactiveGraphicsAuditFixture(this.simulation);
+      },
+      organicPlantGraphicsAtlas: () => ORGANIC_PLANT_GRAPHICS_AUDIT,
+      prepareOrganicPlantGraphicsFixture: () => {
+        prepareOrganicPlantGraphicsAuditFixture(this.simulation);
       },
       canvasPresentationTiming: () => this.renderer.getCanvasPresentationTiming(),
       requestWebGLPresentationTimingSample: () => this.renderer.requestWebGLPresentationTimingSample(),
