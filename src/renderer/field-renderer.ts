@@ -25,6 +25,7 @@ import {
 import { shadeCanvasEnergy } from './canvas-energy-style';
 import { shadeCanvasMaterial } from './canvas-material-style';
 import { shadeCanvasCellularMaterial } from './canvas-cellular-style';
+import { applyCanvasSensorMorphology } from './canvas-sensor-style';
 import { applyCanvasBotanicalMorphology } from './canvas-botanical-style';
 import {
   applyCanvasReconstructedSuspensionStyle, applyCanvasSemanticSuspensionStyle,
@@ -176,6 +177,7 @@ export class MaterialRenderer {
   private solidFieldLightingEnabled = true;
   private roleMaterialStylingEnabled = true;
   private cellularMaterialStylingEnabled = true;
+  private sensorMaterialStylingEnabled = true;
   private phaseContactLightingEnabled = true;
   private thermalMaterialStylingEnabled = true;
   private energyCoreReliefEnabled = true;
@@ -460,6 +462,14 @@ export class MaterialRenderer {
     this.changed = true;
   }
 
+  setSensorMaterialStylingEnabled(enabled: boolean): void {
+    if (enabled === this.sensorMaterialStylingEnabled) return;
+    this.sensorMaterialStylingEnabled = enabled;
+    this.presenter?.setSensorMaterialStylingEnabled(enabled);
+    this.contourChunks.markAll();
+    this.changed = true;
+  }
+
   setPhaseContactLightingEnabled(enabled: boolean): void {
     if (enabled === this.phaseContactLightingEnabled) return;
     this.phaseContactLightingEnabled = enabled;
@@ -654,6 +664,7 @@ export class MaterialRenderer {
       this.solidOpticalDepthEnabled,
       this.roleMaterialStylingEnabled,
       this.cellularMaterialStylingEnabled,
+      this.sensorMaterialStylingEnabled,
     );
     // Route subsequent dirty cells to the candidate while its first expensive
     // frame is in flight. The known-good Canvas remains mounted underneath;
@@ -1371,6 +1382,9 @@ export class MaterialRenderer {
             shadeCanvasCellularMaterial(
               this.styledColor, material, x, y,
             );
+          }
+          if (this.sensorMaterialStylingEnabled) {
+            applyCanvasSensorMorphology(this.styledColor, material, x, y);
           }
           if (material === Material.VINE || material === Material.SEED || material === Material.YEST) {
             applyCanvasBotanicalMorphology(this.styledColor, material, x, y, index);

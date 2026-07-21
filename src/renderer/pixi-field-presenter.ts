@@ -108,6 +108,7 @@ uniform float uPhaseContactLighting;
 uniform float uSolidFieldLighting;
 uniform float uRoleMaterialStyling;
 uniform float uCellularMaterialStyling;
+uniform float uSensorMaterialStyling;
 uniform float uLiquidSilhouetteCohesion;
 uniform float uThermalMaterialStyling;
 uniform float uEnergyCoreRelief;
@@ -1876,6 +1877,92 @@ void main() {
       color += mix(color, vec3(0.34, 0.76, 1.0), 0.58)
         * (trace * (0.12 + deviceSurface * 0.035) + node * (0.10 + deviceSurface * 0.045))
         * interiorMicroGain;
+      // The seven native sensor bodies share one stable 24-cell instrument
+      // bezel, while exact material IDs select a readable static glyph. This
+      // branch is arithmetic-only and restricted to authoritative semantic
+      // cells: reconstructed solid support must never acquire sensor identity.
+      if (uSensorMaterialStyling > 0.5 && material >= 164.0 && material <= 170.0
+        && surfaceOnly < 0.5 && halo < 0.5 && wall < 0.5
+        && wallOnly < 0.5 && emissionOnly < 0.5) {
+        vec2 sensorTile = fract(fieldPosition / 24.0) - 0.5;
+        vec2 sensorAbs = abs(sensorTile);
+        float sensorRadius = length(sensorTile);
+        float bezelDistance = abs(max(sensorAbs.x, sensorAbs.y) - 0.425);
+        float sensorBezel = 1.0 - smoothstep(0.018, 0.040, bezelDistance);
+        float sensorPanel = 1.0 - smoothstep(0.36, 0.405, max(sensorAbs.x, sensorAbs.y));
+        float sensorGlyph = 0.0;
+        vec3 sensorTint = vec3(0.34, 0.82, 1.00);
+        if (material == 164.0) {
+          // DTEC: crosshair.
+          float crosshair = max(
+            1.0 - smoothstep(0.020, 0.052, abs(sensorTile.x)),
+            1.0 - smoothstep(0.020, 0.052, abs(sensorTile.y))
+          ) * (1.0 - smoothstep(0.30, 0.36, sensorRadius));
+          float crosshairRing = 1.0 - smoothstep(0.018, 0.042, abs(sensorRadius - 0.245));
+          sensorGlyph = max(crosshair, crosshairRing);
+          sensorTint = vec3(1.00, 0.48, 0.28);
+        } else if (material == 165.0) {
+          // INVIS: iris.
+          float irisRing = 1.0 - smoothstep(0.020, 0.044, abs(sensorRadius - 0.245));
+          float irisCore = 1.0 - smoothstep(0.075, 0.125, sensorRadius);
+          float irisBlades = 1.0 - smoothstep(
+            0.018, 0.052,
+            abs(abs(sensorTile.x) - abs(sensorTile.y))
+          );
+          sensorGlyph = max(irisRing, max(irisCore, irisBlades * smoothstep(0.12, 0.29, sensorRadius)));
+          sensorTint = vec3(0.62, 0.78, 1.00);
+        } else if (material == 166.0) {
+          // LDTC: scan lines and sweep.
+          float scanLine = 1.0 - smoothstep(0.018, 0.050, abs(sensorTile.y));
+          float scanRails = 1.0 - smoothstep(
+            0.018, 0.048,
+            abs(abs(sensorTile.y) - 0.18)
+          );
+          float scanSweep = 1.0 - smoothstep(
+            0.018, 0.050,
+            abs(sensorTile.x + sensorTile.y * 0.52)
+          );
+          sensorGlyph = max(scanLine, max(scanRails * (1.0 - smoothstep(0.30, 0.37, abs(sensorTile.x))), scanSweep));
+          sensorTint = vec3(0.30, 1.00, 0.76);
+        } else if (material == 167.0) {
+          // LSNS: waveform.
+          float waveform = sin((sensorTile.x + 0.5) * 18.8495559) * 0.145;
+          sensorGlyph = (1.0 - smoothstep(0.020, 0.052, abs(sensorTile.y - waveform)))
+            * (1.0 - smoothstep(0.34, 0.41, abs(sensorTile.x)));
+          sensorTint = vec3(0.42, 1.00, 0.46);
+        } else if (material == 168.0) {
+          // PSNS: pressure rings.
+          float pressureInner = 1.0 - smoothstep(0.018, 0.045, abs(sensorRadius - 0.145));
+          float pressureOuter = 1.0 - smoothstep(0.018, 0.045, abs(sensorRadius - 0.285));
+          sensorGlyph = max(pressureInner, pressureOuter);
+          sensorTint = vec3(1.00, 0.74, 0.30);
+        } else if (material == 169.0) {
+          // TSNS: thermometer.
+          float thermometerStem = (1.0 - smoothstep(0.022, 0.052, abs(sensorTile.x)))
+            * smoothstep(-0.29, -0.21, sensorTile.y)
+            * (1.0 - smoothstep(0.15, 0.23, sensorTile.y));
+          float thermometerBulb = 1.0 - smoothstep(0.075, 0.125, length(sensorTile - vec2(0.0, 0.235)));
+          float thermometerCap = 1.0 - smoothstep(0.030, 0.060, length(sensorTile - vec2(0.0, -0.235)));
+          sensorGlyph = max(thermometerStem, max(thermometerBulb, thermometerCap));
+          sensorTint = vec3(1.00, 0.38, 0.22);
+        } else {
+          // VSNS: vector arrow.
+          float arrowShaft = (1.0 - smoothstep(0.020, 0.052, abs(sensorTile.y)))
+            * smoothstep(-0.31, -0.25, sensorTile.x)
+            * (1.0 - smoothstep(0.19, 0.25, sensorTile.x));
+          float arrowHead = 1.0 - smoothstep(
+            0.020, 0.052,
+            abs(abs(sensorTile.y) - (0.34 - sensorTile.x))
+          );
+          arrowHead *= smoothstep(0.10, 0.18, sensorTile.x)
+            * (1.0 - smoothstep(0.30, 0.37, sensorTile.x));
+          sensorGlyph = max(arrowShaft, arrowHead);
+          sensorTint = vec3(0.74, 0.58, 1.00);
+        }
+        color *= 1.0 - sensorPanel * 0.014 - sensorBezel * 0.036;
+        color += sensorTint * (sensorBezel * 0.030 + sensorGlyph * 0.082);
+        color = clamp(color, 0.0, 1.0);
+      }
     } else if (profile == 6.0) {
       float planeWave = sin((fieldPosition.x + fieldPosition.y * 0.62) * 0.115 - uTime * 1.15 + material);
       float radialWave = sin(length(fieldPosition - vec2(material * 1.7)) * 0.14 + uTime * 0.92);
@@ -2237,6 +2324,7 @@ export class PixiFieldPresenter {
       uSolidFieldLighting: { value: 1, type: 'f32' },
       uRoleMaterialStyling: { value: 1, type: 'f32' },
       uCellularMaterialStyling: { value: 1, type: 'f32' },
+      uSensorMaterialStyling: { value: 1, type: 'f32' },
       uLiquidSilhouetteCohesion: { value: 1, type: 'f32' },
       // FieldRenderer turns this on only for backends that expose temperature;
       // byte zero must therefore never make legacy backends look frozen.
@@ -2495,6 +2583,7 @@ export class PixiFieldPresenter {
     solidOpticalDepthEnabled = true,
     roleMaterialStylingEnabled = true,
     cellularMaterialStylingEnabled = true,
+    sensorMaterialStylingEnabled = true,
   ): void {
     const uniforms = this.uniforms.uniforms;
     uniforms.uGasFieldLighting = gasFieldLightingEnabled ? 1 : 0;
@@ -2515,6 +2604,7 @@ export class PixiFieldPresenter {
     uniforms.uSolidOpticalDepth = solidOpticalDepthEnabled ? 1 : 0;
     uniforms.uRoleMaterialStyling = roleMaterialStylingEnabled ? 1 : 0;
     uniforms.uCellularMaterialStyling = cellularMaterialStylingEnabled ? 1 : 0;
+    uniforms.uSensorMaterialStyling = sensorMaterialStylingEnabled ? 1 : 0;
     uniforms.uPowderBodyDepth = powderBodyDepthEnabled ? 1 : 0;
     uniforms.uThermalMaterialStyling = thermalMaterialStylingEnabled ? 1 : 0;
     uniforms.uEnergyCoreRelief = energyCoreReliefEnabled ? 1 : 0;
@@ -2603,6 +2693,11 @@ export class PixiFieldPresenter {
 
   setCellularMaterialStylingEnabled(enabled: boolean): void {
     this.uniforms.uniforms.uCellularMaterialStyling = enabled ? 1 : 0;
+    this.renderApplication();
+  }
+
+  setSensorMaterialStylingEnabled(enabled: boolean): void {
+    this.uniforms.uniforms.uSensorMaterialStyling = enabled ? 1 : 0;
     this.renderApplication();
   }
 

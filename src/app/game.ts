@@ -26,6 +26,9 @@ import {
 import {
   CELLULAR_GRAPHICS_AUDIT, prepareCellularGraphicsAuditFixture,
 } from './cellular-graphics-audit';
+import {
+  SENSOR_GRAPHICS_AUDIT, prepareSensorGraphicsAuditFixture,
+} from './sensor-graphics-audit';
 
 const AUTOSAVE_KEY = 'stillroom-world-v1';
 
@@ -269,6 +272,9 @@ export class Game {
       setCellularMaterialStyling: (enabled) => {
         this.renderer.setCellularMaterialStylingEnabled(enabled);
       },
+      setSensorMaterialStyling: (enabled) => {
+        this.renderer.setSensorMaterialStylingEnabled(enabled);
+      },
       setPhaseContactLighting: (enabled) => {
         this.renderer.setPhaseContactLightingEnabled(enabled);
       },
@@ -312,6 +318,10 @@ export class Game {
       cellularGraphicsAtlas: () => CELLULAR_GRAPHICS_AUDIT,
       prepareCellularGraphicsFixture: () => {
         prepareCellularGraphicsAuditFixture(this.simulation);
+      },
+      sensorGraphicsAtlas: () => SENSOR_GRAPHICS_AUDIT,
+      prepareSensorGraphicsFixture: () => {
+        prepareSensorGraphicsAuditFixture(this.simulation);
       },
       canvasPresentationTiming: () => this.renderer.getCanvasPresentationTiming(),
       requestWebGLPresentationTimingSample: () => this.renderer.requestWebGLPresentationTimingSample(),

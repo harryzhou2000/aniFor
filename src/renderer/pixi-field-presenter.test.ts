@@ -24,6 +24,7 @@ interface PresenterHarness {
   setSolidFieldLightingEnabled: PixiFieldPresenter['setSolidFieldLightingEnabled'];
   setRoleMaterialStylingEnabled: PixiFieldPresenter['setRoleMaterialStylingEnabled'];
   setCellularMaterialStylingEnabled: PixiFieldPresenter['setCellularMaterialStylingEnabled'];
+  setSensorMaterialStylingEnabled: PixiFieldPresenter['setSensorMaterialStylingEnabled'];
   setLiquidSilhouetteCohesionEnabled: PixiFieldPresenter['setLiquidSilhouetteCohesionEnabled'];
   setRenderStallHandler: PixiFieldPresenter['setRenderStallHandler'];
   forceEightXRenderStallForAudit: PixiFieldPresenter['forceEightXRenderStallForAudit'];
@@ -94,6 +95,7 @@ describe('Pixi presenter startup configuration', () => {
       uSolidFieldLighting: 1,
       uRoleMaterialStyling: 1,
       uCellularMaterialStyling: 1,
+      uSensorMaterialStyling: 1,
       uLiquidSilhouetteCohesion: 1,
       uThermalMaterialStyling: 1,
       uEnergyCoreRelief: 0,
@@ -585,6 +587,48 @@ describe('Pixi presenter startup configuration', () => {
     expect(cellularBlock).not.toMatch(/texture\s*\(/);
     expect(cellularBlock).not.toMatch(/\balpha\s*[+*]?=/);
     expect(source).toContain('if (cellularSurface > 0.5 && surfaceOnly > 0.5) alpha = 0.0;');
+  });
+
+  it('seeds, redraws, and bounds sensor morphology to RGB-only authoritative sensor matter', () => {
+    const presenter = presenterHarness();
+
+    presenter.configurePresentation(
+      true, true, true, true, true, true, true, true, true, 'smooth',
+      true, true, true, true, true, true, true, true, true, true, true, true, false,
+    );
+    expect(presenter.uniforms.uniforms.uSensorMaterialStyling).toBe(0);
+    expect(presenter.app.render).not.toHaveBeenCalled();
+
+    presenter.setSensorMaterialStylingEnabled(true);
+    expect(presenter.uniforms.uniforms.uSensorMaterialStyling).toBe(1);
+    expect(presenter.app.render).toHaveBeenCalledOnce();
+
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const start = source.indexOf('// The seven native sensor bodies share one stable 24-cell instrument');
+    const end = source.indexOf('    } else if (profile == 6.0)', start);
+    const sensorBlock = source.slice(start, end);
+    expect(start).toBeGreaterThan(0);
+    expect(end).toBeGreaterThan(start);
+    expect(source).toContain('uniform float uSensorMaterialStyling;');
+    expect(sensorBlock).toContain('uSensorMaterialStyling > 0.5 && material >= 164.0 && material <= 170.0');
+    expect(sensorBlock).toContain('fieldPosition / 24.0');
+    expect(sensorBlock).toContain('material == 164.0');
+    expect(sensorBlock).toContain('material == 165.0');
+    expect(sensorBlock).toContain('material == 166.0');
+    expect(sensorBlock).toContain('material == 167.0');
+    expect(sensorBlock).toContain('material == 168.0');
+    expect(sensorBlock).toContain('material == 169.0');
+    expect(sensorBlock).toContain('// DTEC: crosshair.');
+    expect(sensorBlock).toContain('// INVIS: iris.');
+    expect(sensorBlock).toContain('// LDTC: scan lines and sweep.');
+    expect(sensorBlock).toContain('// LSNS: waveform.');
+    expect(sensorBlock).toContain('// PSNS: pressure rings.');
+    expect(sensorBlock).toContain('// TSNS: thermometer.');
+    expect(sensorBlock).toContain('// VSNS: vector arrow.');
+    expect(sensorBlock).toContain('surfaceOnly < 0.5 && halo < 0.5 && wall < 0.5');
+    expect(sensorBlock).not.toMatch(/texture\s*\(/);
+    expect(sensorBlock).not.toMatch(/\balpha\s*[+*]?=/);
+    expect(sensorBlock).not.toContain('uTime');
   });
 
   it('keeps contour and thick-body solid field light bounded behind strict eligibility', () => {

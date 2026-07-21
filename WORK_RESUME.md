@@ -31,6 +31,10 @@ The native LIFE graphics phase is complete. The majority of implementation effor
 
 LIFE checkpoint evidence: all 24 projected native presets have distinct static engraved colony motifs in Canvas and WebGL; the deterministic atlas retains all 96 authored hole cells, 24 isolated controls, tendrils, and guarded blanks. Direct integral-backing probes prove exact topology and off→on→off stability independently of CSS screenshot resampling, while composed captures prove visible motifs and bounded silhouette drift. Canvas/WebGL spatial response parity passes. TypeScript, all 69 test files / 451 tests, the 788-module production build, static asset closure, and the paired browser gate pass. True 8× also passes at 4896×3072 with GPU-fence completion, powder/volume/input/atlas checks, forced-stall recovery, and context-loss recovery to a 2× Canvas fallback without losing state or camera.
 
+The native sensor/device identity tranche is complete. DTEC, INVIS, LDTC, LSNS, PSNS, TSNS, and VSNS now have stable 24-cell instrument faces with distinct crosshair, iris, scan, waveform, pressure-ring, thermometer, and vector motifs in both renderers. The next active tranche is ten unusual powders/reaction products that are still mostly palette-plus-generic-grain: ANAR, BGLA, BREC, BRMT, FRZZ, GRAV, SAWD, SLCN, DYST, and BCOL. Follow those with unusual solids, beginning with BIZRS, PSTS, SHLD2–4, and VRSS, then liquids/gases/energy/radioactive/growing-organic depth.
+
+Sensor checkpoint evidence: the deterministic paired browser atlas preserves all 21 air-open notch cells, 112 one-cell wire cells, seven isolated controls, and 3,780 guarded blank cells at raw backing resolution in flat, styled, and repeated-flat states. Off→on→off is byte exact; all seven response signatures are distinct; normalized 4×4 Canvas/WebGL profiles pass; support masks remain authoritative; and both backends report zero browser errors. Canvas backing response is 1.46–2.16 RGB RMS with a 14-byte peak; WebGL is 3.21–7.12 RMS with a 23-byte peak. TypeScript, all 71 test files / 460 tests, the 790-module production build, and the 19-file asset closure pass.
+
 Queued after the renderer checkpoint: revisit desktop/mobile geometry as a dedicated visual pass. Desktop tool categories must not become an unscrollable over-wide row, short windows must never let the Brush card cover the tool library, and constrained scaling must retain usable catalog height. Mobile must keep the material menu conspicuous, compact the pressure/temperature/backend HUD, avoid page-width overflow, and leave deliberate whitespace so touch users can hand page scrolling back from nested tool lists.
 
 ## Current family-chromatic solid-body follow-up
@@ -84,7 +88,7 @@ Queued after the renderer checkpoint: revisit desktop/mobile geometry as a dedic
 
 - Repository: `/home/harry/projects/aniFor_codex`
 - Branch: `main_codex`
-- Current committed base: `Couple solid mesostructure to body lighting` (`HEAD`) on `main_codex`.
+- Current committed base: `Give native sensors distinct graphics` (`HEAD`) on `main_codex`; the ten-material unusual-powder identity tranche is now active.
 - Manual Actions run `29756120034` restored the compiler/tool caches, built, tested, deployed `fcd504a`, and passed the separate post-deploy revision/runtime-asset verifier.
 - Local GitHub CLI authentication is valid. Recheck `gh auth status` before the next manual deployment, and do not confuse a successful artifact build with a live deployment.
 - Current live Pages URL: `https://harryzhou2000.github.io/aniFor/`

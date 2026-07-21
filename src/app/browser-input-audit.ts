@@ -5,6 +5,7 @@ import type { SimulationBackend } from '../simulation';
 import type { Point, ViewState } from '../renderer/view-transform';
 import type { MaterialAtlasEntry } from './material-atlas-audit';
 import type { CellularGraphicsAuditSnapshot } from './cellular-graphics-audit';
+import type { SensorGraphicsAuditSnapshot } from './sensor-graphics-audit';
 
 export interface BrowserInputAuditApi {
   readonly version: 1;
@@ -33,6 +34,7 @@ export interface BrowserInputAuditApi {
   setSolidFieldLighting(enabled: boolean): void;
   setRoleMaterialStyling(enabled: boolean): void;
   setCellularMaterialStyling(enabled: boolean): void;
+  setSensorMaterialStyling(enabled: boolean): void;
   setPhaseContactLighting(enabled: boolean): void;
   setThermalMaterialStyling(enabled: boolean): void;
   setEnergyCoreRelief(enabled: boolean): void;
@@ -54,6 +56,8 @@ export interface BrowserInputAuditApi {
   prepareMaterialAtlas(): void;
   cellularGraphicsAtlas(): CellularGraphicsAuditSnapshot;
   prepareCellularGraphicsFixture(): void;
+  sensorGraphicsAtlas(): SensorGraphicsAuditSnapshot;
+  prepareSensorGraphicsFixture(): void;
   canvasPresentationTiming(): CanvasPresentationTiming | undefined;
   requestWebGLPresentationTimingSample(): boolean;
   webGLPresentationTiming(): WebGLPresentationTiming | undefined;

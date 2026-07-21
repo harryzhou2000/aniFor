@@ -39,7 +39,8 @@ const surfaceContourOnly = process.argv.includes('--surface-contour-only');
 const solidFieldOnly = process.argv.includes('--solid-field-only');
 const roleGraphicsOnly = process.argv.includes('--role-graphics-only');
 const cellularGraphicsOnly = process.argv.includes('--cellular-graphics-only');
-const usesProductionBundle = cellularGraphicsOnly || scaleEightOnly;
+const sensorGraphicsOnly = process.argv.includes('--sensor-graphics-only');
+const usesProductionBundle = cellularGraphicsOnly || sensorGraphicsOnly || scaleEightOnly;
 const AUDIT_BASE_URL = usesProductionBundle ? PRODUCTION_BUNDLE_URL : ORIGIN + '/';
 const screenshotRequest = process.argv.find((argument) => argument.startsWith('--screenshot='))?.slice('--screenshot='.length);
 const SOLID_FIELD_REGIONS = [
@@ -99,7 +100,7 @@ async function main() {
     const reducedAudit = quickScreenshot || layoutOnly || mobileOnly
       || desktopInputOnly || visualScaleMatrixOnly || powderBodyOnly || liquidDepthOnly
       || solidDepthOnly || gasChromaOnly || surfaceContourOnly || solidFieldOnly
-      || roleGraphicsOnly || cellularGraphicsOnly;
+      || roleGraphicsOnly || cellularGraphicsOnly || sensorGraphicsOnly;
     if (powderBodyOnly) assertPairedPowderBodyDepth(results);
     if (liquidDepthOnly) assertPairedLiquidOpticalDepth(results);
     if (solidDepthOnly) assertPairedSolidOpticalDepth(results);
@@ -108,6 +109,7 @@ async function main() {
     if (solidFieldOnly) assertPairedSolidFieldLighting(results);
     if (roleGraphicsOnly) assertPairedRoleGraphics(results);
     if (cellularGraphicsOnly) assertPairedCellularGraphics(results);
+    if (sensorGraphicsOnly) assertPairedSensorGraphics(results);
     if (!scaleEightOnly && !materialAtlasOnly && !reducedAudit) assertPairedVisualRelief(results);
     if (!scaleEightOnly && !reducedAudit) assertPairedMaterialAtlas(results);
     compactMaterialAtlasResults(results);
@@ -124,7 +126,7 @@ async function auditMode(mode) {
   const chromePath = await resolveChrome();
   const profile = await mkdtemp(path.join(tmpdir(), `anifor-input-${mode}-`));
   const dpr = mode === 'canvas2d' ? 2 : 1;
-  const startsBlank = cellularGraphicsOnly;
+  const startsBlank = cellularGraphicsOnly || sensorGraphicsOnly;
   const query = new URLSearchParams({
     scene: 'render-lab', inputAudit: '1', renderScale: '2',
     auditStage: startsBlank ? 'blank' : 'canonical',
@@ -243,6 +245,12 @@ async function auditMode(mode) {
       assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
       cdp.close();
       return { backend: mode, cellularGraphics, browserErrors: errors.length };
+    }
+    if (sensorGraphicsOnly) {
+      const sensorGraphics = await auditSensorGraphics(cdp, mode);
+      assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
+      cdp.close();
+      return { backend: mode, sensorGraphics, browserErrors: errors.length };
     }
     if (mobileOnly) {
       const mobile = await auditMobile(
@@ -2817,6 +2825,329 @@ async function auditCellularGraphics(cdp, mode) {
   };
 }
 
+/** Focused RGB-only proof for all seven native sensor/device projections. */
+async function auditSensorGraphics(cdp, mode) {
+  const started = performance.now();
+  const stage = (name) => console.error(
+    `[sensor-graphics:${mode}] ${name} ${Math.round(performance.now() - started)}ms`,
+  );
+  const blank = await waitForStablePageCapture(cdp, `${mode} initial blank sensor framebuffer`);
+  stage('blank-ready');
+  await evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    if (typeof audit.prepareSensorGraphicsFixture !== 'function'
+      || typeof audit.sensorGraphicsAtlas !== 'function'
+      || typeof audit.setSensorMaterialStyling !== 'function') {
+      throw new Error('Sensor graphics audit API unavailable');
+    }
+    audit.prepareSensorGraphicsFixture();
+    return true;
+  })()`);
+  const rawAtlas = await waitFor(() => evaluate(cdp, `(() => {
+    const atlas = window.__ANIFOR_INPUT_AUDIT__.sensorGraphicsAtlas();
+    const cards = Array.isArray(atlas) ? atlas : atlas?.cards;
+    return cards?.length === 7 ? atlas : false;
+  })()`), 15_000, `${mode} sensor graphics fixture`);
+  const atlas = normalizeSensorGraphicsAtlas(rawAtlas);
+  assert(atlas.cards.length === 7,
+    `${mode}: sensor graphics atlas contains ${atlas.cards.length} cards`);
+  assert(new Set(atlas.cards.map(({ material }) => material)).size === 7,
+    `${mode}: sensor graphics atlas does not expose seven distinct materials`);
+  assert(atlas.cards.every(({ material }, index) => material === 164 + index),
+    `${mode}: sensor material identity range changed (${JSON.stringify(atlas.cards)})`);
+
+  const semanticState = await evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    const snapshot = audit.sensorGraphicsAtlas();
+    const cards = Array.isArray(snapshot) ? snapshot : snapshot.cards;
+    const empty = (rect) => {
+      for (let y = rect.y; y < rect.y + rect.height; y++) {
+        for (let x = rect.x; x < rect.x + rect.width; x++) {
+          if (audit.cell(x, y) !== 0) return false;
+        }
+      }
+      return true;
+    };
+    const exact = (rect, material) => {
+      for (let y = rect.y; y < rect.y + rect.height; y++) {
+        for (let x = rect.x; x < rect.x + rect.width; x++) {
+          if (audit.cell(x, y) !== material) return false;
+        }
+      }
+      return true;
+    };
+    return cards.map((entry) => ({
+      material: entry.material,
+      code: entry.code,
+      body: audit.cell(entry.body.x + 1, entry.body.y + 1),
+      openNotchEmpty: entry.openNotch.every(({ x, y }) => audit.cell(x, y) === 0),
+      wireExact: exact(entry.wire, entry.material),
+      isolated: audit.cell(entry.isolated.x, entry.isolated.y),
+      guardedBlankEmpty: empty(entry.guardedBlank),
+    }));
+  })()`);
+  assert(semanticState.every((entry) => entry.body === entry.material
+      && entry.openNotchEmpty && entry.wireExact
+      && entry.isolated === entry.material && entry.guardedBlankEmpty),
+  `${mode}: sensor fixture lost body/notch/wire/isolated/blank semantics (${JSON.stringify(semanticState)})`);
+  stage('fixture-ready');
+
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setSensorMaterialStyling(false); true');
+  const flat = await waitForStablePageCapture(cdp, `${mode} flat sensor framebuffer`);
+  const flatBacking = await sampleSensorBackingTopology(cdp);
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setSensorMaterialStyling(true); true');
+  const styled = await waitForStablePageCapture(cdp, `${mode} styled sensor framebuffer`);
+  const styledBacking = await sampleSensorBackingTopology(cdp);
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setSensorMaterialStyling(false); true');
+  const repeated = await waitForStablePageCapture(cdp, `${mode} repeated flat sensor framebuffer`);
+  const repeatedBacking = await sampleSensorBackingTopology(cdp);
+  stage('captures-ready');
+
+  for (const [state, backing] of [
+    ['flat', flatBacking], ['styled', styledBacking], ['repeated-flat', repeatedBacking],
+  ]) {
+    assert(backing.width % WORLD_WIDTH === 0 && backing.height % WORLD_HEIGHT === 0,
+      `${mode}: ${state} sensor backing does not preserve integral world scaling (${JSON.stringify(backing)})`);
+    assert(backing.cards.length === 7 && backing.cards.every((card) => (
+      card.bodySupported === card.bodyExpected
+      && card.openNotchesTransparent === card.openNotchesExpected
+      && card.wireSupported === card.wireExpected
+      && card.isolatedAlphaPeak > 0
+      && card.guardedBlankTransparent === card.guardedBlankExpected
+    )), `${mode}: ${state} sensor backing changed exact body/notch/wire/isolated/blank topology (${JSON.stringify(backing.cards)})`);
+  }
+
+  const backingResponses = summarizeSensorBackingResponses(
+    flatBacking, styledBacking, repeatedBacking,
+  );
+  assert(backingResponses.every(({ rgbRms, rgbPeak, repeatRgbPeak }) => (
+    rgbRms >= 0.05 && rgbRms <= 32 && rgbPeak > 0 && rgbPeak <= 64 && repeatRgbPeak === 0
+  )), `${mode}: sensor backing response is absent, unbounded, or non-repeatable (${JSON.stringify(backingResponses)})`);
+  assert(new Set(backingResponses.map(({ responseSignature }) => responseSignature)).size === 7,
+    `${mode}: sensor backing motifs do not have seven distinct response signatures (${JSON.stringify(backingResponses)})`);
+
+  const bodyRegions = atlas.cards.map((entry) => ({
+    name: `sensor-${entry.code}`,
+    x: entry.body.x + entry.body.width / 2,
+    y: entry.body.y + entry.body.height / 2,
+    radiusX: entry.body.width / 2,
+    radiusY: entry.body.height / 2,
+    signature: true,
+    silhouette: true,
+    fastSupport: true,
+  }));
+  const atlasBounds = containingCellularRegion(atlas.cards.map(({ card }) => card));
+  const responses = await sampleBackdropRefractionRegions(cdp, {
+    straight: flat.capture.data,
+    refracted: styled.capture.data,
+    repeatedStraight: repeated.capture.data,
+  }, [...bodyRegions, { name: 'sensor-atlas', ...atlasBounds }], flat.canvasRect);
+  const atlasResponse = responses.at(-1);
+  assert(atlasResponse.repeatRgbPeak === 0,
+    `${mode}: sensor flat→styled→flat framebuffer was not exact (${JSON.stringify(atlasResponse)})`);
+  assert(responses.slice(0, 7).every((sample) => sample.rgbRms > 0 && sample.rgbPeak <= 64),
+    `${mode}: at least one sensor card has no bounded composed styling response (${JSON.stringify(responses)})`);
+
+  const [flatSupport, styledSupport] = await Promise.all([
+    samplePageRegions(
+      cdp, flat.capture.data, bodyRegions,
+      blank.capture.data, blank.reference.data, flat.canvasRect,
+    ),
+    samplePageRegions(
+      cdp, styled.capture.data, bodyRegions,
+      blank.capture.data, blank.reference.data, flat.canvasRect,
+    ),
+  ]);
+  assert(flatSupport.every((sample) => sample.visible > 0 && sample.worldArea > 0)
+      && styledSupport.every((sample) => sample.visible > 0 && sample.worldArea > 0),
+  `${mode}: at least one sensor body is not visible (${JSON.stringify({ flatSupport, styledSupport })})`);
+  stage('responses-sampled');
+
+  const cardSignatures = atlas.cards.map((entry, index) => ({
+    index: entry.index,
+    material: entry.material,
+    code: entry.code,
+    flatSignature: flatSupport[index].signature,
+    styledSignature: styledSupport[index].signature,
+    flatMaskSignature: flatSupport[index].maskSignature,
+    styledMaskSignature: styledSupport[index].maskSignature,
+    flatVisible: flatSupport[index].visible,
+    styledVisible: styledSupport[index].visible,
+    worldArea: styledSupport[index].worldArea,
+    rgbRms: responses[index].rgbRms,
+    rgbPeak: responses[index].rgbPeak,
+    responseSignature: responses[index].responseSignature,
+    backingRgbRms: backingResponses[index].rgbRms,
+    backingRgbPeak: backingResponses[index].rgbPeak,
+    backingChangedCellRatio: backingResponses[index].changedCellRatio,
+    backingRepeatRgbPeak: backingResponses[index].repeatRgbPeak,
+    backingResponseSignature: backingResponses[index].responseSignature,
+    backingResponseProfile: backingResponses[index].responseProfile,
+  }));
+  return {
+    cards: cardSignatures.length,
+    openNotchCells: atlas.openNotches.length,
+    wireCells: atlas.wires.length,
+    isolatedControls: atlas.isolated.length,
+    guardedBlankCells: atlas.guardedBlanks.reduce(
+      (total, rect) => total + rect.width * rect.height, 0,
+    ),
+    exactRepeatedOff: atlasResponse.repeatRgbPeak === 0,
+    cardSignatures,
+  };
+}
+
+async function sampleSensorBackingTopology(cdp) {
+  return evaluate(cdp, `(() => {
+    const world = document.querySelector('.world-canvas');
+    if (!(world instanceof HTMLCanvasElement)) throw new Error('World canvas unavailable');
+    const copy = document.createElement('canvas');
+    copy.width = world.width;
+    copy.height = world.height;
+    const context = copy.getContext('2d', { willReadFrequently: true });
+    if (!context) throw new Error('Sensor backing sampler unavailable');
+    context.drawImage(world, 0, 0);
+    const pixels = context.getImageData(0, 0, copy.width, copy.height).data;
+    const scaleX = copy.width / ${WORLD_WIDTH};
+    const scaleY = copy.height / ${WORLD_HEIGHT};
+    const alphaPeak = ({ x, y }) => {
+      const left = Math.floor(x * scaleX);
+      const top = Math.floor(y * scaleY);
+      const right = Math.max(left + 1, Math.floor((x + 1) * scaleX));
+      const bottom = Math.max(top + 1, Math.floor((y + 1) * scaleY));
+      let peak = 0;
+      for (let py = top; py < bottom; py++) for (let px = left; px < right; px++) {
+        peak = Math.max(peak, pixels[(py * copy.width + px) * 4 + 3]);
+      }
+      return peak;
+    };
+    const rectPoints = (rect) => {
+      const points = [];
+      for (let y = rect.y; y < rect.y + rect.height; y++) {
+        for (let x = rect.x; x < rect.x + rect.width; x++) points.push({ x, y });
+      }
+      return points;
+    };
+    const sampleBody = (body) => {
+      const rgb = [];
+      for (let y = body.y; y < body.y + body.height; y++) {
+        for (let x = body.x; x < body.x + body.width; x++) {
+          const px = Math.min(copy.width - 1, Math.floor((x + 0.5) * scaleX));
+          const py = Math.min(copy.height - 1, Math.floor((y + 0.5) * scaleY));
+          const offset = (py * copy.width + px) * 4;
+          rgb.push(pixels[offset], pixels[offset + 1], pixels[offset + 2]);
+        }
+      }
+      return { width: body.width, height: body.height, rgb };
+    };
+    const snapshot = window.__ANIFOR_INPUT_AUDIT__.sensorGraphicsAtlas();
+    const cards = Array.isArray(snapshot) ? snapshot : snapshot.cards;
+    return {
+      width: copy.width,
+      height: copy.height,
+      cards: cards.map((entry) => {
+        const notchKeys = new Set(entry.openNotch.map(({ x, y }) => x + ',' + y));
+        const bodyPoints = rectPoints(entry.body).filter(({ x, y }) => !notchKeys.has(x + ',' + y));
+        const wirePoints = rectPoints(entry.wire);
+        const guardedPoints = rectPoints(entry.guardedBlank);
+        return {
+          index: entry.index,
+          material: entry.material,
+          code: entry.code,
+          bodyExpected: bodyPoints.length,
+          bodySupported: bodyPoints.filter((point) => alphaPeak(point) > 0).length,
+          openNotchesExpected: entry.openNotch.length,
+          openNotchesTransparent: entry.openNotch.filter((point) => alphaPeak(point) === 0).length,
+          wireExpected: wirePoints.length,
+          wireSupported: wirePoints.filter((point) => alphaPeak(point) > 0).length,
+          isolatedAlphaPeak: alphaPeak(entry.isolated),
+          guardedBlankExpected: guardedPoints.length,
+          guardedBlankTransparent: guardedPoints.filter((point) => alphaPeak(point) === 0).length,
+          ...sampleBody(entry.body),
+        };
+      }),
+    };
+  })()`);
+}
+
+function summarizeSensorBackingResponses(flat, styled, repeated) {
+  assert(flat.cards.length === 7 && styled.cards.length === 7 && repeated.cards.length === 7,
+    'Sensor backing response atlas is incomplete');
+  return flat.cards.map((base, cardIndex) => {
+    const changed = styled.cards[cardIndex];
+    const returned = repeated.cards[cardIndex];
+    assert(changed.index === base.index && returned.index === base.index
+        && changed.material === base.material && returned.material === base.material
+        && changed.code === base.code && returned.code === base.code
+        && changed.width === base.width && returned.width === base.width
+        && changed.height === base.height && returned.height === base.height
+        && changed.rgb.length === base.rgb.length && returned.rgb.length === base.rgb.length,
+    `Sensor backing response geometry changed for ${base.code}`);
+    let squared = 0;
+    let rgbPeak = 0;
+    let repeatRgbPeak = 0;
+    let changedCells = 0;
+    let responseSignature = 2166136261;
+    const buckets = new Float64Array(16);
+    for (let offset = 0; offset < base.rgb.length; offset += 3) {
+      const cell = offset / 3;
+      const x = cell % base.width;
+      const y = Math.floor(cell / base.width);
+      const bucket = Math.min(3, Math.floor(y * 4 / base.height)) * 4
+        + Math.min(3, Math.floor(x * 4 / base.width));
+      let cellChanged = false;
+      for (let channel = 0; channel < 3; channel++) {
+        const delta = changed.rgb[offset + channel] - base.rgb[offset + channel];
+        const repeat = returned.rgb[offset + channel] - base.rgb[offset + channel];
+        squared += delta * delta;
+        rgbPeak = Math.max(rgbPeak, Math.abs(delta));
+        repeatRgbPeak = Math.max(repeatRgbPeak, Math.abs(repeat));
+        buckets[bucket] += Math.abs(delta);
+        cellChanged ||= delta !== 0;
+        responseSignature = Math.imul(responseSignature ^ (delta + 255), 16777619) >>> 0;
+      }
+      changedCells += Number(cellChanged);
+    }
+    const total = Math.max(1, buckets.reduce((sum, value) => sum + value, 0));
+    return {
+      index: base.index,
+      material: base.material,
+      code: base.code,
+      rgbRms: round(Math.sqrt(squared / Math.max(1, base.rgb.length)), 4),
+      rgbPeak,
+      changedCellRatio: round(changedCells / Math.max(1, base.width * base.height), 5),
+      repeatRgbPeak,
+      responseSignature,
+      responseProfile: Array.from(buckets, (value) => round(value / total, 5)),
+    };
+  });
+}
+
+function normalizeSensorGraphicsAtlas(snapshot) {
+  const cards = (Array.isArray(snapshot) ? snapshot : snapshot?.cards ?? []).map((entry) => ({
+    ...entry,
+    card: cellularRect(entry.card ?? entry),
+    body: cellularRect(entry.body),
+    openNotch: cellularPoints(entry.openNotch),
+    wire: cellularRect(entry.wire),
+    isolated: cellularPoint(entry.isolated),
+    guardedBlank: cellularRect(entry.guardedBlank),
+  }));
+  return {
+    cards,
+    openNotches: Array.isArray(snapshot)
+      ? cards.flatMap(({ openNotch }) => openNotch) : cellularPoints(snapshot?.openNotches),
+    wires: Array.isArray(snapshot)
+      ? cards.flatMap(({ wire }) => cellularRectPoints(wire)) : cellularPoints(snapshot?.wires),
+    isolated: cellularPoints(
+      Array.isArray(snapshot) ? cards.map(({ isolated }) => isolated) : snapshot?.isolated,
+    ),
+    guardedBlanks: Array.isArray(snapshot)
+      ? cards.map(({ guardedBlank }) => guardedBlank)
+      : (snapshot?.guardedBlanks ?? []).map(cellularRect),
+  };
+}
+
 async function sampleCellularBackingTopology(cdp) {
   return evaluate(cdp, `(() => {
     const world = document.querySelector('.world-canvas');
@@ -4156,6 +4487,47 @@ function assertPairedCellularGraphics(results) {
     ));
     assert(profileDistance <= 0.12,
       `Canvas/WebGL LIFE preset ${canvasEntry.preset} spatial response diverged (${profileDistance})`);
+  }
+}
+
+function assertPairedSensorGraphics(results) {
+  const canvas = results.find((result) => result.backend === 'canvas2d')?.sensorGraphics;
+  const webgl = results.find((result) => result.backend === 'webgl')?.sensorGraphics;
+  if (!canvas || !webgl) return;
+  assert(canvas.cards === 7 && webgl.cards === 7,
+    `paired sensor graphics atlas is incomplete (${canvas.cards}/${webgl.cards})`);
+  for (const result of [canvas, webgl]) {
+    assert(new Set(result.cardSignatures.map(
+      ({ backingResponseSignature }) => backingResponseSignature,
+    )).size === 7,
+    `sensor motif responses are not distinct in all seven cards (${JSON.stringify(result.cardSignatures)})`);
+    assert(result.cardSignatures.every(({ backingRepeatRgbPeak }) => backingRepeatRgbPeak === 0),
+      `sensor backing off→on→off sequence was not exact (${JSON.stringify(result.cardSignatures)})`);
+  }
+  const webglByMaterial = new Map(webgl.cardSignatures.map((entry) => [entry.material, entry]));
+  for (const canvasEntry of canvas.cardSignatures) {
+    const webglEntry = webglByMaterial.get(canvasEntry.material);
+    assert(webglEntry && webglEntry.code === canvasEntry.code,
+      `paired sensor projection missing ${canvasEntry.code}/${canvasEntry.material}`);
+    assert(Number.isInteger(canvasEntry.flatSignature)
+        && Number.isInteger(canvasEntry.styledSignature)
+        && Number.isInteger(webglEntry.flatSignature)
+        && Number.isInteger(webglEntry.styledSignature)
+        && Number.isInteger(canvasEntry.responseSignature)
+        && Number.isInteger(webglEntry.responseSignature),
+    `paired sensor signatures missing ${canvasEntry.code}`);
+    const responseRatio = canvasEntry.backingRgbRms
+      / Math.max(0.01, webglEntry.backingRgbRms);
+    // Canvas applies the morphology in display-byte space while WebGL applies
+    // it before transfer to display bytes. Keep amplitude broad, and use the
+    // normalized 4x4 response profile below as the morphology parity proof.
+    assert(responseRatio >= 0.20 && responseRatio <= 5.0,
+      `Canvas/WebGL sensor ${canvasEntry.code} backing response diverged (${canvasEntry.backingRgbRms}/${webglEntry.backingRgbRms})`);
+    const profileDistance = Math.max(...canvasEntry.backingResponseProfile.map(
+      (value, index) => Math.abs(value - webglEntry.backingResponseProfile[index]),
+    ));
+    assert(profileDistance <= 0.12,
+      `Canvas/WebGL sensor ${canvasEntry.code} spatial response diverged (${profileDistance})`);
   }
 }
 
