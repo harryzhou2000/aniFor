@@ -6,6 +6,7 @@ import {
   applyCanvasGasVolumeChroma,
   canvasGasVolumeChromaResponse,
 } from './gas-volume-chroma';
+import { applyCanvasGasIdentityStyle } from './canvas-gas-identity-style';
 
 export interface CanvasAtmosphereLightField {
   readonly bytes: Uint8Array;
@@ -61,12 +62,17 @@ export function shadeCanvasAtmosphere(
   height: number,
   light?: CanvasAtmosphereLightField,
   volumeChroma = true,
+  identityStyles?: Uint8Array,
+  identityStyling = true,
 ): void {
   if (!Number.isInteger(width) || !Number.isInteger(height) || width <= 0 || height <= 0) {
     throw new Error('Invalid atmosphere dimensions');
   }
   const length = width * height * 4;
   if (source.length !== length || target.length !== length) throw new Error('Atmosphere buffer size mismatch');
+  if (identityStyles && identityStyles.length !== width * height) {
+    throw new Error('Atmosphere identity field size mismatch');
+  }
   if (light && (!Number.isInteger(light.width) || !Number.isInteger(light.height)
     || light.width <= 0 || light.height <= 0
     || light.bytes.length !== light.width * light.height * 4)) {
@@ -171,6 +177,10 @@ export function shadeCanvasAtmosphere(
         source[offset],
         source[offset + 1],
         source[offset + 2],
+      );
+      if (identityStyling && identityStyles) applyCanvasGasIdentityStyle(
+        target, offset, identityStyles[offset / 4], x, y,
+        density, upperLeftRelief, curvature,
       );
     }
   }

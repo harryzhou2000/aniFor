@@ -38,6 +38,9 @@ import {
 import {
   LIQUID_IDENTITY_GRAPHICS_AUDIT, prepareLiquidIdentityGraphicsAuditFixture,
 } from './liquid-identity-graphics-audit';
+import {
+  GAS_IDENTITY_GRAPHICS_AUDIT, prepareGasIdentityGraphicsAuditFixture,
+} from './gas-identity-graphics-audit';
 
 const AUTOSAVE_KEY = 'stillroom-world-v1';
 
@@ -231,6 +234,7 @@ export class Game {
       },
       sourceTarget: (x, y) => this.simulation.configuredSourceTargetAt?.(x, y) ?? Material.Empty,
       presentationAuxiliary: (x, y) => this.renderer.presentationAuxiliaryAt(x, y),
+      gasIdentityStyle: (x, y) => this.renderer.gasIdentityStyleAt(x, y),
       occupiedCells: () => {
         let occupied = 0;
         for (const material of this.simulation.cells()) if (material !== Material.Empty) occupied++;
@@ -238,6 +242,9 @@ export class Game {
       },
       setGasFieldLighting: (enabled) => { this.renderer.setGasFieldLightingEnabled(enabled); },
       setGasVolumeChroma: (enabled) => { this.renderer.setGasVolumeChromaEnabled(enabled); },
+      setGasIdentityStyling: (enabled) => {
+        this.renderer.setGasIdentityStylingEnabled(enabled);
+      },
       setEmissionVolumeChroma: (enabled) => {
         this.renderer.setEmissionVolumeChromaEnabled(enabled);
       },
@@ -355,6 +362,10 @@ export class Game {
       liquidIdentityGraphicsAtlas: () => LIQUID_IDENTITY_GRAPHICS_AUDIT,
       prepareLiquidIdentityGraphicsFixture: () => {
         prepareLiquidIdentityGraphicsAuditFixture(this.simulation);
+      },
+      gasIdentityGraphicsAtlas: () => GAS_IDENTITY_GRAPHICS_AUDIT,
+      prepareGasIdentityGraphicsFixture: () => {
+        prepareGasIdentityGraphicsAuditFixture(this.simulation);
       },
       canvasPresentationTiming: () => this.renderer.getCanvasPresentationTiming(),
       requestWebGLPresentationTimingSample: () => this.renderer.requestWebGLPresentationTimingSample(),

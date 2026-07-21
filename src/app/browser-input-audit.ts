@@ -10,6 +10,7 @@ import type { SensorGraphicsAuditSnapshot } from './sensor-graphics-audit';
 import type { UnusualPowderGraphicsAuditSnapshot } from './unusual-powder-graphics-audit';
 import type { UnusualSolidGraphicsAuditSnapshot } from './unusual-solid-graphics-audit';
 import type { LiquidIdentityGraphicsAuditSnapshot } from './liquid-identity-graphics-audit';
+import type { GasIdentityGraphicsAuditSnapshot } from './gas-identity-graphics-audit';
 
 export interface BrowserInputAuditApi {
   readonly version: 1;
@@ -20,9 +21,11 @@ export interface BrowserInputAuditApi {
   temperature(x: number, y: number): number;
   sourceTarget(x: number, y: number): number;
   presentationAuxiliary(x: number, y: number): number;
+  gasIdentityStyle(x: number, y: number): number;
   occupiedCells(): number;
   setGasFieldLighting(enabled: boolean): void;
   setGasVolumeChroma(enabled: boolean): void;
+  setGasIdentityStyling(enabled: boolean): void;
   setEmissionVolumeChroma(enabled: boolean): void;
   setLiquidFieldLighting(enabled: boolean): void;
   setLiquidSilhouetteCohesion(enabled: boolean): void;
@@ -72,6 +75,8 @@ export interface BrowserInputAuditApi {
   prepareUnusualSolidGraphicsFixture(): void;
   liquidIdentityGraphicsAtlas(): LiquidIdentityGraphicsAuditSnapshot;
   prepareLiquidIdentityGraphicsFixture(): void;
+  gasIdentityGraphicsAtlas(): GasIdentityGraphicsAuditSnapshot;
+  prepareGasIdentityGraphicsFixture(): void;
   canvasPresentationTiming(): CanvasPresentationTiming | undefined;
   requestWebGLPresentationTimingSample(): boolean;
   webGLPresentationTiming(): WebGLPresentationTiming | undefined;

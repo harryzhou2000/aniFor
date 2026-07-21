@@ -194,6 +194,27 @@ describe('Canvas atmosphere relief', () => {
     expect(darkLit).toEqual(baseline);
   });
 
+  it('applies propagated gas identity across supported volume without changing alpha', () => {
+    const width = 4;
+    const source = new Uint8Array(width * width * 4);
+    const styles = new Uint8Array(width * width).fill(1);
+    for (let index = 0; index < styles.length; index++) {
+      source.set([140, 145, 152, 164], index * 4);
+    }
+    const flat = new Uint8ClampedArray(source.length);
+    const styled = new Uint8ClampedArray(source.length);
+    const repeatedFlat = new Uint8ClampedArray(source.length);
+    shadeCanvasAtmosphere(flat, source, width, width, undefined, true, styles, false);
+    shadeCanvasAtmosphere(styled, source, width, width, undefined, true, styles, true);
+    shadeCanvasAtmosphere(repeatedFlat, source, width, width, undefined, true, styles, false);
+
+    expect(styled).not.toEqual(flat);
+    expect(repeatedFlat).toEqual(flat);
+    for (let offset = 3; offset < source.length; offset += 4) {
+      expect(styled[offset]).toBe(source[offset]);
+    }
+  });
+
   it('rejects invalid dimensions and mismatched buffers', () => {
     expect(() => shadeCanvasAtmosphere(new Uint8ClampedArray(4), new Uint8Array(4), 0, 1)).toThrow('Invalid');
     expect(() => shadeCanvasAtmosphere(new Uint8ClampedArray(8), new Uint8Array(4), 1, 1)).toThrow('size');
@@ -201,5 +222,9 @@ describe('Canvas atmosphere relief', () => {
       new Uint8ClampedArray(4), new Uint8Array(4), 1, 1,
       { bytes: new Uint8Array(4), width: 0, height: 1 },
     )).toThrow('light');
+    expect(() => shadeCanvasAtmosphere(
+      new Uint8ClampedArray(4), new Uint8Array(4), 1, 1,
+      undefined, true, new Uint8Array(2), true,
+    )).toThrow('identity');
   });
 });

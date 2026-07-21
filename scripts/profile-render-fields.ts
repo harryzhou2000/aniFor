@@ -32,6 +32,7 @@ import {
 import {
   applyCanvasLiquidIdentityStyle, CANVAS_LIQUID_IDENTITY_LOOKUP_BYTES,
 } from '../src/renderer/canvas-liquid-identity-style';
+import { CANVAS_GAS_IDENTITY_LOOKUP_BYTES } from '../src/renderer/canvas-gas-identity-style';
 import { applyCanvasPowderBulkStyle } from '../src/renderer/canvas-powder-bulk-style';
 import { applyCanvasSuspensionStyle } from '../src/renderer/canvas-suspension-style';
 import { createRenderLookups } from '../src/renderer/render-field-set';
@@ -55,7 +56,8 @@ const width = 612;
 const height = 384;
 const materials = new Uint8Array(width * height);
 const {
-  gasByMaterial, liquidByMaterial, emissiveByMaterial, colorByMaterial, styleBytes, paletteBytes,
+  gasByMaterial, gasIdentityStyleByMaterial, liquidByMaterial,
+  emissiveByMaterial, colorByMaterial, styleBytes, paletteBytes,
 } = createRenderLookups(ALL_MATERIALS);
 
 // A deterministic mixed workload with dense, sparse, and interleaved regions.
@@ -67,7 +69,9 @@ for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) {
   else materials[index] = (x * 7 + y * 3) % 17 < 3 ? Material.PHOT : Material.Empty;
 }
 
-const atmosphere = new AtmosphereField(width, height, gasByMaterial, colorByMaterial);
+const atmosphere = new AtmosphereField(
+  width, height, gasByMaterial, colorByMaterial, gasIdentityStyleByMaterial,
+);
 const liquid = new LiquidDensityField(width, height, liquidByMaterial, colorByMaterial);
 // Models the already allocated phase-exclusive presenter byte, not a new
 // LiquidDensityField allocation.
@@ -577,6 +581,22 @@ console.log(JSON.stringify({
         shadeCanvasAtmosphere(
           atmospherePixels, atmosphere.bytes, atmosphere.width, atmosphere.height,
           undefined, true,
+        );
+      }),
+    },
+    gasIdentityStyle: {
+      additionalAllocatedBytes: CANVAS_GAS_IDENTITY_LOOKUP_BYTES,
+      fixture: `${atmosphere.width}x${atmosphere.height} propagated mixed-gas volume`,
+      flat: sample(() => {
+        shadeCanvasAtmosphere(
+          atmospherePixels, atmosphere.bytes, atmosphere.width, atmosphere.height,
+          undefined, true, atmosphere.styleBytes, false,
+        );
+      }),
+      styled: sample(() => {
+        shadeCanvasAtmosphere(
+          atmospherePixels, atmosphere.bytes, atmosphere.width, atmosphere.height,
+          undefined, true, atmosphere.styleBytes, true,
         );
       }),
     },

@@ -12,6 +12,8 @@ describe('shared render field set', () => {
     const lookup = createRenderLookups(ALL_MATERIALS);
     expect(lookup.liquidByMaterial[Material.Water]).toBe(1);
     expect(lookup.gasByMaterial[Material.Oxygen]).toBe(1);
+    expect(lookup.gasIdentityStyleByMaterial[Material.Oxygen]).toBe(4);
+    expect(lookup.gasIdentityStyleByMaterial[Material.Water]).toBe(0);
     expect(lookup.emissiveByMaterial[Material.PHOT]).toBe(1);
     expect(lookup.styleBytes[Material.Water * 4]).toBe(RenderPhase.Liquid);
     expect(lookup.paletteBytes[Material.Water * 4 + 3]).toBe(RenderOptics.Aqueous);
@@ -70,6 +72,8 @@ describe('shared render field set', () => {
       expect(lookup.styleBytes[palette + 1]).toBe(renderProfile(material.category));
       expect(lookup.styleBytes[palette + 3]).toBe(renderTraits(material));
       expect(lookup.gasByMaterial[material.id]).toBe(Number(renderPhase(material) === RenderPhase.Gas));
+      expect(Number(lookup.gasIdentityStyleByMaterial[material.id] > 0))
+        .toBe(lookup.gasByMaterial[material.id]);
       expect(lookup.liquidByMaterial[material.id]).toBe(Number(renderPhase(material) === RenderPhase.Liquid));
       expect(lookup.emissiveByMaterial[material.id]).toBe(Number(
         material.emissive === true || renderPhase(material) === RenderPhase.Energy,
@@ -105,6 +109,45 @@ describe('shared render field set', () => {
     expect(fields.updateNext(materials, 101)).toBeUndefined();
   });
 
+  it('redirties atmosphere identity when nearby non-gas contact changes', () => {
+    const width = 20;
+    const height = 20;
+    const materials = new Uint8Array(width * height);
+    for (let y = 8; y <= 11; y++) for (let x = 4; x <= 11; x++) {
+      materials[y * width + x] = Material.Smoke;
+    }
+    const fields = new RenderFieldSet(width, height, ALL_MATERIALS);
+    fields.updateNext(materials, 0);
+    fields.updateNext(materials, 1);
+    fields.updateNext(materials, 2);
+    const contact = 10 * width + 12;
+    materials[contact] = Material.Water;
+    fields.markDirty(Material.Empty, Material.Water, contact);
+
+    expect(fields.updateNext(materials, 100)).toBe('atmosphere');
+    expect(fields.atmosphere.styleBytes[5 * fields.atmosphere.width + 5]).toBe(0);
+  });
+
+  it('redirties atmosphere identity when a nearby native wall changes', () => {
+    const width = 20;
+    const height = 20;
+    const materials = new Uint8Array(width * height);
+    const walls = new Uint8Array(width * height);
+    for (let y = 8; y <= 11; y++) for (let x = 4; x <= 11; x++) {
+      materials[y * width + x] = Material.Smoke;
+    }
+    const fields = new RenderFieldSet(width, height, ALL_MATERIALS);
+    fields.updateNext(materials, 0, walls);
+    fields.updateNext(materials, 1, walls);
+    fields.updateNext(materials, 2, walls);
+    const contact = 10 * width + 12;
+    walls[contact] = 1;
+    fields.markAtmosphereBlockerDirty(contact);
+
+    expect(fields.updateNext(materials, 100, walls)).toBe('atmosphere');
+    expect(fields.atmosphere.styleBytes[5 * fields.atmosphere.width + 5]).toBe(0);
+  });
+
   it('paces the soft suspension field independently at six hertz', () => {
     const materials = new Uint8Array(16);
     const fields = new RenderFieldSet(4, 4, ALL_MATERIALS);
@@ -124,12 +167,14 @@ describe('shared render field set', () => {
     const lookupBytes = fields.lookups.paletteBytes.byteLength
       + fields.lookups.styleBytes.byteLength
       + fields.lookups.gasByMaterial.byteLength
+      + fields.lookups.gasIdentityStyleByMaterial.byteLength
       + fields.lookups.liquidByMaterial.byteLength
       + fields.lookups.emissiveByMaterial.byteLength
       + fields.lookups.colorByMaterial.byteLength;
-    expect(lookupBytes).toBe(3_584);
+    expect(lookupBytes).toBe(3_840);
     expect(fields.powderSurface.allocatedByteLength).toBe(3_290_112);
     expect(fields.suspension.allocatedByteLength).toBe(588_032);
-    expect(fields.allocatedByteLength).toBeLessThan(12_100_000);
+    expect(fields.allocatedByteLength).toBe(12_172_880);
+    expect(fields.allocatedByteLength).toBeLessThan(12_250_000);
   });
 });

@@ -14,6 +14,7 @@ interface PresenterHarness {
   configurePresentation: PixiFieldPresenter['configurePresentation'];
   setGasFieldLightingEnabled: PixiFieldPresenter['setGasFieldLightingEnabled'];
   setGasVolumeChromaEnabled: PixiFieldPresenter['setGasVolumeChromaEnabled'];
+  setGasIdentityStylingEnabled: PixiFieldPresenter['setGasIdentityStylingEnabled'];
   setEmissionVolumeChromaEnabled: PixiFieldPresenter['setEmissionVolumeChromaEnabled'];
   setLiquidVolumeChromaEnabled: PixiFieldPresenter['setLiquidVolumeChromaEnabled'];
   setLiquidIdentityStylingEnabled: PixiFieldPresenter['setLiquidIdentityStylingEnabled'];
@@ -83,6 +84,7 @@ describe('Pixi presenter startup configuration', () => {
     expect(presenter.uniforms.uniforms).toMatchObject({
       uGasFieldLighting: 0,
       uGasVolumeChroma: 1,
+      uGasIdentityStyling: 1,
       uEmissionVolumeChroma: 1,
       uLiquidFieldLighting: 1,
       uLiquidVolumeChroma: 1,
@@ -273,10 +275,10 @@ describe('Pixi presenter startup configuration', () => {
   it('keeps gas volume chroma arithmetic-only and RGB-only', () => {
     const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
     const helperStart = source.indexOf('float gasVolumeChromaResponse(');
-    const helperEnd = source.indexOf('vec3 vividColor', helperStart);
+    const helperEnd = source.indexOf('vec3 gasIdentityVolumeDelta', helperStart);
     const helpers = source.slice(helperStart, helperEnd);
     const blockStart = source.indexOf("// The atmosphere's existing cardinal field samples");
-    const blockEnd = source.indexOf('  } else if (liquidVolume > 0.5)', blockStart);
+    const blockEnd = source.indexOf('    if (uGasIdentityStyling > 0.5)', blockStart);
     const block = source.slice(blockStart, blockEnd);
 
     expect(helperStart).toBeGreaterThan(0);
@@ -291,6 +293,49 @@ describe('Pixi presenter startup configuration', () => {
     expect(`${helpers}${block}`).not.toContain('texture(');
     expect(`${helpers}${block}`).not.toMatch(/\balpha\s*[+*]?=/);
     expect(`${helpers}${block}`).not.toMatch(/\b(?:sin|pow|normalize|length)\s*\(/);
+  });
+
+  it('seeds and redraws optional-last gas identity volume styling', () => {
+    const presenter = presenterHarness();
+
+    presenter.configurePresentation(
+      true, true, true, true, true, true, true, true, true, 'smooth',
+      true, true, true, true, true, true, true, true, true, true,
+      true, true, true, true, true, true, false,
+    );
+    expect(presenter.uniforms.uniforms.uGasIdentityStyling).toBe(0);
+    expect(presenter.app.render).not.toHaveBeenCalled();
+
+    presenter.setGasIdentityStylingEnabled(true);
+    expect(presenter.uniforms.uniforms.uGasIdentityStyling).toBe(1);
+    expect(presenter.app.render).toHaveBeenCalledOnce();
+  });
+
+  it('uses one propagated style sample and one shared motif sample without changing gas support', () => {
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const helperStart = source.indexOf('vec3 gasIdentityVolumeDelta(');
+    const helperEnd = source.indexOf('vec3 vividColor', helperStart);
+    const blockStart = source.indexOf('    if (uGasIdentityStyling > 0.5) {');
+    const blockEnd = source.indexOf('  } else if (liquidVolume > 0.5)', blockStart);
+    const helper = source.slice(helperStart, helperEnd);
+    const block = source.slice(blockStart, blockEnd);
+
+    expect(helperStart).toBeGreaterThan(0);
+    expect(helperEnd).toBeGreaterThan(helperStart);
+    expect(blockStart).toBeGreaterThan(0);
+    expect(blockEnd).toBeGreaterThan(blockStart);
+    expect(helper).toContain('texture(uGasIdentityMotifTexture, motifUv)');
+    expect(block).toContain('texture(uAtmosphereStyleTexture, fieldUv)');
+    expect(block).toContain('color += gasIdentityVolumeDelta(');
+    expect(source).toContain('resource: this.fieldSet.atmosphere.styleBytes');
+    expect(source).toContain("format: 'r8unorm'");
+    expect(source).toContain('this.atmosphereStyleSource.update();');
+    expect(source).toContain('gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1)');
+    expect(source.indexOf('gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1)'))
+      .toBeLessThan(source.indexOf('this.app.render();', source.indexOf('private renderApplicationNow')));
+    expect(`${helper}${block}`).not.toMatch(/\balpha\s*[+*]?=/);
+    expect(`${helper}${block}`).not.toContain('uTime');
+    expect(`${helper}${block}`).not.toMatch(/\b(?:sin|pow|normalize|length)\s*\(/);
   });
 
   it('seeds and redraws optional-last liquid volume chroma', () => {
@@ -416,7 +461,7 @@ describe('Pixi presenter startup configuration', () => {
   it('keeps chromatic surface depth arithmetic-only and RGB-only', () => {
     const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
     const helperStart = source.indexOf('vec3 surfaceChromaKey');
-    const helperEnd = source.indexOf('vec3 vividColor', helperStart);
+    const helperEnd = source.indexOf('vec3 gasIdentityVolumeDelta', helperStart);
     const helpers = source.slice(helperStart, helperEnd);
     const solidStart = source.indexOf('// Reuse the semantic Hermite normal as a small family-coloured');
     const solidEnd = source.indexOf('// Give an authoritative opaque solid a coloured response', solidStart);

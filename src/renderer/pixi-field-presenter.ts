@@ -26,6 +26,11 @@ import {
 } from './powder-render-style';
 import { installWebGLContextLossHandler } from './webgl-context-loss';
 import { writeSolidOpticalDepth } from './solid-optical-depth-field';
+import {
+  GAS_IDENTITY_MOTIF_TEXTURE_BYTES,
+  GAS_IDENTITY_MOTIF_TEXTURE_HEIGHT,
+  GAS_IDENTITY_MOTIF_TEXTURE_WIDTH,
+} from './canvas-gas-identity-style';
 interface PresenterViewport { readonly width: number; readonly height: number }
 
 interface WebGLTimerQueryExtension {
@@ -77,6 +82,8 @@ out vec4 finalColor;
 uniform sampler2D uFieldTexture;
 uniform sampler2D uWallTexture;
 uniform sampler2D uAtmosphereTexture;
+uniform sampler2D uAtmosphereStyleTexture;
+uniform sampler2D uGasIdentityMotifTexture;
 uniform sampler2D uEmissionTexture;
 uniform sampler2D uLiquidTexture;
 uniform sampler2D uBoundaryStabilityTexture;
@@ -93,6 +100,7 @@ uniform float uHighQuality;
 uniform float uAnalyticLightingQuality;
 uniform float uGasFieldLighting;
 uniform float uGasVolumeChroma;
+uniform float uGasIdentityStyling;
 uniform float uEmissionVolumeChroma;
 uniform float uLiquidFieldLighting;
 uniform float uLiquidVolumeChroma;
@@ -217,6 +225,24 @@ vec3 applyGasVolumeChroma(vec3 color, vec3 source, float response) {
     vec3(1.00, 0.72, 0.45), vec3(0.88) - hue * 0.43, spectralMix
   );
   return color * (vec3(1.0) - fill * (-response));
+}
+vec3 gasIdentityVolumeDelta(
+  float style, vec2 worldPosition, float density, float directionalRelief, float curvature
+) {
+  if (style < 0.5 || style > 17.5) return vec3(0.0);
+  // Canvas authors motifs on the half-resolution atmosphere grid. Sampling the
+  // same immutable atlas keeps both presenters spatially coherent while this
+  // fragment path remains independent of output supersampling.
+  vec2 atmospherePosition = floor(worldPosition * 0.5);
+  float motifX = mod(atmospherePosition.x, 16.0);
+  float motifY = (style - 1.0) * 16.0 + mod(atmospherePosition.y, 16.0);
+  vec2 motifUv = vec2((motifX + 0.5) / 16.0, (motifY + 0.5) / 272.0);
+  vec3 motif = texture(uGasIdentityMotifTexture, motifUv).rgb * 255.0 - vec3(128.0);
+  float volume = smoothstep(0.004, 0.52, density);
+  float motifScale = 0.34 + volume * 0.66;
+  float fieldRelief = clamp(directionalRelief * 7.0 + curvature * 9.0, -3.0, 3.0);
+  return clamp((motif * motifScale + vec3(fieldRelief)) / 255.0,
+    vec3(-12.0 / 255.0), vec3(12.0 / 255.0));
 }
 float liquidVolumeChromaResponse(
   float depth, vec2 slope, float centreDensity, float neighbourDensity,
@@ -1305,6 +1331,15 @@ void main() {
       gasShadeDensity, opticalDepth, gasDirectionalRelief, gasCurvature * 0.125
     ) * uGasVolumeChroma;
     color = applyGasVolumeChroma(color, gasBase, gasChroma);
+    if (uGasIdentityStyling > 0.5) {
+      float gasIdentityStyle = floor(
+        texture(uAtmosphereStyleTexture, fieldUv).r * 255.0 + 0.5
+      );
+      color += gasIdentityVolumeDelta(
+        gasIdentityStyle, fieldPosition, gasShadeDensity,
+        gasDirectionalRelief, gasCurvature * 0.125
+      );
+    }
   } else if (liquidVolume > 0.5) {
     float aqueous = optics == 1.0 ? 1.0 : 0.0;
     float oily = optics == 2.0 ? 1.0 : 0.0;
@@ -2405,6 +2440,7 @@ export class PixiFieldPresenter {
   private readonly wallBytes: Uint8Array;
   private readonly wallSource: BufferImageSource;
   private readonly atmosphereSource: BufferImageSource;
+  private readonly atmosphereStyleSource: BufferImageSource;
   private readonly emissionSource: BufferImageSource;
   private readonly liquidSource: BufferImageSource;
   private readonly boundaryStabilityBytes: Uint8Array;
@@ -2490,6 +2526,24 @@ export class PixiFieldPresenter {
       scaleMode: 'linear',
       autoGarbageCollect: false,
     });
+    this.atmosphereStyleSource = new BufferImageSource({
+      resource: this.fieldSet.atmosphere.styleBytes,
+      width: this.fieldSet.atmosphere.width,
+      height: this.fieldSet.atmosphere.height,
+      format: 'r8unorm',
+      alphaMode: 'no-premultiply-alpha',
+      scaleMode: 'nearest',
+      autoGarbageCollect: false,
+    });
+    const gasIdentityMotifSource = new BufferImageSource({
+      resource: GAS_IDENTITY_MOTIF_TEXTURE_BYTES,
+      width: GAS_IDENTITY_MOTIF_TEXTURE_WIDTH,
+      height: GAS_IDENTITY_MOTIF_TEXTURE_HEIGHT,
+      format: 'rgba8unorm',
+      alphaMode: 'no-premultiply-alpha',
+      scaleMode: 'nearest',
+      autoGarbageCollect: false,
+    });
     this.emissionSource = new BufferImageSource({
       resource: this.fieldSet.emission.bytes,
       width: this.fieldSet.emission.width,
@@ -2558,6 +2612,7 @@ export class PixiFieldPresenter {
       },
       uGasFieldLighting: { value: 1, type: 'f32' },
       uGasVolumeChroma: { value: 1, type: 'f32' },
+      uGasIdentityStyling: { value: 1, type: 'f32' },
       uEmissionVolumeChroma: { value: 1, type: 'f32' },
       uLiquidFieldLighting: { value: 1, type: 'f32' },
       uLiquidVolumeChroma: { value: 1, type: 'f32' },
@@ -2597,6 +2652,10 @@ export class PixiFieldPresenter {
       uWallSampler: this.wallSource.style,
       uAtmosphereTexture: this.atmosphereSource,
       uAtmosphereSampler: this.atmosphereSource.style,
+      uAtmosphereStyleTexture: this.atmosphereStyleSource,
+      uAtmosphereStyleSampler: this.atmosphereStyleSource.style,
+      uGasIdentityMotifTexture: gasIdentityMotifSource,
+      uGasIdentityMotifSampler: gasIdentityMotifSource.style,
       uEmissionTexture: this.emissionSource,
       uEmissionSampler: this.emissionSource.style,
       uLiquidTexture: this.liquidSource,
@@ -2732,10 +2791,20 @@ export class PixiFieldPresenter {
     return this.boundaryStabilityBytes[y * this.width + x];
   }
 
+  /** Narrow audit readback of the propagated CPU identity plane. */
+  gasIdentityStyleAt(x: number, y: number): number {
+    if (x < 0 || y < 0 || x >= this.width || y >= this.height) return 0;
+    const fieldX = Math.min(this.fieldSet.atmosphere.width - 1, Math.floor(x / 2));
+    const fieldY = Math.min(this.fieldSet.atmosphere.height - 1, Math.floor(y / 2));
+    return this.fieldSet.atmosphere.styleBytes[
+      fieldY * this.fieldSet.atmosphere.width + fieldX
+    ];
+  }
+
   markDirty(index: number, nextMaterial: number): void {
     const previousMaterial = this.fieldBytes[index * 4];
     this.chunks.markCell(index);
-    this.fieldSet.markDirty(previousMaterial, nextMaterial);
+    this.fieldSet.markDirty(previousMaterial, nextMaterial, index);
     if (this.powderRelevant(previousMaterial) || this.powderRelevant(nextMaterial)
       || this.powderAirBlocker(previousMaterial) !== this.powderAirBlocker(nextMaterial)) {
       this.powderSurfaceDirty = true;
@@ -2747,6 +2816,7 @@ export class PixiFieldPresenter {
 
   markWallDirty(index: number): void {
     this.wallChunks.markCell(index);
+    this.fieldSet.markAtmosphereBlockerDirty(index);
     this.powderSurfaceDirty = true;
     this.solidOpticalDepthDirty = true;
   }
@@ -2839,6 +2909,7 @@ export class PixiFieldPresenter {
     unusualPowderStylingEnabled = true,
     unusualSolidStylingEnabled = true,
     liquidIdentityStylingEnabled = true,
+    gasIdentityStylingEnabled = true,
   ): void {
     const uniforms = this.uniforms.uniforms;
     uniforms.uGasFieldLighting = gasFieldLightingEnabled ? 1 : 0;
@@ -2853,6 +2924,7 @@ export class PixiFieldPresenter {
     uniforms.uSolidFieldLighting = solidFieldLightingEnabled ? 1 : 0;
     uniforms.uLiquidSilhouetteCohesion = liquidSilhouetteCohesionEnabled ? 1 : 0;
     uniforms.uGasVolumeChroma = gasVolumeChromaEnabled ? 1 : 0;
+    uniforms.uGasIdentityStyling = gasIdentityStylingEnabled ? 1 : 0;
     uniforms.uEmissionVolumeChroma = emissionVolumeChromaEnabled ? 1 : 0;
     uniforms.uLiquidVolumeChroma = liquidVolumeChromaEnabled ? 1 : 0;
     uniforms.uLiquidOpticalDepth = liquidOpticalDepthEnabled ? 1 : 0;
@@ -2876,6 +2948,11 @@ export class PixiFieldPresenter {
 
   setGasVolumeChromaEnabled(enabled: boolean): void {
     this.uniforms.uniforms.uGasVolumeChroma = enabled ? 1 : 0;
+    this.renderApplication();
+  }
+
+  setGasIdentityStylingEnabled(enabled: boolean): void {
+    this.uniforms.uniforms.uGasIdentityStyling = enabled ? 1 : 0;
     this.renderApplication();
   }
 
@@ -3105,7 +3182,7 @@ export class PixiFieldPresenter {
       this.lastSolidOpticalDepthRefresh = scheduleTime;
       boundaryTextureDirty = true;
     }
-    const volumeField = this.fieldSet.updateNext(materials, scheduleTime);
+    const volumeField = this.fieldSet.updateNext(materials, scheduleTime, walls);
     if (volumeField === 'liquid' || !this.liquidOpticalDepthHydrated) {
       this.fieldSet.liquid.writeVerticalOpticalDepth(materials, this.boundaryStabilityBytes);
       this.liquidOpticalDepthHydrated = true;
@@ -3121,6 +3198,7 @@ export class PixiFieldPresenter {
     }
     if (volumeField === 'atmosphere') {
       this.atmosphereSource.update();
+      this.atmosphereStyleSource.update();
     } else if (volumeField === 'liquid') {
       this.liquidSource.update();
     } else if (volumeField === 'emission') {
@@ -3164,12 +3242,17 @@ export class PixiFieldPresenter {
   }
 
   private renderApplicationNow(): void {
+    const gl = this.webGLContext();
+    // Pixi's BufferImageSource uploader leaves WebGL's four-byte default in
+    // place. Our 306-byte R8 identity rows require byte alignment; enforcing it
+    // immediately before every render also survives unrelated later uploads.
+    try { if (gl) gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1); }
+    catch { /* a lost context is handled by the existing render path below */ }
     if (!this.webGLTimingEnabled || !this.webGLTimingRequested) {
       this.app.render();
       return;
     }
     this.webGLTimingRequested = false;
-    const gl = this.webGLContext();
     const extension = this.webGLTimingExtension;
     let query: WebGLQuery | null = null;
     try { query = extension && gl ? gl.createQuery() : null; }
@@ -3469,7 +3552,7 @@ export class PixiFieldPresenter {
   }
 
   private webGLContext(): WebGL2RenderingContext | undefined {
-    return (this.app.renderer as { gl?: WebGL2RenderingContext }).gl;
+    return (this.app.renderer as { gl?: WebGL2RenderingContext } | undefined)?.gl;
   }
 }
 

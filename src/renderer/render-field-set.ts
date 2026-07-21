@@ -1,5 +1,6 @@
 import type { MaterialCategory, MaterialPhase } from '../shared/materials';
 import { AtmosphereField } from './atmosphere-field';
+import { GAS_IDENTITY_STYLE_BY_MATERIAL } from './canvas-gas-identity-style';
 import { EmissionField } from './emission-field';
 import { LiquidDensityField } from './liquid-density-field';
 import { renderOptics } from './render-optics';
@@ -21,6 +22,7 @@ export interface RenderLookups {
   readonly paletteBytes: Uint8Array;
   readonly styleBytes: Uint8Array;
   readonly gasByMaterial: Uint8Array;
+  readonly gasIdentityStyleByMaterial: Uint8Array;
   readonly liquidByMaterial: Uint8Array;
   readonly emissiveByMaterial: Uint8Array;
   readonly colorByMaterial: Uint8Array;
@@ -34,6 +36,7 @@ export function createRenderLookups(materials: readonly RenderMaterialStyle[]): 
   const paletteBytes = new Uint8Array(256 * 4);
   const styleBytes = new Uint8Array(256 * 4);
   const gasByMaterial = new Uint8Array(256);
+  const gasIdentityStyleByMaterial = new Uint8Array(GAS_IDENTITY_STYLE_BY_MATERIAL);
   const liquidByMaterial = new Uint8Array(256);
   const emissiveByMaterial = new Uint8Array(256);
   const colorByMaterial = new Uint8Array(256 * 3);
@@ -58,7 +61,10 @@ export function createRenderLookups(materials: readonly RenderMaterialStyle[]): 
     colorByMaterial[colorOffset + 1] = (color >>> 8) & 0xff;
     colorByMaterial[colorOffset + 2] = color & 0xff;
   }
-  return { paletteBytes, styleBytes, gasByMaterial, liquidByMaterial, emissiveByMaterial, colorByMaterial };
+  return {
+    paletteBytes, styleBytes, gasByMaterial, gasIdentityStyleByMaterial,
+    liquidByMaterial, emissiveByMaterial, colorByMaterial,
+  };
 }
 
 /**
@@ -82,7 +88,10 @@ export class RenderFieldSet {
 
   constructor(width: number, height: number, materials: readonly RenderMaterialStyle[]) {
     this.lookups = createRenderLookups(materials);
-    this.atmosphere = new AtmosphereField(width, height, this.lookups.gasByMaterial, this.lookups.colorByMaterial);
+    this.atmosphere = new AtmosphereField(
+      width, height, this.lookups.gasByMaterial, this.lookups.colorByMaterial,
+      this.lookups.gasIdentityStyleByMaterial,
+    );
     this.liquid = new LiquidDensityField(
       width, height, this.lookups.liquidByMaterial, this.lookups.colorByMaterial,
     );
@@ -93,8 +102,9 @@ export class RenderFieldSet {
     );
   }
 
-  markDirty(previousMaterial: number, nextMaterial: number): void {
-    if (this.lookups.gasByMaterial[previousMaterial] || this.lookups.gasByMaterial[nextMaterial]) this.atmosphereDirty = true;
+  markDirty(previousMaterial: number, nextMaterial: number, index = -1): void {
+    if (this.lookups.gasByMaterial[previousMaterial] || this.lookups.gasByMaterial[nextMaterial]
+      || this.atmosphere.mayHaveIdentityNearWorldIndex(index)) this.atmosphereDirty = true;
     if (this.lookups.liquidByMaterial[previousMaterial] || this.lookups.liquidByMaterial[nextMaterial]) this.liquidDirty = true;
     if (this.lookups.emissiveByMaterial[previousMaterial] || this.lookups.emissiveByMaterial[nextMaterial]) this.emissionDirty = true;
     const previousPhase = this.lookups.styleBytes[previousMaterial * 4];
@@ -105,16 +115,20 @@ export class RenderFieldSet {
     }
   }
 
+  markAtmosphereBlockerDirty(index: number): void {
+    if (this.atmosphere.mayHaveIdentityNearWorldIndex(index)) this.atmosphereDirty = true;
+  }
+
   due(time: number): boolean {
     return this.schedule.due(time, this.atmosphereDirty, this.liquidDirty, this.emissionDirty)
       || (this.suspensionDirty
         && time - this.lastSuspensionRefresh >= SUSPENSION_FIELD_REFRESH_INTERVAL);
   }
 
-  updateNext(materials: Uint8Array, time: number): VolumeFieldKind | undefined {
+  updateNext(materials: Uint8Array, time: number, walls?: Uint8Array): VolumeFieldKind | undefined {
     const field = this.schedule.next(time, this.atmosphereDirty, this.liquidDirty, this.emissionDirty);
     if (field === 'atmosphere') {
-      this.atmosphere.update(materials);
+      this.atmosphere.update(materials, walls);
       this.atmosphereDirty = false;
     } else if (field === 'liquid') {
       this.liquid.update(materials);
@@ -149,6 +163,7 @@ export class RenderFieldSet {
     return this.lookups.paletteBytes.byteLength
       + this.lookups.styleBytes.byteLength
       + this.lookups.gasByMaterial.byteLength
+      + this.lookups.gasIdentityStyleByMaterial.byteLength
       + this.lookups.liquidByMaterial.byteLength
       + this.lookups.emissiveByMaterial.byteLength
       + this.lookups.colorByMaterial.byteLength
