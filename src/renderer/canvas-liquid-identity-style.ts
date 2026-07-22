@@ -1,4 +1,6 @@
 import { Material } from '../shared/materials';
+import { RenderPhase } from './render-profile';
+import { canvasVirusFamilyMotifDelta } from './canvas-virus-family-style';
 
 const STYLE_COUNT = 11;
 const TILE_SHIFT = 5;
@@ -152,16 +154,11 @@ function buildMotifLookup(): void {
         else if (radiusSquared >= 8 && radiusSquared <= 19) { red = -2; green = 4; blue = 9; }
         else { green = 1; blue = 3; }
       } else if (style === 5) {
-        // VIRS: coherent membrane, inner capsid, and four attachment nodes.
-        const localX = (x & 15) - 8;
-        const localY = (y & 15) - 8;
-        const radiusSquared = localX * localX + localY * localY;
-        const attachment = (Math.abs(localX) === 8 && Math.abs(localY) <= 1)
-          || (Math.abs(localY) === 8 && Math.abs(localX) <= 1);
-        if (attachment) { red = 10; green = 1; blue = 9; }
-        else if (radiusSquared >= 39 && radiusSquared <= 61) { red = 7; green = -4; blue = 10; }
-        else if (radiusSquared >= 9 && radiusSquared <= 20) { red = -2; green = 4; blue = 8; }
-        else { red = 2; green = -1; blue = 3; }
+        // VIRS: the canonical 16-cell membrane/capsid grammar, softened later
+        // by the existing liquid density, relief, and optical-depth scalars.
+        red = canvasVirusFamilyMotifDelta(RenderPhase.Liquid, x, y, 0);
+        green = canvasVirusFamilyMotifDelta(RenderPhase.Liquid, x, y, 1);
+        blue = canvasVirusFamilyMotifDelta(RenderPhase.Liquid, x, y, 2);
       } else if (style === 6) {
         // FRZW: repeating orthogonal and diagonal frost facets.
         const localX = (x & 15) - 8;

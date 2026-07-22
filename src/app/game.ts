@@ -50,6 +50,9 @@ import {
 import {
   SPONGE_GRAPHICS_AUDIT, prepareSpongeGraphicsAuditFixture,
 } from './sponge-graphics-audit';
+import {
+  VIRUS_GRAPHICS_AUDIT, prepareVirusGraphicsAuditFixture,
+} from './virus-graphics-audit';
 
 const AUTOSAVE_KEY = 'stillroom-world-v1';
 
@@ -393,6 +396,10 @@ export class Game {
       spongeGraphicsAtlas: () => SPONGE_GRAPHICS_AUDIT,
       prepareSpongeGraphicsFixture: () => {
         prepareSpongeGraphicsAuditFixture(this.simulation);
+      },
+      virusGraphicsAtlas: () => VIRUS_GRAPHICS_AUDIT,
+      prepareVirusGraphicsFixture: () => {
+        prepareVirusGraphicsAuditFixture(this.simulation);
       },
       canvasPresentationTiming: () => this.renderer.getCanvasPresentationTiming(),
       requestWebGLPresentationTimingSample: () => this.renderer.requestWebGLPresentationTimingSample(),

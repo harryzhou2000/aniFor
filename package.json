@@ -15,6 +15,7 @@
     "audit:energy-radioactive": "node scripts/verify-browser-input.mjs --energy-radioactive-graphics-only",
     "audit:organic-plant": "node scripts/verify-browser-input.mjs --organic-plant-graphics-only",
     "audit:sponge": "node scripts/verify-browser-input.mjs --sponge-graphics-only",
+    "audit:virus": "node scripts/verify-browser-input.mjs --virus-graphics-only",
     "profile:render-fields": "vite-node scripts/profile-render-fields.ts",
     "setup:emsdk": "bash scripts/setup-emsdk.sh",
     "setup:build-tools": "bash scripts/setup-build-tools.sh",

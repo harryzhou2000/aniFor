@@ -3,6 +3,9 @@ import { RenderTrait } from './render-traits';
 import { isBotanicalMaterial } from './canvas-botanical-style';
 import { applyCanvasRoleMaterialStyle } from './canvas-role-material-style';
 import { applyCanvasRadioactiveIdentityStyle } from './canvas-radioactive-identity-style';
+import {
+  isVirusFamilyMaterial,
+} from './canvas-virus-family-style';
 
 export const CANVAS_RENDER_TRAIT_CLOCK_SIZE = 5;
 
@@ -42,7 +45,8 @@ export function applyCanvasRenderTraits(
     blue += (traits & RenderTrait.Carrier) ? 6 + (decay ? 10 : 0) : 1;
   }
   const botanical = isBotanicalMaterial(material);
-  if ((traits & RenderTrait.Organic) && !botanical) {
+  const virus = isVirusFamilyMaterial(material);
+  if ((traits & RenderTrait.Organic) && !botanical && !virus) {
     const vein = (x + (hash(y + material * 17) & 7)) % 13 < 3;
     red += vein ? 1 : 0;
     green += vein ? 8 : 2;

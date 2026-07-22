@@ -1,4 +1,6 @@
 import { Material } from '../shared/materials';
+import { RenderPhase } from './render-profile';
+import { canvasVirusFamilyMotifDelta } from './canvas-virus-family-style';
 
 const STYLE_COUNT = 17;
 const TILE_SHIFT = 4;
@@ -238,13 +240,12 @@ function buildMotifLookup(): void {
         else if (band >= 10) { red = -3; green = -3; blue = -3; }
         else { red = 1; green = 1; blue = 1; }
       } else {
-        // Gaseous virus: vesicle membranes, capsids, and attachment nodes.
-        const attachment = (Math.abs(localX) === 4 && Math.abs(localY) <= 1)
-          || (Math.abs(localY) === 4 && Math.abs(localX) <= 1);
-        if (attachment) { red = 8; green = -4; blue = 7; }
-        else if (radiusSquared >= 8 && radiusSquared <= 15) { red = 7; green = -5; blue = 8; }
-        else if (radiusSquared <= 3) { red = -2; green = 3; blue = 5; }
-        else { red = 1; green = -1; blue = 2; }
+        // Gaseous virus keeps the shared 16-world-cell grammar. Each atmosphere
+        // texel spans 2x2 world cells, so the 8-cell pattern repeats twice in
+        // this immutable 16x16 atlas without widening gas support.
+        red = canvasVirusFamilyMotifDelta(RenderPhase.Gas, x * 2, y * 2, 0);
+        green = canvasVirusFamilyMotifDelta(RenderPhase.Gas, x * 2, y * 2, 1);
+        blue = canvasVirusFamilyMotifDelta(RenderPhase.Gas, x * 2, y * 2, 2);
       }
 
       const offset = (style * TILE_CELLS + y * TILE_SIZE + x) * MOTIF_CHANNELS;

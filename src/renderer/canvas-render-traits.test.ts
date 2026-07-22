@@ -97,21 +97,25 @@ describe('Canvas render traits', () => {
     }
   });
 
-  it('does not suppress organic identity on viruses or actors', () => {
+  it('leaves virus identity to the phase renderers while retaining actor organic identity', () => {
     const clock = new Int32Array(CANVAS_RENDER_TRAIT_CLOCK_SIZE);
     updateCanvasRenderTraitClock(clock, 420);
     for (const [material, phase] of [
       [Material.VIRS, RenderPhase.Liquid],
       [Material.VRSG, RenderPhase.Gas],
       [Material.VRSS, RenderPhase.Solid],
-      [Material.FIGH, RenderPhase.Solid],
-      [Material.STKM, RenderPhase.Solid],
-      [Material.STKM2, RenderPhase.Solid],
     ] as const) {
       const styled = new Float32Array([90, 100, 110]);
       applyCanvasRenderTraits(
-        styled, RenderTrait.Organic | RenderTrait.Fibrous,
+        styled, RenderTrait.Organic,
         phase, material, 12, 7, 440, clock,
+      );
+      expect(Array.from(styled)).toEqual([90, 100, 110]);
+    }
+    for (const material of [Material.FIGH, Material.STKM, Material.STKM2]) {
+      const styled = new Float32Array([90, 100, 110]);
+      applyCanvasRenderTraits(
+        styled, RenderTrait.Organic, RenderPhase.Solid, material, 12, 7, 440, clock,
       );
       expect(Array.from(styled)).not.toEqual([90, 100, 110]);
     }

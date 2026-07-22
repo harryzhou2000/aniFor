@@ -14,6 +14,7 @@ import type { GasIdentityGraphicsAuditSnapshot } from './gas-identity-graphics-a
 import type { EnergyRadioactiveGraphicsAuditSnapshot } from './energy-radioactive-graphics-audit';
 import type { OrganicPlantGraphicsAuditSnapshot } from './organic-plant-graphics-audit';
 import type { SpongeGraphicsAuditSnapshot } from './sponge-graphics-audit';
+import type { VirusGraphicsAuditSnapshot } from './virus-graphics-audit';
 
 export interface BrowserInputAuditApi {
   readonly version: 1;
@@ -88,6 +89,8 @@ export interface BrowserInputAuditApi {
   prepareOrganicPlantGraphicsFixture(): void;
   spongeGraphicsAtlas(): SpongeGraphicsAuditSnapshot;
   prepareSpongeGraphicsFixture(): void;
+  virusGraphicsAtlas(): VirusGraphicsAuditSnapshot;
+  prepareVirusGraphicsFixture(): void;
   canvasPresentationTiming(): CanvasPresentationTiming | undefined;
   requestWebGLPresentationTimingSample(): boolean;
   webGLPresentationTiming(): WebGLPresentationTiming | undefined;

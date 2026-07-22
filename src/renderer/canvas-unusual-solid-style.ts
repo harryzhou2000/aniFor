@@ -1,4 +1,6 @@
 import { Material } from '../shared/materials';
+import { RenderPhase } from './render-profile';
+import { applyCanvasVirusFamilyMorphology } from './canvas-virus-family-style';
 
 /** Returns whether a material has a native unusual-solid morphology. */
 export function isCanvasUnusualSolidMaterial(material: number): boolean {
@@ -33,6 +35,11 @@ export function applyCanvasUnusualSolidMorphology(
 ): void {
   if (!isCanvasUnusualSolidMaterial(material)) return;
 
+  if (material === Material.VRSS) {
+    applyCanvasVirusFamilyMorphology(output, material, RenderPhase.Solid, x, y);
+    return;
+  }
+
   let red = 0;
   let green = 0;
   let blue = 0;
@@ -56,20 +63,6 @@ export function applyCanvasUnusualSolidMorphology(
     red = compressionSeam ? -7 : pressedLip ? 5 : 1;
     green = compressionSeam ? -6 : pressedLip ? 3 : 0;
     blue = compressionSeam ? -4 : pressedLip ? 6 : 2;
-  } else if (material === Material.VRSS) {
-    // A repeating viral membrane with an inner capsid and four attachment
-    // nodes. The whole cell family receives a violet cast, so even an isolated
-    // semantic cell retains its identity away from a lattice feature.
-    const localX = positiveModulo(x, 15) - 7;
-    const localY = positiveModulo(y, 15) - 7;
-    const radiusSquared = localX * localX + localY * localY;
-    const membrane = radiusSquared >= 32 && radiusSquared <= 53;
-    const capsid = radiusSquared >= 8 && radiusSquared <= 17;
-    const node = (Math.abs(localX) === 7 && Math.abs(localY) <= 1)
-      || (Math.abs(localY) === 7 && Math.abs(localX) <= 1);
-    red = node ? 12 : membrane ? 8 : capsid ? -3 : 3;
-    green = node ? 2 : membrane ? -4 : capsid ? 5 : -2;
-    blue = node ? 10 : membrane ? 11 : capsid ? 9 : 4;
   } else {
     // SHLD1-4 share one nested shell language. Each stage retains every plate
     // from the prior stage and adds a denser inner shell, making native growth

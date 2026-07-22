@@ -47,10 +47,11 @@ const gasIdentityGraphicsOnly = process.argv.includes('--gas-identity-graphics-o
 const energyRadioactiveGraphicsOnly = process.argv.includes('--energy-radioactive-graphics-only');
 const organicPlantGraphicsOnly = process.argv.includes('--organic-plant-graphics-only');
 const spongeGraphicsOnly = process.argv.includes('--sponge-graphics-only');
+const virusGraphicsOnly = process.argv.includes('--virus-graphics-only');
 const usesProductionBundle = cellularGraphicsOnly || sensorGraphicsOnly
   || unusualPowderGraphicsOnly || unusualSolidGraphicsOnly
   || liquidIdentityGraphicsOnly || gasIdentityGraphicsOnly || energyRadioactiveGraphicsOnly
-  || organicPlantGraphicsOnly || spongeGraphicsOnly
+  || organicPlantGraphicsOnly || spongeGraphicsOnly || virusGraphicsOnly
   || scaleEightOnly;
 const AUDIT_BASE_URL = usesProductionBundle ? PRODUCTION_BUNDLE_URL : ORIGIN + '/';
 const screenshotRequest = process.argv.find((argument) => argument.startsWith('--screenshot='))?.slice('--screenshot='.length);
@@ -114,7 +115,7 @@ async function main() {
       || roleGraphicsOnly || cellularGraphicsOnly || sensorGraphicsOnly
       || unusualPowderGraphicsOnly || unusualSolidGraphicsOnly || liquidIdentityGraphicsOnly
       || gasIdentityGraphicsOnly || energyRadioactiveGraphicsOnly || organicPlantGraphicsOnly
-      || spongeGraphicsOnly;
+      || spongeGraphicsOnly || virusGraphicsOnly;
     if (powderBodyOnly) assertPairedPowderBodyDepth(results);
     if (liquidDepthOnly) assertPairedLiquidOpticalDepth(results);
     if (solidDepthOnly) assertPairedSolidOpticalDepth(results);
@@ -131,9 +132,11 @@ async function main() {
     if (energyRadioactiveGraphicsOnly) assertPairedEnergyRadioactiveGraphics(results);
     if (organicPlantGraphicsOnly) assertPairedOrganicPlantGraphics(results);
     if (spongeGraphicsOnly) assertPairedSpongeGraphics(results);
+    if (virusGraphicsOnly) assertPairedVirusGraphics(results);
     if (!scaleEightOnly && !materialAtlasOnly && !reducedAudit) assertPairedVisualRelief(results);
     if (!scaleEightOnly && !reducedAudit) assertPairedMaterialAtlas(results);
     compactMaterialAtlasResults(results);
+    compactVirusGraphicsResults(results);
     console.log(JSON.stringify({ world: `${WORLD_WIDTH}x${WORLD_HEIGHT}`, results }, null, 2));
   } catch (error) {
     if (serverLog.trim()) console.error(serverLog.trim());
@@ -150,7 +153,7 @@ async function auditMode(mode) {
   const startsBlank = cellularGraphicsOnly || sensorGraphicsOnly
     || unusualPowderGraphicsOnly || unusualSolidGraphicsOnly || liquidIdentityGraphicsOnly
     || gasIdentityGraphicsOnly || energyRadioactiveGraphicsOnly || organicPlantGraphicsOnly
-    || spongeGraphicsOnly;
+    || spongeGraphicsOnly || virusGraphicsOnly;
   const query = new URLSearchParams({
     scene: 'render-lab', inputAudit: '1', renderScale: '2',
     auditStage: startsBlank ? 'blank' : 'canonical',
@@ -317,6 +320,12 @@ async function auditMode(mode) {
       assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
       cdp.close();
       return { backend: mode, spongeGraphics, browserErrors: errors.length };
+    }
+    if (virusGraphicsOnly) {
+      const virusGraphics = await auditVirusGraphics(cdp, mode);
+      assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
+      cdp.close();
+      return { backend: mode, virusGraphics, browserErrors: errors.length };
     }
     if (mobileOnly) {
       const mobile = await auditMobile(
@@ -4734,6 +4743,46 @@ function normalizeSpongeGraphicsAtlas(snapshot) {
   };
 }
 
+function normalizeVirusGraphicsAtlas(snapshot) {
+  const cards = (Array.isArray(snapshot) ? snapshot : snapshot?.cards ?? []).map((entry) => ({
+    ...entry,
+    card: cellularRect(entry.card ?? entry),
+    body: cellularRect(entry.body),
+    surfaceProbe: cellularRect(entry.surfaceProbe),
+    coreProbe: cellularRect(entry.coreProbe),
+    authoredCavity: cellularRect(entry.authoredCavity),
+    openChimney: cellularRect(entry.openChimney),
+    haloOuter: cellularRect(entry.haloOuter),
+    phaseStructure: cellularPoints(entry.phaseStructure),
+    phaseGap: entry.phaseGap ? cellularRect(entry.phaseGap) : undefined,
+    shell: entry.shell ? {
+      outer: cellularRect(entry.shell.outer),
+      interior: cellularRect(entry.shell.interior),
+    } : undefined,
+    isolated: cellularPoint(entry.isolated),
+    guardedBlank: cellularRect(entry.guardedBlank),
+    waterContact: {
+      ...entry.waterContact,
+      owner: cellularRect(entry.waterContact.owner),
+      neighbour: cellularRect(entry.waterContact.neighbour),
+    },
+    metalContact: {
+      ...entry.metalContact,
+      owner: cellularRect(entry.metalContact.owner),
+      neighbour: cellularRect(entry.metalContact.neighbour),
+    },
+    motifProbes: (entry.motifProbes ?? []).map((probe) => ({
+      tileOrigin: cellularPoint(probe.tileOrigin),
+      attachment: cellularRect(probe.attachment),
+      membrane: cellularRect(probe.membrane),
+      capsid: cellularRect(probe.capsid),
+      core: cellularRect(probe.core),
+      interstitial: cellularRect(probe.interstitial),
+    })),
+  }));
+  return { cards };
+}
+
 /** Exact nine-card Energy motif proof plus the complete 21-card semantic guard. */
 async function auditEnergyRadioactiveGraphics(cdp, mode) {
   const started = performance.now();
@@ -5819,6 +5868,454 @@ async function auditSpongeGraphics(cdp, mode) {
     backingResponseProfile: backingResponse.responseProfile,
     supportSignature: flatBacking.supportSignature,
   };
+}
+
+async function auditVirusGraphics(cdp, mode) {
+  const started = performance.now();
+  const stage = (name) => console.error(
+    `[virus-graphics:${mode}] ${name} ${Math.round(performance.now() - started)}ms`,
+  );
+  const blank = await waitForStablePageCapture(cdp, `${mode} initial blank virus framebuffer`);
+  await evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    if (typeof audit.prepareVirusGraphicsFixture !== 'function'
+      || typeof audit.virusGraphicsAtlas !== 'function'
+      || typeof audit.setLiquidIdentityStyling !== 'function'
+      || typeof audit.setGasIdentityStyling !== 'function'
+      || typeof audit.setUnusualSolidStyling !== 'function') {
+      throw new Error('Virus graphics audit API unavailable');
+    }
+    audit.prepareVirusGraphicsFixture();
+    return true;
+  })()`);
+  const rawAtlas = await waitFor(() => evaluate(cdp, `(() => {
+    const atlas = window.__ANIFOR_INPUT_AUDIT__.virusGraphicsAtlas();
+    const cards = Array.isArray(atlas) ? atlas : atlas?.cards;
+    return cards?.length === 3 ? atlas : false;
+  })()`), 15_000, `${mode} virus graphics fixture`);
+  const atlas = normalizeVirusGraphicsAtlas(rawAtlas);
+  assert(atlas.cards.map(({ material }) => material).join(',') === '62,215,216'
+      && atlas.cards.map(({ code }) => code).join(',') === 'VIRS,VRSG,VRSS'
+      && atlas.cards.map(({ phase }) => phase).join(',') === 'liquid,gas,solid'
+      && atlas.cards.every(({ body }) => body.width === 112 && body.height === 112)
+      && atlas.cards.every(({ motifProbes }) => motifProbes.length >= 35),
+  `${mode}: virus atlas contract changed (${JSON.stringify(atlas.cards.map((entry) => ({
+    material: entry.material, code: entry.code, phase: entry.phase,
+    body: entry.body, motifProbes: entry.motifProbes.length,
+  })))})`);
+
+  const semanticState = await evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    const snapshot = audit.virusGraphicsAtlas();
+    const cards = Array.isArray(snapshot) ? snapshot : snapshot.cards;
+    const inside = (x, y, rect) => x >= rect.x && y >= rect.y
+      && x < rect.x + rect.width && y < rect.y + rect.height;
+    const exactRect = (rect, material) => {
+      for (let y = rect.y; y < rect.y + rect.height; y++) {
+        for (let x = rect.x; x < rect.x + rect.width; x++) {
+          if (audit.cell(x, y) !== material) return false;
+        }
+      }
+      return true;
+    };
+    return cards.map((entry) => {
+      let bodyExact = true;
+      for (let y = entry.body.y; y < entry.body.y + entry.body.height; y++) {
+        for (let x = entry.body.x; x < entry.body.x + entry.body.width; x++) {
+          const empty = inside(x, y, entry.authoredCavity) || inside(x, y, entry.openChimney);
+          bodyExact = bodyExact && audit.cell(x, y) === (empty ? 0 : entry.material);
+        }
+      }
+      return {
+        material: entry.material,
+        bodyExact,
+        cavityEmpty: exactRect(entry.authoredCavity, 0),
+        chimneyEmpty: exactRect(entry.openChimney, 0),
+        structureExact: entry.phaseStructure.every(({ x, y }) => audit.cell(x, y) === entry.material),
+        isolated: audit.cell(entry.isolated.x, entry.isolated.y),
+        guardedBlankEmpty: exactRect(entry.guardedBlank, 0),
+        waterOwnerExact: exactRect(entry.waterContact.owner, entry.material),
+        waterExact: exactRect(entry.waterContact.neighbour, entry.waterContact.neighbourMaterial),
+        metalOwnerExact: exactRect(entry.metalContact.owner, entry.material),
+        metalExact: exactRect(entry.metalContact.neighbour, entry.metalContact.neighbourMaterial),
+        gasStyle: entry.material === 215
+          ? audit.gasIdentityStyle(entry.body.x + 20, entry.body.y + 20) : 0,
+      };
+    });
+  })()`);
+  assert(semanticState.every((entry) => entry.bodyExact && entry.cavityEmpty
+      && entry.chimneyEmpty && entry.structureExact && entry.isolated === entry.material
+      && entry.guardedBlankEmpty && entry.waterOwnerExact && entry.waterExact
+      && entry.metalOwnerExact && entry.metalExact)
+      && semanticState[1].gasStyle === 17,
+  `${mode}: virus fixture lost phase semantics, topology, contacts, or VRSG identity (${JSON.stringify(semanticState)})`);
+  stage('fixture-ready');
+
+  const setVirusStyling = async (enabled) => evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    audit.setLiquidIdentityStyling(${enabled});
+    audit.setGasIdentityStyling(${enabled});
+    audit.setUnusualSolidStyling(${enabled});
+    return true;
+  })()`);
+  await setVirusStyling(false);
+  const flat = await waitForStablePageCapture(cdp, `${mode} flat virus framebuffer`);
+  const flatBacking = await sampleVirusBacking(cdp);
+  await setVirusStyling(true);
+  const styled = await waitForStablePageCapture(cdp, `${mode} styled virus framebuffer`);
+  const styledBacking = await sampleVirusBacking(cdp);
+  await setVirusStyling(false);
+  const repeated = await waitForStablePageCapture(cdp, `${mode} repeated flat virus framebuffer`);
+  const repeatedBacking = await sampleVirusBacking(cdp);
+  for (const [state, backing] of [
+    ['flat', flatBacking], ['styled', styledBacking], ['repeated-flat', repeatedBacking],
+  ]) assertVirusBacking(backing, `${mode} ${state}`);
+
+  for (let index = 0; index < 3; index++) {
+    const flatCard = flatBacking.cards[index];
+    const styledCard = styledBacking.cards[index];
+    const repeatedCard = repeatedBacking.cards[index];
+    assert(flatCard.semanticSignature === styledCard.semanticSignature
+        && flatCard.semanticSignature === repeatedCard.semanticSignature
+        && flatCard.alphaSignature === styledCard.alphaSignature
+        && flatCard.alphaSignature === repeatedCard.alphaSignature
+        && flatCard.supportSignature === styledCard.supportSignature
+        && flatCard.supportSignature === repeatedCard.supportSignature,
+    `${mode}: ${flatCard.code} styling changed semantic/alpha/support signatures`);
+    for (const contactName of ['waterContact', 'metalContact']) {
+      assert(arraysEqual(flatCard[contactName].neighbourRgb, styledCard[contactName].neighbourRgb)
+          && arraysEqual(flatCard[contactName].neighbourRgb, repeatedCard[contactName].neighbourRgb),
+      `${mode}: ${flatCard.code} styling leaked into ${contactName}`);
+    }
+  }
+
+  const responses = summarizeVirusBackingResponses(flatBacking, styledBacking, repeatedBacking);
+  for (const response of responses) {
+    assert(response.rgbRms >= 0.03 && response.rgbRms <= 24
+        && response.rgbPeak > 0 && response.rgbPeak <= 64
+        && response.changedSampleRatio >= 0.015 && response.changedSampleRatio <= 1
+        && response.repeatRgbPeak === 0
+        && response.profile.length === 16
+        && Math.abs(response.profile.reduce((sum, value) => sum + value, 0) - 1) <= 0.001,
+    `${mode}: ${response.code} family response is absent, unbounded, or non-repeatable (${JSON.stringify(response)})`);
+    assert(response.motifAxis.attachment > response.motifAxis.interstitial + 0.35
+        && response.motifAxis.membrane > response.motifAxis.interstitial + 0.20,
+    `${mode}: ${response.code} lost membrane/node virus-axis ordering (${JSON.stringify(response.motifAxis)})`);
+  }
+  const phaseCorrelations = [
+    virusPearson(responses[0].axisMap, responses[1].axisMap),
+    virusPearson(responses[0].axisMap, responses[2].axisMap),
+    virusPearson(responses[1].axisMap, responses[2].axisMap),
+  ];
+  assert(phaseCorrelations.every((value) => value >= 0.42),
+    `${mode}: virus phases do not retain one spatial grammar (${JSON.stringify(phaseCorrelations)})`);
+
+  const normalFitRegions = atlas.cards.map((entry) => ({
+    name: `${entry.code}-normal-fit-body`,
+    x: entry.body.x + entry.body.width / 2,
+    y: entry.body.y + entry.body.height / 2,
+    radiusX: entry.body.width / 2,
+    radiusY: entry.body.height / 2,
+    signature: true,
+    silhouette: true,
+    fastSupport: true,
+  }));
+  const normalFit = await sampleBackdropRefractionRegions(cdp, {
+    straight: flat.capture.data,
+    refracted: styled.capture.data,
+    repeatedStraight: repeated.capture.data,
+  }, normalFitRegions, flat.canvasRect);
+  assert(normalFit.every((response) => response.rgbRms > 0 && response.rgbRms <= 32
+      && response.rgbPeak > 0 && response.rgbPeak <= 64 && response.repeatRgbPeak === 0),
+  `${mode}: virus family is absent, unbounded, or unstable at normal fit (${JSON.stringify(normalFit)})`);
+  stage('responses-ready');
+
+  return {
+    cards: responses.map((response, index) => ({
+      code: response.code,
+      material: response.material,
+      phase: atlas.cards[index].phase,
+      rgbRms: response.rgbRms,
+      rgbPeak: response.rgbPeak,
+      changedSampleRatio: response.changedSampleRatio,
+      repeatRgbPeak: response.repeatRgbPeak,
+      motifAxis: response.motifAxis,
+      profile: response.profile,
+      axisMap: response.axisMap,
+      normalFitRgbRms: normalFit[index].rgbRms,
+      normalFitRgbPeak: normalFit[index].rgbPeak,
+    })),
+    phaseCorrelations,
+    exactRepeatedOff: responses.every(({ repeatRgbPeak }) => repeatRgbPeak === 0),
+    supportSignatures: flatBacking.cards.map(({ supportSignature }) => supportSignature),
+  };
+}
+
+async function sampleVirusBacking(cdp) {
+  return evaluate(cdp, `(() => {
+    const world = document.querySelector('.world-canvas');
+    if (!(world instanceof HTMLCanvasElement)) throw new Error('World canvas unavailable');
+    const copy = document.createElement('canvas');
+    copy.width = world.width;
+    copy.height = world.height;
+    const context = copy.getContext('2d', { willReadFrequently: true });
+    if (!context) throw new Error('Virus backing sampler unavailable');
+    context.drawImage(world, 0, 0);
+    const pixels = context.getImageData(0, 0, copy.width, copy.height).data;
+    const scaleX = copy.width / ${WORLD_WIDTH};
+    const scaleY = copy.height / ${WORLD_HEIGHT};
+    const snapshot = window.__ANIFOR_INPUT_AUDIT__.virusGraphicsAtlas();
+    const cards = Array.isArray(snapshot) ? snapshot : snapshot.cards;
+    const rectPoints = (rect) => {
+      const points = [];
+      for (let y = rect.y; y < rect.y + rect.height; y++) {
+        for (let x = rect.x; x < rect.x + rect.width; x++) points.push({ x, y });
+      }
+      return points;
+    };
+    const key = ({ x, y }) => x + ',' + y;
+    const uniquePoints = (points) => [...new Map(points.map((point) => [key(point), point])).values()];
+    const cellAlpha = ({ x, y }) => {
+      const left = Math.floor(x * scaleX);
+      const top = Math.floor(y * scaleY);
+      const right = Math.max(left + 1, Math.floor((x + 1) * scaleX));
+      const bottom = Math.max(top + 1, Math.floor((y + 1) * scaleY));
+      let minimum = 255;
+      let peak = 0;
+      for (let py = top; py < bottom; py++) for (let px = left; px < right; px++) {
+        const alpha = pixels[(py * copy.width + px) * 4 + 3];
+        minimum = Math.min(minimum, alpha);
+        peak = Math.max(peak, alpha);
+      }
+      return { minimum, peak };
+    };
+    const cellCenterAlpha = ({ x, y }) => {
+      const px = Math.min(copy.width - 1, Math.floor((x + 0.5) * scaleX));
+      const py = Math.min(copy.height - 1, Math.floor((y + 0.5) * scaleY));
+      return pixels[(py * copy.width + px) * 4 + 3];
+    };
+    const samplePointRgb = (points) => {
+      const rgb = [];
+      for (const { x, y } of points) {
+        const px = Math.min(copy.width - 1, Math.floor((x + 0.5) * scaleX));
+        const py = Math.min(copy.height - 1, Math.floor((y + 0.5) * scaleY));
+        const offset = (py * copy.width + px) * 4;
+        rgb.push(pixels[offset], pixels[offset + 1], pixels[offset + 2]);
+      }
+      return rgb;
+    };
+    const sampleGridRgb = (rect, step = 2) => {
+      const points = [];
+      for (let y = rect.y; y < rect.y + rect.height; y += step) {
+        for (let x = rect.x; x < rect.x + rect.width; x += step) points.push({ x, y });
+      }
+      return { width: Math.ceil(rect.width / step), height: Math.ceil(rect.height / step), rgb: samplePointRgb(points) };
+    };
+    const sampleRectsRgb = (rects) => samplePointRgb(rects.flatMap(rectPoints));
+    return {
+      width: copy.width,
+      height: copy.height,
+      scaleX,
+      scaleY,
+      cards: cards.map((entry) => {
+        const cavityKeys = new Set([
+          ...rectPoints(entry.authoredCavity), ...rectPoints(entry.openChimney),
+        ].map(key));
+        const bodyPoints = rectPoints(entry.body).filter((point) => !cavityKeys.has(key(point)));
+        const structurePoints = uniquePoints(entry.phaseStructure);
+        const guardPoints = rectPoints(entry.guardedBlank);
+        const cavityPoints = rectPoints(entry.authoredCavity);
+        const chimneyPoints = rectPoints(entry.openChimney);
+        const phaseGapPoints = entry.phaseGap ? rectPoints(entry.phaseGap) : [];
+        const shellInteriorPoints = entry.shell ? rectPoints(entry.shell.interior) : [];
+        const cardLeft = Math.floor(entry.card.x * scaleX);
+        const cardTop = Math.floor(entry.card.y * scaleY);
+        const cardRight = Math.floor((entry.card.x + entry.card.width) * scaleX);
+        const cardBottom = Math.floor((entry.card.y + entry.card.height) * scaleY);
+        let alphaSignature = 2166136261;
+        let supportSignature = 2166136261;
+        for (let py = cardTop; py < cardBottom; py++) for (let px = cardLeft; px < cardRight; px++) {
+          const alpha = pixels[(py * copy.width + px) * 4 + 3];
+          alphaSignature = Math.imul(alphaSignature ^ alpha, 16777619) >>> 0;
+          supportSignature = Math.imul(supportSignature ^ Number(alpha > 0), 16777619) >>> 0;
+        }
+        let semanticSignature = 2166136261;
+        for (let y = entry.card.y; y < entry.card.y + entry.card.height; y++) {
+          for (let x = entry.card.x; x < entry.card.x + entry.card.width; x++) {
+            semanticSignature = Math.imul(
+              semanticSignature ^ window.__ANIFOR_INPUT_AUDIT__.cell(x, y), 16777619,
+            ) >>> 0;
+          }
+        }
+        const contact = (control) => {
+          const owner = rectPoints(control.owner);
+          const neighbour = rectPoints(control.neighbour);
+          return {
+            ownerExpected: owner.length,
+            ownerSupported: owner.filter((point) => cellAlpha(point).peak > 0).length,
+            neighbourExpected: neighbour.length,
+            neighbourSupported: neighbour.filter((point) => cellAlpha(point).peak > 0).length,
+            ownerRgb: samplePointRgb(owner),
+            neighbourRgb: samplePointRgb(neighbour),
+          };
+        };
+        const body = sampleGridRgb(entry.body);
+        return {
+          code: entry.code,
+          material: entry.material,
+          semanticSignature,
+          alphaSignature,
+          supportSignature,
+          bodyExpected: bodyPoints.length,
+          bodySupported: bodyPoints.filter((point) => cellAlpha(point).peak > 0).length,
+          structureExpected: structurePoints.length,
+          structureSupported: structurePoints.filter((point) => cellAlpha(point).peak > 0).length,
+          isolatedAlphaPeak: cellAlpha(entry.isolated).peak,
+          guardedBlankExpected: guardPoints.length,
+          guardedBlankTransparent: guardPoints.filter((point) => cellAlpha(point).peak === 0).length,
+          cavityExpected: cavityPoints.length,
+          cavityCentreTransparent: cavityPoints.filter((point) => cellCenterAlpha(point) === 0).length,
+          chimneyExpected: chimneyPoints.length,
+          chimneyCentreTransparent: chimneyPoints.filter((point) => cellCenterAlpha(point) === 0).length,
+          phaseGapExpected: phaseGapPoints.length,
+          phaseGapCentreTransparent: phaseGapPoints.filter((point) => cellCenterAlpha(point) === 0).length,
+          shellInteriorExpected: shellInteriorPoints.length,
+          shellInteriorCentreTransparent: shellInteriorPoints.filter((point) => cellCenterAlpha(point) === 0).length,
+          waterContact: contact(entry.waterContact),
+          metalContact: contact(entry.metalContact),
+          bodyWidth: body.width,
+          bodyHeight: body.height,
+          bodyRgb: body.rgb,
+          motifRgb: {
+            attachment: sampleRectsRgb(entry.motifProbes.map(({ attachment }) => attachment)),
+            membrane: sampleRectsRgb(entry.motifProbes.map(({ membrane }) => membrane)),
+            capsid: sampleRectsRgb(entry.motifProbes.map(({ capsid }) => capsid)),
+            core: sampleRectsRgb(entry.motifProbes.map(({ core }) => core)),
+            interstitial: sampleRectsRgb(entry.motifProbes.map(({ interstitial }) => interstitial)),
+          },
+        };
+      }),
+    };
+  })()`);
+}
+
+function assertVirusBacking(backing, label) {
+  assert(Number.isInteger(backing.scaleX) && Number.isInteger(backing.scaleY)
+      && backing.scaleX > 0 && backing.scaleY > 0,
+  `${label}: virus backing does not preserve integral world scaling (${backing.scaleX}x${backing.scaleY})`);
+  assert(backing.cards.map(({ material }) => material).join(',') === '62,215,216'
+      && backing.cards.every((card) => card.bodyExpected === 12_200
+        && card.bodySupported === card.bodyExpected
+        && card.structureExpected > 0 && card.structureSupported === card.structureExpected
+        && card.isolatedAlphaPeak > 0
+        && card.guardedBlankExpected === 2_288
+        && card.guardedBlankTransparent === card.guardedBlankExpected
+        && card.cavityExpected === 144
+        && card.chimneyExpected === 200
+        && (card.code === 'VRSG' || (
+          card.cavityCentreTransparent / card.cavityExpected >= 0.80
+          && card.chimneyCentreTransparent / card.chimneyExpected >= 0.75
+        ))
+        && card.phaseGapCentreTransparent === card.phaseGapExpected
+        && card.shellInteriorCentreTransparent === card.shellInteriorExpected
+        && card.waterContact.ownerExpected === 192
+        && card.waterContact.ownerSupported === 192
+        && card.waterContact.neighbourExpected === 256
+        && card.waterContact.neighbourSupported === 256
+        && card.metalContact.ownerExpected === 192
+        && card.metalContact.ownerSupported === 192
+        && card.metalContact.neighbourExpected === 256
+        && card.metalContact.neighbourSupported === 256),
+  `${label}: virus backing changed body/structure/isolated/guard/contact topology (${JSON.stringify(
+    backing.cards.map(({ bodyRgb: _bodyRgb, motifRgb: _motifRgb, waterContact, metalContact, ...card }) => ({
+      ...card,
+      waterContact: { ...waterContact, ownerRgb: undefined, neighbourRgb: undefined },
+      metalContact: { ...metalContact, ownerRgb: undefined, neighbourRgb: undefined },
+    })),
+  )})`);
+}
+
+function summarizeVirusBackingResponses(flat, styled, repeated) {
+  return flat.cards.map((base, index) => {
+    const changed = styled.cards[index];
+    const returned = repeated.cards[index];
+    assert(base.code === changed.code && base.code === returned.code
+        && base.bodyRgb.length === changed.bodyRgb.length
+        && base.bodyRgb.length === returned.bodyRgb.length,
+    `Virus backing response geometry changed for ${base.code}`);
+    let squared = 0;
+    let peak = 0;
+    let repeatPeak = 0;
+    let changedSamples = 0;
+    const profileBuckets = new Float64Array(16);
+    const axisMap = [];
+    for (let offset = 0; offset < base.bodyRgb.length; offset += 3) {
+      const sample = offset / 3;
+      const x = sample % base.bodyWidth;
+      const y = Math.floor(sample / base.bodyWidth);
+      const bucket = Math.min(3, Math.floor(y * 4 / base.bodyHeight)) * 4
+        + Math.min(3, Math.floor(x * 4 / base.bodyWidth));
+      const red = changed.bodyRgb[offset] - base.bodyRgb[offset];
+      const green = changed.bodyRgb[offset + 1] - base.bodyRgb[offset + 1];
+      const blue = changed.bodyRgb[offset + 2] - base.bodyRgb[offset + 2];
+      axisMap.push((red + blue) * 0.5 - green);
+      let sampleChanged = false;
+      for (const delta of [red, green, blue]) {
+        squared += delta * delta;
+        peak = Math.max(peak, Math.abs(delta));
+        profileBuckets[bucket] += Math.abs(delta);
+        sampleChanged ||= delta !== 0;
+      }
+      for (let channel = 0; channel < 3; channel++) {
+        repeatPeak = Math.max(repeatPeak, Math.abs(
+          returned.bodyRgb[offset + channel] - base.bodyRgb[offset + channel],
+        ));
+      }
+      changedSamples += Number(sampleChanged);
+    }
+    const profileTotal = profileBuckets.reduce((sum, value) => sum + value, 0);
+    const motifAxis = {};
+    for (const kind of ['attachment', 'membrane', 'capsid', 'core', 'interstitial']) {
+      const before = base.motifRgb[kind];
+      const after = changed.motifRgb[kind];
+      let axis = 0;
+      for (let offset = 0; offset < before.length; offset += 3) {
+        const red = after[offset] - before[offset];
+        const green = after[offset + 1] - before[offset + 1];
+        const blue = after[offset + 2] - before[offset + 2];
+        axis += (red + blue) * 0.5 - green;
+      }
+      motifAxis[kind] = axis / Math.max(1, before.length / 3);
+    }
+    return {
+      code: base.code,
+      material: base.material,
+      rgbRms: Math.sqrt(squared / Math.max(1, base.bodyRgb.length)),
+      rgbPeak: peak,
+      changedSampleRatio: changedSamples / Math.max(1, base.bodyRgb.length / 3),
+      repeatRgbPeak: repeatPeak,
+      profile: Array.from(profileBuckets, (value) => profileTotal > 0 ? value / profileTotal : 0),
+      axisMap,
+      motifAxis,
+    };
+  });
+}
+
+function virusPearson(left, right) {
+  assert(left.length === right.length && left.length > 0, 'Virus correlation geometry changed');
+  const leftMean = left.reduce((sum, value) => sum + value, 0) / left.length;
+  const rightMean = right.reduce((sum, value) => sum + value, 0) / right.length;
+  let covariance = 0;
+  let leftSquared = 0;
+  let rightSquared = 0;
+  for (let index = 0; index < left.length; index++) {
+    const l = left[index] - leftMean;
+    const r = right[index] - rightMean;
+    covariance += l * r;
+    leftSquared += l * l;
+    rightSquared += r * r;
+  }
+  return covariance / Math.max(1e-9, Math.sqrt(leftSquared * rightSquared));
 }
 
 async function sampleSpongeBacking(cdp) {
@@ -8371,6 +8868,51 @@ function assertPairedSpongeGraphics(results) {
     poreContrastRatio: round(poreContrastRatio, 4),
     profileMaxDistance: round(profileDistance, 5),
   })}`);
+}
+
+function assertPairedVirusGraphics(results) {
+  const canvas = results.find((result) => result.backend === 'canvas2d')?.virusGraphics;
+  const webgl = results.find((result) => result.backend === 'webgl')?.virusGraphics;
+  if (!canvas || !webgl) return;
+  assert(canvas.cards.map(({ material }) => material).join(',') === '62,215,216'
+      && webgl.cards.map(({ material }) => material).join(',') === '62,215,216'
+      && canvas.exactRepeatedOff && webgl.exactRepeatedOff,
+  'Paired virus identity/topology contract failed');
+  const parity = canvas.cards.map((canvasCard, index) => {
+    const webglCard = webgl.cards[index];
+    const responseRatio = canvasCard.rgbRms / Math.max(0.01, webglCard.rgbRms);
+    const normalFitRatio = canvasCard.normalFitRgbRms / Math.max(0.01, webglCard.normalFitRgbRms);
+    const profileDistance = Math.max(...canvasCard.profile.map(
+      (value, profileIndex) => Math.abs(value - webglCard.profile[profileIndex]),
+    ));
+    const motifCorrelation = virusPearson(canvasCard.axisMap, webglCard.axisMap);
+    assert(responseRatio >= 0.65 && responseRatio <= 1.40,
+      `Canvas/WebGL ${canvasCard.code} response diverged (${canvasCard.rgbRms}/${webglCard.rgbRms})`);
+    assert(normalFitRatio >= 0.65 && normalFitRatio <= 1.45,
+      `Canvas/WebGL ${canvasCard.code} normal-fit response diverged (${canvasCard.normalFitRgbRms}/${webglCard.normalFitRgbRms})`);
+    assert(profileDistance <= 0.04,
+      `Canvas/WebGL ${canvasCard.code} spatial profile diverged (${profileDistance})`);
+    assert(motifCorrelation >= 0.80,
+      `Canvas/WebGL ${canvasCard.code} motif correlation diverged (${motifCorrelation})`);
+    return {
+      code: canvasCard.code,
+      responseRatio: round(responseRatio, 4),
+      normalFitRatio: round(normalFitRatio, 4),
+      profileMaxDistance: round(profileDistance, 5),
+      motifCorrelation: round(motifCorrelation, 5),
+    };
+  });
+  console.error(`[virus-graphics:paired] parity ${JSON.stringify({
+    canvasPhaseCorrelations: canvas.phaseCorrelations.map((value) => round(value, 5)),
+    webglPhaseCorrelations: webgl.phaseCorrelations.map((value) => round(value, 5)),
+    parity,
+  })}`);
+}
+
+function compactVirusGraphicsResults(results) {
+  for (const result of results) {
+    for (const card of result.virusGraphics?.cards ?? []) delete card.axisMap;
+  }
 }
 
 function assertGasSpectralResponseVectors(samples, label, suffix = '') {

@@ -295,6 +295,43 @@ vec3 applyLiquidVolumeChroma(
   if (optics == 4.0) columnGain = 0.0;
   return color * (vec3(1.0) - shadow * columnDepth * columnGain * uLiquidOpticalDepth);
 }
+vec3 virusFamilyIdentityDelta(float phase, vec2 worldPosition) {
+  // One discrete 16-cell membrane/capsid grammar follows the exact semantic
+  // owner through liquid, gas, and solid native phase changes. Phase-specific
+  // optics remain outside this RGB-only helper.
+  vec2 cell = mod(floor(worldPosition), 16.0);
+  vec2 local = cell - vec2(7.5);
+  float radiusSquared = dot(local, local);
+  float membrane = step(24.5, radiusSquared) * (1.0 - step(43.6, radiusSquared));
+  float capsid = step(5.0, radiusSquared) * (1.0 - step(14.6, radiusSquared));
+  float attachment = max(
+    step(6.5, abs(local.x)) * (1.0 - step(1.6, abs(local.y))),
+    step(6.5, abs(local.y)) * (1.0 - step(1.6, abs(local.x)))
+  );
+  vec3 delta = vec3(1.0, -1.0, 2.0);
+  if (phase < 0.5) {
+    float bridge = (1.0 - step(0.5, mod(cell.x + floor(cell.y * 0.5), 8.0)))
+      * step(14.5, radiusSquared) * (1.0 - step(24.5, radiusSquared));
+    if (attachment > 0.5) delta = vec3(10.0, -3.0, 11.0);
+    else if (membrane > 0.5) delta = vec3(8.0, -5.0, 10.0);
+    else if (capsid > 0.5) delta = vec3(-2.0, 3.0, 7.0);
+    else if (bridge > 0.5) delta = vec3(4.0, -2.0, 5.0);
+  } else if (phase < 1.5) {
+    float vesicle = 1.0 - step(0.5, mod(cell.x * 5.0 + cell.y * 3.0, 32.0));
+    if (attachment > 0.5) delta = vec3(8.0, -2.0, 9.0);
+    else if (membrane > 0.5) delta = vec3(6.0, -4.0, 8.0);
+    else if (capsid > 0.5) delta = vec3(-1.0, 3.0, 6.0);
+    else if (vesicle > 0.5) delta = vec3(5.0, -2.0, 6.0);
+    else delta = vec3(1.0, 0.0, 2.0);
+  } else {
+    float shellJoint = membrane * (1.0 - step(0.5, mod(cell.x + cell.y, 4.0)));
+    if (attachment > 0.5) delta = vec3(12.0, -3.0, 12.0);
+    else if (shellJoint > 0.5) delta = vec3(10.0, -5.0, 12.0);
+    else if (membrane > 0.5) delta = vec3(8.0, -5.0, 10.0);
+    else if (capsid > 0.5) delta = vec3(-3.0, 4.0, 8.0);
+  }
+  return delta / 255.0;
+}
 vec3 liquidMaterialIdentityDelta(
   float material, vec2 worldPosition, float density, float depth, vec2 slope
 ) {
@@ -342,13 +379,8 @@ vec3 liquidMaterialIdentityDelta(
     float ringBand = smoothstep(0.68, 0.94, rings) - 0.26;
     identity = ringBand * vec3(0.018, 0.048, 0.035);
   } else if (material == 62.0) {
-    // VIRS: a quiet reticulated membrane leaves the later Organic trait clear.
-    vec2 tile8 = fract(worldPosition / 8.0);
-    float membraneDistance = min(
-      min(tile8.x, 1.0 - tile8.x), min(tile8.y, 1.0 - tile8.y)
-    );
-    float membrane = 1.0 - smoothstep(0.06, 0.16, membraneDistance);
-    identity = (membrane - 0.16) * vec3(0.050, -0.014, 0.045);
+    // VIRS: the canonical family capsid takes liquid density/depth support.
+    identity = virusFamilyIdentityDelta(0.0, worldPosition);
   } else if (material == 202.0) {
     // FRZW: crossed frost branches keep the phase-change product crystalline.
     float diagonalSaw = fract(
@@ -2388,17 +2420,8 @@ void main() {
         color += vec3(0.025, 0.052, 0.080) * shellWeight
           + vec3(0.060, 0.080, 0.095) * shieldNode * shieldStage * 0.012;
       } else {
-        // VRSS: a membrane ring carries sparse capsid nodes and a dim core.
-        vec2 virusTile = fract((fieldPosition + vec2(2.0, 5.0)) / 14.0) - 0.5;
-        vec2 virusAbs = abs(virusTile);
-        float virusRadius = length(virusTile);
-        float membrane = 1.0 - smoothstep(0.025, 0.060, abs(virusRadius - 0.31));
-        float capsidAxis = 1.0 - smoothstep(0.025, 0.070, min(virusAbs.x, virusAbs.y));
-        float capsidNode = membrane * capsidAxis;
-        float virusCore = 1.0 - smoothstep(0.10, 0.19, virusRadius);
-        color *= 1.0 - membrane * 0.034 - virusCore * 0.018;
-        color += vec3(0.030, 0.072, 0.048) * membrane
-          + vec3(0.070, 0.105, 0.060) * capsidNode;
+        // VRSS: the same family capsid is carried by the rigid solid body.
+        color += virusFamilyIdentityDelta(2.0, fieldPosition);
       }
       color = clamp(color, 0.0, 1.0);
     }
@@ -2501,7 +2524,8 @@ void main() {
     if (botanicalIdentity > 0.5 && uBotanicalIdentityStyling > 0.5) {
       color += botanicalIdentityDelta(material, fieldPosition);
     }
-    if (organic > 0.5 && botanicalIdentity < 0.5) {
+    float virusFamily = material == 62.0 || material == 215.0 || material == 216.0 ? 1.0 : 0.0;
+    if (organic > 0.5 && botanicalIdentity < 0.5 && virusFamily < 0.5) {
       float fibre = 0.5 + 0.5 * sin(
         fieldPosition.x * 0.18 + sin(fieldPosition.y * 0.11 + material) * 1.4
       );
