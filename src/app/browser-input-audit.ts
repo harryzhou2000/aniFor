@@ -15,6 +15,7 @@ import type { EnergyRadioactiveGraphicsAuditSnapshot } from './energy-radioactiv
 import type { OrganicPlantGraphicsAuditSnapshot } from './organic-plant-graphics-audit';
 import type { SpongeGraphicsAuditSnapshot } from './sponge-graphics-audit';
 import type { VirusGraphicsAuditSnapshot } from './virus-graphics-audit';
+import type { WaxGraphicsAuditSnapshot } from './wax-graphics-audit';
 
 export interface BrowserInputAuditApi {
   readonly version: 1;
@@ -91,6 +92,8 @@ export interface BrowserInputAuditApi {
   prepareSpongeGraphicsFixture(): void;
   virusGraphicsAtlas(): VirusGraphicsAuditSnapshot;
   prepareVirusGraphicsFixture(): void;
+  waxGraphicsAtlas(): WaxGraphicsAuditSnapshot;
+  prepareWaxGraphicsFixture(): void;
   canvasPresentationTiming(): CanvasPresentationTiming | undefined;
   requestWebGLPresentationTimingSample(): boolean;
   webGLPresentationTiming(): WebGLPresentationTiming | undefined;

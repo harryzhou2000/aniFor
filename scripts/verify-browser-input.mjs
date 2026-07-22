@@ -48,10 +48,11 @@ const energyRadioactiveGraphicsOnly = process.argv.includes('--energy-radioactiv
 const organicPlantGraphicsOnly = process.argv.includes('--organic-plant-graphics-only');
 const spongeGraphicsOnly = process.argv.includes('--sponge-graphics-only');
 const virusGraphicsOnly = process.argv.includes('--virus-graphics-only');
+const waxGraphicsOnly = process.argv.includes('--wax-graphics-only');
 const usesProductionBundle = cellularGraphicsOnly || sensorGraphicsOnly
   || unusualPowderGraphicsOnly || unusualSolidGraphicsOnly
   || liquidIdentityGraphicsOnly || gasIdentityGraphicsOnly || energyRadioactiveGraphicsOnly
-  || organicPlantGraphicsOnly || spongeGraphicsOnly || virusGraphicsOnly
+  || organicPlantGraphicsOnly || spongeGraphicsOnly || virusGraphicsOnly || waxGraphicsOnly
   || scaleEightOnly;
 const AUDIT_BASE_URL = usesProductionBundle ? PRODUCTION_BUNDLE_URL : ORIGIN + '/';
 const screenshotRequest = process.argv.find((argument) => argument.startsWith('--screenshot='))?.slice('--screenshot='.length);
@@ -115,7 +116,7 @@ async function main() {
       || roleGraphicsOnly || cellularGraphicsOnly || sensorGraphicsOnly
       || unusualPowderGraphicsOnly || unusualSolidGraphicsOnly || liquidIdentityGraphicsOnly
       || gasIdentityGraphicsOnly || energyRadioactiveGraphicsOnly || organicPlantGraphicsOnly
-      || spongeGraphicsOnly || virusGraphicsOnly;
+      || spongeGraphicsOnly || virusGraphicsOnly || waxGraphicsOnly;
     if (powderBodyOnly) assertPairedPowderBodyDepth(results);
     if (liquidDepthOnly) assertPairedLiquidOpticalDepth(results);
     if (solidDepthOnly) assertPairedSolidOpticalDepth(results);
@@ -133,10 +134,12 @@ async function main() {
     if (organicPlantGraphicsOnly) assertPairedOrganicPlantGraphics(results);
     if (spongeGraphicsOnly) assertPairedSpongeGraphics(results);
     if (virusGraphicsOnly) assertPairedVirusGraphics(results);
+    if (waxGraphicsOnly) assertPairedWaxGraphics(results);
     if (!scaleEightOnly && !materialAtlasOnly && !reducedAudit) assertPairedVisualRelief(results);
     if (!scaleEightOnly && !reducedAudit) assertPairedMaterialAtlas(results);
     compactMaterialAtlasResults(results);
     compactVirusGraphicsResults(results);
+    compactWaxGraphicsResults(results);
     console.log(JSON.stringify({ world: `${WORLD_WIDTH}x${WORLD_HEIGHT}`, results }, null, 2));
   } catch (error) {
     if (serverLog.trim()) console.error(serverLog.trim());
@@ -153,7 +156,7 @@ async function auditMode(mode) {
   const startsBlank = cellularGraphicsOnly || sensorGraphicsOnly
     || unusualPowderGraphicsOnly || unusualSolidGraphicsOnly || liquidIdentityGraphicsOnly
     || gasIdentityGraphicsOnly || energyRadioactiveGraphicsOnly || organicPlantGraphicsOnly
-    || spongeGraphicsOnly || virusGraphicsOnly;
+    || spongeGraphicsOnly || virusGraphicsOnly || waxGraphicsOnly;
   const query = new URLSearchParams({
     scene: 'render-lab', inputAudit: '1', renderScale: '2',
     auditStage: startsBlank ? 'blank' : 'canonical',
@@ -326,6 +329,12 @@ async function auditMode(mode) {
       assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
       cdp.close();
       return { backend: mode, virusGraphics, browserErrors: errors.length };
+    }
+    if (waxGraphicsOnly) {
+      const waxGraphics = await auditWaxGraphics(cdp, mode);
+      assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
+      cdp.close();
+      return { backend: mode, waxGraphics, browserErrors: errors.length };
     }
     if (mobileOnly) {
       const mobile = await auditMobile(
@@ -4783,6 +4792,41 @@ function normalizeVirusGraphicsAtlas(snapshot) {
   return { cards };
 }
 
+function normalizeWaxGraphicsAtlas(snapshot) {
+  const cards = (Array.isArray(snapshot) ? snapshot : snapshot?.cards ?? []).map((entry) => ({
+    ...entry,
+    card: cellularRect(entry.card ?? entry),
+    body: cellularRect(entry.body),
+    surfaceProbe: cellularRect(entry.surfaceProbe),
+    coreProbe: cellularRect(entry.coreProbe),
+    authoredCavity: cellularRect(entry.authoredCavity),
+    openChimney: cellularRect(entry.openChimney),
+    haloOuter: cellularRect(entry.haloOuter),
+    phaseStructure: cellularPoints(entry.phaseStructure),
+    isolated: cellularPoint(entry.isolated),
+    guardedBlank: cellularRect(entry.guardedBlank),
+    waterContact: {
+      ...entry.waterContact,
+      owner: cellularRect(entry.waterContact.owner),
+      neighbour: cellularRect(entry.waterContact.neighbour),
+    },
+    metalContact: {
+      ...entry.metalContact,
+      owner: cellularRect(entry.metalContact.owner),
+      neighbour: cellularRect(entry.metalContact.neighbour),
+    },
+    motifProbes: (entry.motifProbes ?? []).map((probe) => ({
+      tileOrigin: cellularPoint(probe.tileOrigin),
+      ridge: cellularRect(probe.ridge),
+      fold: cellularRect(probe.fold),
+      bloom: cellularRect(probe.bloom),
+      joint: cellularRect(probe.joint),
+      interstitial: cellularRect(probe.interstitial),
+    })),
+  }));
+  return { cards };
+}
+
 /** Exact nine-card Energy motif proof plus the complete 21-card semantic guard. */
 async function auditEnergyRadioactiveGraphics(cdp, mode) {
   const started = performance.now();
@@ -6316,6 +6360,350 @@ function virusPearson(left, right) {
     rightSquared += r * r;
   }
   return covariance / Math.max(1e-9, Math.sqrt(leftSquared * rightSquared));
+}
+
+/** Focused phase-continuous WAX/MWAX topology and paired-renderer proof. */
+async function auditWaxGraphics(cdp, mode) {
+  const started = performance.now();
+  const stage = (name) => console.error(
+    `[wax-graphics:${mode}] ${name} ${Math.round(performance.now() - started)}ms`,
+  );
+  const blank = await waitForStablePageCapture(cdp, `${mode} initial blank wax framebuffer`);
+  await evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    if (typeof audit.prepareWaxGraphicsFixture !== 'function'
+      || typeof audit.waxGraphicsAtlas !== 'function'
+      || typeof audit.setLiquidIdentityStyling !== 'function'
+      || typeof audit.setUnusualSolidStyling !== 'function') {
+      throw new Error('Wax graphics audit API unavailable');
+    }
+    audit.prepareWaxGraphicsFixture();
+    return true;
+  })()`);
+  const rawAtlas = await waitFor(() => evaluate(cdp, `(() => {
+    const atlas = window.__ANIFOR_INPUT_AUDIT__.waxGraphicsAtlas();
+    const cards = Array.isArray(atlas) ? atlas : atlas?.cards;
+    return cards?.length === 2 ? atlas : false;
+  })()`), 15_000, `${mode} wax graphics fixture`);
+  const atlas = normalizeWaxGraphicsAtlas(rawAtlas);
+  assert(atlas.cards.map(({ material }) => material).join(',') === '27,59'
+      && atlas.cards.map(({ code }) => code).join(',') === 'WAX,MWAX'
+      && atlas.cards.map(({ phase }) => phase).join(',') === 'solid,liquid'
+      && atlas.cards.every(({ body }) => body.width === 160 && body.height === 128)
+      && atlas.cards.every(({ motifProbes }) => motifProbes.length === 10)
+      && atlas.cards[0].body.x % 32 === atlas.cards[1].body.x % 32
+      && atlas.cards[0].body.y % 32 === atlas.cards[1].body.y % 32,
+  `${mode}: wax atlas contract changed`);
+  const semanticState = await evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    const snapshot = audit.waxGraphicsAtlas();
+    const cards = Array.isArray(snapshot) ? snapshot : snapshot.cards;
+    const inside = (x, y, rect) => x >= rect.x && y >= rect.y
+      && x < rect.x + rect.width && y < rect.y + rect.height;
+    const exactRect = (rect, material) => {
+      for (let y = rect.y; y < rect.y + rect.height; y++) {
+        for (let x = rect.x; x < rect.x + rect.width; x++) {
+          if (audit.cell(x, y) !== material) return false;
+        }
+      }
+      return true;
+    };
+    return cards.map((entry) => {
+      let bodyExact = true;
+      for (let y = entry.body.y; y < entry.body.y + entry.body.height; y++) {
+        for (let x = entry.body.x; x < entry.body.x + entry.body.width; x++) {
+          const empty = inside(x, y, entry.authoredCavity) || inside(x, y, entry.openChimney);
+          bodyExact = bodyExact && audit.cell(x, y) === (empty ? 0 : entry.material);
+        }
+      }
+      return {
+        material: entry.material,
+        bodyExact,
+        cavityEmpty: exactRect(entry.authoredCavity, 0),
+        chimneyEmpty: exactRect(entry.openChimney, 0),
+        structureExact: entry.phaseStructure.every(({ x, y }) => audit.cell(x, y) === entry.material),
+        isolated: audit.cell(entry.isolated.x, entry.isolated.y),
+        guardedBlankEmpty: exactRect(entry.guardedBlank, 0),
+        waterOwnerExact: exactRect(entry.waterContact.owner, entry.material),
+        waterExact: exactRect(entry.waterContact.neighbour, entry.waterContact.neighbourMaterial),
+        metalOwnerExact: exactRect(entry.metalContact.owner, entry.material),
+        metalExact: exactRect(entry.metalContact.neighbour, entry.metalContact.neighbourMaterial),
+      };
+    });
+  })()`);
+  assert(semanticState.every((entry) => entry.bodyExact && entry.cavityEmpty
+      && entry.chimneyEmpty && entry.structureExact && entry.isolated === entry.material
+      && entry.guardedBlankEmpty && entry.waterOwnerExact && entry.waterExact
+      && entry.metalOwnerExact && entry.metalExact),
+  `${mode}: wax fixture lost phase semantics, topology, or contacts (${JSON.stringify(semanticState)})`);
+  stage('fixture-ready');
+
+  const setWaxStyling = async (enabled) => evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    audit.setUnusualSolidStyling(${enabled});
+    audit.setLiquidIdentityStyling(${enabled});
+    return true;
+  })()`);
+  await setWaxStyling(false);
+  const flat = await waitForStablePageCapture(cdp, `${mode} flat wax framebuffer`);
+  const flatBacking = await sampleWaxBacking(cdp);
+  await setWaxStyling(true);
+  const styled = await waitForStablePageCapture(cdp, `${mode} styled wax framebuffer`);
+  const styledBacking = await sampleWaxBacking(cdp);
+  await setWaxStyling(false);
+  const repeated = await waitForStablePageCapture(cdp, `${mode} repeated flat wax framebuffer`);
+  const repeatedBacking = await sampleWaxBacking(cdp);
+  for (const [state, backing] of [
+    ['flat', flatBacking], ['styled', styledBacking], ['repeated-flat', repeatedBacking],
+  ]) assertWaxBacking(backing, `${mode} ${state}`);
+  for (let index = 0; index < 2; index++) {
+    const base = flatBacking.cards[index];
+    const changed = styledBacking.cards[index];
+    const returned = repeatedBacking.cards[index];
+    assert(base.semanticSignature === changed.semanticSignature
+        && base.semanticSignature === returned.semanticSignature
+        && base.alphaSignature === changed.alphaSignature
+        && base.alphaSignature === returned.alphaSignature
+        && base.supportSignature === changed.supportSignature
+        && base.supportSignature === returned.supportSignature,
+    `${mode}: ${base.code} styling changed semantic/alpha/support signatures`);
+    for (const contactName of ['waterContact', 'metalContact']) {
+      assert(arraysEqual(base[contactName].neighbourRgb, changed[contactName].neighbourRgb)
+          && arraysEqual(base[contactName].neighbourRgb, returned[contactName].neighbourRgb),
+      `${mode}: ${base.code} styling leaked into ${contactName}`);
+    }
+  }
+  const responses = summarizeWaxBackingResponses(flatBacking, styledBacking, repeatedBacking);
+  for (const response of responses) {
+    assert(response.rgbRms >= 0.05 && response.rgbRms <= 24
+        && response.rgbPeak > 0 && response.rgbPeak <= 64
+        && response.changedSampleRatio >= 0.02 && response.repeatRgbPeak === 0,
+    `${mode}: ${response.code} wax response is absent, unbounded, or unstable (${JSON.stringify(response)})`);
+    assert(response.motifAxis.ridge > response.motifAxis.interstitial
+        && response.motifAxis.joint > response.motifAxis.interstitial,
+    `${mode}: ${response.code} lost ridge/joint ordering (${JSON.stringify(response.motifAxis)})`);
+  }
+  const phaseCorrelation = virusPearson(responses[0].axisMap, responses[1].axisMap);
+  // The shared wax grammar is intentionally softened by MWAX's liquid body optics;
+  // retain a strong positive spatial relationship without requiring identical phase response.
+  assert(phaseCorrelation >= 0.60,
+    `${mode}: WAX/MWAX do not retain one spatial grammar (${phaseCorrelation})`);
+  const normalFitRegions = atlas.cards.map((entry) => ({
+    name: `${entry.code}-normal-fit-body`,
+    x: entry.body.x + entry.body.width / 2,
+    y: entry.body.y + entry.body.height / 2,
+    radiusX: entry.body.width / 2,
+    radiusY: entry.body.height / 2,
+    signature: true, silhouette: true, fastSupport: true,
+  }));
+  const normalFit = await sampleBackdropRefractionRegions(cdp, {
+    straight: flat.capture.data,
+    refracted: styled.capture.data,
+    repeatedStraight: repeated.capture.data,
+  }, normalFitRegions, flat.canvasRect);
+  assert(normalFit.every((response) => response.rgbRms > 0 && response.rgbRms <= 32
+      && response.rgbPeak > 0 && response.rgbPeak <= 64 && response.repeatRgbPeak === 0),
+  `${mode}: wax family is absent, unbounded, or unstable at normal fit (${JSON.stringify(normalFit)})`);
+  stage('responses-ready');
+  return {
+    cards: responses.map((response, index) => ({
+      ...response,
+      phase: atlas.cards[index].phase,
+      normalFitRgbRms: normalFit[index].rgbRms,
+      normalFitRgbPeak: normalFit[index].rgbPeak,
+    })),
+    phaseCorrelation,
+    exactRepeatedOff: responses.every(({ repeatRgbPeak }) => repeatRgbPeak === 0),
+    supportSignatures: flatBacking.cards.map(({ supportSignature }) => supportSignature),
+  };
+}
+
+async function sampleWaxBacking(cdp) {
+  return evaluate(cdp, `(() => {
+    const world = document.querySelector('.world-canvas');
+    if (!(world instanceof HTMLCanvasElement)) throw new Error('World canvas unavailable');
+    const copy = document.createElement('canvas');
+    copy.width = world.width; copy.height = world.height;
+    const context = copy.getContext('2d', { willReadFrequently: true });
+    if (!context) throw new Error('Wax backing sampler unavailable');
+    context.drawImage(world, 0, 0);
+    const pixels = context.getImageData(0, 0, copy.width, copy.height).data;
+    const scaleX = copy.width / ${WORLD_WIDTH};
+    const scaleY = copy.height / ${WORLD_HEIGHT};
+    const snapshot = window.__ANIFOR_INPUT_AUDIT__.waxGraphicsAtlas();
+    const cards = Array.isArray(snapshot) ? snapshot : snapshot.cards;
+    const key = ({ x, y }) => x + ',' + y;
+    const rectPoints = (rect) => {
+      const points = [];
+      for (let y = rect.y; y < rect.y + rect.height; y++) {
+        for (let x = rect.x; x < rect.x + rect.width; x++) points.push({ x, y });
+      }
+      return points;
+    };
+    const uniquePoints = (points) => [...new Map(points.map((point) => [key(point), point])).values()];
+    const cellAlpha = ({ x, y }) => {
+      const left = Math.floor(x * scaleX), top = Math.floor(y * scaleY);
+      const right = Math.max(left + 1, Math.floor((x + 1) * scaleX));
+      const bottom = Math.max(top + 1, Math.floor((y + 1) * scaleY));
+      let peak = 0;
+      for (let py = top; py < bottom; py++) for (let px = left; px < right; px++) {
+        peak = Math.max(peak, pixels[(py * copy.width + px) * 4 + 3]);
+      }
+      return peak;
+    };
+    const centreAlpha = ({ x, y }) => {
+      const px = Math.min(copy.width - 1, Math.floor((x + 0.5) * scaleX));
+      const py = Math.min(copy.height - 1, Math.floor((y + 0.5) * scaleY));
+      return pixels[(py * copy.width + px) * 4 + 3];
+    };
+    const samplePointRgb = (points) => {
+      const rgb = [];
+      for (const { x, y } of points) {
+        const px = Math.min(copy.width - 1, Math.floor((x + 0.5) * scaleX));
+        const py = Math.min(copy.height - 1, Math.floor((y + 0.5) * scaleY));
+        const offset = (py * copy.width + px) * 4;
+        rgb.push(pixels[offset], pixels[offset + 1], pixels[offset + 2]);
+      }
+      return rgb;
+    };
+    const sampleGrid = (rect, step = 2) => {
+      const points = [];
+      for (let y = rect.y; y < rect.y + rect.height; y += step) {
+        for (let x = rect.x; x < rect.x + rect.width; x += step) points.push({ x, y });
+      }
+      return { width: Math.ceil(rect.width / step), height: Math.ceil(rect.height / step), rgb: samplePointRgb(points) };
+    };
+    return {
+      scaleX, scaleY,
+      cards: cards.map((entry) => {
+        const emptyKeys = new Set([
+          ...rectPoints(entry.authoredCavity), ...rectPoints(entry.openChimney),
+        ].map(key));
+        const bodyPoints = rectPoints(entry.body).filter((point) => !emptyKeys.has(key(point)));
+        const structures = uniquePoints(entry.phaseStructure);
+        const guard = rectPoints(entry.guardedBlank);
+        const cavity = rectPoints(entry.authoredCavity);
+        const chimney = rectPoints(entry.openChimney);
+        let alphaSignature = 2166136261, supportSignature = 2166136261;
+        const left = Math.floor(entry.card.x * scaleX), top = Math.floor(entry.card.y * scaleY);
+        const right = Math.floor((entry.card.x + entry.card.width) * scaleX);
+        const bottom = Math.floor((entry.card.y + entry.card.height) * scaleY);
+        for (let py = top; py < bottom; py++) for (let px = left; px < right; px++) {
+          const alpha = pixels[(py * copy.width + px) * 4 + 3];
+          alphaSignature = Math.imul(alphaSignature ^ alpha, 16777619) >>> 0;
+          supportSignature = Math.imul(supportSignature ^ Number(alpha > 0), 16777619) >>> 0;
+        }
+        let semanticSignature = 2166136261;
+        for (let y = entry.card.y; y < entry.card.y + entry.card.height; y++) {
+          for (let x = entry.card.x; x < entry.card.x + entry.card.width; x++) {
+            semanticSignature = Math.imul(
+              semanticSignature ^ window.__ANIFOR_INPUT_AUDIT__.cell(x, y), 16777619,
+            ) >>> 0;
+          }
+        }
+        const contact = (control) => {
+          const owner = rectPoints(control.owner), neighbour = rectPoints(control.neighbour);
+          return {
+            ownerExpected: owner.length,
+            ownerSupported: owner.filter((point) => cellAlpha(point) > 0).length,
+            neighbourExpected: neighbour.length,
+            neighbourSupported: neighbour.filter((point) => cellAlpha(point) > 0).length,
+            neighbourRgb: samplePointRgb(neighbour),
+          };
+        };
+        const body = sampleGrid(entry.body);
+        const motif = (kind) => samplePointRgb(entry.motifProbes.map((probe) => probe[kind]));
+        return {
+          code: entry.code, material: entry.material,
+          semanticSignature, alphaSignature, supportSignature,
+          bodyExpected: bodyPoints.length,
+          bodySupported: bodyPoints.filter((point) => cellAlpha(point) > 0).length,
+          structureExpected: structures.length,
+          structureSupported: structures.filter((point) => cellAlpha(point) > 0).length,
+          isolatedAlphaPeak: cellAlpha(entry.isolated),
+          guardedBlankExpected: guard.length,
+          guardedBlankTransparent: guard.filter((point) => cellAlpha(point) === 0).length,
+          cavityExpected: cavity.length,
+          cavityCentreTransparent: cavity.filter((point) => centreAlpha(point) === 0).length,
+          chimneyExpected: chimney.length,
+          chimneyCentreTransparent: chimney.filter((point) => centreAlpha(point) === 0).length,
+          waterContact: contact(entry.waterContact), metalContact: contact(entry.metalContact),
+          bodyWidth: body.width, bodyHeight: body.height, bodyRgb: body.rgb,
+          motifRgb: {
+            ridge: motif('ridge'), fold: motif('fold'), bloom: motif('bloom'),
+            joint: motif('joint'), interstitial: motif('interstitial'),
+          },
+        };
+      }),
+    };
+  })()`);
+}
+
+function assertWaxBacking(backing, label) {
+  assert(Number.isInteger(backing.scaleX) && Number.isInteger(backing.scaleY)
+      && backing.scaleX > 0 && backing.scaleY > 0,
+  `${label}: wax backing does not preserve integral scaling`);
+  assert(backing.cards.map(({ material }) => material).join(',') === '27,59'
+      && backing.cards.every((card) => card.bodyExpected === 20_040
+        && card.bodySupported === card.bodyExpected
+        && card.structureSupported === card.structureExpected
+        && card.isolatedAlphaPeak > 0
+        && card.guardedBlankExpected === 3_600
+        && card.guardedBlankTransparent === card.guardedBlankExpected
+        && card.cavityExpected === 224
+        && card.cavityCentreTransparent / card.cavityExpected >= 0.80
+        && card.chimneyExpected === 216
+        && card.chimneyCentreTransparent / card.chimneyExpected >= 0.75
+        && card.waterContact.ownerExpected === 320 && card.waterContact.ownerSupported === 320
+        && card.waterContact.neighbourExpected === 400 && card.waterContact.neighbourSupported === 400
+        && card.metalContact.ownerExpected === 320 && card.metalContact.ownerSupported === 320
+        && card.metalContact.neighbourExpected === 400 && card.metalContact.neighbourSupported === 400),
+  `${label}: wax backing changed topology (${JSON.stringify(backing.cards.map((card) => ({
+    ...card, bodyRgb: undefined, motifRgb: undefined,
+    waterContact: { ...card.waterContact, neighbourRgb: undefined },
+    metalContact: { ...card.metalContact, neighbourRgb: undefined },
+  })))})`);
+}
+
+function summarizeWaxBackingResponses(flat, styled, repeated) {
+  return flat.cards.map((base, index) => {
+    const changed = styled.cards[index], returned = repeated.cards[index];
+    let squared = 0, peak = 0, repeatPeak = 0, changedSamples = 0;
+    const buckets = new Float64Array(16), axisMap = [];
+    for (let offset = 0; offset < base.bodyRgb.length; offset += 3) {
+      const sample = offset / 3;
+      const x = sample % base.bodyWidth, y = Math.floor(sample / base.bodyWidth);
+      const bucket = Math.min(3, Math.floor(y * 4 / base.bodyHeight)) * 4
+        + Math.min(3, Math.floor(x * 4 / base.bodyWidth));
+      const deltas = [0, 1, 2].map((channel) => changed.bodyRgb[offset + channel] - base.bodyRgb[offset + channel]);
+      axisMap.push((deltas[0] + deltas[1]) * 0.5 - deltas[2]);
+      let any = false;
+      for (const delta of deltas) { squared += delta * delta; peak = Math.max(peak, Math.abs(delta)); buckets[bucket] += Math.abs(delta); any ||= delta !== 0; }
+      for (let channel = 0; channel < 3; channel++) repeatPeak = Math.max(
+        repeatPeak, Math.abs(returned.bodyRgb[offset + channel] - base.bodyRgb[offset + channel]),
+      );
+      changedSamples += Number(any);
+    }
+    const total = buckets.reduce((sum, value) => sum + value, 0);
+    const motifAxis = {};
+    for (const kind of ['ridge', 'fold', 'bloom', 'joint', 'interstitial']) {
+      const before = base.motifRgb[kind], after = changed.motifRgb[kind];
+      let axis = 0;
+      for (let offset = 0; offset < before.length; offset += 3) {
+        axis += ((after[offset] - before[offset]) + (after[offset + 1] - before[offset + 1])) * 0.5
+          - (after[offset + 2] - before[offset + 2]);
+      }
+      motifAxis[kind] = axis / Math.max(1, before.length / 3);
+    }
+    return {
+      code: base.code, material: base.material,
+      rgbRms: Math.sqrt(squared / Math.max(1, base.bodyRgb.length)), rgbPeak: peak,
+      changedSampleRatio: changedSamples / Math.max(1, base.bodyRgb.length / 3),
+      repeatRgbPeak: repeatPeak,
+      profile: Array.from(buckets, (value) => total > 0 ? value / total : 0),
+      axisMap, motifAxis,
+    };
+  });
 }
 
 async function sampleSpongeBacking(cdp) {
@@ -8912,6 +9300,50 @@ function assertPairedVirusGraphics(results) {
 function compactVirusGraphicsResults(results) {
   for (const result of results) {
     for (const card of result.virusGraphics?.cards ?? []) delete card.axisMap;
+  }
+}
+
+function assertPairedWaxGraphics(results) {
+  const canvas = results.find((result) => result.backend === 'canvas2d')?.waxGraphics;
+  const webgl = results.find((result) => result.backend === 'webgl')?.waxGraphics;
+  if (!canvas || !webgl) return;
+  assert(canvas.cards.map(({ material }) => material).join(',') === '27,59'
+      && webgl.cards.map(({ material }) => material).join(',') === '27,59'
+      && canvas.exactRepeatedOff && webgl.exactRepeatedOff,
+  'Paired wax identity/topology contract failed');
+  const parity = canvas.cards.map((canvasCard, index) => {
+    const webglCard = webgl.cards[index];
+    const responseRatio = canvasCard.rgbRms / Math.max(0.01, webglCard.rgbRms);
+    const normalFitRatio = canvasCard.normalFitRgbRms / Math.max(0.01, webglCard.normalFitRgbRms);
+    const profileDistance = Math.max(...canvasCard.profile.map(
+      (value, profileIndex) => Math.abs(value - webglCard.profile[profileIndex]),
+    ));
+    const motifCorrelation = virusPearson(canvasCard.axisMap, webglCard.axisMap);
+    assert(responseRatio >= 0.45 && responseRatio <= 2.20,
+      `Canvas/WebGL ${canvasCard.code} response diverged (${canvasCard.rgbRms}/${webglCard.rgbRms})`);
+    assert(normalFitRatio >= 0.40 && normalFitRatio <= 2.50,
+      `Canvas/WebGL ${canvasCard.code} normal-fit response diverged (${canvasCard.normalFitRgbRms}/${webglCard.normalFitRgbRms})`);
+    assert(profileDistance <= 0.12,
+      `Canvas/WebGL ${canvasCard.code} spatial profile diverged (${profileDistance})`);
+    assert(motifCorrelation >= 0.60,
+      `Canvas/WebGL ${canvasCard.code} motif correlation diverged (${motifCorrelation})`);
+    return {
+      code: canvasCard.code,
+      responseRatio: round(responseRatio, 4), normalFitRatio: round(normalFitRatio, 4),
+      profileMaxDistance: round(profileDistance, 5), motifCorrelation: round(motifCorrelation, 5),
+    };
+  });
+  assert(canvas.phaseCorrelation >= 0.60 && webgl.phaseCorrelation >= 0.60,
+    `Paired wax phase continuity failed (${canvas.phaseCorrelation}/${webgl.phaseCorrelation})`);
+  console.error(`[wax-graphics:paired] parity ${JSON.stringify({
+    canvasPhaseCorrelation: round(canvas.phaseCorrelation, 5),
+    webglPhaseCorrelation: round(webgl.phaseCorrelation, 5), parity,
+  })}`);
+}
+
+function compactWaxGraphicsResults(results) {
+  for (const result of results) {
+    for (const card of result.waxGraphics?.cards ?? []) delete card.axisMap;
   }
 }
 

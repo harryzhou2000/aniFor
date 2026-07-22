@@ -1,6 +1,7 @@
 import { Material } from '../shared/materials';
 import { RenderPhase } from './render-profile';
 import { applyCanvasVirusFamilyMorphology } from './canvas-virus-family-style';
+import { applyCanvasWaxFamilyMorphology } from './canvas-wax-family-style';
 
 /** Returns whether a material has a native unusual-solid morphology. */
 export function isCanvasUnusualSolidMaterial(material: number): boolean {
@@ -12,6 +13,7 @@ export function isCanvasUnusualSolidMaterial(material: number): boolean {
     case Material.SHLD3:
     case Material.SHLD4:
     case Material.VRSS:
+    case Material.Wax:
       return true;
     default:
       return false;
@@ -37,6 +39,10 @@ export function applyCanvasUnusualSolidMorphology(
 
   if (material === Material.VRSS) {
     applyCanvasVirusFamilyMorphology(output, material, RenderPhase.Solid, x, y);
+    return;
+  }
+  if (material === Material.Wax) {
+    applyCanvasWaxFamilyMorphology(output, material, RenderPhase.Solid, x, y);
     return;
   }
 

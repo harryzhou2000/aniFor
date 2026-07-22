@@ -53,6 +53,9 @@ import {
 import {
   VIRUS_GRAPHICS_AUDIT, prepareVirusGraphicsAuditFixture,
 } from './virus-graphics-audit';
+import {
+  WAX_GRAPHICS_AUDIT, prepareWaxGraphicsAuditFixture,
+} from './wax-graphics-audit';
 
 const AUTOSAVE_KEY = 'stillroom-world-v1';
 
@@ -400,6 +403,10 @@ export class Game {
       virusGraphicsAtlas: () => VIRUS_GRAPHICS_AUDIT,
       prepareVirusGraphicsFixture: () => {
         prepareVirusGraphicsAuditFixture(this.simulation);
+      },
+      waxGraphicsAtlas: () => WAX_GRAPHICS_AUDIT,
+      prepareWaxGraphicsFixture: () => {
+        prepareWaxGraphicsAuditFixture(this.simulation);
       },
       canvasPresentationTiming: () => this.renderer.getCanvasPresentationTiming(),
       requestWebGLPresentationTimingSample: () => this.renderer.requestWebGLPresentationTimingSample(),

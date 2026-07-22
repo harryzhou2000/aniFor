@@ -13,10 +13,11 @@ const UNUSUAL_SOLIDS = [
   Material.SHLD3,
   Material.SHLD4,
   Material.VRSS,
+  Material.Wax,
 ] as const;
 
 describe('Canvas unusual-solid morphology', () => {
-  it('covers exactly the seven requested non-contiguous identities', () => {
+  it('covers exactly the eight requested non-contiguous identities', () => {
     for (const material of UNUSUAL_SOLIDS) {
       expect(isCanvasUnusualSolidMaterial(material)).toBe(true);
     }
@@ -112,7 +113,7 @@ describe('Canvas unusual-solid morphology', () => {
     expect(accentedCounts[3]).toBeGreaterThan(accentedCounts[2]);
   });
 
-  it('keeps prismatic, compressed-strata, and viral anchors visibly distinct', () => {
+  it('keeps prismatic, compressed-strata, viral, and wax anchors visibly distinct', () => {
     const response = (material: Material, x: number, y: number): readonly number[] => {
       const output = new Float32Array([100, 110, 120, 201]);
       applyCanvasUnusualSolidMorphology(output, material, x, y, y * 612 + x);
@@ -122,6 +123,7 @@ describe('Canvas unusual-solid morphology', () => {
     expect(response(Material.BIZRS, 0, 0)).not.toEqual(response(Material.BIZRS, 4, 4));
     expect(response(Material.PSTS, 4, 0)).not.toEqual(response(Material.PSTS, 4, 3));
     expect(response(Material.VRSS, 0, 7)).not.toEqual(response(Material.VRSS, 7, 7));
+    expect(response(Material.Wax, 0, 0)).not.toEqual(response(Material.Wax, 3, 3));
   });
 
   it('is an exact no-op for controls adjacent to every target range', () => {

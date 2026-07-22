@@ -6,6 +6,58 @@ import { SimulationTool, type SimulationToolId } from './simulation-tools';
 const moduleArtifact = new URL('../../public/wasm/stillroom_core.js', import.meta.url);
 const point = { x: 306, y: 180 };
 
+interface LocalMaterialSample {
+  readonly count: number;
+  readonly minimumTemperature: number;
+  readonly maximumTemperature: number;
+  readonly firstPosition?: Readonly<{ x: number; y: number }>;
+}
+
+function sampleLocalMaterial(
+  simulation: PowderToyBackend,
+  material: Material,
+  halfExtent = 24,
+): LocalMaterialSample {
+  // cells() refreshes every exported native field before temperature() exposes
+  // its decikelvin view, so identity and temperature come from one extraction.
+  const cells = simulation.cells();
+  const temperatures = simulation.temperature();
+  let count = 0;
+  let minimumTemperature = Number.POSITIVE_INFINITY;
+  let maximumTemperature = Number.NEGATIVE_INFINITY;
+  let firstPosition: Readonly<{ x: number; y: number }> | undefined;
+  for (let y = point.y - halfExtent; y <= point.y + halfExtent; y++) {
+    for (let x = point.x - halfExtent; x <= point.x + halfExtent; x++) {
+      const index = y * simulation.width + x;
+      if (cells[index] !== material) continue;
+      count++;
+      firstPosition ??= { x, y };
+      minimumTemperature = Math.min(minimumTemperature, temperatures[index]);
+      maximumTemperature = Math.max(maximumTemperature, temperatures[index]);
+    }
+  }
+  return { count, minimumTemperature, maximumTemperature, firstPosition };
+}
+
+function advanceToLocalPhase(
+  simulation: PowderToyBackend,
+  source: Material,
+  product: Material,
+  maximumSteps = 64,
+): LocalMaterialSample {
+  for (let step = 1; step <= maximumSteps; step++) {
+    simulation.step();
+    const productSample = sampleLocalMaterial(simulation, product, 96);
+    if (productSample.count === 1) {
+      expect(sampleLocalMaterial(simulation, source, 96).count).toBe(0);
+      return productSample;
+    }
+    expect(productSample.count).toBe(0);
+    expect(sampleLocalMaterial(simulation, source, 96).count).toBe(1);
+  }
+  throw new Error(`Native transition ${source} -> ${product} did not complete in ${maximumSteps} steps`);
+}
+
 async function temperatureProduct(
   source: Material,
   tool: SimulationToolId,
@@ -71,5 +123,47 @@ describe('compiled native-only projections', () => {
     await virusPhaseRoundTrip(
       SimulationTool.Heat, 200, Material.VRSG, SimulationTool.Cool, 60,
     );
+  });
+
+  it('round-trips wax through liquid wax at native thresholds and burns overheated liquid wax', async () => {
+    const simulation = await PowderToyBackend.load(moduleArtifact.href);
+    simulation.paint(point.x, point.y, Material.Wax, 0);
+    expect(sampleLocalMaterial(simulation, Material.Wax).count).toBe(1);
+
+    for (let index = 0; index < 30; index++) {
+      simulation.applySimulationTool(SimulationTool.Heat, point.x, point.y, 8);
+    }
+    const hotWax = sampleLocalMaterial(simulation, Material.Wax);
+    expect(hotWax.count).toBe(1);
+    expect(hotWax.minimumTemperature).toBeGreaterThan(3190);
+
+    const liquidWax = advanceToLocalPhase(simulation, Material.Wax, Material.MWAX);
+    expect(liquidWax.firstPosition).toBeDefined();
+
+    for (let index = 0; index < 20; index++) {
+      simulation.applySimulationTool(
+        SimulationTool.Cool,
+        liquidWax.firstPosition!.x,
+        liquidWax.firstPosition!.y,
+        0,
+      );
+    }
+    const coolLiquidWax = sampleLocalMaterial(simulation, Material.MWAX, 96);
+    expect(coolLiquidWax.count).toBe(1);
+    expect(coolLiquidWax.maximumTemperature).toBeLessThan(3180);
+
+    advanceToLocalPhase(simulation, Material.MWAX, Material.Wax);
+
+    simulation.clear();
+    simulation.paint(point.x, point.y, Material.MWAX, 0);
+    expect(sampleLocalMaterial(simulation, Material.MWAX).count).toBe(1);
+    for (let index = 0; index < 180; index++) {
+      simulation.applySimulationTool(SimulationTool.Heat, point.x, point.y, 8);
+    }
+    const burningLiquidWax = sampleLocalMaterial(simulation, Material.MWAX);
+    expect(burningLiquidWax.count).toBe(1);
+    expect(burningLiquidWax.minimumTemperature).toBeGreaterThan(6730);
+
+    advanceToLocalPhase(simulation, Material.MWAX, Material.Fire);
   });
 });

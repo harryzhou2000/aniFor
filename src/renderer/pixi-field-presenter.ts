@@ -332,6 +332,31 @@ vec3 virusFamilyIdentityDelta(float phase, vec2 worldPosition) {
   }
   return delta / 255.0;
 }
+vec3 waxFamilyIdentityDelta(float phase, vec2 worldPosition) {
+  // One 32-cell lamella/bloom grammar follows native WAX through melting into
+  // MWAX. This helper changes RGB only and uses no sample, clock, or derivative.
+  vec2 cell = mod(floor(worldPosition), 32.0);
+  vec2 local = mod(cell, 16.0) - vec2(8.0);
+  float radiusSquared = dot(local, local);
+  float bloom = step(27.0, radiusSquared) * (1.0 - step(50.0, radiusSquared));
+  float lamella = mod(cell.x + cell.y * 2.0 + floor(cell.x / 8.0) * 2.0, 16.0);
+  float raisedRidge = 1.0 - step(3.0, lamella);
+  float recessedFold = step(9.0, lamella) * (1.0 - step(12.0, lamella));
+  float waxJoint = bloom * (1.0 - step(1.0, mod(cell.x + cell.y, 4.0)));
+  vec3 delta = vec3(1.0, 1.0, 0.0);
+  if (phase < 0.5) {
+    if (waxJoint > 0.5) delta = vec3(11.0, 9.0, 4.0);
+    else if (bloom > 0.5) delta = vec3(7.0, 6.0, 2.0);
+    else if (raisedRidge > 0.5) delta = vec3(8.0, 6.0, 2.0);
+    else if (recessedFold > 0.5) delta = vec3(-6.0, -5.0, -3.0);
+  } else {
+    if (waxJoint > 0.5) delta = vec3(7.0, 7.0, 3.0);
+    else if (bloom > 0.5) delta = vec3(4.0, 5.0, 2.0);
+    else if (raisedRidge > 0.5) delta = vec3(6.0, 6.0, 2.0);
+    else if (recessedFold > 0.5) delta = vec3(-3.0, -3.0, -2.0);
+  }
+  return delta / 255.0;
+}
 vec3 liquidMaterialIdentityDelta(
   float material, vec2 worldPosition, float density, float depth, vec2 slope
 ) {
@@ -378,6 +403,9 @@ vec3 liquidMaterialIdentityDelta(
     float rings = 1.0 - abs(fract(ringRadius * 3.0) * 2.0 - 1.0);
     float ringBand = smoothstep(0.68, 0.94, rings) - 0.26;
     identity = ringBand * vec3(0.018, 0.048, 0.035);
+  } else if (material == 59.0) {
+    // MWAX: softened phase of the same WAX lamella and bloom structure.
+    identity = waxFamilyIdentityDelta(1.0, worldPosition);
   } else if (material == 62.0) {
     // VIRS: the canonical family capsid takes liquid density/depth support.
     identity = virusFamilyIdentityDelta(0.0, worldPosition);
@@ -1790,7 +1818,7 @@ void main() {
         );
       }
     }
-    // Eleven unusual/radioactive liquids retain a world-anchored material signature
+    // Twelve unusual/radioactive liquids retain a world-anchored material signature
     // after generic body optics. The authoritative semantic fragment is the
     // only owner: reconstructed support, walls, halos, and emissive projections
     // remain exact. This changes RGB only and adds no sample or resource.
@@ -1798,6 +1826,7 @@ void main() {
       && surfaceOnly < 0.5 && wall < 0.5 && emissionOnly < 0.5
       && family == 2.0 && !materialEmissive
       && (material == 38.0 || (material >= 54.0 && material <= 57.0)
+        || material == 59.0
         || material == 62.0 || material == 100.0 || material == 102.0
         || material == 104.0 || material == 202.0 || material == 207.0)) {
       color += liquidMaterialIdentityDelta(
@@ -2373,11 +2402,11 @@ void main() {
       float interference = (planeWave + radialWave) * 0.5;
       color *= 0.95 + interference * 0.045;
     }
-    // Seven uncommon solids layer one static identity over the generic body
+    // Eight uncommon solids layer one static identity over the generic body
     // structure above. Only authoritative semantic matter participates; this
     // RGB arithmetic adds no sample, pass, field, allocation, clock term, or
     // output-scale resource, and leaves later trait decals independent.
-    float unusualSolid = material == 80.0 || material == 196.0
+    float unusualSolid = material == 27.0 || material == 80.0 || material == 196.0
       || material == 206.0 || material == 208.0 || material == 209.0
       || material == 210.0 || material == 216.0 ? 1.0 : 0.0;
     if (uUnusualSolidStyling > 0.5 && unusualSolid > 0.5
@@ -2385,7 +2414,10 @@ void main() {
       && surfaceOnly < 0.5 && halo < 0.5 && wall < 0.5
       && wallOnly < 0.5 && emissionOnly < 0.5) {
       vec2 solidCell = floor(fieldPosition);
-      if (material == 196.0) {
+      if (material == 27.0) {
+        // WAX: crystalline blooms and cooling lamellae share MWAX's topology.
+        color += waxFamilyIdentityDelta(0.0, fieldPosition);
+      } else if (material == 196.0) {
         // BIZRS: angular prismatic facets split cool and warm reflections.
         vec2 prismTile = abs(fract((fieldPosition + vec2(3.0, 1.0)) / 11.0) - 0.5);
         float prismEdge = 1.0 - smoothstep(

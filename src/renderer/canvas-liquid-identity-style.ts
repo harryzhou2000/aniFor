@@ -1,6 +1,7 @@
 import { Material } from '../shared/materials';
 import { RenderPhase } from './render-profile';
 import { canvasVirusFamilyMotifDelta } from './canvas-virus-family-style';
+import { canvasWaxFamilyMotifDelta } from './canvas-wax-family-style';
 
 const STYLE_COUNT = 11;
 const TILE_SHIFT = 5;
@@ -58,7 +59,7 @@ export const CANVAS_LIQUID_IDENTITY_LOOKUP_BYTES = STYLE_BY_MATERIAL.byteLength
 
 /** Returns whether a liquid belongs to the first authored identity tranche. */
 export function hasCanvasLiquidIdentityStyle(material: number): boolean {
-  return material >= 0 && material < STYLE_BY_MATERIAL.length
+  return material === Material.MWAX || material >= 0 && material < STYLE_BY_MATERIAL.length
     && STYLE_BY_MATERIAL[material] !== NO_STYLE;
 }
 
@@ -82,27 +83,35 @@ export function applyCanvasLiquidIdentityStyle(
   surfaceExposure: number,
   columnDepthByte: number,
 ): void {
+  const waxFamily = material === Material.MWAX;
   const style = material >= 0 && material < STYLE_BY_MATERIAL.length
     ? STYLE_BY_MATERIAL[material] : NO_STYLE;
-  if (style === NO_STYLE) return;
+  if (!waxFamily && style === NO_STYLE) return;
 
   const connected = fieldAlpha * (0.68 / 255) + neighbourDensity * 0.04;
   const depth = columnDepthByte * (1 / 255);
   const motifScale = 0.48 + connected * 0.52
-    + surfaceExposure * SURFACE_SCALE[style] + depth * DEPTH_SCALE[style];
+    + surfaceExposure * (waxFamily ? 0.16 : SURFACE_SCALE[style])
+    + depth * (waxFamily ? -0.16 : DEPTH_SCALE[style]);
   const relief = signedFieldRelief * connected * 11;
   const cell = ((y & TILE_MASK) << TILE_SHIFT) | (x & TILE_MASK);
-  const motif = (style * TILE_CELLS + cell) * CHANNELS;
-  const depthColor = style * CHANNELS;
+  const motif = waxFamily ? 0 : (style * TILE_CELLS + cell) * CHANNELS;
+  const depthColor = waxFamily ? 0 : style * CHANNELS;
+  const motifRed = waxFamily
+    ? canvasWaxFamilyMotifDelta(RenderPhase.Liquid, x, y, 0) : MOTIF_RGB[motif];
+  const motifGreen = waxFamily
+    ? canvasWaxFamilyMotifDelta(RenderPhase.Liquid, x, y, 1) : MOTIF_RGB[motif + 1];
+  const motifBlue = waxFamily
+    ? canvasWaxFamilyMotifDelta(RenderPhase.Liquid, x, y, 2) : MOTIF_RGB[motif + 2];
 
   output[0] += clampDelta(
-    MOTIF_RGB[motif] * motifScale + relief + DEPTH_RGB[depthColor] * depth,
+    motifRed * motifScale + relief + (waxFamily ? -1 : DEPTH_RGB[depthColor]) * depth,
   );
   output[1] += clampDelta(
-    MOTIF_RGB[motif + 1] * motifScale + relief + DEPTH_RGB[depthColor + 1] * depth,
+    motifGreen * motifScale + relief + (waxFamily ? -2 : DEPTH_RGB[depthColor + 1]) * depth,
   );
   output[2] += clampDelta(
-    MOTIF_RGB[motif + 2] * motifScale + relief + DEPTH_RGB[depthColor + 2] * depth,
+    motifBlue * motifScale + relief + (waxFamily ? -3 : DEPTH_RGB[depthColor + 2]) * depth,
   );
 }
 
@@ -192,7 +201,7 @@ function buildMotifLookup(): void {
         if (diamond >= 6 && diamond <= 9) { red = 4; green = -3; blue = 11; }
         else if (shear <= 2) { red = 8; green = 2; blue = 6; }
         else { red = -2; green = 1; blue = 3; }
-      } else {
+      } else if (style === 10) {
         // ISOZ: coherent decay rings matching its solid ISZS phase partner.
         const localX = (x & 15) - 8;
         const localY = (y & 15) - 8;
