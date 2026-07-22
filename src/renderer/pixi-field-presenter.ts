@@ -407,6 +407,49 @@ vec3 crystallineSolidIdentityDelta(float material, vec2 worldPosition) {
   if (material == 74.0) delta *= 0.5;
   return delta / 255.0;
 }
+vec3 pasteResistFamilyIdentityDelta(float family, float phase, vec2 worldPosition) {
+  // Two phase-continuous 32-cell grammars. Native phase changes keep the
+  // family topology fixed while liquid and solid optics alter only its signed
+  // RGB interpretation. This helper owns no sample, clock, derivative, alpha,
+  // support, or output-scale resource.
+  vec2 cell = mod(floor(worldPosition), 32.0);
+  vec2 local = mod(cell, 16.0) - vec2(8.0);
+  float radiusSquared = dot(local, local);
+  vec3 delta;
+  if (family < 0.5) {
+    float layer = mod(cell.y + floor(cell.x / 8.0) * 2.0, 8.0);
+    bool seam = layer < 2.0;
+    bool pocket = radiusSquared >= 18.0 && radiusSquared <= 36.0;
+    if (phase < 0.5) {
+      if (seam) delta = vec3(-7.0, -6.0, -4.0);
+      else if (pocket) delta = vec3(6.0, 4.0, 2.0);
+      else delta = vec3(1.0, 0.0, 2.0);
+    } else {
+      if (seam) delta = vec3(6.0, 5.0, 3.0);
+      else if (pocket) delta = vec3(-3.0, -2.0, 1.0);
+      else delta = vec3(1.0, 0.0, 2.0);
+    }
+  } else {
+    bool rising = mod(cell.x * 2.0 + cell.y, 16.0) < 2.0;
+    bool falling = mod(cell.x - cell.y * 2.0 + 32.0, 16.0) < 2.0;
+    bool node = radiusSquared <= 9.0;
+    bool junction = rising && falling;
+    if (phase < 0.5) {
+      if (node) delta = vec3(13.0, 4.0, -4.0);
+      else if (junction) delta = vec3(14.0, 3.0, -3.0);
+      else if (rising) delta = vec3(10.0, 2.0, -4.0);
+      else if (falling) delta = vec3(7.0, -4.0, 2.0);
+      else delta = vec3(1.0, -1.0, -2.0);
+    } else {
+      if (node) delta = vec3(10.0, 3.0, -3.0);
+      else if (junction) delta = vec3(12.0, 2.0, -2.0);
+      else if (rising) delta = vec3(7.0, 2.0, -2.0);
+      else if (falling) delta = vec3(5.0, -2.0, 2.0);
+      else delta = vec3(2.0, -1.0, -1.0);
+    }
+  }
+  return delta / 255.0;
+}
 vec3 liquidMaterialIdentityDelta(
   float material, vec2 worldPosition, float density, float depth, vec2 slope
 ) {
@@ -456,6 +499,12 @@ vec3 liquidMaterialIdentityDelta(
   } else if (material == 59.0) {
     // MWAX: softened phase of the same WAX lamella and bloom structure.
     identity = waxFamilyIdentityDelta(1.0, worldPosition);
+  } else if (material == 60.0) {
+    // PSTE: hydrated strata retain PSTS's pressure-compressed topology.
+    identity = pasteResistFamilyIdentityDelta(0.0, 1.0, worldPosition);
+  } else if (material == 61.0) {
+    // RSST: flowing resist retains RSSS's woven insulating laminate.
+    identity = pasteResistFamilyIdentityDelta(1.0, 1.0, worldPosition);
   } else if (material == 62.0) {
     // VIRS: the canonical family capsid takes liquid density/depth support.
     identity = virusFamilyIdentityDelta(0.0, worldPosition);
@@ -1868,7 +1917,7 @@ void main() {
         );
       }
     }
-    // Twelve unusual/radioactive liquids retain a world-anchored material signature
+    // Fourteen unusual/radioactive liquids retain a world-anchored material signature
     // after generic body optics. The authoritative semantic fragment is the
     // only owner: reconstructed support, walls, halos, and emissive projections
     // remain exact. This changes RGB only and adds no sample or resource.
@@ -1876,8 +1925,8 @@ void main() {
       && surfaceOnly < 0.5 && wall < 0.5 && emissionOnly < 0.5
       && family == 2.0 && !materialEmissive
       && (material == 38.0 || (material >= 54.0 && material <= 57.0)
-        || material == 59.0
-        || material == 62.0 || material == 100.0 || material == 102.0
+        || (material >= 59.0 && material <= 62.0)
+        || material == 100.0 || material == 102.0
         || material == 104.0 || material == 202.0 || material == 207.0)) {
       color += liquidMaterialIdentityDelta(
         material, fieldPosition, liquidSurfaceDensity, liquidDepth,
@@ -2452,12 +2501,13 @@ void main() {
       float interference = (planeWave + radialWave) * 0.5;
       color *= 0.95 + interference * 0.045;
     }
-    // Twelve uncommon solids layer one static identity over the generic body
+    // Thirteen uncommon solids layer one static identity over the generic body
     // structure above. Only authoritative semantic matter participates; this
     // RGB arithmetic adds no sample, pass, field, allocation, clock term, or
     // output-scale resource, and leaves later trait decals independent.
     float unusualSolid = material == 27.0 || material == 68.0 || material == 74.0
-      || material == 76.0 || material == 77.0 || material == 80.0 || material == 196.0
+      || material == 76.0 || material == 77.0 || material == 79.0
+      || material == 80.0 || material == 196.0
       || material == 206.0 || material == 208.0 || material == 209.0
       || material == 210.0 || material == 216.0 ? 1.0 : 0.0;
     if (uUnusualSolidStyling > 0.5 && unusualSolid > 0.5
@@ -2481,14 +2531,12 @@ void main() {
         float prismFace = step(prismTile.y, prismTile.x);
         color += mix(vec3(0.018, 0.045, 0.070), vec3(0.070, 0.026, 0.052), prismFace)
           * prismEdge * mix(0.62, 1.0, solidDepth);
-      } else if (material == 206.0) {
-        // PSTS: compressed strata tighten with body depth.
-        float stratum = 1.0 - step(
-          mix(1.0, 2.0, solidDepth),
-          mod(solidCell.y + floor(solidCell.x / 9.0), mix(7.0, 5.0, solidDepth))
+      } else if (material == 79.0 || material == 206.0) {
+        // RSSS/PSTS: native solid products retain their liquid family's exact
+        // topology while common solid depth and relief remain authoritative.
+        color += pasteResistFamilyIdentityDelta(
+          material == 206.0 ? 0.0 : 1.0, 0.0, fieldPosition
         );
-        color *= 1.0 - stratum * (0.038 + solidDepth * 0.026);
-        color += vec3(0.046, 0.034, 0.022) * stratum * max(0.0, solidReliefTone * 9.0);
       } else if (material == 80.0 || material == 208.0
         || material == 209.0 || material == 210.0) {
         // SHLD1-4: one coherent shell gains progressively nested armour bands.

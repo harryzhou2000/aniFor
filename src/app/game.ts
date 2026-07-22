@@ -59,6 +59,9 @@ import {
 import {
   CRYSTALLINE_GRAPHICS_AUDIT, prepareCrystallineGraphicsAuditFixture,
 } from './crystalline-graphics-audit';
+import {
+  PASTE_RESIST_GRAPHICS_AUDIT, preparePasteResistGraphicsAuditFixture,
+} from './paste-resist-graphics-audit';
 
 const AUTOSAVE_KEY = 'stillroom-world-v1';
 
@@ -414,6 +417,10 @@ export class Game {
       crystallineGraphicsAtlas: () => CRYSTALLINE_GRAPHICS_AUDIT,
       prepareCrystallineGraphicsFixture: () => {
         prepareCrystallineGraphicsAuditFixture(this.simulation);
+      },
+      pasteResistGraphicsAtlas: () => PASTE_RESIST_GRAPHICS_AUDIT,
+      preparePasteResistGraphicsFixture: () => {
+        preparePasteResistGraphicsAuditFixture(this.simulation);
       },
       canvasPresentationTiming: () => this.renderer.getCanvasPresentationTiming(),
       requestWebGLPresentationTimingSample: () => this.renderer.requestWebGLPresentationTimingSample(),

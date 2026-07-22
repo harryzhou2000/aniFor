@@ -8,6 +8,7 @@ import {
 const UNUSUAL_SOLIDS = [
   Material.BIZRS,
   Material.PSTS,
+  Material.RSSS,
   Material.SHLD1,
   Material.SHLD2,
   Material.SHLD3,
@@ -21,13 +22,12 @@ const UNUSUAL_SOLIDS = [
 ] as const;
 
 describe('Canvas unusual-solid morphology', () => {
-  it('covers exactly the twelve requested non-contiguous identities', () => {
+  it('covers exactly the thirteen requested non-contiguous identities', () => {
     for (const material of UNUSUAL_SOLIDS) {
       expect(isCanvasUnusualSolidMaterial(material)).toBe(true);
     }
     for (const material of [
       Material.Empty,
-      Material.RSSS,
       Material.SPNG,
       Material.BIZRG,
       Material.RFGL,
@@ -127,6 +127,7 @@ describe('Canvas unusual-solid morphology', () => {
 
     expect(response(Material.BIZRS, 0, 0)).not.toEqual(response(Material.BIZRS, 4, 4));
     expect(response(Material.PSTS, 4, 0)).not.toEqual(response(Material.PSTS, 4, 3));
+    expect(response(Material.RSSS, 0, 0)).not.toEqual(response(Material.RSSS, 3, 2));
     expect(response(Material.VRSS, 0, 7)).not.toEqual(response(Material.VRSS, 7, 7));
     expect(response(Material.Wax, 0, 0)).not.toEqual(response(Material.Wax, 3, 3));
     expect(response(Material.DRIC, 0, 0)).not.toEqual(response(Material.DRIC, 4, 4));
@@ -138,12 +139,13 @@ describe('Canvas unusual-solid morphology', () => {
   it('is an exact no-op for controls adjacent to every target range', () => {
     for (const material of [
       Material.Empty,
-      Material.RSSS,
       Material.SPNG,
       Material.BIZRG,
       Material.BRAY,
       Material.RFGL,
       Material.VRSG,
+      Material.PSTE,
+      Material.RSST,
       Material.BCOL,
       Material.Quartz,
     ]) {

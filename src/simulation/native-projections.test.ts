@@ -127,8 +127,107 @@ describe('compiled native-only projections', () => {
     expect(await temperatureProduct(Material.FRZZ, SimulationTool.Heat, 20)).toContain(Material.FRZW);
     expect(await temperatureProduct(Material.VIRS, SimulationTool.Cool, 30)).toContain(Material.VRSS);
     expect(await temperatureProduct(Material.VIRS, SimulationTool.Heat, 200)).toContain(Material.VRSG);
-    expect(await pressureProduct(Material.PSTE, 20)).toContain(Material.PSTS);
     expect(await pressureProduct(Material.RFRG, 55)).toContain(Material.RFGL);
+  });
+
+  it('round-trips one paste particle through its exact native pressure threshold', async () => {
+    const simulation = await PowderToyBackend.load(moduleArtifact.href);
+    simulation.paint(point.x, point.y, Material.PSTE, 0);
+    expect(sampleLocalMaterial(simulation, Material.PSTE, 96).count).toBe(1);
+    expect(sampleLocalMaterial(simulation, Material.PSTS, 96).count).toBe(0);
+
+    // Air is authored per world cell but stored on TPT's coarser pressure grid.
+    // Twenty radius-four applications leave the occupied pressure cell above
+    // PSTE's strict 0.5 threshold even after BeforeSim diffuses the field.
+    for (let index = 0; index < 20; index++) {
+      simulation.applySimulationTool(SimulationTool.Air, point.x, point.y, 4);
+    }
+    simulation.step();
+    const hardenedPaste = sampleLocalMaterial(simulation, Material.PSTS, 96);
+    expect(simulation.pressure()[point.y * simulation.width + point.x]).toBeGreaterThan(0.5);
+    expect(sampleLocalMaterial(simulation, Material.PSTE, 96).count).toBe(0);
+    expect(hardenedPaste.count).toBe(1);
+
+    for (let index = 0; index < 20; index++) {
+      simulation.applySimulationTool(SimulationTool.Vacuum, point.x, point.y, 4);
+    }
+    simulation.step();
+    const softenedPaste = sampleLocalMaterial(simulation, Material.PSTE, 96);
+    expect(simulation.pressure()[point.y * simulation.width + point.x]).toBeLessThan(0.5);
+    expect(softenedPaste.count).toBe(1);
+    expect(sampleLocalMaterial(simulation, Material.PSTS, 96).count).toBe(0);
+  });
+
+  it('solidifies and liquefies resist through native energy overlays', async () => {
+    const simulation = await PowderToyBackend.load(moduleArtifact.href);
+
+    // The adapter uses ordinary TPT brush creation. Create the energy particle
+    // first so its photons-map entry can coexist with matter at the same cell.
+    simulation.paint(point.x, point.y, Material.PHOT, 0);
+    simulation.paint(point.x, point.y, Material.RSST, 0);
+    expect(sampleLocalMaterial(simulation, Material.RSST, 96).count).toBe(1);
+    simulation.step();
+    expect(sampleLocalMaterial(simulation, Material.RSST, 96).count).toBe(0);
+    expect(sampleLocalMaterial(simulation, Material.RSSS, 96).count).toBe(1);
+
+    simulation.clear();
+    simulation.paint(point.x, point.y, Material.NEUT, 0);
+    simulation.paint(point.x, point.y, Material.RSSS, 0);
+    expect(sampleLocalMaterial(simulation, Material.RSSS, 96).count).toBe(1);
+    simulation.step();
+    expect(sampleLocalMaterial(simulation, Material.RSSS, 96).count).toBe(0);
+    expect(sampleLocalMaterial(simulation, Material.RSST, 96).count).toBe(1);
+  });
+
+  it('destroys resist with an electron or a completed spark cycle', async () => {
+    const simulation = await PowderToyBackend.load(moduleArtifact.href);
+
+    simulation.paint(point.x, point.y, Material.ELEC, 0);
+    simulation.paint(point.x, point.y, Material.RSST, 0);
+    simulation.step();
+    expect(sampleLocalMaterial(simulation, Material.RSST, 96).count).toBe(0);
+    expect(simulation.cells().some(Boolean)).toBe(false);
+
+    simulation.clear();
+    simulation.paint(point.x, point.y, Material.RSST, 0);
+    simulation.paint(point.x, point.y, Material.SPRK, 0);
+    expect(sampleLocalMaterial(simulation, Material.RSST, 96).count).toBe(0);
+    expect(sampleLocalMaterial(simulation, Material.SPRK, 96).count).toBe(1);
+    for (let step = 0; step < 4; step++) simulation.step();
+    expect(sampleLocalMaterial(simulation, Material.SPRK, 96).count).toBe(0);
+    expect(simulation.cells().some(Boolean)).toBe(false);
+  });
+
+  it('converts resist reactants into their exact native explosive products', async () => {
+    const simulation = await PowderToyBackend.load(moduleArtifact.href);
+
+    simulation.paint(point.x, point.y, Material.RSST, 0);
+    simulation.paint(point.x + 1, point.y, Material.Gunpowder, 0);
+    simulation.step();
+    expect(sampleLocalMaterial(simulation, Material.RSST, 96).count).toBe(0);
+    expect(sampleLocalMaterial(simulation, Material.Gunpowder, 96).count).toBe(0);
+    expect(sampleLocalMaterial(simulation, Material.FIRW, 96).count).toBe(1);
+
+    simulation.clear();
+    simulation.paint(point.x, point.y, Material.RSST, 0);
+    simulation.paint(point.x + 1, point.y, Material.BCOL, 0);
+    simulation.step();
+    expect(sampleLocalMaterial(simulation, Material.RSST, 96).count).toBe(0);
+    expect(sampleLocalMaterial(simulation, Material.BCOL, 96).count).toBe(0);
+    expect(sampleLocalMaterial(simulation, Material.FSEP, 96).count).toBe(1);
+  });
+
+  it('fires paste into brick above its native 747 K limit', async () => {
+    const simulation = await PowderToyBackend.load(moduleArtifact.href);
+    simulation.paint(point.x, point.y, Material.PSTE, 0);
+    applyThermalTool(simulation, SimulationTool.Heat, 227);
+    const hotPaste = sampleLocalMaterial(simulation, Material.PSTE, 96);
+    expect(hotPaste.count).toBe(1);
+    expect(hotPaste.minimumTemperature).toBeGreaterThan(7470);
+
+    const brick = advanceToLocalPhase(simulation, Material.PSTE, Material.Brick);
+    expect(brick.count).toBe(1);
+    expect(sampleLocalMaterial(simulation, Material.PSTS, 96).count).toBe(0);
   });
 
   it('round-trips the native virus family through both temperature phase products', async () => {

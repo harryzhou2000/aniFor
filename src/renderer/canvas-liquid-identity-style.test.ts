@@ -13,6 +13,8 @@ const IDENTITY_LIQUIDS = [
   Material.GEL,
   Material.GLOW,
   Material.MWAX,
+  Material.PSTE,
+  Material.RSST,
   Material.VIRS,
   Material.FRZW,
   Material.RFGL,
@@ -44,7 +46,7 @@ describe('Canvas liquid identity styling', () => {
     expect(CANVAS_LIQUID_IDENTITY_LOOKUP_BYTES).toBeLessThan(35 * 1024);
   });
 
-  it('covers the nine unusual and three radioactive exact liquid identities', () => {
+  it('covers fourteen unusual, phase-family, and radioactive exact liquid identities', () => {
     for (const material of IDENTITY_LIQUIDS) {
       expect(hasCanvasLiquidIdentityStyle(material)).toBe(true);
     }
@@ -52,7 +54,8 @@ describe('Canvas liquid identity styling', () => {
       Material.Empty,
       Material.LiquidNitrogen,
       Material.LO2,
-      Material.RSST,
+      Material.PSTS,
+      Material.RSSS,
       Material.VRSG,
       Material.BCOL,
     ]) {
@@ -95,7 +98,7 @@ describe('Canvas liquid identity styling', () => {
     }
   });
 
-  it('gives all twelve materials unique coherent bulk fingerprints', () => {
+  it('gives all fourteen materials unique coherent bulk fingerprints', () => {
     const fingerprints = new Set<string>();
     for (const material of IDENTITY_LIQUIDS) {
       let fingerprint = 2166136261;
@@ -138,6 +141,8 @@ describe('Canvas liquid identity styling', () => {
     expect(style(Material.GEL, 2, 3)).not.toEqual(style(Material.GEL, 12, 3));
     expect(style(Material.GLOW, 9, 2)).not.toEqual(style(Material.GLOW, 9, 9));
     expect(style(Material.MWAX, 0, 0)).not.toEqual(style(Material.MWAX, 3, 3));
+    expect(style(Material.PSTE, 0, 0)).not.toEqual(style(Material.PSTE, 13, 8));
+    expect(style(Material.RSST, 0, 0)).not.toEqual(style(Material.RSST, 3, 2));
     expect(style(Material.VIRS, 0, 7)).not.toEqual(style(Material.VIRS, 7, 7));
     expect(style(Material.FRZW, 8, 1)).not.toEqual(style(Material.FRZW, 4, 3));
     expect(style(Material.RFGL, 10, 1)).not.toEqual(style(Material.RFGL, 10, 8));
@@ -161,7 +166,8 @@ describe('Canvas liquid identity styling', () => {
       Material.Empty,
       Material.LiquidNitrogen,
       Material.LO2,
-      Material.RSST,
+      Material.PSTS,
+      Material.RSSS,
       Material.VRSG,
       Material.BCOL,
     ]) {

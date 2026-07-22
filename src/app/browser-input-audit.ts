@@ -17,6 +17,7 @@ import type { SpongeGraphicsAuditSnapshot } from './sponge-graphics-audit';
 import type { VirusGraphicsAuditSnapshot } from './virus-graphics-audit';
 import type { WaxGraphicsAuditSnapshot } from './wax-graphics-audit';
 import type { CrystallineGraphicsAuditSnapshot } from './crystalline-graphics-audit';
+import type { PasteResistGraphicsAuditSnapshot } from './paste-resist-graphics-audit';
 
 export interface BrowserInputAuditApi {
   readonly version: 1;
@@ -97,6 +98,8 @@ export interface BrowserInputAuditApi {
   prepareWaxGraphicsFixture(): void;
   crystallineGraphicsAtlas(): CrystallineGraphicsAuditSnapshot;
   prepareCrystallineGraphicsFixture(): void;
+  pasteResistGraphicsAtlas(): PasteResistGraphicsAuditSnapshot;
+  preparePasteResistGraphicsFixture(): void;
   canvasPresentationTiming(): CanvasPresentationTiming | undefined;
   requestWebGLPresentationTimingSample(): boolean;
   webGLPresentationTiming(): WebGLPresentationTiming | undefined;

@@ -50,11 +50,12 @@ const spongeGraphicsOnly = process.argv.includes('--sponge-graphics-only');
 const virusGraphicsOnly = process.argv.includes('--virus-graphics-only');
 const waxGraphicsOnly = process.argv.includes('--wax-graphics-only');
 const crystalGraphicsOnly = process.argv.includes('--crystal-graphics-only');
+const pasteResistGraphicsOnly = process.argv.includes('--paste-resist-graphics-only');
 const usesProductionBundle = cellularGraphicsOnly || sensorGraphicsOnly
   || unusualPowderGraphicsOnly || unusualSolidGraphicsOnly
   || liquidIdentityGraphicsOnly || gasIdentityGraphicsOnly || energyRadioactiveGraphicsOnly
   || organicPlantGraphicsOnly || spongeGraphicsOnly || virusGraphicsOnly || waxGraphicsOnly
-  || crystalGraphicsOnly
+  || crystalGraphicsOnly || pasteResistGraphicsOnly
   || scaleEightOnly;
 const AUDIT_BASE_URL = usesProductionBundle ? PRODUCTION_BUNDLE_URL : ORIGIN + '/';
 const screenshotRequest = process.argv.find((argument) => argument.startsWith('--screenshot='))?.slice('--screenshot='.length);
@@ -118,7 +119,8 @@ async function main() {
       || roleGraphicsOnly || cellularGraphicsOnly || sensorGraphicsOnly
       || unusualPowderGraphicsOnly || unusualSolidGraphicsOnly || liquidIdentityGraphicsOnly
       || gasIdentityGraphicsOnly || energyRadioactiveGraphicsOnly || organicPlantGraphicsOnly
-      || spongeGraphicsOnly || virusGraphicsOnly || waxGraphicsOnly || crystalGraphicsOnly;
+      || spongeGraphicsOnly || virusGraphicsOnly || waxGraphicsOnly || crystalGraphicsOnly
+      || pasteResistGraphicsOnly;
     if (powderBodyOnly) assertPairedPowderBodyDepth(results);
     if (liquidDepthOnly) assertPairedLiquidOpticalDepth(results);
     if (solidDepthOnly) assertPairedSolidOpticalDepth(results);
@@ -138,12 +140,14 @@ async function main() {
     if (virusGraphicsOnly) assertPairedVirusGraphics(results);
     if (waxGraphicsOnly) assertPairedWaxGraphics(results);
     if (crystalGraphicsOnly) assertPairedCrystallineGraphics(results);
+    if (pasteResistGraphicsOnly) assertPairedPasteResistGraphics(results);
     if (!scaleEightOnly && !materialAtlasOnly && !reducedAudit) assertPairedVisualRelief(results);
     if (!scaleEightOnly && !reducedAudit) assertPairedMaterialAtlas(results);
     compactMaterialAtlasResults(results);
     compactVirusGraphicsResults(results);
     compactWaxGraphicsResults(results);
     compactCrystallineGraphicsResults(results);
+    compactPasteResistGraphicsResults(results);
     console.log(JSON.stringify({ world: `${WORLD_WIDTH}x${WORLD_HEIGHT}`, results }, null, 2));
   } catch (error) {
     if (serverLog.trim()) console.error(serverLog.trim());
@@ -160,7 +164,8 @@ async function auditMode(mode) {
   const startsBlank = cellularGraphicsOnly || sensorGraphicsOnly
     || unusualPowderGraphicsOnly || unusualSolidGraphicsOnly || liquidIdentityGraphicsOnly
     || gasIdentityGraphicsOnly || energyRadioactiveGraphicsOnly || organicPlantGraphicsOnly
-    || spongeGraphicsOnly || virusGraphicsOnly || waxGraphicsOnly || crystalGraphicsOnly;
+    || spongeGraphicsOnly || virusGraphicsOnly || waxGraphicsOnly || crystalGraphicsOnly
+    || pasteResistGraphicsOnly;
   const query = new URLSearchParams({
     scene: 'render-lab', inputAudit: '1', renderScale: '2',
     auditStage: startsBlank ? 'blank' : 'canonical',
@@ -345,6 +350,12 @@ async function auditMode(mode) {
       assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
       cdp.close();
       return { backend: mode, crystallineGraphics, browserErrors: errors.length };
+    }
+    if (pasteResistGraphicsOnly) {
+      const pasteResistGraphics = await auditPasteResistGraphics(cdp, mode);
+      assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
+      cdp.close();
+      return { backend: mode, pasteResistGraphics, browserErrors: errors.length };
     }
     if (mobileOnly) {
       const mobile = await auditMobile(
@@ -4872,6 +4883,41 @@ function normalizeCrystallineGraphicsAtlas(snapshot) {
   return { cards };
 }
 
+function normalizePasteResistGraphicsAtlas(snapshot) {
+  const cards = (Array.isArray(snapshot) ? snapshot : snapshot?.cards ?? []).map((entry) => ({
+    ...entry,
+    card: cellularRect(entry.card ?? entry),
+    body: cellularRect(entry.body),
+    surfaceProbe: cellularRect(entry.surfaceProbe),
+    coreProbe: cellularRect(entry.coreProbe),
+    authoredCavity: cellularRect(entry.authoredCavity),
+    openChimney: cellularRect(entry.openChimney),
+    haloOuter: cellularRect(entry.haloOuter),
+    phaseStructure: cellularPoints(entry.phaseStructure),
+    isolated: cellularPoint(entry.isolated),
+    guardedBlank: cellularRect(entry.guardedBlank),
+    familyContact: {
+      ...entry.familyContact,
+      owner: cellularRect(entry.familyContact.owner),
+      neighbour: cellularRect(entry.familyContact.neighbour),
+    },
+    metalContact: {
+      ...entry.metalContact,
+      owner: cellularRect(entry.metalContact.owner),
+      neighbour: cellularRect(entry.metalContact.neighbour),
+    },
+    motifProbes: (entry.motifProbes ?? []).map((probe) => ({
+      tileOrigin: cellularPoint(probe.tileOrigin),
+      ridge: cellularRect(probe.ridge),
+      fold: cellularRect(probe.fold),
+      bloom: cellularRect(probe.bloom),
+      joint: cellularRect(probe.joint),
+      interstitial: cellularRect(probe.interstitial),
+    })),
+  }));
+  return { cards };
+}
+
 /** Exact nine-card Energy motif proof plus the complete 21-card semantic guard. */
 async function auditEnergyRadioactiveGraphics(cdp, mode) {
   const started = performance.now();
@@ -6747,6 +6793,408 @@ function summarizeWaxBackingResponses(flat, styled, repeated) {
       repeatRgbPeak: repeatPeak,
       profile: Array.from(buckets, (value) => total > 0 ? value / total : 0),
       axisMap, motifAxis,
+    };
+  });
+}
+
+/** Exact paired phase-family proof for PSTE/PSTS and RSST/RSSS. */
+async function auditPasteResistGraphics(cdp, mode) {
+  const started = performance.now();
+  const stage = (name) => console.error(
+    `[paste-resist-graphics:${mode}] ${name} ${Math.round(performance.now() - started)}ms`,
+  );
+  await waitForStablePageCapture(cdp, `${mode} initial blank paste/resist framebuffer`);
+  await evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    if (typeof audit.preparePasteResistGraphicsFixture !== 'function'
+      || typeof audit.pasteResistGraphicsAtlas !== 'function'
+      || typeof audit.setLiquidIdentityStyling !== 'function'
+      || typeof audit.setUnusualSolidStyling !== 'function') {
+      throw new Error('Paste/resist graphics audit API unavailable');
+    }
+    audit.preparePasteResistGraphicsFixture();
+    return true;
+  })()`);
+  const rawAtlas = await waitFor(() => evaluate(cdp, `(() => {
+    const atlas = window.__ANIFOR_INPUT_AUDIT__.pasteResistGraphicsAtlas();
+    const cards = Array.isArray(atlas) ? atlas : atlas?.cards;
+    return cards?.length === 4 ? atlas : false;
+  })()`), 15_000, `${mode} paste/resist graphics fixture`);
+  const atlas = normalizePasteResistGraphicsAtlas(rawAtlas);
+  const cardGeometry = atlas.cards.map(({ card }) => (
+    `${card.x},${card.y},${card.width},${card.height}`
+  )).join('|');
+  const bodyGeometry = atlas.cards.map(({ body }) => (
+    `${body.x},${body.y},${body.width},${body.height}`
+  )).join('|');
+  assert(atlas.cards.map(({ material }) => material).join(',') === '60,206,61,79'
+      && atlas.cards.map(({ code }) => code).join(',') === 'PSTE,PSTS,RSST,RSSS'
+      && atlas.cards.map(({ family }) => family).join(',') === 'paste,paste,resist,resist'
+      && atlas.cards.map(({ phase }) => phase).join(',') === 'liquid,solid,liquid,solid'
+      && atlas.cards.map(({ structureKind }) => structureKind).join(',')
+        === 'paste-rivulet,pressed-column,resist-film,hardened-mask'
+      && atlas.cards.map(({ phasePartnerMaterial }) => phasePartnerMaterial).join(',')
+        === '206,60,79,61'
+      && cardGeometry === '4,4,300,184|308,4,300,184|4,196,300,184|308,196,300,184'
+      && bodyGeometry === '20,20,144,104|340,20,144,104|20,212,144,104|340,212,144,104'
+      && atlas.cards.every(({ motifProbes }) => motifProbes.length === 8)
+      && atlas.cards.every(({ body }) => body.x % 32 === 20 && body.y % 32 === 20),
+  `${mode}: paste/resist atlas identity, family, or geometry contract changed`);
+  const semanticState = await evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    const snapshot = audit.pasteResistGraphicsAtlas();
+    const cards = Array.isArray(snapshot) ? snapshot : snapshot.cards;
+    const inside = (x, y, rect) => x >= rect.x && y >= rect.y
+      && x < rect.x + rect.width && y < rect.y + rect.height;
+    const exactRect = (rect, material) => {
+      for (let y = rect.y; y < rect.y + rect.height; y++) {
+        for (let x = rect.x; x < rect.x + rect.width; x++) {
+          if (audit.cell(x, y) !== material) return false;
+        }
+      }
+      return true;
+    };
+    return cards.map((entry) => {
+      let bodyExact = true;
+      for (let y = entry.body.y; y < entry.body.y + entry.body.height; y++) {
+        for (let x = entry.body.x; x < entry.body.x + entry.body.width; x++) {
+          const empty = inside(x, y, entry.authoredCavity) || inside(x, y, entry.openChimney);
+          bodyExact = bodyExact && audit.cell(x, y) === (empty ? 0 : entry.material);
+        }
+      }
+      return {
+        material: entry.material,
+        bodyExact,
+        cavityEmpty: exactRect(entry.authoredCavity, 0),
+        chimneyEmpty: exactRect(entry.openChimney, 0),
+        structureExact: entry.phaseStructure.every(({ x, y }) => audit.cell(x, y) === entry.material),
+        isolated: audit.cell(entry.isolated.x, entry.isolated.y),
+        guardedBlankEmpty: exactRect(entry.guardedBlank, 0),
+        familyOwnerExact: exactRect(entry.familyContact.owner, entry.material),
+        familyNeighbourExact: exactRect(
+          entry.familyContact.neighbour, entry.familyContact.neighbourMaterial,
+        ),
+        metalOwnerExact: exactRect(entry.metalContact.owner, entry.material),
+        metalExact: exactRect(entry.metalContact.neighbour, entry.metalContact.neighbourMaterial),
+      };
+    });
+  })()`);
+  assert(semanticState.every((entry) => entry.bodyExact && entry.cavityEmpty
+      && entry.chimneyEmpty && entry.structureExact && entry.isolated === entry.material
+      && entry.guardedBlankEmpty && entry.familyOwnerExact && entry.familyNeighbourExact
+      && entry.metalOwnerExact && entry.metalExact),
+  `${mode}: paste/resist fixture lost exact semantics or topology (${JSON.stringify(semanticState)})`);
+  stage('fixture-ready');
+
+  const setPasteResistStyling = async (enabled) => evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    audit.setLiquidIdentityStyling(${enabled});
+    audit.setUnusualSolidStyling(${enabled});
+    return true;
+  })()`);
+  await setPasteResistStyling(false);
+  const flat = await waitForStablePageCapture(cdp, `${mode} flat paste/resist framebuffer`);
+  const flatBacking = await samplePasteResistBacking(cdp);
+  await setPasteResistStyling(true);
+  const styled = await waitForStablePageCapture(cdp, `${mode} styled paste/resist framebuffer`);
+  const styledBacking = await samplePasteResistBacking(cdp);
+  await setPasteResistStyling(false);
+  const repeated = await waitForStablePageCapture(cdp, `${mode} repeated flat paste/resist framebuffer`);
+  const repeatedBacking = await samplePasteResistBacking(cdp);
+  for (const [state, backing] of [
+    ['flat', flatBacking], ['styled', styledBacking], ['repeated-flat', repeatedBacking],
+  ]) assertPasteResistBacking(backing, `${mode} ${state}`);
+  for (let index = 0; index < 4; index++) {
+    const base = flatBacking.cards[index];
+    const changed = styledBacking.cards[index];
+    const returned = repeatedBacking.cards[index];
+    assert(base.semanticSignature === changed.semanticSignature
+        && base.semanticSignature === returned.semanticSignature
+        && base.alphaSignature === changed.alphaSignature
+        && base.alphaSignature === returned.alphaSignature
+        && base.supportSignature === changed.supportSignature
+        && base.supportSignature === returned.supportSignature,
+    `${mode}: ${base.code} styling changed semantic/alpha/support signatures`);
+    assert(arraysEqual(base.metalContact.neighbourRgb, changed.metalContact.neighbourRgb)
+        && arraysEqual(base.metalContact.neighbourRgb, returned.metalContact.neighbourRgb),
+    `${mode}: ${base.code} identity styling leaked into its Metal neighbour`);
+    assert(arraysEqual(base.familyContact.ownerRgb, returned.familyContact.ownerRgb)
+        && arraysEqual(base.familyContact.neighbourRgb, returned.familyContact.neighbourRgb),
+    `${mode}: ${base.code} family contact did not return to its exact flat RGB`);
+    const meanRgb = (rgb) => {
+      const sum = [0, 0, 0];
+      for (let offset = 0; offset < rgb.length; offset += 3) {
+        sum[0] += rgb[offset]; sum[1] += rgb[offset + 1]; sum[2] += rgb[offset + 2];
+      }
+      const samples = Math.max(1, rgb.length / 3);
+      return sum.map((value) => value / samples);
+    };
+    const contactSeparation = (contact) => {
+      const owner = meanRgb(contact.ownerRgb), neighbour = meanRgb(contact.neighbourRgb);
+      return Math.hypot(
+        owner[0] - neighbour[0], owner[1] - neighbour[1], owner[2] - neighbour[2],
+      );
+    };
+    const flatSeparation = contactSeparation(base.familyContact);
+    const styledSeparation = contactSeparation(changed.familyContact);
+    assert(styledSeparation >= 4 && styledSeparation >= flatSeparation * 0.50,
+      `${mode}: ${base.code} phase-partner contact collapsed (${flatSeparation}/${styledSeparation})`);
+  }
+  const responses = summarizePasteResistBackingResponses(
+    flatBacking, styledBacking, repeatedBacking,
+  );
+  for (const response of responses) {
+    const motifValues = Object.values(response.motifResponse);
+    const motifSpread = Math.max(...motifValues) - Math.min(...motifValues);
+    assert(response.rgbRms >= 0.20 && response.rgbRms <= 16
+        && response.rgbPeak > 0 && response.rgbPeak <= 32
+        && response.changedSampleRatio >= 0.50 && response.repeatRgbPeak === 0,
+    `${mode}: ${response.code} response is absent, unbounded, or unstable (${JSON.stringify(response)})`);
+    assert(motifSpread >= 0.50 && Math.max(...motifValues) > 0,
+      `${mode}: ${response.code} lost its spatial family motif (${JSON.stringify(response.motifResponse)})`);
+  }
+  const familyCorrelations = {
+    paste: virusPearson(responses[0].axisMap, responses[1].axisMap),
+    resist: virusPearson(responses[2].axisMap, responses[3].axisMap),
+  };
+  assert(familyCorrelations.paste >= 0.55 && familyCorrelations.resist >= 0.55,
+    `${mode}: paste/resist phases lost within-family spatial continuity (${JSON.stringify(familyCorrelations)})`);
+  const normalFitRegions = atlas.cards.map((entry) => ({
+    name: `${entry.code}-normal-fit-body`,
+    x: entry.body.x + entry.body.width / 2,
+    y: entry.body.y + entry.body.height / 2,
+    radiusX: entry.body.width / 2,
+    radiusY: entry.body.height / 2,
+    signature: true, silhouette: true, fastSupport: true,
+  }));
+  const normalFit = await sampleBackdropRefractionRegions(cdp, {
+    straight: flat.capture.data,
+    refracted: styled.capture.data,
+    repeatedStraight: repeated.capture.data,
+  }, normalFitRegions, flat.canvasRect);
+  assert(normalFit.every((response) => response.rgbRms >= 0.20 && response.rgbRms <= 16
+      && response.rgbPeak > 0 && response.rgbPeak <= 32 && response.repeatRgbPeak === 0),
+  `${mode}: paste/resist styling is absent, unbounded, or unstable at normal fit (${JSON.stringify(normalFit)})`);
+  stage('responses-ready');
+  return {
+    cards: responses.map((response, index) => ({
+      ...response,
+      family: atlas.cards[index].family,
+      phase: atlas.cards[index].phase,
+      normalFitRgbRms: normalFit[index].rgbRms,
+      normalFitRgbPeak: normalFit[index].rgbPeak,
+    })),
+    familyCorrelations,
+    exactRepeatedOff: responses.every(({ repeatRgbPeak }) => repeatRgbPeak === 0),
+    supportSignatures: flatBacking.cards.map(({ supportSignature }) => supportSignature),
+  };
+}
+
+async function samplePasteResistBacking(cdp) {
+  return evaluate(cdp, `(() => {
+    const world = document.querySelector('.world-canvas');
+    if (!(world instanceof HTMLCanvasElement)) throw new Error('World canvas unavailable');
+    const copy = document.createElement('canvas');
+    copy.width = world.width; copy.height = world.height;
+    const context = copy.getContext('2d', { willReadFrequently: true });
+    if (!context) throw new Error('Paste/resist backing sampler unavailable');
+    context.drawImage(world, 0, 0);
+    const pixels = context.getImageData(0, 0, copy.width, copy.height).data;
+    const scaleX = copy.width / ${WORLD_WIDTH};
+    const scaleY = copy.height / ${WORLD_HEIGHT};
+    const snapshot = window.__ANIFOR_INPUT_AUDIT__.pasteResistGraphicsAtlas();
+    const cards = Array.isArray(snapshot) ? snapshot : snapshot.cards;
+    const key = ({ x, y }) => x + ',' + y;
+    const rectPoints = (rect) => {
+      const points = [];
+      for (let y = rect.y; y < rect.y + rect.height; y++) {
+        for (let x = rect.x; x < rect.x + rect.width; x++) points.push({ x, y });
+      }
+      return points;
+    };
+    const uniquePoints = (points) => [...new Map(points.map((point) => [key(point), point])).values()];
+    const cellAlpha = ({ x, y }) => {
+      const left = Math.floor(x * scaleX), top = Math.floor(y * scaleY);
+      const right = Math.max(left + 1, Math.floor((x + 1) * scaleX));
+      const bottom = Math.max(top + 1, Math.floor((y + 1) * scaleY));
+      let peak = 0;
+      for (let py = top; py < bottom; py++) for (let px = left; px < right; px++) {
+        peak = Math.max(peak, pixels[(py * copy.width + px) * 4 + 3]);
+      }
+      return peak;
+    };
+    const centreAlpha = ({ x, y }) => {
+      const px = Math.min(copy.width - 1, Math.floor((x + 0.5) * scaleX));
+      const py = Math.min(copy.height - 1, Math.floor((y + 0.5) * scaleY));
+      return pixels[(py * copy.width + px) * 4 + 3];
+    };
+    const samplePointRgb = (points) => {
+      const rgb = [];
+      for (const { x, y } of points) {
+        const px = Math.min(copy.width - 1, Math.floor((x + 0.5) * scaleX));
+        const py = Math.min(copy.height - 1, Math.floor((y + 0.5) * scaleY));
+        const offset = (py * copy.width + px) * 4;
+        rgb.push(pixels[offset], pixels[offset + 1], pixels[offset + 2]);
+      }
+      return rgb;
+    };
+    const sampleGrid = (rect, step = 2) => {
+      const points = [];
+      for (let y = rect.y; y < rect.y + rect.height; y += step) {
+        for (let x = rect.x; x < rect.x + rect.width; x += step) points.push({ x, y });
+      }
+      return {
+        width: Math.ceil(rect.width / step),
+        height: Math.ceil(rect.height / step),
+        rgb: samplePointRgb(points),
+      };
+    };
+    return {
+      scaleX, scaleY,
+      cards: cards.map((entry) => {
+        const emptyKeys = new Set([
+          ...rectPoints(entry.authoredCavity), ...rectPoints(entry.openChimney),
+        ].map(key));
+        const bodyPoints = rectPoints(entry.body).filter((point) => !emptyKeys.has(key(point)));
+        const structures = uniquePoints(entry.phaseStructure);
+        const guard = rectPoints(entry.guardedBlank);
+        const cavity = rectPoints(entry.authoredCavity);
+        const chimney = rectPoints(entry.openChimney);
+        let alphaSignature = 2166136261, supportSignature = 2166136261;
+        const left = Math.floor(entry.card.x * scaleX), top = Math.floor(entry.card.y * scaleY);
+        const right = Math.floor((entry.card.x + entry.card.width) * scaleX);
+        const bottom = Math.floor((entry.card.y + entry.card.height) * scaleY);
+        for (let py = top; py < bottom; py++) for (let px = left; px < right; px++) {
+          const alpha = pixels[(py * copy.width + px) * 4 + 3];
+          alphaSignature = Math.imul(alphaSignature ^ alpha, 16777619) >>> 0;
+          supportSignature = Math.imul(supportSignature ^ Number(alpha > 0), 16777619) >>> 0;
+        }
+        let semanticSignature = 2166136261;
+        for (let y = entry.card.y; y < entry.card.y + entry.card.height; y++) {
+          for (let x = entry.card.x; x < entry.card.x + entry.card.width; x++) {
+            semanticSignature = Math.imul(
+              semanticSignature ^ window.__ANIFOR_INPUT_AUDIT__.cell(x, y), 16777619,
+            ) >>> 0;
+          }
+        }
+        const contact = (control) => {
+          const owner = rectPoints(control.owner), neighbour = rectPoints(control.neighbour);
+          return {
+            ownerExpected: owner.length,
+            ownerSupported: owner.filter((point) => cellAlpha(point) > 0).length,
+            ownerRgb: samplePointRgb(owner),
+            neighbourExpected: neighbour.length,
+            neighbourSupported: neighbour.filter((point) => cellAlpha(point) > 0).length,
+            neighbourRgb: samplePointRgb(neighbour),
+          };
+        };
+        const body = sampleGrid(entry.body);
+        const motif = (kind) => samplePointRgb(entry.motifProbes.map((probe) => probe[kind]));
+        return {
+          code: entry.code, material: entry.material,
+          semanticSignature, alphaSignature, supportSignature,
+          bodyExpected: bodyPoints.length,
+          bodySupported: bodyPoints.filter((point) => cellAlpha(point) > 0).length,
+          structureExpected: structures.length,
+          structureSupported: structures.filter((point) => cellAlpha(point) > 0).length,
+          isolatedAlphaPeak: cellAlpha(entry.isolated),
+          guardedBlankExpected: guard.length,
+          guardedBlankTransparent: guard.filter((point) => cellAlpha(point) === 0).length,
+          cavityExpected: cavity.length,
+          cavityCentreTransparent: cavity.filter((point) => centreAlpha(point) === 0).length,
+          chimneyExpected: chimney.length,
+          chimneyCentreTransparent: chimney.filter((point) => centreAlpha(point) === 0).length,
+          familyContact: contact(entry.familyContact),
+          metalContact: contact(entry.metalContact),
+          bodyWidth: body.width, bodyHeight: body.height, bodyRgb: body.rgb,
+          motifRgb: {
+            ridge: motif('ridge'), fold: motif('fold'), bloom: motif('bloom'),
+            joint: motif('joint'), interstitial: motif('interstitial'),
+          },
+        };
+      }),
+    };
+  })()`);
+}
+
+function assertPasteResistBacking(backing, label) {
+  const structureCounts = [85, 145, 133, 200];
+  assert(Number.isInteger(backing.scaleX) && Number.isInteger(backing.scaleY)
+      && backing.scaleX > 0 && backing.scaleY > 0,
+  `${label}: paste/resist backing does not preserve integral scaling`);
+  assert(backing.cards.map(({ material }) => material).join(',') === '60,206,61,79'
+      && backing.cards.every((card, index) => card.bodyExpected === 14_676
+        && card.bodySupported === card.bodyExpected
+        && card.structureExpected === structureCounts[index]
+        && card.structureSupported === card.structureExpected
+        && card.isolatedAlphaPeak > 0
+        && card.guardedBlankExpected === 2_800
+        && card.guardedBlankTransparent === card.guardedBlankExpected
+        && card.cavityExpected === 120
+        && card.cavityCentreTransparent / card.cavityExpected >= 0.65
+        && card.chimneyExpected === 180
+        && card.chimneyCentreTransparent / card.chimneyExpected >= 0.75
+        && card.familyContact.ownerExpected === 192
+        && card.familyContact.ownerSupported === card.familyContact.ownerExpected
+        && card.familyContact.neighbourExpected === 256
+        && card.familyContact.neighbourSupported === card.familyContact.neighbourExpected
+        && card.metalContact.ownerExpected === 192
+        && card.metalContact.ownerSupported === card.metalContact.ownerExpected
+        && card.metalContact.neighbourExpected === 256
+        && card.metalContact.neighbourSupported === card.metalContact.neighbourExpected),
+  `${label}: paste/resist backing changed topology (${JSON.stringify(backing.cards.map((card) => ({
+    ...card, bodyRgb: undefined, motifRgb: undefined,
+    familyContact: { ...card.familyContact, ownerRgb: undefined, neighbourRgb: undefined },
+    metalContact: { ...card.metalContact, ownerRgb: undefined, neighbourRgb: undefined },
+  })))})`);
+}
+
+function summarizePasteResistBackingResponses(flat, styled, repeated) {
+  return flat.cards.map((base, index) => {
+    const changed = styled.cards[index], returned = repeated.cards[index];
+    let squared = 0, peak = 0, repeatPeak = 0, changedSamples = 0;
+    const buckets = new Float64Array(16), axisMap = [], signedChromaMap = [];
+    for (let offset = 0; offset < base.bodyRgb.length; offset += 3) {
+      const sample = offset / 3;
+      const x = sample % base.bodyWidth, y = Math.floor(sample / base.bodyWidth);
+      const bucket = Math.min(3, Math.floor(y * 4 / base.bodyHeight)) * 4
+        + Math.min(3, Math.floor(x * 4 / base.bodyWidth));
+      let sampleSquared = 0, any = false;
+      const deltas = [0, 0, 0];
+      for (let channel = 0; channel < 3; channel++) {
+        const delta = changed.bodyRgb[offset + channel] - base.bodyRgb[offset + channel];
+        deltas[channel] = delta;
+        squared += delta * delta; sampleSquared += delta * delta;
+        peak = Math.max(peak, Math.abs(delta)); buckets[bucket] += Math.abs(delta);
+        any ||= delta !== 0;
+        repeatPeak = Math.max(
+          repeatPeak, Math.abs(returned.bodyRgb[offset + channel] - base.bodyRgb[offset + channel]),
+        );
+      }
+      axisMap.push(Math.sqrt(sampleSquared));
+      signedChromaMap.push((deltas[0] + deltas[1]) * 0.5 - deltas[2]);
+      changedSamples += Number(any);
+    }
+    const total = buckets.reduce((sum, value) => sum + value, 0);
+    const motifResponse = {};
+    for (const kind of ['ridge', 'fold', 'bloom', 'joint', 'interstitial']) {
+      const before = base.motifRgb[kind], after = changed.motifRgb[kind];
+      let motifSquared = 0;
+      for (let offset = 0; offset < before.length; offset += 3) {
+        for (let channel = 0; channel < 3; channel++) {
+          const delta = after[offset + channel] - before[offset + channel];
+          motifSquared += delta * delta;
+        }
+      }
+      motifResponse[kind] = Math.sqrt(motifSquared / Math.max(1, before.length / 3));
+    }
+    return {
+      code: base.code, material: base.material,
+      rgbRms: Math.sqrt(squared / Math.max(1, base.bodyRgb.length)), rgbPeak: peak,
+      changedSampleRatio: changedSamples / Math.max(1, base.bodyRgb.length / 3),
+      repeatRgbPeak: repeatPeak,
+      profile: Array.from(buckets, (value) => total > 0 ? value / total : 0),
+      axisMap, signedChromaMap, motifResponse,
     };
   });
 }
@@ -9656,6 +10104,77 @@ function assertPairedWaxGraphics(results) {
 function compactWaxGraphicsResults(results) {
   for (const result of results) {
     for (const card of result.waxGraphics?.cards ?? []) delete card.axisMap;
+  }
+}
+
+function assertPairedPasteResistGraphics(results) {
+  const canvasResult = results.find((result) => result.backend === 'canvas2d');
+  const webglResult = results.find((result) => result.backend === 'webgl');
+  const canvas = canvasResult?.pasteResistGraphics;
+  const webgl = webglResult?.pasteResistGraphics;
+  assert(canvas && webgl,
+    'Paste/resist graphics gate requires both Canvas2D and WebGL results');
+  assert(canvas.cards.map(({ material }) => material).join(',') === '60,206,61,79'
+      && webgl.cards.map(({ material }) => material).join(',') === '60,206,61,79'
+      && canvas.exactRepeatedOff && webgl.exactRepeatedOff
+      && canvasResult.browserErrors === 0 && webglResult.browserErrors === 0,
+  'Paired paste/resist identity, topology, or repetition contract failed');
+  const parity = canvas.cards.map((canvasCard, index) => {
+    const webglCard = webgl.cards[index];
+    const responseRatio = canvasCard.rgbRms / Math.max(0.01, webglCard.rgbRms);
+    const normalFitRatio = canvasCard.normalFitRgbRms / Math.max(0.01, webglCard.normalFitRgbRms);
+    const canvasProfileTotal = canvasCard.profile.reduce((sum, value) => sum + value, 0);
+    const webglProfileTotal = webglCard.profile.reduce((sum, value) => sum + value, 0);
+    const profileDistance = Math.max(...canvasCard.profile.map(
+      (value, profileIndex) => Math.abs(value - webglCard.profile[profileIndex]),
+    ));
+    const motifCorrelation = virusPearson(canvasCard.axisMap, webglCard.axisMap);
+    const signedChromaCorrelation = virusPearson(
+      canvasCard.signedChromaMap, webglCard.signedChromaMap,
+    );
+    assert(responseRatio >= 0.40 && responseRatio <= 1.50,
+      `Canvas/WebGL ${canvasCard.code} response diverged (${canvasCard.rgbRms}/${webglCard.rgbRms})`);
+    assert(normalFitRatio >= 0.40 && normalFitRatio <= 1.50,
+      `Canvas/WebGL ${canvasCard.code} normal-fit response diverged (${canvasCard.normalFitRgbRms}/${webglCard.normalFitRgbRms})`);
+    assert(Math.abs(canvasProfileTotal - 1) <= 1e-6
+        && Math.abs(webglProfileTotal - 1) <= 1e-6
+        && profileDistance <= 0.05,
+      `Canvas/WebGL ${canvasCard.code} normalized spatial profile diverged (${profileDistance})`);
+    assert(motifCorrelation >= 0.55,
+      `Canvas/WebGL ${canvasCard.code} spatial motif diverged (${motifCorrelation})`);
+    assert(signedChromaCorrelation >= 0.45,
+      `Canvas/WebGL ${canvasCard.code} RGB direction diverged (${signedChromaCorrelation})`);
+    return {
+      code: canvasCard.code,
+      responseRatio: round(responseRatio, 4),
+      normalFitRatio: round(normalFitRatio, 4),
+      profileMaxDistance: round(profileDistance, 5),
+      motifCorrelation: round(motifCorrelation, 5),
+      signedChromaCorrelation: round(signedChromaCorrelation, 5),
+    };
+  });
+  assert(canvas.familyCorrelations.paste >= 0.55 && canvas.familyCorrelations.resist >= 0.55
+      && webgl.familyCorrelations.paste >= 0.55 && webgl.familyCorrelations.resist >= 0.55,
+  `Paired paste/resist phase continuity failed (${JSON.stringify({
+    canvas: canvas.familyCorrelations, webgl: webgl.familyCorrelations,
+  })})`);
+  console.error(`[paste-resist-graphics:paired] parity ${JSON.stringify({
+    canvasFamilyCorrelations: Object.fromEntries(Object.entries(canvas.familyCorrelations).map(
+      ([family, value]) => [family, round(value, 5)],
+    )),
+    webglFamilyCorrelations: Object.fromEntries(Object.entries(webgl.familyCorrelations).map(
+      ([family, value]) => [family, round(value, 5)],
+    )),
+    parity,
+  })}`);
+}
+
+function compactPasteResistGraphicsResults(results) {
+  for (const result of results) {
+    for (const card of result.pasteResistGraphics?.cards ?? []) {
+      delete card.axisMap;
+      delete card.signedChromaMap;
+    }
   }
 }
 

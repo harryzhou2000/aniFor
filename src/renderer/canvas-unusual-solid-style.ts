@@ -3,6 +3,7 @@ import {
   applyCanvasCrystallineSolidMorphology,
   isCanvasCrystallineSolidMaterial,
 } from './canvas-crystalline-solid-style';
+import { applyCanvasPasteResistFamilyMorphology } from './canvas-paste-resist-family-style';
 import { RenderPhase } from './render-profile';
 import { applyCanvasVirusFamilyMorphology } from './canvas-virus-family-style';
 import { applyCanvasWaxFamilyMorphology } from './canvas-wax-family-style';
@@ -12,6 +13,7 @@ export function isCanvasUnusualSolidMaterial(material: number): boolean {
   switch (material) {
     case Material.BIZRS:
     case Material.PSTS:
+    case Material.RSSS:
     case Material.SHLD1:
     case Material.SHLD2:
     case Material.SHLD3:
@@ -53,6 +55,10 @@ export function applyCanvasUnusualSolidMorphology(
     applyCanvasWaxFamilyMorphology(output, material, RenderPhase.Solid, x, y);
     return;
   }
+  if (material === Material.PSTS || material === Material.RSSS) {
+    applyCanvasPasteResistFamilyMorphology(output, material, RenderPhase.Solid, x, y);
+    return;
+  }
   if (isCanvasCrystallineSolidMaterial(material)) {
     applyCanvasCrystallineSolidMorphology(output, material, x, y);
     return;
@@ -71,16 +77,6 @@ export function applyCanvasUnusualSolidMorphology(
     red = hinge ? 10 : rising ? -3 : falling ? 6 : 1;
     green = hinge ? -4 : rising ? 7 : falling ? -2 : 2;
     blue = hinge ? 12 : rising ? 9 : falling ? 4 : 3;
-  } else if (material === Material.PSTS) {
-    // Pressure-hardened paste forms compressed horizontal sediment strata.
-    // Long staggered runs keep the bands from looking like a screen overlay.
-    const stagger = Math.floor(x / 13) & 1;
-    const layer = positiveModulo(y + stagger, 6);
-    const compressionSeam = layer === 0;
-    const pressedLip = layer === 1 && positiveModulo(x, 9) < 7;
-    red = compressionSeam ? -7 : pressedLip ? 5 : 1;
-    green = compressionSeam ? -6 : pressedLip ? 3 : 0;
-    blue = compressionSeam ? -4 : pressedLip ? 6 : 2;
   } else {
     // SHLD1-4 share one nested shell language. Each stage retains every plate
     // from the prior stage and adds a denser inner shell, making native growth

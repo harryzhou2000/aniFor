@@ -403,12 +403,12 @@ describe('Pixi presenter startup configuration', () => {
     expect(presenter.app.render).toHaveBeenCalledOnce();
   });
 
-  it('styles exactly twelve authoritative unusual/radioactive liquids with bounded RGB arithmetic', () => {
+  it('styles exactly fourteen authoritative unusual/radioactive liquids with bounded RGB arithmetic', () => {
     const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
     const helperStart = source.indexOf('vec3 liquidMaterialIdentityDelta(');
     const helperEnd = source.indexOf('vec3 botanicalIdentityDelta', helperStart);
     const helper = source.slice(helperStart, helperEnd);
-    const blockStart = source.indexOf('// Twelve unusual/radioactive liquids retain a world-anchored material signature');
+    const blockStart = source.indexOf('// Fourteen unusual/radioactive liquids retain a world-anchored material signature');
     const blockEnd = source.indexOf('  } else {', blockStart);
     const block = source.slice(blockStart, blockEnd);
     const ids = [...helper.matchAll(/material == (\d+)\.0/g)].map((match) => Number(match[1]));
@@ -420,10 +420,11 @@ describe('Pixi presenter startup configuration', () => {
     expect(blockStart).toBeGreaterThan(0);
     expect(blockEnd).toBeGreaterThan(blockStart);
     expect(dispatchStart).toBeGreaterThan(0);
-    expect(ids).toEqual([38, 54, 55, 56, 57, 59, 62, 202, 207, 100, 102, 104]);
+    expect(ids).toEqual([38, 54, 55, 56, 57, 59, 60, 61, 62, 202, 207, 100, 102, 104]);
     for (const motif of [
       'thinFilm', 'prism', 'bubbles', 'foldCrease',
-      'ringBand', 'waxFamilyIdentityDelta', 'virusFamilyIdentityDelta',
+      'ringBand', 'waxFamilyIdentityDelta', 'pasteResistFamilyIdentityDelta',
+      'virusFamilyIdentityDelta',
       'frost', 'ribbon', 'deepBand', 'shear', 'outerRing',
     ]) expect(helper).toContain(motif);
     expect(commonSetup).toContain('smoothstep(0.08, 0.72, density)');
@@ -435,7 +436,8 @@ describe('Pixi presenter startup configuration', () => {
     expect(block).toContain('surfaceOnly < 0.5 && wall < 0.5 && emissionOnly < 0.5');
     expect(block).toContain('family == 2.0 && !materialEmissive');
     expect(block).toContain('(material == 38.0 || (material >= 54.0 && material <= 57.0)');
-    expect(block).toContain('|| material == 62.0 || material == 100.0 || material == 102.0');
+    expect(block).toContain('|| (material >= 59.0 && material <= 62.0)');
+    expect(block).toContain('|| material == 100.0 || material == 102.0');
     expect(block).toContain('|| material == 104.0 || material == 202.0 || material == 207.0');
     expect(block).not.toContain('material == 54.0 || material == 55.0');
     expect(block).toContain('semanticSlope + volumeSlope');
@@ -867,7 +869,7 @@ describe('Pixi presenter startup configuration', () => {
     expect(presenter.app.render).toHaveBeenCalledOnce();
 
     const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
-    const start = source.indexOf('// Twelve uncommon solids layer one static identity');
+    const start = source.indexOf('// Thirteen uncommon solids layer one static identity');
     const end = source.indexOf('    if (uThermalMaterialStyling > 0.5', start);
     const unusualSolidBlock = source.slice(start, end);
     expect(start).toBeGreaterThan(0);
@@ -877,18 +879,17 @@ describe('Pixi presenter startup configuration', () => {
     expect(unusualSolidBlock).toContain('family == 0.0 && !materialEmissive');
     expect(unusualSolidBlock).toContain('surfaceOnly < 0.5 && halo < 0.5 && wall < 0.5');
     expect(unusualSolidBlock).toContain('wallOnly < 0.5 && emissionOnly < 0.5');
-    for (const material of [27, 68, 74, 76, 77, 80, 196, 206, 208, 209, 210, 216]) {
+    for (const material of [27, 68, 74, 76, 77, 79, 80, 196, 206, 208, 209, 210, 216]) {
       expect(unusualSolidBlock).toContain(`material == ${material}.0`);
     }
     expect(unusualSolidBlock).toContain('// BIZRS: angular prismatic facets split cool and warm reflections.');
-    expect(unusualSolidBlock).toContain('// PSTS: compressed strata tighten with body depth.');
+    expect(unusualSolidBlock).toContain('// RSSS/PSTS: native solid products retain their liquid family\'s exact');
     expect(unusualSolidBlock).toContain('// SHLD1-4: one coherent shell gains progressively nested armour bands.');
     expect(unusualSolidBlock).toContain('// VRSS: the same family capsid is carried by the rigid solid body.');
     expect(unusualSolidBlock).toContain('// WAX: crystalline blooms and cooling lamellae share MWAX\'s topology.');
     expect(unusualSolidBlock).toContain('crystallineSolidIdentityDelta(material, fieldPosition)');
     expect(unusualSolidBlock).toContain('virusFamilyIdentityDelta(2.0, fieldPosition)');
     expect(unusualSolidBlock).toContain('solidDepth');
-    expect(unusualSolidBlock).toContain('solidReliefTone');
     expect(unusualSolidBlock).not.toMatch(/texture\s*\(/);
     expect(unusualSolidBlock).not.toMatch(/\balpha\s*[+*]?=/);
     expect(unusualSolidBlock).not.toContain('uTime');
@@ -933,7 +934,7 @@ describe('Pixi presenter startup configuration', () => {
   it('uses sample-free 32-cell crystalline grammars for exact solid projections', () => {
     const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
     const start = source.indexOf('vec3 crystallineSolidIdentityDelta(');
-    const end = source.indexOf('vec3 liquidMaterialIdentityDelta(', start);
+    const end = source.indexOf('vec3 pasteResistFamilyIdentityDelta(', start);
     const helper = source.slice(start, end);
     expect(start).toBeGreaterThan(0);
     expect(end).toBeGreaterThan(start);
@@ -950,6 +951,26 @@ describe('Pixi presenter startup configuration', () => {
     expect(helper).not.toContain('sin(');
     expect(helper).not.toMatch(/\balpha\s*[+*]?=/);
     expect(source).toContain('color += crystallineSolidIdentityDelta(material, fieldPosition);');
+  });
+
+  it('uses two sample-free 32-cell grammars across paste and resist phases', () => {
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const start = source.indexOf('vec3 pasteResistFamilyIdentityDelta(');
+    const end = source.indexOf('vec3 liquidMaterialIdentityDelta(', start);
+    const helper = source.slice(start, end);
+    expect(start).toBeGreaterThan(0);
+    expect(end).toBeGreaterThan(start);
+    expect(helper).toContain('mod(floor(worldPosition), 32.0)');
+    for (const motif of ['layer', 'seam', 'pocket', 'rising', 'falling', 'node', 'junction']) {
+      expect(helper).toContain(motif);
+    }
+    expect(helper).not.toContain('texture(');
+    expect(helper).not.toContain('uTime');
+    expect(helper).not.toContain('sin(');
+    expect(helper).not.toMatch(/\balpha\s*[+*]?=/);
+    expect(source).toContain('identity = pasteResistFamilyIdentityDelta(0.0, 1.0, worldPosition);');
+    expect(source).toContain('identity = pasteResistFamilyIdentityDelta(1.0, 1.0, worldPosition);');
+    expect(source).toContain('material == 206.0 ? 0.0 : 1.0, 0.0, fieldPosition');
   });
 
   it('keeps contour and thick-body solid field light bounded behind strict eligibility', () => {
