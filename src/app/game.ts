@@ -47,6 +47,9 @@ import {
 import {
   ORGANIC_PLANT_GRAPHICS_AUDIT, prepareOrganicPlantGraphicsAuditFixture,
 } from './organic-plant-graphics-audit';
+import {
+  SPONGE_GRAPHICS_AUDIT, prepareSpongeGraphicsAuditFixture,
+} from './sponge-graphics-audit';
 
 const AUTOSAVE_KEY = 'stillroom-world-v1';
 
@@ -386,6 +389,10 @@ export class Game {
       organicPlantGraphicsAtlas: () => ORGANIC_PLANT_GRAPHICS_AUDIT,
       prepareOrganicPlantGraphicsFixture: () => {
         prepareOrganicPlantGraphicsAuditFixture(this.simulation);
+      },
+      spongeGraphicsAtlas: () => SPONGE_GRAPHICS_AUDIT,
+      prepareSpongeGraphicsFixture: () => {
+        prepareSpongeGraphicsAuditFixture(this.simulation);
       },
       canvasPresentationTiming: () => this.renderer.getCanvasPresentationTiming(),
       requestWebGLPresentationTimingSample: () => this.renderer.requestWebGLPresentationTimingSample(),

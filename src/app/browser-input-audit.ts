@@ -13,6 +13,7 @@ import type { LiquidIdentityGraphicsAuditSnapshot } from './liquid-identity-grap
 import type { GasIdentityGraphicsAuditSnapshot } from './gas-identity-graphics-audit';
 import type { EnergyRadioactiveGraphicsAuditSnapshot } from './energy-radioactive-graphics-audit';
 import type { OrganicPlantGraphicsAuditSnapshot } from './organic-plant-graphics-audit';
+import type { SpongeGraphicsAuditSnapshot } from './sponge-graphics-audit';
 
 export interface BrowserInputAuditApi {
   readonly version: 1;
@@ -85,6 +86,8 @@ export interface BrowserInputAuditApi {
   prepareEnergyRadioactiveGraphicsFixture(): void;
   organicPlantGraphicsAtlas(): OrganicPlantGraphicsAuditSnapshot;
   prepareOrganicPlantGraphicsFixture(): void;
+  spongeGraphicsAtlas(): SpongeGraphicsAuditSnapshot;
+  prepareSpongeGraphicsFixture(): void;
   canvasPresentationTiming(): CanvasPresentationTiming | undefined;
   requestWebGLPresentationTimingSample(): boolean;
   webGLPresentationTiming(): WebGLPresentationTiming | undefined;

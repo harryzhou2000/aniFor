@@ -29,6 +29,7 @@ import { shadeCanvasCellularMaterial } from './canvas-cellular-style';
 import { applyCanvasSensorMorphology } from './canvas-sensor-style';
 import { applyCanvasUnusualPowderStyle } from './canvas-unusual-powder-style';
 import { applyCanvasUnusualSolidMorphology } from './canvas-unusual-solid-style';
+import { applyCanvasSpongeMorphology } from './canvas-sponge-style';
 import { applyCanvasBotanicalMorphology } from './canvas-botanical-style';
 import {
   applyCanvasReconstructedSuspensionStyle, applyCanvasSemanticSuspensionStyle,
@@ -515,6 +516,7 @@ export class MaterialRenderer {
     if (enabled === this.unusualSolidStylingEnabled) return;
     this.unusualSolidStylingEnabled = enabled;
     this.presenter?.setUnusualSolidStylingEnabled(enabled);
+    this.solidOpticalDepthDirty = true;
     this.contourChunks.markAll();
     this.changed = true;
   }
@@ -899,7 +901,7 @@ export class MaterialRenderer {
       && scheduleTime - this.lastSolidOpticalDepthRefresh >= POWDER_SURFACE_REFRESH_INTERVAL) {
       writeSolidOpticalDepth(
         this.rendered, this.boundaryStability, fields.lookups.styleBytes,
-        width, this.renderedWalls,
+        width, this.renderedWalls, this.unusualSolidStylingEnabled,
       );
       this.solidOpticalDepthDirty = false;
       this.lastSolidOpticalDepthRefresh = scheduleTime;
@@ -1503,6 +1505,9 @@ export class MaterialRenderer {
             this.styledColor, surfaceLight, normalLight, solidRelief,
             denseSolidInterior, profile, optics, solidOpticalDepth, this.solidOpticalDepthEnabled,
           );
+          if (this.unusualSolidStylingEnabled && phase === RenderPhase.Solid) {
+            applyCanvasSpongeMorphology(this.styledColor, material, x, y);
+          }
           if (this.solidContactDepthEnabled && denseSolidInterior
             && applicableTraits === 0 && !info.emissive) {
             applyCanvasTranslucentCaustic(this.styledColor, solidRelief, material);

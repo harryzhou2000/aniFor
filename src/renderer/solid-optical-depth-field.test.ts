@@ -85,6 +85,27 @@ describe('solid optical depth field', () => {
     expect(target[50 * width + 50]).toBe(255);
   });
 
+  it('adds toggleable SPNG pore relief without changing surface or fine depth', () => {
+    const width = 61;
+    const materials = new Uint8Array(width * width).fill(Material.SPNG);
+    const lookups = createRenderLookups(ALL_MATERIALS);
+    const flat = new Uint8Array(materials.length);
+    const porous = new Uint8Array(materials.length);
+    writeSolidOpticalDepth(materials, flat, lookups.styleBytes, width, undefined, false);
+    writeSolidOpticalDepth(materials, porous, lookups.styleBytes, width, undefined, true);
+
+    const core = 24 * width + 24;
+    const litLip = 24 * width + 21;
+    const shadowLip = 24 * width + 27;
+    const background = 38 * width + 38;
+    expect(porous[core]).toBe(flat[core] + 36);
+    expect(porous[litLip]).toBe(Math.max(7, flat[litLip] - 90));
+    expect(porous[shadowLip]).toBe(flat[shadowLip] + 24);
+    expect(porous[background]).toBe(flat[background]);
+    expect(porous[0]).toBe(0);
+    expect(porous[1 * width + 1]).toBe(SOLID_OPTICAL_DEPTH_STEP);
+  });
+
   it('rejects malformed dimensions and planes', () => {
     expect(() => writeSolidOpticalDepth(
       new Uint8Array(5), new Uint8Array(5), styles(), 2,

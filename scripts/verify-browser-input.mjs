@@ -46,10 +46,11 @@ const liquidIdentityGraphicsOnly = process.argv.includes('--liquid-identity-grap
 const gasIdentityGraphicsOnly = process.argv.includes('--gas-identity-graphics-only');
 const energyRadioactiveGraphicsOnly = process.argv.includes('--energy-radioactive-graphics-only');
 const organicPlantGraphicsOnly = process.argv.includes('--organic-plant-graphics-only');
+const spongeGraphicsOnly = process.argv.includes('--sponge-graphics-only');
 const usesProductionBundle = cellularGraphicsOnly || sensorGraphicsOnly
   || unusualPowderGraphicsOnly || unusualSolidGraphicsOnly
   || liquidIdentityGraphicsOnly || gasIdentityGraphicsOnly || energyRadioactiveGraphicsOnly
-  || organicPlantGraphicsOnly
+  || organicPlantGraphicsOnly || spongeGraphicsOnly
   || scaleEightOnly;
 const AUDIT_BASE_URL = usesProductionBundle ? PRODUCTION_BUNDLE_URL : ORIGIN + '/';
 const screenshotRequest = process.argv.find((argument) => argument.startsWith('--screenshot='))?.slice('--screenshot='.length);
@@ -112,7 +113,8 @@ async function main() {
       || solidDepthOnly || gasChromaOnly || surfaceContourOnly || solidFieldOnly
       || roleGraphicsOnly || cellularGraphicsOnly || sensorGraphicsOnly
       || unusualPowderGraphicsOnly || unusualSolidGraphicsOnly || liquidIdentityGraphicsOnly
-      || gasIdentityGraphicsOnly || energyRadioactiveGraphicsOnly || organicPlantGraphicsOnly;
+      || gasIdentityGraphicsOnly || energyRadioactiveGraphicsOnly || organicPlantGraphicsOnly
+      || spongeGraphicsOnly;
     if (powderBodyOnly) assertPairedPowderBodyDepth(results);
     if (liquidDepthOnly) assertPairedLiquidOpticalDepth(results);
     if (solidDepthOnly) assertPairedSolidOpticalDepth(results);
@@ -128,6 +130,7 @@ async function main() {
     if (gasIdentityGraphicsOnly) assertPairedGasIdentityGraphics(results);
     if (energyRadioactiveGraphicsOnly) assertPairedEnergyRadioactiveGraphics(results);
     if (organicPlantGraphicsOnly) assertPairedOrganicPlantGraphics(results);
+    if (spongeGraphicsOnly) assertPairedSpongeGraphics(results);
     if (!scaleEightOnly && !materialAtlasOnly && !reducedAudit) assertPairedVisualRelief(results);
     if (!scaleEightOnly && !reducedAudit) assertPairedMaterialAtlas(results);
     compactMaterialAtlasResults(results);
@@ -146,7 +149,8 @@ async function auditMode(mode) {
   const dpr = mode === 'canvas2d' ? 2 : 1;
   const startsBlank = cellularGraphicsOnly || sensorGraphicsOnly
     || unusualPowderGraphicsOnly || unusualSolidGraphicsOnly || liquidIdentityGraphicsOnly
-    || gasIdentityGraphicsOnly || energyRadioactiveGraphicsOnly || organicPlantGraphicsOnly;
+    || gasIdentityGraphicsOnly || energyRadioactiveGraphicsOnly || organicPlantGraphicsOnly
+    || spongeGraphicsOnly;
   const query = new URLSearchParams({
     scene: 'render-lab', inputAudit: '1', renderScale: '2',
     auditStage: startsBlank ? 'blank' : 'canonical',
@@ -307,6 +311,12 @@ async function auditMode(mode) {
       assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
       cdp.close();
       return { backend: mode, organicPlantGraphics, browserErrors: errors.length };
+    }
+    if (spongeGraphicsOnly) {
+      const spongeGraphics = await auditSpongeGraphics(cdp, mode);
+      assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
+      cdp.close();
+      return { backend: mode, spongeGraphics, browserErrors: errors.length };
     }
     if (mobileOnly) {
       const mobile = await auditMobile(
@@ -4684,6 +4694,46 @@ function normalizeOrganicPlantGraphicsAtlas(snapshot) {
   };
 }
 
+function normalizeSpongeGraphicsAtlas(snapshot) {
+  const cards = (Array.isArray(snapshot) ? snapshot : snapshot?.cards ?? []).map((entry) => ({
+    ...entry,
+    card: cellularRect(entry.card ?? entry),
+    body: cellularRect(entry.body),
+    surfaceProbe: cellularRect(entry.surfaceProbe),
+    coreProbe: cellularRect(entry.coreProbe),
+    holes: (entry.holes ?? []).map(cellularRect),
+    openNotches: (entry.openNotches ?? []).map(cellularRect),
+    ribs: (entry.ribs ?? []).map(cellularRect),
+    isolated: cellularPoint(entry.isolated),
+    contacts: (entry.contacts ?? []).map((contact) => ({
+      ...contact,
+      owner: cellularRect(contact.owner),
+      neighbour: cellularRect(contact.neighbour),
+    })),
+    guardedBlank: cellularRect(entry.guardedBlank),
+    porePairs: (entry.porePairs ?? []).map((pair) => ({
+      core: cellularPoint(pair.core),
+      litRim: cellularPoint(pair.litRim),
+    })),
+  }));
+  return {
+    cards,
+    holes: Array.isArray(snapshot)
+      ? cards.flatMap(({ holes }) => holes.flatMap(cellularRectPoints))
+      : cellularPoints(snapshot?.holes),
+    openNotches: Array.isArray(snapshot)
+      ? cards.flatMap(({ openNotches }) => openNotches.flatMap(cellularRectPoints))
+      : cellularPoints(snapshot?.openNotches),
+    fineStructures: Array.isArray(snapshot)
+      ? cellularPoints(cards.flatMap(({ ribs }) => ribs.flatMap(cellularRectPoints)))
+      : cellularPoints(snapshot?.fineStructures),
+    contacts: Array.isArray(snapshot)
+      ? cards.flatMap(({ contacts }) => contacts) : snapshot?.contacts ?? [],
+    porePairs: Array.isArray(snapshot)
+      ? cards.flatMap(({ porePairs }) => porePairs) : snapshot?.porePairs ?? [],
+  };
+}
+
 /** Exact nine-card Energy motif proof plus the complete 21-card semantic guard. */
 async function auditEnergyRadioactiveGraphics(cdp, mode) {
   const started = performance.now();
@@ -5569,6 +5619,461 @@ function summarizeOrganicPlantBackingResponses(flat, styled, repeated) {
       responseProfile: Array.from(buckets, (value) => round(value / total, 5)),
     };
   });
+}
+
+/** Focused semantic, topology, and paired porous-volume proof for SPNG. */
+async function auditSpongeGraphics(cdp, mode) {
+  const started = performance.now();
+  const stage = (name) => console.error(
+    `[sponge-graphics:${mode}] ${name} ${Math.round(performance.now() - started)}ms`,
+  );
+  const blank = await waitForStablePageCapture(cdp, `${mode} initial blank SPNG framebuffer`);
+  await evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    if (typeof audit.prepareSpongeGraphicsFixture !== 'function'
+      || typeof audit.spongeGraphicsAtlas !== 'function'
+      || typeof audit.setUnusualSolidStyling !== 'function') {
+      throw new Error('SPNG graphics audit API unavailable');
+    }
+    audit.prepareSpongeGraphicsFixture();
+    return true;
+  })()`);
+  const rawAtlas = await waitFor(() => evaluate(cdp, `(() => {
+    const atlas = window.__ANIFOR_INPUT_AUDIT__.spongeGraphicsAtlas();
+    const cards = Array.isArray(atlas) ? atlas : atlas?.cards;
+    return cards?.length === 1 ? atlas : false;
+  })()`), 15_000, `${mode} SPNG graphics fixture`);
+  const atlas = normalizeSpongeGraphicsAtlas(rawAtlas);
+  assert(atlas.cards.length === 1 && atlas.cards[0].material === 81
+      && atlas.cards[0].code === 'SPNG' && atlas.holes.length === 232
+      && atlas.openNotches.length === 208 && atlas.fineStructures.length === 344
+      && atlas.contacts.length === 3 && atlas.porePairs.length === 271,
+  `${mode}: SPNG atlas contract changed (${JSON.stringify({
+    cards: atlas.cards.map(({ code, material }) => ({ code, material })),
+    holes: atlas.holes.length,
+    openNotches: atlas.openNotches.length,
+    fineStructures: atlas.fineStructures.length,
+    contacts: atlas.contacts.length,
+    porePairs: atlas.porePairs.length,
+  })})`);
+
+  const semanticState = await evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    const snapshot = audit.spongeGraphicsAtlas();
+    const entry = (Array.isArray(snapshot) ? snapshot : snapshot.cards)[0];
+    const inside = (x, y, rect) => x >= rect.x && y >= rect.y
+      && x < rect.x + rect.width && y < rect.y + rect.height;
+    const exactRect = (rect, material) => {
+      for (let y = rect.y; y < rect.y + rect.height; y++) {
+        for (let x = rect.x; x < rect.x + rect.width; x++) {
+          if (audit.cell(x, y) !== material) return false;
+        }
+      }
+      return true;
+    };
+    let bodyExact = true;
+    for (let y = entry.body.y; y < entry.body.y + entry.body.height; y++) {
+      for (let x = entry.body.x; x < entry.body.x + entry.body.width; x++) {
+        const empty = entry.holes.some((rect) => inside(x, y, rect))
+          || entry.openNotches.some((rect) => inside(x, y, rect));
+        bodyExact = bodyExact && audit.cell(x, y) === (empty ? 0 : entry.material);
+      }
+    }
+    return {
+      bodyExact,
+      surfaceProbeExact: exactRect(entry.surfaceProbe, entry.material),
+      coreProbeExact: exactRect(entry.coreProbe, entry.material),
+      holesEmpty: entry.holes.every((rect) => exactRect(rect, 0)),
+      openNotchesEmpty: entry.openNotches.every((rect) => exactRect(rect, 0)),
+      ribsExact: entry.ribs.every((rect) => exactRect(rect, entry.material)),
+      isolated: audit.cell(entry.isolated.x, entry.isolated.y),
+      guardedBlankEmpty: exactRect(entry.guardedBlank, 0),
+      contacts: entry.contacts.map((contact) => ({
+        ownerExact: exactRect(contact.owner, entry.material),
+        neighbourExact: exactRect(contact.neighbour, contact.neighbourMaterial),
+        neighbourMaterial: contact.neighbourMaterial,
+        abuts: contact.owner.x + contact.owner.width === contact.neighbour.x
+          && contact.owner.y === contact.neighbour.y
+          && contact.owner.height === contact.neighbour.height,
+      })),
+    };
+  })()`);
+  assert(semanticState.bodyExact && semanticState.surfaceProbeExact
+      && semanticState.coreProbeExact && semanticState.holesEmpty
+      && semanticState.openNotchesEmpty && semanticState.ribsExact
+      && semanticState.isolated === 81 && semanticState.guardedBlankEmpty
+      && semanticState.contacts.length === 3
+      && semanticState.contacts.every((contact, index) => contact.ownerExact
+        && contact.neighbourExact && contact.abuts
+        && contact.neighbourMaterial === [2, 23, 1][index]),
+  `${mode}: SPNG fixture lost authored body/hole/notch/rib/contact semantics (${JSON.stringify(semanticState)})`);
+  stage('fixture-ready');
+
+  const setSpongeStyling = async (enabled) => evaluate(
+    cdp, `window.__ANIFOR_INPUT_AUDIT__.setUnusualSolidStyling(${enabled}); true`,
+  );
+  await setSpongeStyling(false);
+  const flat = await waitForStablePageCapture(cdp, `${mode} flat SPNG framebuffer`);
+  const flatBacking = await sampleSpongeBacking(cdp);
+  await setSpongeStyling(true);
+  const styled = await waitForStablePageCapture(cdp, `${mode} styled SPNG framebuffer`);
+  const styledBacking = await sampleSpongeBacking(cdp);
+  await setSpongeStyling(false);
+  const repeated = await waitForStablePageCapture(cdp, `${mode} repeated flat SPNG framebuffer`);
+  const repeatedBacking = await sampleSpongeBacking(cdp);
+  for (const [state, backing] of [
+    ['flat', flatBacking], ['styled', styledBacking], ['repeated-flat', repeatedBacking],
+  ]) assertSpongeBacking(backing, `${mode} ${state}`);
+
+  assert(flatBacking.semanticSignature === styledBacking.semanticSignature
+      && flatBacking.semanticSignature === repeatedBacking.semanticSignature
+      && flatBacking.alphaSignature === styledBacking.alphaSignature
+      && flatBacking.alphaSignature === repeatedBacking.alphaSignature
+      && flatBacking.supportSignature === styledBacking.supportSignature
+      && flatBacking.supportSignature === repeatedBacking.supportSignature,
+  `${mode}: SPNG identity styling changed semantic/alpha/support signatures (${JSON.stringify({
+    flat: compactSpongeBacking(flatBacking),
+    styled: compactSpongeBacking(styledBacking),
+    repeated: compactSpongeBacking(repeatedBacking),
+  })})`);
+  assert(flatBacking.contacts.every((contact, index) => (
+    arraysEqual(contact.neighbourRgb, styledBacking.contacts[index].neighbourRgb)
+      && arraysEqual(contact.neighbourRgb, repeatedBacking.contacts[index].neighbourRgb)
+  )), `${mode}: SPNG styling leaked into Water/Metal/Sand contact controls`);
+
+  const backingResponse = summarizeSpongeBackingResponse(
+    flatBacking, styledBacking, repeatedBacking,
+  );
+  assert(backingResponse.rgbRms >= 0.20 && backingResponse.rgbRms <= 18
+      && backingResponse.rgbPeak > 0 && backingResponse.rgbPeak <= 40
+      && backingResponse.changedSampleRatio >= 0.05
+      && backingResponse.changedSampleRatio <= 0.80
+      && backingResponse.surfaceRgbRms > 0 && backingResponse.coreRgbRms > 0
+      && (mode === 'webgl' || backingResponse.ribRgbRms > 0)
+      && backingResponse.contactOwnerRgbRms.every((value) => value > 0)
+      && backingResponse.repeatRgbPeak === 0,
+  `${mode}: SPNG response is absent, unbounded, localized incorrectly, or non-repeatable (${JSON.stringify(backingResponse)})`);
+  assert(backingResponse.porePairPassRatio >= 0.70
+      && backingResponse.poreContrastMean >= 1.5,
+  `${mode}: SPNG lost recessed-core/lit-rim pore relief (${JSON.stringify(backingResponse)})`);
+  assert(backingResponse.responseProfile.length === 16
+      && Math.abs(backingResponse.responseProfile.reduce((sum, value) => sum + value, 0) - 1) <= 0.001,
+  `${mode}: SPNG response profile is not a normalized 4x4 field (${JSON.stringify(backingResponse)})`);
+
+  const bodyRegion = {
+    name: 'sponge-normal-fit-body',
+    x: atlas.cards[0].body.x + atlas.cards[0].body.width / 2,
+    y: atlas.cards[0].body.y + atlas.cards[0].body.height / 2,
+    radiusX: atlas.cards[0].body.width / 2,
+    radiusY: atlas.cards[0].body.height / 2,
+    signature: true,
+    silhouette: true,
+    fastSupport: true,
+  };
+  const [normalFitResponse] = await sampleBackdropRefractionRegions(cdp, {
+    straight: flat.capture.data,
+    refracted: styled.capture.data,
+    repeatedStraight: repeated.capture.data,
+  }, [bodyRegion], flat.canvasRect);
+  assert(normalFitResponse.rgbRms > 0 && normalFitResponse.rgbRms <= 24
+      && normalFitResponse.rgbPeak > 0 && normalFitResponse.rgbPeak <= 64
+      && normalFitResponse.repeatRgbPeak === 0,
+  `${mode}: SPNG has no bounded exact response at normal fit (${JSON.stringify(normalFitResponse)})`);
+  const [flatSupport, styledSupport] = await Promise.all([
+    samplePageRegions(
+      cdp, flat.capture.data, [bodyRegion],
+      blank.capture.data, blank.reference.data, flat.canvasRect,
+    ),
+    samplePageRegions(
+      cdp, styled.capture.data, [bodyRegion],
+      blank.capture.data, blank.reference.data, flat.canvasRect,
+    ),
+  ]);
+  assert(flatSupport[0].visible > 0 && flatSupport[0].worldArea > 0
+      && styledSupport[0].visible > 0 && styledSupport[0].worldArea > 0,
+  `${mode}: SPNG body is not visible at normal fit (${JSON.stringify({ flatSupport, styledSupport })})`);
+  stage('responses-ready');
+
+  return {
+    cards: atlas.cards.length,
+    material: atlas.cards[0].material,
+    holeCells: atlas.holes.length,
+    openNotchCells: atlas.openNotches.length,
+    fineStructureCells: atlas.fineStructures.length,
+    isolatedControls: 1,
+    contacts: atlas.contacts.map(({ neighbourMaterial }) => neighbourMaterial),
+    porePairs: atlas.porePairs.length,
+    exactRepeatedOff: normalFitResponse.repeatRgbPeak === 0,
+    normalFitRgbRms: normalFitResponse.rgbRms,
+    normalFitRgbPeak: normalFitResponse.rgbPeak,
+    backingRgbRms: backingResponse.rgbRms,
+    backingRgbPeak: backingResponse.rgbPeak,
+    backingChangedSampleRatio: backingResponse.changedSampleRatio,
+    backingRepeatRgbPeak: backingResponse.repeatRgbPeak,
+    surfaceRgbRms: backingResponse.surfaceRgbRms,
+    coreRgbRms: backingResponse.coreRgbRms,
+    ribRgbRms: backingResponse.ribRgbRms,
+    contactOwnerRgbRms: backingResponse.contactOwnerRgbRms,
+    porePairPassRatio: backingResponse.porePairPassRatio,
+    poreContrastMean: backingResponse.poreContrastMean,
+    backingResponseProfile: backingResponse.responseProfile,
+    supportSignature: flatBacking.supportSignature,
+  };
+}
+
+async function sampleSpongeBacking(cdp) {
+  return evaluate(cdp, `(() => {
+    const world = document.querySelector('.world-canvas');
+    if (!(world instanceof HTMLCanvasElement)) throw new Error('World canvas unavailable');
+    const copy = document.createElement('canvas');
+    copy.width = world.width;
+    copy.height = world.height;
+    const context = copy.getContext('2d', { willReadFrequently: true });
+    if (!context) throw new Error('SPNG backing sampler unavailable');
+    context.drawImage(world, 0, 0);
+    const pixels = context.getImageData(0, 0, copy.width, copy.height).data;
+    const scaleX = copy.width / ${WORLD_WIDTH};
+    const scaleY = copy.height / ${WORLD_HEIGHT};
+    const snapshot = window.__ANIFOR_INPUT_AUDIT__.spongeGraphicsAtlas();
+    const entry = (Array.isArray(snapshot) ? snapshot : snapshot.cards)[0];
+    const key = ({ x, y }) => x + ',' + y;
+    const rectPoints = (rect) => {
+      const points = [];
+      for (let y = rect.y; y < rect.y + rect.height; y++) {
+        for (let x = rect.x; x < rect.x + rect.width; x++) points.push({ x, y });
+      }
+      return points;
+    };
+    const uniquePoints = (points) => [...new Map(points.map((point) => [key(point), point])).values()];
+    const cellAlpha = ({ x, y }) => {
+      const left = Math.floor(x * scaleX);
+      const top = Math.floor(y * scaleY);
+      const right = Math.max(left + 1, Math.floor((x + 1) * scaleX));
+      const bottom = Math.max(top + 1, Math.floor((y + 1) * scaleY));
+      let minimum = 255;
+      let peak = 0;
+      for (let py = top; py < bottom; py++) for (let px = left; px < right; px++) {
+        const alpha = pixels[(py * copy.width + px) * 4 + 3];
+        minimum = Math.min(minimum, alpha);
+        peak = Math.max(peak, alpha);
+      }
+      return { minimum, peak };
+    };
+    const samplePointRgb = (points) => {
+      const rgb = [];
+      for (const { x, y } of points) {
+        const px = Math.min(copy.width - 1, Math.floor((x + 0.5) * scaleX));
+        const py = Math.min(copy.height - 1, Math.floor((y + 0.5) * scaleY));
+        const offset = (py * copy.width + px) * 4;
+        rgb.push(pixels[offset], pixels[offset + 1], pixels[offset + 2]);
+      }
+      return rgb;
+    };
+    const sampleGridRgb = (rect, step = 1) => {
+      const points = [];
+      for (let y = rect.y; y < rect.y + rect.height; y += step) {
+        for (let x = rect.x; x < rect.x + rect.width; x += step) points.push({ x, y });
+      }
+      return {
+        width: Math.ceil(rect.width / step),
+        height: Math.ceil(rect.height / step),
+        rgb: samplePointRgb(points),
+      };
+    };
+    const holePoints = entry.holes.flatMap(rectPoints);
+    const notchPoints = entry.openNotches.flatMap(rectPoints);
+    const emptyKeys = new Set([...holePoints, ...notchPoints].map(key));
+    const bodyPoints = rectPoints(entry.body).filter((point) => !emptyKeys.has(key(point)));
+    const protectedHolePoints = entry.holes.flatMap((rect) => rectPoints({
+      x: rect.x + 1, y: rect.y + 1,
+      width: Math.max(0, rect.width - 2), height: Math.max(0, rect.height - 2),
+    }));
+    const ribPoints = uniquePoints(entry.ribs.flatMap(rectPoints));
+    const guardPoints = rectPoints(entry.guardedBlank);
+    const cardLeft = Math.floor(entry.card.x * scaleX);
+    const cardTop = Math.floor(entry.card.y * scaleY);
+    const cardRight = Math.floor((entry.card.x + entry.card.width) * scaleX);
+    const cardBottom = Math.floor((entry.card.y + entry.card.height) * scaleY);
+    let alphaSignature = 2166136261;
+    let supportSignature = 2166136261;
+    for (let py = cardTop; py < cardBottom; py++) for (let px = cardLeft; px < cardRight; px++) {
+      const alpha = pixels[(py * copy.width + px) * 4 + 3];
+      alphaSignature = Math.imul(alphaSignature ^ alpha, 16777619) >>> 0;
+      supportSignature = Math.imul(supportSignature ^ Number(alpha > 0), 16777619) >>> 0;
+    }
+    let semanticSignature = 2166136261;
+    for (let y = entry.card.y; y < entry.card.y + entry.card.height; y++) {
+      for (let x = entry.card.x; x < entry.card.x + entry.card.width; x++) {
+        semanticSignature = Math.imul(
+          semanticSignature ^ window.__ANIFOR_INPUT_AUDIT__.cell(x, y), 16777619,
+        ) >>> 0;
+      }
+    }
+    const body = sampleGridRgb(entry.body, 2);
+    return {
+      width: copy.width,
+      height: copy.height,
+      scaleX,
+      scaleY,
+      material: entry.material,
+      bodyExpected: bodyPoints.length,
+      bodySupported: bodyPoints.filter((point) => cellAlpha(point).peak > 0).length,
+      holeExpected: holePoints.length,
+      holeOpen: holePoints.filter((point) => cellAlpha(point).minimum === 0).length,
+      protectedHoleExpected: protectedHolePoints.length,
+      protectedHoleTransparent: protectedHolePoints.filter((point) => cellAlpha(point).peak === 0).length,
+      notchExpected: notchPoints.length,
+      notchOpen: notchPoints.filter((point) => cellAlpha(point).minimum === 0).length,
+      ribExpected: ribPoints.length,
+      ribSupported: ribPoints.filter((point) => cellAlpha(point).peak > 0).length,
+      isolatedAlphaPeak: cellAlpha(entry.isolated).peak,
+      guardedBlankExpected: guardPoints.length,
+      guardedBlankTransparent: guardPoints.filter((point) => cellAlpha(point).peak === 0).length,
+      contacts: entry.contacts.map((contact) => {
+        const owner = rectPoints(contact.owner);
+        const neighbour = rectPoints(contact.neighbour);
+        return {
+          neighbourMaterial: contact.neighbourMaterial,
+          ownerExpected: owner.length,
+          ownerSupported: owner.filter((point) => cellAlpha(point).peak > 0).length,
+          neighbourExpected: neighbour.length,
+          neighbourSupported: neighbour.filter((point) => cellAlpha(point).peak > 0).length,
+          ownerRgb: samplePointRgb(owner),
+          neighbourRgb: samplePointRgb(neighbour),
+        };
+      }),
+      semanticSignature,
+      alphaSignature,
+      supportSignature,
+      bodyWidth: body.width,
+      bodyHeight: body.height,
+      bodyRgb: body.rgb,
+      surfaceRgb: samplePointRgb(rectPoints(entry.surfaceProbe)),
+      coreRgb: samplePointRgb(rectPoints(entry.coreProbe)),
+      ribRgb: samplePointRgb(ribPoints),
+      poreCoreRgb: samplePointRgb(entry.porePairs.map(({ core }) => core)),
+      poreRimRgb: samplePointRgb(entry.porePairs.map(({ litRim }) => litRim)),
+    };
+  })()`);
+}
+
+function assertSpongeBacking(backing, label) {
+  assert(Number.isInteger(backing.scaleX) && Number.isInteger(backing.scaleY)
+      && backing.scaleX > 0 && backing.scaleY > 0,
+  `${label}: backing does not preserve integral world scaling (${backing.scaleX}x${backing.scaleY})`);
+  assert(backing.material === 81 && backing.bodyExpected === 48_840
+      && backing.bodySupported === backing.bodyExpected
+      && backing.holeExpected === 232 && backing.holeOpen === backing.holeExpected
+      && backing.protectedHoleExpected === 134
+      && backing.protectedHoleTransparent === backing.protectedHoleExpected
+      && backing.notchExpected === 208 && backing.notchOpen === backing.notchExpected
+      && backing.ribExpected === 344 && backing.ribSupported === backing.ribExpected
+      && backing.isolatedAlphaPeak > 0
+      && backing.guardedBlankExpected === 12_544
+      && backing.guardedBlankTransparent === backing.guardedBlankExpected
+      && backing.contacts.length === 3
+      && backing.contacts.every((contact, index) => contact.neighbourMaterial === [2, 23, 1][index]
+        && contact.ownerExpected === 560 && contact.ownerSupported === contact.ownerExpected
+        && contact.neighbourExpected === 728
+        && contact.neighbourSupported === contact.neighbourExpected),
+  `${label}: SPNG backing changed body/hole/notch/rib/isolated/contact topology (${JSON.stringify(
+    compactSpongeBacking(backing),
+  )})`);
+}
+
+function compactSpongeBacking(backing) {
+  const {
+    bodyRgb: _bodyRgb, surfaceRgb: _surfaceRgb, coreRgb: _coreRgb, ribRgb: _ribRgb,
+    poreCoreRgb: _poreCoreRgb, poreRimRgb: _poreRimRgb, contacts, ...summary
+  } = backing;
+  return {
+    ...summary,
+    scale: `${backing.scaleX}x${backing.scaleY}`,
+    contacts: contacts.map(({ ownerRgb: _ownerRgb, neighbourRgb: _neighbourRgb, ...contact }) => contact),
+  };
+}
+
+function summarizeSpongeBackingResponse(flat, styled, repeated) {
+  const response = (base, changed, returned, width = base.length / 3, height = 1) => {
+    assert(base.length === changed.length && base.length === returned.length,
+      'SPNG backing response geometry changed');
+    let squared = 0;
+    let peak = 0;
+    let repeatPeak = 0;
+    let changedSamples = 0;
+    const buckets = new Float64Array(16);
+    for (let offset = 0; offset < base.length; offset += 3) {
+      const sample = offset / 3;
+      const x = sample % width;
+      const y = Math.floor(sample / width);
+      const bucket = Math.min(3, Math.floor(y * 4 / Math.max(1, height))) * 4
+        + Math.min(3, Math.floor(x * 4 / Math.max(1, width)));
+      let sampleChanged = false;
+      for (let channel = 0; channel < 3; channel++) {
+        const delta = changed[offset + channel] - base[offset + channel];
+        const repeat = returned[offset + channel] - base[offset + channel];
+        squared += delta * delta;
+        peak = Math.max(peak, Math.abs(delta));
+        repeatPeak = Math.max(repeatPeak, Math.abs(repeat));
+        buckets[bucket] += Math.abs(delta);
+        sampleChanged ||= delta !== 0;
+      }
+      changedSamples += Number(sampleChanged);
+    }
+    const samples = Math.max(1, base.length / 3);
+    return {
+      rms: Math.sqrt(squared / Math.max(1, base.length)),
+      peak,
+      repeatPeak,
+      changedRatio: changedSamples / samples,
+      buckets,
+    };
+  };
+  const body = response(
+    flat.bodyRgb, styled.bodyRgb, repeated.bodyRgb, flat.bodyWidth, flat.bodyHeight,
+  );
+  const surface = response(flat.surfaceRgb, styled.surfaceRgb, repeated.surfaceRgb);
+  const core = response(flat.coreRgb, styled.coreRgb, repeated.coreRgb);
+  const ribs = response(flat.ribRgb, styled.ribRgb, repeated.ribRgb);
+  const contactOwners = flat.contacts.map((contact, index) => response(
+    contact.ownerRgb, styled.contacts[index].ownerRgb, repeated.contacts[index].ownerRgb,
+  ));
+  let passedPairs = 0;
+  let poreContrast = 0;
+  let poreRepeatPeak = 0;
+  const luma = (rgb, offset) => rgb[offset] * 0.2126
+    + rgb[offset + 1] * 0.7152 + rgb[offset + 2] * 0.0722;
+  for (let offset = 0; offset < flat.poreCoreRgb.length; offset += 3) {
+    const coreDelta = luma(styled.poreCoreRgb, offset) - luma(flat.poreCoreRgb, offset);
+    const rimDelta = luma(styled.poreRimRgb, offset) - luma(flat.poreRimRgb, offset);
+    const contrast = rimDelta - coreDelta;
+    poreContrast += contrast;
+    passedPairs += Number(contrast >= 1);
+    for (let channel = 0; channel < 3; channel++) {
+      poreRepeatPeak = Math.max(
+        poreRepeatPeak,
+        Math.abs(repeated.poreCoreRgb[offset + channel] - flat.poreCoreRgb[offset + channel]),
+        Math.abs(repeated.poreRimRgb[offset + channel] - flat.poreRimRgb[offset + channel]),
+      );
+    }
+  }
+  const total = Math.max(1, body.buckets.reduce((sum, value) => sum + value, 0));
+  return {
+    rgbRms: round(body.rms, 4),
+    rgbPeak: body.peak,
+    changedSampleRatio: round(body.changedRatio, 5),
+    surfaceRgbRms: round(surface.rms, 4),
+    coreRgbRms: round(core.rms, 4),
+    ribRgbRms: round(ribs.rms, 4),
+    contactOwnerRgbRms: contactOwners.map(({ rms }) => round(rms, 4)),
+    repeatRgbPeak: Math.max(
+      body.repeatPeak, surface.repeatPeak, core.repeatPeak, ribs.repeatPeak,
+      poreRepeatPeak, ...contactOwners.map(({ repeatPeak }) => repeatPeak),
+    ),
+    porePairPassRatio: round(passedPairs / Math.max(1, flat.poreCoreRgb.length / 3), 5),
+    poreContrastMean: round(poreContrast / Math.max(1, flat.poreCoreRgb.length / 3), 4),
+    responseProfile: Array.from(body.buckets, (value) => round(value / total, 5)),
+  };
 }
 
 /** Focused semantic, atmosphere-volume, and RGB-identity proof for all 17 gases. */
@@ -7832,6 +8337,40 @@ function assertPairedOrganicPlantGraphics(results) {
     });
   }
   console.error(`[organic-plant-graphics:paired] parity ${JSON.stringify(parity)}`);
+}
+
+function assertPairedSpongeGraphics(results) {
+  const canvas = results.find((result) => result.backend === 'canvas2d')?.spongeGraphics;
+  const webgl = results.find((result) => result.backend === 'webgl')?.spongeGraphics;
+  if (!canvas || !webgl) return;
+  for (const result of [canvas, webgl]) {
+    assert(result.cards === 1 && result.material === 81
+        && result.holeCells === 232 && result.openNotchCells === 208
+        && result.fineStructureCells === 344 && result.isolatedControls === 1
+        && result.contacts.join(',') === '2,23,1' && result.porePairs === 271
+        && result.exactRepeatedOff && result.backingRepeatRgbPeak === 0,
+    `paired SPNG topology/repeatability contract failed (${JSON.stringify(result)})`);
+  }
+  const responseRatio = canvas.backingRgbRms / Math.max(0.01, webgl.backingRgbRms);
+  const normalFitRatio = canvas.normalFitRgbRms / Math.max(0.01, webgl.normalFitRgbRms);
+  const poreContrastRatio = canvas.poreContrastMean / Math.max(0.01, webgl.poreContrastMean);
+  const profileDistance = Math.max(...canvas.backingResponseProfile.map(
+    (value, index) => Math.abs(value - webgl.backingResponseProfile[index]),
+  ));
+  assert(responseRatio >= 0.25 && responseRatio <= 4,
+    `Canvas/WebGL SPNG backing response diverged (${canvas.backingRgbRms}/${webgl.backingRgbRms})`);
+  assert(normalFitRatio >= 0.20 && normalFitRatio <= 5,
+    `Canvas/WebGL SPNG normal-fit response diverged (${canvas.normalFitRgbRms}/${webgl.normalFitRgbRms})`);
+  assert(poreContrastRatio >= 0.25 && poreContrastRatio <= 4,
+    `Canvas/WebGL SPNG pore relief diverged (${canvas.poreContrastMean}/${webgl.poreContrastMean})`);
+  assert(profileDistance <= 0.20,
+    `Canvas/WebGL SPNG spatial response diverged (${profileDistance})`);
+  console.error(`[sponge-graphics:paired] parity ${JSON.stringify({
+    responseRatio: round(responseRatio, 4),
+    normalFitRatio: round(normalFitRatio, 4),
+    poreContrastRatio: round(poreContrastRatio, 4),
+    profileMaxDistance: round(profileDistance, 5),
+  })}`);
 }
 
 function assertGasSpectralResponseVectors(samples, label, suffix = '') {

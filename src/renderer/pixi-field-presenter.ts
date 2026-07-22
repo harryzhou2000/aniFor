@@ -2622,6 +2622,7 @@ export class PixiFieldPresenter {
   private webGLTimingSequence = 0;
   private powderSurfaceDirty = true;
   private solidOpticalDepthDirty = true;
+  private unusualSolidStylingEnabled = true;
   private liquidOpticalDepthHydrated = false;
   private lastPowderSurfaceRefresh = -Infinity;
   private lastSolidOpticalDepthRefresh = -Infinity;
@@ -3092,6 +3093,7 @@ export class PixiFieldPresenter {
     uniforms.uSensorMaterialStyling = sensorMaterialStylingEnabled ? 1 : 0;
     uniforms.uUnusualPowderStyling = unusualPowderStylingEnabled ? 1 : 0;
     uniforms.uUnusualSolidStyling = unusualSolidStylingEnabled ? 1 : 0;
+    this.unusualSolidStylingEnabled = unusualSolidStylingEnabled;
     uniforms.uLiquidIdentityStyling = liquidIdentityStylingEnabled ? 1 : 0;
     uniforms.uPowderBodyDepth = powderBodyDepthEnabled ? 1 : 0;
     uniforms.uThermalMaterialStyling = thermalMaterialStylingEnabled ? 1 : 0;
@@ -3207,6 +3209,8 @@ export class PixiFieldPresenter {
   }
 
   setUnusualSolidStylingEnabled(enabled: boolean): void {
+    this.unusualSolidStylingEnabled = enabled;
+    this.solidOpticalDepthDirty = true;
     this.uniforms.uniforms.uUnusualSolidStyling = enabled ? 1 : 0;
     this.renderApplication();
   }
@@ -3346,7 +3350,7 @@ export class PixiFieldPresenter {
       && scheduleTime - this.lastSolidOpticalDepthRefresh >= POWDER_SURFACE_REFRESH_INTERVAL) {
       writeSolidOpticalDepth(
         materials, this.boundaryStabilityBytes, this.fieldSet.lookups.styleBytes,
-        this.fieldSource.width, walls,
+        this.fieldSource.width, walls, this.unusualSolidStylingEnabled,
       );
       this.solidOpticalDepthDirty = false;
       this.lastSolidOpticalDepthRefresh = scheduleTime;
