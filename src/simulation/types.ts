@@ -9,6 +9,15 @@ export const VIBR_PRESENTATION_STATE = {
   alternateModeMask: 0x8000,
 } as const;
 
+/** Exact native DEUT concentration stored in the owner-multiplexed state word. */
+export const DEUT_PRESENTATION_STATE = {
+  defaultConcentration: 10,
+  glowThreshold: 240,
+  canonicalElectronMaximum: 6000,
+  reactionYieldSaturation: 17000,
+  maximumConcentration: 0xffff,
+} as const;
+
 export interface DirtyCell {
   readonly index: number;
   readonly material: Material;

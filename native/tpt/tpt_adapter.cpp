@@ -548,6 +548,14 @@ void ExtractFields()
 					charge | (countdown << 7) | (part.tmp2 ? 0x8000 : 0)
 				);
 			}
+			else if (part.type == PT_DEUT)
+			{
+				// DEUT stores the number of absorbed deuterium particles in life.
+				// Preserve the complete OPS-stable uint16 range. Ordinary electron
+				// absorption stops at 6000, but imported saves may legitimately retain
+				// higher reaction-relevant life values up to the OPS saturation point.
+				presentationStateField[offset] = uint16_t(std::clamp(part.life, 0, 0xFFFF));
+			}
 			temperatureField[offset] = uint16_t(std::clamp(part.temp * 10.0f, 0.0f, 65535.0f));
 			velocityField[offset * 2] = int8_t(std::clamp(part.vx * 12.0f, -127.0f, 127.0f));
 			velocityField[offset * 2 + 1] = int8_t(std::clamp(part.vy * 12.0f, -127.0f, 127.0f));

@@ -72,6 +72,7 @@ import type { PowderRenderStyle } from './powder-render-style';
 import { receivesThermalMaterialStyle, thermalMaterialDelta } from './thermal-material-style';
 import { writeSolidOpticalDepth } from './solid-optical-depth-field';
 import { applyCanvasVibrStateStyle } from './canvas-vibr-state-style';
+import { applyCanvasDeutStateStyle } from './canvas-deut-state-style';
 
 const FRAME_INTERVAL = 1000 / 30;
 export const DYNAMIC_FIELD_REFRESH_INTERVAL = 1000 / 12;
@@ -192,6 +193,7 @@ export class MaterialRenderer {
   private energyCoreReliefEnabled = true;
   private energyIdentityStylingEnabled = true;
   private vibrStateStylingEnabled = true;
+  private deutStateStylingEnabled = true;
   private botanicalIdentityStylingEnabled = true;
   private powderBodyDepthEnabled = true;
   private powderRenderStyle: PowderRenderStyle = 'smooth';
@@ -573,6 +575,14 @@ export class MaterialRenderer {
     this.changed = true;
   }
 
+  setDeutStateStylingEnabled(enabled: boolean): void {
+    if (enabled === this.deutStateStylingEnabled) return;
+    this.deutStateStylingEnabled = enabled;
+    this.presenter?.setDeutStateStylingEnabled(enabled);
+    this.contourChunks.markAll();
+    this.changed = true;
+  }
+
   setBotanicalIdentityStylingEnabled(enabled: boolean): void {
     if (enabled === this.botanicalIdentityStylingEnabled) return;
     this.botanicalIdentityStylingEnabled = enabled;
@@ -758,6 +768,7 @@ export class MaterialRenderer {
       this.energyIdentityStylingEnabled,
       this.botanicalIdentityStylingEnabled,
       this.vibrStateStylingEnabled,
+      this.deutStateStylingEnabled,
     );
     // Route subsequent dirty cells to the candidate while its first expensive
     // frame is in flight. The known-good Canvas remains mounted underneath;
@@ -1468,6 +1479,12 @@ export class MaterialRenderer {
             fields.liquid.bytes[pixel + 3], liquidFieldRelief,
             liquidSurfaceExposure, this.boundaryStability[index],
           );
+          if (this.deutStateStylingEnabled && presentationState
+            && material === Material.DEUT && wall === 0) {
+            applyCanvasDeutStateStyle(
+              this.styledColor, material, presentationState[index], x, y,
+            );
+          }
           if (applicableTraits === 0 && !info.emissive) {
             compositePixel(
               target, pixel,

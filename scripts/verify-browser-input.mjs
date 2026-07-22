@@ -52,11 +52,13 @@ const waxGraphicsOnly = process.argv.includes('--wax-graphics-only');
 const crystalGraphicsOnly = process.argv.includes('--crystal-graphics-only');
 const pasteResistGraphicsOnly = process.argv.includes('--paste-resist-graphics-only');
 const vibrStateGraphicsOnly = process.argv.includes('--vibr-state-graphics-only');
+const deutStateGraphicsOnly = process.argv.includes('--deut-state-graphics-only');
 const usesProductionBundle = cellularGraphicsOnly || sensorGraphicsOnly
   || unusualPowderGraphicsOnly || unusualSolidGraphicsOnly
   || liquidIdentityGraphicsOnly || gasIdentityGraphicsOnly || energyRadioactiveGraphicsOnly
   || organicPlantGraphicsOnly || spongeGraphicsOnly || virusGraphicsOnly || waxGraphicsOnly
   || crystalGraphicsOnly || pasteResistGraphicsOnly || vibrStateGraphicsOnly
+  || deutStateGraphicsOnly
   || scaleEightOnly;
 const AUDIT_BASE_URL = usesProductionBundle ? PRODUCTION_BUNDLE_URL : ORIGIN + '/';
 const screenshotRequest = process.argv.find((argument) => argument.startsWith('--screenshot='))?.slice('--screenshot='.length);
@@ -121,7 +123,7 @@ async function main() {
       || unusualPowderGraphicsOnly || unusualSolidGraphicsOnly || liquidIdentityGraphicsOnly
       || gasIdentityGraphicsOnly || energyRadioactiveGraphicsOnly || organicPlantGraphicsOnly
       || spongeGraphicsOnly || virusGraphicsOnly || waxGraphicsOnly || crystalGraphicsOnly
-      || pasteResistGraphicsOnly || vibrStateGraphicsOnly;
+      || pasteResistGraphicsOnly || vibrStateGraphicsOnly || deutStateGraphicsOnly;
     if (powderBodyOnly) assertPairedPowderBodyDepth(results);
     if (liquidDepthOnly) assertPairedLiquidOpticalDepth(results);
     if (solidDepthOnly) assertPairedSolidOpticalDepth(results);
@@ -143,6 +145,7 @@ async function main() {
     if (crystalGraphicsOnly) assertPairedCrystallineGraphics(results);
     if (pasteResistGraphicsOnly) assertPairedPasteResistGraphics(results);
     if (vibrStateGraphicsOnly) assertPairedVibrStateGraphics(results);
+    if (deutStateGraphicsOnly) assertPairedDeutStateGraphics(results);
     if (!scaleEightOnly && !materialAtlasOnly && !reducedAudit) assertPairedVisualRelief(results);
     if (!scaleEightOnly && !reducedAudit) assertPairedMaterialAtlas(results);
     compactMaterialAtlasResults(results);
@@ -151,6 +154,7 @@ async function main() {
     compactCrystallineGraphicsResults(results);
     compactPasteResistGraphicsResults(results);
     compactVibrStateGraphicsResults(results);
+    compactDeutStateGraphicsResults(results);
     console.log(JSON.stringify({ world: `${WORLD_WIDTH}x${WORLD_HEIGHT}`, results }, null, 2));
   } catch (error) {
     if (serverLog.trim()) console.error(serverLog.trim());
@@ -168,7 +172,7 @@ async function auditMode(mode) {
     || unusualPowderGraphicsOnly || unusualSolidGraphicsOnly || liquidIdentityGraphicsOnly
     || gasIdentityGraphicsOnly || energyRadioactiveGraphicsOnly || organicPlantGraphicsOnly
     || spongeGraphicsOnly || virusGraphicsOnly || waxGraphicsOnly || crystalGraphicsOnly
-    || pasteResistGraphicsOnly || vibrStateGraphicsOnly;
+    || pasteResistGraphicsOnly || vibrStateGraphicsOnly || deutStateGraphicsOnly;
   const query = new URLSearchParams({
     scene: 'render-lab', inputAudit: '1', renderScale: '2',
     auditStage: startsBlank ? 'blank' : 'canonical',
@@ -365,6 +369,12 @@ async function auditMode(mode) {
       assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
       cdp.close();
       return { backend: mode, vibrStateGraphics, browserErrors: errors.length };
+    }
+    if (deutStateGraphicsOnly) {
+      const deutStateGraphics = await auditDeutStateGraphics(cdp, mode);
+      assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
+      cdp.close();
+      return { backend: mode, deutStateGraphics, browserErrors: errors.length };
     }
     if (mobileOnly) {
       const mobile = await auditMobile(
@@ -4947,6 +4957,48 @@ function normalizeVibrStateGraphicsAtlas(snapshot) {
   return { cards };
 }
 
+function normalizeDeutStateGraphicsAtlas(snapshot) {
+  const cards = (Array.isArray(snapshot) ? snapshot : snapshot?.cards ?? []).map((entry) => ({
+    ...entry,
+    card: cellularRect(entry.card ?? entry),
+    body: cellularRect(entry.body),
+    surfaceProbe: cellularRect(entry.surfaceProbe),
+    coreProbe: cellularRect(entry.coreProbe),
+    authoredHole: cellularRect(entry.authoredHole),
+    openNotch: cellularRect(entry.openNotch),
+    thinStructure: cellularRect(entry.thinStructure),
+    isolated: cellularPoint(entry.isolated),
+    zeroState: cellularRect(entry.zeroState),
+    wrongOwner: cellularRect(entry.wrongOwner),
+    waterControl: cellularRect(entry.waterControl),
+    metalControl: cellularRect(entry.metalControl),
+    exotControl: cellularRect(entry.exotControl),
+    isozControl: cellularRect(entry.isozControl),
+    wallCoexistence: cellularRect(entry.wallCoexistence),
+    liquidContact: {
+      ...entry.liquidContact,
+      owner: cellularRect(entry.liquidContact.owner),
+      neighbour: cellularRect(entry.liquidContact.neighbour),
+    },
+    solidContact: {
+      ...entry.solidContact,
+      owner: cellularRect(entry.solidContact.owner),
+      neighbour: cellularRect(entry.solidContact.neighbour),
+    },
+    guardedBlank: cellularRect(entry.guardedBlank),
+  }));
+  return {
+    cards,
+    vibrRecovery: snapshot?.vibrRecovery ? {
+      ...snapshot.vibrRecovery,
+      rect: cellularRect(snapshot.vibrRecovery.rect),
+    } : undefined,
+    highRange: (snapshot?.highRange ?? []).map((entry) => ({
+      ...entry, rect: cellularRect(entry.rect),
+    })),
+  };
+}
+
 /** Exact nine-card Energy motif proof plus the complete 21-card semantic guard. */
 async function auditEnergyRadioactiveGraphics(cdp, mode) {
   const started = performance.now();
@@ -7526,6 +7578,348 @@ function summarizeVibrStateBackingResponses(flat, styled, repeated) {
       meanDeltaRgb: signed.map((value) => value / samples),
       profile: Array.from(buckets, (value) => total > 0 ? value / total : 0), axisMap };
   });
+}
+
+/** Paired real-framebuffer proof for authoritative DEUT concentration graphics. */
+async function auditDeutStateGraphics(cdp, mode) {
+  const started = performance.now();
+  const stage = (name) => console.error(
+    `[deut-state-graphics:${mode}] ${name} ${Math.round(performance.now() - started)}ms`,
+  );
+  await waitForStablePageCapture(cdp, `${mode} initial blank DEUT-state framebuffer`);
+  await evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    if (typeof audit.prepareDeutStateGraphicsFixture !== 'function'
+      || typeof audit.deutStateGraphicsAtlas !== 'function'
+      || typeof audit.setDeutStateStyling !== 'function') {
+      throw new Error('DEUT state graphics audit API unavailable');
+    }
+    audit.prepareDeutStateGraphicsFixture();
+    return true;
+  })()`);
+  const rawAtlas = await waitFor(() => evaluate(cdp, `(() => {
+    const atlas = window.__ANIFOR_INPUT_AUDIT__.deutStateGraphicsAtlas();
+    const cards = Array.isArray(atlas) ? atlas : atlas?.cards;
+    return cards?.length === 7 ? atlas : false;
+  })()`), 15_000, `${mode} DEUT state graphics fixture`);
+  const atlas = normalizeDeutStateGraphicsAtlas(rawAtlas);
+  const expectedKeys = ['zero', 'default', 'low', 'medium', 'preGlow', 'glow', 'compressed'];
+  const expectedStates = [0, 10, 80, 160, 239, 240, 6000];
+  assert(atlas.cards.length === 7
+      && atlas.cards.every((entry, index) => entry.material === 100 && entry.code === 'DEUT'
+        && entry.stateKey === expectedKeys[index]
+        && entry.concentration === expectedStates[index]
+        && entry.encodedState === expectedStates[index]),
+  `${mode}: DEUT state atlas contract changed (${JSON.stringify(atlas.cards.map(
+    ({ stateKey, concentration, encodedState }) => ({ stateKey, concentration, encodedState }),
+  ))})`);
+
+  const semanticState = await evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    const snapshot = audit.deutStateGraphicsAtlas();
+    const cards = Array.isArray(snapshot) ? snapshot : snapshot.cards;
+    const inside = (x, y, rect) => x >= rect.x && x < rect.x + rect.width
+      && y >= rect.y && y < rect.y + rect.height;
+    const exactRect = (rect, material) => {
+      for (let y = rect.y; y < rect.y + rect.height; y++) {
+        for (let x = rect.x; x < rect.x + rect.width; x++) {
+          if (audit.cell(x, y) !== material) return false;
+        }
+      }
+      return true;
+    };
+    return cards.map((entry) => {
+      let bodyExact = true;
+      for (let y = entry.body.y; y < entry.body.y + entry.body.height; y++) {
+        for (let x = entry.body.x; x < entry.body.x + entry.body.width; x++) {
+          const empty = inside(x, y, entry.authoredHole) || inside(x, y, entry.openNotch);
+          bodyExact = bodyExact && audit.cell(x, y) === (empty ? 0 : entry.material);
+        }
+      }
+      return {
+        bodyExact,
+        state: audit.presentationState(entry.surfaceProbe.x, entry.surfaceProbe.y),
+        holeEmpty: exactRect(entry.authoredHole, 0),
+        notchEmpty: exactRect(entry.openNotch, 0),
+        thinExact: exactRect(entry.thinStructure, entry.material),
+        isolated: audit.cell(entry.isolated.x, entry.isolated.y),
+        zeroStateExact: exactRect(entry.zeroState, entry.material),
+        zeroStateWord: audit.presentationState(entry.zeroState.x, entry.zeroState.y),
+        wrongOwnerExact: exactRect(entry.wrongOwner, 1),
+        waterExact: exactRect(entry.waterControl, 2),
+        metalExact: exactRect(entry.metalControl, 23),
+        exotExact: exactRect(entry.exotControl, 102),
+        isozExact: exactRect(entry.isozControl, 104),
+        wallCoexistenceExact: exactRect(entry.wallCoexistence, 100),
+        wallCoexistenceWall: (() => {
+          for (let y = entry.wallCoexistence.y;
+            y < entry.wallCoexistence.y + entry.wallCoexistence.height; y++) {
+            for (let x = entry.wallCoexistence.x;
+              x < entry.wallCoexistence.x + entry.wallCoexistence.width; x++) {
+              if (audit.wall(x, y) !== 1) return false;
+            }
+          }
+          return true;
+        })(),
+        liquidOwner: exactRect(entry.liquidContact.owner, entry.material),
+        liquidNeighbour: exactRect(entry.liquidContact.neighbour, 2),
+        solidOwner: exactRect(entry.solidContact.owner, entry.material),
+        solidNeighbour: exactRect(entry.solidContact.neighbour, 23),
+        guardEmpty: exactRect(entry.guardedBlank, 0),
+      };
+    });
+  })()`);
+  assert(semanticState.every((entry, index) => entry.bodyExact
+      && entry.state === expectedStates[index] && entry.holeEmpty && entry.notchEmpty
+      && entry.thinExact && entry.isolated === 100 && entry.zeroStateExact
+      && entry.zeroStateWord === 0 && entry.wrongOwnerExact && entry.waterExact
+      && entry.metalExact && entry.exotExact && entry.isozExact
+      && entry.wallCoexistenceExact && entry.wallCoexistenceWall
+      && entry.liquidOwner && entry.liquidNeighbour && entry.solidOwner
+      && entry.solidNeighbour && entry.guardEmpty),
+  `${mode}: DEUT state fixture lost semantic/state topology (${JSON.stringify(semanticState)})`);
+  const highRangeState = await evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    return audit.deutStateGraphicsAtlas().highRange.map((entry) => ({
+      stateKey: entry.stateKey,
+      cell: audit.cell(entry.rect.x, entry.rect.y),
+      state: audit.presentationState(entry.rect.x, entry.rect.y),
+      encodedState: entry.encodedState,
+    }));
+  })()`);
+  assert(highRangeState.length === 2
+      && highRangeState[0].stateKey === 'reactionYield'
+      && highRangeState[0].state === 17_000
+      && highRangeState[1].stateKey === 'maximum'
+      && highRangeState[1].state === 65_535
+      && highRangeState.every(({ cell, state, encodedState }) => (
+        cell === 100 && state === encodedState
+      )),
+  `${mode}: DEUT high-word state transport changed (${JSON.stringify(highRangeState)})`);
+  stage('fixture-ready');
+
+  const setStyling = async (enabled) => evaluate(cdp, `(() => {
+    window.__ANIFOR_INPUT_AUDIT__.setDeutStateStyling(${enabled}); return true;
+  })()`);
+  await setStyling(false);
+  await waitForStablePageCapture(cdp, `${mode} flat DEUT-state framebuffer`);
+  const flat = await sampleDeutStateBacking(cdp);
+  await setStyling(true);
+  await waitForStablePageCapture(cdp, `${mode} styled DEUT-state framebuffer`);
+  const styled = await sampleDeutStateBacking(cdp);
+  await setStyling(false);
+  await waitForStablePageCapture(cdp, `${mode} repeated flat DEUT-state framebuffer`);
+  const repeated = await sampleDeutStateBacking(cdp);
+  for (const [state, backing] of [
+    ['flat', flat], ['styled', styled], ['repeated-flat', repeated],
+  ]) assertDeutStateBacking(backing, `${mode} ${state}`);
+
+  for (let index = 0; index < atlas.cards.length; index++) {
+    const base = flat.cards[index], changed = styled.cards[index], returned = repeated.cards[index];
+    assert(base.semanticSignature === changed.semanticSignature
+        && base.semanticSignature === returned.semanticSignature
+        && base.alphaSignature === changed.alphaSignature
+        && base.alphaSignature === returned.alphaSignature
+        && base.supportSignature === changed.supportSignature
+        && base.supportSignature === returned.supportSignature,
+    `${mode}: DEUT/${base.stateKey} styling changed semantic/alpha/support`);
+    for (const control of [
+      'zeroStateRgb', 'wrongOwnerRgb', 'waterRgb', 'metalRgb', 'exotRgb', 'isozRgb',
+      'wallCoexistenceRgb', 'liquidNeighbourRgb', 'solidNeighbourRgb',
+    ]) {
+      assert(arraysEqual(base[control], changed[control])
+          && arraysEqual(base[control], returned[control]),
+      `${mode}: DEUT/${base.stateKey} state leaked into ${control}`);
+    }
+  }
+
+  const responses = summarizeVibrStateBackingResponses(flat, styled, repeated);
+  const byState = Object.fromEntries(responses.map((response) => [response.stateKey, response]));
+  assert(byState.zero.rgbPeak === 0 && byState.zero.rgbRms === 0,
+    `${mode}: DEUT state zero was not an exact no-op (${JSON.stringify(byState.zero)})`);
+  assert(responses.filter(({ stateKey }) => stateKey !== 'zero').every((response) => (
+    response.rgbRms >= 0.02 && response.rgbRms <= 36
+    && response.rgbPeak > 0 && response.rgbPeak <= 96
+    && response.changedSampleRatio >= 0.01 && response.repeatRgbPeak === 0
+    && response.profile.length === 16
+    && Math.abs(response.profile.reduce((sum, value) => sum + value, 0) - 1) <= 0.001
+  )), `${mode}: DEUT concentration response is absent, unbounded, or unstable (${JSON.stringify(responses)})`);
+  const ordered = ['default', 'low', 'medium', 'preGlow', 'glow', 'compressed']
+    .map((key) => byState[key].rgbRms);
+  assert(ordered.every((value, index) => index === 0 || value > ordered[index - 1]),
+    `${mode}: DEUT concentration response is not strictly ordered (${JSON.stringify(ordered)})`);
+  const glowGain = byState.glow.rgbRms / Math.max(0.01, byState.preGlow.rgbRms);
+  assert(glowGain >= 1.35,
+    `${mode}: DEUT 239/240 native glow threshold is not legible (${glowGain})`);
+  const highRange = flat.highRange.map((base, index) => {
+    const changed = styled.highRange[index], returned = repeated.highRange[index];
+    let squared = 0, peak = 0, repeatPeak = 0;
+    for (let offset = 0; offset < base.rgb.length; offset++) {
+      const delta = changed.rgb[offset] - base.rgb[offset];
+      squared += delta * delta;
+      peak = Math.max(peak, Math.abs(delta));
+      repeatPeak = Math.max(repeatPeak, Math.abs(returned.rgb[offset] - base.rgb[offset]));
+    }
+    return { stateKey: base.stateKey, encodedState: base.encodedState,
+      rgbRms: Math.sqrt(squared / Math.max(1, base.rgb.length)), rgbPeak: peak, repeatRgbPeak: repeatPeak };
+  });
+  assert(highRange.length === 2
+      && highRange.every(({ rgbRms, rgbPeak, repeatRgbPeak }) => (
+        rgbRms >= 8 && rgbRms <= 36 && rgbPeak <= 96 && repeatRgbPeak === 0
+      ))
+      && highRange[1].rgbRms / highRange[0].rgbRms >= 0.95
+      && highRange[1].rgbRms / highRange[0].rgbRms <= 1.05,
+  `${mode}: DEUT high-word decode is absent, unstable, or not visually saturated (${JSON.stringify(highRange)})`);
+  stage('responses-ready');
+  return { cards: responses, ordered, glowGain, highRange,
+    exactRepeatedOff: responses.every(({ repeatRgbPeak }) => repeatRgbPeak === 0) };
+}
+
+async function sampleDeutStateBacking(cdp) {
+  return evaluate(cdp, `(() => {
+    const world = document.querySelector('.world-canvas');
+    if (!(world instanceof HTMLCanvasElement)) throw new Error('World canvas unavailable');
+    const copy = document.createElement('canvas'); copy.width = world.width; copy.height = world.height;
+    const context = copy.getContext('2d', { willReadFrequently: true });
+    if (!context) throw new Error('DEUT state backing sampler unavailable');
+    context.drawImage(world, 0, 0);
+    const pixels = context.getImageData(0, 0, copy.width, copy.height).data;
+    const scaleX = copy.width / ${WORLD_WIDTH}, scaleY = copy.height / ${WORLD_HEIGHT};
+    const snapshot = window.__ANIFOR_INPUT_AUDIT__.deutStateGraphicsAtlas();
+    const cards = Array.isArray(snapshot) ? snapshot : snapshot.cards;
+    const key = ({ x, y }) => x + ',' + y;
+    const rectPoints = (rect, step = 1) => { const points = [];
+      for (let y = rect.y; y < rect.y + rect.height; y += step) {
+        for (let x = rect.x; x < rect.x + rect.width; x += step) points.push({ x, y });
+      }
+      return points;
+    };
+    const cellAlpha = ({ x, y }) => { let peak = 0;
+      const left = Math.floor(x * scaleX), top = Math.floor(y * scaleY);
+      const right = Math.max(left + 1, Math.floor((x + 1) * scaleX));
+      const bottom = Math.max(top + 1, Math.floor((y + 1) * scaleY));
+      for (let py = top; py < bottom; py++) for (let px = left; px < right; px++) {
+        peak = Math.max(peak, pixels[(py * copy.width + px) * 4 + 3]);
+      }
+      return peak;
+    };
+    const centreAlpha = ({ x, y }) => pixels[(Math.min(copy.height - 1, Math.floor((y + 0.5) * scaleY))
+      * copy.width + Math.min(copy.width - 1, Math.floor((x + 0.5) * scaleX))) * 4 + 3];
+    const sampleRgb = (points) => { const rgb = [];
+      for (const { x, y } of points) {
+        const px = Math.min(copy.width - 1, Math.floor((x + 0.5) * scaleX));
+        const py = Math.min(copy.height - 1, Math.floor((y + 0.5) * scaleY));
+        const offset = (py * copy.width + px) * 4;
+        rgb.push(pixels[offset], pixels[offset + 1], pixels[offset + 2]);
+      }
+      return rgb;
+    };
+    const highRange = (snapshot.highRange ?? []).map((entry) => ({
+      stateKey: entry.stateKey, encodedState: entry.encodedState,
+      rgb: sampleRgb(rectPoints(entry.rect)),
+    }));
+    return { scaleX, scaleY, highRange, cards: cards.map((entry) => {
+      const emptyKeys = new Set([...rectPoints(entry.authoredHole), ...rectPoints(entry.openNotch)].map(key));
+      const bodyPoints = rectPoints(entry.body).filter((point) => !emptyKeys.has(key(point)));
+      const bodySamples = rectPoints(entry.body, 2).filter((point) => !emptyKeys.has(key(point)));
+      const bodyBuckets = bodySamples.map((point) => Math.min(3, Math.floor(
+        (point.y - entry.body.y) * 4 / entry.body.height,
+      )) * 4 + Math.min(3, Math.floor((point.x - entry.body.x) * 4 / entry.body.width)));
+      const thin = rectPoints(entry.thinStructure), guard = rectPoints(entry.guardedBlank);
+      const hole = rectPoints(entry.authoredHole), notch = rectPoints(entry.openNotch);
+      const zeroState = rectPoints(entry.zeroState), wrongOwner = rectPoints(entry.wrongOwner);
+      const water = rectPoints(entry.waterControl), metal = rectPoints(entry.metalControl);
+      const exot = rectPoints(entry.exotControl), isoz = rectPoints(entry.isozControl);
+      const wallCoexistence = rectPoints(entry.wallCoexistence);
+      const liquidOwner = rectPoints(entry.liquidContact.owner);
+      const liquidNeighbour = rectPoints(entry.liquidContact.neighbour);
+      const solidOwner = rectPoints(entry.solidContact.owner);
+      const solidNeighbour = rectPoints(entry.solidContact.neighbour);
+      let alphaSignature = 2166136261, supportSignature = 2166136261;
+      let semanticSignature = 2166136261;
+      const left = Math.floor(entry.card.x * scaleX), top = Math.floor(entry.card.y * scaleY);
+      const right = Math.floor((entry.card.x + entry.card.width) * scaleX);
+      const bottom = Math.floor((entry.card.y + entry.card.height) * scaleY);
+      for (let py = top; py < bottom; py++) for (let px = left; px < right; px++) {
+        const alpha = pixels[(py * copy.width + px) * 4 + 3];
+        alphaSignature = Math.imul(alphaSignature ^ alpha, 16777619) >>> 0;
+        supportSignature = Math.imul(supportSignature ^ Number(alpha > 0), 16777619) >>> 0;
+      }
+      for (let y = entry.card.y; y < entry.card.y + entry.card.height; y++) {
+        for (let x = entry.card.x; x < entry.card.x + entry.card.width; x++) {
+          semanticSignature = Math.imul(
+            semanticSignature ^ window.__ANIFOR_INPUT_AUDIT__.cell(x, y), 16777619,
+          ) >>> 0;
+        }
+      }
+      return { code: entry.code, material: entry.material, stateKey: entry.stateKey,
+        encodedState: entry.encodedState, semanticSignature, alphaSignature, supportSignature,
+        bodyExpected: bodyPoints.length,
+        bodySupported: bodyPoints.filter((point) => cellAlpha(point) > 0).length,
+        thinExpected: thin.length, thinSupported: thin.filter((point) => cellAlpha(point) > 0).length,
+        isolatedAlphaPeak: cellAlpha(entry.isolated),
+        zeroStateExpected: zeroState.length,
+        zeroStateSupported: zeroState.filter((point) => cellAlpha(point) > 0).length,
+        guardExpected: guard.length, guardTransparent: guard.filter((point) => cellAlpha(point) === 0).length,
+        holeExpected: hole.length, holeCentreTransparent: hole.filter((point) => centreAlpha(point) === 0).length,
+        notchExpected: notch.length,
+        notchCentreTransparent: notch.filter((point) => centreAlpha(point) < 128).length,
+        wrongOwnerExpected: wrongOwner.length,
+        wrongOwnerSupported: wrongOwner.filter((point) => cellAlpha(point) > 0).length,
+        waterExpected: water.length, waterSupported: water.filter((point) => cellAlpha(point) > 0).length,
+        metalExpected: metal.length, metalSupported: metal.filter((point) => cellAlpha(point) > 0).length,
+        exotExpected: exot.length, exotSupported: exot.filter((point) => cellAlpha(point) > 0).length,
+        isozExpected: isoz.length, isozSupported: isoz.filter((point) => cellAlpha(point) > 0).length,
+        liquidOwnerExpected: liquidOwner.length,
+        liquidOwnerSupported: liquidOwner.filter((point) => cellAlpha(point) > 0).length,
+        liquidNeighbourExpected: liquidNeighbour.length,
+        liquidNeighbourSupported: liquidNeighbour.filter((point) => cellAlpha(point) > 0).length,
+        solidOwnerExpected: solidOwner.length,
+        solidOwnerSupported: solidOwner.filter((point) => cellAlpha(point) > 0).length,
+        solidNeighbourExpected: solidNeighbour.length,
+        solidNeighbourSupported: solidNeighbour.filter((point) => cellAlpha(point) > 0).length,
+        bodyRgb: sampleRgb(bodySamples), bodyBuckets,
+        zeroStateRgb: sampleRgb(zeroState), wrongOwnerRgb: sampleRgb(wrongOwner),
+        waterRgb: sampleRgb(water), metalRgb: sampleRgb(metal),
+        exotRgb: sampleRgb(exot), isozRgb: sampleRgb(isoz),
+        wallCoexistenceRgb: sampleRgb(wallCoexistence),
+        liquidNeighbourRgb: sampleRgb(liquidNeighbour), solidNeighbourRgb: sampleRgb(solidNeighbour),
+      };
+    }) };
+  })()`);
+}
+
+function assertDeutStateBacking(backing, label) {
+  assert(Number.isInteger(backing.scaleX) && Number.isInteger(backing.scaleY)
+      && backing.scaleX > 0 && backing.scaleY > 0,
+  `${label}: DEUT state backing does not preserve integral scaling`);
+  assert(backing.highRange.length === 2
+      && backing.highRange.map(({ encodedState }) => encodedState).join(',') === '17000,65535'
+      && backing.cards.length === 7 && backing.cards.every((card) => (
+    card.material === 100 && card.bodyExpected === 3_000
+    && card.bodySupported === card.bodyExpected
+    && card.thinExpected === 24 && card.thinSupported === card.thinExpected
+    && card.isolatedAlphaPeak > 0
+    && card.zeroStateExpected === 144 && card.zeroStateSupported === 144
+    && card.guardExpected === 1_872 && card.guardTransparent === card.guardExpected
+    && card.holeExpected === 36 && card.holeCentreTransparent >= 16
+    && card.notchExpected === 96 && card.notchCentreTransparent >= 90
+    && card.wrongOwnerExpected === 360 && card.wrongOwnerSupported === 360
+    && card.waterExpected === 280 && card.waterSupported === 280
+    && card.metalExpected === 280 && card.metalSupported === 280
+    && card.exotExpected === 280 && card.exotSupported === 280
+    && card.isozExpected === 280 && card.isozSupported === 280
+    && card.liquidOwnerExpected === 320 && card.liquidOwnerSupported === 320
+    && card.liquidNeighbourExpected === 320 && card.liquidNeighbourSupported === 320
+    && card.solidOwnerExpected === 320 && card.solidOwnerSupported === 320
+    && card.solidNeighbourExpected === 320 && card.solidNeighbourSupported === 320
+  )), `${label}: DEUT state backing changed topology (${JSON.stringify(backing.cards.map(
+    (card) => ({ ...card, bodyRgb: undefined, bodyBuckets: undefined,
+      zeroStateRgb: undefined, wrongOwnerRgb: undefined, waterRgb: undefined,
+      metalRgb: undefined, exotRgb: undefined, isozRgb: undefined,
+      wallCoexistenceRgb: undefined,
+      liquidNeighbourRgb: undefined, solidNeighbourRgb: undefined }),
+  ))})`);
 }
 
 /** Focused exact-owner graphics proof for DRIC, NICE, QRTZ, and RIME. */
@@ -10588,6 +10982,75 @@ function compactVibrStateGraphicsResults(results) {
   }
 }
 
+function assertPairedDeutStateGraphics(results) {
+  const canvasResult = results.find((result) => result.backend === 'canvas2d');
+  const webglResult = results.find((result) => result.backend === 'webgl');
+  const canvas = canvasResult?.deutStateGraphics;
+  const webgl = webglResult?.deutStateGraphics;
+  assert(canvas && webgl,
+    'DEUT state graphics gate requires both Canvas2D and WebGL results');
+  const expectedStates = 'zero,default,low,medium,preGlow,glow,compressed';
+  assert(canvas.cards.map(({ stateKey }) => stateKey).join(',') === expectedStates
+      && webgl.cards.map(({ stateKey }) => stateKey).join(',') === expectedStates
+      && canvas.cards.every(({ material }) => material === 100)
+      && webgl.cards.every(({ material }) => material === 100)
+      && canvas.exactRepeatedOff && webgl.exactRepeatedOff
+      && canvasResult.browserErrors === 0 && webglResult.browserErrors === 0,
+  'Paired DEUT identity, state, repetition, or browser-error contract failed');
+
+  const vectorCosine = (left, right) => {
+    let dot = 0, leftSquared = 0, rightSquared = 0;
+    for (let index = 0; index < left.length; index++) {
+      dot += left[index] * right[index];
+      leftSquared += left[index] * left[index];
+      rightSquared += right[index] * right[index];
+    }
+    return dot / Math.max(1e-6, Math.sqrt(leftSquared * rightSquared));
+  };
+  const parity = canvas.cards.slice(1).map((canvasCard, offset) => {
+    const webglCard = webgl.cards[offset + 1];
+    assert(canvasCard.stateKey === webglCard.stateKey
+        && canvasCard.encodedState === webglCard.encodedState,
+    `Canvas/WebGL DEUT state identity diverged at card ${offset + 1}`);
+    const responseRatio = canvasCard.rgbRms / Math.max(0.01, webglCard.rgbRms);
+    const profileDistance = Math.max(...canvasCard.profile.map(
+      (value, index) => Math.abs(value - webglCard.profile[index]),
+    ));
+    const motifCorrelation = virusPearson(canvasCard.axisMap, webglCard.axisMap);
+    const chromaCosine = vectorCosine(canvasCard.meanDeltaRgb, webglCard.meanDeltaRgb);
+    assert(responseRatio >= 0.20 && responseRatio <= 5.0,
+      `Canvas/WebGL DEUT/${canvasCard.stateKey} response diverged (${canvasCard.rgbRms}/${webglCard.rgbRms})`);
+    assert(profileDistance <= 0.10,
+      `Canvas/WebGL DEUT/${canvasCard.stateKey} profile diverged (${profileDistance})`);
+    assert(motifCorrelation >= 0.35,
+      `Canvas/WebGL DEUT/${canvasCard.stateKey} topology diverged (${motifCorrelation})`);
+    assert(chromaCosine >= 0.90,
+      `Canvas/WebGL DEUT/${canvasCard.stateKey} RGB direction diverged (${chromaCosine})`);
+    return { stateKey: canvasCard.stateKey, responseRatio: round(responseRatio, 4),
+      profileMaxDistance: round(profileDistance, 5),
+      motifCorrelation: round(motifCorrelation, 5), chromaCosine: round(chromaCosine, 5) };
+  });
+  const canvasNormalized = canvas.ordered.map((value) => value / canvas.ordered.at(-1));
+  const webglNormalized = webgl.ordered.map((value) => value / webgl.ordered.at(-1));
+  assert(canvasNormalized.every((value, index) => Math.abs(value - webglNormalized[index]) <= 0.16),
+    `Canvas/WebGL DEUT concentration progression diverged (${JSON.stringify({ canvasNormalized, webglNormalized })})`);
+  const glowGainRatio = canvas.glowGain / webgl.glowGain;
+  assert(glowGainRatio >= 0.65 && glowGainRatio <= 1.50,
+    `Canvas/WebGL DEUT glow-threshold gain diverged (${glowGainRatio})`);
+  console.error(`[deut-state-graphics:paired] parity ${JSON.stringify({
+    parity,
+    canvasNormalized: canvasNormalized.map((value) => round(value, 5)),
+    webglNormalized: webglNormalized.map((value) => round(value, 5)),
+    glowGainRatio: round(glowGainRatio, 5),
+  })}`);
+}
+
+function compactDeutStateGraphicsResults(results) {
+  for (const result of results) {
+    for (const card of result.deutStateGraphics?.cards ?? []) delete card.axisMap;
+  }
+}
+
 function assertPairedCrystallineGraphics(results) {
   const canvas = results.find((result) => result.backend === 'canvas2d')?.crystallineGraphics;
   const webgl = results.find((result) => result.backend === 'webgl')?.crystallineGraphics;
@@ -11248,17 +11711,20 @@ async function auditRenderScaleEight(cdp, dpr) {
   stage('atlas-stress-ready');
   const vibrStateAudit = await auditEightXVibrStateGraphics(cdp, geometry.canvas);
   stage('vibr-state-ready');
-  const forcedStallRecovery = await auditEightXVibrStallRecovery(
-    cdp, geometry.canvas, vibrStateAudit,
+  const deutStateAudit = await auditEightXDeutStateGraphics(cdp, geometry.canvas);
+  stage('deut-state-ready');
+  const forcedStallRecovery = await auditEightXNativeStateRecovery(
+    cdp, geometry.canvas, deutStateAudit, 'stall',
   );
   const { recovery: _vibrRecovery, ...vibrStateGraphics } = vibrStateAudit;
+  const { recovery: _nativeStateRecovery, ...deutStateGraphics } = deutStateAudit;
   stage('stall-recovery-ready');
   const contextLossGeometry = await navigateEightXRecoveryPage(cdp, 'context-loss-recovery');
   assertCanvasRectsEqual(
     geometry.canvas, contextLossGeometry.canvas, 'renderScale=8 recovery reload CSS geometry',
   );
-  const contextLossRecovery = await auditEightXFailureRecovery(
-    cdp, contextLossGeometry.canvas, 'context-loss',
+  const contextLossRecovery = await auditEightXNativeStateRecovery(
+    cdp, contextLossGeometry.canvas, deutStateAudit, 'context-loss',
   );
   stage('context-loss-recovery-ready');
   return {
@@ -11283,6 +11749,7 @@ async function auditRenderScaleEight(cdp, dpr) {
     },
     materialAtlasStress,
     vibrStateGraphics,
+    deutStateGraphics,
     forcedStallRecovery,
     contextLossRecovery,
   };
@@ -11437,21 +11904,245 @@ async function auditEightXVibrStateGraphics(cdp, canvasRect) {
   };
 }
 
-async function auditEightXVibrStallRecovery(cdp, canvasRect, stateAudit) {
+async function snapshotEightXDeutState(cdp) {
+  return evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    const snapshot = audit.deutStateGraphicsAtlas();
+    const cards = Array.isArray(snapshot) ? snapshot : snapshot.cards;
+    const inside = (x, y, rect) => x >= rect.x && x < rect.x + rect.width
+      && y >= rect.y && y < rect.y + rect.height;
+    const exactRect = (rect, material, state) => {
+      for (let y = rect.y; y < rect.y + rect.height; y++) {
+        for (let x = rect.x; x < rect.x + rect.width; x++) {
+          if (audit.cell(x, y) !== material || audit.presentationState(x, y) !== state) return false;
+        }
+      }
+      return true;
+    };
+    return {
+      occupied: audit.occupiedCells(),
+      vibrRecovery: {
+        ...snapshot.vibrRecovery,
+        exact: exactRect(snapshot.vibrRecovery.rect, 113, snapshot.vibrRecovery.encodedState),
+      },
+      highRange: snapshot.highRange.map((entry) => ({
+        stateKey: entry.stateKey, encodedState: entry.encodedState,
+        exact: exactRect(entry.rect, 100, entry.encodedState),
+      })),
+      cards: cards.map((entry) => {
+        let bodyExact = true;
+        for (let y = entry.body.y; y < entry.body.y + entry.body.height; y++) {
+          for (let x = entry.body.x; x < entry.body.x + entry.body.width; x++) {
+            const empty = inside(x, y, entry.authoredHole) || inside(x, y, entry.openNotch);
+            bodyExact &&= audit.cell(x, y) === (empty ? 0 : 100)
+              && audit.presentationState(x, y) === (empty ? 0 : entry.encodedState);
+          }
+        }
+        return {
+          stateKey: entry.stateKey, encodedState: entry.encodedState, bodyExact,
+          thinExact: exactRect(entry.thinStructure, 100, entry.encodedState),
+          isolatedExact: audit.cell(entry.isolated.x, entry.isolated.y) === 100
+            && audit.presentationState(entry.isolated.x, entry.isolated.y) === entry.encodedState,
+          zeroStateExact: exactRect(entry.zeroState, 100, 0),
+          wrongOwnerExact: exactRect(entry.wrongOwner, 1, entry.encodedState),
+          waterExact: exactRect(entry.waterControl, 2, entry.encodedState),
+          metalExact: exactRect(entry.metalControl, 23, entry.encodedState),
+          exotExact: exactRect(entry.exotControl, 102, entry.encodedState),
+          isozExact: exactRect(entry.isozControl, 104, entry.encodedState),
+          wallCoexistenceExact: exactRect(entry.wallCoexistence, 100, entry.encodedState),
+          wallCoexistenceWall: (() => {
+            for (let y = entry.wallCoexistence.y;
+              y < entry.wallCoexistence.y + entry.wallCoexistence.height; y++) {
+              for (let x = entry.wallCoexistence.x;
+                x < entry.wallCoexistence.x + entry.wallCoexistence.width; x++) {
+                if (audit.wall(x, y) !== 1) return false;
+              }
+            }
+            return true;
+          })(),
+          liquidOwnerExact: exactRect(entry.liquidContact.owner, 100, entry.encodedState),
+          liquidNeighbourExact: exactRect(entry.liquidContact.neighbour, 2, entry.encodedState),
+          solidOwnerExact: exactRect(entry.solidContact.owner, 100, entry.encodedState),
+          solidNeighbourExact: exactRect(entry.solidContact.neighbour, 23, entry.encodedState),
+          guardExact: exactRect(entry.guardedBlank, 0, 0),
+        };
+      }),
+    };
+  })()`);
+}
+
+function assertEightXDeutTopology(snapshot, label) {
+  const expectedStates = 'zero,default,low,medium,preGlow,glow,compressed';
+  const expectedEncoded = [0, 10, 80, 160, 239, 240, 6000];
+  assert(snapshot.cards.length === 7
+      && snapshot.cards.map(({ stateKey }) => stateKey).join(',') === expectedStates
+      && snapshot.vibrRecovery?.exact
+      && snapshot.vibrRecovery.encodedState === 24_676
+      && snapshot.highRange?.length === 2
+      && snapshot.highRange[0].stateKey === 'reactionYield'
+      && snapshot.highRange[0].encodedState === 17_000
+      && snapshot.highRange[0].exact
+      && snapshot.highRange[1].stateKey === 'maximum'
+      && snapshot.highRange[1].encodedState === 65_535
+      && snapshot.highRange[1].exact
+      && snapshot.cards.every((card, index) => card.encodedState === expectedEncoded[index]
+        && card.bodyExact && card.thinExact && card.isolatedExact && card.zeroStateExact
+        && card.wrongOwnerExact && card.waterExact && card.metalExact
+        && card.exotExact && card.isozExact
+        && card.wallCoexistenceExact && card.wallCoexistenceWall
+        && card.liquidOwnerExact
+        && card.liquidNeighbourExact && card.solidOwnerExact
+        && card.solidNeighbourExact && card.guardExact),
+  `${label}: DEUT/VIBR semantic or presentation-state topology changed (${JSON.stringify(snapshot)})`);
+}
+
+function eightXDeutResponseRegions(atlas) {
+  const centre = (rect) => ({ x: rect.x + rect.width / 2, y: rect.y + rect.height / 2 });
+  const cards = atlas.cards.filter(({ stateKey }) => (
+    stateKey === 'preGlow' || stateKey === 'glow' || stateKey === 'compressed'
+  )).flatMap((entry) => [
+    { name: `DEUT-${entry.stateKey}-state`, ...centre(entry.coreProbe), radiusX: 3, radiusY: 3 },
+    { name: `DEUT-${entry.stateKey}-zero`, ...centre(entry.zeroState), radiusX: 4, radiusY: 4 },
+    { name: `DEUT-${entry.stateKey}-wrong-owner`, ...centre(entry.wrongOwner), radiusX: 6, radiusY: 5 },
+    { name: `DEUT-${entry.stateKey}-EXOT`, ...centre(entry.exotControl), radiusX: 6, radiusY: 4 },
+    { name: `DEUT-${entry.stateKey}-ISOZ`, ...centre(entry.isozControl), radiusX: 6, radiusY: 4 },
+    { name: `DEUT-${entry.stateKey}-wall`, ...centre(entry.wallCoexistence), radiusX: 4, radiusY: 4 },
+  ]);
+  return cards.concat(atlas.highRange.map((entry) => ({
+    name: `DEUT-${entry.stateKey}-state`, ...centre(entry.rect), radiusX: 6, radiusY: 6,
+  })));
+}
+
+function assertEightXDeutResponses(samples, label) {
+  const byName = Object.fromEntries(samples.map((sample) => [sample.name, sample]));
+  const preGlow = byName['DEUT-preGlow-state'];
+  const glow = byName['DEUT-glow-state'];
+  const compressed = byName['DEUT-compressed-state'];
+  const reactionYield = byName['DEUT-reactionYield-state'];
+  const maximum = byName['DEUT-maximum-state'];
+  assert(preGlow?.rgbRms >= 0.08 && preGlow.rgbRms <= 24 && preGlow.rgbPeak <= 64
+      && glow?.rgbRms >= preGlow.rgbRms * 1.35 && glow.rgbRms <= 36 && glow.rgbPeak <= 96
+      && compressed?.rgbRms >= glow.rgbRms * 1.30
+      && compressed.rgbRms <= 40 && compressed.rgbPeak <= 96
+      && reactionYield?.rgbRms >= 8 && reactionYield.rgbRms <= 40
+      && maximum?.rgbRms >= 8 && maximum.rgbRms <= 40
+      && maximum.rgbRms / reactionYield.rgbRms >= 0.90
+      && maximum.rgbRms / reactionYield.rgbRms <= 1.10,
+  `${label}: DEUT pre-glow/glow/compressed response is absent or unbounded (${JSON.stringify(samples)})`);
+  const controls = samples.filter(({ name }) => !name.endsWith('-state'));
+  assert(controls.length === 15 && controls.every(({ rgbPeak }) => rgbPeak <= 1)
+      && samples.every(({ repeatRgbPeak }) => repeatRgbPeak <= 1),
+  `${label}: DEUT state leaked into a control or was nondeterministic (${JSON.stringify(samples)})`);
+}
+
+async function auditEightXDeutStateGraphics(cdp, canvasRect) {
+  const rawAtlas = await evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    if (typeof audit.presentationState !== 'function'
+      || typeof audit.prepareDeutStateGraphicsFixture !== 'function'
+      || typeof audit.setDeutStateStyling !== 'function') {
+      throw new Error('True-8x DEUT state audit API unavailable');
+    }
+    audit.resetView();
+    audit.prepareDeutStateGraphicsFixture();
+    return audit.deutStateGraphicsAtlas();
+  })()`);
+  const atlas = normalizeDeutStateGraphicsAtlas(rawAtlas);
+  const prepared = await snapshotEightXDeutState(cdp);
+  assertEightXDeutTopology(prepared, 'renderScale=8 prepared DEUT fixture');
+  const live = await metrics(cdp);
+  assert(live.backing.width === WORLD_WIDTH * 8 && live.backing.height === WORLD_HEIGHT * 8
+      && live.outputScale === '8',
+  `renderScale=8 DEUT fixture lost true backing (${JSON.stringify(live.backing)})`);
+  assertCanvasRectsEqual(canvasRect, live.canvas, 'renderScale=8 DEUT fixture CSS geometry');
+
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setDeutStateStyling(false); true');
+  const flat = await captureSettledPage(cdp, 'renderScale=8 flat DEUT-state framebuffer', 450);
+  const flatTopology = await snapshotEightXDeutState(cdp);
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setDeutStateStyling(true); true');
+  const styled = await captureSettledPage(cdp, 'renderScale=8 styled DEUT-state framebuffer', 450);
+  const styledTopology = await snapshotEightXDeutState(cdp);
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setDeutStateStyling(false); true');
+  const repeated = await captureSettledPage(cdp, 'renderScale=8 repeated flat DEUT-state framebuffer', 450);
+  const repeatedTopology = await snapshotEightXDeutState(cdp);
+  assert(JSON.stringify(flatTopology) === JSON.stringify(prepared)
+      && JSON.stringify(styledTopology) === JSON.stringify(prepared)
+      && JSON.stringify(repeatedTopology) === JSON.stringify(prepared),
+  'renderScale=8 DEUT state toggle changed semantic or presentation-state topology');
+  const regions = eightXDeutResponseRegions(atlas);
+  const samples = await sampleBackdropRefractionRegions(cdp, {
+    straight: flat.capture.data,
+    refracted: styled.capture.data,
+    repeatedStraight: repeated.capture.data,
+  }, regions, canvasRect);
+  assertEightXDeutResponses(samples, 'renderScale=8 WebGL');
+  const glow = atlas.cards.find(({ stateKey }) => stateKey === 'glow');
+  assert(glow && atlas.vibrRecovery, 'renderScale=8 native-state recovery probes are missing');
+  return {
+    cards: atlas.cards.map(({ stateKey, encodedState }) => ({ stateKey, encodedState })),
+    occupied: prepared.occupied,
+    samples,
+    exactRepeatedOff: samples.every(({ repeatRgbPeak }) => repeatRgbPeak <= 1),
+    recovery: {
+      topology: prepared, regions,
+      point: {
+        x: glow.coreProbe.x + Math.floor(glow.coreProbe.width / 2),
+        y: glow.coreProbe.y + Math.floor(glow.coreProbe.height / 2),
+      },
+      material: glow.material, encodedState: glow.encodedState,
+      vibrPoint: {
+        x: atlas.vibrRecovery.rect.x + Math.floor(atlas.vibrRecovery.rect.width / 2),
+        y: atlas.vibrRecovery.rect.y + Math.floor(atlas.vibrRecovery.rect.height / 2),
+      },
+      vibrMaterial: 113, vibrEncodedState: atlas.vibrRecovery.encodedState,
+    },
+  };
+}
+
+async function auditEightXNativeStateRecovery(cdp, canvasRect, stateAudit, failure) {
   const { recovery } = stateAudit;
+  const failureLabel = failure === 'stall' ? 'forced-stall' : 'context-loss';
+  const expectedReason = failure === 'stall' ? 'webgl-timeout' : 'webgl-context-lost';
+  const recoveryCell = { x: 590, y: 360 };
+  let expectedTopology = recovery.topology;
+  if (failure === 'context-loss') {
+    await evaluate(cdp, `(() => {
+      const audit = window.__ANIFOR_INPUT_AUDIT__;
+      audit.prepareDeutStateGraphicsFixture();
+      audit.setRadius(0);
+      audit.setMaterial(164);
+      audit.resetView();
+      return true;
+    })()`);
+    await captureSettledPage(cdp, 'renderScale=8 context-loss native-state prepared framebuffer', 450);
+    const markerPoint = worldClient(canvasRect, {
+      x: recoveryCell.x + 0.5, y: recoveryCell.y + 0.5,
+    });
+    await mouseClick(cdp, markerPoint.x, markerPoint.y, 'left');
+    await waitFor(() => evaluate(cdp,
+      `window.__ANIFOR_INPUT_AUDIT__.cell(${recoveryCell.x}, ${recoveryCell.y}) === 164`),
+    5_000, 'renderScale=8 context-loss recovery marker');
+    expectedTopology = await snapshotEightXDeutState(cdp);
+    assertEightXDeutTopology(expectedTopology, 'renderScale=8 context-loss prepared fixture');
+  }
   const beforeState = await evaluate(cdp, `(() => {
     const audit = window.__ANIFOR_INPUT_AUDIT__;
     return {
       cell: audit.cell(${recovery.point.x}, ${recovery.point.y}),
       state: audit.presentationState(${recovery.point.x}, ${recovery.point.y}),
+      vibrCell: audit.cell(${recovery.vibrPoint.x}, ${recovery.vibrPoint.y}),
+      vibrState: audit.presentationState(${recovery.vibrPoint.x}, ${recovery.vibrPoint.y}),
       occupied: audit.occupiedCells(),
     };
   })()`);
   assert(beforeState.cell === recovery.material && beforeState.state === recovery.encodedState
-      && beforeState.occupied === recovery.topology.occupied,
-  `renderScale=8 forced-stall VIBR probe was not prepared (${JSON.stringify(beforeState)})`);
+      && beforeState.vibrCell === recovery.vibrMaterial
+      && beforeState.vibrState === recovery.vibrEncodedState
+      && beforeState.occupied === expectedTopology.occupied,
+  `renderScale=8 ${failureLabel} native-state probes were not prepared (${JSON.stringify(beforeState)})`);
+  const zoomAnchor = failure === 'context-loss' ? recoveryCell : recovery.point;
   const point = worldClient(canvasRect, {
-    x: recovery.point.x + 0.5, y: recovery.point.y + 0.5,
+    x: zoomAnchor.x + 0.5, y: zoomAnchor.y + 0.5,
   });
   await cdp.send('Input.dispatchMouseEvent', {
     type: 'mouseWheel', x: point.x, y: point.y,
@@ -11460,17 +12151,28 @@ async function auditEightXVibrStallRecovery(cdp, canvasRect, stateAudit) {
   const beforeView = await waitFor(() => evaluate(cdp, `(() => {
     const view = window.__ANIFOR_INPUT_AUDIT__.viewState();
     return view.zoom > 1.2 ? view : false;
-  })()`), 5_000, 'renderScale=8 forced-stall VIBR pre-failure camera');
+  })()`), 5_000, `renderScale=8 ${failureLabel} native-state pre-failure camera`);
   const beforeGeometry = await metrics(cdp);
-  const failureRequest = await evaluate(cdp, `(() => ({
-    requested: window.__ANIFOR_INPUT_AUDIT__.forceEightXRenderStall(),
-  }))()`);
+  const failureRequest = failure === 'stall'
+    ? await evaluate(cdp, `(() => ({
+      requested: window.__ANIFOR_INPUT_AUDIT__.forceEightXRenderStall(),
+    }))()`)
+    : await evaluate(cdp, `(() => {
+      const canvas = document.querySelector('canvas[data-renderer="semantic-field-webgl"]');
+      if (!(canvas instanceof HTMLCanvasElement)) return { requested: false, reason: 'missing-canvas' };
+      const context = canvas.getContext('webgl2') || canvas.getContext('webgl');
+      const extension = context?.getExtension('WEBGL_lose_context');
+      if (!extension) return { requested: false, reason: 'missing-extension' };
+      extension.loseContext();
+      return { requested: true };
+    })()`);
   assert(failureRequest.requested,
-    `renderScale=8 could not exercise forced-stall VIBR recovery (${JSON.stringify(failureRequest)})`);
+    `renderScale=8 could not exercise ${failureLabel} native-state recovery (${JSON.stringify(failureRequest)})`);
   const backend = await waitFor(() => evaluate(cdp, `(() => {
     const backend = window.__ANIFOR_INPUT_AUDIT__.backend();
-    return backend.backend === 'canvas2d' && backend.reason === 'webgl-timeout' ? backend : false;
-  })()`), 15_000, 'renderScale=8 forced-stall bounded VIBR Canvas recovery');
+    return backend.backend === 'canvas2d' && backend.reason === ${JSON.stringify(expectedReason)}
+      ? backend : false;
+  })()`), 15_000, `renderScale=8 ${failureLabel} bounded native-state Canvas recovery`);
   const recovered = await waitFor(async () => {
     const current = await metrics(cdp);
     const view = await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.viewState()');
@@ -11482,60 +12184,73 @@ async function auditEightXVibrStallRecovery(cdp, canvasRect, stateAudit) {
       && sameRect && Math.abs(view.zoom - beforeView.zoom) < 1e-9
       && Math.abs(view.panX - beforeView.panX) < 1e-9
       && Math.abs(view.panY - beforeView.panY) < 1e-9 ? current : false;
-  }, 15_000, 'renderScale=8 forced-stall VIBR Canvas geometry');
+  }, 15_000, `renderScale=8 ${failureLabel} native-state Canvas geometry`);
   assert(backend.requestedOutputScale === 8 && backend.outputScale === 2,
-    `renderScale=8 VIBR recovery reported wrong scale (${JSON.stringify(backend)})`);
-  assertGeometry(recovered, 'renderScale=8 forced-stall VIBR Canvas', 2);
+    `renderScale=8 native-state recovery reported wrong scale (${JSON.stringify(backend)})`);
+  assertGeometry(recovered, `renderScale=8 ${failureLabel} native-state Canvas`, 2);
   assertCanvasRectsEqual(
-    beforeGeometry.canvas, recovered.canvas, 'renderScale=8 forced-stall VIBR camera geometry',
+    beforeGeometry.canvas, recovered.canvas, `renderScale=8 ${failureLabel} native-state camera geometry`,
   );
-  const recoveredTopology = await snapshotEightXVibrState(cdp);
-  assertEightXVibrTopology(recoveredTopology, 'renderScale=8 forced-stall Canvas recovery');
-  assert(JSON.stringify(recoveredTopology) === JSON.stringify(recovery.topology),
-    'renderScale=8 forced-stall Canvas recovery changed VIBR presentation state');
+  const recoveredTopology = await snapshotEightXDeutState(cdp);
+  assertEightXDeutTopology(recoveredTopology, `renderScale=8 ${failureLabel} Canvas recovery`);
+  assert(JSON.stringify(recoveredTopology) === JSON.stringify(expectedTopology),
+    `renderScale=8 ${failureLabel} Canvas recovery changed DEUT/VIBR presentation state`);
   const after = await evaluate(cdp, `(() => ({
     cell: window.__ANIFOR_INPUT_AUDIT__.cell(${recovery.point.x}, ${recovery.point.y}),
     state: window.__ANIFOR_INPUT_AUDIT__.presentationState(${recovery.point.x}, ${recovery.point.y}),
+    vibrCell: window.__ANIFOR_INPUT_AUDIT__.cell(${recovery.vibrPoint.x}, ${recovery.vibrPoint.y}),
+    vibrState: window.__ANIFOR_INPUT_AUDIT__.presentationState(${recovery.vibrPoint.x}, ${recovery.vibrPoint.y}),
     occupied: window.__ANIFOR_INPUT_AUDIT__.occupiedCells(),
     view: window.__ANIFOR_INPUT_AUDIT__.viewState(),
     renderer: document.querySelector('.world-canvas')?.dataset.renderer,
   }))()`);
   assert(after.cell === recovery.material && after.state === recovery.encodedState
-      && after.occupied === recovery.topology.occupied
+      && after.vibrCell === recovery.vibrMaterial
+      && after.vibrState === recovery.vibrEncodedState
+      && after.occupied === expectedTopology.occupied
       && after.renderer === 'semantic-field-canvas2d',
-  `renderScale=8 forced-stall recovery lost VIBR state (${JSON.stringify(after)})`);
+  `renderScale=8 ${failureLabel} recovery lost DEUT/VIBR state (${JSON.stringify(after)})`);
   assert(Math.abs(after.view.zoom - beforeView.zoom) < 1e-9
       && Math.abs(after.view.panX - beforeView.panX) < 1e-9
       && Math.abs(after.view.panY - beforeView.panY) < 1e-9,
-  `renderScale=8 forced-stall VIBR recovery changed camera (${JSON.stringify({ beforeView, after: after.view })})`);
+  `renderScale=8 ${failureLabel} native-state recovery changed camera (${JSON.stringify({ beforeView, after: after.view })})`);
 
   // The camera-preservation proof above owns the zoomed geometry. Restore the
-  // canonical fit before sampling the whole ten-card atlas so no control card
+  // canonical fit before sampling the whole state atlas so no control card
   // can sit outside the page screenshot.
   await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.resetView(); true');
   const canonicalGeometry = await waitFor(async () => {
     const current = await metrics(cdp);
     return canvasRectsEqual(current.canvas, canvasRect) ? current : false;
-  }, 5_000, 'renderScale=8 forced-stall VIBR canonical Canvas geometry');
-  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setVibrStateStyling(false); true');
-  const flat = await waitForStablePageCapture(cdp, 'forced-stall Canvas flat VIBR state');
-  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setVibrStateStyling(true); true');
-  const styled = await waitForStablePageCapture(cdp, 'forced-stall Canvas styled VIBR state');
-  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setVibrStateStyling(false); true');
-  const repeated = await waitForStablePageCapture(cdp, 'forced-stall Canvas repeated flat VIBR state');
+  }, 5_000, `renderScale=8 ${failureLabel} native-state canonical Canvas geometry`);
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setDeutStateStyling(false); true');
+  const flat = await waitForStablePageCapture(cdp, `${failureLabel} Canvas flat DEUT state`);
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setDeutStateStyling(true); true');
+  const styled = await waitForStablePageCapture(cdp, `${failureLabel} Canvas styled DEUT state`);
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setDeutStateStyling(false); true');
+  const repeated = await waitForStablePageCapture(cdp, `${failureLabel} Canvas repeated flat DEUT state`);
   const samples = await sampleBackdropRefractionRegions(cdp, {
     straight: flat.capture.data,
     refracted: styled.capture.data,
     repeatedStraight: repeated.capture.data,
   }, recovery.regions, canonicalGeometry.canvas);
-  assertEightXVibrResponses(samples, 'renderScale=8 forced-stall Canvas');
+  assertEightXDeutResponses(samples, `renderScale=8 ${failureLabel} Canvas`);
+  const footprint = failure === 'context-loss'
+    ? (await capturePaintedFootprints(
+      cdp, [recoveryCell], 'renderScale=8 context-loss Canvas', 1.5, 1.25,
+    ))[0]
+    : undefined;
   return {
     backend,
     backing: `${recovered.backing.width}x${recovered.backing.height}`,
     cssCanvas: `${round(canonicalGeometry.canvas.width, 2)}x${round(canonicalGeometry.canvas.height, 2)}`,
     view: after.view,
-    stateProbe: { point: recovery.point, material: after.cell, encodedState: after.state },
+    stateProbes: [
+      { point: recovery.point, material: after.cell, encodedState: after.state },
+      { point: recovery.vibrPoint, material: after.vibrCell, encodedState: after.vibrState },
+    ],
     samples,
+    ...(footprint ? { footprint } : {}),
   };
 }
 
@@ -11607,108 +12322,6 @@ async function navigateEightXRecoveryPage(cdp, auditStage) {
   return waitForStableCanvas(
     cdp, 1280, 720, undefined, 45_000, `renderScale=8 ${auditStage} geometry`,
   );
-}
-
-async function auditEightXFailureRecovery(cdp, canvasRect, failure) {
-  const failureLabel = failure === 'stall' ? 'forced-stall' : 'context-loss';
-  const expectedReason = failure === 'stall' ? 'webgl-timeout' : 'webgl-context-lost';
-  const recoveryCell = { x: 306, y: 192 };
-  await evaluate(cdp, `(() => {
-    const audit = window.__ANIFOR_INPUT_AUDIT__;
-    audit.clear();
-    audit.setRadius(0);
-    audit.setMaterial(164);
-    audit.resetView();
-    return true;
-  })()`);
-  await sleep(350);
-  const point = worldClient(canvasRect, {
-    x: recoveryCell.x + 0.5,
-    y: recoveryCell.y + 0.5,
-  });
-  await mouseClick(cdp, point.x, point.y, 'left');
-  await waitFor(() => evaluate(cdp,
-    `window.__ANIFOR_INPUT_AUDIT__.cell(${recoveryCell.x}, ${recoveryCell.y}) === 164`),
-  5_000, `renderScale=8 ${failureLabel} recovery marker`);
-
-  // Keep a non-default camera state across recovery. Backing replacement must
-  // not reset or reinterpret the CSS-pixel transform.
-  await cdp.send('Input.dispatchMouseEvent', {
-    type: 'mouseWheel', x: point.x, y: point.y,
-    deltaX: 0, deltaY: -240, modifiers: 0,
-  });
-  const beforeView = await waitFor(() => evaluate(cdp, `(() => {
-    const view = window.__ANIFOR_INPUT_AUDIT__.viewState();
-    return view.zoom > 1.2 ? view : false;
-  })()`), 5_000, `renderScale=8 ${failureLabel} pre-failure camera`);
-  const beforeGeometry = await metrics(cdp);
-
-  const failureRequest = failure === 'stall'
-    ? await evaluate(cdp, `(() => ({
-      requested: window.__ANIFOR_INPUT_AUDIT__.forceEightXRenderStall(),
-    }))()`)
-    : await evaluate(cdp, `(() => {
-      const canvas = document.querySelector('canvas[data-renderer="semantic-field-webgl"]');
-      if (!(canvas instanceof HTMLCanvasElement)) return { requested: false, reason: 'missing-canvas' };
-      const context = canvas.getContext('webgl2') || canvas.getContext('webgl');
-      const extension = context?.getExtension('WEBGL_lose_context');
-      if (!extension) return { requested: false, reason: 'missing-extension' };
-      extension.loseContext();
-      return { requested: true };
-    })()`);
-  assert(failureRequest.requested,
-    `renderScale=8 could not exercise ${failureLabel} (${JSON.stringify(failureRequest)})`);
-
-  const backend = await waitFor(() => evaluate(cdp, `(() => {
-    const backend = window.__ANIFOR_INPUT_AUDIT__.backend();
-    return backend.backend === 'canvas2d' && backend.reason === ${JSON.stringify(expectedReason)}
-      ? backend : false;
-  })()`), 15_000, `renderScale=8 ${failureLabel} bounded Canvas recovery`);
-  const recovered = await waitFor(async () => {
-    const current = await metrics(cdp);
-    const view = await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.viewState()');
-    const sameRect = ['left', 'top', 'width', 'height'].every(
-      (key) => Math.abs(current.canvas[key] - beforeGeometry.canvas[key]) < 0.05,
-    );
-    return current.backing.width === WORLD_WIDTH * 2
-      && current.backing.height === WORLD_HEIGHT * 2
-      && current.outputScale === '2'
-      && sameRect
-      && Math.abs(view.zoom - beforeView.zoom) < 1e-9
-      && Math.abs(view.panX - beforeView.panX) < 1e-9
-      && Math.abs(view.panY - beforeView.panY) < 1e-9
-      ? current : false;
-  }, 15_000, `renderScale=8 ${failureLabel} Canvas geometry`);
-  assert(backend.requestedOutputScale === 8 && backend.outputScale === 2,
-    `renderScale=8 recovery reported wrong scale (${JSON.stringify(backend)})`);
-  assertGeometry(recovered, `renderScale=8 ${failureLabel} Canvas`, 2);
-  assertCanvasRectsEqual(
-    beforeGeometry.canvas, recovered.canvas, `renderScale=8 ${failureLabel} camera geometry`,
-  );
-  const after = await evaluate(cdp, `(() => ({
-    cell: window.__ANIFOR_INPUT_AUDIT__.cell(${recoveryCell.x}, ${recoveryCell.y}),
-    occupied: window.__ANIFOR_INPUT_AUDIT__.occupiedCells(),
-    view: window.__ANIFOR_INPUT_AUDIT__.viewState(),
-    renderer: document.querySelector('.world-canvas')?.dataset.renderer,
-  }))()`);
-  assert(after.cell === 164 && after.occupied === 1,
-    `renderScale=8 recovery lost semantic state (${JSON.stringify(after)})`);
-  assert(after.renderer === 'semantic-field-canvas2d',
-    `renderScale=8 recovery did not mount Canvas (${JSON.stringify(after)})`);
-  assert(Math.abs(after.view.zoom - beforeView.zoom) < 1e-9
-    && Math.abs(after.view.panX - beforeView.panX) < 1e-9
-    && Math.abs(after.view.panY - beforeView.panY) < 1e-9,
-  `renderScale=8 recovery changed camera (${JSON.stringify({ beforeView, after: after.view })})`);
-  const footprint = await capturePaintedFootprints(
-    cdp, [recoveryCell], `renderScale=8 ${failureLabel} Canvas`, 1.5, 1.25,
-  );
-  return {
-    backend,
-    backing: `${recovered.backing.width}x${recovered.backing.height}`,
-    cssCanvas: `${round(recovered.canvas.width, 2)}x${round(recovered.canvas.height, 2)}`,
-    view: after.view,
-    footprint: footprint[0],
-  };
 }
 
 function powderColumnCells() {

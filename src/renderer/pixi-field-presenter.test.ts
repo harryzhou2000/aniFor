@@ -31,6 +31,7 @@ interface PresenterHarness {
   setUnusualSolidStylingEnabled: PixiFieldPresenter['setUnusualSolidStylingEnabled'];
   setEnergyIdentityStylingEnabled: PixiFieldPresenter['setEnergyIdentityStylingEnabled'];
   setVibrStateStylingEnabled: PixiFieldPresenter['setVibrStateStylingEnabled'];
+  setDeutStateStylingEnabled: PixiFieldPresenter['setDeutStateStylingEnabled'];
   setBotanicalIdentityStylingEnabled: PixiFieldPresenter['setBotanicalIdentityStylingEnabled'];
   setLiquidSilhouetteCohesionEnabled: PixiFieldPresenter['setLiquidSilhouetteCohesionEnabled'];
   setRenderStallHandler: PixiFieldPresenter['setRenderStallHandler'];
@@ -110,6 +111,7 @@ describe('Pixi presenter startup configuration', () => {
       uLiquidSilhouetteCohesion: 1,
       uThermalMaterialStyling: 1,
       uEnergyCoreRelief: 0,
+      uDeutStateStyling: 1,
       uPowderStyle: powderRenderStyleValue('grains'),
       uPowderBodyDepth: 1,
     });
@@ -608,7 +610,7 @@ describe('Pixi presenter startup configuration', () => {
 
     const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
     const start = source.indexOf('vec3 energyIdentityDelta(');
-    const end = source.indexOf('vec4 contactSample(', start);
+    const end = source.indexOf('vec3 radioactiveBodyIdentityDelta(', start);
     const block = source.slice(start, end);
     expect(start).toBeGreaterThan(0);
     expect(end).toBeGreaterThan(start);
@@ -620,7 +622,7 @@ describe('Pixi presenter startup configuration', () => {
   it('styles exactly seven authoritative radioactive bodies without GPU samples', () => {
     const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
     const start = source.indexOf('vec3 radioactiveBodyIdentityDelta(');
-    const end = source.indexOf('vec4 contactSample(', start);
+    const end = source.indexOf('vec3 vibrStateDelta(', start);
     const block = source.slice(start, end);
     const ids = [...block.matchAll(/material == (\d+)\.0/g)].map((match) => Number(match[1]));
     expect(start).toBeGreaterThan(0);
@@ -643,7 +645,7 @@ describe('Pixi presenter startup configuration', () => {
 
     const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
     const start = source.indexOf('vec3 vibrStateDelta(');
-    const end = source.indexOf('vec4 contactSample(', start);
+    const end = source.indexOf('vec3 deutStateDelta(', start);
     const block = source.slice(start, end);
     expect(start).toBeGreaterThan(0);
     expect(end).toBeGreaterThan(start);
@@ -657,6 +659,30 @@ describe('Pixi presenter startup configuration', () => {
     expect(block).not.toMatch(/\balpha\s*[+*]?=/);
     expect(source).toContain('vibrStateDelta(material, wallState.ba, fieldPosition)');
     expect(source).toContain('* uVibrStateStyling;');
+  });
+
+  it('decodes exact DEUT concentration from the shared state sample with RGB-only arithmetic', () => {
+    const presenter = presenterHarness();
+    presenter.setDeutStateStylingEnabled(false);
+    expect(presenter.uniforms.uniforms.uDeutStateStyling).toBe(0);
+    presenter.setDeutStateStylingEnabled(true);
+    expect(presenter.uniforms.uniforms.uDeutStateStyling).toBe(1);
+    expect(presenter.app.render).toHaveBeenCalledTimes(2);
+
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const start = source.indexOf('vec3 deutStateDelta(');
+    const end = source.indexOf('vec4 contactSample(', start);
+    const block = source.slice(start, end);
+    expect(start).toBeGreaterThan(0);
+    expect(end).toBeGreaterThan(start);
+    expect(block).toContain('material != 100.0');
+    expect(block).toContain('+ floor(stateBytes.y * 255.0 + 0.5) * 256.0;');
+    expect(block).toContain('(concentration - 240.0) / 5760.0');
+    expect(block).not.toContain('texture(');
+    expect(block).not.toMatch(/\b(?:sin|pow|normalize|length)\s*\(/);
+    expect(block).not.toMatch(/\balpha\s*[+*]?=/);
+    expect(source).toContain('deutStateDelta(material, wallState.ba, fieldPosition)');
+    expect(source).toContain('uDeutStateStyling > 0.5 && material == 100.0');
   });
 
   it('keeps emission volume shading RGB-only and reuses existing aura samples', () => {

@@ -125,6 +125,7 @@ uniform float uThermalMaterialStyling;
 uniform float uEnergyCoreRelief;
 uniform float uEnergyIdentityStyling;
 uniform float uVibrStateStyling;
+uniform float uDeutStateStyling;
 uniform float uBotanicalIdentityStyling;
 uniform float uPowderStyle;
 uniform float uPowderBodyDepth;
@@ -760,6 +761,27 @@ vec3 vibrStateDelta(float material, vec2 stateBytes, vec2 position) {
   vec3 exploding = mix(vec3(18.0, 20.0, 13.0), vec3(8.0, 15.0, 22.0), alternate)
     * burst;
   return (charged + exploding) / 255.0;
+}
+vec3 deutStateDelta(float material, vec2 stateBytes, vec2 position) {
+  if (material != 100.0) return vec3(0.0);
+  float concentration = floor(stateBytes.x * 255.0 + 0.5)
+    + floor(stateBytes.y * 255.0 + 0.5) * 256.0;
+  if (concentration < 0.5) return vec3(0.0);
+  float ordinary = min(1.0, concentration / 240.0);
+  float compressed = max(0.0, (concentration - 240.0) / 5760.0);
+  float strength = sqrt(ordinary) * 0.25 + sqrt(min(1.0, compressed)) * 0.75;
+  float x = floor(position.x);
+  float y = floor(position.y);
+  vec2 local = mod(vec2(x, y), 16.0);
+  float diamond = abs(local.x - 8.0) + abs(local.y - 8.0);
+  float compressionShell = step(5.0, diamond) * (1.0 - step(7.5, diamond));
+  float compressionCore = 1.0 - step(2.5, diamond);
+  float liftedBand = 1.0 - step(1.5, mod(y + floor(x / 4.0), 8.0));
+  float shape = compressionShell > 0.5 ? 1.0
+    : compressionCore > 0.5 ? 0.72 : liftedBand > 0.5 ? 0.48 : 0.20;
+  float glowBloom = step(240.0, concentration) * shape;
+  return (strength * shape * vec3(10.0, 19.0, 28.0)
+    + glowBloom * vec3(4.0, 6.0, 7.0)) / 255.0;
 }
 vec4 contactSample(vec2 uv, float material, float family) {
   float candidate = materialAt(uv);
@@ -1958,6 +1980,11 @@ void main() {
         semanticSlope + volumeSlope
       ) * uLiquidIdentityStyling;
     }
+    if (uDeutStateStyling > 0.5 && material == 100.0
+      && liquidOnly < 0.5 && halo < 0.5 && surfaceOnly < 0.5
+      && wall < 0.5 && emissionOnly < 0.5 && family == 2.0 && !materialEmissive) {
+      color += deutStateDelta(material, wallState.ba, fieldPosition);
+    }
   } else {
     float powderVisualCohesion = 0.0;
     float powderChromaCohesion = 0.0;
@@ -2980,6 +3007,7 @@ export class PixiFieldPresenter {
       uEnergyCoreRelief: { value: 1, type: 'f32' },
       uEnergyIdentityStyling: { value: 1, type: 'f32' },
       uVibrStateStyling: { value: 1, type: 'f32' },
+      uDeutStateStyling: { value: 1, type: 'f32' },
       uBotanicalIdentityStyling: { value: 1, type: 'f32' },
       uPowderStyle: { value: powderRenderStyleValue('smooth'), type: 'f32' },
       uPowderBodyDepth: { value: 1, type: 'f32' },
@@ -3257,6 +3285,7 @@ export class PixiFieldPresenter {
     energyIdentityStylingEnabled = true,
     botanicalIdentityStylingEnabled = true,
     vibrStateStylingEnabled = true,
+    deutStateStylingEnabled = true,
   ): void {
     const uniforms = this.uniforms.uniforms;
     uniforms.uGasFieldLighting = gasFieldLightingEnabled ? 1 : 0;
@@ -3288,6 +3317,7 @@ export class PixiFieldPresenter {
     uniforms.uEnergyCoreRelief = energyCoreReliefEnabled ? 1 : 0;
     uniforms.uEnergyIdentityStyling = energyIdentityStylingEnabled ? 1 : 0;
     uniforms.uVibrStateStyling = vibrStateStylingEnabled ? 1 : 0;
+    uniforms.uDeutStateStyling = deutStateStylingEnabled ? 1 : 0;
     uniforms.uBotanicalIdentityStyling = botanicalIdentityStylingEnabled ? 1 : 0;
     uniforms.uPowderStyle = powderRenderStyleValue(powderRenderStyle);
   }
@@ -3426,6 +3456,11 @@ export class PixiFieldPresenter {
 
   setVibrStateStylingEnabled(enabled: boolean): void {
     this.uniforms.uniforms.uVibrStateStyling = enabled ? 1 : 0;
+    this.renderApplication();
+  }
+
+  setDeutStateStylingEnabled(enabled: boolean): void {
+    this.uniforms.uniforms.uDeutStateStyling = enabled ? 1 : 0;
     this.renderApplication();
   }
 

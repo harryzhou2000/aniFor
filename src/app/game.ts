@@ -65,6 +65,9 @@ import {
 import {
   VIBR_STATE_GRAPHICS_AUDIT, prepareVibrStateGraphicsAuditFixture,
 } from './vibr-state-graphics-audit';
+import {
+  DEUT_STATE_GRAPHICS_AUDIT, prepareDeutStateGraphicsAuditFixture,
+} from './deut-state-graphics-audit';
 
 const AUTOSAVE_KEY = 'stillroom-world-v1';
 
@@ -343,6 +346,9 @@ export class Game {
       setVibrStateStyling: (enabled) => {
         this.renderer.setVibrStateStylingEnabled(enabled);
       },
+      setDeutStateStyling: (enabled) => {
+        this.renderer.setDeutStateStylingEnabled(enabled);
+      },
       setBotanicalIdentityStyling: (enabled) => {
         this.renderer.setBotanicalIdentityStylingEnabled(enabled);
       },
@@ -435,6 +441,10 @@ export class Game {
       vibrStateGraphicsAtlas: () => VIBR_STATE_GRAPHICS_AUDIT,
       prepareVibrStateGraphicsFixture: () => {
         prepareVibrStateGraphicsAuditFixture(this.simulation);
+      },
+      deutStateGraphicsAtlas: () => DEUT_STATE_GRAPHICS_AUDIT,
+      prepareDeutStateGraphicsFixture: () => {
+        prepareDeutStateGraphicsAuditFixture(this.simulation);
       },
       canvasPresentationTiming: () => this.renderer.getCanvasPresentationTiming(),
       requestWebGLPresentationTimingSample: () => this.renderer.requestWebGLPresentationTimingSample(),

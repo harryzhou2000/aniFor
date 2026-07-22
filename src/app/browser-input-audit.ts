@@ -19,6 +19,7 @@ import type { WaxGraphicsAuditSnapshot } from './wax-graphics-audit';
 import type { CrystallineGraphicsAuditSnapshot } from './crystalline-graphics-audit';
 import type { PasteResistGraphicsAuditSnapshot } from './paste-resist-graphics-audit';
 import type { VibrStateGraphicsAuditSnapshot } from './vibr-state-graphics-audit';
+import type { DeutStateGraphicsAuditSnapshot } from './deut-state-graphics-audit';
 
 export interface BrowserInputAuditApi {
   readonly version: 1;
@@ -59,6 +60,7 @@ export interface BrowserInputAuditApi {
   setEnergyCoreRelief(enabled: boolean): void;
   setEnergyIdentityStyling(enabled: boolean): void;
   setVibrStateStyling(enabled: boolean): void;
+  setDeutStateStyling(enabled: boolean): void;
   setBotanicalIdentityStyling(enabled: boolean): void;
   setPowderBodyDepth(enabled: boolean): void;
   setPowderRenderStyle(style: PowderRenderStyle): void;
@@ -105,6 +107,8 @@ export interface BrowserInputAuditApi {
   preparePasteResistGraphicsFixture(): void;
   vibrStateGraphicsAtlas(): VibrStateGraphicsAuditSnapshot;
   prepareVibrStateGraphicsFixture(): void;
+  deutStateGraphicsAtlas(): DeutStateGraphicsAuditSnapshot;
+  prepareDeutStateGraphicsFixture(): void;
   canvasPresentationTiming(): CanvasPresentationTiming | undefined;
   requestWebGLPresentationTimingSample(): boolean;
   webGLPresentationTiming(): WebGLPresentationTiming | undefined;

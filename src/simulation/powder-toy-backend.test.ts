@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { MATERIALS, Material } from '../shared/materials';
 import { PowderToyBackend } from './powder-toy-backend';
 import { SimulationTool } from './simulation-tools';
-import { VIBR_PRESENTATION_STATE } from './types';
+import { DEUT_PRESENTATION_STATE, VIBR_PRESENTATION_STATE } from './types';
 import { readFileSync } from 'node:fs';
 
 const moduleArtifact = new URL('../../public/wasm/stillroom_core.js', import.meta.url);
@@ -36,6 +36,7 @@ describe('direct Powder Toy backend', () => {
     );
     expect(adapter).toContain('auto const countdown = life > 0');
     expect(adapter).toContain('? std::max(1, (life * 255 + 375) / 750) : 0;');
+    expect(adapter).toContain('std::clamp(part.life, 0, 0xFFFF)');
   });
 
   it('loads the pinned 612x384 engine and exposes rendering fields', async () => {
@@ -134,6 +135,57 @@ describe('direct Powder Toy backend', () => {
     expect(state & VIBR_PRESENTATION_STATE.countdownMask).toBeGreaterThan(0);
     expect(state & VIBR_PRESENTATION_STATE.alternateModeMask)
       .toBe(VIBR_PRESENTATION_STATE.alternateModeMask);
+  });
+
+  it('extracts exact native DEUT concentration and follows native coalescing', async () => {
+    const simulation = await PowderToyBackend.load(moduleArtifact.href);
+    const point = { x: 306, y: 180 };
+    const index = point.y * simulation.width + point.x;
+    const stateAtPoint = (): number => {
+      simulation.cells();
+      return simulation.presentationState()[index];
+    };
+
+    simulation.paint(point.x, point.y, Material.DEUT, 0);
+    expect(simulation.cells()[index]).toBe(Material.DEUT);
+    expect(stateAtPoint()).toBe(DEUT_PRESENTATION_STATE.defaultConcentration);
+
+    // Adjacent native DEUT owners absorb one another into their stored life.
+    // This exercises the upstream concentration rules without a test-only ABI.
+    for (let y = point.y - 2; y <= point.y + 2; y++) {
+      for (let x = point.x - 2; x <= point.x + 2; x++) {
+        simulation.paint(x, y, Material.DEUT, 0);
+      }
+    }
+    simulation.step();
+    simulation.step();
+    const cells = simulation.cells();
+    const states = simulation.presentationState();
+    let concentration = 0;
+    for (let ownerIndex = 0; ownerIndex < cells.length; ownerIndex++) {
+      if (cells[ownerIndex] === Material.DEUT) {
+        concentration = Math.max(concentration, states[ownerIndex]);
+      }
+    }
+    expect(concentration).toBeGreaterThan(DEUT_PRESENTATION_STATE.defaultConcentration);
+    expect(concentration).toBeLessThanOrEqual(DEUT_PRESENTATION_STATE.maximumConcentration);
+
+    const saved = simulation.saveFile();
+    const restored = await PowderToyBackend.load(moduleArtifact.href);
+    restored.loadFile(saved);
+    const restoredCells = restored.cells();
+    const restoredStates = restored.presentationState();
+    let restoredConcentration = 0;
+    for (let ownerIndex = 0; ownerIndex < restoredCells.length; ownerIndex++) {
+      if (restoredCells[ownerIndex] === Material.DEUT) {
+        restoredConcentration = Math.max(restoredConcentration, restoredStates[ownerIndex]);
+      }
+    }
+    expect(restoredConcentration).toBe(concentration);
+
+    simulation.clear();
+    simulation.paint(point.x, point.y, Material.Water, 0);
+    expect(stateAtPoint()).toBe(0);
   });
 
   it('projects every generic native material as its stable frontend ID', async () => {
