@@ -149,10 +149,10 @@ The final direct native-wall invalidation regression brings the current unit/nat
 - Repository: `/home/harry/projects/aniFor_codex`
 - Branch: `main_codex`
 - Current material checkpoint: LIFE/cellular, sensor/device, unusual powder/solid, exact liquid/gas, energy/radioactive, growing-organic, porous-SPNG, VIRS/VRSG/VRSS, WAX/MWAX, and DRIC/NICE/QRTZ/RIME crystalline identity are release-complete locally. The next material sequence is PSTE/PSTS and RSST/RSSS paste/resist continuity, then bounded native-state fidelity for radioactive, botanical, configured-source, and channel families.
-- Manual Actions run `29756120034` restored the compiler/tool caches, built, tested, deployed `fcd504a`, and passed the separate post-deploy revision/runtime-asset verifier.
+- Manual Actions run `29957282956` restored the C++ compiler and project-local Emscripten caches, built in `1m45s`, deployed in `8s`, and passed the separate revision/runtime-asset verifier in `9s` for crystalline checkpoint `3ea682b`.
 - Local GitHub CLI authentication is valid. Recheck `gh auth status` before the next manual deployment, and do not confuse a successful artifact build with a live deployment.
 - Current live Pages URL: `https://harryzhou2000.github.io/aniFor/`
-- Live `revision.txt` is `fcd504a8479ece00f212bc833d2aaa72609dbd08`; an independent local verifier confirmed the exact revision, all 19 recursive assets, and WASM MIME on its first attempt.
+- Live `revision.txt` is `3ea682b79579d5ec9921e06493959c2f8c45d058`; an independent local verifier confirmed the exact revision, all 19 recursive assets, and WASM MIME on its first attempt.
 
 ## Committed/live history through `8ae8765`
 
