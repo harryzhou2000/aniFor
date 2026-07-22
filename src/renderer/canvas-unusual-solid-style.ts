@@ -1,4 +1,8 @@
 import { Material } from '../shared/materials';
+import {
+  applyCanvasCrystallineSolidMorphology,
+  isCanvasCrystallineSolidMaterial,
+} from './canvas-crystalline-solid-style';
 import { RenderPhase } from './render-profile';
 import { applyCanvasVirusFamilyMorphology } from './canvas-virus-family-style';
 import { applyCanvasWaxFamilyMorphology } from './canvas-wax-family-style';
@@ -14,6 +18,10 @@ export function isCanvasUnusualSolidMaterial(material: number): boolean {
     case Material.SHLD4:
     case Material.VRSS:
     case Material.Wax:
+    case Material.DRIC:
+    case Material.NICE:
+    case Material.QRTZ:
+    case Material.RIME:
       return true;
     default:
       return false;
@@ -43,6 +51,10 @@ export function applyCanvasUnusualSolidMorphology(
   }
   if (material === Material.Wax) {
     applyCanvasWaxFamilyMorphology(output, material, RenderPhase.Solid, x, y);
+    return;
+  }
+  if (isCanvasCrystallineSolidMaterial(material)) {
+    applyCanvasCrystallineSolidMorphology(output, material, x, y);
     return;
   }
 

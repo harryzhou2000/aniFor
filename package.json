@@ -17,6 +17,7 @@
     "audit:sponge": "node scripts/verify-browser-input.mjs --sponge-graphics-only",
     "audit:virus": "node scripts/verify-browser-input.mjs --virus-graphics-only",
     "audit:wax": "node scripts/verify-browser-input.mjs --wax-graphics-only",
+    "audit:crystal": "node scripts/verify-browser-input.mjs --crystal-graphics-only",
     "profile:render-fields": "vite-node scripts/profile-render-fields.ts",
     "setup:emsdk": "bash scripts/setup-emsdk.sh",
     "setup:build-tools": "bash scripts/setup-build-tools.sh",

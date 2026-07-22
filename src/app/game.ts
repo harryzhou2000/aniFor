@@ -56,6 +56,9 @@ import {
 import {
   WAX_GRAPHICS_AUDIT, prepareWaxGraphicsAuditFixture,
 } from './wax-graphics-audit';
+import {
+  CRYSTALLINE_GRAPHICS_AUDIT, prepareCrystallineGraphicsAuditFixture,
+} from './crystalline-graphics-audit';
 
 const AUTOSAVE_KEY = 'stillroom-world-v1';
 
@@ -407,6 +410,10 @@ export class Game {
       waxGraphicsAtlas: () => WAX_GRAPHICS_AUDIT,
       prepareWaxGraphicsFixture: () => {
         prepareWaxGraphicsAuditFixture(this.simulation);
+      },
+      crystallineGraphicsAtlas: () => CRYSTALLINE_GRAPHICS_AUDIT,
+      prepareCrystallineGraphicsFixture: () => {
+        prepareCrystallineGraphicsAuditFixture(this.simulation);
       },
       canvasPresentationTiming: () => this.renderer.getCanvasPresentationTiming(),
       requestWebGLPresentationTimingSample: () => this.renderer.requestWebGLPresentationTimingSample(),

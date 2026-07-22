@@ -16,6 +16,7 @@ import type { OrganicPlantGraphicsAuditSnapshot } from './organic-plant-graphics
 import type { SpongeGraphicsAuditSnapshot } from './sponge-graphics-audit';
 import type { VirusGraphicsAuditSnapshot } from './virus-graphics-audit';
 import type { WaxGraphicsAuditSnapshot } from './wax-graphics-audit';
+import type { CrystallineGraphicsAuditSnapshot } from './crystalline-graphics-audit';
 
 export interface BrowserInputAuditApi {
   readonly version: 1;
@@ -94,6 +95,8 @@ export interface BrowserInputAuditApi {
   prepareVirusGraphicsFixture(): void;
   waxGraphicsAtlas(): WaxGraphicsAuditSnapshot;
   prepareWaxGraphicsFixture(): void;
+  crystallineGraphicsAtlas(): CrystallineGraphicsAuditSnapshot;
+  prepareCrystallineGraphicsFixture(): void;
   canvasPresentationTiming(): CanvasPresentationTiming | undefined;
   requestWebGLPresentationTimingSample(): boolean;
   webGLPresentationTiming(): WebGLPresentationTiming | undefined;

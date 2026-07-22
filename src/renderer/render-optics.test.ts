@@ -82,7 +82,10 @@ describe('render optics', () => {
     expect(optics(Material.VIBR)).toBe(RenderOptics.Radioactive);
     expect(optics(Material.Glass)).toBe(RenderOptics.TranslucentRigid);
     expect(optics(Material.Ice)).toBe(RenderOptics.TranslucentRigid);
+    expect(optics(Material.DRIC)).toBe(RenderOptics.TranslucentRigid);
+    expect(optics(Material.NICE)).toBe(RenderOptics.TranslucentRigid);
     expect(optics(Material.QRTZ)).toBe(RenderOptics.TranslucentRigid);
+    expect(optics(Material.RIME)).toBe(RenderOptics.TranslucentRigid);
     expect(optics(Material.FRZW)).toBe(RenderOptics.CryogenicLiquid);
     expect(optics(Material.RFGL)).toBe(RenderOptics.CryogenicLiquid);
     expect(optics(Material.BIZRG)).toBe(RenderOptics.CleanGas);

@@ -357,6 +357,56 @@ vec3 waxFamilyIdentityDelta(float phase, vec2 worldPosition) {
   }
   return delta / 255.0;
 }
+vec3 crystallineSolidIdentityDelta(float material, vec2 worldPosition) {
+  // Exact DRIC/NICE/QRTZ/RIME mesostructure. Integer world-space arithmetic
+  // mirrors Canvas and changes RGB only; no sample, clock, derivative, or state.
+  vec2 cell = mod(floor(worldPosition), 32.0);
+  vec3 delta = vec3(0.0);
+  if (material == 68.0) {
+    float fracture = 1.0 - step(
+      2.0, mod(cell.x * 3.0 + cell.y * 5.0 + floor(cell.y / 4.0) * 2.0, 19.0)
+    );
+    float frostLip = 1.0 - step(2.0, mod(cell.x - floor(cell.y / 2.0) + 26.0, 13.0));
+    if (fracture > 0.5 && frostLip > 0.5) delta = vec3(-10.0, -7.0, -4.0);
+    else if (fracture > 0.5) delta = vec3(-7.0, -5.0, -3.0);
+    else if (frostLip > 0.5) delta = vec3(5.0, 7.0, 10.0);
+    else delta = vec3(-1.0, 0.0, 2.0);
+  } else if (material == 74.0) {
+    float risingFacet = 1.0 - step(2.0, mod(cell.x + cell.y * 2.0, 14.0));
+    float fallingFacet = 1.0 - step(2.0, mod(cell.x * 2.0 - cell.y + 34.0, 17.0));
+    if (risingFacet > 0.5 && fallingFacet > 0.5) delta = vec3(7.0, 10.0, 14.0);
+    else if (risingFacet > 0.5) delta = vec3(-2.0, 3.0, 10.0);
+    else if (fallingFacet > 0.5) delta = vec3(3.0, 7.0, 12.0);
+    else delta = vec3(0.0, 1.0, 4.0);
+  } else if (material == 76.0) {
+    float prismEdge = 1.0 - step(2.0, mod(cell.x, 8.0));
+    float cleavage = 1.0 - step(2.0, mod(cell.x + cell.y, 16.0));
+    if (prismEdge > 0.5 && cleavage > 0.5) delta = vec3(12.0, 9.0, 14.0);
+    else if (prismEdge > 0.5) delta = vec3(8.0, 4.0, 12.0);
+    else if (cleavage > 0.5) delta = vec3(-5.0, 2.0, 7.0);
+    else if (mod(floor(cell.x / 8.0) + floor(cell.y / 8.0), 2.0) < 0.5) {
+      delta = vec3(2.0, 0.0, 4.0);
+    } else delta = vec3(-1.0, 3.0, 1.0);
+  } else {
+    float localX = mod(cell.x, 16.0) - 8.0;
+    float nodeY = mix(8.0, 24.0, step(16.0, cell.y));
+    float localY = cell.y - nodeY;
+    float spine = 1.0 - step(2.0, abs(localX));
+    float branch = (1.0 - step(2.0, abs(abs(localX) - abs(localY))))
+      * (1.0 - step(8.0, abs(localX)));
+    float node = spine * (1.0 - step(2.0, abs(localY)));
+    float tip = branch * step(6.0, abs(localX));
+    if (tip > 0.5) delta = vec3(7.0, 11.0, 14.0);
+    else if (node > 0.5) delta = vec3(4.0, 9.0, 12.0);
+    else if (branch > 0.5) delta = vec3(5.0, 9.0, 13.0);
+    else if (spine > 0.5) delta = vec3(3.0, 7.0, 10.0);
+    else delta = vec3(-2.0, 0.0, 2.0);
+  }
+  // NICE's pale translucent base preserves substantially more of this additive
+  // delta than Canvas's pre-optics path; compensate here for composed parity.
+  if (material == 74.0) delta *= 0.5;
+  return delta / 255.0;
+}
 vec3 liquidMaterialIdentityDelta(
   float material, vec2 worldPosition, float density, float depth, vec2 slope
 ) {
@@ -2402,11 +2452,12 @@ void main() {
       float interference = (planeWave + radialWave) * 0.5;
       color *= 0.95 + interference * 0.045;
     }
-    // Eight uncommon solids layer one static identity over the generic body
+    // Twelve uncommon solids layer one static identity over the generic body
     // structure above. Only authoritative semantic matter participates; this
     // RGB arithmetic adds no sample, pass, field, allocation, clock term, or
     // output-scale resource, and leaves later trait decals independent.
-    float unusualSolid = material == 27.0 || material == 80.0 || material == 196.0
+    float unusualSolid = material == 27.0 || material == 68.0 || material == 74.0
+      || material == 76.0 || material == 77.0 || material == 80.0 || material == 196.0
       || material == 206.0 || material == 208.0 || material == 209.0
       || material == 210.0 || material == 216.0 ? 1.0 : 0.0;
     if (uUnusualSolidStyling > 0.5 && unusualSolid > 0.5
@@ -2417,6 +2468,10 @@ void main() {
       if (material == 27.0) {
         // WAX: crystalline blooms and cooling lamellae share MWAX's topology.
         color += waxFamilyIdentityDelta(0.0, fieldPosition);
+      } else if (material == 68.0 || material == 74.0
+        || material == 76.0 || material == 77.0) {
+        // Cold/crystalline solids retain one exact, world-anchored mesostructure.
+        color += crystallineSolidIdentityDelta(material, fieldPosition);
       } else if (material == 196.0) {
         // BIZRS: angular prismatic facets split cool and warm reflections.
         vec2 prismTile = abs(fract((fieldPosition + vec2(3.0, 1.0)) / 11.0) - 0.5);

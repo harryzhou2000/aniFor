@@ -14,10 +14,14 @@ const UNUSUAL_SOLIDS = [
   Material.SHLD4,
   Material.VRSS,
   Material.Wax,
+  Material.DRIC,
+  Material.NICE,
+  Material.QRTZ,
+  Material.RIME,
 ] as const;
 
 describe('Canvas unusual-solid morphology', () => {
-  it('covers exactly the eight requested non-contiguous identities', () => {
+  it('covers exactly the twelve requested non-contiguous identities', () => {
     for (const material of UNUSUAL_SOLIDS) {
       expect(isCanvasUnusualSolidMaterial(material)).toBe(true);
     }
@@ -29,6 +33,7 @@ describe('Canvas unusual-solid morphology', () => {
       Material.RFGL,
       Material.VRSG,
       Material.BCOL,
+      Material.Quartz,
     ]) {
       expect(isCanvasUnusualSolidMaterial(material)).toBe(false);
     }
@@ -113,7 +118,7 @@ describe('Canvas unusual-solid morphology', () => {
     expect(accentedCounts[3]).toBeGreaterThan(accentedCounts[2]);
   });
 
-  it('keeps prismatic, compressed-strata, viral, and wax anchors visibly distinct', () => {
+  it('keeps phase-family and crystalline anchors visibly distinct', () => {
     const response = (material: Material, x: number, y: number): readonly number[] => {
       const output = new Float32Array([100, 110, 120, 201]);
       applyCanvasUnusualSolidMorphology(output, material, x, y, y * 612 + x);
@@ -124,6 +129,10 @@ describe('Canvas unusual-solid morphology', () => {
     expect(response(Material.PSTS, 4, 0)).not.toEqual(response(Material.PSTS, 4, 3));
     expect(response(Material.VRSS, 0, 7)).not.toEqual(response(Material.VRSS, 7, 7));
     expect(response(Material.Wax, 0, 0)).not.toEqual(response(Material.Wax, 3, 3));
+    expect(response(Material.DRIC, 0, 0)).not.toEqual(response(Material.DRIC, 4, 4));
+    expect(response(Material.NICE, 0, 0)).not.toEqual(response(Material.NICE, 3, 3));
+    expect(response(Material.QRTZ, 0, 0)).not.toEqual(response(Material.QRTZ, 3, 3));
+    expect(response(Material.RIME, 8, 8)).not.toEqual(response(Material.RIME, 12, 8));
   });
 
   it('is an exact no-op for controls adjacent to every target range', () => {
@@ -136,6 +145,7 @@ describe('Canvas unusual-solid morphology', () => {
       Material.RFGL,
       Material.VRSG,
       Material.BCOL,
+      Material.Quartz,
     ]) {
       const output = new Float32Array([17, 29, 43, 211]);
       applyCanvasUnusualSolidMorphology(output, material, 12, 19, 11640);

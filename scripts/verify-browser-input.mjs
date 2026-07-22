@@ -49,10 +49,12 @@ const organicPlantGraphicsOnly = process.argv.includes('--organic-plant-graphics
 const spongeGraphicsOnly = process.argv.includes('--sponge-graphics-only');
 const virusGraphicsOnly = process.argv.includes('--virus-graphics-only');
 const waxGraphicsOnly = process.argv.includes('--wax-graphics-only');
+const crystalGraphicsOnly = process.argv.includes('--crystal-graphics-only');
 const usesProductionBundle = cellularGraphicsOnly || sensorGraphicsOnly
   || unusualPowderGraphicsOnly || unusualSolidGraphicsOnly
   || liquidIdentityGraphicsOnly || gasIdentityGraphicsOnly || energyRadioactiveGraphicsOnly
   || organicPlantGraphicsOnly || spongeGraphicsOnly || virusGraphicsOnly || waxGraphicsOnly
+  || crystalGraphicsOnly
   || scaleEightOnly;
 const AUDIT_BASE_URL = usesProductionBundle ? PRODUCTION_BUNDLE_URL : ORIGIN + '/';
 const screenshotRequest = process.argv.find((argument) => argument.startsWith('--screenshot='))?.slice('--screenshot='.length);
@@ -116,7 +118,7 @@ async function main() {
       || roleGraphicsOnly || cellularGraphicsOnly || sensorGraphicsOnly
       || unusualPowderGraphicsOnly || unusualSolidGraphicsOnly || liquidIdentityGraphicsOnly
       || gasIdentityGraphicsOnly || energyRadioactiveGraphicsOnly || organicPlantGraphicsOnly
-      || spongeGraphicsOnly || virusGraphicsOnly || waxGraphicsOnly;
+      || spongeGraphicsOnly || virusGraphicsOnly || waxGraphicsOnly || crystalGraphicsOnly;
     if (powderBodyOnly) assertPairedPowderBodyDepth(results);
     if (liquidDepthOnly) assertPairedLiquidOpticalDepth(results);
     if (solidDepthOnly) assertPairedSolidOpticalDepth(results);
@@ -135,11 +137,13 @@ async function main() {
     if (spongeGraphicsOnly) assertPairedSpongeGraphics(results);
     if (virusGraphicsOnly) assertPairedVirusGraphics(results);
     if (waxGraphicsOnly) assertPairedWaxGraphics(results);
+    if (crystalGraphicsOnly) assertPairedCrystallineGraphics(results);
     if (!scaleEightOnly && !materialAtlasOnly && !reducedAudit) assertPairedVisualRelief(results);
     if (!scaleEightOnly && !reducedAudit) assertPairedMaterialAtlas(results);
     compactMaterialAtlasResults(results);
     compactVirusGraphicsResults(results);
     compactWaxGraphicsResults(results);
+    compactCrystallineGraphicsResults(results);
     console.log(JSON.stringify({ world: `${WORLD_WIDTH}x${WORLD_HEIGHT}`, results }, null, 2));
   } catch (error) {
     if (serverLog.trim()) console.error(serverLog.trim());
@@ -156,7 +160,7 @@ async function auditMode(mode) {
   const startsBlank = cellularGraphicsOnly || sensorGraphicsOnly
     || unusualPowderGraphicsOnly || unusualSolidGraphicsOnly || liquidIdentityGraphicsOnly
     || gasIdentityGraphicsOnly || energyRadioactiveGraphicsOnly || organicPlantGraphicsOnly
-    || spongeGraphicsOnly || virusGraphicsOnly || waxGraphicsOnly;
+    || spongeGraphicsOnly || virusGraphicsOnly || waxGraphicsOnly || crystalGraphicsOnly;
   const query = new URLSearchParams({
     scene: 'render-lab', inputAudit: '1', renderScale: '2',
     auditStage: startsBlank ? 'blank' : 'canonical',
@@ -335,6 +339,12 @@ async function auditMode(mode) {
       assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
       cdp.close();
       return { backend: mode, waxGraphics, browserErrors: errors.length };
+    }
+    if (crystalGraphicsOnly) {
+      const crystallineGraphics = await auditCrystallineGraphics(cdp, mode);
+      assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
+      cdp.close();
+      return { backend: mode, crystallineGraphics, browserErrors: errors.length };
     }
     if (mobileOnly) {
       const mobile = await auditMobile(
@@ -4827,6 +4837,41 @@ function normalizeWaxGraphicsAtlas(snapshot) {
   return { cards };
 }
 
+function normalizeCrystallineGraphicsAtlas(snapshot) {
+  const cards = (Array.isArray(snapshot) ? snapshot : snapshot?.cards ?? []).map((entry) => ({
+    ...entry,
+    card: cellularRect(entry.card ?? entry),
+    body: cellularRect(entry.body),
+    surfaceProbe: cellularRect(entry.surfaceProbe),
+    coreProbe: cellularRect(entry.coreProbe),
+    authoredCavity: cellularRect(entry.authoredCavity),
+    openChimney: cellularRect(entry.openChimney),
+    haloOuter: cellularRect(entry.haloOuter),
+    fineStructure: cellularPoints(entry.fineStructure),
+    isolated: cellularPoint(entry.isolated),
+    guardedBlank: cellularRect(entry.guardedBlank),
+    crystalContact: {
+      ...entry.crystalContact,
+      owner: cellularRect(entry.crystalContact.owner),
+      neighbour: cellularRect(entry.crystalContact.neighbour),
+    },
+    metalContact: {
+      ...entry.metalContact,
+      owner: cellularRect(entry.metalContact.owner),
+      neighbour: cellularRect(entry.metalContact.neighbour),
+    },
+    motifProbes: (entry.motifProbes ?? []).map((probe) => ({
+      tileOrigin: cellularPoint(probe.tileOrigin),
+      key: cellularRect(probe.key),
+      facet: cellularRect(probe.facet),
+      joint: cellularRect(probe.joint),
+      shadow: cellularRect(probe.shadow),
+      interstitial: cellularRect(probe.interstitial),
+    })),
+  }));
+  return { cards };
+}
+
 /** Exact nine-card Energy motif proof plus the complete 21-card semantic guard. */
 async function auditEnergyRadioactiveGraphics(cdp, mode) {
   const started = performance.now();
@@ -6702,6 +6747,273 @@ function summarizeWaxBackingResponses(flat, styled, repeated) {
       repeatRgbPeak: repeatPeak,
       profile: Array.from(buckets, (value) => total > 0 ? value / total : 0),
       axisMap, motifAxis,
+    };
+  });
+}
+
+/** Focused exact-owner graphics proof for DRIC, NICE, QRTZ, and RIME. */
+async function auditCrystallineGraphics(cdp, mode) {
+  const started = performance.now();
+  const stage = (name) => console.error(
+    `[crystalline-graphics:${mode}] ${name} ${Math.round(performance.now() - started)}ms`,
+  );
+  await waitForStablePageCapture(cdp, `${mode} initial blank crystalline framebuffer`);
+  await evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    if (typeof audit.prepareCrystallineGraphicsFixture !== 'function'
+      || typeof audit.crystallineGraphicsAtlas !== 'function'
+      || typeof audit.setUnusualSolidStyling !== 'function') {
+      throw new Error('Crystalline graphics audit API unavailable');
+    }
+    audit.prepareCrystallineGraphicsFixture();
+    return true;
+  })()`);
+  const rawAtlas = await waitFor(() => evaluate(cdp, `(() => {
+    const atlas = window.__ANIFOR_INPUT_AUDIT__.crystallineGraphicsAtlas();
+    const cards = Array.isArray(atlas) ? atlas : atlas?.cards;
+    return cards?.length === 4 ? atlas : false;
+  })()`), 15_000, `${mode} crystalline graphics fixture`);
+  const atlas = normalizeCrystallineGraphicsAtlas(rawAtlas);
+  assert(atlas.cards.map(({ material }) => material).join(',') === '68,74,76,77'
+      && atlas.cards.map(({ code }) => code).join(',') === 'DRIC,NICE,QRTZ,RIME'
+      && atlas.cards.every(({ body }) => body.width === 144 && body.height === 104)
+      && atlas.cards.map(({ fineStructure }) => fineStructure.length).join(',') === '95,138,88,136'
+      && atlas.cards.every(({ motifProbes }) => motifProbes.length === 8)
+      && atlas.cards.every(({ body }) => body.x % 32 === 20 && body.y % 32 === 20),
+  `${mode}: crystalline atlas contract changed`);
+  const semanticState = await evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    const snapshot = audit.crystallineGraphicsAtlas();
+    const cards = Array.isArray(snapshot) ? snapshot : snapshot.cards;
+    const inside = (x, y, rect) => x >= rect.x && y >= rect.y
+      && x < rect.x + rect.width && y < rect.y + rect.height;
+    const exactRect = (rect, material) => {
+      for (let y = rect.y; y < rect.y + rect.height; y++) for (let x = rect.x; x < rect.x + rect.width; x++) {
+        if (audit.cell(x, y) !== material) return false;
+      }
+      return true;
+    };
+    return cards.map((entry) => {
+      let bodyExact = true;
+      for (let y = entry.body.y; y < entry.body.y + entry.body.height; y++) {
+        for (let x = entry.body.x; x < entry.body.x + entry.body.width; x++) {
+          const empty = inside(x, y, entry.authoredCavity) || inside(x, y, entry.openChimney);
+          bodyExact = bodyExact && audit.cell(x, y) === (empty ? 0 : entry.material);
+        }
+      }
+      return {
+        bodyExact,
+        cavityEmpty: exactRect(entry.authoredCavity, 0),
+        chimneyEmpty: exactRect(entry.openChimney, 0),
+        fineExact: entry.fineStructure.every(({ x, y }) => audit.cell(x, y) === entry.material),
+        isolated: audit.cell(entry.isolated.x, entry.isolated.y),
+        guardEmpty: exactRect(entry.guardedBlank, 0),
+        crystalOwner: exactRect(entry.crystalContact.owner, entry.material),
+        crystalNeighbour: exactRect(entry.crystalContact.neighbour, entry.crystalContact.neighbourMaterial),
+        metalOwner: exactRect(entry.metalContact.owner, entry.material),
+        metalNeighbour: exactRect(entry.metalContact.neighbour, entry.metalContact.neighbourMaterial),
+      };
+    });
+  })()`);
+  assert(semanticState.every((entry, index) => entry.bodyExact && entry.cavityEmpty
+      && entry.chimneyEmpty && entry.fineExact && entry.isolated === atlas.cards[index].material
+      && entry.guardEmpty && entry.crystalOwner && entry.crystalNeighbour
+      && entry.metalOwner && entry.metalNeighbour),
+  `${mode}: crystalline fixture lost semantic topology (${JSON.stringify(semanticState)})`);
+  stage('fixture-ready');
+
+  const setStyling = async (enabled) => evaluate(cdp, `(() => {
+    window.__ANIFOR_INPUT_AUDIT__.setUnusualSolidStyling(${enabled}); return true;
+  })()`);
+  await setStyling(false);
+  const flat = await waitForStablePageCapture(cdp, `${mode} flat crystalline framebuffer`);
+  const flatBacking = await sampleCrystallineBacking(cdp);
+  await setStyling(true);
+  const styled = await waitForStablePageCapture(cdp, `${mode} styled crystalline framebuffer`);
+  const styledBacking = await sampleCrystallineBacking(cdp);
+  await setStyling(false);
+  const repeated = await waitForStablePageCapture(cdp, `${mode} repeated flat crystalline framebuffer`);
+  const repeatedBacking = await sampleCrystallineBacking(cdp);
+  for (const [state, backing] of [
+    ['flat', flatBacking], ['styled', styledBacking], ['repeated-flat', repeatedBacking],
+  ]) assertCrystallineBacking(backing, `${mode} ${state}`);
+  for (let index = 0; index < 4; index++) {
+    const base = flatBacking.cards[index], changed = styledBacking.cards[index];
+    const returned = repeatedBacking.cards[index];
+    assert(base.semanticSignature === changed.semanticSignature
+        && base.semanticSignature === returned.semanticSignature
+        && base.alphaSignature === changed.alphaSignature
+        && base.alphaSignature === returned.alphaSignature
+        && base.supportSignature === changed.supportSignature
+        && base.supportSignature === returned.supportSignature,
+    `${mode}: ${base.code} styling changed semantic/alpha/support signatures`);
+    assert(arraysEqual(base.metalContact.neighbourRgb, changed.metalContact.neighbourRgb)
+        && arraysEqual(base.metalContact.neighbourRgb, returned.metalContact.neighbourRgb),
+    `${mode}: ${base.code} styling leaked into Metal`);
+  }
+  const responses = summarizeCrystallineBackingResponses(flatBacking, styledBacking, repeatedBacking);
+  for (const response of responses) {
+    assert(response.rgbRms >= 0.05 && response.rgbRms <= 24
+        && response.rgbPeak > 0 && response.rgbPeak <= 64
+        && response.changedSampleRatio >= 0.02 && response.repeatRgbPeak === 0,
+    `${mode}: ${response.code} crystalline response is absent, unbounded, or unstable (${JSON.stringify(response)})`);
+  }
+  assert(new Set(responses.map(({ responseSignature }) => responseSignature)).size === 4,
+    `${mode}: crystalline body responses are not distinct`);
+  assert(new Set(responses.map(({ motifVector }) => motifVector.join(','))).size === 4,
+    `${mode}: crystalline motif probes are not distinct`);
+  const normalFitRegions = atlas.cards.map((entry) => ({
+    name: `${entry.code}-normal-fit-body`, x: entry.body.x + entry.body.width / 2,
+    y: entry.body.y + entry.body.height / 2, radiusX: entry.body.width / 2,
+    radiusY: entry.body.height / 2, signature: true, silhouette: true, fastSupport: true,
+  }));
+  const normalFit = await sampleBackdropRefractionRegions(cdp, {
+    straight: flat.capture.data, refracted: styled.capture.data,
+    repeatedStraight: repeated.capture.data,
+  }, normalFitRegions, flat.canvasRect);
+  assert(normalFit.every((response) => response.rgbRms > 0 && response.rgbRms <= 32
+      && response.rgbPeak > 0 && response.rgbPeak <= 64 && response.repeatRgbPeak === 0),
+  `${mode}: crystalline identity is absent, unbounded, or unstable at normal fit (${JSON.stringify(normalFit)})`);
+  stage('responses-ready');
+  return {
+    cards: responses.map((response, index) => ({
+      ...response, normalFitRgbRms: normalFit[index].rgbRms,
+      normalFitRgbPeak: normalFit[index].rgbPeak,
+    })),
+    exactRepeatedOff: responses.every(({ repeatRgbPeak }) => repeatRgbPeak === 0),
+  };
+}
+
+async function sampleCrystallineBacking(cdp) {
+  return evaluate(cdp, `(() => {
+    const world = document.querySelector('.world-canvas');
+    if (!(world instanceof HTMLCanvasElement)) throw new Error('World canvas unavailable');
+    const copy = document.createElement('canvas'); copy.width = world.width; copy.height = world.height;
+    const context = copy.getContext('2d', { willReadFrequently: true });
+    if (!context) throw new Error('Crystalline backing sampler unavailable');
+    context.drawImage(world, 0, 0);
+    const pixels = context.getImageData(0, 0, copy.width, copy.height).data;
+    const scaleX = copy.width / ${WORLD_WIDTH}, scaleY = copy.height / ${WORLD_HEIGHT};
+    const snapshot = window.__ANIFOR_INPUT_AUDIT__.crystallineGraphicsAtlas();
+    const cards = Array.isArray(snapshot) ? snapshot : snapshot.cards;
+    const key = ({ x, y }) => x + ',' + y;
+    const rectPoints = (rect) => { const points = []; for (let y = rect.y; y < rect.y + rect.height; y++) {
+      for (let x = rect.x; x < rect.x + rect.width; x++) points.push({ x, y });
+    } return points; };
+    const unique = (points) => [...new Map(points.map((point) => [key(point), point])).values()];
+    const cellAlpha = ({ x, y }) => { let peak = 0; const left = Math.floor(x * scaleX), top = Math.floor(y * scaleY);
+      const right = Math.max(left + 1, Math.floor((x + 1) * scaleX));
+      const bottom = Math.max(top + 1, Math.floor((y + 1) * scaleY));
+      for (let py = top; py < bottom; py++) for (let px = left; px < right; px++) peak = Math.max(peak, pixels[(py * copy.width + px) * 4 + 3]);
+      return peak; };
+    const centreAlpha = ({ x, y }) => pixels[(Math.min(copy.height - 1, Math.floor((y + 0.5) * scaleY)) * copy.width
+      + Math.min(copy.width - 1, Math.floor((x + 0.5) * scaleX))) * 4 + 3];
+    const sampleRgb = (points) => { const rgb = []; for (const { x, y } of points) {
+      const px = Math.min(copy.width - 1, Math.floor((x + 0.5) * scaleX));
+      const py = Math.min(copy.height - 1, Math.floor((y + 0.5) * scaleY));
+      const offset = (py * copy.width + px) * 4; rgb.push(pixels[offset], pixels[offset + 1], pixels[offset + 2]);
+    } return rgb; };
+    const grid = (rect, step = 2) => { const points = []; for (let y = rect.y; y < rect.y + rect.height; y += step) {
+      for (let x = rect.x; x < rect.x + rect.width; x += step) points.push({ x, y });
+    } return { width: Math.ceil(rect.width / step), height: Math.ceil(rect.height / step), rgb: sampleRgb(points) }; };
+    const contact = (control) => { const owner = rectPoints(control.owner), neighbour = rectPoints(control.neighbour); return {
+      ownerExpected: owner.length, ownerSupported: owner.filter((point) => cellAlpha(point) > 0).length,
+      neighbourExpected: neighbour.length, neighbourSupported: neighbour.filter((point) => cellAlpha(point) > 0).length,
+      neighbourRgb: sampleRgb(neighbour),
+    }; };
+    return { scaleX, scaleY, cards: cards.map((entry) => {
+      const emptyKeys = new Set([...rectPoints(entry.authoredCavity), ...rectPoints(entry.openChimney)].map(key));
+      const bodyPoints = rectPoints(entry.body).filter((point) => !emptyKeys.has(key(point)));
+      const fine = unique(entry.fineStructure), guard = rectPoints(entry.guardedBlank);
+      const cavity = rectPoints(entry.authoredCavity), chimney = rectPoints(entry.openChimney);
+      let alphaSignature = 2166136261, supportSignature = 2166136261, semanticSignature = 2166136261;
+      const left = Math.floor(entry.card.x * scaleX), top = Math.floor(entry.card.y * scaleY);
+      const right = Math.floor((entry.card.x + entry.card.width) * scaleX);
+      const bottom = Math.floor((entry.card.y + entry.card.height) * scaleY);
+      for (let py = top; py < bottom; py++) for (let px = left; px < right; px++) {
+        const alpha = pixels[(py * copy.width + px) * 4 + 3];
+        alphaSignature = Math.imul(alphaSignature ^ alpha, 16777619) >>> 0;
+        supportSignature = Math.imul(supportSignature ^ Number(alpha > 0), 16777619) >>> 0;
+      }
+      for (let y = entry.card.y; y < entry.card.y + entry.card.height; y++) for (let x = entry.card.x; x < entry.card.x + entry.card.width; x++) {
+        semanticSignature = Math.imul(semanticSignature ^ window.__ANIFOR_INPUT_AUDIT__.cell(x, y), 16777619) >>> 0;
+      }
+      const body = grid(entry.body);
+      const motif = (kind) => sampleRgb(entry.motifProbes.map((probe) => probe[kind]));
+      return { code: entry.code, material: entry.material, semanticSignature, alphaSignature, supportSignature,
+        bodyExpected: bodyPoints.length, bodySupported: bodyPoints.filter((point) => cellAlpha(point) > 0).length,
+        fineExpected: fine.length, fineSupported: fine.filter((point) => cellAlpha(point) > 0).length,
+        isolatedAlphaPeak: cellAlpha(entry.isolated), guardExpected: guard.length,
+        guardTransparent: guard.filter((point) => cellAlpha(point) === 0).length,
+        cavityExpected: cavity.length, cavityCentreTransparent: cavity.filter((point) => centreAlpha(point) === 0).length,
+        chimneyExpected: chimney.length, chimneyCentreTransparent: chimney.filter((point) => centreAlpha(point) === 0).length,
+        crystalContact: contact(entry.crystalContact), metalContact: contact(entry.metalContact),
+        bodyWidth: body.width, bodyHeight: body.height, bodyRgb: body.rgb,
+        motifRgb: { key: motif('key'), facet: motif('facet'), joint: motif('joint'),
+          shadow: motif('shadow'), interstitial: motif('interstitial') },
+      };
+    }) };
+  })()`);
+}
+
+function assertCrystallineBacking(backing, label) {
+  const fineCounts = [95, 138, 88, 136];
+  assert(Number.isInteger(backing.scaleX) && Number.isInteger(backing.scaleY)
+      && backing.scaleX > 0 && backing.scaleY > 0,
+  `${label}: crystalline backing does not preserve integral scaling`);
+  assert(backing.cards.map(({ material }) => material).join(',') === '68,74,76,77'
+      && backing.cards.every((card, index) => card.bodyExpected === 14_704
+        && card.bodySupported === card.bodyExpected
+        && card.fineExpected === fineCounts[index] && card.fineSupported === card.fineExpected
+        && card.isolatedAlphaPeak > 0 && card.guardExpected === 2_800
+        && card.guardTransparent === card.guardExpected
+        && card.cavityExpected === 120 && card.cavityCentreTransparent / card.cavityExpected >= 0.65
+        && card.chimneyExpected === 152 && card.chimneyCentreTransparent / card.chimneyExpected >= 0.75
+        && card.crystalContact.ownerExpected === 192 && card.crystalContact.ownerSupported === 192
+        && card.crystalContact.neighbourExpected === 256 && card.crystalContact.neighbourSupported === 256
+        && card.metalContact.ownerExpected === 192 && card.metalContact.ownerSupported === 192
+        && card.metalContact.neighbourExpected === 256 && card.metalContact.neighbourSupported === 256),
+  `${label}: crystalline backing changed topology (${JSON.stringify(backing.cards.map((card) => ({
+    ...card, bodyRgb: undefined, motifRgb: undefined,
+    crystalContact: { ...card.crystalContact, neighbourRgb: undefined },
+    metalContact: { ...card.metalContact, neighbourRgb: undefined },
+  })))})`);
+}
+
+function summarizeCrystallineBackingResponses(flat, styled, repeated) {
+  return flat.cards.map((base, index) => {
+    const changed = styled.cards[index], returned = repeated.cards[index];
+    let squared = 0, peak = 0, repeatPeak = 0, changedSamples = 0, signature = 2166136261;
+    const buckets = new Float64Array(16), axisMap = [];
+    for (let offset = 0; offset < base.bodyRgb.length; offset += 3) {
+      const sample = offset / 3, x = sample % base.bodyWidth, y = Math.floor(sample / base.bodyWidth);
+      const bucket = Math.min(3, Math.floor(y * 4 / base.bodyHeight)) * 4
+        + Math.min(3, Math.floor(x * 4 / base.bodyWidth));
+      let any = false, axis = 0;
+      for (let channel = 0; channel < 3; channel++) {
+        const delta = changed.bodyRgb[offset + channel] - base.bodyRgb[offset + channel];
+        squared += delta * delta; peak = Math.max(peak, Math.abs(delta));
+        buckets[bucket] += Math.abs(delta); any ||= delta !== 0; axis += delta / 3;
+        signature = Math.imul(signature ^ (delta + 128), 16777619) >>> 0;
+        repeatPeak = Math.max(repeatPeak, Math.abs(returned.bodyRgb[offset + channel] - base.bodyRgb[offset + channel]));
+      }
+      axisMap.push(axis); changedSamples += Number(any);
+    }
+    const total = buckets.reduce((sum, value) => sum + value, 0), motifAxis = {};
+    for (const kind of ['key', 'facet', 'joint', 'shadow', 'interstitial']) {
+      const before = base.motifRgb[kind], after = changed.motifRgb[kind]; let sum = 0;
+      for (let offset = 0; offset < before.length; offset += 3) sum += (
+        after[offset] - before[offset] + after[offset + 1] - before[offset + 1]
+          + after[offset + 2] - before[offset + 2]
+      ) / 3;
+      motifAxis[kind] = sum / Math.max(1, before.length / 3);
+    }
+    return { code: base.code, material: base.material,
+      rgbRms: Math.sqrt(squared / Math.max(1, base.bodyRgb.length)), rgbPeak: peak,
+      changedSampleRatio: changedSamples / Math.max(1, base.bodyRgb.length / 3),
+      repeatRgbPeak: repeatPeak, responseSignature: signature,
+      profile: Array.from(buckets, (value) => total > 0 ? value / total : 0),
+      axisMap, motifAxis, motifVector: ['key', 'facet', 'joint', 'shadow', 'interstitial'].map((kind) => motifAxis[kind]),
     };
   });
 }
@@ -9344,6 +9656,43 @@ function assertPairedWaxGraphics(results) {
 function compactWaxGraphicsResults(results) {
   for (const result of results) {
     for (const card of result.waxGraphics?.cards ?? []) delete card.axisMap;
+  }
+}
+
+function assertPairedCrystallineGraphics(results) {
+  const canvas = results.find((result) => result.backend === 'canvas2d')?.crystallineGraphics;
+  const webgl = results.find((result) => result.backend === 'webgl')?.crystallineGraphics;
+  if (!canvas || !webgl) return;
+  assert(canvas.cards.map(({ material }) => material).join(',') === '68,74,76,77'
+      && webgl.cards.map(({ material }) => material).join(',') === '68,74,76,77'
+      && canvas.exactRepeatedOff && webgl.exactRepeatedOff,
+  'Paired crystalline identity/topology contract failed');
+  const parity = canvas.cards.map((canvasCard, index) => {
+    const webglCard = webgl.cards[index];
+    const responseRatio = canvasCard.rgbRms / Math.max(0.01, webglCard.rgbRms);
+    const normalFitRatio = canvasCard.normalFitRgbRms / Math.max(0.01, webglCard.normalFitRgbRms);
+    const profileDistance = Math.max(...canvasCard.profile.map(
+      (value, profileIndex) => Math.abs(value - webglCard.profile[profileIndex]),
+    ));
+    const motifCorrelation = virusPearson(canvasCard.axisMap, webglCard.axisMap);
+    assert(responseRatio >= 0.35 && responseRatio <= 3.0,
+      `Canvas/WebGL ${canvasCard.code} crystalline response diverged (${canvasCard.rgbRms}/${webglCard.rgbRms})`);
+    assert(normalFitRatio >= 0.35 && normalFitRatio <= 3.0,
+      `Canvas/WebGL ${canvasCard.code} crystalline normal-fit response diverged (${canvasCard.normalFitRgbRms}/${webglCard.normalFitRgbRms})`);
+    assert(profileDistance <= 0.15,
+      `Canvas/WebGL ${canvasCard.code} crystalline profile diverged (${profileDistance})`);
+    assert(motifCorrelation >= 0.45,
+      `Canvas/WebGL ${canvasCard.code} crystalline motif diverged (${motifCorrelation})`);
+    return { code: canvasCard.code, responseRatio: round(responseRatio, 4),
+      normalFitRatio: round(normalFitRatio, 4), profileMaxDistance: round(profileDistance, 5),
+      motifCorrelation: round(motifCorrelation, 5) };
+  });
+  console.error(`[crystalline-graphics:paired] parity ${JSON.stringify(parity)}`);
+}
+
+function compactCrystallineGraphicsResults(results) {
+  for (const result of results) {
+    for (const card of result.crystallineGraphics?.cards ?? []) delete card.axisMap;
   }
 }
 

@@ -867,7 +867,7 @@ describe('Pixi presenter startup configuration', () => {
     expect(presenter.app.render).toHaveBeenCalledOnce();
 
     const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
-    const start = source.indexOf('// Eight uncommon solids layer one static identity');
+    const start = source.indexOf('// Twelve uncommon solids layer one static identity');
     const end = source.indexOf('    if (uThermalMaterialStyling > 0.5', start);
     const unusualSolidBlock = source.slice(start, end);
     expect(start).toBeGreaterThan(0);
@@ -877,7 +877,7 @@ describe('Pixi presenter startup configuration', () => {
     expect(unusualSolidBlock).toContain('family == 0.0 && !materialEmissive');
     expect(unusualSolidBlock).toContain('surfaceOnly < 0.5 && halo < 0.5 && wall < 0.5');
     expect(unusualSolidBlock).toContain('wallOnly < 0.5 && emissionOnly < 0.5');
-    for (const material of [27, 80, 196, 206, 208, 209, 210, 216]) {
+    for (const material of [27, 68, 74, 76, 77, 80, 196, 206, 208, 209, 210, 216]) {
       expect(unusualSolidBlock).toContain(`material == ${material}.0`);
     }
     expect(unusualSolidBlock).toContain('// BIZRS: angular prismatic facets split cool and warm reflections.');
@@ -885,6 +885,7 @@ describe('Pixi presenter startup configuration', () => {
     expect(unusualSolidBlock).toContain('// SHLD1-4: one coherent shell gains progressively nested armour bands.');
     expect(unusualSolidBlock).toContain('// VRSS: the same family capsid is carried by the rigid solid body.');
     expect(unusualSolidBlock).toContain('// WAX: crystalline blooms and cooling lamellae share MWAX\'s topology.');
+    expect(unusualSolidBlock).toContain('crystallineSolidIdentityDelta(material, fieldPosition)');
     expect(unusualSolidBlock).toContain('virusFamilyIdentityDelta(2.0, fieldPosition)');
     expect(unusualSolidBlock).toContain('solidDepth');
     expect(unusualSolidBlock).toContain('solidReliefTone');
@@ -915,7 +916,7 @@ describe('Pixi presenter startup configuration', () => {
   it('uses one sample-free 32-cell wax grammar across solid and liquid phases', () => {
     const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
     const start = source.indexOf('vec3 waxFamilyIdentityDelta(');
-    const end = source.indexOf('vec3 liquidMaterialIdentityDelta(', start);
+    const end = source.indexOf('vec3 crystallineSolidIdentityDelta(', start);
     const helper = source.slice(start, end);
     expect(start).toBeGreaterThan(0);
     expect(end).toBeGreaterThan(start);
@@ -927,6 +928,28 @@ describe('Pixi presenter startup configuration', () => {
     expect(helper).not.toContain('uTime');
     expect(source).toContain('identity = waxFamilyIdentityDelta(1.0, worldPosition);');
     expect(source).toContain('color += waxFamilyIdentityDelta(0.0, fieldPosition);');
+  });
+
+  it('uses sample-free 32-cell crystalline grammars for exact solid projections', () => {
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const start = source.indexOf('vec3 crystallineSolidIdentityDelta(');
+    const end = source.indexOf('vec3 liquidMaterialIdentityDelta(', start);
+    const helper = source.slice(start, end);
+    expect(start).toBeGreaterThan(0);
+    expect(end).toBeGreaterThan(start);
+    expect(helper).toContain('mod(floor(worldPosition), 32.0)');
+    for (const material of [68, 74, 76]) {
+      expect(helper).toContain(`material == ${material}.0`);
+    }
+    for (const motif of ['fracture', 'frostLip', 'risingFacet', 'fallingFacet',
+      'prismEdge', 'cleavage', 'spine', 'branch', 'node', 'tip']) {
+      expect(helper).toContain(motif);
+    }
+    expect(helper).not.toContain('texture(');
+    expect(helper).not.toContain('uTime');
+    expect(helper).not.toContain('sin(');
+    expect(helper).not.toMatch(/\balpha\s*[+*]?=/);
+    expect(source).toContain('color += crystallineSolidIdentityDelta(material, fieldPosition);');
   });
 
   it('keeps contour and thick-body solid field light bounded behind strict eligibility', () => {
