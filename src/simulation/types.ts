@@ -1,6 +1,14 @@
 import type { Material } from '../shared/materials';
 import type { SimulationToolId } from './simulation-tools';
 
+/** Stable bit layout of the native VIBR/BVBR presentation-state word. */
+export const VIBR_PRESENTATION_STATE = {
+  chargeMask: 0x007f,
+  countdownShift: 7,
+  countdownMask: 0x7f80,
+  alternateModeMask: 0x8000,
+} as const;
+
 export interface DirtyCell {
   readonly index: number;
   readonly material: Material;
@@ -44,6 +52,8 @@ export interface SimulationBackend {
   clear(): void;
   cells(): Uint8Array;
   temperature?(): Uint16Array;
+  /** Packed native presentation state refreshed by the same extraction as `cells()`. */
+  presentationState?(): Uint16Array;
   pressure?(): Float32Array;
   velocity?(): Int8Array;
   walls?(): Uint8Array;

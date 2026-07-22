@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { MATERIALS, Material } from '../shared/materials';
 import { PowderToyBackend } from './powder-toy-backend';
 import { SimulationTool } from './simulation-tools';
+import { VIBR_PRESENTATION_STATE } from './types';
+import { readFileSync } from 'node:fs';
 
 const moduleArtifact = new URL('../../public/wasm/stillroom_core.js', import.meta.url);
 const LIFE_FIRST_MATERIAL_ID = 171;
@@ -9,8 +11,10 @@ const LIFE_PRESET_COUNT = 24;
 
 interface RawPowderModule {
   HEAPU8: Uint8Array;
+  HEAPU16: Uint16Array;
   _powder_init(): number;
   _powder_cells(): number;
+  _powder_presentation_state(): number;
   _powder_pressure(): number;
   _powder_set(x: number, y: number, material: number): void;
   _powder_set_life(x: number, y: number, preset: number): number;
@@ -26,6 +30,14 @@ interface RawPowderModule {
 }
 
 describe('direct Powder Toy backend', () => {
+  it('reserves a nonzero presentation bucket for the final native explosion tick', () => {
+    const adapter = readFileSync(
+      new URL('../../native/tpt/tpt_adapter.cpp', import.meta.url), 'utf8',
+    );
+    expect(adapter).toContain('auto const countdown = life > 0');
+    expect(adapter).toContain('? std::max(1, (life * 255 + 375) / 750) : 0;');
+  });
+
   it('loads the pinned 612x384 engine and exposes rendering fields', async () => {
     const simulation = await PowderToyBackend.load(moduleArtifact.href);
     expect([simulation.width, simulation.height]).toEqual([612, 384]);
@@ -38,6 +50,10 @@ describe('direct Powder Toy backend', () => {
     const cells = simulation.cells();
     expect(cells.filter((value) => value !== Material.Empty)).toHaveLength(2);
     expect(simulation.temperature()).toHaveLength(612 * 384);
+    const presentationState = simulation.presentationState();
+    expect(presentationState).toHaveLength(612 * 384);
+    expect(presentationState.byteLength).toBe(612 * 384 * Uint16Array.BYTES_PER_ELEMENT);
+    expect(presentationState.every((value) => value === 0)).toBe(true);
     const pressure = simulation.pressure();
     expect(pressure).toHaveLength(612 * 384);
     expect(Array.from(pressure).every(Number.isFinite)).toBe(true);
@@ -51,6 +67,73 @@ describe('direct Powder Toy backend', () => {
     const dirtyWalls = simulation.consumeDirtyWalls();
     expect(dirtyWalls).toHaveLength(16);
     expect(dirtyWalls.every(({ wall }) => wall === 8)).toBe(true);
+  });
+
+  it('extracts exact-owner VIBR charge and preserves it through the BVBR phase change', async () => {
+    const simulation = await PowderToyBackend.load(moduleArtifact.href);
+    const point = { x: 306, y: 180 };
+    const index = point.y * simulation.width + point.x;
+    const stateAtPoint = (): number => {
+      simulation.cells();
+      return simulation.presentationState()[index];
+    };
+
+    simulation.paint(point.x, point.y, Material.VIBR, 0);
+    expect(stateAtPoint()).toBe(0);
+
+    // Sustained native pressure adds seven tmp units per update. Fifty updates
+    // produce a visible upstream tmp/10 charge bucket without entering explosion.
+    for (let step = 0; step < 50; step++) {
+      for (let application = 0; application < 80; application++) {
+        simulation.applySimulationTool(SimulationTool.Air, point.x, point.y, 0);
+      }
+      simulation.step();
+    }
+    const charged = stateAtPoint();
+    expect(simulation.cells()[index]).toBe(Material.VIBR);
+    expect(charged & VIBR_PRESENTATION_STATE.chargeMask).toBeGreaterThan(0);
+    expect(charged & VIBR_PRESENTATION_STATE.countdownMask).toBe(0);
+    expect(charged & VIBR_PRESENTATION_STATE.alternateModeMask).toBe(0);
+
+    // VIBR + ANAR changes only the exact native owner; its stored energy remains.
+    simulation.paint(point.x + 1, point.y, Material.ANAR, 0);
+    simulation.step();
+    const broken = stateAtPoint();
+    expect(simulation.cells()[index]).toBe(Material.BVBR);
+    expect(broken & VIBR_PRESENTATION_STATE.chargeMask)
+      .toBeGreaterThanOrEqual(charged & VIBR_PRESENTATION_STATE.chargeMask);
+
+    simulation.clear();
+    expect(simulation.presentationState().every((value) => value === 0)).toBe(true);
+  });
+
+  it('extracts the native VIBR explosion countdown and alternate mode flags', async () => {
+    const simulation = await PowderToyBackend.load(moduleArtifact.href);
+    const point = { x: 306, y: 180 };
+    const index = point.y * simulation.width + point.x;
+
+    simulation.paint(point.x, point.y, Material.VIBR, 0);
+    for (let step = 0; step < 144; step++) {
+      for (let application = 0; application < 80; application++) {
+        simulation.applySimulationTool(SimulationTool.Air, point.x, point.y, 0);
+      }
+      simulation.step();
+    }
+    simulation.cells();
+    let state = simulation.presentationState()[index];
+    expect(state & VIBR_PRESENTATION_STATE.chargeMask).toBe(100);
+    expect((state & VIBR_PRESENTATION_STATE.countdownMask)
+      >> VIBR_PRESENTATION_STATE.countdownShift).toBe(255);
+    expect(state & VIBR_PRESENTATION_STATE.alternateModeMask).toBe(0);
+
+    // An exploding VIBR touching CFLM enters upstream's alternate explosion mode.
+    simulation.paint(point.x + 1, point.y, Material.CFLM, 0);
+    simulation.step();
+    simulation.cells();
+    state = simulation.presentationState()[index];
+    expect(state & VIBR_PRESENTATION_STATE.countdownMask).toBeGreaterThan(0);
+    expect(state & VIBR_PRESENTATION_STATE.alternateModeMask)
+      .toBe(VIBR_PRESENTATION_STATE.alternateModeMask);
   });
 
   it('projects every generic native material as its stable frontend ID', async () => {

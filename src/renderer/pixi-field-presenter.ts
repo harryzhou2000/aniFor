@@ -19,7 +19,7 @@ import { updateBoundaryStabilityRect } from './boundary-stability-field';
 import { clientToCanvasWorld } from './client-coordinate-map';
 import { RenderFieldSet, type RenderMaterialStyle } from './render-field-set';
 import { packSemanticRect } from './semantic-field';
-import { packExteriorAir, packWallRect } from './wall-field';
+import { packExteriorAir, packPresentationStateRect, packWallRect } from './wall-field';
 import { RenderPhase } from './render-profile';
 import {
   powderRenderStyleValue, type PowderRenderStyle,
@@ -124,6 +124,7 @@ uniform float uLiquidSilhouetteCohesion;
 uniform float uThermalMaterialStyling;
 uniform float uEnergyCoreRelief;
 uniform float uEnergyIdentityStyling;
+uniform float uVibrStateStyling;
 uniform float uBotanicalIdentityStyling;
 uniform float uPowderStyle;
 uniform float uPowderBodyDepth;
@@ -735,6 +736,30 @@ vec3 radioactiveBodyIdentityDelta(float material, vec2 position) {
       : vec3(1.0, 2.0, 0.0);
   }
   return clamp(delta, vec3(-12.0), vec3(12.0)) / 255.0;
+}
+vec3 vibrStateDelta(float material, vec2 stateBytes, vec2 position) {
+  if (material != 99.0 && material != 113.0) return vec3(0.0);
+  float packedState = floor(stateBytes.x * 255.0 + 0.5)
+    + floor(stateBytes.y * 255.0 + 0.5) * 256.0;
+  if (packedState < 0.5) return vec3(0.0);
+  float charge = min(mod(packedState, 128.0), 100.0) / 100.0;
+  float countdown = mod(floor(packedState / 128.0), 256.0) / 255.0;
+  float alternate = step(0.5, floor(packedState / 32768.0));
+  float x = floor(position.x);
+  float y = floor(position.y);
+  float horizontal = 1.0 - step(0.5, abs(mod(y, 8.0)));
+  float vertical = 1.0 - step(0.5, abs(mod(x + floor(y / 8.0) * 3.0, 8.0)));
+  float junction = horizontal * vertical;
+  float conductor = mix(0.24, mix(0.72, 1.0, junction), max(horizontal, vertical));
+  vec3 charged = mix(vec3(-3.0, 12.0, 13.0), vec3(2.0, 7.0, 17.0), alternate)
+    * charge * conductor;
+  vec2 local = mod(vec2(x, y), 16.0) - 8.0;
+  float radiusSquared = dot(local, local);
+  float burstRing = step(24.0, radiusSquared) * step(radiusSquared, 52.0);
+  float burst = countdown * mix(0.34, 1.0, max(burstRing, junction * 0.73));
+  vec3 exploding = mix(vec3(18.0, 20.0, 13.0), vec3(8.0, 15.0, 22.0), alternate)
+    * burst;
+  return (charged + exploding) / 255.0;
 }
 vec4 contactSample(vec2 uv, float material, float family) {
   float candidate = materialAt(uv);
@@ -2647,6 +2672,8 @@ void main() {
     if (radioactive > 0.5 && energyCore < 0.5) {
       color += radioactiveBodyIdentityDelta(material, fieldPosition)
         * uEnergyIdentityStyling;
+      color += vibrStateDelta(material, wallState.ba, fieldPosition)
+        * uVibrStateStyling;
       float isotopeNoise = fract(sin(
         dot(floor(fieldPosition), vec2(12.9898, 78.233)) + material * 0.31
       ) * 43758.5453);
@@ -2952,6 +2979,7 @@ export class PixiFieldPresenter {
       uThermalMaterialStyling: { value: 0, type: 'f32' },
       uEnergyCoreRelief: { value: 1, type: 'f32' },
       uEnergyIdentityStyling: { value: 1, type: 'f32' },
+      uVibrStateStyling: { value: 1, type: 'f32' },
       uBotanicalIdentityStyling: { value: 1, type: 'f32' },
       uPowderStyle: { value: powderRenderStyleValue('smooth'), type: 'f32' },
       uPowderBodyDepth: { value: 1, type: 'f32' },
@@ -3228,6 +3256,7 @@ export class PixiFieldPresenter {
     gasIdentityStylingEnabled = true,
     energyIdentityStylingEnabled = true,
     botanicalIdentityStylingEnabled = true,
+    vibrStateStylingEnabled = true,
   ): void {
     const uniforms = this.uniforms.uniforms;
     uniforms.uGasFieldLighting = gasFieldLightingEnabled ? 1 : 0;
@@ -3258,6 +3287,7 @@ export class PixiFieldPresenter {
     uniforms.uThermalMaterialStyling = thermalMaterialStylingEnabled ? 1 : 0;
     uniforms.uEnergyCoreRelief = energyCoreReliefEnabled ? 1 : 0;
     uniforms.uEnergyIdentityStyling = energyIdentityStylingEnabled ? 1 : 0;
+    uniforms.uVibrStateStyling = vibrStateStylingEnabled ? 1 : 0;
     uniforms.uBotanicalIdentityStyling = botanicalIdentityStylingEnabled ? 1 : 0;
     uniforms.uPowderStyle = powderRenderStyleValue(powderRenderStyle);
   }
@@ -3394,6 +3424,11 @@ export class PixiFieldPresenter {
     this.renderApplication();
   }
 
+  setVibrStateStylingEnabled(enabled: boolean): void {
+    this.uniforms.uniforms.uVibrStateStyling = enabled ? 1 : 0;
+    this.renderApplication();
+  }
+
   setBotanicalIdentityStylingEnabled(enabled: boolean): void {
     this.uniforms.uniforms.uBotanicalIdentityStyling = enabled ? 1 : 0;
     this.renderApplication();
@@ -3471,6 +3506,7 @@ export class PixiFieldPresenter {
     walls: Uint8Array | undefined,
     temperatures: Uint16Array | undefined,
     velocities: Int8Array | undefined,
+    presentationState: Uint16Array | undefined,
     scheduleTime: number,
     visualTime: number,
     refreshDynamicFields: boolean,
@@ -3484,14 +3520,21 @@ export class PixiFieldPresenter {
         this.fieldSet.lookups.styleBytes, this.fieldSource.width, rect, this.boundaryDirtyMarker,
       );
       packSemanticRect(this.fieldBytes, this.fieldSource.width, materials, temperatures, velocities, rect);
+      if (presentationState) {
+        packPresentationStateRect(
+          this.wallBytes, this.wallSource.width, presentationState, rect,
+        );
+      }
     }
     if (rectangles.length) {
       this.fieldSource.update();
       boundaryTextureDirty = true;
     }
+    let wallTextureDirty = rectangles.length > 0 && presentationState !== undefined;
     const wallRectangles = this.wallChunks.consume();
     if (walls) for (const rect of wallRectangles) packWallRect(this.wallBytes, this.wallSource.width, walls, rect);
-    if (walls && wallRectangles.length) this.wallSource.update();
+    if (walls && wallRectangles.length) wallTextureDirty = true;
+    if (wallTextureDirty) this.wallSource.update();
     if (this.powderSurfaceDirty
       && scheduleTime - this.lastPowderSurfaceRefresh >= POWDER_SURFACE_REFRESH_INTERVAL) {
       const changed = this.fieldSet.powderSurface.update(

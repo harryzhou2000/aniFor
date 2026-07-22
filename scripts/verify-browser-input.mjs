@@ -51,11 +51,12 @@ const virusGraphicsOnly = process.argv.includes('--virus-graphics-only');
 const waxGraphicsOnly = process.argv.includes('--wax-graphics-only');
 const crystalGraphicsOnly = process.argv.includes('--crystal-graphics-only');
 const pasteResistGraphicsOnly = process.argv.includes('--paste-resist-graphics-only');
+const vibrStateGraphicsOnly = process.argv.includes('--vibr-state-graphics-only');
 const usesProductionBundle = cellularGraphicsOnly || sensorGraphicsOnly
   || unusualPowderGraphicsOnly || unusualSolidGraphicsOnly
   || liquidIdentityGraphicsOnly || gasIdentityGraphicsOnly || energyRadioactiveGraphicsOnly
   || organicPlantGraphicsOnly || spongeGraphicsOnly || virusGraphicsOnly || waxGraphicsOnly
-  || crystalGraphicsOnly || pasteResistGraphicsOnly
+  || crystalGraphicsOnly || pasteResistGraphicsOnly || vibrStateGraphicsOnly
   || scaleEightOnly;
 const AUDIT_BASE_URL = usesProductionBundle ? PRODUCTION_BUNDLE_URL : ORIGIN + '/';
 const screenshotRequest = process.argv.find((argument) => argument.startsWith('--screenshot='))?.slice('--screenshot='.length);
@@ -120,7 +121,7 @@ async function main() {
       || unusualPowderGraphicsOnly || unusualSolidGraphicsOnly || liquidIdentityGraphicsOnly
       || gasIdentityGraphicsOnly || energyRadioactiveGraphicsOnly || organicPlantGraphicsOnly
       || spongeGraphicsOnly || virusGraphicsOnly || waxGraphicsOnly || crystalGraphicsOnly
-      || pasteResistGraphicsOnly;
+      || pasteResistGraphicsOnly || vibrStateGraphicsOnly;
     if (powderBodyOnly) assertPairedPowderBodyDepth(results);
     if (liquidDepthOnly) assertPairedLiquidOpticalDepth(results);
     if (solidDepthOnly) assertPairedSolidOpticalDepth(results);
@@ -141,6 +142,7 @@ async function main() {
     if (waxGraphicsOnly) assertPairedWaxGraphics(results);
     if (crystalGraphicsOnly) assertPairedCrystallineGraphics(results);
     if (pasteResistGraphicsOnly) assertPairedPasteResistGraphics(results);
+    if (vibrStateGraphicsOnly) assertPairedVibrStateGraphics(results);
     if (!scaleEightOnly && !materialAtlasOnly && !reducedAudit) assertPairedVisualRelief(results);
     if (!scaleEightOnly && !reducedAudit) assertPairedMaterialAtlas(results);
     compactMaterialAtlasResults(results);
@@ -148,6 +150,7 @@ async function main() {
     compactWaxGraphicsResults(results);
     compactCrystallineGraphicsResults(results);
     compactPasteResistGraphicsResults(results);
+    compactVibrStateGraphicsResults(results);
     console.log(JSON.stringify({ world: `${WORLD_WIDTH}x${WORLD_HEIGHT}`, results }, null, 2));
   } catch (error) {
     if (serverLog.trim()) console.error(serverLog.trim());
@@ -165,7 +168,7 @@ async function auditMode(mode) {
     || unusualPowderGraphicsOnly || unusualSolidGraphicsOnly || liquidIdentityGraphicsOnly
     || gasIdentityGraphicsOnly || energyRadioactiveGraphicsOnly || organicPlantGraphicsOnly
     || spongeGraphicsOnly || virusGraphicsOnly || waxGraphicsOnly || crystalGraphicsOnly
-    || pasteResistGraphicsOnly;
+    || pasteResistGraphicsOnly || vibrStateGraphicsOnly;
   const query = new URLSearchParams({
     scene: 'render-lab', inputAudit: '1', renderScale: '2',
     auditStage: startsBlank ? 'blank' : 'canonical',
@@ -356,6 +359,12 @@ async function auditMode(mode) {
       assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
       cdp.close();
       return { backend: mode, pasteResistGraphics, browserErrors: errors.length };
+    }
+    if (vibrStateGraphicsOnly) {
+      const vibrStateGraphics = await auditVibrStateGraphics(cdp, mode);
+      assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
+      cdp.close();
+      return { backend: mode, vibrStateGraphics, browserErrors: errors.length };
     }
     if (mobileOnly) {
       const mobile = await auditMobile(
@@ -4918,6 +4927,26 @@ function normalizePasteResistGraphicsAtlas(snapshot) {
   return { cards };
 }
 
+function normalizeVibrStateGraphicsAtlas(snapshot) {
+  const cards = (Array.isArray(snapshot) ? snapshot : snapshot?.cards ?? []).map((entry) => ({
+    ...entry,
+    card: cellularRect(entry.card ?? entry),
+    body: cellularRect(entry.body),
+    surfaceProbe: cellularRect(entry.surfaceProbe),
+    coreProbe: cellularRect(entry.coreProbe),
+    authoredHole: cellularRect(entry.authoredHole),
+    openNotch: cellularRect(entry.openNotch),
+    thinStructure: cellularRect(entry.thinStructure),
+    isolated: cellularPoint(entry.isolated),
+    zeroState: cellularRect(entry.zeroState),
+    wrongOwner: cellularRect(entry.wrongOwner),
+    waterControl: cellularRect(entry.waterControl),
+    metalControl: cellularRect(entry.metalControl),
+    guardedBlank: cellularRect(entry.guardedBlank),
+  }));
+  return { cards };
+}
+
 /** Exact nine-card Energy motif proof plus the complete 21-card semantic guard. */
 async function auditEnergyRadioactiveGraphics(cdp, mode) {
   const started = performance.now();
@@ -7196,6 +7225,306 @@ function summarizePasteResistBackingResponses(flat, styled, repeated) {
       profile: Array.from(buckets, (value) => total > 0 ? value / total : 0),
       axisMap, signedChromaMap, motifResponse,
     };
+  });
+}
+
+/** Paired real-framebuffer proof for the 16-bit VIBR/BVBR native state path. */
+async function auditVibrStateGraphics(cdp, mode) {
+  const started = performance.now();
+  const stage = (name) => console.error(
+    `[vibr-state-graphics:${mode}] ${name} ${Math.round(performance.now() - started)}ms`,
+  );
+  await waitForStablePageCapture(cdp, `${mode} initial blank VIBR-state framebuffer`);
+  await evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    if (typeof audit.prepareVibrStateGraphicsFixture !== 'function'
+      || typeof audit.vibrStateGraphicsAtlas !== 'function'
+      || typeof audit.setVibrStateStyling !== 'function') {
+      throw new Error('VIBR/BVBR state graphics audit API unavailable');
+    }
+    audit.prepareVibrStateGraphicsFixture();
+    return true;
+  })()`);
+  const rawAtlas = await waitFor(() => evaluate(cdp, `(() => {
+    const atlas = window.__ANIFOR_INPUT_AUDIT__.vibrStateGraphicsAtlas();
+    const cards = Array.isArray(atlas) ? atlas : atlas?.cards;
+    return cards?.length === 10 ? atlas : false;
+  })()`), 15_000, `${mode} VIBR/BVBR state graphics fixture`);
+  const atlas = normalizeVibrStateGraphicsAtlas(rawAtlas);
+  const expectedKeys = ['low', 'mid', 'high', 'exploding', 'alternate'];
+  const expectedEncoded = [8, 54, 99, 100 | (192 << 7), 100 | (112 << 7) | 0x8000];
+  assert(atlas.cards.length === 10
+      && atlas.cards.map(({ material }) => material).join(',')
+        === '113,113,113,113,113,99,99,99,99,99'
+      && atlas.cards.map(({ code }) => code).join(',')
+        === 'VIBR,VIBR,VIBR,VIBR,VIBR,BVBR,BVBR,BVBR,BVBR,BVBR'
+      && atlas.cards.every((entry, index) => entry.stateKey === expectedKeys[index % 5]
+        && entry.encodedState === expectedEncoded[index % 5]
+        && entry.charge === [8, 54, 99, 100, 100][index % 5]
+        && entry.life === [0, 0, 0, 192, 112][index % 5]
+        && entry.alternate === (index % 5 === 4)),
+  `${mode}: VIBR/BVBR state atlas contract changed (${JSON.stringify(atlas.cards.map(
+    ({ code, material, stateKey, charge, life, alternate, encodedState }) => ({
+      code, material, stateKey, charge, life, alternate, encodedState,
+    }),
+  ))})`);
+
+  const semanticState = await evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    const snapshot = audit.vibrStateGraphicsAtlas();
+    const cards = Array.isArray(snapshot) ? snapshot : snapshot.cards;
+    const inside = (x, y, rect) => x >= rect.x && x < rect.x + rect.width
+      && y >= rect.y && y < rect.y + rect.height;
+    const exactRect = (rect, material) => {
+      for (let y = rect.y; y < rect.y + rect.height; y++) {
+        for (let x = rect.x; x < rect.x + rect.width; x++) {
+          if (audit.cell(x, y) !== material) return false;
+        }
+      }
+      return true;
+    };
+    return cards.map((entry) => {
+      let bodyExact = true;
+      for (let y = entry.body.y; y < entry.body.y + entry.body.height; y++) {
+        for (let x = entry.body.x; x < entry.body.x + entry.body.width; x++) {
+          const empty = inside(x, y, entry.authoredHole) || inside(x, y, entry.openNotch);
+          bodyExact = bodyExact && audit.cell(x, y) === (empty ? 0 : entry.material);
+        }
+      }
+      return {
+        bodyExact,
+        surfaceExact: exactRect(entry.surfaceProbe, entry.material),
+        coreExact: exactRect(entry.coreProbe, entry.material),
+        holeEmpty: exactRect(entry.authoredHole, 0),
+        notchEmpty: exactRect(entry.openNotch, 0),
+        thinExact: exactRect(entry.thinStructure, entry.material),
+        isolated: audit.cell(entry.isolated.x, entry.isolated.y),
+        zeroStateExact: exactRect(entry.zeroState, entry.material),
+        wrongOwnerExact: exactRect(entry.wrongOwner, 1),
+        waterExact: exactRect(entry.waterControl, 2),
+        metalExact: exactRect(entry.metalControl, 23),
+        guardEmpty: exactRect(entry.guardedBlank, 0),
+      };
+    });
+  })()`);
+  assert(semanticState.every((entry, index) => entry.bodyExact && entry.surfaceExact
+      && entry.coreExact && entry.holeEmpty && entry.notchEmpty && entry.thinExact
+      && entry.isolated === atlas.cards[index].material && entry.zeroStateExact
+      && entry.wrongOwnerExact
+      && entry.waterExact && entry.metalExact && entry.guardEmpty),
+  `${mode}: VIBR/BVBR state fixture lost semantic topology (${JSON.stringify(semanticState)})`);
+  stage('fixture-ready');
+
+  const setStyling = async (enabled) => evaluate(cdp, `(() => {
+    window.__ANIFOR_INPUT_AUDIT__.setVibrStateStyling(${enabled}); return true;
+  })()`);
+  await setStyling(false);
+  await waitForStablePageCapture(cdp, `${mode} flat VIBR-state framebuffer`);
+  const flat = await sampleVibrStateBacking(cdp);
+  await setStyling(true);
+  await waitForStablePageCapture(cdp, `${mode} styled VIBR-state framebuffer`);
+  const styled = await sampleVibrStateBacking(cdp);
+  await setStyling(false);
+  await waitForStablePageCapture(cdp, `${mode} repeated flat VIBR-state framebuffer`);
+  const repeated = await sampleVibrStateBacking(cdp);
+  for (const [state, backing] of [
+    ['flat', flat], ['styled', styled], ['repeated-flat', repeated],
+  ]) assertVibrStateBacking(backing, `${mode} ${state}`);
+
+  for (let index = 0; index < 10; index++) {
+    const base = flat.cards[index], changed = styled.cards[index], returned = repeated.cards[index];
+    assert(base.semanticSignature === changed.semanticSignature
+        && base.semanticSignature === returned.semanticSignature
+        && base.alphaSignature === changed.alphaSignature
+        && base.alphaSignature === returned.alphaSignature
+        && base.supportSignature === changed.supportSignature
+        && base.supportSignature === returned.supportSignature,
+    `${mode}: ${base.code}/${base.stateKey} state styling changed semantic/alpha/support`);
+    for (const control of ['zeroStateRgb', 'wrongOwnerRgb', 'waterRgb', 'metalRgb']) {
+      assert(arraysEqual(base[control], changed[control])
+          && arraysEqual(base[control], returned[control]),
+      `${mode}: ${base.code}/${base.stateKey} state leaked into ${control}`);
+    }
+  }
+
+  const responses = summarizeVibrStateBackingResponses(flat, styled, repeated);
+  assert(responses.every((response) => response.rgbRms >= 0.02 && response.rgbRms <= 36
+      && response.rgbPeak > 0 && response.rgbPeak <= 96
+      && response.changedSampleRatio >= 0.01 && response.repeatRgbPeak === 0
+      && response.profile.length === 16
+      && Math.abs(response.profile.reduce((sum, value) => sum + value, 0) - 1) <= 0.001),
+  `${mode}: VIBR/BVBR state response is absent, unbounded, or unstable (${JSON.stringify(responses)})`);
+  const stateOrder = [];
+  for (const material of [113, 99]) {
+    const cards = responses.filter((response) => response.material === material);
+    const byState = Object.fromEntries(cards.map((card) => [card.stateKey, card]));
+    const chargeScore = (card) => card.meanDeltaRgb[1] + card.meanDeltaRgb[2] * 0.5;
+    const low = chargeScore(byState.low), mid = chargeScore(byState.mid);
+    const high = chargeScore(byState.high);
+    const exploding = byState.exploding, alternate = byState.alternate;
+    const explosionGain = exploding.rgbRms / Math.max(0.01, byState.high.rgbRms);
+    const explodingBlueGreen = exploding.meanDeltaRgb[2] - exploding.meanDeltaRgb[1];
+    const alternateBlueGreen = alternate.meanDeltaRgb[2] - alternate.meanDeltaRgb[1];
+    assert(low < mid && mid < high,
+      `${mode}: ${material} charge response is not ordered (${JSON.stringify({ low, mid, high })})`);
+    assert(explosionGain > 1.02,
+      `${mode}: ${material} explosion response did not exceed high charge (${explosionGain})`);
+    assert(alternateBlueGreen > explodingBlueGreen + 0.25,
+      `${mode}: ${material} alternate explosion lost its blue spectral turn (${JSON.stringify({
+        explodingBlueGreen, alternateBlueGreen,
+      })})`);
+    stateOrder.push({ material, low, mid, high, explosionGain,
+      explodingBlueGreen, alternateBlueGreen });
+  }
+  stage('responses-ready');
+  return { cards: responses, stateOrder, exactRepeatedOff: responses.every(
+    ({ repeatRgbPeak }) => repeatRgbPeak === 0,
+  ) };
+}
+
+async function sampleVibrStateBacking(cdp) {
+  return evaluate(cdp, `(() => {
+    const world = document.querySelector('.world-canvas');
+    if (!(world instanceof HTMLCanvasElement)) throw new Error('World canvas unavailable');
+    const copy = document.createElement('canvas'); copy.width = world.width; copy.height = world.height;
+    const context = copy.getContext('2d', { willReadFrequently: true });
+    if (!context) throw new Error('VIBR/BVBR state backing sampler unavailable');
+    context.drawImage(world, 0, 0);
+    const pixels = context.getImageData(0, 0, copy.width, copy.height).data;
+    const scaleX = copy.width / ${WORLD_WIDTH}, scaleY = copy.height / ${WORLD_HEIGHT};
+    const snapshot = window.__ANIFOR_INPUT_AUDIT__.vibrStateGraphicsAtlas();
+    const cards = Array.isArray(snapshot) ? snapshot : snapshot.cards;
+    const key = ({ x, y }) => x + ',' + y;
+    const inside = (point, rect) => point.x >= rect.x && point.x < rect.x + rect.width
+      && point.y >= rect.y && point.y < rect.y + rect.height;
+    const rectPoints = (rect, step = 1) => { const points = [];
+      for (let y = rect.y; y < rect.y + rect.height; y += step) {
+        for (let x = rect.x; x < rect.x + rect.width; x += step) points.push({ x, y });
+      }
+      return points;
+    };
+    const cellAlpha = ({ x, y }) => { let peak = 0;
+      const left = Math.floor(x * scaleX), top = Math.floor(y * scaleY);
+      const right = Math.max(left + 1, Math.floor((x + 1) * scaleX));
+      const bottom = Math.max(top + 1, Math.floor((y + 1) * scaleY));
+      for (let py = top; py < bottom; py++) for (let px = left; px < right; px++) {
+        peak = Math.max(peak, pixels[(py * copy.width + px) * 4 + 3]);
+      }
+      return peak;
+    };
+    const centreAlpha = ({ x, y }) => pixels[(Math.min(copy.height - 1, Math.floor((y + 0.5) * scaleY))
+      * copy.width + Math.min(copy.width - 1, Math.floor((x + 0.5) * scaleX))) * 4 + 3];
+    const sampleRgb = (points) => { const rgb = [];
+      for (const { x, y } of points) {
+        const px = Math.min(copy.width - 1, Math.floor((x + 0.5) * scaleX));
+        const py = Math.min(copy.height - 1, Math.floor((y + 0.5) * scaleY));
+        const offset = (py * copy.width + px) * 4;
+        rgb.push(pixels[offset], pixels[offset + 1], pixels[offset + 2]);
+      }
+      return rgb;
+    };
+    return { scaleX, scaleY, cards: cards.map((entry) => {
+      const emptyKeys = new Set([...rectPoints(entry.authoredHole), ...rectPoints(entry.openNotch)].map(key));
+      const bodyPoints = rectPoints(entry.body).filter((point) => !emptyKeys.has(key(point)));
+      const bodySamples = rectPoints(entry.body, 2).filter((point) => !emptyKeys.has(key(point)));
+      const bodyBuckets = bodySamples.map((point) => Math.min(3, Math.floor(
+        (point.y - entry.body.y) * 4 / entry.body.height,
+      )) * 4 + Math.min(3, Math.floor((point.x - entry.body.x) * 4 / entry.body.width)));
+      const thin = rectPoints(entry.thinStructure), guard = rectPoints(entry.guardedBlank);
+      const hole = rectPoints(entry.authoredHole), notch = rectPoints(entry.openNotch);
+      const wrongOwner = rectPoints(entry.wrongOwner), water = rectPoints(entry.waterControl);
+      const metal = rectPoints(entry.metalControl);
+      const zeroState = rectPoints(entry.zeroState);
+      let alphaSignature = 2166136261, supportSignature = 2166136261;
+      let semanticSignature = 2166136261;
+      const left = Math.floor(entry.card.x * scaleX), top = Math.floor(entry.card.y * scaleY);
+      const right = Math.floor((entry.card.x + entry.card.width) * scaleX);
+      const bottom = Math.floor((entry.card.y + entry.card.height) * scaleY);
+      for (let py = top; py < bottom; py++) for (let px = left; px < right; px++) {
+        const alpha = pixels[(py * copy.width + px) * 4 + 3];
+        alphaSignature = Math.imul(alphaSignature ^ alpha, 16777619) >>> 0;
+        supportSignature = Math.imul(supportSignature ^ Number(alpha > 0), 16777619) >>> 0;
+      }
+      for (let y = entry.card.y; y < entry.card.y + entry.card.height; y++) {
+        for (let x = entry.card.x; x < entry.card.x + entry.card.width; x++) {
+          semanticSignature = Math.imul(
+            semanticSignature ^ window.__ANIFOR_INPUT_AUDIT__.cell(x, y), 16777619,
+          ) >>> 0;
+        }
+      }
+      return { code: entry.code, material: entry.material, stateKey: entry.stateKey,
+        encodedState: entry.encodedState, semanticSignature, alphaSignature, supportSignature,
+        bodyExpected: bodyPoints.length,
+        bodySupported: bodyPoints.filter((point) => cellAlpha(point) > 0).length,
+        thinExpected: thin.length, thinSupported: thin.filter((point) => cellAlpha(point) > 0).length,
+        isolatedAlphaPeak: cellAlpha(entry.isolated),
+        zeroStateExpected: zeroState.length,
+        zeroStateSupported: zeroState.filter((point) => cellAlpha(point) > 0).length,
+        guardExpected: guard.length, guardTransparent: guard.filter((point) => cellAlpha(point) === 0).length,
+        holeExpected: hole.length, holeCentreTransparent: hole.filter((point) => centreAlpha(point) === 0).length,
+        notchExpected: notch.length,
+        notchCentreTransparent: notch.filter((point) => centreAlpha(point) < 128).length,
+        wrongOwnerExpected: wrongOwner.length,
+        wrongOwnerSupported: wrongOwner.filter((point) => cellAlpha(point) > 0).length,
+        waterExpected: water.length, waterSupported: water.filter((point) => cellAlpha(point) > 0).length,
+        metalExpected: metal.length, metalSupported: metal.filter((point) => cellAlpha(point) > 0).length,
+        bodyRgb: sampleRgb(bodySamples), bodyBuckets,
+        zeroStateRgb: sampleRgb(zeroState), wrongOwnerRgb: sampleRgb(wrongOwner),
+        waterRgb: sampleRgb(water), metalRgb: sampleRgb(metal),
+      };
+    }) };
+  })()`);
+}
+
+function assertVibrStateBacking(backing, label) {
+  assert(Number.isInteger(backing.scaleX) && Number.isInteger(backing.scaleY)
+      && backing.scaleX > 0 && backing.scaleY > 0,
+  `${label}: VIBR/BVBR state backing does not preserve integral scaling`);
+  assert(backing.cards.map(({ material }) => material).join(',')
+      === '113,113,113,113,113,99,99,99,99,99'
+      && backing.cards.every((card) => card.bodyExpected === 3_000
+        && card.bodySupported === card.bodyExpected
+        && card.thinExpected === 24 && card.thinSupported === card.thinExpected
+        && card.isolatedAlphaPeak > 0
+        && card.zeroStateExpected === 144 && card.zeroStateSupported === 144
+        && card.guardExpected === 1_248 && card.guardTransparent === card.guardExpected
+        && card.holeExpected === 36 && card.holeCentreTransparent >= 16
+        && card.notchExpected === 96 && card.notchCentreTransparent >= 90
+        && card.wrongOwnerExpected === 360 && card.wrongOwnerSupported === 360
+        && card.waterExpected === 280 && card.waterSupported === 280
+        && card.metalExpected === 280 && card.metalSupported === 280),
+  `${label}: VIBR/BVBR state backing changed topology (${JSON.stringify(backing.cards.map(
+    (card) => ({ ...card, bodyRgb: undefined, bodyBuckets: undefined,
+      zeroStateRgb: undefined, wrongOwnerRgb: undefined, waterRgb: undefined, metalRgb: undefined }),
+  ))})`);
+}
+
+function summarizeVibrStateBackingResponses(flat, styled, repeated) {
+  return flat.cards.map((base, index) => {
+    const changed = styled.cards[index], returned = repeated.cards[index];
+    let squared = 0, peak = 0, repeatPeak = 0, changedSamples = 0;
+    const signed = [0, 0, 0], buckets = new Float64Array(16), axisMap = [];
+    for (let offset = 0; offset < base.bodyRgb.length; offset += 3) {
+      let any = false, sampleSquared = 0;
+      const sample = offset / 3, bucket = base.bodyBuckets[sample];
+      for (let channel = 0; channel < 3; channel++) {
+        const delta = changed.bodyRgb[offset + channel] - base.bodyRgb[offset + channel];
+        squared += delta * delta; sampleSquared += delta * delta; signed[channel] += delta;
+        peak = Math.max(peak, Math.abs(delta)); buckets[bucket] += Math.abs(delta); any ||= delta !== 0;
+        repeatPeak = Math.max(
+          repeatPeak, Math.abs(returned.bodyRgb[offset + channel] - base.bodyRgb[offset + channel]),
+        );
+      }
+      axisMap.push(Math.sqrt(sampleSquared)); changedSamples += Number(any);
+    }
+    const samples = Math.max(1, base.bodyRgb.length / 3);
+    const total = buckets.reduce((sum, value) => sum + value, 0);
+    return { code: base.code, material: base.material, stateKey: base.stateKey,
+      encodedState: base.encodedState,
+      rgbRms: Math.sqrt(squared / Math.max(1, base.bodyRgb.length)), rgbPeak: peak,
+      changedSampleRatio: changedSamples / samples, repeatRgbPeak: repeatPeak,
+      meanDeltaRgb: signed.map((value) => value / samples),
+      profile: Array.from(buckets, (value) => total > 0 ? value / total : 0), axisMap };
   });
 }
 
@@ -9665,7 +9994,7 @@ function assertPairedCellularGraphics(results) {
     // Canvas styles in display-byte space while WebGL applies the same bounded
     // motif before its linear-to-display transfer. Compare a broad bounded
     // amplitude here and use the normalized spatial profile below for shape.
-    assert(responseRatio >= 0.20 && responseRatio <= 5.0,
+    assert(responseRatio >= 0.50 && responseRatio <= 2.0,
       `Canvas/WebGL LIFE preset ${canvasEntry.preset} backing response diverged (${canvasEntry.backingRgbRms}/${webglEntry.backingRgbRms})`);
     const profileDistance = Math.max(...canvasEntry.backingResponseProfile.map(
       (value, index) => Math.abs(value - webglEntry.backingResponseProfile[index]),
@@ -10175,6 +10504,87 @@ function compactPasteResistGraphicsResults(results) {
       delete card.axisMap;
       delete card.signedChromaMap;
     }
+  }
+}
+
+function assertPairedVibrStateGraphics(results) {
+  const canvasResult = results.find((result) => result.backend === 'canvas2d');
+  const webglResult = results.find((result) => result.backend === 'webgl');
+  const canvas = canvasResult?.vibrStateGraphics;
+  const webgl = webglResult?.vibrStateGraphics;
+  assert(canvas && webgl,
+    'VIBR/BVBR state graphics gate requires both Canvas2D and WebGL results');
+  const expectedMaterials = '113,113,113,113,113,99,99,99,99,99';
+  const expectedStates = 'low,mid,high,exploding,alternate,low,mid,high,exploding,alternate';
+  assert(canvas.cards.map(({ material }) => material).join(',') === expectedMaterials
+      && webgl.cards.map(({ material }) => material).join(',') === expectedMaterials
+      && canvas.cards.map(({ stateKey }) => stateKey).join(',') === expectedStates
+      && webgl.cards.map(({ stateKey }) => stateKey).join(',') === expectedStates
+      && canvas.exactRepeatedOff && webgl.exactRepeatedOff
+      && canvasResult.browserErrors === 0 && webglResult.browserErrors === 0,
+  'Paired VIBR/BVBR identity, state, repetition, or browser-error contract failed');
+
+  const vectorCosine = (left, right) => {
+    let dot = 0, leftSquared = 0, rightSquared = 0;
+    for (let index = 0; index < left.length; index++) {
+      dot += left[index] * right[index];
+      leftSquared += left[index] * left[index];
+      rightSquared += right[index] * right[index];
+    }
+    return dot / Math.max(1e-6, Math.sqrt(leftSquared * rightSquared));
+  };
+  const parity = canvas.cards.map((canvasCard, index) => {
+    const webglCard = webgl.cards[index];
+    assert(canvasCard.material === webglCard.material
+        && canvasCard.stateKey === webglCard.stateKey
+        && canvasCard.encodedState === webglCard.encodedState,
+    `Canvas/WebGL VIBR state identity diverged at card ${index}`);
+    const responseRatio = canvasCard.rgbRms / Math.max(0.01, webglCard.rgbRms);
+    const profileDistance = Math.max(...canvasCard.profile.map(
+      (value, profileIndex) => Math.abs(value - webglCard.profile[profileIndex]),
+    ));
+    const motifCorrelation = virusPearson(canvasCard.axisMap, webglCard.axisMap);
+    const chromaCosine = vectorCosine(canvasCard.meanDeltaRgb, webglCard.meanDeltaRgb);
+    assert(responseRatio >= 0.20 && responseRatio <= 5.0,
+      `Canvas/WebGL ${canvasCard.code}/${canvasCard.stateKey} response diverged (${canvasCard.rgbRms}/${webglCard.rgbRms})`);
+    assert(profileDistance <= 0.08,
+      `Canvas/WebGL ${canvasCard.code}/${canvasCard.stateKey} normalized profile diverged (${profileDistance})`);
+    assert(motifCorrelation >= -0.10,
+      `Canvas/WebGL ${canvasCard.code}/${canvasCard.stateKey} response topology diverged (${motifCorrelation})`);
+    assert(chromaCosine >= 0.85,
+      `Canvas/WebGL ${canvasCard.code}/${canvasCard.stateKey} RGB direction diverged (${chromaCosine})`);
+    return { code: canvasCard.code, stateKey: canvasCard.stateKey,
+      responseRatio: round(responseRatio, 4), profileMaxDistance: round(profileDistance, 5),
+      motifCorrelation: round(motifCorrelation, 5), chromaCosine: round(chromaCosine, 5) };
+  });
+
+  const normalizedCharge = (result, material) => {
+    const byState = Object.fromEntries(result.cards.filter((card) => card.material === material)
+      .map((card) => [card.stateKey, card]));
+    const score = (card) => card.meanDeltaRgb[1] + card.meanDeltaRgb[2] * 0.5;
+    const low = score(byState.low), high = score(byState.high);
+    return (score(byState.mid) - low) / Math.max(1e-6, high - low);
+  };
+  const orderedParity = [113, 99].map((material) => {
+    const canvasMid = normalizedCharge(canvas, material);
+    const webglMid = normalizedCharge(webgl, material);
+    const canvasOrder = canvas.stateOrder.find((entry) => entry.material === material);
+    const webglOrder = webgl.stateOrder.find((entry) => entry.material === material);
+    const explosionGainRatio = canvasOrder.explosionGain / webglOrder.explosionGain;
+    assert(canvasMid > 0 && canvasMid < 1 && webglMid > 0 && webglMid < 1
+        && Math.abs(canvasMid - webglMid) <= 0.15,
+    `Canvas/WebGL ${material} normalized charge progression diverged (${canvasMid}/${webglMid})`);
+    assert(explosionGainRatio >= 0.65 && explosionGainRatio <= 1.50,
+      `Canvas/WebGL ${material} explosion gain diverged (${explosionGainRatio})`);
+    return { material, canvasMid: round(canvasMid, 5), webglMid: round(webglMid, 5),
+      explosionGainRatio: round(explosionGainRatio, 5) };
+  });
+  console.error(`[vibr-state-graphics:paired] parity ${JSON.stringify({ parity, orderedParity })}`);
+}
+
+function compactVibrStateGraphicsResults(results) {
+  for (const result of results) {
+    for (const card of result.vibrStateGraphics?.cards ?? []) delete card.axisMap;
   }
 }
 
@@ -10836,7 +11246,12 @@ async function auditRenderScaleEight(cdp, dpr) {
     cdp, blankCapture.capture.data, geometry.canvas,
   );
   stage('atlas-stress-ready');
-  const forcedStallRecovery = await auditEightXFailureRecovery(cdp, geometry.canvas, 'stall');
+  const vibrStateAudit = await auditEightXVibrStateGraphics(cdp, geometry.canvas);
+  stage('vibr-state-ready');
+  const forcedStallRecovery = await auditEightXVibrStallRecovery(
+    cdp, geometry.canvas, vibrStateAudit,
+  );
+  const { recovery: _vibrRecovery, ...vibrStateGraphics } = vibrStateAudit;
   stage('stall-recovery-ready');
   const contextLossGeometry = await navigateEightXRecoveryPage(cdp, 'context-loss-recovery');
   assertCanvasRectsEqual(
@@ -10867,8 +11282,260 @@ async function auditRenderScaleEight(cdp, dpr) {
       wheelAnchorError: round(grainAnchorError, 4),
     },
     materialAtlasStress,
+    vibrStateGraphics,
     forcedStallRecovery,
     contextLossRecovery,
+  };
+}
+
+async function snapshotEightXVibrState(cdp) {
+  return evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    const snapshot = audit.vibrStateGraphicsAtlas();
+    const cards = Array.isArray(snapshot) ? snapshot : snapshot.cards;
+    const inside = (x, y, rect) => x >= rect.x && x < rect.x + rect.width
+      && y >= rect.y && y < rect.y + rect.height;
+    const exactRect = (rect, material, state) => {
+      for (let y = rect.y; y < rect.y + rect.height; y++) {
+        for (let x = rect.x; x < rect.x + rect.width; x++) {
+          if (audit.cell(x, y) !== material || audit.presentationState(x, y) !== state) return false;
+        }
+      }
+      return true;
+    };
+    return {
+      occupied: audit.occupiedCells(),
+      cards: cards.map((entry) => {
+        let bodyExact = true;
+        for (let y = entry.body.y; y < entry.body.y + entry.body.height; y++) {
+          for (let x = entry.body.x; x < entry.body.x + entry.body.width; x++) {
+            const empty = inside(x, y, entry.authoredHole) || inside(x, y, entry.openNotch);
+            bodyExact &&= audit.cell(x, y) === (empty ? 0 : entry.material)
+              && audit.presentationState(x, y) === (empty ? 0 : entry.encodedState);
+          }
+        }
+        return {
+          code: entry.code, material: entry.material, stateKey: entry.stateKey,
+          encodedState: entry.encodedState, bodyExact,
+          thinExact: exactRect(entry.thinStructure, entry.material, entry.encodedState),
+          isolatedExact: audit.cell(entry.isolated.x, entry.isolated.y) === entry.material
+            && audit.presentationState(entry.isolated.x, entry.isolated.y) === entry.encodedState,
+          zeroStateExact: exactRect(entry.zeroState, entry.material, 0),
+          wrongOwnerExact: exactRect(entry.wrongOwner, 1, entry.encodedState),
+          waterExact: exactRect(entry.waterControl, 2, entry.encodedState),
+          metalExact: exactRect(entry.metalControl, 23, entry.encodedState),
+          guardExact: exactRect(entry.guardedBlank, 0, 0),
+        };
+      }),
+    };
+  })()`);
+}
+
+function assertEightXVibrTopology(snapshot, label) {
+  const expectedStates = 'low,mid,high,exploding,alternate,low,mid,high,exploding,alternate';
+  const expectedEncoded = [8, 54, 99, 24_676, 47_204, 8, 54, 99, 24_676, 47_204];
+  assert(snapshot.cards.length === 10
+      && snapshot.cards.map(({ stateKey }) => stateKey).join(',') === expectedStates
+      && snapshot.cards.every((card, index) => card.encodedState === expectedEncoded[index]
+        && card.bodyExact && card.thinExact && card.isolatedExact && card.zeroStateExact
+        && card.wrongOwnerExact && card.waterExact && card.metalExact && card.guardExact),
+  `${label}: VIBR/BVBR semantic or presentation-state topology changed (${JSON.stringify(snapshot)})`);
+}
+
+function eightXVibrResponseRegions(atlas) {
+  return atlas.cards.filter(({ stateKey }) => stateKey === 'high' || stateKey === 'exploding')
+    .flatMap((entry) => {
+      const centre = (rect) => ({ x: rect.x + rect.width / 2, y: rect.y + rect.height / 2 });
+      return [
+        { name: `${entry.code}-${entry.stateKey}-state`, ...centre(entry.coreProbe),
+          radiusX: 3, radiusY: 3 },
+        { name: `${entry.code}-${entry.stateKey}-zero`, ...centre(entry.zeroState),
+          radiusX: 4, radiusY: 4 },
+        { name: `${entry.code}-${entry.stateKey}-wrong-owner`, ...centre(entry.wrongOwner),
+          radiusX: 6, radiusY: 5 },
+      ];
+    });
+}
+
+function assertEightXVibrResponses(samples, label) {
+  const byName = Object.fromEntries(samples.map((sample) => [sample.name, sample]));
+  for (const code of ['VIBR', 'BVBR']) {
+    const high = byName[`${code}-high-state`];
+    const exploding = byName[`${code}-exploding-state`];
+    assert(high?.rgbRms >= 0.08 && high.rgbRms <= 24 && high.rgbPeak <= 64
+        && exploding?.rgbRms >= high.rgbRms * 1.15 && exploding.rgbRms <= 36
+        && exploding.rgbPeak <= 96,
+    `${label}: ${code} high/exploding state response is absent or unbounded (${JSON.stringify(samples)})`);
+  }
+  const controls = samples.filter(({ name }) => name.endsWith('-zero')
+    || name.endsWith('-wrong-owner'));
+  assert(controls.length === 8 && controls.every(({ rgbPeak }) => rgbPeak <= 1)
+      && samples.every(({ repeatRgbPeak }) => repeatRgbPeak <= 1),
+  `${label}: VIBR/BVBR state leaked into a control or was nondeterministic (${JSON.stringify(samples)})`);
+}
+
+async function auditEightXVibrStateGraphics(cdp, canvasRect) {
+  const rawAtlas = await evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    if (typeof audit.presentationState !== 'function'
+      || typeof audit.prepareVibrStateGraphicsFixture !== 'function'
+      || typeof audit.setVibrStateStyling !== 'function') {
+      throw new Error('True-8x VIBR/BVBR state audit API unavailable');
+    }
+    audit.resetView();
+    audit.prepareVibrStateGraphicsFixture();
+    return audit.vibrStateGraphicsAtlas();
+  })()`);
+  const atlas = normalizeVibrStateGraphicsAtlas(rawAtlas);
+  const prepared = await snapshotEightXVibrState(cdp);
+  assertEightXVibrTopology(prepared, 'renderScale=8 prepared fixture');
+  const live = await metrics(cdp);
+  assert(live.backing.width === WORLD_WIDTH * 8 && live.backing.height === WORLD_HEIGHT * 8
+      && live.outputScale === '8',
+  `renderScale=8 VIBR fixture lost true backing (${JSON.stringify(live.backing)})`);
+  assertCanvasRectsEqual(canvasRect, live.canvas, 'renderScale=8 VIBR fixture CSS geometry');
+
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setVibrStateStyling(false); true');
+  const flat = await captureSettledPage(cdp, 'renderScale=8 flat VIBR-state framebuffer', 450);
+  const flatTopology = await snapshotEightXVibrState(cdp);
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setVibrStateStyling(true); true');
+  const styled = await captureSettledPage(cdp, 'renderScale=8 styled VIBR-state framebuffer', 450);
+  const styledTopology = await snapshotEightXVibrState(cdp);
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setVibrStateStyling(false); true');
+  const repeated = await captureSettledPage(cdp, 'renderScale=8 repeated flat VIBR-state framebuffer', 450);
+  const repeatedTopology = await snapshotEightXVibrState(cdp);
+  assert(JSON.stringify(flatTopology) === JSON.stringify(prepared)
+      && JSON.stringify(styledTopology) === JSON.stringify(prepared)
+      && JSON.stringify(repeatedTopology) === JSON.stringify(prepared),
+  'renderScale=8 VIBR state toggle changed semantic or presentation-state topology');
+  const regions = eightXVibrResponseRegions(atlas);
+  const samples = await sampleBackdropRefractionRegions(cdp, {
+    straight: flat.capture.data,
+    refracted: styled.capture.data,
+    repeatedStraight: repeated.capture.data,
+  }, regions, canvasRect);
+  assertEightXVibrResponses(samples, 'renderScale=8 WebGL');
+  const exploding = atlas.cards.find(
+    ({ code, stateKey }) => code === 'VIBR' && stateKey === 'exploding',
+  );
+  assert(exploding, 'renderScale=8 VIBR exploding recovery probe is missing');
+  const recoveryPoint = {
+    x: exploding.coreProbe.x + Math.floor(exploding.coreProbe.width / 2),
+    y: exploding.coreProbe.y + Math.floor(exploding.coreProbe.height / 2),
+  };
+  return {
+    cards: atlas.cards.map(({ code, material, stateKey, encodedState }) => ({
+      code, material, stateKey, encodedState,
+    })),
+    occupied: prepared.occupied,
+    samples,
+    exactRepeatedOff: samples.every(({ repeatRgbPeak }) => repeatRgbPeak <= 1),
+    recovery: {
+      topology: prepared, regions, point: recoveryPoint,
+      material: exploding.material, encodedState: exploding.encodedState,
+    },
+  };
+}
+
+async function auditEightXVibrStallRecovery(cdp, canvasRect, stateAudit) {
+  const { recovery } = stateAudit;
+  const beforeState = await evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    return {
+      cell: audit.cell(${recovery.point.x}, ${recovery.point.y}),
+      state: audit.presentationState(${recovery.point.x}, ${recovery.point.y}),
+      occupied: audit.occupiedCells(),
+    };
+  })()`);
+  assert(beforeState.cell === recovery.material && beforeState.state === recovery.encodedState
+      && beforeState.occupied === recovery.topology.occupied,
+  `renderScale=8 forced-stall VIBR probe was not prepared (${JSON.stringify(beforeState)})`);
+  const point = worldClient(canvasRect, {
+    x: recovery.point.x + 0.5, y: recovery.point.y + 0.5,
+  });
+  await cdp.send('Input.dispatchMouseEvent', {
+    type: 'mouseWheel', x: point.x, y: point.y,
+    deltaX: 0, deltaY: -240, modifiers: 0,
+  });
+  const beforeView = await waitFor(() => evaluate(cdp, `(() => {
+    const view = window.__ANIFOR_INPUT_AUDIT__.viewState();
+    return view.zoom > 1.2 ? view : false;
+  })()`), 5_000, 'renderScale=8 forced-stall VIBR pre-failure camera');
+  const beforeGeometry = await metrics(cdp);
+  const failureRequest = await evaluate(cdp, `(() => ({
+    requested: window.__ANIFOR_INPUT_AUDIT__.forceEightXRenderStall(),
+  }))()`);
+  assert(failureRequest.requested,
+    `renderScale=8 could not exercise forced-stall VIBR recovery (${JSON.stringify(failureRequest)})`);
+  const backend = await waitFor(() => evaluate(cdp, `(() => {
+    const backend = window.__ANIFOR_INPUT_AUDIT__.backend();
+    return backend.backend === 'canvas2d' && backend.reason === 'webgl-timeout' ? backend : false;
+  })()`), 15_000, 'renderScale=8 forced-stall bounded VIBR Canvas recovery');
+  const recovered = await waitFor(async () => {
+    const current = await metrics(cdp);
+    const view = await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.viewState()');
+    const sameRect = ['left', 'top', 'width', 'height'].every(
+      (key) => Math.abs(current.canvas[key] - beforeGeometry.canvas[key]) < 0.05,
+    );
+    return current.backing.width === WORLD_WIDTH * 2
+      && current.backing.height === WORLD_HEIGHT * 2 && current.outputScale === '2'
+      && sameRect && Math.abs(view.zoom - beforeView.zoom) < 1e-9
+      && Math.abs(view.panX - beforeView.panX) < 1e-9
+      && Math.abs(view.panY - beforeView.panY) < 1e-9 ? current : false;
+  }, 15_000, 'renderScale=8 forced-stall VIBR Canvas geometry');
+  assert(backend.requestedOutputScale === 8 && backend.outputScale === 2,
+    `renderScale=8 VIBR recovery reported wrong scale (${JSON.stringify(backend)})`);
+  assertGeometry(recovered, 'renderScale=8 forced-stall VIBR Canvas', 2);
+  assertCanvasRectsEqual(
+    beforeGeometry.canvas, recovered.canvas, 'renderScale=8 forced-stall VIBR camera geometry',
+  );
+  const recoveredTopology = await snapshotEightXVibrState(cdp);
+  assertEightXVibrTopology(recoveredTopology, 'renderScale=8 forced-stall Canvas recovery');
+  assert(JSON.stringify(recoveredTopology) === JSON.stringify(recovery.topology),
+    'renderScale=8 forced-stall Canvas recovery changed VIBR presentation state');
+  const after = await evaluate(cdp, `(() => ({
+    cell: window.__ANIFOR_INPUT_AUDIT__.cell(${recovery.point.x}, ${recovery.point.y}),
+    state: window.__ANIFOR_INPUT_AUDIT__.presentationState(${recovery.point.x}, ${recovery.point.y}),
+    occupied: window.__ANIFOR_INPUT_AUDIT__.occupiedCells(),
+    view: window.__ANIFOR_INPUT_AUDIT__.viewState(),
+    renderer: document.querySelector('.world-canvas')?.dataset.renderer,
+  }))()`);
+  assert(after.cell === recovery.material && after.state === recovery.encodedState
+      && after.occupied === recovery.topology.occupied
+      && after.renderer === 'semantic-field-canvas2d',
+  `renderScale=8 forced-stall recovery lost VIBR state (${JSON.stringify(after)})`);
+  assert(Math.abs(after.view.zoom - beforeView.zoom) < 1e-9
+      && Math.abs(after.view.panX - beforeView.panX) < 1e-9
+      && Math.abs(after.view.panY - beforeView.panY) < 1e-9,
+  `renderScale=8 forced-stall VIBR recovery changed camera (${JSON.stringify({ beforeView, after: after.view })})`);
+
+  // The camera-preservation proof above owns the zoomed geometry. Restore the
+  // canonical fit before sampling the whole ten-card atlas so no control card
+  // can sit outside the page screenshot.
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.resetView(); true');
+  const canonicalGeometry = await waitFor(async () => {
+    const current = await metrics(cdp);
+    return canvasRectsEqual(current.canvas, canvasRect) ? current : false;
+  }, 5_000, 'renderScale=8 forced-stall VIBR canonical Canvas geometry');
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setVibrStateStyling(false); true');
+  const flat = await waitForStablePageCapture(cdp, 'forced-stall Canvas flat VIBR state');
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setVibrStateStyling(true); true');
+  const styled = await waitForStablePageCapture(cdp, 'forced-stall Canvas styled VIBR state');
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setVibrStateStyling(false); true');
+  const repeated = await waitForStablePageCapture(cdp, 'forced-stall Canvas repeated flat VIBR state');
+  const samples = await sampleBackdropRefractionRegions(cdp, {
+    straight: flat.capture.data,
+    refracted: styled.capture.data,
+    repeatedStraight: repeated.capture.data,
+  }, recovery.regions, canonicalGeometry.canvas);
+  assertEightXVibrResponses(samples, 'renderScale=8 forced-stall Canvas');
+  return {
+    backend,
+    backing: `${recovered.backing.width}x${recovered.backing.height}`,
+    cssCanvas: `${round(canonicalGeometry.canvas.width, 2)}x${round(canonicalGeometry.canvas.height, 2)}`,
+    view: after.view,
+    stateProbe: { point: recovery.point, material: after.cell, encodedState: after.state },
+    samples,
   };
 }
 

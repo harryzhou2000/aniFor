@@ -47,4 +47,28 @@ describe('RenderLabBackend', () => {
       new Array(8 * 6).fill(RENDER_LAB_AMBIENT_TEMPERATURE),
     );
   });
+
+  it('owns a bounded 16-bit presentation-state plane independent from matter and walls', () => {
+    const simulation = new RenderLabBackend(8, 6);
+    expect(simulation.presentationState()).toHaveLength(8 * 6);
+    expect(simulation.presentationState().byteLength).toBe(8 * 6 * Uint16Array.BYTES_PER_ELEMENT);
+    expect(simulation.presentationState().some(Boolean)).toBe(false);
+
+    simulation.paint(3, 2, Material.VIBR, 0);
+    simulation.paintWall(3, 2, 6, 0);
+    simulation.setFixturePresentationStateRect(2, 1, 3, 2, 0x9234);
+    simulation.setFixturePresentationState(-10, -10, 0xFFFF);
+    simulation.setFixturePresentationState(7, 5, 0x1FFFF);
+
+    for (let y = 0; y < simulation.height; y++) for (let x = 0; x < simulation.width; x++) {
+      const expected = x === 7 && y === 5 ? 0xFFFF
+        : x >= 2 && x < 5 && y >= 1 && y < 3 ? 0x9234 : 0;
+      expect(simulation.presentationState()[y * simulation.width + x]).toBe(expected);
+    }
+    expect(simulation.cells()[2 * simulation.width + 3]).toBe(Material.VIBR);
+    expect(simulation.walls()[2 * simulation.width + 3]).toBe(6);
+
+    simulation.clear();
+    expect(simulation.presentationState().some(Boolean)).toBe(false);
+  });
 });

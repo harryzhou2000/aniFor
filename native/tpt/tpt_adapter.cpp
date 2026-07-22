@@ -29,6 +29,7 @@ std::vector<char> signTextBuffer;
 uint8_t materialField[FIELD_SIZE];
 uint8_t wallField[FIELD_SIZE];
 uint16_t temperatureField[FIELD_SIZE];
+uint16_t presentationStateField[FIELD_SIZE];
 float pressureField[FIELD_SIZE];
 int8_t velocityField[FIELD_SIZE * 2];
 bool windPending = false;
@@ -514,6 +515,7 @@ void ExtractFields()
 	std::fill_n(materialField, FIELD_SIZE, uint8_t(0));
 	std::fill_n(wallField, FIELD_SIZE, uint8_t(0));
 	std::fill_n(temperatureField, FIELD_SIZE, uint16_t(0));
+	std::fill_n(presentationStateField, FIELD_SIZE, uint16_t(0));
 	std::fill_n(pressureField, FIELD_SIZE, 0.0f);
 	std::fill_n(velocityField, FIELD_SIZE * 2, int8_t(0));
 	for (int y = 0; y < YRES; ++y)
@@ -531,6 +533,21 @@ void ExtractFields()
 				materialField[offset] = uint8_t(STILLROOM_LIFE_FIRST + part.ctype);
 			else
 				materialField[offset] = ToStillroomType(part.type);
+			if (part.type == PT_VIBR || part.type == PT_BVBR)
+			{
+				// Match upstream VIBR graphics: tmp / 10 is the visible charge
+				// gradient and reaches its charged presentation at 100. Life is
+				// normalized across the native 750-tick explosion countdown.
+				auto const charge = std::clamp(part.tmp / 10, 0, 100);
+				auto const life = std::clamp(part.life, 0, 750);
+				// Every positive native life must remain distinguishable from the
+				// inactive zero word, including the final explosion tick.
+				auto const countdown = life > 0
+					? std::max(1, (life * 255 + 375) / 750) : 0;
+				presentationStateField[offset] = uint16_t(
+					charge | (countdown << 7) | (part.tmp2 ? 0x8000 : 0)
+				);
+			}
 			temperatureField[offset] = uint16_t(std::clamp(part.temp * 10.0f, 0.0f, 65535.0f));
 			velocityField[offset * 2] = int8_t(std::clamp(part.vx * 12.0f, -127.0f, 127.0f));
 			velocityField[offset * 2 + 1] = int8_t(std::clamp(part.vy * 12.0f, -127.0f, 127.0f));
@@ -546,6 +563,7 @@ __attribute__((visibility("default"))) int powder_height() { return YRES; }
 __attribute__((visibility("default"))) uint8_t *powder_cells() { EnsureSimulation(); ExtractFields(); return materialField; }
 __attribute__((visibility("default"))) uint8_t *powder_walls() { EnsureSimulation(); ExtractFields(); return wallField; }
 __attribute__((visibility("default"))) uint16_t *powder_temperature() { EnsureSimulation(); return temperatureField; }
+__attribute__((visibility("default"))) uint16_t *powder_presentation_state() { EnsureSimulation(); return presentationStateField; }
 __attribute__((visibility("default"))) float *powder_pressure() { EnsureSimulation(); return pressureField; }
 __attribute__((visibility("default"))) int8_t *powder_velocity() { EnsureSimulation(); return velocityField; }
 __attribute__((visibility("default"))) uint32_t powder_tick() { EnsureSimulation(); return simulation->currentTick; }

@@ -62,6 +62,9 @@ import {
 import {
   PASTE_RESIST_GRAPHICS_AUDIT, preparePasteResistGraphicsAuditFixture,
 } from './paste-resist-graphics-audit';
+import {
+  VIBR_STATE_GRAPHICS_AUDIT, prepareVibrStateGraphicsAuditFixture,
+} from './vibr-state-graphics-audit';
 
 const AUTOSAVE_KEY = 'stillroom-world-v1';
 
@@ -245,6 +248,10 @@ export class Game {
         if (x < 0 || y < 0 || x >= this.simulation.width || y >= this.simulation.height) return -1;
         return this.simulation.cells()[y * this.simulation.width + x];
       },
+      presentationState: (x, y) => {
+        if (x < 0 || y < 0 || x >= this.simulation.width || y >= this.simulation.height) return -1;
+        return this.simulation.presentationState?.()[y * this.simulation.width + x] ?? 0;
+      },
       wall: (x, y) => {
         if (x < 0 || y < 0 || x >= this.simulation.width || y >= this.simulation.height) return -1;
         return this.simulation.walls?.()[y * this.simulation.width + x] ?? 0;
@@ -332,6 +339,9 @@ export class Game {
       },
       setEnergyIdentityStyling: (enabled) => {
         this.renderer.setEnergyIdentityStylingEnabled(enabled);
+      },
+      setVibrStateStyling: (enabled) => {
+        this.renderer.setVibrStateStylingEnabled(enabled);
       },
       setBotanicalIdentityStyling: (enabled) => {
         this.renderer.setBotanicalIdentityStylingEnabled(enabled);
@@ -421,6 +431,10 @@ export class Game {
       pasteResistGraphicsAtlas: () => PASTE_RESIST_GRAPHICS_AUDIT,
       preparePasteResistGraphicsFixture: () => {
         preparePasteResistGraphicsAuditFixture(this.simulation);
+      },
+      vibrStateGraphicsAtlas: () => VIBR_STATE_GRAPHICS_AUDIT,
+      prepareVibrStateGraphicsFixture: () => {
+        prepareVibrStateGraphicsAuditFixture(this.simulation);
       },
       canvasPresentationTiming: () => this.renderer.getCanvasPresentationTiming(),
       requestWebGLPresentationTimingSample: () => this.renderer.requestWebGLPresentationTimingSample(),

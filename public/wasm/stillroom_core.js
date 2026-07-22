@@ -5811,6 +5811,7 @@ var _powder_height = Module['_powder_height'] = makeInvalidEarlyAccess('_powder_
 var _powder_cells = Module['_powder_cells'] = makeInvalidEarlyAccess('_powder_cells');
 var _powder_walls = Module['_powder_walls'] = makeInvalidEarlyAccess('_powder_walls');
 var _powder_temperature = Module['_powder_temperature'] = makeInvalidEarlyAccess('_powder_temperature');
+var _powder_presentation_state = Module['_powder_presentation_state'] = makeInvalidEarlyAccess('_powder_presentation_state');
 var _powder_pressure = Module['_powder_pressure'] = makeInvalidEarlyAccess('_powder_pressure');
 var _powder_velocity = Module['_powder_velocity'] = makeInvalidEarlyAccess('_powder_velocity');
 var _powder_tick = Module['_powder_tick'] = makeInvalidEarlyAccess('_powder_tick');
@@ -5867,6 +5868,7 @@ function assignWasmExports(wasmExports) {
   assert(typeof wasmExports['powder_cells'] != 'undefined', 'missing Wasm export: powder_cells');
   assert(typeof wasmExports['powder_walls'] != 'undefined', 'missing Wasm export: powder_walls');
   assert(typeof wasmExports['powder_temperature'] != 'undefined', 'missing Wasm export: powder_temperature');
+  assert(typeof wasmExports['powder_presentation_state'] != 'undefined', 'missing Wasm export: powder_presentation_state');
   assert(typeof wasmExports['powder_pressure'] != 'undefined', 'missing Wasm export: powder_pressure');
   assert(typeof wasmExports['powder_velocity'] != 'undefined', 'missing Wasm export: powder_velocity');
   assert(typeof wasmExports['powder_tick'] != 'undefined', 'missing Wasm export: powder_tick');
@@ -5919,6 +5921,7 @@ function assignWasmExports(wasmExports) {
   _powder_cells = Module['_powder_cells'] = createExportWrapper('powder_cells', wasmExports['powder_cells'], 0);
   _powder_walls = Module['_powder_walls'] = createExportWrapper('powder_walls', wasmExports['powder_walls'], 0);
   _powder_temperature = Module['_powder_temperature'] = createExportWrapper('powder_temperature', wasmExports['powder_temperature'], 0);
+  _powder_presentation_state = Module['_powder_presentation_state'] = createExportWrapper('powder_presentation_state', wasmExports['powder_presentation_state'], 0);
   _powder_pressure = Module['_powder_pressure'] = createExportWrapper('powder_pressure', wasmExports['powder_pressure'], 0);
   _powder_velocity = Module['_powder_velocity'] = createExportWrapper('powder_velocity', wasmExports['powder_velocity'], 0);
   _powder_tick = Module['_powder_tick'] = createExportWrapper('powder_tick', wasmExports['powder_tick'], 0);

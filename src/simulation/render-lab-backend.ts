@@ -13,17 +13,21 @@ export class RenderLabBackend extends DeterministicBackend {
   readonly presentationFieldsDynamic = false;
   private readonly wallWorld: Uint8Array;
   private readonly temperatureWorld: Uint16Array;
+  private readonly presentationStateWorld: Uint16Array;
   private readonly dirtyWalls = new Set<number>();
 
   constructor(width = 612, height = 384) {
     super(width, height);
     this.wallWorld = new Uint8Array(width * height);
     this.temperatureWorld = new Uint16Array(width * height);
+    this.presentationStateWorld = new Uint16Array(width * height);
     this.temperatureWorld.fill(RENDER_LAB_AMBIENT_TEMPERATURE);
   }
 
   walls(): Uint8Array { return this.wallWorld; }
   temperature(): Uint16Array { return this.temperatureWorld; }
+  /** Renderer-facing native-state projection used only by paused render-lab fixtures. */
+  presentationState(): Uint16Array { return this.presentationStateWorld; }
 
   /** Sets an immutable diagnostic temperature region before the paused scene is presented. */
   setFixtureTemperatureRect(
@@ -39,6 +43,26 @@ export class RenderLabBackend extends DeterministicBackend {
     for (let py = top; py < bottom; py++) {
       this.temperatureWorld.fill(value, py * this.width + left, py * this.width + right);
     }
+  }
+
+  /** Sets one bounded diagnostic native-state region without changing matter ownership. */
+  setFixturePresentationStateRect(
+    x: number, y: number, width: number, height: number, state: number,
+  ): void {
+    if (width <= 0 || height <= 0) return;
+    const left = Math.max(0, Math.floor(x));
+    const top = Math.max(0, Math.floor(y));
+    const right = Math.min(this.width, Math.ceil(x + width));
+    const bottom = Math.min(this.height, Math.ceil(y + height));
+    if (right <= left || bottom <= top) return;
+    const value = Math.max(0, Math.min(0xFFFF, Math.round(state)));
+    for (let py = top; py < bottom; py++) {
+      this.presentationStateWorld.fill(value, py * this.width + left, py * this.width + right);
+    }
+  }
+
+  setFixturePresentationState(x: number, y: number, state: number): void {
+    this.setFixturePresentationStateRect(x, y, 1, 1, state);
   }
 
   paintWall(x: number, y: number, wall: number, radius: number): void {
@@ -64,6 +88,7 @@ export class RenderLabBackend extends DeterministicBackend {
   override clear(): void {
     super.clear();
     this.temperatureWorld?.fill(RENDER_LAB_AMBIENT_TEMPERATURE);
+    this.presentationStateWorld?.fill(0);
     if (!this.wallWorld) return;
     for (let index = 0; index < this.wallWorld.length; index++) {
       if (this.wallWorld[index] === 0) continue;

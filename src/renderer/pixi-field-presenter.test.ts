@@ -30,6 +30,7 @@ interface PresenterHarness {
   setUnusualPowderStylingEnabled: PixiFieldPresenter['setUnusualPowderStylingEnabled'];
   setUnusualSolidStylingEnabled: PixiFieldPresenter['setUnusualSolidStylingEnabled'];
   setEnergyIdentityStylingEnabled: PixiFieldPresenter['setEnergyIdentityStylingEnabled'];
+  setVibrStateStylingEnabled: PixiFieldPresenter['setVibrStateStylingEnabled'];
   setBotanicalIdentityStylingEnabled: PixiFieldPresenter['setBotanicalIdentityStylingEnabled'];
   setLiquidSilhouetteCohesionEnabled: PixiFieldPresenter['setLiquidSilhouetteCohesionEnabled'];
   setRenderStallHandler: PixiFieldPresenter['setRenderStallHandler'];
@@ -113,6 +114,16 @@ describe('Pixi presenter startup configuration', () => {
       uPowderBodyDepth: 1,
     });
     expect(presenter.app.render).not.toHaveBeenCalled();
+  });
+
+  it('decodes native presentation state from existing wall B/A channels', () => {
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+
+    expect(source).toContain('float packedState = floor(stateBytes.x * 255.0 + 0.5)');
+    expect(source).toContain('+ floor(stateBytes.y * 255.0 + 0.5) * 256.0;');
+    expect(source).toContain('packPresentationStateRect(');
+    expect(source).not.toContain('uPresentationStateTexture');
+    expect(source).not.toContain('sampler2D uPresentationState');
   });
 
   it('advances fallback presentation timing only after its GPU fence signals', () => {
@@ -620,6 +631,32 @@ describe('Pixi presenter startup configuration', () => {
     expect(block).not.toMatch(/\balpha\s*[+*]?=/);
     expect(source).toContain('radioactiveBodyIdentityDelta(material, fieldPosition)');
     expect(source).toContain('* uEnergyIdentityStyling;');
+  });
+
+  it('decodes VIBR/BVBR native state from the existing wall sample with RGB-only arithmetic', () => {
+    const presenter = presenterHarness();
+    presenter.setVibrStateStylingEnabled(false);
+    expect(presenter.uniforms.uniforms.uVibrStateStyling).toBe(0);
+    presenter.setVibrStateStylingEnabled(true);
+    expect(presenter.uniforms.uniforms.uVibrStateStyling).toBe(1);
+    expect(presenter.app.render).toHaveBeenCalledTimes(2);
+
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const start = source.indexOf('vec3 vibrStateDelta(');
+    const end = source.indexOf('vec4 contactSample(', start);
+    const block = source.slice(start, end);
+    expect(start).toBeGreaterThan(0);
+    expect(end).toBeGreaterThan(start);
+    expect(block).toContain('float packedState = floor(stateBytes.x * 255.0 + 0.5)');
+    expect(block).toContain('+ floor(stateBytes.y * 255.0 + 0.5) * 256.0;');
+    expect(block).toContain('material != 99.0 && material != 113.0');
+    expect(block).toContain('mod(packedState, 128.0)');
+    expect(block).toContain('floor(packedState / 32768.0)');
+    expect(block).not.toContain('texture(');
+    expect(block).not.toMatch(/\b(?:sin|pow|normalize|length)\s*\(/);
+    expect(block).not.toMatch(/\balpha\s*[+*]?=/);
+    expect(source).toContain('vibrStateDelta(material, wallState.ba, fieldPosition)');
+    expect(source).toContain('* uVibrStateStyling;');
   });
 
   it('keeps emission volume shading RGB-only and reuses existing aura samples', () => {

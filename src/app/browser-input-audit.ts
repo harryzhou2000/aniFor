@@ -18,12 +18,14 @@ import type { VirusGraphicsAuditSnapshot } from './virus-graphics-audit';
 import type { WaxGraphicsAuditSnapshot } from './wax-graphics-audit';
 import type { CrystallineGraphicsAuditSnapshot } from './crystalline-graphics-audit';
 import type { PasteResistGraphicsAuditSnapshot } from './paste-resist-graphics-audit';
+import type { VibrStateGraphicsAuditSnapshot } from './vibr-state-graphics-audit';
 
 export interface BrowserInputAuditApi {
   readonly version: 1;
   readonly width: number;
   readonly height: number;
   cell(x: number, y: number): number;
+  presentationState(x: number, y: number): number;
   wall(x: number, y: number): number;
   temperature(x: number, y: number): number;
   sourceTarget(x: number, y: number): number;
@@ -56,6 +58,7 @@ export interface BrowserInputAuditApi {
   setThermalMaterialStyling(enabled: boolean): void;
   setEnergyCoreRelief(enabled: boolean): void;
   setEnergyIdentityStyling(enabled: boolean): void;
+  setVibrStateStyling(enabled: boolean): void;
   setBotanicalIdentityStyling(enabled: boolean): void;
   setPowderBodyDepth(enabled: boolean): void;
   setPowderRenderStyle(style: PowderRenderStyle): void;
@@ -100,6 +103,8 @@ export interface BrowserInputAuditApi {
   prepareCrystallineGraphicsFixture(): void;
   pasteResistGraphicsAtlas(): PasteResistGraphicsAuditSnapshot;
   preparePasteResistGraphicsFixture(): void;
+  vibrStateGraphicsAtlas(): VibrStateGraphicsAuditSnapshot;
+  prepareVibrStateGraphicsFixture(): void;
   canvasPresentationTiming(): CanvasPresentationTiming | undefined;
   requestWebGLPresentationTimingSample(): boolean;
   webGLPresentationTiming(): WebGLPresentationTiming | undefined;

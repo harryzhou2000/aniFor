@@ -71,6 +71,7 @@ import { POWDER_SURFACE_REFRESH_INTERVAL } from './powder-surface-field';
 import type { PowderRenderStyle } from './powder-render-style';
 import { receivesThermalMaterialStyle, thermalMaterialDelta } from './thermal-material-style';
 import { writeSolidOpticalDepth } from './solid-optical-depth-field';
+import { applyCanvasVibrStateStyle } from './canvas-vibr-state-style';
 
 const FRAME_INTERVAL = 1000 / 30;
 export const DYNAMIC_FIELD_REFRESH_INTERVAL = 1000 / 12;
@@ -190,6 +191,7 @@ export class MaterialRenderer {
   private thermalMaterialStylingEnabled = true;
   private energyCoreReliefEnabled = true;
   private energyIdentityStylingEnabled = true;
+  private vibrStateStylingEnabled = true;
   private botanicalIdentityStylingEnabled = true;
   private powderBodyDepthEnabled = true;
   private powderRenderStyle: PowderRenderStyle = 'smooth';
@@ -289,7 +291,9 @@ export class MaterialRenderer {
       this.changed = true;
     }
     const hasDynamicFields = this.simulation.presentationFieldsDynamic !== false
-      && Boolean(this.simulation.temperature || this.simulation.velocity);
+      && Boolean(
+        this.simulation.temperature || this.simulation.velocity || this.simulation.presentationState,
+      );
     const refreshDynamicFields = dynamicFieldRefreshDue(time, this.lastDynamicFieldRefresh, hasDynamicFields);
     const powderRefreshDue = this.powderSurfaceDirty
       && time - this.lastPowderSurfaceRefresh >= POWDER_SURFACE_REFRESH_INTERVAL;
@@ -561,6 +565,14 @@ export class MaterialRenderer {
     this.changed = true;
   }
 
+  setVibrStateStylingEnabled(enabled: boolean): void {
+    if (enabled === this.vibrStateStylingEnabled) return;
+    this.vibrStateStylingEnabled = enabled;
+    this.presenter?.setVibrStateStylingEnabled(enabled);
+    this.contourChunks.markAll();
+    this.changed = true;
+  }
+
   setBotanicalIdentityStylingEnabled(enabled: boolean): void {
     if (enabled === this.botanicalIdentityStylingEnabled) return;
     this.botanicalIdentityStylingEnabled = enabled;
@@ -745,6 +757,7 @@ export class MaterialRenderer {
       this.gasIdentityStylingEnabled,
       this.energyIdentityStylingEnabled,
       this.botanicalIdentityStylingEnabled,
+      this.vibrStateStylingEnabled,
     );
     // Route subsequent dirty cells to the candidate while its first expensive
     // frame is in flight. The known-good Canvas remains mounted underneath;
@@ -752,6 +765,7 @@ export class MaterialRenderer {
     this.presenter = presenter;
     presenter.update(
       this.rendered, this.renderedWalls, this.simulation.temperature?.(), this.simulation.velocity?.(),
+      this.simulation.presentationState?.(),
       now, now, true,
     );
     presenter.resize(this.host.clientWidth, this.host.clientHeight);
@@ -865,9 +879,10 @@ export class MaterialRenderer {
     const height = this.simulation.height;
     const temperatures = this.simulation.temperature?.();
     const velocities = this.simulation.velocity?.();
+    const presentationState = this.simulation.presentationState?.();
     if (this.presenter) {
       this.presenter.update(
-        this.rendered, this.renderedWalls, temperatures, velocities,
+        this.rendered, this.renderedWalls, temperatures, velocities, presentationState,
         scheduleTime, visualTime, refreshDynamicFields,
       );
       return;
@@ -1516,6 +1531,11 @@ export class MaterialRenderer {
             this.styledColor, applicableTraits, phase, material, x, y, index, this.traitClock,
             this.roleMaterialStylingEnabled, this.energyIdentityStylingEnabled,
           );
+          if (this.vibrStateStylingEnabled && presentationState) {
+            applyCanvasVibrStateStyle(
+              this.styledColor, material, presentationState[index], x, y,
+            );
+          }
           if (this.translucentLensShellEnabled && applicableTraits === 0 && !info.emissive) {
             applyCanvasTranslucentLensShell(
               this.styledColor, solidRelief, normalLight, material,

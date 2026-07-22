@@ -15,6 +15,7 @@ interface PowderToyModule {
   _powder_cells(): number;
   _powder_walls(): number;
   _powder_temperature(): number;
+  _powder_presentation_state(): number;
   _powder_pressure(): number;
   _powder_velocity(): number;
   _powder_tick(): number;
@@ -89,6 +90,17 @@ export class PowderToyBackend implements SimulationBackend {
 
   temperature(): Uint16Array {
     return new Uint16Array(this.module.HEAPU16.buffer, this.module._powder_temperature(), this.width * this.height);
+  }
+
+  presentationState(): Uint16Array {
+    // `consumeDirtyCells()` calls `cells()` first, which performs the one shared
+    // native ExtractFields pass. Keep this accessor view-only so rendering does
+    // not repeat a 612x384 extraction for state after material ownership.
+    return new Uint16Array(
+      this.module.HEAPU16.buffer,
+      this.module._powder_presentation_state(),
+      this.width * this.height,
+    );
   }
 
   pressure(): Float32Array {
