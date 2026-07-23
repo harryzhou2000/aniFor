@@ -269,7 +269,7 @@ int ToPowderType(int material)
 bool IsConfiguredSourceType(int type)
 {
 	return type == PT_CLNE || type == PT_BCLN || type == PT_PCLN
-		|| type == PT_PBCN || type == PT_CONV;
+		|| type == PT_PBCN || type == PT_CONV || type == PT_CRAY;
 }
 
 bool CanConfigureSourceType(int sourceType, int targetType)

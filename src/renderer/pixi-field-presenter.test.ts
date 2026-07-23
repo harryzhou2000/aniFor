@@ -701,7 +701,7 @@ describe('Pixi presenter startup configuration', () => {
     const block = source.slice(start, end);
     expect(start).toBeGreaterThan(0);
     expect(end).toBeGreaterThan(start);
-    for (const owner of [124, 126, 127, 158, 159]) {
+    for (const owner of [124, 126, 127, 137, 158, 159]) {
       expect(block).toContain(`material == ${owner}.0`);
     }
     expect(block).toContain('(target >= 1.0 && target <= 170.0) || target == 217.0');

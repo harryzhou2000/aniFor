@@ -86,15 +86,17 @@ describe('tool catalog view model', () => {
     const disabled = semanticTools().filter((tool) => tool.kind === 'source');
     expect(disabled.map(({ key }) => key)).toEqual([
       'source:clne', 'source:bcln', 'source:pcln', 'source:pbcn', 'source:conv',
+      'source:cray',
     ]);
     expect(disabled.map(({ emitter }) => emitter)).toEqual([
       Material.CLNE, Material.BCLN, Material.PCLN, Material.PBCN, Material.CONV,
+      Material.CRAY,
     ]);
     expect(disabled.every((tool) => tool.requiresTarget && !isToolAvailable(tool))).toBe(true);
     expect(disabled.every((tool) => tool.limitations?.includes('configured-sources-unavailable'))).toBe(true);
 
     const enabled = semanticTools({ configuredSources: true }).filter((tool) => tool.kind === 'source');
-    expect(enabled).toHaveLength(5);
+    expect(enabled).toHaveLength(6);
     expect(enabled.every(isToolAvailable)).toBe(true);
   });
 

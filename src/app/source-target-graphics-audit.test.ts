@@ -30,7 +30,7 @@ describe('configured-source target-identity graphics audit', () => {
     }
   });
 
-  it('lays out the full five-owner by seven-target matrix inside 612x384', () => {
+  it('lays out the full six-owner by seven-target matrix inside 612x384', () => {
     expect(SOURCE_TARGET_GRAPHICS_ATLAS).toHaveLength(
       SOURCE_TARGET_GRAPHICS_ATLAS_COLUMNS * SOURCE_TARGET_GRAPHICS_ATLAS_ROWS,
     );
@@ -109,15 +109,15 @@ describe('configured-source target-identity graphics audit', () => {
       expectExactRect(simulation, entry.guardedBlank, Material.Empty, 0, 0);
     }
 
-    expect(SOURCE_TARGET_GRAPHICS_AUDIT.authoredHoles).toHaveLength(35 * 4 * 4);
-    expect(SOURCE_TARGET_GRAPHICS_AUDIT.openNotches).toHaveLength(35 * 8 * 6);
-    expect(SOURCE_TARGET_GRAPHICS_AUDIT.thinStructures).toHaveLength(35 * 14);
-    expect(SOURCE_TARGET_GRAPHICS_AUDIT.isolated).toHaveLength(35);
-    expect(SOURCE_TARGET_GRAPHICS_AUDIT.zeroStates).toHaveLength(35);
-    expect(SOURCE_TARGET_GRAPHICS_AUDIT.wrongOwners).toHaveLength(35);
-    expect(SOURCE_TARGET_GRAPHICS_AUDIT.targetControls).toHaveLength(35);
-    expect(SOURCE_TARGET_GRAPHICS_AUDIT.wallCoexistence).toHaveLength(35);
-    expect(SOURCE_TARGET_GRAPHICS_AUDIT.guardedBlanks).toHaveLength(35);
+    expect(SOURCE_TARGET_GRAPHICS_AUDIT.authoredHoles).toHaveLength(42 * 4 * 4);
+    expect(SOURCE_TARGET_GRAPHICS_AUDIT.openNotches).toHaveLength(42 * 8 * 6);
+    expect(SOURCE_TARGET_GRAPHICS_AUDIT.thinStructures).toHaveLength(42 * 12);
+    expect(SOURCE_TARGET_GRAPHICS_AUDIT.isolated).toHaveLength(42);
+    expect(SOURCE_TARGET_GRAPHICS_AUDIT.zeroStates).toHaveLength(42);
+    expect(SOURCE_TARGET_GRAPHICS_AUDIT.wrongOwners).toHaveLength(42);
+    expect(SOURCE_TARGET_GRAPHICS_AUDIT.targetControls).toHaveLength(42);
+    expect(SOURCE_TARGET_GRAPHICS_AUDIT.wallCoexistence).toHaveLength(42);
+    expect(SOURCE_TARGET_GRAPHICS_AUDIT.guardedBlanks).toHaveLength(42);
   });
 
   it('is deterministic and rejects incomplete or non-canonical backends', () => {

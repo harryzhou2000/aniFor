@@ -405,13 +405,18 @@ describe('direct Powder Toy backend', () => {
         module.HEAPU8.buffer, module._powder_presentation_state(), 612 * 384,
       );
     };
-    const sources = [Material.CLNE, Material.BCLN, Material.PCLN, Material.PBCN, Material.CONV];
+    const sources = [
+      Material.CLNE, Material.BCLN, Material.PCLN, Material.PBCN, Material.CONV,
+      Material.CRAY,
+    ];
 
     expect(module._powder_can_configure_source(Material.CLNE, Material.Water)).toBe(1);
     expect(module._powder_can_configure_source(Material.CLNE, Material.BCOL)).toBe(1);
     expect(module._powder_can_configure_source(Material.CLNE, Material.CLNE)).toBe(0);
     expect(module._powder_can_configure_source(Material.PCLN, Material.PSCN)).toBe(0);
     expect(module._powder_can_configure_source(Material.PBCN, Material.SPRK)).toBe(0);
+    expect(module._powder_can_configure_source(Material.CRAY, Material.Water)).toBe(1);
+    expect(module._powder_can_configure_source(Material.CRAY, Material.CRAY)).toBe(0);
     expect(module._powder_can_configure_source(Material.Sand, Material.Water)).toBe(0);
 
     sources.forEach((source, index) => {
@@ -470,6 +475,7 @@ describe('direct Powder Toy backend', () => {
     expect(source._powder_init()).toBe(1);
     const emitters = [
       Material.CLNE, Material.BCLN, Material.PCLN, Material.PBCN, Material.CONV,
+      Material.CRAY,
     ] as const;
     const targets = [
       Material.Sand, Material.Water, Material.Oxygen, Material.PHOT,
@@ -509,6 +515,40 @@ describe('direct Powder Toy backend', () => {
       expect(restored._powder_source_target(x, y)).toBe(target);
       expect(restoredState[y * 612 + x]).toBe(target);
     });
+  });
+
+  it('emits the configured CRAY target opposite a real native spark', async () => {
+    const imported = await import(moduleArtifact.href) as { default: () => Promise<RawPowderModule> };
+    const module = await imported.default();
+    expect(module._powder_init()).toBe(1);
+    const source = { x: 306, y: 180 };
+
+    expect(module._powder_set_configured_source(
+      source.x, source.y, Material.CRAY, Material.Water,
+    )).toBe(1);
+    module._powder_cells();
+    const configuredTemperature = new Uint16Array(
+      module.HEAPU8.buffer, module._powder_temperature(), 612 * 384,
+    );
+    // CRAY's native CtypeDraw also adopts the target's default temperature.
+    // This proves the semantic adapter did not bypass target-specific setup by
+    // assigning ctype directly.
+    expect(configuredTemperature[source.y * 612 + source.x]).toBe(2931);
+    module._powder_set(source.x - 1, source.y, Material.PSCN);
+    module._powder_set(source.x - 1, source.y, Material.SPRK);
+    module._powder_step();
+
+    const cells = new Uint8Array(
+      module.HEAPU8.buffer, module._powder_cells(), 612 * 384,
+    );
+    const state = new Uint16Array(
+      module.HEAPU8.buffer, module._powder_presentation_state(), 612 * 384,
+    );
+    expect(cells[source.y * 612 + source.x]).toBe(Material.CRAY);
+    expect(cells[source.y * 612 + source.x + 1]).toBe(Material.Water);
+    expect(cells.filter((material) => material === Material.Water)).toHaveLength(255);
+    expect(module._powder_source_target(source.x, source.y)).toBe(Material.Water);
+    expect(state[source.y * 612 + source.x]).toBe(Material.Water);
   });
 
   it('projects all 24 native LIFE presets to stable frontend IDs', async () => {

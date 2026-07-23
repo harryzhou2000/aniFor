@@ -1,4 +1,4 @@
-const EXPECTED_OWNERS = [126, 124, 159, 158, 127];
+const EXPECTED_OWNERS = [126, 124, 159, 158, 127, 137];
 const EXPECTED_TARGETS = [1, 2, 39, 107, 23, 10, 217];
 
 /** Focused paired framebuffer proof for configured-source target presentation. */
@@ -30,7 +30,7 @@ export async function auditSourceTargetGraphics({
   const rawAtlas = await waitFor(() => evaluate(cdp, `(() => {
     const atlas = window.__ANIFOR_INPUT_AUDIT__.sourceTargetGraphicsAtlas();
     const cards = Array.isArray(atlas) ? atlas : atlas?.cards;
-    return cards?.length === 35 ? atlas : false;
+    return cards?.length === 42 ? atlas : false;
   })()`), 15_000, `${mode} source-target graphics fixture`);
   const atlas = normalizeSourceTargetGraphicsAtlas(rawAtlas);
   assertAtlasContract(atlas, mode, assert);
@@ -170,7 +170,7 @@ export function assertPairedSourceTargetGraphics(results, assert) {
   const webgl = webglResult?.sourceTargetGraphics;
   assert(canvas && webgl,
     'Configured-source target graphics gate requires Canvas2D and WebGL results');
-  assert(canvas.cards.length === 35 && webgl.cards.length === 35
+  assert(canvas.cards.length === 42 && webgl.cards.length === 42
       && canvas.exactRepeatedOff && webgl.exactRepeatedOff
       && canvasResult.browserErrors === 0 && webglResult.browserErrors === 0,
   'Paired configured-source count, repetition, or browser-error contract failed');
@@ -237,7 +237,7 @@ function normalizeSourceTargetGraphicsAtlas(snapshot) {
 function assertAtlasContract(atlas, mode, assert) {
   const expectedOwners = EXPECTED_OWNERS.flatMap((owner) => EXPECTED_TARGETS.map(() => owner));
   const expectedTargets = EXPECTED_OWNERS.flatMap(() => EXPECTED_TARGETS);
-  assert(atlas.cards.length === 35
+  assert(atlas.cards.length === 42
       && atlas.cards.map(({ owner }) => owner).join(',') === expectedOwners.join(',')
       && atlas.cards.map(({ target }) => target).join(',') === expectedTargets.join(',')
       && atlas.cards.every((entry, index) => entry.index === index
@@ -354,16 +354,16 @@ function assertBacking(backing, label, assert) {
   assert(Number.isInteger(backing.scaleX) && Number.isInteger(backing.scaleY)
       && backing.scaleX > 0 && backing.scaleY > 0,
   `${label}: configured-source backing does not preserve integral scaling`);
-  assert(backing.cards.length === 35 && backing.cards.every((card) => (
+  assert(backing.cards.length === 42 && backing.cards.every((card) => (
     card.encodedState === card.target && (card.encodedState & 0xFF00) === 0
     && card.bodyExpected === 832 && card.bodySupported === card.bodyExpected
-    && card.thinExpected === 14 && card.thinSupported === card.thinExpected
+    && card.thinExpected === 12 && card.thinSupported === card.thinExpected
     && card.isolatedAlphaPeak > 0
     && card.zeroStateExpected === 100 && card.zeroStateSupported === 100
     && card.wrongOwnerExpected === 120 && card.wrongOwnerSupported === 120
     && card.targetControlExpected === 120 && card.targetControlSupported === 120
     && card.wallExpected === 144 && card.wallSupported === 144
-    && card.guardExpected === 936
+    && card.guardExpected === 720
     // PHOT's independent emission aura legitimately reaches the semantic blank;
     // exact flat/styled signatures below prove source-target styling adds no support.
     && (card.target === 107 || card.guardTransparent === card.guardExpected)

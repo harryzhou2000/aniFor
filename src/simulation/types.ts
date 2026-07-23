@@ -19,7 +19,7 @@ export const DEUT_PRESENTATION_STATE = {
 } as const;
 
 /** Exact public material IDs whose native particles retain a configured ctype target. */
-export const CONFIGURED_SOURCE_MATERIAL_IDS = [124, 126, 127, 158, 159] as const;
+export const CONFIGURED_SOURCE_MATERIAL_IDS = [124, 126, 127, 137, 158, 159] as const;
 
 export interface DirtyCell {
   readonly index: number;

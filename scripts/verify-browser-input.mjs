@@ -11836,9 +11836,9 @@ async function snapshotEightXSourceTargets(cdp) {
 }
 
 function assertEightXSourceTargetTopology(snapshot, label) {
-  const owners = [126, 124, 159, 158, 127];
+  const owners = [126, 124, 159, 158, 127, 137];
   const targets = [1, 2, 39, 107, 23, 10, 217];
-  assert(snapshot.cards.length === 35
+  assert(snapshot.cards.length === 42
       && snapshot.cards.every((card, index) => (
         card.owner === owners[Math.floor(index / targets.length)]
         && card.target === targets[index % targets.length]
@@ -11894,7 +11894,7 @@ async function auditEightXSourceTargetGraphics(cdp, canvasRect) {
     refracted: styled.capture.data,
     repeatedStraight: repeated.capture.data,
   }, regions, canvasRect);
-  assert(samples.length === 35 && samples.every((sample) => (
+  assert(samples.length === 42 && samples.every((sample) => (
     sample.rgbRms >= 0.02 && sample.rgbRms <= 48
       && sample.rgbPeak > 0 && sample.rgbPeak <= 96 && sample.repeatRgbPeak <= 1
   )), `renderScale=8 source response is absent, unbounded, or unstable (${JSON.stringify(samples)})`);

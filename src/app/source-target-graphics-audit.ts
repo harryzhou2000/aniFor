@@ -2,17 +2,17 @@ import { Material } from '../shared/materials';
 import type { SimulationBackend } from '../simulation';
 
 export const SOURCE_TARGET_GRAPHICS_ATLAS_COLUMNS = 7;
-export const SOURCE_TARGET_GRAPHICS_ATLAS_ROWS = 5;
+export const SOURCE_TARGET_GRAPHICS_ATLAS_ROWS = 6;
 
 const WORLD_WIDTH = 612;
 const WORLD_HEIGHT = 384;
 const CARD_ORIGIN_X = 8;
-const CARD_ORIGIN_Y = 8;
+const CARD_ORIGIN_Y = 4;
 // Preserve the shared eight-cell material-motif phase between every card.
 const CARD_STRIDE_X = 84;
-const CARD_STRIDE_Y = 72;
+const CARD_STRIDE_Y = 64;
 const CARD_WIDTH = 80;
-const CARD_HEIGHT = 68;
+const CARD_HEIGHT = 60;
 const CONDUCTIVE_WALL = 1;
 
 export const SOURCE_TARGET_GRAPHICS_OWNERS = [
@@ -21,6 +21,7 @@ export const SOURCE_TARGET_GRAPHICS_OWNERS = [
   { material: Material.PCLN, code: 'PCLN' },
   { material: Material.PBCN, code: 'PBCN' },
   { material: Material.CONV, code: 'CONV' },
+  { material: Material.CRAY, code: 'CRAY' },
 ] as const;
 
 export const SOURCE_TARGET_GRAPHICS_TARGETS = [
@@ -130,13 +131,13 @@ export const SOURCE_TARGET_GRAPHICS_ATLAS: readonly SourceTargetGraphicsAtlasEnt
         targetAccentProbe: { x: card.x + 22, y: card.y + 6, width: 6, height: 6 },
         authoredHole: { x: card.x + 16, y: card.y + 14, width: 4, height: 4 },
         openNotch: { x: card.x + 28, y: card.y + 20, width: 8, height: 6 },
-        thinStructure: { x: card.x + 5, y: card.y + 40, width: 1, height: 14 },
-        isolated: { x: card.x + 20, y: card.y + 54 },
+        thinStructure: { x: card.x + 5, y: card.y + 36, width: 1, height: 12 },
+        isolated: { x: card.x + 20, y: card.y + 50 },
         zeroState: { x: card.x + 44, y: card.y + 4, width: 10, height: 10 },
         wrongOwner: { x: card.x + 64, y: card.y + 4, width: 12, height: 10 },
         targetControl: { x: card.x + 44, y: card.y + 20, width: 12, height: 10 },
         wallCoexistence: { x: card.x + 60, y: card.y + 20, width: 12, height: 12 },
-        guardedBlank: { x: card.x + 40, y: card.y + 38, width: 36, height: 26 },
+        guardedBlank: { x: card.x + 40, y: card.y + 36, width: 36, height: 20 },
       } satisfies SourceTargetGraphicsAtlasEntry;
     })
   ));

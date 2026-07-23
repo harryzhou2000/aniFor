@@ -1,7 +1,7 @@
 import { Material } from '../shared/materials';
 
 const SOURCE_IDS: ReadonlySet<number> = new Set([
-  Material.BCLN, Material.CLNE, Material.CONV, Material.PBCN, Material.PCLN,
+  Material.BCLN, Material.CLNE, Material.CONV, Material.CRAY, Material.PBCN, Material.PCLN,
 ]);
 
 const TARGET_KEYS: readonly (readonly [number, number, number])[] = [

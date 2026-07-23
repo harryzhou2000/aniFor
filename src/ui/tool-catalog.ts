@@ -81,6 +81,7 @@ const SOURCE_DEFINITIONS = [
   ['pcln', Material.PCLN, 'PCLN source', 'Places a powered clone configured to emit the selected target element', '#c4b84a', '▣'],
   ['pbcn', Material.PBCN, 'PBCN source', 'Places a powered breakable clone configured to emit the selected target element', '#b86f43', '▣'],
   ['conv', Material.CONV, 'CONV source', 'Places a converter configured to produce the selected target element', '#0aab0a', '◇'],
+  ['cray', Material.CRAY, 'CRAY source', 'Places a particle ray configured to emit the selected target element when sparked', '#bbff00', '⇢'],
 ] as const;
 
 export function semanticTools(capabilities: ToolCapabilities = {}): readonly Exclude<CatalogTool, ElementToolInfo>[] {

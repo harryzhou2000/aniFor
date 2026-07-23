@@ -4,7 +4,10 @@ import { applyCanvasSourceTargetStyle, isConfiguredSourceMaterial } from './canv
 
 describe('Canvas configured-source target styling', () => {
   it('is exact-owner/state gated, RGB-only, deterministic, and bounded', () => {
-    const owners = [Material.BCLN, Material.CLNE, Material.CONV, Material.PBCN, Material.PCLN];
+    const owners = [
+      Material.BCLN, Material.CLNE, Material.CONV,
+      Material.CRAY, Material.PBCN, Material.PCLN,
+    ];
     for (const owner of owners) {
       expect(isConfiguredSourceMaterial(owner)).toBe(true);
       const first = new Float32Array([80, 90, 100, 177]);

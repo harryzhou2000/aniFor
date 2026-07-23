@@ -786,7 +786,7 @@ vec3 deutStateDelta(float material, vec2 stateBytes, vec2 position) {
 }
 vec3 sourceTargetDelta(float material, vec2 stateBytes, vec2 position) {
   bool sourceOwner = material == 124.0 || material == 126.0 || material == 127.0
-    || material == 158.0 || material == 159.0;
+    || material == 137.0 || material == 158.0 || material == 159.0;
   if (!sourceOwner) return vec3(0.0);
   float target = floor(stateBytes.x * 255.0 + 0.5)
     + floor(stateBytes.y * 255.0 + 0.5) * 256.0;
