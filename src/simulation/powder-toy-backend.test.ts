@@ -14,6 +14,7 @@ interface RawPowderModule {
   HEAPU16: Uint16Array;
   _powder_init(): number;
   _powder_cells(): number;
+  _powder_temperature(): number;
   _powder_presentation_state(): number;
   _powder_pressure(): number;
   _powder_set(x: number, y: number, material: number): void;
