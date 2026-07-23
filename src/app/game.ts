@@ -85,6 +85,9 @@ import {
   SPNG_STATE_GRAPHICS_AUDIT, prepareSpngStateGraphicsAuditFixture,
 } from './spng-state-graphics-audit';
 import {
+  LAVA_STATE_GRAPHICS_AUDIT, prepareLavaStateGraphicsAuditFixture,
+} from './lava-state-graphics-audit';
+import {
   runNativeSeedGrowthAudit,
   type NativeSeedGrowthAuditSnapshot,
   type NativeSeedGrowthBackend,
@@ -386,6 +389,9 @@ export class Game {
       setSpngStateStyling: (enabled) => {
         this.renderer.setSpngStateStylingEnabled(enabled);
       },
+      setLavaAncestryStyling: (enabled) => {
+        this.renderer.setLavaAncestryStylingEnabled(enabled);
+      },
       setBotanicalIdentityStyling: (enabled) => {
         this.renderer.setBotanicalIdentityStylingEnabled(enabled);
       },
@@ -509,6 +515,10 @@ export class Game {
       spngStateGraphicsAtlas: () => SPNG_STATE_GRAPHICS_AUDIT,
       prepareSpngStateGraphicsFixture: () => {
         prepareSpngStateGraphicsAuditFixture(this.simulation);
+      },
+      lavaStateGraphicsAtlas: () => LAVA_STATE_GRAPHICS_AUDIT,
+      prepareLavaStateGraphicsFixture: () => {
+        prepareLavaStateGraphicsAuditFixture(this.simulation);
       },
       nativeSeedGrowthSnapshot: () => {
         if (!this.nativeSeedGrowthAudit) throw new Error('Native seed growth fixture is not prepared');

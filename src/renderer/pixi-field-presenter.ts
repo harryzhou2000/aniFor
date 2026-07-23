@@ -131,6 +131,7 @@ uniform float uSourceTargetStyling;
 uniform float uForceActivityStyling;
 uniform float uPoloStateStyling;
 uniform float uSpngStateStyling;
+uniform float uLavaAncestryStyling;
 uniform float uBotanicalIdentityStyling;
 uniform float uPowderStyle;
 uniform float uPowderBodyDepth;
@@ -742,6 +743,41 @@ vec3 radioactiveBodyIdentityDelta(float material, vec2 position) {
       : vec3(1.0, 2.0, 0.0);
   }
   return clamp(delta, vec3(-12.0), vec3(12.0)) / 255.0;
+}
+float lavaAncestryFamily(float origin) {
+  if (origin == 1.0 || origin == 21.0 || origin == 22.0 || origin == 24.0
+    || origin == 25.0 || origin == 26.0 || origin == 28.0 || origin == 29.0
+    || origin == 44.0 || origin == 76.0 || origin == 78.0) return 1.0;
+  if (origin == 23.0 || origin == 30.0 || origin == 46.0 || origin == 67.0
+    || origin == 70.0 || origin == 72.0 || origin == 73.0 || origin == 75.0
+    || origin == 82.0 || origin == 151.0) return 2.0;
+  if (origin == 7.0 || origin == 94.0) return 3.0;
+  if (origin == 51.0 || origin == 143.0 || origin == 144.0
+    || origin == 145.0 || origin == 146.0 || origin == 147.0) return 4.0;
+  if (origin == 108.0 || origin == 109.0 || origin == 112.0) return 5.0;
+  return 0.0;
+}
+vec3 lavaAncestryDelta(float material, vec2 stateBytes, vec2 position) {
+  if (material != 11.0) return vec3(0.0);
+  float packedState = floor(stateBytes.x * 255.0 + 0.5)
+    + floor(stateBytes.y * 255.0 + 0.5) * 256.0;
+  if (mod(floor(packedState / 256.0), 2.0) < 0.5) return vec3(0.0);
+  float origin = mod(packedState, 256.0);
+  float family = lavaAncestryFamily(origin);
+  if (family < 0.5) return vec3(0.0);
+  float x = floor(position.x);
+  float y = floor(position.y);
+  float identityMark = step(mod(x * 3.0 + y * 5.0 + origin * 7.0, 17.0), 1.0);
+  float familyBand = step(
+    mod(x * (family + 1.0) - y * (6.0 - family) + origin, 23.0), 1.0
+  );
+  float gain = identityMark > 0.5 ? 1.0 : familyBand > 0.5 ? 0.56 : 0.18;
+  vec3 key = family == 1.0 ? vec3(-5.0, 6.0, 14.0)
+    : family == 2.0 ? vec3(2.0, 12.0, 4.0)
+    : family == 3.0 ? vec3(-6.0, 14.0, 9.0)
+    : family == 4.0 ? vec3(-10.0, 9.0, 16.0)
+    : vec3(-6.0, 16.0, -2.0);
+  return clamp(key * gain, vec3(-16.0), vec3(16.0)) / 255.0;
 }
 vec3 vibrStateDelta(float material, vec2 stateBytes, vec2 position) {
   if (material != 99.0 && material != 113.0) return vec3(0.0);
@@ -2116,6 +2152,11 @@ void main() {
       && wall < 0.5 && emissionOnly < 0.5 && family == 2.0 && !materialEmissive) {
       color += deutStateDelta(material, wallState.ba, fieldPosition);
     }
+    if (uLavaAncestryStyling > 0.5 && material == 11.0
+      && liquidOnly < 0.5 && halo < 0.5 && surfaceOnly < 0.5
+      && wall < 0.5 && emissionOnly < 0.5) {
+      color += lavaAncestryDelta(material, wallState.ba, fieldPosition);
+    }
   } else {
     float powderVisualCohesion = 0.0;
     float powderChromaCohesion = 0.0;
@@ -3227,6 +3268,7 @@ export class PixiFieldPresenter {
       uForceActivityStyling: { value: 1, type: 'f32' },
       uPoloStateStyling: { value: 1, type: 'f32' },
       uSpngStateStyling: { value: 1, type: 'f32' },
+      uLavaAncestryStyling: { value: 1, type: 'f32' },
       uBotanicalIdentityStyling: { value: 1, type: 'f32' },
       uPowderStyle: { value: powderRenderStyleValue('smooth'), type: 'f32' },
       uPowderBodyDepth: { value: 1, type: 'f32' },
@@ -3510,6 +3552,7 @@ export class PixiFieldPresenter {
     forceActivityStylingEnabled = true,
     poloStateStylingEnabled = true,
     spngStateStylingEnabled = true,
+    lavaAncestryStylingEnabled = true,
   ): void {
     const uniforms = this.uniforms.uniforms;
     uniforms.uGasFieldLighting = gasFieldLightingEnabled ? 1 : 0;
@@ -3547,6 +3590,7 @@ export class PixiFieldPresenter {
     uniforms.uForceActivityStyling = forceActivityStylingEnabled ? 1 : 0;
     uniforms.uPoloStateStyling = poloStateStylingEnabled ? 1 : 0;
     uniforms.uSpngStateStyling = spngStateStylingEnabled ? 1 : 0;
+    uniforms.uLavaAncestryStyling = lavaAncestryStylingEnabled ? 1 : 0;
     uniforms.uBotanicalIdentityStyling = botanicalIdentityStylingEnabled ? 1 : 0;
     uniforms.uPowderStyle = powderRenderStyleValue(powderRenderStyle);
   }
@@ -3715,6 +3759,11 @@ export class PixiFieldPresenter {
 
   setSpngStateStylingEnabled(enabled: boolean): void {
     this.uniforms.uniforms.uSpngStateStyling = enabled ? 1 : 0;
+    this.renderApplication();
+  }
+
+  setLavaAncestryStylingEnabled(enabled: boolean): void {
+    this.uniforms.uniforms.uLavaAncestryStyling = enabled ? 1 : 0;
     this.renderApplication();
   }
 

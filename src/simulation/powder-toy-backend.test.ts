@@ -3,7 +3,8 @@ import { MATERIALS, Material } from '../shared/materials';
 import { PowderToyBackend } from './powder-toy-backend';
 import { SimulationTool } from './simulation-tools';
 import {
-  DEUT_PRESENTATION_STATE, POLO_PRESENTATION_STATE, SPNG_PRESENTATION_STATE,
+  DEUT_PRESENTATION_STATE, LAVA_PRESENTATION_STATE, POLO_PRESENTATION_STATE,
+  SPNG_PRESENTATION_STATE,
   VIBR_PRESENTATION_STATE,
 } from './types';
 import { readFileSync } from 'node:fs';
@@ -331,6 +332,123 @@ describe('direct Powder Toy backend', () => {
     restored.paint(point.x, point.y, Material.Water, 0);
     expect(owner(restored)).toBe(Material.Water);
     expect(state(restored)).toBe(0);
+  });
+
+  it('projects exact typed-Lava ancestry through native melting, OPS1, and cooling', async () => {
+    const fixtures = [
+      { material: Material.QRTZ, threshold: 2573.15, x: 180, y: 150 },
+      { material: Material.Metal, threshold: 1273, x: 220, y: 150 },
+      { material: Material.IRON, threshold: 1687, x: 260, y: 150 },
+      { material: Material.Salt, threshold: 1173, x: 300, y: 150 },
+      { material: Material.NSCN, threshold: 1687, x: 340, y: 150 },
+      { material: Material.POLO, threshold: 526.95, x: 380, y: 150 },
+    ] as const;
+    const generic = { x: 420, y: 150 } as const;
+    const indexOf = (simulation: PowderToyBackend, x: number, y: number): number => (
+      y * simulation.width + x
+    );
+    const enclose = (simulation: PowderToyBackend, x: number, y: number): void => {
+      // Native INSL has zero heat conduct and blocks the liquid owner without
+      // diluting its test temperature or inventing a test-only particle setter.
+      for (let offsetY = -1; offsetY <= 1; offsetY++) {
+        for (let offsetX = -1; offsetX <= 1; offsetX++) {
+          if (offsetX || offsetY) {
+            simulation.paint(x + offsetX, y + offsetY, Material.INSL, 0);
+          }
+        }
+      }
+    };
+    const stateAt = (simulation: PowderToyBackend, x: number, y: number): number => {
+      simulation.cells();
+      return simulation.presentationState()[indexOf(simulation, x, y)];
+    };
+
+    const source = await PowderToyBackend.load(moduleArtifact.href);
+    for (const fixture of fixtures) {
+      enclose(source, fixture.x, fixture.y);
+      source.paint(fixture.x, fixture.y, fixture.material, 0);
+      expect(stateAt(source, fixture.x, fixture.y)).toBe(
+        fixture.material === Material.POLO ? POLO_PRESENTATION_STATE.presentMask : 0,
+      );
+      const initialKelvin = source.temperature()[indexOf(source, fixture.x, fixture.y)] / 10;
+      const heatApplications = Math.ceil((fixture.threshold + 4 - initialKelvin) / 2);
+      for (let application = 0; application < heatApplications; application++) {
+        source.applySimulationTool(SimulationTool.Heat, fixture.x, fixture.y, 0);
+      }
+    }
+    enclose(source, generic.x, generic.y);
+    source.paint(generic.x, generic.y, Material.Lava, 0);
+    expect(stateAt(source, generic.x, generic.y)).toBe(
+      LAVA_PRESENTATION_STATE.presentMask,
+    );
+
+    // TPT evaluates temperature transitions on the element's native heat-
+    // conduct probability. Advance boundedly until even low-conduct QRTZ has
+    // taken its authentic transition path.
+    let cells = source.cells();
+    for (let step = 0; step < 2048
+      && fixtures.some((fixture) => (
+        cells[indexOf(source, fixture.x, fixture.y)] !== Material.Lava
+      )); step++) {
+      source.step();
+      cells = source.cells();
+    }
+    let state = source.presentationState();
+    for (const fixture of fixtures) {
+      const index = indexOf(source, fixture.x, fixture.y);
+      expect(cells[index]).toBe(Material.Lava);
+      expect(state[index]).toBe(
+        LAVA_PRESENTATION_STATE.presentMask | fixture.material,
+      );
+      expect(state[index] & LAVA_PRESENTATION_STATE.originMask).toBe(fixture.material);
+      expect(state[index] & LAVA_PRESENTATION_STATE.reservedMask).toBe(0);
+    }
+    expect(cells[indexOf(source, generic.x, generic.y)]).toBe(Material.Lava);
+    expect(state[indexOf(source, generic.x, generic.y)]).toBe(
+      LAVA_PRESENTATION_STATE.presentMask,
+    );
+
+    const file = source.saveFile();
+    expect(new TextDecoder().decode(file.slice(0, 4))).toBe('OPS1');
+    const restored = await PowderToyBackend.load(moduleArtifact.href);
+    restored.loadFile(file);
+    cells = restored.cells();
+    state = restored.presentationState();
+    for (const fixture of fixtures) {
+      const index = indexOf(restored, fixture.x, fixture.y);
+      expect(cells[index]).toBe(Material.Lava);
+      expect(state[index]).toBe(
+        LAVA_PRESENTATION_STATE.presentMask | fixture.material,
+      );
+      // Cool the native molten owner below its own upstream transition point.
+      for (let application = 0; application < 40; application++) {
+        restored.applySimulationTool(SimulationTool.Cool, fixture.x, fixture.y, 0);
+      }
+    }
+    cells = restored.cells();
+    for (let step = 0; step < 512
+      && fixtures.some((fixture) => (
+        cells[indexOf(restored, fixture.x, fixture.y)] !== fixture.material
+      )); step++) {
+      restored.step();
+      cells = restored.cells();
+    }
+    state = restored.presentationState();
+    for (const fixture of fixtures) {
+      const index = indexOf(restored, fixture.x, fixture.y);
+      expect(cells[index]).toBe(fixture.material);
+      expect(state[index]).toBe(
+        fixture.material === Material.POLO ? POLO_PRESENTATION_STATE.presentMask : 0,
+      );
+    }
+    expect(cells[indexOf(restored, generic.x, generic.y)]).toBe(Material.Lava);
+    expect(state[indexOf(restored, generic.x, generic.y)]).toBe(
+      LAVA_PRESENTATION_STATE.presentMask,
+    );
+
+    restored.clear();
+    restored.paint(generic.x, generic.y, Material.Water, 0);
+    expect(stateAt(restored, generic.x, generic.y)).toBe(0);
   });
 
   it('extracts the native VIBR explosion countdown and alternate mode flags', async () => {

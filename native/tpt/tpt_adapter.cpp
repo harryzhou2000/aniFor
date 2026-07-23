@@ -510,13 +510,21 @@ uint8_t ToStillroomType(int type)
 	return 3;
 }
 
+uint8_t ExactPublicMaterialIdentity(int type)
+{
+	if (type <= PT_NONE || type >= PT_NUM) return 0;
+	auto const material = ToStillroomType(type);
+	// ToStillroomType deliberately phase-projects unknown native products for
+	// rendering. A native identity is exact only when the public mapping returns
+	// to the same PT_* owner; render-only and phase-fallback IDs therefore stay 0.
+	return material && ToPowderType(material) == type ? material : 0;
+}
+
 uint8_t ExactConfiguredSourceTarget(int targetType)
 {
-	if (targetType <= PT_NONE || targetType >= PT_NUM) return 0;
-	auto const target = ToStillroomType(targetType);
 	// ToStillroomType deliberately phase-projects unknown native products for
 	// rendering. Source identity must represent only an exact public mapping.
-	return target && ToPowderType(target) == targetType ? target : 0;
+	return ExactPublicMaterialIdentity(targetType);
 }
 
 void ExtractFields()
@@ -542,7 +550,17 @@ void ExtractFields()
 				materialField[offset] = uint8_t(STILLROOM_LIFE_FIRST + part.ctype);
 			else
 				materialField[offset] = ToStillroomType(part.type);
-			if (part.type == PT_VIBR || part.type == PT_BVBR)
+			if (part.type == PT_LAVA)
+			{
+				// Native LAVA retains the exact material it melted from in ctype. Bit 8
+				// marks even generic or unrepresentable molten owners as present, while
+				// the low byte carries only a public ID that round-trips to the same PT_*.
+				// This is a render projection only: ctype remains authoritative and OPS-owned.
+				presentationStateField[offset] = uint16_t(
+					0x0100 | ExactPublicMaterialIdentity(part.ctype)
+				);
+			}
+			else if (part.type == PT_VIBR || part.type == PT_BVBR)
 			{
 				// Match upstream VIBR graphics: tmp / 10 is the visible charge
 				// gradient and reaches its charged presentation at 100. Life is

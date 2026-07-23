@@ -37,6 +37,7 @@ interface PresenterHarness {
   setForceActivityStylingEnabled: PixiFieldPresenter['setForceActivityStylingEnabled'];
   setPoloStateStylingEnabled: PixiFieldPresenter['setPoloStateStylingEnabled'];
   setSpngStateStylingEnabled: PixiFieldPresenter['setSpngStateStylingEnabled'];
+  setLavaAncestryStylingEnabled: PixiFieldPresenter['setLavaAncestryStylingEnabled'];
   setBotanicalIdentityStylingEnabled: PixiFieldPresenter['setBotanicalIdentityStylingEnabled'];
   setLiquidSilhouetteCohesionEnabled: PixiFieldPresenter['setLiquidSilhouetteCohesionEnabled'];
   setRenderStallHandler: PixiFieldPresenter['setRenderStallHandler'];
@@ -878,6 +879,40 @@ describe('Pixi presenter startup configuration', () => {
     expect(block).toContain('packedState / 64.0');
     expect(block).toContain('min(50.0, mod(packedState, 64.0))');
     expect(block).toContain('clamp(delta * moisture, vec3(-20.0), vec3(20.0))');
+    expect(block).not.toContain('texture(');
+    expect(block).not.toContain('uTime');
+  });
+
+  it('redraws the independent native Lava-ancestry toggle', () => {
+    const presenter = presenterHarness();
+
+    presenter.setLavaAncestryStylingEnabled(false);
+    expect(presenter.uniforms.uniforms.uLavaAncestryStyling).toBe(0);
+    expect(presenter.app.render).toHaveBeenCalledOnce();
+
+    presenter.setLavaAncestryStylingEnabled(true);
+    expect(presenter.uniforms.uniforms.uLavaAncestryStyling).toBe(1);
+    expect(presenter.app.render).toHaveBeenCalledTimes(2);
+  });
+
+  it('keeps typed-Lava ancestry arithmetic-only, bounded, and exact-owner guarded', () => {
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const start = source.indexOf('float lavaAncestryFamily');
+    const end = source.indexOf('vec3 vibrStateDelta', start);
+    const block = source.slice(start, end);
+
+    expect(start).toBeGreaterThan(0);
+    expect(end).toBeGreaterThan(start);
+    expect(block).toContain('material != 11.0');
+    expect(block).toContain('packedState / 256.0');
+    expect(block).toContain('float origin = mod(packedState, 256.0)');
+    expect(block).toContain('origin == 1.0');
+    expect(block).toContain('origin == 30.0');
+    expect(block).toContain('origin == 46.0');
+    expect(block).toContain('origin == 72.0');
+    expect(block).toContain('origin == 143.0');
+    expect(block).toContain('origin == 112.0');
+    expect(block).toContain('clamp(key * gain, vec3(-16.0), vec3(16.0))');
     expect(block).not.toContain('texture(');
     expect(block).not.toContain('uTime');
   });

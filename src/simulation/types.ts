@@ -49,6 +49,13 @@ export const SPNG_PRESENTATION_STATE = {
   reservedMask: 0xff80,
 } as const;
 
+/** Exact native LAVA ctype ancestry in the owner-multiplexed presentation word. */
+export const LAVA_PRESENTATION_STATE = {
+  originMask: 0x00ff,
+  presentMask: 0x0100,
+  reservedMask: 0xfe00,
+} as const;
+
 /** Exact public material IDs whose native particles retain a configured ctype target. */
 export const CONFIGURED_SOURCE_MATERIAL_IDS = [124, 126, 127, 137, 158, 159] as const;
 

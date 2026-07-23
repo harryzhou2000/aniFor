@@ -26,6 +26,7 @@ import type { NativeSeedGrowthAuditSnapshot } from './native-seed-growth-audit';
 import type { ForceActivityGraphicsAuditSnapshot } from './force-activity-graphics-audit';
 import type { PoloStateGraphicsAuditSnapshot } from './polo-state-graphics-audit';
 import type { SpngStateGraphicsAuditSnapshot } from './spng-state-graphics-audit';
+import type { LavaStateGraphicsAuditSnapshot } from './lava-state-graphics-audit';
 
 export interface BrowserInputAuditApi {
   readonly version: 1;
@@ -72,6 +73,7 @@ export interface BrowserInputAuditApi {
   setForceActivityStyling(enabled: boolean): void;
   setPoloStateStyling(enabled: boolean): void;
   setSpngStateStyling(enabled: boolean): void;
+  setLavaAncestryStyling(enabled: boolean): void;
   setBotanicalIdentityStyling(enabled: boolean): void;
   setPowderBodyDepth(enabled: boolean): void;
   setPowderRenderStyle(style: PowderRenderStyle): void;
@@ -130,6 +132,8 @@ export interface BrowserInputAuditApi {
   preparePoloStateGraphicsFixture(): void;
   spngStateGraphicsAtlas(): SpngStateGraphicsAuditSnapshot;
   prepareSpngStateGraphicsFixture(): void;
+  lavaStateGraphicsAtlas(): LavaStateGraphicsAuditSnapshot;
+  prepareLavaStateGraphicsFixture(): void;
   nativeSeedGrowthSnapshot(): NativeSeedGrowthAuditSnapshot;
   prepareNativeSeedGrowthFixture(): void;
   canvasPresentationTiming(): CanvasPresentationTiming | undefined;
