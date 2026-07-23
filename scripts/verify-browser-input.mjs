@@ -16,6 +16,10 @@ import {
   assertPairedPoloStateGraphics,
   auditPoloStateGraphics,
 } from './polo-state-graphics-audit.mjs';
+import {
+  assertPairedSpngStateGraphics,
+  auditSpngStateGraphics,
+} from './spng-state-graphics-audit.mjs';
 
 const ROOT = process.cwd();
 const requestedPort = Number.parseInt(process.env.ANIFORTPT_AUDIT_PORT ?? '5178', 10);
@@ -70,6 +74,7 @@ const deutStateGraphicsOnly = process.argv.includes('--deut-state-graphics-only'
 const sourceTargetGraphicsOnly = process.argv.includes('--source-target-graphics-only');
 const forceActivityGraphicsOnly = process.argv.includes('--force-activity-graphics-only');
 const poloStateGraphicsOnly = process.argv.includes('--polo-state-graphics-only');
+const spngStateGraphicsOnly = process.argv.includes('--spng-state-graphics-only');
 const nativeSeedGrowthOnly = process.argv.includes('--native-seed-growth-only');
 const usesProductionBundle = cellularGraphicsOnly || sensorGraphicsOnly
   || unusualPowderGraphicsOnly || explosivePowderGraphicsOnly || unusualSolidGraphicsOnly
@@ -77,7 +82,7 @@ const usesProductionBundle = cellularGraphicsOnly || sensorGraphicsOnly
   || organicPlantGraphicsOnly || spongeGraphicsOnly || virusGraphicsOnly || waxGraphicsOnly
   || crystalGraphicsOnly || pasteResistGraphicsOnly || vibrStateGraphicsOnly
   || deutStateGraphicsOnly || sourceTargetGraphicsOnly || forceActivityGraphicsOnly
-  || poloStateGraphicsOnly
+  || poloStateGraphicsOnly || spngStateGraphicsOnly
   || nativeSeedGrowthOnly
   || scaleEightOnly;
 const AUDIT_BASE_URL = usesProductionBundle ? PRODUCTION_BUNDLE_URL : ORIGIN + '/';
@@ -146,6 +151,7 @@ async function main() {
       || spongeGraphicsOnly || virusGraphicsOnly || waxGraphicsOnly || crystalGraphicsOnly
       || pasteResistGraphicsOnly || vibrStateGraphicsOnly || deutStateGraphicsOnly
       || sourceTargetGraphicsOnly || forceActivityGraphicsOnly || poloStateGraphicsOnly
+      || spngStateGraphicsOnly
       || nativeSeedGrowthOnly;
     if (powderBodyOnly) assertPairedPowderBodyDepth(results);
     if (liquidDepthOnly) assertPairedLiquidOpticalDepth(results);
@@ -173,6 +179,7 @@ async function main() {
     if (sourceTargetGraphicsOnly) assertPairedSourceTargetGraphics(results, assert);
     if (forceActivityGraphicsOnly) assertPairedForceActivityGraphics(results, assert);
     if (poloStateGraphicsOnly) assertPairedPoloStateGraphics(results, assert);
+    if (spngStateGraphicsOnly) assertPairedSpngStateGraphics(results, assert);
     if (nativeSeedGrowthOnly) assertPairedNativeSeedGrowth(results);
     if (!scaleEightOnly && !materialAtlasOnly && !reducedAudit) assertPairedVisualRelief(results);
     if (!scaleEightOnly && !reducedAudit) assertPairedMaterialAtlas(results);
@@ -204,6 +211,7 @@ async function auditMode(mode) {
     || spongeGraphicsOnly || virusGraphicsOnly || waxGraphicsOnly || crystalGraphicsOnly
     || pasteResistGraphicsOnly || vibrStateGraphicsOnly || deutStateGraphicsOnly
     || sourceTargetGraphicsOnly || forceActivityGraphicsOnly || poloStateGraphicsOnly
+    || spngStateGraphicsOnly
     || nativeSeedGrowthOnly;
   const query = new URLSearchParams({
     scene: 'render-lab', inputAudit: '1', renderScale: '2',
@@ -465,6 +473,21 @@ async function auditMode(mode) {
       assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
       cdp.close();
       return { backend: mode, poloStateGraphics, browserErrors: errors.length };
+    }
+    if (spngStateGraphicsOnly) {
+      const spngStateGraphics = await auditSpngStateGraphics({
+        cdp,
+        mode,
+        evaluate,
+        waitFor,
+        waitForStablePageCapture,
+        assert,
+        worldWidth: WORLD_WIDTH,
+        worldHeight: WORLD_HEIGHT,
+      });
+      assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
+      cdp.close();
+      return { backend: mode, spngStateGraphics, browserErrors: errors.length };
     }
     if (mobileOnly) {
       const mobile = await auditMobile(

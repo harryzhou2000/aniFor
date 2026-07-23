@@ -585,6 +585,14 @@ void ExtractFields()
 					0x0800 | emissions | (cooldown << 3) | (protonDose << 7)
 				);
 			}
+			else if (part.type == PT_SPNG)
+			{
+				// SPNG keeps its absorbed-fluid reservoir directly in native life. Bit 6
+				// marks an authoritative dry owner as present while zero remains reserved
+				// for every other material in the owner-multiplexed presentation plane.
+				auto const hydration = std::clamp(part.life, 0, 50);
+				presentationStateField[offset] = uint16_t(0x0040 | hydration);
+			}
 			else if (IsConfiguredSourceType(part.type))
 			{
 				// Configured sources retain their target only in native ctype. Project the

@@ -3,7 +3,8 @@ import { MATERIALS, Material } from '../shared/materials';
 import { PowderToyBackend } from './powder-toy-backend';
 import { SimulationTool } from './simulation-tools';
 import {
-  DEUT_PRESENTATION_STATE, POLO_PRESENTATION_STATE, VIBR_PRESENTATION_STATE,
+  DEUT_PRESENTATION_STATE, POLO_PRESENTATION_STATE, SPNG_PRESENTATION_STATE,
+  VIBR_PRESENTATION_STATE,
 } from './types';
 import { readFileSync } from 'node:fs';
 
@@ -258,6 +259,78 @@ describe('direct Powder Toy backend', () => {
     simulation.paint(point.x, point.y, Material.Water, 0);
     expect(owner(simulation)).toBe(Material.Water);
     expect(state(simulation)).toBe(0);
+  });
+
+  it('projects native SPNG hydration and preserves absorbed water through OPS1', async () => {
+    const point = { x: 306, y: 180 };
+    const indexOf = (simulation: PowderToyBackend): number => (
+      point.y * simulation.width + point.x
+    );
+    const owner = (simulation: PowderToyBackend): number => {
+      const cells = simulation.cells();
+      return cells[indexOf(simulation)];
+    };
+    const state = (simulation: PowderToyBackend): number => {
+      simulation.cells();
+      return simulation.presentationState()[indexOf(simulation)];
+    };
+    const hydration = (word: number): number => (
+      word & SPNG_PRESENTATION_STATE.hydrationMask
+    );
+
+    const source = await PowderToyBackend.load(moduleArtifact.href);
+    source.paint(point.x, point.y, Material.SPNG, 0);
+    expect(owner(source)).toBe(Material.SPNG);
+    expect(state(source)).toBe(SPNG_PRESENTATION_STATE.presentMask);
+
+    // Surround the immobile owner with native water. At zero hydration the
+    // upstream first absorption trial is certain (500/500), so this exercises
+    // SPNG's real update rule rather than a test-only state setter.
+    for (let offsetY = -1; offsetY <= 1; offsetY++) {
+      for (let offsetX = -1; offsetX <= 1; offsetX++) {
+        if (offsetX || offsetY) {
+          source.paint(point.x + offsetX, point.y + offsetY, Material.Water, 0);
+        }
+      }
+    }
+    source.step();
+    const hydratedState = state(source);
+    expect(owner(source)).toBe(Material.SPNG);
+    expect(hydration(hydratedState)).toBeGreaterThan(0);
+    expect(hydration(hydratedState)).toBeLessThanOrEqual(
+      SPNG_PRESENTATION_STATE.hydrationMaximum,
+    );
+    expect(hydratedState & SPNG_PRESENTATION_STATE.presentMask)
+      .toBe(SPNG_PRESENTATION_STATE.presentMask);
+    expect(hydratedState & SPNG_PRESENTATION_STATE.reservedMask).toBe(0);
+
+    const file = source.saveFile();
+    expect(new TextDecoder().decode(file.slice(0, 4))).toBe('OPS1');
+    const restored = await PowderToyBackend.load(moduleArtifact.href);
+    restored.loadFile(file);
+    expect(owner(restored)).toBe(Material.SPNG);
+    expect(state(restored)).toBe(hydratedState);
+
+    // With the reservoir preserved, heating above upstream's 374 K release
+    // threshold expels real WATR into adjacent empty cells and lowers life.
+    for (let offsetY = -1; offsetY <= 1; offsetY++) {
+      for (let offsetX = -1; offsetX <= 1; offsetX++) {
+        if (offsetX || offsetY) restored.erase(point.x + offsetX, point.y + offsetY, 0);
+      }
+    }
+    // Leave enough headroom for native heat conduction before SPNG's update.
+    for (let application = 0; application < 60; application++) {
+      restored.applySimulationTool(SimulationTool.Heat, point.x, point.y, 0);
+    }
+    restored.step();
+    expect(owner(restored)).toBe(Material.SPNG);
+    expect(hydration(state(restored))).toBeLessThan(hydration(hydratedState));
+    expect(restored.cells()).toContain(Material.Water);
+
+    restored.clear();
+    restored.paint(point.x, point.y, Material.Water, 0);
+    expect(owner(restored)).toBe(Material.Water);
+    expect(state(restored)).toBe(0);
   });
 
   it('extracts the native VIBR explosion countdown and alternate mode flags', async () => {

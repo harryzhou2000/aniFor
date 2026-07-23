@@ -41,6 +41,14 @@ export const POLO_PRESENTATION_STATE = {
   reservedMask: 0xf000,
 } as const;
 
+/** Exact native SPNG absorbed-fluid reservoir in the owner-multiplexed state word. */
+export const SPNG_PRESENTATION_STATE = {
+  hydrationMask: 0x003f,
+  hydrationMaximum: 50,
+  presentMask: 0x0040,
+  reservedMask: 0xff80,
+} as const;
+
 /** Exact public material IDs whose native particles retain a configured ctype target. */
 export const CONFIGURED_SOURCE_MATERIAL_IDS = [124, 126, 127, 137, 158, 159] as const;
 

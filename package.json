@@ -26,6 +26,7 @@
     "audit:source-target": "node scripts/verify-browser-input.mjs --source-target-graphics-only",
     "audit:force-activity": "node scripts/verify-browser-input.mjs --force-activity-graphics-only",
     "audit:polo-state": "node scripts/verify-browser-input.mjs --polo-state-graphics-only",
+    "audit:spng-state": "node scripts/verify-browser-input.mjs --spng-state-graphics-only",
     "audit:native-seed-growth": "node scripts/verify-browser-input.mjs --native-seed-growth-only",
     "profile:render-fields": "vite-node scripts/profile-render-fields.ts",
     "setup:emsdk": "bash scripts/setup-emsdk.sh",

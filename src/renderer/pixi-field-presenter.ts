@@ -130,6 +130,7 @@ uniform float uDeutStateStyling;
 uniform float uSourceTargetStyling;
 uniform float uForceActivityStyling;
 uniform float uPoloStateStyling;
+uniform float uSpngStateStyling;
 uniform float uBotanicalIdentityStyling;
 uniform float uPowderStyle;
 uniform float uPowderBodyDepth;
@@ -831,6 +832,32 @@ vec3 poloStateDelta(float material, vec2 stateBytes, vec2 position) {
     delta += progress * (captureRung ? vec3(10.0, -3.0, 7.0) : vec3(2.0, -1.0, 2.0));
   }
   return clamp(delta, vec3(-16.0), vec3(16.0)) / 255.0;
+}
+vec3 spongeHydrationDelta(float material, vec2 stateBytes, vec2 position) {
+  if (material != 81.0) return vec3(0.0);
+  float packedState = floor(stateBytes.x * 255.0 + 0.5)
+    + floor(stateBytes.y * 255.0 + 0.5) * 256.0;
+  if (mod(floor(packedState / 64.0), 2.0) < 0.5) return vec3(0.0);
+  float hydration = min(50.0, mod(packedState, 64.0));
+  if (hydration < 0.5) return vec3(0.0);
+  float moisture = hydration / 50.0;
+  vec2 world = floor(position);
+  vec2 local = mod(world, 19.0);
+  vec2 first = local - vec2(5.0);
+  vec2 second = local - vec2(14.0, 12.0);
+  float firstRadius = dot(first, first);
+  float secondRadius = dot(second, second);
+  bool poreCore = firstRadius <= 4.0 || secondRadius <= 3.0;
+  bool firstWall = firstRadius >= 5.0 && firstRadius <= 12.0;
+  bool secondWall = secondRadius >= 4.0 && secondRadius <= 10.0;
+  bool litLip = (firstWall && first.x + first.y <= -2.0)
+    || (secondWall && second.x + second.y <= -2.0);
+  bool wetGlint = litLip && mod(world.x - world.y, 4.0) <= 1.0;
+  vec3 delta = vec3(-16.0, -12.0, -5.0);
+  if (wetGlint) delta += vec3(10.0, 16.0, 22.0);
+  else if (poreCore) delta += vec3(-4.0, -2.0, 8.0);
+  else if (firstWall || secondWall) delta += vec3(-2.0, 1.0, 6.0);
+  return clamp(delta * moisture, vec3(-20.0), vec3(20.0)) / 255.0;
 }
 vec3 deutStateDelta(float material, vec2 stateBytes, vec2 position) {
   if (material != 100.0) return vec3(0.0);
@@ -2791,6 +2818,8 @@ void main() {
       }
       color = clamp(color, 0.0, 1.0);
     }
+    color += spongeHydrationDelta(material, wallState.ba, fieldPosition)
+      * uSpngStateStyling;
     if (uThermalMaterialStyling > 0.5 && !materialEmissive && traits < 0.5
       && material != 3.0 && (family == 0.0 || family == 4.0)) {
       // Scalar, RGB-only response: temperature cannot widen a contour, alter
@@ -3197,6 +3226,7 @@ export class PixiFieldPresenter {
       uSourceTargetStyling: { value: 1, type: 'f32' },
       uForceActivityStyling: { value: 1, type: 'f32' },
       uPoloStateStyling: { value: 1, type: 'f32' },
+      uSpngStateStyling: { value: 1, type: 'f32' },
       uBotanicalIdentityStyling: { value: 1, type: 'f32' },
       uPowderStyle: { value: powderRenderStyleValue('smooth'), type: 'f32' },
       uPowderBodyDepth: { value: 1, type: 'f32' },
@@ -3479,6 +3509,7 @@ export class PixiFieldPresenter {
     explosivePowderStylingEnabled = true,
     forceActivityStylingEnabled = true,
     poloStateStylingEnabled = true,
+    spngStateStylingEnabled = true,
   ): void {
     const uniforms = this.uniforms.uniforms;
     uniforms.uGasFieldLighting = gasFieldLightingEnabled ? 1 : 0;
@@ -3515,6 +3546,7 @@ export class PixiFieldPresenter {
     uniforms.uSourceTargetStyling = sourceTargetStylingEnabled ? 1 : 0;
     uniforms.uForceActivityStyling = forceActivityStylingEnabled ? 1 : 0;
     uniforms.uPoloStateStyling = poloStateStylingEnabled ? 1 : 0;
+    uniforms.uSpngStateStyling = spngStateStylingEnabled ? 1 : 0;
     uniforms.uBotanicalIdentityStyling = botanicalIdentityStylingEnabled ? 1 : 0;
     uniforms.uPowderStyle = powderRenderStyleValue(powderRenderStyle);
   }
@@ -3678,6 +3710,11 @@ export class PixiFieldPresenter {
 
   setPoloStateStylingEnabled(enabled: boolean): void {
     this.uniforms.uniforms.uPoloStateStyling = enabled ? 1 : 0;
+    this.renderApplication();
+  }
+
+  setSpngStateStylingEnabled(enabled: boolean): void {
+    this.uniforms.uniforms.uSpngStateStyling = enabled ? 1 : 0;
     this.renderApplication();
   }
 

@@ -36,6 +36,7 @@ interface PresenterHarness {
   setSourceTargetStylingEnabled: PixiFieldPresenter['setSourceTargetStylingEnabled'];
   setForceActivityStylingEnabled: PixiFieldPresenter['setForceActivityStylingEnabled'];
   setPoloStateStylingEnabled: PixiFieldPresenter['setPoloStateStylingEnabled'];
+  setSpngStateStylingEnabled: PixiFieldPresenter['setSpngStateStylingEnabled'];
   setBotanicalIdentityStylingEnabled: PixiFieldPresenter['setBotanicalIdentityStylingEnabled'];
   setLiquidSilhouetteCohesionEnabled: PixiFieldPresenter['setLiquidSilhouetteCohesionEnabled'];
   setRenderStallHandler: PixiFieldPresenter['setRenderStallHandler'];
@@ -849,6 +850,34 @@ describe('Pixi presenter startup configuration', () => {
     expect(block).toContain('material != 109.0');
     expect(block).toContain('packedState / 2048.0');
     expect(block).toContain('clamp(delta, vec3(-16.0), vec3(16.0))');
+    expect(block).not.toContain('texture(');
+    expect(block).not.toContain('uTime');
+  });
+
+  it('redraws the independent native SPNG-hydration toggle', () => {
+    const presenter = presenterHarness();
+
+    presenter.setSpngStateStylingEnabled(false);
+    expect(presenter.uniforms.uniforms.uSpngStateStyling).toBe(0);
+    expect(presenter.app.render).toHaveBeenCalledOnce();
+
+    presenter.setSpngStateStylingEnabled(true);
+    expect(presenter.uniforms.uniforms.uSpngStateStyling).toBe(1);
+    expect(presenter.app.render).toHaveBeenCalledTimes(2);
+  });
+
+  it('keeps SPNG hydration arithmetic-only, bounded, and exact-owner guarded', () => {
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const start = source.indexOf('vec3 spongeHydrationDelta');
+    const end = source.indexOf('vec3 deutStateDelta', start);
+    const block = source.slice(start, end);
+
+    expect(start).toBeGreaterThan(0);
+    expect(end).toBeGreaterThan(start);
+    expect(block).toContain('material != 81.0');
+    expect(block).toContain('packedState / 64.0');
+    expect(block).toContain('min(50.0, mod(packedState, 64.0))');
+    expect(block).toContain('clamp(delta * moisture, vec3(-20.0), vec3(20.0))');
     expect(block).not.toContain('texture(');
     expect(block).not.toContain('uTime');
   });
