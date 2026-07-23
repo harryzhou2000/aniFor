@@ -28,6 +28,7 @@ import { shadeCanvasMaterial } from './canvas-material-style';
 import { shadeCanvasCellularMaterial } from './canvas-cellular-style';
 import { applyCanvasSensorMorphology } from './canvas-sensor-style';
 import { applyCanvasUnusualPowderStyle } from './canvas-unusual-powder-style';
+import { applyCanvasExplosivePowderStyle } from './canvas-explosive-powder-style';
 import { applyCanvasUnusualSolidMorphology } from './canvas-unusual-solid-style';
 import { applyCanvasSpongeMorphology } from './canvas-sponge-style';
 import { applyCanvasBotanicalMorphology } from './canvas-botanical-style';
@@ -189,6 +190,7 @@ export class MaterialRenderer {
   private cellularMaterialStylingEnabled = true;
   private sensorMaterialStylingEnabled = true;
   private unusualPowderStylingEnabled = true;
+  private explosivePowderStylingEnabled = true;
   private unusualSolidStylingEnabled = true;
   private liquidIdentityStylingEnabled = true;
   private phaseContactLightingEnabled = true;
@@ -522,6 +524,14 @@ export class MaterialRenderer {
     this.changed = true;
   }
 
+  setExplosivePowderStylingEnabled(enabled: boolean): void {
+    if (enabled === this.explosivePowderStylingEnabled) return;
+    this.explosivePowderStylingEnabled = enabled;
+    this.presenter?.setExplosivePowderStylingEnabled(enabled);
+    this.contourChunks.markAll();
+    this.changed = true;
+  }
+
   setUnusualSolidStylingEnabled(enabled: boolean): void {
     if (enabled === this.unusualSolidStylingEnabled) return;
     this.unusualSolidStylingEnabled = enabled;
@@ -782,6 +792,7 @@ export class MaterialRenderer {
       this.vibrStateStylingEnabled,
       this.deutStateStylingEnabled,
       this.sourceTargetStylingEnabled,
+      this.explosivePowderStylingEnabled,
     );
     // Route subsequent dirty cells to the candidate while its first expensive
     // frame is in flight. The known-good Canvas remains mounted underneath;
@@ -1371,6 +1382,10 @@ export class MaterialRenderer {
         this.styledColor[0] = 70 + grain + spark + surfaceLight;
         this.styledColor[1] = 64 + grain + spark * 0.7 + surfaceLight;
         this.styledColor[2] = 58 + grain + spark * 0.35 + surfaceLight;
+        if (this.explosivePowderStylingEnabled && wall === 0
+          && applicableTraits === 0 && !projectedInfo?.emissive) {
+          applyCanvasExplosivePowderStyle(this.styledColor, material, x, y);
+        }
         applyCanvasPowderBulkCellStyle(
           this.styledColor, powderCanonicalColor, this.boundaryStability[index],
           fields.powderSurface.bytes, pixel, powderBulkDepth, this.powderBodyDepthEnabled, optics,
@@ -1532,6 +1547,10 @@ export class MaterialRenderer {
               velocities?.[index * 2] ?? 0,
               velocities?.[index * 2 + 1] ?? 0,
             );
+          }
+          if (this.explosivePowderStylingEnabled && phase === RenderPhase.Powder
+            && wall === 0 && applicableTraits === 0 && !info.emissive) {
+            applyCanvasExplosivePowderStyle(this.styledColor, material, x, y);
           }
           if (this.unusualSolidStylingEnabled && phase === RenderPhase.Solid) {
             applyCanvasUnusualSolidMorphology(this.styledColor, material, x, y, index);

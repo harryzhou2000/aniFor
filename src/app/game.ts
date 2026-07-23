@@ -33,6 +33,9 @@ import {
   UNUSUAL_POWDER_GRAPHICS_AUDIT, prepareUnusualPowderGraphicsAuditFixture,
 } from './unusual-powder-graphics-audit';
 import {
+  EXPLOSIVE_POWDER_GRAPHICS_AUDIT, prepareExplosivePowderGraphicsAuditFixture,
+} from './explosive-powder-graphics-audit';
+import {
   UNUSUAL_SOLID_GRAPHICS_AUDIT, prepareUnusualSolidGraphicsAuditFixture,
 } from './unusual-solid-graphics-audit';
 import {
@@ -329,6 +332,9 @@ export class Game {
       setUnusualPowderStyling: (enabled) => {
         this.renderer.setUnusualPowderStylingEnabled(enabled);
       },
+      setExplosivePowderStyling: (enabled) => {
+        this.renderer.setExplosivePowderStylingEnabled(enabled);
+      },
       setUnusualSolidStyling: (enabled) => {
         this.renderer.setUnusualSolidStylingEnabled(enabled);
       },
@@ -404,6 +410,10 @@ export class Game {
       unusualPowderGraphicsAtlas: () => UNUSUAL_POWDER_GRAPHICS_AUDIT,
       prepareUnusualPowderGraphicsFixture: () => {
         prepareUnusualPowderGraphicsAuditFixture(this.simulation);
+      },
+      explosivePowderGraphicsAtlas: () => EXPLOSIVE_POWDER_GRAPHICS_AUDIT,
+      prepareExplosivePowderGraphicsFixture: () => {
+        prepareExplosivePowderGraphicsAuditFixture(this.simulation);
       },
       unusualSolidGraphicsAtlas: () => UNUSUAL_SOLID_GRAPHICS_AUDIT,
       prepareUnusualSolidGraphicsFixture: () => {

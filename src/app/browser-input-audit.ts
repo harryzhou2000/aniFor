@@ -8,6 +8,7 @@ import type { MaterialAtlasEntry } from './material-atlas-audit';
 import type { CellularGraphicsAuditSnapshot } from './cellular-graphics-audit';
 import type { SensorGraphicsAuditSnapshot } from './sensor-graphics-audit';
 import type { UnusualPowderGraphicsAuditSnapshot } from './unusual-powder-graphics-audit';
+import type { ExplosivePowderGraphicsAuditSnapshot } from './explosive-powder-graphics-audit';
 import type { UnusualSolidGraphicsAuditSnapshot } from './unusual-solid-graphics-audit';
 import type { LiquidIdentityGraphicsAuditSnapshot } from './liquid-identity-graphics-audit';
 import type { GasIdentityGraphicsAuditSnapshot } from './gas-identity-graphics-audit';
@@ -54,6 +55,7 @@ export interface BrowserInputAuditApi {
   setCellularMaterialStyling(enabled: boolean): void;
   setSensorMaterialStyling(enabled: boolean): void;
   setUnusualPowderStyling(enabled: boolean): void;
+  setExplosivePowderStyling(enabled: boolean): void;
   setUnusualSolidStyling(enabled: boolean): void;
   setLiquidIdentityStyling(enabled: boolean): void;
   setPhaseContactLighting(enabled: boolean): void;
@@ -87,6 +89,8 @@ export interface BrowserInputAuditApi {
   prepareSensorGraphicsFixture(): void;
   unusualPowderGraphicsAtlas(): UnusualPowderGraphicsAuditSnapshot;
   prepareUnusualPowderGraphicsFixture(): void;
+  explosivePowderGraphicsAtlas(): ExplosivePowderGraphicsAuditSnapshot;
+  prepareExplosivePowderGraphicsFixture(): void;
   unusualSolidGraphicsAtlas(): UnusualSolidGraphicsAuditSnapshot;
   prepareUnusualSolidGraphicsFixture(): void;
   liquidIdentityGraphicsAtlas(): LiquidIdentityGraphicsAuditSnapshot;

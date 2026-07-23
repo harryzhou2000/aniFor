@@ -13,6 +13,7 @@
     "audit:browser-input": "node scripts/verify-browser-input.mjs",
     "audit:8x": "node scripts/verify-browser-input.mjs --scale-eight-only",
     "audit:material-atlas": "node scripts/verify-browser-input.mjs --material-atlas-only",
+    "audit:explosive-powder": "node scripts/verify-browser-input.mjs --explosive-powder-graphics-only",
     "audit:energy-radioactive": "node scripts/verify-browser-input.mjs --energy-radioactive-graphics-only",
     "audit:organic-plant": "node scripts/verify-browser-input.mjs --organic-plant-graphics-only",
     "audit:sponge": "node scripts/verify-browser-input.mjs --sponge-graphics-only",

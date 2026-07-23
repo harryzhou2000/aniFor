@@ -119,6 +119,7 @@ uniform float uRoleMaterialStyling;
 uniform float uCellularMaterialStyling;
 uniform float uSensorMaterialStyling;
 uniform float uUnusualPowderStyling;
+uniform float uExplosivePowderStyling;
 uniform float uUnusualSolidStyling;
 uniform float uLiquidSilhouetteCohesion;
 uniform float uThermalMaterialStyling;
@@ -2424,6 +2425,81 @@ void main() {
         }
         color = clamp(color, 0.0, 1.0);
       }
+      // Fourteen native explosive powders retain the same semantic/powder
+      // topology but receive stable identity marks. This is arithmetic-only
+      // RGB work: no sample, field, clock, pass, or output-scale resource.
+      float explosiveStyle = 0.0;
+      float explosiveFamily = 0.0;
+      vec3 explosiveKey = vec3(0.0);
+      if (material == 14.0) {
+        explosiveStyle = 1.0; explosiveFamily = 1.0;
+        explosiveKey = vec3(8.0, 5.0, -4.0);
+      } else if (material == 30.0) {
+        explosiveStyle = 2.0; explosiveFamily = 5.0;
+        explosiveKey = vec3(13.0, 3.0, -5.0);
+      } else if (material == 31.0) {
+        explosiveStyle = 3.0; explosiveFamily = 1.0;
+        explosiveKey = vec3(5.0, 7.0, -3.0);
+      } else if (material == 33.0) {
+        explosiveStyle = 4.0; explosiveFamily = 2.0;
+        explosiveKey = vec3(10.0, -2.0, 8.0);
+      } else if (material == 84.0) {
+        explosiveStyle = 5.0; explosiveFamily = 3.0;
+        explosiveKey = vec3(12.0, -4.0, -3.0);
+      } else if (material == 85.0) {
+        explosiveStyle = 6.0; explosiveFamily = 3.0;
+        explosiveKey = vec3(14.0, 7.0, -6.0);
+      } else if (material == 86.0) {
+        explosiveStyle = 7.0; explosiveFamily = 3.0;
+        explosiveKey = vec3(-3.0, 4.0, 12.0);
+      } else if (material == 88.0) {
+        explosiveStyle = 8.0; explosiveFamily = 3.0;
+        explosiveKey = vec3(14.0, -5.0, -6.0);
+      } else if (material == 89.0) {
+        explosiveStyle = 9.0; explosiveFamily = 2.0;
+        explosiveKey = vec3(9.0, 2.0, 10.0);
+      } else if (material == 90.0) {
+        explosiveStyle = 10.0; explosiveFamily = 4.0;
+        explosiveKey = vec3(4.0, 10.0, -3.0);
+      } else if (material == 91.0) {
+        explosiveStyle = 11.0; explosiveFamily = 4.0;
+        explosiveKey = vec3(-2.0, 9.0, -4.0);
+      } else if (material == 92.0) {
+        explosiveStyle = 12.0; explosiveFamily = 4.0;
+        explosiveKey = vec3(11.0, 6.0, -5.0);
+      } else if (material == 94.0) {
+        explosiveStyle = 13.0; explosiveFamily = 5.0;
+        explosiveKey = vec3(8.0, 1.0, 6.0);
+      } else if (material == 96.0) {
+        explosiveStyle = 14.0; explosiveFamily = 5.0;
+        explosiveKey = vec3(6.0, 4.0, 8.0);
+      }
+      if (uExplosivePowderStyling > 0.5 && explosiveStyle > 0.5
+        && family == 4.0 && traits < 0.5 && !materialEmissive
+        && surfaceOnly < 0.5 && halo < 0.5 && wall < 0.5
+        && wallOnly < 0.5 && emissionOnly < 0.5) {
+        vec2 explosiveCell = floor(fieldPosition);
+        float materialRemainder = mod(mod(
+          explosiveCell.x * 3.0 + explosiveCell.y * 5.0 + explosiveStyle * 7.0,
+          13.0
+        ) + 13.0, 13.0);
+        float crossRemainder = mod(mod(
+          explosiveCell.x * 7.0 - explosiveCell.y * 2.0 + explosiveStyle * 3.0,
+          17.0
+        ) + 17.0, 17.0);
+        float familyDivisor = 7.0 + explosiveFamily;
+        float familyCoordinate = explosiveCell.x * (explosiveFamily + 1.0)
+          + explosiveCell.y * (6.0 - explosiveFamily) + explosiveFamily * 3.0;
+        float familyRemainder = mod(mod(familyCoordinate, familyDivisor)
+          + familyDivisor, familyDivisor);
+        float materialMark = 1.0 - step(1.0, materialRemainder);
+        float crossMark = 1.0 - step(1.0, crossRemainder);
+        float familyLimit = explosiveFamily == 2.0 ? 2.0 : 1.0;
+        float familyMark = 1.0 - step(familyLimit, familyRemainder);
+        float explosiveGain = materialMark > 0.5 ? 1.0
+          : (crossMark > 0.5 ? 0.68 : (familyMark > 0.5 ? 0.38 : 0.14));
+        color = clamp(color + explosiveKey * (explosiveGain / 255.0), 0.0, 1.0);
+      }
       color *= 1.0 + powderMacroRelief;
       float powderContourChroma = localPowderShape.x < 0.92
         ? surfaceChromaResponse(density, widePowderShape.yz, optics)
@@ -3036,6 +3112,7 @@ export class PixiFieldPresenter {
       uCellularMaterialStyling: { value: 1, type: 'f32' },
       uSensorMaterialStyling: { value: 1, type: 'f32' },
       uUnusualPowderStyling: { value: 1, type: 'f32' },
+      uExplosivePowderStyling: { value: 1, type: 'f32' },
       uUnusualSolidStyling: { value: 1, type: 'f32' },
       uLiquidSilhouetteCohesion: { value: 1, type: 'f32' },
       // FieldRenderer turns this on only for backends that expose temperature;
@@ -3325,6 +3402,7 @@ export class PixiFieldPresenter {
     vibrStateStylingEnabled = true,
     deutStateStylingEnabled = true,
     sourceTargetStylingEnabled = true,
+    explosivePowderStylingEnabled = true,
   ): void {
     const uniforms = this.uniforms.uniforms;
     uniforms.uGasFieldLighting = gasFieldLightingEnabled ? 1 : 0;
@@ -3348,6 +3426,7 @@ export class PixiFieldPresenter {
     uniforms.uCellularMaterialStyling = cellularMaterialStylingEnabled ? 1 : 0;
     uniforms.uSensorMaterialStyling = sensorMaterialStylingEnabled ? 1 : 0;
     uniforms.uUnusualPowderStyling = unusualPowderStylingEnabled ? 1 : 0;
+    uniforms.uExplosivePowderStyling = explosivePowderStylingEnabled ? 1 : 0;
     uniforms.uUnusualSolidStyling = unusualSolidStylingEnabled ? 1 : 0;
     this.unusualSolidStylingEnabled = unusualSolidStylingEnabled;
     uniforms.uLiquidIdentityStyling = liquidIdentityStylingEnabled ? 1 : 0;
@@ -3464,6 +3543,11 @@ export class PixiFieldPresenter {
 
   setUnusualPowderStylingEnabled(enabled: boolean): void {
     this.uniforms.uniforms.uUnusualPowderStyling = enabled ? 1 : 0;
+    this.renderApplication();
+  }
+
+  setExplosivePowderStylingEnabled(enabled: boolean): void {
+    this.uniforms.uniforms.uExplosivePowderStyling = enabled ? 1 : 0;
     this.renderApplication();
   }
 

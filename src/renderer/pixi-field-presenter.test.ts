@@ -28,6 +28,7 @@ interface PresenterHarness {
   setCellularMaterialStylingEnabled: PixiFieldPresenter['setCellularMaterialStylingEnabled'];
   setSensorMaterialStylingEnabled: PixiFieldPresenter['setSensorMaterialStylingEnabled'];
   setUnusualPowderStylingEnabled: PixiFieldPresenter['setUnusualPowderStylingEnabled'];
+  setExplosivePowderStylingEnabled: PixiFieldPresenter['setExplosivePowderStylingEnabled'];
   setUnusualSolidStylingEnabled: PixiFieldPresenter['setUnusualSolidStylingEnabled'];
   setEnergyIdentityStylingEnabled: PixiFieldPresenter['setEnergyIdentityStylingEnabled'];
   setVibrStateStylingEnabled: PixiFieldPresenter['setVibrStateStylingEnabled'];
@@ -783,6 +784,34 @@ describe('Pixi presenter startup configuration', () => {
     presenter.setRoleMaterialStylingEnabled(true);
     expect(presenter.uniforms.uniforms.uRoleMaterialStyling).toBe(1);
     expect(presenter.app.render).toHaveBeenCalledOnce();
+  });
+
+  it('redraws the independent explosive-powder identity toggle', () => {
+    const presenter = presenterHarness();
+
+    presenter.setExplosivePowderStylingEnabled(false);
+    expect(presenter.uniforms.uniforms.uExplosivePowderStyling).toBe(0);
+    expect(presenter.app.render).toHaveBeenCalledOnce();
+
+    presenter.setExplosivePowderStylingEnabled(true);
+    expect(presenter.uniforms.uniforms.uExplosivePowderStyling).toBe(1);
+    expect(presenter.app.render).toHaveBeenCalledTimes(2);
+  });
+
+  it('keeps explosive-powder identity arithmetic-only and RGB-only', () => {
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const start = source.indexOf('// Fourteen native explosive powders');
+    const end = source.indexOf('      color *= 1.0 + powderMacroRelief;', start);
+    const block = source.slice(start, end);
+
+    expect(start).toBeGreaterThan(0);
+    expect(end).toBeGreaterThan(start);
+    for (const material of [14, 30, 31, 33, 84, 85, 86, 88, 89, 90, 91, 92, 94, 96]) {
+      expect(block).toContain(`material == ${material}.0`);
+    }
+    expect(block).not.toContain('texture(');
+    expect(block).not.toMatch(/\balpha\s*[+*]?=/);
+    expect(block).not.toContain('uTime');
   });
 
   it('keeps role glyphs RGB-only and off reconstructed support', () => {
