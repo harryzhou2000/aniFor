@@ -399,6 +399,12 @@ describe('direct Powder Toy backend', () => {
     const cells = (): Uint8Array => new Uint8Array(
       module.HEAPU8.buffer, module._powder_cells(), 612 * 384,
     );
+    const presentationState = (): Uint16Array => {
+      module._powder_cells();
+      return new Uint16Array(
+        module.HEAPU8.buffer, module._powder_presentation_state(), 612 * 384,
+      );
+    };
     const sources = [Material.CLNE, Material.BCLN, Material.PCLN, Material.PBCN, Material.CONV];
 
     expect(module._powder_can_configure_source(Material.CLNE, Material.Water)).toBe(1);
@@ -414,6 +420,7 @@ describe('direct Powder Toy backend', () => {
       expect(module._powder_set_configured_source(x, y, source, Material.Sand)).toBe(1);
       expect(cells()[y * 612 + x]).toBe(source);
       expect(module._powder_source_target(x, y)).toBe(Material.Sand);
+      expect(presentationState()[y * 612 + x]).toBe(Material.Sand);
     });
 
     const reconfigured = { x: 240, y: 120 };
@@ -422,10 +429,12 @@ describe('direct Powder Toy backend', () => {
     )).toBe(1);
     expect(cells()[reconfigured.y * 612 + reconfigured.x]).toBe(Material.CLNE);
     expect(module._powder_source_target(reconfigured.x, reconfigured.y)).toBe(Material.Water);
+    expect(presentationState()[reconfigured.y * 612 + reconfigured.x]).toBe(Material.Water);
     expect(module._powder_set_configured_source(
       reconfigured.x, reconfigured.y, Material.CLNE, Material.BCLN,
     )).toBe(0);
     expect(module._powder_source_target(reconfigured.x, reconfigured.y)).toBe(Material.Water);
+    expect(presentationState()[reconfigured.y * 612 + reconfigured.x]).toBe(Material.Water);
 
     const occupied = { x: 360, y: 120 };
     module._powder_set(occupied.x, occupied.y, Material.Dust);
@@ -434,6 +443,7 @@ describe('direct Powder Toy backend', () => {
     )).toBe(0);
     expect(cells()[occupied.y * 612 + occupied.x]).toBe(Material.Dust);
     expect(module._powder_source_target(occupied.x, occupied.y)).toBe(Material.Empty);
+    expect(presentationState()[occupied.y * 612 + occupied.x]).toBe(0);
 
     const rejected = { x: 380, y: 120 };
     expect(module._powder_set_configured_source(
@@ -441,6 +451,12 @@ describe('direct Powder Toy backend', () => {
     )).toBe(0);
     expect(cells()[rejected.y * 612 + rejected.x]).toBe(Material.Empty);
     expect(module._powder_source_target(rejected.x, rejected.y)).toBe(Material.Empty);
+    expect(presentationState()[rejected.y * 612 + rejected.x]).toBe(0);
+
+    const unconfigured = { x: 420, y: 120 };
+    module._powder_set(unconfigured.x, unconfigured.y, Material.CLNE);
+    expect(cells()[unconfigured.y * 612 + unconfigured.x]).toBe(Material.CLNE);
+    expect(presentationState()[unconfigured.y * 612 + unconfigured.x]).toBe(0);
 
     expect(module._powder_set_configured_source(400, 120, Material.Sand, Material.Water)).toBe(-1);
     expect(module._powder_set_configured_source(400, 120, Material.CLNE, Material.Empty)).toBe(-1);
@@ -452,15 +468,20 @@ describe('direct Powder Toy backend', () => {
     const imported = await import(moduleArtifact.href) as { default: () => Promise<RawPowderModule> };
     const source = await imported.default();
     expect(source._powder_init()).toBe(1);
-    const cases = [
-      [Material.CLNE, Material.Sand],
-      [Material.BCLN, Material.Water],
-      [Material.PCLN, Material.Oil],
-      [Material.PBCN, Material.Wood],
-      [Material.CONV, Material.BCOL],
+    const emitters = [
+      Material.CLNE, Material.BCLN, Material.PCLN, Material.PBCN, Material.CONV,
     ] as const;
+    const targets = [
+      Material.Sand, Material.Water, Material.Oxygen, Material.PHOT,
+      Material.Metal, Material.Plant, Material.BCOL,
+    ] as const;
+    const cases: Array<readonly [typeof emitters[number], typeof targets[number] | Material.VSNS]> =
+      emitters.flatMap((emitter) => targets.map((target) => [emitter, target] as const));
+    cases.push([Material.CLNE, Material.VSNS]);
     cases.forEach(([emitter, target], index) => {
-      expect(source._powder_set_configured_source(240 + index * 16, 160, emitter, target)).toBe(1);
+      const x = 80 + index % 7 * 64;
+      const y = 80 + Math.floor(index / 7) * 48;
+      expect(source._powder_set_configured_source(x, y, emitter, target)).toBe(1);
     });
 
     const savePointer = source._powder_save();
@@ -478,10 +499,15 @@ describe('direct Powder Toy backend', () => {
     const restoredCells = new Uint8Array(
       restored.HEAPU8.buffer, restored._powder_cells(), 612 * 384,
     );
+    const restoredState = new Uint16Array(
+      restored.HEAPU8.buffer, restored._powder_presentation_state(), 612 * 384,
+    );
     cases.forEach(([emitter, target], index) => {
-      const x = 240 + index * 16;
-      expect(restoredCells[160 * 612 + x]).toBe(emitter);
-      expect(restored._powder_source_target(x, 160)).toBe(target);
+      const x = 80 + index % 7 * 64;
+      const y = 80 + Math.floor(index / 7) * 48;
+      expect(restoredCells[y * 612 + x]).toBe(emitter);
+      expect(restored._powder_source_target(x, y)).toBe(target);
+      expect(restoredState[y * 612 + x]).toBe(target);
     });
   });
 

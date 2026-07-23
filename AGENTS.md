@@ -1,5 +1,18 @@
 # AniforTPT agent guidance
 
+## Current direction
+
+The configured-source identity checkpoint is complete. Spend most implementation
+and audit effort now on material breadth, native material behaviour, and graphics:
+expose more TPT
+forces/sources, radioactive matter, botanical growth, phase changes, and
+reactions; give material families distinctive topology-preserving body optics,
+mesostructure, depth, transmission/reflection, and emission; and tune composed
+powder, solid, liquid, gas, energy, and contact scenes across Canvas and WebGL at
+1×/2×/4×/8×. Treat the now-correct viewport, cursor, brush, pan, zoom, aspect-fit,
+mobile gestures, save/load, CI, and Pages deployment as protected regression
+contracts rather than the primary feature stream.
+
 ## CodeGraph
 
 When `.codegraph/` exists, use `codegraph explore` before grep/find or broad file reads when locating or understanding code. Ask it for the relevant symbols, complete source, and call paths. Use `rg` only after CodeGraph has established the area to inspect.
@@ -29,6 +42,7 @@ The non-negotiable contract is:
 - Native TPT signs live only in `Simulation::signs` and OPS saves. Keep list/staging/CRUD calls separate from particle, wall, and simulation-tool ABIs; sign draw/erase gestures must return without touching matter. Render their native-expanded display text in a pointer-events-free DOM overlay projected through the existing world-to-CSS camera transform. Preserve imported raw text, positions, justification, the native 16-sign/45-character limits, and mobile tap-to-edit/delete behavior.
 - Simulation tools are neither particles nor walls. Brush tools consume sampled points; vector tools consume raw consecutive grid segments and must explicitly no-op in the point path so they never fall through to the selected particle brush.
 - Configured sources are semantic tools, not ordinary source-particle brushes. Keep their emitter and retained target explicit, route them through the native `CtypeDraw` boundary after erase/tool handling and before ordinary paint, and return without fallback even when the capability is absent. Preserve the target as native particle `ctype` in OPS saves; do not mirror it in a JavaScript world map.
+- Configured-source target graphics reuse the owner-multiplexed `Uint16` presentation-state plane. For exact BCLN/CLNE/CONV/PBCN/PCLN owners, project only a public target ID that round-trips through the native mapping; IDs 1–170 and 217 are valid, zero is unconfigured/unrepresentable, and the high byte remains reserved. Never phase-project an imported unknown or parameterized LIFE `ctype`. Canvas and WebGL add the same deterministic world-anchored RGB-only target badge after ordinary role styling, with exact owner/self/projection-state guards and no palette fetch, texture, sampler, pass, target, field, or output-scale resource. Preserve semantic alpha/support, co-located native walls, native `ctype`, emission ownership, and physics. The release gate is the full five-owner×seven-target OPS/Canvas/WebGL atlas, exact off→on→off controls, true 4896×3072 presentation, and DEUT/VIBR/source state retention through both forced-fence timeout and real context-loss Canvas recovery.
 - TPT LIFE presets are semantic tools, not generic material IDs. IDs 171–194 are render projections of `PT_LIFE` ctypes 0–23; place them only through `powder_set_life`, keep occupied cells atomic, return without ordinary-paint fallback, and preserve native `ctype` in OPS saves. Never pass a LIFE projection ID through `powder_set` or use the LIFE brush as a configured-source shortcut.
 - Headless Wind clears inactive particle-authored coarse `vx`/`vy` when a new gesture epoch begins, writes the authored velocity before `BeforeSim`, enables `AIR_ON` for exactly that update, then restores `AIR_VELOCITYOFF` before particle advection. Never inject Wind after `BeforeSim`: that bypasses diffusion, pressure coupling, clamping, and air-blocking walls. Preserve unstepped Wind through the namespaced optional OPS marker instead of inferring it from ordinary imported-save velocity.
 - The shared liquid texture is species-aware RGBA: RGB is the uniquely supported liquid color and alpha is density. Do not read red as density or choose a liquid halo color by fixed neighbor scan order; exact unlike-liquid ties must remain a visible interface.

@@ -126,6 +126,7 @@ uniform float uEnergyCoreRelief;
 uniform float uEnergyIdentityStyling;
 uniform float uVibrStateStyling;
 uniform float uDeutStateStyling;
+uniform float uSourceTargetStyling;
 uniform float uBotanicalIdentityStyling;
 uniform float uPowderStyle;
 uniform float uPowderBodyDepth;
@@ -782,6 +783,40 @@ vec3 deutStateDelta(float material, vec2 stateBytes, vec2 position) {
   float glowBloom = step(240.0, concentration) * shape;
   return (strength * shape * vec3(10.0, 19.0, 28.0)
     + glowBloom * vec3(4.0, 6.0, 7.0)) / 255.0;
+}
+vec3 sourceTargetDelta(float material, vec2 stateBytes, vec2 position) {
+  bool sourceOwner = material == 124.0 || material == 126.0 || material == 127.0
+    || material == 158.0 || material == 159.0;
+  if (!sourceOwner) return vec3(0.0);
+  float target = floor(stateBytes.x * 255.0 + 0.5)
+    + floor(stateBytes.y * 255.0 + 0.5) * 256.0;
+  bool exactTarget = (target >= 1.0 && target <= 170.0) || target == 217.0;
+  if (!exactTarget || target == material) return vec3(0.0);
+
+  vec2 local = mod(
+    floor(position) + vec2(material * 3.0, material * 5.0), 24.0
+  );
+  vec2 centred = local - vec2(11.5);
+  float lens = 1.0 - step(4.75, abs(centred.x) + abs(centred.y));
+  float shellDistance = max(abs(centred.x), abs(centred.y));
+  float shell = step(6.0, shellDistance) * (1.0 - step(8.01, shellDistance));
+  vec2 badgeCell = floor(local / 4.0);
+  float phase7 = mod(target, 7.0);
+  float phase5 = mod(floor(target / 7.0), 5.0);
+  float primary = 1.0 - step(0.5, mod(badgeCell.x * 3.0 + badgeCell.y * 5.0 + phase7, 7.0));
+  float secondary = 1.0 - step(0.5, mod(badgeCell.x + badgeCell.y * 2.0 + phase5, 5.0));
+  float shape = lens > 0.5 ? 1.0 : (shell * primary > 0.5 ? 0.78
+    : (secondary > 0.5 ? 0.36 : 0.10));
+  float keyIndex = mod(target, 6.0);
+  vec3 key = keyIndex < 0.5 ? vec3(20.0, 7.0, 2.0)
+    : (keyIndex < 1.5 ? vec3(17.0, 16.0, 2.0)
+    : (keyIndex < 2.5 ? vec3(4.0, 19.0, 7.0)
+    : (keyIndex < 3.5 ? vec3(2.0, 15.0, 20.0)
+    : (keyIndex < 4.5 ? vec3(8.0, 9.0, 22.0)
+    : vec3(20.0, 6.0, 17.0)))));
+  float tone = mod(floor(target / 6.0), 5.0) - 2.0;
+  key += vec3(tone * 0.55, tone * 0.45, tone * 0.60);
+  return key * shape / 255.0;
 }
 vec4 contactSample(vec2 uv, float material, float family) {
   float candidate = materialAt(uv);
@@ -2696,6 +2731,8 @@ void main() {
         color += vec3(0.32, 0.72, 1.0) * (0.008 + rail * 0.038 + node * 0.018);
       }
     }
+    color += sourceTargetDelta(material, wallState.ba, fieldPosition)
+      * uSourceTargetStyling;
     if (radioactive > 0.5 && energyCore < 0.5) {
       color += radioactiveBodyIdentityDelta(material, fieldPosition)
         * uEnergyIdentityStyling;
@@ -3008,6 +3045,7 @@ export class PixiFieldPresenter {
       uEnergyIdentityStyling: { value: 1, type: 'f32' },
       uVibrStateStyling: { value: 1, type: 'f32' },
       uDeutStateStyling: { value: 1, type: 'f32' },
+      uSourceTargetStyling: { value: 1, type: 'f32' },
       uBotanicalIdentityStyling: { value: 1, type: 'f32' },
       uPowderStyle: { value: powderRenderStyleValue('smooth'), type: 'f32' },
       uPowderBodyDepth: { value: 1, type: 'f32' },
@@ -3286,6 +3324,7 @@ export class PixiFieldPresenter {
     botanicalIdentityStylingEnabled = true,
     vibrStateStylingEnabled = true,
     deutStateStylingEnabled = true,
+    sourceTargetStylingEnabled = true,
   ): void {
     const uniforms = this.uniforms.uniforms;
     uniforms.uGasFieldLighting = gasFieldLightingEnabled ? 1 : 0;
@@ -3318,6 +3357,7 @@ export class PixiFieldPresenter {
     uniforms.uEnergyIdentityStyling = energyIdentityStylingEnabled ? 1 : 0;
     uniforms.uVibrStateStyling = vibrStateStylingEnabled ? 1 : 0;
     uniforms.uDeutStateStyling = deutStateStylingEnabled ? 1 : 0;
+    uniforms.uSourceTargetStyling = sourceTargetStylingEnabled ? 1 : 0;
     uniforms.uBotanicalIdentityStyling = botanicalIdentityStylingEnabled ? 1 : 0;
     uniforms.uPowderStyle = powderRenderStyleValue(powderRenderStyle);
   }
@@ -3461,6 +3501,11 @@ export class PixiFieldPresenter {
 
   setDeutStateStylingEnabled(enabled: boolean): void {
     this.uniforms.uniforms.uDeutStateStyling = enabled ? 1 : 0;
+    this.renderApplication();
+  }
+
+  setSourceTargetStylingEnabled(enabled: boolean): void {
+    this.uniforms.uniforms.uSourceTargetStyling = enabled ? 1 : 0;
     this.renderApplication();
   }
 

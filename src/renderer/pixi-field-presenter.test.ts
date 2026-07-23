@@ -32,6 +32,7 @@ interface PresenterHarness {
   setEnergyIdentityStylingEnabled: PixiFieldPresenter['setEnergyIdentityStylingEnabled'];
   setVibrStateStylingEnabled: PixiFieldPresenter['setVibrStateStylingEnabled'];
   setDeutStateStylingEnabled: PixiFieldPresenter['setDeutStateStylingEnabled'];
+  setSourceTargetStylingEnabled: PixiFieldPresenter['setSourceTargetStylingEnabled'];
   setBotanicalIdentityStylingEnabled: PixiFieldPresenter['setBotanicalIdentityStylingEnabled'];
   setLiquidSilhouetteCohesionEnabled: PixiFieldPresenter['setLiquidSilhouetteCohesionEnabled'];
   setRenderStallHandler: PixiFieldPresenter['setRenderStallHandler'];
@@ -112,6 +113,7 @@ describe('Pixi presenter startup configuration', () => {
       uThermalMaterialStyling: 1,
       uEnergyCoreRelief: 0,
       uDeutStateStyling: 1,
+      uSourceTargetStyling: 1,
       uPowderStyle: powderRenderStyleValue('grains'),
       uPowderBodyDepth: 1,
     });
@@ -671,7 +673,7 @@ describe('Pixi presenter startup configuration', () => {
 
     const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
     const start = source.indexOf('vec3 deutStateDelta(');
-    const end = source.indexOf('vec4 contactSample(', start);
+    const end = source.indexOf('vec3 sourceTargetDelta(', start);
     const block = source.slice(start, end);
     expect(start).toBeGreaterThan(0);
     expect(end).toBeGreaterThan(start);
@@ -683,6 +685,33 @@ describe('Pixi presenter startup configuration', () => {
     expect(block).not.toMatch(/\balpha\s*[+*]?=/);
     expect(source).toContain('deutStateDelta(material, wallState.ba, fieldPosition)');
     expect(source).toContain('uDeutStateStyling > 0.5 && material == 100.0');
+  });
+
+  it('decodes exact configured-source targets with sample-free RGB-only arithmetic', () => {
+    const presenter = presenterHarness();
+    presenter.setSourceTargetStylingEnabled(false);
+    expect(presenter.uniforms.uniforms.uSourceTargetStyling).toBe(0);
+    presenter.setSourceTargetStylingEnabled(true);
+    expect(presenter.uniforms.uniforms.uSourceTargetStyling).toBe(1);
+    expect(presenter.app.render).toHaveBeenCalledTimes(2);
+
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const start = source.indexOf('vec3 sourceTargetDelta(');
+    const end = source.indexOf('vec4 contactSample(', start);
+    const block = source.slice(start, end);
+    expect(start).toBeGreaterThan(0);
+    expect(end).toBeGreaterThan(start);
+    for (const owner of [124, 126, 127, 158, 159]) {
+      expect(block).toContain(`material == ${owner}.0`);
+    }
+    expect(block).toContain('(target >= 1.0 && target <= 170.0) || target == 217.0');
+    expect(block).toContain('target == material');
+    expect(block).toContain('+ floor(stateBytes.y * 255.0 + 0.5) * 256.0;');
+    expect(block).not.toContain('texture(');
+    expect(block).not.toMatch(/\b(?:sin|pow|normalize|length)\s*\(/);
+    expect(block).not.toMatch(/\balpha\s*[+*]?=/);
+    expect(source).toContain('sourceTargetDelta(material, wallState.ba, fieldPosition)');
+    expect(source).toContain('* uSourceTargetStyling;');
   });
 
   it('keeps emission volume shading RGB-only and reuses existing aura samples', () => {

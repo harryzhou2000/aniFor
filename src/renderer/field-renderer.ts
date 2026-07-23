@@ -73,6 +73,9 @@ import { receivesThermalMaterialStyle, thermalMaterialDelta } from './thermal-ma
 import { writeSolidOpticalDepth } from './solid-optical-depth-field';
 import { applyCanvasVibrStateStyle } from './canvas-vibr-state-style';
 import { applyCanvasDeutStateStyle } from './canvas-deut-state-style';
+import {
+  applyCanvasSourceTargetStyle, isConfiguredSourceMaterial,
+} from './canvas-source-target-style';
 
 const FRAME_INTERVAL = 1000 / 30;
 export const DYNAMIC_FIELD_REFRESH_INTERVAL = 1000 / 12;
@@ -194,6 +197,7 @@ export class MaterialRenderer {
   private energyIdentityStylingEnabled = true;
   private vibrStateStylingEnabled = true;
   private deutStateStylingEnabled = true;
+  private sourceTargetStylingEnabled = true;
   private botanicalIdentityStylingEnabled = true;
   private powderBodyDepthEnabled = true;
   private powderRenderStyle: PowderRenderStyle = 'smooth';
@@ -583,6 +587,14 @@ export class MaterialRenderer {
     this.changed = true;
   }
 
+  setSourceTargetStylingEnabled(enabled: boolean): void {
+    if (enabled === this.sourceTargetStylingEnabled) return;
+    this.sourceTargetStylingEnabled = enabled;
+    this.presenter?.setSourceTargetStylingEnabled(enabled);
+    this.contourChunks.markAll();
+    this.changed = true;
+  }
+
   setBotanicalIdentityStylingEnabled(enabled: boolean): void {
     if (enabled === this.botanicalIdentityStylingEnabled) return;
     this.botanicalIdentityStylingEnabled = enabled;
@@ -769,6 +781,7 @@ export class MaterialRenderer {
       this.botanicalIdentityStylingEnabled,
       this.vibrStateStylingEnabled,
       this.deutStateStylingEnabled,
+      this.sourceTargetStylingEnabled,
     );
     // Route subsequent dirty cells to the candidate while its first expensive
     // frame is in flight. The known-good Canvas remains mounted underneath;
@@ -1550,6 +1563,12 @@ export class MaterialRenderer {
           );
           if (this.vibrStateStylingEnabled && presentationState) {
             applyCanvasVibrStateStyle(
+              this.styledColor, material, presentationState[index], x, y,
+            );
+          }
+          if (this.sourceTargetStylingEnabled && presentationState
+            && isConfiguredSourceMaterial(material)) {
+            applyCanvasSourceTargetStyle(
               this.styledColor, material, presentationState[index], x, y,
             );
           }

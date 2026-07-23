@@ -68,6 +68,10 @@ import {
 import {
   DEUT_STATE_GRAPHICS_AUDIT, prepareDeutStateGraphicsAuditFixture,
 } from './deut-state-graphics-audit';
+import {
+  SOURCE_TARGET_GRAPHICS_AUDIT, SOURCE_TARGET_RECOVERY_PROBE,
+  placeSourceTargetRecoveryProbe, prepareSourceTargetGraphicsAuditFixture,
+} from './source-target-graphics-audit';
 
 const AUTOSAVE_KEY = 'stillroom-world-v1';
 
@@ -349,6 +353,9 @@ export class Game {
       setDeutStateStyling: (enabled) => {
         this.renderer.setDeutStateStylingEnabled(enabled);
       },
+      setSourceTargetStyling: (enabled) => {
+        this.renderer.setSourceTargetStylingEnabled(enabled);
+      },
       setBotanicalIdentityStyling: (enabled) => {
         this.renderer.setBotanicalIdentityStylingEnabled(enabled);
       },
@@ -445,6 +452,17 @@ export class Game {
       deutStateGraphicsAtlas: () => DEUT_STATE_GRAPHICS_AUDIT,
       prepareDeutStateGraphicsFixture: () => {
         prepareDeutStateGraphicsAuditFixture(this.simulation);
+        placeSourceTargetRecoveryProbe(
+          this.simulation,
+          SOURCE_TARGET_RECOVERY_PROBE.x,
+          SOURCE_TARGET_RECOVERY_PROBE.y,
+          SOURCE_TARGET_RECOVERY_PROBE.owner,
+          SOURCE_TARGET_RECOVERY_PROBE.target,
+        );
+      },
+      sourceTargetGraphicsAtlas: () => SOURCE_TARGET_GRAPHICS_AUDIT,
+      prepareSourceTargetGraphicsFixture: () => {
+        prepareSourceTargetGraphicsAuditFixture(this.simulation);
       },
       canvasPresentationTiming: () => this.renderer.getCanvasPresentationTiming(),
       requestWebGLPresentationTimingSample: () => this.renderer.requestWebGLPresentationTimingSample(),

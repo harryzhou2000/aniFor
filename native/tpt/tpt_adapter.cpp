@@ -510,6 +510,15 @@ uint8_t ToStillroomType(int type)
 	return 3;
 }
 
+uint8_t ExactConfiguredSourceTarget(int targetType)
+{
+	if (targetType <= PT_NONE || targetType >= PT_NUM) return 0;
+	auto const target = ToStillroomType(targetType);
+	// ToStillroomType deliberately phase-projects unknown native products for
+	// rendering. Source identity must represent only an exact public mapping.
+	return target && ToPowderType(target) == targetType ? target : 0;
+}
+
 void ExtractFields()
 {
 	std::fill_n(materialField, FIELD_SIZE, uint8_t(0));
@@ -555,6 +564,14 @@ void ExtractFields()
 				// absorption stops at 6000, but imported saves may legitimately retain
 				// higher reaction-relevant life values up to the OPS saturation point.
 				presentationStateField[offset] = uint16_t(std::clamp(part.life, 0, 0xFFFF));
+			}
+			else if (IsConfiguredSourceType(part.type))
+			{
+				// Configured sources retain their target only in native ctype. Project the
+				// exact public material ID when it round-trips; never replace or mirror ctype.
+				presentationStateField[offset] = uint16_t(
+					ExactConfiguredSourceTarget(TYP(part.ctype))
+				);
 			}
 			temperatureField[offset] = uint16_t(std::clamp(part.temp * 10.0f, 0.0f, 65535.0f));
 			velocityField[offset * 2] = int8_t(std::clamp(part.vx * 12.0f, -127.0f, 127.0f));
@@ -652,13 +669,7 @@ __attribute__((visibility("default"))) int powder_source_target(int x, int y)
 	if (x < 0 || y < 0 || x >= XRES || y >= YRES) return 0;
 	auto const packed = simulation->pmap[y][x];
 	if (!TYP(packed) || !IsConfiguredSourceType(TYP(packed))) return 0;
-	auto const targetType = TYP(simulation->parts[ID(packed)].ctype);
-	if (targetType <= PT_NONE || targetType >= PT_NUM) return 0;
-	auto const target = ToStillroomType(targetType);
-	// ToStillroomType deliberately phase-projects unknown native products for
-	// rendering. A configured-source query must never report such a projection
-	// as an exact target, so require the public mapping to round-trip.
-	return target && ToPowderType(target) == targetType ? target : 0;
+	return ExactConfiguredSourceTarget(TYP(simulation->parts[ID(packed)].ctype));
 }
 __attribute__((visibility("default"))) void powder_set_wall(int x, int y, int wall, int radius)
 {

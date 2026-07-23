@@ -20,6 +20,7 @@ import type { CrystallineGraphicsAuditSnapshot } from './crystalline-graphics-au
 import type { PasteResistGraphicsAuditSnapshot } from './paste-resist-graphics-audit';
 import type { VibrStateGraphicsAuditSnapshot } from './vibr-state-graphics-audit';
 import type { DeutStateGraphicsAuditSnapshot } from './deut-state-graphics-audit';
+import type { SourceTargetGraphicsAuditSnapshot } from './source-target-graphics-audit';
 
 export interface BrowserInputAuditApi {
   readonly version: 1;
@@ -61,6 +62,7 @@ export interface BrowserInputAuditApi {
   setEnergyIdentityStyling(enabled: boolean): void;
   setVibrStateStyling(enabled: boolean): void;
   setDeutStateStyling(enabled: boolean): void;
+  setSourceTargetStyling(enabled: boolean): void;
   setBotanicalIdentityStyling(enabled: boolean): void;
   setPowderBodyDepth(enabled: boolean): void;
   setPowderRenderStyle(style: PowderRenderStyle): void;
@@ -109,6 +111,8 @@ export interface BrowserInputAuditApi {
   prepareVibrStateGraphicsFixture(): void;
   deutStateGraphicsAtlas(): DeutStateGraphicsAuditSnapshot;
   prepareDeutStateGraphicsFixture(): void;
+  sourceTargetGraphicsAtlas(): SourceTargetGraphicsAuditSnapshot;
+  prepareSourceTargetGraphicsFixture(): void;
   canvasPresentationTiming(): CanvasPresentationTiming | undefined;
   requestWebGLPresentationTimingSample(): boolean;
   webGLPresentationTiming(): WebGLPresentationTiming | undefined;

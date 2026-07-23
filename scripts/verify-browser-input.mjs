@@ -3,6 +3,11 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { spawn } from 'node:child_process';
 import { pathToFileURL } from 'node:url';
+import {
+  assertPairedSourceTargetGraphics,
+  auditSourceTargetGraphics,
+  compactSourceTargetGraphicsResults,
+} from './source-target-graphics-audit.mjs';
 
 const ROOT = process.cwd();
 const requestedPort = Number.parseInt(process.env.ANIFORTPT_AUDIT_PORT ?? '5178', 10);
@@ -53,12 +58,13 @@ const crystalGraphicsOnly = process.argv.includes('--crystal-graphics-only');
 const pasteResistGraphicsOnly = process.argv.includes('--paste-resist-graphics-only');
 const vibrStateGraphicsOnly = process.argv.includes('--vibr-state-graphics-only');
 const deutStateGraphicsOnly = process.argv.includes('--deut-state-graphics-only');
+const sourceTargetGraphicsOnly = process.argv.includes('--source-target-graphics-only');
 const usesProductionBundle = cellularGraphicsOnly || sensorGraphicsOnly
   || unusualPowderGraphicsOnly || unusualSolidGraphicsOnly
   || liquidIdentityGraphicsOnly || gasIdentityGraphicsOnly || energyRadioactiveGraphicsOnly
   || organicPlantGraphicsOnly || spongeGraphicsOnly || virusGraphicsOnly || waxGraphicsOnly
   || crystalGraphicsOnly || pasteResistGraphicsOnly || vibrStateGraphicsOnly
-  || deutStateGraphicsOnly
+  || deutStateGraphicsOnly || sourceTargetGraphicsOnly
   || scaleEightOnly;
 const AUDIT_BASE_URL = usesProductionBundle ? PRODUCTION_BUNDLE_URL : ORIGIN + '/';
 const screenshotRequest = process.argv.find((argument) => argument.startsWith('--screenshot='))?.slice('--screenshot='.length);
@@ -123,7 +129,8 @@ async function main() {
       || unusualPowderGraphicsOnly || unusualSolidGraphicsOnly || liquidIdentityGraphicsOnly
       || gasIdentityGraphicsOnly || energyRadioactiveGraphicsOnly || organicPlantGraphicsOnly
       || spongeGraphicsOnly || virusGraphicsOnly || waxGraphicsOnly || crystalGraphicsOnly
-      || pasteResistGraphicsOnly || vibrStateGraphicsOnly || deutStateGraphicsOnly;
+      || pasteResistGraphicsOnly || vibrStateGraphicsOnly || deutStateGraphicsOnly
+      || sourceTargetGraphicsOnly;
     if (powderBodyOnly) assertPairedPowderBodyDepth(results);
     if (liquidDepthOnly) assertPairedLiquidOpticalDepth(results);
     if (solidDepthOnly) assertPairedSolidOpticalDepth(results);
@@ -146,6 +153,7 @@ async function main() {
     if (pasteResistGraphicsOnly) assertPairedPasteResistGraphics(results);
     if (vibrStateGraphicsOnly) assertPairedVibrStateGraphics(results);
     if (deutStateGraphicsOnly) assertPairedDeutStateGraphics(results);
+    if (sourceTargetGraphicsOnly) assertPairedSourceTargetGraphics(results, assert);
     if (!scaleEightOnly && !materialAtlasOnly && !reducedAudit) assertPairedVisualRelief(results);
     if (!scaleEightOnly && !reducedAudit) assertPairedMaterialAtlas(results);
     compactMaterialAtlasResults(results);
@@ -155,6 +163,7 @@ async function main() {
     compactPasteResistGraphicsResults(results);
     compactVibrStateGraphicsResults(results);
     compactDeutStateGraphicsResults(results);
+    compactSourceTargetGraphicsResults(results);
     console.log(JSON.stringify({ world: `${WORLD_WIDTH}x${WORLD_HEIGHT}`, results }, null, 2));
   } catch (error) {
     if (serverLog.trim()) console.error(serverLog.trim());
@@ -172,7 +181,8 @@ async function auditMode(mode) {
     || unusualPowderGraphicsOnly || unusualSolidGraphicsOnly || liquidIdentityGraphicsOnly
     || gasIdentityGraphicsOnly || energyRadioactiveGraphicsOnly || organicPlantGraphicsOnly
     || spongeGraphicsOnly || virusGraphicsOnly || waxGraphicsOnly || crystalGraphicsOnly
-    || pasteResistGraphicsOnly || vibrStateGraphicsOnly || deutStateGraphicsOnly;
+    || pasteResistGraphicsOnly || vibrStateGraphicsOnly || deutStateGraphicsOnly
+    || sourceTargetGraphicsOnly;
   const query = new URLSearchParams({
     scene: 'render-lab', inputAudit: '1', renderScale: '2',
     auditStage: startsBlank ? 'blank' : 'canonical',
@@ -375,6 +385,21 @@ async function auditMode(mode) {
       assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
       cdp.close();
       return { backend: mode, deutStateGraphics, browserErrors: errors.length };
+    }
+    if (sourceTargetGraphicsOnly) {
+      const sourceTargetGraphics = await auditSourceTargetGraphics({
+        cdp,
+        mode,
+        evaluate,
+        waitFor,
+        waitForStablePageCapture,
+        assert,
+        worldWidth: WORLD_WIDTH,
+        worldHeight: WORLD_HEIGHT,
+      });
+      assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
+      cdp.close();
+      return { backend: mode, sourceTargetGraphics, browserErrors: errors.length };
     }
     if (mobileOnly) {
       const mobile = await auditMobile(
@@ -11709,6 +11734,8 @@ async function auditRenderScaleEight(cdp, dpr) {
     cdp, blankCapture.capture.data, geometry.canvas,
   );
   stage('atlas-stress-ready');
+  const sourceTargetGraphics = await auditEightXSourceTargetGraphics(cdp, geometry.canvas);
+  stage('source-target-ready');
   const vibrStateAudit = await auditEightXVibrStateGraphics(cdp, geometry.canvas);
   stage('vibr-state-ready');
   const deutStateAudit = await auditEightXDeutStateGraphics(cdp, geometry.canvas);
@@ -11748,10 +11775,136 @@ async function auditRenderScaleEight(cdp, dpr) {
       wheelAnchorError: round(grainAnchorError, 4),
     },
     materialAtlasStress,
+    sourceTargetGraphics,
     vibrStateGraphics,
     deutStateGraphics,
     forcedStallRecovery,
     contextLossRecovery,
+  };
+}
+
+async function snapshotEightXSourceTargets(cdp) {
+  return evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    const snapshot = audit.sourceTargetGraphicsAtlas();
+    const cards = Array.isArray(snapshot) ? snapshot : snapshot.cards;
+    const inside = (x, y, rect) => x >= rect.x && x < rect.x + rect.width
+      && y >= rect.y && y < rect.y + rect.height;
+    const exactRect = (rect, material, state) => {
+      for (let y = rect.y; y < rect.y + rect.height; y++) {
+        for (let x = rect.x; x < rect.x + rect.width; x++) {
+          if (audit.cell(x, y) !== material || audit.presentationState(x, y) !== state) return false;
+        }
+      }
+      return true;
+    };
+    return {
+      occupied: audit.occupiedCells(),
+      cards: cards.map((entry) => {
+        let bodyExact = true;
+        for (let y = entry.body.y; y < entry.body.y + entry.body.height; y++) {
+          for (let x = entry.body.x; x < entry.body.x + entry.body.width; x++) {
+            const empty = inside(x, y, entry.authoredHole) || inside(x, y, entry.openNotch);
+            bodyExact &&= audit.cell(x, y) === (empty ? 0 : entry.owner)
+              && audit.presentationState(x, y) === (empty ? 0 : entry.target);
+          }
+        }
+        let wallCells = 0;
+        for (let y = entry.wallCoexistence.y;
+          y < entry.wallCoexistence.y + entry.wallCoexistence.height; y++) {
+          for (let x = entry.wallCoexistence.x;
+            x < entry.wallCoexistence.x + entry.wallCoexistence.width; x++) {
+            wallCells += Number(audit.wall(x, y) === snapshot.conductiveWall);
+          }
+        }
+        return {
+          owner: entry.owner, ownerCode: entry.ownerCode,
+          target: entry.target, targetCode: entry.targetCode,
+          encodedState: entry.encodedState, bodyExact,
+          thinExact: exactRect(entry.thinStructure, entry.owner, entry.target),
+          isolatedExact: audit.cell(entry.isolated.x, entry.isolated.y) === entry.owner
+            && audit.presentationState(entry.isolated.x, entry.isolated.y) === entry.target,
+          zeroExact: exactRect(entry.zeroState, entry.owner, 0),
+          targetControlExact: exactRect(entry.targetControl, entry.target, entry.target),
+          wallExact: exactRect(entry.wallCoexistence, entry.owner, entry.target),
+          wallCells,
+          guardExact: exactRect(entry.guardedBlank, 0, 0),
+        };
+      }),
+    };
+  })()`);
+}
+
+function assertEightXSourceTargetTopology(snapshot, label) {
+  const owners = [126, 124, 159, 158, 127];
+  const targets = [1, 2, 39, 107, 23, 10, 217];
+  assert(snapshot.cards.length === 35
+      && snapshot.cards.every((card, index) => (
+        card.owner === owners[Math.floor(index / targets.length)]
+        && card.target === targets[index % targets.length]
+        && card.encodedState === card.target && (card.encodedState & 0xFF00) === 0
+        && card.bodyExact && card.thinExact && card.isolatedExact && card.zeroExact
+        && card.targetControlExact && card.wallExact && card.wallCells > 0 && card.guardExact
+      )),
+  `${label}: configured-source semantic/state topology changed (${JSON.stringify(snapshot)})`);
+}
+
+async function auditEightXSourceTargetGraphics(cdp, canvasRect) {
+  const atlas = await evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    if (typeof audit.prepareSourceTargetGraphicsFixture !== 'function'
+      || typeof audit.sourceTargetGraphicsAtlas !== 'function'
+      || typeof audit.setSourceTargetStyling !== 'function') {
+      throw new Error('True-8x configured-source graphics API unavailable');
+    }
+    audit.resetView();
+    audit.prepareSourceTargetGraphicsFixture();
+    return audit.sourceTargetGraphicsAtlas();
+  })()`);
+  const prepared = await snapshotEightXSourceTargets(cdp);
+  assertEightXSourceTargetTopology(prepared, 'renderScale=8 prepared source fixture');
+  const live = await metrics(cdp);
+  assert(live.backing.width === WORLD_WIDTH * 8 && live.backing.height === WORLD_HEIGHT * 8
+      && live.outputScale === '8',
+  `renderScale=8 source fixture lost true backing (${JSON.stringify(live.backing)})`);
+  assertCanvasRectsEqual(canvasRect, live.canvas, 'renderScale=8 source fixture CSS geometry');
+
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setSourceTargetStyling(false); true');
+  const flat = await captureSettledPage(cdp, 'renderScale=8 flat source-target framebuffer', 450);
+  const flatTopology = await snapshotEightXSourceTargets(cdp);
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setSourceTargetStyling(true); true');
+  const styled = await captureSettledPage(cdp, 'renderScale=8 styled source-target framebuffer', 450);
+  const styledTopology = await snapshotEightXSourceTargets(cdp);
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setSourceTargetStyling(false); true');
+  const repeated = await captureSettledPage(cdp, 'renderScale=8 repeated flat source-target framebuffer', 450);
+  const repeatedTopology = await snapshotEightXSourceTargets(cdp);
+  assert(JSON.stringify(flatTopology) === JSON.stringify(prepared)
+      && JSON.stringify(styledTopology) === JSON.stringify(prepared)
+      && JSON.stringify(repeatedTopology) === JSON.stringify(prepared),
+  'renderScale=8 source styling changed semantic/state topology');
+
+  const regions = atlas.cards.map((entry) => ({
+    name: `${entry.ownerCode}-${entry.targetCode}`,
+    x: entry.targetAccentProbe.x + entry.targetAccentProbe.width / 2,
+    y: entry.targetAccentProbe.y + entry.targetAccentProbe.height / 2,
+    radiusX: 2, radiusY: 2,
+  }));
+  const samples = await sampleBackdropRefractionRegions(cdp, {
+    straight: flat.capture.data,
+    refracted: styled.capture.data,
+    repeatedStraight: repeated.capture.data,
+  }, regions, canvasRect);
+  assert(samples.length === 35 && samples.every((sample) => (
+    sample.rgbRms >= 0.02 && sample.rgbRms <= 48
+      && sample.rgbPeak > 0 && sample.rgbPeak <= 96 && sample.repeatRgbPeak <= 1
+  )), `renderScale=8 source response is absent, unbounded, or unstable (${JSON.stringify(samples)})`);
+  return {
+    cards: atlas.cards.map(({ owner, ownerCode, target, targetCode, encodedState }) => ({
+      owner, ownerCode, target, targetCode, encodedState,
+    })),
+    occupied: prepared.occupied,
+    samples,
+    exactRepeatedOff: samples.every(({ repeatRgbPeak }) => repeatRgbPeak <= 1),
   };
 }
 
@@ -11921,6 +12074,14 @@ async function snapshotEightXDeutState(cdp) {
     };
     return {
       occupied: audit.occupiedCells(),
+      sourceRecovery: (() => {
+        const probe = audit.sourceTargetGraphicsAtlas().recoveryProbe;
+        return {
+          ...probe,
+          exact: audit.cell(probe.x, probe.y) === probe.owner
+            && audit.presentationState(probe.x, probe.y) === probe.target,
+        };
+      })(),
       vibrRecovery: {
         ...snapshot.vibrRecovery,
         exact: exactRect(snapshot.vibrRecovery.rect, 113, snapshot.vibrRecovery.encodedState),
@@ -11978,6 +12139,9 @@ function assertEightXDeutTopology(snapshot, label) {
       && snapshot.cards.map(({ stateKey }) => stateKey).join(',') === expectedStates
       && snapshot.vibrRecovery?.exact
       && snapshot.vibrRecovery.encodedState === 24_676
+      && snapshot.sourceRecovery?.exact
+      && snapshot.sourceRecovery.owner === 126
+      && snapshot.sourceRecovery.target === 217
       && snapshot.highRange?.length === 2
       && snapshot.highRange[0].stateKey === 'reactionYield'
       && snapshot.highRange[0].encodedState === 17_000
@@ -12077,7 +12241,9 @@ async function auditEightXDeutStateGraphics(cdp, canvasRect) {
   }, regions, canvasRect);
   assertEightXDeutResponses(samples, 'renderScale=8 WebGL');
   const glow = atlas.cards.find(({ stateKey }) => stateKey === 'glow');
-  assert(glow && atlas.vibrRecovery, 'renderScale=8 native-state recovery probes are missing');
+  const sourceRecovery = prepared.sourceRecovery;
+  assert(glow && atlas.vibrRecovery && sourceRecovery?.exact,
+    'renderScale=8 native-state recovery probes are missing');
   return {
     cards: atlas.cards.map(({ stateKey, encodedState }) => ({ stateKey, encodedState })),
     occupied: prepared.occupied,
@@ -12095,6 +12261,9 @@ async function auditEightXDeutStateGraphics(cdp, canvasRect) {
         y: atlas.vibrRecovery.rect.y + Math.floor(atlas.vibrRecovery.rect.height / 2),
       },
       vibrMaterial: 113, vibrEncodedState: atlas.vibrRecovery.encodedState,
+      sourcePoint: { x: sourceRecovery.x, y: sourceRecovery.y },
+      sourceMaterial: sourceRecovery.owner,
+      sourceEncodedState: sourceRecovery.target,
     },
   };
 }
@@ -12132,12 +12301,16 @@ async function auditEightXNativeStateRecovery(cdp, canvasRect, stateAudit, failu
       state: audit.presentationState(${recovery.point.x}, ${recovery.point.y}),
       vibrCell: audit.cell(${recovery.vibrPoint.x}, ${recovery.vibrPoint.y}),
       vibrState: audit.presentationState(${recovery.vibrPoint.x}, ${recovery.vibrPoint.y}),
+      sourceCell: audit.cell(${recovery.sourcePoint.x}, ${recovery.sourcePoint.y}),
+      sourceState: audit.presentationState(${recovery.sourcePoint.x}, ${recovery.sourcePoint.y}),
       occupied: audit.occupiedCells(),
     };
   })()`);
   assert(beforeState.cell === recovery.material && beforeState.state === recovery.encodedState
       && beforeState.vibrCell === recovery.vibrMaterial
       && beforeState.vibrState === recovery.vibrEncodedState
+      && beforeState.sourceCell === recovery.sourceMaterial
+      && beforeState.sourceState === recovery.sourceEncodedState
       && beforeState.occupied === expectedTopology.occupied,
   `renderScale=8 ${failureLabel} native-state probes were not prepared (${JSON.stringify(beforeState)})`);
   const zoomAnchor = failure === 'context-loss' ? recoveryCell : recovery.point;
@@ -12200,6 +12373,8 @@ async function auditEightXNativeStateRecovery(cdp, canvasRect, stateAudit, failu
     state: window.__ANIFOR_INPUT_AUDIT__.presentationState(${recovery.point.x}, ${recovery.point.y}),
     vibrCell: window.__ANIFOR_INPUT_AUDIT__.cell(${recovery.vibrPoint.x}, ${recovery.vibrPoint.y}),
     vibrState: window.__ANIFOR_INPUT_AUDIT__.presentationState(${recovery.vibrPoint.x}, ${recovery.vibrPoint.y}),
+    sourceCell: window.__ANIFOR_INPUT_AUDIT__.cell(${recovery.sourcePoint.x}, ${recovery.sourcePoint.y}),
+    sourceState: window.__ANIFOR_INPUT_AUDIT__.presentationState(${recovery.sourcePoint.x}, ${recovery.sourcePoint.y}),
     occupied: window.__ANIFOR_INPUT_AUDIT__.occupiedCells(),
     view: window.__ANIFOR_INPUT_AUDIT__.viewState(),
     renderer: document.querySelector('.world-canvas')?.dataset.renderer,
@@ -12207,9 +12382,11 @@ async function auditEightXNativeStateRecovery(cdp, canvasRect, stateAudit, failu
   assert(after.cell === recovery.material && after.state === recovery.encodedState
       && after.vibrCell === recovery.vibrMaterial
       && after.vibrState === recovery.vibrEncodedState
+      && after.sourceCell === recovery.sourceMaterial
+      && after.sourceState === recovery.sourceEncodedState
       && after.occupied === expectedTopology.occupied
       && after.renderer === 'semantic-field-canvas2d',
-  `renderScale=8 ${failureLabel} recovery lost DEUT/VIBR state (${JSON.stringify(after)})`);
+  `renderScale=8 ${failureLabel} recovery lost DEUT/VIBR/source state (${JSON.stringify(after)})`);
   assert(Math.abs(after.view.zoom - beforeView.zoom) < 1e-9
       && Math.abs(after.view.panX - beforeView.panX) < 1e-9
       && Math.abs(after.view.panY - beforeView.panY) < 1e-9,
@@ -12235,6 +12412,30 @@ async function auditEightXNativeStateRecovery(cdp, canvasRect, stateAudit, failu
     repeatedStraight: repeated.capture.data,
   }, recovery.regions, canonicalGeometry.canvas);
   assertEightXDeutResponses(samples, `renderScale=8 ${failureLabel} Canvas`);
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setSourceTargetStyling(false); true');
+  const sourceFlat = await waitForStablePageCapture(
+    cdp, `${failureLabel} Canvas flat configured-source target`,
+  );
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setSourceTargetStyling(true); true');
+  const sourceStyled = await waitForStablePageCapture(
+    cdp, `${failureLabel} Canvas styled configured-source target`,
+  );
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setSourceTargetStyling(false); true');
+  const sourceRepeated = await waitForStablePageCapture(
+    cdp, `${failureLabel} Canvas repeated flat configured-source target`,
+  );
+  const [sourceSample] = await sampleBackdropRefractionRegions(cdp, {
+    straight: sourceFlat.capture.data,
+    refracted: sourceStyled.capture.data,
+    repeatedStraight: sourceRepeated.capture.data,
+  }, [{
+    name: 'configuredSourceRecovery',
+    x: recovery.sourcePoint.x, y: recovery.sourcePoint.y, radiusX: 3, radiusY: 3,
+  }], canonicalGeometry.canvas);
+  assert(sourceSample.rgbRms >= 0.02 && sourceSample.rgbRms <= 48
+      && sourceSample.rgbPeak > 0 && sourceSample.rgbPeak <= 96
+      && sourceSample.repeatRgbPeak <= 1,
+  `renderScale=8 ${failureLabel} Canvas lost configured-source response (${JSON.stringify(sourceSample)})`);
   const footprint = failure === 'context-loss'
     ? (await capturePaintedFootprints(
       cdp, [recoveryCell], 'renderScale=8 context-loss Canvas', 1.5, 1.25,
@@ -12248,8 +12449,10 @@ async function auditEightXNativeStateRecovery(cdp, canvasRect, stateAudit, failu
     stateProbes: [
       { point: recovery.point, material: after.cell, encodedState: after.state },
       { point: recovery.vibrPoint, material: after.vibrCell, encodedState: after.vibrState },
+      { point: recovery.sourcePoint, material: after.sourceCell, encodedState: after.sourceState },
     ],
     samples,
+    sourceSample,
     ...(footprint ? { footprint } : {}),
   };
 }
