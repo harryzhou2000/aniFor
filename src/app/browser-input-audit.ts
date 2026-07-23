@@ -24,6 +24,7 @@ import type { DeutStateGraphicsAuditSnapshot } from './deut-state-graphics-audit
 import type { SourceTargetGraphicsAuditSnapshot } from './source-target-graphics-audit';
 import type { NativeSeedGrowthAuditSnapshot } from './native-seed-growth-audit';
 import type { ForceActivityGraphicsAuditSnapshot } from './force-activity-graphics-audit';
+import type { PoloStateGraphicsAuditSnapshot } from './polo-state-graphics-audit';
 
 export interface BrowserInputAuditApi {
   readonly version: 1;
@@ -68,6 +69,7 @@ export interface BrowserInputAuditApi {
   setDeutStateStyling(enabled: boolean): void;
   setSourceTargetStyling(enabled: boolean): void;
   setForceActivityStyling(enabled: boolean): void;
+  setPoloStateStyling(enabled: boolean): void;
   setBotanicalIdentityStyling(enabled: boolean): void;
   setPowderBodyDepth(enabled: boolean): void;
   setPowderRenderStyle(style: PowderRenderStyle): void;
@@ -122,6 +124,8 @@ export interface BrowserInputAuditApi {
   prepareSourceTargetGraphicsFixture(): void;
   forceActivityGraphicsAtlas(): ForceActivityGraphicsAuditSnapshot;
   prepareForceActivityGraphicsFixture(): void;
+  poloStateGraphicsAtlas(): PoloStateGraphicsAuditSnapshot;
+  preparePoloStateGraphicsFixture(): void;
   nativeSeedGrowthSnapshot(): NativeSeedGrowthAuditSnapshot;
   prepareNativeSeedGrowthFixture(): void;
   canvasPresentationTiming(): CanvasPresentationTiming | undefined;

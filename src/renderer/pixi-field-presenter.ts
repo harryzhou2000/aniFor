@@ -129,6 +129,7 @@ uniform float uVibrStateStyling;
 uniform float uDeutStateStyling;
 uniform float uSourceTargetStyling;
 uniform float uForceActivityStyling;
+uniform float uPoloStateStyling;
 uniform float uBotanicalIdentityStyling;
 uniform float uPowderStyle;
 uniform float uPowderBodyDepth;
@@ -786,6 +787,50 @@ vec3 forceActivityDelta(float material, vec2 stateBytes, vec2 position) {
   return radiusSquared >= 25.0 && radiusSquared <= 49.0
     ? vec3(3.0, 10.0, 16.0) / 255.0
     : radiusSquared <= 4.0 ? vec3(-8.0, -5.0, 3.0) / 255.0 : vec3(0.0);
+}
+vec3 poloStateDelta(float material, vec2 stateBytes, vec2 position) {
+  if (material != 109.0) return vec3(0.0);
+  float packedState = floor(stateBytes.x * 255.0 + 0.5)
+    + floor(stateBytes.y * 255.0 + 0.5) * 256.0;
+  if (mod(floor(packedState / 2048.0), 2.0) < 0.5) return vec3(0.0);
+  float emissions = mod(packedState, 8.0);
+  float cooldown = mod(floor(packedState / 8.0), 16.0);
+  float protonDose = mod(floor(packedState / 128.0), 16.0);
+  vec2 world = floor(position);
+  vec2 local = mod(world, 16.0);
+  vec2 centred = local - 8.0;
+  float radiusSquared = dot(centred, centred);
+  vec3 delta = vec3(0.0);
+  if (emissions >= 5.0) {
+    bool ashFacet = mod(world.x + world.y * 3.0, 8.0) < 0.5;
+    delta = ashFacet ? vec3(16.0, 7.0, 16.0) : vec3(10.0, 2.0, 13.0);
+  } else if (cooldown > 0.0) {
+    float boundedCooldown = min(15.0, cooldown);
+    float heat = boundedCooldown / 15.0;
+    float shellRadiusSquared = 16.0 + (15.0 - boundedCooldown) * 2.0;
+    bool shell = abs(radiusSquared - shellRadiusSquared) <= 5.0;
+    bool ray = centred.x == 0.0 || centred.y == 0.0
+      || abs(centred.x) == abs(centred.y);
+    delta = shell ? vec3(12.0 + heat * 4.0, 6.0 + heat * 5.0, -6.0 + heat * 2.0)
+      : ray ? vec3(6.0 + heat * 4.0, 6.0 + heat * 3.0, -2.0)
+      : vec3(1.0 + heat * 3.0, 2.0 + heat * 3.0, heat);
+  } else {
+    bool readyRing = radiusSquared >= 25.0 && radiusSquared <= 49.0;
+    bool readyCore = radiusSquared <= 4.0;
+    bool neutronRay = centred.x == 0.0 || centred.y == 0.0
+      || abs(centred.x) == abs(centred.y);
+    delta = readyRing ? vec3(7.0, 16.0, 9.0)
+      : readyCore ? vec3(5.0, 12.0, 7.0)
+      : neutronRay ? vec3(4.0, 10.0, 5.0) : vec3(2.0, 5.0, 3.0);
+  }
+  if (protonDose > 0.0) {
+    float progress = min(10.0, protonDose) / 10.0;
+    float filledHeight = ceil(progress * 12.0);
+    bool captureRung = local.y >= 16.0 - filledHeight
+      && mod(local.x + local.y, 4.0) <= 1.0;
+    delta += progress * (captureRung ? vec3(10.0, -3.0, 7.0) : vec3(2.0, -1.0, 2.0));
+  }
+  return clamp(delta, vec3(-16.0), vec3(16.0)) / 255.0;
 }
 vec3 deutStateDelta(float material, vec2 stateBytes, vec2 position) {
   if (material != 100.0) return vec3(0.0);
@@ -2837,6 +2882,8 @@ void main() {
     if (radioactive > 0.5 && energyCore < 0.5) {
       color += radioactiveBodyIdentityDelta(material, fieldPosition)
         * uEnergyIdentityStyling;
+      color += poloStateDelta(material, wallState.ba, fieldPosition)
+        * uPoloStateStyling;
       color += vibrStateDelta(material, wallState.ba, fieldPosition)
         * uVibrStateStyling;
       float isotopeNoise = fract(sin(
@@ -3149,6 +3196,7 @@ export class PixiFieldPresenter {
       uDeutStateStyling: { value: 1, type: 'f32' },
       uSourceTargetStyling: { value: 1, type: 'f32' },
       uForceActivityStyling: { value: 1, type: 'f32' },
+      uPoloStateStyling: { value: 1, type: 'f32' },
       uBotanicalIdentityStyling: { value: 1, type: 'f32' },
       uPowderStyle: { value: powderRenderStyleValue('smooth'), type: 'f32' },
       uPowderBodyDepth: { value: 1, type: 'f32' },
@@ -3430,6 +3478,7 @@ export class PixiFieldPresenter {
     sourceTargetStylingEnabled = true,
     explosivePowderStylingEnabled = true,
     forceActivityStylingEnabled = true,
+    poloStateStylingEnabled = true,
   ): void {
     const uniforms = this.uniforms.uniforms;
     uniforms.uGasFieldLighting = gasFieldLightingEnabled ? 1 : 0;
@@ -3465,6 +3514,7 @@ export class PixiFieldPresenter {
     uniforms.uDeutStateStyling = deutStateStylingEnabled ? 1 : 0;
     uniforms.uSourceTargetStyling = sourceTargetStylingEnabled ? 1 : 0;
     uniforms.uForceActivityStyling = forceActivityStylingEnabled ? 1 : 0;
+    uniforms.uPoloStateStyling = poloStateStylingEnabled ? 1 : 0;
     uniforms.uBotanicalIdentityStyling = botanicalIdentityStylingEnabled ? 1 : 0;
     uniforms.uPowderStyle = powderRenderStyleValue(powderRenderStyle);
   }
@@ -3623,6 +3673,11 @@ export class PixiFieldPresenter {
 
   setForceActivityStylingEnabled(enabled: boolean): void {
     this.uniforms.uniforms.uForceActivityStyling = enabled ? 1 : 0;
+    this.renderApplication();
+  }
+
+  setPoloStateStylingEnabled(enabled: boolean): void {
+    this.uniforms.uniforms.uPoloStateStyling = enabled ? 1 : 0;
     this.renderApplication();
   }
 

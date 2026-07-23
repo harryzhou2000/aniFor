@@ -12,6 +12,10 @@ import {
   assertPairedForceActivityGraphics,
   auditForceActivityGraphics,
 } from './force-activity-graphics-audit.mjs';
+import {
+  assertPairedPoloStateGraphics,
+  auditPoloStateGraphics,
+} from './polo-state-graphics-audit.mjs';
 
 const ROOT = process.cwd();
 const requestedPort = Number.parseInt(process.env.ANIFORTPT_AUDIT_PORT ?? '5178', 10);
@@ -65,6 +69,7 @@ const vibrStateGraphicsOnly = process.argv.includes('--vibr-state-graphics-only'
 const deutStateGraphicsOnly = process.argv.includes('--deut-state-graphics-only');
 const sourceTargetGraphicsOnly = process.argv.includes('--source-target-graphics-only');
 const forceActivityGraphicsOnly = process.argv.includes('--force-activity-graphics-only');
+const poloStateGraphicsOnly = process.argv.includes('--polo-state-graphics-only');
 const nativeSeedGrowthOnly = process.argv.includes('--native-seed-growth-only');
 const usesProductionBundle = cellularGraphicsOnly || sensorGraphicsOnly
   || unusualPowderGraphicsOnly || explosivePowderGraphicsOnly || unusualSolidGraphicsOnly
@@ -72,6 +77,7 @@ const usesProductionBundle = cellularGraphicsOnly || sensorGraphicsOnly
   || organicPlantGraphicsOnly || spongeGraphicsOnly || virusGraphicsOnly || waxGraphicsOnly
   || crystalGraphicsOnly || pasteResistGraphicsOnly || vibrStateGraphicsOnly
   || deutStateGraphicsOnly || sourceTargetGraphicsOnly || forceActivityGraphicsOnly
+  || poloStateGraphicsOnly
   || nativeSeedGrowthOnly
   || scaleEightOnly;
 const AUDIT_BASE_URL = usesProductionBundle ? PRODUCTION_BUNDLE_URL : ORIGIN + '/';
@@ -139,7 +145,8 @@ async function main() {
       || gasIdentityGraphicsOnly || energyRadioactiveGraphicsOnly || organicPlantGraphicsOnly
       || spongeGraphicsOnly || virusGraphicsOnly || waxGraphicsOnly || crystalGraphicsOnly
       || pasteResistGraphicsOnly || vibrStateGraphicsOnly || deutStateGraphicsOnly
-      || sourceTargetGraphicsOnly || forceActivityGraphicsOnly || nativeSeedGrowthOnly;
+      || sourceTargetGraphicsOnly || forceActivityGraphicsOnly || poloStateGraphicsOnly
+      || nativeSeedGrowthOnly;
     if (powderBodyOnly) assertPairedPowderBodyDepth(results);
     if (liquidDepthOnly) assertPairedLiquidOpticalDepth(results);
     if (solidDepthOnly) assertPairedSolidOpticalDepth(results);
@@ -165,6 +172,7 @@ async function main() {
     if (deutStateGraphicsOnly) assertPairedDeutStateGraphics(results);
     if (sourceTargetGraphicsOnly) assertPairedSourceTargetGraphics(results, assert);
     if (forceActivityGraphicsOnly) assertPairedForceActivityGraphics(results, assert);
+    if (poloStateGraphicsOnly) assertPairedPoloStateGraphics(results, assert);
     if (nativeSeedGrowthOnly) assertPairedNativeSeedGrowth(results);
     if (!scaleEightOnly && !materialAtlasOnly && !reducedAudit) assertPairedVisualRelief(results);
     if (!scaleEightOnly && !reducedAudit) assertPairedMaterialAtlas(results);
@@ -195,7 +203,8 @@ async function auditMode(mode) {
     || gasIdentityGraphicsOnly || energyRadioactiveGraphicsOnly || organicPlantGraphicsOnly
     || spongeGraphicsOnly || virusGraphicsOnly || waxGraphicsOnly || crystalGraphicsOnly
     || pasteResistGraphicsOnly || vibrStateGraphicsOnly || deutStateGraphicsOnly
-    || sourceTargetGraphicsOnly || forceActivityGraphicsOnly || nativeSeedGrowthOnly;
+    || sourceTargetGraphicsOnly || forceActivityGraphicsOnly || poloStateGraphicsOnly
+    || nativeSeedGrowthOnly;
   const query = new URLSearchParams({
     scene: 'render-lab', inputAudit: '1', renderScale: '2',
     auditStage: startsBlank ? 'blank' : 'canonical',
@@ -441,6 +450,21 @@ async function auditMode(mode) {
       assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
       cdp.close();
       return { backend: mode, forceActivityGraphics, browserErrors: errors.length };
+    }
+    if (poloStateGraphicsOnly) {
+      const poloStateGraphics = await auditPoloStateGraphics({
+        cdp,
+        mode,
+        evaluate,
+        waitFor,
+        waitForStablePageCapture,
+        assert,
+        worldWidth: WORLD_WIDTH,
+        worldHeight: WORLD_HEIGHT,
+      });
+      assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
+      cdp.close();
+      return { backend: mode, poloStateGraphics, browserErrors: errors.length };
     }
     if (mobileOnly) {
       const mobile = await auditMobile(

@@ -572,6 +572,19 @@ void ExtractFields()
 				// introducing a parallel state resource or changing material ownership.
 				presentationStateField[offset] = part.tmp != 0 ? uint16_t(1) : uint16_t(0);
 			}
+			else if (part.type == PT_POLO)
+			{
+				// POLO uses tmp for its five neutron-emission stages, life for the
+				// fifteen-tick cooldown, and tmp2 for the ten-proton transmutation dose.
+				// Bit 11 marks even a default glowing owner as present; zero remains the
+				// exact state of every non-POLO material in this owner-multiplexed plane.
+				auto const emissions = std::clamp(part.tmp, 0, 5);
+				auto const cooldown = std::clamp(part.life, 0, 15);
+				auto const protonDose = std::clamp(part.tmp2, 0, 10);
+				presentationStateField[offset] = uint16_t(
+					0x0800 | emissions | (cooldown << 3) | (protonDose << 7)
+				);
+			}
 			else if (IsConfiguredSourceType(part.type))
 			{
 				// Configured sources retain their target only in native ctype. Project the

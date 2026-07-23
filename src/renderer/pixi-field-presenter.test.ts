@@ -35,6 +35,7 @@ interface PresenterHarness {
   setDeutStateStylingEnabled: PixiFieldPresenter['setDeutStateStylingEnabled'];
   setSourceTargetStylingEnabled: PixiFieldPresenter['setSourceTargetStylingEnabled'];
   setForceActivityStylingEnabled: PixiFieldPresenter['setForceActivityStylingEnabled'];
+  setPoloStateStylingEnabled: PixiFieldPresenter['setPoloStateStylingEnabled'];
   setBotanicalIdentityStylingEnabled: PixiFieldPresenter['setBotanicalIdentityStylingEnabled'];
   setLiquidSilhouetteCohesionEnabled: PixiFieldPresenter['setLiquidSilhouetteCohesionEnabled'];
   setRenderStallHandler: PixiFieldPresenter['setRenderStallHandler'];
@@ -821,6 +822,33 @@ describe('Pixi presenter startup configuration', () => {
     expect(end).toBeGreaterThan(start);
     expect(block).toContain('material != 115.0 && material != 116.0');
     expect(block).toContain('mod(floor(packedState), 2.0)');
+    expect(block).not.toContain('texture(');
+    expect(block).not.toContain('uTime');
+  });
+
+  it('redraws the independent native POLO-state toggle', () => {
+    const presenter = presenterHarness();
+
+    presenter.setPoloStateStylingEnabled(false);
+    expect(presenter.uniforms.uniforms.uPoloStateStyling).toBe(0);
+    expect(presenter.app.render).toHaveBeenCalledOnce();
+
+    presenter.setPoloStateStylingEnabled(true);
+    expect(presenter.uniforms.uniforms.uPoloStateStyling).toBe(1);
+    expect(presenter.app.render).toHaveBeenCalledTimes(2);
+  });
+
+  it('keeps POLO lifecycle state arithmetic-only, bounded, and exact-owner guarded', () => {
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const start = source.indexOf('vec3 poloStateDelta');
+    const end = source.indexOf('vec3 deutStateDelta', start);
+    const block = source.slice(start, end);
+
+    expect(start).toBeGreaterThan(0);
+    expect(end).toBeGreaterThan(start);
+    expect(block).toContain('material != 109.0');
+    expect(block).toContain('packedState / 2048.0');
+    expect(block).toContain('clamp(delta, vec3(-16.0), vec3(16.0))');
     expect(block).not.toContain('texture(');
     expect(block).not.toContain('uTime');
   });

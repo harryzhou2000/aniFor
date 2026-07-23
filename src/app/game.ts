@@ -79,6 +79,9 @@ import {
   FORCE_ACTIVITY_GRAPHICS_AUDIT, prepareForceActivityGraphicsAuditFixture,
 } from './force-activity-graphics-audit';
 import {
+  POLO_STATE_GRAPHICS_AUDIT, preparePoloStateGraphicsAuditFixture,
+} from './polo-state-graphics-audit';
+import {
   runNativeSeedGrowthAudit,
   type NativeSeedGrowthAuditSnapshot,
   type NativeSeedGrowthBackend,
@@ -374,6 +377,9 @@ export class Game {
       setForceActivityStyling: (enabled) => {
         this.renderer.setForceActivityStylingEnabled(enabled);
       },
+      setPoloStateStyling: (enabled) => {
+        this.renderer.setPoloStateStylingEnabled(enabled);
+      },
       setBotanicalIdentityStyling: (enabled) => {
         this.renderer.setBotanicalIdentityStylingEnabled(enabled);
       },
@@ -489,6 +495,10 @@ export class Game {
       forceActivityGraphicsAtlas: () => FORCE_ACTIVITY_GRAPHICS_AUDIT,
       prepareForceActivityGraphicsFixture: () => {
         prepareForceActivityGraphicsAuditFixture(this.simulation);
+      },
+      poloStateGraphicsAtlas: () => POLO_STATE_GRAPHICS_AUDIT,
+      preparePoloStateGraphicsFixture: () => {
+        preparePoloStateGraphicsAuditFixture(this.simulation);
       },
       nativeSeedGrowthSnapshot: () => {
         if (!this.nativeSeedGrowthAudit) throw new Error('Native seed growth fixture is not prepared');

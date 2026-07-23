@@ -23,6 +23,24 @@ export const FORCE_ACTIVITY_PRESENTATION_STATE = {
   activeMask: 0x0001,
 } as const;
 
+/**
+ * Exact native POLO lifecycle state in the owner-multiplexed presentation word.
+ * Default POLO is already visibly radioactive upstream, so `presentMask` keeps
+ * every authoritative owner distinct from the all-zero non-POLO state.
+ */
+export const POLO_PRESENTATION_STATE = {
+  emissionMask: 0x0007,
+  emissionMaximum: 5,
+  cooldownShift: 3,
+  cooldownMask: 0x0078,
+  cooldownMaximum: 15,
+  protonDoseShift: 7,
+  protonDoseMask: 0x0780,
+  protonDoseMaximum: 10,
+  presentMask: 0x0800,
+  reservedMask: 0xf000,
+} as const;
+
 /** Exact public material IDs whose native particles retain a configured ctype target. */
 export const CONFIGURED_SOURCE_MATERIAL_IDS = [124, 126, 127, 137, 158, 159] as const;
 

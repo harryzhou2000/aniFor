@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { MATERIALS, Material } from '../shared/materials';
 import { PowderToyBackend } from './powder-toy-backend';
 import { SimulationTool } from './simulation-tools';
-import { DEUT_PRESENTATION_STATE, VIBR_PRESENTATION_STATE } from './types';
+import {
+  DEUT_PRESENTATION_STATE, POLO_PRESENTATION_STATE, VIBR_PRESENTATION_STATE,
+} from './types';
 import { readFileSync } from 'node:fs';
 
 const moduleArtifact = new URL('../../public/wasm/stillroom_core.js', import.meta.url);
@@ -162,6 +164,100 @@ describe('direct Powder Toy backend', () => {
       expect(state[activeIndex]).toBe(1);
       expect(state[isolatedIndex]).toBe(0);
     }
+  });
+
+  it('projects native POLO lifecycle state and preserves its proton dose through OPS1', async () => {
+    const point = { x: 306, y: 180 };
+    const indexOf = (simulation: PowderToyBackend): number => (
+      point.y * simulation.width + point.x
+    );
+    const owner = (simulation: PowderToyBackend): number => {
+      const cells = simulation.cells();
+      return cells[indexOf(simulation)];
+    };
+    const state = (simulation: PowderToyBackend): number => {
+      simulation.cells();
+      return simulation.presentationState()[indexOf(simulation)];
+    };
+    const protonDose = (word: number): number => (
+      (word & POLO_PRESENTATION_STATE.protonDoseMask)
+      >>> POLO_PRESENTATION_STATE.protonDoseShift
+    );
+    const advanceToDose = (
+      simulation: PowderToyBackend, targetDose: number, maximumSteps = 512,
+    ): number => {
+      let previousDose = protonDose(state(simulation));
+      for (let step = 0; step < maximumSteps; step++) {
+        simulation.step();
+        expect(owner(simulation)).toBe(Material.POLO);
+        const word = state(simulation);
+        const currentDose = protonDose(word);
+        expect(currentDose).toBeGreaterThanOrEqual(previousDose);
+        expect(currentDose).toBeLessThanOrEqual(previousDose + 1);
+        if (currentDose === targetDose) return word;
+        previousDose = currentDose;
+      }
+      throw new Error(`Native POLO did not accept proton dose ${targetDose}`);
+    };
+    const saveAndRestore = async (source: PowderToyBackend): Promise<PowderToyBackend> => {
+      const file = source.saveFile();
+      expect(new TextDecoder().decode(file.slice(0, 4))).toBe('OPS1');
+      const restored = await PowderToyBackend.load(moduleArtifact.href);
+      restored.loadFile(file);
+      return restored;
+    };
+
+    const source = await PowderToyBackend.load(moduleArtifact.href);
+    // Keep the powder owner at one exact world cell. Six ordinary configured
+    // CLNE sources emit native PROT particles, which travel into the owner and
+    // are consumed from TPT's independent photons map one accepted dose at a time.
+    for (let x = point.x - 2; x <= point.x + 2; x++) {
+      source.paint(x, point.y + 1, Material.Wall, 0);
+    }
+    for (const sourceX of [point.x - 6, point.x - 4, point.x - 2,
+      point.x + 2, point.x + 4, point.x + 6]) {
+      expect(source.paintConfiguredSource(
+        sourceX, point.y, Material.CLNE, Material.PROT, 0,
+      )).toBe(1);
+    }
+    source.paint(point.x, point.y, Material.POLO, 0);
+    expect(owner(source)).toBe(Material.POLO);
+    const initialState = state(source);
+    expect(initialState).toBe(POLO_PRESENTATION_STATE.presentMask);
+    expect(initialState & POLO_PRESENTATION_STATE.reservedMask).toBe(0);
+
+    // Initial default POLO is already glowing upstream and must remain a
+    // nonzero exact-owner state after an OPS round trip.
+    let simulation = await saveAndRestore(source);
+    expect(owner(simulation)).toBe(Material.POLO);
+    expect(state(simulation)).toBe(initialState);
+
+    let midDoseState = 0;
+    for (let dose = 1; dose <= 5; dose++) {
+      midDoseState = advanceToDose(simulation, dose);
+    }
+    expect(midDoseState & POLO_PRESENTATION_STATE.presentMask)
+      .toBe(POLO_PRESENTATION_STATE.presentMask);
+
+    simulation = await saveAndRestore(simulation);
+    expect(owner(simulation)).toBe(Material.POLO);
+    expect(state(simulation)).toBe(midDoseState);
+    expect(protonDose(state(simulation))).toBe(5);
+
+    for (let dose = 6; dose <= POLO_PRESENTATION_STATE.protonDoseMaximum; dose++) {
+      advanceToDose(simulation, dose);
+    }
+
+    // Upstream checks the accumulated tmp2 dose before accepting a new proton,
+    // so the first update after the tenth accepted dose performs POLO -> PLUT.
+    simulation.step();
+    expect(owner(simulation)).toBe(Material.PLUT);
+    expect(state(simulation)).toBe(0);
+
+    simulation.clear();
+    simulation.paint(point.x, point.y, Material.Water, 0);
+    expect(owner(simulation)).toBe(Material.Water);
+    expect(state(simulation)).toBe(0);
   });
 
   it('extracts the native VIBR explosion countdown and alternate mode flags', async () => {
