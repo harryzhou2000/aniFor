@@ -4,7 +4,7 @@ import { PowderToyBackend } from './powder-toy-backend';
 import { SimulationTool } from './simulation-tools';
 import {
   DEUT_PRESENTATION_STATE, LAVA_PRESENTATION_STATE, POLO_PRESENTATION_STATE,
-  SPNG_PRESENTATION_STATE,
+  PLNT_PRESENTATION_STATE, SEED_PRESENTATION_STATE, SPNG_PRESENTATION_STATE,
   VIBR_PRESENTATION_STATE,
 } from './types';
 import { readFileSync } from 'node:fs';
@@ -449,6 +449,204 @@ describe('direct Powder Toy backend', () => {
     restored.clear();
     restored.paint(generic.x, generic.y, Material.Water, 0);
     expect(stateAt(restored, generic.x, generic.y)).toBe(0);
+  });
+
+  it('projects native SEED hydration/germination and PLNT inherited growth state through OPS1', async () => {
+    const canonical = { x: 210, y: 180 } as const;
+    const noWater = { x: 290, y: 180 } as const;
+    const noSoil = { x: 370, y: 180 } as const;
+    const badTemperature = { x: 450, y: 180 } as const;
+    const indexOf = (simulation: PowderToyBackend, point: { x: number; y: number }): number => (
+      point.y * simulation.width + point.x
+    );
+    const ownerAt = (
+      simulation: PowderToyBackend, point: { x: number; y: number },
+    ): number => simulation.cells()[indexOf(simulation, point)];
+    const stateAt = (
+      simulation: PowderToyBackend, point: { x: number; y: number },
+    ): number => {
+      simulation.cells();
+      return simulation.presentationState()[indexOf(simulation, point)];
+    };
+    const seedWater = (word: number): number => word & SEED_PRESENTATION_STATE.waterMask;
+    const seedGermination = (word: number): number => (
+      (word & SEED_PRESENTATION_STATE.germinationMask)
+      >>> SEED_PRESENTATION_STATE.germinationShift
+    );
+    const placeSeed = (
+      simulation: PowderToyBackend,
+      point: { x: number; y: number },
+      support: Material.Sand | Material.Wall,
+      withWater: boolean,
+    ): void => {
+      // A three-cell substrate prevents the powder seed from slipping around
+      // its required direct support. The wider non-falling DMND shelf keeps
+      // native SAND from escaping diagonally during the 200-tick timer.
+      for (let offsetX = -2; offsetX <= 2; offsetX++) {
+        simulation.paint(point.x + offsetX, point.y + 2, Material.Wall, 0);
+      }
+      for (let offsetX = -1; offsetX <= 1; offsetX++) {
+        simulation.paint(point.x + offsetX, point.y + 1, support, 0);
+      }
+      simulation.paint(point.x, point.y, Material.SEED, 0);
+      if (!withWater) return;
+      // The seed has a lower native particle ID than its surrounding fluid, so
+      // its authentic update drinks the still-adjacent WATR before it can fall.
+      for (let offsetY = -1; offsetY <= 1; offsetY++) {
+        for (let offsetX = -1; offsetX <= 1; offsetX++) {
+          if ((offsetX || offsetY) && offsetY !== 1) {
+            simulation.paint(point.x + offsetX, point.y + offsetY, Material.Water, 0);
+          }
+        }
+      }
+    };
+
+    const source = await PowderToyBackend.load(moduleArtifact.href);
+    placeSeed(source, canonical, Material.Sand, true);
+    placeSeed(source, noWater, Material.Sand, false);
+    placeSeed(source, noSoil, Material.Wall, true);
+    placeSeed(source, badTemperature, Material.Sand, true);
+    for (const point of [canonical, noWater, noSoil, badTemperature]) {
+      expect(ownerAt(source, point)).toBe(Material.SEED);
+      expect(stateAt(source, point)).toBe(0);
+    }
+
+    // One real update consumes five neighbouring WATR particles. Germination
+    // starts only on a later update, after the upward cell has become empty.
+    source.step();
+    expect(seedWater(stateAt(source, canonical))).toBe(5);
+    expect(seedGermination(stateAt(source, canonical))).toBe(0);
+    expect(stateAt(source, noWater)).toBe(0);
+    expect(seedWater(stateAt(source, noSoil))).toBe(5);
+    expect(seedGermination(stateAt(source, noSoil))).toBe(0);
+    expect(seedWater(stateAt(source, badTemperature))).toBe(5);
+
+    // Upstream clears both water and the germination timer outside its supported
+    // 278.15–343.15 K window, without changing an otherwise safe SEED owner.
+    // Replace the consumed-fluid ring and its support with native zero-conduct
+    // INSL so BeforeSim cannot immediately dissipate the deliberately bad
+    // temperature into an eight-cell neighbourhood.
+    for (let offsetY = -1; offsetY <= 1; offsetY++) {
+      for (let offsetX = -1; offsetX <= 1; offsetX++) {
+        if (offsetX || offsetY) {
+          source.erase(badTemperature.x + offsetX, badTemperature.y + offsetY, 0);
+          source.paint(
+            badTemperature.x + offsetX, badTemperature.y + offsetY, Material.INSL, 0,
+          );
+        }
+      }
+    }
+    // The larger margin survives native heat conduction into the neighbouring
+    // support during BeforeSim while staying far below SEED's FIRE transition.
+    for (let application = 0; application < 80; application++) {
+      source.applySimulationTool(
+        SimulationTool.Heat, badTemperature.x, badTemperature.y, 0,
+      );
+    }
+    source.cells();
+    expect(source.temperature()[indexOf(source, badTemperature)] / 10).toBeGreaterThan(343.15);
+    expect(source.temperature()[indexOf(source, badTemperature)] / 10).toBeLessThan(673.15);
+    source.step();
+    expect(ownerAt(source, badTemperature)).toBe(Material.SEED);
+    expect(stateAt(source, badTemperature)).toBe(0);
+
+    for (let step = 0; step < 48; step++) source.step();
+    const seedCheckpoint = stateAt(source, canonical);
+    expect(ownerAt(source, canonical)).toBe(Material.SEED);
+    expect(seedWater(seedCheckpoint)).toBe(5);
+    expect(seedGermination(seedCheckpoint)).toBeGreaterThan(0);
+    expect(seedGermination(seedCheckpoint)).toBeLessThanOrEqual(
+      SEED_PRESENTATION_STATE.germinationMaximum,
+    );
+    expect(stateAt(source, noWater)).toBe(0);
+    expect(seedWater(stateAt(source, noSoil))).toBe(5);
+    expect(seedGermination(stateAt(source, noSoil))).toBe(0);
+
+    const seedFile = source.saveFile();
+    expect(new TextDecoder().decode(seedFile.slice(0, 4))).toBe('OPS1');
+    let restored = await PowderToyBackend.load(moduleArtifact.href);
+    restored.loadFile(seedFile);
+    expect(ownerAt(restored, canonical)).toBe(Material.SEED);
+    expect(stateAt(restored, canonical)).toBe(seedCheckpoint);
+    expect(stateAt(restored, noWater)).toBe(0);
+    expect(stateAt(restored, noSoil)).toBe(stateAt(source, noSoil));
+    expect(stateAt(restored, badTemperature)).toBe(0);
+
+    // Continue only through the official update loop until supported hydrated
+    // SEED changes into the first active tree-growth PLNT particle.
+    for (let step = 0; step < 256
+      && ownerAt(restored, canonical) === Material.SEED; step++) {
+      restored.step();
+    }
+    expect(ownerAt(restored, canonical)).toBe(Material.Plant);
+    const plantCheckpoint = stateAt(restored, canonical);
+    expect(plantCheckpoint & PLNT_PRESENTATION_STATE.presentMask)
+      .toBe(PLNT_PRESENTATION_STATE.presentMask);
+    expect(plantCheckpoint & PLNT_PRESENTATION_STATE.treeMask)
+      .toBe(PLNT_PRESENTATION_STATE.treeMask);
+    expect(plantCheckpoint & PLNT_PRESENTATION_STATE.phaseMask).toBe(0);
+    expect(
+      (plantCheckpoint & PLNT_PRESENTATION_STATE.directionMask)
+      >>> PLNT_PRESENTATION_STATE.directionShift,
+    ).toBe(0);
+    expect(
+      (plantCheckpoint & PLNT_PRESENTATION_STATE.inheritedColourMask)
+      >>> PLNT_PRESENTATION_STATE.inheritedColourShift,
+    ).toBe(0b111011);
+    expect(
+      (plantCheckpoint & PLNT_PRESENTATION_STATE.hydrationClassMask)
+      >>> PLNT_PRESENTATION_STATE.hydrationClassShift,
+    ).toBe(2);
+    expect(plantCheckpoint & PLNT_PRESENTATION_STATE.activeGrowthMask)
+      .toBe(PLNT_PRESENTATION_STATE.activeGrowthMask);
+
+    // The no-water, no-soil, and bad-temperature controls never germinate.
+    for (const point of [noWater, noSoil, badTemperature]) {
+      expect(ownerAt(restored, point)).toBe(Material.SEED);
+    }
+    expect(stateAt(restored, noWater)).toBe(0);
+    expect(seedGermination(stateAt(restored, noSoil))).toBe(0);
+    expect(stateAt(restored, badTemperature)).toBe(0);
+
+    const plantFile = restored.saveFile();
+    restored = await PowderToyBackend.load(moduleArtifact.href);
+    restored.loadFile(plantFile);
+    expect(ownerAt(restored, canonical)).toBe(Material.Plant);
+    expect(stateAt(restored, canonical)).toBe(plantCheckpoint);
+
+    restored.clear();
+    restored.paint(canonical.x, canonical.y, Material.Water, 0);
+    expect(stateAt(restored, canonical)).toBe(0);
+
+    // SEED's separate upstream wax path is probabilistic but deterministic for
+    // this pinned RNG seed. A radius-eight Air brush raises the whole local air
+    // stencil above 50 without a private pressure setter, while an INSL ring
+    // retains a safe 320–343.15 K particle temperature.
+    const waxSource = await PowderToyBackend.load(moduleArtifact.href);
+    const waxPoint = { x: 306, y: 180 } as const;
+    for (let offsetY = -1; offsetY <= 1; offsetY++) {
+      for (let offsetX = -1; offsetX <= 1; offsetX++) {
+        if (offsetX || offsetY) {
+          waxSource.paint(waxPoint.x + offsetX, waxPoint.y + offsetY, Material.INSL, 0);
+        }
+      }
+    }
+    waxSource.paint(waxPoint.x, waxPoint.y, Material.SEED, 0);
+    for (let application = 0; application < 16; application++) {
+      waxSource.applySimulationTool(SimulationTool.Heat, waxPoint.x, waxPoint.y, 0);
+    }
+    waxSource.cells();
+    expect(waxSource.temperature()[indexOf(waxSource, waxPoint)] / 10).toBeGreaterThan(320);
+    expect(waxSource.temperature()[indexOf(waxSource, waxPoint)] / 10).toBeLessThan(343.15);
+    for (let step = 0; step < 512
+      && ownerAt(waxSource, waxPoint) === Material.SEED; step++) {
+      for (let application = 0; application < 80; application++) {
+        waxSource.applySimulationTool(SimulationTool.Air, waxPoint.x, waxPoint.y, 8);
+      }
+      waxSource.step();
+    }
+    expect(ownerAt(waxSource, waxPoint)).toBe(Material.MWAX);
+    expect(stateAt(waxSource, waxPoint)).toBe(0);
   });
 
   it('extracts the native VIBR explosion countdown and alternate mode flags', async () => {

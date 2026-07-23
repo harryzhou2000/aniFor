@@ -56,6 +56,39 @@ export const LAVA_PRESENTATION_STATE = {
   reservedMask: 0xfe00,
 } as const;
 
+/**
+ * Exact native SEED hydration and supported-soil germination state.
+ * Material.SEED is the owner guard, so an authoritative dry dormant seed is
+ * intentionally the all-zero word.
+ */
+export const SEED_PRESENTATION_STATE = {
+  waterMask: 0x00ff,
+  waterMaximum: 0xff,
+  germinationShift: 8,
+  germinationMask: 0xff00,
+  germinationMaximum: 0xff,
+} as const;
+
+/**
+ * Compact native PLNT tree genome, hydration, and active-growth state.
+ * The low twelve bits retain ctype's tree/phase/direction/inherited-colour
+ * layout exactly; hydration is classified from its native eight-bit water
+ * reservoir. `presentMask` distinguishes every exact PLNT owner.
+ */
+export const PLNT_PRESENTATION_STATE = {
+  treeMask: 0x0001,
+  phaseShift: 1,
+  phaseMask: 0x0006,
+  directionShift: 3,
+  directionMask: 0x0038,
+  inheritedColourShift: 6,
+  inheritedColourMask: 0x0fc0,
+  hydrationClassShift: 12,
+  hydrationClassMask: 0x3000,
+  activeGrowthMask: 0x4000,
+  presentMask: 0x8000,
+} as const;
+
 /** Exact public material IDs whose native particles retain a configured ctype target. */
 export const CONFIGURED_SOURCE_MATERIAL_IDS = [124, 126, 127, 137, 158, 159] as const;
 

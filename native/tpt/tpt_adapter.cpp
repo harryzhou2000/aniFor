@@ -8,6 +8,7 @@
 #include "simulation/SimulationSettings.h"
 #include "simulation/ElementClasses.h"
 #include "simulation/ElementDefs.h"
+#include "simulation/elements/PLNT.h"
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
@@ -610,6 +611,27 @@ void ExtractFields()
 				// for every other material in the owner-multiplexed presentation plane.
 				auto const hydration = std::clamp(part.life, 0, 50);
 				presentationStateField[offset] = uint16_t(0x0040 | hydration);
+			}
+			else if (part.type == PT_SEED)
+			{
+				// SEED keeps absorbed water in ctype's PLNT_LIFE byte and uses life as
+				// the supported-soil germination timer. The semantic material owner is
+				// the exact presence guard, so a genuinely dry dormant seed stays zero.
+				auto const water = (part.ctype >> PLNT_LIFE) & 0xFF;
+				auto const germination = std::clamp(part.life, 0, 0xFF);
+				presentationStateField[offset] = uint16_t(water | (germination << 8));
+			}
+			else if (part.type == PT_PLNT)
+			{
+				// Compact the native tree genome/growth state without replacing ctype:
+				// tree, phase, direction, and six inherited colour bits already occupy
+				// ctype bits 0..11. Its water byte becomes four visual hydration classes.
+				auto const water = (part.ctype >> PLNT_LIFE) & 0xFF;
+				auto const hydrationClass = water == 0 ? 0 : water <= 3 ? 1 : water <= 15 ? 2 : 3;
+				presentationStateField[offset] = uint16_t(
+					0x8000 | (part.ctype & 0x0FFF) | (hydrationClass << 12)
+					| (part.life > 0 ? 0x4000 : 0)
+				);
 			}
 			else if (IsConfiguredSourceType(part.type))
 			{

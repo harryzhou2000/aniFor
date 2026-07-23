@@ -27,6 +27,9 @@ import type { ForceActivityGraphicsAuditSnapshot } from './force-activity-graphi
 import type { PoloStateGraphicsAuditSnapshot } from './polo-state-graphics-audit';
 import type { SpngStateGraphicsAuditSnapshot } from './spng-state-graphics-audit';
 import type { LavaStateGraphicsAuditSnapshot } from './lava-state-graphics-audit';
+import type {
+  BotanicalLifecycleGraphicsAuditSnapshot,
+} from './botanical-lifecycle-graphics-audit';
 
 export interface BrowserInputAuditApi {
   readonly version: 1;
@@ -75,6 +78,7 @@ export interface BrowserInputAuditApi {
   setSpngStateStyling(enabled: boolean): void;
   setLavaAncestryStyling(enabled: boolean): void;
   setBotanicalIdentityStyling(enabled: boolean): void;
+  setBotanicalLifecycleStyling(enabled: boolean): void;
   setPowderBodyDepth(enabled: boolean): void;
   setPowderRenderStyle(style: PowderRenderStyle): void;
   clear(): void;
@@ -134,6 +138,8 @@ export interface BrowserInputAuditApi {
   prepareSpngStateGraphicsFixture(): void;
   lavaStateGraphicsAtlas(): LavaStateGraphicsAuditSnapshot;
   prepareLavaStateGraphicsFixture(): void;
+  botanicalLifecycleGraphicsAtlas(): BotanicalLifecycleGraphicsAuditSnapshot;
+  prepareBotanicalLifecycleGraphicsFixture(): void;
   nativeSeedGrowthSnapshot(): NativeSeedGrowthAuditSnapshot;
   prepareNativeSeedGrowthFixture(): void;
   canvasPresentationTiming(): CanvasPresentationTiming | undefined;

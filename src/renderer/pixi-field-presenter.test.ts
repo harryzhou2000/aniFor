@@ -39,6 +39,7 @@ interface PresenterHarness {
   setSpngStateStylingEnabled: PixiFieldPresenter['setSpngStateStylingEnabled'];
   setLavaAncestryStylingEnabled: PixiFieldPresenter['setLavaAncestryStylingEnabled'];
   setBotanicalIdentityStylingEnabled: PixiFieldPresenter['setBotanicalIdentityStylingEnabled'];
+  setBotanicalLifecycleStylingEnabled: PixiFieldPresenter['setBotanicalLifecycleStylingEnabled'];
   setLiquidSilhouetteCohesionEnabled: PixiFieldPresenter['setLiquidSilhouetteCohesionEnabled'];
   setRenderStallHandler: PixiFieldPresenter['setRenderStallHandler'];
   forceEightXRenderStallForAudit: PixiFieldPresenter['forceEightXRenderStallForAudit'];
@@ -1092,6 +1093,38 @@ describe('Pixi presenter startup configuration', () => {
     expect(helper).not.toMatch(/\balpha\s*[+*]?=/);
     expect(source).toContain('botanicalIdentity > 0.5 && uBotanicalIdentityStyling > 0.5');
     expect(source).toContain('color += botanicalIdentityDelta(material, fieldPosition);');
+  });
+
+  it('decodes native SEED/PLNT lifecycle state with sample-free RGB-only arithmetic', () => {
+    const presenter = presenterHarness();
+    presenter.setBotanicalLifecycleStylingEnabled(false);
+    expect(presenter.uniforms.uniforms.uBotanicalLifecycleStyling).toBe(0);
+    expect(presenter.app.render).toHaveBeenCalledOnce();
+    presenter.app.render.mockClear();
+    presenter.setBotanicalLifecycleStylingEnabled(true);
+    expect(presenter.uniforms.uniforms.uBotanicalLifecycleStyling).toBe(1);
+    expect(presenter.app.render).toHaveBeenCalledOnce();
+
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const start = source.indexOf('vec3 botanicalLifecycleDelta(');
+    const end = source.indexOf('float thermalOpticsGain', start);
+    const helper = source.slice(start, end);
+    expect(start).toBeGreaterThan(0);
+    expect(end).toBeGreaterThan(start);
+    expect(source).toContain('uniform float uBotanicalLifecycleStyling;');
+    expect(helper).toContain('material == 50.0');
+    expect(helper).toContain('material != 10.0');
+    expect(helper).toContain('packedState / 32768.0');
+    expect(helper).toContain('packedState / 4096.0');
+    expect(helper).toContain('packedState / 16384.0');
+    expect(helper).toContain('if (tree < 0.5) return vec3(0.0);');
+    expect(helper).toContain('vec3(-64.0 / 255.0)');
+    expect(helper).not.toMatch(/texture\s*\(/);
+    expect(helper).not.toContain('uTime');
+    expect(helper).not.toMatch(/\balpha\s*[+*]?=/);
+    expect(source).toContain(
+      'color += botanicalLifecycleDelta(material, wallState.ba, fieldPosition, color);',
+    );
   });
 
   it('seeds, redraws, and bounds unusual solid identities to authoritative RGB arithmetic', () => {

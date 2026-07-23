@@ -88,6 +88,9 @@ import {
   LAVA_STATE_GRAPHICS_AUDIT, prepareLavaStateGraphicsAuditFixture,
 } from './lava-state-graphics-audit';
 import {
+  BOTANICAL_LIFECYCLE_GRAPHICS_AUDIT, prepareBotanicalLifecycleGraphicsAuditFixture,
+} from './botanical-lifecycle-graphics-audit';
+import {
   runNativeSeedGrowthAudit,
   type NativeSeedGrowthAuditSnapshot,
   type NativeSeedGrowthBackend,
@@ -395,6 +398,9 @@ export class Game {
       setBotanicalIdentityStyling: (enabled) => {
         this.renderer.setBotanicalIdentityStylingEnabled(enabled);
       },
+      setBotanicalLifecycleStyling: (enabled) => {
+        this.renderer.setBotanicalLifecycleStylingEnabled(enabled);
+      },
       setPowderBodyDepth: (enabled) => {
         this.renderer.setPowderBodyDepthEnabled(enabled);
       },
@@ -519,6 +525,10 @@ export class Game {
       lavaStateGraphicsAtlas: () => LAVA_STATE_GRAPHICS_AUDIT,
       prepareLavaStateGraphicsFixture: () => {
         prepareLavaStateGraphicsAuditFixture(this.simulation);
+      },
+      botanicalLifecycleGraphicsAtlas: () => BOTANICAL_LIFECYCLE_GRAPHICS_AUDIT,
+      prepareBotanicalLifecycleGraphicsFixture: () => {
+        prepareBotanicalLifecycleGraphicsAuditFixture(this.simulation);
       },
       nativeSeedGrowthSnapshot: () => {
         if (!this.nativeSeedGrowthAudit) throw new Error('Native seed growth fixture is not prepared');

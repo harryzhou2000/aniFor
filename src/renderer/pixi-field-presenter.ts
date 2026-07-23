@@ -133,6 +133,7 @@ uniform float uPoloStateStyling;
 uniform float uSpngStateStyling;
 uniform float uLavaAncestryStyling;
 uniform float uBotanicalIdentityStyling;
+uniform float uBotanicalLifecycleStyling;
 uniform float uPowderStyle;
 uniform float uPowderBodyDepth;
 uniform float uSuspensionActive;
@@ -609,6 +610,73 @@ vec3 botanicalIdentityDelta(float material, vec2 position) {
 vec3 vividColor(vec3 color, float saturation) {
   float luminance = dot(color, vec3(0.2126, 0.7152, 0.0722));
   return mix(vec3(luminance), color, saturation);
+}
+vec3 botanicalLifecycleDelta(
+  float material, vec2 stateBytes, vec2 position, vec3 sourceColor
+) {
+  float packedState = floor(stateBytes.x * 255.0 + 0.5)
+    + floor(stateBytes.y * 255.0 + 0.5) * 256.0;
+  vec2 world = floor(position);
+  if (material == 50.0) {
+    if (packedState < 0.5) return vec3(0.0);
+    float water = mod(packedState, 256.0);
+    float timer = mod(floor(packedState / 256.0), 256.0);
+    float moisture = water / 255.0;
+    float germination = min(timer, 200.0) / 200.0;
+    float swelling = min(1.0, water / 4.0);
+    vec2 local = mod(world, 11.0) - 5.0;
+    float radiusSquared = dot(local, local);
+    bool swollenHusk = radiusSquared >= 12.0 && radiusSquared <= 25.0;
+    bool openingSeam = local.x == 0.0 && local.y >= -3.0 && local.y <= 3.0;
+    bool rootTip = local.x >= -1.0 && local.x <= 1.0
+      && local.y >= 2.0 && local.y <= 4.0;
+    vec3 delta = vec3(-12.0, -9.0, 5.0) * moisture;
+    if (swollenHusk) delta += vec3(4.0, 7.0, 6.0) * swelling;
+    if (openingSeam) delta += vec3(5.0, 16.0, 3.0) * germination;
+    if (rootTip) delta += vec3(-2.0, 7.0, 5.0) * germination;
+    return clamp(delta, vec3(-24.0), vec3(24.0)) / 255.0;
+  }
+  if (material != 10.0
+    || mod(floor(packedState / 32768.0), 2.0) < 0.5
+    || mod(packedState, 32768.0) < 0.5) return vec3(0.0);
+  float tree = mod(packedState, 2.0);
+  // Inherited palette/direction are upstream tree genetics, not ordinary PLNT
+  // styling. Hydrated or active non-tree PLNT retains the normal body.
+  if (tree < 0.5) return vec3(0.0);
+  float phase = mod(floor(packedState / 2.0), 4.0);
+  float direction = mod(floor(packedState / 8.0), 8.0);
+  float inheritedColour = mod(floor(packedState / 64.0), 64.0);
+  float hydrationClass = mod(floor(packedState / 4096.0), 4.0);
+  float active = mod(floor(packedState / 16384.0), 2.0);
+  float cyan = mod(floor(inheritedColour / 16.0), 4.0) > 0.0 ? 1.0 : 0.0;
+  float magenta = mod(floor(inheritedColour / 4.0), 4.0) > 0.0 ? 1.0 : 0.0;
+  float yellow = mod(inheritedColour, 4.0) > 0.0 ? 1.0 : 0.0;
+  float paletteIndex = cyan * 4.0 + magenta * 2.0 + yellow;
+  vec3 leafColor = paletteIndex == 0.0 ? vec3(243.0, 246.0, 244.0)
+    : paletteIndex == 1.0 ? vec3(255.0, 223.0, 50.0)
+    : paletteIndex == 2.0 ? vec3(255.0, 183.0, 197.0)
+    : paletteIndex == 3.0 ? vec3(250.0, 0.0, 25.0)
+    : paletteIndex == 4.0 ? vec3(128.0, 206.0, 196.0)
+    : paletteIndex == 5.0 ? vec3(127.0, 255.0, 0.0)
+    : paletteIndex == 6.0 ? vec3(0.0, 74.0, 178.0)
+    : vec3(12.0, 172.0, 0.0);
+  bool vein = mod(
+    world.x * (direction + 1.0) + world.y * (8.0 - direction) + phase * 3.0,
+    13.0
+  ) <= 1.0;
+  bool growthTip = active > 0.5 && mod(
+    world.x * (8.0 - direction) - world.y * (direction + 1.0) + phase * 5.0,
+    17.0
+  ) <= 1.0;
+  float hydration = hydrationClass / 3.0;
+  vec3 variation = vec3(-2.0, -1.0, 4.0) * hydration;
+  if (vein) variation += vec3(-4.0, 7.0, -3.0);
+  if (growthTip) variation += vec3(7.0, 11.0, 4.0);
+  float blend = 0.42;
+  return clamp(
+    (leafColor / 255.0 - sourceColor) * blend + variation / 255.0,
+    vec3(-64.0 / 255.0), vec3(64.0 / 255.0)
+  );
 }
 float thermalOpticsGain(float optics) {
   if (optics == 13.0) return 0.82;
@@ -2968,6 +3036,9 @@ void main() {
     if (botanicalIdentity > 0.5 && uBotanicalIdentityStyling > 0.5) {
       color += botanicalIdentityDelta(material, fieldPosition);
     }
+    if (uBotanicalLifecycleStyling > 0.5 && (material == 10.0 || material == 50.0)) {
+      color += botanicalLifecycleDelta(material, wallState.ba, fieldPosition, color);
+    }
     float virusFamily = material == 62.0 || material == 215.0 || material == 216.0 ? 1.0 : 0.0;
     if (organic > 0.5 && botanicalIdentity < 0.5 && virusFamily < 0.5) {
       float fibre = 0.5 + 0.5 * sin(
@@ -3270,6 +3341,7 @@ export class PixiFieldPresenter {
       uSpngStateStyling: { value: 1, type: 'f32' },
       uLavaAncestryStyling: { value: 1, type: 'f32' },
       uBotanicalIdentityStyling: { value: 1, type: 'f32' },
+      uBotanicalLifecycleStyling: { value: 1, type: 'f32' },
       uPowderStyle: { value: powderRenderStyleValue('smooth'), type: 'f32' },
       uPowderBodyDepth: { value: 1, type: 'f32' },
       uSuspensionActive: {
@@ -3553,6 +3625,7 @@ export class PixiFieldPresenter {
     poloStateStylingEnabled = true,
     spngStateStylingEnabled = true,
     lavaAncestryStylingEnabled = true,
+    botanicalLifecycleStylingEnabled = true,
   ): void {
     const uniforms = this.uniforms.uniforms;
     uniforms.uGasFieldLighting = gasFieldLightingEnabled ? 1 : 0;
@@ -3592,6 +3665,7 @@ export class PixiFieldPresenter {
     uniforms.uSpngStateStyling = spngStateStylingEnabled ? 1 : 0;
     uniforms.uLavaAncestryStyling = lavaAncestryStylingEnabled ? 1 : 0;
     uniforms.uBotanicalIdentityStyling = botanicalIdentityStylingEnabled ? 1 : 0;
+    uniforms.uBotanicalLifecycleStyling = botanicalLifecycleStylingEnabled ? 1 : 0;
     uniforms.uPowderStyle = powderRenderStyleValue(powderRenderStyle);
   }
 
@@ -3769,6 +3843,11 @@ export class PixiFieldPresenter {
 
   setBotanicalIdentityStylingEnabled(enabled: boolean): void {
     this.uniforms.uniforms.uBotanicalIdentityStyling = enabled ? 1 : 0;
+    this.renderApplication();
+  }
+
+  setBotanicalLifecycleStylingEnabled(enabled: boolean): void {
+    this.uniforms.uniforms.uBotanicalLifecycleStyling = enabled ? 1 : 0;
     this.renderApplication();
   }
 

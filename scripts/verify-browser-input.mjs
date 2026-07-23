@@ -24,6 +24,10 @@ import {
   assertPairedLavaStateGraphics,
   auditLavaStateGraphics,
 } from './lava-state-graphics-audit.mjs';
+import {
+  assertPairedBotanicalLifecycleGraphics,
+  auditBotanicalLifecycleGraphics,
+} from './botanical-lifecycle-graphics-audit.mjs';
 
 const ROOT = process.cwd();
 const requestedPort = Number.parseInt(process.env.ANIFORTPT_AUDIT_PORT ?? '5178', 10);
@@ -80,6 +84,7 @@ const forceActivityGraphicsOnly = process.argv.includes('--force-activity-graphi
 const poloStateGraphicsOnly = process.argv.includes('--polo-state-graphics-only');
 const spngStateGraphicsOnly = process.argv.includes('--spng-state-graphics-only');
 const lavaStateGraphicsOnly = process.argv.includes('--lava-state-graphics-only');
+const botanicalLifecycleGraphicsOnly = process.argv.includes('--botanical-lifecycle-graphics-only');
 const nativeSeedGrowthOnly = process.argv.includes('--native-seed-growth-only');
 const usesProductionBundle = cellularGraphicsOnly || sensorGraphicsOnly
   || unusualPowderGraphicsOnly || explosivePowderGraphicsOnly || unusualSolidGraphicsOnly
@@ -88,6 +93,7 @@ const usesProductionBundle = cellularGraphicsOnly || sensorGraphicsOnly
   || crystalGraphicsOnly || pasteResistGraphicsOnly || vibrStateGraphicsOnly
   || deutStateGraphicsOnly || sourceTargetGraphicsOnly || forceActivityGraphicsOnly
   || poloStateGraphicsOnly || spngStateGraphicsOnly || lavaStateGraphicsOnly
+  || botanicalLifecycleGraphicsOnly
   || nativeSeedGrowthOnly
   || scaleEightOnly;
 const AUDIT_BASE_URL = usesProductionBundle ? PRODUCTION_BUNDLE_URL : ORIGIN + '/';
@@ -156,7 +162,7 @@ async function main() {
       || spongeGraphicsOnly || virusGraphicsOnly || waxGraphicsOnly || crystalGraphicsOnly
       || pasteResistGraphicsOnly || vibrStateGraphicsOnly || deutStateGraphicsOnly
       || sourceTargetGraphicsOnly || forceActivityGraphicsOnly || poloStateGraphicsOnly
-      || spngStateGraphicsOnly || lavaStateGraphicsOnly
+      || spngStateGraphicsOnly || lavaStateGraphicsOnly || botanicalLifecycleGraphicsOnly
       || nativeSeedGrowthOnly;
     if (powderBodyOnly) assertPairedPowderBodyDepth(results);
     if (liquidDepthOnly) assertPairedLiquidOpticalDepth(results);
@@ -186,6 +192,9 @@ async function main() {
     if (poloStateGraphicsOnly) assertPairedPoloStateGraphics(results, assert);
     if (spngStateGraphicsOnly) assertPairedSpngStateGraphics(results, assert);
     if (lavaStateGraphicsOnly) assertPairedLavaStateGraphics(results, assert);
+    if (botanicalLifecycleGraphicsOnly) {
+      assertPairedBotanicalLifecycleGraphics(results, assert);
+    }
     if (nativeSeedGrowthOnly) assertPairedNativeSeedGrowth(results);
     if (!scaleEightOnly && !materialAtlasOnly && !reducedAudit) assertPairedVisualRelief(results);
     if (!scaleEightOnly && !reducedAudit) assertPairedMaterialAtlas(results);
@@ -217,7 +226,7 @@ async function auditMode(mode) {
     || spongeGraphicsOnly || virusGraphicsOnly || waxGraphicsOnly || crystalGraphicsOnly
     || pasteResistGraphicsOnly || vibrStateGraphicsOnly || deutStateGraphicsOnly
     || sourceTargetGraphicsOnly || forceActivityGraphicsOnly || poloStateGraphicsOnly
-    || spngStateGraphicsOnly || lavaStateGraphicsOnly
+    || spngStateGraphicsOnly || lavaStateGraphicsOnly || botanicalLifecycleGraphicsOnly
     || nativeSeedGrowthOnly;
   const query = new URLSearchParams({
     scene: 'render-lab', inputAudit: '1', renderScale: '2',
@@ -509,6 +518,25 @@ async function auditMode(mode) {
       assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
       cdp.close();
       return { backend: mode, lavaStateGraphics, browserErrors: errors.length };
+    }
+    if (botanicalLifecycleGraphicsOnly) {
+      const botanicalLifecycleGraphics = await auditBotanicalLifecycleGraphics({
+        cdp,
+        mode,
+        evaluate,
+        waitFor,
+        waitForStablePageCapture,
+        assert,
+        worldWidth: WORLD_WIDTH,
+        worldHeight: WORLD_HEIGHT,
+      });
+      assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
+      cdp.close();
+      return {
+        backend: mode,
+        botanicalLifecycleGraphics,
+        browserErrors: errors.length,
+      };
     }
     if (mobileOnly) {
       const mobile = await auditMobile(

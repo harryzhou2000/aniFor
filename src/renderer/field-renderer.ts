@@ -32,6 +32,7 @@ import { applyCanvasExplosivePowderStyle } from './canvas-explosive-powder-style
 import { applyCanvasUnusualSolidMorphology } from './canvas-unusual-solid-style';
 import { applyCanvasSpongeMorphology } from './canvas-sponge-style';
 import { applyCanvasBotanicalMorphology } from './canvas-botanical-style';
+import { applyCanvasBotanicalLifecycleStyle } from './canvas-botanical-lifecycle-style';
 import {
   applyCanvasReconstructedSuspensionStyle, applyCanvasSemanticSuspensionStyle,
 } from './canvas-suspension-style';
@@ -209,6 +210,7 @@ export class MaterialRenderer {
   private spngStateStylingEnabled = true;
   private lavaAncestryStylingEnabled = true;
   private botanicalIdentityStylingEnabled = true;
+  private botanicalLifecycleStylingEnabled = true;
   private powderBodyDepthEnabled = true;
   private powderRenderStyle: PowderRenderStyle = 'smooth';
   private gasFieldLightingDirty = false;
@@ -653,6 +655,14 @@ export class MaterialRenderer {
     this.changed = true;
   }
 
+  setBotanicalLifecycleStylingEnabled(enabled: boolean): void {
+    if (enabled === this.botanicalLifecycleStylingEnabled) return;
+    this.botanicalLifecycleStylingEnabled = enabled;
+    this.presenter?.setBotanicalLifecycleStylingEnabled(enabled);
+    this.contourChunks.markAll();
+    this.changed = true;
+  }
+
   setPowderBodyDepthEnabled(enabled: boolean): void {
     if (enabled === this.powderBodyDepthEnabled) return;
     this.powderBodyDepthEnabled = enabled;
@@ -837,6 +847,7 @@ export class MaterialRenderer {
       this.poloStateStylingEnabled,
       this.spngStateStylingEnabled,
       this.lavaAncestryStylingEnabled,
+      this.botanicalLifecycleStylingEnabled,
     );
     // Route subsequent dirty cells to the candidate while its first expensive
     // frame is in flight. The known-good Canvas remains mounted underneath;
@@ -1344,6 +1355,11 @@ export class MaterialRenderer {
         if (this.botanicalIdentityStylingEnabled) {
           applyCanvasBotanicalMorphology(this.styledColor, material, x, y, index);
         }
+        if (this.botanicalLifecycleStylingEnabled && presentationState) {
+          applyCanvasBotanicalLifecycleStyle(
+            this.styledColor, material, presentationState[index], x, y,
+          );
+        }
         compositePixel(
           target, pixel, this.styledColor[0], this.styledColor[1], this.styledColor[2], 255,
         );
@@ -1666,6 +1682,11 @@ export class MaterialRenderer {
           if (this.botanicalIdentityStylingEnabled
             && (material === Material.VINE || material === Material.SEED || material === Material.YEST)) {
             applyCanvasBotanicalMorphology(this.styledColor, material, x, y, index);
+          }
+          if (this.botanicalLifecycleStylingEnabled && presentationState) {
+            applyCanvasBotanicalLifecycleStyle(
+              this.styledColor, material, presentationState[index], x, y,
+            );
           }
           const alpha = material === Material.Glass ? 198
             : optics === RenderOptics.TranslucentRigid ? 218 : 255;
