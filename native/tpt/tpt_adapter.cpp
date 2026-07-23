@@ -565,6 +565,13 @@ void ExtractFields()
 				// higher reaction-relevant life values up to the OPS saturation point.
 				presentationStateField[offset] = uint16_t(std::clamp(part.life, 0, 0xFFFF));
 			}
+			else if (part.type == PT_ACEL || part.type == PT_DCEL)
+			{
+				// Native ACEL/DCEL graphics glow exactly while their latest update found
+				// an eligible cardinal neighbour. Project that OPS-stable tmp flag without
+				// introducing a parallel state resource or changing material ownership.
+				presentationStateField[offset] = part.tmp != 0 ? uint16_t(1) : uint16_t(0);
+			}
 			else if (IsConfiguredSourceType(part.type))
 			{
 				// Configured sources retain their target only in native ctype. Project the

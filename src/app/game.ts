@@ -76,6 +76,9 @@ import {
   placeSourceTargetRecoveryProbe, prepareSourceTargetGraphicsAuditFixture,
 } from './source-target-graphics-audit';
 import {
+  FORCE_ACTIVITY_GRAPHICS_AUDIT, prepareForceActivityGraphicsAuditFixture,
+} from './force-activity-graphics-audit';
+import {
   runNativeSeedGrowthAudit,
   type NativeSeedGrowthAuditSnapshot,
   type NativeSeedGrowthBackend,
@@ -368,6 +371,9 @@ export class Game {
       setSourceTargetStyling: (enabled) => {
         this.renderer.setSourceTargetStylingEnabled(enabled);
       },
+      setForceActivityStyling: (enabled) => {
+        this.renderer.setForceActivityStylingEnabled(enabled);
+      },
       setBotanicalIdentityStyling: (enabled) => {
         this.renderer.setBotanicalIdentityStylingEnabled(enabled);
       },
@@ -479,6 +485,10 @@ export class Game {
       sourceTargetGraphicsAtlas: () => SOURCE_TARGET_GRAPHICS_AUDIT,
       prepareSourceTargetGraphicsFixture: () => {
         prepareSourceTargetGraphicsAuditFixture(this.simulation);
+      },
+      forceActivityGraphicsAtlas: () => FORCE_ACTIVITY_GRAPHICS_AUDIT,
+      prepareForceActivityGraphicsFixture: () => {
+        prepareForceActivityGraphicsAuditFixture(this.simulation);
       },
       nativeSeedGrowthSnapshot: () => {
         if (!this.nativeSeedGrowthAudit) throw new Error('Native seed growth fixture is not prepared');

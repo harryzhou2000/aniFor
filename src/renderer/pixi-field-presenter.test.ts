@@ -34,6 +34,7 @@ interface PresenterHarness {
   setVibrStateStylingEnabled: PixiFieldPresenter['setVibrStateStylingEnabled'];
   setDeutStateStylingEnabled: PixiFieldPresenter['setDeutStateStylingEnabled'];
   setSourceTargetStylingEnabled: PixiFieldPresenter['setSourceTargetStylingEnabled'];
+  setForceActivityStylingEnabled: PixiFieldPresenter['setForceActivityStylingEnabled'];
   setBotanicalIdentityStylingEnabled: PixiFieldPresenter['setBotanicalIdentityStylingEnabled'];
   setLiquidSilhouetteCohesionEnabled: PixiFieldPresenter['setLiquidSilhouetteCohesionEnabled'];
   setRenderStallHandler: PixiFieldPresenter['setRenderStallHandler'];
@@ -796,6 +797,32 @@ describe('Pixi presenter startup configuration', () => {
     presenter.setExplosivePowderStylingEnabled(true);
     expect(presenter.uniforms.uniforms.uExplosivePowderStyling).toBe(1);
     expect(presenter.app.render).toHaveBeenCalledTimes(2);
+  });
+
+  it('redraws the independent native force-activity toggle', () => {
+    const presenter = presenterHarness();
+
+    presenter.setForceActivityStylingEnabled(false);
+    expect(presenter.uniforms.uniforms.uForceActivityStyling).toBe(0);
+    expect(presenter.app.render).toHaveBeenCalledOnce();
+
+    presenter.setForceActivityStylingEnabled(true);
+    expect(presenter.uniforms.uniforms.uForceActivityStyling).toBe(1);
+    expect(presenter.app.render).toHaveBeenCalledTimes(2);
+  });
+
+  it('keeps ACEL/DCEL activity arithmetic-only and exact-owner guarded', () => {
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const start = source.indexOf('vec3 forceActivityDelta');
+    const end = source.indexOf('vec3 deutStateDelta', start);
+    const block = source.slice(start, end);
+
+    expect(start).toBeGreaterThan(0);
+    expect(end).toBeGreaterThan(start);
+    expect(block).toContain('material != 115.0 && material != 116.0');
+    expect(block).toContain('mod(floor(packedState), 2.0)');
+    expect(block).not.toContain('texture(');
+    expect(block).not.toContain('uTime');
   });
 
   it('keeps explosive-powder identity arithmetic-only and RGB-only', () => {

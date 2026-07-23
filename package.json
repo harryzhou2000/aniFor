@@ -24,6 +24,7 @@
     "audit:vibr-state": "node scripts/verify-browser-input.mjs --vibr-state-graphics-only",
     "audit:deut-state": "node scripts/verify-browser-input.mjs --deut-state-graphics-only",
     "audit:source-target": "node scripts/verify-browser-input.mjs --source-target-graphics-only",
+    "audit:force-activity": "node scripts/verify-browser-input.mjs --force-activity-graphics-only",
     "audit:native-seed-growth": "node scripts/verify-browser-input.mjs --native-seed-growth-only",
     "profile:render-fields": "vite-node scripts/profile-render-fields.ts",
     "setup:emsdk": "bash scripts/setup-emsdk.sh",

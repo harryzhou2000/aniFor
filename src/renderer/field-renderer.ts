@@ -74,6 +74,7 @@ import { receivesThermalMaterialStyle, thermalMaterialDelta } from './thermal-ma
 import { writeSolidOpticalDepth } from './solid-optical-depth-field';
 import { applyCanvasVibrStateStyle } from './canvas-vibr-state-style';
 import { applyCanvasDeutStateStyle } from './canvas-deut-state-style';
+import { applyCanvasForceActivityStyle } from './canvas-force-activity-style';
 import {
   applyCanvasSourceTargetStyle, isConfiguredSourceMaterial,
 } from './canvas-source-target-style';
@@ -200,6 +201,7 @@ export class MaterialRenderer {
   private vibrStateStylingEnabled = true;
   private deutStateStylingEnabled = true;
   private sourceTargetStylingEnabled = true;
+  private forceActivityStylingEnabled = true;
   private botanicalIdentityStylingEnabled = true;
   private powderBodyDepthEnabled = true;
   private powderRenderStyle: PowderRenderStyle = 'smooth';
@@ -605,6 +607,14 @@ export class MaterialRenderer {
     this.changed = true;
   }
 
+  setForceActivityStylingEnabled(enabled: boolean): void {
+    if (enabled === this.forceActivityStylingEnabled) return;
+    this.forceActivityStylingEnabled = enabled;
+    this.presenter?.setForceActivityStylingEnabled(enabled);
+    this.contourChunks.markAll();
+    this.changed = true;
+  }
+
   setBotanicalIdentityStylingEnabled(enabled: boolean): void {
     if (enabled === this.botanicalIdentityStylingEnabled) return;
     this.botanicalIdentityStylingEnabled = enabled;
@@ -793,6 +803,7 @@ export class MaterialRenderer {
       this.deutStateStylingEnabled,
       this.sourceTargetStylingEnabled,
       this.explosivePowderStylingEnabled,
+      this.forceActivityStylingEnabled,
     );
     // Route subsequent dirty cells to the candidate while its first expensive
     // frame is in flight. The known-good Canvas remains mounted underneath;
@@ -1582,6 +1593,11 @@ export class MaterialRenderer {
           );
           if (this.vibrStateStylingEnabled && presentationState) {
             applyCanvasVibrStateStyle(
+              this.styledColor, material, presentationState[index], x, y,
+            );
+          }
+          if (this.forceActivityStylingEnabled && presentationState) {
+            applyCanvasForceActivityStyle(
               this.styledColor, material, presentationState[index], x, y,
             );
           }

@@ -109,6 +109,61 @@ describe('direct Powder Toy backend', () => {
     expect(simulation.presentationState().every((value) => value === 0)).toBe(true);
   });
 
+  it('projects native ACEL/DCEL activity and preserves active tmp through OPS1', async () => {
+    const simulation = await PowderToyBackend.load(moduleArtifact.href);
+    const fixtures = [
+      { material: Material.ACEL, active: { x: 180, y: 180 }, isolated: { x: 210, y: 180 } },
+      { material: Material.DCEL, active: { x: 240, y: 180 }, isolated: { x: 270, y: 180 } },
+    ] as const;
+    const indexOf = (x: number, y: number): number => y * simulation.width + x;
+
+    for (const fixture of fixtures) {
+      const { x, y } = fixture.active;
+      // A three-cell diamond shelf keeps the cardinal Sand neighbour in place;
+      // the isolated same-owner control has no eligible cardinal neighbour.
+      for (let supportX = x; supportX <= x + 2; supportX++) {
+        simulation.paint(supportX, y + 1, Material.Wall, 0);
+      }
+      simulation.paint(x, y, fixture.material, 0);
+      simulation.paint(x + 1, y, Material.Sand, 0);
+      simulation.paint(fixture.isolated.x, fixture.isolated.y, fixture.material, 0);
+    }
+
+    let cells = simulation.cells();
+    let state = simulation.presentationState();
+    for (const fixture of fixtures) {
+      expect(cells[indexOf(fixture.active.x, fixture.active.y)]).toBe(fixture.material);
+      expect(cells[indexOf(fixture.isolated.x, fixture.isolated.y)]).toBe(fixture.material);
+      expect(state[indexOf(fixture.active.x, fixture.active.y)]).toBe(0);
+      expect(state[indexOf(fixture.isolated.x, fixture.isolated.y)]).toBe(0);
+    }
+
+    simulation.step();
+    cells = simulation.cells();
+    state = simulation.presentationState();
+    for (const fixture of fixtures) {
+      expect(cells[indexOf(fixture.active.x, fixture.active.y)]).toBe(fixture.material);
+      expect(cells[indexOf(fixture.isolated.x, fixture.isolated.y)]).toBe(fixture.material);
+      expect(state[indexOf(fixture.active.x, fixture.active.y)]).toBe(1);
+      expect(state[indexOf(fixture.isolated.x, fixture.isolated.y)]).toBe(0);
+    }
+
+    const file = simulation.saveFile();
+    expect(new TextDecoder().decode(file.slice(0, 4))).toBe('OPS1');
+    const restored = await PowderToyBackend.load(moduleArtifact.href);
+    restored.loadFile(file);
+    cells = restored.cells();
+    state = restored.presentationState();
+    for (const fixture of fixtures) {
+      const activeIndex = fixture.active.y * restored.width + fixture.active.x;
+      const isolatedIndex = fixture.isolated.y * restored.width + fixture.isolated.x;
+      expect(cells[activeIndex]).toBe(fixture.material);
+      expect(cells[isolatedIndex]).toBe(fixture.material);
+      expect(state[activeIndex]).toBe(1);
+      expect(state[isolatedIndex]).toBe(0);
+    }
+  });
+
   it('extracts the native VIBR explosion countdown and alternate mode flags', async () => {
     const simulation = await PowderToyBackend.load(moduleArtifact.href);
     const point = { x: 306, y: 180 };

@@ -18,6 +18,11 @@ export const DEUT_PRESENTATION_STATE = {
   maximumConcentration: 0xffff,
 } as const;
 
+/** Native ACEL/DCEL latest-update activity flag in the owner-multiplexed state word. */
+export const FORCE_ACTIVITY_PRESENTATION_STATE = {
+  activeMask: 0x0001,
+} as const;
+
 /** Exact public material IDs whose native particles retain a configured ctype target. */
 export const CONFIGURED_SOURCE_MATERIAL_IDS = [124, 126, 127, 137, 158, 159] as const;
 
