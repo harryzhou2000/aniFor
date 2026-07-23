@@ -75,6 +75,11 @@ import {
   SOURCE_TARGET_GRAPHICS_AUDIT, SOURCE_TARGET_RECOVERY_PROBE,
   placeSourceTargetRecoveryProbe, prepareSourceTargetGraphicsAuditFixture,
 } from './source-target-graphics-audit';
+import {
+  runNativeSeedGrowthAudit,
+  type NativeSeedGrowthAuditSnapshot,
+  type NativeSeedGrowthBackend,
+} from './native-seed-growth-audit';
 
 const AUTOSAVE_KEY = 'stillroom-world-v1';
 
@@ -98,6 +103,7 @@ export class Game {
   private probeY = 0;
   private lastIndicatorUpdate = -Infinity;
   private indicator?: HTMLOutputElement;
+  private nativeSeedGrowthAudit?: NativeSeedGrowthAuditSnapshot;
 
   constructor(private readonly root: HTMLElement, simulation: SimulationBackend) {
     this.simulation = simulation;
@@ -473,6 +479,15 @@ export class Game {
       sourceTargetGraphicsAtlas: () => SOURCE_TARGET_GRAPHICS_AUDIT,
       prepareSourceTargetGraphicsFixture: () => {
         prepareSourceTargetGraphicsAuditFixture(this.simulation);
+      },
+      nativeSeedGrowthSnapshot: () => {
+        if (!this.nativeSeedGrowthAudit) throw new Error('Native seed growth fixture is not prepared');
+        return this.nativeSeedGrowthAudit;
+      },
+      prepareNativeSeedGrowthFixture: () => {
+        this.nativeSeedGrowthAudit = runNativeSeedGrowthAudit(
+          this.simulation as NativeSeedGrowthBackend,
+        );
       },
       canvasPresentationTiming: () => this.renderer.getCanvasPresentationTiming(),
       requestWebGLPresentationTimingSample: () => this.renderer.requestWebGLPresentationTimingSample(),

@@ -748,23 +748,83 @@ describe('direct Powder Toy backend', () => {
     expect(sandBelowWall).toBe(0);
   }, 15000);
 
-  it('grows native plants from seeds supplied with soil and water', async () => {
-    const simulation = await PowderToyBackend.load(moduleArtifact.href);
-    for (let x = 250; x < 360; x++) {
-      for (let y = 250; y < 254; y++) simulation.paint(x, y, Material.Wall, 0);
-    }
-    for (let x = 260; x < 350; x++) {
-      for (let y = 242; y < 250; y++) simulation.paint(x, y, Material.Sand, 0);
-    }
-    for (let x = 270; x < 295; x++) {
-      for (let y = 225; y < 241; y++) simulation.paint(x, y, Material.Water, 0);
-    }
-    for (let x = 305; x <= 325; x += 5) simulation.paint(x, 241, Material.SEED, 0);
+  it('continues native seed growth through OPS1 and reports it through the dirty stream', async () => {
+    const buildFixture = async (soil: boolean, water: boolean): Promise<PowderToyBackend> => {
+      const simulation = await PowderToyBackend.load(moduleArtifact.href);
+      for (let x = 250; x < 360; x++) {
+        for (let y = 250; y < 254; y++) simulation.paint(x, y, Material.Wall, 0);
+      }
+      if (soil) {
+        for (let x = 260; x < 350; x++) {
+          for (let y = 242; y < 250; y++) simulation.paint(x, y, Material.Sand, 0);
+        }
+      }
+      if (water) {
+        for (let x = 270; x < 295; x++) {
+          for (let y = 225; y < 241; y++) simulation.paint(x, y, Material.Water, 0);
+        }
+      }
+      for (let x = 305; x <= 325; x += 5) simulation.paint(x, 241, Material.SEED, 0);
+      return simulation;
+    };
+    const countGrowth = (simulation: PowderToyBackend): number => simulation.cells()
+      .filter((material) => material === Material.Wood || material === Material.Plant).length;
+    const advance = (simulation: PowderToyBackend, ticks: number): void => {
+      for (let tick = 0; tick < ticks; tick++) simulation.step();
+    };
 
-    for (let index = 0; index < 900; index++) simulation.step();
-    const grownCells = simulation.cells().filter((material) => material === Material.Wood || material === Material.Plant);
-    expect(grownCells.length).toBeGreaterThan(50);
-  }, 15000);
+    const checkpointTick = 300;
+    const continuationTicks = 600;
+    const source = await buildFixture(true, true);
+    advance(source, checkpointTick);
+    const growthAtCheckpoint = countGrowth(source);
+    const checkpointCells = source.cells().slice();
+    const file = source.saveFile();
+    expect(new TextDecoder().decode(file.slice(0, 4))).toBe('OPS1');
+
+    const restored = await PowderToyBackend.load(moduleArtifact.href);
+    restored.loadFile(file);
+    restored.consumeDirtyCells();
+    advance(restored, continuationTicks);
+    const dirtyGrowth = restored.consumeDirtyCells().filter(
+      ({ material }) => material === Material.Wood || material === Material.Plant,
+    );
+    const positiveGrowth = countGrowth(restored);
+    const continuedCells = restored.cells();
+    const newlyGrownIndices: number[] = [];
+    for (let index = 0; index < continuedCells.length; index++) {
+      const material = continuedCells[index];
+      const previous = checkpointCells[index];
+      if ((material === Material.Wood || material === Material.Plant)
+        && previous !== Material.Wood && previous !== Material.Plant) {
+        newlyGrownIndices.push(index);
+      }
+    }
+    const dirtyGrowthIndices = new Set(dirtyGrowth.map(({ index }) => index));
+    const positiveWood = continuedCells.filter((material) => material === Material.Wood).length;
+    const positivePlant = continuedCells.filter((material) => material === Material.Plant).length;
+    const dirtyWood = dirtyGrowth.filter(({ material }) => material === Material.Wood).length;
+    const dirtyPlant = dirtyGrowth.filter(({ material }) => material === Material.Plant).length;
+
+    const withoutWater = await buildFixture(true, false);
+    advance(withoutWater, checkpointTick + continuationTicks);
+    const dryGrowth = countGrowth(withoutWater);
+    const withoutSoil = await buildFixture(false, true);
+    advance(withoutSoil, checkpointTick + continuationTicks);
+    const soillessGrowth = countGrowth(withoutSoil);
+
+    expect(growthAtCheckpoint).toBe(39);
+    expect(positiveGrowth).toBe(568);
+    expect(positiveWood).toBe(494);
+    expect(positivePlant).toBe(74);
+    expect(dirtyGrowth).toHaveLength(532);
+    expect(dirtyWood).toBe(458);
+    expect(dirtyPlant).toBe(74);
+    expect(newlyGrownIndices).toHaveLength(532);
+    expect(newlyGrownIndices.every((index) => dirtyGrowthIndices.has(index))).toBe(true);
+    expect(dryGrowth).toBe(0);
+    expect(soillessGrowth).toBe(0);
+  }, 20000);
 
   it('restores full native state for deterministic continuation', async () => {
     const source = await PowderToyBackend.load(moduleArtifact.href);

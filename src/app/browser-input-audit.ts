@@ -22,6 +22,7 @@ import type { PasteResistGraphicsAuditSnapshot } from './paste-resist-graphics-a
 import type { VibrStateGraphicsAuditSnapshot } from './vibr-state-graphics-audit';
 import type { DeutStateGraphicsAuditSnapshot } from './deut-state-graphics-audit';
 import type { SourceTargetGraphicsAuditSnapshot } from './source-target-graphics-audit';
+import type { NativeSeedGrowthAuditSnapshot } from './native-seed-growth-audit';
 
 export interface BrowserInputAuditApi {
   readonly version: 1;
@@ -117,6 +118,8 @@ export interface BrowserInputAuditApi {
   prepareDeutStateGraphicsFixture(): void;
   sourceTargetGraphicsAtlas(): SourceTargetGraphicsAuditSnapshot;
   prepareSourceTargetGraphicsFixture(): void;
+  nativeSeedGrowthSnapshot(): NativeSeedGrowthAuditSnapshot;
+  prepareNativeSeedGrowthFixture(): void;
   canvasPresentationTiming(): CanvasPresentationTiming | undefined;
   requestWebGLPresentationTimingSample(): boolean;
   webGLPresentationTiming(): WebGLPresentationTiming | undefined;

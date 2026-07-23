@@ -60,12 +60,13 @@ const pasteResistGraphicsOnly = process.argv.includes('--paste-resist-graphics-o
 const vibrStateGraphicsOnly = process.argv.includes('--vibr-state-graphics-only');
 const deutStateGraphicsOnly = process.argv.includes('--deut-state-graphics-only');
 const sourceTargetGraphicsOnly = process.argv.includes('--source-target-graphics-only');
+const nativeSeedGrowthOnly = process.argv.includes('--native-seed-growth-only');
 const usesProductionBundle = cellularGraphicsOnly || sensorGraphicsOnly
   || unusualPowderGraphicsOnly || explosivePowderGraphicsOnly || unusualSolidGraphicsOnly
   || liquidIdentityGraphicsOnly || gasIdentityGraphicsOnly || energyRadioactiveGraphicsOnly
   || organicPlantGraphicsOnly || spongeGraphicsOnly || virusGraphicsOnly || waxGraphicsOnly
   || crystalGraphicsOnly || pasteResistGraphicsOnly || vibrStateGraphicsOnly
-  || deutStateGraphicsOnly || sourceTargetGraphicsOnly
+  || deutStateGraphicsOnly || sourceTargetGraphicsOnly || nativeSeedGrowthOnly
   || scaleEightOnly;
 const AUDIT_BASE_URL = usesProductionBundle ? PRODUCTION_BUNDLE_URL : ORIGIN + '/';
 const screenshotRequest = process.argv.find((argument) => argument.startsWith('--screenshot='))?.slice('--screenshot='.length);
@@ -132,7 +133,7 @@ async function main() {
       || gasIdentityGraphicsOnly || energyRadioactiveGraphicsOnly || organicPlantGraphicsOnly
       || spongeGraphicsOnly || virusGraphicsOnly || waxGraphicsOnly || crystalGraphicsOnly
       || pasteResistGraphicsOnly || vibrStateGraphicsOnly || deutStateGraphicsOnly
-      || sourceTargetGraphicsOnly;
+      || sourceTargetGraphicsOnly || nativeSeedGrowthOnly;
     if (powderBodyOnly) assertPairedPowderBodyDepth(results);
     if (liquidDepthOnly) assertPairedLiquidOpticalDepth(results);
     if (solidDepthOnly) assertPairedSolidOpticalDepth(results);
@@ -157,6 +158,7 @@ async function main() {
     if (vibrStateGraphicsOnly) assertPairedVibrStateGraphics(results);
     if (deutStateGraphicsOnly) assertPairedDeutStateGraphics(results);
     if (sourceTargetGraphicsOnly) assertPairedSourceTargetGraphics(results, assert);
+    if (nativeSeedGrowthOnly) assertPairedNativeSeedGrowth(results);
     if (!scaleEightOnly && !materialAtlasOnly && !reducedAudit) assertPairedVisualRelief(results);
     if (!scaleEightOnly && !reducedAudit) assertPairedMaterialAtlas(results);
     compactMaterialAtlasResults(results);
@@ -186,11 +188,12 @@ async function auditMode(mode) {
     || gasIdentityGraphicsOnly || energyRadioactiveGraphicsOnly || organicPlantGraphicsOnly
     || spongeGraphicsOnly || virusGraphicsOnly || waxGraphicsOnly || crystalGraphicsOnly
     || pasteResistGraphicsOnly || vibrStateGraphicsOnly || deutStateGraphicsOnly
-    || sourceTargetGraphicsOnly;
+    || sourceTargetGraphicsOnly || nativeSeedGrowthOnly;
   const query = new URLSearchParams({
     scene: 'render-lab', inputAudit: '1', renderScale: '2',
     auditStage: startsBlank ? 'blank' : 'canonical',
     ...(startsBlank ? { blankAudit: '1' } : {}),
+    ...(nativeSeedGrowthOnly ? { simulation: 'native' } : {}),
     ...(mode === 'canvas2d' ? { renderer: 'canvas2d' } : {}),
   });
   const auditUrl = `${AUDIT_BASE_URL}?${query}`;
@@ -323,6 +326,12 @@ async function auditMode(mode) {
       assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
       cdp.close();
       return { backend: mode, explosivePowderGraphics, browserErrors: errors.length };
+    }
+    if (nativeSeedGrowthOnly) {
+      const nativeSeedGrowth = await auditNativeSeedGrowth(cdp, mode);
+      assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
+      cdp.close();
+      return { backend: mode, nativeSeedGrowth, browserErrors: errors.length };
     }
     if (unusualSolidGraphicsOnly) {
       const unusualSolidGraphics = await auditUnusualSolidGraphics(cdp, mode);
@@ -3305,6 +3314,195 @@ function normalizeSensorGraphicsAtlas(snapshot) {
       ? cards.map(({ guardedBlank }) => guardedBlank)
       : (snapshot?.guardedBlanks ?? []).map(cellularRect),
   };
+}
+
+/** Native-physics-to-framebuffer proof for the official SEED growth lifecycle. */
+async function auditNativeSeedGrowth(cdp, mode) {
+  const started = performance.now();
+  const stage = (name) => console.error(
+    `[native-seed-growth:${mode}] ${name} ${Math.round(performance.now() - started)}ms`,
+  );
+  const snapshot = await evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    if (typeof audit.prepareNativeSeedGrowthFixture !== 'function'
+      || typeof audit.nativeSeedGrowthSnapshot !== 'function'
+      || typeof audit.setBotanicalIdentityStyling !== 'function') {
+      throw new Error('Native seed-growth browser API unavailable');
+    }
+    audit.prepareNativeSeedGrowthFixture();
+    return audit.nativeSeedGrowthSnapshot();
+  })()`);
+  const canonical = snapshot.regions.find(({ id }) => id === 'canonical');
+  const noWater = snapshot.regions.find(({ id }) => id === 'no-water');
+  const noSoil = snapshot.regions.find(({ id }) => id === 'no-soil');
+  assert(snapshot.width === WORLD_WIDTH && snapshot.height === WORLD_HEIGHT
+      && snapshot.ticks === 900 && snapshot.initialSeedCount === 15
+      && canonical?.finalWoodCount > 0 && canonical?.finalPlantCount > 0
+      && canonical.finalGrowthCount > 50 && canonical.dirtyGrownCount > 50
+      && noWater?.finalGrowthCount === 0 && noSoil?.finalGrowthCount === 0
+      && snapshot.unassignedGrowthCount === 0,
+  `${mode}: native SEED fixture lost positive growth or negative controls (${JSON.stringify(snapshot)})`);
+  stage('native-growth-ready');
+
+  const setStyling = (enabled) => evaluate(cdp,
+    `window.__ANIFOR_INPUT_AUDIT__.setBotanicalIdentityStyling(${enabled}); true`);
+  await setStyling(false);
+  await waitForStablePageCapture(cdp, `${mode} native tree flat framebuffer`);
+  const flat = await sampleNativeSeedGrowthBacking(cdp);
+  await setStyling(true);
+  await waitForStablePageCapture(cdp, `${mode} native tree styled framebuffer`);
+  const styled = await sampleNativeSeedGrowthBacking(cdp);
+  await setStyling(false);
+  await waitForStablePageCapture(cdp, `${mode} native tree repeated-flat framebuffer`);
+  const repeated = await sampleNativeSeedGrowthBacking(cdp);
+
+  const response = summarizeNativeSeedGrowthResponse(flat, styled, repeated, mode);
+  assert(response.grownCells === canonical.finalGrowthCount
+      && response.woodCells === canonical.finalWoodCount
+      && response.plantCells === canonical.finalPlantCount
+      && response.unsupportedCells === 0 && response.alphaDrift === 0
+      && response.rgbRms > 0.05 && response.rgbRms <= 48
+      && response.rgbPeak > 0 && response.rgbPeak <= 96
+      && response.changedCellRatio >= 0.05 && response.repeatRgbPeak === 0,
+  `${mode}: native tree presentation is absent, unsupported, unbounded, or unstable (${JSON.stringify(response)})`);
+  stage('framebuffer-ready');
+  return {
+    ticks: snapshot.ticks,
+    initialSeeds: snapshot.initialSeedCount,
+    growth: {
+      wood: canonical.finalWoodCount,
+      plant: canonical.finalPlantCount,
+      total: canonical.finalGrowthCount,
+      dirty: canonical.dirtyGrownCount,
+      bounds: canonical.finalGrowthBounds,
+    },
+    controls: {
+      noWater: noWater.finalGrowthCount,
+      noSoil: noSoil.finalGrowthCount,
+      unassigned: snapshot.unassignedGrowthCount,
+    },
+    response,
+  };
+}
+
+async function sampleNativeSeedGrowthBacking(cdp) {
+  return evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    const snapshot = audit.nativeSeedGrowthSnapshot();
+    const canonical = snapshot.regions.find(({ id }) => id === 'canonical');
+    const world = document.querySelector('.world-canvas');
+    if (!(world instanceof HTMLCanvasElement)) throw new Error('World canvas unavailable');
+    const copy = document.createElement('canvas');
+    copy.width = world.width;
+    copy.height = world.height;
+    const context = copy.getContext('2d', { willReadFrequently: true });
+    if (!context) throw new Error('Native seed-growth backing sampler unavailable');
+    context.drawImage(world, 0, 0);
+    const pixels = context.getImageData(0, 0, copy.width, copy.height).data;
+    const scaleX = copy.width / ${WORLD_WIDTH};
+    const scaleY = copy.height / ${WORLD_HEIGHT};
+    const samples = [];
+    for (let y = canonical.bounds.y; y < canonical.bounds.y + canonical.bounds.height; y++) {
+      for (let x = canonical.bounds.x; x < canonical.bounds.x + canonical.bounds.width; x++) {
+        const material = audit.cell(x, y);
+        if (material !== 9 && material !== 10) continue;
+        const px = Math.min(copy.width - 1, Math.floor((x + 0.5) * scaleX));
+        const py = Math.min(copy.height - 1, Math.floor((y + 0.5) * scaleY));
+        const offset = (py * copy.width + px) * 4;
+        samples.push({
+          x, y, material,
+          red: pixels[offset], green: pixels[offset + 1], blue: pixels[offset + 2],
+          alpha: pixels[offset + 3],
+        });
+      }
+    }
+    return { width: copy.width, height: copy.height, scaleX, scaleY, samples };
+  })()`);
+}
+
+function summarizeNativeSeedGrowthResponse(flat, styled, repeated, mode) {
+  assert(flat.width === styled.width && flat.width === repeated.width
+      && flat.height === styled.height && flat.height === repeated.height
+      && Number.isInteger(flat.scaleX) && flat.scaleX === flat.scaleY
+      && flat.samples.length === styled.samples.length
+      && flat.samples.length === repeated.samples.length,
+  `${mode}: native tree backing geometry changed`);
+  let squared = 0;
+  let rgbPeak = 0;
+  let repeatRgbPeak = 0;
+  let changedCells = 0;
+  let unsupportedCells = 0;
+  let alphaDrift = 0;
+  let woodCells = 0;
+  let plantCells = 0;
+  const responseProfile = new Float64Array(16);
+  let signature = 2166136261;
+  const xs = flat.samples.map(({ x }) => x);
+  const ys = flat.samples.map(({ y }) => y);
+  const left = Math.min(...xs), right = Math.max(...xs) + 1;
+  const top = Math.min(...ys), bottom = Math.max(...ys) + 1;
+  for (let index = 0; index < flat.samples.length; index++) {
+    const base = flat.samples[index];
+    const changed = styled.samples[index];
+    const returned = repeated.samples[index];
+    assert(changed.x === base.x && changed.y === base.y && changed.material === base.material
+        && returned.x === base.x && returned.y === base.y && returned.material === base.material,
+    `${mode}: native tree semantic ownership changed at sample ${index}`);
+    woodCells += Number(base.material === 9);
+    plantCells += Number(base.material === 10);
+    unsupportedCells += Number(base.alpha === 0 || changed.alpha === 0 || returned.alpha === 0);
+    alphaDrift = Math.max(alphaDrift,
+      Math.abs(changed.alpha - base.alpha), Math.abs(returned.alpha - base.alpha));
+    const bucketX = Math.min(3, Math.floor((base.x - left) * 4 / Math.max(1, right - left)));
+    const bucketY = Math.min(3, Math.floor((base.y - top) * 4 / Math.max(1, bottom - top)));
+    let cellChanged = false;
+    for (const channel of ['red', 'green', 'blue']) {
+      const delta = changed[channel] - base[channel];
+      const repeat = returned[channel] - base[channel];
+      squared += delta * delta;
+      rgbPeak = Math.max(rgbPeak, Math.abs(delta));
+      repeatRgbPeak = Math.max(repeatRgbPeak, Math.abs(repeat));
+      responseProfile[bucketY * 4 + bucketX] += Math.abs(delta);
+      cellChanged ||= delta !== 0;
+      signature = Math.imul(signature ^ (delta + 255), 16777619) >>> 0;
+    }
+    changedCells += Number(cellChanged);
+  }
+  const total = Math.max(1, responseProfile.reduce((sum, value) => sum + value, 0));
+  return {
+    backing: `${flat.width}x${flat.height}`,
+    scale: `${flat.scaleX}x${flat.scaleY}`,
+    grownCells: flat.samples.length,
+    woodCells,
+    plantCells,
+    unsupportedCells,
+    alphaDrift,
+    rgbRms: round(Math.sqrt(squared / Math.max(1, flat.samples.length * 3)), 4),
+    rgbPeak,
+    changedCellRatio: round(changedCells / Math.max(1, flat.samples.length), 5),
+    repeatRgbPeak,
+    responseSignature: signature,
+    responseProfile: Array.from(responseProfile, (value) => round(value / total, 5)),
+  };
+}
+
+function assertPairedNativeSeedGrowth(results) {
+  const canvas = results.find((result) => result.backend === 'canvas2d')?.nativeSeedGrowth;
+  const webgl = results.find((result) => result.backend === 'webgl')?.nativeSeedGrowth;
+  assert(canvas && webgl, 'Native seed-growth gate requires Canvas2D and WebGL');
+  assert(canvas.growth.total === webgl.growth.total
+      && canvas.growth.wood === webgl.growth.wood
+      && canvas.growth.plant === webgl.growth.plant
+      && canvas.growth.dirty === webgl.growth.dirty
+      && canvas.controls.noWater === 0 && webgl.controls.noWater === 0
+      && canvas.controls.noSoil === 0 && webgl.controls.noSoil === 0,
+  `Canvas/WebGL native seed-growth state diverged (${JSON.stringify({ canvas, webgl })})`);
+  const responseRatio = canvas.response.rgbRms / Math.max(0.01, webgl.response.rgbRms);
+  const profileDistance = Math.max(...canvas.response.responseProfile.map(
+    (value, index) => Math.abs(value - webgl.response.responseProfile[index]),
+  ));
+  assert(responseRatio >= 0.20 && responseRatio <= 5.0 && profileDistance <= 0.20,
+    `Canvas/WebGL native tree response diverged (${responseRatio}/${profileDistance})`);
 }
 
 /** Reuses the exact powder-topology gate with the explosive fixture/API bound in place. */
