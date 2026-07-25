@@ -767,3 +767,35 @@ The next material-primary slice is wider exact coverage of palette-led catalog f
   Canvas recovery, and reported zero browser errors. Next checkpoint: review,
   commit, and push `main_codex`; manual Pages deployment still awaits GitHub
   login.
+
+## Current dense unlike-liquid interface checkpoint
+
+- Dense exact Water/Oil-style contacts now receive a shared, restrained
+  family-coloured optical rim in Canvas2D and WebGL. It is driven only by the
+  existing species-safe liquid RGB/alpha field and the already-computed
+  cardinal interface slope: no material is averaged, no semantic cell is
+  claimed, and no alpha, support, topology, ownership, physics, field,
+  texture, sampler, target, pass, upload, allocation, or output-scale resource
+  changes.
+- The contact response is symmetric across either owner of the same boundary
+  and capped at six Canvas RGB bytes per channel. It is enabled through the
+  existing liquid-volume diagnostic toggle, is limited to dense ordinary
+  liquid/liquid contact away from native walls and foreign solid/gas contact,
+  and remains an exact no-op for sparse field support, zero contrast, traits,
+  emissive liquids, Molten/Lava, reconstructed support, and ordinary
+  liquid-air silhouettes. The pre-existing signed optical normal remains in
+  place; the new rim prevents that normal from reading as a constantly changing
+  dark seam.
+- The focused helper probes prove the two directional signs produce the same
+  rim, preserve alpha, stay within six RGB bytes across aqueous/oily/corrosive/
+  cryogenic/metallic/viscous families, and retain every protected no-op.
+  Local validation passes all `114` test files / `718` tests and the
+  834-module production static-closure build.
+- The exact current-bundle true-8× browser gate completed in `554799 ms` with
+  requested/effective `8/8`, a `4896×3072` WebGL backing, eight completed
+  GPU-fence frames at `5605.3/5657.5/5693.8 ms` median/p90/max, full
+  217-identity atlas plus deep-zoom input/topology/native-state checks, and
+  both forced-fence and real context-loss camera-preserving Canvas recovery.
+  It reported zero browser errors and left no audit Chrome process. Next
+  checkpoint: commit and push `main_codex`; Pages deployment remains manual
+  pending GitHub login.

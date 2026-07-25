@@ -2142,6 +2142,21 @@ void main() {
       liquidFresnelShadow = vec3(0.70, 0.64, 0.58);
       liquidFresnelAbsorption = vec3(0.85, 0.60, 0.35);
     }
+    // A dense exact-species boundary gets the same quiet, family-coloured rim
+    // in both presenters. The existing slope/marker prove contact, and the
+    // symmetric magnitude avoids a travelling light/dark divider as either
+    // fluid advances by one cell. No coverage or support decision reads this.
+    if (uLiquidVolumeChroma > 0.5 && liquidOnly < 0.5 && halo < 0.5
+      && wall < 0.5 && family == 2.0 && traits < 0.5 && !materialEmissive
+      && molten < 0.5 && foreignMatterContact < 0.5 && unlikeMaterialContact > 0.5
+      && liquidDepth > 0.38 && liquidNeighbourMean > 0.48) {
+      float liquidInterfaceMeniscusStrength = 0.13 + aqueous * 0.03
+        + oily * 0.01 + cryogenic * 0.03 + metallicLiquid * 0.01 - corrosive * 0.02;
+      float liquidInterfaceMeniscus = min(abs(liquidInterfaceRelief), 0.12)
+        * liquidDepth * liquidInterfaceMeniscusStrength;
+      color += (vec3(1.0) - clamp(color, 0.0, 1.0))
+        * liquidFresnelKey * liquidInterfaceMeniscus;
+    }
     // Split the connected air-facing shell into a reflected outer lip and a
     // deeper absorption shoulder. Both are derived from the existing Hermite
     // density and slope, so the meniscus remains stable at rest and adds no

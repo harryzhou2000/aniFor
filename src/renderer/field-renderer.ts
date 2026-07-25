@@ -17,7 +17,10 @@ import {
   createLiquidSurfaceScratch, reconstructLiquidSurface, type LiquidSurfaceScratch,
 } from './canvas-liquid-surface';
 import {
-  applyCanvasLiquidBodyOptics, applyCanvasLiquidMacroSheen, applyCanvasLiquidVolumeChroma,
+  applyCanvasLiquidBodyOptics,
+  applyCanvasLiquidInterfaceMeniscus,
+  applyCanvasLiquidMacroSheen,
+  applyCanvasLiquidVolumeChroma,
   canvasLiquidContourScale, canvasLiquidMacroWave, canvasLiquidVolumeChromaResponse,
   canvasLiquidEmissionExposure, canvasLiquidFieldRelief,
   canvasLiquidEmissionSurfaceExposure, canvasLiquidSpeciesRelief, canvasLiquidSurfaceExposure,
@@ -1143,11 +1146,17 @@ export class MaterialRenderer {
         || (right !== material && fields.lookups.liquidByMaterial[right] !== 0)
         || (bottom !== material && fields.lookups.liquidByMaterial[bottom] !== 0)
       );
+      const liquidForeignMatterContact = phase === RenderPhase.Liquid && (
+        (top !== material && top !== Material.Empty && fields.lookups.liquidByMaterial[top] === 0)
+        || (left !== material && left !== Material.Empty && fields.lookups.liquidByMaterial[left] === 0)
+        || (right !== material && right !== Material.Empty && fields.lookups.liquidByMaterial[right] === 0)
+        || (bottom !== material && bottom !== Material.Empty && fields.lookups.liquidByMaterial[bottom] === 0)
+      );
+      const liquidSpeciesRelief = phase === RenderPhase.Liquid && liquidSpeciesContact
+        ? canvasLiquidSpeciesRelief(fields.liquid.bytes, width, height, x, y)
+        : 0;
       const liquidFieldRelief = phase === RenderPhase.Liquid
-        ? canvasLiquidFieldRelief(fields.liquid.bytes, width, height, x, y)
-          + (liquidSpeciesContact
-            ? canvasLiquidSpeciesRelief(fields.liquid.bytes, width, height, x, y)
-            : 0)
+        ? canvasLiquidFieldRelief(fields.liquid.bytes, width, height, x, y) + liquidSpeciesRelief
         : 0;
       const liquidEmissionExposure = phase === RenderPhase.Liquid
         && this.liquidFieldLightingEnabled && fields.emission.hasLight
@@ -1312,6 +1321,12 @@ export class MaterialRenderer {
           this.styledColor, optics, fields.liquid.bytes[pixel + 3], density,
           liquidFieldRelief, liquidSurfaceExposure,
         );
+        if (this.liquidVolumeChromaEnabled && liquidSpeciesContact
+          && !liquidForeignMatterContact && wall === 0) {
+          applyCanvasLiquidInterfaceMeniscus(
+            this.styledColor, optics, fields.liquid.bytes[pixel + 3], density, liquidSpeciesRelief,
+          );
+        }
         if (this.liquidVolumeChromaEnabled && !liquidSpeciesContact) {
           const macroWave = wall === 0
             ? canvasLiquidMacroWave(x, y, visualTime, material) : (sheen - contour) / 5;
@@ -1442,6 +1457,12 @@ export class MaterialRenderer {
           this.styledColor, optics, fields.liquid.bytes[pixel + 3], density,
           liquidFieldRelief, liquidSurfaceExposure,
         );
+        if (this.liquidVolumeChromaEnabled && liquidSpeciesContact
+          && !liquidForeignMatterContact && wall === 0) {
+          applyCanvasLiquidInterfaceMeniscus(
+            this.styledColor, optics, fields.liquid.bytes[pixel + 3], density, liquidSpeciesRelief,
+          );
+        }
         if (this.liquidVolumeChromaEnabled && !liquidSpeciesContact) {
           const macroWave = wall === 0
             ? canvasLiquidMacroWave(x, y, visualTime, material) : (shimmer - contour) / 6;
@@ -1510,6 +1531,12 @@ export class MaterialRenderer {
           this.styledColor, optics, fields.liquid.bytes[pixel + 3], density,
           liquidFieldRelief, liquidSurfaceExposure,
         );
+        if (this.liquidVolumeChromaEnabled && liquidSpeciesContact
+          && !liquidForeignMatterContact && wall === 0) {
+          applyCanvasLiquidInterfaceMeniscus(
+            this.styledColor, optics, fields.liquid.bytes[pixel + 3], density, liquidSpeciesRelief,
+          );
+        }
         if (this.liquidVolumeChromaEnabled && !liquidSpeciesContact) {
           const macroWave = wall === 0
             ? canvasLiquidMacroWave(x, y, visualTime, material) : shimmer / 4;
@@ -1583,6 +1610,12 @@ export class MaterialRenderer {
             this.styledColor, optics, fields.liquid.bytes[pixel + 3], density,
             liquidFieldRelief, liquidSurfaceExposure,
           );
+          if (this.liquidVolumeChromaEnabled && applicableTraits === 0
+            && !info.emissive && liquidSpeciesContact && !liquidForeignMatterContact && wall === 0) {
+            applyCanvasLiquidInterfaceMeniscus(
+              this.styledColor, optics, fields.liquid.bytes[pixel + 3], density, liquidSpeciesRelief,
+            );
+          }
           if (this.liquidVolumeChromaEnabled && applicableTraits === 0
             && !info.emissive && !liquidSpeciesContact) {
             const macroWave = wall === 0

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  applyCanvasLiquidBodyOptics, applyCanvasLiquidMacroSheen, applyCanvasLiquidVolumeChroma,
+  applyCanvasLiquidBodyOptics, applyCanvasLiquidInterfaceMeniscus, applyCanvasLiquidMacroSheen, applyCanvasLiquidVolumeChroma,
   canvasLiquidContourScale, canvasLiquidEmissionExposure,
   canvasLiquidEmissionSurfaceExposure, canvasLiquidFieldRelief, canvasLiquidSpeciesRelief,
   canvasLiquidMacroWave, canvasLiquidSurfaceExposure, canvasLiquidVolumeChromaResponse,
@@ -194,6 +194,35 @@ describe('Canvas liquid field-owned light', () => {
     applyCanvasLiquidMacroSheen(sparse, RenderOptics.Aqueous, 160, 8, 1);
     applyCanvasLiquidMacroSheen(molten, RenderOptics.Molten, 255, 8, 1);
     expect(sparse).toEqual(new Float32Array(source));
+    expect(molten).toEqual(new Float32Array(source));
+  });
+
+  it('adds a symmetric, bounded optical meniscus only at dense liquid interfaces', () => {
+    const source = [73, 118, 164, 91] as const;
+    for (const optics of [
+      RenderOptics.Aqueous, RenderOptics.Oily, RenderOptics.Corrosive,
+      RenderOptics.CryogenicLiquid, RenderOptics.MetallicLiquid, RenderOptics.ViscousLiquid,
+    ]) {
+      const rightFacing = new Float32Array(source);
+      const leftFacing = new Float32Array(source);
+      applyCanvasLiquidInterfaceMeniscus(rightFacing, optics, 255, 8, 0.18);
+      applyCanvasLiquidInterfaceMeniscus(leftFacing, optics, 255, 8, -0.18);
+      expect(leftFacing).toEqual(rightFacing);
+      expect(rightFacing[3]).toBe(source[3]);
+      for (let channel = 0; channel < 3; channel++) {
+        expect(rightFacing[channel]).toBeGreaterThanOrEqual(source[channel]);
+        expect(rightFacing[channel] - source[channel]).toBeLessThanOrEqual(6);
+      }
+    }
+
+    const sparse = new Float32Array(source);
+    const neutral = new Float32Array(source);
+    const molten = new Float32Array(source);
+    applyCanvasLiquidInterfaceMeniscus(sparse, RenderOptics.Aqueous, 160, 8, 0.18);
+    applyCanvasLiquidInterfaceMeniscus(neutral, RenderOptics.Aqueous, 255, 8, 0);
+    applyCanvasLiquidInterfaceMeniscus(molten, RenderOptics.Molten, 255, 8, 0.18);
+    expect(sparse).toEqual(new Float32Array(source));
+    expect(neutral).toEqual(new Float32Array(source));
     expect(molten).toEqual(new Float32Array(source));
   });
 

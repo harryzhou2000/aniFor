@@ -15,6 +15,8 @@ const INTERFACE_CONTRAST_START = 0.06;
 const INTERFACE_CONTRAST_END = 0.28;
 const INTERFACE_RELIEF_X = 0.075;
 const INTERFACE_RELIEF_Y = 0.09;
+const INTERFACE_MENISCUS_RELIEF_LIMIT = 0.12;
+const INTERFACE_MENISCUS_MAX_DELTA = 6;
 const EMISSION_BASE_EXPOSURE = 0.46;
 const EMISSION_RELIEF_GAIN = 2.4;
 const BODY_ALPHA_SUPPORT = Float32Array.from(
@@ -187,6 +189,51 @@ export function applyCanvasLiquidMacroSheen(
     color[1] *= 1 - VOLUME_CHROMA_PARAMETERS[parameter + 4] * amount;
     color[2] *= 1 - VOLUME_CHROMA_PARAMETERS[parameter + 5] * amount;
   }
+  compressPeak(color);
+}
+
+/**
+ * Gives a dense, unlike-liquid boundary a restrained optical meniscus. The
+ * caller has already proved exact semantic contact and passes the already
+ * computed species-contrast relief, so this needs neither another field read
+ * nor a neighbour scan. The response is deliberately unsigned: either side of
+ * the same physical boundary receives the same quiet bright rim rather than a
+ * time-varying light/dark separator. It changes RGB only.
+ */
+export function applyCanvasLiquidInterfaceMeniscus(
+  color: Float32Array,
+  optics: RenderOptics,
+  fieldAlpha: number,
+  neighbourCount: number,
+  speciesRelief: number,
+): void {
+  if (optics === RenderOptics.Molten) return;
+  const support = BODY_ALPHA_SUPPORT[fieldAlpha] * BODY_NEIGHBOUR_SUPPORT[neighbourCount];
+  if (support <= 0) return;
+  // The shared field permits a slightly larger positive than negative relief.
+  // An interface rim must not inherit that directional asymmetry, otherwise
+  // the two owners of one boundary can flicker at different intensities.
+  const relief = Math.min(Math.abs(speciesRelief), INTERFACE_MENISCUS_RELIEF_LIMIT);
+  if (relief <= 0) return;
+  const strength = optics === RenderOptics.Aqueous || optics === RenderOptics.CryogenicLiquid
+    ? 0.16
+    : optics === RenderOptics.Oily || optics === RenderOptics.MetallicLiquid
+      ? 0.14
+      : optics === RenderOptics.Corrosive ? 0.11 : 0.13;
+  const amount = Math.min(0.026, relief * support * strength);
+  const parameter = optics * VOLUME_CHROMA_PARAMETER_COUNT;
+  color[0] += Math.min(
+    INTERFACE_MENISCUS_MAX_DELTA,
+    (255 - color[0]) * VOLUME_CHROMA_PARAMETERS[parameter] * amount,
+  );
+  color[1] += Math.min(
+    INTERFACE_MENISCUS_MAX_DELTA,
+    (255 - color[1]) * VOLUME_CHROMA_PARAMETERS[parameter + 1] * amount,
+  );
+  color[2] += Math.min(
+    INTERFACE_MENISCUS_MAX_DELTA,
+    (255 - color[2]) * VOLUME_CHROMA_PARAMETERS[parameter + 2] * amount,
+  );
   compressPeak(color);
 }
 
