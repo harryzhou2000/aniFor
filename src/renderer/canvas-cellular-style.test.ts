@@ -73,18 +73,26 @@ describe('Canvas cellular material styling', () => {
       .not.toBe(fingerprint(Material.LIFE_BRAN, 255, 255, 0));
   });
 
-  it('adds a static membrane/core contrast without changing semantic alpha', () => {
+  it('adds static membrane/core/junction contrast without changing semantic alpha', () => {
     const membrane = new Float32Array([100, 110, 120, 173]);
     const core = new Float32Array([100, 110, 120, 173]);
+    const junction = new Float32Array([100, 110, 120, 173]);
     // LIFE_GOL has a core at (7, 7) and a membrane sample at (3, 4) in its
     // world-anchored 16-cell colony grammar.
     shadeCanvasCellularMaterial(membrane, Material.LIFE_GOL, 3, 4);
     shadeCanvasCellularMaterial(core, Material.LIFE_GOL, 7, 7);
+    // (4, 4) is GOL's diagonal membrane chord while (3, 4) remains an
+    // otherwise comparable unjoined membrane point.
+    shadeCanvasCellularMaterial(junction, Material.LIFE_GOL, 4, 4);
     expect(core[0] + core[1] + core[2]).toBeGreaterThan(
+      membrane[0] + membrane[1] + membrane[2],
+    );
+    expect(junction[0] + junction[1] + junction[2]).toBeLessThan(
       membrane[0] + membrane[1] + membrane[2],
     );
     expect(core[3]).toBe(173);
     expect(membrane[3]).toBe(173);
+    expect(junction[3]).toBe(173);
   });
 
   it('is an exact no-op outside the LIFE projection range', () => {

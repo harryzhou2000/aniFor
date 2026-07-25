@@ -1017,6 +1017,8 @@ describe('Pixi presenter startup configuration', () => {
     expect(source).toContain('if (optics == 8.0 || optics == 19.0) return vec3(2.0, 1.0, 7.0);');
     expect(source).toContain('if (optics == 8.0 || optics == 19.0) {\n        thicknessGain = 23.0;');
     expect(cellularBlock).toContain('uCellularMaterialStyling > 0.5 && surfaceOnly < 0.5');
+    expect(cellularBlock).toContain('float junctionCoordinate = motif < 0.5');
+    expect(cellularBlock).toContain('float junction = step(18.5, cellularRadiusSquared)');
     expect(cellularBlock).not.toMatch(/texture\s*\(/);
     expect(cellularBlock).not.toMatch(/\balpha\s*[+*]?=/);
     expect(source).toContain('if (cellularSurface > 0.5 && surfaceOnly > 0.5) alpha = 0.0;');

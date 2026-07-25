@@ -49,6 +49,28 @@ Immediate priorities are:
   tests, with TypeScript, production build, static 19-asset closure, and audit
   script syntax checks all green. No audit Chrome process remains.
 
+### Current LIFE colony mesostructure refinement
+
+- All 24 exact native `PT_LIFE` projections (`171..194`) retain their existing
+  deterministic ctype-derived identity, but their Canvas/WebGL 16-cell motif
+  now includes a preset-oriented chord through the existing membrane. Dense
+  colonies consequently read as joined cellular bodies rather than only a
+  sequence of engraved stripes, while each preset's palette, static band,
+  node, membrane, and core grammar remains distinct.
+- This is an arithmetic-only RGB refinement. It adds no native state projection,
+  clock, neighbour query, texture/sampler, field, pass, target, allocation,
+  alpha/support change, semantic mutation, or output-scale resource. Dead LIFE
+  cells remain unreconstructed, and authored holes, tendrils, isolated cells,
+  guarded blanks, the native `ctype`/OPS contract, and semantic LIFE placement
+  remain authoritative.
+- Focused Canvas/WebGL source and all-24 fixture tests pass; the paired real
+  browser Cellular gate confirms exact flat→styled→flat mask/support recovery,
+  bounded `8–10` byte RGB response, and zero browser errors in both Canvas2D
+  and WebGL. The full local suite remains `116` files / `738` tests with the
+  production 19-asset build closure. A fresh true-8× `4896×3072` release gate
+  completed every atlas, interaction, source/VIBR/DEUT, forced-stall, and real
+  context-loss recovery check in `731113 ms` with zero browser errors.
+
 ### Current Canvas phase-presence reconstruction guards
 
 - The Canvas fallback now records solid and liquid semantic presence during its

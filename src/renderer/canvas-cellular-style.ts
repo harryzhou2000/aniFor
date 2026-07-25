@@ -16,8 +16,9 @@ export function isCanvasCellularMaterial(material: number): boolean {
  * The native ctype projection supplies the preset identity. Four inexpensive
  * coordinate vocabularies, plus preset-specific period and phase, keep all 24
  * rules legible without animation, sampling, allocation, or topology changes.
- * A fixed 16-cell membrane/core grammar keeps a dense colony from reading as a
- * flat engraved solid. Callers continue to own alpha and semantic support;
+ * A fixed 16-cell membrane/core/junction grammar keeps a dense colony from
+ * reading as a flat engraved solid. Callers continue to own alpha and semantic
+ * support;
  * values beyond RGB are deliberately never read or written.
  */
 export function shadeCanvasCellularMaterial(
@@ -50,13 +51,25 @@ export function shadeCanvasCellularMaterial(
   const radiusSquared = cellX * cellX + cellY * cellY;
   const membrane = radiusSquared >= 24.5 && radiusSquared <= 43.5;
   const core = radiusSquared <= 7.5;
+  // A restrained chord through the living membrane gives a packed colony a
+  // cell-wall junction rather than a field of repeated stripes. It remains a
+  // world-anchored RGB mark: no live/dead inference or neighbour ownership is
+  // involved, and the exact native preset selects its orientation.
+  let junctionCoordinate: number;
+  if (motif === 0) junctionCoordinate = cellX - cellY;
+  else if (motif === 1) junctionCoordinate = cellX + cellY;
+  else if (motif === 2) junctionCoordinate = cellX * 2 + cellY;
+  else junctionCoordinate = cellX - cellY * 2;
+  const junction = radiusSquared >= 18.5 && radiusSquared < 42.5
+    && Math.abs(junctionCoordinate) < 0.75;
   // Engrave the dominant band instead of relying on a bright-only accent.
   // Saturated LIFE palettes (white, yellow, cyan, magenta) otherwise clip the
   // motif in Canvas byte space, while very dark palettes still retain the
   // restrained positive interstice and node response.
   const scalar = (band ? -4 - ((preset >>> 2) & 1) * 2 : 2 + (preset & 1))
     + (node ? (band ? -2 : 2) : 0)
-    + (membrane ? -1 : core ? 1 : 0);
+    + (membrane ? -1 : core ? 1 : 0)
+    + (junction ? (band ? -1 : -2) : 0);
 
   let red = scalar;
   let green = scalar;
@@ -82,6 +95,12 @@ export function shadeCanvasCellularMaterial(
     red += motif === 2 ? 1 : 0;
     green += motif === 3 ? 1 : 0;
     blue += motif === 0 ? 1 : 0;
+  }
+  if (junction) {
+    if (motif === 0) green -= 1;
+    else if (motif === 1) blue -= 1;
+    else if (motif === 2) red -= 1;
+    else green -= 1;
   }
 
   // Keep composed cellular texture in the same restrained ten-byte envelope

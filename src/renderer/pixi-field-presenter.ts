@@ -2877,12 +2877,23 @@ void main() {
         float membrane = step(24.5, cellularRadiusSquared)
           * (1.0 - step(43.5, cellularRadiusSquared));
         float core = 1.0 - step(7.5, cellularRadiusSquared);
+        float junctionCoordinate = motif < 0.5 ? cellularLocal.x - cellularLocal.y
+          : (motif < 1.5 ? cellularLocal.x + cellularLocal.y
+          : (motif < 2.5 ? cellularLocal.x * 2.0 + cellularLocal.y
+          : cellularLocal.x - cellularLocal.y * 2.0));
+        // A preset-oriented chord through the same local membrane makes dense
+        // LIFE read as joined colonies rather than flat stripes. It is strictly
+        // arithmetic over the existing exact owner and adds no state/resource.
+        float junction = step(18.5, cellularRadiusSquared)
+          * (1.0 - step(42.5, cellularRadiusSquared))
+          * (1.0 - step(0.75, abs(junctionCoordinate)));
         float scalar = mix(
           2.0 + mod(preset, 2.0),
           -4.0 - mod(floor(preset / 4.0), 2.0) * 2.0,
           band
         ) + node * mix(2.0, -2.0, band)
-          + membrane * -1.0 + core;
+          + membrane * -1.0 + core
+          + junction * mix(-2.0, -1.0, band);
         vec3 cellularDelta = vec3(scalar);
         if (motif < 0.5) cellularDelta += vec3(0.0, -band * 2.0, node * 2.0);
         else if (motif < 1.5) cellularDelta += vec3(-band * 2.0, 0.0, band);
@@ -2896,6 +2907,12 @@ void main() {
           cellularDelta.r += motif < 2.5 ? (motif < 1.5 ? 0.0 : 1.0) : 0.0;
           cellularDelta.g += motif < 2.5 ? 0.0 : 1.0;
           cellularDelta.b += motif < 0.5 ? 1.0 : 0.0;
+        }
+        if (junction > 0.5) {
+          if (motif < 0.5) cellularDelta.g -= 1.0;
+          else if (motif < 1.5) cellularDelta.b -= 1.0;
+          else if (motif < 2.5) cellularDelta.r -= 1.0;
+          else cellularDelta.g -= 1.0;
         }
         color = clamp(color + clamp(cellularDelta, vec3(-10.0), vec3(10.0)) / 255.0,
           0.0, 1.0);
