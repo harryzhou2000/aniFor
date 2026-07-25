@@ -92,6 +92,7 @@ const lavaStateGraphicsOnly = process.argv.includes('--lava-state-graphics-only'
 const botanicalLifecycleGraphicsOnly = process.argv.includes('--botanical-lifecycle-graphics-only');
 const sparkStateGraphicsOnly = process.argv.includes('--spark-state-graphics-only');
 const nativeSeedGrowthOnly = process.argv.includes('--native-seed-growth-only');
+const catalogSelectionOnly = process.argv.includes('--catalog-selection-only');
 // A focused visual probe should be able to exercise the exact already-built
 // bundle without starting Vite. That keeps screenshot evidence independent of
 // dev-server navigation timing while leaving all default audit paths unchanged.
@@ -177,7 +178,7 @@ async function main() {
       || sourceTargetGraphicsOnly || forceActivityGraphicsOnly || poloStateGraphicsOnly
       || spngStateGraphicsOnly || lavaStateGraphicsOnly || botanicalLifecycleGraphicsOnly
       || sparkStateGraphicsOnly
-      || nativeSeedGrowthOnly;
+      || nativeSeedGrowthOnly || catalogSelectionOnly;
     if (powderBodyOnly) assertPairedPowderBodyDepth(results);
     if (liquidDepthOnly) assertPairedLiquidOpticalDepth(results);
     if (solidDepthOnly) assertPairedSolidOpticalDepth(results);
@@ -371,6 +372,12 @@ async function auditMode(mode) {
       assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
       cdp.close();
       return { backend: mode, desktopInput, browserErrors: errors.length };
+    }
+    if (catalogSelectionOnly) {
+      const catalogSelection = await auditCatalogSelection(cdp);
+      assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
+      cdp.close();
+      return { backend: mode, catalogSelection, browserErrors: errors.length };
     }
     if (powderBodyOnly) {
       const powderBodyDepth = await auditPowderBodyDepth(cdp, mode, dpr);
@@ -13186,6 +13193,90 @@ async function auditNativeSemantics(cdp, mode, dpr, screenshot) {
   };
 }
 
+/**
+ * Proves that brush selection is a visual state update, not a catalog rebuild.
+ * This is deliberately a small standalone audit so a UI regression does not
+ * require the full touch/paint matrix to reproduce.
+ */
+async function auditCatalogSelection(cdp) {
+  await cdp.send('Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: 2 });
+  await cdp.send('Emulation.setDeviceMetricsOverride', {
+    width: 390, height: 844, deviceScaleFactor: 2, mobile: true,
+    screenWidth: 390, screenHeight: 844,
+    screenOrientation: { type: 'portraitPrimary', angle: 0 },
+  });
+  await waitFor(async () => evaluate(cdp, `(() => {
+    const library = document.querySelector('.tool-library');
+    return innerWidth === 390 && library instanceof HTMLElement ? true : false;
+  })()`), 5_000, 'catalog selection mobile geometry');
+  await sleep(60);
+  const selection = await evaluate(cdp, `(() => {
+    window.scrollTo(0, 0);
+    const library = document.querySelector('.tool-library');
+    const filters = [...document.querySelectorAll('.tool-filter')];
+    const groups = [...library?.querySelectorAll('details.material-group') ?? []];
+    const electronics = groups.find((group) => group.dataset.category === 'electronics');
+    if (!(library instanceof HTMLElement) || !(electronics instanceof HTMLDetailsElement)) {
+      throw new Error('Missing stable catalog selection fixture');
+    }
+    // Simulate the state that regressed: a lower non-powder category is open
+    // and scrolled into view before choosing an element brush from it.
+    for (const group of groups) {
+      group.open = false;
+      group.dispatchEvent(new Event('toggle'));
+    }
+    electronics.open = true;
+    electronics.dispatchEvent(new Event('toggle'));
+    const tile = [...electronics.querySelectorAll('.tool-tile')].find((candidate) => {
+      const button = candidate.querySelector('.material-button');
+      return button instanceof HTMLButtonElement && !button.disabled;
+    });
+    const button = tile?.querySelector('.material-button');
+    if (!(tile instanceof HTMLElement) || !(button instanceof HTMLButtonElement)) {
+      throw new Error('Missing selectable electronic element');
+    }
+    library.scrollTop = Math.min(
+      library.scrollHeight - library.clientHeight,
+      Math.max(0, electronics.offsetTop - library.clientHeight / 3),
+    );
+    const children = [...library.children];
+    const before = {
+      scrollTop: library.scrollTop,
+      openGroups: groups.filter((group) => group.open).map((group) => group.dataset.category),
+      activeFilters: filters.filter((filter) => filter.getAttribute('aria-pressed') === 'true')
+        .map((filter) => filter.dataset.filter),
+    };
+    button.click();
+    return {
+      ...before,
+      afterScrollTop: library.scrollTop,
+      afterOpenGroups: groups.filter((group) => group.open).map((group) => group.dataset.category),
+      afterActiveFilters: filters.filter((filter) => filter.getAttribute('aria-pressed') === 'true')
+        .map((filter) => filter.dataset.filter),
+      sameLibraryChildren: children.length === library.children.length
+        && children.every((child, index) => child === library.children[index]),
+      selected: button.classList.contains('selected') && button.getAttribute('aria-pressed') === 'true',
+    };
+  })()`);
+  assert(selection.openGroups.length === 1
+    && selection.openGroups[0] === 'electronics'
+    && selection.afterOpenGroups.length === 1
+    && selection.afterOpenGroups[0] === 'electronics'
+    && selection.activeFilters.length === 1
+    && selection.activeFilters[0] === 'all'
+    && selection.afterActiveFilters.length === 1
+    && selection.afterActiveFilters[0] === 'all'
+    && Math.abs(selection.afterScrollTop - selection.scrollTop) < 0.1
+    && selection.sameLibraryChildren
+    && selection.selected,
+  `element selection reset the active catalog state (${JSON.stringify(selection)})`);
+  return {
+    category: selection.openGroups[0],
+    scrollTop: round(selection.scrollTop),
+    childNodesStable: selection.sameLibraryChildren,
+  };
+}
+
 async function auditMobile(cdp, mode, screenshot) {
   await cdp.send('Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: 2 });
   await cdp.send('Emulation.setDeviceMetricsOverride', {
@@ -13575,6 +13666,7 @@ async function auditMobile(cdp, mode, screenshot) {
     && mobileLibrary.tileTop >= mobileLibrary.libraryTop - 1
     && mobileLibrary.tileBottom <= mobileLibrary.libraryBottom + 1,
   'mobile tool library cannot reveal the last tile in an open group');
+  const stableCatalogSelection = await auditCatalogSelection(cdp);
   const scrollStart = await evaluate(cdp, `(() => {
     const library = document.querySelector('.tool-library');
     if (!(library instanceof HTMLElement)) throw new Error('Missing mobile tool library');
@@ -13699,6 +13791,7 @@ async function auditMobile(cdp, mode, screenshot) {
     horizontalOverflow: round(initial.ui.horizontalOverflow),
     fieldIndicator: `${round(initial.ui.fieldIndicator.width)}x${round(initial.ui.fieldIndicator.height)}`,
     libraryScroll: `${round(mobileLibrary.scrollTop)}/${round(mobileLibrary.scrollHeight - mobileLibrary.clientHeight)}`,
+    catalogSelection: stableCatalogSelection,
     touchScroll: `${round(scrollStart.scrollY)}->${round(touchScrollY)}`,
     nestedScrollStart: `${round(scrollStart.x)},${round(scrollStart.y)}`,
     footerScrollY: round(footer.scrollY),
