@@ -129,6 +129,14 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+        with:
+          # GitHub Pages can remain in its service-side `updating_pages` state
+          # longer than the action's ten-minute default even after the static
+          # artifact has uploaded correctly. Keep the deployment bounded, but
+          # allow the serialized Pages promotion enough time to finish rather
+          # than reporting a false release failure and leaving the old revision
+          # live.
+          timeout: 1800000
 
   verify-deployment:
     needs: deploy

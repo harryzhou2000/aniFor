@@ -1188,3 +1188,18 @@ The next material-primary slice is wider exact coverage of palette-led catalog f
   intentionally unavailable. This is catalog metadata only: particle/wall
   coexistence, wall save/load, renderer composition, and matter/tool dispatch
   are untouched.
+
+## Current Pages deployment timeout checkpoint
+
+- The `a6e86d0` static build, native tests, Pages artifact upload, and deployment
+  creation all succeeded, but GitHub Pages held the service-side deployment in
+  `updating_pages` until `actions/deploy-pages@v4` reached its default ten-minute
+  timeout. That is an external promotion delay, not an artifact or runtime
+  failure; the workflow log shows the expected revision was created before the
+  polling timeout.
+- The deploy action now retains its bounded retry behavior but waits up to 30
+  minutes for that serialized Pages promotion. This keeps manual `build` versus
+  `build-and-deploy` controls unchanged, does not alter the artifact, and avoids
+  declaring a healthy release failed merely because GitHub Pages is slow. The
+  next manual deploy must still be verified against the exact revision and
+  19-asset live closure.
