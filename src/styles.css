@@ -205,32 +205,36 @@ h1 { font-family: inherit; font-size: clamp(26px, 4vw, 44px); font-weight: 500; 
 }
 
 @media (max-width: 680px) {
-  .palette { width: 100%; height: clamp(230px, 36dvh, 300px); min-height: 0; display: grid; grid-template-rows: auto 40px minmax(0, 1fr); overflow: hidden; }
+  .palette { width: 100%; height: clamp(230px, 36dvh, 300px); min-height: 0; display: grid; grid-template-rows: auto 34px minmax(0, 1fr); overflow: hidden; }
   .tool-library { display: grid; grid-template-columns: minmax(0, 1fr); align-content: start; gap: 7px; overflow-x: hidden; overflow-y: auto; overscroll-behavior-y: auto; scroll-snap-type: none; scrollbar-width: thin; padding: 0 2px 10px; }
   .tool-library .material-group { width: 100%; min-width: 0; }
   .tool-library .material-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .tool-filters { height: 34px; min-height: 34px; max-height: 34px; gap: 4px; padding-bottom: 4px; scroll-snap-type: x proximity; }
+  .tool-filter { min-height: 25px; padding: 5px 8px; scroll-snap-align: start; }
 }
 .tool-badge.unavailable { color: #c3bac0; background: rgba(120,110,118,.18); }
 .material-button:disabled { cursor: not-allowed; opacity: .46; filter: saturate(.45); }
 .material-button:disabled:hover { transform: none; background: transparent; }
 
 @media (min-width: 921px) {
-  .palette { min-height: 230px; grid-template-rows: auto 68px minmax(0, 1fr); }
+  .palette { min-height: 246px; grid-template-rows: auto 84px minmax(100px, 1fr); }
   .tool-filters {
-    height: 68px;
-    min-height: 68px;
-    max-height: 68px;
+    height: 84px;
+    min-height: 84px;
+    max-height: 84px;
     display: grid;
-    grid-template-rows: repeat(2, 28px);
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-rows: repeat(3, 25px);
     grid-auto-flow: column;
-    grid-auto-columns: max-content;
+    grid-auto-columns: minmax(0, 1fr);
     align-items: stretch;
-    column-gap: 5px;
-    row-gap: 4px;
-    padding-bottom: 5px;
+    column-gap: 4px;
+    row-gap: 3px;
+    overflow: hidden;
+    padding-bottom: 0;
   }
-  .tool-filter { width: 100%; min-width: 0; }
-  .tool-library { min-height: 116px; }
+  .tool-filter { width: 100%; min-width: 0; min-height: 25px; padding: 4px 5px; overflow: hidden; font-size: 8px; text-align: center; text-overflow: ellipsis; white-space: nowrap; }
+  .tool-library { min-height: 100px; }
 }
 
 @media (min-width: 921px) and (max-height: 720px) {
@@ -240,5 +244,5 @@ h1 { font-family: inherit; font-size: clamp(26px, 4vw, 44px); font-weight: 500; 
   .toolbox-heading { padding-block: 3px 0; }
   .actions { padding: 10px; gap: 6px; }
   .action-button { padding-block: 6px; }
-  .tool-library { min-height: 108px; }
+  .tool-library { min-height: 84px; }
 }

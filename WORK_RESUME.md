@@ -971,3 +971,20 @@ The next material-primary slice is wider exact coverage of palette-led catalog f
   readiness in `9326 ms` and fence-backed readiness in `25486 ms`; its one
   verified temporary `/tmp/anifor-input-*` Chrome profile was closed after the
   successful gate rather than affecting an ordinary browser session.
+
+## Current stable catalog-navigation checkpoint
+
+- Choosing an element no longer rebuilds the catalog: it updates only the
+  selected state, so the active category, expanded groups, and library scroll
+  position remain stable instead of jumping back to Powder. Filter controls
+  now expose their full labels as native tooltips as well as accessible names.
+- Desktop filter controls use a fixed three-row, four-column matrix. Every
+  category remains reachable and readable in a short desktop viewport without
+  a horizontally trapped label row or overlap with Actions. Mobile keeps a
+  compact, snap-scrollable horizontal strip, preserving vertical room for the
+  world and library.
+- Validation: targeted Controls/catalog/input/browser-audit tests (`33`
+  assertions), the complete desktop/mobile browser interaction audit, the
+  834-module production build with its 19-file static closure, and the full
+  `114`-file / `723`-test suite pass. They retain the protected 612×384 fit
+  and client-CSS pointer contract.

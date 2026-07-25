@@ -312,6 +312,7 @@ export function mountControls(host: HTMLElement, callbacks: ControlsCallbacks, c
     button.type = 'button';
     button.dataset.filter = choice.mode;
     button.textContent = choice.label;
+    button.title = `${choice.label} tools`;
     button.setAttribute('aria-controls', library.id);
     button.setAttribute('aria-pressed', choice.mode === mode ? 'true' : 'false');
     button.addEventListener('click', () => {
