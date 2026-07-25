@@ -92,6 +92,36 @@ describe('Canvas energy core styling', () => {
     expect(relievedAlpha).toBe(flatAlpha);
   });
 
+  it('calms field-supported dense carrier detail without changing sparse carriers, glow, or alpha', () => {
+    const render = (x: number, y: number, emissionAlpha: number) => {
+      const core = new Float32Array(3), glow = new Float32Array(3);
+      const alpha = shadeCanvasEnergy(
+        core, glow, 112, 172, 226, RenderProfile.Neutral, RenderTrait.Carrier,
+        39, x, y, 960, 0.25, 18, -6, emissionAlpha, false,
+      );
+      return { core, glow, alpha };
+    };
+    const points = [
+      [3, 7], [7, 11], [11, 17], [17, 23], [23, 29], [29, 31],
+    ] as const;
+    const sparse = points.map(([x, y]) => render(x, y, 0));
+    const dense = points.map(([x, y]) => render(x, y, 255));
+    const luma = (core: Float32Array) => core[0] * 0.2126 + core[1] * 0.7152 + core[2] * 0.0722;
+    const span = (samples: readonly { core: Float32Array }[]) => {
+      const values = samples.map(({ core }) => luma(core));
+      return Math.max(...values) - Math.min(...values);
+    };
+
+    expect(span(dense)).toBeLessThan(span(sparse) * 0.55);
+    expect(dense.some(({ core }, index) => !core.every((channel, color) => (
+      channel === sparse[index].core[color]
+    )))).toBe(true);
+    for (let index = 0; index < points.length; index++) {
+      expect(dense[index].glow).toEqual(sparse[index].glow);
+      expect(dense[index].alpha).toBe(sparse[index].alpha);
+    }
+  });
+
   it('toggles exact identity RGB off-on-off without changing glow or alpha', () => {
     const render = (enabled: boolean) => {
       const core = new Float32Array(3), glow = new Float32Array(3);

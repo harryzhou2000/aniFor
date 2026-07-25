@@ -44,9 +44,17 @@ export function shadeCanvasEnergy(
   const wave = 1 - Math.abs(fraction - 0.5) * 4;
   const pulse = 0.5 + wave * 0.5;
   const scintillation = carrier && noise(x, y, material) > 0.84 ? 1 : 0;
-  const detail = carrier
+  const sparseDetail = carrier
     ? 0.98 + wave * 0.04 + scintillation * 0.16
     : 1.0 + wave * 0.07;
+  // Match WebGL's dense-body treatment: the shared emission support proves a
+  // cohesive energy chunk, so calm its carrier-scale scintillation toward the
+  // already available low-frequency pulse. Sparse energy retains its exact
+  // animated detail, while core RGB—not alpha, glow, or semantic support—is
+  // the only output affected.
+  const cohesiveEnergy = smoothstep(31, 122, emissionAlpha);
+  const cohesiveDetail = 1 + wave * 0.022 + (pulse - 0.5) * 0.036;
+  const detail = sparseDetail + (cohesiveDetail - sparseDetail) * cohesiveEnergy * 0.72;
   const accent = radioactive ? COOL_ACCENT : WARM_ACCENT;
   const energy = 1.04 + heat * 0.28 + pulse * 0.10;
   const accentMix = 0.08 + heat * 0.06;

@@ -1111,3 +1111,22 @@ The next material-primary slice is wider exact coverage of palette-led catalog f
   errors. The attempted broad audit was deliberately not counted because its
   outer harness ended before a result; its verified temporary Chrome profile
   was closed.
+
+## Current Canvas cohesive-energy detail checkpoint
+
+- Cross-backend review found that WebGL already calms cell-scale carrier detail
+  inside emission-field-supported energy bodies, while Canvas applied the same
+  scintillation at every density. Canvas now reuses the existing emission
+  support scalar to blend only cohesive core RGB toward a low-frequency pulse.
+  This makes dense energy read as one luminous volume rather than a collection
+  of restless particles; sparse carriers retain their previous exact detail.
+- The change is arithmetic-only and RGB-only: it adds no field, texture,
+  sample, pass, buffer, scheduler, allocation, alpha/support/topology,
+  semantic identity, glow, physics, or save-state change. It shares WebGL's
+  existing dense-body presentation intent without modifying the shader.
+- Validation: focused Canvas energy tests now prove reduced dense-core
+  microvariation plus byte-identical glow/alpha and unchanged sparse behavior;
+  TypeScript production build/19-asset closure, a forced Canvas2D production
+  showcase capture with zero browser errors, and the full 114-file / 726-test
+  suite pass. A broad visual gate was deliberately not claimed after its outer
+  harness stopped before output; its verified temporary profile was closed.
