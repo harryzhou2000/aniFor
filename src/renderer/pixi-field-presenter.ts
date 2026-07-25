@@ -1720,7 +1720,7 @@ void main() {
     float verticalShare = abs(widePowderShape.z)
       / (abs(widePowderShape.y) + abs(widePowderShape.z) + 0.000001);
     powderSurfaceBlend = smoothstep(0.42, 0.70, verticalShare)
-      * smoothstep(0.006, 0.030, abs(widePowderShape.z))
+      * smoothstep(0.004, 0.027, abs(widePowderShape.z))
       * powderBulkDepth;
     shape = mix(shape, widePowderShape, boundaryStability * powderSurfaceBlend);
   }

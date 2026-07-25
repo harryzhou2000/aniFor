@@ -631,7 +631,11 @@ export class CanvasPhaseContourScratch {
               const verticalShare = Math.abs(gradientY)
                 / (Math.abs(gradientX) + Math.abs(gradientY) + 1e-6);
               slopeAware = smoothstep(0.42, 0.70, verticalShare)
-                * smoothstep(0.006, 0.030, Math.abs(gradientY))
+                // Admit the low-gradient shoulder of a settled shallow pile.
+                // Bulk depth and the vertical-share gate still reject columns,
+                // ledges, seams, pores, and all moving powder before this can
+                // redistribute contour opacity.
+                * smoothstep(0.004, 0.027, Math.abs(gradientY))
                 * powderSurfaceDetailGate;
               surfaceDensity += (wideDensity - surfaceDensity) * slopeAware;
               if (!emptyPowder && (input.surfaceContourLighting ?? true)

@@ -152,16 +152,16 @@ describe('Canvas 2x phase contour scratch', () => {
     expect(signatures).toEqual({
       '1-grains': 'c912c4b1',
       '1-local': '1cc9387d',
-      '1-smooth': '65ee7cf4',
+      '1-smooth': '3eb8e906',
       '2-grains': 'af6d5941',
       '2-local': 'a50b1c45',
-      '2-smooth': 'c693c39d',
+      '2-smooth': 'e4053a49',
       '4-grains': '88dcd447',
       '4-local': 'f23096fb',
-      '4-smooth': 'd067da6c',
+      '4-smooth': '3812b4d0',
       '8-grains': 'b2fef6b7',
       '8-local': '2419d011',
-      '8-smooth': 'd4821ecc',
+      '8-smooth': 'b1854d1a',
     });
   });
 
@@ -458,7 +458,7 @@ describe('Canvas 2x phase contour scratch', () => {
       alphaColumnMass(sharedSurface, 6 * scale, (width - 6) * scale), scale,
     );
     expect(secondDifferenceEnergy(sharedProfile)).toBeLessThan(
-      secondDifferenceEnergy(localProfile) * 0.96,
+      secondDifferenceEnergy(localProfile) * 0.93,
     );
     expect(sharedProfile).not.toEqual(localProfile);
 
