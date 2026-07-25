@@ -948,3 +948,26 @@ The next material-primary slice is wider exact coverage of palette-led catalog f
   forced Canvas2D plus WebGL normal-fit showcase captures all pass. The real
   true-8× browser gate reached reference-ready in `9488 ms` and fence-backed
   8× ready in `25145 ms` without browser errors.
+
+## Current botanical canopy-volume checkpoint
+
+- The protected viewport contract was audited again before this visual pass:
+  focused `ViewTransform`, client-coordinate, input-controller, and
+  browser-audit tests pass, and the complete desktop/mobile Canvas2D/WebGL
+  browser interaction route completed without leaving a temporary Chrome
+  profile. The existing 612×384 aspect-fit, client-CSS pointer mapping,
+  anchored wheel/pinch, middle-drag pan, DPR/page-scale transition, and
+  semantic-to-framebuffer footprint guarantees remain unchanged.
+- Deep, exact PLNT interiors now reuse the existing phase-local solid optical
+  depth and organic macro-relief to receive a bounded leaf-green crown/pocket
+  body response. It is RGB-only and starts strictly beyond the first inner
+  layer: native stems, leaf tips, branch gaps, seed products, walls, contacts,
+  cavities, alpha/support, lifecycle state, growth simulation, and saves stay
+  on their existing paths. Canvas and WebGL add only arithmetic—no sampler,
+  field, target, upload, allocation, or output-scale work.
+- Validation: the dedicated organic/plant Canvas+WebGL fixture, fresh built
+  bundle Canvas/WebGL normal-fit captures, the full `114`-file / `723`-test
+  suite, and the real true-8× gate all pass. The 8× gate reached reference
+  readiness in `9326 ms` and fence-backed readiness in `25486 ms`; its one
+  verified temporary `/tmp/anifor-input-*` Chrome profile was closed after the
+  successful gate rather than affecting an ordinary browser session.

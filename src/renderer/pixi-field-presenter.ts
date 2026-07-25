@@ -2386,6 +2386,22 @@ void main() {
         }
       }
     }
+    // PLNT has native topology and lifecycle cues below; this is only a
+    // depth-proven organic body response. It reuses the existing depth and
+    // macro relief scalars, changing RGB without an additional field/sample or
+    // ever broadening a seed, stem, leaf tip, gap, wall, or contact.
+    if (uSolidOpticalDepth > 0.5 && material == 10.0
+      && solidOpticalDepth > 6.0 / 255.0 && solidInterior > 0.001
+      && surfaceOnly < 0.5) {
+      float canopyDepth = smoothstep(6.0 / 255.0, 42.0 / 255.0, solidOpticalDepth);
+      float canopyRelief = clamp(solidReliefTone * 255.0 / 6.0, -1.0, 1.0)
+        * canopyDepth;
+      if (canopyRelief > 0.0) {
+        color += vec3(1.5, 6.5, 2.3) / 255.0 * canopyRelief;
+      } else if (canopyRelief < 0.0) {
+        color *= vec3(1.0) - vec3(0.075, 0.040, 0.095) * (-canopyRelief);
+      }
+    }
     // Reuse the semantic Hermite normal as a small family-coloured key/fill
     // shell. Unlike-solid contacts retain a dense union, so no internal seam
     // enters the contour band. This changes RGB only and adds no field sample.

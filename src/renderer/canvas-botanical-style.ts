@@ -61,6 +61,44 @@ export function applyCanvasBotanicalMorphology(
   }
 }
 
+/**
+ * Gives only a deep, exact PLNT body a restrained canopy-volume response.
+ *
+ * The caller has already proved the four-cardinal solid interior and supplied
+ * the phase-local optical depth plus the existing organic macro relief. Small
+ * growth tips, one-cell stems, contacts, walls, gaps, and ordinary surface
+ * cells therefore remain on the native morphology/lifecycle paths. RGB is the
+ * only mutable state; this helper never owns alpha, support, or growth state.
+ */
+export function applyCanvasPlantCanopyVolume(
+  rgb: Float32Array,
+  material: number,
+  denseInterior: boolean,
+  opticalDepthByte: number,
+  opticalDepthEnabled: boolean,
+  relief: number,
+): void {
+  if (material !== Material.Plant || !denseInterior
+    || !opticalDepthEnabled || opticalDepthByte <= 6 || relief === 0) return;
+  const depth = Math.max(0, Math.min(1, (opticalDepthByte - 6) / 36));
+  const depthSupport = depth * depth * (3 - 2 * depth);
+  const signedRelief = Math.max(-1, Math.min(1, relief / 6)) * depthSupport;
+  if (signedRelief > 0) {
+    // The broad organic crown catches a filtered leaf-green fill rather than
+    // becoming a white specular hotspot. The bound stays below seven bytes.
+    rgb[0] += signedRelief * 1.5;
+    rgb[1] += signedRelief * 6.5;
+    rgb[2] += signedRelief * 2.3;
+  } else {
+    // Pockets are optically thicker than crowns. Keep their shadow subtle so
+    // an inherited native tree palette remains recognisable afterward.
+    const pocket = -signedRelief;
+    rgb[0] *= 1 - pocket * 0.075;
+    rgb[1] *= 1 - pocket * 0.040;
+    rgb[2] *= 1 - pocket * 0.095;
+  }
+}
+
 function positiveModulo(value: number, divisor: number): number {
   const remainder = value % divisor;
   return remainder < 0 ? remainder + divisor : remainder;

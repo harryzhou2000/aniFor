@@ -1102,6 +1102,17 @@ describe('Pixi presenter startup configuration', () => {
     expect(helper).not.toMatch(/\balpha\s*[+*]?=/);
     expect(source).toContain('botanicalIdentity > 0.5 && uBotanicalIdentityStyling > 0.5');
     expect(source).toContain('color += botanicalIdentityDelta(material, fieldPosition);');
+    const canopyStart = source.indexOf('// PLNT has native topology and lifecycle cues below;');
+    const canopyEnd = source.indexOf('// Reuse the semantic Hermite normal', canopyStart);
+    const canopy = source.slice(canopyStart, canopyEnd);
+    expect(canopyStart).toBeGreaterThan(0);
+    expect(canopyEnd).toBeGreaterThan(canopyStart);
+    expect(canopy).toContain('material == 10.0');
+    expect(canopy).toContain('solidOpticalDepth > 6.0 / 255.0');
+    expect(canopy).toContain('solidInterior > 0.001');
+    expect(canopy).toContain('solidReliefTone * 255.0 / 6.0');
+    expect(canopy).not.toContain('texture(');
+    expect(canopy).not.toMatch(/\balpha\s*[+*]?=/);
   });
 
   it('decodes native SEED/PLNT lifecycle state with sample-free RGB-only arithmetic', () => {

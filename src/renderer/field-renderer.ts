@@ -35,7 +35,7 @@ import { applyCanvasUnusualPowderStyle } from './canvas-unusual-powder-style';
 import { applyCanvasExplosivePowderStyle } from './canvas-explosive-powder-style';
 import { applyCanvasUnusualSolidMorphology } from './canvas-unusual-solid-style';
 import { applyCanvasSpongeMorphology } from './canvas-sponge-style';
-import { applyCanvasBotanicalMorphology } from './canvas-botanical-style';
+import { applyCanvasBotanicalMorphology, applyCanvasPlantCanopyVolume } from './canvas-botanical-style';
 import { applyCanvasBotanicalLifecycleStyle } from './canvas-botanical-lifecycle-style';
 import { applyCanvasSparkStateStyle } from './canvas-spark-state-style';
 import {
@@ -1357,6 +1357,10 @@ export class MaterialRenderer {
         applyCanvasSolidBodyOptics(
           this.styledColor, surfaceLight, normalLight, solidRelief,
           denseSolidInterior, profile, optics, solidOpticalDepth, this.solidOpticalDepthEnabled,
+        );
+        applyCanvasPlantCanopyVolume(
+          this.styledColor, material, denseSolidInterior, solidOpticalDepth,
+          this.solidOpticalDepthEnabled, solidRelief,
         );
         applyCanvasRenderTraits(
           this.styledColor, applicableTraits, phase, material, x, y, index, this.traitClock,
