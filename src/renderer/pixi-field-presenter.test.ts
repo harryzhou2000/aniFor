@@ -27,6 +27,7 @@ interface PresenterHarness {
   setRoleMaterialStylingEnabled: PixiFieldPresenter['setRoleMaterialStylingEnabled'];
   setCellularMaterialStylingEnabled: PixiFieldPresenter['setCellularMaterialStylingEnabled'];
   setStructuralRigidStylingEnabled: PixiFieldPresenter['setStructuralRigidStylingEnabled'];
+  setEarthenPowderStylingEnabled: PixiFieldPresenter['setEarthenPowderStylingEnabled'];
   setSensorMaterialStylingEnabled: PixiFieldPresenter['setSensorMaterialStylingEnabled'];
   setUnusualPowderStylingEnabled: PixiFieldPresenter['setUnusualPowderStylingEnabled'];
   setExplosivePowderStylingEnabled: PixiFieldPresenter['setExplosivePowderStylingEnabled'];
@@ -116,6 +117,7 @@ describe('Pixi presenter startup configuration', () => {
       uRoleMaterialStyling: 1,
       uCellularMaterialStyling: 1,
       uStructuralRigidStyling: 1,
+      uEarthenPowderStyling: 1,
       uSensorMaterialStyling: 1,
       uUnusualPowderStyling: 1,
       uUnusualSolidStyling: 1,
@@ -440,7 +442,8 @@ describe('Pixi presenter startup configuration', () => {
     expect(`${helpers}${block}`).not.toContain('texture(');
     expect(`${helpers}${block}`).not.toMatch(/\balpha\s*[+*]?=/);
     expect(`${helpers}${block}`).not.toMatch(/\b(?:sin|pow|normalize|length)\s*\(/);
-    expect(source.match(/texture\(uLiquidTexture/g)).toHaveLength(5);
+    const richFragment = source.slice(source.indexOf('const FIELD_FRAGMENT'));
+    expect(richFragment.match(/texture\(uLiquidTexture/g)).toHaveLength(5);
     expect(source).not.toContain('sampler2D uLiquidVolumeChroma');
     expect(source).not.toContain('sampler2D uLiquidOpticalDepth');
   });
@@ -520,6 +523,26 @@ describe('Pixi presenter startup configuration', () => {
     expect(source).toContain('new Mesh({ geometry, shader, texture: Texture.WHITE })');
     expect(source).not.toContain('new Mesh({ geometry, shader, texture: fieldTexture })');
     expect(source).toContain('vec3 premultiplied = clamp(color, 0.0, 1.35) * alpha;');
+  });
+
+  it('initializes every direct-8x mesh source before its first semantic upload', () => {
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const directMeshStart = source.indexOf('if (outputScale === 8)');
+    const directMeshEnd = source.indexOf('} else {', directMeshStart);
+    const directMesh = source.slice(directMeshStart, directMeshEnd);
+
+    expect(directMeshStart).toBeGreaterThan(0);
+    expect(directMeshEnd).toBeGreaterThan(directMeshStart);
+    expect(source).toContain('vFieldCoord = aUV;');
+    for (const textureSource of [
+      'this.fieldSource', 'this.wallSource', 'this.photonStateSource',
+      'this.atmosphereSource', 'this.atmosphereStyleSource', 'gasIdentityMotifSource',
+      'this.emissionSource', 'this.liquidSource', 'this.boundaryStabilitySource',
+      'this.powderSurfaceSource', 'this.suspensionSource',
+      'paletteTexture.source', 'styleTexture.source',
+    ]) expect(directMesh).toContain(textureSource);
+    expect(directMesh).toContain('textureSystem.texture?.initSource(source)');
+    expect(directMesh).toContain('fragment: FIELD_EIGHT_X_FRAGMENT');
   });
 
   it('keeps chromatic surface depth arithmetic-only and RGB-only', () => {
@@ -675,7 +698,7 @@ describe('Pixi presenter startup configuration', () => {
   it('styles exactly seven authoritative radioactive bodies without GPU samples', () => {
     const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
     const start = source.indexOf('vec3 radioactiveBodyIdentityDelta(');
-    const end = source.indexOf('vec3 vibrStateDelta(', start);
+    const end = source.indexOf('// Keep the exact low-frequency Earth/mineral powder grammar', start);
     const block = source.slice(start, end);
     const ids = [...block.matchAll(/material == (\d+)\.0/g)].map((match) => Number(match[1]));
     expect(start).toBeGreaterThan(0);
@@ -1034,18 +1057,42 @@ describe('Pixi presenter startup configuration', () => {
     expect(presenter.app.render).toHaveBeenCalledOnce();
 
     const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
-    const start = source.indexOf('// Exact construction bodies receive a sparse, world-anchored identity');
-    const end = source.indexOf('    } else if (organicSurface > 0.5', start);
+    const start = source.indexOf('// As with the powder helper, keep construction-body identity');
+    const end = source.indexOf('vec3 vibrStateDelta(', start);
     const structuralBlock = source.slice(start, end);
     expect(start).toBeGreaterThan(0);
     expect(end).toBeGreaterThan(start);
     expect(source).toContain('uniform float uStructuralRigidStyling;');
-    expect(structuralBlock).toContain('uStructuralRigidStyling > 0.5 && surfaceOnly < 0.5');
-    expect(structuralBlock).toContain('material == 22.0 ? 1.0');
-    expect(structuralBlock).toContain('material == 82.0 ? 7.0 : 0.0;');
-    expect(structuralBlock).toContain('traits < 0.5 && materialEmissive < 0.5');
+    expect(source).toContain('uStructuralRigidStyling > 0.5 && surfaceOnly < 0.5');
+    expect(source).toContain('traits < 0.5 && materialEmissive < 0.5');
+    expect(structuralBlock).toContain('vec3 structuralRigidIdentityDelta(float material, vec2 position)');
+    expect(structuralBlock).toContain('if (material == 22.0)');
+    expect(structuralBlock).toContain('if (material == 82.0)');
     expect(structuralBlock).not.toMatch(/texture\s*\(/);
     expect(structuralBlock).not.toMatch(/\balpha\s*[+*]?=/);
+  });
+
+  it('seeds and redraws the independent earthen powder identity layer', () => {
+    const presenter = presenterHarness();
+
+    presenter.setEarthenPowderStylingEnabled(false);
+    expect(presenter.uniforms.uniforms.uEarthenPowderStyling).toBe(0);
+    expect(presenter.app.render).toHaveBeenCalledOnce();
+
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const start = source.indexOf('// Keep the exact low-frequency Earth/mineral powder grammar');
+    const end = source.indexOf('vec3 vibrStateDelta(', start);
+    const earthenBlock = source.slice(start, end);
+    expect(start).toBeGreaterThan(0);
+    expect(end).toBeGreaterThan(start);
+    expect(source).toContain('uniform float uEarthenPowderStyling;');
+    expect(source).toContain('uEarthenPowderStyling: { value: 1, type: \'f32\' }');
+    expect(source).toContain('uEarthenPowderStyling > 0.5\n        && (material == 6.0 || material == 21.0 || material == 26.0 || material == 28.0)');
+    expect(earthenBlock).toContain('vec3 earthenPowderIdentityDelta(float material, vec2 position)');
+    expect(earthenBlock).toContain('if (material == 6.0)');
+    expect(earthenBlock).toContain('if (material == 28.0)');
+    expect(earthenBlock).not.toMatch(/texture\s*\(/);
+    expect(earthenBlock).not.toMatch(/\balpha\s*[+*]?=/);
   });
 
   it('seeds, redraws, and bounds sensor morphology to RGB-only authoritative sensor matter', () => {

@@ -8,6 +8,7 @@ import {
   Shader,
   Sprite,
   Texture,
+  type TextureSource,
   UniformGroup,
 } from 'pixi.js';
 import { DirtyChunkGrid } from './dirty-chunk-grid';
@@ -78,6 +79,146 @@ void main() {
 }
 `;
 
+// The 8x mesh runs roughly fifteen million fragments. Keep this semantic
+// compositor intentionally compact: SwiftShader and lower-end drivers can
+// compile the richer 1x-4x body shader yet lose live values once its full
+// branch graph is executed at this scale. This retains exact IDs, phase-owned
+// volumes, Grains' square cells, depth response, and premultiplied output.
+const FIELD_EIGHT_X_FRAGMENT = `
+in vec2 vFieldCoord;
+out vec4 finalColor;
+uniform sampler2D uFieldTexture;
+uniform sampler2D uWallTexture;
+uniform sampler2D uAtmosphereTexture;
+uniform sampler2D uEmissionTexture;
+uniform sampler2D uLiquidTexture;
+uniform sampler2D uBoundaryStabilityTexture;
+uniform sampler2D uPaletteTexture;
+uniform sampler2D uStyleTexture;
+uniform vec2 uTexel;
+uniform vec2 uFieldSize;
+uniform float uPowderStyle;
+uniform float uPowderBodyDepth;
+uniform float uLiquidOpticalDepth;
+uniform float uSolidOpticalDepth;
+uniform float uGasVolumeChroma;
+uniform float uEmissionVolumeChroma;
+uniform float uLiquidVolumeChroma;
+uniform float uSourceTargetStyling;
+uniform float uVibrStateStyling;
+uniform float uDeutStateStyling;
+float materialAt(vec2 uv) {
+  return floor(texture(uFieldTexture, clamp(uv, uTexel * 0.5, vec2(1.0) - uTexel * 0.5)).r * 255.0 + 0.5);
+}
+float same(vec2 uv, float material) { return 1.0 - step(0.5, abs(materialAt(uv) - material)); }
+void main() {
+  vec2 uv = vFieldCoord;
+  vec4 semantic = texture(uFieldTexture, clamp(uv, uTexel * 0.5, vec2(1.0) - uTexel * 0.5));
+  float material = floor(semantic.r * 255.0 + 0.5);
+  vec4 atmosphere = texture(uAtmosphereTexture, uv);
+  vec4 emission = texture(uEmissionTexture, uv);
+  vec4 liquid = texture(uLiquidTexture, uv);
+  if (material < 0.5) {
+    if (liquid.a > 0.28) finalColor = vec4(liquid.rgb * liquid.a, liquid.a);
+    else if (atmosphere.a > 0.004) {
+      vec3 gas = atmosphere.rgb + uGasVolumeChroma * atmosphere.a * vec3(0.022, -0.009, 0.017);
+      finalColor = vec4(gas * atmosphere.a * 0.42, atmosphere.a * 0.42);
+    } else if (emission.a > 0.004) {
+      vec3 aura = emission.rgb + uEmissionVolumeChroma * emission.a * vec3(0.025, 0.010, 0.030);
+      finalColor = vec4(aura * emission.a * 0.30, emission.a * 0.30);
+    }
+    else finalColor = vec4(0.0);
+    return;
+  }
+  vec4 style = texture(uStyleTexture, vec2((material + 0.5) / 256.0, 0.5));
+  vec4 palette = texture(uPaletteTexture, vec2((material + 0.5) / 256.0, 0.5));
+  float family = floor(style.r * 255.0 + 0.5);
+  float optics = floor(palette.a * 255.0 + 0.5);
+  vec2 grid = uv * uFieldSize - 0.5;
+  vec2 blend = fract(grid);
+  vec2 origin = (floor(grid) + 0.5) * uTexel;
+  float q00 = same(origin, material);
+  float q10 = same(origin + vec2(uTexel.x, 0.0), material);
+  float q01 = same(origin + vec2(0.0, uTexel.y), material);
+  float q11 = same(origin + uTexel, material);
+  float density = mix(mix(q00, q10, blend.x), mix(q01, q11, blend.x), blend.y);
+  if (family == 4.0 && uPowderStyle < 0.5) density = same(uv, material);
+  if (family == 1.0) density = max(density * 0.20, atmosphere.a);
+  if (family == 2.0) density = max(density, liquid.a);
+  float depth = texture(uBoundaryStabilityTexture, uv).r;
+  vec3 color = palette.rgb;
+  if (family == 1.0) color = mix(color, atmosphere.rgb, min(0.82, atmosphere.a));
+  else if (family == 2.0) color = mix(color, liquid.rgb, min(0.78, liquid.a));
+  else if (family == 3.0) color = mix(color, emission.rgb, emission.a * 0.35) + emission.rgb * 0.18;
+  if (family == 4.0) {
+    float powderDepth = depth * uPowderBodyDepth;
+    color *= vec3(1.02 + density * 0.07) - powderDepth * vec3(0.10, 0.07, 0.04);
+  }
+  float exactLiquidInterior = q00 * q10 * q01 * q11;
+  float liquidCore = same(uv - vec2(uTexel.x, 0.0), material)
+    * same(uv + vec2(uTexel.x, 0.0), material)
+    * same(uv - vec2(0.0, uTexel.y), material)
+    * same(uv + vec2(0.0, uTexel.y), material);
+  vec4 liquidLeft = texture(uLiquidTexture, uv - vec2(uTexel.x, 0.0));
+  vec4 liquidRight = texture(uLiquidTexture, uv + vec2(uTexel.x, 0.0));
+  vec4 liquidTop = texture(uLiquidTexture, uv - vec2(0.0, uTexel.y));
+  vec4 liquidBottom = texture(uLiquidTexture, uv + vec2(0.0, uTexel.y));
+  float liquidSpeciesDifference = max(
+    max(length(liquid.rgb - liquidLeft.rgb), length(liquid.rgb - liquidRight.rgb)),
+    max(length(liquid.rgb - liquidTop.rgb), length(liquid.rgb - liquidBottom.rgb))
+  );
+  if (family == 2.0 && optics != 4.0 && liquidCore > 0.5
+    && liquidSpeciesDifference < 0.035) {
+    color *= 1.08 - depth * uLiquidOpticalDepth * 0.09;
+  }
+  if (family == 2.0 && optics != 4.0 && density > 0.72
+    && exactLiquidInterior > 0.5 && liquidCore > 0.5
+    && liquidSpeciesDifference < 0.035) {
+    color += uLiquidVolumeChroma * depth * vec3(0.022, 0.010, -0.014);
+  }
+  // A few exact TPT projections (notably WARP) have an intentionally near-black
+  // canonical palette. Preserve that identity as visible material instead of
+  // collapsing it into transparent-page black at true 8x.
+  if (max(color.r, max(color.g, color.b)) < 0.035) color = vec3(16.0 / 255.0);
+  float sourceTarget = floor(texture(uWallTexture, uv).b * 255.0 + 0.5)
+    + floor(texture(uWallTexture, uv).a * 255.0 + 0.5) * 256.0;
+  bool sourceOwner = material == 124.0 || material == 126.0 || material == 127.0
+    || material == 137.0 || material == 158.0 || material == 159.0;
+  if (uSourceTargetStyling > 0.5 && sourceOwner
+    && ((sourceTarget >= 1.0 && sourceTarget <= 170.0) || sourceTarget == 217.0)) {
+    vec2 badgeCell = mod(floor(uv * uFieldSize), 6.0);
+    float badge = 1.0 - step(0.5, mod(badgeCell.x * 3.0 + badgeCell.y * 5.0 + sourceTarget, 7.0));
+    vec3 targetKey = vec3(mod(sourceTarget, 6.0) / 6.0, mod(sourceTarget, 11.0) / 11.0, mod(sourceTarget, 17.0) / 17.0);
+    color += (vec3(0.05) + targetKey * 0.12) * (0.35 + badge * 0.65);
+  }
+  if (uVibrStateStyling > 0.5 && (material == 99.0 || material == 113.0)
+    && sourceTarget > 0.5) {
+    float charge = min(mod(sourceTarget, 128.0), 100.0) / 100.0;
+    float countdown = mod(floor(sourceTarget / 128.0), 256.0) / 255.0;
+    float alternate = step(0.5, floor(sourceTarget / 32768.0));
+    vec2 lattice = mod(floor(uv * uFieldSize), 8.0);
+    float conductor = max(1.0 - step(0.5, abs(lattice.y)),
+      1.0 - step(0.5, abs(lattice.x)));
+    vec3 charged = mix(vec3(-3.0, 12.0, 13.0), vec3(2.0, 7.0, 17.0), alternate)
+      * charge * (0.28 + conductor * 0.72);
+    vec3 burst = mix(vec3(18.0, 20.0, 13.0), vec3(8.0, 15.0, 22.0), alternate) * countdown;
+    color += (charged + burst) / 255.0;
+  }
+  if (uDeutStateStyling > 0.5 && material == 100.0 && sourceTarget > 0.5) {
+    float ordinary = min(1.0, sourceTarget / 240.0);
+    float compressed = max(0.0, (sourceTarget - 240.0) / 5760.0);
+    float concentration = sqrt(ordinary) * 0.25 + sqrt(min(1.0, compressed)) * 0.75;
+    color += concentration * vec3(10.0, 19.0, 28.0) / 255.0;
+  }
+  if (family == 0.0) color *= 0.94 - depth * uSolidOpticalDepth * 0.16 + density * 0.13;
+  float alpha = family == 1.0 ? smoothstep(0.006, 0.26, density) * 0.48
+    : (family == 3.0 ? smoothstep(0.18, 0.82, density) : density);
+  if (material == 114.0) { color = vec3(16.0 / 255.0); alpha = 1.0; }
+  alpha = clamp(alpha, 0.0, 1.0);
+  finalColor = vec4(clamp(color, 0.0, 1.0) * alpha, alpha);
+}
+`;
+
 const FIELD_FRAGMENT = `
 in vec2 vFieldCoord;
 out vec4 finalColor;
@@ -121,6 +262,7 @@ uniform float uSolidFieldLighting;
 uniform float uRoleMaterialStyling;
 uniform float uCellularMaterialStyling;
 uniform float uStructuralRigidStyling;
+uniform float uEarthenPowderStyling;
 uniform float uSensorMaterialStyling;
 uniform float uUnusualPowderStyling;
 uniform float uExplosivePowderStyling;
@@ -923,6 +1065,84 @@ vec3 lavaAncestryDelta(float material, vec2 stateBytes, vec2 position) {
     : family == 4.0 ? vec3(-10.0, 9.0, 16.0)
     : vec3(-6.0, 16.0, -2.0);
   return clamp(key * gain, vec3(-16.0), vec3(16.0)) / 255.0;
+}
+// Keep the exact low-frequency Earth/mineral powder grammar out of main's
+// long-lived composed-body scope. True 8x otherwise keeps every temporary
+// modulus result live across unrelated powder optics and can waste registers on
+// the 15-million-fragment path. World coordinates are non-negative here.
+vec3 earthenPowderIdentityDelta(float material, vec2 position) {
+  float x = floor(position.x);
+  float y = floor(position.y);
+  if (material == 6.0) {
+    float band = 1.0 - step(0.5, mod(y + floor(x / 7.0) * 2.0, 17.0));
+    if (band > 0.5) return vec3(-4.0, -3.0, -2.0) / 255.0;
+    float silt = 1.0 - step(0.5, mod(x * 3.0 + y * 5.0, 31.0));
+    return vec3(4.0, 3.0, 1.0) * silt / 255.0;
+  }
+  if (material == 21.0) {
+    float seam = 1.0 - step(0.5, mod(x * 2.0 - y + floor(y / 9.0) * 3.0, 23.0));
+    float facet = 1.0 - step(0.5, mod(x * 5.0 + y * 2.0, 37.0));
+    return (vec3(-5.0, -4.0, -2.0) * seam + vec3(2.0, 3.0, 4.0) * facet) / 255.0;
+  }
+  if (material == 26.0) {
+    float course = 1.0 - step(0.5, mod(y, 13.0));
+    float joint = 1.0 - step(0.5, mod(x + floor(y / 13.0) * 5.0, 29.0));
+    float constructionJoin = max(course, joint);
+    if (constructionJoin > 0.5) return vec3(-4.0, -4.0, -3.0) / 255.0;
+    float aggregate = 1.0 - step(0.5, mod(x * 4.0 + y * 7.0, 41.0));
+    return vec3(3.0, 2.0, -1.0) * aggregate / 255.0;
+  }
+  if (material == 28.0) {
+    float lamella = 1.0 - step(0.5, mod(y * 2.0 + floor(x / 8.0), 19.0));
+    float pocket = 1.0 - step(0.5, mod(x * 3.0 - y * 2.0, 43.0));
+    return (vec3(-3.0, -3.0, -2.0) * lamella + vec3(5.0, 1.0, -2.0) * pocket) / 255.0;
+  }
+  return vec3(0.0);
+}
+// As with the powder helper, keep construction-body identity out of main's
+// shared smooth-surface scope. Each exact owner returns before another
+// material's arithmetic becomes live on the true-8x fragment path.
+vec3 structuralRigidIdentityDelta(float material, vec2 position) {
+  float x = floor(position.x);
+  float y = floor(position.y);
+  if (material == 22.0) {
+    float course = 1.0 - step(0.5, mod(y, 6.0));
+    float joint = 1.0 - step(0.5, mod(x + floor(y / 6.0) * 3.0, 12.0));
+    if (max(course, joint) > 0.5) return vec3(-8.0, -6.0, -4.0) / 255.0;
+    float fleck = 1.0 - step(0.5, mod(x * 5.0 + y * 3.0, 23.0));
+    return vec3(3.0, 1.0, -1.0) * fleck / 255.0;
+  }
+  if (material == 23.0) {
+    float brush = 1.0 - step(0.5, mod(x * 2.0 + y, 9.0));
+    float glint = 1.0 - step(0.5, mod(x * 5.0 - y * 3.0, 31.0));
+    return (vec3(-2.0, 1.0, 4.0) * brush + vec3(5.0, 6.0, 7.0) * glint) / 255.0;
+  }
+  if (material == 25.0) {
+    float glaze = 1.0 - step(0.5, mod(x * 3.0 + y * 5.0, 19.0));
+    float craze = 1.0 - step(0.5, mod(x * 7.0 - y * 4.0, 29.0));
+    return (vec3(3.0, 4.0, 5.0) * glaze - vec3(4.0, 3.0, 2.0) * craze) / 255.0;
+  }
+  if (material == 67.0) {
+    float plate = 1.0 - step(0.5, mod(x + floor(y / 5.0) * 2.0, 11.0));
+    float pit = 1.0 - step(0.5, mod(x * 7.0 + y * 11.0, 37.0));
+    return (vec3(-3.0, -2.0, 2.0) * plate - vec3(7.0, 6.0, 4.0) * pit) / 255.0;
+  }
+  if (material == 70.0) {
+    float grain = 1.0 - step(0.5, mod(x * 3.0 - y, 13.0));
+    float glint = 1.0 - step(0.5, mod(x * 5.0 + y * 2.0, 31.0));
+    return (vec3(5.0, 3.0, -3.0) * grain + vec3(7.0, 5.0, -1.0) * glint) / 255.0;
+  }
+  if (material == 73.0) {
+    float scale = 1.0 - step(2.0, mod(x * 5.0 + y * 3.0, 17.0));
+    float roll = 1.0 - step(0.5, mod(x - y * 2.0, 15.0));
+    return (vec3(5.0, -2.0, -4.0) * scale + vec3(-2.0, -1.0, 2.0) * roll) / 255.0;
+  }
+  if (material == 82.0) {
+    float lamella = 1.0 - step(0.5, mod(x * 2.0 + y * 3.0, 11.0));
+    float highlight = 1.0 - step(0.5, mod(x * 7.0 - y * 5.0, 37.0));
+    return (vec3(-2.0, 2.0, 5.0) * lamella + vec3(3.0, 4.0, 5.0) * highlight) / 255.0;
+  }
+  return vec3(0.0);
 }
 vec3 vibrStateDelta(float material, vec2 stateBytes, vec2 position) {
   if (material != 99.0 && material != 113.0) return vec3(0.0);
@@ -2844,6 +3064,15 @@ void main() {
           : (crossMark > 0.5 ? 0.68 : (familyMark > 0.5 ? 0.38 : 0.14));
         color = clamp(color + explosiveKey * (explosiveGain / 255.0), 0.0, 1.0);
       }
+      // This exact-owner RGB identity sits after the shared granular body.
+      // The helper's local scope keeps the true-8x composed body compact.
+      if (uEarthenPowderStyling > 0.5
+        && (material == 6.0 || material == 21.0 || material == 26.0 || material == 28.0)
+        && family == 4.0 && traits < 0.5 && !materialEmissive
+        && surfaceOnly < 0.5 && halo < 0.5 && wall < 0.5
+        && wallOnly < 0.5 && emissionOnly < 0.5) {
+        color = clamp(color + earthenPowderIdentityDelta(material, fieldPosition), 0.0, 1.0);
+      }
       color *= 1.0 + powderMacroRelief;
       float powderContourChroma = localPowderShape.x < 0.92
         ? surfaceChromaResponse(density, widePowderShape.yz, optics)
@@ -2929,86 +3158,12 @@ void main() {
       // signal, sample, or long-lived shader register.
       color += mix(color, vec3(0.32, 0.36, 0.42), 0.26)
         * bevel * (0.13 + smoothSurface * 0.07 + translucentSurface * 0.10);
-      // Exact construction bodies receive a sparse, world-anchored identity
-      // after their common lit body. This stays RGB-only and deliberately
-      // excludes reconstructed support, traits, emission, walls, and halos.
+      // Exact construction bodies receive a sparse RGB identity after their
+      // shared lit body. The bounded helper keeps 8x register pressure local.
       if (uStructuralRigidStyling > 0.5 && surfaceOnly < 0.5 && halo < 0.5
         && wall < 0.5 && wallOnly < 0.5 && emissionOnly < 0.5
         && traits < 0.5 && materialEmissive < 0.5) {
-        float structuralStyle = material == 22.0 ? 1.0
-          : material == 23.0 ? 2.0
-          : material == 25.0 ? 3.0
-          : material == 67.0 ? 4.0
-          : material == 70.0 ? 5.0
-          : material == 73.0 ? 6.0
-          : material == 82.0 ? 7.0 : 0.0;
-        if (structuralStyle > 0.5) {
-          vec2 structuralCell = floor(fieldPosition);
-          float structuralRed = 0.0;
-          float structuralGreen = 0.0;
-          float structuralBlue = 0.0;
-          if (structuralStyle < 1.5) {
-            float course = 1.0 - step(0.5, mod(structuralCell.y, 6.0));
-            float joint = 1.0 - step(0.5,
-              mod(structuralCell.x + floor(structuralCell.y / 6.0) * 3.0, 12.0));
-            float fleck = 1.0 - step(0.5,
-              mod(structuralCell.x * 5.0 + structuralCell.y * 3.0, 23.0));
-            float mortar = max(course, joint);
-            structuralRed += -8.0 * mortar + 3.0 * fleck * (1.0 - mortar);
-            structuralGreen += -6.0 * mortar + fleck * (1.0 - mortar);
-            structuralBlue += -4.0 * mortar - fleck * (1.0 - mortar);
-          } else if (structuralStyle < 2.5) {
-            float brush = 1.0 - step(0.5,
-              mod(structuralCell.x * 2.0 + structuralCell.y, 9.0));
-            float glint = 1.0 - step(0.5,
-              mod(structuralCell.x * 5.0 - structuralCell.y * 3.0, 31.0));
-            structuralRed += -2.0 * brush + 5.0 * glint;
-            structuralGreen += brush + 6.0 * glint;
-            structuralBlue += 4.0 * brush + 7.0 * glint;
-          } else if (structuralStyle < 3.5) {
-            float glaze = 1.0 - step(0.5,
-              mod(structuralCell.x * 3.0 + structuralCell.y * 5.0, 19.0));
-            float craze = 1.0 - step(0.5,
-              mod(structuralCell.x * 7.0 - structuralCell.y * 4.0, 29.0));
-            structuralRed += 3.0 * glaze - 4.0 * craze;
-            structuralGreen += 4.0 * glaze - 3.0 * craze;
-            structuralBlue += 5.0 * glaze - 2.0 * craze;
-          } else if (structuralStyle < 4.5) {
-            float plate = 1.0 - step(0.5,
-              mod(structuralCell.x + floor(structuralCell.y / 5.0) * 2.0, 11.0));
-            float pit = 1.0 - step(0.5,
-              mod(structuralCell.x * 7.0 + structuralCell.y * 11.0, 37.0));
-            structuralRed += -3.0 * plate - 7.0 * pit;
-            structuralGreen += -2.0 * plate - 6.0 * pit;
-            structuralBlue += 2.0 * plate - 4.0 * pit;
-          } else if (structuralStyle < 5.5) {
-            float grain = 1.0 - step(0.5,
-              mod(structuralCell.x * 3.0 - structuralCell.y, 13.0));
-            float glint = 1.0 - step(0.5,
-              mod(structuralCell.x * 5.0 + structuralCell.y * 2.0, 31.0));
-            structuralRed += 5.0 * grain + 7.0 * glint;
-            structuralGreen += 3.0 * grain + 5.0 * glint;
-            structuralBlue += -3.0 * grain - glint;
-          } else if (structuralStyle < 6.5) {
-            float scale = 1.0 - step(2.0,
-              mod(structuralCell.x * 5.0 + structuralCell.y * 3.0, 17.0));
-            float roll = 1.0 - step(0.5,
-              mod(structuralCell.x - structuralCell.y * 2.0, 15.0));
-            structuralRed += 5.0 * scale - 2.0 * roll;
-            structuralGreen += -2.0 * scale - roll;
-            structuralBlue += -4.0 * scale + 2.0 * roll;
-          } else {
-            float lamella = 1.0 - step(0.5,
-              mod(structuralCell.x * 2.0 + structuralCell.y * 3.0, 11.0));
-            float highlight = 1.0 - step(0.5,
-              mod(structuralCell.x * 7.0 - structuralCell.y * 5.0, 37.0));
-            structuralRed += -2.0 * lamella + 3.0 * highlight;
-            structuralGreen += 2.0 * lamella + 4.0 * highlight;
-            structuralBlue += 5.0 * lamella + 5.0 * highlight;
-          }
-          color = clamp(color + clamp(vec3(structuralRed, structuralGreen, structuralBlue),
-            vec3(-12.0), vec3(12.0)) / 255.0, 0.0, 1.0);
-        }
+        color = clamp(color + structuralRigidIdentityDelta(material, fieldPosition), 0.0, 1.0);
       }
     } else if (organicSurface > 0.5 || (optics < 0.5 && profile == 3.0)) {
       float fibre = sin(fieldPosition.x * 0.20 + sin(fieldPosition.y * 0.115 + material) * 1.45);
@@ -3648,6 +3803,7 @@ export class PixiFieldPresenter {
       uRoleMaterialStyling: { value: 1, type: 'f32' },
       uCellularMaterialStyling: { value: 1, type: 'f32' },
       uStructuralRigidStyling: { value: 1, type: 'f32' },
+      uEarthenPowderStyling: { value: 1, type: 'f32' },
       uSensorMaterialStyling: { value: 1, type: 'f32' },
       uUnusualPowderStyling: { value: 1, type: 'f32' },
       uExplosivePowderStyling: { value: 1, type: 'f32' },
@@ -3710,8 +3866,22 @@ export class PixiFieldPresenter {
       // Filter first renders its source sprite into an implementation-owned
       // target even though this shader never samples that source. At true 8x
       // the redundant target approaches 60 MiB and repeats 15M fragments.
+      // The direct mesh owns explicit resources rather than Sprite-owned
+      // textures. Register every shader source before an update can occur so
+      // Pixi installs each WebGL upload listener; without this, the 8x mesh
+      // can sample an all-zero semantic/palette/style resource indefinitely.
+      const textureSystem = this.app.renderer as {
+        texture?: { initSource(source: TextureSource): void };
+      };
+      for (const source of [
+        this.fieldSource, this.wallSource, this.photonStateSource,
+        this.atmosphereSource, this.atmosphereStyleSource, gasIdentityMotifSource,
+        this.emissionSource, this.liquidSource, this.boundaryStabilitySource,
+        this.powderSurfaceSource, this.suspensionSource,
+        paletteTexture.source, styleTexture.source,
+      ]) textureSystem.texture?.initSource(source);
       const shader = Shader.from({
-        gl: { vertex: FIELD_VERTEX, fragment: FIELD_FRAGMENT, name: 'semantic-field-mesh' },
+        gl: { vertex: FIELD_VERTEX, fragment: FIELD_EIGHT_X_FRAGMENT, name: 'semantic-field-mesh' },
         resources,
       });
       const geometry = new MeshGeometry({
@@ -3823,6 +3993,12 @@ export class PixiFieldPresenter {
   presentationAuxiliaryAt(x: number, y: number): number {
     if (x < 0 || y < 0 || x >= this.width || y >= this.height) return -1;
     return this.boundaryStabilityBytes[y * this.width + x];
+  }
+
+  /** Audit-only readback of the material byte staged for the semantic texture. */
+  semanticMaterialAt(x: number, y: number): number {
+    if (x < 0 || y < 0 || x >= this.width || y >= this.height) return -1;
+    return this.fieldBytes[(y * this.width + x) * 4];
   }
 
   /** Narrow audit readback of the propagated CPU identity plane. */
@@ -3957,6 +4133,7 @@ export class PixiFieldPresenter {
     botanicalLifecycleStylingEnabled = true,
     sparkStateStylingEnabled = true,
     structuralRigidStylingEnabled = true,
+    earthenPowderStylingEnabled = true,
   ): void {
     const uniforms = this.uniforms.uniforms;
     uniforms.uGasFieldLighting = gasFieldLightingEnabled ? 1 : 0;
@@ -3979,6 +4156,7 @@ export class PixiFieldPresenter {
     uniforms.uRoleMaterialStyling = roleMaterialStylingEnabled ? 1 : 0;
     uniforms.uCellularMaterialStyling = cellularMaterialStylingEnabled ? 1 : 0;
     uniforms.uStructuralRigidStyling = structuralRigidStylingEnabled ? 1 : 0;
+    uniforms.uEarthenPowderStyling = earthenPowderStylingEnabled ? 1 : 0;
     uniforms.uSensorMaterialStyling = sensorMaterialStylingEnabled ? 1 : 0;
     uniforms.uUnusualPowderStyling = unusualPowderStylingEnabled ? 1 : 0;
     uniforms.uExplosivePowderStyling = explosivePowderStylingEnabled ? 1 : 0;
@@ -4099,6 +4277,11 @@ export class PixiFieldPresenter {
 
   setStructuralRigidStylingEnabled(enabled: boolean): void {
     this.uniforms.uniforms.uStructuralRigidStyling = enabled ? 1 : 0;
+    this.renderApplication();
+  }
+
+  setEarthenPowderStylingEnabled(enabled: boolean): void {
+    this.uniforms.uniforms.uEarthenPowderStyling = enabled ? 1 : 0;
     this.renderApplication();
   }
 

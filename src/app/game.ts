@@ -292,6 +292,7 @@ export class Game {
         if (x < 0 || y < 0 || x >= this.simulation.width || y >= this.simulation.height) return -1;
         return this.simulation.cells()[y * this.simulation.width + x];
       },
+      renderedCell: (x, y) => this.renderer.renderedMaterialAt(x, y),
       presentationState: (x, y) => {
         if (x < 0 || y < 0 || x >= this.simulation.width || y >= this.simulation.height) return -1;
         return this.simulation.presentationState?.()[y * this.simulation.width + x] ?? 0;
@@ -362,6 +363,9 @@ export class Game {
       },
       setStructuralRigidStyling: (enabled) => {
         this.renderer.setStructuralRigidStylingEnabled(enabled);
+      },
+      setEarthenPowderStyling: (enabled) => {
+        this.renderer.setEarthenPowderStylingEnabled(enabled);
       },
       setSensorMaterialStyling: (enabled) => {
         this.renderer.setSensorMaterialStylingEnabled(enabled);

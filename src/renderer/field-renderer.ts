@@ -30,6 +30,7 @@ import { applyCanvasLiquidIdentityStyle } from './canvas-liquid-identity-style';
 import { shadeCanvasEnergy } from './canvas-energy-style';
 import { shadeCanvasMaterial } from './canvas-material-style';
 import { shadeCanvasCellularMaterial } from './canvas-cellular-style';
+import { applyCanvasEarthenPowderStyle } from './canvas-earthen-powder-style';
 import { applyCanvasStructuralRigidStyle } from './canvas-structural-rigid-style';
 import { applyCanvasSensorMorphology } from './canvas-sensor-style';
 import { applyCanvasUnusualPowderStyle } from './canvas-unusual-powder-style';
@@ -213,6 +214,7 @@ export class MaterialRenderer {
   private roleMaterialStylingEnabled = true;
   private cellularMaterialStylingEnabled = true;
   private structuralRigidStylingEnabled = true;
+  private earthenPowderStylingEnabled = true;
   private sensorMaterialStylingEnabled = true;
   private unusualPowderStylingEnabled = true;
   private explosivePowderStylingEnabled = true;
@@ -363,6 +365,13 @@ export class MaterialRenderer {
     if (x < 0 || y < 0 || x >= this.simulation.width || y >= this.simulation.height) return -1;
     return this.presenter?.presentationAuxiliaryAt(x, y)
       ?? this.boundaryStability[y * this.simulation.width + x];
+  }
+
+  /** Audit-only proof that native dirty state reached the active presentation staging grid. */
+  renderedMaterialAt(x: number, y: number): number {
+    if (x < 0 || y < 0 || x >= this.simulation.width || y >= this.simulation.height) return -1;
+    return this.presenter?.semanticMaterialAt(x, y)
+      ?? this.rendered[y * this.simulation.width + x];
   }
 
   /** Audit-only readback of the propagated half-resolution gas identity plane. */
@@ -544,6 +553,14 @@ export class MaterialRenderer {
     if (enabled === this.structuralRigidStylingEnabled) return;
     this.structuralRigidStylingEnabled = enabled;
     this.presenter?.setStructuralRigidStylingEnabled(enabled);
+    this.contourChunks.markAll();
+    this.changed = true;
+  }
+
+  setEarthenPowderStylingEnabled(enabled: boolean): void {
+    if (enabled === this.earthenPowderStylingEnabled) return;
+    this.earthenPowderStylingEnabled = enabled;
+    this.presenter?.setEarthenPowderStylingEnabled(enabled);
     this.contourChunks.markAll();
     this.changed = true;
   }
@@ -888,6 +905,7 @@ export class MaterialRenderer {
       this.botanicalLifecycleStylingEnabled,
       this.sparkStateStylingEnabled,
       this.structuralRigidStylingEnabled,
+      this.earthenPowderStylingEnabled,
     );
     // Route subsequent dirty cells to the candidate while its first expensive
     // frame is in flight. The known-good Canvas remains mounted underneath;
@@ -1321,6 +1339,9 @@ export class MaterialRenderer {
           this.styledColor, powderCanonicalColor, this.boundaryStability[index],
           fields.powderSurface.bytes, pixel, powderBulkDepth, this.powderBodyDepthEnabled, optics,
         );
+        if (this.earthenPowderStylingEnabled && wall === 0 && applicableTraits === 0) {
+          applyCanvasEarthenPowderStyle(this.styledColor, material, x, y);
+        }
         this.applyThermalMaterialStyle(
           phase, material, false, applicableTraits, temperatures?.[index], optics,
         );
@@ -1757,6 +1778,10 @@ export class MaterialRenderer {
             this.styledColor, powderCanonicalColor, this.boundaryStability[index],
             fields.powderSurface.bytes, pixel, powderBulkDepth, this.powderBodyDepthEnabled, optics,
           );
+          if (this.earthenPowderStylingEnabled && phase === RenderPhase.Powder
+            && wall === 0 && applicableTraits === 0 && !info.emissive) {
+            applyCanvasEarthenPowderStyle(this.styledColor, material, x, y);
+          }
           if (denseSolidInterior && applicableTraits === 0 && !info.emissive) {
             const cohesion = canvasSolidInteriorCohesion(
               profile, optics, solidOpticalDepth, this.solidOpticalDepthEnabled,

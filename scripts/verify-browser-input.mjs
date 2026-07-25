@@ -12073,27 +12073,30 @@ async function auditRenderScaleEight(cdp, dpr) {
   const zoomedGrainCapture = await captureSettledPage(
     cdp, 'renderScale=8 high-zoom grain framebuffer', 450,
   );
+  const highZoomInputMaterial = 164;
   await evaluate(cdp, `(() => {
     const audit = window.__ANIFOR_INPUT_AUDIT__;
     audit.clear();
     audit.setRadius(0);
-    audit.setMaterial(164);
+    audit.setMaterial(${highZoomInputMaterial});
     return true;
   })()`);
-  await sleep(120);
+  await waitFor(() => evaluate(cdp,
+    'window.__ANIFOR_INPUT_AUDIT__.renderedCell(205, 188) === 0'
+      + ' && window.__ANIFOR_INPUT_AUDIT__.renderedCell(205, 194) === 0'),
+  30_000, 'renderScale=8 high-zoom input clear semantic upload');
+  // The old scene can still own the only 8x fence after clear(). Take the
+  // baseline only after the latest-wins empty frame is complete; raw 120ms
+  // screenshots can otherwise compare the click against an old Water column.
+  const zoomedInputBlankCapture = await captureSettledPage(
+    cdp, 'renderScale=8 high-zoom input blank framebuffer', 450,
+  );
   const zoomedInputGeometry = await metrics(cdp);
   const zoomedInputTarget = { x: 205, y: 188 };
   const zoomedInputClient = worldClient(
     zoomedInputGeometry.canvas,
     { x: zoomedInputTarget.x + 0.5, y: zoomedInputTarget.y + 0.5 },
   );
-  const zoomedInputBlank = await cdp.send('Page.captureScreenshot', {
-    format: 'png', fromSurface: true,
-  });
-  await sleep(80);
-  const zoomedInputBlankReference = await cdp.send('Page.captureScreenshot', {
-    format: 'png', fromSurface: true,
-  });
   await mouseClick(cdp, zoomedInputClient.x, zoomedInputClient.y, 'left');
   await sleep(100);
   const zoomedInputSemantic = await evaluate(cdp, `(() => {
@@ -12103,13 +12106,30 @@ async function auditRenderScaleEight(cdp, dpr) {
       occupied: audit.occupiedCells(),
     };
   })()`);
-  assert(zoomedInputSemantic.cell === 164 && zoomedInputSemantic.occupied === 1,
+  assert(zoomedInputSemantic.cell === highZoomInputMaterial && zoomedInputSemantic.occupied === 1,
     `renderScale=8 high-zoom input missed its exact cell (${JSON.stringify(zoomedInputSemantic)})`);
+  await waitFor(() => evaluate(cdp,
+    `window.__ANIFOR_INPUT_AUDIT__.renderedCell(${zoomedInputTarget.x}, ${zoomedInputTarget.y}) === ${highZoomInputMaterial}`),
+  30_000, 'renderScale=8 high-zoom input semantic upload');
+  // Own one completed frame after the semantic mutation. The renderer permits
+  // exactly one older 15M-fragment frame, so this cannot be substituted by an
+  // arbitrary sleep or by the most recently completed framebuffer.
+  await waitForNextWebGLPresentation(cdp, 'renderScale=8 high-zoom input presentation');
+  const zoomedInputPaintedCapture = await captureSettledPage(
+    cdp, 'renderScale=8 high-zoom input painted framebuffer', 450,
+  );
+  assertCanvasRectsEqual(
+    zoomedInputBlankCapture.canvasRect, zoomedInputPaintedCapture.canvasRect,
+    'renderScale=8 high-zoom input CSS geometry',
+  );
   const zoomedInputFootprint = (await capturePaintedFootprints(
     cdp, [zoomedInputTarget], 'renderScale=8 high-zoom input', 1.5, 0.8, {
-      baselineBase64: zoomedInputBlank.data,
-      baselineReferenceBase64: zoomedInputBlankReference.data,
-      captureCanvasRect: zoomedInputGeometry.canvas,
+      baselineBase64: zoomedInputBlankCapture.capture.data,
+      baselineReferenceBase64: zoomedInputBlankCapture.reference.data,
+      captureCanvasRect: zoomedInputBlankCapture.canvasRect,
+      // Sample the frame whose completion fence we just owned. Taking a new
+      // raw screenshot here can race a subsequent 15M-fragment presentation.
+      captureBase64: zoomedInputPaintedCapture.capture.data,
       // True 8x keeps one 15-million-fragment frame behind a GPU fence and
       // coalesces later mutations. Wait for that latest queued frame rather
       // than treating the previously completed framebuffer as a missed click.
@@ -15413,9 +15433,14 @@ async function capturePaintedFootprints(
   });
   const started = performance.now();
   const settleTimeoutMs = Math.max(0, baseline?.settleTimeoutMs ?? 0);
+  let capturedFrameBase64 = baseline?.captureBase64;
+  let requestedQueuedPresentation = false;
   let lastFailure;
   do {
-    const capture = await cdp.send('Page.captureScreenshot', { format: 'png', fromSurface: true });
+    const capture = capturedFrameBase64
+      ? { data: capturedFrameBase64 }
+      : await cdp.send('Page.captureScreenshot', { format: 'png', fromSurface: true });
+    capturedFrameBase64 = undefined;
     const samples = await samplePageRegions(
       cdp,
       capture.data,
@@ -15436,6 +15461,12 @@ async function capturePaintedFootprints(
         cell: `${landmark.x},${landmark.y}`,
         peakLumaDelta,
         peakWorldErrorCells: round(peakWorldError, 4),
+        targetPeakLuma: target.peakLuma,
+        controlPeakLuma: control.peakLuma,
+        targetPeakWorld: target.peakWorld.map((value) => round(value, 3)),
+        controlPeakWorld: control.peakWorld.map((value) => round(value, 3)),
+        textureMaterial: baseline?.textureMaterial,
+        textureMaterialFlipped: baseline?.textureMaterialFlipped,
         waitedMs: round(performance.now() - started, 1),
       };
     });
@@ -15443,12 +15474,28 @@ async function capturePaintedFootprints(
       footprint.peakLumaDelta < 20 || footprint.peakWorldErrorCells >= maximumError
     ));
     if (!lastFailure) return footprints;
-    if (performance.now() - started >= settleTimeoutMs) break;
+    const remainingMs = settleTimeoutMs - (performance.now() - started);
+    if (remainingMs <= 0) break;
+    // A semantic click can be accepted while the single allowed 8x fence still
+    // owns a pre-click or clear frame. The first stale screenshot must request
+    // the latest-wins presentation rather than repeatedly sampling that same
+    // completed framebuffer. Canvas and ordinary browser probes keep their
+    // prior bounded screenshot loop; only the explicit 8x baseline opts in.
+    if (!requestedQueuedPresentation) {
+      requestedQueuedPresentation = true;
+      await waitForNextWebGLPresentation(
+        cdp,
+        `${label} queued semantic presentation`,
+        Math.min(12_000, Math.max(1, remainingMs)),
+        Math.min(30_000, Math.max(1, remainingMs)),
+      );
+      continue;
+    }
     await sleep(50);
   } while (true);
 
   assert(lastFailure.peakLumaDelta >= 20,
-    `${label}: painted footprint at ${lastFailure.cell} is not visible (${lastFailure.peakLumaDelta} peak luma over control after ${lastFailure.waitedMs} ms)`);
+    `${label}: painted footprint at ${lastFailure.cell} is not visible (${lastFailure.peakLumaDelta} peak luma over control after ${lastFailure.waitedMs} ms; ${JSON.stringify(lastFailure)})`);
   assert(lastFailure.peakWorldErrorCells < maximumError,
     `${label}: painted footprint at ${lastFailure.cell} is offset ${lastFailure.peakWorldErrorCells.toFixed(3)} cells`);
   throw new Error(`${label}: unreachable footprint validation state`);

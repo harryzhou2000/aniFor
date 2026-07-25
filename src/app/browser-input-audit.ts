@@ -37,6 +37,7 @@ export interface BrowserInputAuditApi {
   readonly width: number;
   readonly height: number;
   cell(x: number, y: number): number;
+  renderedCell(x: number, y: number): number;
   presentationState(x: number, y: number): number;
   wall(x: number, y: number): number;
   temperature(x: number, y: number): number;
@@ -63,6 +64,7 @@ export interface BrowserInputAuditApi {
   setRoleMaterialStyling(enabled: boolean): void;
   setCellularMaterialStyling(enabled: boolean): void;
   setStructuralRigidStyling(enabled: boolean): void;
+  setEarthenPowderStyling(enabled: boolean): void;
   setSensorMaterialStyling(enabled: boolean): void;
   setUnusualPowderStyling(enabled: boolean): void;
   setExplosivePowderStyling(enabled: boolean): void;
