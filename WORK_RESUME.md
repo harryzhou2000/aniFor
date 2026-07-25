@@ -1281,3 +1281,20 @@ The next material-primary slice is wider exact coverage of palette-led catalog f
 - Validation: focused field/style tests, complete 114-file / 730-test suite,
   production build, forced-Canvas solid-only browser assertion, and existing
   forced-Canvas gas/energy identity captures all pass with zero browser errors.
+
+## Current native LIFE membrane/core checkpoint
+
+- The 24 renderer-only LIFE projections retain their native `PT_LIFE` ctype
+  identity and intentionally discrete live-cell topology, but their former
+  stripe/node detail was applied before Canvas body optics and could be muted in
+  a dense colony. Canvas now applies that exact-owner RGB motif after ordinary
+  solid body optics, matching WebGL's composed ordering.
+- Both presenters add the same static, world-anchored 16-cell micro-colony cue:
+  a dim membrane around a tiny core, over the existing preset-specific
+  stripe/node grammar. It is deliberately bounded to ten RGB bytes, has no time
+  signal, neighbour read, texture, field, support, alpha, contour, allocation,
+  physics, ctype, or save change, and never reconstructs a dead LIFE cell.
+- Validation: focused Canvas/Pixi tests and production build, complete 114-file
+  / 731-test suite, Canvas and WebGL 24-card LIFE atlas gates (including
+  authored holes, isolated controls, blank controls, exact off repetition, and
+  zero browser errors), plus true 4896×3072 8× promotion completion.

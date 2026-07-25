@@ -2859,17 +2859,35 @@ void main() {
         float node = 1.0 - step(
           0.5, mod(cellularCell.x * 3.0 + cellularCell.y * 5.0 + preset * 7.0, nodePeriod)
         );
+        vec2 cellularLocal = mod(
+          cellularCell + vec2(preset * 3.0, preset * 5.0), 16.0
+        ) - vec2(7.5);
+        float cellularRadiusSquared = dot(cellularLocal, cellularLocal);
+        float membrane = step(24.5, cellularRadiusSquared)
+          * (1.0 - step(43.5, cellularRadiusSquared));
+        float core = 1.0 - step(7.5, cellularRadiusSquared);
         float scalar = mix(
           2.0 + mod(preset, 2.0),
           -4.0 - mod(floor(preset / 4.0), 2.0) * 2.0,
           band
-        ) + node * mix(2.0, -2.0, band);
+        ) + node * mix(2.0, -2.0, band)
+          + membrane * -1.0 + core;
         vec3 cellularDelta = vec3(scalar);
         if (motif < 0.5) cellularDelta += vec3(0.0, -band * 2.0, node * 2.0);
         else if (motif < 1.5) cellularDelta += vec3(-band * 2.0, 0.0, band);
         else if (motif < 2.5) cellularDelta += vec3(band, node * 2.0, 0.0);
         else cellularDelta += vec3(0.0, -node, -band * 2.0);
-        color = clamp(color + cellularDelta / 255.0, 0.0, 1.0);
+        if (membrane > 0.5) {
+          cellularDelta.r -= motif < 1.5 ? (motif < 0.5 ? 1.0 : 0.0) : 1.0;
+          cellularDelta.g -= motif < 2.5 ? (motif < 1.5 ? 1.0 : 0.0) : 1.0;
+          cellularDelta.b += motif < 2.5 ? 1.0 : 0.0;
+        } else if (core > 0.5) {
+          cellularDelta.r += motif < 2.5 ? (motif < 1.5 ? 0.0 : 1.0) : 0.0;
+          cellularDelta.g += motif < 2.5 ? 0.0 : 1.0;
+          cellularDelta.b += motif < 0.5 ? 1.0 : 0.0;
+        }
+        color = clamp(color + clamp(cellularDelta, vec3(-10.0), vec3(10.0)) / 255.0,
+          0.0, 1.0);
       }
     } else if (smoothSurface > 0.5 || translucentSurface > 0.5
       || (optics < 0.5 && profile == 2.0)) {

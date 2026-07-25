@@ -1718,11 +1718,6 @@ export class MaterialRenderer {
             this.styledColor, red, green, blue, profile,
             optics, material, x, y, index, visualTime,
           );
-          if (this.cellularMaterialStylingEnabled && optics === RenderOptics.Cellular) {
-            shadeCanvasCellularMaterial(
-              this.styledColor, material, x, y,
-            );
-          }
           if (this.sensorMaterialStylingEnabled) {
             applyCanvasSensorMorphology(this.styledColor, material, x, y);
           }
@@ -1756,6 +1751,13 @@ export class MaterialRenderer {
             this.styledColor, surfaceLight, normalLight, solidRelief,
             denseSolidInterior, profile, optics, solidOpticalDepth, this.solidOpticalDepthEnabled,
           );
+          // Cellular colonies are semantic discrete solids, but their
+          // presentation motif belongs after generic body optics so dense LIFE
+          // remains legible rather than being absorbed by the rigid core pass.
+          // The helper is RGB-only and exact-owner guarded.
+          if (this.cellularMaterialStylingEnabled && optics === RenderOptics.Cellular) {
+            shadeCanvasCellularMaterial(this.styledColor, material, x, y);
+          }
           if (this.unusualSolidStylingEnabled && phase === RenderPhase.Solid) {
             applyCanvasSpongeMorphology(this.styledColor, material, x, y);
           }

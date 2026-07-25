@@ -16,8 +16,9 @@ export function isCanvasCellularMaterial(material: number): boolean {
  * The native ctype projection supplies the preset identity. Four inexpensive
  * coordinate vocabularies, plus preset-specific period and phase, keep all 24
  * rules legible without animation, sampling, allocation, or topology changes.
- * Callers continue to own alpha and semantic support; values beyond RGB are
- * deliberately never read or written.
+ * A fixed 16-cell membrane/core grammar keeps a dense colony from reading as a
+ * flat engraved solid. Callers continue to own alpha and semantic support;
+ * values beyond RGB are deliberately never read or written.
  */
 export function shadeCanvasCellularMaterial(
   output: Float32Array,
@@ -41,12 +42,21 @@ export function shadeCanvasCellularMaterial(
   const band = positiveModulo(coordinate + phase, period) < bandWidth;
   const nodePeriod = 11 + preset % 3;
   const node = positiveModulo(x * 3 + y * 5 + preset * 7, nodePeriod) === 0;
+  // A world-anchored microscopic colony: a dim membrane encloses a small core.
+  // This is deliberately only an RGB grammar; it never substitutes for live-cell
+  // occupancy, reconstructs gaps, reads neighbours, or follows simulation time.
+  const cellX = positiveModulo(x + preset * 3, 16) - 7.5;
+  const cellY = positiveModulo(y + preset * 5, 16) - 7.5;
+  const radiusSquared = cellX * cellX + cellY * cellY;
+  const membrane = radiusSquared >= 24.5 && radiusSquared <= 43.5;
+  const core = radiusSquared <= 7.5;
   // Engrave the dominant band instead of relying on a bright-only accent.
   // Saturated LIFE palettes (white, yellow, cyan, magenta) otherwise clip the
   // motif in Canvas byte space, while very dark palettes still retain the
   // restrained positive interstice and node response.
   const scalar = (band ? -4 - ((preset >>> 2) & 1) * 2 : 2 + (preset & 1))
-    + (node ? (band ? -2 : 2) : 0);
+    + (node ? (band ? -2 : 2) : 0)
+    + (membrane ? -1 : core ? 1 : 0);
 
   let red = scalar;
   let green = scalar;
@@ -64,10 +74,21 @@ export function shadeCanvasCellularMaterial(
     if (band) blue -= 2;
     if (node) green -= 1;
   }
+  if (membrane) {
+    red -= motif === 1 ? 0 : 1;
+    green -= motif === 2 ? 0 : 1;
+    blue += motif === 3 ? 0 : 1;
+  } else if (core) {
+    red += motif === 2 ? 1 : 0;
+    green += motif === 3 ? 1 : 0;
+    blue += motif === 0 ? 1 : 0;
+  }
 
-  output[0] = clampByte(output[0] + red);
-  output[1] = clampByte(output[1] + green);
-  output[2] = clampByte(output[2] + blue);
+  // Keep composed cellular texture in the same restrained ten-byte envelope
+  // used by the former stripe-only motif, including saturated native palettes.
+  output[0] = clampByte(output[0] + clamp(red, -10, 10));
+  output[1] = clampByte(output[1] + clamp(green, -10, 10));
+  output[2] = clampByte(output[2] + clamp(blue, -10, 10));
 }
 
 function positiveModulo(value: number, divisor: number): number {
@@ -77,4 +98,8 @@ function positiveModulo(value: number, divisor: number): number {
 
 function clampByte(value: number): number {
   return value < 0 ? 0 : value > 255 ? 255 : value;
+}
+
+function clamp(value: number, minimum: number, maximum: number): number {
+  return Math.max(minimum, Math.min(maximum, value));
 }
