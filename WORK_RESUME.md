@@ -1013,3 +1013,23 @@ The next material-primary slice is wider exact coverage of palette-led catalog f
   frame in `24757 ms`. The gate also re-proved the fixed 68px/two-row desktop
   filter rail; its verified temporary Chrome profile was closed once the audit
   had completed.
+
+## Current Canvas aqueous macro-sheen follow-up
+
+- Side-by-side built-bundle showcase review found a real fallback parity gap:
+  the Canvas Water pool retained its correct smooth body, glass boundary, Oil
+  island, and semantic ownership, but its broad reflected band was too quiet
+  next to the WebGL volume. Dense aqueous and cryogenic bodies now use the
+  existing macro-sheen path at `0.160` strength rather than `0.095`.
+- This is only a stronger RGB interpolation over the already computed,
+  world-anchored two-wave signal. Existing dense field support, exact
+  trait/emission/wall/unlike-liquid gates, and molten no-op remain authoritative;
+  no alpha, silhouette, reconstruction, field, sample, texture, pass,
+  allocation, output-scale cost, physics, or save state changes.
+- The focused macro test now keeps an observable normal-fit aqueous reflected
+  band while retaining its existing below-18-byte peak bound. The full 114-file
+  / 724-test suite and 834-module static-closure production build pass. A fresh
+  forced-Canvas production showcase capture reports zero browser errors and
+  visibly preserves the pool's curved outline, Oil seam, glass boundary, and
+  all non-liquid scene material while making its broad cyan volume easier to
+  read at fit view.

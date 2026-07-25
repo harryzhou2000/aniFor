@@ -191,7 +191,7 @@ export function applyCanvasLiquidMacroSheen(
   // remains a little broader and quieter, while corrosive hue stays governed
   // by its luminance-safe chroma step below.
   const strength = optics === RenderOptics.Aqueous || optics === RenderOptics.CryogenicLiquid
-    ? 0.095
+    ? 0.160
     : optics === RenderOptics.Oily ? 0.075
       : optics === RenderOptics.Corrosive ? 0.045
         : optics === RenderOptics.MetallicLiquid ? 0.065 : 0.070;

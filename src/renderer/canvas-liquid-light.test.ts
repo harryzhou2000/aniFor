@@ -224,6 +224,10 @@ describe('Canvas liquid field-owned light', () => {
     expect(shaded[0]).toBeLessThan(source[0]);
     expect(shaded[1]).toBeLessThan(source[1]);
     expect(shaded[2]).toBeLessThan(source[2]);
+    // This is the normal-fit fallback's broad reflected band, not a subtle
+    // single-cell accent: retain enough aqueous lift to read beside WebGL.
+    expect(lit[0] - source[0]).toBeGreaterThanOrEqual(13);
+    expect(lit[1] - source[1]).toBeGreaterThanOrEqual(12);
     expect(lit[3]).toBe(source[3]);
     expect(shaded[3]).toBe(source[3]);
     expect(Math.max(...[0, 1, 2].map((channel) => lit[channel] - source[channel]))).toBeLessThan(18);
