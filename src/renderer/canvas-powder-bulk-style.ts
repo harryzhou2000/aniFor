@@ -4,11 +4,13 @@ const STABILITY_MINIMUM = 224;
 const DENSITY_MINIMUM = 0.66 * 255;
 const SUPPORT_MINIMUM = 5.5;
 const SUPPORT_BYTE_TO_COUNT = 9 / 255;
-// Stable, exact-material bulk should read as one body before it reads as a
-// collection of cells. Keep a quarter of the original albedo variation so it
-// remains granular, but leave the full grain treatment for loose material and
-// the explicit Grains/Local modes.
-const CANONICAL_BLEND_MAX = 0.76;
+// A newly settled shoulder retains a quarter of its original albedo variation,
+// but a genuinely dense stable core may retain only sixteen percent. This lets
+// an accumulated Smooth powder body read as material rather than peppered
+// cells, while loose material and explicit Grains/Local stay on their existing
+// paths before this helper is reached.
+const CANONICAL_BLEND_SHOULDER = 0.76;
+const CANONICAL_BLEND_CORE = 0.84;
 const GRADIENT_BYTE_SCALE = 508;
 const RELIEF_DARK_LIMIT = -0.07;
 const RELIEF_LIGHT_LIMIT = 0.08;
@@ -82,7 +84,15 @@ export function applyCanvasPowderBulkStyle(
   const crystalline = optics === RenderOptics.CrystallineGranular;
   const sooty = optics === RenderOptics.SootyGranular;
   const metallic = optics === RenderOptics.MetallicGranular;
-  const blend = crystalline ? 0.68 : sooty ? 0.80 : metallic ? 0.70 : CANONICAL_BLEND_MAX;
+  const baseBlend = crystalline ? 0.68 : sooty ? 0.80 : metallic ? 0.70
+    : CANONICAL_BLEND_SHOULDER;
+  // This runs only after the caller proved an exact stable Smooth-powder body.
+  // Keep the shoulder's established per-cell material character, then calm
+  // only field-dense interiors toward the WebGL core's 16% grain retention.
+  // Density is already the shared powder support; no neighbour scan, field,
+  // allocation, silhouette, alpha, or semantic ownership decision is added.
+  const coreProgress = clamp((densityByte / 255 - 0.68) / (0.85 - 0.68), 0, 1);
+  const blend = baseBlend + (CANONICAL_BLEND_CORE - baseBlend) * coreProgress;
   color[0] += (canonicalRed - color[0]) * blend;
   color[1] += (canonicalGreen - color[1]) * blend;
   color[2] += (canonicalBlue - color[2]) * blend;

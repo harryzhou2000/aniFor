@@ -1151,3 +1151,25 @@ The next material-primary slice is wider exact coverage of palette-led catalog f
   19-asset closure; a real WebGL production showcase compiled with zero browser
   errors; and the true-8× browser gate reached its reference and promoted 8×
   presentation stages in 9.36 s and 25.05 s respectively.
+
+## Current Canvas deep Smooth-powder cohesion checkpoint
+
+- Cross-backend review found that Canvas retained 24–32% of cell-scale albedo
+  variation throughout a settled Smooth-powder body, making the deepest Sand,
+  Clay, and compact powders look visibly peppered compared with WebGL. Canvas
+  now keeps the established shoulder response but ramps only dense, exact,
+  stable Smooth interiors to 16% residual variation. Loose grains, Local and
+  Grains modes, moving matter, fine columns, contacts, traits, emission, holes,
+  support, alpha, topology, physics, and saves never enter this helper.
+- The change is one bounded arithmetic blend using the existing powder-density
+  byte after the prior bulk-depth gate. It adds no neighbour lookup, field,
+  texture, buffer, pass, allocation, timer, output-scale cost, or semantic
+  ownership decision. Existing family body lighting remains independent, so
+  crystalline, sooty, metallic, and mineral powder retain their separate optics.
+- Validation: focused unit coverage proves the unchanged 24% shoulder residual,
+  exact 16% deep-core residual, and all previous confidence/no-op controls;
+  TypeScript build and the 19-asset closure pass; a forced Canvas2D production
+  showcase capture has zero browser errors and visually confirms a calmer packed
+  material base. The paired powder-body browser gate was not counted because an
+  outer harness ended it before it reported results; only its exact
+  audit-owned Chrome profiles were terminated and they were confirmed gone.

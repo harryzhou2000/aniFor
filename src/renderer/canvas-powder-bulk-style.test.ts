@@ -72,7 +72,7 @@ describe('Canvas powder bulk style', () => {
     const color = new Float32Array(original);
     // Disable only the volume cue to isolate established canonical-albedo
     // convergence from the mineral body response.
-    applyCanvasPowderBulkStyle(color, ...canonical, 255, 212, 128, 128, 255, 1, false);
+    applyCanvasPowderBulkStyle(color, ...canonical, 255, 169, 128, 128, 255, 1, false);
 
     for (let channel = 0; channel < 3; channel++) {
       expect(Math.abs(color[channel] - canonical[channel])).toBeLessThan(
@@ -85,6 +85,31 @@ describe('Canvas powder bulk style', () => {
     }
     expect(color[0]).toBeGreaterThan(color[1]);
     expect(color[1]).toBeGreaterThan(color[2]);
+  });
+
+  it('calms only dense stable cores while leaving supported shoulders at their established grain retention', () => {
+    const canonical = [215, 170, 104] as const;
+    const original = [173, 136, 83] as const;
+    const shoulder = new Float32Array(original);
+    const core = new Float32Array(original);
+    // Body chroma is deliberately disabled: this isolates the new residual
+    // cell-albedo contraction from slope and family lighting.
+    applyCanvasPowderBulkStyle(shoulder, ...canonical, 255, 169, 128, 128, 255, 1, false);
+    applyCanvasPowderBulkStyle(core, ...canonical, 255, 255, 128, 128, 255, 1, false);
+
+    for (let channel = 0; channel < 3; channel++) {
+      const shoulderResidual = Math.abs(shoulder[channel] - canonical[channel]);
+      const coreResidual = Math.abs(core[channel] - canonical[channel]);
+      expect(shoulderResidual).toBeCloseTo(
+        Math.abs(original[channel] - canonical[channel]) * 0.24,
+        4,
+      );
+      expect(coreResidual).toBeCloseTo(
+        Math.abs(original[channel] - canonical[channel]) * 0.16,
+        4,
+      );
+      expect(coreResidual).toBeLessThan(shoulderResidual * 0.69);
+    }
   });
 
   it('adds a bounded upper-left mineral key and opposing fill', () => {
