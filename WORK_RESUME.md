@@ -859,5 +859,10 @@ The next material-primary slice is wider exact coverage of palette-led catalog f
   body/macro colours and identical chroma response, plus sparse/dense support
   controls. Local validation passes the focused `20`-test liquid suite, the
   complete `114`-file / `720`-test suite, TypeScript, and the 834-module
-  production static-closure build. Next: commit, push, manually deploy with
-  the existing project-local compiler cache, and independently re-check Pages.
+  production static-closure build.
+- Manual workflow run `30147460442` then built, deployed, and verified this
+  exact checkpoint. Both project-local Emscripten and ccache restored; saving
+  the compiler cache correctly skipped because the exact successful cache key
+  already existed. An independent live check confirmed revision
+  `2c236ef7433bdeae24c4b5edd047f31533026958` and all `19` runtime assets at
+  GitHub Pages.
