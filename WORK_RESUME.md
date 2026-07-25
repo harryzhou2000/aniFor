@@ -866,3 +866,18 @@ The next material-primary slice is wider exact coverage of palette-led catalog f
   already existed. An independent live check confirmed revision
   `2c236ef7433bdeae24c4b5edd047f31533026958` and all `19` runtime assets at
   GitHub Pages.
+
+## Current built-bundle visual-review checkpoint
+
+- The browser audit now accepts `--production-bundle`, and the named
+  `npm run audit:production-screenshot` command combines it with the focused
+  screenshot path. It loads the already-built `dist` bundle directly instead
+  of starting Vite, which keeps visual evidence independent of local
+  dev-server navigation timing while retaining the same Canvas/WebGL semantic
+  fixture and framebuffer assertions.
+- Fresh 2× canonical captures completed in both WebGL and forced Canvas2D with
+  zero browser errors. They confirmed field-composed gas volume, cohesive
+  liquid bodies, smooth stable powder, material-family styling, Canvas
+  fallback, and normalized Sand/Water suspension chroma while preserving the
+  exact 612×384 fixture signature. The temporary audit Chrome process exited
+  cleanly after the earlier dev-server navigation timeout.

@@ -47,6 +47,11 @@ the canonical visual fixture:
 mkdir -p .artifacts
 npm run audit:browser-input -- --webgl-only --screenshot=.artifacts/render-lab-webgl.png
 npm run audit:browser-input -- --canvas-only --screenshot=.artifacts/render-lab-canvas2d.png
+
+# Capture the exact built bundle without starting Vite (useful for visual review).
+npm run build
+npm run audit:production-screenshot -- --webgl-only --screenshot=.artifacts/render-lab-webgl-production.png
+npm run audit:production-screenshot -- --canvas-only --screenshot=.artifacts/render-lab-canvas2d-production.png
 ```
 
 The desktop audit also makes a paired 2×/1× render-backing comparison at an identical 1280×720 CSS viewport. CSS canvas dimensions must remain identical while only the backing changes from 1224×768 to 612×384; each scale must independently pass the same three semantic landmarks, cursor-anchored wheel threshold, and 42×27 CSS-pixel middle-pan assertion.

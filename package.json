@@ -11,6 +11,7 @@
     "typecheck": "tsc -b",
     "test": "vitest run src",
     "audit:browser-input": "node scripts/verify-browser-input.mjs",
+    "audit:production-screenshot": "node scripts/verify-browser-input.mjs --production-bundle --quick-screenshot",
     "audit:8x": "node scripts/verify-browser-input.mjs --scale-eight-only",
     "audit:material-atlas": "node scripts/verify-browser-input.mjs --material-atlas-only",
     "audit:explosive-powder": "node scripts/verify-browser-input.mjs --explosive-powder-graphics-only",

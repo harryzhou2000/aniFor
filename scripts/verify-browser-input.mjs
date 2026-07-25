@@ -91,7 +91,11 @@ const lavaStateGraphicsOnly = process.argv.includes('--lava-state-graphics-only'
 const botanicalLifecycleGraphicsOnly = process.argv.includes('--botanical-lifecycle-graphics-only');
 const sparkStateGraphicsOnly = process.argv.includes('--spark-state-graphics-only');
 const nativeSeedGrowthOnly = process.argv.includes('--native-seed-growth-only');
-const usesProductionBundle = cellularGraphicsOnly || sensorGraphicsOnly
+// A focused visual probe should be able to exercise the exact already-built
+// bundle without starting Vite. That keeps screenshot evidence independent of
+// dev-server navigation timing while leaving all default audit paths unchanged.
+const productionBundle = process.argv.includes('--production-bundle');
+const usesProductionBundle = productionBundle || cellularGraphicsOnly || sensorGraphicsOnly
   || unusualPowderGraphicsOnly || explosivePowderGraphicsOnly || unusualSolidGraphicsOnly
   || liquidIdentityGraphicsOnly || gasIdentityGraphicsOnly || energyRadioactiveGraphicsOnly
   || organicPlantGraphicsOnly || spongeGraphicsOnly || virusGraphicsOnly || waxGraphicsOnly
