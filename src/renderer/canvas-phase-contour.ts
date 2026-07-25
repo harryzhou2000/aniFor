@@ -11,6 +11,7 @@ import { Material } from '../shared/materials';
 import { RenderPhase, RenderProfile } from './render-profile';
 import { isGranularOptics, RenderOptics } from './render-optics';
 import { applyCanvasSurfaceChroma, canvasSurfaceChromaResponse } from './solid-surface-chroma';
+import { hasCanvasLiquidIdentityStyle } from './canvas-liquid-identity-style';
 import type { FieldOutputScale } from './render-resolution';
 import type { PowderRenderStyle } from './powder-render-style';
 
@@ -380,9 +381,16 @@ export class CanvasPhaseContourScratch {
     }
     const emptyPowder = this.haloMaterials[haloIndex] === 0 && material !== 0;
     // Presentation-only reconstruction may prefill sourcePixels for a semantic
-    // empty cell. Only a resolved powder owner may turn that payload into
-    // coverage; otherwise a non-zero source alpha must not claim the cell.
-    if (material === 0 && sourceAlpha !== 0) return;
+    // empty cell. A shared-field liquid pinhole is the one non-owner exception:
+    // it has already been reconstructed from exact liquid donors, and the field
+    // proves one canonical liquid species at this coordinate. It remains Empty
+    // below so it cannot acquire an owner, Hermite contour, or material styling.
+    const reconstructedLiquid = material === 0 && sourceAlpha !== 0 && !this.isWallAt(haloIndex)
+      && this.hasUniqueLiquidFieldSpecies(worldIndex, input);
+    // Only a resolved powder owner or a validated liquid reconstruction may turn
+    // an empty payload into coverage. Other non-zero source alpha (including a
+    // reconstructed LIFE dead cell) must not claim presentation coverage.
+    if (material === 0 && sourceAlpha !== 0 && !reconstructedLiquid) return;
     // The output planes were cleared once for the chunk. A truly empty source
     // with no projected powder owner therefore has no per-supersample work.
     if (material === 0 && sourceRed === 0 && sourceGreen === 0
@@ -696,6 +704,38 @@ export class CanvasPhaseContourScratch {
         this.pixels[outputPixel + 3] = clampByte(sourceAlpha * amount);
       }
     }
+  }
+
+  /**
+   * The liquid field owns canonical species RGB and density. Reconstructed
+   * source RGB intentionally remains styled donor RGB, so it must not be
+   * compared to the field colour here. A unique ordinary canonical liquid
+   * palette match is enough to retain the already-created non-owner payload.
+   * Identity-styled liquids retain their exact authored holes rather than
+   * extending a semantic role onto an Empty pixel; ambiguous or unrecognised
+   * field colours likewise remain empty.
+   */
+  private hasUniqueLiquidFieldSpecies(
+    worldIndex: number,
+    input: CanvasPhaseContourInput,
+  ): boolean {
+    const field = input.liquidField;
+    const palette = input.paletteBytes;
+    if (!field || !palette) return false;
+    const fieldPixel = worldIndex * 4;
+    if (field[fieldPixel + 3] === 0) return false;
+    let matches = 0;
+    for (let candidate = 1; candidate < 256; candidate++) {
+      const palettePixel = candidate * 4;
+      if (input.styleBytes[palettePixel] !== RenderPhase.Liquid
+        || hasCanvasLiquidIdentityStyle(candidate)
+        || palette[palettePixel] !== field[fieldPixel]
+        || palette[palettePixel + 1] !== field[fieldPixel + 1]
+        || palette[palettePixel + 2] !== field[fieldPixel + 2]) continue;
+      matches++;
+      if (matches > 1) return false;
+    }
+    return matches === 1;
   }
 
   /**

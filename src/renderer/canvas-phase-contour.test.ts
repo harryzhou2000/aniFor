@@ -12,6 +12,7 @@ import {
 import { RenderOptics } from './render-optics';
 import { LiquidDensityField } from './liquid-density-field';
 import { PowderSurfaceField } from './powder-surface-field';
+import { createLiquidSurfaceScratch, reconstructLiquidSurface } from './canvas-liquid-surface';
 import { createRenderLookups } from './render-field-set';
 
 const lookups = createRenderLookups(ALL_MATERIALS);
@@ -241,6 +242,76 @@ describe('Canvas 2x phase contour scratch', () => {
       }
     }
     expect(ownedPowderSamples).toBeGreaterThan(0);
+  });
+
+  it('keeps an already reconstructed field-valid liquid pinhole as non-owner 2x coverage', () => {
+    const value = fixture(3, 3);
+    for (let y = 0; y < 3; y++) for (let x = 0; x < 3; x++) {
+      if (x !== 1 || y !== 1) paint(value, x, y, Material.Water);
+    }
+    const field = liquidField(value);
+    const sourcePixels = value.pixels.slice();
+    reconstructLiquidSurface(
+      sourcePixels, value.materials, field,
+      lookups.liquidByMaterial, lookups.colorByMaterial, lookups.styleBytes,
+      createLiquidSurfaceScratch(sourcePixels, 3), 3, 3,
+    );
+    const sourcePixel = 4 * 4;
+    expect(value.materials[4]).toBe(Material.Empty);
+    expect(sourcePixels[sourcePixel + 3]).toBe(210);
+
+    for (const scale of [2, 4, 8] as const) {
+      const valid = new CanvasPhaseContourScratch(scale);
+      valid.rasterize({ ...value.input, sourcePixels, liquidField: field });
+      for (let subY = 0; subY < scale; subY++) for (let subX = 0; subX < scale; subX++) {
+        const output = (scale + subY) * valid.outputStride + scale + subX;
+        expect(valid.ownerMaterials[output]).toBe(Material.Empty);
+        expect(valid.coverage[output]).toBe(255);
+        expect(Array.from(valid.pixels.slice(output * 4, output * 4 + 4))).toEqual(
+          Array.from(sourcePixels.slice(sourcePixel, sourcePixel + 4)),
+        );
+      }
+    }
+
+    const identity = fixture(3, 3);
+    for (let y = 0; y < 3; y++) for (let x = 0; x < 3; x++) {
+      if (x !== 1 || y !== 1) paint(identity, x, y, Material.Soap);
+    }
+    const identityField = liquidField(identity);
+    const identitySource = identity.pixels.slice();
+    reconstructLiquidSurface(
+      identitySource, identity.materials, identityField,
+      lookups.liquidByMaterial, lookups.colorByMaterial, lookups.styleBytes,
+      createLiquidSurfaceScratch(identitySource, 3), 3, 3,
+    );
+    const rejectedIdentity = new CanvasPhaseContourScratch(2);
+    rejectedIdentity.rasterize({
+      ...identity.input, sourcePixels: identitySource, liquidField: identityField,
+    });
+
+    const invalidSpecies = field.slice();
+    const lifeColor = Material.LIFE_GOL * 3;
+    invalidSpecies[sourcePixel] = lookups.colorByMaterial[lifeColor];
+    invalidSpecies[sourcePixel + 1] = lookups.colorByMaterial[lifeColor + 1];
+    invalidSpecies[sourcePixel + 2] = lookups.colorByMaterial[lifeColor + 2];
+    const rejectedSpecies = new CanvasPhaseContourScratch(2);
+    rejectedSpecies.rasterize({ ...value.input, sourcePixels, liquidField: invalidSpecies });
+
+    const noFieldSupport = field.slice();
+    noFieldSupport[sourcePixel + 3] = 0;
+    const rejectedDensity = new CanvasPhaseContourScratch(2);
+    rejectedDensity.rasterize({ ...value.input, sourcePixels, liquidField: noFieldSupport });
+    value.walls[4] = 1;
+    const rejectedWall = new CanvasPhaseContourScratch(2);
+    rejectedWall.rasterize({ ...value.input, sourcePixels, liquidField: field });
+    for (const rejected of [rejectedIdentity, rejectedSpecies, rejectedDensity, rejectedWall]) {
+      for (let subY = 0; subY < 2; subY++) for (let subX = 0; subX < 2; subX++) {
+        const output = (2 + subY) * rejected.outputStride + 2 + subX;
+        expect(rejected.ownerMaterials[output]).toBe(Material.Empty);
+        expect(rejected.coverage[output]).toBe(0);
+        expect(rejected.pixels[output * 4 + 3]).toBe(0);
+      }
+    }
   });
 
   it('creates real four- and eight-times contour samples with matching strides', () => {

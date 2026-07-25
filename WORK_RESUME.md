@@ -1,6 +1,6 @@
 # AniforTPT Work Resume
 
-Last reconciled: 2026-07-25 (Asia/Shanghai)
+Last reconciled: 2026-07-26 (Asia/Shanghai)
 
 This is the authoritative handoff for the active AniforTPT workstream. The goal is not complete.
 
@@ -36,6 +36,26 @@ Immediate priorities are:
   work. The Canvas showcase plus dedicated 17-gas and 21-energy/radioactive
   browser atlases pass with zero errors and their topology/off→on→off controls
   intact; the full local suite is `114` files / `728` tests.
+
+### Current Canvas field-backed liquid pinholes
+
+- At 2× and above, the contour scratch now retains an already reconstructed
+  ordinary-liquid pinhole only when the shared liquid RGBA field proves one
+  exact canonical liquid species at that semantic-empty, non-wall cell. The
+  retained pixel stays `Empty` in `ownerMaterials`, bypasses all Hermite/
+  material branches, and copies its pre-styled RGBA payload without changing
+  alpha, occupancy, physics, or liquid-field topology.
+- Ambiguous or absent field species, zero field density, native walls, LIFE
+  payloads, and all Canvas liquid-identity materials remain rejected. This
+  keeps authored holes and semantic roles stable while letting ordinary Water,
+  Oil, and Acid body support remain continuous rather than becoming visibly
+  punctured only in Canvas.
+- Focused liquid-surface/contour coverage (`44` tests), production build,
+  Canvas liquid-identity and liquid-depth browser gates, and a zero-error
+  Canvas showcase capture pass. The full local suite is `114` files / `729`
+  tests. The liquid-identity gate was compared against the prior committed
+  baseline after it exposed an interaction, then restored without relaxing its
+  response bounds.
 
 ### Current Canvas translucent-rigid shell coverage
 
