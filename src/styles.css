@@ -217,24 +217,26 @@ h1 { font-family: inherit; font-size: clamp(26px, 4vw, 44px); font-weight: 500; 
 .material-button:disabled:hover { transform: none; background: transparent; }
 
 @media (min-width: 921px) {
-  .palette { min-height: 246px; grid-template-rows: auto 84px minmax(100px, 1fr); }
+  .palette { min-height: 230px; grid-template-rows: auto 68px minmax(0, 1fr); }
   .tool-filters {
-    height: 84px;
-    min-height: 84px;
-    max-height: 84px;
+    height: 68px;
+    min-height: 68px;
+    max-height: 68px;
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    grid-template-rows: repeat(3, 25px);
+    /* Twelve compact, visible slots keep all eleven filters discoverable
+       without a desktop-only horizontal scroll rail. */
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    grid-template-rows: repeat(2, 28px);
     grid-auto-flow: column;
     grid-auto-columns: minmax(0, 1fr);
     align-items: stretch;
-    column-gap: 4px;
-    row-gap: 3px;
+    column-gap: 3px;
+    row-gap: 4px;
     overflow: hidden;
-    padding-bottom: 0;
+    padding-bottom: 5px;
   }
-  .tool-filter { width: 100%; min-width: 0; min-height: 25px; padding: 4px 5px; overflow: hidden; font-size: 8px; text-align: center; text-overflow: ellipsis; white-space: nowrap; }
-  .tool-library { min-height: 100px; }
+  .tool-filter { width: 100%; min-width: 0; min-height: 28px; padding: 5px 1px; overflow: hidden; font-size: 7px; letter-spacing: -.01em; text-align: center; text-overflow: ellipsis; white-space: nowrap; }
+  .tool-library { min-height: 116px; }
 }
 
 @media (min-width: 921px) and (max-height: 720px) {
@@ -244,5 +246,5 @@ h1 { font-family: inherit; font-size: clamp(26px, 4vw, 44px); font-weight: 500; 
   .toolbox-heading { padding-block: 3px 0; }
   .actions { padding: 10px; gap: 6px; }
   .action-button { padding-block: 6px; }
-  .tool-library { min-height: 84px; }
+  .tool-library { min-height: 108px; }
 }

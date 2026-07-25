@@ -1358,10 +1358,6 @@ export class MaterialRenderer {
           this.styledColor, surfaceLight, normalLight, solidRelief,
           denseSolidInterior, profile, optics, solidOpticalDepth, this.solidOpticalDepthEnabled,
         );
-        applyCanvasPlantCanopyVolume(
-          this.styledColor, material, denseSolidInterior, solidOpticalDepth,
-          this.solidOpticalDepthEnabled, solidRelief,
-        );
         applyCanvasRenderTraits(
           this.styledColor, applicableTraits, phase, material, x, y, index, this.traitClock,
           this.roleMaterialStylingEnabled, this.energyIdentityStylingEnabled,
@@ -1383,6 +1379,10 @@ export class MaterialRenderer {
         applyCanvasSolidBodyOptics(
           this.styledColor, surfaceLight, normalLight, solidRelief,
           denseSolidInterior, profile, optics, solidOpticalDepth, this.solidOpticalDepthEnabled,
+        );
+        applyCanvasPlantCanopyVolume(
+          this.styledColor, material, denseSolidInterior, solidOpticalDepth,
+          this.solidOpticalDepthEnabled, solidRelief,
         );
         applyCanvasRenderTraits(
           this.styledColor, applicableTraits, phase, material, x, y, index, this.traitClock,

@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { Material } from '../shared/materials';
 import {
@@ -55,5 +56,23 @@ describe('Canvas botanical morphology', () => {
     expect(wood).toEqual(new Float32Array(base));
     expect(crown[3]).toBe(base[3]);
     expect(pocket[3]).toBe(base[3]);
+  });
+
+  it('wires the canopy-volume transform into the Canvas PLNT branch, never Wood', () => {
+    const source = readFileSync(new URL('./field-renderer.ts', import.meta.url), 'utf8');
+    const woodBranch = source.slice(
+      source.indexOf('} else if (material === Material.Wood)'),
+      source.indexOf('} else if (material === Material.Plant)'),
+    );
+    const plantBranch = source.slice(
+      source.indexOf('} else if (material === Material.Plant)'),
+      source.indexOf('} else if (material === Material.Lava)'),
+    );
+
+    expect(woodBranch).not.toContain('applyCanvasPlantCanopyVolume(');
+    expect(plantBranch).toContain('applyCanvasPlantCanopyVolume(');
+    expect(plantBranch.indexOf('applyCanvasPlantCanopyVolume(')).toBeGreaterThan(
+      plantBranch.indexOf('applyCanvasSolidBodyOptics('),
+    );
   });
 });

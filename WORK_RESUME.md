@@ -978,13 +978,38 @@ The next material-primary slice is wider exact coverage of palette-led catalog f
   selected state, so the active category, expanded groups, and library scroll
   position remain stable instead of jumping back to Powder. Filter controls
   now expose their full labels as native tooltips as well as accessible names.
-- Desktop filter controls use a fixed three-row, four-column matrix. Every
-  category remains reachable and readable in a short desktop viewport without
-  a horizontally trapped label row or overlap with Actions. Mobile keeps a
-  compact, snap-scrollable horizontal strip, preserving vertical room for the
-  world and library.
+- Desktop filter controls use a fixed two-row, six-column matrix. Every
+  category remains reachable in the protected 68px rail—without a horizontally
+  trapped label row or overlap with Actions—while full labels remain available
+  to keyboard/pointer users through native tooltips. Mobile keeps a compact,
+  snap-scrollable horizontal strip, preserving vertical room for the world and
+  library.
 - Validation: targeted Controls/catalog/input/browser-audit tests (`33`
   assertions), the complete desktop/mobile browser interaction audit, the
   834-module production build with its 19-file static closure, and the full
   `114`-file / `723`-test suite pass. They retain the protected 612×384 fit
   and client-CSS pointer contract.
+
+## Current Canvas botanical-canopy parity checkpoint
+
+- The existing deep-PLNT canopy-volume transform had already shipped in the
+  WebGL semantic shader, but the Canvas call site had accidentally remained in
+  the Wood branch, where the helper deliberately no-ops. It now runs directly
+  after Canvas PLNT body optics, using the same exact-material interior,
+  phase-local optical-depth, and organic macro-relief inputs as WebGL.
+- This is RGB-only and starts beyond the protected first interior layer. Native
+  plant/seed semantics, growth, lifecycle presentation state, alpha, support,
+  silhouettes, branch gaps, contacts, walls, saves, and physics are unchanged.
+  The Canvas showcase now visibly retains the restrained green crown/pocket
+  volume already present in WebGL without smoothing or widening leaf edges.
+- Validation: focused Canvas-botanical/solid/Pixi tests (`80` assertions), a
+  fresh production build and 19-file closure, production Canvas and WebGL
+  organic/plant browser audits with zero browser errors, and a refreshed Canvas
+  normal-fit showcase capture pass. Both browser audits preserve authored
+  cavities, open gaps, fine structures, Sand/Water contacts, and exact
+  off→on→off repeats.
+- The true 8× render-scale gate subsequently passed again at a 4896×3072
+  backing, with reference readiness in `8791 ms` and the fence-backed true-8×
+  frame in `24757 ms`. The gate also re-proved the fixed 68px/two-row desktop
+  filter rail; its verified temporary Chrome profile was closed once the audit
+  had completed.
