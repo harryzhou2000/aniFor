@@ -2540,7 +2540,14 @@ void main() {
       float powderContact = smoothstep(1.55, 2.85, shape.w);
       float localPowderContact = smoothstep(1.55, 2.85, localPowderShape.w);
       powderContact = max(powderContact, localPowderContact);
-      float powderBulk = powderContact * boundaryStability;
+      // Once the stable Smooth field has proved exact material depth plus
+      // lateral support, it owns the diagonal contour. Otherwise retain the
+      // local contact blend so loose grains, holes, seams, and fine columns
+      // remain exact. The wide-field blend is zero for Grains and Local.
+      float powderBulk = max(
+        powderContact * boundaryStability,
+        powderSurfaceBlend * boundaryStability * 0.78
+      );
       if (uPowderStyle > 1.5 && surfaceOnly < 0.5 && traits < 0.5 && !materialEmissive) {
         powderChromaCohesion = powderBulkDepth
           * smoothstep(0.75, 1.0, boundaryStability);
@@ -4112,6 +4119,14 @@ export class PixiFieldPresenter {
     this.pollWebGLTimingQuery();
     this.pollWebGLTimingFence();
     if (this.webGLTimingRequested || this.webGLTimingPending || this.webGLTimingFence) return false;
+    // At true 8x, one ordinary presentation fence may still own the only GPU
+    // frame in flight. Do not report an audit sample as accepted until that
+    // fence has signalled: otherwise the timing request is merely queued behind
+    // a 15M-fragment frame and a short completed-frame wait measures neither
+    // the requested frame nor its fence. The browser audit retries acceptance
+    // through the same bounded 30-second queue deadline as ordinary latest-wins
+    // presentation.
+    if (this.outputScale === 8 && !this.prepareEightXRender()) return false;
     this.webGLTimingRequested = true;
     // Timing requests are audit-only and must own the frame they measure. A
     // paused/static scene may otherwise have no later update to consume the

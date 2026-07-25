@@ -673,8 +673,16 @@ export class CanvasPhaseContourScratch {
               const support = q00 + q10 + q01 + q11;
               const stability = this.haloStability[haloIndex] / 255;
               const motion = (1 - stability) * 0.10;
-              const bulk = powderBulkWeight(support, motion);
-              amount = grain + (heap - grain) * bulk;
+              const localBulk = powderBulkWeight(support, motion);
+              // A deeply supported, settled Smooth slope already has a
+              // species-safe wide density field. Let that field choose the
+              // contour blend instead of leaking the local loose-grain disc
+              // through every semantic stair step. `slopeAware` is zero for
+              // Local, Grains, moving powder, narrow columns, holes, seams,
+              // and every field candidate that failed the exact depth/support
+              // proof above, so their existing local blend remains intact.
+              const smoothBulk = Math.max(localBulk, slopeAware * stability * 0.78);
+              amount = grain + (heap - grain) * smoothBulk;
             }
           }
         } else if (phase === RenderPhase.Liquid) {

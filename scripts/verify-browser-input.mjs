@@ -44,6 +44,10 @@ const PRODUCTION_BUNDLE_URL = pathToFileURL(path.join(ROOT, 'dist/index.html')).
 const WORLD_WIDTH = 612;
 const WORLD_HEIGHT = 384;
 const WORLD_ASPECT = WORLD_WIDTH / WORLD_HEIGHT;
+// Mirrors the deliberately shallow exact Sand slope in render-lab-scene. Keep
+// this analytic reference local to the composed screenshot audit: it is not a
+// second presentation field and it must never drive simulation or rendering.
+const SHALLOW_SAND_SLOPE = Object.freeze({ left: 18, right: 170, bottom: 149, rise: 8 });
 // A wedged renderer must not leave the audit process, detached Chrome tree, and
 // temporary profile alive forever. This exceeds the production 30-second 8x
 // presentation deadline while still turning an unresponsive CDP target into a
@@ -10042,7 +10046,9 @@ async function sampleMaterialAtlas(cdp, renderedBase64, baselineBase64, canvasRe
   })()`);
 }
 
-async function auditWebGLPresentationTiming(cdp, targetSamples = 30, sampleTimeout = 5_000) {
+async function auditWebGLPresentationTiming(
+  cdp, targetSamples = 30, sampleTimeout = 5_000, acceptanceTimeout = sampleTimeout,
+) {
   let timing = await evaluate(cdp,
     'window.__ANIFOR_INPUT_AUDIT__.webGLPresentationTiming()');
   assert(timing, 'WebGL presentation timing is unavailable');
@@ -10053,9 +10059,9 @@ async function auditWebGLPresentationTiming(cdp, targetSamples = 30, sampleTimeo
   const maximumAttempts = targetSamples + 45;
   for (let attempt = 0; timing.usableSamples < targetSamples && attempt < maximumAttempts; attempt++) {
     const before = timing;
-    const requested = await evaluate(cdp,
-      'window.__ANIFOR_INPUT_AUDIT__.requestWebGLPresentationTimingSample()');
-    assert(requested, `WebGL timing sample ${attempt + 1} was not accepted`);
+    await waitFor(() => evaluate(cdp,
+      'window.__ANIFOR_INPUT_AUDIT__.requestWebGLPresentationTimingSample()'),
+    acceptanceTimeout, `WebGL timing sample ${attempt + 1} accepted completed-frame request`);
     timing = await waitFor(() => evaluate(cdp, `(() => {
       const next = window.__ANIFOR_INPUT_AUDIT__.webGLPresentationTiming();
       return next && (next.source !== ${JSON.stringify(before.source)}
@@ -10082,13 +10088,15 @@ async function auditWebGLPresentationTiming(cdp, targetSamples = 30, sampleTimeo
   };
 }
 
-async function waitForNextWebGLPresentation(cdp, label, timeoutMs = 12_000) {
+async function waitForNextWebGLPresentation(
+  cdp, label, timeoutMs = 12_000, acceptanceTimeout = 30_000,
+) {
   const before = await evaluate(cdp,
     'window.__ANIFOR_INPUT_AUDIT__.webGLPresentationTiming()');
   assert(before, `${label}: WebGL presentation timing is unavailable`);
   await waitFor(() => evaluate(cdp,
     'window.__ANIFOR_INPUT_AUDIT__.requestWebGLPresentationTimingSample()'),
-  timeoutMs, `${label} accepted completed-frame request`);
+  acceptanceTimeout, `${label} accepted completed-frame request`);
   return waitFor(() => evaluate(cdp, `(() => {
     const next = window.__ANIFOR_INPUT_AUDIT__.webGLPresentationTiming();
     return next && next.usableSamples > 0
@@ -10297,6 +10305,23 @@ async function auditPowderBodyDepth(cdp, mode, dpr) {
     cdp, 1280, 720, undefined, 20_000, `${mode} powder-body geometry`,
   );
   await waitForStablePageCapture(cdp, `${mode} settled powder-body fixture`, 20_000);
+  const powderStyleCaptures = {};
+  for (const style of ['grains', 'local', 'smooth']) {
+    await evaluate(cdp, `(() => {
+      const audit = window.__ANIFOR_INPUT_AUDIT__;
+      if (typeof audit?.setPowderRenderStyle !== 'function') {
+        throw new Error('Powder style audit API unavailable');
+      }
+      audit.setPowderRenderStyle('${style}');
+      return true;
+    })()`);
+    powderStyleCaptures[style] = await waitForStablePageCapture(
+      cdp, `${mode} focused ${style} powder slope`, 20_000,
+    );
+  }
+  // The focused body-depth captures below retain the canonical Smooth view;
+  // Grains and Local only exist here as fixed screenshot references.
+  await evaluate(cdp, "window.__ANIFOR_INPUT_AUDIT__.setPowderRenderStyle('smooth'); true");
   await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setPowderBodyDepth(false); true');
   const flat = await waitForStablePageCapture(cdp, `${mode} focused flat powder body`, 20_000);
   await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setPowderBodyDepth(true); true');
@@ -10355,6 +10380,40 @@ async function auditPowderBodyDepth(cdp, mode, dpr) {
     `${mode}: focused powder-body sequence was not deterministic (${JSON.stringify(samples)})`);
   await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.clear(); true');
   const blank = await waitForStablePageCapture(cdp, `${mode} focused blank powder fixture`, 20_000);
+  assertCanvasRectsEqual(geometry.canvas, blank.canvasRect, `${mode} powder slope/blank geometry`);
+  for (const [style, capture] of Object.entries(powderStyleCaptures)) {
+    assertCanvasRectsEqual(
+      geometry.canvas, capture.canvasRect, `${mode} powder slope ${style}/canonical geometry`,
+    );
+  }
+  const powderSlopeContinuity = await samplePowderSlopeContinuity(
+    cdp,
+    Object.fromEntries(Object.entries(powderStyleCaptures).map(([style, capture]) => [
+      style, capture.capture.data,
+    ])),
+    blank.capture.data,
+    geometry.canvas,
+  );
+  const { grains, local, smooth } = powderSlopeContinuity;
+  assert([grains, local, smooth].every((sample) => sample.rows >= 80),
+    `${mode}: shallow powder slope was not measurable (${JSON.stringify(powderSlopeContinuity)})`);
+  // Smooth must follow the analytic settled slope with a bounded antialiased
+  // lip; this intentionally does not demand the same maximum error from the
+  // Local reference, whose semantic cell corner is the regression we expose.
+  assert(smooth.rmsError <= 0.75 && smooth.maximumError <= 1.25
+      && smooth.meanTransitionWidth >= 0.18 && smooth.meanTransitionWidth <= 0.80,
+  `${mode}: Smooth shallow slope lost its bounded contour (${JSON.stringify(powderSlopeContinuity)})`);
+  assert(smooth.meanTangentError <= local.meanTangentError * 0.85
+      && smooth.meanCurvatureEnergy <= local.meanCurvatureEnergy * 0.78,
+  `${mode}: Smooth shallow slope no longer improves Local continuity (${JSON.stringify(powderSlopeContinuity)})`);
+  // Grains deliberately remains a square, discrete reference rather than
+  // inheriting Smooth's lower analytic-error or staircase energy. Transition
+  // width intentionally differs by backend because the Canvas and direct-mesh
+  // rasterizers resolve a one-cell square through different coverage paths.
+  assert(grains.rmsError >= smooth.rmsError * 1.08
+      && grains.meanTangentError >= smooth.meanTangentError * 1.08
+      && grains.meanCurvatureEnergy >= smooth.meanCurvatureEnergy * 1.08,
+  `${mode}: Grains no longer preserves a discrete shallow-slope reference (${JSON.stringify(powderSlopeContinuity)})`);
   const semanticSupport = await sampleSemanticCellSupport(cdp, {
     flat: flat.capture.data,
     relieved: relieved.capture.data,
@@ -10366,9 +10425,14 @@ async function auditPowderBodyDepth(cdp, mode, dpr) {
   assert(semanticSupport.flat.deepHoleLeak <= 0.10
     && semanticSupport.relieved.deepHoleLeak <= 0.10,
   `${mode}: focused powder body depth filled authored holes (${JSON.stringify(semanticSupport)})`);
-  const supportRegions = [
-    { name: 'powderFamilySupport', x: 485.5, y: 204.5, radiusX: 98, radiusY: 11, silhouette: true },
-  ];
+  const supportRegions = [{
+    name: 'powderFamilySupport',
+    x: 485.5,
+    y: 204.5,
+    radiusX: 98,
+    radiusY: 11,
+    silhouette: true,
+  }];
   const [flatSupport, relievedSupport] = await Promise.all([
     samplePageRegions(
       cdp, flat.capture.data, supportRegions,
@@ -10379,15 +10443,32 @@ async function auditPowderBodyDepth(cdp, mode, dpr) {
       blank.capture.data, blank.reference.data, geometry.canvas,
     ),
   ]);
-  assert(flatSupport[0].visible === relievedSupport[0].visible
-    && Math.abs(flatSupport[0].worldArea - relievedSupport[0].worldArea) <= 0.001,
-  `${mode}: powder-family optics changed composed support (${JSON.stringify({ flatSupport, relievedSupport })})`);
+  const familyCoreSupport = await samplePowderFamilyCoreSupport(cdp, {
+    flat: flat.capture.data,
+    relieved: relieved.capture.data,
+  }, blank.capture.data, geometry.canvas, supportRegions[0]);
+  // The raw blank-difference edge includes a one-pixel antialias fringe. A
+  // bounded RGB-only body-depth response can move that threshold without
+  // moving support. Compare the exact four-cardinal interior core instead:
+  // it is still a composed framebuffer mask, rejects a real multi-pixel
+  // silhouette edit, and semantic recall/deep-hole checks immediately above
+  // remain the independent protection for fine structure.
+  assert(familyCoreSupport.coreMismatch
+      <= Math.max(4, Math.ceil(familyCoreSupport.flatCoreVisible * 0.0002))
+      && familyCoreSupport.flatCoreVisible === familyCoreSupport.relievedCoreVisible
+      && familyCoreSupport.coreFraction >= 0.62,
+  `${mode}: powder-family optics changed composed core support (${JSON.stringify({
+    flatSupport, relievedSupport, familyCoreSupport,
+  })})`);
   return {
     backing: `${geometry.backing.width}x${geometry.backing.height}`,
     cssCanvas: `${round(geometry.canvas.width, 2)}x${round(geometry.canvas.height, 2)}`,
     samples,
+    powderSlopeContinuity,
     semanticSupport,
-    familySupport: { flat: flatSupport[0], relieved: relievedSupport[0] },
+    familySupport: {
+      flat: flatSupport[0], relieved: relievedSupport[0], core: familyCoreSupport,
+    },
   };
 }
 
@@ -11638,7 +11719,12 @@ async function auditVisualScaleMatrix(cdp, mode, dpr) {
     assertContained(geometry, `${mode} renderScale=${scale}`);
     let timing;
     if (mode === 'webgl') {
-      timing = await auditWebGLPresentationTiming(cdp, 1, scale === 8 ? 12_000 : 5_000);
+      timing = await auditWebGLPresentationTiming(
+        cdp,
+        1,
+        scale === 8 ? 12_000 : 5_000,
+        scale === 8 ? 30_000 : 5_000,
+      );
       assert(timing.source === 'gpu-query' || timing.source === 'gpu-fence',
         `${mode} renderScale=${scale} did not prove completed GPU work (${JSON.stringify(timing)})`);
     }
@@ -11873,7 +11959,7 @@ async function auditRenderScaleEight(cdp, dpr) {
   `renderScale=8 control did not expose/select true 8x (${JSON.stringify(resolutionControl)})`);
   stage('eight-ready');
 
-  const presentationTiming = await auditWebGLPresentationTiming(cdp, 8, 12_000);
+  const presentationTiming = await auditWebGLPresentationTiming(cdp, 8, 12_000, 30_000);
   assert(presentationTiming.source === 'gpu-query' || presentationTiming.source === 'gpu-fence',
     `renderScale=8 timing did not prove completed GPU work (${JSON.stringify(presentationTiming)})`);
   // Completion-fence timing includes bounded rAF polling and, unlike the old
@@ -14181,6 +14267,244 @@ async function captureStableBlankPage(cdp, mode) {
   await waitFor(() => evaluate(cdp, `window.__ANIFOR_INPUT_AUDIT__.backend().backend === ${JSON.stringify(mode)}`),
     15_000, `blank ${mode} backend`);
   return waitForStablePageCaptures(cdp, `${mode} blank framebuffer`);
+}
+
+/**
+ * Read the composed top edge of the exact shallow Sand slope. This deliberately
+ * measures the already-present screenshot pixels against a blank page rather
+ * than inspecting a renderer field: the check catches a final presentation
+ * regression where a Smooth edge falls back to the semantic staircase.
+ */
+async function samplePowderSlopeContinuity(
+  cdp, screenshots, blankBase64, captureCanvasRect,
+) {
+  return evaluate(cdp, `(async () => {
+    const sources = {
+      ...${JSON.stringify(Object.fromEntries(Object.entries(screenshots).map(([style, data]) => [
+        style, `data:image/png;base64,${data}`,
+      ])))},
+      blank: ${JSON.stringify(`data:image/png;base64,${blankBase64}`)},
+    };
+    const contexts = {};
+    let imageWidth = 0;
+    let imageHeight = 0;
+    for (const [name, source] of Object.entries(sources)) {
+      const image = new Image();
+      image.src = source;
+      await image.decode();
+      if (imageWidth && (image.naturalWidth !== imageWidth || image.naturalHeight !== imageHeight)) {
+        throw new Error('Powder slope screenshot geometry mismatch');
+      }
+      imageWidth = image.naturalWidth;
+      imageHeight = image.naturalHeight;
+      const copy = document.createElement('canvas');
+      copy.width = imageWidth;
+      copy.height = imageHeight;
+      const context = copy.getContext('2d', { willReadFrequently: true });
+      if (!context) throw new Error('Powder slope sampler unavailable');
+      context.drawImage(image, 0, 0);
+      contexts[name] = context;
+    }
+    const bounds = ${JSON.stringify(captureCanvasRect)};
+    const visualWidth = window.visualViewport?.width ?? innerWidth;
+    const visualHeight = window.visualViewport?.height ?? innerHeight;
+    const visualOffsetX = window.visualViewport?.offsetLeft ?? 0;
+    const visualOffsetY = window.visualViewport?.offsetTop ?? 0;
+    const pageScaleX = imageWidth / Math.max(1, visualWidth);
+    const pageScaleY = imageHeight / Math.max(1, visualHeight);
+    const worldScaleX = bounds.width / ${WORLD_WIDTH};
+    const worldScaleY = bounds.height / ${WORLD_HEIGHT};
+    const pixelForWorldX = (x) => (bounds.left + x * worldScaleX - visualOffsetX) * pageScaleX;
+    const pixelForWorldY = (y) => (bounds.top + y * worldScaleY - visualOffsetY) * pageScaleY;
+    const worldForPixelX = (x) => (x / pageScaleX + visualOffsetX - bounds.left) / worldScaleX;
+    const worldForPixelY = (y) => (y / pageScaleY + visualOffsetY - bounds.top) / worldScaleY;
+    const signalAt = (context, x, y) => {
+      const rendered = context.getImageData(x, y, 1, 1).data;
+      const blank = contexts.blank.getImageData(x, y, 1, 1).data;
+      return Math.max(
+        Math.abs(rendered[0] - blank[0]),
+        Math.abs(rendered[1] - blank[1]),
+        Math.abs(rendered[2] - blank[2]),
+      );
+    };
+    const slope = ${JSON.stringify(SHALLOW_SAND_SLOPE)};
+    // Exclude the two vertical end caps: this audit is about the long diagonal
+    // contour, not how the style draws an isolated corner cell.
+    const firstPixelX = Math.max(0, Math.ceil(pixelForWorldX(slope.left + 6)));
+    const lastPixelX = Math.min(imageWidth - 1, Math.floor(pixelForWorldX(slope.right - 6)));
+    const firstPixelY = Math.max(0, Math.ceil(pixelForWorldY(slope.bottom - slope.rise - 4)));
+    const lastPixelY = Math.min(imageHeight - 1, Math.floor(pixelForWorldY(slope.bottom + 2)));
+    const crossing = (samples, level) => {
+      for (let index = 1; index < samples.length; index++) {
+        const previous = samples[index - 1];
+        const current = samples[index];
+        // The body optics can add a later dark/light variation inside the
+        // pile. Only the first outside-to-inside rise is the silhouette edge;
+        // accepting a falling interior sample would divide by a near-zero
+        // negative span and invent an arbitrary world coordinate.
+        if (previous.amount >= level || current.amount < level
+          || current.amount <= previous.amount) continue;
+        const span = Math.max(0.000001, current.amount - previous.amount);
+        return previous.worldY + (level - previous.amount) / span
+          * (current.worldY - previous.worldY);
+      }
+      return undefined;
+    };
+    const result = {};
+    for (const style of ['grains', 'local', 'smooth']) {
+      const context = contexts[style];
+      const rows = [];
+      for (let pixelX = firstPixelX; pixelX <= lastPixelX; pixelX++) {
+        const worldX = worldForPixelX(pixelX + 0.5) - 0.5;
+        if (worldX < slope.left + 6 || worldX > slope.right - 6) continue;
+        const samples = [];
+        let peak = 0;
+        for (let pixelY = firstPixelY; pixelY <= lastPixelY; pixelY++) {
+          const signal = signalAt(context, pixelX, pixelY);
+          peak = Math.max(peak, signal);
+          samples.push({
+            worldY: worldForPixelY(pixelY + 0.5) - 0.5,
+            signal,
+          });
+        }
+        if (peak < 12) continue;
+        for (const sample of samples) sample.amount = Math.max(0, Math.min(1, (sample.signal - 4) / (peak - 4)));
+        const y20 = crossing(samples, 0.20);
+        const y50 = crossing(samples, 0.50);
+        const y80 = crossing(samples, 0.80);
+        if (y20 === undefined || y50 === undefined || y80 === undefined) continue;
+        const expected = slope.bottom
+          - (worldX - slope.left) * slope.rise / (slope.right - slope.left);
+        rows.push({ worldX, y20, y50, y80, expected, error: y50 - expected });
+      }
+      const rmsError = Math.sqrt(rows.reduce((sum, row) => sum + row.error ** 2, 0) / Math.max(1, rows.length));
+      const maximumError = Math.max(0, ...rows.map((row) => Math.abs(row.error)));
+      const meanTransitionWidth = rows.reduce((sum, row) => sum + row.y80 - row.y20, 0)
+        / Math.max(1, rows.length);
+      let tangentError = 0;
+      let curvatureEnergy = 0;
+      for (let index = 1; index < rows.length; index++) {
+        const previous = rows[index - 1];
+        const current = rows[index];
+        const expectedDelta = current.expected - previous.expected;
+        tangentError += Math.abs((current.y50 - previous.y50) - expectedDelta);
+      }
+      for (let index = 1; index + 1 < rows.length; index++) {
+        curvatureEnergy += Math.abs(rows[index + 1].y50 - 2 * rows[index].y50 + rows[index - 1].y50);
+      }
+      result[style] = {
+        rows: rows.length,
+        rmsError: Math.round(rmsError * 1000) / 1000,
+        maximumError: Math.round(maximumError * 1000) / 1000,
+        meanTransitionWidth: Math.round(meanTransitionWidth * 1000) / 1000,
+        meanTangentError: Math.round(tangentError / Math.max(1, rows.length - 1) * 1000) / 1000,
+        meanCurvatureEnergy: Math.round(curvatureEnergy / Math.max(1, rows.length - 2) * 1000) / 1000,
+      };
+    }
+    return result;
+  })()`);
+}
+
+/**
+ * Compare the settled powder body's one-pixel-eroded composed support mask.
+ * Body-depth optics are RGB-only, so a colour threshold may legitimately move
+ * an antialiased fringe by one screenshot pixel. Eroding that fringe keeps the
+ * browser check sensitive to a real multi-pixel silhouette edit while the
+ * adjacent semantic-cell probes retain exact holes, notches, and fine columns.
+ */
+async function samplePowderFamilyCoreSupport(
+  cdp, screenshots, blankBase64, captureCanvasRect, region,
+) {
+  const sources = Object.fromEntries([
+    ...Object.entries(screenshots).map(([name, data]) => [name, `data:image/png;base64,${data}`]),
+    ['blank', `data:image/png;base64,${blankBase64}`],
+  ]);
+  return evaluate(cdp, `(async () => {
+    const sources = ${JSON.stringify(sources)};
+    const copies = {};
+    let imageWidth = 0;
+    let imageHeight = 0;
+    for (const [name, source] of Object.entries(sources)) {
+      const image = new Image();
+      image.src = source;
+      await image.decode();
+      if (imageWidth && (image.naturalWidth !== imageWidth || image.naturalHeight !== imageHeight)) {
+        throw new Error('Powder family support screenshot geometry mismatch');
+      }
+      imageWidth = image.naturalWidth;
+      imageHeight = image.naturalHeight;
+      const copy = document.createElement('canvas');
+      copy.width = imageWidth;
+      copy.height = imageHeight;
+      const context = copy.getContext('2d', { willReadFrequently: true });
+      if (!context) throw new Error('Powder family support sampler unavailable');
+      context.drawImage(image, 0, 0);
+      copies[name] = context;
+    }
+    const bounds = ${JSON.stringify(captureCanvasRect)};
+    const sample = ${JSON.stringify(region)};
+    const visualWidth = window.visualViewport?.width ?? innerWidth;
+    const visualHeight = window.visualViewport?.height ?? innerHeight;
+    const visualOffsetX = window.visualViewport?.offsetLeft ?? 0;
+    const visualOffsetY = window.visualViewport?.offsetTop ?? 0;
+    const pageScaleX = imageWidth / Math.max(1, visualWidth);
+    const pageScaleY = imageHeight / Math.max(1, visualHeight);
+    const worldScaleX = bounds.width / ${WORLD_WIDTH};
+    const worldScaleY = bounds.height / ${WORLD_HEIGHT};
+    const x = Math.floor((bounds.left + (sample.x - sample.radiusX) * worldScaleX
+      - visualOffsetX) * pageScaleX);
+    const y = Math.floor((bounds.top + (sample.y - sample.radiusY) * worldScaleY
+      - visualOffsetY) * pageScaleY);
+    const width = Math.max(1, Math.ceil(sample.radiusX * 2 * worldScaleX * pageScaleX));
+    const height = Math.max(1, Math.ceil(sample.radiusY * 2 * worldScaleY * pageScaleY));
+    const blank = copies.blank.getImageData(x, y, width, height).data;
+    const toMask = (name) => {
+      const data = copies[name].getImageData(x, y, width, height).data;
+      const mask = new Uint8Array(width * height);
+      let visible = 0;
+      for (let index = 0; index < mask.length; index++) {
+        const offset = index * 4;
+        const signal = Math.max(
+          Math.abs(data[offset] - blank[offset]),
+          Math.abs(data[offset + 1] - blank[offset + 1]),
+          Math.abs(data[offset + 2] - blank[offset + 2]),
+        );
+        if (signal <= 12) continue;
+        mask[index] = 1;
+        visible++;
+      }
+      return { mask, visible };
+    };
+    const flat = toMask('flat');
+    const relieved = toMask('relieved');
+    const erode = (source) => {
+      const core = new Uint8Array(source.length);
+      let visible = 0;
+      for (let py = 1; py + 1 < height; py++) for (let px = 1; px + 1 < width; px++) {
+        const index = py * width + px;
+        if (!source[index] || !source[index - 1] || !source[index + 1]
+          || !source[index - width] || !source[index + width]) continue;
+        core[index] = 1;
+        visible++;
+      }
+      return { core, visible };
+    };
+    const flatCore = erode(flat.mask);
+    const relievedCore = erode(relieved.mask);
+    let coreMismatch = 0;
+    for (let index = 0; index < flatCore.core.length; index++) {
+      if (flatCore.core[index] !== relievedCore.core[index]) coreMismatch++;
+    }
+    return {
+      flatVisible: flat.visible,
+      relievedVisible: relieved.visible,
+      flatCoreVisible: flatCore.visible,
+      relievedCoreVisible: relievedCore.visible,
+      coreMismatch,
+      coreFraction: Math.round(Math.min(flatCore.visible, relievedCore.visible)
+        / Math.max(1, Math.max(flat.visible, relieved.visible)) * 1000) / 1000,
+    };
+  })()`);
 }
 
 async function sampleCapsuleContourCrossings(

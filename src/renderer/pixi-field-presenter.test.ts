@@ -49,6 +49,7 @@ interface PresenterHarness {
   enableWebGLPresentationTiming: PixiFieldPresenter['enableWebGLPresentationTiming'];
   requestWebGLPresentationTimingSample: PixiFieldPresenter['requestWebGLPresentationTimingSample'];
   getWebGLPresentationTiming: PixiFieldPresenter['getWebGLPresentationTiming'];
+  webGLTimingRequested: boolean;
   webGLTimingSequence: number;
 }
 
@@ -177,6 +178,28 @@ describe('Pixi presenter startup configuration', () => {
     expect(timing?.sequence).toBe(1);
     expect(timing?.usableSamples).toBe(1);
     expect(gl.deleteSync).toHaveBeenCalledWith(fence);
+  });
+
+  it('defers an 8x timing request until the in-flight presentation fence signals', () => {
+    vi.stubGlobal('requestAnimationFrame', vi.fn(() => 1));
+    vi.stubGlobal('cancelAnimationFrame', vi.fn());
+    const fence = {} as WebGLSync;
+    const gl = {
+      TIMEOUT_EXPIRED: 0x911b,
+      clientWaitSync: vi.fn(() => 0x911b),
+    } as unknown as WebGL2RenderingContext;
+    const presenter = presenterHarness();
+    Object.assign(presenter, {
+      outputScale: 8,
+      webGLTimingEnabled: true,
+      renderFence: fence,
+      renderFencePoll: 0,
+      app: { ...presenter.app, renderer: { gl } },
+    });
+
+    expect(presenter.requestWebGLPresentationTimingSample()).toBe(false);
+    expect(presenter.webGLTimingRequested).toBe(false);
+    expect(presenter.app.render).not.toHaveBeenCalled();
   });
 
   it('bounds an unsignalled audit fence and accepts the next completed sample', () => {

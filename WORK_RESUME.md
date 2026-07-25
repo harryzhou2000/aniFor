@@ -21,6 +21,34 @@ Immediate priorities are:
 
 ### Active execution emphasis
 
+### Current Smooth-powder contour and 8× queue checkpoint
+
+- Settled Smooth powder now gives an already-proven wide, exact-species density
+  field priority over loose per-cell grain contact when choosing its Canvas and
+  WebGL diagonal contour blend. The change is strictly presentation-local:
+  Grains, Local, moving powder, narrow columns, authored holes, unlike seams,
+  traits, and emissive matter retain their prior paths. Grains remains the
+  square discrete reference; Smooth no longer leaks the local semantic
+  staircase across a deeply supported shallow Sand slope.
+- The composed browser gate now captures Grains, Local, and Smooth against the
+  same blank page and compares their long shallow Sand contour to the analytic
+  fixture edge. Canvas/WebGL Smooth RMS/max edge error stays within
+  `0.75`/`1.25` world cells and must improve tangent/curvature continuity over
+  Local while Grains remains measurably discrete. Exact semantic recall and
+  authored-hole checks remain separate from this visual metric.
+- An 8× timing audit request now waits to *own* a completed presentation frame
+  before reporting acceptance. It cannot be silently queued behind the one
+  permitted 15-million-fragment frame/fence. Browser timing checks use the
+  required bounded 30-second queue-ownership deadline and a distinct
+  completed-frame sample deadline; the unit harness covers the unsignalled
+  fence rejection.
+- A fresh full `audit:8x` release run passed at true `4896×3072` with zero
+  browser errors. It completed material-atlas, source-target, VIBR, DEUT,
+  forced-stall, and real context-loss recovery checks; its final recovery stage
+  completed in `707526 ms`. The full local suite is now `116` files / `738`
+  tests, with TypeScript, production build, static 19-asset closure, and audit
+  script syntax checks all green. No audit Chrome process remains.
+
 ### Current Canvas phase-presence reconstruction guards
 
 - The Canvas fallback now records solid and liquid semantic presence during its

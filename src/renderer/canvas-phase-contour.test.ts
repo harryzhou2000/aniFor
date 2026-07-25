@@ -153,16 +153,16 @@ describe('Canvas 2x phase contour scratch', () => {
     expect(signatures).toEqual({
       '1-grains': 'c912c4b1',
       '1-local': '1cc9387d',
-      '1-smooth': '3eb8e906',
+      '1-smooth': '0f222348',
       '2-grains': 'af6d5941',
       '2-local': 'a50b1c45',
-      '2-smooth': 'e4053a49',
+      '2-smooth': '7376d2b5',
       '4-grains': '88dcd447',
       '4-local': 'f23096fb',
-      '4-smooth': '3812b4d0',
+      '4-smooth': 'da16060c',
       '8-grains': 'b2fef6b7',
       '8-local': '2419d011',
-      '8-smooth': 'b1854d1a',
+      '8-smooth': '963fc60c',
     });
   });
 
