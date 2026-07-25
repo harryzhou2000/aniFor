@@ -13,6 +13,8 @@ export class AtmosphereField {
   readonly width: number;
   readonly height: number;
   readonly bytes: Uint8Array;
+  /** True only when the packed field currently has visible volume support. */
+  hasVolume = false;
   /** Dominant gas identity propagated through the same separable cloud kernel. */
   readonly styleBytes: Uint8Array;
   private readonly seed: Float32Array;
@@ -288,6 +290,7 @@ export class AtmosphereField {
   }
 
   private packBytes(): void {
+    this.hasVolume = false;
     for (let offset = 0; offset < this.bytes.length; offset += 4) {
       const blurredDensity = this.blurred[offset + 3];
       const density = Math.min(1, Math.max(this.seed[offset + 3] * 0.85, blurredDensity * CLOUD_GAIN));
@@ -303,6 +306,7 @@ export class AtmosphereField {
       this.bytes[offset + 1] = Math.min(255, Math.round(this.blurred[offset + 1] / blurredDensity * 255));
       this.bytes[offset + 2] = Math.min(255, Math.round(this.blurred[offset + 2] / blurredDensity * 255));
       this.bytes[offset + 3] = Math.round(density * 255);
+      if (this.bytes[offset + 3] > 0) this.hasVolume = true;
     }
   }
 }

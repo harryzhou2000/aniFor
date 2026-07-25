@@ -104,6 +104,10 @@ export interface CanvasPresentationTiming {
   readonly sequence: number;
   readonly durationMs: number;
   readonly rebuiltField?: 'atmosphere' | 'liquid' | 'emission';
+  /** Count of field/accent planes uploaded during this Canvas presentation. */
+  readonly volumePlaneUploads: number;
+  /** Count of full-output volume composites during this Canvas presentation. */
+  readonly volumePlaneComposites: number;
 }
 
 export function dynamicFieldRefreshDue(time: number, lastRefresh: number, enabled: boolean): boolean {
@@ -159,6 +163,11 @@ export class MaterialRenderer {
   private atmospherePixels?: ImageData;
   private emissionPixels?: ImageData;
   private liquidSurfaceScratch?: LiquidSurfaceScratch;
+  /** Last uploaded non-empty state for offscreen volume/accent planes. */
+  private atmosphereSurfaceActive = false;
+  private emissionSurfaceActive = false;
+  private smokeSurfaceActive = false;
+  private fireSurfaceActive = false;
   private context!: CanvasRenderingContext2D;
   private liquidContext!: CanvasRenderingContext2D;
   private smokeContext!: CanvasRenderingContext2D;
@@ -942,30 +951,50 @@ export class MaterialRenderer {
     this.emissionPixels = undefined;
     this.liquidSurfaceScratch = undefined;
     this.contourChunkPixels = undefined;
+    this.atmosphereSurfaceActive = false;
+    this.emissionSurfaceActive = false;
+    this.smokeSurfaceActive = false;
+    this.fireSurfaceActive = false;
   }
 
   private syncFallbackVolumeSurfaces(): void {
     const fields = this.fallbackFields;
     if (!fields) return;
-    if (this.atmospherePixels) {
-      shadeCanvasAtmosphere(
-        this.atmospherePixels.data, fields.atmosphere.bytes,
-        fields.atmosphere.width, fields.atmosphere.height,
-        this.gasFieldLightingEnabled ? fields.emission : undefined,
-        this.gasVolumeChromaEnabled,
-        fields.atmosphere.styleBytes,
-        this.gasIdentityStylingEnabled,
-      );
-      this.atmosphereContext.putImageData(this.atmospherePixels, 0, 0);
-    }
-    if (this.emissionPixels) {
-      shadeCanvasEmissionVolume(
-        this.emissionPixels.data, fields.emission.bytes,
-        fields.emission.width, fields.emission.height,
-        this.emissionVolumeChromaEnabled,
-      );
-      this.emissionContext.putImageData(this.emissionPixels, 0, 0);
-    }
+    this.syncCanvasAtmosphereSurface(fields);
+    this.syncCanvasEmissionSurface(fields);
+  }
+
+  /** Uploads a packed field only while it is visible, plus once to clear it. */
+  private syncCanvasAtmosphereSurface(fields: RenderFieldSet): boolean {
+    const pixels = this.atmospherePixels;
+    const active = fields.atmosphere.hasVolume;
+    if (!pixels || (!active && !this.atmosphereSurfaceActive)) return false;
+    shadeCanvasAtmosphere(
+      pixels.data, fields.atmosphere.bytes,
+      fields.atmosphere.width, fields.atmosphere.height,
+      this.gasFieldLightingEnabled ? fields.emission : undefined,
+      this.gasVolumeChromaEnabled,
+      fields.atmosphere.styleBytes,
+      this.gasIdentityStylingEnabled,
+    );
+    this.atmosphereContext.putImageData(pixels, 0, 0);
+    this.atmosphereSurfaceActive = active;
+    return true;
+  }
+
+  /** Uploads a packed field only while it is visible, plus once to clear it. */
+  private syncCanvasEmissionSurface(fields: RenderFieldSet): boolean {
+    const pixels = this.emissionPixels;
+    const active = fields.emission.hasLight;
+    if (!pixels || (!active && !this.emissionSurfaceActive)) return false;
+    shadeCanvasEmissionVolume(
+      pixels.data, fields.emission.bytes,
+      fields.emission.width, fields.emission.height,
+      this.emissionVolumeChromaEnabled,
+    );
+    this.emissionContext.putImageData(pixels, 0, 0);
+    this.emissionSurfaceActive = active;
+    return true;
   }
 
   private setBackend(backend: RendererBackendInfo): void {
@@ -1028,6 +1057,7 @@ export class MaterialRenderer {
       this.contourChunks.markAll();
     }
     const timingStart = this.canvasPresentationTimingEnabled ? performance.now() : undefined;
+    let volumePlaneUploads = 0;
     const rebuiltField = fields.updateNext(this.rendered, scheduleTime, this.renderedWalls);
     fields.refreshSuspension(this.rendered, scheduleTime, this.renderedWalls);
     if (rebuiltField === 'liquid' || !this.canvasLiquidOpticalDepthHydrated) {
@@ -1037,25 +1067,12 @@ export class MaterialRenderer {
     }
     if (rebuiltField === 'emission') {
       this.contourChunks.markAll();
-      shadeCanvasEmissionVolume(
-        emissionPixels.data, fields.emission.bytes,
-        fields.emission.width, fields.emission.height,
-        this.emissionVolumeChromaEnabled,
-      );
-      this.emissionContext.putImageData(emissionPixels, 0, 0);
+      if (this.syncCanvasEmissionSurface(fields)) volumePlaneUploads++;
     }
     if (rebuiltField === 'atmosphere' || rebuiltField === 'emission'
       || this.gasFieldLightingDirty || this.gasVolumeChromaDirty
       || this.gasIdentityStylingDirty) {
-      shadeCanvasAtmosphere(
-        atmospherePixels.data, fields.atmosphere.bytes,
-        fields.atmosphere.width, fields.atmosphere.height,
-        this.gasFieldLightingEnabled ? fields.emission : undefined,
-        this.gasVolumeChromaEnabled,
-        fields.atmosphere.styleBytes,
-        this.gasIdentityStylingEnabled,
-      );
-      this.atmosphereContext.putImageData(atmospherePixels, 0, 0);
+      if (this.syncCanvasAtmosphereSurface(fields)) volumePlaneUploads++;
       this.gasFieldLightingDirty = false;
       this.gasVolumeChromaDirty = false;
       this.gasIdentityStylingDirty = false;
@@ -1065,7 +1082,12 @@ export class MaterialRenderer {
     const smoke = smokePixels.data;
     const fire = firePixels.data;
     updateCanvasRenderTraitClock(this.traitClock, visualTime);
-    base.fill(0); liquid.fill(0); smoke.fill(0); fire.fill(0);
+    base.fill(0); liquid.fill(0);
+    // The source ImageData must still reset whenever its previous upload was
+    // non-empty. Once an inactive transition has uploaded zeroes, skip both
+    // repeated clears and repeated offscreen transfers until the plane returns.
+    if (this.smokeSurfaceActive) smoke.fill(0);
+    if (this.fireSurfaceActive) fire.fill(0);
     const suspensionSemanticActive = this.powderRenderStyle === 'smooth'
       && fields.suspension.hasSuspension;
 
@@ -1074,6 +1096,8 @@ export class MaterialRenderer {
     // Canvas frames do not pay for impossible solid/liquid reconstruction.
     let hasSolidSurface = false;
     let hasLiquidSurface = false;
+    let hasSemanticGas = false;
+    let hasLocalEmission = false;
     let index = 0;
     for (let y = 0; y < height; y++) for (let x = 0; x < width; x++, index++) {
       const material = this.rendered[index] as Material;
@@ -1124,6 +1148,7 @@ export class MaterialRenderer {
       const liquidMaterial = fields.lookups.liquidByMaterial[material] !== 0;
       if (phase === RenderPhase.Solid) hasSolidSurface = true;
       if (liquidMaterial) hasLiquidSurface = true;
+      if (phase === RenderPhase.Gas) hasSemanticGas = true;
       const applicableTraits = applicableCanvasRenderTraits(traits, phase);
       const gasAtmosphereAlpha = phase === RenderPhase.Gas
         ? canvasAtmosphereAlphaAtWorldCell(
@@ -1269,6 +1294,7 @@ export class MaterialRenderer {
           fire, pixel,
           this.energyGlowColor[0], this.energyGlowColor[1], this.energyGlowColor[2], glowAlpha,
         );
+        hasLocalEmission = true;
       } else if (material === Material.Sand) {
         const grain = hash(index) % 23 - 11;
         this.styledColor[0] = 194 + grain + surfaceLight;
@@ -1436,10 +1462,13 @@ export class MaterialRenderer {
           target, pixel,
           this.styledColor[0], this.styledColor[1], this.styledColor[2], canvasLiquidAlpha(density),
         );
-        if (liquidSurfaceExposure > 0) setPixel(
-          fire, pixel, 255, 72 + heat * 112 + pulse, 12,
-          (48 + heat * 34 + Math.max(0, contour)) * liquidSurfaceExposure,
-        );
+        if (liquidSurfaceExposure > 0) {
+          setPixel(
+            fire, pixel, 255, 72 + heat * 112 + pulse, 12,
+            (48 + heat * 34 + Math.max(0, contour)) * liquidSurfaceExposure,
+          );
+          hasLocalEmission = true;
+        }
       } else if (material === Material.Ice) {
         const facet = (hash(index + 617) & 15) < 3 ? 24 : 0;
         this.styledColor[0] = 116 + facet;
@@ -1810,6 +1839,7 @@ export class MaterialRenderer {
             this.styledColor[0] + light, this.styledColor[1] + light,
             this.styledColor[2] + light, canvasLocalEmissionAlpha(info.phase),
           );
+          hasLocalEmission = true;
         }
       }
       if (fields.emission.hasLight && liquidEmissionExposure > 0
@@ -1875,8 +1905,16 @@ export class MaterialRenderer {
       this.rasterizeCanvasMatterContours(base, fields.lookups.styleBytes, width, height);
     }
     this.liquidContext.putImageData(liquidPixels, 0, 0);
-    this.smokeContext.putImageData(smokePixels, 0, 0);
-    this.fireContext.putImageData(firePixels, 0, 0);
+    if (hasSemanticGas || this.smokeSurfaceActive) {
+      this.smokeContext.putImageData(smokePixels, 0, 0);
+      this.smokeSurfaceActive = hasSemanticGas;
+      volumePlaneUploads++;
+    }
+    if (hasLocalEmission || this.fireSurfaceActive) {
+      this.fireContext.putImageData(firePixels, 0, 0);
+      this.fireSurfaceActive = hasLocalEmission;
+      volumePlaneUploads++;
+    }
     this.context.putImageData(basePixels, 0, 0);
     const output = backingSize(width, height, this.outputScale);
     const fallback = this.fallbackContext;
@@ -1884,13 +1922,17 @@ export class MaterialRenderer {
     fallback.save();
     fallback.imageSmoothingEnabled = true;
     fallback.imageSmoothingQuality = 'high';
-    fallback.globalCompositeOperation = 'lighter';
-    fallback.filter = `blur(${1.7 * this.outputScale}px)`;
-    fallback.globalAlpha = 0.72;
-    fallback.drawImage(
-      this.emissionSurface, 0, 0, this.emissionSurface.width, this.emissionSurface.height,
-      0, 0, output.width, output.height,
-    );
+    let volumePlaneComposites = 0;
+    if (this.emissionSurfaceActive) {
+      fallback.globalCompositeOperation = 'lighter';
+      fallback.filter = `blur(${1.7 * this.outputScale}px)`;
+      fallback.globalAlpha = 0.72;
+      fallback.drawImage(
+        this.emissionSurface, 0, 0, this.emissionSurface.width, this.emissionSurface.height,
+        0, 0, output.width, output.height,
+      );
+      volumePlaneComposites++;
+    }
     // The broad aura belongs behind matter. Opaque contours receive the same
     // field as restrained family-aware RGB lighting above, so their texture is
     // revealed instead of being washed by a screen-space glow.
@@ -1910,29 +1952,41 @@ export class MaterialRenderer {
     }
     // Gas remains an independent particle/volume plane above native walls and
     // opaque matter. Only the broad light aura moved behind those surfaces.
-    fallback.imageSmoothingEnabled = true;
-    fallback.globalAlpha = 0.52;
-    fallback.filter = 'none';
-    fallback.drawImage(
-      this.atmosphereSurface, 0, 0, this.atmosphereSurface.width, this.atmosphereSurface.height,
-      0, 0, output.width, output.height,
-    );
-    fallback.filter = `blur(${0.2 * this.outputScale}px)`;
-    fallback.globalAlpha = 0.24;
-    fallback.drawImage(this.smokeSurface, 0, 0, width, height, 0, 0, output.width, output.height);
-    fallback.globalCompositeOperation = 'lighter';
-    fallback.filter = `blur(${1.1 * this.outputScale}px)`;
-    fallback.globalAlpha = 0.52;
-    fallback.drawImage(this.fireSurface, 0, 0, width, height, 0, 0, output.width, output.height);
-    fallback.filter = 'none';
-    fallback.globalAlpha = 0.88;
-    fallback.drawImage(this.fireSurface, 0, 0, width, height, 0, 0, output.width, output.height);
+    if (this.atmosphereSurfaceActive) {
+      fallback.imageSmoothingEnabled = true;
+      fallback.globalAlpha = 0.52;
+      fallback.filter = 'none';
+      fallback.drawImage(
+        this.atmosphereSurface, 0, 0, this.atmosphereSurface.width, this.atmosphereSurface.height,
+        0, 0, output.width, output.height,
+      );
+      volumePlaneComposites++;
+    }
+    if (this.smokeSurfaceActive) {
+      fallback.imageSmoothingEnabled = true;
+      fallback.filter = `blur(${0.2 * this.outputScale}px)`;
+      fallback.globalAlpha = 0.24;
+      fallback.drawImage(this.smokeSurface, 0, 0, width, height, 0, 0, output.width, output.height);
+      volumePlaneComposites++;
+    }
+    if (this.fireSurfaceActive) {
+      fallback.globalCompositeOperation = 'lighter';
+      fallback.filter = `blur(${1.1 * this.outputScale}px)`;
+      fallback.globalAlpha = 0.52;
+      fallback.drawImage(this.fireSurface, 0, 0, width, height, 0, 0, output.width, output.height);
+      fallback.filter = 'none';
+      fallback.globalAlpha = 0.88;
+      fallback.drawImage(this.fireSurface, 0, 0, width, height, 0, 0, output.width, output.height);
+      volumePlaneComposites += 2;
+    }
     fallback.restore();
     if (timingStart !== undefined) {
       this.canvasPresentationTiming = {
         sequence: (this.canvasPresentationTiming?.sequence ?? 0) + 1,
         durationMs: performance.now() - timingStart,
         rebuiltField,
+        volumePlaneUploads,
+        volumePlaneComposites,
       };
     }
   }
@@ -1942,6 +1996,10 @@ export class MaterialRenderer {
     const height = this.simulation.height;
     this.fallbackFields = new RenderFieldSet(width, height, ALL_MATERIALS);
     this.canvasLiquidOpticalDepthHydrated = false;
+    this.atmosphereSurfaceActive = false;
+    this.emissionSurfaceActive = false;
+    this.smokeSurfaceActive = false;
+    this.fireSurfaceActive = false;
     for (const canvas of [this.surface, this.liquidSurface, this.smokeSurface, this.fireSurface]) {
       canvas.width = width;
       canvas.height = height;

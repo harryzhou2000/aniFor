@@ -35,9 +35,11 @@ describe('atmosphere field', () => {
 
   it('widens a sparse gas cell into a soft bounded volume', () => {
     const { field, materials } = fixture();
+    expect(field.hasVolume).toBe(false);
     materials[10 * 20 + 10] = Material.Smoke;
     field.update(materials);
 
+    expect(field.hasVolume).toBe(true);
     expect(alphaAt(field, 5, 5)).toBeGreaterThan(alphaAt(field, 6, 5));
     expect(alphaAt(field, 6, 5)).toBeGreaterThan(alphaAt(field, 7, 5));
     expect(alphaAt(field, 7, 5)).toBeGreaterThan(0);
@@ -45,6 +47,21 @@ describe('atmosphere field', () => {
     for (let index = 0; index < field.styleBytes.length; index++) {
       expect(field.styleBytes[index]).toBe(field.bytes[index * 4 + 3] > 0 ? 1 : 0);
     }
+  });
+
+  it('clears its packed-volume presence when the final gas source disappears', () => {
+    const { field, materials } = fixture();
+    field.update(materials);
+    expect(field.hasVolume).toBe(false);
+
+    materials[10 * 20 + 10] = Material.Smoke;
+    field.update(materials);
+    expect(field.hasVolume).toBe(true);
+
+    materials.fill(Material.Empty);
+    field.update(materials);
+    expect(field.hasVolume).toBe(false);
+    expect(field.bytes.every((value) => value === 0)).toBe(true);
   });
 
   it('merges nearby sparse gas cells and blends their colour', () => {

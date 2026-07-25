@@ -75,10 +75,11 @@ describe('Canvas local emission styling', () => {
     )).toThrow('Canvas emission volume size mismatch');
   });
 
-  it('keeps both Canvas emission refresh paths on the volume transform', () => {
+  it('routes both Canvas emission refresh paths through the volume transform', () => {
     const source = readFileSync(new URL('./field-renderer.ts', import.meta.url), 'utf8');
 
-    expect(source.match(/shadeCanvasEmissionVolume\(/g)).toHaveLength(2);
+    expect(source.match(/shadeCanvasEmissionVolume\(/g)).toHaveLength(1);
+    expect(source.match(/syncCanvasEmissionSurface\(fields\)/g)).toHaveLength(2);
     expect(source).not.toContain('emissionPixels.data.set(fields.emission.bytes)');
   });
 });

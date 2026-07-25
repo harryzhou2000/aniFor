@@ -1261,3 +1261,23 @@ The next material-primary slice is wider exact coverage of palette-led catalog f
   declaring a healthy release failed merely because GitHub Pages is slow. The
   next manual deploy must still be verified against the exact revision and
   19-asset live closure.
+
+## Current Canvas empty-volume-plane checkpoint
+
+- Canvas now tracks whether each broad volume/accent plane is actually visible:
+  packed atmosphere support, compact emission support, semantic gas accents,
+  and local particle emission. A truly inactive plane skips its offscreen
+  transfer and full-output composite instead of drawing transparent pixels.
+- Each plane is deliberately uploaded once on an active-to-inactive transition
+  before it is skipped, so a stopped cloud or aura cannot leave stale pixels.
+  Field cadence remains authoritative: the renderer uses the already rebuilt
+  `AtmosphereField.hasVolume` and `EmissionField.hasLight`, rather than
+  prematurely removing a still-valid scheduled field.
+- This is a Canvas fallback-only scheduling improvement. It adds one scalar to
+  the existing atmosphere field and four renderer booleans; it adds no image
+  field, buffer, texture, simulation, support, alpha, topology, save, input,
+  camera, or WebGL change. A settled solid-only view now proves zero invisible
+  volume uploads and zero volume composites after any scheduled rebuild settles.
+- Validation: focused field/style tests, complete 114-file / 730-test suite,
+  production build, forced-Canvas solid-only browser assertion, and existing
+  forced-Canvas gas/energy identity captures all pass with zero browser errors.

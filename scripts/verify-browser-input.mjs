@@ -10144,6 +10144,8 @@ async function auditDenseCanvasPresentation(cdp) {
       discardedFieldRebuilds++;
       continue;
     }
+    assert(timing.volumePlaneUploads === 0 && timing.volumePlaneComposites === 0,
+      `Canvas dense presentation retained invisible volume work (${JSON.stringify(timing)})`);
     durations.push(timing.durationMs);
   }
   assert(durations.length === targetSamples,
