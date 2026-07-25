@@ -255,4 +255,25 @@ describe('Canvas solid relief', () => {
       Math.abs(ice[0] - 120), Math.abs(ice[1] - 150), Math.abs(ice[2] - 180),
     )).toBeLessThan(18);
   });
+
+  it('gives each remaining translucent-rigid material a bounded crystalline shell', () => {
+    const source = [120, 150, 180, 0.37] as const;
+    const sourceAlpha = new Float32Array(source)[3];
+    const materials = [Material.DRIC, Material.NICE, Material.QRTZ, Material.RIME] as const;
+    for (const material of materials) {
+      const first = new Float32Array(source);
+      const repeated = new Float32Array(source);
+      applyCanvasTranslucentLensShell(first, 6, 18, material);
+      applyCanvasTranslucentLensShell(repeated, 6, 18, material);
+      expect(Array.from(repeated)).toEqual(Array.from(first));
+      expect(first[3]).toBe(sourceAlpha);
+      expect(first[2] - source[2]).toBeGreaterThan(first[0] - source[0]);
+      expect(Math.max(
+        Math.abs(first[0] - source[0]), Math.abs(first[1] - source[1]), Math.abs(first[2] - source[2]),
+      )).toBeLessThan(14);
+    }
+    const metal = new Float32Array(source);
+    applyCanvasTranslucentLensShell(metal, 6, 18, Material.Metal);
+    expect(Array.from(metal)).toEqual(Array.from(new Float32Array(source)));
+  });
 });

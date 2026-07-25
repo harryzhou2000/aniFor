@@ -295,10 +295,11 @@ export function applyCanvasTranslucentCaustic(
 }
 
 /**
- * Gives exact Glass and Ice a broad body shell without sampling another field.
+ * Gives the translucent-rigid family a broad body shell without sampling another field.
  * `relief` is the existing signed macro height and `edgeLight` is the caller's
- * already-computed semantic contour response. The operation is RGB-only and
- * intentionally leaves every other translucent-rigid material unchanged.
+ * already-computed semantic contour response. Glass and Ice retain their
+ * existing stronger branches; the remaining crystal family receives a quieter
+ * material-specific shell. The operation is RGB-only.
  */
 export function applyCanvasTranslucentLensShell(
   color: Float32Array,
@@ -306,7 +307,9 @@ export function applyCanvasTranslucentLensShell(
   edgeLight: number,
   material: number,
 ): void {
-  if (material !== Material.Glass && material !== Material.Ice) return;
+  if (material !== Material.Glass && material !== Material.Ice
+    && material !== Material.DRIC && material !== Material.NICE
+    && material !== Material.QRTZ && material !== Material.RIME) return;
   const rim = Math.min(7, Math.abs(edgeLight) * 0.32);
   const absoluteRelief = Math.abs(relief);
   if (material === Material.Glass) {
@@ -318,9 +321,39 @@ export function applyCanvasTranslucentLensShell(
     color[2] = color[2] * scale + rim + crown;
     return;
   }
-  const frostedRidge = absoluteRelief * 0.55;
-  const scale = 1 - (2.5 + absoluteRelief * 0.20) / 255;
-  color[0] = color[0] * scale + (rim * 0.70 + frostedRidge) * 0.58;
-  color[1] = color[1] * scale + (rim * 0.70 + frostedRidge) * 0.86;
-  color[2] = color[2] * scale + rim * 0.70 + frostedRidge;
+  if (material === Material.Ice) {
+    const frostedRidge = absoluteRelief * 0.55;
+    const scale = 1 - (2.5 + absoluteRelief * 0.20) / 255;
+    color[0] = color[0] * scale + (rim * 0.70 + frostedRidge) * 0.58;
+    color[1] = color[1] * scale + (rim * 0.70 + frostedRidge) * 0.86;
+    color[2] = color[2] * scale + rim * 0.70 + frostedRidge;
+    return;
+  }
+  if (material === Material.QRTZ) {
+    const crown = Math.max(0, relief) * 0.72;
+    const valley = Math.max(0, -relief);
+    const prismScale = 1 - (1.1 + valley * 0.16) / 255;
+    color[0] = color[0] * prismScale + (rim + crown) * 0.48;
+    color[1] = color[1] * prismScale + (rim + crown) * 0.72;
+    color[2] = color[2] * prismScale + (rim + crown) * 0.94;
+    return;
+  }
+  const frost = absoluteRelief * 0.34;
+  const crystalScale = 1 - (1.4 + absoluteRelief * 0.14) / 255;
+  if (material === Material.DRIC) {
+    color[0] = color[0] * crystalScale + (rim * 0.46 + frost) * 0.62;
+    color[1] = color[1] * crystalScale + (rim * 0.46 + frost) * 0.80;
+    color[2] = color[2] * crystalScale + rim * 0.46 + frost;
+    return;
+  }
+  if (material === Material.NICE) {
+    const coolRim = rim * 0.52 + frost * 1.20;
+    color[0] = color[0] * crystalScale + coolRim * 0.50;
+    color[1] = color[1] * crystalScale + coolRim * 0.84;
+    color[2] = color[2] * crystalScale + coolRim * 1.15;
+    return;
+  }
+  color[0] = color[0] * crystalScale + (rim * 0.42 + frost) * 0.60;
+  color[1] = color[1] * crystalScale + (rim * 0.42 + frost) * 0.82;
+  color[2] = color[2] * crystalScale + rim * 0.42 + frost;
 }

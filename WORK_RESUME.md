@@ -21,6 +21,25 @@ Immediate priorities are:
 
 ### Active execution emphasis
 
+### Current Canvas translucent-rigid shell coverage
+
+- The RGB-only Canvas translucent shell now covers the whole established
+  `TranslucentRigid` family: DRIC, NICE, QRTZ, and RIME join Glass and Ice.
+- Glass and Ice retain their exact existing branches. The new branches reuse
+  only the existing relief and edge-light scalars, add no field, sample,
+  buffer, topology, alpha, or physics work, and leave non-translucent material
+  as an exact no-op.
+- DRIC/RIME receive restrained frosted depth, NICE a cooler nitrogen-ice rim,
+  and QRTZ a light cyan prism response. Focused coverage proves determinism,
+  alpha invariance, blue-weighted crystalline response, bounded magnitude, and
+  the opaque-material no-op control.
+- Validation passes the full 114-file / 728-test suite, production asset
+  closure, and the Canvas-only crystalline fixture with zero browser errors.
+  The paired crystalline command still has a pre-existing NICE normal-fit
+  parity failure (`0.46` Canvas versus `1.49` WebGL): it toggles unusual-solid
+  morphology rather than this lens-shell switch, and is retained as a separate
+  calibration follow-up rather than being threshold-relaxed here.
+
 - **Primary work — material identity and graphics:** deepen family-specific silhouettes, internal structure, lighting, transmission, reflection, motion, and contact response. Each tranche must improve a representative scene at normal fit view, not only magnified diagnostic crops.
 - **Immediate material-identity tranche:** configured-source targets, all fourteen non-emissive native powder explosives, authoritative ACEL/DCEL activity, native POLO radioactive lifecycle graphics, SPNG hydration, typed Lava ancestry, complete SEED/PLNT lifecycle graphics, and conductor-aware SPRK host/lifetime graphics are release-complete locally.
 - **Graphics-led effort:** move from a succession of narrow state projections to a graphics-led material program. As a planning target, spend roughly two thirds of implementation and visual-validation effort on composed material appearance and one third on the native behavior/state needed to make those visuals truthful. Infrastructure, viewport, and layout receive regression work only.
