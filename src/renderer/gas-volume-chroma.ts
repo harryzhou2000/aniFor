@@ -20,7 +20,7 @@ export function canvasGasVolumeChromaResponse(
   // relief remains dominant in pockets and dense overlaps, retaining a real
   // key/fill pair instead of washing the whole cloud brighter.
   const shell = smoothstep(0.008, 0.12, density)
-    * (1 - smoothstep(0.18, 0.58, density)) * 0.012;
+    * (1 - smoothstep(0.18, 0.58, density)) * 0.018;
   return clamp(
     relief * (0.040 + (1 - opticalDepth) * 0.055) + shell,
     -RESPONSE_LIMIT,

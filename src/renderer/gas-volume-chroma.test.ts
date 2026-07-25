@@ -21,6 +21,13 @@ describe('gas volume chroma', () => {
     expect(exposed).toBeGreaterThan(dense);
   });
 
+  it('keeps a visible forward-scatter shell on sparse billows without brightening cores', () => {
+    const sparseShell = canvasGasVolumeChromaResponse(0.12, 0, 0);
+    const coreShell = canvasGasVolumeChromaResponse(0.90, 0, 0);
+    expect(sparseShell).toBeGreaterThanOrEqual(0.018);
+    expect(coreShell).toBe(0);
+  });
+
   it('adds a species-aware key and complementary absorbing fill without changing alpha', () => {
     const key = new Uint8ClampedArray([96, 112, 136, 83]);
     const fill = key.slice();

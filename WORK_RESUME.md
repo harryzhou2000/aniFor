@@ -816,3 +816,24 @@ The next material-primary slice is wider exact coverage of palette-led catalog f
   forced-fence, and real context-loss recovery checks. Its audit-owned Chrome
   session terminated cleanly. Next checkpoint: commit and push `main_codex`;
   Pages deployment remains manual pending GitHub login.
+
+## Current gas forward-scatter shell checkpoint
+
+- The shared low-density gas-volume chroma response now gives sparse billows a
+  slightly stronger forward-scatter shell (`0.018`, previously `0.012`). This
+  makes cloud fringes read as translucent volume at normal fit instead of a
+  flat grey wash while keeping dense cores quiet. The response remains
+  RGB-only, capped at the existing `0.060`, and uses the already available
+  density, directional relief, and curvature—no alpha/support/topology,
+  texture, sampler, field, pass, upload, allocation, or output-scale resource
+  changes.
+- Canvas2D and WebGL use the same shell equation. The focused helper test
+  proves a visible sparse shell and an exact zero dense-core shell; existing
+  hue, alpha-invariance, bounded-key/fill, and matter-control tests remain in
+  place.
+- The production-bundle true-8× WebGL gate completed in `529917 ms` with
+  `4896×3072` backing, all atlas/deep-zoom/native-state stages, forced-fence
+  and real context-loss camera-preserving Canvas recovery, and zero browser
+  errors. The audit-owned Chrome session exited cleanly. Next checkpoint:
+  full tests, commit, and push `main_codex`; Pages deployment remains manual
+  pending GitHub login.

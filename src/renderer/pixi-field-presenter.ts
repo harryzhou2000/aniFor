@@ -210,7 +210,7 @@ float gasVolumeChromaResponse(
 ) {
   float relief = clamp(directionalRelief * 1.20 + curvature * 2.50, -1.0, 1.0);
   float shell = smoothstep(0.008, 0.12, density)
-    * (1.0 - smoothstep(0.18, 0.58, density)) * 0.012;
+    * (1.0 - smoothstep(0.18, 0.58, density)) * 0.018;
   return clamp(
     relief * (0.040 + (1.0 - opticalDepth) * 0.055) + shell, -0.060, 0.060
   );
