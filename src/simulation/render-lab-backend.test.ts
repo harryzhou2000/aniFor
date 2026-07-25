@@ -71,4 +71,23 @@ describe('RenderLabBackend', () => {
     simulation.clear();
     expect(simulation.presentationState().some(Boolean)).toBe(false);
   });
+
+  it('keeps the independent PHOT plane co-located with matter rather than reusing owner state', () => {
+    const simulation = new RenderLabBackend(8, 6);
+    simulation.paint(3, 2, Material.Water, 0);
+    simulation.paintWall(3, 2, 6, 0);
+    simulation.setFixturePresentationState(3, 2, 0x1234);
+    simulation.setFixturePhotonState(3, 2, 0x8A3C);
+    simulation.setFixturePhotonStateRect(4, 2, 2, 1, 0x8000);
+
+    const index = 2 * simulation.width + 3;
+    expect(simulation.cells()[index]).toBe(Material.Water);
+    expect(simulation.walls()[index]).toBe(6);
+    expect(simulation.presentationState()[index]).toBe(0x1234);
+    expect(simulation.photonState()[index]).toBe(0x8A3C);
+    expect(simulation.photonState()[2 * simulation.width + 4]).toBe(0x8000);
+
+    simulation.clear();
+    expect(simulation.photonState().some(Boolean)).toBe(false);
+  });
 });

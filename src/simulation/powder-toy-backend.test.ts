@@ -60,6 +60,10 @@ describe('direct Powder Toy backend', () => {
     expect(presentationState).toHaveLength(612 * 384);
     expect(presentationState.byteLength).toBe(612 * 384 * Uint16Array.BYTES_PER_ELEMENT);
     expect(presentationState.every((value) => value === 0)).toBe(true);
+    const photonState = simulation.photonState();
+    expect(photonState).toHaveLength(612 * 384);
+    expect(photonState.byteLength).toBe(612 * 384 * Uint16Array.BYTES_PER_ELEMENT);
+    expect(photonState.every((value) => value === 0)).toBe(true);
     const pressure = simulation.pressure();
     expect(pressure).toHaveLength(612 * 384);
     expect(Array.from(pressure).every(Number.isFinite)).toBe(true);
@@ -73,6 +77,21 @@ describe('direct Powder Toy backend', () => {
     const dirtyWalls = simulation.consumeDirtyWalls();
     expect(dirtyWalls).toHaveLength(16);
     expect(dirtyWalls.every(({ wall }) => wall === 8)).toBe(true);
+  });
+
+  it('keeps PHOT spectrum independent when a photons-map particle coexists with pmap matter', async () => {
+    const simulation = await PowderToyBackend.load(moduleArtifact.href);
+    const point = { x: 306, y: 180 };
+    const index = point.y * simulation.width + point.x;
+    simulation.paint(point.x, point.y, Material.PHOT, 0);
+    simulation.paint(point.x, point.y, Material.RSST, 0);
+
+    // `cells()` runs the shared native extraction. pmap matter owns the primary
+    // material projection, while the independent photon plane must still retain
+    // PHOT's valid spectrum/presence bit at the exact same coordinate.
+    expect(simulation.cells()[index]).toBe(Material.RSST);
+    expect(simulation.presentationState()[index]).toBe(0);
+    expect(simulation.photonState()[index] & 0x8000).toBe(0x8000);
   });
 
   it('extracts exact-owner VIBR charge and preserves it through the BVBR phase change', async () => {

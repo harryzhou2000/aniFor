@@ -31,6 +31,9 @@ uint8_t materialField[FIELD_SIZE];
 uint8_t wallField[FIELD_SIZE];
 uint16_t temperatureField[FIELD_SIZE];
 uint16_t presentationStateField[FIELD_SIZE];
+// PHOT lives in TPT's independent `photons` map and may co-exist with pmap
+// matter. Keep its visible spectrum out of the matter-owned state plane.
+uint16_t photonStateField[FIELD_SIZE];
 float pressureField[FIELD_SIZE];
 int8_t velocityField[FIELD_SIZE * 2];
 bool windPending = false;
@@ -528,12 +531,37 @@ uint8_t ExactConfiguredSourceTarget(int targetType)
 	return ExactPublicMaterialIdentity(targetType);
 }
 
+int CountPhotonSpectrumBits(uint32_t value)
+{
+	int count = 0;
+	while (value)
+	{
+		count += int(value & 1u);
+		value >>= 1u;
+	}
+	return count;
+}
+
+uint16_t ProjectPhotonSpectrum(int ctype)
+{
+	// TPT PHOT uses ctype's low thirty bits as a wavelength mask. The renderer
+	// needs only the three overlapping twelve-bit visible bands, not the raw
+	// parameter: red 18..29, green 9..20, blue 0..11. Bit 15 preserves the
+	// distinction between a black valid PHOT and an absent photon.
+	auto const spectrum = uint32_t(ctype) & 0x3FFFFFFFu;
+	auto const red = CountPhotonSpectrumBits((spectrum >> 18u) & 0xFFFu);
+	auto const green = CountPhotonSpectrumBits((spectrum >> 9u) & 0xFFFu);
+	auto const blue = CountPhotonSpectrumBits(spectrum & 0xFFFu);
+	return uint16_t(0x8000u | red | (green << 4u) | (blue << 8u));
+}
+
 void ExtractFields()
 {
 	std::fill_n(materialField, FIELD_SIZE, uint8_t(0));
 	std::fill_n(wallField, FIELD_SIZE, uint8_t(0));
 	std::fill_n(temperatureField, FIELD_SIZE, uint16_t(0));
 	std::fill_n(presentationStateField, FIELD_SIZE, uint16_t(0));
+	std::fill_n(photonStateField, FIELD_SIZE, uint16_t(0));
 	std::fill_n(pressureField, FIELD_SIZE, 0.0f);
 	std::fill_n(velocityField, FIELD_SIZE * 2, int8_t(0));
 	for (int y = 0; y < YRES; ++y)
@@ -543,6 +571,15 @@ void ExtractFields()
 			auto offset = y * XRES + x;
 			wallField[offset] = uint8_t(simulation->bmap[y / CELL][x / CELL]);
 			pressureField[offset] = simulation->pv[y / CELL][x / CELL];
+			// pmap ownership deliberately remains first for material/state/thermal
+			// extraction below. Read `photons` separately so a co-located PHOT's
+			// spectrum remains renderable without replacing its matter owner.
+			auto const photonPacked = simulation->photons[y][x];
+			if (TYP(photonPacked) == PT_PHOT)
+			{
+				auto const &photon = simulation->parts[ID(photonPacked)];
+				photonStateField[offset] = ProjectPhotonSpectrum(photon.ctype);
+			}
 			auto packed = simulation->pmap[y][x];
 			if (!TYP(packed)) packed = simulation->photons[y][x];
 			if (!TYP(packed)) continue;
@@ -669,6 +706,7 @@ __attribute__((visibility("default"))) uint8_t *powder_cells() { EnsureSimulatio
 __attribute__((visibility("default"))) uint8_t *powder_walls() { EnsureSimulation(); ExtractFields(); return wallField; }
 __attribute__((visibility("default"))) uint16_t *powder_temperature() { EnsureSimulation(); return temperatureField; }
 __attribute__((visibility("default"))) uint16_t *powder_presentation_state() { EnsureSimulation(); return presentationStateField; }
+__attribute__((visibility("default"))) uint16_t *powder_photon_state() { EnsureSimulation(); return photonStateField; }
 __attribute__((visibility("default"))) float *powder_pressure() { EnsureSimulation(); return pressureField; }
 __attribute__((visibility("default"))) int8_t *powder_velocity() { EnsureSimulation(); return velocityField; }
 __attribute__((visibility("default"))) uint32_t powder_tick() { EnsureSimulation(); return simulation->currentTick; }

@@ -16,6 +16,7 @@ interface PowderToyModule {
   _powder_walls(): number;
   _powder_temperature(): number;
   _powder_presentation_state(): number;
+  _powder_photon_state(): number;
   _powder_pressure(): number;
   _powder_velocity(): number;
   _powder_tick(): number;
@@ -99,6 +100,16 @@ export class PowderToyBackend implements SimulationBackend {
     return new Uint16Array(
       this.module.HEAPU16.buffer,
       this.module._powder_presentation_state(),
+      this.width * this.height,
+    );
+  }
+
+  photonState(): Uint16Array {
+    // This is intentionally a separate view: TPT can store PHOT in `photons`
+    // alongside pmap matter, so owner-multiplexed presentationState cannot hold it.
+    return new Uint16Array(
+      this.module.HEAPU16.buffer,
+      this.module._powder_photon_state(),
       this.width * this.height,
     );
   }

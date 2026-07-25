@@ -151,6 +151,8 @@ export interface SimulationBackend {
   temperature?(): Uint16Array;
   /** Packed native presentation state refreshed by the same extraction as `cells()`. */
   presentationState?(): Uint16Array;
+  /** Independent PHOT wavelength projection; may coexist with a pmap material cell. */
+  photonState?(): Uint16Array;
   pressure?(): Float32Array;
   velocity?(): Int8Array;
   walls?(): Uint8Array;

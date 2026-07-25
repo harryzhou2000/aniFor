@@ -82,7 +82,7 @@ Immediate priorities are:
 - **Primary work — material identity and graphics:** deepen family-specific silhouettes, internal structure, lighting, transmission, reflection, motion, and contact response. Each tranche must improve a representative scene at normal fit view, not only magnified diagnostic crops.
 - **Immediate material-identity tranche:** configured-source targets, all fourteen non-emissive native powder explosives, authoritative ACEL/DCEL activity, native POLO radioactive lifecycle graphics, SPNG hydration, typed Lava ancestry, complete SEED/PLNT lifecycle graphics, and conductor-aware SPRK host/lifetime graphics are release-complete locally.
 - **Graphics-led effort:** move from a succession of narrow state projections to a graphics-led material program. As a planning target, spend roughly two thirds of implementation and visual-validation effort on composed material appearance and one third on the native behavior/state needed to make those visuals truthful. Infrastructure, viewport, and layout receive regression work only.
-- **Energy-state follow-up:** treat PHOT spectrum and co-located energy as a separate architectural milestone. Add an independent energy identity/state projection before styling its 30-bit wavelength mask; never squeeze PHOT into the matter-owned state path while `pmap` can hide a co-located photon.
+- **Energy-state contract:** PHOT spectrum and co-located energy use an independent 612×384 state projection; never squeeze its 30-bit wavelength mask into the matter-owned state path while `pmap` can hide a co-located photon. Preserve this separate plane when extending energy graphics.
 - **Material breadth:** expose and visually validate as much of the native TPT catalog as practical, with special attention to explosives, forces/sources, radioactive and nuclear matter, living/growing plants, unusual phase products, devices, and LIFE presets. Converted or reaction-produced elements must render correctly even when they are not currently selected in the toolbox.
 - **Correctness constraints:** preserve authoritative occupancy, thin structures, intentional holes, unlike-material ownership, stable resting boundaries, square Grains mode, exact cursor/input mapping, and identical world geometry at every render scale.
 - **Performance constraints:** prefer shared semantic fields and bounded per-world-cell work; avoid new output-resolution reconstruction passes. Treat 2× as the normal target, 4× as high quality, and true 8× as a robust inspection mode with tested recovery.
@@ -1319,3 +1319,29 @@ The next material-primary slice is wider exact coverage of palette-led catalog f
   distinct bounded responses, and shield-stage ordering. Local typecheck, the
   114-file / 731-test suite, production build with 19-asset closure, and the
   real paired unusual-solid browser gate pass with zero reported browser errors.
+
+## Current PHOT spectrum/co-location checkpoint
+
+- Native extraction now owns a separate 612×384 `Uint16` `photonStateField`.
+  It reads `simulation->photons` independently of `pmap`, retaining a valid
+  co-located PHOT while matter, walls, temperature, velocity, and the
+  owner-multiplexed presentation state retain their existing ownership. Bit 15
+  marks presence (including a valid black spectrum); the remaining nibbles are
+  TPT's red/green/blue overlapping twelve-bit wavelength-band populations.
+  The matching ABI export is listed in the tracked headless Emscripten patch,
+  so a fresh project-local build exposes it rather than relying on a local
+  generated-artifact accident.
+- Canvas styles the spectrum into the final authoritative material colour
+  before its phase surface is composed. WebGL uses an independent nearest
+  texture and applies the equivalent RGB-only spectral core after ordinary
+  matter and wall composition. Neither path changes alpha, occupancy, support,
+  native walls, material identity, physics, raw `ctype`, or OPS saves.
+- The additional WebGL sampler is guarded scene-wide and stays dormant on
+  photon-free scenes. Its activity scan runs on initial/dynamic refresh rather
+  than every material-dirty frame, preserving the ordinary and true-8× hot
+  paths. A deterministic RenderLab plane plus native PHOT→RSST co-location test
+  prove that a pmap owner and its photon state survive independently.
+- Validation passes project-local TPT/WASM rebuild, TypeScript, all 116 test
+  files / 737 tests, a real Canvas/WebGL shader browser gate, production build
+  with 19-file static closure, and true 8× at `4896×3072` (`9433 ms`
+  reference-ready, `23269 ms` eight-ready).

@@ -87,6 +87,7 @@ import { applyCanvasForceActivityStyle } from './canvas-force-activity-style';
 import { applyCanvasPoloStateStyle } from './canvas-polo-state-style';
 import { applyCanvasSpongeHydrationStyle } from './canvas-sponge-hydration-style';
 import { applyCanvasLavaAncestryStyle } from './canvas-lava-ancestry-style';
+import { applyCanvasPhotonSpectrumStyle } from './photon-spectrum-state';
 import {
   applyCanvasSourceTargetStyle, isConfiguredSourceMaterial,
 } from './canvas-source-target-style';
@@ -328,7 +329,8 @@ export class MaterialRenderer {
     }
     const hasDynamicFields = this.simulation.presentationFieldsDynamic !== false
       && Boolean(
-        this.simulation.temperature || this.simulation.velocity || this.simulation.presentationState,
+        this.simulation.temperature || this.simulation.velocity || this.simulation.presentationState
+          || this.simulation.photonState,
       );
     const refreshDynamicFields = dynamicFieldRefreshDue(time, this.lastDynamicFieldRefresh, hasDynamicFields);
     const powderRefreshDue = this.powderSurfaceDirty
@@ -882,7 +884,7 @@ export class MaterialRenderer {
     this.presenter = presenter;
     presenter.update(
       this.rendered, this.renderedWalls, this.simulation.temperature?.(), this.simulation.velocity?.(),
-      this.simulation.presentationState?.(),
+      this.simulation.presentationState?.(), this.simulation.photonState?.(),
       now, now, true,
     );
     presenter.resize(this.host.clientWidth, this.host.clientHeight);
@@ -1017,9 +1019,10 @@ export class MaterialRenderer {
     const temperatures = this.simulation.temperature?.();
     const velocities = this.simulation.velocity?.();
     const presentationState = this.simulation.presentationState?.();
+    const photonState = this.simulation.photonState?.();
     if (this.presenter) {
       this.presenter.update(
-        this.rendered, this.renderedWalls, temperatures, velocities, presentationState,
+        this.rendered, this.renderedWalls, temperatures, velocities, presentationState, photonState,
         scheduleTime, visualTime, refreshDynamicFields,
       );
       return;
@@ -1825,6 +1828,7 @@ export class MaterialRenderer {
               this.styledColor, material, presentationState[index], x, y,
             );
           }
+          if (photonState) applyCanvasPhotonSpectrumStyle(this.styledColor, photonState[index]);
           const alpha = material === Material.Glass ? 198
             : optics === RenderOptics.TranslucentRigid ? 218 : 255;
           if (wall && optics === RenderOptics.TranslucentRigid) {

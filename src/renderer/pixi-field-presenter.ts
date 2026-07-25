@@ -19,6 +19,8 @@ import { updateBoundaryStabilityRect } from './boundary-stability-field';
 import { clientToCanvasWorld } from './client-coordinate-map';
 import { RenderFieldSet, type RenderMaterialStyle } from './render-field-set';
 import { packSemanticRect } from './semantic-field';
+import { packPhotonStateRect } from './photon-state-field';
+import { photonStateIsActive } from './photon-spectrum-state';
 import { packExteriorAir, packPresentationStateRect, packWallRect } from './wall-field';
 import { RenderPhase } from './render-profile';
 import {
@@ -81,6 +83,7 @@ in vec2 vFieldCoord;
 out vec4 finalColor;
 uniform sampler2D uFieldTexture;
 uniform sampler2D uWallTexture;
+uniform sampler2D uPhotonStateTexture;
 uniform sampler2D uAtmosphereTexture;
 uniform sampler2D uAtmosphereStyleTexture;
 uniform sampler2D uGasIdentityMotifTexture;
@@ -135,6 +138,7 @@ uniform float uLavaAncestryStyling;
 uniform float uBotanicalIdentityStyling;
 uniform float uBotanicalLifecycleStyling;
 uniform float uSparkStateStyling;
+uniform float uPhotonActive;
 uniform float uPowderStyle;
 uniform float uPowderBodyDepth;
 uniform float uSuspensionActive;
@@ -3307,6 +3311,25 @@ void main() {
     premultiplied += wallColor(wall) * backdropPattern * backgroundAlpha * (1.0 - compositeAlpha);
     compositeAlpha += backgroundAlpha * (1.0 - compositeAlpha);
   }
+  // PHOT has its own native map and can share this world cell with pmap matter.
+  // Keep the extra nearest lookup dormant for scenes with no projected photons,
+  // then apply its spectral core RGB after all matter/wall composition without
+  // claiming support or changing alpha.
+  if (uPhotonActive > 0.5) {
+    vec4 photonState = texture(uPhotonStateTexture, fieldUv);
+    float photonLow = floor(photonState.r * 255.0 + 0.5);
+    float photonHigh = floor(photonState.g * 255.0 + 0.5);
+    if (photonHigh >= 128.0) {
+      vec3 photonSpectrum = vec3(
+        mod(photonLow, 16.0),
+        mod(floor(photonLow / 16.0), 16.0),
+        mod(photonHigh, 16.0)
+      ) * (16.0 / 255.0);
+      float photonPeak = max(photonSpectrum.r, max(photonSpectrum.g, photonSpectrum.b));
+      float photonAmount = 0.44 + min(0.18, photonPeak * 0.24);
+      premultiplied = mix(premultiplied, photonSpectrum * compositeAlpha, photonAmount);
+    }
+  }
   finalColor = vec4(premultiplied, compositeAlpha);
 }
 `;
@@ -3318,6 +3341,8 @@ export class PixiFieldPresenter {
   private readonly fieldSource: BufferImageSource;
   private readonly wallBytes: Uint8Array;
   private readonly wallSource: BufferImageSource;
+  private readonly photonStateBytes: Uint8Array;
+  private readonly photonStateSource: BufferImageSource;
   private readonly atmosphereSource: BufferImageSource;
   private readonly atmosphereStyleSource: BufferImageSource;
   private readonly emissionSource: BufferImageSource;
@@ -3347,6 +3372,8 @@ export class PixiFieldPresenter {
   private webGLTimingSequence = 0;
   private powderSurfaceDirty = true;
   private solidOpticalDepthDirty = true;
+  private photonStateActive = false;
+  private photonStateHydrated = false;
   private unusualSolidStylingEnabled = true;
   private liquidOpticalDepthHydrated = false;
   private lastPowderSurfaceRefresh = -Infinity;
@@ -3392,6 +3419,11 @@ export class PixiFieldPresenter {
     this.wallBytes = new Uint8Array(width * height * 4);
     this.wallSource = new BufferImageSource({
       resource: this.wallBytes, width, height, format: 'rgba8unorm',
+      alphaMode: 'no-premultiply-alpha', scaleMode: 'nearest', autoGarbageCollect: false,
+    });
+    this.photonStateBytes = new Uint8Array(width * height * 4);
+    this.photonStateSource = new BufferImageSource({
+      resource: this.photonStateBytes, width, height, format: 'rgba8unorm',
       alphaMode: 'no-premultiply-alpha', scaleMode: 'nearest', autoGarbageCollect: false,
     });
     this.fieldSet = fieldSet ?? new RenderFieldSet(width, height, materials);
@@ -3529,6 +3561,7 @@ export class PixiFieldPresenter {
       uBotanicalIdentityStyling: { value: 1, type: 'f32' },
       uBotanicalLifecycleStyling: { value: 1, type: 'f32' },
       uSparkStateStyling: { value: 1, type: 'f32' },
+      uPhotonActive: { value: 0, type: 'f32' },
       uPowderStyle: { value: powderRenderStyleValue('smooth'), type: 'f32' },
       uPowderBodyDepth: { value: 1, type: 'f32' },
       uSuspensionActive: {
@@ -3542,6 +3575,8 @@ export class PixiFieldPresenter {
       uFieldSampler: this.fieldSource.style,
       uWallTexture: this.wallSource,
       uWallSampler: this.wallSource.style,
+      uPhotonStateTexture: this.photonStateSource,
+      uPhotonStateSampler: this.photonStateSource.style,
       uAtmosphereTexture: this.atmosphereSource,
       uAtmosphereSampler: this.atmosphereSource.style,
       uAtmosphereStyleTexture: this.atmosphereStyleSource,
@@ -4118,6 +4153,7 @@ export class PixiFieldPresenter {
     temperatures: Uint16Array | undefined,
     velocities: Int8Array | undefined,
     presentationState: Uint16Array | undefined,
+    photonState: Uint16Array | undefined,
     scheduleTime: number,
     visualTime: number,
     refreshDynamicFields: boolean,
@@ -4136,16 +4172,34 @@ export class PixiFieldPresenter {
           this.wallBytes, this.wallSource.width, presentationState, rect,
         );
       }
+      if (photonState) {
+        packPhotonStateRect(
+          this.photonStateBytes, this.photonStateSource.width, photonState, rect,
+        );
+      }
     }
     if (rectangles.length) {
       this.fieldSource.update();
       boundaryTextureDirty = true;
     }
     let wallTextureDirty = rectangles.length > 0 && presentationState !== undefined;
+    const photonTextureDirty = rectangles.length > 0 && photonState !== undefined;
     const wallRectangles = this.wallChunks.consume();
     if (walls) for (const rect of wallRectangles) packWallRect(this.wallBytes, this.wallSource.width, walls, rect);
     if (walls && wallRectangles.length) wallTextureDirty = true;
     if (wallTextureDirty) this.wallSource.update();
+    if (photonTextureDirty) this.photonStateSource.update();
+    // Native PHOT can move without a pmap material mutation, so a dynamic
+    // refresh is authoritative for removal as well as arrival. Avoid a second
+    // full-world JS scan on every ordinary particle dirty frame.
+    if (!photonState) {
+      this.photonStateActive = false;
+      this.photonStateHydrated = false;
+    } else if (!this.photonStateHydrated || refreshDynamicFields) {
+      this.photonStateActive = photonStateIsActive(photonState);
+      this.photonStateHydrated = true;
+    }
+    this.uniforms.uniforms.uPhotonActive = this.photonStateActive ? 1 : 0;
     if (this.powderSurfaceDirty
       && scheduleTime - this.lastPowderSurfaceRefresh >= POWDER_SURFACE_REFRESH_INTERVAL) {
       const changed = this.fieldSet.powderSurface.update(

@@ -14,6 +14,7 @@ export class RenderLabBackend extends DeterministicBackend {
   private readonly wallWorld: Uint8Array;
   private readonly temperatureWorld: Uint16Array;
   private readonly presentationStateWorld: Uint16Array;
+  private readonly photonStateWorld: Uint16Array;
   private readonly dirtyWalls = new Set<number>();
 
   constructor(width = 612, height = 384) {
@@ -21,6 +22,7 @@ export class RenderLabBackend extends DeterministicBackend {
     this.wallWorld = new Uint8Array(width * height);
     this.temperatureWorld = new Uint16Array(width * height);
     this.presentationStateWorld = new Uint16Array(width * height);
+    this.photonStateWorld = new Uint16Array(width * height);
     this.temperatureWorld.fill(RENDER_LAB_AMBIENT_TEMPERATURE);
   }
 
@@ -28,6 +30,8 @@ export class RenderLabBackend extends DeterministicBackend {
   temperature(): Uint16Array { return this.temperatureWorld; }
   /** Renderer-facing native-state projection used only by paused render-lab fixtures. */
   presentationState(): Uint16Array { return this.presentationStateWorld; }
+  /** Independent PHOT spectrum projection, allowed to coexist with any matter owner. */
+  photonState(): Uint16Array { return this.photonStateWorld; }
 
   /** Sets an immutable diagnostic temperature region before the paused scene is presented. */
   setFixtureTemperatureRect(
@@ -65,6 +69,26 @@ export class RenderLabBackend extends DeterministicBackend {
     this.setFixturePresentationStateRect(x, y, 1, 1, state);
   }
 
+  /** Sets a bounded PHOT spectrum projection without changing matter ownership. */
+  setFixturePhotonStateRect(
+    x: number, y: number, width: number, height: number, state: number,
+  ): void {
+    if (width <= 0 || height <= 0) return;
+    const left = Math.max(0, Math.floor(x));
+    const top = Math.max(0, Math.floor(y));
+    const right = Math.min(this.width, Math.ceil(x + width));
+    const bottom = Math.min(this.height, Math.ceil(y + height));
+    if (right <= left || bottom <= top) return;
+    const value = Math.max(0, Math.min(0xFFFF, Math.round(state)));
+    for (let py = top; py < bottom; py++) {
+      this.photonStateWorld.fill(value, py * this.width + left, py * this.width + right);
+    }
+  }
+
+  setFixturePhotonState(x: number, y: number, state: number): void {
+    this.setFixturePhotonStateRect(x, y, 1, 1, state);
+  }
+
   paintWall(x: number, y: number, wall: number, radius: number): void {
     const blockRadius = Math.max(0, Math.ceil(radius / 4));
     const blockX = Math.floor(x / 4);
@@ -89,6 +113,7 @@ export class RenderLabBackend extends DeterministicBackend {
     super.clear();
     this.temperatureWorld?.fill(RENDER_LAB_AMBIENT_TEMPERATURE);
     this.presentationStateWorld?.fill(0);
+    this.photonStateWorld?.fill(0);
     if (!this.wallWorld) return;
     for (let index = 0; index < this.wallWorld.length; index++) {
       if (this.wallWorld[index] === 0) continue;
