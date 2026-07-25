@@ -21,6 +21,30 @@ Immediate priorities are:
 
 ### Active execution emphasis
 
+### Current structural-rigid body identity checkpoint
+
+- Brick, Metal, Ceramic, BMTL, Gold, Iron, and Titanium now retain their
+  shared smooth rigid contours, body optics, and thickness absorption while
+  gaining sparse, material-specific construction identity: Brick courses,
+  machined metal brush/glints, ceramic glaze/crazing, repaired BMTL plates,
+  gold grain, iron oxide scale, and titanium lamellae. This gives common
+  construction scenes readable material character instead of one generic rigid
+  texture.
+- The Canvas2D and WebGL implementations are deterministic world-grid RGB
+  arithmetic only. They apply after common solid-body lighting and before
+  traits/state overlays, and reject reconstructed support, walls, halos,
+  emissive matter, and trait owners. They introduce no field, texture/sampler,
+  neighbour query, pass, target, alpha/support/ownership mutation, native-state
+  dependency, or output-scale resource; every other material is an exact no-op.
+- The structural layer is independently switchable through the browser audit
+  bridge. Focused helper and shader-boundary tests cover the exact seven-member
+  mapping, deterministic bounded alpha-invariant RGB response, unique material
+  fingerprints, protected controls, uniform seeding, and the no-texture/no-alpha
+  shader guard. The current full local suite is `117` files / `743` tests;
+  TypeScript, the production build, static 19-asset closure, and paired Canvas2D
+  plus WebGL material-atlas browser compilation gate pass with zero reported
+  browser errors.
+
 ### Current Smooth-powder contour and 8× queue checkpoint
 
 - Settled Smooth powder now gives an already-proven wide, exact-species density

@@ -26,6 +26,7 @@ interface PresenterHarness {
   setSolidFieldLightingEnabled: PixiFieldPresenter['setSolidFieldLightingEnabled'];
   setRoleMaterialStylingEnabled: PixiFieldPresenter['setRoleMaterialStylingEnabled'];
   setCellularMaterialStylingEnabled: PixiFieldPresenter['setCellularMaterialStylingEnabled'];
+  setStructuralRigidStylingEnabled: PixiFieldPresenter['setStructuralRigidStylingEnabled'];
   setSensorMaterialStylingEnabled: PixiFieldPresenter['setSensorMaterialStylingEnabled'];
   setUnusualPowderStylingEnabled: PixiFieldPresenter['setUnusualPowderStylingEnabled'];
   setExplosivePowderStylingEnabled: PixiFieldPresenter['setExplosivePowderStylingEnabled'];
@@ -114,6 +115,7 @@ describe('Pixi presenter startup configuration', () => {
       uSolidFieldLighting: 1,
       uRoleMaterialStyling: 1,
       uCellularMaterialStyling: 1,
+      uStructuralRigidStyling: 1,
       uSensorMaterialStyling: 1,
       uUnusualPowderStyling: 1,
       uUnusualSolidStyling: 1,
@@ -1022,6 +1024,28 @@ describe('Pixi presenter startup configuration', () => {
     expect(cellularBlock).not.toMatch(/texture\s*\(/);
     expect(cellularBlock).not.toMatch(/\balpha\s*[+*]?=/);
     expect(source).toContain('if (cellularSurface > 0.5 && surfaceOnly > 0.5) alpha = 0.0;');
+  });
+
+  it('seeds, redraws, and bounds structural rigid styling to authoritative RGB arithmetic', () => {
+    const presenter = presenterHarness();
+
+    presenter.setStructuralRigidStylingEnabled(false);
+    expect(presenter.uniforms.uniforms.uStructuralRigidStyling).toBe(0);
+    expect(presenter.app.render).toHaveBeenCalledOnce();
+
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const start = source.indexOf('// Exact construction bodies receive a sparse, world-anchored identity');
+    const end = source.indexOf('    } else if (organicSurface > 0.5', start);
+    const structuralBlock = source.slice(start, end);
+    expect(start).toBeGreaterThan(0);
+    expect(end).toBeGreaterThan(start);
+    expect(source).toContain('uniform float uStructuralRigidStyling;');
+    expect(structuralBlock).toContain('uStructuralRigidStyling > 0.5 && surfaceOnly < 0.5');
+    expect(structuralBlock).toContain('material == 22.0 ? 1.0');
+    expect(structuralBlock).toContain('material == 82.0 ? 7.0 : 0.0;');
+    expect(structuralBlock).toContain('traits < 0.5 && materialEmissive < 0.5');
+    expect(structuralBlock).not.toMatch(/texture\s*\(/);
+    expect(structuralBlock).not.toMatch(/\balpha\s*[+*]?=/);
   });
 
   it('seeds, redraws, and bounds sensor morphology to RGB-only authoritative sensor matter', () => {

@@ -120,6 +120,7 @@ uniform float uPhaseContactLighting;
 uniform float uSolidFieldLighting;
 uniform float uRoleMaterialStyling;
 uniform float uCellularMaterialStyling;
+uniform float uStructuralRigidStyling;
 uniform float uSensorMaterialStyling;
 uniform float uUnusualPowderStyling;
 uniform float uExplosivePowderStyling;
@@ -2928,6 +2929,87 @@ void main() {
       // signal, sample, or long-lived shader register.
       color += mix(color, vec3(0.32, 0.36, 0.42), 0.26)
         * bevel * (0.13 + smoothSurface * 0.07 + translucentSurface * 0.10);
+      // Exact construction bodies receive a sparse, world-anchored identity
+      // after their common lit body. This stays RGB-only and deliberately
+      // excludes reconstructed support, traits, emission, walls, and halos.
+      if (uStructuralRigidStyling > 0.5 && surfaceOnly < 0.5 && halo < 0.5
+        && wall < 0.5 && wallOnly < 0.5 && emissionOnly < 0.5
+        && traits < 0.5 && materialEmissive < 0.5) {
+        float structuralStyle = material == 22.0 ? 1.0
+          : material == 23.0 ? 2.0
+          : material == 25.0 ? 3.0
+          : material == 67.0 ? 4.0
+          : material == 70.0 ? 5.0
+          : material == 73.0 ? 6.0
+          : material == 82.0 ? 7.0 : 0.0;
+        if (structuralStyle > 0.5) {
+          vec2 structuralCell = floor(fieldPosition);
+          float structuralRed = 0.0;
+          float structuralGreen = 0.0;
+          float structuralBlue = 0.0;
+          if (structuralStyle < 1.5) {
+            float course = 1.0 - step(0.5, mod(structuralCell.y, 6.0));
+            float joint = 1.0 - step(0.5,
+              mod(structuralCell.x + floor(structuralCell.y / 6.0) * 3.0, 12.0));
+            float fleck = 1.0 - step(0.5,
+              mod(structuralCell.x * 5.0 + structuralCell.y * 3.0, 23.0));
+            float mortar = max(course, joint);
+            structuralRed += -8.0 * mortar + 3.0 * fleck * (1.0 - mortar);
+            structuralGreen += -6.0 * mortar + fleck * (1.0 - mortar);
+            structuralBlue += -4.0 * mortar - fleck * (1.0 - mortar);
+          } else if (structuralStyle < 2.5) {
+            float brush = 1.0 - step(0.5,
+              mod(structuralCell.x * 2.0 + structuralCell.y, 9.0));
+            float glint = 1.0 - step(0.5,
+              mod(structuralCell.x * 5.0 - structuralCell.y * 3.0, 31.0));
+            structuralRed += -2.0 * brush + 5.0 * glint;
+            structuralGreen += brush + 6.0 * glint;
+            structuralBlue += 4.0 * brush + 7.0 * glint;
+          } else if (structuralStyle < 3.5) {
+            float glaze = 1.0 - step(0.5,
+              mod(structuralCell.x * 3.0 + structuralCell.y * 5.0, 19.0));
+            float craze = 1.0 - step(0.5,
+              mod(structuralCell.x * 7.0 - structuralCell.y * 4.0, 29.0));
+            structuralRed += 3.0 * glaze - 4.0 * craze;
+            structuralGreen += 4.0 * glaze - 3.0 * craze;
+            structuralBlue += 5.0 * glaze - 2.0 * craze;
+          } else if (structuralStyle < 4.5) {
+            float plate = 1.0 - step(0.5,
+              mod(structuralCell.x + floor(structuralCell.y / 5.0) * 2.0, 11.0));
+            float pit = 1.0 - step(0.5,
+              mod(structuralCell.x * 7.0 + structuralCell.y * 11.0, 37.0));
+            structuralRed += -3.0 * plate - 7.0 * pit;
+            structuralGreen += -2.0 * plate - 6.0 * pit;
+            structuralBlue += 2.0 * plate - 4.0 * pit;
+          } else if (structuralStyle < 5.5) {
+            float grain = 1.0 - step(0.5,
+              mod(structuralCell.x * 3.0 - structuralCell.y, 13.0));
+            float glint = 1.0 - step(0.5,
+              mod(structuralCell.x * 5.0 + structuralCell.y * 2.0, 31.0));
+            structuralRed += 5.0 * grain + 7.0 * glint;
+            structuralGreen += 3.0 * grain + 5.0 * glint;
+            structuralBlue += -3.0 * grain - glint;
+          } else if (structuralStyle < 6.5) {
+            float scale = 1.0 - step(2.0,
+              mod(structuralCell.x * 5.0 + structuralCell.y * 3.0, 17.0));
+            float roll = 1.0 - step(0.5,
+              mod(structuralCell.x - structuralCell.y * 2.0, 15.0));
+            structuralRed += 5.0 * scale - 2.0 * roll;
+            structuralGreen += -2.0 * scale - roll;
+            structuralBlue += -4.0 * scale + 2.0 * roll;
+          } else {
+            float lamella = 1.0 - step(0.5,
+              mod(structuralCell.x * 2.0 + structuralCell.y * 3.0, 11.0));
+            float highlight = 1.0 - step(0.5,
+              mod(structuralCell.x * 7.0 - structuralCell.y * 5.0, 37.0));
+            structuralRed += -2.0 * lamella + 3.0 * highlight;
+            structuralGreen += 2.0 * lamella + 4.0 * highlight;
+            structuralBlue += 5.0 * lamella + 5.0 * highlight;
+          }
+          color = clamp(color + clamp(vec3(structuralRed, structuralGreen, structuralBlue),
+            vec3(-12.0), vec3(12.0)) / 255.0, 0.0, 1.0);
+        }
+      }
     } else if (organicSurface > 0.5 || (optics < 0.5 && profile == 3.0)) {
       float fibre = sin(fieldPosition.x * 0.20 + sin(fieldPosition.y * 0.115 + material) * 1.45);
       float pores = sin(fieldPosition.x * 0.083 + fieldPosition.y * 0.157 + material * 0.37)
@@ -3565,6 +3647,7 @@ export class PixiFieldPresenter {
       uSolidFieldLighting: { value: 1, type: 'f32' },
       uRoleMaterialStyling: { value: 1, type: 'f32' },
       uCellularMaterialStyling: { value: 1, type: 'f32' },
+      uStructuralRigidStyling: { value: 1, type: 'f32' },
       uSensorMaterialStyling: { value: 1, type: 'f32' },
       uUnusualPowderStyling: { value: 1, type: 'f32' },
       uExplosivePowderStyling: { value: 1, type: 'f32' },
@@ -3873,6 +3956,7 @@ export class PixiFieldPresenter {
     lavaAncestryStylingEnabled = true,
     botanicalLifecycleStylingEnabled = true,
     sparkStateStylingEnabled = true,
+    structuralRigidStylingEnabled = true,
   ): void {
     const uniforms = this.uniforms.uniforms;
     uniforms.uGasFieldLighting = gasFieldLightingEnabled ? 1 : 0;
@@ -3894,6 +3978,7 @@ export class PixiFieldPresenter {
     uniforms.uSolidOpticalDepth = solidOpticalDepthEnabled ? 1 : 0;
     uniforms.uRoleMaterialStyling = roleMaterialStylingEnabled ? 1 : 0;
     uniforms.uCellularMaterialStyling = cellularMaterialStylingEnabled ? 1 : 0;
+    uniforms.uStructuralRigidStyling = structuralRigidStylingEnabled ? 1 : 0;
     uniforms.uSensorMaterialStyling = sensorMaterialStylingEnabled ? 1 : 0;
     uniforms.uUnusualPowderStyling = unusualPowderStylingEnabled ? 1 : 0;
     uniforms.uExplosivePowderStyling = explosivePowderStylingEnabled ? 1 : 0;
@@ -4009,6 +4094,11 @@ export class PixiFieldPresenter {
 
   setCellularMaterialStylingEnabled(enabled: boolean): void {
     this.uniforms.uniforms.uCellularMaterialStyling = enabled ? 1 : 0;
+    this.renderApplication();
+  }
+
+  setStructuralRigidStylingEnabled(enabled: boolean): void {
+    this.uniforms.uniforms.uStructuralRigidStyling = enabled ? 1 : 0;
     this.renderApplication();
   }
 

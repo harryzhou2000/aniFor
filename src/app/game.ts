@@ -360,6 +360,9 @@ export class Game {
       setCellularMaterialStyling: (enabled) => {
         this.renderer.setCellularMaterialStylingEnabled(enabled);
       },
+      setStructuralRigidStyling: (enabled) => {
+        this.renderer.setStructuralRigidStylingEnabled(enabled);
+      },
       setSensorMaterialStyling: (enabled) => {
         this.renderer.setSensorMaterialStylingEnabled(enabled);
       },

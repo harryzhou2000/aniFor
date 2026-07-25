@@ -30,6 +30,7 @@ import { applyCanvasLiquidIdentityStyle } from './canvas-liquid-identity-style';
 import { shadeCanvasEnergy } from './canvas-energy-style';
 import { shadeCanvasMaterial } from './canvas-material-style';
 import { shadeCanvasCellularMaterial } from './canvas-cellular-style';
+import { applyCanvasStructuralRigidStyle } from './canvas-structural-rigid-style';
 import { applyCanvasSensorMorphology } from './canvas-sensor-style';
 import { applyCanvasUnusualPowderStyle } from './canvas-unusual-powder-style';
 import { applyCanvasExplosivePowderStyle } from './canvas-explosive-powder-style';
@@ -211,6 +212,7 @@ export class MaterialRenderer {
   private solidFieldLightingEnabled = true;
   private roleMaterialStylingEnabled = true;
   private cellularMaterialStylingEnabled = true;
+  private structuralRigidStylingEnabled = true;
   private sensorMaterialStylingEnabled = true;
   private unusualPowderStylingEnabled = true;
   private explosivePowderStylingEnabled = true;
@@ -534,6 +536,14 @@ export class MaterialRenderer {
     if (enabled === this.cellularMaterialStylingEnabled) return;
     this.cellularMaterialStylingEnabled = enabled;
     this.presenter?.setCellularMaterialStylingEnabled(enabled);
+    this.contourChunks.markAll();
+    this.changed = true;
+  }
+
+  setStructuralRigidStylingEnabled(enabled: boolean): void {
+    if (enabled === this.structuralRigidStylingEnabled) return;
+    this.structuralRigidStylingEnabled = enabled;
+    this.presenter?.setStructuralRigidStylingEnabled(enabled);
     this.contourChunks.markAll();
     this.changed = true;
   }
@@ -877,6 +887,7 @@ export class MaterialRenderer {
       this.lavaAncestryStylingEnabled,
       this.botanicalLifecycleStylingEnabled,
       this.sparkStateStylingEnabled,
+      this.structuralRigidStylingEnabled,
     );
     // Route subsequent dirty cells to the candidate while its first expensive
     // frame is in flight. The known-good Canvas remains mounted underneath;
@@ -1758,6 +1769,14 @@ export class MaterialRenderer {
             this.styledColor, surfaceLight, normalLight, solidRelief,
             denseSolidInterior, profile, optics, solidOpticalDepth, this.solidOpticalDepthEnabled,
           );
+          // Common construction solids retain their shared curved body and
+          // thickness optics, then receive a bounded exact-owner material
+          // identity. This remains RGB-only and deliberately precedes traits,
+          // thermal overlays, and state-specific graphics.
+          if (this.structuralRigidStylingEnabled && phase === RenderPhase.Solid
+            && applicableTraits === 0 && !info.emissive) {
+            applyCanvasStructuralRigidStyle(this.styledColor, material, x, y);
+          }
           if (this.unusualSolidStylingEnabled && phase === RenderPhase.Solid
             && isCanvasNativeSpecialSolidMaterial(material)) {
             applyCanvasUnusualSolidMorphology(this.styledColor, material, x, y, index);

@@ -62,6 +62,7 @@ export interface BrowserInputAuditApi {
   setSolidFieldLighting(enabled: boolean): void;
   setRoleMaterialStyling(enabled: boolean): void;
   setCellularMaterialStyling(enabled: boolean): void;
+  setStructuralRigidStyling(enabled: boolean): void;
   setSensorMaterialStyling(enabled: boolean): void;
   setUnusualPowderStyling(enabled: boolean): void;
   setExplosivePowderStyling(enabled: boolean): void;
