@@ -109,7 +109,7 @@ const usesProductionBundle = productionBundle || showcaseScreenshotOnly || cellu
   || deutStateGraphicsOnly || sourceTargetGraphicsOnly || forceActivityGraphicsOnly
   || poloStateGraphicsOnly || spngStateGraphicsOnly || lavaStateGraphicsOnly
   || botanicalLifecycleGraphicsOnly || sparkStateGraphicsOnly
-  || nativeSeedGrowthOnly
+  || nativeSeedGrowthOnly || catalogSelectionOnly
   || scaleEightOnly;
 const AUDIT_BASE_URL = usesProductionBundle ? PRODUCTION_BUNDLE_URL : ORIGIN + '/';
 const screenshotRequest = process.argv.find((argument) => argument.startsWith('--screenshot='))?.slice('--screenshot='.length);

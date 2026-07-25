@@ -182,6 +182,7 @@ void main() {
   if (max(color.r, max(color.g, color.b)) < 0.035) color = vec3(16.0 / 255.0);
   float sourceTarget = floor(texture(uWallTexture, uv).b * 255.0 + 0.5)
     + floor(texture(uWallTexture, uv).a * 255.0 + 0.5) * 256.0;
+  float nativeWall = floor(texture(uWallTexture, uv).r * 255.0 + 0.5);
   bool sourceOwner = material == 124.0 || material == 126.0 || material == 127.0
     || material == 137.0 || material == 158.0 || material == 159.0;
   if (uSourceTargetStyling > 0.5 && sourceOwner
@@ -204,10 +205,16 @@ void main() {
     vec3 burst = mix(vec3(18.0, 20.0, 13.0), vec3(8.0, 15.0, 22.0), alternate) * countdown;
     color += (charged + burst) / 255.0;
   }
-  if (uDeutStateStyling > 0.5 && material == 100.0 && sourceTarget > 0.5) {
+  if (uDeutStateStyling > 0.5 && material == 100.0 && sourceTarget > 0.5 && nativeWall < 0.5) {
     float ordinary = min(1.0, sourceTarget / 240.0);
     float compressed = max(0.0, (sourceTarget - 240.0) / 5760.0);
-    float concentration = sqrt(ordinary) * 0.25 + sqrt(min(1.0, compressed)) * 0.75;
+    // Native DEUT's ordinary ctype range reaches the reaction threshold at
+    // 240. Keep its gradual fill below that point, then give the first
+    // reacting state a bounded, visible ignition lift before compression
+    // consumes the remaining highlight range.
+    float ignition = step(240.0, sourceTarget);
+    float concentration = ordinary * 0.45 + ignition * 0.25
+      + sqrt(min(1.0, compressed)) * 0.30;
     color += concentration * vec3(10.0, 19.0, 28.0) / 255.0;
   }
   if (family == 0.0) color *= 0.94 - depth * uSolidOpticalDepth * 0.16 + density * 0.13;
@@ -3162,7 +3169,7 @@ void main() {
       // shared lit body. The bounded helper keeps 8x register pressure local.
       if (uStructuralRigidStyling > 0.5 && surfaceOnly < 0.5 && halo < 0.5
         && wall < 0.5 && wallOnly < 0.5 && emissionOnly < 0.5
-        && traits < 0.5 && materialEmissive < 0.5) {
+        && traits < 0.5 && !materialEmissive) {
         color = clamp(color + structuralRigidIdentityDelta(material, fieldPosition), 0.0, 1.0);
       }
     } else if (organicSurface > 0.5 || (optics < 0.5 && profile == 3.0)) {

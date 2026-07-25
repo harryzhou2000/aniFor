@@ -1064,7 +1064,7 @@ describe('Pixi presenter startup configuration', () => {
     expect(end).toBeGreaterThan(start);
     expect(source).toContain('uniform float uStructuralRigidStyling;');
     expect(source).toContain('uStructuralRigidStyling > 0.5 && surfaceOnly < 0.5');
-    expect(source).toContain('traits < 0.5 && materialEmissive < 0.5');
+    expect(source).toContain('traits < 0.5 && !materialEmissive');
     expect(structuralBlock).toContain('vec3 structuralRigidIdentityDelta(float material, vec2 position)');
     expect(structuralBlock).toContain('if (material == 22.0)');
     expect(structuralBlock).toContain('if (material == 82.0)');
