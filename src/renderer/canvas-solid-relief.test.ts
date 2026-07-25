@@ -177,6 +177,25 @@ describe('Canvas solid relief', () => {
     expect(firstLayer).toEqual(firstLayerDisabled);
   });
 
+  it('gives a thick rigid body a visible but bounded macro depth range at normal fit', () => {
+    const shade = (relief: number) => {
+      const color = new Float32Array([110, 120, 132]);
+      applyCanvasSolidBodyOptics(
+        color, relief, 0, relief, true,
+        RenderProfile.Rigid, RenderOptics.SmoothRigid, 255,
+      );
+      return color;
+    };
+    const crown = shade(7);
+    const pocket = shade(-7);
+    const luma = (color: Float32Array) => color[0] * 0.2126
+      + color[1] * 0.7152 + color[2] * 0.0722;
+
+    expect(luma(crown) - luma(pocket)).toBeGreaterThan(11);
+    expect(Math.max(...crown)).toBeLessThanOrEqual(254);
+    expect(Math.max(...pocket)).toBeLessThanOrEqual(254);
+  });
+
   it('gives Glass and Ice bounded opposing low-bias spectral bands only', () => {
     const glass = new Float32Array([120, 150, 180]);
     const ice = new Float32Array(glass);

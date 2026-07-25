@@ -742,3 +742,28 @@ The next material-primary slice is wider exact coverage of palette-led catalog f
   `5751.4/5831.5/5938.6 ms` median/p90/max, full Local/Smooth recall, and
   camera-preserving Canvas recovery. Next checkpoint: commit and push
   `main_codex`; deployment remains intentionally manual after GitHub login.
+
+## Current Canvas normal-fit solid and liquid efficiency follow-up
+
+- Thick SmoothRigid/rigid Canvas bodies now use a stronger but still bounded
+  existing reflected-body range (`4.0` rather than `2.4`). The response uses
+  only the precomputed signed relief and exact-species optical-depth byte; it
+  stays RGB-only, retains the established ten-byte crown/pocket bound, and
+  makes the normal-fit rigid body luma span exceed eleven bytes without
+  changing alpha, contours, cavities, walls, semantic ownership, or physics.
+- Canvas liquid macro relief keeps its broad reflection/caustic read while
+  reducing hot-path trigonometric work from four evaluations to two coupled
+  waves. It remains world-anchored and continuous, and the existing
+  same-species cohesive-field/trait/emissive/wall gates still own eligibility.
+  No new field, texture, sample, upload, pass, allocation, or output-scale
+  work was added; WebGL's richer semantic shader remains unchanged.
+- The normal-fit forced-Canvas capture is retained as ignored
+  `.artifacts/showcase-canvas-solid-liquid-two-wave.png`. Current validation
+  passes all `114` test files / `717` tests, TypeScript, and the 834-module
+  production static closure. The exact current-bundle 8× gate completed in
+  `539963 ms`, retained requested/effective `8/8` and `4896×3072`, completed
+  eight GPU-fence frames at `5625.3/5763.6/5774.0 ms` median/p90/max, retained
+  atlas/input/topology/native-state coverage plus forced-stall/context-loss
+  Canvas recovery, and reported zero browser errors. Next checkpoint: review,
+  commit, and push `main_codex`; manual Pages deployment still awaits GitHub
+  login.
