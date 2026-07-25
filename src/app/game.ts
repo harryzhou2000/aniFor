@@ -91,6 +91,9 @@ import {
   BOTANICAL_LIFECYCLE_GRAPHICS_AUDIT, prepareBotanicalLifecycleGraphicsAuditFixture,
 } from './botanical-lifecycle-graphics-audit';
 import {
+  SPARK_STATE_GRAPHICS_AUDIT, prepareSparkStateGraphicsAuditFixture,
+} from './spark-state-graphics-audit';
+import {
   runNativeSeedGrowthAudit,
   type NativeSeedGrowthAuditSnapshot,
   type NativeSeedGrowthBackend,
@@ -401,6 +404,9 @@ export class Game {
       setBotanicalLifecycleStyling: (enabled) => {
         this.renderer.setBotanicalLifecycleStylingEnabled(enabled);
       },
+      setSparkStateStyling: (enabled) => {
+        this.renderer.setSparkStateStylingEnabled(enabled);
+      },
       setPowderBodyDepth: (enabled) => {
         this.renderer.setPowderBodyDepthEnabled(enabled);
       },
@@ -529,6 +535,10 @@ export class Game {
       botanicalLifecycleGraphicsAtlas: () => BOTANICAL_LIFECYCLE_GRAPHICS_AUDIT,
       prepareBotanicalLifecycleGraphicsFixture: () => {
         prepareBotanicalLifecycleGraphicsAuditFixture(this.simulation);
+      },
+      sparkStateGraphicsAtlas: () => SPARK_STATE_GRAPHICS_AUDIT,
+      prepareSparkStateGraphicsFixture: () => {
+        prepareSparkStateGraphicsAuditFixture(this.simulation);
       },
       nativeSeedGrowthSnapshot: () => {
         if (!this.nativeSeedGrowthAudit) throw new Error('Native seed growth fixture is not prepared');

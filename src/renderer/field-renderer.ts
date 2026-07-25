@@ -33,6 +33,7 @@ import { applyCanvasUnusualSolidMorphology } from './canvas-unusual-solid-style'
 import { applyCanvasSpongeMorphology } from './canvas-sponge-style';
 import { applyCanvasBotanicalMorphology } from './canvas-botanical-style';
 import { applyCanvasBotanicalLifecycleStyle } from './canvas-botanical-lifecycle-style';
+import { applyCanvasSparkStateStyle } from './canvas-spark-state-style';
 import {
   applyCanvasReconstructedSuspensionStyle, applyCanvasSemanticSuspensionStyle,
 } from './canvas-suspension-style';
@@ -211,6 +212,7 @@ export class MaterialRenderer {
   private lavaAncestryStylingEnabled = true;
   private botanicalIdentityStylingEnabled = true;
   private botanicalLifecycleStylingEnabled = true;
+  private sparkStateStylingEnabled = true;
   private powderBodyDepthEnabled = true;
   private powderRenderStyle: PowderRenderStyle = 'smooth';
   private gasFieldLightingDirty = false;
@@ -663,6 +665,14 @@ export class MaterialRenderer {
     this.changed = true;
   }
 
+  setSparkStateStylingEnabled(enabled: boolean): void {
+    if (enabled === this.sparkStateStylingEnabled) return;
+    this.sparkStateStylingEnabled = enabled;
+    this.presenter?.setSparkStateStylingEnabled(enabled);
+    this.contourChunks.markAll();
+    this.changed = true;
+  }
+
   setPowderBodyDepthEnabled(enabled: boolean): void {
     if (enabled === this.powderBodyDepthEnabled) return;
     this.powderBodyDepthEnabled = enabled;
@@ -848,6 +858,7 @@ export class MaterialRenderer {
       this.spngStateStylingEnabled,
       this.lavaAncestryStylingEnabled,
       this.botanicalLifecycleStylingEnabled,
+      this.sparkStateStylingEnabled,
     );
     // Route subsequent dirty cells to the candidate while its first expensive
     // frame is in flight. The known-good Canvas remains mounted underneath;
@@ -1685,6 +1696,11 @@ export class MaterialRenderer {
           }
           if (this.botanicalLifecycleStylingEnabled && presentationState) {
             applyCanvasBotanicalLifecycleStyle(
+              this.styledColor, material, presentationState[index], x, y,
+            );
+          }
+          if (this.sparkStateStylingEnabled && presentationState) {
+            applyCanvasSparkStateStyle(
               this.styledColor, material, presentationState[index], x, y,
             );
           }

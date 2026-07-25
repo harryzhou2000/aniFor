@@ -134,6 +134,7 @@ uniform float uSpngStateStyling;
 uniform float uLavaAncestryStyling;
 uniform float uBotanicalIdentityStyling;
 uniform float uBotanicalLifecycleStyling;
+uniform float uSparkStateStyling;
 uniform float uPowderStyle;
 uniform float uPowderBodyDepth;
 uniform float uSuspensionActive;
@@ -677,6 +678,47 @@ vec3 botanicalLifecycleDelta(
     (leafColor / 255.0 - sourceColor) * blend + variation / 255.0,
     vec3(-64.0 / 255.0), vec3(64.0 / 255.0)
   );
+}
+float sparkHostFamily(float host) {
+  if (host == 23.0 || host == 36.0 || host == 45.0 || host == 46.0
+    || host == 61.0 || host == 67.0 || host == 70.0 || host == 73.0
+    || host == 75.0 || host == 82.0 || host == 95.0 || host == 96.0
+    || host == 151.0) return 1.0;
+  if (host == 51.0 || host == 144.0 || host == 146.0) return 2.0;
+  if (host == 145.0 || host == 147.0) return 3.0;
+  if (host == 135.0 || host == 136.0 || host == 140.0 || host == 142.0
+    || host == 143.0 || host == 149.0 || host == 150.0 || host == 164.0
+    || host == 166.0 || host == 167.0 || host == 168.0 || host == 169.0
+    || host == 170.0) return 4.0;
+  if (host == 2.0 || host == 16.0 || host == 53.0 || host == 55.0) return 5.0;
+  return 0.0;
+}
+vec3 sparkStateDelta(
+  float material, vec2 stateBytes, vec2 position, vec3 sourceColor
+) {
+  if (material != 148.0) return vec3(0.0);
+  float packedState = floor(stateBytes.x * 255.0 + 0.5)
+    + floor(stateBytes.y * 255.0 + 0.5) * 256.0;
+  if (mod(floor(packedState / 32768.0), 2.0) < 0.5) return vec3(0.0);
+  float host = mod(packedState, 256.0);
+  float family = sparkHostFamily(host);
+  if (host < 0.5 || family < 0.5) return vec3(0.0);
+  float life = min(127.0, mod(floor(packedState / 256.0), 128.0));
+  float lifecycle = min(1.0, life / 4.0);
+  vec2 world = floor(position);
+  float carrier = mod(world.x * 3.0 + world.y * 5.0 + family * 7.0, 11.0) <= 1.0
+    ? 1.0 : 0.0;
+  float junction = mod(world.x - world.y * 2.0 + family * 5.0, 17.0) == 0.0
+    ? 1.0 : 0.0;
+  float geometry = carrier > 0.5 ? 1.0 : junction > 0.5 ? 0.68 : 0.30;
+  float blend = (0.25 + lifecycle * 0.75) * geometry * 0.18;
+  vec3 target = family == 1.0 ? vec3(145.0, 198.0, 255.0)
+    : family == 2.0 ? vec3(218.0, 120.0, 255.0)
+    : family == 3.0 ? vec3(255.0, 178.0, 74.0)
+    : family == 4.0 ? vec3(105.0, 184.0, 255.0)
+    : vec3(70.0, 235.0, 255.0);
+  vec3 displaySource = min(sourceColor, vec3(1.0));
+  return mix(displaySource, target / 255.0, blend) - sourceColor;
 }
 float thermalOpticsGain(float optics) {
   if (optics == 13.0) return 0.82;
@@ -3075,6 +3117,9 @@ void main() {
     // empty space keeps the separate emission halo, avoiding a flat milky wash.
     color += emissionState.rgb * lightReach * lightResponse;
   }
+  if (uSparkStateStyling > 0.5 && material == 148.0) {
+    color += sparkStateDelta(material, wallState.ba, fieldPosition, color);
+  }
   // Converge eligible aqueous liquid and exact-owner granular powder only after
   // their phase and scene lighting. A bounded luma offset keeps macro relief
   // while removing high-frequency cyan/ochre semantic phase contrast.
@@ -3342,6 +3387,7 @@ export class PixiFieldPresenter {
       uLavaAncestryStyling: { value: 1, type: 'f32' },
       uBotanicalIdentityStyling: { value: 1, type: 'f32' },
       uBotanicalLifecycleStyling: { value: 1, type: 'f32' },
+      uSparkStateStyling: { value: 1, type: 'f32' },
       uPowderStyle: { value: powderRenderStyleValue('smooth'), type: 'f32' },
       uPowderBodyDepth: { value: 1, type: 'f32' },
       uSuspensionActive: {
@@ -3626,6 +3672,7 @@ export class PixiFieldPresenter {
     spngStateStylingEnabled = true,
     lavaAncestryStylingEnabled = true,
     botanicalLifecycleStylingEnabled = true,
+    sparkStateStylingEnabled = true,
   ): void {
     const uniforms = this.uniforms.uniforms;
     uniforms.uGasFieldLighting = gasFieldLightingEnabled ? 1 : 0;
@@ -3666,6 +3713,7 @@ export class PixiFieldPresenter {
     uniforms.uLavaAncestryStyling = lavaAncestryStylingEnabled ? 1 : 0;
     uniforms.uBotanicalIdentityStyling = botanicalIdentityStylingEnabled ? 1 : 0;
     uniforms.uBotanicalLifecycleStyling = botanicalLifecycleStylingEnabled ? 1 : 0;
+    uniforms.uSparkStateStyling = sparkStateStylingEnabled ? 1 : 0;
     uniforms.uPowderStyle = powderRenderStyleValue(powderRenderStyle);
   }
 
@@ -3848,6 +3896,11 @@ export class PixiFieldPresenter {
 
   setBotanicalLifecycleStylingEnabled(enabled: boolean): void {
     this.uniforms.uniforms.uBotanicalLifecycleStyling = enabled ? 1 : 0;
+    this.renderApplication();
+  }
+
+  setSparkStateStylingEnabled(enabled: boolean): void {
+    this.uniforms.uniforms.uSparkStateStyling = enabled ? 1 : 0;
     this.renderApplication();
   }
 

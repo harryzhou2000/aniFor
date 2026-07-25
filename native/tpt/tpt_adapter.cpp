@@ -561,6 +561,18 @@ void ExtractFields()
 					0x0100 | ExactPublicMaterialIdentity(part.ctype)
 				);
 			}
+			else if (part.type == PT_SPRK)
+			{
+				// SPRK is a temporary native owner layered over the conductor retained
+				// in ctype. Preserve only an exact public host identity in the low byte
+				// and its bounded native lifecycle in bits 8..14. Bit 15 marks even an
+				// imported spark whose host is absent or cannot round-trip publicly.
+				// Native ctype/life and the eventual official restoration remain untouched.
+				auto const life = std::clamp(part.life, 0, 0x7F);
+				presentationStateField[offset] = uint16_t(
+					0x8000 | (life << 8) | ExactPublicMaterialIdentity(part.ctype)
+				);
+			}
 			else if (part.type == PT_VIBR || part.type == PT_BVBR)
 			{
 				// Match upstream VIBR graphics: tmp / 10 is the visible charge

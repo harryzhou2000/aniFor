@@ -5,7 +5,7 @@ import { SimulationTool } from './simulation-tools';
 import {
   DEUT_PRESENTATION_STATE, LAVA_PRESENTATION_STATE, POLO_PRESENTATION_STATE,
   PLNT_PRESENTATION_STATE, SEED_PRESENTATION_STATE, SPNG_PRESENTATION_STATE,
-  VIBR_PRESENTATION_STATE,
+  SPRK_PRESENTATION_STATE, VIBR_PRESENTATION_STATE,
 } from './types';
 import { readFileSync } from 'node:fs';
 
@@ -332,6 +332,117 @@ describe('direct Powder Toy backend', () => {
     restored.paint(point.x, point.y, Material.Water, 0);
     expect(owner(restored)).toBe(Material.Water);
     expect(state(restored)).toBe(0);
+  });
+
+  it('projects conductor-aware SPRK hosts through native countdown, OPS1, and restoration', async () => {
+    const fixtures = [
+      { material: Material.Metal, x: 120, y: 120 },
+      { material: Material.PSCN, x: 180, y: 120 },
+      { material: Material.NSCN, x: 240, y: 120 },
+      { material: Material.GOLD, x: 300, y: 120 },
+      { material: Material.IRON, x: 360, y: 120 },
+      { material: Material.Water, x: 420, y: 120 },
+    ] as const;
+    const wrongOwner = { x: 280, y: 220 } as const;
+    const emptyControl = { x: 332, y: 220 } as const;
+    const indexOf = (
+      simulation: PowderToyBackend, point: { x: number; y: number },
+    ): number => point.y * simulation.width + point.x;
+    const ownerAt = (
+      simulation: PowderToyBackend, point: { x: number; y: number },
+    ): number => simulation.cells()[indexOf(simulation, point)];
+    const stateAt = (
+      simulation: PowderToyBackend, point: { x: number; y: number },
+    ): number => {
+      simulation.cells();
+      return simulation.presentationState()[indexOf(simulation, point)];
+    };
+    const encode = (host: Material, life: number): number => (
+      SPRK_PRESENTATION_STATE.presentMask
+      | (life << SPRK_PRESENTATION_STATE.lifeShift)
+      | host
+    );
+    const enclose = (
+      simulation: PowderToyBackend, point: { x: number; y: number },
+    ): void => {
+      // Zero-conduct native DMND keeps the WATR host at its authored cell after
+      // restoration and prevents one fixture from conducting into another.
+      for (let offsetY = -1; offsetY <= 1; offsetY++) {
+        for (let offsetX = -1; offsetX <= 1; offsetX++) {
+          if (offsetX || offsetY) {
+            simulation.paint(
+              point.x + offsetX, point.y + offsetY, Material.Wall, 0,
+            );
+          }
+        }
+      }
+    };
+
+    const source = await PowderToyBackend.load(moduleArtifact.href);
+    source.paint(wrongOwner.x, wrongOwner.y, Material.GOLD, 0);
+    for (const fixture of fixtures) {
+      enclose(source, fixture);
+      source.paint(fixture.x, fixture.y, fixture.material, 0);
+      expect(ownerAt(source, fixture)).toBe(fixture.material);
+      expect(stateAt(source, fixture)).toBe(0);
+
+      // SPRK is the official brush operation on an existing native conductor.
+      // It retains that conductor in ctype and starts the common four-tick life.
+      source.paint(fixture.x, fixture.y, Material.SPRK, 0);
+      expect(ownerAt(source, fixture)).toBe(Material.SPRK);
+      expect(stateAt(source, fixture)).toBe(encode(fixture.material, 4));
+    }
+    expect(stateAt(source, wrongOwner)).toBe(0);
+    expect(ownerAt(source, emptyControl)).toBe(Material.Empty);
+    expect(stateAt(source, emptyControl)).toBe(0);
+
+    // BeforeSim performs the native PROP_LIFE_DEC decrement; ExtractFields
+    // reports that authoritative countdown without advancing or mirroring it.
+    source.step();
+    for (const fixture of fixtures) {
+      expect(ownerAt(source, fixture)).toBe(Material.SPRK);
+      const checkpoint = stateAt(source, fixture);
+      expect(checkpoint).toBe(encode(fixture.material, 3));
+      expect(checkpoint & SPRK_PRESENTATION_STATE.hostMask).toBe(fixture.material);
+      expect(
+        (checkpoint & SPRK_PRESENTATION_STATE.lifeMask)
+        >>> SPRK_PRESENTATION_STATE.lifeShift,
+      ).toBe(3);
+      expect(checkpoint & SPRK_PRESENTATION_STATE.presentMask)
+        .toBe(SPRK_PRESENTATION_STATE.presentMask);
+    }
+
+    const file = source.saveFile();
+    expect(new TextDecoder().decode(file.slice(0, 4))).toBe('OPS1');
+    const restored = await PowderToyBackend.load(moduleArtifact.href);
+    restored.loadFile(file);
+    for (const fixture of fixtures) {
+      expect(ownerAt(restored, fixture)).toBe(Material.SPRK);
+      expect(stateAt(restored, fixture)).toBe(encode(fixture.material, 3));
+    }
+    expect(stateAt(restored, wrongOwner)).toBe(0);
+    expect(stateAt(restored, emptyControl)).toBe(0);
+
+    restored.step();
+    for (const fixture of fixtures) {
+      expect(stateAt(restored, fixture)).toBe(encode(fixture.material, 2));
+    }
+    restored.step();
+    for (const fixture of fixtures) {
+      expect(stateAt(restored, fixture)).toBe(encode(fixture.material, 1));
+    }
+    restored.step();
+    for (const fixture of fixtures) {
+      // SPRK's official update restores ctype as the exact native material.
+      expect(ownerAt(restored, fixture)).toBe(fixture.material);
+      expect(stateAt(restored, fixture)).toBe(0);
+    }
+
+    // A free SPRK brush is rejected upstream, so no owner marker can leak into
+    // empty space or a non-SPRK material in this owner-multiplexed plane.
+    restored.paint(emptyControl.x, emptyControl.y, Material.SPRK, 0);
+    expect(ownerAt(restored, emptyControl)).toBe(Material.Empty);
+    expect(stateAt(restored, emptyControl)).toBe(0);
   });
 
   it('projects exact typed-Lava ancestry through native melting, OPS1, and cooling', async () => {

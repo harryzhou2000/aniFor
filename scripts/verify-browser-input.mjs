@@ -28,6 +28,10 @@ import {
   assertPairedBotanicalLifecycleGraphics,
   auditBotanicalLifecycleGraphics,
 } from './botanical-lifecycle-graphics-audit.mjs';
+import {
+  assertPairedSparkStateGraphics,
+  auditSparkStateGraphics,
+} from './spark-state-graphics-audit.mjs';
 
 const ROOT = process.cwd();
 const requestedPort = Number.parseInt(process.env.ANIFORTPT_AUDIT_PORT ?? '5178', 10);
@@ -85,6 +89,7 @@ const poloStateGraphicsOnly = process.argv.includes('--polo-state-graphics-only'
 const spngStateGraphicsOnly = process.argv.includes('--spng-state-graphics-only');
 const lavaStateGraphicsOnly = process.argv.includes('--lava-state-graphics-only');
 const botanicalLifecycleGraphicsOnly = process.argv.includes('--botanical-lifecycle-graphics-only');
+const sparkStateGraphicsOnly = process.argv.includes('--spark-state-graphics-only');
 const nativeSeedGrowthOnly = process.argv.includes('--native-seed-growth-only');
 const usesProductionBundle = cellularGraphicsOnly || sensorGraphicsOnly
   || unusualPowderGraphicsOnly || explosivePowderGraphicsOnly || unusualSolidGraphicsOnly
@@ -93,7 +98,7 @@ const usesProductionBundle = cellularGraphicsOnly || sensorGraphicsOnly
   || crystalGraphicsOnly || pasteResistGraphicsOnly || vibrStateGraphicsOnly
   || deutStateGraphicsOnly || sourceTargetGraphicsOnly || forceActivityGraphicsOnly
   || poloStateGraphicsOnly || spngStateGraphicsOnly || lavaStateGraphicsOnly
-  || botanicalLifecycleGraphicsOnly
+  || botanicalLifecycleGraphicsOnly || sparkStateGraphicsOnly
   || nativeSeedGrowthOnly
   || scaleEightOnly;
 const AUDIT_BASE_URL = usesProductionBundle ? PRODUCTION_BUNDLE_URL : ORIGIN + '/';
@@ -163,6 +168,7 @@ async function main() {
       || pasteResistGraphicsOnly || vibrStateGraphicsOnly || deutStateGraphicsOnly
       || sourceTargetGraphicsOnly || forceActivityGraphicsOnly || poloStateGraphicsOnly
       || spngStateGraphicsOnly || lavaStateGraphicsOnly || botanicalLifecycleGraphicsOnly
+      || sparkStateGraphicsOnly
       || nativeSeedGrowthOnly;
     if (powderBodyOnly) assertPairedPowderBodyDepth(results);
     if (liquidDepthOnly) assertPairedLiquidOpticalDepth(results);
@@ -195,6 +201,7 @@ async function main() {
     if (botanicalLifecycleGraphicsOnly) {
       assertPairedBotanicalLifecycleGraphics(results, assert);
     }
+    if (sparkStateGraphicsOnly) assertPairedSparkStateGraphics(results, assert);
     if (nativeSeedGrowthOnly) assertPairedNativeSeedGrowth(results);
     if (!scaleEightOnly && !materialAtlasOnly && !reducedAudit) assertPairedVisualRelief(results);
     if (!scaleEightOnly && !reducedAudit) assertPairedMaterialAtlas(results);
@@ -227,6 +234,7 @@ async function auditMode(mode) {
     || pasteResistGraphicsOnly || vibrStateGraphicsOnly || deutStateGraphicsOnly
     || sourceTargetGraphicsOnly || forceActivityGraphicsOnly || poloStateGraphicsOnly
     || spngStateGraphicsOnly || lavaStateGraphicsOnly || botanicalLifecycleGraphicsOnly
+    || sparkStateGraphicsOnly
     || nativeSeedGrowthOnly;
   const query = new URLSearchParams({
     scene: 'render-lab', inputAudit: '1', renderScale: '2',
@@ -537,6 +545,21 @@ async function auditMode(mode) {
         botanicalLifecycleGraphics,
         browserErrors: errors.length,
       };
+    }
+    if (sparkStateGraphicsOnly) {
+      const sparkStateGraphics = await auditSparkStateGraphics({
+        cdp,
+        mode,
+        evaluate,
+        waitFor,
+        waitForStablePageCapture,
+        assert,
+        worldWidth: WORLD_WIDTH,
+        worldHeight: WORLD_HEIGHT,
+      });
+      assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
+      cdp.close();
+      return { backend: mode, sparkStateGraphics, browserErrors: errors.length };
     }
     if (mobileOnly) {
       const mobile = await auditMobile(

@@ -30,6 +30,7 @@ import type { LavaStateGraphicsAuditSnapshot } from './lava-state-graphics-audit
 import type {
   BotanicalLifecycleGraphicsAuditSnapshot,
 } from './botanical-lifecycle-graphics-audit';
+import type { SparkStateGraphicsAuditSnapshot } from './spark-state-graphics-audit';
 
 export interface BrowserInputAuditApi {
   readonly version: 1;
@@ -79,6 +80,7 @@ export interface BrowserInputAuditApi {
   setLavaAncestryStyling(enabled: boolean): void;
   setBotanicalIdentityStyling(enabled: boolean): void;
   setBotanicalLifecycleStyling(enabled: boolean): void;
+  setSparkStateStyling(enabled: boolean): void;
   setPowderBodyDepth(enabled: boolean): void;
   setPowderRenderStyle(style: PowderRenderStyle): void;
   clear(): void;
@@ -140,6 +142,8 @@ export interface BrowserInputAuditApi {
   prepareLavaStateGraphicsFixture(): void;
   botanicalLifecycleGraphicsAtlas(): BotanicalLifecycleGraphicsAuditSnapshot;
   prepareBotanicalLifecycleGraphicsFixture(): void;
+  sparkStateGraphicsAtlas(): SparkStateGraphicsAuditSnapshot;
+  prepareSparkStateGraphicsFixture(): void;
   nativeSeedGrowthSnapshot(): NativeSeedGrowthAuditSnapshot;
   prepareNativeSeedGrowthFixture(): void;
   canvasPresentationTiming(): CanvasPresentationTiming | undefined;

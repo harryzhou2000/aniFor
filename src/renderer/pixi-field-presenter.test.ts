@@ -40,6 +40,7 @@ interface PresenterHarness {
   setLavaAncestryStylingEnabled: PixiFieldPresenter['setLavaAncestryStylingEnabled'];
   setBotanicalIdentityStylingEnabled: PixiFieldPresenter['setBotanicalIdentityStylingEnabled'];
   setBotanicalLifecycleStylingEnabled: PixiFieldPresenter['setBotanicalLifecycleStylingEnabled'];
+  setSparkStateStylingEnabled: PixiFieldPresenter['setSparkStateStylingEnabled'];
   setLiquidSilhouetteCohesionEnabled: PixiFieldPresenter['setLiquidSilhouetteCohesionEnabled'];
   setRenderStallHandler: PixiFieldPresenter['setRenderStallHandler'];
   forceEightXRenderStallForAudit: PixiFieldPresenter['forceEightXRenderStallForAudit'];
@@ -1124,6 +1125,36 @@ describe('Pixi presenter startup configuration', () => {
     expect(helper).not.toMatch(/\balpha\s*[+*]?=/);
     expect(source).toContain(
       'color += botanicalLifecycleDelta(material, wallState.ba, fieldPosition, color);',
+    );
+  });
+
+  it('decodes exact SPRK host and life with sample-free RGB-only arithmetic', () => {
+    const presenter = presenterHarness();
+    presenter.setSparkStateStylingEnabled(false);
+    expect(presenter.uniforms.uniforms.uSparkStateStyling).toBe(0);
+    expect(presenter.app.render).toHaveBeenCalledOnce();
+    presenter.app.render.mockClear();
+    presenter.setSparkStateStylingEnabled(true);
+    expect(presenter.uniforms.uniforms.uSparkStateStyling).toBe(1);
+    expect(presenter.app.render).toHaveBeenCalledOnce();
+
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const start = source.indexOf('float sparkHostFamily(');
+    const end = source.indexOf('float thermalOpticsGain', start);
+    const helper = source.slice(start, end);
+    expect(start).toBeGreaterThan(0);
+    expect(end).toBeGreaterThan(start);
+    expect(source).toContain('uniform float uSparkStateStyling;');
+    expect(helper).toContain('material != 148.0');
+    expect(helper).toContain('packedState / 32768.0');
+    expect(helper).toContain('mod(packedState, 256.0)');
+    expect(helper).toContain('mod(floor(packedState / 256.0), 128.0)');
+    expect(helper).not.toContain('153.0');
+    expect(helper).not.toMatch(/texture\s*\(/);
+    expect(helper).not.toContain('uTime');
+    expect(helper).not.toMatch(/\balpha\s*[+*]?=/);
+    expect(source).toContain(
+      'color += sparkStateDelta(material, wallState.ba, fieldPosition, color);',
     );
   });
 

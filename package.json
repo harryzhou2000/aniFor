@@ -29,6 +29,7 @@
     "audit:spng-state": "node scripts/verify-browser-input.mjs --spng-state-graphics-only",
     "audit:lava-state": "node scripts/verify-browser-input.mjs --lava-state-graphics-only",
     "audit:botanical-lifecycle": "node scripts/verify-browser-input.mjs --botanical-lifecycle-graphics-only",
+    "audit:spark-state": "node scripts/verify-browser-input.mjs --spark-state-graphics-only",
     "audit:native-seed-growth": "node scripts/verify-browser-input.mjs --native-seed-growth-only",
     "profile:render-fields": "vite-node scripts/profile-render-fields.ts",
     "setup:emsdk": "bash scripts/setup-emsdk.sh",

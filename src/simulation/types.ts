@@ -57,6 +57,20 @@ export const LAVA_PRESENTATION_STATE = {
 } as const;
 
 /**
+ * Native SPRK host identity and countdown in the owner-multiplexed state word.
+ * The exact public host occupies the low byte; zero means the native ctype is
+ * absent or cannot round-trip through the public material ABI. `presentMask`
+ * therefore remains authoritative even when `hostMask` is zero.
+ */
+export const SPRK_PRESENTATION_STATE = {
+  hostMask: 0x00ff,
+  lifeShift: 8,
+  lifeMask: 0x7f00,
+  lifeMaximum: 0x7f,
+  presentMask: 0x8000,
+} as const;
+
+/**
  * Exact native SEED hydration and supported-soil germination state.
  * Material.SEED is the owner guard, so an authoritative dry dormant seed is
  * intentionally the all-zero word.

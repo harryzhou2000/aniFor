@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { MATERIALS, Material } from '../shared/materials';
-import { groupMaterials, POWDER_RENDER_STYLE_OPTIONS, RENDER_SCALE_OPTIONS, sourceRejectionLabel, sourceSelectionLabel, toolCountLabel } from './controls';
+import { groupMaterials, POWDER_RENDER_STYLE_OPTIONS, reconcileOpenToolGroups, RENDER_SCALE_OPTIONS, sourceRejectionLabel, sourceSelectionLabel, toolCountLabel } from './controls';
 
 describe('material controls', () => {
   it('groups every brush once in a stable, named category', () => {
@@ -38,5 +38,15 @@ describe('material controls', () => {
     const groups = groupMaterials(MATERIALS.filter(({ category }) => category === 'liquids'));
     expect(groups).toHaveLength(1);
     expect(groups[0].id).toBe('liquids');
+  });
+
+  it('keeps the chosen category open when selecting a tool rebuilds the library', () => {
+    const open = reconcileOpenToolGroups(new Set(['electronics']), [
+      { id: 'powders', open: false },
+      { id: 'electronics', open: true },
+    ]);
+
+    expect(open).toEqual(new Set(['electronics']));
+    expect(open.has('powders')).toBe(false);
   });
 });

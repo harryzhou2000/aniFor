@@ -113,6 +113,22 @@ export function sourceRejectionLabel(source: Material, target: Material): string
   return `${sourceSelectionLabel(source, target)} unsupported`;
 }
 
+/**
+ * Carries explicit disclosure choices across a library rebuild. Only rendered
+ * groups are reconciled, so filtering never forgets an unrelated category.
+ */
+export function reconcileOpenToolGroups(
+  previous: ReadonlySet<string>,
+  rendered: Iterable<{ readonly id: string; readonly open: boolean }>,
+): Set<string> {
+  const next = new Set(previous);
+  for (const group of rendered) {
+    if (group.open) next.add(group.id);
+    else next.delete(group.id);
+  }
+  return next;
+}
+
 export function mountControls(host: HTMLElement, callbacks: ControlsCallbacks, catalog: readonly CatalogTool[] = materialTools(MATERIALS)): void {
   const activeRenderScale = resolveFieldOutputScale();
   const tools = document.createElement('nav');
@@ -154,6 +170,8 @@ export function mountControls(host: HTMLElement, callbacks: ControlsCallbacks, c
   let selectedKey = catalog.find((tool) => tool.kind === 'element' && tool.id === Material.Sand)?.key
     ?? catalog[0]?.key;
   let sourceTarget = Material.Sand;
+  let openGroups = new Set<string>();
+  let hasRenderedLibrary = false;
 
   const filterChoices: Array<{ mode: ToolFilter; label: string }> = [
     { mode: 'all', label: 'All' },
@@ -229,6 +247,16 @@ export function mountControls(host: HTMLElement, callbacks: ControlsCallbacks, c
   };
 
   const renderLibrary = (): void => {
+    // Search and filtered views intentionally reveal their results. Do not let
+    // that temporary expansion overwrite the user's normal category choices
+    // when the query/filter is cleared.
+    const revealResults = Boolean(search.value) || mode !== 'all';
+    if (hasRenderedLibrary && !revealResults) {
+      openGroups = reconcileOpenToolGroups(openGroups, Array.from(
+        library.querySelectorAll<HTMLDetailsElement>('details.material-group'),
+        (disclosure) => ({ id: disclosure.dataset.category ?? '', open: disclosure.open }),
+      ).filter(({ id }) => Boolean(id)));
+    }
     const visible = filterTools(catalog, { mode, query: search.value, favorites, recent });
     library.replaceChildren();
     results.value = toolCountLabel(visible.length);
@@ -244,7 +272,11 @@ export function mountControls(host: HTMLElement, callbacks: ControlsCallbacks, c
       const disclosure = document.createElement('details');
       disclosure.className = 'material-group';
       disclosure.dataset.category = group.id;
-      disclosure.open = Boolean(search.value) || mode === 'recent' || mode === 'favorites' || groupIndex === 0;
+      disclosure.open = revealResults || openGroups.has(group.id) || (!hasRenderedLibrary && groupIndex === 0);
+      disclosure.addEventListener('toggle', () => {
+        if (disclosure.open) openGroups.add(group.id);
+        else openGroups.delete(group.id);
+      });
       const heading = document.createElement('summary');
       heading.innerHTML = `<span><strong>${group.label}</strong><small>${group.description}</small></span><span class="material-count">${group.tools.length}</span>`;
       disclosure.append(heading);
@@ -254,6 +286,7 @@ export function mountControls(host: HTMLElement, callbacks: ControlsCallbacks, c
       disclosure.append(grid);
       library.append(disclosure);
     }
+    hasRenderedLibrary = true;
   };
 
   for (const choice of filterChoices) {
