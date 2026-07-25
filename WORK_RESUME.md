@@ -834,6 +834,10 @@ The next material-primary slice is wider exact coverage of palette-led catalog f
 - The production-bundle true-8× WebGL gate completed in `529917 ms` with
   `4896×3072` backing, all atlas/deep-zoom/native-state stages, forced-fence
   and real context-loss camera-preserving Canvas recovery, and zero browser
-  errors. The audit-owned Chrome session exited cleanly. Next checkpoint:
-  full tests, commit, and push `main_codex`; Pages deployment remains manual
-  pending GitHub login.
+  errors. The audit-owned Chrome session exited cleanly.
+- GitHub login became available and manual run `30146876602` built and deployed
+  this checkpoint. Its project-local Emscripten and ccache restores were hits;
+  the compiler cache restored a prefix match, saved the new exact key only
+  after the successful build, and reported `270/271` cacheable calls. Build,
+  deploy, and CI live verification all passed. An independent live check then
+  confirmed the exact full revision and all 19 runtime assets at Pages.
