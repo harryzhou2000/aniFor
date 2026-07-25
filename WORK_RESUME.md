@@ -923,3 +923,10 @@ The next material-primary slice is wider exact coverage of palette-led catalog f
   and WebGL showcase captures with zero browser errors. Next checkpoint: run
   the complete suite, commit, and push; use the retained showcase command for
   subsequent composed-material art direction before selecting the next family.
+- The full local suite then passed `114` files / `721` tests, with the
+  834-module production build and 19-file static closure also clean. Commit
+  `0ce9ae7` was pushed to `main_codex` and manual workflow run `30148564532`
+  completed build, deploy, and Pages revision/asset verification successfully.
+  Both the project-local Emscripten and ccache restores were hits; the compiler
+  cache save correctly skipped its already-existing exact key. An independent
+  live check confirmed that revision's complete 19-resource Pages closure.
