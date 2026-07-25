@@ -238,6 +238,7 @@ vec3 applyGasVolumeChroma(vec3 color, vec3 source, float response) {
   );
   return color * (vec3(1.0) - fill * (-response));
 }
+vec3 gasIdentityBodyDelta(float style, float density);
 vec3 gasIdentityVolumeDelta(
   float style, vec2 worldPosition, float density, float directionalRelief, float curvature
 ) {
@@ -253,8 +254,37 @@ vec3 gasIdentityVolumeDelta(
   float volume = smoothstep(0.004, 0.52, density);
   float motifScale = 0.34 + volume * 0.66;
   float fieldRelief = clamp(directionalRelief * 7.0 + curvature * 9.0, -3.0, 3.0);
-  return clamp((motif * motifScale + vec3(fieldRelief)) / 255.0,
+  // Canvas gives each exact gas species a small dense-body absorption or tint
+  // after the shared atmosphere reconstruction. Keep the same semantic
+  // distinction here without changing the field-owned silhouette: this is one
+  // RGB-only arithmetic term in the already-enabled identity branch, not a
+  // field, sampler, pass, allocation, or time-varying topology signal.
+  vec3 bodyDepth = gasIdentityBodyDelta(style, density);
+  return clamp((motif * motifScale + vec3(fieldRelief) + bodyDepth) / 255.0,
     vec3(-12.0 / 255.0), vec3(12.0 / 255.0));
+}
+vec3 gasIdentityBodyDelta(float style, float density) {
+  // Do not make sparse semantic accents read as dense fog. The existing motif
+  // remains visible at low support; this begins once the shared atmosphere has
+  // accumulated enough mass to read as a coherent volume.
+  float support = smoothstep(0.10, 0.70, density);
+  if (style < 1.5) return vec3(-4.0, -4.0, -3.0) * support; // Smoke
+  if (style < 2.5) return vec3(1.0, 2.0, 3.0) * support; // Steam
+  if (style < 3.5) return vec3(3.0, 2.0, -1.0) * support; // Gas
+  if (style < 4.5) return vec3(0.0, 2.0, 3.0) * support; // Oxygen
+  if (style < 5.5) return vec3(1.0, 1.0, 3.0) * support; // Hydrogen
+  if (style < 6.5) return vec3(-3.0, -2.0, -1.0) * support; // CO2
+  if (style < 7.5) return vec3(2.0, 1.0, 3.0) * support; // Noble gas
+  if (style < 8.5) return vec3(3.0, 0.0, -2.0) * support; // BOYL
+  if (style < 9.5) return vec3(-1.0, 3.0, -1.0) * support; // CAUS
+  if (style < 10.5) return vec3(2.0) * support; // FOG
+  if (style < 11.5) return vec3(-1.0, 2.0, 4.0) * support; // RFRG
+  if (style < 12.5) return vec3(-1.0, 1.0, 4.0) * support; // CFLM
+  if (style < 13.5) return vec3(-4.0, -2.0, -4.0) * support; // AMTR
+  if (style < 14.5) return vec3(2.0, -2.0, 3.0) * support; // WARP
+  if (style < 15.5) return vec3(3.0, -2.0, 3.0) * support; // BIZRG
+  if (style < 16.5) return vec3(-2.0) * support; // MORT
+  return vec3(3.0, -2.0, 3.0) * support; // VRSG
 }
 float liquidVolumeChromaResponse(
   float depth, vec2 slope, float centreDensity, float neighbourDensity,

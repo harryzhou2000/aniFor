@@ -1130,3 +1130,24 @@ The next material-primary slice is wider exact coverage of palette-led catalog f
   showcase capture with zero browser errors, and the full 114-file / 726-test
   suite pass. A broad visual gate was deliberately not claimed after its outer
   harness stopped before output; its verified temporary profile was closed.
+
+## Current WebGL gas identity depth checkpoint
+
+- Cross-backend review found that Canvas already gives each exact gas identity
+  a small density-dependent body response after its shared atmosphere field is
+  reconstructed, while WebGL used the same spatial motifs but retained a
+  mostly universal dense-cloud response. WebGL now reuses the already decoded
+  identity style and atmosphere density to add that matching bounded species
+  depth: smoke, carbon dioxide, antimatter, and exhaust settle into restrained
+  absorption; steam, oxygen, refrigerant, cold flame, and noble gas retain a
+  recognisable dense-volume tint.
+- This is an RGB-only arithmetic term within the existing WebGL identity
+  branch. It creates no sampler, texture, field, pass, target, upload,
+  allocation, time signal, alpha/support/silhouette change, physics, native
+  save, or interaction change. Sparse semantic accents stay on the existing
+  motif path until shared atmosphere density proves a coherent body.
+- Validation: the focused Pixi presenter static-resource/alpha contract and
+  TypeScript checks pass; the 834-module production build retained its
+  19-asset closure; a real WebGL production showcase compiled with zero browser
+  errors; and the true-8× browser gate reached its reference and promoted 8×
+  presentation stages in 9.36 s and 25.05 s respectively.

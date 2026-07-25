@@ -335,7 +335,7 @@ describe('Pixi presenter startup configuration', () => {
     expect(presenter.app.render).toHaveBeenCalledOnce();
   });
 
-  it('uses one propagated style sample and one shared motif sample without changing gas support', () => {
+  it('uses one propagated style sample, one shared motif sample, and RGB-only dense species depth without changing gas support', () => {
     const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
     const helperStart = source.indexOf('vec3 gasIdentityVolumeDelta(');
     const helperEnd = source.indexOf('float liquidVolumeChromaResponse', helperStart);
@@ -349,6 +349,17 @@ describe('Pixi presenter startup configuration', () => {
     expect(blockStart).toBeGreaterThan(0);
     expect(blockEnd).toBeGreaterThan(blockStart);
     expect(helper).toContain('texture(uGasIdentityMotifTexture, motifUv)');
+    expect(helper).toContain('vec3 bodyDepth = gasIdentityBodyDelta(style, density);');
+    expect(helper).toContain('motif * motifScale + vec3(fieldRelief) + bodyDepth');
+    const bodyStart = source.indexOf('vec3 gasIdentityBodyDelta(float style, float density) {');
+    const bodyEnd = source.indexOf('float liquidVolumeChromaResponse', bodyStart);
+    const body = source.slice(bodyStart, bodyEnd);
+    expect(bodyStart).toBeGreaterThan(helperStart);
+    expect(bodyEnd).toBeGreaterThan(bodyStart);
+    expect(body).toContain('smoothstep(0.10, 0.70, density)');
+    expect(body).toContain('vec3(-4.0, -4.0, -3.0) * support');
+    expect(body).toContain('vec3(-1.0, 2.0, 4.0) * support');
+    expect(body).not.toMatch(/\btexture\s*\(/);
     expect(block).toContain('texture(uAtmosphereStyleTexture, fieldUv)');
     expect(block).toContain('color += gasIdentityVolumeDelta(');
     expect(source).toContain('resource: this.fieldSet.atmosphere.styleBytes');
@@ -357,9 +368,9 @@ describe('Pixi presenter startup configuration', () => {
     expect(source).toContain('gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1)');
     expect(source.indexOf('gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1)'))
       .toBeLessThan(source.indexOf('this.app.render();', source.indexOf('private renderApplicationNow')));
-    expect(`${helper}${block}`).not.toMatch(/\balpha\s*[+*]?=/);
-    expect(`${helper}${block}`).not.toContain('uTime');
-    expect(`${helper}${block}`).not.toMatch(/\b(?:sin|pow|normalize|length)\s*\(/);
+    expect(`${helper}${body}${block}`).not.toMatch(/\balpha\s*[+*]?=/);
+    expect(`${helper}${body}${block}`).not.toContain('uTime');
+    expect(`${helper}${body}${block}`).not.toMatch(/\b(?:sin|pow|normalize|length)\s*\(/);
   });
 
   it('seeds and redraws optional-last liquid volume chroma', () => {
