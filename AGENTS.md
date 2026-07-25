@@ -19,16 +19,22 @@ When `.codegraph/` exists, use `codegraph explore` before grep/find or broad fil
 
 ## Delegation
 
-Use subagents proactively for independent mechanical work when slots are
-available: repository scans, focused test/audit runs, CI/Pages status checks,
-screenshot/artifact inspection, and bounded mechanical or mass fixes. Give
-each subagent a concrete, non-overlapping scope; ask audit agents not to edit
-unless they have been assigned the specific mechanical fix; and use their
-evidence to decide whether a proposed change is warranted. The parent agent
-remains the sole integrator: split files/tasks to avoid concurrent writes,
-inspect every returned diff/evidence, and retain design, safety-sensitive, and
-cross-cutting rendering decisions locally. Every subagent follows the same
-CodeGraph and viewport/rendering contracts.
+Use subagents proactively for independent mechanical work whenever a suitable
+bounded task exists and a slot is available. This is the normal route for
+repository scans, focused test/audit runs, CI/Pages status checks,
+screenshot/artifact inspection, repetitive migration or mass-fix work, and
+mechanical fixture/test expansion. Before starting a multi-file change, split
+out at least one such read-only or non-overlapping mechanical task unless the
+work is genuinely too small to delegate.
+
+Give each subagent a concrete success condition, file/scope boundary, and
+whether it may edit. Audit agents must remain read-only unless they are
+explicitly assigned the matching mechanical fix; parallel editing agents must
+own disjoint files. Use returned evidence—not a suggestion alone—to decide
+whether the parent should integrate a change. The parent remains the sole
+integrator: inspect every returned diff/evidence and retain design,
+safety-sensitive, viewport, and cross-cutting rendering decisions locally.
+Every subagent follows the same CodeGraph and viewport/rendering contracts.
 
 ## Viewport, input, and rendering
 
