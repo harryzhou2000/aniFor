@@ -881,3 +881,23 @@ The next material-primary slice is wider exact coverage of palette-led catalog f
   fallback, and normalized Sand/Water suspension chroma while preserving the
   exact 612×384 fixture signature. The temporary audit Chrome process exited
   cleanly after the earlier dev-server navigation timeout.
+
+## Current settled-powder body checkpoint
+
+- Fully settled, exact-material Smooth powder now suppresses more of its
+  interior cell/facet noise: Canvas converges its protected bulk albedo to
+  roughly one-quarter residual variation, and WebGL reduces only the matching
+  existing grain/facet amplitudes. This makes a dense pile read as a styled
+  continuous material rather than a checkerboard of particles.
+- The change is deliberately gated by the pre-existing stable exact-material,
+  depth, lateral-support, trait, and emissive checks. It changes RGB only;
+  silhouettes, alpha, semantic ownership, holes, fine columns, unlike seams,
+  native walls, physics, and saves remain untouched. Local and the square
+  Grains reference mode bypass the gate completely, as do loose/moving grains.
+- Validation: the complete `114`-file / `720`-test suite, TypeScript, and the
+  834-module production build pass. Fresh built-bundle WebGL and forced
+  Canvas2D screenshot audits both report zero browser errors and preserve the
+  canonical 612×384 fixture and Sand/Water phase contrast. The focused
+  long-running paired powder-body audit should be run in a normal terminal
+  before a release-scale 8× cycle; this tool environment cut its long Chrome
+  session short, and the verified temporary audit profile was closed manually.

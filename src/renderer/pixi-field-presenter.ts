@@ -2582,8 +2582,12 @@ void main() {
       float grainFacet = fract(sin(dot(floor(fieldPosition) * 2.0 + subcell, vec2(12.9898, 78.233))) * 43758.5453) - 0.5;
       float facetGain = optics == 13.0 ? 1.12
         : (optics == 14.0 ? 0.35 : (optics == 15.0 ? 0.90 : 1.0));
-      float cellGrainRetention = mix(1.0, 0.28, powderVisualCohesion);
-      float facetRetention = mix(1.0, 0.62, powderVisualCohesion);
+      // Deep, stable Smooth powder is a continuous body with restrained
+      // mineral variation. The same existing exact-material/depth gate leaves
+      // loose grains, fine columns, holes, Local, and the square Grains
+      // comparison mode completely untouched.
+      float cellGrainRetention = mix(1.0, 0.16, powderVisualCohesion);
+      float facetRetention = mix(1.0, 0.42, powderVisualCohesion);
       color *= 0.91 + grain * (0.20 + roughSurface * 0.05) * cellGrainRetention * facetGain
         + grainFacet * (0.10 + roughSurface * 0.04) * facetRetention * facetGain;
       color += base * max(0.0, 0.6 - subcell.x - subcell.y)

@@ -76,10 +76,10 @@ describe('Canvas powder bulk style', () => {
 
     for (let channel = 0; channel < 3; channel++) {
       expect(Math.abs(color[channel] - canonical[channel])).toBeLessThan(
-        Math.abs(original[channel] - canonical[channel]) * 0.4,
+        Math.abs(original[channel] - canonical[channel]) * 0.25,
       );
       expect(color[channel]).toBeCloseTo(
-        original[channel] + (canonical[channel] - original[channel]) * 0.62,
+        original[channel] + (canonical[channel] - original[channel]) * 0.76,
         4,
       );
     }

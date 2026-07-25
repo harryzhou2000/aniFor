@@ -4,7 +4,11 @@ const STABILITY_MINIMUM = 224;
 const DENSITY_MINIMUM = 0.66 * 255;
 const SUPPORT_MINIMUM = 5.5;
 const SUPPORT_BYTE_TO_COUNT = 9 / 255;
-const CANONICAL_BLEND_MAX = 0.62;
+// Stable, exact-material bulk should read as one body before it reads as a
+// collection of cells. Keep a quarter of the original albedo variation so it
+// remains granular, but leave the full grain treatment for loose material and
+// the explicit Grains/Local modes.
+const CANONICAL_BLEND_MAX = 0.76;
 const GRADIENT_BYTE_SCALE = 508;
 const RELIEF_DARK_LIMIT = -0.07;
 const RELIEF_LIGHT_LIMIT = 0.08;
@@ -78,7 +82,7 @@ export function applyCanvasPowderBulkStyle(
   const crystalline = optics === RenderOptics.CrystallineGranular;
   const sooty = optics === RenderOptics.SootyGranular;
   const metallic = optics === RenderOptics.MetallicGranular;
-  const blend = crystalline ? 0.56 : sooty ? 0.72 : metallic ? 0.58 : CANONICAL_BLEND_MAX;
+  const blend = crystalline ? 0.68 : sooty ? 0.80 : metallic ? 0.70 : CANONICAL_BLEND_MAX;
   color[0] += (canonicalRed - color[0]) * blend;
   color[1] += (canonicalGreen - color[1]) * blend;
   color[2] += (canonicalBlue - color[2]) * blend;
