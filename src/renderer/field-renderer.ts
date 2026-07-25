@@ -1069,6 +1069,11 @@ export class MaterialRenderer {
     const suspensionSemanticActive = this.powderRenderStyle === 'smooth'
       && fields.suspension.hasSuspension;
 
+    // Surface reconstruction scans the full 612x384 semantic plane. Record the
+    // required phases while already walking that plane so gas/energy-only
+    // Canvas frames do not pay for impossible solid/liquid reconstruction.
+    let hasSolidSurface = false;
+    let hasLiquidSurface = false;
     let index = 0;
     for (let y = 0; y < height; y++) for (let x = 0; x < width; x++, index++) {
       const material = this.rendered[index] as Material;
@@ -1116,6 +1121,9 @@ export class MaterialRenderer {
       const profile = fields.lookups.styleBytes[material * 4 + 1] as RenderProfile;
       const traits = fields.lookups.styleBytes[material * 4 + 3];
       const optics = fields.lookups.paletteBytes[material * 4 + 3] as RenderOptics;
+      const liquidMaterial = fields.lookups.liquidByMaterial[material] !== 0;
+      if (phase === RenderPhase.Solid) hasSolidSurface = true;
+      if (liquidMaterial) hasLiquidSurface = true;
       const applicableTraits = applicableCanvasRenderTraits(traits, phase);
       const gasAtmosphereAlpha = phase === RenderPhase.Gas
         ? canvasAtmosphereAlphaAtWorldCell(
@@ -1127,7 +1135,7 @@ export class MaterialRenderer {
         || applicableTraits !== 0 || material === Material.Dust) {
         this.contourChunks.markCell(index);
       }
-      const target = fields.lookups.liquidByMaterial[material] ? liquid : base;
+      const target = liquidMaterial ? liquid : base;
       const top = y === 0 ? Material.Empty : this.rendered[index - width] as Material;
       const left = x === 0 ? Material.Empty : this.rendered[index - 1] as Material;
       const right = x === width - 1 ? Material.Empty : this.rendered[index + 1] as Material;
@@ -1843,20 +1851,22 @@ export class MaterialRenderer {
       }
     }
 
-    reconstructSolidSurface(
+    if (hasSolidSurface) reconstructSolidSurface(
       base, this.rendered, fields.lookups.styleBytes, fields.lookups.paletteBytes, width, height,
     );
-    reconstructLiquidSurface(
-      liquid, this.rendered, fields.liquid.bytes,
-      fields.lookups.liquidByMaterial, fields.lookups.colorByMaterial, fields.lookups.styleBytes,
-      liquidSurfaceScratch, width, height,
-    );
-    applyCanvasReconstructedSuspensionStyle(
-      liquid, this.rendered, fields.lookups.styleBytes, fields.lookups.paletteBytes,
-      fields.suspension, fields.liquid.bytes, this.powderRenderStyle,
-    );
+    if (hasLiquidSurface) {
+      reconstructLiquidSurface(
+        liquid, this.rendered, fields.liquid.bytes,
+        fields.lookups.liquidByMaterial, fields.lookups.colorByMaterial, fields.lookups.styleBytes,
+        liquidSurfaceScratch, width, height,
+      );
+      applyCanvasReconstructedSuspensionStyle(
+        liquid, this.rendered, fields.lookups.styleBytes, fields.lookups.paletteBytes,
+        fields.suspension, fields.liquid.bytes, this.powderRenderStyle,
+      );
+    }
     if (this.outputScale >= CANVAS_CONTOUR_OUTPUT_SCALE) {
-      for (let pixel = 0; pixel < base.length; pixel += 4) {
+      if (hasLiquidSurface) for (let pixel = 0; pixel < base.length; pixel += 4) {
         if (liquid[pixel + 3] === 0) continue;
         compositePixel(
           base, pixel, liquid[pixel], liquid[pixel + 1], liquid[pixel + 2], liquid[pixel + 3],

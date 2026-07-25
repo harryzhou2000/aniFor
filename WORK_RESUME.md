@@ -21,6 +21,22 @@ Immediate priorities are:
 
 ### Active execution emphasis
 
+### Current Canvas phase-presence reconstruction guards
+
+- The Canvas fallback now records solid and liquid semantic presence during its
+  existing 612×384 material loop. It skips the full solid reconstruction scan
+  when no solids exist, and skips liquid reconstruction, reconstructed
+  suspension styling, and liquid-to-base compositing when no liquid exists.
+- This changes no mixed frame: a single qualifying material retains the exact
+  previous pipeline. It adds no field, allocation, output-scale work, or
+  viewport/input dependency. Gas- and energy-only frames avoid impossible
+  full-world scans while preserving the existing atmosphere and emission fields.
+- The quick profile measures the independently bounded solid/liquid scans at
+  `3.13 ms` / `5.82 ms` median respectively before their avoided compositing
+  work. The Canvas showcase plus dedicated 17-gas and 21-energy/radioactive
+  browser atlases pass with zero errors and their topology/off→on→off controls
+  intact; the full local suite is `114` files / `728` tests.
+
 ### Current Canvas translucent-rigid shell coverage
 
 - The RGB-only Canvas translucent shell now covers the whole established
