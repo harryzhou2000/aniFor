@@ -35,6 +35,7 @@
     "audit:spark-state": "node scripts/verify-browser-input.mjs --spark-state-graphics-only",
     "audit:native-seed-growth": "node scripts/verify-browser-input.mjs --native-seed-growth-only",
     "profile:render-fields": "vite-node scripts/profile-render-fields.ts",
+    "profile:render-fields:quick": "vite-node scripts/profile-render-fields.ts --quick",
     "setup:emsdk": "bash scripts/setup-emsdk.sh",
     "setup:build-tools": "bash scripts/setup-build-tools.sh",
     "build:wasm": "bash scripts/build-tpt-wasm.sh",

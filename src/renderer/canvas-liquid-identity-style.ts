@@ -85,50 +85,105 @@ export function applyCanvasLiquidIdentityStyle(
   surfaceExposure: number,
   columnDepthByte: number,
 ): void {
-  const waxFamily = material === Material.MWAX;
-  const pasteResistFamily = material === Material.PSTE || material === Material.RSST;
   const style = material >= 0 && material < STYLE_BY_MATERIAL.length
     ? STYLE_BY_MATERIAL[material] : NO_STYLE;
-  if (!waxFamily && !pasteResistFamily && style === NO_STYLE) return;
+  if (style !== NO_STYLE) {
+    applyCanonicalLiquidIdentityStyle(
+      output, style, x, y, neighbourDensity, fieldAlpha,
+      signedFieldRelief, surfaceExposure, columnDepthByte,
+    );
+    return;
+  }
+  if (material === Material.MWAX) {
+    applyWaxLiquidIdentityStyle(
+      output, x, y, neighbourDensity, fieldAlpha,
+      signedFieldRelief, surfaceExposure, columnDepthByte,
+    );
+    return;
+  }
+  if (material === Material.PSTE || material === Material.RSST) {
+    applyPasteResistLiquidIdentityStyle(
+      output, material, x, y, neighbourDensity, fieldAlpha,
+      signedFieldRelief, surfaceExposure, columnDepthByte,
+    );
+  }
+}
 
+/** The ordinary eleven-style hot path: one lookup and no special-family branches. */
+function applyCanonicalLiquidIdentityStyle(
+  output: Float32Array,
+  style: number,
+  x: number,
+  y: number,
+  neighbourDensity: number,
+  fieldAlpha: number,
+  signedFieldRelief: number,
+  surfaceExposure: number,
+  columnDepthByte: number,
+): void {
   const connected = fieldAlpha * (0.68 / 255) + neighbourDensity * 0.04;
   const depth = columnDepthByte * (1 / 255);
-  const familySurfaceScale = material === Material.PSTE ? 0.10
-    : material === Material.RSST ? 0.18 : 0.16;
-  const familyDepthScale = material === Material.PSTE ? -0.12
-    : material === Material.RSST ? -0.06 : -0.16;
   const motifScale = 0.48 + connected * 0.52
-    + surfaceExposure * (waxFamily || pasteResistFamily
-      ? familySurfaceScale : SURFACE_SCALE[style])
-    + depth * (waxFamily || pasteResistFamily ? familyDepthScale : DEPTH_SCALE[style]);
+    + surfaceExposure * SURFACE_SCALE[style]
+    + depth * DEPTH_SCALE[style];
   const relief = signedFieldRelief * connected * 11;
   const cell = ((y & TILE_MASK) << TILE_SHIFT) | (x & TILE_MASK);
-  const motif = waxFamily || pasteResistFamily ? 0 : (style * TILE_CELLS + cell) * CHANNELS;
-  const depthColor = waxFamily || pasteResistFamily ? 0 : style * CHANNELS;
-  const motifRed = pasteResistFamily
-    ? canvasPasteResistFamilyMotifDelta(material, RenderPhase.Liquid, x, y, 0)
-    : waxFamily ? canvasWaxFamilyMotifDelta(RenderPhase.Liquid, x, y, 0) : MOTIF_RGB[motif];
-  const motifGreen = pasteResistFamily
-    ? canvasPasteResistFamilyMotifDelta(material, RenderPhase.Liquid, x, y, 1)
-    : waxFamily ? canvasWaxFamilyMotifDelta(RenderPhase.Liquid, x, y, 1) : MOTIF_RGB[motif + 1];
-  const motifBlue = pasteResistFamily
-    ? canvasPasteResistFamilyMotifDelta(material, RenderPhase.Liquid, x, y, 2)
-    : waxFamily ? canvasWaxFamilyMotifDelta(RenderPhase.Liquid, x, y, 2) : MOTIF_RGB[motif + 2];
-  const familyDepthRed = material === Material.PSTE ? -2 : -3;
-  const familyDepthGreen = material === Material.PSTE ? -1 : -2;
-  const familyDepthBlue = material === Material.PSTE ? 0 : 1;
+  const motif = (style * TILE_CELLS + cell) * CHANNELS;
+  const depthColor = style * CHANNELS;
 
+  output[0] += clampDelta(MOTIF_RGB[motif] * motifScale + relief + DEPTH_RGB[depthColor] * depth);
+  output[1] += clampDelta(MOTIF_RGB[motif + 1] * motifScale + relief + DEPTH_RGB[depthColor + 1] * depth);
+  output[2] += clampDelta(MOTIF_RGB[motif + 2] * motifScale + relief + DEPTH_RGB[depthColor + 2] * depth);
+}
+
+function applyWaxLiquidIdentityStyle(
+  output: Float32Array,
+  x: number,
+  y: number,
+  neighbourDensity: number,
+  fieldAlpha: number,
+  signedFieldRelief: number,
+  surfaceExposure: number,
+  columnDepthByte: number,
+): void {
+  const connected = fieldAlpha * (0.68 / 255) + neighbourDensity * 0.04;
+  const depth = columnDepthByte * (1 / 255);
+  const motifScale = 0.48 + connected * 0.52 + surfaceExposure * 0.16 - depth * 0.16;
+  const relief = signedFieldRelief * connected * 11;
+  output[0] += clampDelta(canvasWaxFamilyMotifDelta(RenderPhase.Liquid, x, y, 0) * motifScale + relief - depth);
+  output[1] += clampDelta(canvasWaxFamilyMotifDelta(RenderPhase.Liquid, x, y, 1) * motifScale + relief - depth * 2);
+  output[2] += clampDelta(canvasWaxFamilyMotifDelta(RenderPhase.Liquid, x, y, 2) * motifScale + relief - depth * 3);
+}
+
+function applyPasteResistLiquidIdentityStyle(
+  output: Float32Array,
+  material: Material.PSTE | Material.RSST,
+  x: number,
+  y: number,
+  neighbourDensity: number,
+  fieldAlpha: number,
+  signedFieldRelief: number,
+  surfaceExposure: number,
+  columnDepthByte: number,
+): void {
+  const isPaste = material === Material.PSTE;
+  const connected = fieldAlpha * (0.68 / 255) + neighbourDensity * 0.04;
+  const depth = columnDepthByte * (1 / 255);
+  const motifScale = 0.48 + connected * 0.52
+    + surfaceExposure * (isPaste ? 0.10 : 0.18)
+    + depth * (isPaste ? -0.12 : -0.06);
+  const relief = signedFieldRelief * connected * 11;
+  const depthRed = isPaste ? -2 : -3;
+  const depthGreen = isPaste ? -1 : -2;
+  const depthBlue = isPaste ? 0 : 1;
   output[0] += clampDelta(
-    motifRed * motifScale + relief + (pasteResistFamily
-      ? familyDepthRed : waxFamily ? -1 : DEPTH_RGB[depthColor]) * depth,
+    canvasPasteResistFamilyMotifDelta(material, RenderPhase.Liquid, x, y, 0) * motifScale + relief + depthRed * depth,
   );
   output[1] += clampDelta(
-    motifGreen * motifScale + relief + (pasteResistFamily
-      ? familyDepthGreen : waxFamily ? -2 : DEPTH_RGB[depthColor + 1]) * depth,
+    canvasPasteResistFamilyMotifDelta(material, RenderPhase.Liquid, x, y, 1) * motifScale + relief + depthGreen * depth,
   );
   output[2] += clampDelta(
-    motifBlue * motifScale + relief + (pasteResistFamily
-      ? familyDepthBlue : waxFamily ? -3 : DEPTH_RGB[depthColor + 2]) * depth,
+    canvasPasteResistFamilyMotifDelta(material, RenderPhase.Liquid, x, y, 2) * motifScale + relief + depthBlue * depth,
   );
 }
 

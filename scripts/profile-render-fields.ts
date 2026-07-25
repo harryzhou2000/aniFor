@@ -55,6 +55,10 @@ import {
   CanvasPhaseContourScratch,
 } from '../src/renderer/canvas-phase-contour';
 
+const QUICK_PROFILE = process.argv.includes('--quick');
+const PROFILE_WARMUP_SAMPLES = QUICK_PROFILE ? 2 : 5;
+const PROFILE_TIMED_SAMPLES = QUICK_PROFILE ? 6 : 30;
+
 const width = 612;
 const height = 384;
 const materials = new Uint8Array(width * height);
@@ -245,9 +249,9 @@ function profilePhaseContact(phaseContactLighting: boolean): ReturnType<typeof s
 }
 
 function sample(update: () => void): { medianMs: number; p90Ms: number; maximumMs: number } {
-  for (let warmup = 0; warmup < 5; warmup++) update();
+  for (let warmup = 0; warmup < PROFILE_WARMUP_SAMPLES; warmup++) update();
   const timings: number[] = [];
-  for (let iteration = 0; iteration < 30; iteration++) {
+  for (let iteration = 0; iteration < PROFILE_TIMED_SAMPLES; iteration++) {
     const start = performance.now();
     update();
     timings.push(performance.now() - start);

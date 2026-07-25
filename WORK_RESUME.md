@@ -1049,3 +1049,21 @@ The next material-primary slice is wider exact coverage of palette-led catalog f
 - Validation before deployment: focused liquid/Pixi tests (100 assertions), a
   fresh 834-module/19-asset production build, and forced Canvas2D and WebGL
   showcase captures with zero browser errors.
+
+## Current Canvas liquid identity hot-path checkpoint
+
+- The normal eleven-material liquid-identity path now takes a direct indexed
+  style route. Wax and the Paste/Resist family retain their separate exact
+  motif and depth arithmetic, so their family-specific appearance is not
+  folded into the common hot loop.
+- This is a control-flow-only Canvas optimisation: it changes no fields,
+  allocations, alpha, coverage, material ownership, topology, physics, save
+  data, or WebGL output. The lightweight `profile:render-fields:quick` command
+  was added for bounded local profiling when the full diagnostic profile would
+  be inconvenient; on its synthetic eleven-material body fixture the measured
+  identity-style median fell from roughly 40 ms to roughly 12 ms. Treat that
+  as an environment-specific profiling signal rather than a frame-rate claim.
+- Validation: focused liquid identity/wax/paste/light assertions (39), full
+  114-file / 725-test suite, TypeScript production build with the 19-file
+  static closure, and a forced Canvas2D production showcase capture with zero
+  browser errors.
