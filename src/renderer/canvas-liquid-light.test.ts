@@ -182,6 +182,7 @@ describe('Canvas liquid field-owned light', () => {
     const first = canvasLiquidMacroWave(184, 218, 3_000, 1);
     const repeated = canvasLiquidMacroWave(184, 218, 3_000, 1);
     const adjacent = canvasLiquidMacroWave(185, 218, 3_000, 1);
+    const lower = canvasLiquidMacroWave(184, 219, 3_000, 1);
     const later = canvasLiquidMacroWave(184, 218, 5_000, 1);
 
     expect(first).toBe(repeated);
@@ -189,11 +190,17 @@ describe('Canvas liquid field-owned light', () => {
     expect(first).toBeLessThanOrEqual(1);
     expect(adjacent).toBeGreaterThanOrEqual(-1);
     expect(adjacent).toBeLessThanOrEqual(1);
+    expect(lower).toBeGreaterThanOrEqual(-1);
+    expect(lower).toBeLessThanOrEqual(1);
     expect(later).toBeGreaterThanOrEqual(-1);
     expect(later).toBeLessThanOrEqual(1);
     // The macro signal changes continuously over both space and time instead
-    // of introducing a cell-frequency checkerboard.
+    // of introducing a cell-frequency checkerboard. Its y phase is also
+    // intentionally live, so a dense Canvas body follows WebGL's curved
+    // reflected bands rather than rendering only vertical stripes.
     expect(Math.abs(adjacent - first)).toBeLessThan(0.2);
+    expect(Math.abs(lower - first)).toBeLessThan(0.2);
+    expect(lower).not.toBe(first);
     expect(Math.abs(later - first)).toBeLessThan(0.7);
   });
 

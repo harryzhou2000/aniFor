@@ -144,10 +144,9 @@ export function canvasLiquidVolumeChromaResponse(
  * Low-frequency, world-anchored liquid relief for the Canvas fallback. It is
  * deliberately a signed unit signal rather than a colour or coverage
  * operation: callers still gate it through cohesive same-species field support
- * before it can affect RGB. Two coupled waves keep dense-liquid rendering
- * materially cheaper than the richer WebGL shader while retaining readable
- * broad reflection and caustic bands, without a new field, sample, or
- * render-scale-dependent work.
+ * before it can affect RGB. It mirrors WebGL's existing two-dimensional
+ * reflected-band and caustic phases in scalar form, without a new field,
+ * sample, or render-scale-dependent work.
  */
 export function canvasLiquidMacroWave(
   x: number,
@@ -156,14 +155,20 @@ export function canvasLiquidMacroWave(
   material: number,
 ): number {
   const time = visualTime * 0.001;
-  const broadSheen = Math.sin(x * 0.041 + y * 0.016 + material * 0.83 + time * 0.22);
-  // Reuse the broad phase to bend a second, shorter caustic band. This retains
-  // a liquid-scale moving contour without the previous nested third/fourth
-  // waves, and remains centred/continuous instead of becoming a cell pattern.
+  const broadPrimary = Math.sin(x * 0.041 + y * 0.016 + material * 0.83 + time * 0.22);
+  const broadCross = Math.sin(y * 0.029 - x * 0.012 - time * 0.17);
+  // Keep the Canvas caustic's curved world-space phase aligned with the WebGL
+  // body shader. The y-driven bend breaks the flat fallback's old vertical
+  // stripes while remaining a single bounded scalar, not cell-frequency noise.
   const causticWave = 0.5 + 0.5 * Math.sin(
-    x * 0.092 + broadSheen * 1.45 + material * 0.67,
+    x * 0.092 + Math.sin(y * 0.037 + time * 0.11) * 1.45 + material * 0.67,
   );
-  return clamp(broadSheen * 0.48 + (smoothstep(0.18, 0.88, causticWave) - 0.5) * 0.92, -1, 1);
+  return clamp(
+    broadPrimary * broadCross * 0.48
+      + (smoothstep(0.18, 0.88, causticWave) - 0.5) * 0.92,
+    -1,
+    1,
+  );
 }
 
 /**

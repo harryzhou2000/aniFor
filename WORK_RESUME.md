@@ -1067,3 +1067,24 @@ The next material-primary slice is wider exact coverage of palette-led catalog f
   114-file / 725-test suite, TypeScript production build with the 19-file
   static closure, and a forced Canvas2D production showcase capture with zero
   browser errors.
+
+## Current Canvas curved liquid-band parity checkpoint
+
+- Capture review showed that the Canvas Water body retained correct smooth
+  coverage and depth, but its broad volume bands were largely vertical while
+  WebGL already carried curved, crossed reflected and caustic phases. The
+  Canvas macro scalar now mirrors those existing WebGL world-space phases:
+  a two-axis reflected band plus a y-bent caustic. This gives cohesive liquid
+  a more three-dimensional body read without trying to copy a shader result
+  through a new image field or post-process.
+- The result remains a bounded RGB-only scalar behind the existing exact
+  species/cohesion, trait, emission, wall, seam, and Molten gates. Alpha,
+  coverage, liquid ownership, reconstruction, interaction, physics, saves,
+  fields, textures, buffers, passes, allocations, and output scale are
+  unchanged. Sparse droplets remain on their semantic contour.
+- Validation: focused liquid-light test now pins a continuous live y phase,
+  typecheck, the complete 114-file / 725-test suite, a fresh 834-module /
+  19-asset production build, and a forced Canvas2D production showcase capture
+  with zero browser errors. The visual review confirms curved Water volume
+  bands while preserving the showcase's gas, powder, solid, plant, and UI
+  geometry.
