@@ -173,6 +173,23 @@ export function mountControls(host: HTMLElement, callbacks: ControlsCallbacks, c
   let openGroups = new Set<string>();
   let hasRenderedLibrary = false;
 
+  /**
+   * Selecting a brush only changes one visual state. Rebuilding the library for
+   * that state discards its scroll position, which is especially disruptive in
+   * lower categories on desktop and in the compact mobile picker. Keep the
+   * disclosure and scroll container intact; filtering and favouriting still
+   * perform the full, structural rebuild they require.
+   */
+  const syncSelectedTool = (): void => {
+    for (const tile of library.querySelectorAll<HTMLElement>('.tool-tile')) {
+      const button = tile.querySelector<HTMLButtonElement>('.material-button');
+      if (!button) continue;
+      const selected = tile.dataset.toolKey === selectedKey;
+      button.classList.toggle('selected', selected);
+      button.setAttribute('aria-pressed', String(selected));
+    }
+  };
+
   const filterChoices: Array<{ mode: ToolFilter; label: string }> = [
     { mode: 'all', label: 'All' },
     ...Array.from(new Set(catalog.map(({ kind }) => kind)), (kind) => ({ mode: kind, label: KIND_LABELS[kind] })),
@@ -226,7 +243,7 @@ export function mountControls(host: HTMLElement, callbacks: ControlsCallbacks, c
         }
         callbacks.onTool?.(tool);
       }
-      renderLibrary();
+      syncSelectedTool();
     });
 
     const favorite = document.createElement('button');
