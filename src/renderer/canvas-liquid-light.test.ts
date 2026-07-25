@@ -241,6 +241,25 @@ describe('Canvas liquid field-owned light', () => {
     expect(molten).toEqual(new Float32Array(source));
   });
 
+  it('gives a dense oil body a visible but restrained amber reflected band', () => {
+    const source = [91, 67, 35, 91] as const;
+    const lit = new Float32Array(source);
+    const shaded = new Float32Array(source);
+    applyCanvasLiquidMacroSheen(lit, RenderOptics.Oily, 255, 8, 1);
+    applyCanvasLiquidMacroSheen(shaded, RenderOptics.Oily, 255, 8, -1);
+
+    expect(lit[0] - source[0]).toBeGreaterThanOrEqual(16);
+    expect(lit[0] - source[0]).toBeGreaterThan(lit[1] - source[1]);
+    expect(lit[1] - source[1]).toBeGreaterThan(lit[2] - source[2]);
+    expect(shaded[0]).toBeLessThan(source[0]);
+    expect(shaded[1]).toBeLessThan(source[1]);
+    expect(shaded[2]).toBeLessThan(source[2]);
+    expect(lit[3]).toBe(source[3]);
+    expect(shaded[3]).toBe(source[3]);
+    expect(Math.max(...[0, 1, 2].map((channel) => lit[channel] - source[channel]))).toBeLessThan(18);
+    expect(Math.max(...[0, 1, 2].map((channel) => source[channel] - shaded[channel]))).toBeLessThan(7);
+  });
+
   it('adds a symmetric, bounded optical meniscus only at dense liquid interfaces', () => {
     const source = [73, 118, 164, 91] as const;
     for (const optics of [

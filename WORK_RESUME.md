@@ -1033,3 +1033,19 @@ The next material-primary slice is wider exact coverage of palette-led catalog f
   visibly preserves the pool's curved outline, Oil seam, glass boundary, and
   all non-liquid scene material while making its broad cyan volume easier to
   read at fit view.
+
+## Current Canvas oil macro-sheen follow-up
+
+- The adjacent Oil island remained intentionally darker than Water but too
+  matte at fit view. Its existing dense-body macro sheen now uses `0.100`
+  strength rather than `0.075`, remaining below the `0.160` aqueous/cryogenic
+  response while making the warm reflected band legible.
+- This reuses the exact existing world-anchored macro wave and dense-body
+  support. The caller still excludes traits, emission, walls, and unlike-liquid
+  contacts; alpha, coverage, species ownership, Water/Oil seams, liquid fields,
+  physics, and saves are untouched. The new focused test pins a visible amber
+  lift, a restrained shadow, alpha invariance, and the existing below-18-byte
+  highlight bound.
+- Validation before deployment: focused liquid/Pixi tests (100 assertions), a
+  fresh 834-module/19-asset production build, and forced Canvas2D and WebGL
+  showcase captures with zero browser errors.

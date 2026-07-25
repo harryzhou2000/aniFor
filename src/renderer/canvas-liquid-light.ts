@@ -192,7 +192,9 @@ export function applyCanvasLiquidMacroSheen(
   // by its luminance-safe chroma step below.
   const strength = optics === RenderOptics.Aqueous || optics === RenderOptics.CryogenicLiquid
     ? 0.160
-    : optics === RenderOptics.Oily ? 0.075
+    // Keep oil below the cool-water response, but give its dense amber body a
+    // readable reflected band at normal fit instead of a uniformly matte cutout.
+    : optics === RenderOptics.Oily ? 0.100
       : optics === RenderOptics.Corrosive ? 0.045
         : optics === RenderOptics.MetallicLiquid ? 0.065 : 0.070;
   const amount = Math.abs(wave) * support * strength;
