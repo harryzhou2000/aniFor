@@ -3014,7 +3014,7 @@ void main() {
       float interference = (planeWave + radialWave) * 0.5;
       color *= 0.95 + interference * 0.045;
     }
-    // Thirteen uncommon solids layer one static identity over the generic body
+    // Seventeen uncommon solids layer one static identity over the generic body
     // structure above. Only authoritative semantic matter participates; this
     // RGB arithmetic adds no sample, pass, field, allocation, clock term, or
     // output-scale resource, and leaves later trait decals independent.
@@ -3022,7 +3022,8 @@ void main() {
       || material == 76.0 || material == 77.0 || material == 79.0
       || material == 80.0 || material == 196.0
       || material == 206.0 || material == 208.0 || material == 209.0
-      || material == 210.0 || material == 216.0 ? 1.0 : 0.0;
+      || material == 210.0 || material == 216.0 || material == 203.0
+      || material == 204.0 || material == 211.0 || material == 212.0 ? 1.0 : 0.0;
     if (uUnusualSolidStyling > 0.5 && unusualSolid > 0.5
       && family == 0.0 && !materialEmissive
       && surfaceOnly < 0.5 && halo < 0.5 && wall < 0.5
@@ -3031,6 +3032,42 @@ void main() {
       if (material == 27.0) {
         // WAX: crystalline blooms and cooling lamellae share MWAX's topology.
         color += waxFamilyIdentityDelta(0.0, fieldPosition);
+      } else if (material == 203.0) {
+        // LOLZ: a static face/ribbon lattice keeps the native pattern matter
+        // recognisable without borrowing an actor state or a glow field.
+        vec2 local = mod(solidCell, 16.0) - vec2(8.0);
+        float leftEye = step(abs(local.x + 4.0), 1.1) * step(abs(local.y + 2.0), 1.1);
+        float rightEye = step(abs(local.x - 4.0), 1.1) * step(abs(local.y + 2.0), 1.1);
+        float smile = (1.0 - step(1.1, abs(abs(local.x) - 4.0))) * (1.0 - step(0.1, abs(local.y - 3.0)));
+        smile = max(smile, (1.0 - step(0.1, abs(abs(local.x) - 5.0))) * (1.0 - step(0.1, abs(local.y - 2.0))));
+        float ribbon = 1.0 - step(1.0, mod(solidCell.x * 3.0 - solidCell.y * 2.0, 13.0));
+        vec3 delta = (leftEye > 0.5 || rightEye > 0.5) ? vec3(8.0, 12.0, -7.0)
+          : (smile > 0.5 ? vec3(10.0, 6.0, -8.0)
+          : (ribbon > 0.5 ? vec3(3.0, 5.0, -3.0) : vec3(0.0, 2.0, -1.0)));
+        color += delta / 255.0;
+      } else if (material == 204.0) {
+        // LOVE: paired lobes and a tapered point make a stable heart quilt.
+        vec2 local = mod(solidCell, 16.0) - vec2(8.0);
+        float leftLobe = 1.0 - step(10.1, dot(local + vec2(3.0, 2.0), local + vec2(3.0, 2.0)));
+        float rightLobe = 1.0 - step(10.1, dot(local - vec2(3.0, -2.0), local - vec2(3.0, -2.0)));
+        float point = (1.0 - step(5.1, abs(local.x) + abs(local.y - 2.0))) * step(-1.1, local.y);
+        float heart = max(max(leftLobe, rightLobe), point);
+        float seam = heart * (1.0 - step(0.1, mod(local.x - local.y * 2.0 + 5.0, 5.0)));
+        vec3 delta = heart > 0.5 ? (seam > 0.5 ? vec3(5.0, -8.0, 10.0) : vec3(3.0, -4.0, 6.0)) : vec3(-2.0, 1.0, 2.0);
+        color += delta / 255.0;
+      } else if (material == 211.0 || material == 212.0) {
+        // SPAWN/SPAWN2: distinct primary/secondary beacon rings, RGB-only.
+        vec2 local = mod(solidCell, 16.0) - vec2(8.0);
+        float radius = abs(local.x) + abs(local.y);
+        float ring = step(4.9, radius) * (1.0 - step(6.1, radius));
+        float core = 1.0 - step(1.1, radius);
+        float ray = (1.0 - step(0.1, min(abs(local.x), abs(local.y))))
+          * step(2.9, radius) * (1.0 - step(5.1, radius));
+        bool secondary = material == 212.0;
+        vec3 delta = secondary
+          ? (core > 0.5 ? vec3(-5.0, 5.0, 12.0) : (ring > 0.5 ? vec3(-3.0, 3.0, 9.0) : (ray > 0.5 ? vec3(-2.0, 2.0, 6.0) : vec3(-1.0, 1.0, 3.0))))
+          : (core > 0.5 ? vec3(10.0, 8.0, -6.0) : (ring > 0.5 ? vec3(7.0, 5.0, -4.0) : (ray > 0.5 ? vec3(4.0, 3.0, -3.0) : vec3(1.0, 1.0, -1.0))));
+        color += delta / 255.0;
       } else if (material == 68.0 || material == 74.0
         || material == 76.0 || material == 77.0) {
         // Cold/crystalline solids retain one exact, world-anchored mesostructure.

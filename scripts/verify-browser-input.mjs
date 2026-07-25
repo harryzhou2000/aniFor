@@ -4125,7 +4125,7 @@ function normalizeUnusualPowderGraphicsAtlas(snapshot) {
   };
 }
 
-/** Focused topology and RGB-identity proof for seven unusual native solids. */
+/** Focused topology and RGB-identity proof for eleven unusual native solids. */
 async function auditUnusualSolidGraphics(cdp, mode) {
   const started = performance.now();
   const stage = (name) => console.error(
@@ -4145,11 +4145,11 @@ async function auditUnusualSolidGraphics(cdp, mode) {
   const rawAtlas = await waitFor(() => evaluate(cdp, `(() => {
     const atlas = window.__ANIFOR_INPUT_AUDIT__.unusualSolidGraphicsAtlas();
     const cards = Array.isArray(atlas) ? atlas : atlas?.cards;
-    return cards?.length === 7 ? atlas : false;
+    return cards?.length === 11 ? atlas : false;
   })()`), 15_000, `${mode} unusual solid graphics fixture`);
   const atlas = normalizeUnusualSolidGraphicsAtlas(rawAtlas);
-  const expectedMaterials = [196, 206, 80, 208, 209, 210, 216];
-  assert(atlas.cards.length === 7
+  const expectedMaterials = [196, 206, 80, 208, 209, 210, 216, 203, 204, 211, 212];
+  assert(atlas.cards.length === 11
       && atlas.cards.every(({ material }, index) => material === expectedMaterials[index]),
   `${mode}: unusual solid atlas identity/order changed (${JSON.stringify(atlas.cards.map(({ code, material }) => ({ code, material })))})`);
   const shieldCards = atlas.cards.filter(({ code }) => code.startsWith('SHLD'));
@@ -4244,8 +4244,8 @@ async function auditUnusualSolidGraphics(cdp, mode) {
   assert(backingResponses.every(({ rgbRms, rgbPeak, repeatRgbPeak }) => (
     rgbRms >= 0.05 && rgbRms <= 32 && rgbPeak > 0 && rgbPeak <= 64 && repeatRgbPeak === 0
   )), `${mode}: unusual solid response is absent, unbounded, or non-repeatable (${JSON.stringify(backingResponses)})`);
-  assert(new Set(backingResponses.map(({ responseSignature }) => responseSignature)).size === 7,
-    `${mode}: unusual solids do not have seven distinct response signatures (${JSON.stringify(backingResponses)})`);
+  assert(new Set(backingResponses.map(({ responseSignature }) => responseSignature)).size === 11,
+    `${mode}: unusual solids do not have eleven distinct response signatures (${JSON.stringify(backingResponses)})`);
   const shieldResponses = backingResponses.filter(({ code }) => code.startsWith('SHLD'));
   assert(shieldResponses.map(({ code }) => code).join(',') === 'SHLD1,SHLD2,SHLD3,SHLD4'
       && new Set(shieldResponses.map(({ responseSignature }) => responseSignature)).size === 4,
@@ -4270,7 +4270,7 @@ async function auditUnusualSolidGraphics(cdp, mode) {
   const atlasResponse = responses.at(-1);
   assert(atlasResponse.repeatRgbPeak === 0,
     `${mode}: unusual solid flat→styled→flat framebuffer was not exact (${JSON.stringify(atlasResponse)})`);
-  assert(responses.slice(0, 7).every((sample) => sample.rgbRms > 0 && sample.rgbPeak <= 64),
+  assert(responses.slice(0, atlas.cards.length).every((sample) => sample.rgbRms > 0 && sample.rgbPeak <= 64),
     `${mode}: at least one unusual solid has no bounded composed response (${JSON.stringify(responses)})`);
   const [flatSupport, styledSupport] = await Promise.all([
     samplePageRegions(
@@ -4448,7 +4448,7 @@ function assertUnusualSolidBackingTopology(backing, label) {
   assert(Number.isInteger(backing.scaleX) && Number.isInteger(backing.scaleY)
       && backing.scaleX > 0 && backing.scaleY > 0,
   `${label}: backing does not preserve integral world scaling (${backing.scaleX}x${backing.scaleY})`);
-  const valid = backing.cards.length === 7 && backing.cards.every((card) => (
+  const valid = backing.cards.length === 11 && backing.cards.every((card) => (
     card.bodySupported === card.bodyExpected
     && card.holeTransparent >= card.centralHoleExpected
     && card.centralHoleTransparent === card.centralHoleExpected
@@ -4477,7 +4477,7 @@ function compactUnusualSolidTopology(backing) {
 }
 
 function summarizeUnusualSolidBackingResponses(flat, styled, repeated) {
-  assert(flat.cards.length === 7 && styled.cards.length === 7 && repeated.cards.length === 7,
+  assert(flat.cards.length === 11 && styled.cards.length === 11 && repeated.cards.length === 11,
     'Unusual solid backing response atlas is incomplete');
   return flat.cards.map((base, cardIndex) => {
     const changed = styled.cards[cardIndex];
@@ -10966,13 +10966,13 @@ function assertPairedUnusualSolidGraphics(results) {
   const canvas = results.find((result) => result.backend === 'canvas2d')?.unusualSolidGraphics;
   const webgl = results.find((result) => result.backend === 'webgl')?.unusualSolidGraphics;
   if (!canvas || !webgl) return;
-  assert(canvas.cards === 7 && webgl.cards === 7,
+  assert(canvas.cards === 11 && webgl.cards === 11,
     `paired unusual solid atlas is incomplete (${canvas.cards}/${webgl.cards})`);
   for (const result of [canvas, webgl]) {
     assert(new Set(result.cardSignatures.map(
       ({ backingResponseSignature }) => backingResponseSignature,
-    )).size === 7,
-    `unusual solid responses are not distinct in all seven cards (${JSON.stringify(result.cardSignatures)})`);
+    )).size === 11,
+    `unusual solid responses are not distinct in all eleven cards (${JSON.stringify(result.cardSignatures)})`);
     assert(result.cardSignatures.every(({ backingRepeatRgbPeak }) => backingRepeatRgbPeak === 0),
       `unusual solid backing off→on→off sequence was not exact (${JSON.stringify(result.cardSignatures)})`);
     const shields = result.cardSignatures.filter(({ code }) => code.startsWith('SHLD'));

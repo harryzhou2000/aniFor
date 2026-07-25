@@ -1203,7 +1203,7 @@ describe('Pixi presenter startup configuration', () => {
     expect(presenter.app.render).toHaveBeenCalledOnce();
 
     const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
-    const start = source.indexOf('// Thirteen uncommon solids layer one static identity');
+    const start = source.indexOf('// Seventeen uncommon solids layer one static identity');
     const end = source.indexOf('    if (uThermalMaterialStyling > 0.5', start);
     const unusualSolidBlock = source.slice(start, end);
     expect(start).toBeGreaterThan(0);
@@ -1213,9 +1213,12 @@ describe('Pixi presenter startup configuration', () => {
     expect(unusualSolidBlock).toContain('family == 0.0 && !materialEmissive');
     expect(unusualSolidBlock).toContain('surfaceOnly < 0.5 && halo < 0.5 && wall < 0.5');
     expect(unusualSolidBlock).toContain('wallOnly < 0.5 && emissionOnly < 0.5');
-    for (const material of [27, 68, 74, 76, 77, 79, 80, 196, 206, 208, 209, 210, 216]) {
+    for (const material of [27, 68, 74, 76, 77, 79, 80, 196, 203, 204, 206, 208, 209, 210, 211, 212, 216]) {
       expect(unusualSolidBlock).toContain(`material == ${material}.0`);
     }
+    expect(unusualSolidBlock).toContain('// LOLZ: a static face/ribbon lattice');
+    expect(unusualSolidBlock).toContain('// LOVE: paired lobes and a tapered point');
+    expect(unusualSolidBlock).toContain('// SPAWN/SPAWN2: distinct primary/secondary beacon rings');
     expect(unusualSolidBlock).toContain('// BIZRS: angular prismatic facets split cool and warm reflections.');
     expect(unusualSolidBlock).toContain('// RSSS/PSTS: native solid products retain their liquid family\'s exact');
     expect(unusualSolidBlock).toContain('// SHLD1-4: one coherent shell gains progressively nested armour bands.');

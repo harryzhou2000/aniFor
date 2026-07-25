@@ -1,8 +1,8 @@
 import { Material } from '../shared/materials';
 import type { SimulationBackend } from '../simulation';
 
-export const UNUSUAL_SOLID_GRAPHICS_ATLAS_COLUMNS = 7;
-export const UNUSUAL_SOLID_GRAPHICS_ATLAS_ROWS = 1;
+export const UNUSUAL_SOLID_GRAPHICS_ATLAS_COLUMNS = 6;
+export const UNUSUAL_SOLID_GRAPHICS_ATLAS_ROWS = 2;
 
 const WORLD_WIDTH = 612;
 const WORLD_HEIGHT = 384;
@@ -11,6 +11,7 @@ const CARD_ORIGIN_Y = 8;
 const CARD_STRIDE_X = 86;
 const CARD_WIDTH = 80;
 const CARD_HEIGHT = 168;
+const CARD_STRIDE_Y = 168;
 
 const UNUSUAL_SOLID_DEFINITIONS = [
   { material: Material.BIZRS, code: 'BIZRS', color: '#00e455' },
@@ -20,6 +21,10 @@ const UNUSUAL_SOLID_DEFINITIONS = [
   { material: Material.SHLD3, code: 'SHLD3', color: '#444444' },
   { material: Material.SHLD4, code: 'SHLD4', color: '#212121' },
   { material: Material.VRSS, code: 'VRSS', color: '#d408cd' },
+  { material: Material.LOLZ, code: 'LOLZ', color: '#569212' },
+  { material: Material.LOVE, code: 'LOVE', color: '#ff30ff' },
+  { material: Material.SPAWN, code: 'SPWN', color: '#aaa18f' },
+  { material: Material.SPAWN2, code: 'SPWN2', color: '#8f96b8' },
 ] as const;
 
 export interface UnusualSolidGraphicsPoint {
@@ -81,12 +86,12 @@ export interface UnusualSolidGraphicsAuditSnapshot {
   readonly contacts: readonly UnusualSolidContactControl[];
 }
 
-/** Stable seven-card atlas shared by paired Canvas/WebGL material-style gates. */
+/** Stable eleven-card atlas shared by paired Canvas/WebGL material-style gates. */
 export const UNUSUAL_SOLID_GRAPHICS_ATLAS: readonly UnusualSolidGraphicsAtlasEntry[] =
   UNUSUAL_SOLID_DEFINITIONS.map(({ material, code, color }, index) => {
     const card = {
-      x: CARD_ORIGIN_X + index * CARD_STRIDE_X,
-      y: CARD_ORIGIN_Y,
+      x: CARD_ORIGIN_X + (index % UNUSUAL_SOLID_GRAPHICS_ATLAS_COLUMNS) * CARD_STRIDE_X,
+      y: CARD_ORIGIN_Y + Math.floor(index / UNUSUAL_SOLID_GRAPHICS_ATLAS_COLUMNS) * CARD_STRIDE_Y,
       width: CARD_WIDTH,
       height: CARD_HEIGHT,
     };

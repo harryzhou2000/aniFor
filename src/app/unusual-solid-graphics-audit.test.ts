@@ -15,7 +15,8 @@ const WORLD_WIDTH = 612;
 const WORLD_HEIGHT = 384;
 const UNUSUAL_SOLID_IDS = [
   Material.BIZRS, Material.PSTS, Material.SHLD1, Material.SHLD2,
-  Material.SHLD3, Material.SHLD4, Material.VRSS,
+  Material.SHLD3, Material.SHLD4, Material.VRSS, Material.LOLZ,
+  Material.LOVE, Material.SPAWN, Material.SPAWN2,
 ];
 
 class PaintTrackingBackend extends DeterministicBackend {
@@ -28,19 +29,25 @@ class PaintTrackingBackend extends DeterministicBackend {
 }
 
 describe('unusual solid graphics audit fixture', () => {
-  it('pins all seven solid identities in a stable in-bounds atlas', () => {
-    expect(UNUSUAL_SOLID_GRAPHICS_ATLAS_COLUMNS).toBe(7);
-    expect(UNUSUAL_SOLID_GRAPHICS_ATLAS_ROWS).toBe(1);
-    expect(UNUSUAL_SOLID_GRAPHICS_ATLAS).toHaveLength(7);
+  it('pins all eleven solid identities in a stable in-bounds atlas', () => {
+    expect(UNUSUAL_SOLID_GRAPHICS_ATLAS_COLUMNS).toBe(6);
+    expect(UNUSUAL_SOLID_GRAPHICS_ATLAS_ROWS).toBe(2);
+    expect(UNUSUAL_SOLID_GRAPHICS_ATLAS).toHaveLength(11);
     expect(UNUSUAL_SOLID_GRAPHICS_ATLAS.map(({ material }) => material)).toEqual(UNUSUAL_SOLID_IDS);
-    expect(UNUSUAL_SOLID_IDS).toEqual([196, 206, 80, 208, 209, 210, 216]);
+    expect(UNUSUAL_SOLID_IDS).toEqual([196, 206, 80, 208, 209, 210, 216, 203, 204, 211, 212]);
     expect(UNUSUAL_SOLID_GRAPHICS_ATLAS.map(({ code }) => code)).toEqual([
       'BIZRS', 'PSTS', 'SHLD1', 'SHLD2', 'SHLD3', 'SHLD4', 'VRSS',
+      'LOLZ', 'LOVE', 'SPWN', 'SPWN2',
     ]);
 
     for (const [index, entry] of UNUSUAL_SOLID_GRAPHICS_ATLAS.entries()) {
       expect(entry.index).toBe(index);
-      expect(entry.card).toEqual({ x: 6 + index * 86, y: 8, width: 80, height: 168 });
+      expect(entry.card).toEqual({
+        x: 6 + (index % 6) * 86,
+        y: 8 + Math.floor(index / 6) * 168,
+        width: 80,
+        height: 168,
+      });
       expect(entry).toMatchObject({
         left: entry.card.x,
         top: entry.card.y,
@@ -85,14 +92,14 @@ describe('unusual solid graphics audit fixture', () => {
     }
 
     expect(UNUSUAL_SOLID_GRAPHICS_AUDIT.cards).toBe(UNUSUAL_SOLID_GRAPHICS_ATLAS);
-    expect(UNUSUAL_SOLID_GRAPHICS_AUDIT.holes).toHaveLength(7 * 36);
-    expect(UNUSUAL_SOLID_GRAPHICS_AUDIT.openNotches).toHaveLength(7 * 3);
-    expect(UNUSUAL_SOLID_GRAPHICS_AUDIT.shellCells).toHaveLength(7 * 68);
-    expect(UNUSUAL_SOLID_GRAPHICS_AUDIT.shellInteriors).toHaveLength(7 * 256);
-    expect(UNUSUAL_SOLID_GRAPHICS_AUDIT.spurs).toHaveLength(7 * 10);
-    expect(UNUSUAL_SOLID_GRAPHICS_AUDIT.isolated).toHaveLength(7);
-    expect(UNUSUAL_SOLID_GRAPHICS_AUDIT.guardedBlanks).toHaveLength(7);
-    expect(UNUSUAL_SOLID_GRAPHICS_AUDIT.contacts).toHaveLength(7);
+    expect(UNUSUAL_SOLID_GRAPHICS_AUDIT.holes).toHaveLength(11 * 36);
+    expect(UNUSUAL_SOLID_GRAPHICS_AUDIT.openNotches).toHaveLength(11 * 3);
+    expect(UNUSUAL_SOLID_GRAPHICS_AUDIT.shellCells).toHaveLength(11 * 68);
+    expect(UNUSUAL_SOLID_GRAPHICS_AUDIT.shellInteriors).toHaveLength(11 * 256);
+    expect(UNUSUAL_SOLID_GRAPHICS_AUDIT.spurs).toHaveLength(11 * 10);
+    expect(UNUSUAL_SOLID_GRAPHICS_AUDIT.isolated).toHaveLength(11);
+    expect(UNUSUAL_SOLID_GRAPHICS_AUDIT.guardedBlanks).toHaveLength(11);
+    expect(UNUSUAL_SOLID_GRAPHICS_AUDIT.contacts).toHaveLength(11);
   });
 
   it('direct-fills exact cavities, shells, fine structures, and contacts without paint', () => {

@@ -1298,3 +1298,24 @@ The next material-primary slice is wider exact coverage of palette-led catalog f
   / 731-test suite, Canvas and WebGL 24-card LIFE atlas gates (including
   authored holes, isolated controls, blank controls, exact off repetition, and
   zero browser errors), plus true 4896×3072 8× promotion completion.
+
+## Current native special-solid identity checkpoint
+
+- The retained native LOLZ, LOVE, SPAWN, and SPAWN2 projections no longer fall
+  through to generic solid styling. LOLZ carries a restrained face/ribbon
+  lattice, LOVE a heart-quilt grammar, and the primary/secondary stickman
+  anchors receive distinct warm/cool diamond beacons. All four remain native
+  special-solid identities: no JavaScript actor state, synthetic glow, or
+  semantic reinterpretation is introduced.
+- The motifs are deterministic, world-anchored, and RGB-only. Canvas applies
+  these four after dense-body optics so their sparse identity remains visible;
+  WebGL layers equivalent arithmetic after its ordinary solid body path. No
+  alpha/support/topology change, neighbour read, texture, field, pass, target,
+  clock term, allocation, physics, or save-state change is involved.
+- The existing unusual-solid fixture now covers eleven exact materials across a
+  compact two-row 612×384 atlas, preserving each body’s authored cavity, open
+  notch, one-cell spur, isolated particle, guarded blank, and Metal contact.
+  Canvas and WebGL prove exact off→on→off return, unchanged backing support,
+  distinct bounded responses, and shield-stage ordering. Local typecheck, the
+  114-file / 731-test suite, production build with 19-asset closure, and the
+  real paired unusual-solid browser gate pass with zero reported browser errors.

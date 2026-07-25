@@ -33,7 +33,10 @@ import { shadeCanvasCellularMaterial } from './canvas-cellular-style';
 import { applyCanvasSensorMorphology } from './canvas-sensor-style';
 import { applyCanvasUnusualPowderStyle } from './canvas-unusual-powder-style';
 import { applyCanvasExplosivePowderStyle } from './canvas-explosive-powder-style';
-import { applyCanvasUnusualSolidMorphology } from './canvas-unusual-solid-style';
+import {
+  applyCanvasUnusualSolidMorphology,
+  isCanvasNativeSpecialSolidMaterial,
+} from './canvas-unusual-solid-style';
 import { applyCanvasSpongeMorphology } from './canvas-sponge-style';
 import { applyCanvasBotanicalMorphology, applyCanvasPlantCanopyVolume } from './canvas-botanical-style';
 import { applyCanvasBotanicalLifecycleStyle } from './canvas-botanical-lifecycle-style';
@@ -1732,7 +1735,8 @@ export class MaterialRenderer {
             && wall === 0 && applicableTraits === 0 && !info.emissive) {
             applyCanvasExplosivePowderStyle(this.styledColor, material, x, y);
           }
-          if (this.unusualSolidStylingEnabled && phase === RenderPhase.Solid) {
+          if (this.unusualSolidStylingEnabled && phase === RenderPhase.Solid
+            && !isCanvasNativeSpecialSolidMaterial(material)) {
             applyCanvasUnusualSolidMorphology(this.styledColor, material, x, y, index);
           }
           if (phase === RenderPhase.Powder) applyCanvasPowderBulkCellStyle(
@@ -1751,6 +1755,10 @@ export class MaterialRenderer {
             this.styledColor, surfaceLight, normalLight, solidRelief,
             denseSolidInterior, profile, optics, solidOpticalDepth, this.solidOpticalDepthEnabled,
           );
+          if (this.unusualSolidStylingEnabled && phase === RenderPhase.Solid
+            && isCanvasNativeSpecialSolidMaterial(material)) {
+            applyCanvasUnusualSolidMorphology(this.styledColor, material, x, y, index);
+          }
           // Cellular colonies are semantic discrete solids, but their
           // presentation motif belongs after generic body optics so dense LIFE
           // remains legible rather than being absorbed by the rigid core pass.

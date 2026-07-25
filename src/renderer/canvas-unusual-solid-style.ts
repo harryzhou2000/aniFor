@@ -24,10 +24,24 @@ export function isCanvasUnusualSolidMaterial(material: number): boolean {
     case Material.NICE:
     case Material.QRTZ:
     case Material.RIME:
+    case Material.LOLZ:
+    case Material.LOVE:
+    case Material.SPAWN:
+    case Material.SPAWN2:
       return true;
     default:
       return false;
   }
+}
+
+/**
+ * Retained native pattern/actor markers belong after dense-body optics so their
+ * semantic glyph remains legible in a packed special-material body. Other
+ * unusual solids deliberately retain their established pre-optics composition.
+ */
+export function isCanvasNativeSpecialSolidMaterial(material: number): boolean {
+  return material === Material.LOLZ || material === Material.LOVE
+    || material === Material.SPAWN || material === Material.SPAWN2;
 }
 
 /**
@@ -68,7 +82,50 @@ export function applyCanvasUnusualSolidMorphology(
   let green = 0;
   let blue = 0;
 
-  if (material === Material.BIZRS) {
+  if (material === Material.LOLZ) {
+    // LOLZ retains a playful, sparse face/ribbon pattern rather than inheriting
+    // generic field noise. The floor/mod lattice is shared exactly with GLSL.
+    const localX = positiveModulo(x, 16) - 8;
+    const localY = positiveModulo(y, 16) - 8;
+    const leftEye = Math.abs(localX + 4) <= 1 && Math.abs(localY + 2) <= 1;
+    const rightEye = Math.abs(localX - 4) <= 1 && Math.abs(localY + 2) <= 1;
+    const smile = Math.abs(Math.abs(localX) - 4) <= 1 && localY === 3
+      || (Math.abs(localX) === 5 && localY === 2);
+    const ribbon = positiveModulo(x * 3 - y * 2, 13) <= 1;
+    red = leftEye || rightEye ? 8 : smile ? 10 : ribbon ? 3 : 0;
+    green = leftEye || rightEye ? 12 : smile ? 6 : ribbon ? 5 : 2;
+    blue = leftEye || rightEye ? -7 : smile ? -8 : ribbon ? -3 : -1;
+  } else if (material === Material.LOVE) {
+    // Two lobes and a tapered lower point form a stable heart quilt. This is
+    // only a colour cue: it never expands the exact native special-solid body.
+    const localX = positiveModulo(x, 16) - 8;
+    const localY = positiveModulo(y, 16) - 8;
+    const leftLobe = (localX + 3) ** 2 + (localY + 2) ** 2 <= 10;
+    const rightLobe = (localX - 3) ** 2 + (localY + 2) ** 2 <= 10;
+    const point = Math.abs(localX) + Math.abs(localY - 2) <= 5 && localY >= -1;
+    const heart = leftLobe || rightLobe || point;
+    const seam = heart && positiveModulo(localX - localY * 2, 5) === 0;
+    red = heart ? (seam ? 5 : 3) : -2;
+    green = heart ? (seam ? -8 : -4) : 1;
+    blue = heart ? (seam ? 10 : 6) : 2;
+  } else if (material === Material.SPAWN || material === Material.SPAWN2) {
+    // The retained STKM/STK2 anchors are distinct non-animated beacons. A
+    // diamond ring plus centre makes an isolated spawn readable without a
+    // state projection or an artificial glow field.
+    const localX = positiveModulo(x, 16) - 8;
+    const localY = positiveModulo(y, 16) - 8;
+    const radius = Math.abs(localX) + Math.abs(localY);
+    const ring = radius >= 5 && radius <= 6;
+    const core = radius <= 1;
+    const ray = (localX === 0 || localY === 0) && radius >= 3 && radius <= 5;
+    const secondary = material === Material.SPAWN2;
+    red = secondary ? (core ? -5 : ring ? -3 : ray ? -2 : -1)
+      : (core ? 10 : ring ? 7 : ray ? 4 : 1);
+    green = secondary ? (core ? 5 : ring ? 3 : ray ? 2 : 1)
+      : (core ? 8 : ring ? 5 : ray ? 3 : 1);
+    blue = secondary ? (core ? 12 : ring ? 9 : ray ? 6 : 3)
+      : (core ? -6 : ring ? -4 : ray ? -3 : -1);
+  } else if (material === Material.BIZRS) {
     // Contradictory prismatic planes: two angular facet families pull the
     // green/cyan solid in opposing warm and cool directions.
     const rising = positiveModulo(x * 2 + y, 13) <= 1;

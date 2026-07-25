@@ -19,10 +19,14 @@ const UNUSUAL_SOLIDS = [
   Material.NICE,
   Material.QRTZ,
   Material.RIME,
+  Material.LOLZ,
+  Material.LOVE,
+  Material.SPAWN,
+  Material.SPAWN2,
 ] as const;
 
 describe('Canvas unusual-solid morphology', () => {
-  it('covers exactly the thirteen requested non-contiguous identities', () => {
+  it('covers exactly the seventeen requested non-contiguous identities', () => {
     for (const material of UNUSUAL_SOLIDS) {
       expect(isCanvasUnusualSolidMaterial(material)).toBe(true);
     }
