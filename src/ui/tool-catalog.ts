@@ -67,12 +67,17 @@ const WALL_DEFINITIONS = [
   [1, 'Conductive wall', 'Blocks matter and conducts electricity', '#909090', '▦'],
   [2, 'E-Wall', 'Becomes transparent when powered', '#6f7784', '▥'],
   [3, 'Detector wall', 'Detects passing particles', '#c78d42', '◇'],
+  [4, 'Streamline', 'Creates a line that follows air movement', '#808080', '〰'],
   [6, 'Liquid filter', 'Allows liquids through', '#4f9fb8', '≈'],
+  [7, 'Absorb wall', 'Absorbs particles while allowing air currents', '#808080', '◉'],
   [9, 'Air-only wall', 'Allows air but blocks particles', '#8294a4', '↟'],
   [10, 'Powder filter', 'Allows powders through', '#c69a58', '⁙'],
+  [11, 'Conductor', 'Allows particles through and conducts electricity', '#ffff22', '⚡'],
+  [12, 'E-Hole', 'Absorbs particles and releases them when powered', '#242424', '◌'],
   [13, 'Gas filter', 'Allows gases through', '#9a8ab5', '☁'],
   [15, 'Energy filter', 'Allows energy particles through', '#e8df88', '✦'],
   [16, 'Air blocker', 'Blocks air while allowing particles', '#52606d', '▧'],
+  [18, 'Stasis wall', 'Freezes particles in place until powered', '#800080', '❄'],
 ] as const;
 
 const SOURCE_DEFINITIONS = [

@@ -1173,3 +1173,18 @@ The next material-primary slice is wider exact coverage of palette-led catalog f
   material base. The paired powder-body browser gate was not counted because an
   outer harness ended it before it reported results; only its exact
   audit-owned Chrome profiles were terminated and they were confirmed gone.
+
+## Current native-wall catalog coverage checkpoint
+
+- A catalog-versus-native audit confirmed that ordinary material brushes,
+  configured sources, LIFE presets, force/thermal tools, signs, radioactive
+  elements, and botanical materials are already reachable through their proper
+  semantic paths. It did find five valid native `bmap` wall types that the
+  adapter accepts but the UI had omitted: Streamline, Absorb wall, Conductor,
+  E-Hole, and Stasis wall. They are now exposed as Walls tools without ever
+  treating a wall ID as a particle material ID.
+- The stable catalog test pins the complete supported UI wall sequence (15
+  types). Native-only Fan, Gravity wall, and destructive Erase All remain
+  intentionally unavailable. This is catalog metadata only: particle/wall
+  coexistence, wall save/load, renderer composition, and matter/tool dispatch
+  are untouched.

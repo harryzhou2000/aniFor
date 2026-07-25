@@ -28,7 +28,9 @@ describe('tool catalog view model', () => {
     expect(filterTools([...tools, wall], { mode: 'wall', query: '', favorites: new Set(), recent: [] })).toEqual([wall]);
     const catalog = buildToolCatalog(MATERIALS, { walls: true });
     const nativeWalls = catalog.filter((tool) => tool.kind === 'wall');
-    expect(nativeWalls.length).toBeGreaterThanOrEqual(10);
+    expect(nativeWalls.map(({ nativeWall }) => nativeWall)).toEqual([
+      8, 1, 2, 3, 4, 6, 7, 9, 10, 11, 12, 13, 15, 16, 18,
+    ]);
     expect(nativeWalls.every(isToolAvailable)).toBe(true);
     expect(catalog.find((tool) => tool.kind === 'element' && tool.id === Material.Wall)?.name).toBe('Diamond');
   });
