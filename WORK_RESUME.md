@@ -799,3 +799,20 @@ The next material-primary slice is wider exact coverage of palette-led catalog f
   It reported zero browser errors and left no audit Chrome process. Next
   checkpoint: commit and push `main_codex`; Pages deployment remains manual
   pending GitHub login.
+
+## Current stable tool-menu regression checkpoint
+
+- Selecting an element now updates the selected tile in place instead of
+  rebuilding the library. The user's scroll position and every category's
+  disclosure state therefore remain intact: selecting an Electronics brush no
+  longer jumps the panel back to or opens Powders.
+- The production-browser native-semantic audit explicitly closes Powders,
+  opens Electronics, scrolls the library, selects ARAY, and proves that the
+  selected button, scroll offset, and both disclosure states are unchanged.
+  This covers the desktop and mobile shared control path rather than only DOM
+  unit behavior.
+- The exact current-bundle 8× browser gate completed with zero browser errors
+  after the new assertion, including atlas, deep-zoom, material/native-state,
+  forced-fence, and real context-loss recovery checks. Its audit-owned Chrome
+  session terminated cleanly. Next checkpoint: commit and push `main_codex`;
+  Pages deployment remains manual pending GitHub login.

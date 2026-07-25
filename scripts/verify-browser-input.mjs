@@ -13052,6 +13052,41 @@ async function auditNativeSemantics(cdp, mode, dpr, screenshot) {
     `${mode}: rejected source pair feedback is ${JSON.stringify(rejectedSource)}`);
   assert(rejectedSource.selected === 'false', `${mode}: rejected source pair became active`);
 
+  const stableToolMenu = await evaluate(cdp, `(() => {
+    document.querySelector('[data-filter="all"]')?.click();
+    const library = document.querySelector('.tool-library');
+    const powder = library?.querySelector('details[data-category="powders"]');
+    const electronics = library?.querySelector('details[data-category="electronics"]');
+    const button = document.querySelector('[data-tool-key="material:135"] .material-button');
+    if (!(library instanceof HTMLElement) || !(powder instanceof HTMLDetailsElement)
+      || !(electronics instanceof HTMLDetailsElement) || !(button instanceof HTMLButtonElement)) {
+      throw new Error('Missing stable-tool-menu controls');
+    }
+    powder.open = false;
+    electronics.open = true;
+    library.scrollTop = Math.min(
+      library.scrollHeight - library.clientHeight,
+      Math.max(0, electronics.offsetTop - library.clientHeight * 0.35),
+    );
+    const before = {
+      scrollTop: library.scrollTop, powderOpen: powder.open, electronicsOpen: electronics.open,
+    };
+    button.click();
+    return {
+      ...before,
+      afterScrollTop: library.scrollTop,
+      afterPowderOpen: powder.open,
+      afterElectronicsOpen: electronics.open,
+      selected: button.getAttribute('aria-pressed'),
+    };
+  })()`);
+  assert(stableToolMenu.scrollTop > 0 && !stableToolMenu.powderOpen && stableToolMenu.electronicsOpen,
+    `${mode}: stable tool-menu setup failed (${JSON.stringify(stableToolMenu)})`);
+  assert(Math.abs(stableToolMenu.afterScrollTop - stableToolMenu.scrollTop) <= 1
+    && !stableToolMenu.afterPowderOpen && stableToolMenu.afterElectronicsOpen
+    && stableToolMenu.selected === 'true',
+  `${mode}: brush selection reset tool-menu state (${JSON.stringify(stableToolMenu)})`);
+
   const lifePoint = { x: 270, y: 180 };
   const lifeClient = worldClient(initial.canvas, { x: lifePoint.x + 0.5, y: lifePoint.y + 0.5 });
   const lifeSelection = await evaluate(cdp, `(() => {
@@ -13105,6 +13140,7 @@ async function auditNativeSemantics(cdp, mode, dpr, screenshot) {
 
   return {
     configuredSource: { emitter: configuredSource.cell, target: configuredSource.target },
+    stableToolMenu,
     lifePreset: { preset: lifePreset.preset, projection: lifePreset.projection, visibleTools: lifeSelection.count },
     screenshots,
   };
