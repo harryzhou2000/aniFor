@@ -21,7 +21,10 @@ When `.codegraph/` exists, use `codegraph explore` before grep/find or broad fil
 
 Use subagents proactively for independent mechanical work when slots are
 available: repository scans, focused test/audit runs, CI/Pages status checks,
-screenshot/artifact inspection, and bounded mass fixes. The parent agent
+screenshot/artifact inspection, and bounded mechanical or mass fixes. Give
+each subagent a concrete, non-overlapping scope; ask audit agents not to edit
+unless they have been assigned the specific mechanical fix; and use their
+evidence to decide whether a proposed change is warranted. The parent agent
 remains the sole integrator: split files/tasks to avoid concurrent writes,
 inspect every returned diff/evidence, and retain design, safety-sensitive, and
 cross-cutting rendering decisions locally. Every subagent follows the same
