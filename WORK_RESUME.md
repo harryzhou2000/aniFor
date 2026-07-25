@@ -978,10 +978,10 @@ The next material-primary slice is wider exact coverage of palette-led catalog f
   selected state, so the active category, expanded groups, and library scroll
   position remain stable instead of jumping back to Powder. Filter controls
   now expose their full labels as native tooltips as well as accessible names.
-- Desktop filter controls use a fixed two-row, six-column matrix. Every
-  category remains reachable in the protected 68px rail—without a horizontally
-  trapped label row or overlap with Actions—while full labels remain available
-  to keyboard/pointer users through native tooltips. Mobile keeps a compact,
+- Desktop filter controls use a fixed 68px two-row scroll rail with four
+  comfortably sized columns. Extra columns stay reachable through the visible
+  horizontal rail instead of compressing all category labels; full labels also
+  remain available through native tooltips. Mobile keeps a compact,
   snap-scrollable horizontal strip, preserving vertical room for the world and
   library.
 - Validation: targeted Controls/catalog/input/browser-audit tests (`33`
@@ -1088,3 +1088,26 @@ The next material-primary slice is wider exact coverage of palette-led catalog f
   with zero browser errors. The visual review confirms curved Water volume
   bands while preserving the showcase's gas, powder, solid, plant, and UI
   geometry.
+
+## Current short-desktop catalog rail checkpoint
+
+- A focused real-browser desktop input audit caught a genuine CSS regression:
+  the two-row desktop filter grid had `overflow: hidden`, making category
+  filters unreachable on a short desktop window. The protected 68px rail now
+  exposes four 88px-minimum columns and scrolls horizontally for the remaining
+  two-row columns. This replaces tiny, compressed labels with usable targets
+  while keeping the rail's vertical size stable and avoiding overlap with the
+  Brush/actions card.
+- The change is presentation-only. It does not rebuild the catalog when a tool
+  is chosen, so its active filter, expanded groups, library scroll position,
+  selected tool, simulation state, and world canvas remain intact.
+- Validation: production build/19-file static closure, Canvas desktop browser
+  input audit with exact wheel-anchor error `0`, live DPR/page-scale anchored
+  zoom error `0.0576` cells, continuous drag, middle pan, and both 1280x520
+  and 1024x500 short-desktop rail/shell reachability; the catalog-selection
+  browser audit also keeps the Electronics category and a `583.5` scroll
+  position without replacing library children. A WebGL 2× layout gate also
+  retains the 612×384 logical world at a 1224×768 backing with zero browser
+  errors. The attempted broad audit was deliberately not counted because its
+  outer harness ended before a result; its verified temporary Chrome profile
+  was closed.

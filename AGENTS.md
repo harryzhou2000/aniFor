@@ -17,6 +17,16 @@ contracts rather than the primary feature stream.
 
 When `.codegraph/` exists, use `codegraph explore` before grep/find or broad file reads when locating or understanding code. Ask it for the relevant symbols, complete source, and call paths. Use `rg` only after CodeGraph has established the area to inspect.
 
+## Delegation
+
+Use subagents proactively for independent mechanical work when slots are
+available: repository scans, focused test/audit runs, CI/Pages status checks,
+screenshot/artifact inspection, and bounded mass fixes. The parent agent
+remains the sole integrator: split files/tasks to avoid concurrent writes,
+inspect every returned diff/evidence, and retain design, safety-sensitive, and
+cross-cutting rendering decisions locally. Every subagent follows the same
+CodeGraph and viewport/rendering contracts.
+
 ## Viewport, input, and rendering
 
 Before changing viewport layout, pointer mapping, zoom/pan, Pixi setup, shader coordinates, canvas sizing, or device-pixel-ratio behavior, read [`docs/viewport-rendering-contract.md`](docs/viewport-rendering-contract.md).
@@ -89,7 +99,8 @@ The non-negotiable contract is:
 - On compact mobile layouts, the single shared Draw/Eraser mode group must be fully visible at initial `scrollY=0` above the tool catalog at both 390×844 and 360×640. Do not duplicate mode state between a quick bar and the actions card; one button group owns `onEraseMode`. Keep the search entry visible at the same time, preserve one-touch drawing/two-touch navigation, and prove exact erase then continuous draw without `scrollIntoView()` in the browser gate.
 - One touch is the mobile brush and two touches are camera pan/pinch. Defer the initial touch mark until the gesture is known to be single-touch so every two-finger gesture does not leave an accidental dot.
 - Keep a compact bounded mobile catalog with `overscroll-behavior-y: auto`: its inner scroll must chain back to the document, and toolbox bottom padding must remain a safe touch target for page scrolling.
-- Desktop tool filters use a fixed 68 px, two-row stacked rail; mobile keeps a fixed 40 px horizontal rail. Preserve those heights, keep every filter vertically contained, and browser-check a non-negative palette/actions gap at short desktop heights so the Brush card cannot cover the library.
+- Desktop tool filters use a fixed 68 px, two-row stacked rail; mobile keeps a fixed 40 px horizontal rail. Preserve those heights, keep every filter vertically contained, and browser-check a non-negative palette/actions gap at short desktop heights so the Brush card cannot cover the library. Desktop retains four 88px-minimum columns and horizontal overflow for later two-row columns: do not compress every category label to avoid scrolling.
+- Tool selection is an in-place selected-state update, not a catalog rebuild. Choosing a material/tool must preserve the active category/filter, expanded groups, search state, and library scroll position; it must never reopen or jump to Powder. The focused browser audit must select from a non-Powder category after scrolling, assert the same library children remain mounted, and retain the category and scroll position on desktop and mobile.
 
 Do not confuse the 2× backing resolution with an internal presentation multiplier. Never add scene scaling such as the former 1.5 multiplier, stretch width and height independently, or introduce a second pointer transform.
 
@@ -154,4 +165,10 @@ The native wall lab uses the real TPT backend, remains paused, and places ten wa
 - Do not permanently choose Canvas2D from a short Pixi initialization deadline. Pages cold loads can have WebGL2 and a valid Pixi chunk yet take more than 1.2 seconds to initialize. Mount the compatibility canvas promptly, expose the reason in the HUD/data attributes, and promote it in place when WebGL becomes ready.
 - A context-existing check is insufficient for high render scales. Probe `MAX_RENDERBUFFER_SIZE`, both `MAX_VIEWPORT_DIMS` axes, and `MAX_TEXTURE_SIZE`, release the temporary context with `WEBGL_lose_context`, and select a supported true scale before Pixi allocates. Compare viewport axes independently; require the texture limit only for filter-based 1×–4×, not the direct-mesh 8× path. Keep requested and effective scale distinct in diagnostics.
 - True 8× recovery needs two independent browser proofs: force the production unsignalled-fence timeout branch, then cold-load another 8× presenter and exercise genuine context loss. Both must preserve semantic state, camera, CSS geometry, and input footprint while rebuilding only the bounded 2× Canvas.
-- Clean up locally launched Chrome and Vite processes immediately after browser validation.
+- Browser audits own a unique `/tmp/anifor-input-*` profile and must terminate
+  their Chrome tree and remove that profile in `finally`, on success, timeout,
+  and failure. If an outer harness interrupts the audit, inspect exact command
+  lines first and terminate only PIDs verified to use that audit profile; then
+  confirm the profile is gone. Never use a broad Chrome kill/pkill that could
+  close a user browser. Clean up locally launched Vite processes by their exact
+  audit-owned PID as well.
