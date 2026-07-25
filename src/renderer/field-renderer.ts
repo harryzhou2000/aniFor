@@ -17,8 +17,8 @@ import {
   createLiquidSurfaceScratch, reconstructLiquidSurface, type LiquidSurfaceScratch,
 } from './canvas-liquid-surface';
 import {
-  applyCanvasLiquidBodyOptics, applyCanvasLiquidVolumeChroma,
-  canvasLiquidContourScale, canvasLiquidVolumeChromaResponse,
+  applyCanvasLiquidBodyOptics, applyCanvasLiquidMacroSheen, applyCanvasLiquidVolumeChroma,
+  canvasLiquidContourScale, canvasLiquidMacroWave, canvasLiquidVolumeChromaResponse,
   canvasLiquidEmissionExposure, canvasLiquidFieldRelief,
   canvasLiquidEmissionSurfaceExposure, canvasLiquidSpeciesRelief, canvasLiquidSurfaceExposure,
 } from './canvas-liquid-light';
@@ -1313,10 +1313,15 @@ export class MaterialRenderer {
           liquidFieldRelief, liquidSurfaceExposure,
         );
         if (this.liquidVolumeChromaEnabled && !liquidSpeciesContact) {
+          const macroWave = wall === 0
+            ? canvasLiquidMacroWave(x, y, visualTime, material) : (sheen - contour) / 5;
+          if (wall === 0) applyCanvasLiquidMacroSheen(
+            this.styledColor, optics, fields.liquid.bytes[pixel + 3], density, macroWave,
+          );
           applyCanvasLiquidVolumeChroma(
             this.styledColor, optics, canvasLiquidVolumeChromaResponse(
               optics, fields.liquid.bytes[pixel + 3], density,
-              liquidFieldRelief, (sheen - contour) / 5,
+              liquidFieldRelief, macroWave,
             ),
             this.liquidOpticalDepthEnabled ? this.boundaryStability[index] : 0,
           );
@@ -1438,10 +1443,15 @@ export class MaterialRenderer {
           liquidFieldRelief, liquidSurfaceExposure,
         );
         if (this.liquidVolumeChromaEnabled && !liquidSpeciesContact) {
+          const macroWave = wall === 0
+            ? canvasLiquidMacroWave(x, y, visualTime, material) : (shimmer - contour) / 6;
+          if (wall === 0) applyCanvasLiquidMacroSheen(
+            this.styledColor, optics, fields.liquid.bytes[pixel + 3], density, macroWave,
+          );
           applyCanvasLiquidVolumeChroma(
             this.styledColor, optics, canvasLiquidVolumeChromaResponse(
               optics, fields.liquid.bytes[pixel + 3], density,
-              liquidFieldRelief, (shimmer - contour) / 6,
+              liquidFieldRelief, macroWave,
             ),
             this.liquidOpticalDepthEnabled ? this.boundaryStability[index] : 0,
           );
@@ -1501,10 +1511,15 @@ export class MaterialRenderer {
           liquidFieldRelief, liquidSurfaceExposure,
         );
         if (this.liquidVolumeChromaEnabled && !liquidSpeciesContact) {
+          const macroWave = wall === 0
+            ? canvasLiquidMacroWave(x, y, visualTime, material) : shimmer / 4;
+          if (wall === 0) applyCanvasLiquidMacroSheen(
+            this.styledColor, optics, fields.liquid.bytes[pixel + 3], density, macroWave,
+          );
           applyCanvasLiquidVolumeChroma(
             this.styledColor, optics, canvasLiquidVolumeChromaResponse(
               optics, fields.liquid.bytes[pixel + 3], density,
-              liquidFieldRelief, shimmer / 4,
+              liquidFieldRelief, macroWave,
             ),
             this.liquidOpticalDepthEnabled ? this.boundaryStability[index] : 0,
           );
@@ -1570,10 +1585,15 @@ export class MaterialRenderer {
           );
           if (this.liquidVolumeChromaEnabled && applicableTraits === 0
             && !info.emissive && !liquidSpeciesContact) {
+            const macroWave = wall === 0
+              ? canvasLiquidMacroWave(x, y, visualTime, material) : (shimmer - contour) / 4;
+            if (wall === 0) applyCanvasLiquidMacroSheen(
+              this.styledColor, optics, fields.liquid.bytes[pixel + 3], density, macroWave,
+            );
             applyCanvasLiquidVolumeChroma(
               this.styledColor, optics, canvasLiquidVolumeChromaResponse(
                 optics, fields.liquid.bytes[pixel + 3], density,
-                liquidFieldRelief, (shimmer - contour) / 4,
+                liquidFieldRelief, macroWave,
               ),
               this.liquidOpticalDepthEnabled ? this.boundaryStability[index] : 0,
             );

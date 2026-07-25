@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
-  applyCanvasLiquidBodyOptics, applyCanvasLiquidVolumeChroma,
+  applyCanvasLiquidBodyOptics, applyCanvasLiquidMacroSheen, applyCanvasLiquidVolumeChroma,
   canvasLiquidContourScale, canvasLiquidEmissionExposure,
   canvasLiquidEmissionSurfaceExposure, canvasLiquidFieldRelief, canvasLiquidSpeciesRelief,
-  canvasLiquidSurfaceExposure, canvasLiquidVolumeChromaResponse,
+  canvasLiquidMacroWave, canvasLiquidSurfaceExposure, canvasLiquidVolumeChromaResponse,
 } from './canvas-liquid-light';
 import { RenderOptics } from './render-optics';
 
@@ -136,6 +136,65 @@ describe('Canvas liquid field-owned light', () => {
     const original = molten.slice();
     applyCanvasLiquidVolumeChroma(molten, RenderOptics.Molten, 0.065);
     expect(molten).toEqual(original);
+  });
+
+  it('uses a bounded world-anchored broad-sheen and caustic signal for liquid volume', () => {
+    const first = canvasLiquidMacroWave(184, 218, 3_000, 1);
+    const repeated = canvasLiquidMacroWave(184, 218, 3_000, 1);
+    const adjacent = canvasLiquidMacroWave(185, 218, 3_000, 1);
+    const later = canvasLiquidMacroWave(184, 218, 5_000, 1);
+
+    expect(first).toBe(repeated);
+    expect(first).toBeGreaterThanOrEqual(-1);
+    expect(first).toBeLessThanOrEqual(1);
+    expect(adjacent).toBeGreaterThanOrEqual(-1);
+    expect(adjacent).toBeLessThanOrEqual(1);
+    expect(later).toBeGreaterThanOrEqual(-1);
+    expect(later).toBeLessThanOrEqual(1);
+    // The macro signal changes continuously over both space and time instead
+    // of introducing a cell-frequency checkerboard.
+    expect(Math.abs(adjacent - first)).toBeLessThan(0.2);
+    expect(Math.abs(later - first)).toBeLessThan(0.7);
+  });
+
+  it('gives aqueous volume stronger macro relief than stable oil while retaining the response bound', () => {
+    const aqueous = canvasLiquidVolumeChromaResponse(
+      RenderOptics.Aqueous, 255, 8, 0, 1,
+    );
+    const oil = canvasLiquidVolumeChromaResponse(
+      RenderOptics.Oily, 255, 8, 0, 1,
+    );
+    const acid = canvasLiquidVolumeChromaResponse(
+      RenderOptics.Corrosive, 255, 8, 0, 1,
+    );
+    expect(aqueous).toBeGreaterThan(oil);
+    expect(oil).toBeGreaterThan(acid);
+    expect(aqueous).toBeLessThanOrEqual(0.065);
+  });
+
+  it('adds a bounded family-coloured macro sheen only to cohesive liquid RGB', () => {
+    const source = [46, 142, 186, 91] as const;
+    const lit = new Float32Array(source);
+    const shaded = new Float32Array(source);
+    applyCanvasLiquidMacroSheen(lit, RenderOptics.Aqueous, 255, 8, 1);
+    applyCanvasLiquidMacroSheen(shaded, RenderOptics.Aqueous, 255, 8, -1);
+    expect(lit[0]).toBeGreaterThan(source[0]);
+    expect(lit[1]).toBeGreaterThan(source[1]);
+    expect(lit[2]).toBeGreaterThan(source[2]);
+    expect(shaded[0]).toBeLessThan(source[0]);
+    expect(shaded[1]).toBeLessThan(source[1]);
+    expect(shaded[2]).toBeLessThan(source[2]);
+    expect(lit[3]).toBe(source[3]);
+    expect(shaded[3]).toBe(source[3]);
+    expect(Math.max(...[0, 1, 2].map((channel) => lit[channel] - source[channel]))).toBeLessThan(18);
+    expect(Math.max(...[0, 1, 2].map((channel) => source[channel] - shaded[channel]))).toBeLessThan(18);
+
+    const sparse = new Float32Array(source);
+    const molten = new Float32Array(source);
+    applyCanvasLiquidMacroSheen(sparse, RenderOptics.Aqueous, 160, 8, 1);
+    applyCanvasLiquidMacroSheen(molten, RenderOptics.Molten, 255, 8, 1);
+    expect(sparse).toEqual(new Float32Array(source));
+    expect(molten).toEqual(new Float32Array(source));
   });
 
   it('strengthens corrosive channel separation without adding scalar macro light', () => {

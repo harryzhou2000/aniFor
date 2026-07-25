@@ -714,3 +714,31 @@ The next material-primary slice is wider exact coverage of palette-led catalog f
 - Expand exact native coverage in coherent behavior families: radioactive transformations, sources and forces, plants/growth, devices/sensors, reactive phase products, and the remaining unusual liquid/gas/powder/solid families. Preserve official reactions, phase changes, `ctype`/`life`/`tmp` state, OPS round trips, and renderability of nonselectable products.
 - Deepen composed aesthetics at ordinary fit view: stable curved silhouettes that retain fine structures, family-specific mesostructure, optical thickness, directional light and contact grounding, bounded transparency/reflection/refraction, cohesive liquid bodies, volumetric gas, readable energy emission, and distinct isolated particles. Prefer shared fields and sample-free family arithmetic over per-material passes or full-frame blur.
 - Every material tranche must keep exact semantic ownership, authored holes, thin structures, unlike-species contacts, native walls, square Grains, and Canvas/WebGL parity. Require deterministic off→on→off captures, relevant native/OPS proof, full-atlas visibility, production build closure, a real runtime-GLSL gate, and renderer-wide true-8× completion/recovery before checkpointing.
+
+## Current normal-fit showcase and Canvas liquid-volume follow-up
+
+- `?scene=showcase&renderScale=2` now provides a deterministic paused material
+  composition using the ordinary field renderer. It deliberately contrasts
+  with `render-lab`: the latter remains an exact sparse diagnostic atlas,
+  while the showcase makes connected Water/Oil, packed granular/rigid bodies,
+  gas volumes, botanical forms, energy, and device optics readable at a
+  normal fit view. It uses the same in-memory no-autosave diagnostic backend.
+- Canvas now reuses the existing WebGL broad-sheen/caustic coordinate grammar
+  for dense, same-species liquid bodies. The new helper is world-anchored,
+  bounded, RGB-only, allocation-free, and runs only after existing cohesive
+  liquid support and exact semantic eligibility gates. Sparse droplets,
+  reconstructed support, seams, traits, emissive liquids, Molten/Lava, alpha,
+  material ownership, physics, and output-scale cost remain untouched.
+- The Canvas fallback's Water body now carries broad reflected/shadowed bands
+  instead of a flat uniform fill. Production captures are retained locally as
+  ignored `.artifacts/showcase-canvas-volume-sheen.png` and
+  `.artifacts/showcase-webgl-current.png`; no WebGL shader changed in this
+  tranche. Current validation passes all `114` test files / `716` tests,
+  TypeScript, and the 834-module static-closure production build. The exact
+  current-bundle true-8× browser gate completed the 217-identity atlas,
+  input/topology, configured-source/VIBR/DEUT state, forced-stall, and real
+  context-loss paths with zero browser errors. It retained requested/effective
+  `8/8`, a `4896×3072` backing, 8 GPU-fence samples at
+  `5751.4/5831.5/5938.6 ms` median/p90/max, full Local/Smooth recall, and
+  camera-preserving Canvas recovery. Next checkpoint: commit and push
+  `main_codex`; deployment remains intentionally manual after GitHub login.

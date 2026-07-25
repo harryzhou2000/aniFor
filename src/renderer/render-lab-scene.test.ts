@@ -5,7 +5,8 @@ import { renderPhase, renderProfile, RenderPhase, RenderProfile } from './render
 import { renderOptics, RenderOptics } from './render-optics';
 import { hasRenderTrait, renderTraits, RenderTrait } from './render-traits';
 import {
-  applyRenderLabScene, RENDER_LAB_AMBIENT_TEMPERATURE, RENDER_LAB_COLD_TEMPERATURE,
+  applyMaterialShowcaseScene, applyRenderLabScene, materialShowcaseRequested,
+  RENDER_LAB_AMBIENT_TEMPERATURE, RENDER_LAB_COLD_TEMPERATURE,
   RENDER_LAB_ENERGY_SAMPLES, RENDER_LAB_HOT_TEMPERATURE, RENDER_LAB_STYLE_SAMPLES,
   renderLabRequested,
 } from './render-lab-scene';
@@ -15,6 +16,32 @@ describe('render lab scene', () => {
     expect(renderLabRequested('?scene=render-lab')).toBe(true);
     expect(renderLabRequested('?scene=other')).toBe(false);
     expect(renderLabRequested('')).toBe(false);
+  });
+
+  it('stages a deterministic normal-fit material showcase independently of the atlas', () => {
+    const first = new RenderLabBackend(612, 384);
+    const second = new RenderLabBackend(612, 384);
+    applyMaterialShowcaseScene(first);
+    applyMaterialShowcaseScene(second);
+
+    expect(first.cells()).toEqual(second.cells());
+    expect(first.walls()).toEqual(second.walls());
+    expect(materialShowcaseRequested('?scene=showcase')).toBe(true);
+    expect(materialShowcaseRequested('?scene=render-lab')).toBe(false);
+
+    const counts = new Uint32Array(256);
+    for (const material of first.cells()) counts[material]++;
+    for (const material of [
+      Material.Stone, Material.Sand, Material.Clay, Material.Concrete,
+      Material.Water, Material.Oil, Material.Glass, Material.Smoke,
+      Material.Oxygen, Material.NobleGas, Material.Wood, Material.Plant,
+      Material.DTEC, Material.URAN, Material.POLO,
+    ]) expect(counts[material]).toBeGreaterThan(100);
+    expect(first.cells()[235 * 612 + 360]).toBe(Material.Water);
+    expect(first.cells()[235 * 612 + 420]).toBe(Material.Oil);
+    expect(first.cells()[265 * 612 + 285]).toBe(Material.Glass);
+    expect(first.cells()[270 * 612 + 512]).toBe(Material.DTEC);
+    expect(first.cells()[173 * 612 + 554]).toBe(Material.POLO);
   });
 
   it('builds a deterministic atlas with representative material families', () => {

@@ -15,11 +15,26 @@ http://localhost:5173/?scene=render-lab&renderScale=2&renderer=canvas2d
 
 `scene=render-lab` selects an in-memory 612×384 backend only for this diagnostic route. It does not load native TPT, restore autosave, advance simulation, or write autosave. Normal URLs continue to use the native backend.
 
+For an art-direction view that uses the same normal field renderer without the
+atlas's deliberately sparse stress patterns, open the paused material showcase:
+
+```text
+http://localhost:5173/?scene=showcase&renderScale=2
+http://localhost:5173/?scene=showcase&renderScale=2&renderer=canvas2d
+```
+
+`scene=showcase` stages connected Water/Oil, packed powders, rigid bodies,
+volumetric gases, botanical forms, energy, and devices in one deterministic
+composition. It has the same no-autosave/no-native-load guarantees as the
+render lab, but is intended for judging cohesive material forms rather than
+particle-level diagnostic coverage.
+
 Screenshots created during local review belong in ignored `.artifacts/`, for example:
 
 ```text
 .artifacts/render-lab-webgl.png
 .artifacts/render-lab-canvas2d.png
+.artifacts/showcase-canvas-volume-sheen.png
 ```
 
 The real-browser audit first captures and signature-checks this deterministic

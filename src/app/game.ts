@@ -1,5 +1,7 @@
 import { MaterialRenderer } from '../renderer/field-renderer';
-import { applyRenderLabScene, renderLabRequested } from '../renderer/render-lab-scene';
+import {
+  applyMaterialShowcaseScene, applyRenderLabScene, materialShowcaseRequested, renderLabRequested,
+} from '../renderer/render-lab-scene';
 import { applyWallLabScene, wallLabRequested } from '../renderer/wall-lab-scene';
 import { ALL_MATERIALS, MATERIALS, Material } from '../shared/materials';
 import { decodeSharedWorld } from '../shared/share-codec';
@@ -134,6 +136,7 @@ export class Game {
   async start(): Promise<void> {
     await this.renderer.init();
     const renderLab = renderLabRequested();
+    const materialShowcase = materialShowcaseRequested();
     const wallLab = wallLabRequested();
     if (renderLab) {
       if (materialAtlasAuditRequested()) prepareMaterialAtlasAuditFixture(this.simulation);
@@ -141,6 +144,10 @@ export class Game {
       else applyRenderLabScene(this.simulation);
       this.paused = true;
       this.root.dataset.scene = 'render-lab';
+    } else if (materialShowcase) {
+      applyMaterialShowcaseScene(this.simulation);
+      this.paused = true;
+      this.root.dataset.scene = 'showcase';
     } else if (wallLab) {
       applyWallLabScene(this.simulation);
       this.paused = true;
@@ -249,9 +256,9 @@ export class Game {
       lifePresets: Boolean(this.simulation.paintLifePreset),
       signs: Boolean(this.simulation.signs && this.simulation.upsertSign && this.simulation.removeSign),
     }));
-    if (renderLab || wallLab) {
+    if (renderLab || materialShowcase || wallLab) {
       const status = this.root.querySelector('.status');
-      const sceneName = renderLab ? 'render lab' : 'native wall lab';
+      const sceneName = renderLab ? 'render lab' : materialShowcase ? 'material showcase' : 'native wall lab';
       if (status) status.textContent = `${this.simulation.name} · paused ${sceneName}`;
     } else {
       this.seedIfEmpty();

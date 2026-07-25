@@ -3,6 +3,7 @@ import type { SimulationBackend } from '../simulation';
 import { RENDER_LAB_AMBIENT_TEMPERATURE } from '../simulation/render-lab-backend';
 
 export const RENDER_LAB_QUERY = 'render-lab';
+export const MATERIAL_SHOWCASE_QUERY = 'showcase';
 export const RENDER_LAB_COLD_TEMPERATURE = 1200;
 export { RENDER_LAB_AMBIENT_TEMPERATURE };
 export const RENDER_LAB_HOT_TEMPERATURE = 18000;
@@ -28,6 +29,61 @@ export const RENDER_LAB_ENERGY_SAMPLES = [
 
 export function renderLabRequested(search = globalThis.location?.search ?? ''): boolean {
   return new URLSearchParams(search).get('scene') === RENDER_LAB_QUERY;
+}
+
+/** A paused, normal-fit composition for visual review outside the diagnostic atlas. */
+export function materialShowcaseRequested(search = globalThis.location?.search ?? ''): boolean {
+  return new URLSearchParams(search).get('scene') === MATERIAL_SHOWCASE_QUERY;
+}
+
+/**
+ * Stages dense, connected bodies so an artist can inspect the normal-fit look
+ * without mistaking the deliberately sparse regression atlas for the intended
+ * presentation. It uses the ordinary simulation paint path and renderer fields
+ * only; no showcase data exists outside the normal semantic world.
+ */
+export function applyMaterialShowcaseScene(simulation: SimulationBackend): void {
+  simulation.clear();
+  const plot = new ScenePlotter(simulation);
+
+  // A deep, ordinary solid ground gives the liquid, pile, tree, and devices a
+  // common contact surface. The small carved channel keeps the composition from
+  // becoming a set of disconnected cards.
+  plot.roundedRect(24, 280, 564, 76, 18, Material.Stone);
+  plot.eraseRect(315, 280, 54, 18);
+  plot.roundedRect(315, 289, 54, 18, 11, Material.Metal);
+
+  // Packed powder should read as one cohesive pile but keep its analytic slope
+  // and a narrow natural ridge rather than a rectangular block.
+  plot.slope(40, 186, 198, 142, Material.Sand);
+  plot.slope(76, 221, 132, 107, Material.Clay);
+  plot.roundedRect(50, 308, 178, 24, 10, Material.Concrete);
+
+  // A broad connected pool with a controlled Oil inlet presents surface depth,
+  // meniscus light, optical thickness, and an unlike-liquid seam at fit view.
+  plot.roundedRect(252, 192, 232, 128, 28, Material.Water);
+  plot.splitCapsule(332, 214, 116, 55, 24, 389, Material.Water, Material.Oil);
+  plot.roundedRect(277, 185, 14, 143, 7, Material.Glass);
+  plot.roundedRect(466, 185, 14, 143, 7, Material.Glass);
+  plot.roundedRect(277, 313, 203, 15, 7, Material.Glass);
+  plot.rect(276, 251, 6, 36, Material.Fire, 1, 0);
+  plot.rect(473, 235, 5, 30, Material.ELEC, 1, 0);
+
+  // Large, overlapping gas bodies deliberately have dense centres and soft
+  // outlines so atmosphere ownership can be judged without the atlas' gaps.
+  plot.ellipse(360, 92, 94, 49, Material.Smoke, 0.96, 811, 0.30);
+  plot.ellipse(427, 82, 82, 43, Material.Oxygen, 0.92, 823, 0.34);
+  plot.ellipse(497, 103, 64, 37, Material.NobleGas, 0.88, 827, 0.40);
+  plot.roundedRect(296, 129, 30, 20, 9, Material.Plasma);
+
+  // A small living silhouette and a device/radioactive cluster keep organic,
+  // hard-surface, energy, and native-state visual vocabulary in one scene.
+  plot.roundedRect(112, 121, 20, 158, 8, Material.Wood);
+  plot.roundedRect(66, 82, 112, 76, 32, Material.Plant);
+  plot.roundedRect(150, 151, 70, 44, 18, Material.Plant);
+  plot.curvaturePlate(510, 226, 54, 58, 14, Material.DTEC);
+  plot.roundedRect(522, 144, 38, 62, 15, Material.URAN);
+  plot.roundedRect(548, 166, 20, 30, 9, Material.POLO);
 }
 
 /** A paused, deterministic material atlas for visual regression screenshots. */

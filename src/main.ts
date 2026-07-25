@@ -1,6 +1,6 @@
 import './styles.css';
 import { Game } from './app/game';
-import { renderLabRequested } from './renderer/render-lab-scene';
+import { materialShowcaseRequested, renderLabRequested } from './renderer/render-lab-scene';
 import { fitAspect } from './renderer/view-transform';
 import { createSimulation } from './simulation';
 
@@ -28,7 +28,9 @@ root.innerHTML = `
 
 const query = new URLSearchParams(location.search);
 const nativeLab = query.get('simulation') === 'native';
-const simulation = await createSimulation({ renderLab: renderLabRequested() && !nativeLab });
+const simulation = await createSimulation({
+  renderLab: (renderLabRequested() || materialShowcaseRequested()) && !nativeLab,
+});
 const viewportFrame = root.querySelector<HTMLElement>('.viewport-frame');
 const viewport = root.querySelector<HTMLElement>('.viewport');
 if (!viewportFrame || !viewport) throw new Error('Missing simulation viewport');

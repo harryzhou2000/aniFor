@@ -108,11 +108,86 @@ export function canvasLiquidVolumeChromaResponse(
   const support = BODY_ALPHA_SUPPORT[fieldAlpha] * BODY_NEIGHBOUR_SUPPORT[neighbourCount];
   if (support <= 0) return 0;
   const boundedRelief = clamp(signedRelief, RELIEF_DARK_LIMIT, RELIEF_LIGHT_LIMIT);
-  const macroGain = optics === RenderOptics.Corrosive ? 0.45 : 1;
+  // The established WebGL composition gives broad reflected water and
+  // cryogenic bodies a little more room than oil/viscous matter. Corrosive
+  // liquid is intentionally restrained here because its later luminance-safe
+  // hue transform already expands the signed response.
+  const macroGain = optics === RenderOptics.Aqueous || optics === RenderOptics.CryogenicLiquid
+    ? 1.35
+    : optics === RenderOptics.Oily || optics === RenderOptics.MetallicLiquid
+      ? 1.15
+      : optics === RenderOptics.Corrosive ? 0.45 : 1;
   const response = (
-    boundedRelief * 0.28 + clamp(macroWave, -1, 1) * 0.035 * macroGain
+    boundedRelief * 0.28 + clamp(macroWave, -1, 1) * 0.045 * macroGain
   ) * support;
   return clamp(response, -0.055, 0.065);
+}
+
+/**
+ * Low-frequency, world-anchored liquid relief shared with the semantic WebGL
+ * composition.  It is deliberately a signed unit signal rather than a colour
+ * or coverage operation: callers still gate it through cohesive same-species
+ * field support before it can affect RGB.  This lets the Canvas fallback read
+ * as one shaped volume instead of a uniformly tinted pool without introducing
+ * a field, a sample, or render-scale-dependent work.
+ */
+export function canvasLiquidMacroWave(
+  x: number,
+  y: number,
+  visualTime: number,
+  material: number,
+): number {
+  const time = visualTime * 0.001;
+  const broadSheen = Math.sin(x * 0.041 + y * 0.016 + material * 0.83 + time * 0.22)
+    * Math.sin(y * 0.029 - x * 0.012 - time * 0.17);
+  const causticWave = 0.5 + 0.5 * Math.sin(
+    x * 0.092 + Math.sin(y * 0.037 + time * 0.11) * 1.45 + material * 0.67,
+  );
+  // The WebGL path combines a broad reflected band with a narrower caustic.
+  // Keep this normalised so the existing family-specific chroma response owns
+  // all magnitude and clipping bounds.
+  return clamp(broadSheen * 0.52 + (smoothstep(0.18, 0.88, causticWave) - 0.5) * 0.96, -1, 1);
+}
+
+/**
+ * Applies the Canvas counterpart to the WebGL broad reflected-band layer. The
+ * caller has already rejected traits, emission, walls, and unlike-liquid
+ * contact, while this function independently rejects sparse support. It only
+ * moves RGB toward the existing family key or shadow; alpha and reconstruction
+ * ownership stay entirely outside this operation.
+ */
+export function applyCanvasLiquidMacroSheen(
+  color: Float32Array,
+  optics: RenderOptics,
+  fieldAlpha: number,
+  neighbourCount: number,
+  macroWave: number,
+): void {
+  if (optics === RenderOptics.Molten) return;
+  const support = BODY_ALPHA_SUPPORT[fieldAlpha] * BODY_NEIGHBOUR_SUPPORT[neighbourCount];
+  if (support <= 0) return;
+  const wave = clamp(macroWave, -1, 1);
+  if (wave === 0) return;
+  const parameter = optics * VOLUME_CHROMA_PARAMETER_COUNT;
+  // Aqueous and cryogenic bodies can carry a readable cool reflection; oil
+  // remains a little broader and quieter, while corrosive hue stays governed
+  // by its luminance-safe chroma step below.
+  const strength = optics === RenderOptics.Aqueous || optics === RenderOptics.CryogenicLiquid
+    ? 0.095
+    : optics === RenderOptics.Oily ? 0.075
+      : optics === RenderOptics.Corrosive ? 0.045
+        : optics === RenderOptics.MetallicLiquid ? 0.065 : 0.070;
+  const amount = Math.abs(wave) * support * strength;
+  if (wave > 0) {
+    color[0] += (255 - color[0]) * VOLUME_CHROMA_PARAMETERS[parameter] * amount;
+    color[1] += (255 - color[1]) * VOLUME_CHROMA_PARAMETERS[parameter + 1] * amount;
+    color[2] += (255 - color[2]) * VOLUME_CHROMA_PARAMETERS[parameter + 2] * amount;
+  } else {
+    color[0] *= 1 - VOLUME_CHROMA_PARAMETERS[parameter + 3] * amount;
+    color[1] *= 1 - VOLUME_CHROMA_PARAMETERS[parameter + 4] * amount;
+    color[2] *= 1 - VOLUME_CHROMA_PARAMETERS[parameter + 5] * amount;
+  }
+  compressPeak(color);
 }
 
 export function applyCanvasLiquidVolumeChroma(
