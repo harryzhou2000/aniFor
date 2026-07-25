@@ -12,6 +12,7 @@ const RELIEF_X = new Int8Array(OPTICS_PROFILE_COUNT);
 const RELIEF_Y = new Int8Array(OPTICS_PROFILE_COUNT);
 const RELIEF_STRENGTH = new Float32Array(OPTICS_PROFILE_COUNT);
 const INTERIOR_COHESION = new Float32Array(OPTICS_PROFILE_COUNT);
+const DEEP_INTERIOR_COHESION = new Float32Array(OPTICS_PROFILE_COUNT);
 const BODY_DEPTH = new Float32Array(OPTICS_PROFILE_COUNT);
 const BODY_RELIEF = new Float32Array(OPTICS_PROFILE_COUNT);
 const BODY_SPECULAR = new Float32Array(OPTICS_PROFILE_COUNT);
@@ -30,6 +31,7 @@ for (let index = 0; index < OPTICS_PROFILE_COUNT; index++) {
   let axisY = 1;
   let strength = 6.5;
   let cohesion = 0.28;
+  let deepCohesion = 0.48;
   let bodyDepth = 10;
   let bodyRelief = 0.50;
   let bodySpecular = 1.0;
@@ -43,11 +45,13 @@ for (let index = 0; index < OPTICS_PROFILE_COUNT; index++) {
   let absorbBlue = 0.68;
   if (isGranularOptics(optics) || profile === RenderProfile.Granular) {
     axisX = 0; axisY = 0; strength = 0; cohesion = 0;
+    deepCohesion = 0;
     bodyDepth = 4; bodyRelief = 0.20; bodySpecular = 0.35; bodyEdge = 0.50;
     tintRed = 0.90; tintGreen = 0.90; tintBlue = 0.85;
     bodyThickness = 10; absorbRed = 0.82; absorbGreen = 0.78; absorbBlue = 0.72;
   } else if (optics === RenderOptics.SmoothRigid || optics === RenderOptics.Cellular) {
     axisX = 2; axisY = 1; strength = 7.0; cohesion = 0.46;
+    deepCohesion = 0.78;
     // Thick rigid bodies are the primary normal-fit solid surface. Give their
     // already-proven broad relief enough reflected range to read as material
     // volume rather than a neutral flat card; alpha and every contour remain
@@ -57,21 +61,25 @@ for (let index = 0; index < OPTICS_PROFILE_COUNT; index++) {
     bodyThickness = 23; absorbRed = 0.94; absorbGreen = 0.84; absorbBlue = 0.70;
   } else if (optics === RenderOptics.Organic) {
     axisX = 1; axisY = 4; strength = 6.0; cohesion = 0.30;
+    deepCohesion = 0.56;
     bodyDepth = 11; bodyRelief = 0.45; bodySpecular = 1.5; bodyEdge = 1.2;
     tintRed = 0.65; tintGreen = 1.20; tintBlue = 0.55;
     bodyThickness = 18; absorbRed = 0.94; absorbGreen = 0.72; absorbBlue = 0.96;
   } else if (optics === RenderOptics.Device) {
     axisX = 4; axisY = 0; strength = 4.5; cohesion = 0.40;
+    deepCohesion = 0.70;
     bodyDepth = 17; bodyRelief = 0.60; bodySpecular = 3.0; bodyEdge = 2.2;
     tintRed = 0.40; tintGreen = 1.15; tintBlue = 1.65;
     bodyThickness = 25; absorbRed = 1.00; absorbGreen = 0.84; absorbBlue = 0.62;
   } else if (optics === RenderOptics.Radioactive) {
     axisX = 3; axisY = -2; strength = 5.5; cohesion = 0.26;
+    deepCohesion = 0.50;
     bodyDepth = 14; bodyRelief = 0.55; bodySpecular = 2.4; bodyEdge = 1.7;
     tintRed = 0.35; tintGreen = 1.45; tintBlue = 0.70;
     bodyThickness = 21; absorbRed = 0.96; absorbGreen = 0.62; absorbBlue = 0.92;
   } else if (optics === RenderOptics.TranslucentRigid) {
     axisX = 2; axisY = 1; strength = 6.0; cohesion = 0.50;
+    deepCohesion = 0.70;
     // Keep the body absorption restrained so Ice's low-alpha wall facets retain
     // their signed positive/negative redistribution after Uint8 composition.
     bodyDepth = 8; bodyRelief = 0.35; bodySpecular = 3.4; bodyEdge = 2.8;
@@ -79,21 +87,25 @@ for (let index = 0; index < OPTICS_PROFILE_COUNT; index++) {
     bodyThickness = 13; absorbRed = 1.00; absorbGreen = 0.78; absorbBlue = 0.54;
   } else if (profile === RenderProfile.Rigid) {
     axisX = 2; axisY = 1; strength = 7.0; cohesion = 0.46;
+    deepCohesion = 0.78;
     bodyDepth = 15; bodyRelief = 0.65; bodySpecular = 4.0; bodyEdge = 1.8;
     tintRed = 0.50; tintGreen = 0.90; tintBlue = 1.35;
     bodyThickness = 23; absorbRed = 0.94; absorbGreen = 0.84; absorbBlue = 0.70;
   } else if (profile === RenderProfile.Organic) {
     axisX = 1; axisY = 4; strength = 6.0; cohesion = 0.30;
+    deepCohesion = 0.56;
     bodyDepth = 11; bodyRelief = 0.45; bodySpecular = 1.5; bodyEdge = 1.2;
     tintRed = 0.65; tintGreen = 1.20; tintBlue = 0.55;
     bodyThickness = 18; absorbRed = 0.94; absorbGreen = 0.72; absorbBlue = 0.96;
   } else if (profile === RenderProfile.Device) {
     axisX = 4; axisY = 0; strength = 4.5; cohesion = 0.40;
+    deepCohesion = 0.70;
     bodyDepth = 17; bodyRelief = 0.60; bodySpecular = 3.0; bodyEdge = 2.2;
     tintRed = 0.40; tintGreen = 1.15; tintBlue = 1.65;
     bodyThickness = 25; absorbRed = 1.00; absorbGreen = 0.84; absorbBlue = 0.62;
   } else if (profile === RenderProfile.Radioactive) {
     axisX = 3; axisY = -2; strength = 5.5; cohesion = 0.26;
+    deepCohesion = 0.50;
     bodyDepth = 14; bodyRelief = 0.55; bodySpecular = 2.4; bodyEdge = 1.7;
     tintRed = 0.35; tintGreen = 1.45; tintBlue = 0.70;
     bodyThickness = 21; absorbRed = 0.96; absorbGreen = 0.62; absorbBlue = 0.92;
@@ -102,6 +114,7 @@ for (let index = 0; index < OPTICS_PROFILE_COUNT; index++) {
   RELIEF_Y[index] = axisY;
   RELIEF_STRENGTH[index] = strength;
   INTERIOR_COHESION[index] = cohesion;
+  DEEP_INTERIOR_COHESION[index] = deepCohesion;
   BODY_DEPTH[index] = bodyDepth;
   BODY_RELIEF[index] = bodyRelief;
   BODY_SPECULAR[index] = bodySpecular;
@@ -133,9 +146,27 @@ export function canvasSolidRelief(
   return SMOOTH_TRIANGLE_128[phase] * RELIEF_STRENGTH[index];
 }
 
-/** RGB-only attenuation of cell-frequency styling in proven solid interiors. */
-export function canvasSolidInteriorCohesion(profile: number, optics: number): number {
-  return INTERIOR_COHESION[optics * PROFILE_COUNT + profile];
+/**
+ * RGB-only attenuation of cell-frequency styling in proven solid interiors.
+ *
+ * The first exact interior layer retains its established response.  Only a
+ * cell already proven deep by the phase-local optical-depth field trades more
+ * micro texture for the existing broad body relief, so the renderer never
+ * erases a thin stroke, authored hole, contact, or contour to make a block
+ * appear smoother.
+ */
+export function canvasSolidInteriorCohesion(
+  profile: number,
+  optics: number,
+  opticalDepthByte = 6,
+  opticalDepthEnabled = true,
+): number {
+  const index = optics * PROFILE_COUNT + profile;
+  const cohesion = INTERIOR_COHESION[index];
+  if (!opticalDepthEnabled || opticalDepthByte <= 6) return cohesion;
+  const progress = Math.max(0, Math.min(1, (opticalDepthByte - 6) / 36));
+  const smoothProgress = progress * progress * (3 - 2 * progress);
+  return cohesion + (DEEP_INTERIOR_COHESION[index] - cohesion) * smoothProgress;
 }
 
 /** Adds solid lighting and uniformly compresses only over-range highlights. */

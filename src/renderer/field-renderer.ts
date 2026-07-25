@@ -1704,7 +1704,9 @@ export class MaterialRenderer {
             fields.powderSurface.bytes, pixel, powderBulkDepth, this.powderBodyDepthEnabled, optics,
           );
           if (denseSolidInterior && applicableTraits === 0 && !info.emissive) {
-            const cohesion = canvasSolidInteriorCohesion(profile, optics);
+            const cohesion = canvasSolidInteriorCohesion(
+              profile, optics, solidOpticalDepth, this.solidOpticalDepthEnabled,
+            );
             this.styledColor[0] += (red - this.styledColor[0]) * cohesion;
             this.styledColor[1] += (green - this.styledColor[1]) * cohesion;
             this.styledColor[2] += (blue - this.styledColor[2]) * cohesion;

@@ -1551,6 +1551,19 @@ float solidInteriorMicroGain(float optics, float profile) {
   if (optics == 12.0) return 0.48;
   return 0.72;
 }
+float solidDeepInteriorMicroGain(float optics, float profile) {
+  // Once the existing exact-species thickness field proves a genuinely broad
+  // body, preserve the macro optical relief over cell-scale albedo. This is an
+  // arithmetic-only complement to the Canvas depth ramp; no contour, support,
+  // or material selection reads this value.
+  if (granularOptics(optics) > 0.5 || profile == 1.0) return 1.0;
+  if (optics == 8.0 || optics == 19.0 || (optics < 0.5 && profile == 2.0)) return 0.22;
+  if (optics == 9.0 || (optics < 0.5 && profile == 3.0)) return 0.44;
+  if (optics == 10.0 || (optics < 0.5 && profile == 5.0)) return 0.30;
+  if (optics == 11.0 || (optics < 0.5 && profile == 4.0)) return 0.50;
+  if (optics == 12.0) return 0.30;
+  return 0.52;
+}
 float solidCurvatureGain(float optics, float profile) {
   if (granularOptics(optics) > 0.5 || profile == 1.0) return 0.0;
   // Runtime WebGL samples the curve at a different composed footprint from the
@@ -2302,6 +2315,14 @@ void main() {
         * (1.0 - smoothstep(0.08, 0.24, suspensionColorDistance));
     }
     float interiorMicroGain = mix(1.0, solidInteriorMicroGain(optics, profile), solidInterior);
+    if (uSolidOpticalDepth > 0.5 && solidOpticalDepth > 6.0 / 255.0) {
+      // Surface and first-inner-layer micro detail remain unchanged. The
+      // phase-local depth byte has already rejected world edges, holes, walls,
+      // unlike seams, and thin structures before this deeper-core blend runs.
+      float coreDepth = smoothstep(6.0 / 255.0, 42.0 / 255.0, solidOpticalDepth);
+      float deepMicroGain = mix(1.0, solidDeepInteriorMicroGain(optics, profile), solidInterior);
+      interiorMicroGain = mix(interiorMicroGain, deepMicroGain, coreDepth);
+    }
     // The bilinear solid field peaks below one for isolated and one-cell-thick
     // semantic strokes. Use a wider iso shoulder so those cells
     // remain visibly brush-sized while the same density field rounds chunk

@@ -48,6 +48,26 @@ describe('Canvas solid relief', () => {
       .toBeGreaterThan(canvasSolidInteriorCohesion(RenderProfile.Rigid, RenderOptics.SmoothRigid));
   });
 
+  it('smooths only field-proven thick rigid cores beyond their first interior layer', () => {
+    const firstInterior = canvasSolidInteriorCohesion(
+      RenderProfile.Rigid, RenderOptics.SmoothRigid, 6,
+    );
+    const deepCore = canvasSolidInteriorCohesion(
+      RenderProfile.Rigid, RenderOptics.SmoothRigid, 42,
+    );
+    const disabled = canvasSolidInteriorCohesion(
+      RenderProfile.Rigid, RenderOptics.SmoothRigid, 42, false,
+    );
+    const granular = canvasSolidInteriorCohesion(
+      RenderProfile.Granular, RenderOptics.RoughGranular, 255,
+    );
+
+    expect(deepCore).toBeGreaterThan(firstInterior);
+    expect(deepCore).toBeLessThan(0.8);
+    expect(disabled).toBe(firstInterior);
+    expect(granular).toBe(0);
+  });
+
   it('compresses over-range solid highlights uniformly instead of clipping a channel', () => {
     const color = new Float32Array([253, 157, 24]);
     const litRatio = (253 + 9) / (157 + 9);

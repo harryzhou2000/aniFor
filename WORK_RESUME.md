@@ -930,3 +930,21 @@ The next material-primary slice is wider exact coverage of palette-led catalog f
   Both the project-local Emscripten and ccache restores were hits; the compiler
   cache save correctly skipped its already-existing exact key. An independent
   live check confirmed that revision's complete 19-resource Pages closure.
+
+## Current deep-rigid-core smoothing checkpoint
+
+- Dense exact-species rigid interiors now turn down their remaining
+  cell-frequency albedo progressively only after the existing phase-local
+  solid optical-depth byte proves they are deeper than the first inner layer.
+  Smooth rigid, organic, device, radioactive, and translucent families retain
+  distinct bounded residual texture; granular matter remains an exact no-op.
+- Canvas and WebGL use matching depth ramps with no new texture, field, pass,
+  upload, allocation, or output-scale work. The effect is RGB-only and is
+  downstream of the pre-existing exact-material/wall/hole/contact guards, so
+  contours, one-cell structures, authored gaps, native walls, semantics,
+  physics, and saves remain unchanged.
+- Validation: focused Canvas/solid-depth/Pixi tests, the complete `114`-file
+  / `722`-test suite, the 834-module production static-closure build, and
+  forced Canvas2D plus WebGL normal-fit showcase captures all pass. The real
+  true-8× browser gate reached reference-ready in `9488 ms` and fence-backed
+  8× ready in `25145 ms` without browser errors.

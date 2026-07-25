@@ -551,14 +551,22 @@ describe('Pixi presenter startup configuration', () => {
     const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
     const sampleStart = source.indexOf('// Solid thickness is the third phase-exclusive occupant');
     const sampleEnd = source.indexOf('if (family == 4.0 && boundaryStability', sampleStart);
-    const shadingStart = source.indexOf('if (uSolidOpticalDepth > 0.5');
+    const coreStart = source.indexOf('float coreDepth = smoothstep(6.0 / 255.0, 42.0 / 255.0, solidOpticalDepth)');
+    const coreEnd = source.indexOf('// The bilinear solid field peaks below one for isolated', coreStart);
+    const shadingStart = source.indexOf('float linearThickness');
     const shadingEnd = source.indexOf('// Reuse the semantic Hermite normal', shadingStart);
     const sample = source.slice(sampleStart, sampleEnd);
+    const core = source.slice(coreStart, coreEnd);
     const shading = source.slice(shadingStart, shadingEnd);
 
     expect(sampleStart).toBeGreaterThan(0);
     expect(sample).toContain('solidOpticalDepth = boundaryStabilityAt(fieldUv)');
     expect(sample).not.toContain('uSolidOpticalDepthTexture');
+    expect(coreStart).toBeGreaterThan(0);
+    expect(coreEnd).toBeGreaterThan(coreStart);
+    expect(core).toContain('solidDeepInteriorMicroGain(optics, profile)');
+    expect(core).not.toContain('texture(');
+    expect(core).not.toMatch(/\balpha\s*[+*]?=/);
     expect(shading).toContain('(solidOpticalDepth * 255.0 - 6.0) / 249.0');
     expect(shading).toContain('thicknessAbsorption');
     expect(shading).toContain('solidBodyMacroKey(optics)');
