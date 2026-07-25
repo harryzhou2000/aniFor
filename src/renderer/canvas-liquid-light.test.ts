@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   applyCanvasLiquidBodyOptics, applyCanvasLiquidInterfaceMeniscus, applyCanvasLiquidMacroSheen, applyCanvasLiquidVolumeChroma,
-  canvasLiquidContourScale, canvasLiquidEmissionExposure,
+  canvasLiquidBodySupport, canvasLiquidContourScale, canvasLiquidEmissionExposure,
   canvasLiquidEmissionSurfaceExposure, canvasLiquidFieldRelief, canvasLiquidSpeciesRelief,
   canvasLiquidMacroWave, canvasLiquidSurfaceExposure, canvasLiquidVolumeChromaResponse,
 } from './canvas-liquid-light';
@@ -49,6 +49,30 @@ describe('Canvas liquid field-owned light', () => {
     const response = (color: Float32Array) => Array.from(color)
       .reduce((sum, channel, index) => sum + Math.abs(channel - [100, 130, 160][index]), 0);
     expect(response(molten)).toBeLessThan(response(water) * 0.5);
+  });
+
+  it('shares exact dense-body support across body, macro, and chroma styling', () => {
+    const support = canvasLiquidBodySupport(255, 8);
+    expect(support).toBe(1);
+    expect(canvasLiquidBodySupport(160, 8)).toBe(0);
+    expect(canvasLiquidBodySupport(255, 2)).toBe(0);
+
+    const source = [53, 169, 205, 91] as const;
+    const defaultBody = new Float32Array(source);
+    const sharedBody = new Float32Array(source);
+    applyCanvasLiquidBodyOptics(defaultBody, RenderOptics.Aqueous, 255, 8, 0.12, 0.7);
+    applyCanvasLiquidBodyOptics(sharedBody, RenderOptics.Aqueous, 255, 8, 0.12, 0.7, support);
+    expect(sharedBody).toEqual(defaultBody);
+
+    const defaultSheen = new Float32Array(source);
+    const sharedSheen = new Float32Array(source);
+    applyCanvasLiquidMacroSheen(defaultSheen, RenderOptics.Aqueous, 255, 8, 0.6);
+    applyCanvasLiquidMacroSheen(sharedSheen, RenderOptics.Aqueous, 255, 8, 0.6, support);
+    expect(sharedSheen).toEqual(defaultSheen);
+
+    expect(canvasLiquidVolumeChromaResponse(
+      RenderOptics.Aqueous, 255, 8, 0.12, 0.6, support,
+    )).toBe(canvasLiquidVolumeChromaResponse(RenderOptics.Aqueous, 255, 8, 0.12, 0.6));
   });
 
   it('keeps macro variation gradual and preserves highlight headroom', () => {

@@ -841,3 +841,23 @@ The next material-primary slice is wider exact coverage of palette-led catalog f
   after the successful build, and reported `270/271` cacheable calls. Build,
   deploy, and CI live verification all passed. An independent live check then
   confirmed the exact full revision and all 19 runtime assets at Pages.
+
+## Current Canvas sparse-liquid efficiency checkpoint
+
+- Canvas liquid styling now computes its exact dense-body eligibility once per
+  authoritative liquid cell and shares it with body optics, macro sheen, and
+  volume chroma. Field-sparse droplets consequently skip the otherwise-unused
+  animated macro-wave work; cohesive bodies retain the exact existing signal.
+  Optical-depth styling still runs with a zero chroma response where required,
+  so the change does not suppress established depth absorption.
+- The optimization is presentation-preserving: the support scalar is the same
+  module-static field-alpha/neighbour lookup already used by each helper, and
+  all affected decisions remain RGB-only. It adds no fields, texture reads,
+  uploads, passes, allocations, output-scale work, or WebGL changes; alpha,
+  support, ownership, topology, physics, and native saves remain untouched.
+- Focused coverage proves default and shared support produce byte-identical
+  body/macro colours and identical chroma response, plus sparse/dense support
+  controls. Local validation passes the focused `20`-test liquid suite, the
+  complete `114`-file / `720`-test suite, TypeScript, and the 834-module
+  production static-closure build. Next: commit, push, manually deploy with
+  the existing project-local compiler cache, and independently re-check Pages.

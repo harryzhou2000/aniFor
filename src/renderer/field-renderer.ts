@@ -21,7 +21,8 @@ import {
   applyCanvasLiquidInterfaceMeniscus,
   applyCanvasLiquidMacroSheen,
   applyCanvasLiquidVolumeChroma,
-  canvasLiquidContourScale, canvasLiquidMacroWave, canvasLiquidVolumeChromaResponse,
+  canvasLiquidBodySupport, canvasLiquidContourScale, canvasLiquidMacroWave,
+  canvasLiquidVolumeChromaResponse,
   canvasLiquidEmissionExposure, canvasLiquidFieldRelief,
   canvasLiquidEmissionSurfaceExposure, canvasLiquidSpeciesRelief, canvasLiquidSurfaceExposure,
 } from './canvas-liquid-light';
@@ -1310,6 +1311,8 @@ export class MaterialRenderer {
       } else if (material === Material.Oil) {
         const mask = materialNeighbourMask(this.rendered, width, height, x, y, material);
         const density = neighbourDensity(mask);
+        const liquidFieldAlpha = fields.liquid.bytes[pixel + 3];
+        const liquidBodySupport = canvasLiquidBodySupport(liquidFieldAlpha, density);
         const contour = contourLight(mask) * liquidContourScale;
         const flow = velocities ? velocities[index * 2] * 0.12 : 0;
         const sheen = Math.sin(visualTime * 0.0017 + x * 0.055 + y * 0.025 + flow) * 5 + contour;
@@ -1318,8 +1321,8 @@ export class MaterialRenderer {
         this.styledColor[1] = 74 - depth * 24 + sheen * 0.65;
         this.styledColor[2] = 39 - depth * 14 + sheen * 0.3;
         applyCanvasLiquidBodyOptics(
-          this.styledColor, optics, fields.liquid.bytes[pixel + 3], density,
-          liquidFieldRelief, liquidSurfaceExposure,
+          this.styledColor, optics, liquidFieldAlpha, density,
+          liquidFieldRelief, liquidSurfaceExposure, liquidBodySupport,
         );
         if (this.liquidVolumeChromaEnabled && liquidSpeciesContact
           && !liquidForeignMatterContact && wall === 0) {
@@ -1328,15 +1331,16 @@ export class MaterialRenderer {
           );
         }
         if (this.liquidVolumeChromaEnabled && !liquidSpeciesContact) {
-          const macroWave = wall === 0
-            ? canvasLiquidMacroWave(x, y, visualTime, material) : (sheen - contour) / 5;
-          if (wall === 0) applyCanvasLiquidMacroSheen(
-            this.styledColor, optics, fields.liquid.bytes[pixel + 3], density, macroWave,
+          const macroWave = liquidBodySupport > 0
+            ? (wall === 0 ? canvasLiquidMacroWave(x, y, visualTime, material) : (sheen - contour) / 5)
+            : 0;
+          if (liquidBodySupport > 0 && wall === 0) applyCanvasLiquidMacroSheen(
+            this.styledColor, optics, liquidFieldAlpha, density, macroWave, liquidBodySupport,
           );
           applyCanvasLiquidVolumeChroma(
             this.styledColor, optics, canvasLiquidVolumeChromaResponse(
-              optics, fields.liquid.bytes[pixel + 3], density,
-              liquidFieldRelief, macroWave,
+              optics, liquidFieldAlpha, density,
+              liquidFieldRelief, macroWave, liquidBodySupport,
             ),
             this.liquidOpticalDepthEnabled ? this.boundaryStability[index] : 0,
           );
@@ -1397,6 +1401,8 @@ export class MaterialRenderer {
       } else if (material === Material.Lava) {
         const mask = materialNeighbourMask(this.rendered, width, height, x, y, material);
         const density = neighbourDensity(mask);
+        const liquidFieldAlpha = fields.liquid.bytes[pixel + 3];
+        const liquidBodySupport = canvasLiquidBodySupport(liquidFieldAlpha, density);
         const contour = contourLight(mask) * liquidContourScale;
         const kelvin = temperatures ? temperatures[index] / 10 : 1450;
         const heat = clamp((kelvin - 700) / 1100, 0, 1);
@@ -1406,8 +1412,8 @@ export class MaterialRenderer {
         this.styledColor[1] = 48 + pulse + heat * 110 + contour * 0.5;
         this.styledColor[2] = 8 + heat * 48;
         applyCanvasLiquidBodyOptics(
-          this.styledColor, optics, fields.liquid.bytes[pixel + 3], density,
-          liquidFieldRelief, liquidSurfaceExposure,
+          this.styledColor, optics, liquidFieldAlpha, density,
+          liquidFieldRelief, liquidSurfaceExposure, liquidBodySupport,
         );
         if (this.lavaAncestryStylingEnabled && presentationState) {
           applyCanvasLavaAncestryStyle(
@@ -1447,6 +1453,8 @@ export class MaterialRenderer {
       } else if (material === Material.Acid) {
         const mask = materialNeighbourMask(this.rendered, width, height, x, y, material);
         const density = neighbourDensity(mask);
+        const liquidFieldAlpha = fields.liquid.bytes[pixel + 3];
+        const liquidBodySupport = canvasLiquidBodySupport(liquidFieldAlpha, density);
         const contour = contourLight(mask) * liquidContourScale;
         const depth = density / 8;
         const shimmer = Math.sin(visualTime * 0.0024 + x * 0.075 + y * 0.035) * 6 + contour;
@@ -1454,8 +1462,8 @@ export class MaterialRenderer {
         this.styledColor[1] = 94 - depth * 22 + shimmer * 0.7;
         this.styledColor[2] = 232 - depth * 24 + shimmer;
         applyCanvasLiquidBodyOptics(
-          this.styledColor, optics, fields.liquid.bytes[pixel + 3], density,
-          liquidFieldRelief, liquidSurfaceExposure,
+          this.styledColor, optics, liquidFieldAlpha, density,
+          liquidFieldRelief, liquidSurfaceExposure, liquidBodySupport,
         );
         if (this.liquidVolumeChromaEnabled && liquidSpeciesContact
           && !liquidForeignMatterContact && wall === 0) {
@@ -1464,15 +1472,16 @@ export class MaterialRenderer {
           );
         }
         if (this.liquidVolumeChromaEnabled && !liquidSpeciesContact) {
-          const macroWave = wall === 0
-            ? canvasLiquidMacroWave(x, y, visualTime, material) : (shimmer - contour) / 6;
-          if (wall === 0) applyCanvasLiquidMacroSheen(
-            this.styledColor, optics, fields.liquid.bytes[pixel + 3], density, macroWave,
+          const macroWave = liquidBodySupport > 0
+            ? (wall === 0 ? canvasLiquidMacroWave(x, y, visualTime, material) : (shimmer - contour) / 6)
+            : 0;
+          if (liquidBodySupport > 0 && wall === 0) applyCanvasLiquidMacroSheen(
+            this.styledColor, optics, liquidFieldAlpha, density, macroWave, liquidBodySupport,
           );
           applyCanvasLiquidVolumeChroma(
             this.styledColor, optics, canvasLiquidVolumeChromaResponse(
-              optics, fields.liquid.bytes[pixel + 3], density,
-              liquidFieldRelief, macroWave,
+              optics, liquidFieldAlpha, density,
+              liquidFieldRelief, macroWave, liquidBodySupport,
             ),
             this.liquidOpticalDepthEnabled ? this.boundaryStability[index] : 0,
           );
@@ -1519,6 +1528,8 @@ export class MaterialRenderer {
       } else if (material === Material.Water) {
         const mask = materialNeighbourMask(this.rendered, width, height, x, y, material);
         const density = neighbourDensity(mask);
+        const liquidFieldAlpha = fields.liquid.bytes[pixel + 3];
+        const liquidBodySupport = canvasLiquidBodySupport(liquidFieldAlpha, density);
         const contour = contourLight(mask) * liquidContourScale;
         const depth = density / 8;
         const flow = velocities ? velocities[index * 2] * 0.18 : 0;
@@ -1528,8 +1539,8 @@ export class MaterialRenderer {
         this.styledColor[1] = 169 - depth * 56 + light;
         this.styledColor[2] = 205 - depth * 40 + light;
         applyCanvasLiquidBodyOptics(
-          this.styledColor, optics, fields.liquid.bytes[pixel + 3], density,
-          liquidFieldRelief, liquidSurfaceExposure,
+          this.styledColor, optics, liquidFieldAlpha, density,
+          liquidFieldRelief, liquidSurfaceExposure, liquidBodySupport,
         );
         if (this.liquidVolumeChromaEnabled && liquidSpeciesContact
           && !liquidForeignMatterContact && wall === 0) {
@@ -1538,15 +1549,16 @@ export class MaterialRenderer {
           );
         }
         if (this.liquidVolumeChromaEnabled && !liquidSpeciesContact) {
-          const macroWave = wall === 0
-            ? canvasLiquidMacroWave(x, y, visualTime, material) : shimmer / 4;
-          if (wall === 0) applyCanvasLiquidMacroSheen(
-            this.styledColor, optics, fields.liquid.bytes[pixel + 3], density, macroWave,
+          const macroWave = liquidBodySupport > 0
+            ? (wall === 0 ? canvasLiquidMacroWave(x, y, visualTime, material) : shimmer / 4)
+            : 0;
+          if (liquidBodySupport > 0 && wall === 0) applyCanvasLiquidMacroSheen(
+            this.styledColor, optics, liquidFieldAlpha, density, macroWave, liquidBodySupport,
           );
           applyCanvasLiquidVolumeChroma(
             this.styledColor, optics, canvasLiquidVolumeChromaResponse(
-              optics, fields.liquid.bytes[pixel + 3], density,
-              liquidFieldRelief, macroWave,
+              optics, liquidFieldAlpha, density,
+              liquidFieldRelief, macroWave, liquidBodySupport,
             ),
             this.liquidOpticalDepthEnabled ? this.boundaryStability[index] : 0,
           );
@@ -1601,14 +1613,16 @@ export class MaterialRenderer {
         } else if (info.phase === RenderPhase.Liquid) {
           const mask = materialNeighbourMask(this.rendered, width, height, x, y, material);
           const density = neighbourDensity(mask);
+          const liquidFieldAlpha = fields.liquid.bytes[pixel + 3];
+          const liquidBodySupport = canvasLiquidBodySupport(liquidFieldAlpha, density);
           const contour = contourLight(mask) * liquidContourScale;
           const shimmer = Math.sin(visualTime * 0.0018 + x * 0.055 + y * 0.025) * 4 + contour;
           shadeCanvasOpticalVolume(
             this.styledColor, red, green, blue, optics, 'liquid', density, shimmer,
           );
           applyCanvasLiquidBodyOptics(
-            this.styledColor, optics, fields.liquid.bytes[pixel + 3], density,
-            liquidFieldRelief, liquidSurfaceExposure,
+            this.styledColor, optics, liquidFieldAlpha, density,
+            liquidFieldRelief, liquidSurfaceExposure, liquidBodySupport,
           );
           if (this.liquidVolumeChromaEnabled && applicableTraits === 0
             && !info.emissive && liquidSpeciesContact && !liquidForeignMatterContact && wall === 0) {
@@ -1618,15 +1632,16 @@ export class MaterialRenderer {
           }
           if (this.liquidVolumeChromaEnabled && applicableTraits === 0
             && !info.emissive && !liquidSpeciesContact) {
-            const macroWave = wall === 0
-              ? canvasLiquidMacroWave(x, y, visualTime, material) : (shimmer - contour) / 4;
-            if (wall === 0) applyCanvasLiquidMacroSheen(
-              this.styledColor, optics, fields.liquid.bytes[pixel + 3], density, macroWave,
+            const macroWave = liquidBodySupport > 0
+              ? (wall === 0 ? canvasLiquidMacroWave(x, y, visualTime, material) : (shimmer - contour) / 4)
+              : 0;
+            if (liquidBodySupport > 0 && wall === 0) applyCanvasLiquidMacroSheen(
+              this.styledColor, optics, liquidFieldAlpha, density, macroWave, liquidBodySupport,
             );
             applyCanvasLiquidVolumeChroma(
               this.styledColor, optics, canvasLiquidVolumeChromaResponse(
-                optics, fields.liquid.bytes[pixel + 3], density,
-                liquidFieldRelief, macroWave,
+                optics, liquidFieldAlpha, density,
+                liquidFieldRelief, macroWave, liquidBodySupport,
               ),
               this.liquidOpticalDepthEnabled ? this.boundaryStability[index] : 0,
             );

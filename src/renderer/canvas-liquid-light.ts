@@ -60,6 +60,15 @@ setBodyParameters(RenderOptics.MetallicLiquid, 0.10, 1.2, 20, 20, 19);
 setBodyParameters(RenderOptics.ViscousLiquid, 0.095, 0.72, 13, 15, 16);
 
 /**
+ * Shared exact dense-body eligibility for Canvas liquid styling. Callers can
+ * compute it before an animated macro wave so sparse droplets avoid work that
+ * every downstream body helper would otherwise reject anyway.
+ */
+export function canvasLiquidBodySupport(fieldAlpha: number, neighbourCount: number): number {
+  return BODY_ALPHA_SUPPORT[fieldAlpha] * BODY_NEIGHBOUR_SUPPORT[neighbourCount];
+}
+
+/**
  * Gives an authoritative Canvas liquid cell field-owned body depth and a
  * continuous exposed meniscus. Every input is already computed by the caller;
  * this helper changes RGB only and performs no sampling or allocation.
@@ -71,8 +80,9 @@ export function applyCanvasLiquidBodyOptics(
   neighbourCount: number,
   signedRelief: number,
   surfaceExposure: number,
+  bodySupport = canvasLiquidBodySupport(fieldAlpha, neighbourCount),
 ): void {
-  const support = BODY_ALPHA_SUPPORT[fieldAlpha] * BODY_NEIGHBOUR_SUPPORT[neighbourCount];
+  const support = bodySupport;
   if (support <= 0) return;
   const parameter = optics * BODY_PARAMETER_COUNT;
   const absorption = BODY_PARAMETERS[parameter];
@@ -105,9 +115,10 @@ export function canvasLiquidVolumeChromaResponse(
   neighbourCount: number,
   signedRelief: number,
   macroWave: number,
+  bodySupport = canvasLiquidBodySupport(fieldAlpha, neighbourCount),
 ): number {
   if (optics === RenderOptics.Molten) return 0;
-  const support = BODY_ALPHA_SUPPORT[fieldAlpha] * BODY_NEIGHBOUR_SUPPORT[neighbourCount];
+  const support = bodySupport;
   if (support <= 0) return 0;
   const boundedRelief = clamp(signedRelief, RELIEF_DARK_LIMIT, RELIEF_LIGHT_LIMIT);
   // The established WebGL composition gives broad reflected water and
@@ -164,9 +175,10 @@ export function applyCanvasLiquidMacroSheen(
   fieldAlpha: number,
   neighbourCount: number,
   macroWave: number,
+  bodySupport = canvasLiquidBodySupport(fieldAlpha, neighbourCount),
 ): void {
   if (optics === RenderOptics.Molten) return;
-  const support = BODY_ALPHA_SUPPORT[fieldAlpha] * BODY_NEIGHBOUR_SUPPORT[neighbourCount];
+  const support = bodySupport;
   if (support <= 0) return;
   const wave = clamp(macroWave, -1, 1);
   if (wave === 0) return;
