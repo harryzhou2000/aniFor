@@ -901,3 +901,25 @@ The next material-primary slice is wider exact coverage of palette-led catalog f
   long-running paired powder-body audit should be run in a normal terminal
   before a release-scale 8× cycle; this tool environment cut its long Chrome
   session short, and the verified temporary audit profile was closed manually.
+
+## Current normal-fit showcase review and aqueous-rim checkpoint
+
+- `npm run audit:showcase-screenshot` now captures the paused, deterministic
+  material showcase directly from the already-built bundle in forced Canvas2D
+  or WebGL. It gives visual review one coherent scene (packed powder, connected
+  Water/Oil, solids, gas, energy, plant, device, and radioactive matter) rather
+  than requiring a sparse diagnostic atlas or a Vite server. The public
+  showcase remains unchanged: only the opt-in audit query installs the frozen
+  diagnostic clock.
+- Fresh production captures showed that Canvas2D's field-proven exposed Water
+  lip was too faint beside WebGL's existing Fresnel/top-lip response. Aqueous
+  Canvas body optics now use a stronger blue-forward rim (`+9/+23/+31` RGB at
+  maximum eligible exposure). It is still limited to a dense authoritative
+  aqueous body with an actual field-proven empty surface; it adds no sampling,
+  field, pass, allocation, alpha/support/ownership, topology, physics, or
+  output-scale work. Sparse droplets, dense pinholes, unlike-liquid seams,
+  Molten/Lava, and non-surface cores remain protected by the existing gates.
+- Targeted helper and audit-query tests pass, as do fresh built-bundle Canvas2D
+  and WebGL showcase captures with zero browser errors. Next checkpoint: run
+  the complete suite, commit, and push; use the retained showcase command for
+  subsequent composed-material art direction before selecting the next family.

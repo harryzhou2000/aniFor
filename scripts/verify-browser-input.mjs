@@ -58,6 +58,7 @@ const materialAtlasOnly = process.argv.includes('--material-atlas-only');
 const mobileOnly = process.argv.includes('--mobile-only');
 const desktopInputOnly = process.argv.includes('--desktop-input-only');
 const quickScreenshot = process.argv.includes('--quick-screenshot');
+const showcaseScreenshotOnly = process.argv.includes('--showcase-screenshot');
 const layoutOnly = process.argv.includes('--layout-only');
 const visualScaleMatrixOnly = process.argv.includes('--visual-scale-matrix-only');
 const powderBodyOnly = process.argv.includes('--powder-body-only');
@@ -95,7 +96,7 @@ const nativeSeedGrowthOnly = process.argv.includes('--native-seed-growth-only');
 // bundle without starting Vite. That keeps screenshot evidence independent of
 // dev-server navigation timing while leaving all default audit paths unchanged.
 const productionBundle = process.argv.includes('--production-bundle');
-const usesProductionBundle = productionBundle || cellularGraphicsOnly || sensorGraphicsOnly
+const usesProductionBundle = productionBundle || showcaseScreenshotOnly || cellularGraphicsOnly || sensorGraphicsOnly
   || unusualPowderGraphicsOnly || explosivePowderGraphicsOnly || unusualSolidGraphicsOnly
   || liquidIdentityGraphicsOnly || gasIdentityGraphicsOnly || energyRadioactiveGraphicsOnly
   || organicPlantGraphicsOnly || spongeGraphicsOnly || virusGraphicsOnly || waxGraphicsOnly
@@ -107,6 +108,9 @@ const usesProductionBundle = productionBundle || cellularGraphicsOnly || sensorG
   || scaleEightOnly;
 const AUDIT_BASE_URL = usesProductionBundle ? PRODUCTION_BUNDLE_URL : ORIGIN + '/';
 const screenshotRequest = process.argv.find((argument) => argument.startsWith('--screenshot='))?.slice('--screenshot='.length);
+if (showcaseScreenshotOnly && !screenshotRequest) {
+  throw new Error('--showcase-screenshot requires --screenshot=<path>');
+}
 const SOLID_FIELD_REGIONS = [
   { name: 'warmMetalFacing', x: 389.5, y: 229, radiusX: 2, radiusY: 5 },
   { name: 'coolMetalFacing', x: 421.5, y: 229, radiusX: 1.5, radiusY: 5 },
@@ -161,7 +165,7 @@ async function main() {
       }, 15_000, 'Vite browser-audit server');
     const results = [];
     for (const mode of modes) results.push(await auditMode(mode));
-    const reducedAudit = quickScreenshot || layoutOnly || mobileOnly
+    const reducedAudit = quickScreenshot || showcaseScreenshotOnly || layoutOnly || mobileOnly
       || desktopInputOnly || visualScaleMatrixOnly || powderBodyOnly || liquidDepthOnly
       || solidDepthOnly || gasChromaOnly || surfaceContourOnly || solidFieldOnly
       || roleGraphicsOnly || cellularGraphicsOnly || sensorGraphicsOnly
@@ -241,9 +245,11 @@ async function auditMode(mode) {
     || sparkStateGraphicsOnly
     || nativeSeedGrowthOnly;
   const query = new URLSearchParams({
-    scene: 'render-lab', inputAudit: '1', renderScale: '2',
-    auditStage: startsBlank ? 'blank' : 'canonical',
-    ...(startsBlank ? { blankAudit: '1' } : {}),
+    scene: showcaseScreenshotOnly ? 'showcase' : 'render-lab', inputAudit: '1', renderScale: '2',
+    ...(showcaseScreenshotOnly ? { auditStage: 'showcase' } : {
+      auditStage: startsBlank ? 'blank' : 'canonical',
+      ...(startsBlank ? { blankAudit: '1' } : {}),
+    }),
     ...(nativeSeedGrowthOnly ? { simulation: 'native' } : {}),
     ...(mode === 'canvas2d' ? { renderer: 'canvas2d' } : {}),
   });
@@ -312,6 +318,36 @@ async function auditMode(mode) {
     }
     if (!usesProductionBundle) {
       await cdp.send('Page.navigate', { url: auditUrl });
+    }
+    if (showcaseScreenshotOnly) {
+      await waitFor(() => evaluate(cdp, `(() => {
+        const parameters = new URLSearchParams(location.search);
+        const ready = parameters.get('scene') === 'showcase'
+          && parameters.get('inputAudit') === '1'
+          && parameters.get('renderScale') === '2'
+          && document.querySelector('[data-scene="showcase"]') !== null
+          && Boolean(window.__ANIFOR_INPUT_AUDIT__);
+        if (!ready) throw new Error('Showcase page not ready: ' + JSON.stringify({
+          href: location.href,
+          readyState: document.readyState,
+          hasAuditApi: Boolean(window.__ANIFOR_INPUT_AUDIT__),
+        }));
+        return true;
+      })()`), 15_000, `material showcase (${mode})`);
+      await waitFor(() => evaluate(cdp,
+        `window.__ANIFOR_INPUT_AUDIT__.backend().backend === ${JSON.stringify(mode)}`,
+      ), 15_000, `${mode} showcase backend`);
+      const capture = await waitForStablePageCapture(cdp, `${mode} material showcase framebuffer`);
+      const screenshot = screenshotPath(mode);
+      await writeFile(screenshot, Buffer.from(capture.capture.data, 'base64'));
+      assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
+      cdp.close();
+      return {
+        backend: mode,
+        screenshot,
+        canvas: `${round(capture.canvasRect.width)}x${round(capture.canvasRect.height)}`,
+        browserErrors: errors.length,
+      };
     }
     await waitFor(() => evaluate(cdp, `(() => {
       const parameters = new URLSearchParams(location.search);

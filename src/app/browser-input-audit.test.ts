@@ -10,6 +10,7 @@ import {
 describe('browser input audit gate', () => {
   it('requires the explicit diagnostic query', () => {
     expect(browserInputAuditRequested('?scene=render-lab&inputAudit=1')).toBe(true);
+    expect(browserInputAuditRequested('?scene=showcase&inputAudit=1')).toBe(true);
     expect(browserInputAuditRequested('?scene=render-lab')).toBe(false);
     expect(browserInputAuditRequested('?inputAudit=0')).toBe(false);
   });

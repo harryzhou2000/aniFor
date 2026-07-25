@@ -37,6 +37,18 @@ Screenshots created during local review belong in ignored `.artifacts/`, for exa
 .artifacts/showcase-canvas-volume-sheen.png
 ```
 
+To capture that composed scene from the already-built bundle without relying on
+Vite, run one backend at a time:
+
+```sh
+npm run build
+npm run audit:showcase-screenshot -- --webgl-only --screenshot=.artifacts/showcase-webgl.png
+npm run audit:showcase-screenshot -- --canvas-only --screenshot=.artifacts/showcase-canvas2d.png
+```
+
+The command opts into the existing diagnostic clock only for its paused capture,
+so normal public showcase URLs retain their ordinary non-audit behavior.
+
 The real-browser audit first captures and signature-checks this deterministic
 atlas, then clears it and exercises painting, wheel/pan, resizing, and mobile
 touch. It navigates separately to the native backend for configured-source and

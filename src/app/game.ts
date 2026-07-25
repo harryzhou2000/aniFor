@@ -264,7 +264,10 @@ export class Game {
       this.seedIfEmpty();
       window.setInterval(() => this.save(), 4000);
     }
-    if (renderLab && browserInputAuditRequested()) this.installBrowserInputAudit();
+    // The showcase is a deterministic paused scene too. Giving it the same
+    // opt-in audit clock keeps production visual captures stable without
+    // changing normal gameplay or the public showcase URL.
+    if ((renderLab || materialShowcase) && browserInputAuditRequested()) this.installBrowserInputAudit();
     requestAnimationFrame(this.frame);
   }
 

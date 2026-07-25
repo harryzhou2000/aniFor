@@ -33,6 +33,22 @@ describe('Canvas liquid field-owned light', () => {
     expect(fingerprints.size).toBe(families.length);
   });
 
+  it('gives a dense exposed aqueous surface a restrained cool reflective rim', () => {
+    const source = [53, 169, 205, 91] as const;
+    const core = new Float32Array(source);
+    const surface = new Float32Array(source);
+    applyCanvasLiquidBodyOptics(core, RenderOptics.Aqueous, 255, 8, 0, 0);
+    applyCanvasLiquidBodyOptics(surface, RenderOptics.Aqueous, 255, 8, 0, 1);
+
+    expect(surface[0] - core[0]).toBeGreaterThanOrEqual(8);
+    expect(surface[1] - core[1]).toBeGreaterThanOrEqual(22);
+    expect(surface[2] - core[2]).toBeGreaterThanOrEqual(30);
+    expect(surface[2] - core[2]).toBeGreaterThan(surface[1] - core[1]);
+    expect(surface[1] - core[1]).toBeGreaterThan(surface[0] - core[0]);
+    expect(surface[3]).toBe(source[3]);
+    expect(Math.max(...surface)).toBeLessThanOrEqual(254);
+  });
+
   it('leaves isolated or field-sparse droplets unchanged and restrains molten reflection', () => {
     for (const [fieldAlpha, neighbours] of [[255, 0], [160, 8], [220, 1]] as const) {
       const color = new Float32Array([80, 120, 160]);

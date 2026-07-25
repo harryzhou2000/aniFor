@@ -51,7 +51,11 @@ const BODY_PARAMETERS = new Float32Array(RENDER_OPTICS_CLASS_COUNT * BODY_PARAME
 for (let optics = 0; optics < RENDER_OPTICS_CLASS_COUNT; optics++) {
   setBodyParameters(optics, 0.05, 0.90, 8, 12, 15);
 }
-setBodyParameters(RenderOptics.Aqueous, 0.055, 2.55, 5, 14, 18);
+// Aqueous surface exposure is the Canvas counterpart of WebGL's existing
+// Fresnel/top-lip cue. Keep it blue-forward and confined to a field-proven
+// exposed semantic surface so a deep pool reads as reflective volume rather
+// than a flat cyan tile.
+setBodyParameters(RenderOptics.Aqueous, 0.055, 2.55, 9, 23, 31);
 setBodyParameters(RenderOptics.Oily, 0.085, 0.85, 16, 9, 3);
 setBodyParameters(RenderOptics.Corrosive, 0.065, 1.0, 15, 8, 18);
 setBodyParameters(RenderOptics.Molten, 0.025, 0.38, 2, 0.7, 0.2);
