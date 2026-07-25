@@ -92,10 +92,10 @@ describe('Canvas crystalline-solid morphology', () => {
     expect(response(Material.DRIC, 4, 4)).toEqual([99, 110, 122, 173]);
 
     expect(response(Material.NICE, 0, 0)).toEqual([107, 120, 134, 173]);
-    expect(response(Material.NICE, 3, 3)).toEqual([100, 111, 124, 173]);
+    expect(response(Material.NICE, 3, 3)).toEqual([99, 113, 128, 173]);
 
     expect(response(Material.QRTZ, 0, 0)).toEqual([112, 119, 134, 173]);
-    expect(response(Material.QRTZ, 3, 3)).toEqual([102, 110, 124, 173]);
+    expect(response(Material.QRTZ, 3, 3)).toEqual([103, 111, 126, 173]);
 
     expect(response(Material.RIME, 8, 8)).toEqual([104, 119, 132, 173]);
     expect(response(Material.RIME, 15, 15)).toEqual([107, 121, 134, 173]);

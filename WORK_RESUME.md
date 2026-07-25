@@ -49,12 +49,15 @@ Immediate priorities are:
   and QRTZ a light cyan prism response. Focused coverage proves determinism,
   alpha invariance, blue-weighted crystalline response, bounded magnitude, and
   the opaque-material no-op control.
-- Validation passes the full 114-file / 728-test suite, production asset
-  closure, and the Canvas-only crystalline fixture with zero browser errors.
-  The paired crystalline command still has a pre-existing NICE normal-fit
-  parity failure (`0.46` Canvas versus `1.49` WebGL): it toggles unusual-solid
-  morphology rather than this lens-shell switch, and is retained as a separate
-  calibration follow-up rather than being threshold-relaxed here.
+- The dominant Canvas NICE cold face and QRTZ broad prism faces now retain
+  enough of their bounded RGB motif through Canvas body optics to remain
+  visible at normal fit. This restores the previously failing paired
+  crystalline gate without relaxing a threshold: normal-fit Canvas/WebGL
+  ratios are DRIC `0.3668`, NICE `0.4094`, QRTZ `0.3730`, and RIME `0.3617`.
+  Topology, alpha/support signatures, exact flat→styled→flat repetition, and
+  browser errors remain clean in both backends. The focused coverage, full
+  114-file / 728-test suite, production bundle, and paired browser capture
+  all pass.
 
 - **Primary work — material identity and graphics:** deepen family-specific silhouettes, internal structure, lighting, transmission, reflection, motion, and contact response. Each tranche must improve a representative scene at normal fit view, not only magnified diagnostic crops.
 - **Immediate material-identity tranche:** configured-source targets, all fourteen non-emissive native powder explosives, authoritative ACEL/DCEL activity, native POLO radioactive lifecycle graphics, SPNG hydration, typed Lava ancestry, complete SEED/PLNT lifecycle graphics, and conductor-aware SPRK host/lifetime graphics are release-complete locally.

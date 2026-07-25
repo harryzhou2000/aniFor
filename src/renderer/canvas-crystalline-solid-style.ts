@@ -57,7 +57,10 @@ export function applyCanvasCrystallineSolidMorphology(
     } else if (fallingFacet) {
       red = 3; green = 7; blue = 12;
     } else {
-      red = 0; green = 1; blue = 4;
+      // This is the dominant body face at normal fit. Canvas applies the
+      // motif before family body optics, so a slightly stronger cool cast
+      // survives the shared depth pass without changing support or shape.
+      red = -1; green = 3; blue = 8;
     }
   } else if (material === Material.QRTZ) {
     // Solid quartz: vertical prism edges cross long diagonal cleavage planes.
@@ -71,9 +74,12 @@ export function applyCanvasCrystallineSolidMorphology(
     } else if (cleavage) {
       red = -5; green = 2; blue = 7;
     } else if (((Math.floor(cellX / 8) + Math.floor(cellY / 8)) & 1) === 0) {
-      red = 2; green = 0; blue = 4;
+      // Broad prism faces need enough chroma to remain legible after Canvas
+      // body optics at normal fit, while the sparse edge/cleavage accents keep
+      // their stronger contrast.
+      red = 3; green = 1; blue = 6;
     } else {
-      red = -1; green = 3; blue = 1;
+      red = 0; green = 4; blue = 3;
     }
   } else {
     // Rime: paired deposition nodes grow a vertical spine and diagonal frost
