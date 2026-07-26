@@ -6,7 +6,11 @@ const WARM_ACCENT = [255, 184, 107] as const;
 const COOL_ACCENT = [184, 230, 255] as const;
 const ENERGY_RADIANCE_KNEE = 176;
 const ENERGY_RADIANCE_CEILING = 232;
-const ENERGY_RADIANCE_SLOPE = 0.30;
+// Keep the Canvas shoulder in the same byte-space as the normal WebGL
+// compositor's `toneMapEnergy`: 0.65 normalized radiance is 0.65 * 255
+// source bytes. Unlike a linear cap, this leaves visible headroom in a bright
+// dense core rather than collapsing its broad relief into one ceiling value.
+const ENERGY_RADIANCE_SHOULDER = 0.65 * 255;
 const ENERGY_GLOW_GAIN = 0.08;
 
 /**
@@ -65,15 +69,24 @@ export function shadeCanvasEnergy(
   const relief = reliefEnabled
     ? canvasEnergyCoreReliefScale(wave, emissionAlpha, edgeLight)
     : 1;
-  core[0] = toneMapEnergyChannel((red * energy * detail + accent[0] * accentMix) * relief);
-  core[1] = toneMapEnergyChannel((green * energy * detail + accent[1] * accentMix) * relief);
-  core[2] = toneMapEnergyChannel((blue * energy * detail + accent[2] * accentMix) * relief);
+  core[0] = (red * energy * detail + accent[0] * accentMix) * relief;
+  core[1] = (green * energy * detail + accent[1] * accentMix) * relief;
+  core[2] = (blue * energy * detail + accent[2] * accentMix) * relief;
   if (identityEnabled) {
-    applyCanvasEnergyIdentityStyle(core, material, x, y, time, velocityX, velocityY);
+    // A dense emission-backed core is one volume: retain its exact sparse
+    // identity at the edge while the existing chunk-scale pulse/relief owns
+    // its interior. RGB only; semantic coverage and glow are untouched.
+    applyCanvasEnergyIdentityStyle(
+      core, material, x, y, time, velocityX, velocityY,
+      1 + (0.35 - 1) * cohesiveEnergy,
+    );
   }
-  core[0] = Math.min(ENERGY_RADIANCE_CEILING, core[0]);
-  core[1] = Math.min(ENERGY_RADIANCE_CEILING, core[1]);
-  core[2] = Math.min(ENERGY_RADIANCE_CEILING, core[2]);
+  // Match the normal WebGL order: compose the exact material cue before the
+  // bounded shoulder so a bright core preserves its own identity instead of
+  // clipping the cue after tone mapping. This remains RGB-only.
+  core[0] = canvasToneMapEnergyChannel(core[0]);
+  core[1] = canvasToneMapEnergyChannel(core[1]);
+  core[2] = canvasToneMapEnergyChannel(core[2]);
   glow[0] = red * glowMix + accent[0] * 0.10;
   glow[1] = green * glowMix + accent[1] * 0.10;
   glow[2] = blue * glowMix + accent[2] * 0.10;
@@ -102,11 +115,16 @@ export function canvasEnergyCoreReliefScale(
   );
 }
 
-function toneMapEnergyChannel(value: number): number {
+/** Byte-space equivalent of the normal WebGL Energy radiance shoulder. */
+export function canvasToneMapEnergyChannel(value: number): number {
   if (value <= ENERGY_RADIANCE_KNEE) return value;
+  const excess = value - ENERGY_RADIANCE_KNEE;
+  const mapped = ENERGY_RADIANCE_KNEE
+    + (ENERGY_RADIANCE_CEILING - ENERGY_RADIANCE_KNEE) * excess
+      / (excess + ENERGY_RADIANCE_SHOULDER);
   return Math.min(
-    ENERGY_RADIANCE_CEILING,
-    ENERGY_RADIANCE_KNEE + (value - ENERGY_RADIANCE_KNEE) * ENERGY_RADIANCE_SLOPE,
+    value,
+    mapped,
   );
 }
 

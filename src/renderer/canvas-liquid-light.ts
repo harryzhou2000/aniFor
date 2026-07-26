@@ -39,9 +39,15 @@ setVolumeChromaParameters(RenderOptics.Corrosive, 0.44, 1.00, 0.68, 0.72, 0.38, 
 setVolumeChromaParameters(RenderOptics.CryogenicLiquid, 0.62, 0.90, 1.00, 1.00, 0.55, 0.28);
 setVolumeChromaParameters(RenderOptics.MetallicLiquid, 1.00, 0.98, 0.94, 0.58, 0.62, 0.70);
 setVolumeChromaParameters(RenderOptics.ViscousLiquid, 0.82, 0.92, 1.00, 0.70, 0.64, 0.58);
-COLUMN_DEPTH_ABSORPTION[RenderOptics.Aqueous] = 0.14;
-COLUMN_DEPTH_ABSORPTION[RenderOptics.Oily] = 0.18;
-COLUMN_DEPTH_ABSORPTION[RenderOptics.Corrosive] = 0.09;
+// Match Canvas's composed Water-core depth to the existing WebGL optics while
+// retaining the shared species-safe depth byte and its RGB-only final multiply.
+COLUMN_DEPTH_ABSORPTION[RenderOptics.Aqueous] = 0.176;
+// Canvas's composed amber pool needs the same bounded core read as WebGL; this
+// remains the existing RGB-only species-safe column multiplier.
+COLUMN_DEPTH_ABSORPTION[RenderOptics.Oily] = 0.24;
+// Keep the corrosive core's chromatic depth legible without relying on a false
+// luminance cue; this remains the existing bounded final RGB multiplier.
+COLUMN_DEPTH_ABSORPTION[RenderOptics.Corrosive] = 0.10;
 COLUMN_DEPTH_ABSORPTION[RenderOptics.Molten] = 0;
 COLUMN_DEPTH_ABSORPTION[RenderOptics.CryogenicLiquid] = 0.10;
 COLUMN_DEPTH_ABSORPTION[RenderOptics.MetallicLiquid] = 0.22;
@@ -172,6 +178,26 @@ export function canvasLiquidMacroWave(
 }
 
 /**
+ * Returns the concentrated positive part of the existing world-anchored
+ * caustic phase. It remains scalar arithmetic only; callers still own the
+ * same dense, ordinary-liquid eligibility, support, and material boundaries.
+ */
+export function canvasLiquidCausticWave(
+  x: number,
+  y: number,
+  visualTime: number,
+  material: number,
+): number {
+  const time = visualTime * 0.001;
+  const causticWave = 0.5 + 0.5 * Math.sin(
+    x * 0.092 + Math.sin(y * 0.037 + time * 0.11) * 1.45 + material * 0.67,
+  );
+  // A narrow positive lobe complements the signed broad band without making
+  // a dense pool flash uniformly or turning cell-scale noise into a texture.
+  return smoothstep(0.58, 0.92, causticWave);
+}
+
+/**
  * Applies the Canvas counterpart to the WebGL broad reflected-band layer. The
  * caller has already rejected traits, emission, walls, and unlike-liquid
  * contact, while this function independently rejects sparse support. It only
@@ -212,6 +238,36 @@ export function applyCanvasLiquidMacroSheen(
     color[1] *= 1 - VOLUME_CHROMA_PARAMETERS[parameter + 4] * amount;
     color[2] *= 1 - VOLUME_CHROMA_PARAMETERS[parameter + 5] * amount;
   }
+  compressPeak(color);
+}
+
+/**
+ * Adds the focused Canvas counterpart to WebGL's dense-body caustic lobe.
+ * It reuses the ordinary liquid key and already-proven support, altering RGB
+ * only. Sparse matter, molten liquid, alpha, ownership, and reconstruction
+ * are deliberately outside this helper.
+ */
+export function applyCanvasLiquidMacroCaustic(
+  color: Float32Array,
+  optics: RenderOptics,
+  fieldAlpha: number,
+  neighbourCount: number,
+  caustic: number,
+  bodySupport = canvasLiquidBodySupport(fieldAlpha, neighbourCount),
+): void {
+  if (optics === RenderOptics.Molten || bodySupport <= 0) return;
+  const lobe = clamp(caustic, 0, 1);
+  if (lobe <= 0) return;
+  const parameter = optics * VOLUME_CHROMA_PARAMETER_COUNT;
+  const strength = optics === RenderOptics.Aqueous || optics === RenderOptics.CryogenicLiquid
+    ? 0.050
+    : optics === RenderOptics.Oily ? 0.032
+      : optics === RenderOptics.Corrosive ? 0.016
+        : optics === RenderOptics.MetallicLiquid ? 0.028 : 0.024;
+  const amount = lobe * bodySupport * strength;
+  color[0] += (255 - color[0]) * VOLUME_CHROMA_PARAMETERS[parameter] * amount;
+  color[1] += (255 - color[1]) * VOLUME_CHROMA_PARAMETERS[parameter + 1] * amount;
+  color[2] += (255 - color[2]) * VOLUME_CHROMA_PARAMETERS[parameter + 2] * amount;
   compressPeak(color);
 }
 
@@ -264,9 +320,9 @@ export function applyCanvasLiquidVolumeChroma(
   color: Float32Array,
   optics: RenderOptics,
   response: number,
-  opticalDepthByte = 0,
+  finalize = true,
 ): void {
-  if ((response === 0 && opticalDepthByte === 0) || optics === RenderOptics.Molten) return;
+  if (response === 0 || optics === RenderOptics.Molten) return;
   const preserveLuminance = optics === RenderOptics.Corrosive;
   const luminance = preserveLuminance
     ? color[0] * 0.2126 + color[1] * 0.7152 + color[2] * 0.0722 : 0;
@@ -291,9 +347,25 @@ export function applyCanvasLiquidVolumeChroma(
     color[1] += correction;
     color[2] += correction;
   }
+  if (finalize) compressPeak(color);
+}
+
+/**
+ * Applies the existing species-safe vertical liquid absorption independently
+ * from optional volume chroma. It is still RGB-only and allocation-free; the
+ * caller retains exact owner, interior, trait, wall, and seam eligibility.
+ * Passing zero finalizes a preceding chroma transform without changing RGB.
+ */
+export function applyCanvasLiquidOpticalDepth(
+  color: Float32Array,
+  optics: RenderOptics,
+  opticalDepthByte: number,
+): void {
+  if (optics === RenderOptics.Molten) return;
   // The existing liquid refresh supplies species-safe vertical depth. Reuse
   // the family shadow tint so deep pools absorb light while their exposed top
   // remains clear; this changes RGB only and adds no per-cell sampling.
+  const parameter = optics * VOLUME_CHROMA_PARAMETER_COUNT;
   const columnAbsorption = opticalDepthByte / 255 * COLUMN_DEPTH_ABSORPTION[optics];
   if (columnAbsorption > 0) {
     color[0] *= 1 - VOLUME_CHROMA_PARAMETERS[parameter + 3] * columnAbsorption;

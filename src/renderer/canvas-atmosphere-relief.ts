@@ -107,6 +107,13 @@ export function shadeCanvasAtmosphere(
       // catches restrained broad light while a pocket self-shadows, making the
       // reconstructed field read as joined billows rather than a flat wash.
       const curvature = density - neighbourMean;
+      // Keep emitted-light scatter on that same volume basis: a convex billow
+      // catches a little more of the existing field light, while a concave
+      // overlap pocket cannot look as front-lit as its rim. This changes only
+      // the existing additive RGB scatter and reuses the cardinal samples.
+      const curvatureNormal = clamp(curvature * 8, -1, 1);
+      const crown = Math.max(0, curvatureNormal);
+      const pocket = Math.max(0, -curvatureNormal);
       const curvatureLight = curvature >= 0 ? curvature * 0.28 : curvature * 0.18;
       // Optical depth darkens dense gas while the gradient retains a restrained
       // upper-left silver lining. Alpha remains the authoritative field support.
@@ -159,7 +166,8 @@ export function shadeCanvasAtmosphere(
           const lightReach = smoothstep(0.01, 0.55, lightDensity);
           const rim = 1 - smoothstep(0.18, 0.74, density);
           const scatter = lightReach * (0.025 + incidence * 0.24 + rim * 0.035)
-            * (1 - density * 0.48) * CANVAS_ATMOSPHERE_LIGHT_GAIN;
+            * (1 - density * 0.48) * (1 + crown * 0.14 - pocket * 0.10)
+            * CANVAS_ATMOSPHERE_LIGHT_GAIN;
           red += light.bytes[lightOffset] * scatter;
           green += light.bytes[lightOffset + 1] * scatter;
           blue += light.bytes[lightOffset + 2] * scatter;

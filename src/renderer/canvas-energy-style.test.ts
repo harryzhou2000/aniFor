@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { canvasEnergyCoreReliefScale, shadeCanvasEnergy } from './canvas-energy-style';
+import {
+  canvasEnergyCoreReliefScale,
+  canvasToneMapEnergyChannel,
+  shadeCanvasEnergy,
+} from './canvas-energy-style';
 import { RenderProfile } from './render-profile';
 import { RenderTrait } from './render-traits';
 
@@ -139,5 +143,35 @@ describe('Canvas energy core styling', () => {
     expect(styled.glow).toEqual(flat.glow);
     expect(styled.alpha).toBe(flat.alpha);
     expect(flatAgain).toEqual(flat);
+  });
+
+  it('keeps the bright Energy shoulder monotonic with bounded headroom', () => {
+    const radiance = [0, 176, 200, 255, 360, 720, 1440, 4096];
+    const mapped = radiance.map((value) => canvasToneMapEnergyChannel(value));
+    expect(mapped[0]).toBe(0);
+    expect(mapped[1]).toBe(176);
+    for (let index = 1; index < mapped.length; index++) {
+      expect(mapped[index]).toBeGreaterThan(mapped[index - 1]);
+      expect(mapped[index]).toBeLessThanOrEqual(232);
+    }
+    expect(mapped.at(-1)).toBeLessThan(232);
+  });
+
+  it('retains a bright exact identity through the shoulder without changing glow or alpha', () => {
+    const render = (enabled: boolean) => {
+      const core = new Float32Array(3), glow = new Float32Array(3);
+      const alpha = shadeCanvasEnergy(
+        core, glow, 255, 255, 255, RenderProfile.Neutral, 0,
+        4, 0, 0, 0, 1, 0, 0, 255, true, 0, enabled,
+      );
+      return { core, glow, alpha };
+    };
+    const flat = render(false);
+    const styled = render(true);
+    expect(styled.core.some((channel, index) => Math.abs(channel - flat.core[index]) > 0.01))
+      .toBe(true);
+    expect(Math.max(...styled.core)).toBeLessThan(232);
+    expect(styled.glow).toEqual(flat.glow);
+    expect(styled.alpha).toBe(flat.alpha);
   });
 });

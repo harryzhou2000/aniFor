@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { dynamicFieldRefreshDue, DYNAMIC_FIELD_REFRESH_INTERVAL } from './field-renderer';
+import {
+  dynamicFieldRefreshDue, dynamicPresentationRefreshDue, DYNAMIC_FIELD_REFRESH_INTERVAL,
+} from './field-renderer';
 import { packSemanticRect, semanticRenderHeat, semanticTemperatureByte } from './semantic-field';
 
 describe('packSemanticRect', () => {
@@ -39,5 +41,26 @@ describe('dynamic field refresh budget', () => {
     expect(dynamicFieldRefreshDue(DYNAMIC_FIELD_REFRESH_INTERVAL - 0.01, 0, true)).toBe(false);
     expect(dynamicFieldRefreshDue(DYNAMIC_FIELD_REFRESH_INTERVAL, 0, true)).toBe(true);
     expect(dynamicFieldRefreshDue(Infinity, 0, false)).toBe(false);
+  });
+
+  it('allows exactly one queued native-state snapshot while paused', () => {
+    const finalSnapshot = 500;
+    expect(dynamicPresentationRefreshDue(
+      finalSnapshot, 0, true, true, false, true,
+    )).toBe(true);
+    expect(dynamicPresentationRefreshDue(
+      finalSnapshot + DYNAMIC_FIELD_REFRESH_INTERVAL * 4, finalSnapshot,
+      true, true, false, false,
+    )).toBe(false);
+    expect(dynamicPresentationRefreshDue(
+      finalSnapshot + DYNAMIC_FIELD_REFRESH_INTERVAL, finalSnapshot,
+      true, true, true, false,
+    )).toBe(true);
+  });
+
+  it('permits an explicit snapshot for a static presentation backend only', () => {
+    expect(dynamicPresentationRefreshDue(0, -Infinity, true, false, false, true)).toBe(true);
+    expect(dynamicPresentationRefreshDue(0, -Infinity, true, false, false, false)).toBe(false);
+    expect(dynamicPresentationRefreshDue(0, -Infinity, false, true, false, true)).toBe(false);
   });
 });

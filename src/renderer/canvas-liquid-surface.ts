@@ -7,7 +7,10 @@ const LIQUID_HOLE_THRESHOLD = 56;
 const LIQUID_INTERIOR_FIELD_ALPHA = 224;
 const LIQUID_INTERIOR_PIXEL_ALPHA = 176;
 const LIQUID_DONOR_PIXEL_ALPHA = 96;
-const LIQUID_INTERIOR_BLEND = 0.60;
+// Dense pools retain their silhouette and alpha while carrying a little more
+// of their same-species cardinal colour. This deliberately stays below a
+// half-neighbour average so authored shading and caustics remain visible.
+const LIQUID_INTERIOR_BLEND = 0.72;
 const LIQUID_NEIGHBOUR_GAIN = LIQUID_INTERIOR_BLEND / 8;
 const LIQUID_ROW_COUNT = 3;
 

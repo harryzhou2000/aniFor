@@ -80,6 +80,15 @@ const WALL_DEFINITIONS = [
   [18, 'Stasis wall', 'Freezes particles in place until powered', '#800080', '❄'],
 ] as const;
 
+// These native wall IDs need an extra configuration gesture which the current
+// wall brush ABI does not expose.  Keep them discoverable in the catalog, but
+// deliberately outside WALL_DEFINITIONS: enabling native walls must never turn
+// an explanatory tile into a partially-functional brush.
+const UNSUPPORTED_WALL_DEFINITIONS = [
+  [5, 'Fan wall', 'Native fan wall; its directional air-vector configuration is not available in this build', '#5d8b9d', '➜', 'native-fan-wall-configuration-unavailable'],
+  [14, 'Gravity wall', 'Native gravity wall; its field configuration is not available in this build', '#70598c', '⌁', 'native-gravity-wall-configuration-unavailable'],
+] as const;
+
 const SOURCE_DEFINITIONS = [
   ['clne', Material.CLNE, 'CLNE source', 'Places a clone configured to emit the selected target element', '#ffd010', '◇'],
   ['bcln', Material.BCLN, 'BCLN source', 'Places a breakable clone configured to emit the selected target element', '#ffd040', '◇'],
@@ -103,6 +112,20 @@ export function semanticTools(capabilities: ToolCapabilities = {}): readonly Exc
     icon,
     category: 'walls',
     ...unsupported(capabilities.walls, 'native-walls-unavailable'),
+  }));
+  const unsupportedWalls: WallToolInfo[] = UNSUPPORTED_WALL_DEFINITIONS.map(([
+    nativeWall, name, description, color, icon, limitation,
+  ]) => ({
+    key: `wall:${nativeWall}`,
+    kind: 'wall',
+    nativeWall,
+    name,
+    description,
+    color,
+    icon,
+    category: 'walls',
+    available: false,
+    limitations: [limitation],
   }));
   const sources: SourceToolInfo[] = SOURCE_DEFINITIONS.map(([key, emitter, name, description, color, icon]) => ({
     key: `source:${key}`,
@@ -130,6 +153,7 @@ export function semanticTools(capabilities: ToolCapabilities = {}): readonly Exc
   }));
   return [
     ...walls,
+    ...unsupportedWalls,
     ...sources,
     ...lifePresets,
     {

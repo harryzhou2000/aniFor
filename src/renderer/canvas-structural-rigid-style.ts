@@ -16,6 +16,32 @@ for (let style = 1; style <= CANVAS_STRUCTURAL_RIGID_MATERIALS.length; style++) 
   STYLE_BY_MATERIAL[CANVAS_STRUCTURAL_RIGID_MATERIALS[style - 1]] = style;
 }
 
+// Dense construction bodies use the existing signed macro-relief and
+// exact-species optical-depth byte for their broad response. These keys are
+// intentionally capped at seven source RGB bytes: they make a large body read
+// as brick, metal, ceramic, or mineral rather than a flat generic solid, while
+// leaving the sparse identity marks below as a separate fine-detail layer.
+const BULK_CROWN_KEY_BY_STYLE = new Int8Array([
+  0, 0, 0,
+  7, 3, 1, // Brick: warm sunlit crown
+  2, 4, 7, // Metal: cool neutral reflection
+  2, 4, 6, // Ceramic: cool glazed crown
+  1, 4, 6, // Broken metal: restrained plate reflection
+  7, 5, 0, // Gold: warm specular crown
+  3, 4, 6, // Iron: cool rolled highlight
+  2, 5, 7, // Titanium: cold machined crown
+]);
+const BULK_POCKET_KEY_BY_STYLE = new Int8Array([
+  0, 0, 0,
+  6, 3, 2, // Brick: shallow warm occlusion
+  3, 4, 6, // Metal: cool pocket absorption
+  2, 3, 5, // Ceramic: restrained glaze shadow
+  3, 4, 5, // Broken metal: subdued plate pocket
+  6, 4, 1, // Gold: amber pocket
+  4, 4, 5, // Iron: blue-grey pocket
+  3, 5, 6, // Titanium: cold pocket
+]);
+
 /** Returns the stable structural-identity style, or zero for every control. */
 export function canvasStructuralRigidStyle(material: number): number {
   if (!Number.isInteger(material) || material < 0 || material >= STYLE_BY_MATERIAL.length) return 0;
@@ -24,6 +50,38 @@ export function canvasStructuralRigidStyle(material: number): number {
 
 export function isCanvasStructuralRigidMaterial(material: number): boolean {
   return canvasStructuralRigidStyle(material) !== 0;
+}
+
+/**
+ * Applies one broad, depth-proven construction-body response after the shared
+ * solid optics. The caller has already established semantic ownership and
+ * trait/emission/wall eligibility; this helper only consumes existing local
+ * state and changes RGB. It is deliberately a no-op for the protected first
+ * interior layer, thin structures, and disabled optical-depth mode.
+ */
+export function applyCanvasStructuralRigidBulkOptics(
+  color: Float32Array,
+  material: number,
+  denseInterior: boolean,
+  opticalDepthByte: number,
+  relief: number,
+  opticalDepthEnabled = true,
+): void {
+  const style = canvasStructuralRigidStyle(material);
+  if (style === 0 || !denseInterior || !opticalDepthEnabled
+    || opticalDepthByte <= 6 || relief === 0) return;
+
+  const depthProgress = clampUnit((opticalDepthByte - 6) / 36);
+  const depthSupport = depthProgress * depthProgress * (3 - 2 * depthProgress);
+  // Seven is the largest currently configured solid-relief amplitude. Keeping
+  // the normalization fixed makes this exact RGB bound independent of family.
+  const signedResponse = clampUnit(Math.abs(relief) / 7) * depthSupport;
+  const keyOffset = style * 3;
+  const keys = relief > 0 ? BULK_CROWN_KEY_BY_STYLE : BULK_POCKET_KEY_BY_STYLE;
+  const direction = relief > 0 ? 1 : -1;
+  color[0] = clampByte(color[0] + keys[keyOffset] * signedResponse * direction);
+  color[1] = clampByte(color[1] + keys[keyOffset + 1] * signedResponse * direction);
+  color[2] = clampByte(color[2] + keys[keyOffset + 2] * signedResponse * direction);
 }
 
 /**
@@ -103,4 +161,8 @@ function positiveModulo(value: number, divisor: number): number {
 
 function clampByte(value: number): number {
   return value < 0 ? 0 : value > 255 ? 255 : value;
+}
+
+function clampUnit(value: number): number {
+  return value < 0 ? 0 : value > 1 ? 1 : value;
 }

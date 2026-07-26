@@ -6,6 +6,7 @@ import {
   CANVAS_CONTOUR_OUTPUT_SCALE,
   CanvasPhaseContourScratch,
   applyCanvasLiquidFresnelShell,
+  canvasPhaseContactPattern,
   canvasPhaseContactTone,
   type CanvasPhaseContourInput,
 } from './canvas-phase-contour';
@@ -13,6 +14,7 @@ import { RenderOptics } from './render-optics';
 import { LiquidDensityField } from './liquid-density-field';
 import { PowderSurfaceField } from './powder-surface-field';
 import { createLiquidSurfaceScratch, reconstructLiquidSurface } from './canvas-liquid-surface';
+import { reconstructSolidSurface } from './canvas-solid-surface';
 import { createRenderLookups } from './render-field-set';
 
 const lookups = createRenderLookups(ALL_MATERIALS);
@@ -154,22 +156,22 @@ describe('Canvas 2x phase contour scratch', () => {
       '1-grains': 'c912c4b1',
       '1-local': '1cc9387d',
       '1-smooth': '0f222348',
-      '2-grains': 'af6d5941',
-      '2-local': 'a50b1c45',
-      '2-smooth': '7376d2b5',
-      '4-grains': '88dcd447',
-      '4-local': 'f23096fb',
-      '4-smooth': 'da16060c',
-      '8-grains': 'b2fef6b7',
-      '8-local': '2419d011',
-      '8-smooth': '963fc60c',
+      '2-grains': 'dd1b22fb',
+      '2-local': 'af954bf7',
+      '2-smooth': '19052edb',
+      '4-grains': '7a43f78c',
+      '4-local': '61e33c94',
+      '4-smooth': '9aba7b53',
+      '8-grains': '08d9d2bd',
+      '8-local': '671aff33',
+      '8-smooth': 'eb834516',
     });
   });
 
   it('owns one bounded 32x32 chunk, one-cell halo, and stable output buffers', () => {
-    expect(CANVAS_CONTOUR_GEOMETRY_LOOKUP_BYTES).toBe(11_855);
+    expect(CANVAS_CONTOUR_GEOMETRY_LOOKUP_BYTES).toBe(13_903);
     const scratch = new CanvasPhaseContourScratch();
-    expect(scratch.allocatedByteLength).toBe(33_824);
+    expect(scratch.allocatedByteLength).toBe(34_079);
     const pixels = scratch.pixels;
     const coverage = scratch.coverage;
     const owners = scratch.ownerMaterials;
@@ -244,6 +246,50 @@ describe('Canvas 2x phase contour scratch', () => {
     expect(ownedPowderSamples).toBeGreaterThan(0);
   });
 
+  it('presents only independently re-proven solid cavities as non-owner coverage', () => {
+    const value = fixture(3, 3);
+    for (let y = 0; y < 3; y++) for (let x = 0; x < 3; x++) {
+      if (x !== 1 || y !== 1) paint(value, x, y, Material.VIBR);
+    }
+    reconstructSolidSurface(
+      value.pixels, value.materials, lookups.styleBytes, lookups.paletteBytes, 3, 3,
+    );
+    const source = (1 * 3 + 1) * 4;
+    expect(Array.from(value.pixels.slice(source, source + 4))).toEqual([
+      lookups.colorByMaterial[Material.VIBR * 3],
+      lookups.colorByMaterial[Material.VIBR * 3 + 1],
+      lookups.colorByMaterial[Material.VIBR * 3 + 2],
+      250,
+    ]);
+
+    for (const scale of [2, 4, 8] as const) {
+      const scratch = new CanvasPhaseContourScratch(scale);
+      scratch.rasterize(value.input);
+      for (let subY = 0; subY < scale; subY++) for (let subX = 0; subX < scale; subX++) {
+        const output = (scale + subY) * scratch.outputStride + scale + subX;
+        const pixel = output * 4;
+        expect(scratch.ownerMaterials[output]).toBe(Material.Empty);
+        expect(scratch.coverage[output]).toBe(255);
+        expect(Array.from(scratch.pixels.slice(pixel, pixel + 4))).toEqual([
+          lookups.colorByMaterial[Material.VIBR * 3],
+          lookups.colorByMaterial[Material.VIBR * 3 + 1],
+          lookups.colorByMaterial[Material.VIBR * 3 + 2],
+          250,
+        ]);
+      }
+    }
+
+    const rejects = fixture(3, 3);
+    for (const [x, y] of [[1, 0], [0, 1], [2, 1], [1, 2]] as const) {
+      paint(rejects, x, y, Material.LIFE_GOL);
+    }
+    rejects.pixels.set(value.pixels.slice(source, source + 4), source);
+    rejects.walls[4] = 1;
+    const rejected = new CanvasPhaseContourScratch(2);
+    rejected.rasterize(rejects.input);
+    expect(alphaAt(rejected, 2, 2)).toBe(0);
+  });
+
   it('keeps an already reconstructed field-valid liquid pinhole as non-owner 2x coverage', () => {
     const value = fixture(3, 3);
     for (let y = 0; y < 3; y++) for (let x = 0; x < 3; x++) {
@@ -314,10 +360,75 @@ describe('Canvas 2x phase contour scratch', () => {
     }
   });
 
+  it('retains only uniquely canonical ordinary liquid reconstruction candidates', () => {
+    const sourceIndex = 4 * 4;
+    const createCandidate = (material: Material) => {
+      const value = fixture(3, 3);
+      for (let y = 0; y < 3; y++) for (let x = 0; x < 3; x++) {
+        if (x !== 1 || y !== 1) paint(value, x, y, material);
+      }
+      const field = liquidField(value);
+      const sourcePixels = value.pixels.slice();
+      reconstructLiquidSurface(
+        sourcePixels, value.materials, field,
+        lookups.liquidByMaterial, lookups.colorByMaterial, lookups.styleBytes,
+        createLiquidSurfaceScratch(sourcePixels, 3), 3, 3,
+      );
+      expect(sourcePixels[sourceIndex + 3]).toBeGreaterThan(0);
+      return { value, field, sourcePixels };
+    };
+    const rasterize = (
+      value: Fixture,
+      sourcePixels: Uint8ClampedArray,
+      field: Uint8Array,
+      paletteBytes = lookups.paletteBytes,
+    ) => {
+      const scratch = new CanvasPhaseContourScratch(2);
+      scratch.rasterize({ ...value.input, sourcePixels, liquidField: field, paletteBytes });
+      return scratch;
+    };
+    const expectCandidate = (scratch: CanvasPhaseContourScratch, retained: boolean) => {
+      for (let subY = 0; subY < 2; subY++) for (let subX = 0; subX < 2; subX++) {
+        const output = (2 + subY) * scratch.outputStride + 2 + subX;
+        expect(scratch.ownerMaterials[output]).toBe(Material.Empty);
+        expect(scratch.coverage[output]).toBe(retained ? 255 : 0);
+        expect(scratch.pixels[output * 4 + 3]).toBe(retained ? 210 : 0);
+      }
+    };
+
+    const water = createCandidate(Material.Water);
+    expectCandidate(rasterize(water.value, water.sourcePixels, water.field), true);
+
+    // A palette collision makes the field owner ambiguous even though the
+    // reconstructed donor was ordinary Water; it must not fill an Empty cell.
+    const duplicateWaterPalette = lookups.paletteBytes.slice();
+    const waterPalette = Material.Water * 4;
+    const oilPalette = Material.Oil * 4;
+    duplicateWaterPalette[oilPalette] = duplicateWaterPalette[waterPalette];
+    duplicateWaterPalette[oilPalette + 1] = duplicateWaterPalette[waterPalette + 1];
+    duplicateWaterPalette[oilPalette + 2] = duplicateWaterPalette[waterPalette + 2];
+    expectCandidate(rasterize(
+      water.value, water.sourcePixels, water.field, duplicateWaterPalette,
+    ), false);
+
+    // Authored liquid identities, including the organic VIRS trait path, keep
+    // holes exact rather than borrowing generic field reconstruction support.
+    for (const material of [Material.Soap, Material.VIRS] as const) {
+      const identity = createCandidate(material);
+      expectCandidate(rasterize(identity.value, identity.sourcePixels, identity.field), false);
+    }
+
+    const noncanonicalField = water.field.slice();
+    noncanonicalField[sourceIndex] = 1;
+    noncanonicalField[sourceIndex + 1] = 2;
+    noncanonicalField[sourceIndex + 2] = 3;
+    expectCandidate(rasterize(water.value, water.sourcePixels, noncanonicalField), false);
+  });
+
   it('creates real four- and eight-times contour samples with matching strides', () => {
     for (const scale of [4, 8] as const) {
       const scratch = new CanvasPhaseContourScratch(scale);
-      expect(scratch.allocatedByteLength).toBe(scale === 4 ? 107_552 : 402_464);
+      expect(scratch.allocatedByteLength).toBe(scale === 4 ? 107_807 : 402_719);
       const value = fixture();
       paint(value, 2, 2, Material.Sand);
       scratch.rasterize(value.input);
@@ -462,6 +573,56 @@ describe('Canvas 2x phase contour scratch', () => {
     expect(bevelled.ownerMaterials).toEqual(flat.ownerMaterials);
   });
 
+  it('keeps isolated solid contour lighting RGB-only at 2x and 4x', () => {
+    for (const scale of [2, 4] as const) {
+      const isolated = fixture(7, 7);
+      paint(isolated, 3, 3, Material.Metal);
+      const off = new CanvasPhaseContourScratch(scale);
+      const on = new CanvasPhaseContourScratch(scale);
+      off.rasterize({
+        ...isolated.input, surfaceContourLighting: false,
+        solidContactDepth: false, solidCurvatureDepth: false,
+      });
+      on.rasterize({
+        ...isolated.input, surfaceContourLighting: true,
+        solidContactDepth: false, solidCurvatureDepth: false,
+      });
+      let changed = 0;
+      let peak = 0;
+      for (let outputY = 0; outputY < on.outputHeight; outputY++) {
+        for (let outputX = 0; outputX < on.outputWidth; outputX++) {
+          const output = outputY * on.outputStride + outputX;
+          const pixel = output * 4;
+          expect(on.coverage[output], `${scale}x coverage ${outputX},${outputY}`)
+            .toBe(off.coverage[output]);
+          expect(on.ownerMaterials[output], `${scale}x owner ${outputX},${outputY}`)
+            .toBe(off.ownerMaterials[output]);
+          expect(on.pixels[pixel + 3], `${scale}x alpha ${outputX},${outputY}`)
+            .toBe(off.pixels[pixel + 3]);
+          const delta = Math.abs(on.pixels[pixel] - off.pixels[pixel]);
+          if (delta > 0) changed++;
+          peak = Math.max(peak, delta);
+        }
+      }
+      expect(changed).toBeGreaterThan(0);
+      expect(peak).toBeLessThanOrEqual(18);
+
+      const dense = fixture(7, 7);
+      for (let y = 1; y <= 5; y++) for (let x = 1; x <= 5; x++) paint(dense, x, y, Material.Metal);
+      const denseOff = new CanvasPhaseContourScratch(scale);
+      const denseOn = new CanvasPhaseContourScratch(scale);
+      denseOff.rasterize({ ...dense.input, surfaceContourLighting: false });
+      denseOn.rasterize({ ...dense.input, surfaceContourLighting: true });
+      for (let subY = 0; subY < scale; subY++) for (let subX = 0; subX < scale; subX++) {
+        const output = (3 * scale + subY) * denseOn.outputStride + 3 * scale + subX;
+        const pixel = output * 4;
+        expect(denseOn.pixels.slice(pixel, pixel + 4)).toEqual(
+          denseOff.pixels.slice(pixel, pixel + 4),
+        );
+      }
+    }
+  });
+
   it('keeps the solid contour bevel off unlike seams, traits, emissive matter, and non-liquid phases', () => {
     const seam = fixture(7, 5);
     for (let y = 1; y <= 3; y++) for (let x = 1; x <= 5; x++) {
@@ -552,6 +713,124 @@ describe('Canvas 2x phase contour scratch', () => {
         expect(hasCardinalOwner).toBe(true);
       }
     }
+  });
+
+  it('calms only deep stable Smooth powder facets while preserving semantic planes and controls', () => {
+    const scale = 4;
+    // The shared field has a ten-cell horizontal blur, so its full-density
+    // proof must be wider than one 32-cell contour chunk. Rasterize the
+    // centred chunk of this larger body exactly as the renderer does.
+    const width = 48;
+    const height = 24;
+    const chunk = <T extends CanvasPhaseContourInput>(input: T): T => ({
+      ...input,
+      chunkX: 8,
+      chunkY: 0,
+      chunkWidth: 32,
+      chunkHeight: height,
+    });
+    const coreX = 16;
+    const coreY = 12;
+    const dense = fixture(width, height);
+    for (let y = 1; y < height - 1; y++) for (let x = 1; x < width - 1; x++) {
+      paint(dense, x, y, Material.Sand);
+    }
+    const field = new PowderSurfaceField(width, height, lookups.styleBytes);
+    expect(field.update(dense.materials, dense.stability, dense.walls)).toBe(true);
+
+    const localCell = (scratch: CanvasPhaseContourScratch, cellX: number, cellY: number) => {
+      const pixels: number[] = [];
+      const coverage: number[] = [];
+      const owners: number[] = [];
+      for (let subY = 0; subY < scale; subY++) for (let subX = 0; subX < scale; subX++) {
+        const output = (cellY * scale + subY) * scratch.outputStride + cellX * scale + subX;
+        const pixel = output * 4;
+        pixels.push(
+          scratch.pixels[pixel], scratch.pixels[pixel + 1],
+          scratch.pixels[pixel + 2], scratch.pixels[pixel + 3],
+        );
+        coverage.push(scratch.coverage[output]);
+        owners.push(scratch.ownerMaterials[output]);
+      }
+      return { pixels, coverage, owners };
+    };
+    const redRange = (pixels: readonly number[]) => {
+      const red = pixels.filter((_, index) => index % 4 === 0);
+      return Math.max(...red) - Math.min(...red);
+    };
+    const render = (input: CanvasPhaseContourInput) => {
+      const scratch = new CanvasPhaseContourScratch(scale);
+      scratch.rasterize(input);
+      return scratch;
+    };
+    const coreRegion = (scratch: CanvasPhaseContourScratch) => {
+      const pixels: number[] = [];
+      const coverage: number[] = [];
+      const owners: number[] = [];
+      for (let cellY = coreY - 4; cellY < coreY + 4; cellY++) {
+        for (let cellX = coreX - 4; cellX < coreX + 4; cellX++) {
+          const cell = localCell(scratch, cellX, cellY);
+          pixels.push(...cell.pixels);
+          coverage.push(...cell.coverage);
+          owners.push(...cell.owners);
+        }
+      }
+      return { pixels, coverage, owners };
+    };
+
+    const ordinary = render({ ...chunk(dense.input), powderStyle: 'smooth' });
+    const smooth = render({
+      ...chunk(dense.input), powderStyle: 'smooth', powderSurface: field.bytes,
+    });
+    const ordinaryCore = coreRegion(ordinary);
+    const smoothCore = coreRegion(smooth);
+    expect(redRange(smoothCore.pixels)).toBeLessThan(redRange(ordinaryCore.pixels) * 0.5);
+    expect(smoothCore.coverage).toEqual(ordinaryCore.coverage);
+    expect(smoothCore.owners).toEqual(ordinaryCore.owners);
+    expect(smoothCore.pixels.filter((_, index) => index % 4 === 3))
+      .toEqual(ordinaryCore.pixels.filter((_, index) => index % 4 === 3));
+
+    for (const style of ['grains', 'local'] as const) {
+      const withoutField = render({ ...chunk(dense.input), powderStyle: style });
+      const withField = render({
+        ...chunk(dense.input), powderStyle: style, powderSurface: field.bytes,
+      });
+      expect(withField.pixels, style).toEqual(withoutField.pixels);
+      expect(withField.coverage, style).toEqual(withoutField.coverage);
+      expect(withField.ownerMaterials, style).toEqual(withoutField.ownerMaterials);
+    }
+
+    for (const decoration of [2, 3] as const) {
+      const styleBytes = lookups.styleBytes.slice();
+      styleBytes[Material.Sand * 4 + decoration] = 1;
+      const decorated = render({
+        ...chunk(dense.input), styleBytes, powderStyle: 'smooth', powderSurface: field.bytes,
+      });
+      const decoratedWithoutField = render({
+        ...chunk(dense.input), styleBytes, powderStyle: 'smooth',
+      });
+      expect(localCell(decorated, coreX, coreY))
+        .toEqual(localCell(decoratedWithoutField, coreX, coreY));
+    }
+
+    const moving = fixture(width, height);
+    for (let y = 1; y < height - 1; y++) for (let x = 1; x < width - 1; x++) {
+      paint(moving, x, y, Material.Sand);
+    }
+    moving.stability.fill(0);
+    const movingField = new PowderSurfaceField(width, height, lookups.styleBytes);
+    movingField.update(moving.materials, moving.stability, moving.walls);
+    expect(render({
+      ...chunk(moving.input), powderStyle: 'smooth', powderSurface: movingField.bytes,
+    }).pixels).toEqual(render({ ...chunk(moving.input), powderStyle: 'smooth' }).pixels);
+
+    const column = fixture(width, height);
+    for (let y = 2; y < height - 2; y++) paint(column, 24, y, Material.Clay);
+    const columnField = new PowderSurfaceField(width, height, lookups.styleBytes);
+    columnField.update(column.materials, column.stability, column.walls);
+    expect(render({
+      ...chunk(column.input), powderStyle: 'smooth', powderSurface: columnField.bytes,
+    }).pixels).toEqual(render({ ...chunk(column.input), powderStyle: 'smooth' }).pixels);
   });
 
   it('keeps narrow settled Clay and Concrete ridges on their exact local 4x contour', () => {
@@ -1173,6 +1452,23 @@ describe('Canvas 2x phase contour scratch', () => {
     }
   });
 
+  it('requires an exact 2x2 liquid quadrant before trimming a connected shore', () => {
+    const shapes: ReadonlyArray<ReadonlyArray<readonly [number, number]>> = [
+      [[3, 3], [4, 3], [3, 4]],
+      [[2, 2], [3, 2], [3, 3], [4, 3]],
+    ];
+    for (const cells of shapes) for (const scale of [1, 2, 4, 8] as const) {
+      const value = fixture(7, 7);
+      for (const [x, y] of cells) paint(value, x, y, Material.Water);
+      const field = liquidField(value);
+      const cohesive = new CanvasPhaseContourScratch(scale);
+      const categorical = new CanvasPhaseContourScratch(scale);
+      cohesive.rasterize({ ...value.input, liquidField: field });
+      categorical.rasterize({ ...value.input, liquidField: field, liquidSilhouetteCohesion: false });
+      expect(contourOutputsEqual(cohesive, categorical)).toBe(true);
+    }
+  });
+
   it('grounds liquid/matter contacts with bounded RGB-only bipolar light', () => {
     expect(canvasPhaseContactTone(1, 1, 0)).toBe(0);
     expect(canvasPhaseContactTone(0.5, -1, -1)).toBeGreaterThan(0);
@@ -1211,6 +1507,18 @@ describe('Canvas 2x phase contour scratch', () => {
     expect(brighter).toBeGreaterThan(0);
     expect(darker).toBeGreaterThan(0);
     expect(maximumDelta).toBeLessThanOrEqual(6);
+  });
+
+  it('maps every cached 3x3 phase-contact stencil to its exact local quadrant', () => {
+    const origins = [0, 1, 3, 4] as const;
+    for (let mask = 0; mask < 512; mask++) for (let quadrant = 0; quadrant < 4; quadrant++) {
+      const origin = origins[quadrant];
+      const direct = ((mask >>> origin) & 1)
+        | (((mask >>> (origin + 1)) & 1) << 1)
+        | (((mask >>> (origin + 3)) & 1) << 2)
+        | (((mask >>> (origin + 4)) & 1) << 3);
+      expect(canvasPhaseContactPattern(mask, quadrant)).toBe(direct);
+    }
   });
 
   it('rejects air, same-phase seams, decoration, and moving powder from phase-contact light', () => {

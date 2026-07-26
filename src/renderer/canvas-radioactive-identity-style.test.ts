@@ -62,4 +62,12 @@ describe('Canvas radioactive powder/solid identity styling', () => {
     }
     expect(fingerprints.size).toBe(BODIES.length);
   });
+
+  it('keeps VIBR interior lattice marks restrained while retaining charged rails', () => {
+    const interior = style(Material.VIBR, 1, 1);
+    const rail = style(Material.VIBR, 0, 1);
+    expect(Array.from(interior)).toEqual([97, 114, 128, 173]);
+    expect(rail[1]).toBe(123);
+    expect(rail[2]).toBeGreaterThan(interior[2]);
+  });
 });

@@ -115,6 +115,17 @@ export function renderOptics(material: RenderOpticsMaterial): RenderOptics {
     case Material.VIRS:
     case Material.ISOZ:
       return RenderOptics.ViscousLiquid;
+    // Configured sources share a native target/role presentation plane. Give
+    // every emitter the same deliberate device body before that RGB-only badge
+    // is layered, rather than letting the unpowered clone/converter owners fall
+    // through to a generic special-material solid.
+    case Material.CLNE:
+    case Material.BCLN:
+    case Material.CONV:
+    case Material.PCLN:
+    case Material.PBCN:
+    case Material.CRAY:
+      return RenderOptics.Device;
   }
 
   const phase = physicalPhase(material);
@@ -126,7 +137,8 @@ export function renderOptics(material: RenderOpticsMaterial): RenderOptics {
   // family appropriate to its physical phase. Category optics are therefore
   // reserved for solid/device bodies rather than overriding phase topology.
   if (material.category === 'life') return RenderOptics.Organic;
-  if (material.category === 'electronics' || material.category === 'powered' || material.category === 'sensors') {
+  if (material.category === 'electronics' || material.category === 'powered'
+    || material.category === 'sensors' || material.category === 'force') {
     return RenderOptics.Device;
   }
   if (material.category === 'radioactive') return RenderOptics.Radioactive;

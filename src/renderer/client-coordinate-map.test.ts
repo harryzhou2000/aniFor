@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { clientToCanvasWorld, contentBoxFromBounds, viewportToClient } from './client-coordinate-map';
+import {
+  clientToCanvasWorld, clientToVisualViewport, contentBoxFromBounds, viewportToClient,
+} from './client-coordinate-map';
 
 describe('production client-coordinate mapping', () => {
   it('resolves a fractional scaled content box from actual element metrics', () => {
@@ -34,6 +36,21 @@ describe('production client-coordinate mapping', () => {
     const rect = { left: 17.2, top: 28.6, width: 612.75, height: 384.4705882353 };
     const client = { x: rect.left + rect.width * 0.73, y: rect.top + rect.height * 0.21 };
     expect(clientToCanvasWorld(client, rect, 612, 384)).toEqual({ x: 446.76, y: 80.64 });
+  });
+
+  it('normalizes layout PointerEvent coordinates into visual DOMRect coordinates at page scale', () => {
+    expect(clientToVisualViewport(
+      { x: 643, y: 507 }, { scale: 1.2, offsetLeft: 0, offsetTop: 0 },
+    )).toEqual({ x: 535.8333333333334, y: 422.5 });
+    expect(clientToVisualViewport(
+      { x: 430, y: 280 }, { scale: 1.25, offsetLeft: 30, offsetTop: 5 },
+    )).toEqual({ x: 320, y: 220 });
+  });
+
+  it('keeps ordinary page scale as an exact no-op', () => {
+    expect(clientToVisualViewport(
+      { x: 446.76, y: 80.64 }, { scale: 1, offsetLeft: 0, offsetTop: 0 },
+    )).toEqual({ x: 446.76, y: 80.64 });
   });
 
   it('projects logical viewport coordinates through a page-scaled content box', () => {

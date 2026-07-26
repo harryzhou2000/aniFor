@@ -144,6 +144,15 @@ const contourLiquidField = new LiquidDensityField(
   width, height, liquidByMaterial, colorByMaterial,
 );
 contourLiquidField.update(contourLiquidMaterials);
+// Profile the exact Canvas contour branch that validates reconstructed liquid
+// support separately from the reconstruction itself. This is the hot path for
+// the cached ordinary-liquid candidate set, not an additional render resource.
+const contourReconstructedLiquidPixels = contourLiquidPixels.slice();
+const contourLiquidSurfaceScratch = createLiquidSurfaceScratch(contourReconstructedLiquidPixels, width);
+reconstructLiquidSurface(
+  contourReconstructedLiquidPixels, contourLiquidMaterials, contourLiquidField.bytes,
+  liquidByMaterial, colorByMaterial, styleBytes, contourLiquidSurfaceScratch, width, height,
+);
 const contourPowderStability = new Uint8Array(width * height);
 const contourFlatStyleBytes = styleBytes.slice();
 contourFlatStyleBytes[Material.Water * 4 + 3] = 1;
@@ -163,6 +172,7 @@ let contourChecksum = 0;
 function profileLiquidContour(
   styles: Uint8Array,
   liquidSilhouetteCohesion = false,
+  pixels = contourLiquidPixels,
 ): ReturnType<typeof sample> {
   const timing = sample(() => {
     let checksum = 0;
@@ -170,7 +180,7 @@ function profileLiquidContour(
       for (let chunkX = 0; chunkX < width; chunkX += CANVAS_CONTOUR_CHUNK_SIZE) {
         contourScratch.rasterize({
           materials: contourLiquidMaterials,
-          sourcePixels: contourLiquidPixels,
+          sourcePixels: pixels,
           powderStability: contourPowderStability,
           styleBytes: styles,
           paletteBytes,
@@ -571,6 +581,9 @@ console.log(JSON.stringify({
       fixture: 'repeating connected 2x2 Water islands',
       flatRgb: profileLiquidContour(contourFlatStyleBytes),
       meniscusRgb: profileLiquidContour(styleBytes),
+      reconstructedLiquidValidation: profileLiquidContour(
+        styleBytes, false, contourReconstructedLiquidPixels,
+      ),
       liquidSilhouetteCohesion: {
         categorical: profileLiquidContour(styleBytes, false),
         cohesive: profileLiquidContour(styleBytes, true),

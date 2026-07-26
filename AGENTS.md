@@ -13,6 +13,12 @@ powder, solid, liquid, gas, energy, and contact scenes across Canvas and WebGL a
 mobile gestures, save/load, CI, and Pages deployment as protected regression
 contracts rather than the primary feature stream.
 
+WebGL is the canonical visual release path. Canvas 2D remains a resilient,
+camera-preserving semantic fallback: keep its loading, input, material/state,
+and bounded-resource contracts strict, but treat advanced-optics visual parity
+as diagnostic rather than a feature-blocking release requirement when browser
+Canvas behaviour cannot match the canonical WebGL presentation.
+
 ## CodeGraph
 
 When `.codegraph/` exists, use `codegraph explore` before grep/find or broad file reads when locating or understanding code. Ask it for the relevant symbols, complete source, and call paths. Use `rg` only after CodeGraph has established the area to inspect.
@@ -23,9 +29,11 @@ Use subagents proactively for independent mechanical work whenever a suitable
 bounded task exists and a slot is available. This is the normal route for
 repository scans, focused test/audit runs, CI/Pages status checks,
 screenshot/artifact inspection, repetitive migration or mass-fix work, and
-mechanical fixture/test expansion. Before starting a multi-file change, split
-out at least one such read-only or non-overlapping mechanical task unless the
-work is genuinely too small to delegate.
+mechanical fixture/test expansion. Delegate scans and audits by default; when
+the fix is repetitive and mechanically specified, delegate a disjoint
+mass-fix as well. Before starting a multi-file change, split out at least one
+such read-only or non-overlapping mechanical task unless the work is genuinely
+too small to delegate.
 
 Give each subagent a concrete success condition, file/scope boundary, and
 whether it may edit. Audit agents must remain read-only unless they are

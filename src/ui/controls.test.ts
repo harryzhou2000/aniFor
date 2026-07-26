@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { MATERIALS, Material } from '../shared/materials';
 import { groupMaterials, POWDER_RENDER_STYLE_OPTIONS, reconcileOpenToolGroups, RENDER_SCALE_OPTIONS, sourceRejectionLabel, sourceSelectionLabel, toolCountLabel } from './controls';
@@ -48,5 +49,27 @@ describe('material controls', () => {
 
     expect(open).toEqual(new Set(['electronics']));
     expect(open.has('powders')).toBe(false);
+  });
+
+  it('updates a non-powder selection in place without rebuilding the catalog', () => {
+    // The full browser audit drives an Electronics tile, verifies the exact
+    // disclosure and scroll position, and catches layout/browser behaviour.
+    // Keep this focused unit guard dependency-free: selection must only update
+    // existing button state, never replace the library that owns disclosure and
+    // scroll state.
+    const source = readFileSync(new URL('./controls.ts', import.meta.url), 'utf8');
+    const clickStart = source.indexOf("button.addEventListener('click', () => {");
+    const clickEnd = source.indexOf('\n\n    const favorite', clickStart);
+    const selectionHandler = source.slice(clickStart, clickEnd);
+    const syncStart = source.indexOf('const syncSelectedTool = (): void => {');
+    const syncEnd = source.indexOf('\n\n  const filterChoices', syncStart);
+    const syncSelectedTool = source.slice(syncStart, syncEnd);
+
+    expect(selectionHandler).toContain('selectedKey = tool.key;');
+    expect(selectionHandler).toContain('callbacks.onMaterial(tool.id);');
+    expect(selectionHandler).toContain('syncSelectedTool();');
+    expect(selectionHandler).not.toContain('renderLibrary();');
+    expect(syncSelectedTool).toContain("library.querySelectorAll<HTMLElement>('.tool-tile')");
+    expect(syncSelectedTool).not.toMatch(/replaceChildren|scrollTop|\.open\s*=/);
   });
 });

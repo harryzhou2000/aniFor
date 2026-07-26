@@ -161,6 +161,38 @@ describe('Canvas atmosphere relief', () => {
     for (let offset = 3; offset < source.length; offset += 4) expect(lit[offset]).toBe(source[offset]);
   });
 
+  it('lets a convex lit billow catch more existing field light than a concave pocket', () => {
+    const width = 5;
+    const fixture = (neighbourAlpha: number) => {
+      const source = new Uint8Array(width * width * 4);
+      pixel(source, width, 2, 2, [104, 132, 168, 136]);
+      for (const [x, y] of [[1, 2], [3, 2], [2, 1], [2, 3]] as const) {
+        pixel(source, width, x, y, [104, 132, 168, neighbourAlpha]);
+      }
+      const light = new Uint8Array(width * width * 4);
+      pixel(light, width, 2, 2, [255, 120, 48, 255]);
+      const unlit = new Uint8ClampedArray(source.length);
+      const lit = new Uint8ClampedArray(source.length);
+      shadeCanvasAtmosphere(unlit, source, width, width);
+      shadeCanvasAtmosphere(lit, source, width, width, { bytes: light, width, height: width });
+      const offset = (2 * width + 2) * 4;
+      return {
+        redGain: lit[offset] - unlit[offset],
+        source,
+        lit,
+      };
+    };
+    const crown = fixture(64);
+    const pocket = fixture(220);
+
+    expect(crown.redGain).toBeGreaterThan(pocket.redGain);
+    for (const result of [crown, pocket]) {
+      for (let offset = 3; offset < result.source.length; offset += 4) {
+        expect(result.lit[offset]).toBe(result.source[offset]);
+      }
+    }
+  });
+
   it('reaches one field texel toward an external light without widening gas support', () => {
     const width = 5;
     const source = new Uint8Array(width * width * 4);

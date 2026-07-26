@@ -36,9 +36,12 @@ export function applyCanvasEnergyIdentityStyle(
   time: number,
   velocityX = 0,
   velocityY = 0,
+  gain = 1,
 ): void {
   const style = canvasEnergyIdentityStyle(material);
   if (style === 0) return;
+  const boundedGain = Math.max(0, Math.min(1, gain));
+  if (boundedGain === 0) return;
 
   const frame = time / 120 | 0;
   const driftX = Math.sign(velocityX);
@@ -115,9 +118,9 @@ export function applyCanvasEnergyIdentityStyle(
     blue = spark < 4 ? -2 : 2;
   }
 
-  rgb[0] += clampDelta(red);
-  rgb[1] += clampDelta(green);
-  rgb[2] += clampDelta(blue);
+  rgb[0] += clampDelta(red) * boundedGain;
+  rgb[1] += clampDelta(green) * boundedGain;
+  rgb[2] += clampDelta(blue) * boundedGain;
 }
 
 function clampDelta(value: number): number {

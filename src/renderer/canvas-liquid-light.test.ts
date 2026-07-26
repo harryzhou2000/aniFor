@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
-  applyCanvasLiquidBodyOptics, applyCanvasLiquidInterfaceMeniscus, applyCanvasLiquidMacroSheen, applyCanvasLiquidVolumeChroma,
+  applyCanvasLiquidBodyOptics, applyCanvasLiquidInterfaceMeniscus, applyCanvasLiquidMacroCaustic, applyCanvasLiquidMacroSheen, applyCanvasLiquidOpticalDepth, applyCanvasLiquidVolumeChroma,
   canvasLiquidBodySupport, canvasLiquidContourScale, canvasLiquidEmissionExposure,
   canvasLiquidEmissionSurfaceExposure, canvasLiquidFieldRelief, canvasLiquidSpeciesRelief,
-  canvasLiquidMacroWave, canvasLiquidSurfaceExposure, canvasLiquidVolumeChromaResponse,
+  canvasLiquidCausticWave, canvasLiquidMacroWave, canvasLiquidSurfaceExposure, canvasLiquidVolumeChromaResponse,
 } from './canvas-liquid-light';
 import { RenderOptics } from './render-optics';
 
@@ -151,9 +151,9 @@ describe('Canvas liquid field-owned light', () => {
       const surface = new Float32Array([112, 138, 176, 91]);
       const middle = surface.slice();
       const deep = surface.slice();
-      applyCanvasLiquidVolumeChroma(surface, optics, 0, 0);
-      applyCanvasLiquidVolumeChroma(middle, optics, 0, 128);
-      applyCanvasLiquidVolumeChroma(deep, optics, 0, 255);
+      applyCanvasLiquidOpticalDepth(surface, optics, 0);
+      applyCanvasLiquidOpticalDepth(middle, optics, 128);
+      applyCanvasLiquidOpticalDepth(deep, optics, 255);
       expect(Array.from(surface)).toEqual([112, 138, 176, 91]);
       for (let channel = 0; channel < 3; channel++) {
         expect(deep[channel]).toBeLessThanOrEqual(middle[channel]);
@@ -162,10 +162,57 @@ describe('Canvas liquid field-owned light', () => {
       expect(deep[3]).toBe(91);
     }
 
+    // The Canvas fallback is deliberately calibrated against the composed
+    // Water-core gate, not by changing depth ownership or support. Keep the
+    // aqueous full-depth multiplier exact and alpha untouched.
+    const aqueousCore = new Float32Array([112, 138, 176, 91]);
+    applyCanvasLiquidOpticalDepth(aqueousCore, RenderOptics.Aqueous, 255);
+    expect(aqueousCore[0]).toBeCloseTo(92.288, 3);
+    expect(aqueousCore[1]).toBeCloseTo(122.941, 3);
+    expect(aqueousCore[2]).toBeCloseTo(164.849, 3);
+    expect(aqueousCore[3]).toBe(91);
+
+    const oilyCore = new Float32Array([112, 138, 176, 91]);
+    applyCanvasLiquidOpticalDepth(oilyCore, RenderOptics.Oily, 255);
+    expect(oilyCore[0]).toBeCloseTo(101.248, 3);
+    expect(oilyCore[1]).toBeCloseTo(115.478, 3);
+    expect(oilyCore[2]).toBeCloseTo(133.76, 3);
+    expect(oilyCore[3]).toBe(91);
+
+    const corrosiveCore = new Float32Array([112, 138, 176, 91]);
+    applyCanvasLiquidOpticalDepth(corrosiveCore, RenderOptics.Corrosive, 255);
+    expect(corrosiveCore[0]).toBeCloseTo(103.936, 3);
+    expect(corrosiveCore[1]).toBeCloseTo(132.756, 3);
+    expect(corrosiveCore[2]).toBeCloseTo(165.088, 3);
+    expect(corrosiveCore[3]).toBe(91);
+
     const molten = new Float32Array([220, 84, 22, 91]);
     const original = molten.slice();
-    applyCanvasLiquidVolumeChroma(molten, RenderOptics.Molten, 0, 255);
+    applyCanvasLiquidOpticalDepth(molten, RenderOptics.Molten, 255);
     expect(molten).toEqual(original);
+  });
+
+  it('keeps optical depth live when optional liquid volume chroma is absent', () => {
+    const source = [112, 138, 176, 91] as const;
+    const depthOnly = new Float32Array(source);
+    const chromaOnly = new Float32Array(source);
+    const combined = new Float32Array(source);
+
+    // This is the Canvas equivalent of volume chroma being disabled while the
+    // independent optical-depth control remains enabled.
+    applyCanvasLiquidOpticalDepth(depthOnly, RenderOptics.Aqueous, 255);
+    applyCanvasLiquidVolumeChroma(chromaOnly, RenderOptics.Aqueous, 0.04);
+    applyCanvasLiquidVolumeChroma(combined, RenderOptics.Aqueous, 0.04, false);
+    applyCanvasLiquidOpticalDepth(combined, RenderOptics.Aqueous, 255);
+
+    expect(depthOnly[0]).toBeLessThan(source[0]);
+    expect(depthOnly[1]).toBeLessThan(source[1]);
+    expect(depthOnly[2]).toBeLessThan(source[2]);
+    expect(chromaOnly).not.toEqual(depthOnly);
+    expect(combined).not.toEqual(chromaOnly);
+    expect(depthOnly[3]).toBe(source[3]);
+    expect(chromaOnly[3]).toBe(source[3]);
+    expect(combined[3]).toBe(source[3]);
   });
 
   it('keeps sparse and molten liquid volume chroma exact no-ops', () => {
@@ -202,6 +249,39 @@ describe('Canvas liquid field-owned light', () => {
     expect(Math.abs(lower - first)).toBeLessThan(0.2);
     expect(lower).not.toBe(first);
     expect(Math.abs(later - first)).toBeLessThan(0.7);
+  });
+
+  it('adds a focused bounded caustic lobe only to supported liquid RGB', () => {
+    const first = canvasLiquidCausticWave(184, 218, 3_000, 1);
+    const repeated = canvasLiquidCausticWave(184, 218, 3_000, 1);
+    const adjacent = canvasLiquidCausticWave(185, 218, 3_000, 1);
+    const later = canvasLiquidCausticWave(184, 218, 5_000, 1);
+    expect(first).toBe(repeated);
+    for (const value of [first, adjacent, later]) {
+      expect(value).toBeGreaterThanOrEqual(0);
+      expect(value).toBeLessThanOrEqual(1);
+    }
+    expect(Math.abs(adjacent - first)).toBeLessThan(0.2);
+    expect(Math.abs(later - first)).toBeLessThan(0.4);
+
+    const source = [46, 142, 186, 91] as const;
+    const crest = new Float32Array(source);
+    applyCanvasLiquidMacroCaustic(crest, RenderOptics.Aqueous, 255, 8, 1);
+    for (let channel = 0; channel < 3; channel++) {
+      expect(crest[channel]).toBeGreaterThan(source[channel]);
+      expect(crest[channel] - source[channel]).toBeLessThanOrEqual(6);
+    }
+    expect(crest[3]).toBe(source[3]);
+
+    const sparse = new Float32Array(source);
+    const molten = new Float32Array(source);
+    const pocket = new Float32Array(source);
+    applyCanvasLiquidMacroCaustic(sparse, RenderOptics.Aqueous, 0, 8, 1);
+    applyCanvasLiquidMacroCaustic(molten, RenderOptics.Molten, 255, 8, 1);
+    applyCanvasLiquidMacroCaustic(pocket, RenderOptics.Aqueous, 255, 8, 0);
+    expect(sparse).toEqual(new Float32Array(source));
+    expect(molten).toEqual(new Float32Array(source));
+    expect(pocket).toEqual(new Float32Array(source));
   });
 
   it('gives aqueous volume stronger macro relief than stable oil while retaining the response bound', () => {

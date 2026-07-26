@@ -11,7 +11,9 @@ import { Material } from '../shared/materials';
 import { RenderPhase, RenderProfile } from './render-profile';
 import { isGranularOptics, RenderOptics } from './render-optics';
 import { applyCanvasSurfaceChroma, canvasSurfaceChromaResponse } from './solid-surface-chroma';
+import { applyCanvasSolidContourFresnelRim } from './canvas-solid-relief';
 import { hasCanvasLiquidIdentityStyle } from './canvas-liquid-identity-style';
+import { solidCavitySupportAt } from './canvas-solid-surface';
 import type { FieldOutputScale } from './render-resolution';
 import type { PowderRenderStyle } from './powder-render-style';
 
@@ -22,6 +24,35 @@ const EMPTY_PHASE = 255;
 const LIQUID_LIGHT_X = 0.48;
 const LIQUID_LIGHT_Y = 0.68;
 const FULL_COMPATIBILITY_MASK = 0x1ff;
+const PHASE_CONTACT_QUADRANT_ORIGINS = new Uint8Array([0, 1, 3, 4]);
+
+/**
+ * The contact stencil has nine categorical bits, while a supersample selects
+ * one of four overlapping 2x2 quadrants. Cache the exact bit packing once:
+ * contact grounding can then reuse the existing sixteen-pattern tone table
+ * without extracting four stencil bits for every output pixel.
+ */
+const PHASE_CONTACT_PATTERN_BY_MASK_AND_QUADRANT = (() => {
+  const patterns = new Uint8Array(512 * 4);
+  for (let mask = 0; mask <= FULL_COMPATIBILITY_MASK; mask++) {
+    for (let quadrant = 0; quadrant < 4; quadrant++) {
+      const origin = PHASE_CONTACT_QUADRANT_ORIGINS[quadrant];
+      const pattern = ((mask >>> origin) & 1)
+        | (((mask >>> (origin + 1)) & 1) << 1)
+        | (((mask >>> (origin + 3)) & 1) << 2)
+        | (((mask >>> (origin + 4)) & 1) << 3);
+      patterns[mask * 4 + quadrant] = pattern;
+    }
+  }
+  return patterns;
+})();
+
+/** Exposes the immutable geometry cache for exhaustive exactness tests. */
+export function canvasPhaseContactPattern(mask: number, quadrant: number): number {
+  return PHASE_CONTACT_PATTERN_BY_MASK_AND_QUADRANT[
+    (mask & FULL_COMPATIBILITY_MASK) * 4 + (quadrant & 3)
+  ];
+}
 
 interface SubpixelAxisGeometry {
   readonly local: Float64Array;
@@ -100,7 +131,8 @@ const SUBPIXEL_AXIS_GEOMETRY: Record<FieldOutputScale, SubpixelAxisGeometry> = {
 /** Typed payload of the shared 1×/2×/4×/8× axis lookup; object headers are engine-owned. */
 export const CANVAS_CONTOUR_GEOMETRY_LOOKUP_BYTES = (1 + 2 + 4 + 8)
   * (8 * Float64Array.BYTES_PER_ELEMENT + Uint8Array.BYTES_PER_ELEMENT)
-  + (1 * 1 + 2 * 2 + 4 * 4 + 8 * 8) * 16 * Float64Array.BYTES_PER_ELEMENT;
+  + (1 * 1 + 2 * 2 + 4 * 4 + 8 * 8) * 16 * Float64Array.BYTES_PER_ELEMENT
+  + PHASE_CONTACT_PATTERN_BY_MASK_AND_QUADRANT.byteLength;
 
 export interface CanvasPhaseContourInput {
   readonly materials: Uint8Array;
@@ -271,6 +303,14 @@ export class CanvasPhaseContourScratch {
   private readonly haloWalls = new Uint8Array(HALO_SIZE * HALO_SIZE);
   private readonly haloStability = new Uint8Array(HALO_SIZE * HALO_SIZE);
   private readonly haloPixels = new Uint8ClampedArray(HALO_SIZE * HALO_SIZE * 4);
+  // Rebuilt only when canonical lookup identities change. A reconstructed
+  // liquid support cell must reject duplicate palette colours, but iterating
+  // all 255 material IDs for every candidate makes the forced-Canvas 4x/8x
+  // contour path needlessly expensive.
+  private readonly ordinaryLiquidCandidates = new Uint8Array(255);
+  private ordinaryLiquidCandidateCount = 0;
+  private liquidCandidateStyles?: Uint8Array;
+  private liquidCandidatePalette?: Uint8Array;
   private readonly emptyPowderOwner = {
     material: 0, stability: 0, red: 0, green: 0, blue: 0,
   };
@@ -301,7 +341,8 @@ export class CanvasPhaseContourScratch {
       + this.haloPhases.byteLength
       + this.haloWalls.byteLength
       + this.haloStability.byteLength
-      + this.haloPixels.byteLength;
+      + this.haloPixels.byteLength
+      + this.ordinaryLiquidCandidates.byteLength;
   }
 
   rasterize(input: CanvasPhaseContourInput): void {
@@ -381,16 +422,21 @@ export class CanvasPhaseContourScratch {
     }
     const emptyPowder = this.haloMaterials[haloIndex] === 0 && material !== 0;
     // Presentation-only reconstruction may prefill sourcePixels for a semantic
-    // empty cell. A shared-field liquid pinhole is the one non-owner exception:
-    // it has already been reconstructed from exact liquid donors, and the field
-    // proves one canonical liquid species at this coordinate. It remains Empty
-    // below so it cannot acquire an owner, Hermite contour, or material styling.
+    // empty cell. A shared-field liquid pinhole or exact-solid cavity is a
+    // non-owner exception: each remains Empty below, so it cannot acquire an
+    // owner, Hermite contour, or material styling.
     const reconstructedLiquid = material === 0 && sourceAlpha !== 0 && !this.isWallAt(haloIndex)
       && this.hasUniqueLiquidFieldSpecies(worldIndex, input);
-    // Only a resolved powder owner or a validated liquid reconstruction may turn
-    // an empty payload into coverage. Other non-zero source alpha (including a
-    // reconstructed LIFE dead cell) must not claim presentation coverage.
-    if (material === 0 && sourceAlpha !== 0 && !reconstructedLiquid) return;
+    const reconstructedSolid = material === 0 && sourceAlpha !== 0 && !this.isWallAt(haloIndex)
+      && input.paletteBytes !== undefined
+      && solidCavitySupportAt(
+        input.materials, input.styleBytes, input.paletteBytes,
+        input.worldWidth, input.worldHeight, worldIndex,
+      ) !== 0;
+    // Only a resolved powder owner, validated liquid reconstruction, or an
+    // independently re-proven solid cavity may turn an Empty payload into
+    // coverage. Other non-zero source alpha (including LIFE) remains blank.
+    if (material === 0 && sourceAlpha !== 0 && !reconstructedLiquid && !reconstructedSolid) return;
     // The output planes were cleared once for the chunk. A truly empty source
     // with no projected powder owner therefore has no per-supersample work.
     if (material === 0 && sourceRed === 0 && sourceGreen === 0
@@ -469,6 +515,24 @@ export class CanvasPhaseContourScratch {
         input, input.chunkX + cellX, input.chunkY + cellY, material, emptyPowder,
       )
       : 0;
+    // Match WebGL's already-established deep-Smooth facet retention. A proven
+    // settled bulk may calm only its per-subpixel RGB facet; coverage, alpha,
+    // owner selection, and all contour geometry stay entirely below this
+    // presentation scalar. Grains, Local, projected empty support, walls,
+    // traits, emissive material, moving powder, and fine columns retain their
+    // exact existing facet pattern.
+    const powderFacetCohesion = phase === RenderPhase.Powder
+      && !emptyPowder
+      && powderStyle === 'smooth'
+      && input.powderSurface !== undefined
+      && powderSurfaceDetailGate > 0
+      && !this.isWallAt(haloIndex)
+      && input.styleBytes[material * 4 + 2] === 0
+      && input.styleBytes[material * 4 + 3] === 0
+      ? smoothstep(0.75, 1, this.haloStability[haloIndex] / 255)
+        * smoothstep(0.55, 0.85, input.powderSurface[worldIndex * 4] / 255)
+      : 0;
+    const powderFacetRetention = 1 - powderFacetCohesion * 0.58;
 
     for (let subY = 0; subY < this.outputScale; subY++) {
       for (let subX = 0; subX < this.outputScale; subX++) {
@@ -485,7 +549,7 @@ export class CanvasPhaseContourScratch {
           const facetX = Math.min(1, Math.floor(subX * 2 / this.outputScale));
           const facetY = Math.min(1, Math.floor(subY * 2 / this.outputScale));
           const facetHash = hash2(cellX * 2 + facetX + material * 17, cellY * 2 + facetY);
-          grainFacet = ((facetHash & 15) - 7.5) * 0.72;
+          grainFacet = ((facetHash & 15) - 7.5) * 0.72 * powderFacetRetention;
         }
         if (grainFacet === 0) {
           this.pixels[outputPixel] = sourceRed;
@@ -554,6 +618,10 @@ export class CanvasPhaseContourScratch {
             materialOptics,
           );
           applyCanvasSurfaceChroma(this.pixels, outputPixel, response, materialOptics);
+          applyCanvasSolidContourFresnelRim(
+            this.pixels, outputPixel,
+            density, solidGradientX, solidGradientY, materialOptics,
+          );
         }
         if (solidCurvatureDepth && density > 0.08 && density < 0.92) {
           const curvature = implicitContourCurvature(
@@ -592,11 +660,10 @@ export class CanvasPhaseContourScratch {
           );
         }
         if (phaseContactMask !== 0) {
-          const p00 = (phaseContactMask >>> stencilOrigin) & 1;
-          const p10 = (phaseContactMask >>> (stencilOrigin + 1)) & 1;
-          const p01 = (phaseContactMask >>> (stencilOrigin + 3)) & 1;
-          const p11 = (phaseContactMask >>> (stencilOrigin + 4)) & 1;
-          const pattern = p00 | (p10 << 1) | (p01 << 2) | (p11 << 3);
+          const quadrant = this.axisGeometry.side[subY] * 2 + this.axisGeometry.side[subX];
+          const pattern = PHASE_CONTACT_PATTERN_BY_MASK_AND_QUADRANT[
+            phaseContactMask * 4 + quadrant
+          ];
           const contactTone = this.axisGeometry.phaseContactTone[
             (pattern * this.outputScale + subY) * this.outputScale + subX
           ];
@@ -689,7 +756,7 @@ export class CanvasPhaseContourScratch {
           // Retain a fractional 2x edge on an isolated or unlike-species side;
           // exact same-species support reaches the fully opaque interior.
           amount = smoothstep(0.35, 0.75, density);
-          if (liquidSilhouetteCohesion) {
+          if (liquidSilhouetteCohesion && this.outputScale > 1) {
             const worldX = input.chunkX + cellX + localX;
             const worldY = input.chunkY + cellY + localY;
             const palette = material * 4;
@@ -732,18 +799,32 @@ export class CanvasPhaseContourScratch {
     if (!field || !palette) return false;
     const fieldPixel = worldIndex * 4;
     if (field[fieldPixel + 3] === 0) return false;
+    this.ensureOrdinaryLiquidCandidates(input.styleBytes, palette);
     let matches = 0;
-    for (let candidate = 1; candidate < 256; candidate++) {
+    for (let offset = 0; offset < this.ordinaryLiquidCandidateCount; offset++) {
+      const candidate = this.ordinaryLiquidCandidates[offset];
       const palettePixel = candidate * 4;
-      if (input.styleBytes[palettePixel] !== RenderPhase.Liquid
-        || hasCanvasLiquidIdentityStyle(candidate)
-        || palette[palettePixel] !== field[fieldPixel]
+      if (palette[palettePixel] !== field[fieldPixel]
         || palette[palettePixel + 1] !== field[fieldPixel + 1]
         || palette[palettePixel + 2] !== field[fieldPixel + 2]) continue;
       matches++;
       if (matches > 1) return false;
     }
     return matches === 1;
+  }
+
+  /** Caches the ordinary-liquid identity set without any per-frame allocation. */
+  private ensureOrdinaryLiquidCandidates(styleBytes: Uint8Array, paletteBytes: Uint8Array): void {
+    if (this.liquidCandidateStyles === styleBytes && this.liquidCandidatePalette === paletteBytes) return;
+    let count = 0;
+    for (let candidate = 1; candidate < 256; candidate++) {
+      if (styleBytes[candidate * 4] !== RenderPhase.Liquid
+        || hasCanvasLiquidIdentityStyle(candidate)) continue;
+      this.ordinaryLiquidCandidates[count++] = candidate;
+    }
+    this.ordinaryLiquidCandidateCount = count;
+    this.liquidCandidateStyles = styleBytes;
+    this.liquidCandidatePalette = paletteBytes;
   }
 
   /**
@@ -987,11 +1068,12 @@ export class CanvasPhaseContourScratch {
     haloY: number,
     ownerMaterial: number,
   ): boolean {
-    let horizontalSupport = false;
-    let verticalSupport = false;
+    let leftSupport = false;
+    let rightSupport = false;
+    let topSupport = false;
+    let bottomSupport = false;
     let exposed = false;
     for (let direction = 0; direction < 4; direction++) {
-      const horizontal = direction < 2;
       const x = haloX + (direction === 0 ? -1 : direction === 1 ? 1 : 0);
       const y = haloY + (direction === 2 ? -1 : direction === 3 ? 1 : 0);
       const index = y * HALO_SIZE + x;
@@ -999,8 +1081,10 @@ export class CanvasPhaseContourScratch {
       const candidate = this.haloMaterials[index];
       const candidatePhase = this.haloPhases[index];
       if (candidate === ownerMaterial && candidatePhase === RenderPhase.Liquid) {
-        if (horizontal) horizontalSupport = true;
-        else verticalSupport = true;
+        if (direction === 0) leftSupport = true;
+        else if (direction === 1) rightSupport = true;
+        else if (direction === 2) topSupport = true;
+        else bottomSupport = true;
       } else if (candidate === 0 || candidatePhase === RenderPhase.Gas) {
         exposed = true;
       } else {
@@ -1009,7 +1093,29 @@ export class CanvasPhaseContourScratch {
         return false;
       }
     }
-    return horizontalSupport && verticalSupport && exposed;
+    if ((!leftSupport && !rightSupport) || (!topSupport && !bottomSupport) || !exposed) return false;
+    // A one-cell strand can happen to have one cardinal neighbour on both
+    // axes. Require a matching diagonal that closes one occupied 2x2 quadrant
+    // before the field is allowed to trim coverage. This keeps sparse chains
+    // categorical while dense shores retain a smooth silhouette.
+    const topLeft = (haloY - 1) * HALO_SIZE + haloX - 1;
+    const topRight = topLeft + 2;
+    const bottomLeft = (haloY + 1) * HALO_SIZE + haloX - 1;
+    const bottomRight = bottomLeft + 2;
+    const sameTopLeft = this.haloMaterials[topLeft] === ownerMaterial
+      && this.haloPhases[topLeft] === RenderPhase.Liquid;
+    const sameTopRight = this.haloMaterials[topRight] === ownerMaterial
+      && this.haloPhases[topRight] === RenderPhase.Liquid;
+    const sameBottomLeft = this.haloMaterials[bottomLeft] === ownerMaterial
+      && this.haloPhases[bottomLeft] === RenderPhase.Liquid;
+    const sameBottomRight = this.haloMaterials[bottomRight] === ownerMaterial
+      && this.haloPhases[bottomRight] === RenderPhase.Liquid;
+    const connectedQuadrant = (leftSupport && topSupport && sameTopLeft)
+      || (rightSupport && topSupport && sameTopRight)
+      || (leftSupport && bottomSupport && sameBottomLeft)
+      || (rightSupport && bottomSupport && sameBottomRight);
+    if (!connectedQuadrant) return false;
+    return true;
   }
 
   private isWallAt(index: number): boolean {
@@ -1107,6 +1213,7 @@ function speciesLiquidAlpha(
     ? bytes[offset + 3] : 0;
 }
 
+
 function samplePowderByte(
   bytes: Uint8Array,
   width: number,
@@ -1146,6 +1253,8 @@ function bitCount(value: number): number {
   for (let remaining = value; remaining !== 0; remaining &= remaining - 1) count++;
   return count;
 }
+
+
 
 function hash2(x: number, y: number): number {
   let value = Math.imul(x ^ 0x9e3779b9, 0x85ebca6b) ^ Math.imul(y, 0xc2b2ae35);

@@ -160,8 +160,33 @@ describe('Canvas liquid surface reconstruction', () => {
     expect(pixels[center]).toBeLessThan(176);
     expect(pixels[center]).toBeGreaterThan(lookup.colorByMaterial[Material.Water * 3]);
     expect(Math.abs(pixels[center] - lookup.colorByMaterial[Material.Water * 3]))
-      .toBeLessThan(Math.abs(176 - lookup.colorByMaterial[Material.Water * 3]) * 0.75);
+      .toBeLessThan(Math.abs(176 - lookup.colorByMaterial[Material.Water * 3]) * 0.67);
     expect(pixels.filter((_, offset) => offset % 4 === 3)).toEqual(alphaBefore);
+  });
+
+  it('reduces dense same-species checkerboard variation without mutating semantic planes', () => {
+    const width = 7;
+    const height = 7;
+    const materials = new Uint8Array(width * height).fill(Material.Water);
+    const density = uniformDensity(materials.length, Material.Water);
+    const pixels = seedLiquidPixels(materials);
+    for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) {
+      const pixel = (y * width + x) * 4;
+      const bright = (x + y) % 2 === 0;
+      pixels.set(bright ? [178, 226, 247, 220] : [42, 90, 132, 220], pixel);
+    }
+    const before = new Uint8ClampedArray(pixels);
+    const materialsBefore = new Uint8Array(materials);
+    const densityBefore = new Uint8Array(density);
+
+    reconstruct(pixels, materials, density, width, height);
+
+    expect(interiorRedVariance(pixels, width, 2, 2, 4, 4))
+      .toBeLessThan(interiorRedVariance(before, width, 2, 2, 4, 4) * 0.12);
+    expect(pixels.filter((_, offset) => offset % 4 === 3))
+      .toEqual(before.filter((_, offset) => offset % 4 === 3));
+    expect(materials).toEqual(materialsBefore);
+    expect(density).toEqual(densityBefore);
   });
 
   it('keeps cohesion around a reconstructed dense pinhole', () => {
@@ -174,12 +199,19 @@ describe('Canvas liquid surface reconstruction', () => {
     const pixels = seedLiquidPixels(materials);
     const probe = (hole + 1) * 4;
     pixels.set([178, 226, 247, 220], probe);
+    const alphaBefore = pixels.filter((_, offset) => offset % 4 === 3);
+    const materialsBefore = new Uint8Array(materials);
+    const densityBefore = new Uint8Array(density);
 
     reconstruct(pixels, materials, density, width, height);
 
     expect(pixels[hole * 4 + 3]).toBe(210);
     expect(pixels[probe]).toBeLessThan(178);
     expect(pixels[probe + 3]).toBe(220);
+    expect(materials).toEqual(materialsBefore);
+    expect(density).toEqual(densityBefore);
+    expect(pixels.filter((_, offset) => offset % 4 === 3).filter((_, index) => index !== hole))
+      .toEqual(alphaBefore.filter((_, index) => index !== hole));
   });
 
   it('leaves a straight shoreline and a narrow stream exactly styled', () => {
@@ -327,5 +359,28 @@ describe('Canvas liquid surface reconstruction', () => {
       pixels[index * 4 + 3] = 220;
     }
     return pixels;
+  }
+
+  function interiorRedVariance(
+    pixels: Uint8ClampedArray,
+    width: number,
+    left: number,
+    top: number,
+    right: number,
+    bottom: number,
+  ): number {
+    let sum = 0;
+    let count = 0;
+    for (let y = top; y <= bottom; y++) for (let x = left; x <= right; x++) {
+      sum += pixels[(y * width + x) * 4];
+      count++;
+    }
+    const mean = sum / count;
+    let squared = 0;
+    for (let y = top; y <= bottom; y++) for (let x = left; x <= right; x++) {
+      const difference = pixels[(y * width + x) * 4] - mean;
+      squared += difference * difference;
+    }
+    return squared / count;
   }
 });

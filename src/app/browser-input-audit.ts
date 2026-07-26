@@ -1,4 +1,6 @@
-import type { CanvasPresentationTiming, RendererBackendInfo } from '../renderer/field-renderer';
+import type {
+  AtmosphereSupportAudit, CanvasPresentationTiming, PresentationRefreshAudit, RendererBackendInfo,
+} from '../renderer/field-renderer';
 import type { WebGLPresentationTiming } from '../renderer/pixi-field-presenter';
 import type { PowderRenderStyle } from '../renderer/powder-render-style';
 import { Material } from '../shared/materials';
@@ -44,6 +46,7 @@ export interface BrowserInputAuditApi {
   sourceTarget(x: number, y: number): number;
   presentationAuxiliary(x: number, y: number): number;
   gasIdentityStyle(x: number, y: number): number;
+  atmosphereSupportAudit(): AtmosphereSupportAudit | undefined;
   occupiedCells(): number;
   setGasFieldLighting(enabled: boolean): void;
   setGasVolumeChroma(enabled: boolean): void;
@@ -133,6 +136,14 @@ export interface BrowserInputAuditApi {
   prepareVibrStateGraphicsFixture(): void;
   deutStateGraphicsAtlas(): DeutStateGraphicsAuditSnapshot;
   prepareDeutStateGraphicsFixture(): void;
+  /** Changes only a retained native presentation-state word in a prepared DEUT card. */
+  toggleRetainedPresentationProbe(): {
+    readonly x: number;
+    readonly y: number;
+    readonly material: Material;
+    readonly before: number;
+    readonly after: number;
+  };
   sourceTargetGraphicsAtlas(): SourceTargetGraphicsAuditSnapshot;
   prepareSourceTargetGraphicsFixture(): void;
   forceActivityGraphicsAtlas(): ForceActivityGraphicsAuditSnapshot;
@@ -150,6 +161,7 @@ export interface BrowserInputAuditApi {
   nativeSeedGrowthSnapshot(): NativeSeedGrowthAuditSnapshot;
   prepareNativeSeedGrowthFixture(): void;
   canvasPresentationTiming(): CanvasPresentationTiming | undefined;
+  presentationRefreshAudit(): PresentationRefreshAudit | undefined;
   requestWebGLPresentationTimingSample(): boolean;
   webGLPresentationTiming(): WebGLPresentationTiming | undefined;
   forceEightXRenderStall(): boolean;

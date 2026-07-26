@@ -72,6 +72,22 @@ describe('RenderLabBackend', () => {
     expect(simulation.presentationState().some(Boolean)).toBe(false);
   });
 
+  it('updates retained presentation state without changing material ownership or dirty particles', () => {
+    const simulation = new RenderLabBackend(8, 6);
+    const x = 3;
+    const y = 2;
+    const index = y * simulation.width + x;
+    simulation.consumeDirtyCells();
+    simulation.paint(x, y, Material.VIBR, 0);
+    expect(simulation.consumeDirtyCells()).toEqual([{ index, material: Material.VIBR }]);
+
+    simulation.setFixturePresentationState(x, y, 0x9234);
+
+    expect(simulation.presentationState()[index]).toBe(0x9234);
+    expect(simulation.cells()[index]).toBe(Material.VIBR);
+    expect(simulation.consumeDirtyCells()).toEqual([]);
+  });
+
   it('keeps the independent PHOT plane co-located with matter rather than reusing owner state', () => {
     const simulation = new RenderLabBackend(8, 6);
     simulation.paint(3, 2, Material.Water, 0);

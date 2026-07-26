@@ -61,4 +61,23 @@ describe('Canvas exact energy identity style', () => {
     }
     expect(fingerprints.size).toBe(ENERGY_IDENTITIES.length);
   });
+
+  it('can calm a dense-body identity without touching alpha or its sparse source bound', () => {
+    const source = new Float32Array([120, 128, 136, 191]);
+    const full = new Float32Array(source);
+    const reduced = new Float32Array(source);
+    const absent = new Float32Array(source);
+    applyCanvasEnergyIdentityStyle(full, Material.PHOT, 12, 8, 300, 0, 0, 1);
+    applyCanvasEnergyIdentityStyle(reduced, Material.PHOT, 12, 8, 300, 0, 0, 0.35);
+    applyCanvasEnergyIdentityStyle(absent, Material.PHOT, 12, 8, 300, 0, 0, 0);
+    for (let channel = 0; channel < 3; channel++) {
+      const fullDelta = full[channel] - source[channel];
+      const reducedDelta = reduced[channel] - source[channel];
+      expect(Math.abs(fullDelta)).toBeLessThanOrEqual(14);
+      expect(Math.abs(reducedDelta)).toBeLessThanOrEqual(Math.abs(fullDelta));
+    }
+    expect(full[3]).toBe(source[3]);
+    expect(reduced[3]).toBe(source[3]);
+    expect(absent).toEqual(source);
+  });
 });

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { Material } from '../shared/materials';
 import {
-  applyCanvasSolidBodyOptics, applyCanvasSolidLighting, applyCanvasTranslucentCaustic,
+  applyCanvasSolidBodyOptics, applyCanvasSolidContourFresnelRim, applyCanvasSolidLighting, applyCanvasTranslucentCaustic,
   applyCanvasTranslucentLensShell,
   canvasSolidInteriorCohesion, canvasSolidRelief,
 } from './canvas-solid-relief';
@@ -78,6 +78,34 @@ describe('Canvas solid relief', () => {
     const inRange = new Float32Array([80, 100, 120]);
     applyCanvasSolidLighting(inRange, -5);
     expect(Array.from(inRange)).toEqual([75, 95, 115]);
+  });
+
+  it('adds a bounded analytic grazing rim only to an eligible solid contour', () => {
+    const base = new Uint8ClampedArray([72, 92, 112, 173]);
+    const rim = base.slice();
+    applyCanvasSolidContourFresnelRim(
+      rim, 0, 0.5, -1.4, 0, RenderOptics.SmoothRigid,
+    );
+    expect(rim[3]).toBe(base[3]);
+    expect(rim.slice(0, 3)).not.toEqual(base.slice(0, 3));
+    expect(Math.max(...Array.from(rim.slice(0, 3), (value, channel) => (
+      value - base[channel]
+    )))).toBeLessThanOrEqual(6);
+    const repeated = base.slice();
+    applyCanvasSolidContourFresnelRim(
+      repeated, 0, 0.5, -1.4, 0, RenderOptics.SmoothRigid,
+    );
+    expect(repeated).toEqual(rim);
+
+    for (const [density, gradientX, gradientY, optics] of [
+      [0.92, -1.4, 0, RenderOptics.SmoothRigid],
+      [0.5, 0, 0, RenderOptics.SmoothRigid],
+      [0.5, -1.4, 0, RenderOptics.RoughGranular],
+    ] as const) {
+      const control = base.slice();
+      applyCanvasSolidContourFresnelRim(control, 0, density, gradientX, gradientY, optics);
+      expect(control).toEqual(base);
+    }
   });
 
   it('adds bounded deterministic family-aware body depth without granular over-styling', () => {
@@ -254,6 +282,18 @@ describe('Canvas solid relief', () => {
       Math.abs(glass[0] - 120), Math.abs(glass[1] - 150), Math.abs(glass[2] - 180),
       Math.abs(ice[0] - 120), Math.abs(ice[1] - 150), Math.abs(ice[2] - 180),
     )).toBeLessThan(18);
+  });
+
+  it('gives Glass a WebGL-aligned bounded crown over its valley', () => {
+    const crown = new Float32Array([120, 150, 180]);
+    const valley = new Float32Array(crown);
+    applyCanvasTranslucentLensShell(crown, 6, 18, Material.Glass);
+    applyCanvasTranslucentLensShell(valley, -6, 18, Material.Glass);
+    const luma = (color: Float32Array) => color[0] * 0.2126
+      + color[1] * 0.7152 + color[2] * 0.0722;
+    const spread = luma(crown) - luma(valley);
+    expect(spread).toBeGreaterThan(9);
+    expect(spread).toBeLessThanOrEqual(11);
   });
 
   it('gives each remaining translucent-rigid material a bounded crystalline shell', () => {

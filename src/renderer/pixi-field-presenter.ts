@@ -17,7 +17,7 @@ import {
 } from './render-resolution';
 import { POWDER_SURFACE_REFRESH_INTERVAL } from './powder-surface-field';
 import { updateBoundaryStabilityRect } from './boundary-stability-field';
-import { clientToCanvasWorld } from './client-coordinate-map';
+import { clientToCanvasWorld, clientToVisualViewport } from './client-coordinate-map';
 import { RenderFieldSet, type RenderMaterialStyle } from './render-field-set';
 import { packSemanticRect } from './semantic-field';
 import { packPhotonStateRect } from './photon-state-field';
@@ -35,6 +35,13 @@ import {
   GAS_IDENTITY_MOTIF_TEXTURE_WIDTH,
 } from './canvas-gas-identity-style';
 interface PresenterViewport { readonly width: number; readonly height: number }
+
+/** Audit-only digest of the field that owns reconstructed gas support. */
+export interface AtmosphereSupportAudit {
+  readonly nonzero: number;
+  readonly alphaSum: number;
+  readonly signature: number;
+}
 
 interface WebGLTimerQueryExtension {
   readonly TIME_ELAPSED_EXT: number;
@@ -90,6 +97,7 @@ out vec4 finalColor;
 uniform sampler2D uFieldTexture;
 uniform sampler2D uWallTexture;
 uniform sampler2D uAtmosphereTexture;
+uniform sampler2D uAtmosphereStyleTexture;
 uniform sampler2D uEmissionTexture;
 uniform sampler2D uLiquidTexture;
 uniform sampler2D uBoundaryStabilityTexture;
@@ -101,16 +109,113 @@ uniform float uPowderStyle;
 uniform float uPowderBodyDepth;
 uniform float uLiquidOpticalDepth;
 uniform float uSolidOpticalDepth;
+uniform float uGasFieldLighting;
 uniform float uGasVolumeChroma;
+uniform float uGasIdentityStyling;
 uniform float uEmissionVolumeChroma;
+uniform float uEnergyCoreRelief;
+uniform float uEnergyIdentityStyling;
+uniform float uLiquidFieldLighting;
 uniform float uLiquidVolumeChroma;
+uniform float uLiquidIdentityStyling;
+uniform float uSolidFieldLighting;
+uniform float uTranslucentFieldTransmission;
+uniform float uTranslucentLensShell;
 uniform float uSourceTargetStyling;
+uniform float uForceActivityStyling;
 uniform float uVibrStateStyling;
 uniform float uDeutStateStyling;
+uniform float uBotanicalIdentityStyling;
+uniform float uBotanicalLifecycleStyling;
 float materialAt(vec2 uv) {
   return floor(texture(uFieldTexture, clamp(uv, uTexel * 0.5, vec2(1.0) - uTexel * 0.5)).r * 255.0 + 0.5);
 }
 float same(vec2 uv, float material) { return 1.0 - step(0.5, abs(materialAt(uv) - material)); }
+// The normal WebGL path also layers a small species motif over atmosphere
+// volume. At 15M fragments, true 8x deliberately keeps only the existing R8
+// propagated style sample and its dense-body key. This preserves a continuous
+// cloud read without a second motif sample or cell-frequency dot pattern.
+vec3 gasIdentityEightXDelta(float style, float density) {
+  float support = smoothstep(0.10, 0.70, density);
+  vec3 key;
+  if (style < 1.5) key = vec3(-4.0, -4.0, -3.0); // Smoke
+  else if (style < 2.5) key = vec3(1.0, 2.0, 3.0); // Steam
+  else if (style < 3.5) key = vec3(3.0, 2.0, -1.0); // Gas
+  else if (style < 4.5) key = vec3(0.0, 2.0, 3.0); // Oxygen
+  else if (style < 5.5) key = vec3(1.0, 1.0, 3.0); // Hydrogen
+  else if (style < 6.5) key = vec3(-3.0, -2.0, -1.0); // CO2
+  else if (style < 7.5) key = vec3(2.0, 1.0, 3.0); // Noble gas
+  else if (style < 8.5) key = vec3(3.0, 0.0, -2.0); // BOYL
+  else if (style < 9.5) key = vec3(-1.0, 3.0, -1.0); // CAUS
+  else if (style < 10.5) key = vec3(2.0); // FOG
+  else if (style < 11.5) key = vec3(-1.0, 2.0, 4.0); // RFRG
+  else if (style < 12.5) key = vec3(-1.0, 1.0, 4.0); // CFLM
+  else if (style < 13.5) key = vec3(-4.0, -2.0, -4.0); // AMTR
+  else if (style < 14.5) key = vec3(2.0, -2.0, 3.0); // WARP
+  else if (style < 15.5) key = vec3(3.0, -2.0, 3.0); // BIZRG
+  else if (style < 16.5) key = vec3(-2.0); // MORT
+  else key = vec3(3.0, -2.0, 3.75); // VRSG retains its magenta distinction.
+  return key * support / 255.0;
+}
+vec3 gasIdentityEightXChroma(float style, float density) {
+  // Keep Noble Gas's restrained violet key/fill under the existing gas-volume
+  // switch. This remains a density-gated RGB term and never changes support.
+  return style > 6.5 && style < 7.5
+    ? vec3(0.009, -0.0045, 0.008) * density : vec3(0.0);
+}
+vec3 liquidEightXMeniscusKey(float optics) {
+  if (optics == 1.0) return vec3(0.52, 0.88, 1.00); // Aqueous
+  if (optics == 2.0) return vec3(1.00, 0.72, 0.28); // Oily
+  return vec3(0.44, 1.00, 0.68); // Corrosive
+}
+vec3 liquidEightXMeniscusShadow(float optics) {
+  if (optics == 1.0) return vec3(1.00, 0.62, 0.36); // Aqueous
+  if (optics == 2.0) return vec3(0.40, 0.68, 1.00); // Oily
+  return vec3(0.72, 0.38, 0.62); // Corrosive
+}
+// The normal path has a richer fourteen-material liquid grammar. At 15M
+// fragments, eight distinct public-liquid identities must share one small
+// material-seeded grammar: duplicating eight independent motif trees can exceed
+// SwiftShader's live-register budget. The selected material supplies stable
+// phase and hue; density/depth/slope are already live in the liquid branch.
+vec3 liquidIdentityEightXDelta(
+  float material, vec2 worldPosition, float density, float depth, vec2 slope
+) {
+  float support = smoothstep(0.12, 0.82, density) * (0.48 + depth * 0.52);
+  vec2 cell = floor(worldPosition);
+  float seed = material * 0.618034;
+  float diagonal = fract(cell.x * (0.052 + fract(seed) * 0.018)
+    + cell.y * (0.034 + fract(seed * 0.5) * 0.015) + seed) * 2.0 - 1.0;
+  float ribbon = 1.0 - abs(diagonal);
+  float fold = 1.0 - abs(fract((cell.x - cell.y) * 0.046875 + seed * 0.37) * 2.0 - 1.0);
+  float slopeLight = clamp(0.5 - slope.x * 0.24 - slope.y * 0.32, 0.0, 1.0);
+  vec3 hue = vec3(
+    fract(seed * 0.381966), fract(seed * 0.618034), fract(seed * 0.173205)
+  ) - vec3(0.5);
+  float motif = (ribbon - 0.44) * 0.72 + (fold - 0.44) * 0.28;
+  vec3 identity = (vec3(0.018, 0.022, 0.026) + hue * 0.056)
+    * motif + hue * (slopeLight - 0.5) * 0.018;
+  return clamp(identity * support, vec3(-0.055), vec3(0.055));
+}
+bool solidEightXGranular(float optics) {
+  return optics == 7.0 || optics == 13.0 || optics == 14.0 || optics == 15.0;
+}
+vec3 solidEightXBodyKey(float optics) {
+  if (optics == 8.0 || optics == 19.0) return vec3(0.3704, 0.6667, 1.0000);
+  if (optics == 9.0) return vec3(0.5417, 1.0000, 0.4583);
+  if (optics == 10.0) return vec3(0.2424, 0.6970, 1.0000);
+  if (optics == 11.0) return vec3(0.2414, 1.0000, 0.4828);
+  if (optics == 12.0) return vec3(0.2647, 0.6176, 1.0000);
+  return vec3(0.8000, 0.9000, 1.0000);
+}
+vec3 solidEightXBodyShadow(float optics) {
+  if (optics == 8.0 || optics == 19.0) return vec3(0.94, 0.84, 0.70);
+  if (optics == 9.0) return vec3(0.94, 0.72, 0.96);
+  if (optics == 10.0) return vec3(1.00, 0.84, 0.62);
+  if (optics == 11.0) return vec3(0.96, 0.62, 0.92);
+  if (optics == 12.0) return vec3(1.00, 0.78, 0.54);
+  return vec3(0.88, 0.80, 0.68);
+}
 void main() {
   vec2 uv = vFieldCoord;
   vec4 semantic = texture(uFieldTexture, clamp(uv, uTexel * 0.5, vec2(1.0) - uTexel * 0.5));
@@ -118,10 +223,22 @@ void main() {
   vec4 atmosphere = texture(uAtmosphereTexture, uv);
   vec4 emission = texture(uEmissionTexture, uv);
   vec4 liquid = texture(uLiquidTexture, uv);
+  // True 8x already needs this centre emission sample for aura and energy.
+  // Reuse it for a deliberately compact gas scatter rather than restoring the
+  // normal presenter's cardinal/outward probes. This stays RGB-only and keeps
+  // the compact shader within its one-sample gas-lighting budget.
+  float gasFieldScatter = uGasFieldLighting * smoothstep(0.002, 0.42, emission.a);
   if (material < 0.5) {
     if (liquid.a > 0.28) finalColor = vec4(liquid.rgb * liquid.a, liquid.a);
     else if (atmosphere.a > 0.004) {
-      vec3 gas = atmosphere.rgb + uGasVolumeChroma * atmosphere.a * vec3(0.022, -0.009, 0.017);
+      float gasShell = 1.0 - smoothstep(0.22, 0.82, atmosphere.a);
+      vec3 gas = atmosphere.rgb + uGasVolumeChroma * atmosphere.a * vec3(0.022, -0.009, 0.017)
+        + emission.rgb * gasFieldScatter * gasShell * 0.035;
+      if (uGasIdentityStyling > 0.5) {
+        float gasIdentityStyle = floor(texture(uAtmosphereStyleTexture, uv).r * 255.0 + 0.5);
+        gas += gasIdentityEightXDelta(gasIdentityStyle, atmosphere.a)
+          + uGasVolumeChroma * gasIdentityEightXChroma(gasIdentityStyle, atmosphere.a);
+      }
       finalColor = vec4(gas * atmosphere.a * 0.42, atmosphere.a * 0.42);
     } else if (emission.a > 0.004) {
       vec3 aura = emission.rgb + uEmissionVolumeChroma * emission.a * vec3(0.025, 0.010, 0.030);
@@ -133,6 +250,8 @@ void main() {
   vec4 style = texture(uStyleTexture, vec2((material + 0.5) / 256.0, 0.5));
   vec4 palette = texture(uPaletteTexture, vec2((material + 0.5) / 256.0, 0.5));
   float family = floor(style.r * 255.0 + 0.5);
+  float traits = floor(style.a * 255.0 + 0.5);
+  bool materialEmissive = style.b > 0.5;
   float optics = floor(palette.a * 255.0 + 0.5);
   vec2 grid = uv * uFieldSize - 0.5;
   vec2 blend = fract(grid);
@@ -147,44 +266,238 @@ void main() {
   if (family == 2.0) density = max(density, liquid.a);
   float depth = texture(uBoundaryStabilityTexture, uv).r;
   vec3 color = palette.rgb;
-  if (family == 1.0) color = mix(color, atmosphere.rgb, min(0.82, atmosphere.a));
+  if (family == 1.0) {
+    float gasDensity = max(density, atmosphere.a);
+    float gasShell = 1.0 - smoothstep(0.22, 0.82, gasDensity);
+    color = mix(color, atmosphere.rgb, min(0.82, atmosphere.a));
+    color += emission.rgb * gasFieldScatter * (0.018 + gasShell * 0.030);
+    if (uGasIdentityStyling > 0.5) {
+      float gasIdentityStyle = floor(texture(uAtmosphereStyleTexture, uv).r * 255.0 + 0.5);
+      color += gasIdentityEightXDelta(gasIdentityStyle, gasDensity)
+        + uGasVolumeChroma * gasIdentityEightXChroma(gasIdentityStyle, gasDensity);
+    }
+  }
   else if (family == 2.0) color = mix(color, liquid.rgb, min(0.78, liquid.a));
-  else if (family == 3.0) color = mix(color, emission.rgb, emission.a * 0.35) + emission.rgb * 0.18;
+  else if (family == 3.0) {
+    color = mix(color, emission.rgb, emission.a * 0.35) + emission.rgb * 0.18;
+    // True 8x keeps Energy's dense-core relief static so a 15M-fragment
+    // presentation neither introduces a clock-driven redraw nor needs the
+    // normal presenter's extra probes. The centre emission sample, material,
+    // grid, and bilinear density are already live here. This changes RGB only:
+    // semantic support and the later alpha calculation remain authoritative.
+    float denseEnergy = smoothstep(0.12, 0.48, emission.a)
+      * smoothstep(0.18, 0.66, density);
+    vec2 energyCell = floor(grid);
+    float energyLobe = 1.0 - abs(fract(
+      energyCell.x * 0.055 + energyCell.y * 0.035 + material * 0.071
+    ) * 2.0 - 1.0);
+    // A ±7% core response stays below the true-8x framebuffer peak bound while
+    // giving cool ELEC enough luma movement to retain a visible dense-body
+    // volume after quantisation.
+    float energyRelief = (energyLobe - 0.5) * 0.14 * denseEnergy;
+    color *= 1.0 + energyRelief * uEnergyCoreRelief;
+
+    // Compact static identity marks retain a small material-specific hue cue
+    // without the normal presenter's per-family branch tree. Dense supported
+    // bodies deliberately reduce the mark, leaving broad relief rather than
+    // cell-frequency noise.
+    float identityMark = 1.0 - step(1.5, mod(
+      energyCell.x * 3.0 + energyCell.y * 5.0 + material * 7.0, 17.0
+    ));
+    vec3 identityHue = vec3(
+      fract(material * 0.381966), fract(material * 0.618034), fract(material * 0.173205)
+    ) - vec3(0.5);
+    color += identityHue * (0.006 + identityMark * 0.024)
+      * (1.0 - denseEnergy * 0.65) * uEnergyIdentityStyling;
+  }
   if (family == 4.0) {
     float powderDepth = depth * uPowderBodyDepth;
     color *= vec3(1.02 + density * 0.07) - powderDepth * vec3(0.10, 0.07, 0.04);
   }
-  float exactLiquidInterior = q00 * q10 * q01 * q11;
-  float liquidCore = same(uv - vec2(uTexel.x, 0.0), material)
-    * same(uv + vec2(uTexel.x, 0.0), material)
-    * same(uv - vec2(0.0, uTexel.y), material)
-    * same(uv + vec2(0.0, uTexel.y), material);
-  vec4 liquidLeft = texture(uLiquidTexture, uv - vec2(uTexel.x, 0.0));
-  vec4 liquidRight = texture(uLiquidTexture, uv + vec2(uTexel.x, 0.0));
-  vec4 liquidTop = texture(uLiquidTexture, uv - vec2(0.0, uTexel.y));
-  vec4 liquidBottom = texture(uLiquidTexture, uv + vec2(0.0, uTexel.y));
-  float liquidSpeciesDifference = max(
-    max(length(liquid.rgb - liquidLeft.rgb), length(liquid.rgb - liquidRight.rgb)),
-    max(length(liquid.rgb - liquidTop.rgb), length(liquid.rgb - liquidBottom.rgb))
-  );
-  if (family == 2.0 && optics != 4.0 && liquidCore > 0.5
-    && liquidSpeciesDifference < 0.035) {
-    color *= 1.08 - depth * uLiquidOpticalDepth * 0.09;
+  // Deep rigid bodies reuse the existing exact-species occupancy, auxiliary
+  // thickness byte, and compact analytic grid. At true 8x this gives smooth,
+  // organic, device, radioactive, and translucent solids a restrained body
+  // read without a new texture, probe, pass, or clock-driven variation. The
+  // strict interior guard keeps granular matter, thin strokes, holes, walls,
+  // and unlike-material seams presentation-exact.
+  if (family == 0.0) {
+    float solidBaseLight = 0.94 + density * 0.13;
+    bool deepSolidBody = uSolidOpticalDepth > 0.5 && !materialEmissive
+      && depth > 6.0 / 255.0 && q00 * q10 * q01 * q11 > 0.5 && density > 0.76
+      && !solidEightXGranular(optics);
+    if (deepSolidBody) {
+      float depthT = smoothstep(6.0 / 255.0, 42.0 / 255.0, depth);
+      float linearThickness = clamp((depth * 255.0 - 6.0) / 249.0, 0.0, 1.0);
+      float shapedThickness = linearThickness * (1.4 - linearThickness * 0.4);
+      float thicknessGain = optics == 8.0 || optics == 19.0 ? 23.0
+        : optics == 9.0 ? 18.0 : optics == 10.0 ? 25.0
+          : optics == 11.0 ? 21.0 : optics == 12.0 ? 13.0 : 16.0;
+      vec2 bodyAxis = optics == 9.0 ? vec2(1.0, 4.0)
+        : optics == 10.0 ? vec2(4.0, 0.0) : optics == 11.0 ? vec2(3.0, -2.0)
+          : vec2(2.0, 1.0);
+      float bodyPhase = fract((dot(floor(grid), bodyAxis) + material * 11.0) / 128.0);
+      float bodyTriangle = 1.0 - abs(bodyPhase * 2.0 - 1.0);
+      float bodyLobe = bodyTriangle * bodyTriangle * (3.0 - bodyTriangle * 2.0);
+      float bodyResponse = (bodyLobe - 0.5) * depthT;
+      vec3 bodyKey = solidEightXBodyKey(optics);
+      vec3 bodyShadow = solidEightXBodyShadow(optics);
+      color *= solidBaseLight * (vec3(1.0) - bodyShadow * (thicknessGain / 255.0
+        * shapedThickness));
+      color += bodyKey * max(0.0, bodyResponse) * (10.0 / 255.0)
+        - bodyShadow * max(0.0, -bodyResponse) * (10.0 / 255.0);
+    } else color *= solidBaseLight;
   }
-  if (family == 2.0 && optics != 4.0 && density > 0.72
-    && exactLiquidInterior > 0.5 && liquidCore > 0.5
-    && liquidSpeciesDifference < 0.035) {
-    color += uLiquidVolumeChroma * depth * vec3(0.022, 0.010, -0.014);
+  // True 8x deliberately reuses the centre emission sample that is already
+  // live for gas and Energy. This is the compact counterpart to normal
+  // WebGL's solid-field light: a bounded RGB-only contour/body cue with no
+  // outward probe, texture, field, pass, or alpha/support decision.
+  if (uSolidFieldLighting > 0.5 && family == 0.0 && traits < 0.5
+    && !materialEmissive && optics != 12.0 && material != 3.0
+    && emission.a > 0.002) {
+    float solidFieldShell = (1.0 - smoothstep(0.40, 0.94, density))
+      * smoothstep(0.08, 0.56, density);
+    float exactSolidInterior = q00 * q10 * q01 * q11;
+    float solidFieldCore = exactSolidInterior
+      * smoothstep(6.0 / 255.0, 48.0 / 255.0, depth)
+      * smoothstep(0.74, 0.96, density);
+    float solidFieldReach = smoothstep(0.002, 0.42, emission.a);
+    float solidFieldWeight = (solidFieldShell * 0.040 + solidFieldCore * 0.015)
+      * solidFieldReach;
+    color += (vec3(1.0) - clamp(color, 0.0, 1.0))
+      * emission.rgb * solidFieldWeight;
+  }
+  // TranslucentRigid is the intentional presentation-alpha exception. Restore
+  // the compact equivalent of normal WebGL's crystalline shell and field-light
+  // transmission from the samples already live at true 8x. This deliberately
+  // omits backdrop refraction: that rich path depends on wall compositing which
+  // the direct 8x mesh does not own. It changes neither support nor material
+  // ownership, and it adds no sampler, target, or output-scale resource.
+  if (family == 0.0 && optics == 12.0 && traits < 0.5 && !materialEmissive) {
+    float translucentDepth = smoothstep(0.34, 0.94, density);
+    vec2 translucentSlope = vec2((q10 + q11) - (q00 + q01),
+      (q01 + q11) - (q00 + q10)) * 0.50;
+    float inverseNormalLength = inversesqrt(0.78 + dot(translucentSlope, translucentSlope));
+    float shellRim = (1.0 - smoothstep(0.58, 0.98, density))
+      * smoothstep(0.12, 0.58, density) * (0.34 + (1.0 - 0.88 * inverseNormalLength) * 0.66);
+    vec3 crystalKey = material == 12.0 ? vec3(0.58, 0.86, 1.00) : vec3(0.45, 0.78, 1.00);
+    if (uTranslucentLensShell > 0.5) {
+      float shellLight = clamp((0.46 - translucentSlope.x * 0.38
+        - translucentSlope.y * 0.54) * inverseNormalLength, 0.0, 1.0);
+      color += crystalKey * shellRim * (0.016 + shellLight * 0.040);
+    }
+    float exactTranslucentInterior = q00 * q10 * q01 * q11;
+    if (uTranslucentFieldTransmission > 0.5 && exactTranslucentInterior > 0.5
+      && emission.a > 0.002) {
+      float transmittedReach = smoothstep(0.002, 0.42, emission.a);
+      float transmittedWeight = mix(0.10, 0.17, translucentDepth);
+      vec3 transmissionTint = material == 12.0 ? vec3(0.88, 1.02, 1.12) : vec3(1.0);
+      vec3 transmittedLight = emission.rgb * transmissionTint * transmittedReach * transmittedWeight;
+      color += (vec3(1.0) - clamp(color, 0.0, 1.0)) * transmittedLight;
+    }
+  }
+  // Compact Device bodies retain a restrained static bus/terminal cue at true
+  // 8x. This gives force infrastructure the same deliberate body language as
+  // ordinary device solids without a sampler, clock, topology, or alpha cost.
+  if (family == 0.0 && optics == 10.0) {
+    vec2 deviceCell = floor(grid);
+    float bus = 1.0 - step(0.5, mod(deviceCell.x + floor(deviceCell.y / 4.0), 9.0));
+    float terminal = 1.0 - step(1.5, mod(deviceCell.x * 3.0 + deviceCell.y * 5.0, 17.0));
+    float trace = max(bus * 0.72, terminal);
+    color += vec3(3.0, 8.0, 11.0) * trace * (0.28 + density * 0.72) / 255.0;
+  }
+  // The centre liquid field remains live for reconstructed Empty support, but
+  // the four neighbour probes are meaningful only for ordinary liquid bodies.
+  // Keeping them inside this branch avoids eight texture fetches per occupied
+  // non-liquid fragment in the fifteen-million-fragment true-8x compositor.
+  if (family == 2.0 && optics != 4.0) {
+    float exactLiquidInterior = q00 * q10 * q01 * q11;
+    float liquidCore = same(uv - vec2(uTexel.x, 0.0), material)
+      * same(uv + vec2(uTexel.x, 0.0), material)
+      * same(uv - vec2(0.0, uTexel.y), material)
+      * same(uv + vec2(0.0, uTexel.y), material);
+    vec4 liquidLeft = texture(uLiquidTexture, uv - vec2(uTexel.x, 0.0));
+    vec4 liquidRight = texture(uLiquidTexture, uv + vec2(uTexel.x, 0.0));
+    vec4 liquidTop = texture(uLiquidTexture, uv - vec2(0.0, uTexel.y));
+    vec4 liquidBottom = texture(uLiquidTexture, uv + vec2(0.0, uTexel.y));
+    float liquidSpeciesDifference = max(
+      max(length(liquid.rgb - liquidLeft.rgb), length(liquid.rgb - liquidRight.rgb)),
+      max(length(liquid.rgb - liquidTop.rgb), length(liquid.rgb - liquidBottom.rgb))
+    );
+    vec2 liquidSlope = vec2(liquidRight.a - liquidLeft.a, liquidBottom.a - liquidTop.a) * 0.72;
+    if (liquidCore > 0.5 && liquidSpeciesDifference < 0.035) {
+      color *= 1.08 - depth * uLiquidOpticalDepth * 0.09;
+    }
+    if (density > 0.72 && exactLiquidInterior > 0.5 && liquidCore > 0.5
+      && liquidSpeciesDifference < 0.035) {
+      color += uLiquidVolumeChroma * depth * vec3(0.022, 0.010, -0.014);
+    }
+    // The compact renderer already owns these exact four field samples for
+    // liquid depth and species seams. Reuse them for a restrained, connected
+    // meniscus/body-light response rather than restoring normal WebGL's extra
+    // probes or time-varying waves at 15M fragments. This remains RGB-only:
+    // alpha, semantic ownership, reconstructed support, and fluid physics stay
+    // field-owned. Molten, trait/emissive, isolated, and unlike-species liquid
+    // are deliberate no-ops.
+    bool ordinaryLiquid = optics == 1.0 || optics == 2.0 || optics == 3.0;
+    if (uLiquidFieldLighting > 0.5 && ordinaryLiquid && traits < 0.5
+      && !materialEmissive && liquidSpeciesDifference < 0.035) {
+      float liquidSupportCount = step(0.48, liquidLeft.a) + step(0.48, liquidRight.a)
+        + step(0.48, liquidTop.a) + step(0.48, liquidBottom.a);
+      float connected = smoothstep(1.5, 3.0, liquidSupportCount)
+        * smoothstep(0.48, 0.88, liquid.a);
+      float liquidNeighbourMean = (liquidLeft.a + liquidRight.a + liquidTop.a + liquidBottom.a) * 0.25;
+      float fieldInterior = smoothstep(0.54, 0.90, min(liquid.a, liquidNeighbourMean));
+      float inverseNormalLength = inversesqrt(0.86 + dot(liquidSlope, liquidSlope));
+      float normalZ = 0.93 * inverseNormalLength;
+      float keyLight = clamp((0.44 - liquidSlope.x * 0.42 - liquidSlope.y * 0.58)
+        * inverseNormalLength, 0.0, 1.0);
+      float airFacingRim = (1.0 - smoothstep(0.52, 0.96, liquidNeighbourMean)) * connected;
+      float grazing = clamp(1.0 - normalZ, 0.0, 1.0);
+      vec3 meniscusKey = liquidEightXMeniscusKey(optics);
+      vec3 meniscusShadow = liquidEightXMeniscusShadow(optics);
+      float bodyResponse = (keyLight - 0.43) * (0.018 + fieldInterior * 0.022) * connected;
+      color *= 1.0 + bodyResponse;
+      color += meniscusKey * airFacingRim * (0.014 + keyLight * 0.026 + grazing * 0.018);
+      color -= meniscusShadow * airFacingRim * (1.0 - keyLight) * 0.010;
+    }
+    // Public unusual/phase-product liquids need a visual grammar after their
+    // shared body optics. Unlike species, molten/emissive liquid, reconstructed
+    // Empty support, and all non-owner materials are exact no-ops.
+    if (uLiquidIdentityStyling > 0.5 && !materialEmissive
+      && liquidSpeciesDifference < 0.035
+      && (material == 38.0 || (material >= 54.0 && material <= 57.0)
+        || material == 62.0 || material == 202.0 || material == 207.0)) {
+      color += liquidIdentityEightXDelta(material, grid, density, depth, liquidSlope)
+        * uLiquidIdentityStyling;
+    }
   }
   // A few exact TPT projections (notably WARP) have an intentionally near-black
   // canonical palette. Preserve that identity as visible material instead of
   // collapsing it into transparent-page black at true 8x.
   if (max(color.r, max(color.g, color.b)) < 0.035) color = vec3(16.0 / 255.0);
-  float sourceTarget = floor(texture(uWallTexture, uv).b * 255.0 + 0.5)
-    + floor(texture(uWallTexture, uv).a * 255.0 + 0.5) * 256.0;
-  float nativeWall = floor(texture(uWallTexture, uv).r * 255.0 + 0.5);
   bool sourceOwner = material == 124.0 || material == 126.0 || material == 127.0
     || material == 137.0 || material == 158.0 || material == 159.0;
+  bool forceOwner = material == 115.0 || material == 116.0;
+  bool vibrOwner = material == 99.0 || material == 113.0;
+  bool deutOwner = material == 100.0;
+  bool botanicalLifecycleOwner = material == 50.0 || material == 10.0;
+  // Most 8x fragments have no retained native state. Decode the B/A state and
+  // co-located native wall exactly once only for owners whose enabled RGB
+  // styling consumes it; this avoids two state-texture samples on every other
+  // occupied fragment without changing state ownership, support, or alpha.
+  bool needsPackedState = (uSourceTargetStyling > 0.5 && sourceOwner)
+    || (uForceActivityStyling > 0.5 && forceOwner)
+    || (uVibrStateStyling > 0.5 && vibrOwner)
+    || (uDeutStateStyling > 0.5 && deutOwner)
+    || (uBotanicalLifecycleStyling > 0.5 && botanicalLifecycleOwner);
+  float sourceTarget = 0.0;
+  float nativeWall = 0.0;
+  if (needsPackedState) {
+    vec4 packedState = texture(uWallTexture, uv);
+    sourceTarget = floor(packedState.b * 255.0 + 0.5)
+      + floor(packedState.a * 255.0 + 0.5) * 256.0;
+    nativeWall = floor(packedState.r * 255.0 + 0.5);
+  }
   if (uSourceTargetStyling > 0.5 && sourceOwner
     && ((sourceTarget >= 1.0 && sourceTarget <= 170.0) || sourceTarget == 217.0)) {
     vec2 badgeCell = mod(floor(uv * uFieldSize), 6.0);
@@ -192,7 +505,30 @@ void main() {
     vec3 targetKey = vec3(mod(sourceTarget, 6.0) / 6.0, mod(sourceTarget, 11.0) / 11.0, mod(sourceTarget, 17.0) / 17.0);
     color += (vec3(0.05) + targetKey * 0.12) * (0.35 + badge * 0.65);
   }
-  if (uVibrStateStyling > 0.5 && (material == 99.0 || material == 113.0)
+  // ACEL/DCEL retain their native active bit in this same B/A word. Mirror the
+  // normal presenter's 16-cell chevron/ring language without a new sample,
+  // pass, support decision, or alpha change on the compact true-8x path.
+  if (uForceActivityStyling > 0.5 && forceOwner
+    && mod(floor(sourceTarget), 2.0) >= 0.5) {
+    vec2 forceLocal = mod(floor(uv * uFieldSize), 16.0);
+    if (material == 115.0) {
+      float centredY = abs(forceLocal.y - 8.0);
+      float chevronDistance = abs(forceLocal.x - 5.0 - centredY);
+      bool leadingChevron = forceLocal.x >= 5.0 && forceLocal.x <= 13.0
+        && chevronDistance <= 1.0;
+      bool wake = forceLocal.x >= 1.0 && forceLocal.x < 6.0
+        && forceLocal.y >= 7.0 && forceLocal.y <= 9.0;
+      color += leadingChevron ? vec3(16.0, 11.0, -4.0) / 255.0
+        : wake ? vec3(8.0, 5.0, -2.0) / 255.0 : vec3(0.0);
+    } else {
+      vec2 forceCentred = forceLocal - 8.0;
+      float forceRadiusSquared = dot(forceCentred, forceCentred);
+      color += forceRadiusSquared >= 25.0 && forceRadiusSquared <= 49.0
+        ? vec3(3.0, 10.0, 16.0) / 255.0
+        : forceRadiusSquared <= 4.0 ? vec3(-8.0, -5.0, 3.0) / 255.0 : vec3(0.0);
+    }
+  }
+  if (uVibrStateStyling > 0.5 && vibrOwner
     && sourceTarget > 0.5) {
     float charge = min(mod(sourceTarget, 128.0), 100.0) / 100.0;
     float countdown = mod(floor(sourceTarget / 128.0), 256.0) / 255.0;
@@ -205,7 +541,7 @@ void main() {
     vec3 burst = mix(vec3(18.0, 20.0, 13.0), vec3(8.0, 15.0, 22.0), alternate) * countdown;
     color += (charged + burst) / 255.0;
   }
-  if (uDeutStateStyling > 0.5 && material == 100.0 && sourceTarget > 0.5 && nativeWall < 0.5) {
+  if (uDeutStateStyling > 0.5 && deutOwner && sourceTarget > 0.5 && nativeWall < 0.5) {
     float ordinary = min(1.0, sourceTarget / 240.0);
     float compressed = max(0.0, (sourceTarget - 240.0) / 5760.0);
     // Native DEUT's ordinary ctype range reaches the reaction threshold at
@@ -217,9 +553,106 @@ void main() {
       + sqrt(min(1.0, compressed)) * 0.30;
     color += concentration * vec3(10.0, 19.0, 28.0) / 255.0;
   }
-  if (family == 0.0) color *= 0.94 - depth * uSolidOpticalDepth * 0.16 + density * 0.13;
+  // True 8x keeps botanical state on the existing packed B/A word. This is
+  // RGB-only compact arithmetic: no additional texture, field, pass, or
+  // topology decision is introduced on the 15M-fragment path.
+  if (uBotanicalIdentityStyling > 0.5 || uBotanicalLifecycleStyling > 0.5) {
+    vec2 botanicalCell = floor(uv * uFieldSize);
+    if (uBotanicalIdentityStyling > 0.5) {
+      if (material == 9.0) {
+        float ring = mod(botanicalCell.x + floor(botanicalCell.y / 3.0) + material, 11.0) < 2.0
+          ? -7.0 : 2.0;
+        float axial = mod(botanicalCell.x + floor(botanicalCell.y / 7.0) + material, 9.0) < 2.0
+          ? 1.0 : 0.0;
+        color += vec3(ring + axial * 3.0, ring * 0.48 + axial * 1.5,
+          ring * 0.22 - axial * 1.5) / 255.0;
+      } else if (material == 10.0) {
+        float leaf = mod(botanicalCell.x * 5.0 + botanicalCell.y * 3.0 + material, 8.0) / 7.0;
+        float vein = mod(botanicalCell.x * 2.0 + botanicalCell.y
+          + mod(botanicalCell.y * 5.0 + 3.0, 8.0), 13.0) < 3.0 ? 1.0 : 0.0;
+        color += vec3(leaf * 1.5 - vein * 3.0, leaf * 3.5 + vein * 6.0,
+          leaf - vein * 2.5) / 255.0;
+      } else if (material == 83.0) {
+        float strand = mod(botanicalCell.x + floor(botanicalCell.y / 4.0) + material, 7.0) < 2.0
+          ? 1.0 : 0.0;
+        float node = mod(botanicalCell.x * 3.0 + botanicalCell.y * 5.0 + material, 16.0) < 2.0
+          ? 1.0 : 0.0;
+        color += (vec3(mix(1.0, -3.0, strand), mix(-1.0, 7.0, strand),
+          mix(0.0, -2.0, strand)) + node * vec3(2.0, 4.0, 1.0)) / 255.0;
+      } else if (material == 50.0 || material == 52.0) {
+        vec2 local = mod(botanicalCell, 8.0) - 4.0;
+        float radiusSquared = dot(local, local);
+        if (material == 50.0) {
+          float husk = radiusSquared >= 5.0 && radiusSquared <= 13.0 ? 1.0 : 0.0;
+          float embryo = local.x >= 0.0 && local.x <= 2.0
+            && local.y >= -1.0 && local.y <= 1.0 ? 1.0 : 0.0;
+          color += (mix(vec3(-2.0, -1.0, 1.0), vec3(5.0, 2.0, -3.0), husk)
+            + embryo * vec3(2.0, 5.0, 1.0)) / 255.0;
+        } else {
+          float cellRim = radiusSquared >= 5.0 && radiusSquared <= 13.0 ? 1.0 : 0.0;
+          vec2 budOffset = local - vec2(1.0, -1.0);
+          float bud = dot(budOffset, budOffset) <= 2.0 ? 1.0 : 0.0;
+          color += (mix(vec3(-1.0, -0.5, -1.5), vec3(3.0, 2.0, 1.0), cellRim)
+            + bud * vec3(3.0, 4.0, 2.0)) / 255.0;
+        }
+      }
+    }
+    if (uBotanicalLifecycleStyling > 0.5) {
+      if (material == 50.0 && sourceTarget > 0.5) {
+        float water = mod(sourceTarget, 256.0);
+        float timer = mod(floor(sourceTarget / 256.0), 256.0);
+        float moisture = water / 255.0;
+        float germination = min(timer, 200.0) / 200.0;
+        float swelling = min(1.0, water / 4.0);
+        vec2 local = mod(botanicalCell, 11.0) - 5.0;
+        float radiusSquared = dot(local, local);
+        float swollenHusk = radiusSquared >= 12.0 && radiusSquared <= 25.0 ? 1.0 : 0.0;
+        float openingSeam = local.x == 0.0 && local.y >= -3.0 && local.y <= 3.0 ? 1.0 : 0.0;
+        float rootTip = local.x >= -1.0 && local.x <= 1.0
+          && local.y >= 2.0 && local.y <= 4.0 ? 1.0 : 0.0;
+        vec3 lifecycle = vec3(-12.0, -9.0, 5.0) * moisture
+          + swollenHusk * vec3(4.0, 7.0, 6.0) * swelling
+          + openingSeam * vec3(5.0, 16.0, 3.0) * germination
+          + rootTip * vec3(-2.0, 7.0, 5.0) * germination;
+        color += clamp(lifecycle, vec3(-24.0), vec3(24.0)) / 255.0;
+      } else if (material == 10.0 && sourceTarget >= 32768.0
+        && mod(sourceTarget, 2.0) >= 0.5) {
+        float phase = mod(floor(sourceTarget / 2.0), 4.0);
+        float direction = mod(floor(sourceTarget / 8.0), 8.0);
+        float inheritedColour = mod(floor(sourceTarget / 64.0), 64.0);
+        float hydration = mod(floor(sourceTarget / 4096.0), 4.0) / 3.0;
+        float active = mod(floor(sourceTarget / 16384.0), 2.0);
+        float cyan = mod(floor(inheritedColour / 16.0), 4.0) > 0.0 ? 1.0 : 0.0;
+        float magenta = mod(floor(inheritedColour / 4.0), 4.0) > 0.0 ? 1.0 : 0.0;
+        float yellow = mod(inheritedColour, 4.0) > 0.0 ? 1.0 : 0.0;
+        float paletteIndex = cyan * 4.0 + magenta * 2.0 + yellow;
+        vec3 leafColor = paletteIndex == 0.0 ? vec3(243.0, 246.0, 244.0)
+          : paletteIndex == 1.0 ? vec3(255.0, 223.0, 50.0)
+          : paletteIndex == 2.0 ? vec3(255.0, 183.0, 197.0)
+          : paletteIndex == 3.0 ? vec3(250.0, 0.0, 25.0)
+          : paletteIndex == 4.0 ? vec3(128.0, 206.0, 196.0)
+          : paletteIndex == 5.0 ? vec3(127.0, 255.0, 0.0)
+          : paletteIndex == 6.0 ? vec3(0.0, 74.0, 178.0)
+          : vec3(12.0, 172.0, 0.0);
+        float vein = mod(botanicalCell.x * (direction + 1.0)
+          + botanicalCell.y * (8.0 - direction) + phase * 3.0, 13.0) <= 1.0 ? 1.0 : 0.0;
+        float growthTip = active > 0.5 && mod(botanicalCell.x * (8.0 - direction)
+          - botanicalCell.y * (direction + 1.0) + phase * 5.0, 17.0) <= 1.0 ? 1.0 : 0.0;
+        vec3 variation = vec3(-2.0, -1.0, 4.0) * hydration
+          + vein * vec3(-4.0, 7.0, -3.0) + growthTip * vec3(7.0, 11.0, 4.0);
+        color += clamp((leafColor / 255.0 - color) * 0.42 + variation / 255.0,
+          vec3(-64.0 / 255.0), vec3(64.0 / 255.0));
+      }
+    }
+  }
   float alpha = family == 1.0 ? smoothstep(0.006, 0.26, density) * 0.48
     : (family == 3.0 ? smoothstep(0.18, 0.82, density) : density);
+  if (family == 0.0 && optics == 12.0) {
+    float translucentDepth = smoothstep(0.34, 0.94, density);
+    float translucentAlpha = (material == 12.0 || material == 24.0)
+      ? mix(0.62, 0.76, translucentDepth) : mix(0.74, 0.88, translucentDepth);
+    alpha *= translucentAlpha;
+  }
   if (material == 114.0) { color = vec3(16.0 / 255.0); alpha = 1.0; }
   alpha = clamp(alpha, 0.0, 1.0);
   finalColor = vec4(clamp(color, 0.0, 1.0) * alpha, alpha);
@@ -440,6 +873,24 @@ vec3 gasIdentityBodyDelta(float style, float density) {
   if (style < 16.5) return vec3(-2.0) * support; // MORT
   return vec3(3.0, -2.0, 3.0) * support; // VRSG
 }
+vec3 gasIdentityVolumeChroma(float style, float response) {
+  // The shared atmosphere may contain a cool neighbouring gas at a Noble Gas
+  // billow edge. Its propagated identity remains exact, so retain a small
+  // violet key/fill there instead of letting a negative generic light response
+  // invert the species into green. The magnitude is still derived from the
+  // existing bounded chroma response, while its public species bias remains
+  // stable on either side of the billow. This is RGB-only and active only under
+  // the public volume-chroma switch at the call site.
+  if (style > 6.5 && style < 7.5) {
+    float violetStrength = smoothstep(0.006, 0.032, abs(response));
+    // The atmosphere is composited at deliberately low opacity, so this small
+    // local RGB bias must remain legible after the shared cloud has been
+    // premultiplied into the page. Positive channels are headroom-limited at
+    // the call site; the source term itself stays below 16 framebuffer bytes.
+    return vec3(0.040, -0.060, 0.028) * violetStrength;
+  }
+  return vec3(0.0);
+}
 float liquidVolumeChromaResponse(
   float depth, vec2 slope, float centreDensity, float neighbourDensity,
   float macroRelief
@@ -450,35 +901,40 @@ float liquidVolumeChromaResponse(
   );
   return clamp(geometric * 0.28 * depth + macroRelief * 0.55, -0.055, 0.065);
 }
-vec3 applyLiquidVolumeChroma(
-  vec3 color, float response, float optics, float columnDepth
-) {
+vec3 liquidVolumeShadow(float optics) {
+  if (optics == 1.0) return vec3(1.00, 0.62, 0.36);
+  if (optics == 2.0) return vec3(0.40, 0.68, 1.00);
+  if (optics == 3.0) return vec3(0.72, 0.38, 0.62);
+  if (optics == 16.0) return vec3(1.00, 0.55, 0.28);
+  if (optics == 17.0) return vec3(0.58, 0.62, 0.70);
+  if (optics == 18.0) return vec3(0.70, 0.64, 0.58);
+  return vec3(0.72, 0.68, 0.58);
+}
+vec3 applyLiquidVolumeChroma(vec3 color, float response, float optics) {
   vec3 key = vec3(0.72, 0.84, 1.00);
-  vec3 shadow = vec3(0.72, 0.68, 0.58);
+  vec3 shadow = liquidVolumeShadow(optics);
   if (optics == 1.0) {
     key = vec3(0.52, 0.88, 1.00);
-    shadow = vec3(1.00, 0.62, 0.36);
   } else if (optics == 2.0) {
     key = vec3(1.00, 0.72, 0.28);
-    shadow = vec3(0.40, 0.68, 1.00);
   } else if (optics == 3.0) {
     key = vec3(0.44, 1.00, 0.68);
-    shadow = vec3(0.72, 0.38, 0.62);
   } else if (optics == 16.0) {
     key = vec3(0.62, 0.90, 1.00);
-    shadow = vec3(1.00, 0.55, 0.28);
   } else if (optics == 17.0) {
     key = vec3(1.00, 0.98, 0.94);
-    shadow = vec3(0.58, 0.62, 0.70);
   } else if (optics == 18.0) {
     key = vec3(0.82, 0.92, 1.00);
-    shadow = vec3(0.70, 0.64, 0.58);
   }
   if (response > 0.0) {
     color += (vec3(1.0) - color) * key * response * 0.90;
   } else {
     color *= vec3(1.0) - shadow * (-response) * 0.85;
   }
+  return color;
+}
+vec3 applyLiquidOpticalDepth(vec3 color, float optics, float columnDepth) {
+  vec3 shadow = liquidVolumeShadow(optics);
   // WebGL's existing macro chroma is stronger than Canvas at some broad
   // shoulders, so Water/Oil need calibrated column absorption for composed
   // surface-to-core parity rather than numeric helper parity.
@@ -931,8 +1387,14 @@ vec3 thermalMaterialTint(float temperatureByte, float optics) {
 }
 vec3 toneMapEnergy(vec3 radiance) {
   const float knee = 0.72;
+  const float ceiling = 232.0 / 255.0;
+  // A hard ceiling turns a dense photon body into a uniform plate precisely
+  // where its existing low-frequency radiance relief should remain visible.
+  // This bounded shoulder approaches the same ceiling without pinning a range
+  // of high source values to one byte.
+  const float shoulder = 0.65;
   vec3 excess = max(radiance - vec3(knee), vec3(0.0));
-  vec3 mapped = min(vec3(1.0), vec3(knee) + excess * 0.30);
+  vec3 mapped = vec3(knee) + vec3(ceiling - knee) * excess / (excess + vec3(shoulder));
   return min(radiance, mapped);
 }
 vec3 energyIdentityDelta(float material, vec2 position, float time, vec2 velocity) {
@@ -1149,6 +1611,22 @@ vec3 structuralRigidIdentityDelta(float material, vec2 position) {
     float highlight = 1.0 - step(0.5, mod(x * 7.0 - y * 5.0, 37.0));
     return (vec3(-2.0, 2.0, 5.0) * lamella + vec3(3.0, 4.0, 5.0) * highlight) / 255.0;
   }
+  return vec3(0.0);
+}
+// Dense construction bodies use the existing signed macro relief plus the
+// phase-local solid-depth byte. No topology, sample, field, texture, or
+// uniform is added: exact edges, cavities, walls, traits, and emissive matter
+// are excluded by the caller. The seven-byte source bound mirrors Canvas.
+vec3 structuralRigidBulkDelta(float material, float signedResponse) {
+  float crown = max(signedResponse, 0.0);
+  float pocket = max(-signedResponse, 0.0);
+  if (material == 22.0) return (vec3(7.0, 3.0, 1.0) * crown - vec3(6.0, 3.0, 2.0) * pocket) / 255.0;
+  if (material == 23.0) return (vec3(2.0, 4.0, 7.0) * crown - vec3(3.0, 4.0, 6.0) * pocket) / 255.0;
+  if (material == 25.0) return (vec3(2.0, 4.0, 6.0) * crown - vec3(2.0, 3.0, 5.0) * pocket) / 255.0;
+  if (material == 67.0) return (vec3(1.0, 4.0, 6.0) * crown - vec3(3.0, 4.0, 5.0) * pocket) / 255.0;
+  if (material == 70.0) return (vec3(7.0, 5.0, 0.0) * crown - vec3(6.0, 4.0, 1.0) * pocket) / 255.0;
+  if (material == 73.0) return (vec3(3.0, 4.0, 6.0) * crown - vec3(4.0, 4.0, 5.0) * pocket) / 255.0;
+  if (material == 82.0) return (vec3(2.0, 5.0, 7.0) * crown - vec3(3.0, 5.0, 6.0) * pocket) / 255.0;
   return vec3(0.0);
 }
 vec3 vibrStateDelta(float material, vec2 stateBytes, vec2 position) {
@@ -2012,6 +2490,10 @@ void main() {
   vec2 liquidSpeciesSlope = vec2(0.0);
   float cloudNeighbourMean = 0.0;
   float emissionNeighbourMean = 0.0;
+  // Carry the signed emission key/fill scalar out of the guarded four-sample
+  // branch. The aura branch below must not retain individual branch-local
+  // samples on the true-8x fragment path.
+  float emissionDirectional = 0.0;
   float liquidNeighbourMean = 0.0;
   float adjacentLiquidSupport = 0.0;
   float exposedLiquidSide = 0.0;
@@ -2022,6 +2504,10 @@ void main() {
     float lightBottom = texture(uEmissionTexture, fieldUv + vec2(0.0, uEmissionTexel.y)).a;
     emissionNeighbourMean = (lightLeft + lightRight + lightTop + lightBottom) * 0.25;
     volumeSlope = vec2(lightRight - lightLeft, lightBottom - lightTop) * 0.72;
+    // Same directional basis as Canvas: the broad volume receives a cool
+    // upper-left key and an opposing fill from its already-sampled field mass.
+    emissionDirectional = (lightLeft - lightRight) * 0.16
+      + (lightBottom - lightTop) * 0.22;
   } else if (gasVolume > 0.5) {
     float cloudLeft = texture(uAtmosphereTexture, fieldUv - vec2(uAtmosphereTexel.x, 0.0)).a;
     float cloudRight = texture(uAtmosphereTexture, fieldUv + vec2(uAtmosphereTexel.x, 0.0)).a;
@@ -2119,18 +2605,22 @@ void main() {
     alpha = smoothstep(0.002, 0.28, volume) * (0.07 + volume * 0.30) * pulse;
     color = mix(base * 1.42 + vec3(0.045), base * 0.72, volume) * (0.68 + diffuse * 0.32);
     color += mix(vec3(0.16, 0.19, 0.24), base, 0.56) * specular * 0.30;
-    // Reuse the four aura samples already needed by the analytic normal. A
-    // small signed crown/pocket term and directional key/fill keep the volume
-    // readable without changing its alpha, support, topology, or 8x resources.
-    float emissionCurvature = clamp((volume - emissionNeighbourMean) * 8.0, -1.0, 1.0);
-    float emissionDirection = clamp(
-      dot(volumeSlope, normalize(vec2(-0.48, -0.68))) * 2.0,
-      -1.0, 1.0
-    );
-    float emissionVolumeTone = (
-      emissionCurvature * 0.048 + emissionDirection * 0.028
+    // Reuse the four aura samples already needed by the analytic normal. This
+    // is the same signed curvature/key-fill response as Canvas, bounded to
+    // twenty-four source bytes before channel headroom. Applying the negative
+    // pocket through available body colour keeps it visible after translucent
+    // compositing instead of quantising a long aura row into bright-only dots.
+    // It changes RGB only: alpha, support, topology, and 8x resources remain
+    // exactly as they were.
+    float emissionCurvature = (volume - emissionNeighbourMean) * 0.28;
+    float emissionVolumeTone = clamp(
+      (emissionDirectional + emissionCurvature) * (0.42 + volume * 0.58),
+      -24.0 / 255.0, 24.0 / 255.0
     ) * uEmissionVolumeChroma;
-    color += (base * 0.80 + vec3(0.035, 0.045, 0.060)) * emissionVolumeTone;
+    vec3 emissionHeadroom = emissionVolumeTone >= 0.0
+      ? vec3(1.0) - clamp(color, 0.0, 1.0)
+      : clamp(color, 0.0, 1.0);
+    color += emissionHeadroom * emissionVolumeTone;
   } else if (energyCore > 0.5) {
     // Energy owns a luminous semantic core. The lower-resolution emission field
     // remains the surrounding aura, so fast particles never inherit its lag or
@@ -2179,19 +2669,35 @@ void main() {
     // Dense exact carriers share the already available low-frequency flow
     // signal as one hue-preserving radiance body. Sparse particles remain
     // exact, and this adds no texture read, field, pass, or alpha change.
+    // A second continuous lobe crosses the small canonical core probe even
+    // when its carrier flow happens to be locally level. It is deliberately
+    // smooth in world space (not a cell motif) and shares the same dense-field
+    // gate, so an isolated photon remains an exact discrete particle.
+    float energyBodyLobe = sin(
+      fieldPosition.x * 0.38 + fieldPosition.y * 0.24 + material * 0.73
+    );
     float energySurfaceRelief = (diffuse - 0.93) * 0.28 * mix(0.20, 1.0, edge);
     float energyRelief = clamp(
-      flowWave * cohesiveEnergy * 0.075 + energySurfaceRelief, -0.10, 0.10
+      (flowWave * 0.065 + energyBodyLobe * 0.055) * cohesiveEnergy + energySurfaceRelief,
+      -0.10, 0.10
     );
     color *= 1.0 + energyRelief * uEnergyCoreRelief;
-    // Preserve sparse aura energy while compressing only the dense semantic
-    // core. This retains hue and flow detail that would otherwise framebuffer-
-    // clip into flat neon slabs after premultiplication.
-    color = mix(color, toneMapEnergy(color), smoothstep(0.08, 0.68, core));
-    color = min(vec3(232.0 / 255.0), max(
-      color + energyIdentityDelta(material, fieldPosition, uTime, velocity) * uEnergyIdentityStyling,
+    // Dense supported energy is one body, not a screen of independently
+    // flashing carrier pixels. Retain exact identity at the sparse edge while
+    // letting the existing broad flow/pulse relief own the dense core. Apply
+    // the bounded shoulder only after identity composition: applying it twice
+    // compresses legitimate low-frequency body relief below a framebuffer byte.
+    float energyIdentityGain = mix(1.0, 0.35, cohesiveEnergy);
+    vec3 energyComposed = max(
+      color + energyIdentityDelta(material, fieldPosition, uTime, velocity)
+        * energyIdentityGain * uEnergyIdentityStyling,
       vec3(0.0)
-    ));
+    );
+    color = mix(
+      energyComposed,
+      toneMapEnergy(energyComposed),
+      smoothstep(0.08, 0.68, core)
+    );
   } else if (gasVolume > 0.5) {
     float billow = 0.92 + atmosphere * 0.08 * (1.0 - gasInterior * 0.50);
     // Dense reconstructed gas should read as one mixed volume, not as the raw
@@ -2265,6 +2771,16 @@ void main() {
       float gasIdentityStyle = floor(
         texture(uAtmosphereStyleTexture, fieldUv).r * 255.0 + 0.5
       );
+      if (uGasVolumeChroma > 0.5 && gasIdentityStyle > 6.5 && gasIdentityStyle < 7.5) {
+        float gasIdentityChromaSupport = smoothstep(0.012, 0.030, atmosphereState.a);
+        vec3 nobleGasChroma = gasIdentityVolumeChroma(gasIdentityStyle, gasChroma)
+          * gasIdentityChromaSupport;
+        // Positive violet key remains inside framebuffer headroom; the small
+        // green fill is deliberately subtractive. No support/alpha decision
+        // reads this presentation-only species term.
+        color += (vec3(1.0) - clamp(color, 0.0, 1.0)) * max(nobleGasChroma, vec3(0.0))
+          + min(nobleGasChroma, vec3(0.0));
+      }
       color += gasIdentityVolumeDelta(
         gasIdentityStyle, fieldPosition, gasShadeDensity,
         gasDirectionalRelief, gasCurvature * 0.125
@@ -2417,21 +2933,6 @@ void main() {
       liquidFresnelShadow = vec3(0.70, 0.64, 0.58);
       liquidFresnelAbsorption = vec3(0.85, 0.60, 0.35);
     }
-    // A dense exact-species boundary gets the same quiet, family-coloured rim
-    // in both presenters. The existing slope/marker prove contact, and the
-    // symmetric magnitude avoids a travelling light/dark divider as either
-    // fluid advances by one cell. No coverage or support decision reads this.
-    if (uLiquidVolumeChroma > 0.5 && liquidOnly < 0.5 && halo < 0.5
-      && wall < 0.5 && family == 2.0 && traits < 0.5 && !materialEmissive
-      && molten < 0.5 && foreignMatterContact < 0.5 && unlikeMaterialContact > 0.5
-      && liquidDepth > 0.38 && liquidNeighbourMean > 0.48) {
-      float liquidInterfaceMeniscusStrength = 0.13 + aqueous * 0.03
-        + oily * 0.01 + cryogenic * 0.03 + metallicLiquid * 0.01 - corrosive * 0.02;
-      float liquidInterfaceMeniscus = min(abs(liquidInterfaceRelief), 0.12)
-        * liquidDepth * liquidInterfaceMeniscusStrength;
-      color += (vec3(1.0) - clamp(color, 0.0, 1.0))
-        * liquidFresnelKey * liquidInterfaceMeniscus;
-    }
     // Split the connected air-facing shell into a reflected outer lip and a
     // deeper absorption shoulder. Both are derived from the existing Hermite
     // density and slope, so the meniscus remains stable at rest and adds no
@@ -2483,7 +2984,7 @@ void main() {
         volume, max(density * 0.65, min(liquidDensity, liquidNeighbourMean) * 0.45)
       );
       liquidSilhouetteDensity = mix(
-        volume, connectedFieldDensity, liquidAirContour * 0.86
+        volume, connectedFieldDensity, liquidAirContour * 0.90
       );
     }
     alpha = smoothstep(
@@ -2495,6 +2996,20 @@ void main() {
     // body term keeps the same meniscus readable at ordinary zoom. It mirrors
     // Canvas and remains well below a dark separator or emissive highlight.
     color *= 1.0 + liquidMacroRelief + liquidInterfaceRelief;
+    // Oil's darker body can make the signed interface relief read only as a
+    // shadow. Add a tiny, capped post-body rim for the already-proven Oil
+    // interface so both sides remain legible. This is RGB-only and reuses the
+    // existing contact, field, depth, and Fresnel terms.
+    if (uLiquidFieldLighting > 0.5 && liquidOnly < 0.5 && halo < 0.5
+      && wall < 0.5 && family == 2.0 && traits < 0.5 && !materialEmissive
+      && molten < 0.5 && foreignMatterContact < 0.5 && unlikeMaterialContact > 0.5
+      && liquidDepth > 0.38 && liquidNeighbourMean > 0.48 && oily > 0.5) {
+      float oilInterfaceRim = min(
+        0.052, min(abs(liquidInterfaceRelief), 0.12) * liquidDepth * 0.85
+      );
+      color += (vec3(1.0) - clamp(color, 0.0, 1.0))
+        * liquidFresnelKey * oilInterfaceRim;
+    }
     float liquidFresnelStrength = liquidFresnelGate
       * (liquidFresnelKeyResponse + liquidFresnelTransmissionResponse)
       * 0.75 * (1.0 + aqueous * 0.65 + oily * 0.35 + cryogenic * 0.25
@@ -2511,11 +3026,11 @@ void main() {
     color += mix(vec3(0.52, 0.68, 0.76), liquidBase, 0.50)
       * (broadSheen * mix(0.016, 0.052 * gloss, liquidDepth) + caustic * causticStrength);
     color += liquidBase * (0.025 + atmosphere * 0.030) + vec3(0.055, 0.090, 0.105) * rim;
-    // Family-coloured absorption and reflection make one cohesive liquid body
-    // read as volume instead of a hue-neutral cut-out. All inputs above are
+    // Family-coloured chroma and vertical optical depth share exact cohesive
+    // liquid eligibility, but remain independently switchable. All inputs are
     // already live for body lighting; this adds arithmetic only and cannot
     // change alpha, reconstruction support, species ownership, or refraction.
-    if (uLiquidVolumeChroma > 0.5 && liquidOnly < 0.5 && halo < 0.5
+    if (liquidOnly < 0.5 && halo < 0.5
       && wall < 0.5 && family == 2.0 && traits < 0.5 && !materialEmissive
       && molten < 0.5 && foreignMatterContact < 0.5 && unlikeMaterialContact < 0.5
       && liquidDepth > 0.38 && liquidNeighbourMean > 0.48) {
@@ -2523,12 +3038,15 @@ void main() {
       // categorical contact flag. Keep that entire mixing meniscus neutral so
       // adjacent family keys cannot flicker as either liquid moves by one cell.
       if (dot(liquidSpeciesSlope, liquidSpeciesSlope) < 0.0025) {
-        float liquidVolumeChroma = liquidVolumeChromaResponse(
-          liquidDepth, volumeSlope, liquidDensity, liquidNeighbourMean, liquidMacroRelief
-        );
-        color = applyLiquidVolumeChroma(
-          color, liquidVolumeChroma, optics, liquidOpticalDepth
-        );
+        if (uLiquidVolumeChroma > 0.5) {
+          float liquidVolumeChroma = liquidVolumeChromaResponse(
+            liquidDepth, volumeSlope, liquidDensity, liquidNeighbourMean, liquidMacroRelief
+          );
+          color = applyLiquidVolumeChroma(color, liquidVolumeChroma, optics);
+        }
+        if (uLiquidOpticalDepth > 0.5) {
+          color = applyLiquidOpticalDepth(color, optics, liquidOpticalDepth);
+        }
       }
     }
     // Fourteen unusual/radioactive liquids retain a world-anchored material signature
@@ -2839,7 +3357,11 @@ void main() {
     // rejected notches, seams, powders, walls, and borders remain transparent.
     if (surfaceOnly > 0.5 && family == 0.0 && density > 0.001) {
       float cavityConfidence = smoothstep(0.30, 0.92, density);
-      alpha = max(alpha, mix(0.90, 0.98, cavityConfidence));
+      // Trait owners retain their canonical palette in empty-space support, so
+      // their intentionally dark material base needs the high opacity end of
+      // the accepted cavity band to read as joined matter rather than a pit.
+      float cavityOpacity = traits > 0.5 ? 0.98 : mix(0.90, 0.98, cavityConfidence);
+      alpha = max(alpha, cavityOpacity);
     }
     // Native LIFE topology is the automaton state itself. Nearby live cells may
     // smooth their own contours, but presentation must never resurrect a dead
@@ -2852,7 +3374,8 @@ void main() {
         * (1.0 - surfaceOnly) * uSolidContactDepth;
       color += vec3(1.0, -0.176, -1.20) * prism;
       color += solidSpecularTint * max(solidContactTone, 0.0) * 0.24;
-      if (uTranslucentLensShell > 0.5 && (material == 12.0 || material == 24.0)
+      if (uTranslucentLensShell > 0.5 && (material == 12.0 || material == 24.0
+        || material == 68.0 || material == 74.0 || material == 76.0 || material == 77.0)
         && !materialEmissive && traits < 0.5 && surfaceOnly < 0.5) {
         float shellRim = (1.0 - solidDepth) * 0.030 + solidFresnel * 0.055;
         if (material == 24.0) {
@@ -2860,10 +3383,28 @@ void main() {
           float valley = max(-solidReliefTone, 0.0);
           color *= 1.0 - solidDepth * 0.010 - valley * 0.70;
           color += vec3(0.45, 0.78, 1.0) * (shellRim + crown * 1.50);
-        } else {
+        } else if (material == 12.0) {
           float frostedRidge = abs(solidReliefTone) * 0.70;
           color *= 1.0 - solidDepth * 0.018 - abs(solidReliefTone) * 0.24;
           color += vec3(0.58, 0.86, 1.0) * (shellRim * 0.72 + frostedRidge);
+        } else if (material == 76.0) {
+          // Quartz keeps a small directional prism: crowns catch a cool key,
+          // valleys absorb, and the shared shell rim retains its curved edge.
+          float crown = max(solidReliefTone, 0.0);
+          float valley = max(-solidReliefTone, 0.0);
+          color *= 1.0 - 1.1 / 255.0 - valley * 0.16;
+          color += vec3(0.48, 0.72, 0.94) * (shellRim + crown * 0.72);
+        } else {
+          // DRIC/RIME carry a quiet frost shell, while NICE strengthens its
+          // cold ridge. All inputs are already local solid-body scalars.
+          float frost = abs(solidReliefTone) * 0.34;
+          color *= 1.0 - 1.4 / 255.0 - abs(solidReliefTone) * 0.14;
+          if (material == 74.0) {
+            float coolRim = shellRim * 0.52 + frost * 1.20;
+            color += vec3(0.50, 0.84, 1.15) * coolRim;
+          } else {
+            color += vec3(0.60, 0.82, 1.0) * (shellRim * 0.46 + frost);
+          }
         }
       }
       float translucentAlpha = (material == 12.0 || material == 24.0)
@@ -3170,6 +3711,12 @@ void main() {
       if (uStructuralRigidStyling > 0.5 && surfaceOnly < 0.5 && halo < 0.5
         && wall < 0.5 && wallOnly < 0.5 && emissionOnly < 0.5
         && traits < 0.5 && !materialEmissive) {
+        if (solidOpticalDepth > 6.0 / 255.0 && solidInterior > 0.001) {
+          float structuralDepth = smoothstep(6.0 / 255.0, 42.0 / 255.0, solidOpticalDepth);
+          float structuralRelief = clamp(solidReliefTone * 255.0 / 7.0, -1.0, 1.0)
+            * structuralDepth;
+          color = clamp(color + structuralRigidBulkDelta(material, structuralRelief), 0.0, 1.0);
+        }
         color = clamp(color + structuralRigidIdentityDelta(material, fieldPosition), 0.0, 1.0);
       }
     } else if (organicSurface > 0.5 || (optics < 0.5 && profile == 3.0)) {
@@ -3993,7 +4540,8 @@ export class PixiFieldPresenter {
 
   clientWorldPoint(clientX: number, clientY: number): { x: number; y: number } {
     return clientToCanvasWorld(
-      { x: clientX, y: clientY }, this.app.canvas.getBoundingClientRect(), this.width, this.height,
+      clientToVisualViewport({ x: clientX, y: clientY }),
+      this.app.canvas.getBoundingClientRect(), this.width, this.height,
     );
   }
 
@@ -4016,6 +4564,21 @@ export class PixiFieldPresenter {
     return this.fieldSet.atmosphere.styleBytes[
       fieldY * this.fieldSet.atmosphere.width + fieldX
     ];
+  }
+
+  /** Exact CPU-field support evidence for RGB-only atmosphere style audits. */
+  atmosphereSupportAudit(): AtmosphereSupportAudit {
+    const bytes = this.fieldSet.atmosphere.bytes;
+    let nonzero = 0;
+    let alphaSum = 0;
+    let signature = 2166136261;
+    for (let offset = 3; offset < bytes.length; offset += 4) {
+      const alpha = bytes[offset];
+      nonzero += Number(alpha !== 0);
+      alphaSum += alpha;
+      signature = Math.imul(signature ^ alpha, 16777619) >>> 0;
+    }
+    return { nonzero, alphaSum, signature };
   }
 
   markDirty(index: number, nextMaterial: number): void {

@@ -79,6 +79,16 @@ describe('render optics', () => {
     expect(optics(Material.LIFE_GOL)).toBe(RenderOptics.Cellular);
     expect(optics(Material.Plant)).toBe(RenderOptics.Organic);
     expect(optics(Material.SPRK)).toBe(RenderOptics.Device);
+    for (const source of [
+      Material.CLNE, Material.BCLN, Material.CONV,
+      Material.PCLN, Material.PBCN, Material.CRAY,
+    ]) expect(optics(source)).toBe(RenderOptics.Device);
+    for (const forceSolid of [
+      Material.ACEL, Material.DCEL, Material.FRAY, Material.FRME,
+      Material.PIPE, Material.PSTN, Material.RPEL,
+    ]) expect(optics(forceSolid)).toBe(RenderOptics.Device);
+    expect(optics(Material.DMG)).toBe(RenderOptics.RoughGranular);
+    expect(optics(Material.GBMB)).toBe(RenderOptics.RoughGranular);
     expect(optics(Material.VIBR)).toBe(RenderOptics.Radioactive);
     expect(optics(Material.Glass)).toBe(RenderOptics.TranslucentRigid);
     expect(optics(Material.Ice)).toBe(RenderOptics.TranslucentRigid);

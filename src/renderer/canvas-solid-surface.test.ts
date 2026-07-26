@@ -10,9 +10,9 @@ describe('Canvas solid surface reconstruction', () => {
 
   it('closes a fully enclosed same-solid pinhole without changing semantics', () => {
     const materials = new Uint8Array([
-      Material.Empty, Material.Wood, Material.Empty,
-      Material.Wood, Material.Empty, Material.Wood,
-      Material.Empty, Material.Wood, Material.Empty,
+      Material.Empty, Material.Metal, Material.Empty,
+      Material.Metal, Material.Empty, Material.Metal,
+      Material.Empty, Material.Metal, Material.Empty,
     ]);
     const pixels = seed(materials);
     reconstructSolidSurface(pixels, materials, styles, palette, 3, 3);
@@ -26,24 +26,40 @@ describe('Canvas solid surface reconstruction', () => {
       reconstructSolidSurface(pixels, materials, styles, palette, 3, 3);
       return pixels[4 * 4 + 3];
     };
+    const ordinaryMaterial = [Material.Brick, Material.Ceramic, Material.Metal, Material.TTAN]
+      .find((material) => styles[material * 4 + 3] === 0);
+    if (ordinaryMaterial === undefined) throw new Error('generic solid control is unavailable');
     const cardinalOnly = new Uint8Array([
-      Material.Empty, Material.Wood, Material.Empty,
-      Material.Wood, Material.Empty, Material.Wood,
-      Material.Empty, Material.Wood, Material.Empty,
+      Material.Empty, ordinaryMaterial, Material.Empty,
+      ordinaryMaterial, Material.Empty, ordinaryMaterial,
+      Material.Empty, ordinaryMaterial, Material.Empty,
     ]);
     const oneDiagonal = cardinalOnly.slice();
-    oneDiagonal[0] = Material.Wood;
+    oneDiagonal[0] = ordinaryMaterial;
     const twoDiagonals = oneDiagonal.slice();
-    twoDiagonals[2] = Material.Wood;
+    twoDiagonals[2] = ordinaryMaterial;
     const threeDiagonals = twoDiagonals.slice();
-    threeDiagonals[6] = Material.Wood;
-    const fullySupported = new Uint8Array(9).fill(Material.Wood);
+    threeDiagonals[6] = ordinaryMaterial;
+    const fullySupported = new Uint8Array(9).fill(ordinaryMaterial);
     fullySupported[4] = Material.Empty;
     const alphas = [cardinalOnly, oneDiagonal, twoDiagonals, threeDiagonals, fullySupported].map(alphaFor);
     expect(alphas.every((alpha) => alpha >= 225)).toBe(true);
     for (let index = 1; index < alphas.length; index++) {
       expect(alphas[index]).toBeGreaterThan(alphas[index - 1]);
     }
+  });
+
+  it('keeps canonical trait cavities at the high end of the accepted alpha band', () => {
+    const materials = new Uint8Array([
+      Material.Empty, Material.VIBR, Material.Empty,
+      Material.VIBR, Material.Empty, Material.VIBR,
+      Material.Empty, Material.VIBR, Material.Empty,
+    ]);
+    const pixels = seed(materials);
+    reconstructSolidSurface(pixels, materials, styles, palette, 3, 3);
+    expect(pixels[4 * 4 + 3]).toBe(250);
+    const paletteOffset = Material.VIBR * 4;
+    expect(Array.from(pixels.slice(16, 19))).toEqual(Array.from(palette.slice(paletteOffset, paletteOffset + 3)));
   });
 
   it('closes a two-cell cavity without propagating through reconstructed pixels', () => {

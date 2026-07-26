@@ -46,6 +46,26 @@ export function materialNeighbourMask(
 
 export function neighbourDensity(mask: number): number { return POPULATION[mask & 0xFF]; }
 
+/**
+ * True only for a locally uniform material body with one neutral-cell buffer
+ * before a different material can begin. Callers reuse the already computed
+ * eight-neighbour mask and pay only four bounded cardinal reads.
+ */
+export function isMaterialBulkInterior(
+  cells: Uint8Array,
+  width: number,
+  height: number,
+  x: number,
+  y: number,
+  material: number,
+  neighbourMask: number,
+): boolean {
+  if ((neighbourMask & 0xFF) !== 0xFF || x < 2 || y < 2 || x + 2 >= width || y + 2 >= height) return false;
+  const index = y * width + x;
+  return cells[index - 2] === material && cells[index + 2] === material
+    && cells[index - width * 2] === material && cells[index + width * 2] === material;
+}
+
 const CARDINALS = NEIGHBOUR_TOP | NEIGHBOUR_LEFT | NEIGHBOUR_RIGHT | NEIGHBOUR_BOTTOM;
 const DIAGONALS = NEIGHBOUR_TOP_LEFT | NEIGHBOUR_TOP_RIGHT | NEIGHBOUR_BOTTOM_LEFT | NEIGHBOUR_BOTTOM_RIGHT;
 

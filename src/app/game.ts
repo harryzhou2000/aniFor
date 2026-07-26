@@ -71,7 +71,7 @@ import {
   VIBR_STATE_GRAPHICS_AUDIT, prepareVibrStateGraphicsAuditFixture,
 } from './vibr-state-graphics-audit';
 import {
-  DEUT_STATE_GRAPHICS_AUDIT, prepareDeutStateGraphicsAuditFixture,
+  DEUT_STATE_GRAPHICS_ATLAS, DEUT_STATE_GRAPHICS_AUDIT, prepareDeutStateGraphicsAuditFixture,
 } from './deut-state-graphics-audit';
 import {
   SOURCE_TARGET_GRAPHICS_AUDIT, SOURCE_TARGET_RECOVERY_PROBE,
@@ -167,21 +167,31 @@ export class Game {
           this.handleSignPoint({ x, y }, erase);
           return;
         }
+        // Native brush tools and configured/LIFE sources can update
+        // temperature, velocity, or ctype while retaining their material ID.
+        // Coalesce one semantic snapshot in a paused game; ordinary particle
+        // and wall brushes remain covered by their narrow dirty-cell paths.
+        const stateOnlyMutation = !erase && Boolean(
+          this.sourceTool || this.lifeTool || this.simulationTool?.gesture === 'brush',
+        );
         drawToolPoint(this.simulation, { x, y }, {
           material: this.material, wallTool: this.wallTool,
           simulationTool: this.simulationTool, sourceTool: this.sourceTool,
           lifeTool: this.lifeTool, signTool: this.signTool,
           radius: this.radius,
         }, erase);
+        if (stateOnlyMutation) this.renderer.invalidateDynamicPresentation();
       },
       drawSegment: (start, end, erase) => {
         erase ||= this.eraseMode;
+        const stateOnlyMutation = !erase && this.simulationTool?.gesture === 'vector';
         drawToolSegment(this.simulation, start, end, {
           material: this.material, wallTool: this.wallTool,
           simulationTool: this.simulationTool, sourceTool: this.sourceTool,
           lifeTool: this.lifeTool, signTool: this.signTool,
           radius: this.radius,
         }, erase);
+        if (stateOnlyMutation) this.renderer.invalidateDynamicPresentation();
       },
     });
     this.mountFieldIndicator(viewport);
@@ -197,7 +207,10 @@ export class Game {
         this.signTool = undefined;
       },
       onRadius: (radius) => { this.radius = radius; },
-      onPause: () => { this.paused = !this.paused; },
+      onPause: () => {
+        this.paused = !this.paused;
+        this.renderer.setSimulationRunning(!this.paused);
+      },
       onEraseMode: (erase) => { this.eraseMode = erase; },
       onPowderRenderStyle: (style) => { this.renderer.setPowderRenderStyle(style); },
       onRenderScale: (scale) => {
@@ -211,7 +224,11 @@ export class Game {
       canConfigureSource: (source, target) => this.simulation.canConfigureSource?.(source, target) ?? false,
       onSaveFile: () => this.downloadWorldFile(),
       onOpenFile: (file) => this.openWorldFile(file),
-      onClear: () => { this.simulation.clear(); localStorage.removeItem(AUTOSAVE_KEY); },
+      onClear: () => {
+        this.simulation.clear();
+        this.renderer.invalidateDynamicPresentation();
+        localStorage.removeItem(AUTOSAVE_KEY);
+      },
       onTool: (tool) => {
         if (tool.kind === 'wall') {
           this.wallTool = tool;
@@ -268,6 +285,7 @@ export class Game {
     // opt-in audit clock keeps production visual captures stable without
     // changing normal gameplay or the public showcase URL.
     if ((renderLab || materialShowcase) && browserInputAuditRequested()) this.installBrowserInputAudit();
+    this.renderer.setSimulationRunning(!this.paused);
     requestAnimationFrame(this.frame);
   }
 
@@ -282,6 +300,7 @@ export class Game {
     this.radius = 0;
     this.renderer.resetView();
     this.renderer.enableCanvasPresentationTiming();
+    this.renderer.enablePresentationRefreshAudit();
     this.renderer.enableWebGLPresentationTiming();
     this.root.dataset.inputAudit = 'ready';
     window.__ANIFOR_INPUT_AUDIT__ = {
@@ -308,6 +327,7 @@ export class Game {
       sourceTarget: (x, y) => this.simulation.configuredSourceTargetAt?.(x, y) ?? Material.Empty,
       presentationAuxiliary: (x, y) => this.renderer.presentationAuxiliaryAt(x, y),
       gasIdentityStyle: (x, y) => this.renderer.gasIdentityStyleAt(x, y),
+      atmosphereSupportAudit: () => this.renderer.getAtmosphereSupportAudit(),
       occupiedCells: () => {
         let occupied = 0;
         for (const material of this.simulation.cells()) if (material !== Material.Empty) occupied++;
@@ -430,7 +450,10 @@ export class Game {
       setPowderRenderStyle: (style) => {
         this.renderer.setPowderRenderStyle(style);
       },
-      clear: () => { this.simulation.clear(); },
+      clear: () => {
+        this.simulation.clear();
+        this.renderer.invalidateDynamicPresentation();
+      },
       setRadius: (radius) => { this.radius = Math.max(0, Math.min(64, Math.round(radius))); },
       setMaterial: (material) => {
         if (!ALL_MATERIALS.some(({ id }) => id === material)) throw new Error(`Unknown audit material ${material}`);
@@ -455,7 +478,10 @@ export class Game {
         prepareSolidFieldLightingAuditFixture(this.simulation);
       },
       prepareContourStressFixture: () => { prepareContourStressAuditFixture(this.simulation); },
-      toggleDenseSolidProbe: () => { toggleDenseSolidAuditProbe(this.simulation); },
+      toggleDenseSolidProbe: () => {
+        toggleDenseSolidAuditProbe(this.simulation);
+        this.renderer.invalidateDynamicPresentation();
+      },
       materialAtlas: () => MATERIAL_ATLAS,
       prepareMaterialAtlas: () => { prepareMaterialAtlasAuditFixture(this.simulation); },
       cellularGraphicsAtlas: () => CELLULAR_GRAPHICS_AUDIT,
@@ -528,6 +554,26 @@ export class Game {
           SOURCE_TARGET_RECOVERY_PROBE.owner,
           SOURCE_TARGET_RECOVERY_PROBE.target,
         );
+        this.renderer.invalidateDynamicPresentation();
+      },
+      toggleRetainedPresentationProbe: () => {
+        const entry = DEUT_STATE_GRAPHICS_ATLAS.find(({ stateKey }) => stateKey === 'medium');
+        if (!entry) throw new Error('Missing retained presentation probe card');
+        const x = entry.coreProbe.x;
+        const y = entry.coreProbe.y;
+        const index = y * this.simulation.width + x;
+        const backend = this.simulation as SimulationBackend & {
+          setFixturePresentationState?: (px: number, py: number, state: number) => void;
+        };
+        if (this.simulation.cells()[index] !== Material.DEUT
+          || !backend.setFixturePresentationState || !this.simulation.presentationState) {
+          throw new Error('Retained presentation probe requires the prepared DEUT render-lab fixture');
+        }
+        const before = this.simulation.presentationState()[index];
+        const after = before === 0x51A0 ? 0x1A05 : 0x51A0;
+        backend.setFixturePresentationState(x, y, after);
+        this.renderer.invalidateDynamicPresentation();
+        return { x, y, material: this.simulation.cells()[index], before, after };
       },
       sourceTargetGraphicsAtlas: () => SOURCE_TARGET_GRAPHICS_AUDIT,
       prepareSourceTargetGraphicsFixture: () => {
@@ -567,6 +613,7 @@ export class Game {
         );
       },
       canvasPresentationTiming: () => this.renderer.getCanvasPresentationTiming(),
+      presentationRefreshAudit: () => this.renderer.getPresentationRefreshAudit(),
       requestWebGLPresentationTimingSample: () => this.renderer.requestWebGLPresentationTimingSample(),
       webGLPresentationTiming: () => this.renderer.getWebGLPresentationTiming(),
       forceEightXRenderStall: () => this.renderer.forceEightXRenderStallForAudit(),
@@ -679,6 +726,7 @@ export class Game {
     if (!file.size || file.size > MAX_WORLD_FILE_BYTES) return false;
     try {
       importWorldFile(this.simulation, new Uint8Array(await file.arrayBuffer()));
+      this.renderer.invalidateDynamicPresentation();
       history.replaceState(null, '', location.pathname + location.search);
       this.save();
       return true;
@@ -692,12 +740,19 @@ export class Game {
   private async restore(): Promise<void> {
     const shared = new URLSearchParams(location.hash.slice(1)).get('world');
     if (shared) {
-      try { this.simulation.loadWorld(await decodeSharedWorld(shared)); return; }
+      try {
+        this.simulation.loadWorld(await decodeSharedWorld(shared));
+        this.renderer.invalidateDynamicPresentation();
+        return;
+      }
       catch { history.replaceState(null, "", location.pathname + location.search); }
     }
     try {
       const saved = localStorage.getItem(AUTOSAVE_KEY);
-      if (saved) this.simulation.loadWorld(saved);
+      if (saved) {
+        this.simulation.loadWorld(saved);
+        this.renderer.invalidateDynamicPresentation();
+      }
     } catch { localStorage.removeItem(AUTOSAVE_KEY); }
   }
 

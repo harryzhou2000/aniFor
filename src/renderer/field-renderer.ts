@@ -1,7 +1,7 @@
 import { ALL_MATERIALS, Material } from '../shared/materials';
 import type { SimulationBackend } from '../simulation';
 import { clientToViewport, ViewTransform, type Point, type ViewState } from './view-transform';
-import { contentBoxFromBounds, viewportToClient } from './client-coordinate-map';
+import { clientToVisualViewport, contentBoxFromBounds, viewportToClient } from './client-coordinate-map';
 import type { PixiFieldPresenter, WebGLPresentationTiming } from './pixi-field-presenter';
 import {
   backingSize, CANVAS_FALLBACK_DIMENSION_BUDGET, CANVAS_FALLBACK_PIXEL_BUDGET,
@@ -19,9 +19,11 @@ import {
 import {
   applyCanvasLiquidBodyOptics,
   applyCanvasLiquidInterfaceMeniscus,
+  applyCanvasLiquidMacroCaustic,
   applyCanvasLiquidMacroSheen,
+  applyCanvasLiquidOpticalDepth,
   applyCanvasLiquidVolumeChroma,
-  canvasLiquidBodySupport, canvasLiquidContourScale, canvasLiquidMacroWave,
+  canvasLiquidBodySupport, canvasLiquidCausticWave, canvasLiquidContourScale, canvasLiquidMacroWave,
   canvasLiquidVolumeChromaResponse,
   canvasLiquidEmissionExposure, canvasLiquidFieldRelief,
   canvasLiquidEmissionSurfaceExposure, canvasLiquidSpeciesRelief, canvasLiquidSurfaceExposure,
@@ -31,7 +33,10 @@ import { shadeCanvasEnergy } from './canvas-energy-style';
 import { shadeCanvasMaterial } from './canvas-material-style';
 import { shadeCanvasCellularMaterial } from './canvas-cellular-style';
 import { applyCanvasEarthenPowderStyle } from './canvas-earthen-powder-style';
-import { applyCanvasStructuralRigidStyle } from './canvas-structural-rigid-style';
+import {
+  applyCanvasStructuralRigidBulkOptics,
+  applyCanvasStructuralRigidStyle,
+} from './canvas-structural-rigid-style';
 import { applyCanvasSensorMorphology } from './canvas-sensor-style';
 import { applyCanvasUnusualPowderStyle } from './canvas-unusual-powder-style';
 import { applyCanvasExplosivePowderStyle } from './canvas-explosive-powder-style';
@@ -73,7 +78,9 @@ import { receivesSurfaceLight, renderPhase, RenderPhase, RenderProfile } from '.
 import { semanticRenderHeat } from './semantic-field';
 import { compositePixel } from './rgba-composite';
 import { forceCanvas2D, probeWebGLCapabilities } from './webgl-support';
-import { contourLight, materialNeighbourMask, neighbourDensity } from './volumetric-field';
+import {
+  contourLight, isMaterialBulkInterior, materialNeighbourMask, neighbourDensity,
+} from './volumetric-field';
 import { updateBoundaryStabilityRect } from './boundary-stability-field';
 import {
   CANVAS_CONTOUR_CHUNK_SIZE, CANVAS_CONTOUR_OUTPUT_SCALE, CanvasPhaseContourScratch,
@@ -116,8 +123,50 @@ export interface CanvasPresentationTiming {
   readonly volumePlaneComposites: number;
 }
 
-export function dynamicFieldRefreshDue(time: number, lastRefresh: number, enabled: boolean): boolean {
-  return enabled && time - lastRefresh >= DYNAMIC_FIELD_REFRESH_INTERVAL;
+/**
+ * Browser-audit-only counts of accepted presentation passes.  This stays
+ * backend neutral: WebGL timing requests deliberately submit frames, so they
+ * cannot be used to observe an idle renderer without perturbing it.
+ */
+export interface PresentationRefreshAudit {
+  readonly sequence: number;
+  /** Accepted full state-plane refreshes (temperature/velocity/native state). */
+  readonly dynamicSequence: number;
+}
+
+/** Exact CPU evidence for the field that owns reconstructed gas support. */
+export interface AtmosphereSupportAudit {
+  readonly nonzero: number;
+  readonly alphaSum: number;
+  readonly signature: number;
+}
+
+/**
+ * Continuous native state (temperature, velocity, ctype projections, photons)
+ * needs a bounded refresh while the simulation steps. A queued state mutation
+ * still gets exactly one coherent presentation while the simulation is paused.
+ */
+export function dynamicFieldRefreshDue(
+  time: number, lastRefresh: number, continuouslyEnabled: boolean, queued = false,
+): boolean {
+  return queued || (continuouslyEnabled && time - lastRefresh >= DYNAMIC_FIELD_REFRESH_INTERVAL);
+}
+
+/**
+ * Separates backend capability from its continuous-clock opt-in: render labs
+ * can remain static yet still explicitly publish one changed native state.
+ */
+export function dynamicPresentationRefreshDue(
+  time: number,
+  lastRefresh: number,
+  hasPresentation: boolean,
+  continuouslyDynamic: boolean,
+  simulationRunning: boolean,
+  invalidated: boolean,
+): boolean {
+  return hasPresentation && dynamicFieldRefreshDue(
+    time, lastRefresh, simulationRunning && continuouslyDynamic, invalidated,
+  );
 }
 
 interface ProjectedRenderInfo { readonly color: number; readonly phase: RenderPhase; readonly emissive: boolean }
@@ -127,6 +176,26 @@ for (const material of ALL_MATERIALS) {
     color: Number.parseInt(material.color.slice(1), 16),
     phase: renderPhase(material),
     emissive: material.emissive === true || renderPhase(material) === RenderPhase.Energy,
+  };
+}
+
+/**
+ * Coalesces independent layout signals into one post-layout update. The frame
+ * can change before its ResizeObserver callback arrives, so callers also feed
+ * window, visual-viewport, and compact-media changes through this scheduler.
+ */
+export function createAnimationFrameCoalescer(
+  callback: () => void,
+  requestFrame: (frame: FrameRequestCallback) => number = requestAnimationFrame,
+): () => void {
+  let pending = false;
+  return () => {
+    if (pending) return;
+    pending = true;
+    requestFrame(() => {
+      pending = false;
+      callback();
+    });
   };
 }
 
@@ -155,6 +224,8 @@ export class MaterialRenderer {
   private readonly webGLAvailable: boolean;
   private readonly contourScratch: CanvasPhaseContourScratch;
   private readonly contourChunks: DirtyChunkGrid;
+  private readonly scheduleResize: () => void;
+  private resizeSourcesInstalled = false;
   private readonly boundaryDirtyMarker = {
     markCell: (index: number): void => {
       this.contourChunks.markCell(index);
@@ -192,6 +263,10 @@ export class MaterialRenderer {
   private lastPowderSurfaceRefresh = -Infinity;
   private lastSolidOpticalDepthRefresh = -Infinity;
   private changed = true;
+  /** Game owns stepping; renderer uses this only to suppress idle state repacks. */
+  private simulationRunning = true;
+  /** Coalesced state-only native mutation requiring one full semantic snapshot. */
+  private dynamicPresentationInvalidated = false;
   private powderSurfaceDirty = true;
   private solidOpticalDepthDirty = true;
   private canvasLiquidOpticalDepthHydrated = false;
@@ -242,6 +317,8 @@ export class MaterialRenderer {
   private canvasPresentationTimingEnabled = false;
   private canvasPresentationTiming?: CanvasPresentationTiming;
   private webGLPresentationTimingEnabled = false;
+  private presentationRefreshAuditEnabled = false;
+  private presentationRefreshAudit?: PresentationRefreshAudit;
 
   constructor(private readonly host: HTMLElement, private readonly simulation: SimulationBackend) {
     this.requestedOutputScale = resolveFieldOutputScale();
@@ -273,6 +350,7 @@ export class MaterialRenderer {
     this.contourChunks.markAll();
     if (simulation.walls) this.renderedWalls = new Uint8Array(simulation.walls());
     this.view = new ViewTransform(simulation.width, simulation.height);
+    this.scheduleResize = createAnimationFrameCoalescer(() => this.resize());
   }
 
   async init(): Promise<void> {
@@ -288,7 +366,7 @@ export class MaterialRenderer {
       this.initFallback();
     }
     this.resize();
-    new ResizeObserver(() => this.resize()).observe(this.host);
+    this.installResizeSources();
     if (webglAvailable) {
       // Let the compatibility canvas and controls paint before Pixi performs any
       // potentially blocking GPU initialization on a cold browser/driver.
@@ -296,6 +374,16 @@ export class MaterialRenderer {
         void this.promoteLatePresenter(this.createWebGLPresenter());
       }, 0));
     }
+  }
+
+  /** Keeps the camera transform current even if host ResizeObserver delivery lags. */
+  private installResizeSources(): void {
+    if (this.resizeSourcesInstalled) return;
+    this.resizeSourcesInstalled = true;
+    new ResizeObserver(this.scheduleResize).observe(this.host);
+    window.addEventListener('resize', this.scheduleResize, { passive: true });
+    window.visualViewport?.addEventListener('resize', this.scheduleResize, { passive: true });
+    window.matchMedia('(max-width: 680px)').addEventListener('change', this.scheduleResize);
   }
 
   render(time: number, visualTime = time): void {
@@ -331,12 +419,19 @@ export class MaterialRenderer {
       this.solidOpticalDepthDirty = true;
       this.changed = true;
     }
-    const hasDynamicFields = this.simulation.presentationFieldsDynamic !== false
-      && Boolean(
-        this.simulation.temperature || this.simulation.velocity || this.simulation.presentationState
-          || this.simulation.photonState,
-      );
-    const refreshDynamicFields = dynamicFieldRefreshDue(time, this.lastDynamicFieldRefresh, hasDynamicFields);
+    const hasDynamicPresentation = Boolean(
+      this.simulation.temperature || this.simulation.velocity || this.simulation.presentationState
+        || this.simulation.photonState,
+    );
+    // A paused render-lab deliberately opts out of recurring state sampling,
+    // but an explicit load/tool/audit invalidation must still produce one
+    // coherent snapshot of its temperature or presentation plane.
+    const continuousDynamicFields = hasDynamicPresentation
+      && this.simulation.presentationFieldsDynamic !== false;
+    const refreshDynamicFields = dynamicPresentationRefreshDue(
+      time, this.lastDynamicFieldRefresh, hasDynamicPresentation,
+      continuousDynamicFields, this.simulationRunning, this.dynamicPresentationInvalidated,
+    );
     const powderRefreshDue = this.powderSurfaceDirty
       && time - this.lastPowderSurfaceRefresh >= POWDER_SURFACE_REFRESH_INTERVAL;
     const solidDepthRefreshDue = this.solidOpticalDepthDirty
@@ -344,13 +439,42 @@ export class MaterialRenderer {
     const visualRefreshDue = this.presenter?.visualRefreshDue(time)
       ?? ((this.fallbackFields?.due(time) ?? false) || powderRefreshDue || solidDepthRefreshDue);
     if (!this.changed && !refreshDynamicFields && !visualRefreshDue) return;
-    if (refreshDynamicFields) this.lastDynamicFieldRefresh = time;
+    if (refreshDynamicFields) {
+      this.lastDynamicFieldRefresh = time;
+      this.dynamicPresentationInvalidated = false;
+    } else if (!hasDynamicPresentation) {
+      // A legacy backend cannot later surface a queued native-state mutation.
+      this.dynamicPresentationInvalidated = false;
+    }
     this.changed = false;
     this.lastDraw = time;
+    if (this.presentationRefreshAuditEnabled) {
+      const previous = this.presentationRefreshAudit;
+      this.presentationRefreshAudit = {
+        sequence: (previous?.sequence ?? 0) + 1,
+        dynamicSequence: (previous?.dynamicSequence ?? 0) + Number(refreshDynamicFields),
+      };
+    }
     this.drawField(time, visualTime, refreshDynamicFields);
   }
 
   getViewState(): ViewState { return this.view.snapshot(); }
+
+  /**
+   * Stops the periodic 12 Hz native-state repack while a game is paused. Each
+   * transition still queues one frame, so the final stepped state and resumed
+   * state are never left behind in the semantic/presentation textures.
+   */
+  setSimulationRunning(running: boolean): void {
+    if (running === this.simulationRunning) return;
+    this.simulationRunning = running;
+    this.dynamicPresentationInvalidated = true;
+  }
+
+  /** Queues one semantic snapshot for a native mutation that retained material IDs. */
+  invalidateDynamicPresentation(): void {
+    this.dynamicPresentationInvalidated = true;
+  }
 
   getBackendInfo(): RendererBackendInfo {
     return {
@@ -387,8 +511,16 @@ export class MaterialRenderer {
     return fields.atmosphere.styleBytes[fieldY * fields.atmosphere.width + fieldX];
   }
 
+  /** WebGL audit surface; the fallback has no advanced gas-chroma shader path. */
+  getAtmosphereSupportAudit(): AtmosphereSupportAudit | undefined {
+    return this.presenter?.atmosphereSupportAudit();
+  }
+
 
   enableCanvasPresentationTiming(): void { this.canvasPresentationTimingEnabled = true; }
+
+  /** Enables passive scheduling counters for paired Canvas/WebGL browser gates. */
+  enablePresentationRefreshAudit(): void { this.presentationRefreshAuditEnabled = true; }
 
   enableWebGLPresentationTiming(): void {
     this.webGLPresentationTimingEnabled = true;
@@ -738,6 +870,10 @@ export class MaterialRenderer {
     return this.canvasPresentationTiming;
   }
 
+  getPresentationRefreshAudit(): PresentationRefreshAudit | undefined {
+    return this.presentationRefreshAudit;
+  }
+
   private applyThermalMaterialStyle(
     phase: RenderPhase,
     material: Material,
@@ -792,7 +928,10 @@ export class MaterialRenderer {
   private viewportPoint(clientX: number, clientY: number): Point {
     const bounds = this.host.getBoundingClientRect();
     const content = contentBoxFromBounds(bounds, this.host);
-    return clientToViewport({ x: clientX, y: clientY }, content, this.host.clientWidth, this.host.clientHeight);
+    return clientToViewport(
+      clientToVisualViewport({ x: clientX, y: clientY }),
+      content, this.host.clientWidth, this.host.clientHeight,
+    );
   }
 
   private interactionPoint(clientX: number, clientY: number): Point {
@@ -1224,8 +1363,12 @@ export class MaterialRenderer {
       const liquidSpeciesRelief = phase === RenderPhase.Liquid && liquidSpeciesContact
         ? canvasLiquidSpeciesRelief(fields.liquid.bytes, width, height, x, y)
         : 0;
+      // A species interface has its own bounded symmetric meniscus below. Keep
+      // only a restrained directional component in the family body-depth term:
+      // full contrast would turn one side of Water/Oil into an oversized bright
+      // ridge instead of a stable shared interface.
       const liquidFieldRelief = phase === RenderPhase.Liquid
-        ? canvasLiquidFieldRelief(fields.liquid.bytes, width, height, x, y) + liquidSpeciesRelief
+        ? canvasLiquidFieldRelief(fields.liquid.bytes, width, height, x, y) + liquidSpeciesRelief * 0.44
         : 0;
       const liquidEmissionExposure = phase === RenderPhase.Liquid
         && this.liquidFieldLightingEnabled && fields.emission.hasLight
@@ -1383,6 +1526,9 @@ export class MaterialRenderer {
       } else if (material === Material.Oil) {
         const mask = materialNeighbourMask(this.rendered, width, height, x, y, material);
         const density = neighbourDensity(mask);
+        const liquidVolumeInterior = isMaterialBulkInterior(
+          this.rendered, width, height, x, y, material, mask,
+        );
         const liquidFieldAlpha = fields.liquid.bytes[pixel + 3];
         const liquidBodySupport = canvasLiquidBodySupport(liquidFieldAlpha, density);
         const contour = contourLight(mask) * liquidContourScale;
@@ -1396,24 +1542,41 @@ export class MaterialRenderer {
           this.styledColor, optics, liquidFieldAlpha, density,
           liquidFieldRelief, liquidSurfaceExposure, liquidBodySupport,
         );
-        if (this.liquidVolumeChromaEnabled && liquidSpeciesContact
+        if (this.liquidFieldLightingEnabled && liquidSpeciesContact
           && !liquidForeignMatterContact && wall === 0) {
           applyCanvasLiquidInterfaceMeniscus(
             this.styledColor, optics, fields.liquid.bytes[pixel + 3], density, liquidSpeciesRelief,
           );
         }
-        if (this.liquidVolumeChromaEnabled && !liquidSpeciesContact) {
+        // Volume chroma belongs to an exact same-species bulk. Keeping the
+        // one-cell shore neutral prevents the 2x presentation from bleeding a
+        // body tint into an otherwise field-lit unlike-liquid meniscus.
+        if (this.liquidVolumeChromaEnabled && liquidVolumeInterior && !liquidSpeciesContact) {
           const macroWave = liquidBodySupport > 0
             ? (wall === 0 ? canvasLiquidMacroWave(x, y, visualTime, material) : (sheen - contour) / 5)
             : 0;
-          if (liquidBodySupport > 0 && wall === 0) applyCanvasLiquidMacroSheen(
-            this.styledColor, optics, liquidFieldAlpha, density, macroWave, liquidBodySupport,
-          );
+          const macroCaustic = liquidBodySupport > 0 && wall === 0
+            ? canvasLiquidCausticWave(x, y, visualTime, material) : 0;
+          if (liquidBodySupport > 0 && wall === 0) {
+            applyCanvasLiquidMacroSheen(
+              this.styledColor, optics, liquidFieldAlpha, density, macroWave, liquidBodySupport,
+            );
+            applyCanvasLiquidMacroCaustic(
+              this.styledColor, optics, liquidFieldAlpha, density, macroCaustic, liquidBodySupport,
+            );
+          }
           applyCanvasLiquidVolumeChroma(
             this.styledColor, optics, canvasLiquidVolumeChromaResponse(
               optics, liquidFieldAlpha, density,
               liquidFieldRelief, macroWave, liquidBodySupport,
             ),
+            false,
+          );
+        }
+        if ((this.liquidVolumeChromaEnabled || this.liquidOpticalDepthEnabled)
+          && liquidVolumeInterior && !liquidSpeciesContact) {
+          applyCanvasLiquidOpticalDepth(
+            this.styledColor, optics,
             this.liquidOpticalDepthEnabled ? this.boundaryStability[index] : 0,
           );
         }
@@ -1532,6 +1695,9 @@ export class MaterialRenderer {
       } else if (material === Material.Acid) {
         const mask = materialNeighbourMask(this.rendered, width, height, x, y, material);
         const density = neighbourDensity(mask);
+        const liquidVolumeInterior = isMaterialBulkInterior(
+          this.rendered, width, height, x, y, material, mask,
+        );
         const liquidFieldAlpha = fields.liquid.bytes[pixel + 3];
         const liquidBodySupport = canvasLiquidBodySupport(liquidFieldAlpha, density);
         const contour = contourLight(mask) * liquidContourScale;
@@ -1544,24 +1710,38 @@ export class MaterialRenderer {
           this.styledColor, optics, liquidFieldAlpha, density,
           liquidFieldRelief, liquidSurfaceExposure, liquidBodySupport,
         );
-        if (this.liquidVolumeChromaEnabled && liquidSpeciesContact
+        if (this.liquidFieldLightingEnabled && liquidSpeciesContact
           && !liquidForeignMatterContact && wall === 0) {
           applyCanvasLiquidInterfaceMeniscus(
             this.styledColor, optics, fields.liquid.bytes[pixel + 3], density, liquidSpeciesRelief,
           );
         }
-        if (this.liquidVolumeChromaEnabled && !liquidSpeciesContact) {
+        if (this.liquidVolumeChromaEnabled && liquidVolumeInterior && !liquidSpeciesContact) {
           const macroWave = liquidBodySupport > 0
             ? (wall === 0 ? canvasLiquidMacroWave(x, y, visualTime, material) : (shimmer - contour) / 6)
             : 0;
-          if (liquidBodySupport > 0 && wall === 0) applyCanvasLiquidMacroSheen(
-            this.styledColor, optics, liquidFieldAlpha, density, macroWave, liquidBodySupport,
-          );
+          const macroCaustic = liquidBodySupport > 0 && wall === 0
+            ? canvasLiquidCausticWave(x, y, visualTime, material) : 0;
+          if (liquidBodySupport > 0 && wall === 0) {
+            applyCanvasLiquidMacroSheen(
+              this.styledColor, optics, liquidFieldAlpha, density, macroWave, liquidBodySupport,
+            );
+            applyCanvasLiquidMacroCaustic(
+              this.styledColor, optics, liquidFieldAlpha, density, macroCaustic, liquidBodySupport,
+            );
+          }
           applyCanvasLiquidVolumeChroma(
             this.styledColor, optics, canvasLiquidVolumeChromaResponse(
               optics, liquidFieldAlpha, density,
               liquidFieldRelief, macroWave, liquidBodySupport,
             ),
+            false,
+          );
+        }
+        if ((this.liquidVolumeChromaEnabled || this.liquidOpticalDepthEnabled)
+          && liquidVolumeInterior && !liquidSpeciesContact) {
+          applyCanvasLiquidOpticalDepth(
+            this.styledColor, optics,
             this.liquidOpticalDepthEnabled ? this.boundaryStability[index] : 0,
           );
         }
@@ -1607,6 +1787,9 @@ export class MaterialRenderer {
       } else if (material === Material.Water) {
         const mask = materialNeighbourMask(this.rendered, width, height, x, y, material);
         const density = neighbourDensity(mask);
+        const liquidVolumeInterior = isMaterialBulkInterior(
+          this.rendered, width, height, x, y, material, mask,
+        );
         const liquidFieldAlpha = fields.liquid.bytes[pixel + 3];
         const liquidBodySupport = canvasLiquidBodySupport(liquidFieldAlpha, density);
         const contour = contourLight(mask) * liquidContourScale;
@@ -1621,24 +1804,38 @@ export class MaterialRenderer {
           this.styledColor, optics, liquidFieldAlpha, density,
           liquidFieldRelief, liquidSurfaceExposure, liquidBodySupport,
         );
-        if (this.liquidVolumeChromaEnabled && liquidSpeciesContact
+        if (this.liquidFieldLightingEnabled && liquidSpeciesContact
           && !liquidForeignMatterContact && wall === 0) {
           applyCanvasLiquidInterfaceMeniscus(
             this.styledColor, optics, fields.liquid.bytes[pixel + 3], density, liquidSpeciesRelief,
           );
         }
-        if (this.liquidVolumeChromaEnabled && !liquidSpeciesContact) {
+        if (this.liquidVolumeChromaEnabled && liquidVolumeInterior && !liquidSpeciesContact) {
           const macroWave = liquidBodySupport > 0
             ? (wall === 0 ? canvasLiquidMacroWave(x, y, visualTime, material) : shimmer / 4)
             : 0;
-          if (liquidBodySupport > 0 && wall === 0) applyCanvasLiquidMacroSheen(
-            this.styledColor, optics, liquidFieldAlpha, density, macroWave, liquidBodySupport,
-          );
+          const macroCaustic = liquidBodySupport > 0 && wall === 0
+            ? canvasLiquidCausticWave(x, y, visualTime, material) : 0;
+          if (liquidBodySupport > 0 && wall === 0) {
+            applyCanvasLiquidMacroSheen(
+              this.styledColor, optics, liquidFieldAlpha, density, macroWave, liquidBodySupport,
+            );
+            applyCanvasLiquidMacroCaustic(
+              this.styledColor, optics, liquidFieldAlpha, density, macroCaustic, liquidBodySupport,
+            );
+          }
           applyCanvasLiquidVolumeChroma(
             this.styledColor, optics, canvasLiquidVolumeChromaResponse(
               optics, liquidFieldAlpha, density,
               liquidFieldRelief, macroWave, liquidBodySupport,
             ),
+            false,
+          );
+        }
+        if ((this.liquidVolumeChromaEnabled || this.liquidOpticalDepthEnabled)
+          && liquidVolumeInterior && !liquidSpeciesContact) {
+          applyCanvasLiquidOpticalDepth(
+            this.styledColor, optics,
             this.liquidOpticalDepthEnabled ? this.boundaryStability[index] : 0,
           );
         }
@@ -1692,6 +1889,9 @@ export class MaterialRenderer {
         } else if (info.phase === RenderPhase.Liquid) {
           const mask = materialNeighbourMask(this.rendered, width, height, x, y, material);
           const density = neighbourDensity(mask);
+          const liquidVolumeInterior = isMaterialBulkInterior(
+            this.rendered, width, height, x, y, material, mask,
+          );
           const liquidFieldAlpha = fields.liquid.bytes[pixel + 3];
           const liquidBodySupport = canvasLiquidBodySupport(liquidFieldAlpha, density);
           const contour = contourLight(mask) * liquidContourScale;
@@ -1703,25 +1903,40 @@ export class MaterialRenderer {
             this.styledColor, optics, liquidFieldAlpha, density,
             liquidFieldRelief, liquidSurfaceExposure, liquidBodySupport,
           );
-          if (this.liquidVolumeChromaEnabled && applicableTraits === 0
+          if (this.liquidFieldLightingEnabled && applicableTraits === 0
             && !info.emissive && liquidSpeciesContact && !liquidForeignMatterContact && wall === 0) {
             applyCanvasLiquidInterfaceMeniscus(
               this.styledColor, optics, fields.liquid.bytes[pixel + 3], density, liquidSpeciesRelief,
             );
           }
           if (this.liquidVolumeChromaEnabled && applicableTraits === 0
-            && !info.emissive && !liquidSpeciesContact) {
+            && !info.emissive && liquidVolumeInterior && !liquidSpeciesContact) {
             const macroWave = liquidBodySupport > 0
               ? (wall === 0 ? canvasLiquidMacroWave(x, y, visualTime, material) : (shimmer - contour) / 4)
               : 0;
-            if (liquidBodySupport > 0 && wall === 0) applyCanvasLiquidMacroSheen(
-              this.styledColor, optics, liquidFieldAlpha, density, macroWave, liquidBodySupport,
-            );
+            const macroCaustic = liquidBodySupport > 0 && wall === 0
+              ? canvasLiquidCausticWave(x, y, visualTime, material) : 0;
+            if (liquidBodySupport > 0 && wall === 0) {
+              applyCanvasLiquidMacroSheen(
+                this.styledColor, optics, liquidFieldAlpha, density, macroWave, liquidBodySupport,
+              );
+              applyCanvasLiquidMacroCaustic(
+                this.styledColor, optics, liquidFieldAlpha, density, macroCaustic, liquidBodySupport,
+              );
+            }
             applyCanvasLiquidVolumeChroma(
               this.styledColor, optics, canvasLiquidVolumeChromaResponse(
                 optics, liquidFieldAlpha, density,
                 liquidFieldRelief, macroWave, liquidBodySupport,
               ),
+              false,
+            );
+          }
+          if ((this.liquidVolumeChromaEnabled || this.liquidOpticalDepthEnabled)
+            && applicableTraits === 0 && !info.emissive
+            && liquidVolumeInterior && !liquidSpeciesContact) {
+            applyCanvasLiquidOpticalDepth(
+              this.styledColor, optics,
               this.liquidOpticalDepthEnabled ? this.boundaryStability[index] : 0,
             );
           }
@@ -1799,7 +2014,11 @@ export class MaterialRenderer {
           // identity. This remains RGB-only and deliberately precedes traits,
           // thermal overlays, and state-specific graphics.
           if (this.structuralRigidStylingEnabled && phase === RenderPhase.Solid
-            && applicableTraits === 0 && !info.emissive) {
+            && wall === 0 && applicableTraits === 0 && !info.emissive) {
+            applyCanvasStructuralRigidBulkOptics(
+              this.styledColor, material, denseSolidInterior,
+              solidOpticalDepth, solidRelief, this.solidOpticalDepthEnabled,
+            );
             applyCanvasStructuralRigidStyle(this.styledColor, material, x, y);
           }
           if (this.unusualSolidStylingEnabled && phase === RenderPhase.Solid

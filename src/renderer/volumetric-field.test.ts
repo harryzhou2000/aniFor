@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   contourLight,
   enclosedSurfaceCoverage,
+  isMaterialBulkInterior,
   materialNeighbourMask,
   neighbourDensity,
   NEIGHBOUR_BOTTOM,
@@ -10,6 +11,16 @@ import {
 } from './volumetric-field';
 
 describe('volumetric field sampling', () => {
+  it('keeps a one-cell buffer between a bulk interior and a foreign seam', () => {
+    const cells = new Uint8Array(7 * 5).fill(2);
+    cells[2 * 7 + 5] = 3;
+    const nearSeamMask = materialNeighbourMask(cells, 7, 5, 3, 2, 2);
+    const bufferedMask = materialNeighbourMask(cells, 7, 5, 2, 2, 2);
+    expect(nearSeamMask).toBe(0xFF);
+    expect(isMaterialBulkInterior(cells, 7, 5, 3, 2, 2, nearSeamMask)).toBe(false);
+    expect(isMaterialBulkInterior(cells, 7, 5, 2, 2, 2, bufferedMask)).toBe(true);
+  });
+
   it('reports a fully enclosed field sample', () => {
     const cells = new Uint8Array(9).fill(2);
     const mask = materialNeighbourMask(cells, 3, 3, 1, 1, 2);

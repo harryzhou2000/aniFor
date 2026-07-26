@@ -178,6 +178,64 @@ export function applyCanvasSolidLighting(color: Float32Array, light: number): vo
 }
 
 /**
+ * Adds the missing Canvas counterpart to WebGL's ordinary-solid grazing
+ * environment response. The caller supplies the already-classified Hermite
+ * density and analytic contour gradient, so this is RGB-only arithmetic: it
+ * cannot change alpha, ownership, coverage, topology, fields, or allocations.
+ * Granular matter deliberately keeps its existing categorical/noisy look.
+ */
+export function applyCanvasSolidContourFresnelRim(
+  target: Uint8ClampedArray,
+  offset: number,
+  density: number,
+  gradientX: number,
+  gradientY: number,
+  optics: number,
+): void {
+  if (density <= 0.08 || density >= 0.92 || isGranularOptics(optics)) return;
+  const gradientLengthSquared = gradientX * gradientX + gradientY * gradientY;
+  if (gradientLengthSquared <= 1e-8) return;
+  const contour = smoothstep(0.08, 0.42, density)
+    * (1 - smoothstep(0.58, 0.92, density));
+  if (contour <= 0) return;
+  // Match the direct mesh's normal-Z/Fresnel construction with only the
+  // Canvas contour's existing analytic slope. A slight slope scale keeps the
+  // 2x rim legible without becoming a white outline at 4x/8x.
+  const normalZ = 1 / Math.sqrt(1 + gradientLengthSquared * 0.90);
+  const fresnel = (1 - normalZ) * (1 - normalZ);
+  const gain = optics === RenderOptics.TranslucentRigid ? 0.19
+    : optics === RenderOptics.SmoothRigid || optics === RenderOptics.Cellular ? 0.17
+    : optics === RenderOptics.Device ? 0.16
+    : optics === RenderOptics.Radioactive ? 0.14
+    : optics === RenderOptics.Organic ? 0.12 : 0.11;
+  // Six source bytes is a hard visual ceiling, including the strongest
+  // translucent contour. The positive environment response deliberately
+  // complements the existing signed key/fill rather than replacing it.
+  const rim = Math.min(6, 255 * contour * fresnel * gain);
+  if (rim <= 0) return;
+  const gradientLength = Math.sqrt(gradientLengthSquared);
+  const keyFacing = Math.max(0, (-gradientX * 0.48 - gradientY * 0.68) / gradientLength);
+  const exposure = rim * (0.72 + keyFacing * 0.28);
+  let red = 0.50;
+  let green = 0.68;
+  let blue = 0.90;
+  if (optics === RenderOptics.SmoothRigid || optics === RenderOptics.Cellular) {
+    red = 0.46; green = 0.80; blue = 1;
+  } else if (optics === RenderOptics.Organic) {
+    red = 0.56; green = 0.82; blue = 0.48;
+  } else if (optics === RenderOptics.Device) {
+    red = 0.38; green = 0.82; blue = 1;
+  } else if (optics === RenderOptics.Radioactive) {
+    red = 0.36; green = 1; blue = 0.64;
+  } else if (optics === RenderOptics.TranslucentRigid) {
+    red = 0.44; green = 0.84; blue = 1;
+  }
+  target[offset] += (255 - target[offset]) / 255 * red * exposure;
+  target[offset + 1] += (255 - target[offset + 1]) / 255 * green * exposure;
+  target[offset + 2] += (255 - target[offset + 2]) / 255 * blue * exposure;
+}
+
+/**
  * Adds family-aware body depth using only lighting and relief values already
  * computed for the semantic solid cell. Dense interiors receive bounded
  * absorption plus a broad tinted reflection; exposed edges retain the old
@@ -273,6 +331,11 @@ function compressSolidPeak(color: Float32Array): void {
   color[2] *= scale;
 }
 
+function smoothstep(start: number, end: number, value: number): number {
+  const progress = Math.max(0, Math.min(1, (value - start) / (end - start)));
+  return progress * progress * (3 - 2 * progress);
+}
+
 /**
  * Adds a broad, signed, nearly luminance-neutral spectral band inside exact
  * Glass and Ice. The caller supplies the already computed solid relief, so the
@@ -313,7 +376,10 @@ export function applyCanvasTranslucentLensShell(
   const rim = Math.min(7, Math.abs(edgeLight) * 0.32);
   const absoluteRelief = Math.abs(relief);
   if (material === Material.Glass) {
-    const crown = Math.max(0, relief) * 1.15;
+    // Canvas composites this translucent shell after the local body pass, so it
+    // needs a modest alpha-compensation over the direct WebGL crown to retain
+    // the same fit-view macro relief. It reuses signed relief and is RGB-only.
+    const crown = Math.max(0, relief) * 2.0;
     const valley = Math.max(0, -relief);
     const scale = 1 - (1.5 + valley * 0.35) / 255;
     color[0] = color[0] * scale + (rim + crown) * 0.45;

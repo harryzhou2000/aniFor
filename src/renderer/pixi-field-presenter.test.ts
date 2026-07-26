@@ -346,6 +346,32 @@ describe('Pixi presenter startup configuration', () => {
     expect(`${helpers}${block}`).not.toMatch(/\b(?:sin|pow|normalize|length)\s*\(/);
   });
 
+  it('keeps normal-WebGL gas chroma out of the composed alpha assignment', () => {
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const blockStart = source.indexOf('    float particleAlpha = smoothstep(0.08, 0.72, density)');
+    const blockEnd = source.indexOf('    // Beer-like optical depth keeps the core saturated', blockStart);
+    const block = source.slice(blockStart, blockEnd);
+
+    expect(blockStart).toBeGreaterThan(0);
+    expect(blockEnd).toBeGreaterThan(blockStart);
+    expect(block).toContain('alpha = cloudOnly > 0.5');
+    expect(block).not.toContain('uGasVolumeChroma');
+  });
+
+  it('keeps normal-WebGL gas field light on the existing field sample', () => {
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const blockStart = source.indexOf('    float gasLightReach = smoothstep(0.002, 0.42, emissionState.a);');
+    const blockEnd = source.indexOf('    // The atmosphere\'s existing cardinal field samples', blockStart);
+    const block = source.slice(blockStart, blockEnd);
+
+    expect(blockStart).toBeGreaterThan(0);
+    expect(blockEnd).toBeGreaterThan(blockStart);
+    expect(block).toContain('* (1.0 - opticalDepth * 0.48) * uGasFieldLighting;');
+    expect(block).not.toContain('gasLightShape');
+    expect(block.match(/texture\(\s*uEmissionTexture/g)).toHaveLength(1);
+    expect(block).not.toMatch(/\balpha\s*[+*]?=/);
+  });
+
   it('seeds and redraws optional-last gas identity volume styling', () => {
     const presenter = presenterHarness();
 
@@ -364,12 +390,13 @@ describe('Pixi presenter startup configuration', () => {
 
   it('uses one propagated style sample, one shared motif sample, and RGB-only dense species depth without changing gas support', () => {
     const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
-    const helperStart = source.indexOf('vec3 gasIdentityVolumeDelta(');
-    const helperEnd = source.indexOf('float liquidVolumeChromaResponse', helperStart);
-    const blockStart = source.indexOf('    if (uGasIdentityStyling > 0.5) {');
-    const blockEnd = source.indexOf('  } else if (liquidVolume > 0.5)', blockStart);
-    const helper = source.slice(helperStart, helperEnd);
-    const block = source.slice(blockStart, blockEnd);
+    const rich = source.slice(source.indexOf('const FIELD_FRAGMENT = `'));
+    const helperStart = rich.indexOf('vec3 gasIdentityVolumeDelta(');
+    const helperEnd = rich.indexOf('float liquidVolumeChromaResponse', helperStart);
+    const blockStart = rich.indexOf('    if (uGasIdentityStyling > 0.5) {');
+    const blockEnd = rich.indexOf('  } else if (liquidVolume > 0.5)', blockStart);
+    const helper = rich.slice(helperStart, helperEnd);
+    const block = rich.slice(blockStart, blockEnd);
 
     expect(helperStart).toBeGreaterThan(0);
     expect(helperEnd).toBeGreaterThan(helperStart);
@@ -378,9 +405,9 @@ describe('Pixi presenter startup configuration', () => {
     expect(helper).toContain('texture(uGasIdentityMotifTexture, motifUv)');
     expect(helper).toContain('vec3 bodyDepth = gasIdentityBodyDelta(style, density);');
     expect(helper).toContain('motif * motifScale + vec3(fieldRelief) + bodyDepth');
-    const bodyStart = source.indexOf('vec3 gasIdentityBodyDelta(float style, float density) {');
-    const bodyEnd = source.indexOf('float liquidVolumeChromaResponse', bodyStart);
-    const body = source.slice(bodyStart, bodyEnd);
+    const bodyStart = rich.indexOf('vec3 gasIdentityBodyDelta(float style, float density) {');
+    const bodyEnd = rich.indexOf('float liquidVolumeChromaResponse', bodyStart);
+    const body = rich.slice(bodyStart, bodyEnd);
     expect(bodyStart).toBeGreaterThan(helperStart);
     expect(bodyEnd).toBeGreaterThan(bodyStart);
     expect(body).toContain('smoothstep(0.10, 0.70, density)');
@@ -400,6 +427,29 @@ describe('Pixi presenter startup configuration', () => {
     expect(`${helper}${body}${block}`).not.toMatch(/\b(?:sin|pow|normalize|length)\s*\(/);
   });
 
+  it('keeps Noble Gas volume chroma violet through the existing identity sample', () => {
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const rich = source.slice(source.indexOf('const FIELD_FRAGMENT = `'));
+    const helperStart = rich.indexOf('vec3 gasIdentityVolumeChroma(float style, float response) {');
+    const helperEnd = rich.indexOf('float liquidVolumeChromaResponse', helperStart);
+    const helper = rich.slice(helperStart, helperEnd);
+    const blockStart = rich.indexOf('    if (uGasIdentityStyling > 0.5) {');
+    const blockEnd = rich.indexOf('  } else if (liquidVolume > 0.5)', blockStart);
+    const block = rich.slice(blockStart, blockEnd);
+
+    expect(helper).toContain('style > 6.5 && style < 7.5');
+    expect(helper).toContain('smoothstep(0.006, 0.032, abs(response))');
+    expect(helper).toContain('vec3(0.040, -0.060, 0.028) * violetStrength');
+    expect(helper).not.toMatch(/\btexture\s*\(/);
+    expect(helper).not.toMatch(/\balpha\s*[+*]?=/);
+    expect(block).toContain('uGasVolumeChroma > 0.5 && gasIdentityStyle > 6.5');
+    expect(block).toContain('float gasIdentityChromaSupport = smoothstep(0.012, 0.030, atmosphereState.a);');
+    expect(block).toContain('vec3 nobleGasChroma = gasIdentityVolumeChroma(gasIdentityStyle, gasChroma)');
+    expect(block).toContain('* gasIdentityChromaSupport;');
+    expect(block).toContain('max(nobleGasChroma, vec3(0.0))');
+    expect(block).toContain('min(nobleGasChroma, vec3(0.0))');
+  });
+
   it('seeds and redraws optional-last liquid volume chroma', () => {
     const presenter = presenterHarness();
 
@@ -415,12 +465,25 @@ describe('Pixi presenter startup configuration', () => {
     expect(presenter.app.render).toHaveBeenCalledOnce();
   });
 
+  it('keeps liquid optical depth independently live when volume chroma is off', () => {
+    const presenter = presenterHarness();
+
+    presenter.setLiquidVolumeChromaEnabled(false);
+    presenter.setLiquidOpticalDepthEnabled(false);
+    expect(presenter.uniforms.uniforms.uLiquidVolumeChroma).toBe(0);
+    expect(presenter.uniforms.uniforms.uLiquidOpticalDepth).toBe(0);
+
+    presenter.setLiquidOpticalDepthEnabled(true);
+    expect(presenter.uniforms.uniforms.uLiquidVolumeChroma).toBe(0);
+    expect(presenter.uniforms.uniforms.uLiquidOpticalDepth).toBe(1);
+  });
+
   it('keeps liquid volume depth RGB-only and reuses the existing auxiliary resource', () => {
     const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
     const helperStart = source.indexOf('float liquidVolumeChromaResponse(');
     const helperEnd = source.indexOf('vec3 vividColor', helperStart);
     const helpers = source.slice(helperStart, helperEnd);
-    const blockStart = source.indexOf('// Family-coloured absorption and reflection');
+    const blockStart = source.indexOf('// Family-coloured chroma and vertical optical depth');
     const blockEnd = source.indexOf('  } else {', blockStart);
     const block = source.slice(blockStart, blockEnd);
 
@@ -428,13 +491,18 @@ describe('Pixi presenter startup configuration', () => {
     expect(helperEnd).toBeGreaterThan(helperStart);
     expect(blockStart).toBeGreaterThan(0);
     expect(blockEnd).toBeGreaterThan(blockStart);
-    expect(block).toContain('uLiquidVolumeChroma > 0.5 && liquidOnly < 0.5');
+    expect(block).toContain('if (liquidOnly < 0.5 && halo < 0.5');
     expect(block).toContain('molten < 0.5 && foreignMatterContact < 0.5');
     expect(block).toContain('unlikeMaterialContact < 0.5');
     expect(block).toContain('liquidDepth > 0.38 && liquidNeighbourMean > 0.48');
     expect(block).toContain('dot(liquidSpeciesSlope, liquidSpeciesSlope) < 0.0025');
     expect(block).toContain('liquidDepth, volumeSlope, liquidDensity, liquidNeighbourMean');
-    expect(block).toContain('liquidOpticalDepth');
+    expect(block).toContain('if (uLiquidVolumeChroma > 0.5)');
+    expect(block).toContain('if (uLiquidOpticalDepth > 0.5)');
+    expect(block).toContain('applyLiquidVolumeChroma(color, liquidVolumeChroma, optics)');
+    expect(block).toContain('applyLiquidOpticalDepth(color, optics, liquidOpticalDepth)');
+    expect(helpers).toContain('vec3 liquidVolumeShadow(float optics)');
+    expect(helpers).toContain('vec3 applyLiquidOpticalDepth(');
     expect(source).toContain('liquidOpticalDepth = boundaryStabilityAt(fieldUv)');
     expect(source).toContain('writeVerticalOpticalDepth(materials, this.boundaryStabilityBytes)');
     expect(source).toContain('if (boundaryTextureDirty) this.boundaryStabilitySource.update()');
@@ -509,12 +577,311 @@ describe('Pixi presenter startup configuration', () => {
     expect(source).not.toContain('sampler2D uLiquidIdentityStyling');
   });
 
+  it('restores the public liquid-identity grammar in compact true-8x WebGL', () => {
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');
+    const helperStart = source.indexOf('vec3 liquidIdentityEightXDelta(', eightStart);
+    const helperEnd = source.indexOf('bool solidEightXGranular', helperStart);
+    const blockStart = source.indexOf('// Public unusual/phase-product liquids need a visual grammar', helperStart);
+    const blockEnd = source.indexOf('  // A few exact TPT projections', blockStart);
+    const helper = source.slice(helperStart, helperEnd);
+    const block = source.slice(blockStart, blockEnd);
+
+    expect(eightStart).toBeGreaterThan(0);
+    expect(helperStart).toBeGreaterThan(eightStart);
+    expect(helperEnd).toBeGreaterThan(helperStart);
+    expect(blockStart).toBeGreaterThan(helperStart);
+    expect(blockEnd).toBeGreaterThan(blockStart);
+    expect(source.slice(eightStart, helperStart)).toContain('uniform float uLiquidIdentityStyling;');
+    for (const motif of ['seed', 'diagonal', 'ribbon', 'fold', 'slopeLight', 'hue']) {
+      expect(helper).toContain(motif);
+    }
+    expect(helper).toContain('return clamp(identity * support, vec3(-0.055), vec3(0.055));');
+    expect(block).toContain('uLiquidIdentityStyling > 0.5 && !materialEmissive');
+    expect(block).toContain('liquidSpeciesDifference < 0.035');
+    expect(block).toContain('material == 38.0 || (material >= 54.0 && material <= 57.0)');
+    expect(block).toContain('material == 62.0 || material == 202.0 || material == 207.0');
+    expect(block).toContain('liquidIdentityEightXDelta(material, grid, density, depth, liquidSlope)');
+    expect(`${helper}${block}`).not.toContain('texture(');
+    expect(`${helper}${block}`).not.toMatch(/\balpha\s*[+*]?=/);
+    expect(`${helper}${block}`).not.toMatch(/\b(?:sin|pow|length)\s*\(/);
+    expect(`${helper}${block}`).not.toContain('uTime');
+  });
+
   it('keeps true-8x analytic body lighting independent of expensive probes', () => {
     const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
     expect(source).toContain("uHighQuality: {\n        value: matchMedia('(min-width: 800px)').matches && outputScale < 8 ? 1 : 0");
     expect(source).toContain("uAnalyticLightingQuality: {\n        value: matchMedia('(min-width: 800px)').matches || outputScale === 8 ? 1 : 0");
     expect(source).toContain('mix(1.45, 1.15, uAnalyticLightingQuality)');
     expect(source).toContain('if (uHighQuality > 0.5)');
+  });
+
+  it('reuses the existing centre emission sample for RGB-only true-8x gas scatter', () => {
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');
+    const eightEnd = source.indexOf('const FIELD_FRAGMENT = `', eightStart);
+    const eight = source.slice(eightStart, eightEnd);
+
+    expect(eightStart).toBeGreaterThan(0);
+    expect(eightEnd).toBeGreaterThan(eightStart);
+    expect(eight).toContain('uniform float uGasFieldLighting;');
+    expect(eight.match(/texture\(uEmissionTexture, uv\)/g)).toHaveLength(1);
+    expect(eight).toContain('float gasFieldScatter = uGasFieldLighting * smoothstep(0.002, 0.42, emission.a);');
+    expect(eight).toContain('emission.rgb * gasFieldScatter * gasShell * 0.035');
+    expect(eight).toContain('emission.rgb * gasFieldScatter * (0.018 + gasShell * 0.030)');
+    expect(eight).toContain('finalColor = vec4(gas * atmosphere.a * 0.42, atmosphere.a * 0.42);');
+    expect(eight).toContain('float alpha = family == 1.0 ? smoothstep(0.006, 0.26, density) * 0.48');
+  });
+
+  it('keeps true-8x dense gas identity on the existing propagated R8 style field', () => {
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');
+    const eightEnd = source.indexOf('const FIELD_FRAGMENT = `', eightStart);
+    const eight = source.slice(eightStart, eightEnd);
+    const helperStart = eight.indexOf('vec3 gasIdentityEightXDelta(');
+    const helperEnd = eight.indexOf('void main()', helperStart);
+    const emptyStart = eight.indexOf('else if (atmosphere.a > 0.004) {');
+    const semanticStart = eight.indexOf('if (family == 1.0) {');
+    const semanticEnd = eight.indexOf('  else if (family == 2.0)', semanticStart);
+    const helper = eight.slice(helperStart, helperEnd);
+    const empty = eight.slice(emptyStart, semanticStart);
+    const semantic = eight.slice(semanticStart, semanticEnd);
+
+    expect(helperStart).toBeGreaterThan(0);
+    expect(helperEnd).toBeGreaterThan(helperStart);
+    expect(eight).toContain('uniform sampler2D uAtmosphereStyleTexture;');
+    expect(eight).toContain('uniform float uGasIdentityStyling;');
+    expect(helper).toContain('smoothstep(0.10, 0.70, density)');
+    expect(helper).toContain('vec3(3.0, -2.0, 3.75)');
+    expect(helper).toContain('style > 6.5 && style < 7.5');
+    expect(helper).not.toContain('texture(');
+    expect(empty).toContain('if (uGasIdentityStyling > 0.5)');
+    expect(semantic).toContain('if (uGasIdentityStyling > 0.5)');
+    expect(`${empty}${semantic}`.match(/texture\(uAtmosphereStyleTexture, uv\)/g)).toHaveLength(2);
+    expect(eight).not.toContain('texture(uGasIdentityMotifTexture');
+    expect(`${helper}${empty}${semantic}`).not.toMatch(/\balpha\s*[+*]?=/);
+  });
+
+  it('keeps true-8x Energy core relief static, RGB-only, and sample-free', () => {
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');
+    const eightEnd = source.indexOf('const FIELD_FRAGMENT = `', eightStart);
+    const eight = source.slice(eightStart, eightEnd);
+    const start = eight.indexOf('// True 8x keeps Energy\'s dense-core relief static');
+    const end = eight.indexOf('  if (family == 4.0) {', start);
+    const block = eight.slice(start, end);
+
+    expect(eightStart).toBeGreaterThan(0);
+    expect(eightEnd).toBeGreaterThan(eightStart);
+    expect(start).toBeGreaterThan(0);
+    expect(end).toBeGreaterThan(start);
+    expect(eight).toContain('uniform float uEnergyCoreRelief;');
+    expect(eight).toContain('uniform float uEnergyIdentityStyling;');
+    expect(block).toContain('float denseEnergy = smoothstep(0.12, 0.48, emission.a)');
+    expect(block).toContain('float energyRelief = (energyLobe - 0.5) * 0.14 * denseEnergy;');
+    expect(block).toContain('color *= 1.0 + energyRelief * uEnergyCoreRelief;');
+    expect(block).toContain('* (1.0 - denseEnergy * 0.65) * uEnergyIdentityStyling;');
+    expect(block).not.toContain('texture(');
+    expect(block).not.toContain('uTime');
+    expect(block).not.toMatch(/\b(?:sin|pow|normalize)\s*\(/);
+    expect(block).not.toMatch(/\balpha\s*[+*]?=/);
+    expect(eight.match(/texture\(uEmissionTexture, uv\)/g)).toHaveLength(1);
+  });
+
+  it('keeps true-8x deep solid body optics interior-only, RGB-only, and resource-free', () => {
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');
+    const eightEnd = source.indexOf('const FIELD_FRAGMENT = `', eightStart);
+    const eight = source.slice(eightStart, eightEnd);
+    const helperStart = eight.indexOf('bool solidEightXGranular(');
+    const helperEnd = eight.indexOf('void main()', helperStart);
+    const start = eight.indexOf('// Deep rigid bodies reuse the existing exact-species occupancy');
+    const end = eight.indexOf('// Compact Device bodies retain', start);
+    const helper = eight.slice(helperStart, helperEnd);
+    const block = eight.slice(start, end);
+
+    expect(helperStart).toBeGreaterThan(0);
+    expect(helperEnd).toBeGreaterThan(helperStart);
+    expect(start).toBeGreaterThan(0);
+    expect(end).toBeGreaterThan(start);
+    expect(eight).toContain('uniform float uSolidOpticalDepth;');
+    expect(helper).toContain('optics == 7.0 || optics == 13.0 || optics == 14.0 || optics == 15.0');
+    expect(helper).toContain('vec3 solidEightXBodyKey(float optics)');
+    expect(helper).toContain('vec3 solidEightXBodyShadow(float optics)');
+    expect(block).toContain('uSolidOpticalDepth > 0.5 && !materialEmissive');
+    expect(block).toContain('depth > 6.0 / 255.0 && q00 * q10 * q01 * q11 > 0.5 && density > 0.76');
+    expect(block).toContain('linearThickness * (1.4 - linearThickness * 0.4)');
+    expect(block).toContain('bodyTriangle * bodyTriangle * (3.0 - bodyTriangle * 2.0)');
+    expect(block).toContain('solidEightXBodyKey(optics)');
+    expect(block).toContain('solidEightXBodyShadow(optics)');
+    expect(`${helper}${block}`).not.toContain('texture(');
+    expect(`${helper}${block}`).not.toContain('uTime');
+    expect(`${helper}${block}`).not.toMatch(/\balpha\s*[+*]?=/);
+  });
+
+  it('restores true-8x translucent rigid alpha, shell, and field transmission without a new sample', () => {
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');
+    const eightEnd = source.indexOf('const FIELD_FRAGMENT = `', eightStart);
+    const eight = source.slice(eightStart, eightEnd);
+    const start = eight.indexOf('// TranslucentRigid is the intentional presentation-alpha exception.');
+    const end = eight.indexOf('// Compact Device bodies retain', start);
+    const alphaStart = eight.indexOf('  float alpha = family == 1.0', start);
+    const alphaEnd = eight.indexOf('  if (material == 114.0)', alphaStart);
+    const block = eight.slice(start, end);
+    const alpha = eight.slice(alphaStart, alphaEnd);
+
+    expect(start).toBeGreaterThan(0);
+    expect(end).toBeGreaterThan(start);
+    expect(alphaStart).toBeGreaterThan(end);
+    expect(alphaEnd).toBeGreaterThan(alphaStart);
+    expect(eight).toContain('uniform float uTranslucentFieldTransmission;');
+    expect(eight).toContain('uniform float uTranslucentLensShell;');
+    expect(block).toContain('family == 0.0 && optics == 12.0 && traits < 0.5 && !materialEmissive');
+    expect(block).toContain('q00 * q10 * q01 * q11');
+    expect(block).toContain('uTranslucentLensShell > 0.5');
+    expect(block).toContain('uTranslucentFieldTransmission > 0.5');
+    expect(block).toContain('emission.rgb * transmissionTint * transmittedReach * transmittedWeight');
+    expect(block).not.toContain('texture(');
+    expect(block).not.toMatch(/\balpha\s*[+*]?=/);
+    expect(alpha).toContain('float translucentAlpha = (material == 12.0 || material == 24.0)');
+    expect(alpha).toContain('alpha *= translucentAlpha;');
+  });
+
+  it('gates true-8x liquid neighbour probes to ordinary liquid bodies', () => {
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');
+    const eightEnd = source.indexOf('const FIELD_FRAGMENT = `', eightStart);
+    const eight = source.slice(eightStart, eightEnd);
+    const start = eight.indexOf('if (family == 2.0 && optics != 4.0) {');
+    const end = eight.indexOf('// A few exact TPT projections', start);
+    const block = eight.slice(start, end);
+
+    expect(start).toBeGreaterThan(0);
+    expect(end).toBeGreaterThan(start);
+    expect(block).toContain('float liquidCore = same(');
+    expect(block).toContain('texture(uLiquidTexture, uv - vec2(uTexel.x, 0.0))');
+    expect(block).toContain('float liquidSpeciesDifference = max(');
+    expect(eight.slice(0, start)).not.toContain('float liquidCore = same(');
+    expect(eight.slice(0, start)).not.toContain('float liquidSpeciesDifference = max(');
+    // Empty-space reconstruction still needs exactly the one centre field read.
+    expect(eight.match(/texture\(uLiquidTexture, uv\)/g)).toHaveLength(1);
+  });
+
+  it('reuses true-8x liquid field samples for bounded RGB-only connected meniscus lighting', () => {
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');
+    const eightEnd = source.indexOf('const FIELD_FRAGMENT = `', eightStart);
+    const eight = source.slice(eightStart, eightEnd);
+    const start = eight.indexOf('// The compact renderer already owns these exact four field samples');
+    const end = eight.indexOf('  // A few exact TPT projections', start);
+    const block = eight.slice(start, end);
+
+    expect(start).toBeGreaterThan(0);
+    expect(end).toBeGreaterThan(start);
+    expect(eight).toContain('uniform float uLiquidFieldLighting;');
+    expect(block).toContain('uLiquidFieldLighting > 0.5 && ordinaryLiquid && traits < 0.5');
+    expect(block).toContain('!materialEmissive && liquidSpeciesDifference < 0.035');
+    expect(block).toContain('liquidLeft.a + liquidRight.a + liquidTop.a + liquidBottom.a');
+    expect(block).toContain('liquidEightXMeniscusKey(optics)');
+    expect(block).toContain('liquidEightXMeniscusShadow(optics)');
+    expect(block).not.toContain('texture(');
+    expect(block).not.toContain('uTime');
+    expect(block).not.toMatch(/\balpha\s*[+*]?=/);
+  });
+
+  it('keeps true-8x Device bodies arithmetic-only and RGB-only', () => {
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');
+    const eightEnd = source.indexOf('const FIELD_FRAGMENT = `', eightStart);
+    const eight = source.slice(eightStart, eightEnd);
+    const start = eight.indexOf('// Compact Device bodies retain');
+    const end = eight.indexOf('// The centre liquid field remains live', start);
+    const block = eight.slice(start, end);
+
+    expect(start).toBeGreaterThan(0);
+    expect(end).toBeGreaterThan(start);
+    expect(block).toContain('family == 0.0 && optics == 10.0');
+    expect(block).toContain('float bus =');
+    expect(block).toContain('float terminal =');
+    expect(block).toContain('vec3(3.0, 8.0, 11.0)');
+    expect(block).not.toContain('texture(');
+    expect(block).not.toContain('uTime');
+    expect(block).not.toMatch(/\balpha\s*[+*]?=/);
+  });
+
+  it('keeps true-8x ACEL/DCEL activity RGB-only and reuses packed state', () => {
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');
+    const eightEnd = source.indexOf('const FIELD_FRAGMENT = `', eightStart);
+    const eight = source.slice(eightStart, eightEnd);
+    const start = eight.indexOf('// ACEL/DCEL retain their native active bit');
+    const end = eight.indexOf('  if (uVibrStateStyling > 0.5', start);
+    const block = eight.slice(start, end);
+
+    expect(start).toBeGreaterThan(0);
+    expect(end).toBeGreaterThan(start);
+    expect(eight).toContain('uniform float uForceActivityStyling;');
+    expect(eight).toContain('bool forceOwner = material == 115.0 || material == 116.0;');
+    expect(block).toContain('uForceActivityStyling > 0.5 && forceOwner');
+    expect(block).toContain('mod(floor(sourceTarget), 2.0) >= 0.5');
+    expect(block).toContain('vec3(16.0, 11.0, -4.0) / 255.0');
+    expect(block).toContain('vec3(3.0, 10.0, 16.0) / 255.0');
+    expect(block).not.toContain('texture(');
+    expect(block).not.toMatch(/\balpha\s*[+*]?=/);
+    expect(block).not.toContain('uTime');
+  });
+
+  it('takes one exact-owner-gated packed-state sample at true 8x', () => {
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');
+    const eightEnd = source.indexOf('const FIELD_FRAGMENT = `', eightStart);
+    const eight = source.slice(eightStart, eightEnd);
+    const start = eight.indexOf('bool sourceOwner =');
+    const end = eight.indexOf('  if (uSourceTargetStyling > 0.5 && sourceOwner', start);
+    const block = eight.slice(start, end);
+
+    expect(start).toBeGreaterThan(0);
+    expect(end).toBeGreaterThan(start);
+    expect(block).toContain('bool forceOwner = material == 115.0 || material == 116.0;');
+    expect(block).toContain('bool vibrOwner = material == 99.0 || material == 113.0;');
+    expect(block).toContain('bool deutOwner = material == 100.0;');
+    expect(block).toContain('bool botanicalLifecycleOwner = material == 50.0 || material == 10.0;');
+    expect(block).toContain('bool needsPackedState =');
+    expect(block).toContain('vec4 packedState = texture(uWallTexture, uv);');
+    expect(block.match(/texture\(uWallTexture, uv\)/g)).toHaveLength(1);
+    expect(eight.match(/texture\(uWallTexture, uv\)/g)).toHaveLength(1);
+    expect(block).toContain('float sourceTarget = 0.0;');
+    expect(block).toContain('float nativeWall = 0.0;');
+  });
+
+  it('keeps true-8x botanical identity and native lifecycle state RGB-only and resource-free', () => {
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');
+    const eightEnd = source.indexOf('const FIELD_FRAGMENT = `', eightStart);
+    const eight = source.slice(eightStart, eightEnd);
+    const start = eight.indexOf('// True 8x keeps botanical state on the existing packed B/A word.');
+    const end = eight.indexOf('  float alpha = family == 1.0', start);
+    const block = eight.slice(start, end);
+
+    expect(eightStart).toBeGreaterThan(0);
+    expect(eightEnd).toBeGreaterThan(eightStart);
+    expect(start).toBeGreaterThan(0);
+    expect(end).toBeGreaterThan(start);
+    expect(eight).toContain('uniform float uBotanicalIdentityStyling;');
+    expect(eight).toContain('uniform float uBotanicalLifecycleStyling;');
+    expect(block).toContain('uBotanicalIdentityStyling > 0.5 || uBotanicalLifecycleStyling > 0.5');
+    expect(block).toContain('material == 9.0');
+    expect(block).toContain('material == 10.0');
+    expect(block).toContain('material == 50.0');
+    expect(block).toContain('material == 52.0');
+    expect(block).toContain('material == 83.0');
+    expect(block).toContain('material == 50.0 && sourceTarget > 0.5');
+    expect(block).toContain('material == 10.0 && sourceTarget >= 32768.0');
+    expect(block).toContain('mod(sourceTarget, 2.0) >= 0.5');
+    expect(block).toContain('float paletteIndex = cyan * 4.0 + magenta * 2.0 + yellow;');
+    expect(block).not.toContain('texture(');
+    expect(block).not.toMatch(/\balpha\s*[+*]?=/);
   });
 
   it('keeps true-8x premultiplied output independent of semantic texture alpha mode', () => {
@@ -612,7 +979,8 @@ describe('Pixi presenter startup configuration', () => {
     const sampleEnd = source.indexOf('if (family == 4.0 && boundaryStability', sampleStart);
     const coreStart = source.indexOf('float coreDepth = smoothstep(6.0 / 255.0, 42.0 / 255.0, solidOpticalDepth)');
     const coreEnd = source.indexOf('// The bilinear solid field peaks below one for isolated', coreStart);
-    const shadingStart = source.indexOf('float linearThickness');
+    const normalStart = source.indexOf('const FIELD_FRAGMENT = `');
+    const shadingStart = source.indexOf('float linearThickness', normalStart);
     const shadingEnd = source.indexOf('// Reuse the semantic Hermite normal', shadingStart);
     const sample = source.slice(sampleStart, sampleEnd);
     const core = source.slice(coreStart, coreEnd);
@@ -626,6 +994,7 @@ describe('Pixi presenter startup configuration', () => {
     expect(core).toContain('solidDeepInteriorMicroGain(optics, profile)');
     expect(core).not.toContain('texture(');
     expect(core).not.toMatch(/\balpha\s*[+*]?=/);
+    expect(normalStart).toBeGreaterThan(0);
     expect(shading).toContain('(solidOpticalDepth * 255.0 - 6.0) / 249.0');
     expect(shading).toContain('thicknessAbsorption');
     expect(shading).toContain('solidBodyMacroKey(optics)');
@@ -636,6 +1005,29 @@ describe('Pixi presenter startup configuration', () => {
     expect(shading).not.toMatch(/\balpha\s*[+*]?=/);
     expect(source).not.toContain('uSolidOpticalDepthTexture');
     expect(source.match(/this\.boundaryStabilitySource\.update\(\)/g)).toHaveLength(1);
+  });
+
+  it('extends the sample-free translucent lens shell to every crystalline rigid material', () => {
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    // The compact 8x shader has a deliberately smaller translucent path.
+    // Scope this regression to the normal shader, whose full crystalline
+    // family shell is being asserted here.
+    const normalStart = source.indexOf('const FIELD_FRAGMENT = `');
+    const start = source.indexOf('if (uTranslucentLensShell > 0.5', normalStart);
+    const end = source.indexOf('      float translucentAlpha =', start);
+    const shell = source.slice(start, end);
+
+    expect(normalStart).toBeGreaterThan(0);
+    expect(start).toBeGreaterThan(0);
+    expect(end).toBeGreaterThan(start);
+    for (const material of [12, 24, 68, 74, 76, 77]) {
+      expect(shell).toContain(`material == ${material}.0`);
+    }
+    expect(shell).toContain('solidReliefTone');
+    expect(shell).toContain('solidDepth');
+    expect(shell).toContain('solidFresnel');
+    expect(shell).not.toContain('texture(');
+    expect(shell).not.toMatch(/\balpha\s*[+*]?=/);
   });
 
   it('seeds and redraws solid optical depth independently', () => {
@@ -1431,6 +1823,23 @@ describe('Pixi presenter startup configuration', () => {
     expect(solidFieldBlock).not.toMatch(/\balpha\s*[+*]?=/);
   });
 
+  it('keeps true-8x solid field lighting RGB-only on already-live shader state', () => {
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const start = source.indexOf('// True 8x deliberately reuses the centre emission sample');
+    const end = source.indexOf('// TranslucentRigid is the intentional presentation-alpha exception.', start);
+    const compactBlock = source.slice(start, end);
+
+    expect(start).toBeGreaterThan(0);
+    expect(end).toBeGreaterThan(start);
+    expect(compactBlock).toContain('uSolidFieldLighting > 0.5 && family == 0.0 && traits < 0.5');
+    expect(compactBlock).toContain('!materialEmissive && optics != 12.0 && material != 3.0');
+    expect(compactBlock).toContain('q00 * q10 * q01 * q11');
+    expect(compactBlock).toContain('emission.a > 0.002');
+    expect(compactBlock).toContain('color += (vec3(1.0) - clamp(color, 0.0, 1.0))');
+    expect(compactBlock).not.toContain('texture(');
+    expect(compactBlock).not.toMatch(/\b(?:finalColor|alpha)\s*[+*]?=/);
+  });
+
   it('seeds and redraws optional-last liquid silhouette cohesion', () => {
     const presenter = presenterHarness();
 
@@ -1469,12 +1878,39 @@ describe('Pixi presenter startup configuration', () => {
     expect(cohesionBlock).toContain('density > 0.08 && density < 0.92');
     expect(cohesionBlock).toContain('adjacentLiquidSupport * exposedLiquidSide');
     expect(cohesionBlock).toContain('min(\n        volume, max(density * 0.65, min(liquidDensity, liquidNeighbourMean) * 0.45)');
+    expect(cohesionBlock).toContain('liquidAirContour * 0.90');
     expect(cohesionBlock).not.toContain('texture(');
     expect(cohesionBlock).not.toMatch(/\bcolor\s*[+*]?=/);
     expect(contactBlock.match(/materialAt\(/g)).toHaveLength(1);
     expect(contactBlock.match(/texture\(/g)).toHaveLength(1);
     expect(resourcesBlock).not.toContain('uLiquidSilhouetteCohesion');
     expect(source).not.toContain('sampler2D uLiquidSilhouetteCohesion');
+  });
+
+  it('keeps the bounded live unlike-liquid interface relief in the final body colour', () => {
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const bodyStart = source.indexOf('    color = liquidBase * mix(1.24, depthTransmission, liquidDepth)');
+    const bodyEnd = source.indexOf('    float liquidFresnelStrength =', bodyStart);
+    const bodyBlock = source.slice(bodyStart, bodyEnd);
+
+    expect(bodyStart).toBeGreaterThan(0);
+    expect(bodyEnd).toBeGreaterThan(bodyStart);
+    expect(bodyBlock).toContain('color *= 1.0 + liquidMacroRelief + liquidInterfaceRelief;');
+    expect(bodyBlock).not.toContain('liquidInterfaceRelief *');
+  });
+
+  it('keeps Oil\'s capped unlike-liquid rim after final body composition', () => {
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const bodyStart = source.indexOf('    color = liquidBase * mix(1.24, depthTransmission, liquidDepth)');
+    const bodyEnd = source.indexOf('    float liquidFresnelStrength =', bodyStart);
+    const bodyBlock = source.slice(bodyStart, bodyEnd);
+
+    expect(bodyBlock).toContain('&& oily > 0.5)');
+    expect(bodyBlock).toContain('float oilInterfaceRim = min(');
+    expect(bodyBlock).toContain(
+      '0.052, min(abs(liquidInterfaceRelief), 0.12) * liquidDepth * 0.85',
+    );
+    expect(bodyBlock).toContain('* liquidFresnelKey * oilInterfaceRim;');
   });
 
   it('keeps CSS camera transforms render-free while public style toggles redraw', () => {

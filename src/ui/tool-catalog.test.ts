@@ -28,10 +28,21 @@ describe('tool catalog view model', () => {
     expect(filterTools([...tools, wall], { mode: 'wall', query: '', favorites: new Set(), recent: [] })).toEqual([wall]);
     const catalog = buildToolCatalog(MATERIALS, { walls: true });
     const nativeWalls = catalog.filter((tool) => tool.kind === 'wall');
-    expect(nativeWalls.map(({ nativeWall }) => nativeWall)).toEqual([
+    const availableNativeWalls = nativeWalls.filter(isToolAvailable);
+    expect(availableNativeWalls.map(({ nativeWall }) => nativeWall)).toEqual([
       8, 1, 2, 3, 4, 6, 7, 9, 10, 11, 12, 13, 15, 16, 18,
     ]);
-    expect(nativeWalls.every(isToolAvailable)).toBe(true);
+    expect(availableNativeWalls).toHaveLength(15);
+    expect(nativeWalls.filter((tool) => !isToolAvailable(tool))).toMatchObject([
+      {
+        key: 'wall:5', nativeWall: 5, name: 'Fan wall', available: false,
+        limitations: ['native-fan-wall-configuration-unavailable'],
+      },
+      {
+        key: 'wall:14', nativeWall: 14, name: 'Gravity wall', available: false,
+        limitations: ['native-gravity-wall-configuration-unavailable'],
+      },
+    ]);
     expect(catalog.find((tool) => tool.kind === 'element' && tool.id === Material.Wall)?.name).toBe('Diamond');
   });
 
@@ -57,6 +68,40 @@ describe('tool catalog view model', () => {
     const radioactive = filterTools(catalog, { ...state, mode: 'radioactive' });
     expect(radioactive).toHaveLength(MATERIALS.filter(({ category }) => category === 'radioactive').length);
     expect(radioactive.every((tool) => tool.kind === 'element' && tool.category === 'radioactive')).toBe(true);
+  });
+
+  it('keeps the complete capable catalog uniquely visible across every semantic family', () => {
+    const catalog = buildToolCatalog(MATERIALS, {
+      walls: true,
+      simulationTools: true,
+      configuredSources: true,
+      lifePresets: true,
+      signs: true,
+    });
+    const state = { query: '', favorites: new Set<string>(), recent: [] as string[] };
+    const visible = filterTools(catalog, { ...state, mode: 'all' });
+
+    expect(catalog).toHaveLength(224);
+    expect(visible).toHaveLength(catalog.length);
+    expect(new Set(catalog.map(({ key }) => key)).size).toBe(catalog.length);
+    expect(new Set(catalog.filter((tool) => tool.kind === 'element').map(({ id }) => id)))
+      .toEqual(new Set(MATERIALS.map(({ id }) => id)));
+    expect(new Set(catalog.map(({ category }) => category))).toEqual(new Set([
+      'powders', 'liquids', 'solids', 'energy', 'gases', 'life', 'explosives',
+      'radioactive', 'force', 'special', 'electronics', 'powered', 'sensors',
+      'walls', 'sources', 'automata', 'signs', 'simulation-forces', 'thermal-tools',
+    ]));
+
+    const semantic = catalog.filter((tool) => tool.kind !== 'element');
+    expect(semantic).toHaveLength(53);
+    expect(semantic.filter(isToolAvailable)).toHaveLength(51);
+    expect(semantic.filter((tool) => tool.kind === 'wall')).toHaveLength(17);
+    expect(semantic.filter((tool) => tool.kind === 'wall' && isToolAvailable(tool))).toHaveLength(15);
+    expect(semantic.filter((tool) => tool.kind === 'source')).toHaveLength(6);
+    expect(semantic.filter((tool) => tool.kind === 'life')).toHaveLength(LIFE_PRESETS.length);
+    expect(semantic.filter((tool) => tool.kind === 'sign')).toHaveLength(1);
+    expect(semantic.filter((tool) => tool.kind === 'force')).toHaveLength(3);
+    expect(semantic.filter((tool) => tool.kind === 'thermal')).toHaveLength(2);
   });
 
   it('exposes unsupported semantics as distinct disabled tools instead of particles', () => {

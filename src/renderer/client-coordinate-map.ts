@@ -9,6 +9,34 @@ export interface ElementBoxMetrics {
   readonly clientHeight: number;
 }
 
+/** The layout-to-visual viewport transform exposed during browser page zoom. */
+export interface VisualViewportMetrics {
+  readonly scale: number;
+  readonly offsetLeft: number;
+  readonly offsetTop: number;
+}
+
+/**
+ * Aligns PointerEvent client coordinates with DOMRect coordinates.
+ *
+ * Chrome's CDP page-scale path reports PointerEvent.clientX/Y in layout
+ * coordinates while getBoundingClientRect() is expressed in the visual
+ * viewport. At ordinary browser scale this is deliberately an exact no-op.
+ * Backing resolution and device-pixel ratio never participate here.
+ */
+export function clientToVisualViewport(
+  point: Point,
+  viewport: VisualViewportMetrics | null | undefined = globalThis.visualViewport,
+): Point {
+  const rawScale = viewport?.scale ?? 1;
+  const scale = Number.isFinite(rawScale) && rawScale > 0 ? rawScale : 1;
+  const rawLeft = viewport?.offsetLeft ?? 0;
+  const rawTop = viewport?.offsetTop ?? 0;
+  const left = Number.isFinite(rawLeft) ? rawLeft : 0;
+  const top = Number.isFinite(rawTop) ? rawTop : 0;
+  return { x: (point.x - left) / scale, y: (point.y - top) / scale };
+}
+
 /** Resolves an element's CSS content box even when an ancestor applies scale. */
 export function contentBoxFromBounds(bounds: ViewportRect, metrics: ElementBoxMetrics): ViewportRect {
   const scaleX = bounds.width / Math.max(1, metrics.offsetWidth);

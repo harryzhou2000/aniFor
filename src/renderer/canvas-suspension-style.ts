@@ -3,7 +3,10 @@ import { RenderPhase } from './render-profile';
 import type { SuspensionField } from './suspension-field';
 
 const SUSPENSION_COHESION_GAIN = 0.98;
-const MAX_RELIEF_DELTA = 8;
+// Dense wet sediment carries only a restrained remnant of the per-cell body
+// relief. Keeping this below the prior cap lets the shared aqueous/powder
+// albedo read as one material volume instead of a checkerboard.
+const MAX_RELIEF_DELTA = 6;
 
 function clampByte(value: number): number {
   return Math.max(0, Math.min(255, Math.round(value)));
