@@ -397,9 +397,9 @@ describe('Pixi presenter startup configuration', () => {
     expect(blockEnd).toBeGreaterThan(blockStart);
     expect(source).toContain('float suspensionBody = smoothstep(0.62, 0.90, density);');
     expect(block).toContain('float sedimentCompaction = smoothstep(0.18, 0.82, suspensionState.a);');
-    expect(block).toContain('float wetSedimentBias = mix(0.48, 0.56, sedimentCompaction);');
+    expect(block).toContain('float wetSedimentBias = mix(0.44, 0.52, sedimentCompaction);');
     expect(block).toContain('mix(liquidState.rgb, suspensionState.rgb, wetSedimentBias)');
-    expect(block).toContain('clamp(currentLuma - wetLuma, -8.0 / 255.0, 8.0 / 255.0)');
+    expect(block).toContain('clamp(currentLuma - wetLuma, -4.0 / 255.0, 4.0 / 255.0)');
     expect(block).not.toContain('texture(');
     expect(block).not.toMatch(/\balpha\s*[+*]?=/);
   });

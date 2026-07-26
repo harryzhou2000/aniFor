@@ -4198,11 +4198,10 @@ void main() {
   // Only a dense shared body may take the wet-sediment albedo. Keeping the
   // existing liquid/powder contour band out of this late RGB blend preserves
   // the established composed curved-edge crossing and leaves sparse material
-  // visibly phase-specific.
-  // The half-resolution field already rejects sparse grains and exposed phase
-  // edges. Start this common interior blend before the cell-scale body density
-  // reaches its old near-solid threshold so submerged Sand loses its dry ochre
-  // checker sooner, while the 0.90 shoulder still protects a hard shoreline.
+  // visibly phase-specific. The half-resolution field already rejects sparse
+  // grains and exposed phase edges; retain the compatible local body shoulder
+  // too because this field is deliberately powder-authored, not a replacement
+  // for authoritative aqueous liquid coverage.
   float suspensionBody = smoothstep(0.62, 0.90, density);
   float lateSuspension = max(suspensionPowder, suspensionLiquid)
     * smoothstep(0.05, 0.62, suspensionState.a) * suspensionBody * 0.98;
@@ -4213,17 +4212,23 @@ void main() {
     // owners, so it improves volume without reintroducing a cyan/ochre phase
     // boundary or touching semantic support.
     float sedimentCompaction = smoothstep(0.18, 0.82, suspensionState.a);
-    float wetSedimentBias = mix(0.48, 0.56, sedimentCompaction);
+    // The retained field RGB is the exact powder owner. Keep a dense body
+    // aqueous-forward so the supported volume reads as wet mineral, rather
+    // than letting individual ochre owners reappear through a cyan pool.
+    float wetSedimentBias = mix(0.44, 0.52, sedimentCompaction);
     vec3 wetSediment = vividColor(
       mix(liquidState.rgb, suspensionState.rgb, wetSedimentBias),
       mix(1.10, 1.06, sedimentCompaction)
     );
     float currentLuma = dot(color, vec3(0.2126, 0.7152, 0.0722));
     float wetLuma = dot(wetSediment, vec3(0.2126, 0.7152, 0.0722));
-    float relief = clamp(currentLuma - wetLuma, -8.0 / 255.0, 8.0 / 255.0);
+    // The shared liquid field already supplies the macro body shape. Preserve
+    // only four RGB bytes of local relief: larger residuals make alternating
+    // authoritative powder/liquid cells visible again at a normal zoom.
+    float relief = clamp(currentLuma - wetLuma, -4.0 / 255.0, 4.0 / 255.0);
     color = mix(
       color, wetSediment + vec3(relief),
-      lateSuspension * mix(0.92, 1.0, sedimentCompaction)
+      lateSuspension * mix(0.96, 1.0, sedimentCompaction)
     );
   }
   if (halo > 0.5 && wallOnly < 0.5 && emissionOnly < 0.5 && surfaceOnly < 0.5
