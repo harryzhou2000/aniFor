@@ -967,9 +967,10 @@ async function auditMode(mode) {
         cdp, canonicalCaptures.capture.data, canonicalCaptures.canvasRect,
         suspensionPhaseCells, 1, 2,
       );
+      const maximumSuspensionPhaseContrast = mode === 'webgl' ? 16 : 24;
       assert(suspensionPhaseContrast.leftCount >= 500
         && suspensionPhaseContrast.rightCount >= 500
-        && suspensionPhaseContrast.distance <= 24,
+        && suspensionPhaseContrast.distance <= maximumSuspensionPhaseContrast,
       `${mode}: dense Sand/Water still reads as two semantic colours (${JSON.stringify(suspensionPhaseContrast)})`);
       assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
       cdp.close();
@@ -1544,9 +1545,10 @@ async function auditMode(mode) {
       cdp, canonicalCaptures.capture.data, canonicalCaptures.canvasRect,
       suspensionPhaseCells, 1, 2,
     );
+    const maximumSuspensionPhaseContrast = mode === 'webgl' ? 16 : 24;
     assert(suspensionPhaseContrast.leftCount >= 500
       && suspensionPhaseContrast.rightCount >= 500
-      && suspensionPhaseContrast.distance <= 24,
+      && suspensionPhaseContrast.distance <= maximumSuspensionPhaseContrast,
     `${mode}: dense Sand/Water still reads as two semantic colours (${JSON.stringify(suspensionPhaseContrast)})`);
     const powderStyleRegion = [{
       name: 'shallowSandSlope', x: 94.5, y: 145,

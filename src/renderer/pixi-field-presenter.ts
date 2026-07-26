@@ -4176,7 +4176,11 @@ void main() {
   // existing liquid/powder contour band out of this late RGB blend preserves
   // the established composed curved-edge crossing and leaves sparse material
   // visibly phase-specific.
-  float suspensionBody = smoothstep(0.70, 0.94, density);
+  // The half-resolution field already rejects sparse grains and exposed phase
+  // edges. Start this common interior blend before the cell-scale body density
+  // reaches its old near-solid threshold so submerged Sand loses its dry ochre
+  // checker sooner, while the 0.90 shoulder still protects a hard shoreline.
+  float suspensionBody = smoothstep(0.62, 0.90, density);
   float lateSuspension = max(suspensionPowder, suspensionLiquid)
     * smoothstep(0.05, 0.62, suspensionState.a) * suspensionBody * 0.98;
   if (lateSuspension > 0.001) {
