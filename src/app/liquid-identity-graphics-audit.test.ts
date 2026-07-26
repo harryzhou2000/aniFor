@@ -17,6 +17,8 @@ const WORLD_HEIGHT = 384;
 const LIQUID_IDS = [
   Material.Soap, Material.BIZR, Material.CBNW, Material.GEL,
   Material.GLOW, Material.VIRS, Material.FRZW, Material.RFGL,
+  Material.MWAX, Material.PSTE, Material.RSST, Material.DEUT,
+  Material.EXOT, Material.ISOZ,
 ];
 
 class PaintTrackingBackend extends DeterministicBackend {
@@ -29,21 +31,27 @@ class PaintTrackingBackend extends DeterministicBackend {
 }
 
 describe('liquid identity graphics audit fixture', () => {
-  it('pins exactly eight liquid identities in a stable in-bounds row', () => {
+  it('pins all fourteen liquid identities in stable in-bounds rows', () => {
     expect(LIQUID_IDENTITY_GRAPHICS_ATLAS_COLUMNS).toBe(8);
-    expect(LIQUID_IDENTITY_GRAPHICS_ATLAS_ROWS).toBe(1);
-    expect(LIQUID_IDENTITY_GRAPHICS_DEFINITIONS).toHaveLength(8);
-    expect(LIQUID_IDENTITY_GRAPHICS_ATLAS).toHaveLength(8);
+    expect(LIQUID_IDENTITY_GRAPHICS_ATLAS_ROWS).toBe(2);
+    expect(LIQUID_IDENTITY_GRAPHICS_DEFINITIONS).toHaveLength(14);
+    expect(LIQUID_IDENTITY_GRAPHICS_ATLAS).toHaveLength(14);
     expect(LIQUID_IDENTITY_GRAPHICS_ATLAS.map(({ material }) => material)).toEqual(LIQUID_IDS);
-    expect(LIQUID_IDS).toEqual([38, 54, 55, 56, 57, 62, 202, 207]);
+    expect(LIQUID_IDS).toEqual([38, 54, 55, 56, 57, 62, 202, 207, 59, 60, 61, 100, 102, 104]);
     expect(LIQUID_IDENTITY_GRAPHICS_ATLAS.map(({ code }) => code)).toEqual([
       'SOAP', 'BIZR', 'CBNW', 'GEL', 'GLOW', 'VIRS', 'FRZW', 'RFGL',
+      'MWAX', 'PSTE', 'RSST', 'DEUT', 'EXOT', 'ISOZ',
     ]);
 
     const world = { x: 0, y: 0, width: WORLD_WIDTH, height: WORLD_HEIGHT };
     for (const [index, entry] of LIQUID_IDENTITY_GRAPHICS_ATLAS.entries()) {
       expect(entry.index).toBe(index);
-      expect(entry.card).toEqual({ x: 4 + index * 76, y: 8, width: 72, height: 176 });
+      expect(entry.card).toEqual({
+        x: 4 + index % 8 * 76,
+        y: 8 + Math.floor(index / 8) * 184,
+        width: 72,
+        height: 176,
+      });
       expect(entry).toMatchObject({
         left: entry.card.x,
         top: entry.card.y,
@@ -78,13 +86,13 @@ describe('liquid identity graphics audit fixture', () => {
     }
 
     expect(LIQUID_IDENTITY_GRAPHICS_AUDIT.cards).toBe(LIQUID_IDENTITY_GRAPHICS_ATLAS);
-    expect(LIQUID_IDENTITY_GRAPHICS_AUDIT.cavities).toHaveLength(8 * 36);
-    expect(LIQUID_IDENTITY_GRAPHICS_AUDIT.openChimneys).toHaveLength(8 * 90);
-    expect(LIQUID_IDENTITY_GRAPHICS_AUDIT.strands).toHaveLength(8 * 12);
-    expect(LIQUID_IDENTITY_GRAPHICS_AUDIT.isolated).toHaveLength(8);
-    expect(LIQUID_IDENTITY_GRAPHICS_AUDIT.guardedBlanks).toHaveLength(8);
-    expect(LIQUID_IDENTITY_GRAPHICS_AUDIT.liquidContacts).toHaveLength(8);
-    expect(LIQUID_IDENTITY_GRAPHICS_AUDIT.solidContacts).toHaveLength(8);
+    expect(LIQUID_IDENTITY_GRAPHICS_AUDIT.cavities).toHaveLength(14 * 36);
+    expect(LIQUID_IDENTITY_GRAPHICS_AUDIT.openChimneys).toHaveLength(14 * 90);
+    expect(LIQUID_IDENTITY_GRAPHICS_AUDIT.strands).toHaveLength(14 * 12);
+    expect(LIQUID_IDENTITY_GRAPHICS_AUDIT.isolated).toHaveLength(14);
+    expect(LIQUID_IDENTITY_GRAPHICS_AUDIT.guardedBlanks).toHaveLength(14);
+    expect(LIQUID_IDENTITY_GRAPHICS_AUDIT.liquidContacts).toHaveLength(14);
+    expect(LIQUID_IDENTITY_GRAPHICS_AUDIT.solidContacts).toHaveLength(14);
   });
 
   it('direct-fills exact liquid topology and unlike contacts without paint', () => {

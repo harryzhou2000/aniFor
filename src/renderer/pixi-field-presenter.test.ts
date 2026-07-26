@@ -623,7 +623,7 @@ describe('Pixi presenter startup configuration', () => {
     expect(source).not.toContain('sampler2D uLiquidIdentityStyling');
   });
 
-  it('restores the public liquid-identity grammar in compact true-8x WebGL', () => {
+  it('restores all public and radioactive liquid identities in compact true-8x WebGL', () => {
     const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
     const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');
     const helperStart = source.indexOf('vec3 liquidIdentityEightXDelta(', eightStart);
@@ -646,7 +646,9 @@ describe('Pixi presenter startup configuration', () => {
     expect(block).toContain('uLiquidIdentityStyling > 0.5 && !materialEmissive');
     expect(block).toContain('liquidSpeciesDifference < 0.035');
     expect(block).toContain('material == 38.0 || (material >= 54.0 && material <= 57.0)');
-    expect(block).toContain('material == 62.0 || material == 202.0 || material == 207.0');
+    expect(block).toContain('|| (material >= 59.0 && material <= 62.0)');
+    expect(block).toContain('|| material == 100.0 || material == 102.0 || material == 104.0');
+    expect(block).toContain('|| material == 202.0 || material == 207.0');
     expect(block).toContain('liquidIdentityEightXDelta(material, grid, density, depth, liquidSlope)');
     expect(`${helper}${block}`).not.toContain('texture(');
     expect(`${helper}${block}`).not.toMatch(/\balpha\s*[+*]?=/);

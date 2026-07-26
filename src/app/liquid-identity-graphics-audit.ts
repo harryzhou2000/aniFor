@@ -2,13 +2,14 @@ import { Material } from '../shared/materials';
 import type { SimulationBackend } from '../simulation';
 
 export const LIQUID_IDENTITY_GRAPHICS_ATLAS_COLUMNS = 8;
-export const LIQUID_IDENTITY_GRAPHICS_ATLAS_ROWS = 1;
+export const LIQUID_IDENTITY_GRAPHICS_ATLAS_ROWS = 2;
 
 const WORLD_WIDTH = 612;
 const WORLD_HEIGHT = 384;
 const CARD_ORIGIN_X = 4;
 const CARD_ORIGIN_Y = 8;
 const CARD_STRIDE_X = 76;
+const CARD_STRIDE_Y = 184;
 const CARD_WIDTH = 72;
 const CARD_HEIGHT = 176;
 
@@ -21,6 +22,15 @@ export const LIQUID_IDENTITY_GRAPHICS_DEFINITIONS = [
   { material: Material.VIRS, code: 'VIRS', color: '#fe11f6' },
   { material: Material.FRZW, code: 'FRZW', color: '#1020c0' },
   { material: Material.RFGL, code: 'RFGL', color: '#84c2cf' },
+  // The normal and compact WebGL paths share this complete public identity
+  // grammar. Keep radioactive liquids here as ordinary semantic liquid owners:
+  // their native state remains in the separate presentation-state plane.
+  { material: Material.MWAX, code: 'MWAX', color: '#e0e0aa' },
+  { material: Material.PSTE, code: 'PSTE', color: '#aa99aa' },
+  { material: Material.RSST, code: 'RSST', color: '#f95b49' },
+  { material: Material.DEUT, code: 'DEUT', color: '#00153f' },
+  { material: Material.EXOT, code: 'EXOT', color: '#247bfe' },
+  { material: Material.ISOZ, code: 'ISOZ', color: '#aa30d0' },
 ] as const;
 
 export interface LiquidIdentityGraphicsPoint {
@@ -78,12 +88,12 @@ export interface LiquidIdentityGraphicsAuditSnapshot {
   readonly solidContacts: readonly LiquidIdentityGraphicsContactControl[];
 }
 
-/** Stable eight-card liquid atlas shared by paired Canvas/WebGL identity gates. */
+/** Stable fourteen-card liquid atlas shared by paired Canvas/WebGL identity gates. */
 export const LIQUID_IDENTITY_GRAPHICS_ATLAS: readonly LiquidIdentityGraphicsAtlasEntry[] =
   LIQUID_IDENTITY_GRAPHICS_DEFINITIONS.map(({ material, code, color }, index) => {
     const card = {
-      x: CARD_ORIGIN_X + index * CARD_STRIDE_X,
-      y: CARD_ORIGIN_Y,
+      x: CARD_ORIGIN_X + index % LIQUID_IDENTITY_GRAPHICS_ATLAS_COLUMNS * CARD_STRIDE_X,
+      y: CARD_ORIGIN_Y + Math.floor(index / LIQUID_IDENTITY_GRAPHICS_ATLAS_COLUMNS) * CARD_STRIDE_Y,
       width: CARD_WIDTH,
       height: CARD_HEIGHT,
     };

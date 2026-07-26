@@ -174,8 +174,8 @@ vec3 liquidEightXMeniscusShadow(float optics) {
   return vec3(0.72, 0.38, 0.62); // Corrosive
 }
 // The normal path has a richer fourteen-material liquid grammar. At 15M
-// fragments, eight distinct public-liquid identities must share one small
-// material-seeded grammar: duplicating eight independent motif trees can exceed
+// fragments, the same fourteen public and radioactive liquid identities share one small
+// material-seeded grammar: duplicating fourteen independent motif trees can exceed
 // SwiftShader's live-register budget. The selected material supplies stable
 // phase and hue; density/depth/slope are already live in the liquid branch.
 vec3 liquidIdentityEightXDelta(
@@ -466,7 +466,9 @@ void main() {
     if (uLiquidIdentityStyling > 0.5 && !materialEmissive
       && liquidSpeciesDifference < 0.035
       && (material == 38.0 || (material >= 54.0 && material <= 57.0)
-        || material == 62.0 || material == 202.0 || material == 207.0)) {
+        || (material >= 59.0 && material <= 62.0)
+        || material == 100.0 || material == 102.0 || material == 104.0
+        || material == 202.0 || material == 207.0)) {
       color += liquidIdentityEightXDelta(material, grid, density, depth, liquidSlope)
         * uLiquidIdentityStyling;
     }
