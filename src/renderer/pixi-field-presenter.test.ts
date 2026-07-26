@@ -767,6 +767,40 @@ describe('Pixi presenter startup configuration', () => {
     expect(`${helper}${block}`).not.toMatch(/\balpha\s*[+*]?=/);
   });
 
+  it('gives true-8x rigid contours bounded Hermite curvature without new samples', () => {
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');
+    const eightEnd = source.indexOf('const FIELD_FRAGMENT = `', eightStart);
+    const eight = source.slice(eightStart, eightEnd);
+    const helperStart = eight.indexOf('float solidEightXCurvatureGain(');
+    const helperEnd = eight.indexOf('vec3 solidEightXBodyKey', helperStart);
+    const blockStart = eight.indexOf('// Derive an intrinsic contour curvature', helperEnd);
+    const blockEnd = eight.indexOf('    bool deepSolidBody =', blockStart);
+    const helper = eight.slice(helperStart, helperEnd);
+    const block = eight.slice(blockStart, blockEnd);
+
+    expect(eightStart).toBeGreaterThan(0);
+    expect(eightEnd).toBeGreaterThan(eightStart);
+    expect(helperStart).toBeGreaterThan(0);
+    expect(helperEnd).toBeGreaterThan(helperStart);
+    expect(blockStart).toBeGreaterThan(helperEnd);
+    expect(blockEnd).toBeGreaterThan(blockStart);
+    expect(eight).toContain('uniform float uSolidCurvatureDepth;');
+    expect(helper).toContain('if (solidEightXGranular(optics)) return 0.0;');
+    expect(helper).toContain('if (optics == 8.0 || optics == 19.0) return 1.25;');
+    expect(block).toContain('uSolidCurvatureDepth > 0.5 && !materialEmissive');
+    expect(block).toContain('vec2 hermite = blend * blend * (3.0 - 2.0 * blend);');
+    expect(block).toContain('vec2 hermiteSlope = 6.0 * blend * (1.0 - blend);');
+    expect(block).toContain('vec2 hermiteCurve = 6.0 - 12.0 * blend;');
+    expect(block).toContain('contourDxx * contourDy * contourDy');
+    expect(block).toContain('- 2.0 * contourDx * contourDy * contourDxy');
+    expect(block).toContain('+ contourDyy * contourDx * contourDx');
+    expect(block).toContain('color *= 1.0 + curvatureResponse;');
+    expect(block).not.toContain('texture(');
+    expect(block).not.toMatch(/\balpha\s*[+*]?=/);
+    expect(block).not.toMatch(/\b(?:pow|normalize)\s*\(/);
+  });
+
   it('restores true-8x translucent rigid alpha, shell, and field transmission without a new sample', () => {
     const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
     const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');

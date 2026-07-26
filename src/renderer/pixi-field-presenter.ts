@@ -109,6 +109,7 @@ uniform float uPowderStyle;
 uniform float uPowderBodyDepth;
 uniform float uLiquidOpticalDepth;
 uniform float uSolidOpticalDepth;
+uniform float uSolidCurvatureDepth;
 uniform float uGasFieldLighting;
 uniform float uGasVolumeChroma;
 uniform float uGasIdentityStyling;
@@ -205,6 +206,15 @@ vec3 liquidIdentityEightXDelta(
 }
 bool solidEightXGranular(float optics) {
   return optics == 7.0 || optics == 13.0 || optics == 14.0 || optics == 15.0;
+}
+float solidEightXCurvatureGain(float optics) {
+  if (solidEightXGranular(optics)) return 0.0;
+  if (optics == 8.0 || optics == 19.0) return 1.25;
+  if (optics == 10.0) return 0.82;
+  if (optics == 11.0) return 0.70;
+  if (optics == 12.0) return 0.62;
+  if (optics == 9.0) return 0.58;
+  return 0.72;
 }
 vec3 solidEightXBodyKey(float optics) {
   if (optics == 8.0 || optics == 19.0) return vec3(0.3704, 0.6667, 1.0000);
@@ -328,6 +338,35 @@ void main() {
   // and unlike-material seams presentation-exact.
   if (family == 0.0) {
     float solidBaseLight = 0.94 + density * 0.13;
+    // Derive an intrinsic contour curvature from the already-live 2x2 exact
+    // owner samples. Hermite's first/second derivatives make a horizontal or
+    // vertical straight contour an exact no-op; the contour band also keeps
+    // dense interiors untouched. This changes RGB only and never alters the
+    // later semantic alpha, ownership, or support calculation.
+    if (uSolidCurvatureDepth > 0.5 && !materialEmissive && !solidEightXGranular(optics)) {
+      vec2 hermite = blend * blend * (3.0 - 2.0 * blend);
+      vec2 hermiteSlope = 6.0 * blend * (1.0 - blend);
+      vec2 hermiteCurve = 6.0 - 12.0 * blend;
+      float row0 = mix(q00, q10, hermite.x);
+      float row1 = mix(q01, q11, hermite.x);
+      float contourDx = mix(q10 - q00, q11 - q01, hermite.y) * hermiteSlope.x;
+      float contourDy = (row1 - row0) * hermiteSlope.y;
+      float contourDxx = mix(q10 - q00, q11 - q01, hermite.y) * hermiteCurve.x;
+      float contourDyy = (row1 - row0) * hermiteCurve.y;
+      float contourDxy = (q11 - q01 - q10 + q00) * hermiteSlope.x * hermiteSlope.y;
+      float contourGradient2 = contourDx * contourDx + contourDy * contourDy;
+      float contourBand = smoothstep(0.03, 0.34, density)
+        * (1.0 - smoothstep(0.62, 0.97, density));
+      float contourInvGradient = inversesqrt(max(0.0025, contourGradient2));
+      float contourCurvature = (contourDxx * contourDy * contourDy
+        - 2.0 * contourDx * contourDy * contourDxy
+        + contourDyy * contourDx * contourDx)
+        * contourInvGradient * contourInvGradient * contourInvGradient;
+      float curvatureResponse = clamp(
+        contourCurvature * 0.025 * solidEightXCurvatureGain(optics), -0.045, 0.045
+      ) * contourBand;
+      color *= 1.0 + curvatureResponse;
+    }
     bool deepSolidBody = uSolidOpticalDepth > 0.5 && !materialEmissive
       && depth > 6.0 / 255.0 && q00 * q10 * q01 * q11 > 0.5 && density > 0.76
       && !solidEightXGranular(optics);

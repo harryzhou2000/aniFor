@@ -12392,6 +12392,37 @@ async function auditRenderScaleEight(cdp, dpr) {
     return { occupied: audit.occupiedCells(), cells: points.map(([x, y]) => audit.cell(x, y)) };
   })()`);
   await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setSolidFieldLighting(true); true');
+  // The compact true-8x shader must consume the same bounded rigid-curvature
+  // control as the normal WebGL path. Fence-own each capture: at this backing
+  // a fixed sleep could sample the earlier flat presentation after the switch.
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setSolidCurvatureDepth(false); true');
+  const flatSolidCurvatureCapture = await captureSettledPage(
+    cdp, 'renderScale=8 flat solid-curvature framebuffer', 450,
+  );
+  const flatSolidCurvatureSemantics = await evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    const points = [[392, 223], [419, 225], [432, 248], [472, 298], [405, 220], [405, 229]];
+    return { occupied: audit.occupiedCells(), cells: points.map(([x, y]) => audit.cell(x, y)) };
+  })()`);
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setSolidCurvatureDepth(true); true');
+  const curvedSolidCapture = await captureSettledPage(
+    cdp, 'renderScale=8 curved solid framebuffer', 450,
+  );
+  const curvedSolidSemantics = await evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    const points = [[392, 223], [419, 225], [432, 248], [472, 298], [405, 220], [405, 229]];
+    return { occupied: audit.occupiedCells(), cells: points.map(([x, y]) => audit.cell(x, y)) };
+  })()`);
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setSolidCurvatureDepth(false); true');
+  const repeatedFlatSolidCurvatureCapture = await captureSettledPage(
+    cdp, 'renderScale=8 repeated flat solid-curvature framebuffer', 450,
+  );
+  const repeatedFlatSolidCurvatureSemantics = await evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    const points = [[392, 223], [419, 225], [432, 248], [472, 298], [405, 220], [405, 229]];
+    return { occupied: audit.occupiedCells(), cells: points.map(([x, y]) => audit.cell(x, y)) };
+  })()`);
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setSolidCurvatureDepth(true); true');
   await evaluate(cdp, `(() => {
     const audit = window.__ANIFOR_INPUT_AUDIT__;
     audit.setTranslucentFieldTransmission(false);
@@ -12884,6 +12915,43 @@ async function auditRenderScaleEight(cdp, dpr) {
   assert(solidFieldLighting.sandSolidFieldControl8x.rgbPeak <= 1
     && solidFieldLighting.glassSolidFieldControl8x.rgbPeak <= 1,
   `renderScale=8 solid field lighting changed a protected control (${JSON.stringify(solidFieldLightingSamples)})`);
+  assert(JSON.stringify(flatSolidCurvatureSemantics) === JSON.stringify(curvedSolidSemantics)
+    && JSON.stringify(flatSolidCurvatureSemantics)
+      === JSON.stringify(repeatedFlatSolidCurvatureSemantics),
+  `renderScale=8 solid curvature changed semantics (${JSON.stringify({
+    flatSolidCurvatureSemantics, curvedSolidSemantics, repeatedFlatSolidCurvatureSemantics,
+  })})`);
+  const solidCurvatureSamples = await sampleBackdropRefractionRegions(cdp, {
+    straight: flatSolidCurvatureCapture.capture.data,
+    refracted: curvedSolidCapture.capture.data,
+    repeatedStraight: repeatedFlatSolidCurvatureCapture.capture.data,
+  }, [
+    { name: 'metalConvex8x', x: 392, y: 223, radius: 3.5 },
+    { name: 'metalConcave8x', x: 419, y: 225, radius: 4 },
+    { name: 'plantConvex8x', x: 432, y: 248, radius: 3.5 },
+    { name: 'dtecConvex8x', x: 472, y: 298, radius: 3.5 },
+    { name: 'metalFlatTop8x', x: 405, y: 220, radiusX: 4, radiusY: 1.5 },
+    { name: 'metalDenseCore8x', x: 405, y: 229, radius: 3 },
+  ], geometry.canvas);
+  const solidCurvature = Object.fromEntries(
+    solidCurvatureSamples.map((sample) => [sample.name, sample]),
+  );
+  assert(solidCurvature.metalConvex8x.rgbRms >= 0.025
+    && solidCurvature.metalConcave8x.rgbRms >= 0.025
+    && solidCurvature.metalConvex8x.rgbPeak > 0
+    && solidCurvature.metalConcave8x.rgbPeak > 0
+    && solidCurvature.metalConvex8x.rgbPeak <= 12
+    && solidCurvature.metalConcave8x.rgbPeak <= 12,
+  `renderScale=8 rigid convex/concave curvature was lost or unbounded (${JSON.stringify(solidCurvatureSamples)})`);
+  assert(solidCurvature.plantConvex8x.rgbRms >= 0.015
+    && solidCurvature.dtecConvex8x.rgbRms >= 0.015
+    && solidCurvature.plantConvex8x.rgbPeak <= 12
+    && solidCurvature.dtecConvex8x.rgbPeak <= 12,
+  `renderScale=8 family curvature gains were lost (${JSON.stringify(solidCurvatureSamples)})`);
+  assert(solidCurvature.metalFlatTop8x.rgbPeak <= 1
+    && solidCurvature.metalDenseCore8x.rgbPeak <= 1
+    && solidCurvatureSamples.every((sample) => sample.repeatRgbPeak <= 1),
+  `renderScale=8 solid curvature changed a straight/core control or was nondeterministic (${JSON.stringify(solidCurvatureSamples)})`);
   assert(JSON.stringify(flatLiquidFieldLightingSemantics) === JSON.stringify(litLiquidFieldLightingSemantics)
     && JSON.stringify(flatLiquidFieldLightingSemantics)
       === JSON.stringify(repeatedFlatLiquidFieldLightingSemantics),
@@ -13042,6 +13110,7 @@ async function auditRenderScaleEight(cdp, dpr) {
     gasVolumeChromaSamples,
     gasIdentitySamples,
     solidFieldLightingSamples,
+    solidCurvatureSamples,
     liquidFieldLightingSamples,
     emissionVolumeChromaSamples,
     liquidVolumeChromaSamples,
