@@ -159,10 +159,12 @@ vec3 gasIdentityEightXDelta(float style, float density) {
   return key * support / 255.0;
 }
 vec3 gasIdentityEightXChroma(float style, float density) {
-  // Keep Noble Gas's restrained violet key/fill under the existing gas-volume
-  // switch. This remains a density-gated RGB term and never changes support.
+  // Carry the normal presenter's readable Noble-Gas violet key/fill into the
+  // compact compositor. It remains density-gated and below a 0.016 source
+  // channel before the existing low-opacity cloud composite, so it neither
+  // changes support nor consumes the bounded gas-volume response budget.
   return style > 6.5 && style < 7.5
-    ? vec3(0.009, -0.0045, 0.008) * density : vec3(0.0);
+    ? vec3(0.014, -0.009, 0.016) * density : vec3(0.0);
 }
 vec3 liquidEightXMeniscusKey(float optics) {
   if (optics == 1.0) return vec3(0.52, 0.88, 1.00); // Aqueous

@@ -496,6 +496,26 @@ describe('Pixi presenter startup configuration', () => {
     expect(block).toContain('min(nobleGasChroma, vec3(0.0))');
   });
 
+  it('keeps true-8x Noble Gas chroma compact, violet, and density-gated', () => {
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const compact = source.slice(
+      source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `'),
+      source.indexOf('const FIELD_FRAGMENT = `'),
+    );
+    const helperStart = compact.indexOf('vec3 gasIdentityEightXChroma(float style, float density) {');
+    const helperEnd = compact.indexOf('vec3 liquidEightXMeniscusKey', helperStart);
+    const helper = compact.slice(helperStart, helperEnd);
+
+    expect(helperStart).toBeGreaterThan(0);
+    expect(helperEnd).toBeGreaterThan(helperStart);
+    expect(helper).toContain('style > 6.5 && style < 7.5');
+    expect(helper).toContain('vec3(0.014, -0.009, 0.016) * density');
+    expect(helper).not.toMatch(/\btexture\s*\(/);
+    expect(helper).not.toMatch(/\balpha\s*[+*]?=/);
+    expect(compact).toContain('uGasVolumeChroma * gasIdentityEightXChroma(gasIdentityStyle, atmosphere.a)');
+    expect(compact).toContain('uGasVolumeChroma * gasIdentityEightXChroma(gasIdentityStyle, gasDensity)');
+  });
+
   it('seeds and redraws optional-last liquid volume chroma', () => {
     const presenter = presenterHarness();
 
