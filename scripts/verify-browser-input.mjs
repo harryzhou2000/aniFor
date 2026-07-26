@@ -12461,6 +12461,19 @@ async function auditRenderScaleEight(cdp, dpr) {
     audit.setTranslucentLensShell(true);
     return true;
   })()`);
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setTranslucentBackdropRefraction(false); true');
+  const flatTranslucentBackdropCapture = await captureSettledPage(
+    cdp, 'renderScale=8 flat translucent-backdrop framebuffer', 450,
+  );
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setTranslucentBackdropRefraction(true); true');
+  const refractedTranslucentBackdropCapture = await captureSettledPage(
+    cdp, 'renderScale=8 refracted translucent-backdrop framebuffer', 450,
+  );
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setTranslucentBackdropRefraction(false); true');
+  const repeatedFlatTranslucentBackdropCapture = await captureSettledPage(
+    cdp, 'renderScale=8 repeated flat translucent-backdrop framebuffer', 450,
+  );
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setTranslucentBackdropRefraction(true); true');
   await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setGasVolumeChroma(false); true');
   const flatGasVolumeCapture = await captureSettledPage(
     cdp, 'renderScale=8 flat gas-volume framebuffer', 450,
@@ -12897,6 +12910,26 @@ async function auditRenderScaleEight(cdp, dpr) {
   }
   assert(translucentRigid.metalTranslucentRigidControl8x.rgbPeak <= 1,
     `renderScale=8 translucent shell/transmission leaked into opaque Metal (${JSON.stringify(translucentRigidSamples)})`);
+  const translucentBackdropRefractionSamples = await sampleBackdropRefractionRegions(cdp, {
+    straight: flatTranslucentBackdropCapture.capture.data,
+    refracted: refractedTranslucentBackdropCapture.capture.data,
+    repeatedStraight: repeatedFlatTranslucentBackdropCapture.capture.data,
+  }, [
+    { name: 'glassBackdropRefraction8x', x: 445, y: 229, radiusX: 17, radiusY: 7 },
+    { name: 'iceBackdropRefraction8x', x: 525, y: 229, radius: 6 },
+    { name: 'metalBackdropRefractionControl8x', x: 405, y: 229, radius: 6 },
+  ], geometry.canvas);
+  const translucentBackdropRefraction = Object.fromEntries(
+    translucentBackdropRefractionSamples.map((sample) => [sample.name, sample]),
+  );
+  for (const name of ['glassBackdropRefraction8x', 'iceBackdropRefraction8x']) {
+    const sample = translucentBackdropRefraction[name];
+    assert(sample.rgbRms >= 0.015 && sample.rgbPeak > 0 && sample.rgbPeak <= 24
+      && sample.repeatRgbPeak <= 1,
+    `renderScale=8 ${name} lost bounded native-wall refraction (${JSON.stringify(translucentBackdropRefractionSamples)})`);
+  }
+  assert(translucentBackdropRefraction.metalBackdropRefractionControl8x.rgbPeak <= 1,
+    `renderScale=8 crystalline backdrop refraction leaked into opaque Metal (${JSON.stringify(translucentBackdropRefractionSamples)})`);
   const gasVolumeChromaSamples = await sampleBackdropRefractionRegions(cdp, {
     straight: flatGasVolumeCapture.capture.data,
     refracted: chromaticGasVolumeCapture.capture.data,
@@ -13224,6 +13257,7 @@ async function auditRenderScaleEight(cdp, dpr) {
     squareGrain,
     zoomedSquareGrain,
     translucentRigidSamples,
+    translucentBackdropRefractionSamples,
     gasVolumeChromaSamples,
     gasIdentitySamples,
     solidFieldLightingSamples,

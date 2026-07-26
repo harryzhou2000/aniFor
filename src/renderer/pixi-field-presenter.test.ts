@@ -948,15 +948,42 @@ describe('Pixi presenter startup configuration', () => {
     expect(eight).toContain('vec4 compositeEightXWallBackdrop');
     expect(empty).toContain('if (uNativeWallsActive > 0.5)');
     expect(empty).toContain('texture(uWallTexture, uv)');
-    expect(empty).toContain('compositeEightXWallBackdrop(foreground, wall, uv * uFieldSize)');
+    expect(empty).toContain('compositeEightXWallBackdrop(\n        foreground, wall, uv * uFieldSize, 0.0, vec2(0.0)\n      )');
     expect(finalStart).toBeGreaterThan(0);
     expect(final).toContain('uNativeWallsActive > 0.5 && alpha < 0.999');
     expect(final).toContain('texture(uWallTexture, uv)');
-    expect(final).toContain('compositeEightXWallBackdrop(foreground, nativeWall, uv * uFieldSize)');
+    expect(final).toContain('compositeEightXWallBackdrop(\n      foreground, nativeWall, uv * uFieldSize, refractedMaterial, refractedBoundarySlope\n    )');
     expect(eight).not.toContain('wallAt(');
     expect(source).toContain('private nativeWallsActive = false;');
     expect(source).toContain('!this.nativeWallsHydrated || wallRectangles.length');
     expect(source).toContain('uNativeWallsActive = this.nativeWallsActive ? 1 : 0');
+  });
+
+  it('restores exact Glass/Ice native-wall refraction at true 8x without a new sample', () => {
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');
+    const eightEnd = source.indexOf('const FIELD_FRAGMENT = `', eightStart);
+    const eight = source.slice(eightStart, eightEnd);
+    const helperStart = eight.indexOf('float refractedEightXWallPattern(');
+    const helperEnd = eight.indexOf('vec4 compositeEightXWallBackdrop(', helperStart);
+    const helper = eight.slice(helperStart, helperEnd);
+    const finalStart = eight.lastIndexOf('  if (uNativeWallsActive > 0.5 && alpha < 0.999) {');
+    const final = eight.slice(finalStart);
+
+    expect(helperStart).toBeGreaterThan(0);
+    expect(helperEnd).toBeGreaterThan(helperStart);
+    expect(finalStart).toBeGreaterThan(0);
+    expect(eight).toContain('uniform float uTranslucentBackdropRefraction;');
+    expect(helper).toContain('if (material == 24.0)');
+    expect(helper).toContain('wallEightXPattern(wall, cell + sign(boundarySlope) * 3.0 * hasBoundary)');
+    expect(helper).toContain('wallEightXPattern(wall, cell + offset) * 0.68');
+    expect(helper).not.toContain('texture(');
+    expect(final).toContain('float exactRefractor = material == 12.0 || material == 24.0 ? 1.0 : 0.0;');
+    expect(final).toContain('uTranslucentBackdropRefraction * exactRefractor');
+    expect(final).toContain('step(0.5, nativeWall) * material;');
+    expect(final).toContain('refractedBoundarySlope');
+    expect(final).not.toMatch(/\balpha\s*[+*]?=/);
+    expect(eight.match(/texture\(uWallTexture, uv\)/g)).toHaveLength(3);
   });
 
   it('reuses true-8x liquid field samples for bounded RGB-only connected meniscus lighting', () => {

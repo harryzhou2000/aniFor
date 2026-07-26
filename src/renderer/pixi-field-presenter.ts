@@ -125,6 +125,7 @@ uniform float uLiquidIdentityStyling;
 uniform float uLiquidSilhouetteCohesion;
 uniform float uSolidFieldLighting;
 uniform float uTranslucentFieldTransmission;
+uniform float uTranslucentBackdropRefraction;
 uniform float uTranslucentLensShell;
 uniform float uSourceTargetStyling;
 uniform float uForceActivityStyling;
@@ -165,11 +166,37 @@ float wallEightXPattern(float wall, vec2 worldPosition) {
   }
   return pattern;
 }
-vec4 compositeEightXWallBackdrop(vec4 foreground, float wall, vec2 worldPosition) {
+float refractedEightXWallPattern(
+  float wall, vec2 worldPosition, float material, vec2 boundarySlope
+) {
+  vec2 cell = floor(worldPosition);
+  // Exact projected IDs retain the normal composer's distinction: GLAS=24 is
+  // one coherent lens shift, while ICE=12 breaks the wall pattern into a small
+  // stable facet pair. Only analytic wall coordinates move; wall ownership and
+  // support remain the nearest centre texel already decoded by the caller.
+  if (material == 24.0) {
+    float hasBoundary = step(0.10, abs(boundarySlope.x) + abs(boundarySlope.y));
+    return wallEightXPattern(wall, cell + sign(boundarySlope) * 3.0 * hasBoundary);
+  }
+  float facet = mod(floor(cell.x / 4.0) + floor(cell.y / 4.0) * 3.0 + material, 4.0);
+  vec2 offset = facet == 0.0 ? vec2(2.0, 0.0)
+    : (facet == 1.0 ? vec2(-2.0, 0.0)
+    : (facet == 2.0 ? vec2(0.0, 2.0) : vec2(0.0, -2.0)));
+  offset.x = abs(boundarySlope.x) >= 0.10 ? sign(boundarySlope.x) * 2.0 : offset.x;
+  offset.y = abs(boundarySlope.y) >= 0.10 ? sign(boundarySlope.y) * 2.0 : offset.y;
+  return wallEightXPattern(wall, cell + offset) * 0.68
+    + wallEightXPattern(wall, cell - offset) * 0.32;
+}
+vec4 compositeEightXWallBackdrop(
+  vec4 foreground, float wall, vec2 worldPosition, float refractedMaterial, vec2 boundarySlope
+) {
   if (wall < 0.5) return foreground;
   float wallAlpha = 0.94;
   float remaining = 1.0 - foreground.a;
-  vec3 wallRgb = wallEightXColor(wall) * wallEightXPattern(wall, worldPosition);
+  float pattern = refractedMaterial > 0.5
+    ? refractedEightXWallPattern(wall, worldPosition, refractedMaterial, boundarySlope)
+    : wallEightXPattern(wall, worldPosition);
+  vec3 wallRgb = wallEightXColor(wall) * pattern;
   return vec4(foreground.rgb + wallRgb * wallAlpha * remaining,
     foreground.a + wallAlpha * remaining);
 }
@@ -345,7 +372,9 @@ void main() {
     // independent from the particle/material plane.
     if (uNativeWallsActive > 0.5) {
       float wall = floor(texture(uWallTexture, uv).r * 255.0 + 0.5);
-      foreground = compositeEightXWallBackdrop(foreground, wall, uv * uFieldSize);
+      foreground = compositeEightXWallBackdrop(
+        foreground, wall, uv * uFieldSize, 0.0, vec2(0.0)
+      );
     }
     finalColor = foreground;
     return;
@@ -501,9 +530,11 @@ void main() {
   // TranslucentRigid is the intentional presentation-alpha exception. Restore
   // the compact equivalent of normal WebGL's crystalline shell and field-light
   // transmission from the samples already live at true 8x. This deliberately
-  // omits backdrop refraction: that rich path depends on wall compositing which
-  // the direct 8x mesh does not own. It changes neither support nor material
-  // ownership, and it adds no sampler, target, or output-scale resource.
+  // carries only the compact shell and field transmission until the final wall
+  // composite. That final path also owns a bounded analytical Glass/Ice
+  // refraction against an already-decoded native wall. It changes neither
+  // support nor material ownership, and adds no sampler, target, or
+  // output-scale resource.
   if (family == 0.0 && optics == 12.0 && traits < 0.5 && !materialEmissive) {
     float translucentDepth = smoothstep(0.34, 0.94, density);
     vec2 translucentSlope = vec2((q10 + q11) - (q00 + q01),
@@ -898,7 +929,21 @@ void main() {
   // wall visible below it, matching the normal compositor without a new pass.
   if (uNativeWallsActive > 0.5 && alpha < 0.999) {
     if (!needsPackedState) nativeWall = floor(texture(uWallTexture, uv).r * 255.0 + 0.5);
-    foreground = compositeEightXWallBackdrop(foreground, nativeWall, uv * uFieldSize);
+    // Reuse the four exact-owner occupancy values already live for body/edge
+    // styling. This changes only the analytic native-wall pattern behind an
+    // exact Glass/Ice particle; alpha, wall ID, support, and semantics remain
+    // owned by their existing paths.
+    float exactRefractor = material == 12.0 || material == 24.0 ? 1.0 : 0.0;
+    float refractedMaterial = uTranslucentBackdropRefraction * exactRefractor
+      * (family == 0.0 ? 1.0 : 0.0) * (optics == 12.0 ? 1.0 : 0.0)
+      * (materialEmissive ? 0.0 : 1.0) * (traits < 0.5 ? 1.0 : 0.0)
+      * step(0.20, density) * step(0.5, nativeWall) * material;
+    vec2 refractedBoundarySlope = vec2(
+      (q10 + q11) - (q00 + q01), (q01 + q11) - (q00 + q10)
+    ) * 0.50;
+    foreground = compositeEightXWallBackdrop(
+      foreground, nativeWall, uv * uFieldSize, refractedMaterial, refractedBoundarySlope
+    );
   }
   finalColor = foreground;
 }
