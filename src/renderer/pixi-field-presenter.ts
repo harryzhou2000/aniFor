@@ -3191,6 +3191,14 @@ void main() {
       } else if (canopyRelief < 0.0) {
         color *= vec3(1.0) - vec3(0.075, 0.040, 0.095) * (-canopyRelief);
       }
+      // Existing semantic normal/specular light gives dense leaves a small
+      // waxy catch-light after body depth has proved a real canopy. Blend from
+      // the already styled colour instead of imposing green, so native tree
+      // inheritance (including cyan/magenta variants) remains authoritative.
+      // This is RGB-only and reuses values already live in the body branch.
+      float canopySheen = (0.009 + specular * 0.036) * canopyDepth;
+      vec3 canopySheenColor = mix(vec3(0.42, 0.72, 0.34), vividColor(color, 1.10), 0.72);
+      color += (vec3(1.0) - clamp(color, 0.0, 1.0)) * canopySheenColor * canopySheen;
     }
     // Reuse the semantic Hermite normal as a small family-coloured key/fill
     // shell. Unlike-solid contacts retain a dense union, so no internal seam

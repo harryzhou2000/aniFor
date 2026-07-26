@@ -1610,6 +1610,8 @@ describe('Pixi presenter startup configuration', () => {
     expect(canopy).toContain('solidOpticalDepth > 6.0 / 255.0');
     expect(canopy).toContain('solidInterior > 0.001');
     expect(canopy).toContain('solidReliefTone * 255.0 / 6.0');
+    expect(canopy).toContain('float canopySheen = (0.009 + specular * 0.036) * canopyDepth;');
+    expect(canopy).toContain('vividColor(color, 1.10)');
     expect(canopy).not.toContain('texture(');
     expect(canopy).not.toMatch(/\balpha\s*[+*]?=/);
   });
