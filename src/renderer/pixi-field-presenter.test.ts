@@ -358,6 +358,21 @@ describe('Pixi presenter startup configuration', () => {
     expect(block).not.toContain('uGasVolumeChroma');
   });
 
+  it('keeps WebGL gas forward scatter field-owned and RGB-only', () => {
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const blockStart = source.indexOf('    // A field-owned mid-density scatter band');
+    const blockEnd = source.indexOf('    color *= 1.0 + gasCrown', blockStart);
+    const block = source.slice(blockStart, blockEnd);
+
+    expect(blockStart).toBeGreaterThan(0);
+    expect(blockEnd).toBeGreaterThan(blockStart);
+    expect(block).toContain('float gasForwardScatter = opticalDepth * (1.0 - opticalDepth)');
+    expect(block).toContain('vec3 gasForwardColor');
+    expect(block).toContain('(vec3(1.0) - clamp(color, 0.0, 1.0))');
+    expect(block).not.toContain('texture(');
+    expect(block).not.toMatch(/\balpha\s*[+*]?=/);
+  });
+
   it('keeps normal-WebGL gas field light on the existing field sample', () => {
     const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
     const blockStart = source.indexOf('    float gasLightReach = smoothstep(0.002, 0.42, emissionState.a);');

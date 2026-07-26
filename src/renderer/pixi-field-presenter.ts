@@ -2732,6 +2732,17 @@ void main() {
     float gasScatter = 0.26 + cleanGas * 0.10 - sootyGas * 0.08;
     color = gasBase * mix(1.08 + cleanGas * 0.04, gasCoreTransmission, opticalDepth)
       * (0.76 + diffuse * 0.28) * billow;
+    // A field-owned mid-density scatter band keeps a deep cloud luminous enough
+    // to read as a volume rather than a uniformly dark blur. It deliberately
+    // peaks between the transparent rim and opaque core, reuses only values
+    // already live in this branch, and changes RGB—not alpha, support, material
+    // ownership, field reconstruction, or the Canvas recovery path.
+    float gasForwardScatter = opticalDepth * (1.0 - opticalDepth)
+      * (0.026 + cleanGas * 0.014 - sootyGas * 0.008);
+    vec3 gasForwardColor = mix(vividColor(gasBase, 1.06), vec3(0.62, 0.76, 0.92),
+      0.18 + cleanGas * 0.14);
+    color += (vec3(1.0) - clamp(color, 0.0, 1.0)) * gasForwardColor
+      * gasForwardScatter * (0.65 + diffuse * 0.35);
     color *= 1.0 + gasCrown * 0.18 - gasPocket * 0.11;
     color += mix(vec3(0.16, 0.19, 0.24), gasBase, 0.30 + cleanGas * 0.12)
       * silverLining * gasScatter;
