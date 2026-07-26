@@ -649,7 +649,7 @@ describe('Pixi presenter startup configuration', () => {
     const helperStart = source.indexOf('vec3 liquidIdentityEightXDelta(', eightStart);
     const helperEnd = source.indexOf('bool solidEightXGranular', helperStart);
     const blockStart = source.indexOf('// Public unusual/phase-product liquids need a visual grammar', helperStart);
-    const blockEnd = source.indexOf('  // A few exact TPT projections', blockStart);
+    const blockEnd = source.indexOf('  // The shared suspension field is powder-authored', blockStart);
     const helper = source.slice(helperStart, helperEnd);
     const block = source.slice(blockStart, blockEnd);
 
@@ -856,7 +856,7 @@ describe('Pixi presenter startup configuration', () => {
     const eightEnd = source.indexOf('const FIELD_FRAGMENT = `', eightStart);
     const eight = source.slice(eightStart, eightEnd);
     const start = eight.indexOf('if (family == 2.0 && optics != 4.0) {');
-    const end = eight.indexOf('// A few exact TPT projections', start);
+    const end = eight.indexOf('// The shared suspension field is powder-authored', start);
     const block = eight.slice(start, end);
 
     expect(start).toBeGreaterThan(0);
@@ -870,13 +870,35 @@ describe('Pixi presenter startup configuration', () => {
     expect(eight.match(/texture\(uLiquidTexture, uv\)/g)).toHaveLength(1);
   });
 
+  it('restores true-8x wet-sediment cohesion with one guarded RGB-only field sample', () => {
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');
+    const eightEnd = source.indexOf('const FIELD_FRAGMENT = `', eightStart);
+    const eight = source.slice(eightStart, eightEnd);
+    const start = eight.indexOf('// The shared suspension field is powder-authored');
+    const end = eight.indexOf('// A few exact TPT projections', start);
+    const block = eight.slice(start, end);
+
+    expect(start).toBeGreaterThan(0);
+    expect(end).toBeGreaterThan(start);
+    expect(eight).toContain('uniform sampler2D uSuspensionTexture;');
+    expect(eight).toContain('uniform float uSuspensionActive;');
+    expect(block).toContain('uSuspensionActive > 0.5 && uPowderStyle > 1.5');
+    expect(block).toContain('family == 4.0 && solidEightXGranular(optics)');
+    expect(block).toContain('family == 2.0 && optics == 1.0');
+    expect(block.match(/texture\(uSuspensionTexture, uv\)/g)).toHaveLength(1);
+    expect(block).toContain('mix(0.44, 0.52, sedimentCompaction)');
+    expect(block).toContain('clamp(currentLuma - wetLuma, -4.0 / 255.0, 4.0 / 255.0)');
+    expect(block).not.toMatch(/\balpha\s*[+*]?=/);
+  });
+
   it('reuses true-8x liquid field samples for bounded RGB-only connected meniscus lighting', () => {
     const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
     const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');
     const eightEnd = source.indexOf('const FIELD_FRAGMENT = `', eightStart);
     const eight = source.slice(eightStart, eightEnd);
     const start = eight.indexOf('// The compact renderer already owns these exact four field samples');
-    const end = eight.indexOf('  // A few exact TPT projections', start);
+    const end = eight.indexOf('  // The shared suspension field is powder-authored', start);
     const block = eight.slice(start, end);
 
     expect(start).toBeGreaterThan(0);

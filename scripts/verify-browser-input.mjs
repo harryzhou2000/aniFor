@@ -12353,6 +12353,9 @@ async function auditRenderScaleEight(cdp, dpr) {
   stage('timing-ready');
 
   const smoothCapture = await captureSettledPage(cdp, 'renderScale=8 smooth powder framebuffer');
+  const smoothSuspensionPhaseCells = await captureMaterialCells(
+    cdp, { left: 74, top: 251, right: 138, bottom: 315 }, 1, 2,
+  );
   await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setEnergyCoreRelief(false); true');
   const flatEnergyCoreCapture = await captureSettledPage(
     cdp, 'renderScale=8 flat energy-core framebuffer', 450,
@@ -12677,6 +12680,31 @@ async function auditRenderScaleEight(cdp, dpr) {
   assertCanvasRectsEqual(
     geometry.canvas, blankCapture.canvasRect, 'renderScale=8 scene/blank CSS geometry',
   );
+  const suspensionSamples = await samplePageRegions(
+    cdp, styleCaptures.smooth,
+    [
+      { name: 'suspensionPlume8x', x: 106, y: 225, radius: 18, topology: true },
+      { name: 'denseSuspension8x', x: 106, y: 283, radius: 18, topology: true },
+    ],
+    blankCapture.capture.data, blankCapture.reference.data, geometry.canvas,
+  );
+  // The direct 8× compositor preserves a sharper exact-coverage transition
+  // than the filtered normal path. Keep the same topology/body requirements,
+  // with a separately bounded 26-byte composed edge microcontrast ceiling.
+  assert(suspensionSamples.every((sample) => sample.visible >= 900
+    && sample.coverage >= 0.80 && sample.dominantComponent >= 0.98
+    && sample.microContrast <= 26 && sample.pinnedFraction <= 0.08
+    && sample.macroLumaRange >= 6),
+  `renderScale=8 powder-in-water lost cohesive volume (${JSON.stringify(suspensionSamples)})`);
+  const suspensionPhaseContrast = await sampleMaterialPhaseContrast(
+    cdp, styleCaptures.smooth, geometry.canvas, smoothSuspensionPhaseCells, 1, 2,
+  );
+  // Direct 8× composition retains a one-byte chroma quantisation margin from
+  // the normal filter path, while the raw RGB metric remains intentionally
+  // independent because semantic Sand and Water keep different alpha.
+  assert(suspensionPhaseContrast.leftCount >= 500
+    && suspensionPhaseContrast.rightCount >= 500 && suspensionPhaseContrast.distance <= 17,
+  `renderScale=8 dense Sand/Water still reads as two semantic colours (${JSON.stringify(suspensionPhaseContrast)})`);
   const powderSupport = await sampleSemanticCellSupport(
     cdp, { local: styleCaptures.local, smooth: styleCaptures.smooth },
     blankCapture.capture.data, geometry.canvas, powderColumnCells(),
@@ -13104,6 +13132,8 @@ async function auditRenderScaleEight(cdp, dpr) {
     cssCanvas: `${round(geometry.canvas.width, 2)}x${round(geometry.canvas.height, 2)}`,
     resolutionControl,
     presentationTiming,
+    suspensionSamples,
+    suspensionPhaseContrast,
     powderSupport,
     powderBodyDepthSamples,
     squareGrain,

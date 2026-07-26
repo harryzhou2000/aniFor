@@ -100,6 +100,7 @@ uniform sampler2D uAtmosphereTexture;
 uniform sampler2D uAtmosphereStyleTexture;
 uniform sampler2D uEmissionTexture;
 uniform sampler2D uLiquidTexture;
+uniform sampler2D uSuspensionTexture;
 uniform sampler2D uBoundaryStabilityTexture;
 uniform sampler2D uPaletteTexture;
 uniform sampler2D uStyleTexture;
@@ -107,6 +108,7 @@ uniform vec2 uTexel;
 uniform vec2 uFieldSize;
 uniform float uPowderStyle;
 uniform float uPowderBodyDepth;
+uniform float uSuspensionActive;
 uniform float uLiquidOpticalDepth;
 uniform float uSolidOpticalDepth;
 uniform float uSolidCurvatureDepth;
@@ -522,6 +524,34 @@ void main() {
         || material == 202.0 || material == 207.0)) {
       color += liquidIdentityEightXDelta(material, grid, density, depth, liquidSlope)
         * uLiquidIdentityStyling;
+    }
+  }
+  // The shared suspension field is powder-authored, so use it only for
+  // ordinary Smooth granular powder and exact aqueous liquid. This restores
+  // the normal presenter's one wet-sediment body at true 8x without changing
+  // semantic coverage, alpha, species ownership, or the dry-scene sampler
+  // budget. The source is already resident on this direct mesh; the fetch is
+  // deliberately inside the active, eligible branch.
+  if (uSuspensionActive > 0.5 && uPowderStyle > 1.5 && traits < 0.5
+    && !materialEmissive
+    && ((family == 4.0 && solidEightXGranular(optics))
+      || (family == 2.0 && optics == 1.0))) {
+    vec4 suspensionState = texture(uSuspensionTexture, uv);
+    float suspensionPowder = family == 4.0
+      ? 1.0 - smoothstep(0.08, 0.24, length(suspensionState.rgb - palette.rgb)) : 0.0;
+    float suspensionLiquid = family == 2.0 && optics == 1.0 ? 1.0 : 0.0;
+    float suspensionBody = smoothstep(0.62, 0.90, density);
+    float lateSuspension = max(suspensionPowder, suspensionLiquid)
+      * smoothstep(0.05, 0.62, suspensionState.a) * suspensionBody * 0.98;
+    if (lateSuspension > 0.001) {
+      float sedimentCompaction = smoothstep(0.18, 0.82, suspensionState.a);
+      vec3 wetSediment = mix(liquid.rgb, suspensionState.rgb,
+        mix(0.44, 0.52, sedimentCompaction)) * mix(1.10, 1.06, sedimentCompaction);
+      float currentLuma = dot(color, vec3(0.2126, 0.7152, 0.0722));
+      float wetLuma = dot(wetSediment, vec3(0.2126, 0.7152, 0.0722));
+      float relief = clamp(currentLuma - wetLuma, -4.0 / 255.0, 4.0 / 255.0);
+      color = mix(color, wetSediment + vec3(relief),
+        lateSuspension * mix(0.96, 1.0, sedimentCompaction));
     }
   }
   // A few exact TPT projections (notably WARP) have an intentionally near-black
