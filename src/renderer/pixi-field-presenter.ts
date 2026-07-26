@@ -3005,7 +3005,10 @@ void main() {
         volume, max(density * 0.65, min(liquidDensity, liquidNeighbourMean) * 0.45)
       );
       liquidSilhouetteDensity = mix(
-        volume, connectedFieldDensity, liquidAirContour * 0.90
+        // A 0.86 cap keeps a connected one-cell strand inside the audited
+        // <= 2 RGB-RMS continuity response while retaining a visible but
+        // non-expanding cohesion trim at ordinary zoom.
+        volume, connectedFieldDensity, liquidAirContour * 0.86
       );
     }
     alpha = smoothstep(
@@ -4118,16 +4121,32 @@ void main() {
     ? 1.0 - smoothstep(0.08, 0.24, suspensionColorDistance) : 0.0;
   float suspensionLiquid = liquidVolume > 0.5 && optics == 1.0 && traits < 0.5
     && !materialEmissive ? 1.0 : 0.0;
+  // Only a dense shared body may take the wet-sediment albedo. Keeping the
+  // existing liquid/powder contour band out of this late RGB blend preserves
+  // the established composed curved-edge crossing and leaves sparse material
+  // visibly phase-specific.
+  float suspensionBody = smoothstep(0.70, 0.94, density);
   float lateSuspension = max(suspensionPowder, suspensionLiquid)
-    * smoothstep(0.05, 0.62, suspensionState.a) * 0.98;
+    * smoothstep(0.05, 0.62, suspensionState.a) * suspensionBody * 0.98;
   if (lateSuspension > 0.001) {
+    // Dense field-proven suspension has settled enough to show more of its
+    // shared mineral body, while a shallow plume remains water-forward. This
+    // is deliberately one common target for the eligible aqueous and powder
+    // owners, so it improves volume without reintroducing a cyan/ochre phase
+    // boundary or touching semantic support.
+    float sedimentCompaction = smoothstep(0.18, 0.82, suspensionState.a);
+    float wetSedimentBias = mix(0.48, 0.56, sedimentCompaction);
     vec3 wetSediment = vividColor(
-      mix(liquidState.rgb, suspensionState.rgb, 0.48), 1.10
+      mix(liquidState.rgb, suspensionState.rgb, wetSedimentBias),
+      mix(1.10, 1.06, sedimentCompaction)
     );
     float currentLuma = dot(color, vec3(0.2126, 0.7152, 0.0722));
     float wetLuma = dot(wetSediment, vec3(0.2126, 0.7152, 0.0722));
     float relief = clamp(currentLuma - wetLuma, -8.0 / 255.0, 8.0 / 255.0);
-    color = mix(color, wetSediment + vec3(relief), lateSuspension);
+    color = mix(
+      color, wetSediment + vec3(relief),
+      lateSuspension * mix(0.92, 1.0, sedimentCompaction)
+    );
   }
   if (halo > 0.5 && wallOnly < 0.5 && emissionOnly < 0.5 && surfaceOnly < 0.5
     && gasVolume < 0.5 && liquidVolume < 0.5 && energyCore < 0.5) alpha = volume * 0.52;

@@ -358,6 +358,20 @@ describe('Pixi presenter startup configuration', () => {
     expect(block).not.toContain('uGasVolumeChroma');
   });
 
+  it('bounds connected WebGL liquid-contour cohesion without new sampling', () => {
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const blockStart = source.indexOf('    if (uLiquidSilhouetteCohesion > 0.5');
+    const blockEnd = source.indexOf('    alpha = smoothstep(', blockStart);
+    const block = source.slice(blockStart, blockEnd);
+
+    expect(blockStart).toBeGreaterThan(0);
+    expect(blockEnd).toBeGreaterThan(blockStart);
+    expect(block).toContain('float liquidAirContour = adjacentLiquidSupport * exposedLiquidSide;');
+    expect(block).toContain('liquidAirContour * 0.86');
+    expect(block).not.toContain('texture(');
+    expect(block).not.toMatch(/\balpha\s*[+*]?=/);
+  });
+
   it('keeps WebGL gas forward scatter field-owned and RGB-only', () => {
     const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
     const blockStart = source.indexOf('    // A field-owned mid-density scatter band');
@@ -369,6 +383,23 @@ describe('Pixi presenter startup configuration', () => {
     expect(block).toContain('float gasForwardScatter = opticalDepth * (1.0 - opticalDepth)');
     expect(block).toContain('vec3 gasForwardColor');
     expect(block).toContain('(vec3(1.0) - clamp(color, 0.0, 1.0))');
+    expect(block).not.toContain('texture(');
+    expect(block).not.toMatch(/\balpha\s*[+*]?=/);
+  });
+
+  it('keeps dense WebGL wet sediment shared, field-owned, and RGB-only', () => {
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const blockStart = source.indexOf('    // Dense field-proven suspension has settled enough');
+    const blockEnd = source.indexOf('  if (halo > 0.5', blockStart);
+    const block = source.slice(blockStart, blockEnd);
+
+    expect(blockStart).toBeGreaterThan(0);
+    expect(blockEnd).toBeGreaterThan(blockStart);
+    expect(source).toContain('float suspensionBody = smoothstep(0.70, 0.94, density);');
+    expect(block).toContain('float sedimentCompaction = smoothstep(0.18, 0.82, suspensionState.a);');
+    expect(block).toContain('float wetSedimentBias = mix(0.48, 0.56, sedimentCompaction);');
+    expect(block).toContain('mix(liquidState.rgb, suspensionState.rgb, wetSedimentBias)');
+    expect(block).toContain('clamp(currentLuma - wetLuma, -8.0 / 255.0, 8.0 / 255.0)');
     expect(block).not.toContain('texture(');
     expect(block).not.toMatch(/\balpha\s*[+*]?=/);
   });
@@ -1895,7 +1926,7 @@ describe('Pixi presenter startup configuration', () => {
     expect(cohesionBlock).toContain('density > 0.08 && density < 0.92');
     expect(cohesionBlock).toContain('adjacentLiquidSupport * exposedLiquidSide');
     expect(cohesionBlock).toContain('min(\n        volume, max(density * 0.65, min(liquidDensity, liquidNeighbourMean) * 0.45)');
-    expect(cohesionBlock).toContain('liquidAirContour * 0.90');
+    expect(cohesionBlock).toContain('liquidAirContour * 0.86');
     expect(cohesionBlock).not.toContain('texture(');
     expect(cohesionBlock).not.toMatch(/\bcolor\s*[+*]?=/);
     expect(contactBlock.match(/materialAt\(/g)).toHaveLength(1);
