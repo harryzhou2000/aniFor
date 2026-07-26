@@ -417,6 +417,10 @@ void main() {
   float q11 = same(origin + uTexel, material);
   float density = mix(mix(q00, q10, blend.x), mix(q01, q11, blend.x), blend.y);
   if (family == 4.0 && uPowderStyle < 0.5) density = same(uv, material);
+  // Preserve exact material coverage before a liquid/gas volume may replace
+  // the working density. Air-facing Surface styling needs this semantic edge;
+  // field density remains authoritative for volume colour and final support.
+  float semanticDensity = density;
   if (family == 1.0) density = max(density * 0.20, atmosphere.a);
   if (family == 2.0) density = max(density, liquid.a);
   float depth = texture(uBoundaryStabilityTexture, uv).r;
@@ -625,8 +629,17 @@ void main() {
   // final premultiplied compositor trim a supported air-facing fringe without
   // retaining the four liquid samples across the rest of the compact shader.
   float liquidCohesionAlphaScale = 1.0;
+  // Keep only the two bounded RGB strengths live past the liquid branch. The
+  // packed native-wall word is decoded later with the other retained-state
+  // owners, so delaying application lets a co-located wall remain an exact
+  // no-op without adding a fourth wall-texture sample.
+  float liquidSurfaceContourKeyStrength = 0.0;
+  float liquidSurfaceContourShadowStrength = 0.0;
   bool nativeWallForLiquidCohesion = uNativeWallsActive > 0.5
     && uLiquidSilhouetteCohesion > 0.5 && family == 2.0 && optics != 4.0
+    && traits < 0.5 && !materialEmissive && density > 0.08 && density < 0.92;
+  bool nativeWallForLiquidSurfaceContour = uNativeWallsActive > 0.5
+    && uSurfaceContourLighting > 0.5 && family == 2.0 && optics != 4.0
     && traits < 0.5 && !materialEmissive && density > 0.08 && density < 0.92;
   if (family == 2.0 && optics != 4.0) {
     float exactLiquidInterior = q00 * q10 * q01 * q11;
@@ -707,8 +720,9 @@ void main() {
     // emissive, isolated, and unlike-species owners remain exact no-ops below.
     bool connectedBodyLiquid = optics == 1.0 || optics == 2.0 || optics == 3.0
       || optics == 16.0 || optics == 17.0 || optics == 18.0;
-    if (uLiquidFieldLighting > 0.5 && connectedBodyLiquid && traits < 0.5
-      && !materialEmissive && liquidSpeciesDifference < 0.035) {
+    if (((uLiquidFieldLighting > 0.5 && liquidSpeciesDifference < 0.035)
+      || uSurfaceContourLighting > 0.5)
+      && connectedBodyLiquid && traits < 0.5 && !materialEmissive) {
       float liquidSupportCount = step(0.48, liquidLeft.a) + step(0.48, liquidRight.a)
         + step(0.48, liquidTop.a) + step(0.48, liquidBottom.a);
       float connected = smoothstep(1.5, 3.0, liquidSupportCount)
@@ -723,10 +737,49 @@ void main() {
       float grazing = clamp(1.0 - normalZ, 0.0, 1.0);
       vec3 meniscusKey = liquidEightXMeniscusKey(optics);
       vec3 meniscusShadow = liquidEightXMeniscusShadow(optics);
-      float bodyResponse = (keyLight - 0.43) * (0.018 + fieldInterior * 0.022) * connected;
-      color *= 1.0 + bodyResponse;
-      color += meniscusKey * airFacingRim * (0.014 + keyLight * 0.026 + grazing * 0.018);
-      color -= meniscusShadow * airFacingRim * (1.0 - keyLight) * 0.010;
+      if (uLiquidFieldLighting > 0.5 && liquidSpeciesDifference < 0.035) {
+        float bodyResponse = (keyLight - 0.43) * (0.018 + fieldInterior * 0.022) * connected;
+        color *= 1.0 + bodyResponse;
+        color += meniscusKey * airFacingRim * (0.014 + keyLight * 0.026 + grazing * 0.018);
+        color -= meniscusShadow * airFacingRim * (1.0 - keyLight) * 0.010;
+      }
+      // Normal WebGL's Surface control carries a distinct Fresnel-like
+      // air-facing key/fill. Keep the compact direct form on the four samples
+      // already live above, and defer its RGB-only application until the
+      // existing packed native-wall state proves the cell wall-free.
+      if (uSurfaceContourLighting > 0.5 && liquidForeignContact < 0.5) {
+        // Water's shared volume deliberately softens at a real shore before
+        // the tighter body-light threshold is reached. Surface lighting has a
+        // distinct, still-connected lip gate: it needs multiple field
+        // neighbours, rejects the dense exact core, and never uses it for
+        // support or alpha. That lets aqueous surfaces read as continuous
+        // without widening a droplet or a sparse strand.
+        float liquidSurfaceConnected = smoothstep(1.5, 3.0, liquidSupportCount)
+          * smoothstep(0.20, 0.78, liquid.a);
+        float liquidSurfaceRim = (1.0 - smoothstep(0.38, 0.88, liquidNeighbourMean))
+          * liquidSurfaceConnected;
+        // Field RGB mixture intentionally falls away at a shore, so it is not
+        // a reliable owner test for the Surface cue. The exact semantic
+        // material already owns that decision above; reuse its local Hermite
+        // silhouette for a bounded fallback contour while retaining the field
+        // rim wherever it is available. One-cell droplets fail the support
+        // gate and unlike material has already returned through foreign contact.
+        vec2 liquidSemanticSlope = vec2(
+          mix(q10 - q00, q11 - q01, blend.y),
+          mix(q01 - q00, q11 - q10, blend.x)
+        );
+        float liquidSemanticSlopeLength = length(liquidSemanticSlope);
+        float liquidSemanticContour = smoothstep(0.05, 0.31, semanticDensity)
+          * (1.0 - smoothstep(0.57, 0.91, semanticDensity))
+          * smoothstep(0.08, 0.72, liquidSemanticSlopeLength);
+        float liquidSemanticSupport = smoothstep(1.5, 3.0, q00 + q10 + q01 + q11);
+        float liquidContourShell = max(liquidSurfaceRim, liquidSemanticContour * liquidSemanticSupport)
+          * (1.0 - liquidCore);
+        liquidSurfaceContourKeyStrength = liquidContourShell
+          * (0.024 + keyLight * 0.084 + grazing * 0.040);
+        liquidSurfaceContourShadowStrength = liquidContourShell
+          * (1.0 - keyLight) * 0.028;
+      }
     }
     // Public unusual/phase-product liquids need a visual grammar after their
     // shared body optics. Unlike species, molten/emissive liquid, reconstructed
@@ -793,7 +846,7 @@ void main() {
     // Eligible translucent liquid already needs this exact wall texel for the
     // final backdrop. Fold the cohesion guard into that one packed-state read
     // so true 8x does not grow another native-wall sample.
-    || nativeWallForLiquidCohesion;
+    || nativeWallForLiquidCohesion || nativeWallForLiquidSurfaceContour;
   float sourceTarget = 0.0;
   float nativeWall = 0.0;
   if (needsPackedState) {
@@ -801,6 +854,14 @@ void main() {
     sourceTarget = floor(packedState.b * 255.0 + 0.5)
       + floor(packedState.a * 255.0 + 0.5) * 256.0;
     nativeWall = floor(packedState.r * 255.0 + 0.5);
+  }
+  if ((liquidSurfaceContourKeyStrength > 0.0001 || liquidSurfaceContourShadowStrength > 0.0001)
+    && (uNativeWallsActive < 0.5 || nativeWall < 0.5)) {
+    vec3 liquidContourKey = liquidEightXMeniscusKey(optics);
+    vec3 liquidContourShadow = liquidEightXMeniscusShadow(optics);
+    color += (vec3(1.0) - clamp(color, 0.0, 1.0))
+      * liquidContourKey * liquidSurfaceContourKeyStrength;
+    color -= liquidContourShadow * liquidSurfaceContourShadowStrength;
   }
   if (uSourceTargetStyling > 0.5 && sourceOwner
     && ((sourceTarget >= 1.0 && sourceTarget <= 170.0) || sourceTarget == 217.0)) {

@@ -12436,14 +12436,29 @@ async function auditRenderScaleEight(cdp, dpr) {
   const flatSurfaceContourCapture = await captureSettledPage(
     cdp, 'renderScale=8 flat surface-contour framebuffer', 450,
   );
+  const flatSurfaceContourSemantics = await evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    const points = [[224, 202], [263, 202], [302, 202], [341, 202], [190, 164], [302, 172], [284, 160]];
+    return { occupied: audit.occupiedCells(), cells: points.map(([x, y]) => audit.cell(x, y)) };
+  })()`);
   await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setSurfaceContourLighting(true); true');
   const litSurfaceContourCapture = await captureSettledPage(
     cdp, 'renderScale=8 lit surface-contour framebuffer', 450,
   );
+  const litSurfaceContourSemantics = await evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    const points = [[224, 202], [263, 202], [302, 202], [341, 202], [190, 164], [302, 172], [284, 160]];
+    return { occupied: audit.occupiedCells(), cells: points.map(([x, y]) => audit.cell(x, y)) };
+  })()`);
   await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setSurfaceContourLighting(false); true');
   const repeatedFlatSurfaceContourCapture = await captureSettledPage(
     cdp, 'renderScale=8 repeated flat surface-contour framebuffer', 450,
   );
+  const repeatedFlatSurfaceContourSemantics = await evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    const points = [[224, 202], [263, 202], [302, 202], [341, 202], [190, 164], [302, 172], [284, 160]];
+    return { occupied: audit.occupiedCells(), cells: points.map(([x, y]) => audit.cell(x, y)) };
+  })()`);
   await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setSurfaceContourLighting(true); true');
   await evaluate(cdp, `(() => {
     const audit = window.__ANIFOR_INPUT_AUDIT__;
@@ -13072,6 +13087,16 @@ async function auditRenderScaleEight(cdp, dpr) {
   }, [
     { name: 'metalSurfaceContour8x', x: 392, y: 223, radius: 3.5 },
     { name: 'smoothSandSlopeContour8x', x: 80, y: 146, radiusX: 42, radiusY: 3 },
+    // These are the deterministic wavy-column air lips. The earlier meniscus
+    // probes sit eight cells below the lip and intentionally exercise body
+    // lighting instead of this contour-only Surface control.
+    { name: 'waterSurfaceContour8x', x: 224, y: 195, radiusX: 5, radiusY: 2 },
+    { name: 'oilSurfaceContour8x', x: 263, y: 195, radiusX: 5, radiusY: 2 },
+    { name: 'acidSurfaceContour8x', x: 302, y: 195, radiusX: 5, radiusY: 2 },
+    { name: 'lavaSurfaceContourControl8x', x: 341, y: 202, radiusX: 5, radiusY: 4 },
+    { name: 'isolatedLiquidSurfaceContourControl8x', x: 190.5, y: 164.5, radius: 2 },
+    { name: 'unlikeLiquidSurfaceContourControl8x', x: 302.5, y: 172, radiusX: 0.45, radiusY: 6 },
+    { name: 'waterWallSurfaceContourControl8x', x: 284, y: 160, radiusX: 5, radiusY: 1.5 },
     { name: 'isolatedSandSurfaceContourControl8x', x: 190.5, y: 176.5, radius: 1.5 },
   ], geometry.canvas);
   const surfaceContour = Object.fromEntries(
@@ -13087,9 +13112,31 @@ async function auditRenderScaleEight(cdp, dpr) {
     && surfaceContour.smoothSandSlopeContour8x.rgbPeak <= 16
     && surfaceContour.smoothSandSlopeContour8x.repeatRgbPeak <= 1,
   `renderScale=8 Smooth Sand slope lost bounded surface-contour lighting (${JSON.stringify(surfaceContourSamples)})`);
+  for (const name of ['waterSurfaceContour8x', 'oilSurfaceContour8x', 'acidSurfaceContour8x']) {
+    const sample = surfaceContour[name];
+    assert(sample.rgbRms >= 0.004 && sample.chromaRms >= 0.002
+      && sample.rgbPeak > 0 && sample.rgbPeak <= 18 && sample.repeatRgbPeak <= 1,
+    `renderScale=8 ${name} lost bounded liquid Surface contour lighting (${JSON.stringify(surfaceContourSamples)})`);
+  }
+  assert(surfaceContour.waterSurfaceContour8x.responseRgb[1] > surfaceContour.waterSurfaceContour8x.responseRgb[0]
+    && surfaceContour.waterSurfaceContour8x.responseRgb[2] >= surfaceContour.waterSurfaceContour8x.responseRgb[0]
+    && surfaceContour.oilSurfaceContour8x.responseRgb[0] > surfaceContour.oilSurfaceContour8x.responseRgb[2]
+    && surfaceContour.acidSurfaceContour8x.responseRgb[1] > surfaceContour.acidSurfaceContour8x.responseRgb[0],
+  `renderScale=8 liquid Surface contour lost family chroma (${JSON.stringify(surfaceContourSamples)})`);
+  for (const name of [
+    'lavaSurfaceContourControl8x', 'isolatedLiquidSurfaceContourControl8x',
+    'unlikeLiquidSurfaceContourControl8x', 'waterWallSurfaceContourControl8x',
+  ]) assert(surfaceContour[name].rgbPeak <= 1 && surfaceContour[name].repeatRgbPeak <= 1,
+    `renderScale=8 liquid Surface contour escaped ${name} (${JSON.stringify(surfaceContourSamples)})`);
   assert(surfaceContour.isolatedSandSurfaceContourControl8x.rgbPeak <= 1
     && surfaceContour.isolatedSandSurfaceContourControl8x.repeatRgbPeak <= 1,
   `renderScale=8 surface contour altered an isolated Sand grain (${JSON.stringify(surfaceContourSamples)})`);
+  assert(JSON.stringify(flatSurfaceContourSemantics) === JSON.stringify(litSurfaceContourSemantics)
+    && JSON.stringify(flatSurfaceContourSemantics)
+      === JSON.stringify(repeatedFlatSurfaceContourSemantics),
+  `renderScale=8 Surface contour lighting changed semantics (${JSON.stringify({
+    flatSurfaceContourSemantics, litSurfaceContourSemantics, repeatedFlatSurfaceContourSemantics,
+  })})`);
   assert(JSON.stringify(flatLiquidFieldLightingSemantics) === JSON.stringify(litLiquidFieldLightingSemantics)
     && JSON.stringify(flatLiquidFieldLightingSemantics)
       === JSON.stringify(repeatedFlatLiquidFieldLightingSemantics),

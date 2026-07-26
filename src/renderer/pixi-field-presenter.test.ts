@@ -899,7 +899,7 @@ describe('Pixi presenter startup configuration', () => {
     expect(block).toContain('min(liquid.a, liquidNeighbourMean) * 0.45');
     expect(block).toContain('clamp(liquidSilhouetteDensity / max(density, 0.001), 0.0, 1.0)');
     expect(block).not.toContain('texture(');
-    expect(packed).toContain('|| nativeWallForLiquidCohesion;');
+    expect(packed).toContain('|| nativeWallForLiquidCohesion || nativeWallForLiquidSurfaceContour;');
     expect(alpha).toContain('uNativeWallsActive < 0.5 || nativeWall < 0.5');
     expect(alpha).toContain('alpha *= liquidCohesionAlphaScale;');
     expect(eight.match(/texture\(uLiquidTexture, uv - vec2\(uTexel\.x, 0\.0\)\)/g)).toHaveLength(1);
@@ -1000,8 +1000,10 @@ describe('Pixi presenter startup configuration', () => {
     expect(eight).toContain('uniform float uLiquidFieldLighting;');
     expect(block).toContain('bool connectedBodyLiquid = optics == 1.0 || optics == 2.0 || optics == 3.0');
     expect(block).toContain('|| optics == 16.0 || optics == 17.0 || optics == 18.0;');
-    expect(block).toContain('uLiquidFieldLighting > 0.5 && connectedBodyLiquid && traits < 0.5');
-    expect(block).toContain('!materialEmissive && liquidSpeciesDifference < 0.035');
+    expect(block).toContain('uLiquidFieldLighting > 0.5 && liquidSpeciesDifference < 0.035');
+    expect(block).toContain('|| uSurfaceContourLighting > 0.5)');
+    expect(block).toContain('&& connectedBodyLiquid && traits < 0.5 && !materialEmissive');
+    expect(block).toContain('&& liquidSpeciesDifference < 0.035');
     expect(block).toContain('liquidLeft.a + liquidRight.a + liquidTop.a + liquidBottom.a');
     expect(block).toContain('liquidEightXMeniscusKey(optics)');
     expect(block).toContain('liquidEightXMeniscusShadow(optics)');
@@ -1214,6 +1216,43 @@ describe('Pixi presenter startup configuration', () => {
     expect(solid).toContain('applySurfaceContourEightX(color, density, solidSurfaceSlope, optics, 0.0)');
     expect(`${helper}${powder}${solid}`).not.toContain('texture(');
     expect(`${helper}${powder}${solid}`).not.toMatch(/\balpha\s*[+*]?=/);
+  });
+
+  it('restores true-8x liquid Surface contours through the existing wall-state read only', () => {
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');
+    const eightEnd = source.indexOf('const FIELD_FRAGMENT = `', eightStart);
+    const eight = source.slice(eightStart, eightEnd);
+    const liquidStart = eight.indexOf('  float liquidCohesionAlphaScale = 1.0;');
+    const liquidEnd = eight.indexOf('  // The shared suspension field is powder-authored', liquidStart);
+    const liquid = eight.slice(liquidStart, liquidEnd);
+    const packedStart = eight.indexOf('  bool needsPackedState =');
+    const packedEnd = eight.indexOf('  if (uSourceTargetStyling > 0.5', packedStart);
+    const packed = eight.slice(packedStart, packedEnd);
+
+    expect(liquidStart).toBeGreaterThan(0);
+    expect(liquidEnd).toBeGreaterThan(liquidStart);
+    expect(liquid).toContain('float liquidSurfaceContourKeyStrength = 0.0;');
+    expect(liquid).toContain('float liquidSurfaceContourShadowStrength = 0.0;');
+    expect(liquid).toContain('bool nativeWallForLiquidSurfaceContour = uNativeWallsActive > 0.5');
+    expect(liquid).toContain('uSurfaceContourLighting > 0.5 && liquidForeignContact < 0.5');
+    expect(liquid).toContain('vec2 liquidSemanticSlope = vec2(');
+    expect(liquid).toContain('float liquidSemanticContour = smoothstep(0.05, 0.31, semanticDensity)');
+    expect(liquid).toContain('float liquidSemanticSupport = smoothstep(1.5, 3.0, q00 + q10 + q01 + q11);');
+    expect(liquid).toContain('max(liquidSurfaceRim, liquidSemanticContour * liquidSemanticSupport)');
+    expect(liquid).toContain('float liquidSurfaceConnected = smoothstep(1.5, 3.0, liquidSupportCount)');
+    expect(liquid).toContain('smoothstep(0.20, 0.78, liquid.a)');
+    expect(liquid).toContain('float liquidSurfaceRim = (1.0 - smoothstep(0.38, 0.88, liquidNeighbourMean))');
+    expect(liquid).toContain('liquidSurfaceContourKeyStrength = liquidContourShell');
+    expect(liquid).toContain('liquidSurfaceContourShadowStrength = liquidContourShell');
+    expect(liquid.match(/texture\(uLiquidTexture, uv [-+] vec2\(/g)).toHaveLength(4);
+    expect(liquid).not.toMatch(/\balpha\s*[+*]?=/);
+    expect(packed).toContain('|| nativeWallForLiquidCohesion || nativeWallForLiquidSurfaceContour;');
+    expect(packed).toContain('uNativeWallsActive < 0.5 || nativeWall < 0.5');
+    expect(packed).toContain('liquidContourKey * liquidSurfaceContourKeyStrength');
+    expect(packed).toContain('liquidContourShadow * liquidSurfaceContourShadowStrength');
+    expect(eight.match(/texture\(uWallTexture, uv\)/g)).toHaveLength(3);
+    expect(eight).toContain('float semanticDensity = density;');
   });
 
   it('keeps Smooth powder body depth gated, bounded, and topology-neutral', () => {
