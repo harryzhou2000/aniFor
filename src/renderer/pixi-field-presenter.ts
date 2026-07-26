@@ -166,12 +166,18 @@ vec3 gasIdentityEightXChroma(float style, float density) {
 vec3 liquidEightXMeniscusKey(float optics) {
   if (optics == 1.0) return vec3(0.52, 0.88, 1.00); // Aqueous
   if (optics == 2.0) return vec3(1.00, 0.72, 0.28); // Oily
-  return vec3(0.44, 1.00, 0.68); // Corrosive
+  if (optics == 3.0) return vec3(0.44, 1.00, 0.68); // Corrosive
+  if (optics == 16.0) return vec3(0.70, 0.92, 1.00); // Cryogenic
+  if (optics == 17.0) return vec3(1.00, 0.98, 0.94); // Metallic
+  return vec3(0.82, 0.92, 1.00); // Viscous
 }
 vec3 liquidEightXMeniscusShadow(float optics) {
   if (optics == 1.0) return vec3(1.00, 0.62, 0.36); // Aqueous
   if (optics == 2.0) return vec3(0.40, 0.68, 1.00); // Oily
-  return vec3(0.72, 0.38, 0.62); // Corrosive
+  if (optics == 3.0) return vec3(0.72, 0.38, 0.62); // Corrosive
+  if (optics == 16.0) return vec3(0.78, 0.86, 1.00); // Cryogenic
+  if (optics == 17.0) return vec3(0.58, 0.62, 0.70); // Metallic
+  return vec3(0.70, 0.64, 0.58); // Viscous
 }
 // The normal path has a richer fourteen-material liquid grammar. At 15M
 // fragments, the same fourteen public and radioactive liquid identities share one small
@@ -438,8 +444,12 @@ void main() {
     // alpha, semantic ownership, reconstructed support, and fluid physics stay
     // field-owned. Molten, trait/emissive, isolated, and unlike-species liquid
     // are deliberate no-ops.
-    bool ordinaryLiquid = optics == 1.0 || optics == 2.0 || optics == 3.0;
-    if (uLiquidFieldLighting > 0.5 && ordinaryLiquid && traits < 0.5
+    // Every non-molten liquid optics family can reuse the four already-live
+    // liquid samples for a stable body/meniscus read. Organic, radioactive,
+    // emissive, isolated, and unlike-species owners remain exact no-ops below.
+    bool connectedBodyLiquid = optics == 1.0 || optics == 2.0 || optics == 3.0
+      || optics == 16.0 || optics == 17.0 || optics == 18.0;
+    if (uLiquidFieldLighting > 0.5 && connectedBodyLiquid && traits < 0.5
       && !materialEmissive && liquidSpeciesDifference < 0.035) {
       float liquidSupportCount = step(0.48, liquidLeft.a) + step(0.48, liquidRight.a)
         + step(0.48, liquidTop.a) + step(0.48, liquidBottom.a);

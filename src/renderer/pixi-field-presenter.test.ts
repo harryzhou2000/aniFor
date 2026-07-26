@@ -828,11 +828,16 @@ describe('Pixi presenter startup configuration', () => {
     expect(start).toBeGreaterThan(0);
     expect(end).toBeGreaterThan(start);
     expect(eight).toContain('uniform float uLiquidFieldLighting;');
-    expect(block).toContain('uLiquidFieldLighting > 0.5 && ordinaryLiquid && traits < 0.5');
+    expect(block).toContain('bool connectedBodyLiquid = optics == 1.0 || optics == 2.0 || optics == 3.0');
+    expect(block).toContain('|| optics == 16.0 || optics == 17.0 || optics == 18.0;');
+    expect(block).toContain('uLiquidFieldLighting > 0.5 && connectedBodyLiquid && traits < 0.5');
     expect(block).toContain('!materialEmissive && liquidSpeciesDifference < 0.035');
     expect(block).toContain('liquidLeft.a + liquidRight.a + liquidTop.a + liquidBottom.a');
     expect(block).toContain('liquidEightXMeniscusKey(optics)');
     expect(block).toContain('liquidEightXMeniscusShadow(optics)');
+    expect(eight).toContain('if (optics == 16.0) return vec3(0.70, 0.92, 1.00); // Cryogenic');
+    expect(eight).toContain('if (optics == 17.0) return vec3(1.00, 0.98, 0.94); // Metallic');
+    expect(eight).toContain('return vec3(0.82, 0.92, 1.00); // Viscous');
     expect(block).not.toContain('texture(');
     expect(block).not.toContain('uTime');
     expect(block).not.toMatch(/\balpha\s*[+*]?=/);
