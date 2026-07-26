@@ -484,8 +484,8 @@ describe('Pixi presenter startup configuration', () => {
     const block = rich.slice(blockStart, blockEnd);
 
     expect(helper).toContain('style > 6.5 && style < 7.5');
-    expect(helper).toContain('smoothstep(0.006, 0.032, abs(response))');
-    expect(helper).toContain('vec3(0.040, -0.060, 0.028) * violetStrength');
+    expect(helper).toContain('smoothstep(0.005, 0.030, abs(response))');
+    expect(helper).toContain('vec3(0.045, -0.052, 0.052) * violetStrength');
     expect(helper).not.toMatch(/\btexture\s*\(/);
     expect(helper).not.toMatch(/\balpha\s*[+*]?=/);
     expect(block).toContain('uGasVolumeChroma > 0.5 && gasIdentityStyle > 6.5');

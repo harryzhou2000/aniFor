@@ -933,12 +933,13 @@ vec3 gasIdentityVolumeChroma(float style, float response) {
   // stable on either side of the billow. This is RGB-only and active only under
   // the public volume-chroma switch at the call site.
   if (style > 6.5 && style < 7.5) {
-    float violetStrength = smoothstep(0.006, 0.032, abs(response));
-    // The atmosphere is composited at deliberately low opacity, so this small
-    // local RGB bias must remain legible after the shared cloud has been
-    // premultiplied into the page. Positive channels are headroom-limited at
-    // the call site; the source term itself stays below 16 framebuffer bytes.
-    return vec3(0.040, -0.060, 0.028) * violetStrength;
+    // Retain a clear violet key/fill only once the existing bounded response
+    // is perceptible. Taking its magnitude keeps the public species cue stable
+    // on the two sides of a signed light response. This reshapes the previous
+    // bias toward blue (rather than raising its maximum): every source channel
+    // remains below the former 0.060 bound before the cloud composite.
+    float violetStrength = smoothstep(0.005, 0.030, abs(response));
+    return vec3(0.045, -0.052, 0.052) * violetStrength;
   }
   return vec3(0.0);
 }
