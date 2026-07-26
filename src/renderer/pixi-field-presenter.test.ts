@@ -1565,10 +1565,15 @@ describe('Pixi presenter startup configuration', () => {
     expect(source).toContain('uStructuralRigidStyling > 0.5 && surfaceOnly < 0.5');
     expect(source).toContain('traits < 0.5 && !materialEmissive');
     expect(structuralBlock).toContain('vec3 structuralRigidIdentityDelta(float material, vec2 position)');
+    expect(structuralBlock).toContain('float structuralRigidDeepIdentityGain(float material)');
     expect(structuralBlock).toContain('if (material == 22.0)');
+    expect(structuralBlock).toContain('if (material == 23.0) return 0.22;');
     expect(structuralBlock).toContain('if (material == 82.0)');
     expect(structuralBlock).not.toMatch(/texture\s*\(/);
     expect(structuralBlock).not.toMatch(/\balpha\s*[+*]?=/);
+    expect(source).toContain('float structuralIdentityGain = 1.0;');
+    expect(source).toContain('structuralRigidDeepIdentityGain(material), structuralDepth * solidInterior');
+    expect(source).toContain('structuralRigidIdentityDelta(material, fieldPosition)\n          * structuralIdentityGain');
   });
 
   it('seeds and redraws the independent earthen powder identity layer', () => {

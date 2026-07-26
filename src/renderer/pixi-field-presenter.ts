@@ -1667,6 +1667,21 @@ vec3 structuralRigidIdentityDelta(float material, vec2 position) {
   }
   return vec3(0.0);
 }
+float structuralRigidDeepIdentityGain(float material) {
+  // Large rigid bodies carry their broad depth and reflected-light response
+  // through the shared solid optics. Retain material-specific construction
+  // marks near contours and in thin pieces, but reduce their cell cadence once
+  // the existing exact-species thickness byte proves a true interior. Metal is
+  // deliberately the calmest plate; Brick preserves more of its courses.
+  if (material == 22.0) return 0.62;
+  if (material == 23.0) return 0.22;
+  if (material == 25.0) return 0.36;
+  if (material == 67.0) return 0.30;
+  if (material == 70.0) return 0.50;
+  if (material == 73.0) return 0.42;
+  if (material == 82.0) return 0.34;
+  return 1.0;
+}
 // Dense construction bodies use the existing signed macro relief plus the
 // phase-local solid-depth byte. No topology, sample, field, texture, or
 // uniform is added: exact edges, cavities, walls, traits, and emissive matter
@@ -3797,13 +3812,18 @@ void main() {
       if (uStructuralRigidStyling > 0.5 && surfaceOnly < 0.5 && halo < 0.5
         && wall < 0.5 && wallOnly < 0.5 && emissionOnly < 0.5
         && traits < 0.5 && !materialEmissive) {
+        float structuralIdentityGain = 1.0;
         if (solidOpticalDepth > 6.0 / 255.0 && solidInterior > 0.001) {
           float structuralDepth = smoothstep(6.0 / 255.0, 42.0 / 255.0, solidOpticalDepth);
           float structuralRelief = clamp(solidReliefTone * 255.0 / 7.0, -1.0, 1.0)
             * structuralDepth;
           color = clamp(color + structuralRigidBulkDelta(material, structuralRelief), 0.0, 1.0);
+          structuralIdentityGain = mix(
+            1.0, structuralRigidDeepIdentityGain(material), structuralDepth * solidInterior
+          );
         }
-        color = clamp(color + structuralRigidIdentityDelta(material, fieldPosition), 0.0, 1.0);
+        color = clamp(color + structuralRigidIdentityDelta(material, fieldPosition)
+          * structuralIdentityGain, 0.0, 1.0);
       }
     } else if (organicSurface > 0.5 || (optics < 0.5 && profile == 3.0)) {
       float fibre = sin(fieldPosition.x * 0.20 + sin(fieldPosition.y * 0.115 + material) * 1.45);
