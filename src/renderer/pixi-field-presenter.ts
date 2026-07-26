@@ -106,6 +106,7 @@ uniform sampler2D uPaletteTexture;
 uniform sampler2D uStyleTexture;
 uniform vec2 uTexel;
 uniform vec2 uFieldSize;
+uniform float uNativeWallsActive;
 uniform float uPowderStyle;
 uniform float uPowderBodyDepth;
 uniform float uSuspensionActive;
@@ -134,6 +135,42 @@ float materialAt(vec2 uv) {
   return floor(texture(uFieldTexture, clamp(uv, uTexel * 0.5, vec2(1.0) - uTexel * 0.5)).r * 255.0 + 0.5);
 }
 float same(vec2 uv, float material) { return 1.0 - step(0.5, abs(materialAt(uv) - material)); }
+// Native TPT walls are stored separately from particles. The direct 8x mesh
+// keeps their raster intentionally compact, but still composites an exact wall
+// ID behind transparent matter without putting a wall into the semantic map.
+vec3 wallEightXColor(float wall) {
+  if (wall == 1.0) return vec3(0.49, 0.55, 0.59);
+  if (wall == 2.0) return vec3(0.36, 0.44, 0.55);
+  if (wall == 3.0) return vec3(0.75, 0.51, 0.24);
+  if (wall == 6.0) return vec3(0.27, 0.57, 0.67);
+  if (wall == 9.0) return vec3(0.44, 0.52, 0.59);
+  if (wall == 10.0) return vec3(0.68, 0.52, 0.29);
+  if (wall == 13.0) return vec3(0.51, 0.43, 0.61);
+  if (wall == 15.0) return vec3(0.80, 0.75, 0.36);
+  if (wall == 16.0) return vec3(0.27, 0.31, 0.36);
+  return vec3(0.41, 0.42, 0.44);
+}
+float wallEightXPattern(float wall, vec2 worldPosition) {
+  vec2 cell = floor(worldPosition);
+  float checker = mod(floor(cell.x / 4.0) + floor(cell.y / 4.0), 2.0);
+  float pattern = mix(0.94, 1.04, checker);
+  if (wall == 6.0) {
+    float rail = 1.0 - step(0.5, mod(cell.x * 2.0 + cell.y, 9.0));
+    pattern += rail * 0.12;
+  } else if (wall == 9.0 || wall == 10.0 || wall == 13.0 || wall == 15.0) {
+    float stripe = 1.0 - step(0.5, mod(cell.x + cell.y, 4.0));
+    pattern += stripe * 0.12;
+  }
+  return pattern;
+}
+vec4 compositeEightXWallBackdrop(vec4 foreground, float wall, vec2 worldPosition) {
+  if (wall < 0.5) return foreground;
+  float wallAlpha = 0.94;
+  float remaining = 1.0 - foreground.a;
+  vec3 wallRgb = wallEightXColor(wall) * wallEightXPattern(wall, worldPosition);
+  return vec4(foreground.rgb + wallRgb * wallAlpha * remaining,
+    foreground.a + wallAlpha * remaining);
+}
 // The normal WebGL path also layers a small species motif over atmosphere
 // volume. At 15M fragments, true 8x deliberately keeps only the existing R8
 // propagated style sample and its dense-body key. This preserves a continuous
@@ -249,7 +286,8 @@ void main() {
   // the compact shader within its one-sample gas-lighting budget.
   float gasFieldScatter = uGasFieldLighting * smoothstep(0.002, 0.42, emission.a);
   if (material < 0.5) {
-    if (liquid.a > 0.28) finalColor = vec4(liquid.rgb * liquid.a, liquid.a);
+    vec4 foreground = vec4(0.0);
+    if (liquid.a > 0.28) foreground = vec4(liquid.rgb * liquid.a, liquid.a);
     else if (atmosphere.a > 0.004) {
       float gasShell = 1.0 - smoothstep(0.22, 0.82, atmosphere.a);
       vec3 gas = atmosphere.rgb + uGasVolumeChroma * atmosphere.a * vec3(0.022, -0.009, 0.017)
@@ -259,12 +297,20 @@ void main() {
         gas += gasIdentityEightXDelta(gasIdentityStyle, atmosphere.a)
           + uGasVolumeChroma * gasIdentityEightXChroma(gasIdentityStyle, atmosphere.a);
       }
-      finalColor = vec4(gas * atmosphere.a * 0.42, atmosphere.a * 0.42);
+      foreground = vec4(gas * atmosphere.a * 0.42, atmosphere.a * 0.42);
     } else if (emission.a > 0.004) {
       vec3 aura = emission.rgb + uEmissionVolumeChroma * emission.a * vec3(0.025, 0.010, 0.030);
-      finalColor = vec4(aura * emission.a * 0.30, emission.a * 0.30);
+      foreground = vec4(aura * emission.a * 0.30, emission.a * 0.30);
     }
-    else finalColor = vec4(0.0);
+    // The scene-level uniform makes fully wall-free 15M-fragment frames take
+    // the original sampler-free empty path. When walls exist, a single nearest
+    // lookup keeps bare native walls and their liquid/gas/energy backdrops
+    // independent from the particle/material plane.
+    if (uNativeWallsActive > 0.5) {
+      float wall = floor(texture(uWallTexture, uv).r * 255.0 + 0.5);
+      foreground = compositeEightXWallBackdrop(foreground, wall, uv * uFieldSize);
+    }
+    finalColor = foreground;
     return;
   }
   vec4 style = texture(uStyleTexture, vec2((material + 0.5) / 256.0, 0.5));
@@ -738,7 +784,15 @@ void main() {
   }
   if (material == 114.0) { color = vec3(16.0 / 255.0); alpha = 1.0; }
   alpha = clamp(alpha, 0.0, 1.0);
-  finalColor = vec4(clamp(color, 0.0, 1.0) * alpha, alpha);
+  vec4 foreground = vec4(clamp(color, 0.0, 1.0) * alpha, alpha);
+  // Opaque matter has no remaining backdrop contribution and does not spend a
+  // wall sample. Every translucent semantic particle keeps the separate native
+  // wall visible below it, matching the normal compositor without a new pass.
+  if (uNativeWallsActive > 0.5 && alpha < 0.999) {
+    float wall = floor(texture(uWallTexture, uv).r * 255.0 + 0.5);
+    foreground = compositeEightXWallBackdrop(foreground, wall, uv * uFieldSize);
+  }
+  finalColor = foreground;
 }
 `;
 
@@ -4350,6 +4404,8 @@ export class PixiFieldPresenter {
   private solidOpticalDepthDirty = true;
   private photonStateActive = false;
   private photonStateHydrated = false;
+  private nativeWallsActive = false;
+  private nativeWallsHydrated = false;
   private unusualSolidStylingEnabled = true;
   private liquidOpticalDepthHydrated = false;
   private lastPowderSurfaceRefresh = -Infinity;
@@ -4540,6 +4596,10 @@ export class PixiFieldPresenter {
       uBotanicalLifecycleStyling: { value: 1, type: 'f32' },
       uSparkStateStyling: { value: 1, type: 'f32' },
       uPhotonActive: { value: 0, type: 'f32' },
+      // Keep the direct 8x empty path sampler-free until the independent native
+      // wall plane has actual content. This is refreshed only after initial or
+      // dirty wall uploads, never by a per-fragment material decision.
+      uNativeWallsActive: { value: 0, type: 'f32' },
       uPowderStyle: { value: powderRenderStyleValue('smooth'), type: 'f32' },
       uPowderBodyDepth: { value: 1, type: 'f32' },
       uSuspensionActive: {
@@ -5223,6 +5283,19 @@ export class PixiFieldPresenter {
     const wallRectangles = this.wallChunks.consume();
     if (walls) for (const rect of wallRectangles) packWallRect(this.wallBytes, this.wallSource.width, walls, rect);
     if (walls && wallRectangles.length) wallTextureDirty = true;
+    if (!walls) {
+      this.nativeWallsActive = false;
+      this.nativeWallsHydrated = false;
+    } else if (!this.nativeWallsHydrated || wallRectangles.length) {
+      this.nativeWallsActive = false;
+      for (let index = 0; index < walls.length; index++) {
+        if (walls[index] === 0) continue;
+        this.nativeWallsActive = true;
+        break;
+      }
+      this.nativeWallsHydrated = true;
+    }
+    this.uniforms.uniforms.uNativeWallsActive = this.nativeWallsActive ? 1 : 0;
     if (wallTextureDirty) this.wallSource.update();
     if (photonTextureDirty) this.photonStateSource.update();
     // Native PHOT can move without a pmap material mutation, so a dynamic

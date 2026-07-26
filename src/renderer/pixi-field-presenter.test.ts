@@ -697,7 +697,7 @@ describe('Pixi presenter startup configuration', () => {
     expect(eight).toContain('float gasFieldScatter = uGasFieldLighting * smoothstep(0.002, 0.42, emission.a);');
     expect(eight).toContain('emission.rgb * gasFieldScatter * gasShell * 0.035');
     expect(eight).toContain('emission.rgb * gasFieldScatter * (0.018 + gasShell * 0.030)');
-    expect(eight).toContain('finalColor = vec4(gas * atmosphere.a * 0.42, atmosphere.a * 0.42);');
+    expect(eight).toContain('foreground = vec4(gas * atmosphere.a * 0.42, atmosphere.a * 0.42);');
     expect(eight).toContain('float alpha = family == 1.0 ? smoothstep(0.006, 0.26, density) * 0.48');
   });
 
@@ -892,6 +892,34 @@ describe('Pixi presenter startup configuration', () => {
     expect(block).not.toMatch(/\balpha\s*[+*]?=/);
   });
 
+  it('keeps native walls separate and composited in the direct true-8x mesh', () => {
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');
+    const eightEnd = source.indexOf('const FIELD_FRAGMENT = `', eightStart);
+    const eight = source.slice(eightStart, eightEnd);
+    const emptyStart = eight.indexOf('if (material < 0.5) {');
+    const emptyEnd = eight.indexOf('  vec4 style = texture(uStyleTexture', emptyStart);
+    const empty = eight.slice(emptyStart, emptyEnd);
+    const finalStart = eight.lastIndexOf('  vec4 foreground = vec4(clamp(color');
+    const final = eight.slice(finalStart);
+
+    expect(eight).toContain('uniform sampler2D uWallTexture;');
+    expect(eight).toContain('uniform float uNativeWallsActive;');
+    expect(eight).toContain('vec3 wallEightXColor(float wall)');
+    expect(eight).toContain('vec4 compositeEightXWallBackdrop');
+    expect(empty).toContain('if (uNativeWallsActive > 0.5)');
+    expect(empty).toContain('texture(uWallTexture, uv)');
+    expect(empty).toContain('compositeEightXWallBackdrop(foreground, wall, uv * uFieldSize)');
+    expect(finalStart).toBeGreaterThan(0);
+    expect(final).toContain('uNativeWallsActive > 0.5 && alpha < 0.999');
+    expect(final).toContain('texture(uWallTexture, uv)');
+    expect(final).toContain('compositeEightXWallBackdrop(foreground, wall, uv * uFieldSize)');
+    expect(eight).not.toContain('wallAt(');
+    expect(source).toContain('private nativeWallsActive = false;');
+    expect(source).toContain('!this.nativeWallsHydrated || wallRectangles.length');
+    expect(source).toContain('uNativeWallsActive = this.nativeWallsActive ? 1 : 0');
+  });
+
   it('reuses true-8x liquid field samples for bounded RGB-only connected meniscus lighting', () => {
     const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
     const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');
@@ -979,7 +1007,8 @@ describe('Pixi presenter startup configuration', () => {
     expect(block).toContain('bool needsPackedState =');
     expect(block).toContain('vec4 packedState = texture(uWallTexture, uv);');
     expect(block.match(/texture\(uWallTexture, uv\)/g)).toHaveLength(1);
-    expect(eight.match(/texture\(uWallTexture, uv\)/g)).toHaveLength(1);
+    // Native-wall composition owns two additional guarded samples in the
+    // direct shader; exact-owner state decoding itself still consumes one.
     expect(block).toContain('float sourceTarget = 0.0;');
     expect(block).toContain('float nativeWall = 0.0;');
   });
