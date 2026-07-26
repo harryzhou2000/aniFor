@@ -135,6 +135,7 @@ uniform float uDeutStateStyling;
 uniform float uLavaAncestryStyling;
 uniform float uBotanicalIdentityStyling;
 uniform float uBotanicalLifecycleStyling;
+uniform float uSparkStateStyling;
 float materialAt(vec2 uv) {
   return floor(texture(uFieldTexture, clamp(uv, uTexel * 0.5, vec2(1.0) - uTexel * 0.5)).r * 255.0 + 0.5);
 }
@@ -309,6 +310,44 @@ vec3 lavaAncestryEightXDelta(float packedState, vec2 position) {
     : family == 4.0 ? vec3(-10.0, 9.0, 16.0)
     : vec3(-6.0, 16.0, -2.0);
   return clamp(key * gain, vec3(-16.0), vec3(16.0)) / 255.0;
+}
+// SPRK retains its exact native host and bounded life in the shared packed
+// B/A word. Keep the owner-local direct form static and RGB-only: true 8x
+// reuses the one state/wall decode already needed by other native owners.
+float sparkEightXHostFamily(float host) {
+  if (host == 23.0 || host == 36.0 || host == 45.0 || host == 46.0
+    || host == 61.0 || host == 67.0 || host == 70.0 || host == 73.0
+    || host == 75.0 || host == 82.0 || host == 95.0 || host == 96.0
+    || host == 151.0) return 1.0;
+  if (host == 51.0 || host == 144.0 || host == 146.0) return 2.0;
+  if (host == 145.0 || host == 147.0) return 3.0;
+  if (host == 135.0 || host == 136.0 || host == 140.0 || host == 142.0
+    || host == 143.0 || host == 149.0 || host == 150.0 || host == 164.0
+    || host == 166.0 || host == 167.0 || host == 168.0 || host == 169.0
+    || host == 170.0) return 4.0;
+  if (host == 2.0 || host == 16.0 || host == 53.0 || host == 55.0) return 5.0;
+  return 0.0;
+}
+vec3 sparkStateEightXDelta(float packedState, vec2 position, vec3 sourceColor) {
+  if (packedState < 32768.0) return vec3(0.0);
+  float host = mod(packedState, 256.0);
+  float family = sparkEightXHostFamily(host);
+  if (host < 0.5 || family < 0.5) return vec3(0.0);
+  float life = min(127.0, mod(floor(packedState / 256.0), 128.0));
+  float lifecycle = min(1.0, life / 4.0);
+  vec2 world = floor(position);
+  float carrier = mod(world.x * 3.0 + world.y * 5.0 + family * 7.0, 11.0) <= 1.0
+    ? 1.0 : 0.0;
+  float junction = mod(world.x - world.y * 2.0 + family * 5.0, 17.0) == 0.0
+    ? 1.0 : 0.0;
+  float geometry = carrier > 0.5 ? 1.0 : junction > 0.5 ? 0.68 : 0.30;
+  float blend = (0.25 + lifecycle * 0.75) * geometry * 0.18;
+  vec3 target = family == 1.0 ? vec3(145.0, 198.0, 255.0)
+    : family == 2.0 ? vec3(218.0, 120.0, 255.0)
+    : family == 3.0 ? vec3(255.0, 178.0, 74.0)
+    : family == 4.0 ? vec3(105.0, 184.0, 255.0)
+    : vec3(70.0, 235.0, 255.0);
+  return mix(min(sourceColor, vec3(1.0)), target / 255.0, blend) - sourceColor;
 }
 bool solidEightXGranular(float optics) {
   return optics == 7.0 || optics == 13.0 || optics == 14.0 || optics == 15.0;
@@ -833,6 +872,7 @@ void main() {
   bool deutOwner = material == 100.0;
   bool lavaAncestryOwner = material == 11.0 && family == 2.0 && !materialEmissive;
   bool botanicalLifecycleOwner = material == 50.0 || material == 10.0;
+  bool sparkOwner = material == 148.0;
   // Most 8x fragments have no retained native state. Decode the B/A state and
   // co-located native wall exactly once only for owners whose enabled RGB
   // styling consumes it; this avoids two state-texture samples on every other
@@ -843,6 +883,7 @@ void main() {
     || (uDeutStateStyling > 0.5 && deutOwner)
     || (uLavaAncestryStyling > 0.5 && lavaAncestryOwner)
     || (uBotanicalLifecycleStyling > 0.5 && botanicalLifecycleOwner)
+    || (uSparkStateStyling > 0.5 && sparkOwner)
     // Eligible translucent liquid already needs this exact wall texel for the
     // final backdrop. Fold the cohesion guard into that one packed-state read
     // so true 8x does not grow another native-wall sample.
@@ -923,6 +964,9 @@ void main() {
   // independent backdrop rather than turning Lava ctype into a wall effect.
   if (uLavaAncestryStyling > 0.5 && lavaAncestryOwner && nativeWall < 0.5) {
     color += lavaAncestryEightXDelta(sourceTarget, uv * uFieldSize);
+  }
+  if (uSparkStateStyling > 0.5 && sparkOwner) {
+    color += sparkStateEightXDelta(sourceTarget, uv * uFieldSize, color);
   }
   // True 8x keeps botanical state on the existing packed B/A word. This is
   // RGB-only compact arithmetic: no additional texture, field, pass, or

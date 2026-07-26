@@ -13314,6 +13314,8 @@ async function auditRenderScaleEight(cdp, dpr) {
   // after each completed GPU fence.
   const lavaStateGraphics = await auditEightXLavaStateGraphics(cdp, geometry.canvas);
   stage('lava-state-ready');
+  const sparkStateGraphics = await auditEightXSparkStateGraphics(cdp, geometry.canvas);
+  stage('spark-state-ready');
   // Keep the DEUT fixture last: its native state is intentionally retained for
   // the forced-fence and real-context-loss recovery probes immediately below.
   const deutStateAudit = await auditEightXDeutStateGraphics(cdp, geometry.canvas);
@@ -13371,6 +13373,7 @@ async function auditRenderScaleEight(cdp, dpr) {
     vibrStateGraphics,
     deutStateGraphics,
     lavaStateGraphics,
+    sparkStateGraphics,
     forcedStallRecovery,
     contextLossRecovery,
   };
@@ -13632,6 +13635,144 @@ async function auditEightXLavaStateGraphics(cdp, canvasRect) {
   return {
     cards: rawAtlas.cards.map(({ key, material, origin, originCode, encodedState }) => ({
       key, material, origin, originCode, encodedState,
+    })),
+    occupied: prepared.occupied,
+    samples,
+    exactRepeatedOff: samples.every(({ repeatRgbPeak }) => repeatRgbPeak <= 1),
+  };
+}
+
+async function snapshotEightXSparkState(cdp) {
+  return evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    const atlas = audit.sparkStateGraphicsAtlas();
+    const inside = (x, y, rect) => x >= rect.x && x < rect.x + rect.width
+      && y >= rect.y && y < rect.y + rect.height;
+    const exactRect = (rect, material, state) => {
+      for (let y = rect.y; y < rect.y + rect.height; y++) {
+        for (let x = rect.x; x < rect.x + rect.width; x++) {
+          if (audit.cell(x, y) !== material || audit.presentationState(x, y) !== state) return false;
+        }
+      }
+      return true;
+    };
+    return {
+      occupied: audit.occupiedCells(),
+      cards: atlas.cards.map((entry) => {
+        let bodyExact = true;
+        for (let y = entry.body.y; y < entry.body.y + entry.body.height; y++) {
+          for (let x = entry.body.x; x < entry.body.x + entry.body.width; x++) {
+            const empty = inside(x, y, entry.authoredHole) || inside(x, y, entry.openNotch);
+            bodyExact = bodyExact
+              && audit.cell(x, y) === (empty ? 0 : entry.material)
+              && audit.presentationState(x, y) === (empty ? 0 : entry.encodedState);
+          }
+        }
+        return {
+          key: entry.key, family: entry.family, host: entry.host, life: entry.life,
+          material: entry.material, encodedState: entry.encodedState, bodyExact,
+          thinExact: exactRect(entry.thinStructure, entry.material, entry.encodedState),
+          isolatedExact: audit.cell(entry.isolated.x, entry.isolated.y) === entry.material
+            && audit.presentationState(entry.isolated.x, entry.isolated.y) === entry.encodedState,
+          zeroExact: exactRect(entry.zeroState, entry.material, 0),
+          unrepresentableExact: exactRect(entry.unrepresentableHost, entry.material, 0x8400),
+          wrongOwnerExact: exactRect(entry.wrongOwner, 1, entry.encodedState),
+          waterExact: exactRect(entry.waterControl, 2, entry.encodedState),
+          metalExact: exactRect(entry.metalControl, 23, entry.encodedState),
+          blankExact: exactRect(entry.guardedBlank, 0, 0),
+        };
+      }),
+    };
+  })()`);
+}
+
+function assertEightXSparkTopology(snapshot, label) {
+  const expectedKeys = 'metalFresh,semiconductorPropagating,thermalMidlife,electrodeExpiring,switchFresh,aqueousPropagating';
+  const expectedFamilies = 'metallic,semiconductor,thermal,electrode,device,aqueous';
+  const expectedHosts = '23,144,145,140,149,16';
+  const expectedLives = '4,3,2,1,4,3';
+  const expectedStates = '33815,33680,33425,33164,33941,33552';
+  assert(snapshot.cards.length === 6
+      && snapshot.cards.map(({ key }) => key).join(',') === expectedKeys
+      && snapshot.cards.map(({ family }) => family).join(',') === expectedFamilies
+      && snapshot.cards.map(({ host }) => host).join(',') === expectedHosts
+      && snapshot.cards.map(({ life }) => life).join(',') === expectedLives
+      && snapshot.cards.map(({ encodedState }) => encodedState).join(',') === expectedStates
+      && snapshot.cards.every((card) => card.material === 148 && card.bodyExact
+        && card.thinExact && card.isolatedExact && card.zeroExact && card.unrepresentableExact
+        && card.wrongOwnerExact && card.waterExact && card.metalExact && card.blankExact),
+  `${label}: SPRK semantic or presentation-state topology changed (${JSON.stringify(snapshot)})`);
+}
+
+function eightXSparkResponseRegions(atlas) {
+  const centre = (rect) => ({ x: rect.x + rect.width / 2, y: rect.y + rect.height / 2 });
+  return atlas.cards.flatMap((entry) => [
+    { name: `SPRK-${entry.key}-state`, ...centre(entry.body), radiusX: 28, radiusY: 24 },
+    { name: `SPRK-${entry.key}-zero`, ...centre(entry.zeroState), radiusX: 4, radiusY: 5 },
+    { name: `SPRK-${entry.key}-unrepresentable`, ...centre(entry.unrepresentableHost), radiusX: 4, radiusY: 5 },
+    { name: `SPRK-${entry.key}-wrong-owner`, ...centre(entry.wrongOwner), radiusX: 4, radiusY: 5 },
+    { name: `SPRK-${entry.key}-water`, ...centre(entry.waterControl), radiusX: 4, radiusY: 5 },
+    { name: `SPRK-${entry.key}-metal`, ...centre(entry.metalControl), radiusX: 4, radiusY: 5 },
+  ]);
+}
+
+function assertEightXSparkResponses(samples, label) {
+  const styled = samples.filter(({ name }) => name.endsWith('-state'));
+  assert(styled.length === 6 && styled.every(({ rgbRms, rgbPeak, repeatRgbPeak }) => (
+    rgbRms >= 0.004 && rgbRms <= 36 && rgbPeak > 0 && rgbPeak <= 64 && repeatRgbPeak <= 1
+  )), `${label}: SPRK host/life response is absent, unbounded, or unstable (${JSON.stringify(styled)})`);
+  assert(new Set(styled.map(({ responseSignature }) => responseSignature)).size === styled.length,
+    `${label}: SPRK host/life response signatures collapsed (${JSON.stringify(styled)})`);
+  const controls = samples.filter(({ name }) => !name.endsWith('-state'));
+  assert(controls.length === 30 && controls.every(({ rgbPeak, repeatRgbPeak }) => (
+    rgbPeak <= 1 && repeatRgbPeak <= 1
+  )), `${label}: SPRK styling leaked into a state/owner/material control (${JSON.stringify(controls)})`);
+}
+
+async function auditEightXSparkStateGraphics(cdp, canvasRect) {
+  const rawAtlas = await evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    if (typeof audit.presentationState !== 'function'
+      || typeof audit.prepareSparkStateGraphicsFixture !== 'function'
+      || typeof audit.sparkStateGraphicsAtlas !== 'function'
+      || typeof audit.setSparkStateStyling !== 'function') {
+      throw new Error('True-8x SPRK state audit API unavailable');
+    }
+    audit.resetView();
+    audit.prepareSparkStateGraphicsFixture();
+    return audit.sparkStateGraphicsAtlas();
+  })()`);
+  const prepared = await snapshotEightXSparkState(cdp);
+  assertEightXSparkTopology(prepared, 'renderScale=8 prepared SPRK fixture');
+  const live = await metrics(cdp);
+  assert(live.backing.width === WORLD_WIDTH * 8 && live.backing.height === WORLD_HEIGHT * 8
+      && live.outputScale === '8',
+  `renderScale=8 SPRK fixture lost true backing (${JSON.stringify(live.backing)})`);
+  assertCanvasRectsEqual(canvasRect, live.canvas, 'renderScale=8 SPRK fixture CSS geometry');
+
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setSparkStateStyling(false); true');
+  const flat = await captureSettledPage(cdp, 'renderScale=8 flat SPRK-state framebuffer', 450);
+  const flatTopology = await snapshotEightXSparkState(cdp);
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setSparkStateStyling(true); true');
+  const styled = await captureSettledPage(cdp, 'renderScale=8 styled SPRK-state framebuffer', 450);
+  const styledTopology = await snapshotEightXSparkState(cdp);
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setSparkStateStyling(false); true');
+  const repeated = await captureSettledPage(cdp, 'renderScale=8 repeated flat SPRK-state framebuffer', 450);
+  const repeatedTopology = await snapshotEightXSparkState(cdp);
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setSparkStateStyling(true); true');
+  assert(JSON.stringify(flatTopology) === JSON.stringify(prepared)
+      && JSON.stringify(styledTopology) === JSON.stringify(prepared)
+      && JSON.stringify(repeatedTopology) === JSON.stringify(prepared),
+  'renderScale=8 SPRK state toggle changed semantic or presentation-state topology');
+  const samples = await sampleBackdropRefractionRegions(cdp, {
+    straight: flat.capture.data,
+    refracted: styled.capture.data,
+    repeatedStraight: repeated.capture.data,
+  }, eightXSparkResponseRegions(rawAtlas), canvasRect);
+  assertEightXSparkResponses(samples, 'renderScale=8 WebGL');
+  return {
+    cards: rawAtlas.cards.map(({ key, family, host, life, encodedState }) => ({
+      key, family, host, life, encodedState,
     })),
     occupied: prepared.occupied,
     samples,

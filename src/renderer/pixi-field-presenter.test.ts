@@ -1255,6 +1255,40 @@ describe('Pixi presenter startup configuration', () => {
     expect(eight).toContain('float semanticDensity = density;');
   });
 
+  it('restores true-8x SPRK host and life styling through the existing packed-state read', () => {
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');
+    const eightEnd = source.indexOf('const FIELD_FRAGMENT = `', eightStart);
+    const eight = source.slice(eightStart, eightEnd);
+    const helperStart = eight.indexOf('float sparkEightXHostFamily(');
+    const helperEnd = eight.indexOf('bool solidEightXGranular(', helperStart);
+    const helper = eight.slice(helperStart, helperEnd);
+    const packedStart = eight.indexOf('  bool needsPackedState =');
+    const packedEnd = eight.indexOf('  float sourceTarget =', packedStart);
+    const packed = eight.slice(packedStart, packedEnd);
+    const applicationStart = eight.indexOf('  if (uSparkStateStyling > 0.5 && sparkOwner) {');
+    const applicationEnd = eight.indexOf('  // True 8x keeps botanical state', applicationStart);
+    const application = eight.slice(applicationStart, applicationEnd);
+
+    expect(helperStart).toBeGreaterThan(0);
+    expect(helperEnd).toBeGreaterThan(helperStart);
+    expect(applicationStart).toBeGreaterThan(0);
+    expect(applicationEnd).toBeGreaterThan(applicationStart);
+    expect(eight).toContain('uniform float uSparkStateStyling;');
+    expect(eight).toContain('bool sparkOwner = material == 148.0;');
+    expect(packed).toContain('|| (uSparkStateStyling > 0.5 && sparkOwner)');
+    expect(helper).toContain('if (packedState < 32768.0) return vec3(0.0);');
+    expect(helper).toContain('float host = mod(packedState, 256.0);');
+    expect(helper).toContain('mod(floor(packedState / 256.0), 128.0)');
+    expect(helper).toContain('float sparkEightXHostFamily(float host)');
+    expect(helper).toContain('vec3 sparkStateEightXDelta(float packedState, vec2 position, vec3 sourceColor)');
+    expect(application).toContain('color += sparkStateEightXDelta(sourceTarget, uv * uFieldSize, color);');
+    expect(helper).not.toContain('texture(');
+    expect(helper).not.toContain('uTime');
+    expect(helper).not.toMatch(/\balpha\s*[+*]?=/);
+    expect(eight.match(/texture\(uWallTexture, uv\)/g)).toHaveLength(3);
+  });
+
   it('keeps Smooth powder body depth gated, bounded, and topology-neutral', () => {
     const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
     const start = source.indexOf('// Stable two-dimensional bulk gets a coherent');
