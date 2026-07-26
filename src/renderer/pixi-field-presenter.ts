@@ -122,6 +122,7 @@ uniform float uEnergyIdentityStyling;
 uniform float uLiquidFieldLighting;
 uniform float uLiquidVolumeChroma;
 uniform float uLiquidIdentityStyling;
+uniform float uLiquidSilhouetteCohesion;
 uniform float uSolidFieldLighting;
 uniform float uTranslucentFieldTransmission;
 uniform float uTranslucentLensShell;
@@ -504,12 +505,27 @@ void main() {
   // the four neighbour probes are meaningful only for ordinary liquid bodies.
   // Keeping them inside this branch avoids eight texture fetches per occupied
   // non-liquid fragment in the fifteen-million-fragment true-8x compositor.
+  // Carry only this bounded alpha scale out of the liquid branch. It lets the
+  // final premultiplied compositor trim a supported air-facing fringe without
+  // retaining the four liquid samples across the rest of the compact shader.
+  float liquidCohesionAlphaScale = 1.0;
+  bool nativeWallForLiquidCohesion = uNativeWallsActive > 0.5
+    && uLiquidSilhouetteCohesion > 0.5 && family == 2.0 && optics != 4.0
+    && traits < 0.5 && !materialEmissive && density > 0.08 && density < 0.92;
   if (family == 2.0 && optics != 4.0) {
     float exactLiquidInterior = q00 * q10 * q01 * q11;
-    float liquidCore = same(uv - vec2(uTexel.x, 0.0), material)
-      * same(uv + vec2(uTexel.x, 0.0), material)
-      * same(uv - vec2(0.0, uTexel.y), material)
-      * same(uv + vec2(0.0, uTexel.y), material);
+    // Keep the exact semantic IDs from the four existing same-material probes.
+    // Besides the established dense-body test, they distinguish true air from
+    // an unlike liquid, gas, or solid without another field fetch.
+    float liquidMaterialLeft = materialAt(uv - vec2(uTexel.x, 0.0));
+    float liquidMaterialRight = materialAt(uv + vec2(uTexel.x, 0.0));
+    float liquidMaterialTop = materialAt(uv - vec2(0.0, uTexel.y));
+    float liquidMaterialBottom = materialAt(uv + vec2(0.0, uTexel.y));
+    float liquidSameLeft = 1.0 - step(0.5, abs(liquidMaterialLeft - material));
+    float liquidSameRight = 1.0 - step(0.5, abs(liquidMaterialRight - material));
+    float liquidSameTop = 1.0 - step(0.5, abs(liquidMaterialTop - material));
+    float liquidSameBottom = 1.0 - step(0.5, abs(liquidMaterialBottom - material));
+    float liquidCore = liquidSameLeft * liquidSameRight * liquidSameTop * liquidSameBottom;
     vec4 liquidLeft = texture(uLiquidTexture, uv - vec2(uTexel.x, 0.0));
     vec4 liquidRight = texture(uLiquidTexture, uv + vec2(uTexel.x, 0.0));
     vec4 liquidTop = texture(uLiquidTexture, uv - vec2(0.0, uTexel.y));
@@ -519,6 +535,43 @@ void main() {
       max(length(liquid.rgb - liquidTop.rgb), length(liquid.rgb - liquidBottom.rgb))
     );
     vec2 liquidSlope = vec2(liquidRight.a - liquidLeft.a, liquidBottom.a - liquidTop.a) * 0.72;
+    // The normal WebGL path reduces only an ordinary, connected liquid-air
+    // fringe. Reuse this direct mesh's four liquid samples and four semantic
+    // probes to make the same conservative decision at true 8x. The scale is
+    // never above one, never creates support, and is deferred until the native
+    // wall backdrop has proved that this exact cell is wall-free.
+    float liquidForeignContact = max(
+      max(step(0.5, liquidMaterialLeft) * (1.0 - liquidSameLeft),
+        step(0.5, liquidMaterialRight) * (1.0 - liquidSameRight)),
+      max(step(0.5, liquidMaterialTop) * (1.0 - liquidSameTop),
+        step(0.5, liquidMaterialBottom) * (1.0 - liquidSameBottom))
+    );
+    if (uLiquidSilhouetteCohesion > 0.5 && traits < 0.5 && !materialEmissive
+      && liquidForeignContact < 0.5 && density > 0.08 && density < 0.92) {
+      float liquidSupportLeft = step(0.68, liquidLeft.a);
+      float liquidSupportRight = step(0.68, liquidRight.a);
+      float liquidSupportTop = step(0.68, liquidTop.a);
+      float liquidSupportBottom = step(0.68, liquidBottom.a);
+      float adjacentLiquidSupport = max(
+        max(liquidSupportLeft * liquidSupportTop, liquidSupportTop * liquidSupportRight),
+        max(liquidSupportRight * liquidSupportBottom, liquidSupportBottom * liquidSupportLeft)
+      );
+      float exposedLiquidSide = max(
+        max(1.0 - liquidSupportLeft, 1.0 - liquidSupportRight),
+        max(1.0 - liquidSupportTop, 1.0 - liquidSupportBottom)
+      );
+      float liquidNeighbourMean = (liquidLeft.a + liquidRight.a + liquidTop.a + liquidBottom.a) * 0.25;
+      float connectedFieldDensity = min(
+        density, max(density * 0.65, min(liquid.a, liquidNeighbourMean) * 0.45)
+      );
+      float liquidSilhouetteDensity = mix(
+        // The direct 8x mesh retains sharper exact coverage than normal WebGL.
+        // A 0.65 cap keeps a connected one-cell strand inside the shared
+        // <=2 RGB-RMS / <=48-byte continuity envelope without widening it.
+        density, connectedFieldDensity, adjacentLiquidSupport * exposedLiquidSide * 0.65
+      );
+      liquidCohesionAlphaScale = clamp(liquidSilhouetteDensity / max(density, 0.001), 0.0, 1.0);
+    }
     if (liquidCore > 0.5 && liquidSpeciesDifference < 0.035) {
       color *= 1.08 - depth * uLiquidOpticalDepth * 0.09;
     }
@@ -618,7 +671,11 @@ void main() {
     || (uForceActivityStyling > 0.5 && forceOwner)
     || (uVibrStateStyling > 0.5 && vibrOwner)
     || (uDeutStateStyling > 0.5 && deutOwner)
-    || (uBotanicalLifecycleStyling > 0.5 && botanicalLifecycleOwner);
+    || (uBotanicalLifecycleStyling > 0.5 && botanicalLifecycleOwner)
+    // Eligible translucent liquid already needs this exact wall texel for the
+    // final backdrop. Fold the cohesion guard into that one packed-state read
+    // so true 8x does not grow another native-wall sample.
+    || nativeWallForLiquidCohesion;
   float sourceTarget = 0.0;
   float nativeWall = 0.0;
   if (needsPackedState) {
@@ -783,14 +840,21 @@ void main() {
     alpha *= translucentAlpha;
   }
   if (material == 114.0) { color = vec3(16.0 / 255.0); alpha = 1.0; }
+  // Native walls are independent from particle occupancy. When a wall plane
+  // is active, the nativeWall scalar was hydrated above for every cohesion candidate;
+  // suppress the alpha-only trim at the exact co-located wall cell. Wall-free
+  // scenes retain the sampler-free path, and every eligible scale is <= 1.
+  if ((uNativeWallsActive < 0.5 || nativeWall < 0.5) && liquidCohesionAlphaScale < 0.999) {
+    alpha *= liquidCohesionAlphaScale;
+  }
   alpha = clamp(alpha, 0.0, 1.0);
   vec4 foreground = vec4(clamp(color, 0.0, 1.0) * alpha, alpha);
   // Opaque matter has no remaining backdrop contribution and does not spend a
   // wall sample. Every translucent semantic particle keeps the separate native
   // wall visible below it, matching the normal compositor without a new pass.
   if (uNativeWallsActive > 0.5 && alpha < 0.999) {
-    float wall = floor(texture(uWallTexture, uv).r * 255.0 + 0.5);
-    foreground = compositeEightXWallBackdrop(foreground, wall, uv * uFieldSize);
+    if (!needsPackedState) nativeWall = floor(texture(uWallTexture, uv).r * 255.0 + 0.5);
+    foreground = compositeEightXWallBackdrop(foreground, nativeWall, uv * uFieldSize);
   }
   finalColor = foreground;
 }

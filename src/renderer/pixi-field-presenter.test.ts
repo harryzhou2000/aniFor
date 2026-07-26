@@ -360,10 +360,12 @@ describe('Pixi presenter startup configuration', () => {
 
   it('bounds connected WebGL liquid-contour cohesion without new sampling', () => {
     const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
-    const blockStart = source.indexOf('    if (uLiquidSilhouetteCohesion > 0.5');
+    const normalStart = source.indexOf('const FIELD_FRAGMENT = `');
+    const blockStart = source.indexOf('    if (uLiquidSilhouetteCohesion > 0.5', normalStart);
     const blockEnd = source.indexOf('    alpha = smoothstep(', blockStart);
     const block = source.slice(blockStart, blockEnd);
 
+    expect(normalStart).toBeGreaterThan(0);
     expect(blockStart).toBeGreaterThan(0);
     expect(blockEnd).toBeGreaterThan(blockStart);
     expect(block).toContain('float liquidAirContour = adjacentLiquidSupport * exposedLiquidSide;');
@@ -861,13 +863,50 @@ describe('Pixi presenter startup configuration', () => {
 
     expect(start).toBeGreaterThan(0);
     expect(end).toBeGreaterThan(start);
-    expect(block).toContain('float liquidCore = same(');
+    expect(block).toContain('float liquidMaterialLeft = materialAt(');
+    expect(block).toContain('float liquidSameLeft = 1.0 - step(0.5, abs(liquidMaterialLeft - material));');
+    expect(block).toContain('float liquidCore = liquidSameLeft * liquidSameRight * liquidSameTop * liquidSameBottom;');
     expect(block).toContain('texture(uLiquidTexture, uv - vec2(uTexel.x, 0.0))');
     expect(block).toContain('float liquidSpeciesDifference = max(');
-    expect(eight.slice(0, start)).not.toContain('float liquidCore = same(');
+    expect(eight.slice(0, start)).not.toContain('float liquidMaterialLeft = materialAt(');
     expect(eight.slice(0, start)).not.toContain('float liquidSpeciesDifference = max(');
     // Empty-space reconstruction still needs exactly the one centre field read.
     expect(eight.match(/texture\(uLiquidTexture, uv\)/g)).toHaveLength(1);
+  });
+
+  it('restores true-8x liquid-air cohesion with an alpha-only trim and no extra samples', () => {
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');
+    const eightEnd = source.indexOf('const FIELD_FRAGMENT = `', eightStart);
+    const eight = source.slice(eightStart, eightEnd);
+    const start = eight.indexOf('// The normal WebGL path reduces only an ordinary, connected liquid-air');
+    const end = eight.indexOf('    if (liquidCore > 0.5', start);
+    const block = eight.slice(start, end);
+    const alphaStart = eight.indexOf('  float alpha = family == 1.0');
+    const alphaEnd = eight.indexOf('  vec4 foreground =', alphaStart);
+    const alpha = eight.slice(alphaStart, alphaEnd);
+    const packedStart = eight.indexOf('  bool needsPackedState =');
+    const packedEnd = eight.indexOf('  float sourceTarget =', packedStart);
+    const packed = eight.slice(packedStart, packedEnd);
+
+    expect(start).toBeGreaterThan(0);
+    expect(end).toBeGreaterThan(start);
+    expect(eight).toContain('uniform float uLiquidSilhouetteCohesion;');
+    expect(eight).toContain('float liquidCohesionAlphaScale = 1.0;');
+    expect(eight).toContain('bool nativeWallForLiquidCohesion = uNativeWallsActive > 0.5');
+    expect(block).toContain('float liquidForeignContact = max(');
+    expect(block).toContain('adjacentLiquidSupport * exposedLiquidSide * 0.65');
+    expect(block).toContain('min(liquid.a, liquidNeighbourMean) * 0.45');
+    expect(block).toContain('clamp(liquidSilhouetteDensity / max(density, 0.001), 0.0, 1.0)');
+    expect(block).not.toContain('texture(');
+    expect(packed).toContain('|| nativeWallForLiquidCohesion;');
+    expect(alpha).toContain('uNativeWallsActive < 0.5 || nativeWall < 0.5');
+    expect(alpha).toContain('alpha *= liquidCohesionAlphaScale;');
+    expect(eight.match(/texture\(uLiquidTexture, uv - vec2\(uTexel\.x, 0\.0\)\)/g)).toHaveLength(1);
+    expect(eight.match(/texture\(uLiquidTexture, uv \+ vec2\(uTexel\.x, 0\.0\)\)/g)).toHaveLength(1);
+    // Empty-wall, packed-state, and translucent-backdrop composition remain
+    // the direct shader's three pre-existing guarded wall reads.
+    expect(eight.match(/texture\(uWallTexture, uv\)/g)).toHaveLength(3);
   });
 
   it('restores true-8x wet-sediment cohesion with one guarded RGB-only field sample', () => {
@@ -913,7 +952,7 @@ describe('Pixi presenter startup configuration', () => {
     expect(finalStart).toBeGreaterThan(0);
     expect(final).toContain('uNativeWallsActive > 0.5 && alpha < 0.999');
     expect(final).toContain('texture(uWallTexture, uv)');
-    expect(final).toContain('compositeEightXWallBackdrop(foreground, wall, uv * uFieldSize)');
+    expect(final).toContain('compositeEightXWallBackdrop(foreground, nativeWall, uv * uFieldSize)');
     expect(eight).not.toContain('wallAt(');
     expect(source).toContain('private nativeWallsActive = false;');
     expect(source).toContain('!this.nativeWallsHydrated || wallRectangles.length');

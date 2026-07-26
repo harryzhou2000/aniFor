@@ -12521,6 +12521,39 @@ async function auditRenderScaleEight(cdp, dpr) {
     return { occupied: audit.occupiedCells(), cells: points.map(([x, y]) => audit.cell(x, y)) };
   })()`);
   await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setLiquidFieldLighting(true); true');
+  // The direct 8x shader has its own compact liquid compositor, so prove this
+  // alpha-only contour decision on completed GPU fences rather than assuming
+  // the normal-WebGL capture is representative. Keep the regular field light
+  // enabled: cohesion must compose with the canonical body material, not a
+  // flattened diagnostic path.
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setLiquidSilhouetteCohesion(false); true');
+  const flatLiquidSilhouetteCapture = await captureSettledPage(
+    cdp, 'renderScale=8 flat liquid-silhouette framebuffer', 450,
+  );
+  const flatLiquidSilhouetteSemantics = await evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    const points = [[267, 82], [190, 164], [302, 172], [341, 231]];
+    return { occupied: audit.occupiedCells(), cells: points.map(([x, y]) => audit.cell(x, y)) };
+  })()`);
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setLiquidSilhouetteCohesion(true); true');
+  const cohesiveLiquidSilhouetteCapture = await captureSettledPage(
+    cdp, 'renderScale=8 cohesive liquid-silhouette framebuffer', 450,
+  );
+  const cohesiveLiquidSilhouetteSemantics = await evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    const points = [[267, 82], [190, 164], [302, 172], [341, 231]];
+    return { occupied: audit.occupiedCells(), cells: points.map(([x, y]) => audit.cell(x, y)) };
+  })()`);
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setLiquidSilhouetteCohesion(false); true');
+  const repeatedFlatLiquidSilhouetteCapture = await captureSettledPage(
+    cdp, 'renderScale=8 repeated flat liquid-silhouette framebuffer', 450,
+  );
+  const repeatedFlatLiquidSilhouetteSemantics = await evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    const points = [[267, 82], [190, 164], [302, 172], [341, 231]];
+    return { occupied: audit.occupiedCells(), cells: points.map(([x, y]) => audit.cell(x, y)) };
+  })()`);
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setLiquidSilhouetteCohesion(true); true');
   await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setEmissionVolumeChroma(false); true');
   const flatEmissionVolumeCapture = await captureSettledPage(
     cdp, 'renderScale=8 flat emission-volume framebuffer', 450,
@@ -13014,6 +13047,50 @@ async function auditRenderScaleEight(cdp, dpr) {
     'lavaMeniscusControl8x', 'isolatedMeniscusControl8x', 'unlikeMeniscusControl8x',
   ]) assert(liquidFieldLighting[name].rgbPeak <= 1,
     `renderScale=8 liquid meniscus changed ${name} (${JSON.stringify(liquidFieldLightingSamples)})`);
+  assert(JSON.stringify(flatLiquidSilhouetteSemantics) === JSON.stringify(cohesiveLiquidSilhouetteSemantics)
+    && JSON.stringify(flatLiquidSilhouetteSemantics)
+      === JSON.stringify(repeatedFlatLiquidSilhouetteSemantics),
+  `renderScale=8 liquid silhouette cohesion changed semantic occupancy (${JSON.stringify({
+    flatLiquidSilhouetteSemantics, cohesiveLiquidSilhouetteSemantics,
+    repeatedFlatLiquidSilhouetteSemantics,
+  })})`);
+  const liquidSilhouetteSamples = await sampleBackdropRefractionRegions(cdp, {
+    straight: flatLiquidSilhouetteCapture.capture.data,
+    refracted: cohesiveLiquidSilhouetteCapture.capture.data,
+    repeatedStraight: repeatedFlatLiquidSilhouetteCapture.capture.data,
+  }, [
+    { name: 'connectedLiquidShore8x', x: 267, y: 82, radiusX: 82, radiusY: 52 },
+    { name: 'isolatedLiquidSilhouetteControl8x', x: 190.5, y: 164.5, radius: 2 },
+    { name: 'sparseLiquidSilhouetteControl8x', x: 224, y: 153, radiusX: 28, radiusY: 2 },
+    { name: 'unlikeLiquidSilhouetteControl8x', x: 302.5, y: 172, radiusX: 0.45, radiusY: 6 },
+    { name: 'lavaSilhouetteControl8x', x: 340.5, y: 231.5, radius: 2 },
+  ], geometry.canvas);
+  const liquidSilhouette = Object.fromEntries(
+    liquidSilhouetteSamples.map((sample) => [sample.name, sample]),
+  );
+  assert(liquidSilhouette.connectedLiquidShore8x.rgbRms >= 0.004
+    && liquidSilhouette.connectedLiquidShore8x.rgbPeak > 0
+    // Direct 8x retains a crisp exact-coverage edge, so a small set of
+    // anti-aliased shore pixels can carry a higher peak than normal WebGL's
+    // filtered path. Its response remains a <=2.5% alpha-trimmed region with
+    // a unidirectional (non-expanding) mean and the bounded 64-byte ceiling.
+    && liquidSilhouette.connectedLiquidShore8x.coverage > 0
+    && liquidSilhouette.connectedLiquidShore8x.coverage <= 0.025
+    && liquidSilhouette.connectedLiquidShore8x.signedMean < -0.05
+    && liquidSilhouette.connectedLiquidShore8x.rgbPeak <= 64
+    && liquidSilhouette.connectedLiquidShore8x.repeatRgbPeak <= 1,
+  `renderScale=8 liquid cohesion did not make a bounded connected-shore response (${JSON.stringify(liquidSilhouetteSamples)})`);
+  const sparseLiquidSilhouette = liquidSilhouette.sparseLiquidSilhouetteControl8x;
+  assert(sparseLiquidSilhouette.coverage <= 0.02
+    && sparseLiquidSilhouette.rgbRms <= 2 && sparseLiquidSilhouette.rgbPeak <= 48
+    && sparseLiquidSilhouette.repeatRgbPeak <= 1,
+  `renderScale=8 liquid cohesion escaped its sparse strand (${JSON.stringify(liquidSilhouetteSamples)})`);
+  for (const name of [
+    'isolatedLiquidSilhouetteControl8x', 'unlikeLiquidSilhouetteControl8x',
+    'lavaSilhouetteControl8x',
+  ]) assert(liquidSilhouette[name].rgbPeak <= 1
+    && liquidSilhouette[name].repeatRgbPeak <= 1,
+  `renderScale=8 liquid cohesion escaped ${name} (${JSON.stringify(liquidSilhouetteSamples)})`);
   const emissionVolumeChromaSamples = await sampleBackdropRefractionRegions(cdp, {
     straight: flatEmissionVolumeCapture.capture.data,
     refracted: chromaticEmissionVolumeCapture.capture.data,
@@ -13144,6 +13221,7 @@ async function auditRenderScaleEight(cdp, dpr) {
     solidFieldLightingSamples,
     solidCurvatureSamples,
     liquidFieldLightingSamples,
+    liquidSilhouetteSamples,
     emissionVolumeChromaSamples,
     liquidVolumeChromaSamples,
     liquidOpticalDepthSamples,
