@@ -1190,6 +1190,32 @@ describe('Pixi presenter startup configuration', () => {
     expect(`${solid}${powder}`).not.toContain('texture(');
   });
 
+  it('restores the global surface-contour control at true 8x without changing support', () => {
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');
+    const eightEnd = source.indexOf('const FIELD_FRAGMENT = `', eightStart);
+    const eight = source.slice(eightStart, eightEnd);
+    const helperStart = eight.indexOf('vec3 applySurfaceContourEightX(');
+    const helperEnd = eight.indexOf('void main()', helperStart);
+    const helper = eight.slice(helperStart, helperEnd);
+    const powderStart = eight.indexOf('// Smooth, supported powder retains a coloured stable edge.');
+    const powderEnd = eight.indexOf('  // Deep rigid bodies reuse', powderStart);
+    const powder = eight.slice(powderStart, powderEnd);
+    const solidStart = eight.indexOf('// Restore the global family-coloured surface-contour control');
+    const solidEnd = eight.indexOf('    // Derive an intrinsic contour curvature', solidStart);
+    const solid = eight.slice(solidStart, solidEnd);
+
+    expect(helperStart).toBeGreaterThan(0);
+    expect(helperEnd).toBeGreaterThan(helperStart);
+    expect(eight).toContain('uniform float uSurfaceContourLighting;');
+    expect(powder).toContain('smoothstep(1.5, 3.0, q00 + q10 + q01 + q11)');
+    expect(powder).toContain('uSurfaceContourLighting > 0.5 && uPowderStyle > 1.5');
+    expect(powder).toContain('applySurfaceContourEightX(color, density, powderSlope, optics, 1.0)');
+    expect(solid).toContain('applySurfaceContourEightX(color, density, solidSurfaceSlope, optics, 0.0)');
+    expect(`${helper}${powder}${solid}`).not.toContain('texture(');
+    expect(`${helper}${powder}${solid}`).not.toMatch(/\balpha\s*[+*]?=/);
+  });
+
   it('keeps Smooth powder body depth gated, bounded, and topology-neutral', () => {
     const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
     const start = source.indexOf('// Stable two-dimensional bulk gets a coherent');

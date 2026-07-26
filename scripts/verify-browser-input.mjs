@@ -12428,6 +12428,23 @@ async function auditRenderScaleEight(cdp, dpr) {
     return { occupied: audit.occupiedCells(), cells: points.map(([x, y]) => audit.cell(x, y)) };
   })()`);
   await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setSolidCurvatureDepth(true); true');
+  // Surface contour lighting is a separate, material-coloured edge cue. The
+  // direct true-8x mesh must consume the existing global switch without a new
+  // resource or support decision, so own each off/on/off capture with the
+  // completed-frame helper before the next styling family changes state.
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setSurfaceContourLighting(false); true');
+  const flatSurfaceContourCapture = await captureSettledPage(
+    cdp, 'renderScale=8 flat surface-contour framebuffer', 450,
+  );
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setSurfaceContourLighting(true); true');
+  const litSurfaceContourCapture = await captureSettledPage(
+    cdp, 'renderScale=8 lit surface-contour framebuffer', 450,
+  );
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setSurfaceContourLighting(false); true');
+  const repeatedFlatSurfaceContourCapture = await captureSettledPage(
+    cdp, 'renderScale=8 repeated flat surface-contour framebuffer', 450,
+  );
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setSurfaceContourLighting(true); true');
   await evaluate(cdp, `(() => {
     const audit = window.__ANIFOR_INPUT_AUDIT__;
     audit.setTranslucentFieldTransmission(false);
@@ -13048,6 +13065,31 @@ async function auditRenderScaleEight(cdp, dpr) {
     && solidCurvature.metalDenseCore8x.rgbPeak <= 1
     && solidCurvatureSamples.every((sample) => sample.repeatRgbPeak <= 1),
   `renderScale=8 solid curvature changed a straight/core control or was nondeterministic (${JSON.stringify(solidCurvatureSamples)})`);
+  const surfaceContourSamples = await sampleBackdropRefractionRegions(cdp, {
+    straight: flatSurfaceContourCapture.capture.data,
+    refracted: litSurfaceContourCapture.capture.data,
+    repeatedStraight: repeatedFlatSurfaceContourCapture.capture.data,
+  }, [
+    { name: 'metalSurfaceContour8x', x: 392, y: 223, radius: 3.5 },
+    { name: 'smoothSandSlopeContour8x', x: 80, y: 146, radiusX: 42, radiusY: 3 },
+    { name: 'isolatedSandSurfaceContourControl8x', x: 190.5, y: 176.5, radius: 1.5 },
+  ], geometry.canvas);
+  const surfaceContour = Object.fromEntries(
+    surfaceContourSamples.map((sample) => [sample.name, sample]),
+  );
+  assert(surfaceContour.metalSurfaceContour8x.rgbRms >= 0.008
+    && surfaceContour.metalSurfaceContour8x.rgbPeak > 0
+    && surfaceContour.metalSurfaceContour8x.rgbPeak <= 16
+    && surfaceContour.metalSurfaceContour8x.repeatRgbPeak <= 1,
+  `renderScale=8 Metal lost bounded surface-contour lighting (${JSON.stringify(surfaceContourSamples)})`);
+  assert(surfaceContour.smoothSandSlopeContour8x.rgbRms >= 0.003
+    && surfaceContour.smoothSandSlopeContour8x.rgbPeak > 0
+    && surfaceContour.smoothSandSlopeContour8x.rgbPeak <= 16
+    && surfaceContour.smoothSandSlopeContour8x.repeatRgbPeak <= 1,
+  `renderScale=8 Smooth Sand slope lost bounded surface-contour lighting (${JSON.stringify(surfaceContourSamples)})`);
+  assert(surfaceContour.isolatedSandSurfaceContourControl8x.rgbPeak <= 1
+    && surfaceContour.isolatedSandSurfaceContourControl8x.repeatRgbPeak <= 1,
+  `renderScale=8 surface contour altered an isolated Sand grain (${JSON.stringify(surfaceContourSamples)})`);
   assert(JSON.stringify(flatLiquidFieldLightingSemantics) === JSON.stringify(litLiquidFieldLightingSemantics)
     && JSON.stringify(flatLiquidFieldLightingSemantics)
       === JSON.stringify(repeatedFlatLiquidFieldLightingSemantics),
@@ -13262,6 +13304,7 @@ async function auditRenderScaleEight(cdp, dpr) {
     gasIdentitySamples,
     solidFieldLightingSamples,
     solidCurvatureSamples,
+    surfaceContourSamples,
     liquidFieldLightingSamples,
     liquidSilhouetteSamples,
     emissionVolumeChromaSamples,

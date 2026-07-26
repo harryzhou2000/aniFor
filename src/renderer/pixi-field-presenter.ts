@@ -123,6 +123,7 @@ uniform float uLiquidFieldLighting;
 uniform float uLiquidVolumeChroma;
 uniform float uLiquidIdentityStyling;
 uniform float uLiquidSilhouetteCohesion;
+uniform float uSurfaceContourLighting;
 uniform float uSolidFieldLighting;
 uniform float uTranslucentFieldTransmission;
 uniform float uTranslucentBackdropRefraction;
@@ -337,6 +338,28 @@ vec3 solidEightXBodyShadow(float optics) {
   if (optics == 12.0) return vec3(1.00, 0.78, 0.54);
   return vec3(0.88, 0.80, 0.68);
 }
+// The normal compositor's surface-contour control carries a family-coloured
+// key/fill across liquid, solid, and Smooth-powder edges. At true 8x, restore
+// its solid/powder body read from the already-live 2x2 owner shape. This is
+// deliberately arithmetic-only: a contour changes RGB but never density,
+// alpha, ownership, or a later native-wall composite.
+vec3 applySurfaceContourEightX(
+  vec3 color, float density, vec2 slope, float optics, float powder
+) {
+  float slopeLength = length(slope);
+  if (slopeLength <= 0.0001) return color;
+  float shell = smoothstep(0.05, 0.31, density)
+    * (1.0 - smoothstep(0.57, 0.91, density));
+  if (shell <= 0.0001) return color;
+  vec2 normal = slope / slopeLength;
+  float directional = dot(normal, normalize(vec2(-0.58, -0.815)));
+  vec3 key = powder > 0.5 ? vec3(1.00, 0.76, 0.42) : solidEightXBodyKey(optics);
+  vec3 shadow = powder > 0.5 ? vec3(0.72, 0.52, 0.30) : solidEightXBodyShadow(optics);
+  float keyWeight = shell * (0.006 + max(0.0, directional) * 0.024);
+  float shadowWeight = shell * (0.004 + max(0.0, -directional) * 0.015);
+  color += (vec3(1.0) - clamp(color, 0.0, 1.0)) * key * keyWeight;
+  return color * (vec3(1.0) - shadow * shadowWeight);
+}
 void main() {
   vec2 uv = vFieldCoord;
   vec4 semantic = texture(uFieldTexture, clamp(uv, uTexel * 0.5, vec2(1.0) - uTexel * 0.5));
@@ -445,6 +468,19 @@ void main() {
   if (family == 4.0) {
     float powderDepth = depth * uPowderBodyDepth;
     color *= vec3(1.02 + density * 0.07) - powderDepth * vec3(0.10, 0.07, 0.04);
+    // Smooth, supported powder retains a coloured stable edge. Local and
+    // Grains are intentionally exact no-ops, as are a one-cell grain and
+    // traits/emissive owners. The compact support guard preserves fine holes
+    // and prevents the contour from becoming a coarse blanket over a pile.
+    if (uSurfaceContourLighting > 0.5 && uPowderStyle > 1.5
+      && traits < 0.5 && !materialEmissive) {
+      float powderSupport = smoothstep(1.5, 3.0, q00 + q10 + q01 + q11);
+      vec2 powderSlope = vec2(
+        mix(q10 - q00, q11 - q01, blend.y),
+        mix(q01 - q00, q11 - q10, blend.x)
+      );
+      color = mix(color, applySurfaceContourEightX(color, density, powderSlope, optics, 1.0), powderSupport);
+    }
   }
   // Deep rigid bodies reuse the existing exact-species occupancy, auxiliary
   // thickness byte, and compact analytic grid. At true 8x this gives smooth,
@@ -454,6 +490,19 @@ void main() {
   // and unlike-material seams presentation-exact.
   if (family == 0.0) {
     float solidBaseLight = 0.94 + density * 0.13;
+    // Restore the global family-coloured surface-contour control with the
+    // direct mesh's existing exact-owner shape. This complements, rather than
+    // replaces, the separate curvature-depth toggle below: straight contours
+    // receive a small directional key/fill while curvature remains a strict
+    // straight-edge no-op.
+    if (uSurfaceContourLighting > 0.5 && traits < 0.5 && !materialEmissive
+      && !solidEightXGranular(optics)) {
+      vec2 solidSurfaceSlope = vec2(
+        mix(q10 - q00, q11 - q01, blend.y),
+        mix(q01 - q00, q11 - q10, blend.x)
+      );
+      color = applySurfaceContourEightX(color, density, solidSurfaceSlope, optics, 0.0);
+    }
     // Derive an intrinsic contour curvature from the already-live 2x2 exact
     // owner samples. Hermite's first/second derivatives make a horizontal or
     // vertical straight contour an exact no-op; the contour band also keeps
