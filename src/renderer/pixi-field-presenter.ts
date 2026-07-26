@@ -2845,12 +2845,17 @@ void main() {
     float surfaceSpecular = pow(
       max(0.0, dot(liquidNormal, normalize(vec3(-0.35, -0.55, 0.92)))), 12.0
     ) * mix(1.0, 0.16, liquidDepth);
+    // Keep broad-liquid light legible at normal zoom without producing a row
+    // of vertical bands across a still pool. Two oblique, low-frequency
+    // directions make the existing procedural sheen read as a reflected
+    // volume; this replaces the old near-vertical carrier and costs the same
+    // two analytic waves (no texture, field, pass, or semantic change).
     float broadSheen = 0.5 + 0.5
-      * sin(fieldPosition.x * 0.041 + fieldPosition.y * 0.016 + material * 0.83 + uTime * 0.22)
-      * sin(fieldPosition.y * 0.029 - fieldPosition.x * 0.012 - uTime * 0.17);
+      * sin(fieldPosition.x * 0.031 + fieldPosition.y * 0.023 + material * 0.83 + uTime * 0.20)
+      * sin(fieldPosition.y * 0.043 - fieldPosition.x * 0.019 - uTime * 0.13);
     float causticWave = 0.5 + 0.5 * sin(
-      fieldPosition.x * 0.092
-      + sin(fieldPosition.y * 0.037 + uTime * 0.11) * 1.45
+      fieldPosition.x * 0.061 + fieldPosition.y * 0.021
+      + sin(fieldPosition.y * 0.051 - fieldPosition.x * 0.024 + uTime * 0.11) * 1.28
       + material * 0.67
     );
     float caustic = pow(causticWave, 6.0) * liquidDepth;
@@ -2860,10 +2865,15 @@ void main() {
     // and self-luminous Lava keeps the weakest reflected modulation. This is
     // RGB-only and field-depth-gated, so sparse droplets, species seams, and
     // reconstructed support remain authoritative.
-    float macroSheenGain = 0.075 + aqueous * 0.055 + oily * 0.085
+    // Water is deliberately calmer than the other liquid families. Its body
+    // gets depth, meniscus, transmission, and reflection below, so a strong
+    // procedural wave here reads as zebra striping rather than moving water.
+    // Keep the field-visible response, but reserve the larger motif gains for
+    // oil, corrosives, metallic liquids, and viscous matter.
+    float macroSheenGain = 0.040 + aqueous * 0.030 + oily * 0.085
       + corrosive * 0.225 - molten * 0.015 + cryogenic * 0.06
       + metallicLiquid * 0.15 + viscousLiquid * 0.11;
-    float macroCausticGain = 0.055 + aqueous * 0.065 - oily * 0.025
+    float macroCausticGain = 0.035 + aqueous * 0.035 - oily * 0.025
       + corrosive * 0.195 - molten * 0.035 + cryogenic * 0.08
       - metallicLiquid * 0.04 - viscousLiquid * 0.03;
     float broadCaustic = smoothstep(0.18, 0.88, causticWave) - 0.5;
