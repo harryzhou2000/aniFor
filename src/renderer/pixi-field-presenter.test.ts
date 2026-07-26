@@ -1042,6 +1042,7 @@ describe('Pixi presenter startup configuration', () => {
     expect(block).toContain('bool forceOwner = material == 115.0 || material == 116.0;');
     expect(block).toContain('bool vibrOwner = material == 99.0 || material == 113.0;');
     expect(block).toContain('bool deutOwner = material == 100.0;');
+    expect(block).toContain('bool lavaAncestryOwner = material == 11.0 && family == 2.0 && !materialEmissive;');
     expect(block).toContain('bool botanicalLifecycleOwner = material == 50.0 || material == 10.0;');
     expect(block).toContain('bool needsPackedState =');
     expect(block).toContain('vec4 packedState = texture(uWallTexture, uv);');
@@ -1050,6 +1051,34 @@ describe('Pixi presenter startup configuration', () => {
     // direct shader; exact-owner state decoding itself still consumes one.
     expect(block).toContain('float sourceTarget = 0.0;');
     expect(block).toContain('float nativeWall = 0.0;');
+  });
+
+  it('restores native Lava ancestry at true 8x through the shared state word only', () => {
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');
+    const eightEnd = source.indexOf('const FIELD_FRAGMENT = `', eightStart);
+    const eight = source.slice(eightStart, eightEnd);
+    const helperStart = eight.indexOf('float lavaAncestryEightXFamily(');
+    const helperEnd = eight.indexOf('bool solidEightXGranular(', helperStart);
+    const helper = eight.slice(helperStart, helperEnd);
+    const start = eight.indexOf('// Native Lava ancestry is visible only on its exact liquid owner.');
+    const end = eight.indexOf('  // True 8x keeps botanical state', start);
+    const block = eight.slice(start, end);
+
+    expect(helperStart).toBeGreaterThan(0);
+    expect(helperEnd).toBeGreaterThan(helperStart);
+    expect(start).toBeGreaterThan(0);
+    expect(end).toBeGreaterThan(start);
+    expect(eight).toContain('uniform float uLavaAncestryStyling;');
+    expect(eight).toContain('uLavaAncestryStyling > 0.5 && lavaAncestryOwner');
+    expect(helper).toContain('mod(floor(packedState / 256.0), 2.0) < 0.5');
+    expect(helper).toContain('float origin = mod(packedState, 256.0);');
+    expect(helper).toContain('lavaAncestryEightXFamily(origin)');
+    expect(helper).not.toContain('texture(');
+    expect(block).toContain('nativeWall < 0.5');
+    expect(block).toContain('lavaAncestryEightXDelta(sourceTarget, uv * uFieldSize)');
+    expect(block).not.toMatch(/\balpha\s*[+*]?=/);
+    expect(block).not.toContain('texture(');
   });
 
   it('keeps true-8x botanical identity and native lifecycle state RGB-only and resource-free', () => {

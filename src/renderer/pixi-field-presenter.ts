@@ -130,6 +130,7 @@ uniform float uSourceTargetStyling;
 uniform float uForceActivityStyling;
 uniform float uVibrStateStyling;
 uniform float uDeutStateStyling;
+uniform float uLavaAncestryStyling;
 uniform float uBotanicalIdentityStyling;
 uniform float uBotanicalLifecycleStyling;
 float materialAt(vec2 uv) {
@@ -245,6 +246,41 @@ vec3 liquidIdentityEightXDelta(
   vec3 identity = (vec3(0.018, 0.022, 0.026) + hue * 0.056)
     * motif + hue * (slopeLight - 0.5) * 0.018;
   return clamp(identity * support, vec3(-0.055), vec3(0.055));
+}
+// Lava's exact native ctype is retained in the shared packed B/A word. Keep
+// the ancestry grammar in this direct shader compact and owner-local: no field
+// reconstruction, alpha decision, or additional sampler is needed at 15M
+// fragments. The native present bit makes untyped Lava an exact no-op.
+float lavaAncestryEightXFamily(float origin) {
+  if (origin == 1.0 || origin == 21.0 || origin == 22.0 || origin == 24.0
+    || origin == 25.0 || origin == 26.0 || origin == 28.0 || origin == 29.0
+    || origin == 44.0 || origin == 76.0 || origin == 78.0) return 1.0;
+  if (origin == 23.0 || origin == 30.0 || origin == 46.0 || origin == 67.0
+    || origin == 70.0 || origin == 72.0 || origin == 73.0 || origin == 75.0
+    || origin == 82.0 || origin == 151.0) return 2.0;
+  if (origin == 7.0 || origin == 94.0) return 3.0;
+  if (origin == 51.0 || origin == 143.0 || origin == 144.0
+    || origin == 145.0 || origin == 146.0 || origin == 147.0) return 4.0;
+  if (origin == 108.0 || origin == 109.0 || origin == 112.0) return 5.0;
+  return 0.0;
+}
+vec3 lavaAncestryEightXDelta(float packedState, vec2 position) {
+  if (mod(floor(packedState / 256.0), 2.0) < 0.5) return vec3(0.0);
+  float origin = mod(packedState, 256.0);
+  float family = lavaAncestryEightXFamily(origin);
+  if (family < 0.5) return vec3(0.0);
+  vec2 cell = floor(position);
+  float identityMark = step(mod(cell.x * 3.0 + cell.y * 5.0 + origin * 7.0, 17.0), 1.0);
+  float familyBand = step(
+    mod(cell.x * (family + 1.0) - cell.y * (6.0 - family) + origin, 23.0), 1.0
+  );
+  float gain = identityMark > 0.5 ? 1.0 : familyBand > 0.5 ? 0.56 : 0.18;
+  vec3 key = family == 1.0 ? vec3(-5.0, 6.0, 14.0)
+    : family == 2.0 ? vec3(2.0, 12.0, 4.0)
+    : family == 3.0 ? vec3(-6.0, 14.0, 9.0)
+    : family == 4.0 ? vec3(-10.0, 9.0, 16.0)
+    : vec3(-6.0, 16.0, -2.0);
+  return clamp(key * gain, vec3(-16.0), vec3(16.0)) / 255.0;
 }
 bool solidEightXGranular(float optics) {
   return optics == 7.0 || optics == 13.0 || optics == 14.0 || optics == 15.0;
@@ -662,6 +698,7 @@ void main() {
   bool forceOwner = material == 115.0 || material == 116.0;
   bool vibrOwner = material == 99.0 || material == 113.0;
   bool deutOwner = material == 100.0;
+  bool lavaAncestryOwner = material == 11.0 && family == 2.0 && !materialEmissive;
   bool botanicalLifecycleOwner = material == 50.0 || material == 10.0;
   // Most 8x fragments have no retained native state. Decode the B/A state and
   // co-located native wall exactly once only for owners whose enabled RGB
@@ -671,6 +708,7 @@ void main() {
     || (uForceActivityStyling > 0.5 && forceOwner)
     || (uVibrStateStyling > 0.5 && vibrOwner)
     || (uDeutStateStyling > 0.5 && deutOwner)
+    || (uLavaAncestryStyling > 0.5 && lavaAncestryOwner)
     || (uBotanicalLifecycleStyling > 0.5 && botanicalLifecycleOwner)
     // Eligible translucent liquid already needs this exact wall texel for the
     // final backdrop. Fold the cohesion guard into that one packed-state read
@@ -738,6 +776,12 @@ void main() {
     float concentration = ordinary * 0.45 + ignition * 0.25
       + sqrt(min(1.0, compressed)) * 0.30;
     color += concentration * vec3(10.0, 19.0, 28.0) / 255.0;
+  }
+  // Native Lava ancestry is visible only on its exact liquid owner. The shared
+  // packed read above also exposes a co-located wall, which must remain an
+  // independent backdrop rather than turning Lava ctype into a wall effect.
+  if (uLavaAncestryStyling > 0.5 && lavaAncestryOwner && nativeWall < 0.5) {
+    color += lavaAncestryEightXDelta(sourceTarget, uv * uFieldSize);
   }
   // True 8x keeps botanical state on the existing packed B/A word. This is
   // RGB-only compact arithmetic: no additional texture, field, pass, or

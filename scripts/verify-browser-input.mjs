@@ -13186,6 +13186,14 @@ async function auditRenderScaleEight(cdp, dpr) {
   stage('source-target-ready');
   const vibrStateAudit = await auditEightXVibrStateGraphics(cdp, geometry.canvas);
   stage('vibr-state-ready');
+  // The shared Lava ancestry audit normally samples a complete backing canvas.
+  // At true 8x that would allocate an avoidable 60 MiB ImageData copy, so keep
+  // the same six-state/topology proof but sample only composed page regions
+  // after each completed GPU fence.
+  const lavaStateGraphics = await auditEightXLavaStateGraphics(cdp, geometry.canvas);
+  stage('lava-state-ready');
+  // Keep the DEUT fixture last: its native state is intentionally retained for
+  // the forced-fence and real-context-loss recovery probes immediately below.
   const deutStateAudit = await auditEightXDeutStateGraphics(cdp, geometry.canvas);
   stage('deut-state-ready');
   const forcedStallRecovery = await auditEightXNativeStateRecovery(
@@ -13238,6 +13246,7 @@ async function auditRenderScaleEight(cdp, dpr) {
     sourceTargetGraphics,
     vibrStateGraphics,
     deutStateGraphics,
+    lavaStateGraphics,
     forcedStallRecovery,
     contextLossRecovery,
   };
@@ -13361,6 +13370,144 @@ async function auditEightXSourceTargetGraphics(cdp, canvasRect) {
   return {
     cards: atlas.cards.map(({ owner, ownerCode, target, targetCode, encodedState }) => ({
       owner, ownerCode, target, targetCode, encodedState,
+    })),
+    occupied: prepared.occupied,
+    samples,
+    exactRepeatedOff: samples.every(({ repeatRgbPeak }) => repeatRgbPeak <= 1),
+  };
+}
+
+async function snapshotEightXLavaState(cdp) {
+  return evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    const atlas = audit.lavaStateGraphicsAtlas();
+    const inside = (x, y, rect) => x >= rect.x && x < rect.x + rect.width
+      && y >= rect.y && y < rect.y + rect.height;
+    const exactRect = (rect, material, state) => {
+      for (let y = rect.y; y < rect.y + rect.height; y++) {
+        for (let x = rect.x; x < rect.x + rect.width; x++) {
+          if (audit.cell(x, y) !== material || audit.presentationState(x, y) !== state) return false;
+        }
+      }
+      return true;
+    };
+    return {
+      occupied: audit.occupiedCells(),
+      cards: atlas.cards.map((entry) => {
+        let bodyExact = true;
+        for (let y = entry.body.y; y < entry.body.y + entry.body.height; y++) {
+          for (let x = entry.body.x; x < entry.body.x + entry.body.width; x++) {
+            const authoredAir = inside(x, y, entry.authoredHole) || inside(x, y, entry.openNotch);
+            bodyExact = bodyExact
+              && audit.cell(x, y) === (authoredAir ? 0 : entry.material)
+              && audit.presentationState(x, y) === (authoredAir ? 0 : entry.encodedState);
+          }
+        }
+        return {
+          key: entry.key, material: entry.material, origin: entry.origin,
+          originCode: entry.originCode, encodedState: entry.encodedState, bodyExact,
+          thinExact: exactRect(entry.thinStructure, entry.material, entry.encodedState),
+          isolatedExact: audit.cell(entry.isolated.x, entry.isolated.y) === entry.material
+            && audit.presentationState(entry.isolated.x, entry.isolated.y) === entry.encodedState,
+          zeroExact: exactRect(entry.zeroState, entry.material, 0),
+          wrongOwnerExact: exactRect(entry.wrongOwner, 1, entry.encodedState),
+          waterExact: exactRect(entry.waterControl, 2, entry.encodedState),
+          cooledExact: exactRect(entry.cooledSolidControl, entry.cooledMaterial, 0),
+          blankExact: exactRect(entry.guardedBlank, 0, 0),
+        };
+      }),
+    };
+  })()`);
+}
+
+function assertEightXLavaTopology(snapshot, label) {
+  const expectedKeys = 'untyped,silicate,metal,mineral,electronic,radioactive';
+  const expectedOrigins = '0,76,70,7,51,109';
+  const expectedStates = '256,332,326,263,307,365';
+  assert(snapshot.cards.length === 6
+      && snapshot.cards.map(({ key }) => key).join(',') === expectedKeys
+      && snapshot.cards.map(({ origin }) => origin).join(',') === expectedOrigins
+      && snapshot.cards.map(({ encodedState }) => encodedState).join(',') === expectedStates
+      && snapshot.cards.every((card) => card.material === 11 && card.bodyExact
+        && card.thinExact && card.isolatedExact && card.zeroExact && card.wrongOwnerExact
+        && card.waterExact && card.cooledExact && card.blankExact),
+  `${label}: Lava ancestry semantic/state topology changed (${JSON.stringify(snapshot)})`);
+}
+
+function eightXLavaResponseRegions(atlas) {
+  const centre = (rect) => ({ x: rect.x + rect.width / 2, y: rect.y + rect.height / 2 });
+  return atlas.cards.flatMap((entry) => [
+    { name: `LAVA-${entry.key}-core`, ...centre(entry.coreProbe), radiusX: 4, radiusY: 4 },
+    { name: `LAVA-${entry.key}-zero`, ...centre(entry.zeroState), radiusX: 4, radiusY: 4 },
+    { name: `LAVA-${entry.key}-wrong-owner`, ...centre(entry.wrongOwner), radiusX: 4, radiusY: 4 },
+    { name: `LAVA-${entry.key}-water`, ...centre(entry.waterControl), radiusX: 4, radiusY: 4 },
+    { name: `LAVA-${entry.key}-cooled`, ...centre(entry.cooledSolidControl), radiusX: 4, radiusY: 4 },
+  ]);
+}
+
+function assertEightXLavaResponses(samples, label) {
+  const byName = Object.fromEntries(samples.map((sample) => [sample.name, sample]));
+  const untyped = byName['LAVA-untyped-core'];
+  assert(untyped?.rgbPeak <= 1 && untyped.repeatRgbPeak <= 1,
+    `${label}: untyped Lava was not an exact ancestry-style no-op (${JSON.stringify(untyped)})`);
+  const typed = ['silicate', 'metal', 'mineral', 'electronic', 'radioactive'].map(
+    (key) => byName[`LAVA-${key}-core`],
+  );
+  assert(typed.every((sample) => sample && sample.rgbRms >= 0.08 && sample.rgbRms <= 32
+      && sample.rgbPeak > 0 && sample.rgbPeak <= 48 && sample.repeatRgbPeak <= 1),
+  `${label}: typed Lava ancestry response is absent, unbounded, or unstable (${JSON.stringify(typed)})`);
+  assert(new Set(typed.map(({ responseSignature }) => responseSignature)).size === typed.length,
+    `${label}: typed Lava ancestry signatures collapsed (${JSON.stringify(typed)})`);
+  const controls = samples.filter(({ name }) => !name.endsWith('-core'));
+  assert(controls.length === 24 && controls.every(({ rgbPeak, repeatRgbPeak }) => (
+    rgbPeak <= 1 && repeatRgbPeak <= 1
+  )), `${label}: Lava ancestry leaked into an owner/state/phase control (${JSON.stringify(controls)})`);
+}
+
+async function auditEightXLavaStateGraphics(cdp, canvasRect) {
+  const rawAtlas = await evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    if (typeof audit.presentationState !== 'function'
+      || typeof audit.prepareLavaStateGraphicsFixture !== 'function'
+      || typeof audit.lavaStateGraphicsAtlas !== 'function'
+      || typeof audit.setLavaAncestryStyling !== 'function') {
+      throw new Error('True-8x Lava ancestry audit API unavailable');
+    }
+    audit.resetView();
+    audit.prepareLavaStateGraphicsFixture();
+    return audit.lavaStateGraphicsAtlas();
+  })()`);
+  const prepared = await snapshotEightXLavaState(cdp);
+  assertEightXLavaTopology(prepared, 'renderScale=8 prepared Lava fixture');
+  const live = await metrics(cdp);
+  assert(live.backing.width === WORLD_WIDTH * 8 && live.backing.height === WORLD_HEIGHT * 8
+      && live.outputScale === '8',
+  `renderScale=8 Lava fixture lost true backing (${JSON.stringify(live.backing)})`);
+  assertCanvasRectsEqual(canvasRect, live.canvas, 'renderScale=8 Lava fixture CSS geometry');
+
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setLavaAncestryStyling(false); true');
+  const flat = await captureSettledPage(cdp, 'renderScale=8 flat Lava-ancestry framebuffer', 450);
+  const flatTopology = await snapshotEightXLavaState(cdp);
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setLavaAncestryStyling(true); true');
+  const styled = await captureSettledPage(cdp, 'renderScale=8 styled Lava-ancestry framebuffer', 450);
+  const styledTopology = await snapshotEightXLavaState(cdp);
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setLavaAncestryStyling(false); true');
+  const repeated = await captureSettledPage(cdp, 'renderScale=8 repeated flat Lava-ancestry framebuffer', 450);
+  const repeatedTopology = await snapshotEightXLavaState(cdp);
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setLavaAncestryStyling(true); true');
+  assert(JSON.stringify(flatTopology) === JSON.stringify(prepared)
+      && JSON.stringify(styledTopology) === JSON.stringify(prepared)
+      && JSON.stringify(repeatedTopology) === JSON.stringify(prepared),
+  'renderScale=8 Lava ancestry toggle changed semantic or presentation-state topology');
+  const samples = await sampleBackdropRefractionRegions(cdp, {
+    straight: flat.capture.data,
+    refracted: styled.capture.data,
+    repeatedStraight: repeated.capture.data,
+  }, eightXLavaResponseRegions(rawAtlas), canvasRect);
+  assertEightXLavaResponses(samples, 'renderScale=8 WebGL');
+  return {
+    cards: rawAtlas.cards.map(({ key, material, origin, originCode, encodedState }) => ({
+      key, material, origin, originCode, encodedState,
     })),
     occupied: prepared.occupied,
     samples,
