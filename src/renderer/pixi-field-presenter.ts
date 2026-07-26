@@ -136,6 +136,7 @@ uniform float uLavaAncestryStyling;
 uniform float uBotanicalIdentityStyling;
 uniform float uBotanicalLifecycleStyling;
 uniform float uSparkStateStyling;
+uniform float uPoloStateStyling;
 float materialAt(vec2 uv) {
   return floor(texture(uFieldTexture, clamp(uv, uTexel * 0.5, vec2(1.0) - uTexel * 0.5)).r * 255.0 + 0.5);
 }
@@ -348,6 +349,50 @@ vec3 sparkStateEightXDelta(float packedState, vec2 position, vec3 sourceColor) {
     : family == 4.0 ? vec3(105.0, 184.0, 255.0)
     : vec3(70.0, 235.0, 255.0);
   return mix(min(sourceColor, vec3(1.0)), target / 255.0, blend) - sourceColor;
+}
+// POLO's native emissions, cooldown, and proton dose share this same B/A
+// state word. The compact radioactive lifecycle grammar remains static and
+// RGB-only at true 8x; presence is the canonical bit eleven projection.
+vec3 poloStateEightXDelta(float packedState, vec2 position) {
+  if (mod(floor(packedState / 2048.0), 2.0) < 0.5) return vec3(0.0);
+  float emissions = mod(packedState, 8.0);
+  float cooldown = mod(floor(packedState / 8.0), 16.0);
+  float protonDose = mod(floor(packedState / 128.0), 16.0);
+  vec2 world = floor(position);
+  vec2 local = mod(world, 16.0);
+  vec2 centred = local - 8.0;
+  float radiusSquared = dot(centred, centred);
+  vec3 delta = vec3(0.0);
+  if (emissions >= 5.0) {
+    bool ashFacet = mod(world.x + world.y * 3.0, 8.0) < 0.5;
+    delta = ashFacet ? vec3(16.0, 7.0, 16.0) : vec3(10.0, 2.0, 13.0);
+  } else if (cooldown > 0.0) {
+    float boundedCooldown = min(15.0, cooldown);
+    float heat = boundedCooldown / 15.0;
+    float shellRadiusSquared = 16.0 + (15.0 - boundedCooldown) * 2.0;
+    bool shell = abs(radiusSquared - shellRadiusSquared) <= 5.0;
+    bool ray = centred.x == 0.0 || centred.y == 0.0
+      || abs(centred.x) == abs(centred.y);
+    delta = shell ? vec3(12.0 + heat * 4.0, 6.0 + heat * 5.0, -6.0 + heat * 2.0)
+      : ray ? vec3(6.0 + heat * 4.0, 6.0 + heat * 3.0, -2.0)
+      : vec3(1.0 + heat * 3.0, 2.0 + heat * 3.0, heat);
+  } else {
+    bool readyRing = radiusSquared >= 25.0 && radiusSquared <= 49.0;
+    bool readyCore = radiusSquared <= 4.0;
+    bool neutronRay = centred.x == 0.0 || centred.y == 0.0
+      || abs(centred.x) == abs(centred.y);
+    delta = readyRing ? vec3(7.0, 16.0, 9.0)
+      : readyCore ? vec3(5.0, 12.0, 7.0)
+      : neutronRay ? vec3(4.0, 10.0, 5.0) : vec3(2.0, 5.0, 3.0);
+  }
+  if (protonDose > 0.0) {
+    float progress = min(10.0, protonDose) / 10.0;
+    float filledHeight = ceil(progress * 12.0);
+    bool captureRung = local.y >= 16.0 - filledHeight
+      && mod(local.x + local.y, 4.0) <= 1.0;
+    delta += progress * (captureRung ? vec3(10.0, -3.0, 7.0) : vec3(2.0, -1.0, 2.0));
+  }
+  return clamp(delta, vec3(-16.0), vec3(16.0)) / 255.0;
 }
 bool solidEightXGranular(float optics) {
   return optics == 7.0 || optics == 13.0 || optics == 14.0 || optics == 15.0;
@@ -873,6 +918,7 @@ void main() {
   bool lavaAncestryOwner = material == 11.0 && family == 2.0 && !materialEmissive;
   bool botanicalLifecycleOwner = material == 50.0 || material == 10.0;
   bool sparkOwner = material == 148.0;
+  bool poloOwner = material == 109.0;
   // Most 8x fragments have no retained native state. Decode the B/A state and
   // co-located native wall exactly once only for owners whose enabled RGB
   // styling consumes it; this avoids two state-texture samples on every other
@@ -884,6 +930,7 @@ void main() {
     || (uLavaAncestryStyling > 0.5 && lavaAncestryOwner)
     || (uBotanicalLifecycleStyling > 0.5 && botanicalLifecycleOwner)
     || (uSparkStateStyling > 0.5 && sparkOwner)
+    || (uPoloStateStyling > 0.5 && poloOwner)
     // Eligible translucent liquid already needs this exact wall texel for the
     // final backdrop. Fold the cohesion guard into that one packed-state read
     // so true 8x does not grow another native-wall sample.
@@ -967,6 +1014,9 @@ void main() {
   }
   if (uSparkStateStyling > 0.5 && sparkOwner) {
     color += sparkStateEightXDelta(sourceTarget, uv * uFieldSize, color);
+  }
+  if (uPoloStateStyling > 0.5 && poloOwner) {
+    color += poloStateEightXDelta(sourceTarget, uv * uFieldSize);
   }
   // True 8x keeps botanical state on the existing packed B/A word. This is
   // RGB-only compact arithmetic: no additional texture, field, pass, or

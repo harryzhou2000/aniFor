@@ -1289,6 +1289,40 @@ describe('Pixi presenter startup configuration', () => {
     expect(eight.match(/texture\(uWallTexture, uv\)/g)).toHaveLength(3);
   });
 
+  it('restores true-8x POLO lifecycle styling through the existing packed-state read', () => {
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');
+    const eightEnd = source.indexOf('const FIELD_FRAGMENT = `', eightStart);
+    const eight = source.slice(eightStart, eightEnd);
+    const helperStart = eight.indexOf('vec3 poloStateEightXDelta(');
+    const helperEnd = eight.indexOf('bool solidEightXGranular(', helperStart);
+    const helper = eight.slice(helperStart, helperEnd);
+    const packedStart = eight.indexOf('  bool needsPackedState =');
+    const packedEnd = eight.indexOf('  float sourceTarget =', packedStart);
+    const packed = eight.slice(packedStart, packedEnd);
+    const applicationStart = eight.indexOf('  if (uPoloStateStyling > 0.5 && poloOwner) {');
+    const applicationEnd = eight.indexOf('  // True 8x keeps botanical state', applicationStart);
+    const application = eight.slice(applicationStart, applicationEnd);
+
+    expect(helperStart).toBeGreaterThan(0);
+    expect(helperEnd).toBeGreaterThan(helperStart);
+    expect(applicationStart).toBeGreaterThan(0);
+    expect(applicationEnd).toBeGreaterThan(applicationStart);
+    expect(eight).toContain('uniform float uPoloStateStyling;');
+    expect(eight).toContain('bool poloOwner = material == 109.0;');
+    expect(packed).toContain('|| (uPoloStateStyling > 0.5 && poloOwner)');
+    expect(helper).toContain('mod(floor(packedState / 2048.0), 2.0) < 0.5');
+    expect(helper).toContain('float emissions = mod(packedState, 8.0);');
+    expect(helper).toContain('mod(floor(packedState / 8.0), 16.0)');
+    expect(helper).toContain('mod(floor(packedState / 128.0), 16.0)');
+    expect(helper).toContain('return clamp(delta, vec3(-16.0), vec3(16.0)) / 255.0;');
+    expect(application).toContain('color += poloStateEightXDelta(sourceTarget, uv * uFieldSize);');
+    expect(helper).not.toContain('texture(');
+    expect(helper).not.toContain('uTime');
+    expect(helper).not.toMatch(/\balpha\s*[+*]?=/);
+    expect(eight.match(/texture\(uWallTexture, uv\)/g)).toHaveLength(3);
+  });
+
   it('keeps Smooth powder body depth gated, bounded, and topology-neutral', () => {
     const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
     const start = source.indexOf('// Stable two-dimensional bulk gets a coherent');
