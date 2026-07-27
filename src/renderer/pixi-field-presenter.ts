@@ -137,6 +137,7 @@ uniform float uBotanicalIdentityStyling;
 uniform float uBotanicalLifecycleStyling;
 uniform float uSparkStateStyling;
 uniform float uPoloStateStyling;
+uniform float uSpngStateStyling;
 float materialAt(vec2 uv) {
   return floor(texture(uFieldTexture, clamp(uv, uTexel * 0.5, vec2(1.0) - uTexel * 0.5)).r * 255.0 + 0.5);
 }
@@ -393,6 +394,32 @@ vec3 poloStateEightXDelta(float packedState, vec2 position) {
     delta += progress * (captureRung ? vec3(10.0, -3.0, 7.0) : vec3(2.0, -1.0, 2.0));
   }
   return clamp(delta, vec3(-16.0), vec3(16.0)) / 255.0;
+}
+// SPNG carries its native life hydration in the same packed B/A word. This
+// direct form retains the dry no-op and wet pore grammar without an additional
+// texture read at true 8x.
+vec3 spngStateEightXDelta(float packedState, vec2 position) {
+  if (mod(floor(packedState / 64.0), 2.0) < 0.5) return vec3(0.0);
+  float hydration = min(50.0, mod(packedState, 64.0));
+  if (hydration < 0.5) return vec3(0.0);
+  float moisture = hydration / 50.0;
+  vec2 world = floor(position);
+  vec2 local = mod(world, 19.0);
+  vec2 first = local - vec2(5.0);
+  vec2 second = local - vec2(14.0, 12.0);
+  float firstRadius = dot(first, first);
+  float secondRadius = dot(second, second);
+  bool poreCore = firstRadius <= 4.0 || secondRadius <= 3.0;
+  bool firstWall = firstRadius >= 5.0 && firstRadius <= 12.0;
+  bool secondWall = secondRadius >= 4.0 && secondRadius <= 10.0;
+  bool litLip = (firstWall && first.x + first.y <= -2.0)
+    || (secondWall && second.x + second.y <= -2.0);
+  bool wetGlint = litLip && mod(world.x - world.y, 4.0) <= 1.0;
+  vec3 delta = vec3(-16.0, -12.0, -5.0);
+  if (wetGlint) delta += vec3(10.0, 16.0, 22.0);
+  else if (poreCore) delta += vec3(-4.0, -2.0, 8.0);
+  else if (firstWall || secondWall) delta += vec3(-2.0, 1.0, 6.0);
+  return clamp(delta * moisture, vec3(-20.0), vec3(20.0)) / 255.0;
 }
 bool solidEightXGranular(float optics) {
   return optics == 7.0 || optics == 13.0 || optics == 14.0 || optics == 15.0;
@@ -919,6 +946,7 @@ void main() {
   bool botanicalLifecycleOwner = material == 50.0 || material == 10.0;
   bool sparkOwner = material == 148.0;
   bool poloOwner = material == 109.0;
+  bool spngOwner = material == 81.0;
   // Most 8x fragments have no retained native state. Decode the B/A state and
   // co-located native wall exactly once only for owners whose enabled RGB
   // styling consumes it; this avoids two state-texture samples on every other
@@ -931,6 +959,7 @@ void main() {
     || (uBotanicalLifecycleStyling > 0.5 && botanicalLifecycleOwner)
     || (uSparkStateStyling > 0.5 && sparkOwner)
     || (uPoloStateStyling > 0.5 && poloOwner)
+    || (uSpngStateStyling > 0.5 && spngOwner)
     // Eligible translucent liquid already needs this exact wall texel for the
     // final backdrop. Fold the cohesion guard into that one packed-state read
     // so true 8x does not grow another native-wall sample.
@@ -1017,6 +1046,9 @@ void main() {
   }
   if (uPoloStateStyling > 0.5 && poloOwner) {
     color += poloStateEightXDelta(sourceTarget, uv * uFieldSize);
+  }
+  if (uSpngStateStyling > 0.5 && spngOwner) {
+    color += spngStateEightXDelta(sourceTarget, uv * uFieldSize);
   }
   // True 8x keeps botanical state on the existing packed B/A word. This is
   // RGB-only compact arithmetic: no additional texture, field, pass, or

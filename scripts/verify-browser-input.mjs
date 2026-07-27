@@ -13310,6 +13310,8 @@ async function auditRenderScaleEight(cdp, dpr) {
   stage('vibr-state-ready');
   const poloStateGraphics = await auditEightXPoloStateGraphics(cdp, geometry.canvas);
   stage('polo-state-ready');
+  const spngStateGraphics = await auditEightXSpngStateGraphics(cdp, geometry.canvas);
+  stage('spng-state-ready');
   // The shared Lava ancestry audit normally samples a complete backing canvas.
   // At true 8x that would allocate an avoidable 60 MiB ImageData copy, so keep
   // the same six-state/topology proof but sample only composed page regions
@@ -13374,6 +13376,7 @@ async function auditRenderScaleEight(cdp, dpr) {
     sourceTargetGraphics,
     vibrStateGraphics,
     poloStateGraphics,
+    spngStateGraphics,
     deutStateGraphics,
     lavaStateGraphics,
     sparkStateGraphics,
@@ -13911,6 +13914,149 @@ async function auditEightXPoloStateGraphics(cdp, canvasRect) {
     cards: rawAtlas.cards.map(({ key, emissions, cooldown, protonDose, encodedState }) => ({
       key, emissions, cooldown, protonDose, encodedState,
     })),
+    occupied: prepared.occupied,
+    samples,
+    exactRepeatedOff: samples.every(({ repeatRgbPeak }) => repeatRgbPeak <= 1),
+  };
+}
+
+async function snapshotEightXSpngState(cdp) {
+  return evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    const atlas = audit.spngStateGraphicsAtlas();
+    const inside = (x, y, rect) => x >= rect.x && x < rect.x + rect.width
+      && y >= rect.y && y < rect.y + rect.height;
+    const exactRect = (rect, material, state) => {
+      for (let y = rect.y; y < rect.y + rect.height; y++) {
+        for (let x = rect.x; x < rect.x + rect.width; x++) {
+          if (audit.cell(x, y) !== material || audit.presentationState(x, y) !== state) return false;
+        }
+      }
+      return true;
+    };
+    return {
+      occupied: audit.occupiedCells(),
+      cards: atlas.cards.map((entry) => {
+        let bodyExact = true;
+        for (let y = entry.body.y; y < entry.body.y + entry.body.height; y++) {
+          for (let x = entry.body.x; x < entry.body.x + entry.body.width; x++) {
+            const empty = inside(x, y, entry.authoredHole) || inside(x, y, entry.openNotch);
+            bodyExact = bodyExact
+              && audit.cell(x, y) === (empty ? 0 : entry.material)
+              && audit.presentationState(x, y) === (empty ? 0 : entry.encodedState);
+          }
+        }
+        return {
+          key: entry.key, hydration: entry.hydration, material: entry.material,
+          encodedState: entry.encodedState, bodyExact,
+          thinExact: exactRect(entry.thinStructure, entry.material, entry.encodedState),
+          isolatedExact: audit.cell(entry.isolated.x, entry.isolated.y) === entry.material
+            && audit.presentationState(entry.isolated.x, entry.isolated.y) === entry.encodedState,
+          zeroExact: exactRect(entry.zeroState, 81, 0),
+          wrongOwnerExact: exactRect(entry.wrongOwner, 1, entry.encodedState),
+          waterExact: exactRect(entry.waterControl, 2, entry.encodedState),
+          steamExact: exactRect(entry.steamControl, 15, entry.encodedState),
+          saltExact: exactRect(entry.saltControl, 7, entry.encodedState),
+          blankExact: exactRect(entry.guardedBlank, 0, 0),
+        };
+      }),
+    };
+  })()`);
+}
+
+function assertEightXSpngTopology(snapshot, label) {
+  const expectedKeys = 'dry,low,mid,high,saturated';
+  const expectedHydration = '0,10,25,40,50';
+  const expectedStates = '64,74,89,104,114';
+  assert(snapshot.cards.length === 5
+      && snapshot.cards.map(({ key }) => key).join(',') === expectedKeys
+      && snapshot.cards.map(({ hydration }) => hydration).join(',') === expectedHydration
+      && snapshot.cards.map(({ encodedState }) => encodedState).join(',') === expectedStates
+      && snapshot.cards.every((card) => card.material === 81 && card.bodyExact
+        && card.thinExact && card.isolatedExact && card.zeroExact && card.wrongOwnerExact
+        && card.waterExact && card.steamExact && card.saltExact && card.blankExact),
+  `${label}: SPNG semantic or presentation-state topology changed (${JSON.stringify(snapshot)})`);
+}
+
+function eightXSpngResponseRegions(atlas) {
+  const centre = (rect) => ({ x: rect.x + rect.width / 2, y: rect.y + rect.height / 2 });
+  return atlas.cards.flatMap((entry) => [
+    { name: `SPNG-${entry.key}-state`, ...centre(entry.body), radiusX: 24, radiusY: 22 },
+    { name: `SPNG-${entry.key}-zero`, ...centre(entry.zeroState), radiusX: 5, radiusY: 5 },
+    { name: `SPNG-${entry.key}-wrong-owner`, ...centre(entry.wrongOwner), radiusX: 5, radiusY: 5 },
+    { name: `SPNG-${entry.key}-water`, ...centre(entry.waterControl), radiusX: 5, radiusY: 5 },
+    { name: `SPNG-${entry.key}-steam`, ...centre(entry.steamControl), radiusX: 5, radiusY: 5 },
+    { name: `SPNG-${entry.key}-salt`, ...centre(entry.saltControl), radiusX: 5, radiusY: 5 },
+    { name: `SPNG-${entry.key}-blank`, ...centre(entry.guardedBlank), radiusX: 20, radiusY: 14 },
+  ]);
+}
+
+function assertEightXSpngResponses(samples, label) {
+  const stateSamples = samples.filter(({ name }) => name.endsWith('-state'));
+  const dry = stateSamples.find(({ name }) => name === 'SPNG-dry-state');
+  const wet = stateSamples.filter(({ name }) => name !== 'SPNG-dry-state');
+  assert(dry && dry.rgbPeak <= 1 && dry.repeatRgbPeak <= 1,
+    `${label}: dry SPNG was not an exact hydration-style no-op (${JSON.stringify(dry)})`);
+  assert(wet.length === 4 && wet.every(({ rgbRms, rgbPeak, repeatRgbPeak }) => (
+    rgbRms >= 0.004 && rgbRms <= 36 && rgbPeak > 0 && rgbPeak <= 64 && repeatRgbPeak <= 1
+  )), `${label}: wet SPNG hydration response is absent, unbounded, or unstable (${JSON.stringify(wet)})`);
+  assert(new Set(stateSamples.map(({ responseSignature }) => responseSignature)).size === 5,
+    `${label}: SPNG hydration signatures collapsed (${JSON.stringify(stateSamples)})`);
+  for (let index = 1; index < wet.length; index++) {
+    assert(wet[index].rgbRms >= wet[index - 1].rgbRms + 0.004,
+      `${label}: SPNG hydration response is not monotonic (${JSON.stringify(wet)})`);
+  }
+  assert(wet.at(-1).rgbRms >= wet[0].rgbRms * 2.5,
+    `${label}: saturated SPNG is not meaningfully wetter than low SPNG (${JSON.stringify(wet)})`);
+  const controls = samples.filter(({ name }) => !name.endsWith('-state'));
+  assert(controls.length === 30 && controls.every(({ rgbPeak, repeatRgbPeak }) => (
+    rgbPeak <= 1 && repeatRgbPeak <= 1
+  )), `${label}: SPNG hydration styling leaked into owner/material controls (${JSON.stringify(controls)})`);
+}
+
+async function auditEightXSpngStateGraphics(cdp, canvasRect) {
+  const rawAtlas = await evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    if (typeof audit.presentationState !== 'function'
+      || typeof audit.prepareSpngStateGraphicsFixture !== 'function'
+      || typeof audit.spngStateGraphicsAtlas !== 'function'
+      || typeof audit.setSpngStateStyling !== 'function') {
+      throw new Error('True-8x SPNG state audit API unavailable');
+    }
+    audit.resetView();
+    audit.prepareSpngStateGraphicsFixture();
+    return audit.spngStateGraphicsAtlas();
+  })()`);
+  const prepared = await snapshotEightXSpngState(cdp);
+  assertEightXSpngTopology(prepared, 'renderScale=8 prepared SPNG fixture');
+  const live = await metrics(cdp);
+  assert(live.backing.width === WORLD_WIDTH * 8 && live.backing.height === WORLD_HEIGHT * 8
+      && live.outputScale === '8',
+  `renderScale=8 SPNG fixture lost true backing (${JSON.stringify(live.backing)})`);
+  assertCanvasRectsEqual(canvasRect, live.canvas, 'renderScale=8 SPNG fixture CSS geometry');
+
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setSpngStateStyling(false); true');
+  const flat = await captureSettledPage(cdp, 'renderScale=8 flat SPNG-state framebuffer', 450);
+  const flatTopology = await snapshotEightXSpngState(cdp);
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setSpngStateStyling(true); true');
+  const styled = await captureSettledPage(cdp, 'renderScale=8 styled SPNG-state framebuffer', 450);
+  const styledTopology = await snapshotEightXSpngState(cdp);
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setSpngStateStyling(false); true');
+  const repeated = await captureSettledPage(cdp, 'renderScale=8 repeated flat SPNG-state framebuffer', 450);
+  const repeatedTopology = await snapshotEightXSpngState(cdp);
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setSpngStateStyling(true); true');
+  assert(JSON.stringify(flatTopology) === JSON.stringify(prepared)
+      && JSON.stringify(styledTopology) === JSON.stringify(prepared)
+      && JSON.stringify(repeatedTopology) === JSON.stringify(prepared),
+  'renderScale=8 SPNG state toggle changed semantic or presentation-state topology');
+  const samples = await sampleBackdropRefractionRegions(cdp, {
+    straight: flat.capture.data,
+    refracted: styled.capture.data,
+    repeatedStraight: repeated.capture.data,
+  }, eightXSpngResponseRegions(rawAtlas), canvasRect);
+  assertEightXSpngResponses(samples, 'renderScale=8 WebGL');
+  return {
+    cards: rawAtlas.cards.map(({ key, hydration, encodedState }) => ({ key, hydration, encodedState })),
     occupied: prepared.occupied,
     samples,
     exactRepeatedOff: samples.every(({ repeatRgbPeak }) => repeatRgbPeak <= 1),
