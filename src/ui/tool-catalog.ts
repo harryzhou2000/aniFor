@@ -203,6 +203,11 @@ export interface CatalogFilterState {
 export function materialTools(materials: readonly MaterialInfo[]): readonly ElementToolInfo[] {
   return materials.map((material) => {
     const metadata = material as MaterialInfo & { readonly hazard?: 'caution' | 'danger'; readonly available?: boolean; readonly limitations?: readonly string[] };
+    // Render-only products have stable identities in imported/native worlds,
+    // but cannot safely cross the ordinary powder_set ABI.  Keep them visible
+    // and searchable rather than silently hiding them, while disabling their
+    // tile before it can become a misleading brush selection.
+    const nativeProductOnly = !material.selectable;
     return {
       key: `material:${material.id}`,
       kind: 'element',
@@ -213,8 +218,8 @@ export function materialTools(materials: readonly MaterialInfo[]): readonly Elem
       icon: material.icon,
       category: material.category,
       hazard: metadata.hazard,
-      available: metadata.available,
-      limitations: metadata.limitations,
+      available: nativeProductOnly ? false : metadata.available,
+      limitations: nativeProductOnly ? ['native-product-only'] : metadata.limitations,
     };
   });
 }

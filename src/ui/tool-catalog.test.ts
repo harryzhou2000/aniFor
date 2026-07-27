@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { LIFE_PRESETS, MATERIALS, Material } from '../shared/materials';
+import { BROWSE_MATERIALS, LIFE_PRESETS, MATERIALS, Material, NATIVE_PROJECTIONS } from '../shared/materials';
 import { buildToolCatalog, filterTools, isToolAvailable, materialTools, recordRecent, semanticTools, type WallToolInfo } from './tool-catalog';
 
 describe('tool catalog view model', () => {
@@ -10,6 +10,19 @@ describe('tool catalog view model', () => {
     expect(new Set(tools.map(({ key }) => key)).size).toBe(tools.length);
     expect(tools.every(({ kind, key }) => kind === 'element' && key.startsWith('material:'))).toBe(true);
     expect(tools.find(({ id }) => id === Material.Wall)?.kind).toBe('element');
+  });
+
+  it('keeps native reaction and lifecycle products discoverable but brush-inert', () => {
+    const browseTools = materialTools(BROWSE_MATERIALS);
+    const products = browseTools.filter(({ id }) => NATIVE_PROJECTIONS.some((product) => product.id === id));
+
+    expect(products).toHaveLength(NATIVE_PROJECTIONS.length);
+    expect(products.map(({ id }) => id)).toEqual(NATIVE_PROJECTIONS.map(({ id }) => id));
+    expect(products.every((tool) => !isToolAvailable(tool))).toBe(true);
+    expect(products.every((tool) => tool.limitations?.includes('native-product-only'))).toBe(true);
+    expect(filterTools(browseTools, {
+      mode: 'all', query: 'native-product-only', favorites: new Set(), recent: [],
+    })).toHaveLength(NATIVE_PROJECTIONS.length);
   });
 
   it('searches names, descriptions, categories, hazards, and limitations', () => {

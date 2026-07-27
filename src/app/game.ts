@@ -3,7 +3,7 @@ import {
   applyMaterialShowcaseScene, applyRenderLabScene, materialShowcaseRequested, renderLabRequested,
 } from '../renderer/render-lab-scene';
 import { applyWallLabScene, wallLabRequested } from '../renderer/wall-lab-scene';
-import { ALL_MATERIALS, MATERIALS, Material } from '../shared/materials';
+import { ALL_MATERIALS, BROWSE_MATERIALS, Material } from '../shared/materials';
 import { decodeSharedWorld } from '../shared/share-codec';
 import { exportWorldFile, importWorldFile, MAX_WORLD_FILE_BYTES, worldFileName } from '../shared/world-file';
 import type { SimulationBackend } from '../simulation';
@@ -267,7 +267,7 @@ export class Game {
           this.lifeTool = undefined;
         }
       },
-    }, buildToolCatalog(MATERIALS, {
+    }, buildToolCatalog(BROWSE_MATERIALS, {
       walls: Boolean(this.simulation.paintWall && this.simulation.eraseWall),
       simulationTools: Boolean(this.simulation.applySimulationTool),
       configuredSources: Boolean(

@@ -15091,6 +15091,21 @@ async function auditCatalogSelection(cdp) {
       activeFilters: filters.filter((filter) => filter.getAttribute('aria-pressed') === 'true')
         .map((filter) => filter.dataset.filter),
     };
+    // Native reaction/lifecycle products are renderer-facing projections, not
+    // ordinary brushes. The full projected range must still be discoverable in
+    // the nested library, with every tile inert before a user can mistake it
+    // for a placeable particle.
+    const nativeProducts = Array.from({ length: 22 }, (_, index) => 195 + index).map((id) => {
+      const tile = library.querySelector('.tool-tile[data-tool-key="material:' + id + '"]');
+      const productButton = tile?.querySelector('.material-button');
+      return {
+        id,
+        found: tile instanceof HTMLElement && productButton instanceof HTMLButtonElement,
+        disabled: productButton instanceof HTMLButtonElement && productButton.disabled,
+        nativeOnly: productButton instanceof HTMLButtonElement
+          && productButton.title.includes('Native Product Only'),
+      };
+    });
     button.click();
     return {
       ...before,
@@ -15101,6 +15116,7 @@ async function auditCatalogSelection(cdp) {
       sameLibraryChildren: children.length === library.children.length
         && children.every((child, index) => child === library.children[index]),
       selected: button.classList.contains('selected') && button.getAttribute('aria-pressed') === 'true',
+      nativeProducts,
     };
   })()`);
   assert(selection.openGroups.length === 1
@@ -15113,12 +15129,15 @@ async function auditCatalogSelection(cdp) {
     && selection.afterActiveFilters[0] === 'all'
     && Math.abs(selection.afterScrollTop - selection.scrollTop) < 0.1
     && selection.sameLibraryChildren
-    && selection.selected,
+    && selection.selected
+    && selection.nativeProducts.length === 22
+    && selection.nativeProducts.every(({ found, disabled, nativeOnly }) => found && disabled && nativeOnly),
   `element selection reset the active catalog state (${JSON.stringify(selection)})`);
   return {
     category: selection.openGroups[0],
     scrollTop: round(selection.scrollTop),
     childNodesStable: selection.sameLibraryChildren,
+    nativeProductTiles: selection.nativeProducts.length,
   };
 }
 

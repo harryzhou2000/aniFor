@@ -515,3 +515,16 @@ export const ALL_MATERIALS: readonly MaterialInfo[] = [
 ];
 
 export const MATERIALS: readonly MaterialInfo[] = ALL_MATERIALS.filter(({ selectable }) => selectable);
+
+/**
+ * The complete ordinary brush library plus native products that can appear in
+ * a loaded save or through authentic reactions.  Products remain deliberately
+ * unavailable as brushes; showing them in the nested catalog makes their
+ * rendered identity discoverable without violating the native particle ABI.
+ * LIFE projections are omitted here because their functional LIFE tools carry
+ * the same identities with their required ctype presets.
+ */
+export const BROWSE_MATERIALS: readonly MaterialInfo[] = [
+  ...MATERIALS,
+  ...NATIVE_PROJECTIONS,
+];

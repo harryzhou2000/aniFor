@@ -1,4 +1,4 @@
-import { MATERIALS, Material, type MaterialCategory, type MaterialInfo } from '../shared/materials';
+import { BROWSE_MATERIALS, MATERIALS, Material, type MaterialCategory, type MaterialInfo } from '../shared/materials';
 import type { PowderRenderStyle } from '../renderer/powder-render-style';
 import { resolveFieldOutputScale, type FieldOutputScale } from '../renderer/render-resolution';
 import { filterTools, isToolAvailable, materialTools, recordRecent, type CatalogTool, type ElementToolInfo, type ToolFilter, type ToolKind } from './tool-catalog';
@@ -70,7 +70,7 @@ export function groupMaterials(materials: readonly MaterialInfo[] = MATERIALS): 
 }
 
 function groupCatalogTools(tools: readonly CatalogTool[]): readonly ToolGroup[] {
-  const elementById = new Map(MATERIALS.map((material) => [material.id, material]));
+  const elementById = new Map(BROWSE_MATERIALS.map((material) => [material.id, material]));
   const materialGroups = groupMaterials(tools.flatMap((tool) => tool.kind === 'element' ? [elementById.get(tool.id)!] : []).filter(Boolean));
   const definitions = new Map<string, { label: string; description: string }>(materialGroups.map(({ id, label, description }) => [id, { label, description }]));
   const categories = new Map<string, CatalogTool[]>();
@@ -129,7 +129,7 @@ export function reconcileOpenToolGroups(
   return next;
 }
 
-export function mountControls(host: HTMLElement, callbacks: ControlsCallbacks, catalog: readonly CatalogTool[] = materialTools(MATERIALS)): void {
+export function mountControls(host: HTMLElement, callbacks: ControlsCallbacks, catalog: readonly CatalogTool[] = materialTools(BROWSE_MATERIALS)): void {
   const activeRenderScale = resolveFieldOutputScale();
   const tools = document.createElement('nav');
   tools.className = 'palette glass';
