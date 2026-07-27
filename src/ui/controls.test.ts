@@ -72,4 +72,22 @@ describe('material controls', () => {
     expect(syncSelectedTool).toContain("library.querySelectorAll<HTMLElement>('.tool-tile')");
     expect(syncSelectedTool).not.toMatch(/replaceChildren|scrollTop|\.open\s*=/);
   });
+
+  it('keeps a configured source active while an element tile retargets it', () => {
+    // The browser audit covers actual clicks.  This narrow source guard makes
+    // the intended state transition explicit: a source remains selected,
+    // Game receives only its target update, and the user still has an explicit
+    // exit back to ordinary brushing.
+    const source = readFileSync(new URL('./controls.ts', import.meta.url), 'utf8');
+    const clickStart = source.indexOf("button.addEventListener('click', () => {");
+    const clickEnd = source.indexOf('\n\n    const favorite', clickStart);
+    const selectionHandler = source.slice(clickStart, clickEnd);
+
+    expect(source).toContain('onSourceTarget?(material: Material): void;');
+    expect(selectionHandler).toContain('const source = activeSourceTool();');
+    expect(selectionHandler).toContain('selectedKey = source.key;');
+    expect(selectionHandler).toContain('callbacks.onSourceTarget(tool.id);');
+    expect(source).toContain("useSourceTargetAsBrush.textContent = 'Use target as brush';");
+    expect(source).toContain('callbacks.onMaterial(sourceTarget);');
+  });
 });

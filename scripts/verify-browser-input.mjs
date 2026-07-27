@@ -97,6 +97,7 @@ const lavaStateGraphicsOnly = process.argv.includes('--lava-state-graphics-only'
 const botanicalLifecycleGraphicsOnly = process.argv.includes('--botanical-lifecycle-graphics-only');
 const sparkStateGraphicsOnly = process.argv.includes('--spark-state-graphics-only');
 const nativeSeedGrowthOnly = process.argv.includes('--native-seed-growth-only');
+const nativeSemanticsOnly = process.argv.includes('--native-semantics-only');
 const catalogSelectionOnly = process.argv.includes('--catalog-selection-only');
 const shortDesktopOnly = process.argv.includes('--short-desktop-only');
 const liveScaleOnly = process.argv.includes('--live-scale-only');
@@ -116,7 +117,8 @@ const focusedSemanticVisualAudit = materialAtlasOnly
   || crystalGraphicsOnly || pasteResistGraphicsOnly || vibrStateGraphicsOnly
   || deutStateGraphicsOnly || sourceTargetGraphicsOnly || forceActivityGraphicsOnly
   || poloStateGraphicsOnly || spngStateGraphicsOnly || lavaStateGraphicsOnly
-  || botanicalLifecycleGraphicsOnly || sparkStateGraphicsOnly || nativeSeedGrowthOnly;
+  || botanicalLifecycleGraphicsOnly || sparkStateGraphicsOnly || nativeSeedGrowthOnly
+  || nativeSemanticsOnly;
 // A focused visual probe should be able to exercise the exact already-built
 // bundle without starting Vite. That keeps screenshot evidence independent of
 // dev-server navigation timing while leaving all default audit paths unchanged.
@@ -129,7 +131,7 @@ const usesProductionBundle = productionBundle || showcaseScreenshotOnly || cellu
   || deutStateGraphicsOnly || sourceTargetGraphicsOnly || forceActivityGraphicsOnly
   || poloStateGraphicsOnly || spngStateGraphicsOnly || lavaStateGraphicsOnly
   || botanicalLifecycleGraphicsOnly || sparkStateGraphicsOnly
-  || nativeSeedGrowthOnly || catalogSelectionOnly || shortDesktopOnly || liveScaleOnly
+  || nativeSeedGrowthOnly || nativeSemanticsOnly || catalogSelectionOnly || shortDesktopOnly || liveScaleOnly
   || scaleEightOnly;
 const AUDIT_BASE_URL = usesProductionBundle ? PRODUCTION_BUNDLE_URL : ORIGIN + '/';
 const DESKTOP_TOOL_FILTER_HEIGHT = 96;
@@ -203,7 +205,7 @@ async function main() {
       || sourceTargetGraphicsOnly || forceActivityGraphicsOnly || poloStateGraphicsOnly
       || spngStateGraphicsOnly || lavaStateGraphicsOnly || botanicalLifecycleGraphicsOnly
       || sparkStateGraphicsOnly
-      || nativeSeedGrowthOnly || catalogSelectionOnly || pausedPresentationOnly;
+      || nativeSeedGrowthOnly || nativeSemanticsOnly || catalogSelectionOnly || pausedPresentationOnly;
     if (powderBodyOnly) assertPairedPowderBodyDepth(results);
     if (liquidDepthOnly) assertPairedLiquidOpticalDepth(results);
     if (solidDepthOnly) assertPairedSolidOpticalDepth(results);
@@ -233,7 +235,14 @@ async function main() {
     if (spngStateGraphicsOnly) assertPairedSpngStateGraphics(results, assert);
     if (lavaStateGraphicsOnly) assertPairedLavaStateGraphics(results, assert);
     if (botanicalLifecycleGraphicsOnly) {
-      assertPairedBotanicalLifecycleGraphics(results, assert);
+      // WebGL is the canonical visual backend.  Keep the full Canvas/WebGL
+      // comparison when both were expressly exercised, while allowing a
+      // WebGL-only release gate to prove the native lifecycle/state contract
+      // without fabricating a missing Canvas result.  Canvas remains covered
+      // whenever it is selected, but is diagnostic fallback evidence here.
+      if (modes.includes('canvas2d') && modes.includes('webgl')) {
+        assertPairedBotanicalLifecycleGraphics(results, assert);
+      }
     }
     if (sparkStateGraphicsOnly) assertPairedSparkStateGraphics(results, assert);
     if (nativeSeedGrowthOnly) assertPairedNativeSeedGrowth(results);
@@ -409,6 +418,12 @@ async function auditMode(mode) {
       assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
       cdp.close();
       return { backend: mode, catalogSelection, browserErrors: errors.length };
+    }
+    if (nativeSemanticsOnly) {
+      const nativeSemantics = await auditNativeSemantics(cdp, mode, dpr);
+      assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
+      cdp.close();
+      return { backend: mode, nativeSemantics, browserErrors: errors.length };
     }
     // WebGL is the canonical material-graphics release path. Keep Canvas as a
     // real, exercised fallback, but do not make browser-specific advanced
@@ -14918,6 +14933,21 @@ async function auditNativeSemantics(cdp, mode, dpr, screenshot) {
   assert(sourceSelection.sourceRect.top >= sourceSelection.libraryRect.top - 1
     && sourceSelection.sourceRect.bottom <= sourceSelection.libraryRect.bottom + 1,
   `${mode}: configured-source tile escaped the visible library`);
+  const retargetedSource = await evaluate(cdp, `(() => {
+    document.querySelector('[data-filter="all"]')?.click();
+    const target = document.querySelector('[data-tool-key="material:23"] .material-button');
+    target?.click();
+    const source = document.querySelector('[data-tool-key="source:clne"] .material-button');
+    const output = document.querySelector('.source-selection');
+    const exit = document.querySelector('.source-target-brush');
+    return {
+      value: output?.value, target: output?.dataset.target, selected: source?.getAttribute('aria-pressed'),
+      exitVisible: exit instanceof HTMLButtonElement && !exit.hidden,
+    };
+  })()`);
+  assert(retargetedSource.value === 'CLNE → Metal' && retargetedSource.target === '23'
+    && retargetedSource.selected === 'true' && retargetedSource.exitVisible,
+  `${mode}: element target did not retain configured-source mode (${JSON.stringify(retargetedSource)})`);
   if (screenshot) {
     screenshots.configuredSourceScreenshot = variantScreenshotPath(screenshot, 'configured-source');
     const capture = await cdp.send('Page.captureScreenshot', { format: 'png', fromSurface: true });
@@ -14930,7 +14960,7 @@ async function auditNativeSemantics(cdp, mode, dpr, screenshot) {
     target: window.__ANIFOR_INPUT_AUDIT__.sourceTarget(${sourcePoint.x}, ${sourcePoint.y}),
   })`);
   assert(configuredSource.cell === 126, `${mode}: source cell projected as ${configuredSource.cell}`);
-  assert(configuredSource.target === 2, `${mode}: source target read back as ${configuredSource.target}`);
+  assert(configuredSource.target === 23, `${mode}: source target read back as ${configuredSource.target}`);
   const rejectedSource = await evaluate(cdp, `(() => {
     document.querySelector('[data-filter="all"]')?.click();
     document.querySelector('[data-tool-key="material:146"] .material-button')?.click();
@@ -14946,10 +14976,12 @@ async function auditNativeSemantics(cdp, mode, dpr, screenshot) {
 
   const stableToolMenu = await evaluate(cdp, `(() => {
     document.querySelector('[data-filter="all"]')?.click();
+    document.querySelector('.source-target-brush')?.click();
     const library = document.querySelector('.tool-library');
     const powder = library?.querySelector('details[data-category="powders"]');
     const electronics = library?.querySelector('details[data-category="electronics"]');
     const button = document.querySelector('[data-tool-key="material:135"] .material-button');
+    const sourceOutput = document.querySelector('.source-selection');
     if (!(library instanceof HTMLElement) || !(powder instanceof HTMLDetailsElement)
       || !(electronics instanceof HTMLDetailsElement) || !(button instanceof HTMLButtonElement)) {
       throw new Error('Missing stable-tool-menu controls');
@@ -14970,13 +15002,14 @@ async function auditNativeSemantics(cdp, mode, dpr, screenshot) {
       afterPowderOpen: powder.open,
       afterElectronicsOpen: electronics.open,
       selected: button.getAttribute('aria-pressed'),
+      exitedSource: sourceOutput instanceof HTMLOutputElement && sourceOutput.hidden,
     };
   })()`);
   assert(stableToolMenu.scrollTop > 0 && !stableToolMenu.powderOpen && stableToolMenu.electronicsOpen,
     `${mode}: stable tool-menu setup failed (${JSON.stringify(stableToolMenu)})`);
   assert(Math.abs(stableToolMenu.afterScrollTop - stableToolMenu.scrollTop) <= 1
     && !stableToolMenu.afterPowderOpen && stableToolMenu.afterElectronicsOpen
-    && stableToolMenu.selected === 'true',
+    && stableToolMenu.selected === 'true' && stableToolMenu.exitedSource,
   `${mode}: brush selection reset tool-menu state (${JSON.stringify(stableToolMenu)})`);
 
   const lifePoint = { x: 270, y: 180 };

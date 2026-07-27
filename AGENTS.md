@@ -18,6 +18,10 @@ camera-preserving semantic fallback: keep its loading, input, material/state,
 and bounded-resource contracts strict, but treat advanced-optics visual parity
 as diagnostic rather than a feature-blocking release requirement when browser
 Canvas behaviour cannot match the canonical WebGL presentation.
+Run a paired visual assertion only when both backends were requested. A
+WebGL-only audit must prove its own native state, topology, RGB-only, fence,
+and recovery contract directly; it must not fail merely because Canvas was not
+also sampled.
 
 ## CodeGraph
 

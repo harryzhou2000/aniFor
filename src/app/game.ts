@@ -210,6 +210,11 @@ export class Game {
         this.lifeTool = undefined;
         this.signTool = undefined;
       },
+      // The control library keeps a configured source selected while an
+      // element tile is being used as its target.  Only change the retained
+      // target material here: source ownership is intentionally preserved so
+      // the next stroke still crosses the native CtypeDraw boundary.
+      onSourceTarget: (material) => { this.material = material; },
       onRadius: (radius) => { this.radius = radius; },
       onPause: () => {
         this.paused = !this.paused;

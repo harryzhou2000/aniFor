@@ -1,7 +1,7 @@
 import { BROWSE_MATERIALS, MATERIALS, Material, type MaterialCategory, type MaterialInfo } from '../shared/materials';
 import type { PowderRenderStyle } from '../renderer/powder-render-style';
 import { resolveFieldOutputScale, type FieldOutputScale } from '../renderer/render-resolution';
-import { filterTools, isToolAvailable, materialTools, recordRecent, type CatalogTool, type ElementToolInfo, type ToolFilter, type ToolKind } from './tool-catalog';
+import { filterTools, isToolAvailable, materialTools, recordRecent, type CatalogTool, type ElementToolInfo, type SourceToolInfo, type ToolFilter, type ToolKind } from './tool-catalog';
 
 const FAVORITES_KEY = 'anifortpt-favorite-tools-v1';
 const RECENT_KEY = 'anifortpt-recent-tools-v1';
@@ -89,6 +89,12 @@ function groupCatalogTools(tools: readonly CatalogTool[]): readonly ToolGroup[] 
 
 export interface ControlsCallbacks {
   onMaterial(material: Material): void;
+  /**
+   * Retargets the currently selected configured source without replacing it
+   * with an ordinary material brush.  Optional so embedded/control-only
+   * callers can retain the historical material-selection behaviour.
+   */
+  onSourceTarget?(material: Material): void;
   onRadius(radius: number): void;
   onPause(): void;
   onEraseMode(erase: boolean): void;
@@ -135,7 +141,9 @@ export function mountControls(host: HTMLElement, callbacks: ControlsCallbacks, c
   tools.className = 'palette glass';
   tools.ariaLabel = 'Tool library';
 
-  const finder = document.createElement('label');
+  // This contains a real mode-exit button when a configured source is active,
+  // so it cannot be a label (interactive content must not be nested in one).
+  const finder = document.createElement('div');
   finder.className = 'tool-search';
   finder.innerHTML = '<span>Find a tool</span><input type="search" placeholder="Search elements and tools" autocomplete="off" />';
   const search = finder.querySelector('input') as HTMLInputElement;
@@ -163,6 +171,14 @@ export function mountControls(host: HTMLElement, callbacks: ControlsCallbacks, c
   sourceSelection.title = 'Configured source and target element';
   finder.append(sourceSelection);
 
+  const useSourceTargetAsBrush = document.createElement('button');
+  useSourceTargetAsBrush.className = 'source-target-brush';
+  useSourceTargetAsBrush.type = 'button';
+  useSourceTargetAsBrush.hidden = true;
+  useSourceTargetAsBrush.textContent = 'Use target as brush';
+  useSourceTargetAsBrush.title = 'Leave configured-source mode and brush with its target';
+  finder.append(useSourceTargetAsBrush);
+
   const validKeys = new Set(catalog.map(({ key }) => key));
   let favorites = new Set(loadList(FAVORITES_KEY).filter((key) => validKeys.has(key)));
   let recent: readonly string[] = loadList(RECENT_KEY).filter((key) => validKeys.has(key));
@@ -172,6 +188,28 @@ export function mountControls(host: HTMLElement, callbacks: ControlsCallbacks, c
   let sourceTarget = Material.Sand;
   let openGroups = new Set<string>();
   let hasRenderedLibrary = false;
+
+  const activeSourceTool = (): SourceToolInfo | undefined => {
+    const tool = catalog.find((candidate) => candidate.key === selectedKey);
+    return tool?.kind === 'source' ? tool : undefined;
+  };
+
+  const showSourceSelection = (source: SourceToolInfo, rejected = false): void => {
+    sourceSelection.value = rejected
+      ? sourceRejectionLabel(source.emitter, sourceTarget)
+      : sourceSelectionLabel(source.emitter, sourceTarget);
+    sourceSelection.hidden = false;
+    sourceSelection.classList.toggle('rejected', rejected);
+    sourceSelection.dataset.emitter = String(source.emitter);
+    sourceSelection.dataset.target = String(sourceTarget);
+    useSourceTargetAsBrush.hidden = false;
+  };
+
+  const hideSourceSelection = (): void => {
+    sourceSelection.hidden = true;
+    sourceSelection.classList.remove('rejected');
+    useSourceTargetAsBrush.hidden = true;
+  };
 
   /**
    * Selecting a brush only changes one visual state. Rebuilding the library for
@@ -218,28 +256,36 @@ export function mountControls(host: HTMLElement, callbacks: ControlsCallbacks, c
     button.setAttribute('aria-pressed', String(selected));
     button.addEventListener('click', () => {
       if (tool.kind === 'source' && callbacks.canConfigureSource?.(tool.emitter, sourceTarget) === false) {
-        sourceSelection.value = sourceRejectionLabel(tool.emitter, sourceTarget);
-        sourceSelection.hidden = false;
-        sourceSelection.classList.add('rejected');
-        sourceSelection.dataset.emitter = String(tool.emitter);
-        sourceSelection.dataset.target = String(sourceTarget);
+        showSourceSelection(tool, true);
         return;
       }
+      const source = activeSourceTool();
+      if (tool.kind === 'element' && source
+        && callbacks.canConfigureSource?.(source.emitter, tool.id) === false) {
+          showSourceSelection(source, true);
+          return;
+        }
       selectedKey = tool.key;
       recent = recordRecent(recent, tool.key);
       saveList(RECENT_KEY, recent);
       if (tool.kind === 'element') {
         sourceTarget = tool.id;
-        sourceSelection.hidden = true;
-        sourceSelection.classList.remove('rejected');
-        callbacks.onMaterial(tool.id);
+        if (source) {
+          // Source mode is an explicit tool mode.  Element tiles retarget it
+          // in place so users can browse a nested catalog without silently
+          // switching back to ordinary paint.
+          selectedKey = source.key;
+          showSourceSelection(source);
+          if (callbacks.onSourceTarget) callbacks.onSourceTarget(tool.id);
+          else callbacks.onMaterial(tool.id);
+        } else {
+          hideSourceSelection();
+          callbacks.onMaterial(tool.id);
+        }
       } else {
-        sourceSelection.hidden = tool.kind !== 'source';
+        hideSourceSelection();
         if (tool.kind === 'source') {
-          sourceSelection.value = sourceSelectionLabel(tool.emitter, sourceTarget);
-          sourceSelection.classList.remove('rejected');
-          sourceSelection.dataset.emitter = String(tool.emitter);
-          sourceSelection.dataset.target = String(sourceTarget);
+          showSourceSelection(tool);
         }
         callbacks.onTool?.(tool);
       }
@@ -328,6 +374,14 @@ export function mountControls(host: HTMLElement, callbacks: ControlsCallbacks, c
     if (event.key !== 'Escape' || !search.value) return;
     search.value = '';
     renderLibrary();
+  });
+  useSourceTargetAsBrush.addEventListener('click', () => {
+    const source = activeSourceTool();
+    if (!source) return;
+    selectedKey = `material:${sourceTarget}`;
+    hideSourceSelection();
+    callbacks.onMaterial(sourceTarget);
+    syncSelectedTool();
   });
   tools.append(finder, filters, results, library);
   renderLibrary();

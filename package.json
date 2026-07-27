@@ -12,6 +12,7 @@
     "test": "vitest run src",
     "audit:browser-input": "node scripts/verify-browser-input.mjs",
     "audit:catalog-selection": "node scripts/verify-browser-input.mjs --catalog-selection-only --canvas-only",
+    "audit:native-semantics": "node scripts/verify-browser-input.mjs --native-semantics-only --webgl-only",
     "audit:production-screenshot": "node scripts/verify-browser-input.mjs --production-bundle --quick-screenshot",
     "audit:showcase-screenshot": "node scripts/verify-browser-input.mjs --production-bundle --showcase-screenshot",
     "audit:8x": "node scripts/verify-browser-input.mjs --scale-eight-only",
