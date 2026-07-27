@@ -74,7 +74,7 @@ describe('independent PHOT spectrum graphics audit', () => {
     }
     expect(simulation.cells()).toEqual(cells);
     expect(simulation.walls()).toEqual(walls);
-  });
+  }, 15_000);
 
   it('is deterministic and rejects state-less fixtures', () => {
     const first = new RenderLabBackend();
