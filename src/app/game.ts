@@ -87,6 +87,10 @@ import {
   SPNG_STATE_GRAPHICS_AUDIT, prepareSpngStateGraphicsAuditFixture,
 } from './spng-state-graphics-audit';
 import {
+  PHOTON_SPECTRUM_GRAPHICS_AUDIT, preparePhotonSpectrumGraphicsAuditFixture,
+  setPhotonSpectrumGraphicsVisible,
+} from './photon-spectrum-graphics-audit';
+import {
   LAVA_STATE_GRAPHICS_AUDIT, prepareLavaStateGraphicsAuditFixture,
 } from './lava-state-graphics-audit';
 import {
@@ -315,6 +319,10 @@ export class Game {
       presentationState: (x, y) => {
         if (x < 0 || y < 0 || x >= this.simulation.width || y >= this.simulation.height) return -1;
         return this.simulation.presentationState?.()[y * this.simulation.width + x] ?? 0;
+      },
+      photonState: (x, y) => {
+        if (x < 0 || y < 0 || x >= this.simulation.width || y >= this.simulation.height) return -1;
+        return this.simulation.photonState?.()[y * this.simulation.width + x] ?? 0;
       },
       wall: (x, y) => {
         if (x < 0 || y < 0 || x >= this.simulation.width || y >= this.simulation.height) return -1;
@@ -590,6 +598,15 @@ export class Game {
       spngStateGraphicsAtlas: () => SPNG_STATE_GRAPHICS_AUDIT,
       prepareSpngStateGraphicsFixture: () => {
         prepareSpngStateGraphicsAuditFixture(this.simulation);
+      },
+      photonSpectrumGraphicsAtlas: () => PHOTON_SPECTRUM_GRAPHICS_AUDIT,
+      preparePhotonSpectrumGraphicsFixture: () => {
+        preparePhotonSpectrumGraphicsAuditFixture(this.simulation);
+        this.renderer.invalidateDynamicPresentation();
+      },
+      setPhotonSpectrumGraphicsVisible: (visible) => {
+        setPhotonSpectrumGraphicsVisible(this.simulation, visible);
+        this.renderer.invalidateDynamicPresentation();
       },
       lavaStateGraphicsAtlas: () => LAVA_STATE_GRAPHICS_AUDIT,
       prepareLavaStateGraphicsFixture: () => {

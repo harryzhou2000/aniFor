@@ -96,6 +96,7 @@ in vec2 vFieldCoord;
 out vec4 finalColor;
 uniform sampler2D uFieldTexture;
 uniform sampler2D uWallTexture;
+uniform sampler2D uPhotonStateTexture;
 uniform sampler2D uAtmosphereTexture;
 uniform sampler2D uAtmosphereStyleTexture;
 uniform sampler2D uEmissionTexture;
@@ -138,6 +139,7 @@ uniform float uBotanicalLifecycleStyling;
 uniform float uSparkStateStyling;
 uniform float uPoloStateStyling;
 uniform float uSpngStateStyling;
+uniform float uPhotonActive;
 float materialAt(vec2 uv) {
   return floor(texture(uFieldTexture, clamp(uv, uTexel * 0.5, vec2(1.0) - uTexel * 0.5)).r * 255.0 + 0.5);
 }
@@ -1180,6 +1182,26 @@ void main() {
     foreground = compositeEightXWallBackdrop(
       foreground, nativeWall, uv * uFieldSize, refractedMaterial, refractedBoundarySlope
     );
+  }
+  // Native PHOT lives in an independent plane and may coexist with any pmap
+  // owner. Keep its existing nearest texture fetch dormant for photon-free
+  // scenes, then tint only premultiplied RGB after matter/wall composition.
+  // It never claims support, changes alpha, or treats the spectrum as a
+  // particle/material owner on the compact true-8x path.
+  if (uPhotonActive > 0.5) {
+    vec4 photonState = texture(uPhotonStateTexture, uv);
+    float photonLow = floor(photonState.r * 255.0 + 0.5);
+    float photonHigh = floor(photonState.g * 255.0 + 0.5);
+    if (photonHigh >= 128.0) {
+      vec3 photonSpectrum = vec3(
+        mod(photonLow, 16.0),
+        mod(floor(photonLow / 16.0), 16.0),
+        mod(photonHigh, 16.0)
+      ) * (16.0 / 255.0);
+      float photonPeak = max(photonSpectrum.r, max(photonSpectrum.g, photonSpectrum.b));
+      float photonAmount = 0.44 + min(0.18, photonPeak * 0.24);
+      foreground.rgb = mix(foreground.rgb, photonSpectrum * foreground.a, photonAmount);
+    }
   }
   finalColor = foreground;
 }

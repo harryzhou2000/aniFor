@@ -33,6 +33,7 @@ import type {
   BotanicalLifecycleGraphicsAuditSnapshot,
 } from './botanical-lifecycle-graphics-audit';
 import type { SparkStateGraphicsAuditSnapshot } from './spark-state-graphics-audit';
+import type { PhotonSpectrumGraphicsAuditSnapshot } from './photon-spectrum-graphics-audit';
 
 export interface BrowserInputAuditApi {
   readonly version: 1;
@@ -41,6 +42,7 @@ export interface BrowserInputAuditApi {
   cell(x: number, y: number): number;
   renderedCell(x: number, y: number): number;
   presentationState(x: number, y: number): number;
+  photonState(x: number, y: number): number;
   wall(x: number, y: number): number;
   temperature(x: number, y: number): number;
   sourceTarget(x: number, y: number): number;
@@ -152,6 +154,9 @@ export interface BrowserInputAuditApi {
   preparePoloStateGraphicsFixture(): void;
   spngStateGraphicsAtlas(): SpngStateGraphicsAuditSnapshot;
   prepareSpngStateGraphicsFixture(): void;
+  photonSpectrumGraphicsAtlas(): PhotonSpectrumGraphicsAuditSnapshot;
+  preparePhotonSpectrumGraphicsFixture(): void;
+  setPhotonSpectrumGraphicsVisible(visible: boolean): void;
   lavaStateGraphicsAtlas(): LavaStateGraphicsAuditSnapshot;
   prepareLavaStateGraphicsFixture(): void;
   botanicalLifecycleGraphicsAtlas(): BotanicalLifecycleGraphicsAuditSnapshot;

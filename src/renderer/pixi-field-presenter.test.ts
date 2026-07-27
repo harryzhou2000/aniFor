@@ -1356,6 +1356,27 @@ describe('Pixi presenter startup configuration', () => {
     expect(eight.match(/texture\(uWallTexture, uv\)/g)).toHaveLength(3);
   });
 
+  it('restores independent PHOT spectrum after true-8x matter and wall composition', () => {
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');
+    const eightEnd = source.indexOf('const FIELD_FRAGMENT = `', eightStart);
+    const eight = source.slice(eightStart, eightEnd);
+    const start = eight.indexOf('  // Native PHOT lives in an independent plane');
+    const end = eight.indexOf('  finalColor = foreground;', start);
+    const block = eight.slice(start, end);
+
+    expect(start).toBeGreaterThan(0);
+    expect(end).toBeGreaterThan(start);
+    expect(eight).toContain('uniform sampler2D uPhotonStateTexture;');
+    expect(eight).toContain('uniform float uPhotonActive;');
+    expect(block).toContain('if (uPhotonActive > 0.5)');
+    expect(block).toContain('texture(uPhotonStateTexture, uv)');
+    expect(block).toContain('if (photonHigh >= 128.0)');
+    expect(block).toContain('foreground.rgb = mix(foreground.rgb, photonSpectrum * foreground.a, photonAmount);');
+    expect(block).not.toMatch(/\balpha\s*[+*]?=/);
+    expect(block).not.toContain('material ==');
+  });
+
   it('keeps Smooth powder body depth gated, bounded, and topology-neutral', () => {
     const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
     const start = source.indexOf('// Stable two-dimensional bulk gets a coherent');

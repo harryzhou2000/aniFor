@@ -13312,6 +13312,8 @@ async function auditRenderScaleEight(cdp, dpr) {
   stage('polo-state-ready');
   const spngStateGraphics = await auditEightXSpngStateGraphics(cdp, geometry.canvas);
   stage('spng-state-ready');
+  const photonSpectrumGraphics = await auditEightXPhotonSpectrumGraphics(cdp, geometry.canvas);
+  stage('photon-spectrum-ready');
   // The shared Lava ancestry audit normally samples a complete backing canvas.
   // At true 8x that would allocate an avoidable 60 MiB ImageData copy, so keep
   // the same six-state/topology proof but sample only composed page regions
@@ -13377,6 +13379,7 @@ async function auditRenderScaleEight(cdp, dpr) {
     vibrStateGraphics,
     poloStateGraphics,
     spngStateGraphics,
+    photonSpectrumGraphics,
     deutStateGraphics,
     lavaStateGraphics,
     sparkStateGraphics,
@@ -14057,6 +14060,158 @@ async function auditEightXSpngStateGraphics(cdp, canvasRect) {
   assertEightXSpngResponses(samples, 'renderScale=8 WebGL');
   return {
     cards: rawAtlas.cards.map(({ key, hydration, encodedState }) => ({ key, hydration, encodedState })),
+    occupied: prepared.occupied,
+    samples,
+    exactRepeatedOff: samples.every(({ repeatRgbPeak }) => repeatRgbPeak <= 1),
+  };
+}
+
+async function snapshotEightXPhotonSpectrum(cdp, visible) {
+  return evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    const atlas = audit.photonSpectrumGraphicsAtlas();
+    const photon = (x, y) => audit.photonState(x, y);
+    const inside = (x, y, rect) => x >= rect.x && x < rect.x + rect.width
+      && y >= rect.y && y < rect.y + rect.height;
+    let matterSignature = 2166136261;
+    for (let y = 0; y < ${WORLD_HEIGHT}; y++) for (let x = 0; x < ${WORLD_WIDTH}; x++) {
+      matterSignature = Math.imul(matterSignature ^ audit.cell(x, y), 16777619) >>> 0;
+      matterSignature = Math.imul(matterSignature ^ audit.presentationState(x, y), 16777619) >>> 0;
+      matterSignature = Math.imul(matterSignature ^ audit.wall(x, y), 16777619) >>> 0;
+    }
+    const exactRect = (rect, material, state) => {
+      for (let y = rect.y; y < rect.y + rect.height; y++) {
+        for (let x = rect.x; x < rect.x + rect.width; x++) {
+          if (audit.cell(x, y) !== material || photon(x, y) !== state
+            || audit.presentationState(x, y) !== 0) return false;
+        }
+      }
+      return true;
+    };
+    return {
+      occupied: audit.occupiedCells(), matterSignature,
+      cards: atlas.cards.map((entry) => {
+        const state = ${visible ? 'entry.encodedState' : '0'};
+        let bodyExact = true;
+        for (let y = entry.body.y; y < entry.body.y + entry.body.height; y++) {
+          for (let x = entry.body.x; x < entry.body.x + entry.body.width; x++) {
+            const empty = inside(x, y, entry.authoredHole) || inside(x, y, entry.openNotch);
+            bodyExact &&= audit.cell(x, y) === (empty ? 0 : 23)
+              && photon(x, y) === (empty ? 0 : state)
+              && audit.presentationState(x, y) === 0;
+          }
+        }
+        let wallCells = 0;
+        for (let y = entry.wallCoexistence.y;
+          y < entry.wallCoexistence.y + entry.wallCoexistence.height; y++) {
+          for (let x = entry.wallCoexistence.x;
+            x < entry.wallCoexistence.x + entry.wallCoexistence.width; x++) {
+            wallCells += Number(audit.wall(x, y) === 1);
+          }
+        }
+        return {
+          key: entry.key, spectrum: entry.spectrum, encodedState: entry.encodedState, bodyExact,
+          thinExact: exactRect(entry.thinStructure, 23, state),
+          isolatedExact: audit.cell(entry.isolated.x, entry.isolated.y) === 23
+            && photon(entry.isolated.x, entry.isolated.y) === state
+            && audit.presentationState(entry.isolated.x, entry.isolated.y) === 0,
+          absentExact: exactRect(entry.absentState, 23, 0),
+          waterExact: exactRect(entry.waterCoexistence, 2, state),
+          glassExact: exactRect(entry.glassCoexistence, 24, state),
+          wallExact: exactRect(entry.wallCoexistence, 24, state),
+          wallCells,
+          blankExact: exactRect(entry.guardedBlank, 0, 0),
+        };
+      }),
+    };
+  })()`);
+}
+
+function assertEightXPhotonSpectrumTopology(snapshot, visible, label) {
+  const keys = 'red,green,blue,violet';
+  const states = '32780,32960,35840,35881';
+  assert(snapshot.cards.length === 4
+      && snapshot.cards.map(({ key }) => key).join(',') === keys
+      && snapshot.cards.map(({ encodedState }) => encodedState).join(',') === states
+      && snapshot.cards.every((card) => card.bodyExact && card.thinExact && card.isolatedExact
+        && card.absentExact && card.waterExact && card.glassExact && card.wallExact
+        && card.wallCells > 0 && card.blankExact),
+  `${label}: independent PHOT ${visible ? 'on' : 'off'} topology changed (${JSON.stringify(snapshot)})`);
+}
+
+function eightXPhotonSpectrumRegions(atlas) {
+  return atlas.cards.flatMap((entry) => [
+    { name: `PHOT-${entry.key}-body`, x: entry.body.x + 17, y: entry.body.y + 17, radiusX: 14, radiusY: 12 },
+    { name: `PHOT-${entry.key}-water`, x: entry.waterCoexistence.x + 10, y: entry.waterCoexistence.y + 9, radiusX: 7, radiusY: 6 },
+    { name: `PHOT-${entry.key}-glass`, x: entry.glassCoexistence.x + 10, y: entry.glassCoexistence.y + 9, radiusX: 7, radiusY: 6 },
+    { name: `PHOT-${entry.key}-wall`, x: entry.wallCoexistence.x + 2, y: entry.wallCoexistence.y + 2, radiusX: 2, radiusY: 2 },
+    { name: `PHOT-${entry.key}-absent`, x: entry.absentState.x + 10, y: entry.absentState.y + 9, radiusX: 6, radiusY: 5 },
+    { name: `PHOT-${entry.key}-blank`, x: entry.guardedBlank.x + 52, y: entry.guardedBlank.y + 32, radiusX: 20, radiusY: 14 },
+  ]);
+}
+
+function assertEightXPhotonSpectrumResponses(samples, label) {
+  const active = samples.filter(({ name }) => /-(body|water|glass|wall)$/.test(name));
+  const controls = samples.filter(({ name }) => /-(absent|blank)$/.test(name));
+  const body = samples.filter(({ name }) => name.endsWith('-body'));
+  assert(active.length === 16 && active.every(({ rgbRms, rgbPeak, repeatRgbPeak }) => (
+    rgbRms >= 0.004 && rgbRms <= 128 && rgbPeak > 0 && rgbPeak <= 160 && repeatRgbPeak <= 1
+  )), `${label}: independent PHOT response is absent, excessive, or unstable (${JSON.stringify(active)})`);
+  assert(controls.length === 8 && controls.every(({ rgbPeak, repeatRgbPeak }) => (
+    rgbPeak <= 1 && repeatRgbPeak <= 1
+  )), `${label}: absent PHOT claimed matter or empty-space support (${JSON.stringify(controls)})`);
+  assert(body.length === 4 && new Set(body.map(({ responseSignature }) => responseSignature)).size === 4,
+    `${label}: independent PHOT spectra collapsed after composition (${JSON.stringify(body)})`);
+}
+
+async function auditEightXPhotonSpectrumGraphics(cdp, canvasRect) {
+  const atlas = await evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    if (typeof audit.cell !== 'function' || typeof audit.wall !== 'function'
+      || typeof audit.photonState !== 'function'
+      || typeof audit.photonSpectrumGraphicsAtlas !== 'function'
+      || typeof audit.preparePhotonSpectrumGraphicsFixture !== 'function'
+      || typeof audit.setPhotonSpectrumGraphicsVisible !== 'function') {
+      throw new Error('True-8x independent PHOT spectrum graphics audit API unavailable');
+    }
+    audit.resetView();
+    audit.preparePhotonSpectrumGraphicsFixture();
+    return audit.photonSpectrumGraphicsAtlas();
+  })()`);
+  const prepared = await snapshotEightXPhotonSpectrum(cdp, true);
+  assertEightXPhotonSpectrumTopology(prepared, true, 'renderScale=8 prepared PHOT fixture');
+  const live = await metrics(cdp);
+  assert(live.backing.width === WORLD_WIDTH * 8 && live.backing.height === WORLD_HEIGHT * 8
+      && live.outputScale === '8',
+  `renderScale=8 PHOT fixture lost true backing (${JSON.stringify(live.backing)})`);
+  assertCanvasRectsEqual(canvasRect, live.canvas, 'renderScale=8 PHOT fixture CSS geometry');
+
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setPhotonSpectrumGraphicsVisible(false); true');
+  const flat = await captureSettledPage(cdp, 'renderScale=8 flat independent PHOT framebuffer', 450);
+  const flatTopology = await snapshotEightXPhotonSpectrum(cdp, false);
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setPhotonSpectrumGraphicsVisible(true); true');
+  const styled = await captureSettledPage(cdp, 'renderScale=8 spectrum independent PHOT framebuffer', 450);
+  const styledTopology = await snapshotEightXPhotonSpectrum(cdp, true);
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setPhotonSpectrumGraphicsVisible(false); true');
+  const repeated = await captureSettledPage(cdp, 'renderScale=8 repeated flat independent PHOT framebuffer', 450);
+  const repeatedTopology = await snapshotEightXPhotonSpectrum(cdp, false);
+  assertEightXPhotonSpectrumTopology(flatTopology, false, 'renderScale=8 flat PHOT fixture');
+  assertEightXPhotonSpectrumTopology(styledTopology, true, 'renderScale=8 spectrum PHOT fixture');
+  assertEightXPhotonSpectrumTopology(repeatedTopology, false, 'renderScale=8 repeated flat PHOT fixture');
+  assert(flatTopology.occupied === prepared.occupied && styledTopology.occupied === prepared.occupied
+      && repeatedTopology.occupied === prepared.occupied
+      && flatTopology.matterSignature === prepared.matterSignature
+      && styledTopology.matterSignature === prepared.matterSignature
+      && repeatedTopology.matterSignature === prepared.matterSignature,
+  'renderScale=8 independent PHOT toggle changed matter, walls, or owner state');
+  const samples = await sampleBackdropRefractionRegions(cdp, {
+    straight: flat.capture.data,
+    refracted: styled.capture.data,
+    repeatedStraight: repeated.capture.data,
+  }, eightXPhotonSpectrumRegions(atlas), canvasRect);
+  assertEightXPhotonSpectrumResponses(samples, 'renderScale=8 WebGL');
+  return {
+    cards: atlas.cards.map(({ key, spectrum, encodedState }) => ({ key, spectrum, encodedState })),
     occupied: prepared.occupied,
     samples,
     exactRepeatedOff: samples.every(({ repeatRgbPeak }) => repeatRgbPeak <= 1),
