@@ -121,6 +121,7 @@ uniform float uEmissionVolumeChroma;
 uniform float uEnergyCoreRelief;
 uniform float uEnergyIdentityStyling;
 uniform float uCellularMaterialStyling;
+uniform float uSensorMaterialStyling;
 uniform float uExplosivePowderStyling;
 uniform float uUnusualPowderStyling;
 uniform float uUnusualSolidStyling;
@@ -546,6 +547,67 @@ vec3 unusualPowderEightXDelta(float material, vec2 position, float density) {
   return clamp(key * motif * smoothstep(0.10, 0.80, density),
     vec3(-14.0), vec3(14.0)) / 255.0;
 }
+// Device sensors need a legible visual vocabulary at true 8x, not merely the
+// generic device bus. Keep this seven-owner instrument layer owner-local and
+// static: it reuses world position and density, preserves the semantic alpha
+// downstream, and adds no state read, texture, field, clock, or render pass.
+float sensorEightXStyle(float material) {
+  return material >= 164.0 && material <= 170.0 ? material - 163.0 : 0.0;
+}
+vec3 sensorEightXDelta(float material, vec2 position, float density) {
+  float style = sensorEightXStyle(material);
+  if (style < 0.5) return vec3(0.0);
+  vec2 local = fract(position / 24.0) - 0.5;
+  vec2 absoluteLocal = abs(local);
+  float radius = length(local);
+  float bezel = 1.0 - smoothstep(0.020, 0.046,
+    abs(max(absoluteLocal.x, absoluteLocal.y) - 0.425));
+  float glyph;
+  vec3 key;
+  if (style == 1.0) {
+    // DTEC: crosshair and a shallow range ring.
+    glyph = max(1.0 - smoothstep(0.018, 0.048, min(absoluteLocal.x, absoluteLocal.y)),
+      1.0 - smoothstep(0.018, 0.044, abs(radius - 0.245)));
+    key = vec3(15.0, 6.0, -2.0);
+  } else if (style == 2.0) {
+    // INVIS: an iris with stable crossed shutters.
+    glyph = max(1.0 - smoothstep(0.020, 0.045, abs(radius - 0.245)),
+      1.0 - smoothstep(0.020, 0.048, abs(absoluteLocal.x - absoluteLocal.y)));
+    key = vec3(5.0, 10.0, 15.0);
+  } else if (style == 3.0) {
+    // LDTC: scan rails and a diagonal sweep.
+    glyph = max(1.0 - smoothstep(0.018, 0.044, abs(local.y - 0.18)),
+      1.0 - smoothstep(0.018, 0.044, abs(local.x + local.y * 0.52)));
+    key = vec3(-3.0, 15.0, 8.0);
+  } else if (style == 4.0) {
+    // LSNS: a triangular waveform avoids a time-varying trace.
+    float wave = (1.0 - abs(fract((local.x + 0.5) * 3.0) * 2.0 - 1.0)) * 0.25 - 0.125;
+    glyph = 1.0 - smoothstep(0.020, 0.050, abs(local.y - wave));
+    key = vec3(3.0, 15.0, 2.0);
+  } else if (style == 5.0) {
+    // PSNS: nested pressure rings.
+    glyph = max(1.0 - smoothstep(0.018, 0.044, abs(radius - 0.145)),
+      1.0 - smoothstep(0.018, 0.044, abs(radius - 0.285)));
+    key = vec3(15.0, 10.0, 2.0);
+  } else if (style == 6.0) {
+    // TSNS: thermometer stem and bulb.
+    float stem = (1.0 - smoothstep(0.020, 0.045, abs(local.x)))
+      * step(-0.29, local.y) * (1.0 - step(0.16, local.y));
+    float bulb = 1.0 - smoothstep(0.070, 0.120, length(local - vec2(0.0, 0.235)));
+    glyph = max(stem, bulb);
+    key = vec3(15.0, 4.0, -2.0);
+  } else {
+    // VSNS: shaft plus a right-facing vector head.
+    float shaft = (1.0 - smoothstep(0.020, 0.045, abs(local.y)))
+      * step(-0.31, local.x) * (1.0 - step(0.19, local.x));
+    float head = (1.0 - smoothstep(0.020, 0.050,
+      abs(absoluteLocal.y - (0.34 - local.x)))) * step(0.10, local.x);
+    glyph = max(shaft, head);
+    key = vec3(10.0, 5.0, 15.0);
+  }
+  return clamp((key * (bezel * 0.38 + glyph))
+    * smoothstep(0.10, 0.80, density), vec3(-16.0), vec3(16.0)) / 255.0;
+}
 // LIFE projections carry an exact native ctype preset rather than a generic
 // material identity. Keep the true-8x counterpart static and owner-local: all
 // twenty-four presets share this small arithmetic grammar, so it adds neither
@@ -955,6 +1017,14 @@ void main() {
     // base. All other trait-bearing owners remain an exact no-op here.
     && (traits < 0.5 || material == 216.0) && !materialEmissive) {
     color = clamp(color + unusualSolidEightXDelta(material, grid, density), 0.0, 1.0);
+  }
+  // Sensor glyphs are an exact device-owner overlay. They remain static and
+  // RGB-only so sparse wires, isolated cells, holes, walls, and semantics keep
+  // the common compositor's coverage and native ownership.
+  if (uSensorMaterialStyling > 0.5 && family == 0.0
+    && sensorEightXStyle(material) > 0.5
+    && traits < 0.5 && !materialEmissive) {
+    color = clamp(color + sensorEightXDelta(material, grid, density), 0.0, 1.0);
   }
   // True 8x deliberately reuses the centre emission sample that is already
   // live for gas and Energy. This is the compact counterpart to normal

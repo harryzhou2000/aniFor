@@ -651,7 +651,7 @@ describe('Pixi presenter startup configuration', () => {
     const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
     const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');
     const helperStart = source.indexOf('vec3 liquidIdentityEightXDelta(', eightStart);
-    const helperEnd = source.indexOf('bool solidEightXGranular', helperStart);
+    const helperEnd = source.indexOf('// Device sensors need a legible visual vocabulary', helperStart);
     const blockStart = source.indexOf('// Public unusual/phase-product liquids need a visual grammar', helperStart);
     const blockEnd = source.indexOf('  // The shared suspension field is powder-authored', blockStart);
     const helper = source.slice(helperStart, helperEnd);
@@ -795,7 +795,7 @@ describe('Pixi presenter startup configuration', () => {
     const eightEnd = source.indexOf('const FIELD_FRAGMENT = `', eightStart);
     const eight = source.slice(eightStart, eightEnd);
     const helperStart = eight.indexOf('float unusualPowderEightXStyle(');
-    const helperEnd = eight.indexOf('// LIFE projections carry', helperStart);
+    const helperEnd = eight.indexOf('// Device sensors need a legible visual vocabulary', helperStart);
     const branchStart = eight.indexOf('if (family == 4.0) {');
     const branchEnd = eight.indexOf('// Deep rigid bodies reuse', branchStart);
     const helper = eight.slice(helperStart, helperEnd);
@@ -812,6 +812,33 @@ describe('Pixi presenter startup configuration', () => {
     expect(branch).toContain('unusualPowderEightXStyle(material) > 0.5');
     expect(branch).toContain('traits < 0.5 && !materialEmissive');
     expect(branch).toContain('unusualPowderEightXDelta(material, grid, density)');
+    expect(`${helper}${branch}`).not.toContain('texture(');
+    expect(`${helper}${branch}`).not.toContain('uTime');
+    expect(`${helper}${branch}`).not.toMatch(/\balpha\s*[+*]?=/);
+  });
+
+  it('keeps true-8x sensor glyphs exact-owner, RGB-only, and resource-free', () => {
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');
+    const eightEnd = source.indexOf('const FIELD_FRAGMENT = `', eightStart);
+    const eight = source.slice(eightStart, eightEnd);
+    const helperStart = eight.indexOf('float sensorEightXStyle(');
+    const helperEnd = eight.indexOf('// LIFE projections carry', helperStart);
+    const branchStart = eight.indexOf('// Sensor glyphs are an exact device-owner overlay.');
+    const branchEnd = eight.indexOf('// True 8x deliberately reuses the centre emission sample', branchStart);
+    const helper = eight.slice(helperStart, helperEnd);
+    const branch = eight.slice(branchStart, branchEnd);
+
+    expect(helperStart).toBeGreaterThan(0);
+    expect(helperEnd).toBeGreaterThan(helperStart);
+    expect(branchStart).toBeGreaterThan(0);
+    expect(branchEnd).toBeGreaterThan(branchStart);
+    expect(eight).toContain('uniform float uSensorMaterialStyling;');
+    expect(helper).toContain('material >= 164.0 && material <= 170.0');
+    expect(branch).toContain('uSensorMaterialStyling > 0.5 && family == 0.0');
+    expect(branch).toContain('sensorEightXStyle(material) > 0.5');
+    expect(branch).toContain('traits < 0.5 && !materialEmissive');
+    expect(branch).toContain('sensorEightXDelta(material, grid, density)');
     expect(`${helper}${branch}`).not.toContain('texture(');
     expect(`${helper}${branch}`).not.toContain('uTime');
     expect(`${helper}${branch}`).not.toMatch(/\balpha\s*[+*]?=/);
