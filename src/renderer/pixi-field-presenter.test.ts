@@ -1103,6 +1103,7 @@ describe('Pixi presenter startup configuration', () => {
     expect(block).toContain('bool lavaAncestryOwner = material == 11.0 && family == 2.0 && !materialEmissive;');
     expect(block).toContain('bool botanicalLifecycleOwner = material == 50.0 || material == 10.0;');
     expect(block).toContain('bool needsPackedState =');
+    expect(block).toContain('uForceActivityStyling > 0.5 && forceOwner');
     expect(block).toContain('uBotanicalLifecycleStyling > 0.5 && botanicalLifecycleOwner');
     expect(block).toContain('vec4 packedState = texture(uWallTexture, uv);');
     expect(block.match(/texture\(uWallTexture, uv\)/g)).toHaveLength(1);

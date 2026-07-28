@@ -230,7 +230,11 @@ async function main() {
     if (vibrStateGraphicsOnly) assertPairedVibrStateGraphics(results);
     if (deutStateGraphicsOnly) assertPairedDeutStateGraphics(results);
     if (sourceTargetGraphicsOnly) assertPairedSourceTargetGraphics(results, assert);
-    if (forceActivityGraphicsOnly) assertPairedForceActivityGraphics(results, assert);
+    if (forceActivityGraphicsOnly && modes.includes('canvas2d') && modes.includes('webgl')) {
+      // ACEL/DCEL's canonical visual proof is WebGL. Canvas remains a semantic
+      // fallback and participates in parity evidence only when it was selected.
+      assertPairedForceActivityGraphics(results, assert);
+    }
     if (poloStateGraphicsOnly) assertPairedPoloStateGraphics(results, assert);
     if (spngStateGraphicsOnly) assertPairedSpngStateGraphics(results, assert);
     if (lavaStateGraphicsOnly) assertPairedLavaStateGraphics(results, assert);
@@ -13321,6 +13325,8 @@ async function auditRenderScaleEight(cdp, dpr) {
   stage('atlas-stress-ready');
   const sourceTargetGraphics = await auditEightXSourceTargetGraphics(cdp, geometry.canvas);
   stage('source-target-ready');
+  const forceActivityGraphics = await auditEightXForceActivityGraphics(cdp, geometry.canvas);
+  stage('force-activity-ready');
   const vibrStateAudit = await auditEightXVibrStateGraphics(cdp, geometry.canvas);
   stage('vibr-state-ready');
   const poloStateGraphics = await auditEightXPoloStateGraphics(cdp, geometry.canvas);
@@ -13402,6 +13408,7 @@ async function auditRenderScaleEight(cdp, dpr) {
     },
     materialAtlasStress,
     sourceTargetGraphics,
+    forceActivityGraphics,
     vibrStateGraphics,
     poloStateGraphics,
     spngStateGraphics,
@@ -13944,6 +13951,143 @@ async function auditEightXPoloStateGraphics(cdp, canvasRect) {
   return {
     cards: rawAtlas.cards.map(({ key, emissions, cooldown, protonDose, encodedState }) => ({
       key, emissions, cooldown, protonDose, encodedState,
+    })),
+    occupied: prepared.occupied,
+    samples,
+    exactRepeatedOff: samples.every(({ repeatRgbPeak }) => repeatRgbPeak <= 1),
+  };
+}
+
+async function snapshotEightXForceActivity(cdp) {
+  return evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    const atlas = audit.forceActivityGraphicsAtlas();
+    const inside = (x, y, rect) => x >= rect.x && x < rect.x + rect.width
+      && y >= rect.y && y < rect.y + rect.height;
+    const exactRect = (rect, material, state) => {
+      for (let y = rect.y; y < rect.y + rect.height; y++) {
+        for (let x = rect.x; x < rect.x + rect.width; x++) {
+          if (audit.cell(x, y) !== material || audit.presentationState(x, y) !== state) return false;
+        }
+      }
+      return true;
+    };
+    return {
+      occupied: audit.occupiedCells(),
+      cards: atlas.cards.map((entry) => {
+        let bodyExact = true;
+        for (let y = entry.body.y; y < entry.body.y + entry.body.height; y++) {
+          for (let x = entry.body.x; x < entry.body.x + entry.body.width; x++) {
+            const empty = inside(x, y, entry.authoredHole) || inside(x, y, entry.openNotch);
+            bodyExact = bodyExact
+              && audit.cell(x, y) === (empty ? 0 : entry.material)
+              && audit.presentationState(x, y) === (empty ? 0 : entry.encodedState);
+          }
+        }
+        return {
+          code: entry.code, stateKey: entry.stateKey, active: entry.active,
+          material: entry.material, encodedState: entry.encodedState, bodyExact,
+          thinExact: exactRect(entry.thinStructure, entry.material, entry.encodedState),
+          isolatedExact: audit.cell(entry.isolated.x, entry.isolated.y) === entry.material
+            && audit.presentationState(entry.isolated.x, entry.isolated.y) === entry.encodedState,
+          wrongOwnerExact: exactRect(entry.wrongOwner, 1, 1),
+          waterExact: exactRect(entry.waterControl, 2, 1),
+          metalExact: exactRect(entry.metalControl, 23, 1),
+          blankExact: exactRect(entry.guardedBlank, 0, 0),
+        };
+      }),
+    };
+  })()`);
+}
+
+function assertEightXForceActivityTopology(snapshot, label) {
+  assert(snapshot.cards.length === 4
+      && snapshot.cards.map(({ code }) => code).join(',') === 'ACEL,ACEL,DCEL,DCEL'
+      && snapshot.cards.map(({ stateKey }) => stateKey).join(',') === 'inactive,active,inactive,active'
+      && snapshot.cards.map(({ active }) => active).join(',') === 'false,true,false,true'
+      && snapshot.cards.map(({ material }) => material).join(',') === '115,115,116,116'
+      && snapshot.cards.map(({ encodedState }) => encodedState).join(',') === '0,1,0,1'
+      && snapshot.cards.every((card) => card.bodyExact && card.thinExact && card.isolatedExact
+        && card.wrongOwnerExact && card.waterExact && card.metalExact && card.blankExact),
+  `${label}: ACEL/DCEL activity semantic/state topology changed (${JSON.stringify(snapshot)})`);
+}
+
+function eightXForceActivityRegions(atlas) {
+  const centre = (rect) => ({ x: rect.x + rect.width / 2, y: rect.y + rect.height / 2 });
+  return atlas.cards.flatMap((entry) => [
+    // The existing fixture's named motif probes intentionally preserve an
+    // eight-cell phase, but do not all land on a compact 16-cell direct-mesh
+    // mark. A body capture is the stable composed visual contract at true 8x.
+    { name: `FORCE-${entry.code}-${entry.stateKey}-state`, ...centre(entry.body), radiusX: 24, radiusY: 22 },
+    { name: `FORCE-${entry.code}-${entry.stateKey}-wrong-owner`, ...centre(entry.wrongOwner), radiusX: 5, radiusY: 5 },
+    { name: `FORCE-${entry.code}-${entry.stateKey}-water`, ...centre(entry.waterControl), radiusX: 5, radiusY: 5 },
+    { name: `FORCE-${entry.code}-${entry.stateKey}-metal`, ...centre(entry.metalControl), radiusX: 5, radiusY: 5 },
+    { name: `FORCE-${entry.code}-${entry.stateKey}-blank`, ...centre(entry.guardedBlank), radiusX: 20, radiusY: 14 },
+  ]);
+}
+
+function assertEightXForceActivityResponses(samples, label) {
+  const states = samples.filter(({ name }) => name.endsWith('-state'));
+  const inactive = states.filter(({ name }) => name.includes('-inactive-'));
+  const active = states.filter(({ name }) => name.includes('-active-'));
+  assert(inactive.length === 2 && inactive.every(({ rgbPeak, repeatRgbPeak }) => (
+    rgbPeak <= 1 && repeatRgbPeak <= 1
+  )), `${label}: inactive ACEL/DCEL owners were not activity-style no-ops (${JSON.stringify(inactive)})`);
+  assert(active.length === 2 && active.every(({ rgbRms, rgbPeak, repeatRgbPeak }) => (
+    rgbRms >= 0.004 && rgbRms <= 70 && rgbPeak > 0 && rgbPeak <= 80 && repeatRgbPeak <= 1
+  )), `${label}: active ACEL/DCEL response is absent, unbounded, or unstable (${JSON.stringify(active)})`);
+  assert(new Set(active.map(({ responseSignature }) => responseSignature)).size === 2,
+    `${label}: active ACEL/DCEL identity responses collapsed (${JSON.stringify(active)})`);
+  const controls = samples.filter(({ name }) => /-(wrong-owner|water|metal|blank)$/.test(name));
+  assert(controls.length === 16 && controls.every(({ rgbPeak, repeatRgbPeak }) => (
+    rgbPeak <= 1 && repeatRgbPeak <= 1
+  )), `${label}: ACEL/DCEL activity styling leaked into owner/material controls (${JSON.stringify(controls)})`);
+}
+
+async function auditEightXForceActivityGraphics(cdp, canvasRect) {
+  const rawAtlas = await evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    if (typeof audit.presentationState !== 'function'
+      || typeof audit.prepareForceActivityGraphicsFixture !== 'function'
+      || typeof audit.forceActivityGraphicsAtlas !== 'function'
+      || typeof audit.setForceActivityStyling !== 'function') {
+      throw new Error('True-8x ACEL/DCEL activity audit API unavailable');
+    }
+    audit.resetView();
+    audit.prepareForceActivityGraphicsFixture();
+    return audit.forceActivityGraphicsAtlas();
+  })()`);
+  const prepared = await snapshotEightXForceActivity(cdp);
+  assertEightXForceActivityTopology(prepared, 'renderScale=8 prepared ACEL/DCEL activity fixture');
+  const live = await metrics(cdp);
+  assert(live.backing.width === WORLD_WIDTH * 8 && live.backing.height === WORLD_HEIGHT * 8
+      && live.outputScale === '8',
+  `renderScale=8 ACEL/DCEL activity fixture lost true backing (${JSON.stringify(live.backing)})`);
+  assertCanvasRectsEqual(canvasRect, live.canvas, 'renderScale=8 ACEL/DCEL activity fixture CSS geometry');
+
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setForceActivityStyling(false); true');
+  const flat = await captureSettledPage(cdp, 'renderScale=8 flat ACEL/DCEL activity framebuffer', 450);
+  const flatTopology = await snapshotEightXForceActivity(cdp);
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setForceActivityStyling(true); true');
+  const styled = await captureSettledPage(cdp, 'renderScale=8 styled ACEL/DCEL activity framebuffer', 450);
+  const styledTopology = await snapshotEightXForceActivity(cdp);
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setForceActivityStyling(false); true');
+  const repeated = await captureSettledPage(cdp, 'renderScale=8 repeated flat ACEL/DCEL activity framebuffer', 450);
+  const repeatedTopology = await snapshotEightXForceActivity(cdp);
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setForceActivityStyling(true); true');
+  assert(JSON.stringify(flatTopology) === JSON.stringify(prepared)
+      && JSON.stringify(styledTopology) === JSON.stringify(prepared)
+      && JSON.stringify(repeatedTopology) === JSON.stringify(prepared),
+  'renderScale=8 ACEL/DCEL activity toggle changed semantic or presentation-state topology');
+  const samples = await sampleBackdropRefractionRegions(cdp, {
+    straight: flat.capture.data,
+    refracted: styled.capture.data,
+    repeatedStraight: repeated.capture.data,
+  }, eightXForceActivityRegions(rawAtlas), canvasRect);
+  assertEightXForceActivityResponses(samples, 'renderScale=8 WebGL');
+  return {
+    cards: rawAtlas.cards.map(({ code, stateKey, active, encodedState }) => ({
+      code, stateKey, active, encodedState,
     })),
     occupied: prepared.occupied,
     samples,
