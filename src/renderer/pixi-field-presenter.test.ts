@@ -1057,6 +1057,35 @@ describe('Pixi presenter startup configuration', () => {
     expect(block).not.toContain('uTime');
   });
 
+  it('restores exact radioactive body identities at true 8x without new resources', () => {
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');
+    const eightEnd = source.indexOf('const FIELD_FRAGMENT = `', eightStart);
+    const eight = source.slice(eightStart, eightEnd);
+    const helperStart = eight.indexOf('vec3 radioactiveBodyIdentityEightXDelta(');
+    const helperEnd = eight.indexOf('bool solidEightXGranular(', helperStart);
+    const helper = eight.slice(helperStart, helperEnd);
+    const start = eight.indexOf('// The direct mesh skips normal-WebGL\'s general radioactive branch at 8x.');
+    const end = eight.indexOf('  if (uVibrStateStyling > 0.5', start);
+    const block = eight.slice(start, end);
+
+    expect(helperStart).toBeGreaterThan(0);
+    expect(helperEnd).toBeGreaterThan(helperStart);
+    expect(start).toBeGreaterThan(0);
+    expect(end).toBeGreaterThan(start);
+    expect(eight).toContain('bool radioactiveIdentityOwner = material == 99.0 || material == 105.0 || material == 108.0');
+    expect(eight).toContain('uniform float uEnergyIdentityStyling;');
+    expect(block).toContain('uEnergyIdentityStyling > 0.5 && radioactiveIdentityOwner');
+    expect(block).toContain('radioactiveBodyIdentityEightXDelta(material, uv * uFieldSize)');
+    for (const material of ['99.0', '105.0', '108.0', '109.0', '111.0', '112.0', '113.0']) {
+      expect(helper).toContain(`material == ${material}`);
+    }
+    expect(helper).not.toContain('texture(');
+    expect(helper).not.toContain('uTime');
+    expect(block).not.toContain('texture(');
+    expect(block).not.toMatch(/\balpha\s*[+*]?=/);
+  });
+
   it('takes one exact-owner-gated packed-state sample at true 8x', () => {
     const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
     const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');

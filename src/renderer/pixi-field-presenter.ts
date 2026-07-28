@@ -423,6 +423,49 @@ vec3 spngStateEightXDelta(float packedState, vec2 position) {
   else if (firstWall || secondWall) delta += vec3(-2.0, 1.0, 6.0);
   return clamp(delta * moisture, vec3(-20.0), vec3(20.0)) / 255.0;
 }
+// These exact radioactive powders/solids already have a static body grammar
+// in the normal WebGL presenter. Keep the true-8x counterpart arithmetic-only
+// and owner-local: it needs no retained state, field, texture, alpha decision,
+// or clock, and POLO/VIBR's native state overlays remain the final cue.
+vec3 radioactiveBodyIdentityEightXDelta(float material, vec2 position) {
+  vec2 cell = floor(position);
+  float x = cell.x;
+  float y = cell.y;
+  vec3 delta = vec3(0.0);
+  if (material == 99.0) {
+    float crackA = step(mod(x * 3.0 + y * 5.0, 16.0), 1.0);
+    float crackB = 1.0 - step(0.5, abs(mod(x - y * 2.0, 16.0)));
+    delta = max(crackA, crackB) > 0.5 ? vec3(-3.0, 10.0, 7.0) : vec3(1.0, 2.0, 0.0);
+  } else if (material == 108.0) {
+    float inclusion = mod(x * 17.0 + y * 31.0 + floor(x * y * 0.125) + material, 32.0);
+    delta = inclusion < 4.0 ? vec3(10.0, 8.0, -2.0) : vec3(-3.0, 1.0, -1.0);
+  } else if (material == 109.0) {
+    vec2 local = mod(cell, 8.0) - 4.0;
+    float radiusSquared = dot(local, local);
+    delta = radiusSquared >= 6.0 && radiusSquared <= 11.0
+      ? vec3(8.0, 10.0, 3.0) : vec3(-2.0, 1.0, -1.0);
+  } else if (material == 111.0) {
+    vec2 local = mod(cell, 16.0) - 8.0;
+    float radiusSquared = dot(local, local);
+    delta = radiusSquared >= 35.0 && radiusSquared <= 58.0
+      ? vec3(2.0, 5.0, 11.0) : vec3(-8.0, -7.0, -5.0);
+  } else if (material == 112.0) {
+    float band = mod(x * 2.0 + y + floor(y / 8.0), 16.0);
+    delta = band <= 3.0 ? vec3(6.0, 9.0, -2.0) : vec3(-3.0, 1.0, 0.0);
+  } else if (material == 105.0) {
+    vec2 local = mod(cell, 8.0) - 4.0;
+    float facet = abs(local.x) + abs(local.y);
+    delta = facet >= 3.0 && facet <= 4.0
+      ? vec3(9.0, -2.0, 11.0) : vec3(-2.0, 3.0, 4.0);
+  } else if (material == 113.0) {
+    float horizontal = 1.0 - step(0.5, abs(mod(y, 8.0)));
+    float vertical = 1.0 - step(0.5, abs(mod(x + floor(y / 8.0) * 3.0, 8.0)));
+    delta = max(horizontal, vertical) > 0.5
+      ? vec3(-2.0, 11.0, horizontal * vertical > 0.5 ? 12.0 : 6.0)
+      : vec3(1.0, 2.0, 0.0);
+  }
+  return clamp(delta, vec3(-12.0), vec3(12.0)) / 255.0;
+}
 bool solidEightXGranular(float optics) {
   return optics == 7.0 || optics == 13.0 || optics == 14.0 || optics == 15.0;
 }
@@ -942,6 +985,8 @@ void main() {
   bool sourceOwner = material == 124.0 || material == 126.0 || material == 127.0
     || material == 137.0 || material == 158.0 || material == 159.0;
   bool forceOwner = material == 115.0 || material == 116.0;
+  bool radioactiveIdentityOwner = material == 99.0 || material == 105.0 || material == 108.0
+    || material == 109.0 || material == 111.0 || material == 112.0 || material == 113.0;
   bool vibrOwner = material == 99.0 || material == 113.0;
   bool deutOwner = material == 100.0;
   bool lavaAncestryOwner = material == 11.0 && family == 2.0 && !materialEmissive;
@@ -1011,6 +1056,13 @@ void main() {
         ? vec3(3.0, 10.0, 16.0) / 255.0
         : forceRadiusSquared <= 4.0 ? vec3(-8.0, -5.0, 3.0) / 255.0 : vec3(0.0);
     }
+  }
+  // The direct mesh skips normal-WebGL's general radioactive branch at 8x.
+  // Restore only the established static exact-owner body identities here;
+  // stateful POLO/VIBR overlays stay below this block and continue to own their
+  // native lifecycle information.
+  if (uEnergyIdentityStyling > 0.5 && radioactiveIdentityOwner) {
+    color += radioactiveBodyIdentityEightXDelta(material, uv * uFieldSize);
   }
   if (uVibrStateStyling > 0.5 && vibrOwner
     && sourceTarget > 0.5) {

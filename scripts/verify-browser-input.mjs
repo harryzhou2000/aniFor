@@ -13334,6 +13334,10 @@ async function auditRenderScaleEight(cdp, dpr) {
     cdp, geometry.canvas,
   );
   stage('botanical-lifecycle-ready');
+  const radioactiveIdentityGraphics = await auditEightXRadioactiveIdentityGraphics(
+    cdp, geometry.canvas,
+  );
+  stage('radioactive-identity-ready');
   const photonSpectrumGraphics = await auditEightXPhotonSpectrumGraphics(cdp, geometry.canvas);
   stage('photon-spectrum-ready');
   // The shared Lava ancestry audit normally samples a complete backing canvas.
@@ -13402,6 +13406,7 @@ async function auditRenderScaleEight(cdp, dpr) {
     poloStateGraphics,
     spngStateGraphics,
     botanicalLifecycleGraphics,
+    radioactiveIdentityGraphics,
     photonSpectrumGraphics,
     deutStateGraphics,
     lavaStateGraphics,
@@ -14242,6 +14247,158 @@ async function auditEightXBotanicalLifecycleGraphics(cdp, canvasRect) {
     cards: rawAtlas.cards.map(({ key, kind, material, encodedState }) => ({
       key, kind, material, encodedState,
     })),
+    occupied: prepared.occupied,
+    samples,
+    exactRepeatedOff: samples.every(({ repeatRgbPeak }) => repeatRgbPeak <= 1),
+  };
+}
+
+async function snapshotEightXEnergyRadioactive(cdp) {
+  return evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    const atlas = audit.energyRadioactiveGraphicsAtlas();
+    const cards = Array.isArray(atlas) ? atlas : atlas?.cards ?? [];
+    const inside = (x, y, rect) => x >= rect.x && x < rect.x + rect.width
+      && y >= rect.y && y < rect.y + rect.height;
+    const exactRect = (rect, material) => {
+      for (let y = rect.y; y < rect.y + rect.height; y++) {
+        for (let x = rect.x; x < rect.x + rect.width; x++) {
+          if (audit.cell(x, y) !== material) return false;
+        }
+      }
+      return true;
+    };
+    return {
+      occupied: audit.occupiedCells(),
+      cards: cards.map((entry) => {
+        let bodyExact = true;
+        for (let y = entry.body.y; y < entry.body.y + entry.body.height; y++) {
+          for (let x = entry.body.x; x < entry.body.x + entry.body.width; x++) {
+            const empty = inside(x, y, entry.authoredHole) || inside(x, y, entry.openChannel);
+            bodyExact = bodyExact && audit.cell(x, y) === (empty ? 0 : entry.material);
+          }
+        }
+        return {
+          code: entry.code, material: entry.material, phase: entry.phase, family: entry.family,
+          bodyExact,
+          surfaceProbeExact: exactRect(entry.surfaceProbe, entry.material),
+          coreProbeExact: exactRect(entry.coreProbe, entry.material),
+          authoredHoleEmpty: exactRect(entry.authoredHole, 0),
+          openChannelEmpty: exactRect(entry.openChannel, 0),
+          sparseCarriersExact: entry.sparseCarriers.every(
+            (point) => audit.cell(point.x, point.y) === entry.material,
+          ),
+          carrierGapEmpty: exactRect(entry.carrierGap, 0),
+          isolatedExact: audit.cell(entry.isolated.x, entry.isolated.y) === entry.material,
+          guardedBlankEmpty: exactRect(entry.guardedBlank, 0),
+          liquidOwnerExact: exactRect(entry.liquidContact.owner, entry.material),
+          liquidUnlikeExact: exactRect(
+            entry.liquidContact.unlike, entry.liquidContact.unlikeMaterial,
+          ),
+          solidOwnerExact: exactRect(entry.solidContact.owner, entry.material),
+          solidUnlikeExact: exactRect(
+            entry.solidContact.unlike, entry.solidContact.unlikeMaterial,
+          ),
+        };
+      }),
+    };
+  })()`);
+}
+
+function assertEightXEnergyRadioactiveTopology(snapshot, label) {
+  const expectedMaterials = '4,20,101,103,106,107,110,197,200,98,99,100,102,104,105,108,109,111,112,113,114';
+  const expectedCodes = 'FIRE,PLSM,ELEC,GRVT,NEUT,PHOT,PROT,BRAY,EMBR,AMTR,BVBR,DEUT,EXOT,ISOZ,ISZS,PLUT,POLO,SING,URAN,VIBR,WARP';
+  assert(snapshot.cards.length === 21
+      && snapshot.cards.map(({ code }) => code).join(',') === expectedCodes
+      && snapshot.cards.map(({ material }) => material).join(',') === expectedMaterials
+      && snapshot.cards.filter(({ phase }) => phase === 'energy').length === 9
+      && snapshot.cards.filter(({ family }) => family === 'radioactive').length === 17
+      && snapshot.cards.every((card) => card.bodyExact && card.surfaceProbeExact
+        && card.coreProbeExact && card.authoredHoleEmpty && card.openChannelEmpty
+        && card.sparseCarriersExact && card.carrierGapEmpty && card.isolatedExact
+        && card.guardedBlankEmpty && card.liquidOwnerExact && card.liquidUnlikeExact
+        && card.solidOwnerExact && card.solidUnlikeExact),
+  `${label}: energy/radioactive semantic topology changed (${JSON.stringify(snapshot)})`);
+}
+
+function eightXRadioactiveIdentityRegions(atlas) {
+  const targetedCodes = new Set(['BVBR', 'ISZS', 'PLUT', 'POLO', 'SING', 'URAN', 'VIBR']);
+  const centre = (rect) => ({ x: rect.x + rect.width / 2, y: rect.y + rect.height / 2 });
+  return atlas.cards.filter(({ code }) => targetedCodes.has(code)).flatMap((entry) => [
+    { name: `RADIOACTIVE-${entry.code}-body`, ...centre(entry.body), radiusX: 28, radiusY: 22 },
+    { name: `RADIOACTIVE-${entry.code}-surface`, ...centre(entry.surfaceProbe), radiusX: 3, radiusY: 3 },
+    { name: `RADIOACTIVE-${entry.code}-core`, ...centre(entry.coreProbe), radiusX: 3, radiusY: 3 },
+    // The unlike control is only six cells wide and abuts the styled owner.
+    // Keep the page-capture probe in its central two columns, otherwise the
+    // anti-aliased 8x frame legitimately includes the adjacent target body.
+    { name: `RADIOACTIVE-${entry.code}-water`, ...centre(entry.liquidContact.unlike), radiusX: 1, radiusY: 2 },
+    { name: `RADIOACTIVE-${entry.code}-metal`, ...centre(entry.solidContact.unlike), radiusX: 1, radiusY: 2 },
+    { name: `RADIOACTIVE-${entry.code}-blank`, ...centre(entry.guardedBlank), radiusX: 16, radiusY: 9 },
+  ]);
+}
+
+function assertEightXRadioactiveIdentityResponses(samples, label) {
+  const bodies = samples.filter(({ name }) => name.endsWith('-body'));
+  assert(bodies.length === 7 && bodies.every((sample) => sample.rgbRms >= 0.004
+      && sample.rgbRms <= 70 && sample.rgbPeak > 0 && sample.rgbPeak <= 80
+      && sample.repeatRgbPeak <= 1),
+  `${label}: static radioactive identities are absent, unbounded, or unstable (${JSON.stringify(bodies)})`);
+  assert(new Set(bodies.map(({ responseSignature }) => responseSignature)).size === 7,
+    `${label}: static radioactive identity motifs collapsed (${JSON.stringify(bodies)})`);
+  const motifs = samples.filter(({ name }) => /-(surface|core)$/.test(name));
+  assert(motifs.some(({ rgbPeak }) => rgbPeak > 0)
+      && motifs.every(({ rgbPeak, repeatRgbPeak }) => rgbPeak <= 80 && repeatRgbPeak <= 1),
+  `${label}: radioactive body detail is absent or unstable (${JSON.stringify(motifs)})`);
+  const controls = samples.filter(({ name }) => /-(water|metal|blank)$/.test(name));
+  assert(controls.length === 21 && controls.every(({ rgbPeak, repeatRgbPeak }) => (
+    rgbPeak <= 1 && repeatRgbPeak <= 1
+  )), `${label}: radioactive identity styling leaked into liquid, solid, or blank controls (${JSON.stringify(controls)})`);
+}
+
+async function auditEightXRadioactiveIdentityGraphics(cdp, canvasRect) {
+  const rawAtlas = await evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    if (typeof audit.prepareEnergyRadioactiveGraphicsFixture !== 'function'
+      || typeof audit.energyRadioactiveGraphicsAtlas !== 'function'
+      || typeof audit.setEnergyIdentityStyling !== 'function') {
+      throw new Error('True-8x energy/radioactive identity audit API unavailable');
+    }
+    audit.resetView();
+    audit.prepareEnergyRadioactiveGraphicsFixture();
+    return audit.energyRadioactiveGraphicsAtlas();
+  })()`);
+  const atlas = normalizeEnergyRadioactiveGraphicsAtlas(rawAtlas);
+  const prepared = await snapshotEightXEnergyRadioactive(cdp);
+  assertEightXEnergyRadioactiveTopology(prepared, 'renderScale=8 prepared energy/radioactive fixture');
+  const live = await metrics(cdp);
+  assert(live.backing.width === WORLD_WIDTH * 8 && live.backing.height === WORLD_HEIGHT * 8
+      && live.outputScale === '8',
+  `renderScale=8 radioactive identity fixture lost true backing (${JSON.stringify(live.backing)})`);
+  assertCanvasRectsEqual(canvasRect, live.canvas, 'renderScale=8 radioactive identity fixture CSS geometry');
+
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setEnergyIdentityStyling(false); true');
+  const flat = await captureSettledPage(cdp, 'renderScale=8 flat radioactive-identity framebuffer', 450);
+  const flatTopology = await snapshotEightXEnergyRadioactive(cdp);
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setEnergyIdentityStyling(true); true');
+  const styled = await captureSettledPage(cdp, 'renderScale=8 styled radioactive-identity framebuffer', 450);
+  const styledTopology = await snapshotEightXEnergyRadioactive(cdp);
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setEnergyIdentityStyling(false); true');
+  const repeated = await captureSettledPage(cdp, 'renderScale=8 repeated flat radioactive-identity framebuffer', 450);
+  const repeatedTopology = await snapshotEightXEnergyRadioactive(cdp);
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setEnergyIdentityStyling(true); true');
+  assert(JSON.stringify(flatTopology) === JSON.stringify(prepared)
+      && JSON.stringify(styledTopology) === JSON.stringify(prepared)
+      && JSON.stringify(repeatedTopology) === JSON.stringify(prepared),
+  'renderScale=8 radioactive identity toggle changed semantic topology');
+  const samples = await sampleBackdropRefractionRegions(cdp, {
+    straight: flat.capture.data,
+    refracted: styled.capture.data,
+    repeatedStraight: repeated.capture.data,
+  }, eightXRadioactiveIdentityRegions(atlas), canvasRect);
+  assertEightXRadioactiveIdentityResponses(samples, 'renderScale=8 WebGL');
+  return {
+    cards: atlas.cards.filter(({ code }) => /^BVBR$|^ISZS$|^PLUT$|^POLO$|^SING$|^URAN$|^VIBR$/.test(code))
+      .map(({ code, material }) => ({ code, material })),
     occupied: prepared.occupied,
     samples,
     exactRepeatedOff: samples.every(({ repeatRgbPeak }) => repeatRgbPeak <= 1),
