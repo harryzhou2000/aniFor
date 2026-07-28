@@ -120,6 +120,7 @@ uniform float uGasIdentityStyling;
 uniform float uEmissionVolumeChroma;
 uniform float uEnergyCoreRelief;
 uniform float uEnergyIdentityStyling;
+uniform float uExplosivePowderStyling;
 uniform float uLiquidFieldLighting;
 uniform float uLiquidVolumeChroma;
 uniform float uLiquidIdentityStyling;
@@ -466,6 +467,39 @@ vec3 radioactiveBodyIdentityEightXDelta(float material, vec2 position) {
   }
   return clamp(delta, vec3(-12.0), vec3(12.0)) / 255.0;
 }
+// The normal presenter gives these fourteen exact native powders their own
+// stable identity layer. Keep the true-8x counterpart material-seeded and
+// compact: it uses the already decoded owner, density, and world coordinate,
+// so it cannot add a field, sampler, pass, clock, or topology decision to a
+// fifteen-million-fragment frame. A zero style is an exact non-explosive no-op.
+float explosivePowderEightXStyle(float material) {
+  if (material == 14.0) return 1.0;
+  if (material == 30.0) return 2.0;
+  if (material == 31.0) return 3.0;
+  if (material == 33.0) return 4.0;
+  if (material >= 84.0 && material <= 86.0) return material - 79.0;
+  if (material >= 88.0 && material <= 92.0) return material - 80.0;
+  if (material == 94.0) return 13.0;
+  if (material == 96.0) return 14.0;
+  return 0.0;
+}
+vec3 explosivePowderEightXDelta(float material, vec2 position, float density) {
+  float style = explosivePowderEightXStyle(material);
+  if (style < 0.5) return vec3(0.0);
+  vec2 cell = floor(position);
+  float diagonal = fract(cell.x * (0.052 + style * 0.0015)
+    + cell.y * (0.034 + style * 0.001) + style * 0.173);
+  float cross = fract(cell.x * (0.081 - style * 0.001)
+    - cell.y * (0.026 + style * 0.0015) + style * 0.131);
+  float facet = max(1.0 - abs(diagonal * 2.0 - 1.0),
+    (1.0 - abs(cross * 2.0 - 1.0)) * 0.72);
+  vec3 hue = vec3(
+    fract(style * 0.381966), fract(style * 0.618034), fract(style * 0.173205)
+  ) - vec3(0.5);
+  vec3 key = vec3(6.0, 4.0, -2.0) + hue * 15.0;
+  float gain = (0.16 + facet * 0.84) * smoothstep(0.12, 0.82, density);
+  return clamp(key * gain, vec3(-14.0), vec3(14.0)) / 255.0;
+}
 bool solidEightXGranular(float optics) {
   return optics == 7.0 || optics == 13.0 || optics == 14.0 || optics == 15.0;
 }
@@ -640,6 +674,13 @@ void main() {
         mix(q01 - q00, q11 - q10, blend.x)
       );
       color = mix(color, applySurfaceContourEightX(color, density, powderSlope, optics, 1.0), powderSupport);
+    }
+    // Keep explosive powders legible as discrete native materials even in the
+    // compact compositor. This is strictly RGB-only and owner-local; Grains,
+    // coverage, support, wall compositing, and every non-explosive material
+    // remain controlled by the existing semantic path.
+    if (uExplosivePowderStyling > 0.5 && traits < 0.5 && !materialEmissive) {
+      color = clamp(color + explosivePowderEightXDelta(material, grid, density), 0.0, 1.0);
     }
   }
   // Deep rigid bodies reuse the existing exact-species occupancy, auxiliary

@@ -760,6 +760,35 @@ describe('Pixi presenter startup configuration', () => {
     expect(eight.match(/texture\(uEmissionTexture, uv\)/g)).toHaveLength(1);
   });
 
+  it('keeps true-8x explosive-powder identity exact-owner, RGB-only, and resource-free', () => {
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');
+    const eightEnd = source.indexOf('const FIELD_FRAGMENT = `', eightStart);
+    const eight = source.slice(eightStart, eightEnd);
+    const helperStart = eight.indexOf('float explosivePowderEightXStyle(');
+    const helperEnd = eight.indexOf('bool solidEightXGranular(', helperStart);
+    const branchStart = eight.indexOf('if (family == 4.0) {');
+    const branchEnd = eight.indexOf('// Deep rigid bodies reuse', branchStart);
+    const helper = eight.slice(helperStart, helperEnd);
+    const branch = eight.slice(branchStart, branchEnd);
+
+    expect(helperStart).toBeGreaterThan(0);
+    expect(helperEnd).toBeGreaterThan(helperStart);
+    expect(branchStart).toBeGreaterThan(0);
+    expect(branchEnd).toBeGreaterThan(branchStart);
+    expect(eight).toContain('uniform float uExplosivePowderStyling;');
+    for (const material of [14, 30, 31, 33, 94, 96]) {
+      expect(helper).toContain(`material == ${material}.0`);
+    }
+    expect(helper).toContain('material >= 84.0 && material <= 86.0');
+    expect(helper).toContain('material >= 88.0 && material <= 92.0');
+    expect(branch).toContain('uExplosivePowderStyling > 0.5 && traits < 0.5 && !materialEmissive');
+    expect(branch).toContain('explosivePowderEightXDelta(material, grid, density)');
+    expect(`${helper}${branch}`).not.toContain('texture(');
+    expect(`${helper}${branch}`).not.toContain('uTime');
+    expect(`${helper}${branch}`).not.toMatch(/\balpha\s*[+*]?=/);
+  });
+
   it('converges normal WebGL dense Energy toward its existing emission field only', () => {
     const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
     const normalStart = source.indexOf('const FIELD_FRAGMENT = `');

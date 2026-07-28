@@ -13307,6 +13307,13 @@ async function auditRenderScaleEight(cdp, dpr) {
     cdp, blankCapture.capture.data, geometry.canvas,
   );
   stage('atlas-stress-ready');
+  // The compact direct shader has its own explosive-powder identity grammar.
+  // Exercise the full fourteen-owner atlas at the real 4896x3072 backing with
+  // page-region captures, rather than copying another 60 MiB backing ImageData.
+  const explosivePowderGraphics = await auditEightXExplosivePowderGraphics(
+    cdp, geometry.canvas,
+  );
+  stage('explosive-powder-ready');
   const sourceTargetGraphics = await auditEightXSourceTargetGraphics(cdp, geometry.canvas);
   stage('source-target-ready');
   const forceActivityGraphics = await auditEightXForceActivityGraphics(cdp, geometry.canvas);
@@ -13391,6 +13398,7 @@ async function auditRenderScaleEight(cdp, dpr) {
       wheelAnchorError: round(grainAnchorError, 4),
     },
     materialAtlasStress,
+    explosivePowderGraphics,
     sourceTargetGraphics,
     forceActivityGraphics,
     vibrStateGraphics,
@@ -13404,6 +13412,141 @@ async function auditRenderScaleEight(cdp, dpr) {
     sparkStateGraphics,
     forcedStallRecovery,
     contextLossRecovery,
+  };
+}
+
+async function snapshotEightXExplosivePowders(cdp) {
+  return evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    const snapshot = audit.explosivePowderGraphicsAtlas();
+    const cards = Array.isArray(snapshot) ? snapshot : snapshot.cards;
+    const inside = (x, y, rect) => x >= rect.x && x < rect.x + rect.width
+      && y >= rect.y && y < rect.y + rect.height;
+    const exactRect = (rect, material) => {
+      for (let y = rect.y; y < rect.y + rect.height; y++) {
+        for (let x = rect.x; x < rect.x + rect.width; x++) {
+          if (audit.cell(x, y) !== material) return false;
+        }
+      }
+      return true;
+    };
+    return {
+      occupied: audit.occupiedCells(),
+      cards: cards.map((entry) => {
+        let bodyExact = true;
+        for (let y = entry.body.y; y < entry.body.y + entry.body.height; y++) {
+          for (let x = entry.body.x; x < entry.body.x + entry.body.width; x++) {
+            const empty = inside(x, y, entry.hole)
+              || entry.openNotch.some((point) => point.x === x && point.y === y);
+            bodyExact &&= audit.cell(x, y) === (empty ? 0 : entry.material);
+          }
+        }
+        return {
+          material: entry.material,
+          code: entry.code,
+          bodyExact,
+          thinExact: exactRect(entry.thinColumn, entry.material),
+          isolatedExact: audit.cell(entry.isolated.x, entry.isolated.y) === entry.material,
+          guardExact: exactRect(entry.guardedBlank, 0),
+          contactOwnerExact: exactRect(entry.contact.owner, entry.material),
+          contactUnlikeExact: exactRect(entry.contact.unlike, entry.contact.unlikeMaterial),
+        };
+      }),
+    };
+  })()`);
+}
+
+function assertEightXExplosivePowderTopology(snapshot, label) {
+  const materials = [14, 30, 31, 33, 84, 85, 86, 88, 89, 90, 91, 92, 94, 96];
+  assert(snapshot.cards.length === materials.length && snapshot.cards.every((card, index) => (
+    card.material === materials[index] && card.bodyExact && card.thinExact
+      && card.isolatedExact && card.guardExact && card.contactOwnerExact && card.contactUnlikeExact
+  )), `${label}: explosive-powder identity/topology changed (${JSON.stringify(snapshot)})`);
+}
+
+async function auditEightXExplosivePowderGraphics(cdp, canvasRect) {
+  await evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    if (typeof audit.prepareExplosivePowderGraphicsFixture !== 'function'
+      || typeof audit.explosivePowderGraphicsAtlas !== 'function'
+      || typeof audit.setExplosivePowderStyling !== 'function') {
+      throw new Error('True-8x explosive-powder graphics API unavailable');
+    }
+    audit.resetView();
+    audit.clear();
+    return true;
+  })()`);
+  const blank = await captureSettledPage(cdp, 'renderScale=8 blank explosive-powder framebuffer', 450);
+  const atlas = await evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    audit.prepareExplosivePowderGraphicsFixture();
+    audit.setPowderRenderStyle('smooth');
+    return audit.explosivePowderGraphicsAtlas();
+  })()`);
+  const prepared = await snapshotEightXExplosivePowders(cdp);
+  assertEightXExplosivePowderTopology(prepared, 'renderScale=8 prepared explosive-powder fixture');
+  const live = await metrics(cdp);
+  assert(live.backing.width === WORLD_WIDTH * 8 && live.backing.height === WORLD_HEIGHT * 8
+      && live.outputScale === '8',
+  `renderScale=8 explosive-powder fixture lost true backing (${JSON.stringify(live.backing)})`);
+  assertCanvasRectsEqual(canvasRect, live.canvas, 'renderScale=8 explosive-powder fixture CSS geometry');
+
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setExplosivePowderStyling(false); true');
+  const flat = await captureSettledPage(cdp, 'renderScale=8 flat explosive-powder framebuffer', 450);
+  const flatTopology = await snapshotEightXExplosivePowders(cdp);
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setExplosivePowderStyling(true); true');
+  const styled = await captureSettledPage(cdp, 'renderScale=8 styled explosive-powder framebuffer', 450);
+  const styledTopology = await snapshotEightXExplosivePowders(cdp);
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setExplosivePowderStyling(false); true');
+  const repeated = await captureSettledPage(cdp, 'renderScale=8 repeated flat explosive-powder framebuffer', 450);
+  const repeatedTopology = await snapshotEightXExplosivePowders(cdp);
+  assert(JSON.stringify(flatTopology) === JSON.stringify(prepared)
+      && JSON.stringify(styledTopology) === JSON.stringify(prepared)
+      && JSON.stringify(repeatedTopology) === JSON.stringify(prepared),
+  'renderScale=8 explosive-powder styling changed semantic topology');
+
+  const cards = Array.isArray(atlas) ? atlas : atlas.cards;
+  const regions = cards.map((entry) => ({
+    name: entry.code,
+    x: entry.body.x + entry.body.width / 2,
+    y: entry.body.y + entry.body.height / 2,
+    radiusX: Math.max(1, entry.body.width / 2 - 1),
+    radiusY: Math.max(1, entry.body.height / 2 - 1),
+    silhouette: true,
+  }));
+  const samples = await sampleBackdropRefractionRegions(cdp, {
+    straight: flat.capture.data,
+    refracted: styled.capture.data,
+    repeatedStraight: repeated.capture.data,
+  }, regions, canvasRect);
+  assert(samples.length === 14 && samples.every((sample) => (
+    sample.rgbRms >= 0.02 && sample.rgbRms <= 24
+      && sample.rgbPeak > 0 && sample.rgbPeak <= 48 && sample.repeatRgbPeak <= 1
+  )), `renderScale=8 explosive-powder response is absent, unbounded, or unstable (${JSON.stringify(samples)})`);
+  assert(new Set(samples.map((sample) => sample.responseSignature)).size === 14,
+    `renderScale=8 explosive powders lost distinct identity responses (${JSON.stringify(samples)})`);
+  const [flatSupport, styledSupport] = await Promise.all([
+    samplePageRegions(
+      cdp, flat.capture.data, regions, blank.capture.data, blank.reference.data, canvasRect,
+    ),
+    samplePageRegions(
+      cdp, styled.capture.data, regions, blank.capture.data, blank.reference.data, canvasRect,
+    ),
+  ]);
+  // The compact identity layer changes RGB only, which the exact semantic
+  // snapshots above prove independently. At the fit-view screenshot footprint
+  // a saturated RGB response can move the display-threshold classifier by one
+  // CSS pixel (roughly half a world cell), without changing alpha or support.
+  // Keep that bounded presentation jitter explicit instead of mistaking it for
+  // a topology mutation; larger coverage changes remain release failures.
+  assert(flatSupport.every((sample, index) => Math.abs(sample.visible - styledSupport[index].visible) <= 2
+      && Math.abs(sample.worldArea - styledSupport[index].worldArea) <= 0.60),
+  `renderScale=8 explosive-powder styling changed composed support (${JSON.stringify({ flatSupport, styledSupport })})`);
+  return {
+    cards: cards.map(({ material, code }) => ({ material, code })),
+    occupied: prepared.occupied,
+    samples,
+    exactRepeatedOff: samples.every((sample) => sample.repeatRgbPeak <= 1),
   };
 }
 
