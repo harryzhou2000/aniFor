@@ -397,7 +397,9 @@ describe('Pixi presenter startup configuration', () => {
 
     expect(blockStart).toBeGreaterThan(0);
     expect(blockEnd).toBeGreaterThan(blockStart);
-    expect(source).toContain('float suspensionBody = smoothstep(0.62, 0.90, density);');
+    expect(source).toContain('float suspensionSemanticBody = smoothstep(0.62, 0.90, density);');
+    expect(source).toContain('float suspensionFieldBody = smoothstep(0.24, 0.68, suspensionState.a);');
+    expect(source).toContain('float suspensionBody = max(suspensionSemanticBody, suspensionFieldBody);');
     expect(block).toContain('float sedimentCompaction = smoothstep(0.18, 0.82, suspensionState.a);');
     expect(block).toContain('float wetSedimentBias = mix(0.44, 0.52, sedimentCompaction);');
     expect(block).toContain('mix(liquidState.rgb, suspensionState.rgb, wetSedimentBias)');
@@ -926,6 +928,9 @@ describe('Pixi presenter startup configuration', () => {
     expect(block).toContain('family == 4.0 && solidEightXGranular(optics)');
     expect(block).toContain('family == 2.0 && optics == 1.0');
     expect(block.match(/texture\(uSuspensionTexture, uv\)/g)).toHaveLength(1);
+    expect(block).toContain('float suspensionSemanticBody = smoothstep(0.62, 0.90, density);');
+    expect(block).toContain('float suspensionFieldBody = smoothstep(0.24, 0.68, suspensionState.a);');
+    expect(block).toContain('float suspensionBody = max(suspensionSemanticBody, suspensionFieldBody);');
     expect(block).toContain('mix(0.44, 0.52, sedimentCompaction)');
     expect(block).toContain('clamp(currentLuma - wetLuma, -4.0 / 255.0, 4.0 / 255.0)');
     expect(block).not.toMatch(/\balpha\s*[+*]?=/);

@@ -969,7 +969,7 @@ async function auditMode(mode) {
         cdp, canonicalCaptures.capture.data, canonicalCaptures.canvasRect,
         suspensionPhaseCells, 1, 2,
       );
-      const maximumSuspensionPhaseContrast = mode === 'webgl' ? 16 : 24;
+      const maximumSuspensionPhaseContrast = mode === 'webgl' ? 10 : 24;
       assert(suspensionPhaseContrast.leftCount >= 500
         && suspensionPhaseContrast.rightCount >= 500
         && suspensionPhaseContrast.distance <= maximumSuspensionPhaseContrast,
@@ -1547,7 +1547,7 @@ async function auditMode(mode) {
       cdp, canonicalCaptures.capture.data, canonicalCaptures.canvasRect,
       suspensionPhaseCells, 1, 2,
     );
-    const maximumSuspensionPhaseContrast = mode === 'webgl' ? 16 : 24;
+    const maximumSuspensionPhaseContrast = mode === 'webgl' ? 10 : 24;
     assert(suspensionPhaseContrast.leftCount >= 500
       && suspensionPhaseContrast.rightCount >= 500
       && suspensionPhaseContrast.distance <= maximumSuspensionPhaseContrast,
@@ -12779,11 +12779,12 @@ async function auditRenderScaleEight(cdp, dpr) {
   const suspensionPhaseContrast = await sampleMaterialPhaseContrast(
     cdp, styleCaptures.smooth, geometry.canvas, smoothSuspensionPhaseCells, 1, 2,
   );
-  // Direct 8× composition retains a one-byte chroma quantisation margin from
-  // the normal filter path, while the raw RGB metric remains intentionally
-  // independent because semantic Sand and Water keep different alpha.
+  // Direct 8× preserves the same field-owned wet body while retaining a small
+  // chroma quantisation margin from the normal filter path. The raw RGB metric
+  // remains intentionally independent because semantic Sand and Water keep
+  // different alpha.
   assert(suspensionPhaseContrast.leftCount >= 500
-    && suspensionPhaseContrast.rightCount >= 500 && suspensionPhaseContrast.distance <= 17,
+    && suspensionPhaseContrast.rightCount >= 500 && suspensionPhaseContrast.distance <= 12,
   `renderScale=8 dense Sand/Water still reads as two semantic colours (${JSON.stringify(suspensionPhaseContrast)})`);
   const powderSupport = await sampleSemanticCellSupport(
     cdp, { local: styleCaptures.local, smooth: styleCaptures.smooth },

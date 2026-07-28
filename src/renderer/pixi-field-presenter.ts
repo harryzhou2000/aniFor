@@ -964,7 +964,17 @@ void main() {
     float suspensionPowder = family == 4.0
       ? 1.0 - smoothstep(0.08, 0.24, length(suspensionState.rgb - palette.rgb)) : 0.0;
     float suspensionLiquid = family == 2.0 && optics == 1.0 ? 1.0 : 0.0;
-    float suspensionBody = smoothstep(0.62, 0.90, density);
+    // A dense wet body can alternate exact Sand and Water cells, leaving the
+    // categorical semantic density near one half even though the existing
+    // half-resolution suspension field has already proved one coherent
+    // powder-in-aqueous volume. Let that field provide the second body proof:
+    // sparse field wisps still fail its higher knee, while a settled mixture
+    // converges to one albedo instead of retaining a cyan/ochre checkerboard.
+    // This stays RGB-only; density, alpha, ownership, and fluid physics remain
+    // in their earlier semantic/field paths.
+    float suspensionSemanticBody = smoothstep(0.62, 0.90, density);
+    float suspensionFieldBody = smoothstep(0.24, 0.68, suspensionState.a);
+    float suspensionBody = max(suspensionSemanticBody, suspensionFieldBody);
     float lateSuspension = max(suspensionPowder, suspensionLiquid)
       * smoothstep(0.05, 0.62, suspensionState.a) * suspensionBody * 0.98;
     if (lateSuspension > 0.001) {
@@ -4754,7 +4764,13 @@ void main() {
   // grains and exposed phase edges; retain the compatible local body shoulder
   // too because this field is deliberately powder-authored, not a replacement
   // for authoritative aqueous liquid coverage.
-  float suspensionBody = smoothstep(0.62, 0.90, density);
+  // Exact Sand and Water can alternate inside one settled two-cell field
+  // tile. The shared field's dense alpha is therefore a second body proof;
+  // it restores one wet-material albedo without ever changing support or
+  // alpha, while sparse field wisps remain below this higher knee.
+  float suspensionSemanticBody = smoothstep(0.62, 0.90, density);
+  float suspensionFieldBody = smoothstep(0.24, 0.68, suspensionState.a);
+  float suspensionBody = max(suspensionSemanticBody, suspensionFieldBody);
   float lateSuspension = max(suspensionPowder, suspensionLiquid)
     * smoothstep(0.05, 0.62, suspensionState.a) * suspensionBody * 0.98;
   if (lateSuspension > 0.001) {
