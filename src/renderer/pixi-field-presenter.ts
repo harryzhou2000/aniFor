@@ -121,6 +121,7 @@ uniform float uEmissionVolumeChroma;
 uniform float uEnergyCoreRelief;
 uniform float uEnergyIdentityStyling;
 uniform float uCellularMaterialStyling;
+uniform float uStructuralRigidStyling;
 uniform float uSensorMaterialStyling;
 uniform float uExplosivePowderStyling;
 uniform float uUnusualPowderStyling;
@@ -608,6 +609,57 @@ vec3 sensorEightXDelta(float material, vec2 position, float density) {
   return clamp((key * (bezel * 0.38 + glyph))
     * smoothstep(0.10, 0.80, density), vec3(-16.0), vec3(16.0)) / 255.0;
 }
+// Construction bodies retain a calm, owner-local material grammar at true 8x
+// after the common rigid-body optics.  This is deliberately a small static
+// RGB layer: the direct mesh already has material, world position, and
+// density, so no field/state sample, clock, support decision, or new resource
+// is needed for Brick, metal, ceramic, and alloy identity.
+float structuralRigidEightXStyle(float material) {
+  if (material == 22.0) return 1.0; // BRCK
+  if (material == 23.0) return 2.0; // METL
+  if (material == 25.0) return 3.0; // CRMC
+  if (material == 67.0) return 4.0; // BMTL
+  if (material == 70.0) return 5.0; // GOLD
+  if (material == 73.0) return 6.0; // IRON
+  if (material == 82.0) return 7.0; // TTAN
+  return 0.0;
+}
+vec3 structuralRigidEightXDelta(float material, vec2 position, float density) {
+  float style = structuralRigidEightXStyle(material);
+  if (style < 0.5) return vec3(0.0);
+  vec2 cell = floor(position);
+  float stripe = 1.0 - step(0.5, mod(cell.x * (1.0 + mod(style, 3.0))
+    + cell.y * (2.0 + mod(style, 2.0)) + style * 3.0, 11.0 + style));
+  float glint = 1.0 - step(0.5, mod(cell.x * (3.0 + mod(style, 4.0))
+    - cell.y * (1.0 + mod(style, 3.0)) + style * 5.0, 23.0 + style * 2.0));
+  vec3 delta;
+  if (style == 1.0) {
+    // Brick: staggered mortar courses plus sparse warm aggregate.
+    float course = 1.0 - step(0.5, mod(cell.y, 6.0));
+    float joint = 1.0 - step(0.5, mod(cell.x + floor(cell.y / 6.0) * 3.0, 12.0));
+    delta = max(course, joint) > 0.5 ? vec3(-8.0, -6.0, -4.0)
+      : vec3(4.0, 2.0, -1.0) * glint;
+  } else if (style == 2.0) {
+    // Metal: restrained cold brush direction with rare clean glints.
+    delta = vec3(-2.0, 1.0, 4.0) * stripe + vec3(5.0, 6.0, 7.0) * glint;
+  } else if (style == 3.0) {
+    // Ceramic: subtle glaze/craze contrast, never a noisy interior pattern.
+    delta = vec3(3.0, 4.0, 5.0) * glint - vec3(3.0, 2.0, 2.0) * stripe;
+  } else if (style == 4.0) {
+    // BMTL: cooler plates with sparse pitted occlusion.
+    delta = vec3(-3.0, -2.0, 3.0) * stripe - vec3(5.0, 4.0, 3.0) * glint;
+  } else if (style == 5.0) {
+    // Gold: warm directional grain and a measured highlight cadence.
+    delta = vec3(5.0, 3.0, -3.0) * stripe + vec3(6.0, 5.0, -1.0) * glint;
+  } else if (style == 6.0) {
+    // Iron: oxide-scale warmth remains below the broad rigid body relief.
+    delta = vec3(4.0, -2.0, -3.0) * stripe + vec3(-2.0, -1.0, 2.0) * glint;
+  } else {
+    // Titanium: cool lamellae and a thin neutral reflection.
+    delta = vec3(-2.0, 2.0, 5.0) * stripe + vec3(3.0, 4.0, 5.0) * glint;
+  }
+  return clamp(delta * smoothstep(0.10, 0.82, density), vec3(-10.0), vec3(10.0)) / 255.0;
+}
 // LIFE projections carry an exact native ctype preset rather than a generic
 // material identity. Keep the true-8x counterpart static and owner-local: all
 // twenty-four presets share this small arithmetic grammar, so it adds neither
@@ -1025,6 +1077,14 @@ void main() {
     && sensorEightXStyle(material) > 0.5
     && traits < 0.5 && !materialEmissive) {
     color = clamp(color + sensorEightXDelta(material, grid, density), 0.0, 1.0);
+  }
+  // Construction solids add their material-local finish only after the shared
+  // thick-body optics.  It is RGB-only, so contours, holes, spurs, walls, and
+  // the exact semantic owner remain entirely under the common compositor.
+  if (uStructuralRigidStyling > 0.5 && family == 0.0
+    && structuralRigidEightXStyle(material) > 0.5
+    && traits < 0.5 && !materialEmissive) {
+    color = clamp(color + structuralRigidEightXDelta(material, grid, density), 0.0, 1.0);
   }
   // True 8x deliberately reuses the centre emission sample that is already
   // live for gas and Energy. This is the compact counterpart to normal

@@ -41,6 +41,9 @@ import {
   UNUSUAL_SOLID_GRAPHICS_AUDIT, prepareUnusualSolidGraphicsAuditFixture,
 } from './unusual-solid-graphics-audit';
 import {
+  STRUCTURAL_RIGID_GRAPHICS_AUDIT, prepareStructuralRigidGraphicsAuditFixture,
+} from './structural-rigid-graphics-audit';
+import {
   LIQUID_IDENTITY_GRAPHICS_AUDIT, prepareLiquidIdentityGraphicsAuditFixture,
 } from './liquid-identity-graphics-audit';
 import {
@@ -516,6 +519,10 @@ export class Game {
       unusualSolidGraphicsAtlas: () => UNUSUAL_SOLID_GRAPHICS_AUDIT,
       prepareUnusualSolidGraphicsFixture: () => {
         prepareUnusualSolidGraphicsAuditFixture(this.simulation);
+      },
+      structuralRigidGraphicsAtlas: () => STRUCTURAL_RIGID_GRAPHICS_AUDIT,
+      prepareStructuralRigidGraphicsFixture: () => {
+        prepareStructuralRigidGraphicsAuditFixture(this.simulation);
       },
       liquidIdentityGraphicsAtlas: () => LIQUID_IDENTITY_GRAPHICS_AUDIT,
       prepareLiquidIdentityGraphicsFixture: () => {

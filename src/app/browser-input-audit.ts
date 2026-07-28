@@ -12,6 +12,7 @@ import type { SensorGraphicsAuditSnapshot } from './sensor-graphics-audit';
 import type { UnusualPowderGraphicsAuditSnapshot } from './unusual-powder-graphics-audit';
 import type { ExplosivePowderGraphicsAuditSnapshot } from './explosive-powder-graphics-audit';
 import type { UnusualSolidGraphicsAuditSnapshot } from './unusual-solid-graphics-audit';
+import type { StructuralRigidGraphicsAuditSnapshot } from './structural-rigid-graphics-audit';
 import type { LiquidIdentityGraphicsAuditSnapshot } from './liquid-identity-graphics-audit';
 import type { GasIdentityGraphicsAuditSnapshot } from './gas-identity-graphics-audit';
 import type { EnergyRadioactiveGraphicsAuditSnapshot } from './energy-radioactive-graphics-audit';
@@ -116,6 +117,8 @@ export interface BrowserInputAuditApi {
   prepareExplosivePowderGraphicsFixture(): void;
   unusualSolidGraphicsAtlas(): UnusualSolidGraphicsAuditSnapshot;
   prepareUnusualSolidGraphicsFixture(): void;
+  structuralRigidGraphicsAtlas(): StructuralRigidGraphicsAuditSnapshot;
+  prepareStructuralRigidGraphicsFixture(): void;
   liquidIdentityGraphicsAtlas(): LiquidIdentityGraphicsAuditSnapshot;
   prepareLiquidIdentityGraphicsFixture(): void;
   gasIdentityGraphicsAtlas(): GasIdentityGraphicsAuditSnapshot;

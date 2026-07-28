@@ -844,6 +844,34 @@ describe('Pixi presenter startup configuration', () => {
     expect(`${helper}${branch}`).not.toMatch(/\balpha\s*[+*]?=/);
   });
 
+  it('keeps true-8x construction-rigid identity exact-owner, RGB-only, and resource-free', () => {
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');
+    const eightEnd = source.indexOf('const FIELD_FRAGMENT = `', eightStart);
+    const eight = source.slice(eightStart, eightEnd);
+    const helperStart = eight.indexOf('float structuralRigidEightXStyle(');
+    const helperEnd = eight.indexOf('// LIFE projections carry', helperStart);
+    const branchStart = eight.indexOf('// Construction solids add their material-local finish');
+    const branchEnd = eight.indexOf('// True 8x deliberately reuses the centre emission sample', branchStart);
+    const helper = eight.slice(helperStart, helperEnd);
+    const branch = eight.slice(branchStart, branchEnd);
+    const materials = [22, 23, 25, 67, 70, 73, 82];
+
+    expect(helperStart).toBeGreaterThan(0);
+    expect(helperEnd).toBeGreaterThan(helperStart);
+    expect(branchStart).toBeGreaterThan(0);
+    expect(branchEnd).toBeGreaterThan(branchStart);
+    expect(eight).toContain('uniform float uStructuralRigidStyling;');
+    for (const material of materials) expect(helper).toContain(`material == ${material}.0`);
+    expect(branch).toContain('uStructuralRigidStyling > 0.5 && family == 0.0');
+    expect(branch).toContain('structuralRigidEightXStyle(material) > 0.5');
+    expect(branch).toContain('traits < 0.5 && !materialEmissive');
+    expect(branch).toContain('structuralRigidEightXDelta(material, grid, density)');
+    expect(`${helper}${branch}`).not.toContain('texture(');
+    expect(`${helper}${branch}`).not.toContain('uTime');
+    expect(`${helper}${branch}`).not.toMatch(/\balpha\s*[+*]?=/);
+  });
+
   it('keeps true-8x LIFE-preset identity exact-owner, RGB-only, and resource-free', () => {
     const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
     const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');

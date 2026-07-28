@@ -13329,6 +13329,11 @@ async function auditRenderScaleEight(cdp, dpr) {
   // fallback visuals as a release requirement or copying a 60 MiB frame.
   const unusualSolidGraphics = await auditEightXUnusualSolidGraphics(cdp, geometry.canvas);
   stage('unusual-solid-graphics-ready');
+  // Brick, metal, ceramic, and alloy bodies use a compact direct-mesh finish
+  // at true 8x.  This is intentionally a canonical-WebGL gate: Canvas stays
+  // an availability fallback and does not hold this high-detail style hostage.
+  const structuralRigidGraphics = await auditEightXStructuralRigidGraphics(cdp, geometry.canvas);
+  stage('structural-rigid-graphics-ready');
   // Sensors are device solids, but their seven exact public IDs need more than
   // the generic true-8x terminal cue. Exercise the compact static glyph layer
   // at the real backing without treating the Canvas fallback as a visual gate.
@@ -13422,6 +13427,7 @@ async function auditRenderScaleEight(cdp, dpr) {
     unusualPowderGraphics,
     cellularGraphics,
     unusualSolidGraphics,
+    structuralRigidGraphics,
     sensorGraphics,
     sourceTargetGraphics,
     forceActivityGraphics,
@@ -13587,6 +13593,149 @@ async function auditEightXUnusualSolidGraphics(cdp, canvasRect) {
     return Math.abs(sample.visible - styledSupport[index].visible) <= visibleLimit
       && Math.abs(sample.worldArea - styledSupport[index].worldArea) <= areaLimit;
   }), `renderScale=8 uncommon-solid styling changed composed support (${JSON.stringify({ flatSupport, styledSupport })})`);
+  return {
+    cards: atlas.cards.map(({ material, code }) => ({ material, code })),
+    occupied: prepared.occupied,
+    samples,
+    exactRepeatedOff: samples.every((sample) => sample.repeatRgbPeak <= 1),
+  };
+}
+
+async function snapshotEightXStructuralRigidGraphics(cdp) {
+  return evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    const snapshot = audit.structuralRigidGraphicsAtlas();
+    const cards = Array.isArray(snapshot) ? snapshot : snapshot.cards;
+    const exactRect = (rect, material) => {
+      for (let y = rect.y; y < rect.y + rect.height; y++) {
+        for (let x = rect.x; x < rect.x + rect.width; x++) {
+          if (audit.cell(x, y) !== material) return false;
+        }
+      }
+      return true;
+    };
+    return {
+      occupied: audit.occupiedCells(),
+      cards: cards.map((entry) => {
+        const empty = new Set();
+        for (let y = entry.hole.y; y < entry.hole.y + entry.hole.height; y++) {
+          for (let x = entry.hole.x; x < entry.hole.x + entry.hole.width; x++) empty.add(x + ',' + y);
+        }
+        for (const { x, y } of entry.openNotch) empty.add(x + ',' + y);
+        let bodyExact = true;
+        for (let y = entry.body.y; y < entry.body.y + entry.body.height; y++) {
+          for (let x = entry.body.x; x < entry.body.x + entry.body.width; x++) {
+            bodyExact &&= audit.cell(x, y) === (empty.has(x + ',' + y) ? 0 : entry.material);
+          }
+        }
+        let shellExact = true;
+        for (let y = entry.shell.outer.y; y < entry.shell.outer.y + entry.shell.outer.height; y++) {
+          for (let x = entry.shell.outer.x; x < entry.shell.outer.x + entry.shell.outer.width; x++) {
+            const inside = x >= entry.shell.interior.x && x < entry.shell.interior.x + entry.shell.interior.width
+              && y >= entry.shell.interior.y && y < entry.shell.interior.y + entry.shell.interior.height;
+            shellExact &&= audit.cell(x, y) === (inside ? 0 : entry.material);
+          }
+        }
+        return {
+          material: entry.material,
+          code: entry.code,
+          bodyExact,
+          shellExact,
+          spurExact: exactRect(entry.spur, entry.material),
+          isolatedExact: audit.cell(entry.isolated.x, entry.isolated.y) === entry.material,
+          guardExact: exactRect(entry.guardedBlank, 0),
+          contactOwnerExact: exactRect(entry.contact.owner, entry.material),
+          contactUnlikeExact: exactRect(entry.contact.unlike, entry.contact.unlikeMaterial),
+        };
+      }),
+    };
+  })()`);
+}
+
+function assertEightXStructuralRigidTopology(snapshot, label) {
+  const materials = [22, 23, 25, 67, 70, 73, 82];
+  assert(snapshot.cards.length === materials.length && snapshot.cards.every((card, index) => (
+    card.material === materials[index] && card.bodyExact && card.shellExact && card.spurExact
+      && card.isolatedExact && card.guardExact && card.contactOwnerExact && card.contactUnlikeExact
+  )), `${label}: structural-rigid identity/topology changed (${JSON.stringify(snapshot)})`);
+}
+
+/** Canonical WebGL true-8x gate for the seven exact construction bodies. */
+async function auditEightXStructuralRigidGraphics(cdp, canvasRect) {
+  await evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    if (typeof audit.prepareStructuralRigidGraphicsFixture !== 'function'
+      || typeof audit.structuralRigidGraphicsAtlas !== 'function'
+      || typeof audit.setStructuralRigidStyling !== 'function') {
+      throw new Error('True-8x structural-rigid graphics API unavailable');
+    }
+    audit.resetView();
+    audit.clear();
+    return true;
+  })()`);
+  const blank = await captureSettledPage(cdp, 'renderScale=8 blank structural-rigid framebuffer', 450);
+  const rawAtlas = await evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    audit.prepareStructuralRigidGraphicsFixture();
+    return audit.structuralRigidGraphicsAtlas();
+  })()`);
+  const atlas = Array.isArray(rawAtlas) ? { cards: rawAtlas } : rawAtlas;
+  assert(atlas?.cards?.length === 7,
+    `renderScale=8 structural-rigid fixture is incomplete (${JSON.stringify(atlas)})`);
+  const prepared = await snapshotEightXStructuralRigidGraphics(cdp);
+  assertEightXStructuralRigidTopology(prepared, 'renderScale=8 prepared structural-rigid fixture');
+  const live = await metrics(cdp);
+  assert(live.backing.width === WORLD_WIDTH * 8 && live.backing.height === WORLD_HEIGHT * 8
+      && live.outputScale === '8',
+  `renderScale=8 structural-rigid fixture lost true backing (${JSON.stringify(live.backing)})`);
+  assertCanvasRectsEqual(canvasRect, live.canvas, 'renderScale=8 structural-rigid fixture CSS geometry');
+
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setStructuralRigidStyling(false); true');
+  const flat = await captureSettledPage(cdp, 'renderScale=8 flat structural-rigid framebuffer', 450);
+  const flatTopology = await snapshotEightXStructuralRigidGraphics(cdp);
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setStructuralRigidStyling(true); true');
+  const styled = await captureSettledPage(cdp, 'renderScale=8 styled structural-rigid framebuffer', 450);
+  const styledTopology = await snapshotEightXStructuralRigidGraphics(cdp);
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setStructuralRigidStyling(false); true');
+  const repeated = await captureSettledPage(cdp, 'renderScale=8 repeated flat structural-rigid framebuffer', 450);
+  const repeatedTopology = await snapshotEightXStructuralRigidGraphics(cdp);
+  assert(JSON.stringify(flatTopology) === JSON.stringify(prepared)
+      && JSON.stringify(styledTopology) === JSON.stringify(prepared)
+      && JSON.stringify(repeatedTopology) === JSON.stringify(prepared),
+  'renderScale=8 structural-rigid styling changed semantic topology');
+
+  const regions = atlas.cards.map((entry) => ({
+    name: entry.code,
+    x: entry.body.x + entry.body.width / 2,
+    y: entry.body.y + entry.body.height / 2,
+    radiusX: Math.max(1, entry.body.width / 2 - 1),
+    radiusY: Math.max(1, entry.body.height / 2 - 1),
+    silhouette: true,
+  }));
+  const samples = await sampleBackdropRefractionRegions(cdp, {
+    straight: flat.capture.data,
+    refracted: styled.capture.data,
+    repeatedStraight: repeated.capture.data,
+  }, regions, canvasRect);
+  assert(samples.length === 7 && samples.every((sample) => (
+    sample.rgbRms >= 0.02 && sample.rgbRms <= 24
+      && sample.rgbPeak > 0 && sample.rgbPeak <= 48 && sample.repeatRgbPeak <= 1
+  )), `renderScale=8 structural-rigid response is absent, unbounded, or unstable (${JSON.stringify(samples)})`);
+  assert(new Set(samples.map((sample) => sample.responseSignature)).size === 7,
+    `renderScale=8 construction bodies lost distinct identity responses (${JSON.stringify(samples)})`);
+  const [flatSupport, styledSupport] = await Promise.all([
+    samplePageRegions(
+      cdp, flat.capture.data, regions, blank.capture.data, blank.reference.data, canvasRect,
+    ),
+    samplePageRegions(
+      cdp, styled.capture.data, regions, blank.capture.data, blank.reference.data, canvasRect,
+    ),
+  ]);
+  assert(flatSupport.every((sample, index) => (
+    Math.abs(sample.visible - styledSupport[index].visible) <= Math.max(2, Math.ceil(sample.visible * 0.005))
+      && Math.abs(sample.worldArea - styledSupport[index].worldArea)
+        <= Math.max(0.60, sample.worldArea * 0.005)
+  )), `renderScale=8 structural-rigid styling changed composed support (${JSON.stringify({ flatSupport, styledSupport })})`);
   return {
     cards: atlas.cards.map(({ material, code }) => ({ material, code })),
     occupied: prepared.occupied,
