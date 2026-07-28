@@ -817,6 +817,34 @@ describe('Pixi presenter startup configuration', () => {
     expect(`${helper}${branch}`).not.toMatch(/\balpha\s*[+*]?=/);
   });
 
+  it('keeps true-8x uncommon-solid identity exact-owner, RGB-only, and resource-free', () => {
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');
+    const eightEnd = source.indexOf('const FIELD_FRAGMENT = `', eightStart);
+    const eight = source.slice(eightStart, eightEnd);
+    const helperStart = eight.indexOf('float unusualSolidEightXStyle(');
+    const helperEnd = eight.indexOf('bool solidEightXGranular(', helperStart);
+    const branchStart = eight.indexOf('// Restore the normal composer\'s uncommon-solid identity family');
+    const branchEnd = eight.indexOf('// True 8x deliberately reuses the centre emission sample', branchStart);
+    const helper = eight.slice(helperStart, helperEnd);
+    const branch = eight.slice(branchStart, branchEnd);
+    const materials = [27, 68, 74, 76, 77, 79, 80, 196, 203, 204, 206, 208, 209, 210, 211, 212, 216];
+
+    expect(helperStart).toBeGreaterThan(0);
+    expect(helperEnd).toBeGreaterThan(helperStart);
+    expect(branchStart).toBeGreaterThan(0);
+    expect(branchEnd).toBeGreaterThan(branchStart);
+    expect(eight).toContain('uniform float uUnusualSolidStyling;');
+    for (const material of materials) expect(helper).toContain(`material == ${material}.0`);
+    expect(branch).toContain('uUnusualSolidStyling > 0.5 && family == 0.0');
+    expect(branch).toContain('unusualSolidEightXStyle(material) > 0.5');
+    expect(branch).toContain('(traits < 0.5 || material == 216.0) && !materialEmissive');
+    expect(branch).toContain('unusualSolidEightXDelta(material, grid, density)');
+    expect(`${helper}${branch}`).not.toContain('texture(');
+    expect(`${helper}${branch}`).not.toContain('uTime');
+    expect(`${helper}${branch}`).not.toMatch(/\balpha\s*[+*]?=/);
+  });
+
   it('converges normal WebGL dense Energy toward its existing emission field only', () => {
     const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
     const normalStart = source.indexOf('const FIELD_FRAGMENT = `');
@@ -2271,7 +2299,7 @@ describe('Pixi presenter startup configuration', () => {
     expect(unusualSolidBlock).toContain('uUnusualSolidStyling > 0.5 && unusualSolid > 0.5');
     expect(unusualSolidBlock).toContain('family == 0.0 && !materialEmissive');
     expect(unusualSolidBlock).toContain('surfaceOnly < 0.5 && halo < 0.5 && wall < 0.5');
-    expect(unusualSolidBlock).toContain('wallOnly < 0.5 && emissionOnly < 0.5 && traits < 0.5');
+    expect(unusualSolidBlock).toContain('wallOnly < 0.5 && emissionOnly < 0.5 && (traits < 0.5 || material == 216.0)');
     for (const material of [27, 68, 74, 76, 77, 79, 80, 196, 203, 204, 206, 208, 209, 210, 211, 212, 216]) {
       expect(unusualSolidBlock).toContain(`material == ${material}.0`);
     }

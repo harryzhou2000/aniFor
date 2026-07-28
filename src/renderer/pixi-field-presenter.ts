@@ -122,6 +122,7 @@ uniform float uEnergyCoreRelief;
 uniform float uEnergyIdentityStyling;
 uniform float uCellularMaterialStyling;
 uniform float uExplosivePowderStyling;
+uniform float uUnusualSolidStyling;
 uniform float uLiquidFieldLighting;
 uniform float uLiquidVolumeChroma;
 uniform float uLiquidIdentityStyling;
@@ -535,6 +536,88 @@ vec3 cellularIdentityEightXDelta(float material, vec2 position, float density) {
   return clamp(delta, vec3(-10.0), vec3(10.0))
     * smoothstep(0.08, 0.72, density) / 255.0;
 }
+// Uncommon native solids are mostly phase products or purpose-built material
+// IDs. The normal compositor gives them individual static motifs; retain that
+// legibility in the direct 8x mesh with one bounded, arithmetic-only grammar.
+// This deliberately samples neither a field nor retained state: it styles an
+// already-authoritative solid owner and leaves coverage, alpha, walls, and
+// simulation semantics to the common compositor below.
+float unusualSolidEightXStyle(float material) {
+  if (material == 27.0) return 1.0; // WAX
+  if (material == 68.0) return 2.0; // DRIC
+  if (material == 74.0) return 3.0; // NICE
+  if (material == 76.0) return 4.0; // QRTZ
+  if (material == 77.0) return 5.0; // RIME
+  if (material == 79.0) return 6.0; // RSSS
+  if (material == 80.0) return 7.0; // SHLD1
+  if (material == 196.0) return 8.0; // BIZRS
+  if (material == 203.0) return 9.0; // LOLZ
+  if (material == 204.0) return 10.0; // LOVE
+  if (material == 206.0) return 11.0; // PSTS
+  if (material == 208.0) return 12.0; // SHLD2
+  if (material == 209.0) return 13.0; // SHLD3
+  if (material == 210.0) return 14.0; // SHLD4
+  if (material == 211.0) return 15.0; // SPAWN
+  if (material == 212.0) return 16.0; // SPAWN2
+  if (material == 216.0) return 17.0; // VRSS
+  return 0.0;
+}
+vec3 unusualSolidEightXDelta(float material, vec2 position, float density) {
+  float style = unusualSolidEightXStyle(material);
+  if (style < 0.5) return vec3(0.0);
+  vec2 cell = floor(position);
+  vec2 local = mod(cell + vec2(style * 3.0, style * 5.0), 16.0) - vec2(7.5);
+  float diagonal = fract(cell.x * (0.043 + style * 0.001)
+    - cell.y * (0.031 + style * 0.0015) + style * 0.137);
+  float ribbon = 1.0 - abs(diagonal * 2.0 - 1.0);
+  float node = 1.0 - step(0.5, mod(cell.x * 3.0 + cell.y * 5.0 + style * 7.0,
+    11.0 + mod(style, 4.0)));
+  float radius = abs(local.x) + abs(local.y);
+  vec3 delta;
+  if (style == 1.0) {
+    // WAX: cooling lamellae and a light crystalline bloom.
+    float lamella = 1.0 - step(1.0, mod(cell.x + cell.y * 2.0, 7.0));
+    delta = lamella > 0.5 ? vec3(8.0, 6.0, 1.0) : vec3(2.0, 1.0, -2.0);
+  } else if (style >= 2.0 && style <= 5.0) {
+    // DRIC/NICE/QRTZ/RIME: distinct cold/crystal facets share a fine stable grid.
+    float facet = max(ribbon, node * 0.82);
+    vec3 crystal = style == 2.0 ? vec3(-4.0, 7.0, 12.0)
+      : (style == 3.0 ? vec3(3.0, 11.0, 13.0)
+      : (style == 4.0 ? vec3(10.0, 7.0, 14.0) : vec3(6.0, 10.0, 16.0)));
+    delta = mix(-crystal * 0.28, crystal, facet);
+  } else if (style == 6.0 || style == 11.0) {
+    // RSSS/PSTS: resist and paste settle into different retained ridge keys.
+    float ridge = max(ribbon, node * 0.64);
+    vec3 key = style == 6.0 ? vec3(8.0, 3.0, 9.0) : vec3(4.0, 7.0, 2.0);
+    delta = mix(-key * 0.36, key, ridge);
+  } else if (style == 8.0) {
+    // BIZRS: prismatic faces split warm/cool reflection along a stable diagonal.
+    delta = ribbon > 0.58 ? vec3(11.0, 4.0, -7.0) : vec3(-3.0, 6.0, 12.0);
+  } else if (style == 9.0 || style == 10.0) {
+    // LOLZ/LOVE retain playful glyph-like cores without a state texture.
+    float eye = (abs(local.x) > 2.5 && abs(local.x) < 5.5 && abs(local.y + 2.0) < 1.5)
+      ? 1.0 : 0.0;
+    float heart = radius >= 3.0 && radius <= 6.0 && local.y > -3.0 ? 1.0 : 0.0;
+    delta = style == 9.0
+      ? (eye > 0.5 ? vec3(9.0, 13.0, -6.0) : vec3(1.0, 4.0, -2.0))
+      : (heart > 0.5 ? vec3(9.0, -5.0, 12.0) : vec3(-2.0, 2.0, 5.0));
+  } else if (style >= 7.0 && style <= 14.0) {
+    // SHLD1-4: nested armour bands become progressively denser by stage.
+    float stage = style == 7.0 ? 1.0 : style - 10.0;
+    float shell = 1.0 - step(0.80, abs(fract(radius * stage * 0.17 + 0.21) - 0.5) * 3.2);
+    vec3 key = vec3(3.0 + stage * 1.5, 7.0 + stage * 1.2, 11.0 + stage * 0.8);
+    delta = shell > 0.5 ? key : -key * 0.24;
+  } else if (style == 15.0 || style == 16.0) {
+    // SPAWN/SPAWN2: related, but oppositely coloured beacon rings.
+    float ring = radius >= 4.0 && radius <= 6.0 ? 1.0 : 0.0;
+    vec3 key = style == 15.0 ? vec3(12.0, 8.0, -6.0) : vec3(-6.0, 6.0, 13.0);
+    delta = ring > 0.5 ? key : key * 0.22;
+  } else {
+    // VRSS: a magenta capsid uses sparse nodes over its rigid body.
+    delta = node > 0.5 ? vec3(12.0, -2.0, 13.0) : vec3(2.0, 0.0, 4.0);
+  }
+  return clamp(delta * smoothstep(0.08, 0.72, density), vec3(-14.0), vec3(14.0)) / 255.0;
+}
 bool solidEightXGranular(float optics) {
   return optics == 7.0 || optics == 13.0 || optics == 14.0 || optics == 15.0;
 }
@@ -809,6 +892,17 @@ void main() {
     && material >= 171.0 && material <= 194.0
     && traits < 0.5 && !materialEmissive) {
     color = clamp(color + cellularIdentityEightXDelta(material, grid, density), 0.0, 1.0);
+  }
+  // Restore the normal composer's uncommon-solid identity family after the
+  // common rigid-body optics. This exact-owner branch is RGB-only: it neither
+  // reconstructs support nor touches alpha, so authored holes, fine spurs,
+  // isolated cells, and co-located-wall compositing remain authoritative.
+  if (uUnusualSolidStyling > 0.5 && family == 0.0
+    && unusualSolidEightXStyle(material) > 0.5
+    // VRSS retains its native infectious trait overlay after this static capsid
+    // base. All other trait-bearing owners remain an exact no-op here.
+    && (traits < 0.5 || material == 216.0) && !materialEmissive) {
+    color = clamp(color + unusualSolidEightXDelta(material, grid, density), 0.0, 1.0);
   }
   // True 8x deliberately reuses the centre emission sample that is already
   // live for gas and Energy. This is the compact counterpart to normal
@@ -4638,7 +4732,9 @@ void main() {
     if (uUnusualSolidStyling > 0.5 && unusualSolid > 0.5
       && family == 0.0 && !materialEmissive
       && surfaceOnly < 0.5 && halo < 0.5 && wall < 0.5
-      && wallOnly < 0.5 && emissionOnly < 0.5 && traits < 0.5) {
+      // VRSS's static capsid sits beneath its later infectious-trait accent;
+      // other trait overlays keep their prior exact identity-only path.
+      && wallOnly < 0.5 && emissionOnly < 0.5 && (traits < 0.5 || material == 216.0)) {
       vec3 unusualSolidBase = color;
       vec2 solidCell = floor(fieldPosition);
       if (material == 27.0) {

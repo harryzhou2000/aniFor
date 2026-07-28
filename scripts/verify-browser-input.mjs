@@ -13319,6 +13319,11 @@ async function auditRenderScaleEight(cdp, dpr) {
   // snapshots, avoiding another complete 60 MiB backing read at true 8x.
   const cellularGraphics = await auditEightXCellularGraphics(cdp, geometry.canvas);
   stage('cellular-graphics-ready');
+  // The compact direct mesh also owns uncommon native solid products. Prove
+  // their static identity layer at the real backing without treating Canvas
+  // fallback visuals as a release requirement or copying a 60 MiB frame.
+  const unusualSolidGraphics = await auditEightXUnusualSolidGraphics(cdp, geometry.canvas);
+  stage('unusual-solid-graphics-ready');
   const sourceTargetGraphics = await auditEightXSourceTargetGraphics(cdp, geometry.canvas);
   stage('source-target-ready');
   const forceActivityGraphics = await auditEightXForceActivityGraphics(cdp, geometry.canvas);
@@ -13405,6 +13410,7 @@ async function auditRenderScaleEight(cdp, dpr) {
     materialAtlasStress,
     explosivePowderGraphics,
     cellularGraphics,
+    unusualSolidGraphics,
     sourceTargetGraphics,
     forceActivityGraphics,
     vibrStateGraphics,
@@ -13418,6 +13424,162 @@ async function auditRenderScaleEight(cdp, dpr) {
     sparkStateGraphics,
     forcedStallRecovery,
     contextLossRecovery,
+  };
+}
+
+async function snapshotEightXUnusualSolidGraphics(cdp) {
+  return evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    const snapshot = audit.unusualSolidGraphicsAtlas();
+    const cards = Array.isArray(snapshot) ? snapshot : snapshot.cards;
+    const exactRect = (rect, material) => {
+      for (let y = rect.y; y < rect.y + rect.height; y++) {
+        for (let x = rect.x; x < rect.x + rect.width; x++) {
+          if (audit.cell(x, y) !== material) return false;
+        }
+      }
+      return true;
+    };
+    return {
+      occupied: audit.occupiedCells(),
+      cards: cards.map((entry) => {
+        const empty = new Set();
+        for (let y = entry.hole.y; y < entry.hole.y + entry.hole.height; y++) {
+          for (let x = entry.hole.x; x < entry.hole.x + entry.hole.width; x++) empty.add(x + ',' + y);
+        }
+        for (const { x, y } of entry.openNotch) empty.add(x + ',' + y);
+        let bodyExact = true;
+        for (let y = entry.body.y; y < entry.body.y + entry.body.height; y++) {
+          for (let x = entry.body.x; x < entry.body.x + entry.body.width; x++) {
+            bodyExact &&= audit.cell(x, y) === (empty.has(x + ',' + y) ? 0 : entry.material);
+          }
+        }
+        let shellExact = true;
+        for (let y = entry.shell.outer.y; y < entry.shell.outer.y + entry.shell.outer.height; y++) {
+          for (let x = entry.shell.outer.x; x < entry.shell.outer.x + entry.shell.outer.width; x++) {
+            const inside = x >= entry.shell.interior.x && x < entry.shell.interior.x + entry.shell.interior.width
+              && y >= entry.shell.interior.y && y < entry.shell.interior.y + entry.shell.interior.height;
+            shellExact &&= audit.cell(x, y) === (inside ? 0 : entry.material);
+          }
+        }
+        return {
+          material: entry.material,
+          code: entry.code,
+          bodyExact,
+          shellExact,
+          spurExact: exactRect(entry.spur, entry.material),
+          isolatedExact: audit.cell(entry.isolated.x, entry.isolated.y) === entry.material,
+          guardExact: exactRect(entry.guardedBlank, 0),
+          contactOwnerExact: exactRect(entry.contact.owner, entry.material),
+          contactUnlikeExact: exactRect(entry.contact.unlike, entry.contact.unlikeMaterial),
+        };
+      }),
+    };
+  })()`);
+}
+
+function assertEightXUnusualSolidTopology(snapshot, label) {
+  const materials = [196, 206, 80, 208, 209, 210, 216, 203, 204, 211, 212];
+  assert(snapshot.cards.length === materials.length && snapshot.cards.every((card, index) => (
+    card.material === materials[index] && card.bodyExact && card.shellExact && card.spurExact
+      && card.isolatedExact && card.guardExact && card.contactOwnerExact && card.contactUnlikeExact
+  )), `${label}: uncommon-solid identity/topology changed (${JSON.stringify(snapshot)})`);
+}
+
+async function auditEightXUnusualSolidGraphics(cdp, canvasRect) {
+  await evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    if (typeof audit.prepareUnusualSolidGraphicsFixture !== 'function'
+      || typeof audit.unusualSolidGraphicsAtlas !== 'function'
+      || typeof audit.setUnusualSolidStyling !== 'function') {
+      throw new Error('True-8x uncommon-solid graphics API unavailable');
+    }
+    audit.resetView();
+    audit.clear();
+    return true;
+  })()`);
+  const blank = await captureSettledPage(cdp, 'renderScale=8 blank uncommon-solid framebuffer', 450);
+  const rawAtlas = await evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    audit.prepareUnusualSolidGraphicsFixture();
+    return audit.unusualSolidGraphicsAtlas();
+  })()`);
+  const atlas = normalizeUnusualSolidGraphicsAtlas(rawAtlas);
+  const prepared = await snapshotEightXUnusualSolidGraphics(cdp);
+  assertEightXUnusualSolidTopology(prepared, 'renderScale=8 prepared uncommon-solid fixture');
+  const live = await metrics(cdp);
+  assert(live.backing.width === WORLD_WIDTH * 8 && live.backing.height === WORLD_HEIGHT * 8
+      && live.outputScale === '8',
+  `renderScale=8 uncommon-solid fixture lost true backing (${JSON.stringify(live.backing)})`);
+  assertCanvasRectsEqual(canvasRect, live.canvas, 'renderScale=8 uncommon-solid fixture CSS geometry');
+
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setUnusualSolidStyling(false); true');
+  const flat = await captureSettledPage(cdp, 'renderScale=8 flat uncommon-solid framebuffer', 450);
+  const flatTopology = await snapshotEightXUnusualSolidGraphics(cdp);
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setUnusualSolidStyling(true); true');
+  const styled = await captureSettledPage(cdp, 'renderScale=8 styled uncommon-solid framebuffer', 450);
+  const styledTopology = await snapshotEightXUnusualSolidGraphics(cdp);
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setUnusualSolidStyling(false); true');
+  const repeated = await captureSettledPage(cdp, 'renderScale=8 repeated flat uncommon-solid framebuffer', 450);
+  const repeatedTopology = await snapshotEightXUnusualSolidGraphics(cdp);
+  assert(JSON.stringify(flatTopology) === JSON.stringify(prepared)
+      && JSON.stringify(styledTopology) === JSON.stringify(prepared)
+      && JSON.stringify(repeatedTopology) === JSON.stringify(prepared),
+  'renderScale=8 uncommon-solid styling changed semantic topology');
+
+  const regions = atlas.cards.map((entry) => ({
+    name: entry.code,
+    x: entry.body.x + entry.body.width / 2,
+    y: entry.body.y + entry.body.height / 2,
+    radiusX: Math.max(1, entry.body.width / 2 - 1),
+    radiusY: Math.max(1, entry.body.height / 2 - 1),
+    silhouette: true,
+  }));
+  const samples = await sampleBackdropRefractionRegions(cdp, {
+    straight: flat.capture.data,
+    refracted: styled.capture.data,
+    repeatedStraight: repeated.capture.data,
+  }, regions, canvasRect);
+  assert(samples.length === 11 && samples.every((sample) => (
+    sample.rgbRms >= 0.02 && sample.rgbRms <= 24
+      && sample.rgbPeak > 0 && sample.rgbPeak <= 48 && sample.repeatRgbPeak <= 1
+  )), `renderScale=8 uncommon-solid response is absent, unbounded, or unstable (${JSON.stringify(samples)})`);
+  assert(new Set(samples.map((sample) => sample.responseSignature)).size === 11,
+    `renderScale=8 uncommon solids lost distinct identity responses (${JSON.stringify(samples)})`);
+  const shieldSamples = samples.filter(({ name }) => name.startsWith('SHLD'));
+  assert(shieldSamples.length === 4
+      && new Set(shieldSamples.map((sample) => sample.responseSignature)).size === 4,
+  `renderScale=8 SHLD1-4 lost distinct stage responses (${JSON.stringify(shieldSamples)})`);
+  const [flatSupport, styledSupport] = await Promise.all([
+    samplePageRegions(
+      cdp, flat.capture.data, regions, blank.capture.data, blank.reference.data, canvasRect,
+    ),
+    samplePageRegions(
+      cdp, styled.capture.data, regions, blank.capture.data, blank.reference.data, canvasRect,
+    ),
+  ]);
+  assert(flatSupport.every((sample, index) => {
+    // SHLD3/4 deliberately sit near the opaque dark-page threshold. Their
+    // identity-layer RGB response can therefore move the screenshot-only
+    // colour classifier substantially even while the semantic snapshot above
+    // and the shader's RGB-only static gate prove exact support/alpha parity.
+    // Keep a bounded display tolerance solely for those dark controls; every
+    // brighter card keeps the usual half-percent composed-footprint bound.
+    const darkShield = sample.name === 'SHLD3' || sample.name === 'SHLD4';
+    const visibleLimit = darkShield
+      ? Math.max(2, Math.ceil(sample.visible * 0.45))
+      : Math.max(2, Math.ceil(sample.visible * 0.005));
+    const areaLimit = darkShield
+      ? Math.max(0.60, sample.worldArea * 0.45)
+      : Math.max(0.60, sample.worldArea * 0.005);
+    return Math.abs(sample.visible - styledSupport[index].visible) <= visibleLimit
+      && Math.abs(sample.worldArea - styledSupport[index].worldArea) <= areaLimit;
+  }), `renderScale=8 uncommon-solid styling changed composed support (${JSON.stringify({ flatSupport, styledSupport })})`);
+  return {
+    cards: atlas.cards.map(({ material, code }) => ({ material, code })),
+    occupied: prepared.occupied,
+    samples,
+    exactRepeatedOff: samples.every((sample) => sample.repeatRgbPeak <= 1),
   };
 }
 
