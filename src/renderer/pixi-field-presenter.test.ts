@@ -1473,6 +1473,8 @@ describe('Pixi presenter startup configuration', () => {
     expect(coreStart).toBeGreaterThan(0);
     expect(coreEnd).toBeGreaterThan(coreStart);
     expect(core).toContain('solidDeepInteriorMicroGain(optics, profile)');
+    expect(source).toContain('float staticSolidIdentityGain = 1.0;');
+    expect(core).toContain('staticSolidIdentityGain = mix(1.0, 0.58, coreDepth * solidInterior);');
     expect(core).not.toContain('texture(');
     expect(core).not.toMatch(/\balpha\s*[+*]?=/);
     expect(normalStart).toBeGreaterThan(0);
@@ -1947,6 +1949,7 @@ describe('Pixi presenter startup configuration', () => {
     expect(structuralBlock).not.toMatch(/\balpha\s*[+*]?=/);
     expect(source).toContain('float structuralIdentityGain = 1.0;');
     expect(source).toContain('structuralRigidDeepIdentityGain(material), structuralDepth * solidInterior');
+    expect(source).toContain('structuralIdentityGain = min(structuralIdentityGain, staticSolidIdentityGain);');
     expect(source).toContain('structuralRigidIdentityDelta(material, fieldPosition)\n          * structuralIdentityGain');
   });
 
@@ -2188,7 +2191,7 @@ describe('Pixi presenter startup configuration', () => {
     expect(unusualSolidBlock).toContain('uUnusualSolidStyling > 0.5 && unusualSolid > 0.5');
     expect(unusualSolidBlock).toContain('family == 0.0 && !materialEmissive');
     expect(unusualSolidBlock).toContain('surfaceOnly < 0.5 && halo < 0.5 && wall < 0.5');
-    expect(unusualSolidBlock).toContain('wallOnly < 0.5 && emissionOnly < 0.5');
+    expect(unusualSolidBlock).toContain('wallOnly < 0.5 && emissionOnly < 0.5 && traits < 0.5');
     for (const material of [27, 68, 74, 76, 77, 79, 80, 196, 203, 204, 206, 208, 209, 210, 211, 212, 216]) {
       expect(unusualSolidBlock).toContain(`material == ${material}.0`);
     }
@@ -2203,6 +2206,8 @@ describe('Pixi presenter startup configuration', () => {
     expect(unusualSolidBlock).toContain('crystallineSolidIdentityDelta(material, fieldPosition)');
     expect(unusualSolidBlock).toContain('virusFamilyIdentityDelta(2.0, fieldPosition)');
     expect(unusualSolidBlock).toContain('solidDepth');
+    expect(unusualSolidBlock).toContain('vec3 unusualSolidBase = color;');
+    expect(unusualSolidBlock).toContain('mix(unusualSolidBase, color, staticSolidIdentityGain)');
     expect(unusualSolidBlock).not.toMatch(/texture\s*\(/);
     expect(unusualSolidBlock).not.toMatch(/\balpha\s*[+*]?=/);
     expect(unusualSolidBlock).not.toContain('uTime');

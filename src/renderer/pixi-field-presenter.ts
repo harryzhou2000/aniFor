@@ -3745,6 +3745,12 @@ void main() {
         * (1.0 - smoothstep(0.08, 0.24, suspensionColorDistance));
     }
     float interiorMicroGain = mix(1.0, solidInteriorMicroGain(optics, profile), solidInterior);
+    // Static construction and uncommon-material marks are useful at silhouettes
+    // and in fine pieces, but should not read as a tiled overlay through a broad
+    // rigid body. This reuses the exact-species depth byte already proven for
+    // the body optics: it cannot run on holes, walls, seams, thin structure, or
+    // reconstructed support, and changes later RGB identity arithmetic only.
+    float staticSolidIdentityGain = 1.0;
     if (uSolidOpticalDepth > 0.5 && solidOpticalDepth > 6.0 / 255.0) {
       // Surface and first-inner-layer micro detail remain unchanged. The
       // phase-local depth byte has already rejected world edges, holes, walls,
@@ -3752,6 +3758,7 @@ void main() {
       float coreDepth = smoothstep(6.0 / 255.0, 42.0 / 255.0, solidOpticalDepth);
       float deepMicroGain = mix(1.0, solidDeepInteriorMicroGain(optics, profile), solidInterior);
       interiorMicroGain = mix(interiorMicroGain, deepMicroGain, coreDepth);
+      staticSolidIdentityGain = mix(1.0, 0.58, coreDepth * solidInterior);
     }
     // The bilinear solid field peaks below one for isolated and one-cell-thick
     // semantic strokes. Use a wider iso shoulder so those cells
@@ -4383,6 +4390,10 @@ void main() {
           structuralIdentityGain = mix(
             1.0, structuralRigidDeepIdentityGain(material), structuralDepth * solidInterior
           );
+          // The material-specific helper intentionally retains the calmest
+          // metals and more Brick course detail. Cap only its strongest deep
+          // cadence with the common static-body proof above.
+          structuralIdentityGain = min(structuralIdentityGain, staticSolidIdentityGain);
         }
         color = clamp(color + structuralRigidIdentityDelta(material, fieldPosition)
           * structuralIdentityGain, 0.0, 1.0);
@@ -4514,7 +4525,8 @@ void main() {
     if (uUnusualSolidStyling > 0.5 && unusualSolid > 0.5
       && family == 0.0 && !materialEmissive
       && surfaceOnly < 0.5 && halo < 0.5 && wall < 0.5
-      && wallOnly < 0.5 && emissionOnly < 0.5) {
+      && wallOnly < 0.5 && emissionOnly < 0.5 && traits < 0.5) {
+      vec3 unusualSolidBase = color;
       vec2 solidCell = floor(fieldPosition);
       if (material == 27.0) {
         // WAX: crystalline blooms and cooling lamellae share MWAX's topology.
@@ -4595,7 +4607,10 @@ void main() {
         // VRSS: the same family capsid is carried by the rigid solid body.
         color += virusFamilyIdentityDelta(2.0, fieldPosition);
       }
-      color = clamp(color, 0.0, 1.0);
+      // Preserve every static material's silhouette-facing motif, while easing
+      // only its deep-core delta toward the already-lit body. Native state,
+      // active traits, alpha, ownership, and the semantic contour are untouched.
+      color = clamp(mix(unusualSolidBase, color, staticSolidIdentityGain), 0.0, 1.0);
     }
     color += spongeHydrationDelta(material, wallState.ba, fieldPosition)
       * uSpngStateStyling;
