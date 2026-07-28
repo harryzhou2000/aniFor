@@ -13327,6 +13327,13 @@ async function auditRenderScaleEight(cdp, dpr) {
   stage('polo-state-ready');
   const spngStateGraphics = await auditEightXSpngStateGraphics(cdp, geometry.canvas);
   stage('spng-state-ready');
+  // SEED/PLNT lifecycle lives in the shared owner-multiplexed state word.
+  // Exercise that exact compact direct-shader path before the independent
+  // PHOT plane and retain DEUT as the final recovery fixture below.
+  const botanicalLifecycleGraphics = await auditEightXBotanicalLifecycleGraphics(
+    cdp, geometry.canvas,
+  );
+  stage('botanical-lifecycle-ready');
   const photonSpectrumGraphics = await auditEightXPhotonSpectrumGraphics(cdp, geometry.canvas);
   stage('photon-spectrum-ready');
   // The shared Lava ancestry audit normally samples a complete backing canvas.
@@ -13394,6 +13401,7 @@ async function auditRenderScaleEight(cdp, dpr) {
     vibrStateGraphics,
     poloStateGraphics,
     spngStateGraphics,
+    botanicalLifecycleGraphics,
     photonSpectrumGraphics,
     deutStateGraphics,
     lavaStateGraphics,
@@ -14075,6 +14083,165 @@ async function auditEightXSpngStateGraphics(cdp, canvasRect) {
   assertEightXSpngResponses(samples, 'renderScale=8 WebGL');
   return {
     cards: rawAtlas.cards.map(({ key, hydration, encodedState }) => ({ key, hydration, encodedState })),
+    occupied: prepared.occupied,
+    samples,
+    exactRepeatedOff: samples.every(({ repeatRgbPeak }) => repeatRgbPeak <= 1),
+  };
+}
+
+async function snapshotEightXBotanicalLifecycle(cdp) {
+  return evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    const atlas = audit.botanicalLifecycleGraphicsAtlas();
+    const inside = (x, y, rect) => x >= rect.x && x < rect.x + rect.width
+      && y >= rect.y && y < rect.y + rect.height;
+    const exactRect = (rect, material, state) => {
+      for (let y = rect.y; y < rect.y + rect.height; y++) {
+        for (let x = rect.x; x < rect.x + rect.width; x++) {
+          if (audit.cell(x, y) !== material || audit.presentationState(x, y) !== state) return false;
+        }
+      }
+      return true;
+    };
+    return {
+      occupied: audit.occupiedCells(),
+      cards: atlas.cards.map((entry) => {
+        let bodyExact = true;
+        for (let y = entry.body.y; y < entry.body.y + entry.body.height; y++) {
+          for (let x = entry.body.x; x < entry.body.x + entry.body.width; x++) {
+            const empty = inside(x, y, entry.authoredHole) || inside(x, y, entry.openNotch);
+            bodyExact = bodyExact
+              && audit.cell(x, y) === (empty ? 0 : entry.material)
+              && audit.presentationState(x, y) === (empty ? 0 : entry.encodedState);
+          }
+        }
+        return {
+          key: entry.key, kind: entry.kind, material: entry.material,
+          encodedState: entry.encodedState, bodyExact,
+          thinExact: exactRect(entry.thinStructure, entry.material, entry.encodedState),
+          isolatedExact: audit.cell(entry.isolated.x, entry.isolated.y) === entry.material
+            && audit.presentationState(entry.isolated.x, entry.isolated.y) === entry.encodedState,
+          zeroExact: exactRect(entry.zeroState, entry.material, 0),
+          wrongOwnerExact: exactRect(entry.wrongOwner, 23, entry.encodedState),
+          waterExact: exactRect(entry.waterControl, 2, entry.encodedState),
+          sandExact: exactRect(entry.sandControl, 1, entry.encodedState),
+          blankExact: exactRect(entry.guardedBlank, 0, 0),
+        };
+      }),
+    };
+  })()`);
+}
+
+function assertEightXBotanicalLifecycleTopology(snapshot, label) {
+  const expectedKeys = 'seedDry,seedSip,seedReady,seedGerminating,plantOrdinary,plantTreeGreen,plantTreeCyan,plantTreeMagenta';
+  const expectedStates = '0,2,16392,51231,32768,54625,58419,45327';
+  assert(snapshot.cards.length === 8
+      && snapshot.cards.map(({ key }) => key).join(',') === expectedKeys
+      && snapshot.cards.map(({ kind }) => kind).join(',') === 'seed,seed,seed,seed,plant,plant,plant,plant'
+      && snapshot.cards.map(({ material }) => material).join(',') === '50,50,50,50,10,10,10,10'
+      && snapshot.cards.map(({ encodedState }) => encodedState).join(',') === expectedStates
+      && snapshot.cards.every((card) => card.bodyExact && card.thinExact && card.isolatedExact
+        && card.zeroExact && card.wrongOwnerExact && card.waterExact && card.sandExact
+        && card.blankExact),
+  `${label}: botanical lifecycle semantic/state topology changed (${JSON.stringify(snapshot)})`);
+}
+
+function eightXBotanicalLifecycleRegions(atlas) {
+  const centre = (rect) => ({ x: rect.x + rect.width / 2, y: rect.y + rect.height / 2 });
+  return atlas.cards.flatMap((entry) => [
+    { name: `BOTANICAL-${entry.key}-state`, ...centre(entry.body), radiusX: 24, radiusY: 22 },
+    { name: `BOTANICAL-${entry.key}-surface`, ...centre(entry.surfaceProbe), radiusX: 3, radiusY: 3 },
+    { name: `BOTANICAL-${entry.key}-core`, ...centre(entry.coreProbe), radiusX: 3, radiusY: 3 },
+    { name: `BOTANICAL-${entry.key}-lifecycle`, ...centre(entry.lifecycleProbe), radiusX: 3, radiusY: 3 },
+    { name: `BOTANICAL-${entry.key}-zero`, ...centre(entry.zeroState), radiusX: 5, radiusY: 5 },
+    { name: `BOTANICAL-${entry.key}-wrong-owner`, ...centre(entry.wrongOwner), radiusX: 5, radiusY: 5 },
+    { name: `BOTANICAL-${entry.key}-water`, ...centre(entry.waterControl), radiusX: 5, radiusY: 5 },
+    { name: `BOTANICAL-${entry.key}-sand`, ...centre(entry.sandControl), radiusX: 5, radiusY: 5 },
+    { name: `BOTANICAL-${entry.key}-blank`, ...centre(entry.guardedBlank), radiusX: 20, radiusY: 14 },
+  ]);
+}
+
+function assertEightXBotanicalLifecycleResponses(samples, label) {
+  const byName = Object.fromEntries(samples.map((sample) => [sample.name, sample]));
+  const state = (key) => byName[`BOTANICAL-${key}-state`];
+  const noOp = [state('seedDry'), state('plantOrdinary')];
+  assert(noOp.every((sample) => sample && sample.rgbPeak <= 1 && sample.repeatRgbPeak <= 1),
+    `${label}: dormant SEED or ordinary PLNT was not an exact lifecycle-style no-op (${JSON.stringify(noOp)})`);
+  const active = [
+    state('seedSip'), state('seedReady'), state('seedGerminating'),
+    state('plantTreeGreen'), state('plantTreeCyan'), state('plantTreeMagenta'),
+  ];
+  assert(active.every((sample) => sample && sample.rgbRms >= 0.004 && sample.rgbRms <= 70
+      && sample.rgbPeak > 0 && sample.rgbPeak <= 80 && sample.repeatRgbPeak <= 1),
+  `${label}: botanical lifecycle response is absent, unbounded, or unstable (${JSON.stringify(active)})`);
+  // Germination becomes a concentrated opening/root cue rather than covering
+  // the whole seed body. The body RMS may therefore contract even as the real
+  // lifecycle signal grows; its bounded composed peak is the scale-invariant
+  // progression measure at true 8x (the normal-scale audit retains its broad
+  // RMS progression requirement).
+  assert(state('seedReady').rgbPeak > state('seedSip').rgbPeak
+      && state('seedGerminating').rgbPeak > state('seedReady').rgbPeak,
+  `${label}: SEED hydration/germination peak response is not progressive (${JSON.stringify(active.slice(0, 3))})`);
+  const trees = active.slice(3);
+  assert(new Set(trees.map(({ responseSignature }) => responseSignature)).size === 3,
+    `${label}: inherited PLNT lifecycle colour responses collapsed (${JSON.stringify(trees)})`);
+  const motifs = samples.filter(({ name }) => /-(surface|core|lifecycle)$/.test(name));
+  const activeMotifs = motifs.filter(({ name }) => !/-seedDry-|-plantOrdinary-/.test(name));
+  assert(activeMotifs.some(({ rgbPeak }) => rgbPeak > 0)
+      && motifs.filter(({ name }) => /-(seedDry|plantOrdinary)-/.test(name))
+        .every(({ rgbPeak, repeatRgbPeak }) => rgbPeak <= 1 && repeatRgbPeak <= 1),
+  `${label}: lifecycle detail did not remain owner/state gated (${JSON.stringify(motifs)})`);
+  const controls = samples.filter(({ name }) => /-(zero|wrong-owner|water|sand|blank)$/.test(name));
+  assert(controls.length === 40 && controls.every(({ rgbPeak, repeatRgbPeak }) => (
+    rgbPeak <= 1 && repeatRgbPeak <= 1
+  )), `${label}: botanical lifecycle styling leaked into a state/owner/material control (${JSON.stringify(controls)})`);
+}
+
+async function auditEightXBotanicalLifecycleGraphics(cdp, canvasRect) {
+  const rawAtlas = await evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    if (typeof audit.presentationState !== 'function'
+      || typeof audit.prepareBotanicalLifecycleGraphicsFixture !== 'function'
+      || typeof audit.botanicalLifecycleGraphicsAtlas !== 'function'
+      || typeof audit.setBotanicalLifecycleStyling !== 'function') {
+      throw new Error('True-8x botanical lifecycle graphics audit API unavailable');
+    }
+    audit.resetView();
+    audit.prepareBotanicalLifecycleGraphicsFixture();
+    return audit.botanicalLifecycleGraphicsAtlas();
+  })()`);
+  const prepared = await snapshotEightXBotanicalLifecycle(cdp);
+  assertEightXBotanicalLifecycleTopology(prepared, 'renderScale=8 prepared botanical lifecycle fixture');
+  const live = await metrics(cdp);
+  assert(live.backing.width === WORLD_WIDTH * 8 && live.backing.height === WORLD_HEIGHT * 8
+      && live.outputScale === '8',
+  `renderScale=8 botanical lifecycle fixture lost true backing (${JSON.stringify(live.backing)})`);
+  assertCanvasRectsEqual(canvasRect, live.canvas, 'renderScale=8 botanical lifecycle fixture CSS geometry');
+
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setBotanicalLifecycleStyling(false); true');
+  const flat = await captureSettledPage(cdp, 'renderScale=8 flat botanical-lifecycle framebuffer', 450);
+  const flatTopology = await snapshotEightXBotanicalLifecycle(cdp);
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setBotanicalLifecycleStyling(true); true');
+  const styled = await captureSettledPage(cdp, 'renderScale=8 styled botanical-lifecycle framebuffer', 450);
+  const styledTopology = await snapshotEightXBotanicalLifecycle(cdp);
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setBotanicalLifecycleStyling(false); true');
+  const repeated = await captureSettledPage(cdp, 'renderScale=8 repeated botanical-lifecycle framebuffer', 450);
+  const repeatedTopology = await snapshotEightXBotanicalLifecycle(cdp);
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setBotanicalLifecycleStyling(true); true');
+  assert(JSON.stringify(flatTopology) === JSON.stringify(prepared)
+      && JSON.stringify(styledTopology) === JSON.stringify(prepared)
+      && JSON.stringify(repeatedTopology) === JSON.stringify(prepared),
+  'renderScale=8 botanical lifecycle toggle changed semantic or presentation-state topology');
+  const samples = await sampleBackdropRefractionRegions(cdp, {
+    straight: flat.capture.data,
+    refracted: styled.capture.data,
+    repeatedStraight: repeated.capture.data,
+  }, eightXBotanicalLifecycleRegions(rawAtlas), canvasRect);
+  assertEightXBotanicalLifecycleResponses(samples, 'renderScale=8 WebGL');
+  return {
+    cards: rawAtlas.cards.map(({ key, kind, material, encodedState }) => ({
+      key, kind, material, encodedState,
+    })),
     occupied: prepared.occupied,
     samples,
     exactRepeatedOff: samples.every(({ repeatRgbPeak }) => repeatRgbPeak <= 1),
