@@ -3285,6 +3285,14 @@ void main() {
     // blocks; sparse carriers keep their exact animated detail and silhouette.
     float denseEnergyField = smoothstep(0.12, 0.48, emissionState.a);
     float cohesiveEnergy = denseEnergyField * smoothstep(0.18, 0.66, density);
+    // Dense Energy owns a continuous luminous body rather than the individual
+    // palette colours of its carriers. Converge only the already-proven core
+    // toward the straight, field-owned emission RGB; sparse PHOT and gaps have
+    // zero cohesive support and therefore retain their exact semantics. The
+    // existing core-relief control makes this RGB-only convergence auditable in
+    // the same off-on-off capture, without adding a sample, field, or pass.
+    float energyFieldChroma = cohesiveEnergy * (0.08 + core * 0.08) * uEnergyCoreRelief;
+    vec3 cohesiveEnergyBase = mix(energyBase, emissionState.rgb, energyFieldChroma);
     float cohesiveCarrierDetail = mix(
       carrierDetail,
       1.0 + flowWave * 0.022 + pulse * 0.018,
@@ -3295,7 +3303,7 @@ void main() {
       * mix(1.0, carrierDetail, edge * 0.55);
     float cohesiveAlpha = smoothstep(0.10, 0.58, density) * mix(0.72, 0.96, core);
     alpha = mix(semanticAlpha, cohesiveAlpha, cohesiveEnergy * 0.72);
-    color = energyBase * (1.05 + core * 0.48 + heat * 0.30) * cohesiveCarrierDetail;
+    color = cohesiveEnergyBase * (1.05 + core * 0.48 + heat * 0.30) * cohesiveCarrierDetail;
     color += auraTint * edge * (0.20 + pulse * 0.16);
     color += mix(vec3(1.0, 0.72, 0.42), vec3(0.72, 0.90, 1.0), radioactiveCarrier)
       * core * (0.10 + pulse * 0.08);

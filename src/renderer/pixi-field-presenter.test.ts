@@ -760,6 +760,24 @@ describe('Pixi presenter startup configuration', () => {
     expect(eight.match(/texture\(uEmissionTexture, uv\)/g)).toHaveLength(1);
   });
 
+  it('converges normal WebGL dense Energy toward its existing emission field only', () => {
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const normalStart = source.indexOf('const FIELD_FRAGMENT = `');
+    const start = source.indexOf('  } else if (energyCore > 0.5) {', normalStart);
+    const end = source.indexOf('  } else if (gasVolume > 0.5) {', start);
+    const block = source.slice(start, end);
+
+    expect(normalStart).toBeGreaterThan(0);
+    expect(start).toBeGreaterThan(normalStart);
+    expect(end).toBeGreaterThan(start);
+    expect(block).toContain('float cohesiveEnergy = denseEnergyField * smoothstep(0.18, 0.66, density);');
+    expect(block).toContain('float energyFieldChroma = cohesiveEnergy * (0.08 + core * 0.08) * uEnergyCoreRelief;');
+    expect(block).toContain('vec3 cohesiveEnergyBase = mix(energyBase, emissionState.rgb, energyFieldChroma);');
+    expect(block).toContain('color = cohesiveEnergyBase * (1.05 + core * 0.48 + heat * 0.30) * cohesiveCarrierDetail;');
+    expect(block).toContain('alpha = mix(semanticAlpha, cohesiveAlpha, cohesiveEnergy * 0.72);');
+    expect(block).not.toContain('texture(');
+  });
+
   it('keeps true-8x deep solid body optics interior-only, RGB-only, and resource-free', () => {
     const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
     const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');
