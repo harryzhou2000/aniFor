@@ -122,6 +122,7 @@ uniform float uEnergyCoreRelief;
 uniform float uEnergyIdentityStyling;
 uniform float uCellularMaterialStyling;
 uniform float uExplosivePowderStyling;
+uniform float uUnusualPowderStyling;
 uniform float uUnusualSolidStyling;
 uniform float uLiquidFieldLighting;
 uniform float uLiquidVolumeChroma;
@@ -502,6 +503,49 @@ vec3 explosivePowderEightXDelta(float material, vec2 position, float density) {
   float gain = (0.16 + facet * 0.84) * smoothstep(0.12, 0.82, density);
   return clamp(key * gain, vec3(-14.0), vec3(14.0)) / 255.0;
 }
+// These ten native powders carry distinct, static body optics on the normal
+// WebGL path. Mirror that identity language in the direct 8x mesh with a
+// compact arithmetic-only layer: it is limited to Smooth powder, reuses the
+// decoded owner/density/world position, and cannot allocate a field, add a
+// sampler, alter coverage, or make the fifteen-million-fragment frame dynamic.
+float unusualPowderEightXStyle(float material) {
+  if (material == 43.0) return 1.0; // ANAR
+  if (material == 44.0) return 2.0; // BGLA
+  if (material == 45.0) return 3.0; // BREC
+  if (material == 46.0) return 4.0; // BRMT
+  if (material == 47.0) return 5.0; // FRZZ
+  if (material == 48.0) return 6.0; // GRAV
+  if (material == 49.0) return 7.0; // SAWD
+  if (material == 51.0) return 8.0; // SLCN
+  if (material == 198.0) return 9.0; // DYST
+  if (material == 217.0) return 10.0; // BCOL
+  return 0.0;
+}
+vec3 unusualPowderEightXDelta(float material, vec2 position, float density) {
+  float style = unusualPowderEightXStyle(material);
+  if (style < 0.5) return vec3(0.0);
+  vec2 cell = floor(position);
+  float diagonal = 1.0 - abs(fract(cell.x * (0.051 + style * 0.001)
+    + cell.y * (0.037 + style * 0.0015) + style * 0.173) * 2.0 - 1.0);
+  float counter = 1.0 - abs(fract(cell.x * (0.073 - style * 0.001)
+    - cell.y * (0.029 + style * 0.001) + style * 0.119) * 2.0 - 1.0);
+  float band = max(diagonal, counter * 0.78);
+  float node = 1.0 - step(0.5, mod(cell.x * 3.0 + cell.y * 5.0 + style * 7.0,
+    11.0 + mod(style, 4.0)));
+  vec3 key = style == 1.0 ? vec3(12.0, 8.0, 3.0)       // ANAR feather shafts
+    : (style == 2.0 ? vec3(3.0, 11.0, 15.0)            // BGLA splinters
+    : (style == 3.0 ? vec3(14.0, 6.0, -2.0)            // BREC copper traces
+    : (style == 4.0 ? vec3(-2.0, 10.0, 6.0)            // BRMT patina
+    : (style == 5.0 ? vec3(4.0, 12.0, 16.0)            // FRZZ crystals
+    : (style == 6.0 ? vec3(10.0, 3.0, 15.0)            // GRAV bands
+    : (style == 7.0 ? vec3(14.0, 6.0, -3.0)            // SAWD fibres
+    : (style == 8.0 ? vec3(3.0, 10.0, 15.0)            // SLCN cleavages
+    : (style == 9.0 ? vec3(11.0, 8.0, -2.0)            // DYST colonies
+    : vec3(15.0, 5.0, -5.0)))))))));
+  float motif = mix(-0.30, 1.0, band) + node * 0.24;
+  return clamp(key * motif * smoothstep(0.10, 0.80, density),
+    vec3(-14.0), vec3(14.0)) / 255.0;
+}
 // LIFE projections carry an exact native ctype preset rather than a generic
 // material identity. Keep the true-8x counterpart static and owner-local: all
 // twenty-four presets share this small arithmetic grammar, so it adds neither
@@ -799,6 +843,14 @@ void main() {
     // remain controlled by the existing semantic path.
     if (uExplosivePowderStyling > 0.5 && traits < 0.5 && !materialEmissive) {
       color = clamp(color + explosivePowderEightXDelta(material, grid, density), 0.0, 1.0);
+    }
+    // The more unusual loose materials have a quiet material-seeded body
+    // language in Smooth view. Local and Grains intentionally retain their
+    // exact reference renderings, so this is never allowed to alter them.
+    if (uUnusualPowderStyling > 0.5 && uPowderStyle > 1.5
+      && unusualPowderEightXStyle(material) > 0.5
+      && traits < 0.5 && !materialEmissive) {
+      color = clamp(color + unusualPowderEightXDelta(material, grid, density), 0.0, 1.0);
     }
   }
   // Deep rigid bodies reuse the existing exact-species occupancy, auxiliary

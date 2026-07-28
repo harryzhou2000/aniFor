@@ -13314,6 +13314,11 @@ async function auditRenderScaleEight(cdp, dpr) {
     cdp, geometry.canvas,
   );
   stage('explosive-powder-ready');
+  // Match the normal WebGL body's uncommon-powder identities in the direct
+  // mesh, but prove Smooth-only styling separately so Grains and Local remain
+  // reliable reference views at the real 4896x3072 backing.
+  const unusualPowderGraphics = await auditEightXUnusualPowderGraphics(cdp, geometry.canvas);
+  stage('unusual-powder-ready');
   // LIFE uses native ctype projections rather than ordinary particle IDs.
   // Prove the compact 24-preset grammar through page regions and semantic
   // snapshots, avoiding another complete 60 MiB backing read at true 8x.
@@ -13409,6 +13414,7 @@ async function auditRenderScaleEight(cdp, dpr) {
     },
     materialAtlasStress,
     explosivePowderGraphics,
+    unusualPowderGraphics,
     cellularGraphics,
     unusualSolidGraphics,
     sourceTargetGraphics,
@@ -13844,6 +13850,171 @@ async function auditEightXExplosivePowderGraphics(cdp, canvasRect) {
     cards: cards.map(({ material, code }) => ({ material, code })),
     occupied: prepared.occupied,
     samples,
+    exactRepeatedOff: samples.every((sample) => sample.repeatRgbPeak <= 1),
+  };
+}
+
+async function snapshotEightXUnusualPowders(cdp) {
+  return evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    const snapshot = audit.unusualPowderGraphicsAtlas();
+    const cards = Array.isArray(snapshot) ? snapshot : snapshot.cards;
+    const inside = (x, y, rect) => x >= rect.x && x < rect.x + rect.width
+      && y >= rect.y && y < rect.y + rect.height;
+    const exactRect = (rect, material) => {
+      for (let y = rect.y; y < rect.y + rect.height; y++) {
+        for (let x = rect.x; x < rect.x + rect.width; x++) {
+          if (audit.cell(x, y) !== material) return false;
+        }
+      }
+      return true;
+    };
+    return {
+      occupied: audit.occupiedCells(),
+      cards: cards.map((entry) => {
+        let bodyExact = true;
+        for (let y = entry.body.y; y < entry.body.y + entry.body.height; y++) {
+          for (let x = entry.body.x; x < entry.body.x + entry.body.width; x++) {
+            const empty = inside(x, y, entry.hole)
+              || entry.openNotch.some((point) => point.x === x && point.y === y);
+            bodyExact &&= audit.cell(x, y) === (empty ? 0 : entry.material);
+          }
+        }
+        return {
+          material: entry.material,
+          code: entry.code,
+          bodyExact,
+          thinExact: exactRect(entry.thinColumn, entry.material),
+          isolatedExact: audit.cell(entry.isolated.x, entry.isolated.y) === entry.material,
+          guardExact: exactRect(entry.guardedBlank, 0),
+          contactOwnerExact: exactRect(entry.contact.owner, entry.material),
+          contactUnlikeExact: exactRect(entry.contact.unlike, entry.contact.unlikeMaterial),
+        };
+      }),
+    };
+  })()`);
+}
+
+function assertEightXUnusualPowderTopology(snapshot, label) {
+  const materials = [43, 44, 45, 46, 47, 48, 49, 51, 198, 217];
+  assert(snapshot.cards.length === materials.length && snapshot.cards.every((card, index) => (
+    card.material === materials[index] && card.bodyExact && card.thinExact
+      && card.isolatedExact && card.guardExact && card.contactOwnerExact && card.contactUnlikeExact
+  )), `${label}: unusual-powder identity/topology changed (${JSON.stringify(snapshot)})`);
+}
+
+async function auditEightXUnusualPowderGraphics(cdp, canvasRect) {
+  await evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    if (typeof audit.prepareUnusualPowderGraphicsFixture !== 'function'
+      || typeof audit.unusualPowderGraphicsAtlas !== 'function'
+      || typeof audit.setUnusualPowderStyling !== 'function'
+      || typeof audit.setPowderRenderStyle !== 'function') {
+      throw new Error('True-8x unusual-powder graphics API unavailable');
+    }
+    audit.resetView();
+    audit.clear();
+    return true;
+  })()`);
+  const blank = await captureSettledPage(cdp, 'renderScale=8 blank unusual-powder framebuffer', 450);
+  const rawAtlas = await evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    audit.prepareUnusualPowderGraphicsFixture();
+    audit.setPowderRenderStyle('smooth');
+    return audit.unusualPowderGraphicsAtlas();
+  })()`);
+  const atlas = normalizeUnusualPowderGraphicsAtlas(rawAtlas);
+  const prepared = await snapshotEightXUnusualPowders(cdp);
+  assertEightXUnusualPowderTopology(prepared, 'renderScale=8 prepared unusual-powder fixture');
+  const live = await metrics(cdp);
+  assert(live.backing.width === WORLD_WIDTH * 8 && live.backing.height === WORLD_HEIGHT * 8
+      && live.outputScale === '8',
+  `renderScale=8 unusual-powder fixture lost true backing (${JSON.stringify(live.backing)})`);
+  assertCanvasRectsEqual(canvasRect, live.canvas, 'renderScale=8 unusual-powder fixture CSS geometry');
+
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setUnusualPowderStyling(false); true');
+  const flat = await captureSettledPage(cdp, 'renderScale=8 flat unusual-powder framebuffer', 450);
+  const flatTopology = await snapshotEightXUnusualPowders(cdp);
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setUnusualPowderStyling(true); true');
+  const styled = await captureSettledPage(cdp, 'renderScale=8 styled unusual-powder framebuffer', 450);
+  const styledTopology = await snapshotEightXUnusualPowders(cdp);
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setUnusualPowderStyling(false); true');
+  const repeated = await captureSettledPage(cdp, 'renderScale=8 repeated flat unusual-powder framebuffer', 450);
+  const repeatedTopology = await snapshotEightXUnusualPowders(cdp);
+  assert(JSON.stringify(flatTopology) === JSON.stringify(prepared)
+      && JSON.stringify(styledTopology) === JSON.stringify(prepared)
+      && JSON.stringify(repeatedTopology) === JSON.stringify(prepared),
+  'renderScale=8 unusual-powder styling changed semantic topology');
+
+  const regions = atlas.cards.map((entry) => ({
+    name: entry.code,
+    x: entry.body.x + entry.body.width / 2,
+    y: entry.body.y + entry.body.height / 2,
+    radiusX: Math.max(1, entry.body.width / 2 - 1),
+    radiusY: Math.max(1, entry.body.height / 2 - 1),
+    silhouette: true,
+  }));
+  const samples = await sampleBackdropRefractionRegions(cdp, {
+    straight: flat.capture.data,
+    refracted: styled.capture.data,
+    repeatedStraight: repeated.capture.data,
+  }, regions, canvasRect);
+  assert(samples.length === 10 && samples.every((sample) => (
+    sample.rgbRms >= 0.02 && sample.rgbRms <= 24
+      && sample.rgbPeak > 0 && sample.rgbPeak <= 48 && sample.repeatRgbPeak <= 1
+  )), `renderScale=8 unusual-powder response is absent, unbounded, or unstable (${JSON.stringify(samples)})`);
+  assert(new Set(samples.map((sample) => sample.responseSignature)).size === 10,
+    `renderScale=8 unusual powders lost distinct identity responses (${JSON.stringify(samples)})`);
+  const [flatSupport, styledSupport] = await Promise.all([
+    samplePageRegions(
+      cdp, flat.capture.data, regions, blank.capture.data, blank.reference.data, canvasRect,
+    ),
+    samplePageRegions(
+      cdp, styled.capture.data, regions, blank.capture.data, blank.reference.data, canvasRect,
+    ),
+  ]);
+  assert(flatSupport.every((sample, index) => (
+    Math.abs(sample.visible - styledSupport[index].visible) <= Math.max(2, Math.ceil(sample.visible * 0.005))
+      && Math.abs(sample.worldArea - styledSupport[index].worldArea)
+        <= Math.max(0.60, sample.worldArea * 0.005)
+  )), `renderScale=8 unusual-powder styling changed composed support (${JSON.stringify({ flatSupport, styledSupport })})`);
+
+  const verifyReferenceStyle = async (style, label) => {
+    await evaluate(cdp, `(() => {
+      const audit = window.__ANIFOR_INPUT_AUDIT__;
+      audit.setPowderRenderStyle('${style}');
+      audit.setUnusualPowderStyling(false);
+      return true;
+    })()`);
+    const off = await captureSettledPage(cdp, `renderScale=8 flat ${label} unusual-powder framebuffer`, 450);
+    await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setUnusualPowderStyling(true); true');
+    const on = await captureSettledPage(cdp, `renderScale=8 styled ${label} unusual-powder framebuffer`, 450);
+    await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setUnusualPowderStyling(false); true');
+    const returned = await captureSettledPage(cdp, `renderScale=8 repeated ${label} unusual-powder framebuffer`, 450);
+    const reference = await sampleBackdropRefractionRegions(cdp, {
+      straight: off.capture.data,
+      refracted: on.capture.data,
+      repeatedStraight: returned.capture.data,
+    }, regions, canvasRect);
+    assert(reference.every((sample) => sample.rgbPeak <= 1 && sample.repeatRgbPeak <= 1),
+      `renderScale=8 unusual-powder styling escaped ${label} reference mode (${JSON.stringify(reference)})`);
+    return reference;
+  };
+  const grainsReference = await verifyReferenceStyle('grains', 'Grains');
+  const localReference = await verifyReferenceStyle('local', 'Local');
+  await evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    audit.setPowderRenderStyle('smooth');
+    audit.setUnusualPowderStyling(true);
+    return true;
+  })()`);
+
+  return {
+    cards: atlas.cards.map(({ material, code }) => ({ material, code })),
+    occupied: prepared.occupied,
+    samples,
+    grainsReference,
+    localReference,
     exactRepeatedOff: samples.every((sample) => sample.repeatRgbPeak <= 1),
   };
 }

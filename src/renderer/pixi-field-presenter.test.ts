@@ -789,6 +789,34 @@ describe('Pixi presenter startup configuration', () => {
     expect(`${helper}${branch}`).not.toMatch(/\balpha\s*[+*]?=/);
   });
 
+  it('keeps true-8x unusual-powder identity Smooth-only, RGB-only, and resource-free', () => {
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');
+    const eightEnd = source.indexOf('const FIELD_FRAGMENT = `', eightStart);
+    const eight = source.slice(eightStart, eightEnd);
+    const helperStart = eight.indexOf('float unusualPowderEightXStyle(');
+    const helperEnd = eight.indexOf('// LIFE projections carry', helperStart);
+    const branchStart = eight.indexOf('if (family == 4.0) {');
+    const branchEnd = eight.indexOf('// Deep rigid bodies reuse', branchStart);
+    const helper = eight.slice(helperStart, helperEnd);
+    const branch = eight.slice(branchStart, branchEnd);
+    const materials = [43, 44, 45, 46, 47, 48, 49, 51, 198, 217];
+
+    expect(helperStart).toBeGreaterThan(0);
+    expect(helperEnd).toBeGreaterThan(helperStart);
+    expect(branchStart).toBeGreaterThan(0);
+    expect(branchEnd).toBeGreaterThan(branchStart);
+    expect(eight).toContain('uniform float uUnusualPowderStyling;');
+    for (const material of materials) expect(helper).toContain(`material == ${material}.0`);
+    expect(branch).toContain('uUnusualPowderStyling > 0.5 && uPowderStyle > 1.5');
+    expect(branch).toContain('unusualPowderEightXStyle(material) > 0.5');
+    expect(branch).toContain('traits < 0.5 && !materialEmissive');
+    expect(branch).toContain('unusualPowderEightXDelta(material, grid, density)');
+    expect(`${helper}${branch}`).not.toContain('texture(');
+    expect(`${helper}${branch}`).not.toContain('uTime');
+    expect(`${helper}${branch}`).not.toMatch(/\balpha\s*[+*]?=/);
+  });
+
   it('keeps true-8x LIFE-preset identity exact-owner, RGB-only, and resource-free', () => {
     const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
     const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');
