@@ -713,8 +713,15 @@ void main() {
       vec3 bodyShadow = solidEightXBodyShadow(optics);
       color *= solidBaseLight * (vec3(1.0) - bodyShadow * (thicknessGain / 255.0
         * shapedThickness));
-      color += bodyKey * max(0.0, bodyResponse) * (10.0 / 255.0)
-        - bodyShadow * max(0.0, -bodyResponse) * (10.0 / 255.0);
+      // A broad rigid body already pays the full thickness absorption above.
+      // Let its existing positive macro lobe recover a restrained 7-byte key
+      // at the lobe apex, while leaving pocket shadow and every semantic
+      // coverage decision untouched. This is the compact counterpart of the
+      // normal WebGL crown calibration below.
+      color += bodyKey * max(0.0, bodyResponse)
+        * (optics == 11.0 ? 4.0 / 255.0 : 14.0 / 255.0)
+        - bodyShadow * max(0.0, -bodyResponse)
+          * (optics == 11.0 ? 16.0 / 255.0 : 10.0 / 255.0);
     } else color *= solidBaseLight;
   }
   // True 8x deliberately reuses the centre emission sample that is already
@@ -3814,12 +3821,24 @@ void main() {
           solidReliefTone * 255.0 / macroStrength, -1.0, 1.0
         ) * macroDepth;
         float macroGain = solidBodyMacroGain(optics);
+        // Keep the smallest derived material scalars live across the signed
+        // branch; GLSL branch-local values cannot be referenced from its else.
+        float macroKeyGain = optics == 11.0 ? 0.15 : 0.72;
+        float macroShadowGain = optics == 11.0 ? 1.60 : 1.0;
         if (macroResponse > 0.0) {
+          // Thickness absorption gives broad solids their depth; retain a
+          // slightly stronger existing crown reflection so their lit lobes do
+          // not read flatter than the surrounding liquid/gas volumes. The
+          // same exact interior/depth proof owns both terms, and this remains
+          // RGB-only arithmetic with no resource or topology decision.
+          // Radioactive bodies keep an absorption-led deep core so the public
+          // isotope identity remains legible; other calm rigid families receive
+          // the brighter crown.
           color += (vec3(1.0) - clamp(color, 0.0, 1.0))
-            * solidBodyMacroKey(optics) * macroResponse * macroGain * 0.55;
+            * solidBodyMacroKey(optics) * macroResponse * macroGain * macroKeyGain;
         } else {
           color *= vec3(1.0) - solidBodyMacroShadow(optics)
-            * (-macroResponse) * macroGain;
+            * (-macroResponse) * macroGain * macroShadowGain;
         }
       }
     }

@@ -786,6 +786,8 @@ describe('Pixi presenter startup configuration', () => {
     expect(block).toContain('bodyTriangle * bodyTriangle * (3.0 - bodyTriangle * 2.0)');
     expect(block).toContain('solidEightXBodyKey(optics)');
     expect(block).toContain('solidEightXBodyShadow(optics)');
+    expect(block).toContain('optics == 11.0 ? 4.0 / 255.0 : 14.0 / 255.0');
+    expect(block).toContain('optics == 11.0 ? 16.0 / 255.0 : 10.0 / 255.0');
     expect(`${helper}${block}`).not.toContain('texture(');
     expect(`${helper}${block}`).not.toContain('uTime');
     expect(`${helper}${block}`).not.toMatch(/\balpha\s*[+*]?=/);
@@ -1483,6 +1485,9 @@ describe('Pixi presenter startup configuration', () => {
     expect(shading).toContain('solidBodyMacroKey(optics)');
     expect(shading).toContain('solidBodyMacroShadow(optics)');
     expect(shading).toContain('solidReliefTone * 255.0 / macroStrength');
+    expect(shading).toContain('float macroKeyGain = optics == 11.0 ? 0.15 : 0.72;');
+    expect(shading).toContain('float macroShadowGain = optics == 11.0 ? 1.60 : 1.0;');
+    expect(shading).toContain('solidBodyMacroKey(optics) * macroResponse * macroGain * macroKeyGain');
     expect(shading).toContain('surfaceOnly < 0.5');
     expect(shading).not.toContain('texture(');
     expect(shading).not.toMatch(/\balpha\s*[+*]?=/);
