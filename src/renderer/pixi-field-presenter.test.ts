@@ -789,6 +789,34 @@ describe('Pixi presenter startup configuration', () => {
     expect(`${helper}${branch}`).not.toMatch(/\balpha\s*[+*]?=/);
   });
 
+  it('keeps true-8x LIFE-preset identity exact-owner, RGB-only, and resource-free', () => {
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');
+    const eightEnd = source.indexOf('const FIELD_FRAGMENT = `', eightStart);
+    const eight = source.slice(eightStart, eightEnd);
+    const helperStart = eight.indexOf('vec3 cellularIdentityEightXDelta(');
+    const helperEnd = eight.indexOf('bool solidEightXGranular(', helperStart);
+    const branchStart = eight.indexOf('// The normal path already gives every PT_LIFE ctype');
+    const branchEnd = eight.indexOf('// True 8x deliberately reuses the centre emission sample', branchStart);
+    const helper = eight.slice(helperStart, helperEnd);
+    const branch = eight.slice(branchStart, branchEnd);
+
+    expect(helperStart).toBeGreaterThan(0);
+    expect(helperEnd).toBeGreaterThan(helperStart);
+    expect(branchStart).toBeGreaterThan(0);
+    expect(branchEnd).toBeGreaterThan(branchStart);
+    expect(eight).toContain('uniform float uCellularMaterialStyling;');
+    expect(helper).toContain('float preset = material - 171.0;');
+    expect(helper).toContain('preset > 23.5');
+    expect(helper).toContain('smoothstep(0.08, 0.72, density)');
+    expect(branch).toContain('uCellularMaterialStyling > 0.5 && family == 0.0');
+    expect(branch).toContain('material >= 171.0 && material <= 194.0');
+    expect(branch).toContain('cellularIdentityEightXDelta(material, grid, density)');
+    expect(`${helper}${branch}`).not.toContain('texture(');
+    expect(`${helper}${branch}`).not.toContain('uTime');
+    expect(`${helper}${branch}`).not.toMatch(/\balpha\s*[+*]?=/);
+  });
+
   it('converges normal WebGL dense Energy toward its existing emission field only', () => {
     const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
     const normalStart = source.indexOf('const FIELD_FRAGMENT = `');

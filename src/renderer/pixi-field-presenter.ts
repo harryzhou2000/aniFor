@@ -120,6 +120,7 @@ uniform float uGasIdentityStyling;
 uniform float uEmissionVolumeChroma;
 uniform float uEnergyCoreRelief;
 uniform float uEnergyIdentityStyling;
+uniform float uCellularMaterialStyling;
 uniform float uExplosivePowderStyling;
 uniform float uLiquidFieldLighting;
 uniform float uLiquidVolumeChroma;
@@ -500,6 +501,40 @@ vec3 explosivePowderEightXDelta(float material, vec2 position, float density) {
   float gain = (0.16 + facet * 0.84) * smoothstep(0.12, 0.82, density);
   return clamp(key * gain, vec3(-14.0), vec3(14.0)) / 255.0;
 }
+// LIFE projections carry an exact native ctype preset rather than a generic
+// material identity. Keep the true-8x counterpart static and owner-local: all
+// twenty-four presets share this small arithmetic grammar, so it adds neither
+// a field/state lookup nor a per-frame resource to the fifteen-million-pixel
+// compositor. It is RGB-only; semantic support and alpha remain downstream.
+vec3 cellularIdentityEightXDelta(float material, vec2 position, float density) {
+  float preset = material - 171.0;
+  if (preset < -0.5 || preset > 23.5) return vec3(0.0);
+  vec2 cell = floor(position);
+  float motif = mod(preset, 4.0);
+  float period = 3.0 + mod(floor(preset / 4.0), 4.0);
+  float phase = mod(preset * 5.0 + floor(preset / 16.0) * 3.0, period);
+  float coordinate = motif < 0.5 ? cell.x + cell.y
+    : (motif < 1.5 ? cell.x + floor(cell.y * 0.5)
+    : (motif < 2.5 ? cell.x * 2.0 + cell.y * 3.0 : cell.x - cell.y));
+  float band = 1.0 - step(1.0 + floor(preset / 16.0),
+    mod(mod(coordinate + phase, period) + period, period));
+  float node = 1.0 - step(0.5,
+    mod(cell.x * 3.0 + cell.y * 5.0 + preset * 7.0, 11.0 + mod(preset, 3.0)));
+  vec2 local = mod(cell + vec2(preset * 3.0, preset * 5.0), 16.0) - vec2(7.5);
+  float radiusSquared = dot(local, local);
+  float membrane = step(24.5, radiusSquared) * (1.0 - step(43.5, radiusSquared));
+  float core = 1.0 - step(7.5, radiusSquared);
+  float scalar = mix(2.0 + mod(preset, 2.0),
+    -4.0 - mod(floor(preset / 4.0), 2.0) * 2.0, band)
+    + node * mix(2.0, -2.0, band) - membrane + core;
+  vec3 delta = vec3(scalar);
+  if (motif < 0.5) delta += vec3(0.0, -band * 2.0, node * 2.0);
+  else if (motif < 1.5) delta += vec3(-band * 2.0, 0.0, band);
+  else if (motif < 2.5) delta += vec3(band, node * 2.0, 0.0);
+  else delta += vec3(0.0, -node, -band * 2.0);
+  return clamp(delta, vec3(-10.0), vec3(10.0))
+    * smoothstep(0.08, 0.72, density) / 255.0;
+}
 bool solidEightXGranular(float optics) {
   return optics == 7.0 || optics == 13.0 || optics == 14.0 || optics == 15.0;
 }
@@ -764,6 +799,16 @@ void main() {
         - bodyShadow * max(0.0, -bodyResponse)
           * (optics == 11.0 ? 16.0 / 255.0 : 10.0 / 255.0);
     } else color *= solidBaseLight;
+  }
+  // The normal path already gives every PT_LIFE ctype its own stable colony
+  // grammar. Restore that legibility at true 8x without treating the projected
+  // ID as a mutable particle state: the exact semantic owner and existing
+  // density are the only inputs, so holes, tendrils, isolated cells, alpha,
+  // and simulation behaviour remain authoritative elsewhere.
+  if (uCellularMaterialStyling > 0.5 && family == 0.0
+    && material >= 171.0 && material <= 194.0
+    && traits < 0.5 && !materialEmissive) {
+    color = clamp(color + cellularIdentityEightXDelta(material, grid, density), 0.0, 1.0);
   }
   // True 8x deliberately reuses the centre emission sample that is already
   // live for gas and Energy. This is the compact counterpart to normal

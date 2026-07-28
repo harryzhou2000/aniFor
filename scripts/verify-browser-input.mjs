@@ -13314,6 +13314,11 @@ async function auditRenderScaleEight(cdp, dpr) {
     cdp, geometry.canvas,
   );
   stage('explosive-powder-ready');
+  // LIFE uses native ctype projections rather than ordinary particle IDs.
+  // Prove the compact 24-preset grammar through page regions and semantic
+  // snapshots, avoiding another complete 60 MiB backing read at true 8x.
+  const cellularGraphics = await auditEightXCellularGraphics(cdp, geometry.canvas);
+  stage('cellular-graphics-ready');
   const sourceTargetGraphics = await auditEightXSourceTargetGraphics(cdp, geometry.canvas);
   stage('source-target-ready');
   const forceActivityGraphics = await auditEightXForceActivityGraphics(cdp, geometry.canvas);
@@ -13399,6 +13404,7 @@ async function auditRenderScaleEight(cdp, dpr) {
     },
     materialAtlasStress,
     explosivePowderGraphics,
+    cellularGraphics,
     sourceTargetGraphics,
     forceActivityGraphics,
     vibrStateGraphics,
@@ -13412,6 +13418,136 @@ async function auditRenderScaleEight(cdp, dpr) {
     sparkStateGraphics,
     forcedStallRecovery,
     contextLossRecovery,
+  };
+}
+
+async function snapshotEightXCellularGraphics(cdp) {
+  return evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    const snapshot = audit.cellularGraphicsAtlas();
+    const cards = Array.isArray(snapshot) ? snapshot : snapshot.cards;
+    const inside = (x, y, rect) => x >= rect.x && x < rect.x + rect.width
+      && y >= rect.y && y < rect.y + rect.height;
+    const exactRect = (rect, material) => {
+      for (let y = rect.y; y < rect.y + rect.height; y++) {
+        for (let x = rect.x; x < rect.x + rect.width; x++) {
+          if (audit.cell(x, y) !== material) return false;
+        }
+      }
+      return true;
+    };
+    return {
+      occupied: audit.occupiedCells(),
+      cards: cards.map((entry) => {
+        let bodyExact = true;
+        for (let y = entry.body.y; y < entry.body.y + entry.body.height; y++) {
+          for (let x = entry.body.x; x < entry.body.x + entry.body.width; x++) {
+            bodyExact &&= audit.cell(x, y) === (inside(x, y, entry.hole) ? 0 : entry.material);
+          }
+        }
+        return {
+          material: entry.material,
+          preset: entry.preset,
+          code: entry.code,
+          bodyExact,
+          tendrilExact: entry.tendril.every(({ x, y }) => audit.cell(x, y) === entry.material),
+          isolatedExact: audit.cell(entry.isolated.x, entry.isolated.y) === entry.material,
+          guardExact: exactRect(entry.guardedBlank, 0),
+        };
+      }),
+    };
+  })()`);
+}
+
+function assertEightXCellularTopology(snapshot, label) {
+  assert(snapshot.cards.length === 24 && snapshot.cards.every((card, preset) => (
+    card.preset === preset && card.material === 171 + preset && card.bodyExact
+      && card.tendrilExact && card.isolatedExact && card.guardExact
+  )), `${label}: LIFE preset identity/topology changed (${JSON.stringify(snapshot)})`);
+}
+
+async function auditEightXCellularGraphics(cdp, canvasRect) {
+  await evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    if (typeof audit.prepareCellularGraphicsFixture !== 'function'
+      || typeof audit.cellularGraphicsAtlas !== 'function'
+      || typeof audit.setCellularMaterialStyling !== 'function') {
+      throw new Error('True-8x cellular graphics API unavailable');
+    }
+    audit.resetView();
+    audit.clear();
+    return true;
+  })()`);
+  const blank = await captureSettledPage(cdp, 'renderScale=8 blank cellular framebuffer', 450);
+  const rawAtlas = await evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    audit.prepareCellularGraphicsFixture();
+    return audit.cellularGraphicsAtlas();
+  })()`);
+  const atlas = normalizeCellularGraphicsAtlas(rawAtlas);
+  const prepared = await snapshotEightXCellularGraphics(cdp);
+  assertEightXCellularTopology(prepared, 'renderScale=8 prepared cellular fixture');
+  const live = await metrics(cdp);
+  assert(live.backing.width === WORLD_WIDTH * 8 && live.backing.height === WORLD_HEIGHT * 8
+      && live.outputScale === '8',
+  `renderScale=8 cellular fixture lost true backing (${JSON.stringify(live.backing)})`);
+  assertCanvasRectsEqual(canvasRect, live.canvas, 'renderScale=8 cellular fixture CSS geometry');
+
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setCellularMaterialStyling(false); true');
+  const flat = await captureSettledPage(cdp, 'renderScale=8 flat cellular framebuffer', 450);
+  const flatTopology = await snapshotEightXCellularGraphics(cdp);
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setCellularMaterialStyling(true); true');
+  const styled = await captureSettledPage(cdp, 'renderScale=8 styled cellular framebuffer', 450);
+  const styledTopology = await snapshotEightXCellularGraphics(cdp);
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setCellularMaterialStyling(false); true');
+  const repeated = await captureSettledPage(cdp, 'renderScale=8 repeated flat cellular framebuffer', 450);
+  const repeatedTopology = await snapshotEightXCellularGraphics(cdp);
+  assert(JSON.stringify(flatTopology) === JSON.stringify(prepared)
+      && JSON.stringify(styledTopology) === JSON.stringify(prepared)
+      && JSON.stringify(repeatedTopology) === JSON.stringify(prepared),
+  'renderScale=8 cellular styling changed semantic topology');
+
+  const regions = atlas.cards.map((entry) => ({
+    name: entry.code,
+    x: entry.body.x + entry.body.width / 2,
+    y: entry.body.y + entry.body.height / 2,
+    radiusX: Math.max(1, entry.body.width / 2 - 1),
+    radiusY: Math.max(1, entry.body.height / 2 - 1),
+    silhouette: true,
+  }));
+  const samples = await sampleBackdropRefractionRegions(cdp, {
+    straight: flat.capture.data,
+    refracted: styled.capture.data,
+    repeatedStraight: repeated.capture.data,
+  }, regions, canvasRect);
+  assert(samples.length === 24 && samples.every((sample) => (
+    sample.rgbRms >= 0.02 && sample.rgbRms <= 24
+      && sample.rgbPeak > 0 && sample.rgbPeak <= 48 && sample.repeatRgbPeak <= 1
+  )), `renderScale=8 cellular response is absent, unbounded, or unstable (${JSON.stringify(samples)})`);
+  assert(new Set(samples.map((sample) => sample.responseSignature)).size === 24,
+    `renderScale=8 LIFE presets lost distinct identity responses (${JSON.stringify(samples)})`);
+  const [flatSupport, styledSupport] = await Promise.all([
+    samplePageRegions(
+      cdp, flat.capture.data, regions, blank.capture.data, blank.reference.data, canvasRect,
+    ),
+    samplePageRegions(
+      cdp, styled.capture.data, regions, blank.capture.data, blank.reference.data, canvasRect,
+    ),
+  ]);
+  // Semantics above and the static shader gate prove that LIFE style cannot
+  // touch alpha/support. The compositor's colour-thresholded page mask may
+  // still shift at a few antialiased CSS pixels; bound that display-only drift
+  // to a half-percent of each card instead of interpreting it as geometry.
+  assert(flatSupport.every((sample, index) => (
+    Math.abs(sample.visible - styledSupport[index].visible) <= Math.max(2, Math.ceil(sample.visible * 0.005))
+      && Math.abs(sample.worldArea - styledSupport[index].worldArea)
+        <= Math.max(0.60, sample.worldArea * 0.005)
+  )), `renderScale=8 cellular styling changed composed support (${JSON.stringify({ flatSupport, styledSupport })})`);
+  return {
+    cards: atlas.cards.map(({ material, preset, code }) => ({ material, preset, code })),
+    occupied: prepared.occupied,
+    samples,
+    exactRepeatedOff: samples.every((sample) => sample.repeatRgbPeak <= 1),
   };
 }
 
