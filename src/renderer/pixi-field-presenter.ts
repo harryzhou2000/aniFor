@@ -4081,8 +4081,13 @@ void main() {
       // mineral variation. The same existing exact-material/depth gate leaves
       // loose grains, fine columns, holes, Local, and the square Grains
       // comparison mode completely untouched.
-      float cellGrainRetention = mix(1.0, 0.16, powderVisualCohesion);
-      float facetRetention = mix(1.0, 0.42, powderVisualCohesion);
+      // A genuinely settled Smooth body should read as one material volume at
+      // fit view rather than a grid of individually shaded simulation cells.
+      // Keep a trace of mineral variation so a dense pile does not become
+      // plastic, but reserve the obvious grain/facet language for loose
+      // matter, Local, and the explicit square Grains reference mode.
+      float cellGrainRetention = mix(1.0, 0.08, powderVisualCohesion);
+      float facetRetention = mix(1.0, 0.20, powderVisualCohesion);
       color *= 0.91 + grain * (0.20 + roughSurface * 0.05) * cellGrainRetention * facetGain
         + grainFacet * (0.10 + roughSurface * 0.04) * facetRetention * facetGain;
       color += base * max(0.0, 0.6 - subcell.x - subcell.y)

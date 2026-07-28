@@ -1409,7 +1409,7 @@ describe('Pixi presenter startup configuration', () => {
     expect(block).not.toContain('material ==');
   });
 
-  it('keeps Smooth powder body depth gated, bounded, and topology-neutral', () => {
+  it('keeps Smooth powder body depth calm, gated, bounded, and topology-neutral', () => {
     const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
     const start = source.indexOf('// Stable two-dimensional bulk gets a coherent');
     const end = source.indexOf('float grainOffsetY', start);
@@ -1431,6 +1431,10 @@ describe('Pixi presenter startup configuration', () => {
     expect(block).not.toMatch(/\balpha\s*[+*]?=/);
     expect(block).not.toMatch(/\b(?:sin|pow|normalize|length|sqrt)\s*\(/);
     expect(source.match(/texture\(uPowderSurfaceTexture/g)).toHaveLength(1);
+    // Stable Smooth powder keeps only a small mineral trace; Local/Grains
+    // never enter this cohesion path and retain their diagnostic cell detail.
+    expect(source).toContain('mix(1.0, 0.08, powderVisualCohesion)');
+    expect(source).toContain('mix(1.0, 0.20, powderVisualCohesion)');
   });
 
   it('redraws when audit powder body depth changes', () => {

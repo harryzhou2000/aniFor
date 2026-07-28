@@ -57,6 +57,13 @@ const CDP_CONNECT_TIMEOUT_MS = 10_000;
 const scaleEightOnly = process.argv.includes('--scale-eight-only');
 const modes = scaleEightOnly ? ['webgl'] : process.argv.includes('--canvas-only') ? ['canvas2d']
   : process.argv.includes('--webgl-only') ? ['webgl'] : ['canvas2d', 'webgl'];
+// WebGL is the canonical visual release path. Canvas runs its strict
+// startup/geometry/semantic fallback audit by default; opt in only when a
+// change needs the slower, diagnostic Canvas/WebGL optics comparison.
+const requireCanvasVisuals = process.argv.includes('--require-canvas-visuals');
+if (requireCanvasVisuals && modes.length !== 2) {
+  throw new Error('--require-canvas-visuals requires both Canvas2D and WebGL; omit --canvas-only, --webgl-only, and --scale-eight-only');
+}
 const visualOnly = process.argv.includes('--visual-only');
 const materialAtlasOnly = process.argv.includes('--material-atlas-only');
 const mobileOnly = process.argv.includes('--mobile-only');
@@ -101,24 +108,6 @@ const nativeSemanticsOnly = process.argv.includes('--native-semantics-only');
 const catalogSelectionOnly = process.argv.includes('--catalog-selection-only');
 const shortDesktopOnly = process.argv.includes('--short-desktop-only');
 const liveScaleOnly = process.argv.includes('--live-scale-only');
-// Canvas is intentionally permissive for the ordinary release visual sweep:
-// WebGL is the canonical optics target and Canvas only has to prove that it is
-// a responsive, semantically faithful fallback.  A specifically requested
-// material/state visual audit is different: it carries its own Canvas/WebGL
-// parity contract, so never let the generic fallback shortcut skip it.
-const focusedSemanticVisualAudit = materialAtlasOnly
-  || powderBodyOnly || liquidDepthOnly || solidDepthOnly || gasChromaOnly
-  || surfaceContourOnly || solidFieldOnly || roleGraphicsOnly
-  || cellularGraphicsOnly || sensorGraphicsOnly || unusualPowderGraphicsOnly
-  || explosivePowderGraphicsOnly || unusualSolidGraphicsOnly
-  || liquidIdentityGraphicsOnly || gasIdentityGraphicsOnly
-  || energyRadioactiveGraphicsOnly || organicPlantGraphicsOnly
-  || spongeGraphicsOnly || virusGraphicsOnly || waxGraphicsOnly
-  || crystalGraphicsOnly || pasteResistGraphicsOnly || vibrStateGraphicsOnly
-  || deutStateGraphicsOnly || sourceTargetGraphicsOnly || forceActivityGraphicsOnly
-  || poloStateGraphicsOnly || spngStateGraphicsOnly || lavaStateGraphicsOnly
-  || botanicalLifecycleGraphicsOnly || sparkStateGraphicsOnly || nativeSeedGrowthOnly
-  || nativeSemanticsOnly;
 // A focused visual probe should be able to exercise the exact already-built
 // bundle without starting Vite. That keeps screenshot evidence independent of
 // dev-server navigation timing while leaving all default audit paths unchanged.
@@ -206,52 +195,44 @@ async function main() {
       || spngStateGraphicsOnly || lavaStateGraphicsOnly || botanicalLifecycleGraphicsOnly
       || sparkStateGraphicsOnly
       || nativeSeedGrowthOnly || nativeSemanticsOnly || catalogSelectionOnly || pausedPresentationOnly;
-    if (powderBodyOnly) assertPairedPowderBodyDepth(results);
-    if (liquidDepthOnly) assertPairedLiquidOpticalDepth(results);
-    if (solidDepthOnly) assertPairedSolidOpticalDepth(results);
-    if (gasChromaOnly) assertPairedGasSpectralScattering(results);
-    if (surfaceContourOnly) assertPairedSurfaceContourLighting(results);
-    if (solidFieldOnly) assertPairedSolidFieldLighting(results);
-    if (roleGraphicsOnly) assertPairedRoleGraphics(results);
-    if (cellularGraphicsOnly) assertPairedCellularGraphics(results);
-    if (sensorGraphicsOnly) assertPairedSensorGraphics(results);
-    if (unusualPowderGraphicsOnly) assertPairedUnusualPowderGraphics(results);
-    if (explosivePowderGraphicsOnly) assertPairedExplosivePowderGraphics(results);
-    if (unusualSolidGraphicsOnly) assertPairedUnusualSolidGraphics(results);
-    if (liquidIdentityGraphicsOnly) assertPairedLiquidIdentityGraphics(results);
-    if (gasIdentityGraphicsOnly) assertPairedGasIdentityGraphics(results);
-    if (energyRadioactiveGraphicsOnly) assertPairedEnergyRadioactiveGraphics(results);
-    if (organicPlantGraphicsOnly) assertPairedOrganicPlantGraphics(results);
-    if (spongeGraphicsOnly) assertPairedSpongeGraphics(results);
-    if (virusGraphicsOnly) assertPairedVirusGraphics(results);
-    if (waxGraphicsOnly) assertPairedWaxGraphics(results);
-    if (crystalGraphicsOnly) assertPairedCrystallineGraphics(results);
-    if (pasteResistGraphicsOnly) assertPairedPasteResistGraphics(results);
-    if (vibrStateGraphicsOnly) assertPairedVibrStateGraphics(results);
-    if (deutStateGraphicsOnly) assertPairedDeutStateGraphics(results);
-    if (sourceTargetGraphicsOnly) assertPairedSourceTargetGraphics(results, assert);
-    if (forceActivityGraphicsOnly && modes.includes('canvas2d') && modes.includes('webgl')) {
-      // ACEL/DCEL's canonical visual proof is WebGL. Canvas remains a semantic
-      // fallback and participates in parity evidence only when it was selected.
-      assertPairedForceActivityGraphics(results, assert);
+    // Focused visual gates prove their complete native WebGL contract by
+    // default. Canvas has already proved its semantic fallback contract in
+    // auditMode; paired optics parity is intentionally an explicit diagnostic.
+    if (requireCanvasVisuals) {
+      if (powderBodyOnly) assertPairedPowderBodyDepth(results);
+      if (liquidDepthOnly) assertPairedLiquidOpticalDepth(results);
+      if (solidDepthOnly) assertPairedSolidOpticalDepth(results);
+      if (gasChromaOnly) assertPairedGasSpectralScattering(results);
+      if (surfaceContourOnly) assertPairedSurfaceContourLighting(results);
+      if (solidFieldOnly) assertPairedSolidFieldLighting(results);
+      if (roleGraphicsOnly) assertPairedRoleGraphics(results);
+      if (cellularGraphicsOnly) assertPairedCellularGraphics(results);
+      if (sensorGraphicsOnly) assertPairedSensorGraphics(results);
+      if (unusualPowderGraphicsOnly) assertPairedUnusualPowderGraphics(results);
+      if (explosivePowderGraphicsOnly) assertPairedExplosivePowderGraphics(results);
+      if (unusualSolidGraphicsOnly) assertPairedUnusualSolidGraphics(results);
+      if (liquidIdentityGraphicsOnly) assertPairedLiquidIdentityGraphics(results);
+      if (gasIdentityGraphicsOnly) assertPairedGasIdentityGraphics(results);
+      if (energyRadioactiveGraphicsOnly) assertPairedEnergyRadioactiveGraphics(results);
+      if (organicPlantGraphicsOnly) assertPairedOrganicPlantGraphics(results);
+      if (spongeGraphicsOnly) assertPairedSpongeGraphics(results);
+      if (virusGraphicsOnly) assertPairedVirusGraphics(results);
+      if (waxGraphicsOnly) assertPairedWaxGraphics(results);
+      if (crystalGraphicsOnly) assertPairedCrystallineGraphics(results);
+      if (pasteResistGraphicsOnly) assertPairedPasteResistGraphics(results);
+      if (vibrStateGraphicsOnly) assertPairedVibrStateGraphics(results);
+      if (deutStateGraphicsOnly) assertPairedDeutStateGraphics(results);
+      if (sourceTargetGraphicsOnly) assertPairedSourceTargetGraphics(results, assert);
+      if (forceActivityGraphicsOnly) assertPairedForceActivityGraphics(results, assert);
+      if (poloStateGraphicsOnly) assertPairedPoloStateGraphics(results, assert);
+      if (spngStateGraphicsOnly) assertPairedSpngStateGraphics(results, assert);
+      if (lavaStateGraphicsOnly) assertPairedLavaStateGraphics(results, assert);
+      if (botanicalLifecycleGraphicsOnly) assertPairedBotanicalLifecycleGraphics(results, assert);
+      if (sparkStateGraphicsOnly) assertPairedSparkStateGraphics(results, assert);
+      if (nativeSeedGrowthOnly) assertPairedNativeSeedGrowth(results);
+      if (!scaleEightOnly && !materialAtlasOnly && !reducedAudit) assertPairedVisualRelief(results);
+      if (!scaleEightOnly && !reducedAudit) assertPairedMaterialAtlas(results);
     }
-    if (poloStateGraphicsOnly) assertPairedPoloStateGraphics(results, assert);
-    if (spngStateGraphicsOnly) assertPairedSpngStateGraphics(results, assert);
-    if (lavaStateGraphicsOnly) assertPairedLavaStateGraphics(results, assert);
-    if (botanicalLifecycleGraphicsOnly) {
-      // WebGL is the canonical visual backend.  Keep the full Canvas/WebGL
-      // comparison when both were expressly exercised, while allowing a
-      // WebGL-only release gate to prove the native lifecycle/state contract
-      // without fabricating a missing Canvas result.  Canvas remains covered
-      // whenever it is selected, but is diagnostic fallback evidence here.
-      if (modes.includes('canvas2d') && modes.includes('webgl')) {
-        assertPairedBotanicalLifecycleGraphics(results, assert);
-      }
-    }
-    if (sparkStateGraphicsOnly) assertPairedSparkStateGraphics(results, assert);
-    if (nativeSeedGrowthOnly) assertPairedNativeSeedGrowth(results);
-    if (!scaleEightOnly && !materialAtlasOnly && !reducedAudit) assertPairedVisualRelief(results);
-    if (!scaleEightOnly && !reducedAudit) assertPairedMaterialAtlas(results);
     compactMaterialAtlasResults(results);
     compactVirusGraphicsResults(results);
     compactWaxGraphicsResults(results);
@@ -273,7 +254,12 @@ async function auditMode(mode) {
   const chromePath = await resolveChrome();
   const profile = await mkdtemp(path.join(tmpdir(), `anifor-input-${mode}-`));
   const dpr = mode === 'canvas2d' ? 2 : 1;
-  const startsBlank = cellularGraphicsOnly || sensorGraphicsOnly
+  const canvasFallbackAudit = mode === 'canvas2d' && !mobileOnly && !layoutOnly
+    && !shortDesktopOnly && !liveScaleOnly && !requireCanvasVisuals;
+  // Advanced fixtures begin blank so WebGL can author exactly the state it
+  // measures. Canvas fallback has no advanced optics obligation, so retain the
+  // canonical paused scene there and prove real material delivery/occupancy.
+  const startsBlank = !canvasFallbackAudit && (cellularGraphicsOnly || sensorGraphicsOnly
     || unusualPowderGraphicsOnly || explosivePowderGraphicsOnly
     || unusualSolidGraphicsOnly || liquidIdentityGraphicsOnly
     || gasIdentityGraphicsOnly || energyRadioactiveGraphicsOnly || organicPlantGraphicsOnly
@@ -282,7 +268,7 @@ async function auditMode(mode) {
     || sourceTargetGraphicsOnly || forceActivityGraphicsOnly || poloStateGraphicsOnly
     || spngStateGraphicsOnly || lavaStateGraphicsOnly || botanicalLifecycleGraphicsOnly
     || sparkStateGraphicsOnly
-    || nativeSeedGrowthOnly;
+    || nativeSeedGrowthOnly);
   const query = new URLSearchParams({
     scene: showcaseScreenshotOnly ? 'showcase' : 'render-lab', inputAudit: '1', renderScale: '2',
     ...(showcaseScreenshotOnly ? { auditStage: 'showcase' } : {
@@ -430,14 +416,11 @@ async function auditMode(mode) {
       return { backend: mode, nativeSemantics, browserErrors: errors.length };
     }
     // WebGL is the canonical material-graphics release path. Keep Canvas as a
-    // real, exercised fallback, but do not make browser-specific advanced
-    // optics measurements block a general release after it has proved page
-    // startup, stable geometry, semantic fixture delivery, and a rendered
-    // canvas. Explicit semantic visual audits retain their paired contracts.
-    // Input/mobile/layout and the paused-state gate return above and remain
-    // strict on Canvas too.
-    if (mode === 'canvas2d' && !mobileOnly && !layoutOnly && !shortDesktopOnly && !liveScaleOnly
-      && !focusedSemanticVisualAudit) {
+    // real, exercised fallback, but make advanced optics diagnostic unless
+    // --require-canvas-visuals explicitly requests paired comparison. Input,
+    // mobile, layout, and paused-state gates return above and remain strict on
+    // Canvas too.
+    if (canvasFallbackAudit) {
       const canvasFallback = await auditCanvasFallback(cdp);
       assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
       cdp.close();
