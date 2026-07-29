@@ -284,6 +284,8 @@ describe('Pixi presenter startup configuration', () => {
     expect(liquid).toContain('liquidFresnelAbsorption');
     expect(liquid).toContain('liquidFresnelAbsorptionResponse');
     expect(liquid).toContain('liquidFresnelStrength');
+    expect(liquid).toContain('float aqueousSurfaceReflection = aqueous * topLip');
+    expect(liquid).toContain('vec3(0.30, 0.74, 1.00) * aqueousSurfaceReflection;');
     expect(liquid).toContain('float cryogenic = optics == 16.0');
     expect(liquid).toContain('float metallicLiquid = optics == 17.0');
     expect(liquid).toContain('float viscousLiquid = optics == 18.0');
@@ -1358,6 +1360,9 @@ describe('Pixi presenter startup configuration', () => {
     expect(block).toContain('liquidLeft.a + liquidRight.a + liquidTop.a + liquidBottom.a');
     expect(block).toContain('liquidEightXMeniscusKey(optics)');
     expect(block).toContain('liquidEightXMeniscusShadow(optics)');
+    expect(block).toContain('if (optics == 1.0) {');
+    expect(block).toContain('float aqueousTopReflection = max(0.0, liquidSlope.y) * airFacingRim');
+    expect(block).toContain('* meniscusKey * aqueousTopReflection;');
     expect(eight).toContain('if (optics == 16.0) return vec3(0.70, 0.92, 1.00); // Cryogenic');
     expect(eight).toContain('if (optics == 17.0) return vec3(1.00, 0.98, 0.94); // Metallic');
     expect(eight).toContain('return vec3(0.82, 0.92, 1.00); // Viscous');

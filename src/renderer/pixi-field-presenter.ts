@@ -1579,6 +1579,18 @@ void main() {
         color *= 1.0 + bodyResponse;
         color += meniscusKey * airFacingRim * (0.014 + keyLight * 0.026 + grazing * 0.018);
         color -= meniscusShadow * airFacingRim * (1.0 - keyLight) * 0.010;
+        // Aqueous pools need one coherent sky-facing shoulder at deep zoom,
+        // not a stronger field wave or a cell-aligned gloss. The top-facing
+        // component of the already-live liquid slope and field rim keeps this
+        // reflection on connected Water only; it cannot widen support, touch
+        // alpha, cross an unlike-liquid seam, or add a fifteenth-million-pixel
+        // sampler cost to the direct compositor.
+        if (optics == 1.0) {
+          float aqueousTopReflection = max(0.0, liquidSlope.y) * airFacingRim
+            * (0.014 + keyLight * 0.030 + grazing * 0.014);
+          color += (vec3(1.0) - clamp(color, 0.0, 1.0))
+            * meniscusKey * aqueousTopReflection;
+        }
         // Normal WebGL reflects the shared compact emission field from an
         // exposed liquid-air rim. Carry the same light into the direct 8x
         // compositor using only its already-live centre emission sample and
@@ -4402,6 +4414,15 @@ void main() {
       * liquidFresnelKey * liquidFresnelStrength;
     color += mix(reflectedEnvironment, edgeTint, 0.42)
       * liquidFresnelStrength * (0.18 + oily * 0.04);
+    // Water's broad body needs a continuous, sky-facing top shoulder at fit
+    // view. Reuse the existing connected top lip, Fresnel, and low-frequency
+    // sheen rather than a new wave, field, or alpha decision. Oil/Acid/Lava,
+    // species seams, droplets, and reconstructed support remain on their
+    // established paths; this is a bounded RGB-only aqueous refinement.
+    float aqueousSurfaceReflection = aqueous * topLip
+      * (0.020 + broadSheen * 0.018 + fresnel * 0.012);
+    color += (vec3(1.0) - clamp(color, 0.0, 1.0))
+      * vec3(0.30, 0.74, 1.00) * aqueousSurfaceReflection;
     color -= color * liquidFresnelGate * (
       liquidFresnelShadow * liquidFresnelShadowResponse
       + liquidFresnelAbsorption * liquidFresnelAbsorptionResponse
