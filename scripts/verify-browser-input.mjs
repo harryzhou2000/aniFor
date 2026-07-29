@@ -13490,6 +13490,12 @@ async function auditRenderScaleEight(cdp, dpr) {
   // an availability fallback and does not hold this high-detail style hostage.
   const structuralRigidGraphics = await auditEightXStructuralRigidGraphics(cdp, geometry.canvas);
   stage('structural-rigid-graphics-ready');
+  // PIPE/PUMP/PSTN/STOR and related transport hardware now have their own
+  // canonical WebGL body grammar. Canvas remains a semantic fallback, so this
+  // proves the exact-owner true-8× layer directly rather than demanding optics
+  // parity from the recovery presenter.
+  const mechanismGraphics = await auditEightXMechanismGraphics(cdp, geometry.canvas);
+  stage('mechanism-graphics-ready');
   // Sensors are device solids, but their seven exact public IDs need more than
   // the generic true-8x terminal cue. Exercise the compact static glyph layer
   // at the real backing without treating the Canvas fallback as a visual gate.
@@ -13596,6 +13602,7 @@ async function auditRenderScaleEight(cdp, dpr) {
     cellularGraphics,
     unusualSolidGraphics,
     structuralRigidGraphics,
+    mechanismGraphics,
     sensorGraphics,
     sourceTargetGraphics,
     forceActivityGraphics,
@@ -13906,6 +13913,142 @@ async function auditEightXStructuralRigidGraphics(cdp, canvasRect) {
       && Math.abs(sample.worldArea - styledSupport[index].worldArea)
         <= Math.max(0.60, sample.worldArea * 0.005)
   )), `renderScale=8 structural-rigid styling changed composed support (${JSON.stringify({ flatSupport, styledSupport })})`);
+  return {
+    cards: atlas.cards.map(({ material, code }) => ({ material, code })),
+    occupied: prepared.occupied,
+    samples,
+    exactRepeatedOff: samples.every((sample) => sample.repeatRgbPeak <= 1),
+  };
+}
+
+async function snapshotEightXMechanismGraphics(cdp) {
+  return evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    const snapshot = audit.mechanismGraphicsAtlas();
+    const cards = Array.isArray(snapshot) ? snapshot : snapshot.cards;
+    const exactRect = (rect, material) => {
+      for (let y = rect.y; y < rect.y + rect.height; y++) {
+        for (let x = rect.x; x < rect.x + rect.width; x++) {
+          if (audit.cell(x, y) !== material) return false;
+        }
+      }
+      return true;
+    };
+    const inside = (x, y, rect) => x >= rect.x && x < rect.x + rect.width
+      && y >= rect.y && y < rect.y + rect.height;
+    return {
+      occupied: audit.occupiedCells(),
+      cards: cards.map((entry) => {
+        let bodyExact = true;
+        for (let y = entry.body.y; y < entry.body.y + entry.body.height; y++) {
+          for (let x = entry.body.x; x < entry.body.x + entry.body.width; x++) {
+            const empty = inside(x, y, entry.authoredHole) || inside(x, y, entry.openChannel);
+            bodyExact &&= audit.cell(x, y) === (empty ? 0 : entry.material);
+          }
+        }
+        return {
+          material: entry.material,
+          code: entry.code,
+          bodyExact,
+          pairedBodyExact: exactRect(entry.pairedBody, entry.material),
+          authoredHoleExact: exactRect(entry.authoredHole, 0),
+          openChannelExact: exactRect(entry.openChannel, 0),
+          railExact: exactRect(entry.thinRail, entry.material),
+          isolatedExact: audit.cell(entry.isolated.x, entry.isolated.y) === entry.material,
+          guardExact: exactRect(entry.guardedBlank, 0),
+          contactOwnerExact: exactRect(entry.metalContact.owner, entry.material),
+          contactMetalExact: exactRect(entry.metalContact.metal, entry.metalContact.material),
+        };
+      }),
+    };
+  })()`);
+}
+
+function assertEightXMechanismTopology(snapshot, label) {
+  const materials = [121, 160, 155, 161, 122, 119, 123, 162, 163, 117];
+  assert(snapshot.cards.length === materials.length && snapshot.cards.every((card, index) => (
+    card.material === materials[index] && card.bodyExact && card.pairedBodyExact
+      && card.authoredHoleExact && card.openChannelExact && card.railExact && card.isolatedExact
+      && card.guardExact && card.contactOwnerExact && card.contactMetalExact
+  )), `${label}: mechanism identity/topology changed (${JSON.stringify(snapshot)})`);
+}
+
+/** Canonical WebGL true-8× gate for exact-owner transport and actuator hardware. */
+async function auditEightXMechanismGraphics(cdp, canvasRect) {
+  await evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    if (typeof audit.prepareMechanismGraphicsFixture !== 'function'
+      || typeof audit.mechanismGraphicsAtlas !== 'function'
+      || typeof audit.setMechanismBodyStyling !== 'function') {
+      throw new Error('True-8x mechanism graphics API unavailable');
+    }
+    audit.resetView();
+    audit.clear();
+    return true;
+  })()`);
+  const blank = await captureSettledPage(cdp, 'renderScale=8 blank mechanism framebuffer', 450);
+  const rawAtlas = await evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    audit.prepareMechanismGraphicsFixture();
+    return audit.mechanismGraphicsAtlas();
+  })()`);
+  const atlas = Array.isArray(rawAtlas) ? { cards: rawAtlas } : rawAtlas;
+  assert(atlas?.cards?.length === 10,
+    `renderScale=8 mechanism fixture is incomplete (${JSON.stringify(atlas)})`);
+  const prepared = await snapshotEightXMechanismGraphics(cdp);
+  assertEightXMechanismTopology(prepared, 'renderScale=8 prepared mechanism fixture');
+  const live = await metrics(cdp);
+  assert(live.backing.width === WORLD_WIDTH * 8 && live.backing.height === WORLD_HEIGHT * 8
+      && live.outputScale === '8',
+  `renderScale=8 mechanism fixture lost true backing (${JSON.stringify(live.backing)})`);
+  assertCanvasRectsEqual(canvasRect, live.canvas, 'renderScale=8 mechanism fixture CSS geometry');
+
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setMechanismBodyStyling(false); true');
+  const flat = await captureSettledPage(cdp, 'renderScale=8 flat mechanism framebuffer', 450);
+  const flatTopology = await snapshotEightXMechanismGraphics(cdp);
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setMechanismBodyStyling(true); true');
+  const styled = await captureSettledPage(cdp, 'renderScale=8 styled mechanism framebuffer', 450);
+  const styledTopology = await snapshotEightXMechanismGraphics(cdp);
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setMechanismBodyStyling(false); true');
+  const repeated = await captureSettledPage(cdp, 'renderScale=8 repeated flat mechanism framebuffer', 450);
+  const repeatedTopology = await snapshotEightXMechanismGraphics(cdp);
+  assert(JSON.stringify(flatTopology) === JSON.stringify(prepared)
+      && JSON.stringify(styledTopology) === JSON.stringify(prepared)
+      && JSON.stringify(repeatedTopology) === JSON.stringify(prepared),
+  'renderScale=8 mechanism styling changed semantic topology');
+
+  const regions = atlas.cards.map((entry) => ({
+    name: entry.code,
+    x: entry.pairedBody.x + entry.pairedBody.width / 2,
+    y: entry.pairedBody.y + entry.pairedBody.height / 2,
+    radiusX: Math.max(1, entry.pairedBody.width / 2 - 1),
+    radiusY: Math.max(1, entry.pairedBody.height / 2 - 1),
+    silhouette: true,
+  }));
+  const samples = await sampleBackdropRefractionRegions(cdp, {
+    straight: flat.capture.data,
+    refracted: styled.capture.data,
+    repeatedStraight: repeated.capture.data,
+  }, regions, canvasRect);
+  assert(samples.length === 10 && samples.every((sample) => (
+    sample.rgbRms >= 0.02 && sample.rgbRms <= 24
+      && sample.rgbPeak > 0 && sample.rgbPeak <= 48 && sample.repeatRgbPeak <= 1
+  )), `renderScale=8 mechanism response is absent, unbounded, or unstable (${JSON.stringify(samples)})`);
+  assert(new Set(samples.map((sample) => sample.responseSignature)).size === 10,
+    `renderScale=8 transport hardware lost distinct identity responses (${JSON.stringify(samples)})`);
+  const [flatSupport, styledSupport] = await Promise.all([
+    samplePageRegions(
+      cdp, flat.capture.data, regions, blank.capture.data, blank.reference.data, canvasRect,
+    ),
+    samplePageRegions(
+      cdp, styled.capture.data, regions, blank.capture.data, blank.reference.data, canvasRect,
+    ),
+  ]);
+  assert(flatSupport.every((sample, index) => (
+    Math.abs(sample.visible - styledSupport[index].visible) <= Math.max(2, Math.ceil(sample.visible * 0.005))
+      && Math.abs(sample.worldArea - styledSupport[index].worldArea)
+        <= Math.max(0.60, sample.worldArea * 0.005)
+  )), `renderScale=8 mechanism styling changed composed support (${JSON.stringify({ flatSupport, styledSupport })})`);
   return {
     cards: atlas.cards.map(({ material, code }) => ({ material, code })),
     occupied: prepared.occupied,

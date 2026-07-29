@@ -123,6 +123,7 @@ uniform float uEnergyCoreRelief;
 uniform float uEnergyIdentityStyling;
 uniform float uCellularMaterialStyling;
 uniform float uStructuralRigidStyling;
+uniform float uMechanismBodyStyling;
 uniform float uSensorMaterialStyling;
 uniform float uExplosivePowderStyling;
 uniform float uEarthenPowderStyling;
@@ -854,6 +855,69 @@ vec3 structuralRigidEightXDelta(float material, vec2 position, float density) {
   }
   return clamp(delta * smoothstep(0.10, 0.82, density), vec3(-10.0), vec3(10.0)) / 255.0;
 }
+// Transport, actuator, and storage devices are semantically distinct native
+// hardware, not generic circuit panels.  Keep their compact direct-mesh
+// grammar exact-owner, static, and RGB-only: material/world position/density
+// are already live at 15M fragments, so this adds no sampler, field, clock,
+// support decision, or output-scale resource.
+float mechanismEightXStyle(float material) {
+  if (material == 121.0) return 1.0; // PIPE
+  if (material == 160.0) return 2.0; // PPIP
+  if (material == 155.0) return 3.0; // GPMP
+  if (material == 161.0) return 4.0; // PUMP
+  if (material == 122.0) return 5.0; // PSTN
+  if (material == 119.0) return 6.0; // FRME
+  if (material == 123.0) return 7.0; // RPEL
+  if (material == 162.0) return 8.0; // PVOD
+  if (material == 163.0) return 9.0; // STOR
+  if (material == 117.0) return 10.0; // DMG
+  return 0.0;
+}
+vec3 mechanismEightXDelta(float material, vec2 position, float density) {
+  float style = mechanismEightXStyle(material);
+  if (style < 0.5) return vec3(0.0);
+  vec2 cell = floor(position);
+  float rail = 1.0 - step(0.5, mod(cell.x * (1.0 + mod(style, 3.0))
+    + cell.y * (2.0 + mod(style, 2.0)) + style * 5.0, 13.0 + style));
+  float seam = 1.0 - step(0.5, mod(cell.x * (3.0 + mod(style, 4.0))
+    - cell.y * (1.0 + mod(style, 3.0)) + style * 7.0, 29.0 + style));
+  vec3 delta;
+  if (style < 2.5) {
+    // PIPE/PPIP: recessed lumen rails, with powered pipe kept cooler.
+    float lumen = 1.0 - step(1.0, mod(cell.x + cell.y * 2.0 + style, 9.0));
+    delta = vec3(-5.0, -3.0, 4.0) * lumen + vec3(3.0, 7.0, 11.0) * rail;
+    if (style > 1.5) delta += vec3(1.0, 4.0, 8.0) * seam;
+  } else if (style < 4.5) {
+    // GPMP/PUMP: broad plenum ring and sparse impeller marks.
+    vec2 local = fract(position / 18.0) - 0.5;
+    float radius = length(local);
+    float ring = 1.0 - smoothstep(0.030, 0.070, abs(radius - 0.29));
+    float hub = 1.0 - smoothstep(0.09, 0.17, radius);
+    float spoke = 1.0 - smoothstep(0.050, 0.115, min(abs(local.x), abs(local.y)));
+    delta = vec3(-3.0, 6.0, 11.0) * (ring * 0.82 + hub * 0.55)
+      + vec3(4.0, 7.0, 10.0) * spoke * (style > 3.5 ? 0.58 : 0.32);
+  } else if (style < 6.5) {
+    // PSTN/FRME: machined ribs and calm cast-frame joints.
+    float rib = 1.0 - step(0.5, mod(cell.x * 2.0 + cell.y + style, 11.0));
+    delta = vec3(5.0, 7.0, 10.0) * rib + vec3(-5.0, -4.0, -2.0) * seam;
+    if (style > 5.5) delta = delta * 0.62 + vec3(5.0, 3.0, 0.0) * rail;
+  } else if (style < 7.5) {
+    // RPEL: nested cool coil bands.
+    vec2 local = fract(position / 20.0) - 0.5;
+    float ring = 1.0 - smoothstep(0.025, 0.060, abs(length(local) - 0.33));
+    float coil = 1.0 - step(0.5, mod(cell.x + cell.y * 3.0, 7.0));
+    delta = vec3(3.0, 4.0, 14.0) * (ring + coil * 0.46) - vec3(3.0, 1.0, 1.0) * seam;
+  } else if (style < 9.5) {
+    // PVOD/STOR: deep contained bays rather than a flat device lattice.
+    float bay = 1.0 - step(0.5, mod(floor(cell.x / 3.0) + floor(cell.y / 3.0), 2.0));
+    delta = vec3(-5.0, -4.0, -2.0) * bay + vec3(4.0, 8.0, 12.0) * rail;
+    if (style > 8.5) delta += vec3(4.0, 2.0, -2.0) * seam;
+  } else {
+    // DMG: fractured plate facets remain static and bounded.
+    delta = vec3(7.0, 4.0, -2.0) * rail - vec3(6.0, 4.0, 2.0) * seam;
+  }
+  return clamp(delta * smoothstep(0.10, 0.82, density), vec3(-14.0), vec3(14.0)) / 255.0;
+}
 // Broad metallic bodies need a different read from the sparse identity marks
 // above. This remains an interior-only, world-anchored finish: the analytic
 // band has no clock, sample, field, or support decision, so thin plates,
@@ -1464,6 +1528,14 @@ void main() {
     && sensorEightXStyle(material) > 0.5
     && traits < 0.5 && !materialEmissive) {
     color = clamp(color + sensorEightXDelta(material, grid, density), 0.0, 1.0);
+  }
+  // Transport/actuator hardware spans force, powered, and ordinary-solid
+  // profiles, and several exact owners deliberately carry a later role trait.
+  // Keep this owner-local RGB base outside those category gates; source/force
+  // overlays still layer afterward and semantic coverage stays untouched.
+  if (uMechanismBodyStyling > 0.5 && mechanismEightXStyle(material) > 0.5
+    && !materialEmissive) {
+    color = clamp(color + mechanismEightXDelta(material, grid, density), 0.0, 1.0);
   }
   // Construction solids add their material-local finish only after the shared
   // thick-body optics.  It is RGB-only, so contours, holes, spurs, walls, and
@@ -2190,6 +2262,7 @@ uniform float uSolidFieldLighting;
 uniform float uRoleMaterialStyling;
 uniform float uCellularMaterialStyling;
 uniform float uStructuralRigidStyling;
+uniform float uMechanismBodyStyling;
 uniform float uEarthenPowderStyling;
 uniform float uSensorMaterialStyling;
 uniform float uUnusualPowderStyling;
@@ -3146,6 +3219,67 @@ vec3 structuralRigidIdentityDelta(float material, vec2 position) {
     return (vec3(-2.0, 2.0, 5.0) * lamella + vec3(3.0, 4.0, 5.0) * highlight) / 255.0;
   }
   return vec3(0.0);
+}
+// Native transport and actuator bodies sit beneath later role/thermal decals.
+// They use only exact owner, world position, and the caller's established
+// device-surface proof.  No alpha, support, material, field, clock, or scale
+// state is touched, so holes/channels/rails retain semantic topology.
+vec3 mechanismBodyIdentityDelta(float material, vec2 position) {
+  float x = floor(position.x);
+  float y = floor(position.y);
+  if (material == 121.0 || material == 160.0) { // PIPE / PPIP
+    float style = material == 160.0 ? 1.0 : 0.0;
+    float lumen = 1.0 - step(1.0, mod(x + y * 2.0 + style, 9.0));
+    float rail = 1.0 - step(0.5, mod(x * (2.0 + style) + y * 3.0, 13.0));
+    float junction = 1.0 - step(0.5, mod(x * 5.0 - y * 2.0 + style, 31.0));
+    return (vec3(-5.0, -3.0, 4.0) * lumen + vec3(3.0, 7.0, 11.0) * rail
+      + vec3(1.0, 4.0, 8.0) * junction * style) / 255.0;
+  }
+  if (material == 155.0 || material == 161.0) { // GPMP / PUMP
+    vec2 local = fract(position / 18.0) - 0.5;
+    float radius = length(local);
+    float ring = 1.0 - smoothstep(0.030, 0.070, abs(radius - 0.29));
+    float hub = 1.0 - smoothstep(0.09, 0.17, radius);
+    float spoke = 1.0 - smoothstep(0.050, 0.115, min(abs(local.x), abs(local.y)));
+    float pump = material == 161.0 ? 1.0 : 0.0;
+    return (vec3(-3.0, 6.0, 11.0) * (ring * 0.82 + hub * 0.55)
+      + vec3(4.0, 7.0, 10.0) * spoke * mix(0.32, 0.58, pump)) / 255.0;
+  }
+  if (material == 122.0 || material == 119.0) { // PSTN / FRME
+    float frame = material == 119.0 ? 1.0 : 0.0;
+    float rib = 1.0 - step(0.5, mod(x * 2.0 + y + frame, 11.0));
+    float seam = 1.0 - step(0.5, mod(x * 4.0 - y * 2.0 + frame, 35.0));
+    float rail = 1.0 - step(0.5, mod(x + y * 3.0, 17.0));
+    return ((vec3(5.0, 7.0, 10.0) * rib - vec3(5.0, 4.0, 2.0) * seam) * (1.0 - frame * 0.38)
+      + vec3(5.0, 3.0, 0.0) * rail * frame) / 255.0;
+  }
+  if (material == 123.0) { // RPEL
+    vec2 local = fract(position / 20.0) - 0.5;
+    float ring = 1.0 - smoothstep(0.025, 0.060, abs(length(local) - 0.33));
+    float coil = 1.0 - step(0.5, mod(x + y * 3.0, 7.0));
+    float seam = 1.0 - step(0.5, mod(x * 3.0 - y, 29.0));
+    return (vec3(3.0, 4.0, 14.0) * (ring + coil * 0.46) - vec3(3.0, 1.0, 1.0) * seam) / 255.0;
+  }
+  if (material == 162.0 || material == 163.0) { // PVOD / STOR
+    float storage = material == 163.0 ? 1.0 : 0.0;
+    float bay = 1.0 - step(0.5, mod(floor(x / 3.0) + floor(y / 3.0), 2.0));
+    float rail = 1.0 - step(0.5, mod(x * 3.0 + y * 2.0 + storage, 17.0));
+    float seam = 1.0 - step(0.5, mod(x * 5.0 - y + storage, 37.0));
+    return (-vec3(5.0, 4.0, 2.0) * bay + vec3(4.0, 8.0, 12.0) * rail
+      + vec3(4.0, 2.0, -2.0) * seam * storage) / 255.0;
+  }
+  if (material == 117.0) { // DMG
+    float facet = 1.0 - step(0.5, mod(x * 2.0 + y * 3.0, 13.0));
+    float crack = 1.0 - step(0.5, mod(x * 5.0 - y * 4.0, 31.0));
+    return (vec3(7.0, 4.0, -2.0) * facet - vec3(6.0, 4.0, 2.0) * crack) / 255.0;
+  }
+  return vec3(0.0);
+}
+float mechanismBodyStyle(float material) {
+  return material == 117.0 || material == 119.0 || material == 121.0
+    || material == 122.0 || material == 123.0 || material == 155.0
+    || material == 160.0 || material == 161.0 || material == 162.0
+    || material == 163.0 ? 1.0 : 0.0;
 }
 float structuralRigidDeepIdentityGain(float material) {
   // Large rigid bodies carry their broad depth and reflected-light response
@@ -5687,6 +5821,18 @@ void main() {
       float interference = (planeWave + radialWave) * 0.5;
       color *= 0.95 + interference * 0.045;
     }
+    // Transport/actuator hardware spans force, powered, and ordinary-solid
+    // profiles. Its exact IDs may also carry a later semantic role trait, so
+    // this static RGB base deliberately sits after generic profile treatment
+    // but before those overlays. Canvas stays a semantic/recovery fallback;
+    // canonical WebGL owns this richer body grammar without altering alpha,
+    // holes, channels, walls, material ownership, or physics.
+    if (uMechanismBodyStyling > 0.5 && mechanismBodyStyle(material) > 0.5
+      && surfaceOnly < 0.5 && halo < 0.5 && wall < 0.5
+      && wallOnly < 0.5 && emissionOnly < 0.5 && !materialEmissive) {
+      color = clamp(color + mechanismBodyIdentityDelta(material, fieldPosition)
+        * (0.58 + interiorMicroGain * 0.42), 0.0, 1.0);
+    }
     // Seventeen uncommon solids layer one static identity over the generic body
     // structure above. Only authoritative semantic matter participates; this
     // RGB arithmetic adds no sample, pass, field, allocation, clock term, or
@@ -6251,6 +6397,7 @@ export class PixiFieldPresenter {
       uRoleMaterialStyling: { value: 1, type: 'f32' },
       uCellularMaterialStyling: { value: 1, type: 'f32' },
       uStructuralRigidStyling: { value: 1, type: 'f32' },
+      uMechanismBodyStyling: { value: 1, type: 'f32' },
       uEarthenPowderStyling: { value: 1, type: 'f32' },
       uSensorMaterialStyling: { value: 1, type: 'f32' },
       uUnusualPowderStyling: { value: 1, type: 'f32' },
@@ -6605,6 +6752,7 @@ export class PixiFieldPresenter {
     earthenPowderStylingEnabled = true,
     moltenBodyOpticsEnabled = true,
     aqueousSurfaceReflectionEnabled = true,
+    mechanismBodyStylingEnabled = true,
   ): void {
     const uniforms = this.uniforms.uniforms;
     uniforms.uGasFieldLighting = gasFieldLightingEnabled ? 1 : 0;
@@ -6628,6 +6776,7 @@ export class PixiFieldPresenter {
     uniforms.uRoleMaterialStyling = roleMaterialStylingEnabled ? 1 : 0;
     uniforms.uCellularMaterialStyling = cellularMaterialStylingEnabled ? 1 : 0;
     uniforms.uStructuralRigidStyling = structuralRigidStylingEnabled ? 1 : 0;
+    uniforms.uMechanismBodyStyling = mechanismBodyStylingEnabled ? 1 : 0;
     uniforms.uEarthenPowderStyling = earthenPowderStylingEnabled ? 1 : 0;
     uniforms.uSensorMaterialStyling = sensorMaterialStylingEnabled ? 1 : 0;
     uniforms.uUnusualPowderStyling = unusualPowderStylingEnabled ? 1 : 0;
@@ -6755,6 +6904,11 @@ export class PixiFieldPresenter {
 
   setStructuralRigidStylingEnabled(enabled: boolean): void {
     this.uniforms.uniforms.uStructuralRigidStyling = enabled ? 1 : 0;
+    this.renderApplication();
+  }
+
+  setMechanismBodyStylingEnabled(enabled: boolean): void {
+    this.uniforms.uniforms.uMechanismBodyStyling = enabled ? 1 : 0;
     this.renderApplication();
   }
 

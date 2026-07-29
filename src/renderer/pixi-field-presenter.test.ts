@@ -28,6 +28,7 @@ interface PresenterHarness {
   setRoleMaterialStylingEnabled: PixiFieldPresenter['setRoleMaterialStylingEnabled'];
   setCellularMaterialStylingEnabled: PixiFieldPresenter['setCellularMaterialStylingEnabled'];
   setStructuralRigidStylingEnabled: PixiFieldPresenter['setStructuralRigidStylingEnabled'];
+  setMechanismBodyStylingEnabled: PixiFieldPresenter['setMechanismBodyStylingEnabled'];
   setEarthenPowderStylingEnabled: PixiFieldPresenter['setEarthenPowderStylingEnabled'];
   setSensorMaterialStylingEnabled: PixiFieldPresenter['setSensorMaterialStylingEnabled'];
   setUnusualPowderStylingEnabled: PixiFieldPresenter['setUnusualPowderStylingEnabled'];
@@ -120,6 +121,7 @@ describe('Pixi presenter startup configuration', () => {
       uRoleMaterialStyling: 1,
       uCellularMaterialStyling: 1,
       uStructuralRigidStyling: 1,
+      uMechanismBodyStyling: 1,
       uEarthenPowderStyling: 1,
       uSensorMaterialStyling: 1,
       uUnusualPowderStyling: 1,
@@ -1035,6 +1037,34 @@ describe('Pixi presenter startup configuration', () => {
     expect(branch).toContain('structuralRigidEightXStyle(material) > 0.5');
     expect(branch).toContain('traits < 0.5 && !materialEmissive');
     expect(branch).toContain('structuralRigidEightXDelta(material, grid, density)');
+    expect(`${helper}${branch}`).not.toContain('texture(');
+    expect(`${helper}${branch}`).not.toContain('uTime');
+    expect(`${helper}${branch}`).not.toMatch(/\balpha\s*[+*]?=/);
+  });
+
+  it('keeps true-8x transport hardware exact-owner, RGB-only, and resource-free', () => {
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');
+    const eightEnd = source.indexOf('const FIELD_FRAGMENT = `', eightStart);
+    const eight = source.slice(eightStart, eightEnd);
+    const helperStart = eight.indexOf('float mechanismEightXStyle(');
+    const helperEnd = eight.indexOf('// Broad metallic bodies need a different read', helperStart);
+    const branchStart = eight.indexOf('// Transport/actuator hardware spans force, powered, and ordinary-solid');
+    const branchEnd = eight.indexOf('// Construction solids add their material-local finish', branchStart);
+    const helper = eight.slice(helperStart, helperEnd);
+    const branch = eight.slice(branchStart, branchEnd);
+    const materials = [117, 119, 121, 122, 123, 155, 160, 161, 162, 163];
+
+    expect(helperStart).toBeGreaterThan(0);
+    expect(helperEnd).toBeGreaterThan(helperStart);
+    expect(branchStart).toBeGreaterThan(0);
+    expect(branchEnd).toBeGreaterThan(branchStart);
+    expect(eight).toContain('uniform float uMechanismBodyStyling;');
+    for (const material of materials) expect(helper).toContain(`material == ${material}.0`);
+    expect(branch).toContain('uMechanismBodyStyling > 0.5 && mechanismEightXStyle(material) > 0.5');
+    expect(branch).toContain('mechanismEightXStyle(material) > 0.5');
+    expect(branch).toContain('&& !materialEmissive');
+    expect(branch).toContain('mechanismEightXDelta(material, grid, density)');
     expect(`${helper}${branch}`).not.toContain('texture(');
     expect(`${helper}${branch}`).not.toContain('uTime');
     expect(`${helper}${branch}`).not.toMatch(/\balpha\s*[+*]?=/);
@@ -2544,6 +2574,30 @@ describe('Pixi presenter startup configuration', () => {
     expect(source).toContain('structuralMetalBodyDelta(\n            material, fieldPosition, structuralDepth, structuralRelief\n          )');
     expect(source).toContain('structuralIdentityGain = min(structuralIdentityGain, staticSolidIdentityGain);');
     expect(source).toContain('structuralRigidIdentityDelta(material, fieldPosition)\n          * structuralIdentityGain');
+  });
+
+  it('seeds and redraws the canonical-WebGL mechanism body layer without extending Canvas optics', () => {
+    const presenter = presenterHarness();
+
+    presenter.setMechanismBodyStylingEnabled(false);
+    expect(presenter.uniforms.uniforms.uMechanismBodyStyling).toBe(0);
+    expect(presenter.app.render).toHaveBeenCalledOnce();
+
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const start = source.indexOf('// Native transport and actuator bodies sit beneath later role/thermal decals.');
+    const end = source.indexOf('float structuralRigidDeepIdentityGain(', start);
+    const mechanismBlock = source.slice(start, end);
+    expect(start).toBeGreaterThan(0);
+    expect(end).toBeGreaterThan(start);
+    expect(source).toContain('uniform float uMechanismBodyStyling;');
+    expect(source).toContain('uMechanismBodyStyling > 0.5 && mechanismBodyStyle(material) > 0.5');
+    expect(mechanismBlock).toContain('vec3 mechanismBodyIdentityDelta(float material, vec2 position)');
+    expect(mechanismBlock).toContain('float mechanismBodyStyle(float material)');
+    for (const material of [117, 119, 121, 122, 123, 155, 160, 161, 162, 163]) {
+      expect(mechanismBlock).toContain(`material == ${material}.0`);
+    }
+    expect(mechanismBlock).not.toMatch(/texture\s*\(/);
+    expect(mechanismBlock).not.toMatch(/\balpha\s*[+*]?=/);
   });
 
   it('seeds and redraws the independent earthen powder identity layer', () => {

@@ -289,6 +289,7 @@ export class MaterialRenderer {
   private roleMaterialStylingEnabled = true;
   private cellularMaterialStylingEnabled = true;
   private structuralRigidStylingEnabled = true;
+  private mechanismBodyStylingEnabled = true;
   private earthenPowderStylingEnabled = true;
   private sensorMaterialStylingEnabled = true;
   private unusualPowderStylingEnabled = true;
@@ -693,6 +694,14 @@ export class MaterialRenderer {
     this.changed = true;
   }
 
+  setMechanismBodyStylingEnabled(enabled: boolean): void {
+    if (enabled === this.mechanismBodyStylingEnabled) return;
+    this.mechanismBodyStylingEnabled = enabled;
+    this.presenter?.setMechanismBodyStylingEnabled(enabled);
+    this.contourChunks.markAll();
+    this.changed = true;
+  }
+
   setEarthenPowderStylingEnabled(enabled: boolean): void {
     if (enabled === this.earthenPowderStylingEnabled) return;
     this.earthenPowderStylingEnabled = enabled;
@@ -1069,6 +1078,7 @@ export class MaterialRenderer {
       this.earthenPowderStylingEnabled,
       this.moltenBodyOpticsEnabled,
       this.aqueousSurfaceReflectionEnabled,
+      this.mechanismBodyStylingEnabled,
     );
     // Route subsequent dirty cells to the candidate while its first expensive
     // frame is in flight. The known-good Canvas remains mounted underneath;
