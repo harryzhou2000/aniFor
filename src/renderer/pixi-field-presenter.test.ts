@@ -1090,6 +1090,11 @@ describe('Pixi presenter startup configuration', () => {
     expect(block).toContain('solidEightXBodyShadow(optics)');
     expect(block).toContain('optics == 11.0 ? 4.0 / 255.0 : 14.0 / 255.0');
     expect(block).toContain('optics == 11.0 ? 16.0 / 255.0 : 10.0 / 255.0');
+    expect(block).toContain('if (material == 10.0) {');
+    expect(block).toContain('float canopyCrown = max(0.0, bodyResponse) * 2.0;');
+    expect(block).toContain('float canopyPocket = max(0.0, -bodyResponse) * 2.0;');
+    expect(block).toContain('vec3 canopyNormal = vec3(-canopySlope * 0.58, 1.0);');
+    expect(block).toContain('float canopySheen = (0.008 + canopySpecular * 0.030) * depthT;');
     expect(`${helper}${block}`).not.toContain('texture(');
     expect(`${helper}${block}`).not.toContain('uTime');
     expect(`${helper}${block}`).not.toMatch(/\balpha\s*[+*]?=/);

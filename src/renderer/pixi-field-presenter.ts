@@ -1258,6 +1258,28 @@ void main() {
         * (optics == 11.0 ? 4.0 / 255.0 : 14.0 / 255.0)
         - bodyShadow * max(0.0, -bodyResponse)
           * (optics == 11.0 ? 16.0 / 255.0 : 10.0 / 255.0);
+      // PLNT's native shape and lifecycle state remain authoritative below,
+      // but a broad, exact-species canopy should not flatten into the generic
+      // organic band at deep zoom. Mirror normal WebGL's restrained leaf
+      // crown, pocket, and waxy catch-light from the density/slope already
+      // resident in this branch. This is RGB-only arithmetic: no state fetch,
+      // neighbour probe, field, alpha, support, or growth decision is added.
+      if (material == 10.0) {
+        float canopyCrown = max(0.0, bodyResponse) * 2.0;
+        float canopyPocket = max(0.0, -bodyResponse) * 2.0;
+        color += vec3(1.5, 6.5, 2.3) / 255.0 * canopyCrown;
+        color *= vec3(1.0) - vec3(0.075, 0.040, 0.095) * canopyPocket;
+        vec2 canopySlope = vec2((q10 + q11) - (q00 + q01),
+          (q01 + q11) - (q00 + q10)) * 0.50;
+        vec3 canopyNormal = vec3(-canopySlope * 0.58, 1.0);
+        canopyNormal *= inversesqrt(dot(canopyNormal, canopyNormal));
+        float canopySpecular = max(0.0, dot(canopyNormal, vec3(-0.34, -0.50, 0.80)));
+        canopySpecular *= canopySpecular;
+        float canopySheen = (0.008 + canopySpecular * 0.030) * depthT;
+        vec3 canopySheenColor = mix(vec3(0.42, 0.72, 0.34),
+          clamp(color * 1.10, 0.0, 1.0), 0.72);
+        color += (vec3(1.0) - clamp(color, 0.0, 1.0)) * canopySheenColor * canopySheen;
+      }
     } else color *= solidBaseLight;
   }
   // The normal path already gives every PT_LIFE ctype its own stable colony
