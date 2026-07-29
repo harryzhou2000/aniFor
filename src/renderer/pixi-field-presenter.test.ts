@@ -606,16 +606,16 @@ describe('Pixi presenter startup configuration', () => {
     expect(presenter.app.render).toHaveBeenCalledOnce();
   });
 
-  it('styles exactly fourteen authoritative unusual/radioactive liquids with bounded RGB arithmetic', () => {
+  it('styles exact unusual, metallic, cryogenic, and radioactive liquids with bounded RGB arithmetic', () => {
     const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
     const helperStart = source.indexOf('vec3 liquidMaterialIdentityDelta(');
     const helperEnd = source.indexOf('vec3 botanicalIdentityDelta', helperStart);
     const helper = source.slice(helperStart, helperEnd);
-    const blockStart = source.indexOf('// Fourteen unusual/radioactive liquids retain a world-anchored material signature');
+    const blockStart = source.indexOf('// Eighteen unusual, metallic, cryogenic, and radioactive liquids retain a world-anchored material signature');
     const blockEnd = source.indexOf('  } else {', blockStart);
     const block = source.slice(blockStart, blockEnd);
     const ids = [...helper.matchAll(/material == (\d+)\.0/g)].map((match) => Number(match[1]));
-    const dispatchStart = helper.indexOf('  if (material == 38.0)');
+    const dispatchStart = helper.indexOf('  if (material == 36.0 || material == 95.0)');
     const commonSetup = helper.slice(helper.indexOf(') {') + 3, dispatchStart);
 
     expect(helperStart).toBeGreaterThan(0);
@@ -623,7 +623,9 @@ describe('Pixi presenter startup configuration', () => {
     expect(blockStart).toBeGreaterThan(0);
     expect(blockEnd).toBeGreaterThan(blockStart);
     expect(dispatchStart).toBeGreaterThan(0);
-    expect(ids).toEqual([38, 54, 55, 56, 57, 59, 60, 61, 62, 202, 207, 100, 102, 104]);
+    expect([...new Set(ids)]).toEqual([
+      36, 95, 37, 58, 38, 54, 55, 56, 57, 59, 60, 61, 62, 202, 207, 100, 102, 104,
+    ]);
     for (const motif of [
       'thinFilm', 'prism', 'bubbles', 'foldCrease',
       'ringBand', 'waxFamilyIdentityDelta', 'pasteResistFamilyIdentityDelta',
@@ -638,7 +640,10 @@ describe('Pixi presenter startup configuration', () => {
     expect(block).toContain('uLiquidIdentityStyling > 0.5 && liquidOnly < 0.5 && halo < 0.5');
     expect(block).toContain('surfaceOnly < 0.5 && wall < 0.5 && emissionOnly < 0.5');
     expect(block).toContain('family == 2.0 && !materialEmissive');
-    expect(block).toContain('(material == 38.0 || (material >= 54.0 && material <= 57.0)');
+    for (const material of ['36.0', '37.0', '58.0', '95.0']) {
+      expect(block).toContain(`material == ${material}`);
+    }
+    expect(block).toContain('|| material == 38.0 || (material >= 54.0 && material <= 57.0)');
     expect(block).toContain('|| (material >= 59.0 && material <= 62.0)');
     expect(block).toContain('|| material == 100.0 || material == 102.0');
     expect(block).toContain('|| material == 104.0 || material == 202.0 || material == 207.0');
@@ -651,12 +656,12 @@ describe('Pixi presenter startup configuration', () => {
     expect(source).not.toContain('sampler2D uLiquidIdentityStyling');
   });
 
-  it('restores all public and radioactive liquid identities in compact true-8x WebGL', () => {
+  it('restores public metallic, cryogenic, and radioactive liquid identities in compact true-8x WebGL', () => {
     const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
     const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');
     const helperStart = source.indexOf('vec3 liquidIdentityEightXDelta(', eightStart);
     const helperEnd = source.indexOf('// Device sensors need a legible visual vocabulary', helperStart);
-    const blockStart = source.indexOf('// Public unusual/phase-product liquids need a visual grammar', helperStart);
+    const blockStart = source.indexOf('// Public unusual, metallic, cryogenic, and phase-product liquids need a visual grammar', helperStart);
     const blockEnd = source.indexOf('  // The shared suspension field is powder-authored', blockStart);
     const helper = source.slice(helperStart, helperEnd);
     const block = source.slice(blockStart, blockEnd);
@@ -673,7 +678,10 @@ describe('Pixi presenter startup configuration', () => {
     expect(helper).toContain('return clamp(identity * support, vec3(-0.055), vec3(0.055));');
     expect(block).toContain('uLiquidIdentityStyling > 0.5 && !materialEmissive');
     expect(block).toContain('liquidSpeciesDifference < 0.035');
-    expect(block).toContain('material == 38.0 || (material >= 54.0 && material <= 57.0)');
+    for (const material of ['36.0', '37.0', '58.0', '95.0']) {
+      expect(block).toContain(`material == ${material}`);
+    }
+    expect(block).toContain('|| material == 38.0 || (material >= 54.0 && material <= 57.0)');
     expect(block).toContain('|| (material >= 59.0 && material <= 62.0)');
     expect(block).toContain('|| material == 100.0 || material == 102.0 || material == 104.0');
     expect(block).toContain('|| material == 202.0 || material == 207.0');

@@ -31,6 +31,10 @@ export const LIQUID_IDENTITY_GRAPHICS_DEFINITIONS = [
   { material: Material.DEUT, code: 'DEUT', color: '#00153f' },
   { material: Material.EXOT, code: 'EXOT', color: '#247bfe' },
   { material: Material.ISOZ, code: 'ISOZ', color: '#aa30d0' },
+  // Representative public owners for the two previously generic liquid
+  // optics families. LO2/LRBD share their exact-family WebGL grammar.
+  { material: Material.Mercury, code: 'MERC', color: '#a8afba' },
+  { material: Material.LiquidNitrogen, code: 'LN2', color: '#9bdaf2' },
 ] as const;
 
 export interface LiquidIdentityGraphicsPoint {
@@ -88,7 +92,7 @@ export interface LiquidIdentityGraphicsAuditSnapshot {
   readonly solidContacts: readonly LiquidIdentityGraphicsContactControl[];
 }
 
-/** Stable fourteen-card liquid atlas shared by paired Canvas/WebGL identity gates. */
+/** Stable sixteen-card liquid atlas shared by paired Canvas/WebGL identity gates. */
 export const LIQUID_IDENTITY_GRAPHICS_ATLAS: readonly LiquidIdentityGraphicsAtlasEntry[] =
   LIQUID_IDENTITY_GRAPHICS_DEFINITIONS.map(({ material, code, color }, index) => {
     const card = {

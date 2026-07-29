@@ -364,6 +364,34 @@ vec3 liquidIdentityEightXDelta(
   float material, vec2 worldPosition, float density, float depth, vec2 slope
 ) {
   float support = smoothstep(0.12, 0.82, density) * (0.48 + depth * 0.52);
+  // Metallic and cryogenic liquids need exact public identities on top of
+  // their shared body optics. Keep these broad world-space bands ahead of the
+  // compact seeded grammar: they are RGB-only arithmetic with no sample,
+  // field, clock, alpha, or support decision in the 15M-fragment path.
+  if (material == 36.0 || material == 95.0) {
+    float mirror = 1.0 - abs(fract(
+      worldPosition.x * 0.034 + worldPosition.y * 0.009 + material * 0.017
+    ) * 2.0 - 1.0);
+    float shoulder = smoothstep(0.62, 0.92, mirror);
+    float pocket = 1.0 - smoothstep(0.20, 0.50, mirror);
+    float slopeKey = clamp(0.50 - slope.x * 0.24 - slope.y * 0.31, 0.0, 1.0);
+    vec3 key = material == 36.0 ? vec3(0.040, 0.050, 0.062) : vec3(0.026, 0.037, 0.056);
+    vec3 shadow = material == 36.0 ? vec3(0.031, 0.032, 0.037) : vec3(0.040, 0.034, 0.033);
+    return clamp((key * shoulder * (0.55 + slopeKey * 0.45) - shadow * pocket)
+      * support, vec3(-0.055), vec3(0.055));
+  }
+  if (material == 37.0 || material == 58.0) {
+    float ripple = 1.0 - abs(fract(
+      worldPosition.x * 0.053 - worldPosition.y * 0.021 + material * 0.031
+    ) * 2.0 - 1.0);
+    float frost = smoothstep(0.64, 0.92, ripple);
+    float trough = 1.0 - smoothstep(0.22, 0.52, ripple);
+    float slopeKey = clamp(0.50 - slope.x * 0.18 - slope.y * 0.34, 0.0, 1.0);
+    vec3 key = material == 37.0 ? vec3(0.006, 0.042, 0.064) : vec3(0.003, 0.029, 0.065);
+    vec3 shadow = material == 37.0 ? vec3(0.015, 0.008, 0.006) : vec3(0.017, 0.010, 0.004);
+    return clamp((key * frost * (0.52 + slopeKey * 0.48) - shadow * trough)
+      * support, vec3(-0.055), vec3(0.055));
+  }
   vec2 cell = floor(worldPosition);
   float seed = material * 0.618034;
   float diagonal = fract(cell.x * (0.052 + fract(seed) * 0.018)
@@ -1734,12 +1762,13 @@ void main() {
           * (1.0 - keyLight) * 0.028;
       }
     }
-    // Public unusual/phase-product liquids need a visual grammar after their
+    // Public unusual, metallic, cryogenic, and phase-product liquids need a visual grammar after their
     // shared body optics. Unlike species, molten/emissive liquid, reconstructed
     // Empty support, and all non-owner materials are exact no-ops.
     if (uLiquidIdentityStyling > 0.5 && !materialEmissive
       && liquidSpeciesDifference < 0.035
-      && (material == 38.0 || (material >= 54.0 && material <= 57.0)
+      && (material == 36.0 || material == 37.0 || material == 58.0 || material == 95.0
+        || material == 38.0 || (material >= 54.0 && material <= 57.0)
         || (material >= 59.0 && material <= 62.0)
         || material == 100.0 || material == 102.0 || material == 104.0
         || material == 202.0 || material == 207.0)) {
@@ -2535,7 +2564,31 @@ vec3 liquidMaterialIdentityDelta(
 ) {
   float support = smoothstep(0.08, 0.72, density) * (0.45 + depth * 0.55);
   vec3 identity = vec3(0.0);
-  if (material == 38.0) {
+  if (material == 36.0 || material == 95.0) {
+    // MERC/LRBD: broad rolling reflection and a neutral occlusion pocket.
+    float mirrorSaw = fract(
+      worldPosition.x * 0.034 + worldPosition.y * 0.009 + material * 0.017
+    ) * 2.0 - 1.0;
+    float mirror = 1.0 - abs(mirrorSaw);
+    float shoulder = smoothstep(0.62, 0.92, mirror);
+    float pocket = 1.0 - smoothstep(0.20, 0.50, mirror);
+    float slopeKey = clamp(0.50 - slope.x * 0.24 - slope.y * 0.31, 0.0, 1.0);
+    vec3 key = material == 36.0 ? vec3(0.040, 0.050, 0.062) : vec3(0.026, 0.037, 0.056);
+    vec3 shadow = material == 36.0 ? vec3(0.031, 0.032, 0.037) : vec3(0.040, 0.034, 0.033);
+    identity = key * shoulder * (0.55 + slopeKey * 0.45) - shadow * pocket;
+  } else if (material == 37.0 || material == 58.0) {
+    // LN2/LO2: cold stratified ripples hold a pale frost shoulder over depth.
+    float rippleSaw = fract(
+      worldPosition.x * 0.053 - worldPosition.y * 0.021 + material * 0.031
+    ) * 2.0 - 1.0;
+    float ripple = 1.0 - abs(rippleSaw);
+    float frost = smoothstep(0.64, 0.92, ripple);
+    float trough = 1.0 - smoothstep(0.22, 0.52, ripple);
+    float slopeKey = clamp(0.50 - slope.x * 0.18 - slope.y * 0.34, 0.0, 1.0);
+    vec3 key = material == 37.0 ? vec3(0.006, 0.042, 0.064) : vec3(0.003, 0.029, 0.065);
+    vec3 shadow = material == 37.0 ? vec3(0.015, 0.008, 0.006) : vec3(0.017, 0.010, 0.004);
+    identity = key * frost * (0.52 + slopeKey * 0.48) - shadow * trough;
+  } else if (material == 38.0) {
     // SOAP: crossed thin-film bands split the spectral key by channel.
     float diagonalSaw = fract(
       (worldPosition.x + worldPosition.y) * 0.09375
@@ -4604,14 +4657,15 @@ void main() {
         }
       }
     }
-    // Fourteen unusual/radioactive liquids retain a world-anchored material signature
+    // Eighteen unusual, metallic, cryogenic, and radioactive liquids retain a world-anchored material signature
     // after generic body optics. The authoritative semantic fragment is the
     // only owner: reconstructed support, walls, halos, and emissive projections
     // remain exact. This changes RGB only and adds no sample or resource.
     if (uLiquidIdentityStyling > 0.5 && liquidOnly < 0.5 && halo < 0.5
       && surfaceOnly < 0.5 && wall < 0.5 && emissionOnly < 0.5
       && family == 2.0 && !materialEmissive
-      && (material == 38.0 || (material >= 54.0 && material <= 57.0)
+      && (material == 36.0 || material == 37.0 || material == 58.0 || material == 95.0
+        || material == 38.0 || (material >= 54.0 && material <= 57.0)
         || (material >= 59.0 && material <= 62.0)
         || material == 100.0 || material == 102.0
         || material == 104.0 || material == 202.0 || material == 207.0)) {

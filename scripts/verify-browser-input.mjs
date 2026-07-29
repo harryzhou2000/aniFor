@@ -4801,7 +4801,7 @@ function normalizeUnusualSolidGraphicsAtlas(snapshot) {
   };
 }
 
-/** Focused topology and RGB-identity proof for eight liquid families. */
+/** Focused topology and RGB-identity proof for canonical liquid families. */
 async function auditLiquidIdentityGraphics(cdp, mode, useEightXCapture = false) {
   const started = performance.now();
   const stage = (name) => console.error(
@@ -4829,15 +4829,15 @@ async function auditLiquidIdentityGraphics(cdp, mode, useEightXCapture = false) 
   const rawAtlas = await waitFor(() => evaluate(cdp, `(() => {
     const atlas = window.__ANIFOR_INPUT_AUDIT__.liquidIdentityGraphicsAtlas();
     const cards = Array.isArray(atlas) ? atlas : atlas?.cards;
-    return cards?.length === 14 ? atlas : false;
+    return cards?.length === 16 ? atlas : false;
   })()`), 15_000, `${mode} liquid identity graphics fixture`);
   const atlas = normalizeLiquidIdentityGraphicsAtlas(rawAtlas);
-  const expectedMaterials = [38, 54, 55, 56, 57, 62, 202, 207, 59, 60, 61, 100, 102, 104];
+  const expectedMaterials = [38, 54, 55, 56, 57, 62, 202, 207, 59, 60, 61, 100, 102, 104, 36, 37];
   const expectedCodes = [
     'SOAP', 'BIZR', 'CBNW', 'GEL', 'GLOW', 'VIRS', 'FRZW', 'RFGL',
-    'MWAX', 'PSTE', 'RSST', 'DEUT', 'EXOT', 'ISOZ',
+    'MWAX', 'PSTE', 'RSST', 'DEUT', 'EXOT', 'ISOZ', 'MERC', 'LN2',
   ];
-  assert(atlas.cards.length === 14
+  assert(atlas.cards.length === 16
       && atlas.cards.every(({ material, code }, index) => (
         material === expectedMaterials[index] && code === expectedCodes[index]
       )),
@@ -4947,8 +4947,8 @@ async function auditLiquidIdentityGraphics(cdp, mode, useEightXCapture = false) 
       responseProfile.length === 16
         && Math.abs(responseProfile.reduce((sum, value) => sum + value, 0) - 1) <= 0.001
     )), `${mode}: liquid identity response profiles are not normalized 4x4 fields (${JSON.stringify(backingResponses)})`);
-    assert(new Set(backingResponses.map(({ responseSignature }) => responseSignature)).size === 14,
-      `${mode}: liquid identities do not have fourteen distinct backing responses (${JSON.stringify(backingResponses)})`);
+    assert(new Set(backingResponses.map(({ responseSignature }) => responseSignature)).size === 16,
+      `${mode}: liquid identities do not have sixteen distinct backing responses (${JSON.stringify(backingResponses)})`);
   }
 
   const bodyRegions = atlas.cards.map((entry) => ({
@@ -4970,10 +4970,10 @@ async function auditLiquidIdentityGraphics(cdp, mode, useEightXCapture = false) 
   const atlasResponse = responses.at(-1);
   assert(atlasResponse.repeatRgbPeak === 0,
     `${mode}: liquid identity flat→styled→flat framebuffer was not exact (${JSON.stringify(atlasResponse)})`);
-  assert(responses.slice(0, 14).every((sample) => (
+  assert(responses.slice(0, 16).every((sample) => (
     sample.rgbRms > 0 && sample.rgbRms <= 12 && sample.rgbPeak > 0 && sample.rgbPeak <= 20
       && sample.repeatRgbPeak === 0
-  )), `${mode}: a liquid identity has no bounded composed response (${JSON.stringify(responses.slice(0, 14))})`);
+  )), `${mode}: a liquid identity has no bounded composed response (${JSON.stringify(responses.slice(0, 16))})`);
   const [flatSupport, styledSupport] = await Promise.all([
     samplePageRegions(
       cdp, flat.capture.data, bodyRegions,
@@ -5163,7 +5163,7 @@ function assertLiquidIdentityBackingTopology(backing, label) {
   assert(Number.isInteger(backing.scaleX) && Number.isInteger(backing.scaleY)
       && backing.scaleX > 0 && backing.scaleY > 0,
   `${label}: backing does not preserve integral world scaling (${backing.scaleX}x${backing.scaleY})`);
-  const valid = backing.cards.length === 14 && backing.cards.every((card) => (
+  const valid = backing.cards.length === 16 && backing.cards.every((card) => (
     card.bodySupported === card.bodyExpected
     && card.centralCavityTransparent === card.centralCavityExpected
     && card.centralCavityExpected === 16
@@ -5194,7 +5194,7 @@ function compactLiquidIdentityTopology(backing) {
 }
 
 function summarizeLiquidIdentityBackingResponses(flat, styled, repeated) {
-  assert(flat.cards.length === 14 && styled.cards.length === 14 && repeated.cards.length === 14,
+  assert(flat.cards.length === 16 && styled.cards.length === 16 && repeated.cards.length === 16,
     'Liquid identity backing response atlas is incomplete');
   return flat.cards.map((base, cardIndex) => {
     const changed = styled.cards[cardIndex];
@@ -11512,13 +11512,13 @@ function assertPairedLiquidIdentityGraphics(results) {
   const canvas = results.find((result) => result.backend === 'canvas2d')?.liquidIdentityGraphics;
   const webgl = results.find((result) => result.backend === 'webgl')?.liquidIdentityGraphics;
   if (!canvas || !webgl) return;
-  assert(canvas.cards === 14 && webgl.cards === 14,
+  assert(canvas.cards === 16 && webgl.cards === 16,
     `paired liquid identity atlas is incomplete (${canvas.cards}/${webgl.cards})`);
   for (const result of [canvas, webgl]) {
     assert(new Set(result.cardSignatures.map(
       ({ backingResponseSignature }) => backingResponseSignature,
-    )).size === 14,
-    `liquid identity responses are not distinct in all fourteen cards (${JSON.stringify(result.cardSignatures)})`);
+    )).size === 16,
+    `liquid identity responses are not distinct in all sixteen cards (${JSON.stringify(result.cardSignatures)})`);
     assert(result.cardSignatures.every(({ backingRepeatRgbPeak }) => backingRepeatRgbPeak === 0),
       `liquid identity backing off→on→off sequence was not exact (${JSON.stringify(result.cardSignatures)})`);
   }

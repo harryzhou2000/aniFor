@@ -4,7 +4,7 @@ import { canvasPasteResistFamilyMotifDelta } from './canvas-paste-resist-family-
 import { canvasVirusFamilyMotifDelta } from './canvas-virus-family-style';
 import { canvasWaxFamilyMotifDelta } from './canvas-wax-family-style';
 
-const STYLE_COUNT = 11;
+const STYLE_COUNT = 15;
 const TILE_SHIFT = 5;
 const TILE_SIZE = 1 << TILE_SHIFT;
 const TILE_MASK = TILE_SIZE - 1;
@@ -25,6 +25,10 @@ STYLE_BY_MATERIAL[Material.RFGL] = 7;
 STYLE_BY_MATERIAL[Material.DEUT] = 8;
 STYLE_BY_MATERIAL[Material.EXOT] = 9;
 STYLE_BY_MATERIAL[Material.ISOZ] = 10;
+STYLE_BY_MATERIAL[Material.Mercury] = 11;
+STYLE_BY_MATERIAL[Material.LRBD] = 12;
+STYLE_BY_MATERIAL[Material.LiquidNitrogen] = 13;
+STYLE_BY_MATERIAL[Material.LO2] = 14;
 
 /** Static signed RGB motif, tiled in world space at 32×32 cells per identity. */
 const MOTIF_RGB = new Int8Array(STYLE_COUNT * TILE_CELLS * CHANNELS);
@@ -33,9 +37,11 @@ const MOTIF_RGB = new Int8Array(STYLE_COUNT * TILE_CELLS * CHANNELS);
 // attenuate or reverse a motif, while the RGB coefficients supply absorption.
 const SURFACE_SCALE = new Float32Array([
   0.34, 0, 0.22, 0, 0, 0, 0.24, 0.20, 0.08, 0.12, 0.18,
+  0.20, 0.12, 0.28, 0.24,
 ]);
 const DEPTH_SCALE = new Float32Array([
   -0.18, -1.55, -0.12, -0.10, 0.12, -0.08, -0.08, -0.12, 0.20, -0.16, -0.10,
+  -0.22, -0.18, -0.06, -0.04,
 ]);
 const DEPTH_RGB = new Int8Array([
   0, 0, 0,
@@ -49,6 +55,10 @@ const DEPTH_RGB = new Int8Array([
   -2, 1, 4,
   2, -2, 4,
   3, -2, 3,
+  -2, -2, -1,
+  -3, -2, 0,
+  -1, 2, 5,
+  -1, 1, 5,
 ]);
 
 buildMotifLookup();
@@ -58,7 +68,7 @@ export const CANVAS_LIQUID_IDENTITY_LOOKUP_BYTES = STYLE_BY_MATERIAL.byteLength
   + MOTIF_RGB.byteLength + SURFACE_SCALE.byteLength + DEPTH_SCALE.byteLength
   + DEPTH_RGB.byteLength;
 
-/** Returns whether a liquid belongs to the first authored identity tranche. */
+/** Returns whether a liquid belongs to the authored exact-identity layer. */
 export function hasCanvasLiquidIdentityStyle(material: number): boolean {
   return material === Material.MWAX || material === Material.PSTE || material === Material.RSST
     || material >= 0 && material < STYLE_BY_MATERIAL.length
@@ -109,7 +119,7 @@ export function applyCanvasLiquidIdentityStyle(
   }
 }
 
-/** The ordinary eleven-style hot path: one lookup and no special-family branches. */
+/** The ordinary fifteen-style hot path: one lookup and no special-family branches. */
 function applyCanonicalLiquidIdentityStyle(
   output: Float32Array,
   style: number,
@@ -281,6 +291,30 @@ function buildMotifLookup(): void {
         if (radiusSquared >= 31 && radiusSquared <= 52) { red = 8; green = -3; blue = 10; }
         else if (radiusSquared <= 10) { red = -3; green = 5; blue = 7; }
         else { red = 2; green = -1; blue = 3; }
+      } else if (style === 11) {
+        // MERC: broad neutral mirror bands with cool recessed pockets.
+        const band = (x * 3 + y) & TILE_MASK;
+        if (band >= 11 && band <= 18) { red = 8; green = 10; blue = 12; }
+        else if (band >= 25 && band <= 29) { red = -6; green = -5; blue = -3; }
+        else { red = 1; green = 2; blue = 3; }
+      } else if (style === 12) {
+        // LRBD: denser lead plates read heavier and less reflective than MERC.
+        const plate = (x * 2 - y * 3) & 15;
+        if (plate <= 2) { red = 4; green = 6; blue = 9; }
+        else if (plate >= 10 && plate <= 13) { red = -7; green = -6; blue = -4; }
+        else { red = -1; green = 0; blue = 2; }
+      } else if (style === 13) {
+        // LN2: cold stratified ripples and a sparse pale frost shoulder.
+        const ripple = (x * 2 + y * 3) & 31;
+        if (ripple <= 3 || ripple >= 29) { red = 2; green = 8; blue = 13; }
+        else if (ripple >= 14 && ripple <= 18) { red = -3; green = 1; blue = 5; }
+        else { red = 0; green = 3; blue = 6; }
+      } else {
+        // LO2: related cold body with a quieter oxygen-blue interference fold.
+        const fold = (x * 3 - y * 2) & 31;
+        if (fold <= 3 || fold >= 28) { red = 1; green = 6; blue = 13; }
+        else if (fold >= 13 && fold <= 17) { red = -4; green = 0; blue = 5; }
+        else { red = -1; green = 2; blue = 6; }
       }
       const offset = (style * TILE_CELLS + y * TILE_SIZE + x) * CHANNELS;
       MOTIF_RGB[offset] = red;

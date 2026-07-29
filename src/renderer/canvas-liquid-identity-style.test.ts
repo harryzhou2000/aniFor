@@ -21,6 +21,10 @@ const IDENTITY_LIQUIDS = [
   Material.DEUT,
   Material.EXOT,
   Material.ISOZ,
+  Material.Mercury,
+  Material.LRBD,
+  Material.LiquidNitrogen,
+  Material.LO2,
 ] as const;
 
 function style(
@@ -41,19 +45,17 @@ function style(
 }
 
 describe('Canvas liquid identity styling', () => {
-  it('keeps its world-independent lookup below 35 KiB', () => {
-    expect(CANVAS_LIQUID_IDENTITY_LOOKUP_BYTES).toBe(34_169);
-    expect(CANVAS_LIQUID_IDENTITY_LOOKUP_BYTES).toBeLessThan(35 * 1024);
+  it('keeps its world-independent lookup below 48 KiB', () => {
+    expect(CANVAS_LIQUID_IDENTITY_LOOKUP_BYTES).toBe(46_501);
+    expect(CANVAS_LIQUID_IDENTITY_LOOKUP_BYTES).toBeLessThan(48 * 1024);
   });
 
-  it('covers fourteen unusual, phase-family, and radioactive exact liquid identities', () => {
+  it('covers unusual, metallic, cryogenic, phase-family, and radioactive liquid identities', () => {
     for (const material of IDENTITY_LIQUIDS) {
       expect(hasCanvasLiquidIdentityStyle(material)).toBe(true);
     }
     for (const material of [
       Material.Empty,
-      Material.LiquidNitrogen,
-      Material.LO2,
       Material.PSTS,
       Material.RSSS,
       Material.VRSG,
@@ -149,6 +151,10 @@ describe('Canvas liquid identity styling', () => {
     expect(style(Material.DEUT, 1, 1)).not.toEqual(style(Material.DEUT, 1, 8));
     expect(style(Material.EXOT, 1, 1)).not.toEqual(style(Material.EXOT, 6, 7));
     expect(style(Material.ISOZ, 8, 8)).not.toEqual(style(Material.ISOZ, 8, 2));
+    expect(style(Material.Mercury, 3, 3)).not.toEqual(style(Material.Mercury, 12, 3));
+    expect(style(Material.LRBD, 3, 3)).not.toEqual(style(Material.LRBD, 8, 8));
+    expect(style(Material.LiquidNitrogen, 1, 2)).not.toEqual(style(Material.LiquidNitrogen, 3, 9));
+    expect(style(Material.LO2, 1, 2)).not.toEqual(style(Material.LO2, 10, 8));
   });
 
   it('responds to existing volume inputs without changing topology state', () => {
@@ -164,8 +170,6 @@ describe('Canvas liquid identity styling', () => {
   it('is an exact no-op for adjacent and same-family controls', () => {
     for (const material of [
       Material.Empty,
-      Material.LiquidNitrogen,
-      Material.LO2,
       Material.PSTS,
       Material.RSSS,
       Material.VRSG,
