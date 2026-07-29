@@ -5460,6 +5460,44 @@ void main() {
           * vec3(0.50, 0.25, 0.07)
           * (woodRidge * 0.34 + max(0.0, woodRelief) * 0.22) * woodDepth;
       }
+      // Organic matter needs a continuous body read before its fine fibre,
+      // canopy, and native lifecycle marks can feel material rather than
+      // cell-banded. Reuse the exact-species solid thickness, relief, normal,
+      // and environment already live in this branch. Seed, YEST, DYST, gaps,
+      // walls, and reconstructed support never reach this exact-owner path.
+      if ((material == 9.0 || material == 10.0 || material == 83.0)
+        && uSolidOpticalDepth > 0.5 && solidOpticalDepth > 6.0 / 255.0
+        && solidInterior > 0.001 && surfaceOnly < 0.5) {
+        float organicDepth = smoothstep(6.0 / 255.0, 42.0 / 255.0, solidOpticalDepth);
+        float organicRelief = clamp(solidReliefTone * 255.0 / 6.0, -1.0, 1.0)
+          * organicDepth;
+        float organicCrown = max(organicRelief, 0.0);
+        float organicPocket = max(-organicRelief, 0.0);
+        float organicGrazing = smoothstep(0.018, 0.18, solidFresnel);
+        if (material == 9.0) {
+          // Wood keeps a warm longitudinal reflection over the existing grain.
+          color *= vec3(1.0) - vec3(0.055, 0.030, 0.012)
+            * (organicPocket * 0.66 + (1.0 - organicGrazing) * 0.08) * organicDepth;
+          color += (vec3(1.0) - clamp(color, 0.0, 1.0))
+            * (vec3(0.54, 0.30, 0.10) * (organicCrown * 0.20 + organicGrazing * 0.075)
+              + solidEnvironment * (0.055 + organicGrazing * 0.12)) * organicDepth;
+        } else if (material == 10.0) {
+          // Plant leaves transmit a soft green crown yet retain an opposing
+          // cool interior shadow; inherited canopy colour is applied later.
+          color *= vec3(1.0) - vec3(0.026, 0.008, 0.060)
+            * (organicPocket * 0.72 + (1.0 - organicGrazing) * 0.05) * organicDepth;
+          color += (vec3(1.0) - clamp(color, 0.0, 1.0))
+            * (vec3(0.26, 0.80, 0.30) * (organicCrown * 0.16 + organicGrazing * 0.080)
+              + solidEnvironment * (0.050 + organicGrazing * 0.11)) * organicDepth;
+        } else {
+          // Vines remain darker and humid, with a quieter wet rim than a leaf.
+          color *= vec3(1.0) - vec3(0.036, 0.012, 0.062)
+            * (organicPocket * 0.58 + (1.0 - organicGrazing) * 0.06) * organicDepth;
+          color += (vec3(1.0) - clamp(color, 0.0, 1.0))
+            * (vec3(0.20, 0.66, 0.28) * (organicCrown * 0.11 + organicGrazing * 0.052)
+              + solidEnvironment * (0.034 + organicGrazing * 0.075)) * organicDepth;
+        }
+      }
     } else if (radioactiveSurface > 0.5 || (optics < 0.5 && profile == 4.0)) {
       float isotope = sin(fieldPosition.x * 0.137 + sin(fieldPosition.y * 0.103 + material) * 1.6)
         * sin(fieldPosition.y * 0.181 - fieldPosition.x * 0.061);

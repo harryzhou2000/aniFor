@@ -1127,7 +1127,7 @@ describe('Pixi presenter startup configuration', () => {
     expect(`${helper}${block}`).not.toMatch(/\balpha\s*[+*]?=/);
   });
 
-  it('keeps dense Wood grain world-anchored, depth-proven, and RGB-only in normal WebGL', () => {
+  it('keeps depth-proven Wood, Plant, and Vine body optics RGB-only in normal WebGL', () => {
     const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
     const normalStart = source.indexOf('const FIELD_FRAGMENT = `');
     const start = source.indexOf('    } else if (organicSurface > 0.5 || (optics < 0.5 && profile == 3.0)) {', normalStart);
@@ -1141,6 +1141,11 @@ describe('Pixi presenter startup configuration', () => {
     expect(block).toContain('solidOpticalDepth > 6.0 / 255.0 && solidInterior > 0.001');
     expect(block).toContain('float woodGrain = 0.5 + 0.5 * fibre;');
     expect(block).toContain('float woodRelief = clamp(solidReliefTone * 255.0 / 6.0, -1.0, 1.0) * woodDepth;');
+    expect(block).toContain('(material == 9.0 || material == 10.0 || material == 83.0)');
+    expect(block).toContain('float organicDepth = smoothstep(6.0 / 255.0, 42.0 / 255.0, solidOpticalDepth);');
+    expect(block).toContain('float organicRelief = clamp(solidReliefTone * 255.0 / 6.0, -1.0, 1.0)');
+    expect(block).toContain('float organicGrazing = smoothstep(0.018, 0.18, solidFresnel);');
+    expect(block).toContain('solidEnvironment * (0.050 + organicGrazing * 0.11)');
     expect(block).toContain('surfaceOnly < 0.5');
     expect(block).not.toContain('texture(');
     expect(block).not.toMatch(/\balpha\s*[+*]?=/);
