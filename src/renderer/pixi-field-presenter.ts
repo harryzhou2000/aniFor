@@ -922,6 +922,15 @@ float solidEightXCurvatureGain(float optics) {
   if (optics == 9.0) return 0.58;
   return 0.72;
 }
+float solidEightXShellSpecularGain(float optics) {
+  if (solidEightXGranular(optics)) return 0.0;
+  if (optics == 8.0 || optics == 19.0) return 1.00;
+  if (optics == 10.0) return 0.76;
+  if (optics == 12.0) return 0.82;
+  if (optics == 11.0) return 0.62;
+  if (optics == 9.0) return 0.40;
+  return 0.54;
+}
 vec3 solidEightXBodyKey(float optics) {
   if (optics == 8.0 || optics == 19.0) return vec3(0.3704, 0.6667, 1.0000);
   if (optics == 9.0) return vec3(0.5417, 1.0000, 0.4583);
@@ -944,7 +953,7 @@ vec3 solidEightXBodyShadow(float optics) {
 // deliberately arithmetic-only: a contour changes RGB but never density,
 // alpha, ownership, or a later native-wall composite.
 vec3 applySurfaceContourEightX(
-  vec3 color, float density, vec2 slope, float optics, float powder
+  vec3 color, float density, vec2 slope, float optics, float powder, float solidAirFacing
 ) {
   float slopeLength = length(slope);
   if (slopeLength <= 0.0001) return color;
@@ -958,7 +967,26 @@ vec3 applySurfaceContourEightX(
   float keyWeight = shell * (0.006 + max(0.0, directional) * 0.024);
   float shadowWeight = shell * (0.004 + max(0.0, -directional) * 0.015);
   color += (vec3(1.0) - clamp(color, 0.0, 1.0)) * key * keyWeight;
-  return color * (vec3(1.0) - shadow * shadowWeight);
+  color *= vec3(1.0) - shadow * shadowWeight;
+  // A solid contour needs actual semantic air before it may take the compact
+  // Fresnel/specular shoulder. The caller derives this from the four exact
+  // owner samples already needed for Hermite coverage, so solid-solid seams,
+  // gas/liquid contact, powder, alpha/support, and topology stay outside this
+  // RGB-only cue. A small static view/key vector restores a 3-D body read at
+  // deep zoom without a field, texture, pass, or clock-driven variation.
+  if (powder < 0.5 && solidAirFacing > 0.5) {
+    vec3 shellNormal = vec3(-slope * 0.72, 1.0);
+    shellNormal *= inversesqrt(dot(shellNormal, shellNormal));
+    float specular = max(0.0, dot(shellNormal, vec3(-0.42, -0.58, 0.70)));
+    specular *= specular;
+    specular *= specular;
+    float fresnel = 1.0 - shellNormal.z;
+    fresnel *= fresnel;
+    float shellSpecular = shell * solidAirFacing * solidEightXShellSpecularGain(optics)
+      * (0.006 + specular * 0.035 + fresnel * 0.022);
+    color += (vec3(1.0) - clamp(color, 0.0, 1.0)) * key * shellSpecular;
+  }
+  return color;
 }
 void main() {
   vec2 uv = vFieldCoord;
@@ -1024,10 +1052,22 @@ void main() {
   vec2 grid = uv * uFieldSize - 0.5;
   vec2 blend = fract(grid);
   vec2 origin = (floor(grid) + 0.5) * uTexel;
-  float q00 = same(origin, material);
-  float q10 = same(origin + vec2(uTexel.x, 0.0), material);
-  float q01 = same(origin + vec2(0.0, uTexel.y), material);
-  float q11 = same(origin + uTexel, material);
+  // The direct mesh already pays these four semantic samples for exact-owner
+  // coverage. Keep the decoded IDs briefly so rigid contours can distinguish
+  // real Empty from an unlike solid, gas, or liquid without another texture
+  // fetch; only the derived scalar survives into the solid-only style branch.
+  float material00 = materialAt(origin);
+  float material10 = materialAt(origin + vec2(uTexel.x, 0.0));
+  float material01 = materialAt(origin + vec2(0.0, uTexel.y));
+  float material11 = materialAt(origin + uTexel);
+  float q00 = 1.0 - step(0.5, abs(material00 - material));
+  float q10 = 1.0 - step(0.5, abs(material10 - material));
+  float q01 = 1.0 - step(0.5, abs(material01 - material));
+  float q11 = 1.0 - step(0.5, abs(material11 - material));
+  float solidAirFacing = max(
+    max(1.0 - step(0.5, material00), 1.0 - step(0.5, material10)),
+    max(1.0 - step(0.5, material01), 1.0 - step(0.5, material11))
+  );
   float density = mix(mix(q00, q10, blend.x), mix(q01, q11, blend.x), blend.y);
   if (family == 4.0 && uPowderStyle < 0.5) density = same(uv, material);
   // Preserve exact material coverage before a liquid/gas volume may replace
@@ -1109,7 +1149,8 @@ void main() {
         mix(q10 - q00, q11 - q01, blend.y),
         mix(q01 - q00, q11 - q10, blend.x)
       );
-      color = mix(color, applySurfaceContourEightX(color, density, powderSlope, optics, 1.0), powderSupport);
+      color = mix(color,
+        applySurfaceContourEightX(color, density, powderSlope, optics, 1.0, 0.0), powderSupport);
     }
     // Keep explosive powders legible as discrete native materials even in the
     // compact compositor. This is strictly RGB-only and owner-local; Grains,
@@ -1154,7 +1195,9 @@ void main() {
         mix(q10 - q00, q11 - q01, blend.y),
         mix(q01 - q00, q11 - q10, blend.x)
       );
-      color = applySurfaceContourEightX(color, density, solidSurfaceSlope, optics, 0.0);
+      color = applySurfaceContourEightX(
+        color, density, solidSurfaceSlope, optics, 0.0, solidAirFacing
+      );
     }
     // Derive an intrinsic contour curvature from the already-live 2x2 exact
     // owner samples. Hermite's first/second derivatives make a horizontal or

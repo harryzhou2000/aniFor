@@ -12503,7 +12503,14 @@ async function auditRenderScaleEight(cdp, dpr) {
   );
   const flatSurfaceContourSemantics = await evaluate(cdp, `(() => {
     const audit = window.__ANIFOR_INPUT_AUDIT__;
-    const points = [[224, 202], [263, 202], [302, 202], [341, 202], [190, 164], [302, 172], [284, 160]];
+    // Keep the curved, air-facing Metal shell and its exact protected
+    // controls in this direct-mesh snapshot.  Surface-contour lighting is
+    // presentation-only: neither the solid shell, its dense core, the
+    // Metal/Glass seam, nor the isolated grain may mutate semantic ownership.
+    const points = [
+      [392, 223], [405, 229], [140, 172], [190, 176],
+      [224, 202], [263, 202], [302, 202], [341, 202], [190, 164], [302, 172], [284, 160],
+    ];
     return { occupied: audit.occupiedCells(), cells: points.map(([x, y]) => audit.cell(x, y)) };
   })()`);
   await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setSurfaceContourLighting(true); true');
@@ -12512,7 +12519,10 @@ async function auditRenderScaleEight(cdp, dpr) {
   );
   const litSurfaceContourSemantics = await evaluate(cdp, `(() => {
     const audit = window.__ANIFOR_INPUT_AUDIT__;
-    const points = [[224, 202], [263, 202], [302, 202], [341, 202], [190, 164], [302, 172], [284, 160]];
+    const points = [
+      [392, 223], [405, 229], [140, 172], [190, 176],
+      [224, 202], [263, 202], [302, 202], [341, 202], [190, 164], [302, 172], [284, 160],
+    ];
     return { occupied: audit.occupiedCells(), cells: points.map(([x, y]) => audit.cell(x, y)) };
   })()`);
   await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setSurfaceContourLighting(false); true');
@@ -12521,7 +12531,10 @@ async function auditRenderScaleEight(cdp, dpr) {
   );
   const repeatedFlatSurfaceContourSemantics = await evaluate(cdp, `(() => {
     const audit = window.__ANIFOR_INPUT_AUDIT__;
-    const points = [[224, 202], [263, 202], [302, 202], [341, 202], [190, 164], [302, 172], [284, 160]];
+    const points = [
+      [392, 223], [405, 229], [140, 172], [190, 176],
+      [224, 202], [263, 202], [302, 202], [341, 202], [190, 164], [302, 172], [284, 160],
+    ];
     return { occupied: audit.occupiedCells(), cells: points.map(([x, y]) => audit.cell(x, y)) };
   })()`);
   await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setSurfaceContourLighting(true); true');
@@ -13160,7 +13173,13 @@ async function auditRenderScaleEight(cdp, dpr) {
     refracted: litSurfaceContourCapture.capture.data,
     repeatedStraight: repeatedFlatSurfaceContourCapture.capture.data,
   }, [
+    // The curved outer shoulder is deliberately separate from the prior
+    // generic contour probe.  It proves that the compact solid Fresnel cue is
+    // visible only where the exact 2x2 owner neighbourhood exposes real air.
+    { name: 'metalAirShellFresnel8x', x: 392, y: 223, radius: 3.5 },
     { name: 'metalSurfaceContour8x', x: 392, y: 223, radius: 3.5 },
+    { name: 'metalStraightCoreSurfaceContourControl8x', x: 405, y: 229, radius: 3 },
+    { name: 'metalGlassSurfaceContourSeamControl8x', x: 140, y: 172, radius: 2.5 },
     { name: 'smoothSandSlopeContour8x', x: 80, y: 146, radiusX: 42, radiusY: 3 },
     // These are the deterministic wavy-column air lips. The earlier meniscus
     // probes sit eight cells below the lip and intentionally exercise body
@@ -13177,6 +13196,11 @@ async function auditRenderScaleEight(cdp, dpr) {
   const surfaceContour = Object.fromEntries(
     surfaceContourSamples.map((sample) => [sample.name, sample]),
   );
+  assert(surfaceContour.metalAirShellFresnel8x.rgbRms >= 0.008
+    && surfaceContour.metalAirShellFresnel8x.rgbPeak > 0
+    && surfaceContour.metalAirShellFresnel8x.rgbPeak <= 20
+    && surfaceContour.metalAirShellFresnel8x.repeatRgbPeak <= 1,
+  `renderScale=8 Metal lost its bounded, repeatable air-facing shell Fresnel (${JSON.stringify(surfaceContourSamples)})`);
   assert(surfaceContour.metalSurfaceContour8x.rgbRms >= 0.008
     && surfaceContour.metalSurfaceContour8x.rgbPeak > 0
     && surfaceContour.metalSurfaceContour8x.rgbPeak <= 16
@@ -13206,12 +13230,51 @@ async function auditRenderScaleEight(cdp, dpr) {
   assert(surfaceContour.isolatedSandSurfaceContourControl8x.rgbPeak <= 1
     && surfaceContour.isolatedSandSurfaceContourControl8x.repeatRgbPeak <= 1,
   `renderScale=8 surface contour altered an isolated Sand grain (${JSON.stringify(surfaceContourSamples)})`);
+  assert(surfaceContour.metalStraightCoreSurfaceContourControl8x.rgbPeak <= 1
+    && surfaceContour.metalStraightCoreSurfaceContourControl8x.repeatRgbPeak <= 1
+    && surfaceContour.metalGlassSurfaceContourSeamControl8x.rgbPeak <= 1
+    && surfaceContour.metalGlassSurfaceContourSeamControl8x.repeatRgbPeak <= 1,
+  `renderScale=8 Metal shell Fresnel escaped a straight core or Metal/Glass seam (${JSON.stringify(surfaceContourSamples)})`);
   assert(JSON.stringify(flatSurfaceContourSemantics) === JSON.stringify(litSurfaceContourSemantics)
     && JSON.stringify(flatSurfaceContourSemantics)
       === JSON.stringify(repeatedFlatSurfaceContourSemantics),
   `renderScale=8 Surface contour lighting changed semantics (${JSON.stringify({
     flatSurfaceContourSemantics, litSurfaceContourSemantics, repeatedFlatSurfaceContourSemantics,
   })})`);
+  const surfaceContourSupportRegions = [
+    { name: 'metalAirShellSupport8x', x: 405, y: 229, radiusX: 17.5, radiusY: 10.5, silhouette: true },
+    { name: 'metalGlassSeamSupport8x', x: 140.5, y: 172, radiusX: 40, radiusY: 16, silhouette: true },
+    { name: 'isolatedSandSurfaceContourSupport8x', x: 190.5, y: 176.5, radius: 2, silhouette: true },
+  ];
+  const [flatSurfaceContourSupport, litSurfaceContourSupport, repeatedFlatSurfaceContourSupport] = await Promise.all([
+    samplePageRegions(
+      cdp, flatSurfaceContourCapture.capture.data, surfaceContourSupportRegions,
+      blankCapture.capture.data, blankCapture.reference.data, geometry.canvas,
+    ),
+    samplePageRegions(
+      cdp, litSurfaceContourCapture.capture.data, surfaceContourSupportRegions,
+      blankCapture.capture.data, blankCapture.reference.data, geometry.canvas,
+    ),
+    samplePageRegions(
+      cdp, repeatedFlatSurfaceContourCapture.capture.data, surfaceContourSupportRegions,
+      blankCapture.capture.data, blankCapture.reference.data, geometry.canvas,
+    ),
+  ]);
+  const surfaceContourSupportInvariantSamples = flatSurfaceContourSupport.map((flat, index) => ({
+    name: flat.name,
+    flatVisible: flat.visible,
+    litVisible: litSurfaceContourSupport[index].visible,
+    repeatedFlatVisible: repeatedFlatSurfaceContourSupport[index].visible,
+    flatWorldArea: flat.worldArea,
+    litWorldArea: litSurfaceContourSupport[index].worldArea,
+    repeatedFlatWorldArea: repeatedFlatSurfaceContourSupport[index].worldArea,
+  }));
+  assert(surfaceContourSupportInvariantSamples.every((sample) => (
+    sample.flatVisible === sample.litVisible
+    && sample.flatVisible === sample.repeatedFlatVisible
+    && Math.abs(sample.flatWorldArea - sample.litWorldArea) <= 0.01
+    && Math.abs(sample.flatWorldArea - sample.repeatedFlatWorldArea) <= 0.01
+  )), `renderScale=8 Metal shell Fresnel changed support (${JSON.stringify(surfaceContourSupportInvariantSamples)})`);
   assert(JSON.stringify(flatLiquidFieldLightingSemantics) === JSON.stringify(litLiquidFieldLightingSemantics)
     && JSON.stringify(flatLiquidFieldLightingSemantics)
       === JSON.stringify(repeatedFlatLiquidFieldLightingSemantics),
@@ -13501,6 +13564,7 @@ async function auditRenderScaleEight(cdp, dpr) {
     solidFieldLightingSamples,
     solidCurvatureSamples,
     surfaceContourSamples,
+    surfaceContourSupportInvariantSamples,
     liquidFieldLightingSamples,
     liquidSilhouetteSamples,
     emissionVolumeChromaSamples,

@@ -1584,10 +1584,43 @@ describe('Pixi presenter startup configuration', () => {
     expect(eight).toContain('uniform float uSurfaceContourLighting;');
     expect(powder).toContain('smoothstep(1.5, 3.0, q00 + q10 + q01 + q11)');
     expect(powder).toContain('uSurfaceContourLighting > 0.5 && uPowderStyle > 1.5');
-    expect(powder).toContain('applySurfaceContourEightX(color, density, powderSlope, optics, 1.0)');
-    expect(solid).toContain('applySurfaceContourEightX(color, density, solidSurfaceSlope, optics, 0.0)');
+    expect(powder).toContain('applySurfaceContourEightX(color, density, powderSlope, optics, 1.0, 0.0)');
+    expect(solid).toContain('color, density, solidSurfaceSlope, optics, 0.0, solidAirFacing');
     expect(`${helper}${powder}${solid}`).not.toContain('texture(');
     expect(`${helper}${powder}${solid}`).not.toMatch(/\balpha\s*[+*]?=/);
+  });
+
+  it('adds a bounded true-8x solid shell cue from the four live semantic owners', () => {
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');
+    const eightEnd = source.indexOf('const FIELD_FRAGMENT = `', eightStart);
+    const eight = source.slice(eightStart, eightEnd);
+    const helperStart = eight.indexOf('float solidEightXShellSpecularGain');
+    const helperEnd = eight.indexOf('void main()', helperStart);
+    const helper = eight.slice(helperStart, helperEnd);
+    const ownerStart = eight.indexOf('  float material00 = materialAt(origin);');
+    const ownerEnd = eight.indexOf('  float density =', ownerStart);
+    const owners = eight.slice(ownerStart, ownerEnd);
+    const solidStart = eight.indexOf('// Restore the global family-coloured surface-contour control');
+    const solidEnd = eight.indexOf('    // Derive an intrinsic contour curvature', solidStart);
+    const solid = eight.slice(solidStart, solidEnd);
+
+    expect(helperStart).toBeGreaterThan(0);
+    expect(ownerStart).toBeGreaterThan(0);
+    expect(solidStart).toBeGreaterThan(0);
+    expect(helper).toContain('float solidEightXShellSpecularGain(float optics)');
+    expect(helper).toContain('powder < 0.5 && solidAirFacing > 0.5');
+    expect(helper).toContain('vec3 shellNormal = vec3(-slope * 0.72, 1.0);');
+    expect(helper).toContain('specular *= specular;');
+    expect(helper).toContain('float fresnel = 1.0 - shellNormal.z;');
+    for (const suffix of ['00', '10', '01', '11']) {
+      expect(owners).toContain(`float material${suffix} = materialAt(`);
+      expect(owners).toContain(`1.0 - step(0.5, material${suffix})`);
+    }
+    expect(owners).toContain('float solidAirFacing = max(');
+    expect(solid).toContain('solidSurfaceSlope, optics, 0.0, solidAirFacing');
+    expect(`${helper}${owners}${solid}`).not.toMatch(/\balpha\s*[+*]?=/);
+    expect(`${helper}${owners}${solid}`).not.toContain('uTime');
   });
 
   it('restores true-8x liquid Surface contours through the existing wall-state read only', () => {
