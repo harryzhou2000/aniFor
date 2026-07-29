@@ -1983,6 +1983,14 @@ void main() {
             * (0.014 + keyLight * 0.030 + grazing * 0.014);
           color += (vec3(1.0) - clamp(color, 0.0, 1.0))
             * meniscusKey * aqueousTopReflection;
+          // Dense Water should retain a faint readable body, not only a bright
+          // shoreline. This uses the already-proven field interior, local
+          // normal, and connected support; it cannot affect alpha, support,
+          // a species seam, or the 8x sampler budget.
+          float aqueousCoreGlaze = fieldInterior * (1.0 - airFacingRim)
+            * connected * (0.008 + keyLight * 0.015);
+          color += (vec3(1.0) - clamp(color, 0.0, 1.0))
+            * vec3(0.16, 0.52, 0.86) * aqueousCoreGlaze;
         }
         // Normal WebGL reflects the shared compact emission field from an
         // exposed liquid-air rim. Carry the same light into the direct 8x
@@ -4907,10 +4915,10 @@ void main() {
     // procedural wave here reads as zebra striping rather than moving water.
     // Keep the field-visible response, but reserve the larger motif gains for
     // oil, corrosives, metallic liquids, and viscous matter.
-    float macroSheenGain = 0.040 + aqueous * 0.030 + oily * 0.085
+    float macroSheenGain = 0.040 + aqueous * 0.055 + oily * 0.085
       + corrosive * 0.225 - molten * 0.015 + cryogenic * 0.06
       + metallicLiquid * 0.15 + viscousLiquid * 0.11;
-    float macroCausticGain = 0.035 + aqueous * 0.035 - oily * 0.025
+    float macroCausticGain = 0.035 + aqueous * 0.065 - oily * 0.025
       + corrosive * 0.195 - molten * 0.035 + cryogenic * 0.08
       - metallicLiquid * 0.04 - viscousLiquid * 0.03;
     float broadCaustic = smoothstep(0.18, 0.88, causticWave) - 0.5;
@@ -4927,7 +4935,7 @@ void main() {
       0.30,
       clamp(topLip * 0.48 + rim * 0.30 + surfaceSpecular * 0.22 + fresnel * 0.26, 0.0, 1.0)
     );
-    float depthTransmission = 0.66 + aqueous * 0.10 - oily * 0.10
+    float depthTransmission = 0.66 + aqueous * 0.14 - oily * 0.10
       + corrosive * 0.04 - molten * 0.15 + cryogenic * 0.14
       - metallicLiquid * 0.18 - viscousLiquid * 0.10;
     float gloss = 1.0 + aqueous * 0.18 + oily * 0.30
@@ -4936,7 +4944,7 @@ void main() {
     float causticStrength = 0.085 + aqueous * 0.055 - oily * 0.045
       + corrosive * 0.025 - molten * 0.055 + cryogenic * 0.04
       - metallicLiquid * 0.07 - viscousLiquid * 0.03;
-    float liquidBodyExposure = 1.0 - aqueous * 0.04 - oily * 0.10
+    float liquidBodyExposure = 1.0 + aqueous * 0.015 - oily * 0.10
       + corrosive * 0.05 + molten * 0.20 - cryogenic * 0.02
       - metallicLiquid * 0.16 - viscousLiquid * 0.09;
     vec3 edgeTint = mix(vec3(0.66, 0.82, 0.88), liquidBase, 0.20);
@@ -5078,6 +5086,14 @@ void main() {
         * (0.020 + broadSheen * 0.018 + fresnel * 0.012);
       color += (vec3(1.0) - clamp(color, 0.0, 1.0))
         * vec3(0.30, 0.74, 1.00) * aqueousSurfaceReflection;
+      // Recombine only the existing body signals for a soft, submerged Water
+      // glaze. It gives deep connected pools a legible blue volume at fit view
+      // without introducing a field, sample, pass, alpha decision, or a
+      // cell-frequency sparkle; shorelines and species ownership remain above.
+      float aqueousCoreGlaze = liquidDepth * (1.0 - liquidFresnelContour)
+        * (0.010 + broadSheen * 0.012 + caustic * 0.006);
+      color += (vec3(1.0) - clamp(color, 0.0, 1.0))
+        * vec3(0.16, 0.52, 0.86) * aqueousCoreGlaze;
     }
     color -= color * liquidFresnelGate * (
       liquidFresnelShadow * liquidFresnelShadowResponse
