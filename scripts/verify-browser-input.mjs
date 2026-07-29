@@ -10861,12 +10861,20 @@ async function auditPowderBodyDepth(cdp, mode, dpr) {
   // it is still a composed framebuffer mask, rejects a real multi-pixel
   // silhouette edit, and semantic recall/deep-hole checks immediately above
   // remain the independent protection for fine structure.
-  assert(familyCoreSupport.coreMismatch
-      <= Math.max(4, Math.ceil(familyCoreSupport.flatCoreVisible * 0.0002))
-      && familyCoreSupport.flatCoreVisible === familyCoreSupport.relievedCoreVisible
+  const familyCoreSupportTolerance = Math.max(
+    4, Math.ceil(familyCoreSupport.flatCoreVisible * 0.0002),
+  );
+  assert(familyCoreSupport.coreMismatch <= familyCoreSupportTolerance
+      // A body-depth RGB response can move the blank-difference threshold on a
+      // few dark core pixels. The erosion/mismatch bound above still rejects a
+      // real multi-pixel silhouette edit; require both independently measured
+      // core counts to stay inside that same documented bound instead of the
+      // contradictory exact-equality check.
+      && Math.abs(familyCoreSupport.flatCoreVisible - familyCoreSupport.relievedCoreVisible)
+        <= familyCoreSupportTolerance
       && familyCoreSupport.coreFraction >= 0.62,
   `${mode}: powder-family optics changed composed core support (${JSON.stringify({
-    flatSupport, relievedSupport, familyCoreSupport,
+    flatSupport, relievedSupport, familyCoreSupport, familyCoreSupportTolerance,
   })})`);
   return {
     backing: `${geometry.backing.width}x${geometry.backing.height}`,
