@@ -454,6 +454,9 @@ export class Game {
       setLavaAncestryStyling: (enabled) => {
         this.renderer.setLavaAncestryStylingEnabled(enabled);
       },
+      setMoltenBodyOptics: (enabled) => {
+        this.renderer.setMoltenBodyOpticsEnabled(enabled);
+      },
       setBotanicalIdentityStyling: (enabled) => {
         this.renderer.setBotanicalIdentityStylingEnabled(enabled);
       },

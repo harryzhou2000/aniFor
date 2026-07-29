@@ -40,6 +40,7 @@ interface PresenterHarness {
   setPoloStateStylingEnabled: PixiFieldPresenter['setPoloStateStylingEnabled'];
   setSpngStateStylingEnabled: PixiFieldPresenter['setSpngStateStylingEnabled'];
   setLavaAncestryStylingEnabled: PixiFieldPresenter['setLavaAncestryStylingEnabled'];
+  setMoltenBodyOpticsEnabled: PixiFieldPresenter['setMoltenBodyOpticsEnabled'];
   setBotanicalIdentityStylingEnabled: PixiFieldPresenter['setBotanicalIdentityStylingEnabled'];
   setBotanicalLifecycleStylingEnabled: PixiFieldPresenter['setBotanicalLifecycleStylingEnabled'];
   setSparkStateStylingEnabled: PixiFieldPresenter['setSparkStateStylingEnabled'];
@@ -126,6 +127,7 @@ describe('Pixi presenter startup configuration', () => {
       uEnergyCoreRelief: 0,
       uDeutStateStyling: 1,
       uSourceTargetStyling: 1,
+      uMoltenBodyOptics: 1,
       uPowderStyle: powderRenderStyleValue('grains'),
       uPowderBodyDepth: 1,
     });
@@ -2269,6 +2271,42 @@ describe('Pixi presenter startup configuration', () => {
     presenter.setLavaAncestryStylingEnabled(true);
     expect(presenter.uniforms.uniforms.uLavaAncestryStyling).toBe(1);
     expect(presenter.app.render).toHaveBeenCalledTimes(2);
+  });
+
+  it('keeps WebGL-only molten body optics independently switchable and resource-bounded', () => {
+    const presenter = presenterHarness();
+    presenter.setMoltenBodyOpticsEnabled(false);
+    expect(presenter.uniforms.uniforms.uMoltenBodyOptics).toBe(0);
+    presenter.setMoltenBodyOpticsEnabled(true);
+    expect(presenter.uniforms.uniforms.uMoltenBodyOptics).toBe(1);
+    expect(presenter.app.render).toHaveBeenCalledTimes(2);
+
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');
+    const eightEnd = source.indexOf('const FIELD_FRAGMENT = `', eightStart);
+    const eight = source.slice(eightStart, eightEnd);
+    const eightStartBlock = eight.indexOf('// Lava is deliberately outside the shared liquid contour/reconstruction');
+    const eightEndBlock = eight.indexOf('  if (family == 4.0) {', eightStartBlock);
+    const eightBlock = eight.slice(eightStartBlock, eightEndBlock);
+    const normalStart = source.indexOf('// Lava\'s wide glow is deliberately left to the shared emission field');
+    const normalEnd = source.indexOf('    // Family-coloured chroma and vertical optical depth', normalStart);
+    const normalBlock = source.slice(normalStart, normalEnd);
+
+    expect(eightStartBlock).toBeGreaterThan(0);
+    expect(eightEndBlock).toBeGreaterThan(eightStartBlock);
+    expect(normalStart).toBeGreaterThan(0);
+    expect(normalEnd).toBeGreaterThan(normalStart);
+    expect(source).toContain('uniform float uMoltenBodyOptics;');
+    expect(eightBlock).toContain('uMoltenBodyOptics > 0.5 && family == 2.0 && material == 11.0');
+    expect(eightBlock).toContain('q00 * q10 * q01 * q11');
+    expect(eightBlock).toContain('lavaRibbon');
+    expect(eightBlock).not.toContain('texture(');
+    expect(eightBlock).not.toContain('uTime');
+    expect(eightBlock).not.toMatch(/\balpha\s*[+*]?=/);
+    expect(normalBlock).toContain('uMoltenBodyOptics > 0.5 && uLiquidFieldLighting > 0.5');
+    expect(normalBlock).toContain('foreignMatterContact < 0.5 && unlikeMaterialContact < 0.5');
+    expect(normalBlock).not.toContain('texture(');
+    expect(normalBlock).not.toMatch(/\balpha\s*[+*]?=/);
   });
 
   it('keeps typed-Lava ancestry arithmetic-only, bounded, and exact-owner guarded', () => {

@@ -88,6 +88,7 @@ export interface BrowserInputAuditApi {
   setPoloStateStyling(enabled: boolean): void;
   setSpngStateStyling(enabled: boolean): void;
   setLavaAncestryStyling(enabled: boolean): void;
+  setMoltenBodyOptics(enabled: boolean): void;
   setBotanicalIdentityStyling(enabled: boolean): void;
   setBotanicalLifecycleStyling(enabled: boolean): void;
   setSparkStateStyling(enabled: boolean): void;

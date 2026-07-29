@@ -306,6 +306,9 @@ export class MaterialRenderer {
   private poloStateStylingEnabled = true;
   private spngStateStylingEnabled = true;
   private lavaAncestryStylingEnabled = true;
+  // Canonical WebGL body optics only. Canvas deliberately remains a safe,
+  // semantically equivalent fallback instead of carrying every advanced look.
+  private moltenBodyOpticsEnabled = true;
   private botanicalIdentityStylingEnabled = true;
   private botanicalLifecycleStylingEnabled = true;
   private sparkStateStylingEnabled = true;
@@ -826,6 +829,15 @@ export class MaterialRenderer {
     this.changed = true;
   }
 
+  setMoltenBodyOpticsEnabled(enabled: boolean): void {
+    if (enabled === this.moltenBodyOpticsEnabled) return;
+    this.moltenBodyOpticsEnabled = enabled;
+    // Canvas intentionally has no advanced molten-body counterpart. Its
+    // semantic liquid/energy presentation remains usable when WebGL is absent.
+    this.presenter?.setMoltenBodyOpticsEnabled(enabled);
+    this.changed = true;
+  }
+
   setBotanicalIdentityStylingEnabled(enabled: boolean): void {
     if (enabled === this.botanicalIdentityStylingEnabled) return;
     this.botanicalIdentityStylingEnabled = enabled;
@@ -1045,6 +1057,7 @@ export class MaterialRenderer {
       this.sparkStateStylingEnabled,
       this.structuralRigidStylingEnabled,
       this.earthenPowderStylingEnabled,
+      this.moltenBodyOpticsEnabled,
     );
     // Route subsequent dirty cells to the candidate while its first expensive
     // frame is in flight. The known-good Canvas remains mounted underneath;

@@ -144,6 +144,7 @@ uniform float uForceActivityStyling;
 uniform float uVibrStateStyling;
 uniform float uDeutStateStyling;
 uniform float uLavaAncestryStyling;
+uniform float uMoltenBodyOptics;
 uniform float uBotanicalIdentityStyling;
 uniform float uBotanicalLifecycleStyling;
 uniform float uSparkStateStyling;
@@ -1135,6 +1136,30 @@ void main() {
     color += identityHue * (0.006 + identityMark * 0.024)
       * (1.0 - denseEnergy * 0.65) * uEnergyIdentityStyling;
   }
+  // Lava is deliberately outside the shared liquid contour/reconstruction
+  // path: its broad glow remains owned by the emission field. Dense, exact
+  // Lava still needs an interior body read at deep zoom, though. Reuse the
+  // four semantic owners and the existing centre liquid mix only; this adds
+  // static RGB convection ridges and cooled pockets, never a texture fetch,
+  // alpha/support decision, wall decision, or animated 15M-fragment cost.
+  if (uMoltenBodyOptics > 0.5 && family == 2.0 && material == 11.0
+    && optics == 4.0 && traits < 0.5 && !materialEmissive) {
+    float lavaInterior = q00 * q10 * q01 * q11 * smoothstep(0.76, 0.96, density);
+    if (lavaInterior > 0.0) {
+      float lavaRibbon = 1.0 - abs(fract(
+        grid.x * 0.056 + grid.y * 0.034 + 0.173
+      ) * 2.0 - 1.0);
+      float lavaCrossflow = 1.0 - abs(fract(
+        grid.x * -0.019 + grid.y * 0.047 + 0.419
+      ) * 2.0 - 1.0);
+      float lavaRidge = smoothstep(0.66, 0.94, lavaRibbon)
+        * mix(0.60, 1.0, lavaCrossflow);
+      float lavaPocket = 1.0 - smoothstep(0.24, 0.54, lavaRibbon);
+      color *= vec3(1.0) - vec3(0.070, 0.032, 0.010) * lavaPocket * lavaInterior;
+      color += (vec3(1.0) - clamp(color, 0.0, 1.0))
+        * vec3(1.00, 0.34, 0.055) * lavaRidge * 0.060 * lavaInterior;
+    }
+  }
   if (family == 4.0) {
     float powderDepth = depth * uPowderBodyDepth;
     color *= vec3(1.02 + density * 0.07) - powderDepth * vec3(0.10, 0.07, 0.04);
@@ -2066,6 +2091,7 @@ uniform float uForceActivityStyling;
 uniform float uPoloStateStyling;
 uniform float uSpngStateStyling;
 uniform float uLavaAncestryStyling;
+uniform float uMoltenBodyOptics;
 uniform float uBotanicalIdentityStyling;
 uniform float uBotanicalLifecycleStyling;
 uniform float uSparkStateStyling;
@@ -4431,6 +4457,30 @@ void main() {
     color += mix(vec3(0.52, 0.68, 0.76), liquidBase, 0.50)
       * (broadSheen * mix(0.016, 0.052 * gloss, liquidDepth) + caustic * causticStrength);
     color += liquidBase * (0.025 + atmosphere * 0.030) + vec3(0.055, 0.090, 0.105) * rim;
+    // Lava's wide glow is deliberately left to the shared emission field, so
+    // it never feeds light back into its own body. Its dense, exact liquid
+    // interior can still use the already-live field support, low-frequency
+    // convection waves, and top lip for a restrained molten ridge/pocket read.
+    // This is RGB-only and excludes every shore, droplet, hole, native wall,
+    // trait, emissive owner, and cross-material contact.
+    if (uMoltenBodyOptics > 0.5 && uLiquidFieldLighting > 0.5
+      && molten > 0.5 && material == 11.0
+      && liquidOnly < 0.5 && halo < 0.5 && surfaceOnly < 0.5
+      && wall < 0.5 && family == 2.0 && traits < 0.5 && !materialEmissive
+      && foreignMatterContact < 0.5 && unlikeMaterialContact < 0.5
+      && liquidDepth > 0.48 && liquidNeighbourMean > 0.56) {
+      float moltenBodySupport = smoothstep(0.48, 0.90, liquidDepth)
+        * smoothstep(0.56, 0.88, liquidNeighbourMean);
+      float moltenConvection = mix(broadSheen, causticWave, 0.58);
+      float moltenRidge = smoothstep(0.64, 0.94, moltenConvection);
+      float moltenPocket = 1.0 - smoothstep(0.23, 0.53, moltenConvection);
+      float moltenTopShoulder = topLip * (0.022 + surfaceSpecular * 0.030);
+      color *= vec3(1.0) - vec3(0.072, 0.034, 0.010)
+        * moltenPocket * moltenBodySupport;
+      color += (vec3(1.0) - clamp(color, 0.0, 1.0))
+        * vec3(1.00, 0.34, 0.055)
+        * (moltenRidge * 0.058 + moltenTopShoulder) * moltenBodySupport;
+    }
     // Family-coloured chroma and vertical optical depth share exact cohesive
     // liquid eligibility, but remain independently switchable. All inputs are
     // already live for body lighting; this adds arithmetic only and cannot
@@ -5879,6 +5929,7 @@ export class PixiFieldPresenter {
       uPoloStateStyling: { value: 1, type: 'f32' },
       uSpngStateStyling: { value: 1, type: 'f32' },
       uLavaAncestryStyling: { value: 1, type: 'f32' },
+      uMoltenBodyOptics: { value: 1, type: 'f32' },
       uBotanicalIdentityStyling: { value: 1, type: 'f32' },
       uBotanicalLifecycleStyling: { value: 1, type: 'f32' },
       uSparkStateStyling: { value: 1, type: 'f32' },
@@ -6212,6 +6263,7 @@ export class PixiFieldPresenter {
     sparkStateStylingEnabled = true,
     structuralRigidStylingEnabled = true,
     earthenPowderStylingEnabled = true,
+    moltenBodyOpticsEnabled = true,
   ): void {
     const uniforms = this.uniforms.uniforms;
     uniforms.uGasFieldLighting = gasFieldLightingEnabled ? 1 : 0;
@@ -6252,6 +6304,7 @@ export class PixiFieldPresenter {
     uniforms.uPoloStateStyling = poloStateStylingEnabled ? 1 : 0;
     uniforms.uSpngStateStyling = spngStateStylingEnabled ? 1 : 0;
     uniforms.uLavaAncestryStyling = lavaAncestryStylingEnabled ? 1 : 0;
+    uniforms.uMoltenBodyOptics = moltenBodyOpticsEnabled ? 1 : 0;
     uniforms.uBotanicalIdentityStyling = botanicalIdentityStylingEnabled ? 1 : 0;
     uniforms.uBotanicalLifecycleStyling = botanicalLifecycleStylingEnabled ? 1 : 0;
     uniforms.uSparkStateStyling = sparkStateStylingEnabled ? 1 : 0;
@@ -6437,6 +6490,12 @@ export class PixiFieldPresenter {
 
   setLavaAncestryStylingEnabled(enabled: boolean): void {
     this.uniforms.uniforms.uLavaAncestryStyling = enabled ? 1 : 0;
+    this.renderApplication();
+  }
+
+  /** WebGL-only dense Lava optics; Canvas keeps its safe semantic fallback. */
+  setMoltenBodyOpticsEnabled(enabled: boolean): void {
+    this.uniforms.uniforms.uMoltenBodyOptics = enabled ? 1 : 0;
     this.renderApplication();
   }
 

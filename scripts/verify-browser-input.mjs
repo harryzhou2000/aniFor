@@ -13524,6 +13524,11 @@ async function auditRenderScaleEight(cdp, dpr) {
   // after each completed GPU fence.
   const lavaStateGraphics = await auditEightXLavaStateGraphics(cdp, geometry.canvas);
   stage('lava-state-ready');
+  // Dense molten-body optics are canonical WebGL only. Canvas remains a
+  // semantic fallback, while this fenced direct-8x capture proves the compact
+  // RGB layer has no topology cost and cannot leak into controls.
+  const lavaBodyOptics = await auditEightXLavaBodyOptics(cdp, geometry.canvas);
+  stage('lava-body-optics-ready');
   const sparkStateGraphics = await auditEightXSparkStateGraphics(cdp, geometry.canvas);
   stage('spark-state-ready');
   // Keep the DEUT fixture last: its native state is intentionally retained for
@@ -13597,6 +13602,7 @@ async function auditRenderScaleEight(cdp, dpr) {
     photonSpectrumGraphics,
     deutStateGraphics,
     lavaStateGraphics,
+    lavaBodyOptics,
     sparkStateGraphics,
     forcedStallRecovery,
     contextLossRecovery,
@@ -15043,6 +15049,79 @@ async function auditEightXLavaStateGraphics(cdp, canvasRect) {
     repeatedStraight: repeated.capture.data,
   }, eightXLavaResponseRegions(rawAtlas), canvasRect);
   assertEightXLavaResponses(samples, 'renderScale=8 WebGL');
+  return {
+    cards: rawAtlas.cards.map(({ key, material, origin, originCode, encodedState }) => ({
+      key, material, origin, originCode, encodedState,
+    })),
+    occupied: prepared.occupied,
+    samples,
+    exactRepeatedOff: samples.every(({ repeatRgbPeak }) => repeatRgbPeak <= 1),
+  };
+}
+
+function eightXLavaBodyOpticsRegions(atlas) {
+  const centre = (rect) => ({ x: rect.x + rect.width / 2, y: rect.y + rect.height / 2 });
+  return atlas.cards.flatMap((entry) => [
+    { name: `LAVA-${entry.key}-core`, ...centre(entry.coreProbe), radiusX: 4, radiusY: 4 },
+    { name: `LAVA-${entry.key}-zero`, ...centre(entry.zeroState), radiusX: 4, radiusY: 4 },
+    { name: `LAVA-${entry.key}-isolated`, ...entry.isolated, radiusX: 3, radiusY: 3 },
+    { name: `LAVA-${entry.key}-wrong-owner`, ...centre(entry.wrongOwner), radiusX: 4, radiusY: 4 },
+    { name: `LAVA-${entry.key}-water`, ...centre(entry.waterControl), radiusX: 4, radiusY: 4 },
+    { name: `LAVA-${entry.key}-cooled`, ...centre(entry.cooledSolidControl), radiusX: 4, radiusY: 4 },
+  ]);
+}
+
+function assertEightXLavaBodyOpticsResponses(samples, label) {
+  const body = samples.filter(({ name }) => name.endsWith('-core') || name.endsWith('-zero'));
+  assert(body.length === 12 && body.every(({ rgbRms, rgbPeak, repeatRgbPeak }) => (
+    rgbRms >= 0.006 && rgbRms <= 32 && rgbPeak > 0 && rgbPeak <= 64 && repeatRgbPeak <= 1
+  )), `${label}: dense Lava body response is absent, unbounded, or unstable (${JSON.stringify(body)})`);
+  const controls = samples.filter(({ name }) => !name.endsWith('-core') && !name.endsWith('-zero'));
+  assert(controls.length === 24 && controls.every(({ rgbPeak, repeatRgbPeak }) => (
+    rgbPeak <= 1 && repeatRgbPeak <= 1
+  )), `${label}: molten-body optics leaked through a semantic/control boundary (${JSON.stringify(controls)})`);
+}
+
+async function auditEightXLavaBodyOptics(cdp, canvasRect) {
+  const rawAtlas = await evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    if (typeof audit.prepareLavaStateGraphicsFixture !== 'function'
+      || typeof audit.lavaStateGraphicsAtlas !== 'function'
+      || typeof audit.setMoltenBodyOptics !== 'function') {
+      throw new Error('True-8x molten Lava body-optics API unavailable');
+    }
+    audit.resetView();
+    audit.prepareLavaStateGraphicsFixture();
+    return audit.lavaStateGraphicsAtlas();
+  })()`);
+  const prepared = await snapshotEightXLavaState(cdp);
+  assertEightXLavaTopology(prepared, 'renderScale=8 prepared molten Lava fixture');
+  const live = await metrics(cdp);
+  assert(live.backing.width === WORLD_WIDTH * 8 && live.backing.height === WORLD_HEIGHT * 8
+      && live.outputScale === '8',
+  `renderScale=8 molten Lava fixture lost true backing (${JSON.stringify(live.backing)})`);
+  assertCanvasRectsEqual(canvasRect, live.canvas, 'renderScale=8 molten Lava fixture CSS geometry');
+
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setMoltenBodyOptics(false); true');
+  const flat = await captureSettledPage(cdp, 'renderScale=8 flat molten-body framebuffer', 450);
+  const flatTopology = await snapshotEightXLavaState(cdp);
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setMoltenBodyOptics(true); true');
+  const styled = await captureSettledPage(cdp, 'renderScale=8 styled molten-body framebuffer', 450);
+  const styledTopology = await snapshotEightXLavaState(cdp);
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setMoltenBodyOptics(false); true');
+  const repeated = await captureSettledPage(cdp, 'renderScale=8 repeated flat molten-body framebuffer', 450);
+  const repeatedTopology = await snapshotEightXLavaState(cdp);
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setMoltenBodyOptics(true); true');
+  assert(JSON.stringify(flatTopology) === JSON.stringify(prepared)
+      && JSON.stringify(styledTopology) === JSON.stringify(prepared)
+      && JSON.stringify(repeatedTopology) === JSON.stringify(prepared),
+  'renderScale=8 molten-body toggle changed semantic or presentation-state topology');
+  const samples = await sampleBackdropRefractionRegions(cdp, {
+    straight: flat.capture.data,
+    refracted: styled.capture.data,
+    repeatedStraight: repeated.capture.data,
+  }, eightXLavaBodyOpticsRegions(rawAtlas), canvasRect);
+  assertEightXLavaBodyOpticsResponses(samples, 'renderScale=8 WebGL');
   return {
     cards: rawAtlas.cards.map(({ key, material, origin, originCode, encodedState }) => ({
       key, material, origin, originCode, encodedState,
