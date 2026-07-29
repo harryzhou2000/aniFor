@@ -5595,9 +5595,10 @@ void main() {
       // Smooth owns only the settled exterior contour and broad body depth. It
       // must retain enough mineral/grain variation inside a pile to avoid the
       // previous airbrushed look; Local and square Grains still carry the full
-      // reference cadence, while a stable bulk keeps a restrained 65/70%.
-      float cellGrainRetention = mix(1.0, 0.65, powderVisualCohesion);
-      float facetRetention = mix(1.0, 0.70, powderVisualCohesion);
+      // reference cadence, while a stable bulk retains a clearly readable but
+      // non-cellular 86/88% mineral/facet response.
+      float cellGrainRetention = mix(1.0, 0.86, powderVisualCohesion);
+      float facetRetention = mix(1.0, 0.88, powderVisualCohesion);
       color *= 0.91 + grain * (0.20 + roughSurface * 0.05) * cellGrainRetention * facetGain
         + grainFacet * (0.10 + roughSurface * 0.04) * facetRetention * facetGain;
       color += base * max(0.0, 0.6 - subcell.x - subcell.y)

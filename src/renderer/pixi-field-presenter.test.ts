@@ -2028,8 +2028,8 @@ describe('Pixi presenter startup configuration', () => {
     expect(source.match(/texture\(uPowderSurfaceTexture/g)).toHaveLength(2);
     // Stable Smooth powder retains bounded mineral variation; Local/Grains
     // still carry their full diagnostic cell detail.
-    expect(source).toContain('mix(1.0, 0.65, powderVisualCohesion)');
-    expect(source).toContain('mix(1.0, 0.70, powderVisualCohesion)');
+    expect(source).toContain('mix(1.0, 0.86, powderVisualCohesion)');
+    expect(source).toContain('mix(1.0, 0.88, powderVisualCohesion)');
     expect(source).toContain('uPowderStyle < 1.5 ? 0.044 : 0.085');
   });
 
