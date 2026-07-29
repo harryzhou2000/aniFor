@@ -3151,8 +3151,8 @@ describe('Pixi presenter startup configuration', () => {
     expect(block).toContain('fieldPosition.x * 0.031 + fieldPosition.y * 0.023');
     expect(block).toContain('fieldPosition.y * 0.043 - fieldPosition.x * 0.019');
     expect(block).toContain('fieldPosition.x * 0.061 + fieldPosition.y * 0.021');
-    expect(block).toContain('float macroSheenGain = 0.040 + aqueous * 0.055');
-    expect(block).toContain('float macroCausticGain = 0.035 + aqueous * 0.065');
+    expect(block).toContain('float macroSheenGain = 0.040 + aqueous * 0.095');
+    expect(block).toContain('float macroCausticGain = 0.035 + aqueous * 0.105');
     expect(block).not.toContain('texture(');
     expect(block).not.toMatch(/\b(?:alpha|density|support)\s*[+*]?=/);
   });

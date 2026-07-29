@@ -1980,7 +1980,7 @@ void main() {
         // sampler cost to the direct compositor.
         if (uAqueousSurfaceReflection > 0.5 && optics == 1.0) {
           float aqueousTopReflection = max(0.0, liquidSlope.y) * airFacingRim
-            * (0.014 + keyLight * 0.030 + grazing * 0.014);
+            * (0.018 + keyLight * 0.040 + grazing * 0.020);
           color += (vec3(1.0) - clamp(color, 0.0, 1.0))
             * meniscusKey * aqueousTopReflection;
           // Dense Water should retain a faint readable body, not only a bright
@@ -1988,7 +1988,7 @@ void main() {
           // normal, and connected support; it cannot affect alpha, support,
           // a species seam, or the 8x sampler budget.
           float aqueousCoreGlaze = fieldInterior * (1.0 - airFacingRim)
-            * connected * (0.008 + keyLight * 0.015);
+            * connected * (0.012 + keyLight * 0.022);
           color += (vec3(1.0) - clamp(color, 0.0, 1.0))
             * vec3(0.16, 0.52, 0.86) * aqueousCoreGlaze;
         }
@@ -4915,10 +4915,10 @@ void main() {
     // procedural wave here reads as zebra striping rather than moving water.
     // Keep the field-visible response, but reserve the larger motif gains for
     // oil, corrosives, metallic liquids, and viscous matter.
-    float macroSheenGain = 0.040 + aqueous * 0.055 + oily * 0.085
+    float macroSheenGain = 0.040 + aqueous * 0.095 + oily * 0.085
       + corrosive * 0.225 - molten * 0.015 + cryogenic * 0.06
       + metallicLiquid * 0.15 + viscousLiquid * 0.11;
-    float macroCausticGain = 0.035 + aqueous * 0.065 - oily * 0.025
+    float macroCausticGain = 0.035 + aqueous * 0.105 - oily * 0.025
       + corrosive * 0.195 - molten * 0.035 + cryogenic * 0.08
       - metallicLiquid * 0.04 - viscousLiquid * 0.03;
     float broadCaustic = smoothstep(0.18, 0.88, causticWave) - 0.5;
@@ -4944,7 +4944,7 @@ void main() {
     float causticStrength = 0.085 + aqueous * 0.055 - oily * 0.045
       + corrosive * 0.025 - molten * 0.055 + cryogenic * 0.04
       - metallicLiquid * 0.07 - viscousLiquid * 0.03;
-    float liquidBodyExposure = 1.0 + aqueous * 0.015 - oily * 0.10
+    float liquidBodyExposure = 1.0 + aqueous * 0.045 - oily * 0.10
       + corrosive * 0.05 + molten * 0.20 - cryogenic * 0.02
       - metallicLiquid * 0.16 - viscousLiquid * 0.09;
     vec3 edgeTint = mix(vec3(0.66, 0.82, 0.88), liquidBase, 0.20);
@@ -5083,7 +5083,7 @@ void main() {
     // established paths; this is a bounded RGB-only aqueous refinement.
     if (uAqueousSurfaceReflection > 0.5 && aqueous > 0.5) {
       float aqueousSurfaceReflection = aqueous * topLip
-        * (0.020 + broadSheen * 0.018 + fresnel * 0.012);
+        * (0.026 + broadSheen * 0.024 + fresnel * 0.016);
       color += (vec3(1.0) - clamp(color, 0.0, 1.0))
         * vec3(0.30, 0.74, 1.00) * aqueousSurfaceReflection;
       // Recombine only the existing body signals for a soft, submerged Water
@@ -5091,7 +5091,7 @@ void main() {
       // without introducing a field, sample, pass, alpha decision, or a
       // cell-frequency sparkle; shorelines and species ownership remain above.
       float aqueousCoreGlaze = liquidDepth * (1.0 - liquidFresnelContour)
-        * (0.010 + broadSheen * 0.012 + caustic * 0.006);
+        * (0.014 + broadSheen * 0.018 + caustic * 0.010);
       color += (vec3(1.0) - clamp(color, 0.0, 1.0))
         * vec3(0.16, 0.52, 0.86) * aqueousCoreGlaze;
     }
