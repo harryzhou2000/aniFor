@@ -579,6 +579,7 @@ describe('Pixi presenter startup configuration', () => {
     expect(block).toContain('applyLiquidOpticalDepth(color, optics, liquidOpticalDepth)');
     expect(helpers).toContain('vec3 liquidVolumeShadow(float optics)');
     expect(helpers).toContain('vec3 applyLiquidOpticalDepth(');
+    expect(helpers).toContain('0.14 + 0.025 * smoothstep(0.42, 0.86, columnDepth)');
     expect(source).toContain('liquidOpticalDepth = boundaryStabilityAt(fieldUv)');
     expect(source).toContain('writeVerticalOpticalDepth(materials, this.boundaryStabilityBytes)');
     expect(source).toContain('if (boundaryTextureDirty) this.boundaryStabilitySource.update()');

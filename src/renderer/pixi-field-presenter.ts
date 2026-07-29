@@ -2399,7 +2399,12 @@ vec3 applyLiquidOpticalDepth(vec3 color, float optics, float columnDepth) {
   // WebGL's existing macro chroma is stronger than Canvas at some broad
   // shoulders, so Water/Oil need calibrated column absorption for composed
   // surface-to-core parity rather than numeric helper parity.
-  float columnGain = optics == 1.0 ? 0.14
+  // Water's shallow column keeps the calibrated surface gain, while a proven
+  // deep connected core gains a restrained extra teal/red absorption. The
+  // phase-local depth byte has already rejected droplets, seams, walls, and
+  // reconstructed support at the call site; this is RGB-only arithmetic.
+  float columnGain = optics == 1.0
+    ? 0.14 + 0.025 * smoothstep(0.42, 0.86, columnDepth)
     : (optics == 2.0 ? 0.18 : (optics == 3.0 ? 0.09
     : (optics == 16.0 ? 0.10 : (optics == 17.0 ? 0.22
     : (optics == 18.0 ? 0.20 : 0.06)))));
