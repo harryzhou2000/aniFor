@@ -1328,6 +1328,7 @@ void main() {
   // no-op without adding a fourth wall-texture sample.
   float liquidSurfaceContourKeyStrength = 0.0;
   float liquidSurfaceContourShadowStrength = 0.0;
+  float liquidEmissionReflectionStrength = 0.0;
   bool nativeWallForLiquidCohesion = uNativeWallsActive > 0.5
     && uLiquidSilhouetteCohesion > 0.5 && family == 2.0 && optics != 4.0
     && traits < 0.5 && !materialEmissive && density > 0.08 && density < 0.92;
@@ -1435,6 +1436,30 @@ void main() {
         color *= 1.0 + bodyResponse;
         color += meniscusKey * airFacingRim * (0.014 + keyLight * 0.026 + grazing * 0.018);
         color -= meniscusShadow * airFacingRim * (1.0 - keyLight) * 0.010;
+        // Normal WebGL reflects the shared compact emission field from an
+        // exposed liquid-air rim. Carry the same light into the direct 8x
+        // compositor using only its already-live centre emission sample and
+        // four liquid/material probes. A semantic empty side must also be
+        // sparse in the liquid field, so dense reconstructed pinholes, unlike
+        // seams, droplets, Lava, traits, and emissive liquid remain exact
+        // no-ops. Defer RGB application until the existing contour wall guard
+        // has proved this exact liquid cell is not backed by a native wall.
+        if (uSurfaceContourLighting > 0.5 && liquidForeignContact < 0.5
+          && density > 0.08 && density < 0.92 && emission.a > 0.002) {
+          float liquidAirLeft = 1.0 - step(0.5, liquidMaterialLeft);
+          float liquidAirRight = 1.0 - step(0.5, liquidMaterialRight);
+          float liquidAirTop = 1.0 - step(0.5, liquidMaterialTop);
+          float liquidAirBottom = 1.0 - step(0.5, liquidMaterialBottom);
+          float validatedLiquidAir = max(
+            max(liquidAirLeft * (1.0 - smoothstep(0.16, 0.66, liquidLeft.a)),
+              liquidAirRight * (1.0 - smoothstep(0.16, 0.66, liquidRight.a))),
+            max(liquidAirTop * (1.0 - smoothstep(0.16, 0.66, liquidTop.a)),
+              liquidAirBottom * (1.0 - smoothstep(0.16, 0.66, liquidBottom.a)))
+          );
+          float emissionReach = smoothstep(0.002, 0.42, emission.a);
+          liquidEmissionReflectionStrength = emissionReach * validatedLiquidAir * airFacingRim
+            * (0.026 + keyLight * 0.058 + grazing * 0.036);
+        }
       }
       // Normal WebGL's Surface control carries a distinct Fresnel-like
       // air-facing key/fill. Keep the compact direct form on the four samples
@@ -1583,6 +1608,11 @@ void main() {
     color += (vec3(1.0) - clamp(color, 0.0, 1.0))
       * liquidContourKey * liquidSurfaceContourKeyStrength;
     color -= liquidContourShadow * liquidSurfaceContourShadowStrength;
+  }
+  if (liquidEmissionReflectionStrength > 0.0001
+    && (uNativeWallsActive < 0.5 || nativeWall < 0.5)) {
+    color += (vec3(1.0) - clamp(color, 0.0, 1.0))
+      * emission.rgb * liquidEmissionReflectionStrength;
   }
   // Static semantic-role accents preserve the normal compositor's source,
   // sink, channel, and force vocabulary at true 8x. Stateful target/activity

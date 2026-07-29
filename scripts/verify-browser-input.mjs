@@ -12609,7 +12609,10 @@ async function auditRenderScaleEight(cdp, dpr) {
   );
   const flatLiquidFieldLightingSemantics = await evaluate(cdp, `(() => {
     const audit = window.__ANIFOR_INPUT_AUDIT__;
-    const points = [[224, 202], [263, 202], [302, 202], [341, 202], [190, 164], [302, 172]];
+    const points = [
+      [224, 202], [263, 202], [302, 202], [341, 202], [190, 164], [302, 172],
+      [188, 68], [353, 62], [284, 160],
+    ];
     return { occupied: audit.occupiedCells(), cells: points.map(([x, y]) => audit.cell(x, y)) };
   })()`);
   await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setLiquidFieldLighting(true); true');
@@ -12618,7 +12621,10 @@ async function auditRenderScaleEight(cdp, dpr) {
   );
   const litLiquidFieldLightingSemantics = await evaluate(cdp, `(() => {
     const audit = window.__ANIFOR_INPUT_AUDIT__;
-    const points = [[224, 202], [263, 202], [302, 202], [341, 202], [190, 164], [302, 172]];
+    const points = [
+      [224, 202], [263, 202], [302, 202], [341, 202], [190, 164], [302, 172],
+      [188, 68], [353, 62], [284, 160],
+    ];
     return { occupied: audit.occupiedCells(), cells: points.map(([x, y]) => audit.cell(x, y)) };
   })()`);
   await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setLiquidFieldLighting(false); true');
@@ -12627,7 +12633,10 @@ async function auditRenderScaleEight(cdp, dpr) {
   );
   const repeatedFlatLiquidFieldLightingSemantics = await evaluate(cdp, `(() => {
     const audit = window.__ANIFOR_INPUT_AUDIT__;
-    const points = [[224, 202], [263, 202], [302, 202], [341, 202], [190, 164], [302, 172]];
+    const points = [
+      [224, 202], [263, 202], [302, 202], [341, 202], [190, 164], [302, 172],
+      [188, 68], [353, 62], [284, 160],
+    ];
     return { occupied: audit.occupiedCells(), cells: points.map(([x, y]) => audit.cell(x, y)) };
   })()`);
   await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setLiquidFieldLighting(true); true');
@@ -13221,6 +13230,9 @@ async function auditRenderScaleEight(cdp, dpr) {
     { name: 'lavaMeniscusControl8x', x: 341, y: 202, radiusX: 5, radiusY: 4 },
     { name: 'isolatedMeniscusControl8x', x: 190.5, y: 164.5, radius: 2 },
     { name: 'unlikeMeniscusControl8x', x: 302.5, y: 172, radiusX: 0.45, radiusY: 6 },
+    { name: 'coolWaterReflection8x', x: 188, y: 68, radius: 3 },
+    { name: 'warmAcidReflection8x', x: 353, y: 62, radius: 4 },
+    { name: 'waterWallReflectionControl8x', x: 284, y: 160, radiusX: 5, radiusY: 1.5 },
   ], geometry.canvas);
   const liquidFieldLighting = Object.fromEntries(
     liquidFieldLightingSamples.map((sample) => [sample.name, sample]),
@@ -13231,9 +13243,22 @@ async function auditRenderScaleEight(cdp, dpr) {
       && sample.repeatRgbPeak <= 1,
     `renderScale=8 ${name} lost bounded connected liquid meniscus (${JSON.stringify(liquidFieldLightingSamples)})`);
   }
+  const coolWaterReflection = liquidFieldLighting.coolWaterReflection8x;
+  const warmAcidReflection = liquidFieldLighting.warmAcidReflection8x;
+  assert(coolWaterReflection.rgbRms >= 0.004 && coolWaterReflection.rgbPeak > 0
+    && coolWaterReflection.rgbPeak <= 18 && coolWaterReflection.repeatRgbPeak <= 1
+    && coolWaterReflection.responseRgb[1] > coolWaterReflection.responseRgb[0],
+  `renderScale=8 Water lost bounded cool emitted-light reflection (${JSON.stringify(liquidFieldLightingSamples)})`);
+  assert(warmAcidReflection.rgbRms >= 0.004 && warmAcidReflection.rgbPeak > 0
+    && warmAcidReflection.rgbPeak <= 18 && warmAcidReflection.repeatRgbPeak <= 1
+    && warmAcidReflection.responseRgb[1] > warmAcidReflection.responseRgb[0] + 0.02
+    && warmAcidReflection.responseRgb[1] > warmAcidReflection.responseRgb[2] + 0.02,
+  `renderScale=8 Acid lost bounded warm emitted-light reflection (${JSON.stringify(liquidFieldLightingSamples)})`);
   for (const name of [
     'lavaMeniscusControl8x', 'isolatedMeniscusControl8x', 'unlikeMeniscusControl8x',
-  ]) assert(liquidFieldLighting[name].rgbPeak <= 1,
+    'waterWallReflectionControl8x',
+  ]) assert(liquidFieldLighting[name].rgbPeak <= 1
+    && liquidFieldLighting[name].repeatRgbPeak <= 1,
     `renderScale=8 liquid meniscus changed ${name} (${JSON.stringify(liquidFieldLightingSamples)})`);
   assert(JSON.stringify(flatLiquidSilhouetteSemantics) === JSON.stringify(cohesiveLiquidSilhouetteSemantics)
     && JSON.stringify(flatLiquidSilhouetteSemantics)

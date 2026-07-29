@@ -1324,6 +1324,37 @@ describe('Pixi presenter startup configuration', () => {
     expect(block).not.toMatch(/\balpha\s*[+*]?=/);
   });
 
+  it('restores true-8x exposed-liquid emission reflection through existing light and wall state', () => {
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');
+    const eightEnd = source.indexOf('const FIELD_FRAGMENT = `', eightStart);
+    const eight = source.slice(eightStart, eightEnd);
+    const liquidStart = eight.indexOf('  float liquidCohesionAlphaScale = 1.0;');
+    const reflectionStart = eight.indexOf('// Normal WebGL reflects the shared compact emission field', liquidStart);
+    const reflectionEnd = eight.indexOf('      }\n      // Normal WebGL\'s Surface control', reflectionStart);
+    const packedStart = eight.indexOf('  bool needsPackedState =');
+    const packedEnd = eight.indexOf('  if (uSourceTargetStyling > 0.5', packedStart);
+    const reflection = eight.slice(reflectionStart, reflectionEnd);
+    const packed = eight.slice(packedStart, packedEnd);
+
+    expect(reflectionStart).toBeGreaterThan(liquidStart);
+    expect(reflectionEnd).toBeGreaterThan(reflectionStart);
+    expect(eight).toContain('float liquidEmissionReflectionStrength = 0.0;');
+    expect(reflection).toContain('uSurfaceContourLighting > 0.5 && liquidForeignContact < 0.5');
+    expect(reflection).toContain('density > 0.08 && density < 0.92 && emission.a > 0.002');
+    expect(reflection).toContain('float liquidAirLeft = 1.0 - step(0.5, liquidMaterialLeft);');
+    expect(reflection).toContain('float validatedLiquidAir = max(');
+    expect(reflection).toContain('smoothstep(0.16, 0.66, liquidLeft.a)');
+    expect(reflection).toContain('liquidEmissionReflectionStrength = emissionReach * validatedLiquidAir * airFacingRim');
+    expect(reflection).not.toContain('texture(');
+    expect(reflection).not.toContain('uTime');
+    expect(reflection).not.toMatch(/\balpha\s*[+*]?=/);
+    expect(packed).toContain('liquidEmissionReflectionStrength > 0.0001');
+    expect(packed).toContain('* emission.rgb * liquidEmissionReflectionStrength');
+    expect(packed).toContain('uNativeWallsActive < 0.5 || nativeWall < 0.5');
+    expect(eight.match(/texture\(uWallTexture, uv\)/g)).toHaveLength(3);
+  });
+
   it('keeps true-8x Device bodies arithmetic-only and RGB-only', () => {
     const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
     const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');
