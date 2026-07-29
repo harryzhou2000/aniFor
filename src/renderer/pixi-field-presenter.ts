@@ -5504,6 +5504,60 @@ void main() {
       float decayPulse = 0.5 + 0.5 * sin(uTime * 1.55 + material * 0.73 + isotope * 1.8);
       color *= 0.97 + isotope * 0.038 * interiorMicroGain + decayPulse * 0.012;
       color += vec3(0.10, 0.25, 0.13) * radioactiveSurface * decayPulse * 0.035;
+      // Exact dense radioactive bodies need a coherent core before their
+      // static isotope marks and retained POLO/VIBR state are layered below.
+      // This consumes the existing solid thickness/relief/Fresnel response
+      // only; phase, support, alpha, native state, and Energy emission remain
+      // owned by their established paths.
+      bool radioactiveBody = material == 99.0 || material == 105.0 || material == 108.0
+        || material == 109.0 || material == 111.0 || material == 112.0 || material == 113.0;
+      if (uEnergyIdentityStyling > 0.5 && radioactiveBody
+        && uSolidOpticalDepth > 0.5 && family == 0.0
+        && surfaceOnly < 0.5 && halo < 0.5 && wall < 0.5
+        && traits < 0.5 && !materialEmissive
+        && solidOpticalDepth > 6.0 / 255.0 && solidInterior > 0.001) {
+        float radioactiveDepth = smoothstep(6.0 / 255.0, 42.0 / 255.0, solidOpticalDepth);
+        float radioactiveRelief = clamp(solidReliefTone * 255.0 / 6.0, -1.0, 1.0)
+          * radioactiveDepth;
+        float radioactiveCrown = max(radioactiveRelief, 0.0);
+        float radioactivePocket = max(-radioactiveRelief, 0.0);
+        float radioactiveGrazing = smoothstep(0.018, 0.18, solidFresnel);
+        vec3 radioactiveAbsorption = vec3(0.038, 0.052, 0.046);
+        vec3 radioactiveKey = vec3(0.24, 0.62, 0.34);
+        float radioactiveReflection = 0.075;
+        if (material == 99.0) {
+          radioactiveAbsorption = vec3(0.052, 0.030, 0.072);
+          radioactiveKey = vec3(0.46, 0.28, 0.78);
+          radioactiveReflection = 0.088;
+        } else if (material == 105.0) {
+          radioactiveAbsorption = vec3(0.026, 0.060, 0.070);
+          radioactiveKey = vec3(0.22, 0.72, 0.80);
+          radioactiveReflection = 0.092;
+        } else if (material == 108.0 || material == 112.0) {
+          radioactiveAbsorption = vec3(0.060, 0.050, 0.018);
+          radioactiveKey = vec3(0.60, 0.78, 0.20);
+          radioactiveReflection = 0.070;
+        } else if (material == 109.0) {
+          radioactiveAbsorption = vec3(0.044, 0.062, 0.026);
+          radioactiveKey = vec3(0.38, 0.88, 0.34);
+          radioactiveReflection = 0.095;
+        } else if (material == 111.0) {
+          radioactiveAbsorption = vec3(0.070, 0.038, 0.080);
+          radioactiveKey = vec3(0.48, 0.30, 0.76);
+          radioactiveReflection = 0.110;
+        } else if (material == 113.0) {
+          radioactiveAbsorption = vec3(0.024, 0.052, 0.070);
+          radioactiveKey = vec3(0.24, 0.62, 0.88);
+          radioactiveReflection = 0.102;
+        }
+        color *= vec3(1.0) - radioactiveAbsorption
+          * (radioactivePocket * 0.72 + (1.0 - radioactiveGrazing) * 0.055)
+          * radioactiveDepth;
+        color += (vec3(1.0) - clamp(color, 0.0, 1.0))
+          * (radioactiveKey * (radioactiveCrown * 0.16 + radioactiveGrazing * 0.070)
+            + solidEnvironment * (0.040 + radioactiveGrazing * radioactiveReflection))
+          * radioactiveDepth;
+      }
     } else if (deviceSurface > 0.5 || (optics < 0.5 && profile == 5.0)) {
       vec2 circuitCell = abs(fract((fieldPosition + vec2(material * 0.37, material * 0.19)) / 8.0) - 0.5);
       float trace = max(1.0 - smoothstep(0.055, 0.105, circuitCell.x), 1.0 - smoothstep(0.055, 0.105, circuitCell.y));

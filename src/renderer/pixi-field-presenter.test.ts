@@ -1151,6 +1151,27 @@ describe('Pixi presenter startup configuration', () => {
     expect(block).not.toMatch(/\balpha\s*[+*]?=/);
   });
 
+  it('gives dense radioactive solids an exact-owner depth body without changing support', () => {
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const normalStart = source.indexOf('const FIELD_FRAGMENT = `');
+    const start = source.indexOf('    } else if (radioactiveSurface > 0.5 || (optics < 0.5 && profile == 4.0)) {', normalStart);
+    const end = source.indexOf('    } else if (deviceSurface > 0.5 || (optics < 0.5 && profile == 5.0)) {', start);
+    const block = source.slice(start, end);
+
+    expect(normalStart).toBeGreaterThan(0);
+    expect(start).toBeGreaterThan(normalStart);
+    expect(end).toBeGreaterThan(start);
+    expect(block).toContain('uEnergyIdentityStyling > 0.5 && radioactiveBody');
+    for (const material of ['99.0', '105.0', '108.0', '109.0', '111.0', '112.0', '113.0']) {
+      expect(block).toContain(`material == ${material}`);
+    }
+    expect(block).toContain('solidOpticalDepth > 6.0 / 255.0 && solidInterior > 0.001');
+    expect(block).toContain('float radioactiveGrazing = smoothstep(0.018, 0.18, solidFresnel);');
+    expect(block).toContain('solidEnvironment * (0.040 + radioactiveGrazing * radioactiveReflection)');
+    expect(block).not.toContain('texture(');
+    expect(block).not.toMatch(/\balpha\s*[+*]?=/);
+  });
+
   it('gives true-8x rigid contours bounded Hermite curvature without new samples', () => {
     const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
     const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');
