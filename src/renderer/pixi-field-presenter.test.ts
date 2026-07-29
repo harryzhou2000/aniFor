@@ -1129,7 +1129,7 @@ describe('Pixi presenter startup configuration', () => {
     expect(block).not.toMatch(/\b(?:pow|normalize)\s*\(/);
   });
 
-  it('restores true-8x translucent rigid alpha, shell, and field transmission without a new sample', () => {
+  it('restores true-8x translucent rigid alpha, environment shell, and field transmission without a new sample', () => {
     const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
     const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');
     const eightEnd = source.indexOf('const FIELD_FRAGMENT = `', eightStart);
@@ -1150,10 +1150,16 @@ describe('Pixi presenter startup configuration', () => {
     expect(block).toContain('family == 0.0 && optics == 12.0 && traits < 0.5 && !materialEmissive');
     expect(block).toContain('q00 * q10 * q01 * q11');
     expect(block).toContain('uTranslucentLensShell > 0.5');
+    expect(block).toContain('vec3 crystalNormal = vec3(-translucentSlope * 0.76, 1.0);');
+    expect(block).toContain('crystalSpecular *= crystalSpecular;');
+    expect(block).toContain('float crystalFresnel = 1.0 - crystalNormal.z;');
+    expect(block).toContain('vec3 crystalEnvironment = mix(');
+    expect(block).toContain('material == 24.0 ? 0.045 : 0.032');
     expect(block).toContain('uTranslucentFieldTransmission > 0.5');
     expect(block).toContain('emission.rgb * transmissionTint * transmittedReach * transmittedWeight');
     expect(block).not.toContain('texture(');
     expect(block).not.toMatch(/\balpha\s*[+*]?=/);
+    expect(block).not.toMatch(/\b(?:pow|normalize)\s*\(/);
     expect(alpha).toContain('float translucentAlpha = (material == 12.0 || material == 24.0)');
     expect(alpha).toContain('alpha *= translucentAlpha;');
   });

@@ -1336,6 +1336,27 @@ void main() {
       float shellLight = clamp((0.46 - translucentSlope.x * 0.38
         - translucentSlope.y * 0.54) * inverseNormalLength, 0.0, 1.0);
       color += crystalKey * shellRim * (0.016 + shellLight * 0.040);
+      // The normal compositor's Glass/Ice bodies carry a broad environment and
+      // Fresnel shoulder. Reconstruct the same compact cue from the live
+      // owner slope instead of adding a field or a high-resolution blur: the
+      // translucent body stays continuous at deep zoom while its semantic
+      // coverage, alpha, refraction, and field transmission remain untouched.
+      vec3 crystalNormal = vec3(-translucentSlope * 0.76, 1.0);
+      crystalNormal *= inversesqrt(dot(crystalNormal, crystalNormal));
+      float crystalSpecular = max(0.0, dot(crystalNormal, vec3(-0.34, -0.50, 0.80)));
+      crystalSpecular *= crystalSpecular;
+      crystalSpecular *= crystalSpecular;
+      float crystalFresnel = 1.0 - crystalNormal.z;
+      crystalFresnel *= crystalFresnel;
+      vec3 crystalEnvironment = mix(
+        vec3(0.035, 0.055, 0.080), vec3(0.10, 0.070, 0.040),
+        clamp(0.48 - crystalNormal.y * 0.55 + crystalNormal.x * 0.12, 0.0, 1.0)
+      );
+      float crystalShellGloss = shellRim * (0.012 + crystalSpecular * 0.036
+        + crystalFresnel * 0.030);
+      color += (vec3(1.0) - clamp(color, 0.0, 1.0)) * crystalKey * crystalShellGloss;
+      color += crystalEnvironment * shellRim * crystalFresnel
+        * (material == 24.0 ? 0.045 : 0.032);
     }
     float exactTranslucentInterior = q00 * q10 * q01 * q11;
     if (uTranslucentFieldTransmission > 0.5 && exactTranslucentInterior > 0.5
