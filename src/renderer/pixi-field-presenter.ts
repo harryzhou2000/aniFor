@@ -1331,11 +1331,50 @@ void main() {
     float inverseNormalLength = inversesqrt(0.78 + dot(translucentSlope, translucentSlope));
     float shellRim = (1.0 - smoothstep(0.58, 0.98, density))
       * smoothstep(0.12, 0.58, density) * (0.34 + (1.0 - 0.88 * inverseNormalLength) * 0.66);
-    vec3 crystalKey = material == 12.0 ? vec3(0.58, 0.86, 1.00) : vec3(0.45, 0.78, 1.00);
+    // Keep the whole crystalline family legible at deep zoom. The normal
+    // compositor already gives each rigid a distinct optical identity; carry
+    // that vocabulary here from the same local density/slope state instead of
+    // making DRIC, NICE, QRTZ, and RIME all read as generic blue glass.
+    vec3 crystalKey = vec3(0.45, 0.78, 1.00);
+    float crystalCoreAbsorption = 0.010;
+    float crystalRimGain = 1.0;
+    float crystalEnvironmentGain = 0.045;
+    if (material == 24.0) {
+      crystalKey = vec3(0.45, 0.78, 1.00);
+      crystalCoreAbsorption = 0.010;
+      crystalRimGain = 1.0;
+      crystalEnvironmentGain = 0.045;
+    } else if (material == 12.0) {
+      crystalKey = vec3(0.58, 0.86, 1.00);
+      crystalCoreAbsorption = 0.006;
+      crystalRimGain = 0.82;
+      crystalEnvironmentGain = 0.032;
+    } else if (material == 68.0) {
+      crystalKey = vec3(0.46, 0.74, 0.96);
+      crystalCoreAbsorption = 0.018;
+      crystalRimGain = 0.68;
+      crystalEnvironmentGain = 0.028;
+    } else if (material == 74.0) {
+      crystalKey = vec3(0.54, 0.88, 1.00);
+      crystalCoreAbsorption = 0.008;
+      crystalRimGain = 1.18;
+      crystalEnvironmentGain = 0.038;
+    } else if (material == 76.0) {
+      crystalKey = vec3(0.58, 0.74, 1.00);
+      crystalCoreAbsorption = 0.012;
+      crystalRimGain = 0.92;
+      crystalEnvironmentGain = 0.050;
+    } else if (material == 77.0) {
+      crystalKey = vec3(0.64, 0.86, 1.00);
+      crystalCoreAbsorption = 0.009;
+      crystalRimGain = 1.05;
+      crystalEnvironmentGain = 0.034;
+    }
     if (uTranslucentLensShell > 0.5) {
       float shellLight = clamp((0.46 - translucentSlope.x * 0.38
         - translucentSlope.y * 0.54) * inverseNormalLength, 0.0, 1.0);
-      color += crystalKey * shellRim * (0.016 + shellLight * 0.040);
+      color *= 1.0 - translucentDepth * crystalCoreAbsorption;
+      color += crystalKey * shellRim * crystalRimGain * (0.016 + shellLight * 0.040);
       // The normal compositor's Glass/Ice bodies carry a broad environment and
       // Fresnel shoulder. Reconstruct the same compact cue from the live
       // owner slope instead of adding a field or a high-resolution blur: the
@@ -1352,11 +1391,11 @@ void main() {
         vec3(0.035, 0.055, 0.080), vec3(0.10, 0.070, 0.040),
         clamp(0.48 - crystalNormal.y * 0.55 + crystalNormal.x * 0.12, 0.0, 1.0)
       );
-      float crystalShellGloss = shellRim * (0.012 + crystalSpecular * 0.036
+      float crystalShellGloss = shellRim * crystalRimGain * (0.012 + crystalSpecular * 0.036
         + crystalFresnel * 0.030);
       color += (vec3(1.0) - clamp(color, 0.0, 1.0)) * crystalKey * crystalShellGloss;
       color += crystalEnvironment * shellRim * crystalFresnel
-        * (material == 24.0 ? 0.045 : 0.032);
+        * crystalEnvironmentGain;
     }
     float exactTranslucentInterior = q00 * q10 * q01 * q11;
     if (uTranslucentFieldTransmission > 0.5 && exactTranslucentInterior > 0.5

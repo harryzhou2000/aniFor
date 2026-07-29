@@ -1154,7 +1154,15 @@ describe('Pixi presenter startup configuration', () => {
     expect(block).toContain('crystalSpecular *= crystalSpecular;');
     expect(block).toContain('float crystalFresnel = 1.0 - crystalNormal.z;');
     expect(block).toContain('vec3 crystalEnvironment = mix(');
-    expect(block).toContain('material == 24.0 ? 0.045 : 0.032');
+    for (const material of [12, 24, 68, 74, 76, 77]) {
+      expect(block).toContain(`material == ${material}.0`);
+    }
+    expect(block).toContain('float crystalCoreAbsorption = 0.010;');
+    expect(block).toContain('float crystalRimGain = 1.0;');
+    expect(block).toContain('float crystalEnvironmentGain = 0.045;');
+    expect(block).toContain('color *= 1.0 - translucentDepth * crystalCoreAbsorption;');
+    expect(block).toContain('shellRim * crystalRimGain');
+    expect(block).toContain('* crystalEnvironmentGain;');
     expect(block).toContain('uTranslucentFieldTransmission > 0.5');
     expect(block).toContain('emission.rgb * transmissionTint * transmittedReach * transmittedWeight');
     expect(block).not.toContain('texture(');
@@ -1869,25 +1877,39 @@ describe('Pixi presenter startup configuration', () => {
 
   it('extends the sample-free translucent lens shell to every crystalline rigid material', () => {
     const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
-    // The compact 8x shader has a deliberately smaller translucent path.
-    // Scope this regression to the normal shader, whose full crystalline
-    // family shell is being asserted here.
+    // Both WebGL compositors intentionally cover the complete crystalline
+    // family. The compact path relies on its already-live density/slope state
+    // rather than the normal shader's broader body-relief vocabulary.
     const normalStart = source.indexOf('const FIELD_FRAGMENT = `');
+    const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');
+    const eightEnd = source.indexOf('const FIELD_FRAGMENT = `', eightStart);
+    const compactSource = source.slice(eightStart, eightEnd);
+    const compactStart = compactSource.indexOf('// TranslucentRigid is the intentional presentation-alpha exception.');
+    const compactEnd = compactSource.indexOf('// Compact Device bodies retain', compactStart);
+    const compact = compactSource.slice(compactStart, compactEnd);
     const start = source.indexOf('if (uTranslucentLensShell > 0.5', normalStart);
     const end = source.indexOf('      float translucentAlpha =', start);
     const shell = source.slice(start, end);
 
     expect(normalStart).toBeGreaterThan(0);
+    expect(compactStart).toBeGreaterThan(0);
+    expect(compactEnd).toBeGreaterThan(compactStart);
     expect(start).toBeGreaterThan(0);
     expect(end).toBeGreaterThan(start);
     for (const material of [12, 24, 68, 74, 76, 77]) {
       expect(shell).toContain(`material == ${material}.0`);
+      expect(compact).toContain(`material == ${material}.0`);
     }
     expect(shell).toContain('solidReliefTone');
     expect(shell).toContain('solidDepth');
     expect(shell).toContain('solidFresnel');
     expect(shell).not.toContain('texture(');
     expect(shell).not.toMatch(/\balpha\s*[+*]?=/);
+    expect(compact).toContain('crystalCoreAbsorption');
+    expect(compact).toContain('crystalRimGain');
+    expect(compact).toContain('crystalEnvironmentGain');
+    expect(compact).not.toContain('texture(');
+    expect(compact).not.toMatch(/\balpha\s*[+*]?=/);
   });
 
   it('seeds and redraws solid optical depth independently', () => {
