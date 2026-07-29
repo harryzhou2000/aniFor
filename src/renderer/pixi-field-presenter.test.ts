@@ -699,6 +699,35 @@ describe('Pixi presenter startup configuration', () => {
     expect(`${helper}${block}`).not.toContain('uTime');
   });
 
+  it('keeps WAX and MWAX on one bounded 32-cell grammar in compact true-8x WebGL', () => {
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');
+    const eightEnd = source.indexOf('const FIELD_FRAGMENT = `', eightStart);
+    const eight = source.slice(eightStart, eightEnd);
+    const helperStart = eight.indexOf('vec3 waxEightXIdentityDelta(');
+    const helperEnd = eight.indexOf('// The normal path has a richer fourteen-material liquid grammar.', helperStart);
+    const solidStart = eight.indexOf('vec3 unusualSolidEightXDelta(', helperEnd);
+    const solidEnd = eight.indexOf('bool solidEightXGranular(', solidStart);
+    const liquidStart = eight.indexOf('// Public unusual, metallic, cryogenic, and phase-product liquids need a visual grammar');
+    const liquidEnd = eight.indexOf('  // The shared suspension field is powder-authored', liquidStart);
+    const helper = eight.slice(helperStart, helperEnd);
+    const solid = eight.slice(solidStart, solidEnd);
+    const liquid = eight.slice(liquidStart, liquidEnd);
+
+    expect(helperStart).toBeGreaterThan(0);
+    expect(helperEnd).toBeGreaterThan(helperStart);
+    for (const motif of ['mod(floor(worldPosition), 32.0)', 'bloom', 'raisedRidge', 'recessedFold', 'waxJoint']) {
+      expect(helper).toContain(motif);
+    }
+    expect(helper).toContain('if (phase > 0.5) support *= 0.48 + depth * 0.52;');
+    expect(solid).toContain('style == 1.0) return waxEightXIdentityDelta(0.0, position, density, 1.0);');
+    expect(liquid).toContain('material == 59.0 && traits < 0.5');
+    expect(liquid).toContain('waxEightXIdentityDelta(1.0, grid, density, depth)');
+    expect(`${helper}${solid}${liquid}`).not.toContain('texture(');
+    expect(`${helper}${solid}${liquid}`).not.toContain('uTime');
+    expect(`${helper}${solid}${liquid}`).not.toMatch(/\balpha\s*[+*]?=/);
+  });
+
   it('keeps true-8x analytic body lighting independent of expensive probes', () => {
     const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
     expect(source).toContain("uHighQuality: {\n        value: matchMedia('(min-width: 800px)').matches && outputScale < 8 ? 1 : 0");

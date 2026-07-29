@@ -356,6 +356,36 @@ vec3 liquidEightXMeniscusShadow(float optics) {
   if (optics == 17.0) return vec3(0.58, 0.62, 0.70); // Metallic
   return vec3(0.70, 0.64, 0.58); // Viscous
 }
+// WAX and MWAX are native phase partners rather than unrelated materials. Keep
+// one compact, world-anchored 32-cell lamella/bloom grammar at true 8x while
+// allowing molten wax to soften through the density/depth values already live
+// in the liquid branch. This is RGB-only arithmetic: no sampler, clock,
+// derivative, alpha, support, or ownership decision is introduced here.
+vec3 waxEightXIdentityDelta(float phase, vec2 worldPosition, float density, float depth) {
+  vec2 cell = mod(floor(worldPosition), 32.0);
+  vec2 local = mod(cell, 16.0) - vec2(8.0);
+  float radiusSquared = dot(local, local);
+  float bloom = step(27.0, radiusSquared) * (1.0 - step(50.0, radiusSquared));
+  float lamella = mod(cell.x + cell.y * 2.0 + floor(cell.x / 8.0) * 2.0, 16.0);
+  float raisedRidge = 1.0 - step(3.0, lamella);
+  float recessedFold = step(9.0, lamella) * (1.0 - step(12.0, lamella));
+  float waxJoint = bloom * (1.0 - step(1.0, mod(cell.x + cell.y, 4.0)));
+  vec3 delta = vec3(1.0, 1.0, 0.0);
+  if (phase < 0.5) {
+    if (waxJoint > 0.5) delta = vec3(11.0, 9.0, 4.0);
+    else if (bloom > 0.5) delta = vec3(7.0, 6.0, 2.0);
+    else if (raisedRidge > 0.5) delta = vec3(8.0, 6.0, 2.0);
+    else if (recessedFold > 0.5) delta = vec3(-6.0, -5.0, -3.0);
+  } else {
+    if (waxJoint > 0.5) delta = vec3(7.0, 7.0, 3.0);
+    else if (bloom > 0.5) delta = vec3(4.0, 5.0, 2.0);
+    else if (raisedRidge > 0.5) delta = vec3(6.0, 6.0, 2.0);
+    else if (recessedFold > 0.5) delta = vec3(-3.0, -3.0, -2.0);
+  }
+  float support = smoothstep(0.08, 0.72, density);
+  if (phase > 0.5) support *= 0.48 + depth * 0.52;
+  return clamp(delta * support, vec3(-14.0), vec3(14.0)) / 255.0;
+}
 // The normal path has a richer fourteen-material liquid grammar. At 15M
 // fragments, the same fourteen public and radioactive liquid identities share one small
 // material-seeded grammar: duplicating fourteen independent motif trees can exceed
@@ -933,6 +963,7 @@ float unusualSolidEightXStyle(float material) {
 vec3 unusualSolidEightXDelta(float material, vec2 position, float density) {
   float style = unusualSolidEightXStyle(material);
   if (style < 0.5) return vec3(0.0);
+  if (style == 1.0) return waxEightXIdentityDelta(0.0, position, density, 1.0);
   vec2 cell = floor(position);
   vec2 local = mod(cell + vec2(style * 3.0, style * 5.0), 16.0) - vec2(7.5);
   float diagonal = fract(cell.x * (0.043 + style * 0.001)
@@ -942,11 +973,7 @@ vec3 unusualSolidEightXDelta(float material, vec2 position, float density) {
     11.0 + mod(style, 4.0)));
   float radius = abs(local.x) + abs(local.y);
   vec3 delta;
-  if (style == 1.0) {
-    // WAX: cooling lamellae and a light crystalline bloom.
-    float lamella = 1.0 - step(1.0, mod(cell.x + cell.y * 2.0, 7.0));
-    delta = lamella > 0.5 ? vec3(8.0, 6.0, 1.0) : vec3(2.0, 1.0, -2.0);
-  } else if (style >= 2.0 && style <= 5.0) {
+  if (style >= 2.0 && style <= 5.0) {
     // DRIC/NICE/QRTZ/RIME: distinct cold/crystal facets share a fine stable grid.
     float facet = max(ribbon, node * 0.82);
     vec3 crystal = style == 2.0 ? vec3(-4.0, 7.0, 12.0)
@@ -1773,8 +1800,10 @@ void main() {
         || (material >= 59.0 && material <= 62.0)
         || material == 100.0 || material == 102.0 || material == 104.0
         || material == 202.0 || material == 207.0)) {
-      color += liquidIdentityEightXDelta(material, grid, density, depth, liquidSlope)
-        * uLiquidIdentityStyling;
+      vec3 liquidIdentityDelta = material == 59.0 && traits < 0.5
+        ? waxEightXIdentityDelta(1.0, grid, density, depth)
+        : liquidIdentityEightXDelta(material, grid, density, depth, liquidSlope);
+      color += liquidIdentityDelta * uLiquidIdentityStyling;
     }
   }
   // The shared suspension field is powder-authored, so use it only for

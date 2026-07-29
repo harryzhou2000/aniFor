@@ -242,11 +242,17 @@ function buildMotifProbes(
     for (let tileX = firstTileX; tileX + 32 <= body.x + body.width; tileX += 32) {
       const set = {
         tileOrigin: { x: tileX, y: tileY },
-        ridge: { x: tileX, y: tileY, width: 1, height: 1 },
-        fold: { x: tileX + 8, y: tileY, width: 1, height: 1 },
+        // Keep every probe at the centre of its local response neighbourhood.
+        // The true-8x gate samples the composed CSS page over roughly three
+        // world cells; the older locations sat immediately beside a different
+        // motif (notably a ridge beside the "interstitial" point), which made
+        // that visual assertion depend on downsample phase rather than the
+        // shared WAX/MWAX grammar itself.
+        ridge: { x: tileX + 26, y: tileY + 1, width: 1, height: 1 },
+        fold: { x: tileX + 3, y: tileY + 3, width: 1, height: 1 },
         bloom: { x: tileX + 8, y: tileY + 1, width: 1, height: 1 },
-        joint: { x: tileX + 6, y: tileY + 2, width: 1, height: 1 },
-        interstitial: { x: tileX + 3, y: tileY, width: 1, height: 1 },
+        joint: { x: tileX + 12, y: tileY + 12, width: 1, height: 1 },
+        interstitial: { x: tileX + 10, y: tileY + 8, width: 1, height: 1 },
       } satisfies WaxGraphicsMotifProbeSet;
       if (motifProbeRects(set).every((rect) => rectInside(rect, body)
         && !rectanglesOverlap(rect, authoredCavity)

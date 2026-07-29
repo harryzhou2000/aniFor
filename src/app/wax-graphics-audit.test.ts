@@ -108,6 +108,13 @@ describe('wax graphics audit fixture', () => {
     const probeCounts = WAX_GRAPHICS_ATLAS.map(({ motifProbes }) => motifProbes.length);
     expect(probeCounts).toEqual([10, 10]);
     const referenceSignature = relativeMotifSignature(WAX_GRAPHICS_ATLAS[0]);
+    expect(WAX_GRAPHICS_ATLAS[0].motifProbes[0]).toMatchObject({
+      ridge: { x: 58, y: 33 },
+      fold: { x: 35, y: 35 },
+      bloom: { x: 40, y: 33 },
+      joint: { x: 44, y: 44 },
+      interstitial: { x: 42, y: 40 },
+    });
     for (const entry of WAX_GRAPHICS_ATLAS) {
       expect(relativeMotifSignature(entry)).toEqual(referenceSignature);
       for (const probe of entry.motifProbes) {

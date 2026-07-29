@@ -13531,6 +13531,11 @@ async function auditRenderScaleEight(cdp, dpr) {
   stage('lava-body-optics-ready');
   const sparkStateGraphics = await auditEightXSparkStateGraphics(cdp, geometry.canvas);
   stage('spark-state-ready');
+  // WAX/MWAX keeps one native phase grammar even at the compact 15M-fragment
+  // path. This is deliberately canonical-WebGL-only; Canvas remains a
+  // semantic/recovery fallback and does not hold this direct-mesh finish back.
+  const waxGraphics = await auditEightXWaxGraphics(cdp, geometry.canvas);
+  stage('wax-graphics-ready');
   // Keep the DEUT fixture last: its native state is intentionally retained for
   // the forced-fence and real-context-loss recovery probes immediately below.
   const deutStateAudit = await auditEightXDeutStateGraphics(cdp, geometry.canvas);
@@ -13604,6 +13609,7 @@ async function auditRenderScaleEight(cdp, dpr) {
     lavaStateGraphics,
     lavaBodyOptics,
     sparkStateGraphics,
+    waxGraphics,
     forcedStallRecovery,
     contextLossRecovery,
   };
@@ -14917,6 +14923,163 @@ async function auditEightXSourceTargetGraphics(cdp, canvasRect) {
     })),
     occupied: prepared.occupied,
     samples,
+    exactRepeatedOff: samples.every(({ repeatRgbPeak }) => repeatRgbPeak <= 1),
+  };
+}
+
+async function snapshotEightXWaxGraphics(cdp) {
+  return evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    const snapshot = audit.waxGraphicsAtlas();
+    const cards = Array.isArray(snapshot) ? snapshot : snapshot.cards;
+    const inside = (x, y, rect) => x >= rect.x && x < rect.x + rect.width
+      && y >= rect.y && y < rect.y + rect.height;
+    const exactRect = (rect, material) => {
+      for (let y = rect.y; y < rect.y + rect.height; y++) {
+        for (let x = rect.x; x < rect.x + rect.width; x++) {
+          if (audit.cell(x, y) !== material) return false;
+        }
+      }
+      return true;
+    };
+    return {
+      occupied: audit.occupiedCells(),
+      cards: cards.map((entry) => {
+        let bodyExact = true;
+        for (let y = entry.body.y; y < entry.body.y + entry.body.height; y++) {
+          for (let x = entry.body.x; x < entry.body.x + entry.body.width; x++) {
+            const empty = inside(x, y, entry.authoredCavity) || inside(x, y, entry.openChimney);
+            bodyExact = bodyExact && audit.cell(x, y) === (empty ? 0 : entry.material);
+          }
+        }
+        return {
+          code: entry.code, material: entry.material, phase: entry.phase, bodyExact,
+          cavityEmpty: exactRect(entry.authoredCavity, 0),
+          chimneyEmpty: exactRect(entry.openChimney, 0),
+          structureExact: entry.phaseStructure.every(({ x, y }) => audit.cell(x, y) === entry.material),
+          isolatedExact: audit.cell(entry.isolated.x, entry.isolated.y) === entry.material,
+          blankExact: exactRect(entry.guardedBlank, 0),
+          waterOwnerExact: exactRect(entry.waterContact.owner, entry.material),
+          waterExact: exactRect(entry.waterContact.neighbour, entry.waterContact.neighbourMaterial),
+          metalOwnerExact: exactRect(entry.metalContact.owner, entry.material),
+          metalExact: exactRect(entry.metalContact.neighbour, entry.metalContact.neighbourMaterial),
+        };
+      }),
+    };
+  })()`);
+}
+
+function assertEightXWaxTopology(snapshot, label) {
+  assert(snapshot.cards.length === 2
+      && snapshot.cards.map(({ code }) => code).join(',') === 'WAX,MWAX'
+      && snapshot.cards.map(({ material }) => material).join(',') === '27,59'
+      && snapshot.cards.map(({ phase }) => phase).join(',') === 'solid,liquid'
+      && snapshot.cards.every((card) => card.bodyExact && card.cavityEmpty && card.chimneyEmpty
+        && card.structureExact && card.isolatedExact && card.blankExact
+        && card.waterOwnerExact && card.waterExact && card.metalOwnerExact && card.metalExact),
+  `${label}: WAX/MWAX semantic topology changed (${JSON.stringify(snapshot)})`);
+}
+
+function eightXWaxRegions(atlas) {
+  const cards = Array.isArray(atlas) ? atlas : atlas.cards;
+  const motifKinds = ['ridge', 'fold', 'bloom', 'joint', 'interstitial'];
+  return cards.flatMap((entry) => [
+    ...entry.motifProbes.flatMap((probe, index) => motifKinds.map((kind) => ({
+      name: `${entry.code}-motif-${kind}-${index}`,
+      x: probe[kind].x, y: probe[kind].y, radius: 1.3,
+    }))),
+    { name: `${entry.code}-cavity`, x: entry.authoredCavity.x + entry.authoredCavity.width / 2,
+      y: entry.authoredCavity.y + entry.authoredCavity.height / 2, radius: 2.5 },
+    { name: `${entry.code}-chimney`, x: entry.openChimney.x + entry.openChimney.width / 2,
+      y: entry.openChimney.y + entry.openChimney.height / 2, radius: 1.5 },
+    { name: `${entry.code}-water-control`, x: entry.waterContact.neighbour.x + entry.waterContact.neighbour.width / 2,
+      y: entry.waterContact.neighbour.y + entry.waterContact.neighbour.height / 2, radius: 3 },
+    { name: `${entry.code}-metal-control`, x: entry.metalContact.neighbour.x + entry.metalContact.neighbour.width / 2,
+      y: entry.metalContact.neighbour.y + entry.metalContact.neighbour.height / 2, radius: 3 },
+  ]);
+}
+
+function waxMotifAxis(samples, code, kind) {
+  const motif = samples.filter(({ name }) => name.startsWith(`${code}-motif-${kind}-`));
+  assert(motif.length === 10, `renderScale=8 ${code}/${kind} motif sample count changed`);
+  return motif.map(({ responseRgb }) => (responseRgb[0] + responseRgb[1]) * 0.5 - responseRgb[2]);
+}
+
+async function auditEightXWaxGraphics(cdp, canvasRect) {
+  const rawAtlas = await evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    if (typeof audit.prepareWaxGraphicsFixture !== 'function'
+      || typeof audit.waxGraphicsAtlas !== 'function'
+      || typeof audit.setLiquidIdentityStyling !== 'function'
+      || typeof audit.setUnusualSolidStyling !== 'function') {
+      throw new Error('True-8x WAX graphics audit API unavailable');
+    }
+    audit.resetView();
+    audit.prepareWaxGraphicsFixture();
+    return audit.waxGraphicsAtlas();
+  })()`);
+  const prepared = await snapshotEightXWaxGraphics(cdp);
+  assertEightXWaxTopology(prepared, 'renderScale=8 prepared WAX fixture');
+  const live = await metrics(cdp);
+  assert(live.backing.width === WORLD_WIDTH * 8 && live.backing.height === WORLD_HEIGHT * 8
+      && live.outputScale === '8',
+  `renderScale=8 WAX fixture lost true backing (${JSON.stringify(live.backing)})`);
+  assertCanvasRectsEqual(canvasRect, live.canvas, 'renderScale=8 WAX fixture CSS geometry');
+
+  const setWaxStyling = async (enabled) => evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    audit.setUnusualSolidStyling(${enabled});
+    audit.setLiquidIdentityStyling(${enabled});
+    return true;
+  })()`);
+  await setWaxStyling(false);
+  const flat = await captureSettledPage(cdp, 'renderScale=8 flat WAX/MWAX framebuffer', 450);
+  const flatTopology = await snapshotEightXWaxGraphics(cdp);
+  await setWaxStyling(true);
+  const styled = await captureSettledPage(cdp, 'renderScale=8 styled WAX/MWAX framebuffer', 450);
+  const styledTopology = await snapshotEightXWaxGraphics(cdp);
+  await setWaxStyling(false);
+  const repeated = await captureSettledPage(cdp, 'renderScale=8 repeated flat WAX/MWAX framebuffer', 450);
+  const repeatedTopology = await snapshotEightXWaxGraphics(cdp);
+  await setWaxStyling(true);
+  assert(JSON.stringify(flatTopology) === JSON.stringify(prepared)
+      && JSON.stringify(styledTopology) === JSON.stringify(prepared)
+      && JSON.stringify(repeatedTopology) === JSON.stringify(prepared),
+  'renderScale=8 WAX/MWAX toggle changed semantic topology');
+
+  const samples = await sampleBackdropRefractionRegions(cdp, {
+    straight: flat.capture.data,
+    refracted: styled.capture.data,
+    repeatedStraight: repeated.capture.data,
+  }, eightXWaxRegions(rawAtlas), canvasRect);
+  const motif = samples.filter(({ name }) => name.includes('-motif-'));
+  assert(motif.length === 100 && motif.every(({ rgbRms, rgbPeak, repeatRgbPeak }) => (
+    rgbRms >= 0.01 && rgbRms <= 24 && rgbPeak > 0 && rgbPeak <= 64 && repeatRgbPeak <= 1
+  )), `renderScale=8 WAX/MWAX motif response is absent, unbounded, or unstable (${JSON.stringify(motif)})`);
+  const controls = samples.filter(({ name }) => !name.includes('-motif-'));
+  assert(controls.length === 8 && controls.every(({ rgbPeak, repeatRgbPeak }) => (
+    rgbPeak <= 1 && repeatRgbPeak <= 1
+  )), `renderScale=8 WAX/MWAX leaked into an authored-air or contact control (${JSON.stringify(controls)})`);
+  const motifAxes = {};
+  for (const code of ['WAX', 'MWAX']) {
+    const ridge = waxMotifAxis(samples, code, 'ridge');
+    const joint = waxMotifAxis(samples, code, 'joint');
+    const interstitial = waxMotifAxis(samples, code, 'interstitial');
+    const mean = (values) => values.reduce((sum, value) => sum + value, 0) / values.length;
+    assert(mean(ridge) > mean(interstitial) && mean(joint) > mean(interstitial),
+      `renderScale=8 ${code} lost its lamella/joint ordering (${JSON.stringify({ ridge, joint, interstitial })})`);
+    motifAxes[code] = ['ridge', 'fold', 'bloom', 'joint', 'interstitial']
+      .flatMap((kind) => waxMotifAxis(samples, code, kind));
+  }
+  const phaseCorrelation = virusPearson(motifAxes.WAX, motifAxes.MWAX);
+  assert(phaseCorrelation >= 0.45,
+    `renderScale=8 WAX/MWAX no longer share one spatial grammar (${phaseCorrelation})`);
+  return {
+    cards: prepared.cards.map(({ code, material, phase }) => ({ code, material, phase })),
+    occupied: prepared.occupied,
+    motifSamples: motif.length,
+    controlSamples: controls.length,
+    phaseCorrelation: round(phaseCorrelation, 4),
     exactRepeatedOff: samples.every(({ repeatRgbPeak }) => repeatRgbPeak <= 1),
   };
 }
