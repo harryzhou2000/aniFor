@@ -4240,6 +4240,15 @@ void main() {
       -0.10, 0.10
     );
     color *= 1.0 + energyRelief * uEnergyCoreRelief;
+    // A cohesive energy body has no hard boundary, but its dense shoulder can
+    // catch a small luminous corona. Reuse the already-live density edge,
+    // directional light, and radioactive carrier tint; sparse PHOT has zero
+    // cohesive support, while alpha/support and the field-owned aura remain
+    // exactly untouched.
+    float energyCorona = cohesiveEnergy * edge * smoothstep(0.96, 1.12, diffuse) * 0.035;
+    vec3 energyCoronaTint = mix(vec3(1.0, 0.68, 0.36), vec3(0.62, 0.86, 1.0), radioactiveCarrier);
+    color += (vec3(1.0) - clamp(color, 0.0, 1.0))
+      * energyCoronaTint * energyCorona * uEnergyCoreRelief;
     // Dense supported energy is one body, not a screen of independently
     // flashing carrier pixels. Retain exact identity at the sparse edge while
     // letting the existing broad flow/pulse relief own the dense core. Apply

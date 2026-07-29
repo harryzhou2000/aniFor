@@ -2127,6 +2127,22 @@ describe('Pixi presenter startup configuration', () => {
     expect(block).not.toMatch(/\balpha\s*[+*]?=/);
   });
 
+  it('adds a bounded field-gated corona to cohesive WebGL energy bodies', () => {
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const normal = source.slice(source.indexOf('const FIELD_FRAGMENT = `'));
+    const start = normal.indexOf('float energyCorona = cohesiveEnergy * edge');
+    const end = normal.indexOf('  } else if (gasVolume > 0.5) {', start);
+    const block = normal.slice(start, end);
+
+    expect(start).toBeGreaterThan(0);
+    expect(end).toBeGreaterThan(start);
+    expect(block).toContain('smoothstep(0.96, 1.12, diffuse) * 0.035');
+    expect(block).toContain('mix(vec3(1.0, 0.68, 0.36), vec3(0.62, 0.86, 1.0), radioactiveCarrier)');
+    expect(block).toContain('* energyCorona * uEnergyCoreRelief;');
+    expect(block).not.toContain('texture(');
+    expect(block).not.toMatch(/\balpha\s*[+*]?=/);
+  });
+
   it('hydrates disabled powder body depth without an intermediate frame', () => {
     const presenter = presenterHarness();
 
