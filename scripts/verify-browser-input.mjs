@@ -12400,6 +12400,12 @@ async function auditRenderScaleEight(cdp, dpr) {
   const thermalMaterialGraphics = await auditEightXThermalMaterialGraphics(cdp, geometry.canvas);
   stage('thermal-material-ready');
 
+  // The direct mesh owns canonical gas-volume relief at 8x. Keep this before
+  // fixture-replacement stages so the existing Smoke/O2/Noble/Fog composition
+  // remains the authority; Canvas visual parity stays explicitly optional.
+  const gasVolumeRelief = await auditEightXGasVolumeRelief(cdp, geometry.canvas);
+  stage('gas-volume-relief-ready');
+
   const presentationTiming = await auditWebGLPresentationTiming(cdp, 8, 12_000, 30_000);
   assert(presentationTiming.source === 'gpu-query' || presentationTiming.source === 'gpu-fence',
     `renderScale=8 timing did not prove completed GPU work (${JSON.stringify(presentationTiming)})`);
@@ -14267,6 +14273,105 @@ async function auditEightXThermalMaterialGraphics(cdp, canvasRect) {
       && Math.abs(sample.neutralWorldArea - sample.styledWorldArea) <= 0.60),
   `renderScale=8 thermal styling changed composed support (${JSON.stringify(support)})`);
   return { fixture, responseSamples, repeatSamples, support };
+}
+
+/**
+ * True-8x direct gas-volume lighting proof. The atmosphere field remains the
+ * sole owner of gas alpha and topology; this toggle may change RGB relief only.
+ */
+async function auditEightXGasVolumeRelief(cdp, canvasRect) {
+  const fixture = await evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    if (typeof audit.setGasFieldLighting !== 'function'
+      || typeof audit.atmosphereSupportAudit !== 'function') {
+      throw new Error('True-8x gas-volume relief API unavailable');
+    }
+    const signature = (() => {
+      let hash = 2166136261;
+      for (let y = 0; y < 190; y++) for (let x = 350; x < 612; x++) {
+        hash = Math.imul(hash ^ audit.cell(x, y), 16777619);
+      }
+      return hash >>> 0;
+    })();
+    return { support: audit.atmosphereSupportAudit(), semanticSignature: signature };
+  })()`);
+  const live = await metrics(cdp);
+  assert(live.backing.width === WORLD_WIDTH * 8 && live.backing.height === WORLD_HEIGHT * 8
+      && live.outputScale === '8',
+  `renderScale=8 gas-volume relief lost true backing (${JSON.stringify(live.backing)})`);
+  assertCanvasRectsEqual(canvasRect, live.canvas, 'renderScale=8 gas-volume relief CSS geometry');
+
+  const state = () => evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    let hash = 2166136261;
+    for (let y = 0; y < 190; y++) for (let x = 350; x < 612; x++) {
+      hash = Math.imul(hash ^ audit.cell(x, y), 16777619);
+    }
+    return { support: audit.atmosphereSupportAudit(), semanticSignature: hash >>> 0 };
+  })()`);
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setGasFieldLighting(false); true');
+  const flat = await captureSettledPage(cdp, 'renderScale=8 flat gas-volume-relief framebuffer', 450);
+  const flatState = await state();
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setGasFieldLighting(true); true');
+  const lit = await captureSettledPage(cdp, 'renderScale=8 lit gas-volume-relief framebuffer', 450);
+  const litState = await state();
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setGasFieldLighting(false); true');
+  const repeated = await captureSettledPage(cdp, 'renderScale=8 repeated flat gas-volume-relief framebuffer', 450);
+  const repeatedState = await state();
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setGasFieldLighting(true); true');
+  assert(JSON.stringify(fixture) === JSON.stringify(flatState)
+      && JSON.stringify(fixture) === JSON.stringify(litState)
+      && JSON.stringify(fixture) === JSON.stringify(repeatedState),
+  `renderScale=8 gas relief mutated semantic gas or atmosphere alpha (${JSON.stringify({
+    fixture, flatState, litState, repeatedState,
+  })})`);
+
+  const regions = [
+    { name: 'smokeGasRelief8x', x: 382, y: 40, radius: 9 },
+    { name: 'oxygenGasRelief8x', x: 486, y: 32, radius: 10 },
+    { name: 'nobleGasRelief8x', x: 544, y: 54, radius: 9 },
+    { name: 'fogGasRelief8x', x: 430, y: 171, radiusX: 30, radiusY: 10 },
+    { name: 'waterGasReliefControl8x', x: 238, y: 79, radius: 10 },
+    { name: 'metalGasReliefControl8x', x: 405, y: 229, radius: 6 },
+  ];
+  const samples = await sampleBackdropRefractionRegions(cdp, {
+    straight: flat.capture.data,
+    refracted: lit.capture.data,
+    repeatedStraight: repeated.capture.data,
+  }, regions, canvasRect);
+  const byName = Object.fromEntries(samples.map((sample) => [sample.name, sample]));
+  for (const name of [
+    'smokeGasRelief8x', 'oxygenGasRelief8x', 'nobleGasRelief8x', 'fogGasRelief8x',
+  ]) {
+    const sample = byName[name];
+    assert(sample.rgbPeak <= 24 && sample.repeatRgbPeak <= 1,
+      `renderScale=8 ${name} gas relief was unbounded or non-repeatable (${JSON.stringify(samples)})`);
+  }
+  assert(byName.smokeGasRelief8x.rgbRms >= 0.01
+      && byName.nobleGasRelief8x.rgbRms >= 0.01,
+  `renderScale=8 gas-volume relief did not change canonical Smoke/Noble RGB (${JSON.stringify(samples)})`);
+  assert(byName.waterGasReliefControl8x.rgbPeak <= 1
+      && byName.metalGasReliefControl8x.rgbPeak <= 1,
+  `renderScale=8 gas-volume relief leaked into liquid/solid controls (${JSON.stringify(samples)})`);
+
+  const supportRegions = regions.slice(0, 4).map((region) => ({
+    ...region, silhouette: true, fastSupport: true,
+  }));
+  const [flatSupport, litSupport] = await Promise.all([
+    samplePageRegions(cdp, flat.capture.data, supportRegions, undefined, undefined, canvasRect),
+    samplePageRegions(cdp, lit.capture.data, supportRegions, undefined, undefined, canvasRect),
+  ]);
+  const screenSupport = flatSupport.map((sample, index) => ({
+    name: sample.name,
+    flatVisible: sample.visible,
+    litVisible: litSupport[index].visible,
+    flatWorldArea: sample.worldArea,
+    litWorldArea: litSupport[index].worldArea,
+  }));
+  assert(screenSupport.every((sample) => sample.flatVisible === sample.litVisible
+      && Math.abs(sample.flatWorldArea - sample.litWorldArea) <= 0.60),
+  `renderScale=8 gas-volume relief changed composed support (${JSON.stringify(screenSupport)})`);
+  return { fixture, samples, screenSupport };
 }
 
 async function snapshotEightXUnusualPowders(cdp) {

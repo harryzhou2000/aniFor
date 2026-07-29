@@ -705,6 +705,37 @@ describe('Pixi presenter startup configuration', () => {
     expect(eight).toContain('float alpha = family == 1.0 ? smoothstep(0.006, 0.26, density) * 0.48');
   });
 
+  it('restores true-8x gas volume relief from cardinal atmosphere alpha only', () => {
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');
+    const eightEnd = source.indexOf('const FIELD_FRAGMENT = `', eightStart);
+    const eight = source.slice(eightStart, eightEnd);
+    const helperStart = eight.indexOf('vec3 gasEightXVolumeRelief(');
+    const helperEnd = eight.indexOf('// The direct 8x compositor cannot carry', helperStart);
+    const emptyStart = eight.indexOf('else if (atmosphere.a > 0.004) {');
+    const semanticStart = eight.indexOf('if (family == 1.0) {');
+    const semanticEnd = eight.indexOf('  else if (family == 2.0)', semanticStart);
+    const helper = eight.slice(helperStart, helperEnd);
+    const empty = eight.slice(emptyStart, semanticStart);
+    const semantic = eight.slice(semanticStart, semanticEnd);
+
+    expect(helperStart).toBeGreaterThan(0);
+    expect(helperEnd).toBeGreaterThan(helperStart);
+    expect(eight).toContain('uniform vec2 uAtmosphereTexel;');
+    expect(helper).toContain('float neighbourMean = (left + right + top + bottom) * 0.25;');
+    expect(helper).toContain('float curvature = clamp((density - neighbourMean) * 8.0, -1.0, 1.0);');
+    expect(helper).toContain('return vec3(0.060, 0.076, 0.108) * key');
+    expect(`${helper}${empty}${semantic}`).not.toContain('uTime');
+    expect(`${helper}${empty}${semantic}`).not.toMatch(/\balpha\s*[+*]?=/);
+    for (const branch of [empty, semantic]) {
+      expect(branch).toContain('if (uGasFieldLighting > 0.5)');
+      expect(branch.match(/texture\(uAtmosphereTexture/g)).toHaveLength(4);
+      expect(branch).toContain('gasEightXVolumeRelief(');
+      expect(branch).toMatch(/texture\(uAtmosphereTexture,[\s\S]*?\)\.a/);
+      expect(branch).not.toMatch(/texture\(uAtmosphereTexture,[\s\S]*?\)\.rgb/);
+    }
+  });
+
   it('keeps true-8x dense gas identity on the existing propagated R8 style field', () => {
     const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
     const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');

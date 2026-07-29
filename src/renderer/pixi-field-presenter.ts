@@ -106,6 +106,7 @@ uniform sampler2D uBoundaryStabilityTexture;
 uniform sampler2D uPaletteTexture;
 uniform sampler2D uStyleTexture;
 uniform vec2 uTexel;
+uniform vec2 uAtmosphereTexel;
 uniform vec2 uFieldSize;
 uniform float uNativeWallsActive;
 uniform float uPowderStyle;
@@ -248,6 +249,35 @@ vec3 gasIdentityEightXChroma(float style, float density) {
   // changes support nor consumes the bounded gas-volume response budget.
   return style > 6.5 && style < 7.5
     ? vec3(0.014, -0.009, 0.016) * density : vec3(0.0);
+}
+// The direct compositor otherwise has only one atmosphere sample, so deep
+// clouds remain continuous but read flatter than the normal WebGL path. Reuse
+// four alpha-only cardinal probes from that same shared field to restore a
+// restrained crown/pocket and directional rim. This deliberately returns RGB
+// only: atmosphere alpha remains the sole owner of gas support and final
+// opacity, and neighbour RGB/species are never blended across a cloud.
+vec3 gasEightXVolumeRelief(
+  float density, float left, float right, float top, float bottom
+) {
+  float neighbourMean = (left + right + top + bottom) * 0.25;
+  float curvature = clamp((density - neighbourMean) * 8.0, -1.0, 1.0);
+  float crown = max(curvature, 0.0);
+  float pocket = max(-curvature, 0.0);
+  vec2 slope = vec2(right - left, bottom - top);
+  float slopeLength2 = dot(slope, slope);
+  float directional = 0.0;
+  if (slopeLength2 > 0.00001) {
+    vec2 outward = -slope * inversesqrt(slopeLength2);
+    directional = max(0.0, dot(outward, vec2(-0.58, -0.815)));
+  }
+  float opticalDepth = smoothstep(0.035, 0.62, density);
+  float shell = smoothstep(0.014, 0.28, density)
+    * (1.0 - smoothstep(0.54, 0.94, density));
+  float key = (crown * 0.52 + directional * shell * 0.74)
+    * (1.0 - opticalDepth * 0.42);
+  float shade = pocket * (0.22 + opticalDepth * 0.50);
+  return vec3(0.060, 0.076, 0.108) * key
+    - vec3(0.038, 0.026, 0.052) * shade;
 }
 // The direct 8x compositor cannot carry the normal presenter's animated role
 // waves, but sources, sinks, channels, and force materials still need a clear
@@ -938,9 +968,9 @@ void main() {
   vec4 emission = texture(uEmissionTexture, uv);
   vec4 liquid = texture(uLiquidTexture, uv);
   // True 8x already needs this centre emission sample for aura and energy.
-  // Reuse it for a deliberately compact gas scatter rather than restoring the
-  // normal presenter's cardinal/outward probes. This stays RGB-only and keeps
-  // the compact shader within its one-sample gas-lighting budget.
+  // Reuse it for compact gas scatter. The gas-only branches below additionally
+  // take four alpha-only atmosphere probes for volume curvature, never an
+  // emission-neighbour or gas-RGB probe. Every term stays RGB-only.
   float gasFieldScatter = uGasFieldLighting * smoothstep(0.002, 0.42, emission.a);
   if (material < 0.5) {
     vec4 foreground = vec4(0.0);
@@ -949,6 +979,19 @@ void main() {
       float gasShell = 1.0 - smoothstep(0.22, 0.82, atmosphere.a);
       vec3 gas = atmosphere.rgb + uGasVolumeChroma * atmosphere.a * vec3(0.022, -0.009, 0.017)
         + emission.rgb * gasFieldScatter * gasShell * 0.035;
+      if (uGasFieldLighting > 0.5) {
+        vec2 atmosphereMin = uAtmosphereTexel * 0.5;
+        vec2 atmosphereMax = vec2(1.0) - atmosphereMin;
+        float gasLeft = texture(uAtmosphereTexture,
+          clamp(uv - vec2(uAtmosphereTexel.x, 0.0), atmosphereMin, atmosphereMax)).a;
+        float gasRight = texture(uAtmosphereTexture,
+          clamp(uv + vec2(uAtmosphereTexel.x, 0.0), atmosphereMin, atmosphereMax)).a;
+        float gasTop = texture(uAtmosphereTexture,
+          clamp(uv - vec2(0.0, uAtmosphereTexel.y), atmosphereMin, atmosphereMax)).a;
+        float gasBottom = texture(uAtmosphereTexture,
+          clamp(uv + vec2(0.0, uAtmosphereTexel.y), atmosphereMin, atmosphereMax)).a;
+        gas += gasEightXVolumeRelief(atmosphere.a, gasLeft, gasRight, gasTop, gasBottom);
+      }
       if (uGasIdentityStyling > 0.5) {
         float gasIdentityStyle = floor(texture(uAtmosphereStyleTexture, uv).r * 255.0 + 0.5);
         gas += gasIdentityEightXDelta(gasIdentityStyle, atmosphere.a)
@@ -1000,6 +1043,19 @@ void main() {
     float gasShell = 1.0 - smoothstep(0.22, 0.82, gasDensity);
     color = mix(color, atmosphere.rgb, min(0.82, atmosphere.a));
     color += emission.rgb * gasFieldScatter * (0.018 + gasShell * 0.030);
+    if (uGasFieldLighting > 0.5) {
+      vec2 atmosphereMin = uAtmosphereTexel * 0.5;
+      vec2 atmosphereMax = vec2(1.0) - atmosphereMin;
+      float gasLeft = texture(uAtmosphereTexture,
+        clamp(uv - vec2(uAtmosphereTexel.x, 0.0), atmosphereMin, atmosphereMax)).a;
+      float gasRight = texture(uAtmosphereTexture,
+        clamp(uv + vec2(uAtmosphereTexel.x, 0.0), atmosphereMin, atmosphereMax)).a;
+      float gasTop = texture(uAtmosphereTexture,
+        clamp(uv - vec2(0.0, uAtmosphereTexel.y), atmosphereMin, atmosphereMax)).a;
+      float gasBottom = texture(uAtmosphereTexture,
+        clamp(uv + vec2(0.0, uAtmosphereTexel.y), atmosphereMin, atmosphereMax)).a;
+      color += gasEightXVolumeRelief(gasDensity, gasLeft, gasRight, gasTop, gasBottom);
+    }
     if (uGasIdentityStyling > 0.5) {
       float gasIdentityStyle = floor(texture(uAtmosphereStyleTexture, uv).r * 255.0 + 0.5);
       color += gasIdentityEightXDelta(gasIdentityStyle, gasDensity)
