@@ -309,6 +309,7 @@ export class MaterialRenderer {
   // Canonical WebGL body optics only. Canvas deliberately remains a safe,
   // semantically equivalent fallback instead of carrying every advanced look.
   private moltenBodyOpticsEnabled = true;
+  private aqueousSurfaceReflectionEnabled = true;
   private botanicalIdentityStylingEnabled = true;
   private botanicalLifecycleStylingEnabled = true;
   private sparkStateStylingEnabled = true;
@@ -838,6 +839,15 @@ export class MaterialRenderer {
     this.changed = true;
   }
 
+  setAqueousSurfaceReflectionEnabled(enabled: boolean): void {
+    if (enabled === this.aqueousSurfaceReflectionEnabled) return;
+    this.aqueousSurfaceReflectionEnabled = enabled;
+    // Canvas intentionally remains a semantic fallback: this is a WebGL-only
+    // Water optics control with no effect on matter ownership or physics.
+    this.presenter?.setAqueousSurfaceReflectionEnabled(enabled);
+    this.changed = true;
+  }
+
   setBotanicalIdentityStylingEnabled(enabled: boolean): void {
     if (enabled === this.botanicalIdentityStylingEnabled) return;
     this.botanicalIdentityStylingEnabled = enabled;
@@ -1058,6 +1068,7 @@ export class MaterialRenderer {
       this.structuralRigidStylingEnabled,
       this.earthenPowderStylingEnabled,
       this.moltenBodyOpticsEnabled,
+      this.aqueousSurfaceReflectionEnabled,
     );
     // Route subsequent dirty cells to the candidate while its first expensive
     // frame is in flight. The known-good Canvas remains mounted underneath;

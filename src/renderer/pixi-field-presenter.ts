@@ -129,6 +129,7 @@ uniform float uEarthenPowderStyling;
 uniform float uUnusualPowderStyling;
 uniform float uUnusualSolidStyling;
 uniform float uLiquidFieldLighting;
+uniform float uAqueousSurfaceReflection;
 uniform float uLiquidVolumeChroma;
 uniform float uLiquidIdentityStyling;
 uniform float uLiquidSilhouetteCohesion;
@@ -1693,7 +1694,7 @@ void main() {
         // reflection on connected Water only; it cannot widen support, touch
         // alpha, cross an unlike-liquid seam, or add a fifteenth-million-pixel
         // sampler cost to the direct compositor.
-        if (optics == 1.0) {
+        if (uAqueousSurfaceReflection > 0.5 && optics == 1.0) {
           float aqueousTopReflection = max(0.0, liquidSlope.y) * airFacingRim
             * (0.014 + keyLight * 0.030 + grazing * 0.014);
           color += (vec3(1.0) - clamp(color, 0.0, 1.0))
@@ -2144,6 +2145,7 @@ uniform float uGasVolumeChroma;
 uniform float uGasIdentityStyling;
 uniform float uEmissionVolumeChroma;
 uniform float uLiquidFieldLighting;
+uniform float uAqueousSurfaceReflection;
 uniform float uLiquidVolumeChroma;
 uniform float uLiquidIdentityStyling;
 uniform float uLiquidOpticalDepth;
@@ -4598,10 +4600,12 @@ void main() {
     // sheen rather than a new wave, field, or alpha decision. Oil/Acid/Lava,
     // species seams, droplets, and reconstructed support remain on their
     // established paths; this is a bounded RGB-only aqueous refinement.
-    float aqueousSurfaceReflection = aqueous * topLip
-      * (0.020 + broadSheen * 0.018 + fresnel * 0.012);
-    color += (vec3(1.0) - clamp(color, 0.0, 1.0))
-      * vec3(0.30, 0.74, 1.00) * aqueousSurfaceReflection;
+    if (uAqueousSurfaceReflection > 0.5 && aqueous > 0.5) {
+      float aqueousSurfaceReflection = aqueous * topLip
+        * (0.020 + broadSheen * 0.018 + fresnel * 0.012);
+      color += (vec3(1.0) - clamp(color, 0.0, 1.0))
+        * vec3(0.30, 0.74, 1.00) * aqueousSurfaceReflection;
+    }
     color -= color * liquidFresnelGate * (
       liquidFresnelShadow * liquidFresnelShadowResponse
       + liquidFresnelAbsorption * liquidFresnelAbsorptionResponse
@@ -6053,6 +6057,7 @@ export class PixiFieldPresenter {
       uGasIdentityStyling: { value: 1, type: 'f32' },
       uEmissionVolumeChroma: { value: 1, type: 'f32' },
       uLiquidFieldLighting: { value: 1, type: 'f32' },
+      uAqueousSurfaceReflection: { value: 1, type: 'f32' },
       uLiquidVolumeChroma: { value: 1, type: 'f32' },
       uLiquidIdentityStyling: { value: 1, type: 'f32' },
       uLiquidOpticalDepth: { value: 1, type: 'f32' },
@@ -6421,10 +6426,12 @@ export class PixiFieldPresenter {
     structuralRigidStylingEnabled = true,
     earthenPowderStylingEnabled = true,
     moltenBodyOpticsEnabled = true,
+    aqueousSurfaceReflectionEnabled = true,
   ): void {
     const uniforms = this.uniforms.uniforms;
     uniforms.uGasFieldLighting = gasFieldLightingEnabled ? 1 : 0;
     uniforms.uLiquidFieldLighting = liquidFieldLightingEnabled ? 1 : 0;
+    uniforms.uAqueousSurfaceReflection = aqueousSurfaceReflectionEnabled ? 1 : 0;
     uniforms.uTranslucentFieldTransmission = translucentFieldTransmissionEnabled ? 1 : 0;
     uniforms.uTranslucentBackdropRefraction = translucentBackdropRefractionEnabled ? 1 : 0;
     uniforms.uSolidContactDepth = solidContactDepthEnabled ? 1 : 0;
@@ -6490,6 +6497,11 @@ export class PixiFieldPresenter {
 
   setLiquidFieldLightingEnabled(enabled: boolean): void {
     this.uniforms.uniforms.uLiquidFieldLighting = enabled ? 1 : 0;
+    this.renderApplication();
+  }
+
+  setAqueousSurfaceReflectionEnabled(enabled: boolean): void {
+    this.uniforms.uniforms.uAqueousSurfaceReflection = enabled ? 1 : 0;
     this.renderApplication();
   }
 

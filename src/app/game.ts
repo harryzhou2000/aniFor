@@ -361,6 +361,9 @@ export class Game {
         this.renderer.setEmissionVolumeChromaEnabled(enabled);
       },
       setLiquidFieldLighting: (enabled) => { this.renderer.setLiquidFieldLightingEnabled(enabled); },
+      setAqueousSurfaceReflection: (enabled) => {
+        this.renderer.setAqueousSurfaceReflectionEnabled(enabled);
+      },
       setLiquidSilhouetteCohesion: (enabled) => {
         this.renderer.setLiquidSilhouetteCohesionEnabled(enabled);
       },

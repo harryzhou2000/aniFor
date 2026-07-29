@@ -16,6 +16,7 @@ interface PresenterHarness {
   setGasVolumeChromaEnabled: PixiFieldPresenter['setGasVolumeChromaEnabled'];
   setGasIdentityStylingEnabled: PixiFieldPresenter['setGasIdentityStylingEnabled'];
   setEmissionVolumeChromaEnabled: PixiFieldPresenter['setEmissionVolumeChromaEnabled'];
+  setAqueousSurfaceReflectionEnabled: PixiFieldPresenter['setAqueousSurfaceReflectionEnabled'];
   setLiquidVolumeChromaEnabled: PixiFieldPresenter['setLiquidVolumeChromaEnabled'];
   setLiquidIdentityStylingEnabled: PixiFieldPresenter['setLiquidIdentityStylingEnabled'];
   setLiquidOpticalDepthEnabled: PixiFieldPresenter['setLiquidOpticalDepthEnabled'];
@@ -103,6 +104,7 @@ describe('Pixi presenter startup configuration', () => {
       uGasIdentityStyling: 1,
       uEmissionVolumeChroma: 1,
       uLiquidFieldLighting: 1,
+      uAqueousSurfaceReflection: 1,
       uLiquidVolumeChroma: 1,
       uLiquidIdentityStyling: 1,
       uLiquidOpticalDepth: 1,
@@ -1374,7 +1376,7 @@ describe('Pixi presenter startup configuration', () => {
     expect(block).toContain('liquidLeft.a + liquidRight.a + liquidTop.a + liquidBottom.a');
     expect(block).toContain('liquidEightXMeniscusKey(optics)');
     expect(block).toContain('liquidEightXMeniscusShadow(optics)');
-    expect(block).toContain('if (optics == 1.0) {');
+    expect(block).toContain('if (uAqueousSurfaceReflection > 0.5 && optics == 1.0) {');
     expect(block).toContain('float aqueousTopReflection = max(0.0, liquidSlope.y) * airFacingRim');
     expect(block).toContain('* meniscusKey * aqueousTopReflection;');
     expect(eight).toContain('if (optics == 16.0) return vec3(0.70, 0.92, 1.00); // Cryogenic');
@@ -2319,6 +2321,30 @@ describe('Pixi presenter startup configuration', () => {
     expect(normalBlock).toContain('foreignMatterContact < 0.5 && unlikeMaterialContact < 0.5');
     expect(normalBlock).not.toContain('texture(');
     expect(normalBlock).not.toMatch(/\balpha\s*[+*]?=/);
+  });
+
+  it('keeps the WebGL-only aqueous surface shoulder independently switchable', () => {
+    const presenter = presenterHarness();
+    presenter.setAqueousSurfaceReflectionEnabled(false);
+    expect(presenter.uniforms.uniforms.uAqueousSurfaceReflection).toBe(0);
+    presenter.setAqueousSurfaceReflectionEnabled(true);
+    expect(presenter.uniforms.uniforms.uAqueousSurfaceReflection).toBe(1);
+    expect(presenter.app.render).toHaveBeenCalledTimes(2);
+
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');
+    const eightEnd = source.indexOf('const FIELD_FRAGMENT = `', eightStart);
+    const normalStart = source.indexOf('// Water\'s broad body needs a continuous, sky-facing top shoulder');
+    const normalEnd = source.indexOf('color -= color * liquidFresnelGate', normalStart);
+    const eight = source.slice(eightStart, eightEnd);
+    const normal = source.slice(normalStart, normalEnd);
+
+    expect(source).toContain('uniform float uAqueousSurfaceReflection;');
+    expect(eight).toContain('uAqueousSurfaceReflection > 0.5 && optics == 1.0');
+    expect(normal).toContain('uAqueousSurfaceReflection > 0.5 && aqueous > 0.5');
+    expect(normal).toContain('vec3(0.30, 0.74, 1.00) * aqueousSurfaceReflection');
+    expect(normal).not.toContain('texture(');
+    expect(normal).not.toMatch(/\balpha\s*[+*]?=/);
   });
 
   it('keeps typed-Lava ancestry arithmetic-only, bounded, and exact-owner guarded', () => {

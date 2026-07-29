@@ -57,6 +57,8 @@ export interface BrowserInputAuditApi {
   setGasIdentityStyling(enabled: boolean): void;
   setEmissionVolumeChroma(enabled: boolean): void;
   setLiquidFieldLighting(enabled: boolean): void;
+  /** WebGL-only Water surface shoulder; Canvas remains the semantic fallback. */
+  setAqueousSurfaceReflection(enabled: boolean): void;
   setLiquidSilhouetteCohesion(enabled: boolean): void;
   setLiquidVolumeChroma(enabled: boolean): void;
   setLiquidOpticalDepth(enabled: boolean): void;
