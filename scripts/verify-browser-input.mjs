@@ -12388,6 +12388,12 @@ async function auditRenderScaleEight(cdp, dpr) {
   `renderScale=8 control did not expose/select true 8x (${JSON.stringify(resolutionControl)})`);
   stage('eight-ready');
 
+  // Role material graphics are canonical-WebGL presentation at 8x. Exercise
+  // the ordinary render-lab source/sink/channel/force scene before later
+  // fixture audits replace it; Canvas remains an availability fallback here.
+  const roleGraphics = await auditEightXRoleGraphics(cdp, geometry.canvas);
+  stage('role-graphics-ready');
+
   const presentationTiming = await auditWebGLPresentationTiming(cdp, 8, 12_000, 30_000);
   assert(presentationTiming.source === 'gpu-query' || presentationTiming.source === 'gpu-fence',
     `renderScale=8 timing did not prove completed GPU work (${JSON.stringify(presentationTiming)})`);
@@ -14057,6 +14063,94 @@ async function auditEightXExplosivePowderGraphics(cdp, canvasRect) {
     occupied: prepared.occupied,
     samples,
     exactRepeatedOff: samples.every((sample) => sample.repeatRgbPeak <= 1),
+  };
+}
+
+/**
+ * Canonical direct-mesh proof for static source/sink/channel/force identity.
+ * The render lab already owns this scene, so do not replace it with a second
+ * fixture or require a Canvas capture.  The style is RGB-only: page captures
+ * prove the composed result while the broad support probe catches accidental
+ * coverage changes without allocating a true-8x backing ImageData copy.
+ */
+async function auditEightXRoleGraphics(cdp, canvasRect) {
+  const probeState = await evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    if (typeof audit.setRoleMaterialStyling !== 'function') {
+      throw new Error('True-8x role-graphics API unavailable');
+    }
+    return (${JSON.stringify(ROLE_GRAPHICS_REGIONS)}).map(({ name, x, y }) => ({
+      name, material: audit.cell(x, y), wall: audit.wall(x, y),
+    }));
+  })()`);
+  const expectedRoleMaterials = [127, 126, 159, 164, 130, 115];
+  assert(probeState.slice(0, expectedRoleMaterials.length).every((probe, index) => (
+    probe.material === expectedRoleMaterials[index] && probe.wall === 0
+  )), `renderScale=8 semantic role fixture changed (${JSON.stringify(probeState)})`);
+  const live = await metrics(cdp);
+  assert(live.backing.width === WORLD_WIDTH * 8 && live.backing.height === WORLD_HEIGHT * 8
+      && live.outputScale === '8',
+  `renderScale=8 role graphics lost true backing (${JSON.stringify(live.backing)})`);
+  assertCanvasRectsEqual(canvasRect, live.canvas, 'renderScale=8 role graphics CSS geometry');
+
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setRoleMaterialStyling(false); true');
+  const flat = await captureSettledPage(cdp, 'renderScale=8 flat semantic-role framebuffer', 450);
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setRoleMaterialStyling(true); true');
+  const styled = await captureSettledPage(cdp, 'renderScale=8 styled semantic-role framebuffer', 450);
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setRoleMaterialStyling(false); true');
+  const repeated = await captureSettledPage(cdp, 'renderScale=8 repeated flat semantic-role framebuffer', 450);
+  const samples = await sampleBackdropRefractionRegions(cdp, {
+    straight: flat.capture.data,
+    refracted: styled.capture.data,
+    repeatedStraight: repeated.capture.data,
+  }, ROLE_GRAPHICS_REGIONS, canvasRect);
+  const byName = Object.fromEntries(samples.map((sample) => [sample.name, sample]));
+  for (const name of [
+    'converter', 'cloneEmitter', 'poweredCloneEmitter',
+    'portalSinkChannel', 'acceleratorForce',
+  ]) {
+    const sample = byName[name];
+    assert(sample.rgbRms >= 0.015 && sample.rgbPeak > 0 && sample.rgbPeak <= 32,
+      `renderScale=8 ${name} lost bounded role identity (${JSON.stringify(samples)})`);
+  }
+  assert(byName.cloneEmitter.responseRgb[0] > byName.cloneEmitter.responseRgb[2] + 0.01
+      && byName.poweredCloneEmitter.responseRgb[0]
+        > byName.poweredCloneEmitter.responseRgb[2] + 0.01,
+  `renderScale=8 emitters lost warm role identity (${JSON.stringify(samples)})`);
+  assert(byName.portalSinkChannel.responseRgb[2]
+      > byName.portalSinkChannel.responseRgb[0] + 0.01
+    && byName.acceleratorForce.responseRgb[2]
+      > byName.acceleratorForce.responseRgb[0] + 0.01,
+  `renderScale=8 sink/channel/force roles lost cool identity (${JSON.stringify(samples)})`);
+  assert(byName.deviceControl.rgbPeak <= 1,
+    `renderScale=8 role styling leaked into device control (${JSON.stringify(samples)})`);
+  assert(samples.every((sample) => sample.repeatRgbPeak <= 1),
+    `renderScale=8 semantic role off-on-off sequence was not deterministic (${JSON.stringify(samples)})`);
+
+  const supportRegion = [{
+    name: 'semanticRoleSupport8x', x: 486, y: 291,
+    radiusX: 100, radiusY: 28, silhouette: true, fastSupport: true,
+  }];
+  // These are composed page pixels rather than semantic cells.  Without a
+  // backing read or a second page/fixture, the raw alpha/luma support mask is
+  // sufficient for the broad existing role strip; the exact off/on screenshots
+  // above separately detect its RGB-only response.
+  const [flatSupport, styledSupport] = await Promise.all([
+    samplePageRegions(cdp, flat.capture.data, supportRegion, undefined, undefined, canvasRect),
+    samplePageRegions(cdp, styled.capture.data, supportRegion, undefined, undefined, canvasRect),
+  ]);
+  assert(flatSupport[0].visible === styledSupport[0].visible
+      && Math.abs(flatSupport[0].worldArea - styledSupport[0].worldArea) <= 0.60,
+  `renderScale=8 role styling changed composed support (${JSON.stringify({ flatSupport, styledSupport })})`);
+  return {
+    samples,
+    probeState,
+    support: {
+      flatVisible: flatSupport[0].visible,
+      styledVisible: styledSupport[0].visible,
+      flatWorldArea: flatSupport[0].worldArea,
+      styledWorldArea: styledSupport[0].worldArea,
+    },
   };
 }
 

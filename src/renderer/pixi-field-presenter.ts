@@ -133,6 +133,7 @@ uniform float uLiquidIdentityStyling;
 uniform float uLiquidSilhouetteCohesion;
 uniform float uSurfaceContourLighting;
 uniform float uSolidFieldLighting;
+uniform float uRoleMaterialStyling;
 uniform float uTranslucentFieldTransmission;
 uniform float uTranslucentBackdropRefraction;
 uniform float uTranslucentLensShell;
@@ -246,6 +247,38 @@ vec3 gasIdentityEightXChroma(float style, float density) {
   // changes support nor consumes the bounded gas-volume response budget.
   return style > 6.5 && style < 7.5
     ? vec3(0.014, -0.009, 0.016) * density : vec3(0.0);
+}
+// The direct 8x compositor cannot carry the normal presenter's animated role
+// waves, but sources, sinks, channels, and force materials still need a clear
+// semantic read at deep zoom. This exact trait-bit grammar is static and
+// owner-local: it reuses the decoded style byte, world position, and density,
+// adds no sampler/field/pass/clock, and leaves alpha and support untouched.
+float roleEightXTrait(float traits, float mask) {
+  return mod(floor(traits / mask), 2.0);
+}
+vec3 roleEightXDelta(float traits, vec2 position, float density) {
+  float emitter = roleEightXTrait(traits, 1.0);
+  float sink = roleEightXTrait(traits, 2.0);
+  float channel = roleEightXTrait(traits, 4.0);
+  float force = roleEightXTrait(traits, 8.0);
+  if (emitter + sink + channel + force < 0.5) return vec3(0.0);
+  vec2 local = fract(position / 24.0) - 0.5;
+  float radius = length(local);
+  float core = 1.0 - smoothstep(0.10, 0.17, radius);
+  float ring = 1.0 - smoothstep(0.025, 0.060, abs(radius - 0.31));
+  float innerRing = 1.0 - smoothstep(0.025, 0.055, abs(radius - 0.20));
+  float outerRing = 1.0 - smoothstep(0.025, 0.055, abs(radius - 0.40));
+  float railDistance = abs(fract((position.x - position.y) / 14.0) - 0.5);
+  float rail = 1.0 - smoothstep(0.050, 0.120, railDistance);
+  float nodePhase = fract((position.x + position.y) / 12.0);
+  float node = rail * (1.0 - smoothstep(0.070, 0.150, min(nodePhase, 1.0 - nodePhase)));
+  vec3 delta = vec3(0.0);
+  if (emitter > 0.5) delta += vec3(14.0, 7.0, -3.0) * (0.14 + core * 0.74 + ring * 0.46);
+  if (sink > 0.5) delta += vec3(-3.0, 8.0, 16.0) * (0.12 + core * 0.56 + ring * 0.60);
+  if (channel > 0.5) delta += vec3(1.0, 8.0, 15.0) * (rail * 0.52 + node * 0.62);
+  if (force > 0.5) delta += vec3(-2.0, 10.0, 17.0)
+    * (0.10 + innerRing * 0.52 + outerRing * 0.68);
+  return clamp(delta * smoothstep(0.08, 0.72, density), vec3(-20.0), vec3(20.0)) / 255.0;
 }
 vec3 liquidEightXMeniscusKey(float optics) {
   if (optics == 1.0) return vec3(0.52, 0.88, 1.00); // Aqueous
@@ -1456,6 +1489,12 @@ void main() {
     color += (vec3(1.0) - clamp(color, 0.0, 1.0))
       * liquidContourKey * liquidSurfaceContourKeyStrength;
     color -= liquidContourShadow * liquidSurfaceContourShadowStrength;
+  }
+  // Static semantic-role accents preserve the normal compositor's source,
+  // sink, channel, and force vocabulary at true 8x. Stateful target/activity
+  // overlays below remain authoritative and are deliberately layered on top.
+  if (uRoleMaterialStyling > 0.5 && traits > 0.5 && !materialEmissive) {
+    color = clamp(color + roleEightXDelta(traits, uv * uFieldSize, density), 0.0, 1.0);
   }
   if (uSourceTargetStyling > 0.5 && sourceOwner
     && ((sourceTarget >= 1.0 && sourceTarget <= 170.0) || sourceTarget == 217.0)) {

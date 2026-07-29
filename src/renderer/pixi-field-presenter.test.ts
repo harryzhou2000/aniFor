@@ -845,6 +845,33 @@ describe('Pixi presenter startup configuration', () => {
     expect(`${helper}${branch}`).not.toMatch(/\balpha\s*[+*]?=/);
   });
 
+  it('keeps true-8x semantic role accents static, RGB-only, and resource-free', () => {
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');
+    const eightEnd = source.indexOf('const FIELD_FRAGMENT = `', eightStart);
+    const eight = source.slice(eightStart, eightEnd);
+    const helperStart = eight.indexOf('float roleEightXTrait(');
+    const helperEnd = eight.indexOf('vec3 liquidEightXMeniscusKey(', helperStart);
+    const branchStart = eight.indexOf('// Static semantic-role accents preserve');
+    const branchEnd = eight.indexOf('  if (uSourceTargetStyling > 0.5', branchStart);
+    const helper = eight.slice(helperStart, helperEnd);
+    const branch = eight.slice(branchStart, branchEnd);
+
+    expect(helperStart).toBeGreaterThan(0);
+    expect(helperEnd).toBeGreaterThan(helperStart);
+    expect(branchStart).toBeGreaterThan(0);
+    expect(branchEnd).toBeGreaterThan(branchStart);
+    expect(eight).toContain('uniform float uRoleMaterialStyling;');
+    for (const mask of [1, 2, 4, 8]) expect(helper).toContain(`roleEightXTrait(traits, ${mask}.0)`);
+    expect(helper).toContain('fract(position / 24.0) - 0.5');
+    expect(helper).toContain('smoothstep(0.08, 0.72, density)');
+    expect(branch).toContain('uRoleMaterialStyling > 0.5 && traits > 0.5 && !materialEmissive');
+    expect(branch).toContain('roleEightXDelta(traits, uv * uFieldSize, density)');
+    expect(`${helper}${branch}`).not.toContain('texture(');
+    expect(`${helper}${branch}`).not.toContain('uTime');
+    expect(`${helper}${branch}`).not.toMatch(/\balpha\s*[+*]?=/);
+  });
+
   it('keeps true-8x sensor glyphs exact-owner, RGB-only, and resource-free', () => {
     const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
     const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');
