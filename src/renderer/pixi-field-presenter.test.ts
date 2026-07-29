@@ -983,6 +983,10 @@ describe('Pixi presenter startup configuration', () => {
     expect(branchEnd).toBeGreaterThan(branchStart);
     expect(eight).toContain('uniform float uStructuralRigidStyling;');
     for (const material of materials) expect(helper).toContain(`material == ${material}.0`);
+    for (const material of [23, 67, 70, 73, 82]) {
+      expect(helper).toContain(`material == ${material}.0`);
+    }
+    expect(helper).toContain('vec3 structuralMetalEightXBodyDelta(');
     expect(branch).toContain('uStructuralRigidStyling > 0.5 && family == 0.0');
     expect(branch).toContain('structuralRigidEightXStyle(material) > 0.5');
     expect(branch).toContain('traits < 0.5 && !materialEmissive');
@@ -2412,6 +2416,7 @@ describe('Pixi presenter startup configuration', () => {
     expect(source).toContain('traits < 0.5 && !materialEmissive');
     expect(structuralBlock).toContain('vec3 structuralRigidIdentityDelta(float material, vec2 position)');
     expect(structuralBlock).toContain('float structuralRigidDeepIdentityGain(float material)');
+    expect(structuralBlock).toContain('vec3 structuralMetalBodyDelta(');
     expect(structuralBlock).toContain('if (material == 22.0)');
     expect(structuralBlock).toContain('if (material == 23.0) return 0.22;');
     expect(structuralBlock).toContain('if (material == 82.0)');
@@ -2419,6 +2424,7 @@ describe('Pixi presenter startup configuration', () => {
     expect(structuralBlock).not.toMatch(/\balpha\s*[+*]?=/);
     expect(source).toContain('float structuralIdentityGain = 1.0;');
     expect(source).toContain('structuralRigidDeepIdentityGain(material), structuralDepth * solidInterior');
+    expect(source).toContain('structuralMetalBodyDelta(\n            material, fieldPosition, structuralDepth, structuralRelief\n          )');
     expect(source).toContain('structuralIdentityGain = min(structuralIdentityGain, staticSolidIdentityGain);');
     expect(source).toContain('structuralRigidIdentityDelta(material, fieldPosition)\n          * structuralIdentityGain');
   });

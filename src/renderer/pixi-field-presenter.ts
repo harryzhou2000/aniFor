@@ -795,6 +795,52 @@ vec3 structuralRigidEightXDelta(float material, vec2 position, float density) {
   }
   return clamp(delta * smoothstep(0.10, 0.82, density), vec3(-10.0), vec3(10.0)) / 255.0;
 }
+// Broad metallic bodies need a different read from the sparse identity marks
+// above. This remains an interior-only, world-anchored finish: the analytic
+// band has no clock, sample, field, or support decision, so thin plates,
+// contours, holes, walls, and the semantic owner remain under the compositor.
+vec3 structuralMetalEightXBodyDelta(
+  float material, vec2 position, float depthT, float bodyResponse
+) {
+  vec2 direction = vec2(1.0, 0.0);
+  vec3 key = vec3(0.0);
+  vec3 shadow = vec3(0.0);
+  float offset = 0.0;
+  if (material == 23.0) {
+    // METL: a cool, rolled-steel shoulder and blue-grey occlusion pocket.
+    direction = vec2(0.034, 0.009);
+    key = vec3(8.0, 11.0, 16.0);
+    shadow = vec3(6.0, 7.0, 10.0);
+    offset = 0.17;
+  } else if (material == 67.0) {
+    direction = vec2(0.027, -0.014);
+    key = vec3(5.0, 10.0, 16.0);
+    shadow = vec3(7.0, 6.0, 8.0);
+    offset = 0.39;
+  } else if (material == 70.0) {
+    direction = vec2(0.030, 0.006);
+    key = vec3(12.0, 8.0, 1.0);
+    shadow = vec3(7.0, 4.0, 1.0);
+    offset = 0.61;
+  } else if (material == 73.0) {
+    direction = vec2(0.022, -0.018);
+    key = vec3(6.0, 7.0, 10.0);
+    shadow = vec3(8.0, 7.0, 7.0);
+    offset = 0.83;
+  } else if (material == 82.0) {
+    direction = vec2(0.031, 0.012);
+    key = vec3(6.0, 12.0, 18.0);
+    shadow = vec3(5.0, 7.0, 10.0);
+    offset = 0.47;
+  } else return vec3(0.0);
+  float rollTriangle = 1.0 - abs(fract(dot(position, direction) + offset) * 2.0 - 1.0);
+  float rollLobe = rollTriangle * rollTriangle * (3.0 - rollTriangle * 2.0);
+  float shoulder = smoothstep(0.62, 0.92, rollLobe);
+  float pocket = 1.0 - smoothstep(0.20, 0.50, rollLobe);
+  float crownGain = shoulder * (0.58 + max(0.0, bodyResponse) * 0.72) * depthT;
+  float pocketGain = pocket * (0.62 + max(0.0, -bodyResponse) * 0.48) * depthT;
+  return (key * crownGain - shadow * pocketGain) / 255.0;
+}
 // LIFE projections carry an exact native ctype preset rather than a generic
 // material identity. Keep the true-8x counterpart static and owner-local: all
 // twenty-four presets share this small arithmetic grammar, so it adds neither
@@ -1283,6 +1329,15 @@ void main() {
         * (optics == 11.0 ? 4.0 / 255.0 : 14.0 / 255.0)
         - bodyShadow * max(0.0, -bodyResponse)
           * (optics == 11.0 ? 16.0 / 255.0 : 10.0 / 255.0);
+      // Exact structural metals get a broad rolled reflection only once the
+      // existing thickness byte and four-owner proof establish a real body.
+      // Keep it under the established construction-style switch and leave
+      // traits, emissive solids, thin structures, and semantic coverage alone.
+      if (uStructuralRigidStyling > 0.5 && traits < 0.5) {
+        color = clamp(color + structuralMetalEightXBodyDelta(
+          material, grid, depthT, bodyResponse
+        ), 0.0, 1.0);
+      }
       // Wood keeps the native botanical identity mark below, but a thick trunk
       // needs a quieter, longitudinal body read than generic Organic matter.
       // This derives its grain from the world grid and already-proven body
@@ -3002,6 +3057,51 @@ float structuralRigidDeepIdentityGain(float material) {
   if (material == 73.0) return 0.42;
   if (material == 82.0) return 0.34;
   return 1.0;
+}
+// Smooth, thick structural metals read as coherent rolled material rather
+// than a collection of grid marks. This arithmetic-only body finish is called
+// only after the existing exact-species optical-depth proof; it leaves thin
+// pieces to the identity helper and never changes alpha or reconstruction.
+vec3 structuralMetalBodyDelta(
+  float material, vec2 position, float depthT, float signedResponse
+) {
+  vec2 direction = vec2(1.0, 0.0);
+  vec3 key = vec3(0.0);
+  vec3 shadow = vec3(0.0);
+  float offset = 0.0;
+  if (material == 23.0) {
+    direction = vec2(0.034, 0.009);
+    key = vec3(8.0, 11.0, 16.0);
+    shadow = vec3(6.0, 7.0, 10.0);
+    offset = 0.17;
+  } else if (material == 67.0) {
+    direction = vec2(0.027, -0.014);
+    key = vec3(5.0, 10.0, 16.0);
+    shadow = vec3(7.0, 6.0, 8.0);
+    offset = 0.39;
+  } else if (material == 70.0) {
+    direction = vec2(0.030, 0.006);
+    key = vec3(12.0, 8.0, 1.0);
+    shadow = vec3(7.0, 4.0, 1.0);
+    offset = 0.61;
+  } else if (material == 73.0) {
+    direction = vec2(0.022, -0.018);
+    key = vec3(6.0, 7.0, 10.0);
+    shadow = vec3(8.0, 7.0, 7.0);
+    offset = 0.83;
+  } else if (material == 82.0) {
+    direction = vec2(0.031, 0.012);
+    key = vec3(6.0, 12.0, 18.0);
+    shadow = vec3(5.0, 7.0, 10.0);
+    offset = 0.47;
+  } else return vec3(0.0);
+  float rollTriangle = 1.0 - abs(fract(dot(position, direction) + offset) * 2.0 - 1.0);
+  float rollLobe = rollTriangle * rollTriangle * (3.0 - rollTriangle * 2.0);
+  float shoulder = smoothstep(0.62, 0.92, rollLobe);
+  float pocket = 1.0 - smoothstep(0.20, 0.50, rollLobe);
+  float crownGain = shoulder * (0.58 + max(0.0, signedResponse) * 0.72) * depthT;
+  float pocketGain = pocket * (0.62 + max(0.0, -signedResponse) * 0.48) * depthT;
+  return (key * crownGain - shadow * pocketGain) / 255.0;
 }
 // Dense construction bodies use the existing signed macro relief plus the
 // phase-local solid-depth byte. No topology, sample, field, texture, or
@@ -5204,6 +5304,9 @@ void main() {
           float structuralRelief = clamp(solidReliefTone * 255.0 / 7.0, -1.0, 1.0)
             * structuralDepth;
           color = clamp(color + structuralRigidBulkDelta(material, structuralRelief), 0.0, 1.0);
+          color = clamp(color + structuralMetalBodyDelta(
+            material, fieldPosition, structuralDepth, structuralRelief
+          ), 0.0, 1.0);
           structuralIdentityGain = mix(
             1.0, structuralRigidDeepIdentityGain(material), structuralDepth * solidInterior
           );
