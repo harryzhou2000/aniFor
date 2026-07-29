@@ -1090,6 +1090,10 @@ describe('Pixi presenter startup configuration', () => {
     expect(block).toContain('solidEightXBodyShadow(optics)');
     expect(block).toContain('optics == 11.0 ? 4.0 / 255.0 : 14.0 / 255.0');
     expect(block).toContain('optics == 11.0 ? 16.0 / 255.0 : 10.0 / 255.0');
+    expect(block).toContain('if (material == 9.0) {');
+    expect(block).toContain('float woodGrain = 0.5 + 0.5 * sin(');
+    expect(block).toContain('float woodRidge = smoothstep(0.64, 0.94, woodGrain);');
+    expect(block).toContain('float woodPocket = 1.0 - smoothstep(0.28, 0.58, woodGrain);');
     expect(block).toContain('if (material == 10.0) {');
     expect(block).toContain('float canopyCrown = max(0.0, bodyResponse) * 2.0;');
     expect(block).toContain('float canopyPocket = max(0.0, -bodyResponse) * 2.0;');
@@ -1098,6 +1102,25 @@ describe('Pixi presenter startup configuration', () => {
     expect(`${helper}${block}`).not.toContain('texture(');
     expect(`${helper}${block}`).not.toContain('uTime');
     expect(`${helper}${block}`).not.toMatch(/\balpha\s*[+*]?=/);
+  });
+
+  it('keeps dense Wood grain world-anchored, depth-proven, and RGB-only in normal WebGL', () => {
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const normalStart = source.indexOf('const FIELD_FRAGMENT = `');
+    const start = source.indexOf('    } else if (organicSurface > 0.5 || (optics < 0.5 && profile == 3.0)) {', normalStart);
+    const end = source.indexOf('    } else if (radioactiveSurface > 0.5 || (optics < 0.5 && profile == 4.0)) {', start);
+    const block = source.slice(start, end);
+
+    expect(normalStart).toBeGreaterThan(0);
+    expect(start).toBeGreaterThan(normalStart);
+    expect(end).toBeGreaterThan(start);
+    expect(block).toContain('if (material == 9.0 && uSolidOpticalDepth > 0.5');
+    expect(block).toContain('solidOpticalDepth > 6.0 / 255.0 && solidInterior > 0.001');
+    expect(block).toContain('float woodGrain = 0.5 + 0.5 * fibre;');
+    expect(block).toContain('float woodRelief = clamp(solidReliefTone * 255.0 / 6.0, -1.0, 1.0) * woodDepth;');
+    expect(block).toContain('surfaceOnly < 0.5');
+    expect(block).not.toContain('texture(');
+    expect(block).not.toMatch(/\balpha\s*[+*]?=/);
   });
 
   it('gives true-8x rigid contours bounded Hermite curvature without new samples', () => {

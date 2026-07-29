@@ -1258,6 +1258,24 @@ void main() {
         * (optics == 11.0 ? 4.0 / 255.0 : 14.0 / 255.0)
         - bodyShadow * max(0.0, -bodyResponse)
           * (optics == 11.0 ? 16.0 / 255.0 : 10.0 / 255.0);
+      // Wood keeps the native botanical identity mark below, but a thick trunk
+      // needs a quieter, longitudinal body read than generic Organic matter.
+      // This derives its grain from the world grid and already-proven body
+      // depth/relief only. Fine branches, authored holes, and lifecycle state
+      // remain outside this interior-only RGB treatment.
+      if (material == 9.0) {
+        float woodGrain = 0.5 + 0.5 * sin(
+          grid.x * 0.20 + sin(grid.y * 0.115 + material) * 1.45
+        );
+        float woodRidge = smoothstep(0.64, 0.94, woodGrain);
+        float woodPocket = 1.0 - smoothstep(0.28, 0.58, woodGrain);
+        float woodCrown = max(0.0, bodyResponse);
+        float woodShade = max(0.0, -bodyResponse);
+        color *= vec3(1.0) - vec3(0.075, 0.040, 0.018)
+          * (woodPocket * 0.52 + woodShade * 0.38) * depthT;
+        color += (vec3(1.0) - clamp(color, 0.0, 1.0))
+          * vec3(0.50, 0.25, 0.07) * (woodRidge * 0.34 + woodCrown * 0.22) * depthT;
+      }
       // PLNT's native shape and lifecycle state remain authoritative below,
       // but a broad, exact-species canopy should not flatten into the generic
       // organic band at deep zoom. Mirror normal WebGL's restrained leaf
@@ -5134,6 +5152,25 @@ void main() {
         + organicSurface * max(0.0, fibre) * 0.018) * interiorMicroGain;
       color += mix(color, vec3(0.19, 0.34, 0.18), 0.38)
         * organicSurface * max(0.0, 0.6 - abs(pores)) * 0.028 * interiorMicroGain;
+      // Mature Wood alone receives a compact trunk grain after the common
+      // Organic response. The existing solid-depth field proves a broad,
+      // exact-species interior, so thin branches, holes, walls, and all Plant
+      // lifecycle graphics keep their semantic render path. This is static,
+      // RGB-only arithmetic with no texture, field, pass, or support change.
+      if (material == 9.0 && uSolidOpticalDepth > 0.5
+        && solidOpticalDepth > 6.0 / 255.0 && solidInterior > 0.001
+        && surfaceOnly < 0.5) {
+        float woodDepth = smoothstep(6.0 / 255.0, 42.0 / 255.0, solidOpticalDepth);
+        float woodGrain = 0.5 + 0.5 * fibre;
+        float woodRidge = smoothstep(0.64, 0.94, woodGrain);
+        float woodPocket = 1.0 - smoothstep(0.28, 0.58, woodGrain);
+        float woodRelief = clamp(solidReliefTone * 255.0 / 6.0, -1.0, 1.0) * woodDepth;
+        color *= vec3(1.0) - vec3(0.075, 0.040, 0.018)
+          * (woodPocket * 0.52 + max(0.0, -woodRelief) * 0.38) * woodDepth;
+        color += (vec3(1.0) - clamp(color, 0.0, 1.0))
+          * vec3(0.50, 0.25, 0.07)
+          * (woodRidge * 0.34 + max(0.0, woodRelief) * 0.22) * woodDepth;
+      }
     } else if (radioactiveSurface > 0.5 || (optics < 0.5 && profile == 4.0)) {
       float isotope = sin(fieldPosition.x * 0.137 + sin(fieldPosition.y * 0.103 + material) * 1.6)
         * sin(fieldPosition.y * 0.181 - fieldPosition.x * 0.061);
