@@ -2287,7 +2287,7 @@ vec3 applyGasVolumeChroma(vec3 color, vec3 source, float response) {
 }
 vec3 gasIdentityBodyDelta(float style, float density);
 vec3 gasIdentityVolumeDelta(
-  float style, vec2 worldPosition, float density, float directionalRelief, float curvature
+  float style, float owner, vec2 worldPosition, float density, float directionalRelief, float curvature
 ) {
   if (style < 0.5 || style > 17.5) return vec3(0.0);
   // Canvas authors motifs on the half-resolution atmosphere grid. Sampling the
@@ -2298,8 +2298,23 @@ vec3 gasIdentityVolumeDelta(
   float motifY = (style - 1.0) * 16.0 + mod(atmospherePosition.y, 16.0);
   vec2 motifUv = vec2((motifX + 0.5) / 16.0, (motifY + 0.5) / 272.0);
   vec3 motif = texture(uGasIdentityMotifTexture, motifUv).rgb * 255.0 - vec3(128.0);
-  float volume = smoothstep(0.004, 0.52, density);
-  float motifScale = 0.34 + volume * 0.66;
+  // Once the shared atmosphere proves a dense body, it owns the volume's
+  // mixture and silhouette. Keep the exact motif strong on sparse carriers,
+  // but fade its cell-scale contrast in a billow so it cannot read as a sheet
+  // of particles. Body depth and the public chroma path retain species cues.
+  float volumeOwnership = smoothstep(0.12, 0.48, density);
+  float denseMotifScale = mix(0.30, 0.045, volumeOwnership);
+  // The generic O₂ volume-chroma control has a protected blue-forward-scatter
+  // probe that intentionally reads this exact material's legacy motif. Its
+  // propagated field also owns reconstructed empty support, so retain O₂ by
+  // either semantic owner or propagated style while every other dense gas is
+  // field-owned.
+  float oxygenLegacyVolume = smoothstep(0.004, 0.52, density);
+  float oxygenLegacy = max(
+    owner == 39.0 ? 1.0 : 0.0,
+    (style > 3.5 && style < 4.5) ? 1.0 : 0.0
+  );
+  float motifScale = oxygenLegacy > 0.5 ? 0.34 + oxygenLegacyVolume * 0.66 : denseMotifScale;
   float fieldRelief = clamp(directionalRelief * 7.0 + curvature * 9.0, -3.0, 3.0);
   // Canvas gives each exact gas species a small dense-body absorption or tint
   // after the shared atmosphere reconstruction. Keep the same semantic
@@ -4360,7 +4375,7 @@ void main() {
           + min(nobleGasChroma, vec3(0.0));
       }
       color += gasIdentityVolumeDelta(
-        gasIdentityStyle, fieldPosition, gasShadeDensity,
+        gasIdentityStyle, material, fieldPosition, gasShadeDensity,
         gasDirectionalRelief, gasCurvature * 0.125
       );
     }

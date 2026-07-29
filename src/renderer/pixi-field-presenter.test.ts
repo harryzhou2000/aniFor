@@ -459,6 +459,10 @@ describe('Pixi presenter startup configuration', () => {
     expect(blockStart).toBeGreaterThan(0);
     expect(blockEnd).toBeGreaterThan(blockStart);
     expect(helper).toContain('texture(uGasIdentityMotifTexture, motifUv)');
+    expect(helper).toContain('float volumeOwnership = smoothstep(0.12, 0.48, density);');
+    expect(helper).toContain('float denseMotifScale = mix(0.30, 0.045, volumeOwnership);');
+    expect(helper).toContain('(style > 3.5 && style < 4.5) ? 1.0 : 0.0');
+    expect(helper).toContain('float motifScale = oxygenLegacy > 0.5 ? 0.34 + oxygenLegacyVolume * 0.66 : denseMotifScale;');
     expect(helper).toContain('vec3 bodyDepth = gasIdentityBodyDelta(style, density);');
     expect(helper).toContain('motif * motifScale + vec3(fieldRelief) + bodyDepth');
     const bodyStart = rich.indexOf('vec3 gasIdentityBodyDelta(float style, float density) {');
