@@ -2824,7 +2824,10 @@ describe('Pixi presenter startup configuration', () => {
     expect(start).toBeGreaterThan(0);
     expect(end).toBeGreaterThan(start);
     expect(ids).toEqual([9, 10, 83, 50, 52]);
-    for (const motif of ['ring', 'axial', 'vein', 'strand', 'node', 'husk', 'embryo', 'cellRim', 'bud']) {
+    for (const motif of [
+      'ring', 'axial', 'vein', 'canopyFacet', 'canopyCross', 'canopyCrown', 'canopyPocket', 'strand',
+      'node', 'husk', 'embryo', 'cellRim', 'bud',
+    ]) {
       expect(helper).toContain(motif);
     }
     expect(helper).toContain('clamp(delta, vec3(-12.0), vec3(12.0)) / 255.0');

@@ -2265,8 +2265,17 @@ void main() {
         float leaf = mod(botanicalCell.x * 5.0 + botanicalCell.y * 3.0 + material, 8.0) / 7.0;
         float vein = mod(botanicalCell.x * 2.0 + botanicalCell.y
           + mod(botanicalCell.y * 5.0 + 3.0, 8.0), 13.0) < 3.0 ? 1.0 : 0.0;
-        color += vec3(leaf * 1.5 - vein * 3.0, leaf * 3.5 + vein * 6.0,
-          leaf - vein * 2.5) / 255.0;
+        float canopyFacet = 1.0 - abs(fract((botanicalCell.x * 3.0
+          - botanicalCell.y * 2.0 + material) / 19.0) * 2.0 - 1.0);
+        float canopyCross = 1.0 - abs(fract((botanicalCell.x
+          + botanicalCell.y * 4.0 + material) / 23.0) * 2.0 - 1.0);
+        float canopyCrown = smoothstep(0.69, 0.94, canopyFacet)
+          * (0.45 + canopyCross * 0.55);
+        float canopyPocket = 1.0 - smoothstep(0.18, 0.48, canopyFacet);
+        color += (vec3(leaf * 1.5 - vein * 3.0, leaf * 3.5 + vein * 6.0,
+          leaf - vein * 2.5)
+          + canopyCrown * vec3(1.5, 4.5, 1.0)
+          - canopyPocket * vec3(1.7, 2.1, 0.8)) / 255.0;
       } else if (material == 83.0) {
         float strand = mod(botanicalCell.x + floor(botanicalCell.y / 4.0) + material, 7.0) < 2.0
           ? 1.0 : 0.0;
@@ -3015,8 +3024,18 @@ vec3 botanicalIdentityDelta(float material, vec2 position) {
   } else if (material == 10.0) {
     float leaf = mod(x * 5.0 + y * 3.0 + material, 8.0) / 7.0;
     float vein = mod(x * 2.0 + y + mod(y * 5.0 + 3.0, 8.0), 13.0) < 3.0 ? 1.0 : 0.0;
+    // A second, much broader world-anchored motif stops a connected PLNT
+    // canopy reading as a uniform green tile. It is deliberately independent
+    // of lifecycle state and neighbour data: native growth/topology stays
+    // authoritative while dense canopies gain only bounded RGB depth.
+    float canopyFacet = 1.0 - abs(fract((x * 3.0 - y * 2.0 + material) / 19.0) * 2.0 - 1.0);
+    float canopyCross = 1.0 - abs(fract((x + y * 4.0 + material) / 23.0) * 2.0 - 1.0);
+    float canopyCrown = smoothstep(0.69, 0.94, canopyFacet) * (0.45 + canopyCross * 0.55);
+    float canopyPocket = 1.0 - smoothstep(0.18, 0.48, canopyFacet);
     delta = vec3(leaf * 1.5 - vein * 3.0, leaf * 3.5 + vein * 6.0,
-      leaf - vein * 2.5);
+      leaf - vein * 2.5)
+      + canopyCrown * vec3(1.5, 4.5, 1.0)
+      - canopyPocket * vec3(1.7, 2.1, 0.8);
   } else if (material == 83.0) {
     float strand = mod(x + floor(y / 4.0) + material, 7.0) < 2.0 ? 1.0 : 0.0;
     float node = mod(x * 3.0 + y * 5.0 + material, 16.0) < 2.0 ? 1.0 : 0.0;
