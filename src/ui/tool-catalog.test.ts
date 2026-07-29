@@ -70,8 +70,11 @@ describe('tool catalog view model', () => {
       Material.PSTN, Material.RPEL, Material.BHOL, Material.NBHL, Material.NWHL,
       Material.WHOL, Material.GPMP, Material.PUMP, Material.GRVT, Material.SING,
     ]) expect(forces.some((tool) => tool.kind === 'element' && tool.id === id)).toBe(true);
-    expect(forces.some((tool) => tool.kind === 'element' && tool.id === Material.FRME)).toBe(false);
-    expect(forces.some((tool) => tool.kind === 'element' && tool.id === Material.PIPE)).toBe(false);
+    expect(forces.some((tool) => tool.kind === 'element' && tool.id === Material.FRME)).toBe(true);
+    expect(forces.some((tool) => tool.kind === 'element' && tool.id === Material.PIPE)).toBe(true);
+    expect(MATERIALS.filter(({ category }) => category === 'force').every(({ id }) => (
+      forces.some((tool) => tool.kind === 'element' && tool.id === id)
+    ))).toBe(true);
 
     const life = filterTools(catalog, { ...state, mode: 'life' });
     expect(life).toHaveLength(LIFE_PRESETS.length + 5);

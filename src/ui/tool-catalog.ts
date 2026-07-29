@@ -231,7 +231,10 @@ export function filterTools(tools: readonly CatalogTool[], state: CatalogFilterS
     if (state.mode === 'favorites' && !state.favorites.has(tool.key)) return false;
     if (state.mode === 'recent' && !recent.has(tool.key)) return false;
     const categoryElement = tool.kind === 'element' && (
-      (state.mode === 'force' && isForceMaterial(tool.id))
+      // The Forces filter includes active force traits and the two passive
+      // force-category construction/transport elements (FRME and PIPE). Keep
+      // the render trait narrow: this is toolbox discoverability only.
+      (state.mode === 'force' && (tool.category === 'force' || isForceMaterial(tool.id)))
       || (state.mode === 'life' && tool.category === 'life')
       || (state.mode === 'radioactive' && tool.category === 'radioactive')
     );
