@@ -1863,6 +1863,7 @@ describe('Pixi presenter startup configuration', () => {
     expect(block).toContain('(widePowderShape.w - 5.5) / 3.5');
     expect(block).toContain('powderBodySupportDepth * 0.88');
     expect(block).toContain('mix(0.030, -0.052, powderBodyVolumeDepth)');
+    expect(block).toContain('(optics == 7.0 ? 0.006 * powderBodyVolumeDepth : 0.0)');
     expect(block).toContain('-0.080, 0.085');
     expect(block).not.toContain('texture(');
     expect(block).not.toMatch(/\balpha\s*[+*]?=/);

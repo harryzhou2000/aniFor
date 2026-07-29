@@ -4967,7 +4967,12 @@ void main() {
         float powderBodyVolumeDepth = max(
           powderBodyDensity, powderBodySupportDepth * 0.88
         );
-        float powderBodyDepthTone = mix(0.030, -0.052, powderBodyVolumeDepth);
+        // Rough granular bodies need a little more dense-core absorption than
+        // crystalline/sooty/metallic powders. This only deepens settled Smooth
+        // Sand/Clay/Concrete through the existing stable body gate; loose
+        // particles, Grains, Local, holes, and fine structures stay exact.
+        float powderBodyDepthTone = mix(0.030, -0.052, powderBodyVolumeDepth)
+          - (optics == 7.0 ? 0.006 * powderBodyVolumeDepth : 0.0);
         float powderBodyDirectionalGain = mix(0.060, 0.045, powderBodyVolumeDepth);
         powderBodyChroma = clamp(
           powderDirectedSlope * powderBodyDirectionalGain + powderBodyDepthTone,
