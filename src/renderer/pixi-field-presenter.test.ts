@@ -872,6 +872,36 @@ describe('Pixi presenter startup configuration', () => {
     expect(`${helper}${branch}`).not.toMatch(/\balpha\s*[+*]?=/);
   });
 
+  it('restores true-8x thermal material styling from the live semantic temperature byte only', () => {
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');
+    const eightEnd = source.indexOf('const FIELD_FRAGMENT = `', eightStart);
+    const eight = source.slice(eightStart, eightEnd);
+    const helperStart = eight.indexOf('float thermalEightXOpticsGain(');
+    const helperEnd = eight.indexOf('vec3 liquidEightXMeniscusKey(', helperStart);
+    const branchStart = eight.indexOf('// Solid and powder temperature is already encoded in semantic.g.');
+    const branchEnd = eight.indexOf('// A few exact TPT projections', branchStart);
+    const helper = eight.slice(helperStart, helperEnd);
+    const branch = eight.slice(branchStart, branchEnd);
+
+    expect(helperStart).toBeGreaterThan(0);
+    expect(helperEnd).toBeGreaterThan(helperStart);
+    expect(branchStart).toBeGreaterThan(0);
+    expect(branchEnd).toBeGreaterThan(branchStart);
+    expect(eight).toContain('uniform float uThermalMaterialStyling;');
+    expect(helper).toContain('smoothstep(1.0, 7.0, 11.0 - temperatureByte)');
+    expect(helper).toContain('smoothstep(2.0, 55.0, temperatureByte - 11.0)');
+    expect(helper).toContain('thermalEightXOpticsGain(optics) / 255.0');
+    expect(branch).toContain('uThermalMaterialStyling > 0.5 && !materialEmissive && traits < 0.5');
+    expect(branch).toContain('material != 3.0 && (family == 0.0 || family == 4.0)');
+    expect(branch).toContain('floor(semantic.g * 255.0 + 0.5)');
+    expect(branch).toContain('abs(temperatureByte - 11.0) > 1.0');
+    expect(branch).toContain('thermalEightXDelta(temperatureByte, optics)');
+    expect(`${helper}${branch}`).not.toContain('texture(');
+    expect(`${helper}${branch}`).not.toContain('uTime');
+    expect(`${helper}${branch}`).not.toMatch(/\balpha\s*[+*]?=/);
+  });
+
   it('keeps true-8x sensor glyphs exact-owner, RGB-only, and resource-free', () => {
     const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
     const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');

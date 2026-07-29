@@ -12394,6 +12394,12 @@ async function auditRenderScaleEight(cdp, dpr) {
   const roleGraphics = await auditEightXRoleGraphics(cdp, geometry.canvas);
   stage('role-graphics-ready');
 
+  // Temperature is a canonical direct-mesh RGB response at 8x. Reuse the
+  // render-lab's cold/ambient/hot cards before later fixture gates mutate the
+  // semantic scene; Canvas fallback does not participate in this release gate.
+  const thermalMaterialGraphics = await auditEightXThermalMaterialGraphics(cdp, geometry.canvas);
+  stage('thermal-material-ready');
+
   const presentationTiming = await auditWebGLPresentationTiming(cdp, 8, 12_000, 30_000);
   assert(presentationTiming.source === 'gpu-query' || presentationTiming.source === 'gpu-fence',
     `renderScale=8 timing did not prove completed GPU work (${JSON.stringify(presentationTiming)})`);
@@ -14152,6 +14158,115 @@ async function auditEightXRoleGraphics(cdp, canvasRect) {
       styledWorldArea: styledSupport[0].worldArea,
     },
   };
+}
+
+/**
+ * True-8x direct-mesh thermal proof over the ordinary render-lab cards. The
+ * response is RGB-only: preserve the existing semantic owners and composed
+ * support while proving cold blue and hot warm material interpretation.
+ */
+async function auditEightXThermalMaterialGraphics(cdp, canvasRect) {
+  const fixture = await evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    if (typeof audit.setThermalMaterialStyling !== 'function') {
+      throw new Error('True-8x thermal-material API unavailable');
+    }
+    return [
+      [30, 370], [70, 370], [110, 370],
+      [166, 370], [206, 370], [246, 370],
+      [445, 229], [539, 229],
+    ].map(([x, y]) => ({ material: audit.cell(x, y), temperature: audit.temperature(x, y) }));
+  })()`);
+  assert(fixture.map(({ material }) => material).join(',') === '23,23,23,1,1,1,24,12'
+      && fixture.map(({ temperature }) => temperature).join(',')
+        === '1200,2952,18000,1200,2952,18000,18000,1200',
+  `renderScale=8 thermal fixture changed (${JSON.stringify(fixture)})`);
+  const live = await metrics(cdp);
+  assert(live.backing.width === WORLD_WIDTH * 8 && live.backing.height === WORLD_HEIGHT * 8
+      && live.outputScale === '8',
+  `renderScale=8 thermal graphics lost true backing (${JSON.stringify(live.backing)})`);
+  assertCanvasRectsEqual(canvasRect, live.canvas, 'renderScale=8 thermal graphics CSS geometry');
+
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setThermalMaterialStyling(false); true');
+  const neutral = await captureSettledPage(cdp, 'renderScale=8 neutral thermal-material framebuffer', 450);
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setThermalMaterialStyling(true); true');
+  const styled = await captureSettledPage(cdp, 'renderScale=8 styled thermal-material framebuffer', 450);
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setThermalMaterialStyling(false); true');
+  const repeated = await captureSettledPage(cdp, 'renderScale=8 repeated neutral thermal-material framebuffer', 450);
+  const regions = [
+    { name: 'metalCold8x', x: 30, y: 370, radiusX: 9, radiusY: 5 },
+    { name: 'metalAmbient8x', x: 70, y: 370, radiusX: 9, radiusY: 5 },
+    { name: 'metalHot8x', x: 110, y: 370, radiusX: 9, radiusY: 5 },
+    { name: 'sandCold8x', x: 166, y: 370, radiusX: 9, radiusY: 5 },
+    { name: 'sandAmbient8x', x: 206, y: 370, radiusX: 9, radiusY: 5 },
+    { name: 'sandHot8x', x: 246, y: 370, radiusX: 9, radiusY: 5 },
+    { name: 'glassHotBackdrop8x', x: 445, y: 229, radiusX: 7, radiusY: 5 },
+    { name: 'iceColdBackdrop8x', x: 539, y: 229, radiusX: 3, radiusY: 5 },
+  ];
+  const responseSamples = await sampleLightingDifferenceRegions(cdp, {
+    lit: styled.capture.data,
+    unlit: neutral.capture.data,
+  }, regions, canvasRect);
+  const response = Object.fromEntries(responseSamples.map((sample) => [sample.name, sample]));
+  for (const family of ['metal', 'sand']) {
+    const cold = response[`${family}Cold8x`];
+    const ambient = response[`${family}Ambient8x`];
+    const hot = response[`${family}Hot8x`];
+    assert(ambient.peakMagnitude <= 1,
+      `renderScale=8 ambient ${family} is not a thermal no-op (${JSON.stringify(ambient)})`);
+    assert(cold.coverage >= 0.55 && cold.responseRgb[2] >= 1.5
+      && cold.responseRgb[2] >= cold.responseRgb[0] + 2 && cold.peakMagnitude <= 32,
+    `renderScale=8 cold ${family} lost bounded blue response (${JSON.stringify(cold)})`);
+    assert(hot.coverage >= 0.55 && hot.responseRgb[0] >= 1.5
+      && hot.responseRgb[0] >= hot.responseRgb[2] + 3 && hot.peakMagnitude <= 32,
+    `renderScale=8 hot ${family} lost bounded warm response (${JSON.stringify(hot)})`);
+  }
+  // The wall-backed translucent cards are intentionally smaller than the
+  // broad opaque material cards, so retain a practical but still directional
+  // signal threshold rather than requiring normal-backend magnitude parity.
+  assert(response.glassHotBackdrop8x.coverage >= 0.45
+      && response.glassHotBackdrop8x.responseRgb[0] >= 1.0
+      && response.glassHotBackdrop8x.responseRgb[0]
+        >= response.glassHotBackdrop8x.responseRgb[2] + 2
+      && response.glassHotBackdrop8x.peakMagnitude <= 32,
+  `renderScale=8 hot wall-backed Glass lost warm response (${JSON.stringify(response.glassHotBackdrop8x)})`);
+  // The Ice card is a deliberately narrow translucent sliver over a wall. At
+  // 8x its cold shift covers only the owned high-contrast facets, so coverage
+  // is much smaller than the broad material cards; require that measured
+  // footprint plus a strongly directional, bounded blue response instead of
+  // inventing normal-scale coverage parity for the compact direct compositor.
+  assert(response.iceColdBackdrop8x.coverage >= 0.05
+      && response.iceColdBackdrop8x.responseRgb[2] >= 1.0
+      && response.iceColdBackdrop8x.responseRgb[2]
+        >= response.iceColdBackdrop8x.responseRgb[0] + 2
+      && response.iceColdBackdrop8x.peakMagnitude <= 32,
+  `renderScale=8 cold wall-backed Ice lost blue response (${JSON.stringify(response.iceColdBackdrop8x)})`);
+  const repeatSamples = await sampleBackdropRefractionRegions(cdp, {
+    straight: neutral.capture.data,
+    refracted: styled.capture.data,
+    repeatedStraight: repeated.capture.data,
+  }, regions, canvasRect);
+  assert(repeatSamples.every((sample) => sample.repeatRgbPeak <= 1),
+    `renderScale=8 thermal off-on-off sequence was not deterministic (${JSON.stringify(repeatSamples)})`);
+
+  const supportRegions = regions.map((region) => ({
+    ...region, silhouette: true, fastSupport: true,
+  }));
+  const [neutralSupport, styledSupport] = await Promise.all([
+    samplePageRegions(cdp, neutral.capture.data, supportRegions, undefined, undefined, canvasRect),
+    samplePageRegions(cdp, styled.capture.data, supportRegions, undefined, undefined, canvasRect),
+  ]);
+  const support = neutralSupport.map((sample, index) => ({
+    name: sample.name,
+    neutralVisible: sample.visible,
+    styledVisible: styledSupport[index].visible,
+    neutralWorldArea: sample.worldArea,
+    styledWorldArea: styledSupport[index].worldArea,
+  }));
+  assert(support.every((sample) => sample.neutralVisible === sample.styledVisible
+      && Math.abs(sample.neutralWorldArea - sample.styledWorldArea) <= 0.60),
+  `renderScale=8 thermal styling changed composed support (${JSON.stringify(support)})`);
+  return { fixture, responseSamples, repeatSamples, support };
 }
 
 async function snapshotEightXUnusualPowders(cdp) {

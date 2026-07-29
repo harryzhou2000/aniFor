@@ -134,6 +134,7 @@ uniform float uLiquidSilhouetteCohesion;
 uniform float uSurfaceContourLighting;
 uniform float uSolidFieldLighting;
 uniform float uRoleMaterialStyling;
+uniform float uThermalMaterialStyling;
 uniform float uTranslucentFieldTransmission;
 uniform float uTranslucentBackdropRefraction;
 uniform float uTranslucentLensShell;
@@ -279,6 +280,33 @@ vec3 roleEightXDelta(float traits, vec2 position, float density) {
   if (force > 0.5) delta += vec3(-2.0, 10.0, 17.0)
     * (0.10 + innerRing * 0.52 + outerRing * 0.68);
   return clamp(delta * smoothstep(0.08, 0.72, density), vec3(-20.0), vec3(20.0)) / 255.0;
+}
+// Temperature is already packed into the centre semantic sample used by this
+// direct compositor. Retain the normal path's ambient dead band and bounded
+// cold/warm/incandescent response without adding a sampler, field, pass, or
+// clock to the fifteen-million-fragment frame.
+float thermalEightXOpticsGain(float optics) {
+  if (optics == 13.0) return 0.82;
+  if (optics == 14.0) return 0.62;
+  if (optics == 15.0) return 0.90;
+  if (optics == 7.0) return 0.72;
+  if (optics == 8.0 || optics == 19.0) return 1.0;
+  if (optics == 9.0) return 0.88;
+  if (optics == 10.0) return 1.08;
+  if (optics == 11.0) return 0.92;
+  if (optics == 12.0) return 0.86;
+  return 0.90;
+}
+vec3 thermalEightXDelta(float temperatureByte, float optics) {
+  float cold = smoothstep(1.0, 7.0, 11.0 - temperatureByte);
+  float warm = smoothstep(2.0, 55.0, temperatureByte - 11.0);
+  float incandescent = smoothstep(0.55, 1.0, warm);
+  float gain = thermalEightXOpticsGain(optics) / 255.0;
+  return vec3(
+    -3.0 * cold + 17.0 * warm + 9.0 * incandescent,
+    2.0 * cold + 4.0 * warm + 6.0 * incandescent,
+    14.0 * cold - 7.0 * warm + incandescent
+  ) * gain;
 }
 vec3 liquidEightXMeniscusKey(float optics) {
   if (optics == 1.0) return vec3(0.52, 0.88, 1.00); // Aqueous
@@ -1439,6 +1467,16 @@ void main() {
       float relief = clamp(currentLuma - wetLuma, -4.0 / 255.0, 4.0 / 255.0);
       color = mix(color, wetSediment + vec3(relief),
         lateSuspension * mix(0.96, 1.0, sedimentCompaction));
+    }
+  }
+  // Solid and powder temperature is already encoded in semantic.g. Keep the
+  // compact deep-zoom response semantically passive: traits, emissive owners,
+  // liquid/gas/energy, coverage, support, and alpha remain outside this branch.
+  if (uThermalMaterialStyling > 0.5 && !materialEmissive && traits < 0.5
+    && material != 3.0 && (family == 0.0 || family == 4.0)) {
+    float temperatureByte = floor(semantic.g * 255.0 + 0.5);
+    if (abs(temperatureByte - 11.0) > 1.0) {
+      color = clamp(color + thermalEightXDelta(temperatureByte, optics), 0.0, 1.0);
     }
   }
   // A few exact TPT projections (notably WARP) have an intentionally near-black
