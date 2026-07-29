@@ -47,6 +47,9 @@ import {
   MECHANISM_GRAPHICS_AUDIT, prepareMechanismGraphicsAuditFixture,
 } from './mechanism-graphics-audit';
 import {
+  ELECTRONICS_GRAPHICS_AUDIT, prepareElectronicsGraphicsAuditFixture,
+} from './electronics-graphics-audit';
+import {
   EARTHEN_POWDER_GRAPHICS_AUDIT, prepareEarthenPowderGraphicsAuditFixture,
 } from './earthen-powder-graphics-audit';
 import {
@@ -412,6 +415,9 @@ export class Game {
       setMechanismBodyStyling: (enabled) => {
         this.renderer.setMechanismBodyStylingEnabled(enabled);
       },
+      setElectronicIdentityStyling: (enabled) => {
+        this.renderer.setElectronicIdentityStylingEnabled(enabled);
+      },
       setEarthenPowderStyling: (enabled) => {
         this.renderer.setEarthenPowderStylingEnabled(enabled);
       },
@@ -543,6 +549,10 @@ export class Game {
       mechanismGraphicsAtlas: () => MECHANISM_GRAPHICS_AUDIT,
       prepareMechanismGraphicsFixture: () => {
         prepareMechanismGraphicsAuditFixture(this.simulation);
+      },
+      electronicsGraphicsAtlas: () => ELECTRONICS_GRAPHICS_AUDIT,
+      prepareElectronicsGraphicsFixture: () => {
+        prepareElectronicsGraphicsAuditFixture(this.simulation);
       },
       earthenPowderGraphicsAtlas: () => EARTHEN_POWDER_GRAPHICS_AUDIT,
       prepareEarthenPowderGraphicsFixture: () => {

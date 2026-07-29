@@ -103,6 +103,7 @@ uniform sampler2D uEmissionTexture;
 uniform sampler2D uLiquidTexture;
 uniform sampler2D uSuspensionTexture;
 uniform sampler2D uBoundaryStabilityTexture;
+uniform sampler2D uPowderSurfaceTexture;
 uniform sampler2D uPaletteTexture;
 uniform sampler2D uStyleTexture;
 uniform vec2 uTexel;
@@ -110,6 +111,7 @@ uniform vec2 uAtmosphereTexel;
 uniform vec2 uFieldSize;
 uniform float uNativeWallsActive;
 uniform float uPowderStyle;
+uniform float uPowderSurfaceActive;
 uniform float uPowderBodyDepth;
 uniform float uSuspensionActive;
 uniform float uLiquidOpticalDepth;
@@ -124,6 +126,7 @@ uniform float uEnergyIdentityStyling;
 uniform float uCellularMaterialStyling;
 uniform float uStructuralRigidStyling;
 uniform float uMechanismBodyStyling;
+uniform float uElectronicIdentityStyling;
 uniform float uSensorMaterialStyling;
 uniform float uExplosivePowderStyling;
 uniform float uEarthenPowderStyling;
@@ -157,6 +160,19 @@ float materialAt(vec2 uv) {
   return floor(texture(uFieldTexture, clamp(uv, uTexel * 0.5, vec2(1.0) - uTexel * 0.5)).r * 255.0 + 0.5);
 }
 float same(vec2 uv, float material) { return 1.0 - step(0.5, abs(materialAt(uv) - material)); }
+// The stable Smooth-powder field is already uploaded for the normal WebGL
+// compositor. At true 8x it is sampled only in a settled Smooth-powder scene;
+// Local and Grains stay texture-free references. RGB is density, G/B are the
+// bounded field gradient, and A is the compact compatible-neighbour support.
+vec4 powderSurfaceEightXShape(vec2 uv) {
+  vec4 state = texture(uPowderSurfaceTexture, uv);
+  return vec4(
+    state.r,
+    (state.g * 255.0 - 128.0) / 508.0,
+    (state.b * 255.0 - 128.0) / 508.0,
+    state.a * 9.0
+  );
+}
 // Native TPT walls are stored separately from particles. The direct 8x mesh
 // keeps their raster intentionally compact, but still composites an exact wall
 // ID behind transparent matter without putting a wall into the semantic map.
@@ -918,6 +934,77 @@ vec3 mechanismEightXDelta(float material, vec2 position, float density) {
   }
   return clamp(delta * smoothstep(0.10, 0.82, density), vec3(-14.0), vec3(14.0)) / 255.0;
 }
+// Native control electronics deliberately retain their own static grammar
+// rather than collapsing into the generic Device trace. This is an
+// exact-owner RGB-only layer: it consumes the already-live material, world
+// position, and density values and adds neither a sampler nor a field/pass at
+// true 8x. Source, Spark, clone, and transport owners keep their specialist
+// layers, so this list covers only the twenty remaining control components.
+float electronicEightXStyle(float material) {
+  if (material == 135.0) return 1.0; // ARAY
+  if (material == 136.0) return 2.0; // BTRY
+  if (material == 138.0) return 3.0; // DRAY
+  if (material == 139.0) return 4.0; // EMP
+  if (material == 140.0) return 5.0; // ETRD
+  if (material == 141.0) return 6.0; // INSL
+  if (material == 142.0) return 7.0; // INST
+  if (material == 143.0) return 8.0; // INWR
+  if (material == 144.0) return 9.0; // NSCN
+  if (material == 145.0) return 10.0; // NTCT
+  if (material == 146.0) return 11.0; // PSCN
+  if (material == 147.0) return 12.0; // PTCT
+  if (material == 149.0) return 13.0; // SWCH
+  if (material == 150.0) return 14.0; // TESC
+  if (material == 151.0) return 15.0; // TUNG
+  if (material == 152.0) return 16.0; // WIFI
+  if (material == 153.0) return 17.0; // WIRE
+  if (material == 154.0) return 18.0; // DLAY
+  if (material == 156.0) return 19.0; // HSWC
+  if (material == 157.0) return 20.0; // LCRY
+  return 0.0;
+}
+vec3 electronicEightXDelta(float material, vec2 position, float density) {
+  float style = electronicEightXStyle(material);
+  if (style < 0.5) return vec3(0.0);
+  vec2 cell = floor(position);
+  float rail = 1.0 - step(0.5, mod(cell.x * (1.0 + mod(style, 4.0))
+    + cell.y * (2.0 + mod(style, 3.0)) + style * 3.0, 11.0 + mod(style, 5.0)));
+  float node = 1.0 - step(0.5, mod(cell.x * (4.0 + mod(style, 3.0))
+    - cell.y * (2.0 + mod(style, 4.0)) + style * 7.0, 29.0 + mod(style, 7.0)));
+  vec3 delta;
+  if (style < 3.5) {
+    // ARAY/BTRY/DRAY: directional emitters and charge buses.
+    float beam = 1.0 - step(1.0, mod(cell.x - cell.y * (style == 2.0 ? 1.0 : 2.0), 9.0));
+    delta = vec3(8.0, 5.0, -3.0) * beam + vec3(3.0, 8.0, 13.0) * rail
+      - vec3(4.0, 3.0, 1.0) * node;
+  } else if (style < 6.0) {
+    // EMP/ETRD: pulse rings and electrode forks.
+    float ring = 1.0 - step(0.5, mod(abs(cell.x * 2.0 - cell.y * 3.0) + style, 13.0));
+    delta = vec3(4.0, 9.0, 14.0) * ring + vec3(8.0, 3.0, -2.0) * node
+      - vec3(3.0, 2.0, 1.0) * rail;
+  } else if (style < 9.0) {
+    // INSL/INST/INWR: ceramic separators, sensing dots, and insulated rails.
+    float slot = 1.0 - step(0.5, mod(cell.x + cell.y * 3.0 + style, 17.0));
+    delta = vec3(-4.0, 2.0, 8.0) * rail + vec3(5.0, 4.0, 1.0) * slot
+      + vec3(2.0, 5.0, 8.0) * node;
+  } else if (style < 13.0) {
+    // Doped silicon and thermistors share restrained cold/warm junction marks.
+    float junction = 1.0 - step(0.5, mod(cell.x * 2.0 + cell.y * 5.0 + style, 19.0));
+    vec3 polarity = mod(style, 2.0) < 0.5 ? vec3(9.0, -2.0, 7.0) : vec3(-3.0, 8.0, 11.0);
+    delta = polarity * junction + vec3(3.0, 5.0, 9.0) * rail - vec3(3.0, 2.0, 1.0) * node;
+  } else if (style < 17.0) {
+    // Switches, Tesla coils, tungsten, and Wi-Fi use sparse mechanical/radio marks.
+    float coil = 1.0 - step(0.5, mod(cell.x * 3.0 - cell.y * 2.0 + style, 15.0));
+    delta = vec3(6.0, 4.0, -2.0) * rail + vec3(2.0, 8.0, 14.0) * coil
+      - vec3(4.0, 3.0, 1.0) * node;
+  } else {
+    // WIRE/DLAY/HSWC/LCRY: conductors, timed taps, heat gates, and lattice cells.
+    float tap = 1.0 - step(0.5, mod(cell.x + cell.y * 4.0 + style, 21.0));
+    delta = vec3(3.0, 8.0, 13.0) * rail + vec3(7.0, 3.0, 5.0) * tap
+      - vec3(4.0, 3.0, 1.0) * node;
+  }
+  return clamp(delta * smoothstep(0.10, 0.82, density), vec3(-16.0), vec3(16.0)) / 255.0;
+}
 // Broad metallic bodies need a different read from the sparse identity marks
 // above. This remains an interior-only, world-anchored finish: the analytic
 // band has no clock, sample, field, or support decision, so thin plates,
@@ -1162,6 +1249,45 @@ void main() {
   vec4 atmosphere = texture(uAtmosphereTexture, uv);
   vec4 emission = texture(uEmissionTexture, uv);
   vec4 liquid = texture(uLiquidTexture, uv);
+  // A direct 8x mesh normally returns immediately for semantic Empty. Smooth
+  // powder is the deliberate exception: the shared settled-powder field may
+  // own a conservative exterior contour in an Empty cell, exactly as it does
+  // at 1x–4x. Choose an owner only from one compatible 2x2 semantic block,
+  // reject walls, unlike matter, enclosed authored holes, and weak/flat field
+  // support, then carry the smallest derived state into the common compositor.
+  float projectedSmoothPowder = 0.0;
+  vec4 projectedPowderShape = vec4(0.0);
+  if (material < 0.5 && uPowderStyle > 1.5 && uPowderSurfaceActive > 0.5) {
+    vec4 candidateShape = powderSurfaceEightXShape(uv);
+    vec4 wallState = texture(uWallTexture, uv);
+    vec2 candidateGrid = uv * uFieldSize - 0.5;
+    vec2 candidateOrigin = (floor(candidateGrid) + 0.5) * uTexel;
+    float candidate00 = materialAt(candidateOrigin);
+    float candidate10 = materialAt(candidateOrigin + vec2(uTexel.x, 0.0));
+    float candidate01 = materialAt(candidateOrigin + vec2(0.0, uTexel.y));
+    float candidate11 = materialAt(candidateOrigin + uTexel);
+    float candidate = candidate00 > 0.5 ? candidate00
+      : (candidate10 > 0.5 ? candidate10 : (candidate01 > 0.5 ? candidate01 : candidate11));
+    float compatible = (candidate00 < 0.5 || abs(candidate00 - candidate) < 0.5 ? 1.0 : 0.0)
+      * (candidate10 < 0.5 || abs(candidate10 - candidate) < 0.5 ? 1.0 : 0.0)
+      * (candidate01 < 0.5 || abs(candidate01 - candidate) < 0.5 ? 1.0 : 0.0)
+      * (candidate11 < 0.5 || abs(candidate11 - candidate) < 0.5 ? 1.0 : 0.0);
+    float candidateFamily = candidate > 0.5
+      ? floor(texture(uStyleTexture, vec2((candidate + 0.5) / 256.0, 0.5)).r * 255.0 + 0.5)
+      : 0.0;
+    float verticalShare = abs(candidateShape.z)
+      / (abs(candidateShape.y) + abs(candidateShape.z) + 0.000001);
+    float fieldContour = smoothstep(0.42, 0.70, verticalShare)
+      * smoothstep(0.004, 0.027, abs(candidateShape.z))
+      * smoothstep(5.5, 8.0, candidateShape.w)
+      * smoothstep(0.075, 0.26, candidateShape.x);
+    if (candidateFamily == 4.0 && compatible > 0.5 && wallState.r < 0.5
+      && wallState.g > 0.5 && fieldContour > 0.001) {
+      material = candidate;
+      projectedSmoothPowder = fieldContour;
+      projectedPowderShape = candidateShape;
+    }
+  }
   // True 8x already needs this centre emission sample for aura and energy.
   // Reuse it for compact gas scatter. The gas-only branches below additionally
   // take four alpha-only atmosphere probes for volume curvature, never an
@@ -1236,11 +1362,50 @@ void main() {
     max(1.0 - step(0.5, material01), 1.0 - step(0.5, material11))
   );
   float density = mix(mix(q00, q10, blend.x), mix(q01, q11, blend.x), blend.y);
-  if (family == 4.0 && uPowderStyle < 0.5) density = same(uv, material);
+  float semanticDensity = density;
+  vec2 powderFieldSlope = vec2(0.0);
+  float powderFieldBlend = 0.0;
+  if (family == 4.0) {
+    if (uPowderStyle < 0.5) {
+      // Grains is the exact square-cell reference: coverage never spills into
+      // an Empty neighbour, regardless of output scale or powder stability.
+      density = same(uv, material);
+    } else if (uPowderStyle < 1.5) {
+      // Local remains one rounded particle per semantic cell. The compact 8x
+      // mesh used to leave this as bilinear coverage, making it indistinguish-
+      // able from Smooth at high detail; retain the normal renderer's stable
+      // world-anchored offset without a field/sample/pass.
+      float grainOffsetY = fract(sin(dot(floor(grid), vec2(39.346, 11.135))) * 24634.6345) - 0.5;
+      float grainOffsetX = fract(sin(dot(floor(grid), vec2(73.619, 17.713))) * 12463.3795) - 0.5;
+      vec2 grainCentre = vec2(grainOffsetX, grainOffsetY) * 0.075;
+      // Grid is deliberately shifted by -0.5 for the 2x2 owner block. Put
+      // the Local disc back on its semantic cell centre before measuring it;
+      // using fract(grid) here offset every grain by half a cell and erased
+      // legitimate column centres under the true-8x support audit.
+      float grainDistance = length(fract(grid + 0.5) - 0.5 - grainCentre);
+      density = 1.0 - smoothstep(0.34, 0.56, grainDistance);
+    } else if (uPowderSurfaceActive > 0.5) {
+      vec4 smoothPowderShape = projectedSmoothPowder > 0.5
+        ? projectedPowderShape : powderSurfaceEightXShape(uv);
+      float verticalShare = abs(smoothPowderShape.z)
+        / (abs(smoothPowderShape.y) + abs(smoothPowderShape.z) + 0.000001);
+      float semanticCompatibility = projectedSmoothPowder > 0.5 ? 1.0
+        : smoothstep(0.42, 0.92, semanticDensity);
+      powderFieldBlend = max(projectedSmoothPowder,
+        smoothstep(0.42, 0.70, verticalShare)
+          * smoothstep(0.004, 0.027, abs(smoothPowderShape.z))
+          * smoothstep(5.5, 8.0, smoothPowderShape.w)
+          * semanticCompatibility);
+      powderFieldSlope = smoothPowderShape.yz;
+      // The field supplies only the settled outer volume. Semantic density
+      // remains the colour/mesostructure owner in the powder branch below, so
+      // a Smooth pile gains one curved silhouette without becoming airbrushed.
+      density = mix(density, smoothPowderShape.x, powderFieldBlend);
+    }
+  }
   // Preserve exact material coverage before a liquid/gas volume may replace
   // the working density. Air-facing Surface styling needs this semantic edge;
   // field density remains authoritative for volume colour and final support.
-  float semanticDensity = density;
   if (family == 1.0) density = max(density * 0.20, atmosphere.a);
   if (family == 2.0) density = max(density, liquid.a);
   float depth = texture(uBoundaryStabilityTexture, uv).r;
@@ -1328,7 +1493,19 @@ void main() {
   }
   if (family == 4.0) {
     float powderDepth = depth * uPowderBodyDepth;
-    color *= vec3(1.02 + density * 0.07) - powderDepth * vec3(0.10, 0.07, 0.04);
+    // Smooth changes a settled silhouette, not the material's interior into a
+    // uniform airbrushed fill. Preserve the exact-cell density and a bounded
+    // world-anchored microvariation for all three powder modes.
+    float powderOpticalDensity = mix(semanticDensity, density, 0.18);
+    float powderGrain = fract(sin(dot(floor(grid), vec2(23.417, 61.873))) * 18347.2861) - 0.5;
+    // Smooth may cohere a settled silhouette, but it must not erase the
+    // material's internal grain colour. Its bounded, world-anchored variation
+    // is deliberately stronger than the reference modes' particle shading:
+    // the result reads as a continuous body with mineral depth rather than a
+    // uniformly airbrushed fill at 1x through true 8x.
+    float powderMicro = uPowderStyle < 0.5 ? 0.032 : (uPowderStyle < 1.5 ? 0.044 : 0.085);
+    color *= vec3(1.02 + powderOpticalDensity * 0.07 + powderGrain * powderMicro)
+      - powderDepth * vec3(0.10, 0.07, 0.04);
     // Smooth, supported powder retains a coloured stable edge. Local and
     // Grains are intentionally exact no-ops, as are a one-cell grain and
     // traits/emissive owners. The compact support guard preserves fine holes
@@ -1340,6 +1517,7 @@ void main() {
         mix(q10 - q00, q11 - q01, blend.y),
         mix(q01 - q00, q11 - q10, blend.x)
       );
+      powderSlope = mix(powderSlope, powderFieldSlope, powderFieldBlend);
       color = mix(color,
         applySurfaceContourEightX(color, density, powderSlope, optics, 1.0, 0.0), powderSupport);
     }
@@ -1536,6 +1714,13 @@ void main() {
   if (uMechanismBodyStyling > 0.5 && mechanismEightXStyle(material) > 0.5
     && !materialEmissive) {
     color = clamp(color + mechanismEightXDelta(material, grid, density), 0.0, 1.0);
+  }
+  // Control electronics span powered, force, and ordinary Device records and
+  // may carry later role traits. Keep their exact-owner body identity outside
+  // those generic category gates; the later overlays remain authoritative.
+  if (uElectronicIdentityStyling > 0.5 && electronicEightXStyle(material) > 0.5
+    && !materialEmissive) {
+    color = clamp(color + electronicEightXDelta(material, grid, density), 0.0, 1.0);
   }
   // Construction solids add their material-local finish only after the shared
   // thick-body optics.  It is RGB-only, so contours, holes, spurs, walls, and
@@ -2263,6 +2448,7 @@ uniform float uRoleMaterialStyling;
 uniform float uCellularMaterialStyling;
 uniform float uStructuralRigidStyling;
 uniform float uMechanismBodyStyling;
+uniform float uElectronicIdentityStyling;
 uniform float uEarthenPowderStyling;
 uniform float uSensorMaterialStyling;
 uniform float uUnusualPowderStyling;
@@ -3280,6 +3466,82 @@ float mechanismBodyStyle(float material) {
     || material == 122.0 || material == 123.0 || material == 155.0
     || material == 160.0 || material == 161.0 || material == 162.0
     || material == 163.0 ? 1.0 : 0.0;
+}
+// Exact native control electronics retain a legible body grammar on canonical
+// WebGL. This does not borrow the generic Device profile as an identity test:
+// several controls are trait-bearing, and semantic roles still layer after the
+// bounded RGB marks below. Canvas is intentionally left as the semantic and
+// recovery backend for this advanced visual layer.
+float electronicBodyStyle(float material) {
+  return material == 135.0 || material == 136.0 || material == 138.0
+    || material == 139.0 || material == 140.0 || material == 141.0
+    || material == 142.0 || material == 143.0 || material == 144.0
+    || material == 145.0 || material == 146.0 || material == 147.0
+    || material == 149.0 || material == 150.0 || material == 151.0
+    || material == 152.0 || material == 153.0 || material == 154.0
+    || material == 156.0 || material == 157.0 ? 1.0 : 0.0;
+}
+float electronicBodyIndex(float material) {
+  if (material == 135.0) return 1.0;
+  if (material == 136.0) return 2.0;
+  if (material == 138.0) return 3.0;
+  if (material == 139.0) return 4.0;
+  if (material == 140.0) return 5.0;
+  if (material == 141.0) return 6.0;
+  if (material == 142.0) return 7.0;
+  if (material == 143.0) return 8.0;
+  if (material == 144.0) return 9.0;
+  if (material == 145.0) return 10.0;
+  if (material == 146.0) return 11.0;
+  if (material == 147.0) return 12.0;
+  if (material == 149.0) return 13.0;
+  if (material == 150.0) return 14.0;
+  if (material == 151.0) return 15.0;
+  if (material == 152.0) return 16.0;
+  if (material == 153.0) return 17.0;
+  if (material == 154.0) return 18.0;
+  if (material == 156.0) return 19.0;
+  if (material == 157.0) return 20.0;
+  return 0.0;
+}
+vec3 electronicBodyIdentityDelta(float material, vec2 position) {
+  float style = electronicBodyIndex(material);
+  if (style < 0.5) return vec3(0.0);
+  float x = floor(position.x);
+  float y = floor(position.y);
+  float rail = 1.0 - step(0.5, mod(x * (1.0 + mod(style, 4.0))
+    + y * (2.0 + mod(style, 3.0)) + style * 3.0, 11.0 + mod(style, 5.0)));
+  float node = 1.0 - step(0.5, mod(x * (4.0 + mod(style, 3.0))
+    - y * (2.0 + mod(style, 4.0)) + style * 7.0, 29.0 + mod(style, 7.0)));
+  if (style < 3.5) {
+    float beam = 1.0 - step(1.0, mod(x - y * (style == 2.0 ? 1.0 : 2.0), 9.0));
+    return (vec3(8.0, 5.0, -3.0) * beam + vec3(3.0, 8.0, 13.0) * rail
+      - vec3(4.0, 3.0, 1.0) * node) / 255.0;
+  }
+  if (style < 6.0) {
+    float ring = 1.0 - step(0.5, mod(abs(x * 2.0 - y * 3.0) + style, 13.0));
+    return (vec3(4.0, 9.0, 14.0) * ring + vec3(8.0, 3.0, -2.0) * node
+      - vec3(3.0, 2.0, 1.0) * rail) / 255.0;
+  }
+  if (style < 9.0) {
+    float slot = 1.0 - step(0.5, mod(x + y * 3.0 + style, 17.0));
+    return (vec3(-4.0, 2.0, 8.0) * rail + vec3(5.0, 4.0, 1.0) * slot
+      + vec3(2.0, 5.0, 8.0) * node) / 255.0;
+  }
+  if (style < 13.0) {
+    float junction = 1.0 - step(0.5, mod(x * 2.0 + y * 5.0 + style, 19.0));
+    vec3 polarity = mod(style, 2.0) < 0.5 ? vec3(9.0, -2.0, 7.0) : vec3(-3.0, 8.0, 11.0);
+    return (polarity * junction + vec3(3.0, 5.0, 9.0) * rail
+      - vec3(3.0, 2.0, 1.0) * node) / 255.0;
+  }
+  if (style < 17.0) {
+    float coil = 1.0 - step(0.5, mod(x * 3.0 - y * 2.0 + style, 15.0));
+    return (vec3(6.0, 4.0, -2.0) * rail + vec3(2.0, 8.0, 14.0) * coil
+      - vec3(4.0, 3.0, 1.0) * node) / 255.0;
+  }
+  float tap = 1.0 - step(0.5, mod(x + y * 4.0 + style, 21.0));
+  return (vec3(3.0, 8.0, 13.0) * rail + vec3(7.0, 3.0, 5.0) * tap
+    - vec3(4.0, 3.0, 1.0) * node) / 255.0;
 }
 float structuralRigidDeepIdentityGain(float material) {
   // Large rigid bodies carry their broad depth and reflected-light response
@@ -5295,11 +5557,12 @@ void main() {
       // comparison mode completely untouched.
       // A genuinely settled Smooth body should read as one material volume at
       // fit view rather than a grid of individually shaded simulation cells.
-      // Keep a trace of mineral variation so a dense pile does not become
-      // plastic, but reserve the obvious grain/facet language for loose
-      // matter, Local, and the explicit square Grains reference mode.
-      float cellGrainRetention = mix(1.0, 0.08, powderVisualCohesion);
-      float facetRetention = mix(1.0, 0.20, powderVisualCohesion);
+      // Smooth owns only the settled exterior contour and broad body depth. It
+      // must retain enough mineral/grain variation inside a pile to avoid the
+      // previous airbrushed look; Local and square Grains still carry the full
+      // reference cadence, while a stable bulk keeps a restrained 65/70%.
+      float cellGrainRetention = mix(1.0, 0.65, powderVisualCohesion);
+      float facetRetention = mix(1.0, 0.70, powderVisualCohesion);
       color *= 0.91 + grain * (0.20 + roughSurface * 0.05) * cellGrainRetention * facetGain
         + grainFacet * (0.10 + roughSurface * 0.04) * facetRetention * facetGain;
       color += base * max(0.0, 0.6 - subcell.x - subcell.y)
@@ -5831,6 +6094,16 @@ void main() {
       && surfaceOnly < 0.5 && halo < 0.5 && wall < 0.5
       && wallOnly < 0.5 && emissionOnly < 0.5 && !materialEmissive) {
       color = clamp(color + mechanismBodyIdentityDelta(material, fieldPosition)
+        * (0.58 + interiorMicroGain * 0.42), 0.0, 1.0);
+    }
+    // Canonical WebGL owns the detailed static grammar for native control
+    // hardware. Canvas keeps exact semantic bodies for compatibility/recovery;
+    // this branch is RGB-only and preserves alpha, coverage, holes, walls,
+    // owner identity, and physics while allowing role decals to layer later.
+    if (uElectronicIdentityStyling > 0.5 && electronicBodyStyle(material) > 0.5
+      && surfaceOnly < 0.5 && halo < 0.5 && wall < 0.5
+      && wallOnly < 0.5 && emissionOnly < 0.5 && !materialEmissive) {
+      color = clamp(color + electronicBodyIdentityDelta(material, fieldPosition)
         * (0.58 + interiorMicroGain * 0.42), 0.0, 1.0);
     }
     // Seventeen uncommon solids layer one static identity over the generic body
@@ -6398,6 +6671,7 @@ export class PixiFieldPresenter {
       uCellularMaterialStyling: { value: 1, type: 'f32' },
       uStructuralRigidStyling: { value: 1, type: 'f32' },
       uMechanismBodyStyling: { value: 1, type: 'f32' },
+      uElectronicIdentityStyling: { value: 1, type: 'f32' },
       uEarthenPowderStyling: { value: 1, type: 'f32' },
       uSensorMaterialStyling: { value: 1, type: 'f32' },
       uUnusualPowderStyling: { value: 1, type: 'f32' },
@@ -6426,6 +6700,9 @@ export class PixiFieldPresenter {
       // dirty wall uploads, never by a per-fragment material decision.
       uNativeWallsActive: { value: 0, type: 'f32' },
       uPowderStyle: { value: powderRenderStyleValue('smooth'), type: 'f32' },
+      // Keep the true-8x empty fast path sampler-free unless the shared stable
+      // powder field really has a settled surface to project.
+      uPowderSurfaceActive: { value: this.fieldSet.powderSurface.hasSurface ? 1 : 0, type: 'f32' },
       uPowderBodyDepth: { value: 1, type: 'f32' },
       uSuspensionActive: {
         value: this.fieldSet.suspension.hasSuspension ? 1 : 0,
@@ -6753,6 +7030,7 @@ export class PixiFieldPresenter {
     moltenBodyOpticsEnabled = true,
     aqueousSurfaceReflectionEnabled = true,
     mechanismBodyStylingEnabled = true,
+    electronicIdentityStylingEnabled = true,
   ): void {
     const uniforms = this.uniforms.uniforms;
     uniforms.uGasFieldLighting = gasFieldLightingEnabled ? 1 : 0;
@@ -6777,6 +7055,7 @@ export class PixiFieldPresenter {
     uniforms.uCellularMaterialStyling = cellularMaterialStylingEnabled ? 1 : 0;
     uniforms.uStructuralRigidStyling = structuralRigidStylingEnabled ? 1 : 0;
     uniforms.uMechanismBodyStyling = mechanismBodyStylingEnabled ? 1 : 0;
+    uniforms.uElectronicIdentityStyling = electronicIdentityStylingEnabled ? 1 : 0;
     uniforms.uEarthenPowderStyling = earthenPowderStylingEnabled ? 1 : 0;
     uniforms.uSensorMaterialStyling = sensorMaterialStylingEnabled ? 1 : 0;
     uniforms.uUnusualPowderStyling = unusualPowderStylingEnabled ? 1 : 0;
@@ -6909,6 +7188,11 @@ export class PixiFieldPresenter {
 
   setMechanismBodyStylingEnabled(enabled: boolean): void {
     this.uniforms.uniforms.uMechanismBodyStyling = enabled ? 1 : 0;
+    this.renderApplication();
+  }
+
+  setElectronicIdentityStylingEnabled(enabled: boolean): void {
+    this.uniforms.uniforms.uElectronicIdentityStyling = enabled ? 1 : 0;
     this.renderApplication();
   }
 
@@ -7163,6 +7447,7 @@ export class PixiFieldPresenter {
       );
       this.powderSurfaceDirty = false;
       this.lastPowderSurfaceRefresh = scheduleTime;
+      this.uniforms.uniforms.uPowderSurfaceActive = this.fieldSet.powderSurface.hasSurface ? 1 : 0;
       if (changed) {
         this.powderSurfaceSource.update();
         packExteriorAir(this.wallBytes, this.fieldSet.powderSurface.exteriorAirBytes);

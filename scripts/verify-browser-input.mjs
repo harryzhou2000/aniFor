@@ -12885,6 +12885,62 @@ async function auditRenderScaleEight(cdp, dpr) {
   assert(powderSupport.local.deepHoleLeak <= 0.10
     && powderSupport.smooth.deepHoleLeak <= 0.10,
   `renderScale=8 powder styling filled authored column holes (${JSON.stringify(powderSupport)})`);
+  // The direct 8x compositor is a high-resolution presentation of the normal
+  // WebGL modes, not a simplified fourth powder style. Sample the same shallow
+  // settled slope used by the normal-scale contract before later fixtures
+  // replace the scene: Smooth must have its own curved exterior, Local keeps a
+  // rounded particle read, and Grains remains the square discrete reference.
+  const eightPowderStyleRegion = [{
+    name: 'shallowSandSlope8x', x: 94.5, y: 145,
+    radiusX: 77, radiusY: 7, topology: true, silhouette: true, signature: true,
+  }, {
+    name: 'smoothSandInterior8x', x: 156, y: 78, radius: 8,
+  }];
+  const eightPowderStyleSamples = {};
+  for (const style of ['grains', 'local', 'smooth']) {
+    eightPowderStyleSamples[style] = await samplePageRegions(
+      cdp, styleCaptures[style], eightPowderStyleRegion,
+      blankCapture.capture.data, blankCapture.reference.data, geometry.canvas,
+    );
+  }
+  const eightPowderSlopeContinuity = await samplePowderSlopeContinuity(
+    cdp, styleCaptures, blankCapture.capture.data, geometry.canvas,
+  );
+  assert(eightPowderStyleSamples.grains[0].signature !== eightPowderStyleSamples.local[0].signature
+      && eightPowderStyleSamples.local[0].signature !== eightPowderStyleSamples.smooth[0].signature,
+  `renderScale=8 powder styles converged (${JSON.stringify(eightPowderStyleSamples)})`);
+  assert([eightPowderSlopeContinuity.grains, eightPowderSlopeContinuity.local,
+    eightPowderSlopeContinuity.smooth].every((sample) => sample.rows >= 80)
+      && eightPowderSlopeContinuity.smooth.rmsError <= 0.75
+      && eightPowderSlopeContinuity.smooth.maximumError <= 1.25
+      && eightPowderSlopeContinuity.smooth.meanTransitionWidth >= 0.18
+      && eightPowderSlopeContinuity.smooth.meanTransitionWidth <= 0.80
+      && eightPowderSlopeContinuity.smooth.meanTangentError
+        <= eightPowderSlopeContinuity.local.meanTangentError * 0.85
+      && eightPowderSlopeContinuity.smooth.meanCurvatureEnergy
+        <= eightPowderSlopeContinuity.local.meanCurvatureEnergy * 0.78,
+  `renderScale=8 Smooth powder lost normal-WebGL contour compatibility (${JSON.stringify({
+    eightPowderStyleSamples, eightPowderSlopeContinuity,
+  })})`);
+  // A square raster has a deliberately sharper coverage transition than the
+  // Hermite contour.  On a shallow slope it can have *less* measured
+  // second-difference energy than a soft curve, so use its larger geometric
+  // error and narrower transition here; the deep-zoom exact-square probe
+  // later in this gate remains the direct shape contract.
+  assert(eightPowderSlopeContinuity.grains.rmsError
+      >= eightPowderSlopeContinuity.smooth.rmsError * 1.08
+      && eightPowderSlopeContinuity.grains.meanTransitionWidth
+        <= eightPowderSlopeContinuity.smooth.meanTransitionWidth * 0.78
+      && eightPowderSlopeContinuity.grains.meanTransitionWidth >= 0.18,
+  `renderScale=8 Grains lost its square reference geometry (${JSON.stringify(eightPowderSlopeContinuity)})`);
+  // Local's score is dominated by its deliberate round-particle coverage
+  // edges, so it is not a colour-texture baseline for a continuous Smooth
+  // body. Require a substantial absolute material variation instead, and keep
+  // it clearly above the deliberately flat square-Grains reference.
+  assert(eightPowderStyleSamples.smooth[1].microContrast >= 8.5
+      && eightPowderStyleSamples.smooth[1].microContrast
+        >= eightPowderStyleSamples.grains[1].microContrast * 2.5,
+  `renderScale=8 Smooth powder over-smoothed its interior material variation (${JSON.stringify(eightPowderStyleSamples)})`);
   stage('powder-support-ready');
   const powderBodyDepthSamples = await sampleBackdropRefractionRegions(cdp, {
     straight: flatPowderBodyCapture.capture.data,
@@ -13496,6 +13552,11 @@ async function auditRenderScaleEight(cdp, dpr) {
   // parity from the recovery presenter.
   const mechanismGraphics = await auditEightXMechanismGraphics(cdp, geometry.canvas);
   stage('mechanism-graphics-ready');
+  // Exact native control components have a canonical WebGL body grammar of
+  // their own. Canvas remains a semantic/recovery fallback, so this exercises
+  // only the true 4896×3072 direct mesh and its completed-frame queue.
+  const electronicsGraphics = await auditEightXElectronicsGraphics(cdp, geometry.canvas);
+  stage('electronics-graphics-ready');
   // Sensors are device solids, but their seven exact public IDs need more than
   // the generic true-8x terminal cue. Exercise the compact static glyph layer
   // at the real backing without treating the Canvas fallback as a visual gate.
@@ -13569,6 +13630,8 @@ async function auditRenderScaleEight(cdp, dpr) {
     presentationTiming,
     suspensionSamples,
     suspensionPhaseContrast,
+    eightPowderStyleSamples,
+    eightPowderSlopeContinuity,
     powderSupport,
     powderBodyDepthSamples,
     squareGrain,
@@ -13603,6 +13666,7 @@ async function auditRenderScaleEight(cdp, dpr) {
     unusualSolidGraphics,
     structuralRigidGraphics,
     mechanismGraphics,
+    electronicsGraphics,
     sensorGraphics,
     sourceTargetGraphics,
     forceActivityGraphics,
@@ -14049,6 +14113,147 @@ async function auditEightXMechanismGraphics(cdp, canvasRect) {
       && Math.abs(sample.worldArea - styledSupport[index].worldArea)
         <= Math.max(0.60, sample.worldArea * 0.005)
   )), `renderScale=8 mechanism styling changed composed support (${JSON.stringify({ flatSupport, styledSupport })})`);
+  return {
+    cards: atlas.cards.map(({ material, code }) => ({ material, code })),
+    occupied: prepared.occupied,
+    samples,
+    exactRepeatedOff: samples.every((sample) => sample.repeatRgbPeak <= 1),
+  };
+}
+
+async function snapshotEightXElectronicsGraphics(cdp) {
+  return evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    const snapshot = audit.electronicsGraphicsAtlas();
+    const cards = Array.isArray(snapshot) ? snapshot : snapshot.cards;
+    const exactRect = (rect, material) => {
+      for (let y = rect.y; y < rect.y + rect.height; y++) {
+        for (let x = rect.x; x < rect.x + rect.width; x++) {
+          if (audit.cell(x, y) !== material) return false;
+        }
+      }
+      return true;
+    };
+    const inside = (x, y, rect) => x >= rect.x && x < rect.x + rect.width
+      && y >= rect.y && y < rect.y + rect.height;
+    return {
+      occupied: audit.occupiedCells(),
+      cards: cards.map((entry) => {
+        let bodyExact = true;
+        for (let y = entry.body.y; y < entry.body.y + entry.body.height; y++) {
+          for (let x = entry.body.x; x < entry.body.x + entry.body.width; x++) {
+            const empty = inside(x, y, entry.authoredHole) || inside(x, y, entry.openChannel);
+            bodyExact &&= audit.cell(x, y) === (empty ? 0 : entry.material);
+          }
+        }
+        return {
+          material: entry.material,
+          code: entry.code,
+          bodyExact,
+          pairedBodyExact: exactRect(entry.pairedBody, entry.material),
+          authoredHoleExact: exactRect(entry.authoredHole, 0),
+          openChannelExact: exactRect(entry.openChannel, 0),
+          railExact: exactRect(entry.thinRail, entry.material),
+          isolatedExact: audit.cell(entry.isolated.x, entry.isolated.y) === entry.material,
+          guardExact: exactRect(entry.guardedBlank, 0),
+          contactOwnerExact: exactRect(entry.metalContact.owner, entry.material),
+          contactMetalExact: exactRect(entry.metalContact.metal, entry.metalContact.material),
+          controlsExact: exactRect(entry.controls.cray, 137)
+            && exactRect(entry.controls.pcln, 159) && exactRect(entry.controls.pipe, 121)
+            && exactRect(entry.controls.spark, 148),
+        };
+      }),
+    };
+  })()`);
+}
+
+function assertEightXElectronicsTopology(snapshot, label) {
+  const materials = [135, 136, 138, 139, 140, 141, 142, 143, 144, 145,
+    146, 147, 149, 150, 151, 152, 153, 154, 156, 157];
+  assert(snapshot.cards.length === materials.length && snapshot.cards.every((card, index) => (
+    card.material === materials[index] && card.bodyExact && card.pairedBodyExact
+      && card.authoredHoleExact && card.openChannelExact && card.railExact && card.isolatedExact
+      && card.guardExact && card.contactOwnerExact && card.contactMetalExact && card.controlsExact
+  )), `${label}: electronics identity/topology changed (${JSON.stringify(snapshot)})`);
+}
+
+/** Canonical WebGL true-8× gate for the remaining native control hardware. */
+async function auditEightXElectronicsGraphics(cdp, canvasRect) {
+  await evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    if (typeof audit.prepareElectronicsGraphicsFixture !== 'function'
+      || typeof audit.electronicsGraphicsAtlas !== 'function'
+      || typeof audit.setElectronicIdentityStyling !== 'function') {
+      throw new Error('True-8x electronics graphics API unavailable');
+    }
+    audit.resetView();
+    audit.clear();
+    return true;
+  })()`);
+  const blank = await captureSettledPage(cdp, 'renderScale=8 blank electronics framebuffer', 450);
+  const rawAtlas = await evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    audit.prepareElectronicsGraphicsFixture();
+    return audit.electronicsGraphicsAtlas();
+  })()`);
+  const atlas = Array.isArray(rawAtlas) ? { cards: rawAtlas } : rawAtlas;
+  assert(atlas?.cards?.length === 20,
+    `renderScale=8 electronics fixture is incomplete (${JSON.stringify(atlas)})`);
+  const prepared = await snapshotEightXElectronicsGraphics(cdp);
+  assertEightXElectronicsTopology(prepared, 'renderScale=8 prepared electronics fixture');
+  const live = await metrics(cdp);
+  assert(live.backing.width === WORLD_WIDTH * 8 && live.backing.height === WORLD_HEIGHT * 8
+      && live.outputScale === '8',
+  `renderScale=8 electronics fixture lost true backing (${JSON.stringify(live.backing)})`);
+  assertCanvasRectsEqual(canvasRect, live.canvas, 'renderScale=8 electronics fixture CSS geometry');
+
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setElectronicIdentityStyling(false); true');
+  const flat = await captureSettledPage(cdp, 'renderScale=8 flat electronics framebuffer', 450);
+  const flatTopology = await snapshotEightXElectronicsGraphics(cdp);
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setElectronicIdentityStyling(true); true');
+  const styled = await captureSettledPage(cdp, 'renderScale=8 styled electronics framebuffer', 450);
+  const styledTopology = await snapshotEightXElectronicsGraphics(cdp);
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setElectronicIdentityStyling(false); true');
+  const repeated = await captureSettledPage(cdp, 'renderScale=8 repeated flat electronics framebuffer', 450);
+  const repeatedTopology = await snapshotEightXElectronicsGraphics(cdp);
+  assert(JSON.stringify(flatTopology) === JSON.stringify(prepared)
+      && JSON.stringify(styledTopology) === JSON.stringify(prepared)
+      && JSON.stringify(repeatedTopology) === JSON.stringify(prepared),
+  'renderScale=8 electronics styling changed semantic topology');
+
+  const regions = atlas.cards.map((entry) => ({
+    name: entry.code,
+    x: entry.pairedBody.x + entry.pairedBody.width / 2,
+    y: entry.pairedBody.y + entry.pairedBody.height / 2,
+    radiusX: Math.max(1, entry.pairedBody.width / 2 - 1),
+    radiusY: Math.max(1, entry.pairedBody.height / 2 - 1),
+    silhouette: true,
+  }));
+  const samples = await sampleBackdropRefractionRegions(cdp, {
+    straight: flat.capture.data,
+    refracted: styled.capture.data,
+    repeatedStraight: repeated.capture.data,
+  }, regions, canvasRect);
+  assert(samples.length === 20 && samples.every((sample) => (
+    sample.rgbRms >= 0.01 && sample.rgbRms <= 24
+      && sample.rgbPeak > 0 && sample.rgbPeak <= 48 && sample.repeatRgbPeak <= 1
+  )), `renderScale=8 electronics response is absent, unbounded, or unstable (${JSON.stringify(samples)})`);
+  assert(new Set(samples.map((sample) => sample.responseSignature)).size >= 12,
+    `renderScale=8 electronics lost distinct component responses (${JSON.stringify(samples)})`);
+  const [flatSupport, styledSupport] = await Promise.all([
+    samplePageRegions(
+      cdp, flat.capture.data, regions, blank.capture.data, blank.reference.data, canvasRect,
+    ),
+    samplePageRegions(
+      cdp, styled.capture.data, regions, blank.capture.data, blank.reference.data, canvasRect,
+    ),
+  ]);
+  assert(flatSupport.every((sample, index) => (
+    Math.abs(sample.visible - styledSupport[index].visible) <= Math.max(2, Math.ceil(sample.visible * 0.005))
+      && Math.abs(sample.worldArea - styledSupport[index].worldArea)
+        <= Math.max(0.60, sample.worldArea * 0.005)
+  )), `renderScale=8 electronics styling changed composed support (${JSON.stringify({ flatSupport, styledSupport })})`);
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setElectronicIdentityStyling(true); true');
   return {
     cards: atlas.cards.map(({ material, code }) => ({ material, code })),
     occupied: prepared.occupied,

@@ -14,6 +14,7 @@ import type { ExplosivePowderGraphicsAuditSnapshot } from './explosive-powder-gr
 import type { UnusualSolidGraphicsAuditSnapshot } from './unusual-solid-graphics-audit';
 import type { StructuralRigidGraphicsAuditSnapshot } from './structural-rigid-graphics-audit';
 import type { MechanismGraphicsAuditSnapshot } from './mechanism-graphics-audit';
+import type { ElectronicsGraphicsAuditSnapshot } from './electronics-graphics-audit';
 import type { EarthenPowderGraphicsAuditSnapshot } from './earthen-powder-graphics-audit';
 import type { LiquidIdentityGraphicsAuditSnapshot } from './liquid-identity-graphics-audit';
 import type { GasIdentityGraphicsAuditSnapshot } from './gas-identity-graphics-audit';
@@ -75,6 +76,7 @@ export interface BrowserInputAuditApi {
   setCellularMaterialStyling(enabled: boolean): void;
   setStructuralRigidStyling(enabled: boolean): void;
   setMechanismBodyStyling(enabled: boolean): void;
+  setElectronicIdentityStyling(enabled: boolean): void;
   setEarthenPowderStyling(enabled: boolean): void;
   setSensorMaterialStyling(enabled: boolean): void;
   setUnusualPowderStyling(enabled: boolean): void;
@@ -128,6 +130,8 @@ export interface BrowserInputAuditApi {
   prepareStructuralRigidGraphicsFixture(): void;
   mechanismGraphicsAtlas(): MechanismGraphicsAuditSnapshot;
   prepareMechanismGraphicsFixture(): void;
+  electronicsGraphicsAtlas(): ElectronicsGraphicsAuditSnapshot;
+  prepareElectronicsGraphicsFixture(): void;
   earthenPowderGraphicsAtlas(): EarthenPowderGraphicsAuditSnapshot;
   prepareEarthenPowderGraphicsFixture(): void;
   liquidIdentityGraphicsAtlas(): LiquidIdentityGraphicsAuditSnapshot;

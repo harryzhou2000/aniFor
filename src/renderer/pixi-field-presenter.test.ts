@@ -29,6 +29,7 @@ interface PresenterHarness {
   setCellularMaterialStylingEnabled: PixiFieldPresenter['setCellularMaterialStylingEnabled'];
   setStructuralRigidStylingEnabled: PixiFieldPresenter['setStructuralRigidStylingEnabled'];
   setMechanismBodyStylingEnabled: PixiFieldPresenter['setMechanismBodyStylingEnabled'];
+  setElectronicIdentityStylingEnabled: PixiFieldPresenter['setElectronicIdentityStylingEnabled'];
   setEarthenPowderStylingEnabled: PixiFieldPresenter['setEarthenPowderStylingEnabled'];
   setSensorMaterialStylingEnabled: PixiFieldPresenter['setSensorMaterialStylingEnabled'];
   setUnusualPowderStylingEnabled: PixiFieldPresenter['setUnusualPowderStylingEnabled'];
@@ -122,6 +123,7 @@ describe('Pixi presenter startup configuration', () => {
       uCellularMaterialStyling: 1,
       uStructuralRigidStyling: 1,
       uMechanismBodyStyling: 1,
+      uElectronicIdentityStyling: 1,
       uEarthenPowderStyling: 1,
       uSensorMaterialStyling: 1,
       uUnusualPowderStyling: 1,
@@ -841,6 +843,38 @@ describe('Pixi presenter startup configuration', () => {
     expect(eight.match(/texture\(uEmissionTexture, uv\)/g)).toHaveLength(1);
   });
 
+  it('keeps true-8x Smooth, Local, and Grains powder semantics distinct and field-compatible', () => {
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');
+    const eightEnd = source.indexOf('const FIELD_FRAGMENT = `', eightStart);
+    const eight = source.slice(eightStart, eightEnd);
+    const projectionStart = eight.indexOf('// A direct 8x mesh normally returns immediately for semantic Empty.');
+    const projectionEnd = eight.indexOf('  // True 8x already needs this centre emission sample', projectionStart);
+    const modeStart = eight.indexOf('float semanticDensity = density;');
+    const modeEnd = eight.indexOf('  // Preserve exact material coverage before a liquid/gas volume', modeStart);
+    const projection = eight.slice(projectionStart, projectionEnd);
+    const modes = eight.slice(modeStart, modeEnd);
+
+    expect(projectionStart).toBeGreaterThan(0);
+    expect(projectionEnd).toBeGreaterThan(projectionStart);
+    expect(modeStart).toBeGreaterThan(0);
+    expect(modeEnd).toBeGreaterThan(modeStart);
+    expect(eight).toContain('uniform sampler2D uPowderSurfaceTexture;');
+    expect(eight).toContain('uniform float uPowderSurfaceActive;');
+    expect(eight).toContain('vec4 powderSurfaceEightXShape(vec2 uv)');
+    expect(projection).toContain('uPowderStyle > 1.5 && uPowderSurfaceActive > 0.5');
+    expect(projection).toContain('wallState.g > 0.5');
+    expect(projection).toContain('candidateFamily == 4.0 && compatible > 0.5');
+    expect(modes).toContain('if (uPowderStyle < 0.5)');
+    expect(modes).toContain('density = same(uv, material);');
+    expect(modes).toContain('else if (uPowderStyle < 1.5)');
+    expect(modes).toContain('float grainDistance = length(fract(grid + 0.5) - 0.5 - grainCentre);');
+    expect(modes).toContain('else if (uPowderSurfaceActive > 0.5)');
+    expect(modes).toContain('density = mix(density, smoothPowderShape.x, powderFieldBlend);');
+    expect(modes).not.toContain('uTime');
+    expect(modes).not.toMatch(/\balpha\s*[+*]?=/);
+  });
+
   it('keeps true-8x explosive-powder identity exact-owner, RGB-only, and resource-free', () => {
     const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
     const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');
@@ -848,8 +882,8 @@ describe('Pixi presenter startup configuration', () => {
     const eight = source.slice(eightStart, eightEnd);
     const helperStart = eight.indexOf('float explosivePowderEightXStyle(');
     const helperEnd = eight.indexOf('bool solidEightXGranular(', helperStart);
-    const branchStart = eight.indexOf('if (family == 4.0) {');
-    const branchEnd = eight.indexOf('// Deep rigid bodies reuse', branchStart);
+    const branchStart = eight.indexOf('if (uExplosivePowderStyling > 0.5', helperStart);
+    const branchEnd = eight.indexOf('    // Common Earth/mineral piles retain', branchStart);
     const helper = eight.slice(helperStart, helperEnd);
     const branch = eight.slice(branchStart, branchEnd);
 
@@ -877,8 +911,8 @@ describe('Pixi presenter startup configuration', () => {
     const eight = source.slice(eightStart, eightEnd);
     const helperStart = eight.indexOf('float unusualPowderEightXStyle(');
     const helperEnd = eight.indexOf('// Device sensors need a legible visual vocabulary', helperStart);
-    const branchStart = eight.indexOf('if (family == 4.0) {');
-    const branchEnd = eight.indexOf('// Deep rigid bodies reuse', branchStart);
+    const branchStart = eight.indexOf('if (uUnusualPowderStyling > 0.5', helperStart);
+    const branchEnd = eight.indexOf('  }\n  // Deep rigid bodies reuse', branchStart);
     const helper = eight.slice(helperStart, helperEnd);
     const branch = eight.slice(branchStart, branchEnd);
     const materials = [43, 44, 45, 46, 47, 48, 49, 51, 198, 217];
@@ -905,8 +939,8 @@ describe('Pixi presenter startup configuration', () => {
     const eight = source.slice(eightStart, eightEnd);
     const helperStart = eight.indexOf('float earthenPowderEightXStyle(');
     const helperEnd = eight.indexOf('// These ten native powders carry distinct', helperStart);
-    const branchStart = eight.indexOf('if (family == 4.0) {');
-    const branchEnd = eight.indexOf('// Deep rigid bodies reuse', branchStart);
+    const branchStart = eight.indexOf('if (uEarthenPowderStyling > 0.5', helperStart);
+    const branchEnd = eight.indexOf('    // The more unusual loose materials', branchStart);
     const helper = eight.slice(helperStart, helperEnd);
     const branch = eight.slice(branchStart, branchEnd);
     const materials = [6, 21, 26, 28];
@@ -1065,6 +1099,37 @@ describe('Pixi presenter startup configuration', () => {
     expect(branch).toContain('mechanismEightXStyle(material) > 0.5');
     expect(branch).toContain('&& !materialEmissive');
     expect(branch).toContain('mechanismEightXDelta(material, grid, density)');
+    expect(`${helper}${branch}`).not.toContain('texture(');
+    expect(`${helper}${branch}`).not.toContain('uTime');
+    expect(`${helper}${branch}`).not.toMatch(/\balpha\s*[+*]?=/);
+  });
+
+  it('keeps true-8x native control electronics exact-owner, RGB-only, and resource-free', () => {
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');
+    const eightEnd = source.indexOf('const FIELD_FRAGMENT = `', eightStart);
+    const eight = source.slice(eightStart, eightEnd);
+    const helperStart = eight.indexOf('float electronicEightXStyle(');
+    const helperEnd = eight.indexOf('// Broad metallic bodies need a different read', helperStart);
+    const branchStart = eight.indexOf('// Control electronics span powered, force, and ordinary Device records');
+    const branchEnd = eight.indexOf('// Construction solids add their material-local finish', branchStart);
+    const helper = eight.slice(helperStart, helperEnd);
+    const branch = eight.slice(branchStart, branchEnd);
+    const materials = [135, 136, 138, 139, 140, 141, 142, 143, 144, 145,
+      146, 147, 149, 150, 151, 152, 153, 154, 156, 157];
+
+    expect(helperStart).toBeGreaterThan(0);
+    expect(helperEnd).toBeGreaterThan(helperStart);
+    expect(branchStart).toBeGreaterThan(0);
+    expect(branchEnd).toBeGreaterThan(branchStart);
+    expect(eight).toContain('uniform float uElectronicIdentityStyling;');
+    for (const material of materials) expect(helper).toContain(`material == ${material}.0`);
+    for (const excluded of [137, 148, 155, 158, 159, 160, 161, 162, 163]) {
+      expect(helper).not.toContain(`material == ${excluded}.0`);
+    }
+    expect(branch).toContain('uElectronicIdentityStyling > 0.5 && electronicEightXStyle(material) > 0.5');
+    expect(branch).toContain('&& !materialEmissive');
+    expect(branch).toContain('electronicEightXDelta(material, grid, density)');
     expect(`${helper}${branch}`).not.toContain('texture(');
     expect(`${helper}${branch}`).not.toContain('uTime');
     expect(`${helper}${branch}`).not.toMatch(/\balpha\s*[+*]?=/);
@@ -1360,9 +1425,12 @@ describe('Pixi presenter startup configuration', () => {
     expect(alpha).toContain('alpha *= liquidCohesionAlphaScale;');
     expect(eight.match(/texture\(uLiquidTexture, uv - vec2\(uTexel\.x, 0\.0\)\)/g)).toHaveLength(1);
     expect(eight.match(/texture\(uLiquidTexture, uv \+ vec2\(uTexel\.x, 0\.0\)\)/g)).toHaveLength(1);
-    // Empty-wall, packed-state, and translucent-backdrop composition remain
-    // the direct shader's three pre-existing guarded wall reads.
-    expect(eight.match(/texture\(uWallTexture, uv\)/g)).toHaveLength(3);
+    // Empty-wall, packed-state, and translucent-backdrop composition retain
+    // their three guarded reads; settled Smooth powder additionally reuses the
+    // packed exterior-air G byte to reject authored internal holes.
+    expect(eight).toContain('uPowderSurfaceActive > 0.5');
+    expect(eight).toContain('wallState.g > 0.5');
+    expect(eight.match(/texture\(uWallTexture, uv\)/g)).toHaveLength(4);
   });
 
   it('restores true-8x wet-sediment cohesion with one guarded RGB-only field sample', () => {
@@ -1442,7 +1510,7 @@ describe('Pixi presenter startup configuration', () => {
     expect(final).toContain('step(0.5, nativeWall) * material;');
     expect(final).toContain('refractedBoundarySlope');
     expect(final).not.toMatch(/\balpha\s*[+*]?=/);
-    expect(eight.match(/texture\(uWallTexture, uv\)/g)).toHaveLength(3);
+    expect(eight.match(/texture\(uWallTexture, uv\)/g)).toHaveLength(4);
   });
 
   it('reuses true-8x liquid field samples for bounded RGB-only connected meniscus lighting', () => {
@@ -1505,7 +1573,7 @@ describe('Pixi presenter startup configuration', () => {
     expect(packed).toContain('liquidEmissionReflectionStrength > 0.0001');
     expect(packed).toContain('* emission.rgb * liquidEmissionReflectionStrength');
     expect(packed).toContain('uNativeWallsActive < 0.5 || nativeWall < 0.5');
-    expect(eight.match(/texture\(uWallTexture, uv\)/g)).toHaveLength(3);
+    expect(eight.match(/texture\(uWallTexture, uv\)/g)).toHaveLength(4);
   });
 
   it('keeps true-8x Device bodies arithmetic-only and RGB-only', () => {
@@ -1809,7 +1877,7 @@ describe('Pixi presenter startup configuration', () => {
     expect(packed).toContain('uNativeWallsActive < 0.5 || nativeWall < 0.5');
     expect(packed).toContain('liquidContourKey * liquidSurfaceContourKeyStrength');
     expect(packed).toContain('liquidContourShadow * liquidSurfaceContourShadowStrength');
-    expect(eight.match(/texture\(uWallTexture, uv\)/g)).toHaveLength(3);
+    expect(eight.match(/texture\(uWallTexture, uv\)/g)).toHaveLength(4);
     expect(eight).toContain('float semanticDensity = density;');
   });
 
@@ -1844,7 +1912,7 @@ describe('Pixi presenter startup configuration', () => {
     expect(helper).not.toContain('texture(');
     expect(helper).not.toContain('uTime');
     expect(helper).not.toMatch(/\balpha\s*[+*]?=/);
-    expect(eight.match(/texture\(uWallTexture, uv\)/g)).toHaveLength(3);
+    expect(eight.match(/texture\(uWallTexture, uv\)/g)).toHaveLength(4);
   });
 
   it('restores true-8x POLO lifecycle styling through the existing packed-state read', () => {
@@ -1878,7 +1946,7 @@ describe('Pixi presenter startup configuration', () => {
     expect(helper).not.toContain('texture(');
     expect(helper).not.toContain('uTime');
     expect(helper).not.toMatch(/\balpha\s*[+*]?=/);
-    expect(eight.match(/texture\(uWallTexture, uv\)/g)).toHaveLength(3);
+    expect(eight.match(/texture\(uWallTexture, uv\)/g)).toHaveLength(4);
   });
 
   it('restores true-8x SPNG hydration through the existing packed-state read', () => {
@@ -1911,7 +1979,7 @@ describe('Pixi presenter startup configuration', () => {
     expect(helper).not.toContain('texture(');
     expect(helper).not.toContain('uTime');
     expect(helper).not.toMatch(/\balpha\s*[+*]?=/);
-    expect(eight.match(/texture\(uWallTexture, uv\)/g)).toHaveLength(3);
+    expect(eight.match(/texture\(uWallTexture, uv\)/g)).toHaveLength(4);
   });
 
   it('restores independent PHOT spectrum after true-8x matter and wall composition', () => {
@@ -1957,11 +2025,12 @@ describe('Pixi presenter startup configuration', () => {
     expect(block).not.toContain('texture(');
     expect(block).not.toMatch(/\balpha\s*[+*]?=/);
     expect(block).not.toMatch(/\b(?:sin|pow|normalize|length|sqrt)\s*\(/);
-    expect(source.match(/texture\(uPowderSurfaceTexture/g)).toHaveLength(1);
-    // Stable Smooth powder keeps only a small mineral trace; Local/Grains
-    // never enter this cohesion path and retain their diagnostic cell detail.
-    expect(source).toContain('mix(1.0, 0.08, powderVisualCohesion)');
-    expect(source).toContain('mix(1.0, 0.20, powderVisualCohesion)');
+    expect(source.match(/texture\(uPowderSurfaceTexture/g)).toHaveLength(2);
+    // Stable Smooth powder retains bounded mineral variation; Local/Grains
+    // still carry their full diagnostic cell detail.
+    expect(source).toContain('mix(1.0, 0.65, powderVisualCohesion)');
+    expect(source).toContain('mix(1.0, 0.70, powderVisualCohesion)');
+    expect(source).toContain('uPowderStyle < 1.5 ? 0.044 : 0.085');
   });
 
   it('redraws when audit powder body depth changes', () => {
@@ -2598,6 +2667,33 @@ describe('Pixi presenter startup configuration', () => {
     }
     expect(mechanismBlock).not.toMatch(/texture\s*\(/);
     expect(mechanismBlock).not.toMatch(/\balpha\s*[+*]?=/);
+  });
+
+  it('seeds and redraws the canonical-WebGL electronics identity layer without extending Canvas optics', () => {
+    const presenter = presenterHarness();
+
+    presenter.setElectronicIdentityStylingEnabled(false);
+    expect(presenter.uniforms.uniforms.uElectronicIdentityStyling).toBe(0);
+    expect(presenter.app.render).toHaveBeenCalledOnce();
+
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const start = source.indexOf('// Exact native control electronics retain a legible body grammar');
+    const end = source.indexOf('float structuralRigidDeepIdentityGain(', start);
+    const electronicsBlock = source.slice(start, end);
+    const materials = [135, 136, 138, 139, 140, 141, 142, 143, 144, 145,
+      146, 147, 149, 150, 151, 152, 153, 154, 156, 157];
+    expect(start).toBeGreaterThan(0);
+    expect(end).toBeGreaterThan(start);
+    expect(source).toContain('uniform float uElectronicIdentityStyling;');
+    expect(source).toContain('uElectronicIdentityStyling > 0.5 && electronicBodyStyle(material) > 0.5');
+    expect(electronicsBlock).toContain('vec3 electronicBodyIdentityDelta(float material, vec2 position)');
+    expect(electronicsBlock).toContain('float electronicBodyStyle(float material)');
+    for (const material of materials) expect(electronicsBlock).toContain(`material == ${material}.0`);
+    for (const excluded of [137, 148, 155, 158, 159, 160, 161, 162, 163]) {
+      expect(electronicsBlock).not.toContain(`material == ${excluded}.0`);
+    }
+    expect(electronicsBlock).not.toMatch(/texture\s*\(/);
+    expect(electronicsBlock).not.toMatch(/\balpha\s*[+*]?=/);
   });
 
   it('seeds and redraws the independent earthen powder identity layer', () => {

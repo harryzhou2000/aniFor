@@ -290,6 +290,7 @@ export class MaterialRenderer {
   private cellularMaterialStylingEnabled = true;
   private structuralRigidStylingEnabled = true;
   private mechanismBodyStylingEnabled = true;
+  private electronicIdentityStylingEnabled = true;
   private earthenPowderStylingEnabled = true;
   private sensorMaterialStylingEnabled = true;
   private unusualPowderStylingEnabled = true;
@@ -702,6 +703,15 @@ export class MaterialRenderer {
     this.changed = true;
   }
 
+  /** Canonical-WebGL control hardware identity; Canvas stays semantic/recovery. */
+  setElectronicIdentityStylingEnabled(enabled: boolean): void {
+    if (enabled === this.electronicIdentityStylingEnabled) return;
+    this.electronicIdentityStylingEnabled = enabled;
+    this.presenter?.setElectronicIdentityStylingEnabled(enabled);
+    this.contourChunks.markAll();
+    this.changed = true;
+  }
+
   setEarthenPowderStylingEnabled(enabled: boolean): void {
     if (enabled === this.earthenPowderStylingEnabled) return;
     this.earthenPowderStylingEnabled = enabled;
@@ -1079,6 +1089,7 @@ export class MaterialRenderer {
       this.moltenBodyOpticsEnabled,
       this.aqueousSurfaceReflectionEnabled,
       this.mechanismBodyStylingEnabled,
+      this.electronicIdentityStylingEnabled,
     );
     // Route subsequent dirty cells to the candidate while its first expensive
     // frame is in flight. The known-good Canvas remains mounted underneath;
