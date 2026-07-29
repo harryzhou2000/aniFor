@@ -18,7 +18,7 @@ const LIQUID_IDS = [
   Material.Soap, Material.BIZR, Material.CBNW, Material.GEL,
   Material.GLOW, Material.VIRS, Material.FRZW, Material.RFGL,
   Material.MWAX, Material.PSTE, Material.RSST, Material.DEUT,
-  Material.EXOT, Material.ISOZ,
+  Material.EXOT, Material.ISOZ, Material.Mercury, Material.LiquidNitrogen,
 ];
 
 class PaintTrackingBackend extends DeterministicBackend {
@@ -31,16 +31,16 @@ class PaintTrackingBackend extends DeterministicBackend {
 }
 
 describe('liquid identity graphics audit fixture', () => {
-  it('pins all fourteen liquid identities in stable in-bounds rows', () => {
+  it('pins all sixteen liquid identities in stable in-bounds rows', () => {
     expect(LIQUID_IDENTITY_GRAPHICS_ATLAS_COLUMNS).toBe(8);
     expect(LIQUID_IDENTITY_GRAPHICS_ATLAS_ROWS).toBe(2);
-    expect(LIQUID_IDENTITY_GRAPHICS_DEFINITIONS).toHaveLength(14);
-    expect(LIQUID_IDENTITY_GRAPHICS_ATLAS).toHaveLength(14);
+    expect(LIQUID_IDENTITY_GRAPHICS_DEFINITIONS).toHaveLength(16);
+    expect(LIQUID_IDENTITY_GRAPHICS_ATLAS).toHaveLength(16);
     expect(LIQUID_IDENTITY_GRAPHICS_ATLAS.map(({ material }) => material)).toEqual(LIQUID_IDS);
-    expect(LIQUID_IDS).toEqual([38, 54, 55, 56, 57, 62, 202, 207, 59, 60, 61, 100, 102, 104]);
+    expect(LIQUID_IDS).toEqual([38, 54, 55, 56, 57, 62, 202, 207, 59, 60, 61, 100, 102, 104, 36, 37]);
     expect(LIQUID_IDENTITY_GRAPHICS_ATLAS.map(({ code }) => code)).toEqual([
       'SOAP', 'BIZR', 'CBNW', 'GEL', 'GLOW', 'VIRS', 'FRZW', 'RFGL',
-      'MWAX', 'PSTE', 'RSST', 'DEUT', 'EXOT', 'ISOZ',
+      'MWAX', 'PSTE', 'RSST', 'DEUT', 'EXOT', 'ISOZ', 'MERC', 'LN2',
     ]);
 
     const world = { x: 0, y: 0, width: WORLD_WIDTH, height: WORLD_HEIGHT };
@@ -86,13 +86,13 @@ describe('liquid identity graphics audit fixture', () => {
     }
 
     expect(LIQUID_IDENTITY_GRAPHICS_AUDIT.cards).toBe(LIQUID_IDENTITY_GRAPHICS_ATLAS);
-    expect(LIQUID_IDENTITY_GRAPHICS_AUDIT.cavities).toHaveLength(14 * 36);
-    expect(LIQUID_IDENTITY_GRAPHICS_AUDIT.openChimneys).toHaveLength(14 * 90);
-    expect(LIQUID_IDENTITY_GRAPHICS_AUDIT.strands).toHaveLength(14 * 12);
-    expect(LIQUID_IDENTITY_GRAPHICS_AUDIT.isolated).toHaveLength(14);
-    expect(LIQUID_IDENTITY_GRAPHICS_AUDIT.guardedBlanks).toHaveLength(14);
-    expect(LIQUID_IDENTITY_GRAPHICS_AUDIT.liquidContacts).toHaveLength(14);
-    expect(LIQUID_IDENTITY_GRAPHICS_AUDIT.solidContacts).toHaveLength(14);
+    expect(LIQUID_IDENTITY_GRAPHICS_AUDIT.cavities).toHaveLength(16 * 36);
+    expect(LIQUID_IDENTITY_GRAPHICS_AUDIT.openChimneys).toHaveLength(16 * 90);
+    expect(LIQUID_IDENTITY_GRAPHICS_AUDIT.strands).toHaveLength(16 * 12);
+    expect(LIQUID_IDENTITY_GRAPHICS_AUDIT.isolated).toHaveLength(16);
+    expect(LIQUID_IDENTITY_GRAPHICS_AUDIT.guardedBlanks).toHaveLength(16);
+    expect(LIQUID_IDENTITY_GRAPHICS_AUDIT.liquidContacts).toHaveLength(16);
+    expect(LIQUID_IDENTITY_GRAPHICS_AUDIT.solidContacts).toHaveLength(16);
   });
 
   it('direct-fills exact liquid topology and unlike contacts without paint', () => {
