@@ -493,6 +493,7 @@ export class Game {
       resetView: () => { this.renderer.resetView(); },
       screenToWorld: (clientX, clientY) => this.renderer.screenToWorld(clientX, clientY),
       screenToCell: (clientX, clientY) => this.renderer.screenToCell(clientX, clientY),
+      worldToScreen: (x, y) => this.renderer.worldToScreen(x, y),
       viewState: () => this.renderer.getViewState(),
       backend: () => this.renderer.getBackendInfo(),
       prepareDenseSolidFixture: () => { prepareDenseSolidAuditFixture(this.simulation); },

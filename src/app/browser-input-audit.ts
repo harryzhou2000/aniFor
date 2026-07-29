@@ -102,6 +102,7 @@ export interface BrowserInputAuditApi {
   resetView(): void;
   screenToWorld(clientX: number, clientY: number): Point;
   screenToCell(clientX: number, clientY: number): Point;
+  worldToScreen(x: number, y: number): Point;
   viewState(): ViewState;
   backend(): RendererBackendInfo;
   prepareDenseSolidFixture(): void;

@@ -17344,6 +17344,13 @@ async function auditMobile(cdp, mode, screenshot) {
   assert(mobileResizeAnchorError < 0.2,
     `mobile ${mode} responsive camera anchor drifted ${mobileResizeAnchorError.toFixed(4)} cells`);
 
+  // The desktop gate owns browser page-scale coverage. Mobile intentionally
+  // reserves native pinch for the simulation camera, so keep this camera
+  // active while exercising a live DPR transition and touch mapping instead.
+  const mobileLiveDpr = await auditMobileLiveDprTransition(
+    cdp, mode, returnedMobileGeometry, returnedMobileView,
+  );
+
   await evaluate(cdp, `window.__ANIFOR_INPUT_AUDIT__.clear(); window.__ANIFOR_INPUT_AUDIT__.resetView(); true`);
   await sleep(60);
   const reset = await metrics(cdp);
@@ -17601,6 +17608,7 @@ async function auditMobile(cdp, mode, screenshot) {
       normalizedPanY: round(mobileNormalizedPanAfter.y, 5),
       anchorErrorCells: round(mobileResizeAnchorError, 5),
     },
+    liveDpr: mobileLiveDpr,
     singleTouchCell: `${target.x},${target.y}`,
     paintedFootprints,
     continuousTouchCells: continuousTouch.occupied,
@@ -17630,6 +17638,106 @@ async function setDesktopMetrics(cdp, width, height, dpr) {
     width, height, deviceScaleFactor: dpr, mobile: false,
     screenWidth: width, screenHeight: height,
   });
+}
+
+async function setMobileMetrics(cdp, width, height, dpr) {
+  await cdp.send('Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: 2 });
+  await cdp.send('Emulation.setDeviceMetricsOverride', {
+    width, height, deviceScaleFactor: dpr, mobile: true,
+    screenWidth: width, screenHeight: height,
+    screenOrientation: { type: 'portraitPrimary', angle: 0 },
+  });
+}
+
+/**
+ * Exercises real protocol-normalized mobile touch input after a live DPR
+ * transition. Mobile disables browser page zoom so a two-finger gesture stays
+ * dedicated to the simulation camera; desktop covers page-scale separately.
+ */
+async function auditMobileLiveDprTransition(cdp, mode, beforeGeometry, beforeView) {
+  const width = beforeGeometry.window.width;
+  const height = beforeGeometry.window.height;
+  const initialDpr = beforeGeometry.dpr;
+  const transitionedDpr = initialDpr === 2 ? 3 : 2;
+  assert(beforeView.zoom > 1.2,
+    `mobile ${mode}: live DPR transition did not start with an active zoomed camera`);
+
+  await setMobileMetrics(cdp, width, height, transitionedDpr);
+  const dprTransitioned = await waitForStableScaleTransition(
+    cdp, transitionedDpr, 1, 5_000, `mobile ${mode} live DPR transition`,
+  );
+  assertGeometry(dprTransitioned.geometry, `mobile ${mode} live DPR transition`);
+  assertResizeAdjustedViewState(
+    beforeView, beforeGeometry.canvas,
+    dprTransitioned.view, dprTransitioned.geometry.canvas,
+    `mobile ${mode} live DPR camera preservation`,
+  );
+
+  const targetProbe = {
+    x: dprTransitioned.geometry.viewport.left + dprTransitioned.geometry.viewport.width * 0.57,
+    y: dprTransitioned.geometry.viewport.top + dprTransitioned.geometry.viewport.height * 0.46,
+  };
+  const requestedCell = await evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    const probe = audit.screenToCell(${targetProbe.x}, ${targetProbe.y});
+    return probe;
+  })()`);
+  assert(requestedCell.x >= 0 && requestedCell.x < WORLD_WIDTH
+    && requestedCell.y >= 0 && requestedCell.y < WORLD_HEIGHT,
+  `mobile ${mode}: DPR touch target escaped the world (${JSON.stringify(requestedCell)})`);
+  const requestedClient = await evaluate(cdp,
+    `window.__ANIFOR_INPUT_AUDIT__.worldToScreen(${requestedCell.x + 0.5}, ${requestedCell.y + 0.5})`);
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.clear(); true');
+  await sleep(80);
+  const blank = await cdp.send('Page.captureScreenshot', { format: 'png', fromSurface: true });
+  await sleep(80);
+  const blankReference = await cdp.send('Page.captureScreenshot', { format: 'png', fromSurface: true });
+  const touchEvent = await dispatchTouchTapAtClient(cdp, 91, requestedClient);
+  assert(Math.hypot(
+    touchEvent.client.x - touchEvent.protocol.x,
+    touchEvent.client.y - touchEvent.protocol.y,
+  ) <= 0.75,
+  `mobile ${mode}: CDP DPR touch did not preserve its integer event point (${JSON.stringify({
+    requestedVisual: requestedClient, requestedProtocol: touchEvent.protocol,
+    receivedClient: touchEvent.client,
+  })})`);
+  assert(touchEvent.cell.x === requestedCell.x && touchEvent.cell.y === requestedCell.y,
+    `mobile ${mode}: DPR touch did not resolve to its requested world cell (${JSON.stringify({
+      requested: requestedCell, received: touchEvent.cell, client: touchEvent.client,
+    })})`);
+  await sleep(100);
+  const painted = await evaluate(cdp, `({
+    cell: window.__ANIFOR_INPUT_AUDIT__.cell(${requestedCell.x}, ${requestedCell.y}),
+    occupied: window.__ANIFOR_INPUT_AUDIT__.occupiedCells(),
+  })`);
+  assert(painted.cell > 0 && painted.occupied === 1,
+    `mobile ${mode}: live DPR transition missed its semantic touch landmark (${JSON.stringify(painted)})`);
+  const footprint = (await capturePaintedFootprints(
+    cdp, [requestedCell], `mobile ${mode} live DPR transition`, 1.5, 0.8, {
+      baselineBase64: blank.data,
+      baselineReferenceBase64: blankReference.data,
+      captureCanvasRect: dprTransitioned.geometry.canvas,
+    },
+  ))[0];
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.clear(); true');
+
+  await setMobileMetrics(cdp, width, height, initialDpr);
+  const restored = await waitForStableScaleTransition(
+    cdp, initialDpr, 1, 5_000, `mobile ${mode} restored DPR`,
+  );
+  assertGeometry(restored.geometry, `mobile ${mode} restored DPR`);
+  assertResizeAdjustedViewState(
+    dprTransitioned.view, dprTransitioned.geometry.canvas,
+    restored.view, restored.geometry.canvas,
+    `mobile ${mode} restored DPR camera preservation`,
+  );
+
+  return {
+    dpr: `${initialDpr}->${transitionedDpr}->${initialDpr}`,
+    cameraZoom: round(dprTransitioned.view.zoom, 4),
+    touchCell: `${requestedCell.x},${requestedCell.y}`,
+    footprint,
+  };
 }
 
 async function auditLiveScaleTransition(cdp, mode, initialDpr, beforeGeometry, beforeView) {
@@ -19358,6 +19466,30 @@ async function mouseClick(cdp, x, y, button) {
   const bit = button === 'middle' ? 4 : 1;
   await cdp.send('Input.dispatchMouseEvent', { type: 'mousePressed', x, y, button, buttons: bit, clickCount: 1 });
   await cdp.send('Input.dispatchMouseEvent', { type: 'mouseReleased', x, y, button, buttons: 0, clickCount: 1 });
+}
+
+/** Dispatches a one-contact touch at a visual DOM point and captures its exact client/cell mapping. */
+async function dispatchTouchTapAtClient(cdp, id, client) {
+  const point = await protocolPointForClient(cdp, client);
+  await evaluate(cdp, `(() => {
+    window.__ANIFOR_AUDIT_TOUCH_EVENT__ = undefined;
+    document.addEventListener('touchstart', (event) => {
+      const contact = event.changedTouches[0] ?? event.touches[0];
+      const audit = window.__ANIFOR_INPUT_AUDIT__;
+      window.__ANIFOR_AUDIT_TOUCH_EVENT__ = {
+        client: { x: contact.clientX, y: contact.clientY },
+        cell: audit.screenToCell(contact.clientX, contact.clientY),
+      };
+    }, { capture: true, once: true });
+    return true;
+  })()`);
+  await cdp.send('Input.dispatchTouchEvent', {
+    type: 'touchStart', touchPoints: [touch(id, point.x, point.y)],
+  });
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+  const event = await waitFor(() => evaluate(cdp,
+    'window.__ANIFOR_AUDIT_TOUCH_EVENT__ ?? false'), 5_000, 'captured dispatched touch event');
+  return { ...event, protocol: point };
 }
 
 function touch(id, x, y) { return { id, x, y, radiusX: 1, radiusY: 1, force: 1 }; }
