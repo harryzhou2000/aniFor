@@ -1958,6 +1958,12 @@ describe('Pixi presenter startup configuration', () => {
     expect(shell).toContain('solidReliefTone');
     expect(shell).toContain('solidDepth');
     expect(shell).toContain('solidFresnel');
+    expect(shell).toContain('float glassCore = smoothstep(0.28, 0.90, solidDepth);');
+    expect(shell).toContain('float glassGrazing = smoothstep(0.018, 0.18, solidFresnel);');
+    expect(shell).toContain('vec3 glassReflection = solidEnvironment');
+    expect(shell).toContain('float iceCore = smoothstep(0.22, 0.88, solidDepth);');
+    expect(shell).toContain('float iceGrazing = smoothstep(0.018, 0.18, solidFresnel);');
+    expect(shell).toContain('vec3 iceReflection = solidEnvironment');
     expect(shell).not.toContain('texture(');
     expect(shell).not.toMatch(/\balpha\s*[+*]?=/);
     expect(compact).toContain('crystalCoreAbsorption');

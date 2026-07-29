@@ -5055,12 +5055,35 @@ void main() {
         if (material == 24.0) {
           float crown = max(solidReliefTone, 0.0);
           float valley = max(-solidReliefTone, 0.0);
+          // The semantic wall compositor already supplies the actual backdrop
+          // refraction. This is only the body optic: deeper Glass absorbs a
+          // little warm base light, carries a cool transmission, and catches
+          // the existing environment at a grazing angle. It is deliberately
+          // local RGB arithmetic, so it cannot disturb support or alpha.
+          float glassCore = smoothstep(0.28, 0.90, solidDepth);
+          float glassGrazing = smoothstep(0.018, 0.18, solidFresnel);
+          color = mix(color, color * vec3(0.86, 0.965, 1.075), glassCore * 0.30);
           color *= 1.0 - solidDepth * 0.010 - valley * 0.70;
           color += vec3(0.45, 0.78, 1.0) * (shellRim + crown * 1.50);
+          vec3 glassReflection = solidEnvironment * (0.045 + glassGrazing * 0.20)
+            + solidSpecularTint * (0.006 + glassGrazing * 0.018);
+          color += (vec3(1.0) - clamp(color, 0.0, 1.0)) * glassReflection
+            * (0.30 + glassCore * 0.70);
         } else if (material == 12.0) {
           float frostedRidge = abs(solidReliefTone) * 0.70;
+          // Deep Ice remains translucent rather than simply pale: its body
+          // transmits a restrained blue key while the same live environment
+          // provides a broad frozen reflection. The authored ridge remains
+          // visible above this slower depth cue.
+          float iceCore = smoothstep(0.22, 0.88, solidDepth);
+          float iceGrazing = smoothstep(0.018, 0.18, solidFresnel);
+          color = mix(color, color * vec3(0.88, 0.995, 1.105), iceCore * 0.24);
           color *= 1.0 - solidDepth * 0.018 - abs(solidReliefTone) * 0.24;
           color += vec3(0.58, 0.86, 1.0) * (shellRim * 0.72 + frostedRidge);
+          vec3 iceReflection = solidEnvironment * (0.032 + iceGrazing * 0.13)
+            + solidSpecularTint * (0.004 + iceGrazing * 0.012);
+          color += (vec3(1.0) - clamp(color, 0.0, 1.0)) * iceReflection
+            * (0.34 + iceCore * 0.66);
         } else if (material == 76.0) {
           // Quartz keeps a small directional prism: crowns catch a cool key,
           // valleys absorb, and the shared shell rim retains its curved edge.
