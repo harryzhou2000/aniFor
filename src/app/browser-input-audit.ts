@@ -13,6 +13,7 @@ import type { UnusualPowderGraphicsAuditSnapshot } from './unusual-powder-graphi
 import type { ExplosivePowderGraphicsAuditSnapshot } from './explosive-powder-graphics-audit';
 import type { UnusualSolidGraphicsAuditSnapshot } from './unusual-solid-graphics-audit';
 import type { StructuralRigidGraphicsAuditSnapshot } from './structural-rigid-graphics-audit';
+import type { EarthenPowderGraphicsAuditSnapshot } from './earthen-powder-graphics-audit';
 import type { LiquidIdentityGraphicsAuditSnapshot } from './liquid-identity-graphics-audit';
 import type { GasIdentityGraphicsAuditSnapshot } from './gas-identity-graphics-audit';
 import type { EnergyRadioactiveGraphicsAuditSnapshot } from './energy-radioactive-graphics-audit';
@@ -119,6 +120,8 @@ export interface BrowserInputAuditApi {
   prepareUnusualSolidGraphicsFixture(): void;
   structuralRigidGraphicsAtlas(): StructuralRigidGraphicsAuditSnapshot;
   prepareStructuralRigidGraphicsFixture(): void;
+  earthenPowderGraphicsAtlas(): EarthenPowderGraphicsAuditSnapshot;
+  prepareEarthenPowderGraphicsFixture(): void;
   liquidIdentityGraphicsAtlas(): LiquidIdentityGraphicsAuditSnapshot;
   prepareLiquidIdentityGraphicsFixture(): void;
   gasIdentityGraphicsAtlas(): GasIdentityGraphicsAuditSnapshot;

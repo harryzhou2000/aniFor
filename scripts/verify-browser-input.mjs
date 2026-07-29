@@ -83,6 +83,7 @@ const roleGraphicsOnly = process.argv.includes('--role-graphics-only');
 const cellularGraphicsOnly = process.argv.includes('--cellular-graphics-only');
 const sensorGraphicsOnly = process.argv.includes('--sensor-graphics-only');
 const unusualPowderGraphicsOnly = process.argv.includes('--unusual-powder-graphics-only');
+const earthenPowderGraphicsOnly = process.argv.includes('--earthen-powder-graphics-only');
 const explosivePowderGraphicsOnly = process.argv.includes('--explosive-powder-graphics-only');
 const unusualSolidGraphicsOnly = process.argv.includes('--unusual-solid-graphics-only');
 const liquidIdentityGraphicsOnly = process.argv.includes('--liquid-identity-graphics-only');
@@ -113,7 +114,7 @@ const liveScaleOnly = process.argv.includes('--live-scale-only');
 // dev-server navigation timing while leaving all default audit paths unchanged.
 const productionBundle = process.argv.includes('--production-bundle');
 const usesProductionBundle = productionBundle || showcaseScreenshotOnly || cellularGraphicsOnly || sensorGraphicsOnly
-  || unusualPowderGraphicsOnly || explosivePowderGraphicsOnly || unusualSolidGraphicsOnly
+  || unusualPowderGraphicsOnly || earthenPowderGraphicsOnly || explosivePowderGraphicsOnly || unusualSolidGraphicsOnly
   || liquidIdentityGraphicsOnly || gasIdentityGraphicsOnly || energyRadioactiveGraphicsOnly
   || organicPlantGraphicsOnly || spongeGraphicsOnly || virusGraphicsOnly || waxGraphicsOnly
   || crystalGraphicsOnly || pasteResistGraphicsOnly || vibrStateGraphicsOnly
@@ -186,7 +187,7 @@ async function main() {
       || desktopInputOnly || visualScaleMatrixOnly || powderBodyOnly || liquidDepthOnly
       || solidDepthOnly || gasChromaOnly || surfaceContourOnly || solidFieldOnly
       || roleGraphicsOnly || cellularGraphicsOnly || sensorGraphicsOnly
-      || unusualPowderGraphicsOnly || explosivePowderGraphicsOnly
+      || unusualPowderGraphicsOnly || earthenPowderGraphicsOnly || explosivePowderGraphicsOnly
       || unusualSolidGraphicsOnly || liquidIdentityGraphicsOnly
       || gasIdentityGraphicsOnly || energyRadioactiveGraphicsOnly || organicPlantGraphicsOnly
       || spongeGraphicsOnly || virusGraphicsOnly || waxGraphicsOnly || crystalGraphicsOnly
@@ -260,7 +261,7 @@ async function auditMode(mode) {
   // measures. Canvas fallback has no advanced optics obligation, so retain the
   // canonical paused scene there and prove real material delivery/occupancy.
   const startsBlank = !canvasFallbackAudit && (cellularGraphicsOnly || sensorGraphicsOnly
-    || unusualPowderGraphicsOnly || explosivePowderGraphicsOnly
+    || unusualPowderGraphicsOnly || earthenPowderGraphicsOnly || explosivePowderGraphicsOnly
     || unusualSolidGraphicsOnly || liquidIdentityGraphicsOnly
     || gasIdentityGraphicsOnly || energyRadioactiveGraphicsOnly || organicPlantGraphicsOnly
     || spongeGraphicsOnly || virusGraphicsOnly || waxGraphicsOnly || crystalGraphicsOnly
@@ -461,6 +462,12 @@ async function auditMode(mode) {
       assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
       cdp.close();
       return { backend: mode, unusualPowderGraphics, browserErrors: errors.length };
+    }
+    if (earthenPowderGraphicsOnly) {
+      const earthenPowderGraphics = await auditEarthenPowderGraphics(cdp, mode);
+      assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
+      cdp.close();
+      return { backend: mode, earthenPowderGraphics, browserErrors: errors.length };
     }
     if (explosivePowderGraphicsOnly) {
       const explosivePowderGraphics = await auditExplosivePowderGraphics(cdp, mode);
@@ -3911,10 +3918,47 @@ async function auditExplosivePowderGraphics(cdp, mode) {
   }
 }
 
+/** Reuse the powder topology harness while keeping Canvas visual parity optional. */
+async function auditEarthenPowderGraphics(cdp, mode) {
+  await evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    audit.__earthenPowderAliasRestore = {
+      prepare: audit.prepareUnusualPowderGraphicsFixture,
+      atlas: audit.unusualPowderGraphicsAtlas,
+      toggle: audit.setUnusualPowderStyling,
+    };
+    audit.prepareUnusualPowderGraphicsFixture = audit.prepareEarthenPowderGraphicsFixture;
+    audit.unusualPowderGraphicsAtlas = audit.earthenPowderGraphicsAtlas;
+    audit.setUnusualPowderStyling = audit.setEarthenPowderStyling;
+    return true;
+  })()`);
+  try {
+    return await auditUnusualPowderGraphics(cdp, mode, {
+      count: 4,
+      materials: [6, 21, 26, 28],
+      contactMaterial: 23,
+      label: 'earthen-powder',
+    });
+  } finally {
+    await evaluate(cdp, `(() => {
+      const audit = window.__ANIFOR_INPUT_AUDIT__;
+      const saved = audit.__earthenPowderAliasRestore;
+      if (saved) {
+        audit.prepareUnusualPowderGraphicsFixture = saved.prepare;
+        audit.unusualPowderGraphicsAtlas = saved.atlas;
+        audit.setUnusualPowderStyling = saved.toggle;
+        delete audit.__earthenPowderAliasRestore;
+      }
+      return true;
+    })()`);
+  }
+}
+
 /** Focused topology and RGB-identity proof for unusual native powders. */
 async function auditUnusualPowderGraphics(cdp, mode, options = {}) {
   const expectedCount = options.count ?? 10;
   const expectedMaterials = options.materials ?? [43, 44, 45, 46, 47, 48, 49, 51, 198, 217];
+  const expectedContactMaterial = options.contactMaterial ?? 1;
   const powderLabel = options.label ?? 'unusual-powder';
   const started = performance.now();
   const stage = (name) => console.error(
@@ -3984,7 +4028,8 @@ async function auditUnusualPowderGraphics(cdp, mode, options = {}) {
   })()`);
   assert(semanticState.every((entry) => entry.bodyExact && entry.thinColumnExact
       && entry.isolated === entry.material && entry.guardedBlankEmpty
-      && entry.contactOwnerExact && entry.contactUnlikeExact && entry.unlikeMaterial === 1),
+      && entry.contactOwnerExact && entry.contactUnlikeExact
+      && entry.unlikeMaterial === expectedContactMaterial),
   `${mode}: unusual powder fixture lost body/hole/notch/column/isolated/blank/contact semantics (${JSON.stringify(semanticState)})`);
   stage('fixture-ready');
 
@@ -13319,6 +13364,11 @@ async function auditRenderScaleEight(cdp, dpr) {
   // reliable reference views at the real 4896x3072 backing.
   const unusualPowderGraphics = await auditEightXUnusualPowderGraphics(cdp, geometry.canvas);
   stage('unusual-powder-ready');
+  // Common Earth/mineral powders now receive the same direct-mesh identity
+  // treatment. Canvas remains an availability fallback; only true-8× WebGL
+  // owns this high-detail release contract.
+  const earthenPowderGraphics = await auditEightXEarthenPowderGraphics(cdp, geometry.canvas);
+  stage('earthen-powder-ready');
   // LIFE uses native ctype projections rather than ordinary particle IDs.
   // Prove the compact 24-preset grammar through page regions and semantic
   // snapshots, avoiding another complete 60 MiB backing read at true 8x.
@@ -13425,6 +13475,7 @@ async function auditRenderScaleEight(cdp, dpr) {
     materialAtlasStress,
     explosivePowderGraphics,
     unusualPowderGraphics,
+    earthenPowderGraphics,
     cellularGraphics,
     unusualSolidGraphics,
     structuralRigidGraphics,
@@ -14050,15 +14101,19 @@ async function snapshotEightXUnusualPowders(cdp) {
   })()`);
 }
 
-function assertEightXUnusualPowderTopology(snapshot, label) {
-  const materials = [43, 44, 45, 46, 47, 48, 49, 51, 198, 217];
+function assertEightXUnusualPowderTopology(
+  snapshot, label, materials = [43, 44, 45, 46, 47, 48, 49, 51, 198, 217],
+) {
   assert(snapshot.cards.length === materials.length && snapshot.cards.every((card, index) => (
     card.material === materials[index] && card.bodyExact && card.thinExact
       && card.isolatedExact && card.guardExact && card.contactOwnerExact && card.contactUnlikeExact
   )), `${label}: unusual-powder identity/topology changed (${JSON.stringify(snapshot)})`);
 }
 
-async function auditEightXUnusualPowderGraphics(cdp, canvasRect) {
+async function auditEightXUnusualPowderGraphics(cdp, canvasRect, options = {}) {
+  const materials = options.materials ?? [43, 44, 45, 46, 47, 48, 49, 51, 198, 217];
+  const expectedCount = materials.length;
+  const powderLabel = options.label ?? 'unusual-powder';
   await evaluate(cdp, `(() => {
     const audit = window.__ANIFOR_INPUT_AUDIT__;
     if (typeof audit.prepareUnusualPowderGraphicsFixture !== 'function'
@@ -14071,7 +14126,7 @@ async function auditEightXUnusualPowderGraphics(cdp, canvasRect) {
     audit.clear();
     return true;
   })()`);
-  const blank = await captureSettledPage(cdp, 'renderScale=8 blank unusual-powder framebuffer', 450);
+  const blank = await captureSettledPage(cdp, `renderScale=8 blank ${powderLabel} framebuffer`, 450);
   const rawAtlas = await evaluate(cdp, `(() => {
     const audit = window.__ANIFOR_INPUT_AUDIT__;
     audit.prepareUnusualPowderGraphicsFixture();
@@ -14080,26 +14135,26 @@ async function auditEightXUnusualPowderGraphics(cdp, canvasRect) {
   })()`);
   const atlas = normalizeUnusualPowderGraphicsAtlas(rawAtlas);
   const prepared = await snapshotEightXUnusualPowders(cdp);
-  assertEightXUnusualPowderTopology(prepared, 'renderScale=8 prepared unusual-powder fixture');
+  assertEightXUnusualPowderTopology(prepared, `renderScale=8 prepared ${powderLabel} fixture`, materials);
   const live = await metrics(cdp);
   assert(live.backing.width === WORLD_WIDTH * 8 && live.backing.height === WORLD_HEIGHT * 8
       && live.outputScale === '8',
-  `renderScale=8 unusual-powder fixture lost true backing (${JSON.stringify(live.backing)})`);
-  assertCanvasRectsEqual(canvasRect, live.canvas, 'renderScale=8 unusual-powder fixture CSS geometry');
+  `renderScale=8 ${powderLabel} fixture lost true backing (${JSON.stringify(live.backing)})`);
+  assertCanvasRectsEqual(canvasRect, live.canvas, `renderScale=8 ${powderLabel} fixture CSS geometry`);
 
   await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setUnusualPowderStyling(false); true');
-  const flat = await captureSettledPage(cdp, 'renderScale=8 flat unusual-powder framebuffer', 450);
+  const flat = await captureSettledPage(cdp, `renderScale=8 flat ${powderLabel} framebuffer`, 450);
   const flatTopology = await snapshotEightXUnusualPowders(cdp);
   await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setUnusualPowderStyling(true); true');
-  const styled = await captureSettledPage(cdp, 'renderScale=8 styled unusual-powder framebuffer', 450);
+  const styled = await captureSettledPage(cdp, `renderScale=8 styled ${powderLabel} framebuffer`, 450);
   const styledTopology = await snapshotEightXUnusualPowders(cdp);
   await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setUnusualPowderStyling(false); true');
-  const repeated = await captureSettledPage(cdp, 'renderScale=8 repeated flat unusual-powder framebuffer', 450);
+  const repeated = await captureSettledPage(cdp, `renderScale=8 repeated flat ${powderLabel} framebuffer`, 450);
   const repeatedTopology = await snapshotEightXUnusualPowders(cdp);
   assert(JSON.stringify(flatTopology) === JSON.stringify(prepared)
       && JSON.stringify(styledTopology) === JSON.stringify(prepared)
       && JSON.stringify(repeatedTopology) === JSON.stringify(prepared),
-  'renderScale=8 unusual-powder styling changed semantic topology');
+  `renderScale=8 ${powderLabel} styling changed semantic topology`);
 
   const regions = atlas.cards.map((entry) => ({
     name: entry.code,
@@ -14114,12 +14169,12 @@ async function auditEightXUnusualPowderGraphics(cdp, canvasRect) {
     refracted: styled.capture.data,
     repeatedStraight: repeated.capture.data,
   }, regions, canvasRect);
-  assert(samples.length === 10 && samples.every((sample) => (
+  assert(samples.length === expectedCount && samples.every((sample) => (
     sample.rgbRms >= 0.02 && sample.rgbRms <= 24
       && sample.rgbPeak > 0 && sample.rgbPeak <= 48 && sample.repeatRgbPeak <= 1
-  )), `renderScale=8 unusual-powder response is absent, unbounded, or unstable (${JSON.stringify(samples)})`);
-  assert(new Set(samples.map((sample) => sample.responseSignature)).size === 10,
-    `renderScale=8 unusual powders lost distinct identity responses (${JSON.stringify(samples)})`);
+  )), `renderScale=8 ${powderLabel} response is absent, unbounded, or unstable (${JSON.stringify(samples)})`);
+  assert(new Set(samples.map((sample) => sample.responseSignature)).size === expectedCount,
+    `renderScale=8 ${powderLabel} owners lost distinct identity responses (${JSON.stringify(samples)})`);
   const [flatSupport, styledSupport] = await Promise.all([
     samplePageRegions(
       cdp, flat.capture.data, regions, blank.capture.data, blank.reference.data, canvasRect,
@@ -14132,7 +14187,7 @@ async function auditEightXUnusualPowderGraphics(cdp, canvasRect) {
     Math.abs(sample.visible - styledSupport[index].visible) <= Math.max(2, Math.ceil(sample.visible * 0.005))
       && Math.abs(sample.worldArea - styledSupport[index].worldArea)
         <= Math.max(0.60, sample.worldArea * 0.005)
-  )), `renderScale=8 unusual-powder styling changed composed support (${JSON.stringify({ flatSupport, styledSupport })})`);
+  )), `renderScale=8 ${powderLabel} styling changed composed support (${JSON.stringify({ flatSupport, styledSupport })})`);
 
   const verifyReferenceStyle = async (style, label) => {
     await evaluate(cdp, `(() => {
@@ -14152,7 +14207,7 @@ async function auditEightXUnusualPowderGraphics(cdp, canvasRect) {
       repeatedStraight: returned.capture.data,
     }, regions, canvasRect);
     assert(reference.every((sample) => sample.rgbPeak <= 1 && sample.repeatRgbPeak <= 1),
-      `renderScale=8 unusual-powder styling escaped ${label} reference mode (${JSON.stringify(reference)})`);
+      `renderScale=8 ${powderLabel} styling escaped ${label} reference mode (${JSON.stringify(reference)})`);
     return reference;
   };
   const grainsReference = await verifyReferenceStyle('grains', 'Grains');
@@ -14172,6 +14227,40 @@ async function auditEightXUnusualPowderGraphics(cdp, canvasRect) {
     localReference,
     exactRepeatedOff: samples.every((sample) => sample.repeatRgbPeak <= 1),
   };
+}
+
+/** Canonical direct-mesh release gate for the common Earth/mineral powder group. */
+async function auditEightXEarthenPowderGraphics(cdp, canvasRect) {
+  await evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    audit.__eightXEarthenPowderAliasRestore = {
+      prepare: audit.prepareUnusualPowderGraphicsFixture,
+      atlas: audit.unusualPowderGraphicsAtlas,
+      toggle: audit.setUnusualPowderStyling,
+    };
+    audit.prepareUnusualPowderGraphicsFixture = audit.prepareEarthenPowderGraphicsFixture;
+    audit.unusualPowderGraphicsAtlas = audit.earthenPowderGraphicsAtlas;
+    audit.setUnusualPowderStyling = audit.setEarthenPowderStyling;
+    return true;
+  })()`);
+  try {
+    return await auditEightXUnusualPowderGraphics(cdp, canvasRect, {
+      materials: [6, 21, 26, 28],
+      label: 'earthen-powder',
+    });
+  } finally {
+    await evaluate(cdp, `(() => {
+      const audit = window.__ANIFOR_INPUT_AUDIT__;
+      const saved = audit.__eightXEarthenPowderAliasRestore;
+      if (saved) {
+        audit.prepareUnusualPowderGraphicsFixture = saved.prepare;
+        audit.unusualPowderGraphicsAtlas = saved.atlas;
+        audit.setUnusualPowderStyling = saved.toggle;
+        delete audit.__eightXEarthenPowderAliasRestore;
+      }
+      return true;
+    })()`);
+  }
 }
 
 async function snapshotEightXSensors(cdp) {

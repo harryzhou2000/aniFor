@@ -44,6 +44,9 @@ import {
   STRUCTURAL_RIGID_GRAPHICS_AUDIT, prepareStructuralRigidGraphicsAuditFixture,
 } from './structural-rigid-graphics-audit';
 import {
+  EARTHEN_POWDER_GRAPHICS_AUDIT, prepareEarthenPowderGraphicsAuditFixture,
+} from './earthen-powder-graphics-audit';
+import {
   LIQUID_IDENTITY_GRAPHICS_AUDIT, prepareLiquidIdentityGraphicsAuditFixture,
 } from './liquid-identity-graphics-audit';
 import {
@@ -523,6 +526,10 @@ export class Game {
       structuralRigidGraphicsAtlas: () => STRUCTURAL_RIGID_GRAPHICS_AUDIT,
       prepareStructuralRigidGraphicsFixture: () => {
         prepareStructuralRigidGraphicsAuditFixture(this.simulation);
+      },
+      earthenPowderGraphicsAtlas: () => EARTHEN_POWDER_GRAPHICS_AUDIT,
+      prepareEarthenPowderGraphicsFixture: () => {
+        prepareEarthenPowderGraphicsAuditFixture(this.simulation);
       },
       liquidIdentityGraphicsAtlas: () => LIQUID_IDENTITY_GRAPHICS_AUDIT,
       prepareLiquidIdentityGraphicsFixture: () => {

@@ -124,6 +124,7 @@ uniform float uCellularMaterialStyling;
 uniform float uStructuralRigidStyling;
 uniform float uSensorMaterialStyling;
 uniform float uExplosivePowderStyling;
+uniform float uEarthenPowderStyling;
 uniform float uUnusualPowderStyling;
 uniform float uUnusualSolidStyling;
 uniform float uLiquidFieldLighting;
@@ -504,6 +505,48 @@ vec3 explosivePowderEightXDelta(float material, vec2 position, float density) {
   vec3 key = vec3(6.0, 4.0, -2.0) + hue * 15.0;
   float gain = (0.16 + facet * 0.84) * smoothstep(0.12, 0.82, density);
   return clamp(key * gain, vec3(-14.0), vec3(14.0)) / 255.0;
+}
+// Common Earth/mineral powders keep the normal composer's low-frequency body
+// language in Smooth true-8x view. The four exact owners reuse only material,
+// world position, and already-computed density: no state/field sample, clock,
+// alpha, or support decision is introduced in the direct 15M-fragment mesh.
+float earthenPowderEightXStyle(float material) {
+  if (material == 6.0) return 1.0;  // DUST
+  if (material == 21.0) return 2.0; // STNE
+  if (material == 26.0) return 3.0; // CNCT
+  if (material == 28.0) return 4.0; // CLAY
+  return 0.0;
+}
+vec3 earthenPowderEightXDelta(float material, vec2 position, float density) {
+  float style = earthenPowderEightXStyle(material);
+  if (style < 0.5) return vec3(0.0);
+  vec2 cell = floor(position);
+  vec3 delta;
+  if (style == 1.0) {
+    // Dust: long soft silt bands with a sparse warm grain.
+    float band = 1.0 - step(0.5, mod(cell.y + floor(cell.x / 7.0) * 2.0, 17.0));
+    float silt = 1.0 - step(0.5, mod(cell.x * 3.0 + cell.y * 5.0, 31.0));
+    delta = band > 0.5 ? vec3(-4.0, -3.0, -2.0) : vec3(4.0, 3.0, 1.0) * silt;
+  } else if (style == 2.0) {
+    // Stone: cool seams and rare mineral facets.
+    float seam = 1.0 - step(0.5, mod(cell.x * 2.0 - cell.y
+      + floor(cell.y / 9.0) * 3.0, 23.0));
+    float facet = 1.0 - step(0.5, mod(cell.x * 5.0 + cell.y * 2.0, 37.0));
+    delta = vec3(-5.0, -4.0, -2.0) * seam + vec3(2.0, 3.0, 4.0) * facet;
+  } else if (style == 3.0) {
+    // Concrete: calm construction joints and embedded aggregate.
+    float course = 1.0 - step(0.5, mod(cell.y, 13.0));
+    float joint = 1.0 - step(0.5, mod(cell.x + floor(cell.y / 13.0) * 5.0, 29.0));
+    float aggregate = 1.0 - step(0.5, mod(cell.x * 4.0 + cell.y * 7.0, 41.0));
+    delta = max(course, joint) > 0.5 ? vec3(-4.0, -4.0, -3.0)
+      : vec3(3.0, 2.0, -1.0) * aggregate;
+  } else {
+    // Clay: damp lamellae and a restrained terracotta pocket.
+    float lamella = 1.0 - step(0.5, mod(cell.y * 2.0 + floor(cell.x / 8.0), 19.0));
+    float pocket = 1.0 - step(0.5, mod(cell.x * 3.0 - cell.y * 2.0, 43.0));
+    delta = vec3(-3.0, -3.0, -2.0) * lamella + vec3(5.0, 1.0, -2.0) * pocket;
+  }
+  return clamp(delta * smoothstep(0.10, 0.82, density), vec3(-12.0), vec3(12.0)) / 255.0;
 }
 // These ten native powders carry distinct, static body optics on the normal
 // WebGL path. Mirror that identity language in the direct 8x mesh with a
@@ -957,6 +1000,14 @@ void main() {
     // remain controlled by the existing semantic path.
     if (uExplosivePowderStyling > 0.5 && traits < 0.5 && !materialEmissive) {
       color = clamp(color + explosivePowderEightXDelta(material, grid, density), 0.0, 1.0);
+    }
+    // Common Earth/mineral piles retain their normal material identity only in
+    // Smooth view. Local and square Grains are explicit visual references, so
+    // this arithmetic-only overlay cannot affect either presentation mode.
+    if (uEarthenPowderStyling > 0.5 && uPowderStyle > 1.5
+      && earthenPowderEightXStyle(material) > 0.5
+      && traits < 0.5 && !materialEmissive) {
+      color = clamp(color + earthenPowderEightXDelta(material, grid, density), 0.0, 1.0);
     }
     // The more unusual loose materials have a quiet material-seeded body
     // language in Smooth view. Local and Grains intentionally retain their
