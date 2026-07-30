@@ -6057,10 +6057,22 @@ void main() {
       float fibre = sin(fieldPosition.x * 0.20 + sin(fieldPosition.y * 0.115 + material) * 1.45);
       float pores = sin(fieldPosition.x * 0.083 + fieldPosition.y * 0.157 + material * 0.37)
         * sin(fieldPosition.y * 0.091 - fieldPosition.x * 0.047);
-      color *= 0.95 + (fibre * 0.042 + pores * 0.024
-        + organicSurface * max(0.0, fibre) * 0.018) * interiorMicroGain;
+      // Dense PLNT already has a depth-proven three-cell leaf cluster, crown,
+      // pocket, waxy sheen, and native lifecycle colours below. Letting this
+      // generic, cell-frequency organic fibre carry its full amplitude over a
+      // canopy makes normal WebGL read as horizontal scanlines rather than
+      // foliage. Keep Wood/Vine's fibrous body unchanged, but make PLNT's
+      // generic fibre only a quiet undertone so its existing larger leaf forms
+      // remain legible. This is RGB-only arithmetic over values already live
+      // in the material branch; it does not change topology, alpha, state, or
+      // the deliberately compact true-8x renderer.
+      float organicMicroGain = material == 10.0 ? 0.12 : 1.0;
+      float organicBaseline = material == 10.0 ? 1.0 : 0.95;
+      color *= organicBaseline + (fibre * 0.042 + pores * 0.024
+        + organicSurface * max(0.0, fibre) * 0.018) * interiorMicroGain * organicMicroGain;
       color += mix(color, vec3(0.19, 0.34, 0.18), 0.38)
-        * organicSurface * max(0.0, 0.6 - abs(pores)) * 0.028 * interiorMicroGain;
+        * organicSurface * max(0.0, 0.6 - abs(pores)) * 0.028 * interiorMicroGain
+        * organicMicroGain;
       // Mature Wood alone receives a compact trunk grain after the common
       // Organic response. The existing solid-depth field proves a broad,
       // exact-species interior, so thin branches, holes, walls, and all Plant
