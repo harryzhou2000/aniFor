@@ -12942,12 +12942,15 @@ async function auditRenderScaleEight(cdp, dpr) {
       && eightPowderSlopeContinuity.grains.meanTransitionWidth >= 0.18,
   `renderScale=8 Grains lost its square reference geometry (${JSON.stringify(eightPowderSlopeContinuity)})`);
   // Local's score is dominated by its deliberate round-particle coverage
-  // edges, so it is not a colour-texture baseline for a continuous Smooth
-  // body. Require a substantial absolute material variation instead, and keep
-  // it clearly above the deliberately flat square-Grains reference.
-  assert(eightPowderStyleSamples.smooth[1].microContrast >= 8.5
+  // edges. Grains is likewise a square-cell reference whose exact pixel-phase
+  // contrast changes with the deep-zoom capture alignment, so neither is a
+  // valid multiplicative target for a cohesive Smooth material body. Require
+  // a substantial absolute mineral cadence and a modest lead over Grains;
+  // this proves Smooth is not airbrushed without turning it into noisier
+  // particle shading than its reference mode.
+  assert(eightPowderStyleSamples.smooth[1].microContrast >= 10.5
       && eightPowderStyleSamples.smooth[1].microContrast
-        >= eightPowderStyleSamples.grains[1].microContrast * 2.5,
+        >= eightPowderStyleSamples.grains[1].microContrast * 1.15,
   `renderScale=8 Smooth powder over-smoothed its interior material variation (${JSON.stringify(eightPowderStyleSamples)})`);
   stage('powder-support-ready');
   const powderBodyDepthSamples = await sampleBackdropRefractionRegions(cdp, {

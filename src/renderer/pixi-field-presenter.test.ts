@@ -875,6 +875,33 @@ describe('Pixi presenter startup configuration', () => {
     expect(modes).not.toMatch(/\balpha\s*[+*]?=/);
   });
 
+  it('retains the normal powder 2x2 interior facet cadence at true 8x without new resources', () => {
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');
+    const eightEnd = source.indexOf('const FIELD_FRAGMENT = `', eightStart);
+    const eight = source.slice(eightStart, eightEnd);
+    const powderStart = eight.indexOf('  if (family == 4.0) {');
+    const powderEnd = eight.indexOf('  // Deep rigid bodies reuse', powderStart);
+    const powder = eight.slice(powderStart, powderEnd);
+    const facetStart = powder.indexOf('vec2 powderSubcell = floor(fract(grid) * 2.0);');
+    const facetEnd = powder.indexOf('    // Smooth, supported powder retains', facetStart);
+    const facet = powder.slice(facetStart, facetEnd);
+
+    expect(powderStart).toBeGreaterThan(0);
+    expect(powderEnd).toBeGreaterThan(powderStart);
+    expect(facetStart).toBeGreaterThan(0);
+    expect(facetEnd).toBeGreaterThan(facetStart);
+    expect(facet).toContain('floor(grid) * 2.0 + powderSubcell');
+    expect(facet).toContain('float powderFacetRetention = uPowderStyle > 1.5 ? 0.88 : 1.0;');
+    expect(facet).toContain('float powderFacetGain = optics == 13.0 ? 1.12');
+    expect(facet).toContain('float powderFacetInterior = uPowderStyle > 1.5');
+    expect(facet).toContain('(1.0 - step(0.001, powderFieldBlend))');
+    expect(facet).toContain('traits < 0.5 && !materialEmissive');
+    expect(facet).toContain('color *= 1.0 + powderFacet * 0.24');
+    expect(facet).not.toContain('texture(');
+    expect(facet).not.toMatch(/\balpha\s*[+*]?=/);
+  });
+
   it('keeps true-8x explosive-powder identity exact-owner, RGB-only, and resource-free', () => {
     const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
     const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');

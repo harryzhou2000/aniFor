@@ -1498,6 +1498,33 @@ void main() {
     // world-anchored microvariation for all three powder modes.
     float powderOpticalDensity = mix(semanticDensity, density, 0.18);
     float powderGrain = fract(sin(dot(floor(grid), vec2(23.417, 61.873))) * 18347.2861) - 0.5;
+    // The normal 1x-4x compositor resolves a second, 2x2 world-anchored
+    // mineral facet inside every powder cell.  Keep that cadence at true 8x:
+    // without it, a Detail change preserves the silhouette but reduces a
+    // settled material body to one coarser grain frequency.  This is derived
+    // from the already-live world coordinate only, so it adds no sample,
+    // field, pass, alpha/support decision, or 8x resource.  Retain the same
+    // Smooth 88% restraint used by the normal path; Local and square Grains
+    // remain their unsoftened presentation references.
+    vec2 powderSubcell = floor(fract(grid) * 2.0);
+    float powderFacet = fract(sin(dot(
+      floor(grid) * 2.0 + powderSubcell, vec2(12.9898, 78.233)
+    )) * 43758.5453) - 0.5;
+    float powderFacetRetention = uPowderStyle > 1.5 ? 0.88 : 1.0;
+    float powderFacetGain = optics == 13.0 ? 1.12
+      : (optics == 14.0 ? 0.35 : (optics == 15.0 ? 0.90 : 1.0));
+    // The colour facet is deliberately a semantic-bulk treatment, never an
+    // edge treatment. Where the existing Hermite powder field owns the curved
+    // exterior, it is exactly disabled. The boundary byte tracks settlement,
+    // not optical thickness, and the 2x2 reconstruction block straddles a
+    // semantic edge even for some legitimate inner samples. A nonzero field
+    // blend is therefore the authoritative contour discriminator; untouched
+    // semantic bulk retains its material cadence without changing coverage.
+    // Local and Grains are exact comparison modes; only Smooth receives this
+    // retained interior mesostructure.
+    float powderFacetInterior = uPowderStyle > 1.5
+      ? (1.0 - step(0.001, powderFieldBlend)) * smoothstep(0.55, 0.88, density)
+      : 0.0;
     // Smooth may cohere a settled silhouette, but it must not erase the
     // material's internal grain colour. Its bounded, world-anchored variation
     // is deliberately stronger than the reference modes' particle shading:
@@ -1506,6 +1533,24 @@ void main() {
     float powderMicro = uPowderStyle < 0.5 ? 0.032 : (uPowderStyle < 1.5 ? 0.044 : 0.085);
     color *= vec3(1.02 + powderOpticalDensity * 0.07 + powderGrain * powderMicro)
       - powderDepth * vec3(0.10, 0.07, 0.04);
+    if (traits < 0.5 && !materialEmissive) {
+      // Match the normal composer's material facet magnitude without turning
+      // the high-resolution direct mesh into a cell-grid overlay.  The small
+      // upper-left catchlight makes the 2x2 facets legible at deep zoom while
+      // retaining the existing semantic colour as the material owner.
+      color *= 1.0 + powderFacet * 0.24 * powderFacetRetention * powderFacetGain
+        * powderFacetInterior;
+      float powderFacetHighlight = max(0.0, 0.60 - powderSubcell.x - powderSubcell.y);
+      color += color * powderFacetHighlight * 0.135 * powderFacetRetention * powderFacetGain
+        * powderFacetInterior;
+      float brightPowderFacet = max(0.0, powderFacet - 0.18) * powderFacetRetention
+        * powderFacetInterior;
+      if (optics == 13.0) {
+        color += vec3(0.52, 0.78, 1.00) * brightPowderFacet * 0.085;
+      } else if (optics == 15.0) {
+        color += vec3(1.00, 0.68, 0.32) * brightPowderFacet * 0.060;
+      }
+    }
     // Smooth, supported powder retains a coloured stable edge. Local and
     // Grains are intentionally exact no-ops, as are a one-cell grain and
     // traits/emissive owners. The compact support guard preserves fine holes
