@@ -4,13 +4,13 @@ const STABILITY_MINIMUM = 224;
 const DENSITY_MINIMUM = 0.66 * 255;
 const SUPPORT_MINIMUM = 5.5;
 const SUPPORT_BYTE_TO_COUNT = 9 / 255;
-// A newly settled shoulder retains forty-two percent of its original albedo
-// variation, and a genuinely dense stable core retains thirty-two percent.
-// This calms noisy per-cell simulation colour without turning a Smooth pile
-// into one airbrushed canonical fill. Loose material and explicit Grains/Local
-// stay on their existing paths before this helper is reached.
-const CANONICAL_BLEND_SHOULDER = 0.58;
-const CANONICAL_BLEND_CORE = 0.68;
+// A newly settled shoulder retains seventy percent of its original albedo
+// variation, and a genuinely dense stable core retains sixty-two percent.
+// This keeps the field-owned silhouette calm without ironing the mineral
+// cadence out of a Smooth pile. Loose material and explicit Grains/Local stay
+// on their existing paths before this helper is reached.
+const CANONICAL_BLEND_SHOULDER = 0.30;
+const CANONICAL_BLEND_CORE = 0.38;
 const GRADIENT_BYTE_SCALE = 508;
 const RELIEF_DARK_LIMIT = -0.07;
 const RELIEF_LIGHT_LIMIT = 0.08;
@@ -84,7 +84,7 @@ export function applyCanvasPowderBulkStyle(
   const crystalline = optics === RenderOptics.CrystallineGranular;
   const sooty = optics === RenderOptics.SootyGranular;
   const metallic = optics === RenderOptics.MetallicGranular;
-  const baseBlend = crystalline ? 0.68 : sooty ? 0.80 : metallic ? 0.70
+  const baseBlend = crystalline ? 0.38 : sooty ? 0.46 : metallic ? 0.40
     : CANONICAL_BLEND_SHOULDER;
   // This runs only after the caller proved an exact stable Smooth-powder body.
   // Keep the shoulder's established per-cell material character, then calm

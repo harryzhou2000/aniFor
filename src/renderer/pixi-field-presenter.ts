@@ -5753,10 +5753,10 @@ void main() {
       // must retain enough mineral/grain variation inside a pile to avoid the
       // previous airbrushed look; Local and square Grains still carry the full
       // reference cadence, while a stable bulk retains a clearly readable but
-      // non-cellular 94/95% mineral/facet response. Curving the silhouette
+      // non-cellular 98.5/99% mineral/facet response. Curving the silhouette
       // must not erase the internal material vocabulary at normal detail.
-      float cellGrainRetention = mix(1.0, 0.94, powderVisualCohesion);
-      float facetRetention = mix(1.0, 0.95, powderVisualCohesion);
+      float cellGrainRetention = mix(1.0, 0.985, powderVisualCohesion);
+      float facetRetention = mix(1.0, 0.99, powderVisualCohesion);
       color *= 0.91 + grain * (0.20 + roughSurface * 0.05) * cellGrainRetention * facetGain
         + grainFacet * (0.10 + roughSurface * 0.04) * facetRetention * facetGain;
       color += base * max(0.0, 0.6 - subcell.x - subcell.y)

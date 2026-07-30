@@ -76,10 +76,10 @@ describe('Canvas powder bulk style', () => {
 
     for (let channel = 0; channel < 3; channel++) {
       expect(Math.abs(color[channel] - canonical[channel])).toBeGreaterThan(
-        Math.abs(original[channel] - canonical[channel]) * 0.40,
+        Math.abs(original[channel] - canonical[channel]) * 0.60,
       );
       expect(color[channel]).toBeCloseTo(
-        original[channel] + (canonical[channel] - original[channel]) * 0.58,
+        original[channel] + (canonical[channel] - original[channel]) * 0.30,
         4,
       );
     }
@@ -101,14 +101,14 @@ describe('Canvas powder bulk style', () => {
       const shoulderResidual = Math.abs(shoulder[channel] - canonical[channel]);
       const coreResidual = Math.abs(core[channel] - canonical[channel]);
       expect(shoulderResidual).toBeCloseTo(
-        Math.abs(original[channel] - canonical[channel]) * 0.42,
+        Math.abs(original[channel] - canonical[channel]) * 0.70,
         4,
       );
       expect(coreResidual).toBeCloseTo(
-        Math.abs(original[channel] - canonical[channel]) * 0.32,
+        Math.abs(original[channel] - canonical[channel]) * 0.62,
         4,
       );
-      expect(coreResidual).toBeLessThan(shoulderResidual * 0.77);
+      expect(coreResidual).toBeLessThan(shoulderResidual * 0.90);
     }
   });
 

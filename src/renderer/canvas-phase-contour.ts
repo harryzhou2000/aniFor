@@ -515,12 +515,12 @@ export class CanvasPhaseContourScratch {
         input, input.chunkX + cellX, input.chunkY + cellY, material, emptyPowder,
       )
       : 0;
-    // Match WebGL's already-established deep-Smooth facet retention. A proven
-    // settled bulk may calm only its per-subpixel RGB facet; coverage, alpha,
-    // owner selection, and all contour geometry stay entirely below this
-    // presentation scalar. Grains, Local, projected empty support, walls,
-    // traits, emissive material, moving powder, and fine columns retain their
-    // exact existing facet pattern.
+    // A proven settled bulk may calm only a small fraction of its per-subpixel
+    // RGB facet; coverage, alpha, owner selection, and all contour geometry
+    // stay entirely below this presentation scalar. Smooth needs a coherent
+    // silhouette, not an airbrushed interior. Grains, Local, projected empty
+    // support, walls, traits, emissive material, moving powder, and fine
+    // columns retain their exact existing facet pattern.
     const powderFacetCohesion = phase === RenderPhase.Powder
       && !emptyPowder
       && powderStyle === 'smooth'
@@ -532,7 +532,7 @@ export class CanvasPhaseContourScratch {
       ? smoothstep(0.75, 1, this.haloStability[haloIndex] / 255)
         * smoothstep(0.55, 0.85, input.powderSurface[worldIndex * 4] / 255)
       : 0;
-    const powderFacetRetention = 1 - powderFacetCohesion * 0.58;
+    const powderFacetRetention = 1 - powderFacetCohesion * 0.15;
 
     for (let subY = 0; subY < this.outputScale; subY++) {
       for (let subX = 0; subX < this.outputScale; subX++) {
