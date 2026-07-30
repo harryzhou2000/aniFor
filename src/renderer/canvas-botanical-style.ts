@@ -77,12 +77,30 @@ export function applyCanvasPlantCanopyVolume(
   opticalDepthByte: number,
   opticalDepthEnabled: boolean,
   relief: number,
+  x: number,
+  y: number,
 ): void {
   if (material !== Material.Plant || !denseInterior
-    || !opticalDepthEnabled || opticalDepthByte <= 6 || relief === 0) return;
+    || !opticalDepthEnabled || opticalDepthByte <= 6) return;
   const depth = Math.max(0, Math.min(1, (opticalDepthByte - 6) / 36));
   const depthSupport = depth * depth * (3 - 2 * depth);
   const signedRelief = Math.max(-1, Math.min(1, relief / 6)) * depthSupport;
+  // A broad Plant body is usually a tree canopy, but native topology decides
+  // that body elsewhere. Reuse its already-proven dense interior for a small
+  // world-anchored leaf-cluster read: three-cell cells avoid simulation-pixel
+  // pepper while the restrained vein keeps an otherwise smooth crown from
+  // becoming a flat green disc. This is RGB-only and has no neighbour/state
+  // lookup, so tips, stems, gaps, walls, and lifecycle ownership stay exact.
+  const cluster = positiveModulo(Math.floor(x / 3) * 17 + Math.floor(y / 3) * 31, 29) / 28;
+  const clusterCrown = smoothstep(0.64, 0.93, cluster);
+  const clusterPocket = 1 - smoothstep(0.18, 0.48, cluster);
+  const clusterVein = positiveModulo(Math.floor(x / 2) * 5 - Math.floor(y / 3) * 3, 23) === 0;
+  rgb[0] += (1.4 * clusterCrown - 2.6 * clusterPocket - (clusterVein ? 2 : 0))
+    * depthSupport;
+  rgb[1] += (6 * clusterCrown - 3.4 * clusterPocket + (clusterVein ? 4 : 0))
+    * depthSupport;
+  rgb[2] += (1 * clusterCrown - 2.1 * clusterPocket - (clusterVein ? 1.2 : 0))
+    * depthSupport;
   if (signedRelief > 0) {
     // The broad organic crown catches a filtered leaf-green fill rather than
     // becoming a white specular hotspot. The bound stays below seven bytes.
@@ -102,4 +120,9 @@ export function applyCanvasPlantCanopyVolume(
 function positiveModulo(value: number, divisor: number): number {
   const remainder = value % divisor;
   return remainder < 0 ? remainder + divisor : remainder;
+}
+
+function smoothstep(start: number, end: number, value: number): number {
+  const progress = Math.max(0, Math.min(1, (value - start) / (end - start)));
+  return progress * progress * (3 - 2 * progress);
 }

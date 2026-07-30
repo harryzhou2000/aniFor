@@ -1325,6 +1325,8 @@ describe('Pixi presenter startup configuration', () => {
     expect(block).toContain('float canopyPocket = max(0.0, -bodyResponse) * 2.0;');
     expect(block).toContain('vec3 canopyNormal = vec3(-canopySlope * 0.58, 1.0);');
     expect(block).toContain('float canopySheen = (0.008 + canopySpecular * 0.030) * depthT;');
+    expect(block).toContain('float canopyCluster = mod(floor(grid.x / 3.0) * 17.0');
+    expect(block).toContain('float canopyClusterVein = 1.0 - step(0.5, mod(');
     expect(`${helper}${block}`).not.toContain('texture(');
     expect(`${helper}${block}`).not.toContain('uTime');
     expect(`${helper}${block}`).not.toMatch(/\balpha\s*[+*]?=/);
@@ -2930,6 +2932,8 @@ describe('Pixi presenter startup configuration', () => {
     expect(canopy).toContain('solidReliefTone * 255.0 / 6.0');
     expect(canopy).toContain('float canopySheen = (0.009 + specular * 0.036) * canopyDepth;');
     expect(canopy).toContain('vividColor(color, 1.10)');
+    expect(canopy).toContain('float canopyCluster = mod(floor(fieldPosition.x / 3.0) * 17.0');
+    expect(canopy).toContain('float canopyClusterVein = 1.0 - step(0.5, mod(');
     expect(canopy).not.toContain('texture(');
     expect(canopy).not.toMatch(/\balpha\s*[+*]?=/);
   });

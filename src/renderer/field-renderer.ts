@@ -1662,7 +1662,7 @@ export class MaterialRenderer {
         );
         applyCanvasPlantCanopyVolume(
           this.styledColor, material, denseSolidInterior, solidOpticalDepth,
-          this.solidOpticalDepthEnabled, solidRelief,
+          this.solidOpticalDepthEnabled, solidRelief, x, y,
         );
         applyCanvasRenderTraits(
           this.styledColor, applicableTraits, phase, material, x, y, index, this.traitClock,

@@ -1765,6 +1765,16 @@ void main() {
         vec3 canopySheenColor = mix(vec3(0.42, 0.72, 0.34),
           clamp(color * 1.10, 0.0, 1.0), 0.72);
         color += (vec3(1.0) - clamp(color, 0.0, 1.0)) * canopySheenColor * canopySheen;
+        float canopyCluster = mod(floor(grid.x / 3.0) * 17.0
+          + floor(grid.y / 3.0) * 31.0, 29.0) / 28.0;
+        float canopyClusterCrown = smoothstep(0.64, 0.93, canopyCluster);
+        float canopyClusterPocket = 1.0 - smoothstep(0.18, 0.48, canopyCluster);
+        float canopyClusterVein = 1.0 - step(0.5, mod(
+          floor(grid.x / 2.0) * 5.0 - floor(grid.y / 3.0) * 3.0, 23.0
+        ));
+        color += (vec3(1.4, 6.0, 1.0) * canopyClusterCrown
+          - vec3(2.6, 3.4, 2.1) * canopyClusterPocket
+          + vec3(-2.0, 4.0, -1.2) * canopyClusterVein) / 255.0 * depthT;
       }
     } else color *= solidBaseLight;
   }
@@ -5433,6 +5443,21 @@ void main() {
       float canopySheen = (0.009 + specular * 0.036) * canopyDepth;
       vec3 canopySheenColor = mix(vec3(0.42, 0.72, 0.34), vividColor(color, 1.10), 0.72);
       color += (vec3(1.0) - clamp(color, 0.0, 1.0)) * canopySheenColor * canopySheen;
+      // Three-cell leaf clusters add material-scale canopy variation only after
+      // the existing exact-owner/depth/interior proof. They reuse world-space
+      // arithmetic and established depth support, so native plant topology,
+      // inherited tree colour, alpha, walls, gaps, and growing tips remain
+      // authoritative in their existing paths.
+      float canopyCluster = mod(floor(fieldPosition.x / 3.0) * 17.0
+        + floor(fieldPosition.y / 3.0) * 31.0, 29.0) / 28.0;
+      float canopyClusterCrown = smoothstep(0.64, 0.93, canopyCluster);
+      float canopyClusterPocket = 1.0 - smoothstep(0.18, 0.48, canopyCluster);
+      float canopyClusterVein = 1.0 - step(0.5, mod(
+        floor(fieldPosition.x / 2.0) * 5.0 - floor(fieldPosition.y / 3.0) * 3.0, 23.0
+      ));
+      color += (vec3(1.4, 6.0, 1.0) * canopyClusterCrown
+        - vec3(2.6, 3.4, 2.1) * canopyClusterPocket
+        + vec3(-2.0, 4.0, -1.2) * canopyClusterVein) / 255.0 * canopyDepth;
     }
     // Reuse the semantic Hermite normal as a small family-coloured key/fill
     // shell. Unlike-solid contacts retain a dense union, so no internal seam
