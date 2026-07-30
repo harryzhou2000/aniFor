@@ -837,6 +837,38 @@ describe('Pixi presenter startup configuration', () => {
     expect(`${helper}${empty}${semantic}`).not.toMatch(/\balpha\s*[+*]?=/);
   });
 
+  it('restores static Field-profile identities for true-8x special and force bodies', () => {
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');
+    const eightEnd = source.indexOf('const FIELD_FRAGMENT = `', eightStart);
+    const eight = source.slice(eightStart, eightEnd);
+    const helperStart = eight.indexOf('vec3 fieldProfileEightXDelta(');
+    const helperEnd = eight.indexOf('// Temperature is already packed into the centre semantic sample', helperStart);
+    const applicationStart = eight.indexOf('// Restore the normal compositor\'s Field-profile material language');
+    const applicationEnd = eight.indexOf('// A few exact TPT projections', applicationStart);
+    const helper = eight.slice(helperStart, helperEnd);
+    const application = eight.slice(applicationStart, applicationEnd);
+
+    expect(eightStart).toBeGreaterThan(0);
+    expect(eightEnd).toBeGreaterThan(eightStart);
+    expect(helperStart).toBeGreaterThan(0);
+    expect(helperEnd).toBeGreaterThan(helperStart);
+    expect(applicationStart).toBeGreaterThan(helperEnd);
+    expect(applicationEnd).toBeGreaterThan(applicationStart);
+    expect(eight).toContain('float profile = floor(style.g * 255.0 + 0.5);');
+    for (const owner of ['132.0', '130.0', '131.0', '125.0', '128.0', '133.0', '129.0', '134.0']) {
+      expect(helper).toContain(`material == ${owner}`);
+    }
+    for (const motif of ['fieldBand', 'fieldCross', 'apertureCore', 'apertureRing', 'tronRail', 'portalKey']) {
+      expect(helper).toContain(motif);
+    }
+    expect(application).toContain('if (family == 0.0 && profile == 6.0 && optics < 0.5 && !materialEmissive)');
+    expect(application).toContain('fieldProfileEightXDelta(material, grid, density)');
+    expect(`${helper}${application}`).not.toContain('texture(');
+    expect(`${helper}${application}`).not.toContain('uTime');
+    expect(`${helper}${application}`).not.toMatch(/\balpha\s*[+*]?=/);
+  });
+
   it('keeps true-8x Energy core relief static, RGB-only, and sample-free', () => {
     const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
     const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');
@@ -2073,10 +2105,10 @@ describe('Pixi presenter startup configuration', () => {
     expect(block).not.toMatch(/\balpha\s*[+*]?=/);
     expect(block).not.toMatch(/\b(?:sin|pow|normalize|length|sqrt)\s*\(/);
     expect(source.match(/texture\(uPowderSurfaceTexture/g)).toHaveLength(2);
-    // Stable Smooth powder retains bounded mineral variation; Local/Grains
-    // still carry their full diagnostic cell detail.
-    expect(source).toContain('mix(1.0, 0.86, powderVisualCohesion)');
-    expect(source).toContain('mix(1.0, 0.88, powderVisualCohesion)');
+    // Stable Smooth powder retains almost all mineral variation at normal
+    // detail; Local/Grains still carry their full diagnostic cell detail.
+    expect(source).toContain('mix(1.0, 0.94, powderVisualCohesion)');
+    expect(source).toContain('mix(1.0, 0.95, powderVisualCohesion)');
     expect(source).toContain('uPowderStyle < 1.5 ? 0.044 : 0.085');
   });
 

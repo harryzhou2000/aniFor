@@ -66,7 +66,7 @@ describe('Canvas powder bulk style', () => {
     }
   });
 
-  it('suppresses per-cell deviation while retaining canonical hue ownership', () => {
+  it('calms per-cell deviation while retaining substantial canonical-colour variation', () => {
     const canonical = [215, 170, 104] as const;
     const original = [173, 136, 83] as const;
     const color = new Float32Array(original);
@@ -75,11 +75,11 @@ describe('Canvas powder bulk style', () => {
     applyCanvasPowderBulkStyle(color, ...canonical, 255, 169, 128, 128, 255, 1, false);
 
     for (let channel = 0; channel < 3; channel++) {
-      expect(Math.abs(color[channel] - canonical[channel])).toBeLessThan(
-        Math.abs(original[channel] - canonical[channel]) * 0.25,
+      expect(Math.abs(color[channel] - canonical[channel])).toBeGreaterThan(
+        Math.abs(original[channel] - canonical[channel]) * 0.40,
       );
       expect(color[channel]).toBeCloseTo(
-        original[channel] + (canonical[channel] - original[channel]) * 0.76,
+        original[channel] + (canonical[channel] - original[channel]) * 0.58,
         4,
       );
     }
@@ -87,7 +87,7 @@ describe('Canvas powder bulk style', () => {
     expect(color[1]).toBeGreaterThan(color[2]);
   });
 
-  it('calms only dense stable cores while leaving supported shoulders at their established grain retention', () => {
+  it('calms only dense stable cores while preserving their internal grain colour', () => {
     const canonical = [215, 170, 104] as const;
     const original = [173, 136, 83] as const;
     const shoulder = new Float32Array(original);
@@ -101,14 +101,14 @@ describe('Canvas powder bulk style', () => {
       const shoulderResidual = Math.abs(shoulder[channel] - canonical[channel]);
       const coreResidual = Math.abs(core[channel] - canonical[channel]);
       expect(shoulderResidual).toBeCloseTo(
-        Math.abs(original[channel] - canonical[channel]) * 0.24,
+        Math.abs(original[channel] - canonical[channel]) * 0.42,
         4,
       );
       expect(coreResidual).toBeCloseTo(
-        Math.abs(original[channel] - canonical[channel]) * 0.16,
+        Math.abs(original[channel] - canonical[channel]) * 0.32,
         4,
       );
-      expect(coreResidual).toBeLessThan(shoulderResidual * 0.69);
+      expect(coreResidual).toBeLessThan(shoulderResidual * 0.77);
     }
   });
 

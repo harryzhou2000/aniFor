@@ -330,6 +330,50 @@ vec3 roleEightXDelta(float traits, vec2 position, float density) {
     * (0.10 + innerRing * 0.52 + outerRing * 0.68);
   return clamp(delta * smoothstep(0.08, 0.72, density), vec3(-20.0), vec3(20.0)) / 255.0;
 }
+// Default-optics Field-profile special bodies carry a compact interference
+// vocabulary. Normal WebGL gives them a moving interference wave; the true-8x
+// compositor keeps an equivalent deliberately static so it costs no
+// clock/state/resource and remains repeatable through fence recovery. The
+// exact owner merely selects a compact vocabulary: TRON gets a lime rail,
+// portals a directional aperture, holes a dark core/rim, and vents a pale
+// pressure ring. Device-optics force/source bodies remain on their existing
+// path. This is RGB-only arithmetic over already-decoded world coordinates and
+// density: it cannot affect alpha, support, physics, walls, or the later native
+// target/role overlays.
+vec3 fieldProfileEightXDelta(float material, vec2 position, float density) {
+  vec2 cell = floor(position);
+  float support = smoothstep(0.08, 0.72, density);
+  float fieldBand = 1.0 - abs(fract((cell.x + cell.y * 0.62 + material * 0.37) / 12.0) * 2.0 - 1.0);
+  float fieldCross = 1.0 - step(0.5, mod(cell.x * 3.0 + cell.y * 5.0 + material, 13.0));
+  vec3 delta = vec3(-3.0, 4.0, 10.0) * (fieldBand - 0.46) * 0.72
+    + vec3(1.0, 3.0, 6.0) * fieldCross * 0.30;
+  vec2 tile = mod(cell, 16.0) - vec2(7.5);
+  float radius2 = dot(tile, tile);
+  float apertureCore = 1.0 - smoothstep(3.0, 26.0, radius2);
+  float apertureRing = smoothstep(13.0, 32.0, radius2)
+    * (1.0 - smoothstep(45.0, 74.0, radius2));
+  float spoke = 1.0 - step(0.5, mod(cell.x * 5.0 - cell.y * 3.0 + material, 11.0));
+  if (material == 132.0) {
+    float tronRail = max(
+      1.0 - step(0.5, mod(cell.x + cell.y * 2.0, 7.0)),
+      1.0 - step(0.5, mod(cell.x * 2.0 - cell.y, 11.0))
+    );
+    delta = vec3(2.0, 19.0, -7.0) * (0.26 + tronRail * 0.74)
+      + vec3(-2.0, 4.0, 1.0) * fieldBand;
+  } else if (material == 130.0 || material == 131.0) {
+    vec3 portalKey = material == 130.0 ? vec3(17.0, 5.0, -3.0) : vec3(-4.0, 8.0, 18.0);
+    delta = portalKey * (apertureRing * 0.86 + spoke * 0.24)
+      - vec3(4.0, 3.0, 5.0) * apertureCore * 0.38;
+  } else if (material == 125.0 || material == 128.0 || material == 133.0) {
+    vec3 rim = material == 133.0 ? vec3(15.0, 1.0, -2.0) : vec3(5.0, 1.0, 13.0);
+    delta = rim * (apertureRing * 0.76 + spoke * 0.16)
+      - vec3(5.0, 4.0, 6.0) * apertureCore * 0.56;
+  } else if (material == 129.0 || material == 134.0) {
+    delta = vec3(5.0, 13.0, 18.0) * (apertureRing * 0.74 + spoke * 0.32)
+      - vec3(2.0, 1.0, 2.0) * apertureCore * 0.16;
+  }
+  return clamp(delta * support, vec3(-18.0), vec3(18.0)) / 255.0;
+}
 // Temperature is already packed into the centre semantic sample used by this
 // direct compositor. Retain the normal path's ambient dead band and bounded
 // cold/warm/incandescent response without adding a sampler, field, pass, or
@@ -1339,6 +1383,7 @@ void main() {
   vec4 style = texture(uStyleTexture, vec2((material + 0.5) / 256.0, 0.5));
   vec4 palette = texture(uPaletteTexture, vec2((material + 0.5) / 256.0, 0.5));
   float family = floor(style.r * 255.0 + 0.5);
+  float profile = floor(style.g * 255.0 + 0.5);
   float traits = floor(style.a * 255.0 + 0.5);
   bool materialEmissive = style.b > 0.5;
   float optics = floor(palette.a * 255.0 + 0.5);
@@ -2163,6 +2208,13 @@ void main() {
     if (abs(temperatureByte - 11.0) > 1.0) {
       color = clamp(color + thermalEightXDelta(temperatureByte, optics), 0.0, 1.0);
     }
+  }
+  // Restore the normal compositor's Field-profile material language before
+  // later semantic-role and native-state overlays. The profile byte is already
+  // resident in the sampled style word; this branch adds no fetch, field,
+  // output-scale resource, or topology decision at true 8x.
+  if (family == 0.0 && profile == 6.0 && optics < 0.5 && !materialEmissive) {
+    color = clamp(color + fieldProfileEightXDelta(material, grid, density), 0.0, 1.0);
   }
   // A few exact TPT projections (notably WARP) have an intentionally near-black
   // canonical palette. Preserve that identity as visible material instead of
@@ -5667,9 +5719,10 @@ void main() {
       // must retain enough mineral/grain variation inside a pile to avoid the
       // previous airbrushed look; Local and square Grains still carry the full
       // reference cadence, while a stable bulk retains a clearly readable but
-      // non-cellular 86/88% mineral/facet response.
-      float cellGrainRetention = mix(1.0, 0.86, powderVisualCohesion);
-      float facetRetention = mix(1.0, 0.88, powderVisualCohesion);
+      // non-cellular 94/95% mineral/facet response. Curving the silhouette
+      // must not erase the internal material vocabulary at normal detail.
+      float cellGrainRetention = mix(1.0, 0.94, powderVisualCohesion);
+      float facetRetention = mix(1.0, 0.95, powderVisualCohesion);
       color *= 0.91 + grain * (0.20 + roughSurface * 0.05) * cellGrainRetention * facetGain
         + grainFacet * (0.10 + roughSurface * 0.04) * facetRetention * facetGain;
       color += base * max(0.0, 0.6 - subcell.x - subcell.y)
