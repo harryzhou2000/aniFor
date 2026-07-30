@@ -2083,10 +2083,13 @@ void main() {
             * (0.018 + keyLight * 0.040 + grazing * 0.020);
           color += (vec3(1.0) - clamp(color, 0.0, 1.0))
             * meniscusKey * aqueousTopReflection;
-          // Dense Water should retain a faint readable body, not only a bright
+          // Dense Water retains a faint readable body, not only a bright
           // shoreline. This uses the already-proven field interior, local
           // normal, and connected support; it cannot affect alpha, support,
-          // a species seam, or the 8x sampler budget.
+          // a species seam, or the 8x sampler budget. Keep this compact
+          // direct-path expression separate from normal WebGL's richer
+          // Water-only core: its broader guard crosses SwiftShader's stable
+          // live-register limit at fifteen million fragments.
           float aqueousCoreGlaze = fieldInterior * (1.0 - airFacingRim)
             * connected * (0.012 + keyLight * 0.022);
           color += (vec3(1.0) - clamp(color, 0.0, 1.0))

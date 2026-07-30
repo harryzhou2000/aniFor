@@ -2607,6 +2607,7 @@ describe('Pixi presenter startup configuration', () => {
     expect(normal).toContain('uAqueousSurfaceReflection > 0.5 && aqueous > 0.5');
     expect(normal).toContain('vec3(0.30, 0.74, 1.00) * aqueousSurfaceReflection');
     expect(eight).toContain('float aqueousCoreGlaze = fieldInterior * (1.0 - airFacingRim)');
+    expect(eight).toContain('* connected * (0.012 + keyLight * 0.022);');
     expect(normal).toContain('material == 2.0 && liquidOnly < 0.5 && halo < 0.5 && wall < 0.5');
     expect(normal).toContain('foreignMatterContact < 0.5');
     expect(normal).toContain('unlikeMaterialContact < 0.5 && liquidDepth > 0.48');
