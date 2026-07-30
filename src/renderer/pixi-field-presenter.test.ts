@@ -2607,9 +2607,12 @@ describe('Pixi presenter startup configuration', () => {
     expect(normal).toContain('uAqueousSurfaceReflection > 0.5 && aqueous > 0.5');
     expect(normal).toContain('vec3(0.30, 0.74, 1.00) * aqueousSurfaceReflection');
     expect(eight).toContain('float aqueousCoreGlaze = fieldInterior * (1.0 - airFacingRim)');
-    expect(normal).toContain('float aqueousCoreGlaze = liquidDepth * (1.0 - liquidFresnelContour)');
-    expect(normal).toContain('float aqueousCoreAbsorption = aqueousCoreGlaze * 0.48;');
-    expect(normal).toContain('1.0 - aqueousCoreAbsorption * 0.86');
+    expect(normal).toContain('material == 2.0 && liquidOnly < 0.5 && halo < 0.5 && wall < 0.5');
+    expect(normal).toContain('foreignMatterContact < 0.5');
+    expect(normal).toContain('unlikeMaterialContact < 0.5 && liquidDepth > 0.48');
+    expect(normal).toContain('smoothstep(0.56, 0.86, liquidNeighbourMean)');
+    expect(normal).toContain('vec3(0.018, 0.007, 0.000) * aqueousCoreVolume');
+    expect(normal).toContain('float aqueousCoreGlaze = aqueousCoreVolume');
     expect(normal).not.toContain('texture(');
     expect(normal).not.toMatch(/\balpha\s*[+*]?=/);
   });

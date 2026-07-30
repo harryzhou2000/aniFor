@@ -10982,6 +10982,41 @@ async function auditLiquidOpticalDepth(cdp, mode, dpr) {
   assert(samples.every((sample) => sample.repeatRgbPeak <= 1),
     `${mode}: liquid optical-depth off-on-off sequence was not deterministic (${JSON.stringify(samples)})`);
 
+  // The Water-only core glaze is deliberately separate from vertical optical
+  // depth: it must give a deep, connected ordinary Water body a little volume
+  // without changing droplets or unlike-liquid seams. Canvas has its own
+  // equivalent body styling, so this isolates the normal WebGL contract.
+  if (mode === 'webgl') {
+    await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setAqueousSurfaceReflection(false); true');
+    const aqueousFlat = await waitForStablePageCapture(cdp, 'webgl focused flat aqueous core', 20_000);
+    await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setAqueousSurfaceReflection(true); true');
+    const aqueousStyled = await waitForStablePageCapture(cdp, 'webgl focused aqueous core', 20_000);
+    await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setAqueousSurfaceReflection(false); true');
+    const aqueousRepeatedFlat = await waitForStablePageCapture(
+      cdp, 'webgl focused repeated flat aqueous core', 20_000,
+    );
+    const aqueousSamples = await sampleBackdropRefractionRegions(cdp, {
+      straight: aqueousFlat.capture.data,
+      refracted: aqueousStyled.capture.data,
+      repeatedStraight: aqueousRepeatedFlat.capture.data,
+    }, [
+      { name: 'waterDeepCore', x: 224, y: 315, radiusX: 6, radiusY: 10 },
+      { name: 'isolatedLiquidDepthControl', x: 190.5, y: 164.5, radius: 2 },
+      { name: 'unlikeLiquidDepthControl', x: 302.5, y: 172, radiusX: 0.45, radiusY: 6 },
+    ], geometry.canvas);
+    const aqueousByName = Object.fromEntries(aqueousSamples.map((sample) => [sample.name, sample]));
+    const waterCore = aqueousByName.waterDeepCore;
+    assert(waterCore.rgbRms >= 0.12 && waterCore.signedMean <= -0.10 && waterCore.rgbPeak <= 8,
+      `webgl: aqueous core lost bounded Water-only volume (${JSON.stringify(aqueousSamples)})`);
+    assert(aqueousByName.isolatedLiquidDepthControl.rgbPeak <= 1,
+      `webgl: aqueous core changed an isolated droplet (${JSON.stringify(aqueousSamples)})`);
+    assert(aqueousByName.unlikeLiquidDepthControl.rgbPeak <= 3,
+      `webgl: aqueous core changed an unlike-liquid seam (${JSON.stringify(aqueousSamples)})`);
+    assert(aqueousSamples.every((sample) => sample.repeatRgbPeak <= 1),
+      `webgl: aqueous core off-on-off sequence was not deterministic (${JSON.stringify(aqueousSamples)})`);
+    await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setAqueousSurfaceReflection(true); true');
+  }
+
   await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.clear(); true');
   const blank = await waitForStablePageCapture(cdp, `${mode} focused blank liquid-depth fixture`, 20_000);
   const supportRegions = [

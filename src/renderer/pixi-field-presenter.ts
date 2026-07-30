@@ -5209,24 +5209,22 @@ void main() {
         * (0.026 + broadSheen * 0.024 + fresnel * 0.016);
       color += (vec3(1.0) - clamp(color, 0.0, 1.0))
         * vec3(0.30, 0.74, 1.00) * aqueousSurfaceReflection;
-      // Recombine only the existing body signals for a soft, submerged Water
-      // glaze. It gives deep connected pools a legible blue volume at fit view
-      // without introducing a field, sample, pass, alpha decision, or a
-      // cell-frequency sparkle; shorelines and species ownership remain above.
-      float aqueousCoreGlaze = liquidDepth * (1.0 - liquidFresnelContour)
-        * (0.014 + broadSheen * 0.018 + caustic * 0.010);
-      // A supported core needs a little blue-biased absorption as well as its
-      // sky-facing glaze. Reusing this existing depth/fresnel scalar preserves
-      // the field-owned shoreline, alpha, species seams, droplets, and all
-      // non-aqueous families while making a large Water body read as volume.
-      float aqueousCoreAbsorption = aqueousCoreGlaze * 0.48;
-      color *= vec3(
-        1.0 - aqueousCoreAbsorption * 0.86,
-        1.0 - aqueousCoreAbsorption * 0.58,
-        1.0 - aqueousCoreAbsorption * 0.22
-      );
-      color += (vec3(1.0) - clamp(color, 0.0, 1.0))
-        * vec3(0.16, 0.52, 0.86) * aqueousCoreGlaze;
+      // A true Water core gets a small submerged volume response in addition
+      // to the shared aqueous surface. Keep this stricter than the surface
+      // cue: distilled/salt water retain their native identity, and shores,
+      // droplets, seams, walls, traits, and reconstructed support stay exact.
+      // It is RGB-only arithmetic over existing depth/Fresnel/field terms.
+      if (material == 2.0 && liquidOnly < 0.5 && halo < 0.5 && wall < 0.5
+        && traits < 0.5 && !materialEmissive && foreignMatterContact < 0.5
+        && unlikeMaterialContact < 0.5 && liquidDepth > 0.48 && liquidNeighbourMean > 0.56) {
+        float aqueousCoreVolume = liquidDepth * (1.0 - liquidFresnelContour)
+          * smoothstep(0.56, 0.86, liquidNeighbourMean);
+        color *= vec3(1.0) - vec3(0.018, 0.007, 0.000) * aqueousCoreVolume;
+        float aqueousCoreGlaze = aqueousCoreVolume
+          * (0.016 + broadSheen * 0.020 + caustic * 0.012);
+        color += (vec3(1.0) - clamp(color, 0.0, 1.0))
+          * vec3(0.16, 0.52, 0.86) * aqueousCoreGlaze;
+      }
     }
     color -= color * liquidFresnelGate * (
       liquidFresnelShadow * liquidFresnelShadowResponse
