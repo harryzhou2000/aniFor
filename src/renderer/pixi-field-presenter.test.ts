@@ -452,6 +452,21 @@ describe('Pixi presenter startup configuration', () => {
     expect(block).not.toMatch(/\balpha\s*[+*]?=/);
   });
 
+  it('softens only field-proven dense WebGL gas colour seams before identity accents', () => {
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const start = source.indexOf('    vec3 gasMixture = mix(');
+    const end = source.indexOf('    float gasCurvature =', start);
+    const block = source.slice(start, end);
+
+    expect(start).toBeGreaterThan(0);
+    expect(end).toBeGreaterThan(start);
+    expect(block).toContain('float gasInteriorScatter = gasInterior * smoothstep(0.10, 0.60, gasShadeDensity);');
+    expect(block).toContain('float gasBaseLuminance = dot(gasBase, vec3(0.2126, 0.7152, 0.0722));');
+    expect(block).toContain('gasInteriorScatter * 0.12');
+    expect(block).not.toContain('texture(');
+    expect(block).not.toMatch(/\balpha\s*[+*]?=/);
+  });
+
   it('seeds and redraws optional-last gas identity volume styling', () => {
     const presenter = presenterHarness();
 

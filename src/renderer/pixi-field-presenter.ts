@@ -4858,6 +4858,14 @@ void main() {
     );
     vec3 gasBase = vividColor(gasMixture, 1.20 + cleanGas * 0.10 - sootyGas * 0.08);
     float gasShadeDensity = mix(density, atmosphereState.a, gasInterior);
+    // A dense field-owned cloud scatters colour through its own volume. Lightly
+    // compress only its interior chroma before the existing family identity
+    // accents are layered: mixed billows read as one soft body instead of hard
+    // semantic colour lobes, while sparse chains and species colour remain
+    // legible. This is RGB-only arithmetic over already-live field state.
+    float gasInteriorScatter = gasInterior * smoothstep(0.10, 0.60, gasShadeDensity);
+    float gasBaseLuminance = dot(gasBase, vec3(0.2126, 0.7152, 0.0722));
+    gasBase = mix(gasBase, vec3(gasBaseLuminance), gasInteriorScatter * 0.12);
     float gasCurvature = clamp((atmosphereState.a - cloudNeighbourMean) * 8.0, -1.0, 1.0);
     float gasCrown = max(gasCurvature, 0.0);
     float gasPocket = max(-gasCurvature, 0.0);
