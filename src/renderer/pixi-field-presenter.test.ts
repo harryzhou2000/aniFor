@@ -379,7 +379,7 @@ describe('Pixi presenter startup configuration', () => {
     expect(blockStart).toBeGreaterThan(0);
     expect(blockEnd).toBeGreaterThan(blockStart);
     expect(block).toContain('float liquidAirContour = adjacentLiquidSupport * exposedLiquidSide;');
-    expect(block).toContain('liquidAirContour * 0.86');
+    expect(block).toContain('liquidAirContour * 0.82');
     expect(block).not.toContain('texture(');
     expect(block).not.toMatch(/\balpha\s*[+*]?=/);
   });
@@ -397,6 +397,26 @@ describe('Pixi presenter startup configuration', () => {
     expect(block).toContain('(vec3(1.0) - clamp(color, 0.0, 1.0))');
     expect(block).not.toContain('texture(');
     expect(block).not.toMatch(/\balpha\s*[+*]?=/);
+  });
+
+  it('keeps near-black WARP gas visible through an exact-owner RGB floor', () => {
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const normalStart = source.indexOf('const FIELD_FRAGMENT = `');
+    const gasStart = source.indexOf('    // Dense reconstructed gas should read as one mixed volume', normalStart);
+    const gasEnd = source.indexOf('  } else if (liquidVolume > 0.5) {', gasStart);
+    const gas = source.slice(gasStart, gasEnd);
+    const warpStart = gas.indexOf('    // Native WARP is deliberately near-black');
+    const warp = gas.slice(warpStart);
+    const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');
+    const eightEnd = source.indexOf('const FIELD_FRAGMENT = `', eightStart);
+    const eight = source.slice(eightStart, eightEnd);
+
+    expect(gasStart).toBeGreaterThan(normalStart);
+    expect(gasEnd).toBeGreaterThan(gasStart);
+    expect(warpStart).toBeGreaterThan(0);
+    expect(warp).toContain('if (material == 114.0) color = max(color, vec3(0.115, 0.075, 0.155));');
+    expect(warp).not.toMatch(/\balpha\s*[+*]?=/);
+    expect(eight).toContain('if (material == 114.0 && family == 1.0) color = max(color, vec3(0.115, 0.075, 0.155));');
   });
 
   it('keeps dense WebGL wet sediment shared, field-owned, and RGB-only', () => {
@@ -3146,7 +3166,7 @@ describe('Pixi presenter startup configuration', () => {
     expect(cohesionBlock).toContain('density > 0.08 && density < 0.92');
     expect(cohesionBlock).toContain('adjacentLiquidSupport * exposedLiquidSide');
     expect(cohesionBlock).toContain('min(\n        volume, max(density * 0.65, min(liquidDensity, liquidNeighbourMean) * 0.45)');
-    expect(cohesionBlock).toContain('liquidAirContour * 0.86');
+    expect(cohesionBlock).toContain('liquidAirContour * 0.82');
     expect(cohesionBlock).not.toContain('texture(');
     expect(cohesionBlock).not.toMatch(/\bcolor\s*[+*]?=/);
     expect(contactBlock.match(/materialAt\(/g)).toHaveLength(1);

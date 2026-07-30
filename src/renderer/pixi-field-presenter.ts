@@ -2166,8 +2166,11 @@ void main() {
   }
   // A few exact TPT projections (notably WARP) have an intentionally near-black
   // canonical palette. Preserve that identity as visible material instead of
-  // collapsing it into transparent-page black at true 8x.
-  if (max(color.r, max(color.g, color.b)) < 0.035) color = vec3(16.0 / 255.0);
+  // collapsing it into transparent-page black at true 8x. WARP's owner-local
+  // violet floor matches the normal compositor while alpha/support remain
+  // entirely field-owned.
+  if (material == 114.0 && family == 1.0) color = max(color, vec3(0.115, 0.075, 0.155));
+  else if (max(color.r, max(color.g, color.b)) < 0.035) color = vec3(16.0 / 255.0);
   bool sourceOwner = material == 124.0 || material == 126.0 || material == 127.0
     || material == 137.0 || material == 158.0 || material == 159.0;
   bool forceOwner = material == 115.0 || material == 116.0;
@@ -4807,17 +4810,23 @@ void main() {
       : cloudAlpha + semanticAccentAlpha * (1.0 - cloudAlpha);
     // Beer-like optical depth keeps the core saturated and translucent while a
     // directional silver lining gives the boundary volume without a hard edge.
-    float gasCoreTransmission = 0.74 + cleanGas * 0.08 - sootyGas * 0.13;
-    float gasScatter = 0.26 + cleanGas * 0.10 - sootyGas * 0.08;
+    // The Canvas volume keeps a broad, soft midtone through a dense billow.
+    // Retain that readable body in the normal WebGL compositor as well: the
+    // prior core/transverse pair compounded to a markedly darker cloud on the
+    // black world backdrop, even though alpha and atmosphere mass agreed.
+    // This is deliberately RGB-only and stays below the Canvas body exposure;
+    // alpha/support continue to be owned exclusively by the field above.
+    float gasCoreTransmission = 0.82 + cleanGas * 0.06 - sootyGas * 0.10;
+    float gasScatter = 0.32 + cleanGas * 0.09 - sootyGas * 0.06;
     color = gasBase * mix(1.08 + cleanGas * 0.04, gasCoreTransmission, opticalDepth)
-      * (0.76 + diffuse * 0.28) * billow;
+      * (0.82 + diffuse * 0.23) * billow;
     // A field-owned mid-density scatter band keeps a deep cloud luminous enough
     // to read as a volume rather than a uniformly dark blur. It deliberately
     // peaks between the transparent rim and opaque core, reuses only values
     // already live in this branch, and changes RGB—not alpha, support, material
     // ownership, field reconstruction, or the Canvas recovery path.
     float gasForwardScatter = opticalDepth * (1.0 - opticalDepth)
-      * (0.026 + cleanGas * 0.014 - sootyGas * 0.008);
+      * (0.036 + cleanGas * 0.014 - sootyGas * 0.008);
     vec3 gasForwardColor = mix(vividColor(gasBase, 1.06), vec3(0.62, 0.76, 0.92),
       0.18 + cleanGas * 0.14);
     color += (vec3(1.0) - clamp(color, 0.0, 1.0)) * gasForwardColor
@@ -4876,6 +4885,13 @@ void main() {
         gasDirectionalRelief, gasCurvature * 0.125
       );
     }
+    // Native WARP is deliberately near-black, but a field-owned gas carries
+    // low presentation alpha over AniforTPT's dark world. Its canonical colour
+    // can therefore collapse into the backdrop even when semantic ownership
+    // and atmosphere support are correct. Keep one exact-owner violet floor in
+    // RGB only: it does not brighten neighbouring gases, alter the propagated
+    // field, or claim coverage, and the existing gas alpha remains authoritative.
+    if (material == 114.0) color = max(color, vec3(0.115, 0.075, 0.155));
   } else if (liquidVolume > 0.5) {
     float aqueous = optics == 1.0 ? 1.0 : 0.0;
     float oily = optics == 2.0 ? 1.0 : 0.0;
@@ -5084,10 +5100,10 @@ void main() {
         volume, max(density * 0.65, min(liquidDensity, liquidNeighbourMean) * 0.45)
       );
       liquidSilhouetteDensity = mix(
-        // A 0.86 cap keeps a connected one-cell strand inside the audited
+        // A 0.82 cap keeps a connected one-cell strand inside the audited
         // <= 2 RGB-RMS continuity response while retaining a visible but
         // non-expanding cohesion trim at ordinary zoom.
-        volume, connectedFieldDensity, liquidAirContour * 0.86
+        volume, connectedFieldDensity, liquidAirContour * 0.82
       );
     }
     alpha = smoothstep(
