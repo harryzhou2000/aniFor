@@ -5153,6 +5153,16 @@ void main() {
       // cell-frequency sparkle; shorelines and species ownership remain above.
       float aqueousCoreGlaze = liquidDepth * (1.0 - liquidFresnelContour)
         * (0.014 + broadSheen * 0.018 + caustic * 0.010);
+      // A supported core needs a little blue-biased absorption as well as its
+      // sky-facing glaze. Reusing this existing depth/fresnel scalar preserves
+      // the field-owned shoreline, alpha, species seams, droplets, and all
+      // non-aqueous families while making a large Water body read as volume.
+      float aqueousCoreAbsorption = aqueousCoreGlaze * 0.48;
+      color *= vec3(
+        1.0 - aqueousCoreAbsorption * 0.86,
+        1.0 - aqueousCoreAbsorption * 0.58,
+        1.0 - aqueousCoreAbsorption * 0.22
+      );
       color += (vec3(1.0) - clamp(color, 0.0, 1.0))
         * vec3(0.16, 0.52, 0.86) * aqueousCoreGlaze;
     }
