@@ -959,7 +959,7 @@ describe('Pixi presenter startup configuration', () => {
     expect(facetStart).toBeGreaterThan(0);
     expect(facetEnd).toBeGreaterThan(facetStart);
     expect(facet).toContain('floor(grid) * 2.0 + powderSubcell');
-    expect(facet).toContain('float powderFacetRetention = uPowderStyle > 1.5 ? 0.88 : 1.0;');
+    expect(facet).toContain('float powderFacetRetention = uPowderStyle > 1.5 ? 0.99 : 1.0;');
     expect(facet).toContain('float powderFacetGain = optics == 13.0 ? 1.12');
     expect(facet).toContain('float powderFacetInterior = uPowderStyle > 1.5');
     expect(facet).toContain('(1.0 - step(0.001, powderFieldBlend))');

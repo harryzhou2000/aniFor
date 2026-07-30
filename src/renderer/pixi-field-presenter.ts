@@ -1549,13 +1549,13 @@ void main() {
     // settled material body to one coarser grain frequency.  This is derived
     // from the already-live world coordinate only, so it adds no sample,
     // field, pass, alpha/support decision, or 8x resource.  Retain the same
-    // Smooth 88% restraint used by the normal path; Local and square Grains
-    // remain their unsoftened presentation references.
+    // near-full Smooth facet response used by the normal path; Local and
+    // square Grains remain their unsoftened presentation references.
     vec2 powderSubcell = floor(fract(grid) * 2.0);
     float powderFacet = fract(sin(dot(
       floor(grid) * 2.0 + powderSubcell, vec2(12.9898, 78.233)
     )) * 43758.5453) - 0.5;
-    float powderFacetRetention = uPowderStyle > 1.5 ? 0.88 : 1.0;
+    float powderFacetRetention = uPowderStyle > 1.5 ? 0.99 : 1.0;
     float powderFacetGain = optics == 13.0 ? 1.12
       : (optics == 14.0 ? 0.35 : (optics == 15.0 ? 0.90 : 1.0));
     // The colour facet is deliberately a semantic-bulk treatment, never an
