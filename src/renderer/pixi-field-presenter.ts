@@ -133,6 +133,7 @@ uniform float uCellularMaterialStyling;
 uniform float uStructuralRigidStyling;
 uniform float uMechanismBodyStyling;
 uniform float uElectronicIdentityStyling;
+uniform float uFieldProfileIdentityStyling;
 uniform float uSensorMaterialStyling;
 uniform float uExplosivePowderStyling;
 uniform float uEarthenPowderStyling;
@@ -2374,7 +2375,8 @@ void main() {
   // later semantic-role and native-state overlays. The profile byte is already
   // resident in the sampled style word; this branch adds no fetch, field,
   // output-scale resource, or topology decision at true 8x.
-  if (family == 0.0 && profile == 6.0 && optics < 0.5 && !materialEmissive) {
+  if (uFieldProfileIdentityStyling > 0.5
+    && family == 0.0 && profile == 6.0 && optics < 0.5 && !materialEmissive) {
     color = clamp(color + fieldProfileEightXDelta(material, grid, density), 0.0, 1.0);
   }
   // A few exact TPT projections (notably WARP) have an intentionally near-black
@@ -2736,6 +2738,7 @@ uniform float uCellularMaterialStyling;
 uniform float uStructuralRigidStyling;
 uniform float uMechanismBodyStyling;
 uniform float uElectronicIdentityStyling;
+uniform float uFieldProfileIdentityStyling;
 uniform float uEarthenPowderStyling;
 uniform float uSensorMaterialStyling;
 uniform float uUnusualPowderStyling;
@@ -3839,6 +3842,44 @@ vec3 electronicBodyIdentityDelta(float material, vec2 position) {
   float tap = 1.0 - step(0.5, mod(x + y * 4.0 + style, 21.0));
   return (vec3(3.0, 8.0, 13.0) * rail + vec3(7.0, 3.0, 5.0) * tap
     - vec3(4.0, 3.0, 1.0) * node) / 255.0;
+}
+// Exact default-optics Field bodies need more than the generic animated wave
+// at ordinary presentation scale. Keep the direct 8x vocabulary's rails,
+// apertures, cores, and rings static here as well: this is RGB-only arithmetic
+// over already-decoded world coordinates, so it adds no sample, resource,
+// clock, alpha, support, wall, ownership, or simulation decision.
+vec3 fieldProfileIdentityDelta(float material, vec2 position) {
+  vec2 cell = floor(position);
+  float fieldBand = 1.0 - abs(fract((cell.x + cell.y * 0.62 + material * 0.37) / 12.0) * 2.0 - 1.0);
+  float fieldCross = 1.0 - step(0.5, mod(cell.x * 3.0 + cell.y * 5.0 + material, 13.0));
+  vec3 delta = vec3(-3.0, 4.0, 10.0) * (fieldBand - 0.46) * 0.72
+    + vec3(1.0, 3.0, 6.0) * fieldCross * 0.30;
+  vec2 tile = mod(cell, 16.0) - vec2(7.5);
+  float radius2 = dot(tile, tile);
+  float apertureCore = 1.0 - smoothstep(3.0, 26.0, radius2);
+  float apertureRing = smoothstep(13.0, 32.0, radius2)
+    * (1.0 - smoothstep(45.0, 74.0, radius2));
+  float spoke = 1.0 - step(0.5, mod(cell.x * 5.0 - cell.y * 3.0 + material, 11.0));
+  if (material == 132.0) { // TRON
+    float tronRail = max(
+      1.0 - step(0.5, mod(cell.x + cell.y * 2.0, 7.0)),
+      1.0 - step(0.5, mod(cell.x * 2.0 - cell.y, 11.0))
+    );
+    delta = vec3(2.0, 19.0, -7.0) * (0.26 + tronRail * 0.74)
+      + vec3(-2.0, 4.0, 1.0) * fieldBand;
+  } else if (material == 130.0 || material == 131.0) { // PRTI / PRTO
+    vec3 portalKey = material == 130.0 ? vec3(17.0, 5.0, -3.0) : vec3(-4.0, 8.0, 18.0);
+    delta = portalKey * (apertureRing * 0.86 + spoke * 0.24)
+      - vec3(4.0, 3.0, 5.0) * apertureCore * 0.38;
+  } else if (material == 125.0 || material == 128.0 || material == 133.0) { // holes
+    vec3 rim = material == 133.0 ? vec3(15.0, 1.0, -2.0) : vec3(5.0, 1.0, 13.0);
+    delta = rim * (apertureRing * 0.76 + spoke * 0.16)
+      - vec3(5.0, 4.0, 6.0) * apertureCore * 0.56;
+  } else if (material == 129.0 || material == 134.0) { // VOID / WHOL
+    delta = vec3(5.0, 13.0, 18.0) * (apertureRing * 0.74 + spoke * 0.32)
+      - vec3(2.0, 1.0, 2.0) * apertureCore * 0.16;
+  } else return vec3(0.0);
+  return clamp(delta, vec3(-18.0), vec3(18.0)) / 255.0;
 }
 float structuralRigidDeepIdentityGain(float material) {
   // Large rigid bodies carry their broad depth and reflected-light response
@@ -6449,6 +6490,15 @@ void main() {
       float interference = (planeWave + radialWave) * 0.5;
       color *= 0.95 + interference * 0.045;
     }
+    // Portals, holes, vents, and TRON retain one exact-owner static body atop
+    // the broad generic Field wave. The default-optics/profile guard keeps
+    // force/source Device owners, reconstructed support, walls, emission, and
+    // later semantic-role decals outside this RGB-only material layer.
+    if (uFieldProfileIdentityStyling > 0.5 && family == 0.0 && profile == 6.0 && optics < 0.5
+      && surfaceOnly < 0.5 && halo < 0.5 && wall < 0.5
+      && wallOnly < 0.5 && emissionOnly < 0.5 && !materialEmissive) {
+      color = clamp(color + fieldProfileIdentityDelta(material, fieldPosition), 0.0, 1.0);
+    }
     // Transport/actuator hardware spans force, powered, and ordinary-solid
     // profiles. Its exact IDs may also carry a later semantic role trait, so
     // this static RGB base deliberately sits after generic profile treatment
@@ -7038,6 +7088,7 @@ export class PixiFieldPresenter {
       uStructuralRigidStyling: { value: 1, type: 'f32' },
       uMechanismBodyStyling: { value: 1, type: 'f32' },
       uElectronicIdentityStyling: { value: 1, type: 'f32' },
+      uFieldProfileIdentityStyling: { value: 1, type: 'f32' },
       uEarthenPowderStyling: { value: 1, type: 'f32' },
       uSensorMaterialStyling: { value: 1, type: 'f32' },
       uUnusualPowderStyling: { value: 1, type: 'f32' },
@@ -7397,6 +7448,7 @@ export class PixiFieldPresenter {
     aqueousSurfaceReflectionEnabled = true,
     mechanismBodyStylingEnabled = true,
     electronicIdentityStylingEnabled = true,
+    fieldProfileIdentityStylingEnabled = true,
   ): void {
     const uniforms = this.uniforms.uniforms;
     uniforms.uGasFieldLighting = gasFieldLightingEnabled ? 1 : 0;
@@ -7422,6 +7474,7 @@ export class PixiFieldPresenter {
     uniforms.uStructuralRigidStyling = structuralRigidStylingEnabled ? 1 : 0;
     uniforms.uMechanismBodyStyling = mechanismBodyStylingEnabled ? 1 : 0;
     uniforms.uElectronicIdentityStyling = electronicIdentityStylingEnabled ? 1 : 0;
+    uniforms.uFieldProfileIdentityStyling = fieldProfileIdentityStylingEnabled ? 1 : 0;
     uniforms.uEarthenPowderStyling = earthenPowderStylingEnabled ? 1 : 0;
     uniforms.uSensorMaterialStyling = sensorMaterialStylingEnabled ? 1 : 0;
     uniforms.uUnusualPowderStyling = unusualPowderStylingEnabled ? 1 : 0;
@@ -7559,6 +7612,11 @@ export class PixiFieldPresenter {
 
   setElectronicIdentityStylingEnabled(enabled: boolean): void {
     this.uniforms.uniforms.uElectronicIdentityStyling = enabled ? 1 : 0;
+    this.renderApplication();
+  }
+
+  setFieldProfileIdentityStylingEnabled(enabled: boolean): void {
+    this.uniforms.uniforms.uFieldProfileIdentityStyling = enabled ? 1 : 0;
     this.renderApplication();
   }
 

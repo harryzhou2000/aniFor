@@ -50,6 +50,9 @@ import {
   ELECTRONICS_GRAPHICS_AUDIT, prepareElectronicsGraphicsAuditFixture,
 } from './electronics-graphics-audit';
 import {
+  FIELD_PROFILE_GRAPHICS_AUDIT, prepareFieldProfileGraphicsAuditFixture,
+} from './field-profile-graphics-audit';
+import {
   EARTHEN_POWDER_GRAPHICS_AUDIT, prepareEarthenPowderGraphicsAuditFixture,
 } from './earthen-powder-graphics-audit';
 import {
@@ -418,6 +421,9 @@ export class Game {
       setElectronicIdentityStyling: (enabled) => {
         this.renderer.setElectronicIdentityStylingEnabled(enabled);
       },
+      setFieldProfileIdentityStyling: (enabled) => {
+        this.renderer.setFieldProfileIdentityStylingEnabled(enabled);
+      },
       setEarthenPowderStyling: (enabled) => {
         this.renderer.setEarthenPowderStylingEnabled(enabled);
       },
@@ -553,6 +559,10 @@ export class Game {
       electronicsGraphicsAtlas: () => ELECTRONICS_GRAPHICS_AUDIT,
       prepareElectronicsGraphicsFixture: () => {
         prepareElectronicsGraphicsAuditFixture(this.simulation);
+      },
+      fieldProfileGraphicsAtlas: () => FIELD_PROFILE_GRAPHICS_AUDIT,
+      prepareFieldProfileGraphicsFixture: () => {
+        prepareFieldProfileGraphicsAuditFixture(this.simulation);
       },
       earthenPowderGraphicsAtlas: () => EARTHEN_POWDER_GRAPHICS_AUDIT,
       prepareEarthenPowderGraphicsFixture: () => {

@@ -44,6 +44,7 @@ import {
   applyCanvasElectronicBodyIdentityStyle,
   applyCanvasMechanismBodyIdentityStyle,
 } from './canvas-device-identity-style';
+import { applyCanvasFieldProfileIdentityStyle } from './canvas-field-profile-identity-style';
 import {
   applyCanvasUnusualSolidMorphology,
   isCanvasNativeSpecialSolidMaterial,
@@ -300,6 +301,7 @@ export class MaterialRenderer {
   private structuralRigidStylingEnabled = true;
   private mechanismBodyStylingEnabled = true;
   private electronicIdentityStylingEnabled = true;
+  private fieldProfileIdentityStylingEnabled = true;
   private earthenPowderStylingEnabled = true;
   private sensorMaterialStylingEnabled = true;
   private unusualPowderStylingEnabled = true;
@@ -721,6 +723,15 @@ export class MaterialRenderer {
     this.changed = true;
   }
 
+  /** Exact portals, holes, vents, and TRON retain static field bodies in both presenters. */
+  setFieldProfileIdentityStylingEnabled(enabled: boolean): void {
+    if (enabled === this.fieldProfileIdentityStylingEnabled) return;
+    this.fieldProfileIdentityStylingEnabled = enabled;
+    this.presenter?.setFieldProfileIdentityStylingEnabled(enabled);
+    this.contourChunks.markAll();
+    this.changed = true;
+  }
+
   setEarthenPowderStylingEnabled(enabled: boolean): void {
     if (enabled === this.earthenPowderStylingEnabled) return;
     this.earthenPowderStylingEnabled = enabled;
@@ -1099,6 +1110,7 @@ export class MaterialRenderer {
       this.aqueousSurfaceReflectionEnabled,
       this.mechanismBodyStylingEnabled,
       this.electronicIdentityStylingEnabled,
+      this.fieldProfileIdentityStylingEnabled,
     );
     // Route subsequent dirty cells to the candidate while its first expensive
     // frame is in flight. The known-good Canvas remains mounted underneath;
@@ -2111,6 +2123,10 @@ export class MaterialRenderer {
             }
             if (this.electronicIdentityStylingEnabled) {
               applyCanvasElectronicBodyIdentityStyle(this.styledColor, material, x, y);
+            }
+            if (this.fieldProfileIdentityStylingEnabled && profile === RenderProfile.Field
+              && optics === RenderOptics.Default) {
+              applyCanvasFieldProfileIdentityStyle(this.styledColor, material, x, y);
             }
           }
           if (applicableTraits !== 0) applyCanvasRenderTraits(

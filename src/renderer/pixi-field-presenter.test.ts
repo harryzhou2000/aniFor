@@ -30,6 +30,7 @@ interface PresenterHarness {
   setStructuralRigidStylingEnabled: PixiFieldPresenter['setStructuralRigidStylingEnabled'];
   setMechanismBodyStylingEnabled: PixiFieldPresenter['setMechanismBodyStylingEnabled'];
   setElectronicIdentityStylingEnabled: PixiFieldPresenter['setElectronicIdentityStylingEnabled'];
+  setFieldProfileIdentityStylingEnabled: PixiFieldPresenter['setFieldProfileIdentityStylingEnabled'];
   setEarthenPowderStylingEnabled: PixiFieldPresenter['setEarthenPowderStylingEnabled'];
   setSensorMaterialStylingEnabled: PixiFieldPresenter['setSensorMaterialStylingEnabled'];
   setUnusualPowderStylingEnabled: PixiFieldPresenter['setUnusualPowderStylingEnabled'];
@@ -908,7 +909,8 @@ describe('Pixi presenter startup configuration', () => {
     for (const motif of ['fieldBand', 'fieldCross', 'apertureCore', 'apertureRing', 'tronRail', 'portalKey']) {
       expect(helper).toContain(motif);
     }
-    expect(application).toContain('if (family == 0.0 && profile == 6.0 && optics < 0.5 && !materialEmissive)');
+    expect(application).toContain('if (uFieldProfileIdentityStyling > 0.5');
+    expect(application).toContain('family == 0.0 && profile == 6.0 && optics < 0.5 && !materialEmissive');
     expect(application).toContain('fieldProfileEightXDelta(material, grid, density)');
     expect(`${helper}${application}`).not.toContain('texture(');
     expect(`${helper}${application}`).not.toContain('uTime');
@@ -2864,6 +2866,34 @@ describe('Pixi presenter startup configuration', () => {
     }
     expect(electronicsBlock).not.toMatch(/texture\s*\(/);
     expect(electronicsBlock).not.toMatch(/\balpha\s*[+*]?=/);
+  });
+
+  it('keeps normal and true-8x Field-profile identities on one RGB-only switch', () => {
+    const presenter = presenterHarness();
+
+    presenter.setFieldProfileIdentityStylingEnabled(false);
+    expect(presenter.uniforms.uniforms.uFieldProfileIdentityStyling).toBe(0);
+    expect(presenter.app.render).toHaveBeenCalledOnce();
+
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');
+    const normalStart = source.indexOf('const FIELD_FRAGMENT = `');
+    const eight = source.slice(eightStart, normalStart);
+    const helperStart = source.indexOf('// Exact default-optics Field bodies need more than the generic animated wave');
+    const helperEnd = source.indexOf('float structuralRigidDeepIdentityGain(', helperStart);
+    const normalHelper = source.slice(helperStart, helperEnd);
+    expect(eight).toContain('uniform float uFieldProfileIdentityStyling;');
+    expect(eight).toContain('uFieldProfileIdentityStyling > 0.5');
+    expect(source.slice(normalStart)).toContain('uniform float uFieldProfileIdentityStyling;');
+    expect(source).toContain('uFieldProfileIdentityStyling: { value: 1, type: \'f32\' }');
+    expect(source).toContain('uFieldProfileIdentityStyling > 0.5 && family == 0.0 && profile == 6.0');
+    expect(normalHelper).toContain('vec3 fieldProfileIdentityDelta(float material, vec2 position)');
+    for (const owner of [125, 128, 129, 130, 131, 132, 133, 134]) {
+      expect(normalHelper).toContain(`material == ${owner}.0`);
+    }
+    expect(normalHelper).not.toMatch(/texture\s*\(/);
+    expect(normalHelper).not.toContain('uTime');
+    expect(normalHelper).not.toMatch(/\balpha\s*[+*]?=/);
   });
 
   it('seeds and redraws the independent earthen powder identity layer', () => {

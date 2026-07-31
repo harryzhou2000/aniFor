@@ -55,7 +55,8 @@ const SHALLOW_SAND_SLOPE = Object.freeze({ left: 18, right: 170, bottom: 149, ri
 const CDP_COMMAND_TIMEOUT_MS = 45_000;
 const CDP_CONNECT_TIMEOUT_MS = 10_000;
 const scaleEightOnly = process.argv.includes('--scale-eight-only');
-const modes = scaleEightOnly ? ['webgl'] : process.argv.includes('--canvas-only') ? ['canvas2d']
+const eightFieldProfileOnly = process.argv.includes('--eight-field-profile-only');
+const modes = scaleEightOnly || eightFieldProfileOnly ? ['webgl'] : process.argv.includes('--canvas-only') ? ['canvas2d']
   : process.argv.includes('--webgl-only') ? ['webgl'] : ['canvas2d', 'webgl'];
 // WebGL is the canonical visual release path. Canvas runs its strict
 // startup/geometry/semantic fallback audit by default; opt in only when a
@@ -91,6 +92,7 @@ const earthenPowderGraphicsOnly = process.argv.includes('--earthen-powder-graphi
 const explosivePowderGraphicsOnly = process.argv.includes('--explosive-powder-graphics-only');
 const unusualSolidGraphicsOnly = process.argv.includes('--unusual-solid-graphics-only');
 const deviceIdentityGraphicsOnly = process.argv.includes('--device-identity-graphics-only');
+const fieldProfileGraphicsOnly = process.argv.includes('--field-profile-graphics-only');
 const liquidIdentityGraphicsOnly = process.argv.includes('--liquid-identity-graphics-only');
 const gasIdentityGraphicsOnly = process.argv.includes('--gas-identity-graphics-only');
 const energyRadioactiveGraphicsOnly = process.argv.includes('--energy-radioactive-graphics-only');
@@ -121,6 +123,7 @@ const productionBundle = process.argv.includes('--production-bundle');
 const usesProductionBundle = productionBundle || showcaseScreenshotOnly || cellularGraphicsOnly || sensorGraphicsOnly
   || unusualPowderGraphicsOnly || earthenPowderGraphicsOnly || explosivePowderGraphicsOnly || unusualSolidGraphicsOnly
   || deviceIdentityGraphicsOnly
+  || fieldProfileGraphicsOnly
   || liquidIdentityGraphicsOnly || gasIdentityGraphicsOnly || energyRadioactiveGraphicsOnly
   || organicPlantGraphicsOnly || spongeGraphicsOnly || virusGraphicsOnly || waxGraphicsOnly
   || crystalGraphicsOnly || pasteResistGraphicsOnly || vibrStateGraphicsOnly
@@ -128,7 +131,7 @@ const usesProductionBundle = productionBundle || showcaseScreenshotOnly || cellu
   || poloStateGraphicsOnly || spngStateGraphicsOnly || lavaStateGraphicsOnly
   || botanicalLifecycleGraphicsOnly || sparkStateGraphicsOnly
   || nativeSeedGrowthOnly || nativeSemanticsOnly || catalogSelectionOnly || shortDesktopOnly || liveScaleOnly
-  || scaleEightOnly;
+  || scaleEightOnly || eightFieldProfileOnly;
 const AUDIT_BASE_URL = usesProductionBundle ? PRODUCTION_BUNDLE_URL : ORIGIN + '/';
 const DESKTOP_TOOL_FILTER_HEIGHT = 96;
 const screenshotRequest = process.argv.find((argument) => argument.startsWith('--screenshot='))?.slice('--screenshot='.length);
@@ -196,6 +199,7 @@ async function main() {
       || unusualPowderGraphicsOnly || earthenPowderGraphicsOnly || explosivePowderGraphicsOnly
       || unusualSolidGraphicsOnly || liquidIdentityGraphicsOnly
       || deviceIdentityGraphicsOnly
+      || fieldProfileGraphicsOnly
       || gasIdentityGraphicsOnly || energyRadioactiveGraphicsOnly || organicPlantGraphicsOnly
       || spongeGraphicsOnly || virusGraphicsOnly || waxGraphicsOnly || crystalGraphicsOnly
       || pasteResistGraphicsOnly || vibrStateGraphicsOnly || deutStateGraphicsOnly
@@ -203,7 +207,7 @@ async function main() {
       || spngStateGraphicsOnly || lavaStateGraphicsOnly || botanicalLifecycleGraphicsOnly
       || sparkStateGraphicsOnly
       || nativeSeedGrowthOnly || nativeSemanticsOnly || catalogSelectionOnly || pausedPresentationOnly
-      || canvasTimingOnly;
+      || canvasTimingOnly || eightFieldProfileOnly;
     // Focused visual gates prove their complete native WebGL contract by
     // default. Canvas has already proved its semantic fallback contract in
     // auditMode; paired optics parity is intentionally an explicit diagnostic.
@@ -243,6 +247,7 @@ async function main() {
       if (!scaleEightOnly && !reducedAudit) assertPairedMaterialAtlas(results);
     }
     if (deviceIdentityGraphicsOnly) assertPairedDeviceIdentityGraphics(results);
+    if (fieldProfileGraphicsOnly) assertPairedFieldProfileGraphics(results);
     compactMaterialAtlasResults(results);
     compactVirusGraphicsResults(results);
     compactWaxGraphicsResults(results);
@@ -265,13 +270,14 @@ async function auditMode(mode) {
   const profile = await mkdtemp(path.join(tmpdir(), `anifor-input-${mode}-`));
   const dpr = mode === 'canvas2d' ? 2 : 1;
   const canvasFallbackAudit = mode === 'canvas2d' && !mobileOnly && !layoutOnly
-    && !shortDesktopOnly && !liveScaleOnly && !requireCanvasVisuals && !deviceIdentityGraphicsOnly;
+    && !shortDesktopOnly && !liveScaleOnly && !requireCanvasVisuals && !deviceIdentityGraphicsOnly
+    && !fieldProfileGraphicsOnly;
   // Advanced fixtures begin blank so WebGL can author exactly the state it
   // measures. Canvas fallback has no advanced optics obligation, so retain the
   // canonical paused scene there and prove real material delivery/occupancy.
   const startsBlank = !canvasFallbackAudit && (cellularGraphicsOnly || sensorGraphicsOnly
     || unusualPowderGraphicsOnly || earthenPowderGraphicsOnly || explosivePowderGraphicsOnly
-    || unusualSolidGraphicsOnly || deviceIdentityGraphicsOnly || liquidIdentityGraphicsOnly
+    || unusualSolidGraphicsOnly || deviceIdentityGraphicsOnly || fieldProfileGraphicsOnly || liquidIdentityGraphicsOnly
     || gasIdentityGraphicsOnly || energyRadioactiveGraphicsOnly || organicPlantGraphicsOnly
     || spongeGraphicsOnly || virusGraphicsOnly || waxGraphicsOnly || crystalGraphicsOnly
     || pasteResistGraphicsOnly || vibrStateGraphicsOnly || deutStateGraphicsOnly
@@ -344,6 +350,12 @@ async function auditMode(mode) {
       assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
       cdp.close();
       return { backend: mode, renderScaleEight, browserErrors: errors.length };
+    }
+    if (eightFieldProfileOnly) {
+      const eightFieldProfile = await auditEightXFieldProfileGraphics(cdp, dpr);
+      assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
+      cdp.close();
+      return { backend: mode, eightFieldProfile, browserErrors: errors.length };
     }
     if (visualScaleMatrixOnly) {
       const visualScaleMatrix = await auditVisualScaleMatrix(cdp, mode, dpr);
@@ -444,6 +456,12 @@ async function auditMode(mode) {
       assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
       cdp.close();
       return { backend: mode, deviceIdentityGraphics, browserErrors: errors.length };
+    }
+    if (fieldProfileGraphicsOnly) {
+      const fieldProfileGraphics = await auditFieldProfileGraphics(cdp, mode);
+      assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
+      cdp.close();
+      return { backend: mode, fieldProfileGraphics, browserErrors: errors.length };
     }
     // WebGL is the canonical material-graphics release path. Keep Canvas as a
     // real, exercised fallback, but make advanced optics diagnostic unless
@@ -12435,6 +12453,99 @@ async function auditRenderScaleOne(cdp, mode, dpr) {
   };
 }
 
+/**
+ * Bounded true-8x owner smoke gate. The comprehensive --scale-eight-only
+ * release matrix also runs every unrelated material family and can take much
+ * longer on software WebGL; this keeps a shader-local change accountable to
+ * the exact 4896x3072 mesh, completed fences, and its semantic atlas without
+ * weakening that broader release gate.
+ */
+async function auditEightXFieldProfileGraphics(cdp, dpr) {
+  await setDesktopMetrics(cdp, 1280, 720, dpr);
+  const query = new URLSearchParams({
+    scene: 'render-lab', inputAudit: '1', renderScale: '8', auditStage: 'eight-field-profile', blankAudit: '1',
+  });
+  await cdp.send('Page.navigate', { url: `${AUDIT_BASE_URL}?${query}` });
+  await waitFor(() => evaluate(cdp, `(() => {
+    const parameters = new URLSearchParams(location.search);
+    return parameters.get('renderScale') === '8'
+      && parameters.get('auditStage') === 'eight-field-profile'
+      && parameters.has('blankAudit') && Boolean(window.__ANIFOR_INPUT_AUDIT__);
+  })()`), 15_000, 'true-8x Field-profile input audit API');
+  await waitFor(() => evaluate(cdp,
+    `window.__ANIFOR_INPUT_AUDIT__.backend().backend === 'webgl'`),
+  45_000, 'true-8x Field-profile WebGL backend');
+  const geometry = await waitForStableCanvas(
+    cdp, 1280, 720, undefined, 45_000, 'true-8x Field-profile geometry',
+  );
+  assert(geometry.backing.width === WORLD_WIDTH * 8 && geometry.backing.height === WORLD_HEIGHT * 8
+    && geometry.outputScale === '8',
+  `true-8x Field-profile fixture lost exact backing (${JSON.stringify(geometry.backing)})`);
+  await evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    if (typeof audit.prepareFieldProfileGraphicsFixture !== 'function'
+      || typeof audit.fieldProfileGraphicsAtlas !== 'function'
+      || typeof audit.setFieldProfileIdentityStyling !== 'function') {
+      throw new Error('True-8x Field-profile graphics API unavailable');
+    }
+    audit.clear();
+    audit.resetView();
+    audit.setFieldProfileIdentityStyling(true);
+    return true;
+  })()`);
+  const blank = await captureSettledPage(cdp, 'true-8x blank Field-profile framebuffer', 450);
+  const rawAtlas = await evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    audit.prepareFieldProfileGraphicsFixture();
+    return audit.fieldProfileGraphicsAtlas();
+  })()`);
+  const atlas = Array.isArray(rawAtlas) ? { cards: rawAtlas } : rawAtlas;
+  assert(atlas?.cards?.length === 8,
+    `true-8x Field-profile fixture is incomplete (${JSON.stringify(atlas)})`);
+  const prepared = await snapshotFieldProfileGraphics(cdp);
+  assertFieldProfileTopology(prepared, 'true-8x prepared Field-profile fixture');
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setFieldProfileIdentityStyling(false); true');
+  const flat = await captureSettledPage(cdp, 'true-8x flat Field-profile framebuffer', 450);
+  const flatTopology = await snapshotFieldProfileGraphics(cdp);
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setFieldProfileIdentityStyling(true); true');
+  const styled = await captureSettledPage(cdp, 'true-8x styled Field-profile framebuffer', 450);
+  const styledTopology = await snapshotFieldProfileGraphics(cdp);
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setFieldProfileIdentityStyling(false); true');
+  const repeated = await captureSettledPage(cdp, 'true-8x repeated flat Field-profile framebuffer', 450);
+  const repeatedTopology = await snapshotFieldProfileGraphics(cdp);
+  assert(JSON.stringify(flatTopology) === JSON.stringify(prepared)
+      && JSON.stringify(styledTopology) === JSON.stringify(prepared)
+      && JSON.stringify(repeatedTopology) === JSON.stringify(prepared),
+  'true-8x Field-profile styling changed semantic topology');
+  const regions = atlas.cards.map((entry) => ({
+    name: entry.code,
+    x: entry.pairedBody.x + entry.pairedBody.width / 2,
+    y: entry.pairedBody.y + entry.pairedBody.height / 2,
+    radiusX: Math.max(1, entry.pairedBody.width / 2 - 1),
+    radiusY: Math.max(1, entry.pairedBody.height / 2 - 1),
+    silhouette: true,
+  }));
+  const samples = await sampleBackdropRefractionRegions(cdp, {
+    straight: flat.capture.data,
+    refracted: styled.capture.data,
+    repeatedStraight: repeated.capture.data,
+  }, regions, geometry.canvas);
+  assert(samples.length === 8 && samples.every((sample) => (
+    sample.rgbRms >= 0.01 && sample.rgbRms <= 24
+      && sample.rgbPeak > 0 && sample.rgbPeak <= 48 && sample.repeatRgbPeak <= 1
+  )), `true-8x Field-profile response is absent, unbounded, or unstable (${JSON.stringify(samples)})`);
+  assert(new Set(samples.map((sample) => sample.responseSignature)).size === 8,
+    `true-8x Field-profile bodies lost distinct motifs (${JSON.stringify(samples)})`);
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setFieldProfileIdentityStyling(true); true');
+  return {
+    backing: `${geometry.backing.width}x${geometry.backing.height}`,
+    cards: atlas.cards.map(({ material, code }) => ({ material, code })),
+    occupied: prepared.occupied,
+    samples,
+    exactRepeatedOff: samples.every((sample) => sample.repeatRgbPeak <= 1),
+  };
+}
+
 async function auditRenderScaleEight(cdp, dpr) {
   const started = performance.now();
   const stage = (name) => console.error(
@@ -14381,7 +14492,7 @@ async function auditEightXElectronicsGraphics(cdp, canvasRect) {
  * ordinary WebGL shader in the same paused fixture.
  */
 async function auditDeviceIdentityGraphics(cdp, mode) {
-  const mechanisms = await auditNormalDeviceIdentityLayer(cdp, mode, {
+  const mechanisms = await auditNormalExactIdentityLayer(cdp, mode, {
     label: 'mechanism',
     prepare: 'prepareMechanismGraphicsFixture',
     atlas: 'mechanismGraphicsAtlas',
@@ -14392,7 +14503,7 @@ async function auditDeviceIdentityGraphics(cdp, mode) {
     minDistinct: 10,
     useBody: 'pairedBody',
   });
-  const electronics = await auditNormalDeviceIdentityLayer(cdp, mode, {
+  const electronics = await auditNormalExactIdentityLayer(cdp, mode, {
     label: 'electronics',
     prepare: 'prepareElectronicsGraphicsFixture',
     atlas: 'electronicsGraphicsAtlas',
@@ -14406,7 +14517,7 @@ async function auditDeviceIdentityGraphics(cdp, mode) {
   return { mechanisms, electronics };
 }
 
-async function auditNormalDeviceIdentityLayer(cdp, mode, definition) {
+async function auditNormalExactIdentityLayer(cdp, mode, definition) {
   const { label, prepare, atlas: atlasName, toggle, snapshot, assertTopology,
     expectedCards, minDistinct, useBody } = definition;
   await evaluate(cdp, `(() => {
@@ -14503,6 +14614,72 @@ async function auditNormalDeviceIdentityLayer(cdp, mode, definition) {
   };
 }
 
+async function snapshotFieldProfileGraphics(cdp) {
+  return evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    const snapshot = audit.fieldProfileGraphicsAtlas();
+    const cards = Array.isArray(snapshot) ? snapshot : snapshot.cards;
+    const exactRect = (rect, material) => {
+      for (let y = rect.y; y < rect.y + rect.height; y++) {
+        for (let x = rect.x; x < rect.x + rect.width; x++) {
+          if (audit.cell(x, y) !== material) return false;
+        }
+      }
+      return true;
+    };
+    const inside = (x, y, rect) => x >= rect.x && x < rect.x + rect.width
+      && y >= rect.y && y < rect.y + rect.height;
+    return {
+      occupied: audit.occupiedCells(),
+      cards: cards.map((entry) => {
+        let bodyExact = true;
+        for (let y = entry.body.y; y < entry.body.y + entry.body.height; y++) {
+          for (let x = entry.body.x; x < entry.body.x + entry.body.width; x++) {
+            const empty = inside(x, y, entry.authoredHole) || inside(x, y, entry.openChannel);
+            bodyExact &&= audit.cell(x, y) === (empty ? 0 : entry.material);
+          }
+        }
+        return {
+          material: entry.material,
+          code: entry.code,
+          bodyExact,
+          pairedBodyExact: exactRect(entry.pairedBody, entry.material),
+          authoredHoleExact: exactRect(entry.authoredHole, 0),
+          openChannelExact: exactRect(entry.openChannel, 0),
+          railExact: exactRect(entry.thinRail, entry.material),
+          isolatedExact: audit.cell(entry.isolated.x, entry.isolated.y) === entry.material,
+          guardExact: exactRect(entry.guardedBlank, 0),
+          controlsExact: exactRect(entry.controls.force, 115)
+            && exactRect(entry.controls.device, 164) && exactRect(entry.controls.role, 127),
+        };
+      }),
+    };
+  })()`);
+}
+
+function assertFieldProfileTopology(snapshot, label) {
+  const materials = [125, 128, 133, 130, 131, 132, 129, 134];
+  assert(snapshot.cards.length === materials.length && snapshot.cards.every((card, index) => (
+    card.material === materials[index] && card.bodyExact && card.pairedBodyExact
+      && card.authoredHoleExact && card.openChannelExact && card.railExact && card.isolatedExact
+      && card.guardExact && card.controlsExact
+  )), `${label}: Field-profile identity/topology changed (${JSON.stringify(snapshot)})`);
+}
+
+async function auditFieldProfileGraphics(cdp, mode) {
+  return auditNormalExactIdentityLayer(cdp, mode, {
+    label: 'Field-profile',
+    prepare: 'prepareFieldProfileGraphicsFixture',
+    atlas: 'fieldProfileGraphicsAtlas',
+    toggle: 'setFieldProfileIdentityStyling',
+    snapshot: snapshotFieldProfileGraphics,
+    assertTopology: assertFieldProfileTopology,
+    expectedCards: 8,
+    minDistinct: 8,
+    useBody: 'pairedBody',
+  });
+}
+
 function assertPairedDeviceIdentityGraphics(results) {
   const canvas = results.find((result) => result.backend === 'canvas2d')?.deviceIdentityGraphics;
   const webgl = results.find((result) => result.backend === 'webgl')?.deviceIdentityGraphics;
@@ -14527,6 +14704,25 @@ function assertPairedDeviceIdentityGraphics(results) {
       assert(ratio >= 0.10 && ratio <= 10,
         `Canvas/WebGL ${label} ${canvasSample.name} response diverged (${canvasSample.rgbRms}/${webglSample.rgbRms})`);
     }
+  }
+}
+
+function assertPairedFieldProfileGraphics(results) {
+  const canvas = results.find((result) => result.backend === 'canvas2d')?.fieldProfileGraphics;
+  const webgl = results.find((result) => result.backend === 'webgl')?.fieldProfileGraphics;
+  if (!canvas || !webgl) return;
+  assert(canvas.cards.length === 8 && webgl.cards.length === 8 && canvas.occupied === webgl.occupied,
+    `paired Field-profile fixture topology diverged (${JSON.stringify({ canvas, webgl })})`);
+  assert(new Set(canvas.samples.map((sample) => sample.responseSignature)).size === 8
+    && new Set(webgl.samples.map((sample) => sample.responseSignature)).size === 8
+    && canvas.exactRepeatedOff && webgl.exactRepeatedOff,
+  `paired Field-profile motifs lost distinct or repeatable responses (${JSON.stringify({ canvas, webgl })})`);
+  for (const canvasSample of canvas.samples) {
+    const webglSample = webgl.samples.find((sample) => sample.name === canvasSample.name);
+    assert(webglSample, `paired Field-profile sample missing ${canvasSample.name}`);
+    const ratio = canvasSample.rgbRms / Math.max(0.01, webglSample.rgbRms);
+    assert(ratio >= 0.10 && ratio <= 10,
+      `Canvas/WebGL Field-profile ${canvasSample.name} response diverged (${canvasSample.rgbRms}/${webglSample.rgbRms})`);
   }
 }
 
