@@ -214,6 +214,37 @@ describe('Pixi presenter startup configuration', () => {
     expect(presenter.app.render).not.toHaveBeenCalled();
   });
 
+  it('forces a stale normal-scale GPU timer query only for the explicit audit sample', () => {
+    const query = {} as WebGLQuery;
+    const extension = { TIME_ELAPSED_EXT: 0x88bf, GPU_DISJOINT_EXT: 0x8fbb };
+    const gl = {
+      QUERY_RESULT_AVAILABLE: 0x8867,
+      getExtension: vi.fn(() => extension),
+      createQuery: vi.fn(() => query),
+      beginQuery: vi.fn(),
+      endQuery: vi.fn(),
+      flush: vi.fn(),
+      finish: vi.fn(),
+      getParameter: vi.fn(() => false),
+      getQueryParameter: vi.fn(() => false),
+      deleteQuery: vi.fn(),
+    } as unknown as WebGL2RenderingContext;
+    const presenter = presenterHarness();
+    Object.assign(presenter.app, { renderer: { gl } });
+    vi.spyOn(performance, 'now')
+      .mockReturnValueOnce(100)
+      .mockReturnValue(2_101);
+
+    presenter.enableWebGLPresentationTiming();
+    expect(presenter.requestWebGLPresentationTimingSample()).toBe(true);
+
+    expect(presenter.getWebGLPresentationTiming()).toMatchObject({
+      source: 'gpu-finish', sequence: 1, usableSamples: 1, discardedSamples: 0,
+    });
+    expect(gl.finish).toHaveBeenCalledOnce();
+    expect(gl.deleteQuery).toHaveBeenCalledWith(query);
+  });
+
   it('bounds an unsignalled audit fence and accepts the next completed sample', () => {
     const callbacks: FrameRequestCallback[] = [];
     vi.stubGlobal('requestAnimationFrame', vi.fn((callback: FrameRequestCallback) => {
@@ -1460,6 +1491,13 @@ describe('Pixi presenter startup configuration', () => {
     expect(block).toContain('float crystalCoreAbsorption = 0.010;');
     expect(block).toContain('float crystalRimGain = 1.0;');
     expect(block).toContain('float crystalEnvironmentGain = 0.045;');
+    expect(block).toContain('float glassVolume = smoothstep(6.0 / 255.0, 42.0 / 255.0, depth)');
+    expect(block).toContain('color *= vec3(1.0) - vec3(0.080, 0.035, 0.010) * glassVolume;');
+    expect(block).toContain('color *= mix(1.0, 0.81, glassVolume);');
+    expect(block).toContain('float glassPhase = fract((floor(grid.x) * 2.0 + floor(grid.y) * 3.0');
+    expect(block).toContain('+ material * 0.17) / 96.0);');
+    expect(block).toContain('float glassCrown = smoothstep(0.62, 0.94, glassLobe);');
+    expect(block).toContain('float glassPocket = 1.0 - smoothstep(0.20, 0.50, glassLobe);');
     expect(block).toContain('color *= 1.0 - translucentDepth * crystalCoreAbsorption;');
     expect(block).toContain('shellRim * crystalRimGain');
     expect(block).toContain('* crystalEnvironmentGain;');
@@ -1488,6 +1526,11 @@ describe('Pixi presenter startup configuration', () => {
     expect(block).toContain('float liquidCore = liquidSameLeft * liquidSameRight * liquidSameTop * liquidSameBottom;');
     expect(block).toContain('texture(uLiquidTexture, uv - vec2(uTexel.x, 0.0))');
     expect(block).toContain('float liquidSpeciesDifference = max(');
+    expect(block).toContain('if (material == 2.0 && optics == 1.0 && traits < 0.5 && !materialEmissive');
+    expect(block).toContain('density > 0.72 && liquidSpeciesDifference < 0.035');
+    expect(block).toContain('color *= 0.74;');
+    expect(block).toContain('if (material == 8.0 && optics == 2.0 && traits < 0.5 && !materialEmissive');
+    expect(block).toContain('color *= 0.50;');
     expect(eight.slice(0, start)).not.toContain('float liquidMaterialLeft = materialAt(');
     expect(eight.slice(0, start)).not.toContain('float liquidSpeciesDifference = max(');
     // Empty-space reconstruction still needs exactly the one centre field read.
@@ -2127,9 +2170,17 @@ describe('Pixi presenter startup configuration', () => {
     expect(source.match(/texture\(uPowderSurfaceTexture/g)).toHaveLength(2);
     // Stable Smooth powder retains almost all mineral variation at normal
     // detail; Local/Grains still carry their full diagnostic cell detail.
-    expect(source).toContain('mix(1.0, 0.985, powderVisualCohesion)');
-    expect(source).toContain('mix(1.0, 0.99, powderVisualCohesion)');
+    expect(source).toContain('mix(1.0, 1.12, powderVisualCohesion)');
+    expect(source).toContain('mix(1.0, 1.08, powderVisualCohesion)');
     expect(source).toContain('uPowderStyle < 1.5 ? 0.044 : 0.085');
+    expect(source).toContain('float powderDetailCalibration = material == 1.0 && uPowderStyle > 1.5');
+    expect(source).toContain('if (material == 1.0 && uPowderStyle > 1.5 && traits < 0.5 && !materialEmissive)');
+    expect(source).toContain('float sandInteriorExposure = q00 * q10 * q01 * q11');
+    expect(source).toContain('* smoothstep(0.72, 0.95, semanticDensity);');
+    expect(source).toContain('color = max(color - vec3(20.0, 18.0, 10.0) / 255.0 * sandInteriorExposure, vec3(0.0));');
+    expect(source).toContain('float sandInteriorPigment = (powderGrain * 0.150 + powderFacet * 0.120)');
+    expect(source).toContain('if (family == 4.0 && uPowderStyle > 1.5 && powderFieldBlend > 0.001)');
+    expect(source).toContain('density = smoothstep(0.04, 0.96, density);');
   });
 
   it('redraws when audit powder body depth changes', () => {

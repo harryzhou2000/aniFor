@@ -10365,7 +10365,7 @@ async function auditWebGLPresentationTiming(
   let timing = await evaluate(cdp,
     'window.__ANIFOR_INPUT_AUDIT__.webGLPresentationTiming()');
   assert(timing, 'WebGL presentation timing is unavailable');
-  assert(timing.source === 'gpu-query' || timing.source === 'gpu-fence'
+  assert(timing.source === 'gpu-query' || timing.source === 'gpu-fence' || timing.source === 'gpu-finish'
     || timing.source === 'cpu-submission',
     `Unknown WebGL timing source ${timing.source}`);
 
@@ -12241,7 +12241,7 @@ async function auditVisualScaleMatrix(cdp, mode, dpr) {
         scale === 8 ? 12_000 : 5_000,
         scale === 8 ? 30_000 : 5_000,
       );
-      assert(timing.source === 'gpu-query' || timing.source === 'gpu-fence',
+      assert(timing.source === 'gpu-query' || timing.source === 'gpu-fence' || timing.source === 'gpu-finish',
         `${mode} renderScale=${scale} did not prove completed GPU work (${JSON.stringify(timing)})`);
     }
     const captures = scale === 8
@@ -12505,7 +12505,8 @@ async function auditRenderScaleEight(cdp, dpr) {
   stage('gas-volume-relief-ready');
 
   const presentationTiming = await auditWebGLPresentationTiming(cdp, 8, 12_000, 30_000);
-  assert(presentationTiming.source === 'gpu-query' || presentationTiming.source === 'gpu-fence',
+  assert(presentationTiming.source === 'gpu-query' || presentationTiming.source === 'gpu-fence'
+    || presentationTiming.source === 'gpu-finish',
     `renderScale=8 timing did not prove completed GPU work (${JSON.stringify(presentationTiming)})`);
   // Completion-fence timing includes bounded rAF polling and, unlike the old
   // CPU-submission fallback, measures the actual 15M-fragment SwiftShader

@@ -49,7 +49,7 @@ interface WebGLTimerQueryExtension {
 }
 
 export interface WebGLPresentationTiming {
-  readonly source: 'gpu-query' | 'gpu-fence' | 'cpu-submission';
+  readonly source: 'gpu-query' | 'gpu-fence' | 'gpu-finish' | 'cpu-submission';
   readonly sequence: number;
   readonly usableSamples: number;
   readonly discardedSamples: number;
@@ -57,6 +57,12 @@ export interface WebGLPresentationTiming {
   readonly p90Ms: number;
   readonly maximumMs: number;
 }
+
+// A browser can expose EXT_disjoint_timer_query_webgl2 yet leave its first
+// query unavailable forever after an otherwise-presented frame. The ordinary
+// WebGL audit has a five-second completed-frame budget, so diagnose the
+// optional precision source before it consumes that whole bounded window.
+const WEBGL_TIMING_QUERY_STALL_MS = 2_000;
 
 const FIELD_VERTEX = `
 in vec2 aPosition;
@@ -1576,6 +1582,13 @@ void main() {
     // the result reads as a continuous body with mineral depth rather than a
     // uniformly airbrushed fill at 1x through true 8x.
     float powderMicro = uPowderStyle < 0.5 ? 0.032 : (uPowderStyle < 1.5 ? 0.044 : 0.085);
+    // The direct 8x Sand calibration below is deliberately exposure-only.
+    // Restore its small world-anchored mineral deltas before that calibration
+    // so matching normal-scale exposure never means losing the normal
+    // compositor's readable inner grain colour.
+    float powderDetailCalibration = material == 1.0 && uPowderStyle > 1.5
+      && traits < 0.5 && !materialEmissive ? 1.08 : 1.0;
+    powderMicro *= powderDetailCalibration;
     color *= vec3(1.02 + powderOpticalDensity * 0.07 + powderGrain * powderMicro)
       - powderDepth * vec3(0.10, 0.07, 0.04);
     if (traits < 0.5 && !materialEmissive) {
@@ -1584,12 +1597,14 @@ void main() {
       // upper-left catchlight makes the 2x2 facets legible at deep zoom while
       // retaining the existing semantic colour as the material owner.
       color *= 1.0 + powderFacet * 0.24 * powderFacetRetention * powderFacetGain
+        * powderDetailCalibration
         * powderFacetInterior;
       float powderFacetHighlight = max(0.0, 0.60 - powderSubcell.x - powderSubcell.y);
       color += color * powderFacetHighlight * 0.135 * powderFacetRetention * powderFacetGain
+        * powderDetailCalibration
         * powderFacetInterior;
       float brightPowderFacet = max(0.0, powderFacet - 0.18) * powderFacetRetention
-        * powderFacetInterior;
+        * powderFacetInterior * powderDetailCalibration;
       if (optics == 13.0) {
         color += vec3(0.52, 0.78, 1.00) * brightPowderFacet * 0.085;
       } else if (optics == 15.0) {
@@ -1633,6 +1648,33 @@ void main() {
       && unusualPowderEightXStyle(material) > 0.5
       && traits < 0.5 && !materialEmissive) {
       color = clamp(color + unusualPowderEightXDelta(material, grid, density), 0.0, 1.0);
+    }
+    // The compact high-resolution powder grammar keeps Sand's grain contrast,
+    // but its stacked optical/key terms otherwise expose the canonical pile
+    // slightly brighter than the normal compositor. Subtract a restrained
+    // material albedo offset rather than scaling the finished colour: a scalar
+    // would dim the individual mineral deltas along with the exposure and put
+    // Smooth below the normal path's interior-grain contrast. Calibrate only this
+    // settled Smooth material after its identity layers: Local and square
+    // Grains remain untouched diagnostic references, and no support/alpha or
+    // simulation decision is involved.
+    if (material == 1.0 && uPowderStyle > 1.5 && traits < 0.5 && !materialEmissive) {
+      // A curved outer contour is already colour-balanced by its Hermite
+      // surface-light path. Require all four already-live exact material
+      // samples plus a dense semantic centre for this core exposure match:
+      // that keeps a broad stable interior calibrated without broadening the
+      // apparent Smooth silhouette at deep zoom.
+      float sandInteriorExposure = q00 * q10 * q01 * q11
+        * smoothstep(0.72, 0.95, semanticDensity);
+      color = max(color - vec3(20.0, 18.0, 10.0) / 255.0 * sandInteriorExposure, vec3(0.0));
+      // Keep the correction exposure-neutral while retaining enough mineral
+      // pigment separation for a dense 8x body to match the normal compositor.
+      // These two existing zero-mean world-anchored signals are deliberately
+      // gated by the exact same settled interior proof as the earlier facets;
+      // no silhouette, support, Local, or square-Grains pixel can receive it.
+      float sandInteriorPigment = (powderGrain * 0.150 + powderFacet * 0.120)
+        * powderFacetInterior;
+      color = clamp(color + vec3(1.00, 0.78, 0.46) * sandInteriorPigment, 0.0, 1.0);
     }
   }
   // Deep rigid bodies reuse the existing exact-species occupancy, auxiliary
@@ -1929,6 +1971,38 @@ void main() {
       color += (vec3(1.0) - clamp(color, 0.0, 1.0)) * crystalKey * crystalShellGloss;
       color += crystalEnvironment * shellRim * crystalFresnel
         * crystalEnvironmentGain;
+      // A broad Glass tile can be entirely inside the local shell band at a
+      // deep zoom, which otherwise collapses this translucent body to a nearly
+      // flat tint. Reuse the existing exact-species thickness byte and
+      // world-anchored body phase for a low-frequency crown/pocket response.
+      // It is RGB-only and exact-owner gated: thin glass, boundaries, holes,
+      // walls, other crystalline solids, alpha, and refraction stay on their
+      // existing paths.
+      if (material == 24.0) {
+        // The auxiliary thickness is assigned only to authoritative exact
+        // solid interiors and is zero at edges, holes, walls, and unlike seams.
+        // It therefore remains the conservative guard here without requiring a
+        // second four-neighbour proof that would suppress a valid narrow slab.
+        float glassVolume = smoothstep(6.0 / 255.0, 42.0 / 255.0, depth);
+        // Unlike the shell cue above, this is a true volume response. A broad
+        // pane therefore darkens gently toward its thickness-proven core while
+        // retaining the cool blue transmission rather than becoming opaque.
+        color *= vec3(1.0) - vec3(0.080, 0.035, 0.010) * glassVolume;
+        // The direct 8x palette is otherwise exposed above the normal
+        // compositor once this translucent body is composited premultiplied.
+        // Apply the matching volume-only calibration rather than darkening a
+        // shell or border; exterior support and alpha remain exact.
+        color *= mix(1.0, 0.81, glassVolume);
+        float glassPhase = fract((floor(grid.x) * 2.0 + floor(grid.y) * 3.0
+          + material * 0.17) / 96.0);
+        float glassLobe = 1.0 - abs(glassPhase * 2.0 - 1.0);
+        float glassCrown = smoothstep(0.62, 0.94, glassLobe);
+        float glassPocket = 1.0 - smoothstep(0.20, 0.50, glassLobe);
+        color *= vec3(1.0) - vec3(0.032, 0.016, 0.004) * glassVolume
+          * (0.34 + glassPocket * 0.66);
+        color += (vec3(1.0) - clamp(color, 0.0, 1.0)) * crystalKey
+          * glassCrown * glassVolume * 0.045;
+      }
     }
     float exactTranslucentInterior = q00 * q10 * q01 * q11;
     if (uTranslucentFieldTransmission > 0.5 && exactTranslucentInterior > 0.5
@@ -2172,6 +2246,27 @@ void main() {
         ? waxEightXIdentityDelta(1.0, grid, density, depth)
         : liquidIdentityEightXDelta(material, grid, density, depth, liquidSlope);
       color += liquidIdentityDelta * uLiquidIdentityStyling;
+    }
+    // The direct 8x aqueous body has more stacked key terms than normal WebGL.
+    // Match the normal Water exposure only for a dense, same-species body
+    // proven by the existing species-valid density support. Do not quantize
+    // this calibration by the six-byte vertical-depth steps: that turns a
+    // continuous Water core into horizontal colour bands at true 8x. Shores,
+    // droplets, contacts, traits, emission, and every other liquid keep their
+    // existing body/meniscus response.
+    if (material == 2.0 && optics == 1.0 && traits < 0.5 && !materialEmissive
+      && density > 0.72 && liquidSpeciesDifference < 0.035) {
+      color *= 0.74;
+    }
+    // Oil's direct high-resolution path carries the same normal/body lights
+    // but starts from an unattenuated amber palette. Match the normal composer's
+    // dense-core exposure with one uniform species-safe multiplier; unlike the
+    // Water correction above, its deliberately low microcontrast means this
+    // cannot erase a mineral/facet cue. Shores, droplets, seams, traits, and
+    // emission remain on their existing paths.
+    if (material == 8.0 && optics == 2.0 && traits < 0.5 && !materialEmissive
+      && density > 0.72 && liquidSpeciesDifference < 0.035) {
+      color *= 0.50;
     }
   }
   // The shared suspension field is powder-authored, so use it only for
@@ -2469,6 +2564,15 @@ void main() {
           vec3(-64.0 / 255.0), vec3(64.0 / 255.0));
       }
     }
+  }
+  // The settled powder field has already supplied the curved outer volume.
+  // Its raw interpolation is a little wider than the normal compositor at
+  // true 8x, so apply one symmetric monotone remap only to that owned contour.
+  // It leaves the 50% geometric boundary fixed, narrows the soft transition,
+  // and cannot affect Grains, Local, moving/fine powder, alpha ownership, or
+  // any other material family.
+  if (family == 4.0 && uPowderStyle > 1.5 && powderFieldBlend > 0.001) {
+    density = smoothstep(0.04, 0.96, density);
   }
   float alpha = family == 1.0 ? smoothstep(0.006, 0.26, density) * 0.48
     : (family == 3.0 ? smoothstep(0.18, 0.82, density) : density);
@@ -5752,11 +5856,13 @@ void main() {
       // Smooth owns only the settled exterior contour and broad body depth. It
       // must retain enough mineral/grain variation inside a pile to avoid the
       // previous airbrushed look; Local and square Grains still carry the full
-      // reference cadence, while a stable bulk retains a clearly readable but
-      // non-cellular 98.5/99% mineral/facet response. Curving the silhouette
-      // must not erase the internal material vocabulary at normal detail.
-      float cellGrainRetention = mix(1.0, 0.985, powderVisualCohesion);
-      float facetRetention = mix(1.0, 0.99, powderVisualCohesion);
+      // reference cadence, while a stable bulk deliberately lifts only its
+      // already world-anchored mineral/facet contrast. This keeps a smooth
+      // silhouette from airbrushing the interior at 1x–4x without restoring
+      // square particle boundaries. Curving the silhouette must not erase the
+      // internal material vocabulary at normal detail.
+      float cellGrainRetention = mix(1.0, 1.12, powderVisualCohesion);
+      float facetRetention = mix(1.0, 1.08, powderVisualCohesion);
       color *= 0.91 + grain * (0.20 + roughSurface * 0.05) * cellGrainRetention * facetGain
         + grainFacet * (0.10 + roughSurface * 0.04) * facetRetention * facetGain;
       color += base * max(0.0, 0.6 - subcell.x - subcell.y)
@@ -6695,6 +6801,7 @@ export class PixiFieldPresenter {
   private webGLTimingSource: WebGLPresentationTiming['source'] = 'cpu-submission';
   private webGLTimingExtension?: WebGLTimerQueryExtension;
   private webGLTimingPending?: WebGLQuery;
+  private webGLTimingQueryStartedAt = 0;
   private webGLTimingFence?: WebGLSync;
   private webGLTimingFenceStartedAt = 0;
   private webGLTimingFencePoll = 0;
@@ -7746,7 +7853,8 @@ export class PixiFieldPresenter {
     try { query = extension && gl ? gl.createQuery() : null; }
     catch { /* a lost/invalid context falls through to labelled CPU timing */ }
     if (!query || !extension || !gl) {
-      if (gl) this.renderAndRecordFenceTiming(gl);
+      if (gl && this.webGLTimingSource === 'gpu-finish') this.renderAndRecordFinishTiming(gl);
+      else if (gl) this.renderAndRecordFenceTiming(gl);
       else {
         this.useCpuTimingFallback();
         this.renderAndRecordCpuTiming();
@@ -7778,6 +7886,7 @@ export class PixiFieldPresenter {
       // advance without relying on unrelated animation or field refreshes.
       gl.flush();
       this.webGLTimingPending = query;
+      this.webGLTimingQueryStartedAt = started;
     } catch {
       try { gl.deleteQuery(query); } catch { /* context may already be invalid */ }
       if (!this.insertWebGLTimingFence(gl, started)) {
@@ -7896,18 +8005,35 @@ export class PixiFieldPresenter {
     let disjoint: boolean;
     let nanoseconds: number;
     try {
-      if (!gl.getQueryParameter(query, gl.QUERY_RESULT_AVAILABLE)) return;
+      if (!gl.getQueryParameter(query, gl.QUERY_RESULT_AVAILABLE)) {
+        if (performance.now() - this.webGLTimingQueryStartedAt < WEBGL_TIMING_QUERY_STALL_MS) return;
+        // The visible frame already submitted successfully; only the optional
+        // elapsed-time query is stale. This path is used solely by an explicit
+        // browser audit request, so one bounded completion is preferable to
+        // letting a software driver's asynchronous query starve the audit.
+        // Normal presentation never calls finish().
+        const started = this.webGLTimingQueryStartedAt;
+        gl.finish();
+        if (!gl.getQueryParameter(query, gl.QUERY_RESULT_AVAILABLE)) {
+          this.releaseWebGLTimingQuery();
+          this.useFinishTimingFallback();
+          this.recordWebGLTimingSample(performance.now() - started);
+          return;
+        }
+      }
       disjoint = Boolean(gl.getParameter(extension.GPU_DISJOINT_EXT));
       nanoseconds = Number(gl.getQueryParameter(query, gl.QUERY_RESULT));
     } catch {
       try { gl.deleteQuery(query); } catch { /* context may already be invalid */ }
       this.webGLTimingPending = undefined;
+      this.webGLTimingQueryStartedAt = 0;
       this.useFenceTimingFallback();
       this.recordWebGLTimingSample(Number.NaN);
       return;
     }
     try { gl.deleteQuery(query); } catch { /* result is already consumed */ }
     this.webGLTimingPending = undefined;
+    this.webGLTimingQueryStartedAt = 0;
     this.webGLTimingSequence++;
     if (disjoint || !Number.isFinite(nanoseconds) || nanoseconds < 0) {
       this.webGLTimingDiscarded++;
@@ -7922,6 +8048,19 @@ export class PixiFieldPresenter {
     if (this.insertWebGLTimingFence(gl, started)) return;
     this.useCpuTimingFallback();
     this.recordWebGLTimingSample(performance.now() - started);
+  }
+
+  /** Audit-only recovery for drivers that finish draws but never publish timer queries/fences. */
+  private renderAndRecordFinishTiming(gl: WebGL2RenderingContext): void {
+    const started = performance.now();
+    this.app.render();
+    try {
+      gl.finish();
+      this.recordWebGLTimingSample(performance.now() - started);
+    } catch {
+      this.useCpuTimingFallback();
+      this.recordWebGLTimingSample(performance.now() - started);
+    }
   }
 
   private insertWebGLTimingFence(gl: WebGL2RenderingContext, started: number): boolean {
@@ -7968,7 +8107,13 @@ export class PixiFieldPresenter {
       return true;
     }
     let status: number;
-    try { status = gl.clientWaitSync(fence, 0, 0); }
+    try {
+      // Some software/headless implementations only make a just-submitted
+      // fence observable when the first non-blocking client wait carries the
+      // prescribed flush bit. This remains a zero-time completion poll; it
+      // never blocks the presentation path.
+      status = gl.clientWaitSync(fence, gl.SYNC_FLUSH_COMMANDS_BIT, 0);
+    }
     catch { status = gl.WAIT_FAILED; }
     if (status === gl.TIMEOUT_EXPIRED) return false;
     const started = this.webGLTimingFenceStartedAt;
@@ -8019,6 +8164,15 @@ export class PixiFieldPresenter {
     this.webGLTimingSequence = 0;
   }
 
+  private useFinishTimingFallback(): void {
+    this.webGLTimingExtension = undefined;
+    if (this.webGLTimingSource === 'gpu-finish') return;
+    this.webGLTimingSource = 'gpu-finish';
+    this.webGLTimingSamples.length = 0;
+    this.webGLTimingDiscarded = 0;
+    this.webGLTimingSequence = 0;
+  }
+
   private useCpuTimingFallback(): void {
     this.webGLTimingExtension = undefined;
     if (this.webGLTimingSource === 'cpu-submission') return;
@@ -8037,6 +8191,7 @@ export class PixiFieldPresenter {
       try { gl.deleteQuery(query); } catch { /* context may already be invalid */ }
     }
     this.webGLTimingPending = undefined;
+    this.webGLTimingQueryStartedAt = 0;
   }
 
   private webGLContext(): WebGL2RenderingContext | undefined {
