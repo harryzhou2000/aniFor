@@ -2467,8 +2467,18 @@ void main() {
   // Static semantic-role accents preserve the normal compositor's source,
   // sink, channel, and force vocabulary at true 8x. Stateful target/activity
   // overlays below remain authoritative and are deliberately layered on top.
-  if (uRoleMaterialStyling > 0.5 && traits > 0.5 && !materialEmissive) {
-    color = clamp(color + roleEightXDelta(traits, uv * uFieldSize, density), 0.0, 1.0);
+  // LIGH/THDR reuse this one already-compiled call site rather than adding a
+  // second identity helper to the register-constrained 15M-fragment shader:
+  // a synthetic Channel trait supplies LIGH's cool rail/node, while Emitter
+  // supplies THDR's warm fork/ring. The energy switch remains independent of
+  // ordinary role styling, and the exact-owner branch changes RGB only.
+  if ((uRoleMaterialStyling > 0.5 && traits > 0.5 && !materialEmissive)
+    || (uEnergyIdentityStyling > 0.5 && (material == 93.0 || material == 97.0))) {
+    color = clamp(color + roleEightXDelta(
+      uEnergyIdentityStyling > 0.5 && material == 93.0 ? 4.0
+        : (uEnergyIdentityStyling > 0.5 && material == 97.0 ? 1.0 : traits),
+      uv * uFieldSize, density
+    ), 0.0, 1.0);
   }
   if (uSourceTargetStyling > 0.5 && sourceOwner
     && ((sourceTarget >= 1.0 && sourceTarget <= 170.0) || sourceTarget == 217.0)) {
@@ -3579,6 +3589,34 @@ vec3 energyIdentityDelta(float material, vec2 position, float time, vec2 velocit
     delta = spark < 4.0 ? vec3(13.0, 8.0, -2.0) : vec3(-3.0, -1.0, 2.0);
   }
   return clamp(delta, vec3(-14.0), vec3(14.0)) / 255.0;
+}
+// Exact native electric-discharge matter. LIGH/THDR do not enter the Energy
+// family branch, so this shared arithmetic motif is composed later over their
+// authoritative semantic cells. It changes RGB only and performs no sampling.
+vec3 electricDischargeIdentityDelta(float material, vec2 position) {
+  float x = floor(position.x);
+  float y = floor(position.y);
+  vec3 delta = vec3(0.0);
+  if (material == 93.0) {
+    bool trunk = mod(x * 2.0 - y * 3.0, 13.0) <= 1.0;
+    bool branch = mod(x * 5.0 + y * 3.0, 17.0) < 0.5;
+    bool node = mod(x + y * 2.0, 29.0) < 0.5;
+    delta = vec3(
+      trunk ? 10.0 : (branch ? 6.0 : 2.0),
+      trunk ? 14.0 : (branch ? 8.0 : 3.0),
+      node ? 18.0 : (trunk ? 16.0 : (branch ? 14.0 : 5.0))
+    );
+  } else if (material == 97.0) {
+    bool fork = mod(x * 3.0 + y * 5.0, 11.0) <= 1.0;
+    bool shock = mod(x * 7.0 - y * 2.0, 19.0) < 0.5;
+    bool ember = mod(x + y * 3.0, 7.0) <= 1.0;
+    delta = vec3(
+      fork ? 18.0 : (shock ? 12.0 : 5.0),
+      fork ? 13.0 : (shock ? 7.0 : 3.0),
+      fork ? 3.0 : (shock ? 7.0 : (ember ? 1.0 : -2.0))
+    );
+  }
+  return clamp(delta, vec3(-18.0), vec3(18.0)) / 255.0;
 }
 vec3 radioactiveBodyIdentityDelta(float material, vec2 position) {
   float x = floor(position.x);
@@ -6681,6 +6719,14 @@ void main() {
         color += thermalMaterialTint(temperatureByte, optics);
       }
     }
+  }
+  if (uEnergyIdentityStyling > 0.5 && halo < 0.5 && surfaceOnly < 0.5
+    && wallOnly < 0.5 && emissionOnly < 0.5
+    && (material == 93.0 || material == 97.0)) {
+    color = clamp(
+      color + electricDischargeIdentityDelta(material, fieldPosition),
+      0.0, 1.0
+    );
   }
   // Ground unlike phases without adding a separator or widening either body.
   // Only an authoritative ordinary owner participates. Powder additionally

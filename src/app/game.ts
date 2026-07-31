@@ -65,6 +65,9 @@ import {
   ENERGY_RADIOACTIVE_GRAPHICS_AUDIT, prepareEnergyRadioactiveGraphicsAuditFixture,
 } from './energy-radioactive-graphics-audit';
 import {
+  ELECTRIC_DISCHARGE_GRAPHICS_AUDIT, prepareElectricDischargeGraphicsAuditFixture,
+} from './electric-discharge-graphics-audit';
+import {
   ORGANIC_PLANT_GRAPHICS_AUDIT, prepareOrganicPlantGraphicsAuditFixture,
 } from './organic-plant-graphics-audit';
 import {
@@ -579,6 +582,10 @@ export class Game {
       energyRadioactiveGraphicsAtlas: () => ENERGY_RADIOACTIVE_GRAPHICS_AUDIT,
       prepareEnergyRadioactiveGraphicsFixture: () => {
         prepareEnergyRadioactiveGraphicsAuditFixture(this.simulation);
+      },
+      electricDischargeGraphicsAtlas: () => ELECTRIC_DISCHARGE_GRAPHICS_AUDIT,
+      prepareElectricDischargeGraphicsFixture: () => {
+        prepareElectricDischargeGraphicsAuditFixture(this.simulation);
       },
       organicPlantGraphicsAtlas: () => ORGANIC_PLANT_GRAPHICS_AUDIT,
       prepareOrganicPlantGraphicsFixture: () => {

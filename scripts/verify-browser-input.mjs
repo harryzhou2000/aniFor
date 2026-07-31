@@ -95,6 +95,7 @@ const explosivePowderGraphicsOnly = process.argv.includes('--explosive-powder-gr
 const unusualSolidGraphicsOnly = process.argv.includes('--unusual-solid-graphics-only');
 const deviceIdentityGraphicsOnly = process.argv.includes('--device-identity-graphics-only');
 const fieldProfileGraphicsOnly = process.argv.includes('--field-profile-graphics-only');
+const electricDischargeGraphicsOnly = process.argv.includes('--electric-discharge-graphics-only');
 const liquidIdentityGraphicsOnly = process.argv.includes('--liquid-identity-graphics-only');
 const gasIdentityGraphicsOnly = process.argv.includes('--gas-identity-graphics-only');
 const energyRadioactiveGraphicsOnly = process.argv.includes('--energy-radioactive-graphics-only');
@@ -126,6 +127,7 @@ const usesProductionBundle = productionBundle || showcaseScreenshotOnly || cellu
   || unusualPowderGraphicsOnly || earthenPowderGraphicsOnly || explosivePowderGraphicsOnly || unusualSolidGraphicsOnly
   || deviceIdentityGraphicsOnly
   || fieldProfileGraphicsOnly
+  || electricDischargeGraphicsOnly
   || liquidIdentityGraphicsOnly || gasIdentityGraphicsOnly || energyRadioactiveGraphicsOnly
   || organicPlantGraphicsOnly || spongeGraphicsOnly || virusGraphicsOnly || waxGraphicsOnly
   || crystalGraphicsOnly || pasteResistGraphicsOnly || vibrStateGraphicsOnly
@@ -202,6 +204,7 @@ async function main() {
       || unusualSolidGraphicsOnly || liquidIdentityGraphicsOnly
       || deviceIdentityGraphicsOnly
       || fieldProfileGraphicsOnly
+      || electricDischargeGraphicsOnly
       || gasIdentityGraphicsOnly || energyRadioactiveGraphicsOnly || organicPlantGraphicsOnly
       || spongeGraphicsOnly || virusGraphicsOnly || waxGraphicsOnly || crystalGraphicsOnly
       || pasteResistGraphicsOnly || vibrStateGraphicsOnly || deutStateGraphicsOnly
@@ -250,6 +253,7 @@ async function main() {
     }
     if (deviceIdentityGraphicsOnly) assertPairedDeviceIdentityGraphics(results);
     if (fieldProfileGraphicsOnly) assertPairedFieldProfileGraphics(results);
+    if (electricDischargeGraphicsOnly) assertPairedElectricDischargeGraphics(results);
     compactMaterialAtlasResults(results);
     compactVirusGraphicsResults(results);
     compactWaxGraphicsResults(results);
@@ -273,13 +277,14 @@ async function auditMode(mode) {
   const dpr = mode === 'canvas2d' ? 2 : 1;
   const canvasFallbackAudit = mode === 'canvas2d' && !materialAtlasOnly && !mobileOnly && !layoutOnly
     && !shortDesktopOnly && !liveScaleOnly && !requireCanvasVisuals && !deviceIdentityGraphicsOnly
-    && !fieldProfileGraphicsOnly;
+    && !fieldProfileGraphicsOnly && !electricDischargeGraphicsOnly;
   // Advanced fixtures begin blank so WebGL can author exactly the state it
   // measures. Canvas fallback has no advanced optics obligation, so retain the
   // canonical paused scene there and prove real material delivery/occupancy.
   const startsBlank = !canvasFallbackAudit && (cellularGraphicsOnly || sensorGraphicsOnly
     || unusualPowderGraphicsOnly || earthenPowderGraphicsOnly || explosivePowderGraphicsOnly
-    || unusualSolidGraphicsOnly || deviceIdentityGraphicsOnly || fieldProfileGraphicsOnly || liquidIdentityGraphicsOnly
+    || unusualSolidGraphicsOnly || deviceIdentityGraphicsOnly || fieldProfileGraphicsOnly
+    || electricDischargeGraphicsOnly || liquidIdentityGraphicsOnly
     || gasIdentityGraphicsOnly || energyRadioactiveGraphicsOnly || organicPlantGraphicsOnly
     || spongeGraphicsOnly || virusGraphicsOnly || waxGraphicsOnly || crystalGraphicsOnly
     || pasteResistGraphicsOnly || vibrStateGraphicsOnly || deutStateGraphicsOnly
@@ -464,6 +469,12 @@ async function auditMode(mode) {
       assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
       cdp.close();
       return { backend: mode, fieldProfileGraphics, browserErrors: errors.length };
+    }
+    if (electricDischargeGraphicsOnly) {
+      const electricDischargeGraphics = await auditElectricDischargeGraphics(cdp, mode);
+      assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
+      cdp.close();
+      return { backend: mode, electricDischargeGraphics, browserErrors: errors.length };
     }
     // WebGL is the canonical material-graphics release path. Keep Canvas as a
     // real, exercised fallback, but make advanced optics diagnostic unless
@@ -14757,6 +14768,83 @@ async function snapshotFieldProfileGraphics(cdp) {
   })()`);
 }
 
+async function snapshotElectricDischargeGraphics(cdp) {
+  return evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    const snapshot = audit.electricDischargeGraphicsAtlas();
+    const cards = Array.isArray(snapshot) ? snapshot : snapshot.cards;
+    const inside = (x, y, rect) => rect && x >= rect.x && x < rect.x + rect.width
+      && y >= rect.y && y < rect.y + rect.height;
+    const exactRect = (rect, material, except) => {
+      if (!rect) return true;
+      for (let y = rect.y; y < rect.y + rect.height; y++) {
+        for (let x = rect.x; x < rect.x + rect.width; x++) {
+          const expected = except?.x === x && except?.y === y ? 0 : material;
+          if (audit.cell(x, y) !== expected) return false;
+        }
+      }
+      return true;
+    };
+    const exactPoints = (points, material) => (points ?? []).every(
+      ({ x, y }) => audit.cell(x, y) === material,
+    );
+    return {
+      occupied: audit.occupiedCells(),
+      cards: cards.map((entry) => {
+        const open = new Set(entry.openChannel.map(({ x, y }) => x + ',' + y));
+        let bodyExact = true;
+        for (let y = entry.body.y; y < entry.body.y + entry.body.height; y++) {
+          for (let x = entry.body.x; x < entry.body.x + entry.body.width; x++) {
+            const empty = inside(x, y, entry.hole) || open.has(x + ',' + y);
+            bodyExact &&= audit.cell(x, y) === (empty ? 0 : entry.material);
+          }
+        }
+        return {
+          material: entry.material,
+          code: entry.code,
+          bodyExact,
+          holeExact: exactRect(entry.hole, 0),
+          openExact: exactPoints(entry.openChannel, 0),
+          thinExact: exactRect(entry.thinStem, entry.material),
+          branchExact: exactPoints(entry.branch, entry.material),
+          isolatedExact: audit.cell(entry.isolated.x, entry.isolated.y) === entry.material,
+          guardExact: exactRect(entry.guardedBlank, 0),
+          metalContactExact: exactRect(entry.metalContact.owner, entry.material)
+            && exactRect(entry.metalContact.unlike, 23),
+          waterContactExact: exactRect(entry.waterContact.owner, entry.material)
+            && exactRect(entry.waterContact.unlike, 2),
+          powderExact: exactRect(entry.powderColumn, entry.material, entry.powderGap)
+            && exactPoints(entry.powderBranch, entry.material)
+            && (!entry.powderGap || audit.cell(entry.powderGap.x, entry.powderGap.y) === 0),
+        };
+      }),
+    };
+  })()`);
+}
+
+function assertElectricDischargeTopology(snapshot, label) {
+  const materials = [93, 97];
+  assert(snapshot.cards.length === materials.length && snapshot.cards.every((card, index) => (
+    card.material === materials[index] && card.bodyExact && card.holeExact && card.openExact
+      && card.thinExact && card.branchExact && card.isolatedExact && card.guardExact
+      && card.metalContactExact && card.waterContactExact && card.powderExact
+  )), `${label}: electric-discharge identity/topology changed (${JSON.stringify(snapshot)})`);
+}
+
+async function auditElectricDischargeGraphics(cdp, mode) {
+  return auditNormalExactIdentityLayer(cdp, mode, {
+    label: 'electric-discharge',
+    prepare: 'prepareElectricDischargeGraphicsFixture',
+    atlas: 'electricDischargeGraphicsAtlas',
+    toggle: 'setEnergyIdentityStyling',
+    snapshot: snapshotElectricDischargeGraphics,
+    assertTopology: assertElectricDischargeTopology,
+    expectedCards: 2,
+    minDistinct: 2,
+    useBody: 'body',
+  });
+}
+
 function assertFieldProfileTopology(snapshot, label) {
   const materials = [125, 128, 133, 130, 131, 132, 129, 134];
   assert(snapshot.cards.length === materials.length && snapshot.cards.every((card, index) => (
@@ -14823,6 +14911,29 @@ function assertPairedFieldProfileGraphics(results) {
     const ratio = canvasSample.rgbRms / Math.max(0.01, webglSample.rgbRms);
     assert(ratio >= 0.10 && ratio <= 10,
       `Canvas/WebGL Field-profile ${canvasSample.name} response diverged (${canvasSample.rgbRms}/${webglSample.rgbRms})`);
+  }
+}
+
+function assertPairedElectricDischargeGraphics(results) {
+  const canvas = results.find((result) => result.backend === 'canvas2d')?.electricDischargeGraphics;
+  const webgl = results.find((result) => result.backend === 'webgl')?.electricDischargeGraphics;
+  if (!canvas || !webgl) return;
+  assert(canvas.cards.length === 2 && webgl.cards.length === 2 && canvas.occupied === webgl.occupied,
+    `paired electric-discharge fixture topology diverged (${JSON.stringify({ canvas, webgl })})`);
+  assert(new Set(canvas.samples.map((sample) => sample.responseSignature)).size === 2
+    && new Set(webgl.samples.map((sample) => sample.responseSignature)).size === 2
+    && canvas.exactRepeatedOff && webgl.exactRepeatedOff,
+  `paired electric-discharge motifs lost distinct or repeatable responses (${JSON.stringify({ canvas, webgl })})`);
+  for (const canvasSample of canvas.samples) {
+    const webglSample = webgl.samples.find((sample) => sample.name === canvasSample.name);
+    assert(webglSample, `paired electric-discharge sample missing ${canvasSample.name}`);
+    const ratio = canvasSample.rgbRms / Math.max(0.01, webglSample.rgbRms);
+    // Canvas composites emissive matter through its bounded local fire plane,
+    // so this exact RGB cue is intentionally quieter there than in canonical
+    // WebGL. Require a real deterministic fallback response, but do not force
+    // the recovery presenter to match WebGL's discharge radiance magnitude.
+    assert(ratio >= 0.02 && ratio <= 10,
+      `Canvas/WebGL electric-discharge ${canvasSample.name} response diverged (${canvasSample.rgbRms}/${webglSample.rgbRms})`);
   }
 }
 

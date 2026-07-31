@@ -45,6 +45,7 @@ import {
   applyCanvasMechanismBodyIdentityStyle,
 } from './canvas-device-identity-style';
 import { applyCanvasFieldProfileIdentityStyle } from './canvas-field-profile-identity-style';
+import { applyCanvasElectricDischargeStyle } from './canvas-electric-discharge-style';
 import {
   applyCanvasUnusualSolidMorphology,
   isCanvasNativeSpecialSolidMaterial,
@@ -810,6 +811,10 @@ export class MaterialRenderer {
     if (enabled === this.energyIdentityStylingEnabled) return;
     this.energyIdentityStylingEnabled = enabled;
     this.presenter?.setEnergyIdentityStylingEnabled(enabled);
+    // Canvas electric-discharge identities are authored in the semantic body
+    // pass, so a paused off/on audit needs those cells restyled even though no
+    // simulation material became dirty. WebGL redraws immediately above.
+    this.contourChunks.markAll();
     this.changed = true;
   }
 
@@ -2133,6 +2138,16 @@ export class MaterialRenderer {
             this.styledColor, applicableTraits, phase, material, x, y, index, this.traitClock,
             this.roleMaterialStylingEnabled, this.energyIdentityStylingEnabled,
           );
+          // LIGH and THDR are emissive native matter rather than Energy-phase
+          // particles, so the common energy-core identity branch cannot name
+          // them. Compose their exact discharge cue after the generic Carrier
+          // accent; doing so keeps the warm/cool fork visible instead of losing
+          // it to Canvas byte saturation. This is RGB-only and shares the
+          // existing energy-identity audit toggle; emission support, powder
+          // topology, native LIGH ctype, and physics remain untouched.
+          if (this.energyIdentityStylingEnabled && wall === 0) {
+            applyCanvasElectricDischargeStyle(this.styledColor, material, x, y);
+          }
           if (this.vibrStateStylingEnabled && presentationState) {
             applyCanvasVibrStateStyle(
               this.styledColor, material, presentationState[index], x, y,

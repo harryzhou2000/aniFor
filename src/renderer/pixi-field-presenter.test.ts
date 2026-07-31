@@ -1120,7 +1120,8 @@ describe('Pixi presenter startup configuration', () => {
     expect(helper).toContain('fract(position / 24.0) - 0.5');
     expect(helper).toContain('smoothstep(0.08, 0.72, density)');
     expect(branch).toContain('uRoleMaterialStyling > 0.5 && traits > 0.5 && !materialEmissive');
-    expect(branch).toContain('roleEightXDelta(traits, uv * uFieldSize, density)');
+    expect(branch).toContain('roleEightXDelta(');
+    expect(branch).toContain('uv * uFieldSize, density');
     expect(`${helper}${branch}`).not.toContain('texture(');
     expect(`${helper}${branch}`).not.toContain('uTime');
     expect(`${helper}${branch}`).not.toMatch(/\balpha\s*[+*]?=/);
@@ -2841,6 +2842,33 @@ describe('Pixi presenter startup configuration', () => {
     }
     expect(mechanismBlock).not.toMatch(/texture\s*\(/);
     expect(mechanismBlock).not.toMatch(/\balpha\s*[+*]?=/);
+  });
+
+  it('keeps LIGH and THDR discharge identities exact, RGB-only, and scale-neutral', () => {
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');
+    const normalStart = source.indexOf('const FIELD_FRAGMENT = `');
+    const eight = source.slice(eightStart, normalStart);
+    const normal = source.slice(normalStart);
+    const normalHelperStart = normal.indexOf('vec3 electricDischargeIdentityDelta(');
+    const normalHelperEnd = normal.indexOf('vec3 radioactiveBodyIdentityDelta(', normalHelperStart);
+    expect(normalHelperStart).toBeGreaterThan(0);
+    expect(normalHelperEnd).toBeGreaterThan(normalHelperStart);
+    const normalHelper = normal.slice(normalHelperStart, normalHelperEnd);
+    expect(normalHelper).toContain('material == 93.0');
+    expect(normalHelper).toContain('material == 97.0');
+    expect(normalHelper).not.toContain('texture(');
+    expect(normalHelper).not.toContain('uTime');
+    expect(normalHelper).not.toMatch(/\balpha\s*[+*]?=/);
+    expect(eight).toContain('uEnergyIdentityStyling > 0.5 && (material == 93.0 || material == 97.0)');
+    expect(eight).toContain('material == 93.0 ? 4.0');
+    expect(eight).toContain('material == 97.0 ? 1.0 : traits');
+    expect(eight.match(/roleEightXDelta\(/g)).toHaveLength(2);
+    expect(normal).toContain('electricDischargeIdentityDelta(material, fieldPosition)');
+    for (const shader of [eight, normal]) {
+      expect(shader).toContain('uEnergyIdentityStyling > 0.5');
+      expect(shader).toContain('(material == 93.0 || material == 97.0)');
+    }
   });
 
   it('seeds and redraws the canonical-WebGL electronics identity layer', () => {

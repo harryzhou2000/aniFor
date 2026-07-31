@@ -20,6 +20,7 @@ import type { EarthenPowderGraphicsAuditSnapshot } from './earthen-powder-graphi
 import type { LiquidIdentityGraphicsAuditSnapshot } from './liquid-identity-graphics-audit';
 import type { GasIdentityGraphicsAuditSnapshot } from './gas-identity-graphics-audit';
 import type { EnergyRadioactiveGraphicsAuditSnapshot } from './energy-radioactive-graphics-audit';
+import type { ElectricDischargeGraphicsAuditSnapshot } from './electric-discharge-graphics-audit';
 import type { OrganicPlantGraphicsAuditSnapshot } from './organic-plant-graphics-audit';
 import type { SpongeGraphicsAuditSnapshot } from './sponge-graphics-audit';
 import type { VirusGraphicsAuditSnapshot } from './virus-graphics-audit';
@@ -144,6 +145,8 @@ export interface BrowserInputAuditApi {
   prepareGasIdentityGraphicsFixture(): void;
   energyRadioactiveGraphicsAtlas(): EnergyRadioactiveGraphicsAuditSnapshot;
   prepareEnergyRadioactiveGraphicsFixture(): void;
+  electricDischargeGraphicsAtlas(): ElectricDischargeGraphicsAuditSnapshot;
+  prepareElectricDischargeGraphicsFixture(): void;
   organicPlantGraphicsAtlas(): OrganicPlantGraphicsAuditSnapshot;
   prepareOrganicPlantGraphicsFixture(): void;
   spongeGraphicsAtlas(): SpongeGraphicsAuditSnapshot;
