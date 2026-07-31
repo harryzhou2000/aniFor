@@ -12156,6 +12156,11 @@ async function auditVisualScaleMatrix(cdp, mode, dpr) {
   await setDesktopMetrics(cdp, 1280, 720, dpr);
   const scales = mode === 'webgl' ? [1, 2, 4, 8] : [1, 2, 4];
   const regions = [
+    // A settled interior, rather than an antialiased lip, is the regression
+    // probe for Smooth powder's retained mineral/facet vocabulary.  The dense
+    // Sand band is deliberately clear of the later Dust/Salt overlay and the
+    // Clay/Concrete notched-column fixture.
+    { name: 'sandSmoothInterior', x: 124, y: 78, radius: 8, silhouette: true },
     { name: 'metalScaleBody', x: 405, y: 229, radius: 8, silhouette: true },
     { name: 'glassScaleBody', x: 290, y: 370, radiusX: 8, radiusY: 5, silhouette: true },
     { name: 'waterScaleBody', x: 224, y: 270, radius: 8, silhouette: true },
@@ -12226,6 +12231,10 @@ async function auditVisualScaleMatrix(cdp, mode, dpr) {
     assert(byName.metalScaleBody.macroLumaRange >= 4
       && byName.metalScaleBody.microContrast <= 12,
     `${mode} renderScale=${scale} lost smooth solid body depth (${JSON.stringify(samples)})`);
+    assert(byName.sandSmoothInterior.microContrast >= 3,
+      `${mode} renderScale=${scale} over-smoothed settled Sand interior detail (${JSON.stringify(
+        byName.sandSmoothInterior,
+      )})`);
     assert(byName.glassScaleBody.macroLumaRange >= 3
       && byName.glassScaleBody.rgb[2] >= byName.glassScaleBody.rgb[0],
     `${mode} renderScale=${scale} lost translucent solid depth/tint (${JSON.stringify(samples)})`);
@@ -12264,6 +12273,13 @@ async function auditVisualScaleMatrix(cdp, mode, dpr) {
         areaRatio: round(areaRatio), rgbDistance: round(rgbDistance), sample, baseline,
       })})`);
     }
+    const sandBaseline = reference.samples.find(({ name }) => name === 'sandSmoothInterior');
+    const sandSample = row.samples.find(({ name }) => name === 'sandSmoothInterior');
+    assert(sandBaseline && sandSample
+      && sandSample.microContrast >= sandBaseline.microContrast * 0.82,
+    `${mode} renderScale=${row.scale} softened Smooth powder internal colour detail relative to 2x (${JSON.stringify({
+      baseline: sandBaseline, sample: sandSample,
+    })})`);
   }
   return rows;
 }
