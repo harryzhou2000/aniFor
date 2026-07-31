@@ -1012,8 +1012,6 @@ export class CanvasPhaseContourScratch {
           : candidatePhase === RenderPhase.Powder || candidatePhase === RenderPhase.Solid) {
           compatibilityMask |= bit;
         }
-        if (input.styleBytes[candidate * 4 + 2] !== 0
-          || input.styleBytes[candidate * 4 + 3] !== 0) continue;
         const liquidMatterContact = ownerPhase === RenderPhase.Solid
           ? candidatePhase === RenderPhase.Liquid
           : ownerPhase === RenderPhase.Liquid
@@ -1021,7 +1019,15 @@ export class CanvasPhaseContourScratch {
               || (candidatePhase === RenderPhase.Powder && this.haloStability[index] >= 192)
             : ownerPhase === RenderPhase.Powder
               && (candidatePhase === RenderPhase.Liquid || candidatePhase === RenderPhase.Solid);
-        if (liquidMatterContact) contactMask |= bit;
+        // Most cells in a real scene are compatible bulk or unrelated phases.
+        // They cannot contribute to grounding, so defer the decorated-owner
+        // lookup until a neighbour is actually a liquid/matter contact. This
+        // preserves the exact categorical mask while keeping Canvas fallback
+        // presentation cheaper on dense ordinary material bodies.
+        if (!liquidMatterContact) continue;
+        if (input.styleBytes[candidate * 4 + 2] !== 0
+          || input.styleBytes[candidate * 4 + 3] !== 0) continue;
+        contactMask |= bit;
       }
     }
     const cardinalMask = (1 << 1) | (1 << 3) | (1 << 5) | (1 << 7);
