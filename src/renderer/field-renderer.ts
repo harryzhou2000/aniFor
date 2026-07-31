@@ -41,6 +41,10 @@ import { applyCanvasSensorMorphology } from './canvas-sensor-style';
 import { applyCanvasUnusualPowderStyle } from './canvas-unusual-powder-style';
 import { applyCanvasExplosivePowderStyle } from './canvas-explosive-powder-style';
 import {
+  applyCanvasElectronicBodyIdentityStyle,
+  applyCanvasMechanismBodyIdentityStyle,
+} from './canvas-device-identity-style';
+import {
   applyCanvasUnusualSolidMorphology,
   isCanvasNativeSpecialSolidMaterial,
 } from './canvas-unusual-solid-style';
@@ -708,7 +712,7 @@ export class MaterialRenderer {
     this.changed = true;
   }
 
-  /** Canonical-WebGL control hardware identity; Canvas stays semantic/recovery. */
+  /** Exact native control-hardware identity in both WebGL and Canvas recovery. */
   setElectronicIdentityStylingEnabled(enabled: boolean): void {
     if (enabled === this.electronicIdentityStylingEnabled) return;
     this.electronicIdentityStylingEnabled = enabled;
@@ -2095,6 +2099,19 @@ export class MaterialRenderer {
           if (this.solidContactDepthEnabled && denseSolidInterior
             && applicableTraits === 0 && !info.emissive) {
             applyCanvasTranslucentCaustic(this.styledColor, solidRelief, material);
+          }
+          // The normal WebGL and direct 8x presenters both give exact native
+          // transport/electronics bodies an owner-local surface grammar. Keep
+          // Canvas recovery visually legible too, after common body work but
+          // before role/state/thermal overlays. These helpers are RGB-only and
+          // cannot modify semantic topology, alpha, walls, or simulation state.
+          if (wall === 0 && !info.emissive) {
+            if (this.mechanismBodyStylingEnabled) {
+              applyCanvasMechanismBodyIdentityStyle(this.styledColor, material, x, y);
+            }
+            if (this.electronicIdentityStylingEnabled) {
+              applyCanvasElectronicBodyIdentityStyle(this.styledColor, material, x, y);
+            }
           }
           if (applicableTraits !== 0) applyCanvasRenderTraits(
             this.styledColor, applicableTraits, phase, material, x, y, index, this.traitClock,

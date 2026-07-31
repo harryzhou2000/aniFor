@@ -90,6 +90,7 @@ const unusualPowderGraphicsOnly = process.argv.includes('--unusual-powder-graphi
 const earthenPowderGraphicsOnly = process.argv.includes('--earthen-powder-graphics-only');
 const explosivePowderGraphicsOnly = process.argv.includes('--explosive-powder-graphics-only');
 const unusualSolidGraphicsOnly = process.argv.includes('--unusual-solid-graphics-only');
+const deviceIdentityGraphicsOnly = process.argv.includes('--device-identity-graphics-only');
 const liquidIdentityGraphicsOnly = process.argv.includes('--liquid-identity-graphics-only');
 const gasIdentityGraphicsOnly = process.argv.includes('--gas-identity-graphics-only');
 const energyRadioactiveGraphicsOnly = process.argv.includes('--energy-radioactive-graphics-only');
@@ -119,6 +120,7 @@ const liveScaleOnly = process.argv.includes('--live-scale-only');
 const productionBundle = process.argv.includes('--production-bundle');
 const usesProductionBundle = productionBundle || showcaseScreenshotOnly || cellularGraphicsOnly || sensorGraphicsOnly
   || unusualPowderGraphicsOnly || earthenPowderGraphicsOnly || explosivePowderGraphicsOnly || unusualSolidGraphicsOnly
+  || deviceIdentityGraphicsOnly
   || liquidIdentityGraphicsOnly || gasIdentityGraphicsOnly || energyRadioactiveGraphicsOnly
   || organicPlantGraphicsOnly || spongeGraphicsOnly || virusGraphicsOnly || waxGraphicsOnly
   || crystalGraphicsOnly || pasteResistGraphicsOnly || vibrStateGraphicsOnly
@@ -193,6 +195,7 @@ async function main() {
       || roleGraphicsOnly || cellularGraphicsOnly || sensorGraphicsOnly
       || unusualPowderGraphicsOnly || earthenPowderGraphicsOnly || explosivePowderGraphicsOnly
       || unusualSolidGraphicsOnly || liquidIdentityGraphicsOnly
+      || deviceIdentityGraphicsOnly
       || gasIdentityGraphicsOnly || energyRadioactiveGraphicsOnly || organicPlantGraphicsOnly
       || spongeGraphicsOnly || virusGraphicsOnly || waxGraphicsOnly || crystalGraphicsOnly
       || pasteResistGraphicsOnly || vibrStateGraphicsOnly || deutStateGraphicsOnly
@@ -239,6 +242,7 @@ async function main() {
       if (!scaleEightOnly && !materialAtlasOnly && !reducedAudit) assertPairedVisualRelief(results);
       if (!scaleEightOnly && !reducedAudit) assertPairedMaterialAtlas(results);
     }
+    if (deviceIdentityGraphicsOnly) assertPairedDeviceIdentityGraphics(results);
     compactMaterialAtlasResults(results);
     compactVirusGraphicsResults(results);
     compactWaxGraphicsResults(results);
@@ -261,13 +265,13 @@ async function auditMode(mode) {
   const profile = await mkdtemp(path.join(tmpdir(), `anifor-input-${mode}-`));
   const dpr = mode === 'canvas2d' ? 2 : 1;
   const canvasFallbackAudit = mode === 'canvas2d' && !mobileOnly && !layoutOnly
-    && !shortDesktopOnly && !liveScaleOnly && !requireCanvasVisuals;
+    && !shortDesktopOnly && !liveScaleOnly && !requireCanvasVisuals && !deviceIdentityGraphicsOnly;
   // Advanced fixtures begin blank so WebGL can author exactly the state it
   // measures. Canvas fallback has no advanced optics obligation, so retain the
   // canonical paused scene there and prove real material delivery/occupancy.
   const startsBlank = !canvasFallbackAudit && (cellularGraphicsOnly || sensorGraphicsOnly
     || unusualPowderGraphicsOnly || earthenPowderGraphicsOnly || explosivePowderGraphicsOnly
-    || unusualSolidGraphicsOnly || liquidIdentityGraphicsOnly
+    || unusualSolidGraphicsOnly || deviceIdentityGraphicsOnly || liquidIdentityGraphicsOnly
     || gasIdentityGraphicsOnly || energyRadioactiveGraphicsOnly || organicPlantGraphicsOnly
     || spongeGraphicsOnly || virusGraphicsOnly || waxGraphicsOnly || crystalGraphicsOnly
     || pasteResistGraphicsOnly || vibrStateGraphicsOnly || deutStateGraphicsOnly
@@ -434,6 +438,12 @@ async function auditMode(mode) {
       assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
       cdp.close();
       return { backend: mode, nativeSemantics, browserErrors: errors.length };
+    }
+    if (deviceIdentityGraphicsOnly) {
+      const deviceIdentityGraphics = await auditDeviceIdentityGraphics(cdp, mode);
+      assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
+      cdp.close();
+      return { backend: mode, deviceIdentityGraphics, browserErrors: errors.length };
     }
     // WebGL is the canonical material-graphics release path. Keep Canvas as a
     // real, exercised fallback, but make advanced optics diagnostic unless
@@ -14364,6 +14374,162 @@ async function auditEightXElectronicsGraphics(cdp, canvasRect) {
   };
 }
 
+/**
+ * Normal-detail Canvas/WebGL gate for recovery-presenter transport and control
+ * identities. Unlike the true-8x atlas this deliberately uses the standard 2x
+ * backing, exercising the Canvas fallback's RGB-only owner grammars and the
+ * ordinary WebGL shader in the same paused fixture.
+ */
+async function auditDeviceIdentityGraphics(cdp, mode) {
+  const mechanisms = await auditNormalDeviceIdentityLayer(cdp, mode, {
+    label: 'mechanism',
+    prepare: 'prepareMechanismGraphicsFixture',
+    atlas: 'mechanismGraphicsAtlas',
+    toggle: 'setMechanismBodyStyling',
+    snapshot: snapshotEightXMechanismGraphics,
+    assertTopology: assertEightXMechanismTopology,
+    expectedCards: 10,
+    minDistinct: 10,
+    useBody: 'pairedBody',
+  });
+  const electronics = await auditNormalDeviceIdentityLayer(cdp, mode, {
+    label: 'electronics',
+    prepare: 'prepareElectronicsGraphicsFixture',
+    atlas: 'electronicsGraphicsAtlas',
+    toggle: 'setElectronicIdentityStyling',
+    snapshot: snapshotEightXElectronicsGraphics,
+    assertTopology: assertEightXElectronicsTopology,
+    expectedCards: 20,
+    minDistinct: 12,
+    useBody: 'pairedBody',
+  });
+  return { mechanisms, electronics };
+}
+
+async function auditNormalDeviceIdentityLayer(cdp, mode, definition) {
+  const { label, prepare, atlas: atlasName, toggle, snapshot, assertTopology,
+    expectedCards, minDistinct, useBody } = definition;
+  await evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    for (const method of ${JSON.stringify([prepare, atlasName, toggle])}) {
+      if (typeof audit?.[method] !== 'function') {
+        throw new Error('Normal-detail ${label} graphics API unavailable: ' + method);
+      }
+    }
+    audit.resetView();
+    audit.clear();
+    audit[${JSON.stringify(toggle)}](true);
+    return true;
+  })()`);
+  const blank = await waitForStablePageCapture(cdp, `${mode} blank ${label} framebuffer`);
+  const rawAtlas = await evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    audit[${JSON.stringify(prepare)}]();
+    return audit[${JSON.stringify(atlasName)}]();
+  })()`);
+  const atlas = Array.isArray(rawAtlas) ? { cards: rawAtlas } : rawAtlas;
+  assert(atlas?.cards?.length === expectedCards,
+    `${mode} ${label} fixture is incomplete (${JSON.stringify(atlas)})`);
+  const prepared = await snapshot(cdp);
+  assertTopology(prepared, `${mode} prepared ${label} fixture`);
+
+  await evaluate(cdp, `window.__ANIFOR_INPUT_AUDIT__[${JSON.stringify(toggle)}](false); true`);
+  const flat = await waitForStablePageCapture(cdp, `${mode} flat ${label} framebuffer`);
+  const flatTopology = await snapshot(cdp);
+  await evaluate(cdp, `window.__ANIFOR_INPUT_AUDIT__[${JSON.stringify(toggle)}](true); true`);
+  const styled = await waitForStablePageCapture(cdp, `${mode} styled ${label} framebuffer`);
+  const styledTopology = await snapshot(cdp);
+  await evaluate(cdp, `window.__ANIFOR_INPUT_AUDIT__[${JSON.stringify(toggle)}](false); true`);
+  const repeated = await waitForStablePageCapture(cdp, `${mode} repeated flat ${label} framebuffer`);
+  const repeatedTopology = await snapshot(cdp);
+  assert(JSON.stringify(flatTopology) === JSON.stringify(prepared)
+      && JSON.stringify(styledTopology) === JSON.stringify(prepared)
+      && JSON.stringify(repeatedTopology) === JSON.stringify(prepared),
+  `${mode} ${label} styling changed semantic topology`);
+
+  const regions = atlas.cards.map((entry) => {
+    const body = entry[useBody];
+    return {
+      name: entry.code,
+      x: body.x + body.width / 2,
+      y: body.y + body.height / 2,
+      radiusX: Math.max(1, body.width / 2 - 1),
+      radiusY: Math.max(1, body.height / 2 - 1),
+      silhouette: true,
+      // Some exact Device bodies (notably PUMP) are intentionally near the
+      // render-lab backdrop. Their RGB motif must not look like a topology
+      // change merely because a generic screenshot support sampler rounds a
+      // dark antialiased edge below four bytes. The paired blank captures are
+      // stable, so a one-byte low-noise threshold measures the same coverage.
+      signalMinimum: 1,
+      signalNoiseMargin: 1,
+    };
+  });
+  const samples = await sampleBackdropRefractionRegions(cdp, {
+    straight: flat.capture.data,
+    refracted: styled.capture.data,
+    repeatedStraight: repeated.capture.data,
+  }, regions, flat.canvasRect);
+  assert(samples.length === expectedCards && samples.every((sample) => (
+    sample.rgbRms >= 0.01 && sample.rgbRms <= 24
+      && sample.rgbPeak > 0 && sample.rgbPeak <= 48 && sample.repeatRgbPeak <= 1
+  )), `${mode} ${label} response is absent, unbounded, or unstable (${JSON.stringify(samples)})`);
+  assert(new Set(samples.map((sample) => sample.responseSignature)).size >= minDistinct,
+    `${mode} ${label} bodies lost distinct identity responses (${JSON.stringify(samples)})`);
+  const [flatSupport, styledSupport] = await Promise.all([
+    samplePageRegions(
+      cdp, flat.capture.data, regions, blank.capture.data, blank.reference.data, flat.canvasRect,
+    ),
+    samplePageRegions(
+      cdp, styled.capture.data, regions, blank.capture.data, blank.reference.data, flat.canvasRect,
+    ),
+  ]);
+  const supportDrift = flatSupport.map((sample, index) => ({
+    name: sample.name,
+    visible: [sample.visible, styledSupport[index].visible],
+    worldArea: [sample.worldArea, styledSupport[index].worldArea],
+  })).filter(({ visible, worldArea }) => (
+    Math.abs(visible[0] - visible[1]) > Math.max(2, Math.ceil(visible[0] * 0.01))
+      || Math.abs(worldArea[0] - worldArea[1]) > Math.max(0.60, worldArea[0] * 0.01)
+  ));
+  assert(supportDrift.length === 0,
+    `${mode} ${label} styling changed composed support (${JSON.stringify(supportDrift)})`);
+  await evaluate(cdp, `window.__ANIFOR_INPUT_AUDIT__[${JSON.stringify(toggle)}](true); true`);
+  return {
+    cards: atlas.cards.map(({ material, code }) => ({ material, code })),
+    occupied: prepared.occupied,
+    samples,
+    exactRepeatedOff: samples.every((sample) => sample.repeatRgbPeak <= 1),
+  };
+}
+
+function assertPairedDeviceIdentityGraphics(results) {
+  const canvas = results.find((result) => result.backend === 'canvas2d')?.deviceIdentityGraphics;
+  const webgl = results.find((result) => result.backend === 'webgl')?.deviceIdentityGraphics;
+  if (!canvas || !webgl) return;
+  for (const [label, expectedCards, minDistinct] of [
+    ['mechanisms', 10, 10],
+    ['electronics', 20, 12],
+  ]) {
+    const canvasLayer = canvas[label];
+    const webglLayer = webgl[label];
+    assert(canvasLayer.cards.length === expectedCards && webglLayer.cards.length === expectedCards
+      && canvasLayer.occupied === webglLayer.occupied,
+    `paired ${label} fixture topology diverged (${JSON.stringify({ canvasLayer, webglLayer })})`);
+    assert(new Set(canvasLayer.samples.map((sample) => sample.responseSignature)).size >= minDistinct
+      && new Set(webglLayer.samples.map((sample) => sample.responseSignature)).size >= minDistinct
+      && canvasLayer.exactRepeatedOff && webglLayer.exactRepeatedOff,
+    `paired ${label} lost distinct or repeatable body identities (${JSON.stringify({ canvasLayer, webglLayer })})`);
+    for (const canvasSample of canvasLayer.samples) {
+      const webglSample = webglLayer.samples.find((sample) => sample.name === canvasSample.name);
+      assert(webglSample, `paired ${label} sample missing ${canvasSample.name}`);
+      const ratio = canvasSample.rgbRms / Math.max(0.01, webglSample.rgbRms);
+      assert(ratio >= 0.10 && ratio <= 10,
+        `Canvas/WebGL ${label} ${canvasSample.name} response diverged (${canvasSample.rgbRms}/${webglSample.rgbRms})`);
+    }
+  }
+}
+
 async function snapshotEightXCellularGraphics(cdp) {
   return evaluate(cdp, `(() => {
     const audit = window.__ANIFOR_INPUT_AUDIT__;
@@ -19751,6 +19917,8 @@ async function samplePageRegions(
       const data = context.getImageData(x, y, width, height).data;
       const baselineData = baselineContext?.getImageData(x, y, width, height).data;
       const baselineReferenceData = baselineReferenceContext?.getImageData(x, y, width, height).data;
+      const signalMinimum = region.signalMinimum ?? 4;
+      const signalNoiseMargin = region.signalNoiseMargin ?? 3;
       let signalThreshold = 0;
       if (baselineData && baselineReferenceData) {
         const noise = new Uint8Array(width * height);
@@ -19762,9 +19930,11 @@ async function samplePageRegions(
           );
         }
         noise.sort();
-        signalThreshold = Math.max(4, noise[Math.floor((noise.length - 1) * 0.99)] + 3);
+        signalThreshold = Math.max(
+          signalMinimum, noise[Math.floor((noise.length - 1) * 0.99)] + signalNoiseMargin,
+        );
       }
-      signalThreshold = Math.max(signalThreshold, region.signalFloor ?? 0);
+      signalThreshold = Math.max(signalThreshold, region.signalFloor ?? 0, signalMinimum);
       const total = [0, 0, 0];
       let visible = 0;
       let pinned = 0;

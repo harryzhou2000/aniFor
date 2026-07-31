@@ -18,6 +18,7 @@
     "audit:showcase-screenshot": "node scripts/verify-browser-input.mjs --production-bundle --showcase-screenshot",
     "audit:8x": "node scripts/verify-browser-input.mjs --scale-eight-only",
     "audit:material-atlas": "node scripts/verify-browser-input.mjs --material-atlas-only",
+    "audit:device-identities": "npm run build && node scripts/verify-browser-input.mjs --device-identity-graphics-only --production-bundle",
     "audit:explosive-powder": "node scripts/verify-browser-input.mjs --explosive-powder-graphics-only",
     "audit:earthen-powder": "node scripts/verify-browser-input.mjs --earthen-powder-graphics-only",
     "audit:energy-radioactive": "node scripts/verify-browser-input.mjs --energy-radioactive-graphics-only",

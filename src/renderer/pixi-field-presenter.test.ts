@@ -2815,7 +2815,7 @@ describe('Pixi presenter startup configuration', () => {
     expect(source).toContain('structuralRigidIdentityDelta(material, fieldPosition)\n          * structuralIdentityGain');
   });
 
-  it('seeds and redraws the canonical-WebGL mechanism body layer without extending Canvas optics', () => {
+  it('seeds and redraws the canonical-WebGL mechanism body layer', () => {
     const presenter = presenterHarness();
 
     presenter.setMechanismBodyStylingEnabled(false);
@@ -2839,7 +2839,7 @@ describe('Pixi presenter startup configuration', () => {
     expect(mechanismBlock).not.toMatch(/\balpha\s*[+*]?=/);
   });
 
-  it('seeds and redraws the canonical-WebGL electronics identity layer without extending Canvas optics', () => {
+  it('seeds and redraws the canonical-WebGL electronics identity layer', () => {
     const presenter = presenterHarness();
 
     presenter.setElectronicIdentityStylingEnabled(false);

@@ -6452,8 +6452,8 @@ void main() {
     // Transport/actuator hardware spans force, powered, and ordinary-solid
     // profiles. Its exact IDs may also carry a later semantic role trait, so
     // this static RGB base deliberately sits after generic profile treatment
-    // but before those overlays. Canvas stays a semantic/recovery fallback;
-    // canonical WebGL owns this richer body grammar without altering alpha,
+    // but before those overlays. Canvas mirrors the same owner-local hierarchy
+    // with its bounded CPU grammar without altering alpha,
     // holes, channels, walls, material ownership, or physics.
     if (uMechanismBodyStyling > 0.5 && mechanismBodyStyle(material) > 0.5
       && surfaceOnly < 0.5 && halo < 0.5 && wall < 0.5
@@ -6461,9 +6461,9 @@ void main() {
       color = clamp(color + mechanismBodyIdentityDelta(material, fieldPosition)
         * (0.58 + interiorMicroGain * 0.42), 0.0, 1.0);
     }
-    // Canonical WebGL owns the detailed static grammar for native control
-    // hardware. Canvas keeps exact semantic bodies for compatibility/recovery;
-    // this branch is RGB-only and preserves alpha, coverage, holes, walls,
+    // Native control hardware retains a detailed static grammar. Canvas mirrors
+    // the owner-local hierarchy with bounded CPU marks; this branch is RGB-only
+    // and preserves alpha, coverage, holes, walls,
     // owner identity, and physics while allowing role decals to layer later.
     if (uElectronicIdentityStyling > 0.5 && electronicBodyStyle(material) > 0.5
       && surfaceOnly < 0.5 && halo < 0.5 && wall < 0.5
