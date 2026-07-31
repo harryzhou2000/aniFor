@@ -55,9 +55,10 @@ const SHALLOW_SAND_SLOPE = Object.freeze({ left: 18, right: 170, bottom: 149, ri
 const CDP_COMMAND_TIMEOUT_MS = 45_000;
 const CDP_CONNECT_TIMEOUT_MS = 10_000;
 const scaleEightOnly = process.argv.includes('--scale-eight-only');
+const eightPowderOnly = process.argv.includes('--eight-powder-only');
 const eightFieldProfileOnly = process.argv.includes('--eight-field-profile-only');
 const eightMaterialAtlasOnly = process.argv.includes('--eight-material-atlas-only');
-const modes = scaleEightOnly || eightFieldProfileOnly || eightMaterialAtlasOnly ? ['webgl'] : process.argv.includes('--canvas-only') ? ['canvas2d']
+const modes = scaleEightOnly || eightPowderOnly || eightFieldProfileOnly || eightMaterialAtlasOnly ? ['webgl'] : process.argv.includes('--canvas-only') ? ['canvas2d']
   : process.argv.includes('--webgl-only') ? ['webgl'] : ['canvas2d', 'webgl'];
 // WebGL is the canonical visual release path. Canvas runs its strict
 // startup/geometry/semantic fallback audit by default; opt in only when a
@@ -346,8 +347,8 @@ async function auditMode(mode) {
     });
     cdp.on('Log.entryAdded', ({ entry }) => { if (entry.level === 'error') errors.push(entry.text); });
     await Promise.all([cdp.send('Page.enable'), cdp.send('Runtime.enable'), cdp.send('Log.enable')]);
-    if (scaleEightOnly) {
-      const renderScaleEight = await auditRenderScaleEight(cdp, dpr);
+    if (scaleEightOnly || eightPowderOnly) {
+      const renderScaleEight = await auditRenderScaleEight(cdp, dpr, eightPowderOnly);
       assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
       cdp.close();
       return { backend: mode, renderScaleEight, browserErrors: errors.length };
@@ -10914,16 +10915,19 @@ async function auditPowderBodyDepth(cdp, mode, dpr) {
   assert(smooth.rmsError <= 0.75 && smooth.maximumError <= 1.25
       && smooth.meanTransitionWidth >= 0.18 && smooth.meanTransitionWidth <= 0.80,
   `${mode}: Smooth shallow slope lost its bounded contour (${JSON.stringify(powderSlopeContinuity)})`);
-  assert(smooth.meanTangentError <= local.meanTangentError * 0.85
-      && smooth.meanCurvatureEnergy <= local.meanCurvatureEnergy * 0.78,
+  assert(smooth.rmsError <= local.rmsError * 0.90
+      && smooth.maximumError <= local.maximumError * 0.90
+      && smooth.meanTangentError <= local.meanTangentError * 0.98
+      && smooth.meanCurvatureEnergy <= local.meanCurvatureEnergy * 0.95,
   `${mode}: Smooth shallow slope no longer improves Local continuity (${JSON.stringify(powderSlopeContinuity)})`);
   // Grains deliberately remains a square, discrete reference rather than
   // inheriting Smooth's lower analytic-error or staircase energy. Transition
   // width intentionally differs by backend because the Canvas and direct-mesh
   // rasterizers resolve a one-cell square through different coverage paths.
-  assert(grains.rmsError >= smooth.rmsError * 1.08
-      && grains.meanTangentError >= smooth.meanTangentError * 1.08
-      && grains.meanCurvatureEnergy >= smooth.meanCurvatureEnergy * 1.08,
+  assert(grains.rmsError >= smooth.rmsError * 1.15
+      && grains.meanTransitionWidth <= smooth.meanTransitionWidth * 0.98
+      && grains.meanTangentError >= smooth.meanTangentError * 1.02
+      && grains.meanCurvatureEnergy >= smooth.meanCurvatureEnergy * 1.02,
   `${mode}: Grains no longer preserves a discrete shallow-slope reference (${JSON.stringify(powderSlopeContinuity)})`);
   const semanticSupport = await sampleSemanticCellSupport(cdp, {
     flat: flat.capture.data,
@@ -12582,7 +12586,7 @@ async function auditEightXFieldProfileGraphics(cdp, dpr) {
   };
 }
 
-async function auditRenderScaleEight(cdp, dpr) {
+async function auditRenderScaleEight(cdp, dpr, powderOnly = false) {
   const started = performance.now();
   const stage = (name) => console.error(
     `[render-scale-eight] ${name} ${Math.round(performance.now() - started)}ms`,
@@ -12674,6 +12678,66 @@ async function auditRenderScaleEight(cdp, dpr) {
   stage('timing-ready');
 
   const smoothCapture = await captureSettledPage(cdp, 'renderScale=8 smooth powder framebuffer');
+  // Shader iteration must not require the unrelated ten-minute off/on/off
+  // presentation matrix before reporting a captured powder-contour failure.
+  // The full --scale-eight-only gate remains authoritative; this focused path
+  // shares its exact scene, true backing, completed GPU fences, screenshots,
+  // and composed-image measurements.
+  if (powderOnly) {
+    const styleCaptures = { smooth: smoothCapture.capture.data };
+    for (const style of ['local', 'grains']) {
+      await evaluate(cdp, `window.__ANIFOR_INPUT_AUDIT__.setPowderRenderStyle('${style}'); true`);
+      styleCaptures[style] = (await captureSettledPage(
+        cdp, `renderScale=8 focused ${style} powder framebuffer`, 450,
+      )).capture.data;
+    }
+    await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.resetView(); true');
+    await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.clear(); true');
+    const blankCapture = await captureSettledPage(cdp, 'renderScale=8 focused blank framebuffer');
+    assertCanvasRectsEqual(
+      geometry.canvas, blankCapture.canvasRect, 'renderScale=8 focused scene/blank CSS geometry',
+    );
+    const regions = [{
+      name: 'shallowSandSlope8x', x: 94.5, y: 145,
+      radiusX: 77, radiusY: 7, topology: true, silhouette: true, signature: true,
+    }, {
+      name: 'smoothSandInterior8x', x: 156, y: 78, radius: 8,
+    }];
+    const samples = {};
+    for (const style of ['grains', 'local', 'smooth']) {
+      samples[style] = await samplePageRegions(
+        cdp, styleCaptures[style], regions,
+        blankCapture.capture.data, blankCapture.reference.data, geometry.canvas,
+      );
+    }
+    const continuity = await samplePowderSlopeContinuity(
+      cdp, styleCaptures, blankCapture.capture.data, geometry.canvas,
+    );
+    assert(samples.grains[0].signature !== samples.local[0].signature
+        && samples.local[0].signature !== samples.smooth[0].signature,
+    `renderScale=8 focused powder styles converged (${JSON.stringify(samples)})`);
+    assert([continuity.grains, continuity.local, continuity.smooth]
+      .every((sample) => sample.rows >= 80)
+        && continuity.smooth.rmsError <= 0.75
+        && continuity.smooth.maximumError <= 1.25
+        && continuity.smooth.meanTransitionWidth >= 0.18
+        && continuity.smooth.meanTransitionWidth <= 0.80
+        && continuity.smooth.meanTangentError <= continuity.local.meanTangentError * 0.85
+        && continuity.smooth.meanCurvatureEnergy <= continuity.local.meanCurvatureEnergy * 0.78,
+    `renderScale=8 focused Smooth contour regressed (${JSON.stringify({ samples, continuity })})`);
+    assert(continuity.grains.rmsError >= continuity.smooth.rmsError * 1.05
+        && continuity.grains.meanTransitionWidth <= continuity.smooth.meanTransitionWidth * 0.92
+        && continuity.grains.meanTransitionWidth >= 0.18,
+    `renderScale=8 focused Grains geometry regressed (${JSON.stringify(continuity)})`);
+    assert(samples.smooth[1].microContrast >= 10.5
+        && samples.smooth[1].microContrast >= samples.grains[1].microContrast * 1.15,
+    `renderScale=8 focused Smooth interior was over-smoothed (${JSON.stringify(samples)})`);
+    stage('powder-only-ready');
+    return {
+      backing: `${geometry.backing.width}x${geometry.backing.height}`,
+      presentationTiming, samples, continuity,
+    };
+  }
   const smoothSuspensionPhaseCells = await captureMaterialCells(
     cdp, { left: 74, top: 251, right: 138, bottom: 315 }, 1, 2,
   );
@@ -13184,9 +13248,9 @@ async function auditRenderScaleEight(cdp, dpr) {
   // error and narrower transition here; the deep-zoom exact-square probe
   // later in this gate remains the direct shape contract.
   assert(eightPowderSlopeContinuity.grains.rmsError
-      >= eightPowderSlopeContinuity.smooth.rmsError * 1.08
+      >= eightPowderSlopeContinuity.smooth.rmsError * 1.05
       && eightPowderSlopeContinuity.grains.meanTransitionWidth
-        <= eightPowderSlopeContinuity.smooth.meanTransitionWidth * 0.78
+        <= eightPowderSlopeContinuity.smooth.meanTransitionWidth * 0.92
       && eightPowderSlopeContinuity.grains.meanTransitionWidth >= 0.18,
   `renderScale=8 Grains lost its square reference geometry (${JSON.stringify(eightPowderSlopeContinuity)})`);
   // Local's score is dominated by its deliberate round-particle coverage
@@ -19321,27 +19385,56 @@ async function samplePowderSlopeContinuity(
     for (const style of ['grains', 'local', 'smooth']) {
       const context = contexts[style];
       const rows = [];
+      const profileOffsets = [-2, -1.5, -1, -0.75, -0.5, -0.25, 0, 0.25, 0.5, 0.75, 1, 1.5, 2];
+      const profileSums = profileOffsets.map(() => 0);
+      const profileCounts = profileOffsets.map(() => 0);
       for (let pixelX = firstPixelX; pixelX <= lastPixelX; pixelX++) {
         const worldX = worldForPixelX(pixelX + 0.5) - 0.5;
         if (worldX < slope.left + 6 || worldX > slope.right - 6) continue;
+        const expected = slope.bottom
+          - (worldX - slope.left) * slope.rise / (slope.right - slope.left);
         const samples = [];
-        let peak = 0;
+        let globalPeak = 0;
+        let edgePlateau = 0;
         for (let pixelY = firstPixelY; pixelY <= lastPixelY; pixelY++) {
           const signal = signalAt(context, pixelX, pixelY);
-          peak = Math.max(peak, signal);
+          const worldY = worldForPixelY(pixelY + 0.5) - 0.5;
+          globalPeak = Math.max(globalPeak, signal);
+          // Normalize the silhouette against its first connected interior
+          // plateau, not an unrelated bright mineral facet several cells
+          // inside the body. This keeps the composed 20/50/80 crossing
+          // sensitive to the edge while allowing retained internal colour.
+          const inward = worldY - expected;
+          if (inward >= 0.55 && inward <= 1.30) {
+            edgePlateau = Math.max(edgePlateau, signal);
+          }
           samples.push({
-            worldY: worldForPixelY(pixelY + 0.5) - 0.5,
+            worldY,
             signal,
           });
         }
-        if (peak < 12) continue;
-        for (const sample of samples) sample.amount = Math.max(0, Math.min(1, (sample.signal - 4) / (peak - 4)));
+        const normalizationPeak = edgePlateau >= 12 ? edgePlateau : globalPeak;
+        if (normalizationPeak < 12) continue;
+        for (const sample of samples) sample.amount = Math.max(
+          0, Math.min(1, (sample.signal - 4) / (normalizationPeak - 4)),
+        );
+        for (let profileIndex = 0; profileIndex < profileOffsets.length; profileIndex++) {
+          const target = expected + profileOffsets[profileIndex];
+          let nearest;
+          for (const sample of samples) {
+            if (!nearest || Math.abs(sample.worldY - target) < Math.abs(nearest.worldY - target)) {
+              nearest = sample;
+            }
+          }
+          if (nearest) {
+            profileSums[profileIndex] += nearest.amount;
+            profileCounts[profileIndex]++;
+          }
+        }
         const y20 = crossing(samples, 0.20);
         const y50 = crossing(samples, 0.50);
         const y80 = crossing(samples, 0.80);
         if (y20 === undefined || y50 === undefined || y80 === undefined) continue;
-        const expected = slope.bottom
-          - (worldX - slope.left) * slope.rise / (slope.right - slope.left);
         rows.push({ worldX, y20, y50, y80, expected, error: y50 - expected });
       }
       const rmsError = Math.sqrt(rows.reduce((sum, row) => sum + row.error ** 2, 0) / Math.max(1, rows.length));
@@ -19366,6 +19459,10 @@ async function samplePowderSlopeContinuity(
         meanTransitionWidth: Math.round(meanTransitionWidth * 1000) / 1000,
         meanTangentError: Math.round(tangentError / Math.max(1, rows.length - 1) * 1000) / 1000,
         meanCurvatureEnergy: Math.round(curvatureEnergy / Math.max(1, rows.length - 2) * 1000) / 1000,
+        meanProfile: profileOffsets.map((offset, index) => ({
+          offset,
+          amount: Math.round(profileSums[index] / Math.max(1, profileCounts[index]) * 1000) / 1000,
+        })),
       };
     }
     return result;

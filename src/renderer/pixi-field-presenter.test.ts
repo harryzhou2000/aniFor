@@ -1959,7 +1959,7 @@ describe('Pixi presenter startup configuration', () => {
     expect(helperStart).toBeGreaterThan(0);
     expect(helperEnd).toBeGreaterThan(helperStart);
     expect(eight).toContain('uniform float uSurfaceContourLighting;');
-    expect(powder).toContain('smoothstep(1.5, 3.0, q00 + q10 + q01 + q11)');
+    expect(powder).toContain('smoothstep(1.0, 2.0, q00 + q10 + q01 + q11)');
     expect(powder).toContain('uSurfaceContourLighting > 0.5 && uPowderStyle > 1.5');
     expect(powder).toContain('applySurfaceContourEightX(color, density, powderSlope, optics, 1.0, 0.0)');
     expect(solid).toContain('color, density, solidSurfaceSlope, optics, 0.0, solidAirFacing');
@@ -2184,14 +2184,16 @@ describe('Pixi presenter startup configuration', () => {
     expect(source.match(/texture\(uPowderSurfaceTexture/g)).toHaveLength(2);
     // Stable Smooth powder retains almost all mineral variation at normal
     // detail; Local/Grains still carry their full diagnostic cell detail.
-    expect(source).toContain('mix(1.0, 1.12, powderVisualCohesion)');
-    expect(source).toContain('mix(1.0, 1.08, powderVisualCohesion)');
+    expect(source).toContain('float settledMineralRetention = max(powderVisualCohesion, stablePowderMineral)');
+    expect(source).toContain('mix(1.0, 1.12, settledMineralRetention)');
+    expect(source).toContain('mix(1.0, 1.08, settledMineralRetention)');
+    expect(source).toContain('color += base * grain * vec3(0.080, 0.018, -0.050) * stablePowderMineral;');
     expect(source).toContain('uPowderStyle < 1.5 ? 0.044 : 0.085');
     expect(source).toContain('float powderDetailCalibration = material == 1.0 && uPowderStyle > 1.5');
     expect(source).toContain('if (material == 1.0 && uPowderStyle > 1.5 && traits < 0.5 && !materialEmissive)');
     expect(source).toContain('float sandInteriorExposure = q00 * q10 * q01 * q11');
     expect(source).toContain('* smoothstep(0.72, 0.95, semanticDensity);');
-    expect(source).toContain('color = max(color - vec3(40.0, 35.0, 22.0) / 255.0 * sandInteriorExposure, vec3(0.0));');
+    expect(source).toContain('color = max(color - vec3(50.0, 45.0, 27.0) / 255.0 * sandInteriorExposure, vec3(0.0));');
     expect(source).toContain('float sandInteriorPigment = (powderGrain * 0.150 + powderFacet * 0.120)');
     expect(source).toContain('if (family == 4.0 && uPowderStyle > 1.5 && powderFieldBlend > 0.001)');
     expect(source).toContain('density = smoothstep(0.04, 0.96, density);');

@@ -17,6 +17,7 @@
     "audit:production-screenshot": "node scripts/verify-browser-input.mjs --production-bundle --quick-screenshot",
     "audit:showcase-screenshot": "node scripts/verify-browser-input.mjs --production-bundle --showcase-screenshot",
     "audit:8x": "node scripts/verify-browser-input.mjs --scale-eight-only",
+    "audit:powder:8x": "npm run build && node scripts/verify-browser-input.mjs --eight-powder-only --production-bundle",
     "audit:material-atlas": "node scripts/verify-browser-input.mjs --material-atlas-only",
     "audit:material-atlas:8x": "npm run build && node scripts/verify-browser-input.mjs --eight-material-atlas-only --production-bundle",
     "audit:device-identities": "npm run build && node scripts/verify-browser-input.mjs --device-identity-graphics-only --production-bundle",

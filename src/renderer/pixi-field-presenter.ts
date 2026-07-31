@@ -1329,8 +1329,12 @@ vec3 applySurfaceContourEightX(
   float directional = dot(normal, normalize(vec2(-0.58, -0.815)));
   vec3 key = powder > 0.5 ? vec3(1.00, 0.76, 0.42) : solidEightXBodyKey(optics);
   vec3 shadow = powder > 0.5 ? vec3(0.72, 0.52, 0.30) : solidEightXBodyShadow(optics);
-  float keyWeight = shell * (0.006 + max(0.0, directional) * 0.024);
-  float shadowWeight = shell * (0.004 + max(0.0, -directional) * 0.015);
+  float keyWeight = shell * (powder > 0.5
+    ? (0.085 + max(0.0, directional) * 0.040)
+    : (0.006 + max(0.0, directional) * 0.024));
+  float shadowWeight = shell * (powder > 0.5
+    ? 0.0
+    : (0.004 + max(0.0, -directional) * 0.015));
   color += (vec3(1.0) - clamp(color, 0.0, 1.0)) * key * keyWeight;
   color *= vec3(1.0) - shadow * shadowWeight;
   // A solid contour needs actual semantic air before it may take the compact
@@ -1636,6 +1640,15 @@ void main() {
     // the result reads as a continuous body with mineral depth rather than a
     // uniformly airbrushed fill at 1x through true 8x.
     float powderMicro = uPowderStyle < 0.5 ? 0.032 : (uPowderStyle < 1.5 ? 0.044 : 0.085);
+    // Preserve the quiet contour cadence, then restore stronger mineral
+    // contrast only after all four already-live semantic owners prove a real
+    // Smooth-powder interior. That keeps the screenshot's outer alpha rise
+    // monotone while retaining normal-detail material texture in the body.
+    if (uPowderStyle > 1.5) {
+      float powderMicroInterior = q00 * q10 * q01 * q11
+        * smoothstep(0.66, 0.94, semanticDensity);
+      powderMicro = mix(powderMicro, 0.120, powderMicroInterior);
+    }
     // The direct 8x Sand calibration below is deliberately exposure-only.
     // Restore its small world-anchored mineral deltas before that calibration
     // so matching normal-scale exposure never means losing the normal
@@ -1643,7 +1656,13 @@ void main() {
     float powderDetailCalibration = material == 1.0 && uPowderStyle > 1.5
       && traits < 0.5 && !materialEmissive ? 1.08 : 1.0;
     powderMicro *= powderDetailCalibration;
-    color *= vec3(1.02 + powderOpticalDensity * 0.07 + powderGrain * powderMicro)
+    // The Smooth field owns the curved exterior. Suppress only the
+    // cell-frequency pigment while that field is blending the contour, so a
+    // shallow slope has one monotone composed edge rather than a different
+    // mineral key at each subpixel. The settled semantic interior retains the
+    // complete world-anchored grain vocabulary below.
+    float powderContourGrain = powderGrain * (1.0 - powderFieldBlend);
+    color *= vec3(1.02 + powderOpticalDensity * 0.07 + powderContourGrain * powderMicro)
       - powderDepth * vec3(0.10, 0.07, 0.04);
     if (traits < 0.5 && !materialEmissive) {
       // Match the normal composer's material facet magnitude without turning
@@ -1671,7 +1690,11 @@ void main() {
     // and prevents the contour from becoming a coarse blanket over a pile.
     if (uSurfaceContourLighting > 0.5 && uPowderStyle > 1.5
       && traits < 0.5 && !materialEmissive) {
-      float powderSupport = smoothstep(1.5, 3.0, q00 + q10 + q01 + q11);
+      // A shallow connected slope commonly presents exactly two compatible
+      // owners in this 2x2 block. Treat that as full contour support while a
+      // lone particle remains an exact zero and therefore keeps its round or
+      // square reference appearance.
+      float powderSupport = smoothstep(1.0, 2.0, q00 + q10 + q01 + q11);
       vec2 powderSlope = vec2(
         mix(q10 - q00, q11 - q01, blend.y),
         mix(q01 - q00, q11 - q10, blend.x)
@@ -1725,7 +1748,7 @@ void main() {
       // same exposure band without touching its retained grain/facet deltas:
       // this is an RGB-only core correction, deliberately stronger in the
       // warm channels that were still visibly washed out at true 8x.
-      color = max(color - vec3(40.0, 35.0, 22.0) / 255.0 * sandInteriorExposure, vec3(0.0));
+      color = max(color - vec3(50.0, 45.0, 27.0) / 255.0 * sandInteriorExposure, vec3(0.0));
       // Keep the correction exposure-neutral while retaining enough mineral
       // pigment separation for a dense 8x body to match the normal compositor.
       // These two existing zero-mean world-anchored signals are deliberately
@@ -2626,11 +2649,8 @@ void main() {
     }
   }
   // The settled powder field has already supplied the curved outer volume.
-  // Its raw interpolation is a little wider than the normal compositor at
-  // true 8x, so apply one symmetric monotone remap only to that owned contour.
-  // It leaves the 50% geometric boundary fixed, narrows the soft transition,
-  // and cannot affect Grains, Local, moving/fine powder, alpha ownership, or
-  // any other material family.
+  // Keep its conservative original endpoint transfer: the stronger RGB-only
+  // surface key above now owns visual separation without shrinking support.
   if (family == 4.0 && uPowderStyle > 1.5 && powderFieldBlend > 0.001) {
     density = smoothstep(0.04, 0.96, density);
   }
@@ -5528,6 +5548,7 @@ void main() {
     float powderMacroRelief = 0.0;
     float powderBodyChroma = 0.0;
     float powderSuspensionCohesion = 0.0;
+    float stablePowderMineral = 0.0;
     float roughSurface = granularOptics(optics);
     float smoothSurface = optics == 8.0 || optics == 19.0 ? 1.0 : 0.0;
     float organicSurface = optics == 9.0 ? 1.0 : 0.0;
@@ -5823,6 +5844,13 @@ void main() {
           -0.080, 0.085
         ) * powderBodyGate * (optics == 13.0 ? 0.98
           : (optics == 14.0 ? 0.58 : (optics == 15.0 ? 1.08 : 1.0)));
+        // This is intentionally stricter than a generic settled-powder
+        // classification. It names only a proven, deep compatible interior;
+        // slopes, holes, narrow columns, loose material, Local, and Grains
+        // retain their established geometry and colour treatment.
+        stablePowderMineral = step(224.0 / 255.0, boundaryStability)
+          * step(0.66, localPowderShape.x)
+          * step(5.5, widePowderShape.w);
       }
       float grainOffsetY = fract(sin(dot(floor(fieldPosition), vec2(39.346, 11.135))) * 24634.6345) - 0.5;
       vec2 grainCentre = vec2(grain, grainOffsetY) * 0.075;
@@ -5960,10 +5988,21 @@ void main() {
       // silhouette from airbrushing the interior at 1x–4x without restoring
       // square particle boundaries. Curving the silhouette must not erase the
       // internal material vocabulary at normal detail.
-      float cellGrainRetention = mix(1.0, 1.12, powderVisualCohesion);
-      float facetRetention = mix(1.0, 1.08, powderVisualCohesion);
+      // The cell-scale mineral cadence is deliberately a little stronger than
+      // the sub-cell facet cadence in a settled Smooth body. At 1x–4x the
+      // latter is legitimately filtered by the composed presentation, whereas
+      // this world-anchored term remains readable without reintroducing square
+      // particle borders. Local and Grains keep their unmodified references.
+      float settledMineralRetention = max(powderVisualCohesion, stablePowderMineral);
+      float cellGrainRetention = mix(1.0, 1.12, settledMineralRetention);
+      float facetRetention = mix(1.0, 1.08, settledMineralRetention);
       color *= 0.91 + grain * (0.20 + roughSurface * 0.05) * cellGrainRetention * facetGain
         + grainFacet * (0.10 + roughSurface * 0.04) * facetRetention * facetGain;
+      // A modest chromatic mineral key survives normal-detail raster filtering
+      // better than sub-cell luminance alone. It is exact-cell/world anchored
+      // and RGB-only, so composed Smooth bodies gain colour vocabulary without
+      // creating a new support decision or perturbing Local/Grains references.
+      color += base * grain * vec3(0.080, 0.018, -0.050) * stablePowderMineral;
       color += base * max(0.0, 0.6 - subcell.x - subcell.y)
         * (0.11 + roughSurface * 0.035) * facetRetention * facetGain;
       float brightFacet = max(0.0, grainFacet - 0.18) * facetRetention;
