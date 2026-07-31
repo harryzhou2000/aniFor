@@ -1720,7 +1720,12 @@ void main() {
       // apparent Smooth silhouette at deep zoom.
       float sandInteriorExposure = q00 * q10 * q01 * q11
         * smoothstep(0.72, 0.95, semanticDensity);
-      color = max(color - vec3(20.0, 18.0, 10.0) / 255.0 * sandInteriorExposure, vec3(0.0));
+      // The normal renderer's deep-Sand core is materially darker after its
+      // body optics and image-space composition.  Keep the direct mesh in the
+      // same exposure band without touching its retained grain/facet deltas:
+      // this is an RGB-only core correction, deliberately stronger in the
+      // warm channels that were still visibly washed out at true 8x.
+      color = max(color - vec3(40.0, 35.0, 22.0) / 255.0 * sandInteriorExposure, vec3(0.0));
       // Keep the correction exposure-neutral while retaining enough mineral
       // pigment separation for a dense 8x body to match the normal compositor.
       // These two existing zero-mean world-anchored signals are deliberately
