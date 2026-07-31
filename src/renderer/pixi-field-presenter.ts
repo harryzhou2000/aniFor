@@ -304,6 +304,66 @@ vec3 gasEightXVolumeRelief(
   return vec3(0.060, 0.076, 0.108) * key
     - vec3(0.038, 0.026, 0.052) * shade;
 }
+// The direct 8x mesh cannot afford the normal composer's clock-driven energy
+// motifs, but it must retain the same nine native identities. These are the
+// static phase of the normal integer grammar: Fire remains a rising warm
+// tongue, Plasma a violet cell, charged carriers keep their own rails, and
+// EMBR remains detached sparks rather than a generic coloured volume. The
+// helper is deliberately arithmetic-only and RGB-only; coverage, emission
+// support, and alpha remain owned by the existing semantic/emission paths.
+vec3 energyEightXIdentityDelta(float material, vec2 cell) {
+  vec3 delta = vec3(0.0);
+  if (material == 4.0) {
+    float tongue = mod(cell.x * 3.0 + cell.y, 16.0);
+    float crest = mod(cell.y, 8.0);
+    delta = tongue < 5.0
+      ? vec3(9.0, 5.0 + (crest < 2.0 ? 3.0 : 0.0), -4.0)
+      : vec3(-2.0, -2.0, 1.0);
+  } else if (material == 20.0) {
+    float localX = mod(cell.x, 8.0);
+    float localY = mod(cell.y, 8.0);
+    float membrane = abs(localX - 4.0) + abs(localY - 4.0);
+    delta = vec3(
+      membrane >= 4.0 && membrane <= 6.0 ? 8.0 : -2.0,
+      membrane >= 4.0 && membrane <= 6.0 ? 3.0 : 0.0,
+      membrane <= 2.0 ? 8.0 : 2.0
+    );
+  } else if (material == 101.0) {
+    float branch = mod(cell.x * 3.0 + cell.y * 5.0, 16.0);
+    float node = mod(cell.x + cell.y, 8.0);
+    delta = branch <= 2.0
+      ? vec3(8.0, 11.0, 13.0)
+      : vec3(-2.0, 1.0, 4.0 + (node < 0.5 ? 5.0 : 0.0));
+  } else if (material == 103.0) {
+    vec2 local = mod(cell, 16.0) - 8.0;
+    float ring = mod(dot(local, local), 32.0);
+    bool rim = ring >= 10.0 && ring <= 16.0;
+    delta = rim ? vec3(-5.0, 3.0, 11.0) : vec3(3.0, -2.0, 5.0);
+  } else if (material == 106.0) {
+    float track = mod(cell.x * 5.0 - cell.y * 3.0, 16.0);
+    float gap = mod(cell.x + cell.y * 2.0, 8.0);
+    delta = track <= 1.0 && gap > 1.0 ? vec3(4.0, 9.0, 8.0) : vec3(-3.0, 1.0, 2.0);
+  } else if (material == 107.0) {
+    float band = mod(cell.x + cell.y, 16.0);
+    delta = band <= 2.0 ? vec3(11.0, 10.0, 4.0)
+      : (band >= 8.0 && band <= 10.0 ? vec3(-4.0, 1.0, 10.0) : vec3(1.0, 3.0, 2.0));
+  } else if (material == 110.0) {
+    float rail = mod(cell.x * 2.0 - cell.y, 8.0);
+    float bead = mod(cell.x + cell.y * 3.0, 16.0);
+    delta = rail <= 1.0 ? vec3(12.0, 5.0 + (bead <= 2.0 ? 5.0 : 0.0), 2.0)
+      : vec3(-2.0, 1.0, 5.0);
+  } else if (material == 197.0) {
+    float rail = abs(mod(cell.x - cell.y, 16.0) - 8.0);
+    float node = mod(cell.x + cell.y, 16.0);
+    delta = rail <= 1.0
+      ? vec3(10.0, 8.0 + (node <= 2.0 ? 5.0 : 0.0), 5.0 + (node <= 2.0 ? 7.0 : 0.0))
+      : vec3(-2.0, 0.0, 3.0);
+  } else if (material == 200.0) {
+    float spark = mod(cell.x * 17.0 + cell.y * 31.0 + floor(cell.x * cell.y * 0.125) + material, 32.0);
+    delta = spark < 4.0 ? vec3(13.0, 8.0, -2.0) : vec3(-3.0, -1.0, 2.0);
+  }
+  return clamp(delta, vec3(-14.0), vec3(14.0)) / 255.0;
+}
 // The direct 8x compositor cannot carry the normal presenter's animated role
 // waves, but sources, sinks, channels, and force materials still need a clear
 // semantic read at deep zoom. This exact trait-bit grammar is static and
@@ -1505,17 +1565,10 @@ void main() {
     float energyRelief = (energyLobe - 0.5) * 0.14 * denseEnergy;
     color *= 1.0 + energyRelief * uEnergyCoreRelief;
 
-    // Compact static identity marks retain a small material-specific hue cue
-    // without the normal presenter's per-family branch tree. Dense supported
-    // bodies deliberately reduce the mark, leaving broad relief rather than
-    // cell-frequency noise.
-    float identityMark = 1.0 - step(1.5, mod(
-      energyCell.x * 3.0 + energyCell.y * 5.0 + material * 7.0, 17.0
-    ));
-    vec3 identityHue = vec3(
-      fract(material * 0.381966), fract(material * 0.618034), fract(material * 0.173205)
-    ) - vec3(0.5);
-    color += identityHue * (0.006 + identityMark * 0.024)
+    // Match normal WebGL's nine exact native energy identities in a static
+    // form. Dense supported bodies still attenuate the cell-frequency mark so
+    // broad emission relief remains dominant instead of becoming visual noise.
+    color += energyEightXIdentityDelta(material, energyCell)
       * (1.0 - denseEnergy * 0.65) * uEnergyIdentityStyling;
   }
   // Lava is deliberately outside the shared liquid contour/reconstruction

@@ -933,11 +933,23 @@ describe('Pixi presenter startup configuration', () => {
     expect(block).toContain('float denseEnergy = smoothstep(0.12, 0.48, emission.a)');
     expect(block).toContain('float energyRelief = (energyLobe - 0.5) * 0.14 * denseEnergy;');
     expect(block).toContain('color *= 1.0 + energyRelief * uEnergyCoreRelief;');
+    const helperStart = eight.indexOf('vec3 energyEightXIdentityDelta(');
+    const helperEnd = eight.indexOf('// The direct 8x compositor cannot carry', helperStart);
+    const helper = eight.slice(helperStart, helperEnd);
+    expect(helperStart).toBeGreaterThan(0);
+    expect(helperEnd).toBeGreaterThan(helperStart);
+    for (const material of [4, 20, 101, 103, 106, 107, 110, 197, 200]) {
+      expect(helper).toContain(`material == ${material}.0`);
+    }
+    expect(block).toContain('energyEightXIdentityDelta(material, energyCell)');
     expect(block).toContain('* (1.0 - denseEnergy * 0.65) * uEnergyIdentityStyling;');
     expect(block).not.toContain('texture(');
     expect(block).not.toContain('uTime');
     expect(block).not.toMatch(/\b(?:sin|pow|normalize)\s*\(/);
     expect(block).not.toMatch(/\balpha\s*[+*]?=/);
+    expect(helper).not.toContain('texture(');
+    expect(helper).not.toContain('uTime');
+    expect(helper).not.toMatch(/\balpha\s*[+*]?=/);
     expect(eight.match(/texture\(uEmissionTexture, uv\)/g)).toHaveLength(1);
   });
 

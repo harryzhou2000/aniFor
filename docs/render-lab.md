@@ -197,6 +197,17 @@ The granular optics byte now subdivides that shared topology into mineral, cryst
 
 The independent true-8× gate also compiles and runs this shader at requested/effective `8/8` on one `4896×3072` target. Local and Smooth retain every authored Clay/Concrete cell and all deep holes, zoomed Grains yields one fully filled 8×8 square, the embedded 217-material stress atlas remains complete, and forced fence-stall plus context-loss recovery return to the bounded 2× Canvas surface without camera or input loss. The run reports zero browser errors and no new 8× resource class.
 
+At true 8× the direct compositor retains the exact static phase of the normal
+Energy grammar for FIRE, PLSM, ELEC, GRVT, NEUT, PHOT, PROT, BRAY, and EMBR.
+This preserves flame tongues, plasma cells, carrier rails, and detached embers
+instead of reducing the nine native identities to a generic seeded hue. The
+direct path deliberately removes clock motion only: the helper is RGB-only
+arithmetic over already-live material/world coordinates, adds no texture fetch,
+field, pass, output-scale resource, alpha/support/ownership change, or physics
+decision. The energy/radioactive atlas proves all nine identities remain
+distinct and bounded through a flat→styled→flat sequence while retaining their
+semantic topology and sparse PHOT controls.
+
 Native typed Lava now retains its `ctype` ancestry on the canonical direct WebGL path as well. True 8× reads the already shared packed B/A state word only for exact non-emissive Lava, rejects a co-located native wall, and applies a bounded RGB-only silicate/metal/mineral/electronic/radioactive motif; untyped Lava is exact-flat. It adds no field, sampler class, pass, target, upload, alpha, support, or physics decision. The completed-fence `4896×3072` gate stages the six native states plus authored holes, notches, thin/isolated structure, untyped, wrong-owner, Water, cooled-solid, and blank controls; it requires flat→styled→flat semantic stability, distinct typed responses, exact protected controls, and then restores the DEUT/VIBR state fixture before forced-stall and context-loss recovery. The latest complete run reported eight GPU-fence samples at `1711.4/1764.7/1875.2 ms` median/p90/max with zero browser errors.
 
 The direct true-8× compositor now also preserves native SPRK host and lifetime styling. Its exact owner reads the already packed B/A word alongside the other native state owners: the high bit is presence, the low byte is the host ID, and the remaining high-byte bits are the bounded life counter. A static host-family carrier/junction tint then changes RGB only; it does not alter alpha, support, ownership, wall composition, native state, physics, or add a sampler, field, pass, target, upload, or allocation. The real `4896×3072` gate stages all six retained host/life families, verifies semantic/presentation-state identity through flat→styled→flat captures, requires distinct bounded responses, and holds absent state, unrepresentable host, wrong owner, Water, Metal, and blank controls exact before the normal forced-stall/context-loss recovery sequence.
