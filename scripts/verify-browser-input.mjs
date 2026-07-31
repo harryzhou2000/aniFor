@@ -56,14 +56,15 @@ const CDP_COMMAND_TIMEOUT_MS = 45_000;
 const CDP_CONNECT_TIMEOUT_MS = 10_000;
 const scaleEightOnly = process.argv.includes('--scale-eight-only');
 const eightFieldProfileOnly = process.argv.includes('--eight-field-profile-only');
-const modes = scaleEightOnly || eightFieldProfileOnly ? ['webgl'] : process.argv.includes('--canvas-only') ? ['canvas2d']
+const eightMaterialAtlasOnly = process.argv.includes('--eight-material-atlas-only');
+const modes = scaleEightOnly || eightFieldProfileOnly || eightMaterialAtlasOnly ? ['webgl'] : process.argv.includes('--canvas-only') ? ['canvas2d']
   : process.argv.includes('--webgl-only') ? ['webgl'] : ['canvas2d', 'webgl'];
 // WebGL is the canonical visual release path. Canvas runs its strict
 // startup/geometry/semantic fallback audit by default; opt in only when a
 // change needs the slower, diagnostic Canvas/WebGL optics comparison.
 const requireCanvasVisuals = process.argv.includes('--require-canvas-visuals');
 if (requireCanvasVisuals && modes.length !== 2) {
-  throw new Error('--require-canvas-visuals requires both Canvas2D and WebGL; omit --canvas-only, --webgl-only, and --scale-eight-only');
+  throw new Error('--require-canvas-visuals requires both Canvas2D and WebGL; omit --canvas-only, --webgl-only, and exact-8x-only flags');
 }
 const visualOnly = process.argv.includes('--visual-only');
 const materialAtlasOnly = process.argv.includes('--material-atlas-only');
@@ -131,7 +132,7 @@ const usesProductionBundle = productionBundle || showcaseScreenshotOnly || cellu
   || poloStateGraphicsOnly || spngStateGraphicsOnly || lavaStateGraphicsOnly
   || botanicalLifecycleGraphicsOnly || sparkStateGraphicsOnly
   || nativeSeedGrowthOnly || nativeSemanticsOnly || catalogSelectionOnly || shortDesktopOnly || liveScaleOnly
-  || scaleEightOnly || eightFieldProfileOnly;
+  || scaleEightOnly || eightFieldProfileOnly || eightMaterialAtlasOnly;
 const AUDIT_BASE_URL = usesProductionBundle ? PRODUCTION_BUNDLE_URL : ORIGIN + '/';
 const DESKTOP_TOOL_FILTER_HEIGHT = 96;
 const screenshotRequest = process.argv.find((argument) => argument.startsWith('--screenshot='))?.slice('--screenshot='.length);
@@ -207,7 +208,7 @@ async function main() {
       || spngStateGraphicsOnly || lavaStateGraphicsOnly || botanicalLifecycleGraphicsOnly
       || sparkStateGraphicsOnly
       || nativeSeedGrowthOnly || nativeSemanticsOnly || catalogSelectionOnly || pausedPresentationOnly
-      || canvasTimingOnly || eightFieldProfileOnly;
+      || canvasTimingOnly || eightFieldProfileOnly || eightMaterialAtlasOnly;
     // Focused visual gates prove their complete native WebGL contract by
     // default. Canvas has already proved its semantic fallback contract in
     // auditMode; paired optics parity is intentionally an explicit diagnostic.
@@ -269,7 +270,7 @@ async function auditMode(mode) {
   const chromePath = await resolveChrome();
   const profile = await mkdtemp(path.join(tmpdir(), `anifor-input-${mode}-`));
   const dpr = mode === 'canvas2d' ? 2 : 1;
-  const canvasFallbackAudit = mode === 'canvas2d' && !mobileOnly && !layoutOnly
+  const canvasFallbackAudit = mode === 'canvas2d' && !materialAtlasOnly && !mobileOnly && !layoutOnly
     && !shortDesktopOnly && !liveScaleOnly && !requireCanvasVisuals && !deviceIdentityGraphicsOnly
     && !fieldProfileGraphicsOnly;
   // Advanced fixtures begin blank so WebGL can author exactly the state it
@@ -719,6 +720,15 @@ async function auditMode(mode) {
     }
     if (materialAtlasOnly) {
       const materialAtlas = await auditMaterialAtlas(cdp, mode, dpr, screenshotPath(mode));
+      assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
+      cdp.close();
+      return { backend: mode, materialAtlas, browserErrors: errors.length };
+    }
+    if (eightMaterialAtlasOnly) {
+      const materialAtlas = await auditMaterialAtlas(cdp, mode, dpr, screenshotPath(mode), {
+        outputScale: 8,
+        reuseBlankDocument: true,
+      });
       assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
       cdp.close();
       return { backend: mode, materialAtlas, browserErrors: errors.length };
@@ -10225,11 +10235,15 @@ async function auditDesktopInput(cdp, mode, dpr) {
   };
 }
 
-async function auditMaterialAtlas(cdp, mode, dpr, screenshot) {
+async function auditMaterialAtlas(cdp, mode, dpr, screenshot, options = {}) {
+  const outputScale = options.outputScale ?? 2;
+  const reuseBlankDocument = options.reuseBlankDocument === true;
+  const backendTimeout = outputScale === 8 ? 45_000 : 15_000;
+  const captureTimeout = outputScale === 8 ? 45_000 : 12_000;
   await cdp.send('Emulation.setTouchEmulationEnabled', { enabled: false });
   await setDesktopMetrics(cdp, 1280, 720, dpr);
   const blankQuery = new URLSearchParams({
-    scene: 'render-lab', inputAudit: '1', blankAudit: '1', renderScale: '2',
+    scene: 'render-lab', inputAudit: '1', blankAudit: '1', renderScale: String(outputScale),
     auditStage: 'material-atlas-blank',
     ...(mode === 'canvas2d' ? { renderer: 'canvas2d' } : {}),
   });
@@ -10241,23 +10255,41 @@ async function auditMaterialAtlas(cdp, mode, dpr, screenshot) {
   })()`), 15_000, `${mode} material-atlas blank audit API`);
   await waitFor(() => evaluate(cdp,
     `window.__ANIFOR_INPUT_AUDIT__.backend().backend === ${JSON.stringify(mode)}`),
-  15_000, `${mode} material-atlas blank backend`);
+  backendTimeout, `${mode} material-atlas blank backend`);
+  const blankGeometry = await metrics(cdp);
+  assertGeometry(blankGeometry, `${mode} material-atlas blank`, outputScale);
+  if (outputScale === 8) {
+    const backend = await evaluate(cdp, `window.__ANIFOR_INPUT_AUDIT__.backend()`);
+    assert(backend.requestedOutputScale === 8 && backend.outputScale === 8,
+      `${mode}: material atlas did not retain true 8x WebGL (${JSON.stringify(backend)})`);
+  }
 
-  const baseline = await waitForStablePageCapture(cdp, `${mode} material-atlas blank framebuffer`);
-  const query = new URLSearchParams({
-    scene: 'render-lab', inputAudit: '1', renderScale: '2', auditStage: 'material-atlas',
-    ...(mode === 'canvas2d' ? { renderer: 'canvas2d' } : {}),
-  });
-  await cdp.send('Page.navigate', { url: `${AUDIT_BASE_URL}?${query}` });
-  await waitFor(() => evaluate(cdp, `(() => {
-    const parameters = new URLSearchParams(location.search);
-    return parameters.get('auditStage') === 'material-atlas'
-      && Boolean(window.__ANIFOR_INPUT_AUDIT__?.prepareMaterialAtlas);
-  })()`), 15_000, `${mode} material-atlas audit API`);
-  await waitFor(() => evaluate(cdp,
-    `window.__ANIFOR_INPUT_AUDIT__.backend().backend === ${JSON.stringify(mode)}`),
-  15_000, `${mode} material-atlas backend`);
-  const manifest = await evaluate(cdp, `window.__ANIFOR_INPUT_AUDIT__.materialAtlas()`);
+  const baseline = await waitForStablePageCapture(
+    cdp, `${mode} material-atlas blank framebuffer`, captureTimeout,
+  );
+  let manifest;
+  if (reuseBlankDocument) {
+    manifest = await evaluate(cdp, `(() => {
+      const audit = window.__ANIFOR_INPUT_AUDIT__;
+      audit.prepareMaterialAtlas();
+      return audit.materialAtlas();
+    })()`);
+  } else {
+    const query = new URLSearchParams({
+      scene: 'render-lab', inputAudit: '1', renderScale: String(outputScale), auditStage: 'material-atlas',
+      ...(mode === 'canvas2d' ? { renderer: 'canvas2d' } : {}),
+    });
+    await cdp.send('Page.navigate', { url: `${AUDIT_BASE_URL}?${query}` });
+    await waitFor(() => evaluate(cdp, `(() => {
+      const parameters = new URLSearchParams(location.search);
+      return parameters.get('auditStage') === 'material-atlas'
+        && Boolean(window.__ANIFOR_INPUT_AUDIT__?.prepareMaterialAtlas);
+    })()`), 15_000, `${mode} material-atlas audit API`);
+    await waitFor(() => evaluate(cdp,
+      `window.__ANIFOR_INPUT_AUDIT__.backend().backend === ${JSON.stringify(mode)}`),
+    backendTimeout, `${mode} material-atlas backend`);
+    manifest = await evaluate(cdp, `window.__ANIFOR_INPUT_AUDIT__.materialAtlas()`);
+  }
   assert(manifest.length > 0, `${mode}: material atlas is empty`);
   assert(new Set(manifest.map(({ id }) => id)).size === manifest.length,
     `${mode}: material atlas contains duplicate IDs`);
@@ -10291,7 +10323,9 @@ async function auditMaterialAtlas(cdp, mode, dpr, screenshot) {
   assert(invalidOwners.length === 0,
     `${mode}: material-atlas semantic ownership failed (${JSON.stringify(invalidOwners.slice(0, 8))})`);
 
-  const rendered = await waitForStablePageCapture(cdp, `${mode} material-atlas framebuffer`, 12_000);
+  const rendered = await waitForStablePageCapture(
+    cdp, `${mode} material-atlas framebuffer`, captureTimeout,
+  );
   assertCanvasRectsEqual(baseline.canvasRect, rendered.canvasRect, `${mode} material-atlas blank/rendered`);
   const samples = await sampleMaterialAtlas(
     cdp, rendered.capture.data, baseline.capture.data, rendered.canvasRect, manifest,
@@ -10307,6 +10341,8 @@ async function auditMaterialAtlas(cdp, mode, dpr, screenshot) {
     `${mode}: projected materials disappeared from composed output (${JSON.stringify(invisible)})`);
   if (screenshot) await writeFile(screenshot, Buffer.from(rendered.capture.data, 'base64'));
   return {
+    outputScale,
+    backing: `${blankGeometry.backing.width}x${blankGeometry.backing.height}`,
     projections: manifest.length,
     semanticCellsPerProjection: expectedOwned,
     visible: samples.length - invisible.length,
