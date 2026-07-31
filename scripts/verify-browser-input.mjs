@@ -69,6 +69,10 @@ const materialAtlasOnly = process.argv.includes('--material-atlas-only');
 const mobileOnly = process.argv.includes('--mobile-only');
 const desktopInputOnly = process.argv.includes('--desktop-input-only');
 const pausedPresentationOnly = process.argv.includes('--paused-presentation-only');
+// Keep fallback performance evidence independently runnable.  The paired
+// Canvas/WebGL optics path intentionally exercises WebGL-only atmosphere
+// evidence, whereas these two fixtures measure only Canvas presentation work.
+const canvasTimingOnly = process.argv.includes('--canvas-timing-only');
 const quickScreenshot = process.argv.includes('--quick-screenshot');
 const showcaseScreenshotOnly = process.argv.includes('--showcase-screenshot');
 const layoutOnly = process.argv.includes('--layout-only');
@@ -195,7 +199,8 @@ async function main() {
       || sourceTargetGraphicsOnly || forceActivityGraphicsOnly || poloStateGraphicsOnly
       || spngStateGraphicsOnly || lavaStateGraphicsOnly || botanicalLifecycleGraphicsOnly
       || sparkStateGraphicsOnly
-      || nativeSeedGrowthOnly || nativeSemanticsOnly || catalogSelectionOnly || pausedPresentationOnly;
+      || nativeSeedGrowthOnly || nativeSemanticsOnly || catalogSelectionOnly || pausedPresentationOnly
+      || canvasTimingOnly;
     // Focused visual gates prove their complete native WebGL contract by
     // default. Canvas has already proved its semantic fallback contract in
     // auditMode; paired optics parity is intentionally an explicit diagnostic.
@@ -403,6 +408,20 @@ async function auditMode(mode) {
       assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
       cdp.close();
       return { backend: mode, pausedPresentation, browserErrors: errors.length };
+    }
+    if (canvasTimingOnly) {
+      assert(mode === 'canvas2d',
+        '--canvas-timing-only requires --canvas-only so it never invokes WebGL-only diagnostics');
+      const denseCanvasPresentation = await auditDenseCanvasPresentation(cdp);
+      const contourCanvasPresentation = await auditContourCanvasPresentation(cdp, denseCanvasPresentation);
+      assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
+      cdp.close();
+      return {
+        backend: mode,
+        denseCanvasPresentation,
+        contourCanvasPresentation,
+        browserErrors: errors.length,
+      };
     }
     if (catalogSelectionOnly) {
       const catalogSelection = await auditCatalogSelection(cdp);
@@ -10550,6 +10569,7 @@ async function auditDenseCanvasPresentation(cdp) {
 
   const targetSamples = 30;
   const durations = [];
+  const stageSamples = [];
   let discardedFieldRebuilds = 0;
   for (let attempt = 0; durations.length < targetSamples && attempt < targetSamples + 15; attempt++) {
     await evaluate(cdp, `window.__ANIFOR_INPUT_AUDIT__.toggleDenseSolidProbe(); true`);
@@ -10561,6 +10581,7 @@ async function auditDenseCanvasPresentation(cdp) {
     assert(timing.volumePlaneUploads === 0 && timing.volumePlaneComposites === 0,
       `Canvas dense presentation retained invisible volume work (${JSON.stringify(timing)})`);
     durations.push(timing.durationMs);
+    stageSamples.push(timing);
   }
   assert(durations.length === targetSamples,
     `Canvas dense presentation produced only ${durations.length}/${targetSamples} steady-state samples`);
@@ -10573,6 +10594,7 @@ async function auditDenseCanvasPresentation(cdp) {
     medianMs: round(durations[Math.floor(durations.length / 2)]),
     p90Ms: round(durations[Math.floor(durations.length * 0.9)]),
     maximumMs: round(durations.at(-1)),
+    stages: summarizeCanvasPresentationStages(stageSamples),
   };
 }
 
@@ -10597,6 +10619,7 @@ async function auditContourCanvasPresentation(cdp, denseTiming) {
 
   const targetSamples = 30;
   const durations = [];
+  const stageSamples = [];
   let discardedFieldRebuilds = 0;
   for (let attempt = 0; durations.length < targetSamples && attempt < targetSamples + 30; attempt++) {
     lightingEnabled = !lightingEnabled;
@@ -10609,6 +10632,7 @@ async function auditContourCanvasPresentation(cdp, denseTiming) {
       continue;
     }
     durations.push(timing.durationMs);
+    stageSamples.push(timing);
   }
   assert(durations.length === targetSamples,
     `Canvas contour presentation produced only ${durations.length}/${targetSamples} steady-state samples`);
@@ -10625,10 +10649,25 @@ async function auditContourCanvasPresentation(cdp, denseTiming) {
     medianMs: round(medianMs),
     p90Ms: round(p90Ms),
     maximumMs: round(maximumMs),
+    stages: summarizeCanvasPresentationStages(stageSamples),
     // Same-process normalization is more useful than a host-specific absolute
     // number. Keep it diagnostic until repeated CI runs establish its variance.
     p90VsDense: round(p90Ms / Math.max(0.001, denseTiming.p90Ms)),
   };
+}
+
+function summarizeCanvasPresentationStages(samples) {
+  const stages = {};
+  for (const key of ['fieldMs', 'materialMs', 'contourMs', 'compositeMs']) {
+    const values = samples.map((sample) => sample[key]).filter((value) => Number.isFinite(value));
+    if (values.length !== samples.length) continue;
+    values.sort((left, right) => left - right);
+    stages[key] = {
+      medianMs: round(values[Math.floor(values.length / 2)]),
+      p90Ms: round(values[Math.floor(values.length * 0.9)]),
+    };
+  }
+  return stages;
 }
 
 function waitForCanvasPresentation(cdp, afterSequence, label) {

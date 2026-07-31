@@ -116,6 +116,11 @@ export interface RendererBackendInfo {
 export interface CanvasPresentationTiming {
   readonly sequence: number;
   readonly durationMs: number;
+  /** Optional audit-only breakdown; production leaves timing disabled. */
+  readonly fieldMs?: number;
+  readonly materialMs?: number;
+  readonly contourMs?: number;
+  readonly compositeMs?: number;
   readonly rebuiltField?: 'atmosphere' | 'liquid' | 'emission';
   /** Count of field/accent planes uploaded during this Canvas presentation. */
   readonly volumePlaneUploads: number;
@@ -1296,6 +1301,8 @@ export class MaterialRenderer {
       this.gasVolumeChromaDirty = false;
       this.gasIdentityStylingDirty = false;
     }
+    const fieldMs = timingStart === undefined ? undefined : performance.now() - timingStart;
+    const materialTimingStart = timingStart === undefined ? undefined : performance.now();
     const base = basePixels.data;
     const liquid = liquidPixels.data;
     const smoke = smokePixels.data;
@@ -2217,6 +2224,10 @@ export class MaterialRenderer {
         fields.suspension, fields.liquid.bytes, this.powderRenderStyle,
       );
     }
+    const materialMs = materialTimingStart === undefined
+      ? undefined
+      : performance.now() - materialTimingStart;
+    const contourTimingStart = timingStart === undefined ? undefined : performance.now();
     if (this.outputScale >= CANVAS_CONTOUR_OUTPUT_SCALE) {
       if (hasLiquidSurface) for (let pixel = 0; pixel < base.length; pixel += 4) {
         if (liquid[pixel + 3] === 0) continue;
@@ -2224,8 +2235,20 @@ export class MaterialRenderer {
           base, pixel, liquid[pixel], liquid[pixel + 1], liquid[pixel + 2], liquid[pixel + 3],
         );
       }
+      // Fully enclosed opaque solid chunks can be copied from this exact
+      // semantic plane while the 2x contour cache is rebuilt. Upload before
+      // contouring so that conservative interior chunks need not rerun the
+      // per-subsample contour path, whose signed boundary response is an exact
+      // no-op away from every material/wall/air interface.
+      this.context.putImageData(basePixels, 0, 0);
       this.rasterizeCanvasMatterContours(base, fields.lookups.styleBytes, width, height);
+    } else {
+      this.context.putImageData(basePixels, 0, 0);
     }
+    const contourMs = contourTimingStart === undefined
+      ? undefined
+      : performance.now() - contourTimingStart;
+    const compositeTimingStart = timingStart === undefined ? undefined : performance.now();
     this.liquidContext.putImageData(liquidPixels, 0, 0);
     if (hasSemanticGas || this.smokeSurfaceActive) {
       this.smokeContext.putImageData(smokePixels, 0, 0);
@@ -2237,7 +2260,6 @@ export class MaterialRenderer {
       this.fireSurfaceActive = hasLocalEmission;
       volumePlaneUploads++;
     }
-    this.context.putImageData(basePixels, 0, 0);
     const output = backingSize(width, height, this.outputScale);
     const fallback = this.fallbackContext;
     fallback.clearRect(0, 0, output.width, output.height);
@@ -2306,6 +2328,12 @@ export class MaterialRenderer {
       this.canvasPresentationTiming = {
         sequence: (this.canvasPresentationTiming?.sequence ?? 0) + 1,
         durationMs: performance.now() - timingStart,
+        fieldMs,
+        materialMs,
+        contourMs,
+        compositeMs: compositeTimingStart === undefined
+          ? undefined
+          : performance.now() - compositeTimingStart,
         rebuiltField,
         volumePlaneUploads,
         volumePlaneComposites,
@@ -2397,6 +2425,9 @@ export class MaterialRenderer {
         const chunkHeight = Math.min(CANVAS_CONTOUR_CHUNK_SIZE, height - chunkY);
         for (let chunkX = dirty.x; chunkX < dirty.x + dirty.width; chunkX += CANVAS_CONTOUR_CHUNK_SIZE) {
         const chunkWidth = Math.min(CANVAS_CONTOUR_CHUNK_SIZE, width - chunkX);
+        if (this.copyUniformSolidContourInterior(
+          styleBytes, width, height, chunkX, chunkY, chunkWidth, chunkHeight,
+        )) continue;
         this.contourScratch.rasterize({
           materials: this.rendered,
           sourcePixels,
@@ -2438,6 +2469,52 @@ export class MaterialRenderer {
         }
       }
     }
+  }
+
+  /**
+   * Skips supersampled contour reconstruction only when this complete chunk
+   * and its one-cell halo are one ordinary opaque rigid solid.  All possible
+   * contour decisions (air, another material, a wall, a trait, emission, or a
+   * world edge) therefore take the established raster path.  The base plane
+   * already contains dense-body optics, so copying it exactly is equivalent in
+   * this zero-boundary case and avoids expensive redundant subpixel work.
+   */
+  private copyUniformSolidContourInterior(
+    styleBytes: Uint8Array,
+    width: number,
+    height: number,
+    chunkX: number,
+    chunkY: number,
+    chunkWidth: number,
+    chunkHeight: number,
+  ): boolean {
+    if (chunkX === 0 || chunkY === 0
+      || chunkX + chunkWidth >= width || chunkY + chunkHeight >= height) return false;
+    const material = this.rendered[chunkY * width + chunkX] as Material;
+    const styleOffset = material * 4;
+    if (material === Material.Empty || material === Material.Wall
+      || styleBytes[styleOffset] !== RenderPhase.Solid
+      || styleBytes[styleOffset + 1] !== RenderProfile.Rigid
+      || styleBytes[styleOffset + 3] !== 0
+      || PROJECTED_RENDER_INFO[material]?.emissive) return false;
+    const walls = this.renderedWalls;
+    for (let y = chunkY - 1; y <= chunkY + chunkHeight; y++) {
+      let index = y * width + chunkX - 1;
+      for (let x = chunkX - 1; x <= chunkX + chunkWidth; x++, index++) {
+        if (this.rendered[index] !== material || (walls?.[index] ?? 0) !== 0) return false;
+      }
+    }
+    const scale = this.contourScratch.outputScale;
+    const destinationX = chunkX * scale;
+    const destinationY = chunkY * scale;
+    this.contourContext.clearRect(destinationX, destinationY, chunkWidth * scale, chunkHeight * scale);
+    this.contourContext.imageSmoothingEnabled = false;
+    this.contourContext.drawImage(
+      this.surface,
+      chunkX, chunkY, chunkWidth, chunkHeight,
+      destinationX, destinationY, chunkWidth * scale, chunkHeight * scale,
+    );
+    return true;
   }
 
 
