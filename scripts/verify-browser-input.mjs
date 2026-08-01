@@ -118,6 +118,7 @@ const poloStateGraphicsOnly = process.argv.includes('--polo-state-graphics-only'
 const spngStateGraphicsOnly = process.argv.includes('--spng-state-graphics-only');
 const gelStateGraphicsOnly = process.argv.includes('--gel-state-graphics-only');
 const pqrtStateGraphicsOnly = process.argv.includes('--pqrt-state-graphics-only');
+const pqrtStateGraphicsEight = pqrtStateGraphicsOnly && process.argv.includes('--render-scale=8');
 const lavaStateGraphicsOnly = process.argv.includes('--lava-state-graphics-only');
 const botanicalLifecycleGraphicsOnly = process.argv.includes('--botanical-lifecycle-graphics-only');
 const sparkStateGraphicsOnly = process.argv.includes('--spark-state-graphics-only');
@@ -304,7 +305,8 @@ async function auditMode(mode) {
     || sparkStateGraphicsOnly
     || nativeSeedGrowthOnly);
   const query = new URLSearchParams({
-    scene: showcaseScreenshotOnly ? 'showcase' : 'render-lab', inputAudit: '1', renderScale: '2',
+    scene: showcaseScreenshotOnly ? 'showcase' : 'render-lab', inputAudit: '1',
+    renderScale: pqrtStateGraphicsEight ? '8' : '2',
     ...(showcaseScreenshotOnly ? { auditStage: 'showcase' } : {
       auditStage: startsBlank ? 'blank' : 'canonical',
       ...(startsBlank ? { blankAudit: '1' } : {}),
@@ -418,7 +420,7 @@ async function auditMode(mode) {
       const parameters = new URLSearchParams(location.search);
       const ready = parameters.get('scene') === 'render-lab'
         && parameters.get('inputAudit') === '1'
-        && parameters.get('renderScale') === '2'
+        && parameters.get('renderScale') === ${JSON.stringify(pqrtStateGraphicsEight ? '8' : '2')}
         && parameters.get('auditStage') === ${JSON.stringify(startsBlank ? 'blank' : 'canonical')}
         && parameters.has('blankAudit') === ${startsBlank}
         && Boolean(window.__ANIFOR_INPUT_AUDIT__ && document.documentElement);
@@ -429,8 +431,8 @@ async function auditMode(mode) {
         hasAuditApi: Boolean(window.__ANIFOR_INPUT_AUDIT__),
       }));
       return true;
-    })()`), 15_000, `input audit API (${mode})`);
-    await waitFor(() => evaluate(cdp, `window.__ANIFOR_INPUT_AUDIT__.backend().backend === ${JSON.stringify(mode)}`), 15_000, `${mode} backend`);
+    })()`), pqrtStateGraphicsEight ? 45_000 : 15_000, `input audit API (${mode})`);
+    await waitFor(() => evaluate(cdp, `window.__ANIFOR_INPUT_AUDIT__.backend().backend === ${JSON.stringify(mode)}`), pqrtStateGraphicsEight ? 45_000 : 15_000, `${mode} backend`);
     if (desktopInputOnly) {
       const desktopInput = await auditDesktopInput(cdp, mode, dpr);
       assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
@@ -701,7 +703,8 @@ async function auditMode(mode) {
     }
     if (pqrtStateGraphicsOnly) {
       const pqrtStateGraphics = await auditPqrtStateGraphics({ cdp, mode, evaluate, waitFor,
-        waitForStablePageCapture, assert, worldWidth: WORLD_WIDTH, worldHeight: WORLD_HEIGHT });
+        waitForStablePageCapture, captureSettledPage, outputScale: pqrtStateGraphicsEight ? 8 : 2,
+        assert, worldWidth: WORLD_WIDTH, worldHeight: WORLD_HEIGHT });
       assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
       cdp.close();
       return { backend: mode, pqrtStateGraphics, browserErrors: errors.length };
@@ -13943,6 +13946,8 @@ async function auditRenderScaleEight(cdp, dpr, powderOnly = false) {
   stage('spng-state-ready');
   const gelStateGraphics = await auditEightXGelStateGraphics(cdp, geometry.canvas);
   stage('gel-state-ready');
+  const pqrtStateGraphics = await auditEightXPqrtStateGraphics(cdp, geometry.canvas);
+  stage('pqrt-state-ready');
   // SEED/PLNT lifecycle lives in the shared owner-multiplexed state word.
   // Exercise that exact compact direct-shader path before the independent
   // PHOT plane and retain DEUT as the final recovery fixture below.
@@ -14045,6 +14050,7 @@ async function auditRenderScaleEight(cdp, dpr, powderOnly = false) {
     poloStateGraphics,
     spngStateGraphics,
     gelStateGraphics,
+    pqrtStateGraphics,
     botanicalLifecycleGraphics,
     radioactiveIdentityGraphics,
     photonSpectrumGraphics,
@@ -17045,6 +17051,93 @@ async function auditEightXGelStateGraphics(cdp, canvasRect) {
     samples,
     exactRepeatedOff: samples.every(({ repeatRgbPeak }) => repeatRgbPeak <= 1),
   };
+}
+
+async function snapshotEightXPqrtState(cdp) {
+  return evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    const atlas = audit.pqrtStateGraphicsAtlas();
+    const inside = (x, y, rect) => x >= rect.x && x < rect.x + rect.width && y >= rect.y && y < rect.y + rect.height;
+    const exact = (rect, material, state) => {
+      for (let y = rect.y; y < rect.y + rect.height; y++) for (let x = rect.x; x < rect.x + rect.width; x++) {
+        if (audit.cell(x, y) !== material || audit.presentationState(x, y) !== state) return false;
+      }
+      return true;
+    };
+    return { occupied: audit.occupiedCells(), cards: atlas.cards.map((entry) => {
+      let bodyExact = true;
+      for (let y = entry.body.y; y < entry.body.y + entry.body.height; y++) for (let x = entry.body.x; x < entry.body.x + entry.body.width; x++) {
+        const empty = inside(x, y, entry.authoredHole) || inside(x, y, entry.openNotch);
+        bodyExact &&= audit.cell(x, y) === (empty ? 0 : entry.material) && audit.presentationState(x, y) === (empty ? 0 : entry.encodedState);
+      }
+      return { stateKey: entry.stateKey, speckle: entry.speckle, material: entry.material, encodedState: entry.encodedState, bodyExact,
+        thinExact: exact(entry.thinStructure, entry.material, entry.encodedState),
+        isolatedExact: audit.cell(entry.isolated.x, entry.isolated.y) === entry.material && audit.presentationState(entry.isolated.x, entry.isolated.y) === entry.encodedState,
+        neutralExact: exact(entry.neutralState, entry.material, 5), wrongOwnerExact: exact(entry.wrongOwner, 2, entry.encodedState), blankExact: exact(entry.guardedBlank, 0, 0) };
+    }) };
+  })()`);
+}
+
+function assertEightXPqrtTopology(snapshot, label) {
+  assert(snapshot.cards.length === 5
+      && snapshot.cards.map(({ stateKey }) => stateKey).join(',') === 'dark,low,neutral,high,bright'
+      && snapshot.cards.map(({ speckle }) => speckle).join(',') === '0,2,5,8,10'
+      && snapshot.cards.map(({ encodedState }) => encodedState).join(',') === '0,2,5,8,10'
+      && snapshot.cards.map(({ material }) => material).join(',') === '29,76,29,76,29'
+      && snapshot.cards.every((card) => card.bodyExact && card.thinExact && card.isolatedExact
+        && card.neutralExact && card.wrongOwnerExact && card.blankExact),
+  `${label}: PQRT/QRTZ semantic or native-state topology changed (${JSON.stringify(snapshot)})`);
+}
+
+function eightXPqrtStateRegions(atlas) {
+  const centre = (rect) => ({ x: rect.x + rect.width / 2, y: rect.y + rect.height / 2 });
+  return atlas.cards.flatMap((entry) => [
+    { name: `PQRT-${entry.stateKey}-state`, ...centre(entry.responseProbe), radiusX: 3, radiusY: 3 },
+    { name: `PQRT-${entry.stateKey}-neutral`, ...centre(entry.neutralState), radiusX: 5, radiusY: 5 },
+    { name: `PQRT-${entry.stateKey}-wrong`, ...centre(entry.wrongOwner), radiusX: 5, radiusY: 5 },
+    { name: `PQRT-${entry.stateKey}-blank`, ...centre(entry.guardedBlank), radiusX: 20, radiusY: 14 },
+  ]);
+}
+
+function assertEightXPqrtResponses(samples, label) {
+  const state = Object.fromEntries(samples.filter(({ name }) => name.endsWith('-state')).map((sample) => [sample.name, sample]));
+  const dark = state['PQRT-dark-state']; const low = state['PQRT-low-state'];
+  const neutral = state['PQRT-neutral-state']; const high = state['PQRT-high-state']; const bright = state['PQRT-bright-state'];
+  assert(neutral && neutral.rgbPeak <= 1 && neutral.repeatRgbPeak <= 1,
+    `${label}: neutral native PQRT seed was not an exact no-op (${JSON.stringify(neutral)})`);
+  assert(dark && low && high && bright && dark.responseRgb[0] < -0.05 && low.responseRgb[0] < -0.02
+      && high.responseRgb[0] > 0.02 && bright.responseRgb[0] > 0.05
+      && [dark, low, high, bright].every(({ rgbPeak, repeatRgbPeak }) => rgbPeak > 0 && rgbPeak <= 96 && repeatRgbPeak <= 1),
+  `${label}: native PQRT signed state response is absent, unbounded, or unstable (${JSON.stringify(state)})`);
+  const controls = samples.filter(({ name }) => /-(neutral|wrong|blank)$/.test(name));
+  assert(controls.length === 15 && controls.every(({ rgbPeak, repeatRgbPeak }) => rgbPeak <= 1 && repeatRgbPeak <= 1),
+    `${label}: PQRT styling leaked into neutral/wrong-owner/blank controls (${JSON.stringify(controls)})`);
+}
+
+async function auditEightXPqrtStateGraphics(cdp, canvasRect) {
+  const atlas = await evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    if (typeof audit.preparePqrtStateGraphicsFixture !== 'function' || typeof audit.pqrtStateGraphicsAtlas !== 'function'
+      || typeof audit.setQuartzCrystalStateStyling !== 'function') throw new Error('True-8x PQRT state audit API unavailable');
+    audit.resetView(); audit.preparePqrtStateGraphicsFixture(); return audit.pqrtStateGraphicsAtlas();
+  })()`);
+  const prepared = await snapshotEightXPqrtState(cdp);
+  assertEightXPqrtTopology(prepared, 'renderScale=8 prepared PQRT fixture');
+  const live = await metrics(cdp);
+  assert(live.backing.width === WORLD_WIDTH * 8 && live.backing.height === WORLD_HEIGHT * 8 && live.outputScale === '8',
+    `renderScale=8 PQRT fixture lost true backing (${JSON.stringify(live.backing)})`);
+  assertCanvasRectsEqual(canvasRect, live.canvas, 'renderScale=8 PQRT fixture CSS geometry');
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setQuartzCrystalStateStyling(false); true');
+  const flat = await captureSettledPage(cdp, 'renderScale=8 flat PQRT-state framebuffer', 450);
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setQuartzCrystalStateStyling(true); true');
+  const styled = await captureSettledPage(cdp, 'renderScale=8 styled PQRT-state framebuffer', 450);
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setQuartzCrystalStateStyling(false); true');
+  const repeated = await captureSettledPage(cdp, 'renderScale=8 repeated flat PQRT-state framebuffer', 450);
+  assertEightXPqrtTopology(await snapshotEightXPqrtState(cdp), 'renderScale=8 repeated PQRT fixture');
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setQuartzCrystalStateStyling(true); true');
+  const samples = await sampleBackdropRefractionRegions(cdp, { straight: flat.capture.data, refracted: styled.capture.data, repeatedStraight: repeated.capture.data }, eightXPqrtStateRegions(atlas), canvasRect);
+  assertEightXPqrtResponses(samples, 'renderScale=8 WebGL');
+  return { cards: atlas.cards.map(({ stateKey, speckle, material }) => ({ stateKey, speckle, material })), occupied: prepared.occupied, samples, exactRepeatedOff: samples.every(({ repeatRgbPeak }) => repeatRgbPeak <= 1) };
 }
 
 async function snapshotEightXBotanicalLifecycle(cdp) {

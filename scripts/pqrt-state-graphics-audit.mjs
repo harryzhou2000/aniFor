@@ -7,9 +7,13 @@ const EXPECTED_STATES = [0, 2, 5, 8, 10];
  * pixels after world-to-screen projection, so DPR/backing scale cannot mask a
  * state/camera regression.
  */
-export async function auditPqrtStateGraphics({ cdp, mode, evaluate, waitFor, waitForStablePageCapture, assert }) {
+export async function auditPqrtStateGraphics({
+  cdp, mode, evaluate, waitFor, waitForStablePageCapture, captureSettledPage, outputScale = 2, assert,
+}) {
   if (mode !== 'webgl') return { skippedCanvasFallback: true };
-  await waitForStablePageCapture(cdp, 'WebGL initial blank PQRT-state framebuffer');
+  const settle = (label) => outputScale === 8
+    ? captureSettledPage(cdp, label, 450) : waitForStablePageCapture(cdp, label);
+  await settle('WebGL initial blank PQRT-state framebuffer');
   await evaluate(cdp, `(() => {
     const audit = window.__ANIFOR_INPUT_AUDIT__;
     if (typeof audit.preparePqrtStateGraphicsFixture !== 'function'
@@ -49,13 +53,13 @@ export async function auditPqrtStateGraphics({ cdp, mode, evaluate, waitFor, wai
   const setStyling = (enabled) => evaluate(cdp,
     `window.__ANIFOR_INPUT_AUDIT__.setQuartzCrystalStateStyling(${enabled}); true;`);
   await setStyling(false);
-  await waitForStablePageCapture(cdp, 'flat PQRT-state framebuffer');
+  await settle('flat PQRT-state framebuffer');
   const flat = await sample(cdp, evaluate);
   await setStyling(true);
-  await waitForStablePageCapture(cdp, 'styled PQRT-state framebuffer');
+  await settle('styled PQRT-state framebuffer');
   const styled = await sample(cdp, evaluate);
   await setStyling(false);
-  await waitForStablePageCapture(cdp, 'repeated flat PQRT-state framebuffer');
+  await settle('repeated flat PQRT-state framebuffer');
   const repeated = await sample(cdp, evaluate);
 
   const cards = atlas.map((entry, index) => {
