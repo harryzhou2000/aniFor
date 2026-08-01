@@ -107,6 +107,22 @@ export const FILT_PRESENTATION_STATE = {
   reservedMask: 0x0000,
 } as const;
 
+/**
+ * Native PIPE/PPIP carriage and routing state. The low byte is an exact public
+ * payload identity when one exists; `payloadPresentMask` preserves a loaded
+ * unknown native payload. Route comes directly from upstream PFLAG_COLORS;
+ * only exact PPIP ownership may use `pausedMask`.
+ */
+export const PIPE_PRESENTATION_STATE = {
+  payloadMask: 0x00ff,
+  payloadPresentMask: 0x0100,
+  routeShift: 9,
+  routeMask: 0x0600,
+  routeMaximum: 3,
+  pausedMask: 0x0800,
+  reservedMask: 0xf000,
+} as const;
+
 /** Exact native LAVA ctype ancestry in the owner-multiplexed presentation word. */
 export const LAVA_PRESENTATION_STATE = {
   originMask: 0x00ff,

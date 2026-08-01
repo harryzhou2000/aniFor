@@ -9,6 +9,7 @@
 #include "simulation/ElementClasses.h"
 #include "simulation/ElementDefs.h"
 #include "simulation/elements/PLNT.h"
+#include "simulation/elements/PIPE.h"
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
@@ -20,6 +21,10 @@ constexpr unsigned int STILLROOM_SEED = 0x51A17EED;
 constexpr int FIELD_SIZE = XRES * YRES;
 constexpr int STILLROOM_LIFE_FIRST = 171;
 constexpr int STILLROOM_LIFE_PRESET_COUNT = 24;
+// PIPE.cpp keeps this PPIP routing flag file-local upstream. Keep this exact
+// audited value here solely for the presentation projection; native `tmp`
+// remains authoritative and is serialized by OPS.
+constexpr int STILLROOM_PPIP_TMPFLAG_PAUSED = 0x02000000;
 static_assert(NGOL == STILLROOM_LIFE_PRESET_COUNT, "Stillroom LIFE projection must match TPT builtin GOL presets");
 std::unique_ptr<SimulationData> simulationData;
 std::unique_ptr<Simulation> simulation;
@@ -569,6 +574,24 @@ uint16_t ProjectFilterSpectrum(int ctype, int life)
 	return uint16_t(0x8000u | red | (green << 4u) | (blue << 8u) | (activation << 12u));
 }
 
+uint16_t ProjectPipeState(Particle const &part)
+{
+	// PIPE/PPIP retain their carried particle only in native ctype. Preserve an
+	// exact public payload ID when possible, while bit 8 still reports a valid
+	// unrepresentable native payload. Routing colour is the upstream PFLAG_COLORS
+	// two-bit field. PPIP alone exposes its exact upstream paused flag in bit 11.
+	// No state is written back to the particle: ctype/tmp stay OPS-authoritative.
+	auto const payloadType = TYP(part.ctype);
+	auto const payloadPresent = payloadType != PT_NONE;
+	auto const route = (uint32_t(part.tmp) & uint32_t(PFLAG_COLORS)) >> 18u;
+	return uint16_t(
+		ExactPublicMaterialIdentity(payloadType)
+		| (payloadPresent ? 0x0100 : 0)
+		| (route << 9u)
+		| (part.type == PT_PPIP && (part.tmp & STILLROOM_PPIP_TMPFLAG_PAUSED) ? 0x0800 : 0)
+	);
+}
+
 void ExtractFields()
 {
 	std::fill_n(materialField, FIELD_SIZE, uint8_t(0));
@@ -703,6 +726,10 @@ void ExtractFields()
 			else if (part.type == PT_FILT)
 			{
 				presentationStateField[offset] = ProjectFilterSpectrum(part.ctype, part.life);
+			}
+			else if (part.type == PT_PIPE || part.type == PT_PPIP)
+			{
+				presentationStateField[offset] = ProjectPipeState(part);
 			}
 			else if (part.type == PT_SEED)
 			{
