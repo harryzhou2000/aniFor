@@ -43,6 +43,7 @@
     "audit:pqrt-state": "npm run build && node scripts/verify-browser-input.mjs --pqrt-state-graphics-only --webgl-only --production-bundle",
     "audit:pqrt-state:8x": "npm run build && node scripts/verify-browser-input.mjs --pqrt-state-graphics-only --render-scale=8 --webgl-only --production-bundle",
     "audit:filt-state": "npm run build && node scripts/verify-browser-input.mjs --filt-state-graphics-only --webgl-only --production-bundle",
+    "audit:filt-state:8x": "npm run build && node scripts/verify-browser-input.mjs --filt-state-graphics-only --render-scale=8 --webgl-only --production-bundle",
     "audit:lava-state": "node scripts/verify-browser-input.mjs --lava-state-graphics-only",
     "audit:botanical-lifecycle": "node scripts/verify-browser-input.mjs --botanical-lifecycle-graphics-only",
     "audit:spark-state": "node scripts/verify-browser-input.mjs --spark-state-graphics-only",

@@ -16,10 +16,15 @@ const WATER_MATERIAL = 2;
  * projection so CSS/DPR geometry cannot hide a visual or camera regression.
  */
 export async function auditFiltStateGraphics({
-  cdp, mode, evaluate, waitFor, waitForStablePageCapture, assert,
+  cdp, mode, evaluate, waitFor, waitForStablePageCapture, captureSettledPage, outputScale = 2, assert,
 }) {
   if (mode !== 'webgl') return { skippedCanvasFallback: true };
-  await waitForStablePageCapture(cdp, 'WebGL initial blank FILT-state framebuffer');
+  // A true 8x direct mesh can dither by a byte between otherwise identical
+  // captures. Wait through the bounded field cadence rather than demanding
+  // whole-page equality from its 15M-fragment presentation.
+  const settle = (label) => outputScale === 8
+    ? captureSettledPage(cdp, label, 450) : waitForStablePageCapture(cdp, label);
+  await settle('WebGL initial blank FILT-state framebuffer');
   await evaluate(cdp, `(() => {
     const audit = window.__ANIFOR_INPUT_AUDIT__;
     if (typeof audit.prepareFiltStateGraphicsFixture !== 'function'
@@ -65,13 +70,13 @@ export async function auditFiltStateGraphics({
   const setStyling = (enabled) => evaluate(cdp,
     `window.__ANIFOR_INPUT_AUDIT__.setFiltSpectrumStyling(${enabled}); true;`);
   await setStyling(false);
-  await waitForStablePageCapture(cdp, 'flat FILT-state framebuffer');
+  await settle('flat FILT-state framebuffer');
   const flat = await sample(cdp, evaluate);
   await setStyling(true);
-  await waitForStablePageCapture(cdp, 'styled FILT-state framebuffer');
+  await settle('styled FILT-state framebuffer');
   const styled = await sample(cdp, evaluate);
   await setStyling(false);
-  await waitForStablePageCapture(cdp, 'repeated flat FILT-state framebuffer');
+  await settle('repeated flat FILT-state framebuffer');
   const repeated = await sample(cdp, evaluate);
 
   const cards = atlas.map((entry, index) => {
