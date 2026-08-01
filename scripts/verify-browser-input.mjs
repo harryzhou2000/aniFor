@@ -13968,6 +13968,12 @@ async function auditRenderScaleEight(cdp, dpr, powderOnly = false) {
   stage('gel-state-ready');
   const pqrtStateGraphics = await auditEightXPqrtStateGraphics(cdp, geometry.canvas);
   stage('pqrt-state-ready');
+  // FILT carries a public ctype/life spectrum word, with the zero-channel
+  // cases deriving their visible colour from native temperature. Keep this
+  // beside the other owner-multiplexed state fixtures so the release gate
+  // proves both projections on the exact direct-8x mesh.
+  const filtStateGraphics = await auditEightXFiltStateGraphics(cdp, geometry.canvas);
+  stage('filt-state-ready');
   // SEED/PLNT lifecycle lives in the shared owner-multiplexed state word.
   // Exercise that exact compact direct-shader path before the independent
   // PHOT plane and retain DEUT as the final recovery fixture below.
@@ -14071,6 +14077,7 @@ async function auditRenderScaleEight(cdp, dpr, powderOnly = false) {
     spngStateGraphics,
     gelStateGraphics,
     pqrtStateGraphics,
+    filtStateGraphics,
     botanicalLifecycleGraphics,
     radioactiveIdentityGraphics,
     photonSpectrumGraphics,
@@ -17158,6 +17165,201 @@ async function auditEightXPqrtStateGraphics(cdp, canvasRect) {
   const samples = await sampleBackdropRefractionRegions(cdp, { straight: flat.capture.data, refracted: styled.capture.data, repeatedStraight: repeated.capture.data }, eightXPqrtStateRegions(atlas), canvasRect);
   assertEightXPqrtResponses(samples, 'renderScale=8 WebGL');
   return { cards: atlas.cards.map(({ stateKey, speckle, material }) => ({ stateKey, speckle, material })), occupied: prepared.occupied, samples, exactRepeatedOff: samples.every(({ repeatRgbPeak }) => repeatRgbPeak <= 1) };
+}
+
+const EIGHT_X_FILT_STATE_CARDS = [
+  { key: 'red', red: 12, green: 0, blue: 0, life: 0, temperature: undefined },
+  { key: 'green', red: 0, green: 12, blue: 0, life: 0, temperature: undefined },
+  { key: 'blue', red: 0, green: 0, blue: 12, life: 0, temperature: undefined },
+  { key: 'mixedRest', red: 8, green: 4, blue: 10, life: 0, temperature: undefined },
+  { key: 'mixedActive', red: 8, green: 4, blue: 10, life: 4, temperature: undefined },
+  { key: 'fallbackCold', red: 0, green: 0, blue: 0, life: 0, temperature: 2730 },
+  { key: 'fallbackHot', red: 0, green: 0, blue: 0, life: 4, temperature: 13000 },
+];
+
+async function snapshotEightXFiltState(cdp) {
+  return evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    const atlas = audit.filtStateGraphicsAtlas();
+    const inside = (x, y, rect) => x >= rect.x && x < rect.x + rect.width
+      && y >= rect.y && y < rect.y + rect.height;
+    const exact = (rect, material, state) => {
+      for (let y = rect.y; y < rect.y + rect.height; y++) {
+        for (let x = rect.x; x < rect.x + rect.width; x++) {
+          if (audit.cell(x, y) !== material || audit.presentationState(x, y) !== state) return false;
+        }
+      }
+      return true;
+    };
+    const exactTemperature = (rect, temperature) => {
+      if (temperature === undefined) return true;
+      for (let y = rect.y; y < rect.y + rect.height; y++) {
+        for (let x = rect.x; x < rect.x + rect.width; x++) {
+          if (audit.temperature(x, y) !== temperature) return false;
+        }
+      }
+      return true;
+    };
+    return {
+      occupied: audit.occupiedCells(),
+      cards: atlas.cards.map((entry) => {
+        let bodyExact = true;
+        for (let y = entry.body.y; y < entry.body.y + entry.body.height; y++) {
+          for (let x = entry.body.x; x < entry.body.x + entry.body.width; x++) {
+            const empty = inside(x, y, entry.authoredHole) || inside(x, y, entry.openNotch);
+            bodyExact &&= audit.cell(x, y) === (empty ? 0 : entry.material)
+              && audit.presentationState(x, y) === (empty ? 0 : entry.encodedState);
+          }
+        }
+        return {
+          key: entry.key,
+          red: entry.red,
+          green: entry.green,
+          blue: entry.blue,
+          life: entry.life,
+          temperature: entry.temperature,
+          material: entry.material,
+          encodedState: entry.encodedState,
+          bodyExact,
+          bodyTemperatureExact: exactTemperature(entry.body, entry.temperature),
+          responseState: audit.presentationState(entry.responseProbe.x, entry.responseProbe.y),
+          responseTemperature: audit.temperature(entry.responseProbe.x, entry.responseProbe.y),
+          thinExact: exact(entry.thinStructure, entry.material, entry.encodedState),
+          isolatedExact: audit.cell(entry.isolated.x, entry.isolated.y) === entry.material
+            && audit.presentationState(entry.isolated.x, entry.isolated.y) === entry.encodedState,
+          zeroExact: exact(entry.zeroPresentState, entry.material, 0),
+          wrongExact: exact(entry.wrongOwner, 2, entry.encodedState),
+          blankExact: exact(entry.guardedBlank, 0, 0),
+        };
+      }),
+    };
+  })()`);
+}
+
+function assertEightXFiltTopology(snapshot, label) {
+  assert(snapshot.cards.length === EIGHT_X_FILT_STATE_CARDS.length
+      && snapshot.cards.every((card, index) => {
+        const expected = EIGHT_X_FILT_STATE_CARDS[index];
+        return card.key === expected.key && card.red === expected.red && card.green === expected.green
+          && card.blue === expected.blue && card.life === expected.life
+          && card.temperature === expected.temperature && card.material === 69
+          && Number.isInteger(card.encodedState) && card.encodedState > 0
+          && card.bodyExact && card.bodyTemperatureExact && card.responseState === card.encodedState
+          && (expected.temperature === undefined || card.responseTemperature === expected.temperature)
+          && card.thinExact && card.isolatedExact && card.zeroExact && card.wrongExact && card.blankExact;
+      }),
+  `${label}: FILT state, temperature, or semantic topology changed (${JSON.stringify(snapshot)})`);
+}
+
+function eightXFiltStateRegions(atlas) {
+  const centre = (rect) => ({ x: rect.x + rect.width / 2, y: rect.y + rect.height / 2 });
+  return atlas.cards.flatMap((entry) => [
+    { name: `FILT-${entry.key}-spectrum`, ...centre(entry.responseProbe), radiusX: 3, radiusY: 3 },
+    { name: `FILT-${entry.key}-zero`, ...centre(entry.zeroPresentState), radiusX: 5, radiusY: 5 },
+    { name: `FILT-${entry.key}-wrong`, ...centre(entry.wrongOwner), radiusX: 5, radiusY: 5 },
+    { name: `FILT-${entry.key}-blank`, ...centre(entry.guardedBlank), radiusX: 20, radiusY: 8 },
+  ]);
+}
+
+async function snapshotEightXFiltFramebuffer(cdp) {
+  return evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    const canvas = document.querySelector('canvas.semantic-field-canvas');
+    const gl = canvas?.getContext('webgl2') || canvas?.getContext('webgl');
+    if (!canvas || !gl) throw new Error('True-8x FILT WebGL backing unavailable');
+    const rect = canvas.getBoundingClientRect();
+    const read = (point) => {
+      const screen = audit.worldToScreen(point.x + point.width / 2, point.y + point.height / 2);
+      const x = Math.max(0, Math.min(canvas.width - 1,
+        Math.floor((screen.x - rect.left) * canvas.width / rect.width)));
+      const y = Math.max(0, Math.min(canvas.height - 1,
+        canvas.height - 1 - Math.floor((screen.y - rect.top) * canvas.height / rect.height)));
+      const pixel = new Uint8Array(4);
+      gl.readPixels(x, y, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, pixel);
+      return Array.from(pixel);
+    };
+    const cards = audit.filtStateGraphicsAtlas().cards;
+    return {
+      probes: cards.map((entry) => read(entry.responseProbe)),
+      zero: cards.map((entry) => read(entry.zeroPresentState)),
+      wrong: cards.map((entry) => read(entry.wrongOwner)),
+    };
+  })()`);
+}
+
+function assertEightXFiltResponses(samples, flat, styled, repeated, label) {
+  const byName = Object.fromEntries(samples.map((sample) => [sample.name, sample]));
+  const channelDominant = (rgb, channel) => Array.isArray(rgb)
+    && rgb[channel] >= rgb[(channel + 1) % 3] + 16
+    && rgb[channel] >= rgb[(channel + 2) % 3] + 16;
+  const same = (left, right) => left.length === right.length
+    && left.every((value, index) => value === right[index]);
+  const cards = EIGHT_X_FILT_STATE_CARDS.map((entry, index) => ({
+    ...entry,
+    flat: flat.probes[index],
+    styled: styled.probes[index],
+    repeated: repeated.probes[index],
+    spectrum: byName[`FILT-${entry.key}-spectrum`],
+  }));
+  assert(channelDominant(cards[0]?.styled?.slice(0, 3), 0)
+      && channelDominant(cards[1]?.styled?.slice(0, 3), 1)
+      && channelDominant(cards[2]?.styled?.slice(0, 3), 2),
+  `${label}: FILT primary spectrum signatures drifted (${JSON.stringify(cards)})`);
+  assert(channelDominant(cards[5]?.styled?.slice(0, 3), 2)
+      && channelDominant(cards[6]?.styled?.slice(0, 3), 0),
+  `${label}: FILT native temperature fallback signatures drifted (${JSON.stringify(cards)})`);
+  assert(Math.max(...cards[4].styled.slice(0, 3).map((value, index) => Math.abs(value - cards[3].styled[index]))) >= 4,
+    `${label}: FILT native life reveal is visually inert (${JSON.stringify(cards)})`);
+  assert(cards.every(({ flat: base, styled: styledPixel, repeated: repeatedPixel, spectrum }) => (
+    base[3] === styledPixel[3] && base[3] === repeatedPixel[3]
+      && spectrum && spectrum.rgbPeak > 0 && spectrum.rgbPeak <= 255 && spectrum.repeatRgbPeak <= 1
+  )), `${label}: FILT RGB-only state response is absent, unbounded, or unstable (${JSON.stringify(cards)})`);
+  const controls = samples.filter(({ name }) => /-(zero|wrong|blank)$/.test(name));
+  assert(controls.length === EIGHT_X_FILT_STATE_CARDS.length * 3
+      && controls.every(({ rgbPeak, repeatRgbPeak }) => rgbPeak <= 1 && repeatRgbPeak <= 1)
+      && flat.zero.every((pixel, index) => same(pixel, styled.zero[index]) && same(pixel, repeated.zero[index]))
+      && flat.wrong.every((pixel, index) => same(pixel, styled.wrong[index]) && same(pixel, repeated.wrong[index])),
+  `${label}: FILT styling leaked into absent-state or wrong-owner controls (${JSON.stringify(controls)})`);
+}
+
+async function auditEightXFiltStateGraphics(cdp, canvasRect) {
+  const atlas = await evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    if (typeof audit.prepareFiltStateGraphicsFixture !== 'function' || typeof audit.filtStateGraphicsAtlas !== 'function'
+      || typeof audit.setFiltSpectrumStyling !== 'function') throw new Error('True-8x FILT state audit API unavailable');
+    audit.resetView(); audit.prepareFiltStateGraphicsFixture(); return audit.filtStateGraphicsAtlas();
+  })()`);
+  const prepared = await snapshotEightXFiltState(cdp);
+  assertEightXFiltTopology(prepared, 'renderScale=8 prepared FILT fixture');
+  const live = await metrics(cdp);
+  assert(live.backing.width === WORLD_WIDTH * 8 && live.backing.height === WORLD_HEIGHT * 8 && live.outputScale === '8',
+    `renderScale=8 FILT fixture lost true backing (${JSON.stringify(live.backing)})`);
+  assertCanvasRectsEqual(canvasRect, live.canvas, 'renderScale=8 FILT fixture CSS geometry');
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setFiltSpectrumStyling(false); true');
+  const flat = await captureSettledPage(cdp, 'renderScale=8 flat FILT-state framebuffer', 450);
+  const flatPixels = await snapshotEightXFiltFramebuffer(cdp);
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setFiltSpectrumStyling(true); true');
+  const styled = await captureSettledPage(cdp, 'renderScale=8 styled FILT-state framebuffer', 450);
+  const styledPixels = await snapshotEightXFiltFramebuffer(cdp);
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setFiltSpectrumStyling(false); true');
+  const repeated = await captureSettledPage(cdp, 'renderScale=8 repeated flat FILT-state framebuffer', 450);
+  const repeatedPixels = await snapshotEightXFiltFramebuffer(cdp);
+  assertEightXFiltTopology(await snapshotEightXFiltState(cdp), 'renderScale=8 repeated FILT fixture');
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setFiltSpectrumStyling(true); true');
+  const samples = await sampleBackdropRefractionRegions(cdp, {
+    straight: flat.capture.data,
+    refracted: styled.capture.data,
+    repeatedStraight: repeated.capture.data,
+  }, eightXFiltStateRegions(atlas), canvasRect);
+  assertEightXFiltResponses(samples, flatPixels, styledPixels, repeatedPixels, 'renderScale=8 WebGL');
+  return {
+    cards: atlas.cards.map(({ key, red, green, blue, life, temperature, material }) => ({
+      key, red, green, blue, life, temperature, material,
+    })),
+    occupied: prepared.occupied,
+    samples,
+    exactRepeatedOff: samples.every(({ repeatRgbPeak }) => repeatRgbPeak <= 1),
+  };
 }
 
 async function snapshotEightXBotanicalLifecycle(cdp) {
