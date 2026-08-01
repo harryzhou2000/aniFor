@@ -10,10 +10,15 @@ const LCRY_PRESENT = 0x8000;
  * so CSS/DPR geometry cannot mask a state or camera regression.
  */
 export async function auditLcryStateGraphics({
-  cdp, mode, evaluate, waitFor, waitForStablePageCapture, assert,
+  cdp, mode, evaluate, waitFor, waitForStablePageCapture, captureSettledPage, outputScale = 2, assert,
 }) {
   if (mode !== 'webgl') return { skippedCanvasFallback: true };
-  await waitForStablePageCapture(cdp, 'WebGL initial LCRY-state framebuffer');
+  // A true 8x direct mesh can vary by a compositor byte between equal frames.
+  // Fence-safe settling waits through the bounded field cadence instead of
+  // requiring whole-page equality from the 15M-fragment presentation.
+  const settle = (label) => outputScale === 8
+    ? captureSettledPage(cdp, label, 450) : waitForStablePageCapture(cdp, label);
+  await settle('WebGL initial LCRY-state framebuffer');
   await evaluate(cdp, `(() => {
     const audit = window.__ANIFOR_INPUT_AUDIT__;
     if (typeof audit.prepareLcryStateGraphicsFixture !== 'function'
@@ -55,13 +60,13 @@ export async function auditLcryStateGraphics({
   const setStyling = (enabled) => evaluate(cdp,
     `window.__ANIFOR_INPUT_AUDIT__.setLcryStateStyling(${enabled}); true;`);
   await setStyling(false);
-  await waitForStablePageCapture(cdp, 'flat LCRY-state framebuffer');
+  await settle('flat LCRY-state framebuffer');
   const flat = await sample(cdp, evaluate);
   await setStyling(true);
-  await waitForStablePageCapture(cdp, 'styled LCRY-state framebuffer');
+  await settle('styled LCRY-state framebuffer');
   const styled = await sample(cdp, evaluate);
   await setStyling(false);
-  await waitForStablePageCapture(cdp, 'repeated flat LCRY-state framebuffer');
+  await settle('repeated flat LCRY-state framebuffer');
   const repeated = await sample(cdp, evaluate);
 
   const cards = atlas.map((entry, index) => {
