@@ -108,6 +108,9 @@ import {
   GEL_STATE_GRAPHICS_AUDIT, prepareGelStateGraphicsAuditFixture,
 } from './gel-state-graphics-audit';
 import {
+  PQRT_STATE_GRAPHICS_AUDIT, preparePqrtStateGraphicsAuditFixture,
+} from './pqrt-state-graphics-audit';
+import {
   PHOTON_SPECTRUM_GRAPHICS_AUDIT, preparePhotonSpectrumGraphicsAuditFixture,
   setPhotonSpectrumGraphicsVisible,
 } from './photon-spectrum-graphics-audit';
@@ -481,6 +484,9 @@ export class Game {
       setGelHydrationStyling: (enabled) => {
         this.renderer.setGelHydrationStylingEnabled(enabled);
       },
+      setQuartzCrystalStateStyling: (enabled) => {
+        this.renderer.setQuartzCrystalStateStylingEnabled(enabled);
+      },
       setLavaAncestryStyling: (enabled) => {
         this.renderer.setLavaAncestryStylingEnabled(enabled);
       },
@@ -671,6 +677,10 @@ export class Game {
       gelStateGraphicsAtlas: () => GEL_STATE_GRAPHICS_AUDIT,
       prepareGelStateGraphicsFixture: () => {
         prepareGelStateGraphicsAuditFixture(this.simulation);
+      },
+      pqrtStateGraphicsAtlas: () => PQRT_STATE_GRAPHICS_AUDIT,
+      preparePqrtStateGraphicsFixture: () => {
+        preparePqrtStateGraphicsAuditFixture(this.simulation);
       },
       photonSpectrumGraphicsAtlas: () => PHOTON_SPECTRUM_GRAPHICS_AUDIT,
       preparePhotonSpectrumGraphicsFixture: () => {

@@ -35,6 +35,7 @@ import type { ForceActivityGraphicsAuditSnapshot } from './force-activity-graphi
 import type { PoloStateGraphicsAuditSnapshot } from './polo-state-graphics-audit';
 import type { SpngStateGraphicsAuditSnapshot } from './spng-state-graphics-audit';
 import type { GelStateGraphicsAuditSnapshot } from './gel-state-graphics-audit';
+import type { PqrtStateGraphicsAuditSnapshot } from './pqrt-state-graphics-audit';
 import type { LavaStateGraphicsAuditSnapshot } from './lava-state-graphics-audit';
 import type {
   BotanicalLifecycleGraphicsAuditSnapshot,
@@ -98,6 +99,7 @@ export interface BrowserInputAuditApi {
   setPoloStateStyling(enabled: boolean): void;
   setSpngStateStyling(enabled: boolean): void;
   setGelHydrationStyling(enabled: boolean): void;
+  setQuartzCrystalStateStyling(enabled: boolean): void;
   setLavaAncestryStyling(enabled: boolean): void;
   setMoltenBodyOptics(enabled: boolean): void;
   setBotanicalIdentityStyling(enabled: boolean): void;
@@ -183,6 +185,8 @@ export interface BrowserInputAuditApi {
   prepareSpngStateGraphicsFixture(): void;
   gelStateGraphicsAtlas(): GelStateGraphicsAuditSnapshot;
   prepareGelStateGraphicsFixture(): void;
+  pqrtStateGraphicsAtlas(): PqrtStateGraphicsAuditSnapshot;
+  preparePqrtStateGraphicsFixture(): void;
   photonSpectrumGraphicsAtlas(): PhotonSpectrumGraphicsAuditSnapshot;
   preparePhotonSpectrumGraphicsFixture(): void;
   setPhotonSpectrumGraphicsVisible(visible: boolean): void;
