@@ -114,6 +114,9 @@ import {
   FILT_STATE_GRAPHICS_AUDIT, prepareFiltStateGraphicsAuditFixture,
 } from './filt-state-graphics-audit';
 import {
+  LCRY_STATE_GRAPHICS_AUDIT, prepareLcryStateGraphicsAuditFixture,
+} from './lcry-state-graphics-audit';
+import {
   PHOTON_SPECTRUM_GRAPHICS_AUDIT, preparePhotonSpectrumGraphicsAuditFixture,
   setPhotonSpectrumGraphicsVisible,
 } from './photon-spectrum-graphics-audit';
@@ -694,6 +697,10 @@ export class Game {
       filtStateGraphicsAtlas: () => FILT_STATE_GRAPHICS_AUDIT,
       prepareFiltStateGraphicsFixture: () => {
         prepareFiltStateGraphicsAuditFixture(this.simulation);
+      },
+      lcryStateGraphicsAtlas: () => LCRY_STATE_GRAPHICS_AUDIT,
+      prepareLcryStateGraphicsFixture: () => {
+        prepareLcryStateGraphicsAuditFixture(this.simulation);
       },
       photonSpectrumGraphicsAtlas: () => PHOTON_SPECTRUM_GRAPHICS_AUDIT,
       preparePhotonSpectrumGraphicsFixture: () => {
