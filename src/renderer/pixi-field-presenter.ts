@@ -166,6 +166,7 @@ uniform float uGelHydrationStyling;
 uniform float uFiltSpectrumStyling;
 uniform float uQuartzCrystalStateStyling;
 uniform float uLcryStateStyling;
+uniform float uPipePresentationStyling;
 uniform float uPhotonActive;
 float materialAt(vec2 uv) {
   return floor(texture(uFieldTexture, clamp(uv, uTexel * 0.5, vec2(1.0) - uTexel * 0.5)).r * 255.0 + 0.5);
@@ -747,6 +748,39 @@ vec3 lcryStateEightXDelta(vec3 color, float packedState) {
   float brightness = min(10.0, mod(packedState, 16.0));
   float gray = 80.0 + brightness * 16.0;
   return vec3(gray / 255.0) - color;
+}
+// PIPE/PPIP retain their carriage in ctype. This compact, palette-free
+// grammar reuses the existing packed state and changes RGB only.
+vec3 pipePresentationEightXDelta(vec3 color, float material, float packedState) {
+  float payload = mod(packedState, 256.0);
+  bool loaded = mod(floor(packedState / 256.0), 2.0) > 0.5;
+  float route = mod(floor(packedState / 512.0), 4.0);
+  bool paused = material == 160.0 && mod(floor(packedState / 2048.0), 2.0) > 0.5;
+  vec3 styled = color;
+  if (loaded && payload > 0.5) {
+    bool liquidPayload = payload == 2.0 || payload == 8.0 || payload == 11.0 || payload == 12.0
+      || payload == 13.0 || payload == 16.0 || (payload >= 34.0 && payload <= 38.0)
+      || payload == 63.0 || payload == 64.0 || payload == 71.0;
+    bool gasPayload = payload == 4.0 || payload == 5.0 || payload == 15.0 || payload == 17.0
+      || payload == 20.0 || (payload >= 39.0 && payload <= 42.0) || payload == 65.0
+      || payload == 87.0 || payload == 101.0 || payload == 106.0 || payload == 107.0 || payload == 110.0;
+    bool granularPayload = payload == 1.0 || payload == 6.0 || payload == 7.0 || payload == 14.0
+      || payload == 18.0 || payload == 21.0 || payload == 28.0 || (payload >= 30.0 && payload <= 33.0)
+      || (payload >= 84.0 && payload <= 88.0);
+    vec3 target = liquidPayload ? vec3(58.0, 148.0, 192.0)
+      : gasPayload ? vec3(160.0, 102.0, 210.0)
+      : granularPayload ? vec3(202.0, 148.0, 66.0) : vec3(118.0, 166.0, 185.0);
+    styled = mix(styled, target / 255.0, 0.42);
+  } else if (loaded) {
+    styled = mix(styled, vec3(144.0, 150.0, 160.0) / 255.0, 0.34);
+  } else {
+    vec3 routeTarget = route < 0.5 ? vec3(83.0, 122.0, 174.0)
+      : route < 1.5 ? vec3(62.0, 167.0, 185.0)
+      : route < 2.5 ? vec3(193.0, 139.0, 66.0) : vec3(168.0, 91.0, 184.0);
+    styled = mix(styled, routeTarget / 255.0, 0.27);
+  }
+  if (paused) styled = styled * vec3(0.91, 0.93, 0.98) + vec3(9.0, 11.0, 16.0) / 255.0;
+  return styled - color;
 }
 // Native FILT stores the three visible-band populations in its ctype-derived
 // packed word. A zero spectrum is the native default sentinel rather than a
@@ -2493,6 +2527,7 @@ void main() {
   bool filtOwner = material == 69.0;
   bool quartzCrystalOwner = material == 29.0 || material == 76.0;
   bool lcryOwner = material == 157.0;
+  bool pipeOwner = material == 121.0 || material == 160.0;
   // Most 8x fragments have no retained native state. Decode the B/A state and
   // co-located native wall exactly once only for owners whose enabled RGB
   // styling consumes it; this avoids two state-texture samples on every other
@@ -2510,6 +2545,7 @@ void main() {
     || (uFiltSpectrumStyling > 0.5 && filtOwner)
     || (uQuartzCrystalStateStyling > 0.5 && quartzCrystalOwner)
     || (uLcryStateStyling > 0.5 && lcryOwner)
+    || (uPipePresentationStyling > 0.5 && pipeOwner)
     // Eligible translucent liquid already needs this exact wall texel for the
     // final backdrop. Fold the cohesion guard into that one packed-state read
     // so true 8x does not grow another native-wall sample.
@@ -2639,6 +2675,9 @@ void main() {
   }
   if (uLcryStateStyling > 0.5 && lcryOwner && nativeWall < 0.5) {
     color += lcryStateEightXDelta(color, sourceTarget);
+  }
+  if (uPipePresentationStyling > 0.5 && pipeOwner && nativeWall < 0.5) {
+    color += pipePresentationEightXDelta(color, material, sourceTarget);
   }
   // True 8x keeps botanical state on the existing packed B/A word. This is
   // RGB-only compact arithmetic: no additional texture, field, pass, or
@@ -2876,6 +2915,7 @@ uniform float uGelHydrationStyling;
 uniform float uFiltSpectrumStyling;
 uniform float uQuartzCrystalStateStyling;
 uniform float uLcryStateStyling;
+uniform float uPipePresentationStyling;
 uniform float uLavaAncestryStyling;
 uniform float uMoltenBodyOptics;
 uniform float uBotanicalIdentityStyling;
@@ -4260,6 +4300,39 @@ vec3 lcryStateDelta(vec3 color, vec2 stateBytes) {
   float brightness = min(10.0, mod(packedState, 16.0));
   float gray = 80.0 + brightness * 16.0;
   return vec3(gray / 255.0) - color;
+}
+vec3 pipePresentationDelta(vec3 color, float material, vec2 stateBytes) {
+  float packedState = floor(stateBytes.x * 255.0 + 0.5)
+    + floor(stateBytes.y * 255.0 + 0.5) * 256.0;
+  float payload = mod(packedState, 256.0);
+  bool loaded = mod(floor(packedState / 256.0), 2.0) > 0.5;
+  float route = mod(floor(packedState / 512.0), 4.0);
+  bool paused = material == 160.0 && mod(floor(packedState / 2048.0), 2.0) > 0.5;
+  vec3 styled = color;
+  if (loaded && payload > 0.5) {
+    bool liquidPayload = payload == 2.0 || payload == 8.0 || payload == 11.0 || payload == 12.0
+      || payload == 13.0 || payload == 16.0 || (payload >= 34.0 && payload <= 38.0)
+      || payload == 63.0 || payload == 64.0 || payload == 71.0;
+    bool gasPayload = payload == 4.0 || payload == 5.0 || payload == 15.0 || payload == 17.0
+      || payload == 20.0 || (payload >= 39.0 && payload <= 42.0) || payload == 65.0
+      || payload == 87.0 || payload == 101.0 || payload == 106.0 || payload == 107.0 || payload == 110.0;
+    bool granularPayload = payload == 1.0 || payload == 6.0 || payload == 7.0 || payload == 14.0
+      || payload == 18.0 || payload == 21.0 || payload == 28.0 || (payload >= 30.0 && payload <= 33.0)
+      || (payload >= 84.0 && payload <= 88.0);
+    vec3 target = liquidPayload ? vec3(58.0, 148.0, 192.0)
+      : gasPayload ? vec3(160.0, 102.0, 210.0)
+      : granularPayload ? vec3(202.0, 148.0, 66.0) : vec3(118.0, 166.0, 185.0);
+    styled = mix(styled, target / 255.0, 0.42);
+  } else if (loaded) {
+    styled = mix(styled, vec3(144.0, 150.0, 160.0) / 255.0, 0.34);
+  } else {
+    vec3 routeTarget = route < 0.5 ? vec3(83.0, 122.0, 174.0)
+      : route < 1.5 ? vec3(62.0, 167.0, 185.0)
+      : route < 2.5 ? vec3(193.0, 139.0, 66.0) : vec3(168.0, 91.0, 184.0);
+    styled = mix(styled, routeTarget / 255.0, 0.27);
+  }
+  if (paused) styled = styled * vec3(0.91, 0.93, 0.98) + vec3(9.0, 11.0, 16.0) / 255.0;
+  return styled - color;
 }
 // FILT's all-zero ctype is an upstream temperature-generated wavelength mask,
 // not a black spectrum. Reconstruct Kelvin from materialTemperature's
@@ -6880,6 +6953,11 @@ void main() {
       && wall < 0.5 && surfaceOnly < 0.5 && halo < 0.5 && emissionOnly < 0.5) {
       color += lcryStateDelta(color, wallState.ba);
     }
+    if (uPipePresentationStyling > 0.5 && (material == 121.0 || material == 160.0)
+      && (family == 0.0 || family == 4.0) && traits < 0.5 && !materialEmissive
+      && wall < 0.5 && surfaceOnly < 0.5 && halo < 0.5 && emissionOnly < 0.5) {
+      color += pipePresentationDelta(color, material, wallState.ba);
+    }
     if (uThermalMaterialStyling > 0.5 && !materialEmissive && traits < 0.5
       && material != 3.0 && (family == 0.0 || family == 4.0)) {
       // Scalar, RGB-only response: temperature cannot widen a contour, alter
@@ -7373,6 +7451,7 @@ export class PixiFieldPresenter {
       uFiltSpectrumStyling: { value: 1, type: 'f32' },
       uQuartzCrystalStateStyling: { value: 1, type: 'f32' },
       uLcryStateStyling: { value: 1, type: 'f32' },
+      uPipePresentationStyling: { value: 1, type: 'f32' },
       uLavaAncestryStyling: { value: 1, type: 'f32' },
       uMoltenBodyOptics: { value: 1, type: 'f32' },
       uBotanicalIdentityStyling: { value: 1, type: 'f32' },
@@ -7720,6 +7799,7 @@ export class PixiFieldPresenter {
     electronicIdentityStylingEnabled = true,
     fieldProfileIdentityStylingEnabled = true,
     lcryStateStylingEnabled = true,
+    pipePresentationStylingEnabled = true,
   ): void {
     const uniforms = this.uniforms.uniforms;
     uniforms.uGasFieldLighting = gasFieldLightingEnabled ? 1 : 0;
@@ -7767,6 +7847,7 @@ export class PixiFieldPresenter {
     uniforms.uFiltSpectrumStyling = filtSpectrumStylingEnabled ? 1 : 0;
     uniforms.uQuartzCrystalStateStyling = quartzCrystalStateStylingEnabled ? 1 : 0;
     uniforms.uLcryStateStyling = lcryStateStylingEnabled ? 1 : 0;
+    uniforms.uPipePresentationStyling = pipePresentationStylingEnabled ? 1 : 0;
     uniforms.uLavaAncestryStyling = lavaAncestryStylingEnabled ? 1 : 0;
     uniforms.uMoltenBodyOptics = moltenBodyOpticsEnabled ? 1 : 0;
     uniforms.uBotanicalIdentityStyling = botanicalIdentityStylingEnabled ? 1 : 0;
@@ -7989,6 +8070,11 @@ export class PixiFieldPresenter {
 
   setLcryStateStylingEnabled(enabled: boolean): void {
     this.uniforms.uniforms.uLcryStateStyling = enabled ? 1 : 0;
+    this.renderApplication();
+  }
+
+  setPipePresentationStylingEnabled(enabled: boolean): void {
+    this.uniforms.uniforms.uPipePresentationStyling = enabled ? 1 : 0;
     this.renderApplication();
   }
 
