@@ -101,6 +101,7 @@ export interface BrowserInputAuditApi {
   setSpngStateStyling(enabled: boolean): void;
   setGelHydrationStyling(enabled: boolean): void;
   setFiltSpectrumStyling(enabled: boolean): void;
+  setLcryStateStyling(enabled: boolean): void;
   setQuartzCrystalStateStyling(enabled: boolean): void;
   setLavaAncestryStyling(enabled: boolean): void;
   setMoltenBodyOptics(enabled: boolean): void;

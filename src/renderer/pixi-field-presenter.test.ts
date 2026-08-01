@@ -43,6 +43,7 @@ interface PresenterHarness {
   setForceActivityStylingEnabled: PixiFieldPresenter['setForceActivityStylingEnabled'];
   setPoloStateStylingEnabled: PixiFieldPresenter['setPoloStateStylingEnabled'];
   setSpngStateStylingEnabled: PixiFieldPresenter['setSpngStateStylingEnabled'];
+  setLcryStateStylingEnabled: PixiFieldPresenter['setLcryStateStylingEnabled'];
   setLavaAncestryStylingEnabled: PixiFieldPresenter['setLavaAncestryStylingEnabled'];
   setMoltenBodyOpticsEnabled: PixiFieldPresenter['setMoltenBodyOpticsEnabled'];
   setBotanicalIdentityStylingEnabled: PixiFieldPresenter['setBotanicalIdentityStylingEnabled'];
@@ -135,6 +136,7 @@ describe('Pixi presenter startup configuration', () => {
       uDeutStateStyling: 1,
       uSourceTargetStyling: 1,
       uFiltSpectrumStyling: 1,
+      uLcryStateStyling: 1,
       uMoltenBodyOptics: 1,
       uPowderStyle: powderRenderStyleValue('grains'),
       uPowderBodyDepth: 1,
@@ -2191,6 +2193,34 @@ describe('Pixi presenter startup configuration', () => {
     expect(normal).not.toContain('uFiltSpectrumTexture');
   });
 
+  it('projects native LCRY charge brightness through the existing packed state in both WebGL compositors', () => {
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');
+    const eightEnd = source.indexOf('const FIELD_FRAGMENT = `', eightStart);
+    const eight = source.slice(eightStart, eightEnd);
+    const normalStart = source.indexOf('const FIELD_FRAGMENT = `', eightEnd);
+    const normalEnd = source.indexOf('`;\n\n/** Primary WebGL presentation', normalStart);
+    const normal = source.slice(normalStart, normalEnd);
+    const packedStart = eight.indexOf('  bool needsPackedState =');
+    const packedEnd = eight.indexOf('  float sourceTarget =', packedStart);
+    const packed = eight.slice(packedStart, packedEnd);
+
+    expect(eight).toContain('uniform float uLcryStateStyling;');
+    expect(eight).toContain('bool lcryOwner = material == 157.0;');
+    expect(eight).toContain('vec3 lcryStateEightXDelta(vec3 color, float packedState)');
+    expect(eight).toContain('if (packedState < 32768.0) return vec3(0.0);');
+    expect(eight).toContain('float gray = 80.0 + brightness * 16.0;');
+    expect(packed).toContain('|| (uLcryStateStyling > 0.5 && lcryOwner)');
+    expect(eight).toContain('color += lcryStateEightXDelta(color, sourceTarget);');
+    expect(eight.match(/texture\(uWallTexture, uv\)/g)).toHaveLength(4);
+
+    expect(normal).toContain('uniform float uLcryStateStyling;');
+    expect(normal).toContain('vec3 lcryStateDelta(vec3 color, vec2 stateBytes)');
+    expect(normal).toContain('if (uLcryStateStyling > 0.5 && material == 157.0');
+    expect(normal).toContain('color += lcryStateDelta(color, wallState.ba);');
+    expect(normal).not.toContain('uLcryStateTexture');
+  });
+
   it('restores independent PHOT spectrum after true-8x matter and wall composition', () => {
     const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
     const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');
@@ -2630,6 +2660,18 @@ describe('Pixi presenter startup configuration', () => {
 
     presenter.setPoloStateStylingEnabled(true);
     expect(presenter.uniforms.uniforms.uPoloStateStyling).toBe(1);
+    expect(presenter.app.render).toHaveBeenCalledTimes(2);
+  });
+
+  it('redraws the independent native LCRY charge-brightness toggle', () => {
+    const presenter = presenterHarness();
+
+    presenter.setLcryStateStylingEnabled(false);
+    expect(presenter.uniforms.uniforms.uLcryStateStyling).toBe(0);
+    expect(presenter.app.render).toHaveBeenCalledOnce();
+
+    presenter.setLcryStateStylingEnabled(true);
+    expect(presenter.uniforms.uniforms.uLcryStateStyling).toBe(1);
     expect(presenter.app.render).toHaveBeenCalledTimes(2);
   });
 

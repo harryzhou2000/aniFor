@@ -74,6 +74,18 @@ export const QUARTZ_PRESENTATION_STATE = {
 } as const;
 
 /**
+ * Native LCRY brightness (`tmp2`) in the owner-multiplexed state word. The
+ * present bit distinguishes an uncharged liquid crystal from another owner;
+ * native `tmp` propagation and `life` ramp stay outside this visual projection.
+ */
+export const LCRY_PRESENTATION_STATE = {
+  brightnessMask: 0x000f,
+  brightnessMaximum: 10,
+  presentMask: 0x8000,
+  reservedMask: 0x7ff0,
+} as const;
+
+/**
  * Native FILT wavelength-mask populations (`ctype`) and activation (`life`) in
  * the owner-multiplexed state word. The semantic FILT owner guards the word;
  * `presentMask` keeps a valid black/default filter distinct from no owner.

@@ -5,7 +5,8 @@ import { SimulationTool } from './simulation-tools';
 import {
   DEUT_PRESENTATION_STATE, GEL_PRESENTATION_STATE, LAVA_PRESENTATION_STATE, POLO_PRESENTATION_STATE,
   PLNT_PRESENTATION_STATE, SEED_PRESENTATION_STATE, SPNG_PRESENTATION_STATE,
-  FILT_PRESENTATION_STATE, QUARTZ_PRESENTATION_STATE, SPRK_PRESENTATION_STATE, VIBR_PRESENTATION_STATE,
+  FILT_PRESENTATION_STATE, LCRY_PRESENTATION_STATE, QUARTZ_PRESENTATION_STATE,
+  SPRK_PRESENTATION_STATE, VIBR_PRESENTATION_STATE,
 } from './types';
 import { readFileSync } from 'node:fs';
 
@@ -853,6 +854,61 @@ describe('direct Powder Toy backend', () => {
       expect(restored.cells()[point.y * restored.width + point.x]).toBe(point.material);
       expect(stateAt(restored, point.x, point.y)).toBe(seeds[index]);
     }
+  });
+
+  it('projects native LCRY brightness levels and preserves its charge ramp through OPS1', async () => {
+    const points = {
+      idle: { x: 240, y: 180 },
+      electron: { x: 306, y: 180 },
+      charged: { x: 372, y: 180 },
+    } as const;
+    const source = await PowderToyBackend.load(moduleArtifact.href);
+    const stateAt = (simulation: PowderToyBackend, point: { x: number; y: number }): number => {
+      simulation.cells();
+      return simulation.presentationState()[point.y * simulation.width + point.x];
+    };
+
+    source.paint(points.idle.x, points.idle.y, Material.LCRY, 0);
+    expect(stateAt(source, points.idle)).toBe(LCRY_PRESENTATION_STATE.presentMask);
+
+    // Upstream ELEC assigns LCRY tmp2 from its native 5..9 brightness band.
+    // The pinned deterministic RNG reaches 5 at this real particle, proving
+    // the non-neutral level comes from the simulation rather than a
+    // presentation-side state write.
+    source.paint(points.electron.x, points.electron.y, Material.LCRY, 0);
+    source.paint(points.electron.x - 1, points.electron.y, Material.ELEC, 0);
+    source.step();
+    expect(stateAt(source, points.electron)).toBe(LCRY_PRESENTATION_STATE.presentMask | 5);
+
+    // PSCN's native spark path changes LCRY tmp and ramps life, which in turn
+    // reaches the distinct max tmp2 brightness. The extractor reads tmp2 only;
+    // native tmp/life remain responsible for this propagation and ramp.
+    source.paint(points.charged.x, points.charged.y, Material.LCRY, 0);
+    source.paint(points.charged.x - 1, points.charged.y, Material.PSCN, 0);
+    source.paint(points.charged.x - 1, points.charged.y, Material.SPRK, 0);
+    for (let step = 0; step < 6; step++) source.step();
+    expect(stateAt(source, points.charged)).toBe(
+      LCRY_PRESENTATION_STATE.presentMask | LCRY_PRESENTATION_STATE.brightnessMaximum,
+    );
+
+    const file = source.saveFile();
+    expect(new TextDecoder().decode(file.slice(0, 4))).toBe('OPS1');
+    const restored = await PowderToyBackend.load(moduleArtifact.href);
+    restored.loadFile(file);
+    expect(stateAt(restored, points.idle)).toBe(LCRY_PRESENTATION_STATE.presentMask);
+    expect(stateAt(restored, points.electron)).toBe(LCRY_PRESENTATION_STATE.presentMask | 5);
+    expect(stateAt(restored, points.charged)).toBe(
+      LCRY_PRESENTATION_STATE.presentMask | LCRY_PRESENTATION_STATE.brightnessMaximum,
+    );
+
+    // The restored max-brightness cell is still natively latched in its
+    // charged tmp/life mode. NSCN reverses that real ramp to 8; a projection
+    // that replaced tmp/life with a presentation value could not satisfy this.
+    restored.paint(points.charged.x + 1, points.charged.y, Material.NSCN, 0);
+    restored.paint(points.charged.x + 1, points.charged.y, Material.SPRK, 0);
+    restored.step();
+    restored.step();
+    expect(stateAt(restored, points.charged)).toBe(LCRY_PRESENTATION_STATE.presentMask | 8);
   });
 
   it('projects an exact native FILT owner and preserves its retained state through OPS1', async () => {

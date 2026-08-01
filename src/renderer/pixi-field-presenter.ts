@@ -165,6 +165,7 @@ uniform float uSpngStateStyling;
 uniform float uGelHydrationStyling;
 uniform float uFiltSpectrumStyling;
 uniform float uQuartzCrystalStateStyling;
+uniform float uLcryStateStyling;
 uniform float uPhotonActive;
 float materialAt(vec2 uv) {
   return floor(texture(uFieldTexture, clamp(uv, uTexel * 0.5, vec2(1.0) - uTexel * 0.5)).r * 255.0 + 0.5);
@@ -737,6 +738,15 @@ vec3 quartzCrystalStateEightXDelta(float material, float packedState) {
   float signedSeed = (speckle - 5.0) * 16.0;
   vec3 key = material == 76.0 ? vec3(0.29, 0.34, 0.47) : vec3(0.33, 0.31, 0.38);
   return clamp(signedSeed * key, vec3(-80.0), vec3(80.0)) / 255.0;
+}
+// Native LCRY's tmp2 brightness is an exact grayscale response. Its owner bit
+// distinguishes uncharged LCRY from unrelated words on the packed shared
+// state plane, so true 8x can reuse the same one guarded fetch.
+vec3 lcryStateEightXDelta(vec3 color, float packedState) {
+  if (packedState < 32768.0) return vec3(0.0);
+  float brightness = min(10.0, mod(packedState, 16.0));
+  float gray = 80.0 + brightness * 16.0;
+  return vec3(gray / 255.0) - color;
 }
 // Native FILT stores the three visible-band populations in its ctype-derived
 // packed word. A zero spectrum is the native default sentinel rather than a
@@ -2482,6 +2492,7 @@ void main() {
   bool gelOwner = material == 56.0;
   bool filtOwner = material == 69.0;
   bool quartzCrystalOwner = material == 29.0 || material == 76.0;
+  bool lcryOwner = material == 157.0;
   // Most 8x fragments have no retained native state. Decode the B/A state and
   // co-located native wall exactly once only for owners whose enabled RGB
   // styling consumes it; this avoids two state-texture samples on every other
@@ -2498,6 +2509,7 @@ void main() {
     || (uGelHydrationStyling > 0.5 && gelOwner)
     || (uFiltSpectrumStyling > 0.5 && filtOwner)
     || (uQuartzCrystalStateStyling > 0.5 && quartzCrystalOwner)
+    || (uLcryStateStyling > 0.5 && lcryOwner)
     // Eligible translucent liquid already needs this exact wall texel for the
     // final backdrop. Fold the cohesion guard into that one packed-state read
     // so true 8x does not grow another native-wall sample.
@@ -2624,6 +2636,9 @@ void main() {
   }
   if (uQuartzCrystalStateStyling > 0.5 && quartzCrystalOwner && nativeWall < 0.5) {
     color += quartzCrystalStateEightXDelta(material, sourceTarget);
+  }
+  if (uLcryStateStyling > 0.5 && lcryOwner && nativeWall < 0.5) {
+    color += lcryStateEightXDelta(color, sourceTarget);
   }
   // True 8x keeps botanical state on the existing packed B/A word. This is
   // RGB-only compact arithmetic: no additional texture, field, pass, or
@@ -2860,6 +2875,7 @@ uniform float uSpngStateStyling;
 uniform float uGelHydrationStyling;
 uniform float uFiltSpectrumStyling;
 uniform float uQuartzCrystalStateStyling;
+uniform float uLcryStateStyling;
 uniform float uLavaAncestryStyling;
 uniform float uMoltenBodyOptics;
 uniform float uBotanicalIdentityStyling;
@@ -4236,6 +4252,14 @@ vec3 quartzCrystalStateDelta(float material, vec2 stateBytes) {
   float signedSeed = (speckle - 5.0) * 16.0;
   vec3 key = material == 76.0 ? vec3(0.29, 0.34, 0.47) : vec3(0.33, 0.31, 0.38);
   return clamp(signedSeed * key, vec3(-80.0), vec3(80.0)) / 255.0;
+}
+vec3 lcryStateDelta(vec3 color, vec2 stateBytes) {
+  float packedState = floor(stateBytes.x * 255.0 + 0.5)
+    + floor(stateBytes.y * 255.0 + 0.5) * 256.0;
+  if (packedState < 32768.0) return vec3(0.0);
+  float brightness = min(10.0, mod(packedState, 16.0));
+  float gray = 80.0 + brightness * 16.0;
+  return vec3(gray / 255.0) - color;
 }
 // FILT's all-zero ctype is an upstream temperature-generated wavelength mask,
 // not a black spectrum. Reconstruct Kelvin from materialTemperature's
@@ -6851,6 +6875,11 @@ void main() {
       && wall < 0.5 && surfaceOnly < 0.5 && halo < 0.5 && emissionOnly < 0.5) {
       color += quartzCrystalStateDelta(material, wallState.ba);
     }
+    if (uLcryStateStyling > 0.5 && material == 157.0
+      && (family == 0.0 || family == 4.0) && traits < 0.5 && !materialEmissive
+      && wall < 0.5 && surfaceOnly < 0.5 && halo < 0.5 && emissionOnly < 0.5) {
+      color += lcryStateDelta(color, wallState.ba);
+    }
     if (uThermalMaterialStyling > 0.5 && !materialEmissive && traits < 0.5
       && material != 3.0 && (family == 0.0 || family == 4.0)) {
       // Scalar, RGB-only response: temperature cannot widen a contour, alter
@@ -7343,6 +7372,7 @@ export class PixiFieldPresenter {
       uGelHydrationStyling: { value: 1, type: 'f32' },
       uFiltSpectrumStyling: { value: 1, type: 'f32' },
       uQuartzCrystalStateStyling: { value: 1, type: 'f32' },
+      uLcryStateStyling: { value: 1, type: 'f32' },
       uLavaAncestryStyling: { value: 1, type: 'f32' },
       uMoltenBodyOptics: { value: 1, type: 'f32' },
       uBotanicalIdentityStyling: { value: 1, type: 'f32' },
@@ -7689,6 +7719,7 @@ export class PixiFieldPresenter {
     mechanismBodyStylingEnabled = true,
     electronicIdentityStylingEnabled = true,
     fieldProfileIdentityStylingEnabled = true,
+    lcryStateStylingEnabled = true,
   ): void {
     const uniforms = this.uniforms.uniforms;
     uniforms.uGasFieldLighting = gasFieldLightingEnabled ? 1 : 0;
@@ -7735,6 +7766,7 @@ export class PixiFieldPresenter {
     uniforms.uGelHydrationStyling = gelHydrationStylingEnabled ? 1 : 0;
     uniforms.uFiltSpectrumStyling = filtSpectrumStylingEnabled ? 1 : 0;
     uniforms.uQuartzCrystalStateStyling = quartzCrystalStateStylingEnabled ? 1 : 0;
+    uniforms.uLcryStateStyling = lcryStateStylingEnabled ? 1 : 0;
     uniforms.uLavaAncestryStyling = lavaAncestryStylingEnabled ? 1 : 0;
     uniforms.uMoltenBodyOptics = moltenBodyOpticsEnabled ? 1 : 0;
     uniforms.uBotanicalIdentityStyling = botanicalIdentityStylingEnabled ? 1 : 0;
@@ -7952,6 +7984,11 @@ export class PixiFieldPresenter {
 
   setQuartzCrystalStateStylingEnabled(enabled: boolean): void {
     this.uniforms.uniforms.uQuartzCrystalStateStyling = enabled ? 1 : 0;
+    this.renderApplication();
+  }
+
+  setLcryStateStylingEnabled(enabled: boolean): void {
+    this.uniforms.uniforms.uLcryStateStyling = enabled ? 1 : 0;
     this.renderApplication();
   }
 

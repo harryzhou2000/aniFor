@@ -690,6 +690,16 @@ void ExtractFields()
 				// native simulation state and must never be mirrored into JavaScript.
 				presentationStateField[offset] = uint16_t(std::clamp(part.tmp2, 0, 10));
 			}
+			else if (part.type == PT_LCRY)
+			{
+				// LCRY stores its visible charge brightness in tmp2. Its tmp propagation
+				// mode and life ramp remain native simulation state, so project neither:
+				// bit 15 identifies even an uncharged LCRY owner while the low nibble
+				// preserves upstream's bounded 0..10 brightness response.
+				presentationStateField[offset] = uint16_t(
+					0x8000 | std::clamp(part.tmp2, 0, 10)
+				);
+			}
 			else if (part.type == PT_FILT)
 			{
 				presentationStateField[offset] = ProjectFilterSpectrum(part.ctype, part.life);

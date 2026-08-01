@@ -490,6 +490,9 @@ export class Game {
       setFiltSpectrumStyling: (enabled) => {
         this.renderer.setFiltSpectrumStylingEnabled(enabled);
       },
+      setLcryStateStyling: (enabled) => {
+        this.renderer.setLcryStateStylingEnabled(enabled);
+      },
       setQuartzCrystalStateStyling: (enabled) => {
         this.renderer.setQuartzCrystalStateStylingEnabled(enabled);
       },

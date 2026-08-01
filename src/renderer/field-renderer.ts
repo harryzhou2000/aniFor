@@ -32,6 +32,7 @@ import { applyCanvasLiquidIdentityStyle } from './canvas-liquid-identity-style';
 import { applyCanvasGelHydrationStyle } from './canvas-gel-hydration-style';
 import { applyCanvasFiltSpectrumStyle } from './canvas-filt-spectrum-style';
 import { applyCanvasQuartzCrystalStateStyle } from './canvas-quartz-crystal-state-style';
+import { applyCanvasLcryStateStyle } from './canvas-lcry-state-style';
 import { shadeCanvasEnergy } from './canvas-energy-style';
 import { shadeCanvasMaterial } from './canvas-material-style';
 import { shadeCanvasCellularMaterial } from './canvas-cellular-style';
@@ -325,6 +326,7 @@ export class MaterialRenderer {
   private gelHydrationStylingEnabled = true;
   private filtSpectrumStylingEnabled = true;
   private quartzCrystalStateStylingEnabled = true;
+  private lcryStateStylingEnabled = true;
   private lavaAncestryStylingEnabled = true;
   // Canonical WebGL body optics only. Canvas deliberately remains a safe,
   // semantically equivalent fallback instead of carrying every advanced look.
@@ -888,6 +890,14 @@ export class MaterialRenderer {
     this.changed = true;
   }
 
+  setLcryStateStylingEnabled(enabled: boolean): void {
+    if (enabled === this.lcryStateStylingEnabled) return;
+    this.lcryStateStylingEnabled = enabled;
+    this.presenter?.setLcryStateStylingEnabled(enabled);
+    this.contourChunks.markAll();
+    this.changed = true;
+  }
+
   setFiltSpectrumStylingEnabled(enabled: boolean): void {
     if (enabled === this.filtSpectrumStylingEnabled) return;
     this.filtSpectrumStylingEnabled = enabled;
@@ -1149,6 +1159,7 @@ export class MaterialRenderer {
       this.mechanismBodyStylingEnabled,
       this.electronicIdentityStylingEnabled,
       this.fieldProfileIdentityStylingEnabled,
+      this.lcryStateStylingEnabled,
     );
     // Route subsequent dirty cells to the candidate while its first expensive
     // frame is in flight. The known-good Canvas remains mounted underneath;
@@ -2177,6 +2188,12 @@ export class MaterialRenderer {
             }
             if (this.electronicIdentityStylingEnabled) {
               applyCanvasElectronicBodyIdentityStyle(this.styledColor, material, x, y);
+            }
+            // LCRY's native tmp2 is the final charged gray response. Layer it
+            // after the ordinary electronics grammar without giving its shared
+            // state word any authority over walls, alpha, or topology.
+            if (this.lcryStateStylingEnabled && presentationState) {
+              applyCanvasLcryStateStyle(this.styledColor, material, presentationState[index]);
             }
             if (this.fieldProfileIdentityStylingEnabled && profile === RenderProfile.Field
               && optics === RenderOptics.Default) {
