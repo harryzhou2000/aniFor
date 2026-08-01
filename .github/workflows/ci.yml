@@ -26,6 +26,10 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    # A lost hosted runner can otherwise leave the manual Pages control in an
+    # apparently-running state indefinitely.  Native compilation is normally
+    # far below this bound, including a cold project-local toolchain cache.
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
 
