@@ -73,6 +73,28 @@ export const QUARTZ_PRESENTATION_STATE = {
   reservedMask: 0xfff0,
 } as const;
 
+/**
+ * Native FILT wavelength-mask populations (`ctype`) and activation (`life`) in
+ * the owner-multiplexed state word. The semantic FILT owner guards the word;
+ * `presentMask` keeps a valid black/default filter distinct from no owner.
+ */
+export const FILT_PRESENTATION_STATE = {
+  redShift: 0,
+  redMask: 0x000f,
+  redMaximum: 12,
+  greenShift: 4,
+  greenMask: 0x00f0,
+  greenMaximum: 12,
+  blueShift: 8,
+  blueMask: 0x0f00,
+  blueMaximum: 12,
+  lifeShift: 12,
+  lifeMask: 0x7000,
+  lifeMaximum: 4,
+  presentMask: 0x8000,
+  reservedMask: 0x0000,
+} as const;
+
 /** Exact native LAVA ctype ancestry in the owner-multiplexed presentation word. */
 export const LAVA_PRESENTATION_STATE = {
   originMask: 0x00ff,

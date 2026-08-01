@@ -484,6 +484,9 @@ export class Game {
       setGelHydrationStyling: (enabled) => {
         this.renderer.setGelHydrationStylingEnabled(enabled);
       },
+      setFiltSpectrumStyling: (enabled) => {
+        this.renderer.setFiltSpectrumStylingEnabled(enabled);
+      },
       setQuartzCrystalStateStyling: (enabled) => {
         this.renderer.setQuartzCrystalStateStylingEnabled(enabled);
       },

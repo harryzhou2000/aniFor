@@ -30,6 +30,7 @@ import {
 } from './canvas-liquid-light';
 import { applyCanvasLiquidIdentityStyle } from './canvas-liquid-identity-style';
 import { applyCanvasGelHydrationStyle } from './canvas-gel-hydration-style';
+import { applyCanvasFiltSpectrumStyle } from './canvas-filt-spectrum-style';
 import { applyCanvasQuartzCrystalStateStyle } from './canvas-quartz-crystal-state-style';
 import { shadeCanvasEnergy } from './canvas-energy-style';
 import { shadeCanvasMaterial } from './canvas-material-style';
@@ -322,6 +323,7 @@ export class MaterialRenderer {
   private poloStateStylingEnabled = true;
   private spngStateStylingEnabled = true;
   private gelHydrationStylingEnabled = true;
+  private filtSpectrumStylingEnabled = true;
   private quartzCrystalStateStylingEnabled = true;
   private lavaAncestryStylingEnabled = true;
   // Canonical WebGL body optics only. Canvas deliberately remains a safe,
@@ -886,6 +888,14 @@ export class MaterialRenderer {
     this.changed = true;
   }
 
+  setFiltSpectrumStylingEnabled(enabled: boolean): void {
+    if (enabled === this.filtSpectrumStylingEnabled) return;
+    this.filtSpectrumStylingEnabled = enabled;
+    this.presenter?.setFiltSpectrumStylingEnabled(enabled);
+    this.contourChunks.markAll();
+    this.changed = true;
+  }
+
   setLavaAncestryStylingEnabled(enabled: boolean): void {
     if (enabled === this.lavaAncestryStylingEnabled) return;
     this.lavaAncestryStylingEnabled = enabled;
@@ -1127,6 +1137,7 @@ export class MaterialRenderer {
       this.poloStateStylingEnabled,
       this.spngStateStylingEnabled,
       this.gelHydrationStylingEnabled,
+      this.filtSpectrumStylingEnabled,
       this.quartzCrystalStateStylingEnabled,
       this.lavaAncestryStylingEnabled,
       this.botanicalLifecycleStylingEnabled,
@@ -2144,6 +2155,11 @@ export class MaterialRenderer {
           if (this.quartzCrystalStateStylingEnabled && presentationState && wall === 0) {
             applyCanvasQuartzCrystalStateStyle(
               this.styledColor, material, presentationState[index],
+            );
+          }
+          if (this.filtSpectrumStylingEnabled && presentationState && wall === 0) {
+            applyCanvasFiltSpectrumStyle(
+              this.styledColor, material, presentationState[index], temperatures?.[index],
             );
           }
           if (this.solidContactDepthEnabled && denseSolidInterior

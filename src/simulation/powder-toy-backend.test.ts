@@ -5,7 +5,7 @@ import { SimulationTool } from './simulation-tools';
 import {
   DEUT_PRESENTATION_STATE, GEL_PRESENTATION_STATE, LAVA_PRESENTATION_STATE, POLO_PRESENTATION_STATE,
   PLNT_PRESENTATION_STATE, SEED_PRESENTATION_STATE, SPNG_PRESENTATION_STATE,
-  QUARTZ_PRESENTATION_STATE, SPRK_PRESENTATION_STATE, VIBR_PRESENTATION_STATE,
+  FILT_PRESENTATION_STATE, QUARTZ_PRESENTATION_STATE, SPRK_PRESENTATION_STATE, VIBR_PRESENTATION_STATE,
 } from './types';
 import { readFileSync } from 'node:fs';
 
@@ -853,6 +853,73 @@ describe('direct Powder Toy backend', () => {
       expect(restored.cells()[point.y * restored.width + point.x]).toBe(point.material);
       expect(stateAt(restored, point.x, point.y)).toBe(seeds[index]);
     }
+  });
+
+  it('projects an exact native FILT owner and preserves its retained state through OPS1', async () => {
+    const point = { x: 306, y: 180 } as const;
+    const indexOf = (simulation: PowderToyBackend): number => point.y * simulation.width + point.x;
+    const owner = (simulation: PowderToyBackend): number => simulation.cells()[indexOf(simulation)];
+    const state = (simulation: PowderToyBackend): number => {
+      simulation.cells();
+      return simulation.presentationState()[indexOf(simulation)];
+    };
+
+    const source = await PowderToyBackend.load(moduleArtifact.href);
+    source.paint(point.x, point.y, Material.FILT, 0);
+    expect(owner(source)).toBe(Material.FILT);
+    expect(state(source)).toBe(FILT_PRESENTATION_STATE.presentMask);
+
+    // DTEC copies the exact native BIZR spectrum into each adjacent FILT in
+    // its line of sight. This reaches the real ctype path without introducing
+    // a fixture-only state write; BIZR's documented default ctype is 0x47ffff.
+    source.paint(point.x - 1, point.y, Material.DTEC, 0);
+    source.paint(point.x - 3, point.y, Material.BIZR, 0);
+    source.step();
+    const projected = state(source);
+    expect(projected & FILT_PRESENTATION_STATE.presentMask).toBe(FILT_PRESENTATION_STATE.presentMask);
+    expect((projected & FILT_PRESENTATION_STATE.redMask) >>> FILT_PRESENTATION_STATE.redShift).toBe(2);
+    expect((projected & FILT_PRESENTATION_STATE.greenMask) >>> FILT_PRESENTATION_STATE.greenShift)
+      .toBe(10);
+    expect((projected & FILT_PRESENTATION_STATE.blueMask) >>> FILT_PRESENTATION_STATE.blueShift)
+      .toBe(12);
+    expect((projected & FILT_PRESENTATION_STATE.lifeMask) >>> FILT_PRESENTATION_STATE.lifeShift)
+      .toBe(0);
+    expect(projected & FILT_PRESENTATION_STATE.reservedMask).toBe(0);
+
+    const file = source.saveFile();
+    expect(new TextDecoder().decode(file.slice(0, 4))).toBe('OPS1');
+    const restored = await PowderToyBackend.load(moduleArtifact.href);
+    restored.loadFile(file);
+    expect(owner(restored)).toBe(Material.FILT);
+    expect(state(restored)).toBe(projected);
+
+    restored.clear();
+    restored.paint(point.x, point.y, Material.Water, 0);
+    expect(state(restored)).toBe(0);
+
+    // An ARAY triggered by a real three-tick SPRK marks the FILT it crosses
+    // with upstream's four-tick activation cue. This validates the high three
+    // state bits independently from the wavelength transfer above.
+    const activation = await PowderToyBackend.load(moduleArtifact.href);
+    const emitter = { x: 300, y: 220 } as const;
+    const activeFilter = { x: emitter.x + 2, y: emitter.y } as const;
+    const activeIndex = activeFilter.y * activation.width + activeFilter.x;
+    activation.paint(emitter.x, emitter.y, Material.ARAY, 0);
+    activation.paint(emitter.x - 1, emitter.y, Material.Metal, 0);
+    activation.paint(emitter.x - 1, emitter.y, Material.SPRK, 0);
+    activation.paint(activeFilter.x, activeFilter.y, Material.FILT, 0);
+    activation.step();
+    expect(activation.cells()[activeIndex]).toBe(Material.FILT);
+    expect((activation.presentationState()[activeIndex] & FILT_PRESENTATION_STATE.lifeMask)
+      >>> FILT_PRESENTATION_STATE.lifeShift).toBe(FILT_PRESENTATION_STATE.lifeMaximum);
+
+    const activatedFile = activation.saveFile();
+    const activatedRestored = await PowderToyBackend.load(moduleArtifact.href);
+    activatedRestored.loadFile(activatedFile);
+    expect(activatedRestored.cells()[activeIndex]).toBe(Material.FILT);
+    expect(activatedRestored.presentationState()[activeIndex]).toBe(
+      activation.presentationState()[activeIndex],
+    );
   });
 
   it('projects native GEL absorption and preserves its reservoir through OPS1', async () => {

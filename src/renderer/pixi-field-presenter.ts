@@ -163,6 +163,7 @@ uniform float uSparkStateStyling;
 uniform float uPoloStateStyling;
 uniform float uSpngStateStyling;
 uniform float uGelHydrationStyling;
+uniform float uFiltSpectrumStyling;
 uniform float uQuartzCrystalStateStyling;
 uniform float uPhotonActive;
 float materialAt(vec2 uv) {
@@ -736,6 +737,30 @@ vec3 quartzCrystalStateEightXDelta(float material, float packedState) {
   float signedSeed = (speckle - 5.0) * 16.0;
   vec3 key = material == 76.0 ? vec3(0.29, 0.34, 0.47) : vec3(0.33, 0.31, 0.38);
   return clamp(signedSeed * key, vec3(-80.0), vec3(80.0)) / 255.0;
+}
+// Native FILT stores the three visible-band populations in its ctype-derived
+// packed word. A zero spectrum is the native default sentinel rather than a
+// black material: upstream derives its five adjacent wavelength bits from
+// temperature. Reconstruct Kelvin from the normalized semantic byte with the
+// calibrated 16-bit range conversion, without another texture sample on the
+// true-8x path.
+vec3 filtSpectrumEightXDelta(vec3 color, float packedState, float temperatureNormalized) {
+  if (packedState < 32768.0) return vec3(0.0);
+  float red = mod(packedState, 16.0);
+  float green = mod(floor(packedState / 16.0), 16.0);
+  float blue = mod(floor(packedState / 256.0), 16.0);
+  float life = mod(floor(packedState / 4096.0), 8.0);
+  if (red + green + blue < 0.5) {
+    float temperatureKelvin = floor(temperatureNormalized * 255.0 + 0.5)
+      * (65536.0 / 255.0 / 10.0);
+    float band = clamp(floor((temperatureKelvin - 273.0) * 0.025), 0.0, 25.0);
+    red = clamp(min(band + 5.0, 30.0) - max(band, 18.0), 0.0, 5.0);
+    green = clamp(min(band + 5.0, 21.0) - max(band, 9.0), 0.0, 5.0);
+    blue = clamp(min(band + 5.0, 12.0) - max(band, 0.0), 0.0, 5.0);
+  }
+  float scale = 624.0 / (red + green + blue + 1.0);
+  float reveal = 0.50 + min(4.0, life) * 0.11;
+  return mix(color, vec3(red, green, blue) * scale / 255.0, reveal) - color;
 }
 // These exact radioactive powders/solids already have a static body grammar
 // in the normal WebGL presenter. Keep the true-8x counterpart arithmetic-only
@@ -2455,6 +2480,7 @@ void main() {
   bool poloOwner = material == 109.0;
   bool spngOwner = material == 81.0;
   bool gelOwner = material == 56.0;
+  bool filtOwner = material == 69.0;
   bool quartzCrystalOwner = material == 29.0 || material == 76.0;
   // Most 8x fragments have no retained native state. Decode the B/A state and
   // co-located native wall exactly once only for owners whose enabled RGB
@@ -2470,6 +2496,7 @@ void main() {
     || (uPoloStateStyling > 0.5 && poloOwner)
     || (uSpngStateStyling > 0.5 && spngOwner)
     || (uGelHydrationStyling > 0.5 && gelOwner)
+    || (uFiltSpectrumStyling > 0.5 && filtOwner)
     || (uQuartzCrystalStateStyling > 0.5 && quartzCrystalOwner)
     // Eligible translucent liquid already needs this exact wall texel for the
     // final backdrop. Fold the cohesion guard into that one packed-state read
@@ -2589,6 +2616,11 @@ void main() {
   if ((uSpngStateStyling > 0.5 && spngOwner)
     || (uGelHydrationStyling > 0.5 && gelOwner)) {
     color += hydrationStateEightXDelta(material, sourceTarget, uv * uFieldSize);
+  }
+  if (uFiltSpectrumStyling > 0.5 && filtOwner && nativeWall < 0.5) {
+    color += filtSpectrumEightXDelta(
+      color, sourceTarget, semantic.g
+    );
   }
   if (uQuartzCrystalStateStyling > 0.5 && quartzCrystalOwner && nativeWall < 0.5) {
     color += quartzCrystalStateEightXDelta(material, sourceTarget);
@@ -2826,6 +2858,7 @@ uniform float uForceActivityStyling;
 uniform float uPoloStateStyling;
 uniform float uSpngStateStyling;
 uniform float uGelHydrationStyling;
+uniform float uFiltSpectrumStyling;
 uniform float uQuartzCrystalStateStyling;
 uniform float uLavaAncestryStyling;
 uniform float uMoltenBodyOptics;
@@ -4203,6 +4236,30 @@ vec3 quartzCrystalStateDelta(float material, vec2 stateBytes) {
   float signedSeed = (speckle - 5.0) * 16.0;
   vec3 key = material == 76.0 ? vec3(0.29, 0.34, 0.47) : vec3(0.33, 0.31, 0.38);
   return clamp(signedSeed * key, vec3(-80.0), vec3(80.0)) / 255.0;
+}
+// FILT's all-zero ctype is an upstream temperature-generated wavelength mask,
+// not a black spectrum. Reconstruct Kelvin from materialTemperature's
+// normalized semantic byte with the calibrated 16-bit range conversion for the
+// same five-bit wavelength-band reconstruction.
+vec3 filtSpectrumDelta(vec3 color, vec2 stateBytes, float temperatureNormalized) {
+  float packedState = floor(stateBytes.x * 255.0 + 0.5)
+    + floor(stateBytes.y * 255.0 + 0.5) * 256.0;
+  if (packedState < 32768.0) return vec3(0.0);
+  float red = mod(packedState, 16.0);
+  float green = mod(floor(packedState / 16.0), 16.0);
+  float blue = mod(floor(packedState / 256.0), 16.0);
+  float life = mod(floor(packedState / 4096.0), 8.0);
+  if (red + green + blue < 0.5) {
+    float temperatureKelvin = floor(temperatureNormalized * 255.0 + 0.5)
+      * (65536.0 / 255.0 / 10.0);
+    float band = clamp(floor((temperatureKelvin - 273.0) * 0.025), 0.0, 25.0);
+    red = clamp(min(band + 5.0, 30.0) - max(band, 18.0), 0.0, 5.0);
+    green = clamp(min(band + 5.0, 21.0) - max(band, 9.0), 0.0, 5.0);
+    blue = clamp(min(band + 5.0, 12.0) - max(band, 0.0), 0.0, 5.0);
+  }
+  float scale = 624.0 / (red + green + blue + 1.0);
+  float reveal = 0.50 + min(4.0, life) * 0.11;
+  return mix(color, vec3(red, green, blue) * scale / 255.0, reveal) - color;
 }
 vec3 deutStateDelta(float material, vec2 stateBytes, vec2 position) {
   if (material != 100.0) return vec3(0.0);
@@ -6784,6 +6841,11 @@ void main() {
     }
     color += spongeHydrationDelta(material, wallState.ba, fieldPosition)
       * uSpngStateStyling;
+    if (uFiltSpectrumStyling > 0.5 && material == 69.0
+      && (family == 0.0 || family == 4.0) && traits < 0.5 && !materialEmissive
+      && wall < 0.5 && surfaceOnly < 0.5 && halo < 0.5 && emissionOnly < 0.5) {
+      color += filtSpectrumDelta(color, wallState.ba, materialTemperature);
+    }
     if (uQuartzCrystalStateStyling > 0.5 && (material == 29.0 || material == 76.0)
       && (family == 0.0 || family == 4.0) && traits < 0.5 && !materialEmissive
       && wall < 0.5 && surfaceOnly < 0.5 && halo < 0.5 && emissionOnly < 0.5) {
@@ -7279,6 +7341,7 @@ export class PixiFieldPresenter {
       uPoloStateStyling: { value: 1, type: 'f32' },
       uSpngStateStyling: { value: 1, type: 'f32' },
       uGelHydrationStyling: { value: 1, type: 'f32' },
+      uFiltSpectrumStyling: { value: 1, type: 'f32' },
       uQuartzCrystalStateStyling: { value: 1, type: 'f32' },
       uLavaAncestryStyling: { value: 1, type: 'f32' },
       uMoltenBodyOptics: { value: 1, type: 'f32' },
@@ -7614,6 +7677,7 @@ export class PixiFieldPresenter {
     poloStateStylingEnabled = true,
     spngStateStylingEnabled = true,
     gelHydrationStylingEnabled = true,
+    filtSpectrumStylingEnabled = true,
     quartzCrystalStateStylingEnabled = true,
     lavaAncestryStylingEnabled = true,
     botanicalLifecycleStylingEnabled = true,
@@ -7669,6 +7733,7 @@ export class PixiFieldPresenter {
     uniforms.uPoloStateStyling = poloStateStylingEnabled ? 1 : 0;
     uniforms.uSpngStateStyling = spngStateStylingEnabled ? 1 : 0;
     uniforms.uGelHydrationStyling = gelHydrationStylingEnabled ? 1 : 0;
+    uniforms.uFiltSpectrumStyling = filtSpectrumStylingEnabled ? 1 : 0;
     uniforms.uQuartzCrystalStateStyling = quartzCrystalStateStylingEnabled ? 1 : 0;
     uniforms.uLavaAncestryStyling = lavaAncestryStylingEnabled ? 1 : 0;
     uniforms.uMoltenBodyOptics = moltenBodyOpticsEnabled ? 1 : 0;
@@ -7877,6 +7942,11 @@ export class PixiFieldPresenter {
 
   setGelHydrationStylingEnabled(enabled: boolean): void {
     this.uniforms.uniforms.uGelHydrationStyling = enabled ? 1 : 0;
+    this.renderApplication();
+  }
+
+  setFiltSpectrumStylingEnabled(enabled: boolean): void {
+    this.uniforms.uniforms.uFiltSpectrumStyling = enabled ? 1 : 0;
     this.renderApplication();
   }
 

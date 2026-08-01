@@ -134,6 +134,7 @@ describe('Pixi presenter startup configuration', () => {
       uEnergyCoreRelief: 0,
       uDeutStateStyling: 1,
       uSourceTargetStyling: 1,
+      uFiltSpectrumStyling: 1,
       uMoltenBodyOptics: 1,
       uPowderStyle: powderRenderStyleValue('grains'),
       uPowderBodyDepth: 1,
@@ -2148,6 +2149,46 @@ describe('Pixi presenter startup configuration', () => {
     expect(helper).not.toContain('uTime');
     expect(helper).not.toMatch(/\balpha\s*[+*]?=/);
     expect(eight.match(/texture\(uWallTexture, uv\)/g)).toHaveLength(4);
+  });
+
+  it('projects native FILT spectrum through the existing packed state in both WebGL compositors', () => {
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');
+    const eightEnd = source.indexOf('const FIELD_FRAGMENT = `', eightStart);
+    const eight = source.slice(eightStart, eightEnd);
+    const normalStart = source.indexOf('const FIELD_FRAGMENT = `', eightEnd);
+    const normalEnd = source.indexOf('`;\n\n/** Primary WebGL presentation', normalStart);
+    const normal = source.slice(normalStart, normalEnd);
+    const eightHelperStart = eight.indexOf('vec3 filtSpectrumEightXDelta(');
+    const eightHelperEnd = eight.indexOf('// These exact radioactive powders', eightHelperStart);
+    const eightHelper = eight.slice(eightHelperStart, eightHelperEnd);
+    const packedStart = eight.indexOf('  bool needsPackedState =');
+    const packedEnd = eight.indexOf('  float sourceTarget =', packedStart);
+    const packed = eight.slice(packedStart, packedEnd);
+
+    expect(eightHelperStart).toBeGreaterThan(0);
+    expect(eightHelperEnd).toBeGreaterThan(eightHelperStart);
+    expect(eight).toContain('uniform float uFiltSpectrumStyling;');
+    expect(eight).toContain('bool filtOwner = material == 69.0;');
+    expect(packed).toContain('|| (uFiltSpectrumStyling > 0.5 && filtOwner)');
+    expect(eight).toContain('color += filtSpectrumEightXDelta(');
+    expect(eightHelper).toContain('if (packedState < 32768.0) return vec3(0.0);');
+    expect(eightHelper).toContain('mod(floor(packedState / 4096.0), 8.0)');
+    expect(eightHelper).toContain('floor(temperatureNormalized * 255.0 + 0.5)');
+    expect(eightHelper).toContain('(65536.0 / 255.0 / 10.0)');
+    expect(eightHelper).toContain('min(band + 5.0, 30.0) - max(band, 18.0)');
+    expect(eightHelper).not.toContain('texture(');
+    expect(eightHelper).not.toMatch(/\balpha\s*[+*]?=/);
+    expect(eight.match(/texture\(uWallTexture, uv\)/g)).toHaveLength(4);
+
+    expect(normal).toContain('uniform float uFiltSpectrumStyling;');
+    expect(normal).toContain('vec3 filtSpectrumDelta(vec3 color, vec2 stateBytes, float temperatureNormalized)');
+    expect(normal).toContain('if (uFiltSpectrumStyling > 0.5 && material == 69.0');
+    expect(normal).toContain('color += filtSpectrumDelta(color, wallState.ba,');
+    expect(normal).toContain('color += filtSpectrumDelta(color, wallState.ba, materialTemperature);');
+    expect(normal).toContain('floor(temperatureNormalized * 255.0 + 0.5)');
+    expect(normal).toContain('(65536.0 / 255.0 / 10.0)');
+    expect(normal).not.toContain('uFiltSpectrumTexture');
   });
 
   it('restores independent PHOT spectrum after true-8x matter and wall composition', () => {

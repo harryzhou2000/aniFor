@@ -555,6 +555,20 @@ uint16_t ProjectPhotonSpectrum(int ctype)
 	return uint16_t(0x8000u | red | (green << 4u) | (blue << 8u));
 }
 
+uint16_t ProjectFilterSpectrum(int ctype, int life)
+{
+	// FILT owns the same thirty-bit wavelength mask as PHOT. Keep the three
+	// overlapping visible twelve-bit band populations, plus its bounded native
+	// activation life. Bit 15 distinguishes a black/default FILT from a cell
+	// with no FILT owner; native ctype and life remain OPS-authoritative.
+	auto const spectrum = uint32_t(ctype) & 0x3FFFFFFFu;
+	auto const red = CountPhotonSpectrumBits((spectrum >> 18u) & 0xFFFu);
+	auto const green = CountPhotonSpectrumBits((spectrum >> 9u) & 0xFFFu);
+	auto const blue = CountPhotonSpectrumBits(spectrum & 0xFFFu);
+	auto const activation = std::clamp(life, 0, 4);
+	return uint16_t(0x8000u | red | (green << 4u) | (blue << 8u) | (activation << 12u));
+}
+
 void ExtractFields()
 {
 	std::fill_n(materialField, FIELD_SIZE, uint8_t(0));
@@ -675,6 +689,10 @@ void ExtractFields()
 				// response. Project only that OPS-stable visual state; tmp/life remain
 				// native simulation state and must never be mirrored into JavaScript.
 				presentationStateField[offset] = uint16_t(std::clamp(part.tmp2, 0, 10));
+			}
+			else if (part.type == PT_FILT)
+			{
+				presentationStateField[offset] = ProjectFilterSpectrum(part.ctype, part.life);
 			}
 			else if (part.type == PT_SEED)
 			{
