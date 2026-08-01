@@ -13994,6 +13994,11 @@ async function auditRenderScaleEight(cdp, dpr, powderOnly = false) {
   // proves both projections on the exact direct-8x mesh.
   const filtStateGraphics = await auditEightXFiltStateGraphics(cdp, geometry.canvas);
   stage('filt-state-ready');
+  // LCRY has a compact native tmp2 charge word. Keep its direct-8x proof next
+  // to the other owner-multiplexed crystal states: both semantic presence and
+  // the final grayscale response must survive the exact direct mesh.
+  const lcryStateGraphics = await auditEightXLcryStateGraphics(cdp, geometry.canvas);
+  stage('lcry-state-ready');
   // SEED/PLNT lifecycle lives in the shared owner-multiplexed state word.
   // Exercise that exact compact direct-shader path before the independent
   // PHOT plane and retain DEUT as the final recovery fixture below.
@@ -14098,6 +14103,7 @@ async function auditRenderScaleEight(cdp, dpr, powderOnly = false) {
     gelStateGraphics,
     pqrtStateGraphics,
     filtStateGraphics,
+    lcryStateGraphics,
     botanicalLifecycleGraphics,
     radioactiveIdentityGraphics,
     photonSpectrumGraphics,
@@ -17375,6 +17381,201 @@ async function auditEightXFiltStateGraphics(cdp, canvasRect) {
   return {
     cards: atlas.cards.map(({ key, red, green, blue, life, temperature, material }) => ({
       key, red, green, blue, life, temperature, material,
+    })),
+    occupied: prepared.occupied,
+    samples,
+    exactRepeatedOff: samples.every(({ repeatRgbPeak }) => repeatRgbPeak <= 1),
+  };
+}
+
+const EIGHT_X_LCRY_STATE_CARDS = [
+  { stateKey: 'dark', brightness: 0, encodedState: 0x8000 },
+  { stateKey: 'low', brightness: 2, encodedState: 0x8002 },
+  { stateKey: 'neutral', brightness: 5, encodedState: 0x8005 },
+  { stateKey: 'high', brightness: 8, encodedState: 0x8008 },
+  { stateKey: 'bright', brightness: 10, encodedState: 0x800a },
+];
+
+async function snapshotEightXLcryState(cdp) {
+  return evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    const atlas = audit.lcryStateGraphicsAtlas();
+    const inside = (x, y, rect) => x >= rect.x && x < rect.x + rect.width
+      && y >= rect.y && y < rect.y + rect.height;
+    const exact = (rect, material, state) => {
+      for (let y = rect.y; y < rect.y + rect.height; y++) {
+        for (let x = rect.x; x < rect.x + rect.width; x++) {
+          if (audit.cell(x, y) !== material || audit.presentationState(x, y) !== state) return false;
+        }
+      }
+      return true;
+    };
+    return {
+      occupied: audit.occupiedCells(),
+      cards: atlas.cards.map((entry) => {
+        let bodyExact = true;
+        for (let y = entry.body.y; y < entry.body.y + entry.body.height; y++) {
+          for (let x = entry.body.x; x < entry.body.x + entry.body.width; x++) {
+            const empty = inside(x, y, entry.authoredHole) || inside(x, y, entry.openNotch);
+            bodyExact &&= audit.cell(x, y) === (empty ? 0 : entry.material)
+              && audit.presentationState(x, y) === (empty ? 0 : entry.encodedState);
+          }
+        }
+        return {
+          stateKey: entry.stateKey,
+          brightness: entry.brightness,
+          material: entry.material,
+          encodedState: entry.encodedState,
+          bodyExact,
+          responseExact: audit.cell(entry.responseProbe.x, entry.responseProbe.y) === entry.material
+            && audit.presentationState(entry.responseProbe.x, entry.responseProbe.y) === entry.encodedState,
+          thinExact: exact(entry.thinStructure, entry.material, entry.encodedState),
+          isolatedExact: audit.cell(entry.isolated.x, entry.isolated.y) === entry.material
+            && audit.presentationState(entry.isolated.x, entry.isolated.y) === entry.encodedState,
+          neutralExact: exact(entry.neutralState, entry.material, 0x8005),
+          absentExact: exact(entry.absentState, entry.material, 0),
+          wrongExact: exact(entry.wrongOwner, 2, entry.encodedState),
+          blankExact: exact(entry.guardedBlank, 0, 0),
+        };
+      }),
+    };
+  })()`);
+}
+
+function assertEightXLcryTopology(snapshot, label) {
+  assert(snapshot.cards.length === EIGHT_X_LCRY_STATE_CARDS.length
+      && snapshot.cards.every((card, index) => {
+        const expected = EIGHT_X_LCRY_STATE_CARDS[index];
+        return card.stateKey === expected.stateKey && card.brightness === expected.brightness
+          && card.encodedState === expected.encodedState && card.material === 157
+          && card.bodyExact && card.responseExact && card.thinExact && card.isolatedExact
+          && card.neutralExact && card.absentExact && card.wrongExact && card.blankExact;
+      }),
+  `${label}: LCRY native charge state or semantic topology changed (${JSON.stringify(snapshot)})`);
+}
+
+function eightXLcryStateRegions(atlas) {
+  const centre = (rect) => ({ x: rect.x + rect.width / 2, y: rect.y + rect.height / 2 });
+  return atlas.cards.flatMap((entry) => [
+    { name: `LCRY-${entry.stateKey}-charge`, ...centre(entry.responseProbe), radiusX: 3, radiusY: 3 },
+    { name: `LCRY-${entry.stateKey}-neutral`, ...centre(entry.neutralState), radiusX: 5, radiusY: 5 },
+    { name: `LCRY-${entry.stateKey}-absent`, ...centre(entry.absentState), radiusX: 5, radiusY: 5 },
+    { name: `LCRY-${entry.stateKey}-wrong`, ...centre(entry.wrongOwner), radiusX: 5, radiusY: 5 },
+    { name: `LCRY-${entry.stateKey}-blank`, ...centre(entry.guardedBlank), radiusX: 20, radiusY: 14 },
+  ]);
+}
+
+async function snapshotEightXLcryFramebuffer(cdp) {
+  return evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    const canvas = document.querySelector('canvas.semantic-field-canvas');
+    const gl = canvas?.getContext('webgl2') || canvas?.getContext('webgl');
+    if (!canvas || !gl) throw new Error('True-8x LCRY WebGL backing unavailable');
+    const rect = canvas.getBoundingClientRect();
+    const read = (point) => {
+      const screen = audit.worldToScreen(point.x + point.width / 2, point.y + point.height / 2);
+      const x = Math.max(0, Math.min(canvas.width - 1,
+        Math.floor((screen.x - rect.left) * canvas.width / rect.width)));
+      const y = Math.max(0, Math.min(canvas.height - 1,
+        canvas.height - 1 - Math.floor((screen.y - rect.top) * canvas.height / rect.height)));
+      const pixel = new Uint8Array(4);
+      gl.readPixels(x, y, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, pixel);
+      return Array.from(pixel);
+    };
+    const cards = audit.lcryStateGraphicsAtlas().cards;
+    return {
+      probes: cards.map((entry) => read(entry.responseProbe)),
+      neutral: cards.map((entry) => read(entry.neutralState)),
+      absent: cards.map((entry) => read(entry.absentState)),
+      wrong: cards.map((entry) => read(entry.wrongOwner)),
+    };
+  })()`);
+}
+
+function assertEightXLcryResponses(samples, flat, styled, repeated, label) {
+  const same = (left, right) => left.length === right.length
+    && left.every((value, index) => value === right[index]);
+  const luma = (pixel) => pixel[0] * 0.2126 + pixel[1] * 0.7152 + pixel[2] * 0.0722;
+  const peak = (left, right) => Math.max(...left.map((value, index) => Math.abs(value - right[index])));
+  const byName = Object.fromEntries(samples.map((sample) => [sample.name, sample]));
+  const cards = EIGHT_X_LCRY_STATE_CARDS.map((entry, index) => ({
+    ...entry,
+    flat: flat.probes[index],
+    styled: styled.probes[index],
+    repeated: repeated.probes[index],
+    luma: luma(styled.probes[index]),
+    peak: peak(styled.probes[index], flat.probes[index]),
+    repeatPeak: peak(repeated.probes[index], flat.probes[index]),
+    charge: byName[`LCRY-${entry.stateKey}-charge`],
+  }));
+  assert(cards.every(({ flat: base, styled: styledPixel, repeated: repeatedPixel, charge }) => (
+    base[3] === styledPixel[3] && base[3] === repeatedPixel[3]
+      && charge && charge.rgbPeak > 0 && charge.rgbPeak <= 192 && charge.repeatRgbPeak <= 1
+  )), `${label}: LCRY charge response is absent, unbounded, unstable, or changed alpha (${JSON.stringify(cards)})`);
+  assert(cards.every((card, index) => index === 0 || card.luma >= cards[index - 1].luma + 12)
+      && cards[4].luma - cards[0].luma >= 120,
+  `${label}: native LCRY charge brightness is not monotonic on the direct-8x framebuffer (${JSON.stringify(cards)})`);
+  assert(cards.every(({ peak: responsePeak, repeatPeak, flat: base, repeated: repeatedPixel }) => (
+    responsePeak <= 192 && repeatPeak === 0 && same(base, repeatedPixel)
+  )), `${label}: LCRY off→on→off framebuffer recovery is not exact (${JSON.stringify(cards)})`);
+  assert(cards.every((card, index) => same(styled.neutral[index], card.styled)),
+    `${label}: LCRY native neutral charge is not the exact grayscale reference (${JSON.stringify(cards)})`);
+  assert(flat.absent.every((pixel, index) => same(pixel, styled.absent[index]) && same(pixel, repeated.absent[index]))
+      && flat.wrong.every((pixel, index) => same(pixel, styled.wrong[index]) && same(pixel, repeated.wrong[index])),
+  `${label}: LCRY styling leaked into absent-state or wrong-owner direct framebuffer controls`);
+  const controls = samples.filter(({ name }) => /-(absent|wrong|blank)$/.test(name));
+  assert(controls.length === EIGHT_X_LCRY_STATE_CARDS.length * 3
+      && controls.every(({ rgbPeak, repeatRgbPeak }) => rgbPeak <= 1 && repeatRgbPeak <= 1),
+  `${label}: LCRY styling leaked into guarded screenshot controls (${JSON.stringify(controls)})`);
+}
+
+async function auditEightXLcryStateGraphics(cdp, canvasRect) {
+  const atlas = await evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    if (typeof audit.prepareLcryStateGraphicsFixture !== 'function'
+      || typeof audit.lcryStateGraphicsAtlas !== 'function'
+      || typeof audit.setLcryStateStyling !== 'function') {
+      throw new Error('True-8x LCRY state audit API unavailable');
+    }
+    audit.resetView();
+    audit.prepareLcryStateGraphicsFixture();
+    return audit.lcryStateGraphicsAtlas();
+  })()`);
+  const prepared = await snapshotEightXLcryState(cdp);
+  assertEightXLcryTopology(prepared, 'renderScale=8 prepared LCRY fixture');
+  const live = await metrics(cdp);
+  assert(live.backing.width === WORLD_WIDTH * 8 && live.backing.height === WORLD_HEIGHT * 8
+      && live.outputScale === '8',
+  `renderScale=8 LCRY fixture lost true backing (${JSON.stringify(live.backing)})`);
+  assertCanvasRectsEqual(canvasRect, live.canvas, 'renderScale=8 LCRY fixture CSS geometry');
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setLcryStateStyling(false); true');
+  const flat = await captureSettledPage(cdp, 'renderScale=8 flat LCRY-state framebuffer', 450);
+  const flatPixels = await snapshotEightXLcryFramebuffer(cdp);
+  const flatTopology = await snapshotEightXLcryState(cdp);
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setLcryStateStyling(true); true');
+  const styled = await captureSettledPage(cdp, 'renderScale=8 styled LCRY-state framebuffer', 450);
+  const styledPixels = await snapshotEightXLcryFramebuffer(cdp);
+  const styledTopology = await snapshotEightXLcryState(cdp);
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setLcryStateStyling(false); true');
+  const repeated = await captureSettledPage(cdp, 'renderScale=8 repeated flat LCRY-state framebuffer', 450);
+  const repeatedPixels = await snapshotEightXLcryFramebuffer(cdp);
+  const repeatedTopology = await snapshotEightXLcryState(cdp);
+  assertEightXLcryTopology(flatTopology, 'renderScale=8 flat LCRY fixture');
+  assertEightXLcryTopology(styledTopology, 'renderScale=8 styled LCRY fixture');
+  assertEightXLcryTopology(repeatedTopology, 'renderScale=8 repeated LCRY fixture');
+  assert(flatTopology.occupied === prepared.occupied && styledTopology.occupied === prepared.occupied
+      && repeatedTopology.occupied === prepared.occupied,
+  'renderScale=8 LCRY styling changed semantic occupancy');
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setLcryStateStyling(true); true');
+  const samples = await sampleBackdropRefractionRegions(cdp, {
+    straight: flat.capture.data,
+    refracted: styled.capture.data,
+    repeatedStraight: repeated.capture.data,
+  }, eightXLcryStateRegions(atlas), canvasRect);
+  assertEightXLcryResponses(samples, flatPixels, styledPixels, repeatedPixels, 'renderScale=8 WebGL');
+  return {
+    cards: atlas.cards.map(({ stateKey, brightness, encodedState, material }) => ({
+      stateKey, brightness, encodedState, material,
     })),
     occupied: prepared.occupied,
     samples,
