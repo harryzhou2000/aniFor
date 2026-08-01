@@ -111,6 +111,9 @@ import {
   PQRT_STATE_GRAPHICS_AUDIT, preparePqrtStateGraphicsAuditFixture,
 } from './pqrt-state-graphics-audit';
 import {
+  FILT_STATE_GRAPHICS_AUDIT, prepareFiltStateGraphicsAuditFixture,
+} from './filt-state-graphics-audit';
+import {
   PHOTON_SPECTRUM_GRAPHICS_AUDIT, preparePhotonSpectrumGraphicsAuditFixture,
   setPhotonSpectrumGraphicsVisible,
 } from './photon-spectrum-graphics-audit';
@@ -684,6 +687,10 @@ export class Game {
       pqrtStateGraphicsAtlas: () => PQRT_STATE_GRAPHICS_AUDIT,
       preparePqrtStateGraphicsFixture: () => {
         preparePqrtStateGraphicsAuditFixture(this.simulation);
+      },
+      filtStateGraphicsAtlas: () => FILT_STATE_GRAPHICS_AUDIT,
+      prepareFiltStateGraphicsFixture: () => {
+        prepareFiltStateGraphicsAuditFixture(this.simulation);
       },
       photonSpectrumGraphicsAtlas: () => PHOTON_SPECTRUM_GRAPHICS_AUDIT,
       preparePhotonSpectrumGraphicsFixture: () => {
