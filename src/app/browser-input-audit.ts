@@ -38,6 +38,7 @@ import type { GelStateGraphicsAuditSnapshot } from './gel-state-graphics-audit';
 import type { PqrtStateGraphicsAuditSnapshot } from './pqrt-state-graphics-audit';
 import type { FiltStateGraphicsAuditSnapshot } from './filt-state-graphics-audit';
 import type { LcryStateGraphicsAuditSnapshot } from './lcry-state-graphics-audit';
+import type { PipeStateGraphicsAuditSnapshot } from './pipe-state-graphics-audit';
 import type { LavaStateGraphicsAuditSnapshot } from './lava-state-graphics-audit';
 import type {
   BotanicalLifecycleGraphicsAuditSnapshot,
@@ -103,6 +104,7 @@ export interface BrowserInputAuditApi {
   setGelHydrationStyling(enabled: boolean): void;
   setFiltSpectrumStyling(enabled: boolean): void;
   setLcryStateStyling(enabled: boolean): void;
+  setPipePresentationStyling(enabled: boolean): void;
   setQuartzCrystalStateStyling(enabled: boolean): void;
   setLavaAncestryStyling(enabled: boolean): void;
   setMoltenBodyOptics(enabled: boolean): void;
@@ -195,6 +197,8 @@ export interface BrowserInputAuditApi {
   prepareFiltStateGraphicsFixture(): void;
   lcryStateGraphicsAtlas(): LcryStateGraphicsAuditSnapshot;
   prepareLcryStateGraphicsFixture(): void;
+  pipeStateGraphicsAtlas(): PipeStateGraphicsAuditSnapshot;
+  preparePipeStateGraphicsFixture(): void;
   photonSpectrumGraphicsAtlas(): PhotonSpectrumGraphicsAuditSnapshot;
   preparePhotonSpectrumGraphicsFixture(): void;
   setPhotonSpectrumGraphicsVisible(visible: boolean): void;

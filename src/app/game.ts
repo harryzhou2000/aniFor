@@ -117,6 +117,9 @@ import {
   LCRY_STATE_GRAPHICS_AUDIT, prepareLcryStateGraphicsAuditFixture,
 } from './lcry-state-graphics-audit';
 import {
+  PIPE_STATE_GRAPHICS_AUDIT, preparePipeStateGraphicsAuditFixture,
+} from './pipe-state-graphics-audit';
+import {
   PHOTON_SPECTRUM_GRAPHICS_AUDIT, preparePhotonSpectrumGraphicsAuditFixture,
   setPhotonSpectrumGraphicsVisible,
 } from './photon-spectrum-graphics-audit';
@@ -496,6 +499,9 @@ export class Game {
       setLcryStateStyling: (enabled) => {
         this.renderer.setLcryStateStylingEnabled(enabled);
       },
+      setPipePresentationStyling: (enabled) => {
+        this.renderer.setPipePresentationStylingEnabled(enabled);
+      },
       setQuartzCrystalStateStyling: (enabled) => {
         this.renderer.setQuartzCrystalStateStylingEnabled(enabled);
       },
@@ -701,6 +707,11 @@ export class Game {
       lcryStateGraphicsAtlas: () => LCRY_STATE_GRAPHICS_AUDIT,
       prepareLcryStateGraphicsFixture: () => {
         prepareLcryStateGraphicsAuditFixture(this.simulation);
+      },
+      pipeStateGraphicsAtlas: () => PIPE_STATE_GRAPHICS_AUDIT,
+      preparePipeStateGraphicsFixture: () => {
+        preparePipeStateGraphicsAuditFixture(this.simulation);
+        this.renderer.invalidateDynamicPresentation();
       },
       photonSpectrumGraphicsAtlas: () => PHOTON_SPECTRUM_GRAPHICS_AUDIT,
       preparePhotonSpectrumGraphicsFixture: () => {

@@ -27,6 +27,7 @@ import {
 import { auditPqrtStateGraphics } from './pqrt-state-graphics-audit.mjs';
 import { auditFiltStateGraphics } from './filt-state-graphics-audit.mjs';
 import { auditLcryStateGraphics } from './lcry-state-graphics-audit.mjs';
+import { auditPipeStateGraphics } from './pipe-state-graphics-audit.mjs';
 import {
   assertPairedLavaStateGraphics,
   auditLavaStateGraphics,
@@ -125,6 +126,7 @@ const filtStateGraphicsOnly = process.argv.includes('--filt-state-graphics-only'
 const filtStateGraphicsEight = filtStateGraphicsOnly && process.argv.includes('--render-scale=8');
 const lcryStateGraphicsOnly = process.argv.includes('--lcry-state-graphics-only');
 const lcryStateGraphicsEight = lcryStateGraphicsOnly && process.argv.includes('--render-scale=8');
+const pipeStateGraphicsOnly = process.argv.includes('--pipe-state-graphics-only');
 const lavaStateGraphicsOnly = process.argv.includes('--lava-state-graphics-only');
 const botanicalLifecycleGraphicsOnly = process.argv.includes('--botanical-lifecycle-graphics-only');
 const sparkStateGraphicsOnly = process.argv.includes('--spark-state-graphics-only');
@@ -148,6 +150,7 @@ const usesProductionBundle = productionBundle || showcaseScreenshotOnly || cellu
   || deutStateGraphicsOnly || sourceTargetGraphicsOnly || forceActivityGraphicsOnly
   || poloStateGraphicsOnly || spngStateGraphicsOnly || gelStateGraphicsOnly || lavaStateGraphicsOnly
   || pqrtStateGraphicsOnly || filtStateGraphicsOnly || lcryStateGraphicsOnly
+  || pipeStateGraphicsOnly
   || botanicalLifecycleGraphicsOnly || sparkStateGraphicsOnly
   || nativeSeedGrowthOnly || nativeSemanticsOnly || catalogSelectionOnly || shortDesktopOnly || liveScaleOnly
   || scaleEightOnly || eightFieldProfileOnly || eightMaterialAtlasOnly;
@@ -748,6 +751,21 @@ async function auditMode(mode) {
       assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
       cdp.close();
       return { backend: mode, lcryStateGraphics, browserErrors: errors.length };
+    }
+    if (pipeStateGraphicsOnly) {
+      const pipeStateGraphics = await auditPipeStateGraphics({
+        cdp,
+        mode,
+        evaluate,
+        waitFor,
+        waitForStablePageCapture,
+        captureSettledPage,
+        outputScale: process.argv.includes('--render-scale=8') ? 8 : 2,
+        assert,
+      });
+      assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
+      cdp.close();
+      return { backend: mode, pipeStateGraphics, browserErrors: errors.length };
     }
     if (lavaStateGraphicsOnly) {
       const lavaStateGraphics = await auditLavaStateGraphics({
