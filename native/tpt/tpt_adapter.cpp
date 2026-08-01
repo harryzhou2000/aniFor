@@ -668,6 +668,14 @@ void ExtractFields()
 				// remains zero instead of consuming a separate presence marker.
 				presentationStateField[offset] = uint16_t(std::clamp(part.tmp, 0, 100));
 			}
+			else if (part.type == PT_PQRT || part.type == PT_QRTZ)
+			{
+				// PQRT and its native solid QRTZ product seed tmp2 in 0..10. Upstream
+				// Graphics maps `(tmp2 - 5) * 16` directly to the crystal speckle
+				// response. Project only that OPS-stable visual state; tmp/life remain
+				// native simulation state and must never be mirrored into JavaScript.
+				presentationStateField[offset] = uint16_t(std::clamp(part.tmp2, 0, 10));
+			}
 			else if (part.type == PT_SEED)
 			{
 				// SEED keeps absorbed water in ctype's PLNT_LIFE byte and uses life as

@@ -60,6 +60,19 @@ export const GEL_PRESENTATION_STATE = {
   reservedMask: 0xff80,
 } as const;
 
+/**
+ * Native PQRT/QRTZ crystal speckle (`tmp2`) in the owner-multiplexed state
+ * word. Upstream seeds this exact 0..10 value and uses `(tmp2 - 5) * 16` for
+ * its crystal RGB response. The semantic Quartz/QRTZ owner is the guard, so
+ * zero is a valid native state rather than an absence marker.
+ */
+export const QUARTZ_PRESENTATION_STATE = {
+  speckleMask: 0x000f,
+  speckleMaximum: 10,
+  neutralSpeckle: 5,
+  reservedMask: 0xfff0,
+} as const;
+
 /** Exact native LAVA ctype ancestry in the owner-multiplexed presentation word. */
 export const LAVA_PRESENTATION_STATE = {
   originMask: 0x00ff,

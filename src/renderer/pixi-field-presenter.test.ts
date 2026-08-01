@@ -2127,10 +2127,13 @@ describe('Pixi presenter startup configuration', () => {
     expect(applicationEnd).toBeGreaterThan(applicationStart);
     expect(eight).toContain('uniform float uSpngStateStyling;');
     expect(eight).toContain('uniform float uGelHydrationStyling;');
+    expect(eight).toContain('uniform float uQuartzCrystalStateStyling;');
     expect(eight).toContain('bool spngOwner = material == 81.0;');
     expect(eight).toContain('bool gelOwner = material == 56.0;');
+    expect(eight).toContain('bool quartzCrystalOwner = material == 29.0 || material == 76.0;');
     expect(packed).toContain('|| (uSpngStateStyling > 0.5 && spngOwner)');
     expect(packed).toContain('|| (uGelHydrationStyling > 0.5 && gelOwner)');
+    expect(packed).toContain('|| (uQuartzCrystalStateStyling > 0.5 && quartzCrystalOwner)');
     expect(helper).toContain('mod(floor(packedState / 64.0), 2.0) < 0.5');
     expect(helper).toContain('float hydration = min(50.0, mod(packedState, 64.0));');
     expect(helper).toContain('if (hydration < 0.5) return vec3(0.0);');
@@ -2139,6 +2142,8 @@ describe('Pixi presenter startup configuration', () => {
     expect(helper).toContain('float hydration = min(100.0, mod(packedState, 128.0));');
     expect(helper).toContain('return clamp(delta, vec3(-124.0), vec3(124.0)) / 255.0;');
     expect(application).toContain('color += hydrationStateEightXDelta(material, sourceTarget, uv * uFieldSize);');
+    expect(eight).toContain('vec3 quartzCrystalStateEightXDelta(float material, float packedState)');
+    expect(eight).toContain('color += quartzCrystalStateEightXDelta(material, sourceTarget);');
     expect(helper).not.toContain('texture(');
     expect(helper).not.toContain('uTime');
     expect(helper).not.toMatch(/\balpha\s*[+*]?=/);

@@ -163,6 +163,7 @@ uniform float uSparkStateStyling;
 uniform float uPoloStateStyling;
 uniform float uSpngStateStyling;
 uniform float uGelHydrationStyling;
+uniform float uQuartzCrystalStateStyling;
 uniform float uPhotonActive;
 float materialAt(vec2 uv) {
   return floor(texture(uFieldTexture, clamp(uv, uTexel * 0.5, vec2(1.0) - uTexel * 0.5)).r * 255.0 + 0.5);
@@ -726,6 +727,15 @@ vec3 hydrationStateEightXDelta(float material, float packedState, vec2 position)
   else if (poreCore) delta += vec3(-4.0, -2.0, 8.0);
   else if (firstWall || secondWall) delta += vec3(-2.0, 1.0, 6.0);
   return clamp(delta * moisture, vec3(-20.0), vec3(20.0)) / 255.0;
+}
+// Native PQRT/QRTZ use tmp2 as an exact 0..10 crystal seed. Keep this compact
+// and owner-local so true 8x reuses the one existing packed-state fetch.
+vec3 quartzCrystalStateEightXDelta(float material, float packedState) {
+  if (material != 29.0 && material != 76.0) return vec3(0.0);
+  float speckle = min(10.0, mod(packedState, 16.0));
+  float signedSeed = (speckle - 5.0) * 16.0;
+  vec3 key = material == 76.0 ? vec3(0.29, 0.34, 0.47) : vec3(0.33, 0.31, 0.38);
+  return clamp(signedSeed * key, vec3(-80.0), vec3(80.0)) / 255.0;
 }
 // These exact radioactive powders/solids already have a static body grammar
 // in the normal WebGL presenter. Keep the true-8x counterpart arithmetic-only
@@ -2445,6 +2455,7 @@ void main() {
   bool poloOwner = material == 109.0;
   bool spngOwner = material == 81.0;
   bool gelOwner = material == 56.0;
+  bool quartzCrystalOwner = material == 29.0 || material == 76.0;
   // Most 8x fragments have no retained native state. Decode the B/A state and
   // co-located native wall exactly once only for owners whose enabled RGB
   // styling consumes it; this avoids two state-texture samples on every other
@@ -2459,6 +2470,7 @@ void main() {
     || (uPoloStateStyling > 0.5 && poloOwner)
     || (uSpngStateStyling > 0.5 && spngOwner)
     || (uGelHydrationStyling > 0.5 && gelOwner)
+    || (uQuartzCrystalStateStyling > 0.5 && quartzCrystalOwner)
     // Eligible translucent liquid already needs this exact wall texel for the
     // final backdrop. Fold the cohesion guard into that one packed-state read
     // so true 8x does not grow another native-wall sample.
@@ -2577,6 +2589,9 @@ void main() {
   if ((uSpngStateStyling > 0.5 && spngOwner)
     || (uGelHydrationStyling > 0.5 && gelOwner)) {
     color += hydrationStateEightXDelta(material, sourceTarget, uv * uFieldSize);
+  }
+  if (uQuartzCrystalStateStyling > 0.5 && quartzCrystalOwner && nativeWall < 0.5) {
+    color += quartzCrystalStateEightXDelta(material, sourceTarget);
   }
   // True 8x keeps botanical state on the existing packed B/A word. This is
   // RGB-only compact arithmetic: no additional texture, field, pass, or
@@ -2811,6 +2826,7 @@ uniform float uForceActivityStyling;
 uniform float uPoloStateStyling;
 uniform float uSpngStateStyling;
 uniform float uGelHydrationStyling;
+uniform float uQuartzCrystalStateStyling;
 uniform float uLavaAncestryStyling;
 uniform float uMoltenBodyOptics;
 uniform float uBotanicalIdentityStyling;
@@ -4178,6 +4194,15 @@ vec3 gelHydrationDelta(float material, vec2 stateBytes, vec2 position) {
   else if (waterVein) delta += vec3(3.0, 4.0, 2.0) * moisture;
   if (upperLip) delta += vec3(6.0, 8.0, 2.0) * moisture;
   return clamp(delta, vec3(-124.0), vec3(124.0)) / 255.0;
+}
+vec3 quartzCrystalStateDelta(float material, vec2 stateBytes) {
+  if (material != 29.0 && material != 76.0) return vec3(0.0);
+  float packedState = floor(stateBytes.x * 255.0 + 0.5)
+    + floor(stateBytes.y * 255.0 + 0.5) * 256.0;
+  float speckle = min(10.0, mod(packedState, 16.0));
+  float signedSeed = (speckle - 5.0) * 16.0;
+  vec3 key = material == 76.0 ? vec3(0.29, 0.34, 0.47) : vec3(0.33, 0.31, 0.38);
+  return clamp(signedSeed * key, vec3(-80.0), vec3(80.0)) / 255.0;
 }
 vec3 deutStateDelta(float material, vec2 stateBytes, vec2 position) {
   if (material != 100.0) return vec3(0.0);
@@ -6759,6 +6784,11 @@ void main() {
     }
     color += spongeHydrationDelta(material, wallState.ba, fieldPosition)
       * uSpngStateStyling;
+    if (uQuartzCrystalStateStyling > 0.5 && (material == 29.0 || material == 76.0)
+      && (family == 0.0 || family == 4.0) && traits < 0.5 && !materialEmissive
+      && wall < 0.5 && surfaceOnly < 0.5 && halo < 0.5 && emissionOnly < 0.5) {
+      color += quartzCrystalStateDelta(material, wallState.ba);
+    }
     if (uThermalMaterialStyling > 0.5 && !materialEmissive && traits < 0.5
       && material != 3.0 && (family == 0.0 || family == 4.0)) {
       // Scalar, RGB-only response: temperature cannot widen a contour, alter
@@ -7249,6 +7279,7 @@ export class PixiFieldPresenter {
       uPoloStateStyling: { value: 1, type: 'f32' },
       uSpngStateStyling: { value: 1, type: 'f32' },
       uGelHydrationStyling: { value: 1, type: 'f32' },
+      uQuartzCrystalStateStyling: { value: 1, type: 'f32' },
       uLavaAncestryStyling: { value: 1, type: 'f32' },
       uMoltenBodyOptics: { value: 1, type: 'f32' },
       uBotanicalIdentityStyling: { value: 1, type: 'f32' },
@@ -7583,6 +7614,7 @@ export class PixiFieldPresenter {
     poloStateStylingEnabled = true,
     spngStateStylingEnabled = true,
     gelHydrationStylingEnabled = true,
+    quartzCrystalStateStylingEnabled = true,
     lavaAncestryStylingEnabled = true,
     botanicalLifecycleStylingEnabled = true,
     sparkStateStylingEnabled = true,
@@ -7637,6 +7669,7 @@ export class PixiFieldPresenter {
     uniforms.uPoloStateStyling = poloStateStylingEnabled ? 1 : 0;
     uniforms.uSpngStateStyling = spngStateStylingEnabled ? 1 : 0;
     uniforms.uGelHydrationStyling = gelHydrationStylingEnabled ? 1 : 0;
+    uniforms.uQuartzCrystalStateStyling = quartzCrystalStateStylingEnabled ? 1 : 0;
     uniforms.uLavaAncestryStyling = lavaAncestryStylingEnabled ? 1 : 0;
     uniforms.uMoltenBodyOptics = moltenBodyOpticsEnabled ? 1 : 0;
     uniforms.uBotanicalIdentityStyling = botanicalIdentityStylingEnabled ? 1 : 0;
@@ -7844,6 +7877,11 @@ export class PixiFieldPresenter {
 
   setGelHydrationStylingEnabled(enabled: boolean): void {
     this.uniforms.uniforms.uGelHydrationStyling = enabled ? 1 : 0;
+    this.renderApplication();
+  }
+
+  setQuartzCrystalStateStylingEnabled(enabled: boolean): void {
+    this.uniforms.uniforms.uQuartzCrystalStateStyling = enabled ? 1 : 0;
     this.renderApplication();
   }
 

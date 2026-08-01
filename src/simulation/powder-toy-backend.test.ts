@@ -5,7 +5,7 @@ import { SimulationTool } from './simulation-tools';
 import {
   DEUT_PRESENTATION_STATE, GEL_PRESENTATION_STATE, LAVA_PRESENTATION_STATE, POLO_PRESENTATION_STATE,
   PLNT_PRESENTATION_STATE, SEED_PRESENTATION_STATE, SPNG_PRESENTATION_STATE,
-  SPRK_PRESENTATION_STATE, VIBR_PRESENTATION_STATE,
+  QUARTZ_PRESENTATION_STATE, SPRK_PRESENTATION_STATE, VIBR_PRESENTATION_STATE,
 } from './types';
 import { readFileSync } from 'node:fs';
 
@@ -497,9 +497,17 @@ describe('direct Powder Toy backend', () => {
     for (const fixture of fixtures) {
       enclose(source, fixture.x, fixture.y);
       source.paint(fixture.x, fixture.y, fixture.material, 0);
-      expect(stateAt(source, fixture.x, fixture.y)).toBe(
-        fixture.material === Material.POLO ? POLO_PRESENTATION_STATE.presentMask : 0,
-      );
+      const initialState = stateAt(source, fixture.x, fixture.y);
+      if (fixture.material === Material.POLO) {
+        expect(initialState).toBe(POLO_PRESENTATION_STATE.presentMask);
+      } else if (fixture.material === Material.QRTZ) {
+        // QRTZ owns native tmp2 crystal state before it becomes typed Lava;
+        // it must not be mistaken for Lava ctype ancestry.
+        expect(initialState & QUARTZ_PRESENTATION_STATE.reservedMask).toBe(0);
+        expect(initialState & QUARTZ_PRESENTATION_STATE.speckleMask).toBeLessThanOrEqual(
+          QUARTZ_PRESENTATION_STATE.speckleMaximum,
+        );
+      } else expect(initialState).toBe(0);
       const initialKelvin = source.temperature()[indexOf(source, fixture.x, fixture.y)] / 10;
       const heatApplications = Math.ceil((fixture.threshold + 4 - initialKelvin) / 2);
       for (let application = 0; application < heatApplications; application++) {
@@ -567,9 +575,14 @@ describe('direct Powder Toy backend', () => {
     for (const fixture of fixtures) {
       const index = indexOf(restored, fixture.x, fixture.y);
       expect(cells[index]).toBe(fixture.material);
-      expect(state[index]).toBe(
-        fixture.material === Material.POLO ? POLO_PRESENTATION_STATE.presentMask : 0,
-      );
+      if (fixture.material === Material.POLO) {
+        expect(state[index]).toBe(POLO_PRESENTATION_STATE.presentMask);
+      } else if (fixture.material === Material.QRTZ) {
+        expect(state[index] & QUARTZ_PRESENTATION_STATE.reservedMask).toBe(0);
+        expect(state[index] & QUARTZ_PRESENTATION_STATE.speckleMask).toBeLessThanOrEqual(
+          QUARTZ_PRESENTATION_STATE.speckleMaximum,
+        );
+      } else expect(state[index]).toBe(0);
     }
     expect(cells[indexOf(restored, generic.x, generic.y)]).toBe(Material.Lava);
     expect(state[indexOf(restored, generic.x, generic.y)]).toBe(
@@ -806,6 +819,40 @@ describe('direct Powder Toy backend', () => {
     expect(state & VIBR_PRESENTATION_STATE.countdownMask).toBeGreaterThan(0);
     expect(state & VIBR_PRESENTATION_STATE.alternateModeMask)
       .toBe(VIBR_PRESENTATION_STATE.alternateModeMask);
+  });
+
+  it('projects native PQRT/QRTZ crystal seeds and preserves them through OPS1', async () => {
+    const points = [
+      { material: Material.Quartz, x: 285, y: 180 },
+      { material: Material.QRTZ, x: 325, y: 180 },
+    ] as const;
+    const source = await PowderToyBackend.load(moduleArtifact.href);
+    const stateAt = (simulation: PowderToyBackend, x: number, y: number): number => {
+      simulation.cells();
+      return simulation.presentationState()[y * simulation.width + x];
+    };
+    const seeds: number[] = [];
+    for (const point of points) {
+      source.paint(point.x, point.y, point.material, 0);
+      expect(source.cells()[point.y * source.width + point.x]).toBe(point.material);
+      const state = stateAt(source, point.x, point.y);
+      expect(state & QUARTZ_PRESENTATION_STATE.reservedMask).toBe(0);
+      expect(state & QUARTZ_PRESENTATION_STATE.speckleMask).toBeGreaterThanOrEqual(0);
+      expect(state & QUARTZ_PRESENTATION_STATE.speckleMask).toBeLessThanOrEqual(
+        QUARTZ_PRESENTATION_STATE.speckleMaximum,
+      );
+      seeds.push(state);
+    }
+
+    const file = source.saveFile();
+    expect(new TextDecoder().decode(file.slice(0, 4))).toBe('OPS1');
+    const restored = await PowderToyBackend.load(moduleArtifact.href);
+    restored.loadFile(file);
+    for (let index = 0; index < points.length; index++) {
+      const point = points[index];
+      expect(restored.cells()[point.y * restored.width + point.x]).toBe(point.material);
+      expect(stateAt(restored, point.x, point.y)).toBe(seeds[index]);
+    }
   });
 
   it('projects native GEL absorption and preserves its reservoir through OPS1', async () => {

@@ -30,6 +30,7 @@ import {
 } from './canvas-liquid-light';
 import { applyCanvasLiquidIdentityStyle } from './canvas-liquid-identity-style';
 import { applyCanvasGelHydrationStyle } from './canvas-gel-hydration-style';
+import { applyCanvasQuartzCrystalStateStyle } from './canvas-quartz-crystal-state-style';
 import { shadeCanvasEnergy } from './canvas-energy-style';
 import { shadeCanvasMaterial } from './canvas-material-style';
 import { shadeCanvasCellularMaterial } from './canvas-cellular-style';
@@ -321,6 +322,7 @@ export class MaterialRenderer {
   private poloStateStylingEnabled = true;
   private spngStateStylingEnabled = true;
   private gelHydrationStylingEnabled = true;
+  private quartzCrystalStateStylingEnabled = true;
   private lavaAncestryStylingEnabled = true;
   // Canonical WebGL body optics only. Canvas deliberately remains a safe,
   // semantically equivalent fallback instead of carrying every advanced look.
@@ -876,6 +878,14 @@ export class MaterialRenderer {
     this.changed = true;
   }
 
+  setQuartzCrystalStateStylingEnabled(enabled: boolean): void {
+    if (enabled === this.quartzCrystalStateStylingEnabled) return;
+    this.quartzCrystalStateStylingEnabled = enabled;
+    this.presenter?.setQuartzCrystalStateStylingEnabled(enabled);
+    this.contourChunks.markAll();
+    this.changed = true;
+  }
+
   setLavaAncestryStylingEnabled(enabled: boolean): void {
     if (enabled === this.lavaAncestryStylingEnabled) return;
     this.lavaAncestryStylingEnabled = enabled;
@@ -1117,6 +1127,7 @@ export class MaterialRenderer {
       this.poloStateStylingEnabled,
       this.spngStateStylingEnabled,
       this.gelHydrationStylingEnabled,
+      this.quartzCrystalStateStylingEnabled,
       this.lavaAncestryStylingEnabled,
       this.botanicalLifecycleStylingEnabled,
       this.sparkStateStylingEnabled,
@@ -2128,6 +2139,11 @@ export class MaterialRenderer {
           if (this.spngStateStylingEnabled && presentationState) {
             applyCanvasSpongeHydrationStyle(
               this.styledColor, material, presentationState[index], x, y,
+            );
+          }
+          if (this.quartzCrystalStateStylingEnabled && presentationState && wall === 0) {
+            applyCanvasQuartzCrystalStateStyle(
+              this.styledColor, material, presentationState[index],
             );
           }
           if (this.solidContactDepthEnabled && denseSolidInterior
