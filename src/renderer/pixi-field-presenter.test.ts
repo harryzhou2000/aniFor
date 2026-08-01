@@ -2106,18 +2106,18 @@ describe('Pixi presenter startup configuration', () => {
     expect(eight.match(/texture\(uWallTexture, uv\)/g)).toHaveLength(4);
   });
 
-  it('restores true-8x SPNG hydration through the existing packed-state read', () => {
+  it('restores true-8x SPNG and GEL hydration through one packed-state read', () => {
     const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
     const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');
     const eightEnd = source.indexOf('const FIELD_FRAGMENT = `', eightStart);
     const eight = source.slice(eightStart, eightEnd);
-    const helperStart = eight.indexOf('vec3 spngStateEightXDelta(');
+    const helperStart = eight.indexOf('vec3 hydrationStateEightXDelta(');
     const helperEnd = eight.indexOf('bool solidEightXGranular(', helperStart);
     const helper = eight.slice(helperStart, helperEnd);
     const packedStart = eight.indexOf('  bool needsPackedState =');
     const packedEnd = eight.indexOf('  float sourceTarget =', packedStart);
     const packed = eight.slice(packedStart, packedEnd);
-    const applicationStart = eight.indexOf('  if (uSpngStateStyling > 0.5 && spngOwner) {');
+    const applicationStart = eight.indexOf('  if ((uSpngStateStyling > 0.5 && spngOwner)');
     const applicationEnd = eight.indexOf('  // True 8x keeps botanical state', applicationStart);
     const application = eight.slice(applicationStart, applicationEnd);
 
@@ -2126,13 +2126,19 @@ describe('Pixi presenter startup configuration', () => {
     expect(applicationStart).toBeGreaterThan(0);
     expect(applicationEnd).toBeGreaterThan(applicationStart);
     expect(eight).toContain('uniform float uSpngStateStyling;');
+    expect(eight).toContain('uniform float uGelHydrationStyling;');
     expect(eight).toContain('bool spngOwner = material == 81.0;');
+    expect(eight).toContain('bool gelOwner = material == 56.0;');
     expect(packed).toContain('|| (uSpngStateStyling > 0.5 && spngOwner)');
+    expect(packed).toContain('|| (uGelHydrationStyling > 0.5 && gelOwner)');
     expect(helper).toContain('mod(floor(packedState / 64.0), 2.0) < 0.5');
     expect(helper).toContain('float hydration = min(50.0, mod(packedState, 64.0));');
     expect(helper).toContain('if (hydration < 0.5) return vec3(0.0);');
     expect(helper).toContain('return clamp(delta * moisture, vec3(-20.0), vec3(20.0)) / 255.0;');
-    expect(application).toContain('color += spngStateEightXDelta(sourceTarget, uv * uFieldSize);');
+    expect(helper).toContain('if (material == 56.0) {');
+    expect(helper).toContain('float hydration = min(100.0, mod(packedState, 128.0));');
+    expect(helper).toContain('return clamp(delta, vec3(-124.0), vec3(124.0)) / 255.0;');
+    expect(application).toContain('color += hydrationStateEightXDelta(material, sourceTarget, uv * uFieldSize);');
     expect(helper).not.toContain('texture(');
     expect(helper).not.toContain('uTime');
     expect(helper).not.toMatch(/\balpha\s*[+*]?=/);
@@ -2186,9 +2192,9 @@ describe('Pixi presenter startup configuration', () => {
     // Stable Smooth powder retains almost all mineral variation at normal
     // detail; Local/Grains still carry their full diagnostic cell detail.
     expect(source).toContain('float settledMineralRetention = max(powderVisualCohesion, stablePowderMineral)');
-    expect(source).toContain('mix(1.0, 1.12, settledMineralRetention)');
-    expect(source).toContain('mix(1.0, 1.08, settledMineralRetention)');
-    expect(source).toContain('color += base * grain * vec3(0.080, 0.018, -0.050) * stablePowderMineral;');
+    expect(source).toContain('mix(1.0, 1.24, settledMineralRetention)');
+    expect(source).toContain('mix(1.0, 1.14, settledMineralRetention)');
+    expect(source).toContain('color += base * grain * vec3(0.105, 0.024, -0.066) * stablePowderMineral;');
     expect(source).toContain('uPowderStyle < 1.5 ? 0.044 : 0.085');
     expect(source).toContain('float powderDetailCalibration = material == 1.0 && uPowderStyle > 1.5');
     expect(source).toContain('if (material == 1.0 && uPowderStyle > 1.5 && traits < 0.5 && !materialEmissive)');

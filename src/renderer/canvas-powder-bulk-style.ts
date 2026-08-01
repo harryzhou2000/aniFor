@@ -5,12 +5,12 @@ const DENSITY_MINIMUM = 0.66 * 255;
 const SUPPORT_MINIMUM = 5.5;
 const SUPPORT_BYTE_TO_COUNT = 9 / 255;
 // A newly settled shoulder retains seventy percent of its original albedo
-// variation, and a genuinely dense stable core retains sixty-two percent.
+// variation, and a genuinely dense stable core retains seventy-six percent.
 // This keeps the field-owned silhouette calm without ironing the mineral
 // cadence out of a Smooth pile. Loose material and explicit Grains/Local stay
 // on their existing paths before this helper is reached.
 const CANONICAL_BLEND_SHOULDER = 0.30;
-const CANONICAL_BLEND_CORE = 0.38;
+const CANONICAL_BLEND_CORE = 0.24;
 const GRADIENT_BYTE_SCALE = 508;
 const RELIEF_DARK_LIMIT = -0.07;
 const RELIEF_LIGHT_LIMIT = 0.08;
@@ -88,7 +88,11 @@ export function applyCanvasPowderBulkStyle(
     : CANONICAL_BLEND_SHOULDER;
   // This runs only after the caller proved an exact stable Smooth-powder body.
   // Keep the shoulder's established per-cell material character, then calm
-  // only field-dense interiors toward the WebGL core's 32% grain retention.
+  // only field-dense interiors. Keep substantially more exact cell albedo in
+  // the core: at 1x–4x presentation the later composed raster legitimately
+  // filters a sub-cell facet, so aggressively converging this cell-scale
+  // signal leaves a Smooth pile visibly airbrushed. The field still owns only
+  // the outer silhouette; this RGB-only residual cannot alter it.
   // Density is already the shared powder support; no neighbour scan, field,
   // allocation, silhouette, alpha, or semantic ownership decision is added.
   const coreProgress = clamp((densityByte / 255 - 0.68) / (0.85 - 0.68), 0, 1);

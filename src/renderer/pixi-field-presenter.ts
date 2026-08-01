@@ -162,6 +162,7 @@ uniform float uBotanicalLifecycleStyling;
 uniform float uSparkStateStyling;
 uniform float uPoloStateStyling;
 uniform float uSpngStateStyling;
+uniform float uGelHydrationStyling;
 uniform float uPhotonActive;
 float materialAt(vec2 uv) {
   return floor(texture(uFieldTexture, clamp(uv, uTexel * 0.5, vec2(1.0) - uTexel * 0.5)).r * 255.0 + 0.5);
@@ -683,10 +684,27 @@ vec3 poloStateEightXDelta(float packedState, vec2 position) {
   }
   return clamp(delta, vec3(-16.0), vec3(16.0)) / 255.0;
 }
-// SPNG carries its native life hydration in the same packed B/A word. This
-// direct form retains the dry no-op and wet pore grammar without an additional
-// texture read at true 8x.
-vec3 spngStateEightXDelta(float packedState, vec2 position) {
+// SPNG and GEL carry disjoint owner-guarded hydration meanings in the same
+// packed B/A word. Keeping both in this one already-compiled call site avoids
+// another state helper/register class in the 15M-fragment shader.
+vec3 hydrationStateEightXDelta(float material, float packedState, vec2 position) {
+  if (material == 56.0) {
+    float hydration = min(100.0, mod(packedState, 128.0));
+    if (hydration < 0.5) return vec3(0.0);
+    float moisture = hydration / 100.0;
+    vec2 world = floor(position);
+    // True 8x keeps GEL's native orange-to-blue body delta and a sparse
+    // world-anchored wet vein/lip cue, but deliberately avoids the normal
+    // path's radial pocket intermediates. This shared SPNG/GEL helper remains
+    // below the direct shader's register budget at 15M fragments.
+    float waterVein = 1.0 - step(1.5, mod(world.x * 3.0 - world.y * 2.0, 17.0));
+    float upperLip = (1.0 - step(1.5, mod(world.x + world.y, 5.0)))
+      * (1.0 - step(1.5, mod(world.x * 2.0 - world.y, 11.0)));
+    vec3 delta = hydration * vec3(-223.0 / 120.0, -138.0 / 120.0, 208.0 / 120.0) * 0.62;
+    delta += vec3(3.0, 4.0, 2.0) * waterVein * moisture;
+    delta += vec3(6.0, 8.0, 2.0) * upperLip * moisture;
+    return clamp(delta, vec3(-124.0), vec3(124.0)) / 255.0;
+  }
   if (mod(floor(packedState / 64.0), 2.0) < 0.5) return vec3(0.0);
   float hydration = min(50.0, mod(packedState, 64.0));
   if (hydration < 0.5) return vec3(0.0);
@@ -2426,6 +2444,7 @@ void main() {
   bool sparkOwner = material == 148.0;
   bool poloOwner = material == 109.0;
   bool spngOwner = material == 81.0;
+  bool gelOwner = material == 56.0;
   // Most 8x fragments have no retained native state. Decode the B/A state and
   // co-located native wall exactly once only for owners whose enabled RGB
   // styling consumes it; this avoids two state-texture samples on every other
@@ -2439,6 +2458,7 @@ void main() {
     || (uSparkStateStyling > 0.5 && sparkOwner)
     || (uPoloStateStyling > 0.5 && poloOwner)
     || (uSpngStateStyling > 0.5 && spngOwner)
+    || (uGelHydrationStyling > 0.5 && gelOwner)
     // Eligible translucent liquid already needs this exact wall texel for the
     // final backdrop. Fold the cohesion guard into that one packed-state read
     // so true 8x does not grow another native-wall sample.
@@ -2554,8 +2574,9 @@ void main() {
   if (uPoloStateStyling > 0.5 && poloOwner) {
     color += poloStateEightXDelta(sourceTarget, uv * uFieldSize);
   }
-  if (uSpngStateStyling > 0.5 && spngOwner) {
-    color += spngStateEightXDelta(sourceTarget, uv * uFieldSize);
+  if ((uSpngStateStyling > 0.5 && spngOwner)
+    || (uGelHydrationStyling > 0.5 && gelOwner)) {
+    color += hydrationStateEightXDelta(material, sourceTarget, uv * uFieldSize);
   }
   // True 8x keeps botanical state on the existing packed B/A word. This is
   // RGB-only compact arithmetic: no additional texture, field, pass, or
@@ -2789,6 +2810,7 @@ uniform float uSourceTargetStyling;
 uniform float uForceActivityStyling;
 uniform float uPoloStateStyling;
 uniform float uSpngStateStyling;
+uniform float uGelHydrationStyling;
 uniform float uLavaAncestryStyling;
 uniform float uMoltenBodyOptics;
 uniform float uBotanicalIdentityStyling;
@@ -4135,6 +4157,27 @@ vec3 spongeHydrationDelta(float material, vec2 stateBytes, vec2 position) {
   else if (poreCore) delta += vec3(-4.0, -2.0, 8.0);
   else if (firstWall || secondWall) delta += vec3(-2.0, 1.0, 6.0);
   return clamp(delta * moisture, vec3(-20.0), vec3(20.0)) / 255.0;
+}
+vec3 gelHydrationDelta(float material, vec2 stateBytes, vec2 position) {
+  if (material != 56.0) return vec3(0.0);
+  float packedState = floor(stateBytes.x * 255.0 + 0.5)
+    + floor(stateBytes.y * 255.0 + 0.5) * 256.0;
+  float hydration = min(100.0, mod(packedState, 128.0));
+  if (hydration < 0.5) return vec3(0.0);
+  float moisture = hydration / 100.0;
+  vec2 world = floor(position);
+  vec2 local = mod(world, 20.0) - 10.0;
+  float radiusSquared = dot(local, local);
+  bool swollenPocket = radiusSquared <= 18.0;
+  bool membrane = radiusSquared >= 34.0 && radiusSquared <= 58.0;
+  bool waterVein = mod(world.x * 3.0 - world.y * 2.0, 17.0) <= 1.0;
+  bool upperLip = membrane && local.x + local.y <= -3.0
+    && mod(world.x + world.y, 5.0) <= 1.0;
+  vec3 delta = hydration * vec3(-223.0 / 120.0, -138.0 / 120.0, 208.0 / 120.0) * 0.62;
+  if (swollenPocket) delta += vec3(-3.0, -2.0, 0.0) * moisture;
+  else if (waterVein) delta += vec3(3.0, 4.0, 2.0) * moisture;
+  if (upperLip) delta += vec3(6.0, 8.0, 2.0) * moisture;
+  return clamp(delta, vec3(-124.0), vec3(124.0)) / 255.0;
 }
 vec3 deutStateDelta(float material, vec2 stateBytes, vec2 position) {
   if (material != 100.0) return vec3(0.0);
@@ -5575,6 +5618,11 @@ void main() {
       && wall < 0.5 && emissionOnly < 0.5 && family == 2.0 && !materialEmissive) {
       color += deutStateDelta(material, wallState.ba, fieldPosition);
     }
+    if (uGelHydrationStyling > 0.5 && material == 56.0
+      && liquidOnly < 0.5 && halo < 0.5 && surfaceOnly < 0.5
+      && wall < 0.5 && emissionOnly < 0.5 && family == 2.0 && !materialEmissive) {
+      color += gelHydrationDelta(material, wallState.ba, fieldPosition);
+    }
     if (uLavaAncestryStyling > 0.5 && material == 11.0
       && liquidOnly < 0.5 && halo < 0.5 && surfaceOnly < 0.5
       && wall < 0.5 && emissionOnly < 0.5) {
@@ -6032,15 +6080,19 @@ void main() {
       // this world-anchored term remains readable without reintroducing square
       // particle borders. Local and Grains keep their unmodified references.
       float settledMineralRetention = max(powderVisualCohesion, stablePowderMineral);
-      float cellGrainRetention = mix(1.0, 1.12, settledMineralRetention);
-      float facetRetention = mix(1.0, 1.08, settledMineralRetention);
+      // Keep the bulk at a clearly legible mineral cadence at normal detail.
+      // The silhouette estimator is still solely responsible for curvature;
+      // this modest interior-only lift restores the colour variation that the
+      // 1x--4x raster filters away before a viewer can read a pile as grains.
+      float cellGrainRetention = mix(1.0, 1.24, settledMineralRetention);
+      float facetRetention = mix(1.0, 1.14, settledMineralRetention);
       color *= 0.91 + grain * (0.20 + roughSurface * 0.05) * cellGrainRetention * facetGain
         + grainFacet * (0.10 + roughSurface * 0.04) * facetRetention * facetGain;
       // A modest chromatic mineral key survives normal-detail raster filtering
       // better than sub-cell luminance alone. It is exact-cell/world anchored
       // and RGB-only, so composed Smooth bodies gain colour vocabulary without
       // creating a new support decision or perturbing Local/Grains references.
-      color += base * grain * vec3(0.080, 0.018, -0.050) * stablePowderMineral;
+      color += base * grain * vec3(0.105, 0.024, -0.066) * stablePowderMineral;
       color += base * max(0.0, 0.6 - subcell.x - subcell.y)
         * (0.11 + roughSurface * 0.035) * facetRetention * facetGain;
       float brightFacet = max(0.0, grainFacet - 0.18) * facetRetention;
@@ -7196,6 +7248,7 @@ export class PixiFieldPresenter {
       uForceActivityStyling: { value: 1, type: 'f32' },
       uPoloStateStyling: { value: 1, type: 'f32' },
       uSpngStateStyling: { value: 1, type: 'f32' },
+      uGelHydrationStyling: { value: 1, type: 'f32' },
       uLavaAncestryStyling: { value: 1, type: 'f32' },
       uMoltenBodyOptics: { value: 1, type: 'f32' },
       uBotanicalIdentityStyling: { value: 1, type: 'f32' },
@@ -7529,6 +7582,7 @@ export class PixiFieldPresenter {
     forceActivityStylingEnabled = true,
     poloStateStylingEnabled = true,
     spngStateStylingEnabled = true,
+    gelHydrationStylingEnabled = true,
     lavaAncestryStylingEnabled = true,
     botanicalLifecycleStylingEnabled = true,
     sparkStateStylingEnabled = true,
@@ -7582,6 +7636,7 @@ export class PixiFieldPresenter {
     uniforms.uForceActivityStyling = forceActivityStylingEnabled ? 1 : 0;
     uniforms.uPoloStateStyling = poloStateStylingEnabled ? 1 : 0;
     uniforms.uSpngStateStyling = spngStateStylingEnabled ? 1 : 0;
+    uniforms.uGelHydrationStyling = gelHydrationStylingEnabled ? 1 : 0;
     uniforms.uLavaAncestryStyling = lavaAncestryStylingEnabled ? 1 : 0;
     uniforms.uMoltenBodyOptics = moltenBodyOpticsEnabled ? 1 : 0;
     uniforms.uBotanicalIdentityStyling = botanicalIdentityStylingEnabled ? 1 : 0;
@@ -7784,6 +7839,11 @@ export class PixiFieldPresenter {
 
   setSpngStateStylingEnabled(enabled: boolean): void {
     this.uniforms.uniforms.uSpngStateStyling = enabled ? 1 : 0;
+    this.renderApplication();
+  }
+
+  setGelHydrationStylingEnabled(enabled: boolean): void {
+    this.uniforms.uniforms.uGelHydrationStyling = enabled ? 1 : 0;
     this.renderApplication();
   }
 

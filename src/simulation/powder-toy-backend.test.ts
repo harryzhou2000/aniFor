@@ -3,7 +3,7 @@ import { MATERIALS, Material } from '../shared/materials';
 import { PowderToyBackend } from './powder-toy-backend';
 import { SimulationTool } from './simulation-tools';
 import {
-  DEUT_PRESENTATION_STATE, LAVA_PRESENTATION_STATE, POLO_PRESENTATION_STATE,
+  DEUT_PRESENTATION_STATE, GEL_PRESENTATION_STATE, LAVA_PRESENTATION_STATE, POLO_PRESENTATION_STATE,
   PLNT_PRESENTATION_STATE, SEED_PRESENTATION_STATE, SPNG_PRESENTATION_STATE,
   SPRK_PRESENTATION_STATE, VIBR_PRESENTATION_STATE,
 } from './types';
@@ -806,6 +806,43 @@ describe('direct Powder Toy backend', () => {
     expect(state & VIBR_PRESENTATION_STATE.countdownMask).toBeGreaterThan(0);
     expect(state & VIBR_PRESENTATION_STATE.alternateModeMask)
       .toBe(VIBR_PRESENTATION_STATE.alternateModeMask);
+  });
+
+  it('projects native GEL absorption and preserves its reservoir through OPS1', async () => {
+    const point = { x: 306, y: 180 };
+    const indexOf = (simulation: PowderToyBackend): number => point.y * simulation.width + point.x;
+    const owner = (simulation: PowderToyBackend): number => simulation.cells()[indexOf(simulation)];
+    const state = (simulation: PowderToyBackend): number => {
+      simulation.cells();
+      return simulation.presentationState()[indexOf(simulation)];
+    };
+    const hydration = (word: number): number => word & GEL_PRESENTATION_STATE.hydrationMask;
+
+    const source = await PowderToyBackend.load(moduleArtifact.href);
+    source.paint(point.x, point.y, Material.GEL, 0);
+    expect(owner(source)).toBe(Material.GEL);
+    expect(state(source)).toBe(0);
+
+    // GEL's first WATR absorption at tmp=0 is certain (500 / 500), so this
+    // exercises the real native update rather than a fixture-only state write.
+    for (let offsetY = -1; offsetY <= 1; offsetY++) {
+      for (let offsetX = -1; offsetX <= 1; offsetX++) {
+        if (offsetX || offsetY) source.paint(point.x + offsetX, point.y + offsetY, Material.Water, 0);
+      }
+    }
+    source.step();
+    const hydratedState = state(source);
+    expect(owner(source)).toBe(Material.GEL);
+    expect(hydration(hydratedState)).toBeGreaterThan(0);
+    expect(hydration(hydratedState)).toBeLessThanOrEqual(GEL_PRESENTATION_STATE.hydrationMaximum);
+    expect(hydratedState & GEL_PRESENTATION_STATE.reservedMask).toBe(0);
+
+    const file = source.saveFile();
+    expect(new TextDecoder().decode(file.slice(0, 4))).toBe('OPS1');
+    const restored = await PowderToyBackend.load(moduleArtifact.href);
+    restored.loadFile(file);
+    expect(owner(restored)).toBe(Material.GEL);
+    expect(state(restored)).toBe(hydratedState);
   });
 
   it('extracts exact native DEUT concentration and follows native coalescing', async () => {

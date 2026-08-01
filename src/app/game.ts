@@ -105,6 +105,9 @@ import {
   SPNG_STATE_GRAPHICS_AUDIT, prepareSpngStateGraphicsAuditFixture,
 } from './spng-state-graphics-audit';
 import {
+  GEL_STATE_GRAPHICS_AUDIT, prepareGelStateGraphicsAuditFixture,
+} from './gel-state-graphics-audit';
+import {
   PHOTON_SPECTRUM_GRAPHICS_AUDIT, preparePhotonSpectrumGraphicsAuditFixture,
   setPhotonSpectrumGraphicsVisible,
 } from './photon-spectrum-graphics-audit';
@@ -475,6 +478,9 @@ export class Game {
       setSpngStateStyling: (enabled) => {
         this.renderer.setSpngStateStylingEnabled(enabled);
       },
+      setGelHydrationStyling: (enabled) => {
+        this.renderer.setGelHydrationStylingEnabled(enabled);
+      },
       setLavaAncestryStyling: (enabled) => {
         this.renderer.setLavaAncestryStylingEnabled(enabled);
       },
@@ -661,6 +667,10 @@ export class Game {
       spngStateGraphicsAtlas: () => SPNG_STATE_GRAPHICS_AUDIT,
       prepareSpngStateGraphicsFixture: () => {
         prepareSpngStateGraphicsAuditFixture(this.simulation);
+      },
+      gelStateGraphicsAtlas: () => GEL_STATE_GRAPHICS_AUDIT,
+      prepareGelStateGraphicsFixture: () => {
+        prepareGelStateGraphicsAuditFixture(this.simulation);
       },
       photonSpectrumGraphicsAtlas: () => PHOTON_SPECTRUM_GRAPHICS_AUDIT,
       preparePhotonSpectrumGraphicsFixture: () => {

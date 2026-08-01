@@ -661,6 +661,13 @@ void ExtractFields()
 				auto const hydration = std::clamp(part.life, 0, 50);
 				presentationStateField[offset] = uint16_t(0x0040 | hydration);
 			}
+			else if (part.type == PT_GEL)
+			{
+				// GEL's native water reservoir is tmp, capped by upstream at 100. The
+				// exact semantic GEL owner guards this word, so dry GEL intentionally
+				// remains zero instead of consuming a separate presence marker.
+				presentationStateField[offset] = uint16_t(std::clamp(part.tmp, 0, 100));
+			}
 			else if (part.type == PT_SEED)
 			{
 				// SEED keeps absorbed water in ctype's PLNT_LIFE byte and uses life as

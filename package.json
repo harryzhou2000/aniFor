@@ -39,6 +39,7 @@
     "audit:force-activity": "node scripts/verify-browser-input.mjs --force-activity-graphics-only",
     "audit:polo-state": "node scripts/verify-browser-input.mjs --polo-state-graphics-only",
     "audit:spng-state": "node scripts/verify-browser-input.mjs --spng-state-graphics-only",
+    "audit:gel-state": "npm run build && node scripts/verify-browser-input.mjs --gel-state-graphics-only --require-canvas-visuals --production-bundle",
     "audit:lava-state": "node scripts/verify-browser-input.mjs --lava-state-graphics-only",
     "audit:botanical-lifecycle": "node scripts/verify-browser-input.mjs --botanical-lifecycle-graphics-only",
     "audit:spark-state": "node scripts/verify-browser-input.mjs --spark-state-graphics-only",

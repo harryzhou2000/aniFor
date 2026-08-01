@@ -105,10 +105,10 @@ describe('Canvas powder bulk style', () => {
         4,
       );
       expect(coreResidual).toBeCloseTo(
-        Math.abs(original[channel] - canonical[channel]) * 0.62,
+        Math.abs(original[channel] - canonical[channel]) * 0.76,
         4,
       );
-      expect(coreResidual).toBeLessThan(shoulderResidual * 0.90);
+      expect(coreResidual).toBeGreaterThan(shoulderResidual * 1.05);
     }
   });
 

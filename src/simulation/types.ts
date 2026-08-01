@@ -49,6 +49,17 @@ export const SPNG_PRESENTATION_STATE = {
   reservedMask: 0xff80,
 } as const;
 
+/**
+ * Exact native GEL absorbed-water reservoir (`tmp`) in the owner-multiplexed
+ * state word. Material.GEL is the authoritative owner guard, so zero remains
+ * the valid dry, presentation-no-op state rather than a missing-state marker.
+ */
+export const GEL_PRESENTATION_STATE = {
+  hydrationMask: 0x007f,
+  hydrationMaximum: 100,
+  reservedMask: 0xff80,
+} as const;
+
 /** Exact native LAVA ctype ancestry in the owner-multiplexed presentation word. */
 export const LAVA_PRESENTATION_STATE = {
   originMask: 0x00ff,

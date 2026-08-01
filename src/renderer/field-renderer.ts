@@ -29,6 +29,7 @@ import {
   canvasLiquidEmissionSurfaceExposure, canvasLiquidSpeciesRelief, canvasLiquidSurfaceExposure,
 } from './canvas-liquid-light';
 import { applyCanvasLiquidIdentityStyle } from './canvas-liquid-identity-style';
+import { applyCanvasGelHydrationStyle } from './canvas-gel-hydration-style';
 import { shadeCanvasEnergy } from './canvas-energy-style';
 import { shadeCanvasMaterial } from './canvas-material-style';
 import { shadeCanvasCellularMaterial } from './canvas-cellular-style';
@@ -319,6 +320,7 @@ export class MaterialRenderer {
   private forceActivityStylingEnabled = true;
   private poloStateStylingEnabled = true;
   private spngStateStylingEnabled = true;
+  private gelHydrationStylingEnabled = true;
   private lavaAncestryStylingEnabled = true;
   // Canonical WebGL body optics only. Canvas deliberately remains a safe,
   // semantically equivalent fallback instead of carrying every advanced look.
@@ -866,6 +868,14 @@ export class MaterialRenderer {
     this.changed = true;
   }
 
+  setGelHydrationStylingEnabled(enabled: boolean): void {
+    if (enabled === this.gelHydrationStylingEnabled) return;
+    this.gelHydrationStylingEnabled = enabled;
+    this.presenter?.setGelHydrationStylingEnabled(enabled);
+    this.contourChunks.markAll();
+    this.changed = true;
+  }
+
   setLavaAncestryStylingEnabled(enabled: boolean): void {
     if (enabled === this.lavaAncestryStylingEnabled) return;
     this.lavaAncestryStylingEnabled = enabled;
@@ -1106,6 +1116,7 @@ export class MaterialRenderer {
       this.forceActivityStylingEnabled,
       this.poloStateStylingEnabled,
       this.spngStateStylingEnabled,
+      this.gelHydrationStylingEnabled,
       this.lavaAncestryStylingEnabled,
       this.botanicalLifecycleStylingEnabled,
       this.sparkStateStylingEnabled,
@@ -2018,6 +2029,12 @@ export class MaterialRenderer {
             fields.liquid.bytes[pixel + 3], liquidFieldRelief,
             liquidSurfaceExposure, this.boundaryStability[index],
           );
+          if (this.gelHydrationStylingEnabled && presentationState
+            && material === Material.GEL && wall === 0) {
+            applyCanvasGelHydrationStyle(
+              this.styledColor, material, presentationState[index], x, y,
+            );
+          }
           if (this.deutStateStylingEnabled && presentationState
             && material === Material.DEUT && wall === 0) {
             applyCanvasDeutStateStyle(
