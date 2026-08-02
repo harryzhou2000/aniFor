@@ -290,6 +290,15 @@ Run `npm run audit:distilled-diesel-liquid` or
 
 The direct true-8× compositor now also restores native-wall refraction for exact translucent Glass and Ice. It moves only the already-generated analytic wall pattern beneath a partially transparent owner: Glass uses a coherent boundary shift and Ice uses a stable two-facet shift. The wall ID/support still comes from the same nearest texel, and no alpha, semantic support, material ownership, field, texture sample, pass, target, upload, or output-scale resource changes. The completed-fence gate captures flat→refracted→flat Glass/Ice against wall patterns, retains opaque Metal as an exact control, and repeats the full forced-stall/context-loss recovery sequence. The accepted run stayed at `1797.3/1837.7/1943.0 ms` GPU-fence median/p90/max with zero browser errors.
 
+After true-8× promotion, completion normally polls its single GPU fence through
+`requestAnimationFrame`; an independent fence-bound 30-second watchdog now
+backs that poll. If a backgrounded or wedged browser stops delivering animation
+frames while the promoted fence remains unsignalled, the watchdog releases the
+exact same fence and invokes the existing camera-preserving Canvas recovery.
+It is cleared on normal fence release and is deliberately not armed during the
+first-frame candidate, which already shares the one promotion deadline with
+the temporary Canvas fallback.
+
 The true-8× direct mesh now also consumes the shared Surface contour control for opaque rigid bodies and supported Smooth powder. It derives a small family-coloured key/fill from the already-live four exact owner samples and their analytic slope: Smooth powder needs at least two local owner samples, while Grains, Local, traits, emissive matter, and an isolated Sand cell are exact no-ops. This is RGB-only and leaves alpha, support, material ownership, physics, authored holes, native-wall composition, and every resource budget untouched. Its completed-fence gate captures Metal and a settled Sand slope flat→lit→flat, verifies bounded response and byte-repeatability, and keeps the isolated grain unchanged.
 
 The canonical true-8× mesh now gives ordinary connected Water, Oil, and Acid the same Surface-control treatment. It preserves the exact semantic Hermite density before the liquid volume field replaces working density, then combines the four already-live species-aware liquid samples with that semantic edge to locate a bounded air-facing shell. The deferred family-coloured key/fill is RGB-only and is applied only after the existing packed native-wall read proves the cell wall-free; Lava, isolated droplets, unlike-liquid seams, traits, emission, and wall contacts remain exact controls. This adds no sampler, field, pass, target, upload, allocation, alpha/support/ownership decision, or physics change. The completed-fence 4896×3072 browser gate captures Water/Oil/Acid flat→lit→flat with semantic snapshots and family-chroma checks, while repeating the protected controls byte-exactly before the normal forced-stall/context-loss recovery sequence.

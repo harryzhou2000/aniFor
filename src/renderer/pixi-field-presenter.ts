@@ -7792,6 +7792,11 @@ export class PixiFieldPresenter {
   private renderFenceStartedAt = 0;
   private renderQueued = false;
   private renderFencePoll = 0;
+  // requestAnimationFrame is deliberately used for cheap completion polling,
+  // but a wedged/backgrounded browser may stop delivering animation frames.
+  // Keep an independent wall-clock watchdog for an already promoted 8x fence
+  // so that condition still recovers the bounded Canvas fallback on time.
+  private renderFenceWatchdog?: ReturnType<typeof setTimeout>;
   private renderFenceStallForcedForAudit = false;
   private firstFrameReady = false;
   private firstFrameFailed = false;
@@ -9068,7 +9073,30 @@ export class PixiFieldPresenter {
       // Poll even when no second redraw has arrived. Promotion must not remove
       // the visible Canvas merely because the first 8x frame was submitted.
       this.scheduleEightXRenderPoll();
+      // The candidate's first fence remains owned by waitForFirstFrame(),
+      // which shares the one promotion deadline with FieldRenderer. Once that
+      // has promoted, however, rAF alone is insufficient to guarantee that an
+      // unsignalled later fence restores Canvas after thirty seconds.
+      this.armPromotedEightXFenceWatchdog(fence);
     } catch { /* context loss will promote the Canvas fallback */ }
+  }
+
+  /**
+   * Guarantees post-promotion stalled-fence recovery even if no further rAF
+   * callback is delivered. The identity check makes an expired callback from a
+   * completed fence harmless after latest-wins submits a successor.
+   */
+  private armPromotedEightXFenceWatchdog(fence: WebGLSync): void {
+    if (this.outputScale !== 8 || !this.firstFrameReady
+      || this.destroyed || this.contextLost || this.renderFence !== fence) return;
+    if (this.renderFenceWatchdog !== undefined) clearTimeout(this.renderFenceWatchdog);
+    this.renderFenceWatchdog = setTimeout(() => {
+      this.renderFenceWatchdog = undefined;
+      if (this.destroyed || this.contextLost || !this.firstFrameReady
+        || this.renderFence !== fence) return;
+      this.releaseRenderFence();
+      this.renderStallHandler?.();
+    }, WEBGL_EIGHT_X_FRAME_STALL_MS);
   }
 
   private scheduleEightXRenderPoll(): void {
@@ -9089,6 +9117,10 @@ export class PixiFieldPresenter {
   }
 
   private releaseRenderFence(): void {
+    if (this.renderFenceWatchdog !== undefined) {
+      clearTimeout(this.renderFenceWatchdog);
+      this.renderFenceWatchdog = undefined;
+    }
     if (this.renderFencePoll !== 0) {
       cancelAnimationFrame(this.renderFencePoll);
       this.renderFencePoll = 0;

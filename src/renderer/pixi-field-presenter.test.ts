@@ -89,6 +89,7 @@ function presenterHarness(): PresenterHarness {
     webGLTimingFenceStartedAt: 0,
     webGLTimingFencePoll: 0,
     renderFencePoll: 0,
+    renderFenceWatchdog: undefined,
     renderQueued: false,
     renderFenceStallForcedForAudit: false,
   });
@@ -3957,6 +3958,72 @@ describe('Pixi presenter startup configuration', () => {
     expect(gl.deleteSync).toHaveBeenCalledWith(fence);
     expect(gl.clientWaitSync).not.toHaveBeenCalled();
     expect(presenter.app.render).not.toHaveBeenCalled();
+  });
+
+  it('recovers a promoted 8x fence at the deadline even when rAF stops', () => {
+    vi.useFakeTimers();
+    vi.stubGlobal('requestAnimationFrame', vi.fn(() => 41));
+    vi.stubGlobal('cancelAnimationFrame', vi.fn());
+    const fence = {} as WebGLSync;
+    const gl = {
+      SYNC_GPU_COMMANDS_COMPLETE: 0x9117,
+      fenceSync: vi.fn(() => fence),
+      deleteSync: vi.fn(),
+      flush: vi.fn(),
+    };
+    const stalled = vi.fn();
+    const presenter = presenterHarness();
+    Object.assign(presenter, {
+      outputScale: 8,
+      firstFrameReady: true,
+      destroyed: false,
+      contextLost: false,
+      app: { ...presenter.app, renderer: { gl } },
+    });
+    presenter.setRenderStallHandler(stalled);
+
+    presenter.setGasFieldLightingEnabled(true);
+
+    expect(gl.fenceSync).toHaveBeenCalledOnce();
+    expect(stalled).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(WEBGL_EIGHT_X_FRAME_STALL_MS - 1);
+    expect(stalled).not.toHaveBeenCalled();
+
+    vi.advanceTimersByTime(1);
+
+    expect(gl.deleteSync).toHaveBeenCalledWith(fence);
+    expect(stalled).toHaveBeenCalledOnce();
+    expect(presenter.app.render).toHaveBeenCalledOnce();
+  });
+
+  it('cancels the promoted 8x watchdog when its fence releases normally', () => {
+    vi.useFakeTimers();
+    vi.stubGlobal('requestAnimationFrame', vi.fn(() => 43));
+    vi.stubGlobal('cancelAnimationFrame', vi.fn());
+    const fence = {} as WebGLSync;
+    const gl = {
+      SYNC_GPU_COMMANDS_COMPLETE: 0x9117,
+      fenceSync: vi.fn(() => fence),
+      deleteSync: vi.fn(),
+      flush: vi.fn(),
+    };
+    const stalled = vi.fn();
+    const presenter = presenterHarness();
+    Object.assign(presenter, {
+      outputScale: 8,
+      firstFrameReady: true,
+      destroyed: false,
+      contextLost: false,
+      app: { ...presenter.app, renderer: { gl } },
+    });
+    presenter.setRenderStallHandler(stalled);
+
+    presenter.setGasFieldLightingEnabled(true);
+    (presenter as unknown as { releaseRenderFence(): void }).releaseRenderFence();
+    vi.advanceTimersByTime(WEBGL_EIGHT_X_FRAME_STALL_MS);
+
+    expect(gl.deleteSync).toHaveBeenCalledWith(fence);
+    expect(stalled).not.toHaveBeenCalled();
   });
 
   it('lets the explicit browser audit exercise the production 8x stall branch', () => {
