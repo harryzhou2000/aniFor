@@ -45,6 +45,7 @@ interface PresenterHarness {
   setSpngStateStylingEnabled: PixiFieldPresenter['setSpngStateStylingEnabled'];
   setLcryStateStylingEnabled: PixiFieldPresenter['setLcryStateStylingEnabled'];
   setPipePresentationStylingEnabled: PixiFieldPresenter['setPipePresentationStylingEnabled'];
+  setSwchStateStylingEnabled: PixiFieldPresenter['setSwchStateStylingEnabled'];
   setLavaAncestryStylingEnabled: PixiFieldPresenter['setLavaAncestryStylingEnabled'];
   setMoltenBodyOpticsEnabled: PixiFieldPresenter['setMoltenBodyOpticsEnabled'];
   setBotanicalIdentityStylingEnabled: PixiFieldPresenter['setBotanicalIdentityStylingEnabled'];
@@ -139,6 +140,7 @@ describe('Pixi presenter startup configuration', () => {
       uFiltSpectrumStyling: 1,
       uLcryStateStyling: 1,
       uPipePresentationStyling: 1,
+      uSwchStateStyling: 1,
       uMoltenBodyOptics: 1,
       uPowderStyle: powderRenderStyleValue('grains'),
       uPowderBodyDepth: 1,
@@ -2250,6 +2252,34 @@ describe('Pixi presenter startup configuration', () => {
     expect(normal).not.toContain('uPipePresentationTexture');
   });
 
+  it('projects native SWCH conducting state through the existing packed state in both WebGL compositors', () => {
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');
+    const eightEnd = source.indexOf('const FIELD_FRAGMENT = `', eightStart);
+    const eight = source.slice(eightStart, eightEnd);
+    const normalStart = source.indexOf('const FIELD_FRAGMENT = `', eightEnd);
+    const normalEnd = source.indexOf('`;\n\n/** Primary WebGL presentation', normalStart);
+    const normal = source.slice(normalStart, normalEnd);
+    const packedStart = eight.indexOf('  bool needsPackedState =');
+    const packedEnd = eight.indexOf('  float sourceTarget =', packedStart);
+    const packed = eight.slice(packedStart, packedEnd);
+
+    expect(eight).toContain('uniform float uSwchStateStyling;');
+    expect(eight).toContain('bool swchOwner = material == 149.0;');
+    expect(eight).toContain('vec3 swchStateEightXDelta(vec3 color, float packedState)');
+    expect(eight).toContain('bool present = packedState >= 32768.0;');
+    expect(eight).toContain('bool on = mod(packedState, 2.0) > 0.5;');
+    expect(packed).toContain('|| (uSwchStateStyling > 0.5 && swchOwner)');
+    expect(eight).toContain('color += swchStateEightXDelta(color, sourceTarget);');
+    expect(eight.match(/texture\(uWallTexture, uv\)/g)).toHaveLength(4);
+
+    expect(normal).toContain('uniform float uSwchStateStyling;');
+    expect(normal).toContain('vec3 swchStateDelta(vec3 color, vec2 stateBytes)');
+    expect(normal).toContain('if (uSwchStateStyling > 0.5 && material == 149.0');
+    expect(normal).toContain('color += swchStateDelta(color, wallState.ba);');
+    expect(normal).not.toContain('uSwchStateTexture');
+  });
+
   it('restores independent PHOT spectrum after true-8x matter and wall composition', () => {
     const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
     const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');
@@ -2713,6 +2743,18 @@ describe('Pixi presenter startup configuration', () => {
 
     presenter.setPipePresentationStylingEnabled(true);
     expect(presenter.uniforms.uniforms.uPipePresentationStyling).toBe(1);
+    expect(presenter.app.render).toHaveBeenCalledTimes(2);
+  });
+
+  it('redraws the independent native SWCH conducting-state toggle', () => {
+    const presenter = presenterHarness();
+
+    presenter.setSwchStateStylingEnabled(false);
+    expect(presenter.uniforms.uniforms.uSwchStateStyling).toBe(0);
+    expect(presenter.app.render).toHaveBeenCalledOnce();
+
+    presenter.setSwchStateStylingEnabled(true);
+    expect(presenter.uniforms.uniforms.uSwchStateStyling).toBe(1);
     expect(presenter.app.render).toHaveBeenCalledTimes(2);
   });
 

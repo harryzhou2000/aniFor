@@ -123,6 +123,16 @@ export const PIPE_PRESENTATION_STATE = {
   reservedMask: 0xf000,
 } as const;
 
+/**
+ * Native SWCH conduction state. `life >= 10` is the exact upstream on
+ * threshold; bit 15 keeps a valid native off switch distinct from no owner.
+ */
+export const SWCH_PRESENTATION_STATE = {
+  onMask: 0x0001,
+  presentMask: 0x8000,
+  reservedMask: 0x7ffe,
+} as const;
+
 /** Exact native LAVA ctype ancestry in the owner-multiplexed presentation word. */
 export const LAVA_PRESENTATION_STATE = {
   originMask: 0x00ff,

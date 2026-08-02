@@ -6,7 +6,7 @@ import {
   DEUT_PRESENTATION_STATE, GEL_PRESENTATION_STATE, LAVA_PRESENTATION_STATE, POLO_PRESENTATION_STATE,
   PLNT_PRESENTATION_STATE, SEED_PRESENTATION_STATE, SPNG_PRESENTATION_STATE,
   FILT_PRESENTATION_STATE, LCRY_PRESENTATION_STATE, QUARTZ_PRESENTATION_STATE,
-  PIPE_PRESENTATION_STATE, SPRK_PRESENTATION_STATE, VIBR_PRESENTATION_STATE,
+  PIPE_PRESENTATION_STATE, SPRK_PRESENTATION_STATE, SWCH_PRESENTATION_STATE, VIBR_PRESENTATION_STATE,
 } from './types';
 import { readFileSync } from 'node:fs';
 
@@ -964,6 +964,47 @@ describe('direct Powder Toy backend', () => {
       expect(restored.cells()[indexOf(restored)]).toBe(material);
       expect(stateAt(restored)).toBe(ingested);
     }
+  });
+
+  it('projects native SWCH PSCN/NSCN switching and preserves its on state through OPS1', async () => {
+    const point = { x: 306, y: 180 } as const;
+    const indexOf = (simulation: PowderToyBackend): number => point.y * simulation.width + point.x;
+    const ownerAt = (simulation: PowderToyBackend): number => simulation.cells()[indexOf(simulation)];
+    const stateAt = (simulation: PowderToyBackend): number => {
+      simulation.cells();
+      return simulation.presentationState()[indexOf(simulation)];
+    };
+
+    const source = await PowderToyBackend.load(moduleArtifact.href);
+    source.paint(point.x, point.y, Material.SWCH, 0);
+    expect(ownerAt(source)).toBe(Material.SWCH);
+    expect(stateAt(source)).toBe(SWCH_PRESENTATION_STATE.presentMask);
+
+    // This is the native PSCN spark transition, not a fixture state write.
+    source.paint(point.x - 1, point.y, Material.PSCN, 0);
+    source.paint(point.x - 1, point.y, Material.SPRK, 0);
+    source.step();
+    expect(ownerAt(source)).toBe(Material.SWCH);
+    const onState = stateAt(source);
+    expect(onState).toBe(SWCH_PRESENTATION_STATE.presentMask | SWCH_PRESENTATION_STATE.onMask);
+    expect(onState & SWCH_PRESENTATION_STATE.reservedMask).toBe(0);
+
+    const file = source.saveFile();
+    expect(new TextDecoder().decode(file.slice(0, 4))).toBe('OPS1');
+    const restored = await PowderToyBackend.load(moduleArtifact.href);
+    restored.loadFile(file);
+    expect(ownerAt(restored)).toBe(Material.SWCH);
+    expect(stateAt(restored)).toBe(onState);
+
+    // NSCN performs the official switch-off transition. Its native countdown
+    // becomes less than ten, so the projected on bit clears without mutating
+    // the retained life value through a JavaScript mirror.
+    restored.paint(point.x + 1, point.y, Material.NSCN, 0);
+    restored.paint(point.x + 1, point.y, Material.SPRK, 0);
+    restored.step();
+    expect(ownerAt(restored)).toBe(Material.SWCH);
+    const offState = stateAt(restored);
+    expect(offState).toBe(SWCH_PRESENTATION_STATE.presentMask);
   });
 
   it('projects an exact native FILT owner and preserves its retained state through OPS1', async () => {

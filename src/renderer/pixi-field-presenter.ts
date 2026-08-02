@@ -167,6 +167,7 @@ uniform float uFiltSpectrumStyling;
 uniform float uQuartzCrystalStateStyling;
 uniform float uLcryStateStyling;
 uniform float uPipePresentationStyling;
+uniform float uSwchStateStyling;
 uniform float uPhotonActive;
 float materialAt(vec2 uv) {
   return floor(texture(uFieldTexture, clamp(uv, uTexel * 0.5, vec2(1.0) - uTexel * 0.5)).r * 255.0 + 0.5);
@@ -748,6 +749,16 @@ vec3 lcryStateEightXDelta(vec3 color, float packedState) {
   float brightness = min(10.0, mod(packedState, 16.0));
   float gray = 80.0 + brightness * 16.0;
   return vec3(gray / 255.0) - color;
+}
+// Native SWCH is visibly conducting only while its retained life is in the
+// on range. Reuse the shared packed state with a compact RGB-only emerald cue;
+// an absent or off word must be an exact no-op.
+vec3 swchStateEightXDelta(vec3 color, float packedState) {
+  bool present = packedState >= 32768.0;
+  bool on = mod(packedState, 2.0) > 0.5;
+  if (!present || !on) return vec3(0.0);
+  vec3 styled = color * vec3(0.66, 0.82, 0.70) + vec3(16.0, 100.0, 42.0) / 255.0;
+  return clamp(styled, 0.0, 1.0) - color;
 }
 // PIPE/PPIP retain their carriage in ctype. This compact, palette-free
 // grammar reuses the existing packed state and changes RGB only.
@@ -2528,6 +2539,7 @@ void main() {
   bool quartzCrystalOwner = material == 29.0 || material == 76.0;
   bool lcryOwner = material == 157.0;
   bool pipeOwner = material == 121.0 || material == 160.0;
+  bool swchOwner = material == 149.0;
   // Most 8x fragments have no retained native state. Decode the B/A state and
   // co-located native wall exactly once only for owners whose enabled RGB
   // styling consumes it; this avoids two state-texture samples on every other
@@ -2546,6 +2558,7 @@ void main() {
     || (uQuartzCrystalStateStyling > 0.5 && quartzCrystalOwner)
     || (uLcryStateStyling > 0.5 && lcryOwner)
     || (uPipePresentationStyling > 0.5 && pipeOwner)
+    || (uSwchStateStyling > 0.5 && swchOwner)
     // Eligible translucent liquid already needs this exact wall texel for the
     // final backdrop. Fold the cohesion guard into that one packed-state read
     // so true 8x does not grow another native-wall sample.
@@ -2678,6 +2691,9 @@ void main() {
   }
   if (uPipePresentationStyling > 0.5 && pipeOwner && nativeWall < 0.5) {
     color += pipePresentationEightXDelta(color, material, sourceTarget);
+  }
+  if (uSwchStateStyling > 0.5 && swchOwner && nativeWall < 0.5) {
+    color += swchStateEightXDelta(color, sourceTarget);
   }
   // True 8x keeps botanical state on the existing packed B/A word. This is
   // RGB-only compact arithmetic: no additional texture, field, pass, or
@@ -2916,6 +2932,7 @@ uniform float uFiltSpectrumStyling;
 uniform float uQuartzCrystalStateStyling;
 uniform float uLcryStateStyling;
 uniform float uPipePresentationStyling;
+uniform float uSwchStateStyling;
 uniform float uLavaAncestryStyling;
 uniform float uMoltenBodyOptics;
 uniform float uBotanicalIdentityStyling;
@@ -4300,6 +4317,15 @@ vec3 lcryStateDelta(vec3 color, vec2 stateBytes) {
   float brightness = min(10.0, mod(packedState, 16.0));
   float gray = 80.0 + brightness * 16.0;
   return vec3(gray / 255.0) - color;
+}
+vec3 swchStateDelta(vec3 color, vec2 stateBytes) {
+  float packedState = floor(stateBytes.x * 255.0 + 0.5)
+    + floor(stateBytes.y * 255.0 + 0.5) * 256.0;
+  bool present = packedState >= 32768.0;
+  bool on = mod(packedState, 2.0) > 0.5;
+  if (!present || !on) return vec3(0.0);
+  vec3 styled = color * vec3(0.66, 0.82, 0.70) + vec3(16.0, 100.0, 42.0) / 255.0;
+  return clamp(styled, 0.0, 1.0) - color;
 }
 vec3 pipePresentationDelta(vec3 color, float material, vec2 stateBytes) {
   float packedState = floor(stateBytes.x * 255.0 + 0.5)
@@ -6958,6 +6984,11 @@ void main() {
       && wall < 0.5 && surfaceOnly < 0.5 && halo < 0.5 && emissionOnly < 0.5) {
       color += pipePresentationDelta(color, material, wallState.ba);
     }
+    if (uSwchStateStyling > 0.5 && material == 149.0
+      && (family == 0.0 || family == 4.0) && traits < 0.5 && !materialEmissive
+      && wall < 0.5 && surfaceOnly < 0.5 && halo < 0.5 && emissionOnly < 0.5) {
+      color += swchStateDelta(color, wallState.ba);
+    }
     if (uThermalMaterialStyling > 0.5 && !materialEmissive && traits < 0.5
       && material != 3.0 && (family == 0.0 || family == 4.0)) {
       // Scalar, RGB-only response: temperature cannot widen a contour, alter
@@ -7452,6 +7483,7 @@ export class PixiFieldPresenter {
       uQuartzCrystalStateStyling: { value: 1, type: 'f32' },
       uLcryStateStyling: { value: 1, type: 'f32' },
       uPipePresentationStyling: { value: 1, type: 'f32' },
+      uSwchStateStyling: { value: 1, type: 'f32' },
       uLavaAncestryStyling: { value: 1, type: 'f32' },
       uMoltenBodyOptics: { value: 1, type: 'f32' },
       uBotanicalIdentityStyling: { value: 1, type: 'f32' },
@@ -7800,6 +7832,7 @@ export class PixiFieldPresenter {
     fieldProfileIdentityStylingEnabled = true,
     lcryStateStylingEnabled = true,
     pipePresentationStylingEnabled = true,
+    swchStateStylingEnabled = true,
   ): void {
     const uniforms = this.uniforms.uniforms;
     uniforms.uGasFieldLighting = gasFieldLightingEnabled ? 1 : 0;
@@ -7848,6 +7881,7 @@ export class PixiFieldPresenter {
     uniforms.uQuartzCrystalStateStyling = quartzCrystalStateStylingEnabled ? 1 : 0;
     uniforms.uLcryStateStyling = lcryStateStylingEnabled ? 1 : 0;
     uniforms.uPipePresentationStyling = pipePresentationStylingEnabled ? 1 : 0;
+    uniforms.uSwchStateStyling = swchStateStylingEnabled ? 1 : 0;
     uniforms.uLavaAncestryStyling = lavaAncestryStylingEnabled ? 1 : 0;
     uniforms.uMoltenBodyOptics = moltenBodyOpticsEnabled ? 1 : 0;
     uniforms.uBotanicalIdentityStyling = botanicalIdentityStylingEnabled ? 1 : 0;
@@ -8075,6 +8109,11 @@ export class PixiFieldPresenter {
 
   setPipePresentationStylingEnabled(enabled: boolean): void {
     this.uniforms.uniforms.uPipePresentationStyling = enabled ? 1 : 0;
+    this.renderApplication();
+  }
+
+  setSwchStateStylingEnabled(enabled: boolean): void {
+    this.uniforms.uniforms.uSwchStateStyling = enabled ? 1 : 0;
     this.renderApplication();
   }
 

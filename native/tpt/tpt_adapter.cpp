@@ -731,6 +731,16 @@ void ExtractFields()
 			{
 				presentationStateField[offset] = ProjectPipeState(part);
 			}
+			else if (part.type == PT_SWCH)
+			{
+				// SWCH is electrically closed exactly while its native life is at
+				// least ten. Keep that threshold as the sole renderer-facing state:
+				// PSCN/NSCN and the native decay path remain authoritative, and bit
+				// 15 distinguishes a valid off switch from every other owner.
+				presentationStateField[offset] = uint16_t(
+					0x8000 | (part.life >= 10 ? 0x0001 : 0)
+				);
+			}
 			else if (part.type == PT_SEED)
 			{
 				// SEED keeps absorbed water in ctype's PLNT_LIFE byte and uses life as
