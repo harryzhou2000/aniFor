@@ -2632,8 +2632,9 @@ describe('Pixi presenter startup configuration', () => {
     expect(coreStart).toBeGreaterThan(0);
     expect(coreEnd).toBeGreaterThan(coreStart);
     expect(core).toContain('solidDeepInteriorMicroGain(optics, profile)');
+    expect(source).toContain('profile == 2.0)) return 0.34;');
     expect(source).toContain('float staticSolidIdentityGain = 1.0;');
-    expect(core).toContain('staticSolidIdentityGain = mix(1.0, 0.58, coreDepth * solidInterior);');
+    expect(core).toContain('staticSolidIdentityGain = mix(1.0, 0.66, coreDepth * solidInterior);');
     expect(core).not.toContain('texture(');
     expect(core).not.toMatch(/\balpha\s*[+*]?=/);
     expect(normalStart).toBeGreaterThan(0);

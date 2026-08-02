@@ -63,7 +63,10 @@ describe('Canvas solid relief', () => {
     );
 
     expect(deepCore).toBeGreaterThan(firstInterior);
-    expect(deepCore).toBeLessThan(0.8);
+    // A deep rigid body reduces cell cadence but must retain enough authored
+    // material variation to avoid reading as a uniform plastic swatch.
+    expect(deepCore).toBeGreaterThanOrEqual(0.65);
+    expect(deepCore).toBeLessThanOrEqual(0.67);
     expect(disabled).toBe(firstInterior);
     expect(granular).toBe(0);
   });

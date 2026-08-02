@@ -51,7 +51,12 @@ for (let index = 0; index < OPTICS_PROFILE_COUNT; index++) {
     bodyThickness = 10; absorbRed = 0.82; absorbGreen = 0.78; absorbBlue = 0.72;
   } else if (optics === RenderOptics.SmoothRigid || optics === RenderOptics.Cellular) {
     axisX = 2; axisY = 1; strength = 7.0; cohesion = 0.46;
-    deepCohesion = 0.78;
+    // Preserve a restrained amount of the already-authored material cadence
+    // in a genuinely thick rigid core. The old 78% pull toward canonical
+    // palette made broad Metal/Stone/Concrete bodies read as a flat plastic
+    // swatch once the separate depth optics had done their work. This remains
+    // RGB-only and only applies after the exact-species depth proof.
+    deepCohesion = 0.66;
     // Thick rigid bodies are the primary normal-fit solid surface. Give their
     // already-proven broad relief enough reflected range to read as material
     // volume rather than a neutral flat card; alpha and every contour remain
@@ -87,7 +92,7 @@ for (let index = 0; index < OPTICS_PROFILE_COUNT; index++) {
     bodyThickness = 13; absorbRed = 1.00; absorbGreen = 0.78; absorbBlue = 0.54;
   } else if (profile === RenderProfile.Rigid) {
     axisX = 2; axisY = 1; strength = 7.0; cohesion = 0.46;
-    deepCohesion = 0.78;
+    deepCohesion = 0.66;
     bodyDepth = 15; bodyRelief = 0.65; bodySpecular = 4.0; bodyEdge = 1.8;
     tintRed = 0.50; tintGreen = 0.90; tintBlue = 1.35;
     bodyThickness = 23; absorbRed = 0.94; absorbGreen = 0.84; absorbBlue = 0.70;

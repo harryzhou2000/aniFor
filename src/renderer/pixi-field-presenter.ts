@@ -5404,7 +5404,11 @@ float solidDeepInteriorMicroGain(float optics, float profile) {
   // arithmetic-only complement to the Canvas depth ramp; no contour, support,
   // or material selection reads this value.
   if (granularOptics(optics) > 0.5 || profile == 1.0) return 1.0;
-  if (optics == 8.0 || optics == 19.0 || (optics < 0.5 && profile == 2.0)) return 0.22;
+  // Thick rigid bodies still need a little retained authored material
+  // variation after their depth/crown pass. This is deliberately below the
+  // normal interior gain, so it adds body character without restoring a
+  // cell-grid overlay or touching density, alpha, or topology.
+  if (optics == 8.0 || optics == 19.0 || (optics < 0.5 && profile == 2.0)) return 0.34;
   if (optics == 9.0 || (optics < 0.5 && profile == 3.0)) return 0.44;
   if (optics == 10.0 || (optics < 0.5 && profile == 5.0)) return 0.30;
   if (optics == 11.0 || (optics < 0.5 && profile == 4.0)) return 0.50;
@@ -6378,7 +6382,11 @@ void main() {
       float coreDepth = smoothstep(6.0 / 255.0, 42.0 / 255.0, solidOpticalDepth);
       float deepMicroGain = mix(1.0, solidDeepInteriorMicroGain(optics, profile), solidInterior);
       interiorMicroGain = mix(interiorMicroGain, deepMicroGain, coreDepth);
-      staticSolidIdentityGain = mix(1.0, 0.58, coreDepth * solidInterior);
+      // Keep exact static family cues present in a deep rigid body. The
+      // optical-depth proof already excludes edges, holes, thin structure,
+      // walls, traits, and emissive owners, so this is a bounded RGB-only
+      // relaxation rather than a new material-selection path.
+      staticSolidIdentityGain = mix(1.0, 0.66, coreDepth * solidInterior);
     }
     // The bilinear solid field peaks below one for isolated and one-cell-thick
     // semantic strokes. Use a wider iso shoulder so those cells
