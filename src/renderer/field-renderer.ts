@@ -304,6 +304,7 @@ export class MaterialRenderer {
   private solidCurvatureDepthEnabled = true;
   private surfaceContourLightingEnabled = true;
   private solidFieldLightingEnabled = true;
+  private denseBodyAmbientFillEnabled = true;
   private roleMaterialStylingEnabled = true;
   private cellularMaterialStylingEnabled = true;
   private structuralRigidStylingEnabled = true;
@@ -694,6 +695,14 @@ export class MaterialRenderer {
     // and samples the lit base RGB. Rebuild it whenever this light term changes
     // or its cached pixels conceal an otherwise correct Canvas body response.
     this.contourChunks.markAll();
+    this.changed = true;
+  }
+
+  /** WebGL's bounded dense liquid/solid core lift; Canvas remains semantic fallback. */
+  setDenseBodyAmbientFillEnabled(enabled: boolean): void {
+    if (enabled === this.denseBodyAmbientFillEnabled) return;
+    this.denseBodyAmbientFillEnabled = enabled;
+    this.presenter?.setDenseBodyAmbientFillEnabled(enabled);
     this.changed = true;
   }
 
@@ -1193,6 +1202,7 @@ export class MaterialRenderer {
       this.pipePresentationStylingEnabled,
       this.storStateStylingEnabled,
       this.swchStateStylingEnabled,
+      this.denseBodyAmbientFillEnabled,
     );
     // Route subsequent dirty cells to the candidate while its first expensive
     // frame is in flight. The known-good Canvas remains mounted underneath;

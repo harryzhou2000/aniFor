@@ -2936,6 +2936,7 @@ uniform float uSolidCurvatureDepth;
 uniform float uSurfaceContourLighting;
 uniform float uPhaseContactLighting;
 uniform float uSolidFieldLighting;
+uniform float uDenseBodyAmbientFill;
 uniform float uRoleMaterialStyling;
 uniform float uCellularMaterialStyling;
 uniform float uStructuralRigidStyling;
@@ -5886,6 +5887,22 @@ void main() {
       && wall < 0.5 && emissionOnly < 0.5) {
       color += lavaAncestryDelta(material, wallState.ba, fieldPosition);
     }
+    // Dense, ordinary liquid can retain a tiny scene-independent ambient fill
+    // after all of its body optics and native state cues. It is deliberately
+    // a hue-preserving multiplier, is bounded to five framebuffer bytes, and
+    // never touches reconstructed support, shores, seams, walls, traits, or
+    // emissive/molten matter. The existing field depth and cardinal mean are
+    // the only body proof; no sampler, field, pass, or alpha decision is added.
+    if (uDenseBodyAmbientFill > 0.5 && family == 2.0
+      && liquidOnly < 0.5 && halo < 0.5 && surfaceOnly < 0.5 && wall < 0.5
+      && traits < 0.5 && !materialEmissive && molten < 0.5
+      && foreignMatterContact < 0.5 && unlikeMaterialContact < 0.5
+      && liquidDepth > 0.48 && liquidNeighbourMean > 0.56) {
+      float liquidAmbientBody = smoothstep(0.48, 0.90, liquidDepth)
+        * smoothstep(0.56, 0.90, liquidNeighbourMean);
+      float liquidAmbientLift = min(5.0 / 255.0, liquidAmbientBody * 5.0 / 255.0);
+      color *= 1.0 + liquidAmbientLift;
+    }
   } else {
     float powderVisualCohesion = 0.0;
     float powderChromaCohesion = 0.0;
@@ -7059,6 +7076,21 @@ void main() {
         color += thermalMaterialTint(temperatureByte, optics);
       }
     }
+    // The same bounded hue-preserving ambient lift gives only a genuinely
+    // thick, ordinary rigid body a little separation from the dark backdrop.
+    // It follows completed body/state composition, retains every edge/contact
+    // decision above, and uses the phase-local optical-depth byte already live
+    // for solid optics. Granular, translucent, trait, wall, emissive, halo,
+    // and reconstructed-support cases are intentionally exact no-ops.
+    if (uDenseBodyAmbientFill > 0.5 && family == 0.0 && granularSurface < 0.5
+      && translucentSurface < 0.5 && surfaceOnly < 0.5 && halo < 0.5 && wall < 0.5
+      && traits < 0.5 && !materialEmissive
+      && solidInterior > 0.001 && solidOpticalDepth > 6.0 / 255.0) {
+      float solidAmbientBody = solidInterior
+        * smoothstep(6.0 / 255.0, 42.0 / 255.0, solidOpticalDepth);
+      float solidAmbientLift = min(5.0 / 255.0, solidAmbientBody * 5.0 / 255.0);
+      color *= 1.0 + solidAmbientLift;
+    }
   }
   if (uEnergyIdentityStyling > 0.5 && halo < 0.5 && surfaceOnly < 0.5
     && wallOnly < 0.5 && emissionOnly < 0.5
@@ -7513,6 +7545,7 @@ export class PixiFieldPresenter {
       uSurfaceContourLighting: { value: 1, type: 'f32' },
       uPhaseContactLighting: { value: 1, type: 'f32' },
       uSolidFieldLighting: { value: 1, type: 'f32' },
+      uDenseBodyAmbientFill: { value: 1, type: 'f32' },
       uRoleMaterialStyling: { value: 1, type: 'f32' },
       uCellularMaterialStyling: { value: 1, type: 'f32' },
       uStructuralRigidStyling: { value: 1, type: 'f32' },
@@ -7893,6 +7926,7 @@ export class PixiFieldPresenter {
     pipePresentationStylingEnabled = true,
     storStateStylingEnabled = true,
     swchStateStylingEnabled = true,
+    denseBodyAmbientFillEnabled = true,
   ): void {
     const uniforms = this.uniforms.uniforms;
     uniforms.uGasFieldLighting = gasFieldLightingEnabled ? 1 : 0;
@@ -7906,6 +7940,7 @@ export class PixiFieldPresenter {
     uniforms.uSurfaceContourLighting = surfaceContourLightingEnabled ? 1 : 0;
     uniforms.uPhaseContactLighting = phaseContactLightingEnabled ? 1 : 0;
     uniforms.uSolidFieldLighting = solidFieldLightingEnabled ? 1 : 0;
+    uniforms.uDenseBodyAmbientFill = denseBodyAmbientFillEnabled ? 1 : 0;
     uniforms.uLiquidSilhouetteCohesion = liquidSilhouetteCohesionEnabled ? 1 : 0;
     uniforms.uGasVolumeChroma = gasVolumeChromaEnabled ? 1 : 0;
     uniforms.uGasIdentityStyling = gasIdentityStylingEnabled ? 1 : 0;
@@ -8038,6 +8073,13 @@ export class PixiFieldPresenter {
 
   setSolidFieldLightingEnabled(enabled: boolean): void {
     this.uniforms.uniforms.uSolidFieldLighting = enabled ? 1 : 0;
+    this.renderApplication();
+  }
+
+  /** Normal-WebGL-only body-core fill; direct 8x deliberately stays compact. */
+  setDenseBodyAmbientFillEnabled(enabled: boolean): void {
+    if (this.outputScale >= 8) return;
+    this.uniforms.uniforms.uDenseBodyAmbientFill = enabled ? 1 : 0;
     this.renderApplication();
   }
 

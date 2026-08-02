@@ -30,6 +30,7 @@ import { auditLcryStateGraphics } from './lcry-state-graphics-audit.mjs';
 import { auditPipeStateGraphics } from './pipe-state-graphics-audit.mjs';
 import { auditSwchStateGraphics } from './swch-state-graphics-audit.mjs';
 import { auditStorStateGraphics } from './stor-state-graphics-audit.mjs';
+import { auditDenseBodyAmbientGraphics } from './dense-body-ambient-graphics-audit.mjs';
 import {
   assertPairedLavaStateGraphics,
   auditLavaStateGraphics,
@@ -131,6 +132,8 @@ const lcryStateGraphicsEight = lcryStateGraphicsOnly && process.argv.includes('-
 const pipeStateGraphicsOnly = process.argv.includes('--pipe-state-graphics-only');
 const swchStateGraphicsOnly = process.argv.includes('--swch-state-graphics-only');
 const storStateGraphicsOnly = process.argv.includes('--stor-state-graphics-only');
+const denseBodyAmbientOnly = process.argv.includes('--dense-body-ambient-only');
+const denseBodyAmbientEight = denseBodyAmbientOnly && process.argv.includes('--render-scale=8');
 const lavaStateGraphicsOnly = process.argv.includes('--lava-state-graphics-only');
 const botanicalLifecycleGraphicsOnly = process.argv.includes('--botanical-lifecycle-graphics-only');
 const sparkStateGraphicsOnly = process.argv.includes('--spark-state-graphics-only');
@@ -317,11 +320,13 @@ async function auditMode(mode) {
     || sourceTargetGraphicsOnly || forceActivityGraphicsOnly || poloStateGraphicsOnly
     || spngStateGraphicsOnly || gelStateGraphicsOnly || lavaStateGraphicsOnly || botanicalLifecycleGraphicsOnly
     || pqrtStateGraphicsOnly || filtStateGraphicsOnly || lcryStateGraphicsOnly
+    || denseBodyAmbientOnly
     || sparkStateGraphicsOnly
     || nativeSeedGrowthOnly);
   const query = new URLSearchParams({
     scene: showcaseScreenshotOnly ? 'showcase' : 'render-lab', inputAudit: '1',
-    renderScale: (pqrtStateGraphicsEight || filtStateGraphicsEight || lcryStateGraphicsEight) ? '8' : '2',
+    renderScale: (pqrtStateGraphicsEight || filtStateGraphicsEight || lcryStateGraphicsEight
+      || denseBodyAmbientEight) ? '8' : '2',
     ...(showcaseScreenshotOnly ? { auditStage: 'showcase' } : {
       auditStage: startsBlank ? 'blank' : 'canonical',
       ...(startsBlank ? { blankAudit: '1' } : {}),
@@ -435,7 +440,7 @@ async function auditMode(mode) {
       const parameters = new URLSearchParams(location.search);
       const ready = parameters.get('scene') === 'render-lab'
         && parameters.get('inputAudit') === '1'
-        && parameters.get('renderScale') === ${JSON.stringify((pqrtStateGraphicsEight || filtStateGraphicsEight || lcryStateGraphicsEight) ? '8' : '2')}
+        && parameters.get('renderScale') === ${JSON.stringify((pqrtStateGraphicsEight || filtStateGraphicsEight || lcryStateGraphicsEight || denseBodyAmbientEight) ? '8' : '2')}
         && parameters.get('auditStage') === ${JSON.stringify(startsBlank ? 'blank' : 'canonical')}
         && parameters.has('blankAudit') === ${startsBlank}
         && Boolean(window.__ANIFOR_INPUT_AUDIT__ && document.documentElement);
@@ -446,8 +451,8 @@ async function auditMode(mode) {
         hasAuditApi: Boolean(window.__ANIFOR_INPUT_AUDIT__),
       }));
       return true;
-    })()`), (pqrtStateGraphicsEight || filtStateGraphicsEight || lcryStateGraphicsEight) ? 45_000 : 15_000, `input audit API (${mode})`);
-    await waitFor(() => evaluate(cdp, `window.__ANIFOR_INPUT_AUDIT__.backend().backend === ${JSON.stringify(mode)}`), (pqrtStateGraphicsEight || filtStateGraphicsEight || lcryStateGraphicsEight) ? 45_000 : 15_000, `${mode} backend`);
+    })()`), (pqrtStateGraphicsEight || filtStateGraphicsEight || lcryStateGraphicsEight || denseBodyAmbientEight) ? 45_000 : 15_000, `input audit API (${mode})`);
+    await waitFor(() => evaluate(cdp, `window.__ANIFOR_INPUT_AUDIT__.backend().backend === ${JSON.stringify(mode)}`), (pqrtStateGraphicsEight || filtStateGraphicsEight || lcryStateGraphicsEight || denseBodyAmbientEight) ? 45_000 : 15_000, `${mode} backend`);
     if (desktopInputOnly) {
       const desktopInput = await auditDesktopInput(cdp, mode, dpr);
       assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
@@ -802,6 +807,21 @@ async function auditMode(mode) {
       assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
       cdp.close();
       return { backend: mode, storStateGraphics, browserErrors: errors.length };
+    }
+    if (denseBodyAmbientOnly) {
+      const denseBodyAmbientGraphics = await auditDenseBodyAmbientGraphics({
+        cdp,
+        mode,
+        evaluate,
+        waitFor,
+        waitForStablePageCapture,
+        captureSettledPage,
+        outputScale: denseBodyAmbientEight ? 8 : 2,
+        assert,
+      });
+      assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
+      cdp.close();
+      return { backend: mode, denseBodyAmbientGraphics, browserErrors: errors.length };
     }
     if (lavaStateGraphicsOnly) {
       const lavaStateGraphics = await auditLavaStateGraphics({

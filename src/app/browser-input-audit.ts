@@ -81,6 +81,7 @@ export interface BrowserInputAuditApi {
   setSolidCurvatureDepth(enabled: boolean): void;
   setSurfaceContourLighting(enabled: boolean): void;
   setSolidFieldLighting(enabled: boolean): void;
+  setDenseBodyAmbientFill(enabled: boolean): void;
   setRoleMaterialStyling(enabled: boolean): void;
   setCellularMaterialStyling(enabled: boolean): void;
   setStructuralRigidStyling(enabled: boolean): void;

@@ -430,6 +430,9 @@ export class Game {
       setSolidFieldLighting: (enabled) => {
         this.renderer.setSolidFieldLightingEnabled(enabled);
       },
+      setDenseBodyAmbientFill: (enabled) => {
+        this.renderer.setDenseBodyAmbientFillEnabled(enabled);
+      },
       setRoleMaterialStyling: (enabled) => {
         this.renderer.setRoleMaterialStylingEnabled(enabled);
       },

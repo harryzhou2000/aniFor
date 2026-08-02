@@ -25,6 +25,7 @@ interface PresenterHarness {
   setSurfaceContourLightingEnabled: PixiFieldPresenter['setSurfaceContourLightingEnabled'];
   setPhaseContactLightingEnabled: PixiFieldPresenter['setPhaseContactLightingEnabled'];
   setSolidFieldLightingEnabled: PixiFieldPresenter['setSolidFieldLightingEnabled'];
+  setDenseBodyAmbientFillEnabled: PixiFieldPresenter['setDenseBodyAmbientFillEnabled'];
   setRoleMaterialStylingEnabled: PixiFieldPresenter['setRoleMaterialStylingEnabled'];
   setCellularMaterialStylingEnabled: PixiFieldPresenter['setCellularMaterialStylingEnabled'];
   setStructuralRigidStylingEnabled: PixiFieldPresenter['setStructuralRigidStylingEnabled'];
@@ -123,6 +124,7 @@ describe('Pixi presenter startup configuration', () => {
       uSurfaceContourLighting: 1,
       uPhaseContactLighting: 1,
       uSolidFieldLighting: 1,
+      uDenseBodyAmbientFill: 1,
       uRoleMaterialStyling: 1,
       uCellularMaterialStyling: 1,
       uStructuralRigidStyling: 1,
@@ -2683,6 +2685,51 @@ describe('Pixi presenter startup configuration', () => {
     presenter.setSolidFieldLightingEnabled(true);
     expect(presenter.uniforms.uniforms.uSolidFieldLighting).toBe(1);
     expect(presenter.app.render).toHaveBeenCalledOnce();
+  });
+
+  it('keeps the dense body ambient fill normal-WebGL-only and independently toggleable', () => {
+    const presenter = presenterHarness();
+
+    presenter.configurePresentation(
+      true, true, true, true, true, true, true, true, true, 'smooth',
+    );
+    expect(presenter.uniforms.uniforms.uDenseBodyAmbientFill).toBe(1);
+    expect(presenter.app.render).not.toHaveBeenCalled();
+
+    presenter.setDenseBodyAmbientFillEnabled(false);
+    expect(presenter.uniforms.uniforms.uDenseBodyAmbientFill).toBe(0);
+    expect(presenter.app.render).toHaveBeenCalledOnce();
+  });
+
+  it('keeps dense-body ambient fill RGB-only and inside the normal WebGL compositor', () => {
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const normalStart = source.indexOf('const FIELD_FRAGMENT = `');
+    const normalEnd = source.indexOf('export class PixiFieldPresenter', normalStart);
+    const normal = source.slice(normalStart, normalEnd);
+    const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');
+    const eightEnd = source.indexOf('const FIELD_FRAGMENT = `', eightStart);
+    const eight = source.slice(eightStart, eightEnd);
+    const liquidStart = normal.indexOf('// Dense, ordinary liquid can retain');
+    const liquidEnd = normal.indexOf('  } else {', liquidStart);
+    const solidStart = normal.indexOf('// The same bounded hue-preserving ambient lift');
+    const solidEnd = normal.indexOf('  }\n  if (uEnergyIdentityStyling', solidStart);
+    const bodyBlocks = `${normal.slice(liquidStart, liquidEnd)}${normal.slice(solidStart, solidEnd)}`;
+
+    expect(normal).toContain('uniform float uDenseBodyAmbientFill;');
+    expect(liquidStart).toBeGreaterThan(0);
+    expect(solidStart).toBeGreaterThan(0);
+    expect(bodyBlocks).toContain('family == 2.0');
+    expect(bodyBlocks).toContain('liquidOnly < 0.5 && halo < 0.5 && surfaceOnly < 0.5 && wall < 0.5');
+    expect(bodyBlocks).toContain('foreignMatterContact < 0.5 && unlikeMaterialContact < 0.5');
+    expect(bodyBlocks).toContain('liquidDepth > 0.48 && liquidNeighbourMean > 0.56');
+    expect(bodyBlocks).toContain('family == 0.0 && granularSurface < 0.5');
+    expect(bodyBlocks).toContain('translucentSurface < 0.5 && surfaceOnly < 0.5 && halo < 0.5 && wall < 0.5');
+    expect(bodyBlocks).toContain('solidInterior > 0.001 && solidOpticalDepth > 6.0 / 255.0');
+    expect(bodyBlocks).toContain('min(5.0 / 255.0');
+    expect(bodyBlocks).toContain('color *= 1.0 +');
+    expect(bodyBlocks).not.toContain('texture(');
+    expect(bodyBlocks).not.toMatch(/\balpha\s*[+*]?=/);
+    expect(eight).not.toContain('uDenseBodyAmbientFill');
   });
 
   it('seeds and redraws optional-last semantic role styling', () => {
