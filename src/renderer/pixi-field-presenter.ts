@@ -6789,7 +6789,12 @@ void main() {
       // The silhouette estimator is still solely responsible for curvature;
       // this modest interior-only lift restores the colour variation that the
       // 1x--4x raster filters away before a viewer can read a pile as grains.
-      float cellGrainRetention = mix(1.0, 1.24, settledMineralRetention);
+      // At 1x the sub-cell facet is necessarily filtered into the presentation
+      // target, so give the existing world-cell mineral cadence enough weight
+      // to retain the 2x body's readable colour variation. This remains inside
+      // the settled-only proof: it cannot square off a silhouette or touch
+      // Local/Grains, loose particles, seams, holes, traits, or emission.
+      float cellGrainRetention = mix(1.0, 1.48, settledMineralRetention);
       float facetRetention = mix(1.0, 1.14, settledMineralRetention);
       color *= 0.91 + grain * (0.20 + roughSurface * 0.05) * cellGrainRetention * facetGain
         + grainFacet * (0.10 + roughSurface * 0.04) * facetRetention * facetGain;
@@ -6797,7 +6802,7 @@ void main() {
       // better than sub-cell luminance alone. It is exact-cell/world anchored
       // and RGB-only, so composed Smooth bodies gain colour vocabulary without
       // creating a new support decision or perturbing Local/Grains references.
-      color += base * grain * vec3(0.105, 0.024, -0.066) * stablePowderMineral;
+      color += base * grain * vec3(0.135, 0.031, -0.084) * stablePowderMineral;
       color += base * max(0.0, 0.6 - subcell.x - subcell.y)
         * (0.11 + roughSurface * 0.035) * facetRetention * facetGain;
       float brightFacet = max(0.0, grainFacet - 0.18) * facetRetention;
