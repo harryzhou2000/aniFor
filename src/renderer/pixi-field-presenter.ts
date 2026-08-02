@@ -5903,7 +5903,7 @@ void main() {
     // the existing optical-depth and alpha paths remain the sole owners of
     // mass, gaps, and silhouette. Keep sooty Smoke slightly less reflective.
     float gasForwardScatter = opticalDepth * (1.0 - opticalDepth)
-      * (0.052 + cleanGas * 0.018 - sootyGas * 0.010);
+      * (0.085 + cleanGas * 0.020 - sootyGas * 0.008);
     vec3 gasForwardColor = mix(vividColor(gasBase, 1.06), vec3(0.62, 0.76, 0.92),
       0.18 + cleanGas * 0.14);
     color += (vec3(1.0) - clamp(color, 0.0, 1.0)) * gasForwardColor
