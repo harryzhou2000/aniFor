@@ -2548,10 +2548,10 @@ describe('Pixi presenter startup configuration', () => {
     expect(source).toContain('float powderContourTextureRetention = 1.0;');
     expect(source).toContain('powderContourTextureRetention = 1.0 - smoothContourTransfer');
     expect(source).toContain('color *= mix(1.0, powderMineralFactor, powderContourTextureRetention);');
-    expect(source).toContain('mix(1.0, 1.78, settledMineralRetention)');
+    expect(source).toContain('mix(1.0, 1.96, settledMineralRetention)');
     expect(source).toContain('float detailEstimate = min(');
     expect(source).toContain('(gl_FragCoord.x + 0.5) / max(fieldPosition.x, 0.5)');
-    expect(source).toContain('float lowDetailMineralGain = mix(1.92, 1.0, smoothstep(1.20, 1.80, detailEstimate))');
+    expect(source).toContain('float lowDetailMineralGain = mix(2.15, 1.0, smoothstep(1.20, 4.0, detailEstimate))');
     expect(source).toContain('mix(1.0, 1.20, settledMineralRetention)');
     expect(source).toContain('color += base * grain * vec3(0.178, 0.044, -0.112)');
     expect(source).toContain('* stablePowderMineral * lowDetailMineralGain * powderContourTextureRetention;');
