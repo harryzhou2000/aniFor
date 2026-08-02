@@ -7234,10 +7234,23 @@ void main() {
       vec2 circuitCell = abs(fract((fieldPosition + vec2(material * 0.37, material * 0.19)) / 8.0) - 0.5);
       float trace = max(1.0 - smoothstep(0.055, 0.105, circuitCell.x), 1.0 - smoothstep(0.055, 0.105, circuitCell.y));
       float node = 1.0 - smoothstep(0.10, 0.22, length(circuitCell));
-      color *= 0.96 + trace * 0.025 * interiorMicroGain;
+      // A thick native sensor is an instrument face, not an eight-cell circuit
+      // grid repeated through its full body. The existing exact-species depth
+      // proof calms only that deep face; contours, holes, one-cell wires, and
+      // shallow sensor matter retain the complete trace grammar below.
+      float sensorPanelCore = 0.0;
+      if (uSensorMaterialStyling > 0.5 && material >= 164.0 && material <= 170.0
+        && family == 0.0 && !materialEmissive && surfaceOnly < 0.5 && halo < 0.5
+        && wall < 0.5 && wallOnly < 0.5 && emissionOnly < 0.5
+        && solidOpticalDepth > 6.0 / 255.0 && solidInterior > 0.001) {
+        sensorPanelCore = smoothstep(6.0 / 255.0, 42.0 / 255.0, solidOpticalDepth)
+          * solidInterior;
+      }
+      float circuitInteriorGain = mix(1.0, 0.26, sensorPanelCore);
+      color *= 0.96 + trace * 0.025 * interiorMicroGain * circuitInteriorGain;
       color += mix(color, vec3(0.34, 0.76, 1.0), 0.58)
         * (trace * (0.12 + deviceSurface * 0.035) + node * (0.10 + deviceSurface * 0.045))
-        * interiorMicroGain;
+        * interiorMicroGain * circuitInteriorGain;
       // The seven native sensor bodies share one stable 24-cell instrument
       // bezel, while exact material IDs select a readable static glyph. This
       // branch is arithmetic-only and restricted to authoritative semantic
@@ -7320,8 +7333,26 @@ void main() {
           sensorGlyph = max(arrowShaft, arrowHead);
           sensorTint = vec3(0.74, 0.58, 1.00);
         }
-        color *= 1.0 - sensorPanel * 0.014 - sensorBezel * 0.036;
-        color += sensorTint * (sensorBezel * 0.030 + sensorGlyph * 0.082);
+        // Reuse the existing broad solid relief and environment reflection to
+        // give the depth-proven face one coherent panel volume. The glyph stays
+        // readable but the repeated circuit cadence is deliberately quieter in
+        // the same interior. This is RGB-only arithmetic over values already
+        // live in the solid branch; alpha, support, state, and topology remain
+        // entirely semantic.
+        float sensorPanelRelief = clamp(solidReliefTone * 255.0 / 6.0, -1.0, 1.0)
+          * sensorPanelCore;
+        float sensorPanelCrown = max(sensorPanelRelief, 0.0);
+        float sensorPanelPocket = max(-sensorPanelRelief, 0.0);
+        float sensorPanelGrazing = smoothstep(0.018, 0.18, solidFresnel) * sensorPanelCore;
+        color *= vec3(1.0) - vec3(0.032, 0.024, 0.042)
+          * (sensorPanelPocket * 0.52 + (1.0 - sensorPanelGrazing) * 0.035);
+        color += (vec3(1.0) - clamp(color, 0.0, 1.0))
+          * (sensorTint * (sensorPanelCrown * 0.072 + sensorPanelGrazing * 0.038)
+            + solidEnvironment * (0.024 + sensorPanelGrazing * 0.045));
+        float sensorGlyphGain = mix(1.0, 0.68, sensorPanelCore);
+        color *= 1.0 - sensorPanel * (0.014 + sensorPanelCore * 0.010)
+          - sensorBezel * (0.036 + sensorPanelCore * 0.012);
+        color += sensorTint * (sensorBezel * 0.030 + sensorGlyph * 0.082 * sensorGlyphGain);
         color = clamp(color, 0.0, 1.0);
       }
     } else if (profile == 6.0) {

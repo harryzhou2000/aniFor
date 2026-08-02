@@ -3471,6 +3471,10 @@ describe('Pixi presenter startup configuration', () => {
     expect(start).toBeGreaterThan(0);
     expect(end).toBeGreaterThan(start);
     expect(source).toContain('uniform float uSensorMaterialStyling;');
+    expect(source).toContain('float sensorPanelCore = 0.0;');
+    expect(source).toContain('solidOpticalDepth > 6.0 / 255.0 && solidInterior > 0.001');
+    expect(source).toContain('float circuitInteriorGain = mix(1.0, 0.26, sensorPanelCore);');
+    expect(source).toContain('* interiorMicroGain * circuitInteriorGain;');
     expect(sensorBlock).toContain('uSensorMaterialStyling > 0.5 && material >= 164.0 && material <= 170.0');
     expect(sensorBlock).toContain('fieldPosition / 24.0');
     expect(sensorBlock).toContain('material == 164.0');
@@ -3486,6 +3490,9 @@ describe('Pixi presenter startup configuration', () => {
     expect(sensorBlock).toContain('// PSNS: pressure rings.');
     expect(sensorBlock).toContain('// TSNS: thermometer.');
     expect(sensorBlock).toContain('// VSNS: vector arrow.');
+    expect(sensorBlock).toContain('float sensorPanelRelief = clamp(solidReliefTone * 255.0 / 6.0, -1.0, 1.0)');
+    expect(sensorBlock).toContain('float sensorPanelGrazing = smoothstep(0.018, 0.18, solidFresnel) * sensorPanelCore;');
+    expect(sensorBlock).toContain('float sensorGlyphGain = mix(1.0, 0.68, sensorPanelCore);');
     expect(sensorBlock).toContain('surfaceOnly < 0.5 && halo < 0.5 && wall < 0.5');
     expect(sensorBlock).not.toMatch(/texture\s*\(/);
     expect(sensorBlock).not.toMatch(/\balpha\s*[+*]?=/);
