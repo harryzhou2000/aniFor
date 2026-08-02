@@ -12719,7 +12719,7 @@ async function auditVisualScaleMatrix(cdp, mode, dpr) {
       try {
         startupBackend = await waitForEightXTerminalBackend(
           cdp, `${mode} ${stage}`,
-          remainingDeadlineMs(startupDeadline, `${mode} ${stage} terminal backend`),
+          startupDeadline,
         );
       } catch (error) {
         const observed = await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__?.backend()');
