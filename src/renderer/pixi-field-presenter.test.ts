@@ -1541,7 +1541,7 @@ describe('Pixi presenter startup configuration', () => {
     expect(block).toContain('solidOpticalDepth > 6.0 / 255.0 && solidInterior > 0.001');
     expect(block).toContain('float woodGrain = 0.5 + 0.5 * fibre;');
     expect(block).toContain('float woodRelief = clamp(solidReliefTone * 255.0 / 6.0, -1.0, 1.0) * woodDepth;');
-    expect(block).toContain('float organicMicroGain = material == 10.0 ? 0.12 : 1.0;');
+    expect(block).toContain('float organicMicroGain = material == 10.0 ? 0.055 : 1.0;');
     expect(block).toContain('float organicBaseline = material == 10.0 ? 1.0 : 0.95;');
     expect(block).toContain('* interiorMicroGain * organicMicroGain;');
     expect(block).toContain('(material == 9.0 || material == 10.0 || material == 83.0)');

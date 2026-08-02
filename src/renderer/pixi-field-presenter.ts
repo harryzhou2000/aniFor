@@ -7102,7 +7102,11 @@ void main() {
       // remain legible. This is RGB-only arithmetic over values already live
       // in the material branch; it does not change topology, alpha, state, or
       // the deliberately compact true-8x renderer.
-      float organicMicroGain = material == 10.0 ? 0.12 : 1.0;
+      // PLNT's larger body optics below already supply a crown, pocket, waxy
+      // sheen, and three-cell leaf clusters. Keep this cell-frequency fibre
+      // as a very quiet undertone so a dense canopy reads as foliage rather
+      // than evenly spaced horizontal bands at normal viewing distance.
+      float organicMicroGain = material == 10.0 ? 0.055 : 1.0;
       float organicBaseline = material == 10.0 ? 1.0 : 0.95;
       color *= organicBaseline + (fibre * 0.042 + pores * 0.024
         + organicSurface * max(0.0, fibre) * 0.018) * interiorMicroGain * organicMicroGain;
