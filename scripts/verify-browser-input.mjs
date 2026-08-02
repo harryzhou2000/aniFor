@@ -20841,16 +20841,31 @@ async function samplePowderSlopeContinuity(
       const maximumError = Math.max(0, ...rows.map((row) => Math.abs(row.error)));
       const meanTransitionWidth = rows.reduce((sum, row) => sum + row.y80 - row.y20, 0)
         / Math.max(1, rows.length);
+      // Keep the absolute composed crossing error above deliberately raw: it
+      // catches actual contour displacement.  Tangent/curvature instead use a
+      // tiny horizontal median, because retained world-anchored mineral
+      // pigment can otherwise perturb one screenshot column's contrast-based
+      // crossing even when the geometric edge is unchanged.  A five-column
+      // window suppresses that cell-scale optical noise without erasing the
+      // much wider Local staircase that this comparison is meant to reject.
+      const stabilizedRows = rows.map((row, index) => {
+        const y50s = rows.slice(Math.max(0, index - 2), Math.min(rows.length, index + 3))
+          .map((candidate) => candidate.y50)
+          .sort((left, right) => left - right);
+        return { ...row, y50: y50s[Math.floor(y50s.length / 2)] };
+      });
       let tangentError = 0;
       let curvatureEnergy = 0;
-      for (let index = 1; index < rows.length; index++) {
-        const previous = rows[index - 1];
-        const current = rows[index];
+      for (let index = 1; index < stabilizedRows.length; index++) {
+        const previous = stabilizedRows[index - 1];
+        const current = stabilizedRows[index];
         const expectedDelta = current.expected - previous.expected;
         tangentError += Math.abs((current.y50 - previous.y50) - expectedDelta);
       }
-      for (let index = 1; index + 1 < rows.length; index++) {
-        curvatureEnergy += Math.abs(rows[index + 1].y50 - 2 * rows[index].y50 + rows[index - 1].y50);
+      for (let index = 1; index + 1 < stabilizedRows.length; index++) {
+        curvatureEnergy += Math.abs(
+          stabilizedRows[index + 1].y50 - 2 * stabilizedRows[index].y50 + stabilizedRows[index - 1].y50,
+        );
       }
       result[style] = {
         rows: rows.length,
