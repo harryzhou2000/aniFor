@@ -1975,7 +1975,7 @@ void main() {
       // Grains, loose grains, traits, and emissive matter.
       float mineralPowderOwner = (material == 1.0 || material == 26.0 || material == 28.0)
         ? 1.0 : 0.0;
-      color += base * powderGrain * vec3(0.105, 0.024, -0.066)
+      color += palette.rgb * powderGrain * vec3(0.105, 0.024, -0.066)
         * powderFacetInterior * mineralPowderOwner;
     }
     // Smooth, supported powder retains a coloured stable edge. Local and
@@ -8191,6 +8191,15 @@ export class PixiFieldPresenter {
         this.powderSurfaceSource, this.suspensionSource,
         paletteTexture.source, styleTexture.source,
       ]) textureSystem.texture?.initSource(source);
+      // The semantic plane is refreshed by `update()` before the first draw,
+      // but palette/style are immutable lookup rows.  Merely registering their
+      // BufferImageSources is not enough on every direct-mesh WebGL path: a
+      // driver may leave the initial R8/RGBA upload deferred, making every
+      // family and role trait read as zero at true 8×. Explicitly publish the
+      // two preallocated rows once; this adds no texture, pass, or per-frame
+      // upload and retains the normal path's exact lookup data.
+      paletteTexture.source.update();
+      styleTexture.source.update();
       const shader = Shader.from({
         gl: { vertex: FIELD_VERTEX, fragment: FIELD_EIGHT_X_FRAGMENT, name: 'semantic-field-mesh' },
         resources,
@@ -8331,6 +8340,12 @@ export class PixiFieldPresenter {
 
   gbmbForceStylingEnabled(): boolean {
     const value = this.uniforms.uniforms.uGbmbForceStyling;
+    return typeof value === 'number' && value > 0.5;
+  }
+
+  /** Audit-only proof that the live role-control write reached this presenter. */
+  roleMaterialStylingEnabled(): boolean {
+    const value = this.uniforms.uniforms.uRoleMaterialStyling;
     return typeof value === 'number' && value > 0.5;
   }
 

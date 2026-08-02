@@ -420,6 +420,7 @@ export class Game {
       presentationAuxiliary: (x, y) => this.renderer.presentationAuxiliaryAt(x, y),
       geologicalSolidStylingEnabled: () => this.renderer.geologicalSolidStylingIsEnabled(),
       thermalCatalyticRigidStylingEnabled: () => this.renderer.thermalCatalyticRigidStylingIsEnabled(),
+      roleMaterialStylingEnabled: () => this.renderer.roleMaterialStylingIsEnabled(),
       gooSolidStylingEnabled: () => this.renderer.gooSolidStylingIsEnabled(),
       frayForceStylingEnabled: () => this.renderer.frayForceStylingIsEnabled(),
       gbmbForceStylingEnabled: () => this.renderer.gbmbForceStylingIsEnabled(),

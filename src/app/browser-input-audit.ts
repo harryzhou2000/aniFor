@@ -75,6 +75,7 @@ export interface BrowserInputAuditApi {
   presentationAuxiliary(x: number, y: number): number;
   geologicalSolidStylingEnabled(): boolean;
   thermalCatalyticRigidStylingEnabled(): boolean;
+  roleMaterialStylingEnabled(): boolean;
   gooSolidStylingEnabled(): boolean;
   frayForceStylingEnabled(): boolean;
   gbmbForceStylingEnabled(): boolean;

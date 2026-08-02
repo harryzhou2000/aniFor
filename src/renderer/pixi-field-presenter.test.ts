@@ -3173,6 +3173,21 @@ describe('Pixi presenter startup configuration', () => {
     expect(normalBlock).not.toMatch(/\balpha\s*[+*]?=/);
   });
 
+  it('keeps true-8x mineral powder colour on a live palette binding', () => {
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');
+    const eightEnd = source.indexOf('const FIELD_FRAGMENT = `', eightStart);
+    const eight = source.slice(eightStart, eightEnd);
+    const start = eight.indexOf('// Keep the normal compositor\'s chromatic mineral vocabulary at true 8x');
+    const end = eight.indexOf('// Smooth, supported powder retains a coloured stable edge.', start);
+    const block = eight.slice(start, end);
+
+    expect(start).toBeGreaterThan(0);
+    expect(end).toBeGreaterThan(start);
+    expect(block).toContain('color += palette.rgb * powderGrain');
+    expect(block).not.toContain('color += base * powderGrain');
+  });
+
   it('keeps the WebGL-only aqueous surface shoulder independently switchable', () => {
     const presenter = presenterHarness();
     presenter.setAqueousSurfaceReflectionEnabled(false);

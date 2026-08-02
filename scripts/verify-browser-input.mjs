@@ -13073,7 +13073,6 @@ async function auditRenderScaleEight(cdp, dpr, powderOnly = false) {
     && resolutionControl.selected === 8,
   `renderScale=8 control did not expose/select true 8x (${JSON.stringify(resolutionControl)})`);
   stage('eight-ready');
-
   // Role material graphics are canonical-WebGL presentation at 8x. Exercise
   // the ordinary render-lab source/sink/channel/force scene before later
   // fixture audits replace it; Canvas remains an availability fallback here.
@@ -15649,16 +15648,19 @@ async function auditEightXExplosivePowderGraphics(cdp, canvasRect) {
 async function auditEightXRoleGraphics(cdp, canvasRect) {
   const probeState = await evaluate(cdp, `(() => {
     const audit = window.__ANIFOR_INPUT_AUDIT__;
-    if (typeof audit.setRoleMaterialStyling !== 'function') {
+    if (typeof audit.setRoleMaterialStyling !== 'function'
+      || typeof audit.roleMaterialStylingEnabled !== 'function') {
       throw new Error('True-8x role-graphics API unavailable');
     }
     return (${JSON.stringify(ROLE_GRAPHICS_REGIONS)}).map(({ name, x, y }) => ({
-      name, material: audit.cell(x, y), wall: audit.wall(x, y),
+      name, material: audit.cell(x, y), rendered: audit.renderedCell(x, y), wall: audit.wall(x, y),
     }));
   })()`);
   const expectedRoleMaterials = [127, 126, 159, 164, 130, 115];
   assert(probeState.slice(0, expectedRoleMaterials.length).every((probe, index) => (
-    probe.material === expectedRoleMaterials[index] && probe.wall === 0
+    probe.material === expectedRoleMaterials[index]
+      && probe.rendered === expectedRoleMaterials[index]
+      && probe.wall === 0
   )), `renderScale=8 semantic role fixture changed (${JSON.stringify(probeState)})`);
   const live = await metrics(cdp);
   assert(live.backing.width === WORLD_WIDTH * 8 && live.backing.height === WORLD_HEIGHT * 8
@@ -15667,17 +15669,27 @@ async function auditEightXRoleGraphics(cdp, canvasRect) {
   assertCanvasRectsEqual(canvasRect, live.canvas, 'renderScale=8 role graphics CSS geometry');
 
   await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setRoleMaterialStyling(false); true');
+  const flatControl = await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.roleMaterialStylingEnabled()');
   const flat = await captureSettledPage(cdp, 'renderScale=8 flat semantic-role framebuffer', 450);
   await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setRoleMaterialStyling(true); true');
+  const styledControl = await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.roleMaterialStylingEnabled()');
   const styled = await captureSettledPage(cdp, 'renderScale=8 styled semantic-role framebuffer', 450);
   await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setRoleMaterialStyling(false); true');
+  const repeatedControl = await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.roleMaterialStylingEnabled()');
   const repeated = await captureSettledPage(cdp, 'renderScale=8 repeated flat semantic-role framebuffer', 450);
   const samples = await sampleBackdropRefractionRegions(cdp, {
     straight: flat.capture.data,
     refracted: styled.capture.data,
     repeatedStraight: repeated.capture.data,
   }, ROLE_GRAPHICS_REGIONS, canvasRect);
+  if (screenshotRequest) {
+    await writeFile(variantScreenshotPath(screenshotRequest, 'role-flat'), Buffer.from(flat.capture.data, 'base64'));
+    await writeFile(variantScreenshotPath(screenshotRequest, 'role-styled'), Buffer.from(styled.capture.data, 'base64'));
+    await writeFile(variantScreenshotPath(screenshotRequest, 'role-repeated'), Buffer.from(repeated.capture.data, 'base64'));
+  }
   const byName = Object.fromEntries(samples.map((sample) => [sample.name, sample]));
+  assert(!flatControl && styledControl && !repeatedControl,
+    `renderScale=8 role control did not reach the presenter (${JSON.stringify({ flatControl, styledControl, repeatedControl })})`);
   for (const name of [
     'converter', 'cloneEmitter', 'poweredCloneEmitter',
     'portalSinkChannel', 'acceleratorForce',
@@ -20440,6 +20452,15 @@ async function captureSettledPage(cdp, label, delayMs = 900) {
   // prove that a 15-million-fragment latest-wins redraw reached the framebuffer.
   const remaining = remainingDeadlineMs(deadline, `${label} completed-frame request`);
   await waitForNextWebGLPresentation(cdp, label, remaining, remaining);
+  // A signalled WebGL fence proves the target is ready, not that Chrome has
+  // copied the canvas into the compositor surface used by Page.captureScreenshot.
+  // Give that hand-off two compositor turns, discard one warm-up read, then
+  // return the later settled capture.  Returning the old immediate read made
+  // valid 8x off/on mutations look identical in screenshot gates.
+  await evaluate(cdp, 'new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)))',
+    remainingDeadlineMs(deadline, `${label} compositor hand-off`));
+  await cdp.send('Page.captureScreenshot', { format: 'png', fromSurface: true });
+  await sleep(150);
   const capture = await cdp.send('Page.captureScreenshot', { format: 'png', fromSurface: true });
   await sleep(150);
   const reference = await cdp.send('Page.captureScreenshot', { format: 'png', fromSurface: true });
@@ -20989,18 +21010,25 @@ async function sampleBackdropRefractionRegions(cdp, screenshots, regions, captur
       context.drawImage(image, 0, 0);
       contexts[name] = context;
     }
-    const bounds = ${JSON.stringify(captureCanvasRect)};
-    const pageScaleX = imageWidth / innerWidth;
-    const pageScaleY = imageHeight / innerHeight;
-    const worldScaleX = bounds.width / ${WORLD_WIDTH};
-    const worldScaleY = bounds.height / ${WORLD_HEIGHT};
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    const visualViewport = window.visualViewport;
+    const visualWidth = visualViewport?.width ?? innerWidth;
+    const visualHeight = visualViewport?.height ?? innerHeight;
+    const visualOffsetX = visualViewport?.offsetLeft ?? 0;
+    const visualOffsetY = visualViewport?.offsetTop ?? 0;
+    const pageScaleX = imageWidth / Math.max(1, visualWidth);
+    const pageScaleY = imageHeight / Math.max(1, visualHeight);
     return ${JSON.stringify(regions)}.map((region) => {
       const radiusX = region.radiusX ?? region.radius ?? 3;
       const radiusY = region.radiusY ?? region.radius ?? 3;
-      const x = Math.floor((bounds.left + (region.x - radiusX) * worldScaleX) * pageScaleX);
-      const y = Math.floor((bounds.top + (region.y - radiusY) * worldScaleY) * pageScaleY);
-      const width = Math.max(1, Math.ceil(radiusX * 2 * worldScaleX * pageScaleX));
-      const height = Math.max(1, Math.ceil(radiusY * 2 * worldScaleY * pageScaleY));
+      const topLeft = audit.worldToScreen(region.x - radiusX, region.y - radiusY);
+      const bottomRight = audit.worldToScreen(region.x + radiusX, region.y + radiusY);
+      const x = Math.max(0, Math.floor((Math.min(topLeft.x, bottomRight.x) - visualOffsetX) * pageScaleX));
+      const y = Math.max(0, Math.floor((Math.min(topLeft.y, bottomRight.y) - visualOffsetY) * pageScaleY));
+      const width = Math.max(1, Math.min(imageWidth - x,
+        Math.ceil(Math.abs(bottomRight.x - topLeft.x) * pageScaleX)));
+      const height = Math.max(1, Math.min(imageHeight - y,
+        Math.ceil(Math.abs(bottomRight.y - topLeft.y) * pageScaleY)));
       const data = Object.fromEntries(Object.entries(contexts).map(([name, context]) => [
         name, context.getImageData(x, y, width, height).data,
       ]));

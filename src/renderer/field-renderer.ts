@@ -585,6 +585,11 @@ export class MaterialRenderer {
       ?? this.thermalCatalyticRigidStylingEnabled;
   }
 
+  /** Audit-only state for the source/sink/channel/force presentation control. */
+  roleMaterialStylingIsEnabled(): boolean {
+    return this.presenter?.roleMaterialStylingEnabled() ?? this.roleMaterialStylingEnabled;
+  }
+
   gooSolidStylingIsEnabled(): boolean {
     return this.presenter?.gooSolidStylingEnabled() ?? this.gooSolidStylingEnabled;
   }
