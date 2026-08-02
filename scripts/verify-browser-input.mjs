@@ -107,7 +107,9 @@ const canvasTimingOnly = process.argv.includes('--canvas-timing-only');
 const quickScreenshot = process.argv.includes('--quick-screenshot');
 const showcaseScreenshotOnly = process.argv.includes('--showcase-screenshot');
 const layoutOnly = process.argv.includes('--layout-only');
-const visualScaleMatrixOnly = process.argv.includes('--visual-scale-matrix-only');
+const visualScaleMatrixNormalOnly = process.argv.includes('--visual-scale-matrix-normal-only');
+const visualScaleMatrixOnly = process.argv.includes('--visual-scale-matrix-only')
+  || visualScaleMatrixNormalOnly;
 const powderBodyOnly = process.argv.includes('--powder-body-only');
 const liquidDepthOnly = process.argv.includes('--liquid-depth-only');
 const solidDepthOnly = process.argv.includes('--solid-depth-only');
@@ -465,7 +467,9 @@ async function auditMode(mode) {
       return { backend: mode, eightFieldProfile, browserErrors: errors.length };
     }
     if (visualScaleMatrixOnly) {
-      const visualScaleMatrix = await auditVisualScaleMatrix(cdp, mode, dpr);
+      const visualScaleMatrix = await auditVisualScaleMatrix(
+        cdp, mode, dpr, visualScaleMatrixNormalOnly,
+      );
       assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
       cdp.close();
       return { backend: mode, visualScaleMatrix, browserErrors: errors.length };
@@ -12681,9 +12685,9 @@ function assertGasSpectralResponseVectors(samples, label, suffix = '') {
   `${label}: gas families collapsed to one scattering response (${JSON.stringify({ smoke, oxygen, noble })})`);
 }
 
-async function auditVisualScaleMatrix(cdp, mode, dpr) {
+async function auditVisualScaleMatrix(cdp, mode, dpr, normalOnly = false) {
   await setDesktopMetrics(cdp, 1280, 720, dpr);
-  const scales = mode === 'webgl' ? [1, 2, 4, 8] : [1, 2, 4];
+  const scales = mode === 'webgl' && !normalOnly ? [1, 2, 4, 8] : [1, 2, 4];
   const regions = [
     // A settled interior, rather than an antialiased lip, is the regression
     // probe for Smooth powder's retained mineral/facet vocabulary.  The dense
@@ -12846,6 +12850,18 @@ async function auditVisualScaleMatrix(cdp, mode, dpr) {
     assert(sandBaseline && sandSample
       && sandSample.microContrast >= sandBaseline.microContrast * 0.90,
     `${mode} renderScale=${row.scale} softened Smooth powder internal colour detail relative to 2x (${JSON.stringify({
+      baseline: sandBaseline, sample: sandSample,
+    })})`);
+    // The normal 1x--4x compositor filters sub-cell facets by design. Its
+    // settled bulk must still retain enough normalized mineral chroma to read
+    // as material rather than a flat airbrushed shape. Direct 8x has a
+    // deliberately separate compact pigment path, so retain its independent
+    // luma/topology contract rather than forcing normal-raster calibration
+    // onto the 15-million-fragment compositor.
+    if (row.scale <= 4) assert(sandBaseline && sandSample
+      && sandSample.chromaticContrast >= 0.75
+      && sandSample.chromaticContrast >= sandBaseline.chromaticContrast * 0.90,
+    `${mode} renderScale=${row.scale} softened Smooth powder mineral colour detail relative to 2x (${JSON.stringify({
       baseline: sandBaseline, sample: sandSample,
     })})`);
   }
@@ -21623,17 +21639,37 @@ async function samplePageRegions(
       }
       const fastSupport = region.fastSupport === true;
       let adjacentContrast = 0;
+      let adjacentChromaContrast = 0;
       let adjacentPairs = 0;
       if (!fastSupport) {
+        // Separate hue/saturation changes from ordinary light/dark relief.
+        // Smooth powder's mineral vocabulary is deliberately chromatic, so a
+        // luma-only contrast metric could accept a visibly airbrushed pile.
+        // This is screenshot-audit arithmetic only; it has no renderer cost
+        // and normalising each RGB triplet keeps broad exposure changes out of
+        // the retained-material-detail assertion below.
+        const chromaDistance = (leftIndex, rightIndex) => {
+          const left = leftIndex * 4;
+          const right = rightIndex * 4;
+          const leftScale = 255 / Math.max(1, data[left] + data[left + 1] + data[left + 2]);
+          const rightScale = 255 / Math.max(1, data[right] + data[right + 1] + data[right + 2]);
+          return Math.hypot(
+            data[left] * leftScale - data[right] * rightScale,
+            data[left + 1] * leftScale - data[right + 1] * rightScale,
+            data[left + 2] * leftScale - data[right + 2] * rightScale,
+          ) / Math.sqrt(3);
+        };
         for (let py = 0; py < height; py++) for (let px = 0; px < width; px++) {
           const sampleIndex = py * width + px;
           if (!visiblePixels[sampleIndex]) continue;
           if (px + 1 < width && visiblePixels[sampleIndex + 1]) {
             adjacentContrast += Math.abs(lumaValues[sampleIndex] - lumaValues[sampleIndex + 1]);
+            adjacentChromaContrast += chromaDistance(sampleIndex, sampleIndex + 1);
             adjacentPairs++;
           }
           if (py + 1 < height && visiblePixels[sampleIndex + width]) {
             adjacentContrast += Math.abs(lumaValues[sampleIndex] - lumaValues[sampleIndex + width]);
+            adjacentChromaContrast += chromaDistance(sampleIndex, sampleIndex + width);
             adjacentPairs++;
           }
         }
@@ -21758,6 +21794,7 @@ async function samplePageRegions(
         visible,
         coverage: Math.round(visible / Math.max(1, width * height) * 1000) / 1000,
         microContrast: Math.round(adjacentContrast / Math.max(1, adjacentPairs) * 100) / 100,
+        chromaticContrast: Math.round(adjacentChromaContrast / Math.max(1, adjacentPairs) * 100) / 100,
         macroLumaRange: macroSamples ? Math.round(maximumMacroLuma - minimumMacroLuma) : 0,
         meanLuma: Math.round(meanLuma * 100) / 100,
         darkFraction: Math.round(darkPixels / Math.max(1, visible) * 1000) / 1000,
