@@ -2050,7 +2050,9 @@ export class MaterialRenderer {
           applyCanvasTranslucentCaustic(this.styledColor, solidRelief, material);
         }
         if (this.translucentLensShellEnabled) {
-          applyCanvasTranslucentLensShell(this.styledColor, solidRelief, normalLight, material);
+          applyCanvasTranslucentLensShell(
+            this.styledColor, solidRelief, normalLight, material, solidOpticalDepth,
+          );
         }
         this.applyThermalMaterialStyle(
           phase, material, false, applicableTraits, temperatures?.[index], optics,
@@ -2562,7 +2564,7 @@ export class MaterialRenderer {
           }
           if (this.translucentLensShellEnabled && applicableTraits === 0 && !info.emissive) {
             applyCanvasTranslucentLensShell(
-              this.styledColor, solidRelief, normalLight, material,
+              this.styledColor, solidRelief, normalLight, material, solidOpticalDepth,
             );
           }
           this.applyThermalMaterialStyle(

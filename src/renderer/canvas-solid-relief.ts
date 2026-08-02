@@ -374,6 +374,7 @@ export function applyCanvasTranslucentLensShell(
   relief: number,
   edgeLight: number,
   material: number,
+  opticalDepthByte = 0,
 ): void {
   if (material !== Material.Glass && material !== Material.Ice
     && material !== Material.DRIC && material !== Material.NICE
@@ -390,6 +391,15 @@ export function applyCanvasTranslucentLensShell(
     color[0] = color[0] * scale + (rim + crown) * 0.45;
     color[1] = color[1] * scale + (rim + crown) * 0.78;
     color[2] = color[2] * scale + rim + crown;
+    // Match the normal WebGL glass core with the already-maintained
+    // exact-species thickness byte. The first interior layer stays an exact
+    // no-op; only a proven deep pane receives this cool transmission/absorption
+    // cue. This is RGB-only and cannot affect the separate backdrop, alpha,
+    // semantic coverage, wall ownership, or any reconstruction decision.
+    const glassDepth = smoothstep(6, 42, opticalDepthByte);
+    color[0] *= 1 - glassDepth * 0.042;
+    color[1] *= 1 - glassDepth * 0.0105;
+    color[2] += (255 - color[2]) * glassDepth * 0.0225;
     return;
   }
   if (material === Material.Ice) {

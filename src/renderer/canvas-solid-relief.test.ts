@@ -299,6 +299,26 @@ describe('Canvas solid relief', () => {
     expect(spread).toBeLessThanOrEqual(11);
   });
 
+  it('gives only a deep exact Glass core a restrained cool transmission cue', () => {
+    const firstInterior = new Float32Array([120, 150, 180, 0.37]);
+    const shellOnly = new Float32Array(firstInterior);
+    const deepCore = new Float32Array(firstInterior);
+    const opaqueControl = new Float32Array(firstInterior);
+    applyCanvasTranslucentLensShell(shellOnly, 0, 0, Material.Glass);
+    applyCanvasTranslucentLensShell(firstInterior, 0, 0, Material.Glass, 6);
+    applyCanvasTranslucentLensShell(deepCore, 0, 0, Material.Glass, 255);
+    applyCanvasTranslucentLensShell(opaqueControl, 0, 0, Material.Metal, 255);
+
+    expect(firstInterior).toEqual(shellOnly);
+    expect(deepCore[0]).toBeLessThan(firstInterior[0]);
+    expect(deepCore[1]).toBeLessThan(firstInterior[1]);
+    expect(deepCore[2]).toBeGreaterThan(firstInterior[2]);
+    expect(deepCore[3]).toBe(shellOnly[3]);
+    expect(Math.max(...deepCore.map((value, channel) => Math.abs(value - firstInterior[channel]))))
+      .toBeLessThanOrEqual(6);
+    expect(opaqueControl).toEqual(new Float32Array([120, 150, 180, 0.37]));
+  });
+
   it('gives each remaining translucent-rigid material a bounded crystalline shell', () => {
     const source = [120, 150, 180, 0.37] as const;
     const sourceAlpha = new Float32Array(source)[3];
