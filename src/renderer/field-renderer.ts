@@ -2086,7 +2086,8 @@ export class MaterialRenderer {
             : 0;
           const macroCaustic = liquidBodySupport > 0 && wall === 0
             ? canvasLiquidCausticWave(x, y, visualTime, material) : 0;
-          if (liquidBodySupport > 0 && wall === 0) {
+          if (liquidBodySupport > 0 && wall === 0
+            && !liquidForeignMatterContact && applicableTraits === 0 && !projectedInfo?.emissive) {
             applyCanvasLiquidMacroSheen(
               this.styledColor, optics, liquidFieldAlpha, density, macroWave, liquidBodySupport,
             );
@@ -2101,6 +2102,21 @@ export class MaterialRenderer {
             ),
             false,
           );
+          // Match normal WebGL's exact Acid-only deep-body chroma with the
+          // already computed field support and low-frequency liquid signals.
+          // The vector is Rec.709-luma-neutral, and this RGB-only addition is
+          // unreachable for shores, droplets, seams, walls, or reconstructed
+          // support because the same-species bulk proof above owns it.
+          if (liquidBodySupport > 0 && wall === 0
+            && !liquidForeignMatterContact && applicableTraits === 0 && !projectedInfo?.emissive) {
+            const acidCoreVolume = liquidBodySupport * Math.max(0, Math.min(1, (density - 4) / 4));
+            const acidCoreGlaze = acidCoreVolume * (
+              0.020 + macroWave * 0.045 + macroCaustic * 0.025
+            );
+            this.styledColor[0] += 255 * 0.28 * acidCoreGlaze;
+            this.styledColor[1] -= 255 * 0.15 * acidCoreGlaze;
+            this.styledColor[2] += 255 * 0.65 * acidCoreGlaze;
+          }
         }
         if ((this.liquidVolumeChromaEnabled || this.liquidOpticalDepthEnabled)
           && liquidVolumeInterior && !liquidSpeciesContact) {

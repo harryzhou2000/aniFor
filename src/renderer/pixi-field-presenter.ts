@@ -6236,12 +6236,31 @@ void main() {
         // than the compact 8x path: at fit view this makes the submerged core
         // recede behind its blue transmission instead of reading as one opaque
         // cyan plate. All eligibility and support are already proven above.
-        color *= vec3(1.0) - vec3(0.022, 0.008, 0.000) * aqueousCoreVolume;
+        color *= vec3(1.0) - vec3(0.052, 0.030, 0.012) * aqueousCoreVolume;
         float aqueousCoreGlaze = aqueousCoreVolume
-          * (0.020 + broadSheen * 0.024 + caustic * 0.014);
+          * (0.014 + broadSheen * 0.018 + caustic * 0.010);
         color += (vec3(1.0) - clamp(color, 0.0, 1.0))
           * vec3(0.16, 0.52, 0.86) * aqueousCoreGlaze;
       }
+    }
+    // Acid shares the dense-liquid body proof with Water, but it should not
+    // inherit Water's sky-blue submerged glaze. Reuse the already-live depth,
+    // Fresnel contour, sheen, and caustic terms for a small luminance-neutral
+    // corrosive chroma shift instead. No sampler, field, alpha, support, or
+    // species decision is added; shores, droplets, seams, walls, traits, and
+    // emissive owners remain on their exact generic paths.
+    if (uLiquidVolumeChroma > 0.5 && material == 16.0
+      && liquidOnly < 0.5 && halo < 0.5 && wall < 0.5
+      && traits < 0.5 && !materialEmissive && foreignMatterContact < 0.5
+      && unlikeMaterialContact < 0.5 && liquidDepth > 0.48 && liquidNeighbourMean > 0.56) {
+      float acidCoreVolume = liquidDepth * (1.0 - liquidFresnelContour)
+        * smoothstep(0.56, 0.86, liquidNeighbourMean);
+      float acidCoreGlaze = acidCoreVolume
+        * (0.020 + broadSheen * 0.045 + caustic * 0.025);
+      // Rec.709 luma is approximately zero for this vector. It makes the
+      // existing magenta acid body read as denser, reactive material instead
+      // of manufacturing a false light source in its interior.
+      color += vec3(0.28, -0.15, 0.65) * acidCoreGlaze;
     }
     color -= color * liquidFresnelGate * (
       liquidFresnelShadow * liquidFresnelShadowResponse
