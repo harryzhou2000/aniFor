@@ -31,6 +31,7 @@ interface PresenterHarness {
   setStructuralRigidStylingEnabled: PixiFieldPresenter['setStructuralRigidStylingEnabled'];
   setGeologicalSolidStylingEnabled: PixiFieldPresenter['setGeologicalSolidStylingEnabled'];
   setFrayForceStylingEnabled: PixiFieldPresenter['setFrayForceStylingEnabled'];
+  setGbmbForceStylingEnabled: PixiFieldPresenter['setGbmbForceStylingEnabled'];
   setMechanismBodyStylingEnabled: PixiFieldPresenter['setMechanismBodyStylingEnabled'];
   setElectronicIdentityStylingEnabled: PixiFieldPresenter['setElectronicIdentityStylingEnabled'];
   setFieldProfileIdentityStylingEnabled: PixiFieldPresenter['setFieldProfileIdentityStylingEnabled'];
@@ -1305,6 +1306,43 @@ describe('Pixi presenter startup configuration', () => {
     expect(`${direct}${normal}${branches}`).toContain('material == 118.0');
     expect(`${direct}${normal}${branches}`).not.toContain('texture(');
     expect(`${direct}${normal}${branches}`).not.toContain('uTime');
+    expect(`${direct}${normal}${branches}`).not.toMatch(/\balpha\s*[+*]?=/);
+  });
+
+  it('keeps GBMB containment identity exact-owner and never infers unavailable gravity', () => {
+    const presenter = presenterHarness();
+    presenter.setGbmbForceStylingEnabled(false);
+    expect(presenter.uniforms.uniforms.uGbmbForceStyling).toBe(0);
+    expect(presenter.app.render).toHaveBeenCalledOnce();
+
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');
+    const eightEnd = source.indexOf('const FIELD_FRAGMENT = `', eightStart);
+    const eight = source.slice(eightStart, eightEnd);
+    const directStart = eight.indexOf('vec3 gbmbForceEightXDelta(');
+    const directEnd = eight.indexOf('// Transport, actuator, and storage devices', directStart);
+    const normalStart = source.indexOf('vec3 gbmbForceIdentityDelta(');
+    const normalEnd = source.indexOf('// Native transport and actuator bodies', normalStart);
+    const directBranch = eight.indexOf('if (uGbmbForceStyling > 0.5 && material == 120.0');
+    const normalBranch = source.indexOf('if (uGbmbForceStyling > 0.5 && material == 120.0', normalStart);
+    const direct = eight.slice(directStart, directEnd);
+    const normal = source.slice(normalStart, normalEnd);
+    const branches = eight.slice(directBranch, directBranch + 300)
+      + source.slice(normalBranch, normalBranch + 420);
+
+    expect(directStart).toBeGreaterThan(0);
+    expect(directEnd).toBeGreaterThan(directStart);
+    expect(normalStart).toBeGreaterThan(0);
+    expect(normalEnd).toBeGreaterThan(normalStart);
+    expect(directBranch).toBeGreaterThan(0);
+    expect(normalBranch).toBeGreaterThan(0);
+    expect(eight).toContain('uniform float uGbmbForceStyling;');
+    expect(source).toContain('uGbmbForceStyling: { value: 1, type: \'f32\' }');
+    expect(`${direct}${normal}${branches}`).toContain('material == 120.0');
+    expect(`${direct}${normal}${branches}`).not.toContain('texture(');
+    expect(`${direct}${normal}${branches}`).not.toContain('uTime');
+    expect(`${direct}${normal}${branches}`).not.toContain('uGravity');
+    expect(`${direct}${normal}${branches}`).not.toContain('velocity');
     expect(`${direct}${normal}${branches}`).not.toMatch(/\balpha\s*[+*]?=/);
   });
 

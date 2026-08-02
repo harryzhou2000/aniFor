@@ -50,6 +50,7 @@ import type {
 } from './thermal-catalytic-rigid-graphics-audit';
 import type { GooSolidGraphicsAuditSnapshot } from './goo-solid-graphics-audit';
 import type { FrayForceGraphicsAuditSnapshot } from './fray-force-graphics-audit';
+import type { GbmbForceGraphicsAuditSnapshot } from './gbmb-force-graphics-audit';
 import type {
   DistilledDieselLiquidGraphicsAuditSnapshot,
 } from './distilled-diesel-liquid-graphics-audit';
@@ -76,6 +77,7 @@ export interface BrowserInputAuditApi {
   thermalCatalyticRigidStylingEnabled(): boolean;
   gooSolidStylingEnabled(): boolean;
   frayForceStylingEnabled(): boolean;
+  gbmbForceStylingEnabled(): boolean;
   gasIdentityStyle(x: number, y: number): number;
   atmosphereSupportAudit(): AtmosphereSupportAudit | undefined;
   occupiedCells(): number;
@@ -140,6 +142,7 @@ export interface BrowserInputAuditApi {
   setThermalCatalyticRigidStyling(enabled: boolean): void;
   setGooSolidStyling(enabled: boolean): void;
   setFrayForceStyling(enabled: boolean): void;
+  setGbmbForceStyling(enabled: boolean): void;
   setPowderRenderStyle(style: PowderRenderStyle): void;
   clear(): void;
   setRadius(radius: number): void;
@@ -245,6 +248,8 @@ export interface BrowserInputAuditApi {
   prepareGooSolidGraphicsFixture(): void;
   frayForceGraphicsAtlas(): FrayForceGraphicsAuditSnapshot;
   prepareFrayForceGraphicsFixture(): void;
+  gbmbForceGraphicsAtlas(): GbmbForceGraphicsAuditSnapshot;
+  prepareGbmbForceGraphicsFixture(): void;
   distilledDieselLiquidGraphicsAtlas(): DistilledDieselLiquidGraphicsAuditSnapshot;
   prepareDistilledDieselLiquidGraphicsFixture(): void;
   photonSpectrumGraphicsAtlas(): PhotonSpectrumGraphicsAuditSnapshot;

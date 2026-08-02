@@ -289,6 +289,17 @@ bounded RGB-only response, and protected topology. The equivalent
 `npm run audit:fray-force:8x` route exercises the direct mesh once an
 8×-capable browser completes its first fenced frame.
 
+GBMB now has a separate exact-owner deep-blue containment-body grammar for
+Canvas, normal WebGL, and the direct true-8× mesh. This makes its powder body
+read as a distinctive material without asserting a force direction or any
+gravity state: native Newtonian gravity is unavailable in this build and the
+renderer does not fabricate it. The bounded world-anchored RGB arithmetic adds
+no state, clock, field, sampler, pass, or output-scale resource. Its fixture
+protects authored voids, thin/isolated powder, co-located walls, Water/Metal
+contacts, and the neighbouring force powder DMG as the strict wrong-owner
+control. Use `npm run audit:gbmb-force` for the normal WebGL flat→styled→flat
+gate; `npm run audit:gbmb-force:8x` uses the equivalent fenced direct path.
+
 Distilled Water and Diesel now share their aqueous/oily volume fields with
 their close relatives while retaining separate exact-owner RGB identity:
 Distilled Water adds quiet clean-water threads, and Diesel adds darker warm

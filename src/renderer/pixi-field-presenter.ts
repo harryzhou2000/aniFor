@@ -135,6 +135,7 @@ uniform float uGeologicalSolidStyling;
 uniform float uThermalCatalyticRigidStyling;
 uniform float uGooSolidStyling;
 uniform float uFrayForceStyling;
+uniform float uGbmbForceStyling;
 uniform float uMechanismBodyStyling;
 uniform float uElectronicIdentityStyling;
 uniform float uFieldProfileIdentityStyling;
@@ -1252,6 +1253,21 @@ vec3 frayForceEightXDelta(vec2 position) {
     + vec3(1.0, 3.0, 5.0) * axis + vec3(-2.0, 2.0, 4.0) * rail
     + vec3(2.0, 3.0, 4.0) * pin, vec3(-12.0), vec3(12.0)) / 255.0;
 }
+// GBMB's gravity behavior is unavailable in this build. Keep this exact-owner
+// treatment deliberately static: a containment-body read, never a fabricated
+// gravity direction, state, field, texture fetch, or output-scale resource.
+vec3 gbmbForceEightXDelta(vec2 position) {
+  vec2 cell = mod(floor(position), 28.0) - vec2(13.5);
+  float radiusSquared = dot(cell, cell);
+  float core = 1.0 - step(9.01, radiusSquared);
+  float ring = step(35.0, radiusSquared) * (1.0 - step(60.01, radiusSquared));
+  float meridian = (1.0 - step(1.51, abs(cell.x))) * (1.0 - step(11.51, abs(cell.y)));
+  float latitude = (1.0 - step(1.51, abs(cell.y))) * (1.0 - step(11.51, abs(cell.x)));
+  float mote = 1.0 - step(0.5, mod(floor(position.x) * 5.0 + floor(position.y) * 3.0, 37.0));
+  return clamp(vec3(3.0, 4.0, 9.0) * core + vec3(2.0, 2.0, 8.0) * ring
+    + vec3(-3.0, -2.0, 3.0) * max(meridian, latitude) + vec3(2.0, 3.0, 5.0) * mote,
+  vec3(-12.0), vec3(12.0)) / 255.0;
+}
 // Transport, actuator, and storage devices are semantically distinct native
 // hardware, not generic circuit panels.  Keep their compact direct-mesh
 // grammar exact-owner, static, and RGB-only: material/world position/density
@@ -2237,6 +2253,9 @@ void main() {
   if (uFrayForceStyling > 0.5 && material == 118.0 && !materialEmissive) {
     color = clamp(color + frayForceEightXDelta(grid), 0.0, 1.0);
   }
+  if (uGbmbForceStyling > 0.5 && material == 120.0 && !materialEmissive) {
+    color = clamp(color + gbmbForceEightXDelta(grid), 0.0, 1.0);
+  }
   // Sensor glyphs are an exact device-owner overlay. They remain static and
   // RGB-only so sparse wires, isolated cells, holes, walls, and semantics keep
   // the common compositor's coverage and native ownership.
@@ -3162,6 +3181,7 @@ uniform float uGeologicalSolidStyling;
 uniform float uThermalCatalyticRigidStyling;
 uniform float uGooSolidStyling;
 uniform float uFrayForceStyling;
+uniform float uGbmbForceStyling;
 uniform float uMechanismBodyStyling;
 uniform float uElectronicIdentityStyling;
 uniform float uFieldProfileIdentityStyling;
@@ -4279,6 +4299,18 @@ vec3 frayForceIdentityDelta(vec2 position) {
   return clamp(vec3(-3.0, 5.0, 8.0) * core + vec3(-2.0, 4.0, 7.0) * ring
     + vec3(1.0, 3.0, 5.0) * axis + vec3(-2.0, 2.0, 4.0) * rail
     + vec3(2.0, 3.0, 4.0) * pin, vec3(-12.0), vec3(12.0)) / 255.0;
+}
+vec3 gbmbForceIdentityDelta(vec2 position) {
+  vec2 cell = mod(floor(position), 28.0) - vec2(13.5);
+  float radiusSquared = dot(cell, cell);
+  float core = 1.0 - step(9.01, radiusSquared);
+  float ring = step(35.0, radiusSquared) * (1.0 - step(60.01, radiusSquared));
+  float meridian = (1.0 - step(1.51, abs(cell.x))) * (1.0 - step(11.51, abs(cell.y)));
+  float latitude = (1.0 - step(1.51, abs(cell.y))) * (1.0 - step(11.51, abs(cell.x)));
+  float mote = 1.0 - step(0.5, mod(floor(position.x) * 5.0 + floor(position.y) * 3.0, 37.0));
+  return clamp(vec3(3.0, 4.0, 9.0) * core + vec3(2.0, 2.0, 8.0) * ring
+    + vec3(-3.0, -2.0, 3.0) * max(meridian, latitude) + vec3(2.0, 3.0, 5.0) * mote,
+  vec3(-12.0), vec3(12.0)) / 255.0;
 }
 // Native transport and actuator bodies sit beneath later role/thermal decals.
 // They use only exact owner, world position, and the caller's established
@@ -7560,6 +7592,11 @@ void main() {
     && wallOnly < 0.5 && emissionOnly < 0.5 && !materialEmissive) {
     color = clamp(color + frayForceIdentityDelta(fieldPosition), 0.0, 1.0);
   }
+  if (uGbmbForceStyling > 0.5 && material == 120.0
+    && surfaceOnly < 0.5 && halo < 0.5 && wall < 0.5
+    && wallOnly < 0.5 && emissionOnly < 0.5 && !materialEmissive) {
+    color = clamp(color + gbmbForceIdentityDelta(fieldPosition), 0.0, 1.0);
+  }
   // Static role accents cross phase boundaries without widening semantic
   // silhouettes. Empty-space volume reconstruction intentionally remains free
   // of role metadata because it no longer has an authoritative material ID.
@@ -8003,6 +8040,7 @@ export class PixiFieldPresenter {
       uThermalCatalyticRigidStyling: { value: 1, type: 'f32' },
       uGooSolidStyling: { value: 1, type: 'f32' },
       uFrayForceStyling: { value: 1, type: 'f32' },
+      uGbmbForceStyling: { value: 1, type: 'f32' },
       uMechanismBodyStyling: { value: 1, type: 'f32' },
       uElectronicIdentityStyling: { value: 1, type: 'f32' },
       uFieldProfileIdentityStyling: { value: 1, type: 'f32' },
@@ -8239,6 +8277,11 @@ export class PixiFieldPresenter {
     return typeof value === 'number' && value > 0.5;
   }
 
+  gbmbForceStylingEnabled(): boolean {
+    const value = this.uniforms.uniforms.uGbmbForceStyling;
+    return typeof value === 'number' && value > 0.5;
+  }
+
   /** Audit-only readback of the material byte staged for the semantic texture. */
   semanticMaterialAt(x: number, y: number): number {
     if (x < 0 || y < 0 || x >= this.width || y >= this.height) return -1;
@@ -8399,6 +8442,7 @@ export class PixiFieldPresenter {
     thermalCatalyticRigidStylingEnabled = true,
     gooSolidStylingEnabled = true,
     frayForceStylingEnabled = true,
+    gbmbForceStylingEnabled = true,
     earthenPowderStylingEnabled = true,
     powderMesostrataStylingEnabled = true,
     moltenBodyOpticsEnabled = true,
@@ -8441,6 +8485,7 @@ export class PixiFieldPresenter {
     uniforms.uThermalCatalyticRigidStyling = thermalCatalyticRigidStylingEnabled ? 1 : 0;
     uniforms.uGooSolidStyling = gooSolidStylingEnabled ? 1 : 0;
     uniforms.uFrayForceStyling = frayForceStylingEnabled ? 1 : 0;
+    uniforms.uGbmbForceStyling = gbmbForceStylingEnabled ? 1 : 0;
     uniforms.uMechanismBodyStyling = mechanismBodyStylingEnabled ? 1 : 0;
     uniforms.uElectronicIdentityStyling = electronicIdentityStylingEnabled ? 1 : 0;
     uniforms.uFieldProfileIdentityStyling = fieldProfileIdentityStylingEnabled ? 1 : 0;
@@ -8608,6 +8653,11 @@ export class PixiFieldPresenter {
 
   setFrayForceStylingEnabled(enabled: boolean): void {
     this.uniforms.uniforms.uFrayForceStyling = enabled ? 1 : 0;
+    this.renderApplication();
+  }
+
+  setGbmbForceStylingEnabled(enabled: boolean): void {
+    this.uniforms.uniforms.uGbmbForceStyling = enabled ? 1 : 0;
     this.renderApplication();
   }
 

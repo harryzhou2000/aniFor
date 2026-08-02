@@ -112,6 +112,7 @@ import { applyCanvasVibrStateStyle } from './canvas-vibr-state-style';
 import { applyCanvasDeutStateStyle } from './canvas-deut-state-style';
 import { applyCanvasForceActivityStyle } from './canvas-force-activity-style';
 import { applyCanvasFrayForceStyle } from './canvas-fray-force-style';
+import { applyCanvasGbmbForceStyle } from './canvas-gbmb-force-style';
 import { applyCanvasPoloStateStyle } from './canvas-polo-state-style';
 import { applyCanvasSpongeHydrationStyle } from './canvas-sponge-hydration-style';
 import { applyCanvasLavaAncestryStyle } from './canvas-lava-ancestry-style';
@@ -318,6 +319,7 @@ export class MaterialRenderer {
   private thermalCatalyticRigidStylingEnabled = true;
   private gooSolidStylingEnabled = true;
   private frayForceStylingEnabled = true;
+  private gbmbForceStylingEnabled = true;
   private mechanismBodyStylingEnabled = true;
   private electronicIdentityStylingEnabled = true;
   private fieldProfileIdentityStylingEnabled = true;
@@ -591,6 +593,10 @@ export class MaterialRenderer {
     return this.presenter?.frayForceStylingEnabled() ?? this.frayForceStylingEnabled;
   }
 
+  gbmbForceStylingIsEnabled(): boolean {
+    return this.presenter?.gbmbForceStylingEnabled() ?? this.gbmbForceStylingEnabled;
+  }
+
   /** Audit-only proof that native dirty state reached the active presentation staging grid. */
   renderedMaterialAt(x: number, y: number): number {
     if (x < 0 || y < 0 || x >= this.simulation.width || y >= this.simulation.height) return -1;
@@ -845,6 +851,15 @@ export class MaterialRenderer {
     if (enabled === this.frayForceStylingEnabled) return;
     this.frayForceStylingEnabled = enabled;
     this.presenter?.setFrayForceStylingEnabled(enabled);
+    this.contourChunks.markAll();
+    this.changed = true;
+  }
+
+  /** Static GBMB containment cue; unavailable gravity is never inferred. */
+  setGbmbForceStylingEnabled(enabled: boolean): void {
+    if (enabled === this.gbmbForceStylingEnabled) return;
+    this.gbmbForceStylingEnabled = enabled;
+    this.presenter?.setGbmbForceStylingEnabled(enabled);
     this.contourChunks.markAll();
     this.changed = true;
   }
@@ -1324,6 +1339,7 @@ export class MaterialRenderer {
       this.thermalCatalyticRigidStylingEnabled,
       this.gooSolidStylingEnabled,
       this.frayForceStylingEnabled,
+      this.gbmbForceStylingEnabled,
       this.earthenPowderStylingEnabled,
       this.powderMesostrataStylingEnabled,
       this.moltenBodyOpticsEnabled,
@@ -2429,6 +2445,9 @@ export class MaterialRenderer {
             }
             if (this.frayForceStylingEnabled) {
               applyCanvasFrayForceStyle(this.styledColor, material, x, y);
+            }
+            if (this.gbmbForceStylingEnabled) {
+              applyCanvasGbmbForceStyle(this.styledColor, material, x, y);
             }
           }
           if (applicableTraits !== 0) applyCanvasRenderTraits(

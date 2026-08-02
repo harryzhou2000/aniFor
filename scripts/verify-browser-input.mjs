@@ -37,6 +37,7 @@ import { auditGeologicalSolidGraphics } from './geological-solid-graphics-audit.
 import { auditThermalCatalyticRigidGraphics } from './thermal-catalytic-rigid-graphics-audit.mjs';
 import { auditGooSolidGraphics } from './goo-solid-graphics-audit.mjs';
 import { auditFrayForceGraphics } from './fray-force-graphics-audit.mjs';
+import { auditGbmbForceGraphics } from './gbmb-force-graphics-audit.mjs';
 import { auditDistilledDieselLiquidGraphics } from './distilled-diesel-liquid-graphics-audit.mjs';
 import { auditDenseBodyAmbientGraphics } from './dense-body-ambient-graphics-audit.mjs';
 import {
@@ -160,6 +161,8 @@ const gooSolidGraphicsOnly = process.argv.includes('--goo-solid-graphics-only');
 const gooSolidGraphicsEight = gooSolidGraphicsOnly && process.argv.includes('--render-scale=8');
 const frayForceGraphicsOnly = process.argv.includes('--fray-force-graphics-only');
 const frayForceGraphicsEight = frayForceGraphicsOnly && process.argv.includes('--render-scale=8');
+const gbmbForceGraphicsOnly = process.argv.includes('--gbmb-force-graphics-only');
+const gbmbForceGraphicsEight = gbmbForceGraphicsOnly && process.argv.includes('--render-scale=8');
 const distilledDieselLiquidGraphicsOnly = process.argv.includes('--distilled-diesel-liquid-graphics-only');
 const distilledDieselLiquidGraphicsEight = distilledDieselLiquidGraphicsOnly && process.argv.includes('--render-scale=8');
 const denseBodyAmbientOnly = process.argv.includes('--dense-body-ambient-only');
@@ -197,6 +200,7 @@ const usesProductionBundle = productionBundle || showcaseScreenshotOnly || cellu
   || thermalCatalyticRigidGraphicsOnly
   || gooSolidGraphicsOnly
   || frayForceGraphicsOnly
+  || gbmbForceGraphicsOnly
   || distilledDieselLiquidGraphicsOnly
   || botanicalLifecycleGraphicsOnly || sparkStateGraphicsOnly
   || nativeSeedGrowthOnly || nativeSemanticsOnly || catalogSelectionOnly || shortDesktopOnly || liveScaleOnly
@@ -280,6 +284,7 @@ async function main() {
       || thermalCatalyticRigidGraphicsOnly
       || gooSolidGraphicsOnly
       || frayForceGraphicsOnly
+      || gbmbForceGraphicsOnly
       || distilledDieselLiquidGraphicsOnly
       || sparkStateGraphicsOnly
       || nativeSeedGrowthOnly || nativeSemanticsOnly || catalogSelectionOnly || pausedPresentationOnly
@@ -366,7 +371,7 @@ async function auditMode(mode) {
     || pipeStateGraphicsOnly || swchStateGraphicsOnly || storStateGraphicsOnly
     || dlayStateGraphicsOnly || wifiStateGraphicsOnly || powderMesostrataGraphicsOnly
     || geologicalSolidGraphicsOnly || gooSolidGraphicsOnly || distilledDieselLiquidGraphicsOnly || denseBodyAmbientOnly
-    || thermalCatalyticRigidGraphicsOnly || frayForceGraphicsOnly
+    || thermalCatalyticRigidGraphicsOnly || frayForceGraphicsOnly || gbmbForceGraphicsOnly
     || sparkStateGraphicsOnly
     || nativeSeedGrowthOnly);
   const query = new URLSearchParams({
@@ -374,7 +379,7 @@ async function auditMode(mode) {
     renderScale: (pqrtStateGraphicsEight || filtStateGraphicsEight || lcryStateGraphicsEight
       || pipeStateGraphicsEight || swchStateGraphicsEight || storStateGraphicsEight
       || dlayStateGraphicsEight || wifiStateGraphicsEight || powderMesostrataGraphicsEight
-      || geologicalSolidGraphicsEight || thermalCatalyticRigidGraphicsEight || gooSolidGraphicsEight || frayForceGraphicsEight || distilledDieselLiquidGraphicsEight || denseBodyAmbientEight) ? '8' : '2',
+      || geologicalSolidGraphicsEight || thermalCatalyticRigidGraphicsEight || gooSolidGraphicsEight || frayForceGraphicsEight || gbmbForceGraphicsEight || distilledDieselLiquidGraphicsEight || denseBodyAmbientEight) ? '8' : '2',
     ...(showcaseScreenshotOnly ? { auditStage: 'showcase' } : {
       auditStage: startsBlank ? 'blank' : 'canonical',
       ...(startsBlank ? { blankAudit: '1' } : {}),
@@ -487,14 +492,14 @@ async function auditMode(mode) {
     const dedicatedEightX = pqrtStateGraphicsEight || filtStateGraphicsEight || lcryStateGraphicsEight
       || denseBodyAmbientEight || wifiStateGraphicsEight || powderMesostrataGraphicsEight
       || geologicalSolidGraphicsEight || thermalCatalyticRigidGraphicsEight || gooSolidGraphicsEight
-      || frayForceGraphicsEight || distilledDieselLiquidGraphicsEight;
+      || frayForceGraphicsEight || gbmbForceGraphicsEight || distilledDieselLiquidGraphicsEight;
     const dedicatedEightXDeadline = dedicatedEightX
       ? Date.now() + EIGHT_X_PRESENTATION_DEADLINE_MS : undefined;
     const auditApiExpression = `(() => {
       const parameters = new URLSearchParams(location.search);
       const ready = parameters.get('scene') === 'render-lab'
         && parameters.get('inputAudit') === '1'
-        && parameters.get('renderScale') === ${JSON.stringify((pqrtStateGraphicsEight || filtStateGraphicsEight || lcryStateGraphicsEight || pipeStateGraphicsEight || swchStateGraphicsEight || storStateGraphicsEight || dlayStateGraphicsEight || wifiStateGraphicsEight || powderMesostrataGraphicsEight || geologicalSolidGraphicsEight || thermalCatalyticRigidGraphicsEight || gooSolidGraphicsEight || frayForceGraphicsEight || distilledDieselLiquidGraphicsEight || denseBodyAmbientEight) ? '8' : '2')}
+        && parameters.get('renderScale') === ${JSON.stringify((pqrtStateGraphicsEight || filtStateGraphicsEight || lcryStateGraphicsEight || pipeStateGraphicsEight || swchStateGraphicsEight || storStateGraphicsEight || dlayStateGraphicsEight || wifiStateGraphicsEight || powderMesostrataGraphicsEight || geologicalSolidGraphicsEight || thermalCatalyticRigidGraphicsEight || gooSolidGraphicsEight || frayForceGraphicsEight || gbmbForceGraphicsEight || distilledDieselLiquidGraphicsEight || denseBodyAmbientEight) ? '8' : '2')}
         && parameters.get('auditStage') === ${JSON.stringify(startsBlank ? 'blank' : 'canonical')}
         && parameters.has('blankAudit') === ${startsBlank}
         && Boolean(window.__ANIFOR_INPUT_AUDIT__ && document.documentElement);
@@ -975,6 +980,20 @@ async function auditMode(mode) {
       assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
       cdp.close();
       return { backend: mode, frayForceGraphics, browserErrors: errors.length };
+    }
+    if (gbmbForceGraphicsOnly) {
+      const gbmbForceGraphics = await auditGbmbForceGraphics({
+        cdp,
+        mode,
+        evaluate,
+        waitFor,
+        captureSettledPage,
+        outputScale: gbmbForceGraphicsEight ? 8 : 2,
+        assert,
+      });
+      assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
+      cdp.close();
+      return { backend: mode, gbmbForceGraphics, browserErrors: errors.length };
     }
     if (distilledDieselLiquidGraphicsOnly) {
       const distilledDieselLiquidGraphics = await auditDistilledDieselLiquidGraphics({

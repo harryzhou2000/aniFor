@@ -148,6 +148,9 @@ import {
   FRAY_FORCE_GRAPHICS_AUDIT, prepareFrayForceGraphicsAuditFixture,
 } from './fray-force-graphics-audit';
 import {
+  GBMB_FORCE_GRAPHICS_AUDIT, prepareGbmbForceGraphicsAuditFixture,
+} from './gbmb-force-graphics-audit';
+import {
   DISTILLED_DIESEL_LIQUID_GRAPHICS_AUDIT,
   prepareDistilledDieselLiquidGraphicsAuditFixture,
 } from './distilled-diesel-liquid-graphics-audit';
@@ -408,6 +411,7 @@ export class Game {
       thermalCatalyticRigidStylingEnabled: () => this.renderer.thermalCatalyticRigidStylingIsEnabled(),
       gooSolidStylingEnabled: () => this.renderer.gooSolidStylingIsEnabled(),
       frayForceStylingEnabled: () => this.renderer.frayForceStylingIsEnabled(),
+      gbmbForceStylingEnabled: () => this.renderer.gbmbForceStylingIsEnabled(),
       gasIdentityStyle: (x, y) => this.renderer.gasIdentityStyleAt(x, y),
       atmosphereSupportAudit: () => this.renderer.getAtmosphereSupportAudit(),
       occupiedCells: () => {
@@ -588,6 +592,9 @@ export class Game {
       },
       setFrayForceStyling: (enabled) => {
         this.renderer.setFrayForceStylingEnabled(enabled);
+      },
+      setGbmbForceStyling: (enabled) => {
+        this.renderer.setGbmbForceStylingEnabled(enabled);
       },
       setPowderRenderStyle: (style) => {
         this.renderer.setPowderRenderStyle(style);
@@ -831,6 +838,12 @@ export class Game {
       frayForceGraphicsAtlas: () => FRAY_FORCE_GRAPHICS_AUDIT,
       prepareFrayForceGraphicsFixture: () => {
         prepareFrayForceGraphicsAuditFixture(this.simulation);
+        this.renderer.synchronizeFixtureMaterialPlane();
+        this.renderer.invalidateDynamicPresentation();
+      },
+      gbmbForceGraphicsAtlas: () => GBMB_FORCE_GRAPHICS_AUDIT,
+      prepareGbmbForceGraphicsFixture: () => {
+        prepareGbmbForceGraphicsAuditFixture(this.simulation);
         this.renderer.synchronizeFixtureMaterialPlane();
         this.renderer.invalidateDynamicPresentation();
       },
