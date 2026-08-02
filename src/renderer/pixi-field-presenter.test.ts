@@ -1477,6 +1477,7 @@ describe('Pixi presenter startup configuration', () => {
     expect(block).toContain('float cohesiveEnergy = denseEnergyField * smoothstep(0.18, 0.66, density);');
     expect(block).toContain('float energyFieldChroma = cohesiveEnergy * (0.08 + core * 0.08) * uEnergyCoreRelief;');
     expect(block).toContain('vec3 cohesiveEnergyBase = mix(energyBase, emissionState.rgb, energyFieldChroma);');
+    expect(block).toContain('1.0 + flowWave * 0.022 + pulse * 0.018,\n      // Once the shared emission field proves a dense body, its broad flow is\n      // the only remaining carrier variation. This is RGB-only: semantic\n      // alpha, sparse-particle topology, and field support remain unchanged.\n      cohesiveEnergy');
     expect(block).toContain('color = cohesiveEnergyBase * (1.05 + core * 0.48 + heat * 0.30) * cohesiveCarrierDetail;');
     expect(block).toContain('alpha = mix(semanticAlpha, cohesiveAlpha, cohesiveEnergy * 0.72);');
     expect(block).not.toContain('texture(');

@@ -31,6 +31,7 @@
     "audit:explosive-powder": "node scripts/verify-browser-input.mjs --explosive-powder-graphics-only",
     "audit:earthen-powder": "node scripts/verify-browser-input.mjs --earthen-powder-graphics-only",
     "audit:energy-radioactive": "node scripts/verify-browser-input.mjs --energy-radioactive-graphics-only",
+    "audit:energy-radioactive:webgl": "npm run build && node scripts/verify-browser-input.mjs --energy-radioactive-graphics-only --webgl-only --production-bundle",
     "audit:electric-discharge": "npm run build && node scripts/verify-browser-input.mjs --electric-discharge-graphics-only --production-bundle",
     "audit:organic-plant": "node scripts/verify-browser-input.mjs --organic-plant-graphics-only",
     "audit:sponge": "node scripts/verify-browser-input.mjs --sponge-graphics-only",

@@ -5752,7 +5752,10 @@ void main() {
     float cohesiveCarrierDetail = mix(
       carrierDetail,
       1.0 + flowWave * 0.022 + pulse * 0.018,
-      cohesiveEnergy * 0.72
+      // Once the shared emission field proves a dense body, its broad flow is
+      // the only remaining carrier variation. This is RGB-only: semantic
+      // alpha, sparse-particle topology, and field support remain unchanged.
+      cohesiveEnergy
     );
     float semanticAlpha = smoothstep(0.18, 0.72, density)
       * mix(0.58 + pulse * 0.08, 0.94, core)
