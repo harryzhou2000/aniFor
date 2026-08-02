@@ -43,6 +43,19 @@ float pressureField[FIELD_SIZE];
 int8_t velocityField[FIELD_SIZE * 2];
 bool windPending = false;
 
+// Fan walls are the one native wall family that must keep air velocity live
+// between gestures. Do the inexpensive coarse-grid scan at the C++ boundary
+// instead of retaining a parallel JavaScript flag: imported OPS saves, erase,
+// and any future native wall mutation then remain authoritative.
+bool HasFanWall(Simulation const &candidate)
+{
+	for (int y = 0; y < YCELLS; ++y)
+		for (int x = 0; x < XCELLS; ++x)
+			if (candidate.bmap[y][x] == WL_FAN)
+				return true;
+	return false;
+}
+
 uint8_t *CacheSignText(int index, bool display)
 {
 	signTextBuffer.clear();
@@ -924,7 +937,9 @@ __attribute__((visibility("default"))) void powder_set_wall(int x, int y, int wa
 {
 	EnsureSimulation();
 	if (x < 0 || y < 0 || x >= XRES || y >= YRES) return;
-	if (wall < WL_ERASE || wall >= UI_WALLCOUNT || wall == WL_FAN || wall == WL_GRAV || wall == WL_ERASEALL) return;
+	// Gravity wall still requires its separate native field-configuration UI.
+	// Fan direction is configured through powder_configure_fan below.
+	if (wall < WL_ERASE || wall >= UI_WALLCOUNT || wall == WL_GRAV || wall == WL_ERASEALL) return;
 	auto const cellRadius = std::max(0, radius) / CELL;
 	auto const centerX = x / CELL;
 	auto const centerY = y / CELL;
@@ -932,10 +947,74 @@ __attribute__((visibility("default"))) void powder_set_wall(int x, int y, int wa
 	{
 		for (int wallX = std::max(0, centerX - cellRadius); wallX <= std::min(XCELLS - 1, centerX + cellRadius); ++wallX)
 		{
+			if (wall != WL_FAN)
+			{
+				simulation->fvx[wallY][wallX] = 0.0f;
+				simulation->fvy[wallY][wallX] = 0.0f;
+			}
 			simulation->bmap[wallY][wallX] = wall;
 			RefreshAirBlockCell(wallY, wallX);
 		}
 	}
+}
+// The headless target deliberately leaves Simulation::FloodWalls out of its
+// link set. Reproduce that upstream WallTool component operation locally over
+// the native coarse bmap: a four-connected exact WL_FAN flood, then restore
+// the marker. Retain the exact 0.005 coordinate-to-velocity scale; this is
+// native fan state, not a browser-side wind approximation.
+__attribute__((visibility("default"))) int powder_configure_fan(int startX, int startY, int endX, int endY)
+{
+	EnsureSimulation();
+	if (startX < 0 || startY < 0 || startX >= XRES || startY >= YRES
+		|| endX < 0 || endY < 0 || endX >= XRES || endY >= YRES)
+		return 0;
+	auto const wallX = startX / CELL;
+	auto const wallY = startY / CELL;
+	if (simulation->bmap[wallY][wallX] != WL_FAN) return 0;
+	auto const fanVelocityX = float(endX - startX) * 0.005f;
+	auto const fanVelocityY = float(endY - startY) * 0.005f;
+	std::vector<int> component;
+	component.reserve(XCELLS * YCELLS);
+	simulation->bmap[wallY][wallX] = WL_FLOODHELPER;
+	component.push_back(wallY * XCELLS + wallX);
+	for (size_t cursor = 0; cursor < component.size(); ++cursor)
+	{
+		auto const cell = component[cursor];
+		auto const y = cell / XCELLS;
+		auto const x = cell % XCELLS;
+		auto enqueueFan = [&](int neighbourX, int neighbourY) {
+			if (neighbourX < 0 || neighbourY < 0 || neighbourX >= XCELLS || neighbourY >= YCELLS
+				|| simulation->bmap[neighbourY][neighbourX] != WL_FAN)
+				return;
+			simulation->bmap[neighbourY][neighbourX] = WL_FLOODHELPER;
+			component.push_back(neighbourY * XCELLS + neighbourX);
+		};
+		enqueueFan(x - 1, y);
+		enqueueFan(x + 1, y);
+		enqueueFan(x, y - 1);
+		enqueueFan(x, y + 1);
+	}
+	int configured = 0;
+	for (auto const cell : component)
+	{
+		auto const y = cell / XCELLS;
+		auto const x = cell % XCELLS;
+		simulation->fvx[y][x] = fanVelocityX;
+		simulation->fvy[y][x] = fanVelocityY;
+		simulation->bmap[y][x] = WL_FAN;
+		RefreshAirBlockCell(y, x);
+		++configured;
+	}
+	return configured;
+}
+__attribute__((visibility("default"))) float powder_fan_velocity(int x, int y, int axis)
+{
+	EnsureSimulation();
+	if (x < 0 || y < 0 || x >= XRES || y >= YRES || (axis != 0 && axis != 1)) return 0.0f;
+	auto const wallX = x / CELL;
+	auto const wallY = y / CELL;
+	if (simulation->bmap[wallY][wallX] != WL_FAN) return 0.0f;
+	return axis == 0 ? simulation->fvx[wallY][wallX] : simulation->fvy[wallY][wallX];
 }
 __attribute__((visibility("default"))) int powder_apply_tool(int tool, int x, int y, int radius, int deltaX, int deltaY)
 {
@@ -1065,7 +1144,10 @@ __attribute__((visibility("default"))) int powder_sign_remove(int index)
 __attribute__((visibility("default"))) void powder_step()
 {
 	EnsureSimulation();
-	simulation->air->airMode = windPending ? AIR_ON : AIR_VELOCITYOFF;
+	// A native fan is persistent air machinery, unlike the one-frame authored
+	// Wind gesture. Keep the regular headless stable-water mode for worlds
+	// without either, but run upstream AIR_ON whenever a fan genuinely exists.
+	simulation->air->airMode = (windPending || HasFanWall(*simulation)) ? AIR_ON : AIR_VELOCITYOFF;
 	simulation->BeforeSim(true);
 	// Ordinary headless air velocity remains disabled for stable liquid settling,
 	// but authored WIND has now passed through TPT's diffusion, pressure coupling,

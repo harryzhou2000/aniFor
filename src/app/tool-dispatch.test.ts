@@ -2,8 +2,8 @@ import { describe, expect, it, vi } from 'vitest';
 import { Material } from '../shared/materials';
 import { SimulationTool } from '../simulation/simulation-tools';
 import type { SimulationBackend } from '../simulation';
-import type { LifeToolInfo, SignToolInfo, SimToolInfo, SourceToolInfo } from '../ui/tool-catalog';
-import { drawToolPoint, drawToolSegment, type ActiveToolSelection } from './tool-dispatch';
+import type { LifeToolInfo, SignToolInfo, SimToolInfo, SourceToolInfo, WallToolInfo } from '../ui/tool-catalog';
+import { drawToolPoint, drawToolSegment, finishToolStroke, type ActiveToolSelection } from './tool-dispatch';
 
 function backend(): SimulationBackend {
   return {
@@ -11,6 +11,7 @@ function backend(): SimulationBackend {
     step: vi.fn(), paint: vi.fn(), erase: vi.fn(), clear: vi.fn(),
     cells: () => new Uint8Array(32 * 20), consumeDirtyCells: () => [],
     saveWorld: () => '', loadWorld: vi.fn(), applySimulationTool: vi.fn(),
+    configureFanWall: vi.fn(),
     paintConfiguredSource: vi.fn(),
     paintLifePreset: vi.fn(),
   };
@@ -46,6 +47,13 @@ function signTool(): SignToolInfo {
   return {
     key: 'sign:place', kind: 'sign', maximumLength: 45,
     name: 'Sign', description: 'Sign', color: '#fff', icon: 'T', category: 'signs',
+  };
+}
+
+function fanWall(): WallToolInfo {
+  return {
+    key: 'wall:5', kind: 'wall', nativeWall: 5,
+    name: 'Fan wall', description: 'fan', color: '#fff', icon: '>', category: 'walls',
   };
 }
 
@@ -138,6 +146,18 @@ describe('semantic tool dispatch', () => {
     delete simulation.paintLifePreset;
     drawToolPoint(simulation, { x: 7, y: 8 }, active, false);
     expect(simulation.paint).not.toHaveBeenCalled();
+  });
+
+  it('configures an already-painted native Fan once on completed drag without particle fallback', () => {
+    const simulation = backend();
+    const active: ActiveToolSelection = { material: Material.Sand, radius: 3, wallTool: fanWall() };
+
+    expect(finishToolStroke(simulation, { x: 12, y: 9 }, { x: 28, y: 13 }, active, false)).toBe(0);
+    expect(simulation.configureFanWall).toHaveBeenCalledWith(12, 9, 28, 13);
+    expect(simulation.paint).not.toHaveBeenCalled();
+
+    expect(finishToolStroke(simulation, { x: 12, y: 9 }, { x: 28, y: 13 }, active, true)).toBe(0);
+    expect(simulation.configureFanWall).toHaveBeenCalledOnce();
   });
 
   it('never treats a sign gesture as particle paint or erasure', () => {

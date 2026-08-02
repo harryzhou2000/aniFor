@@ -280,6 +280,8 @@ export interface SimulationBackend {
   walls?(): Uint8Array;
   paintWall?(x: number, y: number, wall: number, radius: number): void;
   eraseWall?(x: number, y: number, radius: number): void;
+  /** Configure the native connected Fan wall body touched at `start` from one completed world-space drag. */
+  configureFanWall?(startX: number, startY: number, endX: number, endY: number): number;
   /** Atomically place a native TPT source with its ctype target. */
   paintConfiguredSource?(x: number, y: number, source: Material, target: Material, radius: number): number;
   /** Ask the native element rules whether a source/target ctype pair is valid. */

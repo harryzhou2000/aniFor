@@ -56,6 +56,14 @@ describe('tool catalog view model', () => {
         limitations: ['native-gravity-wall-configuration-unavailable'],
       },
     ]);
+    const withFan = buildToolCatalog(MATERIALS, { walls: true, fanWalls: true });
+    expect(withFan.find((tool) => tool.key === 'wall:5')).toMatchObject({
+      kind: 'wall', nativeWall: 5, available: true,
+    });
+    expect(withFan.find((tool) => tool.key === 'wall:14')).toMatchObject({
+      kind: 'wall', nativeWall: 14, available: false,
+      limitations: ['native-gravity-wall-configuration-unavailable'],
+    });
     expect(catalog.find((tool) => tool.kind === 'element' && tool.id === Material.Wall)?.name).toBe('Diamond');
   });
 
@@ -89,6 +97,7 @@ describe('tool catalog view model', () => {
   it('keeps the complete capable catalog uniquely visible across every semantic family', () => {
     const catalog = buildToolCatalog(MATERIALS, {
       walls: true,
+      fanWalls: true,
       simulationTools: true,
       configuredSources: true,
       lifePresets: true,
@@ -110,9 +119,9 @@ describe('tool catalog view model', () => {
 
     const semantic = catalog.filter((tool) => tool.kind !== 'element');
     expect(semantic).toHaveLength(53);
-    expect(semantic.filter(isToolAvailable)).toHaveLength(51);
+    expect(semantic.filter(isToolAvailable)).toHaveLength(52);
     expect(semantic.filter((tool) => tool.kind === 'wall')).toHaveLength(17);
-    expect(semantic.filter((tool) => tool.kind === 'wall' && isToolAvailable(tool))).toHaveLength(15);
+    expect(semantic.filter((tool) => tool.kind === 'wall' && isToolAvailable(tool))).toHaveLength(16);
     expect(semantic.filter((tool) => tool.kind === 'source')).toHaveLength(6);
     expect(semantic.filter((tool) => tool.kind === 'life')).toHaveLength(LIFE_PRESETS.length);
     expect(semantic.filter((tool) => tool.kind === 'sign')).toHaveLength(1);

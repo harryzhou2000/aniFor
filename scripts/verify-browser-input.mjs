@@ -12707,7 +12707,8 @@ async function auditVisualScaleMatrix(cdp, mode, dpr) {
       : timeout, `${mode} ${stage} audit API`);
     if (scale === 8 && mode === 'webgl') {
       const startupBackend = await waitForEightXTerminalBackend(
-        cdp, `${mode} ${stage}`, startupDeadline,
+        cdp, `${mode} ${stage}`,
+        remainingDeadlineMs(startupDeadline, `${mode} ${stage} terminal backend`),
       );
       assertEightXWebGLBackend(startupBackend, `${mode} ${stage}`);
     } else {

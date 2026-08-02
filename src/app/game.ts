@@ -14,7 +14,7 @@ import {
   type SourceToolInfo, type WallToolInfo,
 } from '../ui/tool-catalog';
 import { WorldInputController } from '../ui/world-input';
-import { drawToolPoint, drawToolSegment } from './tool-dispatch';
+import { drawToolPoint, drawToolSegment, finishToolStroke } from './tool-dispatch';
 import {
   blankBrowserInputAuditRequested, browserInputAuditRequested,
   prepareContourStressAuditFixture, prepareDenseSolidAuditFixture,
@@ -265,6 +265,16 @@ export class Game {
         }, erase);
         if (stateOnlyMutation) this.renderer.invalidateDynamicPresentation();
       },
+      finishStroke: (start, end, erase) => {
+        erase ||= this.eraseMode;
+        const configured = finishToolStroke(this.simulation, start, end, {
+          material: this.material, wallTool: this.wallTool,
+          simulationTool: this.simulationTool, sourceTool: this.sourceTool,
+          lifeTool: this.lifeTool, signTool: this.signTool,
+          radius: this.radius,
+        }, erase);
+        if (configured > 0) this.renderer.invalidateDynamicPresentation();
+      },
     });
     this.mountFieldIndicator(viewport);
     const toolbox = this.root.querySelector<HTMLElement>('.toolbox');
@@ -342,6 +352,7 @@ export class Game {
       },
     }, buildToolCatalog(BROWSE_MATERIALS, {
       walls: Boolean(this.simulation.paintWall && this.simulation.eraseWall),
+      fanWalls: Boolean(this.simulation.paintWall && this.simulation.eraseWall && this.simulation.configureFanWall),
       simulationTools: Boolean(this.simulation.applySimulationTool),
       configuredSources: Boolean(
         this.simulation.paintConfiguredSource && this.simulation.canConfigureSource

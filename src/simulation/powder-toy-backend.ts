@@ -28,6 +28,8 @@ interface PowderToyModule {
   _powder_source_target(x: number, y: number): number;
   _powder_set_life(x: number, y: number, preset: number): number;
   _powder_set_wall(x: number, y: number, wall: number, radius: number): void;
+  _powder_configure_fan(startX: number, startY: number, endX: number, endY: number): number;
+  _powder_fan_velocity(x: number, y: number, axis: number): number;
   _powder_apply_tool(tool: SimulationToolId, x: number, y: number, radius: number, deltaX: number, deltaY: number): number;
   _powder_sign_count(): number;
   _powder_sign_x(index: number): number;
@@ -181,6 +183,22 @@ export class PowderToyBackend implements SimulationBackend {
   }
 
   eraseWall(x: number, y: number, radius: number): void { this.paintWall(x, y, 0, radius); }
+
+  configureFanWall(startX: number, startY: number, endX: number, endY: number): number {
+    const configured = this.module._powder_configure_fan(startX, startY, endX, endY);
+    if (configured > 0) {
+      // Fan vectors live in native coarse-air state, not the material plane.
+      // The complete connected component may extend beyond this gesture's brush.
+      this.dirtyCheck = true;
+      this.wallDirtyAll = true;
+    }
+    return configured;
+  }
+
+  /** Native coarse fan velocity for diagnostics/tests; no JavaScript mirror exists. */
+  fanVelocityAt(x: number, y: number): readonly [number, number] {
+    return [this.module._powder_fan_velocity(x, y, 0), this.module._powder_fan_velocity(x, y, 1)];
+  }
 
   applySimulationTool(tool: SimulationToolId, x: number, y: number, radius: number, deltaX = 0, deltaY = 0): void {
     const applied = this.module._powder_apply_tool(tool, x, y, radius, deltaX, deltaY);

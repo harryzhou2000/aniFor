@@ -56,6 +56,7 @@ export type CatalogTool = ElementToolInfo | WallToolInfo | SimToolInfo | SourceT
 
 export interface ToolCapabilities {
   readonly walls?: boolean;
+  readonly fanWalls?: boolean;
   readonly simulationTools?: boolean;
   readonly configuredSources?: boolean;
   readonly lifePresets?: boolean;
@@ -80,12 +81,15 @@ const WALL_DEFINITIONS = [
   [18, 'Stasis wall', 'Freezes particles in place until powered', '#800080', '❄'],
 ] as const;
 
+const FAN_WALL_DEFINITION = [
+  5, 'Fan wall', 'Paint a connected fan body, then drag from it to set native air direction and strength', '#5d8b9d', '➜',
+] as const;
+
 // These native wall IDs need an extra configuration gesture which the current
 // wall brush ABI does not expose.  Keep them discoverable in the catalog, but
 // deliberately outside WALL_DEFINITIONS: enabling native walls must never turn
 // an explanatory tile into a partially-functional brush.
 const UNSUPPORTED_WALL_DEFINITIONS = [
-  [5, 'Fan wall', 'Native fan wall; its directional air-vector configuration is not available in this build', '#5d8b9d', '➜', 'native-fan-wall-configuration-unavailable'],
   [14, 'Gravity wall', 'Native gravity wall; its field configuration is not available in this build', '#70598c', '⌁', 'native-gravity-wall-configuration-unavailable'],
 ] as const;
 
@@ -113,6 +117,18 @@ export function semanticTools(capabilities: ToolCapabilities = {}): readonly Exc
     category: 'walls',
     ...unsupported(capabilities.walls, 'native-walls-unavailable'),
   }));
+  const [fanWall, fanName, fanDescription, fanColor, fanIcon] = FAN_WALL_DEFINITION;
+  walls.push({
+    key: `wall:${fanWall}`,
+    kind: 'wall',
+    nativeWall: fanWall,
+    name: fanName,
+    description: fanDescription,
+    color: fanColor,
+    icon: fanIcon,
+    category: 'walls',
+    ...unsupported(Boolean(capabilities.walls && capabilities.fanWalls), 'native-fan-wall-configuration-unavailable'),
+  });
   const unsupportedWalls: WallToolInfo[] = UNSUPPORTED_WALL_DEFINITIONS.map(([
     nativeWall, name, description, color, icon, limitation,
   ]) => ({

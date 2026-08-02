@@ -1969,6 +1969,14 @@ void main() {
       } else if (optics == 15.0) {
         color += vec3(1.00, 0.68, 0.32) * brightPowderFacet * 0.060;
       }
+      // Keep the normal compositor's chromatic mineral vocabulary at true 8x
+      // for the three settled earth materials.  The existing Smooth interior
+      // proof makes this RGB-only term an exact no-op for contours, Local,
+      // Grains, loose grains, traits, and emissive matter.
+      float mineralPowderOwner = (material == 1.0 || material == 26.0 || material == 28.0)
+        ? 1.0 : 0.0;
+      color += base * powderGrain * vec3(0.105, 0.024, -0.066)
+        * powderFacetInterior * mineralPowderOwner;
     }
     // Smooth, supported powder retains a coloured stable edge. Local and
     // Grains are intentionally exact no-ops, as are a one-cell grain and

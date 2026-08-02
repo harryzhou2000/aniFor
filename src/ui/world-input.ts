@@ -4,7 +4,7 @@ interface PointerSample extends Point { readonly pointerType: string }
 const TOUCH_PAINT_ACTIVATION_DISTANCE = 6;
 
 type Interaction =
-  | { readonly kind: 'paint'; readonly pointerId: number; readonly erase: boolean; lastCell: Point; started: boolean; readonly tapEligible: boolean; readonly origin: Point }
+  | { readonly kind: 'paint'; readonly pointerId: number; readonly erase: boolean; readonly startCell: Point; lastCell: Point; started: boolean; readonly tapEligible: boolean; readonly origin: Point }
   | { readonly kind: 'pan'; readonly pointerId: number; readonly view: ViewState; readonly start: Point }
   | { readonly kind: 'pinch'; readonly pointerIds: readonly [number, number]; readonly view: ViewState; readonly center: Point; readonly distance: number };
 
@@ -19,6 +19,8 @@ export interface WorldInputCallbacks {
   draw(cell: Point, erase: boolean): void;
   /** Raw consecutive grid samples for vector tools such as TPT Wind. */
   drawSegment?(start: Point, end: Point, erase: boolean): void;
+  /** One completed nonzero paint drag, used by native Fan-wall configuration. */
+  finishStroke?(start: Point, end: Point, erase: boolean): void;
 }
 
 export function wheelZoomRatio(deltaY: number, deltaMode: number, viewportHeight: number): number {
@@ -64,9 +66,10 @@ export class WorldInputController {
       const touchCount = Array.from(this.pointers.values()).filter(({ pointerType }) => pointerType === 'touch').length;
       if (touchCount >= 2) this.rebaseTouchNavigation();
       else {
+        const cell = this.viewport.screenToCell(event.clientX, event.clientY);
         this.setInteraction({
           kind: 'paint', pointerId: event.pointerId, erase: false,
-          lastCell: this.viewport.screenToCell(event.clientX, event.clientY),
+          startCell: cell, lastCell: cell,
           started: false, tapEligible: true, origin: { x: event.clientX, y: event.clientY },
         });
       }
@@ -76,9 +79,10 @@ export class WorldInputController {
     if (isPan) this.setInteraction({ kind: 'pan', pointerId: event.pointerId, view: this.viewport.getViewState(), start: { x: event.clientX, y: event.clientY } });
     else {
       const erase = event.button === 2;
+      const cell = this.drawAt(event.clientX, event.clientY, erase);
       this.setInteraction({
         kind: 'paint', pointerId: event.pointerId, erase,
-        lastCell: this.drawAt(event.clientX, event.clientY, erase),
+        startCell: cell, lastCell: cell,
         started: true, tapEligible: false, origin: { x: event.clientX, y: event.clientY },
       });
     }
@@ -118,6 +122,11 @@ export class WorldInputController {
     const interaction = this.interaction;
     if (commitTap && interaction?.kind === 'paint' && interaction.pointerId === event.pointerId && !interaction.started && interaction.tapEligible) {
       this.callbacks.draw(interaction.lastCell, interaction.erase);
+    }
+    if (commitTap && interaction?.kind === 'paint' && interaction.pointerId === event.pointerId
+      && interaction.started && !interaction.erase
+      && (interaction.startCell.x !== interaction.lastCell.x || interaction.startCell.y !== interaction.lastCell.y)) {
+      this.callbacks.finishStroke?.(interaction.startCell, interaction.lastCell, false);
     }
     this.pointers.delete(event.pointerId);
     if (!interaction) return;
@@ -171,6 +180,7 @@ export class WorldInputController {
       const [touch] = touches;
       this.setInteraction({
         kind: 'paint', pointerId: touch.pointerId, erase: false,
+        startCell: this.viewport.screenToCell(touch.sample.x, touch.sample.y),
         lastCell: this.viewport.screenToCell(touch.sample.x, touch.sample.y),
         started: false, tapEligible: false, origin: touch.sample,
       });

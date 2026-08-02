@@ -5824,6 +5824,8 @@ var _powder_set_configured_source = Module['_powder_set_configured_source'] = ma
 var _powder_can_configure_source = Module['_powder_can_configure_source'] = makeInvalidEarlyAccess('_powder_can_configure_source');
 var _powder_source_target = Module['_powder_source_target'] = makeInvalidEarlyAccess('_powder_source_target');
 var _powder_set_wall = Module['_powder_set_wall'] = makeInvalidEarlyAccess('_powder_set_wall');
+var _powder_configure_fan = Module['_powder_configure_fan'] = makeInvalidEarlyAccess('_powder_configure_fan');
+var _powder_fan_velocity = Module['_powder_fan_velocity'] = makeInvalidEarlyAccess('_powder_fan_velocity');
 var _powder_apply_tool = Module['_powder_apply_tool'] = makeInvalidEarlyAccess('_powder_apply_tool');
 var _powder_sign_count = Module['_powder_sign_count'] = makeInvalidEarlyAccess('_powder_sign_count');
 var _powder_sign_x = Module['_powder_sign_x'] = makeInvalidEarlyAccess('_powder_sign_x');
@@ -5882,6 +5884,8 @@ function assignWasmExports(wasmExports) {
   assert(typeof wasmExports['powder_can_configure_source'] != 'undefined', 'missing Wasm export: powder_can_configure_source');
   assert(typeof wasmExports['powder_source_target'] != 'undefined', 'missing Wasm export: powder_source_target');
   assert(typeof wasmExports['powder_set_wall'] != 'undefined', 'missing Wasm export: powder_set_wall');
+  assert(typeof wasmExports['powder_configure_fan'] != 'undefined', 'missing Wasm export: powder_configure_fan');
+  assert(typeof wasmExports['powder_fan_velocity'] != 'undefined', 'missing Wasm export: powder_fan_velocity');
   assert(typeof wasmExports['powder_apply_tool'] != 'undefined', 'missing Wasm export: powder_apply_tool');
   assert(typeof wasmExports['powder_sign_count'] != 'undefined', 'missing Wasm export: powder_sign_count');
   assert(typeof wasmExports['powder_sign_x'] != 'undefined', 'missing Wasm export: powder_sign_x');
@@ -5936,6 +5940,8 @@ function assignWasmExports(wasmExports) {
   _powder_can_configure_source = Module['_powder_can_configure_source'] = createExportWrapper('powder_can_configure_source', wasmExports['powder_can_configure_source'], 2);
   _powder_source_target = Module['_powder_source_target'] = createExportWrapper('powder_source_target', wasmExports['powder_source_target'], 2);
   _powder_set_wall = Module['_powder_set_wall'] = createExportWrapper('powder_set_wall', wasmExports['powder_set_wall'], 4);
+  _powder_configure_fan = Module['_powder_configure_fan'] = createExportWrapper('powder_configure_fan', wasmExports['powder_configure_fan'], 4);
+  _powder_fan_velocity = Module['_powder_fan_velocity'] = createExportWrapper('powder_fan_velocity', wasmExports['powder_fan_velocity'], 3);
   _powder_apply_tool = Module['_powder_apply_tool'] = createExportWrapper('powder_apply_tool', wasmExports['powder_apply_tool'], 6);
   _powder_sign_count = Module['_powder_sign_count'] = createExportWrapper('powder_sign_count', wasmExports['powder_sign_count'], 0);
   _powder_sign_x = Module['_powder_sign_x'] = createExportWrapper('powder_sign_x', wasmExports['powder_sign_x'], 1);
@@ -6097,6 +6103,28 @@ function invoke_ii(index,a1) {
   }
 }
 
+function invoke_v(index) {
+  var sp = stackSave();
+  try {
+    getWasmTableEntry(index)();
+  } catch(e) {
+    stackRestore(sp);
+    if (!(e instanceof EmscriptenEH)) throw e;
+    _setThrew(1, 0);
+  }
+}
+
+function invoke_vii(index,a1,a2) {
+  var sp = stackSave();
+  try {
+    getWasmTableEntry(index)(a1,a2);
+  } catch(e) {
+    stackRestore(sp);
+    if (!(e instanceof EmscriptenEH)) throw e;
+    _setThrew(1, 0);
+  }
+}
+
 function invoke_viiiiiiiii(index,a1,a2,a3,a4,a5,a6,a7,a8,a9) {
   var sp = stackSave();
   try {
@@ -6112,17 +6140,6 @@ function invoke_iiii(index,a1,a2,a3) {
   var sp = stackSave();
   try {
     return getWasmTableEntry(index)(a1,a2,a3);
-  } catch(e) {
-    stackRestore(sp);
-    if (!(e instanceof EmscriptenEH)) throw e;
-    _setThrew(1, 0);
-  }
-}
-
-function invoke_vii(index,a1,a2) {
-  var sp = stackSave();
-  try {
-    getWasmTableEntry(index)(a1,a2);
   } catch(e) {
     stackRestore(sp);
     if (!(e instanceof EmscriptenEH)) throw e;
@@ -6167,17 +6184,6 @@ function invoke_iiiiii(index,a1,a2,a3,a4,a5) {
   var sp = stackSave();
   try {
     return getWasmTableEntry(index)(a1,a2,a3,a4,a5);
-  } catch(e) {
-    stackRestore(sp);
-    if (!(e instanceof EmscriptenEH)) throw e;
-    _setThrew(1, 0);
-  }
-}
-
-function invoke_v(index) {
-  var sp = stackSave();
-  try {
-    getWasmTableEntry(index)();
   } catch(e) {
     stackRestore(sp);
     if (!(e instanceof EmscriptenEH)) throw e;

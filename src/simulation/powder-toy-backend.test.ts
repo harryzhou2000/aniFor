@@ -1900,6 +1900,39 @@ describe('direct Powder Toy backend', () => {
     expect(sandBelowWall).toBe(0);
   }, 15000);
 
+  it('configures a connected native Fan body and preserves its exact air vector through OPS1', async () => {
+    const source = await PowderToyBackend.load(moduleArtifact.href);
+    // Two adjacent coarse cells form one fan component. Configuration must
+    // flood that native component, never a JavaScript world-side list.
+    source.paintWall(300, 180, 5, 0);
+    source.paintWall(304, 180, 5, 0);
+    expect(source.configureFanWall(300, 180, 360, 160)).toBe(2);
+    expect(source.walls()[180 * source.width + 300]).toBe(5);
+    expect(source.walls()[180 * source.width + 304]).toBe(5);
+    expect(source.fanVelocityAt(300, 180)[0]).toBeCloseTo(0.3, 6);
+    expect(source.fanVelocityAt(300, 180)[1]).toBeCloseTo(-0.1, 6);
+    expect(source.fanVelocityAt(304, 180)[0]).toBeCloseTo(0.3, 6);
+    expect(source.fanVelocityAt(304, 180)[1]).toBeCloseTo(-0.1, 6);
+
+    // Fan presence switches this world to upstream AIR_ON; without that
+    // explicit native mode choice the headless velocity-off path erases dx/dy.
+    for (let step = 0; step < 3; step++) source.step();
+    source.cells(); // refresh the shared native air-field extraction
+    expect(source.pressure().some((value) => Math.abs(value) > 0.0001)).toBe(true);
+
+    const file = source.saveFile();
+    expect(new TextDecoder().decode(file.slice(0, 4))).toBe('OPS1');
+    const restored = await PowderToyBackend.load(moduleArtifact.href);
+    restored.loadFile(file);
+    expect(restored.walls()[180 * restored.width + 300]).toBe(5);
+    expect(restored.walls()[180 * restored.width + 304]).toBe(5);
+    // OPS stores fan components at 1/64 precision, using its native byte
+    // conversion. The source's 0.30/-0.10 line vector becomes 19/-6 units.
+    expect(restored.fanVelocityAt(300, 180)[0]).toBeCloseTo(19 / 64, 6);
+    expect(restored.fanVelocityAt(300, 180)[1]).toBeCloseTo(-6 / 64, 6);
+    expect(restored.fanVelocityAt(304, 180)).toEqual(restored.fanVelocityAt(300, 180));
+  }, 15000);
+
   it('continues native seed growth through OPS1 and reports it through the dirty stream', async () => {
     const buildFixture = async (soil: boolean, water: boolean): Promise<PowderToyBackend> => {
       const simulation = await PowderToyBackend.load(moduleArtifact.href);

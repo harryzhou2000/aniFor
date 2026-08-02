@@ -73,3 +73,15 @@ export function drawToolSegment(
     end.x - start.x, end.y - start.y,
   );
 }
+
+/** Applies the single completed native Fan configuration gesture after its normal wall brush stroke. */
+export function finishToolStroke(
+  simulation: SimulationBackend,
+  start: Point,
+  end: Point,
+  selection: ActiveToolSelection,
+  erase: boolean,
+): number {
+  if (erase || selection.wallTool?.nativeWall !== 5) return 0;
+  return simulation.configureFanWall?.(start.x, start.y, end.x, end.y) ?? 0;
+}
