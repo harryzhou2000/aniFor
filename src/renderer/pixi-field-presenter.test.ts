@@ -2432,6 +2432,49 @@ describe('Pixi presenter startup configuration', () => {
     expect(source).toContain('density = smoothstep(0.04, 0.96, density);');
   });
 
+  it('keeps settled Sand/Concrete/Clay mesostrata dry, Smooth-only, RGB-only, and resource-free', () => {
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');
+    const eightEnd = source.indexOf('const FIELD_FRAGMENT = `', eightStart);
+    const eight = source.slice(eightStart, eightEnd);
+    const eightHelperStart = eight.indexOf('vec3 settledPowderMesostrataEightXDelta(');
+    const eightHelperEnd = eight.indexOf('// These ten native powders carry distinct', eightHelperStart);
+    const eightBranchStart = eight.indexOf('// Apply dry mineral compaction after the retained packed-wall state');
+    const eightBranchEnd = eight.indexOf('  if ((liquidSurfaceContourKeyStrength', eightBranchStart);
+    const normalHelperStart = source.lastIndexOf('vec3 settledPowderMesostrataDelta(');
+    const normalHelperEnd = source.indexOf('// As with the powder helper', normalHelperStart);
+    const normalGateStart = source.indexOf('// Sand, Clay, and Concrete receive a small slope-aligned compaction');
+    const normalGateEnd = source.indexOf('float grainOffsetY', normalGateStart);
+    const eightHelper = eight.slice(eightHelperStart, eightHelperEnd);
+    const eightBranch = eight.slice(eightBranchStart, eightBranchEnd);
+    const normal = source.slice(normalHelperStart, normalHelperEnd)
+      + source.slice(normalGateStart, normalGateEnd);
+
+    expect(eightHelperStart).toBeGreaterThan(0);
+    expect(eightHelperEnd).toBeGreaterThan(eightHelperStart);
+    expect(eightBranchStart).toBeGreaterThan(0);
+    expect(eightBranchEnd).toBeGreaterThan(eightBranchStart);
+    expect(normalHelperStart).toBeGreaterThan(0);
+    expect(normalGateStart).toBeGreaterThan(0);
+    for (const material of [1, 26, 28]) {
+      expect(eightHelper).toContain(`material == ${material}.0`);
+      expect(normal).toContain(`material == ${material}.0`);
+    }
+    expect(normal).toContain('powderMesostrataStrength = uPowderMesostrataStyling * powderBodyGate * mesostrataOwner');
+    expect(normal).toContain('powderSuspensionCohesion');
+    expect(normal).toContain('(1.0 - step(0.5, wall))');
+    expect(eightBranch).toContain('uPowderStyle > 1.5');
+    expect(eightBranch).toContain('powderWetMix <= 0.001');
+    expect(eightBranch).toContain('nativeWall < 0.5');
+    expect(eightBranch).toContain('depth * q00 * q10 * q01 * q11');
+    expect(eightHelper).toContain('vec3(15.0, 7.0, -8.0)');
+    expect(eightBranch).toContain('(0.72 + mesostrataCore * 0.28)');
+    expect(eight).toContain('uNativeWallsActive > 0.5 && uPowderMesostrataStyling > 0.5');
+    expect(`${eightHelper}${eightBranch}${normal}`).not.toContain('texture(');
+    expect(`${eightHelper}${eightBranch}${normal}`).not.toContain('uTime');
+    expect(`${eightHelper}${eightBranch}${normal}`).not.toMatch(/\balpha\s*[+*]?=/);
+  });
+
   it('redraws when audit powder body depth changes', () => {
     const presenter = presenterHarness();
 

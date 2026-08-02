@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { applyCanvasPowderBulkStyle, canvasPowderBulkDepth } from './canvas-powder-bulk-style';
 import { RenderOptics } from './render-optics';
+import { Material } from '../shared/materials';
 
 describe('Canvas powder bulk style', () => {
   it('accepts only two-cell-deep material with a same-row lateral support', () => {
@@ -214,6 +215,53 @@ describe('Canvas powder bulk style', () => {
     expect(color[1]).toBeGreaterThan(color[2]);
     expect(Math.abs(color[0] / color[1] - 254 / 250)).toBeLessThan(0.002);
     expect(Math.abs(color[1] / color[2] - 250 / 245)).toBeLessThan(0.002);
+  });
+
+  it('adds bounded, deterministic settled mesostrata only to deep Sand, Concrete, and Clay', () => {
+    const render = (material: Material, x: number, y: number, bodyDepthEnabled = true): Float32Array => {
+      const color = new Float32Array([184, 142, 91]);
+      applyCanvasPowderBulkStyle(
+        color, 210, 166, 108, 255, 236, 94, 177, 255, 1,
+        bodyDepthEnabled, RenderOptics.RoughGranular, material, x, y,
+      );
+      return color;
+    };
+    const baseline = render(Material.Empty, 37, 19);
+    const sand = render(Material.Sand, 37, 19);
+    const concrete = render(Material.Concrete, 37, 19);
+    const clay = render(Material.Clay, 37, 19);
+    const fingerprints = [sand, concrete, clay].map((color) => Array.from(color).join(','));
+
+    expect(Array.from(sand)).not.toEqual(Array.from(baseline));
+    expect(Array.from(concrete)).not.toEqual(Array.from(baseline));
+    expect(Array.from(clay)).not.toEqual(Array.from(baseline));
+    expect(new Set(fingerprints).size).toBe(3);
+    for (const color of [sand, concrete, clay]) {
+      expect(Math.max(...color.map((value, channel) => Math.abs(value - baseline[channel])))).toBeLessThanOrEqual(8);
+    }
+    expect(Array.from(render(Material.Sand, 37, 19))).toEqual(Array.from(sand));
+    expect(Array.from(render(Material.Sand, 37, 19, false))).toEqual(
+      Array.from(render(Material.Empty, 37, 19, false)),
+    );
+  });
+
+  it('keeps mesostrata an exact no-op before the stable bulk confidence proof', () => {
+    const base = [184, 142, 91] as const;
+    for (const [stability, density, support, bulkDepth] of [
+      [223, 236, 255, 1], [255, 168, 255, 1], [255, 236, 155, 1], [255, 236, 255, 0],
+    ] as const) {
+      const sand = new Float32Array(base);
+      const control = new Float32Array(base);
+      applyCanvasPowderBulkStyle(
+        sand, 210, 166, 108, stability, density, 94, 177, support, bulkDepth,
+        true, RenderOptics.RoughGranular, Material.Sand, 37, 19,
+      );
+      applyCanvasPowderBulkStyle(
+        control, 210, 166, 108, stability, density, 94, 177, support, bulkDepth,
+        true, RenderOptics.RoughGranular, Material.Empty, 37, 19,
+      );
+      expect(Array.from(sand)).toEqual(Array.from(control));
+    }
   });
 });
 

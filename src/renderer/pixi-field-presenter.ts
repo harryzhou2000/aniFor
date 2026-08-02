@@ -137,6 +137,7 @@ uniform float uFieldProfileIdentityStyling;
 uniform float uSensorMaterialStyling;
 uniform float uExplosivePowderStyling;
 uniform float uEarthenPowderStyling;
+uniform float uPowderMesostrataStyling;
 uniform float uUnusualPowderStyling;
 uniform float uUnusualSolidStyling;
 uniform float uLiquidFieldLighting;
@@ -988,6 +989,26 @@ vec3 earthenPowderEightXDelta(float material, vec2 position, float density) {
     delta = vec3(-3.0, -3.0, -2.0) * lamella + vec3(5.0, 1.0, -2.0) * pocket;
   }
   return clamp(delta * smoothstep(0.10, 0.82, density), vec3(-12.0), vec3(12.0)) / 255.0;
+}
+// Keep the 8x settled-body treatment compact: it reuses the four already-live
+// semantic owners, boundary depth, and powder-surface slope after suspension
+// composition. No texture read, alpha/support decision, or extra 15M-frame
+// resource is introduced.
+vec3 settledPowderMesostrataEightXDelta(float material, vec2 position, float directedSlope) {
+  float style = material == 1.0 ? 1.0 : (material == 26.0 ? 2.0
+    : (material == 28.0 ? 3.0 : 0.0));
+  if (style < 0.5) return vec3(0.0);
+  vec2 cell = floor(position);
+  float phase = cell.x * (-directedSlope * 0.072 + 0.037 * style)
+    + cell.y * (directedSlope * 0.061 + 0.061 * style) + style * 0.173;
+  float band = 1.0 - abs(fract(phase) * 2.0 - 1.0);
+  // The direct mesh quantises after the completed 8x presentation. Keep a
+  // clearly visible but still restrained body signal at a flat dense core;
+  // the strict caller gate, rather than a weak slope multiplier, owns the
+  // exclusion of every thin/contact/reference control.
+  vec3 key = style == 1.0 ? vec3(15.0, 7.0, -8.0)
+    : (style == 2.0 ? vec3(8.0, 7.0, 8.0) : vec3(14.0, 4.0, -7.0));
+  return key * (band - 0.5) * 2.0 / 255.0;
 }
 // These ten native powders carry distinct, static body optics on the normal
 // WebGL path. Mirror that identity language in the direct 8x mesh with a
@@ -2519,6 +2540,7 @@ void main() {
   // semantic coverage, alpha, species ownership, or the dry-scene sampler
   // budget. The source is already resident on this direct mesh; the fetch is
   // deliberately inside the active, eligible branch.
+  float powderWetMix = 0.0;
   if (uSuspensionActive > 0.5 && uPowderStyle > 1.5 && traits < 0.5
     && !materialEmissive
     && ((family == 4.0 && solidEightXGranular(optics))
@@ -2540,6 +2562,7 @@ void main() {
     float suspensionBody = max(suspensionSemanticBody, suspensionFieldBody);
     float lateSuspension = max(suspensionPowder, suspensionLiquid)
       * smoothstep(0.05, 0.62, suspensionState.a) * suspensionBody * 0.98;
+    if (family == 4.0) powderWetMix = lateSuspension;
     if (lateSuspension > 0.001) {
       float sedimentCompaction = smoothstep(0.18, 0.82, suspensionState.a);
       vec3 wetSediment = mix(liquid.rgb, suspensionState.rgb,
@@ -2619,6 +2642,12 @@ void main() {
     || (uSwchStateStyling > 0.5 && swchOwner)
     || (uDlayStateStyling > 0.5 && dlayOwner)
     || (uWifiStateStyling > 0.5 && wifiOwner)
+    // Deep mesostrata normally needs no wall read. In a wall-bearing scene,
+    // reuse this packed-state path only for its three exact qualified powder
+    // owners so co-located native walls remain an exact visual no-op.
+    || (uNativeWallsActive > 0.5 && uPowderMesostrataStyling > 0.5
+      && family == 4.0 && uPowderStyle > 1.5 && traits < 0.5 && !materialEmissive
+      && (material == 1.0 || material == 26.0 || material == 28.0))
     // Eligible translucent liquid already needs this exact wall texel for the
     // final backdrop. Fold the cohesion guard into that one packed-state read
     // so true 8x does not grow another native-wall sample.
@@ -2630,6 +2659,25 @@ void main() {
     sourceTarget = floor(packedState.b * 255.0 + 0.5)
       + floor(packedState.a * 255.0 + 0.5) * 256.0;
     nativeWall = floor(packedState.r * 255.0 + 0.5);
+  }
+  // Apply dry mineral compaction after the retained packed-wall state has
+  // resolved a possible co-located native wall. This preserves the original
+  // strict four-owner/depth proof while keeping wall controls out of the
+  // material grammar without a second sampler or a new 8x resource class.
+  if (family == 4.0 && uPowderMesostrataStyling > 0.5 && uPowderStyle > 1.5
+    && traits < 0.5 && !materialEmissive && nativeWall < 0.5
+    && powderWetMix <= 0.001 && (material == 1.0 || material == 26.0 || material == 28.0)) {
+    float mesostrataCore = depth * q00 * q10 * q01 * q11
+      * smoothstep(0.72, 0.95, semanticDensity);
+    float mesostrataSlope = clamp(
+      powderFieldSlope.x * -2.20 + powderFieldSlope.y * -3.20, -1.0, 1.0
+    );
+    float mesostrataSlopeWeight = clamp(length(powderFieldSlope) * 2.4, 0.0, 1.0);
+    float mesostrataStrength = mesostrataCore
+      * (0.72 + mesostrataCore * 0.28) * (0.72 + mesostrataSlopeWeight * 0.28);
+    color = clamp(color + settledPowderMesostrataEightXDelta(
+      material, grid, mesostrataSlope
+    ) * mesostrataStrength, 0.0, 1.0);
   }
   if ((liquidSurfaceContourKeyStrength > 0.0001 || liquidSurfaceContourShadowStrength > 0.0001)
     && (uNativeWallsActive < 0.5 || nativeWall < 0.5)) {
@@ -2983,6 +3031,7 @@ uniform float uMechanismBodyStyling;
 uniform float uElectronicIdentityStyling;
 uniform float uFieldProfileIdentityStyling;
 uniform float uEarthenPowderStyling;
+uniform float uPowderMesostrataStyling;
 uniform float uSensorMaterialStyling;
 uniform float uUnusualPowderStyling;
 uniform float uExplosivePowderStyling;
@@ -3940,6 +3989,22 @@ vec3 earthenPowderIdentityDelta(float material, vec2 position) {
     return (vec3(-3.0, -3.0, -2.0) * lamella + vec3(5.0, 1.0, -2.0) * pocket) / 255.0;
   }
   return vec3(0.0);
+}
+// Settled mineral strata are deliberately separate from the ordinary Earth
+// identity marks above. They exist only where the composed body has already
+// proved a deep, stable Smooth powder interior; this helper is arithmetic-only
+// RGB grammar and carries no topology, field, or output-scale decision.
+vec3 settledPowderMesostrataDelta(float material, vec2 position, float directedSlope) {
+  float style = material == 1.0 ? 1.0 : (material == 26.0 ? 2.0
+    : (material == 28.0 ? 3.0 : 0.0));
+  if (style < 0.5) return vec3(0.0);
+  vec2 cell = floor(position);
+  float phase = cell.x * (-directedSlope * 0.072 + 0.037 * style)
+    + cell.y * (directedSlope * 0.061 + 0.061 * style) + style * 0.173;
+  float band = 1.0 - abs(fract(phase) * 2.0 - 1.0);
+  vec3 key = style == 1.0 ? vec3(7.0, 3.0, -4.0)
+    : (style == 2.0 ? vec3(8.0, 7.0, 8.0) : vec3(6.0, 1.0, -3.0));
+  return key * (band - 0.5) * 2.0 / 255.0;
 }
 // As with the powder helper, keep construction-body identity out of main's
 // shared smooth-surface scope. Each exact owner returns before another
@@ -5980,6 +6045,8 @@ void main() {
     float powderBodyChroma = 0.0;
     float powderSuspensionCohesion = 0.0;
     float stablePowderMineral = 0.0;
+    float powderMesostrataStrength = 0.0;
+    float powderMesostrataSlope = 0.0;
     float roughSurface = granularOptics(optics);
     float smoothSurface = optics == 8.0 || optics == 19.0 ? 1.0 : 0.0;
     float organicSurface = optics == 9.0 ? 1.0 : 0.0;
@@ -6282,6 +6349,21 @@ void main() {
         stablePowderMineral = step(224.0 / 255.0, boundaryStability)
           * step(0.66, localPowderShape.x)
           * step(5.5, widePowderShape.w);
+        // Sand, Clay, and Concrete receive a small slope-aligned compaction
+        // cadence only after the existing stable bulk proof. The suspension
+        // field owns wet sediment, so its established cohesion rejects this
+        // dry-body material grammar before it can touch a mixed liquid cell.
+        float mesostrataOwner = (material == 1.0 || material == 26.0 || material == 28.0)
+          ? 1.0 : 0.0;
+        float mesostrataSlope = clamp(
+          (abs(widePowderShape.y) + abs(widePowderShape.z)) * 2.4, 0.0, 1.0
+        );
+        powderMesostrataStrength = uPowderMesostrataStyling * powderBodyGate * mesostrataOwner
+          * (0.34 + powderBodyVolumeDepth * 0.66)
+          * (0.30 + mesostrataSlope * 0.70)
+          * (1.0 - smoothstep(0.01, 0.09, powderSuspensionCohesion))
+          * (1.0 - step(0.5, wall));
+        powderMesostrataSlope = powderDirectedSlope;
       }
       float grainOffsetY = fract(sin(dot(floor(fieldPosition), vec2(39.346, 11.135))) * 24634.6345) - 0.5;
       vec2 grainCentre = vec2(grain, grainOffsetY) * 0.075;
@@ -6621,6 +6703,11 @@ void main() {
         && surfaceOnly < 0.5 && halo < 0.5 && wall < 0.5
         && wallOnly < 0.5 && emissionOnly < 0.5) {
         color = clamp(color + earthenPowderIdentityDelta(material, fieldPosition), 0.0, 1.0);
+      }
+      if (powderMesostrataStrength > 0.0) {
+        color = clamp(color + settledPowderMesostrataDelta(
+          material, fieldPosition, powderMesostrataSlope
+        ) * powderMesostrataStrength, 0.0, 1.0);
       }
       color *= 1.0 + powderMacroRelief;
       float powderContourChroma = localPowderShape.x < 0.92
@@ -7635,6 +7722,7 @@ export class PixiFieldPresenter {
       uElectronicIdentityStyling: { value: 1, type: 'f32' },
       uFieldProfileIdentityStyling: { value: 1, type: 'f32' },
       uEarthenPowderStyling: { value: 1, type: 'f32' },
+      uPowderMesostrataStyling: { value: 1, type: 'f32' },
       uSensorMaterialStyling: { value: 1, type: 'f32' },
       uUnusualPowderStyling: { value: 1, type: 'f32' },
       uExplosivePowderStyling: { value: 1, type: 'f32' },
@@ -8001,6 +8089,7 @@ export class PixiFieldPresenter {
     sparkStateStylingEnabled = true,
     structuralRigidStylingEnabled = true,
     earthenPowderStylingEnabled = true,
+    powderMesostrataStylingEnabled = true,
     moltenBodyOpticsEnabled = true,
     aqueousSurfaceReflectionEnabled = true,
     mechanismBodyStylingEnabled = true,
@@ -8041,6 +8130,7 @@ export class PixiFieldPresenter {
     uniforms.uElectronicIdentityStyling = electronicIdentityStylingEnabled ? 1 : 0;
     uniforms.uFieldProfileIdentityStyling = fieldProfileIdentityStylingEnabled ? 1 : 0;
     uniforms.uEarthenPowderStyling = earthenPowderStylingEnabled ? 1 : 0;
+    uniforms.uPowderMesostrataStyling = powderMesostrataStylingEnabled ? 1 : 0;
     uniforms.uSensorMaterialStyling = sensorMaterialStylingEnabled ? 1 : 0;
     uniforms.uUnusualPowderStyling = unusualPowderStylingEnabled ? 1 : 0;
     uniforms.uExplosivePowderStyling = explosivePowderStylingEnabled ? 1 : 0;
@@ -8203,6 +8293,11 @@ export class PixiFieldPresenter {
 
   setEarthenPowderStylingEnabled(enabled: boolean): void {
     this.uniforms.uniforms.uEarthenPowderStyling = enabled ? 1 : 0;
+    this.renderApplication();
+  }
+
+  setPowderMesostrataStylingEnabled(enabled: boolean): void {
+    this.uniforms.uniforms.uPowderMesostrataStyling = enabled ? 1 : 0;
     this.renderApplication();
   }
 

@@ -1,4 +1,5 @@
 import { RenderOptics } from './render-optics';
+import { Material } from '../shared/materials';
 
 const STABILITY_MINIMUM = 224;
 const DENSITY_MINIMUM = 0.66 * 255;
@@ -73,6 +74,10 @@ export function applyCanvasPowderBulkStyle(
   bulkDepth: number,
   bodyDepthEnabled = true,
   optics: RenderOptics = RenderOptics.RoughGranular,
+  material = Material.Empty,
+  worldX = 0,
+  worldY = 0,
+  mesostrataEnabled = true,
 ): void {
   // Temporal hysteresis already happens in BoundaryStabilityField. A second
   // trio of smoothsteps here made a fully powder-filled Canvas several
@@ -164,6 +169,18 @@ export function applyCanvasPowderBulkStyle(
     }
   }
 
+  // The broad powder field owns the calm exterior, while this strictly
+  // deep-body term adds a sparse, slope-aware compaction cadence to the three
+  // common earth materials. It deliberately follows the exact same stable
+  // bulk proof above: loose grains, fine structures, Local/Grains callers,
+  // trait/emissive owners, walls, and wet-sediment replacement never reach
+  // this RGB-only arithmetic. Retaining the pre-existing per-cell mineral
+  // albedo underneath prevents a Smooth pile from becoming airbrushed.
+  if (bodyDepthEnabled && mesostrataEnabled) applyCanvasSettledPowderMesostrata(
+    color, material, worldX, worldY, gradientXByte, gradientYByte,
+    densityByte, supportByte,
+  );
+
   const peak = Math.max(color[0], color[1], color[2]);
   if (peak > OUTPUT_PEAK) {
     const headroomScale = OUTPUT_PEAK / peak;
@@ -171,6 +188,63 @@ export function applyCanvasPowderBulkStyle(
     color[1] *= headroomScale;
     color[2] *= headroomScale;
   }
+}
+
+/**
+ * Gives deep Sand, Clay, and Concrete a restrained, world-anchored compaction
+ * cadence. The caller has already proved stable, exact-material bulk support;
+ * this helper allocates nothing and changes RGB only.
+ */
+function applyCanvasSettledPowderMesostrata(
+  color: Float32Array,
+  material: number,
+  worldX: number,
+  worldY: number,
+  gradientXByte: number,
+  gradientYByte: number,
+  densityByte: number,
+  supportByte: number,
+): void {
+  let style = 0;
+  if (material === Material.Sand) style = 1;
+  else if (material === Material.Concrete) style = 2;
+  else if (material === Material.Clay) style = 3;
+  else return;
+
+  const slopeX = (gradientXByte - 128) / 127;
+  const slopeY = (gradientYByte - 128) / 127;
+  const slopeMagnitude = clamp(Math.hypot(slopeX, slopeY) * 0.72, 0, 1);
+  const volumeDepth = Math.max(
+    clamp((densityByte - DENSITY_MINIMUM) / (255 - DENSITY_MINIMUM), 0, 1),
+    clamp((supportByte * SUPPORT_BYTE_TO_COUNT - SUPPORT_MINIMUM) / (9 - SUPPORT_MINIMUM), 0, 1) * 0.88,
+  );
+  const x = Math.floor(worldX);
+  const y = Math.floor(worldY);
+  // The perpendicular component follows the established field slope; the
+  // small fixed basis keeps a settled flat core coherent without inventing a
+  // neighbour sample or a time-varying direction.
+  const phase = x * (-slopeY * 0.195 + 0.037 * style)
+    + y * (slopeX * 0.195 + 0.061 * style) + style * 0.173;
+  const band = 1 - Math.abs(positiveFraction(phase) * 2 - 1);
+  const signedBand = (band - 0.5) * 2;
+  const gain = (0.30 + slopeMagnitude * 0.70) * (0.34 + volumeDepth * 0.66);
+  let red = 0;
+  let green = 0;
+  let blue = 0;
+  if (style === 1) { // Sand: warm compressed strata with a cool shaded side.
+    red = 7; green = 3; blue = -4;
+  } else if (style === 2) { // Concrete: cool aggregate density, not courses.
+    red = 8; green = 7; blue = 8;
+  } else { // Clay: slightly warmer lamellae and denser terracotta pockets.
+    red = 6; green = 1; blue = -3;
+  }
+  color[0] = clamp(color[0] + red * signedBand * gain, 0, 255);
+  color[1] = clamp(color[1] + green * signedBand * gain, 0, 255);
+  color[2] = clamp(color[2] + blue * signedBand * gain, 0, 255);
+}
+
+function positiveFraction(value: number): number {
+  return value - Math.floor(value);
 }
 
 function clamp(value: number, minimum: number, maximum: number): number {

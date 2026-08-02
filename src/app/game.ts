@@ -132,6 +132,9 @@ import {
   WIFI_STATE_GRAPHICS_AUDIT, prepareWifiStateGraphicsAuditFixture,
 } from './wifi-state-graphics-audit';
 import {
+  POWDER_MESOSTRATA_GRAPHICS_AUDIT, preparePowderMesostrataGraphicsAuditFixture,
+} from './powder-mesostrata-graphics-audit';
+import {
   PHOTON_SPECTRUM_GRAPHICS_AUDIT, preparePhotonSpectrumGraphicsAuditFixture,
   setPhotonSpectrumGraphicsVisible,
 } from './photon-spectrum-graphics-audit';
@@ -550,6 +553,9 @@ export class Game {
       setPowderBodyDepth: (enabled) => {
         this.renderer.setPowderBodyDepthEnabled(enabled);
       },
+      setPowderMesostrataStyling: (enabled) => {
+        this.renderer.setPowderMesostrataStylingEnabled(enabled);
+      },
       setPowderRenderStyle: (style) => {
         this.renderer.setPowderRenderStyle(style);
       },
@@ -762,6 +768,12 @@ export class Game {
       wifiStateGraphicsAtlas: () => WIFI_STATE_GRAPHICS_AUDIT,
       prepareWifiStateGraphicsFixture: () => {
         prepareWifiStateGraphicsAuditFixture(this.simulation);
+        this.renderer.synchronizeFixtureMaterialPlane();
+        this.renderer.invalidateDynamicPresentation();
+      },
+      powderMesostrataGraphicsAtlas: () => POWDER_MESOSTRATA_GRAPHICS_AUDIT,
+      preparePowderMesostrataGraphicsFixture: () => {
+        preparePowderMesostrataGraphicsAuditFixture(this.simulation);
         this.renderer.synchronizeFixtureMaterialPlane();
         this.renderer.invalidateDynamicPresentation();
       },

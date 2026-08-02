@@ -43,6 +43,7 @@ import type { SwchStateGraphicsAuditSnapshot } from './swch-state-graphics-audit
 import type { StorStateGraphicsAuditSnapshot } from './stor-state-graphics-audit';
 import type { DlayStateGraphicsAuditSnapshot } from './dlay-state-graphics-audit';
 import type { WifiStateGraphicsAuditSnapshot } from './wifi-state-graphics-audit';
+import type { PowderMesostrataGraphicsAuditSnapshot } from './powder-mesostrata-graphics-audit';
 import type { LavaStateGraphicsAuditSnapshot } from './lava-state-graphics-audit';
 import type {
   BotanicalLifecycleGraphicsAuditSnapshot,
@@ -121,6 +122,7 @@ export interface BrowserInputAuditApi {
   setBotanicalLifecycleStyling(enabled: boolean): void;
   setSparkStateStyling(enabled: boolean): void;
   setPowderBodyDepth(enabled: boolean): void;
+  setPowderMesostrataStyling(enabled: boolean): void;
   setPowderRenderStyle(style: PowderRenderStyle): void;
   clear(): void;
   setRadius(radius: number): void;
@@ -216,6 +218,8 @@ export interface BrowserInputAuditApi {
   prepareDlayStateGraphicsFixture(): void;
   wifiStateGraphicsAtlas(): WifiStateGraphicsAuditSnapshot;
   prepareWifiStateGraphicsFixture(): void;
+  powderMesostrataGraphicsAtlas(): PowderMesostrataGraphicsAuditSnapshot;
+  preparePowderMesostrataGraphicsFixture(): void;
   photonSpectrumGraphicsAtlas(): PhotonSpectrumGraphicsAuditSnapshot;
   preparePhotonSpectrumGraphicsFixture(): void;
   setPhotonSpectrumGraphicsVisible(visible: boolean): void;

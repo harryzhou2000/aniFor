@@ -314,6 +314,7 @@ export class MaterialRenderer {
   private electronicIdentityStylingEnabled = true;
   private fieldProfileIdentityStylingEnabled = true;
   private earthenPowderStylingEnabled = true;
+  private powderMesostrataStylingEnabled = true;
   private sensorMaterialStylingEnabled = true;
   private unusualPowderStylingEnabled = true;
   private explosivePowderStylingEnabled = true;
@@ -819,6 +820,15 @@ export class MaterialRenderer {
     this.changed = true;
   }
 
+  /** Stable Smooth Sand/Clay/Concrete compaction grammar; RGB-only. */
+  setPowderMesostrataStylingEnabled(enabled: boolean): void {
+    if (enabled === this.powderMesostrataStylingEnabled) return;
+    this.powderMesostrataStylingEnabled = enabled;
+    this.presenter?.setPowderMesostrataStylingEnabled(enabled);
+    this.contourChunks.markAll();
+    this.changed = true;
+  }
+
   setSensorMaterialStylingEnabled(enabled: boolean): void {
     if (enabled === this.sensorMaterialStylingEnabled) return;
     this.sensorMaterialStylingEnabled = enabled;
@@ -1248,6 +1258,7 @@ export class MaterialRenderer {
       this.sparkStateStylingEnabled,
       this.structuralRigidStylingEnabled,
       this.earthenPowderStylingEnabled,
+      this.powderMesostrataStylingEnabled,
       this.moltenBodyOpticsEnabled,
       this.aqueousSurfaceReflectionEnabled,
       this.mechanismBodyStylingEnabled,
@@ -1698,6 +1709,7 @@ export class MaterialRenderer {
         applyCanvasPowderBulkCellStyle(
           this.styledColor, powderCanonicalColor, this.boundaryStability[index],
           fields.powderSurface.bytes, pixel, powderBulkDepth, this.powderBodyDepthEnabled, optics,
+          material, x, y, this.powderMesostrataStylingEnabled,
         );
         if (this.earthenPowderStylingEnabled && wall === 0 && applicableTraits === 0) {
           applyCanvasEarthenPowderStyle(this.styledColor, material, x, y);
@@ -1717,6 +1729,7 @@ export class MaterialRenderer {
         applyCanvasPowderBulkCellStyle(
           this.styledColor, powderCanonicalColor, this.boundaryStability[index],
           fields.powderSurface.bytes, pixel, powderBulkDepth, this.powderBodyDepthEnabled, optics,
+          material, x, y, this.powderMesostrataStylingEnabled,
         );
         this.applyThermalMaterialStyle(
           phase, material, false, applicableTraits, temperatures?.[index], optics,
@@ -1733,6 +1746,7 @@ export class MaterialRenderer {
         applyCanvasPowderBulkCellStyle(
           this.styledColor, powderCanonicalColor, this.boundaryStability[index],
           fields.powderSurface.bytes, pixel, powderBulkDepth, this.powderBodyDepthEnabled, optics,
+          material, x, y, this.powderMesostrataStylingEnabled,
         );
         this.applyThermalMaterialStyle(
           phase, material, false, applicableTraits, temperatures?.[index], optics,
@@ -1981,6 +1995,7 @@ export class MaterialRenderer {
         applyCanvasPowderBulkCellStyle(
           this.styledColor, powderCanonicalColor, this.boundaryStability[index],
           fields.powderSurface.bytes, pixel, powderBulkDepth, this.powderBodyDepthEnabled, optics,
+          material, x, y, this.powderMesostrataStylingEnabled,
         );
         this.applyThermalMaterialStyle(
           phase, material, false, applicableTraits, temperatures?.[index], optics,
@@ -2215,6 +2230,7 @@ export class MaterialRenderer {
           if (phase === RenderPhase.Powder) applyCanvasPowderBulkCellStyle(
             this.styledColor, powderCanonicalColor, this.boundaryStability[index],
             fields.powderSurface.bytes, pixel, powderBulkDepth, this.powderBodyDepthEnabled, optics,
+            material, x, y, this.powderMesostrataStylingEnabled,
           );
           if (this.earthenPowderStylingEnabled && phase === RenderPhase.Powder
             && wall === 0 && applicableTraits === 0 && !info.emissive) {
@@ -2774,6 +2790,10 @@ function applyCanvasPowderBulkCellStyle(
   bulkDepth: number,
   bodyDepthEnabled: boolean,
   optics: RenderOptics,
+  material: Material,
+  x: number,
+  y: number,
+  mesostrataEnabled: boolean,
 ): void {
   applyCanvasPowderBulkStyle(
     color,
@@ -2788,6 +2808,10 @@ function applyCanvasPowderBulkCellStyle(
     bulkDepth,
     bodyDepthEnabled,
     optics,
+    material,
+    x,
+    y,
+    mesostrataEnabled,
   );
 }
 
