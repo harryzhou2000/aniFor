@@ -191,7 +191,7 @@ export function applyCanvasPowderBulkStyle(
 }
 
 /**
- * Gives deep Sand, Clay, and Concrete a restrained, world-anchored compaction
+ * Gives deep Sand, Stone, Clay, and Concrete a restrained, world-anchored compaction
  * cadence. The caller has already proved stable, exact-material bulk support;
  * this helper allocates nothing and changes RGB only.
  */
@@ -207,8 +207,9 @@ function applyCanvasSettledPowderMesostrata(
 ): void {
   let style = 0;
   if (material === Material.Sand) style = 1;
-  else if (material === Material.Concrete) style = 2;
-  else if (material === Material.Clay) style = 3;
+  else if (material === Material.Stone) style = 2;
+  else if (material === Material.Concrete) style = 3;
+  else if (material === Material.Clay) style = 4;
   else return;
 
   const slopeX = (gradientXByte - 128) / 127;
@@ -233,7 +234,9 @@ function applyCanvasSettledPowderMesostrata(
   let blue = 0;
   if (style === 1) { // Sand: warm compressed strata with a cool shaded side.
     red = 7; green = 3; blue = -4;
-  } else if (style === 2) { // Concrete: cool aggregate density, not courses.
+  } else if (style === 2) { // Stone: cool mineral bedding, not a pixel grain field.
+    red = 3; green = 4; blue = 7;
+  } else if (style === 3) { // Concrete: cool aggregate density, not courses.
     red = 8; green = 7; blue = 8;
   } else { // Clay: slightly warmer lamellae and denser terracotta pockets.
     red = 6; green = 1; blue = -3;

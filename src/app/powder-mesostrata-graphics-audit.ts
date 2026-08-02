@@ -1,19 +1,21 @@
 import { Material } from '../shared/materials';
 import type { SimulationBackend } from '../simulation';
 
-export const POWDER_MESOSTRATA_GRAPHICS_ATLAS_COLUMNS = 3;
-export const POWDER_MESOSTRATA_GRAPHICS_ATLAS_ROWS = 1;
+export const POWDER_MESOSTRATA_GRAPHICS_ATLAS_COLUMNS = 2;
+export const POWDER_MESOSTRATA_GRAPHICS_ATLAS_ROWS = 2;
 
 const WORLD_WIDTH = 612;
 const WORLD_HEIGHT = 384;
 const CARD_ORIGIN_X = 8;
 const CARD_ORIGIN_Y = 8;
-const CARD_STRIDE_X = 200;
-const CARD_WIDTH = 192;
+const CARD_STRIDE_X = 300;
+const CARD_STRIDE_Y = 184;
+const CARD_WIDTH = 292;
 const CONDUCTIVE_WALL = 1;
 
 const POWDER_MESOSTRATA_DEFINITIONS = [
   { material: Material.Sand, code: 'SAND', color: '#c2a36a' },
+  { material: Material.Stone, code: 'STNE', color: '#77736b' },
   { material: Material.Clay, code: 'CLAY', color: '#b87955' },
   { material: Material.Concrete, code: 'CNCT', color: '#86837d' },
 ] as const;
@@ -59,7 +61,12 @@ export interface PowderMesostrataGraphicsAuditSnapshot {
 /** Dense settled powder bodies plus exact no-op topology/contact controls. */
 export const POWDER_MESOSTRATA_GRAPHICS_ATLAS: readonly PowderMesostrataGraphicsAtlasEntry[] =
   POWDER_MESOSTRATA_DEFINITIONS.map(({ material, code, color }, index) => {
-    const card = { x: CARD_ORIGIN_X + index * CARD_STRIDE_X, y: CARD_ORIGIN_Y, width: CARD_WIDTH, height: 368 };
+    const card = {
+      x: CARD_ORIGIN_X + (index % POWDER_MESOSTRATA_GRAPHICS_ATLAS_COLUMNS) * CARD_STRIDE_X,
+      y: CARD_ORIGIN_Y + Math.floor(index / POWDER_MESOSTRATA_GRAPHICS_ATLAS_COLUMNS) * CARD_STRIDE_Y,
+      width: CARD_WIDTH,
+      height: CARD_STRIDE_Y - 8,
+    };
     const settledBody = { x: card.x + 8, y: card.y + 12, width: 92, height: 86 };
     const wallX = card.x + 124 + ((4 - ((card.x + 124) % 4)) % 4);
     return {
@@ -75,7 +82,7 @@ export const POWDER_MESOSTRATA_GRAPHICS_ATLAS: readonly PowderMesostrataGraphics
         water: { x: card.x + 32, y: card.y + 120, width: 24, height: 18 },
       },
       wallCoexistence: { x: wallX, y: card.y + 116, width: 20, height: 20 },
-      guardedBlank: { x: card.x + 72, y: card.y + 166, width: 72, height: 54 },
+      guardedBlank: { x: card.x + 72, y: card.y + 144, width: 72, height: 30 },
     } satisfies PowderMesostrataGraphicsAtlasEntry;
   });
 

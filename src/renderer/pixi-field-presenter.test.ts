@@ -2566,7 +2566,7 @@ describe('Pixi presenter startup configuration', () => {
     expect(source).toContain('density = smoothstep(0.04, 0.96, density);');
   });
 
-  it('keeps settled Sand/Concrete/Clay mesostrata dry, Smooth-only, RGB-only, and resource-free', () => {
+  it('keeps settled Sand/Stone/Concrete/Clay mesostrata dry, Smooth-only, RGB-only, and resource-free', () => {
     const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
     const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');
     const eightEnd = source.indexOf('const FIELD_FRAGMENT = `', eightStart);
@@ -2577,7 +2577,7 @@ describe('Pixi presenter startup configuration', () => {
     const eightBranchEnd = eight.indexOf('  if ((liquidSurfaceContourKeyStrength', eightBranchStart);
     const normalHelperStart = source.lastIndexOf('vec3 settledPowderMesostrataDelta(');
     const normalHelperEnd = source.indexOf('// As with the powder helper', normalHelperStart);
-    const normalGateStart = source.indexOf('// Sand, Clay, and Concrete receive a small slope-aligned compaction');
+    const normalGateStart = source.indexOf('// Sand, Stone, Clay, and Concrete receive a small slope-aligned compaction');
     const normalGateEnd = source.indexOf('float grainOffsetY', normalGateStart);
     const eightHelper = eight.slice(eightHelperStart, eightHelperEnd);
     const eightBranch = eight.slice(eightBranchStart, eightBranchEnd);
@@ -2590,7 +2590,7 @@ describe('Pixi presenter startup configuration', () => {
     expect(eightBranchEnd).toBeGreaterThan(eightBranchStart);
     expect(normalHelperStart).toBeGreaterThan(0);
     expect(normalGateStart).toBeGreaterThan(0);
-    for (const material of [1, 26, 28]) {
+    for (const material of [1, 21, 26, 28]) {
       expect(eightHelper).toContain(`material == ${material}.0`);
       expect(normal).toContain(`material == ${material}.0`);
     }

@@ -1000,8 +1000,8 @@ vec3 earthenPowderEightXDelta(float material, vec2 position, float density) {
 // composition. No texture read, alpha/support decision, or extra 15M-frame
 // resource is introduced.
 vec3 settledPowderMesostrataEightXDelta(float material, vec2 position, float directedSlope) {
-  float style = material == 1.0 ? 1.0 : (material == 26.0 ? 2.0
-    : (material == 28.0 ? 3.0 : 0.0));
+  float style = material == 1.0 ? 1.0 : (material == 21.0 ? 2.0
+    : (material == 26.0 ? 3.0 : (material == 28.0 ? 4.0 : 0.0)));
   if (style < 0.5) return vec3(0.0);
   vec2 cell = floor(position);
   float phase = cell.x * (-directedSlope * 0.072 + 0.037 * style)
@@ -1012,7 +1012,8 @@ vec3 settledPowderMesostrataEightXDelta(float material, vec2 position, float dir
   // the strict caller gate, rather than a weak slope multiplier, owns the
   // exclusion of every thin/contact/reference control.
   vec3 key = style == 1.0 ? vec3(15.0, 7.0, -8.0)
-    : (style == 2.0 ? vec3(8.0, 7.0, 8.0) : vec3(14.0, 4.0, -7.0));
+    : (style == 2.0 ? vec3(5.0, 7.0, 11.0)
+    : (style == 3.0 ? vec3(8.0, 7.0, 8.0) : vec3(14.0, 4.0, -7.0)));
   return key * (band - 0.5) * 2.0 / 255.0;
 }
 // These ten native powders carry distinct, static body optics on the normal
@@ -2811,11 +2812,11 @@ void main() {
     || (uDlayStateStyling > 0.5 && dlayOwner)
     || (uWifiStateStyling > 0.5 && wifiOwner)
     // Deep mesostrata normally needs no wall read. In a wall-bearing scene,
-    // reuse this packed-state path only for its three exact qualified powder
+    // reuse this packed-state path only for its four exact qualified powder
     // owners so co-located native walls remain an exact visual no-op.
     || (uNativeWallsActive > 0.5 && uPowderMesostrataStyling > 0.5
       && family == 4.0 && uPowderStyle > 1.5 && traits < 0.5 && !materialEmissive
-      && (material == 1.0 || material == 26.0 || material == 28.0))
+      && (material == 1.0 || material == 21.0 || material == 26.0 || material == 28.0))
     // Eligible translucent liquid already needs this exact wall texel for the
     // final backdrop. Fold the cohesion guard into that one packed-state read
     // so true 8x does not grow another native-wall sample.
@@ -2834,7 +2835,7 @@ void main() {
   // material grammar without a second sampler or a new 8x resource class.
   if (family == 4.0 && uPowderMesostrataStyling > 0.5 && uPowderStyle > 1.5
     && traits < 0.5 && !materialEmissive && nativeWall < 0.5
-    && powderWetMix <= 0.001 && (material == 1.0 || material == 26.0 || material == 28.0)) {
+    && powderWetMix <= 0.001 && (material == 1.0 || material == 21.0 || material == 26.0 || material == 28.0)) {
     float mesostrataCore = depth * q00 * q10 * q01 * q11
       * smoothstep(0.72, 0.95, semanticDensity);
     float mesostrataSlope = clamp(
@@ -4184,15 +4185,16 @@ vec3 earthenPowderIdentityDelta(float material, vec2 position) {
 // proved a deep, stable Smooth powder interior; this helper is arithmetic-only
 // RGB grammar and carries no topology, field, or output-scale decision.
 vec3 settledPowderMesostrataDelta(float material, vec2 position, float directedSlope) {
-  float style = material == 1.0 ? 1.0 : (material == 26.0 ? 2.0
-    : (material == 28.0 ? 3.0 : 0.0));
+  float style = material == 1.0 ? 1.0 : (material == 21.0 ? 2.0
+    : (material == 26.0 ? 3.0 : (material == 28.0 ? 4.0 : 0.0)));
   if (style < 0.5) return vec3(0.0);
   vec2 cell = floor(position);
   float phase = cell.x * (-directedSlope * 0.072 + 0.037 * style)
     + cell.y * (directedSlope * 0.061 + 0.061 * style) + style * 0.173;
   float band = 1.0 - abs(fract(phase) * 2.0 - 1.0);
   vec3 key = style == 1.0 ? vec3(7.0, 3.0, -4.0)
-    : (style == 2.0 ? vec3(8.0, 7.0, 8.0) : vec3(6.0, 1.0, -3.0));
+    : (style == 2.0 ? vec3(3.0, 4.0, 7.0)
+    : (style == 3.0 ? vec3(8.0, 7.0, 8.0) : vec3(6.0, 1.0, -3.0)));
   return key * (band - 0.5) * 2.0 / 255.0;
 }
 // As with the powder helper, keep construction-body identity out of main's
@@ -6691,11 +6693,11 @@ void main() {
         stablePowderMineral = step(224.0 / 255.0, boundaryStability)
           * step(0.66, localPowderShape.x)
           * step(5.5, widePowderShape.w);
-        // Sand, Clay, and Concrete receive a small slope-aligned compaction
+        // Sand, Stone, Clay, and Concrete receive a small slope-aligned compaction
         // cadence only after the existing stable bulk proof. The suspension
         // field owns wet sediment, so its established cohesion rejects this
         // dry-body material grammar before it can touch a mixed liquid cell.
-        float mesostrataOwner = (material == 1.0 || material == 26.0 || material == 28.0)
+        float mesostrataOwner = (material == 1.0 || material == 21.0 || material == 26.0 || material == 28.0)
           ? 1.0 : 0.0;
         float mesostrataSlope = clamp(
           (abs(widePowderShape.y) + abs(widePowderShape.z)) * 2.4, 0.0, 1.0

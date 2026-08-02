@@ -1,5 +1,6 @@
 const EXPECTED_CARDS = [
   { code: 'SAND', material: 1 },
+  { code: 'STNE', material: 21 },
   { code: 'CLAY', material: 28 },
   { code: 'CNCT', material: 26 },
 ];

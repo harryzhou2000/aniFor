@@ -217,7 +217,7 @@ describe('Canvas powder bulk style', () => {
     expect(Math.abs(color[1] / color[2] - 250 / 245)).toBeLessThan(0.002);
   });
 
-  it('adds bounded, deterministic settled mesostrata only to deep Sand, Concrete, and Clay', () => {
+  it('adds bounded, deterministic settled mesostrata only to deep Sand, Stone, Concrete, and Clay', () => {
     const render = (material: Material, x: number, y: number, bodyDepthEnabled = true): Float32Array => {
       const color = new Float32Array([184, 142, 91]);
       applyCanvasPowderBulkStyle(
@@ -228,15 +228,17 @@ describe('Canvas powder bulk style', () => {
     };
     const baseline = render(Material.Empty, 37, 19);
     const sand = render(Material.Sand, 37, 19);
+    const stone = render(Material.Stone, 37, 19);
     const concrete = render(Material.Concrete, 37, 19);
     const clay = render(Material.Clay, 37, 19);
-    const fingerprints = [sand, concrete, clay].map((color) => Array.from(color).join(','));
+    const fingerprints = [sand, stone, concrete, clay].map((color) => Array.from(color).join(','));
 
     expect(Array.from(sand)).not.toEqual(Array.from(baseline));
+    expect(Array.from(stone)).not.toEqual(Array.from(baseline));
     expect(Array.from(concrete)).not.toEqual(Array.from(baseline));
     expect(Array.from(clay)).not.toEqual(Array.from(baseline));
-    expect(new Set(fingerprints).size).toBe(3);
-    for (const color of [sand, concrete, clay]) {
+    expect(new Set(fingerprints).size).toBe(4);
+    for (const color of [sand, stone, concrete, clay]) {
       expect(Math.max(...color.map((value, channel) => Math.abs(value - baseline[channel])))).toBeLessThanOrEqual(8);
     }
     expect(Array.from(render(Material.Sand, 37, 19))).toEqual(Array.from(sand));
