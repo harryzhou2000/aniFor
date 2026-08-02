@@ -44,15 +44,20 @@ export function applyCanvasRenderTraits(
     green += 5 + (decay ? 13 : 0);
     blue += (traits & RenderTrait.Carrier) ? 6 + (decay ? 10 : 0) : 1;
   }
-  const botanical = isBotanicalMaterial(material);
-  const virus = isVirusFamilyMaterial(material);
-  if ((traits & RenderTrait.Organic) && !botanical && !virus) {
+  // Most trait-bearing material is radioactive/carrier/force hardware. Avoid
+  // botanical and virus classification unless an Organic/Fibrous branch can
+  // actually consume it; those tests are otherwise pure wasted work in the
+  // Canvas semantic loop. This is deliberately only a scheduling change.
+  const organic = (traits & RenderTrait.Organic) !== 0;
+  const fibrous = (traits & RenderTrait.Fibrous) !== 0;
+  const botanical = organic || fibrous ? isBotanicalMaterial(material) : false;
+  if (organic && !botanical && !isVirusFamilyMaterial(material)) {
     const vein = (x + (hash(y + material * 17) & 7)) % 13 < 3;
     red += vein ? 1 : 0;
     green += vein ? 8 : 2;
     blue -= vein ? 2 : 0;
   }
-  if ((traits & RenderTrait.Fibrous) && !botanical) {
+  if (fibrous && !botanical) {
     red += edgePattern ? 7 : -2;
     green += edgePattern ? 3 : -1;
     blue -= edgePattern ? 2 : 0;
