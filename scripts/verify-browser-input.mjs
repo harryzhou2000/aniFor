@@ -10362,6 +10362,10 @@ function containingCellularRegion(rectangles) {
 
 /** Focused release proof for the CSS-pixel camera/input contract. */
 async function auditDesktopInput(cdp, mode, dpr) {
+  const started = performance.now();
+  const stage = (name) => console.error(
+    `[desktop-input:${mode}] ${name} ${Math.round(performance.now() - started)}ms`,
+  );
   await setDesktopMetrics(cdp, 1280, 720, dpr);
   await waitForStableCanvas(cdp, 1280, 720, undefined, 6_000, `${mode} desktop-input geometry`);
   await evaluate(cdp, `(() => {
@@ -10376,6 +10380,7 @@ async function auditDesktopInput(cdp, mode, dpr) {
   const initial = await metrics(cdp);
   assertGeometry(initial, `${mode} desktop-input initial`);
   assertContained(initial, `${mode} desktop-input initial`);
+  stage('geometry-ready');
 
   const landmarks = [{ x: 17, y: 21 }, { x: 306, y: 192 }, { x: 594, y: 361 }];
   for (const landmark of landmarks) {
@@ -10396,6 +10401,7 @@ async function auditDesktopInput(cdp, mode, dpr) {
   const landmarkFootprints = await capturePaintedFootprints(
     cdp, landmarks, `${mode} focused desktop landmarks`, 1.5, 1.2,
   );
+  stage('landmarks-ready');
 
   await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.clear(); true');
   const drag = { y: 88, start: 96, end: 120 };
@@ -10423,6 +10429,7 @@ async function auditDesktopInput(cdp, mode, dpr) {
   assert(dragResult.cells.every((cell) => cell === 164) && dragResult.occupied === dragCells,
     `${mode}: focused desktop left drag was discontinuous (${JSON.stringify(dragResult)})`);
   await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.clear(); true');
+  stage('drag-ready');
 
   const wheelGeometry = await metrics(cdp);
   const rawWheelAnchor = worldClient(wheelGeometry.canvas, { x: 431.25, y: 117.75 });
@@ -10440,6 +10447,7 @@ async function auditDesktopInput(cdp, mode, dpr) {
   );
   assert(beforePan.zoom > 1.2 && wheelAnchorError < 0.2,
     `${mode}: focused desktop wheel anchor failed (${wheelAnchorError.toFixed(4)} cells)`);
+  stage('wheel-ready');
 
   await cdp.send('Input.dispatchMouseEvent', {
     type: 'mousePressed', x: wheelAnchor.x, y: wheelAnchor.y,
@@ -10458,6 +10466,7 @@ async function auditDesktopInput(cdp, mode, dpr) {
   assert(Math.abs(afterPan.panX - beforePan.panX - 42) < 0.12
     && Math.abs(afterPan.panY - beforePan.panY - 27) < 0.12,
   `${mode}: focused desktop middle pan mismatch (${JSON.stringify({ beforePan, afterPan })})`);
+  stage('pan-ready');
 
   const transformedGeometry = await metrics(cdp);
   const transformedCell = { x: 431, y: 118 };
@@ -10488,6 +10497,7 @@ async function auditDesktopInput(cdp, mode, dpr) {
     },
   ))[0];
   await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.clear(); true');
+  stage('transformed-paint-ready');
 
   const transformedStrokeStart = { x: 412, y: 108 };
   const transformedStrokeEnd = { x: 436, y: 126 };
@@ -10542,6 +10552,7 @@ async function auditDesktopInput(cdp, mode, dpr) {
     captureCanvasRect: transformedStrokeGeometry.canvas,
   });
   await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.clear(); true');
+  stage('transformed-stroke-ready');
 
   const resizeAnchor = { x: wheelAnchor.x + 42, y: wheelAnchor.y + 27 };
   const resizeAnchorBefore = await screenWorld(cdp, resizeAnchor);
@@ -10577,16 +10588,19 @@ async function auditDesktopInput(cdp, mode, dpr) {
   );
   assert(resizeAnchorError < 0.2,
     `${mode}: focused breakpoint anchor drifted ${resizeAnchorError.toFixed(4)} cells`);
+  stage('resize-ready');
 
   const liveScaleTransition = await auditLiveScaleTransition(
     cdp, mode, dpr, returnedGeometry, returnedView,
   );
+  stage('live-scale-ready');
   await setDesktopMetrics(cdp, 1280, 720, dpr);
   await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.resetView(); true');
   const resetGeometry = await waitForStableCanvas(
     cdp, 1280, 720, undefined, 6_000, `${mode} focused reset geometry`,
   );
   const shortDesktop = await auditShortDesktop(cdp, mode, dpr, resetGeometry);
+  stage('complete');
 
   return {
     backing: `${initial.backing.width}x${initial.backing.height}`,
