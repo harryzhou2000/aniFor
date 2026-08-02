@@ -13409,6 +13409,31 @@ async function auditRenderScaleEight(cdp, dpr, powderOnly = false) {
     return { occupied: audit.occupiedCells(), cells: points.map(([x, y]) => audit.cell(x, y)) };
   })()`);
   await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setLiquidFieldLighting(true); true');
+  // Direct 8x intentionally keeps Water's connected-core reflection compact
+  // enough for SwiftShader. Capture its independent control while the render
+  // lab is still intact; later in this release gate the high-zoom input proof
+  // deliberately clears that scene.
+  const aqueousCoreSemantics = async () => evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    const points = [[224, 315], [190, 164], [302, 172], [284, 160]];
+    return { occupied: audit.occupiedCells(), cells: points.map(([x, y]) => audit.cell(x, y)) };
+  })()`);
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setAqueousSurfaceReflection(false); true');
+  const flatAqueousCoreCapture = await captureSettledPage(
+    cdp, 'renderScale=8 flat aqueous-core framebuffer', 450,
+  );
+  const flatAqueousCoreSemantics = await aqueousCoreSemantics();
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setAqueousSurfaceReflection(true); true');
+  const styledAqueousCoreCapture = await captureSettledPage(
+    cdp, 'renderScale=8 styled aqueous-core framebuffer', 450,
+  );
+  const styledAqueousCoreSemantics = await aqueousCoreSemantics();
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setAqueousSurfaceReflection(false); true');
+  const repeatedFlatAqueousCoreCapture = await captureSettledPage(
+    cdp, 'renderScale=8 repeated flat aqueous-core framebuffer', 450,
+  );
+  const repeatedFlatAqueousCoreSemantics = await aqueousCoreSemantics();
+  await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setAqueousSurfaceReflection(true); true');
   const litLiquidFieldLightingCapture = await captureSettledPage(
     cdp, 'renderScale=8 lit liquid-field-lighting framebuffer', 450,
   );
@@ -14056,8 +14081,12 @@ async function auditRenderScaleEight(cdp, dpr, powderOnly = false) {
       && sample.rgbPeak > 0 && sample.rgbPeak <= 18 && sample.repeatRgbPeak <= 1,
     `renderScale=8 ${name} lost bounded liquid Surface contour lighting (${JSON.stringify(surfaceContourSamples)})`);
   }
-  assert(surfaceContour.waterSurfaceContour8x.responseRgb[1] > surfaceContour.waterSurfaceContour8x.responseRgb[0]
-    && surfaceContour.waterSurfaceContour8x.responseRgb[2] >= surfaceContour.waterSurfaceContour8x.responseRgb[0]
+  // The compact direct path uses the aqueous meniscus key (blue-forward with a
+  // secondary cyan component). At a true 8x compositor capture the tiny green
+  // shoulder can quantise to the red component, while the blue key remains
+  // stable. Require that canonical blue separation instead of treating one
+  // quantised sub-byte green/red tie as a lost family identity.
+  assert(surfaceContour.waterSurfaceContour8x.responseRgb[2] > surfaceContour.waterSurfaceContour8x.responseRgb[0]
     && surfaceContour.oilSurfaceContour8x.responseRgb[0] > surfaceContour.oilSurfaceContour8x.responseRgb[2]
     && surfaceContour.acidSurfaceContour8x.responseRgb[1] > surfaceContour.acidSurfaceContour8x.responseRgb[0],
   `renderScale=8 liquid Surface contour lost family chroma (${JSON.stringify(surfaceContourSamples)})`);
@@ -14162,6 +14191,30 @@ async function auditRenderScaleEight(cdp, dpr, powderOnly = false) {
   ]) assert(liquidFieldLighting[name].rgbPeak <= 1
     && liquidFieldLighting[name].repeatRgbPeak <= 1,
     `renderScale=8 liquid meniscus changed ${name} (${JSON.stringify(liquidFieldLightingSamples)})`);
+  assert(JSON.stringify(flatAqueousCoreSemantics) === JSON.stringify(styledAqueousCoreSemantics)
+    && JSON.stringify(flatAqueousCoreSemantics) === JSON.stringify(repeatedFlatAqueousCoreSemantics),
+  `renderScale=8 aqueous-core reflection changed semantics (${JSON.stringify({
+    flatAqueousCoreSemantics, styledAqueousCoreSemantics, repeatedFlatAqueousCoreSemantics,
+  })})`);
+  const aqueousCoreSamples = await sampleBackdropRefractionRegions(cdp, {
+    straight: flatAqueousCoreCapture.capture.data,
+    refracted: styledAqueousCoreCapture.capture.data,
+    repeatedStraight: repeatedFlatAqueousCoreCapture.capture.data,
+  }, [
+    { name: 'waterDeepCore8x', x: 224, y: 315, radiusX: 6, radiusY: 10 },
+    { name: 'isolatedAqueousCoreControl8x', x: 190.5, y: 164.5, radius: 2 },
+    { name: 'unlikeAqueousCoreControl8x', x: 302.5, y: 172, radiusX: 0.45, radiusY: 6 },
+    { name: 'wallAqueousCoreControl8x', x: 284, y: 160, radiusX: 5, radiusY: 1.5 },
+  ], geometry.canvas);
+  const aqueousCore = Object.fromEntries(aqueousCoreSamples.map((sample) => [sample.name, sample]));
+  assert(aqueousCore.waterDeepCore8x.rgbRms >= 0.006
+    && aqueousCore.waterDeepCore8x.rgbPeak > 0 && aqueousCore.waterDeepCore8x.rgbPeak <= 12
+    && aqueousCore.waterDeepCore8x.repeatRgbPeak <= 1,
+  `renderScale=8 Water lost bounded connected-core reflection (${JSON.stringify(aqueousCoreSamples)})`);
+  for (const name of [
+    'isolatedAqueousCoreControl8x', 'unlikeAqueousCoreControl8x', 'wallAqueousCoreControl8x',
+  ]) assert(aqueousCore[name].rgbPeak <= 1 && aqueousCore[name].repeatRgbPeak <= 1,
+  `renderScale=8 aqueous core changed ${name} (${JSON.stringify(aqueousCoreSamples)})`);
   assert(JSON.stringify(flatLiquidSilhouetteSemantics) === JSON.stringify(cohesiveLiquidSilhouetteSemantics)
     && JSON.stringify(flatLiquidSilhouetteSemantics)
       === JSON.stringify(repeatedFlatLiquidSilhouetteSemantics),

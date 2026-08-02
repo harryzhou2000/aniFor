@@ -2587,8 +2587,14 @@ void main() {
           // direct-path expression separate from normal WebGL's richer
           // Water-only core: its broader guard crosses SwiftShader's stable
           // live-register limit at fifteen million fragments.
-          float aqueousCoreGlaze = fieldInterior * (1.0 - airFacingRim)
-            * connected * (0.012 + keyLight * 0.022);
+          float aqueousCoreVolume = fieldInterior * (1.0 - airFacingRim) * connected;
+          // The compact compositor still needs a measurable submerged body
+          // response after its later dense-Water exposure calibration. Reuse
+          // the normal path's restrained aqueous absorption over the exact
+          // same already-live support scalar; this is RGB-only and adds no
+          // sample, topology, or field dependency at fifteen million pixels.
+          color *= vec3(1.0) - vec3(0.018, 0.007, 0.000) * aqueousCoreVolume;
+          float aqueousCoreGlaze = aqueousCoreVolume * (0.016 + keyLight * 0.028);
           color += (vec3(1.0) - clamp(color, 0.0, 1.0))
             * vec3(0.16, 0.52, 0.86) * aqueousCoreGlaze;
         }
