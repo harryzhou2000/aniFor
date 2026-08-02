@@ -6212,9 +6212,13 @@ void main() {
         && unlikeMaterialContact < 0.5 && liquidDepth > 0.48 && liquidNeighbourMean > 0.56) {
         float aqueousCoreVolume = liquidDepth * (1.0 - liquidFresnelContour)
           * smoothstep(0.56, 0.86, liquidNeighbourMean);
-        color *= vec3(1.0) - vec3(0.018, 0.007, 0.000) * aqueousCoreVolume;
+        // Connected normal-detail Water needs a little more depth separation
+        // than the compact 8x path: at fit view this makes the submerged core
+        // recede behind its blue transmission instead of reading as one opaque
+        // cyan plate. All eligibility and support are already proven above.
+        color *= vec3(1.0) - vec3(0.022, 0.008, 0.000) * aqueousCoreVolume;
         float aqueousCoreGlaze = aqueousCoreVolume
-          * (0.016 + broadSheen * 0.020 + caustic * 0.012);
+          * (0.020 + broadSheen * 0.024 + caustic * 0.014);
         color += (vec3(1.0) - clamp(color, 0.0, 1.0))
           * vec3(0.16, 0.52, 0.86) * aqueousCoreGlaze;
       }
