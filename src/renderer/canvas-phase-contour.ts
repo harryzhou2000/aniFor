@@ -879,11 +879,14 @@ export class CanvasPhaseContourScratch {
   }
 
   /**
-   * Wide gravity smoothing belongs only to a genuinely deep heap. Requiring
-   * two exact stable cells below and an exact horizontal neighbour preserve
-   * narrow ridges and branches; an empty projection needs one
-   * additional depth cell because it is not itself part of the material.
-   * Exact material checks keep unlike powder seams on the local contour.
+   * Wide gravity smoothing belongs only to a genuinely deep, settled-powder
+   * heap. The shared powder field carries phase-compatible stable support, so
+   * a mixed Sand/Clay/Concrete body can own one curved *outer* contour. Exact
+   * owner selection and ambiguous empty-cell projection remain unchanged, so
+   * this cannot blend materials or create a claim across their semantic seam.
+   * Requiring vertical and lateral field density still preserves narrow ridges,
+   * branches, walls, moving powder, and authored holes; an empty projection
+   * needs one additional depth cell because it is not itself matter.
    */
   private powderSurfaceBulkDepth(
     input: CanvasPhaseContourInput,
@@ -892,14 +895,23 @@ export class CanvasPhaseContourScratch {
     material: number,
     emptyPowder: boolean,
   ): number {
+    const powderSurface = input.powderSurface;
+    if (powderSurface === undefined) return 0;
     const requiredDepth = emptyPowder ? 3 : 2;
     for (let depth = 1; depth <= requiredDepth; depth++) {
       const y = worldY + depth;
       if (y >= input.worldHeight) return 0;
       const index = y * input.worldWidth + worldX;
-      if (input.materials[index] !== material
-        || input.powderStability[index] < 192
-        || (input.walls?.[index] ?? 0) !== 0) return 0;
+      const candidate = input.materials[index];
+      const exactOwner = candidate === material
+        && input.powderStability[index] >= 192
+        && (input.walls?.[index] ?? 0) === 0;
+      const compatibleSettledPowder = candidate !== 0
+        && input.styleBytes[candidate * 4] === RenderPhase.Powder
+        && input.powderStability[index] >= 192
+        && (input.walls?.[index] ?? 0) === 0
+        && powderSurface[index * 4] / 255 >= 0.18;
+      if (!exactOwner && !compatibleSettledPowder) return 0;
     }
     if (worldX <= 0 || worldX + 1 >= input.worldWidth) return 0;
     const anchorY = worldY + (emptyPowder ? 1 : 0);
@@ -907,9 +919,16 @@ export class CanvasPhaseContourScratch {
     let lateralSupport = false;
     for (const offset of [-1, 1]) {
       const index = anchor + offset;
-      lateralSupport ||= input.materials[index] === material
+      const candidate = input.materials[index];
+      const exactOwner = candidate === material
         && input.powderStability[index] >= 192
         && (input.walls?.[index] ?? 0) === 0;
+      const compatibleSettledPowder = candidate !== 0
+        && input.styleBytes[candidate * 4] === RenderPhase.Powder
+        && input.powderStability[index] >= 192
+        && (input.walls?.[index] ?? 0) === 0
+        && powderSurface[index * 4] / 255 >= 0.18;
+      lateralSupport ||= exactOwner || compatibleSettledPowder;
     }
     return lateralSupport ? 1 : 0;
   }

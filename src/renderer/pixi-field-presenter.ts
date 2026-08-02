@@ -1654,9 +1654,10 @@ void main() {
   // A direct 8x mesh normally returns immediately for semantic Empty. Smooth
   // powder is the deliberate exception: the shared settled-powder field may
   // own a conservative exterior contour in an Empty cell, exactly as it does
-  // at 1x–4x. Choose an owner only from one compatible 2x2 semantic block,
-  // reject walls, unlike matter, enclosed authored holes, and weak/flat field
-  // support, then carry the smallest derived state into the common compositor.
+  // at 1x–4x. Choose one deterministic owner from a compatible 2x2 settled
+  // powder block; separately owned powders may share that exterior support,
+  // but solids/liquids/gas, walls, enclosed authored holes, and weak/flat
+  // field support remain rejected before common composition.
   float projectedSmoothPowder = 0.0;
   vec4 projectedPowderShape = vec4(0.0);
   if (material < 0.5 && uPowderStyle > 1.5 && uPowderSurfaceActive > 0.5) {
@@ -1670,10 +1671,6 @@ void main() {
     float candidate11 = materialAt(candidateOrigin + uTexel);
     float candidate = candidate00 > 0.5 ? candidate00
       : (candidate10 > 0.5 ? candidate10 : (candidate01 > 0.5 ? candidate01 : candidate11));
-    float compatible = (candidate00 < 0.5 || abs(candidate00 - candidate) < 0.5 ? 1.0 : 0.0)
-      * (candidate10 < 0.5 || abs(candidate10 - candidate) < 0.5 ? 1.0 : 0.0)
-      * (candidate01 < 0.5 || abs(candidate01 - candidate) < 0.5 ? 1.0 : 0.0)
-      * (candidate11 < 0.5 || abs(candidate11 - candidate) < 0.5 ? 1.0 : 0.0);
     float candidateFamily = candidate > 0.5
       ? floor(texture(uStyleTexture, vec2((candidate + 0.5) / 256.0, 0.5)).r * 255.0 + 0.5)
       : 0.0;
@@ -1683,6 +1680,24 @@ void main() {
       * smoothstep(0.004, 0.027, abs(candidateShape.z))
       * smoothstep(5.5, 8.0, candidateShape.w)
       * smoothstep(0.075, 0.26, candidateShape.x);
+    // The candidate-family and shared-field gates make these three style
+    // samples an exterior-band cost rather than a 15M-fragment Empty-path
+    // cost. Every non-empty 2x2 owner must still be Powder: mixed Sand/Clay
+    // therefore shares one curved *outer* support, but a powder/solid or
+    // powder/liquid contact cannot be projected across.
+    float compatible = 0.0;
+    if (candidateFamily == 4.0 && fieldContour > 0.001) {
+      float family10 = candidate10 > 0.5
+        ? floor(texture(uStyleTexture, vec2((candidate10 + 0.5) / 256.0, 0.5)).r * 255.0 + 0.5) : 4.0;
+      float family01 = candidate01 > 0.5
+        ? floor(texture(uStyleTexture, vec2((candidate01 + 0.5) / 256.0, 0.5)).r * 255.0 + 0.5) : 4.0;
+      float family11 = candidate11 > 0.5
+        ? floor(texture(uStyleTexture, vec2((candidate11 + 0.5) / 256.0, 0.5)).r * 255.0 + 0.5) : 4.0;
+      compatible = (candidate00 < 0.5 || candidateFamily == 4.0 ? 1.0 : 0.0)
+        * (candidate10 < 0.5 || family10 == 4.0 ? 1.0 : 0.0)
+        * (candidate01 < 0.5 || family01 == 4.0 ? 1.0 : 0.0)
+        * (candidate11 < 0.5 || family11 == 4.0 ? 1.0 : 0.0);
+    }
     if (candidateFamily == 4.0 && compatible > 0.5 && wallState.r < 0.5
       && wallState.g > 0.5 && fieldContour > 0.001) {
       material = candidate;
@@ -5022,6 +5037,15 @@ vec4 powderSurfaceShape(vec2 uv) {
     state.a * 9.0
   );
 }
+float powderSurfaceBulkSupport(vec2 uv, float material) {
+  // Preserve the exact-owner route for narrow but valid homogeneous bodies.
+  // The field route is intentionally wider and is only the compatibility
+  // fallback that lets separately owned settled powders share their exterior.
+  return max(
+    sameMaterial(uv, material),
+    smoothstep(0.18, 0.42, powderSurfaceShape(uv).x)
+  );
+}
 float powderSurfaceBulkDepth(vec2 uv, float material, float surfaceOnly) {
   vec2 cell = (floor(uv * uFieldSize) + 0.5) * uTexel;
   if (cell.x < uTexel.x * 1.5 - 0.000001
@@ -5029,15 +5053,22 @@ float powderSurfaceBulkDepth(vec2 uv, float material, float surfaceOnly) {
   float requiredDepth = surfaceOnly > 0.5 ? 3.0 : 2.0;
   float lastCellY = 1.0 - uTexel.y * 0.5;
   if (cell.y + uTexel.y * requiredDepth > lastCellY + 0.000001) return 0.0;
-  float bulk = sameMaterial(cell + vec2(0.0, uTexel.y), material)
-    * sameMaterial(cell + vec2(0.0, uTexel.y * 2.0), material);
+  // The shared field's density contains *only* settled powder.  It is thus a
+  // stronger and more relevant depth proof than exact material equality here:
+  // adjacent settled Sand/Clay/Concrete may form one curved outer body, while
+  // owner selection and every interior material seam remain semantic/local.
+  // This deliberately does not promote solids, liquid, gas, walls, moving
+  // powder, sparse columns, or holes; those cannot meet the dense vertical and
+  // lateral settled-powder proof below.
+  float bulk = powderSurfaceBulkSupport(cell + vec2(0.0, uTexel.y), material)
+    * powderSurfaceBulkSupport(cell + vec2(0.0, uTexel.y * 2.0), material);
   if (surfaceOnly > 0.5) {
-    bulk *= sameMaterial(cell + vec2(0.0, uTexel.y * 3.0), material);
+    bulk *= powderSurfaceBulkSupport(cell + vec2(0.0, uTexel.y * 3.0), material);
   }
   vec2 anchor = cell + vec2(0.0, surfaceOnly > 0.5 ? uTexel.y : 0.0);
   bulk *= max(
-    sameMaterial(anchor - vec2(uTexel.x, 0.0), material),
-    sameMaterial(anchor + vec2(uTexel.x, 0.0), material)
+    powderSurfaceBulkSupport(anchor - vec2(uTexel.x, 0.0), material),
+    powderSurfaceBulkSupport(anchor + vec2(uTexel.x, 0.0), material)
   );
   return bulk;
 }

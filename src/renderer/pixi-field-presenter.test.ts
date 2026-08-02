@@ -999,6 +999,10 @@ describe('Pixi presenter startup configuration', () => {
     expect(eight).toContain('vec4 powderSurfaceEightXShape(vec2 uv)');
     expect(projection).toContain('uPowderStyle > 1.5 && uPowderSurfaceActive > 0.5');
     expect(projection).toContain('wallState.g > 0.5');
+    expect(projection).toContain('float family10 = candidate10 > 0.5');
+    expect(projection).toContain('candidate10 < 0.5 || family10 == 4.0');
+    expect(projection).toContain('candidate01 < 0.5 || family01 == 4.0');
+    expect(projection).toContain('candidate11 < 0.5 || family11 == 4.0');
     expect(projection).toContain('candidateFamily == 4.0 && compatible > 0.5');
     expect(modes).toContain('if (uPowderStyle < 0.5)');
     expect(modes).toContain('density = same(uv, material);');
@@ -2568,6 +2572,22 @@ describe('Pixi presenter startup configuration', () => {
     expect(source).toContain('float sandInteriorPigment = (powderGrain * 0.365 + powderFacet * 0.285)');
     expect(source).toContain('if (family == 4.0 && uPowderStyle > 1.5 && powderFieldBlend > 0.001)');
     expect(source).toContain('density = smoothstep(0.04, 0.96, density);');
+  });
+
+  it('lets settled mixed powders share only their broad Smooth exterior proof', () => {
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const start = source.indexOf('float powderSurfaceBulkSupport(');
+    const end = source.indexOf('vec3 discreteShape', start);
+    const helper = source.slice(start, end);
+
+    expect(start).toBeGreaterThan(0);
+    expect(end).toBeGreaterThan(start);
+    expect(helper).toContain('float powderSurfaceBulkSupport(vec2 uv, float material)');
+    expect(helper).toContain('smoothstep(0.18, 0.42, powderSurfaceShape(uv).x)');
+    expect(helper).toContain('powderSurfaceBulkSupport(cell + vec2(0.0, uTexel.y), material)');
+    expect(helper).toContain('powderSurfaceBulkSupport(cell + vec2(0.0, uTexel.y * 2.0), material)');
+    expect(helper).toContain('powderSurfaceBulkSupport(anchor - vec2(uTexel.x, 0.0), material)');
+    expect(source).toContain('powderBulkDepth = powderSurfaceBulkDepth(fieldUv, material, surfaceOnly);');
   });
 
   it('keeps settled Sand/Stone/Concrete/Clay mesostrata dry, Smooth-only, RGB-only, and resource-free', () => {

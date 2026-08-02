@@ -715,6 +715,41 @@ describe('Canvas 2x phase contour scratch', () => {
     }
   });
 
+  it('smooths a settled mixed-powder slope while keeping exact material ownership', () => {
+    const scale = 4;
+    const width = 32;
+    const height = 24;
+    const value = fixture(width, height);
+    for (let x = 3; x < width - 3; x++) {
+      const top = 17 - Math.round((x - 3) * 4 / (width - 7));
+      for (let y = top; y < height; y++) {
+        paint(value, x, y, (x + y) % 2 === 0 ? Material.Sand : Material.Clay);
+      }
+    }
+    const field = new PowderSurfaceField(width, height, lookups.styleBytes);
+    expect(field.update(value.materials, value.stability, value.walls)).toBe(true);
+
+    const local = new CanvasPhaseContourScratch(scale);
+    local.rasterize({ ...value.input, powderStyle: 'local' });
+    const smooth = new CanvasPhaseContourScratch(scale);
+    smooth.rasterize({ ...value.input, powderStyle: 'smooth', powderSurface: field.bytes });
+    const localProfile = groupMeans(alphaColumnMass(local, 8 * scale, (width - 8) * scale), scale);
+    const smoothProfile = groupMeans(alphaColumnMass(smooth, 8 * scale, (width - 8) * scale), scale);
+
+    expect(secondDifferenceEnergy(smoothProfile)).toBeLessThan(secondDifferenceEnergy(localProfile) * 0.93);
+    for (let outputY = 0; outputY < height * scale; outputY++) {
+      for (let outputX = 0; outputX < width * scale; outputX++) {
+        const output = outputY * smooth.outputStride + outputX;
+        if (smooth.coverage[output] === 0) continue;
+        const cellX = Math.floor(outputX / scale);
+        const cellY = Math.floor(outputY / scale);
+        const expected = value.materials[cellY * width + cellX];
+        if (expected === Material.Empty) continue;
+        expect(smooth.ownerMaterials[output]).toBe(expected);
+      }
+    }
+  });
+
   it('calms only deep stable Smooth powder facets while preserving semantic planes and controls', () => {
     const scale = 4;
     // The shared field has a ten-cell horizontal blur, so its full-density
