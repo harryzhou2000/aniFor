@@ -6795,6 +6795,18 @@ void main() {
       // the settled-only proof: it cannot square off a silhouette or touch
       // Local/Grains, loose particles, seams, holes, traits, or emission.
       float cellGrainRetention = mix(1.0, 1.48, settledMineralRetention);
+      // The filter's logical field spans the fixed world while gl_FragCoord is
+      // in its backing pixels. Their ratio is therefore the active Detail
+      // scale, independent of CSS camera transforms and without a new uniform.
+      // Only a one-times backing needs compensation for its necessarily
+      // unresolved sub-cell facet; 2x through 8x retain their normal pigment.
+      float detailEstimate = min(
+        (gl_FragCoord.x + 0.5) / max(fieldPosition.x, 0.5),
+        (gl_FragCoord.y + 0.5) / max(fieldPosition.y, 0.5)
+      );
+      float lowDetailMineralGain = mix(1.75, 1.0, smoothstep(1.20, 1.80, detailEstimate));
+      cellGrainRetention = mix(1.0, cellGrainRetention * lowDetailMineralGain,
+        settledMineralRetention);
       float facetRetention = mix(1.0, 1.14, settledMineralRetention);
       color *= 0.91 + grain * (0.20 + roughSurface * 0.05) * cellGrainRetention * facetGain
         + grainFacet * (0.10 + roughSurface * 0.04) * facetRetention * facetGain;
@@ -6802,7 +6814,8 @@ void main() {
       // better than sub-cell luminance alone. It is exact-cell/world anchored
       // and RGB-only, so composed Smooth bodies gain colour vocabulary without
       // creating a new support decision or perturbing Local/Grains references.
-      color += base * grain * vec3(0.135, 0.031, -0.084) * stablePowderMineral;
+      color += base * grain * vec3(0.135, 0.031, -0.084)
+        * stablePowderMineral * lowDetailMineralGain;
       color += base * max(0.0, 0.6 - subcell.x - subcell.y)
         * (0.11 + roughSurface * 0.035) * facetRetention * facetGain;
       float brightFacet = max(0.0, grainFacet - 0.18) * facetRetention;
