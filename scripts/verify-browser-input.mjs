@@ -11566,6 +11566,49 @@ async function auditLiquidOpticalDepth(cdp, mode, dpr) {
     await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setAqueousSurfaceReflection(true); true');
   }
 
+  // Acid has its own deep, luminance-neutral chroma body treatment. It is
+  // deliberately behind the general Liquid Volume switch rather than the
+  // aqueous-only reflection switch, so keep a separate WebGL off→on→off
+  // proof here. The ordinary depth fixture above keeps volume chroma flat;
+  // without this triplet the exact Acid core branch would never be exercised.
+  let acidCoreSamples;
+  if (mode === 'webgl') {
+    await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setLiquidVolumeChroma(false); true');
+    const acidCoreFlat = await waitForStablePageCapture(cdp, 'webgl focused flat acid core', 20_000);
+    await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setLiquidVolumeChroma(true); true');
+    const acidCoreStyled = await waitForStablePageCapture(cdp, 'webgl focused acid core', 20_000);
+    await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setLiquidVolumeChroma(false); true');
+    const acidCoreRepeatedFlat = await waitForStablePageCapture(
+      cdp, 'webgl focused repeated flat acid core', 20_000,
+    );
+    acidCoreSamples = await sampleBackdropRefractionRegions(cdp, {
+      straight: acidCoreFlat.capture.data,
+      refracted: acidCoreStyled.capture.data,
+      repeatedStraight: acidCoreRepeatedFlat.capture.data,
+    }, [
+      { name: 'acidDeepCore', x: 302, y: 315, radiusX: 6, radiusY: 10 },
+      { name: 'acidSurfaceCore', x: 302, y: 202, radiusX: 5, radiusY: 4 },
+      { name: 'isolatedLiquidDepthControl', x: 190.5, y: 164.5, radius: 2 },
+      { name: 'unlikeLiquidDepthControl', x: 302.5, y: 172, radiusX: 0.45, radiusY: 6 },
+      { name: 'lavaDepthControl', x: 341, y: 315, radiusX: 6, radiusY: 10 },
+    ], geometry.canvas);
+    const acidCoreByName = Object.fromEntries(acidCoreSamples.map((sample) => [sample.name, sample]));
+    const acidCore = acidCoreByName.acidDeepCore;
+    const acidSurfaceCore = acidCoreByName.acidSurfaceCore;
+    assert(acidCore.rgbRms >= 0.08 && acidCore.chromaRms >= 0.05 && acidCore.rgbPeak <= 24,
+      `webgl: Acid deep core lost its bounded chromatic volume (${JSON.stringify(acidCoreSamples)})`);
+    assert(acidCore.rgbRms >= acidSurfaceCore.rgbRms + 0.02
+      && acidCore.chromaRms >= acidSurfaceCore.chromaRms + 0.02,
+    `webgl: Acid core no longer separates from its surface (${JSON.stringify(acidCoreSamples)})`);
+    for (const name of ['isolatedLiquidDepthControl', 'unlikeLiquidDepthControl', 'lavaDepthControl']) {
+      assert(acidCoreByName[name].rgbPeak <= 1,
+        `webgl: Acid core leaked into ${name} (${JSON.stringify(acidCoreSamples)})`);
+    }
+    assert(acidCoreSamples.every((sample) => sample.repeatRgbPeak <= 1),
+      `webgl: Acid core off-on-off sequence was not deterministic (${JSON.stringify(acidCoreSamples)})`);
+    await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setLiquidVolumeChroma(true); true');
+  }
+
   await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.clear(); true');
   const blank = await waitForStablePageCapture(cdp, `${mode} focused blank liquid-depth fixture`, 20_000);
   const supportRegions = [
@@ -11591,6 +11634,7 @@ async function auditLiquidOpticalDepth(cdp, mode, dpr) {
     backing: `${geometry.backing.width}x${geometry.backing.height}`,
     cssCanvas: `${round(geometry.canvas.width, 2)}x${round(geometry.canvas.height, 2)}`,
     samples,
+    acidCoreSamples,
     support: { flat: flatSupport[0], relieved: relievedSupport[0] },
   };
 }
