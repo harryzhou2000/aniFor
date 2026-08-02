@@ -13159,7 +13159,14 @@ async function auditRenderScaleEight(cdp, dpr, powderOnly = false) {
     `renderScale=8 presentation exceeded its watchdog budget (${JSON.stringify(presentationTiming)})`);
   stage('timing-ready');
 
-  const smoothCapture = await captureSettledPage(cdp, 'renderScale=8 smooth powder framebuffer');
+  // `auditWebGLPresentationTiming` immediately above has just submitted and
+  // fence-proven the canonical 8x frame, and nothing mutates the scene before
+  // this first Smooth capture. Reuse that proof instead of submitting another
+  // identical 15M-fragment audit frame. Every later capture keeps its own
+  // completed-frame request because it follows a real toggle or scene edit.
+  const smoothCapture = await captureSettledPage(
+    cdp, 'renderScale=8 smooth powder framebuffer', 900, true,
+  );
   // Shader iteration must not require the unrelated ten-minute off/on/off
   // presentation matrix before reporting a captured powder-contour failure.
   // The full --scale-eight-only gate remains authoritative; this focused path
@@ -20568,7 +20575,7 @@ async function waitForStablePageCapture(cdp, label, timeoutMs) {
   return waitForStablePageCaptures(cdp, label, timeoutMs);
 }
 
-async function captureSettledPage(cdp, label, delayMs = 900) {
+async function captureSettledPage(cdp, label, delayMs = 900, presentationAlreadyProven = false) {
   // SwiftShader's 15M-fragment 8x target can dither otherwise identical page
   // captures by a byte, so exact whole-frame equality is not a useful settle
   // criterion here. Wait through every staggered 12 Hz field rebuild, then take
@@ -20576,11 +20583,15 @@ async function captureSettledPage(cdp, label, delayMs = 900) {
   // sub-byte noise and prove the actual fixture instead.
   const deadline = Date.now() + EIGHT_X_PRESENTATION_DEADLINE_MS;
   await sleep(Math.min(delayMs, remainingDeadlineMs(deadline, `${label} settle delay`)));
-  // Every use of this helper is a true-8x WebGL capture. Own one audit frame
-  // and wait for its completion fence before sampling; a fixed sleep cannot
-  // prove that a 15-million-fragment latest-wins redraw reached the framebuffer.
-  const remaining = remainingDeadlineMs(deadline, `${label} completed-frame request`);
-  await waitForNextWebGLPresentation(cdp, label, remaining, remaining);
+  // Every capture following a mutation owns one audit frame and waits for its
+  // completion fence; a fixed sleep cannot prove that a 15-million-fragment
+  // latest-wins redraw reached the framebuffer. The one explicit reuse call
+  // immediately after `auditWebGLPresentationTiming` is safe because that
+  // helper has already fence-proven the same unmodified canonical frame.
+  if (!presentationAlreadyProven) {
+    const remaining = remainingDeadlineMs(deadline, `${label} completed-frame request`);
+    await waitForNextWebGLPresentation(cdp, label, remaining, remaining);
+  }
   // A signalled WebGL fence proves the target is ready, not that Chrome has
   // copied the canvas into the compositor surface used by Page.captureScreenshot.
   // Give that hand-off two compositor turns, discard one warm-up read, then
