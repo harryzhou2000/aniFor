@@ -93,6 +93,11 @@ if (requireCanvasVisuals && modes.length !== 2) {
 const visualOnly = process.argv.includes('--visual-only');
 const materialAtlasOnly = process.argv.includes('--material-atlas-only');
 const mobileOnly = process.argv.includes('--mobile-only');
+// Keep the coordinate-critical half of the mobile audit independently runnable.
+// The full mobile audit additionally exercises long nested palette/document
+// scrolling, which is intentionally retained below but can exceed interactive
+// runner output windows before it reports the already-completed gesture proof.
+const mobileGestureOnly = process.argv.includes('--mobile-gesture-only');
 const desktopInputOnly = process.argv.includes('--desktop-input-only');
 const pausedPresentationOnly = process.argv.includes('--paused-presentation-only');
 // Keep fallback performance evidence independently runnable.  The paired
@@ -271,7 +276,7 @@ async function main() {
       }, 15_000, 'Vite browser-audit server');
     const results = [];
     for (const mode of modes) results.push(await auditMode(mode));
-    const reducedAudit = quickScreenshot || showcaseScreenshotOnly || layoutOnly || mobileOnly
+    const reducedAudit = quickScreenshot || showcaseScreenshotOnly || layoutOnly || mobileOnly || mobileGestureOnly
       || desktopInputOnly || visualScaleMatrixOnly || powderBodyOnly || liquidDepthOnly
       || solidDepthOnly || gasChromaOnly || surfaceContourOnly || solidFieldOnly
       || roleGraphicsOnly || cellularGraphicsOnly || sensorGraphicsOnly
@@ -1083,9 +1088,10 @@ async function auditMode(mode) {
       cdp.close();
       return { backend: mode, sparkStateGraphics, browserErrors: errors.length };
     }
-    if (mobileOnly) {
+    if (mobileOnly || mobileGestureOnly) {
       const mobile = await auditMobile(
         cdp, mode, screenshotRequest ? variantScreenshotPath(screenshotRequest, `${mode}-mobile`) : undefined,
+        mobileGestureOnly,
       );
       assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
       cdp.close();
@@ -19432,7 +19438,7 @@ async function auditCatalogSelection(cdp) {
   };
 }
 
-async function auditMobile(cdp, mode, screenshot) {
+async function auditMobile(cdp, mode, screenshot, gestureOnly = false) {
   await cdp.send('Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: 2 });
   await cdp.send('Emulation.setDeviceMetricsOverride', {
     width: 390, height: 844, deviceScaleFactor: 2, mobile: true,
@@ -19619,6 +19625,28 @@ async function auditMobile(cdp, mode, screenshot) {
     },
   );
   await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+
+  if (gestureOnly) {
+    return {
+      viewport: `${round(initial.viewport.width, 2)}x${round(initial.viewport.height, 2)}`,
+      canvasAspect: round(initial.canvas.width / initial.canvas.height, 6),
+      pinchZoom: round(pinch.view.zoom, 4),
+      pinchPanX: round(pinch.view.panX, 3),
+      pinchPanY: round(pinch.view.panY, 3),
+      pinchAnchorErrorCells: round(pinchAnchorError, 5),
+      pinchAnchorProjectionErrorCells: {
+        x: round(pinchAnchorProjectionError.x, 5),
+        y: round(pinchAnchorProjectionError.y, 5),
+      },
+      pinchStrayCells: pinch.occupied,
+      pinchBrushHandoff: `${handoffLine.start.x},${handoffLine.start.y}->${handoffLine.end.x},${handoffLine.end.y}`,
+      pinchBrushHandoffCells: handoffLine.occupied,
+      pinchBrushHandoffFootprints: handoffPaintedFootprints,
+      mobileFilterScroll: `${round(mobileFilterReach.reached)}/${round(mobileFilterReach.maximum)}`,
+      fieldIndicator: `${round(initial.ui.fieldIndicator.width)}x${round(initial.ui.fieldIndicator.height)}`,
+      ...(screenshot ? { screenshot } : {}),
+    };
+  }
 
   // Preserve the composed pinch/pan camera across the 680px mobile layout
   // breakpoint. This catches responsive geometry changes that a reset-view

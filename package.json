@@ -13,6 +13,7 @@
     "audit:browser-input": "node scripts/verify-browser-input.mjs",
     "audit:viewport:desktop": "node scripts/verify-browser-input.mjs --desktop-input-only --webgl-only",
     "audit:viewport:mobile": "node scripts/verify-browser-input.mjs --mobile-only --webgl-only",
+    "audit:viewport:mobile-gesture": "node scripts/verify-browser-input.mjs --mobile-gesture-only --webgl-only",
     "audit:viewport:live-scale": "node scripts/verify-browser-input.mjs --live-scale-only --webgl-only",
     "audit:viewport:matrix": "node scripts/verify-browser-input.mjs --visual-scale-matrix-only --webgl-only",
     "audit:canvas-timing": "npm run build && node scripts/verify-browser-input.mjs --canvas-only --canvas-timing-only --production-bundle",
