@@ -111,6 +111,7 @@ import { writeSolidOpticalDepth } from './solid-optical-depth-field';
 import { applyCanvasVibrStateStyle } from './canvas-vibr-state-style';
 import { applyCanvasDeutStateStyle } from './canvas-deut-state-style';
 import { applyCanvasForceActivityStyle } from './canvas-force-activity-style';
+import { applyCanvasFrayForceStyle } from './canvas-fray-force-style';
 import { applyCanvasPoloStateStyle } from './canvas-polo-state-style';
 import { applyCanvasSpongeHydrationStyle } from './canvas-sponge-hydration-style';
 import { applyCanvasLavaAncestryStyle } from './canvas-lava-ancestry-style';
@@ -316,6 +317,7 @@ export class MaterialRenderer {
   private geologicalSolidStylingEnabled = true;
   private thermalCatalyticRigidStylingEnabled = true;
   private gooSolidStylingEnabled = true;
+  private frayForceStylingEnabled = true;
   private mechanismBodyStylingEnabled = true;
   private electronicIdentityStylingEnabled = true;
   private fieldProfileIdentityStylingEnabled = true;
@@ -585,6 +587,10 @@ export class MaterialRenderer {
     return this.presenter?.gooSolidStylingEnabled() ?? this.gooSolidStylingEnabled;
   }
 
+  frayForceStylingIsEnabled(): boolean {
+    return this.presenter?.frayForceStylingEnabled() ?? this.frayForceStylingEnabled;
+  }
+
   /** Audit-only proof that native dirty state reached the active presentation staging grid. */
   renderedMaterialAt(x: number, y: number): number {
     if (x < 0 || y < 0 || x >= this.simulation.width || y >= this.simulation.height) return -1;
@@ -830,6 +836,15 @@ export class MaterialRenderer {
     if (enabled === this.gooSolidStylingEnabled) return;
     this.gooSolidStylingEnabled = enabled;
     this.presenter?.setGooSolidStylingEnabled(enabled);
+    this.contourChunks.markAll();
+    this.changed = true;
+  }
+
+  /** Exact FRAY nozzle grammar; RGB-only and independent of native force polarity. */
+  setFrayForceStylingEnabled(enabled: boolean): void {
+    if (enabled === this.frayForceStylingEnabled) return;
+    this.frayForceStylingEnabled = enabled;
+    this.presenter?.setFrayForceStylingEnabled(enabled);
     this.contourChunks.markAll();
     this.changed = true;
   }
@@ -1308,6 +1323,7 @@ export class MaterialRenderer {
       this.geologicalSolidStylingEnabled,
       this.thermalCatalyticRigidStylingEnabled,
       this.gooSolidStylingEnabled,
+      this.frayForceStylingEnabled,
       this.earthenPowderStylingEnabled,
       this.powderMesostrataStylingEnabled,
       this.moltenBodyOpticsEnabled,
@@ -2410,6 +2426,9 @@ export class MaterialRenderer {
             if (this.fieldProfileIdentityStylingEnabled && profile === RenderProfile.Field
               && optics === RenderOptics.Default) {
               applyCanvasFieldProfileIdentityStyle(this.styledColor, material, x, y);
+            }
+            if (this.frayForceStylingEnabled) {
+              applyCanvasFrayForceStyle(this.styledColor, material, x, y);
             }
           }
           if (applicableTraits !== 0) applyCanvasRenderTraits(

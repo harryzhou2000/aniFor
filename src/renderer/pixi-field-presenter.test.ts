@@ -30,6 +30,7 @@ interface PresenterHarness {
   setCellularMaterialStylingEnabled: PixiFieldPresenter['setCellularMaterialStylingEnabled'];
   setStructuralRigidStylingEnabled: PixiFieldPresenter['setStructuralRigidStylingEnabled'];
   setGeologicalSolidStylingEnabled: PixiFieldPresenter['setGeologicalSolidStylingEnabled'];
+  setFrayForceStylingEnabled: PixiFieldPresenter['setFrayForceStylingEnabled'];
   setMechanismBodyStylingEnabled: PixiFieldPresenter['setMechanismBodyStylingEnabled'];
   setElectronicIdentityStylingEnabled: PixiFieldPresenter['setElectronicIdentityStylingEnabled'];
   setFieldProfileIdentityStylingEnabled: PixiFieldPresenter['setFieldProfileIdentityStylingEnabled'];
@@ -1270,6 +1271,41 @@ describe('Pixi presenter startup configuration', () => {
     expect(`${direct}${normalContract}`).not.toContain('texture(');
     expect(`${direct}${normalContract}`).not.toContain('uTime');
     expect(`${direct}${normalContract}`).not.toMatch(/\balpha\s*[+*]?=/);
+  });
+
+  it('keeps FRAY force identity exact-owner, RGB-only, and resource-free in both shaders', () => {
+    const presenter = presenterHarness();
+    presenter.setFrayForceStylingEnabled(false);
+    expect(presenter.uniforms.uniforms.uFrayForceStyling).toBe(0);
+    expect(presenter.app.render).toHaveBeenCalledOnce();
+
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');
+    const eightEnd = source.indexOf('const FIELD_FRAGMENT = `', eightStart);
+    const eight = source.slice(eightStart, eightEnd);
+    const directStart = eight.indexOf('vec3 frayForceEightXDelta(');
+    const directEnd = eight.indexOf('// Transport, actuator, and storage devices', directStart);
+    const normalStart = source.indexOf('vec3 frayForceIdentityDelta(');
+    const normalEnd = source.indexOf('// Native transport and actuator bodies', normalStart);
+    const directBranch = eight.indexOf('if (uFrayForceStyling > 0.5 && material == 118.0');
+    const normalBranch = source.indexOf('if (uFrayForceStyling > 0.5 && material == 118.0', normalStart);
+    const direct = eight.slice(directStart, directEnd);
+    const normal = source.slice(normalStart, normalEnd);
+    const branches = eight.slice(directBranch, directBranch + 360)
+      + source.slice(normalBranch, normalBranch + 420);
+
+    expect(directStart).toBeGreaterThan(0);
+    expect(directEnd).toBeGreaterThan(directStart);
+    expect(normalStart).toBeGreaterThan(0);
+    expect(normalEnd).toBeGreaterThan(normalStart);
+    expect(directBranch).toBeGreaterThan(0);
+    expect(normalBranch).toBeGreaterThan(0);
+    expect(eight).toContain('uniform float uFrayForceStyling;');
+    expect(source).toContain('uFrayForceStyling: { value: 1, type: \'f32\' }');
+    expect(`${direct}${normal}${branches}`).toContain('material == 118.0');
+    expect(`${direct}${normal}${branches}`).not.toContain('texture(');
+    expect(`${direct}${normal}${branches}`).not.toContain('uTime');
+    expect(`${direct}${normal}${branches}`).not.toMatch(/\balpha\s*[+*]?=/);
   });
 
   it('keeps true-8x transport hardware exact-owner, RGB-only, and resource-free', () => {

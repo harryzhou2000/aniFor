@@ -145,6 +145,9 @@ import {
   GOO_SOLID_GRAPHICS_AUDIT, prepareGooSolidGraphicsAuditFixture,
 } from './goo-solid-graphics-audit';
 import {
+  FRAY_FORCE_GRAPHICS_AUDIT, prepareFrayForceGraphicsAuditFixture,
+} from './fray-force-graphics-audit';
+import {
   DISTILLED_DIESEL_LIQUID_GRAPHICS_AUDIT,
   prepareDistilledDieselLiquidGraphicsAuditFixture,
 } from './distilled-diesel-liquid-graphics-audit';
@@ -404,6 +407,7 @@ export class Game {
       geologicalSolidStylingEnabled: () => this.renderer.geologicalSolidStylingIsEnabled(),
       thermalCatalyticRigidStylingEnabled: () => this.renderer.thermalCatalyticRigidStylingIsEnabled(),
       gooSolidStylingEnabled: () => this.renderer.gooSolidStylingIsEnabled(),
+      frayForceStylingEnabled: () => this.renderer.frayForceStylingIsEnabled(),
       gasIdentityStyle: (x, y) => this.renderer.gasIdentityStyleAt(x, y),
       atmosphereSupportAudit: () => this.renderer.getAtmosphereSupportAudit(),
       occupiedCells: () => {
@@ -581,6 +585,9 @@ export class Game {
       },
       setGooSolidStyling: (enabled) => {
         this.renderer.setGooSolidStylingEnabled(enabled);
+      },
+      setFrayForceStyling: (enabled) => {
+        this.renderer.setFrayForceStylingEnabled(enabled);
       },
       setPowderRenderStyle: (style) => {
         this.renderer.setPowderRenderStyle(style);
@@ -818,6 +825,12 @@ export class Game {
       gooSolidGraphicsAtlas: () => GOO_SOLID_GRAPHICS_AUDIT,
       prepareGooSolidGraphicsFixture: () => {
         prepareGooSolidGraphicsAuditFixture(this.simulation);
+        this.renderer.synchronizeFixtureMaterialPlane();
+        this.renderer.invalidateDynamicPresentation();
+      },
+      frayForceGraphicsAtlas: () => FRAY_FORCE_GRAPHICS_AUDIT,
+      prepareFrayForceGraphicsFixture: () => {
+        prepareFrayForceGraphicsAuditFixture(this.simulation);
         this.renderer.synchronizeFixtureMaterialPlane();
         this.renderer.invalidateDynamicPresentation();
       },

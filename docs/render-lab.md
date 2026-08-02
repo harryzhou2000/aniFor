@@ -277,6 +277,18 @@ remain untouched. `npm run audit:goo-solid` proves the exact-owner
 flat→styled→flat response and protected controls; `npm run audit:goo-solid:8x`
 uses the equivalent true-`4896×3072` direct-mesh gate.
 
+The native Force Emitter (`FRAY`) now has an exact-owner cyan nozzle/rail
+grammar in Canvas, normal WebGL, and the direct true-8× mesh. It is static
+world-cell RGB arithmetic, deliberately separate from FRAY's native
+temperature-driven push/pull polarity: no JavaScript force state, direction,
+clock, sampler, field, pass, or output-scale allocation is added. The paused
+fixture covers body texture, authored hole/open channel, thin rail, isolated
+owner, co-located native wall, Water/Metal contacts, ARAY wrong-owner control,
+and blank space; `npm run audit:fray-force` verifies flat→styled→flat,
+bounded RGB-only response, and protected topology. The equivalent
+`npm run audit:fray-force:8x` route exercises the direct mesh once an
+8×-capable browser completes its first fenced frame.
+
 Distilled Water and Diesel now share their aqueous/oily volume fields with
 their close relatives while retaining separate exact-owner RGB identity:
 Distilled Water adds quiet clean-water threads, and Diesel adds darker warm
