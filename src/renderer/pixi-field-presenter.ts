@@ -2593,8 +2593,12 @@ void main() {
           // the normal path's restrained aqueous absorption over the exact
           // same already-live support scalar; this is RGB-only and adds no
           // sample, topology, or field dependency at fifteen million pixels.
-          color *= vec3(1.0) - vec3(0.018, 0.007, 0.000) * aqueousCoreVolume;
-          float aqueousCoreGlaze = aqueousCoreVolume * (0.016 + keyLight * 0.028);
+          // Keep the compact 8x body close to normal WebGL's deeper blue
+          // transmission. This remains intentionally a little gentler: the
+          // direct compositor has no broad-sheen or caustic terms to balance
+          // a stronger core at high output scale.
+          color *= vec3(1.0) - vec3(0.020, 0.0075, 0.000) * aqueousCoreVolume;
+          float aqueousCoreGlaze = aqueousCoreVolume * (0.018 + keyLight * 0.030);
           color += (vec3(1.0) - clamp(color, 0.0, 1.0))
             * vec3(0.16, 0.52, 0.86) * aqueousCoreGlaze;
         }
