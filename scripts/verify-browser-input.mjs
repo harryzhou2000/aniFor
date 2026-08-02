@@ -10587,7 +10587,11 @@ async function auditDesktopInput(cdp, mode, dpr) {
     `${mode} focused breakpoint camera preservation`,
   );
   assert(resizeAnchorError < 0.2,
-    `${mode}: focused breakpoint anchor drifted ${resizeAnchorError.toFixed(4)} cells`);
+    `${mode}: focused breakpoint anchor drifted ${resizeAnchorError.toFixed(4)} cells (${JSON.stringify({
+      resizeAnchor, returnedAnchor, resizeAnchorBefore, resizeAnchorAfter,
+      beforeCanvas: transformedGeometry.canvas, compactCanvas: compactGeometry.canvas,
+      returnedCanvas: returnedGeometry.canvas, resizeStartView, returnedView,
+    })})`);
   stage('resize-ready');
 
   const liveScaleTransition = await auditLiveScaleTransition(
