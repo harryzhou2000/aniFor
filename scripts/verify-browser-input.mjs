@@ -208,6 +208,12 @@ const usesProductionBundle = productionBundle || showcaseScreenshotOnly || cellu
 const AUDIT_BASE_URL = usesProductionBundle ? PRODUCTION_BUNDLE_URL : ORIGIN + '/';
 const DESKTOP_TOOL_FILTER_HEIGHT = 96;
 const screenshotRequest = process.argv.find((argument) => argument.startsWith('--screenshot='))?.slice('--screenshot='.length);
+const captureDprArgument = process.argv.find((argument) => argument.startsWith('--capture-dpr='))
+  ?.slice('--capture-dpr='.length);
+const captureDpr = captureDprArgument === undefined ? undefined : Number(captureDprArgument);
+if (captureDpr !== undefined && captureDpr !== 1 && captureDpr !== 2) {
+  throw new Error('--capture-dpr must be 1 or 2');
+}
 if (showcaseScreenshotOnly && !screenshotRequest) {
   throw new Error('--showcase-screenshot requires --screenshot=<path>');
 }
@@ -351,7 +357,10 @@ async function main() {
 async function auditMode(mode) {
   const chromePath = await resolveChrome();
   const profile = await mkdtemp(path.join(tmpdir(), `anifor-input-${mode}-`));
-  const dpr = mode === 'canvas2d' ? 2 : 1;
+  // Screenshot comparison may request one common browser DPR. This changes
+  // only the browser capture raster; renderScale continues to own the semantic
+  // 612×384 backing resolution. Ordinary audits retain their backend defaults.
+  const dpr = captureDpr ?? (mode === 'canvas2d' ? 2 : 1);
   const canvasFallbackAudit = mode === 'canvas2d' && !materialAtlasOnly && !mobileOnly && !layoutOnly
     && !shortDesktopOnly && !liveScaleOnly && !requireCanvasVisuals && !deviceIdentityGraphicsOnly
     && !fieldProfileGraphicsOnly && !electricDischargeGraphicsOnly;
