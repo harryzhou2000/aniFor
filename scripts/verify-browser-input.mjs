@@ -12698,6 +12698,11 @@ async function auditVisualScaleMatrix(cdp, mode, dpr) {
       ...(blank ? { blankAudit: '1' } : {}),
       ...(mode === 'canvas2d' ? { renderer: 'canvas2d' } : {}),
     });
+    // A user Detail change disposes the active presenter before assigning the
+    // next URL. Reproduce that ordered lifecycle rather than asking CDP to
+    // overlap an old detached WebGL target with the incoming true-8x startup.
+    await evaluate(cdp, 'window.dispatchEvent(new Event("pagehide"))');
+    await evaluate(cdp, 'new Promise((resolve) => setTimeout(resolve, 100))');
     await cdp.send('Page.navigate', { url: `${AUDIT_BASE_URL}?${query}` });
     const startupDeadline = scale === 8 ? Date.now() + EIGHT_X_PRESENTATION_DEADLINE_MS : undefined;
     const timeout = scale === 8 ? 45_000 : 20_000;
@@ -12710,10 +12715,16 @@ async function auditVisualScaleMatrix(cdp, mode, dpr) {
       ? remainingDeadlineMs(startupDeadline, `${mode} ${stage} input audit API`)
       : timeout, `${mode} ${stage} audit API`);
     if (scale === 8 && mode === 'webgl') {
-      const startupBackend = await waitForEightXTerminalBackend(
-        cdp, `${mode} ${stage}`,
-        remainingDeadlineMs(startupDeadline, `${mode} ${stage} terminal backend`),
-      );
+      let startupBackend;
+      try {
+        startupBackend = await waitForEightXTerminalBackend(
+          cdp, `${mode} ${stage}`,
+          remainingDeadlineMs(startupDeadline, `${mode} ${stage} terminal backend`),
+        );
+      } catch (error) {
+        const observed = await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__?.backend()');
+        throw new Error(`${error instanceof Error ? error.message : String(error)}; final backend ${JSON.stringify(observed)}`);
+      }
       assertEightXWebGLBackend(startupBackend, `${mode} ${stage}`);
     } else {
       await waitFor(() => evaluate(cdp,

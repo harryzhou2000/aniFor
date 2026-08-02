@@ -55,4 +55,8 @@ window.visualViewport?.addEventListener('resize', scheduleViewportFit, { passive
 fitViewport();
 
 root.querySelector('.status')!.textContent = `${simulation.name} · saved on this device`;
-await new Game(root, simulation).start();
+const game = new Game(root, simulation);
+await game.start();
+// Browser navigation tears down WebGL asynchronously. Dispose the outgoing
+// presenter first so a following Detail page can allocate true 8x promptly.
+window.addEventListener('pagehide', () => game.dispose(), { once: true });

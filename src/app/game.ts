@@ -305,6 +305,7 @@ export class Game {
           currentUrl: location.href,
           diagnosticScene: renderLab || wallLab,
           persist: () => this.save(),
+          prepare: () => this.renderer.disposeForNavigation(),
           assign: (href) => { location.assign(href); },
         });
       },
@@ -375,6 +376,11 @@ export class Game {
     if ((renderLab || materialShowcase) && browserInputAuditRequested()) this.installBrowserInputAudit();
     this.renderer.setSimulationRunning(!this.paused);
     requestAnimationFrame(this.frame);
+  }
+
+  /** Releases renderer-owned GPU work before this document is replaced. */
+  dispose(): void {
+    this.renderer.dispose();
   }
 
   private installBrowserInputAudit(): void {

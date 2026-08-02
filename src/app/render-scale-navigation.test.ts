@@ -31,4 +31,23 @@ describe('navigateToRenderScale', () => {
       'https://example.test/?scene=render-lab&simulation=native&renderScale=4',
     );
   });
+
+  it('waits for an optional renderer release before replacing the document', async () => {
+    const order: string[] = [];
+    let release: (() => void) | undefined;
+    navigateToRenderScale(8, {
+      currentUrl: 'https://example.test/?renderScale=2',
+      diagnosticScene: false,
+      persist: () => { order.push('persist'); },
+      prepare: () => new Promise<void>((resolve) => {
+        release = () => { order.push('release'); resolve(); };
+      }),
+      assign: () => { order.push('assign'); },
+    });
+
+    expect(order).toEqual(['persist']);
+    release?.();
+    await Promise.resolve();
+    expect(order).toEqual(['persist', 'release', 'assign']);
+  });
 });

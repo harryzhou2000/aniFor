@@ -14,11 +14,48 @@ const UNSUPPORTED_WEBGL: WebGLCapabilities = {
   maxTextureSize: 0,
 };
 
+const CAPABILITIES_SESSION_KEY = 'anifor-webgl-capabilities-v1';
+
+function cachedWebGLCapabilities(): WebGLCapabilities | undefined {
+  try {
+    const raw = sessionStorage.getItem(CAPABILITIES_SESSION_KEY);
+    if (!raw) return undefined;
+    const parsed = JSON.parse(raw) as Partial<WebGLCapabilities>;
+    const values = [
+      parsed.maxRenderbufferSize, parsed.maxViewportWidth,
+      parsed.maxViewportHeight, parsed.maxTextureSize,
+    ];
+    if (parsed.supported !== true
+      || !values.every((value) => typeof value === 'number'
+        && Number.isInteger(value) && value >= 1)) return undefined;
+    return {
+      supported: true,
+      maxRenderbufferSize: parsed.maxRenderbufferSize!,
+      maxViewportWidth: parsed.maxViewportWidth!,
+      maxViewportHeight: parsed.maxViewportHeight!,
+      maxTextureSize: parsed.maxTextureSize!,
+    };
+  } catch {
+    // Private browsing and non-browser tests may not expose session storage.
+    return undefined;
+  }
+}
+
+function cacheWebGLCapabilities(capabilities: WebGLCapabilities): void {
+  if (!capabilities.supported) return;
+  try { sessionStorage.setItem(CAPABILITIES_SESSION_KEY, JSON.stringify(capabilities)); }
+  catch { /* the next document can safely probe again */ }
+}
+
 /**
  * Probes the limits that bound the root presentation target, then explicitly
  * releases the short-lived context so Pixi can create the only live context.
+ * A tab-session cache prevents rapid Detail navigation from accumulating those
+ * transient probe contexts while Chrome releases them asynchronously.
  */
 export function probeWebGLCapabilities(): WebGLCapabilities {
+  const cached = cachedWebGLCapabilities();
+  if (cached) return cached;
   const probe = document.createElement('canvas');
   // The presenter uses WebGL2 fenceSync/clientWaitSync for bounded promotion,
   // latest-wins frame scheduling, and 8x stall recovery. A WebGL1 context could
@@ -34,13 +71,15 @@ export function probeWebGLCapabilities(): WebGLCapabilities {
     const maxViewportHeight = Number(viewport?.[1]);
     if (![maxRenderbufferSize, maxViewportWidth, maxViewportHeight, maxTextureSize]
       .every((value) => Number.isFinite(value) && value >= 1)) return UNSUPPORTED_WEBGL;
-    return {
+    const capabilities = {
       supported: true,
       maxRenderbufferSize: Math.floor(maxRenderbufferSize),
       maxViewportWidth: Math.floor(maxViewportWidth),
       maxViewportHeight: Math.floor(maxViewportHeight),
       maxTextureSize: Math.floor(maxTextureSize),
     };
+    cacheWebGLCapabilities(capabilities);
+    return capabilities;
   } catch {
     return UNSUPPORTED_WEBGL;
   } finally {

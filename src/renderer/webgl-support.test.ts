@@ -69,6 +69,32 @@ describe('WebGL capability probe', () => {
     expect(getContext).toHaveBeenCalledOnce();
     expect(getContext).toHaveBeenCalledWith('webgl2');
   });
+
+  it('reuses verified limits within a tab session without creating another probe context', () => {
+    const values = new Map<string, string>();
+    vi.stubGlobal('sessionStorage', {
+      getItem: (key: string) => values.get(key) ?? null,
+      setItem: (key: string, value: string) => { values.set(key, value); },
+    });
+    const context = {
+      MAX_RENDERBUFFER_SIZE: 0x84e8,
+      MAX_VIEWPORT_DIMS: 0x0d3a,
+      MAX_TEXTURE_SIZE: 0x0d33,
+      isContextLost: () => false,
+      getParameter: (parameter: number) => {
+        if (parameter === 0x84e8) return 8192;
+        if (parameter === 0x0d33) return 4096;
+        return new Int32Array([8192, 4096]);
+      },
+      getExtension: () => ({ loseContext: () => undefined }),
+    };
+    const createElement = vi.fn(() => ({ getContext: vi.fn(() => context) }));
+    vi.stubGlobal('document', { createElement });
+
+    expect(probeWebGLCapabilities().supported).toBe(true);
+    expect(probeWebGLCapabilities().supported).toBe(true);
+    expect(createElement).toHaveBeenCalledOnce();
+  });
 });
 
 describe('renderer diagnostics', () => {

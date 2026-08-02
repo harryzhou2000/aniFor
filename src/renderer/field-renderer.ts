@@ -367,6 +367,10 @@ export class MaterialRenderer {
   private webGLPresentationTimingEnabled = false;
   private presentationRefreshAuditEnabled = false;
   private presentationRefreshAudit?: PresentationRefreshAudit;
+  // Detail navigation creates a fresh page with a different-sized WebGL
+  // backing. Relinquish the outgoing presenter before that navigation so its
+  // colour target cannot contend with the next true-8x candidate.
+  private disposed = false;
 
   constructor(private readonly host: HTMLElement, private readonly simulation: SimulationBackend) {
     this.requestedOutputScale = resolveFieldOutputScale();
@@ -416,12 +420,38 @@ export class MaterialRenderer {
     this.resize();
     this.installResizeSources();
     if (webglAvailable) {
-      // Let the compatibility canvas and controls paint before Pixi performs any
-      // potentially blocking GPU initialization on a cold browser/driver.
-      requestAnimationFrame(() => window.setTimeout(() => {
+      // Keep the compatibility Canvas mounted, but do not make WebGL promotion
+      // depend on an animation frame. A just-replaced high-detail page can keep
+      // rAF behind outstanding GPU work long enough to consume the entire 8x
+      // promotion window before Pixi is even asked to create its context.
+      window.setTimeout(() => {
+        if (this.disposed) return;
         void this.promoteLatePresenter(this.createWebGLPresenter());
-      }, 0));
+      }, 0);
     }
+  }
+
+  /**
+   * Releases a presenter that will not be reused. This is intentionally not a
+   * fallback transition: callers use it only while the document is leaving or
+   * Detail navigation is replacing the whole renderer.
+   */
+  dispose(): void {
+    if (this.disposed) return;
+    this.disposed = true;
+    const presenter = this.presenter;
+    this.presenter = undefined;
+    try { presenter?.destroy(); }
+    catch { /* a document teardown may already have invalidated WebGL */ }
+  }
+
+  /**
+   * Lets the browser observe an explicitly lost outgoing context before a
+   * Detail navigation asks it to allocate a differently sized backing.
+   */
+  disposeForNavigation(): Promise<void> {
+    this.dispose();
+    return new Promise((resolve) => window.setTimeout(resolve, 100));
   }
 
   /** Keeps the camera transform current even if host ResizeObserver delivery lags. */
@@ -1249,6 +1279,10 @@ export class MaterialRenderer {
     const promotionDeadline = performance.now() + promotionTimeout;
     try {
       presenter = await settleWithin(pending, promotionTimeout);
+      if (this.disposed) {
+        try { presenter?.destroy(); } catch { /* document is already leaving */ }
+        return;
+      }
       if (!presenter) {
         this.setBackend({ backend: 'canvas2d', label: 'Canvas 2D', reason: 'webgl-timeout' });
         void pending.then((latePresenter) => latePresenter.destroy()).catch(() => undefined);
@@ -1292,6 +1326,7 @@ export class MaterialRenderer {
   ): Promise<boolean> {
     // Compile the shader and seed every semantic field while the known-good
     // Canvas remains visible. Any failure leaves the fallback fully intact.
+    if (this.disposed) return false;
     const now = performance.now();
     presenter.setContextLossHandler(() => this.recoverFromWebGLFailure(presenter, 'webgl-context-lost'));
     presenter.setRenderStallHandler(() => this.recoverFromWebGLFailure(presenter, 'webgl-timeout'));
@@ -1381,6 +1416,7 @@ export class MaterialRenderer {
     // call mid-compile, but it can avoid extending the deadline a second time.
     const firstFrameTimeoutMs = Math.max(0, promotionDeadline - performance.now());
     if (!await presenter.waitForFirstFrame(firstFrameTimeoutMs)) return false;
+    if (this.disposed) return false;
     if (presenter.isContextLost() || this.presenter !== presenter) return false;
     this.releaseFallbackStorage();
     this.setBackend({ backend: 'webgl', label: 'WebGL' });

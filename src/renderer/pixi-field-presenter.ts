@@ -8291,6 +8291,15 @@ export class PixiFieldPresenter {
     this.releaseRenderFence();
     this.releaseWebGLTimingQuery();
     this.releaseWebGLTimingFence();
+    // Browser navigation may keep a detached canvas' GPU allocation alive
+    // until its normal garbage-collection turn. A Detail change replaces this
+    // presenter with a potentially 60 MiB true-8x target, so explicitly lose
+    // the outgoing context before Pixi releases DOM ownership.
+    try {
+      const canvas = this.app.canvas;
+      const gl = canvas.getContext('webgl2') ?? canvas.getContext('webgl');
+      gl?.getExtension('WEBGL_lose_context')?.loseContext();
+    } catch { /* a context loss or document teardown may already own it */ }
     this.app.canvas.remove();
     try { this.app.destroy(); }
     catch {
