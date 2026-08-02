@@ -72,6 +72,9 @@ const SHALLOW_SAND_SLOPE = Object.freeze({ left: 18, right: 170, bottom: 149, ri
 // bounded gate failure that reaches auditMode's cleanup.
 const CDP_COMMAND_TIMEOUT_MS = 45_000;
 const CDP_CONNECT_TIMEOUT_MS = 10_000;
+// Mirror the renderer's bounded 8x promotion contract. Audit waits must not
+// turn one stalled candidate into sequential acceptance and completion waits.
+const EIGHT_X_PRESENTATION_DEADLINE_MS = 30_000;
 const scaleEightOnly = process.argv.includes('--scale-eight-only');
 const eightPowderOnly = process.argv.includes('--eight-powder-only');
 const eightFieldProfileOnly = process.argv.includes('--eight-field-profile-only');
@@ -10774,19 +10777,45 @@ async function auditWebGLPresentationTiming(
 async function waitForNextWebGLPresentation(
   cdp, label, timeoutMs = 12_000, acceptanceTimeout = 30_000,
 ) {
+  // `requestWebGLPresentationTimingSample` may only accept after an older
+  // 15M-fragment frame retires. Give acceptance and the requested frame one
+  // deadline, rather than allowing their individual budgets to add together.
+  const deadline = Date.now() + Math.max(timeoutMs, acceptanceTimeout);
   const before = await evaluate(cdp,
     'window.__ANIFOR_INPUT_AUDIT__.webGLPresentationTiming()');
   assert(before, `${label}: WebGL presentation timing is unavailable`);
   await waitFor(() => evaluate(cdp,
     'window.__ANIFOR_INPUT_AUDIT__.requestWebGLPresentationTimingSample()'),
-  acceptanceTimeout, `${label} accepted completed-frame request`);
+  remainingDeadlineMs(deadline, `${label} acceptance`), `${label} accepted completed-frame request`);
   return waitFor(() => evaluate(cdp, `(() => {
     const next = window.__ANIFOR_INPUT_AUDIT__.webGLPresentationTiming();
     return next && next.usableSamples > 0
       && (next.source !== ${JSON.stringify(before.source)}
         || (next.sequence > ${before.sequence}
           && next.usableSamples > ${before.usableSamples})) ? next : null;
-  })()`), timeoutMs, `${label} completed WebGL frame`);
+  })()`), remainingDeadlineMs(deadline, `${label} completion`), `${label} completed WebGL frame`);
+}
+
+function remainingDeadlineMs(deadline, label) {
+  const milliseconds = deadline - Date.now();
+  if (milliseconds <= 0) throw new Error(`${label} exceeded its shared deadline`);
+  return milliseconds;
+}
+
+async function waitForEightXTerminalBackend(cdp, label, timeoutMs) {
+  return waitFor(() => evaluate(cdp, `(() => {
+    const backend = window.__ANIFOR_INPUT_AUDIT__?.backend();
+    if (!backend) return false;
+    return backend.backend === 'webgl'
+      || (backend.backend === 'canvas2d'
+        && (backend.reason === 'webgl-timeout' || backend.reason === 'webgl-context-lost'))
+      ? backend : false;
+  })()`), timeoutMs, `${label} terminal backend`);
+}
+
+function assertEightXWebGLBackend(backend, label) {
+  assert(backend.backend === 'webgl',
+    `${label}: 8x promotion did not complete before its bounded fallback (${JSON.stringify(backend)})`);
 }
 
 async function auditCanvasFallback(cdp) {
@@ -12588,16 +12617,26 @@ async function auditVisualScaleMatrix(cdp, mode, dpr) {
       ...(mode === 'canvas2d' ? { renderer: 'canvas2d' } : {}),
     });
     await cdp.send('Page.navigate', { url: `${AUDIT_BASE_URL}?${query}` });
+    const startupDeadline = scale === 8 ? Date.now() + EIGHT_X_PRESENTATION_DEADLINE_MS : undefined;
     const timeout = scale === 8 ? 45_000 : 20_000;
     await waitFor(() => evaluate(cdp, `(() => {
       const parameters = new URLSearchParams(location.search);
       return parameters.get('auditStage') === ${JSON.stringify(stage)}
         && parameters.get('renderScale') === ${JSON.stringify(String(scale))}
         && Boolean(window.__ANIFOR_INPUT_AUDIT__ && document.documentElement);
-    })()`), timeout, `${mode} ${stage} audit API`);
-    await waitFor(() => evaluate(cdp,
-      `window.__ANIFOR_INPUT_AUDIT__.backend().backend === ${JSON.stringify(mode)}`),
-    timeout, `${mode} ${stage} backend`);
+    })()`), startupDeadline
+      ? remainingDeadlineMs(startupDeadline, `${mode} ${stage} input audit API`)
+      : timeout, `${mode} ${stage} audit API`);
+    if (scale === 8 && mode === 'webgl') {
+      const startupBackend = await waitForEightXTerminalBackend(
+        cdp, `${mode} ${stage}`, remainingDeadlineMs(startupDeadline, `${mode} ${stage} startup`),
+      );
+      assertEightXWebGLBackend(startupBackend, `${mode} ${stage}`);
+    } else {
+      await waitFor(() => evaluate(cdp,
+        `window.__ANIFOR_INPUT_AUDIT__.backend().backend === ${JSON.stringify(mode)}`),
+      timeout, `${mode} ${stage} backend`);
+    }
     const geometry = await waitForStableCanvas(
       cdp, 1280, 720, undefined, timeout, `${mode} ${stage} geometry`,
     );
@@ -12811,15 +12850,17 @@ async function auditEightXFieldProfileGraphics(cdp, dpr) {
     scene: 'render-lab', inputAudit: '1', renderScale: '8', auditStage: 'eight-field-profile', blankAudit: '1',
   });
   await cdp.send('Page.navigate', { url: `${AUDIT_BASE_URL}?${query}` });
+  const startupDeadline = Date.now() + EIGHT_X_PRESENTATION_DEADLINE_MS;
   await waitFor(() => evaluate(cdp, `(() => {
     const parameters = new URLSearchParams(location.search);
     return parameters.get('renderScale') === '8'
       && parameters.get('auditStage') === 'eight-field-profile'
       && parameters.has('blankAudit') && Boolean(window.__ANIFOR_INPUT_AUDIT__);
-  })()`), 15_000, 'true-8x Field-profile input audit API');
-  await waitFor(() => evaluate(cdp,
-    `window.__ANIFOR_INPUT_AUDIT__.backend().backend === 'webgl'`),
-  45_000, 'true-8x Field-profile WebGL backend');
+  })()`), remainingDeadlineMs(startupDeadline, 'true-8x Field-profile input audit API'), 'true-8x Field-profile input audit API');
+  const startupBackend = await waitForEightXTerminalBackend(
+    cdp, 'true-8x Field-profile', remainingDeadlineMs(startupDeadline, 'true-8x Field-profile startup'),
+  );
+  assertEightXWebGLBackend(startupBackend, 'true-8x Field-profile');
   const geometry = await waitForStableCanvas(
     cdp, 1280, 720, undefined, 45_000, 'true-8x Field-profile geometry',
   );
@@ -12918,15 +12959,17 @@ async function auditRenderScaleEight(cdp, dpr, powderOnly = false) {
     scene: 'render-lab', inputAudit: '1', renderScale: '8', auditStage: 'scale-eight',
   });
   await cdp.send('Page.navigate', { url: `${AUDIT_BASE_URL}?${query}` });
+  const startupDeadline = Date.now() + EIGHT_X_PRESENTATION_DEADLINE_MS;
   await waitFor(() => evaluate(cdp, `(() => {
     const parameters = new URLSearchParams(location.search);
     return parameters.get('renderScale') === '8'
       && parameters.get('auditStage') === 'scale-eight'
       && Boolean(window.__ANIFOR_INPUT_AUDIT__ && document.documentElement);
-  })()`), 15_000, 'renderScale=8 input audit API');
-  await waitFor(() => evaluate(cdp,
-    `window.__ANIFOR_INPUT_AUDIT__.backend().backend === 'webgl'`),
-  45_000, 'renderScale=8 WebGL backend');
+  })()`), remainingDeadlineMs(startupDeadline, 'renderScale=8 input audit API'), 'renderScale=8 input audit API');
+  const startupBackend = await waitForEightXTerminalBackend(
+    cdp, 'renderScale=8', remainingDeadlineMs(startupDeadline, 'renderScale=8 startup'),
+  );
+  assertEightXWebGLBackend(startupBackend, 'renderScale=8');
   const geometry = await waitForStableCanvas(
     cdp, 1280, 720, undefined, 45_000, 'renderScale=8 WebGL geometry',
   );
@@ -18875,15 +18918,17 @@ async function navigateEightXRecoveryPage(cdp, auditStage) {
     scene: 'render-lab', inputAudit: '1', renderScale: '8', auditStage,
   });
   await cdp.send('Page.navigate', { url: `${AUDIT_BASE_URL}?${query}` });
+  const startupDeadline = Date.now() + EIGHT_X_PRESENTATION_DEADLINE_MS;
   await waitFor(() => evaluate(cdp, `(() => {
     const parameters = new URLSearchParams(location.search);
     return parameters.get('renderScale') === '8'
       && parameters.get('auditStage') === ${JSON.stringify(auditStage)}
       && Boolean(window.__ANIFOR_INPUT_AUDIT__ && document.documentElement);
-  })()`), 15_000, `renderScale=8 ${auditStage} input audit API`);
-  await waitFor(() => evaluate(cdp,
-    `window.__ANIFOR_INPUT_AUDIT__.backend().backend === 'webgl'`),
-  45_000, `renderScale=8 ${auditStage} WebGL backend`);
+  })()`), remainingDeadlineMs(startupDeadline, `renderScale=8 ${auditStage} input audit API`), `renderScale=8 ${auditStage} input audit API`);
+  const startupBackend = await waitForEightXTerminalBackend(
+    cdp, `renderScale=8 ${auditStage}`, remainingDeadlineMs(startupDeadline, `renderScale=8 ${auditStage} startup`),
+  );
+  assertEightXWebGLBackend(startupBackend, `renderScale=8 ${auditStage}`);
   return waitForStableCanvas(
     cdp, 1280, 720, undefined, 45_000, `renderScale=8 ${auditStage} geometry`,
   );
@@ -20309,11 +20354,13 @@ async function captureSettledPage(cdp, label, delayMs = 900) {
   // criterion here. Wait through every staggered 12 Hz field rebuild, then take
   // two bounded captures; downstream blank-differenced material metrics tolerate
   // sub-byte noise and prove the actual fixture instead.
-  await sleep(delayMs);
+  const deadline = Date.now() + EIGHT_X_PRESENTATION_DEADLINE_MS;
+  await sleep(Math.min(delayMs, remainingDeadlineMs(deadline, `${label} settle delay`)));
   // Every use of this helper is a true-8x WebGL capture. Own one audit frame
   // and wait for its completion fence before sampling; a fixed sleep cannot
   // prove that a 15-million-fragment latest-wins redraw reached the framebuffer.
-  await waitForNextWebGLPresentation(cdp, label);
+  const remaining = remainingDeadlineMs(deadline, `${label} completed-frame request`);
+  await waitForNextWebGLPresentation(cdp, label, remaining, remaining);
   const capture = await cdp.send('Page.captureScreenshot', { format: 'png', fromSurface: true });
   await sleep(150);
   const reference = await cdp.send('Page.captureScreenshot', { format: 'png', fromSurface: true });
