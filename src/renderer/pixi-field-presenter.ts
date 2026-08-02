@@ -6800,7 +6800,11 @@ void main() {
       // to retain the 2x body's readable colour variation. This remains inside
       // the settled-only proof: it cannot square off a silhouette or touch
       // Local/Grains, loose particles, seams, holes, traits, or emission.
-      float cellGrainRetention = mix(1.0, 1.48, settledMineralRetention);
+      // Leave a little more of the material's own world-cell pigment in the
+      // settled core. The curved field still owns only coverage at the edge;
+      // this is deliberately below the Local/Grains cadence, but enough to
+      // survive the 1x--4x compositor without an airbrushed clay/sand body.
+      float cellGrainRetention = mix(1.0, 1.62, settledMineralRetention);
       // The filter's logical field spans the fixed world while gl_FragCoord is
       // in its backing pixels. Their ratio is therefore the active Detail
       // scale, independent of CSS camera transforms and without a new uniform.
@@ -6820,7 +6824,7 @@ void main() {
       // better than sub-cell luminance alone. It is exact-cell/world anchored
       // and RGB-only, so composed Smooth bodies gain colour vocabulary without
       // creating a new support decision or perturbing Local/Grains references.
-      color += base * grain * vec3(0.135, 0.031, -0.084)
+      color += base * grain * vec3(0.154, 0.036, -0.096)
         * stablePowderMineral * lowDetailMineralGain;
       color += base * max(0.0, 0.6 - subcell.x - subcell.y)
         * (0.11 + roughSurface * 0.035) * facetRetention * facetGain;

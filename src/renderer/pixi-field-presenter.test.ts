@@ -2539,12 +2539,12 @@ describe('Pixi presenter startup configuration', () => {
     // Stable Smooth powder retains almost all mineral variation at normal
     // detail; Local/Grains still carry their full diagnostic cell detail.
     expect(source).toContain('float settledMineralRetention = max(powderVisualCohesion, stablePowderMineral)');
-    expect(source).toContain('mix(1.0, 1.48, settledMineralRetention)');
+    expect(source).toContain('mix(1.0, 1.62, settledMineralRetention)');
     expect(source).toContain('float detailEstimate = min(');
     expect(source).toContain('(gl_FragCoord.x + 0.5) / max(fieldPosition.x, 0.5)');
     expect(source).toContain('float lowDetailMineralGain = mix(1.75, 1.0, smoothstep(1.20, 1.80, detailEstimate))');
     expect(source).toContain('mix(1.0, 1.14, settledMineralRetention)');
-    expect(source).toContain('color += base * grain * vec3(0.135, 0.031, -0.084)');
+    expect(source).toContain('color += base * grain * vec3(0.154, 0.036, -0.096)');
     expect(source).toContain('* stablePowderMineral * lowDetailMineralGain;');
     expect(source).toContain('uPowderStyle < 1.5 ? 0.044 : 0.085');
     expect(source).toContain('float powderDetailCalibration = material == 1.0 && uPowderStyle > 1.5');
