@@ -2855,6 +2855,8 @@ describe('Pixi presenter startup configuration', () => {
     expect(end).toBeGreaterThan(start);
     expect(block).toContain('uEmissionVolumeChroma');
     expect(block).toContain('emissionNeighbourMean');
+    expect(block).toContain('emissionState.rgb / max(emissionHuePeak, 0.0001)');
+    expect(block).toContain('mix(vec3(1.0), emissionKeySpectrum, 0.34)');
     expect(block).not.toContain('texture(');
     expect(block).not.toMatch(/\balpha\s*[+*]?=/);
   });

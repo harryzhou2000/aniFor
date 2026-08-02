@@ -5717,8 +5717,11 @@ void main() {
     // twenty-four source bytes before channel headroom. Applying the negative
     // pocket through available body colour keeps it visible after translucent
     // compositing instead of quantising a long aura row into bright-only dots.
-    // It changes RGB only: alpha, support, topology, and 8x resources remain
-    // exactly as they were.
+    // A positive key borrows a restrained amount of the already-sampled aura
+    // spectrum instead of pulling a saturated Fire/Plasma/Elec volume toward
+    // white. This normal-compositor-only arithmetic leaves the compact true-8x
+    // path untouched. It changes RGB only: alpha, support, topology, and 8x
+    // resources remain exactly as they were.
     float emissionCurvature = (volume - emissionNeighbourMean) * 0.28;
     float emissionVolumeTone = clamp(
       (emissionDirectional + emissionCurvature) * (0.42 + volume * 0.58),
@@ -5727,7 +5730,12 @@ void main() {
     vec3 emissionHeadroom = emissionVolumeTone >= 0.0
       ? vec3(1.0) - clamp(color, 0.0, 1.0)
       : clamp(color, 0.0, 1.0);
-    color += emissionHeadroom * emissionVolumeTone;
+    float emissionHuePeak = max(max(emissionState.r, emissionState.g), emissionState.b);
+    vec3 emissionKeySpectrum = emissionState.rgb / max(emissionHuePeak, 0.0001);
+    vec3 emissionKeyWeight = emissionVolumeTone >= 0.0
+      ? mix(vec3(1.0), emissionKeySpectrum, 0.34)
+      : vec3(1.0);
+    color += emissionHeadroom * emissionKeyWeight * emissionVolumeTone;
   } else if (energyCore > 0.5) {
     // Energy owns a luminous semantic core. The lower-resolution emission field
     // remains the surrounding aura, so fast particles never inherit its lag or
