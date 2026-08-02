@@ -123,6 +123,9 @@ import {
   SWCH_STATE_GRAPHICS_AUDIT, prepareSwchStateGraphicsAuditFixture,
 } from './swch-state-graphics-audit';
 import {
+  STOR_STATE_GRAPHICS_AUDIT, prepareStorStateGraphicsAuditFixture,
+} from './stor-state-graphics-audit';
+import {
   PHOTON_SPECTRUM_GRAPHICS_AUDIT, preparePhotonSpectrumGraphicsAuditFixture,
   setPhotonSpectrumGraphicsVisible,
 } from './photon-spectrum-graphics-audit';
@@ -508,6 +511,9 @@ export class Game {
       setSwchStateStyling: (enabled) => {
         this.renderer.setSwchStateStylingEnabled(enabled);
       },
+      setStorStateStyling: (enabled) => {
+        this.renderer.setStorStateStylingEnabled(enabled);
+      },
       setQuartzCrystalStateStyling: (enabled) => {
         this.renderer.setQuartzCrystalStateStylingEnabled(enabled);
       },
@@ -722,6 +728,11 @@ export class Game {
       swchStateGraphicsAtlas: () => SWCH_STATE_GRAPHICS_AUDIT,
       prepareSwchStateGraphicsFixture: () => {
         prepareSwchStateGraphicsAuditFixture(this.simulation);
+        this.renderer.invalidateDynamicPresentation();
+      },
+      storStateGraphicsAtlas: () => STOR_STATE_GRAPHICS_AUDIT,
+      prepareStorStateGraphicsFixture: () => {
+        prepareStorStateGraphicsAuditFixture(this.simulation);
         this.renderer.invalidateDynamicPresentation();
       },
       photonSpectrumGraphicsAtlas: () => PHOTON_SPECTRUM_GRAPHICS_AUDIT,

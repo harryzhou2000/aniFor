@@ -133,6 +133,19 @@ export const SWCH_PRESENTATION_STATE = {
   reservedMask: 0x7ffe,
 } as const;
 
+/**
+ * Native STOR retained-particle state. The low byte is an exact public
+ * identity when native `tmp` holds one; `payloadPresentMask` also preserves an
+ * occupied store whose retained type is not publicly representable. Native
+ * `life > 0` is the post-release cooldown, not a JavaScript timer.
+ */
+export const STOR_PRESENTATION_STATE = {
+  payloadMask: 0x00ff,
+  payloadPresentMask: 0x0100,
+  cooldownMask: 0x0200,
+  reservedMask: 0xfc00,
+} as const;
+
 /** Exact native LAVA ctype ancestry in the owner-multiplexed presentation word. */
 export const LAVA_PRESENTATION_STATE = {
   originMask: 0x00ff,

@@ -6,7 +6,8 @@ import {
   DEUT_PRESENTATION_STATE, GEL_PRESENTATION_STATE, LAVA_PRESENTATION_STATE, POLO_PRESENTATION_STATE,
   PLNT_PRESENTATION_STATE, SEED_PRESENTATION_STATE, SPNG_PRESENTATION_STATE,
   FILT_PRESENTATION_STATE, LCRY_PRESENTATION_STATE, QUARTZ_PRESENTATION_STATE,
-  PIPE_PRESENTATION_STATE, SPRK_PRESENTATION_STATE, SWCH_PRESENTATION_STATE, VIBR_PRESENTATION_STATE,
+  PIPE_PRESENTATION_STATE, SPRK_PRESENTATION_STATE, STOR_PRESENTATION_STATE,
+  SWCH_PRESENTATION_STATE, VIBR_PRESENTATION_STATE,
 } from './types';
 import { readFileSync } from 'node:fs';
 
@@ -1005,6 +1006,54 @@ describe('direct Powder Toy backend', () => {
     expect(ownerAt(restored)).toBe(Material.SWCH);
     const offState = stateAt(restored);
     expect(offState).toBe(SWCH_PRESENTATION_STATE.presentMask);
+  });
+
+  it('projects native STOR water capture and PSCN release through OPS1', async () => {
+    const point = { x: 306, y: 180 } as const;
+    const indexOf = (simulation: PowderToyBackend): number => point.y * simulation.width + point.x;
+    const ownerAt = (simulation: PowderToyBackend): number => simulation.cells()[indexOf(simulation)];
+    const stateAt = (simulation: PowderToyBackend): number => {
+      simulation.cells();
+      return simulation.presentationState()[indexOf(simulation)];
+    };
+
+    const source = await PowderToyBackend.load(moduleArtifact.href);
+    source.paint(point.x, point.y, Material.STOR, 0);
+    expect(ownerAt(source)).toBe(Material.STOR);
+    expect(stateAt(source)).toBe(0);
+
+    // STOR's own native update captures a non-solid neighbour into tmp. This
+    // deliberately uses no render-lab presentation-state write.
+    source.paint(point.x - 1, point.y, Material.Water, 0);
+    source.step();
+    expect(ownerAt(source)).toBe(Material.STOR);
+    const captured = stateAt(source);
+    expect(captured & STOR_PRESENTATION_STATE.payloadMask).toBe(Material.Water);
+    expect(captured & STOR_PRESENTATION_STATE.payloadPresentMask)
+      .toBe(STOR_PRESENTATION_STATE.payloadPresentMask);
+    expect(captured & STOR_PRESENTATION_STATE.cooldownMask).toBe(0);
+    expect(captured & STOR_PRESENTATION_STATE.reservedMask).toBe(0);
+
+    const file = source.saveFile();
+    expect(new TextDecoder().decode(file.slice(0, 4))).toBe('OPS1');
+    const restored = await PowderToyBackend.load(moduleArtifact.href);
+    restored.loadFile(file);
+    expect(ownerAt(restored)).toBe(Material.STOR);
+    expect(stateAt(restored)).toBe(captured);
+
+    // A real PSCN spark causes upstream STOR to release its retained payload
+    // and enter its native ten-tick cooldown. That clears retained `tmp` while
+    // keeping the cooldown fact projected from native `life`.
+    restored.paint(point.x + 1, point.y, Material.PSCN, 0);
+    restored.paint(point.x + 1, point.y, Material.SPRK, 0);
+    restored.step();
+    expect(ownerAt(restored)).toBe(Material.STOR);
+    const released = stateAt(restored);
+    expect(released & STOR_PRESENTATION_STATE.payloadMask).toBe(0);
+    expect(released & STOR_PRESENTATION_STATE.payloadPresentMask).toBe(0);
+    expect(released & STOR_PRESENTATION_STATE.cooldownMask)
+      .toBe(STOR_PRESENTATION_STATE.cooldownMask);
+    expect(released & STOR_PRESENTATION_STATE.reservedMask).toBe(0);
   });
 
   it('projects an exact native FILT owner and preserves its retained state through OPS1', async () => {

@@ -34,6 +34,7 @@ import { applyCanvasFiltSpectrumStyle } from './canvas-filt-spectrum-style';
 import { applyCanvasQuartzCrystalStateStyle } from './canvas-quartz-crystal-state-style';
 import { applyCanvasLcryStateStyle } from './canvas-lcry-state-style';
 import { applyCanvasPipePresentationStyle } from './canvas-pipe-state-style';
+import { applyCanvasStorStateStyle } from './canvas-stor-state-style';
 import { applyCanvasSwchStateStyle } from './canvas-swch-state-style';
 import { shadeCanvasEnergy } from './canvas-energy-style';
 import { shadeCanvasMaterial } from './canvas-material-style';
@@ -330,6 +331,7 @@ export class MaterialRenderer {
   private quartzCrystalStateStylingEnabled = true;
   private lcryStateStylingEnabled = true;
   private pipePresentationStylingEnabled = true;
+  private storStateStylingEnabled = true;
   private swchStateStylingEnabled = true;
   private lavaAncestryStylingEnabled = true;
   // Canonical WebGL body optics only. Canvas deliberately remains a safe,
@@ -910,6 +912,14 @@ export class MaterialRenderer {
     this.changed = true;
   }
 
+  setStorStateStylingEnabled(enabled: boolean): void {
+    if (enabled === this.storStateStylingEnabled) return;
+    this.storStateStylingEnabled = enabled;
+    this.presenter?.setStorStateStylingEnabled(enabled);
+    this.contourChunks.markAll();
+    this.changed = true;
+  }
+
   setSwchStateStylingEnabled(enabled: boolean): void {
     if (enabled === this.swchStateStylingEnabled) return;
     this.swchStateStylingEnabled = enabled;
@@ -1181,6 +1191,7 @@ export class MaterialRenderer {
       this.fieldProfileIdentityStylingEnabled,
       this.lcryStateStylingEnabled,
       this.pipePresentationStylingEnabled,
+      this.storStateStylingEnabled,
       this.swchStateStylingEnabled,
     );
     // Route subsequent dirty cells to the candidate while its first expensive
@@ -2219,6 +2230,9 @@ export class MaterialRenderer {
             }
             if (this.pipePresentationStylingEnabled && presentationState) {
               applyCanvasPipePresentationStyle(this.styledColor, material, presentationState[index]);
+            }
+            if (this.storStateStylingEnabled && presentationState) {
+              applyCanvasStorStateStyle(this.styledColor, material, presentationState[index]);
             }
             if (this.swchStateStylingEnabled && presentationState) {
               applyCanvasSwchStateStyle(this.styledColor, material, presentationState[index]);

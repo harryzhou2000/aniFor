@@ -592,6 +592,23 @@ uint16_t ProjectPipeState(Particle const &part)
 	);
 }
 
+uint16_t ProjectStorState(Particle const &part)
+{
+	// STOR keeps its captured particle type only in tmp. The low byte carries an
+	// exact public identity when that retained native type can round-trip, while
+	// bit 8 still distinguishes an occupied store holding an unknown payload.
+	// After the official PSCN release, upstream sets life to ten; expose only
+	// that nonzero native cooldown in bit 9. tmp/life and all captured particle
+	// fields remain native and OPS-authoritative.
+	auto const payloadType = TYP(part.tmp);
+	auto const payloadPresent = payloadType != PT_NONE;
+	return uint16_t(
+		ExactPublicMaterialIdentity(payloadType)
+		| (payloadPresent ? 0x0100 : 0)
+		| (part.life > 0 ? 0x0200 : 0)
+	);
+}
+
 void ExtractFields()
 {
 	std::fill_n(materialField, FIELD_SIZE, uint8_t(0));
@@ -740,6 +757,10 @@ void ExtractFields()
 				presentationStateField[offset] = uint16_t(
 					0x8000 | (part.life >= 10 ? 0x0001 : 0)
 				);
+			}
+			else if (part.type == PT_STOR)
+			{
+				presentationStateField[offset] = ProjectStorState(part);
 			}
 			else if (part.type == PT_SEED)
 			{

@@ -50,6 +50,8 @@
     "audit:pipe-state:8x": "npm run build && node scripts/verify-browser-input.mjs --pipe-state-graphics-only --render-scale=8 --webgl-only --production-bundle",
     "audit:swch-state": "npm run build && node scripts/verify-browser-input.mjs --swch-state-graphics-only --webgl-only --production-bundle",
     "audit:swch-state:8x": "npm run build && node scripts/verify-browser-input.mjs --swch-state-graphics-only --render-scale=8 --webgl-only --production-bundle",
+    "audit:stor-state": "npm run build && node scripts/verify-browser-input.mjs --stor-state-graphics-only --webgl-only --production-bundle",
+    "audit:stor-state:8x": "npm run build && node scripts/verify-browser-input.mjs --stor-state-graphics-only --render-scale=8 --webgl-only --production-bundle",
     "audit:lava-state": "node scripts/verify-browser-input.mjs --lava-state-graphics-only",
     "audit:botanical-lifecycle": "node scripts/verify-browser-input.mjs --botanical-lifecycle-graphics-only",
     "audit:spark-state": "node scripts/verify-browser-input.mjs --spark-state-graphics-only",

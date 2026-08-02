@@ -2280,6 +2280,34 @@ describe('Pixi presenter startup configuration', () => {
     expect(normal).not.toContain('uSwchStateTexture');
   });
 
+  it('projects native STOR reservoir state through the existing packed state in both WebGL compositors', () => {
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');
+    const eightEnd = source.indexOf('const FIELD_FRAGMENT = `', eightStart);
+    const eight = source.slice(eightStart, eightEnd);
+    const normalStart = source.indexOf('const FIELD_FRAGMENT = `', eightEnd);
+    const normalEnd = source.indexOf('`;\n\n/** Primary WebGL presentation', normalStart);
+    const normal = source.slice(normalStart, normalEnd);
+    const packedStart = eight.indexOf('  bool needsPackedState =');
+    const packedEnd = eight.indexOf('  float sourceTarget =', packedStart);
+    const packed = eight.slice(packedStart, packedEnd);
+
+    expect(eight).toContain('uniform float uStorStateStyling;');
+    expect(eight).toContain('bool storOwner = material == 163.0;');
+    expect(eight).toContain('vec3 storStateEightXDelta(vec3 color, float packedState)');
+    expect(eight).toContain('bool loaded = mod(floor(packedState / 256.0), 2.0) > 0.5;');
+    expect(eight).toContain('bool cooldown = mod(floor(packedState / 512.0), 2.0) > 0.5;');
+    expect(packed).toContain('|| (uStorStateStyling > 0.5 && storOwner)');
+    expect(eight).toContain('color += storStateEightXDelta(color, sourceTarget);');
+    expect(eight.match(/texture\(uWallTexture, uv\)/g)).toHaveLength(4);
+
+    expect(normal).toContain('uniform float uStorStateStyling;');
+    expect(normal).toContain('vec3 storStateDelta(vec3 color, vec2 stateBytes)');
+    expect(normal).toContain('if (uStorStateStyling > 0.5 && material == 163.0');
+    expect(normal).toContain('color += storStateDelta(color, wallState.ba);');
+    expect(normal).not.toContain('uStorStateTexture');
+  });
+
   it('restores independent PHOT spectrum after true-8x matter and wall composition', () => {
     const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
     const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');
