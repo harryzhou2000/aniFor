@@ -48,6 +48,7 @@ import type { GeologicalSolidGraphicsAuditSnapshot } from './geological-solid-gr
 import type {
   ThermalCatalyticRigidGraphicsAuditSnapshot,
 } from './thermal-catalytic-rigid-graphics-audit';
+import type { GooSolidGraphicsAuditSnapshot } from './goo-solid-graphics-audit';
 import type { LavaStateGraphicsAuditSnapshot } from './lava-state-graphics-audit';
 import type {
   BotanicalLifecycleGraphicsAuditSnapshot,
@@ -69,6 +70,7 @@ export interface BrowserInputAuditApi {
   presentationAuxiliary(x: number, y: number): number;
   geologicalSolidStylingEnabled(): boolean;
   thermalCatalyticRigidStylingEnabled(): boolean;
+  gooSolidStylingEnabled(): boolean;
   gasIdentityStyle(x: number, y: number): number;
   atmosphereSupportAudit(): AtmosphereSupportAudit | undefined;
   occupiedCells(): number;
@@ -131,6 +133,7 @@ export interface BrowserInputAuditApi {
   setPowderMesostrataStyling(enabled: boolean): void;
   setGeologicalSolidStyling(enabled: boolean): void;
   setThermalCatalyticRigidStyling(enabled: boolean): void;
+  setGooSolidStyling(enabled: boolean): void;
   setPowderRenderStyle(style: PowderRenderStyle): void;
   clear(): void;
   setRadius(radius: number): void;
@@ -232,6 +235,8 @@ export interface BrowserInputAuditApi {
   prepareGeologicalSolidGraphicsFixture(): void;
   thermalCatalyticRigidGraphicsAtlas(): ThermalCatalyticRigidGraphicsAuditSnapshot;
   prepareThermalCatalyticRigidGraphicsFixture(): void;
+  gooSolidGraphicsAtlas(): GooSolidGraphicsAuditSnapshot;
+  prepareGooSolidGraphicsFixture(): void;
   photonSpectrumGraphicsAtlas(): PhotonSpectrumGraphicsAuditSnapshot;
   preparePhotonSpectrumGraphicsFixture(): void;
   setPhotonSpectrumGraphicsVisible(visible: boolean): void;

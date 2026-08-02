@@ -142,6 +142,9 @@ import {
   prepareThermalCatalyticRigidGraphicsAuditFixture,
 } from './thermal-catalytic-rigid-graphics-audit';
 import {
+  GOO_SOLID_GRAPHICS_AUDIT, prepareGooSolidGraphicsAuditFixture,
+} from './goo-solid-graphics-audit';
+import {
   PHOTON_SPECTRUM_GRAPHICS_AUDIT, preparePhotonSpectrumGraphicsAuditFixture,
   setPhotonSpectrumGraphicsVisible,
 } from './photon-spectrum-graphics-audit';
@@ -396,6 +399,7 @@ export class Game {
       presentationAuxiliary: (x, y) => this.renderer.presentationAuxiliaryAt(x, y),
       geologicalSolidStylingEnabled: () => this.renderer.geologicalSolidStylingIsEnabled(),
       thermalCatalyticRigidStylingEnabled: () => this.renderer.thermalCatalyticRigidStylingIsEnabled(),
+      gooSolidStylingEnabled: () => this.renderer.gooSolidStylingIsEnabled(),
       gasIdentityStyle: (x, y) => this.renderer.gasIdentityStyleAt(x, y),
       atmosphereSupportAudit: () => this.renderer.getAtmosphereSupportAudit(),
       occupiedCells: () => {
@@ -570,6 +574,9 @@ export class Game {
       },
       setThermalCatalyticRigidStyling: (enabled) => {
         this.renderer.setThermalCatalyticRigidStylingEnabled(enabled);
+      },
+      setGooSolidStyling: (enabled) => {
+        this.renderer.setGooSolidStylingEnabled(enabled);
       },
       setPowderRenderStyle: (style) => {
         this.renderer.setPowderRenderStyle(style);
@@ -801,6 +808,12 @@ export class Game {
       thermalCatalyticRigidGraphicsAtlas: () => THERMAL_CATALYTIC_RIGID_GRAPHICS_AUDIT,
       prepareThermalCatalyticRigidGraphicsFixture: () => {
         prepareThermalCatalyticRigidGraphicsAuditFixture(this.simulation);
+        this.renderer.synchronizeFixtureMaterialPlane();
+        this.renderer.invalidateDynamicPresentation();
+      },
+      gooSolidGraphicsAtlas: () => GOO_SOLID_GRAPHICS_AUDIT,
+      prepareGooSolidGraphicsFixture: () => {
+        prepareGooSolidGraphicsAuditFixture(this.simulation);
         this.renderer.synchronizeFixtureMaterialPlane();
         this.renderer.invalidateDynamicPresentation();
       },

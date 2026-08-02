@@ -133,6 +133,7 @@ uniform float uCellularMaterialStyling;
 uniform float uStructuralRigidStyling;
 uniform float uGeologicalSolidStyling;
 uniform float uThermalCatalyticRigidStyling;
+uniform float uGooSolidStyling;
 uniform float uMechanismBodyStyling;
 uniform float uElectronicIdentityStyling;
 uniform float uFieldProfileIdentityStyling;
@@ -1222,6 +1223,19 @@ vec3 thermalCatalyticRigidEightXDelta(float material, vec2 position, float depth
   }
   return vec3(0.0);
 }
+// Native GOO is pressure-reactive in simulation, but this body layer never
+// infers pressure. It merely gives a proven, current deep GOO core a soft
+// static volume cue using arithmetic already safe at 15M fragments.
+vec3 gooSolidEightXDelta(vec2 position, float depthT, float bodyResponse) {
+  vec2 cell = floor(position);
+  float crown = max(0.0, bodyResponse);
+  float pocket = max(0.0, -bodyResponse);
+  float compression = 1.0 - step(2.0, mod(cell.x * 2.0 + cell.y * 3.0, 29.0));
+  float bubble = 1.0 - step(0.5, mod(cell.x * 5.0 - cell.y * 2.0, 47.0));
+  return clamp(vec3(2.0, 4.0, 5.0) * crown - vec3(4.0, 2.0, 1.0) * pocket
+    + vec3(-1.0, 0.0, 2.0) * compression * depthT + vec3(0.0, 1.0, 1.0) * bubble * depthT,
+  vec3(-10.0), vec3(10.0)) / 255.0;
+}
 // Transport, actuator, and storage devices are semantically distinct native
 // hardware, not generic circuit panels.  Keep their compact direct-mesh
 // grammar exact-owner, static, and RGB-only: material/world position/density
@@ -2192,6 +2206,15 @@ void main() {
       material, grid, thermalCatalyticDepth, thermalCatalyticResponse
     ), 0.0, 1.0);
   }
+  if (uGooSolidStyling > 0.5 && family == 0.0 && traits < 0.5 && !materialEmissive
+    && material == 71.0 && depth > 6.0 / 255.0
+    && q00 * q10 * q01 * q11 > 0.5 && density > 0.76) {
+    float gooDepth = smoothstep(6.0 / 255.0, 42.0 / 255.0, depth);
+    float gooPhase = fract((grid.x * 2.0 + grid.y + material * 11.0) / 128.0);
+    float gooTriangle = 1.0 - abs(gooPhase * 2.0 - 1.0);
+    float gooResponse = (gooTriangle * gooTriangle * (3.0 - gooTriangle * 2.0) - 0.5) * gooDepth;
+    color = clamp(color + gooSolidEightXDelta(grid, gooDepth, gooResponse), 0.0, 1.0);
+  }
   // Sensor glyphs are an exact device-owner overlay. They remain static and
   // RGB-only so sparse wires, isolated cells, holes, walls, and semantics keep
   // the common compositor's coverage and native ownership.
@@ -3115,6 +3138,7 @@ uniform float uCellularMaterialStyling;
 uniform float uStructuralRigidStyling;
 uniform float uGeologicalSolidStyling;
 uniform float uThermalCatalyticRigidStyling;
+uniform float uGooSolidStyling;
 uniform float uMechanismBodyStyling;
 uniform float uElectronicIdentityStyling;
 uniform float uFieldProfileIdentityStyling;
@@ -4194,6 +4218,16 @@ vec3 thermalCatalyticRigidCoreDelta(float material, vec2 position, float depthT,
     vec3(-12.0), vec3(12.0)) / 255.0;
   }
   return vec3(0.0);
+}
+vec3 gooSolidCoreDelta(vec2 position, float depthT, float signedRelief) {
+  vec2 cell = floor(position);
+  float crown = max(0.0, signedRelief);
+  float pocket = max(0.0, -signedRelief);
+  float compression = 1.0 - step(2.0, mod(cell.x * 2.0 + cell.y * 3.0, 29.0));
+  float bubble = 1.0 - step(0.5, mod(cell.x * 5.0 - cell.y * 2.0, 47.0));
+  return clamp(vec3(2.0, 4.0, 5.0) * crown - vec3(4.0, 2.0, 1.0) * pocket
+    + vec3(-1.0, 0.0, 2.0) * compression * depthT + vec3(0.0, 1.0, 1.0) * bubble * depthT,
+  vec3(-10.0), vec3(10.0)) / 255.0;
 }
 // Native transport and actuator bodies sit beneath later role/thermal decals.
 // They use only exact owner, world position, and the caller's established
@@ -7460,6 +7494,14 @@ void main() {
       material, fieldPosition, thermalCatalyticDepth, thermalCatalyticRelief
     ), 0.0, 1.0);
   }
+  if (uGooSolidStyling > 0.5 && family == 0.0
+    && surfaceOnly < 0.5 && halo < 0.5 && wall < 0.5
+    && wallOnly < 0.5 && emissionOnly < 0.5 && traits < 0.5 && !materialEmissive
+    && material == 71.0 && solidOpticalDepth > 6.0 / 255.0) {
+    float gooDepth = smoothstep(6.0 / 255.0, 42.0 / 255.0, solidOpticalDepth);
+    float gooRelief = clamp(solidReliefTone * 255.0 / 7.0, -1.0, 1.0) * gooDepth;
+    color = clamp(color + gooSolidCoreDelta(fieldPosition, gooDepth, gooRelief), 0.0, 1.0);
+  }
   // Static role accents cross phase boundaries without widening semantic
   // silhouettes. Empty-space volume reconstruction intentionally remains free
   // of role metadata because it no longer has an authoritative material ID.
@@ -7896,6 +7938,7 @@ export class PixiFieldPresenter {
       uStructuralRigidStyling: { value: 1, type: 'f32' },
       uGeologicalSolidStyling: { value: 1, type: 'f32' },
       uThermalCatalyticRigidStyling: { value: 1, type: 'f32' },
+      uGooSolidStyling: { value: 1, type: 'f32' },
       uMechanismBodyStyling: { value: 1, type: 'f32' },
       uElectronicIdentityStyling: { value: 1, type: 'f32' },
       uFieldProfileIdentityStyling: { value: 1, type: 'f32' },
@@ -8122,6 +8165,11 @@ export class PixiFieldPresenter {
     return typeof value === 'number' && value > 0.5;
   }
 
+  gooSolidStylingEnabled(): boolean {
+    const value = this.uniforms.uniforms.uGooSolidStyling;
+    return typeof value === 'number' && value > 0.5;
+  }
+
   /** Audit-only readback of the material byte staged for the semantic texture. */
   semanticMaterialAt(x: number, y: number): number {
     if (x < 0 || y < 0 || x >= this.width || y >= this.height) return -1;
@@ -8280,6 +8328,7 @@ export class PixiFieldPresenter {
     structuralRigidStylingEnabled = true,
     geologicalSolidStylingEnabled = true,
     thermalCatalyticRigidStylingEnabled = true,
+    gooSolidStylingEnabled = true,
     earthenPowderStylingEnabled = true,
     powderMesostrataStylingEnabled = true,
     moltenBodyOpticsEnabled = true,
@@ -8320,6 +8369,7 @@ export class PixiFieldPresenter {
     uniforms.uStructuralRigidStyling = structuralRigidStylingEnabled ? 1 : 0;
     uniforms.uGeologicalSolidStyling = geologicalSolidStylingEnabled ? 1 : 0;
     uniforms.uThermalCatalyticRigidStyling = thermalCatalyticRigidStylingEnabled ? 1 : 0;
+    uniforms.uGooSolidStyling = gooSolidStylingEnabled ? 1 : 0;
     uniforms.uMechanismBodyStyling = mechanismBodyStylingEnabled ? 1 : 0;
     uniforms.uElectronicIdentityStyling = electronicIdentityStylingEnabled ? 1 : 0;
     uniforms.uFieldProfileIdentityStyling = fieldProfileIdentityStylingEnabled ? 1 : 0;
@@ -8477,6 +8527,11 @@ export class PixiFieldPresenter {
 
   setThermalCatalyticRigidStylingEnabled(enabled: boolean): void {
     this.uniforms.uniforms.uThermalCatalyticRigidStyling = enabled ? 1 : 0;
+    this.renderApplication();
+  }
+
+  setGooSolidStylingEnabled(enabled: boolean): void {
+    this.uniforms.uniforms.uGooSolidStyling = enabled ? 1 : 0;
     this.renderApplication();
   }
 

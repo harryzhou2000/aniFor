@@ -267,6 +267,16 @@ controls, and the true `4896×3072` direct path via
 `npm run audit:thermal-catalytic-rigid` and
 `npm run audit:thermal-catalytic-rigid:8x`.
 
+Native pressure-reactive GOO now has a distinct soft solid-body read without
+inventing a JavaScript pressure state: only a currently authoritative,
+depth-proven GOO core receives a restrained compression/bubble RGB cue from
+the existing solid depth and relief inputs. Surfaces, fine structures,
+authored holes/open notches, native walls, Water/Metal contacts, alpha,
+semantic support, reactions, and the native pressure-disappearance behaviour
+remain untouched. `npm run audit:goo-solid` proves the exact-owner
+flat→styled→flat response and protected controls; `npm run audit:goo-solid:8x`
+uses the equivalent true-`4896×3072` direct-mesh gate.
+
 The direct true-8× compositor now also restores native-wall refraction for exact translucent Glass and Ice. It moves only the already-generated analytic wall pattern beneath a partially transparent owner: Glass uses a coherent boundary shift and Ice uses a stable two-facet shift. The wall ID/support still comes from the same nearest texel, and no alpha, semantic support, material ownership, field, texture sample, pass, target, upload, or output-scale resource changes. The completed-fence gate captures flat→refracted→flat Glass/Ice against wall patterns, retains opaque Metal as an exact control, and repeats the full forced-stall/context-loss recovery sequence. The accepted run stayed at `1797.3/1837.7/1943.0 ms` GPU-fence median/p90/max with zero browser errors.
 
 The true-8× direct mesh now also consumes the shared Surface contour control for opaque rigid bodies and supported Smooth powder. It derives a small family-coloured key/fill from the already-live four exact owner samples and their analytic slope: Smooth powder needs at least two local owner samples, while Grains, Local, traits, emissive matter, and an isolated Sand cell are exact no-ops. This is RGB-only and leaves alpha, support, material ownership, physics, authored holes, native-wall composition, and every resource budget untouched. Its completed-fence gate captures Metal and a settled Sand slope flat→lit→flat, verifies bounded response and byte-repeatability, and keeps the isolated grain unchanged.

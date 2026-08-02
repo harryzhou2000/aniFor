@@ -48,6 +48,7 @@ import {
 } from './canvas-structural-rigid-style';
 import { applyCanvasGeologicalSolidCoreOptics } from './canvas-geological-solid-style';
 import { applyCanvasThermalCatalyticRigidCoreOptics } from './canvas-thermal-catalytic-rigid-style';
+import { applyCanvasGooSolidCoreOptics } from './canvas-goo-solid-style';
 import { applyCanvasSensorMorphology } from './canvas-sensor-style';
 import { applyCanvasUnusualPowderStyle } from './canvas-unusual-powder-style';
 import { applyCanvasExplosivePowderStyle } from './canvas-explosive-powder-style';
@@ -314,6 +315,7 @@ export class MaterialRenderer {
   private structuralRigidStylingEnabled = true;
   private geologicalSolidStylingEnabled = true;
   private thermalCatalyticRigidStylingEnabled = true;
+  private gooSolidStylingEnabled = true;
   private mechanismBodyStylingEnabled = true;
   private electronicIdentityStylingEnabled = true;
   private fieldProfileIdentityStylingEnabled = true;
@@ -579,6 +581,10 @@ export class MaterialRenderer {
       ?? this.thermalCatalyticRigidStylingEnabled;
   }
 
+  gooSolidStylingIsEnabled(): boolean {
+    return this.presenter?.gooSolidStylingEnabled() ?? this.gooSolidStylingEnabled;
+  }
+
   /** Audit-only proof that native dirty state reached the active presentation staging grid. */
   renderedMaterialAt(x: number, y: number): number {
     if (x < 0 || y < 0 || x >= this.simulation.width || y >= this.simulation.height) return -1;
@@ -815,6 +821,15 @@ export class MaterialRenderer {
     if (enabled === this.thermalCatalyticRigidStylingEnabled) return;
     this.thermalCatalyticRigidStylingEnabled = enabled;
     this.presenter?.setThermalCatalyticRigidStylingEnabled(enabled);
+    this.contourChunks.markAll();
+    this.changed = true;
+  }
+
+  /** Native GOO deep-body cue; no pressure state is inferred or persisted. */
+  setGooSolidStylingEnabled(enabled: boolean): void {
+    if (enabled === this.gooSolidStylingEnabled) return;
+    this.gooSolidStylingEnabled = enabled;
+    this.presenter?.setGooSolidStylingEnabled(enabled);
     this.contourChunks.markAll();
     this.changed = true;
   }
@@ -1292,6 +1307,7 @@ export class MaterialRenderer {
       this.structuralRigidStylingEnabled,
       this.geologicalSolidStylingEnabled,
       this.thermalCatalyticRigidStylingEnabled,
+      this.gooSolidStylingEnabled,
       this.earthenPowderStylingEnabled,
       this.powderMesostrataStylingEnabled,
       this.moltenBodyOpticsEnabled,
@@ -2310,6 +2326,13 @@ export class MaterialRenderer {
           if (this.thermalCatalyticRigidStylingEnabled && phase === RenderPhase.Solid
             && wall === 0 && applicableTraits === 0 && !info.emissive) {
             applyCanvasThermalCatalyticRigidCoreOptics(
+              this.styledColor, material, x, y, denseSolidInterior,
+              solidOpticalDepth, solidRelief, this.solidOpticalDepthEnabled,
+            );
+          }
+          if (this.gooSolidStylingEnabled && phase === RenderPhase.Solid
+            && wall === 0 && applicableTraits === 0 && !info.emissive) {
+            applyCanvasGooSolidCoreOptics(
               this.styledColor, material, x, y, denseSolidInterior,
               solidOpticalDepth, solidRelief, this.solidOpticalDepthEnabled,
             );
