@@ -64,6 +64,8 @@
     "audit:thermal-catalytic-rigid:8x": "npm run build && node scripts/verify-browser-input.mjs --thermal-catalytic-rigid-graphics-only --render-scale=8 --webgl-only --production-bundle",
     "audit:goo-solid": "npm run build && node scripts/verify-browser-input.mjs --goo-solid-graphics-only --webgl-only --production-bundle",
     "audit:goo-solid:8x": "npm run build && node scripts/verify-browser-input.mjs --goo-solid-graphics-only --render-scale=8 --webgl-only --production-bundle",
+    "audit:distilled-diesel-liquid": "npm run build && node scripts/verify-browser-input.mjs --distilled-diesel-liquid-graphics-only --webgl-only --production-bundle",
+    "audit:distilled-diesel-liquid:8x": "npm run build && node scripts/verify-browser-input.mjs --distilled-diesel-liquid-graphics-only --render-scale=8 --webgl-only --production-bundle",
     "audit:dense-body-ambient": "npm run build && node scripts/verify-browser-input.mjs --dense-body-ambient-only --webgl-only --production-bundle",
     "audit:dense-body-ambient:8x": "npm run build && node scripts/verify-browser-input.mjs --dense-body-ambient-only --render-scale=8 --webgl-only --production-bundle",
     "audit:lava-state": "node scripts/verify-browser-input.mjs --lava-state-graphics-only",

@@ -2611,7 +2611,7 @@ void main() {
     // Empty support, and all non-owner materials are exact no-ops.
     if (uLiquidIdentityStyling > 0.5 && !materialEmissive
       && liquidSpeciesDifference < 0.035
-      && (material == 36.0 || material == 37.0 || material == 58.0 || material == 95.0
+      && (material == 34.0 || material == 35.0 || material == 36.0 || material == 37.0 || material == 58.0 || material == 95.0
         || material == 38.0 || (material >= 54.0 && material <= 57.0)
         || (material >= 59.0 && material <= 62.0)
         || material == 100.0 || material == 102.0 || material == 104.0
@@ -3601,6 +3601,22 @@ vec3 liquidMaterialIdentityDelta(
     vec3 key = material == 37.0 ? vec3(0.006, 0.042, 0.064) : vec3(0.003, 0.029, 0.065);
     vec3 shadow = material == 37.0 ? vec3(0.015, 0.008, 0.006) : vec3(0.017, 0.010, 0.004);
     identity = key * frost * (0.52 + slopeKey * 0.48) - shadow * trough;
+  } else if (material == 34.0) {
+    // DSTW: quiet clean-water threads distinguish it from ordinary aqueous water.
+    float thread = 1.0 - abs(fract(
+      worldPosition.x * 0.09375 + worldPosition.y * 0.0625
+    ) * 2.0 - 1.0);
+    float crest = smoothstep(0.72, 0.94, thread);
+    float trough = 1.0 - smoothstep(0.22, 0.50, thread);
+    identity = crest * vec3(0.004, 0.020, 0.036) - trough * vec3(0.008, 0.003, 0.002);
+  } else if (material == 35.0) {
+    // DESL: heavier warm hydrocarbon ribbons, separate from Oil's shared volume.
+    float ribbon = 1.0 - abs(fract(
+      worldPosition.x * 0.0625 - worldPosition.y * 0.09375
+    ) * 2.0 - 1.0);
+    float crest = smoothstep(0.68, 0.92, ribbon);
+    float pocket = 1.0 - smoothstep(0.24, 0.54, ribbon);
+    identity = crest * vec3(0.040, 0.016, -0.010) - pocket * vec3(0.034, 0.022, 0.012);
   } else if (material == 38.0) {
     // SOAP: crossed thin-film bands split the spectral key by channel.
     float diagonalSaw = fract(
@@ -6168,14 +6184,14 @@ void main() {
         }
       }
     }
-    // Eighteen unusual, metallic, cryogenic, and radioactive liquids retain a world-anchored material signature
+    // Twenty ordinary, unusual, metallic, cryogenic, and radioactive liquids retain a world-anchored material signature
     // after generic body optics. The authoritative semantic fragment is the
     // only owner: reconstructed support, walls, halos, and emissive projections
     // remain exact. This changes RGB only and adds no sample or resource.
     if (uLiquidIdentityStyling > 0.5 && liquidOnly < 0.5 && halo < 0.5
       && surfaceOnly < 0.5 && wall < 0.5 && emissionOnly < 0.5
       && family == 2.0 && !materialEmissive
-      && (material == 36.0 || material == 37.0 || material == 58.0 || material == 95.0
+      && (material == 34.0 || material == 35.0 || material == 36.0 || material == 37.0 || material == 58.0 || material == 95.0
         || material == 38.0 || (material >= 54.0 && material <= 57.0)
         || (material >= 59.0 && material <= 62.0)
         || material == 100.0 || material == 102.0

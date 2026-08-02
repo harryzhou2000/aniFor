@@ -145,6 +145,10 @@ import {
   GOO_SOLID_GRAPHICS_AUDIT, prepareGooSolidGraphicsAuditFixture,
 } from './goo-solid-graphics-audit';
 import {
+  DISTILLED_DIESEL_LIQUID_GRAPHICS_AUDIT,
+  prepareDistilledDieselLiquidGraphicsAuditFixture,
+} from './distilled-diesel-liquid-graphics-audit';
+import {
   PHOTON_SPECTRUM_GRAPHICS_AUDIT, preparePhotonSpectrumGraphicsAuditFixture,
   setPhotonSpectrumGraphicsVisible,
 } from './photon-spectrum-graphics-audit';
@@ -814,6 +818,12 @@ export class Game {
       gooSolidGraphicsAtlas: () => GOO_SOLID_GRAPHICS_AUDIT,
       prepareGooSolidGraphicsFixture: () => {
         prepareGooSolidGraphicsAuditFixture(this.simulation);
+        this.renderer.synchronizeFixtureMaterialPlane();
+        this.renderer.invalidateDynamicPresentation();
+      },
+      distilledDieselLiquidGraphicsAtlas: () => DISTILLED_DIESEL_LIQUID_GRAPHICS_AUDIT,
+      prepareDistilledDieselLiquidGraphicsFixture: () => {
+        prepareDistilledDieselLiquidGraphicsAuditFixture(this.simulation);
         this.renderer.synchronizeFixtureMaterialPlane();
         this.renderer.invalidateDynamicPresentation();
       },

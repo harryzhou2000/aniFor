@@ -49,6 +49,9 @@ import type {
   ThermalCatalyticRigidGraphicsAuditSnapshot,
 } from './thermal-catalytic-rigid-graphics-audit';
 import type { GooSolidGraphicsAuditSnapshot } from './goo-solid-graphics-audit';
+import type {
+  DistilledDieselLiquidGraphicsAuditSnapshot,
+} from './distilled-diesel-liquid-graphics-audit';
 import type { LavaStateGraphicsAuditSnapshot } from './lava-state-graphics-audit';
 import type {
   BotanicalLifecycleGraphicsAuditSnapshot,
@@ -237,6 +240,8 @@ export interface BrowserInputAuditApi {
   prepareThermalCatalyticRigidGraphicsFixture(): void;
   gooSolidGraphicsAtlas(): GooSolidGraphicsAuditSnapshot;
   prepareGooSolidGraphicsFixture(): void;
+  distilledDieselLiquidGraphicsAtlas(): DistilledDieselLiquidGraphicsAuditSnapshot;
+  prepareDistilledDieselLiquidGraphicsFixture(): void;
   photonSpectrumGraphicsAtlas(): PhotonSpectrumGraphicsAuditSnapshot;
   preparePhotonSpectrumGraphicsFixture(): void;
   setPhotonSpectrumGraphicsVisible(visible: boolean): void;

@@ -698,12 +698,12 @@ describe('Pixi presenter startup configuration', () => {
     expect(presenter.app.render).toHaveBeenCalledOnce();
   });
 
-  it('styles exact unusual, metallic, cryogenic, and radioactive liquids with bounded RGB arithmetic', () => {
+  it('styles exact ordinary, unusual, metallic, cryogenic, and radioactive liquids with bounded RGB arithmetic', () => {
     const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
     const helperStart = source.indexOf('vec3 liquidMaterialIdentityDelta(');
     const helperEnd = source.indexOf('vec3 botanicalIdentityDelta', helperStart);
     const helper = source.slice(helperStart, helperEnd);
-    const blockStart = source.indexOf('// Eighteen unusual, metallic, cryogenic, and radioactive liquids retain a world-anchored material signature');
+    const blockStart = source.indexOf('// Twenty ordinary, unusual, metallic, cryogenic, and radioactive liquids retain a world-anchored material signature');
     const blockEnd = source.indexOf('  } else {', blockStart);
     const block = source.slice(blockStart, blockEnd);
     const ids = [...helper.matchAll(/material == (\d+)\.0/g)].map((match) => Number(match[1]));
@@ -716,7 +716,7 @@ describe('Pixi presenter startup configuration', () => {
     expect(blockEnd).toBeGreaterThan(blockStart);
     expect(dispatchStart).toBeGreaterThan(0);
     expect([...new Set(ids)]).toEqual([
-      36, 95, 37, 58, 38, 54, 55, 56, 57, 59, 60, 61, 62, 202, 207, 100, 102, 104,
+      36, 95, 37, 58, 34, 35, 38, 54, 55, 56, 57, 59, 60, 61, 62, 202, 207, 100, 102, 104,
     ]);
     for (const motif of [
       'thinFilm', 'prism', 'bubbles', 'foldCrease',

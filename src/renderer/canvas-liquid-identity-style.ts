@@ -71,6 +71,7 @@ export const CANVAS_LIQUID_IDENTITY_LOOKUP_BYTES = STYLE_BY_MATERIAL.byteLength
 /** Returns whether a liquid belongs to the authored exact-identity layer. */
 export function hasCanvasLiquidIdentityStyle(material: number): boolean {
   return material === Material.MWAX || material === Material.PSTE || material === Material.RSST
+    || material === Material.DistilledWater || material === Material.Diesel
     || material >= 0 && material < STYLE_BY_MATERIAL.length
     && STYLE_BY_MATERIAL[material] !== NO_STYLE;
 }
@@ -95,6 +96,13 @@ export function applyCanvasLiquidIdentityStyle(
   surfaceExposure: number,
   columnDepthByte: number,
 ): void {
+  if (material === Material.DistilledWater || material === Material.Diesel) {
+    applyOrdinaryLiquidIdentityStyle(
+      output, material, x, y, neighbourDensity, fieldAlpha,
+      signedFieldRelief, surfaceExposure, columnDepthByte,
+    );
+    return;
+  }
   const style = material >= 0 && material < STYLE_BY_MATERIAL.length
     ? STYLE_BY_MATERIAL[material] : NO_STYLE;
   if (style !== NO_STYLE) {
@@ -116,6 +124,37 @@ export function applyCanvasLiquidIdentityStyle(
       output, material, x, y, neighbourDensity, fieldAlpha,
       signedFieldRelief, surfaceExposure, columnDepthByte,
     );
+  }
+}
+
+/** Two common liquids use compact arithmetic rather than growing the 46 KiB motif atlas. */
+function applyOrdinaryLiquidIdentityStyle(
+  output: Float32Array,
+  material: Material.DistilledWater | Material.Diesel,
+  x: number,
+  y: number,
+  neighbourDensity: number,
+  fieldAlpha: number,
+  signedFieldRelief: number,
+  surfaceExposure: number,
+  columnDepthByte: number,
+): void {
+  const connected = fieldAlpha * (0.68 / 255) + neighbourDensity * 0.04;
+  const depth = columnDepthByte * (1 / 255);
+  const phase = positiveModulo(material === Material.DistilledWater
+    ? x * 3 + y * 2 : x * 2 - y * 3, 32);
+  const crest = phase <= 3 || phase >= 28 ? 1 : 0;
+  const pocket = phase >= 13 && phase <= 18 ? 1 : 0;
+  const relief = signedFieldRelief * connected * 11;
+  const surface = surfaceExposure * connected;
+  if (material === Material.DistilledWater) {
+    output[0] += clampDelta(relief + 0.25 + crest * 1.5 - pocket * 2 - depth + surface * 0.5);
+    output[1] += clampDelta(relief + 0.75 + crest * 5 - pocket + depth * 2 + surface * 1.5);
+    output[2] += clampDelta(relief + 1.25 + crest * 9 - pocket * 3 + depth * 4 + surface * 2.5);
+  } else {
+    output[0] += clampDelta(relief + 1.25 + crest * 7 - pocket * 6 - depth * 3 + surface);
+    output[1] += clampDelta(relief - 0.75 + crest * 3 - pocket * 4 - depth * 2 + surface * 0.3);
+    output[2] += clampDelta(relief - 0.5 - crest * 2 - pocket * 2 - depth - surface * 0.2);
   }
 }
 
@@ -309,12 +348,24 @@ function buildMotifLookup(): void {
         if (ripple <= 3 || ripple >= 29) { red = 2; green = 8; blue = 13; }
         else if (ripple >= 14 && ripple <= 18) { red = -3; green = 1; blue = 5; }
         else { red = 0; green = 3; blue = 6; }
-      } else {
+      } else if (style === 14) {
         // LO2: related cold body with a quieter oxygen-blue interference fold.
         const fold = (x * 3 - y * 2) & 31;
         if (fold <= 3 || fold >= 28) { red = 1; green = 6; blue = 13; }
         else if (fold >= 13 && fold <= 17) { red = -4; green = 0; blue = 5; }
         else { red = -1; green = 2; blue = 6; }
+      } else if (style === 15) {
+        // DSTW: quiet clean-water caustic threads, lighter than ordinary water.
+        const thread = (x * 3 + y * 2) & 31;
+        if (thread <= 2 || thread >= 29) { red = 1; green = 5; blue = 9; }
+        else if (thread >= 14 && thread <= 18) { red = -2; green = 0; blue = 3; }
+        else { green = 1; blue = 2; }
+      } else {
+        // DESL: dense warm oil ribbons and restrained carbon-rich pockets.
+        const ribbon = (x * 2 - y * 3) & 31;
+        if (ribbon <= 3 || ribbon >= 28) { red = 7; green = 3; blue = -2; }
+        else if (ribbon >= 13 && ribbon <= 18) { red = -6; green = -4; blue = -2; }
+        else { red = 1; green = -1; }
       }
       const offset = (style * TILE_CELLS + y * TILE_SIZE + x) * CHANNELS;
       MOTIF_RGB[offset] = red;
@@ -326,4 +377,9 @@ function buildMotifLookup(): void {
 
 function clampDelta(value: number): number {
   return value < -14 ? -14 : value > 14 ? 14 : value;
+}
+
+function positiveModulo(value: number, divisor: number): number {
+  const remainder = value % divisor;
+  return remainder < 0 ? remainder + divisor : remainder;
 }

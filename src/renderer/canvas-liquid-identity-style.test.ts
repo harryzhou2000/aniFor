@@ -25,6 +25,8 @@ const IDENTITY_LIQUIDS = [
   Material.LRBD,
   Material.LiquidNitrogen,
   Material.LO2,
+  Material.DistilledWater,
+  Material.Diesel,
 ] as const;
 
 function style(
@@ -155,6 +157,8 @@ describe('Canvas liquid identity styling', () => {
     expect(style(Material.LRBD, 3, 3)).not.toEqual(style(Material.LRBD, 8, 8));
     expect(style(Material.LiquidNitrogen, 1, 2)).not.toEqual(style(Material.LiquidNitrogen, 3, 9));
     expect(style(Material.LO2, 1, 2)).not.toEqual(style(Material.LO2, 10, 8));
+    expect(style(Material.DistilledWater, 1, 2)).not.toEqual(style(Material.DistilledWater, 10, 8));
+    expect(style(Material.Diesel, 1, 2)).not.toEqual(style(Material.Diesel, 8, 8));
   });
 
   it('responds to existing volume inputs without changing topology state', () => {
