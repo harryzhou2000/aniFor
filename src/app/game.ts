@@ -135,6 +135,9 @@ import {
   POWDER_MESOSTRATA_GRAPHICS_AUDIT, preparePowderMesostrataGraphicsAuditFixture,
 } from './powder-mesostrata-graphics-audit';
 import {
+  GEOLOGICAL_SOLID_GRAPHICS_AUDIT, prepareGeologicalSolidGraphicsAuditFixture,
+} from './geological-solid-graphics-audit';
+import {
   PHOTON_SPECTRUM_GRAPHICS_AUDIT, preparePhotonSpectrumGraphicsAuditFixture,
   setPhotonSpectrumGraphicsVisible,
 } from './photon-spectrum-graphics-audit';
@@ -387,6 +390,7 @@ export class Game {
       },
       sourceTarget: (x, y) => this.simulation.configuredSourceTargetAt?.(x, y) ?? Material.Empty,
       presentationAuxiliary: (x, y) => this.renderer.presentationAuxiliaryAt(x, y),
+      geologicalSolidStylingEnabled: () => this.renderer.geologicalSolidStylingIsEnabled(),
       gasIdentityStyle: (x, y) => this.renderer.gasIdentityStyleAt(x, y),
       atmosphereSupportAudit: () => this.renderer.getAtmosphereSupportAudit(),
       occupiedCells: () => {
@@ -555,6 +559,9 @@ export class Game {
       },
       setPowderMesostrataStyling: (enabled) => {
         this.renderer.setPowderMesostrataStylingEnabled(enabled);
+      },
+      setGeologicalSolidStyling: (enabled) => {
+        this.renderer.setGeologicalSolidStylingEnabled(enabled);
       },
       setPowderRenderStyle: (style) => {
         this.renderer.setPowderRenderStyle(style);
@@ -774,6 +781,12 @@ export class Game {
       powderMesostrataGraphicsAtlas: () => POWDER_MESOSTRATA_GRAPHICS_AUDIT,
       preparePowderMesostrataGraphicsFixture: () => {
         preparePowderMesostrataGraphicsAuditFixture(this.simulation);
+        this.renderer.synchronizeFixtureMaterialPlane();
+        this.renderer.invalidateDynamicPresentation();
+      },
+      geologicalSolidGraphicsAtlas: () => GEOLOGICAL_SOLID_GRAPHICS_AUDIT,
+      prepareGeologicalSolidGraphicsFixture: () => {
+        prepareGeologicalSolidGraphicsAuditFixture(this.simulation);
         this.renderer.synchronizeFixtureMaterialPlane();
         this.renderer.invalidateDynamicPresentation();
       },

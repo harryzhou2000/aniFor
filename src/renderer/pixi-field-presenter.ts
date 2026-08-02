@@ -131,6 +131,7 @@ uniform float uEnergyCoreRelief;
 uniform float uEnergyIdentityStyling;
 uniform float uCellularMaterialStyling;
 uniform float uStructuralRigidStyling;
+uniform float uGeologicalSolidStyling;
 uniform float uMechanismBodyStyling;
 uniform float uElectronicIdentityStyling;
 uniform float uFieldProfileIdentityStyling;
@@ -1165,6 +1166,31 @@ vec3 structuralRigidEightXDelta(float material, vec2 position, float density) {
   }
   return clamp(delta * smoothstep(0.10, 0.82, density), vec3(-10.0), vec3(10.0)) / 255.0;
 }
+// Coal and ROCK need an exact-owner body grammar rather than another generic
+// Rigid band. This compact direct form consumes only the already-proven deep
+// solid response; it never samples, reconstructs, or changes coverage.
+vec3 geologicalSolidEightXDelta(float material, vec2 position, float depthT, float bodyResponse) {
+  vec2 cell = floor(position);
+  float crown = max(0.0, bodyResponse);
+  float pocket = max(0.0, -bodyResponse);
+  if (material == 19.0) { // COAL: dark shale cleavage, rare warm inclusion.
+    float cleavage = 1.0 - step(0.5, mod(cell.x * 2.0 + cell.y * 3.0, 13.0));
+    float cross = 1.0 - step(0.5, mod(cell.x - cell.y * 2.0, 29.0));
+    float inclusion = 1.0 - step(0.5, mod(cell.x * 7.0 + cell.y * 5.0, 41.0));
+    vec3 delta = -vec3(5.0, 4.0, 3.0) * depthT - vec3(3.0, 2.0, 1.0) * pocket
+      - vec3(2.0, 2.0, 1.0) * max(cleavage, cross) * depthT
+      + vec3(3.0, 1.0, -1.0) * inclusion * depthT + vec3(0.0, 0.0, 2.0) * crown;
+    return clamp(delta, vec3(-12.0), vec3(12.0)) / 255.0;
+  }
+  if (material == 78.0) { // ROCK: quiet strata with a cool mineral crown.
+    float stratum = 1.0 - step(2.0, mod(cell.x + floor(cell.y / 3.0) * 2.0, 15.0));
+    float vein = 1.0 - step(0.5, mod(cell.x * 3.0 - cell.y * 2.0, 37.0));
+    vec3 delta = vec3(-3.0, 2.0, 4.0) * crown - vec3(3.0, 2.0, 1.0) * pocket
+      + vec3(-1.0, 1.0, 2.0) * stratum * depthT + vec3(1.0, 2.0, 3.0) * vein * depthT;
+    return clamp(delta, vec3(-12.0), vec3(12.0)) / 255.0;
+  }
+  return vec3(0.0);
+}
 // Transport, actuator, and storage devices are semantically distinct native
 // hardware, not generic circuit panels.  Keep their compact direct-mesh
 // grammar exact-owner, static, and RGB-only: material/world position/density
@@ -2106,6 +2132,22 @@ void main() {
     && (traits < 0.5 || material == 216.0) && !materialEmissive) {
     color = clamp(color + unusualSolidEightXDelta(material, grid, density), 0.0, 1.0);
   }
+  // Coal's ordinary optics are granular, so it deliberately skips the common
+  // rigid-body branch above. Its exact-material depth byte plus the same four
+  // already-live owner samples prove a genuine geological core here without
+  // changing its granular edge silhouette or spending another texture read.
+  if (uGeologicalSolidStyling > 0.5 && family == 0.0
+    && traits < 0.5 && !materialEmissive && (material == 19.0 || material == 78.0)
+    && depth > 6.0 / 255.0 && q00 * q10 * q01 * q11 > 0.5 && density > 0.76) {
+    float geologicalDepth = smoothstep(6.0 / 255.0, 42.0 / 255.0, depth);
+    float geologicalPhase = fract((grid.x * 2.0 + grid.y + material * 11.0) / 128.0);
+    float geologicalTriangle = 1.0 - abs(geologicalPhase * 2.0 - 1.0);
+    float geologicalResponse = (geologicalTriangle * geologicalTriangle
+      * (3.0 - geologicalTriangle * 2.0) - 0.5) * geologicalDepth;
+    color = clamp(color + geologicalSolidEightXDelta(
+      material, grid, geologicalDepth, geologicalResponse
+    ), 0.0, 1.0);
+  }
   // Sensor glyphs are an exact device-owner overlay. They remain static and
   // RGB-only so sparse wires, isolated cells, holes, walls, and semantics keep
   // the common compositor's coverage and native ownership.
@@ -3027,6 +3069,7 @@ uniform float uDenseBodyAmbientFill;
 uniform float uRoleMaterialStyling;
 uniform float uCellularMaterialStyling;
 uniform float uStructuralRigidStyling;
+uniform float uGeologicalSolidStyling;
 uniform float uMechanismBodyStyling;
 uniform float uElectronicIdentityStyling;
 uniform float uFieldProfileIdentityStyling;
@@ -4048,6 +4091,32 @@ vec3 structuralRigidIdentityDelta(float material, vec2 position) {
     float lamella = 1.0 - step(0.5, mod(x * 2.0 + y * 3.0, 11.0));
     float highlight = 1.0 - step(0.5, mod(x * 7.0 - y * 5.0, 37.0));
     return (vec3(-2.0, 2.0, 5.0) * lamella + vec3(3.0, 4.0, 5.0) * highlight) / 255.0;
+  }
+  return vec3(0.0);
+}
+// Normal WebGL counterpart of the direct geological body grammar. The caller
+// already proved a deep, exact solid interior, so this is compact RGB-only
+// world-space arithmetic; walls, traits, surface support, and alpha never
+// enter the helper.
+vec3 geologicalSolidCoreDelta(float material, vec2 position, float depthT, float signedRelief) {
+  vec2 cell = floor(position);
+  float crown = max(0.0, signedRelief);
+  float pocket = max(0.0, -signedRelief);
+  if (material == 19.0) {
+    float cleavage = 1.0 - step(0.5, mod(cell.x * 2.0 + cell.y * 3.0, 13.0));
+    float cross = 1.0 - step(0.5, mod(cell.x - cell.y * 2.0, 29.0));
+    float inclusion = 1.0 - step(0.5, mod(cell.x * 7.0 + cell.y * 5.0, 41.0));
+    return clamp(-vec3(5.0, 4.0, 3.0) * depthT - vec3(3.0, 2.0, 1.0) * pocket
+      - vec3(2.0, 2.0, 1.0) * max(cleavage, cross) * depthT
+      + vec3(3.0, 1.0, -1.0) * inclusion * depthT + vec3(0.0, 0.0, 2.0) * crown,
+    vec3(-12.0), vec3(12.0)) / 255.0;
+  }
+  if (material == 78.0) {
+    float stratum = 1.0 - step(2.0, mod(cell.x + floor(cell.y / 3.0) * 2.0, 15.0));
+    float vein = 1.0 - step(0.5, mod(cell.x * 3.0 - cell.y * 2.0, 37.0));
+    return clamp(vec3(-3.0, 2.0, 4.0) * crown - vec3(3.0, 2.0, 1.0) * pocket
+      + vec3(-1.0, 1.0, 2.0) * stratum * depthT + vec3(1.0, 2.0, 3.0) * vein * depthT,
+    vec3(-12.0), vec3(12.0)) / 255.0;
   }
   return vec3(0.0);
 }
@@ -7284,6 +7353,23 @@ void main() {
     phaseContactLight * (4.0 / 255.0), -6.0 / 255.0, 6.0 / 255.0
   ) * phaseContactOwner * stablePhaseContact * uPhaseContactLighting;
   color += vec3(phaseContactTone);
+  // Geological owners may use the shared solid-body proof even when their
+  // optical class is granular (Coal). Keeping this after the family branches
+  // avoids making owner identity depend on the generic Smooth path, while the
+  // existing exact interior/depth guard still rejects walls, seams, holes,
+  // thin strokes, reconstructed support, traits, and emission.
+  if (uGeologicalSolidStyling > 0.5 && family == 0.0
+    && surfaceOnly < 0.5 && halo < 0.5 && wall < 0.5
+    && wallOnly < 0.5 && emissionOnly < 0.5 && traits < 0.5 && !materialEmissive
+    && (material == 19.0 || material == 78.0)
+    && solidOpticalDepth > 6.0 / 255.0) {
+    float geologicalDepth = smoothstep(6.0 / 255.0, 42.0 / 255.0, solidOpticalDepth);
+    float geologicalRelief = clamp(solidReliefTone * 255.0 / 7.0, -1.0, 1.0)
+      * geologicalDepth;
+    color = clamp(color + geologicalSolidCoreDelta(
+      material, fieldPosition, geologicalDepth, geologicalRelief
+    ), 0.0, 1.0);
+  }
   // Static role accents cross phase boundaries without widening semantic
   // silhouettes. Empty-space volume reconstruction intentionally remains free
   // of role metadata because it no longer has an authoritative material ID.
@@ -7718,6 +7804,7 @@ export class PixiFieldPresenter {
       uRoleMaterialStyling: { value: 1, type: 'f32' },
       uCellularMaterialStyling: { value: 1, type: 'f32' },
       uStructuralRigidStyling: { value: 1, type: 'f32' },
+      uGeologicalSolidStyling: { value: 1, type: 'f32' },
       uMechanismBodyStyling: { value: 1, type: 'f32' },
       uElectronicIdentityStyling: { value: 1, type: 'f32' },
       uFieldProfileIdentityStyling: { value: 1, type: 'f32' },
@@ -7932,6 +8019,12 @@ export class PixiFieldPresenter {
     return this.boundaryStabilityBytes[y * this.width + x];
   }
 
+  /** Narrow audit readback for an exact-owner optional presentation layer. */
+  geologicalSolidStylingEnabled(): boolean {
+    const value = this.uniforms.uniforms.uGeologicalSolidStyling;
+    return typeof value === 'number' && value > 0.5;
+  }
+
   /** Audit-only readback of the material byte staged for the semantic texture. */
   semanticMaterialAt(x: number, y: number): number {
     if (x < 0 || y < 0 || x >= this.width || y >= this.height) return -1;
@@ -8088,6 +8181,7 @@ export class PixiFieldPresenter {
     botanicalLifecycleStylingEnabled = true,
     sparkStateStylingEnabled = true,
     structuralRigidStylingEnabled = true,
+    geologicalSolidStylingEnabled = true,
     earthenPowderStylingEnabled = true,
     powderMesostrataStylingEnabled = true,
     moltenBodyOpticsEnabled = true,
@@ -8126,6 +8220,7 @@ export class PixiFieldPresenter {
     uniforms.uRoleMaterialStyling = roleMaterialStylingEnabled ? 1 : 0;
     uniforms.uCellularMaterialStyling = cellularMaterialStylingEnabled ? 1 : 0;
     uniforms.uStructuralRigidStyling = structuralRigidStylingEnabled ? 1 : 0;
+    uniforms.uGeologicalSolidStyling = geologicalSolidStylingEnabled ? 1 : 0;
     uniforms.uMechanismBodyStyling = mechanismBodyStylingEnabled ? 1 : 0;
     uniforms.uElectronicIdentityStyling = electronicIdentityStylingEnabled ? 1 : 0;
     uniforms.uFieldProfileIdentityStyling = fieldProfileIdentityStylingEnabled ? 1 : 0;
@@ -8273,6 +8368,11 @@ export class PixiFieldPresenter {
 
   setStructuralRigidStylingEnabled(enabled: boolean): void {
     this.uniforms.uniforms.uStructuralRigidStyling = enabled ? 1 : 0;
+    this.renderApplication();
+  }
+
+  setGeologicalSolidStylingEnabled(enabled: boolean): void {
+    this.uniforms.uniforms.uGeologicalSolidStyling = enabled ? 1 : 0;
     this.renderApplication();
   }
 

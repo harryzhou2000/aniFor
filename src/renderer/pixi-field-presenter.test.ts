@@ -29,6 +29,7 @@ interface PresenterHarness {
   setRoleMaterialStylingEnabled: PixiFieldPresenter['setRoleMaterialStylingEnabled'];
   setCellularMaterialStylingEnabled: PixiFieldPresenter['setCellularMaterialStylingEnabled'];
   setStructuralRigidStylingEnabled: PixiFieldPresenter['setStructuralRigidStylingEnabled'];
+  setGeologicalSolidStylingEnabled: PixiFieldPresenter['setGeologicalSolidStylingEnabled'];
   setMechanismBodyStylingEnabled: PixiFieldPresenter['setMechanismBodyStylingEnabled'];
   setElectronicIdentityStylingEnabled: PixiFieldPresenter['setElectronicIdentityStylingEnabled'];
   setFieldProfileIdentityStylingEnabled: PixiFieldPresenter['setFieldProfileIdentityStylingEnabled'];
@@ -1227,6 +1228,47 @@ describe('Pixi presenter startup configuration', () => {
     expect(`${helper}${branch}`).not.toContain('texture(');
     expect(`${helper}${branch}`).not.toContain('uTime');
     expect(`${helper}${branch}`).not.toMatch(/\balpha\s*[+*]?=/);
+  });
+
+  it('keeps geological Coal/ROCK core optics depth-proven, RGB-only, and resource-free', () => {
+    const presenter = presenterHarness();
+    presenter.setGeologicalSolidStylingEnabled(false);
+    expect(presenter.uniforms.uniforms.uGeologicalSolidStyling).toBe(0);
+    expect(presenter.app.render).toHaveBeenCalledOnce();
+
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');
+    const eightEnd = source.indexOf('const FIELD_FRAGMENT = `', eightStart);
+    const eight = source.slice(eightStart, eightEnd);
+    const directStart = eight.indexOf('vec3 geologicalSolidEightXDelta(');
+    const directEnd = eight.indexOf('// Transport, actuator, and storage devices', directStart);
+    const normalStart = source.indexOf('// Normal WebGL counterpart of the direct geological body grammar.');
+    const normalEnd = source.indexOf('// Native transport and actuator bodies', normalStart);
+    const normalBranchStart = source.indexOf(
+      'if (uGeologicalSolidStyling > 0.5 && family == 0.0', normalStart,
+    );
+    const normalBranchEnd = source.indexOf('// Static role accents cross phase boundaries', normalBranchStart);
+    const direct = eight.slice(directStart, directEnd);
+    const normal = source.slice(normalStart, normalEnd);
+
+    expect(directStart).toBeGreaterThan(0);
+    expect(directEnd).toBeGreaterThan(directStart);
+    expect(normalStart).toBeGreaterThan(0);
+    expect(normalEnd).toBeGreaterThan(normalStart);
+    expect(normalBranchStart).toBeGreaterThan(0);
+    expect(normalBranchEnd).toBeGreaterThan(normalBranchStart);
+    for (const material of [19, 78]) {
+      expect(direct).toContain(`material == ${material}.0`);
+      expect(normal).toContain(`material == ${material}.0`);
+    }
+    expect(eight).toContain('uniform float uGeologicalSolidStyling;');
+    expect(source).toContain('uGeologicalSolidStyling: { value: 1, type: \'f32\' }');
+    const normalContract = normal + source.slice(normalBranchStart, normalBranchEnd);
+    expect(normalContract).toContain('solidOpticalDepth > 6.0 / 255.0) {');
+    expect(eight).toContain('depth > 6.0 / 255.0 && q00 * q10 * q01 * q11 > 0.5');
+    expect(`${direct}${normalContract}`).not.toContain('texture(');
+    expect(`${direct}${normalContract}`).not.toContain('uTime');
+    expect(`${direct}${normalContract}`).not.toMatch(/\balpha\s*[+*]?=/);
   });
 
   it('keeps true-8x transport hardware exact-owner, RGB-only, and resource-free', () => {

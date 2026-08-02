@@ -242,6 +242,18 @@ WIFI now projects its native temperature channel and current broadcast latch: bi
 
 Smooth powder now has a separate settled-body mesostrata layer for Sand, Clay, and Concrete. It uses only the existing stable deep-body density/support/slope information to suggest subdued strata and compaction, so a formed pile reads as a material body without replacing grain detail. The transform is RGB-only and deliberately absent from Local, square Grains, moving or shallow powder, thin/single structures, holes, walls, wet suspension/contact, traits, and emission. Canvas, normal WebGL, and the compact direct 8× path share this constraint. `npm run audit:powder-mesostrata` and `npm run audit:powder-mesostrata:8x` prove distinct settled-body responses, exact off→on→off recovery, protected topology/modes/contacts, and fenced 4896×3072 presentation.
 
+Coal and ROCK now have a separate deep geological-body treatment. Coal retains
+its granular silhouette while a depth-proven core gets subdued cleavage and
+rare warm inclusions; ROCK receives quiet strata and cool mineral veins. The
+owner-local effect runs only for thick, exact, wall-free, trait-free,
+non-emissive Solid cells after common body lighting, using the existing
+phase-local optical-depth byte and relief scalar. It is RGB-only and does not
+change coverage, alpha, holes, thin or isolated structures, liquid contacts,
+native-wall composition, physics, or renderer resources. The paused two-card
+fixture covers both owners plus those protected controls. Run
+`npm run audit:geological-solid` for normal WebGL and
+`npm run audit:geological-solid:8x` for the fenced direct 4896×3072 path.
+
 The direct true-8× compositor now also restores native-wall refraction for exact translucent Glass and Ice. It moves only the already-generated analytic wall pattern beneath a partially transparent owner: Glass uses a coherent boundary shift and Ice uses a stable two-facet shift. The wall ID/support still comes from the same nearest texel, and no alpha, semantic support, material ownership, field, texture sample, pass, target, upload, or output-scale resource changes. The completed-fence gate captures flat→refracted→flat Glass/Ice against wall patterns, retains opaque Metal as an exact control, and repeats the full forced-stall/context-loss recovery sequence. The accepted run stayed at `1797.3/1837.7/1943.0 ms` GPU-fence median/p90/max with zero browser errors.
 
 The true-8× direct mesh now also consumes the shared Surface contour control for opaque rigid bodies and supported Smooth powder. It derives a small family-coloured key/fill from the already-live four exact owner samples and their analytic slope: Smooth powder needs at least two local owner samples, while Grains, Local, traits, emissive matter, and an isolated Sand cell are exact no-ops. This is RGB-only and leaves alpha, support, material ownership, physics, authored holes, native-wall composition, and every resource budget untouched. Its completed-fence gate captures Metal and a settled Sand slope flat→lit→flat, verifies bounded response and byte-repeatability, and keeps the isolated grain unchanged.
