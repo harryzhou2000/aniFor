@@ -445,6 +445,7 @@ describe('Pixi presenter startup configuration', () => {
     expect(blockStart).toBeGreaterThan(0);
     expect(blockEnd).toBeGreaterThan(blockStart);
     expect(block).toContain('float gasForwardScatter = opticalDepth * (1.0 - opticalDepth)');
+    expect(block).toContain('(0.052 + cleanGas * 0.018 - sootyGas * 0.010)');
     expect(block).toContain('vec3 gasForwardColor');
     expect(block).toContain('(vec3(1.0) - clamp(color, 0.0, 1.0))');
     expect(block).not.toContain('texture(');

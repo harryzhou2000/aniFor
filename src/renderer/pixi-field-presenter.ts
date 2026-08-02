@@ -5875,7 +5875,7 @@ void main() {
     // black world backdrop, even though alpha and atmosphere mass agreed.
     // This is deliberately RGB-only and stays below the Canvas body exposure;
     // alpha/support continue to be owned exclusively by the field above.
-    float gasCoreTransmission = 0.82 + cleanGas * 0.06 - sootyGas * 0.10;
+    float gasCoreTransmission = 0.85 + cleanGas * 0.06 - sootyGas * 0.10;
     float gasScatter = 0.32 + cleanGas * 0.09 - sootyGas * 0.06;
     color = gasBase * mix(1.08 + cleanGas * 0.04, gasCoreTransmission, opticalDepth)
       * (0.82 + diffuse * 0.23) * billow;
@@ -5884,13 +5884,17 @@ void main() {
     // peaks between the transparent rim and opaque core, reuses only values
     // already live in this branch, and changes RGB—not alpha, support, material
     // ownership, field reconstruction, or the Canvas recovery path.
+    // Give the field-owned middle density one more restrained scattering lift.
+    // It makes a cloud read as translucent volume against the dark world while
+    // the existing optical-depth and alpha paths remain the sole owners of
+    // mass, gaps, and silhouette. Keep sooty Smoke slightly less reflective.
     float gasForwardScatter = opticalDepth * (1.0 - opticalDepth)
-      * (0.036 + cleanGas * 0.014 - sootyGas * 0.008);
+      * (0.052 + cleanGas * 0.018 - sootyGas * 0.010);
     vec3 gasForwardColor = mix(vividColor(gasBase, 1.06), vec3(0.62, 0.76, 0.92),
       0.18 + cleanGas * 0.14);
     color += (vec3(1.0) - clamp(color, 0.0, 1.0)) * gasForwardColor
       * gasForwardScatter * (0.65 + diffuse * 0.35);
-    color *= 1.0 + gasCrown * 0.18 - gasPocket * 0.11;
+    color *= 1.0 + gasCrown * 0.21 - gasPocket * 0.13;
     color += mix(vec3(0.16, 0.19, 0.24), gasBase, 0.30 + cleanGas * 0.12)
       * silverLining * gasScatter;
     color += mix(vec3(0.10, 0.12, 0.16), gasBase, 0.34)
