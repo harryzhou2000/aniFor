@@ -81,7 +81,12 @@ const scaleEightOnly = process.argv.includes('--scale-eight-only');
 const eightPowderOnly = process.argv.includes('--eight-powder-only');
 const eightFieldProfileOnly = process.argv.includes('--eight-field-profile-only');
 const eightMaterialAtlasOnly = process.argv.includes('--eight-material-atlas-only');
-const modes = scaleEightOnly || eightPowderOnly || eightFieldProfileOnly || eightMaterialAtlasOnly ? ['webgl'] : process.argv.includes('--canvas-only') ? ['canvas2d']
+// Keep the two expensive recovery paths independently runnable. The complete
+// 8x release gate deliberately carries a large visual atlas before it reaches
+// them; a single long-lived software-GPU browser can otherwise stall after
+// timing despite both recovery implementations being healthy.
+const eightRecoveryOnly = process.argv.includes('--eight-recovery-only');
+const modes = scaleEightOnly || eightPowderOnly || eightFieldProfileOnly || eightMaterialAtlasOnly || eightRecoveryOnly ? ['webgl'] : process.argv.includes('--canvas-only') ? ['canvas2d']
   : process.argv.includes('--webgl-only') ? ['webgl'] : ['canvas2d', 'webgl'];
 // WebGL is the canonical visual release path. Canvas runs its strict
 // startup/geometry/semantic fallback audit by default; opt in only when a
@@ -211,7 +216,7 @@ const usesProductionBundle = productionBundle || showcaseScreenshotOnly || cellu
   || distilledDieselLiquidGraphicsOnly
   || botanicalLifecycleGraphicsOnly || sparkStateGraphicsOnly
   || nativeSeedGrowthOnly || nativeSemanticsOnly || catalogSelectionOnly || shortDesktopOnly || liveScaleOnly
-  || scaleEightOnly || eightFieldProfileOnly || eightMaterialAtlasOnly;
+  || scaleEightOnly || eightFieldProfileOnly || eightMaterialAtlasOnly || eightRecoveryOnly;
 const AUDIT_BASE_URL = usesProductionBundle ? PRODUCTION_BUNDLE_URL : ORIGIN + '/';
 const DESKTOP_TOOL_FILTER_HEIGHT = 96;
 const screenshotRequest = process.argv.find((argument) => argument.startsWith('--screenshot='))?.slice('--screenshot='.length);
@@ -301,7 +306,7 @@ async function main() {
       || distilledDieselLiquidGraphicsOnly
       || sparkStateGraphicsOnly
       || nativeSeedGrowthOnly || nativeSemanticsOnly || catalogSelectionOnly || pausedPresentationOnly
-      || canvasTimingOnly || eightFieldProfileOnly || eightMaterialAtlasOnly;
+      || canvasTimingOnly || eightFieldProfileOnly || eightMaterialAtlasOnly || eightRecoveryOnly;
     // Focused visual gates prove their complete native WebGL contract by
     // default. Canvas has already proved its semantic fallback contract in
     // auditMode; paired optics parity is intentionally an explicit diagnostic.
@@ -459,6 +464,12 @@ async function auditMode(mode) {
       assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
       cdp.close();
       return { backend: mode, renderScaleEight, browserErrors: errors.length };
+    }
+    if (eightRecoveryOnly) {
+      const eightRecovery = await auditEightXRecovery(cdp, dpr);
+      assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
+      cdp.close();
+      return { backend: mode, eightRecovery, browserErrors: errors.length };
     }
     if (eightFieldProfileOnly) {
       const eightFieldProfile = await auditEightXFieldProfileGraphics(cdp, dpr);
@@ -19137,6 +19148,55 @@ async function navigateEightXRecoveryPage(cdp, auditStage) {
   return waitForStableCanvas(
     cdp, 1280, 720, undefined, 45_000, `renderScale=8 ${auditStage} geometry`,
   );
+}
+
+/**
+ * The recovery release contract is intentionally runnable apart from the
+ * material/visual atlas. It still uses genuine 4896×3072 direct rendering:
+ * first a forced unsignalled fence must preserve native DEUT/VIBR/source state
+ * through the bounded Canvas fallback, then a fresh promoted context must do
+ * the same after WEBGL_lose_context. Keeping these runs isolated prevents an
+ * already-completed 15M-fragment atlas from obscuring a recovery regression.
+ */
+async function auditEightXRecovery(cdp, dpr) {
+  const started = performance.now();
+  const stage = (name) => console.error(
+    `[render-scale-eight-recovery] ${name} ${Math.round(performance.now() - started)}ms`,
+  );
+  await setDesktopMetrics(cdp, 1280, 720, dpr);
+  const geometry = await navigateEightXRecoveryPage(cdp, 'native-state-stall-recovery');
+  const backend = await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.backend()');
+  assert(backend.requestedOutputScale === 8 && backend.outputScale === 8,
+    `renderScale=8 recovery did not remain true 8x WebGL (${JSON.stringify(backend)})`);
+  assertGeometry(geometry, 'renderScale=8 recovery WebGL', 8);
+  assertContained(geometry, 'renderScale=8 recovery WebGL');
+  const deutStateAudit = await auditEightXDeutStateGraphics(cdp, geometry.canvas);
+  stage('deut-state-ready');
+  const forcedStallRecovery = await auditEightXNativeStateRecovery(
+    cdp, geometry.canvas, deutStateAudit, 'stall',
+  );
+  stage('stall-recovery-ready');
+  const contextLossGeometry = await navigateEightXRecoveryPage(cdp, 'context-loss-recovery');
+  assertCanvasRectsEqual(
+    geometry.canvas, contextLossGeometry.canvas, 'renderScale=8 recovery reload CSS geometry',
+  );
+  const contextLossRecovery = await auditEightXNativeStateRecovery(
+    cdp, contextLossGeometry.canvas, deutStateAudit, 'context-loss',
+  );
+  stage('context-loss-recovery-ready');
+  return {
+    requested: backend.requestedOutputScale,
+    effective: backend.outputScale,
+    backing: `${geometry.backing.width}x${geometry.backing.height}`,
+    cssCanvas: `${round(geometry.canvas.width, 2)}x${round(geometry.canvas.height, 2)}`,
+    deutState: {
+      cards: deutStateAudit.cards,
+      occupied: deutStateAudit.occupied,
+      exactRepeatedOff: deutStateAudit.exactRepeatedOff,
+    },
+    forcedStallRecovery,
+    contextLossRecovery,
+  };
 }
 
 function powderColumnCells() {
