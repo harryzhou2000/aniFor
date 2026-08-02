@@ -3965,6 +3965,13 @@ describe('Pixi presenter startup configuration', () => {
     expect(presenter.app.render).toHaveBeenCalledTimes(2);
     expect(gl.deleteSync).toHaveBeenCalledWith(firstFence);
     expect(gl.fenceSync).toHaveBeenCalledTimes(2);
+
+    // The queued mutation was consumed by the one follow-up draw. A later
+    // fence completion must retire it rather than resubmitting an unchanged
+    // 15M-fragment frame forever.
+    scheduled?.(performance.now());
+    expect(presenter.app.render).toHaveBeenCalledTimes(2);
+    expect(gl.fenceSync).toHaveBeenCalledTimes(2);
   });
 
   it('does not declare true 8x ready until its first GPU fence completes', async () => {

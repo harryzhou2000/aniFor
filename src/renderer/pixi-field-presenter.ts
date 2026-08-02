@@ -9101,6 +9101,10 @@ export class PixiFieldPresenter {
       this.renderQueued = true;
       if (!this.prepareEightXRender()) return;
     }
+    // A completed fence has released the only frame in flight. Its queued
+    // mutation is being submitted below, so do not let the next fence poll
+    // mistake it for another update and redraw the 15M-fragment target again.
+    if (this.outputScale === 8) this.renderQueued = false;
     this.renderApplicationNow();
     if (this.outputScale === 8) this.insertEightXRenderFence();
   }
@@ -9263,6 +9267,9 @@ export class PixiFieldPresenter {
       if (!this.renderFence || this.destroyed || this.contextLost) return;
       const redraw = this.renderQueued;
       if (!this.prepareEightXRender()) return;
+      // Preserve a queued mutation only while its predecessor fence is still
+      // pending. Once that fence signals, the redraw below consumes it.
+      this.renderQueued = false;
       this.resolveFirstFrame(true);
       if (redraw) this.renderApplication();
     });
