@@ -6174,11 +6174,18 @@ void main() {
       float connectedFieldDensity = min(
         volume, max(density * 0.65, min(liquidDensity, liquidNeighbourMean) * 0.45)
       );
+      // Sparse one-cell strands retain the established 0.82 trim bound. A
+      // broad shore has the same four already-sampled field neighbours proving
+      // dense support, so it can reach the visibly cohesive 0.96 response
+      // without letting that response escape into the protected strand.
+      float liquidCohesionStrength = mix(
+        0.82, 0.96, smoothstep(0.56, 0.78, liquidNeighbourMean)
+      );
       liquidSilhouetteDensity = mix(
-        // A 0.82 cap keeps a connected one-cell strand inside the audited
+        // The density-gated cap keeps a connected one-cell strand inside the audited
         // <= 2 RGB-RMS continuity response while retaining a visible but
-        // non-expanding cohesion trim at ordinary zoom.
-        volume, connectedFieldDensity, liquidAirContour * 0.82
+        // non-expanding cohesion trim after canonical framebuffer quantisation.
+        volume, connectedFieldDensity, liquidAirContour * liquidCohesionStrength
       );
     }
     alpha = smoothstep(
@@ -6374,6 +6381,10 @@ void main() {
     float stablePowderMineral = 0.0;
     float powderMesostrataStrength = 0.0;
     float powderMesostrataSlope = 0.0;
+    // Smooth's field owns the stable outer silhouette; retain the material's
+    // grain vocabulary in the proven body, but do not let per-cell pigment
+    // move the first composed edge crossing from one slope column to another.
+    float powderContourTextureRetention = 1.0;
     float roughSurface = granularOptics(optics);
     float smoothSurface = optics == 8.0 || optics == 19.0 ? 1.0 : 0.0;
     float organicSurface = optics == 9.0 ? 1.0 : 0.0;
@@ -6703,6 +6714,19 @@ void main() {
       float heapStart = mix(0.10 + grain * 0.020, 0.40 + grain * 0.012, powderSurfaceBlend);
       float heapEnd = mix(0.62 + grain * 0.030, 0.60 + grain * 0.018, powderSurfaceBlend);
       float heapAlpha = smoothstep(heapStart, heapEnd, density);
+      // The stable wide field already owns Smooth's outer silhouette.  Do not
+      // carry the deliberately cell-varying mineral threshold into that edge:
+      // it reintroduces a stair-step at the final alpha transfer even though
+      // the field geometry is curved.  The transfer is restricted to the
+      // settled, bulk-proven surface blend, leaving Local/Grains and fragile
+      // columns, holes, seams, and moving powder on their exact local path.
+      float smoothContourTransfer = boundaryStability * powderSurfaceBlend;
+      if (uPowderStyle > 1.5) {
+        float smoothContourAlpha = smoothstep(0.36, 0.64, widePowderShape.x);
+        heapAlpha = mix(heapAlpha, smoothContourAlpha, smoothContourTransfer);
+        powderContourTextureRetention = 1.0 - smoothContourTransfer
+          * (1.0 - smoothstep(0.72, 1.00, widePowderShape.x));
+      }
       float localHeapAlpha = smoothstep(
         0.10 + grain * 0.020, 0.62 + grain * 0.030, localPowderShape.x
       );
@@ -6865,17 +6889,21 @@ void main() {
       cellGrainRetention = mix(1.0, cellGrainRetention * lowDetailMineralGain,
         settledMineralRetention);
       float facetRetention = mix(1.0, 1.20, settledMineralRetention);
-      color *= 0.91 + grain * (0.20 + roughSurface * 0.05) * cellGrainRetention * facetGain
+      float powderMineralFactor = 0.91
+        + grain * (0.20 + roughSurface * 0.05) * cellGrainRetention * facetGain
         + grainFacet * (0.10 + roughSurface * 0.04) * facetRetention * facetGain;
+      color *= mix(1.0, powderMineralFactor, powderContourTextureRetention);
       // A modest chromatic mineral key survives normal-detail raster filtering
       // better than sub-cell luminance alone. It is exact-cell/world anchored
       // and RGB-only, so composed Smooth bodies gain colour vocabulary without
       // creating a new support decision or perturbing Local/Grains references.
       color += base * grain * vec3(0.178, 0.044, -0.112)
-        * stablePowderMineral * lowDetailMineralGain;
+        * stablePowderMineral * lowDetailMineralGain * powderContourTextureRetention;
       color += base * max(0.0, 0.6 - subcell.x - subcell.y)
-        * (0.11 + roughSurface * 0.035) * facetRetention * facetGain;
-      float brightFacet = max(0.0, grainFacet - 0.18) * facetRetention;
+        * (0.11 + roughSurface * 0.035) * facetRetention * facetGain
+        * powderContourTextureRetention;
+      float brightFacet = max(0.0, grainFacet - 0.18) * facetRetention
+        * powderContourTextureRetention;
       if (optics == 13.0) {
         color += vec3(0.52, 0.78, 1.00) * brightFacet * 0.085;
       } else if (optics == 14.0) {

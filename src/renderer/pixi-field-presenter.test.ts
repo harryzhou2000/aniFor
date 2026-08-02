@@ -431,7 +431,9 @@ describe('Pixi presenter startup configuration', () => {
     expect(blockStart).toBeGreaterThan(0);
     expect(blockEnd).toBeGreaterThan(blockStart);
     expect(block).toContain('float liquidAirContour = adjacentLiquidSupport * exposedLiquidSide;');
-    expect(block).toContain('liquidAirContour * 0.82');
+    expect(block).toContain('float liquidCohesionStrength = mix(');
+    expect(block).toContain('0.82, 0.96, smoothstep(0.56, 0.78, liquidNeighbourMean)');
+    expect(block).toContain('liquidAirContour * liquidCohesionStrength');
     expect(block).not.toContain('texture(');
     expect(block).not.toMatch(/\balpha\s*[+*]?=/);
   });
@@ -2540,13 +2542,19 @@ describe('Pixi presenter startup configuration', () => {
     // Stable Smooth powder retains almost all mineral variation at normal
     // detail; Local/Grains still carry their full diagnostic cell detail.
     expect(source).toContain('float settledMineralRetention = max(powderVisualCohesion, stablePowderMineral)');
+    expect(source).toContain('float smoothContourTransfer = boundaryStability * powderSurfaceBlend;');
+    expect(source).toContain('float smoothContourAlpha = smoothstep(0.36, 0.64, widePowderShape.x);');
+    expect(source).toContain('heapAlpha = mix(heapAlpha, smoothContourAlpha, smoothContourTransfer);');
+    expect(source).toContain('float powderContourTextureRetention = 1.0;');
+    expect(source).toContain('powderContourTextureRetention = 1.0 - smoothContourTransfer');
+    expect(source).toContain('color *= mix(1.0, powderMineralFactor, powderContourTextureRetention);');
     expect(source).toContain('mix(1.0, 1.78, settledMineralRetention)');
     expect(source).toContain('float detailEstimate = min(');
     expect(source).toContain('(gl_FragCoord.x + 0.5) / max(fieldPosition.x, 0.5)');
     expect(source).toContain('float lowDetailMineralGain = mix(1.92, 1.0, smoothstep(1.20, 1.80, detailEstimate))');
     expect(source).toContain('mix(1.0, 1.20, settledMineralRetention)');
     expect(source).toContain('color += base * grain * vec3(0.178, 0.044, -0.112)');
-    expect(source).toContain('* stablePowderMineral * lowDetailMineralGain;');
+    expect(source).toContain('* stablePowderMineral * lowDetailMineralGain * powderContourTextureRetention;');
     expect(source).toContain('uPowderStyle < 1.5 ? 0.044 : 0.085');
     expect(source).toContain('float powderDetailCalibration = material == 1.0 && uPowderStyle > 1.5');
     expect(source).toContain('if (material == 1.0 && uPowderStyle > 1.5 && traits < 0.5 && !materialEmissive)');
@@ -3884,7 +3892,9 @@ describe('Pixi presenter startup configuration', () => {
     expect(cohesionBlock).toContain('density > 0.08 && density < 0.92');
     expect(cohesionBlock).toContain('adjacentLiquidSupport * exposedLiquidSide');
     expect(cohesionBlock).toContain('min(\n        volume, max(density * 0.65, min(liquidDensity, liquidNeighbourMean) * 0.45)');
-    expect(cohesionBlock).toContain('liquidAirContour * 0.82');
+    expect(cohesionBlock).toContain('float liquidCohesionStrength = mix(');
+    expect(cohesionBlock).toContain('0.82, 0.96, smoothstep(0.56, 0.78, liquidNeighbourMean)');
+    expect(cohesionBlock).toContain('liquidAirContour * liquidCohesionStrength');
     expect(cohesionBlock).not.toContain('texture(');
     expect(cohesionBlock).not.toMatch(/\bcolor\s*[+*]?=/);
     expect(contactBlock.match(/materialAt\(/g)).toHaveLength(1);

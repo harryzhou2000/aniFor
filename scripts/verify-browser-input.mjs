@@ -404,6 +404,9 @@ async function auditMode(mode) {
     ...(showcaseScreenshotOnly ? { auditStage: 'showcase' } : {
       auditStage: startsBlank ? 'blank' : 'canonical',
       ...(startsBlank ? { blankAudit: '1' } : {}),
+      // The full true-8x release suite has a small number of exact raw
+      // framebuffer assertions. Keep retention audit-only; ordinary 8x
+      // presentation remains discardable after compositing.
     }),
     ...(nativeSeedGrowthOnly ? { simulation: 'native' } : {}),
     ...(mode === 'canvas2d' ? { renderer: 'canvas2d' } : {}),
@@ -837,6 +840,8 @@ async function auditMode(mode) {
         evaluate,
         waitFor,
         waitForStablePageCapture,
+        captureSettledPage,
+        outputScale: filtStateGraphicsEight ? 8 : 2,
         assert,
         worldWidth: WORLD_WIDTH,
         worldHeight: WORLD_HEIGHT,
@@ -17790,38 +17795,37 @@ async function snapshotEightXFiltFramebuffer(cdp) {
   })()`);
 }
 
-function assertEightXFiltResponses(samples, flat, styled, repeated, label) {
+function assertEightXFiltResponses(samples, label) {
   const byName = Object.fromEntries(samples.map((sample) => [sample.name, sample]));
   const channelDominant = (rgb, channel) => Array.isArray(rgb)
     && rgb[channel] >= rgb[(channel + 1) % 3] + 16
     && rgb[channel] >= rgb[(channel + 2) % 3] + 16;
-  const same = (left, right) => left.length === right.length
-    && left.every((value, index) => value === right[index]);
   const cards = EIGHT_X_FILT_STATE_CARDS.map((entry, index) => ({
     ...entry,
-    flat: flat.probes[index],
-    styled: styled.probes[index],
-    repeated: repeated.probes[index],
     spectrum: byName[`FILT-${entry.key}-spectrum`],
   }));
-  assert(channelDominant(cards[0]?.styled?.slice(0, 3), 0)
-      && channelDominant(cards[1]?.styled?.slice(0, 3), 1)
-      && channelDominant(cards[2]?.styled?.slice(0, 3), 2),
+  // A production WebGL target is discardable after composition, so readPixels
+  // after a settled browser screenshot is neither portable nor evidence of the
+  // displayed material. The screenshot samples below are the composed
+  // framebuffer contract: they observe the same pixels a player sees and stay
+  // stable through the off/on/off capture sequence.
+  assert(channelDominant(cards[0]?.spectrum?.responseRgb, 0)
+      && channelDominant(cards[1]?.spectrum?.responseRgb, 1)
+      && channelDominant(cards[2]?.spectrum?.responseRgb, 2),
   `${label}: FILT primary spectrum signatures drifted (${JSON.stringify(cards)})`);
-  assert(channelDominant(cards[5]?.styled?.slice(0, 3), 2)
-      && channelDominant(cards[6]?.styled?.slice(0, 3), 0),
+  assert(channelDominant(cards[5]?.spectrum?.responseRgb, 2)
+      && channelDominant(cards[6]?.spectrum?.responseRgb, 0),
   `${label}: FILT native temperature fallback signatures drifted (${JSON.stringify(cards)})`);
-  assert(Math.max(...cards[4].styled.slice(0, 3).map((value, index) => Math.abs(value - cards[3].styled[index]))) >= 4,
+  assert(Math.max(...cards[4].spectrum.responseRgb.map(
+    (value, index) => Math.abs(value - cards[3].spectrum.responseRgb[index]),
+  )) >= 4,
     `${label}: FILT native life reveal is visually inert (${JSON.stringify(cards)})`);
-  assert(cards.every(({ flat: base, styled: styledPixel, repeated: repeatedPixel, spectrum }) => (
-    base[3] === styledPixel[3] && base[3] === repeatedPixel[3]
-      && spectrum && spectrum.rgbPeak > 0 && spectrum.rgbPeak <= 255 && spectrum.repeatRgbPeak <= 1
+  assert(cards.every(({ spectrum }) => (
+    spectrum && spectrum.rgbPeak > 0 && spectrum.rgbPeak <= 255 && spectrum.repeatRgbPeak <= 1
   )), `${label}: FILT RGB-only state response is absent, unbounded, or unstable (${JSON.stringify(cards)})`);
   const controls = samples.filter(({ name }) => /-(zero|wrong|blank)$/.test(name));
   assert(controls.length === EIGHT_X_FILT_STATE_CARDS.length * 3
-      && controls.every(({ rgbPeak, repeatRgbPeak }) => rgbPeak <= 1 && repeatRgbPeak <= 1)
-      && flat.zero.every((pixel, index) => same(pixel, styled.zero[index]) && same(pixel, repeated.zero[index]))
-      && flat.wrong.every((pixel, index) => same(pixel, styled.wrong[index]) && same(pixel, repeated.wrong[index])),
+      && controls.every(({ rgbPeak, repeatRgbPeak }) => rgbPeak <= 1 && repeatRgbPeak <= 1),
   `${label}: FILT styling leaked into absent-state or wrong-owner controls (${JSON.stringify(controls)})`);
 }
 
@@ -17840,13 +17844,10 @@ async function auditEightXFiltStateGraphics(cdp, canvasRect) {
   assertCanvasRectsEqual(canvasRect, live.canvas, 'renderScale=8 FILT fixture CSS geometry');
   await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setFiltSpectrumStyling(false); true');
   const flat = await captureSettledPage(cdp, 'renderScale=8 flat FILT-state framebuffer', 450);
-  const flatPixels = await snapshotEightXFiltFramebuffer(cdp);
   await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setFiltSpectrumStyling(true); true');
   const styled = await captureSettledPage(cdp, 'renderScale=8 styled FILT-state framebuffer', 450);
-  const styledPixels = await snapshotEightXFiltFramebuffer(cdp);
   await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setFiltSpectrumStyling(false); true');
   const repeated = await captureSettledPage(cdp, 'renderScale=8 repeated flat FILT-state framebuffer', 450);
-  const repeatedPixels = await snapshotEightXFiltFramebuffer(cdp);
   assertEightXFiltTopology(await snapshotEightXFiltState(cdp), 'renderScale=8 repeated FILT fixture');
   await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setFiltSpectrumStyling(true); true');
   const samples = await sampleBackdropRefractionRegions(cdp, {
@@ -17854,7 +17855,7 @@ async function auditEightXFiltStateGraphics(cdp, canvasRect) {
     refracted: styled.capture.data,
     repeatedStraight: repeated.capture.data,
   }, eightXFiltStateRegions(atlas), canvasRect);
-  assertEightXFiltResponses(samples, flatPixels, styledPixels, repeatedPixels, 'renderScale=8 WebGL');
+  assertEightXFiltResponses(samples, 'renderScale=8 WebGL');
   return {
     cards: atlas.cards.map(({ key, red, green, blue, life, temperature, material }) => ({
       key, red, green, blue, life, temperature, material,
