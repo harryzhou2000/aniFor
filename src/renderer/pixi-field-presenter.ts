@@ -6947,17 +6947,37 @@ void main() {
         + 1.40 * lowDetailShoulder + 1.05 * fourXMineralRecovery;
       cellGrainRetention = mix(1.0, cellGrainRetention * lowDetailMineralGain,
         settledMineralRetention);
+      // At fit view the low-detail recovery must leave a material readable, but
+      // a fully settled Smooth body should not resolve as a uniform pepper
+      // field. Narrow only that proven deep-interior cadence; contour cells,
+      // loose powder, Local, Grains, and the compact 8x path retain their
+      // existing diagnostic detail.
+      float broadPowderPigmentDamping = 1.0 - smoothstep(
+        0.72, 0.98, powderVisualCohesion
+      ) * 0.22;
+      cellGrainRetention = mix(
+        cellGrainRetention,
+        cellGrainRetention * broadPowderPigmentDamping,
+        smoothstep(0.72, 0.98, powderVisualCohesion)
+      );
       float facetRetention = mix(1.0, 1.20, settledMineralRetention);
       float powderMineralFactor = 0.91
         + grain * (0.20 + roughSurface * 0.05) * cellGrainRetention * facetGain
         + grainFacet * (0.10 + roughSurface * 0.04) * facetRetention * facetGain;
       color *= mix(1.0, powderMineralFactor, powderContourTextureRetention);
+      // A large, fully settled Smooth body should retain its mineral vocabulary
+      // without reading as a dense cell-frequency pepper field at fit view.
+      // Leave the existing low-frequency body depth and mesostrata untouched;
+      // only the strongest warm/cool per-cell chroma key steps back a little in
+      // an already-proven deep interior. Local/Grains, loose powder, seams,
+      // holes, traits, emission, and true 8x never enter this normal-path gate.
       // A modest chromatic mineral key survives normal-detail raster filtering
       // better than sub-cell luminance alone. It is exact-cell/world anchored
       // and RGB-only, so composed Smooth bodies gain colour vocabulary without
       // creating a new support decision or perturbing Local/Grains references.
       color += base * grain * vec3(0.178, 0.044, -0.112)
-        * stablePowderMineral * lowDetailMineralGain * powderContourTextureRetention;
+        * stablePowderMineral * lowDetailMineralGain * powderContourTextureRetention
+        * broadPowderPigmentDamping;
       color += base * max(0.0, 0.6 - subcell.x - subcell.y)
         * (0.11 + roughSurface * 0.035) * facetRetention * facetGain
         * powderContourTextureRetention;

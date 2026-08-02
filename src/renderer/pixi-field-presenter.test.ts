@@ -2561,8 +2561,13 @@ describe('Pixi presenter startup configuration', () => {
     expect(source).toContain('float lowDetailMineralGain = 1.0 + 1.15 * lowDetailTaper');
     expect(source).toContain('+ 1.40 * lowDetailShoulder + 1.05 * fourXMineralRecovery;');
     expect(source).toContain('mix(1.0, 1.20, settledMineralRetention)');
+    expect(source).toContain('float broadPowderPigmentDamping = 1.0 - smoothstep(');
+    expect(source).toContain('0.72, 0.98, powderVisualCohesion');
+    expect(source).toContain(') * 0.22;');
+    expect(source).toContain('cellGrainRetention * broadPowderPigmentDamping');
     expect(source).toContain('color += base * grain * vec3(0.178, 0.044, -0.112)');
-    expect(source).toContain('* stablePowderMineral * lowDetailMineralGain * powderContourTextureRetention;');
+    expect(source).toContain('* stablePowderMineral * lowDetailMineralGain * powderContourTextureRetention');
+    expect(source).toContain('* broadPowderPigmentDamping;');
     expect(source).toContain('uPowderStyle < 1.5 ? 0.044 : 0.085');
     expect(source).toContain('float powderDetailCalibration = material == 1.0 && uPowderStyle > 1.5');
     expect(source).toContain('if (material == 1.0 && uPowderStyle > 1.5 && traits < 0.5 && !materialEmissive)');
