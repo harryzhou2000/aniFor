@@ -6,7 +6,7 @@ import {
   DEUT_PRESENTATION_STATE, GEL_PRESENTATION_STATE, LAVA_PRESENTATION_STATE, POLO_PRESENTATION_STATE,
   PLNT_PRESENTATION_STATE, SEED_PRESENTATION_STATE, SPNG_PRESENTATION_STATE,
   FILT_PRESENTATION_STATE, LCRY_PRESENTATION_STATE, QUARTZ_PRESENTATION_STATE,
-  SPRK_PRESENTATION_STATE, VIBR_PRESENTATION_STATE,
+  PIPE_PRESENTATION_STATE, SPRK_PRESENTATION_STATE, VIBR_PRESENTATION_STATE,
 } from './types';
 import { readFileSync } from 'node:fs';
 
@@ -909,6 +909,61 @@ describe('direct Powder Toy backend', () => {
     restored.step();
     restored.step();
     expect(stateAt(restored, points.charged)).toBe(LCRY_PRESENTATION_STATE.presentMask | 8);
+  });
+
+  it('extracts real PIPE/PPIP water carriage from native ctype and preserves it through OPS1', async () => {
+    const point = { x: 306, y: 180 } as const;
+    const neighbours = [
+      [-1, -1], [0, -1], [1, -1], [-1, 0], [1, 0], [-1, 1], [0, 1], [1, 1],
+    ] as const;
+    const indexOf = (simulation: PowderToyBackend): number => point.y * simulation.width + point.x;
+    const stateAt = (simulation: PowderToyBackend): number => {
+      simulation.cells();
+      return simulation.presentationState()[indexOf(simulation)];
+    };
+
+    for (const material of [Material.PIPE, Material.PPIP] as const) {
+      const source = await PowderToyBackend.load(moduleArtifact.href);
+      source.paint(point.x, point.y, material, 0);
+
+      // PIPE/PPIP must first run their native BRCK/initialising lifecycle; no
+      // JS state is injected. Once live, fill every sampled neighbour with
+      // Water so the next upstream random neighbour probe necessarily ingests
+      // a real liquid before a vacant exit can emit a previous payload.
+      // Allow the default sixty-tick native shell to form, then open its BRCK
+      // enclosure exactly as the upstream element description requires before
+      // letting the genuine initialising state establish a route colour.
+      for (let step = 0; step < 62; step++) source.step();
+      for (const [offsetX, offsetY] of neighbours) {
+        source.erase(point.x + offsetX, point.y + offsetY, 0);
+      }
+      source.step();
+      for (let step = 0; step < 52; step++) source.step();
+      expect(source.cells()[indexOf(source)]).toBe(material);
+      expect((stateAt(source) & PIPE_PRESENTATION_STATE.routeMask) >>> PIPE_PRESENTATION_STATE.routeShift)
+        .toBeGreaterThan(0);
+      for (const [offsetX, offsetY] of neighbours) {
+        source.paint(point.x + offsetX, point.y + offsetY, Material.Water, 0);
+      }
+      source.step();
+
+      const ingested = stateAt(source);
+      expect(source.cells()[indexOf(source)]).toBe(material);
+      expect(ingested & PIPE_PRESENTATION_STATE.payloadMask).toBe(Material.Water);
+      expect(ingested & PIPE_PRESENTATION_STATE.payloadPresentMask)
+        .toBe(PIPE_PRESENTATION_STATE.payloadPresentMask);
+      expect((ingested & PIPE_PRESENTATION_STATE.routeMask) >>> PIPE_PRESENTATION_STATE.routeShift)
+        .toBeGreaterThan(0);
+      expect(ingested & PIPE_PRESENTATION_STATE.reservedMask).toBe(0);
+      if (material === Material.PIPE) expect(ingested & PIPE_PRESENTATION_STATE.pausedMask).toBe(0);
+
+      const file = source.saveFile();
+      expect(new TextDecoder().decode(file.slice(0, 4))).toBe('OPS1');
+      const restored = await PowderToyBackend.load(moduleArtifact.href);
+      restored.loadFile(file);
+      expect(restored.cells()[indexOf(restored)]).toBe(material);
+      expect(stateAt(restored)).toBe(ingested);
+    }
   });
 
   it('projects an exact native FILT owner and preserves its retained state through OPS1', async () => {
