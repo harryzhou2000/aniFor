@@ -247,6 +247,24 @@ describe('Canvas powder bulk style', () => {
     );
   });
 
+  it('keeps broad, settled Stone visibly mineral at a flat Canvas fit-view core', () => {
+    const renderFlat = (material: Material): Float32Array => {
+      const color = new Float32Array([184, 142, 91]);
+      applyCanvasPowderBulkStyle(
+        color, 210, 166, 108, 255, 236, 128, 128, 255, 1,
+        true, RenderOptics.RoughGranular, material, 37, 19,
+      );
+      return color;
+    };
+    const baseline = renderFlat(Material.Empty);
+    const stone = renderFlat(Material.Stone);
+    const deltas = stone.map((value, channel) => Math.abs(value - baseline[channel]));
+
+    expect(Math.max(...deltas)).toBeGreaterThanOrEqual(4);
+    expect(Math.max(...deltas)).toBeLessThanOrEqual(8);
+    expect(Array.from(renderFlat(Material.Stone))).toEqual(Array.from(stone));
+  });
+
   it('keeps mesostrata an exact no-op before the stable bulk confidence proof', () => {
     const base = [184, 142, 91] as const;
     for (const [stability, density, support, bulkDepth] of [

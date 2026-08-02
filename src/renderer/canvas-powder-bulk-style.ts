@@ -228,7 +228,13 @@ function applyCanvasSettledPowderMesostrata(
     + y * (slopeX * 0.195 + 0.061 * style) + style * 0.173;
   const band = 1 - Math.abs(positiveFraction(phase) * 2 - 1);
   const signedBand = (band - 0.5) * 2;
-  const gain = (0.30 + slopeMagnitude * 0.70) * (0.34 + volumeDepth * 0.66);
+  // A flat settled Stone body still needs a readable mineral cadence at Canvas
+  // fit view. Sand/Clay/Concrete continue to reserve most of their strata for
+  // actual slopes, while Stone keeps a stronger calm-core floor that makes a
+  // broad natural bed distinguishable from a flat grey fallback plane.
+  const slopeBase = style === 2 ? 0.58 : 0.30;
+  const gain = (slopeBase + slopeMagnitude * (1 - slopeBase))
+    * (0.34 + volumeDepth * 0.66);
   let red = 0;
   let green = 0;
   let blue = 0;
