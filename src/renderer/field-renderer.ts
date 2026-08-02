@@ -23,7 +23,8 @@ import {
   applyCanvasLiquidMacroSheen,
   applyCanvasLiquidOpticalDepth,
   applyCanvasLiquidVolumeChroma,
-  canvasLiquidBodySupport, canvasLiquidCausticWave, canvasLiquidContourScale, canvasLiquidMacroWave,
+  canvasLiquidBodySupport, canvasLiquidCausticPhase, canvasLiquidCausticWave,
+  canvasLiquidContourScale, canvasLiquidMacroWave,
   canvasLiquidVolumeChromaResponse,
   canvasLiquidEmissionExposure, canvasLiquidFieldRelief,
   canvasLiquidEmissionSurfaceExposure, canvasLiquidSpeciesRelief, canvasLiquidSurfaceExposure,
@@ -1916,11 +1917,13 @@ export class MaterialRenderer {
         // one-cell shore neutral prevents the 2x presentation from bleeding a
         // body tint into an otherwise field-lit unlike-liquid meniscus.
         if (this.liquidVolumeChromaEnabled && liquidVolumeInterior && !liquidSpeciesContact) {
+          const causticPhase = liquidBodySupport > 0 && wall === 0
+            ? canvasLiquidCausticPhase(x, y, visualTime, material) : 0;
           const macroWave = liquidBodySupport > 0
-            ? (wall === 0 ? canvasLiquidMacroWave(x, y, visualTime, material) : (sheen - contour) / 5)
+            ? (wall === 0 ? canvasLiquidMacroWave(x, y, visualTime, material, causticPhase) : (sheen - contour) / 5)
             : 0;
           const macroCaustic = liquidBodySupport > 0 && wall === 0
-            ? canvasLiquidCausticWave(x, y, visualTime, material) : 0;
+            ? canvasLiquidCausticWave(x, y, visualTime, material, causticPhase) : 0;
           if (liquidBodySupport > 0 && wall === 0) {
             applyCanvasLiquidMacroSheen(
               this.styledColor, optics, liquidFieldAlpha, density, macroWave, liquidBodySupport,
@@ -2081,11 +2084,13 @@ export class MaterialRenderer {
           );
         }
         if (this.liquidVolumeChromaEnabled && liquidVolumeInterior && !liquidSpeciesContact) {
+          const causticPhase = liquidBodySupport > 0 && wall === 0
+            ? canvasLiquidCausticPhase(x, y, visualTime, material) : 0;
           const macroWave = liquidBodySupport > 0
-            ? (wall === 0 ? canvasLiquidMacroWave(x, y, visualTime, material) : (shimmer - contour) / 6)
+            ? (wall === 0 ? canvasLiquidMacroWave(x, y, visualTime, material, causticPhase) : (shimmer - contour) / 6)
             : 0;
           const macroCaustic = liquidBodySupport > 0 && wall === 0
-            ? canvasLiquidCausticWave(x, y, visualTime, material) : 0;
+            ? canvasLiquidCausticWave(x, y, visualTime, material, causticPhase) : 0;
           if (liquidBodySupport > 0 && wall === 0
             && !liquidForeignMatterContact && applicableTraits === 0 && !projectedInfo?.emissive) {
             applyCanvasLiquidMacroSheen(
@@ -2192,11 +2197,13 @@ export class MaterialRenderer {
           );
         }
         if (this.liquidVolumeChromaEnabled && liquidVolumeInterior && !liquidSpeciesContact) {
+          const causticPhase = liquidBodySupport > 0 && wall === 0
+            ? canvasLiquidCausticPhase(x, y, visualTime, material) : 0;
           const macroWave = liquidBodySupport > 0
-            ? (wall === 0 ? canvasLiquidMacroWave(x, y, visualTime, material) : shimmer / 4)
+            ? (wall === 0 ? canvasLiquidMacroWave(x, y, visualTime, material, causticPhase) : shimmer / 4)
             : 0;
           const macroCaustic = liquidBodySupport > 0 && wall === 0
-            ? canvasLiquidCausticWave(x, y, visualTime, material) : 0;
+            ? canvasLiquidCausticWave(x, y, visualTime, material, causticPhase) : 0;
           if (liquidBodySupport > 0 && wall === 0) {
             applyCanvasLiquidMacroSheen(
               this.styledColor, optics, liquidFieldAlpha, density, macroWave, liquidBodySupport,
@@ -2292,11 +2299,13 @@ export class MaterialRenderer {
           }
           if (this.liquidVolumeChromaEnabled && applicableTraits === 0
             && !info.emissive && liquidVolumeInterior && !liquidSpeciesContact) {
+            const causticPhase = liquidBodySupport > 0 && wall === 0
+              ? canvasLiquidCausticPhase(x, y, visualTime, material) : 0;
             const macroWave = liquidBodySupport > 0
-              ? (wall === 0 ? canvasLiquidMacroWave(x, y, visualTime, material) : (shimmer - contour) / 4)
+              ? (wall === 0 ? canvasLiquidMacroWave(x, y, visualTime, material, causticPhase) : (shimmer - contour) / 4)
               : 0;
             const macroCaustic = liquidBodySupport > 0 && wall === 0
-              ? canvasLiquidCausticWave(x, y, visualTime, material) : 0;
+              ? canvasLiquidCausticWave(x, y, visualTime, material, causticPhase) : 0;
             if (liquidBodySupport > 0 && wall === 0) {
               applyCanvasLiquidMacroSheen(
                 this.styledColor, optics, liquidFieldAlpha, density, macroWave, liquidBodySupport,

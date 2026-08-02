@@ -3,7 +3,8 @@ import {
   applyCanvasLiquidBodyOptics, applyCanvasLiquidInterfaceMeniscus, applyCanvasLiquidMacroCaustic, applyCanvasLiquidMacroSheen, applyCanvasLiquidOpticalDepth, applyCanvasLiquidVolumeChroma,
   canvasLiquidBodySupport, canvasLiquidContourScale, canvasLiquidEmissionExposure,
   canvasLiquidEmissionSurfaceExposure, canvasLiquidFieldRelief, canvasLiquidSpeciesRelief,
-  canvasLiquidCausticWave, canvasLiquidMacroWave, canvasLiquidSurfaceExposure, canvasLiquidVolumeChromaResponse,
+  canvasLiquidCausticPhase, canvasLiquidCausticWave, canvasLiquidMacroWave,
+  canvasLiquidSurfaceExposure, canvasLiquidVolumeChromaResponse,
 } from './canvas-liquid-light';
 import { RenderOptics } from './render-optics';
 
@@ -107,6 +108,16 @@ describe('Canvas liquid field-owned light', () => {
     expect(Math.max(...bright)).toBeLessThanOrEqual(254);
     expect(bright[2] + 1).toBeGreaterThanOrEqual(bright[1]);
     expect(bright[1]).toBeGreaterThan(bright[0]);
+  });
+
+  it('reuses one curved caustic phase without changing the composed liquid signals', () => {
+    for (const [x, y, time, material] of [[12, 18, 0, 3], [173, 246, 7_342, 12]] as const) {
+      const phase = canvasLiquidCausticPhase(x, y, time, material);
+      expect(canvasLiquidMacroWave(x, y, time, material, phase))
+        .toBe(canvasLiquidMacroWave(x, y, time, material));
+      expect(canvasLiquidCausticWave(x, y, time, material, phase))
+        .toBe(canvasLiquidCausticWave(x, y, time, material));
+    }
   });
 
   it('adds bounded family-coloured liquid volume key and fill without changing alpha', () => {

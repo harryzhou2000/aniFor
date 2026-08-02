@@ -159,21 +159,35 @@ export function canvasLiquidMacroWave(
   y: number,
   visualTime: number,
   material: number,
+  causticPhase = canvasLiquidCausticPhase(x, y, visualTime, material),
 ): number {
   const time = visualTime * 0.001;
   const broadPrimary = Math.sin(x * 0.041 + y * 0.016 + material * 0.83 + time * 0.22);
   const broadCross = Math.sin(y * 0.029 - x * 0.012 - time * 0.17);
-  // Keep the Canvas caustic's curved world-space phase aligned with the WebGL
-  // body shader. The y-driven bend breaks the flat fallback's old vertical
-  // stripes while remaining a single bounded scalar, not cell-frequency noise.
-  const causticWave = 0.5 + 0.5 * Math.sin(
-    x * 0.092 + Math.sin(y * 0.037 + time * 0.11) * 1.45 + material * 0.67,
-  );
   return clamp(
     broadPrimary * broadCross * 0.48
-      + (smoothstep(0.18, 0.88, causticWave) - 0.5) * 0.92,
+      + (smoothstep(0.18, 0.88, causticPhase) - 0.5) * 0.92,
     -1,
     1,
+  );
+}
+
+/**
+ * Shared curved caustic phase for Canvas liquid bulk styling. It is deliberately
+ * scalar-only: callers may feed it to both the broad reflected band and narrow
+ * caustic lobe without repeating the same two sine evaluations per dense cell.
+ */
+export function canvasLiquidCausticPhase(
+  x: number,
+  y: number,
+  visualTime: number,
+  material: number,
+): number {
+  const time = visualTime * 0.001;
+  // Keep the Canvas phase aligned with the WebGL body shader. The y-driven
+  // bend breaks the flat fallback's old vertical stripes without cell noise.
+  return 0.5 + 0.5 * Math.sin(
+    x * 0.092 + Math.sin(y * 0.037 + time * 0.11) * 1.45 + material * 0.67,
   );
 }
 
@@ -187,14 +201,11 @@ export function canvasLiquidCausticWave(
   y: number,
   visualTime: number,
   material: number,
+  causticPhase = canvasLiquidCausticPhase(x, y, visualTime, material),
 ): number {
-  const time = visualTime * 0.001;
-  const causticWave = 0.5 + 0.5 * Math.sin(
-    x * 0.092 + Math.sin(y * 0.037 + time * 0.11) * 1.45 + material * 0.67,
-  );
   // A narrow positive lobe complements the signed broad band without making
   // a dense pool flash uniformly or turning cell-scale noise into a texture.
-  return smoothstep(0.58, 0.92, causticWave);
+  return smoothstep(0.58, 0.92, causticPhase);
 }
 
 /**
