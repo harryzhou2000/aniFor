@@ -6944,7 +6944,7 @@ void main() {
       // this normal compositor.
       float fourXMineralRecovery = smoothstep(2.75, 4.0, detailEstimate);
       float lowDetailMineralGain = 1.0 + 1.15 * lowDetailTaper
-        + 1.40 * lowDetailShoulder + 1.05 * fourXMineralRecovery;
+        + 1.40 * lowDetailShoulder + 1.20 * fourXMineralRecovery;
       cellGrainRetention = mix(1.0, cellGrainRetention * lowDetailMineralGain,
         settledMineralRetention);
       // At fit view the low-detail recovery must leave a material readable, but
@@ -6955,11 +6955,22 @@ void main() {
       float broadPowderPigmentDamping = 1.0 - smoothstep(
         0.72, 0.98, powderVisualCohesion
       ) * 0.22;
+      // The showcase's deep Stone platform needs a quieter fit-view body than
+      // an exposed Sand/Clay pile: its established macro relief and mesostrata
+      // already carry the bulk read. Restrict this cap to that exact semantic
+      // owner so the calibrated 1x--4x granular-material vocabulary remains
+      // intact. Edges, holes, Local, Grains, and every 8x direct-mesh pixel
+      // stay on their established paths.
+      float deepPowderBody = smoothstep(0.86, 0.98, powderVisualCohesion);
+      float deepStoneBody = material == 21.0 ? deepPowderBody : 0.0;
+      float settledGrainCeiling = mix(8.0, 3.20, deepStoneBody);
       cellGrainRetention = mix(
         cellGrainRetention,
         cellGrainRetention * broadPowderPigmentDamping,
         smoothstep(0.72, 0.98, powderVisualCohesion)
       );
+      cellGrainRetention = min(cellGrainRetention, settledGrainCeiling);
+      float deepPowderChromaDamping = mix(1.0, 0.82, deepStoneBody);
       float facetRetention = mix(1.0, 1.20, settledMineralRetention);
       float powderMineralFactor = 0.91
         + grain * (0.20 + roughSurface * 0.05) * cellGrainRetention * facetGain
@@ -6977,7 +6988,7 @@ void main() {
       // creating a new support decision or perturbing Local/Grains references.
       color += base * grain * vec3(0.178, 0.044, -0.112)
         * stablePowderMineral * lowDetailMineralGain * powderContourTextureRetention
-        * broadPowderPigmentDamping;
+        * broadPowderPigmentDamping * deepPowderChromaDamping;
       color += base * max(0.0, 0.6 - subcell.x - subcell.y)
         * (0.11 + roughSurface * 0.035) * facetRetention * facetGain
         * powderContourTextureRetention;
