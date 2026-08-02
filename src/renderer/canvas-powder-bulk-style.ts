@@ -234,16 +234,20 @@ function applyCanvasSettledPowderMesostrata(
   let blue = 0;
   if (style === 1) { // Sand: warm compressed strata with a cool shaded side.
     red = 7; green = 3; blue = -4;
-  } else if (style === 2) { // Stone: cool mineral bedding, not a pixel grain field.
-    red = 3; green = 4; blue = 7;
+  } else if (style === 2) { // Stone: a visible cool bedding, not a pixel grain field.
+    red = 14; green = 17; blue = 23;
   } else if (style === 3) { // Concrete: cool aggregate density, not courses.
     red = 8; green = 7; blue = 8;
   } else { // Clay: slightly warmer lamellae and denser terracotta pockets.
     red = 6; green = 1; blue = -3;
   }
-  color[0] = clamp(color[0] + red * signedBand * gain, 0, 255);
-  color[1] = clamp(color[1] + green * signedBand * gain, 0, 255);
-  color[2] = clamp(color[2] + blue * signedBand * gain, 0, 255);
+  // Stone's longer-cadence cool bedding needs to survive the Canvas 2x
+  // downsample, but all mineral layers share this explicit eight-byte cap.
+  // The same existing confidence gate keeps it out of grains, thin bodies,
+  // holes, contacts, walls, and every non-Smooth style.
+  color[0] = clamp(color[0] + clamp(red * signedBand * gain, -8, 8), 0, 255);
+  color[1] = clamp(color[1] + clamp(green * signedBand * gain, -8, 8), 0, 255);
+  color[2] = clamp(color[2] + clamp(blue * signedBand * gain, -8, 8), 0, 255);
 }
 
 function positiveFraction(value: number): number {

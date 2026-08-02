@@ -1012,7 +1012,7 @@ vec3 settledPowderMesostrataEightXDelta(float material, vec2 position, float dir
   // the strict caller gate, rather than a weak slope multiplier, owns the
   // exclusion of every thin/contact/reference control.
   vec3 key = style == 1.0 ? vec3(15.0, 7.0, -8.0)
-    : (style == 2.0 ? vec3(5.0, 7.0, 11.0)
+    : (style == 2.0 ? vec3(10.0, 13.0, 18.0)
     : (style == 3.0 ? vec3(8.0, 7.0, 8.0) : vec3(14.0, 4.0, -7.0)));
   return key * (band - 0.5) * 2.0 / 255.0;
 }
@@ -4193,7 +4193,7 @@ vec3 settledPowderMesostrataDelta(float material, vec2 position, float directedS
     + cell.y * (directedSlope * 0.061 + 0.061 * style) + style * 0.173;
   float band = 1.0 - abs(fract(phase) * 2.0 - 1.0);
   vec3 key = style == 1.0 ? vec3(7.0, 3.0, -4.0)
-    : (style == 2.0 ? vec3(3.0, 4.0, 7.0)
+    : (style == 2.0 ? vec3(7.0, 9.0, 13.0)
     : (style == 3.0 ? vec3(8.0, 7.0, 8.0) : vec3(6.0, 1.0, -3.0)));
   return key * (band - 0.5) * 2.0 / 255.0;
 }
