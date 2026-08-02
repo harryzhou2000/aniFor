@@ -6875,17 +6875,26 @@ void main() {
       // settled core. The curved field still owns only coverage at the edge;
       // this is deliberately below the Local/Grains cadence, but enough to
       // survive the 1x--4x compositor without an airbrushed clay/sand body.
-      float cellGrainRetention = mix(1.0, 1.78, settledMineralRetention);
+      // A 2x backing still filters the world-cell mineral cadence enough to
+      // make a broad Smooth pile read airbrushed. Retain a little more of that
+      // cadence in a *proven* settled interior. This is RGB only: the wide
+      // field continues to own the curved exterior, and fragile material,
+      // Local, Grains, and the direct 8x compositor remain on their existing
+      // paths.
+      float cellGrainRetention = mix(1.0, 1.96, settledMineralRetention);
       // The filter's logical field spans the fixed world while gl_FragCoord is
       // in its backing pixels. Their ratio is therefore the active Detail
       // scale, independent of CSS camera transforms and without a new uniform.
-      // Only a one-times backing needs compensation for its necessarily
-      // unresolved sub-cell facet; 2x through 8x retain their normal pigment.
+      // One and two-times backings need compensation for necessarily filtered
+      // cell/facet pigment; taper it smoothly by 4x. The curve is derived
+      // solely from framebuffer/world scale, never CSS camera transforms, so
+      // it cannot alter pointer or viewport math. True 8x has its own compact
+      // compositor and does not execute this normal-path branch.
       float detailEstimate = min(
         (gl_FragCoord.x + 0.5) / max(fieldPosition.x, 0.5),
         (gl_FragCoord.y + 0.5) / max(fieldPosition.y, 0.5)
       );
-      float lowDetailMineralGain = mix(1.92, 1.0, smoothstep(1.20, 1.80, detailEstimate));
+      float lowDetailMineralGain = mix(2.15, 1.0, smoothstep(1.20, 4.0, detailEstimate));
       cellGrainRetention = mix(1.0, cellGrainRetention * lowDetailMineralGain,
         settledMineralRetention);
       float facetRetention = mix(1.0, 1.20, settledMineralRetention);
