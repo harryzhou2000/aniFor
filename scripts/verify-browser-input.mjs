@@ -479,7 +479,13 @@ async function auditMode(mode) {
         browserErrors: errors.length,
       };
     }
-    await waitFor(() => evaluate(cdp, `(() => {
+    const dedicatedEightX = pqrtStateGraphicsEight || filtStateGraphicsEight || lcryStateGraphicsEight
+      || denseBodyAmbientEight || wifiStateGraphicsEight || powderMesostrataGraphicsEight
+      || geologicalSolidGraphicsEight || thermalCatalyticRigidGraphicsEight || gooSolidGraphicsEight
+      || distilledDieselLiquidGraphicsEight;
+    const dedicatedEightXDeadline = dedicatedEightX
+      ? Date.now() + EIGHT_X_PRESENTATION_DEADLINE_MS : undefined;
+    const auditApiExpression = `(() => {
       const parameters = new URLSearchParams(location.search);
       const ready = parameters.get('scene') === 'render-lab'
         && parameters.get('inputAudit') === '1'
@@ -494,8 +500,19 @@ async function auditMode(mode) {
         hasAuditApi: Boolean(window.__ANIFOR_INPUT_AUDIT__),
       }));
       return true;
-    })()`), (pqrtStateGraphicsEight || filtStateGraphicsEight || lcryStateGraphicsEight || denseBodyAmbientEight || wifiStateGraphicsEight || powderMesostrataGraphicsEight || geologicalSolidGraphicsEight || thermalCatalyticRigidGraphicsEight || gooSolidGraphicsEight || distilledDieselLiquidGraphicsEight) ? 45_000 : 15_000, `input audit API (${mode})`);
-    await waitFor(() => evaluate(cdp, `window.__ANIFOR_INPUT_AUDIT__.backend().backend === ${JSON.stringify(mode)}`), (pqrtStateGraphicsEight || filtStateGraphicsEight || lcryStateGraphicsEight || denseBodyAmbientEight || wifiStateGraphicsEight || powderMesostrataGraphicsEight || geologicalSolidGraphicsEight || thermalCatalyticRigidGraphicsEight || gooSolidGraphicsEight || distilledDieselLiquidGraphicsEight) ? 45_000 : 15_000, `${mode} backend`);
+    })()`;
+    if (dedicatedEightX && mode === 'webgl') {
+      await waitForEightX((timeoutMs) => evaluate(cdp, auditApiExpression, timeoutMs), dedicatedEightXDeadline,
+        `input audit API (${mode})`);
+      const startupBackend = await waitForEightXTerminalBackend(
+        cdp, `${mode} dedicated 8x`, dedicatedEightXDeadline,
+      );
+      assertEightXWebGLBackend(startupBackend, `${mode} dedicated 8x`);
+    } else {
+      await waitFor(() => evaluate(cdp, auditApiExpression), 15_000, `input audit API (${mode})`);
+      await waitFor(() => evaluate(cdp, `window.__ANIFOR_INPUT_AUDIT__.backend().backend === ${JSON.stringify(mode)}`),
+        15_000, `${mode} backend`);
+    }
     if (desktopInputOnly) {
       const desktopInput = await auditDesktopInput(cdp, mode, dpr);
       assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
@@ -10802,15 +10819,15 @@ function remainingDeadlineMs(deadline, label) {
   return milliseconds;
 }
 
-async function waitForEightXTerminalBackend(cdp, label, timeoutMs) {
-  return waitFor(() => evaluate(cdp, `(() => {
+async function waitForEightXTerminalBackend(cdp, label, deadline) {
+  return waitForEightX((timeoutMs) => evaluate(cdp, `(() => {
     const backend = window.__ANIFOR_INPUT_AUDIT__?.backend();
     if (!backend) return false;
     return backend.backend === 'webgl'
       || (backend.backend === 'canvas2d'
         && (backend.reason === 'webgl-timeout' || backend.reason === 'webgl-context-lost'))
       ? backend : false;
-  })()`), timeoutMs, `${label} terminal backend`);
+  })()`, timeoutMs), deadline, `${label} terminal backend`);
 }
 
 function assertEightXWebGLBackend(backend, label) {
@@ -12629,7 +12646,7 @@ async function auditVisualScaleMatrix(cdp, mode, dpr) {
       : timeout, `${mode} ${stage} audit API`);
     if (scale === 8 && mode === 'webgl') {
       const startupBackend = await waitForEightXTerminalBackend(
-        cdp, `${mode} ${stage}`, remainingDeadlineMs(startupDeadline, `${mode} ${stage} startup`),
+        cdp, `${mode} ${stage}`, startupDeadline,
       );
       assertEightXWebGLBackend(startupBackend, `${mode} ${stage}`);
     } else {
@@ -12858,7 +12875,7 @@ async function auditEightXFieldProfileGraphics(cdp, dpr) {
       && parameters.has('blankAudit') && Boolean(window.__ANIFOR_INPUT_AUDIT__);
   })()`), remainingDeadlineMs(startupDeadline, 'true-8x Field-profile input audit API'), 'true-8x Field-profile input audit API');
   const startupBackend = await waitForEightXTerminalBackend(
-    cdp, 'true-8x Field-profile', remainingDeadlineMs(startupDeadline, 'true-8x Field-profile startup'),
+    cdp, 'true-8x Field-profile', startupDeadline,
   );
   assertEightXWebGLBackend(startupBackend, 'true-8x Field-profile');
   const geometry = await waitForStableCanvas(
@@ -12967,7 +12984,7 @@ async function auditRenderScaleEight(cdp, dpr, powderOnly = false) {
       && Boolean(window.__ANIFOR_INPUT_AUDIT__ && document.documentElement);
   })()`), remainingDeadlineMs(startupDeadline, 'renderScale=8 input audit API'), 'renderScale=8 input audit API');
   const startupBackend = await waitForEightXTerminalBackend(
-    cdp, 'renderScale=8', remainingDeadlineMs(startupDeadline, 'renderScale=8 startup'),
+    cdp, 'renderScale=8', startupDeadline,
   );
   assertEightXWebGLBackend(startupBackend, 'renderScale=8');
   const geometry = await waitForStableCanvas(
@@ -18926,7 +18943,7 @@ async function navigateEightXRecoveryPage(cdp, auditStage) {
       && Boolean(window.__ANIFOR_INPUT_AUDIT__ && document.documentElement);
   })()`), remainingDeadlineMs(startupDeadline, `renderScale=8 ${auditStage} input audit API`), `renderScale=8 ${auditStage} input audit API`);
   const startupBackend = await waitForEightXTerminalBackend(
-    cdp, `renderScale=8 ${auditStage}`, remainingDeadlineMs(startupDeadline, `renderScale=8 ${auditStage} startup`),
+    cdp, `renderScale=8 ${auditStage}`, startupDeadline,
   );
   assertEightXWebGLBackend(startupBackend, `renderScale=8 ${auditStage}`);
   return waitForStableCanvas(
@@ -21701,8 +21718,10 @@ async function dispatchTouchTapAtClient(cdp, id, client) {
 
 function touch(id, x, y) { return { id, x, y, radiusX: 1, radiusY: 1, force: 1 }; }
 
-async function evaluate(cdp, expression) {
-  const response = await cdp.send('Runtime.evaluate', { expression, returnByValue: true, awaitPromise: true });
+async function evaluate(cdp, expression, timeoutMs) {
+  const response = await cdp.send(
+    'Runtime.evaluate', { expression, returnByValue: true, awaitPromise: true }, timeoutMs,
+  );
   if (response.exceptionDetails) throw new Error(response.exceptionDetails.exception?.description ?? response.exceptionDetails.text);
   return response.result.value;
 }
@@ -21726,6 +21745,15 @@ async function waitFor(check, timeoutMs, label) {
     await sleep(50);
   }
   throw new Error(`${label} timed out${lastError ? `: ${lastError}` : ''}`);
+}
+
+/** Bounds every CDP evaluation as well as the polling loop to one 8x deadline. */
+async function waitForEightX(check, deadline, label) {
+  return waitFor(
+    () => check(remainingDeadlineMs(deadline, label)),
+    remainingDeadlineMs(deadline, label),
+    label,
+  );
 }
 
 function assert(condition, message) { if (!condition) throw new Error(message); }
