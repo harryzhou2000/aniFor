@@ -6896,7 +6896,24 @@ void main() {
         (gl_FragCoord.x + 0.5) / max(fieldPosition.x, 0.5),
         (gl_FragCoord.y + 0.5) / max(fieldPosition.y, 0.5)
       );
-      float lowDetailMineralGain = mix(2.15, 1.0, smoothstep(1.20, 4.0, detailEstimate));
+      // A one-times backing filters a settled body's world-cell pigment much
+      // more aggressively than its curved coverage. Keep a deliberately
+      // short low-detail shoulder: 1x receives enough of the already-owned
+      // mineral vocabulary to match the readable 2x body, while 2x retains
+      // its prior compensation; the distinct 4x filter is handled below.
+      // This remains a dense-interior RGB multiplier only; the Hermite field
+      // still owns every contour, alpha, support, and material decision.
+      float lowDetailShoulder = 1.0 - smoothstep(1.15, 2.25, detailEstimate);
+      float lowDetailTaper = 1.0 - smoothstep(2.25, 4.0, detailEstimate);
+      // Four-times backing resolves the smooth coverage transition crisply,
+      // yet its final cell-frequency pigment still filters below the 2x body
+      // in a fit viewport. Recover that distinct high-normal-detail loss with
+      // a separate 4x band rather than raising the 1x shoulder or changing
+      // the already calibrated 2x body. The true 8x direct mesh does not run
+      // this normal compositor.
+      float fourXMineralRecovery = smoothstep(2.75, 4.0, detailEstimate);
+      float lowDetailMineralGain = 1.0 + 1.15 * lowDetailTaper
+        + 1.40 * lowDetailShoulder + 1.05 * fourXMineralRecovery;
       cellGrainRetention = mix(1.0, cellGrainRetention * lowDetailMineralGain,
         settledMineralRetention);
       float facetRetention = mix(1.0, 1.20, settledMineralRetention);
