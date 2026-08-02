@@ -134,6 +134,18 @@ export const SWCH_PRESENTATION_STATE = {
 } as const;
 
 /**
+ * Native DLAY pending countdown. `life` is retained exactly in the low
+ * fifteen bits after clamping to the representable range; bit 15 keeps an
+ * idle DLAY distinct from a non-DLAY owner. PSCN activation and NSCN expiry
+ * remain wholly native rather than being mirrored in JavaScript.
+ */
+export const DLAY_PRESENTATION_STATE = {
+  countdownMask: 0x7fff,
+  presentMask: 0x8000,
+  reservedMask: 0x0000,
+} as const;
+
+/**
  * Native STOR retained-particle state. The low byte is an exact public
  * identity when native `tmp` holds one; `payloadPresentMask` also preserves an
  * occupied store whose retained type is not publicly representable. Native

@@ -758,6 +758,17 @@ void ExtractFields()
 					0x8000 | (part.life >= 10 ? 0x0001 : 0)
 				);
 			}
+			else if (part.type == PT_DLAY)
+			{
+				// DLAY's entire pending-delay state is native life. Bit 15 marks a
+				// real idle DLAY separately from every non-DLAY owner, while the low
+				// fifteen bits retain the exact currently pending countdown. PSCN
+				// starts it and the native expiry path remains solely responsible for
+				// producing the eventual NSCN spark; never mirror this timer in JS.
+				presentationStateField[offset] = uint16_t(
+					0x8000 | std::clamp(part.life, 0, 0x7FFF)
+				);
+			}
 			else if (part.type == PT_STOR)
 			{
 				presentationStateField[offset] = ProjectStorState(part);

@@ -30,6 +30,7 @@ import { auditLcryStateGraphics } from './lcry-state-graphics-audit.mjs';
 import { auditPipeStateGraphics } from './pipe-state-graphics-audit.mjs';
 import { auditSwchStateGraphics } from './swch-state-graphics-audit.mjs';
 import { auditStorStateGraphics } from './stor-state-graphics-audit.mjs';
+import { auditDlayStateGraphics } from './dlay-state-graphics-audit.mjs';
 import { auditDenseBodyAmbientGraphics } from './dense-body-ambient-graphics-audit.mjs';
 import {
   assertPairedLavaStateGraphics,
@@ -132,6 +133,7 @@ const lcryStateGraphicsEight = lcryStateGraphicsOnly && process.argv.includes('-
 const pipeStateGraphicsOnly = process.argv.includes('--pipe-state-graphics-only');
 const swchStateGraphicsOnly = process.argv.includes('--swch-state-graphics-only');
 const storStateGraphicsOnly = process.argv.includes('--stor-state-graphics-only');
+const dlayStateGraphicsOnly = process.argv.includes('--dlay-state-graphics-only');
 const denseBodyAmbientOnly = process.argv.includes('--dense-body-ambient-only');
 const denseBodyAmbientEight = denseBodyAmbientOnly && process.argv.includes('--render-scale=8');
 const lavaStateGraphicsOnly = process.argv.includes('--lava-state-graphics-only');
@@ -160,6 +162,7 @@ const usesProductionBundle = productionBundle || showcaseScreenshotOnly || cellu
   || pipeStateGraphicsOnly
   || swchStateGraphicsOnly
   || storStateGraphicsOnly
+  || dlayStateGraphicsOnly
   || botanicalLifecycleGraphicsOnly || sparkStateGraphicsOnly
   || nativeSeedGrowthOnly || nativeSemanticsOnly || catalogSelectionOnly || shortDesktopOnly || liveScaleOnly
   || scaleEightOnly || eightFieldProfileOnly || eightMaterialAtlasOnly;
@@ -807,6 +810,21 @@ async function auditMode(mode) {
       assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
       cdp.close();
       return { backend: mode, storStateGraphics, browserErrors: errors.length };
+    }
+    if (dlayStateGraphicsOnly) {
+      const dlayStateGraphics = await auditDlayStateGraphics({
+        cdp,
+        mode,
+        evaluate,
+        waitFor,
+        waitForStablePageCapture,
+        captureSettledPage,
+        outputScale: process.argv.includes('--render-scale=8') ? 8 : 2,
+        assert,
+      });
+      assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
+      cdp.close();
+      return { backend: mode, dlayStateGraphics, browserErrors: errors.length };
     }
     if (denseBodyAmbientOnly) {
       const denseBodyAmbientGraphics = await auditDenseBodyAmbientGraphics({

@@ -169,6 +169,7 @@ uniform float uLcryStateStyling;
 uniform float uPipePresentationStyling;
 uniform float uStorStateStyling;
 uniform float uSwchStateStyling;
+uniform float uDlayStateStyling;
 uniform float uPhotonActive;
 float materialAt(vec2 uv) {
   return floor(texture(uFieldTexture, clamp(uv, uTexel * 0.5, vec2(1.0) - uTexel * 0.5)).r * 255.0 + 0.5);
@@ -759,6 +760,20 @@ vec3 swchStateEightXDelta(vec3 color, float packedState) {
   bool on = mod(packedState, 2.0) > 0.5;
   if (!present || !on) return vec3(0.0);
   vec3 styled = color * vec3(0.66, 0.82, 0.70) + vec3(16.0, 100.0, 42.0) / 255.0;
+  return clamp(styled, 0.0, 1.0) - color;
+}
+// DLAY retains its live native countdown in the existing packed word. The
+// semantic owner and bit-15 marker guard an idle zero independently of every
+// other state owner; temperature only reconstructs the native delay range.
+vec3 dlayCountdownEightXDelta(vec3 color, float packedState, float temperatureNormalized) {
+  if (packedState < 32768.0) return vec3(0.0);
+  float countdown = mod(packedState, 32768.0);
+  if (countdown < 0.5) return vec3(0.0);
+  float temperatureKelvin = floor(temperatureNormalized * 255.0 + 0.5)
+    * (65536.0 / 255.0 / 10.0);
+  float configuredDelay = clamp(temperatureKelvin - 273.15, 1.0, 600.0);
+  float elapsed = 1.0 - clamp(countdown / configuredDelay, 0.0, 1.0);
+  vec3 styled = mix(color, vec3(236.0, 132.0, 66.0) / 255.0, 0.12 + elapsed * 0.32);
   return clamp(styled, 0.0, 1.0) - color;
 }
 // PIPE/PPIP retain their carriage in ctype. This compact, palette-free
@@ -2566,6 +2581,7 @@ void main() {
   bool pipeOwner = material == 121.0 || material == 160.0;
   bool storOwner = material == 163.0;
   bool swchOwner = material == 149.0;
+  bool dlayOwner = material == 154.0;
   // Most 8x fragments have no retained native state. Decode the B/A state and
   // co-located native wall exactly once only for owners whose enabled RGB
   // styling consumes it; this avoids two state-texture samples on every other
@@ -2586,6 +2602,7 @@ void main() {
     || (uPipePresentationStyling > 0.5 && pipeOwner)
     || (uStorStateStyling > 0.5 && storOwner)
     || (uSwchStateStyling > 0.5 && swchOwner)
+    || (uDlayStateStyling > 0.5 && dlayOwner)
     // Eligible translucent liquid already needs this exact wall texel for the
     // final backdrop. Fold the cohesion guard into that one packed-state read
     // so true 8x does not grow another native-wall sample.
@@ -2724,6 +2741,9 @@ void main() {
   }
   if (uSwchStateStyling > 0.5 && swchOwner && nativeWall < 0.5) {
     color += swchStateEightXDelta(color, sourceTarget);
+  }
+  if (uDlayStateStyling > 0.5 && dlayOwner && nativeWall < 0.5) {
+    color += dlayCountdownEightXDelta(color, sourceTarget, semantic.g);
   }
   // True 8x keeps botanical state on the existing packed B/A word. This is
   // RGB-only compact arithmetic: no additional texture, field, pass, or
@@ -2965,6 +2985,7 @@ uniform float uLcryStateStyling;
 uniform float uPipePresentationStyling;
 uniform float uStorStateStyling;
 uniform float uSwchStateStyling;
+uniform float uDlayStateStyling;
 uniform float uLavaAncestryStyling;
 uniform float uMoltenBodyOptics;
 uniform float uBotanicalIdentityStyling;
@@ -4412,6 +4433,23 @@ vec3 storStateDelta(vec3 color, vec2 stateBytes) {
     styled = mix(styled, vec3(78.0, 177.0, 194.0) / 255.0, 0.30);
   }
   if (cooldown) styled = styled * vec3(0.95, 0.98, 1.02) + vec3(3.0, 5.0, 9.0) / 255.0;
+  return clamp(styled, 0.0, 1.0) - color;
+}
+// DLAY's exact native life countdown is packed into the same B/A state word
+// used by other native owners. Bit 15 differentiates a present idle DLAY from
+// unrelated zero words, while semantic temperature supplies only its static
+// native delay range; no clock or support decision is introduced.
+vec3 dlayCountdownDelta(vec3 color, vec2 stateBytes, float temperatureNormalized) {
+  float packedState = floor(stateBytes.x * 255.0 + 0.5)
+    + floor(stateBytes.y * 255.0 + 0.5) * 256.0;
+  if (packedState < 32768.0) return vec3(0.0);
+  float countdown = mod(packedState, 32768.0);
+  if (countdown < 0.5) return vec3(0.0);
+  float temperatureKelvin = floor(temperatureNormalized * 255.0 + 0.5)
+    * (65536.0 / 255.0 / 10.0);
+  float configuredDelay = clamp(temperatureKelvin - 273.15, 1.0, 600.0);
+  float elapsed = 1.0 - clamp(countdown / configuredDelay, 0.0, 1.0);
+  vec3 styled = mix(color, vec3(236.0, 132.0, 66.0) / 255.0, 0.12 + elapsed * 0.32);
   return clamp(styled, 0.0, 1.0) - color;
 }
 // FILT's all-zero ctype is an upstream temperature-generated wavelength mask,
@@ -7064,6 +7102,12 @@ void main() {
       && wall < 0.5 && surfaceOnly < 0.5 && halo < 0.5 && emissionOnly < 0.5) {
       color += swchStateDelta(color, wallState.ba);
     }
+    if (uDlayStateStyling > 0.5 && material == 154.0
+      && (family == 0.0 || family == 4.0) && traits < 0.5
+      && !materialEmissive && wall < 0.5 && surfaceOnly < 0.5 && halo < 0.5
+      && emissionOnly < 0.5) {
+      color += dlayCountdownDelta(color, wallState.ba, materialTemperature);
+    }
     if (uThermalMaterialStyling > 0.5 && !materialEmissive && traits < 0.5
       && material != 3.0 && (family == 0.0 || family == 4.0)) {
       // Scalar, RGB-only response: temperature cannot widen a contour, alter
@@ -7576,6 +7620,7 @@ export class PixiFieldPresenter {
       uPipePresentationStyling: { value: 1, type: 'f32' },
       uStorStateStyling: { value: 1, type: 'f32' },
       uSwchStateStyling: { value: 1, type: 'f32' },
+      uDlayStateStyling: { value: 1, type: 'f32' },
       uLavaAncestryStyling: { value: 1, type: 'f32' },
       uMoltenBodyOptics: { value: 1, type: 'f32' },
       uBotanicalIdentityStyling: { value: 1, type: 'f32' },
@@ -7927,6 +7972,7 @@ export class PixiFieldPresenter {
     storStateStylingEnabled = true,
     swchStateStylingEnabled = true,
     denseBodyAmbientFillEnabled = true,
+    dlayStateStylingEnabled = true,
   ): void {
     const uniforms = this.uniforms.uniforms;
     uniforms.uGasFieldLighting = gasFieldLightingEnabled ? 1 : 0;
@@ -7978,6 +8024,7 @@ export class PixiFieldPresenter {
     uniforms.uPipePresentationStyling = pipePresentationStylingEnabled ? 1 : 0;
     uniforms.uStorStateStyling = storStateStylingEnabled ? 1 : 0;
     uniforms.uSwchStateStyling = swchStateStylingEnabled ? 1 : 0;
+    uniforms.uDlayStateStyling = dlayStateStylingEnabled ? 1 : 0;
     uniforms.uLavaAncestryStyling = lavaAncestryStylingEnabled ? 1 : 0;
     uniforms.uMoltenBodyOptics = moltenBodyOpticsEnabled ? 1 : 0;
     uniforms.uBotanicalIdentityStyling = botanicalIdentityStylingEnabled ? 1 : 0;
@@ -8222,6 +8269,11 @@ export class PixiFieldPresenter {
 
   setSwchStateStylingEnabled(enabled: boolean): void {
     this.uniforms.uniforms.uSwchStateStyling = enabled ? 1 : 0;
+    this.renderApplication();
+  }
+
+  setDlayStateStylingEnabled(enabled: boolean): void {
+    this.uniforms.uniforms.uDlayStateStyling = enabled ? 1 : 0;
     this.renderApplication();
   }
 

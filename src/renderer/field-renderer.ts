@@ -36,6 +36,7 @@ import { applyCanvasLcryStateStyle } from './canvas-lcry-state-style';
 import { applyCanvasPipePresentationStyle } from './canvas-pipe-state-style';
 import { applyCanvasStorStateStyle } from './canvas-stor-state-style';
 import { applyCanvasSwchStateStyle } from './canvas-swch-state-style';
+import { applyCanvasDlayCountdownStyle } from './canvas-dlay-countdown-style';
 import { shadeCanvasEnergy } from './canvas-energy-style';
 import { shadeCanvasMaterial } from './canvas-material-style';
 import { shadeCanvasCellularMaterial } from './canvas-cellular-style';
@@ -334,6 +335,7 @@ export class MaterialRenderer {
   private pipePresentationStylingEnabled = true;
   private storStateStylingEnabled = true;
   private swchStateStylingEnabled = true;
+  private dlayStateStylingEnabled = true;
   private lavaAncestryStylingEnabled = true;
   // Canonical WebGL body optics only. Canvas deliberately remains a safe,
   // semantically equivalent fallback instead of carrying every advanced look.
@@ -703,6 +705,14 @@ export class MaterialRenderer {
     if (enabled === this.denseBodyAmbientFillEnabled) return;
     this.denseBodyAmbientFillEnabled = enabled;
     this.presenter?.setDenseBodyAmbientFillEnabled(enabled);
+    this.changed = true;
+  }
+
+  /** Native DLAY countdown is a state-owned RGB cue, never a JavaScript timer. */
+  setDlayStateStylingEnabled(enabled: boolean): void {
+    if (enabled === this.dlayStateStylingEnabled) return;
+    this.dlayStateStylingEnabled = enabled;
+    this.presenter?.setDlayStateStylingEnabled(enabled);
     this.changed = true;
   }
 
@@ -1203,6 +1213,7 @@ export class MaterialRenderer {
       this.storStateStylingEnabled,
       this.swchStateStylingEnabled,
       this.denseBodyAmbientFillEnabled,
+      this.dlayStateStylingEnabled,
     );
     // Route subsequent dirty cells to the candidate while its first expensive
     // frame is in flight. The known-good Canvas remains mounted underneath;
@@ -2246,6 +2257,11 @@ export class MaterialRenderer {
             }
             if (this.swchStateStylingEnabled && presentationState) {
               applyCanvasSwchStateStyle(this.styledColor, material, presentationState[index]);
+            }
+            if (this.dlayStateStylingEnabled) {
+              applyCanvasDlayCountdownStyle(
+                this.styledColor, material, presentationState?.[index] ?? 0, temperatures?.[index],
+              );
             }
             if (this.fieldProfileIdentityStylingEnabled && profile === RenderProfile.Field
               && optics === RenderOptics.Default) {

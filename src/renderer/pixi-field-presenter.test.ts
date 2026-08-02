@@ -47,6 +47,7 @@ interface PresenterHarness {
   setLcryStateStylingEnabled: PixiFieldPresenter['setLcryStateStylingEnabled'];
   setPipePresentationStylingEnabled: PixiFieldPresenter['setPipePresentationStylingEnabled'];
   setSwchStateStylingEnabled: PixiFieldPresenter['setSwchStateStylingEnabled'];
+  setDlayStateStylingEnabled: PixiFieldPresenter['setDlayStateStylingEnabled'];
   setLavaAncestryStylingEnabled: PixiFieldPresenter['setLavaAncestryStylingEnabled'];
   setMoltenBodyOpticsEnabled: PixiFieldPresenter['setMoltenBodyOpticsEnabled'];
   setBotanicalIdentityStylingEnabled: PixiFieldPresenter['setBotanicalIdentityStylingEnabled'];
@@ -143,6 +144,7 @@ describe('Pixi presenter startup configuration', () => {
       uLcryStateStyling: 1,
       uPipePresentationStyling: 1,
       uSwchStateStyling: 1,
+      uDlayStateStyling: 1,
       uMoltenBodyOptics: 1,
       uPowderStyle: powderRenderStyleValue('grains'),
       uPowderBodyDepth: 1,
@@ -2282,6 +2284,35 @@ describe('Pixi presenter startup configuration', () => {
     expect(normal).not.toContain('uSwchStateTexture');
   });
 
+  it('projects native DLAY countdown through the existing packed state and temperature in both WebGL compositors', () => {
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');
+    const eightEnd = source.indexOf('const FIELD_FRAGMENT = `', eightStart);
+    const eight = source.slice(eightStart, eightEnd);
+    const normalStart = source.indexOf('const FIELD_FRAGMENT = `', eightEnd);
+    const normalEnd = source.indexOf('`;\n\n/** Primary WebGL presentation', normalStart);
+    const normal = source.slice(normalStart, normalEnd);
+    const packedStart = eight.indexOf('  bool needsPackedState =');
+    const packedEnd = eight.indexOf('  float sourceTarget =', packedStart);
+    const packed = eight.slice(packedStart, packedEnd);
+
+    expect(eight).toContain('uniform float uDlayStateStyling;');
+    expect(eight).toContain('bool dlayOwner = material == 154.0;');
+    expect(eight).toContain('vec3 dlayCountdownEightXDelta(vec3 color, float packedState, float temperatureNormalized)');
+    expect(eight).toContain('float countdown = mod(packedState, 32768.0);');
+    expect(eight).toContain('if (packedState < 32768.0) return vec3(0.0);');
+    expect(packed).toContain('|| (uDlayStateStyling > 0.5 && dlayOwner)');
+    expect(eight).toContain('if (uDlayStateStyling > 0.5 && dlayOwner && nativeWall < 0.5)');
+    expect(eight.match(/texture\(uWallTexture, uv\)/g)).toHaveLength(4);
+
+    expect(normal).toContain('uniform float uDlayStateStyling;');
+    expect(normal).toContain('vec3 dlayCountdownDelta(vec3 color, vec2 stateBytes, float temperatureNormalized)');
+    expect(normal).toContain('if (uDlayStateStyling > 0.5 && material == 154.0');
+    expect(normal).toContain('color += dlayCountdownDelta(color, wallState.ba, materialTemperature);');
+    expect(normal).toContain('(65536.0 / 255.0 / 10.0)');
+    expect(normal).not.toContain('uDlayStateTexture');
+  });
+
   it('projects native STOR reservoir state through the existing packed state in both WebGL compositors', () => {
     const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
     const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');
@@ -2830,6 +2861,18 @@ describe('Pixi presenter startup configuration', () => {
 
     presenter.setSwchStateStylingEnabled(true);
     expect(presenter.uniforms.uniforms.uSwchStateStyling).toBe(1);
+    expect(presenter.app.render).toHaveBeenCalledTimes(2);
+  });
+
+  it('redraws the native DLAY countdown toggle', () => {
+    const presenter = presenterHarness();
+
+    presenter.setDlayStateStylingEnabled(false);
+    expect(presenter.uniforms.uniforms.uDlayStateStyling).toBe(0);
+    expect(presenter.app.render).toHaveBeenCalledOnce();
+
+    presenter.setDlayStateStylingEnabled(true);
+    expect(presenter.uniforms.uniforms.uDlayStateStyling).toBe(1);
     expect(presenter.app.render).toHaveBeenCalledTimes(2);
   });
 

@@ -126,6 +126,9 @@ import {
   STOR_STATE_GRAPHICS_AUDIT, prepareStorStateGraphicsAuditFixture,
 } from './stor-state-graphics-audit';
 import {
+  DLAY_STATE_GRAPHICS_AUDIT, prepareDlayStateGraphicsAuditFixture,
+} from './dlay-state-graphics-audit';
+import {
   PHOTON_SPECTRUM_GRAPHICS_AUDIT, preparePhotonSpectrumGraphicsAuditFixture,
   setPhotonSpectrumGraphicsVisible,
 } from './photon-spectrum-graphics-audit';
@@ -517,6 +520,9 @@ export class Game {
       setStorStateStyling: (enabled) => {
         this.renderer.setStorStateStylingEnabled(enabled);
       },
+      setDlayStateStyling: (enabled) => {
+        this.renderer.setDlayStateStylingEnabled(enabled);
+      },
       setQuartzCrystalStateStyling: (enabled) => {
         this.renderer.setQuartzCrystalStateStylingEnabled(enabled);
       },
@@ -736,6 +742,11 @@ export class Game {
       storStateGraphicsAtlas: () => STOR_STATE_GRAPHICS_AUDIT,
       prepareStorStateGraphicsFixture: () => {
         prepareStorStateGraphicsAuditFixture(this.simulation);
+        this.renderer.invalidateDynamicPresentation();
+      },
+      dlayStateGraphicsAtlas: () => DLAY_STATE_GRAPHICS_AUDIT,
+      prepareDlayStateGraphicsFixture: () => {
+        prepareDlayStateGraphicsAuditFixture(this.simulation);
         this.renderer.invalidateDynamicPresentation();
       },
       photonSpectrumGraphicsAtlas: () => PHOTON_SPECTRUM_GRAPHICS_AUDIT,

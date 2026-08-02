@@ -3,7 +3,7 @@ import { MATERIALS, Material } from '../shared/materials';
 import { PowderToyBackend } from './powder-toy-backend';
 import { SimulationTool } from './simulation-tools';
 import {
-  DEUT_PRESENTATION_STATE, GEL_PRESENTATION_STATE, LAVA_PRESENTATION_STATE, POLO_PRESENTATION_STATE,
+  DEUT_PRESENTATION_STATE, DLAY_PRESENTATION_STATE, GEL_PRESENTATION_STATE, LAVA_PRESENTATION_STATE, POLO_PRESENTATION_STATE,
   PLNT_PRESENTATION_STATE, SEED_PRESENTATION_STATE, SPNG_PRESENTATION_STATE,
   FILT_PRESENTATION_STATE, LCRY_PRESENTATION_STATE, QUARTZ_PRESENTATION_STATE,
   PIPE_PRESENTATION_STATE, SPRK_PRESENTATION_STATE, STOR_PRESENTATION_STATE,
@@ -1006,6 +1006,60 @@ describe('direct Powder Toy backend', () => {
     expect(ownerAt(restored)).toBe(Material.SWCH);
     const offState = stateAt(restored);
     expect(offState).toBe(SWCH_PRESENTATION_STATE.presentMask);
+  });
+
+  it('projects native DLAY countdown through PSCN, OPS1, and NSCN expiry', async () => {
+    const point = { x: 306, y: 180 } as const;
+    const indexOf = (simulation: PowderToyBackend): number => point.y * simulation.width + point.x;
+    const ownerAt = (simulation: PowderToyBackend): number => simulation.cells()[indexOf(simulation)];
+    const stateAt = (simulation: PowderToyBackend): number => {
+      simulation.cells();
+      return simulation.presentationState()[indexOf(simulation)];
+    };
+
+    const source = await PowderToyBackend.load(moduleArtifact.href);
+    source.paint(point.x, point.y, Material.DLAY, 0);
+    expect(ownerAt(source)).toBe(Material.DLAY);
+    expect(stateAt(source)).toBe(DLAY_PRESENTATION_STATE.presentMask);
+
+    // A real PSCN spark begins the temperature-derived upstream DLAY timer.
+    source.paint(point.x - 1, point.y, Material.PSCN, 0);
+    source.paint(point.x - 1, point.y, Material.SPRK, 0);
+    source.step();
+    expect(ownerAt(source)).toBe(Material.DLAY);
+    const active = stateAt(source);
+    const countdown = active & DLAY_PRESENTATION_STATE.countdownMask;
+    expect(active & DLAY_PRESENTATION_STATE.presentMask).toBe(DLAY_PRESENTATION_STATE.presentMask);
+    expect(countdown).toBeGreaterThan(1);
+    expect(active & DLAY_PRESENTATION_STATE.reservedMask).toBe(0);
+
+    // Preserve a genuine mid-countdown native `life` through OPS1.
+    source.step();
+    const midCountdown = stateAt(source);
+    expect(midCountdown & DLAY_PRESENTATION_STATE.countdownMask).toBeLessThan(countdown);
+    expect(midCountdown & DLAY_PRESENTATION_STATE.countdownMask).toBeGreaterThan(0);
+    const file = source.saveFile();
+    expect(new TextDecoder().decode(file.slice(0, 4))).toBe('OPS1');
+    const restored = await PowderToyBackend.load(moduleArtifact.href);
+    restored.loadFile(file);
+    expect(ownerAt(restored)).toBe(Material.DLAY);
+    expect(stateAt(restored)).toBe(midCountdown);
+
+    // Native DLAY creates a spark on NSCN exactly when its native life reaches
+    // zero. No fixture state and no JavaScript countdown are involved.
+    restored.paint(point.x + 1, point.y, Material.NSCN, 0);
+    let expired = false;
+    for (let step = 0; step <= countdown + 2; step++) {
+      restored.step();
+      if ((stateAt(restored) & DLAY_PRESENTATION_STATE.countdownMask) === 0) {
+        expired = true;
+        break;
+      }
+    }
+    expect(expired).toBe(true);
+    expect(ownerAt(restored)).toBe(Material.DLAY);
+    expect(stateAt(restored)).toBe(DLAY_PRESENTATION_STATE.presentMask);
+    expect(restored.cells()[point.y * restored.width + point.x + 1]).toBe(Material.SPRK);
   });
 
   it('projects native STOR water capture and PSCN release through OPS1', async () => {

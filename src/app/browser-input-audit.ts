@@ -41,6 +41,7 @@ import type { LcryStateGraphicsAuditSnapshot } from './lcry-state-graphics-audit
 import type { PipeStateGraphicsAuditSnapshot } from './pipe-state-graphics-audit';
 import type { SwchStateGraphicsAuditSnapshot } from './swch-state-graphics-audit';
 import type { StorStateGraphicsAuditSnapshot } from './stor-state-graphics-audit';
+import type { DlayStateGraphicsAuditSnapshot } from './dlay-state-graphics-audit';
 import type { LavaStateGraphicsAuditSnapshot } from './lava-state-graphics-audit';
 import type {
   BotanicalLifecycleGraphicsAuditSnapshot,
@@ -110,6 +111,7 @@ export interface BrowserInputAuditApi {
   setPipePresentationStyling(enabled: boolean): void;
   setSwchStateStyling(enabled: boolean): void;
   setStorStateStyling(enabled: boolean): void;
+  setDlayStateStyling(enabled: boolean): void;
   setQuartzCrystalStateStyling(enabled: boolean): void;
   setLavaAncestryStyling(enabled: boolean): void;
   setMoltenBodyOptics(enabled: boolean): void;
@@ -208,6 +210,8 @@ export interface BrowserInputAuditApi {
   prepareSwchStateGraphicsFixture(): void;
   storStateGraphicsAtlas(): StorStateGraphicsAuditSnapshot;
   prepareStorStateGraphicsFixture(): void;
+  dlayStateGraphicsAtlas(): DlayStateGraphicsAuditSnapshot;
+  prepareDlayStateGraphicsFixture(): void;
   photonSpectrumGraphicsAtlas(): PhotonSpectrumGraphicsAuditSnapshot;
   preparePhotonSpectrumGraphicsFixture(): void;
   setPhotonSpectrumGraphicsVisible(visible: boolean): void;
