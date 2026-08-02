@@ -6812,7 +6812,7 @@ void main() {
       // settled core. The curved field still owns only coverage at the edge;
       // this is deliberately below the Local/Grains cadence, but enough to
       // survive the 1x--4x compositor without an airbrushed clay/sand body.
-      float cellGrainRetention = mix(1.0, 1.62, settledMineralRetention);
+      float cellGrainRetention = mix(1.0, 1.78, settledMineralRetention);
       // The filter's logical field spans the fixed world while gl_FragCoord is
       // in its backing pixels. Their ratio is therefore the active Detail
       // scale, independent of CSS camera transforms and without a new uniform.
@@ -6822,17 +6822,17 @@ void main() {
         (gl_FragCoord.x + 0.5) / max(fieldPosition.x, 0.5),
         (gl_FragCoord.y + 0.5) / max(fieldPosition.y, 0.5)
       );
-      float lowDetailMineralGain = mix(1.75, 1.0, smoothstep(1.20, 1.80, detailEstimate));
+      float lowDetailMineralGain = mix(1.92, 1.0, smoothstep(1.20, 1.80, detailEstimate));
       cellGrainRetention = mix(1.0, cellGrainRetention * lowDetailMineralGain,
         settledMineralRetention);
-      float facetRetention = mix(1.0, 1.14, settledMineralRetention);
+      float facetRetention = mix(1.0, 1.20, settledMineralRetention);
       color *= 0.91 + grain * (0.20 + roughSurface * 0.05) * cellGrainRetention * facetGain
         + grainFacet * (0.10 + roughSurface * 0.04) * facetRetention * facetGain;
       // A modest chromatic mineral key survives normal-detail raster filtering
       // better than sub-cell luminance alone. It is exact-cell/world anchored
       // and RGB-only, so composed Smooth bodies gain colour vocabulary without
       // creating a new support decision or perturbing Local/Grains references.
-      color += base * grain * vec3(0.154, 0.036, -0.096)
+      color += base * grain * vec3(0.178, 0.044, -0.112)
         * stablePowderMineral * lowDetailMineralGain;
       color += base * max(0.0, 0.6 - subcell.x - subcell.y)
         * (0.11 + roughSurface * 0.035) * facetRetention * facetGain;
