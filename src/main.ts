@@ -11,7 +11,7 @@ root.innerHTML = `
   <section class="shell">
     <header class="topbar">
       <div><p class="eyebrow">THE POWDER TOY, REIMAGINED</p><h1>AniforTPT</h1></div>
-      <p class="hint">Draw · wheel to zoom · right-click to erase</p>
+      <p class="hint">Draw · wheel to zoom · middle-drag to pan · right-click to erase</p>
     </header>
     <section class="workspace">
       <div class="viewport-frame">

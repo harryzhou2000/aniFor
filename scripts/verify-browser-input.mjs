@@ -12688,6 +12688,10 @@ async function auditVisualScaleMatrix(cdp, mode, dpr) {
     { name: 'glassScaleBody', x: 290, y: 370, radiusX: 8, radiusY: 5, silhouette: true },
     { name: 'waterScaleBody', x: 224, y: 270, radius: 8, silhouette: true },
     { name: 'oilScaleBody', x: 263, y: 270, radius: 8, silhouette: true },
+    // This compact, field-owned FOG billow exercises the important direct-8x
+    // distinction from the normal compositor: it must retain one joined volume
+    // rather than falling back to visible semantic-particle dots.
+    { name: 'compactFogScaleVolume', x: 430, y: 171, radiusX: 30, radiusY: 10, topology: true, silhouette: true },
   ];
   const rows = [];
 
@@ -12793,6 +12797,13 @@ async function auditVisualScaleMatrix(cdp, mode, dpr) {
     assert(byName.oilScaleBody.rgb[0] > byName.oilScaleBody.rgb[1]
       && byName.oilScaleBody.rgb[1] > byName.oilScaleBody.rgb[2],
     `${mode} renderScale=${scale} Oil lost warm ordering (${byName.oilScaleBody.rgb})`);
+    assert(byName.compactFogScaleVolume.coverage >= 0.45
+      && byName.compactFogScaleVolume.dominantComponent >= 0.90
+      && byName.compactFogScaleVolume.microContrast <= 18
+      && Math.max(...byName.compactFogScaleVolume.rgb) - Math.min(...byName.compactFogScaleVolume.rgb) <= 18,
+    `${mode} renderScale=${scale} compact FOG lost cohesive neutral volume (${JSON.stringify(
+      byName.compactFogScaleVolume,
+    )})`);
     rows.push({
       scale,
       backing: `${scene.geometry.backing.width}x${scene.geometry.backing.height}`,
@@ -12817,6 +12828,12 @@ async function auditVisualScaleMatrix(cdp, mode, dpr) {
       `${mode} renderScale=${row.scale} changed ${sample.name} materially (${JSON.stringify({
         areaRatio: round(areaRatio), rgbDistance: round(rgbDistance), sample, baseline,
       })})`);
+      if (sample.name === 'compactFogScaleVolume') assert(
+        sample.dominantComponent >= baseline.dominantComponent - 0.06,
+        `${mode} renderScale=${row.scale} fragmented compact FOG relative to 2x (${JSON.stringify({
+          baseline, sample,
+        })})`,
+      );
     }
     const sandBaseline = reference.samples.find(({ name }) => name === 'sandSmoothInterior');
     const sandSample = row.samples.find(({ name }) => name === 'sandSmoothInterior');
