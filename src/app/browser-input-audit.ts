@@ -45,6 +45,9 @@ import type { DlayStateGraphicsAuditSnapshot } from './dlay-state-graphics-audit
 import type { WifiStateGraphicsAuditSnapshot } from './wifi-state-graphics-audit';
 import type { PowderMesostrataGraphicsAuditSnapshot } from './powder-mesostrata-graphics-audit';
 import type { GeologicalSolidGraphicsAuditSnapshot } from './geological-solid-graphics-audit';
+import type {
+  ThermalCatalyticRigidGraphicsAuditSnapshot,
+} from './thermal-catalytic-rigid-graphics-audit';
 import type { LavaStateGraphicsAuditSnapshot } from './lava-state-graphics-audit';
 import type {
   BotanicalLifecycleGraphicsAuditSnapshot,
@@ -65,6 +68,7 @@ export interface BrowserInputAuditApi {
   sourceTarget(x: number, y: number): number;
   presentationAuxiliary(x: number, y: number): number;
   geologicalSolidStylingEnabled(): boolean;
+  thermalCatalyticRigidStylingEnabled(): boolean;
   gasIdentityStyle(x: number, y: number): number;
   atmosphereSupportAudit(): AtmosphereSupportAudit | undefined;
   occupiedCells(): number;
@@ -126,6 +130,7 @@ export interface BrowserInputAuditApi {
   setPowderBodyDepth(enabled: boolean): void;
   setPowderMesostrataStyling(enabled: boolean): void;
   setGeologicalSolidStyling(enabled: boolean): void;
+  setThermalCatalyticRigidStyling(enabled: boolean): void;
   setPowderRenderStyle(style: PowderRenderStyle): void;
   clear(): void;
   setRadius(radius: number): void;
@@ -225,6 +230,8 @@ export interface BrowserInputAuditApi {
   preparePowderMesostrataGraphicsFixture(): void;
   geologicalSolidGraphicsAtlas(): GeologicalSolidGraphicsAuditSnapshot;
   prepareGeologicalSolidGraphicsFixture(): void;
+  thermalCatalyticRigidGraphicsAtlas(): ThermalCatalyticRigidGraphicsAuditSnapshot;
+  prepareThermalCatalyticRigidGraphicsFixture(): void;
   photonSpectrumGraphicsAtlas(): PhotonSpectrumGraphicsAuditSnapshot;
   preparePhotonSpectrumGraphicsFixture(): void;
   setPhotonSpectrumGraphicsVisible(visible: boolean): void;

@@ -132,6 +132,7 @@ uniform float uEnergyIdentityStyling;
 uniform float uCellularMaterialStyling;
 uniform float uStructuralRigidStyling;
 uniform float uGeologicalSolidStyling;
+uniform float uThermalCatalyticRigidStyling;
 uniform float uMechanismBodyStyling;
 uniform float uElectronicIdentityStyling;
 uniform float uFieldProfileIdentityStyling;
@@ -1191,6 +1192,36 @@ vec3 geologicalSolidEightXDelta(float material, vec2 position, float depthT, flo
   }
   return vec3(0.0);
 }
+// HEAC, PTNM, and RSSS reuse only the deep solid-body proof already live in
+// this direct mesh. The grammar is static, RGB-only, and exact-owner: it adds
+// no sampler, field, support decision, or scale-dependent resource.
+vec3 thermalCatalyticRigidEightXDelta(float material, vec2 position, float depthT, float bodyResponse) {
+  vec2 cell = floor(position);
+  float crown = max(0.0, bodyResponse);
+  float pocket = max(0.0, -bodyResponse);
+  if (material == 72.0) { // HEAC: warm heat-channel lamellae.
+    float channel = 1.0 - step(0.5, mod(cell.x * 3.0 + cell.y * 2.0, 17.0));
+    float pin = 1.0 - step(0.5, mod(cell.x - cell.y * 4.0, 31.0));
+    return clamp(vec3(4.0, -2.0, -3.0) * crown - vec3(3.0, 2.0, 3.0) * pocket
+      + vec3(3.0, 0.0, -1.0) * channel * depthT + vec3(0.0, -1.0, 0.0) * pin * depthT,
+    vec3(-12.0), vec3(12.0)) / 255.0;
+  }
+  if (material == 75.0) { // PTNM: cool catalytic planes and sparse active sites.
+    float plane = 1.0 - step(2.0, mod(cell.x + cell.y * 2.0, 19.0));
+    float site = 1.0 - step(0.5, mod(cell.x * 5.0 - cell.y * 3.0, 43.0));
+    return clamp(vec3(2.0, 3.0, 5.0) * crown - vec3(2.0, 1.0, 1.0) * pocket
+      + vec3(-1.0, 0.0, 2.0) * plane * depthT + vec3(0.0, 1.0, 1.0) * site * depthT,
+    vec3(-12.0), vec3(12.0)) / 255.0;
+  }
+  if (material == 79.0) { // RSSS: low-frequency fused resist body below its surface grammar.
+    float seam = 1.0 - step(0.5, mod(cell.x * 2.0 - cell.y * 3.0, 23.0));
+    float inclusion = 1.0 - step(0.5, mod(cell.x * 7.0 + cell.y, 47.0));
+    return clamp(vec3(2.0, 0.0, 0.0) * crown - vec3(4.0, 3.0, 3.0) * pocket
+      + vec3(0.0, -1.0, -1.0) * seam * depthT + vec3(2.0, 0.0, 0.0) * inclusion * depthT,
+    vec3(-12.0), vec3(12.0)) / 255.0;
+  }
+  return vec3(0.0);
+}
 // Transport, actuator, and storage devices are semantically distinct native
 // hardware, not generic circuit panels.  Keep their compact direct-mesh
 // grammar exact-owner, static, and RGB-only: material/world position/density
@@ -2148,6 +2179,19 @@ void main() {
       material, grid, geologicalDepth, geologicalResponse
     ), 0.0, 1.0);
   }
+  if (uThermalCatalyticRigidStyling > 0.5 && family == 0.0
+    && traits < 0.5 && !materialEmissive
+    && (material == 72.0 || material == 75.0 || material == 79.0)
+    && depth > 6.0 / 255.0 && q00 * q10 * q01 * q11 > 0.5 && density > 0.76) {
+    float thermalCatalyticDepth = smoothstep(6.0 / 255.0, 42.0 / 255.0, depth);
+    float thermalCatalyticPhase = fract((grid.x * 2.0 + grid.y + material * 11.0) / 128.0);
+    float thermalCatalyticTriangle = 1.0 - abs(thermalCatalyticPhase * 2.0 - 1.0);
+    float thermalCatalyticResponse = (thermalCatalyticTriangle * thermalCatalyticTriangle
+      * (3.0 - thermalCatalyticTriangle * 2.0) - 0.5) * thermalCatalyticDepth;
+    color = clamp(color + thermalCatalyticRigidEightXDelta(
+      material, grid, thermalCatalyticDepth, thermalCatalyticResponse
+    ), 0.0, 1.0);
+  }
   // Sensor glyphs are an exact device-owner overlay. They remain static and
   // RGB-only so sparse wires, isolated cells, holes, walls, and semantics keep
   // the common compositor's coverage and native ownership.
@@ -3070,6 +3114,7 @@ uniform float uRoleMaterialStyling;
 uniform float uCellularMaterialStyling;
 uniform float uStructuralRigidStyling;
 uniform float uGeologicalSolidStyling;
+uniform float uThermalCatalyticRigidStyling;
 uniform float uMechanismBodyStyling;
 uniform float uElectronicIdentityStyling;
 uniform float uFieldProfileIdentityStyling;
@@ -4116,6 +4161,36 @@ vec3 geologicalSolidCoreDelta(float material, vec2 position, float depthT, float
     float vein = 1.0 - step(0.5, mod(cell.x * 3.0 - cell.y * 2.0, 37.0));
     return clamp(vec3(-3.0, 2.0, 4.0) * crown - vec3(3.0, 2.0, 1.0) * pocket
       + vec3(-1.0, 1.0, 2.0) * stratum * depthT + vec3(1.0, 2.0, 3.0) * vein * depthT,
+    vec3(-12.0), vec3(12.0)) / 255.0;
+  }
+  return vec3(0.0);
+}
+// Normal-path counterpart of the direct thermal/catalytic core grammar. The
+// caller has already rejected contours, walls, traits, emission, and shallow
+// owners; this function remains static arithmetic over existing values only.
+vec3 thermalCatalyticRigidCoreDelta(float material, vec2 position, float depthT, float signedRelief) {
+  vec2 cell = floor(position);
+  float crown = max(0.0, signedRelief);
+  float pocket = max(0.0, -signedRelief);
+  if (material == 72.0) {
+    float channel = 1.0 - step(0.5, mod(cell.x * 3.0 + cell.y * 2.0, 17.0));
+    float pin = 1.0 - step(0.5, mod(cell.x - cell.y * 4.0, 31.0));
+    return clamp(vec3(4.0, -2.0, -3.0) * crown - vec3(3.0, 2.0, 3.0) * pocket
+      + vec3(3.0, 0.0, -1.0) * channel * depthT + vec3(0.0, -1.0, 0.0) * pin * depthT,
+    vec3(-12.0), vec3(12.0)) / 255.0;
+  }
+  if (material == 75.0) {
+    float plane = 1.0 - step(2.0, mod(cell.x + cell.y * 2.0, 19.0));
+    float site = 1.0 - step(0.5, mod(cell.x * 5.0 - cell.y * 3.0, 43.0));
+    return clamp(vec3(2.0, 3.0, 5.0) * crown - vec3(2.0, 1.0, 1.0) * pocket
+      + vec3(-1.0, 0.0, 2.0) * plane * depthT + vec3(0.0, 1.0, 1.0) * site * depthT,
+    vec3(-12.0), vec3(12.0)) / 255.0;
+  }
+  if (material == 79.0) {
+    float seam = 1.0 - step(0.5, mod(cell.x * 2.0 - cell.y * 3.0, 23.0));
+    float inclusion = 1.0 - step(0.5, mod(cell.x * 7.0 + cell.y, 47.0));
+    return clamp(vec3(2.0, 0.0, 0.0) * crown - vec3(4.0, 3.0, 3.0) * pocket
+      + vec3(0.0, -1.0, -1.0) * seam * depthT + vec3(2.0, 0.0, 0.0) * inclusion * depthT,
     vec3(-12.0), vec3(12.0)) / 255.0;
   }
   return vec3(0.0);
@@ -7370,6 +7445,21 @@ void main() {
       material, fieldPosition, geologicalDepth, geologicalRelief
     ), 0.0, 1.0);
   }
+  // Thermal/catalytic rigid owners layer only over a depth-proven ordinary
+  // solid core. RSSS retains its earlier native surface morphology; this is a
+  // separate static body volume below it rather than a contour treatment.
+  if (uThermalCatalyticRigidStyling > 0.5 && family == 0.0
+    && surfaceOnly < 0.5 && halo < 0.5 && wall < 0.5
+    && wallOnly < 0.5 && emissionOnly < 0.5 && traits < 0.5 && !materialEmissive
+    && (material == 72.0 || material == 75.0 || material == 79.0)
+    && solidOpticalDepth > 6.0 / 255.0) {
+    float thermalCatalyticDepth = smoothstep(6.0 / 255.0, 42.0 / 255.0, solidOpticalDepth);
+    float thermalCatalyticRelief = clamp(solidReliefTone * 255.0 / 7.0, -1.0, 1.0)
+      * thermalCatalyticDepth;
+    color = clamp(color + thermalCatalyticRigidCoreDelta(
+      material, fieldPosition, thermalCatalyticDepth, thermalCatalyticRelief
+    ), 0.0, 1.0);
+  }
   // Static role accents cross phase boundaries without widening semantic
   // silhouettes. Empty-space volume reconstruction intentionally remains free
   // of role metadata because it no longer has an authoritative material ID.
@@ -7805,6 +7895,7 @@ export class PixiFieldPresenter {
       uCellularMaterialStyling: { value: 1, type: 'f32' },
       uStructuralRigidStyling: { value: 1, type: 'f32' },
       uGeologicalSolidStyling: { value: 1, type: 'f32' },
+      uThermalCatalyticRigidStyling: { value: 1, type: 'f32' },
       uMechanismBodyStyling: { value: 1, type: 'f32' },
       uElectronicIdentityStyling: { value: 1, type: 'f32' },
       uFieldProfileIdentityStyling: { value: 1, type: 'f32' },
@@ -8025,6 +8116,12 @@ export class PixiFieldPresenter {
     return typeof value === 'number' && value > 0.5;
   }
 
+  /** Narrow audit readback for the HEAC/PTNM/RSSS deep-body layer. */
+  thermalCatalyticRigidStylingEnabled(): boolean {
+    const value = this.uniforms.uniforms.uThermalCatalyticRigidStyling;
+    return typeof value === 'number' && value > 0.5;
+  }
+
   /** Audit-only readback of the material byte staged for the semantic texture. */
   semanticMaterialAt(x: number, y: number): number {
     if (x < 0 || y < 0 || x >= this.width || y >= this.height) return -1;
@@ -8182,6 +8279,7 @@ export class PixiFieldPresenter {
     sparkStateStylingEnabled = true,
     structuralRigidStylingEnabled = true,
     geologicalSolidStylingEnabled = true,
+    thermalCatalyticRigidStylingEnabled = true,
     earthenPowderStylingEnabled = true,
     powderMesostrataStylingEnabled = true,
     moltenBodyOpticsEnabled = true,
@@ -8221,6 +8319,7 @@ export class PixiFieldPresenter {
     uniforms.uCellularMaterialStyling = cellularMaterialStylingEnabled ? 1 : 0;
     uniforms.uStructuralRigidStyling = structuralRigidStylingEnabled ? 1 : 0;
     uniforms.uGeologicalSolidStyling = geologicalSolidStylingEnabled ? 1 : 0;
+    uniforms.uThermalCatalyticRigidStyling = thermalCatalyticRigidStylingEnabled ? 1 : 0;
     uniforms.uMechanismBodyStyling = mechanismBodyStylingEnabled ? 1 : 0;
     uniforms.uElectronicIdentityStyling = electronicIdentityStylingEnabled ? 1 : 0;
     uniforms.uFieldProfileIdentityStyling = fieldProfileIdentityStylingEnabled ? 1 : 0;
@@ -8373,6 +8472,11 @@ export class PixiFieldPresenter {
 
   setGeologicalSolidStylingEnabled(enabled: boolean): void {
     this.uniforms.uniforms.uGeologicalSolidStyling = enabled ? 1 : 0;
+    this.renderApplication();
+  }
+
+  setThermalCatalyticRigidStylingEnabled(enabled: boolean): void {
+    this.uniforms.uniforms.uThermalCatalyticRigidStyling = enabled ? 1 : 0;
     this.renderApplication();
   }
 

@@ -60,6 +60,8 @@
     "audit:powder-mesostrata:8x": "npm run build && node scripts/verify-browser-input.mjs --powder-mesostrata-graphics-only --render-scale=8 --webgl-only --production-bundle",
     "audit:geological-solid": "npm run build && node scripts/verify-browser-input.mjs --geological-solid-graphics-only --webgl-only --production-bundle",
     "audit:geological-solid:8x": "npm run build && node scripts/verify-browser-input.mjs --geological-solid-graphics-only --render-scale=8 --webgl-only --production-bundle",
+    "audit:thermal-catalytic-rigid": "npm run build && node scripts/verify-browser-input.mjs --thermal-catalytic-rigid-graphics-only --webgl-only --production-bundle",
+    "audit:thermal-catalytic-rigid:8x": "npm run build && node scripts/verify-browser-input.mjs --thermal-catalytic-rigid-graphics-only --render-scale=8 --webgl-only --production-bundle",
     "audit:dense-body-ambient": "npm run build && node scripts/verify-browser-input.mjs --dense-body-ambient-only --webgl-only --production-bundle",
     "audit:dense-body-ambient:8x": "npm run build && node scripts/verify-browser-input.mjs --dense-body-ambient-only --render-scale=8 --webgl-only --production-bundle",
     "audit:lava-state": "node scripts/verify-browser-input.mjs --lava-state-graphics-only",

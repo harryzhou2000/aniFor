@@ -47,6 +47,7 @@ import {
   applyCanvasStructuralRigidStyle,
 } from './canvas-structural-rigid-style';
 import { applyCanvasGeologicalSolidCoreOptics } from './canvas-geological-solid-style';
+import { applyCanvasThermalCatalyticRigidCoreOptics } from './canvas-thermal-catalytic-rigid-style';
 import { applyCanvasSensorMorphology } from './canvas-sensor-style';
 import { applyCanvasUnusualPowderStyle } from './canvas-unusual-powder-style';
 import { applyCanvasExplosivePowderStyle } from './canvas-explosive-powder-style';
@@ -312,6 +313,7 @@ export class MaterialRenderer {
   private cellularMaterialStylingEnabled = true;
   private structuralRigidStylingEnabled = true;
   private geologicalSolidStylingEnabled = true;
+  private thermalCatalyticRigidStylingEnabled = true;
   private mechanismBodyStylingEnabled = true;
   private electronicIdentityStylingEnabled = true;
   private fieldProfileIdentityStylingEnabled = true;
@@ -571,6 +573,12 @@ export class MaterialRenderer {
     return this.presenter?.geologicalSolidStylingEnabled() ?? this.geologicalSolidStylingEnabled;
   }
 
+  /** Audit-only state for HEAC/PTNM/RSSS deep-body styling. */
+  thermalCatalyticRigidStylingIsEnabled(): boolean {
+    return this.presenter?.thermalCatalyticRigidStylingEnabled()
+      ?? this.thermalCatalyticRigidStylingEnabled;
+  }
+
   /** Audit-only proof that native dirty state reached the active presentation staging grid. */
   renderedMaterialAt(x: number, y: number): number {
     if (x < 0 || y < 0 || x >= this.simulation.width || y >= this.simulation.height) return -1;
@@ -798,6 +806,15 @@ export class MaterialRenderer {
     if (enabled === this.geologicalSolidStylingEnabled) return;
     this.geologicalSolidStylingEnabled = enabled;
     this.presenter?.setGeologicalSolidStylingEnabled(enabled);
+    this.contourChunks.markAll();
+    this.changed = true;
+  }
+
+  /** HEAC/PTNM/RSSS deep-body optics; RGB-only and topology-preserving. */
+  setThermalCatalyticRigidStylingEnabled(enabled: boolean): void {
+    if (enabled === this.thermalCatalyticRigidStylingEnabled) return;
+    this.thermalCatalyticRigidStylingEnabled = enabled;
+    this.presenter?.setThermalCatalyticRigidStylingEnabled(enabled);
     this.contourChunks.markAll();
     this.changed = true;
   }
@@ -1274,6 +1291,7 @@ export class MaterialRenderer {
       this.sparkStateStylingEnabled,
       this.structuralRigidStylingEnabled,
       this.geologicalSolidStylingEnabled,
+      this.thermalCatalyticRigidStylingEnabled,
       this.earthenPowderStylingEnabled,
       this.powderMesostrataStylingEnabled,
       this.moltenBodyOpticsEnabled,
@@ -2283,6 +2301,15 @@ export class MaterialRenderer {
           if (this.geologicalSolidStylingEnabled && phase === RenderPhase.Solid
             && wall === 0 && applicableTraits === 0 && !info.emissive) {
             applyCanvasGeologicalSolidCoreOptics(
+              this.styledColor, material, x, y, denseSolidInterior,
+              solidOpticalDepth, solidRelief, this.solidOpticalDepthEnabled,
+            );
+          }
+          // HEAC, PTNM, and RSSS retain their native surface identities above;
+          // this exact-owner treatment begins only inside a proven solid core.
+          if (this.thermalCatalyticRigidStylingEnabled && phase === RenderPhase.Solid
+            && wall === 0 && applicableTraits === 0 && !info.emissive) {
+            applyCanvasThermalCatalyticRigidCoreOptics(
               this.styledColor, material, x, y, denseSolidInterior,
               solidOpticalDepth, solidRelief, this.solidOpticalDepthEnabled,
             );

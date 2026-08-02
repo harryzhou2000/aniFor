@@ -34,6 +34,7 @@ import { auditDlayStateGraphics } from './dlay-state-graphics-audit.mjs';
 import { auditWifiStateGraphics } from './wifi-state-graphics-audit.mjs';
 import { auditPowderMesostrataGraphics } from './powder-mesostrata-graphics-audit.mjs';
 import { auditGeologicalSolidGraphics } from './geological-solid-graphics-audit.mjs';
+import { auditThermalCatalyticRigidGraphics } from './thermal-catalytic-rigid-graphics-audit.mjs';
 import { auditDenseBodyAmbientGraphics } from './dense-body-ambient-graphics-audit.mjs';
 import {
   assertPairedLavaStateGraphics,
@@ -147,6 +148,8 @@ const powderMesostrataGraphicsOnly = process.argv.includes('--powder-mesostrata-
 const powderMesostrataGraphicsEight = powderMesostrataGraphicsOnly && process.argv.includes('--render-scale=8');
 const geologicalSolidGraphicsOnly = process.argv.includes('--geological-solid-graphics-only');
 const geologicalSolidGraphicsEight = geologicalSolidGraphicsOnly && process.argv.includes('--render-scale=8');
+const thermalCatalyticRigidGraphicsOnly = process.argv.includes('--thermal-catalytic-rigid-graphics-only');
+const thermalCatalyticRigidGraphicsEight = thermalCatalyticRigidGraphicsOnly && process.argv.includes('--render-scale=8');
 const denseBodyAmbientOnly = process.argv.includes('--dense-body-ambient-only');
 const denseBodyAmbientEight = denseBodyAmbientOnly && process.argv.includes('--render-scale=8');
 const lavaStateGraphicsOnly = process.argv.includes('--lava-state-graphics-only');
@@ -179,6 +182,7 @@ const usesProductionBundle = productionBundle || showcaseScreenshotOnly || cellu
   || wifiStateGraphicsOnly
   || powderMesostrataGraphicsOnly
   || geologicalSolidGraphicsOnly
+  || thermalCatalyticRigidGraphicsOnly
   || botanicalLifecycleGraphicsOnly || sparkStateGraphicsOnly
   || nativeSeedGrowthOnly || nativeSemanticsOnly || catalogSelectionOnly || shortDesktopOnly || liveScaleOnly
   || scaleEightOnly || eightFieldProfileOnly || eightMaterialAtlasOnly;
@@ -258,6 +262,7 @@ async function main() {
       || spngStateGraphicsOnly || gelStateGraphicsOnly || lavaStateGraphicsOnly || botanicalLifecycleGraphicsOnly
       || pqrtStateGraphicsOnly || filtStateGraphicsOnly || lcryStateGraphicsOnly
       || geologicalSolidGraphicsOnly
+      || thermalCatalyticRigidGraphicsOnly
       || sparkStateGraphicsOnly
       || nativeSeedGrowthOnly || nativeSemanticsOnly || catalogSelectionOnly || pausedPresentationOnly
       || canvasTimingOnly || eightFieldProfileOnly || eightMaterialAtlasOnly;
@@ -343,6 +348,7 @@ async function auditMode(mode) {
     || pipeStateGraphicsOnly || swchStateGraphicsOnly || storStateGraphicsOnly
     || dlayStateGraphicsOnly || wifiStateGraphicsOnly || powderMesostrataGraphicsOnly
     || geologicalSolidGraphicsOnly || denseBodyAmbientOnly
+    || thermalCatalyticRigidGraphicsOnly
     || sparkStateGraphicsOnly
     || nativeSeedGrowthOnly);
   const query = new URLSearchParams({
@@ -350,7 +356,7 @@ async function auditMode(mode) {
     renderScale: (pqrtStateGraphicsEight || filtStateGraphicsEight || lcryStateGraphicsEight
       || pipeStateGraphicsEight || swchStateGraphicsEight || storStateGraphicsEight
       || dlayStateGraphicsEight || wifiStateGraphicsEight || powderMesostrataGraphicsEight
-      || geologicalSolidGraphicsEight || denseBodyAmbientEight) ? '8' : '2',
+      || geologicalSolidGraphicsEight || thermalCatalyticRigidGraphicsEight || denseBodyAmbientEight) ? '8' : '2',
     ...(showcaseScreenshotOnly ? { auditStage: 'showcase' } : {
       auditStage: startsBlank ? 'blank' : 'canonical',
       ...(startsBlank ? { blankAudit: '1' } : {}),
@@ -464,7 +470,7 @@ async function auditMode(mode) {
       const parameters = new URLSearchParams(location.search);
       const ready = parameters.get('scene') === 'render-lab'
         && parameters.get('inputAudit') === '1'
-        && parameters.get('renderScale') === ${JSON.stringify((pqrtStateGraphicsEight || filtStateGraphicsEight || lcryStateGraphicsEight || pipeStateGraphicsEight || swchStateGraphicsEight || storStateGraphicsEight || dlayStateGraphicsEight || wifiStateGraphicsEight || powderMesostrataGraphicsEight || geologicalSolidGraphicsEight || denseBodyAmbientEight) ? '8' : '2')}
+        && parameters.get('renderScale') === ${JSON.stringify((pqrtStateGraphicsEight || filtStateGraphicsEight || lcryStateGraphicsEight || pipeStateGraphicsEight || swchStateGraphicsEight || storStateGraphicsEight || dlayStateGraphicsEight || wifiStateGraphicsEight || powderMesostrataGraphicsEight || geologicalSolidGraphicsEight || thermalCatalyticRigidGraphicsEight || denseBodyAmbientEight) ? '8' : '2')}
         && parameters.get('auditStage') === ${JSON.stringify(startsBlank ? 'blank' : 'canonical')}
         && parameters.has('blankAudit') === ${startsBlank}
         && Boolean(window.__ANIFOR_INPUT_AUDIT__ && document.documentElement);
@@ -475,8 +481,8 @@ async function auditMode(mode) {
         hasAuditApi: Boolean(window.__ANIFOR_INPUT_AUDIT__),
       }));
       return true;
-    })()`), (pqrtStateGraphicsEight || filtStateGraphicsEight || lcryStateGraphicsEight || denseBodyAmbientEight || wifiStateGraphicsEight || powderMesostrataGraphicsEight || geologicalSolidGraphicsEight) ? 45_000 : 15_000, `input audit API (${mode})`);
-    await waitFor(() => evaluate(cdp, `window.__ANIFOR_INPUT_AUDIT__.backend().backend === ${JSON.stringify(mode)}`), (pqrtStateGraphicsEight || filtStateGraphicsEight || lcryStateGraphicsEight || denseBodyAmbientEight || wifiStateGraphicsEight || powderMesostrataGraphicsEight || geologicalSolidGraphicsEight) ? 45_000 : 15_000, `${mode} backend`);
+    })()`), (pqrtStateGraphicsEight || filtStateGraphicsEight || lcryStateGraphicsEight || denseBodyAmbientEight || wifiStateGraphicsEight || powderMesostrataGraphicsEight || geologicalSolidGraphicsEight || thermalCatalyticRigidGraphicsEight) ? 45_000 : 15_000, `input audit API (${mode})`);
+    await waitFor(() => evaluate(cdp, `window.__ANIFOR_INPUT_AUDIT__.backend().backend === ${JSON.stringify(mode)}`), (pqrtStateGraphicsEight || filtStateGraphicsEight || lcryStateGraphicsEight || denseBodyAmbientEight || wifiStateGraphicsEight || powderMesostrataGraphicsEight || geologicalSolidGraphicsEight || thermalCatalyticRigidGraphicsEight) ? 45_000 : 15_000, `${mode} backend`);
     if (desktopInputOnly) {
       const desktopInput = await auditDesktopInput(cdp, mode, dpr);
       assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
@@ -891,6 +897,21 @@ async function auditMode(mode) {
       assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
       cdp.close();
       return { backend: mode, geologicalSolidGraphics, browserErrors: errors.length };
+    }
+    if (thermalCatalyticRigidGraphicsOnly) {
+      const thermalCatalyticRigidGraphics = await auditThermalCatalyticRigidGraphics({
+        cdp,
+        mode,
+        evaluate,
+        waitFor,
+        waitForStablePageCapture,
+        captureSettledPage,
+        outputScale: thermalCatalyticRigidGraphicsEight ? 8 : 2,
+        assert,
+      });
+      assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
+      cdp.close();
+      return { backend: mode, thermalCatalyticRigidGraphics, browserErrors: errors.length };
     }
     if (denseBodyAmbientOnly) {
       const denseBodyAmbientGraphics = await auditDenseBodyAmbientGraphics({

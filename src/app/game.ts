@@ -138,6 +138,10 @@ import {
   GEOLOGICAL_SOLID_GRAPHICS_AUDIT, prepareGeologicalSolidGraphicsAuditFixture,
 } from './geological-solid-graphics-audit';
 import {
+  THERMAL_CATALYTIC_RIGID_GRAPHICS_AUDIT,
+  prepareThermalCatalyticRigidGraphicsAuditFixture,
+} from './thermal-catalytic-rigid-graphics-audit';
+import {
   PHOTON_SPECTRUM_GRAPHICS_AUDIT, preparePhotonSpectrumGraphicsAuditFixture,
   setPhotonSpectrumGraphicsVisible,
 } from './photon-spectrum-graphics-audit';
@@ -391,6 +395,7 @@ export class Game {
       sourceTarget: (x, y) => this.simulation.configuredSourceTargetAt?.(x, y) ?? Material.Empty,
       presentationAuxiliary: (x, y) => this.renderer.presentationAuxiliaryAt(x, y),
       geologicalSolidStylingEnabled: () => this.renderer.geologicalSolidStylingIsEnabled(),
+      thermalCatalyticRigidStylingEnabled: () => this.renderer.thermalCatalyticRigidStylingIsEnabled(),
       gasIdentityStyle: (x, y) => this.renderer.gasIdentityStyleAt(x, y),
       atmosphereSupportAudit: () => this.renderer.getAtmosphereSupportAudit(),
       occupiedCells: () => {
@@ -562,6 +567,9 @@ export class Game {
       },
       setGeologicalSolidStyling: (enabled) => {
         this.renderer.setGeologicalSolidStylingEnabled(enabled);
+      },
+      setThermalCatalyticRigidStyling: (enabled) => {
+        this.renderer.setThermalCatalyticRigidStylingEnabled(enabled);
       },
       setPowderRenderStyle: (style) => {
         this.renderer.setPowderRenderStyle(style);
@@ -787,6 +795,12 @@ export class Game {
       geologicalSolidGraphicsAtlas: () => GEOLOGICAL_SOLID_GRAPHICS_AUDIT,
       prepareGeologicalSolidGraphicsFixture: () => {
         prepareGeologicalSolidGraphicsAuditFixture(this.simulation);
+        this.renderer.synchronizeFixtureMaterialPlane();
+        this.renderer.invalidateDynamicPresentation();
+      },
+      thermalCatalyticRigidGraphicsAtlas: () => THERMAL_CATALYTIC_RIGID_GRAPHICS_AUDIT,
+      prepareThermalCatalyticRigidGraphicsFixture: () => {
+        prepareThermalCatalyticRigidGraphicsAuditFixture(this.simulation);
         this.renderer.synchronizeFixtureMaterialPlane();
         this.renderer.invalidateDynamicPresentation();
       },
