@@ -7,7 +7,7 @@ import {
   PLNT_PRESENTATION_STATE, SEED_PRESENTATION_STATE, SPNG_PRESENTATION_STATE,
   FILT_PRESENTATION_STATE, LCRY_PRESENTATION_STATE, QUARTZ_PRESENTATION_STATE,
   PIPE_PRESENTATION_STATE, SPRK_PRESENTATION_STATE, STOR_PRESENTATION_STATE,
-  SWCH_PRESENTATION_STATE, VIBR_PRESENTATION_STATE,
+  SWCH_PRESENTATION_STATE, VIBR_PRESENTATION_STATE, WIFI_PRESENTATION_STATE,
 } from './types';
 import { readFileSync } from 'node:fs';
 
@@ -1060,6 +1060,82 @@ describe('direct Powder Toy backend', () => {
     expect(ownerAt(restored)).toBe(Material.DLAY);
     expect(stateAt(restored)).toBe(DLAY_PRESENTATION_STATE.presentMask);
     expect(restored.cells()[point.y * restored.width + point.x + 1]).toBe(Material.SPRK);
+  });
+
+  it('projects native WIFI temperature channels and remote wireless broadcast activity', async () => {
+    const transmitter = { x: 220, y: 180 } as const;
+    const receiver = { x: 392, y: 180 } as const;
+    const heated = { x: 306, y: 100 } as const;
+    const indexOf = (simulation: PowderToyBackend, point: { x: number; y: number }): number => (
+      point.y * simulation.width + point.x
+    );
+    const stateAt = (simulation: PowderToyBackend, point: { x: number; y: number }): number => {
+      simulation.cells();
+      return simulation.presentationState()[indexOf(simulation, point)];
+    };
+    const channelAt = (simulation: PowderToyBackend, point: { x: number; y: number }): number => (
+      stateAt(simulation, point) & WIFI_PRESENTATION_STATE.channelMask
+    );
+    const expectedChannel = (temperatureTenths: number): number => Math.max(0, Math.min(
+      WIFI_PRESENTATION_STATE.channelMaximum,
+      Math.trunc((temperatureTenths / 10 - 73.15) / 100 + 1),
+    ));
+
+    const source = await PowderToyBackend.load(moduleArtifact.href);
+    source.paint(transmitter.x, transmitter.y, Material.WIFI, 0);
+    source.paint(receiver.x, receiver.y, Material.WIFI, 0);
+    source.paint(heated.x, heated.y, Material.WIFI, 0);
+    source.paint(transmitter.x - 1, transmitter.y, Material.PSCN, 0);
+    source.paint(receiver.x + 1, receiver.y, Material.NSCN, 0);
+    for (let application = 0; application < 50; application++) {
+      source.applySimulationTool(SimulationTool.Heat, heated.x, heated.y, 0);
+    }
+    source.step();
+
+    const transmitterState = stateAt(source, transmitter);
+    const receiverState = stateAt(source, receiver);
+    const heatedState = stateAt(source, heated);
+    expect(transmitterState & WIFI_PRESENTATION_STATE.presentMask)
+      .toBe(WIFI_PRESENTATION_STATE.presentMask);
+    expect(receiverState & WIFI_PRESENTATION_STATE.presentMask)
+      .toBe(WIFI_PRESENTATION_STATE.presentMask);
+    expect(transmitterState & WIFI_PRESENTATION_STATE.activeMask).toBe(0);
+    expect(receiverState & WIFI_PRESENTATION_STATE.activeMask).toBe(0);
+    expect(channelAt(source, transmitter)).toBe(channelAt(source, receiver));
+    expect(channelAt(source, transmitter)).toBe(expectedChannel(
+      source.temperature()[indexOf(source, transmitter)],
+    ));
+    expect(channelAt(source, heated)).toBe(expectedChannel(
+      source.temperature()[indexOf(source, heated)],
+    ));
+    expect(channelAt(source, heated)).toBeGreaterThan(channelAt(source, transmitter));
+    expect(heatedState & WIFI_PRESENTATION_STATE.reservedMask).toBe(0);
+
+    const file = source.saveFile();
+    expect(new TextDecoder().decode(file.slice(0, 4))).toBe('OPS1');
+    const restored = await PowderToyBackend.load(moduleArtifact.href);
+    restored.loadFile(file);
+    expect(stateAt(restored, transmitter)).toBe(transmitterState);
+    expect(stateAt(restored, receiver)).toBe(receiverState);
+    expect(stateAt(restored, heated)).toBe(heatedState);
+
+    // Spark the PSCN through the ordinary native path. The transmitter writes
+    // the next-frame wireless latch first; the following frame exposes the
+    // current-frame bit and sparks the remote same-channel NSCN.
+    restored.paint(transmitter.x - 1, transmitter.y, Material.SPRK, 0);
+    restored.step();
+    expect(stateAt(restored, transmitter) & WIFI_PRESENTATION_STATE.activeMask).toBe(0);
+    restored.step();
+    expect(stateAt(restored, transmitter) & WIFI_PRESENTATION_STATE.activeMask)
+      .toBe(WIFI_PRESENTATION_STATE.activeMask);
+    expect(stateAt(restored, receiver) & WIFI_PRESENTATION_STATE.activeMask)
+      .toBe(WIFI_PRESENTATION_STATE.activeMask);
+    expect(restored.cells()[indexOf(restored, { x: receiver.x + 1, y: receiver.y })])
+      .toBe(Material.SPRK);
+
+    restored.step();
+    expect(stateAt(restored, transmitter) & WIFI_PRESENTATION_STATE.activeMask).toBe(0);
+    expect(stateAt(restored, receiver) & WIFI_PRESENTATION_STATE.activeMask).toBe(0);
   });
 
   it('projects native STOR water capture and PSCN release through OPS1', async () => {

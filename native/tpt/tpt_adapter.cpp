@@ -609,6 +609,21 @@ uint16_t ProjectStorState(Particle const &part)
 	);
 }
 
+uint16_t ProjectWifiState(Particle const &part)
+{
+	// WIFI's channel is native temperature state rather than an arbitrary colour
+	// index. Keep the exact upstream conversion so a newly painted/imported
+	// owner is correct before its next update refreshes `tmp`; bit 7 is the
+	// authoritative current-frame wireless broadcast for that exact channel.
+	// Neither the global wireless latch nor particle tmp is mirrored in JS.
+	auto const channel = std::clamp(
+		int((part.temp - 73.15f) / 100.0f + 1.0f), 0, CHANNELS - 1
+	);
+	return uint16_t(
+		0x8000 | channel | (simulation->wireless[channel][0] ? 0x0080 : 0)
+	);
+}
+
 void ExtractFields()
 {
 	std::fill_n(materialField, FIELD_SIZE, uint8_t(0));
@@ -768,6 +783,10 @@ void ExtractFields()
 				presentationStateField[offset] = uint16_t(
 					0x8000 | std::clamp(part.life, 0, 0x7FFF)
 				);
+			}
+			else if (part.type == PT_WIFI)
+			{
+				presentationStateField[offset] = ProjectWifiState(part);
 			}
 			else if (part.type == PT_STOR)
 			{

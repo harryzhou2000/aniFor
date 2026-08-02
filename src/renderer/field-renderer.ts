@@ -37,6 +37,7 @@ import { applyCanvasPipePresentationStyle } from './canvas-pipe-state-style';
 import { applyCanvasStorStateStyle } from './canvas-stor-state-style';
 import { applyCanvasSwchStateStyle } from './canvas-swch-state-style';
 import { applyCanvasDlayCountdownStyle } from './canvas-dlay-countdown-style';
+import { applyCanvasWifiStateStyle } from './canvas-wifi-state-style';
 import { shadeCanvasEnergy } from './canvas-energy-style';
 import { shadeCanvasMaterial } from './canvas-material-style';
 import { shadeCanvasCellularMaterial } from './canvas-cellular-style';
@@ -336,6 +337,7 @@ export class MaterialRenderer {
   private storStateStylingEnabled = true;
   private swchStateStylingEnabled = true;
   private dlayStateStylingEnabled = true;
+  private wifiStateStylingEnabled = true;
   private lavaAncestryStylingEnabled = true;
   // Canonical WebGL body optics only. Canvas deliberately remains a safe,
   // semantically equivalent fallback instead of carrying every advanced look.
@@ -508,6 +510,41 @@ export class MaterialRenderer {
 
   /** Queues one semantic snapshot for a native mutation that retained material IDs. */
   invalidateDynamicPresentation(): void {
+    this.dynamicPresentationInvalidated = true;
+  }
+
+  /**
+   * Reconciles an audit fixture that authored the backend's raw material plane
+   * directly. Normal simulation and brush mutations retain the incremental
+   * dirty-cell path; this bounded full scan exists only so diagnostic fixtures
+   * cannot leave the presenter texture behind their semantic cells.
+   */
+  synchronizeFixtureMaterialPlane(): void {
+    const cells = this.simulation.cells();
+    if (cells.length !== this.rendered.length) throw new Error('Fixture material plane size mismatch');
+    for (let index = 0; index < cells.length; index++) {
+      const material = cells[index];
+      const previous = this.rendered[index];
+      if (previous === material) continue;
+      this.rendered[index] = material;
+      const fallbackFields = this.fallbackFields;
+      fallbackFields?.markDirty(previous, material, index);
+      this.contourChunks.markCell(index);
+      if (fallbackFields) {
+        const previousPhase = fallbackFields.lookups.styleBytes[previous * 4];
+        const nextPhase = fallbackFields.lookups.styleBytes[material * 4];
+        if (previousPhase === RenderPhase.Solid || previousPhase === RenderPhase.Powder
+          || nextPhase === RenderPhase.Solid || nextPhase === RenderPhase.Powder
+          || powderAirBlocker(previous, previousPhase) !== powderAirBlocker(material, nextPhase)) {
+          this.powderSurfaceDirty = true;
+        }
+        if (previousPhase === RenderPhase.Solid || nextPhase === RenderPhase.Solid) {
+          this.solidOpticalDepthDirty = true;
+        }
+      }
+      this.presenter?.markDirty(index, material);
+      this.changed = true;
+    }
     this.dynamicPresentationInvalidated = true;
   }
 
@@ -713,6 +750,14 @@ export class MaterialRenderer {
     if (enabled === this.dlayStateStylingEnabled) return;
     this.dlayStateStylingEnabled = enabled;
     this.presenter?.setDlayStateStylingEnabled(enabled);
+    this.changed = true;
+  }
+
+  /** Native WIFI channel/activity is an RGB projection of its packed state. */
+  setWifiStateStylingEnabled(enabled: boolean): void {
+    if (enabled === this.wifiStateStylingEnabled) return;
+    this.wifiStateStylingEnabled = enabled;
+    this.presenter?.setWifiStateStylingEnabled(enabled);
     this.changed = true;
   }
 
@@ -1214,6 +1259,7 @@ export class MaterialRenderer {
       this.swchStateStylingEnabled,
       this.denseBodyAmbientFillEnabled,
       this.dlayStateStylingEnabled,
+      this.wifiStateStylingEnabled,
     );
     // Route subsequent dirty cells to the candidate while its first expensive
     // frame is in flight. The known-good Canvas remains mounted underneath;
@@ -2261,6 +2307,11 @@ export class MaterialRenderer {
             if (this.dlayStateStylingEnabled) {
               applyCanvasDlayCountdownStyle(
                 this.styledColor, material, presentationState?.[index] ?? 0, temperatures?.[index],
+              );
+            }
+            if (this.wifiStateStylingEnabled) {
+              applyCanvasWifiStateStyle(
+                this.styledColor, material, presentationState?.[index] ?? 0,
               );
             }
             if (this.fieldProfileIdentityStylingEnabled && profile === RenderProfile.Field

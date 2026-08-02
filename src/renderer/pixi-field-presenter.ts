@@ -170,6 +170,7 @@ uniform float uPipePresentationStyling;
 uniform float uStorStateStyling;
 uniform float uSwchStateStyling;
 uniform float uDlayStateStyling;
+uniform float uWifiStateStyling;
 uniform float uPhotonActive;
 float materialAt(vec2 uv) {
   return floor(texture(uFieldTexture, clamp(uv, uTexel * 0.5, vec2(1.0) - uTexel * 0.5)).r * 255.0 + 0.5);
@@ -774,6 +775,19 @@ vec3 dlayCountdownEightXDelta(vec3 color, float packedState, float temperatureNo
   float configuredDelay = clamp(temperatureKelvin - 273.15, 1.0, 600.0);
   float elapsed = 1.0 - clamp(countdown / configuredDelay, 0.0, 1.0);
   vec3 styled = mix(color, vec3(236.0, 132.0, 66.0) / 255.0, 0.12 + elapsed * 0.32);
+  return clamp(styled, 0.0, 1.0) - color;
+}
+// WIFI stores its temperature-selected native channel and current broadcast
+// latch in this same packed word. The exact owner/presence guard keeps the
+// RGB-only spectral rail isolated from every other multiplexed state owner.
+vec3 wifiStateEightXDelta(vec3 color, float packedState) {
+  if (packedState < 32768.0) return vec3(0.0);
+  float channel = min(100.0, mod(packedState, 128.0)) / 100.0;
+  bool wifiActive = mod(floor(packedState / 128.0), 2.0) > 0.5;
+  vec3 target = vec3(76.0 + channel * 156.0, 184.0 - channel * 82.0,
+    224.0 - channel * 134.0) / 255.0;
+  vec3 styled = mix(color, target, wifiActive ? 0.50 : 0.28);
+  if (wifiActive) styled += vec3(8.0, 14.0, 18.0) / 255.0;
   return clamp(styled, 0.0, 1.0) - color;
 }
 // PIPE/PPIP retain their carriage in ctype. This compact, palette-free
@@ -2582,6 +2596,7 @@ void main() {
   bool storOwner = material == 163.0;
   bool swchOwner = material == 149.0;
   bool dlayOwner = material == 154.0;
+  bool wifiOwner = material == 152.0;
   // Most 8x fragments have no retained native state. Decode the B/A state and
   // co-located native wall exactly once only for owners whose enabled RGB
   // styling consumes it; this avoids two state-texture samples on every other
@@ -2603,6 +2618,7 @@ void main() {
     || (uStorStateStyling > 0.5 && storOwner)
     || (uSwchStateStyling > 0.5 && swchOwner)
     || (uDlayStateStyling > 0.5 && dlayOwner)
+    || (uWifiStateStyling > 0.5 && wifiOwner)
     // Eligible translucent liquid already needs this exact wall texel for the
     // final backdrop. Fold the cohesion guard into that one packed-state read
     // so true 8x does not grow another native-wall sample.
@@ -2744,6 +2760,9 @@ void main() {
   }
   if (uDlayStateStyling > 0.5 && dlayOwner && nativeWall < 0.5) {
     color += dlayCountdownEightXDelta(color, sourceTarget, semantic.g);
+  }
+  if (uWifiStateStyling > 0.5 && wifiOwner && nativeWall < 0.5) {
+    color += wifiStateEightXDelta(color, sourceTarget);
   }
   // True 8x keeps botanical state on the existing packed B/A word. This is
   // RGB-only compact arithmetic: no additional texture, field, pass, or
@@ -2986,6 +3005,7 @@ uniform float uPipePresentationStyling;
 uniform float uStorStateStyling;
 uniform float uSwchStateStyling;
 uniform float uDlayStateStyling;
+uniform float uWifiStateStyling;
 uniform float uLavaAncestryStyling;
 uniform float uMoltenBodyOptics;
 uniform float uBotanicalIdentityStyling;
@@ -4450,6 +4470,18 @@ vec3 dlayCountdownDelta(vec3 color, vec2 stateBytes, float temperatureNormalized
   float configuredDelay = clamp(temperatureKelvin - 273.15, 1.0, 600.0);
   float elapsed = 1.0 - clamp(countdown / configuredDelay, 0.0, 1.0);
   vec3 styled = mix(color, vec3(236.0, 132.0, 66.0) / 255.0, 0.12 + elapsed * 0.32);
+  return clamp(styled, 0.0, 1.0) - color;
+}
+vec3 wifiStateDelta(vec3 color, vec2 stateBytes) {
+  float packedState = floor(stateBytes.x * 255.0 + 0.5)
+    + floor(stateBytes.y * 255.0 + 0.5) * 256.0;
+  if (packedState < 32768.0) return vec3(0.0);
+  float channel = min(100.0, mod(packedState, 128.0)) / 100.0;
+  bool wifiActive = mod(floor(packedState / 128.0), 2.0) > 0.5;
+  vec3 target = vec3(76.0 + channel * 156.0, 184.0 - channel * 82.0,
+    224.0 - channel * 134.0) / 255.0;
+  vec3 styled = mix(color, target, wifiActive ? 0.50 : 0.28);
+  if (wifiActive) styled += vec3(8.0, 14.0, 18.0) / 255.0;
   return clamp(styled, 0.0, 1.0) - color;
 }
 // FILT's all-zero ctype is an upstream temperature-generated wavelength mask,
@@ -7108,6 +7140,12 @@ void main() {
       && emissionOnly < 0.5) {
       color += dlayCountdownDelta(color, wallState.ba, materialTemperature);
     }
+    // WIFI's packed word supplies its own exact owner/presence guard. Keep the
+    // native-wall separation here, but do not make the radio's ordinary body
+    // cue depend on reconstructed-surface eligibility owned by another pass.
+    if (uWifiStateStyling > 0.5 && material == 152.0 && wall < 0.5) {
+      color += wifiStateDelta(color, wallState.ba);
+    }
     if (uThermalMaterialStyling > 0.5 && !materialEmissive && traits < 0.5
       && material != 3.0 && (family == 0.0 || family == 4.0)) {
       // Scalar, RGB-only response: temperature cannot widen a contour, alter
@@ -7621,6 +7659,7 @@ export class PixiFieldPresenter {
       uStorStateStyling: { value: 1, type: 'f32' },
       uSwchStateStyling: { value: 1, type: 'f32' },
       uDlayStateStyling: { value: 1, type: 'f32' },
+      uWifiStateStyling: { value: 1, type: 'f32' },
       uLavaAncestryStyling: { value: 1, type: 'f32' },
       uMoltenBodyOptics: { value: 1, type: 'f32' },
       uBotanicalIdentityStyling: { value: 1, type: 'f32' },
@@ -7973,6 +8012,7 @@ export class PixiFieldPresenter {
     swchStateStylingEnabled = true,
     denseBodyAmbientFillEnabled = true,
     dlayStateStylingEnabled = true,
+    wifiStateStylingEnabled = true,
   ): void {
     const uniforms = this.uniforms.uniforms;
     uniforms.uGasFieldLighting = gasFieldLightingEnabled ? 1 : 0;
@@ -8025,6 +8065,7 @@ export class PixiFieldPresenter {
     uniforms.uStorStateStyling = storStateStylingEnabled ? 1 : 0;
     uniforms.uSwchStateStyling = swchStateStylingEnabled ? 1 : 0;
     uniforms.uDlayStateStyling = dlayStateStylingEnabled ? 1 : 0;
+    uniforms.uWifiStateStyling = wifiStateStylingEnabled ? 1 : 0;
     uniforms.uLavaAncestryStyling = lavaAncestryStylingEnabled ? 1 : 0;
     uniforms.uMoltenBodyOptics = moltenBodyOpticsEnabled ? 1 : 0;
     uniforms.uBotanicalIdentityStyling = botanicalIdentityStylingEnabled ? 1 : 0;
@@ -8274,6 +8315,11 @@ export class PixiFieldPresenter {
 
   setDlayStateStylingEnabled(enabled: boolean): void {
     this.uniforms.uniforms.uDlayStateStyling = enabled ? 1 : 0;
+    this.renderApplication();
+  }
+
+  setWifiStateStylingEnabled(enabled: boolean): void {
+    this.uniforms.uniforms.uWifiStateStyling = enabled ? 1 : 0;
     this.renderApplication();
   }
 

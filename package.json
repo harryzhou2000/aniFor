@@ -54,6 +54,8 @@
     "audit:stor-state:8x": "npm run build && node scripts/verify-browser-input.mjs --stor-state-graphics-only --render-scale=8 --webgl-only --production-bundle",
     "audit:dlay-state": "npm run build && node scripts/verify-browser-input.mjs --dlay-state-graphics-only --webgl-only --production-bundle",
     "audit:dlay-state:8x": "npm run build && node scripts/verify-browser-input.mjs --dlay-state-graphics-only --render-scale=8 --webgl-only --production-bundle",
+    "audit:wifi-state": "npm run build && node scripts/verify-browser-input.mjs --wifi-state-graphics-only --webgl-only --production-bundle",
+    "audit:wifi-state:8x": "npm run build && node scripts/verify-browser-input.mjs --wifi-state-graphics-only --render-scale=8 --webgl-only --production-bundle",
     "audit:dense-body-ambient": "npm run build && node scripts/verify-browser-input.mjs --dense-body-ambient-only --webgl-only --production-bundle",
     "audit:dense-body-ambient:8x": "npm run build && node scripts/verify-browser-input.mjs --dense-body-ambient-only --render-scale=8 --webgl-only --production-bundle",
     "audit:lava-state": "node scripts/verify-browser-input.mjs --lava-state-graphics-only",

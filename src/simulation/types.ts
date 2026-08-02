@@ -146,6 +146,19 @@ export const DLAY_PRESENTATION_STATE = {
 } as const;
 
 /**
+ * Native WIFI channel and current-frame broadcast state. The channel is the
+ * exact temperature-derived upstream value (0..100); activity reflects the
+ * simulation-owned wireless latch, not a JavaScript clock or signal mirror.
+ */
+export const WIFI_PRESENTATION_STATE = {
+  channelMask: 0x007f,
+  channelMaximum: 100,
+  activeMask: 0x0080,
+  presentMask: 0x8000,
+  reservedMask: 0x7f00,
+} as const;
+
+/**
  * Native STOR retained-particle state. The low byte is an exact public
  * identity when native `tmp` holds one; `payloadPresentMask` also preserves an
  * occupied store whose retained type is not publicly representable. Native

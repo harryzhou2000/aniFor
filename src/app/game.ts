@@ -129,6 +129,9 @@ import {
   DLAY_STATE_GRAPHICS_AUDIT, prepareDlayStateGraphicsAuditFixture,
 } from './dlay-state-graphics-audit';
 import {
+  WIFI_STATE_GRAPHICS_AUDIT, prepareWifiStateGraphicsAuditFixture,
+} from './wifi-state-graphics-audit';
+import {
   PHOTON_SPECTRUM_GRAPHICS_AUDIT, preparePhotonSpectrumGraphicsAuditFixture,
   setPhotonSpectrumGraphicsVisible,
 } from './photon-spectrum-graphics-audit';
@@ -523,6 +526,9 @@ export class Game {
       setDlayStateStyling: (enabled) => {
         this.renderer.setDlayStateStylingEnabled(enabled);
       },
+      setWifiStateStyling: (enabled) => {
+        this.renderer.setWifiStateStylingEnabled(enabled);
+      },
       setQuartzCrystalStateStyling: (enabled) => {
         this.renderer.setQuartzCrystalStateStylingEnabled(enabled);
       },
@@ -732,21 +738,31 @@ export class Game {
       pipeStateGraphicsAtlas: () => PIPE_STATE_GRAPHICS_AUDIT,
       preparePipeStateGraphicsFixture: () => {
         preparePipeStateGraphicsAuditFixture(this.simulation);
+        this.renderer.synchronizeFixtureMaterialPlane();
         this.renderer.invalidateDynamicPresentation();
       },
       swchStateGraphicsAtlas: () => SWCH_STATE_GRAPHICS_AUDIT,
       prepareSwchStateGraphicsFixture: () => {
         prepareSwchStateGraphicsAuditFixture(this.simulation);
+        this.renderer.synchronizeFixtureMaterialPlane();
         this.renderer.invalidateDynamicPresentation();
       },
       storStateGraphicsAtlas: () => STOR_STATE_GRAPHICS_AUDIT,
       prepareStorStateGraphicsFixture: () => {
         prepareStorStateGraphicsAuditFixture(this.simulation);
+        this.renderer.synchronizeFixtureMaterialPlane();
         this.renderer.invalidateDynamicPresentation();
       },
       dlayStateGraphicsAtlas: () => DLAY_STATE_GRAPHICS_AUDIT,
       prepareDlayStateGraphicsFixture: () => {
         prepareDlayStateGraphicsAuditFixture(this.simulation);
+        this.renderer.synchronizeFixtureMaterialPlane();
+        this.renderer.invalidateDynamicPresentation();
+      },
+      wifiStateGraphicsAtlas: () => WIFI_STATE_GRAPHICS_AUDIT,
+      prepareWifiStateGraphicsFixture: () => {
+        prepareWifiStateGraphicsAuditFixture(this.simulation);
+        this.renderer.synchronizeFixtureMaterialPlane();
         this.renderer.invalidateDynamicPresentation();
       },
       photonSpectrumGraphicsAtlas: () => PHOTON_SPECTRUM_GRAPHICS_AUDIT,
