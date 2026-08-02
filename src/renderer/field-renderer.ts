@@ -994,9 +994,18 @@ export class MaterialRenderer {
   setThermalMaterialStylingEnabled(enabled: boolean): void {
     if (enabled === this.thermalMaterialStylingEnabled) return;
     this.thermalMaterialStylingEnabled = enabled;
-    this.presenter?.setThermalMaterialStylingEnabled(
+    const presenter = this.presenter;
+    presenter?.setThermalMaterialStylingEnabled(
       enabled && this.simulation.temperature !== undefined,
     );
+    // The WebGL presenter has already submitted the uniform-only thermal
+    // mutation above. Marking the Canvas chunks as changed here makes the next
+    // tick submit a second full frame; at true 8x that can queue another
+    // 15-million-fragment draw ahead of the audit-owned completion frame.
+    // Canvas still needs its ordinary style rebuild. If WebGL later fails,
+    // recovery marks every Canvas surface dirty and renders from this retained
+    // toggle state before exposing the fallback.
+    if (presenter) return;
     this.contourChunks.markAll();
     this.changed = true;
   }
