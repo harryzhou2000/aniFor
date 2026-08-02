@@ -2552,7 +2552,7 @@ describe('Pixi presenter startup configuration', () => {
     expect(source).toContain('float sandInteriorExposure = q00 * q10 * q01 * q11');
     expect(source).toContain('* smoothstep(0.72, 0.95, semanticDensity);');
     expect(source).toContain('color = max(color - vec3(50.0, 45.0, 27.0) / 255.0 * sandInteriorExposure, vec3(0.0));');
-    expect(source).toContain('float sandInteriorPigment = (powderGrain * 0.150 + powderFacet * 0.120)');
+    expect(source).toContain('float sandInteriorPigment = (powderGrain * 0.365 + powderFacet * 0.285)');
     expect(source).toContain('if (family == 4.0 && uPowderStyle > 1.5 && powderFieldBlend > 0.001)');
     expect(source).toContain('density = smoothstep(0.04, 0.96, density);');
   });
