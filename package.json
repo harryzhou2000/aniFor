@@ -27,6 +27,7 @@
     "audit:device-identities": "npm run build && node scripts/verify-browser-input.mjs --device-identity-graphics-only --production-bundle",
     "audit:field-profiles": "npm run build && node scripts/verify-browser-input.mjs --field-profile-graphics-only --production-bundle",
     "audit:field-profiles:8x": "npm run build && node scripts/verify-browser-input.mjs --eight-field-profile-only --production-bundle",
+    "audit:gas-identity": "npm run build && node scripts/verify-browser-input.mjs --gas-identity-graphics-only --webgl-only --production-bundle",
     "audit:explosive-powder": "node scripts/verify-browser-input.mjs --explosive-powder-graphics-only",
     "audit:earthen-powder": "node scripts/verify-browser-input.mjs --earthen-powder-graphics-only",
     "audit:energy-radioactive": "node scripts/verify-browser-input.mjs --energy-radioactive-graphics-only",

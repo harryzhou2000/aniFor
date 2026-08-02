@@ -127,6 +127,15 @@ Six small gas probes cover the warm and green-cyan rim, middle, and dense core. 
 
 Compact FOG/CFLM probes additionally require at least 90% of signal in one connected component, bounded cell-frequency contrast, neutral FOG and blue-dominant CFLM hue, and Canvas/WebGL exposure/connectivity parity. Each sparse gas chain samples an authored carrier, the midpoint between carriers, and the centre gap: carrier/midpoint luminance must stay comparable while the gap remains empty. WebGL is the canonical visual release path: focused visual commands (including `--visual-only`) prove WebGL directly while Canvas proves its responsive semantic fallback. Add `--require-canvas-visuals` to any focused or full browser audit to run the diagnostic paired Canvas/WebGL optics assertions explicitly. The field profiler includes an allocation-free full-612×384 worst case for Canvas's per-gas-cell bilinear atmosphere lookup; it is world-cell work and therefore does not multiply with 2×/4×/8× presentation resolution.
 
+In normal WebGL, the linear atmosphere field now also owns dense gas opacity,
+not merely RGB mixture: an exact semantic gas accent fades to zero only once
+field alpha proves a dense cloud. This removes residual cell-frequency outline
+marks without changing `cloudAlpha`, field support, physics, or the alpha of
+sparse carrier chains and authored gaps. It reuses the already-sampled
+atmosphere alpha and adds no texture read, field, upload, pass, target, or
+output-scale resource. `npm run audit:gas-identity` covers the 17-material
+cloud/wisp/void/contact atlas in normal canonical WebGL.
+
 Smooth deep heaps retain a 40% floor of the Local contour on every semantically occupied subpixel. The long tangent may still redistribute the remaining coverage at top- and slope-facing boundaries, but it cannot erase the interior of a Clay/Concrete column or notched pile. The column fixture is authored after adjacent Dust/Salt bands so later layers cannot overwrite its lower sections. Grains deliberately bypasses both contour paths and renders exact square occupied cells; Local and Smooth retain analytic subcell contours.
 
 Deep settled Smooth cells also receive an RGB-only bulk treatment. Canvas proves exact material support at one and two cells below plus same-row lateral contact before blending cell-scale colour variation toward canonical albedo; WebGL reuses its existing wide powder sample and bulk-depth result. Both derive a small signed macro relief from the packed field gradients while retaining bounded facets, and both bypass shallow, unstable, trait-bearing, and emissive matter. This neither widens nor removes support, so the full-cell Clay/Concrete recall, authored-notch, and maximum-zoom square-Grains gates remain authoritative. The full 612×384 Canvas deep-Sand profiler reports `10.23/10.43 ms` median/p90 without the chromatic body cue and `11.86/12.04 ms` with it, including a `1.23/1.26 ms` loop baseline. The new all-world ceiling is about `1.6 ms`; runtime scratch bytes remain unchanged and work is independent of 1×/2×/4×/8× output scale.

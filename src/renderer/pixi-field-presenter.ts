@@ -5836,7 +5836,13 @@ void main() {
       * (0.085 + atmosphereState.a * 0.36) * billow;
     float semanticAccentShare = mix(0.22, 0.055, gasFieldSupport)
       + (materialEmissive ? 0.035 : 0.0);
-    float semanticAccentAlpha = particleAlpha * semanticAccentShare;
+    // Once the shared atmosphere field proves a dense cloud, it owns the
+    // displayed mass and silhouette. Leaving even a small semantic-particle
+    // alpha there makes a normal-scale plume read as a cellular checker. Fade
+    // only that accent: sparse carriers and authored field gaps keep their
+    // exact semantic alpha, while cloudAlpha remains field-owned and unchanged.
+    float semanticAccentOwnership = 1.0 - smoothstep(0.020, 0.160, atmosphereState.a);
+    float semanticAccentAlpha = particleAlpha * semanticAccentShare * semanticAccentOwnership;
     alpha = cloudOnly > 0.5
       ? cloudAlpha
       : cloudAlpha + semanticAccentAlpha * (1.0 - cloudAlpha);

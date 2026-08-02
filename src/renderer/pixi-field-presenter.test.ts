@@ -414,7 +414,10 @@ describe('Pixi presenter startup configuration', () => {
     expect(blockStart).toBeGreaterThan(0);
     expect(blockEnd).toBeGreaterThan(blockStart);
     expect(block).toContain('alpha = cloudOnly > 0.5');
+    expect(block).toContain('float semanticAccentOwnership = 1.0 - smoothstep(0.020, 0.160, atmosphereState.a);');
+    expect(block).toContain('particleAlpha * semanticAccentShare * semanticAccentOwnership');
     expect(block).not.toContain('uGasVolumeChroma');
+    expect(block).not.toContain('texture(');
   });
 
   it('bounds connected WebGL liquid-contour cohesion without new sampling', () => {
