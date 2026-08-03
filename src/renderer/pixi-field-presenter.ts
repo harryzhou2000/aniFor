@@ -3799,7 +3799,7 @@ vec3 liquidMaterialIdentityDelta(
   }
   return clamp(identity * support, vec3(-0.055), vec3(0.055));
 }
-vec3 botanicalIdentityDelta(float material, vec2 position) {
+vec3 botanicalIdentityDelta(float material, vec2 position, float plantFineGain) {
   float x = floor(position.x);
   float y = floor(position.y);
   vec3 delta = vec3(0.0);
@@ -3819,8 +3819,13 @@ vec3 botanicalIdentityDelta(float material, vec2 position) {
     float canopyCross = 1.0 - abs(fract((x + y * 4.0 + material) / 23.0) * 2.0 - 1.0);
     float canopyCrown = smoothstep(0.69, 0.94, canopyFacet) * (0.45 + canopyCross * 0.55);
     float canopyPocket = 1.0 - smoothstep(0.18, 0.48, canopyFacet);
-    delta = vec3(leaf * 1.5 - vein * 3.0, leaf * 3.5 + vein * 6.0,
-      leaf - vein * 2.5)
+    // Dense PLNT bodies already own a slower canopy cluster, crown, and
+    // pocket. Scale only this cell-scale leaf/vein grammar there so it adds
+    // living variation without resolving as repeated bright scanlines; broad
+    // facet/cross identity remains fully legible in every topology.
+    vec3 leafVein = vec3(leaf * 1.5 - vein * 3.0, leaf * 3.5 + vein * 6.0,
+      leaf - vein * 2.5) * plantFineGain;
+    delta = leafVein
       + canopyCrown * vec3(1.5, 4.5, 1.0)
       - canopyPocket * vec3(1.7, 2.1, 0.8);
   } else if (material == 83.0) {
@@ -7936,7 +7941,21 @@ void main() {
     float botanicalIdentity = (material == 9.0 || material == 10.0 || material == 50.0
       || material == 52.0 || material == 83.0) ? 1.0 : 0.0;
     if (botanicalIdentity > 0.5 && uBotanicalIdentityStyling > 0.5) {
-      color += botanicalIdentityDelta(material, fieldPosition);
+      // Fine PLNT identity is a leaf-scale cue, not a competing surface field.
+      // Restrict its calm-down to a real deep, ordinary canopy: tips, stems,
+      // gaps, co-located walls, and reconstructed support keep the full native
+      // diagnostic motif; lifecycle colour and all semantic topology remain
+      // authoritative in their existing paths.
+      float canopyFineIdentityGain = 1.0;
+      if (material == 10.0 && uSolidOpticalDepth > 0.5
+        && solidOpticalDepth > 6.0 / 255.0 && solidInterior > 0.001
+        && surfaceOnly < 0.5 && halo < 0.5 && wall < 0.5
+        && wallOnly < 0.5 && emissionOnly < 0.5) {
+        float canopyFineBody = smoothstep(6.0 / 255.0, 42.0 / 255.0, solidOpticalDepth)
+          * solidInterior;
+        canopyFineIdentityGain = mix(1.0, 0.42, canopyFineBody);
+      }
+      color += botanicalIdentityDelta(material, fieldPosition, canopyFineIdentityGain);
     }
     if (uBotanicalLifecycleStyling > 0.5 && (material == 10.0 || material == 50.0)) {
       color += botanicalLifecycleDelta(material, wallState.ba, fieldPosition, color);

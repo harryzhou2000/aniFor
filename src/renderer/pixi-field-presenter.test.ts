@@ -3650,7 +3650,7 @@ describe('Pixi presenter startup configuration', () => {
     expect(presenter.app.render).toHaveBeenCalledOnce();
 
     const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
-    const start = source.indexOf('vec3 botanicalIdentityDelta(');
+    const start = source.indexOf('vec3 botanicalIdentityDelta(float material, vec2 position, float plantFineGain) {');
     const end = source.indexOf('vec3 vividColor', start);
     const helper = source.slice(start, end);
     const ids = [...helper.matchAll(/material == (\d+)\.0/g)].map((match) => Number(match[1]));
@@ -3663,12 +3663,18 @@ describe('Pixi presenter startup configuration', () => {
     ]) {
       expect(helper).toContain(motif);
     }
+    expect(helper).toContain('vec3 leafVein = vec3(leaf * 1.5 - vein * 3.0, leaf * 3.5 + vein * 6.0,');
+    expect(helper).toContain('leaf - vein * 2.5) * plantFineGain;');
     expect(helper).toContain('clamp(delta, vec3(-12.0), vec3(12.0)) / 255.0');
     expect(helper).not.toContain('texture(');
     expect(helper).not.toContain('uTime');
     expect(helper).not.toMatch(/\balpha\s*[+*]?=/);
     expect(source).toContain('botanicalIdentity > 0.5 && uBotanicalIdentityStyling > 0.5');
-    expect(source).toContain('color += botanicalIdentityDelta(material, fieldPosition);');
+    expect(source).toContain('float canopyFineIdentityGain = 1.0;');
+    expect(source).toContain('material == 10.0 && uSolidOpticalDepth > 0.5');
+    expect(source).toContain('wallOnly < 0.5 && emissionOnly < 0.5');
+    expect(source).toContain('canopyFineIdentityGain = mix(1.0, 0.42, canopyFineBody);');
+    expect(source).toContain('color += botanicalIdentityDelta(material, fieldPosition, canopyFineIdentityGain);');
     const canopyStart = source.indexOf('// PLNT has native topology and lifecycle cues below;');
     const canopyEnd = source.indexOf('// Reuse the semantic Hermite normal', canopyStart);
     const canopy = source.slice(canopyStart, canopyEnd);
