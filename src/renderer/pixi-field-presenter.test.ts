@@ -3266,10 +3266,12 @@ describe('Pixi presenter startup configuration', () => {
     expect(eight).toContain('float aqueousCoreGlaze = aqueousCoreVolume * (0.018 + keyLight * 0.030);');
     expect(normal).toContain('material == 2.0 && liquidOnly < 0.5 && halo < 0.5 && wall < 0.5');
     expect(normal).toContain('foreignMatterContact < 0.5');
-    expect(normal).toContain('unlikeMaterialContact < 0.5 && liquidDepth > 0.48');
+    expect(normal).toContain('unlikeMaterialContact < 0.5');
+    expect(normal).toContain('dot(liquidSpeciesSlope, liquidSpeciesSlope) < 0.0025');
+    expect(normal).toContain('liquidDepth > 0.48 && liquidNeighbourMean > 0.56');
     expect(normal).toContain('smoothstep(0.56, 0.86, liquidNeighbourMean)');
-    expect(normal).toContain('vec3(0.052, 0.030, 0.012) * aqueousCoreVolume');
-    expect(normal).toContain('* (0.014 + broadSheen * 0.018 + caustic * 0.010)');
+    expect(normal).toContain('vec3(0.082, 0.050, 0.024) * aqueousCoreVolume');
+    expect(normal).toContain('* (0.010 + broadSheen * 0.014 + caustic * 0.008)');
     expect(normal).toContain('if (uLiquidVolumeChroma > 0.5 && material == 16.0');
     expect(normal).toContain('float acidCoreVolume = liquidDepth * (1.0 - liquidFresnelContour)');
     expect(normal).toContain('vec3(0.28, -0.15, 0.65) * acidCoreGlaze');
