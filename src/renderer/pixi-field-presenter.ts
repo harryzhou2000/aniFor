@@ -7309,8 +7309,13 @@ void main() {
       // than evenly spaced horizontal bands at normal viewing distance.
       float organicMicroGain = material == 10.0 ? 0.055 : 1.0;
       float organicBaseline = material == 10.0 ? 1.0 : 0.95;
-      color *= organicBaseline + (fibre * 0.042 + pores * 0.024
-        + organicSurface * max(0.0, fibre) * 0.018) * interiorMicroGain * organicMicroGain;
+      // PLNT's generic fibre varies mainly along one world axis. Blend its
+      // already-live two-axis pore signal into that deliberately tiny undertone
+      // so a mature canopy reads as clustered living matter rather than quiet
+      // scanlines. Wood and Vine retain their original longitudinal fibre.
+      float organicMicroFibre = material == 10.0 ? fibre * 0.32 + pores * 0.68 : fibre;
+      color *= organicBaseline + (organicMicroFibre * 0.042 + pores * 0.024
+        + organicSurface * max(0.0, organicMicroFibre) * 0.018) * interiorMicroGain * organicMicroGain;
       color += mix(color, vec3(0.19, 0.34, 0.18), 0.38)
         * organicSurface * max(0.0, 0.6 - abs(pores)) * 0.028 * interiorMicroGain
         * organicMicroGain;

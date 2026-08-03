@@ -2576,6 +2576,9 @@ describe('Pixi presenter startup configuration', () => {
     expect(source).toContain('uPowderStyle < 1.5 ? 0.044 : 0.085');
     expect(source).toContain('float powderDetailCalibration = material == 1.0 && uPowderStyle > 1.5');
     expect(source).toContain('if (material == 1.0 && uPowderStyle > 1.5 && traits < 0.5 && !materialEmissive)');
+    expect(source).toContain('float organicMicroFibre = material == 10.0 ? fibre * 0.32 + pores * 0.68 : fibre;');
+    expect(source).toContain('organicMicroFibre * 0.042 + pores * 0.024');
+    expect(source).toContain('max(0.0, organicMicroFibre) * 0.018');
     expect(source).toContain('float sandInteriorExposure = q00 * q10 * q01 * q11');
     expect(source).toContain('* smoothstep(0.72, 0.95, semanticDensity);');
     expect(source).toContain('color = max(color - vec3(50.0, 45.0, 27.0) / 255.0 * sandInteriorExposure, vec3(0.0));');
