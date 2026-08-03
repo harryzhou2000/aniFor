@@ -7012,7 +7012,7 @@ void main() {
       // existing diagnostic detail.
       float broadPowderPigmentDamping = 1.0 - smoothstep(
         0.72, 0.98, powderVisualCohesion
-      ) * 0.22;
+      ) * 0.14;
       // The showcase's deep Stone platform needs a quieter fit-view body than
       // an exposed Sand/Clay pile: its established macro relief and mesostrata
       // already carry the bulk read. Restrict this cap to that exact semantic

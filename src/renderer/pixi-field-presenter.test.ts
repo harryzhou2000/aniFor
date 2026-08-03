@@ -2604,7 +2604,7 @@ describe('Pixi presenter startup configuration', () => {
     expect(source).toContain('mix(1.0, 1.20, settledMineralRetention)');
     expect(source).toContain('float broadPowderPigmentDamping = 1.0 - smoothstep(');
     expect(source).toContain('0.72, 0.98, powderVisualCohesion');
-    expect(source).toContain(') * 0.22;');
+    expect(source).toContain(') * 0.14;');
     expect(source).toContain('cellGrainRetention * broadPowderPigmentDamping');
     expect(source).toContain('float deepPowderBody = smoothstep(0.86, 0.98, powderVisualCohesion);');
     expect(source).toContain('float deepStoneBody = material == 21.0 ? deepPowderBody : 0.0;');
