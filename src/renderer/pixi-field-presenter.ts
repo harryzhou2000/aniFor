@@ -6963,14 +6963,14 @@ void main() {
       // stay on their established paths.
       float deepPowderBody = smoothstep(0.86, 0.98, powderVisualCohesion);
       float deepStoneBody = material == 21.0 ? deepPowderBody : 0.0;
-      float settledGrainCeiling = mix(8.0, 3.20, deepStoneBody);
+      float settledGrainCeiling = mix(8.0, 2.70, deepStoneBody);
       cellGrainRetention = mix(
         cellGrainRetention,
         cellGrainRetention * broadPowderPigmentDamping,
         smoothstep(0.72, 0.98, powderVisualCohesion)
       );
       cellGrainRetention = min(cellGrainRetention, settledGrainCeiling);
-      float deepPowderChromaDamping = mix(1.0, 0.82, deepStoneBody);
+      float deepPowderChromaDamping = mix(1.0, 0.78, deepStoneBody);
       float facetRetention = mix(1.0, 1.20, settledMineralRetention);
       float powderMineralFactor = 0.91
         + grain * (0.20 + roughSurface * 0.05) * cellGrainRetention * facetGain
