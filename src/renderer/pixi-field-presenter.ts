@@ -7013,14 +7013,15 @@ void main() {
       } else if (optics == 15.0) {
         color += vec3(1.00, 0.68, 0.32) * brightFacet * 0.060;
       }
-      // Ten unusual native powders share the existing deterministic grain and
+      // Thirteen distinct native powders share the existing deterministic grain and
       // half-cell facet signals, then select one small identity motif. The
       // branch is authoritative-matter RGB arithmetic only: it adds no sample,
       // field, pass, allocation, clock term, or output-scale resource.
       float unusualPowder = material == 43.0 || material == 44.0
         || material == 45.0 || material == 46.0 || material == 47.0
         || material == 48.0 || material == 49.0 || material == 51.0
-        || material == 198.0 || material == 217.0 ? 1.0 : 0.0;
+        || material == 198.0 || material == 217.0 || material == 7.0
+        || material == 18.0 || material == 29.0 ? 1.0 : 0.0;
       if (uUnusualPowderStyling > 0.5 && unusualPowder > 0.5
         && family == 4.0 && traits < 0.5 && !materialEmissive
         && surfaceOnly < 0.5 && halo < 0.5 && wall < 0.5
@@ -7089,6 +7090,25 @@ void main() {
           float cleavage = max(diagonalBand, counterBand * step(0.0, grainFacet));
           color += vec3(0.030, 0.050, 0.075) * cleavage;
           color *= 1.0 - coarseNode * 0.028;
+        } else if (material == 7.0) {
+          // SALT: warm cubic cleavages remain sparse across a settled crystal body.
+          float cleavage = max(diagonalBand, counterBand * step(-0.08, grainFacet));
+          color += vec3(0.040, 0.027, 0.011) * cleavage;
+          color *= 1.0 - counterBand * step(grainFacet, -0.20) * 0.026;
+        } else if (material == 18.0) {
+          // SNOW: cool, soft flake intersections keep the powder light but legible.
+          vec2 snowCell = abs(mod(motifCell + vec2(4.0), 9.0) - 4.0);
+          float flake = max(
+            1.0 - step(0.5, min(snowCell.x, snowCell.y)),
+            1.0 - step(0.5, abs(snowCell.x - snowCell.y))
+          ) * (1.0 - step(3.6, max(snowCell.x, snowCell.y)));
+          color += vec3(0.014, 0.026, 0.039) * flake;
+          color *= 1.0 - max(0.0, -grainFacet) * 0.014;
+        } else if (material == 29.0) {
+          // PQRT: lilac angular planes establish a baseline beneath native crystal state.
+          float plane = max(diagonalBand, counterBand * step(0.06, grain));
+          color += vec3(0.044, 0.016, 0.039) * plane;
+          color *= 1.0 - coarseNode * step(grainFacet, -0.15) * 0.024;
         } else if (material == 198.0) {
           // DYST: dead-colony clumps retain sparse ochre islands.
           float clump = step(0.08, grain) * step(-0.10, grainFacet);

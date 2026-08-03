@@ -3609,7 +3609,7 @@ describe('Pixi presenter startup configuration', () => {
     expect(presenter.app.render).toHaveBeenCalledOnce();
 
     const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
-    const start = source.indexOf('// Ten unusual native powders share the existing deterministic grain');
+    const start = source.indexOf('// Thirteen distinct native powders share the existing deterministic grain');
     const end = source.indexOf('      color *= 1.0 + powderMacroRelief;', start);
     const unusualBlock = source.slice(start, end);
     expect(start).toBeGreaterThan(0);
@@ -3619,9 +3619,12 @@ describe('Pixi presenter startup configuration', () => {
     expect(unusualBlock).toContain('family == 4.0 && traits < 0.5 && !materialEmissive');
     expect(unusualBlock).toContain('surfaceOnly < 0.5 && halo < 0.5 && wall < 0.5');
     expect(unusualBlock).toContain('wallOnly < 0.5 && emissionOnly < 0.5');
-    for (const material of [43, 44, 45, 46, 47, 48, 49, 51, 198, 217]) {
+    for (const material of [7, 18, 29, 43, 44, 45, 46, 47, 48, 49, 51, 198, 217]) {
       expect(unusualBlock).toContain(`material == ${material}.0`);
     }
+    expect(unusualBlock).toContain('// SALT: warm cubic cleavages remain sparse across a settled crystal body.');
+    expect(unusualBlock).toContain('// SNOW: cool, soft flake intersections keep the powder light but legible.');
+    expect(unusualBlock).toContain('// PQRT: lilac angular planes establish a baseline beneath native crystal state.');
     expect(unusualBlock).toContain('// ANAR: pale feather shafts with restrained barbs.');
     expect(unusualBlock).toContain('// BGLA: cool angular glass splinters.');
     expect(unusualBlock).toContain('// BREC: dark PCB fragments crossed by copper traces and pads.');
