@@ -3992,9 +3992,14 @@ vec3 toneMapEnergy(vec3 radiance) {
   // This bounded shoulder approaches the same ceiling without pinning a range
   // of high source values to one byte.
   const float shoulder = 0.65;
-  vec3 excess = max(radiance - vec3(knee), vec3(0.0));
-  vec3 mapped = vec3(knee) + vec3(ceiling - knee) * excess / (excess + vec3(shoulder));
-  return min(radiance, mapped);
+  // Compress the peak as one scalar rather than each RGB channel independently.
+  // Saturated Plasma and photon bodies then retain their authored violet/blue
+  // chroma and broad internal relief instead of drifting toward grey at the
+  // shoulder. This remains RGB-only and preserves the original ceiling.
+  float peak = max(max(radiance.r, radiance.g), radiance.b);
+  if (peak <= knee) return radiance;
+  float mappedPeak = knee + (ceiling - knee) * (peak - knee) / (peak - knee + shoulder);
+  return radiance * (mappedPeak / peak);
 }
 vec3 energyIdentityDelta(float material, vec2 position, float time, vec2 velocity) {
   // Exact native energy identities share the Canvas integer motifs. The
@@ -7553,14 +7558,19 @@ void main() {
         float sensorPanelPocket = max(-sensorPanelRelief, 0.0);
         float sensorPanelGrazing = smoothstep(0.018, 0.18, solidFresnel) * sensorPanelCore;
         color *= vec3(1.0) - vec3(0.032, 0.024, 0.042)
-          * (sensorPanelPocket * 0.52 + (1.0 - sensorPanelGrazing) * 0.035);
+          * (sensorPanelPocket * 0.62 + (1.0 - sensorPanelGrazing) * 0.045);
         color += (vec3(1.0) - clamp(color, 0.0, 1.0))
-          * (sensorTint * (sensorPanelCrown * 0.072 + sensorPanelGrazing * 0.038)
-            + solidEnvironment * (0.024 + sensorPanelGrazing * 0.045));
-        float sensorGlyphGain = mix(1.0, 0.68, sensorPanelCore);
+          * (sensorTint * (sensorPanelCrown * 0.098 + sensorPanelGrazing * 0.052)
+            + solidEnvironment * (0.030 + sensorPanelGrazing * 0.055));
+        // Preserve one clear diagnostic glyph around a thin or shallow sensor,
+        // but let a deep panel read as a single instrument face instead of a
+        // tiled decal. The broad crown/pocket above carries that dense body.
+        float sensorGlyphGain = mix(1.0, 0.36, sensorPanelCore);
+        float sensorBezelGain = mix(1.0, 0.42, sensorPanelCore);
         color *= 1.0 - sensorPanel * (0.014 + sensorPanelCore * 0.010)
           - sensorBezel * (0.036 + sensorPanelCore * 0.012);
-        color += sensorTint * (sensorBezel * 0.030 + sensorGlyph * 0.082 * sensorGlyphGain);
+        color += sensorTint * (sensorBezel * 0.030 * sensorBezelGain
+          + sensorGlyph * 0.082 * sensorGlyphGain);
         color = clamp(color, 0.0, 1.0);
       }
     } else if (profile == 6.0) {

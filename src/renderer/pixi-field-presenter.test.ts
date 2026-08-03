@@ -1490,6 +1490,23 @@ describe('Pixi presenter startup configuration', () => {
     expect(block).not.toContain('texture(');
   });
 
+  it('keeps saturated normal-WebGL Energy hue through its bounded shoulder', () => {
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const normalStart = source.indexOf('const FIELD_FRAGMENT = `');
+    const start = source.indexOf('vec3 toneMapEnergy(vec3 radiance) {', normalStart);
+    const end = source.indexOf('vec3 energyIdentityDelta(', start);
+    const helper = source.slice(start, end);
+
+    expect(start).toBeGreaterThan(normalStart);
+    expect(end).toBeGreaterThan(start);
+    expect(helper).toContain('float peak = max(max(radiance.r, radiance.g), radiance.b);');
+    expect(helper).toContain('if (peak <= knee) return radiance;');
+    expect(helper).toContain('float mappedPeak = knee + (ceiling - knee) * (peak - knee) / (peak - knee + shoulder);');
+    expect(helper).toContain('return radiance * (mappedPeak / peak);');
+    expect(helper).not.toContain('vec3 excess =');
+    expect(helper).not.toContain('vec3 mapped =');
+  });
+
   it('keeps true-8x deep solid body optics interior-only, RGB-only, and resource-free', () => {
     const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
     const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');
@@ -3566,7 +3583,11 @@ describe('Pixi presenter startup configuration', () => {
     expect(sensorBlock).toContain('// VSNS: vector arrow.');
     expect(sensorBlock).toContain('float sensorPanelRelief = clamp(solidReliefTone * 255.0 / 6.0, -1.0, 1.0)');
     expect(sensorBlock).toContain('float sensorPanelGrazing = smoothstep(0.018, 0.18, solidFresnel) * sensorPanelCore;');
-    expect(sensorBlock).toContain('float sensorGlyphGain = mix(1.0, 0.68, sensorPanelCore);');
+    expect(sensorBlock).toContain('sensorPanelPocket * 0.62 + (1.0 - sensorPanelGrazing) * 0.045');
+    expect(sensorBlock).toContain('sensorPanelCrown * 0.098 + sensorPanelGrazing * 0.052');
+    expect(sensorBlock).toContain('float sensorGlyphGain = mix(1.0, 0.36, sensorPanelCore);');
+    expect(sensorBlock).toContain('float sensorBezelGain = mix(1.0, 0.42, sensorPanelCore);');
+    expect(sensorBlock).toContain('sensorBezel * 0.030 * sensorBezelGain');
     expect(sensorBlock).toContain('surfaceOnly < 0.5 && halo < 0.5 && wall < 0.5');
     expect(sensorBlock).not.toMatch(/texture\s*\(/);
     expect(sensorBlock).not.toMatch(/\balpha\s*[+*]?=/);
