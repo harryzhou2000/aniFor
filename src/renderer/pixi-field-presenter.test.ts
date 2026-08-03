@@ -1600,6 +1600,29 @@ describe('Pixi presenter startup configuration', () => {
     expect(block).not.toMatch(/\balpha\s*[+*]?=/);
   });
 
+  it('gives only deep settled radioactive powders an RGB-only Smooth body', () => {
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const normalStart = source.indexOf('const FIELD_FRAGMENT = `');
+    const start = source.indexOf('// Radioactive powders carry native traits, so the ordinary trait-free', normalStart);
+    const end = source.indexOf('      float grainOffsetY =', start);
+    const block = source.slice(start, end);
+
+    expect(start).toBeGreaterThan(normalStart);
+    expect(end).toBeGreaterThan(start);
+    for (const material of ['99.0', '108.0', '109.0', '111.0', '112.0']) {
+      expect(block).toContain(`material == ${material}`);
+    }
+    expect(block).toContain('uEnergyIdentityStyling > 0.5 && uPowderBodyDepth > 0.5');
+    expect(block).toContain('uPowderStyle > 1.5 && !materialEmissive');
+    expect(block).toContain('smoothstep(224.0 / 255.0, 1.0, boundaryStability)');
+    expect(block).toContain('smoothstep(0.66, 0.94, widePowderShape.x)');
+    expect(block).toContain('smoothstep(5.5, 8.5, widePowderShape.w)');
+    expect(block).toContain('surfaceOnly < 0.5 && halo < 0.5 && wall < 0.5');
+    expect(block).not.toContain('texture(');
+    expect(block).not.toContain('uTime');
+    expect(block).not.toMatch(/\balpha\s*[+*]?=/);
+  });
+
   it('gives true-8x rigid contours bounded Hermite curvature without new samples', () => {
     const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
     const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');

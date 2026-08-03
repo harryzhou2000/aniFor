@@ -6756,6 +6756,48 @@ void main() {
           * (1.0 - step(0.5, wall));
         powderMesostrataSlope = powderDirectedSlope;
       }
+      // Radioactive powders carry native traits, so the ordinary trait-free
+      // settled-powder body deliberately leaves them alone. Give only a deep,
+      // stable Smooth core a restrained family-coloured volume before the
+      // existing isotope and retained POLO/VIBR state overlays. This reuses the
+      // already-live wide powder field; alpha, support, walls, holes, physics,
+      // Local, Grains, and the compact 8x compositor remain untouched.
+      float radioactivePowder = material == 99.0 || material == 108.0 || material == 109.0
+        || material == 111.0 || material == 112.0 ? 1.0 : 0.0;
+      if (uEnergyIdentityStyling > 0.5 && uPowderBodyDepth > 0.5 && radioactivePowder > 0.5
+        && uPowderStyle > 1.5 && !materialEmissive
+        && surfaceOnly < 0.5 && halo < 0.5 && wall < 0.5
+        && wallOnly < 0.5 && emissionOnly < 0.5) {
+        float radioactivePowderCore = powderBulkDepth
+          * smoothstep(224.0 / 255.0, 1.0, boundaryStability)
+          * smoothstep(0.66, 0.94, widePowderShape.x)
+          * smoothstep(5.5, 8.5, widePowderShape.w);
+        float radioactivePowderSlope = clamp(
+          widePowderShape.y * -2.20 + widePowderShape.z * -3.20, -1.0, 1.0
+        ) * radioactivePowderCore;
+        float radioactivePowderCrown = max(radioactivePowderSlope, 0.0);
+        float radioactivePowderPocket = max(-radioactivePowderSlope, 0.0);
+        vec3 radioactivePowderAbsorption = vec3(0.046, 0.057, 0.033);
+        vec3 radioactivePowderKey = vec3(0.34, 0.74, 0.30);
+        if (material == 99.0) {
+          radioactivePowderAbsorption = vec3(0.058, 0.032, 0.078);
+          radioactivePowderKey = vec3(0.48, 0.28, 0.78);
+        } else if (material == 108.0 || material == 112.0) {
+          radioactivePowderAbsorption = vec3(0.065, 0.053, 0.018);
+          radioactivePowderKey = vec3(0.64, 0.80, 0.22);
+        } else if (material == 109.0) {
+          radioactivePowderAbsorption = vec3(0.048, 0.066, 0.026);
+          radioactivePowderKey = vec3(0.40, 0.90, 0.34);
+        } else {
+          radioactivePowderAbsorption = vec3(0.074, 0.040, 0.084);
+          radioactivePowderKey = vec3(0.50, 0.30, 0.78);
+        }
+        color *= vec3(1.0) - radioactivePowderAbsorption
+          * (0.040 + radioactivePowderPocket * 0.40) * radioactivePowderCore;
+        color += (vec3(1.0) - clamp(color, 0.0, 1.0))
+          * radioactivePowderKey * (0.014 + radioactivePowderCrown * 0.090)
+          * radioactivePowderCore;
+      }
       float grainOffsetY = fract(sin(dot(floor(fieldPosition), vec2(39.346, 11.135))) * 24634.6345) - 0.5;
       vec2 grainCentre = vec2(grain, grainOffsetY) * 0.075;
       float grainDistance = length(fract(fieldPosition) - 0.5 - grainCentre);
