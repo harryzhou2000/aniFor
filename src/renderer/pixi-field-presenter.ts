@@ -5897,10 +5897,14 @@ void main() {
     // compress only its interior chroma before the existing family identity
     // accents are layered: mixed billows read as one soft body instead of hard
     // semantic colour lobes, while sparse chains and species colour remain
-    // legible. This is RGB-only arithmetic over already-live field state.
+    // legible. Keep that neutralisation below the old cap: a fully field-owned
+    // coloured cloud should still read as translucent material rather than a
+    // uniformly grey volume. This is RGB-only arithmetic over already-live
+    // field state.
     float gasInteriorScatter = gasInterior * smoothstep(0.10, 0.60, gasShadeDensity);
     float gasBaseLuminance = dot(gasBase, vec3(0.2126, 0.7152, 0.0722));
-    gasBase = mix(gasBase, vec3(gasBaseLuminance), gasInteriorScatter * 0.12);
+    float gasNeutralMix = gasInteriorScatter * 0.085;
+    gasBase = mix(gasBase, vec3(gasBaseLuminance), gasNeutralMix);
     float gasCurvature = clamp((atmosphereState.a - cloudNeighbourMean) * 8.0, -1.0, 1.0);
     float gasCrown = max(gasCurvature, 0.0);
     float gasPocket = max(-gasCurvature, 0.0);

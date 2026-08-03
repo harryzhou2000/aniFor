@@ -517,7 +517,8 @@ describe('Pixi presenter startup configuration', () => {
     expect(end).toBeGreaterThan(start);
     expect(block).toContain('float gasInteriorScatter = gasInterior * smoothstep(0.10, 0.60, gasShadeDensity);');
     expect(block).toContain('float gasBaseLuminance = dot(gasBase, vec3(0.2126, 0.7152, 0.0722));');
-    expect(block).toContain('gasInteriorScatter * 0.12');
+    expect(block).toContain('float gasNeutralMix = gasInteriorScatter * 0.085;');
+    expect(block).toContain('gasBase = mix(gasBase, vec3(gasBaseLuminance), gasNeutralMix);');
     expect(block).not.toContain('texture(');
     expect(block).not.toMatch(/\balpha\s*[+*]?=/);
   });
