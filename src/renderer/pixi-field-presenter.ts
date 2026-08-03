@@ -6972,7 +6972,7 @@ void main() {
       // field continues to own the curved exterior, and fragile material,
       // Local, Grains, and the direct 8x compositor remain on their existing
       // paths.
-      float cellGrainRetention = mix(1.0, 1.96, settledMineralRetention);
+      float cellGrainRetention = mix(1.0, 1.70, settledMineralRetention);
       // The filter's logical field spans the fixed world while gl_FragCoord is
       // in its backing pixels. Their ratio is therefore the active Detail
       // scale, independent of CSS camera transforms and without a new uniform.
@@ -7001,8 +7001,8 @@ void main() {
       // the already calibrated 2x body. The true 8x direct mesh does not run
       // this normal compositor.
       float fourXMineralRecovery = smoothstep(2.75, 4.0, detailEstimate);
-      float lowDetailMineralGain = 1.0 + 1.15 * lowDetailTaper
-        + 1.40 * lowDetailShoulder + 1.20 * fourXMineralRecovery;
+      float lowDetailMineralGain = 1.0 + 0.85 * lowDetailTaper
+        + 1.05 * lowDetailShoulder + 0.90 * fourXMineralRecovery;
       cellGrainRetention = mix(1.0, cellGrainRetention * lowDetailMineralGain,
         settledMineralRetention);
       // At fit view the low-detail recovery must leave a material readable, but

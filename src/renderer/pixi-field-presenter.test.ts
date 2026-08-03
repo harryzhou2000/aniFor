@@ -2593,14 +2593,14 @@ describe('Pixi presenter startup configuration', () => {
     expect(source).toContain('float powderContourTextureRetention = 1.0;');
     expect(source).toContain('powderContourTextureRetention = 1.0 - smoothContourTransfer');
     expect(source).toContain('color *= mix(1.0, powderMineralFactor, powderContourTextureRetention);');
-    expect(source).toContain('mix(1.0, 1.96, settledMineralRetention)');
+    expect(source).toContain('mix(1.0, 1.70, settledMineralRetention)');
     expect(source).toContain('float detailEstimate = min(');
     expect(source).toContain('(gl_FragCoord.x + 0.5) / max(fieldPosition.x, 0.5)');
     expect(source).toContain('float lowDetailShoulder = 1.0 - smoothstep(1.15, 2.25, detailEstimate);');
     expect(source).toContain('float lowDetailTaper = 1.0 - smoothstep(2.25, 4.0, detailEstimate);');
     expect(source).toContain('float fourXMineralRecovery = smoothstep(2.75, 4.0, detailEstimate);');
-    expect(source).toContain('float lowDetailMineralGain = 1.0 + 1.15 * lowDetailTaper');
-    expect(source).toContain('+ 1.40 * lowDetailShoulder + 1.20 * fourXMineralRecovery;');
+    expect(source).toContain('float lowDetailMineralGain = 1.0 + 0.85 * lowDetailTaper');
+    expect(source).toContain('+ 1.05 * lowDetailShoulder + 0.90 * fourXMineralRecovery;');
     expect(source).toContain('mix(1.0, 1.20, settledMineralRetention)');
     expect(source).toContain('float broadPowderPigmentDamping = 1.0 - smoothstep(');
     expect(source).toContain('0.72, 0.98, powderVisualCohesion');
