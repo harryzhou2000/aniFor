@@ -43,6 +43,7 @@ import { shadeCanvasEnergy } from './canvas-energy-style';
 import { shadeCanvasMaterial } from './canvas-material-style';
 import { shadeCanvasCellularMaterial } from './canvas-cellular-style';
 import { applyCanvasEarthenPowderStyle } from './canvas-earthen-powder-style';
+import { applyCanvasCrystallinePowderStyle } from './canvas-crystalline-powder-style';
 import {
   applyCanvasStructuralRigidBulkOptics,
   applyCanvasStructuralRigidStyle,
@@ -1882,6 +1883,10 @@ export class MaterialRenderer {
           fields.powderSurface.bytes, pixel, powderBulkDepth, this.powderBodyDepthEnabled, optics,
           material, x, y, this.powderMesostrataStylingEnabled,
         );
+        if (this.unusualPowderStylingEnabled && wall === 0 && applicableTraits === 0
+          && !projectedInfo?.emissive) {
+          applyCanvasCrystallinePowderStyle(this.styledColor, material, x, y);
+        }
         this.applyThermalMaterialStyle(
           phase, material, false, applicableTraits, temperatures?.[index], optics,
         );
@@ -2392,6 +2397,10 @@ export class MaterialRenderer {
             fields.powderSurface.bytes, pixel, powderBulkDepth, this.powderBodyDepthEnabled, optics,
             material, x, y, this.powderMesostrataStylingEnabled,
           );
+          if (this.unusualPowderStylingEnabled && phase === RenderPhase.Powder
+            && wall === 0 && applicableTraits === 0 && !info.emissive) {
+            applyCanvasCrystallinePowderStyle(this.styledColor, material, x, y);
+          }
           if (this.earthenPowderStylingEnabled && phase === RenderPhase.Powder
             && wall === 0 && applicableTraits === 0 && !info.emissive) {
             applyCanvasEarthenPowderStyle(this.styledColor, material, x, y);
