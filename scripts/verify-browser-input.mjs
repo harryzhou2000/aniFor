@@ -20715,20 +20715,29 @@ async function captureSettledPage(cdp, label, delayMs = 900, presentationAlready
     const remaining = remainingDeadlineMs(deadline, `${label} completed-frame request`);
     await waitForNextWebGLPresentation(cdp, label, remaining, remaining);
   }
+  // A completed fence is the renderer-health boundary. The following rAF and
+  // PNG transfer only wait for Chrome's compositor to expose that already
+  // completed frame, so keep them bounded separately instead of turning a
+  // healthy 29.9-second fence into a false presentation timeout.
+  const compositorDeadline = Date.now() + 10_000;
   // A signalled WebGL fence proves the target is ready, not that Chrome has
   // copied the canvas into the compositor surface used by Page.captureScreenshot.
   // Give that hand-off two compositor turns, discard one warm-up read, then
   // return the later settled capture.  Returning the old immediate read made
   // valid 8x off/on mutations look identical in screenshot gates.
   await evaluate(cdp, 'new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)))',
-    remainingDeadlineMs(deadline, `${label} compositor hand-off`));
+    remainingDeadlineMs(compositorDeadline, `${label} compositor hand-off`));
   await capturePageScreenshot(
-    cdp, deadline, `${label} compositor warm-up screenshot`,
+    cdp, compositorDeadline, `${label} compositor warm-up screenshot`,
   );
   await sleep(150);
-  const capture = await capturePageScreenshot(cdp, deadline, `${label} framebuffer screenshot`);
+  const capture = await capturePageScreenshot(
+    cdp, compositorDeadline, `${label} framebuffer screenshot`,
+  );
   await sleep(150);
-  const reference = await capturePageScreenshot(cdp, deadline, `${label} reference screenshot`);
+  const reference = await capturePageScreenshot(
+    cdp, compositorDeadline, `${label} reference screenshot`,
+  );
   const canvasRect = await evaluate(cdp, `(() => {
     const canvas = document.querySelector('.world-canvas');
     if (!(canvas instanceof HTMLCanvasElement)) return undefined;
