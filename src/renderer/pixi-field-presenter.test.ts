@@ -168,6 +168,31 @@ describe('Pixi presenter startup configuration', () => {
     expect(source).not.toContain('sampler2D uPresentationState');
   });
 
+  it('keeps the optional GLSL blackbody ramp aligned with its CPU reference and out of 8x', () => {
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const reference = readFileSync(new URL('./blackbody-emission.ts', import.meta.url), 'utf8');
+    const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');
+    const normalStart = source.indexOf('const FIELD_FRAGMENT = `', eightStart);
+
+    expect(eightStart).toBeGreaterThanOrEqual(0);
+    expect(normalStart).toBeGreaterThan(eightStart);
+    expect(source.slice(eightStart, normalStart)).not.toContain('blackbodyHdrRadiance');
+    expect(source.slice(normalStart)).toContain('temperatureByte * 25.6');
+    expect(source.slice(normalStart)).toContain('smoothstep(28.0, 52.0, temperatureByte)');
+    expect(source.slice(normalStart)).toContain('smoothstep(52.0, 255.0, temperatureByte)');
+    expect(reference).toContain('semanticTemperatureKelvin(temperatureByte)');
+    expect(reference).toContain('smoothstep(28, 52, temperatureByte)');
+    expect(reference).toContain('smoothstep(52, 255, temperatureByte)');
+    for (const coefficient of [
+      '329.698727446', '-0.1332047592', '99.4708025861', '161.1195681661',
+      '288.1221695283', '-0.0755148492', '138.5177312231', '305.0447927307',
+    ]) {
+      expect(source).toContain(coefficient);
+      expect(reference).toContain(coefficient);
+    }
+    expect(source.match(/this\.uniforms\.uniforms\.uHDRVfx = 0;/g)).toHaveLength(2);
+  });
+
   it('advances fallback presentation timing only after its GPU fence signals', () => {
     const callbacks: FrameRequestCallback[] = [];
     vi.stubGlobal('requestAnimationFrame', vi.fn((callback: FrameRequestCallback) => {

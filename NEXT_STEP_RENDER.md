@@ -2,6 +2,37 @@
 
 Define the art target first: **physically-inspired stylized realism** — soft directional lighting, HDR emission, true fluid surfaces, depth through absorption and scatter. Every effect below serves that. I'd also lock in two reference presets early (e.g. "Realistic" and "Neon Lab") so aesthetic decisions stay coherent.
 
+## Experiment ledger
+
+The established presentation remains the `classic` control while experiments
+are measured. Select a look with `?renderLook=classic|realistic|neon-lab`; this
+does not alter simulation, camera, semantic ownership, or `renderScale`.
+
+- **E01 — HDR chassis (active):** at 1×–4×, `realistic` and `neon-lab` require
+  the actual Pixi WebGL2 context to prove float colour attachments, MRT limits,
+  and a complete `RGBA16F` framebuffer. The semantic scene renders into one HDR
+  target, bright regions feed a half-resolution threshold/blur chain, and an
+  ACES-style shoulder composites without changing the established alpha plane.
+  Exact temperature drives a blackbody core for Fire, Lava, Plasma, and
+  incandescent ordinary matter. Unsupported devices drop to classic WebGL;
+  Canvas remains the semantic fallback.
+- **Protected 8× rung:** `renderScale=8` deliberately reports
+  `hdrPipeline=inactive` / `scale-8` and retains the proven direct single-mesh
+  4896×3072 path. The experiment must earn a bounded 8× design rather than
+  allocating a 115 MiB full-resolution float target beside that path.
+- **Current decision:** E01 is opt-in until its powder/liquid/gas scene metrics,
+  GPU timing, context-loss recovery, and mobile thermal behavior are measured.
+  Sub-1.0 material colour stays on the established response; tonemapping owns
+  only real HDR highlights so powder texture and liquid body contrast are not
+  washed out.
+
+Run the two review presets with `npm run audit:vfx:realistic` and
+`npm run audit:vfx:neon`. `npm run audit:vfx:hdr` is the objective 2× WebGL
+gate: it reloads a paused fixture as classic → realistic → classic and checks
+the hot-material RGB response, repeatability, semantic/staging topology, exact
+geometry, active float pipeline, and browser errors. The browser gate also
+accepts `--render-scale=1|2|4|8` for capability/degradation checks.
+
 ## Phase 1 — HDR pipeline & lighting core (biggest visual payoff)
 
 **Goal:** everything downstream needs light and dynamic range; build the chassis first.

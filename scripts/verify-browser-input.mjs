@@ -112,6 +112,13 @@ const pausedPresentationOnly = process.argv.includes('--paused-presentation-only
 const canvasTimingOnly = process.argv.includes('--canvas-timing-only');
 const quickScreenshot = process.argv.includes('--quick-screenshot');
 const showcaseScreenshotOnly = process.argv.includes('--showcase-screenshot');
+// This is deliberately a separate 2x WebGL experiment gate. It reloads the
+// deterministic paused render lab as classic -> realistic -> classic so it
+// never adds render targets, readback, or timing pressure to the true-8x gate.
+const hdrVfxOnly = process.argv.includes('--hdr-vfx-only');
+if (hdrVfxOnly && (modes.length !== 1 || modes[0] !== 'webgl')) {
+  throw new Error('--hdr-vfx-only requires --webgl-only');
+}
 const layoutOnly = process.argv.includes('--layout-only');
 const visualScaleMatrixNormalOnly = process.argv.includes('--visual-scale-matrix-normal-only');
 const visualScaleMatrixOnly = process.argv.includes('--visual-scale-matrix-only')
@@ -192,7 +199,7 @@ const liveScaleOnly = process.argv.includes('--live-scale-only');
 // bundle without starting Vite. That keeps screenshot evidence independent of
 // dev-server navigation timing while leaving all default audit paths unchanged.
 const productionBundle = process.argv.includes('--production-bundle');
-const usesProductionBundle = productionBundle || showcaseScreenshotOnly || cellularGraphicsOnly || sensorGraphicsOnly
+const usesProductionBundle = productionBundle || showcaseScreenshotOnly || hdrVfxOnly || cellularGraphicsOnly || sensorGraphicsOnly
   || unusualPowderGraphicsOnly || earthenPowderGraphicsOnly || explosivePowderGraphicsOnly || unusualSolidGraphicsOnly
   || deviceIdentityGraphicsOnly
   || fieldProfileGraphicsOnly
@@ -221,14 +228,31 @@ const usesProductionBundle = productionBundle || showcaseScreenshotOnly || cellu
 const AUDIT_BASE_URL = usesProductionBundle ? PRODUCTION_BUNDLE_URL : ORIGIN + '/';
 const DESKTOP_TOOL_FILTER_HEIGHT = 96;
 const screenshotRequest = process.argv.find((argument) => argument.startsWith('--screenshot='))?.slice('--screenshot='.length);
+const renderLook = process.argv.find((argument) => argument.startsWith('--render-look='))
+  ?.slice('--render-look='.length);
+const requireHdrPipeline = process.argv.includes('--require-hdr-pipeline');
+const renderScaleArgument = process.argv.find((argument) => argument.startsWith('--render-scale='))
+  ?.slice('--render-scale='.length);
 const captureDprArgument = process.argv.find((argument) => argument.startsWith('--capture-dpr='))
   ?.slice('--capture-dpr='.length);
+if (renderLook !== undefined && !['classic', 'realistic', 'neon-lab'].includes(renderLook)) {
+  throw new Error('--render-look must be classic, realistic, or neon-lab');
+}
+if (renderScaleArgument !== undefined && !['1', '2', '4', '8'].includes(renderScaleArgument)) {
+  throw new Error('--render-scale must be 1, 2, 4, or 8');
+}
 const captureDpr = captureDprArgument === undefined ? undefined : Number(captureDprArgument);
 if (captureDpr !== undefined && captureDpr !== 1 && captureDpr !== 2) {
   throw new Error('--capture-dpr must be 1 or 2');
 }
 if (showcaseScreenshotOnly && !screenshotRequest) {
   throw new Error('--showcase-screenshot requires --screenshot=<path>');
+}
+if (hdrVfxOnly && renderLook !== undefined) {
+  throw new Error('--hdr-vfx-only owns classic -> realistic -> classic; omit --render-look');
+}
+if (hdrVfxOnly && renderScaleArgument !== undefined && renderScaleArgument !== '2') {
+  throw new Error('--hdr-vfx-only is deliberately bounded to --render-scale=2');
 }
 const SOLID_FIELD_REGIONS = [
   { name: 'warmMetalFacing', x: 389.5, y: 229, radiusX: 2, radiusY: 5 },
@@ -284,7 +308,7 @@ async function main() {
       }, 15_000, 'Vite browser-audit server');
     const results = [];
     for (const mode of modes) results.push(await auditMode(mode));
-    const reducedAudit = quickScreenshot || showcaseScreenshotOnly || layoutOnly || mobileOnly || mobileGestureOnly
+    const reducedAudit = quickScreenshot || showcaseScreenshotOnly || hdrVfxOnly || layoutOnly || mobileOnly || mobileGestureOnly
       || desktopInputOnly || visualScaleMatrixOnly || powderBodyOnly || liquidDepthOnly
       || solidDepthOnly || gasChromaOnly || surfaceContourOnly || solidFieldOnly
       || roleGraphicsOnly || cellularGraphicsOnly || sensorGraphicsOnly
@@ -398,10 +422,11 @@ async function auditMode(mode) {
     || nativeSeedGrowthOnly);
   const query = new URLSearchParams({
     scene: showcaseScreenshotOnly ? 'showcase' : 'render-lab', inputAudit: '1',
-    renderScale: (pqrtStateGraphicsEight || filtStateGraphicsEight || lcryStateGraphicsEight
+    ...(renderLook ? { renderLook } : {}),
+    renderScale: renderScaleArgument ?? ((pqrtStateGraphicsEight || filtStateGraphicsEight || lcryStateGraphicsEight
       || pipeStateGraphicsEight || swchStateGraphicsEight || storStateGraphicsEight
       || dlayStateGraphicsEight || wifiStateGraphicsEight || powderMesostrataGraphicsEight
-      || geologicalSolidGraphicsEight || thermalCatalyticRigidGraphicsEight || gooSolidGraphicsEight || frayForceGraphicsEight || gbmbForceGraphicsEight || distilledDieselLiquidGraphicsEight || denseBodyAmbientEight) ? '8' : '2',
+      || geologicalSolidGraphicsEight || thermalCatalyticRigidGraphicsEight || gooSolidGraphicsEight || frayForceGraphicsEight || gbmbForceGraphicsEight || distilledDieselLiquidGraphicsEight || denseBodyAmbientEight) ? '8' : '2'),
     ...(showcaseScreenshotOnly ? { auditStage: 'showcase' } : {
       auditStage: startsBlank ? 'blank' : 'canonical',
       ...(startsBlank ? { blankAudit: '1' } : {}),
@@ -503,7 +528,7 @@ async function auditMode(mode) {
         const parameters = new URLSearchParams(location.search);
         const ready = parameters.get('scene') === 'showcase'
           && parameters.get('inputAudit') === '1'
-          && parameters.get('renderScale') === '2'
+          && parameters.get('renderScale') === ${JSON.stringify(renderScaleArgument ?? '2')}
           && document.querySelector('[data-scene="showcase"]') !== null
           && Boolean(window.__ANIFOR_INPUT_AUDIT__);
         if (!ready) throw new Error('Showcase page not ready: ' + JSON.stringify({
@@ -516,6 +541,27 @@ async function auditMode(mode) {
       await waitFor(() => evaluate(cdp,
         `window.__ANIFOR_INPUT_AUDIT__.backend().backend === ${JSON.stringify(mode)}`,
       ), 15_000, `${mode} showcase backend`);
+      const hdrPipeline = await evaluate(cdp, `(() => {
+        const canvas = document.querySelector('.semantic-field-canvas');
+        return canvas ? {
+          look: canvas.dataset.renderLook,
+          state: canvas.dataset.hdrPipeline,
+          reason: canvas.dataset.hdrPipelineReason,
+          bloomBacking: canvas.dataset.bloomBacking,
+        } : undefined;
+      })()`);
+      if (mode === 'webgl' && renderLook && renderLook !== 'classic') {
+        const expectsActive = (renderScaleArgument ?? '2') !== '8';
+        const supportedFallback = hdrPipeline?.state === 'inactive'
+          && ['not-webgl2', 'float-color-unavailable', 'mrt-unavailable',
+            'float-framebuffer-incomplete', 'initialization-error', 'runtime-error']
+            .includes(hdrPipeline?.reason);
+        assert(hdrPipeline?.look === renderLook
+          && (expectsActive
+            ? hdrPipeline?.state === 'active' || (!requireHdrPipeline && supportedFallback)
+            : hdrPipeline?.state === 'inactive' && hdrPipeline?.reason === 'scale-8'),
+        `${mode}: requested HDR look resolved incorrectly (${JSON.stringify(hdrPipeline)})`);
+      }
       const capture = await waitForStablePageCapture(cdp, `${mode} material showcase framebuffer`);
       const screenshot = screenshotPath(mode);
       await writeFile(screenshot, Buffer.from(capture.capture.data, 'base64'));
@@ -523,7 +569,7 @@ async function auditMode(mode) {
       cdp.close();
       return {
         backend: mode,
-        screenshot,
+        screenshot, hdrPipeline,
         canvas: `${round(capture.canvasRect.width)}x${round(capture.canvasRect.height)}`,
         browserErrors: errors.length,
       };
@@ -567,6 +613,13 @@ async function auditMode(mode) {
       assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
       cdp.close();
       return { backend: mode, desktopInput, browserErrors: errors.length };
+    }
+    if (hdrVfxOnly) {
+      assert(mode === 'webgl', '--hdr-vfx-only requires --webgl-only');
+      const hdrVfx = await auditHdrVfxExperiment(cdp, mode);
+      assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
+      cdp.close();
+      return { backend: mode, hdrVfx, browserErrors: errors.length };
     }
     if (pausedPresentationOnly) {
       const pausedPresentation = await auditPausedPresentation(cdp, mode);
@@ -1450,9 +1503,30 @@ async function auditMode(mode) {
         && suspensionPhaseContrast.distance <= maximumSuspensionPhaseContrast,
       `${mode}: dense Sand/Water still reads as two semantic colours (${JSON.stringify(suspensionPhaseContrast)})`);
       assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
+      const hdrPipeline = await evaluate(cdp, `(() => {
+        const canvas = document.querySelector('.semantic-field-canvas');
+        return canvas ? {
+          look: canvas.dataset.renderLook,
+          state: canvas.dataset.hdrPipeline,
+          reason: canvas.dataset.hdrPipelineReason,
+          bloomBacking: canvas.dataset.bloomBacking,
+        } : undefined;
+      })()`);
+      if (mode === 'webgl' && renderLook && renderLook !== 'classic') {
+        const expectsActive = (renderScaleArgument ?? '2') !== '8';
+        const supportedFallback = hdrPipeline?.state === 'inactive'
+          && ['not-webgl2', 'float-color-unavailable', 'mrt-unavailable',
+            'float-framebuffer-incomplete', 'initialization-error', 'runtime-error']
+            .includes(hdrPipeline?.reason);
+        assert(hdrPipeline?.look === renderLook
+          && (expectsActive
+            ? hdrPipeline?.state === 'active' || (!requireHdrPipeline && supportedFallback)
+            : hdrPipeline?.state === 'inactive' && hdrPipeline?.reason === 'scale-8'),
+        `${mode}: requested HDR look resolved incorrectly (${JSON.stringify(hdrPipeline)})`);
+      }
       cdp.close();
       return {
-        backend: mode, canonicalFixture, screenshot, suspensionPhaseContrast,
+        backend: mode, canonicalFixture, screenshot, suspensionPhaseContrast, hdrPipeline,
         browserErrors: errors.length,
       };
     }
@@ -20608,6 +20682,223 @@ function assertResizeAdjustedViewState(expected, expectedCanvas, actual, actualC
     && Math.abs(actual.panX - expected.panX * widthRatio) < 0.05
     && Math.abs(actual.panY - expected.panY * heightRatio) < 0.05,
   `${label}: ${JSON.stringify({ expected, actual, widthRatio, heightRatio })}`);
+}
+
+const HDR_VFX_REGIONS = Object.freeze([
+  // The paused render-lab's dedicated energy row. These have stable semantic
+  // ownership, so a response here is renderer-only rather than a simulation
+  // tick or an evolving particle field.
+  { name: 'fireCore', x: 405, y: 329, radius: 6, hot: true },
+  { name: 'plasmaCore', x: 445, y: 329, radius: 6, hot: true },
+  { name: 'lavaCore', x: 339, y: 230, radius: 6, hot: true },
+  // The cold/ambient/hot calibration cards distinguish a temperature response
+  // from an arbitrary whole-frame colour-grade change.
+  { name: 'hotMetal', x: 110, y: 370, radius: 5, hot: true },
+  { name: 'hotSand', x: 246, y: 370, radius: 5, hot: true },
+  { name: 'coldMetalControl', x: 30, y: 370, radius: 5, hot: false },
+]);
+
+/**
+ * Production-only HDR experiment gate. It intentionally captures ordinary PNG
+ * compositor output at 2x—not a raw WebGL framebuffer—so this check never
+ * allocates or transfers a 60 MiB true-8x readback.
+ */
+async function auditHdrVfxExperiment(cdp, mode) {
+  const captures = {};
+  for (const look of ['classic', 'realistic', 'classic']) {
+    const key = look === 'classic' && captures.classic ? 'classicRepeat' : look;
+    captures[key] = await navigateHdrVfxLook(cdp, mode, look, key);
+  }
+  const { classic, realistic, classicRepeat } = captures;
+  assertHdrVfxGeometry(classic, 'classic HDR experiment');
+  assertHdrVfxGeometry(realistic, 'realistic HDR experiment');
+  assertHdrVfxGeometry(classicRepeat, 'repeated classic HDR experiment');
+  assertCanvasRectsEqual(classic.geometry.canvas, realistic.geometry.canvas,
+    'HDR experiment classic/realistic CSS geometry');
+  assertCanvasRectsEqual(classic.geometry.canvas, classicRepeat.geometry.canvas,
+    'HDR experiment classic/repeated CSS geometry');
+  assert(JSON.stringify(classic.geometry.backing) === JSON.stringify(realistic.geometry.backing)
+    && JSON.stringify(classic.geometry.backing) === JSON.stringify(classicRepeat.geometry.backing),
+  `HDR experiment backing geometry changed (${JSON.stringify({
+    classic: classic.geometry.backing, realistic: realistic.geometry.backing,
+    repeat: classicRepeat.geometry.backing,
+  })})`);
+  assertHdrVfxSemanticEquality(classic.semantic, realistic.semantic, 'classic/realistic');
+  assertHdrVfxSemanticEquality(classic.semantic, classicRepeat.semantic, 'classic/repeated classic');
+
+  const samples = await sampleHdrVfxRegions(cdp, {
+    classic: classic.capture.capture.data,
+    realistic: realistic.capture.capture.data,
+    classicRepeat: classicRepeat.capture.capture.data,
+  }, HDR_VFX_REGIONS, classic.capture.canvasRect);
+  assert(samples.every((sample) => sample.repeatPeak <= 1),
+    `HDR experiment classic capture was not deterministic (${JSON.stringify(samples)})`);
+  const hot = samples.filter((sample) => sample.hot);
+  const strongestHot = hot.reduce((strongest, sample) => (
+    sample.rgbRms > strongest.rgbRms ? sample : strongest
+  ), { name: 'none', rgbRms: 0, peak: 0 });
+  // The experiment deliberately preserves sub-1.0 albedo, so a broadly
+  // visible full-frame grade is not the success condition. A bounded response
+  // at a semantic hot/emissive core proves the HDR/blackbody+bloom branch ran.
+  assert(strongestHot.rgbRms >= 0.5 && strongestHot.peak >= 2,
+    `HDR experiment produced no meaningful hot/emissive RGB response (${JSON.stringify(samples)})`);
+  return {
+    looks: Object.fromEntries(Object.entries(captures).map(([key, value]) => [key, value.hdrPipeline])),
+    geometry: classic.geometry.backing,
+    semantic: classic.semantic,
+    hotResponse: strongestHot,
+    samples,
+  };
+}
+
+async function navigateHdrVfxLook(cdp, mode, look, label) {
+  const query = new URLSearchParams({
+    scene: 'render-lab', inputAudit: '1', auditStage: 'canonical',
+    renderScale: '2', renderLook: look,
+  });
+  await cdp.send('Page.navigate', { url: `${AUDIT_BASE_URL}?${query}` });
+  await waitFor(() => evaluate(cdp, `(() => {
+    const parameters = new URLSearchParams(location.search);
+    return parameters.get('scene') === 'render-lab'
+      && parameters.get('inputAudit') === '1'
+      && parameters.get('auditStage') === 'canonical'
+      && parameters.get('renderScale') === '2'
+      && parameters.get('renderLook') === ${JSON.stringify(look)}
+      && Boolean(window.__ANIFOR_INPUT_AUDIT__);
+  })()`), 15_000, `${label} HDR experiment page`);
+  await waitFor(() => evaluate(cdp,
+    `window.__ANIFOR_INPUT_AUDIT__.backend().backend === ${JSON.stringify(mode)}`),
+  15_000, `${label} HDR experiment backend`);
+  const hdrPipeline = await evaluate(cdp, `(() => {
+    const canvas = document.querySelector('.semantic-field-canvas');
+    return canvas ? {
+      look: canvas.dataset.renderLook,
+      state: canvas.dataset.hdrPipeline,
+      reason: canvas.dataset.hdrPipelineReason,
+      bloomBacking: canvas.dataset.bloomBacking,
+    } : undefined;
+  })()`);
+  if (look === 'realistic') {
+    assert(hdrPipeline?.look === 'realistic' && hdrPipeline?.state === 'active',
+      `${label}: SwiftShader HDR pipeline was not active (${JSON.stringify(hdrPipeline)})`);
+    assert(new RegExp(`^${WORLD_WIDTH}[x×]${WORLD_HEIGHT}$`).test(hdrPipeline?.bloomBacking ?? ''),
+      `${label}: unexpected 2x HDR half-resolution bloom backing (${JSON.stringify(hdrPipeline)})`);
+  } else {
+    assert(hdrPipeline?.look === 'classic' && hdrPipeline?.state === 'inactive'
+      && hdrPipeline?.reason === 'classic',
+    `${label}: classic look did not retain its single-pass path (${JSON.stringify(hdrPipeline)})`);
+  }
+  const capture = await waitForStablePageCapture(cdp, `${label} HDR experiment framebuffer`);
+  return {
+    capture,
+    geometry: await metrics(cdp),
+    semantic: await hdrVfxSemanticDigest(cdp),
+    hdrPipeline,
+  };
+}
+
+function assertHdrVfxGeometry(variant, label) {
+  assertGeometry(variant.geometry, label, 2);
+  assert(variant.geometry.backend.backend === 'webgl', `${label}: WebGL presentation was lost`);
+}
+
+function assertHdrVfxSemanticEquality(left, right, label) {
+  assert(left.occupied === right.occupied
+    && left.ownershipHash === right.ownershipHash
+    && left.topologyHash === right.topologyHash
+    && left.stagingChecked && right.stagingChecked
+    && left.stagingMismatches === 0 && right.stagingMismatches === 0,
+  `HDR experiment altered semantic ownership/topology/support (${label}: ${JSON.stringify({ left, right })})`);
+}
+
+/** A tiny page-side digest avoids transferring the 612x384 material plane. */
+async function hdrVfxSemanticDigest(cdp) {
+  return evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    if (!audit?.cell) throw new Error('Input audit API has no material cell accessor');
+    const rendered = typeof audit.renderedCell === 'function' ? audit.renderedCell.bind(audit) : undefined;
+    let occupied = 0;
+    let ownershipHash = 2166136261;
+    let topologyHash = 0x9e3779b9;
+    let stagingMismatches = 0;
+    for (let y = 0; y < ${WORLD_HEIGHT}; y++) for (let x = 0; x < ${WORLD_WIDTH}; x++) {
+      const material = audit.cell(x, y) >>> 0;
+      const index = y * ${WORLD_WIDTH} + x;
+      occupied += Number(material !== 0);
+      ownershipHash = Math.imul(ownershipHash ^ material ^ index, 16777619) >>> 0;
+      const occupiedBit = Number(material !== 0);
+      topologyHash = Math.imul(topologyHash ^ occupiedBit ^ (index * 31), 2246822519) >>> 0;
+      if (rendered && rendered(x, y) !== material) stagingMismatches++;
+    }
+    return { occupied, ownershipHash, topologyHash, stagingMismatches, stagingChecked: Boolean(rendered) };
+  })()`);
+}
+
+/** Samples only six small world-space regions from compositor PNGs. */
+async function sampleHdrVfxRegions(cdp, screenshots, regions, captureCanvasRect) {
+  return evaluate(cdp, `(async () => {
+    const sources = ${JSON.stringify(Object.fromEntries(Object.entries(screenshots).map(([name, data]) => [
+      name, `data:image/png;base64,${data}`,
+    ])))};
+    const images = {};
+    const contexts = {};
+    for (const [name, source] of Object.entries(sources)) {
+      const image = new Image();
+      image.src = source;
+      await image.decode();
+      images[name] = image;
+    }
+    const imageList = Object.values(images);
+    const [first] = imageList;
+    if (!imageList.every((image) => image.naturalWidth === first.naturalWidth
+      && image.naturalHeight === first.naturalHeight)) {
+      throw new Error('HDR experiment screenshot geometry mismatch');
+    }
+    for (const [name, image] of Object.entries(images)) {
+      const copy = document.createElement('canvas');
+      copy.width = image.naturalWidth;
+      copy.height = image.naturalHeight;
+      const context = copy.getContext('2d', { willReadFrequently: true });
+      if (!context) throw new Error('HDR experiment screenshot sampler unavailable');
+      context.drawImage(image, 0, 0);
+      contexts[name] = context;
+    }
+    const bounds = ${JSON.stringify(captureCanvasRect)};
+    const visualWidth = window.visualViewport?.width ?? innerWidth;
+    const visualHeight = window.visualViewport?.height ?? innerHeight;
+    const offsetX = window.visualViewport?.offsetLeft ?? 0;
+    const offsetY = window.visualViewport?.offsetTop ?? 0;
+    const pageScaleX = first.naturalWidth / Math.max(1, visualWidth);
+    const pageScaleY = first.naturalHeight / Math.max(1, visualHeight);
+    const worldScaleX = bounds.width / ${WORLD_WIDTH};
+    const worldScaleY = bounds.height / ${WORLD_HEIGHT};
+    return ${JSON.stringify(regions)}.map((region) => {
+      const radius = region.radius ?? 4;
+      const x = Math.floor((bounds.left + (region.x - radius) * worldScaleX - offsetX) * pageScaleX);
+      const y = Math.floor((bounds.top + (region.y - radius) * worldScaleY - offsetY) * pageScaleY);
+      const width = Math.max(1, Math.ceil(radius * 2 * worldScaleX * pageScaleX));
+      const height = Math.max(1, Math.ceil(radius * 2 * worldScaleY * pageScaleY));
+      const data = Object.fromEntries(Object.entries(contexts).map(([name, context]) => [
+        name, context.getImageData(x, y, width, height).data,
+      ]));
+      let responseSquares = 0;
+      let responsePeak = 0;
+      let repeatPeak = 0;
+      for (let offset = 0; offset < data.classic.length; offset += 4) for (let channel = 0; channel < 3; channel++) {
+        const response = data.realistic[offset + channel] - data.classic[offset + channel];
+        responseSquares += response * response;
+        responsePeak = Math.max(responsePeak, Math.abs(response));
+        repeatPeak = Math.max(repeatPeak, Math.abs(data.classicRepeat[offset + channel] - data.classic[offset + channel]));
+      }
+      return {
+        name: region.name,
+        hot: region.hot === true,
+        rgbRms: Math.round(Math.sqrt(responseSquares / Math.max(1, width * height * 3)) * 100) / 100,
+        peak: responsePeak,
+        repeatPeak,
+      };
+    });
+  })()`);
 }
 
 async function waitForStableCanvas(cdp, width, height, previous, timeoutMs, label) {

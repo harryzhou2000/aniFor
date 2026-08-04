@@ -34,6 +34,8 @@ import {
   GAS_IDENTITY_MOTIF_TEXTURE_HEIGHT,
   GAS_IDENTITY_MOTIF_TEXTURE_WIDTH,
 } from './canvas-gas-identity-style';
+import { HDRVfxPipeline, type HDRPipelineInfo } from './hdr-vfx-pipeline';
+import { resolveRenderLook } from './render-look';
 interface PresenterViewport { readonly width: number; readonly height: number }
 
 /** Audit-only digest of the field that owns reconstructed gas support. */
@@ -3195,6 +3197,7 @@ uniform vec2 uFieldSize;
 uniform vec2 uAtmosphereTexel;
 uniform vec2 uEmissionTexel;
 uniform float uTime;
+uniform float uHDRVfx;
 uniform float uHighQuality;
 uniform float uAnalyticLightingQuality;
 uniform float uGasFieldLighting;
@@ -3996,6 +3999,27 @@ vec3 thermalMaterialTint(float temperatureByte, float optics) {
     2.0 * cold + 4.0 * warm + 6.0 * incandescent,
     14.0 * cold - 7.0 * warm + incandescent
   ) * gain;
+}
+// Temperature is packed as decikelvin >> 8, so one semantic byte is 25.6 K.
+// This Tanner-Helland-style ramp supplies chromatic HDR radiance to the
+// optional float pipeline without changing alpha, material ownership, or the
+// shared emission field. The classic and true-8x paths never execute it.
+vec3 blackbodyColor(float temperatureByte) {
+  float temperature = clamp(temperatureByte * 25.6, 1000.0, 6500.0) / 100.0;
+  float red = temperature <= 66.0
+    ? 255.0 : 329.698727446 * pow(temperature - 60.0, -0.1332047592);
+  float green = temperature <= 66.0
+    ? 99.4708025861 * log(temperature) - 161.1195681661
+    : 288.1221695283 * pow(temperature - 60.0, -0.0755148492);
+  float blue = temperature >= 66.0
+    ? 255.0 : temperature <= 19.0
+      ? 0.0 : 138.5177312231 * log(temperature - 10.0) - 305.0447927307;
+  return clamp(vec3(red, green, blue), 0.0, 255.0) / 255.0;
+}
+float blackbodyHdrRadiance(float temperatureByte) {
+  float onset = smoothstep(28.0, 52.0, temperatureByte);
+  float whiteHot = smoothstep(52.0, 255.0, temperatureByte);
+  return onset * (0.35 + whiteHot * 2.4);
 }
 vec3 toneMapEnergy(vec3 radiance) {
   const float knee = 0.72;
@@ -8081,6 +8105,22 @@ void main() {
       color += carrierTint * (0.012 + carrierPulse * 0.038) * (0.40 + traitEdge * 0.60);
     }
   }
+  if (uHDRVfx > 0.5) {
+    float temperatureByte = floor(materialTemperature * 255.0 + 0.5);
+    float radiance = blackbodyHdrRadiance(temperatureByte);
+    float thermalCore = (material == 4.0 || material == 11.0 || material == 20.0) ? 1.0 : 0.0;
+    float incandescentMatter = !materialEmissive && traits < 0.5
+      && material != 3.0 && (family == 0.0 || family == 4.0) ? 1.0 : 0.0;
+    float blackbodyEligible = max(thermalCore, incandescentMatter);
+    if (blackbodyEligible > 0.5 && radiance > 0.001) {
+      vec3 blackbody = blackbodyColor(temperatureByte);
+      float reveal = smoothstep(0.0, 0.85, radiance)
+        * mix(0.28, 0.52, thermalCore);
+      color = mix(color, blackbody * (0.72 + radiance * 0.10), reveal);
+      color += blackbody * radiance * mix(0.18, 0.46, thermalCore)
+        * (uHDRVfx > 1.5 ? 1.18 : 1.0);
+    }
+  }
   float emission = energyCore > 0.5
     ? 0.0
     : (materialEmissive ? 0.48 + heat * 1.05 : (material == 11.0 ? 0.28 + heat * 0.62 : 0.0));
@@ -8207,6 +8247,8 @@ void main() {
 /** Primary WebGL presentation of raw simulation semantics. */
 export class PixiFieldPresenter {
   private readonly scene = new Container();
+  private hdrVfxPipeline?: HDRVfxPipeline;
+  private hdrPipelineInfo: HDRPipelineInfo;
   private readonly fieldBytes: Uint8Array;
   private readonly fieldSource: BufferImageSource;
   private readonly wallBytes: Uint8Array;
@@ -8381,12 +8423,17 @@ export class PixiFieldPresenter {
       scaleMode: 'linear',
       autoGarbageCollect: false,
     });
+    const renderLook = resolveRenderLook();
     this.uniforms = new UniformGroup({
       uTexel: { value: new Float32Array([1 / width, 1 / height]), type: 'vec2<f32>' },
       uFieldSize: { value: new Float32Array([width, height]), type: 'vec2<f32>' },
       uAtmosphereTexel: { value: new Float32Array([1 / this.fieldSet.atmosphere.width, 1 / this.fieldSet.atmosphere.height]), type: 'vec2<f32>' },
       uEmissionTexel: { value: new Float32Array([1 / this.fieldSet.emission.width, 1 / this.fieldSet.emission.height]), type: 'vec2<f32>' },
       uTime: { value: 0, type: 'f32' },
+      uHDRVfx: {
+        value: renderLook === 'classic' ? 0 : renderLook === 'neon-lab' ? 2 : 1,
+        type: 'f32',
+      },
       // At 8x, the supersampled analytic boundary already supplies detail. Drop
       // diagonal/ring probes so the 15M-pixel frame remains watchdog-safe.
       uHighQuality: {
@@ -8566,6 +8613,19 @@ export class PixiFieldPresenter {
     this.wallChunks = new DirtyChunkGrid(width, height, 32, 2);
     this.chunks.markAll();
     this.wallChunks.markAll();
+    const hdr = HDRVfxPipeline.create(
+      this.app, this.scene, width, height, outputScale, renderLook,
+    );
+    this.hdrVfxPipeline = hdr.pipeline;
+    this.hdrPipelineInfo = hdr.info;
+    if (!this.hdrVfxPipeline) {
+      // Capability or initialization failure returns to the established SDR
+      // shader as well as its single-pass target. Leaving the HDR uniform set
+      // would retain blackbody over-range values without the float composite
+      // that is responsible for tonemapping them.
+      this.uniforms.uniforms.uHDRVfx = 0;
+      this.app.stage.addChild(this.scene);
+    }
   }
 
   static async create(
@@ -8610,7 +8670,15 @@ export class PixiFieldPresenter {
     presenter.app.canvas.dataset.worldSize = width + 'x' + height;
     presenter.app.canvas.dataset.outputScale = String(outputScale);
     presenter.app.canvas.dataset.backingSize = presenter.app.canvas.width + 'x' + presenter.app.canvas.height;
-    presenter.app.stage.addChild(presenter.scene);
+    presenter.app.canvas.dataset.renderLook = presenter.hdrPipelineInfo.look;
+    presenter.app.canvas.dataset.hdrPipeline = presenter.hdrPipelineInfo.active ? 'active' : 'inactive';
+    if (presenter.hdrPipelineInfo.reason) {
+      presenter.app.canvas.dataset.hdrPipelineReason = presenter.hdrPipelineInfo.reason;
+    }
+    if (presenter.hdrPipelineInfo.bloomWidth && presenter.hdrPipelineInfo.bloomHeight) {
+      presenter.app.canvas.dataset.bloomBacking = presenter.hdrPipelineInfo.bloomWidth
+        + 'x' + presenter.hdrPipelineInfo.bloomHeight;
+    }
     return presenter;
   }
 
@@ -8625,6 +8693,9 @@ export class PixiFieldPresenter {
     this.releaseRenderFence();
     this.releaseWebGLTimingQuery();
     this.releaseWebGLTimingFence();
+    try { this.hdrVfxPipeline?.destroy(); }
+    catch { /* a lost context may already own the optional experiment targets */ }
+    this.hdrVfxPipeline = undefined;
     // Browser navigation may keep a detached canvas' GPU allocation alive
     // until its normal garbage-collection turn. A Detail change replaces this
     // presenter with a potentially 60 MiB true-8x target, so explicitly lose
@@ -9482,7 +9553,7 @@ export class PixiFieldPresenter {
     try { if (gl) gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1); }
     catch { /* a lost context is handled by the existing render path below */ }
     if (!this.webGLTimingEnabled || !this.webGLTimingRequested) {
-      this.app.render();
+      this.renderPresentationFrame();
       return;
     }
     this.webGLTimingRequested = false;
@@ -9510,7 +9581,7 @@ export class PixiFieldPresenter {
 
     const started = performance.now();
     try {
-      this.app.render();
+      this.renderPresentationFrame();
     } catch (error) {
       try { gl.endQuery(extension.TIME_ELAPSED_EXT); } catch { /* query is already invalid */ }
       try { gl.deleteQuery(query); } catch { /* preserve the original render error */ }
@@ -9723,7 +9794,7 @@ export class PixiFieldPresenter {
 
   private renderAndRecordFenceTiming(gl: WebGL2RenderingContext): void {
     const started = performance.now();
-    this.app.render();
+    this.renderPresentationFrame();
     if (this.insertWebGLTimingFence(gl, started)) return;
     this.useCpuTimingFallback();
     this.recordWebGLTimingSample(performance.now() - started);
@@ -9732,7 +9803,7 @@ export class PixiFieldPresenter {
   /** Audit-only recovery for drivers that finish draws but never publish timer queries/fences. */
   private renderAndRecordFinishTiming(gl: WebGL2RenderingContext): void {
     const started = performance.now();
-    this.app.render();
+    this.renderPresentationFrame();
     try {
       gl.finish();
       this.recordWebGLTimingSample(performance.now() - started);
@@ -9836,8 +9907,34 @@ export class PixiFieldPresenter {
 
   private renderAndRecordCpuTiming(): void {
     const started = performance.now();
-    this.app.render();
+    this.renderPresentationFrame();
     this.recordWebGLTimingSample(performance.now() - started);
+  }
+
+  private renderPresentationFrame(): void {
+    const pipeline = this.hdrVfxPipeline;
+    if (pipeline) {
+      try {
+        pipeline.render();
+        return;
+      } catch {
+        // A driver can accept the 2x2 float probe yet reject a world-size
+        // attachment or shader at first use. Drop only the optional targets and
+        // continue on the established single-pass WebGL scene; simulation and
+        // camera state remain in this presenter.
+        try { pipeline.destroy(); } catch { /* partially initialized GPU resources */ }
+        this.hdrVfxPipeline = undefined;
+        this.hdrPipelineInfo = {
+          active: false, look: this.hdrPipelineInfo.look, reason: 'runtime-error',
+        };
+        this.uniforms.uniforms.uHDRVfx = 0;
+        this.app.canvas.dataset.hdrPipeline = 'inactive';
+        this.app.canvas.dataset.hdrPipelineReason = 'runtime-error';
+        delete this.app.canvas.dataset.bloomBacking;
+        if (!this.scene.parent) this.app.stage.addChild(this.scene);
+      }
+    }
+    this.app.render();
   }
 
   private useFenceTimingFallback(): void {

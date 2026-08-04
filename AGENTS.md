@@ -23,6 +23,18 @@ WebGL-only audit must prove its own native state, topology, RGB-only, fence,
 and recovery contract directly; it must not fail merely because Canvas was not
 also sampled.
 
+The first HDR experiment is explicit and opt-in through
+`?renderLook=realistic|neon-lab`; `classic` remains the default control. At
+1×–4× it may allocate one full-resolution `RGBA16F` scene target and two
+half-resolution bloom targets only after the actual Pixi context proves WebGL2,
+float-colour framebuffer completeness, and MRT limits. It is deliberately
+inactive at true 8×, which must retain the single direct mesh. Capability,
+initialization, or runtime failure must destroy every optional target, disable
+the matching `uHDRVfx` shader arithmetic, and return to the established
+single-pass WebGL scene without changing camera or semantics. Validate the
+known-capable path with `npm run audit:vfx:hdr`; generic look captures may accept
+an explicit capability fallback unless `--require-hdr-pipeline` was requested.
+
 ## CodeGraph
 
 When `.codegraph/` exists, use `codegraph explore` before grep/find or broad file reads when locating or understanding code. Ask it for the relevant symbols, complete source, and call paths. Use `rg` only after CodeGraph has established the area to inspect.
