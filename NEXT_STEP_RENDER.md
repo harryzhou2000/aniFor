@@ -78,11 +78,23 @@ does not alter simulation, camera, semantic ownership, or `renderScale`.
   texture, sampler, upload call, field pass, render target, clock, output-scale
   resource, alpha/support/silhouette/ownership, or physics decision. Canvas
   consumes only R and is byte-identical for arbitrary G/B/A payloads.
+- **E08 — HDR liquid-surface transport (accepted checkpoint):** normal 1×–4×
+  WebGL reuses the completed HDR scene, blurred bloom, semantic field, native
+  wall plane, and species-aware liquid field in the existing tonemap composite.
+  Exact connected, air-facing Water, Oil, and Acid surfaces derive a field
+  normal, bend same-owner HDR radiance inward for transmission, and combine it
+  with a bounded family-coloured environment/bloom reflection. The original
+  scene alpha remains the sole topology owner. `?liquidSurfaceVfx=0|1` isolates
+  E08 on top of E03; Classic, E03-off, HDR failure, and true 8× resolve it off.
+  It adds no render target, texture, field, pass, upload, scheduler stage,
+  persistent allocation, clock, output-scale resource, or physics decision.
+  Lava, isolated droplets, unlike seams, foreign contacts, reconstructed
+  support, and non-liquid phases remain protected no-ops.
 - **Protected 8× rung:** `renderScale=8` deliberately reports
   `hdrPipeline=inactive` / `scale-8` and retains the proven direct single-mesh
   4896×3072 path. The experiment must earn a bounded 8× design rather than
   allocating a 115 MiB full-resolution float target beside that path.
-- **Current decision:** E01/E02/E03/E04/E05/E06/E07 remain opt-in through the non-Classic looks
+- **Current decision:** E01/E02/E03/E04/E05/E06/E07/E08 remain opt-in through the non-Classic looks
   until representative hardware timing and mobile thermal behavior are
   measured. E02 remains the safe family-wide baseline. E03 is accepted as the
   liquid-depth checkpoint: its fit-view crop is visibly more cohesive, retains
@@ -104,7 +116,12 @@ does not alter simulation, camera, semantic ownership, or `renderScale`.
   checkerboard counterflow cancels to an exact framebuffer no-op, and amplified
   captures show body-scale curved lobes rather than particle speckles. Its
   normal-view strength is deliberately restrained; keep the current amplitude
-  until another fit-view review. These are not the final material/VFX results.
+  until another fit-view review. E08 is accepted as the first real
+  HDR-composite liquid-surface checkpoint: fit-view changes remain restrained,
+  while enlarged and amplified captures show coherent curved lips rather than
+  a flat whole-body grade. Water, Oil, and Acid remain optically distinct and
+  all protected topology/contact controls stay exact. Freeze this response
+  until another normal-view review. These are not the final material/VFX results.
   Sub-1.0 material colour stays on the established response; tonemapping owns
   only real HDR highlights so powder texture and liquid body contrast are not
   washed out.
@@ -187,15 +204,29 @@ alpha. Pass `--render-scale=1`, `2`, or `4` when tuning one scale. The existing
 single-navigation `audit:spng:8x` fence explicitly requests E07 and proves the
 4896×3072 direct shader reports it inactive with HDR/bloom absent.
 
-**Next visual experiments:** E03–E07 now provide accepted liquid, stable-gas,
-coherent-gas-motion, powder-depth, and powder-local-light checkpoints. The next
-candidate should add a visibly distinct material cue rather than another global
-grade: prefer either field-safe liquid surface transmission/reflection or a
-low-frequency powder/solid contact-depth experiment, then return to advected gas
-detail only if it can remain atmosphere-owned and counterflow-coherent. Each
-experiment keeps its own off/on/off switch and must pass the same topology,
-contact, scale, resource, fallback, and true-8× isolation controls before it can
-become a preset default.
+Run `npm run audit:vfx:liquid-surface` for E08. It holds E03 on as the accepted
+liquid-body baseline, then reloads `liquidSurfaceVfx=0 → 1 → 0` at
+1×/2×/4×. The gate requires the real HDR pipeline, exact CSS/backing geometry,
+semantic state, raw alpha/support, and byte-exact repeated-off framebuffer.
+Water/Oil/Acid exposed lips and native-wall-backed lips must gain shaped,
+family-distinct transport while Lava, an isolated Water cell, the exact
+Water/Oil seam, Water/Metal, and Oil/Glass remain exact controls. Across the
+accepted matrix, exposed surfaces measure `1.42–3.14` RGB RMS with `5–11` byte
+peaks; wall-backed lips measure `2.30–6.34` RMS with `6–16` byte peaks. The
+same command finishes by requesting E08 on the true 4896×3072 SPNG route,
+which must report E08/HDR inactive with reason `scale-8`, no bloom backing, and
+a completed GPU fence.
+
+**Next visual experiments:** E03–E08 now provide accepted liquid body/surface,
+stable-gas, coherent-gas-motion, powder-depth, and powder-local-light
+checkpoints. The next candidate should add a visibly distinct material cue
+rather than another global grade: prefer a low-frequency powder/solid
+contact-depth experiment that reuses existing stability/contact evidence.
+Return to advected gas detail only if it can remain atmosphere-owned and
+counterflow-coherent; expand liquid curvature/thickness architecture only with
+an explicit bounded-resource design. Each experiment keeps its own off/on/off
+switch and must pass the same topology, contact, scale, resource, fallback,
+and true-8× isolation controls before it can become a preset default.
 
 ## Phase 1 — HDR pipeline & lighting core (biggest visual payoff)
 

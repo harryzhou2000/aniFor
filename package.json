@@ -27,6 +27,7 @@
     "audit:vfx:hdr": "npm run build && node scripts/verify-browser-input.mjs --hdr-vfx-only --webgl-only --production-bundle --capture-dpr=1",
     "audit:vfx:volume": "npm run build && node scripts/verify-browser-input.mjs --volume-vfx-only --webgl-only --production-bundle --capture-dpr=1",
     "audit:vfx:liquid-body": "npm run build && node scripts/verify-browser-input.mjs --liquid-body-vfx-only --webgl-only --production-bundle --capture-dpr=1",
+    "audit:vfx:liquid-surface": "npm run build && node scripts/verify-browser-input.mjs --liquid-surface-vfx-only --webgl-only --production-bundle --capture-dpr=1",
     "audit:vfx:gas-body": "npm run build && node scripts/verify-browser-input.mjs --gas-body-vfx-only --webgl-only --production-bundle --capture-dpr=1",
     "audit:vfx:gas-motion": "npm run build && node scripts/verify-browser-input.mjs --gas-motion-vfx-only --webgl-only --production-bundle --capture-dpr=1",
     "audit:vfx:powder-body": "npm run build && node scripts/verify-browser-input.mjs --powder-body-vfx-only --webgl-only --production-bundle --capture-dpr=1",

@@ -388,6 +388,65 @@ describe('Pixi presenter startup configuration', () => {
     expect(source).toContain('const powderLightVfxEnabled = outputScale < 8');
   });
 
+  it('routes E08 liquid surfaces through existing normal-scale HDR resources only', () => {
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');
+    const normalStart = source.indexOf('const FIELD_FRAGMENT = `', eightStart);
+    const hdrCreateStart = source.indexOf('const hdr = HDRVfxPipeline.create(');
+    const hdrCreateEnd = source.indexOf(');', hdrCreateStart);
+    const hdrCreate = source.slice(hdrCreateStart, hdrCreateEnd);
+    const startupDatasetStart = source.indexOf(
+      'presenter.app.canvas.dataset.renderLook =',
+      hdrCreateEnd,
+    );
+    const startupDatasetEnd = source.indexOf(
+      'if (presenter.hdrPipelineInfo.reason)',
+      startupDatasetStart,
+    );
+    const startupDataset = source.slice(startupDatasetStart, startupDatasetEnd);
+    const runtimeFallbackStart = source.indexOf(
+      "this.app.canvas.dataset.hdrPipelineReason = 'runtime-error';",
+    );
+    const runtimeFallbackEnd = source.indexOf(
+      'delete this.app.canvas.dataset.bloomBacking;',
+      runtimeFallbackStart,
+    );
+    const runtimeFallback = source.slice(runtimeFallbackStart, runtimeFallbackEnd);
+    const eight = source.slice(eightStart, normalStart);
+
+    expect(eightStart).toBeGreaterThanOrEqual(0);
+    expect(normalStart).toBeGreaterThan(eightStart);
+    expect(source).toContain('resolveLiquidSurfaceVfxEnabled');
+    expect(source).toMatch(
+      /const liquidSurfaceVfxEnabled = outputScale < 8\s*&& resolveLiquidSurfaceVfxEnabled\(renderLook\);/,
+    );
+
+    expect(hdrCreateStart).toBeGreaterThan(normalStart);
+    expect(hdrCreateEnd).toBeGreaterThan(hdrCreateStart);
+    for (const existingResource of [
+      'this.fieldSource', 'this.wallSource', 'this.liquidSource',
+    ]) expect(hdrCreate).toContain(existingResource);
+    expect(hdrCreate).toContain('liquidSurfaceVfxEnabled');
+
+    expect(startupDatasetStart).toBeGreaterThan(hdrCreateEnd);
+    expect(startupDatasetEnd).toBeGreaterThan(startupDatasetStart);
+    expect(startupDataset).toMatch(
+      /presenter\.app\.canvas\.dataset\.liquidSurfaceVfx\s*=[\s\S]*?\? 'active' : 'inactive';/,
+    );
+    expect(runtimeFallbackStart).toBeGreaterThan(startupDatasetEnd);
+    expect(runtimeFallbackEnd).toBeGreaterThan(runtimeFallbackStart);
+    expect(runtimeFallback).toContain(
+      "this.app.canvas.dataset.liquidSurfaceVfx = 'inactive';",
+    );
+    expect(source).toContain("get('liquidSurfaceVfxAudit') === '1'");
+
+    // E08 is an optional HDR composite over existing textures. The protected
+    // direct 8x semantic shader must not gain its selector or a parallel
+    // screen-space branch merely because a normal-scale URL requests it.
+    expect(eight).not.toContain('uLiquidSurfaceVfx');
+    expect(eight).not.toContain('liquidSurfaceVfx');
+  });
+
   it('advances fallback presentation timing only after its GPU fence signals', () => {
     const callbacks: FrameRequestCallback[] = [];
     vi.stubGlobal('requestAnimationFrame', vi.fn((callback: FrameRequestCallback) => {

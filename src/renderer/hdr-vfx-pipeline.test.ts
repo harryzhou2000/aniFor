@@ -1,5 +1,15 @@
 import { describe, expect, it } from 'vitest';
-import { probeHDRPipelineSupport } from './hdr-vfx-pipeline';
+import { HDR_TONEMAP_FRAGMENT, probeHDRPipelineSupport } from './hdr-vfx-pipeline';
+
+function uniformSamplers(shader: string): string[] {
+  return [...shader.matchAll(/uniform\s+sampler2D\s+(\w+)\s*;/g)]
+    .map((match) => match[1])
+    .sort();
+}
+
+function occurrences(source: string, needle: string): number {
+  return source.split(needle).length - 1;
+}
 
 class FakeWebGL2Context {
   readonly MAX_DRAW_BUFFERS = 0x8824;
@@ -141,5 +151,44 @@ describe('HDR VFX capability gate', () => {
     expect(context.textureBindings.at(-1)).toBe(context.previousTexture);
     expect(context.deletedFramebuffers).toEqual([context.createdFramebuffer]);
     expect(context.deletedTextures).toEqual([context.createdTexture]);
+  });
+});
+
+describe('HDR liquid-surface composite contract', () => {
+  it('reuses the established scene, bloom, and semantic field inputs', () => {
+    expect(uniformSamplers(HDR_TONEMAP_FRAGMENT)).toEqual([
+      'uBloomTexture',
+      'uHdrTexture',
+      'uLiquidTexture',
+      'uSemanticTexture',
+      'uWallTexture',
+    ]);
+    expect(HDR_TONEMAP_FRAGMENT).toMatch(/uniform\s+float\s+uLiquidSurfaceVfx\s*;/);
+    expect(HDR_TONEMAP_FRAGMENT).toMatch(/uniform\s+vec2\s+uWorldTexel\s*;/);
+
+    for (const sampler of ['uHdrTexture', 'uBloomTexture', 'uSemanticTexture',
+      'uWallTexture', 'uLiquidTexture']) {
+      expect(occurrences(HDR_TONEMAP_FRAGMENT, sampler)).toBeGreaterThan(1);
+    }
+    expect(occurrences(HDR_TONEMAP_FRAGMENT, 'uWorldTexel')).toBeGreaterThan(1);
+  });
+
+  it('recognizes only the exact Water, Oil, and Acid material identities', () => {
+    expect(HDR_TONEMAP_FRAGMENT).toMatch(/const\s+float\s+MATERIAL_WATER\s*=\s*2\.0\s*;/);
+    expect(HDR_TONEMAP_FRAGMENT).toMatch(/const\s+float\s+MATERIAL_OIL\s*=\s*8\.0\s*;/);
+    expect(HDR_TONEMAP_FRAGMENT).toMatch(/const\s+float\s+MATERIAL_ACID\s*=\s*13\.0\s*;/);
+    expect(HDR_TONEMAP_FRAGMENT).toMatch(/uLiquidSurfaceVfx\s*>\s*0\.5/);
+  });
+
+  it('keeps topology scene-alpha-owned and introduces no animated or extra pass input', () => {
+    const finalWrites = [...HDR_TONEMAP_FRAGMENT.matchAll(/finalColor\s*=\s*([^;]+);/g)]
+      .map((match) => match[1].trim());
+    expect(finalWrites.length).toBeGreaterThan(0);
+    for (const write of finalWrites) {
+      expect(write === 'vec4(0.0)' || /,\s*scene\.a\s*\)$/.test(write)).toBe(true);
+    }
+    expect(HDR_TONEMAP_FRAGMENT).not.toMatch(/(?:finalColor|scene)\.a\s*=/);
+    expect(HDR_TONEMAP_FRAGMENT).not.toContain('uTime');
+    expect(HDR_TONEMAP_FRAGMENT).not.toMatch(/uniform\s+sampler2D\s+\w*(?:Target|Pass)\w*/i);
   });
 });

@@ -1,6 +1,7 @@
 import {
   Application, Container, Mesh, MeshGeometry, RenderTexture, Shader, Texture, UniformGroup,
 } from 'pixi.js';
+import type { TextureSource } from 'pixi.js';
 import type { FieldOutputScale } from './render-resolution';
 import type { RenderLook } from './render-look';
 
@@ -21,6 +22,15 @@ export interface HDRPipelineInfo {
   readonly reason?: HDRPipelineReason;
   readonly bloomWidth?: number;
   readonly bloomHeight?: number;
+  readonly liquidSurfaceVfx?: boolean;
+}
+
+/** Existing presenter textures reused by the HDR liquid-transport composite. */
+export interface HDRLiquidSurfaceResources {
+  readonly enabled: boolean;
+  readonly semanticTexture: TextureSource;
+  readonly wallTexture: TextureSource;
+  readonly liquidTexture: TextureSource;
 }
 
 interface RenderPassRenderer {
@@ -89,14 +99,143 @@ void main() {
 }
 `;
 
-const TONEMAP_FRAGMENT = `
+export const HDR_TONEMAP_FRAGMENT = `
 in vec2 vUv;
 out vec4 finalColor;
 uniform sampler2D uHdrTexture;
 uniform sampler2D uBloomTexture;
+uniform sampler2D uSemanticTexture;
+uniform sampler2D uWallTexture;
+uniform sampler2D uLiquidTexture;
+uniform vec2 uWorldTexel;
+uniform float uLiquidSurfaceVfx;
 uniform float uBloomIntensity;
 uniform float uExposure;
 uniform float uSaturation;
+
+const float MATERIAL_WATER = 2.0;
+const float MATERIAL_OIL = 8.0;
+const float MATERIAL_ACID = 13.0;
+
+vec2 boundedUv(vec2 uv) {
+  return clamp(uv, uWorldTexel * 0.5, vec2(1.0) - uWorldTexel * 0.5);
+}
+
+float semanticMaterial(vec2 uv) {
+  return floor(texture(uSemanticTexture, boundedUv(uv)).r * 255.0 + 0.5);
+}
+
+float exactMaterial(float candidate, float owner) {
+  return 1.0 - step(0.5, abs(candidate - owner));
+}
+
+float emptyMaterial(float candidate) {
+  return 1.0 - step(0.5, candidate);
+}
+
+vec3 straightRadiance(vec4 sampleValue) {
+  return sampleValue.a > 0.0001 ? sampleValue.rgb / sampleValue.a : vec3(0.0);
+}
+
+/**
+ * E08 transports only colour already present in the completed HDR scene. The
+ * semantic centre/cardinals prove an exact, connected, air-facing Water/Oil/
+ * Acid surface before any displaced HDR or bloom read occurs. Displaced alpha
+ * is never used as support and the caller always emits the original scene.a.
+ */
+vec3 liquidSurfaceTransport(vec3 sourceRadiance, float material) {
+  vec2 leftUv = boundedUv(vUv - vec2(uWorldTexel.x, 0.0));
+  vec2 rightUv = boundedUv(vUv + vec2(uWorldTexel.x, 0.0));
+  vec2 topUv = boundedUv(vUv - vec2(0.0, uWorldTexel.y));
+  vec2 bottomUv = boundedUv(vUv + vec2(0.0, uWorldTexel.y));
+  float materialLeft = semanticMaterial(leftUv);
+  float materialRight = semanticMaterial(rightUv);
+  float materialTop = semanticMaterial(topUv);
+  float materialBottom = semanticMaterial(bottomUv);
+  float sameLeft = exactMaterial(materialLeft, material);
+  float sameRight = exactMaterial(materialRight, material);
+  float sameTop = exactMaterial(materialTop, material);
+  float sameBottom = exactMaterial(materialBottom, material);
+  float emptyLeft = emptyMaterial(materialLeft);
+  float emptyRight = emptyMaterial(materialRight);
+  float emptyTop = emptyMaterial(materialTop);
+  float emptyBottom = emptyMaterial(materialBottom);
+  float sameCount = sameLeft + sameRight + sameTop + sameBottom;
+  float emptyCount = emptyLeft + emptyRight + emptyTop + emptyBottom;
+  float foreignCount = 4.0 - sameCount - emptyCount;
+  if (sameCount < 2.5 || emptyCount < 0.5 || foreignCount > 0.5) {
+    return sourceRadiance;
+  }
+
+  vec4 liquidCentre = texture(uLiquidTexture, vUv);
+  vec4 liquidLeft = texture(uLiquidTexture, leftUv);
+  vec4 liquidRight = texture(uLiquidTexture, rightUv);
+  vec4 liquidTop = texture(uLiquidTexture, topUv);
+  vec4 liquidBottom = texture(uLiquidTexture, bottomUv);
+  float neighbourMean = (
+    liquidLeft.a + liquidRight.a + liquidTop.a + liquidBottom.a
+  ) * 0.25;
+  if (liquidCentre.a < 0.58 || neighbourMean < 0.46) return sourceRadiance;
+
+  vec2 densityGradient = vec2(
+    liquidRight.a - liquidLeft.a,
+    liquidBottom.a - liquidTop.a
+  ) * 0.5;
+  float gradientLength = length(densityGradient);
+  if (gradientLength < 0.025) return sourceRadiance;
+  vec2 outward = -densityGradient / gradientLength;
+  vec2 airVector = vec2(emptyRight - emptyLeft, emptyBottom - emptyTop);
+  float airLength = length(airVector);
+  if (airLength < 0.5 || dot(outward, airVector / airLength) < 0.45) {
+    return sourceRadiance;
+  }
+
+  vec2 worldPosition = vUv / uWorldTexel;
+  vec2 tangent = vec2(-outward.y, outward.x);
+  float ripple = sin(dot(worldPosition, vec2(0.071, 0.047)) + material * 0.61)
+    * sin(dot(worldPosition, vec2(-0.039, 0.083)) + material * 0.37);
+  float wallBacked = step(
+    0.5, floor(texture(uWallTexture, vUv).r * 255.0 + 0.5)
+  );
+  float familyOffset = material == MATERIAL_WATER ? 1.85
+    : (material == MATERIAL_OIL ? 1.35 : 1.60);
+  vec2 transmissionUv = boundedUv(
+    vUv - outward * uWorldTexel * familyOffset * (1.0 + wallBacked * 0.28)
+      + tangent * uWorldTexel * ripple * (0.44 + wallBacked * 0.22)
+  );
+  if (exactMaterial(semanticMaterial(transmissionUv), material) < 0.5) {
+    return sourceRadiance;
+  }
+
+  vec3 transmitted = straightRadiance(texture(uHdrTexture, transmissionUv));
+  vec3 transmissionTint = material == MATERIAL_WATER ? vec3(0.90, 1.00, 1.08)
+    : (material == MATERIAL_OIL ? vec3(1.06, 0.96, 0.78)
+    : vec3(1.02, 0.92, 1.08));
+  float environmentMix = clamp(
+    0.50 - outward.y * 0.52 + outward.x * 0.12, 0.0, 1.0
+  );
+  vec3 environment = mix(
+    vec3(0.075, 0.055, 0.038), vec3(0.075, 0.145, 0.215), environmentMix
+  );
+  if (material == MATERIAL_OIL) environment *= vec3(1.24, 0.98, 0.68);
+  else if (material == MATERIAL_ACID) environment *= vec3(1.02, 0.82, 1.18);
+  vec2 reflectionUv = boundedUv(vUv + outward * uWorldTexel * 2.4);
+  vec3 reflected = environment
+    + texture(uBloomTexture, reflectionUv).rgb * (0.32 + wallBacked * 0.08);
+
+  float surface = smoothstep(0.035, 0.24, gradientLength)
+    * smoothstep(0.46, 0.78, neighbourMean);
+  float f0 = material == MATERIAL_WATER ? 0.020
+    : (material == MATERIAL_OIL ? 0.060 : 0.042);
+  float grazing = smoothstep(0.035, 0.30, gradientLength);
+  float fresnel = f0 + (1.0 - f0) * pow(grazing, 5.0);
+  float reflectionShare = clamp(fresnel * 1.8 + wallBacked * 0.025, 0.04, 0.34);
+  vec3 transported = mix(transmitted * transmissionTint, reflected, reflectionShare);
+  float transportAmount = surface * (
+    material == MATERIAL_WATER ? 0.18 : (material == MATERIAL_OIL ? 0.15 : 0.16)
+  ) * (1.0 + wallBacked * 0.24);
+  return mix(sourceRadiance, transported, min(0.24, transportAmount));
+}
 
 vec3 acesFilm(vec3 value) {
   const float a = 2.51;
@@ -114,6 +253,12 @@ void main() {
     return;
   }
   vec3 radiance = scene.rgb / scene.a;
+  if (uLiquidSurfaceVfx > 0.5) {
+    float material = semanticMaterial(vUv);
+    if (material == MATERIAL_WATER || material == MATERIAL_OIL || material == MATERIAL_ACID) {
+      radiance = liquidSurfaceTransport(radiance, material);
+    }
+  }
   // Bloom is presentation-only RGB. Existing scene alpha remains the sole
   // owner of silhouettes, gaps, and sparse material topology.
   float support = smoothstep(0.002, 0.10, scene.a);
@@ -209,6 +354,7 @@ export class HDRVfxPipeline {
     height: number,
     outputScale: FieldOutputScale,
     look: Exclude<RenderLook, 'classic'>,
+    liquidSurface: HDRLiquidSurfaceResources,
   ) {
     const bloomWidth = Math.max(1, Math.ceil(width / 2));
     const bloomHeight = Math.max(1, Math.ceil(height / 2));
@@ -261,17 +407,27 @@ export class HDRVfxPipeline {
         'hdr-bloom-blur',
       ));
       this.compositeScene.addChild(createPassMesh(
-        width, height, TONEMAP_FRAGMENT,
+        width, height, HDR_TONEMAP_FRAGMENT,
         {
           passUniforms: new UniformGroup({
             uBloomIntensity: { value: look === 'neon-lab' ? 0.62 : 0.34, type: 'f32' },
             uExposure: { value: look === 'neon-lab' ? 1.04 : 1.0, type: 'f32' },
             uSaturation: { value: look === 'neon-lab' ? 1.14 : 1.01, type: 'f32' },
+            uWorldTexel: {
+              value: new Float32Array([1 / width, 1 / height]), type: 'vec2<f32>',
+            },
+            uLiquidSurfaceVfx: { value: liquidSurface.enabled ? 1 : 0, type: 'f32' },
           }),
           uHdrTexture: hdrTarget.source,
           uHdrSampler: hdrTarget.source.style,
           uBloomTexture: bloomB.source,
           uBloomSampler: bloomB.source.style,
+          uSemanticTexture: liquidSurface.semanticTexture,
+          uSemanticSampler: liquidSurface.semanticTexture.style,
+          uWallTexture: liquidSurface.wallTexture,
+          uWallSampler: liquidSurface.wallTexture.style,
+          uLiquidTexture: liquidSurface.liquidTexture,
+          uLiquidSampler: liquidSurface.liquidTexture.style,
         },
         'hdr-aces-composite',
       ));
@@ -279,7 +435,7 @@ export class HDRVfxPipeline {
       this.bloomA = bloomA;
       this.bloomB = bloomB;
       this.info = {
-        active: true, look,
+        active: true, look, liquidSurfaceVfx: liquidSurface.enabled,
         bloomWidth: bloomWidth * outputScale,
         bloomHeight: bloomHeight * outputScale,
       };
@@ -304,6 +460,7 @@ export class HDRVfxPipeline {
     height: number,
     outputScale: FieldOutputScale,
     look: RenderLook,
+    liquidSurface: HDRLiquidSurfaceResources,
   ): { readonly pipeline?: HDRVfxPipeline; readonly info: HDRPipelineInfo } {
     if (look === 'classic') return { info: { active: false, look, reason: 'classic' } };
     if (outputScale === 8) return { info: { active: false, look, reason: 'scale-8' } };
@@ -315,7 +472,7 @@ export class HDRVfxPipeline {
     try {
       const pipeline = new HDRVfxPipeline(
         app.renderer as unknown as RenderPassRenderer,
-        sourceScene, width, height, outputScale, look,
+        sourceScene, width, height, outputScale, look, liquidSurface,
       );
       return { pipeline, info: pipeline.info };
     } catch {

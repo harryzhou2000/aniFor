@@ -37,6 +37,7 @@ import {
 import { HDRVfxPipeline, type HDRPipelineInfo } from './hdr-vfx-pipeline';
 import {
   resolveGasBodyVfxEnabled, resolveGasMotionVfxEnabled, resolveLiquidBodyVfxEnabled,
+  resolveLiquidSurfaceVfxEnabled,
   resolvePowderBodyVfxEnabled, resolvePowderLightVfxEnabled, resolveRenderLook,
   resolveVolumeVfxEnabled,
 } from './render-look';
@@ -8736,6 +8737,10 @@ export class PixiFieldPresenter {
     // must not advertise an effect that cannot run on that path.
     const liquidBodyVfxEnabled = outputScale < 8
       && resolveLiquidBodyVfxEnabled(renderLook);
+    // E08 is a normal-detail HDR-composite experiment. Its displaced transport
+    // reuses existing presenter textures and never enters the direct 8x shader.
+    const liquidSurfaceVfxEnabled = outputScale < 8
+      && resolveLiquidSurfaceVfxEnabled(renderLook);
     this.uniforms = new UniformGroup({
       uTexel: { value: new Float32Array([1 / width, 1 / height]), type: 'vec2<f32>' },
       uFieldSize: { value: new Float32Array([width, height]), type: 'vec2<f32>' },
@@ -8933,6 +8938,12 @@ export class PixiFieldPresenter {
     this.wallChunks.markAll();
     const hdr = HDRVfxPipeline.create(
       this.app, this.scene, width, height, outputScale, renderLook,
+      {
+        enabled: liquidSurfaceVfxEnabled,
+        semanticTexture: this.fieldSource,
+        wallTexture: this.wallSource,
+        liquidTexture: this.liquidSource,
+      },
     );
     this.hdrVfxPipeline = hdr.pipeline;
     this.hdrPipelineInfo = hdr.info;
@@ -8977,6 +8988,7 @@ export class PixiFieldPresenter {
             || new URLSearchParams(location.search).get('gasBodyVfxAudit') === '1'
             || new URLSearchParams(location.search).get('gasMotionVfxAudit') === '1'
             || new URLSearchParams(location.search).get('liquidBodyVfxAudit') === '1'
+            || new URLSearchParams(location.search).get('liquidSurfaceVfxAudit') === '1'
             || new URLSearchParams(location.search).get('powderBodyVfxAudit') === '1'
             || new URLSearchParams(location.search).get('powderLightVfxAudit') === '1'),
         resolution: outputScale, autoDensity: true, autoStart: false,
@@ -9010,6 +9022,8 @@ export class PixiFieldPresenter {
       ? 'active' : 'inactive';
     presenter.app.canvas.dataset.liquidBodyVfx = Number(presenter.uniforms.uniforms.uLiquidBodyVfx) > 0.5
       ? 'active' : 'inactive';
+    presenter.app.canvas.dataset.liquidSurfaceVfx = presenter.hdrPipelineInfo.active
+      && presenter.hdrPipelineInfo.liquidSurfaceVfx ? 'active' : 'inactive';
     presenter.app.canvas.dataset.powderBodyVfx = Number(presenter.uniforms.uniforms.uPowderBodyVfx) > 0.5
       ? 'active' : 'inactive';
     presenter.app.canvas.dataset.powderLightVfx = Number(presenter.uniforms.uniforms.uPowderLightVfx) > 0.5
@@ -10314,6 +10328,7 @@ export class PixiFieldPresenter {
         this.app.canvas.dataset.gasBodyVfx = 'inactive';
         this.app.canvas.dataset.gasMotionVfx = 'inactive';
         this.app.canvas.dataset.liquidBodyVfx = 'inactive';
+        this.app.canvas.dataset.liquidSurfaceVfx = 'inactive';
         this.app.canvas.dataset.powderBodyVfx = 'inactive';
         this.app.canvas.dataset.powderLightVfx = 'inactive';
         delete this.app.canvas.dataset.bloomBacking;

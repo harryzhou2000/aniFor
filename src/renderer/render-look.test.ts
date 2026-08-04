@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   DEFAULT_RENDER_LOOK, resolveGasBodyVfxEnabled, resolveGasMotionVfxEnabled,
-  resolveLiquidBodyVfxEnabled,
+  resolveLiquidBodyVfxEnabled, resolveLiquidSurfaceVfxEnabled,
   resolvePowderBodyVfxEnabled, resolvePowderLightVfxEnabled, resolveRenderLook,
   resolveVolumeVfxEnabled,
 } from './render-look';
@@ -34,6 +34,20 @@ describe('resolveRenderLook', () => {
     )).toBe(true);
     expect(resolveLiquidBodyVfxEnabled(
       'neon-lab', '?volumeVfx=1&liquidBodyVfx=off',
+    )).toBe(false);
+  });
+
+  it('keeps liquid-surface VFX subordinate to the established liquid body', () => {
+    expect(resolveLiquidSurfaceVfxEnabled('classic', '?liquidSurfaceVfx=on')).toBe(false);
+    expect(resolveLiquidSurfaceVfxEnabled('realistic', '')).toBe(true);
+    expect(resolveLiquidSurfaceVfxEnabled(
+      'realistic', '?liquidBodyVfx=on&liquidSurfaceVfx=off',
+    )).toBe(false);
+    expect(resolveLiquidSurfaceVfxEnabled(
+      'realistic', '?volumeVfx=0&liquidBodyVfx=on',
+    )).toBe(true);
+    expect(resolveLiquidSurfaceVfxEnabled(
+      'realistic', '?liquidBodyVfx=off&liquidSurfaceVfx=on',
     )).toBe(false);
   });
 

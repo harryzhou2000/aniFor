@@ -52,6 +52,23 @@ export function resolveLiquidBodyVfxEnabled(
 }
 
 /**
+ * Enables the HDR-composite liquid transport experiment only on top of E03's
+ * connected liquid body. The composite consumes the same semantic/liquid
+ * textures as the presenter, so an explicit override cannot bypass either the
+ * non-Classic HDR look or the liquid-body eligibility baseline.
+ */
+export function resolveLiquidSurfaceVfxEnabled(
+  look: RenderLook,
+  search = globalThis.location?.search ?? '',
+): boolean {
+  if (!resolveLiquidBodyVfxEnabled(look, search)) return false;
+  const requested = new URLSearchParams(search).get('liquidSurfaceVfx');
+  if (requested === '0' || requested === 'off') return false;
+  if (requested === '1' || requested === 'on') return true;
+  return true;
+}
+
+/**
  * Keeps the gas-body experiment independently measurable without also
  * changing powder or liquid. Ordinary realistic/neon presets retain the broad
  * volume default; the explicit query is reserved for visual captures and

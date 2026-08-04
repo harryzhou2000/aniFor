@@ -134,6 +134,29 @@ explicitly requests it and must still report E07/HDR inactive, reason `scale-8`,
 no bloom backing, exact 4896×3072 WebGL, and a completed GPU fence. Freeze the
 accepted amplitude until a new normal-view review.
 
+E08 is the accepted first HDR-composite liquid-surface transport layer,
+independently measurable with `?liquidSurfaceVfx=0|1` and subordinate to E03.
+At normal 1×–4×, reuse only the existing completed HDR scene, blurred bloom,
+semantic source, native-wall source, and species-aware liquid source in the
+existing tonemap composite. Add no texture, field, target, pass, upload,
+scheduler stage, persistent allocation, clock, output-scale resource, alpha,
+support, silhouette, ownership, or physics decision. Eligibility requires an
+exact authoritative Water, Oil, or Acid centre; connected same-owner
+cardinals; an air-facing, aligned liquid-field slope; no foreign contact; and
+same-owner displaced semantic radiance. The displaced HDR and bloom samples
+may change RGB only; always emit the original scene alpha. Lava, isolated
+droplets, exact unlike seams, foreign Solid/Liquid contacts, reconstructed
+support, and every other material remain no-ops. Capability, initialization,
+or runtime fallback must report `liquidSurfaceVfx=inactive`. Validate with
+`npm run audit:vfx:liquid-surface`: its real HDR 1×/2×/4× off→on→off matrix,
+byte-exact repeated-off framebuffer, semantics/alpha/support, shaped exposed
+and native-wall-backed lips, and exact protected controls are release
+contracts. The gate must then request E08 on the existing true-8× SPNG route
+and prove E08/HDR inactive, reason `scale-8`, no bloom, exact 4896×3072 WebGL,
+SPNG state, and completed GPU work. Do not declare or branch on E08 in
+`FIELD_EIGHT_X_FRAGMENT`; freeze the accepted amplitude until a new normal-view
+review.
+
 ## CodeGraph
 
 When `.codegraph/` exists, use `codegraph explore` before grep/find or broad file reads when locating or understanding code. Ask it for the relevant symbols, complete source, and call paths. Use `rg` only after CodeGraph has established the area to inspect.

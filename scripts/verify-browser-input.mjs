@@ -132,6 +132,13 @@ const liquidBodyVfxOnly = process.argv.includes('--liquid-body-vfx-only');
 if (liquidBodyVfxOnly && (modes.length !== 1 || modes[0] !== 'webgl')) {
   throw new Error('--liquid-body-vfx-only requires --webgl-only');
 }
+// E08 isolates a field-safe Fresnel/transmission cue on top of the accepted
+// E03 liquid-body baseline. It remains a normal-detail WebGL/HDR experiment;
+// the compact true-8x mesh must not inherit its uniform or branch.
+const liquidSurfaceVfxOnly = process.argv.includes('--liquid-surface-vfx-only');
+if (liquidSurfaceVfxOnly && (modes.length !== 1 || modes[0] !== 'webgl')) {
+  throw new Error('--liquid-surface-vfx-only requires --webgl-only');
+}
 // E04 keeps the atmospheric body experiment separate from both the broad E02
 // treatment and E03's liquid-only optics. It remains normal-detail only.
 const gasBodyVfxOnly = process.argv.includes('--gas-body-vfx-only');
@@ -158,9 +165,10 @@ const powderLightVfxOnly = process.argv.includes('--powder-light-vfx-only');
 if (powderLightVfxOnly && (modes.length !== 1 || modes[0] !== 'webgl')) {
   throw new Error('--powder-light-vfx-only requires --webgl-only');
 }
-if ([hdrVfxOnly, volumeVfxOnly, liquidBodyVfxOnly, gasBodyVfxOnly, gasMotionVfxOnly, powderBodyVfxOnly, powderLightVfxOnly]
+if ([hdrVfxOnly, volumeVfxOnly, liquidBodyVfxOnly, liquidSurfaceVfxOnly, gasBodyVfxOnly,
+  gasMotionVfxOnly, powderBodyVfxOnly, powderLightVfxOnly]
   .filter(Boolean).length > 1) {
-  throw new Error('HDR/volume/liquid-body/gas-body/gas-motion/powder-body/powder-light focused audits are mutually exclusive');
+  throw new Error('HDR/volume/liquid-body/liquid-surface/gas-body/gas-motion/powder-body/powder-light focused audits are mutually exclusive');
 }
 const layoutOnly = process.argv.includes('--layout-only');
 const visualScaleMatrixNormalOnly = process.argv.includes('--visual-scale-matrix-normal-only');
@@ -242,7 +250,9 @@ const liveScaleOnly = process.argv.includes('--live-scale-only');
 // bundle without starting Vite. That keeps screenshot evidence independent of
 // dev-server navigation timing while leaving all default audit paths unchanged.
 const productionBundle = process.argv.includes('--production-bundle');
-const usesProductionBundle = productionBundle || showcaseScreenshotOnly || hdrVfxOnly || volumeVfxOnly || liquidBodyVfxOnly || gasBodyVfxOnly || gasMotionVfxOnly || powderBodyVfxOnly || powderLightVfxOnly || cellularGraphicsOnly || sensorGraphicsOnly
+const usesProductionBundle = productionBundle || showcaseScreenshotOnly || hdrVfxOnly || volumeVfxOnly
+  || liquidBodyVfxOnly || liquidSurfaceVfxOnly || gasBodyVfxOnly || gasMotionVfxOnly
+  || powderBodyVfxOnly || powderLightVfxOnly || cellularGraphicsOnly || sensorGraphicsOnly
   || unusualPowderGraphicsOnly || earthenPowderGraphicsOnly || explosivePowderGraphicsOnly || unusualSolidGraphicsOnly
   || deviceIdentityGraphicsOnly
   || fieldProfileGraphicsOnly
@@ -277,6 +287,8 @@ const volumeVfxArgument = process.argv.find((argument) => argument.startsWith('-
   ?.slice('--volume-vfx='.length);
 const liquidBodyVfxArgument = process.argv.find((argument) => argument.startsWith('--liquid-body-vfx='))
   ?.slice('--liquid-body-vfx='.length);
+const liquidSurfaceVfxArgument = process.argv.find((argument) => argument.startsWith('--liquid-surface-vfx='))
+  ?.slice('--liquid-surface-vfx='.length);
 const gasBodyVfxArgument = process.argv.find((argument) => argument.startsWith('--gas-body-vfx='))
   ?.slice('--gas-body-vfx='.length);
 const gasMotionVfxArgument = process.argv.find((argument) => argument.startsWith('--gas-motion-vfx='))
@@ -298,6 +310,9 @@ if (volumeVfxArgument !== undefined && !['0', '1', 'off', 'on'].includes(volumeV
 }
 if (liquidBodyVfxArgument !== undefined && !['0', '1', 'off', 'on'].includes(liquidBodyVfxArgument)) {
   throw new Error('--liquid-body-vfx must be 0, 1, off, or on');
+}
+if (liquidSurfaceVfxArgument !== undefined && !['0', '1', 'off', 'on'].includes(liquidSurfaceVfxArgument)) {
+  throw new Error('--liquid-surface-vfx must be 0, 1, off, or on');
 }
 if (gasBodyVfxArgument !== undefined && !['0', '1', 'off', 'on'].includes(gasBodyVfxArgument)) {
   throw new Error('--gas-body-vfx must be 0, 1, off, or on');
@@ -346,6 +361,18 @@ if (liquidBodyVfxOnly && powderLightVfxArgument !== undefined) {
 }
 if (liquidBodyVfxOnly && gasMotionVfxArgument !== undefined) {
   throw new Error('--liquid-body-vfx-only keeps gas-motion VFX defaulted; omit --gas-motion-vfx');
+}
+if ((volumeVfxOnly || liquidBodyVfxOnly || gasBodyVfxOnly || gasMotionVfxOnly
+  || powderBodyVfxOnly || powderLightVfxOnly) && liquidSurfaceVfxArgument !== undefined) {
+  throw new Error('E02-E07 focused audits pin liquidSurfaceVfx=0; omit --liquid-surface-vfx');
+}
+if (liquidSurfaceVfxOnly && (volumeVfxArgument !== undefined || liquidBodyVfxArgument !== undefined
+  || gasBodyVfxArgument !== undefined || gasMotionVfxArgument !== undefined
+  || powderBodyVfxArgument !== undefined || powderLightVfxArgument !== undefined)) {
+  throw new Error('--liquid-surface-vfx-only owns its fixed E03 baseline and other VFX selectors; omit overrides');
+}
+if (liquidSurfaceVfxOnly && liquidSurfaceVfxArgument !== undefined) {
+  throw new Error('--liquid-surface-vfx-only owns its off -> on -> off sequence; omit --liquid-surface-vfx');
 }
 if (gasBodyVfxOnly && (volumeVfxArgument !== undefined || liquidBodyVfxArgument !== undefined)) {
   throw new Error('--gas-body-vfx-only fixes volumeVfx=0 and liquidBodyVfx=0; omit those flags');
@@ -411,6 +438,9 @@ if (gasBodyVfxOnly && renderScaleArgument === '8') {
 if (gasMotionVfxOnly && renderScaleArgument === '8') {
   throw new Error('--gas-motion-vfx-only is a normal-detail 1x/2x/4x experiment');
 }
+if (liquidSurfaceVfxOnly && renderScaleArgument === '8') {
+  throw new Error('--liquid-surface-vfx-only is a normal-detail 1x/2x/4x experiment');
+}
 if (powderBodyVfxOnly && renderScaleArgument === '8') {
   throw new Error('--powder-body-vfx-only is a normal-detail 1x/2x/4x experiment');
 }
@@ -428,7 +458,8 @@ if (hdrVfxOnly && renderLook !== undefined) {
   throw new Error('--hdr-vfx-only owns classic -> realistic -> classic; omit --render-look');
 }
 if (hdrVfxOnly && (volumeVfxArgument !== undefined
-  || liquidBodyVfxArgument !== undefined || gasBodyVfxArgument !== undefined)) {
+  || liquidBodyVfxArgument !== undefined || liquidSurfaceVfxArgument !== undefined
+  || gasBodyVfxArgument !== undefined)) {
   throw new Error('--hdr-vfx-only owns all optional VFX state; omit VFX override flags');
 }
 if (hdrVfxOnly && renderScaleArgument !== undefined && renderScaleArgument !== '2') {
@@ -488,7 +519,9 @@ async function main() {
       }, 15_000, 'Vite browser-audit server');
     const results = [];
     for (const mode of modes) results.push(await auditMode(mode));
-    const reducedAudit = quickScreenshot || showcaseScreenshotOnly || hdrVfxOnly || volumeVfxOnly || liquidBodyVfxOnly || gasBodyVfxOnly || gasMotionVfxOnly || powderBodyVfxOnly || powderLightVfxOnly || layoutOnly || mobileOnly || mobileGestureOnly
+    const reducedAudit = quickScreenshot || showcaseScreenshotOnly || hdrVfxOnly || volumeVfxOnly
+      || liquidBodyVfxOnly || liquidSurfaceVfxOnly || gasBodyVfxOnly || gasMotionVfxOnly
+      || powderBodyVfxOnly || powderLightVfxOnly || layoutOnly || mobileOnly || mobileGestureOnly
       || desktopInputOnly || visualScaleMatrixOnly || powderBodyOnly || liquidDepthOnly
       || solidDepthOnly || gasChromaOnly || surfaceContourOnly || solidFieldOnly
       || roleGraphicsOnly || cellularGraphicsOnly || sensorGraphicsOnly
@@ -585,7 +618,8 @@ async function auditMode(mode) {
   // measures. Canvas fallback has no advanced optics obligation, so retain the
   // canonical paused scene there and prove real material delivery/occupancy.
   const startsBlank = !canvasFallbackAudit && (hdrVfxOnly || volumeVfxOnly
-    || liquidBodyVfxOnly || gasBodyVfxOnly || gasMotionVfxOnly || powderBodyVfxOnly || powderLightVfxOnly || cellularGraphicsOnly || sensorGraphicsOnly
+    || liquidBodyVfxOnly || liquidSurfaceVfxOnly || gasBodyVfxOnly || gasMotionVfxOnly
+    || powderBodyVfxOnly || powderLightVfxOnly || cellularGraphicsOnly || sensorGraphicsOnly
     || unusualPowderGraphicsOnly || earthenPowderGraphicsOnly || explosivePowderGraphicsOnly
     || unusualSolidGraphicsOnly || deviceIdentityGraphicsOnly || fieldProfileGraphicsOnly
     || electricDischargeGraphicsOnly || liquidIdentityGraphicsOnly
@@ -606,6 +640,7 @@ async function auditMode(mode) {
     ...(renderLook ? { renderLook } : {}),
     ...(volumeVfxArgument ? { volumeVfx: volumeVfxArgument } : {}),
     ...(liquidBodyVfxArgument ? { liquidBodyVfx: liquidBodyVfxArgument } : {}),
+    ...(liquidSurfaceVfxArgument ? { liquidSurfaceVfx: liquidSurfaceVfxArgument } : {}),
     ...(gasBodyVfxArgument ? { gasBodyVfx: gasBodyVfxArgument } : {}),
     ...(gasMotionVfxArgument ? { gasMotionVfx: gasMotionVfxArgument } : {}),
     ...(powderBodyVfxArgument ? { powderBodyVfx: powderBodyVfxArgument } : {}),
@@ -821,6 +856,13 @@ async function auditMode(mode) {
       assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
       cdp.close();
       return { backend: mode, liquidBodyVfx, browserErrors: errors.length };
+    }
+    if (liquidSurfaceVfxOnly) {
+      assert(mode === 'webgl', '--liquid-surface-vfx-only requires --webgl-only');
+      const liquidSurfaceVfx = await auditLiquidSurfaceVfxExperiment(cdp, mode, dpr);
+      assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
+      cdp.close();
+      return { backend: mode, liquidSurfaceVfx, browserErrors: errors.length };
     }
     if (gasBodyVfxOnly) {
       assert(mode === 'webgl', '--gas-body-vfx-only requires --webgl-only');
@@ -13468,7 +13510,7 @@ async function auditEightXSpngStateOnly(cdp, dpr) {
   await setDesktopMetrics(cdp, 1280, 720, dpr);
   const query = new URLSearchParams({
     scene: 'render-lab', inputAudit: '1', renderScale: '8', auditStage: 'eight-spng', blankAudit: '1',
-    renderLook: 'realistic', gasMotionVfx: '1',
+    renderLook: 'realistic', gasMotionVfx: '1', liquidSurfaceVfx: '1',
   });
   await cdp.send('Page.navigate', { url: `${AUDIT_BASE_URL}?${query}` });
   const startupDeadline = Date.now() + EIGHT_X_PRESENTATION_DEADLINE_MS;
@@ -13478,6 +13520,7 @@ async function auditEightXSpngStateOnly(cdp, dpr) {
       && parameters.get('auditStage') === 'eight-spng'
       && parameters.get('renderLook') === 'realistic'
       && parameters.get('gasMotionVfx') === '1'
+      && parameters.get('liquidSurfaceVfx') === '1'
       && parameters.has('blankAudit') && Boolean(window.__ANIFOR_INPUT_AUDIT__);
   })()`), remainingDeadlineMs(startupDeadline, 'true-8x SPNG input audit API'), 'true-8x SPNG input audit API');
   const startupBackend = await waitForEightXTerminalBackend(cdp, 'true-8x SPNG', startupDeadline);
@@ -13491,9 +13534,9 @@ async function auditEightXSpngStateOnly(cdp, dpr) {
   assertGeometry(geometry, 'true-8x SPNG', 8);
   assertContained(geometry, 'true-8x SPNG');
   assertToolboxGeometry(geometry, 'true-8x SPNG', DESKTOP_TOOL_FILTER_HEIGHT);
-  // E07 is a normal-detail experiment. Request it explicitly on this existing
-  // one-navigation true-8x fence gate and prove the compact path declines it
-  // without allocating HDR bloom or changing the canonical backing.
+  // E07 and E08 are normal-detail experiments. Request both explicitly on this
+  // existing one-navigation true-8x fence gate and prove the compact path
+  // declines them without allocating HDR bloom or changing canonical backing.
   const e07Isolation = await evaluate(cdp, `(() => {
     const canvas = document.querySelector('canvas.semantic-field-canvas');
     if (!(canvas instanceof HTMLCanvasElement)) return undefined;
@@ -13504,13 +13547,15 @@ async function auditEightXSpngStateOnly(cdp, dpr) {
       reason: canvas.dataset.hdrPipelineReason,
       bloomBacking: canvas.dataset.bloomBacking ?? null,
       gasMotionVfx: canvas.dataset.gasMotionVfx,
+      liquidSurfaceVfx: canvas.dataset.liquidSurfaceVfx,
     };
   })()`);
   assert(e07Isolation?.renderer === 'semantic-field-webgl'
       && e07Isolation.look === 'realistic' && e07Isolation.state === 'inactive'
       && e07Isolation.reason === 'scale-8' && e07Isolation.bloomBacking === null
-      && e07Isolation.gasMotionVfx === 'inactive',
-  `true-8x E07 isolation failed (${JSON.stringify(e07Isolation)})`);
+      && e07Isolation.gasMotionVfx === 'inactive'
+      && e07Isolation.liquidSurfaceVfx === 'inactive',
+  `true-8x E07/E08 isolation failed (${JSON.stringify(e07Isolation)})`);
   const timing = await auditWebGLPresentationTiming(cdp, 1, 12_000, 30_000, 1);
   assert(timing.source === 'gpu-query' || timing.source === 'gpu-fence' || timing.source === 'gpu-finish',
     `true-8x SPNG timing did not prove completed GPU work (${JSON.stringify(timing)})`);
@@ -21043,6 +21088,45 @@ const LIQUID_BODY_VFX_RAW_CONTROL_POINTS = Object.freeze([
   { name: 'oilWallOwner', x: 315, y: 172 },
 ]);
 
+// E08 reuses E03's canonical Water/Oil/Acid bodies. The exposed wavy-column
+// lips and the two exact native-wall calibration cards must both gain shaped
+// RGB response; a flat whole-liquid grade is insufficient. The bounds retain
+// headroom around the measured 1x/2x/4x SwiftShader response while still
+// rejecting an inert selector, a flat grade, or a materially stronger halo.
+const LIQUID_SURFACE_VFX_TARGET_REGIONS = Object.freeze([
+  { name: 'waterSurface', family: 'water', zone: 'surface', x: 224, y: 195,
+    radiusX: 7, radiusY: 2.5, minimumRms: 2.4, minimumSpatial: 2.0,
+    minimumPeak: 6, maximumPeak: 14 },
+  { name: 'oilSurface', family: 'oil', zone: 'surface', x: 263, y: 195,
+    radiusX: 7, radiusY: 2.5, minimumRms: 1.1, minimumSpatial: 0.9,
+    minimumPeak: 4, maximumPeak: 9 },
+  { name: 'acidSurface', family: 'acid', zone: 'surface', x: 302, y: 195,
+    radiusX: 7, radiusY: 2.5, minimumRms: 1.3, minimumSpatial: 1.1,
+    minimumPeak: 6, maximumPeak: 14 },
+  { name: 'waterWallTransmission', family: 'water', zone: 'wall', x: 287, y: 161.5,
+    radiusX: 6, radiusY: 1.5, minimumRms: 5.2, minimumSpatial: 4.0,
+    minimumPeak: 12, maximumPeak: 18 },
+  { name: 'oilWallTransmission', family: 'oil', zone: 'wall', x: 318, y: 161.5,
+    radiusX: 6, radiusY: 1.5, minimumRms: 1.8, minimumSpatial: 1.4,
+    minimumPeak: 5, maximumPeak: 9 },
+]);
+const LIQUID_SURFACE_VFX_CONTROL_REGIONS = Object.freeze([
+  { name: 'lavaCoreControl', x: 341, y: 315, radiusX: 6, radiusY: 10,
+    maximumPeak: 1, maximumCoverage: 0.02 },
+  { name: 'lavaWallPinholeControl', x: 340.5, y: 231.5, radius: 2,
+    maximumPeak: 1, maximumCoverage: 0.04 },
+  { name: 'isolatedWaterControl', x: 190.5, y: 164.5, radius: 2,
+    maximumPeak: 1, maximumCoverage: 0.04 },
+  // Sub-cell filtering may expose a bounded shoulder from either eligible
+  // owner, but E08 must never turn the exact Water/Oil seam into a third body.
+  { name: 'unlikeLiquidSeamControl', x: 302.5, y: 172, radiusX: 0.45, radiusY: 6,
+    maximumPeak: 4, maximumCoverage: 0.30 },
+  { name: 'waterMetalContactControl', x: 392.5, y: 369.5, radiusX: 1.5, radiusY: 5,
+    maximumPeak: 4, maximumCoverage: 0.30 },
+  { name: 'oilGlassContactControl', x: 472.5, y: 369.5, radiusX: 1.5, radiusY: 5,
+    maximumPeak: 4, maximumCoverage: 0.30 },
+]);
+
 // E04 samples the actual deterministic render-lab atmosphere. The large cloud
 // core/shell pairs expose shaped volume treatment, while the compact FOG/CFLM
 // bodies and sparse chains prevent a prettier atmosphere from becoming a
@@ -21373,6 +21457,121 @@ async function auditLiquidBodyVfxExperiment(cdp, mode) {
 }
 
 /**
+ * E08 liquid-surface experiment. E03 remains active as the accepted body
+ * baseline while this gate toggles only its field-safe surface
+ * reflection/transmission arithmetic. The canonical render-lab supplies both
+ * exposed Water/Oil/Acid lips and exact native-wall calibration cards.
+ */
+async function auditLiquidSurfaceVfxExperiment(cdp, mode, dpr) {
+  const scales = [];
+  const requestedScales = renderScaleArgument === undefined
+    ? VOLUME_VFX_SCALES : [Number(renderScaleArgument)];
+  for (const scale of requestedScales) {
+    const captures = {};
+    for (const enabled of [false, true, false]) {
+      const key = enabled ? 'enabled' : captures.disabled ? 'disabledRepeat' : 'disabled';
+      captures[key] = await navigateLiquidSurfaceVfxState(cdp, mode, scale, enabled, key);
+    }
+    const { disabled, enabled, disabledRepeat } = captures;
+    for (const [label, variant] of Object.entries(captures)) {
+      assertGeometry(variant.geometry, `E08 ${label} ${scale}x`, scale);
+      assert(variant.geometry.backend.backend === 'webgl',
+        `E08 ${label} ${scale}x lost WebGL presentation`);
+      assert(variant.hdrPipeline?.state === 'active',
+        `E08 ${label} ${scale}x HDR pipeline was not active (${JSON.stringify(variant.hdrPipeline)})`);
+    }
+    assertCanvasRectsEqual(disabled.geometry.canvas, enabled.geometry.canvas,
+      `E08 ${scale}x disabled/enabled CSS geometry`);
+    assertCanvasRectsEqual(disabled.geometry.canvas, disabledRepeat.geometry.canvas,
+      `E08 ${scale}x disabled/repeated CSS geometry`);
+    assert(JSON.stringify(disabled.geometry.backing) === JSON.stringify(enabled.geometry.backing)
+      && JSON.stringify(disabled.geometry.backing) === JSON.stringify(disabledRepeat.geometry.backing),
+    `E08 ${scale}x backing geometry changed (${JSON.stringify({
+      disabled: disabled.geometry.backing, enabled: enabled.geometry.backing,
+      repeat: disabledRepeat.geometry.backing,
+    })})`);
+    assertHdrVfxSemanticEquality(disabled.semantic, enabled.semantic,
+      `E08 ${scale}x disabled/enabled`);
+    assertHdrVfxSemanticEquality(disabled.semantic, disabledRepeat.semantic,
+      `E08 ${scale}x disabled/repeated`);
+    assertVolumeVfxBackingInvariant(disabled.backing, enabled.backing,
+      `E08 ${scale}x disabled/enabled`);
+    assertVolumeVfxBackingInvariant(disabled.backing, disabledRepeat.backing,
+      `E08 ${scale}x disabled/repeated`);
+    assert(JSON.stringify(disabled.rgb) === JSON.stringify(disabledRepeat.rgb),
+      `E08 ${scale}x repeated disabled framebuffer was not byte-exact (${JSON.stringify({
+        disabled: disabled.rgb, repeat: disabledRepeat.rgb,
+      })})`);
+    assert(disabled.rgb.signature !== enabled.rgb.signature,
+      `E08 ${scale}x enabled framebuffer was globally inert (${JSON.stringify({
+        disabled: disabled.rgb, enabled: enabled.rgb,
+      })})`);
+
+    const responseRegions = [
+      ...LIQUID_SURFACE_VFX_TARGET_REGIONS, ...LIQUID_SURFACE_VFX_CONTROL_REGIONS,
+    ];
+    const rawResponses = await sampleBackdropRefractionRegions(cdp, {
+      straight: disabled.capture.capture.data,
+      refracted: enabled.capture.capture.data,
+      repeatedStraight: disabledRepeat.capture.capture.data,
+    }, responseRegions, disabled.capture.canvasRect);
+    const responses = rawResponses.map((sample, index) => {
+      const region = responseRegions[index];
+      const meanRgbRms = Math.hypot(...sample.responseRgb) / Math.sqrt(3);
+      return {
+        ...sample,
+        ...region,
+        spatialRgbRms: round(Math.sqrt(Math.max(0, sample.rgbRms ** 2 - meanRgbRms ** 2)), 3),
+      };
+    });
+    assert(responses.every((sample) => sample.repeatRgbPeak === 0),
+      `E08 ${scale}x liquid-surface off state was not byte-exact on repeat (${JSON.stringify(responses)})`);
+    const targets = responses.filter((sample) => sample.family);
+    assert(targets.every((sample) => sample.rgbRms >= sample.minimumRms
+      && sample.spatialRgbRms >= sample.minimumSpatial
+      && sample.rgbPeak >= sample.minimumPeak && sample.rgbPeak <= sample.maximumPeak),
+    `E08 ${scale}x liquid-surface response was inert, uniform, or exceeded its RGB budget (${JSON.stringify(targets)})`);
+    for (const family of ['water', 'oil', 'acid']) {
+      assert(targets.some((sample) => sample.family === family && sample.zone === 'surface'),
+        `E08 ${scale}x ${family} surface target was not sampled`);
+    }
+    for (const family of ['water', 'oil']) {
+      const surface = targets.find((sample) => sample.family === family && sample.zone === 'surface');
+      const wall = targets.find((sample) => sample.family === family && sample.zone === 'wall');
+      assert(surface && wall && surface.responseSignature !== wall.responseSignature,
+        `E08 ${scale}x ${family} surface/wall response collapsed to one grade (${JSON.stringify({ surface, wall })})`);
+    }
+    const controls = responses.filter((sample) => !sample.family);
+    assert(controls.every((sample) => sample.rgbPeak <= sample.maximumPeak
+      && sample.coverage <= sample.maximumCoverage),
+    `E08 ${scale}x liquid-surface response leaked into a protected control (${JSON.stringify(controls)})`);
+    const screenshots = screenshotRequest
+      ? await writeLiquidSurfaceVfxScreenshots(screenshotRequest, scale, captures)
+      : undefined;
+    scales.push({
+      scale,
+      backing: disabled.geometry.backing,
+      alphaSupport: disabled.backing,
+      responses,
+      exactRepeatedOff: true,
+      ...(screenshots ? { screenshots } : {}),
+    });
+  }
+  const trueEightX = await auditEightXSpngStateOnly(cdp, dpr);
+  return { scales, trueEightX };
+}
+
+async function writeLiquidSurfaceVfxScreenshots(source, scale, captures) {
+  const paths = {};
+  for (const [variant, capture] of Object.entries(captures)) {
+    const output = variantScreenshotPath(source, `liquid-surface-${scale}x-${variant}`);
+    await writeFile(output, Buffer.from(capture.capture.capture.data, 'base64'));
+    paths[variant] = output;
+  }
+  return paths;
+}
+
+/**
  * E04 atmospheric-body experiment. The broad E02 volume pass and E03 liquid
  * body pass remain explicitly inactive so every response is attributable to
  * the normal-detail gas-body arithmetic.
@@ -21507,6 +21706,7 @@ async function auditGasMotionVfxExperiment(cdp, mode) {
       assert(variant.hdrPipeline?.state === 'active',
         `E07 ${label} ${scale}x HDR pipeline was not active (${JSON.stringify(variant.hdrPipeline)})`);
       assert(variant.hdrPipeline?.volumeVfx === 'inactive' && variant.hdrPipeline?.liquidBodyVfx === 'inactive'
+        && variant.hdrPipeline?.liquidSurfaceVfx === 'inactive'
         && variant.hdrPipeline?.gasBodyVfx === 'active' && variant.hdrPipeline?.powderBodyVfx === 'inactive'
         && variant.hdrPipeline?.powderLightVfx === 'inactive'
         && variant.hdrPipeline?.gasMotionVfx === (
@@ -22017,7 +22217,8 @@ async function navigateGasMotionVfxState(cdp, mode, scale, fixtureMode, enabled,
   const query = new URLSearchParams({
     scene: 'render-lab', inputAudit: '1', blankAudit: '1', auditStage: 'blank',
     gasMotionVfxAudit: '1', renderScale: String(scale), renderLook: 'realistic',
-    volumeVfx: '0', liquidBodyVfx: '0', gasBodyVfx: '1', gasMotionVfx: enabled ? '1' : '0',
+    volumeVfx: '0', liquidBodyVfx: '0', liquidSurfaceVfx: '0',
+    gasBodyVfx: '1', gasMotionVfx: enabled ? '1' : '0',
     powderBodyVfx: '0', powderLightVfx: '0',
   });
   await cdp.send('Page.navigate', { url: `${AUDIT_BASE_URL}?${query}` });
@@ -22027,7 +22228,8 @@ async function navigateGasMotionVfxState(cdp, mode, scale, fixtureMode, enabled,
       && parameters.get('blankAudit') === '1' && parameters.get('auditStage') === 'blank'
       && parameters.get('gasMotionVfxAudit') === '1' && parameters.get('renderScale') === ${JSON.stringify(String(scale))}
       && parameters.get('renderLook') === 'realistic' && parameters.get('volumeVfx') === '0'
-      && parameters.get('liquidBodyVfx') === '0' && parameters.get('gasBodyVfx') === '1'
+      && parameters.get('liquidBodyVfx') === '0' && parameters.get('liquidSurfaceVfx') === '0'
+      && parameters.get('gasBodyVfx') === '1'
       && parameters.get('gasMotionVfx') === ${JSON.stringify(enabled ? '1' : '0')}
       && parameters.get('powderBodyVfx') === '0' && parameters.get('powderLightVfx') === '0'
       && typeof window.__ANIFOR_INPUT_AUDIT__?.prepareGasMotionVfxFixture === 'function';
@@ -22069,6 +22271,7 @@ async function navigateGasMotionVfxState(cdp, mode, scale, fixtureMode, enabled,
       look: canvas.dataset.renderLook, state: canvas.dataset.hdrPipeline,
       reason: canvas.dataset.hdrPipelineReason, bloomBacking: canvas.dataset.bloomBacking,
       volumeVfx: canvas.dataset.volumeVfx, liquidBodyVfx: canvas.dataset.liquidBodyVfx,
+      liquidSurfaceVfx: canvas.dataset.liquidSurfaceVfx,
       gasBodyVfx: canvas.dataset.gasBodyVfx, gasMotionVfx: canvas.dataset.gasMotionVfx,
       powderBodyVfx: canvas.dataset.powderBodyVfx, powderLightVfx: canvas.dataset.powderLightVfx,
     } : undefined;
@@ -22076,7 +22279,8 @@ async function navigateGasMotionVfxState(cdp, mode, scale, fixtureMode, enabled,
   const expectedBloom = `${WORLD_WIDTH * scale / 2}x${WORLD_HEIGHT * scale / 2}`;
   assert(hdrPipeline?.look === 'realistic' && hdrPipeline?.state === 'active'
     && hdrPipeline?.bloomBacking === expectedBloom && hdrPipeline?.volumeVfx === 'inactive'
-    && hdrPipeline?.liquidBodyVfx === 'inactive' && hdrPipeline?.gasBodyVfx === 'active'
+    && hdrPipeline?.liquidBodyVfx === 'inactive' && hdrPipeline?.liquidSurfaceVfx === 'inactive'
+    && hdrPipeline?.gasBodyVfx === 'active'
     && hdrPipeline?.powderBodyVfx === 'inactive' && hdrPipeline?.powderLightVfx === 'inactive'
     && hdrPipeline?.gasMotionVfx === (enabled ? 'active' : 'inactive'),
   `E07 ${label} ${scale}x HDR/gas-motion state resolved incorrectly (${JSON.stringify(hdrPipeline)})`);
@@ -22266,7 +22470,9 @@ async function auditPowderLightVfxExperiment(cdp, mode) {
       assert(variant.hdrPipeline?.state === 'active',
         `E06 ${label} ${scale}x HDR pipeline was not active (${JSON.stringify(variant.hdrPipeline)})`);
       assert(variant.hdrPipeline?.volumeVfx === 'active' && variant.hdrPipeline?.powderBodyVfx === 'active'
-        && variant.hdrPipeline?.liquidBodyVfx === 'inactive' && variant.hdrPipeline?.gasBodyVfx === 'inactive'
+        && variant.hdrPipeline?.liquidBodyVfx === 'inactive'
+        && variant.hdrPipeline?.liquidSurfaceVfx === 'inactive'
+        && variant.hdrPipeline?.gasBodyVfx === 'inactive'
         && variant.hdrPipeline?.powderLightVfx === (label === 'enabled' ? 'active' : 'inactive'),
       `E06 ${label} ${scale}x did not retain its fixed E02/E05 baseline (${JSON.stringify(variant.hdrPipeline)})`);
     }
@@ -22459,7 +22665,8 @@ async function navigateVolumeVfxState(cdp, mode, scale, enabled, label) {
   const query = new URLSearchParams({
     scene: 'render-lab', inputAudit: '1', auditStage: 'canonical',
     volumeVfxAudit: '1', renderScale: String(scale), renderLook: 'realistic',
-    volumeVfx: enabled ? '1' : '0', powderBodyVfx: '0', powderLightVfx: '0',
+    volumeVfx: enabled ? '1' : '0', liquidSurfaceVfx: '0',
+    powderBodyVfx: '0', powderLightVfx: '0',
   });
   await cdp.send('Page.navigate', { url: `${AUDIT_BASE_URL}?${query}` });
   await waitFor(() => evaluate(cdp, `(() => {
@@ -22471,6 +22678,7 @@ async function navigateVolumeVfxState(cdp, mode, scale, enabled, label) {
       && parameters.get('renderScale') === ${JSON.stringify(String(scale))}
       && parameters.get('renderLook') === 'realistic'
       && parameters.get('volumeVfx') === ${JSON.stringify(enabled ? '1' : '0')}
+      && parameters.get('liquidSurfaceVfx') === '0'
       && parameters.get('powderBodyVfx') === '0'
       && parameters.get('powderLightVfx') === '0'
       && Boolean(window.__ANIFOR_INPUT_AUDIT__);
@@ -22486,6 +22694,7 @@ async function navigateVolumeVfxState(cdp, mode, scale, enabled, label) {
       reason: canvas.dataset.hdrPipelineReason,
       bloomBacking: canvas.dataset.bloomBacking,
       volumeVfx: canvas.dataset.volumeVfx,
+      liquidSurfaceVfx: canvas.dataset.liquidSurfaceVfx,
       powderBodyVfx: canvas.dataset.powderBodyVfx,
       powderLightVfx: canvas.dataset.powderLightVfx,
     } : undefined;
@@ -22494,6 +22703,7 @@ async function navigateVolumeVfxState(cdp, mode, scale, enabled, label) {
   assert(hdrPipeline?.look === 'realistic' && hdrPipeline?.state === 'active'
     && hdrPipeline?.bloomBacking === expectedBloom
     && hdrPipeline?.volumeVfx === (enabled ? 'active' : 'inactive')
+    && hdrPipeline?.liquidSurfaceVfx === 'inactive'
     && hdrPipeline?.powderBodyVfx === 'inactive' && hdrPipeline?.powderLightVfx === 'inactive',
   `E02 ${label} ${scale}x HDR/volume state resolved incorrectly (${JSON.stringify(hdrPipeline)})`);
   const capture = await waitForStablePageCapture(
@@ -22512,7 +22722,7 @@ async function navigateLiquidBodyVfxState(cdp, mode, scale, enabled, label) {
   const query = new URLSearchParams({
     scene: 'render-lab', inputAudit: '1', auditStage: 'canonical',
     liquidBodyVfxAudit: '1', renderScale: String(scale), renderLook: 'realistic',
-    volumeVfx: '0', liquidBodyVfx: enabled ? '1' : '0',
+    volumeVfx: '0', liquidBodyVfx: enabled ? '1' : '0', liquidSurfaceVfx: '0',
   });
   await cdp.send('Page.navigate', { url: `${AUDIT_BASE_URL}?${query}` });
   await waitFor(() => evaluate(cdp, `(() => {
@@ -22525,6 +22735,7 @@ async function navigateLiquidBodyVfxState(cdp, mode, scale, enabled, label) {
       && parameters.get('renderLook') === 'realistic'
       && parameters.get('volumeVfx') === '0'
       && parameters.get('liquidBodyVfx') === ${JSON.stringify(enabled ? '1' : '0')}
+      && parameters.get('liquidSurfaceVfx') === '0'
       && Boolean(window.__ANIFOR_INPUT_AUDIT__);
   })()`), 15_000, `E03 ${label} ${scale}x page`);
   await waitFor(() => evaluate(cdp,
@@ -22539,13 +22750,15 @@ async function navigateLiquidBodyVfxState(cdp, mode, scale, enabled, label) {
       bloomBacking: canvas.dataset.bloomBacking,
       volumeVfx: canvas.dataset.volumeVfx,
       liquidBodyVfx: canvas.dataset.liquidBodyVfx,
+      liquidSurfaceVfx: canvas.dataset.liquidSurfaceVfx,
     } : undefined;
   })()`);
   const expectedBloom = `${WORLD_WIDTH * scale / 2}x${WORLD_HEIGHT * scale / 2}`;
   assert(hdrPipeline?.look === 'realistic' && hdrPipeline?.state === 'active'
     && hdrPipeline?.bloomBacking === expectedBloom
     && hdrPipeline?.volumeVfx === 'inactive'
-    && hdrPipeline?.liquidBodyVfx === (enabled ? 'active' : 'inactive'),
+    && hdrPipeline?.liquidBodyVfx === (enabled ? 'active' : 'inactive')
+    && hdrPipeline?.liquidSurfaceVfx === 'inactive',
   `E03 ${label} ${scale}x HDR/liquid-body state resolved incorrectly (${JSON.stringify(hdrPipeline)})`);
   // A cold 4x HDR compositor may need more than the generic eight-second
   // equality window after repeated production-bundle navigation. This remains
@@ -22563,11 +22776,84 @@ async function navigateLiquidBodyVfxState(cdp, mode, scale, enabled, label) {
   };
 }
 
+async function navigateLiquidSurfaceVfxState(cdp, mode, scale, enabled, label) {
+  const query = new URLSearchParams({
+    scene: 'render-lab', inputAudit: '1', auditStage: 'canonical',
+    // Retain E03's preserveDrawingBuffer/fixture contract while giving E08 an
+    // independent audit marker and selector.
+    liquidBodyVfxAudit: '1', liquidSurfaceVfxAudit: '1',
+    renderScale: String(scale), renderLook: 'realistic',
+    volumeVfx: '0', liquidBodyVfx: '1', liquidSurfaceVfx: enabled ? '1' : '0',
+    gasBodyVfx: '0', gasMotionVfx: '0', powderBodyVfx: '0', powderLightVfx: '0',
+  });
+  await cdp.send('Page.navigate', { url: `${AUDIT_BASE_URL}?${query}` });
+  await waitFor(() => evaluate(cdp, `(() => {
+    const parameters = new URLSearchParams(location.search);
+    return parameters.get('scene') === 'render-lab'
+      && parameters.get('inputAudit') === '1'
+      && parameters.get('auditStage') === 'canonical'
+      && parameters.get('liquidBodyVfxAudit') === '1'
+      && parameters.get('liquidSurfaceVfxAudit') === '1'
+      && parameters.get('renderScale') === ${JSON.stringify(String(scale))}
+      && parameters.get('renderLook') === 'realistic'
+      && parameters.get('volumeVfx') === '0'
+      && parameters.get('liquidBodyVfx') === '1'
+      && parameters.get('liquidSurfaceVfx') === ${JSON.stringify(enabled ? '1' : '0')}
+      && parameters.get('gasBodyVfx') === '0'
+      && parameters.get('gasMotionVfx') === '0'
+      && parameters.get('powderBodyVfx') === '0'
+      && parameters.get('powderLightVfx') === '0'
+      && Boolean(window.__ANIFOR_INPUT_AUDIT__);
+  })()`), 15_000, `E08 ${label} ${scale}x page`);
+  await waitFor(() => evaluate(cdp,
+    `window.__ANIFOR_INPUT_AUDIT__.backend().backend === ${JSON.stringify(mode)}`),
+  15_000, `E08 ${label} ${scale}x backend`);
+  const hdrPipeline = await evaluate(cdp, `(() => {
+    const canvas = document.querySelector('.semantic-field-canvas');
+    return canvas ? {
+      look: canvas.dataset.renderLook,
+      state: canvas.dataset.hdrPipeline,
+      reason: canvas.dataset.hdrPipelineReason,
+      bloomBacking: canvas.dataset.bloomBacking,
+      volumeVfx: canvas.dataset.volumeVfx,
+      liquidBodyVfx: canvas.dataset.liquidBodyVfx,
+      liquidSurfaceVfx: canvas.dataset.liquidSurfaceVfx,
+      gasBodyVfx: canvas.dataset.gasBodyVfx,
+      gasMotionVfx: canvas.dataset.gasMotionVfx,
+      powderBodyVfx: canvas.dataset.powderBodyVfx,
+      powderLightVfx: canvas.dataset.powderLightVfx,
+    } : undefined;
+  })()`);
+  const expectedBloom = `${WORLD_WIDTH * scale / 2}x${WORLD_HEIGHT * scale / 2}`;
+  assert(hdrPipeline?.look === 'realistic' && hdrPipeline?.state === 'active'
+    && hdrPipeline?.bloomBacking === expectedBloom
+    && hdrPipeline?.volumeVfx === 'inactive'
+    && hdrPipeline?.liquidBodyVfx === 'active'
+    && hdrPipeline?.liquidSurfaceVfx === (enabled ? 'active' : 'inactive')
+    && hdrPipeline?.gasBodyVfx === 'inactive'
+    && hdrPipeline?.gasMotionVfx === 'inactive'
+    && hdrPipeline?.powderBodyVfx === 'inactive'
+    && hdrPipeline?.powderLightVfx === 'inactive',
+  `E08 ${label} ${scale}x HDR/liquid-surface state resolved incorrectly (${JSON.stringify(hdrPipeline)})`);
+  const capture = await waitForStablePageCapture(
+    cdp, `E08 ${label} ${scale}x framebuffer`, scale === 4 ? 20_000 : undefined,
+  );
+  return {
+    capture,
+    geometry: await metrics(cdp),
+    semantic: await hdrVfxSemanticDigest(cdp),
+    backing: await sampleVolumeVfxCanvasAlphaSupport(cdp),
+    rgb: await sampleLiquidSurfaceVfxCanvasRgbDigest(cdp),
+    hdrPipeline,
+  };
+}
+
 async function navigateGasBodyVfxState(cdp, mode, scale, enabled, label) {
   const query = new URLSearchParams({
     scene: 'render-lab', inputAudit: '1', auditStage: 'canonical',
     gasBodyVfxAudit: '1', renderScale: String(scale), renderLook: 'realistic',
-    volumeVfx: '0', liquidBodyVfx: '0', gasBodyVfx: enabled ? '1' : '0', gasMotionVfx: '0',
+    volumeVfx: '0', liquidBodyVfx: '0', liquidSurfaceVfx: '0',
+    gasBodyVfx: enabled ? '1' : '0', gasMotionVfx: '0',
   });
   await cdp.send('Page.navigate', { url: `${AUDIT_BASE_URL}?${query}` });
   await waitFor(() => evaluate(cdp, `(() => {
@@ -22580,6 +22866,7 @@ async function navigateGasBodyVfxState(cdp, mode, scale, enabled, label) {
       && parameters.get('renderLook') === 'realistic'
       && parameters.get('volumeVfx') === '0'
       && parameters.get('liquidBodyVfx') === '0'
+      && parameters.get('liquidSurfaceVfx') === '0'
       && parameters.get('gasBodyVfx') === ${JSON.stringify(enabled ? '1' : '0')}
       && parameters.get('gasMotionVfx') === '0'
       && Boolean(window.__ANIFOR_INPUT_AUDIT__);
@@ -22596,6 +22883,7 @@ async function navigateGasBodyVfxState(cdp, mode, scale, enabled, label) {
       bloomBacking: canvas.dataset.bloomBacking,
       volumeVfx: canvas.dataset.volumeVfx,
       liquidBodyVfx: canvas.dataset.liquidBodyVfx,
+      liquidSurfaceVfx: canvas.dataset.liquidSurfaceVfx,
       gasBodyVfx: canvas.dataset.gasBodyVfx,
       gasMotionVfx: canvas.dataset.gasMotionVfx,
     } : undefined;
@@ -22605,6 +22893,7 @@ async function navigateGasBodyVfxState(cdp, mode, scale, enabled, label) {
     && hdrPipeline?.bloomBacking === expectedBloom
     && hdrPipeline?.volumeVfx === 'inactive'
     && hdrPipeline?.liquidBodyVfx === 'inactive'
+    && hdrPipeline?.liquidSurfaceVfx === 'inactive'
     && hdrPipeline?.gasBodyVfx === (enabled ? 'active' : 'inactive')
     && hdrPipeline?.gasMotionVfx === 'inactive',
   `E04 ${label} ${scale}x HDR/gas-body state resolved incorrectly (${JSON.stringify(hdrPipeline)})`);
@@ -22625,7 +22914,8 @@ async function navigatePowderBodyVfxState(cdp, mode, scale, enabled, label) {
   const query = new URLSearchParams({
     scene: 'render-lab', inputAudit: '1', auditStage: 'canonical',
     powderBodyVfxAudit: '1', renderScale: String(scale), renderLook: 'realistic',
-    volumeVfx: '0', liquidBodyVfx: '0', gasBodyVfx: '0', powderBodyVfx: enabled ? '1' : '0',
+    volumeVfx: '0', liquidBodyVfx: '0', liquidSurfaceVfx: '0',
+    gasBodyVfx: '0', powderBodyVfx: enabled ? '1' : '0',
   });
   await cdp.send('Page.navigate', { url: `${AUDIT_BASE_URL}?${query}` });
   await waitFor(() => evaluate(cdp, `(() => {
@@ -22638,6 +22928,7 @@ async function navigatePowderBodyVfxState(cdp, mode, scale, enabled, label) {
       && parameters.get('renderLook') === 'realistic'
       && parameters.get('volumeVfx') === '0'
       && parameters.get('liquidBodyVfx') === '0'
+      && parameters.get('liquidSurfaceVfx') === '0'
       && parameters.get('gasBodyVfx') === '0'
       && parameters.get('powderBodyVfx') === ${JSON.stringify(enabled ? '1' : '0')}
       && Boolean(window.__ANIFOR_INPUT_AUDIT__);
@@ -22654,6 +22945,7 @@ async function navigatePowderBodyVfxState(cdp, mode, scale, enabled, label) {
       bloomBacking: canvas.dataset.bloomBacking,
       volumeVfx: canvas.dataset.volumeVfx,
       liquidBodyVfx: canvas.dataset.liquidBodyVfx,
+      liquidSurfaceVfx: canvas.dataset.liquidSurfaceVfx,
       gasBodyVfx: canvas.dataset.gasBodyVfx,
       powderBodyVfx: canvas.dataset.powderBodyVfx,
     } : undefined;
@@ -22663,6 +22955,7 @@ async function navigatePowderBodyVfxState(cdp, mode, scale, enabled, label) {
     && hdrPipeline?.bloomBacking === expectedBloom
     && hdrPipeline?.volumeVfx === 'inactive'
     && hdrPipeline?.liquidBodyVfx === 'inactive'
+    && hdrPipeline?.liquidSurfaceVfx === 'inactive'
     && hdrPipeline?.gasBodyVfx === 'inactive'
     && hdrPipeline?.powderBodyVfx === (enabled ? 'active' : 'inactive'),
   `E05 ${label} ${scale}x HDR/powder-body state resolved incorrectly (${JSON.stringify(hdrPipeline)})`);
@@ -22684,7 +22977,8 @@ async function navigatePowderLightVfxState(cdp, mode, scale, enabled, label) {
     scene: 'render-lab', inputAudit: '1', blankAudit: '1', auditStage: 'blank',
     powderLightVfxAudit: '1', renderScale: String(scale), renderLook: 'realistic',
     // E06 compares its one selector on top of the accepted E02/E05 body base.
-    volumeVfx: '1', powderBodyVfx: '1', liquidBodyVfx: '0', gasBodyVfx: '0',
+    volumeVfx: '1', powderBodyVfx: '1', liquidBodyVfx: '0', liquidSurfaceVfx: '0',
+    gasBodyVfx: '0',
     powderLightVfx: enabled ? '1' : '0',
   });
   await cdp.send('Page.navigate', { url: `${AUDIT_BASE_URL}?${query}` });
@@ -22700,6 +22994,7 @@ async function navigatePowderLightVfxState(cdp, mode, scale, enabled, label) {
       && parameters.get('volumeVfx') === '1'
       && parameters.get('powderBodyVfx') === '1'
       && parameters.get('liquidBodyVfx') === '0'
+      && parameters.get('liquidSurfaceVfx') === '0'
       && parameters.get('gasBodyVfx') === '0'
       && parameters.get('powderLightVfx') === ${JSON.stringify(enabled ? '1' : '0')}
       && typeof window.__ANIFOR_INPUT_AUDIT__?.preparePowderLightVfxFixture === 'function';
@@ -22738,6 +23033,7 @@ async function navigatePowderLightVfxState(cdp, mode, scale, enabled, label) {
       look: canvas.dataset.renderLook, state: canvas.dataset.hdrPipeline,
       reason: canvas.dataset.hdrPipelineReason, bloomBacking: canvas.dataset.bloomBacking,
       volumeVfx: canvas.dataset.volumeVfx, liquidBodyVfx: canvas.dataset.liquidBodyVfx,
+      liquidSurfaceVfx: canvas.dataset.liquidSurfaceVfx,
       gasBodyVfx: canvas.dataset.gasBodyVfx, powderBodyVfx: canvas.dataset.powderBodyVfx,
       powderLightVfx: canvas.dataset.powderLightVfx,
     } : undefined;
@@ -22746,6 +23042,7 @@ async function navigatePowderLightVfxState(cdp, mode, scale, enabled, label) {
   assert(hdrPipeline?.look === 'realistic' && hdrPipeline?.state === 'active'
     && hdrPipeline?.bloomBacking === expectedBloom && hdrPipeline?.volumeVfx === 'active'
     && hdrPipeline?.powderBodyVfx === 'active' && hdrPipeline?.liquidBodyVfx === 'inactive'
+    && hdrPipeline?.liquidSurfaceVfx === 'inactive'
     && hdrPipeline?.gasBodyVfx === 'inactive'
     && hdrPipeline?.powderLightVfx === (enabled ? 'active' : 'inactive'),
   `E06 ${label} ${scale}x HDR/powder-light state resolved incorrectly (${JSON.stringify(hdrPipeline)})`);
@@ -22803,6 +23100,37 @@ async function sampleVolumeVfxCanvasAlphaSupport(cdp) {
       supported += support;
     }
     return { width: copy.width, height: copy.height, alphaSignature, supportSignature, alphaSum, supported };
+  })()`);
+}
+
+/** Full normal-detail RGB digest for E08's exact off -> on -> off contract. */
+async function sampleLiquidSurfaceVfxCanvasRgbDigest(cdp) {
+  return evaluate(cdp, `(() => {
+    const canvas = document.querySelector('canvas.semantic-field-canvas');
+    if (!(canvas instanceof HTMLCanvasElement)) throw new Error('E08 semantic field canvas unavailable');
+    const copy = document.createElement('canvas');
+    copy.width = canvas.width;
+    copy.height = canvas.height;
+    const context = copy.getContext('2d', { willReadFrequently: true });
+    if (!context) throw new Error('E08 RGB digest sampler unavailable');
+    context.drawImage(canvas, 0, 0);
+    const pixels = context.getImageData(0, 0, copy.width, copy.height).data;
+    let signature = 2166136261;
+    let redSum = 0;
+    let greenSum = 0;
+    let blueSum = 0;
+    for (let offset = 0; offset < pixels.length; offset += 4) {
+      const red = pixels[offset];
+      const green = pixels[offset + 1];
+      const blue = pixels[offset + 2];
+      signature = Math.imul(signature ^ red, 16777619) >>> 0;
+      signature = Math.imul(signature ^ green, 16777619) >>> 0;
+      signature = Math.imul(signature ^ blue, 16777619) >>> 0;
+      redSum += red;
+      greenSum += green;
+      blueSum += blue;
+    }
+    return { width: copy.width, height: copy.height, signature, redSum, greenSum, blueSum };
   })()`);
 }
 
