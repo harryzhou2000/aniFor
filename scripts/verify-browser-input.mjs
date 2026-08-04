@@ -19218,6 +19218,10 @@ async function restartEightXAuditContext(cdp, dpr, expectedCanvas, batch) {
   assertToolboxGeometry(geometry, `renderScale=8 ${batch} batch WebGL`, DESKTOP_TOOL_FILTER_HEIGHT);
   assertCanvasRectsEqual(expectedCanvas, geometry.canvas,
     `renderScale=8 ${batch} fresh-context CSS geometry`);
+  const presentationTiming = await auditWebGLPresentationTiming(cdp, 1, 12_000, 30_000, 1);
+  assert(presentationTiming.source === 'gpu-query' || presentationTiming.source === 'gpu-fence'
+    || presentationTiming.source === 'gpu-finish',
+  `renderScale=8 ${batch} batch did not complete its warm-up frame (${JSON.stringify(presentationTiming)})`);
   return { geometry, backend };
 }
 
