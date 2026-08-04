@@ -6265,7 +6265,7 @@ void main() {
     color += (vec3(1.0) - clamp(color, 0.0, 1.0))
       * liquidFresnelKey * liquidFresnelStrength;
     color += mix(reflectedEnvironment, edgeTint, 0.42)
-      * liquidFresnelStrength * (0.18 + oily * 0.04);
+      * liquidFresnelStrength * (0.18 + aqueous * 0.06 + oily * 0.04);
     // Water's broad body needs a continuous, sky-facing top shoulder at fit
     // view. Reuse the existing connected top lip, Fresnel, and low-frequency
     // sheen rather than a new wave, field, or alpha decision. Oil/Acid/Lava,

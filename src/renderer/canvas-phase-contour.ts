@@ -247,12 +247,21 @@ export function applyCanvasLiquidFresnelShell(
     : optics === RenderOptics.MetallicLiquid ? 1.4
     : optics === RenderOptics.ViscousLiquid ? 1.1 : 1;
   const keyResponse = (key + innerTransmission) * familyKeyGain;
+  // The normal WebGL path carries a small sky/environment leg in this same
+  // aqueous Fresnel shell. Mirror that restrained cool lift here without
+  // changing the Hermite density, alpha, or family-key response; dense cores
+  // and every non-aqueous contour retain their existing behaviour.
+  const aqueousEnvironmentGain = optics === RenderOptics.Aqueous
+    ? (key + innerTransmission) * 0.10 : 0;
   const red = originalRed + (255 - originalRed) * keyRed * keyResponse
-    - originalRed * (shadowRed * outerShadow + absorptionRed * absorption);
+    - originalRed * (shadowRed * outerShadow + absorptionRed * absorption)
+    + (255 - originalRed) * 0.28 * aqueousEnvironmentGain;
   const green = originalGreen + (255 - originalGreen) * keyGreen * keyResponse
-    - originalGreen * (shadowGreen * outerShadow + absorptionGreen * absorption);
+    - originalGreen * (shadowGreen * outerShadow + absorptionGreen * absorption)
+    + (255 - originalGreen) * 0.68 * aqueousEnvironmentGain;
   const blue = originalBlue + (255 - originalBlue) * keyBlue * keyResponse
-    - originalBlue * (shadowBlue * outerShadow + absorptionBlue * absorption);
+    - originalBlue * (shadowBlue * outerShadow + absorptionBlue * absorption)
+    + (255 - originalBlue) * aqueousEnvironmentGain;
   pixels[offset] = clampByte(Math.max(originalRed - 18, Math.min(originalRed + 18, red)));
   pixels[offset + 1] = clampByte(
     Math.max(originalGreen - 18, Math.min(originalGreen + 18, green)),
