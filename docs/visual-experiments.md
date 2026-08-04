@@ -37,8 +37,10 @@ An exhaustive single-session `--scale-eight-only` run cleared the broad visual
 atlas, deep zoom, liquid identity, and the dedicated earthen-powder fixture, but
 eventually exhausted its 30-second live-frame watchdog when it reached a later
 stateful fixture after more than forty minutes of forced 15-million-fragment
-captures. A clean SPNG state audit passes in both backends. This is therefore a
-long-session release-gate issue to resolve by batching independent 8x fixture
-groups into fresh promoted contexts; it is not evidence of an SPNG/material
-visual regression. Do not publish from this observation alone—the full gate
-must be green after that batching work.
+captures. A clean SPNG state audit passes in both backends. The release verifier
+now runs that independent retained-state/recovery tail in a fresh promoted 8x
+context, while asserting unchanged CSS geometry and true 4896x3072 backing at
+the seam. Its screenshot hand-off also has its own short compositor bound after
+the mandatory 30-second GPU-fence deadline has signalled. The focused 8x powder
+gate has passed with this policy. Do not publish from this observation alone—the
+batched complete gate must still be green.
