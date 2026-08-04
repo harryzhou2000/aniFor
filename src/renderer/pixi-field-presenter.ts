@@ -9455,16 +9455,23 @@ export class PixiFieldPresenter {
   }
 
   private renderApplication(): void {
-    if (this.outputScale === 8 && this.renderFence) {
+    // An audit timing fence is also a real direct-8x presentation fence. Do
+    // not submit a second ordinary fence for the same 15M-fragment frame: on
+    // SwiftShader the timing fence can signal while that redundant sibling
+    // remains pending indefinitely. Later mutations stay latest-wins queued
+    // until whichever single owner fence retires.
+    this.pollWebGLTimingFence();
+    if (this.outputScale === 8 && (this.renderFence || this.webGLTimingFence)) {
       this.renderQueued = true;
       if (!this.prepareEightXRender()) return;
+      if (this.webGLTimingFence) return;
     }
     // A completed fence has released the only frame in flight. Its queued
     // mutation is being submitted below, so do not let the next fence poll
     // mistake it for another update and redraw the 15M-fragment target again.
     if (this.outputScale === 8) this.renderQueued = false;
     this.renderApplicationNow();
-    if (this.outputScale === 8) this.insertEightXRenderFence();
+    if (this.outputScale === 8 && !this.webGLTimingFence) this.insertEightXRenderFence();
   }
 
   private renderApplicationNow(): void {
@@ -9789,12 +9796,18 @@ export class PixiFieldPresenter {
     catch { status = gl.WAIT_FAILED; }
     if (status === gl.TIMEOUT_EXPIRED) return false;
     const started = this.webGLTimingFenceStartedAt;
+    const redraw = this.outputScale === 8 && this.renderQueued;
     this.releaseWebGLTimingFence();
     this.recordWebGLTimingSample(
       status === gl.ALREADY_SIGNALED || status === gl.CONDITION_SATISFIED
         ? performance.now() - started
         : Number.NaN,
     );
+    // The timing fence is the sole 8x frame owner for audit-submitted draws.
+    // Consume one coalesced semantic/style mutation only after it signals.
+    if (redraw) requestAnimationFrame(() => {
+      if (!this.destroyed && !this.contextLost && this.renderQueued) this.renderApplication();
+    });
     return true;
   }
 
