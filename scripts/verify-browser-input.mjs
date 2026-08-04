@@ -14532,6 +14532,14 @@ async function auditRenderScaleEight(cdp, dpr, powderOnly = false) {
   stage('vibr-state-ready');
   const poloStateGraphics = await auditEightXPoloStateGraphics(cdp, geometry.canvas);
   stage('polo-state-ready');
+  // SPNG begins a separate retained-state fixture with its own dense topology
+  // and off/on/off captures.  Re-promote before it so a completed POLO frame
+  // cannot occupy the single true-8x presentation slot while SPNG establishes
+  // its first semantic scene.
+  ({ geometry, backend } = await restartEightXAuditContext(
+    cdp, dpr, geometry.canvas, 'stateful-spng',
+  ));
+  stage('spng-context-ready');
   const spngStateGraphics = await auditEightXSpngStateGraphics(cdp, geometry.canvas);
   stage('spng-state-ready');
   const gelStateGraphics = await auditEightXGelStateGraphics(cdp, geometry.canvas);
