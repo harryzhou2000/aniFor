@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
   DEFAULT_RENDER_LOOK, resolveGasBodyVfxEnabled, resolveLiquidBodyVfxEnabled,
-  resolvePowderBodyVfxEnabled, resolveRenderLook, resolveVolumeVfxEnabled,
+  resolvePowderBodyVfxEnabled, resolvePowderLightVfxEnabled, resolveRenderLook,
+  resolveVolumeVfxEnabled,
 } from './render-look';
 
 describe('resolveRenderLook', () => {
@@ -56,6 +57,18 @@ describe('resolveRenderLook', () => {
     )).toBe(true);
     expect(resolvePowderBodyVfxEnabled(
       'neon-lab', '?volumeVfx=1&powderBodyVfx=off',
+    )).toBe(false);
+  });
+
+  it('lets powder-light VFX follow the preset or override broad volume styling', () => {
+    expect(resolvePowderLightVfxEnabled('classic', '?powderLightVfx=on')).toBe(false);
+    expect(resolvePowderLightVfxEnabled('realistic', '')).toBe(true);
+    expect(resolvePowderLightVfxEnabled('realistic', '?volumeVfx=0')).toBe(false);
+    expect(resolvePowderLightVfxEnabled(
+      'realistic', '?volumeVfx=0&powderLightVfx=on',
+    )).toBe(true);
+    expect(resolvePowderLightVfxEnabled(
+      'neon-lab', '?volumeVfx=1&powderLightVfx=off',
     )).toBe(false);
   });
 });

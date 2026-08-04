@@ -29,6 +29,7 @@
     "audit:vfx:liquid-body": "npm run build && node scripts/verify-browser-input.mjs --liquid-body-vfx-only --webgl-only --production-bundle --capture-dpr=1",
     "audit:vfx:gas-body": "npm run build && node scripts/verify-browser-input.mjs --gas-body-vfx-only --webgl-only --production-bundle --capture-dpr=1",
     "audit:vfx:powder-body": "npm run build && node scripts/verify-browser-input.mjs --powder-body-vfx-only --webgl-only --production-bundle --capture-dpr=1",
+    "audit:vfx:powder-light": "npm run build && node scripts/verify-browser-input.mjs --powder-light-vfx-only --webgl-only --production-bundle --capture-dpr=1",
     "audit:8x": "node scripts/verify-browser-input.mjs --scale-eight-only",
     "audit:powder:8x": "npm run build && node scripts/verify-browser-input.mjs --eight-powder-only --production-bundle",
     "audit:spng:8x": "npm run build && node scripts/verify-browser-input.mjs --eight-spng-only --production-bundle",

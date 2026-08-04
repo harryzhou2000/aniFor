@@ -89,9 +89,26 @@ off→on→off repetition; and 1×/2×/4× geometry are release contracts in
 triangular cadence, so do not raise the accepted amplitude without a new
 normal-view visual review. Capability/runtime HDR fallback must disable
 `uPowderBodyVfx`; `FIELD_EIGHT_X_FRAGMENT` must not declare or use it, and true
-8× must report E05 inactive. The next experiment is bounded local-light
-transport from the existing emission field, followed by velocity-aware gas
-motion if it can preserve E04's stable topology.
+8× must report E05 inactive.
+
+E06 is the accepted first dry-powder local-light layer, independently measurable
+with `?powderLightVfx=0|1`. Normal 1×–4× WebGL may reuse only the existing centre
+emission sample and the strict E05 deep/dry/stable/authoritative Smooth-body
+gate. Preferentially lift the weak field tail with the accepted endpoint-preserving root blend,
+carry the current pigment cadence through the added spectrum, and retain the
+bounded depth/slope attenuation; this gives Fire/ELEC-facing Sand, Clay, and
+Concrete a shallow coloured shoulder without a hot rim or flat wash. Add no
+sample, texture, field, pass, target, upload, allocation, clock, output-scale,
+alpha/support/silhouette/ownership, or physics decision. Unlit fixture cores beyond field reach, sources,
+air gaps, authored holes, fine columns, isolated powder, wet suspension, walls,
+Local, and square Grains are exact no-ops; warm/cool direction, byte-exact
+off→on→off repetition, bounded 3–10-byte peaks, and 97–103% retained local
+microchroma are release contracts in `npm run audit:vfx:powder-light`. E02's
+focused audit must explicitly pin E06 off. Capability/runtime HDR fallback must
+disable `uPowderLightVfx`; `FIELD_EIGHT_X_FRAGMENT` must neither declare nor use
+it, and true 8× must report E06 inactive. Freeze the accepted shoulder amplitude
+until a new normal-view review. The next visual experiment is velocity-aware
+gas motion, provided it preserves E04's stable field-owned topology.
 
 ## CodeGraph
 

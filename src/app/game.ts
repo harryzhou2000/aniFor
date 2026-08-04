@@ -21,6 +21,9 @@ import {
   prepareSolidFieldLightingAuditFixture, prepareSolidOpticalDepthAuditFixture,
   toggleDenseSolidAuditProbe,
 } from './browser-input-audit';
+import {
+  POWDER_LIGHT_VFX_AUDIT, preparePowderLightVfxFixture,
+} from './powder-light-vfx-audit';
 import { navigateToRenderScale } from './render-scale-navigation';
 import {
   MATERIAL_ATLAS, materialAtlasAuditRequested, prepareMaterialAtlasAuditFixture,
@@ -645,6 +648,11 @@ export class Game {
       },
       prepareSolidFieldLightingFixture: () => {
         prepareSolidFieldLightingAuditFixture(this.simulation);
+      },
+      powderLightVfxFixture: () => POWDER_LIGHT_VFX_AUDIT,
+      preparePowderLightVfxFixture: () => {
+        preparePowderLightVfxFixture(this.simulation);
+        this.renderer.invalidateDynamicPresentation();
       },
       prepareContourStressFixture: () => { prepareContourStressAuditFixture(this.simulation); },
       toggleDenseSolidProbe: () => {

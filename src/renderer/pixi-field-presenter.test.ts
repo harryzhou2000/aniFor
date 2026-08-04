@@ -218,10 +218,23 @@ describe('Pixi presenter startup configuration', () => {
       '        // This is intentionally stricter than a generic settled-powder',
       powderBodyVfxStart,
     );
+    const powderLightCarrierStart = powder.indexOf(
+      '        powderLightBodyGate = powderBodyGate',
+    );
+    const powderLightCarrierEnd = powder.indexOf(
+      '        // Rough granular bodies need a little more dense-core absorption',
+      powderLightCarrierStart,
+    );
+    const powderLightVfxStart = powder.indexOf('    // E06:', powderBodyVfxEnd);
+    const powderLightVfxEnd = powder.indexOf(
+      '    color += fieldLightContribution;', powderLightVfxStart,
+    );
     const gasVfx = gas.slice(gasVfxStart, gasVfxEnd);
     const liquidVfx = liquid.slice(liquidVfxStart, liquidVfxEnd);
     const powderVfx = powder.slice(powderVfxStart, powderVfxEnd);
     const powderBodyVfx = powder.slice(powderBodyVfxStart, powderBodyVfxEnd);
+    const powderLightCarrier = powder.slice(powderLightCarrierStart, powderLightCarrierEnd);
+    const powderLightVfx = powder.slice(powderLightVfxStart, powderLightVfxEnd);
 
     expect(eightStart).toBeGreaterThanOrEqual(0);
     expect(normalStart).toBeGreaterThan(eightStart);
@@ -234,10 +247,12 @@ describe('Pixi presenter startup configuration', () => {
     expect(normal).toContain('uniform float uGasBodyVfx;');
     expect(normal).toContain('uniform float uLiquidBodyVfx;');
     expect(normal).toContain('uniform float uPowderBodyVfx;');
+    expect(normal).toContain('uniform float uPowderLightVfx;');
     expect(eight).not.toContain('uVolumeVfx');
     expect(eight).not.toContain('uGasBodyVfx');
     expect(eight).not.toContain('uLiquidBodyVfx');
     expect(eight).not.toContain('uPowderBodyVfx');
+    expect(eight).not.toContain('uPowderLightVfx');
 
     // Gas stays field-owned: its independent E04 selector reuses the
     // established mass/curvature/scatter scalars and never samples or assigns
@@ -297,6 +312,39 @@ describe('Pixi presenter startup configuration', () => {
     expect(powderBodyVfx).not.toContain('gl_FragCoord');
     expect(powderBodyVfx).not.toMatch(/\balpha\s*[+*]?=/);
 
+    expect(powderLightCarrierStart).toBeGreaterThan(0);
+    expect(powderLightCarrierStart).toBeLessThan(powderVfxStart);
+    expect(powderLightCarrierEnd).toBeGreaterThan(powderLightCarrierStart);
+    expect(powderLightCarrier).toContain('powderBodyGate');
+    expect(powderLightCarrier).toContain('step(0.5, halo)');
+    expect(powderLightCarrier).toContain('step(0.5, wall)');
+    expect(powderLightCarrier).toContain('step(0.5, wallOnly)');
+    expect(powderLightCarrier).toContain('step(0.5, emissionOnly)');
+    expect(powderLightCarrier).toContain('step(0.01, powderSuspensionCohesion)');
+    expect(powderLightCarrier).not.toContain('texture(');
+    expect(powderLightCarrier).not.toMatch(/\balpha\s*[+*]?=/);
+
+    // E06 recomposes the already-present centre emission contribution instead
+    // of adding a powder sampler or touching any other phase. Its three live
+    // scalars originate in the strict stable-body proof above.
+    expect(powderLightVfxStart).toBeGreaterThan(powderBodyVfxEnd);
+    expect(powderLightVfxEnd).toBeGreaterThan(powderLightVfxStart);
+    expect(powderLightVfx).toContain('uPowderLightVfx > 0.5');
+    expect(powderLightVfx).toContain('powderLightBodyGate > 0.001');
+    expect(powderLightVfx).toContain('powderLightBodySlope');
+    expect(powderLightVfx).toContain('powderLightBodyDepth');
+    expect(powderLightVfx).toContain('mix(lightReach, sqrt(lightReach), 0.65)');
+    expect(powderLightVfx).toContain('emissionState.rgb');
+    expect(powderLightVfx).toContain('color / max(base, vec3(0.08))');
+    expect(powderLightVfx).toContain('vec3(0.72), vec3(1.28)');
+    expect(powderLightVfx).toContain('powderLightContribution = fieldLightContribution');
+    expect(powderLightVfx).toContain('vividColor(emissionState.rgb, 1.10), vec3(0.0)');
+    expect(powderLightVfx).not.toContain('texture(');
+    expect(powderLightVfx).not.toContain('uTime');
+    expect(powderLightVfx).not.toContain('gl_FragCoord');
+    expect(powderLightVfx).not.toMatch(/\balpha\s*[+*]?=/);
+    expect(normal.match(/texture\(\s*uEmissionTexture/g)).toHaveLength(7);
+
     // Capability/initialization and first-render failures must turn every HDR
     // arithmetic family off before continuing with the single-pass scene.
     expect(source.match(/this\.uniforms\.uniforms\.uHDRVfx = 0;/g)).toHaveLength(2);
@@ -304,13 +352,16 @@ describe('Pixi presenter startup configuration', () => {
     expect(source.match(/this\.uniforms\.uniforms\.uGasBodyVfx = 0;/g)).toHaveLength(2);
     expect(source.match(/this\.uniforms\.uniforms\.uLiquidBodyVfx = 0;/g)).toHaveLength(2);
     expect(source.match(/this\.uniforms\.uniforms\.uPowderBodyVfx = 0;/g)).toHaveLength(2);
+    expect(source.match(/this\.uniforms\.uniforms\.uPowderLightVfx = 0;/g)).toHaveLength(2);
     expect(source).toContain("get('volumeVfxAudit') === '1'");
     expect(source).toContain("get('gasBodyVfxAudit') === '1'");
     expect(source).toContain("get('liquidBodyVfxAudit') === '1'");
     expect(source).toContain("get('powderBodyVfxAudit') === '1'");
+    expect(source).toContain("get('powderLightVfxAudit') === '1'");
     expect(source).toContain('const gasBodyVfxEnabled = outputScale < 8');
     expect(source).toContain('const liquidBodyVfxEnabled = outputScale < 8');
     expect(source).toContain('const powderBodyVfxEnabled = outputScale < 8');
+    expect(source).toContain('const powderLightVfxEnabled = outputScale < 8');
   });
 
   it('advances fallback presentation timing only after its GPU fence signals', () => {

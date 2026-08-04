@@ -21,7 +21,7 @@ Immediate priorities are:
 
 ### Active execution emphasis
 
-### Current HDR, field-aware volume, E03 liquid, E04 gas, and E05 powder checkpoint
+### Current HDR, field-aware volume, E03 liquid, E04 gas, E05 powder, and E06 local-light checkpoint
 
 - The active visual goal is now an explicit experiment program rather than a
   one-off shader tweak: improve powder, liquid, and gas depth, material beauty,
@@ -66,6 +66,17 @@ Immediate priorities are:
   texture read, field, upload, pass, target, allocation, time, output-scale,
   alpha/support/ownership/silhouette, or physics decision; it is absent and
   reported inactive on true 8×.
+- E06 is the accepted first dry-powder local-light refinement.
+  `?powderLightVfx=0|1` isolates it while ordinary non-Classic use follows the
+  broad volume preset. Normal 1×–4× WebGL reuses the one existing centre
+  emission sample and the strict E05 deep/dry/stable authoritative Smooth-body
+  proof. An endpoint-preserving root blend preferentially lifts the weak field tail;
+  existing body depth/slope restrains the shoulder, and a bounded ratio to
+  canonical albedo carries the current pigment cadence through the warm/cool
+  spectrum. It adds no sample, texture, field, upload, pass, target, allocation,
+  clock, output-scale, alpha/support/ownership/silhouette, or physics decision.
+  Capability/runtime fallback disables it, and it is absent from the compact
+  true-8× shader.
 - `npm run audit:vfx:volume` passes production WebGL at 1×/2×/4× through
   `off→on→off`: exact CSS/backing geometry, semantic/staging digests, nonzero
   raw canvas alpha/support hashes, repeat captures, and zero browser errors.
@@ -113,7 +124,7 @@ Immediate priorities are:
   `/tmp/anifor-e04-showcase-gas-compare.png`,
   `/tmp/anifor-e04-showcase-gas-diff-x14.png`, and
   `/tmp/anifor-e04-full.json`.
-- Focused HDR/E02/E03/E04/E05 production audits now start on the existing blank
+- Focused HDR/E02/E03/E04/E05/E06 production audits now start on the existing blank
   render-lab stage before navigating their own exact fixtures. This avoids an
   unnecessary canonical warm-up and does not narrow any measured state.
 - `npm run audit:vfx:powder-body` passes production WebGL at 1×/2×/4× through
@@ -128,18 +139,37 @@ Immediate priorities are:
   `/tmp/anifor-e05-showcase-on-v3.png`,
   `/tmp/anifor-e05-powder-compare-v3.png`, and
   `/tmp/anifor-e05-showcase-diff-v3-x12.png`.
-- The next active experiment is bounded local-light transport from the existing
-  emission field across the accepted powder/liquid/gas bodies, followed by a
-  velocity-aware gas comparison if it preserves E04's stable topology.
+- The dedicated E06 fixture and production gate exercise Fire/ELEC-facing Sand,
+  Clay, and Concrete alongside exact sources, air gaps, authored holes, fine
+  structures, isolated Sand, wet Sand/Water suspension, native-wall, wall-free,
+  Local, and square-Grains controls. The initially clean but rim-only candidate
+  was rejected by visual review. The accepted revision extends the useful
+  shoulder roughly three world cells farther inward while slightly lowering the
+  immediate rim energy; at 2× its target response is `0.86–3.24` RGB RMS with
+  `3–5`-byte peaks and `99.27–102.60%` retained local microchroma. The 4× visual
+  review found a roughly 12-CSS-pixel coloured shoulder with a broad neutral
+  core; Concrete's worst `97.47%` warm-side residual remains visibly stippled,
+  not blurred or uniformly washed. The fixture's unlit cores beyond field reach and
+  every protected control are byte-exact, repeated-off captures are exact, and
+  browser errors are zero. The complete 1×/2×/4× matrix spans `0.66–3.27` RGB
+  RMS, `3–5`-byte peaks, and `97.47–102.60%` local microchroma with exact
+  Grains/Local references. Evidence is retained at
+  `/tmp/anifor-e06f-powder-light-4x-disabled.png`,
+  `/tmp/anifor-e06f-powder-light-4x-enabled.png`,
+  `/tmp/anifor-e06f-concrete-compare-nearest-4x.png`, and
+  `/tmp/anifor-e06f-concrete-diff-x24-nearest-4x.png`.
+- The next active visual experiment is velocity-aware gas motion, provided it
+  preserves E04's deterministic, field-owned topology and does not turn sparse
+  authored gaps back into particle beads or time-varying support.
 - Final checkpoint validation passes TypeScript, the 19-asset production/Pages
-  closure, the real E02/E03/E04/E05 WebGL off→on→off gates, and the dedicated true-8×
+  closure, the real E02/E03/E04/E05/E06 WebGL off→on→off gates, and the dedicated true-8×
   powder gate at exact `4896×3072`; the final completed GPU-fence timing sample
-  is `6.18 s`, below the strict `10 s` p90 and `12 s` hard-frame ceilings.
+  is `6.04 s`, below the strict `10 s` p90 and `12 s` hard-frame ceilings.
   After Smooth, Local, and Grains captures,
   its blank compositing baseline starts on a fresh true-8× page and reuses the
   completed warm-up fence; this avoids a proven SwiftShader fourth-frame stall
   without relaxing the 30-second renderer deadline or any material assertion.
-  The complete serial suite passes `163` files / `1028` tests.
+  The complete serial suite passes `164` files / `1032` tests.
   Vitest now preserves its default exclusions and also ignores the
   project-local `.toolchains` tree, so a naked full-suite run cannot execute
   upstream emsdk fixtures as application tests.

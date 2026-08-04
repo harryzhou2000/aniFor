@@ -37,7 +37,7 @@ import {
 import { HDRVfxPipeline, type HDRPipelineInfo } from './hdr-vfx-pipeline';
 import {
   resolveGasBodyVfxEnabled, resolveLiquidBodyVfxEnabled, resolvePowderBodyVfxEnabled,
-  resolveRenderLook, resolveVolumeVfxEnabled,
+  resolvePowderLightVfxEnabled, resolveRenderLook, resolveVolumeVfxEnabled,
 } from './render-look';
 interface PresenterViewport { readonly width: number; readonly height: number }
 
@@ -3205,6 +3205,7 @@ uniform float uVolumeVfx;
 uniform float uGasBodyVfx;
 uniform float uLiquidBodyVfx;
 uniform float uPowderBodyVfx;
+uniform float uPowderLightVfx;
 uniform float uHighQuality;
 uniform float uAnalyticLightingQuality;
 uniform float uGasFieldLighting;
@@ -5788,6 +5789,13 @@ void main() {
   float alpha;
   vec3 color;
   float liquidLightResponse = 0.0;
+  // E06 carries only the smallest three scalars from the strict settled-body
+  // proof to the terminal field-light compositor. Keeping the existing centre
+  // emission sample there avoids another texture read or a branch-local GLSL
+  // value escaping its scope.
+  float powderLightBodyGate = 0.0;
+  float powderLightBodyDepth = 0.0;
+  float powderLightBodySlope = 0.0;
   vec2 liquidBackdropOffset = vec2(0.0);
   if (wallOnly > 0.5) {
     alpha = smoothstep(0.30, 0.70, density) * 0.96;
@@ -6860,6 +6868,14 @@ void main() {
         float powderBodyVolumeDepth = max(
           powderBodyDensity, powderBodySupportDepth * 0.88
         );
+        powderLightBodyGate = powderBodyGate
+          * (1.0 - step(0.5, halo))
+          * (1.0 - step(0.5, wall))
+          * (1.0 - step(0.5, wallOnly))
+          * (1.0 - step(0.5, emissionOnly))
+          * (1.0 - step(0.01, powderSuspensionCohesion));
+        powderLightBodyDepth = powderBodyVolumeDepth;
+        powderLightBodySlope = powderDirectedSlope;
         // Rough granular bodies need a little more dense-core absorption than
         // crystalline/sooty/metallic powders. This only deepens settled Smooth
         // Sand/Clay/Concrete through the existing stable body gate; loose
@@ -8303,7 +8319,50 @@ void main() {
       : (materialEmissive ? 0.24 : surfaceResponse));
     // Opaque matter receives coloured light through its reconstructed relief;
     // empty space keeps the separate emission halo, avoiding a flat milky wash.
-    color += emissionState.rgb * lightReach * lightResponse;
+    vec3 fieldLightContribution = emissionState.rgb * lightReach * lightResponse;
+    // E06: recompose the generic exposed-powder tint into a restrained bulk
+    // bounce only after the same dry, exact-material, stable Smooth body proof
+    // used by E02/E05. Nearby field intensity owns locality and colour; the
+    // existing macro slope shapes the crown while depth attenuates the core.
+    // This extends the already-present centre-sample contribution in place—it
+    // does not sample or composite a second light—and changes RGB only.
+    // Local/Grains, motion, holes, thin structures, traits, walls, wet
+    // suspension, reconstructed support, emissive matter, and every
+    // non-powder phase remain exact no-ops.
+    if (uPowderLightVfx > 0.5 && powderLightBodyGate > 0.001) {
+      float powderLightCrown = max(powderLightBodySlope, 0.0);
+      // Preferentially lift the weak tail of the already-sampled compact field
+      // so light enters several stable body cells instead of reading as a rim.
+      // The blended root keeps both endpoints fixed while avoiding a shoulder
+      // so strong that display tonemapping compresses Concrete's fine pigment.
+      float powderLightReach = mix(lightReach, sqrt(lightReach), 0.65);
+      float powderLightTransport = min(
+        0.082,
+        powderLightReach * (
+          mix(0.052, 0.030, powderLightBodyDepth)
+            + powderLightCrown * 0.036
+        )
+      );
+      vec3 powderLightSpectrum = max(
+        vividColor(emissionState.rgb, 1.10), vec3(0.0)
+      );
+      // Derive one material-constant headroom scalar from canonical albedo.
+      // A per-channel screen blend would attenuate the very grain contrast E05
+      // protects; this broad additive spectrum leaves that local cadence intact.
+      float powderLightHeadroom = max(
+        0.0, 1.18 - max(base.r, max(base.g, base.b))
+      );
+      vec3 powderLightPigmentCarrier = clamp(
+        color / max(base, vec3(0.08)), vec3(0.72), vec3(1.28)
+      );
+      vec3 powderLightContribution = fieldLightContribution
+        + powderLightHeadroom * powderLightSpectrum * powderLightTransport
+          * powderLightPigmentCarrier;
+      fieldLightContribution = mix(
+        fieldLightContribution, powderLightContribution, powderLightBodyGate
+      );
+    }
+    color += fieldLightContribution;
   }
   if (uSparkStateStyling > 0.5 && material == 148.0) {
     color += sparkStateDelta(material, wallState.ba, fieldPosition, color);
@@ -8593,6 +8652,10 @@ export class PixiFieldPresenter {
     // retains its established powder body and does not declare this uniform.
     const powderBodyVfxEnabled = outputScale < 8
       && resolvePowderBodyVfxEnabled(renderLook);
+    // E06 is a normal-detail recomposition of the existing centre-field light.
+    // The protected compact shader retains its one established emission sample.
+    const powderLightVfxEnabled = outputScale < 8
+      && resolvePowderLightVfxEnabled(renderLook);
     // E04 follows the same normal-detail boundary as E03. The protected true
     // 8x shader deliberately has neither this uniform nor its arithmetic.
     const gasBodyVfxEnabled = outputScale < 8
@@ -8616,6 +8679,7 @@ export class PixiFieldPresenter {
       uGasBodyVfx: { value: gasBodyVfxEnabled ? 1 : 0, type: 'f32' },
       uLiquidBodyVfx: { value: liquidBodyVfxEnabled ? 1 : 0, type: 'f32' },
       uPowderBodyVfx: { value: powderBodyVfxEnabled ? 1 : 0, type: 'f32' },
+      uPowderLightVfx: { value: powderLightVfxEnabled ? 1 : 0, type: 'f32' },
       // At 8x, the supersampled analytic boundary already supplies detail. Drop
       // diagonal/ring probes so the 15M-pixel frame remains watchdog-safe.
       uHighQuality: {
@@ -8810,6 +8874,7 @@ export class PixiFieldPresenter {
       this.uniforms.uniforms.uGasBodyVfx = 0;
       this.uniforms.uniforms.uLiquidBodyVfx = 0;
       this.uniforms.uniforms.uPowderBodyVfx = 0;
+      this.uniforms.uniforms.uPowderLightVfx = 0;
       this.app.stage.addChild(this.scene);
     }
   }
@@ -8838,7 +8903,8 @@ export class PixiFieldPresenter {
             || new URLSearchParams(location.search).get('volumeVfxAudit') === '1'
             || new URLSearchParams(location.search).get('gasBodyVfxAudit') === '1'
             || new URLSearchParams(location.search).get('liquidBodyVfxAudit') === '1'
-            || new URLSearchParams(location.search).get('powderBodyVfxAudit') === '1'),
+            || new URLSearchParams(location.search).get('powderBodyVfxAudit') === '1'
+            || new URLSearchParams(location.search).get('powderLightVfxAudit') === '1'),
         resolution: outputScale, autoDensity: true, autoStart: false,
       });
     } catch (error) {
@@ -8869,6 +8935,8 @@ export class PixiFieldPresenter {
     presenter.app.canvas.dataset.liquidBodyVfx = Number(presenter.uniforms.uniforms.uLiquidBodyVfx) > 0.5
       ? 'active' : 'inactive';
     presenter.app.canvas.dataset.powderBodyVfx = Number(presenter.uniforms.uniforms.uPowderBodyVfx) > 0.5
+      ? 'active' : 'inactive';
+    presenter.app.canvas.dataset.powderLightVfx = Number(presenter.uniforms.uniforms.uPowderLightVfx) > 0.5
       ? 'active' : 'inactive';
     if (presenter.hdrPipelineInfo.reason) {
       presenter.app.canvas.dataset.hdrPipelineReason = presenter.hdrPipelineInfo.reason;
@@ -10132,12 +10200,14 @@ export class PixiFieldPresenter {
         this.uniforms.uniforms.uGasBodyVfx = 0;
         this.uniforms.uniforms.uLiquidBodyVfx = 0;
         this.uniforms.uniforms.uPowderBodyVfx = 0;
+        this.uniforms.uniforms.uPowderLightVfx = 0;
         this.app.canvas.dataset.hdrPipeline = 'inactive';
         this.app.canvas.dataset.hdrPipelineReason = 'runtime-error';
         this.app.canvas.dataset.volumeVfx = 'inactive';
         this.app.canvas.dataset.gasBodyVfx = 'inactive';
         this.app.canvas.dataset.liquidBodyVfx = 'inactive';
         this.app.canvas.dataset.powderBodyVfx = 'inactive';
+        this.app.canvas.dataset.powderLightVfx = 'inactive';
         delete this.app.canvas.dataset.bloomBacking;
         if (!this.scene.parent) this.app.stage.addChild(this.scene);
       }

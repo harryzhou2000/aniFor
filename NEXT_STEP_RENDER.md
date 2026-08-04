@@ -54,11 +54,22 @@ does not alter simulation, camera, semantic ownership, or `renderScale`.
   field, upload, pass, target, allocation, time, output-scale, alpha/support,
   ownership, silhouette, or physics decision. `?powderBodyVfx=0|1` isolates
   E05; absent that audit override it follows the non-Classic E02 volume preset.
+- **E06 — dry-powder local-light transport (accepted checkpoint):** normal
+  1×–4× WebGL reuses the existing centre emission sample and the exact E05
+  deep/dry/stable Smooth-body proof. It preferentially lifts the weak tail of that compact
+  field with an endpoint-preserving root blend, attenuates it with existing
+  body depth/slope, and carries the current pigment cadence through the added
+  warm/cool spectrum. Fire/ELEC-facing Sand, Clay, and Concrete therefore gain
+  a shallow coloured shoulder instead of a hot contour rim or flat body wash.
+  Unlit fixture cores beyond field reach, sources, gaps, holes, fine structures, isolated powder, wet
+  suspension, walls, Local, and Grains remain exact no-ops. It adds no sample,
+  texture, field, upload, pass, target, allocation, time, output-scale,
+  alpha/support/ownership/silhouette, or physics decision.
 - **Protected 8× rung:** `renderScale=8` deliberately reports
   `hdrPipeline=inactive` / `scale-8` and retains the proven direct single-mesh
   4896×3072 path. The experiment must earn a bounded 8× design rather than
   allocating a 115 MiB full-resolution float target beside that path.
-- **Current decision:** E01/E02/E03/E04/E05 remain opt-in through the non-Classic looks
+- **Current decision:** E01/E02/E03/E04/E05/E06 remain opt-in through the non-Classic looks
   until representative hardware timing and mobile thermal behavior are
   measured. E02 remains the safe family-wide baseline. E03 is accepted as the
   liquid-depth checkpoint: its fit-view crop is visibly more cohesive, retains
@@ -71,9 +82,12 @@ does not alter simulation, camera, semantic ownership, or `renderScale`.
   local pigment cadence, smooth contour, holes, thin tips, wet suspension,
   Local, and Grains remain unchanged. The triangular construction is visible
   only in amplified differences at its current strength; do not raise it into
-  an overt repeating surface pattern. These are not the final material/VFX
-  results; later work may add bounded dynamic light transport or velocity-aware
-  gas motion without replacing their stable bases.
+  an overt repeating surface pattern. E06 is accepted as the first local-light
+  checkpoint: warm/cool powder shoulders enter several cells farther than the
+  original rim-only candidate while remaining subordinate to grain pigment;
+  the fixture's unlit cores outside field reach and protected controls do not respond. Freeze this shoulder until
+  a new normal-view review. These are not the final material/VFX results;
+  velocity-aware gas motion may build on E04 without replacing its stable base.
   Sub-1.0 material colour stays on the established response; tonemapping owns
   only real HDR highlights so powder texture and liquid body contrast are not
   washed out.
@@ -127,10 +141,23 @@ disabled body at every scale, and every repeated-off comparison is byte-exact.
 Pass `--render-scale=1`, `2`, or `4` to tune one scale; true 8× rejects E05 and
 retains its protected direct shader.
 
-**Next visual experiments:** E03, E04, and E05 are the accepted liquid, gas, and
-powder depth checkpoints. Next compare bounded local-light transport from the
-existing emission field against these stable bodies, then evaluate
-velocity-aware gas motion against E04's deterministic base. Each experiment
+Run `npm run audit:vfx:powder-light` for E06. It keeps E02 and E05 enabled as
+the fixed body baseline, then reloads `powderLightVfx=0 → 1 → 0` at 1×/2×/4×.
+The dedicated paused fixture contains Fire/ELEC-facing Sand, Clay, and Concrete
+cards plus exact sources, two-cell gaps, authored holes, fine columns, isolated
+Sand, wet Sand/Water suspension, a native wall, and a wall-free blank. The gate
+requires real WebGL/HDR, exact geometry/semantics/raw alpha/support, warm/cool
+spectral direction, a non-uniform shallow shoulder, byte-exact protected
+controls and repeated-off captures, 97–103% retained local microchroma, exact
+Local/Grains references, and zero browser errors. The normal shader retains its
+seven established emission samples. The accepted 1×/2×/4× matrix measures
+`0.66–3.27` RGB RMS with `3–5`-byte peaks and `97.47–102.60%` retained local
+microchroma; every excluded control remains exact. Pass `--render-scale=1`, `2`, or `4` when
+tuning one scale; true 8× rejects E06 and retains its protected direct shader.
+
+**Next visual experiments:** E03, E04, E05, and E06 are the accepted liquid,
+gas, powder-depth, and powder-local-light checkpoints. Next evaluate
+velocity-aware gas motion against E04's deterministic field-owned base. Each experiment
 keeps its own off/on/off switch and must pass the same topology, contact, scale,
 resource, and fallback controls before it can become a preset default.
 

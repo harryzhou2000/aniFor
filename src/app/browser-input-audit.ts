@@ -60,6 +60,7 @@ import type {
 } from './botanical-lifecycle-graphics-audit';
 import type { SparkStateGraphicsAuditSnapshot } from './spark-state-graphics-audit';
 import type { PhotonSpectrumGraphicsAuditSnapshot } from './photon-spectrum-graphics-audit';
+import type { PowderLightVfxAuditSnapshot } from './powder-light-vfx-audit';
 
 export interface BrowserInputAuditApi {
   readonly version: 1;
@@ -157,6 +158,8 @@ export interface BrowserInputAuditApi {
   prepareDenseSolidFixture(): void;
   prepareSolidOpticalDepthFixture(): void;
   prepareSolidFieldLightingFixture(): void;
+  powderLightVfxFixture(): PowderLightVfxAuditSnapshot;
+  preparePowderLightVfxFixture(): void;
   prepareContourStressFixture(): void;
   toggleDenseSolidProbe(): void;
   materialAtlas(): readonly MaterialAtlasEntry[];
