@@ -20719,7 +20719,11 @@ async function captureSettledPage(cdp, label, delayMs = 900, presentationAlready
   // PNG transfer only wait for Chrome's compositor to expose that already
   // completed frame, so keep them bounded separately instead of turning a
   // healthy 29.9-second fence into a false presentation timeout.
-  const compositorDeadline = Date.now() + 10_000;
+  // GPU completion remains capped by the renderer's 30-second watchdog above.
+  // Chrome can take several rAF turns to hand a newly promoted 15M target to
+  // Page.captureScreenshot, so give that independent transfer the same bounded
+  // 30-second window rather than misclassifying a signalled frame as stalled.
+  const compositorDeadline = Date.now() + 30_000;
   // A signalled WebGL fence proves the target is ready, not that Chrome has
   // copied the canvas into the compositor surface used by Page.captureScreenshot.
   // Give that hand-off two compositor turns, discard one warm-up read, then
