@@ -5988,6 +5988,15 @@ void main() {
       gasShadeDensity, opticalDepth, gasDirectionalRelief, gasCurvature * 0.125
     ) * uGasVolumeChroma;
     color = applyGasVolumeChroma(color, gasBase, gasChroma);
+    // Canvas already turns this field-derived gradient/curvature pair into a
+    // broad billow shade. Give normal WebGL the same restrained crown/pocket
+    // exposure after its hue response: this reuses only live RGB inputs, so
+    // alpha, atmosphere support, sparse gaps, and direct-8x stay untouched.
+    float gasVolumeExposure = clamp(
+      gasDirectionalRelief * 0.075 + gasCurvature * 0.035, -0.055, 0.055
+    ) * smoothstep(0.025, 0.50, gasShadeDensity)
+      * (1.0 - opticalDepth * 0.30) * uGasVolumeChroma;
+    color *= 1.0 + gasVolumeExposure;
     if (uGasIdentityStyling > 0.5) {
       float gasIdentityStyle = floor(
         texture(uAtmosphereStyleTexture, fieldUv).r * 255.0 + 0.5

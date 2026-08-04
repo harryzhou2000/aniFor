@@ -397,6 +397,10 @@ describe('Pixi presenter startup configuration', () => {
     expect(blockEnd).toBeGreaterThan(blockStart);
     expect(block).toContain('(volumeSlope.x + volumeSlope.y) * 0.5882353');
     expect(block).toContain('gasCurvature * 0.125');
+    expect(block).toContain('float gasVolumeExposure = clamp(');
+    expect(block).toContain('gasDirectionalRelief * 0.075 + gasCurvature * 0.035');
+    expect(block).toContain('(1.0 - opticalDepth * 0.30) * uGasVolumeChroma;');
+    expect(block).toContain('color *= 1.0 + gasVolumeExposure;');
     expect(block).toContain('* uGasVolumeChroma');
     expect(helpers).toContain('dot(source, vec3(0.2126, 0.7152, 0.0722))');
     expect(helpers).toContain('vec3(0.88) - hue * 0.43');
