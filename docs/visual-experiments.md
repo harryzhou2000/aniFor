@@ -25,3 +25,20 @@ Evidence:
   --production-bundle` retains a bounded true-8x startup/timing/powder check;
   the complete `--scale-eight-only` suite remains the publication gate.
 
+## Release-gate observation
+
+The focused true-8x powder gate has completed at the required 4896x3072 backing
+with a GPU-fence result, no browser errors, distinct Smooth/Local/Grains output,
+and preserved high-zoom input. The verifier now bounds every 8x completed-frame
+poll and the compositor screenshots it owns, so an unhealthy frame cannot leave
+Chrome or the test process waiting behind an unbounded CDP request.
+
+An exhaustive single-session `--scale-eight-only` run cleared the broad visual
+atlas, deep zoom, liquid identity, and the dedicated earthen-powder fixture, but
+eventually exhausted its 30-second live-frame watchdog when it reached a later
+stateful fixture after more than forty minutes of forced 15-million-fragment
+captures. A clean SPNG state audit passes in both backends. This is therefore a
+long-session release-gate issue to resolve by batching independent 8x fixture
+groups into fresh promoted contexts; it is not evidence of an SPNG/material
+visual regression. Do not publish from this observation alone—the full gate
+must be green after that batching work.
