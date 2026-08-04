@@ -245,11 +245,13 @@ describe('Pixi presenter startup configuration', () => {
     expect(powderStart).toBeGreaterThan(liquidStart);
     expect(normal).toContain('uniform float uVolumeVfx;');
     expect(normal).toContain('uniform float uGasBodyVfx;');
+    expect(normal).toContain('uniform float uGasMotionVfx;');
     expect(normal).toContain('uniform float uLiquidBodyVfx;');
     expect(normal).toContain('uniform float uPowderBodyVfx;');
     expect(normal).toContain('uniform float uPowderLightVfx;');
     expect(eight).not.toContain('uVolumeVfx');
     expect(eight).not.toContain('uGasBodyVfx');
+    expect(eight).not.toContain('uGasMotionVfx');
     expect(eight).not.toContain('uLiquidBodyVfx');
     expect(eight).not.toContain('uPowderBodyVfx');
     expect(eight).not.toContain('uPowderLightVfx');
@@ -265,8 +267,27 @@ describe('Pixi presenter startup configuration', () => {
     expect(gasVfxEnd).toBeGreaterThan(gasVfxStart);
     expect(gasVfx).toContain('sin(dot(fieldPosition');
     expect(gasVfx).toContain('gasVfxBodySupport');
+    expect(normal).toContain('gasStyleState = texture(uAtmosphereStyleTexture, fieldUv)');
+    expect(normal.match(/texture\(uAtmosphereStyleTexture/g)).toHaveLength(1);
+    expect(gasVfx).toContain('if (uGasMotionVfx > 0.5)');
+    expect(gasVfx).toContain('floor(gasStyleState.gb * 255.0 + vec2(0.5))');
+    expect(gasVfx).toContain('smoothstep(0.45, 0.75, gasStyleState.a)');
+    expect(gasVfx).toContain('gasMotionOutward = -volumeSlope');
+    expect(gasVfx).toContain('gasMotionBillowGradient');
+    expect(gasVfx).toContain('gasMotionInteriorTone + gasMotionEdgeTone');
+    expect(gasVfx).toContain('* max(gasMotionTone, 0.0) * (32.0 / 255.0)');
+    expect(gasVfx).toContain('* vec3(-64.0, 28.0, 52.0) / 255.0');
+    expect(gasVfx).toContain('gasMotionShadowBytes = material == 87.0 ? 40.0 : 32.0');
+    expect(gasVfx).toContain('* max(-gasMotionTone, 0.0) * (gasMotionShadowBytes / 255.0)');
+    expect(gasVfx).toContain('gasMotionSpeedBytes > 0.5');
+    expect(gasVfx.indexOf('if (uGasMotionVfx > 0.5)'))
+      .toBeLessThan(gasVfx.indexOf('vec2 gasMotionBytes ='));
+    expect(gasVfx).toContain('), vec3(0.0), vec3(1.0));');
+    expect(gasVfx).toContain('(vec3(1.12) - clamp(color, 0.0, 1.12))');
+    expect(gasVfx).toContain('color -= clamp(color, 0.0, 1.0)');
     expect(gasVfx).not.toMatch(/sin\([^;\n]*uTime/);
     expect(gasVfx).not.toContain('texture(');
+    expect(gasVfx).not.toContain('state.ba');
     expect(gasVfx).not.toMatch(/\balpha\s*[+*]?=/);
 
     // Liquid has an independent E03 selector but retains the pre-existing
@@ -350,15 +371,18 @@ describe('Pixi presenter startup configuration', () => {
     expect(source.match(/this\.uniforms\.uniforms\.uHDRVfx = 0;/g)).toHaveLength(2);
     expect(source.match(/this\.uniforms\.uniforms\.uVolumeVfx = 0;/g)).toHaveLength(2);
     expect(source.match(/this\.uniforms\.uniforms\.uGasBodyVfx = 0;/g)).toHaveLength(2);
+    expect(source.match(/this\.uniforms\.uniforms\.uGasMotionVfx = 0;/g)).toHaveLength(2);
     expect(source.match(/this\.uniforms\.uniforms\.uLiquidBodyVfx = 0;/g)).toHaveLength(2);
     expect(source.match(/this\.uniforms\.uniforms\.uPowderBodyVfx = 0;/g)).toHaveLength(2);
     expect(source.match(/this\.uniforms\.uniforms\.uPowderLightVfx = 0;/g)).toHaveLength(2);
     expect(source).toContain("get('volumeVfxAudit') === '1'");
     expect(source).toContain("get('gasBodyVfxAudit') === '1'");
+    expect(source).toContain("get('gasMotionVfxAudit') === '1'");
     expect(source).toContain("get('liquidBodyVfxAudit') === '1'");
     expect(source).toContain("get('powderBodyVfxAudit') === '1'");
     expect(source).toContain("get('powderLightVfxAudit') === '1'");
     expect(source).toContain('const gasBodyVfxEnabled = outputScale < 8');
+    expect(source).toContain('const gasMotionVfxEnabled = outputScale < 8');
     expect(source).toContain('const liquidBodyVfxEnabled = outputScale < 8');
     expect(source).toContain('const powderBodyVfxEnabled = outputScale < 8');
     expect(source).toContain('const powderLightVfxEnabled = outputScale < 8');
@@ -769,10 +793,17 @@ describe('Pixi presenter startup configuration', () => {
     expect(body).toContain('vec3(-4.0, -4.0, -3.0) * support');
     expect(body).toContain('vec3(-1.0, 2.0, 4.0) * support');
     expect(body).not.toMatch(/\btexture\s*\(/);
-    expect(block).toContain('texture(uAtmosphereStyleTexture, fieldUv)');
+    expect(block).toContain('floor(gasStyleState.r * 255.0 + 0.5)');
+    expect(block).not.toContain('texture(uAtmosphereStyleTexture, fieldUv)');
     expect(block).toContain('color += gasIdentityVolumeDelta(');
     expect(source).toContain('resource: this.fieldSet.atmosphere.styleBytes');
-    expect(source).toContain("format: 'r8unorm'");
+    const styleSourceStart = source.indexOf('this.atmosphereStyleSource = new BufferImageSource({');
+    const styleSourceEnd = source.indexOf('});', styleSourceStart);
+    const styleSource = source.slice(styleSourceStart, styleSourceEnd);
+    expect(styleSourceStart).toBeGreaterThan(0);
+    expect(styleSource).toContain("format: 'rgba8unorm'");
+    expect(styleSource).toContain("alphaMode: 'no-premultiply-alpha'");
+    expect(styleSource).toContain("scaleMode: 'nearest'");
     expect(source).toContain('this.atmosphereStyleSource.update();');
     expect(source).toContain('gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1)');
     expect(source.indexOf('gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1)'))
@@ -1079,7 +1110,7 @@ describe('Pixi presenter startup configuration', () => {
     }
   });
 
-  it('keeps true-8x dense gas identity on the existing propagated R8 style field', () => {
+  it('keeps true-8x dense gas identity on the R channel of the existing packed style field', () => {
     const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
     const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');
     const eightEnd = source.indexOf('const FIELD_FRAGMENT = `', eightStart);

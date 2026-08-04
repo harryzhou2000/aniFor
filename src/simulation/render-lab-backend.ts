@@ -13,6 +13,7 @@ export class RenderLabBackend extends DeterministicBackend {
   readonly presentationFieldsDynamic = false;
   private readonly wallWorld: Uint8Array;
   private readonly temperatureWorld: Uint16Array;
+  private readonly velocityWorld: Int8Array;
   private readonly presentationStateWorld: Uint16Array;
   private readonly photonStateWorld: Uint16Array;
   private readonly dirtyWalls = new Set<number>();
@@ -21,6 +22,7 @@ export class RenderLabBackend extends DeterministicBackend {
     super(width, height);
     this.wallWorld = new Uint8Array(width * height);
     this.temperatureWorld = new Uint16Array(width * height);
+    this.velocityWorld = new Int8Array(width * height * 2);
     this.presentationStateWorld = new Uint16Array(width * height);
     this.photonStateWorld = new Uint16Array(width * height);
     this.temperatureWorld.fill(RENDER_LAB_AMBIENT_TEMPERATURE);
@@ -28,6 +30,8 @@ export class RenderLabBackend extends DeterministicBackend {
 
   walls(): Uint8Array { return this.wallWorld; }
   temperature(): Uint16Array { return this.temperatureWorld; }
+  /** Paused diagnostic particle velocity, packed as signed x/y bytes per world cell. */
+  velocity(): Int8Array { return this.velocityWorld; }
   /** Renderer-facing native-state projection used only by paused render-lab fixtures. */
   presentationState(): Uint16Array { return this.presentationStateWorld; }
   /** Independent PHOT spectrum projection, allowed to coexist with any matter owner. */
@@ -46,6 +50,31 @@ export class RenderLabBackend extends DeterministicBackend {
     const value = Math.max(0, Math.min(0xFFFF, Math.round(temperature)));
     for (let py = top; py < bottom; py++) {
       this.temperatureWorld.fill(value, py * this.width + left, py * this.width + right);
+    }
+  }
+
+  /**
+   * Sets a clipped paused velocity fixture without changing material, wall, or
+   * native-state ownership. Values use the native extracted velocity range and
+   * are rounded then saturated rather than allowing Int8Array wrapping.
+   */
+  setFixtureVelocityRect(
+    x: number, y: number, width: number, height: number, velocityX: number, velocityY: number,
+  ): void {
+    if (width <= 0 || height <= 0) return;
+    const left = Math.max(0, Math.floor(x));
+    const top = Math.max(0, Math.floor(y));
+    const right = Math.min(this.width, Math.ceil(x + width));
+    const bottom = Math.min(this.height, Math.ceil(y + height));
+    if (right <= left || bottom <= top) return;
+    const velocityXByte = clampVelocityByte(velocityX);
+    const velocityYByte = clampVelocityByte(velocityY);
+    for (let py = top; py < bottom; py++) {
+      for (let px = left; px < right; px++) {
+        const offset = (py * this.width + px) * 2;
+        this.velocityWorld[offset] = velocityXByte;
+        this.velocityWorld[offset + 1] = velocityYByte;
+      }
     }
   }
 
@@ -112,6 +141,7 @@ export class RenderLabBackend extends DeterministicBackend {
   override clear(): void {
     super.clear();
     this.temperatureWorld?.fill(RENDER_LAB_AMBIENT_TEMPERATURE);
+    this.velocityWorld?.fill(0);
     this.presentationStateWorld?.fill(0);
     this.photonStateWorld?.fill(0);
     if (!this.wallWorld) return;
@@ -135,4 +165,8 @@ export class RenderLabBackend extends DeterministicBackend {
       }
     }
   }
+}
+
+function clampVelocityByte(value: number): number {
+  return Math.max(-127, Math.min(127, Math.round(Number.isFinite(value) ? value : 0)));
 }

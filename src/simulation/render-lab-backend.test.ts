@@ -48,6 +48,42 @@ describe('RenderLabBackend', () => {
     );
   });
 
+  it('owns a clipped signed-byte velocity fixture plane and clears it to zero', () => {
+    const simulation = new RenderLabBackend(8, 6);
+    expect(simulation.velocity()).toHaveLength(8 * 6 * 2);
+    expect(simulation.velocity().byteLength).toBe(8 * 6 * 2 * Int8Array.BYTES_PER_ELEMENT);
+    expect(simulation.velocity().some(Boolean)).toBe(false);
+
+    simulation.setFixtureVelocityRect(-1.2, 1.1, 3, 2, 128.6, -200.2);
+    simulation.setFixtureVelocityRect(5, 4, 1, 1, 1.6, -1.6);
+    simulation.setFixtureVelocityRect(-20, -20, 2, 2, 90, 90);
+    for (let y = 0; y < simulation.height; y++) for (let x = 0; x < simulation.width; x++) {
+      const offset = (y * simulation.width + x) * 2;
+      const clipped = x < 2 && y >= 1 && y < 4;
+      const rounded = x === 5 && y === 4;
+      expect(simulation.velocity()[offset]).toBe(clipped ? 127 : rounded ? 2 : 0);
+      expect(simulation.velocity()[offset + 1]).toBe(clipped ? -127 : rounded ? -2 : 0);
+    }
+
+    simulation.clear();
+    expect(simulation.velocity().some(Boolean)).toBe(false);
+  });
+
+  it('keeps diagnostic velocity independent from ordinary material and wall operations', () => {
+    const simulation = new RenderLabBackend(8, 6);
+    simulation.setFixtureVelocityRect(2, 2, 2, 2, 31, -18);
+    const before = simulation.velocity().slice();
+    simulation.consumeDirtyCells();
+    simulation.paint(2, 2, Material.Smoke, 0);
+    simulation.erase(3, 3, 0);
+    simulation.paintWall(2, 2, 6, 0);
+
+    expect(simulation.velocity()).toEqual(before);
+    expect(simulation.cells()[2 * simulation.width + 2]).toBe(Material.Smoke);
+    expect(simulation.walls()[2 * simulation.width + 2]).toBe(6);
+    expect(simulation.consumeDirtyCells()).toEqual([{ index: 2 * simulation.width + 2, material: Material.Smoke }]);
+  });
+
   it('owns a bounded 16-bit presentation-state plane independent from matter and walls', () => {
     const simulation = new RenderLabBackend(8, 6);
     expect(simulation.presentationState()).toHaveLength(8 * 6);

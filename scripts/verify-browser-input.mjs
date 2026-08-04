@@ -138,6 +138,13 @@ const gasBodyVfxOnly = process.argv.includes('--gas-body-vfx-only');
 if (gasBodyVfxOnly && (modes.length !== 1 || modes[0] !== 'webgl')) {
   throw new Error('--gas-body-vfx-only requires --webgl-only');
 }
+// E07 layers only a bounded directional RGB cue onto E04's field-owned gas
+// body. It stays normal-detail/WebGL-only so the true-8x direct mesh remains
+// resource-identical to its established release path.
+const gasMotionVfxOnly = process.argv.includes('--gas-motion-vfx-only');
+if (gasMotionVfxOnly && (modes.length !== 1 || modes[0] !== 'webgl')) {
+  throw new Error('--gas-motion-vfx-only requires --webgl-only');
+}
 // E05 is deliberately narrower than the established powder-body base: it
 // measures a new crown/facet layer only at normal detail, leaving Canvas and
 // the compact direct 8x mesh as their proven controls.
@@ -151,9 +158,9 @@ const powderLightVfxOnly = process.argv.includes('--powder-light-vfx-only');
 if (powderLightVfxOnly && (modes.length !== 1 || modes[0] !== 'webgl')) {
   throw new Error('--powder-light-vfx-only requires --webgl-only');
 }
-if ([hdrVfxOnly, volumeVfxOnly, liquidBodyVfxOnly, gasBodyVfxOnly, powderBodyVfxOnly, powderLightVfxOnly]
+if ([hdrVfxOnly, volumeVfxOnly, liquidBodyVfxOnly, gasBodyVfxOnly, gasMotionVfxOnly, powderBodyVfxOnly, powderLightVfxOnly]
   .filter(Boolean).length > 1) {
-  throw new Error('HDR/volume/liquid-body/gas-body/powder-body/powder-light focused audits are mutually exclusive');
+  throw new Error('HDR/volume/liquid-body/gas-body/gas-motion/powder-body/powder-light focused audits are mutually exclusive');
 }
 const layoutOnly = process.argv.includes('--layout-only');
 const visualScaleMatrixNormalOnly = process.argv.includes('--visual-scale-matrix-normal-only');
@@ -235,7 +242,7 @@ const liveScaleOnly = process.argv.includes('--live-scale-only');
 // bundle without starting Vite. That keeps screenshot evidence independent of
 // dev-server navigation timing while leaving all default audit paths unchanged.
 const productionBundle = process.argv.includes('--production-bundle');
-const usesProductionBundle = productionBundle || showcaseScreenshotOnly || hdrVfxOnly || volumeVfxOnly || liquidBodyVfxOnly || gasBodyVfxOnly || powderBodyVfxOnly || powderLightVfxOnly || cellularGraphicsOnly || sensorGraphicsOnly
+const usesProductionBundle = productionBundle || showcaseScreenshotOnly || hdrVfxOnly || volumeVfxOnly || liquidBodyVfxOnly || gasBodyVfxOnly || gasMotionVfxOnly || powderBodyVfxOnly || powderLightVfxOnly || cellularGraphicsOnly || sensorGraphicsOnly
   || unusualPowderGraphicsOnly || earthenPowderGraphicsOnly || explosivePowderGraphicsOnly || unusualSolidGraphicsOnly
   || deviceIdentityGraphicsOnly
   || fieldProfileGraphicsOnly
@@ -272,6 +279,8 @@ const liquidBodyVfxArgument = process.argv.find((argument) => argument.startsWit
   ?.slice('--liquid-body-vfx='.length);
 const gasBodyVfxArgument = process.argv.find((argument) => argument.startsWith('--gas-body-vfx='))
   ?.slice('--gas-body-vfx='.length);
+const gasMotionVfxArgument = process.argv.find((argument) => argument.startsWith('--gas-motion-vfx='))
+  ?.slice('--gas-motion-vfx='.length);
 const powderBodyVfxArgument = process.argv.find((argument) => argument.startsWith('--powder-body-vfx='))
   ?.slice('--powder-body-vfx='.length);
 const powderLightVfxArgument = process.argv.find((argument) => argument.startsWith('--powder-light-vfx='))
@@ -292,6 +301,9 @@ if (liquidBodyVfxArgument !== undefined && !['0', '1', 'off', 'on'].includes(liq
 }
 if (gasBodyVfxArgument !== undefined && !['0', '1', 'off', 'on'].includes(gasBodyVfxArgument)) {
   throw new Error('--gas-body-vfx must be 0, 1, off, or on');
+}
+if (gasMotionVfxArgument !== undefined && !['0', '1', 'off', 'on'].includes(gasMotionVfxArgument)) {
+  throw new Error('--gas-motion-vfx must be 0, 1, off, or on');
 }
 if (powderBodyVfxArgument !== undefined && !['0', '1', 'off', 'on'].includes(powderBodyVfxArgument)) {
   throw new Error('--powder-body-vfx must be 0, 1, off, or on');
@@ -314,6 +326,9 @@ if (volumeVfxOnly && powderBodyVfxArgument !== undefined) {
 if (volumeVfxOnly && powderLightVfxArgument !== undefined) {
   throw new Error('--volume-vfx-only owns the inherited powder-light state; omit --powder-light-vfx');
 }
+if (volumeVfxOnly && gasMotionVfxArgument !== undefined) {
+  throw new Error('--volume-vfx-only owns the inherited gas-motion state; omit --gas-motion-vfx');
+}
 if (liquidBodyVfxOnly && volumeVfxArgument !== undefined) {
   throw new Error('--liquid-body-vfx-only fixes volumeVfx=0; omit --volume-vfx');
 }
@@ -329,6 +344,9 @@ if (liquidBodyVfxOnly && powderBodyVfxArgument !== undefined) {
 if (liquidBodyVfxOnly && powderLightVfxArgument !== undefined) {
   throw new Error('--liquid-body-vfx-only keeps powder-light VFX defaulted; omit --powder-light-vfx');
 }
+if (liquidBodyVfxOnly && gasMotionVfxArgument !== undefined) {
+  throw new Error('--liquid-body-vfx-only keeps gas-motion VFX defaulted; omit --gas-motion-vfx');
+}
 if (gasBodyVfxOnly && (volumeVfxArgument !== undefined || liquidBodyVfxArgument !== undefined)) {
   throw new Error('--gas-body-vfx-only fixes volumeVfx=0 and liquidBodyVfx=0; omit those flags');
 }
@@ -341,11 +359,25 @@ if (gasBodyVfxOnly && powderBodyVfxArgument !== undefined) {
 if (gasBodyVfxOnly && powderLightVfxArgument !== undefined) {
   throw new Error('--gas-body-vfx-only keeps powder-light VFX defaulted; omit --powder-light-vfx');
 }
+if (gasBodyVfxOnly && gasMotionVfxArgument !== undefined) {
+  throw new Error('--gas-body-vfx-only keeps gas-motion VFX defaulted; omit --gas-motion-vfx');
+}
+if (gasMotionVfxOnly && (volumeVfxArgument !== undefined || liquidBodyVfxArgument !== undefined
+  || gasBodyVfxArgument !== undefined || powderBodyVfxArgument !== undefined
+  || powderLightVfxArgument !== undefined)) {
+  throw new Error('--gas-motion-vfx-only owns its E04 baseline and other VFX selectors; omit overrides');
+}
+if (gasMotionVfxOnly && gasMotionVfxArgument !== undefined) {
+  throw new Error('--gas-motion-vfx-only owns its off -> on -> off sequence; omit --gas-motion-vfx');
+}
 if (hdrVfxOnly && powderBodyVfxArgument !== undefined) {
   throw new Error('--hdr-vfx-only owns its HDR experiment state; omit --powder-body-vfx');
 }
 if (hdrVfxOnly && powderLightVfxArgument !== undefined) {
   throw new Error('--hdr-vfx-only owns its HDR experiment state; omit --powder-light-vfx');
+}
+if (hdrVfxOnly && gasMotionVfxArgument !== undefined) {
+  throw new Error('--hdr-vfx-only owns its HDR experiment state; omit --gas-motion-vfx');
 }
 if (powderBodyVfxOnly && (volumeVfxArgument !== undefined || liquidBodyVfxArgument !== undefined
   || gasBodyVfxArgument !== undefined)) {
@@ -357,6 +389,9 @@ if (powderBodyVfxOnly && powderBodyVfxArgument !== undefined) {
 if (powderBodyVfxOnly && powderLightVfxArgument !== undefined) {
   throw new Error('--powder-body-vfx-only keeps powder-light VFX defaulted; omit --powder-light-vfx');
 }
+if (powderBodyVfxOnly && gasMotionVfxArgument !== undefined) {
+  throw new Error('--powder-body-vfx-only keeps gas-motion VFX defaulted; omit --gas-motion-vfx');
+}
 if (powderLightVfxOnly && (volumeVfxArgument !== undefined || liquidBodyVfxArgument !== undefined
   || gasBodyVfxArgument !== undefined || powderBodyVfxArgument !== undefined)) {
   throw new Error('--powder-light-vfx-only owns its fixed E02/E05 baseline; omit other VFX overrides');
@@ -364,11 +399,17 @@ if (powderLightVfxOnly && (volumeVfxArgument !== undefined || liquidBodyVfxArgum
 if (powderLightVfxOnly && powderLightVfxArgument !== undefined) {
   throw new Error('--powder-light-vfx-only owns its off -> on -> off sequence; omit --powder-light-vfx');
 }
+if (powderLightVfxOnly && gasMotionVfxArgument !== undefined) {
+  throw new Error('--powder-light-vfx-only keeps gas-motion VFX defaulted; omit --gas-motion-vfx');
+}
 if (renderScaleArgument !== undefined && !['1', '2', '4', '8'].includes(renderScaleArgument)) {
   throw new Error('--render-scale must be 1, 2, 4, or 8');
 }
 if (gasBodyVfxOnly && renderScaleArgument === '8') {
   throw new Error('--gas-body-vfx-only is a normal-detail 1x/2x/4x experiment');
+}
+if (gasMotionVfxOnly && renderScaleArgument === '8') {
+  throw new Error('--gas-motion-vfx-only is a normal-detail 1x/2x/4x experiment');
 }
 if (powderBodyVfxOnly && renderScaleArgument === '8') {
   throw new Error('--powder-body-vfx-only is a normal-detail 1x/2x/4x experiment');
@@ -447,7 +488,7 @@ async function main() {
       }, 15_000, 'Vite browser-audit server');
     const results = [];
     for (const mode of modes) results.push(await auditMode(mode));
-    const reducedAudit = quickScreenshot || showcaseScreenshotOnly || hdrVfxOnly || volumeVfxOnly || liquidBodyVfxOnly || gasBodyVfxOnly || powderBodyVfxOnly || powderLightVfxOnly || layoutOnly || mobileOnly || mobileGestureOnly
+    const reducedAudit = quickScreenshot || showcaseScreenshotOnly || hdrVfxOnly || volumeVfxOnly || liquidBodyVfxOnly || gasBodyVfxOnly || gasMotionVfxOnly || powderBodyVfxOnly || powderLightVfxOnly || layoutOnly || mobileOnly || mobileGestureOnly
       || desktopInputOnly || visualScaleMatrixOnly || powderBodyOnly || liquidDepthOnly
       || solidDepthOnly || gasChromaOnly || surfaceContourOnly || solidFieldOnly
       || roleGraphicsOnly || cellularGraphicsOnly || sensorGraphicsOnly
@@ -544,7 +585,7 @@ async function auditMode(mode) {
   // measures. Canvas fallback has no advanced optics obligation, so retain the
   // canonical paused scene there and prove real material delivery/occupancy.
   const startsBlank = !canvasFallbackAudit && (hdrVfxOnly || volumeVfxOnly
-    || liquidBodyVfxOnly || gasBodyVfxOnly || powderBodyVfxOnly || powderLightVfxOnly || cellularGraphicsOnly || sensorGraphicsOnly
+    || liquidBodyVfxOnly || gasBodyVfxOnly || gasMotionVfxOnly || powderBodyVfxOnly || powderLightVfxOnly || cellularGraphicsOnly || sensorGraphicsOnly
     || unusualPowderGraphicsOnly || earthenPowderGraphicsOnly || explosivePowderGraphicsOnly
     || unusualSolidGraphicsOnly || deviceIdentityGraphicsOnly || fieldProfileGraphicsOnly
     || electricDischargeGraphicsOnly || liquidIdentityGraphicsOnly
@@ -566,6 +607,7 @@ async function auditMode(mode) {
     ...(volumeVfxArgument ? { volumeVfx: volumeVfxArgument } : {}),
     ...(liquidBodyVfxArgument ? { liquidBodyVfx: liquidBodyVfxArgument } : {}),
     ...(gasBodyVfxArgument ? { gasBodyVfx: gasBodyVfxArgument } : {}),
+    ...(gasMotionVfxArgument ? { gasMotionVfx: gasMotionVfxArgument } : {}),
     ...(powderBodyVfxArgument ? { powderBodyVfx: powderBodyVfxArgument } : {}),
     ...(powderLightVfxArgument ? { powderLightVfx: powderLightVfxArgument } : {}),
     renderScale: renderScaleArgument ?? ((pqrtStateGraphicsEight || filtStateGraphicsEight || lcryStateGraphicsEight
@@ -786,6 +828,13 @@ async function auditMode(mode) {
       assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
       cdp.close();
       return { backend: mode, gasBodyVfx, browserErrors: errors.length };
+    }
+    if (gasMotionVfxOnly) {
+      assert(mode === 'webgl', '--gas-motion-vfx-only requires --webgl-only');
+      const gasMotionVfx = await auditGasMotionVfxExperiment(cdp, mode);
+      assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
+      cdp.close();
+      return { backend: mode, gasMotionVfx, browserErrors: errors.length };
     }
     if (powderBodyVfxOnly) {
       assert(mode === 'webgl', '--powder-body-vfx-only requires --webgl-only');
@@ -13419,6 +13468,7 @@ async function auditEightXSpngStateOnly(cdp, dpr) {
   await setDesktopMetrics(cdp, 1280, 720, dpr);
   const query = new URLSearchParams({
     scene: 'render-lab', inputAudit: '1', renderScale: '8', auditStage: 'eight-spng', blankAudit: '1',
+    renderLook: 'realistic', gasMotionVfx: '1',
   });
   await cdp.send('Page.navigate', { url: `${AUDIT_BASE_URL}?${query}` });
   const startupDeadline = Date.now() + EIGHT_X_PRESENTATION_DEADLINE_MS;
@@ -13426,6 +13476,8 @@ async function auditEightXSpngStateOnly(cdp, dpr) {
     const parameters = new URLSearchParams(location.search);
     return parameters.get('renderScale') === '8'
       && parameters.get('auditStage') === 'eight-spng'
+      && parameters.get('renderLook') === 'realistic'
+      && parameters.get('gasMotionVfx') === '1'
       && parameters.has('blankAudit') && Boolean(window.__ANIFOR_INPUT_AUDIT__);
   })()`), remainingDeadlineMs(startupDeadline, 'true-8x SPNG input audit API'), 'true-8x SPNG input audit API');
   const startupBackend = await waitForEightXTerminalBackend(cdp, 'true-8x SPNG', startupDeadline);
@@ -13439,6 +13491,26 @@ async function auditEightXSpngStateOnly(cdp, dpr) {
   assertGeometry(geometry, 'true-8x SPNG', 8);
   assertContained(geometry, 'true-8x SPNG');
   assertToolboxGeometry(geometry, 'true-8x SPNG', DESKTOP_TOOL_FILTER_HEIGHT);
+  // E07 is a normal-detail experiment. Request it explicitly on this existing
+  // one-navigation true-8x fence gate and prove the compact path declines it
+  // without allocating HDR bloom or changing the canonical backing.
+  const e07Isolation = await evaluate(cdp, `(() => {
+    const canvas = document.querySelector('canvas.semantic-field-canvas');
+    if (!(canvas instanceof HTMLCanvasElement)) return undefined;
+    return {
+      renderer: canvas.dataset.renderer,
+      look: canvas.dataset.renderLook,
+      state: canvas.dataset.hdrPipeline,
+      reason: canvas.dataset.hdrPipelineReason,
+      bloomBacking: canvas.dataset.bloomBacking ?? null,
+      gasMotionVfx: canvas.dataset.gasMotionVfx,
+    };
+  })()`);
+  assert(e07Isolation?.renderer === 'semantic-field-webgl'
+      && e07Isolation.look === 'realistic' && e07Isolation.state === 'inactive'
+      && e07Isolation.reason === 'scale-8' && e07Isolation.bloomBacking === null
+      && e07Isolation.gasMotionVfx === 'inactive',
+  `true-8x E07 isolation failed (${JSON.stringify(e07Isolation)})`);
   const timing = await auditWebGLPresentationTiming(cdp, 1, 12_000, 30_000, 1);
   assert(timing.source === 'gpu-query' || timing.source === 'gpu-fence' || timing.source === 'gpu-finish',
     `true-8x SPNG timing did not prove completed GPU work (${JSON.stringify(timing)})`);
@@ -13447,6 +13519,7 @@ async function auditEightXSpngStateOnly(cdp, dpr) {
   const spngStateGraphics = await auditEightXSpngStateGraphics(cdp, geometry.canvas);
   return {
     backing: `${geometry.backing.width}x${geometry.backing.height}`,
+    e07Isolation,
     timing,
     spngStateGraphics,
   };
@@ -21402,6 +21475,623 @@ async function auditGasBodyVfxExperiment(cdp, mode) {
 }
 
 /**
+ * E07 proves that the velocity-aware gas cue is a strictly RGB-only addition
+ * to E04's field-owned atmosphere. The paused render-lab fixture changes only
+ * semantic velocity bytes between its directed and still forms; material,
+ * walls, atmosphere support, and every protected sparse/control point stay
+ * exactly fixed.
+ */
+async function auditGasMotionVfxExperiment(cdp, mode) {
+  const scales = [];
+  const requestedScales = renderScaleArgument === undefined
+    ? VOLUME_VFX_SCALES : [Number(renderScaleArgument)];
+  for (const scale of requestedScales) {
+    const directedOff = await navigateGasMotionVfxState(cdp, mode, scale, 'directed', false, 'directedOff');
+    const directedOn = await navigateGasMotionVfxState(cdp, mode, scale, 'directed', true, 'directedOn');
+    const directedRepeat = await navigateGasMotionVfxState(cdp, mode, scale, 'directed', false, 'directedRepeat');
+    const reversedOff = await navigateGasMotionVfxState(cdp, mode, scale, 'reversed', false, 'reversedOff');
+    const reversedOn = await navigateGasMotionVfxState(cdp, mode, scale, 'reversed', true, 'reversedOn');
+    const stillOff = await navigateGasMotionVfxState(cdp, mode, scale, 'still', false, 'stillOff');
+    const stillOn = await navigateGasMotionVfxState(cdp, mode, scale, 'still', true, 'stillOn');
+    const variants = {
+      directedOff, directedOn, directedRepeat, reversedOff, reversedOn, stillOff, stillOn,
+    };
+    const fixture = directedOff.fixture;
+    assert(Object.values(variants).every((variant) => JSON.stringify(variant.fixture) === JSON.stringify(fixture)),
+      `E07 ${scale}x fixture metadata changed (${JSON.stringify(Object.fromEntries(
+        Object.entries(variants).map(([key, variant]) => [key, variant.fixture]),
+      ))})`);
+    for (const [label, variant] of Object.entries(variants)) {
+      assertGeometry(variant.geometry, `E07 ${label} ${scale}x`, scale);
+      assert(variant.geometry.backend.backend === 'webgl', `E07 ${label} ${scale}x lost WebGL presentation`);
+      assert(variant.hdrPipeline?.state === 'active',
+        `E07 ${label} ${scale}x HDR pipeline was not active (${JSON.stringify(variant.hdrPipeline)})`);
+      assert(variant.hdrPipeline?.volumeVfx === 'inactive' && variant.hdrPipeline?.liquidBodyVfx === 'inactive'
+        && variant.hdrPipeline?.gasBodyVfx === 'active' && variant.hdrPipeline?.powderBodyVfx === 'inactive'
+        && variant.hdrPipeline?.powderLightVfx === 'inactive'
+        && variant.hdrPipeline?.gasMotionVfx === (
+          label === 'directedOn' || label === 'reversedOn' || label === 'stillOn'
+            ? 'active' : 'inactive'
+        ),
+      `E07 ${label} ${scale}x selector state resolved incorrectly (${JSON.stringify(variant.hdrPipeline)})`);
+      assertGasMotionRawTopology(variant.rawControls, `E07 ${label} ${scale}x`);
+    }
+    for (const [leftName, rightName] of [
+      ['directedOff', 'directedOn'], ['directedOff', 'directedRepeat'],
+      ['reversedOff', 'reversedOn'], ['stillOff', 'stillOn'],
+      ['directedOff', 'reversedOff'], ['directedOff', 'stillOff'],
+    ]) {
+      const left = variants[leftName];
+      const right = variants[rightName];
+      assertCanvasRectsEqual(left.geometry.canvas, right.geometry.canvas,
+        `E07 ${scale}x ${leftName}/${rightName} CSS geometry`);
+      assert(JSON.stringify(left.geometry.backing) === JSON.stringify(right.geometry.backing),
+        `E07 ${scale}x ${leftName}/${rightName} backing geometry changed (${JSON.stringify({
+          left: left.geometry.backing, right: right.geometry.backing,
+        })})`);
+      assertHdrVfxSemanticEquality(left.semantic, right.semantic, `E07 ${scale}x ${leftName}/${rightName}`);
+      assertGasMotionAtmosphereEquality(left.atmosphere, right.atmosphere,
+        `E07 ${scale}x ${leftName}/${rightName}`);
+      // Native particle velocity already contributes to the established gas
+      // billow alpha outside E07, so directed and still fixtures may differ in
+      // presentation alpha even though their AtmosphereField support is exact.
+      // The E07 selector itself remains strictly alpha-invariant: compare full
+      // backing and raw probes only within one unchanged velocity plane.
+      const velocityPlane = (name) => name.startsWith('directed') ? 'directed'
+        : name.startsWith('reversed') ? 'reversed' : 'still';
+      const sameVelocityPlane = velocityPlane(leftName) === velocityPlane(rightName);
+      if (sameVelocityPlane) {
+        assertVolumeVfxBackingInvariant(left.backing, right.backing,
+          `E07 ${scale}x ${leftName}/${rightName}`);
+        assertVolumeVfxRawAlphaInvariant(left.rawControls, right.rawControls,
+          `E07 ${scale}x ${leftName}/${rightName}`);
+      }
+    }
+    assertGasMotionVelocityMetadata(directedOff.velocity, fixture, 'directed', `E07 directedOff ${scale}x`);
+    assertGasMotionVelocityMetadata(directedOn.velocity, fixture, 'directed', `E07 directedOn ${scale}x`);
+    assertGasMotionVelocityMetadata(directedRepeat.velocity, fixture, 'directed', `E07 directedRepeat ${scale}x`);
+    assertGasMotionVelocityMetadata(reversedOff.velocity, fixture, 'reversed', `E07 reversedOff ${scale}x`);
+    assertGasMotionVelocityMetadata(reversedOn.velocity, fixture, 'reversed', `E07 reversedOn ${scale}x`);
+    assertGasMotionVelocityMetadata(stillOff.velocity, fixture, 'still', `E07 stillOff ${scale}x`);
+    assertGasMotionVelocityMetadata(stillOn.velocity, fixture, 'still', `E07 stillOn ${scale}x`);
+    assertGasMotionFieldMetadata(directedOff.motion, fixture, 'directed', `E07 directedOff ${scale}x`);
+    assertGasMotionFieldMetadata(directedOn.motion, fixture, 'directed', `E07 directedOn ${scale}x`);
+    assertGasMotionFieldMetadata(directedRepeat.motion, fixture, 'directed', `E07 directedRepeat ${scale}x`);
+    assertGasMotionFieldMetadata(reversedOff.motion, fixture, 'reversed', `E07 reversedOff ${scale}x`);
+    assertGasMotionFieldMetadata(reversedOn.motion, fixture, 'reversed', `E07 reversedOn ${scale}x`);
+    assertGasMotionFieldMetadata(stillOff.motion, fixture, 'still', `E07 stillOff ${scale}x`);
+    assertGasMotionFieldMetadata(stillOn.motion, fixture, 'still', `E07 stillOn ${scale}x`);
+    assert(JSON.stringify(directedOff.motion) === JSON.stringify(directedOn.motion)
+      && JSON.stringify(directedOff.motion) === JSON.stringify(directedRepeat.motion)
+      && JSON.stringify(reversedOff.motion) === JSON.stringify(reversedOn.motion)
+      && JSON.stringify(stillOff.motion) === JSON.stringify(stillOn.motion),
+    `E07 ${scale}x selector changed the atmosphere-owned motion field (${JSON.stringify({
+      directedOff: directedOff.motion, directedOn: directedOn.motion,
+      directedRepeat: directedRepeat.motion, reversedOff: reversedOff.motion,
+      reversedOn: reversedOn.motion, stillOff: stillOff.motion, stillOn: stillOn.motion,
+    })})`);
+
+    const targets = gasMotionTargetRegions(fixture);
+    const counterflowTargets = gasMotionCounterflowRegions(fixture);
+    const controls = gasMotionControlRegions(fixture);
+    const responseRegions = [...targets, ...counterflowTargets, ...controls];
+    const directedRawSamples = await sampleBackdropRefractionRegions(cdp, {
+      straight: directedOff.capture.capture.data,
+      refracted: directedOn.capture.capture.data,
+      repeatedStraight: directedRepeat.capture.capture.data,
+    }, responseRegions, directedOff.capture.canvasRect);
+    const directedSamples = directedRawSamples.map((sample, index) => ({
+      ...sample, ...responseRegions[index],
+    }));
+    const directedTargets = directedSamples.slice(0, targets.length);
+    const directedCounterflow = directedSamples.slice(
+      targets.length, targets.length + counterflowTargets.length,
+    );
+    const directedControls = directedSamples.slice(targets.length + counterflowTargets.length);
+    assert(directedSamples.every((sample) => sample.repeatRgbPeak === 0),
+      `E07 ${scale}x directed off/on/off was not exact (${JSON.stringify(directedSamples)})`);
+    assertGasMotionTargetResponse(directedTargets, scale, 'directed');
+    assertGasMotionControlResponse(directedControls, scale, 'directed');
+
+    const reversedRawSamples = await sampleBackdropRefractionRegions(cdp, {
+      straight: reversedOff.capture.capture.data,
+      refracted: reversedOn.capture.capture.data,
+      repeatedStraight: reversedOff.capture.capture.data,
+    }, responseRegions, reversedOff.capture.canvasRect);
+    const reversedSamples = reversedRawSamples.map((sample, index) => ({
+      ...sample, ...responseRegions[index],
+    }));
+    const reversedTargets = reversedSamples.slice(0, targets.length);
+    const reversedCounterflow = reversedSamples.slice(
+      targets.length, targets.length + counterflowTargets.length,
+    );
+    const reversedControls = reversedSamples.slice(targets.length + counterflowTargets.length);
+    assertGasMotionTargetResponse(reversedTargets, scale, 'reversed');
+    assertGasMotionControlResponse(reversedControls, scale, 'reversed');
+
+    const stillSamples = await sampleBackdropRefractionRegions(cdp, {
+      straight: stillOff.capture.capture.data,
+      refracted: stillOn.capture.capture.data,
+      repeatedStraight: stillOff.capture.capture.data,
+    }, responseRegions, stillOff.capture.canvasRect);
+    assert(stillSamples.every((sample) => sample.rgbPeak === 0 && sample.repeatRgbPeak === 0),
+      `E07 ${scale}x zero-velocity fixture produced a gas-motion RGB response (${JSON.stringify(stillSamples)})`);
+    assertGasMotionCounterflowResponse(directedCounterflow, reversedCounterflow, scale);
+    assertGasMotionDirectionality(directedTargets, reversedTargets, scale);
+    const screenshots = screenshotRequest
+      ? await writeGasMotionVfxScreenshots(screenshotRequest, scale, variants)
+      : undefined;
+    scales.push({
+      scale,
+      backing: directedOff.geometry.backing,
+      alphaSupport: directedOff.backing,
+      atmosphereSupport: directedOff.atmosphere,
+      rawControls: directedOff.rawControls,
+      directedVelocity: directedOff.velocity,
+      directedMotion: directedOff.motion,
+      targets: directedTargets,
+      reversedTargets,
+      counterflow: directedCounterflow,
+      reversedCounterflow,
+      controls: directedControls,
+      screenshots,
+    });
+  }
+  return { scales, trueEightXExcluded: true };
+}
+
+async function writeGasMotionVfxScreenshots(source, scale, variants) {
+  const paths = {};
+  for (const [variant, capture] of Object.entries(variants)) {
+    paths[variant] = variantScreenshotPath(source, `gas-motion-${scale}x-${variant}`);
+    await writeFile(paths[variant], Buffer.from(capture.capture.capture.data, 'base64'));
+  }
+  return paths;
+}
+
+function gasMotionTargetRegions(fixture) {
+  return fixture.cards.flatMap((card) => [
+    { name: `${card.code}Core`, code: card.code, zone: 'core', ...rectRegion(card.coreProbe) },
+    { name: `${card.code}Left`, code: card.code, zone: 'left', ...rectRegion(card.leftShoulder) },
+    { name: `${card.code}Right`, code: card.code, zone: 'right', ...rectRegion(card.rightShoulder) },
+    { name: `${card.code}Top`, code: card.code, zone: 'top', ...rectRegion(card.topShoulder) },
+    { name: `${card.code}Bottom`, code: card.code, zone: 'bottom', ...rectRegion(card.bottomShoulder) },
+  ]);
+}
+
+function gasMotionCounterflowRegions(fixture) {
+  return [
+    { name: 'counterflowLeft', zone: 'left', ...rectRegion(fixture.counterflow.leftProbe) },
+    { name: 'counterflowRight', zone: 'right', ...rectRegion(fixture.counterflow.rightProbe) },
+  ];
+}
+
+function gasMotionControlRegions(fixture) {
+  const point = (name, entry) => ({ name, x: entry.x, y: entry.y, radius: 0.35 });
+  return [
+    ...fixture.cards.flatMap((card) => [
+      { name: `${card.code}Hole`, ...rectRegion(card.authoredHole) },
+      { name: `${card.code}Channel`, ...rectRegion(card.openChannel) },
+    ]),
+    { name: 'counterflowHole', ...rectRegion(fixture.counterflow.authoredHole) },
+    { name: 'counterflowChannel', ...rectRegion(fixture.counterflow.openChannel) },
+    { name: 'stillCore', ...rectRegion(fixture.stillCloud.coreProbe) },
+    { name: 'stillHole', ...rectRegion(fixture.stillCloud.authoredHole) },
+    ...fixture.sparseChains.flatMap((chain) => [
+      point(`${chain.code}CarrierA`, chain.carriers[0]), point(`${chain.code}Midpoint`, chain.midpoint),
+      point(`${chain.code}CarrierB`, chain.carriers[1]), point(`${chain.code}Gap`, chain.gap),
+      point(`${chain.code}Isolated`, chain.isolated),
+    ]),
+    { name: 'solidGas', ...rectRegion(fixture.solidContact.gas) },
+    { name: 'solid', ...rectRegion(fixture.solidContact.solid) },
+    { name: 'liquidGas', ...rectRegion(fixture.liquidContact.gas) },
+    { name: 'liquid', ...rectRegion(fixture.liquidContact.liquid) },
+    point('nativeWall', fixture.nativeWall),
+    { name: 'guardedBlank', ...rectRegion(fixture.guardedBlank) },
+  ];
+}
+
+function gasMotionRawControlPoints(fixture) {
+  const centre = (name, rect) => ({ name,
+    x: Math.floor(rect.x + rect.width / 2), y: Math.floor(rect.y + rect.height / 2) });
+  return [
+    ...fixture.cards.flatMap((card) => [
+      centre(`${card.code}Hole`, card.authoredHole), centre(`${card.code}Channel`, card.openChannel),
+    ]),
+    centre('counterflowHole', fixture.counterflow.authoredHole),
+    centre('counterflowChannel', fixture.counterflow.openChannel),
+    centre('stillCore', fixture.stillCloud.coreProbe), centre('stillHole', fixture.stillCloud.authoredHole),
+    ...fixture.sparseChains.flatMap((chain) => [
+      { name: `${chain.code}CarrierA`, ...chain.carriers[0] }, { name: `${chain.code}Midpoint`, ...chain.midpoint },
+      { name: `${chain.code}CarrierB`, ...chain.carriers[1] }, { name: `${chain.code}Gap`, ...chain.gap },
+      { name: `${chain.code}Isolated`, ...chain.isolated },
+    ]),
+    centre('solidGas', fixture.solidContact.gas), centre('solid', fixture.solidContact.solid),
+    centre('liquidGas', fixture.liquidContact.gas), centre('liquid', fixture.liquidContact.liquid),
+    { name: 'nativeWall', ...fixture.nativeWall }, centre('guardedBlank', fixture.guardedBlank),
+  ];
+}
+
+function rectRegion(rect) {
+  return {
+    x: rect.x + rect.width / 2,
+    y: rect.y + rect.height / 2,
+    radiusX: Math.max(0.35, rect.width / 2 - 0.25),
+    radiusY: Math.max(0.35, rect.height / 2 - 0.25),
+  };
+}
+
+function gasMotionSpatialRgbRms(sample) {
+  return Math.sqrt(Math.max(0, sample.rgbRms ** 2
+    - (Math.hypot(...sample.responseRgb) / Math.sqrt(3)) ** 2));
+}
+
+function assertGasMotionTargetResponse(targets, scale, mode) {
+  assert(targets.every((sample) => sample.rgbPeak <= 6),
+    `E07 ${scale}x ${mode} response exceeded its RGB budget (${JSON.stringify(targets)})`);
+  for (const code of ['SMKE', 'FOG', 'CFLM']) {
+    const family = targets.filter((sample) => sample.code === code);
+    const core = family.find((sample) => sample.zone === 'core');
+    const coreMinimum = code === 'CFLM' ? 0.40 : 0.65;
+    // At 4x the capture kernel averages four times as many presentation pixels;
+    // retain the same RMS/body evidence while accepting its expected one-byte
+    // reduction in the single-pixel peak statistic.
+    const peakMinimum = scale === 4 ? 2 : 3;
+    assert(family.length === 5 && core?.rgbRms >= coreMinimum
+      && Math.max(...family.map((sample) => sample.rgbPeak)) >= peakMinimum
+      && family.filter((sample) => sample.rgbPeak >= 2).length >= 3
+      && Math.max(...family.map((sample) => sample.rgbRms)) >= 0.80
+      && family.some((sample) => gasMotionSpatialRgbRms(sample) >= 0.15),
+    `E07 ${scale}x ${mode} ${code} response was inert or uniform (${JSON.stringify(family)})`);
+  }
+}
+
+function assertGasMotionControlResponse(controls, scale, mode) {
+  // A small hole/channel inside a coherent cloud may already be supported by
+  // the shared atmosphere field. E07 is allowed to shade that existing volume;
+  // the exact backing/raw-alpha checks above remain the topology authority.
+  // Keep it bounded, while the field-cancelled counterflow and all genuinely
+  // independent sparse/contact/wall controls remain exact RGB no-ops.
+  const isMovingCardVolume = (sample) => /^(?:SMKE|FOG|CFLM)(?:Hole|Channel)$/.test(sample.name);
+  const reconstructedVolumes = controls.filter(isMovingCardVolume);
+  const strictControls = controls.filter((sample) => !isMovingCardVolume(sample));
+  assert(reconstructedVolumes.every((sample) => sample.rgbPeak <= 12 && sample.rgbRms <= 4.25),
+    `E07 ${scale}x ${mode} over-lit reconstructed cloud topology (${JSON.stringify(reconstructedVolumes)})`);
+  assert(strictControls.every((sample) => sample.rgbPeak === 0),
+    `E07 ${scale}x ${mode} escaped a protected sparse/contact/wall control (${JSON.stringify(strictControls)})`);
+}
+
+function assertGasMotionRawTopology(points, label) {
+  const byName = new Map(points.map((point) => [point.name, point.rgba[3]]));
+  for (const code of ['SMKE', 'FOG', 'CFLM']) {
+    assert(byName.get(`${code}Gap`) === 0,
+      `${label}: ${code} authored sparse gap gained support (${JSON.stringify(points)})`);
+    for (const suffix of ['CarrierA', 'Midpoint', 'CarrierB', 'Isolated']) {
+      assert((byName.get(`${code}${suffix}`) ?? 0) > 0,
+        `${label}: ${code} ${suffix} lost supported topology (${JSON.stringify(points)})`);
+    }
+  }
+  assert((byName.get('stillCore') ?? 0) > 0 && byName.get('guardedBlank') === 0,
+    `${label}: still gas or guarded blank topology was invalid (${JSON.stringify(points)})`);
+}
+
+function assertGasMotionCounterflowResponse(directed, reversed, scale) {
+  const combined = [...directed, ...reversed];
+  assert(directed.length === 2 && reversed.length === 2
+    && combined.every((sample) => sample.rgbPeak <= 1 && sample.rgbRms <= 0.15
+      && Math.abs(sample.signedMean) <= 0.10),
+  `E07 ${scale}x counterflow exposed a particle-scale lighting field (${JSON.stringify({ directed, reversed })})`);
+}
+
+function assertGasMotionDirectionality(directed, reversed, scale) {
+  const target = (samples, code, zone) => samples.find(
+    (sample) => sample.code === code && sample.zone === zone,
+  );
+  const comparisons = [
+    { code: 'SMKE', first: 'right', second: 'left', channel: 'luma', expectedSign: 1, minimum: 0.10, reversal: 0.20 },
+    { code: 'FOG', first: 'right', second: 'left', channel: 'luma', expectedSign: -1, minimum: 0.10, reversal: 0.20 },
+    // CFLM's body is already HDR-bright, so E07 deliberately carries motion
+    // through a bipolar cyan/amber shift. Test the red-axis reversal directly;
+    // Rec.709 mean can cancel even while that designed hue direction is clear.
+    { code: 'CFLM', first: 'bottom', second: 'top', channel: 0, expectedSign: -1, minimum: 0.03, reversal: 0.06 },
+  ].map(({ code, first, second, channel, expectedSign, minimum, reversal }) => {
+    const directFirst = target(directed, code, first);
+    const directSecond = target(directed, code, second);
+    const reverseFirst = target(reversed, code, first);
+    const reverseSecond = target(reversed, code, second);
+    const response = (sample) => channel === 'luma'
+      ? (sample?.signedMean ?? 0) : (sample?.responseRgb?.[channel] ?? 0);
+    return {
+      code, first, second, channel, expectedSign, minimum, reversal,
+      directFirst, directSecond, reverseFirst, reverseSecond,
+      directedContrast: response(directFirst) - response(directSecond),
+      reversedContrast: response(reverseFirst) - response(reverseSecond),
+    };
+  });
+  assert(comparisons.every((entry) => entry.directFirst && entry.directSecond
+    && entry.reverseFirst && entry.reverseSecond
+    && entry.directedContrast * entry.expectedSign + 1e-9 >= entry.minimum
+    && entry.reversedContrast * entry.expectedSign - 1e-9 <= -entry.minimum
+    && (entry.directedContrast - entry.reversedContrast) * entry.expectedSign + 1e-9 >= entry.reversal),
+  `E07 ${scale}x reversing velocity did not reverse shoulder contrast (${JSON.stringify(comparisons)})`);
+}
+
+function assertGasMotionAtmosphereEquality(left, right, label) {
+  assert(left.nonzero === right.nonzero && left.alphaSum === right.alphaSum && left.signature === right.signature,
+    `${label}: velocity selector changed AtmosphereField support (${JSON.stringify({ left, right })})`);
+}
+
+function assertGasMotionVelocityMetadata(metadata, fixture, mode, label) {
+  assert(metadata.mode === mode && metadata.cards.length === fixture.cards.length
+    && metadata.counterflow.ownerCells > 0 && metadata.counterflow.backendExact
+    && metadata.counterflow.stagedExact
+    && metadata.counterflow.holesZero && metadata.counterflow.channelsZero
+    && metadata.stillZero && metadata.sparseZero && metadata.contactsZero
+    && metadata.wallZero && metadata.blankZero,
+  `${label}: protected zero-velocity metadata was invalid (${JSON.stringify(metadata)})`);
+  for (const [index, card] of fixture.cards.entries()) {
+    const actual = metadata.cards[index];
+    const expected = mode === 'directed' ? card.velocity
+      : mode === 'reversed' ? { x: -card.velocity.x, y: -card.velocity.y }
+        : { x: 0, y: 0 };
+    assert(actual?.code === card.code && actual.ownerCells > 0 && actual.uniform
+      && actual.stagedUniform
+      && actual.velocityCells === (mode === 'still' ? 0 : actual.ownerCells)
+      && actual.stagedVelocityCells === (mode === 'still' ? 0 : actual.ownerCells)
+      && actual.velocityX === expected.x && actual.velocityY === expected.y
+      && actual.stagedVelocityX === expected.x && actual.stagedVelocityY === expected.y
+      && actual.holesZero && actual.channelsZero,
+    `${label}: ${card.code} velocity metadata was invalid (${JSON.stringify({ actual, expected })})`);
+  }
+}
+
+function assertGasMotionFieldMetadata(metadata, fixture, mode, label) {
+  assert(metadata.mode === mode && metadata.cards.length === fixture.cards.length
+    && metadata.counterflow.every((sample) => sample.identity > 0
+      && sample.flow[0] === 0 && sample.flow[1] === 0 && sample.flow[2] === 0)
+    && metadata.still.identity > 0
+    && metadata.still.flow[0] === 0 && metadata.still.flow[1] === 0
+    && metadata.still.flow[2] === 0
+    && metadata.protected.every((flow) => flow[0] === 0 && flow[1] === 0 && flow[2] === 0),
+  `${label}: protected atmosphere motion metadata was invalid (${JSON.stringify(metadata)})`);
+  for (const [index, card] of fixture.cards.entries()) {
+    const actual = metadata.cards[index];
+    const direction = mode === 'reversed' ? -1 : 1;
+    const expected = mode === 'still'
+      ? [0, 0, 0]
+      : [card.velocity.x * direction, card.velocity.y * direction, 255];
+    assert(actual?.code === card.code && actual.identity > 0
+      && actual.flow[0] === expected[0] && actual.flow[1] === expected[1]
+      && actual.flow[2] === expected[2],
+    `${label}: ${card.code} atmosphere flow was invalid (${JSON.stringify({ actual, expected })})`);
+  }
+}
+
+async function sampleGasMotionFieldMetadata(cdp, mode) {
+  return evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    if (typeof audit?.atmosphereMotion !== 'function'
+      || typeof audit?.gasIdentityStyle !== 'function') {
+      throw new Error('E07 atmosphere motion audit API unavailable');
+    }
+    const fixture = audit.gasMotionVfxFixture();
+    const centre = (rect) => ({
+      x: Math.floor(rect.x + rect.width / 2),
+      y: Math.floor(rect.y + rect.height / 2),
+    });
+    const sample = (rect) => {
+      const point = centre(rect);
+      return { point, identity: audit.gasIdentityStyle(point.x, point.y),
+        flow: audit.atmosphereMotion(point.x, point.y) };
+    };
+    return {
+      mode: ${JSON.stringify(mode)},
+      cards: fixture.cards.map((card) => ({ code: card.code, ...sample(card.coreProbe) })),
+      counterflow: [sample(fixture.counterflow.leftProbe), sample(fixture.counterflow.rightProbe)],
+      still: sample(fixture.stillCloud.coreProbe),
+      protected: [
+        sample(fixture.solidContact.gas).flow, sample(fixture.liquidContact.gas).flow,
+        audit.atmosphereMotion(fixture.nativeWall.x, fixture.nativeWall.y),
+        sample(fixture.guardedBlank).flow,
+        ...fixture.sparseChains.flatMap((chain) => [
+          audit.atmosphereMotion(chain.carriers[0].x, chain.carriers[0].y),
+          audit.atmosphereMotion(chain.midpoint.x, chain.midpoint.y),
+          audit.atmosphereMotion(chain.gap.x, chain.gap.y),
+          audit.atmosphereMotion(chain.isolated.x, chain.isolated.y),
+        ]),
+      ],
+    };
+  })()`);
+}
+
+async function sampleGasMotionVelocityMetadata(cdp, mode) {
+  return evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    if (typeof audit?.velocity !== 'function') throw new Error('E07 velocity audit API unavailable');
+    const fixture = audit.gasMotionVfxFixture();
+    const velocityAt = (x, y) => audit.velocity(x, y);
+    const stagedAt = (x, y) => audit.renderedVelocity(x, y);
+    const zeroRect = (rect) => {
+      for (let y = rect.y; y < rect.y + rect.height; y++) for (let x = rect.x; x < rect.x + rect.width; x++) {
+        const velocity = velocityAt(x, y);
+        if (velocity[0] !== 0 || velocity[1] !== 0) return false;
+      }
+      return true;
+    };
+    const stagedZeroRect = (rect) => {
+      for (let y = rect.y; y < rect.y + rect.height; y++) for (let x = rect.x; x < rect.x + rect.width; x++) {
+        const velocity = stagedAt(x, y);
+        if (velocity[0] !== 0 || velocity[1] !== 0) return false;
+      }
+      return true;
+    };
+    const zeroPoint = (point) => {
+      const velocity = velocityAt(point.x, point.y);
+      const staged = stagedAt(point.x, point.y);
+      return velocity[0] === 0 && velocity[1] === 0
+        && staged[0] === 0 && staged[1] === 0;
+    };
+    return {
+      mode: ${JSON.stringify(mode)},
+      cards: fixture.cards.map((card) => {
+        let ownerCells = 0;
+        let velocityCells = 0;
+        let velocityX = 0;
+        let velocityY = 0;
+        let uniform = true;
+        let stagedVelocityCells = 0;
+        let stagedVelocityX = 0;
+        let stagedVelocityY = 0;
+        let stagedUniform = true;
+        for (let y = card.body.y; y < card.body.y + card.body.height; y++) {
+          for (let x = card.body.x; x < card.body.x + card.body.width; x++) {
+            if (audit.cell(x, y) !== card.material) continue;
+            ownerCells++;
+            const velocity = velocityAt(x, y);
+            if (velocity[0] !== 0 || velocity[1] !== 0) velocityCells++;
+            if (ownerCells === 1) { velocityX = velocity[0]; velocityY = velocity[1]; }
+            else uniform = uniform && velocity[0] === velocityX && velocity[1] === velocityY;
+            const staged = stagedAt(x, y);
+            if (staged[0] !== 0 || staged[1] !== 0) stagedVelocityCells++;
+            if (ownerCells === 1) {
+              stagedVelocityX = staged[0]; stagedVelocityY = staged[1];
+            } else {
+              stagedUniform = stagedUniform
+                && staged[0] === stagedVelocityX && staged[1] === stagedVelocityY;
+            }
+          }
+        }
+        return { code: card.code, ownerCells, velocityCells, velocityX, velocityY, uniform,
+          stagedVelocityCells, stagedVelocityX, stagedVelocityY, stagedUniform,
+          holesZero: zeroRect(card.authoredHole), channelsZero: zeroRect(card.openChannel) };
+      }),
+      counterflow: (() => {
+        let ownerCells = 0;
+        let backendExact = true;
+        let stagedExact = true;
+        const direction = ${JSON.stringify(mode)} === 'reversed' ? -1 : 1;
+        for (let y = fixture.counterflow.body.y;
+          y < fixture.counterflow.body.y + fixture.counterflow.body.height; y++) {
+          for (let x = fixture.counterflow.body.x;
+            x < fixture.counterflow.body.x + fixture.counterflow.body.width; x++) {
+            if (audit.cell(x, y) !== fixture.counterflow.material) continue;
+            ownerCells++;
+            const expected = ${JSON.stringify(mode)} === 'still' ? 0
+              : (((x + y) & 1) === 0 ? 1 : -1)
+                * fixture.counterflow.velocityMagnitude * direction;
+            const backend = velocityAt(x, y);
+            const staged = stagedAt(x, y);
+            backendExact = backendExact && backend[0] === expected && backend[1] === 0;
+            stagedExact = stagedExact && staged[0] === expected && staged[1] === 0;
+          }
+        }
+        return { ownerCells, backendExact, stagedExact,
+          holesZero: zeroRect(fixture.counterflow.authoredHole)
+            && stagedZeroRect(fixture.counterflow.authoredHole),
+          channelsZero: zeroRect(fixture.counterflow.openChannel)
+            && stagedZeroRect(fixture.counterflow.openChannel) };
+      })(),
+      stillZero: zeroRect(fixture.stillCloud.body) && stagedZeroRect(fixture.stillCloud.body),
+      sparseZero: fixture.sparseChains.every((chain) => chain.carriers.every(zeroPoint)
+        && zeroPoint(chain.midpoint) && zeroPoint(chain.gap) && zeroPoint(chain.isolated)),
+      contactsZero: zeroRect(fixture.solidContact.gas) && stagedZeroRect(fixture.solidContact.gas)
+        && zeroRect(fixture.solidContact.solid) && stagedZeroRect(fixture.solidContact.solid)
+        && zeroRect(fixture.liquidContact.gas) && stagedZeroRect(fixture.liquidContact.gas)
+        && zeroRect(fixture.liquidContact.liquid) && stagedZeroRect(fixture.liquidContact.liquid),
+      wallZero: zeroPoint(fixture.nativeWall),
+      blankZero: zeroRect(fixture.guardedBlank) && stagedZeroRect(fixture.guardedBlank),
+    };
+  })()`);
+}
+
+async function sampleGasMotionAtmosphereSupport(cdp) {
+  return evaluate(cdp, `(() => {
+    const support = window.__ANIFOR_INPUT_AUDIT__?.atmosphereSupportAudit?.();
+    if (!support || !Number.isInteger(support.nonzero) || !Number.isInteger(support.alphaSum)
+      || !Number.isInteger(support.signature)) throw new Error('E07 atmosphere support audit unavailable');
+    return support;
+  })()`);
+}
+
+async function navigateGasMotionVfxState(cdp, mode, scale, fixtureMode, enabled, label) {
+  const query = new URLSearchParams({
+    scene: 'render-lab', inputAudit: '1', blankAudit: '1', auditStage: 'blank',
+    gasMotionVfxAudit: '1', renderScale: String(scale), renderLook: 'realistic',
+    volumeVfx: '0', liquidBodyVfx: '0', gasBodyVfx: '1', gasMotionVfx: enabled ? '1' : '0',
+    powderBodyVfx: '0', powderLightVfx: '0',
+  });
+  await cdp.send('Page.navigate', { url: `${AUDIT_BASE_URL}?${query}` });
+  await waitFor(() => evaluate(cdp, `(() => {
+    const parameters = new URLSearchParams(location.search);
+    return parameters.get('scene') === 'render-lab' && parameters.get('inputAudit') === '1'
+      && parameters.get('blankAudit') === '1' && parameters.get('auditStage') === 'blank'
+      && parameters.get('gasMotionVfxAudit') === '1' && parameters.get('renderScale') === ${JSON.stringify(String(scale))}
+      && parameters.get('renderLook') === 'realistic' && parameters.get('volumeVfx') === '0'
+      && parameters.get('liquidBodyVfx') === '0' && parameters.get('gasBodyVfx') === '1'
+      && parameters.get('gasMotionVfx') === ${JSON.stringify(enabled ? '1' : '0')}
+      && parameters.get('powderBodyVfx') === '0' && parameters.get('powderLightVfx') === '0'
+      && typeof window.__ANIFOR_INPUT_AUDIT__?.prepareGasMotionVfxFixture === 'function';
+  })()`), 15_000, `E07 ${label} ${scale}x page`);
+  await waitFor(() => evaluate(cdp,
+    `window.__ANIFOR_INPUT_AUDIT__.backend().backend === ${JSON.stringify(mode)}`),
+  15_000, `E07 ${label} ${scale}x backend`);
+  const fixture = await evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    audit.prepareGasMotionVfxFixture(${JSON.stringify(fixtureMode)});
+    audit.resetView();
+    return audit.gasMotionVfxFixture();
+  })()`);
+  // Fixture preparation may race a just-promoted presenter: backend bytes are
+  // synchronous, while the invalidated semantic texture is published on the
+  // next presentation refresh. Wait for the actual staged bytes so a capture
+  // can never silently exercise the stationary texture.
+  const velocity = await waitFor(async () => {
+    const candidate = await sampleGasMotionVelocityMetadata(cdp, fixtureMode);
+    try {
+      assertGasMotionVelocityMetadata(
+        candidate, fixture, fixtureMode, `E07 ${label} ${scale}x readiness`,
+      );
+      return candidate;
+    } catch { return undefined; }
+  }, 8_000, `E07 ${label} ${scale}x velocity staging`);
+  const motion = await waitFor(async () => {
+    const candidate = await sampleGasMotionFieldMetadata(cdp, fixtureMode);
+    try {
+      assertGasMotionFieldMetadata(
+        candidate, fixture, fixtureMode, `E07 ${label} ${scale}x atmosphere readiness`,
+      );
+      return candidate;
+    } catch { return undefined; }
+  }, 8_000, `E07 ${label} ${scale}x atmosphere motion staging`);
+  const hdrPipeline = await evaluate(cdp, `(() => {
+    const canvas = document.querySelector('.semantic-field-canvas');
+    return canvas ? {
+      look: canvas.dataset.renderLook, state: canvas.dataset.hdrPipeline,
+      reason: canvas.dataset.hdrPipelineReason, bloomBacking: canvas.dataset.bloomBacking,
+      volumeVfx: canvas.dataset.volumeVfx, liquidBodyVfx: canvas.dataset.liquidBodyVfx,
+      gasBodyVfx: canvas.dataset.gasBodyVfx, gasMotionVfx: canvas.dataset.gasMotionVfx,
+      powderBodyVfx: canvas.dataset.powderBodyVfx, powderLightVfx: canvas.dataset.powderLightVfx,
+    } : undefined;
+  })()`);
+  const expectedBloom = `${WORLD_WIDTH * scale / 2}x${WORLD_HEIGHT * scale / 2}`;
+  assert(hdrPipeline?.look === 'realistic' && hdrPipeline?.state === 'active'
+    && hdrPipeline?.bloomBacking === expectedBloom && hdrPipeline?.volumeVfx === 'inactive'
+    && hdrPipeline?.liquidBodyVfx === 'inactive' && hdrPipeline?.gasBodyVfx === 'active'
+    && hdrPipeline?.powderBodyVfx === 'inactive' && hdrPipeline?.powderLightVfx === 'inactive'
+    && hdrPipeline?.gasMotionVfx === (enabled ? 'active' : 'inactive'),
+  `E07 ${label} ${scale}x HDR/gas-motion state resolved incorrectly (${JSON.stringify(hdrPipeline)})`);
+  const capture = await waitForStablePageCapture(
+    cdp, `E07 ${label} ${scale}x framebuffer`, scale === 4 ? 20_000 : undefined,
+  );
+  return {
+    fixture, velocity, motion, capture, geometry: await metrics(cdp), semantic: await hdrVfxSemanticDigest(cdp),
+    atmosphere: await sampleGasMotionAtmosphereSupport(cdp),
+    backing: await sampleVolumeVfxCanvasAlphaSupport(cdp),
+    rawControls: await sampleVolumeVfxRawWorldPixels(cdp, gasMotionRawControlPoints(fixture)), hdrPipeline,
+  };
+}
+
+/**
  * E05 powder crown/facet gate. The established body-depth and mesostrata
  * layers remain enabled as the accepted baseline; only the new normal-detail
  * RGB layer changes here. Grains and Local are captured independently as exact
@@ -21877,7 +22567,7 @@ async function navigateGasBodyVfxState(cdp, mode, scale, enabled, label) {
   const query = new URLSearchParams({
     scene: 'render-lab', inputAudit: '1', auditStage: 'canonical',
     gasBodyVfxAudit: '1', renderScale: String(scale), renderLook: 'realistic',
-    volumeVfx: '0', liquidBodyVfx: '0', gasBodyVfx: enabled ? '1' : '0',
+    volumeVfx: '0', liquidBodyVfx: '0', gasBodyVfx: enabled ? '1' : '0', gasMotionVfx: '0',
   });
   await cdp.send('Page.navigate', { url: `${AUDIT_BASE_URL}?${query}` });
   await waitFor(() => evaluate(cdp, `(() => {
@@ -21891,6 +22581,7 @@ async function navigateGasBodyVfxState(cdp, mode, scale, enabled, label) {
       && parameters.get('volumeVfx') === '0'
       && parameters.get('liquidBodyVfx') === '0'
       && parameters.get('gasBodyVfx') === ${JSON.stringify(enabled ? '1' : '0')}
+      && parameters.get('gasMotionVfx') === '0'
       && Boolean(window.__ANIFOR_INPUT_AUDIT__);
   })()`), 15_000, `E04 ${label} ${scale}x page`);
   await waitFor(() => evaluate(cdp,
@@ -21906,6 +22597,7 @@ async function navigateGasBodyVfxState(cdp, mode, scale, enabled, label) {
       volumeVfx: canvas.dataset.volumeVfx,
       liquidBodyVfx: canvas.dataset.liquidBodyVfx,
       gasBodyVfx: canvas.dataset.gasBodyVfx,
+      gasMotionVfx: canvas.dataset.gasMotionVfx,
     } : undefined;
   })()`);
   const expectedBloom = `${WORLD_WIDTH * scale / 2}x${WORLD_HEIGHT * scale / 2}`;
@@ -21913,7 +22605,8 @@ async function navigateGasBodyVfxState(cdp, mode, scale, enabled, label) {
     && hdrPipeline?.bloomBacking === expectedBloom
     && hdrPipeline?.volumeVfx === 'inactive'
     && hdrPipeline?.liquidBodyVfx === 'inactive'
-    && hdrPipeline?.gasBodyVfx === (enabled ? 'active' : 'inactive'),
+    && hdrPipeline?.gasBodyVfx === (enabled ? 'active' : 'inactive')
+    && hdrPipeline?.gasMotionVfx === 'inactive',
   `E04 ${label} ${scale}x HDR/gas-body state resolved incorrectly (${JSON.stringify(hdrPipeline)})`);
   const capture = await waitForStablePageCapture(
     cdp, `E04 ${label} ${scale}x framebuffer`, scale === 4 ? 20_000 : undefined,

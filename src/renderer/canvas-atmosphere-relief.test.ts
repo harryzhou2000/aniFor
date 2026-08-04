@@ -226,24 +226,47 @@ describe('Canvas atmosphere relief', () => {
     expect(darkLit).toEqual(baseline);
   });
 
-  it('applies propagated gas identity across supported volume without changing alpha', () => {
+  it('renders scalar and packed RGBA identity planes byte-identically', () => {
     const width = 4;
     const source = new Uint8Array(width * width * 4);
-    const styles = new Uint8Array(width * width).fill(1);
-    for (let index = 0; index < styles.length; index++) {
+    const scalarStyles = new Uint8Array(width * width);
+    const packedStyles = new Uint8Array(width * width * 4);
+    const alternateMotion = new Uint8Array(packedStyles.length);
+    for (let index = 0; index < scalarStyles.length; index++) {
+      const style = index % 5 === 0 ? 4 : 1;
+      scalarStyles[index] = style;
+      const styleOffset = index * 4;
+      packedStyles[styleOffset] = style;
+      packedStyles[styleOffset + 1] = (index * 37 + 11) & 0xff;
+      packedStyles[styleOffset + 2] = (255 - index * 29) & 0xff;
+      packedStyles[styleOffset + 3] = (index * 53 + 7) & 0xff;
+      alternateMotion[styleOffset] = style;
+      alternateMotion[styleOffset + 1] = (255 - index * 17) & 0xff;
+      alternateMotion[styleOffset + 2] = (index * 61 + 3) & 0xff;
+      alternateMotion[styleOffset + 3] = (255 - index * 43) & 0xff;
       source.set([140, 145, 152, 164], index * 4);
     }
+    const original = source.slice();
     const flat = new Uint8ClampedArray(source.length);
-    const styled = new Uint8ClampedArray(source.length);
+    const scalar = new Uint8ClampedArray(source.length);
+    const packed = new Uint8ClampedArray(source.length);
+    const alternate = new Uint8ClampedArray(source.length);
     const repeatedFlat = new Uint8ClampedArray(source.length);
-    shadeCanvasAtmosphere(flat, source, width, width, undefined, true, styles, false);
-    shadeCanvasAtmosphere(styled, source, width, width, undefined, true, styles, true);
-    shadeCanvasAtmosphere(repeatedFlat, source, width, width, undefined, true, styles, false);
+    shadeCanvasAtmosphere(flat, source, width, width, undefined, true, scalarStyles, false);
+    shadeCanvasAtmosphere(scalar, source, width, width, undefined, true, scalarStyles, true);
+    shadeCanvasAtmosphere(packed, source, width, width, undefined, true, packedStyles, true);
+    shadeCanvasAtmosphere(alternate, source, width, width, undefined, true, alternateMotion, true);
+    shadeCanvasAtmosphere(repeatedFlat, source, width, width, undefined, true, scalarStyles, false);
 
-    expect(styled).not.toEqual(flat);
+    expect(scalar).not.toEqual(flat);
+    expect(packed).toEqual(scalar);
+    expect(alternate).toEqual(scalar);
     expect(repeatedFlat).toEqual(flat);
+    expect(source).toEqual(original);
     for (let offset = 3; offset < source.length; offset += 4) {
-      expect(styled[offset]).toBe(source[offset]);
+      expect(scalar[offset]).toBe(source[offset]);
+      expect(packed[offset]).toBe(source[offset]);
+      expect(alternate[offset]).toBe(source[offset]);
     }
   });
 

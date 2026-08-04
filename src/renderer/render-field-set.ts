@@ -123,16 +123,23 @@ export class RenderFieldSet {
     this.liquidDirty = true;
   }
 
+  /** Reuses the existing atmosphere cadence when only native gas flow changed. */
+  markAtmosphereMotionDirty(): void {
+    if (this.atmosphere.hasVolume) this.atmosphereDirty = true;
+  }
+
   due(time: number): boolean {
     return this.schedule.due(time, this.atmosphereDirty, this.liquidDirty, this.emissionDirty)
       || (this.suspensionDirty
         && time - this.lastSuspensionRefresh >= SUSPENSION_FIELD_REFRESH_INTERVAL);
   }
 
-  updateNext(materials: Uint8Array, time: number, walls?: Uint8Array): VolumeFieldKind | undefined {
+  updateNext(
+    materials: Uint8Array, time: number, walls?: Uint8Array, velocities?: Int8Array,
+  ): VolumeFieldKind | undefined {
     const field = this.schedule.next(time, this.atmosphereDirty, this.liquidDirty, this.emissionDirty);
     if (field === 'atmosphere') {
-      this.atmosphere.update(materials, walls);
+      this.atmosphere.update(materials, walls, velocities);
       this.atmosphereDirty = false;
     } else if (field === 'liquid') {
       this.liquid.update(materials);

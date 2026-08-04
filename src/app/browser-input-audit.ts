@@ -61,6 +61,9 @@ import type {
 import type { SparkStateGraphicsAuditSnapshot } from './spark-state-graphics-audit';
 import type { PhotonSpectrumGraphicsAuditSnapshot } from './photon-spectrum-graphics-audit';
 import type { PowderLightVfxAuditSnapshot } from './powder-light-vfx-audit';
+import type {
+  GasMotionVfxAuditSnapshot, GasMotionVfxFixtureMode,
+} from './gas-motion-vfx-audit';
 
 export interface BrowserInputAuditApi {
   readonly version: 1;
@@ -72,6 +75,9 @@ export interface BrowserInputAuditApi {
   photonState(x: number, y: number): number;
   wall(x: number, y: number): number;
   temperature(x: number, y: number): number;
+  velocity(x: number, y: number): readonly [number, number];
+  renderedVelocity(x: number, y: number): readonly [number, number];
+  atmosphereMotion(x: number, y: number): readonly [number, number, number];
   sourceTarget(x: number, y: number): number;
   presentationAuxiliary(x: number, y: number): number;
   geologicalSolidStylingEnabled(): boolean;
@@ -160,6 +166,8 @@ export interface BrowserInputAuditApi {
   prepareSolidFieldLightingFixture(): void;
   powderLightVfxFixture(): PowderLightVfxAuditSnapshot;
   preparePowderLightVfxFixture(): void;
+  gasMotionVfxFixture(): GasMotionVfxAuditSnapshot;
+  prepareGasMotionVfxFixture(mode: GasMotionVfxFixtureMode): void;
   prepareContourStressFixture(): void;
   toggleDenseSolidProbe(): void;
   materialAtlas(): readonly MaterialAtlasEntry[];

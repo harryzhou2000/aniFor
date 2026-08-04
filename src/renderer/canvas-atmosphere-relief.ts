@@ -70,7 +70,9 @@ export function shadeCanvasAtmosphere(
   }
   const length = width * height * 4;
   if (source.length !== length || target.length !== length) throw new Error('Atmosphere buffer size mismatch');
-  if (identityStyles && identityStyles.length !== width * height) {
+  const identityStride = identityStyles?.length === width * height * 4 ? 4 : 1;
+  if (identityStyles && identityStyles.length !== width * height
+    && identityStyles.length !== width * height * 4) {
     throw new Error('Atmosphere identity field size mismatch');
   }
   if (light && (!Number.isInteger(light.width) || !Number.isInteger(light.height)
@@ -187,7 +189,7 @@ export function shadeCanvasAtmosphere(
         source[offset + 2],
       );
       if (identityStyling && identityStyles) applyCanvasGasIdentityStyle(
-        target, offset, identityStyles[offset / 4], x, y,
+        target, offset, identityStyles[(offset / 4) * identityStride], x, y,
         density, upperLeftRelief, curvature,
       );
     }

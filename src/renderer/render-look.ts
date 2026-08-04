@@ -69,6 +69,23 @@ export function resolveGasBodyVfxEnabled(
 }
 
 /**
+ * Adds a velocity-aware lighting cue on top of E04's stable field-owned gas
+ * body. The experiment cannot be enabled without that base: atmosphere mass,
+ * silhouette, and the static billow remain E04-owned while this selector only
+ * admits a bounded RGB response to native particle velocity.
+ */
+export function resolveGasMotionVfxEnabled(
+  look: RenderLook,
+  search = globalThis.location?.search ?? '',
+): boolean {
+  if (!resolveGasBodyVfxEnabled(look, search)) return false;
+  const requested = new URLSearchParams(search).get('gasMotionVfx');
+  if (requested === '0' || requested === 'off') return false;
+  if (requested === '1' || requested === 'on') return true;
+  return true;
+}
+
+/**
  * Keeps the settled-powder crown experiment independently measurable without
  * changing liquid or gas. Ordinary realistic/neon presets retain the broad
  * volume default; the explicit query is reserved for comparison captures and

@@ -3,6 +3,8 @@ const KERNEL = [1, 4, 6, 4, 1] as const;
 const KERNEL_RADIUS = 2;
 const CLOUD_GAIN = 4.2;
 const STYLE_COMPETITOR_RATIO = 0.78;
+const STYLE_STRIDE = 4;
+const FLOW_ZERO_BYTE = 128;
 
 /**
  * A bounded half-resolution gas volume. RGB stores blended gas colour and alpha
@@ -15,7 +17,13 @@ export class AtmosphereField {
   readonly bytes: Uint8Array;
   /** True only when the packed field currently has visible volume support. */
   hasVolume = false;
-  /** Dominant gas identity propagated through the same separable cloud kernel. */
+  /**
+   * Existing atmosphere-style plane, now RGBA: dominant identity in R,
+   * density-weighted signed flow in G/B, and directional coherence in A.
+   * It remains one half-resolution texture and one upload; the extra channels
+   * let normal WebGL shade the field-owned cloud instead of individual gas
+   * carriers.
+   */
   readonly styleBytes: Uint8Array;
   private readonly seed: Float32Array;
   private readonly horizontal: Float32Array;
@@ -33,18 +41,22 @@ export class AtmosphereField {
     this.width = Math.ceil(worldWidth / DOWNSAMPLE);
     this.height = Math.ceil(worldHeight / DOWNSAMPLE);
     this.bytes = new Uint8Array(this.width * this.height * 4);
-    this.styleBytes = new Uint8Array(this.width * this.height);
+    this.styleBytes = new Uint8Array(this.width * this.height * STYLE_STRIDE);
+    initializeFlowZeros(this.styleBytes);
     this.seed = new Float32Array(this.bytes.length);
     this.horizontal = new Float32Array(this.bytes.length);
     this.blurred = new Float32Array(this.bytes.length);
-    this.horizontalStyles = new Uint8Array(this.styleBytes.length);
+    this.horizontalStyles = new Uint8Array(this.width * this.height);
   }
 
-  update(materials: Uint8Array, walls?: Uint8Array): void {
+  update(materials: Uint8Array, walls?: Uint8Array, velocities?: Int8Array): void {
     if (materials.length !== this.worldWidth * this.worldHeight) throw new Error('Atmosphere field size mismatch');
     if (walls && walls.length !== materials.length) throw new Error('Atmosphere wall field size mismatch');
+    if (velocities && velocities.length !== materials.length * 2) {
+      throw new Error('Atmosphere velocity field size mismatch');
+    }
     this.seed.fill(0);
-    this.seedGas(materials);
+    this.seedGas(materials, velocities);
     this.blurHorizontal();
     this.blurVertical();
     this.suppressStylesNearMatter(materials, walls);
@@ -72,13 +84,16 @@ export class AtmosphereField {
       + this.horizontalStyles.byteLength + this.styleWeights.byteLength;
   }
 
-  private seedGas(materials: Uint8Array): void {
+  private seedGas(materials: Uint8Array, velocities?: Int8Array): void {
     for (let ay = 0; ay < this.height; ay++) {
       for (let ax = 0; ax < this.width; ax++) {
         let count = 0;
         let red = 0;
         let green = 0;
         let blue = 0;
+        let velocityX = 0;
+        let velocityY = 0;
+        let velocityMagnitude = 0;
         let style0 = 0;
         let style1 = 0;
         let style2 = 0;
@@ -89,12 +104,19 @@ export class AtmosphereField {
           for (let ox = 0; ox < DOWNSAMPLE; ox++) {
             const x = ax * DOWNSAMPLE + ox;
             if (x >= this.worldWidth) continue;
-            const material = materials[y * this.worldWidth + x];
+            const worldIndex = y * this.worldWidth + x;
+            const material = materials[worldIndex];
             if (!this.gasByMaterial[material]) continue;
             const colorOffset = material * 3;
             red += this.colorByMaterial[colorOffset];
             green += this.colorByMaterial[colorOffset + 1];
             blue += this.colorByMaterial[colorOffset + 2];
+            const sourceVelocity = worldIndex * 2;
+            const sourceVelocityX = velocities?.[sourceVelocity] ?? 0;
+            const sourceVelocityY = velocities?.[sourceVelocity + 1] ?? 0;
+            velocityX += sourceVelocityX;
+            velocityY += sourceVelocityY;
+            velocityMagnitude += Math.hypot(sourceVelocityX, sourceVelocityY);
             const style = this.styleByMaterial[material];
             if (count === 0) style0 = style;
             else if (count === 1) style1 = style;
@@ -103,7 +125,12 @@ export class AtmosphereField {
             count++;
           }
         }
-        if (!count) continue;
+        const styleOffset = (ay * this.width + ax) * STYLE_STRIDE;
+        if (!count) {
+          this.styleBytes[styleOffset] = 0;
+          writeFlowScratch(this.styleBytes, styleOffset, 0, 0, 0);
+          continue;
+        }
         const density = count / (DOWNSAMPLE * DOWNSAMPLE);
         const offset = (ay * this.width + ax) * 4;
         this.seed[offset] = red / count / 255 * density;
@@ -160,7 +187,11 @@ export class AtmosphereField {
         if (style3 && style3 !== dominantStyle) runnerUpCount = Math.max(runnerUpCount, style3Count);
         if (dominantCount / count < 0.58
           || (dominantCount - runnerUpCount) / count < 0.12) dominantStyle = 0;
-        this.styleBytes[ay * this.width + ax] = dominantStyle;
+        this.styleBytes[styleOffset] = dominantStyle;
+        writeFlowScratch(
+          this.styleBytes, styleOffset,
+          velocityX / count, velocityY / count, velocityMagnitude / count,
+        );
       }
     }
   }
@@ -173,6 +204,10 @@ export class AtmosphereField {
         let green = 0;
         let blue = 0;
         let density = 0;
+        let flowX = 0;
+        let flowY = 0;
+        let flowMagnitude = 0;
+        let flowDensity = 0;
         let weightSum = 0;
         this.styleWeights.fill(0);
         for (let kernel = -KERNEL_RADIUS; kernel <= KERNEL_RADIUS; kernel++) {
@@ -184,9 +219,16 @@ export class AtmosphereField {
           green += this.seed[source + 1] * weight;
           blue += this.seed[source + 2] * weight;
           density += this.seed[source + 3] * weight;
-          const style = this.styleBytes[source / 4];
+          const style = this.styleBytes[source];
           const contribution = this.seed[source + 3] * weight;
           if (style) this.styleWeights[style] += contribution;
+          const sourceFlowX = this.styleBytes[source + 1] - FLOW_ZERO_BYTE;
+          const sourceFlowY = this.styleBytes[source + 2] - FLOW_ZERO_BYTE;
+          const sourceMagnitude = this.styleBytes[source + 3];
+          flowX += sourceFlowX * contribution;
+          flowY += sourceFlowY * contribution;
+          flowMagnitude += sourceMagnitude * contribution;
+          flowDensity += contribution;
           weightSum += weight;
         }
         const inverseWeight = 1 / weightSum;
@@ -195,6 +237,12 @@ export class AtmosphereField {
         this.horizontal[target + 2] = blue * inverseWeight;
         this.horizontal[target + 3] = density * inverseWeight;
         this.horizontalStyles[target / 4] = dominantStyle(this.styleWeights);
+        writeFlowScratch(
+          this.bytes, target,
+          flowDensity > 1e-8 ? flowX / flowDensity : 0,
+          flowDensity > 1e-8 ? flowY / flowDensity : 0,
+          flowDensity > 1e-8 ? flowMagnitude / flowDensity : 0,
+        );
       }
     }
   }
@@ -207,6 +255,10 @@ export class AtmosphereField {
         let green = 0;
         let blue = 0;
         let density = 0;
+        let flowX = 0;
+        let flowY = 0;
+        let flowMagnitude = 0;
+        let flowDensity = 0;
         let weightSum = 0;
         this.styleWeights.fill(0);
         for (let kernel = -KERNEL_RADIUS; kernel <= KERNEL_RADIUS; kernel++) {
@@ -221,6 +273,13 @@ export class AtmosphereField {
           const style = this.horizontalStyles[source / 4];
           const contribution = this.horizontal[source + 3] * weight;
           if (style) this.styleWeights[style] += contribution;
+          const sourceFlowX = this.bytes[source + 1] - FLOW_ZERO_BYTE;
+          const sourceFlowY = this.bytes[source + 2] - FLOW_ZERO_BYTE;
+          const sourceMagnitude = this.bytes[source + 3];
+          flowX += sourceFlowX * contribution;
+          flowY += sourceFlowY * contribution;
+          flowMagnitude += sourceMagnitude * contribution;
+          flowDensity += contribution;
           weightSum += weight;
         }
         const inverseWeight = 1 / weightSum;
@@ -228,7 +287,13 @@ export class AtmosphereField {
         this.blurred[target + 1] = green * inverseWeight;
         this.blurred[target + 2] = blue * inverseWeight;
         this.blurred[target + 3] = density * inverseWeight;
-        this.styleBytes[target / 4] = dominantStyle(this.styleWeights);
+        this.styleBytes[target] = dominantStyle(this.styleWeights);
+        writeFlowFinal(
+          this.styleBytes, target,
+          flowDensity > 1e-8 ? flowX / flowDensity : 0,
+          flowDensity > 1e-8 ? flowY / flowDensity : 0,
+          flowDensity > 1e-8 ? flowMagnitude / flowDensity : 0,
+        );
       }
     }
   }
@@ -270,8 +335,8 @@ export class AtmosphereField {
       const minimumY = Math.max(0, fieldY - 2);
       const maximumY = Math.min(this.height - 1, fieldY + 2);
       for (let fieldX = 0; fieldX < this.width; fieldX++) {
-        const styleOffset = fieldY * this.width + fieldX;
-        if (this.styleBytes[styleOffset] === 0) continue;
+        const styleOffset = (fieldY * this.width + fieldX) * STYLE_STRIDE;
+        if (this.blurred[styleOffset + 3] <= 1e-6) continue;
         const minimumX = Math.max(0, fieldX - 2);
         const maximumX = Math.min(this.width - 1, fieldX + 2);
         let blocked = false;
@@ -284,7 +349,10 @@ export class AtmosphereField {
             }
           }
         }
-        if (blocked) this.styleBytes[styleOffset] = 0;
+        if (blocked) {
+          this.styleBytes[styleOffset] = 0;
+          writeFlowFinal(this.styleBytes, styleOffset, 0, 0, 0);
+        }
       }
     }
   }
@@ -299,7 +367,8 @@ export class AtmosphereField {
         this.bytes[offset + 1] = 0;
         this.bytes[offset + 2] = 0;
         this.bytes[offset + 3] = 0;
-        this.styleBytes[offset / 4] = 0;
+        this.styleBytes[offset] = 0;
+        writeFlowFinal(this.styleBytes, offset, 0, 0, 0);
         continue;
       }
       this.bytes[offset] = Math.min(255, Math.round(this.blurred[offset] / blurredDensity * 255));
@@ -327,4 +396,45 @@ function dominantStyle(weights: Float32Array): number {
   }
   return strongestWeight > 0 && runnerUpWeight < strongestWeight * STYLE_COMPETITOR_RATIO
     ? strongestStyle : 0;
+}
+
+function initializeFlowZeros(target: Uint8Array): void {
+  for (let offset = 0; offset < target.length; offset += STYLE_STRIDE) {
+    target[offset + 1] = FLOW_ZERO_BYTE;
+    target[offset + 2] = FLOW_ZERO_BYTE;
+  }
+}
+
+/** Intermediate passes retain mean speed directly so cancellation is lossless. */
+function writeFlowScratch(
+  target: Uint8Array, offset: number,
+  velocityX: number, velocityY: number, meanMagnitude: number,
+): void {
+  const boundedX = Math.max(-128, Math.min(127, velocityX));
+  const boundedY = Math.max(-128, Math.min(127, velocityY));
+  target[offset + 1] = roundSigned(boundedX) + FLOW_ZERO_BYTE;
+  target[offset + 2] = roundSigned(boundedY) + FLOW_ZERO_BYTE;
+  target[offset + 3] = Math.round(Math.max(0, Math.min(255, meanMagnitude)));
+}
+
+/** Final texture stores signed mean flow plus `|mean vector| / mean speed`. */
+function writeFlowFinal(
+  target: Uint8Array, offset: number,
+  velocityX: number, velocityY: number, meanMagnitude: number,
+): void {
+  const boundedX = Math.max(-128, Math.min(127, velocityX));
+  const boundedY = Math.max(-128, Math.min(127, velocityY));
+  const roundedX = roundSigned(boundedX);
+  const roundedY = roundSigned(boundedY);
+  const resultant = Math.hypot(roundedX, roundedY);
+  const coherence = meanMagnitude > 1e-6
+    ? Math.max(0, Math.min(1, resultant / meanMagnitude)) : 0;
+  target[offset + 1] = roundedX + FLOW_ZERO_BYTE;
+  target[offset + 2] = roundedY + FLOW_ZERO_BYTE;
+  target[offset + 3] = Math.round(coherence * 255);
+}
+
+/** Keep exact velocity reversal byte-symmetric at half-integer boundaries. */
+function roundSigned(value: number): number {
+  return value < 0 ? -Math.round(-value) : Math.round(value);
 }

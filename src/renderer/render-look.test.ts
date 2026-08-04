@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
-  DEFAULT_RENDER_LOOK, resolveGasBodyVfxEnabled, resolveLiquidBodyVfxEnabled,
+  DEFAULT_RENDER_LOOK, resolveGasBodyVfxEnabled, resolveGasMotionVfxEnabled,
+  resolveLiquidBodyVfxEnabled,
   resolvePowderBodyVfxEnabled, resolvePowderLightVfxEnabled, resolveRenderLook,
   resolveVolumeVfxEnabled,
 } from './render-look';
@@ -45,6 +46,18 @@ describe('resolveRenderLook', () => {
     )).toBe(true);
     expect(resolveGasBodyVfxEnabled(
       'neon-lab', '?volumeVfx=1&gasBodyVfx=off',
+    )).toBe(false);
+  });
+
+  it('keeps velocity-aware gas lighting subordinate to the stable gas body', () => {
+    expect(resolveGasMotionVfxEnabled('classic', '?gasMotionVfx=on')).toBe(false);
+    expect(resolveGasMotionVfxEnabled('realistic', '')).toBe(true);
+    expect(resolveGasMotionVfxEnabled('realistic', '?gasMotionVfx=off')).toBe(false);
+    expect(resolveGasMotionVfxEnabled(
+      'realistic', '?volumeVfx=0&gasBodyVfx=on&gasMotionVfx=on',
+    )).toBe(true);
+    expect(resolveGasMotionVfxEnabled(
+      'realistic', '?gasBodyVfx=off&gasMotionVfx=on',
     )).toBe(false);
   });
 

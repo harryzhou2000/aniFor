@@ -646,6 +646,17 @@ export class MaterialRenderer {
       ?? this.rendered[y * this.simulation.width + x];
   }
 
+  /** Audit-only proof that signed velocity reached the active WebGL staging grid. */
+  renderedVelocityAt(x: number, y: number): readonly [number, number] {
+    if (x < 0 || y < 0 || x >= this.simulation.width || y >= this.simulation.height) {
+      return [0, 0];
+    }
+    if (this.presenter) return this.presenter.semanticVelocityAt(x, y);
+    const velocity = this.simulation.velocity?.();
+    const offset = (y * this.simulation.width + x) * 2;
+    return [velocity?.[offset] ?? 0, velocity?.[offset + 1] ?? 0];
+  }
+
   /** Audit-only readback of the propagated half-resolution gas identity plane. */
   gasIdentityStyleAt(x: number, y: number): number {
     if (x < 0 || y < 0 || x >= this.simulation.width || y >= this.simulation.height) {
@@ -656,7 +667,24 @@ export class MaterialRenderer {
     if (!fields) return 0;
     const fieldX = Math.min(fields.atmosphere.width - 1, Math.floor(x / 2));
     const fieldY = Math.min(fields.atmosphere.height - 1, Math.floor(y / 2));
-    return fields.atmosphere.styleBytes[fieldY * fields.atmosphere.width + fieldX];
+    return fields.atmosphere.styleBytes[
+      (fieldY * fields.atmosphere.width + fieldX) * 4
+    ];
+  }
+
+  /** Audit-only readback of the atmosphere-owned signed flow and coherence byte. */
+  atmosphereMotionAt(x: number, y: number): readonly [number, number, number] {
+    if (x < 0 || y < 0 || x >= this.simulation.width || y >= this.simulation.height) {
+      return [0, 0, 0];
+    }
+    if (this.presenter) return this.presenter.atmosphereMotionAt(x, y);
+    const fields = this.fallbackFields;
+    if (!fields) return [0, 0, 0];
+    const fieldX = Math.min(fields.atmosphere.width - 1, Math.floor(x / 2));
+    const fieldY = Math.min(fields.atmosphere.height - 1, Math.floor(y / 2));
+    const offset = (fieldY * fields.atmosphere.width + fieldX) * 4;
+    const state = fields.atmosphere.styleBytes;
+    return [state[offset + 1] - 128, state[offset + 2] - 128, state[offset + 3]];
   }
 
   /** WebGL audit surface; the fallback has no advanced gas-chroma shader path. */
@@ -1598,7 +1626,9 @@ export class MaterialRenderer {
     }
     const timingStart = this.canvasPresentationTimingEnabled ? performance.now() : undefined;
     let volumePlaneUploads = 0;
-    const rebuiltField = fields.updateNext(this.rendered, scheduleTime, this.renderedWalls);
+    const rebuiltField = fields.updateNext(
+      this.rendered, scheduleTime, this.renderedWalls, velocities,
+    );
     fields.refreshSuspension(this.rendered, scheduleTime, this.renderedWalls);
     if (rebuiltField === 'liquid' || !this.canvasLiquidOpticalDepthHydrated) {
       fields.liquid.writeVerticalOpticalDepth(

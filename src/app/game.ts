@@ -24,6 +24,9 @@ import {
 import {
   POWDER_LIGHT_VFX_AUDIT, preparePowderLightVfxFixture,
 } from './powder-light-vfx-audit';
+import {
+  GAS_MOTION_VFX_AUDIT, prepareGasMotionVfxFixture,
+} from './gas-motion-vfx-audit';
 import { navigateToRenderScale } from './render-scale-navigation';
 import {
   MATERIAL_ATLAS, materialAtlasAuditRequested, prepareMaterialAtlasAuditFixture,
@@ -425,6 +428,16 @@ export class Game {
         if (x < 0 || y < 0 || x >= this.simulation.width || y >= this.simulation.height) return -1;
         return this.simulation.temperature?.()[y * this.simulation.width + x] ?? -1;
       },
+      velocity: (x, y) => {
+        if (x < 0 || y < 0 || x >= this.simulation.width || y >= this.simulation.height) {
+          return [0, 0] as const;
+        }
+        const field = this.simulation.velocity?.();
+        const offset = (y * this.simulation.width + x) * 2;
+        return [field?.[offset] ?? 0, field?.[offset + 1] ?? 0] as const;
+      },
+      renderedVelocity: (x, y) => this.renderer.renderedVelocityAt(x, y),
+      atmosphereMotion: (x, y) => this.renderer.atmosphereMotionAt(x, y),
       sourceTarget: (x, y) => this.simulation.configuredSourceTargetAt?.(x, y) ?? Material.Empty,
       presentationAuxiliary: (x, y) => this.renderer.presentationAuxiliaryAt(x, y),
       geologicalSolidStylingEnabled: () => this.renderer.geologicalSolidStylingIsEnabled(),
@@ -652,6 +665,12 @@ export class Game {
       powderLightVfxFixture: () => POWDER_LIGHT_VFX_AUDIT,
       preparePowderLightVfxFixture: () => {
         preparePowderLightVfxFixture(this.simulation);
+        this.renderer.invalidateDynamicPresentation();
+      },
+      gasMotionVfxFixture: () => GAS_MOTION_VFX_AUDIT,
+      prepareGasMotionVfxFixture: (mode) => {
+        prepareGasMotionVfxFixture(this.simulation, mode);
+        this.renderer.synchronizeFixtureMaterialPlane();
         this.renderer.invalidateDynamicPresentation();
       },
       prepareContourStressFixture: () => { prepareContourStressAuditFixture(this.simulation); },

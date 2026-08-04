@@ -36,8 +36,9 @@ import {
 } from './canvas-gas-identity-style';
 import { HDRVfxPipeline, type HDRPipelineInfo } from './hdr-vfx-pipeline';
 import {
-  resolveGasBodyVfxEnabled, resolveLiquidBodyVfxEnabled, resolvePowderBodyVfxEnabled,
-  resolvePowderLightVfxEnabled, resolveRenderLook, resolveVolumeVfxEnabled,
+  resolveGasBodyVfxEnabled, resolveGasMotionVfxEnabled, resolveLiquidBodyVfxEnabled,
+  resolvePowderBodyVfxEnabled, resolvePowderLightVfxEnabled, resolveRenderLook,
+  resolveVolumeVfxEnabled,
 } from './render-look';
 interface PresenterViewport { readonly width: number; readonly height: number }
 
@@ -3203,6 +3204,7 @@ uniform float uTime;
 uniform float uHDRVfx;
 uniform float uVolumeVfx;
 uniform float uGasBodyVfx;
+uniform float uGasMotionVfx;
 uniform float uLiquidBodyVfx;
 uniform float uPowderBodyVfx;
 uniform float uPowderLightVfx;
@@ -5691,6 +5693,10 @@ void main() {
   float liquidNeighbourMean = 0.0;
   float adjacentLiquidSupport = 0.0;
   float exposedLiquidSide = 0.0;
+  // This packed state is consumed by the later gas-colour branch. Keep it in
+  // main scope: branch-local sampler values are invalid there and also raise
+  // register-pressure risk in the separate compact true-8x shader.
+  vec4 gasStyleState = vec4(0.0, 128.0 / 255.0, 128.0 / 255.0, 0.0);
   if (emissionOnly > 0.5) {
     float lightLeft = texture(uEmissionTexture, fieldUv - vec2(uEmissionTexel.x, 0.0)).a;
     float lightRight = texture(uEmissionTexture, fieldUv + vec2(uEmissionTexel.x, 0.0)).a;
@@ -5703,6 +5709,12 @@ void main() {
     emissionDirectional = (lightLeft - lightRight) * 0.16
       + (lightBottom - lightTop) * 0.22;
   } else if (gasVolume > 0.5) {
+    // One existing half-resolution style sample carries both categorical gas
+    // identity and coherent atmosphere motion. E07 therefore adds no texture,
+    // sampler, fetch, upload call, target, or pass to the default E04 path.
+    if (uGasIdentityStyling > 0.5 || uGasMotionVfx > 0.5) {
+      gasStyleState = texture(uAtmosphereStyleTexture, fieldUv);
+    }
     float cloudLeft = texture(uAtmosphereTexture, fieldUv - vec2(uAtmosphereTexel.x, 0.0)).a;
     float cloudRight = texture(uAtmosphereTexture, fieldUv + vec2(uAtmosphereTexel.x, 0.0)).a;
     float cloudTop = texture(uAtmosphereTexture, fieldUv - vec2(0.0, uAtmosphereTexel.y)).a;
@@ -6091,11 +6103,65 @@ void main() {
       color += (vec3(1.35) - clamp(color, 0.0, 1.35))
         * gasVfxTint * gasVfxKey;
       color *= 1.0 - gasVfxPocket;
+
+      // E07: the existing atmosphere-style plane carries density-weighted
+      // momentum through the same separable blur as gas mass. Alternating
+      // particle velocity cancels before presentation, while reconstructed
+      // cloud fragments inherit the coherent direction of their body. R stays
+      // the exact identity byte; G/B are signed flow and A is coherence.
+      if (uGasMotionVfx > 0.5) {
+        vec2 gasMotionBytes = floor(gasStyleState.gb * 255.0 + vec2(0.5))
+          - vec2(128.0);
+        float gasMotionSpeedBytes = length(gasMotionBytes);
+        float gasMotionCoherence = smoothstep(0.45, 0.75, gasStyleState.a);
+        if (gasMotionSpeedBytes > 0.5 && gasMotionCoherence > 0.001) {
+          vec2 gasMotionDirection = gasMotionBytes / gasMotionSpeedBytes;
+          float gasMotionStrength = smoothstep(6.0, 30.0, gasMotionSpeedBytes)
+            * gasMotionCoherence;
+          float gasMotionSlopeLength = length(volumeSlope);
+          vec2 gasMotionOutward = -volumeSlope
+            / max(gasMotionSlopeLength, 0.000001);
+          float gasMotionLeading = dot(gasMotionOutward, gasMotionDirection);
+          float gasMotionShoulder = smoothstep(0.004, 0.045, gasMotionSlopeLength)
+            * (1.0 - smoothstep(0.92, 1.0, gasShadeDensity));
+          // Differentiate E04's three established macro waves analytically in
+          // the coherent flow direction. This produces one broad bipolar body
+          // response that reverses with momentum; it is not the old speed-only
+          // static billow grade and cannot expose carrier-sized cells.
+          vec2 gasMotionBillowGradient =
+            cos(dot(fieldPosition, vec2(0.055, 0.031)) + 0.80)
+              * vec2(0.055, 0.031) * 0.50
+            + cos(dot(fieldPosition, vec2(-0.029, 0.081)) + 2.15)
+              * vec2(-0.029, 0.081) * 0.31
+            + cos(dot(fieldPosition, vec2(0.097, -0.043)) + 4.05)
+              * vec2(0.097, -0.043) * 0.19;
+          float gasMotionInteriorTone = dot(
+            gasMotionBillowGradient, gasMotionDirection
+          ) * 12.0 * gasVfxBodySupport;
+          float gasMotionEdgeTone = gasMotionLeading * gasMotionShoulder
+            * gasVfxSupport * 1.20;
+          float gasMotionTone = clamp(
+            gasMotionInteriorTone + gasMotionEdgeTone, -1.0, 1.0
+          );
+          gasMotionTone *= gasMotionStrength;
+          vec3 gasMotionTint = clamp(mix(
+            vec3(0.48, 0.70, 1.00), vividColor(gasBase, 1.08), 0.70
+          ), vec3(0.0), vec3(1.0));
+          color += (vec3(1.12) - clamp(color, 0.0, 1.12))
+            * gasMotionTint * max(gasMotionTone, 0.0) * (32.0 / 255.0);
+          // CFLM's emissive body already consumes most positive HDR headroom.
+          // A small bipolar cyan/amber shift therefore carries direction more
+          // legibly than another highlight; reversal negates it exactly.
+          if (material == 87.0) color += gasMotionTone
+            * vec3(-64.0, 28.0, 52.0) / 255.0;
+          float gasMotionShadowBytes = material == 87.0 ? 40.0 : 32.0;
+          color -= clamp(color, 0.0, 1.0)
+            * max(-gasMotionTone, 0.0) * (gasMotionShadowBytes / 255.0);
+        }
+      }
     }
     if (uGasIdentityStyling > 0.5) {
-      float gasIdentityStyle = floor(
-        texture(uAtmosphereStyleTexture, fieldUv).r * 255.0 + 0.5
-      );
+      float gasIdentityStyle = floor(gasStyleState.r * 255.0 + 0.5);
       if (uGasVolumeChroma > 0.5 && gasIdentityStyle > 6.5 && gasIdentityStyle < 7.5) {
         float gasIdentityChromaSupport = smoothstep(0.012, 0.030, atmosphereState.a);
         vec3 nobleGasChroma = gasIdentityVolumeChroma(gasIdentityStyle, gasChroma)
@@ -8512,6 +8578,7 @@ export class PixiFieldPresenter {
   private photonStateHydrated = false;
   private nativeWallsActive = false;
   private nativeWallsHydrated = false;
+  private atmosphereMotionHydrated = false;
   private unusualSolidStylingEnabled = true;
   private liquidOpticalDepthHydrated = false;
   private lastPowderSurfaceRefresh = -Infinity;
@@ -8585,7 +8652,7 @@ export class PixiFieldPresenter {
       resource: this.fieldSet.atmosphere.styleBytes,
       width: this.fieldSet.atmosphere.width,
       height: this.fieldSet.atmosphere.height,
-      format: 'r8unorm',
+      format: 'rgba8unorm',
       alphaMode: 'no-premultiply-alpha',
       scaleMode: 'nearest',
       autoGarbageCollect: false,
@@ -8660,6 +8727,10 @@ export class PixiFieldPresenter {
     // 8x shader deliberately has neither this uniform nor its arithmetic.
     const gasBodyVfxEnabled = outputScale < 8
       && resolveGasBodyVfxEnabled(renderLook);
+    // E07 is an arithmetic-only normal-detail layer over E04. The protected
+    // true-8x shader neither declares its selector nor decodes particle flow.
+    const gasMotionVfxEnabled = outputScale < 8
+      && resolveGasMotionVfxEnabled(renderLook);
     // E03 is a normal-detail experiment. The true-8x shader intentionally has
     // no corresponding uniform or arithmetic, so its public capability state
     // must not advertise an effect that cannot run on that path.
@@ -8677,6 +8748,7 @@ export class PixiFieldPresenter {
       },
       uVolumeVfx: { value: volumeVfxEnabled ? 1 : 0, type: 'f32' },
       uGasBodyVfx: { value: gasBodyVfxEnabled ? 1 : 0, type: 'f32' },
+      uGasMotionVfx: { value: gasMotionVfxEnabled ? 1 : 0, type: 'f32' },
       uLiquidBodyVfx: { value: liquidBodyVfxEnabled ? 1 : 0, type: 'f32' },
       uPowderBodyVfx: { value: powderBodyVfxEnabled ? 1 : 0, type: 'f32' },
       uPowderLightVfx: { value: powderLightVfxEnabled ? 1 : 0, type: 'f32' },
@@ -8872,6 +8944,7 @@ export class PixiFieldPresenter {
       this.uniforms.uniforms.uHDRVfx = 0;
       this.uniforms.uniforms.uVolumeVfx = 0;
       this.uniforms.uniforms.uGasBodyVfx = 0;
+      this.uniforms.uniforms.uGasMotionVfx = 0;
       this.uniforms.uniforms.uLiquidBodyVfx = 0;
       this.uniforms.uniforms.uPowderBodyVfx = 0;
       this.uniforms.uniforms.uPowderLightVfx = 0;
@@ -8902,6 +8975,7 @@ export class PixiFieldPresenter {
           && (new URLSearchParams(location.search).get('blankAudit') === '1'
             || new URLSearchParams(location.search).get('volumeVfxAudit') === '1'
             || new URLSearchParams(location.search).get('gasBodyVfxAudit') === '1'
+            || new URLSearchParams(location.search).get('gasMotionVfxAudit') === '1'
             || new URLSearchParams(location.search).get('liquidBodyVfxAudit') === '1'
             || new URLSearchParams(location.search).get('powderBodyVfxAudit') === '1'
             || new URLSearchParams(location.search).get('powderLightVfxAudit') === '1'),
@@ -8931,6 +9005,8 @@ export class PixiFieldPresenter {
     presenter.app.canvas.dataset.volumeVfx = Number(presenter.uniforms.uniforms.uVolumeVfx) > 0.5
       ? 'active' : 'inactive';
     presenter.app.canvas.dataset.gasBodyVfx = Number(presenter.uniforms.uniforms.uGasBodyVfx) > 0.5
+      ? 'active' : 'inactive';
+    presenter.app.canvas.dataset.gasMotionVfx = Number(presenter.uniforms.uniforms.uGasMotionVfx) > 0.5
       ? 'active' : 'inactive';
     presenter.app.canvas.dataset.liquidBodyVfx = Number(presenter.uniforms.uniforms.uLiquidBodyVfx) > 0.5
       ? 'active' : 'inactive';
@@ -9035,14 +9111,31 @@ export class PixiFieldPresenter {
     return this.fieldBytes[(y * this.width + x) * 4];
   }
 
+  /** Narrow audit readback of the exact signed velocity bytes staged for WebGL. */
+  semanticVelocityAt(x: number, y: number): readonly [number, number] {
+    if (x < 0 || y < 0 || x >= this.width || y >= this.height) return [0, 0];
+    const offset = (y * this.width + x) * 4;
+    return [this.fieldBytes[offset + 2] - 128, this.fieldBytes[offset + 3] - 128];
+  }
+
   /** Narrow audit readback of the propagated CPU identity plane. */
   gasIdentityStyleAt(x: number, y: number): number {
     if (x < 0 || y < 0 || x >= this.width || y >= this.height) return 0;
     const fieldX = Math.min(this.fieldSet.atmosphere.width - 1, Math.floor(x / 2));
     const fieldY = Math.min(this.fieldSet.atmosphere.height - 1, Math.floor(y / 2));
     return this.fieldSet.atmosphere.styleBytes[
-      fieldY * this.fieldSet.atmosphere.width + fieldX
+      (fieldY * this.fieldSet.atmosphere.width + fieldX) * 4
     ];
+  }
+
+  /** Narrow audit readback of packed atmosphere flow/coherence bytes. */
+  atmosphereMotionAt(x: number, y: number): readonly [number, number, number] {
+    if (x < 0 || y < 0 || x >= this.width || y >= this.height) return [0, 0, 0];
+    const fieldX = Math.min(this.fieldSet.atmosphere.width - 1, Math.floor(x / 2));
+    const fieldY = Math.min(this.fieldSet.atmosphere.height - 1, Math.floor(y / 2));
+    const offset = (fieldY * this.fieldSet.atmosphere.width + fieldX) * 4;
+    const state = this.fieldSet.atmosphere.styleBytes;
+    return [state[offset + 1] - 128, state[offset + 2] - 128, state[offset + 3]];
   }
 
   /** Exact CPU-field support evidence for RGB-only atmosphere style audits. */
@@ -9741,7 +9834,18 @@ export class PixiFieldPresenter {
       this.lastSolidOpticalDepthRefresh = scheduleTime;
       boundaryTextureDirty = true;
     }
-    const volumeField = this.fieldSet.updateNext(materials, scheduleTime, walls);
+    const gasMotionActive = Boolean(velocities)
+      && (this.uniforms.uniforms.uGasMotionVfx as number) > 0.5;
+    // A promoted presenter can inherit a clean atmosphere field produced by
+    // Canvas while paused. Queue one velocity-aware rebuild before calling the
+    // packed plane hydrated; subsequent native velocity refreshes reuse the
+    // same bounded atmosphere cadence.
+    if (gasMotionActive && (!this.atmosphereMotionHydrated || refreshDynamicFields)) {
+      this.fieldSet.markAtmosphereMotionDirty();
+    }
+    const volumeField = this.fieldSet.updateNext(
+      materials, scheduleTime, walls, velocities,
+    );
     if (volumeField === 'liquid' || !this.liquidOpticalDepthHydrated) {
       this.fieldSet.liquid.writeVerticalOpticalDepth(
         materials, this.boundaryStabilityBytes, walls,
@@ -9760,6 +9864,7 @@ export class PixiFieldPresenter {
     if (volumeField === 'atmosphere') {
       this.atmosphereSource.update();
       this.atmosphereStyleSource.update();
+      if (gasMotionActive) this.atmosphereMotionHydrated = true;
     } else if (volumeField === 'liquid') {
       this.liquidSource.update();
     } else if (volumeField === 'emission') {
@@ -9815,9 +9920,10 @@ export class PixiFieldPresenter {
 
   private renderApplicationNow(): void {
     const gl = this.webGLContext();
-    // Pixi's BufferImageSource uploader leaves WebGL's four-byte default in
-    // place. Our 306-byte R8 identity rows require byte alignment; enforcing it
-    // immediately before every render also survives unrelated later uploads.
+    // Keep byte alignment explicit before every render. The current packed
+    // RGBA atmosphere-style rows are naturally four-byte aligned, but other
+    // byte fields and unrelated later uploads share this WebGL pixel-store
+    // state, including after recovery.
     try { if (gl) gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1); }
     catch { /* a lost context is handled by the existing render path below */ }
     if (!this.webGLTimingEnabled || !this.webGLTimingRequested) {
@@ -10198,6 +10304,7 @@ export class PixiFieldPresenter {
         this.uniforms.uniforms.uHDRVfx = 0;
         this.uniforms.uniforms.uVolumeVfx = 0;
         this.uniforms.uniforms.uGasBodyVfx = 0;
+        this.uniforms.uniforms.uGasMotionVfx = 0;
         this.uniforms.uniforms.uLiquidBodyVfx = 0;
         this.uniforms.uniforms.uPowderBodyVfx = 0;
         this.uniforms.uniforms.uPowderLightVfx = 0;
@@ -10205,6 +10312,7 @@ export class PixiFieldPresenter {
         this.app.canvas.dataset.hdrPipelineReason = 'runtime-error';
         this.app.canvas.dataset.volumeVfx = 'inactive';
         this.app.canvas.dataset.gasBodyVfx = 'inactive';
+        this.app.canvas.dataset.gasMotionVfx = 'inactive';
         this.app.canvas.dataset.liquidBodyVfx = 'inactive';
         this.app.canvas.dataset.powderBodyVfx = 'inactive';
         this.app.canvas.dataset.powderLightVfx = 'inactive';

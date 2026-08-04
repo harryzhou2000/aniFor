@@ -107,8 +107,32 @@ microchroma are release contracts in `npm run audit:vfx:powder-light`. E02's
 focused audit must explicitly pin E06 off. Capability/runtime HDR fallback must
 disable `uPowderLightVfx`; `FIELD_EIGHT_X_FRAGMENT` must neither declare nor use
 it, and true 8× must report E06 inactive. Freeze the accepted shoulder amplitude
-until a new normal-view review. The next visual experiment is velocity-aware
-gas motion, provided it preserves E04's stable field-owned topology.
+until a new normal-view review.
+
+E07 is the accepted first coherent gas-motion layer, independently measurable
+with `?gasMotionVfx=0|1`. At normal 1×–4×, upgrade only the existing
+half-resolution atmosphere-style plane to packed RGBA: R is the exact gas
+identity, G/B are signed density-weighted mean velocity biased by 128, and A is
+`|mean velocity| / mean speed` coherence. Preserve the existing texture,
+sampler, nearest/no-premultiply sampling, upload call, atmosphere cadence, and
+separable kernel; add no texture, sampler, pass, target, full-resolution field,
+or output-scale resource. Intermediate blur scratch must retain mean speed
+directly, signed byte packing must round forward/reverse symmetrically, and
+non-gas/native-wall contact suppression must neutralize all four channels even
+when R is already zero. Canvas reads R only and arbitrary G/B/A must be a
+byte-exact visual no-op. Normal WebGL shares one main-scope style sample between
+identity and E07, then applies only bounded RGB arithmetic over E04's existing
+static macro-wave derivative and atmosphere slope. No time, alpha, support,
+silhouette, ownership, or physics decision may depend on motion. Raw particle
+checkerboard velocity must cancel in every aligned 2×2 atmosphere seed block;
+directed and reversed coherent cards must remain exact signed opposites, while
+still gas, counterflow, sparse chains, contacts, walls, and blanks are no-ops.
+Validate with `npm run audit:vfx:gas-motion`; its 1×/2×/4× off/on/reverse/still
+matrix and field readback are release contracts. Do not declare, branch on, or
+decode E07 in `FIELD_EIGHT_X_FRAGMENT`; the one-navigation true-8× SPNG fence
+explicitly requests it and must still report E07/HDR inactive, reason `scale-8`,
+no bloom backing, exact 4896×3072 WebGL, and a completed GPU fence. Freeze the
+accepted amplitude until a new normal-view review.
 
 ## CodeGraph
 

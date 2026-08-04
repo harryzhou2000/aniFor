@@ -125,7 +125,7 @@ describe('shared render field set', () => {
     fields.markDirty(Material.Empty, Material.Water, contact);
 
     expect(fields.updateNext(materials, 100)).toBe('atmosphere');
-    expect(fields.atmosphere.styleBytes[5 * fields.atmosphere.width + 5]).toBe(0);
+    expect(fields.atmosphere.styleBytes[(5 * fields.atmosphere.width + 5) * 4]).toBe(0);
   });
 
   it('redirties atmosphere identity when a nearby native wall changes', () => {
@@ -145,9 +145,36 @@ describe('shared render field set', () => {
     fields.markAtmosphereBlockerDirty(contact);
 
     expect(fields.updateNext(materials, 100, walls)).toBe('atmosphere');
-    expect(fields.atmosphere.styleBytes[5 * fields.atmosphere.width + 5]).toBe(0);
+    expect(fields.atmosphere.styleBytes[(5 * fields.atmosphere.width + 5) * 4]).toBe(0);
     expect(fields.updateNext(materials, 101, walls)).toBe('liquid');
     expect(fields.updateNext(materials, 102, walls)).toBeUndefined();
+  });
+
+  it('reuses the atmosphere cadence when only coherent gas motion changes', () => {
+    const width = 8;
+    const height = 8;
+    const materials = new Uint8Array(width * height);
+    const velocities = new Int8Array(width * height * 2);
+    for (let y = 2; y < 6; y++) for (let x = 2; x < 6; x++) {
+      materials[y * width + x] = Material.Smoke;
+    }
+    const fields = new RenderFieldSet(width, height, ALL_MATERIALS);
+    fields.updateNext(materials, 0, undefined, velocities);
+    fields.updateNext(materials, 1, undefined, velocities);
+    fields.updateNext(materials, 2, undefined, velocities);
+    expect(fields.updateNext(materials, 3, undefined, velocities)).toBeUndefined();
+
+    for (let index = 0; index < materials.length; index++) {
+      if (materials[index] !== Material.Smoke) continue;
+      velocities[index * 2] = 48;
+    }
+    fields.markAtmosphereMotionDirty();
+
+    expect(fields.updateNext(materials, 100, undefined, velocities)).toBe('atmosphere');
+    const offset = (2 * fields.atmosphere.width + 2) * 4;
+    expect(Array.from(fields.atmosphere.styleBytes.slice(offset + 1, offset + 4)))
+      .toEqual([176, 128, 255]);
+    expect(fields.updateNext(materials, 101, undefined, velocities)).toBeUndefined();
   });
 
   it('paces the soft suspension field independently at six hertz', () => {
@@ -176,7 +203,7 @@ describe('shared render field set', () => {
     expect(lookupBytes).toBe(3_840);
     expect(fields.powderSurface.allocatedByteLength).toBe(3_290_112);
     expect(fields.suspension.allocatedByteLength).toBe(588_032);
-    expect(fields.allocatedByteLength).toBe(12_172_880);
-    expect(fields.allocatedByteLength).toBeLessThan(12_250_000);
+    expect(fields.allocatedByteLength).toBe(12_349_136);
+    expect(fields.allocatedByteLength).toBeLessThan(12_400_000);
   });
 });

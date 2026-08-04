@@ -65,11 +65,24 @@ does not alter simulation, camera, semantic ownership, or `renderScale`.
   suspension, walls, Local, and Grains remain exact no-ops. It adds no sample,
   texture, field, upload, pass, target, allocation, time, output-scale,
   alpha/support/ownership/silhouette, or physics decision.
+- **E07 — coherent atmosphere-motion relief (accepted checkpoint):** normal
+  1×–4× WebGL carries gas motion on the reconstructed atmosphere rather than
+  shading semantic particles independently. The existing half-resolution
+  atmosphere-style plane is packed as RGBA: R remains the exact propagated gas
+  identity, G/B hold signed density-weighted flow, and A holds vector
+  coherence. The same separable atmosphere kernel cancels counterflow before
+  presentation. The normal shader reuses its one style sample and differentiates
+  E04's static macro waves in the coherent flow direction, with a bounded
+  slope-facing shoulder; emissive CFLM uses a reversible cyan/amber cue where
+  highlight headroom is exhausted. `?gasMotionVfx=0|1` isolates E07. It adds no
+  texture, sampler, upload call, field pass, render target, clock, output-scale
+  resource, alpha/support/silhouette/ownership, or physics decision. Canvas
+  consumes only R and is byte-identical for arbitrary G/B/A payloads.
 - **Protected 8× rung:** `renderScale=8` deliberately reports
   `hdrPipeline=inactive` / `scale-8` and retains the proven direct single-mesh
   4896×3072 path. The experiment must earn a bounded 8× design rather than
   allocating a 115 MiB full-resolution float target beside that path.
-- **Current decision:** E01/E02/E03/E04/E05/E06 remain opt-in through the non-Classic looks
+- **Current decision:** E01/E02/E03/E04/E05/E06/E07 remain opt-in through the non-Classic looks
   until representative hardware timing and mobile thermal behavior are
   measured. E02 remains the safe family-wide baseline. E03 is accepted as the
   liquid-depth checkpoint: its fit-view crop is visibly more cohesive, retains
@@ -86,8 +99,12 @@ does not alter simulation, camera, semantic ownership, or `renderScale`.
   checkpoint: warm/cool powder shoulders enter several cells farther than the
   original rim-only candidate while remaining subordinate to grain pigment;
   the fixture's unlit cores outside field reach and protected controls do not respond. Freeze this shoulder until
-  a new normal-view review. These are not the final material/VFX results;
-  velocity-aware gas motion may build on E04 without replacing its stable base.
+  a new normal-view review. E07 is accepted as the first velocity-aware gas
+  checkpoint: the atmosphere field carries exact coherent direction, a 2×2
+  checkerboard counterflow cancels to an exact framebuffer no-op, and amplified
+  captures show body-scale curved lobes rather than particle speckles. Its
+  normal-view strength is deliberately restrained; keep the current amplitude
+  until another fit-view review. These are not the final material/VFX results.
   Sub-1.0 material colour stays on the established response; tonemapping owns
   only real HDR highlights so powder texture and liquid body contrast are not
   washed out.
@@ -155,11 +172,30 @@ seven established emission samples. The accepted 1×/2×/4× matrix measures
 microchroma; every excluded control remains exact. Pass `--render-scale=1`, `2`, or `4` when
 tuning one scale; true 8× rejects E06 and retains its protected direct shader.
 
-**Next visual experiments:** E03, E04, E05, and E06 are the accepted liquid,
-gas, powder-depth, and powder-local-light checkpoints. Next evaluate
-velocity-aware gas motion against E04's deterministic field-owned base. Each experiment
-keeps its own off/on/off switch and must pass the same topology, contact, scale,
-resource, and fallback controls before it can become a preset default.
+Run `npm run audit:vfx:gas-motion` for E07. It fixes E04 on as the accepted gas
+body baseline and reloads directed, reversed, and still paused fixtures with
+E07 off/on/off at 1×/2×/4×. Smoke, FOG, and CFLM cards carry exact native
+velocity into the packed atmosphere field; the gate independently proves
+semantic staging, `[±48,0,255]` / `[0,±48,255]` coherent field readback,
+direction reversal, byte-exact still and checker-counterflow no-ops, unchanged
+full-frame/raw alpha and atmosphere support, preserved sparse carriers and
+true gaps, contacts/walls/blanks, exact repetition, and zero browser errors.
+The accepted body response is broad (`~0.4–2.2` RGB RMS across family probes)
+with target peaks at or below six display bytes; already reconstructed small
+holes/channels may receive a bounded stronger edge response but never gain
+alpha. Pass `--render-scale=1`, `2`, or `4` when tuning one scale. The existing
+single-navigation `audit:spng:8x` fence explicitly requests E07 and proves the
+4896×3072 direct shader reports it inactive with HDR/bloom absent.
+
+**Next visual experiments:** E03–E07 now provide accepted liquid, stable-gas,
+coherent-gas-motion, powder-depth, and powder-local-light checkpoints. The next
+candidate should add a visibly distinct material cue rather than another global
+grade: prefer either field-safe liquid surface transmission/reflection or a
+low-frequency powder/solid contact-depth experiment, then return to advected gas
+detail only if it can remain atmosphere-owned and counterflow-coherent. Each
+experiment keeps its own off/on/off switch and must pass the same topology,
+contact, scale, resource, fallback, and true-8× isolation controls before it can
+become a preset default.
 
 ## Phase 1 — HDR pipeline & lighting core (biggest visual payoff)
 
