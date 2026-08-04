@@ -13186,10 +13186,10 @@ async function auditRenderScaleEight(cdp, dpr, powderOnly = false) {
     cdp, 'renderScale=8', startupDeadline,
   );
   assertEightXWebGLBackend(startupBackend, 'renderScale=8');
-  const geometry = await waitForStableCanvas(
+  let geometry = await waitForStableCanvas(
     cdp, 1280, 720, undefined, 45_000, 'renderScale=8 WebGL geometry',
   );
-  const backend = await evaluate(cdp, `window.__ANIFOR_INPUT_AUDIT__.backend()`);
+  let backend = await evaluate(cdp, `window.__ANIFOR_INPUT_AUDIT__.backend()`);
   assert(backend.requestedOutputScale === 8 && backend.outputScale === 8,
     `renderScale=8 did not remain true 8x WebGL (${JSON.stringify(backend)})`);
   assertGeometry(geometry, 'renderScale=8 WebGL', 8);
@@ -14517,6 +14517,17 @@ async function auditRenderScaleEight(cdp, dpr, powderOnly = false) {
   stage('source-target-ready');
   const forceActivityGraphics = await auditEightXForceActivityGraphics(cdp, geometry.canvas);
   stage('force-activity-ready');
+  // The first batch intentionally drives the full normal visual atlas, deep
+  // zoom, and material-identity captures.  On software WebGL that can submit
+  // hundreds of true-8x frames in one tab.  Start the independent retained-
+  // state and recovery batch in a freshly promoted 8x context instead of
+  // masking a real 30-second fence stall by extending the watchdog.  Every
+  // fixture below creates its own semantic scene, so it has no valid data
+  // dependency on the earlier context; CSS geometry remains an exact contract.
+  ({ geometry, backend } = await restartEightXAuditContext(
+    cdp, dpr, geometry.canvas, 'stateful',
+  ));
+  stage('stateful-context-ready');
   const vibrStateAudit = await auditEightXVibrStateGraphics(cdp, geometry.canvas);
   stage('vibr-state-ready');
   const poloStateGraphics = await auditEightXPoloStateGraphics(cdp, geometry.canvas);
@@ -19179,6 +19190,27 @@ async function navigateEightXRecoveryPage(cdp, auditStage) {
   return waitForStableCanvas(
     cdp, 1280, 720, undefined, 45_000, `renderScale=8 ${auditStage} geometry`,
   );
+}
+
+/**
+ * Start an independent true-8x fixture batch after a deliberately exhaustive
+ * previous batch. This is a real page navigation and promotion, not a scene
+ * clear: it releases the prior 15M-fragment context while keeping the exact
+ * CSS/world contract under test.
+ */
+async function restartEightXAuditContext(cdp, dpr, expectedCanvas, batch) {
+  await setDesktopMetrics(cdp, 1280, 720, dpr);
+  const auditStage = `scale-eight-${batch}`;
+  const geometry = await navigateEightXRecoveryPage(cdp, auditStage);
+  const backend = await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.backend()');
+  assert(backend.requestedOutputScale === 8 && backend.outputScale === 8,
+    `renderScale=8 ${batch} batch did not remain true 8x WebGL (${JSON.stringify(backend)})`);
+  assertGeometry(geometry, `renderScale=8 ${batch} batch WebGL`, 8);
+  assertContained(geometry, `renderScale=8 ${batch} batch WebGL`);
+  assertToolboxGeometry(geometry, `renderScale=8 ${batch} batch WebGL`, DESKTOP_TOOL_FILTER_HEIGHT);
+  assertCanvasRectsEqual(expectedCanvas, geometry.canvas,
+    `renderScale=8 ${batch} fresh-context CSS geometry`);
+  return { geometry, backend };
 }
 
 /**
