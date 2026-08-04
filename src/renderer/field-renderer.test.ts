@@ -81,4 +81,14 @@ describe('field renderer layout scheduling', () => {
     expect(markAll).toHaveBeenCalledOnce();
     expect(renderer.changed).toBe(true);
   });
+
+  it('ignores a queued frame after navigation has disposed the outgoing renderer', () => {
+    const renderer = Object.create(MaterialRenderer.prototype) as {
+      disposed: boolean;
+      render(time: number): void;
+    };
+    renderer.disposed = true;
+
+    expect(() => renderer.render(1000)).not.toThrow();
+  });
 });

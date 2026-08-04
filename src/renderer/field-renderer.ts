@@ -467,6 +467,11 @@ export class MaterialRenderer {
   }
 
   render(time: number, visualTime = time): void {
+    // Detail/page navigation intentionally disposes the outgoing presenter
+    // before the document is replaced. A queued game rAF may still arrive in
+    // the bounded hand-off interval; rendering into released Canvas/WebGL
+    // fields is neither meaningful nor safe.
+    if (this.disposed) return;
     if (time - this.lastDraw < FRAME_INTERVAL) return;
     for (const cell of this.simulation.consumeDirtyCells()) {
       const previous = this.rendered[cell.index];
