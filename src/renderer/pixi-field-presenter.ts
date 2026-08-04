@@ -9553,7 +9553,18 @@ export class PixiFieldPresenter {
       return false;
     }
     let status: number;
-    try { status = gl.clientWaitSync(fence, 0, 0); }
+    try {
+      status = gl.clientWaitSync(fence, 0, 0);
+      // SwiftShader/headless WebGL can leave an otherwise completed direct-8x
+      // fence invisible to a pure zero-flag poll. Mirror the audit-timing
+      // fence's prescribed non-blocking flush retry so the single ordinary
+      // presentation fence and its timing proof share one completion truth.
+      // This remains a zero-time poll; it never blocks a frame or changes the
+      // 30-second Canvas-recovery deadline.
+      if (status === gl.TIMEOUT_EXPIRED) {
+        status = gl.clientWaitSync(fence, gl.SYNC_FLUSH_COMMANDS_BIT, 0);
+      }
+    }
     catch {
       this.releaseRenderFence();
       if (!this.firstFrameReady) {

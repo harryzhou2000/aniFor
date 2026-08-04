@@ -4297,4 +4297,29 @@ describe('Pixi presenter startup configuration', () => {
     Object.assign(presenter, { outputScale: 4 });
     expect(presenter.forceEightXRenderStallForAudit()).toBe(false);
   });
+
+  it('retries an ordinary true-8x fence with the non-blocking flush bit', () => {
+    const fence = {} as WebGLSync;
+    const gl = {
+      TIMEOUT_EXPIRED: 0x911b,
+      CONDITION_SATISFIED: 0x911c,
+      SYNC_FLUSH_COMMANDS_BIT: 0x00000001,
+      clientWaitSync: vi.fn()
+        .mockReturnValueOnce(0x911b)
+        .mockReturnValueOnce(0x911c),
+      deleteSync: vi.fn(),
+    };
+    const presenter = presenterHarness();
+    Object.assign(presenter, {
+      outputScale: 8,
+      firstFrameReady: true,
+      renderFence: fence,
+      app: { ...presenter.app, renderer: { gl } },
+    });
+
+    expect((presenter as unknown as { prepareEightXRender(): boolean }).prepareEightXRender()).toBe(true);
+    expect(gl.clientWaitSync).toHaveBeenNthCalledWith(1, fence, 0, 0);
+    expect(gl.clientWaitSync).toHaveBeenNthCalledWith(2, fence, gl.SYNC_FLUSH_COMMANDS_BIT, 0);
+    expect(gl.deleteSync).toHaveBeenCalledWith(fence);
+  });
 });
