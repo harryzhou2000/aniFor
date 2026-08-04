@@ -13684,6 +13684,18 @@ async function auditRenderScaleEight(cdp, dpr, powderOnly = false) {
     return { occupied: audit.occupiedCells(), cells: points.map(([x, y]) => audit.cell(x, y)) };
   })()`);
   await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setLiquidSilhouetteCohesion(true); true');
+
+  // Liquid field and silhouette checks have completed their own exact
+  // off/on/off sequences. Energy aura, liquid chroma/depth, and powder body
+  // depth begin from the ordinary render-lab fixture and retain no state from
+  // those captures, so isolate this next direct-frame batch as well. This is
+  // a recovery exercise for a real finite WebGL context, not a longer fence
+  // allowance: geometry and completed warm-up work remain asserted below.
+  ({ geometry, backend } = await restartEightXAuditContext(
+    cdp, dpr, geometry.canvas, 'volume-depth-toggles',
+  ));
+  stage('volume-depth-context-ready');
+
   await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setEmissionVolumeChroma(false); true');
   const flatEmissionVolumeCapture = await captureSettledPage(
     cdp, 'renderScale=8 flat emission-volume framebuffer', 450,
