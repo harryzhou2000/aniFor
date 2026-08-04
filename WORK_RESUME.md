@@ -21,7 +21,7 @@ Immediate priorities are:
 
 ### Active execution emphasis
 
-### Current HDR, field-aware volume, E03 liquid, and E04 gas checkpoint
+### Current HDR, field-aware volume, E03 liquid, E04 gas, and E05 powder checkpoint
 
 - The active visual goal is now an explicit experiment program rather than a
   one-off shader tweak: improve powder, liquid, and gas depth, material beauty,
@@ -57,6 +57,15 @@ Immediate priorities are:
   read, field, upload, pass, target, allocation, output-scale term, alpha,
   support, ownership, silhouette, or physics decision. E04 is deliberately
   absent and reported inactive on the protected true-8× shader.
+- E05 is the accepted settled-powder refinement. `?powderBodyVfx=0|1` isolates
+  it while ordinary non-Classic use follows the broad volume preset. Normal
+  1×–4× WebGL reuses the existing deep/dry/stable Smooth body proof and macro
+  slope, then adds three restrained, static, incommensurate triangular planes
+  in world space for signed crown/pocket depth. The established mineral and
+  subcell facet cadence remains downstream and is not mixed away. E05 adds no
+  texture read, field, upload, pass, target, allocation, time, output-scale,
+  alpha/support/ownership/silhouette, or physics decision; it is absent and
+  reported inactive on true 8×.
 - `npm run audit:vfx:volume` passes production WebGL at 1×/2×/4× through
   `off→on→off`: exact CSS/backing geometry, semantic/staging digests, nonzero
   raw canvas alpha/support hashes, repeat captures, and zero browser errors.
@@ -104,21 +113,33 @@ Immediate priorities are:
   `/tmp/anifor-e04-showcase-gas-compare.png`,
   `/tmp/anifor-e04-showcase-gas-diff-x14.png`, and
   `/tmp/anifor-e04-full.json`.
-- Focused HDR/E02/E03/E04 production audits now start on the existing blank
+- Focused HDR/E02/E03/E04/E05 production audits now start on the existing blank
   render-lab stage before navigating their own exact fixtures. This avoids an
   unnecessary canonical warm-up and does not narrow any measured state.
-- The next active experiment is powder crown/facet balance: add readable bulk
-  depth without damping grain cadence, smoothing internal colour identity, or
-  erasing columns, ledges, authored holes, and isolated square Grains.
+- `npm run audit:vfx:powder-body` passes production WebGL at 1×/2×/4× through
+  exact `off→on→off`. Clay/Concrete crowns and their opposing cores remain
+  spatially distinct with `0.42–1.76` RGB RMS and `3–8` byte peaks. Raw
+  alpha/support, authored Clay/Concrete holes, the one-cell Sand slope tip,
+  isolated Sand, wet suspension, Local, and square Grains are exact zero
+  response. The new local 5×5 chroma-residual assertion measures
+  `99.1–100.5%` retained internal pigment across all targets/scales; every
+  repeated-off value is exact. Visual evidence is retained at
+  `/tmp/anifor-e05-showcase-off.png`,
+  `/tmp/anifor-e05-showcase-on-v3.png`,
+  `/tmp/anifor-e05-powder-compare-v3.png`, and
+  `/tmp/anifor-e05-showcase-diff-v3-x12.png`.
+- The next active experiment is bounded local-light transport from the existing
+  emission field across the accepted powder/liquid/gas bodies, followed by a
+  velocity-aware gas comparison if it preserves E04's stable topology.
 - Final checkpoint validation passes TypeScript, the 19-asset production/Pages
-  closure, the real E02/E03/E04 WebGL off→on→off gates, and the dedicated true-8×
+  closure, the real E02/E03/E04/E05 WebGL off→on→off gates, and the dedicated true-8×
   powder gate at exact `4896×3072`; the final completed GPU-fence timing sample
-  is `8.82 s`, below the strict `10 s` p90 and `12 s` hard-frame ceilings.
+  is `6.18 s`, below the strict `10 s` p90 and `12 s` hard-frame ceilings.
   After Smooth, Local, and Grains captures,
   its blank compositing baseline starts on a fresh true-8× page and reuses the
   completed warm-up fence; this avoids a proven SwiftShader fourth-frame stall
   without relaxing the 30-second renderer deadline or any material assertion.
-  The complete serial suite passes `163` files / `1027` tests.
+  The complete serial suite passes `163` files / `1028` tests.
   Vitest now preserves its default exclusions and also ignores the
   project-local `.toolchains` tree, so a naked full-suite run cannot execute
   upstream emsdk fixtures as application tests.

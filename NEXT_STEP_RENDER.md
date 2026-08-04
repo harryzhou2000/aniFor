@@ -45,11 +45,20 @@ does not alter simulation, camera, semantic ownership, or `renderScale`.
   allocation, alpha/support, silhouette, ownership, or physics effect, and
   remain identical across render scale. `?gasBodyVfx=0|1` isolates E04; absent
   that audit override it follows the non-Classic E02 volume preset.
+- **E05 — settled-powder crown/facet depth (accepted checkpoint):** normal
+  1×–4× WebGL gives only proven deep, dry, stable Smooth powder a restrained
+  signed plane response. It combines the already-live exact-material body
+  gate and macro slope with three broad, static, incommensurate triangular
+  world-space planes; illuminated crowns and opposing pockets change RGB
+  without damping the established cell/facet pigment. It adds no texture read,
+  field, upload, pass, target, allocation, time, output-scale, alpha/support,
+  ownership, silhouette, or physics decision. `?powderBodyVfx=0|1` isolates
+  E05; absent that audit override it follows the non-Classic E02 volume preset.
 - **Protected 8× rung:** `renderScale=8` deliberately reports
   `hdrPipeline=inactive` / `scale-8` and retains the proven direct single-mesh
   4896×3072 path. The experiment must earn a bounded 8× design rather than
   allocating a 115 MiB full-resolution float target beside that path.
-- **Current decision:** E01/E02/E03/E04 remain opt-in through the non-Classic looks
+- **Current decision:** E01/E02/E03/E04/E05 remain opt-in through the non-Classic looks
   until representative hardware timing and mobile thermal behavior are
   measured. E02 remains the safe family-wide baseline. E03 is accepted as the
   liquid-depth checkpoint: its fit-view crop is visibly more cohesive, retains
@@ -57,9 +66,14 @@ does not alter simulation, camera, semantic ownership, or `renderScale`.
   silhouette change. E04 is accepted as the first gas-depth checkpoint: its
   fit-view result is intentionally subtle, but broad cloud cores now have
   stable bipolar billow relief while compact FOG/CFLM shoulders remain smooth.
-  It is not the final fluid/gas result; powder now needs more bulk relief
-  without losing grain cadence, and later gas work may add bounded dynamic
-  light transport without replacing E04's stable base.
+  E05 is accepted as the first powder-only depth checkpoint: broad Clay,
+  Concrete, and Sand bodies gain a visible crown/pocket separation while their
+  local pigment cadence, smooth contour, holes, thin tips, wet suspension,
+  Local, and Grains remain unchanged. The triangular construction is visible
+  only in amplified differences at its current strength; do not raise it into
+  an overt repeating surface pattern. These are not the final material/VFX
+  results; later work may add bounded dynamic light transport or velocity-aware
+  gas motion without replacing their stable bases.
   Sub-1.0 material colour stays on the established response; tonemapping owns
   only real HDR highlights so powder texture and liquid body contrast are not
   washed out.
@@ -102,12 +116,23 @@ remains zero and every repeat response is byte-exact. Pass `--render-scale=1`,
 `2`, or `4` to the underlying focused command when tuning one scale; true 8×
 rejects E04 and retains its protected direct shader.
 
-**Next visual experiments:** E03 and E04 are the accepted liquid- and gas-depth
-checkpoints. Next tune a powder crown/facet balance that increases bulk depth
-without damping the established grain cadence. After that, compare local-light
-transport or velocity-aware gas motion against E04's deterministic base. Each
-experiment keeps its own off/on/off switch and must pass the same topology,
-contact, scale, and fallback controls before it can become a preset default.
+Run `npm run audit:vfx:powder-body` for E05. It holds E02/E03/E04 styling off,
+reloads `powderBodyVfx=0 → 1 → 0` at 1×/2×/4×, and requires WebGL, the real HDR
+pipeline, exact geometry/semantics, exact full-frame raw alpha/support, and
+byte-exact holes, a one-cell slope tip, isolated Sand, wet suspension, Local,
+and square Grains. Clay/Concrete crowns remain positive while their cores and
+the sampled Sand body provide the opposing fill; target peaks stay within
+`3–8` display bytes. The retained local microchroma is `99.1–100.5%` of the
+disabled body at every scale, and every repeated-off comparison is byte-exact.
+Pass `--render-scale=1`, `2`, or `4` to tune one scale; true 8× rejects E05 and
+retains its protected direct shader.
+
+**Next visual experiments:** E03, E04, and E05 are the accepted liquid, gas, and
+powder depth checkpoints. Next compare bounded local-light transport from the
+existing emission field against these stable bodies, then evaluate
+velocity-aware gas motion against E04's deterministic base. Each experiment
+keeps its own off/on/off switch and must pass the same topology, contact, scale,
+resource, and fallback controls before it can become a preset default.
 
 ## Phase 1 — HDR pipeline & lighting core (biggest visual payoff)
 

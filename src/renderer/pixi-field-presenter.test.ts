@@ -212,10 +212,16 @@ describe('Pixi presenter startup configuration', () => {
     const liquidVfxStart = liquid.indexOf('        if (uLiquidBodyVfx > 0.5');
     const liquidVfxEnd = liquid.indexOf('    // Twenty ordinary, unusual, metallic', liquidVfxStart);
     const powderVfxStart = powder.indexOf('        if (uVolumeVfx > 0.5');
-    const powderVfxEnd = powder.indexOf('        // This is intentionally stricter than a generic settled-powder', powderVfxStart);
+    const powderVfxEnd = powder.indexOf('        // E05:', powderVfxStart);
+    const powderBodyVfxStart = powder.indexOf('        if (uPowderBodyVfx > 0.5', powderVfxEnd);
+    const powderBodyVfxEnd = powder.indexOf(
+      '        // This is intentionally stricter than a generic settled-powder',
+      powderBodyVfxStart,
+    );
     const gasVfx = gas.slice(gasVfxStart, gasVfxEnd);
     const liquidVfx = liquid.slice(liquidVfxStart, liquidVfxEnd);
     const powderVfx = powder.slice(powderVfxStart, powderVfxEnd);
+    const powderBodyVfx = powder.slice(powderBodyVfxStart, powderBodyVfxEnd);
 
     expect(eightStart).toBeGreaterThanOrEqual(0);
     expect(normalStart).toBeGreaterThan(eightStart);
@@ -227,9 +233,11 @@ describe('Pixi presenter startup configuration', () => {
     expect(normal).toContain('uniform float uVolumeVfx;');
     expect(normal).toContain('uniform float uGasBodyVfx;');
     expect(normal).toContain('uniform float uLiquidBodyVfx;');
+    expect(normal).toContain('uniform float uPowderBodyVfx;');
     expect(eight).not.toContain('uVolumeVfx');
     expect(eight).not.toContain('uGasBodyVfx');
     expect(eight).not.toContain('uLiquidBodyVfx');
+    expect(eight).not.toContain('uPowderBodyVfx');
 
     // Gas stays field-owned: its independent E04 selector reuses the
     // established mass/curvature/scatter scalars and never samples or assigns
@@ -271,17 +279,38 @@ describe('Pixi presenter startup configuration', () => {
     expect(powderVfxEnd).toBeGreaterThan(powderVfxStart);
     expect(powderVfx).not.toMatch(/\balpha\s*[+*]?=/);
 
+    // E05 independently strengthens the already-proven stable body's signed
+    // crown/pocket response while leaving the later grain cadence untouched.
+    expect(powderBodyVfxStart).toBeGreaterThan(powderVfxEnd);
+    expect(powderBodyVfxEnd).toBeGreaterThan(powderBodyVfxStart);
+    expect(powderBodyVfx).toContain('powderBodyGate');
+    expect(powderBodyVfx).toContain('powderDirectedSlope');
+    expect(powderBodyVfx).toContain('powderBodyVolumeDepth');
+    expect(powderBodyVfx).toContain('powderVfxPlaneA');
+    expect(powderBodyVfx).toContain('powderVfxWorldFacet');
+    expect(powderBodyVfx).toContain('powderVfxFacetBalance');
+    expect(powderBodyVfx).toContain('powderVfxCrownResponse');
+    expect(powderBodyVfx).toContain('powderVfxPocketResponse');
+    expect(powderBodyVfx).toContain('powderSuspensionCohesion < 0.01');
+    expect(powderBodyVfx).not.toContain('texture(');
+    expect(powderBodyVfx).not.toContain('uTime');
+    expect(powderBodyVfx).not.toContain('gl_FragCoord');
+    expect(powderBodyVfx).not.toMatch(/\balpha\s*[+*]?=/);
+
     // Capability/initialization and first-render failures must turn every HDR
     // arithmetic family off before continuing with the single-pass scene.
     expect(source.match(/this\.uniforms\.uniforms\.uHDRVfx = 0;/g)).toHaveLength(2);
     expect(source.match(/this\.uniforms\.uniforms\.uVolumeVfx = 0;/g)).toHaveLength(2);
     expect(source.match(/this\.uniforms\.uniforms\.uGasBodyVfx = 0;/g)).toHaveLength(2);
     expect(source.match(/this\.uniforms\.uniforms\.uLiquidBodyVfx = 0;/g)).toHaveLength(2);
+    expect(source.match(/this\.uniforms\.uniforms\.uPowderBodyVfx = 0;/g)).toHaveLength(2);
     expect(source).toContain("get('volumeVfxAudit') === '1'");
     expect(source).toContain("get('gasBodyVfxAudit') === '1'");
     expect(source).toContain("get('liquidBodyVfxAudit') === '1'");
+    expect(source).toContain("get('powderBodyVfxAudit') === '1'");
     expect(source).toContain('const gasBodyVfxEnabled = outputScale < 8');
     expect(source).toContain('const liquidBodyVfxEnabled = outputScale < 8');
+    expect(source).toContain('const powderBodyVfxEnabled = outputScale < 8');
   });
 
   it('advances fallback presentation timing only after its GPU fence signals', () => {

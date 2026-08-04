@@ -71,8 +71,27 @@ carrier/midpoint/gap alpha, full raw alpha/support, bipolar core response,
 bounded compact FOG/CFLM shoulders, off→on→off repeat, and 1×/2×/4× geometry
 are release contracts in `npm run audit:vfx:gas-body`. Capability/runtime HDR
 fallback must disable `uGasBodyVfx`; `FIELD_EIGHT_X_FRAGMENT` must not declare
-or use it, and true 8× must report E04 inactive. The next visual experiment is
-powder crown/facet balance.
+or use it, and true 8× must report E04 inactive.
+
+E05 is the accepted powder-only crown/facet layer, independently measurable
+with `?powderBodyVfx=0|1`. At normal 1×–4× it may run only inside the existing
+deep, dry, stable, authoritative Smooth body proof and may reuse only the live
+powder body gate, macro slope, base colour, world position, and arithmetic.
+Its three broad triangular world-space planes must remain static, mutually
+incommensurate, and restrained: they add signed crown/pocket RGB depth without
+replacing or damping the established mineral and subcell facet cadence. Add no
+texture read, field, upload, pass, target, allocation, clock, output-scale,
+alpha/support/silhouette/ownership, or physics decision. Exact holes, the
+one-cell slope tip, isolated powder, wet suspension, Local, and square Grains;
+99.1–100.5% retained Smooth microchroma; bounded 3–8-byte target peaks; exact
+off→on→off repetition; and 1×/2×/4× geometry are release contracts in
+`npm run audit:vfx:powder-body`. The amplified difference exposes a regular
+triangular cadence, so do not raise the accepted amplitude without a new
+normal-view visual review. Capability/runtime HDR fallback must disable
+`uPowderBodyVfx`; `FIELD_EIGHT_X_FRAGMENT` must not declare or use it, and true
+8× must report E05 inactive. The next experiment is bounded local-light
+transport from the existing emission field, followed by velocity-aware gas
+motion if it can preserve E04's stable topology.
 
 ## CodeGraph
 

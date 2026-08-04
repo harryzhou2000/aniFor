@@ -36,8 +36,8 @@ import {
 } from './canvas-gas-identity-style';
 import { HDRVfxPipeline, type HDRPipelineInfo } from './hdr-vfx-pipeline';
 import {
-  resolveGasBodyVfxEnabled, resolveLiquidBodyVfxEnabled, resolveRenderLook,
-  resolveVolumeVfxEnabled,
+  resolveGasBodyVfxEnabled, resolveLiquidBodyVfxEnabled, resolvePowderBodyVfxEnabled,
+  resolveRenderLook, resolveVolumeVfxEnabled,
 } from './render-look';
 interface PresenterViewport { readonly width: number; readonly height: number }
 
@@ -3204,6 +3204,7 @@ uniform float uHDRVfx;
 uniform float uVolumeVfx;
 uniform float uGasBodyVfx;
 uniform float uLiquidBodyVfx;
+uniform float uPowderBodyVfx;
 uniform float uHighQuality;
 uniform float uAnalyticLightingQuality;
 uniform float uGasFieldLighting;
@@ -6892,6 +6893,51 @@ void main() {
             * powderVfxKey * powderVfxCrown;
           color *= vec3(1.0) - vec3(0.040, 0.032, 0.022) * powderVfxCore;
         }
+        // E05: the settled field's signed macro slope is already a stable,
+        // topology-proven powder facet. Balance its illuminated crown against
+        // the opposing pocket and deep-core absorption without changing the
+        // later mineral cadence. This branch is RGB-only arithmetic over the
+        // existing body gate: no sample, field, clock, alpha, support, owner,
+        // pass, target, or output-scale decision is added.
+        if (uPowderBodyVfx > 0.5 && halo < 0.5 && wall < 0.5
+          && wallOnly < 0.5 && emissionOnly < 0.5
+          && powderSuspensionCohesion < 0.01) {
+          // Three broad triangular planes create angular mineral lobes rather
+          // than a cell-frequency grade. Their incommensurate world-space
+          // directions stay static under camera and Detail changes, while the
+          // live powder slope keeps the lighting tied to the actual body.
+          float powderVfxPlaneA = 1.0 - 2.0 * abs(
+            fract(dot(fieldPosition, vec2(0.02995, -0.02140)) + 0.0101) * 2.0 - 1.0
+          );
+          float powderVfxPlaneB = 1.0 - 2.0 * abs(
+            fract(dot(fieldPosition, vec2(-0.01980, 0.04649)) + 0.1889) * 2.0 - 1.0
+          );
+          float powderVfxPlaneC = 1.0 - 2.0 * abs(
+            fract(dot(fieldPosition, vec2(0.03460, 0.03080)) + 0.3750) * 2.0 - 1.0
+          );
+          float powderVfxWorldFacet = powderVfxPlaneA * 0.42
+            + powderVfxPlaneB * 0.35 + powderVfxPlaneC * 0.23;
+          float powderVfxFacetBalance = clamp(
+            powderDirectedSlope * mix(0.72, 0.48, powderBodyVolumeDepth)
+              + powderVfxWorldFacet * 0.60
+              + (0.48 - powderBodyVolumeDepth) * 0.10,
+            -1.0, 1.0
+          );
+          float powderVfxCrown = max(powderVfxFacetBalance, 0.0);
+          float powderVfxPocket = max(-powderVfxFacetBalance, 0.0);
+          float powderVfxShoulder = (1.0 - powderBodyVolumeDepth)
+            * (0.30 + powderVfxCrown * 0.70);
+          float powderVfxCrownResponse = powderBodyGate
+            * (powderVfxCrown * 0.095 + powderVfxShoulder * 0.025);
+          float powderVfxPocketResponse = powderBodyGate
+            * (powderBodyVolumeDepth * 0.008 + powderVfxPocket * 0.065);
+          vec3 powderVfxFacetKey = mix(
+            vividColor(base, 1.10), vec3(1.0, 0.78, 0.52), 0.14
+          );
+          color += (vec3(1.35) - clamp(color, 0.0, 1.35))
+            * powderVfxFacetKey * powderVfxCrownResponse;
+          color *= vec3(1.0) - vec3(0.82, 0.91, 1.0) * powderVfxPocketResponse;
+        }
         // This is intentionally stricter than a generic settled-powder
         // classification. It names only a proven, deep compatible interior;
         // slopes, holes, narrow columns, loose material, Local, and Grains
@@ -8543,6 +8589,10 @@ export class PixiFieldPresenter {
     });
     const renderLook = resolveRenderLook();
     const volumeVfxEnabled = resolveVolumeVfxEnabled(renderLook);
+    // E05 follows the normal-detail HDR boundary. The compact true-8x shader
+    // retains its established powder body and does not declare this uniform.
+    const powderBodyVfxEnabled = outputScale < 8
+      && resolvePowderBodyVfxEnabled(renderLook);
     // E04 follows the same normal-detail boundary as E03. The protected true
     // 8x shader deliberately has neither this uniform nor its arithmetic.
     const gasBodyVfxEnabled = outputScale < 8
@@ -8565,6 +8615,7 @@ export class PixiFieldPresenter {
       uVolumeVfx: { value: volumeVfxEnabled ? 1 : 0, type: 'f32' },
       uGasBodyVfx: { value: gasBodyVfxEnabled ? 1 : 0, type: 'f32' },
       uLiquidBodyVfx: { value: liquidBodyVfxEnabled ? 1 : 0, type: 'f32' },
+      uPowderBodyVfx: { value: powderBodyVfxEnabled ? 1 : 0, type: 'f32' },
       // At 8x, the supersampled analytic boundary already supplies detail. Drop
       // diagonal/ring probes so the 15M-pixel frame remains watchdog-safe.
       uHighQuality: {
@@ -8758,6 +8809,7 @@ export class PixiFieldPresenter {
       this.uniforms.uniforms.uVolumeVfx = 0;
       this.uniforms.uniforms.uGasBodyVfx = 0;
       this.uniforms.uniforms.uLiquidBodyVfx = 0;
+      this.uniforms.uniforms.uPowderBodyVfx = 0;
       this.app.stage.addChild(this.scene);
     }
   }
@@ -8785,7 +8837,8 @@ export class PixiFieldPresenter {
           && (new URLSearchParams(location.search).get('blankAudit') === '1'
             || new URLSearchParams(location.search).get('volumeVfxAudit') === '1'
             || new URLSearchParams(location.search).get('gasBodyVfxAudit') === '1'
-            || new URLSearchParams(location.search).get('liquidBodyVfxAudit') === '1'),
+            || new URLSearchParams(location.search).get('liquidBodyVfxAudit') === '1'
+            || new URLSearchParams(location.search).get('powderBodyVfxAudit') === '1'),
         resolution: outputScale, autoDensity: true, autoStart: false,
       });
     } catch (error) {
@@ -8814,6 +8867,8 @@ export class PixiFieldPresenter {
     presenter.app.canvas.dataset.gasBodyVfx = Number(presenter.uniforms.uniforms.uGasBodyVfx) > 0.5
       ? 'active' : 'inactive';
     presenter.app.canvas.dataset.liquidBodyVfx = Number(presenter.uniforms.uniforms.uLiquidBodyVfx) > 0.5
+      ? 'active' : 'inactive';
+    presenter.app.canvas.dataset.powderBodyVfx = Number(presenter.uniforms.uniforms.uPowderBodyVfx) > 0.5
       ? 'active' : 'inactive';
     if (presenter.hdrPipelineInfo.reason) {
       presenter.app.canvas.dataset.hdrPipelineReason = presenter.hdrPipelineInfo.reason;
@@ -10076,11 +10131,13 @@ export class PixiFieldPresenter {
         this.uniforms.uniforms.uVolumeVfx = 0;
         this.uniforms.uniforms.uGasBodyVfx = 0;
         this.uniforms.uniforms.uLiquidBodyVfx = 0;
+        this.uniforms.uniforms.uPowderBodyVfx = 0;
         this.app.canvas.dataset.hdrPipeline = 'inactive';
         this.app.canvas.dataset.hdrPipelineReason = 'runtime-error';
         this.app.canvas.dataset.volumeVfx = 'inactive';
         this.app.canvas.dataset.gasBodyVfx = 'inactive';
         this.app.canvas.dataset.liquidBodyVfx = 'inactive';
+        this.app.canvas.dataset.powderBodyVfx = 'inactive';
         delete this.app.canvas.dataset.bloomBacking;
         if (!this.scene.parent) this.app.stage.addChild(this.scene);
       }

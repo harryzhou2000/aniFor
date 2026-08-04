@@ -138,9 +138,16 @@ const gasBodyVfxOnly = process.argv.includes('--gas-body-vfx-only');
 if (gasBodyVfxOnly && (modes.length !== 1 || modes[0] !== 'webgl')) {
   throw new Error('--gas-body-vfx-only requires --webgl-only');
 }
-if ([hdrVfxOnly, volumeVfxOnly, liquidBodyVfxOnly, gasBodyVfxOnly]
+// E05 is deliberately narrower than the established powder-body base: it
+// measures a new crown/facet layer only at normal detail, leaving Canvas and
+// the compact direct 8x mesh as their proven controls.
+const powderBodyVfxOnly = process.argv.includes('--powder-body-vfx-only');
+if (powderBodyVfxOnly && (modes.length !== 1 || modes[0] !== 'webgl')) {
+  throw new Error('--powder-body-vfx-only requires --webgl-only');
+}
+if ([hdrVfxOnly, volumeVfxOnly, liquidBodyVfxOnly, gasBodyVfxOnly, powderBodyVfxOnly]
   .filter(Boolean).length > 1) {
-  throw new Error('HDR/volume/liquid-body/gas-body focused audits are mutually exclusive');
+  throw new Error('HDR/volume/liquid-body/gas-body/powder-body focused audits are mutually exclusive');
 }
 const layoutOnly = process.argv.includes('--layout-only');
 const visualScaleMatrixNormalOnly = process.argv.includes('--visual-scale-matrix-normal-only');
@@ -222,7 +229,7 @@ const liveScaleOnly = process.argv.includes('--live-scale-only');
 // bundle without starting Vite. That keeps screenshot evidence independent of
 // dev-server navigation timing while leaving all default audit paths unchanged.
 const productionBundle = process.argv.includes('--production-bundle');
-const usesProductionBundle = productionBundle || showcaseScreenshotOnly || hdrVfxOnly || volumeVfxOnly || liquidBodyVfxOnly || gasBodyVfxOnly || cellularGraphicsOnly || sensorGraphicsOnly
+const usesProductionBundle = productionBundle || showcaseScreenshotOnly || hdrVfxOnly || volumeVfxOnly || liquidBodyVfxOnly || gasBodyVfxOnly || powderBodyVfxOnly || cellularGraphicsOnly || sensorGraphicsOnly
   || unusualPowderGraphicsOnly || earthenPowderGraphicsOnly || explosivePowderGraphicsOnly || unusualSolidGraphicsOnly
   || deviceIdentityGraphicsOnly
   || fieldProfileGraphicsOnly
@@ -259,6 +266,8 @@ const liquidBodyVfxArgument = process.argv.find((argument) => argument.startsWit
   ?.slice('--liquid-body-vfx='.length);
 const gasBodyVfxArgument = process.argv.find((argument) => argument.startsWith('--gas-body-vfx='))
   ?.slice('--gas-body-vfx='.length);
+const powderBodyVfxArgument = process.argv.find((argument) => argument.startsWith('--powder-body-vfx='))
+  ?.slice('--powder-body-vfx='.length);
 const requireHdrPipeline = process.argv.includes('--require-hdr-pipeline');
 const renderScaleArgument = process.argv.find((argument) => argument.startsWith('--render-scale='))
   ?.slice('--render-scale='.length);
@@ -276,6 +285,9 @@ if (liquidBodyVfxArgument !== undefined && !['0', '1', 'off', 'on'].includes(liq
 if (gasBodyVfxArgument !== undefined && !['0', '1', 'off', 'on'].includes(gasBodyVfxArgument)) {
   throw new Error('--gas-body-vfx must be 0, 1, off, or on');
 }
+if (powderBodyVfxArgument !== undefined && !['0', '1', 'off', 'on'].includes(powderBodyVfxArgument)) {
+  throw new Error('--powder-body-vfx must be 0, 1, off, or on');
+}
 if (volumeVfxOnly && volumeVfxArgument !== undefined) {
   throw new Error('--volume-vfx-only owns its off -> on -> off sequence; omit --volume-vfx');
 }
@@ -284,6 +296,9 @@ if (volumeVfxOnly && liquidBodyVfxArgument !== undefined) {
 }
 if (volumeVfxOnly && gasBodyVfxArgument !== undefined) {
   throw new Error('--volume-vfx-only owns the inherited gas state; omit --gas-body-vfx');
+}
+if (volumeVfxOnly && powderBodyVfxArgument !== undefined) {
+  throw new Error('--volume-vfx-only owns the inherited powder-body state; omit --powder-body-vfx');
 }
 if (liquidBodyVfxOnly && volumeVfxArgument !== undefined) {
   throw new Error('--liquid-body-vfx-only fixes volumeVfx=0; omit --volume-vfx');
@@ -294,17 +309,36 @@ if (liquidBodyVfxOnly && liquidBodyVfxArgument !== undefined) {
 if (liquidBodyVfxOnly && gasBodyVfxArgument !== undefined) {
   throw new Error('--liquid-body-vfx-only keeps gas-body VFX defaulted; omit --gas-body-vfx');
 }
+if (liquidBodyVfxOnly && powderBodyVfxArgument !== undefined) {
+  throw new Error('--liquid-body-vfx-only keeps powder-body VFX defaulted; omit --powder-body-vfx');
+}
 if (gasBodyVfxOnly && (volumeVfxArgument !== undefined || liquidBodyVfxArgument !== undefined)) {
   throw new Error('--gas-body-vfx-only fixes volumeVfx=0 and liquidBodyVfx=0; omit those flags');
 }
 if (gasBodyVfxOnly && gasBodyVfxArgument !== undefined) {
   throw new Error('--gas-body-vfx-only owns its off -> on -> off sequence; omit --gas-body-vfx');
 }
+if (gasBodyVfxOnly && powderBodyVfxArgument !== undefined) {
+  throw new Error('--gas-body-vfx-only keeps powder-body VFX defaulted; omit --powder-body-vfx');
+}
+if (hdrVfxOnly && powderBodyVfxArgument !== undefined) {
+  throw new Error('--hdr-vfx-only owns its HDR experiment state; omit --powder-body-vfx');
+}
+if (powderBodyVfxOnly && (volumeVfxArgument !== undefined || liquidBodyVfxArgument !== undefined
+  || gasBodyVfxArgument !== undefined)) {
+  throw new Error('--powder-body-vfx-only fixes volumeVfx=0, liquidBodyVfx=0, and gasBodyVfx=0; omit those flags');
+}
+if (powderBodyVfxOnly && powderBodyVfxArgument !== undefined) {
+  throw new Error('--powder-body-vfx-only owns its off -> on -> off sequence; omit --powder-body-vfx');
+}
 if (renderScaleArgument !== undefined && !['1', '2', '4', '8'].includes(renderScaleArgument)) {
   throw new Error('--render-scale must be 1, 2, 4, or 8');
 }
 if (gasBodyVfxOnly && renderScaleArgument === '8') {
   throw new Error('--gas-body-vfx-only is a normal-detail 1x/2x/4x experiment');
+}
+if (powderBodyVfxOnly && renderScaleArgument === '8') {
+  throw new Error('--powder-body-vfx-only is a normal-detail 1x/2x/4x experiment');
 }
 const captureDpr = captureDprArgument === undefined ? undefined : Number(captureDprArgument);
 if (captureDpr !== undefined && captureDpr !== 1 && captureDpr !== 2) {
@@ -377,7 +411,7 @@ async function main() {
       }, 15_000, 'Vite browser-audit server');
     const results = [];
     for (const mode of modes) results.push(await auditMode(mode));
-    const reducedAudit = quickScreenshot || showcaseScreenshotOnly || hdrVfxOnly || volumeVfxOnly || liquidBodyVfxOnly || gasBodyVfxOnly || layoutOnly || mobileOnly || mobileGestureOnly
+    const reducedAudit = quickScreenshot || showcaseScreenshotOnly || hdrVfxOnly || volumeVfxOnly || liquidBodyVfxOnly || gasBodyVfxOnly || powderBodyVfxOnly || layoutOnly || mobileOnly || mobileGestureOnly
       || desktopInputOnly || visualScaleMatrixOnly || powderBodyOnly || liquidDepthOnly
       || solidDepthOnly || gasChromaOnly || surfaceContourOnly || solidFieldOnly
       || roleGraphicsOnly || cellularGraphicsOnly || sensorGraphicsOnly
@@ -474,7 +508,7 @@ async function auditMode(mode) {
   // measures. Canvas fallback has no advanced optics obligation, so retain the
   // canonical paused scene there and prove real material delivery/occupancy.
   const startsBlank = !canvasFallbackAudit && (hdrVfxOnly || volumeVfxOnly
-    || liquidBodyVfxOnly || gasBodyVfxOnly || cellularGraphicsOnly || sensorGraphicsOnly
+    || liquidBodyVfxOnly || gasBodyVfxOnly || powderBodyVfxOnly || cellularGraphicsOnly || sensorGraphicsOnly
     || unusualPowderGraphicsOnly || earthenPowderGraphicsOnly || explosivePowderGraphicsOnly
     || unusualSolidGraphicsOnly || deviceIdentityGraphicsOnly || fieldProfileGraphicsOnly
     || electricDischargeGraphicsOnly || liquidIdentityGraphicsOnly
@@ -496,6 +530,7 @@ async function auditMode(mode) {
     ...(volumeVfxArgument ? { volumeVfx: volumeVfxArgument } : {}),
     ...(liquidBodyVfxArgument ? { liquidBodyVfx: liquidBodyVfxArgument } : {}),
     ...(gasBodyVfxArgument ? { gasBodyVfx: gasBodyVfxArgument } : {}),
+    ...(powderBodyVfxArgument ? { powderBodyVfx: powderBodyVfxArgument } : {}),
     renderScale: renderScaleArgument ?? ((pqrtStateGraphicsEight || filtStateGraphicsEight || lcryStateGraphicsEight
       || pipeStateGraphicsEight || swchStateGraphicsEight || storStateGraphicsEight
       || dlayStateGraphicsEight || wifiStateGraphicsEight || powderMesostrataGraphicsEight
@@ -714,6 +749,13 @@ async function auditMode(mode) {
       assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
       cdp.close();
       return { backend: mode, gasBodyVfx, browserErrors: errors.length };
+    }
+    if (powderBodyVfxOnly) {
+      assert(mode === 'webgl', '--powder-body-vfx-only requires --webgl-only');
+      const powderBodyVfx = await auditPowderBodyVfxExperiment(cdp, mode);
+      assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
+      cdp.close();
+      return { backend: mode, powderBodyVfx, browserErrors: errors.length };
     }
     if (pausedPresentationOnly) {
       const pausedPresentation = await auditPausedPresentation(cdp, mode);
@@ -20935,6 +20977,64 @@ const GAS_BODY_VFX_RAW_CONTROL_POINTS = Object.freeze([
   { name: 'cflmGap', x: 544, y: 145 },
 ]);
 
+// E05 deliberately reuses the settled render-lab powder bodies. The broad
+// bodies are the only expected crown/facet owners; the adjacent hole, ledge,
+// isolated, and wet-mixed samples are independent controls. There is no moving
+// powder fixture in this paused lab, so motion remains protected by the
+// renderer's stable-body guard and the existing full powder release gate.
+const POWDER_BODY_VFX_TARGET_REGIONS = Object.freeze([
+  { name: 'clayCrown', family: 'clay', zone: 'crown', x: 148, y: 48, radiusX: 4, radiusY: 7,
+    minimumRms: 1.2, minimumSpatial: 1.1, minimumPeak: 3, maximumPeak: 8,
+    minimumSignedMean: 0.4 },
+  { name: 'clayCore', family: 'clay', zone: 'core', x: 148, y: 80, radiusX: 4, radiusY: 18,
+    minimumRms: 1.15, minimumSpatial: 1.1, minimumPeak: 5, maximumPeak: 8,
+    maximumSignedMean: 0.05 },
+  { name: 'concreteCrown', family: 'concrete', zone: 'crown', x: 163, y: 55, radiusX: 4, radiusY: 7,
+    minimumRms: 1.0, minimumSpatial: 0.95, minimumPeak: 5, maximumPeak: 8,
+    minimumSignedMean: 0.35 },
+  { name: 'concreteCore', family: 'concrete', zone: 'core', x: 163, y: 90, radiusX: 4, radiusY: 18,
+    minimumRms: 0.3, minimumSpatial: 0.3, minimumPeak: 3, maximumPeak: 6,
+    maximumSignedMean: -0.03 },
+  { name: 'sandBulk', family: 'sand', zone: 'core', x: 156, y: 78, radius: 8,
+    minimumRms: 0.85, minimumSpatial: 0.7, minimumPeak: 3, maximumPeak: 7,
+    maximumSignedMean: -0.35 },
+]);
+// E05 must deepen settled powder bodies without smearing their material
+// mesostructure. This is intentionally a local chroma residual rather than a
+// whole-region variance: broad crown/core lighting may change, while the
+// small-scale colour cadence of Clay, Concrete, and Sand must remain.
+const POWDER_BODY_VFX_MICROCHROMA = Object.freeze({
+  minimumBaseline: 0.05,
+  minimumRetention: 0.991,
+  maximumRetention: 1.005,
+  maximumRepeatDelta: 0.001,
+  minimumSamples: 16,
+});
+const POWDER_BODY_VFX_CONTROL_REGIONS = Object.freeze([
+  { name: 'clayDeepHole', x: 144.5, y: 62.5, radiusX: 0.45, radiusY: 0.45, maximumPeak: 0 },
+  { name: 'concreteDeepHole', x: 159.5, y: 73.5, radiusX: 0.45, radiusY: 0.45, maximumPeak: 0 },
+  // The shallow Sand slope starts with one exact cell at this tip. Unlike the
+  // six-cell-deep column feet, it is a genuine fine-structure no-op control.
+  { name: 'thinSlopeTip', x: 18, y: 149, radiusX: 0.45, radiusY: 0.45, maximumPeak: 0 },
+  { name: 'isolatedSand', x: 190.5, y: 176.5, radius: 1.5, maximumPeak: 0 },
+  // This is the established dense Sand/Water suspension capsule. E05 must
+  // leave its field-owned wet body untouched.
+  { name: 'wetMixedSuspension', x: 106, y: 283, radius: 12, maximumPeak: 0 },
+]);
+const POWDER_BODY_VFX_REFERENCE_REGIONS = Object.freeze([
+  { name: 'sandSlopeReference', x: 94.5, y: 145, radiusX: 77, radiusY: 7 },
+  { name: 'clayColumnReference', x: 148, y: 82, radiusX: 7, radiusY: 54 },
+  { name: 'concreteColumnReference', x: 163, y: 88, radiusX: 7, radiusY: 48 },
+  { name: 'isolatedSquareReference', x: 190.5, y: 176.5, radius: 1.5 },
+]);
+const POWDER_BODY_VFX_RAW_CONTROL_POINTS = Object.freeze([
+  { name: 'clayDeepHole', x: 144, y: 62 },
+  { name: 'concreteDeepHole', x: 159, y: 73 },
+  { name: 'thinSlopeTip', x: 18, y: 149 },
+  { name: 'isolatedSand', x: 190, y: 176 },
+  { name: 'wetMixedSuspension', x: 106, y: 283 },
+]);
+
 /**
  * Production-only HDR experiment gate. It intentionally captures ordinary PNG
  * compositor output at 2x—not a raw WebGL framebuffer—so this check never
@@ -21257,11 +21357,183 @@ async function auditGasBodyVfxExperiment(cdp, mode) {
   return { scales, trueEightXExcluded: true };
 }
 
+/**
+ * E05 powder crown/facet gate. The established body-depth and mesostrata
+ * layers remain enabled as the accepted baseline; only the new normal-detail
+ * RGB layer changes here. Grains and Local are captured independently as exact
+ * reference modes, while the paused fixture's semantic digest protects the
+ * notched columns, holes, ledges, and mixed wet powder.
+ */
+async function auditPowderBodyVfxExperiment(cdp, mode) {
+  const scales = [];
+  const requestedScales = renderScaleArgument === undefined
+    ? VOLUME_VFX_SCALES : [Number(renderScaleArgument)];
+  for (const scale of requestedScales) {
+    const captures = {};
+    for (const enabled of [false, true, false]) {
+      const key = enabled ? 'enabled' : captures.disabled ? 'disabledRepeat' : 'disabled';
+      const variant = await navigatePowderBodyVfxState(cdp, mode, scale, enabled, key);
+      variant.references = await capturePowderBodyVfxReferenceStyles(cdp, scale, key);
+      captures[key] = variant;
+    }
+    const { disabled, enabled, disabledRepeat } = captures;
+    for (const [label, variant] of Object.entries(captures)) {
+      assertGeometry(variant.geometry, `E05 ${label} ${scale}x`, scale);
+      assert(variant.geometry.backend.backend === 'webgl',
+        `E05 ${label} ${scale}x lost WebGL presentation`);
+      assert(variant.hdrPipeline?.state === 'active',
+        `E05 ${label} ${scale}x HDR pipeline was not active (${JSON.stringify(variant.hdrPipeline)})`);
+    }
+    assertCanvasRectsEqual(disabled.geometry.canvas, enabled.geometry.canvas,
+      `E05 ${scale}x disabled/enabled CSS geometry`);
+    assertCanvasRectsEqual(disabled.geometry.canvas, disabledRepeat.geometry.canvas,
+      `E05 ${scale}x disabled/repeated CSS geometry`);
+    assert(JSON.stringify(disabled.geometry.backing) === JSON.stringify(enabled.geometry.backing)
+      && JSON.stringify(disabled.geometry.backing) === JSON.stringify(disabledRepeat.geometry.backing),
+    `E05 ${scale}x backing geometry changed (${JSON.stringify({
+      disabled: disabled.geometry.backing, enabled: enabled.geometry.backing,
+      repeat: disabledRepeat.geometry.backing,
+    })})`);
+    assertHdrVfxSemanticEquality(disabled.semantic, enabled.semantic,
+      `E05 ${scale}x disabled/enabled`);
+    assertHdrVfxSemanticEquality(disabled.semantic, disabledRepeat.semantic,
+      `E05 ${scale}x disabled/repeated`);
+    assertVolumeVfxBackingInvariant(disabled.backing, enabled.backing,
+      `E05 ${scale}x disabled/enabled`);
+    assertVolumeVfxBackingInvariant(disabled.backing, disabledRepeat.backing,
+      `E05 ${scale}x disabled/repeated`);
+    assertVolumeVfxRawControlInvariant(disabled.rawControls, enabled.rawControls,
+      `E05 ${scale}x disabled/enabled`);
+    assertVolumeVfxRawControlInvariant(disabled.rawControls, disabledRepeat.rawControls,
+      `E05 ${scale}x disabled/repeated`);
+
+    const responseRegions = [...POWDER_BODY_VFX_TARGET_REGIONS, ...POWDER_BODY_VFX_CONTROL_REGIONS];
+    const rawResponses = await sampleBackdropRefractionRegions(cdp, {
+      straight: disabled.capture.capture.data,
+      refracted: enabled.capture.capture.data,
+      repeatedStraight: disabledRepeat.capture.capture.data,
+    }, responseRegions, disabled.capture.canvasRect);
+    const responses = rawResponses.map((sample, index) => {
+      const region = responseRegions[index];
+      const meanRgbRms = Math.hypot(...sample.responseRgb) / Math.sqrt(3);
+      return {
+        ...sample,
+        ...region,
+        spatialRgbRms: round(Math.sqrt(Math.max(0, sample.rgbRms ** 2 - meanRgbRms ** 2)), 3),
+      };
+    });
+    assert(responses.every((sample) => sample.repeatRgbPeak === 0),
+      `E05 ${scale}x powder-body query was not deterministic (${JSON.stringify(responses)})`);
+    const targets = responses.filter((sample) => sample.family);
+    assert(targets.every((sample) => sample.rgbRms >= sample.minimumRms
+      && sample.spatialRgbRms >= sample.minimumSpatial
+      && sample.rgbPeak >= (sample.minimumPeak ?? 1)
+      && sample.rgbPeak <= sample.maximumPeak
+      && (sample.minimumSignedMean === undefined
+        || sample.signedMean >= sample.minimumSignedMean)
+      && (sample.maximumSignedMean === undefined
+        || sample.signedMean <= sample.maximumSignedMean)),
+    `E05 ${scale}x powder-body response was inert, uniform, or exceeded its RGB budget (${JSON.stringify(targets)})`);
+    const controls = responses.filter((sample) => !sample.family);
+    assert(controls.every((sample) => sample.rgbPeak <= sample.maximumPeak),
+      `E05 ${scale}x powder-body response escaped a hole, fine structure, isolated grain, or wet mixed control (${JSON.stringify(controls)})`);
+    assert(targets.some((sample) => sample.signedMean >= 0.05)
+      && targets.some((sample) => sample.signedMean <= -0.05),
+    `E05 ${scale}x powder-body response lost its bipolar crown/core relation (${JSON.stringify(targets)})`);
+    for (const family of ['clay', 'concrete']) {
+      const crown = targets.find((sample) => sample.family === family && sample.zone === 'crown');
+      const core = targets.find((sample) => sample.family === family && sample.zone === 'core');
+      assert(crown && core && crown.responseSignature !== core.responseSignature
+        && (Math.abs(crown.spatialRgbRms - core.spatialRgbRms) >= 0.01
+          || Math.abs(crown.signedMean - core.signedMean) >= 0.05),
+      `E05 ${scale}x ${family} lost its shaped crown/core response (${JSON.stringify({ crown, core })})`);
+    }
+
+    // Reuse the already captured off/on/off images. This proves that macro
+    // body relief has not traded away the stable material grain cadence.
+    const microchroma = await samplePowderBodyVfxMicrochroma(cdp, {
+      disabled: disabled.capture.capture.data,
+      enabled: enabled.capture.capture.data,
+      disabledRepeat: disabledRepeat.capture.capture.data,
+    }, POWDER_BODY_VFX_TARGET_REGIONS);
+    assert(microchroma.every((sample) => sample.samples >= POWDER_BODY_VFX_MICROCHROMA.minimumSamples
+      && sample.disabled >= POWDER_BODY_VFX_MICROCHROMA.minimumBaseline
+      && sample.retention >= POWDER_BODY_VFX_MICROCHROMA.minimumRetention
+      && sample.retention <= POWDER_BODY_VFX_MICROCHROMA.maximumRetention
+      && sample.repeatDelta <= POWDER_BODY_VFX_MICROCHROMA.maximumRepeatDelta),
+    `E05 ${scale}x powder-body VFX damped or destabilized internal grain microchroma (${JSON.stringify({
+      limits: POWDER_BODY_VFX_MICROCHROMA, microchroma,
+    })})`);
+
+    const references = {};
+    for (const style of ['grains', 'local']) {
+      const samples = await sampleBackdropRefractionRegions(cdp, {
+        straight: disabled.references[style].capture.data,
+        refracted: enabled.references[style].capture.data,
+        repeatedStraight: disabledRepeat.references[style].capture.data,
+      }, POWDER_BODY_VFX_REFERENCE_REGIONS, disabled.references[style].canvasRect);
+      assert(samples.every((sample) => sample.rgbPeak === 0 && sample.repeatRgbPeak === 0),
+        `E05 ${scale}x powder-body VFX escaped the ${style} reference mode (${JSON.stringify(samples)})`);
+      references[style] = samples;
+    }
+
+    const screenshots = screenshotRequest ? await writePowderBodyVfxScreenshots(
+      screenshotRequest, scale, captures,
+    ) : undefined;
+    scales.push({
+      scale,
+      backing: disabled.geometry.backing,
+      alphaSupport: disabled.backing,
+      rawControls: disabled.rawControls,
+      responses,
+      microchroma,
+      references,
+      screenshots,
+    });
+  }
+  return { scales, trueEightXExcluded: true };
+}
+
+async function capturePowderBodyVfxReferenceStyles(cdp, scale, label) {
+  const references = {};
+  for (const style of ['grains', 'local']) {
+    await evaluate(cdp, `(() => {
+      const audit = window.__ANIFOR_INPUT_AUDIT__;
+      if (typeof audit?.setPowderRenderStyle !== 'function') {
+        throw new Error('E05 powder style audit API unavailable');
+      }
+      audit.setPowderRenderStyle(${JSON.stringify(style)});
+      return true;
+    })()`);
+    references[style] = await waitForStablePageCapture(
+      cdp, `E05 ${label} ${scale}x ${style} reference`, scale === 4 ? 20_000 : undefined,
+    );
+  }
+  await evaluate(cdp, `window.__ANIFOR_INPUT_AUDIT__.setPowderRenderStyle('smooth'); true`);
+  return references;
+}
+
+async function writePowderBodyVfxScreenshots(source, scale, captures) {
+  const paths = {};
+  for (const [variant, capture] of Object.entries(captures)) {
+    const suffix = `powder-body-${scale}x-${variant}`;
+    paths[variant] = variantScreenshotPath(source, suffix);
+    await writeFile(paths[variant], Buffer.from(capture.capture.capture.data, 'base64'));
+    for (const style of ['grains', 'local']) {
+      const referenceSuffix = `${suffix}-${style}`;
+      const referencePath = variantScreenshotPath(source, referenceSuffix);
+      paths[`${variant}-${style}`] = referencePath;
+      await writeFile(referencePath, Buffer.from(capture.references[style].capture.data, 'base64'));
+    }
+  }
+  return paths;
+}
+
 async function navigateVolumeVfxState(cdp, mode, scale, enabled, label) {
   const query = new URLSearchParams({
     scene: 'render-lab', inputAudit: '1', auditStage: 'canonical',
     volumeVfxAudit: '1', renderScale: String(scale), renderLook: 'realistic',
-    volumeVfx: enabled ? '1' : '0',
+    volumeVfx: enabled ? '1' : '0', powderBodyVfx: '0',
   });
   await cdp.send('Page.navigate', { url: `${AUDIT_BASE_URL}?${query}` });
   await waitFor(() => evaluate(cdp, `(() => {
@@ -21273,6 +21545,7 @@ async function navigateVolumeVfxState(cdp, mode, scale, enabled, label) {
       && parameters.get('renderScale') === ${JSON.stringify(String(scale))}
       && parameters.get('renderLook') === 'realistic'
       && parameters.get('volumeVfx') === ${JSON.stringify(enabled ? '1' : '0')}
+      && parameters.get('powderBodyVfx') === '0'
       && Boolean(window.__ANIFOR_INPUT_AUDIT__);
   })()`), 15_000, `E02 ${label} ${scale}x page`);
   await waitFor(() => evaluate(cdp,
@@ -21286,12 +21559,14 @@ async function navigateVolumeVfxState(cdp, mode, scale, enabled, label) {
       reason: canvas.dataset.hdrPipelineReason,
       bloomBacking: canvas.dataset.bloomBacking,
       volumeVfx: canvas.dataset.volumeVfx,
+      powderBodyVfx: canvas.dataset.powderBodyVfx,
     } : undefined;
   })()`);
   const expectedBloom = `${WORLD_WIDTH * scale / 2}x${WORLD_HEIGHT * scale / 2}`;
   assert(hdrPipeline?.look === 'realistic' && hdrPipeline?.state === 'active'
     && hdrPipeline?.bloomBacking === expectedBloom
-    && hdrPipeline?.volumeVfx === (enabled ? 'active' : 'inactive'),
+    && hdrPipeline?.volumeVfx === (enabled ? 'active' : 'inactive')
+    && hdrPipeline?.powderBodyVfx === 'inactive',
   `E02 ${label} ${scale}x HDR/volume state resolved incorrectly (${JSON.stringify(hdrPipeline)})`);
   const capture = await waitForStablePageCapture(
     cdp, `E02 ${label} ${scale}x framebuffer`, scale === 4 ? 20_000 : undefined,
@@ -21411,6 +21686,64 @@ async function navigateGasBodyVfxState(cdp, mode, scale, enabled, label) {
     semantic: await hdrVfxSemanticDigest(cdp),
     backing: await sampleVolumeVfxCanvasAlphaSupport(cdp),
     rawControls: await sampleVolumeVfxRawWorldPixels(cdp, GAS_BODY_VFX_RAW_CONTROL_POINTS),
+    hdrPipeline,
+  };
+}
+
+async function navigatePowderBodyVfxState(cdp, mode, scale, enabled, label) {
+  const query = new URLSearchParams({
+    scene: 'render-lab', inputAudit: '1', auditStage: 'canonical',
+    powderBodyVfxAudit: '1', renderScale: String(scale), renderLook: 'realistic',
+    volumeVfx: '0', liquidBodyVfx: '0', gasBodyVfx: '0', powderBodyVfx: enabled ? '1' : '0',
+  });
+  await cdp.send('Page.navigate', { url: `${AUDIT_BASE_URL}?${query}` });
+  await waitFor(() => evaluate(cdp, `(() => {
+    const parameters = new URLSearchParams(location.search);
+    return parameters.get('scene') === 'render-lab'
+      && parameters.get('inputAudit') === '1'
+      && parameters.get('auditStage') === 'canonical'
+      && parameters.get('powderBodyVfxAudit') === '1'
+      && parameters.get('renderScale') === ${JSON.stringify(String(scale))}
+      && parameters.get('renderLook') === 'realistic'
+      && parameters.get('volumeVfx') === '0'
+      && parameters.get('liquidBodyVfx') === '0'
+      && parameters.get('gasBodyVfx') === '0'
+      && parameters.get('powderBodyVfx') === ${JSON.stringify(enabled ? '1' : '0')}
+      && Boolean(window.__ANIFOR_INPUT_AUDIT__);
+  })()`), 15_000, `E05 ${label} ${scale}x page`);
+  await waitFor(() => evaluate(cdp,
+    `window.__ANIFOR_INPUT_AUDIT__.backend().backend === ${JSON.stringify(mode)}`),
+  15_000, `E05 ${label} ${scale}x backend`);
+  const hdrPipeline = await evaluate(cdp, `(() => {
+    const canvas = document.querySelector('.semantic-field-canvas');
+    return canvas ? {
+      look: canvas.dataset.renderLook,
+      state: canvas.dataset.hdrPipeline,
+      reason: canvas.dataset.hdrPipelineReason,
+      bloomBacking: canvas.dataset.bloomBacking,
+      volumeVfx: canvas.dataset.volumeVfx,
+      liquidBodyVfx: canvas.dataset.liquidBodyVfx,
+      gasBodyVfx: canvas.dataset.gasBodyVfx,
+      powderBodyVfx: canvas.dataset.powderBodyVfx,
+    } : undefined;
+  })()`);
+  const expectedBloom = `${WORLD_WIDTH * scale / 2}x${WORLD_HEIGHT * scale / 2}`;
+  assert(hdrPipeline?.look === 'realistic' && hdrPipeline?.state === 'active'
+    && hdrPipeline?.bloomBacking === expectedBloom
+    && hdrPipeline?.volumeVfx === 'inactive'
+    && hdrPipeline?.liquidBodyVfx === 'inactive'
+    && hdrPipeline?.gasBodyVfx === 'inactive'
+    && hdrPipeline?.powderBodyVfx === (enabled ? 'active' : 'inactive'),
+  `E05 ${label} ${scale}x HDR/powder-body state resolved incorrectly (${JSON.stringify(hdrPipeline)})`);
+  const capture = await waitForStablePageCapture(
+    cdp, `E05 ${label} ${scale}x framebuffer`, scale === 4 ? 20_000 : undefined,
+  );
+  return {
+    capture,
+    geometry: await metrics(cdp),
+    semantic: await hdrVfxSemanticDigest(cdp),
+    backing: await sampleVolumeVfxCanvasAlphaSupport(cdp),
+    rawControls: await sampleVolumeVfxRawWorldPixels(cdp, POWDER_BODY_VFX_RAW_CONTROL_POINTS),
     hdrPipeline,
   };
 }
@@ -22580,6 +22913,115 @@ async function sampleBackdropRefractionRegions(cdp, screenshots, regions, captur
         repeatPeak: Math.round(repeatPeak * 100) / 100,
         repeatRgbPeak: Math.round(repeatRgbPeak * 100) / 100,
         responseSignature: responseSignature >>> 0,
+      };
+    });
+  })()`);
+}
+
+/**
+ * E05's material-cadence assertion deliberately consumes the already captured
+ * off/on/off PNGs. A trimmed 5×5 local chroma residual ignores broad lighting
+ * gradients and crop-edge aliases, leaving the high-frequency pigment/facet
+ * variation that Smooth powder must retain inside a settled body.
+ */
+async function samplePowderBodyVfxMicrochroma(cdp, screenshots, regions) {
+  return evaluate(cdp, `(async () => {
+    const sources = ${JSON.stringify(Object.fromEntries(
+    Object.entries(screenshots).map(([name, data]) => [name, `data:image/png;base64,${data}`]),
+  ))};
+    const contexts = {};
+    let imageWidth = 0;
+    let imageHeight = 0;
+    for (const [name, source] of Object.entries(sources)) {
+      const image = new Image();
+      image.src = source;
+      await image.decode();
+      if (imageWidth && (image.naturalWidth !== imageWidth || image.naturalHeight !== imageHeight)) {
+        throw new Error('Powder microchroma screenshot geometry mismatch');
+      }
+      imageWidth = image.naturalWidth;
+      imageHeight = image.naturalHeight;
+      const copy = document.createElement('canvas');
+      copy.width = imageWidth;
+      copy.height = imageHeight;
+      const context = copy.getContext('2d', { willReadFrequently: true });
+      if (!context) throw new Error('Powder microchroma sampler unavailable');
+      context.drawImage(image, 0, 0);
+      contexts[name] = context;
+    }
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    const visualViewport = window.visualViewport;
+    const visualWidth = visualViewport?.width ?? innerWidth;
+    const visualHeight = visualViewport?.height ?? innerHeight;
+    const visualOffsetX = visualViewport?.offsetLeft ?? 0;
+    const visualOffsetY = visualViewport?.offsetTop ?? 0;
+    const pageScaleX = imageWidth / Math.max(1, visualWidth);
+    const pageScaleY = imageHeight / Math.max(1, visualHeight);
+    const chromaResidual = (pixels, width, height) => {
+      const residuals = [];
+      const chroma = (offset) => {
+        const red = pixels[offset];
+        const green = pixels[offset + 1];
+        const blue = pixels[offset + 2];
+        const luminance = red * 0.2126 + green * 0.7152 + blue * 0.0722;
+        return [red - luminance, green - luminance, blue - luminance];
+      };
+      for (let py = 2; py + 2 < height; py++) for (let px = 2; px + 2 < width; px++) {
+        const centre = chroma((py * width + px) * 4);
+        let meanRed = 0;
+        let meanGreen = 0;
+        let meanBlue = 0;
+        for (let oy = -2; oy <= 2; oy++) for (let ox = -2; ox <= 2; ox++) {
+          const nearby = chroma(((py + oy) * width + px + ox) * 4);
+          meanRed += nearby[0];
+          meanGreen += nearby[1];
+          meanBlue += nearby[2];
+        }
+        const red = centre[0] - meanRed / 25;
+        const green = centre[1] - meanGreen / 25;
+        const blue = centre[2] - meanBlue / 25;
+        // Bound exceptional single-pixel output while preserving ordinary grain
+        // cadence; this makes the RMS resistant to a lone HDR highlight.
+        residuals.push(Math.min(48, Math.sqrt((red * red + green * green + blue * blue) / 3)));
+      }
+      residuals.sort((left, right) => left - right);
+      if (residuals.length === 0) return { samples: 0, rms: 0 };
+      const trim = Math.floor(residuals.length * 0.05);
+      const first = Math.min(trim, Math.max(0, residuals.length - 1));
+      const last = Math.max(first + 1, residuals.length - trim);
+      let squared = 0;
+      for (let index = first; index < last; index++) squared += residuals[index] ** 2;
+      return {
+        samples: Math.max(0, last - first),
+        rms: Math.sqrt(squared / Math.max(1, last - first)),
+      };
+    };
+    const fixed = (value) => Math.round(value * 10000) / 10000;
+    return ${JSON.stringify(regions)}.map((region) => {
+      const radiusX = region.radiusX ?? region.radius ?? 3;
+      const radiusY = region.radiusY ?? region.radius ?? 3;
+      const topLeft = audit.worldToScreen(region.x - radiusX, region.y - radiusY);
+      const bottomRight = audit.worldToScreen(region.x + radiusX, region.y + radiusY);
+      const x = Math.max(0, Math.floor((Math.min(topLeft.x, bottomRight.x) - visualOffsetX) * pageScaleX));
+      const y = Math.max(0, Math.floor((Math.min(topLeft.y, bottomRight.y) - visualOffsetY) * pageScaleY));
+      const width = Math.max(1, Math.min(imageWidth - x,
+        Math.ceil(Math.abs(bottomRight.x - topLeft.x) * pageScaleX)));
+      const height = Math.max(1, Math.min(imageHeight - y,
+        Math.ceil(Math.abs(bottomRight.y - topLeft.y) * pageScaleY)));
+      const measured = Object.fromEntries(Object.entries(contexts).map(([name, context]) => [
+        name, chromaResidual(context.getImageData(x, y, width, height).data, width, height),
+      ]));
+      const baseline = measured.disabled.rms;
+      return {
+        name: region.name,
+        family: region.family,
+        zone: region.zone,
+        samples: measured.disabled.samples,
+        disabled: fixed(baseline),
+        enabled: fixed(measured.enabled.rms),
+        disabledRepeat: fixed(measured.disabledRepeat.rms),
+        retention: fixed(measured.enabled.rms / Math.max(0.0001, baseline)),
+        repeatDelta: fixed(Math.abs(measured.disabledRepeat.rms - baseline)),
       };
     });
   })()`);
