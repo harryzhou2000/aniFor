@@ -736,10 +736,18 @@ vec3 hydrationStateEightXDelta(float material, float packedState, vec2 position)
     || (secondWall && second.x + second.y <= -2.0);
   bool wetGlint = litLip && mod(world.x - world.y, 4.0) <= 1.0;
   vec3 delta = vec3(-16.0, -12.0, -5.0);
+  // The compact direct compositor intentionally omits the normal path's
+  // intermediate pore passes. Retain its readable deep-wet body progression
+  // with one owner-local scalar instead: low and mid hydration keep the
+  // ordinary porous lift, while only the genuinely saturated core gains the
+  // restrained absorbed-light response. This is RGB-only arithmetic over the
+  // already decoded state, so it cannot alter support, alpha, or topology.
+  float soakedCore = smoothstep(0.45, 1.0, moisture);
+  delta += vec3(-9.0, -6.0, -2.0) * soakedCore;
   if (wetGlint) delta += vec3(10.0, 16.0, 22.0);
   else if (poreCore) delta += vec3(-4.0, -2.0, 8.0);
   else if (firstWall || secondWall) delta += vec3(-2.0, 1.0, 6.0);
-  return clamp(delta * moisture, vec3(-20.0), vec3(20.0)) / 255.0;
+  return clamp(delta * moisture, vec3(-28.0), vec3(20.0)) / 255.0;
 }
 // Native PQRT/QRTZ use tmp2 as an exact 0..10 crystal seed. Keep this compact
 // and owner-local so true 8x reuses the one existing packed-state fetch.

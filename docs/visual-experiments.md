@@ -25,6 +25,23 @@ Evidence:
   --production-bundle` retains a bounded true-8x startup/timing/powder check;
   the complete `--scale-eight-only` suite remains the publication gate.
 
+## Saturated sponge volume at true 8x
+
+The direct 8x compositor now restores the normal renderer's absorbed-light
+read for genuinely soaked SPNG cores. It layers a small monotonic deep-wet
+darkening only after exact SPNG ownership and the native packed hydration flag
+are decoded. Low and mid hydration retain the porous surface response, while
+high and saturated states gain a darker, denser internal body. The term is
+RGB-only arithmetic: it adds no sampler, field, pass, allocation, alpha,
+support, or topology decision.
+
+Evidence:
+
+- `npm run audit:spng:8x` starts an independent true 4896x3072 WebGL context,
+  proves completed GPU timing, then checks exact dry/low/mid/high/saturated
+  SPNG state topology, owner/material controls, off/on/off determinism, and
+  strictly monotonic hydration response.
+
 ## Release-gate observation
 
 The focused true-8x powder gate has completed at the required 4896x3072 backing

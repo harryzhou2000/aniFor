@@ -2323,7 +2323,9 @@ describe('Pixi presenter startup configuration', () => {
     expect(helper).toContain('mod(floor(packedState / 64.0), 2.0) < 0.5');
     expect(helper).toContain('float hydration = min(50.0, mod(packedState, 64.0));');
     expect(helper).toContain('if (hydration < 0.5) return vec3(0.0);');
-    expect(helper).toContain('return clamp(delta * moisture, vec3(-20.0), vec3(20.0)) / 255.0;');
+    expect(helper).toContain('float soakedCore = smoothstep(0.45, 1.0, moisture);');
+    expect(helper).toContain('delta += vec3(-9.0, -6.0, -2.0) * soakedCore;');
+    expect(helper).toContain('return clamp(delta * moisture, vec3(-28.0), vec3(20.0)) / 255.0;');
     expect(helper).toContain('if (material == 56.0) {');
     expect(helper).toContain('float hydration = min(100.0, mod(packedState, 128.0));');
     expect(helper).toContain('return clamp(delta, vec3(-124.0), vec3(124.0)) / 255.0;');

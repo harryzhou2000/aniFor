@@ -79,6 +79,7 @@ const CDP_CONNECT_TIMEOUT_MS = 10_000;
 const EIGHT_X_PRESENTATION_DEADLINE_MS = 30_000;
 const scaleEightOnly = process.argv.includes('--scale-eight-only');
 const eightPowderOnly = process.argv.includes('--eight-powder-only');
+const eightSpngOnly = process.argv.includes('--eight-spng-only');
 const eightFieldProfileOnly = process.argv.includes('--eight-field-profile-only');
 const eightMaterialAtlasOnly = process.argv.includes('--eight-material-atlas-only');
 // Keep the two expensive recovery paths independently runnable. The complete
@@ -86,7 +87,7 @@ const eightMaterialAtlasOnly = process.argv.includes('--eight-material-atlas-onl
 // them; a single long-lived software-GPU browser can otherwise stall after
 // timing despite both recovery implementations being healthy.
 const eightRecoveryOnly = process.argv.includes('--eight-recovery-only');
-const modes = scaleEightOnly || eightPowderOnly || eightFieldProfileOnly || eightMaterialAtlasOnly || eightRecoveryOnly ? ['webgl'] : process.argv.includes('--canvas-only') ? ['canvas2d']
+const modes = scaleEightOnly || eightPowderOnly || eightSpngOnly || eightFieldProfileOnly || eightMaterialAtlasOnly || eightRecoveryOnly ? ['webgl'] : process.argv.includes('--canvas-only') ? ['canvas2d']
   : process.argv.includes('--webgl-only') ? ['webgl'] : ['canvas2d', 'webgl'];
 // WebGL is the canonical visual release path. Canvas runs its strict
 // startup/geometry/semantic fallback audit by default; opt in only when a
@@ -216,7 +217,7 @@ const usesProductionBundle = productionBundle || showcaseScreenshotOnly || cellu
   || distilledDieselLiquidGraphicsOnly
   || botanicalLifecycleGraphicsOnly || sparkStateGraphicsOnly
   || nativeSeedGrowthOnly || nativeSemanticsOnly || catalogSelectionOnly || shortDesktopOnly || liveScaleOnly
-  || scaleEightOnly || eightFieldProfileOnly || eightMaterialAtlasOnly || eightRecoveryOnly;
+  || scaleEightOnly || eightSpngOnly || eightFieldProfileOnly || eightMaterialAtlasOnly || eightRecoveryOnly;
 const AUDIT_BASE_URL = usesProductionBundle ? PRODUCTION_BUNDLE_URL : ORIGIN + '/';
 const DESKTOP_TOOL_FILTER_HEIGHT = 96;
 const screenshotRequest = process.argv.find((argument) => argument.startsWith('--screenshot='))?.slice('--screenshot='.length);
@@ -306,7 +307,7 @@ async function main() {
       || distilledDieselLiquidGraphicsOnly
       || sparkStateGraphicsOnly
       || nativeSeedGrowthOnly || nativeSemanticsOnly || catalogSelectionOnly || pausedPresentationOnly
-      || canvasTimingOnly || eightFieldProfileOnly || eightMaterialAtlasOnly || eightRecoveryOnly;
+      || canvasTimingOnly || eightSpngOnly || eightFieldProfileOnly || eightMaterialAtlasOnly || eightRecoveryOnly;
     // Focused visual gates prove their complete native WebGL contract by
     // default. Canvas has already proved its semantic fallback contract in
     // auditMode; paired optics parity is intentionally an explicit diagnostic.
@@ -467,6 +468,12 @@ async function auditMode(mode) {
       assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
       cdp.close();
       return { backend: mode, renderScaleEight, browserErrors: errors.length };
+    }
+    if (eightSpngOnly) {
+      const eightSpng = await auditEightXSpngStateOnly(cdp, dpr);
+      assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
+      cdp.close();
+      return { backend: mode, eightSpng, browserErrors: errors.length };
     }
     if (eightRecoveryOnly) {
       const eightRecovery = await auditEightXRecovery(cdp, dpr);
@@ -13145,6 +13152,49 @@ async function auditEightXFieldProfileGraphics(cdp, dpr) {
     occupied: prepared.occupied,
     samples,
     exactRepeatedOff: samples.every((sample) => sample.repeatRgbPeak <= 1),
+  };
+}
+
+/**
+ * Focused true-8x proof for native SPNG hydration optics. This retains the
+ * production direct mesh, completed-fence timing, exact backing, and CSS
+ * geometry checks while avoiding the unrelated full material-atlas matrix.
+ * The comprehensive --scale-eight-only gate remains the release authority.
+ */
+async function auditEightXSpngStateOnly(cdp, dpr) {
+  await setDesktopMetrics(cdp, 1280, 720, dpr);
+  const query = new URLSearchParams({
+    scene: 'render-lab', inputAudit: '1', renderScale: '8', auditStage: 'eight-spng', blankAudit: '1',
+  });
+  await cdp.send('Page.navigate', { url: `${AUDIT_BASE_URL}?${query}` });
+  const startupDeadline = Date.now() + EIGHT_X_PRESENTATION_DEADLINE_MS;
+  await waitFor(() => evaluate(cdp, `(() => {
+    const parameters = new URLSearchParams(location.search);
+    return parameters.get('renderScale') === '8'
+      && parameters.get('auditStage') === 'eight-spng'
+      && parameters.has('blankAudit') && Boolean(window.__ANIFOR_INPUT_AUDIT__);
+  })()`), remainingDeadlineMs(startupDeadline, 'true-8x SPNG input audit API'), 'true-8x SPNG input audit API');
+  const startupBackend = await waitForEightXTerminalBackend(cdp, 'true-8x SPNG', startupDeadline);
+  assertEightXWebGLBackend(startupBackend, 'true-8x SPNG');
+  const geometry = await waitForStableCanvas(
+    cdp, 1280, 720, undefined, 45_000, 'true-8x SPNG geometry',
+  );
+  assert(geometry.backing.width === WORLD_WIDTH * 8 && geometry.backing.height === WORLD_HEIGHT * 8
+      && geometry.outputScale === '8',
+  `true-8x SPNG fixture lost exact backing (${JSON.stringify(geometry.backing)})`);
+  assertGeometry(geometry, 'true-8x SPNG', 8);
+  assertContained(geometry, 'true-8x SPNG');
+  assertToolboxGeometry(geometry, 'true-8x SPNG', DESKTOP_TOOL_FILTER_HEIGHT);
+  const timing = await auditWebGLPresentationTiming(cdp, 1, 12_000, 30_000, 1);
+  assert(timing.source === 'gpu-query' || timing.source === 'gpu-fence' || timing.source === 'gpu-finish',
+    `true-8x SPNG timing did not prove completed GPU work (${JSON.stringify(timing)})`);
+  assert(timing.p90Ms <= 10_000 && timing.maximumMs <= 12_000,
+    `true-8x SPNG presentation exceeded its watchdog budget (${JSON.stringify(timing)})`);
+  const spngStateGraphics = await auditEightXSpngStateGraphics(cdp, geometry.canvas);
+  return {
+    backing: `${geometry.backing.width}x${geometry.backing.height}`,
+    timing,
+    spngStateGraphics,
   };
 }
 
