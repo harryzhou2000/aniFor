@@ -953,9 +953,14 @@ async function auditMode(mode) {
         outputScale: powderMesostrataGraphicsEight ? 8 : 2,
         assert,
       });
+      const screenshot = screenshotPath(mode);
+      if (screenshot) {
+        const capture = await captureSettledPage(cdp, `${mode} styled powder-mesostrata capture`);
+        await writeFile(screenshot, Buffer.from(capture.capture.data, 'base64'));
+      }
       assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
       cdp.close();
-      return { backend: mode, powderMesostrataGraphics, browserErrors: errors.length };
+      return { backend: mode, powderMesostrataGraphics, screenshot, browserErrors: errors.length };
     }
     if (geologicalSolidGraphicsOnly) {
       const geologicalSolidGraphics = await auditGeologicalSolidGraphics({
@@ -10847,6 +10852,7 @@ async function sampleMaterialAtlas(cdp, renderedBase64, baselineBase64, canvasRe
 
 async function auditWebGLPresentationTiming(
   cdp, targetSamples = 30, sampleTimeout = 5_000, acceptanceTimeout = sampleTimeout,
+  maximumAttempts = targetSamples + 45,
 ) {
   let timing = await evaluate(cdp,
     'window.__ANIFOR_INPUT_AUDIT__.webGLPresentationTiming()');
@@ -10855,17 +10861,26 @@ async function auditWebGLPresentationTiming(
     || timing.source === 'cpu-submission',
     `Unknown WebGL timing source ${timing.source}`);
 
-  const maximumAttempts = targetSamples + 45;
   for (let attempt = 0; timing.usableSamples < targetSamples && attempt < maximumAttempts; attempt++) {
     const before = timing;
+    // A 15M-fragment 8x request may wait for the previous presentation fence,
+    // but acceptance and completion own one bounded attempt window. Passing a
+    // short CDP timeout into each poll prevents Runtime.evaluate's global
+    // fallback from escaping that renderer/audit deadline.
+    const attemptDeadline = Date.now() + Math.max(sampleTimeout, acceptanceTimeout);
+    const remainingAttemptMs = (label) => remainingDeadlineMs(attemptDeadline, label);
     await waitFor(() => evaluate(cdp,
-      'window.__ANIFOR_INPUT_AUDIT__.requestWebGLPresentationTimingSample()'),
-    acceptanceTimeout, `WebGL timing sample ${attempt + 1} accepted completed-frame request`);
+      'window.__ANIFOR_INPUT_AUDIT__.requestWebGLPresentationTimingSample()',
+      Math.min(1_000, remainingAttemptMs(`WebGL timing sample ${attempt + 1} acceptance poll`))),
+    remainingAttemptMs(`WebGL timing sample ${attempt + 1} acceptance`),
+    `WebGL timing sample ${attempt + 1} accepted completed-frame request`);
     timing = await waitFor(() => evaluate(cdp, `(() => {
       const next = window.__ANIFOR_INPUT_AUDIT__.webGLPresentationTiming();
       return next && (next.source !== ${JSON.stringify(before.source)}
         || next.sequence > ${before.sequence}) ? next : null;
-    })()`), sampleTimeout, `WebGL presentation sample ${attempt + 1}`);
+    })()`, Math.min(1_000, remainingAttemptMs(`WebGL presentation sample ${attempt + 1} poll`))),
+    remainingAttemptMs(`WebGL presentation sample ${attempt + 1}`),
+    `WebGL presentation sample ${attempt + 1}`);
   }
 
   assert(timing.usableSamples >= targetSamples,
@@ -13195,22 +13210,25 @@ async function auditRenderScaleEight(cdp, dpr, powderOnly = false) {
   // Role material graphics are canonical-WebGL presentation at 8x. Exercise
   // the ordinary render-lab source/sink/channel/force scene before later
   // fixture audits replace it; Canvas remains an availability fallback here.
-  const roleGraphics = await auditEightXRoleGraphics(cdp, geometry.canvas);
-  stage('role-graphics-ready');
+  const roleGraphics = powderOnly ? undefined : await auditEightXRoleGraphics(cdp, geometry.canvas);
+  if (!powderOnly) stage('role-graphics-ready');
 
   // Temperature is a canonical direct-mesh RGB response at 8x. Reuse the
   // render-lab's cold/ambient/hot cards before later fixture gates mutate the
   // semantic scene; Canvas fallback does not participate in this release gate.
-  const thermalMaterialGraphics = await auditEightXThermalMaterialGraphics(cdp, geometry.canvas);
-  stage('thermal-material-ready');
+  const thermalMaterialGraphics = powderOnly
+    ? undefined : await auditEightXThermalMaterialGraphics(cdp, geometry.canvas);
+  if (!powderOnly) stage('thermal-material-ready');
 
   // The direct mesh owns canonical gas-volume relief at 8x. Keep this before
   // fixture-replacement stages so the existing Smoke/O2/Noble/Fog composition
   // remains the authority; Canvas visual parity stays explicitly optional.
-  const gasVolumeRelief = await auditEightXGasVolumeRelief(cdp, geometry.canvas);
-  stage('gas-volume-relief-ready');
+  const gasVolumeRelief = powderOnly ? undefined : await auditEightXGasVolumeRelief(cdp, geometry.canvas);
+  if (!powderOnly) stage('gas-volume-relief-ready');
 
-  const presentationTiming = await auditWebGLPresentationTiming(cdp, 8, 12_000, 30_000);
+  const presentationTiming = await auditWebGLPresentationTiming(
+    cdp, powderOnly ? 1 : 8, 12_000, 30_000, powderOnly ? 1 : undefined,
+  );
   assert(presentationTiming.source === 'gpu-query' || presentationTiming.source === 'gpu-fence'
     || presentationTiming.source === 'gpu-finish',
     `renderScale=8 timing did not prove completed GPU work (${JSON.stringify(presentationTiming)})`);

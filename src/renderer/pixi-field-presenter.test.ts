@@ -2614,6 +2614,10 @@ describe('Pixi presenter startup configuration', () => {
     expect(source).toContain('float deepStoneBody = material == 21.0 ? deepPowderBody : 0.0;');
     expect(source).toContain('float settledGrainCeiling = mix(8.0, 2.70, deepStoneBody);');
     expect(source).toContain('cellGrainRetention = min(cellGrainRetention, settledGrainCeiling);');
+    expect(source).toContain('float settledPowderColorCalm = step(1.5, uPowderStyle)');
+    expect(source).toContain('smoothstep(2.5, 3.5, shape.w);');
+    expect(source).toContain('min(cellGrainRetention, 1.20), settledPowderColorCalm * 0.85');
+    expect(source).toContain('powderBodyBase, settledPowderColorCalm * commonEarthenPowder * 0.42');
     expect(source).toContain('float deepPowderChromaDamping = mix(1.0, 0.78, deepStoneBody);');
     expect(source).toContain('color += base * grain * vec3(0.178, 0.044, -0.112)');
     expect(source).toContain('* stablePowderMineral * lowDetailMineralGain * powderContourTextureRetention');

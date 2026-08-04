@@ -6938,6 +6938,9 @@ void main() {
       }
     }
     if (roughSurface > 0.5 || (optics < 0.5 && profile == 1.0)) {
+      // Keep the already lit semantic body available for the final settled
+      // earth-material calm. It is not a new sample or support decision.
+      vec3 powderBodyBase = color;
       vec2 subcell = floor(fract(fieldPosition) * 2.0);
       float grainFacet = fract(sin(dot(floor(fieldPosition) * 2.0 + subcell, vec2(12.9898, 78.233))) * 43758.5453) - 0.5;
       float facetGain = optics == 13.0 ? 1.12
@@ -7037,6 +7040,17 @@ void main() {
         smoothstep(0.72, 0.98, powderVisualCohesion)
       );
       cellGrainRetention = min(cellGrainRetention, settledGrainCeiling);
+      // A locally packed, temporally settled Smooth body is material, not a
+      // grid of independently shaded simulation cells. Reuse the already
+      // decoded semantic contact (shape.w) rather than adding a field/sample:
+      // loose grains, unsupported hole interiors, Local, Grains, and direct
+      // 8x never satisfy this RGB-only calm gate.
+      float settledPowderColorCalm = step(1.5, uPowderStyle)
+        * step(224.0 / 255.0, boundaryStability)
+        * smoothstep(2.5, 3.5, shape.w);
+      cellGrainRetention = mix(
+        cellGrainRetention, min(cellGrainRetention, 1.20), settledPowderColorCalm * 0.85
+      );
       float deepPowderChromaDamping = mix(1.0, 0.78, deepStoneBody);
       float facetRetention = mix(1.0, 1.20, settledMineralRetention);
       float powderMineralFactor = 0.91
@@ -7262,6 +7276,14 @@ void main() {
         && wallOnly < 0.5 && emissionOnly < 0.5) {
         color = clamp(color + earthenPowderIdentityDelta(material, fieldPosition), 0.0, 1.0);
       }
+      // Dense, temporally settled earth bodies keep a living mineral trace, but
+      // no longer read as four independently coloured square particles per
+      // semantic cell. Preserve their broad lit base before mesostrata/body
+      // optics are restored; loose grains, unsupported hole interiors, other
+      // powder families, Local, Grains, and direct 8x are exact no-ops.
+      float commonEarthenPowder = (material == 1.0 || material == 21.0
+        || material == 26.0 || material == 28.0) ? 1.0 : 0.0;
+      color = mix(color, powderBodyBase, settledPowderColorCalm * commonEarthenPowder * 0.42);
       if (powderMesostrataStrength > 0.0) {
         color = clamp(color + settledPowderMesostrataDelta(
           material, fieldPosition, powderMesostrataSlope
