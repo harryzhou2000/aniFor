@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
-  DEFAULT_RENDER_LOOK, resolveRenderLook, resolveVolumeVfxEnabled,
+  DEFAULT_RENDER_LOOK, resolveLiquidBodyVfxEnabled, resolveRenderLook,
+  resolveVolumeVfxEnabled,
 } from './render-look';
 
 describe('resolveRenderLook', () => {
@@ -20,5 +21,17 @@ describe('resolveRenderLook', () => {
     expect(resolveVolumeVfxEnabled('neon-lab', '?volumeVfx=1')).toBe(true);
     expect(resolveVolumeVfxEnabled('realistic', '?volumeVfx=0')).toBe(false);
     expect(resolveVolumeVfxEnabled('neon-lab', '?volumeVfx=off')).toBe(false);
+  });
+
+  it('lets liquid-body VFX follow the preset or override broad volume styling', () => {
+    expect(resolveLiquidBodyVfxEnabled('classic', '?liquidBodyVfx=on')).toBe(false);
+    expect(resolveLiquidBodyVfxEnabled('realistic', '')).toBe(true);
+    expect(resolveLiquidBodyVfxEnabled('realistic', '?volumeVfx=0')).toBe(false);
+    expect(resolveLiquidBodyVfxEnabled(
+      'realistic', '?volumeVfx=0&liquidBodyVfx=on',
+    )).toBe(true);
+    expect(resolveLiquidBodyVfxEnabled(
+      'neon-lab', '?volumeVfx=1&liquidBodyVfx=off',
+    )).toBe(false);
   });
 });

@@ -27,19 +27,27 @@ does not alter simulation, camera, semantic ownership, or `renderScale`.
   Local/Grains, motion, authored holes, isolated particles/droplets, unlike
   seams, walls, traits, suspension, molten liquid, and foreign matter remain
   protected controls.
+- **E03 — liquid readability (accepted checkpoint):** normal 1×–4× WebGL
+  strengthens only the existing connected, exact-species, ordinary-liquid
+  body response. It reuses the species-safe density and vertical-depth byte
+  plus the already-live meniscus/Fresnel scalars for a reflected exposed lip
+  and family-coloured Beer–Lambert core. It adds no field, texture read, pass,
+  target, clock, alpha/support/ownership, reconstruction, or physics decision.
+  Droplets, Lava, walls, traits, emissive liquid, foreign contacts, and exact
+  unlike-liquid owners remain no-ops. `?liquidBodyVfx=0|1` isolates the effect;
+  absent that audit override it follows the non-Classic E02 volume preset.
 - **Protected 8× rung:** `renderScale=8` deliberately reports
   `hdrPipeline=inactive` / `scale-8` and retains the proven direct single-mesh
   4896×3072 path. The experiment must earn a bounded 8× design rather than
   allocating a 115 MiB full-resolution float target beside that path.
-- **Current decision:** E01/E02 remain opt-in until their powder/liquid/gas
-  scene metrics, hardware GPU timing, context-loss recovery, and mobile thermal
-  behavior are measured. Retained fit-view review found E02 topology-safe but
-  too subtle to promote as the visible overhaul: powder remains speckled,
-  liquid bodies remain comparatively flat, and the already-cohesive gas field
-  gains only a faint relief change. E02 is therefore a controlled
-  body-lighting baseline, not the final fluid/gas result. Later experiments
-  still need to earn stronger thickness/refraction, species-safe reflection,
-  and richer cloud structure.
+- **Current decision:** E01/E02/E03 remain opt-in through the non-Classic looks
+  until representative hardware timing and mobile thermal behavior are
+  measured. E02 remains the safe family-wide baseline. E03 is accepted as the
+  liquid-depth checkpoint: its fit-view crop is visibly more cohesive, retains
+  Water/Oil/Acid hue order, and shows no objectionable striping, seam bleed, or
+  silhouette change. It is not the final fluid/gas result; gas still needs a
+  stronger stable density grammar and powder still needs more bulk relief
+  without losing grain cadence.
   Sub-1.0 material colour stays on the established response; tonemapping owns
   only real HDR highlights so powder texture and liquid body contrast are not
   washed out.
@@ -55,22 +63,29 @@ Run `npm run audit:vfx:volume` for E02. It reloads the paused composed material
 lab as `volumeVfx=0 → 1 → 0` at 1×, 2×, and 4×, requires the real HDR pipeline,
 and proves exact semantic/staging state plus raw presented alpha/support hashes.
 The accepted response is spatial rather than a uniform grade: the current
-fixture reaches 6 framebuffer bytes in settled Clay, 9 in connected liquids,
+fixture reaches 6 framebuffer bytes in settled Clay, 13 in connected liquids,
 and 3 in gas while isolated Sand/Water, authored holes, Metal, and repeat
-captures remain exact. The sub-cell Water/Oil page probe permits only two bytes
-of filtered neighbouring-body RGB; its raw support remains exact.
+captures remain exact. The sub-cell Water/Oil page probe permits four bytes of
+filtered neighbouring-body RGB; E03 separately proves both exact raw seam
+owners and whole-frame alpha/support unchanged.
 
-**Next visual experiments:** first prototype a liquid-only readability tranche
-using the existing species-safe field and vertical optical-depth byte: a
-stronger bounded Beer–Lambert core plus an exposed-surface Fresnel response
-should produce a clearly visible 3–8 framebuffer-byte core/surface separation
-without changing alpha or support. Isolated droplets, Lava, walls, foreign
-contacts, and exact unlike-liquid seams remain controls. Follow that with a
-stable world-anchored multi-scale gas density treatment and a powder
-crown/facet balance that increases bulk depth without damping the established
-grain cadence. Each experiment keeps its own off/on/off switch and must pass
-the same topology, contact, scale, and fallback controls before it can become a
-preset default.
+Run `npm run audit:vfx:liquid-body` for E03. It holds E02 powder/gas styling
+off, reloads `liquidBodyVfx=0 → 1 → 0` at 1×/2×/4×, requires the real HDR
+pipeline, and proves exact semantic state, raw alpha/support, exact raw seam,
+wall, isolated-droplet and Lava controls, deterministic spatial response, and
+zero browser errors. Across the three scales, Water, Oil, and Acid expose a
+positive surface response and a darker core with `5.8–8.5` signed display-byte
+separation; target peaks remain at or below 14 bytes. Native walls now also
+reset the vertical optical-depth byte and redirty that scan at the bounded
+liquid cadence.
+
+**Next visual experiments:** E03 is the accepted liquid-depth checkpoint.
+Next prototype a stable world-anchored multi-scale gas-density treatment that
+adds readable billow depth without moving support or authored gaps, then tune a
+powder crown/facet balance that increases bulk depth without damping the
+established grain cadence. Each experiment keeps its own off/on/off switch and
+must pass the same topology, contact, scale, and fallback controls before it
+can become a preset default.
 
 ## Phase 1 — HDR pipeline & lighting core (biggest visual payoff)
 

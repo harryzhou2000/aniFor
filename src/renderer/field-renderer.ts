@@ -1601,7 +1601,9 @@ export class MaterialRenderer {
     const rebuiltField = fields.updateNext(this.rendered, scheduleTime, this.renderedWalls);
     fields.refreshSuspension(this.rendered, scheduleTime, this.renderedWalls);
     if (rebuiltField === 'liquid' || !this.canvasLiquidOpticalDepthHydrated) {
-      fields.liquid.writeVerticalOpticalDepth(this.rendered, this.boundaryStability);
+      fields.liquid.writeVerticalOpticalDepth(
+        this.rendered, this.boundaryStability, this.renderedWalls,
+      );
       this.canvasLiquidOpticalDepthHydrated = true;
       if (this.liquidSilhouetteCohesionEnabled) this.contourChunks.markAll();
     }

@@ -126,6 +126,12 @@ const volumeVfxOnly = process.argv.includes('--volume-vfx-only');
 if (volumeVfxOnly && (modes.length !== 1 || modes[0] !== 'webgl')) {
   throw new Error('--volume-vfx-only requires --webgl-only');
 }
+// E03 isolates the liquid body treatment from the broader E02 volume pass.
+// It remains a normal-detail HDR-only probe: no true-8x direct-mesh route.
+const liquidBodyVfxOnly = process.argv.includes('--liquid-body-vfx-only');
+if (liquidBodyVfxOnly && (modes.length !== 1 || modes[0] !== 'webgl')) {
+  throw new Error('--liquid-body-vfx-only requires --webgl-only');
+}
 const layoutOnly = process.argv.includes('--layout-only');
 const visualScaleMatrixNormalOnly = process.argv.includes('--visual-scale-matrix-normal-only');
 const visualScaleMatrixOnly = process.argv.includes('--visual-scale-matrix-only')
@@ -206,7 +212,7 @@ const liveScaleOnly = process.argv.includes('--live-scale-only');
 // bundle without starting Vite. That keeps screenshot evidence independent of
 // dev-server navigation timing while leaving all default audit paths unchanged.
 const productionBundle = process.argv.includes('--production-bundle');
-const usesProductionBundle = productionBundle || showcaseScreenshotOnly || hdrVfxOnly || volumeVfxOnly || cellularGraphicsOnly || sensorGraphicsOnly
+const usesProductionBundle = productionBundle || showcaseScreenshotOnly || hdrVfxOnly || volumeVfxOnly || liquidBodyVfxOnly || cellularGraphicsOnly || sensorGraphicsOnly
   || unusualPowderGraphicsOnly || earthenPowderGraphicsOnly || explosivePowderGraphicsOnly || unusualSolidGraphicsOnly
   || deviceIdentityGraphicsOnly
   || fieldProfileGraphicsOnly
@@ -239,6 +245,8 @@ const renderLook = process.argv.find((argument) => argument.startsWith('--render
   ?.slice('--render-look='.length);
 const volumeVfxArgument = process.argv.find((argument) => argument.startsWith('--volume-vfx='))
   ?.slice('--volume-vfx='.length);
+const liquidBodyVfxArgument = process.argv.find((argument) => argument.startsWith('--liquid-body-vfx='))
+  ?.slice('--liquid-body-vfx='.length);
 const requireHdrPipeline = process.argv.includes('--require-hdr-pipeline');
 const renderScaleArgument = process.argv.find((argument) => argument.startsWith('--render-scale='))
   ?.slice('--render-scale='.length);
@@ -250,8 +258,20 @@ if (renderLook !== undefined && !['classic', 'realistic', 'neon-lab'].includes(r
 if (volumeVfxArgument !== undefined && !['0', '1', 'off', 'on'].includes(volumeVfxArgument)) {
   throw new Error('--volume-vfx must be 0, 1, off, or on');
 }
+if (liquidBodyVfxArgument !== undefined && !['0', '1', 'off', 'on'].includes(liquidBodyVfxArgument)) {
+  throw new Error('--liquid-body-vfx must be 0, 1, off, or on');
+}
 if (volumeVfxOnly && volumeVfxArgument !== undefined) {
   throw new Error('--volume-vfx-only owns its off -> on -> off sequence; omit --volume-vfx');
+}
+if (volumeVfxOnly && liquidBodyVfxArgument !== undefined) {
+  throw new Error('--volume-vfx-only owns the inherited liquid state; omit --liquid-body-vfx');
+}
+if (liquidBodyVfxOnly && volumeVfxArgument !== undefined) {
+  throw new Error('--liquid-body-vfx-only fixes volumeVfx=0; omit --volume-vfx');
+}
+if (liquidBodyVfxOnly && liquidBodyVfxArgument !== undefined) {
+  throw new Error('--liquid-body-vfx-only owns its off -> on -> off sequence; omit --liquid-body-vfx');
 }
 if (renderScaleArgument !== undefined && !['1', '2', '4', '8'].includes(renderScaleArgument)) {
   throw new Error('--render-scale must be 1, 2, 4, or 8');
@@ -323,7 +343,7 @@ async function main() {
       }, 15_000, 'Vite browser-audit server');
     const results = [];
     for (const mode of modes) results.push(await auditMode(mode));
-    const reducedAudit = quickScreenshot || showcaseScreenshotOnly || hdrVfxOnly || volumeVfxOnly || layoutOnly || mobileOnly || mobileGestureOnly
+    const reducedAudit = quickScreenshot || showcaseScreenshotOnly || hdrVfxOnly || volumeVfxOnly || liquidBodyVfxOnly || layoutOnly || mobileOnly || mobileGestureOnly
       || desktopInputOnly || visualScaleMatrixOnly || powderBodyOnly || liquidDepthOnly
       || solidDepthOnly || gasChromaOnly || surfaceContourOnly || solidFieldOnly
       || roleGraphicsOnly || cellularGraphicsOnly || sensorGraphicsOnly
@@ -439,6 +459,7 @@ async function auditMode(mode) {
     scene: showcaseScreenshotOnly ? 'showcase' : 'render-lab', inputAudit: '1',
     ...(renderLook ? { renderLook } : {}),
     ...(volumeVfxArgument ? { volumeVfx: volumeVfxArgument } : {}),
+    ...(liquidBodyVfxArgument ? { liquidBodyVfx: liquidBodyVfxArgument } : {}),
     renderScale: renderScaleArgument ?? ((pqrtStateGraphicsEight || filtStateGraphicsEight || lcryStateGraphicsEight
       || pipeStateGraphicsEight || swchStateGraphicsEight || storStateGraphicsEight
       || dlayStateGraphicsEight || wifiStateGraphicsEight || powderMesostrataGraphicsEight
@@ -643,6 +664,13 @@ async function auditMode(mode) {
       assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
       cdp.close();
       return { backend: mode, volumeVfx, browserErrors: errors.length };
+    }
+    if (liquidBodyVfxOnly) {
+      assert(mode === 'webgl', '--liquid-body-vfx-only requires --webgl-only');
+      const liquidBodyVfx = await auditLiquidBodyVfxExperiment(cdp, mode);
+      assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
+      cdp.close();
+      return { backend: mode, liquidBodyVfx, browserErrors: errors.length };
     }
     if (pausedPresentationOnly) {
       const pausedPresentation = await auditPausedPresentation(cdp, mode);
@@ -13427,9 +13455,17 @@ async function auditRenderScaleEight(cdp, dpr, powderOnly = false) {
         cdp, `renderScale=8 focused ${style} powder framebuffer`, 450,
       )).capture.data;
     }
-    await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.resetView(); true');
-    await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.clear(); true');
-    const blankCapture = await captureSettledPage(cdp, 'renderScale=8 focused blank framebuffer');
+    // SwiftShader can retire the initial, Local, and Grains 15M-fragment
+    // frames yet leave the following full-world clear fence pending forever.
+    // The blank is only a compositing baseline for the retained screenshots,
+    // so release that exhausted context and obtain it from one fresh, equally
+    // true-8x direct mesh with identical CSS/world geometry.
+    ({ geometry, backend } = await restartEightXAuditContext(
+      cdp, dpr, geometry.canvas, 'focused-powder-blank', true,
+    ));
+    const blankCapture = await captureSettledPage(
+      cdp, 'renderScale=8 focused blank framebuffer', 900, true,
+    );
     assertCanvasRectsEqual(
       geometry.canvas, blankCapture.canvasRect, 'renderScale=8 focused scene/blank CSS geometry',
     );
@@ -19375,7 +19411,7 @@ async function auditEightXMaterialAtlasStress(cdp, blankBase64, canvasRect) {
   };
 }
 
-async function navigateEightXRecoveryPage(cdp, auditStage) {
+async function navigateEightXRecoveryPage(cdp, auditStage, blank = false) {
   // Navigation alone leaves Pixi/WebGL destruction to document teardown. In a
   // long SwiftShader audit that can retain an outgoing 15M-fragment direct mesh
   // past the next promotion. Release the presenter and its fences explicitly,
@@ -19391,6 +19427,7 @@ async function navigateEightXRecoveryPage(cdp, auditStage) {
   })()`);
   const query = new URLSearchParams({
     scene: 'render-lab', inputAudit: '1', renderScale: '8', auditStage,
+    ...(blank ? { blankAudit: '1' } : {}),
   });
   await cdp.send('Page.navigate', { url: `${AUDIT_BASE_URL}?${query}` });
   const startupDeadline = Date.now() + EIGHT_X_PRESENTATION_DEADLINE_MS;
@@ -19398,6 +19435,7 @@ async function navigateEightXRecoveryPage(cdp, auditStage) {
     const parameters = new URLSearchParams(location.search);
     return parameters.get('renderScale') === '8'
       && parameters.get('auditStage') === ${JSON.stringify(auditStage)}
+      && parameters.has('blankAudit') === ${blank}
       && Boolean(window.__ANIFOR_INPUT_AUDIT__ && document.documentElement);
   })()`), remainingDeadlineMs(startupDeadline, `renderScale=8 ${auditStage} input audit API`), `renderScale=8 ${auditStage} input audit API`);
   const startupBackend = await waitForEightXTerminalBackend(
@@ -19415,10 +19453,10 @@ async function navigateEightXRecoveryPage(cdp, auditStage) {
  * clear: it releases the prior 15M-fragment context while keeping the exact
  * CSS/world contract under test.
  */
-async function restartEightXAuditContext(cdp, dpr, expectedCanvas, batch) {
+async function restartEightXAuditContext(cdp, dpr, expectedCanvas, batch, blank = false) {
   await setDesktopMetrics(cdp, 1280, 720, dpr);
   const auditStage = `scale-eight-${batch}`;
-  const geometry = await navigateEightXRecoveryPage(cdp, auditStage);
+  const geometry = await navigateEightXRecoveryPage(cdp, auditStage, blank);
   const backend = await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.backend()');
   assert(backend.requestedOutputScale === 8 && backend.outputScale === 8,
     `renderScale=8 ${batch} batch did not remain true 8x WebGL (${JSON.stringify(backend)})`);
@@ -20754,11 +20792,53 @@ const VOLUME_VFX_CONTROL_REGIONS = Object.freeze([
   { name: 'clayHoleControl', x: 144.5, y: 62.5, radiusX: 0.45, radiusY: 0.45 },
   { name: 'isolatedWaterControl', x: 190.5, y: 164.5, radius: 2 },
   // A sub-cell page capture includes one filtered shoulder from either body;
-  // exact raw support remains independently hashed, so cap that RGB spill to
-  // two bytes without weakening the exact isolated/hole/foreign controls.
+  // exact raw support remains independently hashed, and E03 additionally
+  // proves both seam owners byte-exact, so cap that composited spill to four
+  // bytes without weakening the exact isolated/hole/foreign controls.
   { name: 'unlikeLiquidSeamControl', x: 302.5, y: 172, radiusX: 0.45, radiusY: 6,
-    maximumPeak: 2 },
+    maximumPeak: 4 },
   { name: 'metalControl', x: 405, y: 229, radius: 6 },
+]);
+
+// E03 is deliberately constrained to the established, connected liquid
+// columns in render-lab. Surface and deep-core samples prove that the body
+// treatment has a shaped response rather than a whole-frame grade. The rest
+// are hard exclusions for ineligible liquid semantics and native walls.
+const LIQUID_BODY_VFX_TARGET_REGIONS = Object.freeze([
+  { name: 'waterSurface', family: 'water', zone: 'surface', x: 224, y: 195, radiusX: 5, radiusY: 1.5,
+    minimumRms: 2.4, minimumSpatial: 0.8, minimumSignedMean: 1.5, maximumPeak: 16 },
+  { name: 'waterDeepCore', family: 'water', zone: 'core', x: 224, y: 315, radiusX: 6, radiusY: 10,
+    minimumRms: 3, minimumSpatial: 0.8, maximumSignedMean: -3, maximumPeak: 16 },
+  { name: 'oilSurface', family: 'oil', zone: 'surface', x: 263, y: 195, radiusX: 5, radiusY: 1.5,
+    minimumRms: 2.4, minimumSpatial: 0.8, minimumSignedMean: 1.5, maximumPeak: 16 },
+  { name: 'oilDeepCore', family: 'oil', zone: 'core', x: 263, y: 315, radiusX: 6, radiusY: 10,
+    minimumRms: 3, minimumSpatial: 0.8, maximumSignedMean: -3, maximumPeak: 16 },
+  { name: 'acidSurface', family: 'acid', zone: 'surface', x: 302, y: 195, radiusX: 5, radiusY: 1.5,
+    minimumRms: 2.4, minimumSpatial: 0.8, minimumSignedMean: 1.5, maximumPeak: 16 },
+  { name: 'acidDeepCore', family: 'acid', zone: 'core', x: 302, y: 315, radiusX: 6, radiusY: 10,
+    minimumRms: 3, minimumSpatial: 0.8, maximumSignedMean: -3, maximumPeak: 16 },
+]);
+const LIQUID_BODY_VFX_CONTROL_REGIONS = Object.freeze([
+  { name: 'lavaCoreControl', x: 341, y: 315, radiusX: 6, radiusY: 10, maximumPeak: 1 },
+  { name: 'lavaPinholeControl', x: 340.5, y: 231.5, radius: 2, maximumPeak: 1 },
+  { name: 'isolatedWaterControl', x: 190.5, y: 164.5, radius: 2, maximumPeak: 1 },
+  // A filtered shoulder can cross a sub-cell exact Water/Oil seam even while
+  // exact cell-centre RGBA and raw support/ownership remain fixed, so allow
+  // four page-composited RGB bytes.
+  { name: 'unlikeLiquidSeamControl', x: 302.5, y: 172, radiusX: 0.45, radiusY: 6,
+    maximumPeak: 4 },
+  { name: 'waterNativeWallControl', x: 288, y: 172, radiusX: 4, radiusY: 7, maximumPeak: 1 },
+  { name: 'oilNativeWallControl', x: 315, y: 172, radiusX: 4, radiusY: 7, maximumPeak: 1 },
+]);
+const LIQUID_BODY_VFX_RAW_CONTROL_POINTS = Object.freeze([
+  // Exact cell-centre reads distinguish a real owner mutation from the
+  // page-level interpolation shoulder around a styled neighbouring body.
+  { name: 'waterSeamOwner', x: 302, y: 172 },
+  { name: 'oilSeamOwner', x: 303, y: 172 },
+  { name: 'isolatedWaterOwner', x: 190, y: 164 },
+  { name: 'lavaCoreOwner', x: 341, y: 315 },
+  { name: 'waterWallOwner', x: 288, y: 172 },
+  { name: 'oilWallOwner', x: 315, y: 172 },
 ]);
 
 /**
@@ -20892,6 +20972,93 @@ async function auditVolumeVfxExperiment(cdp, mode) {
   return { scales, trueEightXExcluded: true };
 }
 
+/**
+ * E03 liquid-body experiment. This deliberately leaves the broad E02 volume
+ * treatment disabled, then proves that only the eligible Water/Oil/Acid body
+ * arithmetic responds across the normal-detail HDR pipeline.
+ */
+async function auditLiquidBodyVfxExperiment(cdp, mode) {
+  const scales = [];
+  for (const scale of VOLUME_VFX_SCALES) {
+    const captures = {};
+    for (const enabled of [false, true, false]) {
+      const key = enabled ? 'enabled' : captures.disabled ? 'disabledRepeat' : 'disabled';
+      captures[key] = await navigateLiquidBodyVfxState(cdp, mode, scale, enabled, key);
+    }
+    const { disabled, enabled, disabledRepeat } = captures;
+    for (const [label, variant] of Object.entries(captures)) {
+      assertGeometry(variant.geometry, `E03 ${label} ${scale}x`, scale);
+      assert(variant.geometry.backend.backend === 'webgl',
+        `E03 ${label} ${scale}x lost WebGL presentation`);
+      assert(variant.hdrPipeline?.state === 'active',
+        `E03 ${label} ${scale}x HDR pipeline was not active (${JSON.stringify(variant.hdrPipeline)})`);
+    }
+    assertCanvasRectsEqual(disabled.geometry.canvas, enabled.geometry.canvas,
+      `E03 ${scale}x disabled/enabled CSS geometry`);
+    assertCanvasRectsEqual(disabled.geometry.canvas, disabledRepeat.geometry.canvas,
+      `E03 ${scale}x disabled/repeated CSS geometry`);
+    assert(JSON.stringify(disabled.geometry.backing) === JSON.stringify(enabled.geometry.backing)
+      && JSON.stringify(disabled.geometry.backing) === JSON.stringify(disabledRepeat.geometry.backing),
+    `E03 ${scale}x backing geometry changed (${JSON.stringify({
+      disabled: disabled.geometry.backing, enabled: enabled.geometry.backing,
+      repeat: disabledRepeat.geometry.backing,
+    })})`);
+    assertHdrVfxSemanticEquality(disabled.semantic, enabled.semantic,
+      `E03 ${scale}x disabled/enabled`);
+    assertHdrVfxSemanticEquality(disabled.semantic, disabledRepeat.semantic,
+      `E03 ${scale}x disabled/repeated`);
+    assertVolumeVfxBackingInvariant(disabled.backing, enabled.backing,
+      `E03 ${scale}x disabled/enabled`);
+    assertVolumeVfxBackingInvariant(disabled.backing, disabledRepeat.backing,
+      `E03 ${scale}x disabled/repeated`);
+    assertVolumeVfxRawControlInvariant(disabled.rawControls, enabled.rawControls,
+      `E03 ${scale}x disabled/enabled`);
+    assertVolumeVfxRawControlInvariant(disabled.rawControls, disabledRepeat.rawControls,
+      `E03 ${scale}x disabled/repeated`);
+
+    const responseRegions = [...LIQUID_BODY_VFX_TARGET_REGIONS, ...LIQUID_BODY_VFX_CONTROL_REGIONS];
+    const rawResponses = await sampleBackdropRefractionRegions(cdp, {
+      straight: disabled.capture.capture.data,
+      refracted: enabled.capture.capture.data,
+      repeatedStraight: disabledRepeat.capture.capture.data,
+    }, responseRegions, disabled.capture.canvasRect);
+    const responses = rawResponses.map((sample, index) => {
+      const region = responseRegions[index];
+      const meanRgbRms = Math.hypot(...sample.responseRgb) / Math.sqrt(3);
+      // A visible but uniform grade is not body optics. Subtract its mean RGB
+      // vector so every target must retain a local lip/core shape as well.
+      const spatialRgbRms = Math.sqrt(Math.max(0, sample.rgbRms ** 2 - meanRgbRms ** 2));
+      return { ...sample, ...region, spatialRgbRms: round(spatialRgbRms, 3) };
+    });
+    assert(responses.every((sample) => sample.repeatRgbPeak <= 1),
+      `E03 ${scale}x liquid-body query was not deterministic (${JSON.stringify(responses)})`);
+    const targets = responses.filter((sample) => sample.family);
+    assert(targets.every((sample) => sample.rgbRms >= sample.minimumRms
+      && sample.spatialRgbRms >= sample.minimumSpatial
+      && sample.rgbPeak >= 1 && sample.rgbPeak <= sample.maximumPeak),
+    `E03 ${scale}x liquid-body response was inert, uniform, or exceeded its RGB budget (${JSON.stringify(targets)})`);
+    const controls = responses.filter((sample) => !sample.family);
+    assert(controls.every((sample) => sample.rgbPeak <= sample.maximumPeak),
+      `E03 ${scale}x liquid-body response leaked into an ineligible control (${JSON.stringify(controls)})`);
+    for (const family of ['water', 'oil', 'acid']) {
+      const surface = targets.find((sample) => sample.family === family && sample.zone === 'surface');
+      const core = targets.find((sample) => sample.family === family && sample.zone === 'core');
+      assert(surface && core
+        && surface.signedMean >= surface.minimumSignedMean
+        && core.signedMean <= core.maximumSignedMean
+        && surface.signedMean - core.signedMean >= 5.5,
+      `E03 ${scale}x ${family} lost its distinct surface/deep-core response (${JSON.stringify({ surface, core })})`);
+    }
+    scales.push({
+      scale,
+      backing: disabled.geometry.backing,
+      alphaSupport: disabled.backing,
+      responses,
+    });
+  }
+  return { scales, trueEightXExcluded: true };
+}
+
 async function navigateVolumeVfxState(cdp, mode, scale, enabled, label) {
   const query = new URLSearchParams({
     scene: 'render-lab', inputAudit: '1', auditStage: 'canonical',
@@ -20928,12 +21095,69 @@ async function navigateVolumeVfxState(cdp, mode, scale, enabled, label) {
     && hdrPipeline?.bloomBacking === expectedBloom
     && hdrPipeline?.volumeVfx === (enabled ? 'active' : 'inactive'),
   `E02 ${label} ${scale}x HDR/volume state resolved incorrectly (${JSON.stringify(hdrPipeline)})`);
-  const capture = await waitForStablePageCapture(cdp, `E02 ${label} ${scale}x framebuffer`);
+  const capture = await waitForStablePageCapture(
+    cdp, `E02 ${label} ${scale}x framebuffer`, scale === 4 ? 20_000 : undefined,
+  );
   return {
     capture,
     geometry: await metrics(cdp),
     semantic: await hdrVfxSemanticDigest(cdp),
     backing: await sampleVolumeVfxCanvasAlphaSupport(cdp),
+    hdrPipeline,
+  };
+}
+
+async function navigateLiquidBodyVfxState(cdp, mode, scale, enabled, label) {
+  const query = new URLSearchParams({
+    scene: 'render-lab', inputAudit: '1', auditStage: 'canonical',
+    liquidBodyVfxAudit: '1', renderScale: String(scale), renderLook: 'realistic',
+    volumeVfx: '0', liquidBodyVfx: enabled ? '1' : '0',
+  });
+  await cdp.send('Page.navigate', { url: `${AUDIT_BASE_URL}?${query}` });
+  await waitFor(() => evaluate(cdp, `(() => {
+    const parameters = new URLSearchParams(location.search);
+    return parameters.get('scene') === 'render-lab'
+      && parameters.get('inputAudit') === '1'
+      && parameters.get('auditStage') === 'canonical'
+      && parameters.get('liquidBodyVfxAudit') === '1'
+      && parameters.get('renderScale') === ${JSON.stringify(String(scale))}
+      && parameters.get('renderLook') === 'realistic'
+      && parameters.get('volumeVfx') === '0'
+      && parameters.get('liquidBodyVfx') === ${JSON.stringify(enabled ? '1' : '0')}
+      && Boolean(window.__ANIFOR_INPUT_AUDIT__);
+  })()`), 15_000, `E03 ${label} ${scale}x page`);
+  await waitFor(() => evaluate(cdp,
+    `window.__ANIFOR_INPUT_AUDIT__.backend().backend === ${JSON.stringify(mode)}`),
+  15_000, `E03 ${label} ${scale}x backend`);
+  const hdrPipeline = await evaluate(cdp, `(() => {
+    const canvas = document.querySelector('.semantic-field-canvas');
+    return canvas ? {
+      look: canvas.dataset.renderLook,
+      state: canvas.dataset.hdrPipeline,
+      reason: canvas.dataset.hdrPipelineReason,
+      bloomBacking: canvas.dataset.bloomBacking,
+      volumeVfx: canvas.dataset.volumeVfx,
+      liquidBodyVfx: canvas.dataset.liquidBodyVfx,
+    } : undefined;
+  })()`);
+  const expectedBloom = `${WORLD_WIDTH * scale / 2}x${WORLD_HEIGHT * scale / 2}`;
+  assert(hdrPipeline?.look === 'realistic' && hdrPipeline?.state === 'active'
+    && hdrPipeline?.bloomBacking === expectedBloom
+    && hdrPipeline?.volumeVfx === 'inactive'
+    && hdrPipeline?.liquidBodyVfx === (enabled ? 'active' : 'inactive'),
+  `E03 ${label} ${scale}x HDR/liquid-body state resolved incorrectly (${JSON.stringify(hdrPipeline)})`);
+  // A cold 4x HDR compositor may need more than the generic eight-second
+  // equality window after repeated production-bundle navigation. This remains
+  // a bounded exact-stability check; it only widens the audit deadline.
+  const capture = await waitForStablePageCapture(
+    cdp, `E03 ${label} ${scale}x framebuffer`, scale === 4 ? 20_000 : undefined,
+  );
+  return {
+    capture,
+    geometry: await metrics(cdp),
+    semantic: await hdrVfxSemanticDigest(cdp),
+    backing: await sampleVolumeVfxCanvasAlphaSupport(cdp),
+    rawControls: await sampleVolumeVfxRawWorldPixels(cdp, LIQUID_BODY_VFX_RAW_CONTROL_POINTS),
     hdrPipeline,
   };
 }
@@ -20972,6 +21196,32 @@ function assertVolumeVfxBackingInvariant(left, right, label) {
     && left.supportSignature === right.supportSignature
     && left.alphaSum === right.alphaSum && left.supported === right.supported,
   `${label}: volume styling changed raw presentation alpha/support (${JSON.stringify({ left, right })})`);
+}
+
+/** Exact final-framebuffer RGBA at one integer device pixel inside each world cell. */
+async function sampleVolumeVfxRawWorldPixels(cdp, points) {
+  return evaluate(cdp, `(() => {
+    const canvas = document.querySelector('canvas.semantic-field-canvas');
+    if (!(canvas instanceof HTMLCanvasElement)) throw new Error('E03 raw control canvas unavailable');
+    const copy = document.createElement('canvas');
+    copy.width = canvas.width;
+    copy.height = canvas.height;
+    const context = copy.getContext('2d', { willReadFrequently: true });
+    if (!context) throw new Error('E03 raw control sampler unavailable');
+    context.drawImage(canvas, 0, 0);
+    const scaleX = copy.width / ${WORLD_WIDTH};
+    const scaleY = copy.height / ${WORLD_HEIGHT};
+    return ${JSON.stringify(points)}.map((point) => {
+      const pixelX = Math.max(0, Math.min(copy.width - 1, Math.floor((point.x + 0.5) * scaleX)));
+      const pixelY = Math.max(0, Math.min(copy.height - 1, Math.floor((point.y + 0.5) * scaleY)));
+      return { ...point, rgba: Array.from(context.getImageData(pixelX, pixelY, 1, 1).data) };
+    });
+  })()`);
+}
+
+function assertVolumeVfxRawControlInvariant(left, right, label) {
+  assert(JSON.stringify(left) === JSON.stringify(right),
+    `${label}: liquid-body VFX changed an exact raw control owner (${JSON.stringify({ left, right })})`);
 }
 
 async function navigateHdrVfxLook(cdp, mode, look, label) {

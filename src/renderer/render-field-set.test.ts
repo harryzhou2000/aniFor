@@ -146,6 +146,8 @@ describe('shared render field set', () => {
 
     expect(fields.updateNext(materials, 100, walls)).toBe('atmosphere');
     expect(fields.atmosphere.styleBytes[5 * fields.atmosphere.width + 5]).toBe(0);
+    expect(fields.updateNext(materials, 101, walls)).toBe('liquid');
+    expect(fields.updateNext(materials, 102, walls)).toBeUndefined();
   });
 
   it('paces the soft suspension field independently at six hertz', () => {

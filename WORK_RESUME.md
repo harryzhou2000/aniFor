@@ -21,7 +21,7 @@ Immediate priorities are:
 
 ### Active execution emphasis
 
-### Current HDR and field-aware volume experiment checkpoint
+### Current HDR, field-aware volume, and E03 liquid-readability checkpoint
 
 - The active visual goal is now an explicit experiment program rather than a
   one-off shader tweak: improve powder, liquid, and gas depth, material beauty,
@@ -40,13 +40,23 @@ Immediate priorities are:
   shader branch. The stricter family guards protect Local/Grains, motion, fine
   structures, authored holes, isolated droplets, unlike contacts, walls,
   traits, wet sediment, and molten liquid.
+- E03 is the accepted liquid-only refinement of that normal-detail HDR path.
+  `?liquidBodyVfx=0|1` isolates it; ordinary non-Classic use follows the broad
+  volume preset. The normal shader reuses exact connected-species liquid
+  density, the existing phase-local vertical-depth byte, and already-live
+  meniscus/Fresnel terms for a reflected surface lip and family-coloured
+  Beer–Lambert core. It adds no field, texture read, pass, target, clock,
+  allocation, alpha/support/ownership, reconstruction, or physics decision,
+  and is deliberately inactive and reported inactive on the compact true-8×
+  shader path.
 - `npm run audit:vfx:volume` passes production WebGL at 1×/2×/4× through
   `off→on→off`: exact CSS/backing geometry, semantic/staging digests, nonzero
   raw canvas alpha/support hashes, repeat captures, and zero browser errors.
-  Current peak response is 6 bytes for stable Clay, 9 for connected liquid,
+  Current peak response is 6 bytes for stable Clay, 13 for connected liquid,
   and 3 for gas, while isolated Sand/Water, holes, and Metal are exact. The
-  bounded sub-cell Water/Oil page sample reaches two RGB bytes only because the
-  CSS capture filters the adjacent eligible shoulders; raw support is exact.
+  bounded sub-cell Water/Oil page sample reaches four RGB bytes only because
+  the CSS capture filters the adjacent eligible shoulders; E03 independently
+  proves both exact raw seam owners and full alpha/support unchanged.
 - Visual evidence is available locally at `/tmp/anifor-e02-volume-v2.png`
   (enabled) and `/tmp/anifor-e02-volume-off.png` (control). The result is a
   safe first tranche, not the final art overhaul. Side-by-side fit-view review
@@ -55,16 +65,35 @@ Immediate priorities are:
   `0.00443`, liquid `0.00605`, gas `0.00230`), powder remains visibly speckled,
   liquid bodies remain comparatively flat, and gas changes only faintly over
   its already-cohesive field shape.
-- The next active experiment is therefore liquid-only readability, reusing the
-  species-safe field and existing vertical optical-depth byte for a stronger
-  bounded Beer–Lambert core plus exposed-surface Fresnel response. Target a
-  visible 3–8 framebuffer-byte core/surface separation while keeping alpha,
-  support, ownership, isolated droplets, Lava, walls, foreign contacts, and
-  exact unlike-liquid seams unchanged. Richer stable gas structure and a
-  powder crown/facet balance follow after that independently gated tranche.
+- `npm run audit:vfx:liquid-body` passes production WebGL at 1×/2×/4× through
+  exact `off→on→off`. Every Water/Oil/Acid surface is positive, every deep core
+  is negative, signed surface/core separation is `5.8–8.5` display bytes, and
+  the largest target channel response is 14 bytes. Lava, isolated Water,
+  native-wall regions, exact Water/Oil owners, semantic state, backing
+  geometry, and full-frame raw alpha/support remain exact; browser errors are
+  zero. Native walls now reset liquid vertical depth, including the first row
+  below a co-located wall, and wall edits redirty that scan at the existing
+  bounded liquid cadence in both Canvas and WebGL.
+- Fit-view comparison accepts E03 as a meaningful but restrained improvement:
+  targeted crop RMSE is `0.01387`; enabled-minus-off upper/core/lower luma is
+  Water `−3.4/−4.6/−5.0`, Oil `−2.6/−3.3/−3.2`, and Acid
+  `−3.0/−4.4/−6.8`. Water remains `B>G>R`, Oil `R>G>B`, and Acid `B>R>G`.
+  The final crop shows no objectionable banding, over-darkening, alpha change,
+  seam bleed, or silhouette change. Evidence is retained at
+  `/tmp/anifor-e03-liquid-off-crop.png`,
+  `/tmp/anifor-e03-liquid-final-on-crop.png`,
+  `/tmp/anifor-e03-liquid-compare.png`, and
+  `/tmp/anifor-e03-liquid-final-diff-x12.png`.
+- The next active experiment is stable multi-scale gas density and billow
+  lighting that preserves authored gaps and atmosphere-owned support. A powder
+  crown/facet balance follows, adding bulk depth without damping grain cadence.
 - Final checkpoint validation passes TypeScript, the 19-asset production/Pages
-  closure, the real E02 WebGL off→on→off gate, the dedicated true-8× powder gate
-  at exact `4896×3072`, and the complete serial `163`-file / `1023`-test suite.
+  closure, the real E02 and E03 WebGL off→on→off gates, and the dedicated true-8×
+  powder gate at exact `4896×3072`. After Smooth, Local, and Grains captures,
+  its blank compositing baseline starts on a fresh true-8× page and reuses the
+  completed warm-up fence; this avoids a proven SwiftShader fourth-frame stall
+  without relaxing the 30-second renderer deadline or any material assertion.
+  The complete serial suite passes `163` files / `1026` tests.
   Vitest now preserves its default exclusions and also ignores the
   project-local `.toolchains` tree, so a naked full-suite run cannot execute
   upstream emsdk fixtures as application tests.

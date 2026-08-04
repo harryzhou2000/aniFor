@@ -53,6 +53,34 @@ describe('liquid density field', () => {
     expect(opticalDepth[49 * 5 + 3]).toBe(255);
   });
 
+  it('resets exact-liquid depth at co-located native walls without touching non-liquid bytes', () => {
+    const { field, materials } = fixture(3, 7);
+    const walls = new Uint8Array(materials.length);
+    const opticalDepth = new Uint8Array(materials.length);
+    for (let y = 0; y < 7; y++) materials[y * 3 + 1] = Material.Water;
+    const preservedNonLiquid = 6 * 3;
+    materials[preservedNonLiquid] = Material.Sand;
+    opticalDepth[preservedNonLiquid] = 173;
+    walls[3 * 3 + 1] = 6;
+
+    field.writeVerticalOpticalDepth(materials, opticalDepth, walls);
+
+    expect(opticalDepth[0 * 3 + 1]).toBe(0);
+    expect(opticalDepth[1 * 3 + 1]).toBe(6);
+    expect(opticalDepth[2 * 3 + 1]).toBe(12);
+    expect(opticalDepth[3 * 3 + 1]).toBe(0);
+    expect(opticalDepth[4 * 3 + 1]).toBe(0);
+    expect(opticalDepth[5 * 3 + 1]).toBe(6);
+    expect(opticalDepth[preservedNonLiquid]).toBe(173);
+  });
+
+  it('rejects a native wall plane whose size differs from the liquid grid', () => {
+    const { field, materials } = fixture(3, 3);
+    expect(() => field.writeVerticalOpticalDepth(
+      materials, new Uint8Array(materials.length), new Uint8Array(materials.length - 1),
+    )).toThrow('Liquid optical depth field size mismatch');
+  });
+
   it('keeps a dense core and a tight one-cell edge', () => {
     const { field, materials } = fixture();
     materials[4 * 9 + 4] = Material.Water;

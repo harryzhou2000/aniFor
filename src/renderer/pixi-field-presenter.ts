@@ -35,7 +35,9 @@ import {
   GAS_IDENTITY_MOTIF_TEXTURE_WIDTH,
 } from './canvas-gas-identity-style';
 import { HDRVfxPipeline, type HDRPipelineInfo } from './hdr-vfx-pipeline';
-import { resolveRenderLook, resolveVolumeVfxEnabled } from './render-look';
+import {
+  resolveLiquidBodyVfxEnabled, resolveRenderLook, resolveVolumeVfxEnabled,
+} from './render-look';
 interface PresenterViewport { readonly width: number; readonly height: number }
 
 /** Audit-only digest of the field that owns reconstructed gas support. */
@@ -3199,6 +3201,7 @@ uniform vec2 uEmissionTexel;
 uniform float uTime;
 uniform float uHDRVfx;
 uniform float uVolumeVfx;
+uniform float uLiquidBodyVfx;
 uniform float uHighQuality;
 uniform float uAnalyticLightingQuality;
 uniform float uGasFieldLighting;
@@ -6435,26 +6438,48 @@ void main() {
         if (uLiquidOpticalDepth > 0.5) {
           color = applyLiquidOpticalDepth(color, optics, liquidOpticalDepth);
         }
-        // E02: the already-proven connected, species-safe body receives a
-        // restrained HDR lip and coloured core absorption. Reconstructed
-        // support, droplets, seams, walls, traits, and molten matter cannot
-        // enter this branch, and alpha remains owned by the contour above.
-        if (uVolumeVfx > 0.5
+        // E03: one exact connected species receives a stable reflected surface
+        // and true column-depth attenuation. The first exact-species row has
+        // zero vertical depth, while each row below adds six bytes in the
+        // existing auxiliary plane; that gives the body a surface/core grammar
+        // without deriving depth from screen position or widening its alpha.
+        // Reconstructed support, droplets, seams, walls, traits, foreign
+        // contacts, and molten matter were rejected by the enclosing guards.
+        if (uLiquidBodyVfx > 0.5
           && dot(liquidSpeciesSlope, liquidSpeciesSlope) < 0.0004) {
           float liquidVfxBody = smoothstep(0.48, 0.90, liquidDepth)
             * smoothstep(0.56, 0.90, liquidNeighbourMean);
-          float liquidVfxKey = min(
-            0.085,
-            liquidFresnelContour * (
-              0.024 + max(liquidFresnelDirectional, 0.0) * 0.072
-                + liquidFresnelGrazing * 0.018
-            ) + max(liquidMacroRelief, 0.0) * 0.20
-          ) * mix(0.72, 1.0, liquidVfxBody);
-          float liquidVfxCore = liquidVfxBody * (1.0 - liquidFresnelContour)
-            * min(0.045, 0.022 + max(-liquidMacroRelief, 0.0) * 0.30);
+          float liquidVfxColumn = smoothstep(
+            6.0 / 255.0, 30.0 / 255.0, liquidOpticalDepth
+          ) * liquidVfxBody * (1.0 - liquidFresnelContour);
+          float liquidVfxAbsorptionGain = 0.090 + oily * 0.075
+            + corrosive * 0.008 + cryogenic * 0.010
+            + metallicLiquid * 0.025 + viscousLiquid * 0.018;
+          vec3 liquidVfxAbsorption = mix(
+            vec3(0.70), liquidFresnelAbsorption, 0.58
+          );
+          // Beer-Lambert transmittance remains family coloured and monotone in
+          // the exact vertical optical depth. It is consumed immediately so
+          // the already-large normal shader does not retain another live field.
+          color *= exp(
+            -liquidVfxAbsorption * liquidVfxColumn * liquidVfxAbsorptionGain
+          );
+          float liquidVfxExposedTop = smoothstep(0.015, 0.16, topLip)
+            * (1.0 - smoothstep(0.0, 18.0 / 255.0, liquidOpticalDepth));
+          float liquidVfxSurface = min(
+            0.078,
+            max(
+              liquidFresnelContour * (
+                0.030 + max(liquidFresnelDirectional, 0.0) * 0.048
+                  + liquidFresnelGrazing * 0.018
+              ),
+              liquidVfxExposedTop
+                * (0.052 + surfaceSpecular * 0.026 + fresnel * 0.012)
+            )
+          ) * (1.0 - liquidVfxColumn * 0.88)
+            * mix(0.74, 1.0, liquidVfxBody);
           color += (vec3(1.35) - clamp(color, 0.0, 1.35))
-            * liquidFresnelKey * liquidVfxKey;
-          color *= vec3(1.0) - liquidFresnelAbsorption * liquidVfxCore;
+            * mix(liquidFresnelKey, edgeTint, 0.18) * liquidVfxSurface;
         }
       }
     }
@@ -8490,6 +8515,11 @@ export class PixiFieldPresenter {
     });
     const renderLook = resolveRenderLook();
     const volumeVfxEnabled = resolveVolumeVfxEnabled(renderLook);
+    // E03 is a normal-detail experiment. The true-8x shader intentionally has
+    // no corresponding uniform or arithmetic, so its public capability state
+    // must not advertise an effect that cannot run on that path.
+    const liquidBodyVfxEnabled = outputScale < 8
+      && resolveLiquidBodyVfxEnabled(renderLook);
     this.uniforms = new UniformGroup({
       uTexel: { value: new Float32Array([1 / width, 1 / height]), type: 'vec2<f32>' },
       uFieldSize: { value: new Float32Array([width, height]), type: 'vec2<f32>' },
@@ -8501,6 +8531,7 @@ export class PixiFieldPresenter {
         type: 'f32',
       },
       uVolumeVfx: { value: volumeVfxEnabled ? 1 : 0, type: 'f32' },
+      uLiquidBodyVfx: { value: liquidBodyVfxEnabled ? 1 : 0, type: 'f32' },
       // At 8x, the supersampled analytic boundary already supplies detail. Drop
       // diagonal/ring probes so the 15M-pixel frame remains watchdog-safe.
       uHighQuality: {
@@ -8692,6 +8723,7 @@ export class PixiFieldPresenter {
       // that is responsible for tonemapping them.
       this.uniforms.uniforms.uHDRVfx = 0;
       this.uniforms.uniforms.uVolumeVfx = 0;
+      this.uniforms.uniforms.uLiquidBodyVfx = 0;
       this.app.stage.addChild(this.scene);
     }
   }
@@ -8717,7 +8749,8 @@ export class PixiFieldPresenter {
         preserveDrawingBuffer: typeof location !== 'undefined'
           && new URLSearchParams(location.search).get('inputAudit') === '1'
           && (new URLSearchParams(location.search).get('blankAudit') === '1'
-            || new URLSearchParams(location.search).get('volumeVfxAudit') === '1'),
+            || new URLSearchParams(location.search).get('volumeVfxAudit') === '1'
+            || new URLSearchParams(location.search).get('liquidBodyVfxAudit') === '1'),
         resolution: outputScale, autoDensity: true, autoStart: false,
       });
     } catch (error) {
@@ -8742,6 +8775,8 @@ export class PixiFieldPresenter {
     presenter.app.canvas.dataset.renderLook = presenter.hdrPipelineInfo.look;
     presenter.app.canvas.dataset.hdrPipeline = presenter.hdrPipelineInfo.active ? 'active' : 'inactive';
     presenter.app.canvas.dataset.volumeVfx = Number(presenter.uniforms.uniforms.uVolumeVfx) > 0.5
+      ? 'active' : 'inactive';
+    presenter.app.canvas.dataset.liquidBodyVfx = Number(presenter.uniforms.uniforms.uLiquidBodyVfx) > 0.5
       ? 'active' : 'inactive';
     if (presenter.hdrPipelineInfo.reason) {
       presenter.app.canvas.dataset.hdrPipelineReason = presenter.hdrPipelineInfo.reason;
@@ -9548,7 +9583,9 @@ export class PixiFieldPresenter {
     }
     const volumeField = this.fieldSet.updateNext(materials, scheduleTime, walls);
     if (volumeField === 'liquid' || !this.liquidOpticalDepthHydrated) {
-      this.fieldSet.liquid.writeVerticalOpticalDepth(materials, this.boundaryStabilityBytes);
+      this.fieldSet.liquid.writeVerticalOpticalDepth(
+        materials, this.boundaryStabilityBytes, walls,
+      );
       this.liquidOpticalDepthHydrated = true;
       boundaryTextureDirty = true;
     }
@@ -10000,9 +10037,11 @@ export class PixiFieldPresenter {
         };
         this.uniforms.uniforms.uHDRVfx = 0;
         this.uniforms.uniforms.uVolumeVfx = 0;
+        this.uniforms.uniforms.uLiquidBodyVfx = 0;
         this.app.canvas.dataset.hdrPipeline = 'inactive';
         this.app.canvas.dataset.hdrPipelineReason = 'runtime-error';
         this.app.canvas.dataset.volumeVfx = 'inactive';
+        this.app.canvas.dataset.liquidBodyVfx = 'inactive';
         delete this.app.canvas.dataset.bloomBacking;
         if (!this.scene.parent) this.app.stage.addChild(this.scene);
       }

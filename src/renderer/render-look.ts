@@ -33,3 +33,20 @@ export function resolveVolumeVfxEnabled(
   if (requested === '1' || requested === 'on') return true;
   return true;
 }
+
+/**
+ * Lets the liquid-body experiment be measured without also changing powder or
+ * gas. In ordinary use it follows the broad volume switch, so existing
+ * realistic/neon URLs retain one coherent preset; an explicit liquid override
+ * is reserved for comparison captures and capability audits.
+ */
+export function resolveLiquidBodyVfxEnabled(
+  look: RenderLook,
+  search = globalThis.location?.search ?? '',
+): boolean {
+  if (look === 'classic') return false;
+  const requested = new URLSearchParams(search).get('liquidBodyVfx');
+  if (requested === '0' || requested === 'off') return false;
+  if (requested === '1' || requested === 'on') return true;
+  return resolveVolumeVfxEnabled(look, search);
+}

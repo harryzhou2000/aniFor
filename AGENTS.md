@@ -52,15 +52,16 @@ realistic `off→on→off` at 1×/2×/4× with exact semantic and raw alpha/supp
 hashes, deterministic spatial RGB response, and isolated/hole/seam/foreign
 controls.
 
-E02 is a safety-proven baseline, not a promotion candidate: ordinary fit-view
-review found its RGB response too faint and liquids still comparatively flat.
-Prioritize the next liquid-only experiment using the existing species-safe
-field and vertical optical-depth byte. Earn a visibly readable but bounded
-Beer–Lambert core and exposed-surface Fresnel separation without changing
-alpha, support, species ownership, isolated droplets, Lava, walls, foreign
-contacts, or exact unlike-liquid seams. Keep it independently switchable and
-measure it at normal fit view as well as diagnostic zoom before extending gas
-or powder again.
+E02 is the safe family-wide baseline. E03 is the accepted liquid-only
+readability layer: at normal 1×–4× it may strengthen only existing connected,
+ordinary, exact-species liquid RGB depth through `?liquidBodyVfx=0|1`, while
+droplets, Lava, walls, foreign contacts, traits, emissive liquid, reconstructed
+support, and exact unlike-liquid owners remain no-ops. It remains opt-in with
+the non-Classic looks pending representative-hardware/mobile evidence. Do not
+add E02/E03 branches, resources, or targets to `FIELD_EIGHT_X_FRAGMENT`; true
+8× remains the direct single-mesh control, and E03 must report inactive there.
+The next visual experiment is stable multi-scale gas density and billow
+lighting; powder crown/facet balance follows.
 
 ## CodeGraph
 
@@ -92,6 +93,15 @@ Every subagent follows the same CodeGraph and viewport/rendering contracts.
 Before changing viewport layout, pointer mapping, zoom/pan, Pixi setup, shader coordinates, canvas sizing, or device-pixel-ratio behavior, read [`docs/viewport-rendering-contract.md`](docs/viewport-rendering-contract.md).
 
 True 8× promotion is complete only after its first GPU fence signals, not when `Application.render()` returns. Keep the bounded 2× Canvas and shared fields alive under the candidate for one total 30-second deadline, coalesce warm-up changes into that candidate, and release fallback storage only after the signal. Once promoted, a fence that remains unsignalled for 30 seconds must tear down WebGL and rebuild the camera-preserving Canvas fallback with reason `webgl-timeout`, even if the browser never emits `webglcontextlost`. The `--scale-eight-only` release gate must exercise the full 217-identity material atlas at true 4896×3072 as well as powder recall, authored holes, square Grains, a real deep-zoom anchored wheel and radius-zero semantic/framebuffer click, timing, and camera-preserving context-loss recovery. `npm run audit:recovery:8x` independently runs the forced-fence and real-context-loss tail after fresh 8× promotion when a monolithic software-GPU run stalls after its earlier atlas; it supplements, rather than narrows, the full release gate. When driving Chrome through CDP, measure the same integer device-pixel coordinate that the protocol dispatches; comparing a fractional requested point against a rounded event invents camera drift in the test harness.
+
+The focused 8× powder gate may complete the initial, Local, and Grains
+15-million-fragment frames yet leave a following full-world clear fence
+unsignalled on SwiftShader. Its blank image is only a compositing baseline, so
+obtain that baseline by starting a fresh `blankAudit=1` true-8× page with
+identical CSS/world geometry, prove its warm-up GPU fence, and reuse that proof
+for the screenshot. Do not issue a post-startup `clear()` merely to build the
+baseline, do not reuse an unproven framebuffer, and do not relax the renderer's
+30-second deadline or any Smooth/Local/Grains assertion.
 
 An accepted 8× semantic mutation is not necessarily in the most recently completed framebuffer: exactly one 15-million-fragment frame may still own the GPU fence while later texture/uniform changes wait in the latest-wins queue. Browser framebuffer assertions must wait boundedly for the queued presentation instead of sampling the stable previous frame after an arbitrary 100 ms sleep. TypeScript/string tests do not compile the embedded GLSL; every shader edit must also run a real WebGL browser gate. In particular, never reference branch-local GLSL samples after their scope ends—carry only the smallest derived scalar state needed by later branches so 8× register pressure stays bounded. The direct 8× aqueous core has a verified SwiftShader edge: extending its compact one-scalar expression with the normal presenter's richer Water-only guard made unrelated role-graphics toggles inert. Keep that 8× core compact and move richer Water eligibility to normal WebGL unless a real 4896×3072 role atlas proves otherwise.
 

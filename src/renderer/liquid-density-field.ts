@@ -71,15 +71,18 @@ export class LiquidDensityField {
    * plane. Non-liquid bytes are preserved for phase-local uses such as powder
    * stability, so this adds no persistent allocation.
    */
-  writeVerticalOpticalDepth(materials: Uint8Array, target: Uint8Array): void {
-    if (materials.length !== this.seed.length || target.length !== materials.length) {
+  writeVerticalOpticalDepth(materials: Uint8Array, target: Uint8Array, walls?: Uint8Array): void {
+    if (materials.length !== this.seed.length || target.length !== materials.length
+      || (walls !== undefined && walls.length !== materials.length)) {
       throw new Error('Liquid optical depth field size mismatch');
     }
     for (let y = 0; y < this.height; y++) for (let x = 0; x < this.width; x++) {
       const index = y * this.width + x;
       const material = materials[index];
       if (!this.liquidByMaterial[material]) continue;
-      target[index] = y > 0 && materials[index - this.width] === material
+      const above = index - this.width;
+      target[index] = y > 0 && (!walls || (walls[index] === 0 && walls[above] === 0))
+        && materials[above] === material
         ? Math.min(255, target[index - this.width] + OPTICAL_DEPTH_STEP)
         : 0;
     }

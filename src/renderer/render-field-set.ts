@@ -117,6 +117,10 @@ export class RenderFieldSet {
 
   markAtmosphereBlockerDirty(index: number): void {
     if (this.atmosphere.mayHaveIdentityNearWorldIndex(index)) this.atmosphereDirty = true;
+    // Native walls are also discontinuities in the caller-owned vertical
+    // liquid optical-depth plane. Reuse the bounded liquid cadence so a wall
+    // edit cannot leave stale depth even when liquid semantics did not change.
+    this.liquidDirty = true;
   }
 
   due(time: number): boolean {

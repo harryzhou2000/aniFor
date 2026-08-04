@@ -209,7 +209,7 @@ describe('Pixi presenter startup configuration', () => {
     const powder = normal.slice(powderStart);
     const gasVfxStart = gas.indexOf('    if (uVolumeVfx > 0.5)');
     const gasVfxEnd = gas.indexOf('    if (uGasIdentityStyling > 0.5)', gasVfxStart);
-    const liquidVfxStart = liquid.indexOf('        if (uVolumeVfx > 0.5');
+    const liquidVfxStart = liquid.indexOf('        if (uLiquidBodyVfx > 0.5');
     const liquidVfxEnd = liquid.indexOf('    // Twenty ordinary, unusual, metallic', liquidVfxStart);
     const powderVfxStart = powder.indexOf('        if (uVolumeVfx > 0.5');
     const powderVfxEnd = powder.indexOf('        // This is intentionally stricter than a generic settled-powder', powderVfxStart);
@@ -225,7 +225,9 @@ describe('Pixi presenter startup configuration', () => {
     expect(liquidStart).toBeGreaterThan(gasStart);
     expect(powderStart).toBeGreaterThan(liquidStart);
     expect(normal).toContain('uniform float uVolumeVfx;');
+    expect(normal).toContain('uniform float uLiquidBodyVfx;');
     expect(eight).not.toContain('uVolumeVfx');
+    expect(eight).not.toContain('uLiquidBodyVfx');
 
     // Gas stays field-owned: the experimental lift reuses the established
     // mass/curvature/scatter scalars and never assigns support or opacity.
@@ -237,12 +239,17 @@ describe('Pixi presenter startup configuration', () => {
     expect(gasVfxEnd).toBeGreaterThan(gasVfxStart);
     expect(gasVfx).not.toMatch(/\balpha\s*[+*]?=/);
 
-    // Liquid requires the pre-existing species-safe, connected-body guard;
-    // reconstruction, unlike-liquid seams, and alpha remain outside E02.
+    // Liquid has an independent E03 selector but retains the pre-existing
+    // species-safe connected-body guard. Its vertical Beer-Lambert core and
+    // exposed Fresnel surface must remain RGB-only and sample-free.
     expect(liquid).toContain('dot(liquidSpeciesSlope, liquidSpeciesSlope) < 0.0025');
-    expect(liquid).toContain('if (uVolumeVfx > 0.5');
+    expect(liquid).toContain('if (uLiquidBodyVfx > 0.5');
     expect(liquid).toContain('liquidFresnelContour');
     expect(liquid).toContain('liquidFresnelAbsorption');
+    expect(liquidVfx).toContain('liquidOpticalDepth');
+    expect(liquidVfx).toContain('color *= exp(');
+    expect(liquidVfx).toContain('smoothstep(0.015, 0.16, topLip)');
+    expect(liquidVfx).not.toContain('texture(');
     expect(liquidVfxStart).toBeGreaterThanOrEqual(0);
     expect(liquidVfxEnd).toBeGreaterThan(liquidVfxStart);
     expect(liquidVfx).not.toMatch(/\balpha\s*[+*]?=/);
@@ -257,11 +264,14 @@ describe('Pixi presenter startup configuration', () => {
     expect(powderVfxEnd).toBeGreaterThan(powderVfxStart);
     expect(powderVfx).not.toMatch(/\balpha\s*[+*]?=/);
 
-    // Capability/initialization and first-render failures must turn both HDR
-    // arithmetic families off before continuing with the single-pass scene.
+    // Capability/initialization and first-render failures must turn every HDR
+    // arithmetic family off before continuing with the single-pass scene.
     expect(source.match(/this\.uniforms\.uniforms\.uHDRVfx = 0;/g)).toHaveLength(2);
     expect(source.match(/this\.uniforms\.uniforms\.uVolumeVfx = 0;/g)).toHaveLength(2);
+    expect(source.match(/this\.uniforms\.uniforms\.uLiquidBodyVfx = 0;/g)).toHaveLength(2);
     expect(source).toContain("get('volumeVfxAudit') === '1'");
+    expect(source).toContain("get('liquidBodyVfxAudit') === '1'");
+    expect(source).toContain('const liquidBodyVfxEnabled = outputScale < 8');
   });
 
   it('advances fallback presentation timing only after its GPU fence signals', () => {
@@ -780,7 +790,7 @@ describe('Pixi presenter startup configuration', () => {
     expect(helpers).toContain('vec3 applyLiquidOpticalDepth(');
     expect(helpers).toContain('0.14 + 0.025 * smoothstep(0.42, 0.86, columnDepth)');
     expect(source).toContain('liquidOpticalDepth = boundaryStabilityAt(fieldUv)');
-    expect(source).toContain('writeVerticalOpticalDepth(materials, this.boundaryStabilityBytes)');
+    expect(source).toMatch(/writeVerticalOpticalDepth\(\s*materials, this\.boundaryStabilityBytes, walls,\s*\)/);
     expect(source).toContain('if (boundaryTextureDirty) this.boundaryStabilitySource.update()');
     expect(source.match(/boundaryStabilitySource\.update\(\)/g)).toHaveLength(1);
     expect(`${helpers}${block}`).not.toContain('texture(');
