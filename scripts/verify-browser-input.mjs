@@ -14515,6 +14515,15 @@ async function auditRenderScaleEight(cdp, dpr, powderOnly = false) {
     cdp, blankCapture.capture.data, geometry.canvas,
   );
   stage('atlas-stress-ready');
+  // The broad atlas above owns many completed 15M-fragment captures. Restart
+  // before the first independent fourteen-owner fixture so a legitimate old
+  // compositor hand-off cannot retain the sole direct-presentation slot while
+  // Explosive Powder establishes its blank/off/on sequence. Preserve and
+  // reassert the same CSS camera geometry through the existing recovery helper.
+  ({ geometry, backend } = await restartEightXAuditContext(
+    cdp, dpr, geometry.canvas, 'explosive-powder',
+  ));
+  stage('explosive-context-ready');
   // The compact direct shader has its own explosive-powder identity grammar.
   // Exercise the full fourteen-owner atlas at the real 4896x3072 backing with
   // page-region captures, rather than copying another 60 MiB backing ImageData.
