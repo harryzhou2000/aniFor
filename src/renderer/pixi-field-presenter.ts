@@ -36,7 +36,8 @@ import {
 } from './canvas-gas-identity-style';
 import { HDRVfxPipeline, type HDRPipelineInfo } from './hdr-vfx-pipeline';
 import {
-  resolveLiquidBodyVfxEnabled, resolveRenderLook, resolveVolumeVfxEnabled,
+  resolveGasBodyVfxEnabled, resolveLiquidBodyVfxEnabled, resolveRenderLook,
+  resolveVolumeVfxEnabled,
 } from './render-look';
 interface PresenterViewport { readonly width: number; readonly height: number }
 
@@ -3201,6 +3202,7 @@ uniform vec2 uEmissionTexel;
 uniform float uTime;
 uniform float uHDRVfx;
 uniform float uVolumeVfx;
+uniform float uGasBodyVfx;
 uniform float uLiquidBodyVfx;
 uniform float uHighQuality;
 uniform float uAnalyticLightingQuality;
@@ -6033,24 +6035,50 @@ void main() {
     ) * smoothstep(0.025, 0.50, gasShadeDensity)
       * (1.0 - opticalDepth * 0.30) * uGasVolumeChroma;
     color *= 1.0 + gasVolumeExposure;
-    // E02: amplify the field's existing stable normal and curvature only in an
-    // HDR experiment. The atmosphere field continues to own mass and alpha;
-    // this adds no sample, blur, pass, clock, or particle-scale dot grammar.
-    if (uVolumeVfx > 0.5) {
-      float gasVfxSupport = smoothstep(0.018, 0.16, gasShadeDensity)
-        * (1.0 - smoothstep(0.62, 0.92, gasShadeDensity) * 0.55);
-      float gasVfxKey = clamp(
-        0.010 + max(gasDirectionalRelief, 0.0) * 0.090
-          + max(gasCurvature, 0.0) * 0.075
-          + gasForwardScatter * 0.60 + silverLining * 0.022,
-        0.0, 0.10
-      ) * gasVfxSupport * (1.0 - opticalDepth * 0.28);
-      float gasVfxPocket = min(
-        0.038,
-        max(-gasCurvature, 0.0) * 0.038
-          * smoothstep(0.08, 0.58, gasShadeDensity)
+    // E04: turn the existing field normal and curvature into a readable
+    // connected billow without inventing particle-scale noise. The shared
+    // atmosphere remains the sole owner of mass, colour mixture, support, and
+    // alpha. This normal-detail experiment adds only bounded RGB arithmetic:
+    // no sample, field, target, pass, clock, or output-scale resource.
+    if (uGasBodyVfx > 0.5) {
+      float gasVfxSupport = smoothstep(0.002, 0.050, gasShadeDensity)
+        * mix(0.60, 1.0, gasInterior);
+      float gasVfxShoulder = 1.0 - smoothstep(0.24, 0.56, gasShadeDensity);
+      float gasVfxCrown = gasVfxShoulder
+        * smoothstep(0.003, 0.040, gasShadeDensity)
+        * smoothstep(0.68, 1.02, diffuse);
+      // Three long, incommensurate world-space waves form a stable macro/meso
+      // billow basis. It is deliberately independent of uTime and is admitted
+      // only after the atmosphere field proves connected body ownership, so it
+      // cannot turn semantic carriers into moving dots or animate an authored
+      // gap. Wavelengths remain tens of cells at every output scale.
+      float gasVfxWaveA = sin(dot(fieldPosition, vec2(0.055, 0.031)) + 0.80);
+      float gasVfxWaveB = sin(dot(fieldPosition, vec2(-0.029, 0.081)) + 2.15);
+      float gasVfxWaveC = sin(dot(fieldPosition, vec2(0.097, -0.043)) + 4.05);
+      float gasVfxBillow = clamp(
+        gasVfxWaveA * 0.50 + gasVfxWaveB * 0.31 + gasVfxWaveC * 0.19,
+        -1.0, 1.0
       );
-      vec3 gasVfxTint = mix(vec3(0.46, 0.66, 0.96), vividColor(gasBase, 1.10), 0.64);
+      float gasVfxBodySupport = smoothstep(0.090, 0.32, gasShadeDensity)
+        * gasInterior * (1.0 - opticalDepth * 0.35);
+      float gasVfxKey = min(
+        0.180,
+        (gasVfxCrown * 0.120
+          + max(gasDirectionalRelief, 0.0) * (0.095 + gasVfxShoulder * 0.085)
+          + max(gasCurvature, 0.0) * (0.090 + gasVfxShoulder * 0.045)
+          + gasForwardScatter * 0.68 + silverLining * 0.140)
+          * gasVfxSupport * (1.0 - opticalDepth * 0.20)
+          + max(gasVfxBillow, 0.0) * gasVfxBodySupport * 0.055
+      );
+      float gasVfxPocket = min(
+        0.065,
+        (max(-gasDirectionalRelief, 0.0) * (0.020 + gasVfxShoulder * 0.030)
+          + max(-gasCurvature, 0.0) * (0.032 + opticalDepth * 0.040)
+          + gasVfxShoulder * (1.0 - smoothstep(0.48, 0.76, diffuse)) * 0.022)
+          * gasVfxSupport
+          + max(-gasVfxBillow, 0.0) * gasVfxBodySupport * 0.040
+      );
+      vec3 gasVfxTint = mix(vec3(0.44, 0.68, 1.00), vividColor(gasBase, 1.12), 0.62);
       color += (vec3(1.35) - clamp(color, 0.0, 1.35))
         * gasVfxTint * gasVfxKey;
       color *= 1.0 - gasVfxPocket;
@@ -8515,6 +8543,10 @@ export class PixiFieldPresenter {
     });
     const renderLook = resolveRenderLook();
     const volumeVfxEnabled = resolveVolumeVfxEnabled(renderLook);
+    // E04 follows the same normal-detail boundary as E03. The protected true
+    // 8x shader deliberately has neither this uniform nor its arithmetic.
+    const gasBodyVfxEnabled = outputScale < 8
+      && resolveGasBodyVfxEnabled(renderLook);
     // E03 is a normal-detail experiment. The true-8x shader intentionally has
     // no corresponding uniform or arithmetic, so its public capability state
     // must not advertise an effect that cannot run on that path.
@@ -8531,6 +8563,7 @@ export class PixiFieldPresenter {
         type: 'f32',
       },
       uVolumeVfx: { value: volumeVfxEnabled ? 1 : 0, type: 'f32' },
+      uGasBodyVfx: { value: gasBodyVfxEnabled ? 1 : 0, type: 'f32' },
       uLiquidBodyVfx: { value: liquidBodyVfxEnabled ? 1 : 0, type: 'f32' },
       // At 8x, the supersampled analytic boundary already supplies detail. Drop
       // diagonal/ring probes so the 15M-pixel frame remains watchdog-safe.
@@ -8723,6 +8756,7 @@ export class PixiFieldPresenter {
       // that is responsible for tonemapping them.
       this.uniforms.uniforms.uHDRVfx = 0;
       this.uniforms.uniforms.uVolumeVfx = 0;
+      this.uniforms.uniforms.uGasBodyVfx = 0;
       this.uniforms.uniforms.uLiquidBodyVfx = 0;
       this.app.stage.addChild(this.scene);
     }
@@ -8750,6 +8784,7 @@ export class PixiFieldPresenter {
           && new URLSearchParams(location.search).get('inputAudit') === '1'
           && (new URLSearchParams(location.search).get('blankAudit') === '1'
             || new URLSearchParams(location.search).get('volumeVfxAudit') === '1'
+            || new URLSearchParams(location.search).get('gasBodyVfxAudit') === '1'
             || new URLSearchParams(location.search).get('liquidBodyVfxAudit') === '1'),
         resolution: outputScale, autoDensity: true, autoStart: false,
       });
@@ -8775,6 +8810,8 @@ export class PixiFieldPresenter {
     presenter.app.canvas.dataset.renderLook = presenter.hdrPipelineInfo.look;
     presenter.app.canvas.dataset.hdrPipeline = presenter.hdrPipelineInfo.active ? 'active' : 'inactive';
     presenter.app.canvas.dataset.volumeVfx = Number(presenter.uniforms.uniforms.uVolumeVfx) > 0.5
+      ? 'active' : 'inactive';
+    presenter.app.canvas.dataset.gasBodyVfx = Number(presenter.uniforms.uniforms.uGasBodyVfx) > 0.5
       ? 'active' : 'inactive';
     presenter.app.canvas.dataset.liquidBodyVfx = Number(presenter.uniforms.uniforms.uLiquidBodyVfx) > 0.5
       ? 'active' : 'inactive';
@@ -10037,10 +10074,12 @@ export class PixiFieldPresenter {
         };
         this.uniforms.uniforms.uHDRVfx = 0;
         this.uniforms.uniforms.uVolumeVfx = 0;
+        this.uniforms.uniforms.uGasBodyVfx = 0;
         this.uniforms.uniforms.uLiquidBodyVfx = 0;
         this.app.canvas.dataset.hdrPipeline = 'inactive';
         this.app.canvas.dataset.hdrPipelineReason = 'runtime-error';
         this.app.canvas.dataset.volumeVfx = 'inactive';
+        this.app.canvas.dataset.gasBodyVfx = 'inactive';
         this.app.canvas.dataset.liquidBodyVfx = 'inactive';
         delete this.app.canvas.dataset.bloomBacking;
         if (!this.scene.parent) this.app.stage.addChild(this.scene);

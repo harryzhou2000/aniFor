@@ -1,6 +1,6 @@
 # AniforTPT Work Resume
 
-Last reconciled: 2026-08-04 (Asia/Shanghai)
+Last reconciled: 2026-08-05 (Asia/Shanghai)
 
 This is the authoritative handoff for the active AniforTPT workstream. The goal is not complete.
 
@@ -21,7 +21,7 @@ Immediate priorities are:
 
 ### Active execution emphasis
 
-### Current HDR, field-aware volume, and E03 liquid-readability checkpoint
+### Current HDR, field-aware volume, E03 liquid, and E04 gas checkpoint
 
 - The active visual goal is now an explicit experiment program rather than a
   one-off shader tweak: improve powder, liquid, and gas depth, material beauty,
@@ -49,6 +49,14 @@ Immediate priorities are:
   allocation, alpha/support/ownership, reconstruction, or physics decision,
   and is deliberately inactive and reported inactive on the compact true-8×
   shader path.
+- E04 is the accepted gas-only refinement. `?gasBodyVfx=0|1` isolates it while
+  ordinary non-Classic use follows the broad volume preset. Normal 1×–4×
+  WebGL reuses the existing atmosphere body density, cardinal slope/curvature,
+  and light scalars, then adds three long, incommensurate, world-anchored waves
+  after connected field ownership is proven. They contain no `uTime`, texture
+  read, field, upload, pass, target, allocation, output-scale term, alpha,
+  support, ownership, silhouette, or physics decision. E04 is deliberately
+  absent and reported inactive on the protected true-8× shader.
 - `npm run audit:vfx:volume` passes production WebGL at 1×/2×/4× through
   `off→on→off`: exact CSS/backing geometry, semantic/staging digests, nonzero
   raw canvas alpha/support hashes, repeat captures, and zero browser errors.
@@ -84,16 +92,33 @@ Immediate priorities are:
   `/tmp/anifor-e03-liquid-final-on-crop.png`,
   `/tmp/anifor-e03-liquid-compare.png`, and
   `/tmp/anifor-e03-liquid-final-diff-x12.png`.
-- The next active experiment is stable multi-scale gas density and billow
-  lighting that preserves authored gaps and atmosphere-owned support. A powder
-  crown/facet balance follows, adding bulk depth without damping grain cadence.
+- `npm run audit:vfx:gas-body` passes production WebGL at 1×/2×/4× through
+  exact `off→on→off`. Smoke/Oxygen/Noble cores hold `0.91–1.03` RGB RMS with
+  `0.44–0.64` spatial RMS and a two-byte peak; compact FOG/CFLM shoulders hold
+  `1.53–2.08` RGB RMS and four/five-byte peaks. At every scale at least one
+  body lobe is a positive key and one a negative fill, exact semantic state,
+  full raw alpha/support, and sparse carrier/midpoint/gap topology are stable,
+  authored-gap centre alpha is zero, repeat response is byte-exact, and browser
+  errors are zero. Matched fit-view review accepts the restrained depth: no
+  visible bands, new mud, rim emphasis, or hue loss. Evidence is retained at
+  `/tmp/anifor-e04-showcase-gas-compare.png`,
+  `/tmp/anifor-e04-showcase-gas-diff-x14.png`, and
+  `/tmp/anifor-e04-full.json`.
+- Focused HDR/E02/E03/E04 production audits now start on the existing blank
+  render-lab stage before navigating their own exact fixtures. This avoids an
+  unnecessary canonical warm-up and does not narrow any measured state.
+- The next active experiment is powder crown/facet balance: add readable bulk
+  depth without damping grain cadence, smoothing internal colour identity, or
+  erasing columns, ledges, authored holes, and isolated square Grains.
 - Final checkpoint validation passes TypeScript, the 19-asset production/Pages
-  closure, the real E02 and E03 WebGL off→on→off gates, and the dedicated true-8×
-  powder gate at exact `4896×3072`. After Smooth, Local, and Grains captures,
+  closure, the real E02/E03/E04 WebGL off→on→off gates, and the dedicated true-8×
+  powder gate at exact `4896×3072`; the final completed GPU-fence timing sample
+  is `8.82 s`, below the strict `10 s` p90 and `12 s` hard-frame ceilings.
+  After Smooth, Local, and Grains captures,
   its blank compositing baseline starts on a fresh true-8× page and reuses the
   completed warm-up fence; this avoids a proven SwiftShader fourth-frame stall
   without relaxing the 30-second renderer deadline or any material assertion.
-  The complete serial suite passes `163` files / `1026` tests.
+  The complete serial suite passes `163` files / `1027` tests.
   Vitest now preserves its default exclusions and also ignores the
   project-local `.toolchains` tree, so a naked full-suite run cannot execute
   upstream emsdk fixtures as application tests.

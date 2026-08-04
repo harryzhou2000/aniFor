@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
-  DEFAULT_RENDER_LOOK, resolveLiquidBodyVfxEnabled, resolveRenderLook,
-  resolveVolumeVfxEnabled,
+  DEFAULT_RENDER_LOOK, resolveGasBodyVfxEnabled, resolveLiquidBodyVfxEnabled,
+  resolveRenderLook, resolveVolumeVfxEnabled,
 } from './render-look';
 
 describe('resolveRenderLook', () => {
@@ -32,6 +32,18 @@ describe('resolveRenderLook', () => {
     )).toBe(true);
     expect(resolveLiquidBodyVfxEnabled(
       'neon-lab', '?volumeVfx=1&liquidBodyVfx=off',
+    )).toBe(false);
+  });
+
+  it('lets gas-body VFX follow the preset or override broad volume styling', () => {
+    expect(resolveGasBodyVfxEnabled('classic', '?gasBodyVfx=on')).toBe(false);
+    expect(resolveGasBodyVfxEnabled('realistic', '')).toBe(true);
+    expect(resolveGasBodyVfxEnabled('realistic', '?volumeVfx=0')).toBe(false);
+    expect(resolveGasBodyVfxEnabled(
+      'realistic', '?volumeVfx=0&gasBodyVfx=on',
+    )).toBe(true);
+    expect(resolveGasBodyVfxEnabled(
+      'neon-lab', '?volumeVfx=1&gasBodyVfx=off',
     )).toBe(false);
   });
 });

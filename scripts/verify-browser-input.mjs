@@ -132,6 +132,16 @@ const liquidBodyVfxOnly = process.argv.includes('--liquid-body-vfx-only');
 if (liquidBodyVfxOnly && (modes.length !== 1 || modes[0] !== 'webgl')) {
   throw new Error('--liquid-body-vfx-only requires --webgl-only');
 }
+// E04 keeps the atmospheric body experiment separate from both the broad E02
+// treatment and E03's liquid-only optics. It remains normal-detail only.
+const gasBodyVfxOnly = process.argv.includes('--gas-body-vfx-only');
+if (gasBodyVfxOnly && (modes.length !== 1 || modes[0] !== 'webgl')) {
+  throw new Error('--gas-body-vfx-only requires --webgl-only');
+}
+if ([hdrVfxOnly, volumeVfxOnly, liquidBodyVfxOnly, gasBodyVfxOnly]
+  .filter(Boolean).length > 1) {
+  throw new Error('HDR/volume/liquid-body/gas-body focused audits are mutually exclusive');
+}
 const layoutOnly = process.argv.includes('--layout-only');
 const visualScaleMatrixNormalOnly = process.argv.includes('--visual-scale-matrix-normal-only');
 const visualScaleMatrixOnly = process.argv.includes('--visual-scale-matrix-only')
@@ -212,7 +222,7 @@ const liveScaleOnly = process.argv.includes('--live-scale-only');
 // bundle without starting Vite. That keeps screenshot evidence independent of
 // dev-server navigation timing while leaving all default audit paths unchanged.
 const productionBundle = process.argv.includes('--production-bundle');
-const usesProductionBundle = productionBundle || showcaseScreenshotOnly || hdrVfxOnly || volumeVfxOnly || liquidBodyVfxOnly || cellularGraphicsOnly || sensorGraphicsOnly
+const usesProductionBundle = productionBundle || showcaseScreenshotOnly || hdrVfxOnly || volumeVfxOnly || liquidBodyVfxOnly || gasBodyVfxOnly || cellularGraphicsOnly || sensorGraphicsOnly
   || unusualPowderGraphicsOnly || earthenPowderGraphicsOnly || explosivePowderGraphicsOnly || unusualSolidGraphicsOnly
   || deviceIdentityGraphicsOnly
   || fieldProfileGraphicsOnly
@@ -247,6 +257,8 @@ const volumeVfxArgument = process.argv.find((argument) => argument.startsWith('-
   ?.slice('--volume-vfx='.length);
 const liquidBodyVfxArgument = process.argv.find((argument) => argument.startsWith('--liquid-body-vfx='))
   ?.slice('--liquid-body-vfx='.length);
+const gasBodyVfxArgument = process.argv.find((argument) => argument.startsWith('--gas-body-vfx='))
+  ?.slice('--gas-body-vfx='.length);
 const requireHdrPipeline = process.argv.includes('--require-hdr-pipeline');
 const renderScaleArgument = process.argv.find((argument) => argument.startsWith('--render-scale='))
   ?.slice('--render-scale='.length);
@@ -261,11 +273,17 @@ if (volumeVfxArgument !== undefined && !['0', '1', 'off', 'on'].includes(volumeV
 if (liquidBodyVfxArgument !== undefined && !['0', '1', 'off', 'on'].includes(liquidBodyVfxArgument)) {
   throw new Error('--liquid-body-vfx must be 0, 1, off, or on');
 }
+if (gasBodyVfxArgument !== undefined && !['0', '1', 'off', 'on'].includes(gasBodyVfxArgument)) {
+  throw new Error('--gas-body-vfx must be 0, 1, off, or on');
+}
 if (volumeVfxOnly && volumeVfxArgument !== undefined) {
   throw new Error('--volume-vfx-only owns its off -> on -> off sequence; omit --volume-vfx');
 }
 if (volumeVfxOnly && liquidBodyVfxArgument !== undefined) {
   throw new Error('--volume-vfx-only owns the inherited liquid state; omit --liquid-body-vfx');
+}
+if (volumeVfxOnly && gasBodyVfxArgument !== undefined) {
+  throw new Error('--volume-vfx-only owns the inherited gas state; omit --gas-body-vfx');
 }
 if (liquidBodyVfxOnly && volumeVfxArgument !== undefined) {
   throw new Error('--liquid-body-vfx-only fixes volumeVfx=0; omit --volume-vfx');
@@ -273,8 +291,20 @@ if (liquidBodyVfxOnly && volumeVfxArgument !== undefined) {
 if (liquidBodyVfxOnly && liquidBodyVfxArgument !== undefined) {
   throw new Error('--liquid-body-vfx-only owns its off -> on -> off sequence; omit --liquid-body-vfx');
 }
+if (liquidBodyVfxOnly && gasBodyVfxArgument !== undefined) {
+  throw new Error('--liquid-body-vfx-only keeps gas-body VFX defaulted; omit --gas-body-vfx');
+}
+if (gasBodyVfxOnly && (volumeVfxArgument !== undefined || liquidBodyVfxArgument !== undefined)) {
+  throw new Error('--gas-body-vfx-only fixes volumeVfx=0 and liquidBodyVfx=0; omit those flags');
+}
+if (gasBodyVfxOnly && gasBodyVfxArgument !== undefined) {
+  throw new Error('--gas-body-vfx-only owns its off -> on -> off sequence; omit --gas-body-vfx');
+}
 if (renderScaleArgument !== undefined && !['1', '2', '4', '8'].includes(renderScaleArgument)) {
   throw new Error('--render-scale must be 1, 2, 4, or 8');
+}
+if (gasBodyVfxOnly && renderScaleArgument === '8') {
+  throw new Error('--gas-body-vfx-only is a normal-detail 1x/2x/4x experiment');
 }
 const captureDpr = captureDprArgument === undefined ? undefined : Number(captureDprArgument);
 if (captureDpr !== undefined && captureDpr !== 1 && captureDpr !== 2) {
@@ -285,6 +315,10 @@ if (showcaseScreenshotOnly && !screenshotRequest) {
 }
 if (hdrVfxOnly && renderLook !== undefined) {
   throw new Error('--hdr-vfx-only owns classic -> realistic -> classic; omit --render-look');
+}
+if (hdrVfxOnly && (volumeVfxArgument !== undefined
+  || liquidBodyVfxArgument !== undefined || gasBodyVfxArgument !== undefined)) {
+  throw new Error('--hdr-vfx-only owns all optional VFX state; omit VFX override flags');
 }
 if (hdrVfxOnly && renderScaleArgument !== undefined && renderScaleArgument !== '2') {
   throw new Error('--hdr-vfx-only is deliberately bounded to --render-scale=2');
@@ -343,7 +377,7 @@ async function main() {
       }, 15_000, 'Vite browser-audit server');
     const results = [];
     for (const mode of modes) results.push(await auditMode(mode));
-    const reducedAudit = quickScreenshot || showcaseScreenshotOnly || hdrVfxOnly || volumeVfxOnly || liquidBodyVfxOnly || layoutOnly || mobileOnly || mobileGestureOnly
+    const reducedAudit = quickScreenshot || showcaseScreenshotOnly || hdrVfxOnly || volumeVfxOnly || liquidBodyVfxOnly || gasBodyVfxOnly || layoutOnly || mobileOnly || mobileGestureOnly
       || desktopInputOnly || visualScaleMatrixOnly || powderBodyOnly || liquidDepthOnly
       || solidDepthOnly || gasChromaOnly || surfaceContourOnly || solidFieldOnly
       || roleGraphicsOnly || cellularGraphicsOnly || sensorGraphicsOnly
@@ -439,7 +473,8 @@ async function auditMode(mode) {
   // Advanced fixtures begin blank so WebGL can author exactly the state it
   // measures. Canvas fallback has no advanced optics obligation, so retain the
   // canonical paused scene there and prove real material delivery/occupancy.
-  const startsBlank = !canvasFallbackAudit && (cellularGraphicsOnly || sensorGraphicsOnly
+  const startsBlank = !canvasFallbackAudit && (hdrVfxOnly || volumeVfxOnly
+    || liquidBodyVfxOnly || gasBodyVfxOnly || cellularGraphicsOnly || sensorGraphicsOnly
     || unusualPowderGraphicsOnly || earthenPowderGraphicsOnly || explosivePowderGraphicsOnly
     || unusualSolidGraphicsOnly || deviceIdentityGraphicsOnly || fieldProfileGraphicsOnly
     || electricDischargeGraphicsOnly || liquidIdentityGraphicsOnly
@@ -460,6 +495,7 @@ async function auditMode(mode) {
     ...(renderLook ? { renderLook } : {}),
     ...(volumeVfxArgument ? { volumeVfx: volumeVfxArgument } : {}),
     ...(liquidBodyVfxArgument ? { liquidBodyVfx: liquidBodyVfxArgument } : {}),
+    ...(gasBodyVfxArgument ? { gasBodyVfx: gasBodyVfxArgument } : {}),
     renderScale: renderScaleArgument ?? ((pqrtStateGraphicsEight || filtStateGraphicsEight || lcryStateGraphicsEight
       || pipeStateGraphicsEight || swchStateGraphicsEight || storStateGraphicsEight
       || dlayStateGraphicsEight || wifiStateGraphicsEight || powderMesostrataGraphicsEight
@@ -621,7 +657,7 @@ async function auditMode(mode) {
       const parameters = new URLSearchParams(location.search);
       const ready = parameters.get('scene') === 'render-lab'
         && parameters.get('inputAudit') === '1'
-        && parameters.get('renderScale') === ${JSON.stringify((pqrtStateGraphicsEight || filtStateGraphicsEight || lcryStateGraphicsEight || pipeStateGraphicsEight || swchStateGraphicsEight || storStateGraphicsEight || dlayStateGraphicsEight || wifiStateGraphicsEight || powderMesostrataGraphicsEight || geologicalSolidGraphicsEight || thermalCatalyticRigidGraphicsEight || gooSolidGraphicsEight || frayForceGraphicsEight || gbmbForceGraphicsEight || distilledDieselLiquidGraphicsEight || denseBodyAmbientEight) ? '8' : '2')}
+        && parameters.get('renderScale') === ${JSON.stringify(renderScaleArgument ?? ((pqrtStateGraphicsEight || filtStateGraphicsEight || lcryStateGraphicsEight || pipeStateGraphicsEight || swchStateGraphicsEight || storStateGraphicsEight || dlayStateGraphicsEight || wifiStateGraphicsEight || powderMesostrataGraphicsEight || geologicalSolidGraphicsEight || thermalCatalyticRigidGraphicsEight || gooSolidGraphicsEight || frayForceGraphicsEight || gbmbForceGraphicsEight || distilledDieselLiquidGraphicsEight || denseBodyAmbientEight) ? '8' : '2'))}
         && parameters.get('auditStage') === ${JSON.stringify(startsBlank ? 'blank' : 'canonical')}
         && parameters.has('blankAudit') === ${startsBlank}
         && Boolean(window.__ANIFOR_INPUT_AUDIT__ && document.documentElement);
@@ -671,6 +707,13 @@ async function auditMode(mode) {
       assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
       cdp.close();
       return { backend: mode, liquidBodyVfx, browserErrors: errors.length };
+    }
+    if (gasBodyVfxOnly) {
+      assert(mode === 'webgl', '--gas-body-vfx-only requires --webgl-only');
+      const gasBodyVfx = await auditGasBodyVfxExperiment(cdp, mode);
+      assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
+      cdp.close();
+      return { backend: mode, gasBodyVfx, browserErrors: errors.length };
     }
     if (pausedPresentationOnly) {
       const pausedPresentation = await auditPausedPresentation(cdp, mode);
@@ -20841,6 +20884,57 @@ const LIQUID_BODY_VFX_RAW_CONTROL_POINTS = Object.freeze([
   { name: 'oilWallOwner', x: 315, y: 172 },
 ]);
 
+// E04 samples the actual deterministic render-lab atmosphere. The large cloud
+// core/shell pairs expose shaped volume treatment, while the compact FOG/CFLM
+// bodies and sparse chains prevent a prettier atmosphere from becoming a
+// uniform grade or filling authored gas gaps.
+const GAS_BODY_VFX_TARGET_REGIONS = Object.freeze([
+  { name: 'smokeCore', family: 'smoke', zone: 'core', x: 420, y: 76, radius: 10,
+    minimumRms: 0.45, minimumSpatial: 0.35, minimumPeak: 1, maximumPeak: 4 },
+  { name: 'smokeShell', family: 'smoke', zone: 'shell', x: 382, y: 40, radius: 6,
+    minimumRms: 0.10, minimumSpatial: 0.08, minimumPeak: 1, maximumPeak: 4 },
+  { name: 'oxygenCore', family: 'oxygen', zone: 'core', x: 486, y: 72, radius: 10,
+    minimumRms: 0.45, minimumSpatial: 0.35, minimumPeak: 1, maximumPeak: 4 },
+  { name: 'oxygenShell', family: 'oxygen', zone: 'shell', x: 486, y: 32, radius: 6,
+    minimumRms: 0.10, minimumSpatial: 0.08, minimumPeak: 1, maximumPeak: 4 },
+  { name: 'nobleCore', family: 'noble', zone: 'core', x: 544, y: 88, radius: 9,
+    minimumRms: 0.45, minimumSpatial: 0.35, minimumPeak: 1, maximumPeak: 4 },
+  { name: 'nobleShell', family: 'noble', zone: 'shell', x: 544, y: 54, radius: 6,
+    minimumRms: 0.10, minimumSpatial: 0.08, minimumPeak: 1, maximumPeak: 4 },
+  { name: 'fogCompactCore', family: 'fog', zone: 'core', x: 430, y: 171, radiusX: 10, radiusY: 6,
+    minimumRms: 0.40, minimumSpatial: 0.35, minimumPeak: 1, maximumPeak: 4 },
+  { name: 'fogCompactShell', family: 'fog', zone: 'shell', x: 402, y: 171, radiusX: 4, radiusY: 5,
+    minimumRms: 1.00, minimumSpatial: 0.50, minimumPeak: 3, maximumPeak: 8 },
+  { name: 'cflmCompactCore', family: 'cflm', zone: 'core', x: 520, y: 171, radiusX: 10, radiusY: 6,
+    minimumRms: 0.40, minimumSpatial: 0.35, minimumPeak: 1, maximumPeak: 4 },
+  { name: 'cflmCompactShell', family: 'cflm', zone: 'shell', x: 492, y: 171, radiusX: 4, radiusY: 5,
+    minimumRms: 1.00, minimumSpatial: 0.50, minimumPeak: 3, maximumPeak: 8 },
+]);
+const GAS_BODY_VFX_CHAIN_CONTROLS = Object.freeze([
+  { name: 'smokeCarrier', x: 382, y: 145, radiusX: 0.45, radiusY: 0.45, maximumPeak: 4 },
+  { name: 'smokeMidpoint', x: 384, y: 145, radiusX: 0.45, radiusY: 0.45, maximumPeak: 4 },
+  // The seven-cell crop intentionally reaches each field shoulder. Raw centre
+  // alpha and the full support hash remain exact; permit one extra composited
+  // RGB byte at that shoulder without treating it as claimed gap support.
+  { name: 'smokeAuthoredGap', x: 410, y: 145, radiusX: 7, radiusY: 1,
+    maximumPeak: 3, maximumCoverage: 0.16 },
+  { name: 'fogCarrier', x: 449, y: 145, radiusX: 0.45, radiusY: 0.45, maximumPeak: 4 },
+  { name: 'fogMidpoint', x: 451, y: 145, radiusX: 0.45, radiusY: 0.45, maximumPeak: 4 },
+  { name: 'fogAuthoredGap', x: 477, y: 145, radiusX: 7, radiusY: 1,
+    maximumPeak: 2, maximumCoverage: 0.08 },
+  { name: 'cflmCarrier', x: 516, y: 145, radiusX: 0.45, radiusY: 0.45, maximumPeak: 4 },
+  { name: 'cflmMidpoint', x: 518, y: 145, radiusX: 0.45, radiusY: 0.45, maximumPeak: 4 },
+  { name: 'cflmAuthoredGap', x: 544, y: 145, radiusX: 7, radiusY: 1,
+    maximumPeak: 1, maximumCoverage: 0.02 },
+]);
+const GAS_BODY_VFX_RAW_CONTROL_POINTS = Object.freeze([
+  { name: 'smokeCarrier', x: 382, y: 145 }, { name: 'smokeMidpoint', x: 384, y: 145 },
+  { name: 'smokeGap', x: 410, y: 145 }, { name: 'fogCarrier', x: 449, y: 145 },
+  { name: 'fogMidpoint', x: 451, y: 145 }, { name: 'fogGap', x: 477, y: 145 },
+  { name: 'cflmCarrier', x: 516, y: 145 }, { name: 'cflmMidpoint', x: 518, y: 145 },
+  { name: 'cflmGap', x: 544, y: 145 },
+]);
+
 /**
  * Production-only HDR experiment gate. It intentionally captures ordinary PNG
  * compositor output at 2x—not a raw WebGL framebuffer—so this check never
@@ -21035,10 +21129,12 @@ async function auditLiquidBodyVfxExperiment(cdp, mode) {
     const targets = responses.filter((sample) => sample.family);
     assert(targets.every((sample) => sample.rgbRms >= sample.minimumRms
       && sample.spatialRgbRms >= sample.minimumSpatial
-      && sample.rgbPeak >= 1 && sample.rgbPeak <= sample.maximumPeak),
+      && sample.rgbPeak >= (sample.minimumPeak ?? 1)
+      && sample.rgbPeak <= sample.maximumPeak),
     `E03 ${scale}x liquid-body response was inert, uniform, or exceeded its RGB budget (${JSON.stringify(targets)})`);
     const controls = responses.filter((sample) => !sample.family);
-    assert(controls.every((sample) => sample.rgbPeak <= sample.maximumPeak),
+    assert(controls.every((sample) => sample.rgbPeak <= sample.maximumPeak
+      && (sample.maximumCoverage === undefined || sample.coverage <= sample.maximumCoverage)),
       `E03 ${scale}x liquid-body response leaked into an ineligible control (${JSON.stringify(controls)})`);
     for (const family of ['water', 'oil', 'acid']) {
       const surface = targets.find((sample) => sample.family === family && sample.zone === 'surface');
@@ -21053,6 +21149,108 @@ async function auditLiquidBodyVfxExperiment(cdp, mode) {
       scale,
       backing: disabled.geometry.backing,
       alphaSupport: disabled.backing,
+      responses,
+    });
+  }
+  return { scales, trueEightXExcluded: true };
+}
+
+/**
+ * E04 atmospheric-body experiment. The broad E02 volume pass and E03 liquid
+ * body pass remain explicitly inactive so every response is attributable to
+ * the normal-detail gas-body arithmetic.
+ */
+async function auditGasBodyVfxExperiment(cdp, mode) {
+  const scales = [];
+  const requestedScales = renderScaleArgument === undefined
+    ? VOLUME_VFX_SCALES : [Number(renderScaleArgument)];
+  for (const scale of requestedScales) {
+    const captures = {};
+    for (const enabled of [false, true, false]) {
+      const key = enabled ? 'enabled' : captures.disabled ? 'disabledRepeat' : 'disabled';
+      captures[key] = await navigateGasBodyVfxState(cdp, mode, scale, enabled, key);
+    }
+    const { disabled, enabled, disabledRepeat } = captures;
+    for (const [label, variant] of Object.entries(captures)) {
+      assertGeometry(variant.geometry, `E04 ${label} ${scale}x`, scale);
+      assert(variant.geometry.backend.backend === 'webgl',
+        `E04 ${label} ${scale}x lost WebGL presentation`);
+      assert(variant.hdrPipeline?.state === 'active',
+        `E04 ${label} ${scale}x HDR pipeline was not active (${JSON.stringify(variant.hdrPipeline)})`);
+    }
+    assertCanvasRectsEqual(disabled.geometry.canvas, enabled.geometry.canvas,
+      `E04 ${scale}x disabled/enabled CSS geometry`);
+    assertCanvasRectsEqual(disabled.geometry.canvas, disabledRepeat.geometry.canvas,
+      `E04 ${scale}x disabled/repeated CSS geometry`);
+    assert(JSON.stringify(disabled.geometry.backing) === JSON.stringify(enabled.geometry.backing)
+      && JSON.stringify(disabled.geometry.backing) === JSON.stringify(disabledRepeat.geometry.backing),
+    `E04 ${scale}x backing geometry changed (${JSON.stringify({
+      disabled: disabled.geometry.backing, enabled: enabled.geometry.backing,
+      repeat: disabledRepeat.geometry.backing,
+    })})`);
+    assertHdrVfxSemanticEquality(disabled.semantic, enabled.semantic,
+      `E04 ${scale}x disabled/enabled`);
+    assertHdrVfxSemanticEquality(disabled.semantic, disabledRepeat.semantic,
+      `E04 ${scale}x disabled/repeated`);
+    assertVolumeVfxBackingInvariant(disabled.backing, enabled.backing,
+      `E04 ${scale}x disabled/enabled`);
+    assertVolumeVfxBackingInvariant(disabled.backing, disabledRepeat.backing,
+      `E04 ${scale}x disabled/repeated`);
+    assertVolumeVfxRawAlphaInvariant(disabled.rawControls, enabled.rawControls,
+      `E04 ${scale}x disabled/enabled`);
+    assertVolumeVfxRawAlphaInvariant(disabled.rawControls, disabledRepeat.rawControls,
+      `E04 ${scale}x disabled/repeated`);
+    const rawGas = Object.fromEntries(disabled.rawControls.map((point) => [point.name, point]));
+    for (const family of ['smoke', 'fog', 'cflm']) {
+      assert(rawGas[`${family}Carrier`]?.rgba[3] > 0
+        && rawGas[`${family}Midpoint`]?.rgba[3] > 0
+        && rawGas[`${family}Gap`]?.rgba[3] === 0,
+      `E04 ${scale}x lost its sparse carrier/midpoint/gap topology (${JSON.stringify(rawGas)})`);
+    }
+
+    const responseRegions = [...GAS_BODY_VFX_TARGET_REGIONS, ...GAS_BODY_VFX_CHAIN_CONTROLS];
+    const rawResponses = await sampleBackdropRefractionRegions(cdp, {
+      straight: disabled.capture.capture.data,
+      refracted: enabled.capture.capture.data,
+      repeatedStraight: disabledRepeat.capture.capture.data,
+    }, responseRegions, disabled.capture.canvasRect);
+    const responses = rawResponses.map((sample, index) => {
+      const region = responseRegions[index];
+      const meanRgbRms = Math.hypot(...sample.responseRgb) / Math.sqrt(3);
+      return {
+        ...sample,
+        ...region,
+        spatialRgbRms: round(Math.sqrt(Math.max(0, sample.rgbRms ** 2 - meanRgbRms ** 2)), 3),
+      };
+    });
+    assert(responses.every((sample) => sample.repeatRgbPeak === 0),
+      `E04 ${scale}x gas-body query was not deterministic (${JSON.stringify(responses)})`);
+    const targets = responses.filter((sample) => sample.family);
+    assert(targets.every((sample) => sample.rgbRms >= sample.minimumRms
+      && sample.spatialRgbRms >= sample.minimumSpatial
+      && sample.rgbPeak >= (sample.minimumPeak ?? 1)
+      && sample.rgbPeak <= sample.maximumPeak),
+    `E04 ${scale}x gas-body response was inert, uniform, or exceeded its RGB budget (${JSON.stringify(targets)})`);
+    const controls = responses.filter((sample) => !sample.family);
+    assert(controls.every((sample) => sample.rgbPeak <= sample.maximumPeak
+      && (sample.maximumCoverage === undefined || sample.coverage <= sample.maximumCoverage)),
+      `E04 ${scale}x gas-body response widened a sparse carrier or authored gap (${JSON.stringify(controls)})`);
+    assert(targets.some((sample) => sample.signedMean >= 0.20)
+      && targets.some((sample) => sample.signedMean <= -0.20),
+    `E04 ${scale}x lost its bipolar billow key/fill response (${JSON.stringify(targets)})`);
+    for (const family of ['smoke', 'oxygen', 'noble', 'fog', 'cflm']) {
+      const core = targets.find((sample) => sample.family === family && sample.zone === 'core');
+      const shell = targets.find((sample) => sample.family === family && sample.zone === 'shell');
+      assert(core && shell && core.responseSignature !== shell.responseSignature
+        && (Math.abs(core.spatialRgbRms - shell.spatialRgbRms) >= 0.15
+          || Math.abs(core.signedMean - shell.signedMean) >= 0.15),
+      `E04 ${scale}x ${family} lost its shaped core/shell response (${JSON.stringify({ core, shell })})`);
+    }
+    scales.push({
+      scale,
+      backing: disabled.geometry.backing,
+      alphaSupport: disabled.backing,
+      rawControls: disabled.rawControls,
       responses,
     });
   }
@@ -21162,6 +21360,61 @@ async function navigateLiquidBodyVfxState(cdp, mode, scale, enabled, label) {
   };
 }
 
+async function navigateGasBodyVfxState(cdp, mode, scale, enabled, label) {
+  const query = new URLSearchParams({
+    scene: 'render-lab', inputAudit: '1', auditStage: 'canonical',
+    gasBodyVfxAudit: '1', renderScale: String(scale), renderLook: 'realistic',
+    volumeVfx: '0', liquidBodyVfx: '0', gasBodyVfx: enabled ? '1' : '0',
+  });
+  await cdp.send('Page.navigate', { url: `${AUDIT_BASE_URL}?${query}` });
+  await waitFor(() => evaluate(cdp, `(() => {
+    const parameters = new URLSearchParams(location.search);
+    return parameters.get('scene') === 'render-lab'
+      && parameters.get('inputAudit') === '1'
+      && parameters.get('auditStage') === 'canonical'
+      && parameters.get('gasBodyVfxAudit') === '1'
+      && parameters.get('renderScale') === ${JSON.stringify(String(scale))}
+      && parameters.get('renderLook') === 'realistic'
+      && parameters.get('volumeVfx') === '0'
+      && parameters.get('liquidBodyVfx') === '0'
+      && parameters.get('gasBodyVfx') === ${JSON.stringify(enabled ? '1' : '0')}
+      && Boolean(window.__ANIFOR_INPUT_AUDIT__);
+  })()`), 15_000, `E04 ${label} ${scale}x page`);
+  await waitFor(() => evaluate(cdp,
+    `window.__ANIFOR_INPUT_AUDIT__.backend().backend === ${JSON.stringify(mode)}`),
+  15_000, `E04 ${label} ${scale}x backend`);
+  const hdrPipeline = await evaluate(cdp, `(() => {
+    const canvas = document.querySelector('.semantic-field-canvas');
+    return canvas ? {
+      look: canvas.dataset.renderLook,
+      state: canvas.dataset.hdrPipeline,
+      reason: canvas.dataset.hdrPipelineReason,
+      bloomBacking: canvas.dataset.bloomBacking,
+      volumeVfx: canvas.dataset.volumeVfx,
+      liquidBodyVfx: canvas.dataset.liquidBodyVfx,
+      gasBodyVfx: canvas.dataset.gasBodyVfx,
+    } : undefined;
+  })()`);
+  const expectedBloom = `${WORLD_WIDTH * scale / 2}x${WORLD_HEIGHT * scale / 2}`;
+  assert(hdrPipeline?.look === 'realistic' && hdrPipeline?.state === 'active'
+    && hdrPipeline?.bloomBacking === expectedBloom
+    && hdrPipeline?.volumeVfx === 'inactive'
+    && hdrPipeline?.liquidBodyVfx === 'inactive'
+    && hdrPipeline?.gasBodyVfx === (enabled ? 'active' : 'inactive'),
+  `E04 ${label} ${scale}x HDR/gas-body state resolved incorrectly (${JSON.stringify(hdrPipeline)})`);
+  const capture = await waitForStablePageCapture(
+    cdp, `E04 ${label} ${scale}x framebuffer`, scale === 4 ? 20_000 : undefined,
+  );
+  return {
+    capture,
+    geometry: await metrics(cdp),
+    semantic: await hdrVfxSemanticDigest(cdp),
+    backing: await sampleVolumeVfxCanvasAlphaSupport(cdp),
+    rawControls: await sampleVolumeVfxRawWorldPixels(cdp, GAS_BODY_VFX_RAW_CONTROL_POINTS),
+    hdrPipeline,
+  };
+}
+
 /** Hash raw presented alpha rather than page PNG alpha, which is opaque after compositing. */
 async function sampleVolumeVfxCanvasAlphaSupport(cdp) {
   return evaluate(cdp, `(() => {
@@ -21222,6 +21475,15 @@ async function sampleVolumeVfxRawWorldPixels(cdp, points) {
 function assertVolumeVfxRawControlInvariant(left, right, label) {
   assert(JSON.stringify(left) === JSON.stringify(right),
     `${label}: liquid-body VFX changed an exact raw control owner (${JSON.stringify({ left, right })})`);
+}
+
+function assertVolumeVfxRawAlphaInvariant(left, right, label) {
+  const same = left.length === right.length && left.every((point, index) => (
+    point.name === right[index].name && point.x === right[index].x && point.y === right[index].y
+      && point.rgba[3] === right[index].rgba[3]
+  ));
+  assert(same,
+    `${label}: gas-body VFX changed sparse-carrier or authored-gap raw alpha (${JSON.stringify({ left, right })})`);
 }
 
 async function navigateHdrVfxLook(cdp, mode, look, label) {

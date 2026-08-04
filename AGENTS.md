@@ -60,8 +60,19 @@ support, and exact unlike-liquid owners remain no-ops. It remains opt-in with
 the non-Classic looks pending representative-hardware/mobile evidence. Do not
 add E02/E03 branches, resources, or targets to `FIELD_EIGHT_X_FRAGMENT`; true
 8× remains the direct single-mesh control, and E03 must report inactive there.
-The next visual experiment is stable multi-scale gas density and billow
-lighting; powder crown/facet balance follows.
+E04 is the accepted gas-only depth layer, independently measurable with
+`?gasBodyVfx=0|1`. At normal 1×–4× it may reuse only the already-live
+atmosphere density, four cardinal slope/curvature samples, body lighting, and
+world position. Its low-frequency billow basis must be world-anchored, contain
+no `uTime`, and run only after connected atmosphere ownership is proven. Add no
+texture read, field, upload, pass, target, persistent allocation, output-scale
+term, alpha/support/silhouette/ownership, or physics decision. Exact sparse
+carrier/midpoint/gap alpha, full raw alpha/support, bipolar core response,
+bounded compact FOG/CFLM shoulders, off→on→off repeat, and 1×/2×/4× geometry
+are release contracts in `npm run audit:vfx:gas-body`. Capability/runtime HDR
+fallback must disable `uGasBodyVfx`; `FIELD_EIGHT_X_FRAGMENT` must not declare
+or use it, and true 8× must report E04 inactive. The next visual experiment is
+powder crown/facet balance.
 
 ## CodeGraph
 

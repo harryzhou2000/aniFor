@@ -207,7 +207,7 @@ describe('Pixi presenter startup configuration', () => {
     const gas = normal.slice(gasStart, liquidStart);
     const liquid = normal.slice(liquidStart, powderStart);
     const powder = normal.slice(powderStart);
-    const gasVfxStart = gas.indexOf('    if (uVolumeVfx > 0.5)');
+    const gasVfxStart = gas.indexOf('    if (uGasBodyVfx > 0.5)');
     const gasVfxEnd = gas.indexOf('    if (uGasIdentityStyling > 0.5)', gasVfxStart);
     const liquidVfxStart = liquid.indexOf('        if (uLiquidBodyVfx > 0.5');
     const liquidVfxEnd = liquid.indexOf('    // Twenty ordinary, unusual, metallic', liquidVfxStart);
@@ -225,18 +225,25 @@ describe('Pixi presenter startup configuration', () => {
     expect(liquidStart).toBeGreaterThan(gasStart);
     expect(powderStart).toBeGreaterThan(liquidStart);
     expect(normal).toContain('uniform float uVolumeVfx;');
+    expect(normal).toContain('uniform float uGasBodyVfx;');
     expect(normal).toContain('uniform float uLiquidBodyVfx;');
     expect(eight).not.toContain('uVolumeVfx');
+    expect(eight).not.toContain('uGasBodyVfx');
     expect(eight).not.toContain('uLiquidBodyVfx');
 
-    // Gas stays field-owned: the experimental lift reuses the established
-    // mass/curvature/scatter scalars and never assigns support or opacity.
-    expect(gas).toContain('if (uVolumeVfx > 0.5)');
+    // Gas stays field-owned: its independent E04 selector reuses the
+    // established mass/curvature/scatter scalars and never samples or assigns
+    // support/opacity.
+    expect(gas).toContain('if (uGasBodyVfx > 0.5)');
     expect(gas).toContain('gasShadeDensity');
     expect(gas).toContain('gasCurvature');
     expect(gas).toContain('gasForwardScatter');
     expect(gasVfxStart).toBeGreaterThanOrEqual(0);
     expect(gasVfxEnd).toBeGreaterThan(gasVfxStart);
+    expect(gasVfx).toContain('sin(dot(fieldPosition');
+    expect(gasVfx).toContain('gasVfxBodySupport');
+    expect(gasVfx).not.toMatch(/sin\([^;\n]*uTime/);
+    expect(gasVfx).not.toContain('texture(');
     expect(gasVfx).not.toMatch(/\balpha\s*[+*]?=/);
 
     // Liquid has an independent E03 selector but retains the pre-existing
@@ -268,9 +275,12 @@ describe('Pixi presenter startup configuration', () => {
     // arithmetic family off before continuing with the single-pass scene.
     expect(source.match(/this\.uniforms\.uniforms\.uHDRVfx = 0;/g)).toHaveLength(2);
     expect(source.match(/this\.uniforms\.uniforms\.uVolumeVfx = 0;/g)).toHaveLength(2);
+    expect(source.match(/this\.uniforms\.uniforms\.uGasBodyVfx = 0;/g)).toHaveLength(2);
     expect(source.match(/this\.uniforms\.uniforms\.uLiquidBodyVfx = 0;/g)).toHaveLength(2);
     expect(source).toContain("get('volumeVfxAudit') === '1'");
+    expect(source).toContain("get('gasBodyVfxAudit') === '1'");
     expect(source).toContain("get('liquidBodyVfxAudit') === '1'");
+    expect(source).toContain('const gasBodyVfxEnabled = outputScale < 8');
     expect(source).toContain('const liquidBodyVfxEnabled = outputScale < 8');
   });
 
@@ -494,7 +504,7 @@ describe('Pixi presenter startup configuration', () => {
     const helperEnd = source.indexOf('vec3 gasIdentityVolumeDelta', helperStart);
     const helpers = source.slice(helperStart, helperEnd);
     const blockStart = source.indexOf("// The atmosphere's existing cardinal field samples");
-    const blockEnd = source.indexOf('    if (uGasIdentityStyling > 0.5)', blockStart);
+    const blockEnd = source.indexOf('    if (uGasBodyVfx > 0.5)', blockStart);
     const block = source.slice(blockStart, blockEnd);
 
     expect(helperStart).toBeGreaterThan(0);

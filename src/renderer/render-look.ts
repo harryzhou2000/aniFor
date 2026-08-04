@@ -50,3 +50,20 @@ export function resolveLiquidBodyVfxEnabled(
   if (requested === '1' || requested === 'on') return true;
   return resolveVolumeVfxEnabled(look, search);
 }
+
+/**
+ * Keeps the gas-body experiment independently measurable without also
+ * changing powder or liquid. Ordinary realistic/neon presets retain the broad
+ * volume default; the explicit query is reserved for visual captures and
+ * capability audits.
+ */
+export function resolveGasBodyVfxEnabled(
+  look: RenderLook,
+  search = globalThis.location?.search ?? '',
+): boolean {
+  if (look === 'classic') return false;
+  const requested = new URLSearchParams(search).get('gasBodyVfx');
+  if (requested === '0' || requested === 'off') return false;
+  if (requested === '1' || requested === 'on') return true;
+  return resolveVolumeVfxEnabled(look, search);
+}

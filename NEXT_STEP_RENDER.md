@@ -36,18 +36,30 @@ does not alter simulation, camera, semantic ownership, or `renderScale`.
   Droplets, Lava, walls, traits, emissive liquid, foreign contacts, and exact
   unlike-liquid owners remain no-ops. `?liquidBodyVfx=0|1` isolates the effect;
   absent that audit override it follows the non-Classic E02 volume preset.
+- **E04 — stable gas billow depth (accepted checkpoint):** normal 1×–4×
+  WebGL gives field-owned gas a restrained interior key/fill rather than a
+  particle or rim effect. It reuses the existing atmosphere density, four
+  cardinal slope/curvature samples, and body lighting, then combines three
+  long world-space analytic waves only after connected atmosphere ownership is
+  proven. The waves have no clock, texture, field, upload, pass, target,
+  allocation, alpha/support, silhouette, ownership, or physics effect, and
+  remain identical across render scale. `?gasBodyVfx=0|1` isolates E04; absent
+  that audit override it follows the non-Classic E02 volume preset.
 - **Protected 8× rung:** `renderScale=8` deliberately reports
   `hdrPipeline=inactive` / `scale-8` and retains the proven direct single-mesh
   4896×3072 path. The experiment must earn a bounded 8× design rather than
   allocating a 115 MiB full-resolution float target beside that path.
-- **Current decision:** E01/E02/E03 remain opt-in through the non-Classic looks
+- **Current decision:** E01/E02/E03/E04 remain opt-in through the non-Classic looks
   until representative hardware timing and mobile thermal behavior are
   measured. E02 remains the safe family-wide baseline. E03 is accepted as the
   liquid-depth checkpoint: its fit-view crop is visibly more cohesive, retains
   Water/Oil/Acid hue order, and shows no objectionable striping, seam bleed, or
-  silhouette change. It is not the final fluid/gas result; gas still needs a
-  stronger stable density grammar and powder still needs more bulk relief
-  without losing grain cadence.
+  silhouette change. E04 is accepted as the first gas-depth checkpoint: its
+  fit-view result is intentionally subtle, but broad cloud cores now have
+  stable bipolar billow relief while compact FOG/CFLM shoulders remain smooth.
+  It is not the final fluid/gas result; powder now needs more bulk relief
+  without losing grain cadence, and later gas work may add bounded dynamic
+  light transport without replacing E04's stable base.
   Sub-1.0 material colour stays on the established response; tonemapping owns
   only real HDR highlights so powder texture and liquid body contrast are not
   washed out.
@@ -79,13 +91,23 @@ separation; target peaks remain at or below 14 bytes. Native walls now also
 reset the vertical optical-depth byte and redirty that scan at the bounded
 liquid cadence.
 
-**Next visual experiments:** E03 is the accepted liquid-depth checkpoint.
-Next prototype a stable world-anchored multi-scale gas-density treatment that
-adds readable billow depth without moving support or authored gaps, then tune a
-powder crown/facet balance that increases bulk depth without damping the
-established grain cadence. Each experiment keeps its own off/on/off switch and
-must pass the same topology, contact, scale, and fallback controls before it
-can become a preset default.
+Run `npm run audit:vfx:gas-body` for E04. It holds E02 powder and E03 liquid
+styling off, reloads `gasBodyVfx=0 → 1 → 0` at 1×/2×/4×, and requires WebGL,
+the real HDR pipeline, exact geometry/semantics, exact full-frame raw
+alpha/support, exact sparse carrier/midpoint/gap alpha, deterministic RGB, and
+zero browser errors. Across all three scales, broad Smoke/Oxygen/Noble cores
+hold `0.91–1.03` RGB RMS with positive and negative billow lobes; compact FOG
+and CFLM shoulders peak at four and five display bytes. Raw authored-gap alpha
+remains zero and every repeat response is byte-exact. Pass `--render-scale=1`,
+`2`, or `4` to the underlying focused command when tuning one scale; true 8×
+rejects E04 and retains its protected direct shader.
+
+**Next visual experiments:** E03 and E04 are the accepted liquid- and gas-depth
+checkpoints. Next tune a powder crown/facet balance that increases bulk depth
+without damping the established grain cadence. After that, compare local-light
+transport or velocity-aware gas motion against E04's deterministic base. Each
+experiment keeps its own off/on/off switch and must pass the same topology,
+contact, scale, and fallback controls before it can become a preset default.
 
 ## Phase 1 — HDR pipeline & lighting core (biggest visual payoff)
 
