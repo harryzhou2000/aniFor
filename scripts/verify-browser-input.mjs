@@ -10910,10 +10910,12 @@ async function waitForNextWebGLPresentation(
   // deadline, rather than allowing their individual budgets to add together.
   const deadline = Date.now() + Math.max(timeoutMs, acceptanceTimeout);
   const before = await evaluate(cdp,
-    'window.__ANIFOR_INPUT_AUDIT__.webGLPresentationTiming()');
+    'window.__ANIFOR_INPUT_AUDIT__.webGLPresentationTiming()',
+    Math.min(1_000, remainingDeadlineMs(deadline, `${label} initial timing read`)));
   assert(before, `${label}: WebGL presentation timing is unavailable`);
   await waitFor(() => evaluate(cdp,
-    'window.__ANIFOR_INPUT_AUDIT__.requestWebGLPresentationTimingSample()'),
+    'window.__ANIFOR_INPUT_AUDIT__.requestWebGLPresentationTimingSample()',
+    Math.min(1_000, remainingDeadlineMs(deadline, `${label} acceptance poll`))),
   remainingDeadlineMs(deadline, `${label} acceptance`), `${label} accepted completed-frame request`);
   return waitFor(() => evaluate(cdp, `(() => {
     const next = window.__ANIFOR_INPUT_AUDIT__.webGLPresentationTiming();
@@ -10921,7 +10923,8 @@ async function waitForNextWebGLPresentation(
       && (next.source !== ${JSON.stringify(before.source)}
         || (next.sequence > ${before.sequence}
           && next.usableSamples > ${before.usableSamples})) ? next : null;
-  })()`), remainingDeadlineMs(deadline, `${label} completion`), `${label} completed WebGL frame`);
+  })()`, Math.min(1_000, remainingDeadlineMs(deadline, `${label} completion poll`))),
+  remainingDeadlineMs(deadline, `${label} completion`), `${label} completed WebGL frame`);
 }
 
 function remainingDeadlineMs(deadline, label) {
@@ -20687,11 +20690,13 @@ async function captureSettledPage(cdp, label, delayMs = 900, presentationAlready
   // valid 8x off/on mutations look identical in screenshot gates.
   await evaluate(cdp, 'new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)))',
     remainingDeadlineMs(deadline, `${label} compositor hand-off`));
-  await cdp.send('Page.captureScreenshot', { format: 'png', fromSurface: true });
+  await capturePageScreenshot(
+    cdp, deadline, `${label} compositor warm-up screenshot`,
+  );
   await sleep(150);
-  const capture = await cdp.send('Page.captureScreenshot', { format: 'png', fromSurface: true });
+  const capture = await capturePageScreenshot(cdp, deadline, `${label} framebuffer screenshot`);
   await sleep(150);
-  const reference = await cdp.send('Page.captureScreenshot', { format: 'png', fromSurface: true });
+  const reference = await capturePageScreenshot(cdp, deadline, `${label} reference screenshot`);
   const canvasRect = await evaluate(cdp, `(() => {
     const canvas = document.querySelector('.world-canvas');
     if (!(canvas instanceof HTMLCanvasElement)) return undefined;
@@ -20700,6 +20705,24 @@ async function captureSettledPage(cdp, label, delayMs = 900, presentationAlready
   })()`);
   if (!canvasRect) throw new Error(`${label}: world canvas unavailable`);
   return { capture, reference, canvasRect, referenceCanvasRect: canvasRect };
+}
+
+/**
+ * A true-8x screenshot can be several megabytes, but it must still share the
+ * owning presentation deadline.  Leaving CDP at its global default here can
+ * pin a release gate behind a compositor request long after the renderer has
+ * declared the candidate unhealthy.
+ */
+async function capturePageScreenshot(cdp, deadline, label) {
+  return capturePageScreenshotWithin(cdp,
+    Math.min(10_000, remainingDeadlineMs(deadline, label)), label);
+}
+
+async function capturePageScreenshotWithin(cdp, timeoutMs, label) {
+  return cdp.send('Page.captureScreenshot', { format: 'png', fromSurface: true }, timeoutMs)
+    .catch((error) => {
+      throw new Error(`${label} failed: ${error instanceof Error ? error.message : error}`);
+    });
 }
 
 async function captureStableBlankPage(cdp, mode) {
@@ -21978,7 +22001,7 @@ async function capturePaintedFootprints(
   do {
     const capture = capturedFrameBase64
       ? { data: capturedFrameBase64 }
-      : await cdp.send('Page.captureScreenshot', { format: 'png', fromSurface: true });
+      : await capturePageScreenshotWithin(cdp, 10_000, `${label} footprint screenshot`);
     capturedFrameBase64 = undefined;
     const samples = await samplePageRegions(
       cdp,
