@@ -13273,9 +13273,23 @@ async function auditRenderScaleEight(cdp, dpr, powderOnly = false) {
     ? undefined : await auditEightXThermalMaterialGraphics(cdp, geometry.canvas);
   if (!powderOnly) stage('thermal-material-ready');
 
-  // The direct mesh owns canonical gas-volume relief at 8x. Keep this before
-  // fixture-replacement stages so the existing Smoke/O2/Noble/Fog composition
-  // remains the authority; Canvas visual parity stays explicitly optional.
+  // Role and thermal probes together complete several full 15M-fragment
+  // presentations. Gas relief is an independent fixture with no valid
+  // framebuffer or semantic dependency on those probes, so give it a fresh
+  // promoted context instead of allowing a completed prior presentation to
+  // occupy the sole direct-render slot. This preserves the exact CSS camera
+  // geometry and the real true-8x fence contract; it does not relax either
+  // watchdog.
+  if (!powderOnly) {
+    ({ geometry, backend } = await restartEightXAuditContext(
+      cdp, dpr, geometry.canvas, 'gas-volume-relief',
+    ));
+    stage('gas-volume-context-ready');
+  }
+
+  // The direct mesh owns canonical gas-volume relief at 8x. The fresh
+  // render-lab scene supplies its ordinary Smoke/O2/Noble/Fog composition;
+  // Canvas visual parity stays explicitly optional.
   const gasVolumeRelief = powderOnly ? undefined : await auditEightXGasVolumeRelief(cdp, geometry.canvas);
   if (!powderOnly) stage('gas-volume-relief-ready');
 
@@ -13561,6 +13575,20 @@ async function auditRenderScaleEight(cdp, dpr, powderOnly = false) {
   const repeatedFlatGasIdentitySupport = await evaluate(cdp,
     'window.__ANIFOR_INPUT_AUDIT__.atmosphereSupportAudit()');
   await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setGasIdentityStyling(true); true');
+
+  // The preceding generic body/gas group deliberately proves several
+  // independent off/on/off presentations.  The remaining liquid, emission,
+  // and powder-depth group has no semantic or framebuffer dependency on its
+  // context: it starts from the same render-lab fixture and stores its own
+  // topology snapshots. Re-promote here so SwiftShader cannot carry an
+  // exhausted direct-frame slot into a legitimate later liquid capture. Keep
+  // the exact CSS geometry and unchanged production 30-second fence deadline
+  // as part of the assertion rather than treating a slower frame as healthy.
+  ({ geometry, backend } = await restartEightXAuditContext(
+    cdp, dpr, geometry.canvas, 'liquid-volume-toggles',
+  ));
+  stage('liquid-volume-context-ready');
+
   await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setLiquidFieldLighting(false); true');
   const flatLiquidFieldLightingCapture = await captureSettledPage(
     cdp, 'renderScale=8 flat liquid-field-lighting framebuffer', 450,
