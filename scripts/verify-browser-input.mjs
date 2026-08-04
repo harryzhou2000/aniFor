@@ -19279,6 +19279,19 @@ async function auditEightXMaterialAtlasStress(cdp, blankBase64, canvasRect) {
 }
 
 async function navigateEightXRecoveryPage(cdp, auditStage) {
+  // Navigation alone leaves Pixi/WebGL destruction to document teardown. In a
+  // long SwiftShader audit that can retain an outgoing 15M-fragment direct mesh
+  // past the next promotion. Release the presenter and its fences explicitly,
+  // then allow its bounded navigation disposer to run before we allocate the
+  // replacement context. This is audit lifecycle fidelity, not a longer
+  // presentation deadline; production Detail navigation follows the same
+  // renderer-owned disposal path.
+  await evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    return typeof audit?.disposeRendererForNavigation === 'function'
+      ? audit.disposeRendererForNavigation().then(() => true)
+      : true;
+  })()`);
   const query = new URLSearchParams({
     scene: 'render-lab', inputAudit: '1', renderScale: '8', auditStage,
   });
