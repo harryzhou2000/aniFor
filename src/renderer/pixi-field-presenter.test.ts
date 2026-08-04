@@ -193,6 +193,77 @@ describe('Pixi presenter startup configuration', () => {
     expect(source.match(/this\.uniforms\.uniforms\.uHDRVfx = 0;/g)).toHaveLength(2);
   });
 
+  it('keeps opt-in field volume VFX on the normal HDR compositor only', () => {
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');
+    const normalStart = source.indexOf('const FIELD_FRAGMENT = `', eightStart);
+    const normalEnd = source.indexOf('`;\n\n/** Primary WebGL presentation', normalStart);
+    const eight = source.slice(eightStart, normalStart);
+    const normal = source.slice(normalStart, normalEnd);
+    const gasBody = normal.indexOf('    // Dense reconstructed gas should read as one mixed volume');
+    const gasStart = normal.lastIndexOf('  } else if (gasVolume > 0.5) {', gasBody);
+    const liquidStart = normal.indexOf('  } else if (liquidVolume > 0.5) {', gasStart);
+    const powderStart = normal.indexOf('    float powderVisualCohesion = 0.0;', liquidStart);
+    const gas = normal.slice(gasStart, liquidStart);
+    const liquid = normal.slice(liquidStart, powderStart);
+    const powder = normal.slice(powderStart);
+    const gasVfxStart = gas.indexOf('    if (uVolumeVfx > 0.5)');
+    const gasVfxEnd = gas.indexOf('    if (uGasIdentityStyling > 0.5)', gasVfxStart);
+    const liquidVfxStart = liquid.indexOf('        if (uVolumeVfx > 0.5');
+    const liquidVfxEnd = liquid.indexOf('    // Twenty ordinary, unusual, metallic', liquidVfxStart);
+    const powderVfxStart = powder.indexOf('        if (uVolumeVfx > 0.5');
+    const powderVfxEnd = powder.indexOf('        // This is intentionally stricter than a generic settled-powder', powderVfxStart);
+    const gasVfx = gas.slice(gasVfxStart, gasVfxEnd);
+    const liquidVfx = liquid.slice(liquidVfxStart, liquidVfxEnd);
+    const powderVfx = powder.slice(powderVfxStart, powderVfxEnd);
+
+    expect(eightStart).toBeGreaterThanOrEqual(0);
+    expect(normalStart).toBeGreaterThan(eightStart);
+    expect(normalEnd).toBeGreaterThan(normalStart);
+    expect(gasBody).toBeGreaterThanOrEqual(0);
+    expect(gasStart).toBeGreaterThanOrEqual(0);
+    expect(liquidStart).toBeGreaterThan(gasStart);
+    expect(powderStart).toBeGreaterThan(liquidStart);
+    expect(normal).toContain('uniform float uVolumeVfx;');
+    expect(eight).not.toContain('uVolumeVfx');
+
+    // Gas stays field-owned: the experimental lift reuses the established
+    // mass/curvature/scatter scalars and never assigns support or opacity.
+    expect(gas).toContain('if (uVolumeVfx > 0.5)');
+    expect(gas).toContain('gasShadeDensity');
+    expect(gas).toContain('gasCurvature');
+    expect(gas).toContain('gasForwardScatter');
+    expect(gasVfxStart).toBeGreaterThanOrEqual(0);
+    expect(gasVfxEnd).toBeGreaterThan(gasVfxStart);
+    expect(gasVfx).not.toMatch(/\balpha\s*[+*]?=/);
+
+    // Liquid requires the pre-existing species-safe, connected-body guard;
+    // reconstruction, unlike-liquid seams, and alpha remain outside E02.
+    expect(liquid).toContain('dot(liquidSpeciesSlope, liquidSpeciesSlope) < 0.0025');
+    expect(liquid).toContain('if (uVolumeVfx > 0.5');
+    expect(liquid).toContain('liquidFresnelContour');
+    expect(liquid).toContain('liquidFresnelAbsorption');
+    expect(liquidVfxStart).toBeGreaterThanOrEqual(0);
+    expect(liquidVfxEnd).toBeGreaterThan(liquidVfxStart);
+    expect(liquidVfx).not.toMatch(/\balpha\s*[+*]?=/);
+
+    // Powder remains the temporally stable, dry Smooth-body-only path; Local,
+    // Grains, moving powder, and suspension cannot gain an HDR body treatment.
+    expect(powder).toContain('if (uVolumeVfx > 0.5');
+    expect(powder).toContain('uPowderStyle > 1.5');
+    expect(powder).toContain('powderBodyGate');
+    expect(powder).toContain('powderSuspensionCohesion < 0.01');
+    expect(powderVfxStart).toBeGreaterThanOrEqual(0);
+    expect(powderVfxEnd).toBeGreaterThan(powderVfxStart);
+    expect(powderVfx).not.toMatch(/\balpha\s*[+*]?=/);
+
+    // Capability/initialization and first-render failures must turn both HDR
+    // arithmetic families off before continuing with the single-pass scene.
+    expect(source.match(/this\.uniforms\.uniforms\.uHDRVfx = 0;/g)).toHaveLength(2);
+    expect(source.match(/this\.uniforms\.uniforms\.uVolumeVfx = 0;/g)).toHaveLength(2);
+    expect(source).toContain("get('volumeVfxAudit') === '1'");
+  });
+
   it('advances fallback presentation timing only after its GPU fence signals', () => {
     const callbacks: FrameRequestCallback[] = [];
     vi.stubGlobal('requestAnimationFrame', vi.fn((callback: FrameRequestCallback) => {

@@ -35,6 +35,33 @@ single-pass WebGL scene without changing camera or semantics. Validate the
 known-capable path with `npm run audit:vfx:hdr`; generic look captures may accept
 an explicit capability fallback unless `--require-hdr-pipeline` was requested.
 
+The second HDR experiment is independently controlled by `?volumeVfx=0|1` and
+defaults on only inside a non-Classic look with an active HDR pipeline. At
+1×–4×, reuse the normal semantic shader's already-live gas curvature/scatter,
+liquid species/depth/Fresnel, and stable Smooth-powder surface scalars; add no
+field sample, texture, blur, pass, target, time term, alpha, support, ownership,
+or physics decision. Keep the enhancement family-local and RGB-only. Powder
+must remain stable/dry/Smooth/deep and reject Local, Grains, motion, fine
+structures, holes, walls, traits, and suspension. Liquid must remain exact
+semantic, ordinary, connected, same-species, non-molten, and away from foreign
+contacts; gas support remains owned by the atmosphere field. Capability or
+runtime fallback disables both `uHDRVfx` and `uVolumeVfx`. Do not add the volume
+uniform or branch to `FIELD_EIGHT_X_FRAGMENT`; true 8× remains the protected
+compact path. Validate with `npm run audit:vfx:volume`, whose default matrix is
+realistic `off→on→off` at 1×/2×/4× with exact semantic and raw alpha/support
+hashes, deterministic spatial RGB response, and isolated/hole/seam/foreign
+controls.
+
+E02 is a safety-proven baseline, not a promotion candidate: ordinary fit-view
+review found its RGB response too faint and liquids still comparatively flat.
+Prioritize the next liquid-only experiment using the existing species-safe
+field and vertical optical-depth byte. Earn a visibly readable but bounded
+Beer–Lambert core and exposed-surface Fresnel separation without changing
+alpha, support, species ownership, isolated droplets, Lava, walls, foreign
+contacts, or exact unlike-liquid seams. Keep it independently switchable and
+measure it at normal fit view as well as diagnostic zoom before extending gas
+or powder again.
+
 ## CodeGraph
 
 When `.codegraph/` exists, use `codegraph explore` before grep/find or broad file reads when locating or understanding code. Ask it for the relevant symbols, complete source, and call paths. Use `rg` only after CodeGraph has established the area to inspect.

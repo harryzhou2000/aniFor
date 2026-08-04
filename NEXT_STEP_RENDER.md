@@ -16,12 +16,30 @@ does not alter simulation, camera, semantic ownership, or `renderScale`.
   Exact temperature drives a blackbody core for Fire, Lava, Plasma, and
   incandescent ordinary matter. Unsupported devices drop to classic WebGL;
   Canvas remains the semantic fallback.
+- **E02 — field-aware material volume (active):** the normal 1×–4× WebGL
+  compositor reuses its already-live settled-powder surface, species-safe
+  liquid depth/meniscus, and atmosphere curvature/scatter signals for a
+  stronger HDR key/fill and bounded core absorption. It adds no texture read,
+  field, blur, pass, target, clock, or alpha/support decision. Enablement is
+  independently measurable with `?volumeVfx=0|1`; non-Classic looks default
+  it on only while the HDR pipeline is active. Smooth stable dry powder,
+  connected ordinary same-species liquid, and field-owned gas are eligible;
+  Local/Grains, motion, authored holes, isolated particles/droplets, unlike
+  seams, walls, traits, suspension, molten liquid, and foreign matter remain
+  protected controls.
 - **Protected 8× rung:** `renderScale=8` deliberately reports
   `hdrPipeline=inactive` / `scale-8` and retains the proven direct single-mesh
   4896×3072 path. The experiment must earn a bounded 8× design rather than
   allocating a 115 MiB full-resolution float target beside that path.
-- **Current decision:** E01 is opt-in until its powder/liquid/gas scene metrics,
-  GPU timing, context-loss recovery, and mobile thermal behavior are measured.
+- **Current decision:** E01/E02 remain opt-in until their powder/liquid/gas
+  scene metrics, hardware GPU timing, context-loss recovery, and mobile thermal
+  behavior are measured. Retained fit-view review found E02 topology-safe but
+  too subtle to promote as the visible overhaul: powder remains speckled,
+  liquid bodies remain comparatively flat, and the already-cohesive gas field
+  gains only a faint relief change. E02 is therefore a controlled
+  body-lighting baseline, not the final fluid/gas result. Later experiments
+  still need to earn stronger thickness/refraction, species-safe reflection,
+  and richer cloud structure.
   Sub-1.0 material colour stays on the established response; tonemapping owns
   only real HDR highlights so powder texture and liquid body contrast are not
   washed out.
@@ -32,6 +50,27 @@ gate: it reloads a paused fixture as classic → realistic → classic and check
 the hot-material RGB response, repeatability, semantic/staging topology, exact
 geometry, active float pipeline, and browser errors. The browser gate also
 accepts `--render-scale=1|2|4|8` for capability/degradation checks.
+
+Run `npm run audit:vfx:volume` for E02. It reloads the paused composed material
+lab as `volumeVfx=0 → 1 → 0` at 1×, 2×, and 4×, requires the real HDR pipeline,
+and proves exact semantic/staging state plus raw presented alpha/support hashes.
+The accepted response is spatial rather than a uniform grade: the current
+fixture reaches 6 framebuffer bytes in settled Clay, 9 in connected liquids,
+and 3 in gas while isolated Sand/Water, authored holes, Metal, and repeat
+captures remain exact. The sub-cell Water/Oil page probe permits only two bytes
+of filtered neighbouring-body RGB; its raw support remains exact.
+
+**Next visual experiments:** first prototype a liquid-only readability tranche
+using the existing species-safe field and vertical optical-depth byte: a
+stronger bounded Beer–Lambert core plus an exposed-surface Fresnel response
+should produce a clearly visible 3–8 framebuffer-byte core/surface separation
+without changing alpha or support. Isolated droplets, Lava, walls, foreign
+contacts, and exact unlike-liquid seams remain controls. Follow that with a
+stable world-anchored multi-scale gas density treatment and a powder
+crown/facet balance that increases bulk depth without damping the established
+grain cadence. Each experiment keeps its own off/on/off switch and must pass
+the same topology, contact, scale, and fallback controls before it can become a
+preset default.
 
 ## Phase 1 — HDR pipeline & lighting core (biggest visual payoff)
 

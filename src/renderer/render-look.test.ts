@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_RENDER_LOOK, resolveRenderLook } from './render-look';
+import {
+  DEFAULT_RENDER_LOOK, resolveRenderLook, resolveVolumeVfxEnabled,
+} from './render-look';
 
 describe('resolveRenderLook', () => {
   it('retains the established renderer as the experiment control', () => {
@@ -11,4 +13,12 @@ describe('resolveRenderLook', () => {
     'accepts the %s preset',
     (look) => expect(resolveRenderLook(`?renderLook=${look}`)).toBe(look),
   );
+
+  it('keeps volume VFX opt-in through an HDR preset and independently switchable', () => {
+    expect(resolveVolumeVfxEnabled('classic', '?volumeVfx=on')).toBe(false);
+    expect(resolveVolumeVfxEnabled('realistic', '')).toBe(true);
+    expect(resolveVolumeVfxEnabled('neon-lab', '?volumeVfx=1')).toBe(true);
+    expect(resolveVolumeVfxEnabled('realistic', '?volumeVfx=0')).toBe(false);
+    expect(resolveVolumeVfxEnabled('neon-lab', '?volumeVfx=off')).toBe(false);
+  });
 });

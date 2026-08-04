@@ -119,6 +119,13 @@ const hdrVfxOnly = process.argv.includes('--hdr-vfx-only');
 if (hdrVfxOnly && (modes.length !== 1 || modes[0] !== 'webgl')) {
   throw new Error('--hdr-vfx-only requires --webgl-only');
 }
+// E02 is deliberately a normal-detail HDR experiment. It repeatedly reloads
+// the paused deterministic scene at 1x/2x/4x and must never route its optional
+// presentation resources through the true-8x direct-mesh release path.
+const volumeVfxOnly = process.argv.includes('--volume-vfx-only');
+if (volumeVfxOnly && (modes.length !== 1 || modes[0] !== 'webgl')) {
+  throw new Error('--volume-vfx-only requires --webgl-only');
+}
 const layoutOnly = process.argv.includes('--layout-only');
 const visualScaleMatrixNormalOnly = process.argv.includes('--visual-scale-matrix-normal-only');
 const visualScaleMatrixOnly = process.argv.includes('--visual-scale-matrix-only')
@@ -199,7 +206,7 @@ const liveScaleOnly = process.argv.includes('--live-scale-only');
 // bundle without starting Vite. That keeps screenshot evidence independent of
 // dev-server navigation timing while leaving all default audit paths unchanged.
 const productionBundle = process.argv.includes('--production-bundle');
-const usesProductionBundle = productionBundle || showcaseScreenshotOnly || hdrVfxOnly || cellularGraphicsOnly || sensorGraphicsOnly
+const usesProductionBundle = productionBundle || showcaseScreenshotOnly || hdrVfxOnly || volumeVfxOnly || cellularGraphicsOnly || sensorGraphicsOnly
   || unusualPowderGraphicsOnly || earthenPowderGraphicsOnly || explosivePowderGraphicsOnly || unusualSolidGraphicsOnly
   || deviceIdentityGraphicsOnly
   || fieldProfileGraphicsOnly
@@ -230,6 +237,8 @@ const DESKTOP_TOOL_FILTER_HEIGHT = 96;
 const screenshotRequest = process.argv.find((argument) => argument.startsWith('--screenshot='))?.slice('--screenshot='.length);
 const renderLook = process.argv.find((argument) => argument.startsWith('--render-look='))
   ?.slice('--render-look='.length);
+const volumeVfxArgument = process.argv.find((argument) => argument.startsWith('--volume-vfx='))
+  ?.slice('--volume-vfx='.length);
 const requireHdrPipeline = process.argv.includes('--require-hdr-pipeline');
 const renderScaleArgument = process.argv.find((argument) => argument.startsWith('--render-scale='))
   ?.slice('--render-scale='.length);
@@ -237,6 +246,12 @@ const captureDprArgument = process.argv.find((argument) => argument.startsWith('
   ?.slice('--capture-dpr='.length);
 if (renderLook !== undefined && !['classic', 'realistic', 'neon-lab'].includes(renderLook)) {
   throw new Error('--render-look must be classic, realistic, or neon-lab');
+}
+if (volumeVfxArgument !== undefined && !['0', '1', 'off', 'on'].includes(volumeVfxArgument)) {
+  throw new Error('--volume-vfx must be 0, 1, off, or on');
+}
+if (volumeVfxOnly && volumeVfxArgument !== undefined) {
+  throw new Error('--volume-vfx-only owns its off -> on -> off sequence; omit --volume-vfx');
 }
 if (renderScaleArgument !== undefined && !['1', '2', '4', '8'].includes(renderScaleArgument)) {
   throw new Error('--render-scale must be 1, 2, 4, or 8');
@@ -308,7 +323,7 @@ async function main() {
       }, 15_000, 'Vite browser-audit server');
     const results = [];
     for (const mode of modes) results.push(await auditMode(mode));
-    const reducedAudit = quickScreenshot || showcaseScreenshotOnly || hdrVfxOnly || layoutOnly || mobileOnly || mobileGestureOnly
+    const reducedAudit = quickScreenshot || showcaseScreenshotOnly || hdrVfxOnly || volumeVfxOnly || layoutOnly || mobileOnly || mobileGestureOnly
       || desktopInputOnly || visualScaleMatrixOnly || powderBodyOnly || liquidDepthOnly
       || solidDepthOnly || gasChromaOnly || surfaceContourOnly || solidFieldOnly
       || roleGraphicsOnly || cellularGraphicsOnly || sensorGraphicsOnly
@@ -423,6 +438,7 @@ async function auditMode(mode) {
   const query = new URLSearchParams({
     scene: showcaseScreenshotOnly ? 'showcase' : 'render-lab', inputAudit: '1',
     ...(renderLook ? { renderLook } : {}),
+    ...(volumeVfxArgument ? { volumeVfx: volumeVfxArgument } : {}),
     renderScale: renderScaleArgument ?? ((pqrtStateGraphicsEight || filtStateGraphicsEight || lcryStateGraphicsEight
       || pipeStateGraphicsEight || swchStateGraphicsEight || storStateGraphicsEight
       || dlayStateGraphicsEight || wifiStateGraphicsEight || powderMesostrataGraphicsEight
@@ -620,6 +636,13 @@ async function auditMode(mode) {
       assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
       cdp.close();
       return { backend: mode, hdrVfx, browserErrors: errors.length };
+    }
+    if (volumeVfxOnly) {
+      assert(mode === 'webgl', '--volume-vfx-only requires --webgl-only');
+      const volumeVfx = await auditVolumeVfxExperiment(cdp, mode);
+      assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
+      cdp.close();
+      return { backend: mode, volumeVfx, browserErrors: errors.length };
     }
     if (pausedPresentationOnly) {
       const pausedPresentation = await auditPausedPresentation(cdp, mode);
@@ -20698,6 +20721,46 @@ const HDR_VFX_REGIONS = Object.freeze([
   { name: 'coldMetalControl', x: 30, y: 370, radius: 5, hot: false },
 ]);
 
+const VOLUME_VFX_SCALES = Object.freeze([1, 2, 4]);
+// These are paused, field-owned bodies with enough settled support that an
+// E02 response is not a simulation-timing or isolated-particle artefact.
+// Keep all source regions in world coordinates: output scale belongs only to
+// the backing/capture mapping inside the established samplers.
+const VOLUME_VFX_TARGET_REGIONS = Object.freeze([
+  { name: 'clayBulk', family: 'powder', x: 148, y: 80, radiusX: 4, radiusY: 18,
+    minimumRms: 0.08, minimumSpatial: 0.02, maximumPeak: 24 },
+  { name: 'concreteBulk', family: 'powder', x: 163, y: 90, radiusX: 4, radiusY: 18,
+    minimumRms: 0.08, minimumSpatial: 0.02, maximumPeak: 24 },
+  { name: 'waterVolume', family: 'liquid', x: 224, y: 270, radius: 8,
+    minimumRms: 0.06, minimumSpatial: 0.015, maximumPeak: 18 },
+  { name: 'oilVolume', family: 'liquid', x: 263, y: 270, radius: 8,
+    minimumRms: 0.06, minimumSpatial: 0.015, maximumPeak: 18 },
+  { name: 'acidVolume', family: 'liquid', x: 302, y: 270, radius: 8,
+    minimumRms: 0.06, minimumSpatial: 0.015, maximumPeak: 18 },
+  { name: 'smokeBillow', family: 'gas', x: 382, y: 40, radius: 9,
+    minimumRms: 0.04, minimumSpatial: 0.01, maximumPeak: 16 },
+  { name: 'oxygenBillow', family: 'gas', x: 486, y: 32, radius: 10,
+    minimumRms: 0.04, minimumSpatial: 0.01, maximumPeak: 16 },
+  { name: 'nobleBillow', family: 'gas', x: 544, y: 54, radius: 9,
+    minimumRms: 0.04, minimumSpatial: 0.01, maximumPeak: 16 },
+  { name: 'compactFogBillow', family: 'gas', x: 430, y: 171, radiusX: 30, radiusY: 10,
+    minimumRms: 0.04, minimumSpatial: 0.01, maximumPeak: 16 },
+]);
+const VOLUME_VFX_CONTROL_REGIONS = Object.freeze([
+  // Existing E02 eligibility deliberately rejects isolated, seam, and fine
+  // structures. These samples prevent a prettier field from widening or
+  // recolouring the controls as a side effect.
+  { name: 'isolatedSandControl', x: 190.5, y: 176.5, radius: 1.5 },
+  { name: 'clayHoleControl', x: 144.5, y: 62.5, radiusX: 0.45, radiusY: 0.45 },
+  { name: 'isolatedWaterControl', x: 190.5, y: 164.5, radius: 2 },
+  // A sub-cell page capture includes one filtered shoulder from either body;
+  // exact raw support remains independently hashed, so cap that RGB spill to
+  // two bytes without weakening the exact isolated/hole/foreign controls.
+  { name: 'unlikeLiquidSeamControl', x: 302.5, y: 172, radiusX: 0.45, radiusY: 6,
+    maximumPeak: 2 },
+  { name: 'metalControl', x: 405, y: 229, radius: 6 },
+]);
+
 /**
  * Production-only HDR experiment gate. It intentionally captures ordinary PNG
  * compositor output at 2x—not a raw WebGL framebuffer—so this check never
@@ -20749,6 +20812,166 @@ async function auditHdrVfxExperiment(cdp, mode) {
     hotResponse: strongestHot,
     samples,
   };
+}
+
+/**
+ * E02 visual-volume gate. The query changes RGB arithmetic only while staying
+ * inside the already-created 1x–4x HDR pipeline. It never navigates to 8x,
+ * where the release path must retain its single direct mesh.
+ */
+async function auditVolumeVfxExperiment(cdp, mode) {
+  const scales = [];
+  for (const scale of VOLUME_VFX_SCALES) {
+    const captures = {};
+    for (const enabled of [false, true, false]) {
+      const key = enabled ? 'enabled' : captures.disabled ? 'disabledRepeat' : 'disabled';
+      captures[key] = await navigateVolumeVfxState(cdp, mode, scale, enabled, key);
+    }
+    const { disabled, enabled, disabledRepeat } = captures;
+    for (const [label, variant] of Object.entries(captures)) {
+      assertGeometry(variant.geometry, `E02 ${label} ${scale}x`, scale);
+      assert(variant.geometry.backend.backend === 'webgl',
+        `E02 ${label} ${scale}x lost WebGL presentation`);
+      assert(variant.hdrPipeline?.state === 'active',
+        `E02 ${label} ${scale}x HDR pipeline was not active (${JSON.stringify(variant.hdrPipeline)})`);
+    }
+    assertCanvasRectsEqual(disabled.geometry.canvas, enabled.geometry.canvas,
+      `E02 ${scale}x disabled/enabled CSS geometry`);
+    assertCanvasRectsEqual(disabled.geometry.canvas, disabledRepeat.geometry.canvas,
+      `E02 ${scale}x disabled/repeated CSS geometry`);
+    assert(JSON.stringify(disabled.geometry.backing) === JSON.stringify(enabled.geometry.backing)
+      && JSON.stringify(disabled.geometry.backing) === JSON.stringify(disabledRepeat.geometry.backing),
+    `E02 ${scale}x backing geometry changed (${JSON.stringify({
+      disabled: disabled.geometry.backing, enabled: enabled.geometry.backing,
+      repeat: disabledRepeat.geometry.backing,
+    })})`);
+    assertHdrVfxSemanticEquality(disabled.semantic, enabled.semantic,
+      `E02 ${scale}x disabled/enabled`);
+    assertHdrVfxSemanticEquality(disabled.semantic, disabledRepeat.semantic,
+      `E02 ${scale}x disabled/repeated`);
+    assertVolumeVfxBackingInvariant(disabled.backing, enabled.backing,
+      `E02 ${scale}x disabled/enabled`);
+    assertVolumeVfxBackingInvariant(disabled.backing, disabledRepeat.backing,
+      `E02 ${scale}x disabled/repeated`);
+
+    const responseRegions = [...VOLUME_VFX_TARGET_REGIONS, ...VOLUME_VFX_CONTROL_REGIONS];
+    const rawResponses = await sampleBackdropRefractionRegions(cdp, {
+      straight: disabled.capture.capture.data,
+      refracted: enabled.capture.capture.data,
+      repeatedStraight: disabledRepeat.capture.capture.data,
+    }, responseRegions, disabled.capture.canvasRect);
+    const responses = rawResponses.map((sample, index) => {
+      const region = responseRegions[index];
+      const meanRgbRms = Math.hypot(...sample.responseRgb) / Math.sqrt(3);
+      // RMS alone permits a uniform full-frame grade. Remove the signed mean
+      // vector so a passing result has actual local crown/core or billow shape.
+      const spatialRgbRms = Math.sqrt(Math.max(0, sample.rgbRms ** 2 - meanRgbRms ** 2));
+      return { ...sample, ...region, spatialRgbRms: round(spatialRgbRms, 3) };
+    });
+    assert(responses.every((sample) => sample.repeatRgbPeak <= 1),
+      `E02 ${scale}x volume query was not deterministic (${JSON.stringify(responses)})`);
+    const targets = responses.filter((sample) => sample.family);
+    assert(targets.every((sample) => sample.rgbPeak <= sample.maximumPeak),
+      `E02 ${scale}x volume response clipped or exceeded its family budget (${JSON.stringify(targets)})`);
+    const controls = responses.filter((sample) => !sample.family);
+    assert(controls.every((sample) => sample.rgbPeak <= (sample.maximumPeak ?? 1)),
+      `E02 ${scale}x volume response leaked into an ineligible control (${JSON.stringify(controls)})`);
+    for (const family of ['powder', 'liquid', 'gas']) {
+      const candidates = targets.filter((sample) => sample.family === family);
+      assert(candidates.some((sample) => sample.rgbRms >= sample.minimumRms
+        && sample.spatialRgbRms >= sample.minimumSpatial && sample.rgbPeak >= 1),
+      `E02 ${scale}x ${family} volume response was inert or uniform (${JSON.stringify(candidates)})`);
+    }
+    scales.push({
+      scale,
+      backing: disabled.geometry.backing,
+      alphaSupport: disabled.backing,
+      responses,
+    });
+  }
+  return { scales, trueEightXExcluded: true };
+}
+
+async function navigateVolumeVfxState(cdp, mode, scale, enabled, label) {
+  const query = new URLSearchParams({
+    scene: 'render-lab', inputAudit: '1', auditStage: 'canonical',
+    volumeVfxAudit: '1', renderScale: String(scale), renderLook: 'realistic',
+    volumeVfx: enabled ? '1' : '0',
+  });
+  await cdp.send('Page.navigate', { url: `${AUDIT_BASE_URL}?${query}` });
+  await waitFor(() => evaluate(cdp, `(() => {
+    const parameters = new URLSearchParams(location.search);
+    return parameters.get('scene') === 'render-lab'
+      && parameters.get('inputAudit') === '1'
+      && parameters.get('auditStage') === 'canonical'
+      && parameters.get('volumeVfxAudit') === '1'
+      && parameters.get('renderScale') === ${JSON.stringify(String(scale))}
+      && parameters.get('renderLook') === 'realistic'
+      && parameters.get('volumeVfx') === ${JSON.stringify(enabled ? '1' : '0')}
+      && Boolean(window.__ANIFOR_INPUT_AUDIT__);
+  })()`), 15_000, `E02 ${label} ${scale}x page`);
+  await waitFor(() => evaluate(cdp,
+    `window.__ANIFOR_INPUT_AUDIT__.backend().backend === ${JSON.stringify(mode)}`),
+  15_000, `E02 ${label} ${scale}x backend`);
+  const hdrPipeline = await evaluate(cdp, `(() => {
+    const canvas = document.querySelector('.semantic-field-canvas');
+    return canvas ? {
+      look: canvas.dataset.renderLook,
+      state: canvas.dataset.hdrPipeline,
+      reason: canvas.dataset.hdrPipelineReason,
+      bloomBacking: canvas.dataset.bloomBacking,
+      volumeVfx: canvas.dataset.volumeVfx,
+    } : undefined;
+  })()`);
+  const expectedBloom = `${WORLD_WIDTH * scale / 2}x${WORLD_HEIGHT * scale / 2}`;
+  assert(hdrPipeline?.look === 'realistic' && hdrPipeline?.state === 'active'
+    && hdrPipeline?.bloomBacking === expectedBloom
+    && hdrPipeline?.volumeVfx === (enabled ? 'active' : 'inactive'),
+  `E02 ${label} ${scale}x HDR/volume state resolved incorrectly (${JSON.stringify(hdrPipeline)})`);
+  const capture = await waitForStablePageCapture(cdp, `E02 ${label} ${scale}x framebuffer`);
+  return {
+    capture,
+    geometry: await metrics(cdp),
+    semantic: await hdrVfxSemanticDigest(cdp),
+    backing: await sampleVolumeVfxCanvasAlphaSupport(cdp),
+    hdrPipeline,
+  };
+}
+
+/** Hash raw presented alpha rather than page PNG alpha, which is opaque after compositing. */
+async function sampleVolumeVfxCanvasAlphaSupport(cdp) {
+  return evaluate(cdp, `(() => {
+    const canvas = document.querySelector('canvas.semantic-field-canvas');
+    if (!(canvas instanceof HTMLCanvasElement)) throw new Error('E02 semantic field canvas unavailable');
+    const copy = document.createElement('canvas');
+    copy.width = canvas.width;
+    copy.height = canvas.height;
+    const context = copy.getContext('2d', { willReadFrequently: true });
+    if (!context) throw new Error('E02 alpha/support sampler unavailable');
+    context.drawImage(canvas, 0, 0);
+    const pixels = context.getImageData(0, 0, copy.width, copy.height).data;
+    let alphaSignature = 2166136261;
+    let supportSignature = 2166136261;
+    let alphaSum = 0;
+    let supported = 0;
+    for (let offset = 3; offset < pixels.length; offset += 4) {
+      const alpha = pixels[offset];
+      const support = Number(alpha > 0);
+      alphaSignature = Math.imul(alphaSignature ^ alpha, 16777619) >>> 0;
+      supportSignature = Math.imul(supportSignature ^ support, 16777619) >>> 0;
+      alphaSum += alpha;
+      supported += support;
+    }
+    return { width: copy.width, height: copy.height, alphaSignature, supportSignature, alphaSum, supported };
+  })()`);
+}
+
+function assertVolumeVfxBackingInvariant(left, right, label) {
+  assert(left.width === right.width && left.height === right.height
+    && left.alphaSignature === right.alphaSignature
+    && left.supportSignature === right.supportSignature
+    && left.alphaSum === right.alphaSum && left.supported === right.supported,
+  `${label}: volume styling changed raw presentation alpha/support (${JSON.stringify({ left, right })})`);
 }
 
 async function navigateHdrVfxLook(cdp, mode, look, label) {

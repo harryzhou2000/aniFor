@@ -1,6 +1,6 @@
 # AniforTPT Work Resume
 
-Last reconciled: 2026-07-26 (Asia/Shanghai)
+Last reconciled: 2026-08-04 (Asia/Shanghai)
 
 This is the authoritative handoff for the active AniforTPT workstream. The goal is not complete.
 
@@ -20,6 +20,59 @@ Immediate priorities are:
 8. Checkpoint reviewed visual tranches on `main_codex`; after GitHub authentication is available, run the manual cached `build-and-deploy` and verify the live Pages revision, recursive asset closure, WASM MIME, backend promotion, and representative material scene rather than accepting a successful workflow alone.
 
 ### Active execution emphasis
+
+### Current HDR and field-aware volume experiment checkpoint
+
+- The active visual goal is now an explicit experiment program rather than a
+  one-off shader tweak: improve powder, liquid, and gas depth, material beauty,
+  and VFX under `realistic` / `neon-lab`, retain `classic` as the comparison,
+  and promote an effect only after topology, contacts, scale, resource bounds,
+  and fallback behavior are measured.
+- E01 supplies an opt-in, capability-probed WebGL2 HDR chassis at 1×–4×: one
+  `RGBA16F` scene target, two half-resolution bloom targets, an ACES shoulder,
+  and semantic-temperature blackbody emission. It is inactive at true 8× and
+  tears down cleanly to the established single-pass WebGL presentation on
+  initialization or runtime failure.
+- E02 adds an independently switchable `?volumeVfx=0|1` RGB grade inside the
+  normal shader. It reuses already-live stable-powder, liquid field/Fresnel,
+  and gas atmosphere/curvature terms, so there is no new texture read, field,
+  pass, target, blur, allocation, animation clock, alpha/support change, or 8×
+  shader branch. The stricter family guards protect Local/Grains, motion, fine
+  structures, authored holes, isolated droplets, unlike contacts, walls,
+  traits, wet sediment, and molten liquid.
+- `npm run audit:vfx:volume` passes production WebGL at 1×/2×/4× through
+  `off→on→off`: exact CSS/backing geometry, semantic/staging digests, nonzero
+  raw canvas alpha/support hashes, repeat captures, and zero browser errors.
+  Current peak response is 6 bytes for stable Clay, 9 for connected liquid,
+  and 3 for gas, while isolated Sand/Water, holes, and Metal are exact. The
+  bounded sub-cell Water/Oil page sample reaches two RGB bytes only because the
+  CSS capture filters the adjacent eligible shoulders; raw support is exact.
+- Visual evidence is available locally at `/tmp/anifor-e02-volume-v2.png`
+  (enabled) and `/tmp/anifor-e02-volume-off.png` (control). The result is a
+  safe first tranche, not the final art overhaul. Side-by-side fit-view review
+  found no alpha widening, seam bleed, or topology artefact, but the response
+  is too subtle to promote: normalized full-frame RMSE is `0.00235` (powder
+  `0.00443`, liquid `0.00605`, gas `0.00230`), powder remains visibly speckled,
+  liquid bodies remain comparatively flat, and gas changes only faintly over
+  its already-cohesive field shape.
+- The next active experiment is therefore liquid-only readability, reusing the
+  species-safe field and existing vertical optical-depth byte for a stronger
+  bounded Beer–Lambert core plus exposed-surface Fresnel response. Target a
+  visible 3–8 framebuffer-byte core/surface separation while keeping alpha,
+  support, ownership, isolated droplets, Lava, walls, foreign contacts, and
+  exact unlike-liquid seams unchanged. Richer stable gas structure and a
+  powder crown/facet balance follow after that independently gated tranche.
+- Final checkpoint validation passes TypeScript, the 19-asset production/Pages
+  closure, the real E02 WebGL off→on→off gate, the dedicated true-8× powder gate
+  at exact `4896×3072`, and the complete serial `163`-file / `1023`-test suite.
+  Vitest now preserves its default exclusions and also ignores the
+  project-local `.toolchains` tree, so a naked full-suite run cannot execute
+  upstream emsdk fixtures as application tests.
+- No current code blocker is known. Remaining promotion blockers are aesthetic
+  selection on representative hardware, mobile thermal/performance evidence,
+  and deciding whether a refined preset should replace `classic` as the public
+  default. Canvas remains the camera/semantic fallback; matching HDR optics is
+  diagnostic rather than a release blocker.
 
 ### Current structural-rigid body identity checkpoint
 

@@ -1,7 +1,10 @@
-import { defineConfig } from 'vite';
+import { configDefaults, defineConfig } from 'vitest/config';
 
 export default defineConfig({
   base: './',
+  test: {
+    exclude: [...configDefaults.exclude, '.toolchains/**'],
+  },
   build: {
     target: 'es2022',
     modulePreload: false,

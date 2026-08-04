@@ -35,7 +35,7 @@ import {
   GAS_IDENTITY_MOTIF_TEXTURE_WIDTH,
 } from './canvas-gas-identity-style';
 import { HDRVfxPipeline, type HDRPipelineInfo } from './hdr-vfx-pipeline';
-import { resolveRenderLook } from './render-look';
+import { resolveRenderLook, resolveVolumeVfxEnabled } from './render-look';
 interface PresenterViewport { readonly width: number; readonly height: number }
 
 /** Audit-only digest of the field that owns reconstructed gas support. */
@@ -3198,6 +3198,7 @@ uniform vec2 uAtmosphereTexel;
 uniform vec2 uEmissionTexel;
 uniform float uTime;
 uniform float uHDRVfx;
+uniform float uVolumeVfx;
 uniform float uHighQuality;
 uniform float uAnalyticLightingQuality;
 uniform float uGasFieldLighting;
@@ -6029,6 +6030,28 @@ void main() {
     ) * smoothstep(0.025, 0.50, gasShadeDensity)
       * (1.0 - opticalDepth * 0.30) * uGasVolumeChroma;
     color *= 1.0 + gasVolumeExposure;
+    // E02: amplify the field's existing stable normal and curvature only in an
+    // HDR experiment. The atmosphere field continues to own mass and alpha;
+    // this adds no sample, blur, pass, clock, or particle-scale dot grammar.
+    if (uVolumeVfx > 0.5) {
+      float gasVfxSupport = smoothstep(0.018, 0.16, gasShadeDensity)
+        * (1.0 - smoothstep(0.62, 0.92, gasShadeDensity) * 0.55);
+      float gasVfxKey = clamp(
+        0.010 + max(gasDirectionalRelief, 0.0) * 0.090
+          + max(gasCurvature, 0.0) * 0.075
+          + gasForwardScatter * 0.60 + silverLining * 0.022,
+        0.0, 0.10
+      ) * gasVfxSupport * (1.0 - opticalDepth * 0.28);
+      float gasVfxPocket = min(
+        0.038,
+        max(-gasCurvature, 0.0) * 0.038
+          * smoothstep(0.08, 0.58, gasShadeDensity)
+      );
+      vec3 gasVfxTint = mix(vec3(0.46, 0.66, 0.96), vividColor(gasBase, 1.10), 0.64);
+      color += (vec3(1.35) - clamp(color, 0.0, 1.35))
+        * gasVfxTint * gasVfxKey;
+      color *= 1.0 - gasVfxPocket;
+    }
     if (uGasIdentityStyling > 0.5) {
       float gasIdentityStyle = floor(
         texture(uAtmosphereStyleTexture, fieldUv).r * 255.0 + 0.5
@@ -6412,6 +6435,27 @@ void main() {
         if (uLiquidOpticalDepth > 0.5) {
           color = applyLiquidOpticalDepth(color, optics, liquidOpticalDepth);
         }
+        // E02: the already-proven connected, species-safe body receives a
+        // restrained HDR lip and coloured core absorption. Reconstructed
+        // support, droplets, seams, walls, traits, and molten matter cannot
+        // enter this branch, and alpha remains owned by the contour above.
+        if (uVolumeVfx > 0.5
+          && dot(liquidSpeciesSlope, liquidSpeciesSlope) < 0.0004) {
+          float liquidVfxBody = smoothstep(0.48, 0.90, liquidDepth)
+            * smoothstep(0.56, 0.90, liquidNeighbourMean);
+          float liquidVfxKey = min(
+            0.085,
+            liquidFresnelContour * (
+              0.024 + max(liquidFresnelDirectional, 0.0) * 0.072
+                + liquidFresnelGrazing * 0.018
+            ) + max(liquidMacroRelief, 0.0) * 0.20
+          ) * mix(0.72, 1.0, liquidVfxBody);
+          float liquidVfxCore = liquidVfxBody * (1.0 - liquidFresnelContour)
+            * min(0.045, 0.022 + max(-liquidMacroRelief, 0.0) * 0.30);
+          color += (vec3(1.35) - clamp(color, 0.0, 1.35))
+            * liquidFresnelKey * liquidVfxKey;
+          color *= vec3(1.0) - liquidFresnelAbsorption * liquidVfxCore;
+        }
       }
     }
     // Twenty ordinary, unusual, metallic, cryogenic, and radioactive liquids retain a world-anchored material signature
@@ -6774,6 +6818,27 @@ void main() {
           -0.080, 0.085
         ) * powderBodyGate * (optics == 13.0 ? 0.98
           : (optics == 14.0 ? 0.58 : (optics == 15.0 ? 1.08 : 1.0)));
+        // E02: preserve the established grain cadence while giving only a dry,
+        // temporally stable Smooth bulk a broader directional crown and core
+        // absorption. The existing body proof excludes fine structures and
+        // authored holes; Local, Grains, motion, walls, and suspension are
+        // exact no-ops. This is bounded HDR RGB arithmetic over live scalars.
+        if (uVolumeVfx > 0.5 && halo < 0.5 && wall < 0.5
+          && wallOnly < 0.5 && emissionOnly < 0.5
+          && powderSuspensionCohesion < 0.01) {
+          float powderVfxCrown = min(
+            0.055,
+            powderBodyGate * (
+              max(powderDirectedSlope, 0.0) * 0.055
+                + (1.0 - powderBodyVolumeDepth) * 0.016
+            )
+          );
+          float powderVfxCore = powderBodyGate * powderBodyVolumeDepth;
+          vec3 powderVfxKey = mix(vividColor(base, 1.08), vec3(1.0, 0.74, 0.46), 0.18);
+          color += (vec3(1.35) - clamp(color, 0.0, 1.35))
+            * powderVfxKey * powderVfxCrown;
+          color *= vec3(1.0) - vec3(0.040, 0.032, 0.022) * powderVfxCore;
+        }
         // This is intentionally stricter than a generic settled-powder
         // classification. It names only a proven, deep compatible interior;
         // slopes, holes, narrow columns, loose material, Local, and Grains
@@ -8424,6 +8489,7 @@ export class PixiFieldPresenter {
       autoGarbageCollect: false,
     });
     const renderLook = resolveRenderLook();
+    const volumeVfxEnabled = resolveVolumeVfxEnabled(renderLook);
     this.uniforms = new UniformGroup({
       uTexel: { value: new Float32Array([1 / width, 1 / height]), type: 'vec2<f32>' },
       uFieldSize: { value: new Float32Array([width, height]), type: 'vec2<f32>' },
@@ -8434,6 +8500,7 @@ export class PixiFieldPresenter {
         value: renderLook === 'classic' ? 0 : renderLook === 'neon-lab' ? 2 : 1,
         type: 'f32',
       },
+      uVolumeVfx: { value: volumeVfxEnabled ? 1 : 0, type: 'f32' },
       // At 8x, the supersampled analytic boundary already supplies detail. Drop
       // diagonal/ring probes so the 15M-pixel frame remains watchdog-safe.
       uHighQuality: {
@@ -8624,6 +8691,7 @@ export class PixiFieldPresenter {
       // would retain blackbody over-range values without the float composite
       // that is responsible for tonemapping them.
       this.uniforms.uniforms.uHDRVfx = 0;
+      this.uniforms.uniforms.uVolumeVfx = 0;
       this.app.stage.addChild(this.scene);
     }
   }
@@ -8648,7 +8716,8 @@ export class PixiFieldPresenter {
         // can be read after Chrome has composited a screenshot.
         preserveDrawingBuffer: typeof location !== 'undefined'
           && new URLSearchParams(location.search).get('inputAudit') === '1'
-          && new URLSearchParams(location.search).get('blankAudit') === '1',
+          && (new URLSearchParams(location.search).get('blankAudit') === '1'
+            || new URLSearchParams(location.search).get('volumeVfxAudit') === '1'),
         resolution: outputScale, autoDensity: true, autoStart: false,
       });
     } catch (error) {
@@ -8672,6 +8741,8 @@ export class PixiFieldPresenter {
     presenter.app.canvas.dataset.backingSize = presenter.app.canvas.width + 'x' + presenter.app.canvas.height;
     presenter.app.canvas.dataset.renderLook = presenter.hdrPipelineInfo.look;
     presenter.app.canvas.dataset.hdrPipeline = presenter.hdrPipelineInfo.active ? 'active' : 'inactive';
+    presenter.app.canvas.dataset.volumeVfx = Number(presenter.uniforms.uniforms.uVolumeVfx) > 0.5
+      ? 'active' : 'inactive';
     if (presenter.hdrPipelineInfo.reason) {
       presenter.app.canvas.dataset.hdrPipelineReason = presenter.hdrPipelineInfo.reason;
     }
@@ -9928,8 +9999,10 @@ export class PixiFieldPresenter {
           active: false, look: this.hdrPipelineInfo.look, reason: 'runtime-error',
         };
         this.uniforms.uniforms.uHDRVfx = 0;
+        this.uniforms.uniforms.uVolumeVfx = 0;
         this.app.canvas.dataset.hdrPipeline = 'inactive';
         this.app.canvas.dataset.hdrPipelineReason = 'runtime-error';
+        this.app.canvas.dataset.volumeVfx = 'inactive';
         delete this.app.canvas.dataset.bloomBacking;
         if (!this.scene.parent) this.app.stage.addChild(this.scene);
       }
