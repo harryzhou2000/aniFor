@@ -1139,6 +1139,54 @@ describe('Pixi presenter startup configuration', () => {
     expect(source).toContain("this.app.canvas.dataset.oilBodyVfx = 'inactive';");
   });
 
+  it('keeps E23 ROCK roughness exact-owner, E17-dependent, normal-WebGL-only, and RGB-only', () => {
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const canvasSource = readFileSync(new URL('./field-renderer.ts', import.meta.url), 'utf8');
+    const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');
+    const normalStart = source.indexOf('const FIELD_FRAGMENT = `', eightStart);
+    const normalEnd = source.indexOf('`;\n\n/** Primary WebGL presentation', normalStart);
+    const eight = source.slice(eightStart, normalStart);
+    const normal = source.slice(normalStart, normalEnd);
+    const e23Start = normal.indexOf('    // E23:');
+    const e23End = normal.indexOf('    color = mix(', e23Start);
+    const e23 = normal.slice(e23Start, e23End);
+
+    expect(e23Start).toBeGreaterThanOrEqual(0);
+    expect(e23End).toBeGreaterThan(e23Start);
+    expect(normal).toContain('uniform float uRockRoughnessVfx;');
+    expect(normal.match(/uRockRoughnessVfx > 0\.5/g)).toHaveLength(2);
+    expect(eight).not.toContain('uRockRoughnessVfx');
+    expect(eight).not.toContain('rockRoughness');
+    expect(canvasSource).not.toContain('rockRoughnessVfx');
+    for (const guard of [
+      'material == 78.0', 'family == 0.0', 'profile == 2.0', 'optics == 8.0',
+      'traits < 0.5', '!materialEmissive', 'surfaceOnly < 0.5', 'halo < 0.5',
+      'wall < 0.5', 'wallOnly < 0.5', 'emissionOnly < 0.5',
+      'granularSurface < 0.5', 'translucentSurface < 0.5',
+      'foreignMatterContact < 0.5', 'unlikeMaterialContact < 0.5',
+      'solidInterior > 0.001', 'solidOpticalDepth > 6.0 / 255.0',
+    ]) expect(e23).toContain(guard);
+    expect(e23).toContain('rockMicroGlint');
+    expect(e23).toContain('rockBroadGloss');
+    expect(e23).toContain('rockEnvironmentGloss');
+    expect(e23).toContain('mix(1.0, 0.52, rockRoughness)');
+    expect(e23).toContain('mix(1.0, 0.18, rockRoughness)');
+    expect(e23).toContain('mix(1.0, 0.32, rockRoughness)');
+    expect(normal).toContain('solidBodyKey *= mix(1.0, 0.42, solidBodyDepth);');
+    expect(e23).not.toContain('texture(');
+    expect(e23).not.toContain('uTime');
+    expect(e23).not.toContain('gl_FragCoord');
+    expect(e23).not.toMatch(/\balpha\s*[+*]?=/);
+    expect(source.match(/this\.uniforms\.uniforms\.uRockRoughnessVfx = 0;/g))
+      .toHaveLength(2);
+    expect(source).toContain("get('rockRoughnessVfxAudit') === '1'");
+    expect(source).toMatch(
+      /const rockRoughnessVfxEnabled = outputScale < 8\s*&& resolveRockRoughnessVfxEnabled\(renderLook\);/,
+    );
+    expect(source).toContain('presenter.app.canvas.dataset.rockRoughnessVfx');
+    expect(source).toContain("this.app.canvas.dataset.rockRoughnessVfx = 'inactive';");
+  });
+
   it('routes E08 liquid surfaces through existing normal-scale HDR resources only', () => {
     const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
     const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');

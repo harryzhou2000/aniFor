@@ -290,11 +290,27 @@ does not alter simulation, camera, semantic ownership, or `renderScale`.
   sampler, texture read, field, resource, pass, target, upload, allocation,
   clock, output-scale input, alpha/support/silhouette/ownership/topology, or
   physics decision.
+- **E23 — exact ROCK matte-body correction (accepted checkpoint):** the
+  post-E22 fit-view proved that native ROCK inherited too much of E17's shared
+  ROCK/Metal SmoothRigid polish. Normal 1×–4× WebGL now uses
+  `?rockRoughnessVfx=0|1`, strictly subordinate to `?solidBodyVfx=0|1`, to
+  attenuate only the existing micro-glint, broad-specular, Fresnel/environment,
+  and positive E17 cool-key carriers on authoritative deep ROCK `78`. E17's
+  signed absorptive pocket and the later geological strata/vein identity remain
+  intact; E23 adds no replacement tint or material motif. Eligibility repeats
+  the exact ordinary ROCK phase/profile/optics, depth/interior, wall, trait,
+  emission, reconstruction, and foreign/unlike-contact proof. Geometry-matched
+  Metal, Coal, native-Powder Stone, Brick, Glass, Sand, Water, surface/first
+  layers, holes, notches, thin/isolated ROCK, co-located walls, and ROCK/Metal/
+  Water/Sand/Smoke contacts remain controls. E23 adds no sample, sampler,
+  texture, field, resource, pass, target, upload, allocation, clock,
+  output-scale input, alpha/support/silhouette/ownership/topology, or physics
+  decision. Canvas and compact true 8× contain no E23 branch.
 - **Protected 8× rung:** `renderScale=8` deliberately reports
   `hdrPipeline=inactive` / `scale-8` and retains the proven direct single-mesh
   4896×3072 path. The experiment must earn a bounded 8× design rather than
   allocating a 115 MiB full-resolution float target beside that path.
-- **Current decision:** E01/E02/E03/E04/E05/E06/E07/E08/E09/E10/E11/E12/E13/E14/E15/E16/E17/E18/E19/E20/E21/E22 remain opt-in through the non-Classic looks
+- **Current decision:** E01/E02/E03/E04/E05/E06/E07/E08/E09/E10/E11/E12/E13/E14/E15/E16/E17/E18/E19/E20/E21/E22/E23 remain opt-in through the non-Classic looks
   until representative hardware timing and mobile thermal behavior are
   measured. E02 remains the safe family-wide baseline. E03 is accepted as the
   liquid-depth checkpoint: its fit-view crop is visibly more cohesive, retains
@@ -384,7 +400,13 @@ does not alter simulation, camera, semantic ownership, or `renderScale`.
   subordinate to E03 and preserving exact Oil ownership, connected support,
   and every sparse/contact control. Freeze E22's exact owner, byte-30–78
   handoff, spectra, and existing-evidence-only construction until another
-  production fit-view review.
+  production fit-view review. E23 is accepted as the exact ROCK matte-body
+  correction: it removes the demonstrated coherent polished lobe without
+  flattening ROCK's signed mineral relief, weakening E17's absorptive pocket,
+  changing Metal, or replacing the established geological identity. Freeze its
+  E17 dependency, exact-owner/depth/contact proof, three gloss attenuation
+  factors, and positive-key attenuation until another production fit-view
+  review.
   These are not the final material/VFX results.
   Sub-1.0 material colour stays on the established response; tonemapping owns
   only real HDR highlights so powder texture and liquid body contrast are not
@@ -781,6 +803,33 @@ bloom, exact 4896×3072, and completed GPU timing.
 The final frozen full-matrix SwiftShader fence completed in `11.05 s`, inside
 the original one-total 30-second promotion deadline, with zero browser errors.
 
+Run `npm run audit:vfx:rock-roughness` for E23. It reloads a dedicated
+geometry-matched ROCK/Metal fixture as `rockRoughnessVfx=0 → 1 → 0` at
+1×/2×/4× with E17 and geological styling active and every unrelated experiment
+pinned off. Both cards expose exact solid-depth bytes `0`, `6`, `12–30`,
+`36–66`, `72–126`, and `192–255`. The fixture additionally protects Coal,
+native-Powder Stone, Brick, Glass, Sand, Water, authored holes/open notches,
+thin and isolated ROCK, a co-located native-wall region, blank space, and exact
+ROCK/Metal/Water/Sand/Smoke contacts. Semantic ownership, full-frame alpha/
+support, native-wall count/hash, solid-depth hashes, integer-cell raw controls,
+and repeated-off framebuffers remain invariant.
+Across the accepted matrix, shallow/transition/mid/deep RGB RMS is respectively
+`0.82…0.87`, `2.39…2.40`, `1.84…1.85`, and `4.33…4.35`; chroma RMS remains
+`0.39…0.41`, `0.47…0.49`, `0.46…0.47`, and `0.70…0.71`. Coverage is
+`0.061…0.073`, `0.682…0.720`, `0.639…0.668`, and exactly `1.0`, with RGB peaks
+of `2…3`, `5`, `4`, and `7`. Every band is a bounded negative gloss reduction:
+signed means remain `−0.53…−0.52`, `−2.12…−2.09`, `−1.71…−1.69`, and
+`−4.08…−4.07`, with blue-selective absorption ordered above green and red.
+Spatial RGB RMS remains `0.621…0.675`, `1.015…1.033`, `0.554…0.575`, and
+`1.048…1.076`, proving a shaped response rather than a uniform dark grade. The
+largest normal-scale RGB-RMS drift is `0.05`; every Metal, material, topology,
+contact, wall, and blank control is exact zero and every repeated-off framebuffer
+is byte-identical. Freeze these per-target RGB, chroma, coverage, peak, signed,
+spatial, and spectral envelopes. Requested-on true 8× reports E17/E23/HDR
+inactive with reason `scale-8`, no bloom, exact `4896×3072`, and a completed
+GPU fence. The final calibration fence completed in `8.60 s` with zero browser
+errors.
+
 The earlier post-E16 survey was invalid for Solid: it sampled native Stone `21`,
 which is Powder, while labelling that region Solid. The corrected post-E17
 showcase uses native ROCK `78`, asserts exactly `2769` matching Solid cells, and
@@ -807,13 +856,14 @@ next production 4× survey then selected Wood/PLNT as the largest remaining
   changing sparse botanical topology or lifecycle state. E21 closes the deep-
   Glass defect while retaining E10's shallow edge. E22 closes the flat Oil-plug
   defect with an exact liquid-body card rather than widening Oily optics to
-  Diesel or Nitro. The remaining demonstrated fit-view candidate is ROCK's
-  overly polished macro response; survey it independently before changing E17
-  or adding another material card. Do not widen E17–E22 owner sets by
-  resemblance alone. Preserve their owner, exposure, topology, scale, and true-
-  8× contracts independently.
+  Diesel or Nitro. E23 closes ROCK's demonstrated overly polished macro response
+  by reducing its inherited gloss carriers rather than widening or replacing
+  E17. Re-run the composed fit-view ranking before selecting E24; the previous
+  ordering has now served its final demonstrated defect. Do not widen E17–E23
+  owner sets by resemblance alone. Preserve their owner, exposure, topology,
+  scale, and true-8× contracts independently.
 
-**Next visual experiments:** E03–E22 now provide accepted liquid body/surface,
+**Next visual experiments:** E03–E23 now provide accepted liquid body/surface,
 stable-gas, coherent-gas-motion, powder-depth, and powder-local-light
 checkpoints plus exact resting contact grounding, Glass/Ice transmission, and
 state-aware Wax/PLNT subsurface response, composed wet-mineral optics,
@@ -821,9 +871,10 @@ atmosphere-owned external-light spectra, exact liquid-side wet contacts, and
 species-aware gas-core optical depth, dense-Plasma containment, exact
 ROCK/Metal opaque-body relief, a distinct broad Platinum finish, an exact
 Ceramic fired-glaze response, recomposed clustered Wood/PLNT bodies, and deep
-Glass selective transmission plus exact Oil amber-crown/cool-pocket body
-optics. The same fit-view survey now ranks ROCK's overly polished macro response
-next. The radioactive-solid review found no current identity bug, but also
+Glass selective transmission, exact Oil amber-crown/cool-pocket body optics,
+and an exact ROCK matte-body correction over E17. Re-rank the production
+fit-view before selecting another material card. The radioactive-solid review
+found no current identity bug, but also
 proved that the existing
 phase-permissive identity guard is not suitable for a future broad ISZS/VIBR
 finish; such work needs its own exact solid-only fixture and gate. Continue
@@ -831,7 +882,7 @@ with topology-preserving, material-
 specific cards that reuse already-live evidence. Prefer the smallest
 arithmetic-only candidate that fixes a visible fit-view deficiency; do not add
 an isolated tint merely to continue the experiment number. Preserve the E14
-1× stencil snap and all E01–E22 selectors/controls while surveying.
+1× stencil snap and all E01–E23 selectors/controls while surveying.
 
 ## Phase 1 — HDR pipeline & lighting core (biggest visual payoff)
 

@@ -13,7 +13,7 @@ powder, solid, liquid, gas, energy, and contact scenes across Canvas and WebGL a
 mobile gestures, save/load, CI, and Pages deployment as protected regression
 contracts rather than the primary feature stream.
 
-The accepted visual experiment ladder now runs through E22. E12 is the
+The accepted visual experiment ladder now runs through E23. E12 is the
 species-safe Sand/Clay/Concrete wet-sediment checkpoint; preserve its exact
 aqueous owner/stability proof, split moving-powder/stationary-Water control,
 Local/Grains no-op, fine structures, authored gaps, Canvas fallback, and true
@@ -209,6 +209,33 @@ report E03/E08/E14/E22 and HDR inactive with `scale-8`, no bloom, exact
 4896×3072, completed GPU timing, and zero browser errors. Never declare or
 branch on E22 in `FIELD_EIGHT_X_FRAGMENT`.
 
+E23 is the calibrated normal-WebGL-only exact-ROCK matte-body correction,
+independently measurable with `?rockRoughnessVfx=0|1` and strictly subordinate
+to E17's `?solidBodyVfx=0|1`. Only authoritative native ROCK `78` with ordinary
+SmoothRigid profile/optics, exact-species depth beyond byte 6, proven interior
+support, and no wall, trait, emission, reconstruction, granular/translucent
+ownership, or foreign/unlike contact may receive it. Reuse only the existing
+micro-glint, broad-solid-specular, Fresnel/environment, solid-depth/interior,
+and E17 positive-key values: attenuate their coherent polish without adding a
+tint, motif, sample, clock, or new lighting basis. Preserve E17's signed pocket
+and the later geological strata/vein layer. Geometry-matched Metal, Coal,
+Powder-phase Stone, Brick, Glass, Sand, Water, surface/first-layer ROCK,
+authored holes/notches, one-cell and isolated ROCK, co-located walls, and ROCK/
+Metal/Water/Sand/Smoke contacts are exact controls. E23 adds no sampler,
+texture, field, resource, pass, target, upload, allocation, clock, output-scale
+input, alpha, support, silhouette, ownership, topology, state, or physics
+decision. Validate with `npm run audit:vfx:rock-roughness`: the 1×/2×/4×
+off→on→off matrix must prove exact depth ranges `0`, `6`, `12–30`, `36–66`,
+`72–126`, and `192–255`, invariant semantics/alpha/support/walls/depth, exact
+raw controls, deterministic repeated-off output, and frozen shallow/
+transition/mid/deep response bounds. The accepted RGB RMS ranges are
+`0.82…0.87`, `2.39…2.40`, `1.84…1.85`, and `4.33…4.35`; every protected
+composed control is exact zero, maximum cross-scale RGB-RMS drift is `0.05`,
+and repeated-off framebuffers are byte-identical. Requested-on true 8× must report E17/E23/
+HDR inactive with `scale-8`, no bloom, exact `4896×3072`, completed GPU timing,
+and zero browser errors. Never declare or branch on E23 in
+`FIELD_EIGHT_X_FRAGMENT`; Canvas contains no E23 path.
+
 The radioactive-solid review found no current correctness bug: ISZS `105`
 and VIBR `113` already receive exact-species Solid depth, while the existing
 seven-owner radioactive identity motif is intentionally phase-permissive.
@@ -223,7 +250,10 @@ asserts 2,769 matching Solid cells before ranking; never use the old Solid
 semantics and 104,027 occupied cells, the corrected E17 off/on survey moves
 only native-ROCK Solid from `4.182` to `5.975` visual signal (`+42.9%`), while
 Gas `1.944`, Energy `7.817`, Powder `10.553`, Liquid `11.233`, and Contact
-`15.849` stay fixed.
+`15.849` stay fixed. That survey subsequently selected ROCK's overly polished
+macro response; E23 closes that demonstrated defect by reducing existing gloss
+carriers rather than changing E17's owner set or adding another material motif.
+Re-run the composed fit-view ranking before selecting E24.
 
 WebGL is the canonical visual release path. Canvas 2D remains a resilient,
 camera-preserving semantic fallback: keep its loading, input, material/state,

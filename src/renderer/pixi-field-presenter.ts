@@ -46,6 +46,7 @@ import {
   resolvePlasmaCoreVfxEnabled,
   resolveCeramicGlazeVfxEnabled,
   resolvePlatinumBodyVfxEnabled,
+  resolveRockRoughnessVfxEnabled,
   resolveSolidBodyVfxEnabled,
   resolvePowderBodyVfxEnabled, resolvePowderLightVfxEnabled, resolveRenderLook,
   resolveOrganicSubsurfaceVfxEnabled,
@@ -3230,6 +3231,7 @@ uniform float uGasLightVfx;
 uniform float uGasCoreDepthVfx;
 uniform float uPlasmaCoreVfx;
 uniform float uSolidBodyVfx;
+uniform float uRockRoughnessVfx;
 uniform float uPlatinumBodyVfx;
 uniform float uCeramicGlazeVfx;
 uniform float uBotanicalBodyVfx;
@@ -7190,11 +7192,32 @@ void main() {
       vec3(0.035, 0.055, 0.080), vec3(0.10, 0.070, 0.040),
       clamp(0.48 - normal.y * 0.55 + normal.x * 0.12, 0.0, 1.0)
     );
+    // E23: native ROCK shares SmoothRigid with Metal, but its proven deep body
+    // should not inherit the same coherent polished lobe. Reuse E17's exact
+    // owner/contact/depth proof locally, then attenuate only the existing gloss
+    // carriers. The later geological strata and pockets remain authoritative.
+    float rockRoughness = 0.0;
+    if (uRockRoughnessVfx > 0.5 && material == 78.0
+      && family == 0.0 && profile == 2.0 && optics == 8.0
+      && !materialEmissive && traits < 0.5
+      && surfaceOnly < 0.5 && halo < 0.5 && wall < 0.5
+      && wallOnly < 0.5 && emissionOnly < 0.5
+      && granularSurface < 0.5 && translucentSurface < 0.5
+      && foreignMatterContact < 0.5 && unlikeMaterialContact < 0.5
+      && solidInterior > 0.001 && solidOpticalDepth > 6.0 / 255.0) {
+      rockRoughness = solidInterior
+        * smoothstep(6.0 / 255.0, 42.0 / 255.0, solidOpticalDepth);
+    }
+    float rockMicroGlint = mix(1.0, 0.52, rockRoughness);
+    float rockBroadGloss = mix(1.0, 0.18, rockRoughness);
+    float rockEnvironmentGloss = mix(1.0, 0.32, rockRoughness);
     color += solidSpecularTint
-      * (specular * solidSpecularGain + broadSolidSpecular * (0.035 + smoothSurface * 0.055));
+      * (specular * solidSpecularGain * rockMicroGlint
+        + broadSolidSpecular * (0.035 + smoothSurface * 0.055) * rockBroadGloss);
     color += solidEnvironment * solidFresnel
       * (0.12 + smoothSurface * 0.24 + deviceSurface * 0.16
-        + radioactiveSurface * 0.08 + translucentSurface * 0.40);
+        + radioactiveSurface * 0.08 + translucentSurface * 0.40)
+      * rockEnvironmentGloss;
     color = mix(
       color,
       color * vec3(0.88, 0.97, 1.08) + solidEnvironment * (0.16 + solidFresnel * 0.34),
@@ -8721,6 +8744,12 @@ void main() {
         max(solidBodyFace, 0.0) * 0.068
           + smoothstep(0.035, 0.22, solidFresnel) * 0.012
       );
+      if (uRockRoughnessVfx > 0.5 && material == 78.0 && profile == 2.0) {
+        // The generic ROCK polish was already reduced at its point of use. This
+        // second local factor removes E17's correlated cool crown without
+        // weakening the signed pocket or the later mineral identity layer.
+        solidBodyKey *= mix(1.0, 0.42, solidBodyDepth);
+      }
       float solidBodyPocket = solidBodyDepth * min(
         0.050, max(-solidBodyFace, 0.0) * 0.078
       );
@@ -9629,6 +9658,11 @@ export class PixiFieldPresenter {
     // values. The compact true-8x shader has no selector or parallel branch.
     const solidBodyVfxEnabled = outputScale < 8
       && resolveSolidBodyVfxEnabled(renderLook);
+    // E23 is an exact-ROCK normal-WebGL correction to E17's inherited polished
+    // lobe. Compact true 8x retains its established mineral grammar and has no
+    // selector or parallel arithmetic.
+    const rockRoughnessVfxEnabled = outputScale < 8
+      && resolveRockRoughnessVfxEnabled(renderLook);
     // E18 is a normal-WebGL body finish over values already used by the
     // established solid shader. The compact true-8x program declares neither
     // this selector nor a parallel reflection branch.
@@ -9684,6 +9718,7 @@ export class PixiFieldPresenter {
       uGasCoreDepthVfx: { value: gasCoreDepthVfxEnabled ? 1 : 0, type: 'f32' },
       uPlasmaCoreVfx: { value: plasmaCoreVfxEnabled ? 1 : 0, type: 'f32' },
       uSolidBodyVfx: { value: solidBodyVfxEnabled ? 1 : 0, type: 'f32' },
+      uRockRoughnessVfx: { value: rockRoughnessVfxEnabled ? 1 : 0, type: 'f32' },
       uPlatinumBodyVfx: { value: platinumBodyVfxEnabled ? 1 : 0, type: 'f32' },
       uCeramicGlazeVfx: { value: ceramicGlazeVfxEnabled ? 1 : 0, type: 'f32' },
       uBotanicalBodyVfx: { value: botanicalBodyVfxEnabled ? 1 : 0, type: 'f32' },
@@ -9906,6 +9941,7 @@ export class PixiFieldPresenter {
       this.uniforms.uniforms.uGasCoreDepthVfx = 0;
       this.uniforms.uniforms.uPlasmaCoreVfx = 0;
       this.uniforms.uniforms.uSolidBodyVfx = 0;
+      this.uniforms.uniforms.uRockRoughnessVfx = 0;
       this.uniforms.uniforms.uPlatinumBodyVfx = 0;
       this.uniforms.uniforms.uCeramicGlazeVfx = 0;
       this.uniforms.uniforms.uBotanicalBodyVfx = 0;
@@ -9951,6 +9987,7 @@ export class PixiFieldPresenter {
             || new URLSearchParams(location.search).get('gasCoreDepthVfxAudit') === '1'
             || new URLSearchParams(location.search).get('plasmaCoreVfxAudit') === '1'
             || new URLSearchParams(location.search).get('solidBodyVfxAudit') === '1'
+            || new URLSearchParams(location.search).get('rockRoughnessVfxAudit') === '1'
             || new URLSearchParams(location.search).get('platinumBodyVfxAudit') === '1'
             || new URLSearchParams(location.search).get('ceramicGlazeVfxAudit') === '1'
             || new URLSearchParams(location.search).get('botanicalBodyVfxAudit') === '1'
@@ -10004,6 +10041,9 @@ export class PixiFieldPresenter {
     ) > 0.5 ? 'active' : 'inactive';
     presenter.app.canvas.dataset.solidBodyVfx = Number(
       presenter.uniforms.uniforms.uSolidBodyVfx
+    ) > 0.5 ? 'active' : 'inactive';
+    presenter.app.canvas.dataset.rockRoughnessVfx = Number(
+      presenter.uniforms.uniforms.uRockRoughnessVfx
     ) > 0.5 ? 'active' : 'inactive';
     presenter.app.canvas.dataset.platinumBodyVfx = Number(
       presenter.uniforms.uniforms.uPlatinumBodyVfx
@@ -11398,6 +11438,7 @@ export class PixiFieldPresenter {
         this.uniforms.uniforms.uGasCoreDepthVfx = 0;
         this.uniforms.uniforms.uPlasmaCoreVfx = 0;
         this.uniforms.uniforms.uSolidBodyVfx = 0;
+        this.uniforms.uniforms.uRockRoughnessVfx = 0;
         this.uniforms.uniforms.uPlatinumBodyVfx = 0;
         this.uniforms.uniforms.uCeramicGlazeVfx = 0;
         this.uniforms.uniforms.uBotanicalBodyVfx = 0;
@@ -11420,6 +11461,7 @@ export class PixiFieldPresenter {
         this.app.canvas.dataset.gasCoreDepthVfx = 'inactive';
         this.app.canvas.dataset.plasmaCoreVfx = 'inactive';
         this.app.canvas.dataset.solidBodyVfx = 'inactive';
+        this.app.canvas.dataset.rockRoughnessVfx = 'inactive';
         this.app.canvas.dataset.platinumBodyVfx = 'inactive';
         this.app.canvas.dataset.ceramicGlazeVfx = 'inactive';
         this.app.canvas.dataset.botanicalBodyVfx = 'inactive';

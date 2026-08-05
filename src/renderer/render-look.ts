@@ -188,6 +188,23 @@ export function resolveSolidBodyVfxEnabled(
 }
 
 /**
+ * Rebalances only deep native ROCK after E17 has proved the opaque-body
+ * topology. The correction is deliberately subordinate to solid-body VFX: it
+ * may reduce ROCK's inherited SmoothRigid polish, but it cannot recreate E17
+ * when that parent experiment or the containing HDR look is disabled.
+ */
+export function resolveRockRoughnessVfxEnabled(
+  look: RenderLook,
+  search = globalThis.location?.search ?? '',
+): boolean {
+  if (!resolveSolidBodyVfxEnabled(look, search)) return false;
+  const requested = new URLSearchParams(search).get('rockRoughnessVfx');
+  if (requested === '0' || requested === 'off' || requested === 'false') return false;
+  if (requested === '1' || requested === 'on' || requested === 'true') return true;
+  return true;
+}
+
+/**
  * Keeps the exact Platinum body experiment independently measurable while
  * retaining the same non-Classic preset policy as the broader volume studies.
  * The renderer decides its strict native-owner and topology eligibility.

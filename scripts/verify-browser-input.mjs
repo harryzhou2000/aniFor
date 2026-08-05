@@ -255,14 +255,20 @@ const oilBodyVfxOnly = process.argv.includes('--oil-body-vfx-only');
 if (oilBodyVfxOnly && (modes.length !== 1 || modes[0] !== 'webgl')) {
   throw new Error('--oil-body-vfx-only requires --webgl-only');
 }
+// E23 is a normal-detail exact-ROCK roughness study. It composes over E17's
+// accepted opaque-body relief while the compact true-8x mesh stays unchanged.
+const rockRoughnessVfxOnly = process.argv.includes('--rock-roughness-vfx-only');
+if (rockRoughnessVfxOnly && (modes.length !== 1 || modes[0] !== 'webgl')) {
+  throw new Error('--rock-roughness-vfx-only requires --webgl-only');
+}
 if ([hdrVfxOnly, volumeVfxOnly, liquidBodyVfxOnly, liquidSurfaceVfxOnly, gasBodyVfxOnly,
   gasMotionVfxOnly, powderBodyVfxOnly, powderLightVfxOnly, powderSolidContactVfxOnly,
   translucentEdgeVfxOnly, organicSubsurfaceVfxOnly, wetSedimentVfxOnly, gasLightVfxOnly,
   liquidSolidMeniscusVfxOnly, gasCoreDepthVfxOnly, plasmaCoreVfxOnly, solidBodyVfxOnly,
   platinumBodyVfxOnly, ceramicGlazeVfxOnly, botanicalBodyVfxOnly, glassBodyVfxOnly,
-  oilBodyVfxOnly]
+  oilBodyVfxOnly, rockRoughnessVfxOnly]
   .filter(Boolean).length > 1) {
-  throw new Error('HDR/volume/liquid-body/liquid-surface/gas-body/gas-motion/powder-body/powder-light/powder-solid-contact/translucent-edge/organic-subsurface/wet-sediment/gas-light/liquid-solid-meniscus/gas-core-depth/plasma-core/solid-body/platinum-body/ceramic-glaze/botanical-body/glass-body/oil-body focused audits are mutually exclusive');
+  throw new Error('HDR/volume/liquid-body/liquid-surface/gas-body/gas-motion/powder-body/powder-light/powder-solid-contact/translucent-edge/organic-subsurface/wet-sediment/gas-light/liquid-solid-meniscus/gas-core-depth/plasma-core/solid-body/platinum-body/ceramic-glaze/botanical-body/glass-body/oil-body/rock-roughness focused audits are mutually exclusive');
 }
 const layoutOnly = process.argv.includes('--layout-only');
 const visualScaleMatrixNormalOnly = process.argv.includes('--visual-scale-matrix-normal-only');
@@ -346,7 +352,7 @@ const liveScaleOnly = process.argv.includes('--live-scale-only');
 const productionBundle = process.argv.includes('--production-bundle');
 const usesProductionBundle = productionBundle || showcaseScreenshotOnly || composedRankOnly || hdrVfxOnly || volumeVfxOnly
   || liquidBodyVfxOnly || liquidSurfaceVfxOnly || gasBodyVfxOnly || gasMotionVfxOnly
-  || powderBodyVfxOnly || powderLightVfxOnly || powderSolidContactVfxOnly || translucentEdgeVfxOnly || organicSubsurfaceVfxOnly || wetSedimentVfxOnly || gasLightVfxOnly || liquidSolidMeniscusVfxOnly || gasCoreDepthVfxOnly || plasmaCoreVfxOnly || solidBodyVfxOnly || platinumBodyVfxOnly || ceramicGlazeVfxOnly || botanicalBodyVfxOnly || glassBodyVfxOnly || oilBodyVfxOnly || cellularGraphicsOnly || sensorGraphicsOnly
+  || powderBodyVfxOnly || powderLightVfxOnly || powderSolidContactVfxOnly || translucentEdgeVfxOnly || organicSubsurfaceVfxOnly || wetSedimentVfxOnly || gasLightVfxOnly || liquidSolidMeniscusVfxOnly || gasCoreDepthVfxOnly || plasmaCoreVfxOnly || solidBodyVfxOnly || platinumBodyVfxOnly || ceramicGlazeVfxOnly || botanicalBodyVfxOnly || glassBodyVfxOnly || oilBodyVfxOnly || rockRoughnessVfxOnly || cellularGraphicsOnly || sensorGraphicsOnly
   || unusualPowderGraphicsOnly || earthenPowderGraphicsOnly || explosivePowderGraphicsOnly || unusualSolidGraphicsOnly
   || deviceIdentityGraphicsOnly
   || fieldProfileGraphicsOnly
@@ -730,6 +736,9 @@ if (glassBodyVfxOnly && renderScaleArgument === '8') {
 if (oilBodyVfxOnly && renderScaleArgument === '8') {
   throw new Error('--oil-body-vfx-only is a normal-detail 1x/2x/4x experiment');
 }
+if (rockRoughnessVfxOnly && renderScaleArgument === '8') {
+  throw new Error('--rock-roughness-vfx-only is a normal-detail 1x/2x/4x experiment');
+}
 const captureDpr = captureDprArgument === undefined ? undefined : Number(captureDprArgument);
 if (captureDpr !== undefined && captureDpr !== 1 && captureDpr !== 2) {
   throw new Error('--capture-dpr must be 1 or 2');
@@ -828,7 +837,7 @@ async function main() {
     for (const mode of modes) results.push(await auditMode(mode));
     const reducedAudit = quickScreenshot || showcaseScreenshotOnly || composedRankOnly || hdrVfxOnly || volumeVfxOnly
       || liquidBodyVfxOnly || liquidSurfaceVfxOnly || gasBodyVfxOnly || gasMotionVfxOnly
-      || powderBodyVfxOnly || powderLightVfxOnly || powderSolidContactVfxOnly || translucentEdgeVfxOnly || organicSubsurfaceVfxOnly || wetSedimentVfxOnly || gasLightVfxOnly || liquidSolidMeniscusVfxOnly || gasCoreDepthVfxOnly || plasmaCoreVfxOnly || solidBodyVfxOnly || platinumBodyVfxOnly || ceramicGlazeVfxOnly || botanicalBodyVfxOnly || glassBodyVfxOnly || oilBodyVfxOnly || layoutOnly || mobileOnly || mobileGestureOnly
+      || powderBodyVfxOnly || powderLightVfxOnly || powderSolidContactVfxOnly || translucentEdgeVfxOnly || organicSubsurfaceVfxOnly || wetSedimentVfxOnly || gasLightVfxOnly || liquidSolidMeniscusVfxOnly || gasCoreDepthVfxOnly || plasmaCoreVfxOnly || solidBodyVfxOnly || platinumBodyVfxOnly || ceramicGlazeVfxOnly || botanicalBodyVfxOnly || glassBodyVfxOnly || oilBodyVfxOnly || rockRoughnessVfxOnly || layoutOnly || mobileOnly || mobileGestureOnly
       || desktopInputOnly || visualScaleMatrixOnly || powderBodyOnly || liquidDepthOnly
       || solidDepthOnly || gasChromaOnly || surfaceContourOnly || solidFieldOnly
       || roleGraphicsOnly || cellularGraphicsOnly || sensorGraphicsOnly
@@ -926,7 +935,7 @@ async function auditMode(mode) {
   // canonical paused scene there and prove real material delivery/occupancy.
   const startsBlank = !canvasFallbackAudit && (hdrVfxOnly || volumeVfxOnly
     || liquidBodyVfxOnly || liquidSurfaceVfxOnly || gasBodyVfxOnly || gasMotionVfxOnly
-    || powderBodyVfxOnly || powderLightVfxOnly || powderSolidContactVfxOnly || translucentEdgeVfxOnly || organicSubsurfaceVfxOnly || wetSedimentVfxOnly || gasLightVfxOnly || liquidSolidMeniscusVfxOnly || gasCoreDepthVfxOnly || plasmaCoreVfxOnly || solidBodyVfxOnly || platinumBodyVfxOnly || ceramicGlazeVfxOnly || botanicalBodyVfxOnly || glassBodyVfxOnly || oilBodyVfxOnly || cellularGraphicsOnly || sensorGraphicsOnly
+    || powderBodyVfxOnly || powderLightVfxOnly || powderSolidContactVfxOnly || translucentEdgeVfxOnly || organicSubsurfaceVfxOnly || wetSedimentVfxOnly || gasLightVfxOnly || liquidSolidMeniscusVfxOnly || gasCoreDepthVfxOnly || plasmaCoreVfxOnly || solidBodyVfxOnly || platinumBodyVfxOnly || ceramicGlazeVfxOnly || botanicalBodyVfxOnly || glassBodyVfxOnly || oilBodyVfxOnly || rockRoughnessVfxOnly || cellularGraphicsOnly || sensorGraphicsOnly
     || unusualPowderGraphicsOnly || earthenPowderGraphicsOnly || explosivePowderGraphicsOnly
     || unusualSolidGraphicsOnly || deviceIdentityGraphicsOnly || fieldProfileGraphicsOnly
     || electricDischargeGraphicsOnly || liquidIdentityGraphicsOnly
@@ -1014,6 +1023,14 @@ async function auditMode(mode) {
       || liquidSolidMeniscusVfxOnly || gasCoreDepthVfxOnly || plasmaCoreVfxOnly || solidBodyVfxOnly
       || platinumBodyVfxOnly || ceramicGlazeVfxOnly || botanicalBodyVfxOnly || glassBodyVfxOnly
       ? { oilBodyVfx: '0' } : {}),
+    // E23 owns exact-ROCK roughness independently and is subordinate to E17.
+    // Every older focused audit pins it off; E23 sets its own state per reload.
+    ...(hdrVfxOnly || volumeVfxOnly || liquidBodyVfxOnly || liquidSurfaceVfxOnly || gasBodyVfxOnly
+      || gasMotionVfxOnly || powderBodyVfxOnly || powderLightVfxOnly || powderSolidContactVfxOnly
+      || translucentEdgeVfxOnly || organicSubsurfaceVfxOnly || wetSedimentVfxOnly || gasLightVfxOnly
+      || liquidSolidMeniscusVfxOnly || gasCoreDepthVfxOnly || plasmaCoreVfxOnly || solidBodyVfxOnly
+      || platinumBodyVfxOnly || ceramicGlazeVfxOnly || botanicalBodyVfxOnly || glassBodyVfxOnly
+      || oilBodyVfxOnly || rockRoughnessVfxOnly ? { rockRoughnessVfx: '0' } : {}),
     renderScale: renderScaleArgument ?? ((pqrtStateGraphicsEight || filtStateGraphicsEight || lcryStateGraphicsEight
       || pipeStateGraphicsEight || swchStateGraphicsEight || storStateGraphicsEight
       || dlayStateGraphicsEight || wifiStateGraphicsEight || powderMesostrataGraphicsEight
@@ -1417,6 +1434,13 @@ async function auditMode(mode) {
       assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
       cdp.close();
       return { backend: mode, oilBodyVfx, browserErrors: errors.length };
+    }
+    if (rockRoughnessVfxOnly) {
+      assert(mode === 'webgl', '--rock-roughness-vfx-only requires --webgl-only');
+      const rockRoughnessVfx = await auditRockRoughnessVfxExperiment(cdp, mode, dpr);
+      assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
+      cdp.close();
+      return { backend: mode, rockRoughnessVfx, browserErrors: errors.length };
     }
     if (pausedPresentationOnly) {
       const pausedPresentation = await auditPausedPresentation(cdp, mode);
@@ -14226,7 +14250,7 @@ async function auditEightXSpngStateOnly(cdp, dpr) {
   await setDesktopMetrics(cdp, 1280, 720, dpr);
   const query = new URLSearchParams({
     scene: 'render-lab', inputAudit: '1', renderScale: '8', auditStage: 'eight-spng', blankAudit: '1',
-    renderLook: 'realistic', gasMotionVfx: '1', liquidSurfaceVfx: '1', organicSubsurfaceVfx: '0', wetSedimentVfx: '0', gasLightVfx: '0', liquidSolidMeniscusVfx: '0', gasCoreDepthVfx: '0', oilBodyVfx: '0',
+    renderLook: 'realistic', gasMotionVfx: '1', liquidSurfaceVfx: '1', organicSubsurfaceVfx: '0', wetSedimentVfx: '0', gasLightVfx: '0', liquidSolidMeniscusVfx: '0', gasCoreDepthVfx: '0', oilBodyVfx: '0', rockRoughnessVfx: '0',
   });
   await cdp.send('Page.navigate', { url: `${AUDIT_BASE_URL}?${query}` });
   const startupDeadline = Date.now() + EIGHT_X_PRESENTATION_DEADLINE_MS;
@@ -22942,7 +22966,7 @@ async function navigateGasMotionVfxState(cdp, mode, scale, fixtureMode, enabled,
     gasMotionVfxAudit: '1', renderScale: String(scale), renderLook: 'realistic',
     volumeVfx: '0', liquidBodyVfx: '0', liquidSurfaceVfx: '0',
     gasBodyVfx: '1', gasMotionVfx: enabled ? '1' : '0',
-    powderBodyVfx: '0', powderLightVfx: '0', organicSubsurfaceVfx: '0', wetSedimentVfx: '0', gasLightVfx: '0', liquidSolidMeniscusVfx: '0', gasCoreDepthVfx: '0', plasmaCoreVfx: '0', solidBodyVfx: '0', platinumBodyVfx: '0', ceramicGlazeVfx: '0', botanicalBodyVfx: '0', glassBodyVfx: '0', oilBodyVfx: '0',
+    powderBodyVfx: '0', powderLightVfx: '0', organicSubsurfaceVfx: '0', wetSedimentVfx: '0', gasLightVfx: '0', liquidSolidMeniscusVfx: '0', gasCoreDepthVfx: '0', plasmaCoreVfx: '0', solidBodyVfx: '0', platinumBodyVfx: '0', ceramicGlazeVfx: '0', botanicalBodyVfx: '0', glassBodyVfx: '0', oilBodyVfx: '0', rockRoughnessVfx: '0',
   });
   await cdp.send('Page.navigate', { url: `${AUDIT_BASE_URL}?${query}` });
   await waitFor(() => evaluate(cdp, `(() => {
@@ -23415,7 +23439,7 @@ async function navigatePowderSolidContactVfxState(cdp, mode, scale, enabled, lab
     powderSolidContactVfxAudit: '1', renderScale: String(scale), renderLook: 'realistic',
     volumeVfx: '0', liquidBodyVfx: '0', liquidSurfaceVfx: '0', gasBodyVfx: '0',
     gasMotionVfx: '0', powderBodyVfx: '0', powderLightVfx: '0',
-    powderSolidContactVfx: enabled ? '1' : '0', organicSubsurfaceVfx: '0', wetSedimentVfx: '0', gasLightVfx: '0', liquidSolidMeniscusVfx: '0', gasCoreDepthVfx: '0', plasmaCoreVfx: '0', solidBodyVfx: '0', platinumBodyVfx: '0', ceramicGlazeVfx: '0', botanicalBodyVfx: '0', glassBodyVfx: '0', oilBodyVfx: '0',
+    powderSolidContactVfx: enabled ? '1' : '0', organicSubsurfaceVfx: '0', wetSedimentVfx: '0', gasLightVfx: '0', liquidSolidMeniscusVfx: '0', gasCoreDepthVfx: '0', plasmaCoreVfx: '0', solidBodyVfx: '0', platinumBodyVfx: '0', ceramicGlazeVfx: '0', botanicalBodyVfx: '0', glassBodyVfx: '0', oilBodyVfx: '0', rockRoughnessVfx: '0',
   });
   await cdp.send('Page.navigate', { url: `${AUDIT_BASE_URL}?${query}` });
   await waitFor(() => evaluate(cdp, `(() => {
@@ -23566,7 +23590,7 @@ async function auditEightXPowderSolidContactVfxExclusion(cdp, dpr) {
     scene: 'render-lab', inputAudit: '1', blankAudit: '1', renderScale: '8',
     auditStage: 'eight-powder-solid-contact', renderLook: 'realistic',
     volumeVfx: '0', liquidBodyVfx: '0', liquidSurfaceVfx: '0', gasBodyVfx: '0',
-    gasMotionVfx: '0', powderBodyVfx: '0', powderLightVfx: '0', powderSolidContactVfx: '1', organicSubsurfaceVfx: '0', wetSedimentVfx: '0', gasLightVfx: '0', liquidSolidMeniscusVfx: '0', gasCoreDepthVfx: '0', platinumBodyVfx: '0', ceramicGlazeVfx: '0', botanicalBodyVfx: '0', glassBodyVfx: '0', oilBodyVfx: '0',
+    gasMotionVfx: '0', powderBodyVfx: '0', powderLightVfx: '0', powderSolidContactVfx: '1', organicSubsurfaceVfx: '0', wetSedimentVfx: '0', gasLightVfx: '0', liquidSolidMeniscusVfx: '0', gasCoreDepthVfx: '0', platinumBodyVfx: '0', ceramicGlazeVfx: '0', botanicalBodyVfx: '0', glassBodyVfx: '0', oilBodyVfx: '0', rockRoughnessVfx: '0',
   });
   await cdp.send('Page.navigate', { url: `${AUDIT_BASE_URL}?${query}` });
   const deadline = Date.now() + EIGHT_X_PRESENTATION_DEADLINE_MS;
@@ -23729,7 +23753,7 @@ async function navigateOrganicSubsurfaceVfxState(cdp, mode, scale, enabled, labe
     organicSubsurfaceVfxAudit: '1', renderScale: String(scale), renderLook: 'realistic',
     volumeVfx: '0', liquidBodyVfx: '0', liquidSurfaceVfx: '0', gasBodyVfx: '0',
     gasMotionVfx: '0', powderBodyVfx: '0', powderLightVfx: '0', powderSolidContactVfx: '0',
-    translucentEdgeVfx: '0', organicSubsurfaceVfx: enabled ? '1' : '0', wetSedimentVfx: '0', gasLightVfx: '0', liquidSolidMeniscusVfx: '0', gasCoreDepthVfx: '0', plasmaCoreVfx: '0', solidBodyVfx: '0', platinumBodyVfx: '0', ceramicGlazeVfx: '0', botanicalBodyVfx: '0', glassBodyVfx: '0', oilBodyVfx: '0',
+    translucentEdgeVfx: '0', organicSubsurfaceVfx: enabled ? '1' : '0', wetSedimentVfx: '0', gasLightVfx: '0', liquidSolidMeniscusVfx: '0', gasCoreDepthVfx: '0', plasmaCoreVfx: '0', solidBodyVfx: '0', platinumBodyVfx: '0', ceramicGlazeVfx: '0', botanicalBodyVfx: '0', glassBodyVfx: '0', oilBodyVfx: '0', rockRoughnessVfx: '0',
   });
   await cdp.send('Page.navigate', { url: `${AUDIT_BASE_URL}?${query}` });
   await waitFor(() => evaluate(cdp, `(() => {
@@ -23953,7 +23977,7 @@ async function auditEightXOrganicSubsurfaceVfxExclusion(cdp, dpr) {
     auditStage: 'eight-organic-subsurface', renderLook: 'realistic',
     volumeVfx: '0', liquidBodyVfx: '0', liquidSurfaceVfx: '0', gasBodyVfx: '0',
     gasMotionVfx: '0', powderBodyVfx: '0', powderLightVfx: '0', powderSolidContactVfx: '0',
-    translucentEdgeVfx: '0', organicSubsurfaceVfx: '1', wetSedimentVfx: '0', gasLightVfx: '0', liquidSolidMeniscusVfx: '0', gasCoreDepthVfx: '0', platinumBodyVfx: '0', ceramicGlazeVfx: '0', botanicalBodyVfx: '0', glassBodyVfx: '0', oilBodyVfx: '0',
+    translucentEdgeVfx: '0', organicSubsurfaceVfx: '1', wetSedimentVfx: '0', gasLightVfx: '0', liquidSolidMeniscusVfx: '0', gasCoreDepthVfx: '0', platinumBodyVfx: '0', ceramicGlazeVfx: '0', botanicalBodyVfx: '0', glassBodyVfx: '0', oilBodyVfx: '0', rockRoughnessVfx: '0',
   });
   await cdp.send('Page.navigate', { url: `${AUDIT_BASE_URL}?${query}` });
   const deadline = Date.now() + EIGHT_X_PRESENTATION_DEADLINE_MS;
@@ -24089,7 +24113,7 @@ async function navigateWetSedimentVfxState(cdp, mode, scale, enabled, label, pow
     wetSedimentVfxAudit: '1', renderScale: String(scale), renderLook: 'realistic',
     volumeVfx: '0', liquidBodyVfx: '0', liquidSurfaceVfx: '0', gasBodyVfx: '0', gasMotionVfx: '0',
     powderBodyVfx: '0', powderLightVfx: '0', powderSolidContactVfx: '0', translucentEdgeVfx: '0',
-    organicSubsurfaceVfx: '0', wetSedimentVfx: enabled ? '1' : '0', gasLightVfx: '0', liquidSolidMeniscusVfx: '0', gasCoreDepthVfx: '0', plasmaCoreVfx: '0', solidBodyVfx: '0', platinumBodyVfx: '0', ceramicGlazeVfx: '0', botanicalBodyVfx: '0', glassBodyVfx: '0', oilBodyVfx: '0',
+    organicSubsurfaceVfx: '0', wetSedimentVfx: enabled ? '1' : '0', gasLightVfx: '0', liquidSolidMeniscusVfx: '0', gasCoreDepthVfx: '0', plasmaCoreVfx: '0', solidBodyVfx: '0', platinumBodyVfx: '0', ceramicGlazeVfx: '0', botanicalBodyVfx: '0', glassBodyVfx: '0', oilBodyVfx: '0', rockRoughnessVfx: '0',
   });
   await cdp.send('Page.navigate', { url: `${AUDIT_BASE_URL}?${query}` });
   await waitFor(() => evaluate(cdp, `(() => {
@@ -24297,7 +24321,7 @@ async function auditEightXWetSedimentVfxExclusion(cdp, dpr) {
   const query = new URLSearchParams({ scene: 'render-lab', inputAudit: '1', blankAudit: '1', renderScale: '8',
     auditStage: 'eight-wet-sediment', renderLook: 'realistic', volumeVfx: '0', liquidBodyVfx: '0', liquidSurfaceVfx: '0',
     gasBodyVfx: '0', gasMotionVfx: '0', powderBodyVfx: '0', powderLightVfx: '0', powderSolidContactVfx: '0',
-    translucentEdgeVfx: '0', organicSubsurfaceVfx: '0', wetSedimentVfx: '1', gasLightVfx: '0', liquidSolidMeniscusVfx: '0', gasCoreDepthVfx: '0', platinumBodyVfx: '0', ceramicGlazeVfx: '0', botanicalBodyVfx: '0', glassBodyVfx: '0', oilBodyVfx: '0' });
+    translucentEdgeVfx: '0', organicSubsurfaceVfx: '0', wetSedimentVfx: '1', gasLightVfx: '0', liquidSolidMeniscusVfx: '0', gasCoreDepthVfx: '0', platinumBodyVfx: '0', ceramicGlazeVfx: '0', botanicalBodyVfx: '0', glassBodyVfx: '0', oilBodyVfx: '0', rockRoughnessVfx: '0' });
   await cdp.send('Page.navigate', { url: `${AUDIT_BASE_URL}?${query}` });
   const deadline = Date.now() + EIGHT_X_PRESENTATION_DEADLINE_MS;
   await waitFor(() => evaluate(cdp, `(() => { const parameters = new URLSearchParams(location.search);
@@ -24424,7 +24448,7 @@ async function navigateGasLightVfxState(cdp, mode, scale, enabled, label) {
     scene: 'render-lab', inputAudit: '1', blankAudit: '1', auditStage: 'blank', gasLightVfxAudit: '1',
     renderScale: String(scale), renderLook: 'realistic', volumeVfx: '0', liquidBodyVfx: '0', liquidSurfaceVfx: '0',
     gasBodyVfx: '1', gasMotionVfx: '0', powderBodyVfx: '0', powderLightVfx: '0', powderSolidContactVfx: '0',
-    translucentEdgeVfx: '0', organicSubsurfaceVfx: '0', wetSedimentVfx: '0', gasLightVfx: enabled ? '1' : '0', liquidSolidMeniscusVfx: '0', gasCoreDepthVfx: '0', plasmaCoreVfx: '0', solidBodyVfx: '0', platinumBodyVfx: '0', ceramicGlazeVfx: '0', botanicalBodyVfx: '0', glassBodyVfx: '0', oilBodyVfx: '0',
+    translucentEdgeVfx: '0', organicSubsurfaceVfx: '0', wetSedimentVfx: '0', gasLightVfx: enabled ? '1' : '0', liquidSolidMeniscusVfx: '0', gasCoreDepthVfx: '0', plasmaCoreVfx: '0', solidBodyVfx: '0', platinumBodyVfx: '0', ceramicGlazeVfx: '0', botanicalBodyVfx: '0', glassBodyVfx: '0', oilBodyVfx: '0', rockRoughnessVfx: '0',
   });
   await cdp.send('Page.navigate', { url: `${AUDIT_BASE_URL}?${query}` });
   await waitFor(() => evaluate(cdp, `(() => {
@@ -24556,7 +24580,7 @@ async function auditEightXGasLightVfxExclusion(cdp, dpr) {
   const query = new URLSearchParams({ scene: 'render-lab', inputAudit: '1', blankAudit: '1', renderScale: '8', auditStage: 'eight-gas-light',
     renderLook: 'realistic', volumeVfx: '0', liquidBodyVfx: '0', liquidSurfaceVfx: '0', gasBodyVfx: '1', gasMotionVfx: '0',
     powderBodyVfx: '0', powderLightVfx: '0', powderSolidContactVfx: '0', translucentEdgeVfx: '0', organicSubsurfaceVfx: '0',
-    wetSedimentVfx: '0', gasLightVfx: '1', liquidSolidMeniscusVfx: '0', gasCoreDepthVfx: '0', platinumBodyVfx: '0', ceramicGlazeVfx: '0', botanicalBodyVfx: '0', glassBodyVfx: '0', oilBodyVfx: '0' });
+    wetSedimentVfx: '0', gasLightVfx: '1', liquidSolidMeniscusVfx: '0', gasCoreDepthVfx: '0', platinumBodyVfx: '0', ceramicGlazeVfx: '0', botanicalBodyVfx: '0', glassBodyVfx: '0', oilBodyVfx: '0', rockRoughnessVfx: '0' });
   await cdp.send('Page.navigate', { url: `${AUDIT_BASE_URL}?${query}` });
   const deadline = Date.now() + EIGHT_X_PRESENTATION_DEADLINE_MS;
   await waitFor(() => evaluate(cdp, `(() => { const p = new URLSearchParams(location.search); return p.get('renderScale') === '8'
@@ -24700,7 +24724,7 @@ async function navigateLiquidSolidMeniscusVfxState(cdp, mode, scale, enabled, la
     liquidSolidMeniscusVfxAudit: '1', renderScale: String(scale), renderLook: 'realistic',
     volumeVfx: '0', liquidBodyVfx: '1', liquidSurfaceVfx: '0', gasBodyVfx: '0', gasMotionVfx: '0',
     powderBodyVfx: '0', powderLightVfx: '0', powderSolidContactVfx: '0', translucentEdgeVfx: '0',
-    organicSubsurfaceVfx: '0', wetSedimentVfx: '0', gasLightVfx: '0', gasCoreDepthVfx: '0', plasmaCoreVfx: '0', solidBodyVfx: '0', platinumBodyVfx: '0', ceramicGlazeVfx: '0', botanicalBodyVfx: '0', glassBodyVfx: '0', oilBodyVfx: '0',
+    organicSubsurfaceVfx: '0', wetSedimentVfx: '0', gasLightVfx: '0', gasCoreDepthVfx: '0', plasmaCoreVfx: '0', solidBodyVfx: '0', platinumBodyVfx: '0', ceramicGlazeVfx: '0', botanicalBodyVfx: '0', glassBodyVfx: '0', oilBodyVfx: '0', rockRoughnessVfx: '0',
     liquidSolidMeniscusVfx: enabled ? '1' : '0',
   });
   await cdp.send('Page.navigate', { url: `${AUDIT_BASE_URL}?${query}` });
@@ -24914,7 +24938,7 @@ async function auditEightXLiquidSolidMeniscusVfxExclusion(cdp, dpr) {
     scene: 'render-lab', inputAudit: '1', blankAudit: '1', renderScale: '8', auditStage: 'eight-liquid-solid-meniscus',
     renderLook: 'realistic', volumeVfx: '0', liquidBodyVfx: '1', liquidSurfaceVfx: '0', gasBodyVfx: '0', gasMotionVfx: '0',
     powderBodyVfx: '0', powderLightVfx: '0', powderSolidContactVfx: '0', translucentEdgeVfx: '0',
-    organicSubsurfaceVfx: '0', wetSedimentVfx: '0', gasLightVfx: '0', liquidSolidMeniscusVfx: '1', gasCoreDepthVfx: '0', platinumBodyVfx: '0', ceramicGlazeVfx: '0', botanicalBodyVfx: '0', glassBodyVfx: '0', oilBodyVfx: '0',
+    organicSubsurfaceVfx: '0', wetSedimentVfx: '0', gasLightVfx: '0', liquidSolidMeniscusVfx: '1', gasCoreDepthVfx: '0', platinumBodyVfx: '0', ceramicGlazeVfx: '0', botanicalBodyVfx: '0', glassBodyVfx: '0', oilBodyVfx: '0', rockRoughnessVfx: '0',
   });
   await cdp.send('Page.navigate', { url: `${AUDIT_BASE_URL}?${query}` });
   const deadline = Date.now() + EIGHT_X_PRESENTATION_DEADLINE_MS;
@@ -25064,7 +25088,7 @@ async function navigateGasCoreDepthVfxState(cdp, mode, scale, enabled, label) {
     renderScale: String(scale), renderLook: 'realistic', volumeVfx: '0', liquidBodyVfx: '0', liquidSurfaceVfx: '0',
     gasBodyVfx: '1', gasMotionVfx: '0', powderBodyVfx: '0', powderLightVfx: '0', powderSolidContactVfx: '0',
     translucentEdgeVfx: '0', organicSubsurfaceVfx: '0', wetSedimentVfx: '0', gasLightVfx: '0',
-    liquidSolidMeniscusVfx: '0', gasCoreDepthVfx: enabled ? '1' : '0', plasmaCoreVfx: '0', solidBodyVfx: '0', platinumBodyVfx: '0', ceramicGlazeVfx: '0', botanicalBodyVfx: '0', glassBodyVfx: '0', oilBodyVfx: '0',
+    liquidSolidMeniscusVfx: '0', gasCoreDepthVfx: enabled ? '1' : '0', plasmaCoreVfx: '0', solidBodyVfx: '0', platinumBodyVfx: '0', ceramicGlazeVfx: '0', botanicalBodyVfx: '0', glassBodyVfx: '0', oilBodyVfx: '0', rockRoughnessVfx: '0',
   });
   await cdp.send('Page.navigate', { url: `${AUDIT_BASE_URL}?${query}` });
   await waitFor(() => evaluate(cdp, `(() => {
@@ -25232,7 +25256,7 @@ async function auditEightXGasCoreDepthVfxExclusion(cdp, dpr) {
     scene: 'render-lab', inputAudit: '1', blankAudit: '1', renderScale: '8', auditStage: 'eight-gas-core-depth',
     renderLook: 'realistic', volumeVfx: '0', liquidBodyVfx: '0', liquidSurfaceVfx: '0', gasBodyVfx: '1', gasMotionVfx: '0',
     powderBodyVfx: '0', powderLightVfx: '0', powderSolidContactVfx: '0', translucentEdgeVfx: '0',
-    organicSubsurfaceVfx: '0', wetSedimentVfx: '0', gasLightVfx: '0', liquidSolidMeniscusVfx: '0', gasCoreDepthVfx: '1', platinumBodyVfx: '0', ceramicGlazeVfx: '0', botanicalBodyVfx: '0', glassBodyVfx: '0', oilBodyVfx: '0',
+    organicSubsurfaceVfx: '0', wetSedimentVfx: '0', gasLightVfx: '0', liquidSolidMeniscusVfx: '0', gasCoreDepthVfx: '1', platinumBodyVfx: '0', ceramicGlazeVfx: '0', botanicalBodyVfx: '0', glassBodyVfx: '0', oilBodyVfx: '0', rockRoughnessVfx: '0',
   });
   await cdp.send('Page.navigate', { url: `${AUDIT_BASE_URL}?${query}` });
   const deadline = Date.now() + EIGHT_X_PRESENTATION_DEADLINE_MS;
@@ -25389,7 +25413,7 @@ async function navigatePlasmaCoreVfxState(cdp, mode, scale, enabled, label) {
     renderScale: String(scale), renderLook: 'realistic', volumeVfx: '0', liquidBodyVfx: '0', liquidSurfaceVfx: '0',
     gasBodyVfx: '0', gasMotionVfx: '0', powderBodyVfx: '0', powderLightVfx: '0', powderSolidContactVfx: '0',
     translucentEdgeVfx: '0', organicSubsurfaceVfx: '0', wetSedimentVfx: '0', gasLightVfx: '0',
-    liquidSolidMeniscusVfx: '0', gasCoreDepthVfx: '0', plasmaCoreVfx: enabled ? '1' : '0', solidBodyVfx: '0', platinumBodyVfx: '0', ceramicGlazeVfx: '0', botanicalBodyVfx: '0', glassBodyVfx: '0', oilBodyVfx: '0',
+    liquidSolidMeniscusVfx: '0', gasCoreDepthVfx: '0', plasmaCoreVfx: enabled ? '1' : '0', solidBodyVfx: '0', platinumBodyVfx: '0', ceramicGlazeVfx: '0', botanicalBodyVfx: '0', glassBodyVfx: '0', oilBodyVfx: '0', rockRoughnessVfx: '0',
   });
   await cdp.send('Page.navigate', { url: `${AUDIT_BASE_URL}?${query}` });
   await waitFor(() => evaluate(cdp, `(() => {
@@ -25524,7 +25548,7 @@ async function auditEightXPlasmaCoreVfxExclusion(cdp, dpr) {
     renderLook: 'realistic', volumeVfx: '0', liquidBodyVfx: '0', liquidSurfaceVfx: '0', gasBodyVfx: '0', gasMotionVfx: '0',
     powderBodyVfx: '0', powderLightVfx: '0', powderSolidContactVfx: '0', translucentEdgeVfx: '0',
     organicSubsurfaceVfx: '0', wetSedimentVfx: '0', gasLightVfx: '0', liquidSolidMeniscusVfx: '0',
-    gasCoreDepthVfx: '0', plasmaCoreVfx: '1', solidBodyVfx: '0', platinumBodyVfx: '0', ceramicGlazeVfx: '0', botanicalBodyVfx: '0', glassBodyVfx: '0', oilBodyVfx: '0',
+    gasCoreDepthVfx: '0', plasmaCoreVfx: '1', solidBodyVfx: '0', platinumBodyVfx: '0', ceramicGlazeVfx: '0', botanicalBodyVfx: '0', glassBodyVfx: '0', oilBodyVfx: '0', rockRoughnessVfx: '0',
   });
   await cdp.send('Page.navigate', { url: `${AUDIT_BASE_URL}?${query}` });
   const deadline = Date.now() + EIGHT_X_PRESENTATION_DEADLINE_MS;
@@ -25675,7 +25699,7 @@ async function navigateSolidBodyVfxState(cdp, mode, scale, enabled, label) {
     renderScale: String(scale), renderLook: 'realistic', volumeVfx: '0', liquidBodyVfx: '0', liquidSurfaceVfx: '0',
     gasBodyVfx: '0', gasMotionVfx: '0', powderBodyVfx: '0', powderLightVfx: '0', powderSolidContactVfx: '0',
     translucentEdgeVfx: '0', organicSubsurfaceVfx: '0', wetSedimentVfx: '0', gasLightVfx: '0',
-    liquidSolidMeniscusVfx: '0', gasCoreDepthVfx: '0', plasmaCoreVfx: '0', solidBodyVfx: enabled ? '1' : '0', platinumBodyVfx: '0', ceramicGlazeVfx: '0', botanicalBodyVfx: '0', glassBodyVfx: '0', oilBodyVfx: '0',
+    liquidSolidMeniscusVfx: '0', gasCoreDepthVfx: '0', plasmaCoreVfx: '0', solidBodyVfx: enabled ? '1' : '0', platinumBodyVfx: '0', ceramicGlazeVfx: '0', botanicalBodyVfx: '0', glassBodyVfx: '0', oilBodyVfx: '0', rockRoughnessVfx: '0',
   });
   await cdp.send('Page.navigate', { url: `${AUDIT_BASE_URL}?${query}` });
   await waitFor(() => evaluate(cdp, `(() => {
@@ -25684,6 +25708,7 @@ async function navigateSolidBodyVfxState(cdp, mode, scale, enabled, label) {
       && parameters.get('renderScale') === ${JSON.stringify(String(scale))}
       && parameters.get('renderLook') === 'realistic'
       && parameters.get('solidBodyVfx') === ${JSON.stringify(enabled ? '1' : '0')}
+      && parameters.get('rockRoughnessVfx') === '0'
       && ['volumeVfx', 'liquidBodyVfx', 'liquidSurfaceVfx', 'gasBodyVfx', 'gasMotionVfx',
         'powderBodyVfx', 'powderLightVfx', 'powderSolidContactVfx', 'translucentEdgeVfx',
         'organicSubsurfaceVfx', 'wetSedimentVfx', 'gasLightVfx', 'liquidSolidMeniscusVfx',
@@ -25706,7 +25731,9 @@ async function navigateSolidBodyVfxState(cdp, mode, scale, enabled, label) {
       wetSedimentVfx: canvas.dataset.wetSedimentVfx, gasLightVfx: canvas.dataset.gasLightVfx,
       liquidSolidMeniscusVfx: canvas.dataset.liquidSolidMeniscusVfx,
       gasCoreDepthVfx: canvas.dataset.gasCoreDepthVfx, plasmaCoreVfx: canvas.dataset.plasmaCoreVfx,
-      solidBodyVfx: canvas.dataset.solidBodyVfx } : undefined; })()`);
+      solidBodyVfx: canvas.dataset.solidBodyVfx,
+      platinumBodyVfx: canvas.dataset.platinumBodyVfx,
+      rockRoughnessVfx: canvas.dataset.rockRoughnessVfx } : undefined; })()`);
   const expectedBloom = `${WORLD_WIDTH * scale / 2}x${WORLD_HEIGHT * scale / 2}`;
   assert(hdrPipeline?.look === 'realistic' && hdrPipeline?.state === 'active'
     && hdrPipeline?.bloomBacking === expectedBloom
@@ -25715,7 +25742,8 @@ async function navigateSolidBodyVfxState(cdp, mode, scale, enabled, label) {
       'organicSubsurfaceVfx', 'wetSedimentVfx', 'gasLightVfx', 'liquidSolidMeniscusVfx',
       'gasCoreDepthVfx', 'plasmaCoreVfx'].every((name) => hdrPipeline[name] === 'inactive')
     && hdrPipeline?.solidBodyVfx === (enabled ? 'active' : 'inactive')
-    && hdrPipeline?.platinumBodyVfx === 'inactive',
+    && hdrPipeline?.platinumBodyVfx === 'inactive'
+    && hdrPipeline?.rockRoughnessVfx === 'inactive',
   `E17 ${label} ${scale}x HDR/selector state resolved incorrectly (${JSON.stringify(hdrPipeline)})`);
   const indicator = await evaluate(cdp, `(() => {
     const nodes = [...document.querySelectorAll('.field-indicator')];
@@ -25835,12 +25863,13 @@ async function auditEightXSolidBodyVfxExclusion(cdp, dpr) {
     renderLook: 'realistic', volumeVfx: '0', liquidBodyVfx: '0', liquidSurfaceVfx: '0', gasBodyVfx: '0', gasMotionVfx: '0',
     powderBodyVfx: '0', powderLightVfx: '0', powderSolidContactVfx: '0', translucentEdgeVfx: '0',
     organicSubsurfaceVfx: '0', wetSedimentVfx: '0', gasLightVfx: '0', liquidSolidMeniscusVfx: '0',
-    gasCoreDepthVfx: '0', plasmaCoreVfx: '0', solidBodyVfx: '1', platinumBodyVfx: '0', ceramicGlazeVfx: '0', botanicalBodyVfx: '0', glassBodyVfx: '0', oilBodyVfx: '0',
+    gasCoreDepthVfx: '0', plasmaCoreVfx: '0', solidBodyVfx: '1', platinumBodyVfx: '0', ceramicGlazeVfx: '0', botanicalBodyVfx: '0', glassBodyVfx: '0', oilBodyVfx: '0', rockRoughnessVfx: '0',
   });
   await cdp.send('Page.navigate', { url: `${AUDIT_BASE_URL}?${query}` });
   const deadline = Date.now() + EIGHT_X_PRESENTATION_DEADLINE_MS;
   await waitFor(() => evaluate(cdp, `(() => { const p = new URLSearchParams(location.search); return p.get('renderScale') === '8'
-    && p.get('auditStage') === 'eight-solid-body' && p.get('solidBodyVfx') === '1' && p.get('platinumBodyVfx') === '0'
+    && p.get('auditStage') === 'eight-solid-body' && p.get('solidBodyVfx') === '1'
+    && p.get('platinumBodyVfx') === '0' && p.get('rockRoughnessVfx') === '0'
     && Boolean(window.__ANIFOR_INPUT_AUDIT__); })()`),
   remainingDeadlineMs(deadline, 'true-8x E17 input audit API'), 'true-8x E17 input audit API');
   const backend = await waitForEightXTerminalBackend(cdp, 'true-8x E17', deadline);
@@ -25851,10 +25880,12 @@ async function auditEightXSolidBodyVfxExclusion(cdp, dpr) {
   const isolation = await evaluate(cdp, `(() => { const canvas = document.querySelector('canvas.semantic-field-canvas'); return canvas ? {
     renderer: canvas.dataset.renderer, look: canvas.dataset.renderLook, state: canvas.dataset.hdrPipeline,
     reason: canvas.dataset.hdrPipelineReason, bloomBacking: canvas.dataset.bloomBacking ?? null,
-    solidBodyVfx: canvas.dataset.solidBodyVfx, platinumBodyVfx: canvas.dataset.platinumBodyVfx } : undefined; })()`);
+    solidBodyVfx: canvas.dataset.solidBodyVfx, platinumBodyVfx: canvas.dataset.platinumBodyVfx,
+    rockRoughnessVfx: canvas.dataset.rockRoughnessVfx } : undefined; })()`);
   assert(isolation?.renderer === 'semantic-field-webgl' && isolation.look === 'realistic'
     && isolation.state === 'inactive' && isolation.reason === 'scale-8' && isolation.bloomBacking === null
-    && isolation.solidBodyVfx === 'inactive' && isolation.platinumBodyVfx === 'inactive',
+    && isolation.solidBodyVfx === 'inactive' && isolation.platinumBodyVfx === 'inactive'
+    && isolation.rockRoughnessVfx === 'inactive',
   `true-8x E17 isolation failed (${JSON.stringify(isolation)})`);
   const timing = await auditWebGLPresentationTiming(cdp, 1, 12_000, 30_000, 1);
   assert(timing.source === 'gpu-query' || timing.source === 'gpu-fence' || timing.source === 'gpu-finish',
@@ -25969,7 +26000,7 @@ async function navigatePlatinumBodyVfxState(cdp, mode, scale, enabled, label) {
     gasBodyVfx: '0', gasMotionVfx: '0', powderBodyVfx: '0', powderLightVfx: '0', powderSolidContactVfx: '0',
     translucentEdgeVfx: '0', organicSubsurfaceVfx: '0', wetSedimentVfx: '0', gasLightVfx: '0',
     liquidSolidMeniscusVfx: '0', gasCoreDepthVfx: '0', plasmaCoreVfx: '0', solidBodyVfx: '0',
-    platinumBodyVfx: enabled ? '1' : '0', ceramicGlazeVfx: '0', botanicalBodyVfx: '0', glassBodyVfx: '0', oilBodyVfx: '0',
+    platinumBodyVfx: enabled ? '1' : '0', ceramicGlazeVfx: '0', botanicalBodyVfx: '0', glassBodyVfx: '0', oilBodyVfx: '0', rockRoughnessVfx: '0',
   });
   await cdp.send('Page.navigate', { url: `${AUDIT_BASE_URL}?${query}` });
   await waitFor(() => evaluate(cdp, `(() => {
@@ -25978,6 +26009,7 @@ async function navigatePlatinumBodyVfxState(cdp, mode, scale, enabled, label) {
       && parameters.get('renderScale') === ${JSON.stringify(String(scale))}
       && parameters.get('renderLook') === 'realistic'
       && parameters.get('platinumBodyVfx') === ${JSON.stringify(enabled ? '1' : '0')}
+      && parameters.get('rockRoughnessVfx') === '0'
       && ['volumeVfx', 'liquidBodyVfx', 'liquidSurfaceVfx', 'gasBodyVfx', 'gasMotionVfx',
         'powderBodyVfx', 'powderLightVfx', 'powderSolidContactVfx', 'translucentEdgeVfx',
         'organicSubsurfaceVfx', 'wetSedimentVfx', 'gasLightVfx', 'liquidSolidMeniscusVfx',
@@ -26003,7 +26035,8 @@ async function navigatePlatinumBodyVfxState(cdp, mode, scale, enabled, label) {
       gasCoreDepthVfx: canvas.dataset.gasCoreDepthVfx, plasmaCoreVfx: canvas.dataset.plasmaCoreVfx,
       solidBodyVfx: canvas.dataset.solidBodyVfx, platinumBodyVfx: canvas.dataset.platinumBodyVfx,
       ceramicGlazeVfx: canvas.dataset.ceramicGlazeVfx,
-      botanicalBodyVfx: canvas.dataset.botanicalBodyVfx } : undefined; })()`);
+      botanicalBodyVfx: canvas.dataset.botanicalBodyVfx,
+      rockRoughnessVfx: canvas.dataset.rockRoughnessVfx } : undefined; })()`);
   const expectedBloom = `${WORLD_WIDTH * scale / 2}x${WORLD_HEIGHT * scale / 2}`;
   assert(hdrPipeline?.look === 'realistic' && hdrPipeline?.state === 'active'
     && hdrPipeline?.bloomBacking === expectedBloom
@@ -26011,7 +26044,7 @@ async function navigatePlatinumBodyVfxState(cdp, mode, scale, enabled, label) {
       'powderBodyVfx', 'powderLightVfx', 'powderSolidContactVfx', 'translucentEdgeVfx',
       'organicSubsurfaceVfx', 'wetSedimentVfx', 'gasLightVfx', 'liquidSolidMeniscusVfx',
       'gasCoreDepthVfx', 'plasmaCoreVfx', 'solidBodyVfx', 'ceramicGlazeVfx',
-      'botanicalBodyVfx'].every((name) => hdrPipeline[name] === 'inactive')
+      'botanicalBodyVfx', 'rockRoughnessVfx'].every((name) => hdrPipeline[name] === 'inactive')
     && hdrPipeline?.platinumBodyVfx === (enabled ? 'active' : 'inactive'),
   `E18 ${label} ${scale}x HDR/selector state resolved incorrectly (${JSON.stringify(hdrPipeline)})`);
   const indicator = await evaluate(cdp, `(() => {
@@ -26118,7 +26151,7 @@ async function auditEightXPlatinumBodyVfxExclusion(cdp, dpr) {
     platinumBodyVfxAudit: '1', renderLook: 'realistic', volumeVfx: '0', liquidBodyVfx: '0', liquidSurfaceVfx: '0',
     gasBodyVfx: '0', gasMotionVfx: '0', powderBodyVfx: '0', powderLightVfx: '0', powderSolidContactVfx: '0',
     translucentEdgeVfx: '0', organicSubsurfaceVfx: '0', wetSedimentVfx: '0', gasLightVfx: '0',
-    liquidSolidMeniscusVfx: '0', gasCoreDepthVfx: '0', plasmaCoreVfx: '0', solidBodyVfx: '0', platinumBodyVfx: '1', ceramicGlazeVfx: '0', botanicalBodyVfx: '0', glassBodyVfx: '0', oilBodyVfx: '0',
+    liquidSolidMeniscusVfx: '0', gasCoreDepthVfx: '0', plasmaCoreVfx: '0', solidBodyVfx: '0', platinumBodyVfx: '1', ceramicGlazeVfx: '0', botanicalBodyVfx: '0', glassBodyVfx: '0', oilBodyVfx: '0', rockRoughnessVfx: '0',
   });
   await cdp.send('Page.navigate', { url: `${AUDIT_BASE_URL}?${query}` });
   const deadline = Date.now() + EIGHT_X_PRESENTATION_DEADLINE_MS;
@@ -26269,7 +26302,7 @@ async function navigateCeramicGlazeVfxState(cdp, mode, scale, enabled, label) {
     gasBodyVfx: '0', gasMotionVfx: '0', powderBodyVfx: '0', powderLightVfx: '0', powderSolidContactVfx: '0',
     translucentEdgeVfx: '0', organicSubsurfaceVfx: '0', wetSedimentVfx: '0', gasLightVfx: '0',
     liquidSolidMeniscusVfx: '0', gasCoreDepthVfx: '0', plasmaCoreVfx: '0', solidBodyVfx: '0',
-    platinumBodyVfx: '0', ceramicGlazeVfx: enabled ? '1' : '0', botanicalBodyVfx: '0', glassBodyVfx: '0', oilBodyVfx: '0',
+    platinumBodyVfx: '0', ceramicGlazeVfx: enabled ? '1' : '0', botanicalBodyVfx: '0', glassBodyVfx: '0', oilBodyVfx: '0', rockRoughnessVfx: '0',
   });
   await cdp.send('Page.navigate', { url: `${AUDIT_BASE_URL}?${query}` });
   await waitFor(() => evaluate(cdp, `(() => {
@@ -26278,6 +26311,7 @@ async function navigateCeramicGlazeVfxState(cdp, mode, scale, enabled, label) {
       && parameters.get('renderScale') === ${JSON.stringify(String(scale))}
       && parameters.get('renderLook') === 'realistic'
       && parameters.get('ceramicGlazeVfx') === ${JSON.stringify(enabled ? '1' : '0')}
+      && parameters.get('rockRoughnessVfx') === '0'
       && ['volumeVfx', 'liquidBodyVfx', 'liquidSurfaceVfx', 'gasBodyVfx', 'gasMotionVfx',
         'powderBodyVfx', 'powderLightVfx', 'powderSolidContactVfx', 'translucentEdgeVfx',
         'organicSubsurfaceVfx', 'wetSedimentVfx', 'gasLightVfx', 'liquidSolidMeniscusVfx',
@@ -26303,7 +26337,8 @@ async function navigateCeramicGlazeVfxState(cdp, mode, scale, enabled, label) {
       gasCoreDepthVfx: canvas.dataset.gasCoreDepthVfx, plasmaCoreVfx: canvas.dataset.plasmaCoreVfx,
       solidBodyVfx: canvas.dataset.solidBodyVfx, platinumBodyVfx: canvas.dataset.platinumBodyVfx,
       ceramicGlazeVfx: canvas.dataset.ceramicGlazeVfx,
-      botanicalBodyVfx: canvas.dataset.botanicalBodyVfx } : undefined; })()`);
+      botanicalBodyVfx: canvas.dataset.botanicalBodyVfx,
+      rockRoughnessVfx: canvas.dataset.rockRoughnessVfx } : undefined; })()`);
   const expectedBloom = `${WORLD_WIDTH * scale / 2}x${WORLD_HEIGHT * scale / 2}`;
   assert(hdrPipeline?.look === 'realistic' && hdrPipeline?.state === 'active'
     && hdrPipeline?.bloomBacking === expectedBloom
@@ -26311,7 +26346,7 @@ async function navigateCeramicGlazeVfxState(cdp, mode, scale, enabled, label) {
       'powderBodyVfx', 'powderLightVfx', 'powderSolidContactVfx', 'translucentEdgeVfx',
       'organicSubsurfaceVfx', 'wetSedimentVfx', 'gasLightVfx', 'liquidSolidMeniscusVfx',
       'gasCoreDepthVfx', 'plasmaCoreVfx', 'solidBodyVfx', 'platinumBodyVfx',
-      'botanicalBodyVfx'].every((name) => hdrPipeline[name] === 'inactive')
+      'botanicalBodyVfx', 'rockRoughnessVfx'].every((name) => hdrPipeline[name] === 'inactive')
     && hdrPipeline?.ceramicGlazeVfx === (enabled ? 'active' : 'inactive'),
   `E19 ${label} ${scale}x HDR/selector state resolved incorrectly (${JSON.stringify(hdrPipeline)})`);
   const indicator = await evaluate(cdp, `(() => {
@@ -26441,7 +26476,7 @@ async function auditEightXCeramicGlazeVfxExclusion(cdp, dpr) {
     gasBodyVfx: '0', gasMotionVfx: '0', powderBodyVfx: '0', powderLightVfx: '0', powderSolidContactVfx: '0',
     translucentEdgeVfx: '0', organicSubsurfaceVfx: '0', wetSedimentVfx: '0', gasLightVfx: '0',
     liquidSolidMeniscusVfx: '0', gasCoreDepthVfx: '0', plasmaCoreVfx: '0', solidBodyVfx: '0',
-    platinumBodyVfx: '0', ceramicGlazeVfx: '1', botanicalBodyVfx: '0', glassBodyVfx: '0', oilBodyVfx: '0',
+    platinumBodyVfx: '0', ceramicGlazeVfx: '1', botanicalBodyVfx: '0', glassBodyVfx: '0', oilBodyVfx: '0', rockRoughnessVfx: '0',
   });
   await cdp.send('Page.navigate', { url: `${AUDIT_BASE_URL}?${query}` });
   const deadline = Date.now() + EIGHT_X_PRESENTATION_DEADLINE_MS;
@@ -26651,7 +26686,7 @@ async function navigateBotanicalBodyVfxState(cdp, mode, scale, enabled, label) {
     gasBodyVfx: '0', gasMotionVfx: '0', powderBodyVfx: '0', powderLightVfx: '0', powderSolidContactVfx: '0',
     translucentEdgeVfx: '0', organicSubsurfaceVfx: '0', wetSedimentVfx: '0', gasLightVfx: '0',
     liquidSolidMeniscusVfx: '0', gasCoreDepthVfx: '0', plasmaCoreVfx: '0', solidBodyVfx: '0',
-    platinumBodyVfx: '0', ceramicGlazeVfx: '0', botanicalBodyVfx: enabled ? '1' : '0', glassBodyVfx: '0', oilBodyVfx: '0',
+    platinumBodyVfx: '0', ceramicGlazeVfx: '0', botanicalBodyVfx: enabled ? '1' : '0', glassBodyVfx: '0', oilBodyVfx: '0', rockRoughnessVfx: '0',
   });
   await cdp.send('Page.navigate', { url: `${AUDIT_BASE_URL}?${query}` });
   await waitFor(() => evaluate(cdp, `(() => {
@@ -26660,6 +26695,7 @@ async function navigateBotanicalBodyVfxState(cdp, mode, scale, enabled, label) {
       && parameters.get('renderScale') === ${JSON.stringify(String(scale))}
       && parameters.get('renderLook') === 'realistic'
       && parameters.get('botanicalBodyVfx') === ${JSON.stringify(enabled ? '1' : '0')}
+      && parameters.get('rockRoughnessVfx') === '0'
       && ['volumeVfx', 'liquidBodyVfx', 'liquidSurfaceVfx', 'gasBodyVfx', 'gasMotionVfx',
         'powderBodyVfx', 'powderLightVfx', 'powderSolidContactVfx', 'translucentEdgeVfx',
         'organicSubsurfaceVfx', 'wetSedimentVfx', 'gasLightVfx', 'liquidSolidMeniscusVfx',
@@ -26685,7 +26721,8 @@ async function navigateBotanicalBodyVfxState(cdp, mode, scale, enabled, label) {
       gasCoreDepthVfx: canvas.dataset.gasCoreDepthVfx, plasmaCoreVfx: canvas.dataset.plasmaCoreVfx,
       solidBodyVfx: canvas.dataset.solidBodyVfx, platinumBodyVfx: canvas.dataset.platinumBodyVfx,
       ceramicGlazeVfx: canvas.dataset.ceramicGlazeVfx,
-      botanicalBodyVfx: canvas.dataset.botanicalBodyVfx } : undefined; })()`);
+      botanicalBodyVfx: canvas.dataset.botanicalBodyVfx,
+      rockRoughnessVfx: canvas.dataset.rockRoughnessVfx } : undefined; })()`);
   const expectedBloom = `${WORLD_WIDTH * scale / 2}x${WORLD_HEIGHT * scale / 2}`;
   assert(hdrPipeline?.look === 'realistic' && hdrPipeline?.state === 'active'
     && hdrPipeline?.bloomBacking === expectedBloom
@@ -26693,7 +26730,7 @@ async function navigateBotanicalBodyVfxState(cdp, mode, scale, enabled, label) {
       'powderBodyVfx', 'powderLightVfx', 'powderSolidContactVfx', 'translucentEdgeVfx',
       'organicSubsurfaceVfx', 'wetSedimentVfx', 'gasLightVfx', 'liquidSolidMeniscusVfx',
       'gasCoreDepthVfx', 'plasmaCoreVfx', 'solidBodyVfx', 'platinumBodyVfx',
-      'ceramicGlazeVfx'].every((name) => hdrPipeline[name] === 'inactive')
+      'ceramicGlazeVfx', 'rockRoughnessVfx'].every((name) => hdrPipeline[name] === 'inactive')
     && hdrPipeline?.botanicalBodyVfx === (enabled ? 'active' : 'inactive'),
   `E20 ${label} ${scale}x HDR/selector state resolved incorrectly (${JSON.stringify(hdrPipeline)})`);
   const indicator = await evaluate(cdp, `(() => {
@@ -26975,7 +27012,7 @@ async function auditEightXBotanicalBodyVfxExclusion(cdp, dpr) {
     gasBodyVfx: '0', gasMotionVfx: '0', powderBodyVfx: '0', powderLightVfx: '0', powderSolidContactVfx: '0',
     translucentEdgeVfx: '0', organicSubsurfaceVfx: '0', wetSedimentVfx: '0', gasLightVfx: '0',
     liquidSolidMeniscusVfx: '0', gasCoreDepthVfx: '0', plasmaCoreVfx: '0', solidBodyVfx: '0',
-    platinumBodyVfx: '0', ceramicGlazeVfx: '0', botanicalBodyVfx: '1', glassBodyVfx: '0', oilBodyVfx: '0',
+    platinumBodyVfx: '0', ceramicGlazeVfx: '0', botanicalBodyVfx: '1', glassBodyVfx: '0', oilBodyVfx: '0', rockRoughnessVfx: '0',
   });
   await cdp.send('Page.navigate', { url: `${AUDIT_BASE_URL}?${query}` });
   const deadline = Date.now() + EIGHT_X_PRESENTATION_DEADLINE_MS;
@@ -27205,7 +27242,7 @@ async function navigateOilBodyVfxState(cdp, mode, scale, enabled, label) {
     gasLightVfx: '0', liquidSolidMeniscusVfx: '1', gasCoreDepthVfx: '0',
     plasmaCoreVfx: '0', solidBodyVfx: '0', platinumBodyVfx: '0',
     ceramicGlazeVfx: '0', botanicalBodyVfx: '0', glassBodyVfx: '0',
-    oilBodyVfx: enabled ? '1' : '0',
+    oilBodyVfx: enabled ? '1' : '0', rockRoughnessVfx: '0',
   });
   await cdp.send('Page.navigate', { url: `${AUDIT_BASE_URL}?${query}` });
   await waitFor(() => evaluate(cdp, `(() => {
@@ -27214,6 +27251,7 @@ async function navigateOilBodyVfxState(cdp, mode, scale, enabled, label) {
     return p.get('oilBodyVfxAudit') === '1'
       && p.get('renderScale') === ${JSON.stringify(String(scale))}
       && p.get('oilBodyVfx') === ${JSON.stringify(enabled ? '1' : '0')}
+      && p.get('rockRoughnessVfx') === '0'
       && typeof audit?.prepareOilBodyVfxFixture === 'function'
       && typeof audit?.oilBodyVfxFixture === 'function';
   })()`), scale === 4 ? 45_000 : 15_000, `E22 ${label} ${scale}x page`);
@@ -27252,6 +27290,7 @@ async function navigateOilBodyVfxState(cdp, mode, scale, enabled, label) {
         ceramicGlazeVfx: canvas.dataset.ceramicGlazeVfx,
         botanicalBodyVfx: canvas.dataset.botanicalBodyVfx,
         glassBodyVfx: canvas.dataset.glassBodyVfx,
+        rockRoughnessVfx: canvas.dataset.rockRoughnessVfx,
       },
     } : undefined;
   })()`);
@@ -27486,6 +27525,7 @@ async function auditEightXOilBodyVfxExclusion(cdp, dpr) {
     gasLightVfx: '0', liquidSolidMeniscusVfx: '1', gasCoreDepthVfx: '0',
     plasmaCoreVfx: '0', solidBodyVfx: '0', platinumBodyVfx: '0',
     ceramicGlazeVfx: '0', botanicalBodyVfx: '0', glassBodyVfx: '0', oilBodyVfx: '1',
+    rockRoughnessVfx: '0',
   });
   await cdp.send('Page.navigate', { url: `${AUDIT_BASE_URL}?${query}` });
   const deadline = Date.now() + EIGHT_X_PRESENTATION_DEADLINE_MS;
@@ -27533,6 +27573,508 @@ async function auditEightXOilBodyVfxExclusion(cdp, dpr) {
     || timing.source === 'gpu-finish',
   `true-8x E22 did not complete GPU work (${JSON.stringify(timing)})`);
   return { backing: `${geometry.backing.width}x${geometry.backing.height}`, isolation, timing };
+}
+
+/**
+ * E23 is a ROCK-only roughness correction composed over the accepted E17 body
+ * and geological layers. These bounds freeze the accepted 1x/2x/4x
+ * SwiftShader matrix after the exact topology and material controls passed.
+ */
+const ROCK_ROUGHNESS_VFX_ACCEPTANCE = Object.freeze({
+  ROCK_TARGETShallow: Object.freeze({
+    rgbRms: [0.78, 0.92], chromaRms: [0.35, 0.45], rgbPeak: [2, 3],
+    coverage: [0.045, 0.09], signedMean: [-0.58, -0.47],
+    spatialRgbRms: [0.58, 0.72],
+    red: [-0.54, -0.38], green: [-0.59, -0.48], blue: [-0.69, -0.57],
+  }),
+  ROCK_TARGETTransition: Object.freeze({
+    rgbRms: [2.32, 2.47], chromaRms: [0.43, 0.53], rgbPeak: [5, 5],
+    coverage: [0.65, 0.75], signedMean: [-2.18, -2.03],
+    spatialRgbRms: [0.97, 1.08],
+    red: [-1.91, -1.77], green: [-2.22, -2.08], blue: [-2.53, -2.39],
+  }),
+  ROCK_TARGETMidBody: Object.freeze({
+    rgbRms: [1.78, 1.91], chromaRms: [0.42, 0.51], rgbPeak: [4, 4],
+    coverage: [0.61, 0.70], signedMean: [-1.77, -1.63],
+    spatialRgbRms: [0.51, 0.62],
+    red: [-1.55, -1.40], green: [-1.80, -1.65], blue: [-2.09, -1.95],
+  }),
+  ROCK_TARGETDeepCore: Object.freeze({
+    rgbRms: [4.25, 4.43], chromaRms: [0.66, 0.75], rgbPeak: [7, 7],
+    coverage: [0.99, 1.0], signedMean: [-4.15, -4.00],
+    spatialRgbRms: [1.00, 1.12],
+    red: [-3.55, -3.40], green: [-4.25, -4.10], blue: [-4.95, -4.78],
+  }),
+});
+
+async function auditRockRoughnessVfxExperiment(cdp, mode, dpr) {
+  const scales = [];
+  const requestedScales = renderScaleArgument === undefined
+    ? VOLUME_VFX_SCALES : [Number(renderScaleArgument)];
+  for (const scale of requestedScales) {
+    const captures = {};
+    for (const enabled of [false, true, false]) {
+      const key = enabled ? 'enabled' : captures.disabled ? 'disabledRepeat' : 'disabled';
+      captures[key] = await navigateRockRoughnessVfxState(cdp, mode, scale, enabled, key);
+    }
+    const { disabled, enabled, disabledRepeat } = captures;
+    const fixture = disabled.fixture;
+    assert(JSON.stringify(fixture) === JSON.stringify(enabled.fixture)
+      && JSON.stringify(fixture) === JSON.stringify(disabledRepeat.fixture),
+    `E23 ${scale}x fixture metadata changed`);
+    for (const [label, variant] of Object.entries(captures)) {
+      assertGeometry(variant.geometry, `E23 ${label} ${scale}x`, scale);
+      assert(variant.geometry.backend.backend === 'webgl',
+        `E23 ${label} ${scale}x lost WebGL presentation`);
+      assert(variant.hdrPipeline?.state === 'active'
+        && variant.hdrPipeline.solidBodyVfx === 'active'
+        && variant.hdrPipeline.geologicalSolidStyling === true
+        && variant.hdrPipeline.rockRoughnessVfx === (label === 'enabled' ? 'active' : 'inactive'),
+      `E23 ${label} ${scale}x selector/HDR state was wrong (${JSON.stringify(variant.hdrPipeline)})`);
+    }
+    assertCanvasRectsEqual(disabled.geometry.canvas, enabled.geometry.canvas,
+      `E23 ${scale}x disabled/enabled CSS geometry`);
+    assertCanvasRectsEqual(disabled.geometry.canvas, disabledRepeat.geometry.canvas,
+      `E23 ${scale}x disabled/repeated CSS geometry`);
+    assert(JSON.stringify(disabled.geometry.backing) === JSON.stringify(enabled.geometry.backing)
+      && JSON.stringify(disabled.geometry.backing) === JSON.stringify(disabledRepeat.geometry.backing),
+    `E23 ${scale}x backing geometry changed`);
+    assertHdrVfxSemanticEquality(disabled.semantic, enabled.semantic, `E23 ${scale}x disabled/enabled`);
+    assertHdrVfxSemanticEquality(disabled.semantic, disabledRepeat.semantic, `E23 ${scale}x disabled/repeated`);
+    assertVolumeVfxBackingInvariant(disabled.backing, enabled.backing, `E23 ${scale}x disabled/enabled`);
+    assertVolumeVfxBackingInvariant(disabled.backing, disabledRepeat.backing,
+      `E23 ${scale}x disabled/repeated`);
+    assert(JSON.stringify(disabled.walls) === JSON.stringify(enabled.walls)
+      && JSON.stringify(disabled.walls) === JSON.stringify(disabledRepeat.walls)
+      && disabled.walls.occupied === fixture.nativeWall.wallRegion.width
+        * fixture.nativeWall.wallRegion.height,
+    `E23 ${scale}x changed native-wall topology (${JSON.stringify(disabled.walls)})`);
+    assert(JSON.stringify(disabled.depth) === JSON.stringify(enabled.depth)
+      && JSON.stringify(disabled.depth) === JSON.stringify(disabledRepeat.depth),
+    `E23 ${scale}x changed the solid-depth auxiliary plane`);
+    assert(disabled.depth.panes.length === 2 && disabled.depth.panes.every((entry) =>
+      entry.surface.min === 0 && entry.surface.max === 0
+      && entry.first.min === 6 && entry.first.max === 6
+      && entry.shallow.min === 12 && entry.shallow.max === 30
+      && entry.transition.min === 36 && entry.transition.max === 66
+      && entry.mid.min === 72 && entry.mid.max === 126
+      && entry.deep.min === 192 && entry.deep.max === 255)
+      && disabled.depth.thin.min === 0 && disabled.depth.thin.max === 0
+      && disabled.depth.isolated === 0 && disabled.depth.nativeWallOccupied === 0,
+    `E23 ${scale}x fixture escaped its exact depth contract (${JSON.stringify(disabled.depth)})`);
+    assertVolumeVfxRawAlphaInvariant(disabled.rawAll, enabled.rawAll,
+      `E23 ${scale}x disabled/enabled`);
+    assertVolumeVfxRawAlphaInvariant(disabled.rawAll, disabledRepeat.rawAll,
+      `E23 ${scale}x disabled/repeated`);
+    assert(JSON.stringify(disabled.rawControls) === JSON.stringify(enabled.rawControls)
+      && JSON.stringify(disabled.rawControls) === JSON.stringify(disabledRepeat.rawControls),
+    `E23 ${scale}x changed an exact protected raw control`);
+    assert(disabled.capture.capture.data === disabledRepeat.capture.capture.data,
+      `E23 ${scale}x repeated off framebuffer was not byte exact`);
+
+    const targets = rockRoughnessVfxTargetRegions(fixture);
+    const controls = rockRoughnessVfxControlRegions(fixture);
+    const responses = await sampleBackdropRefractionRegions(cdp, {
+      straight: disabled.capture.capture.data,
+      refracted: enabled.capture.capture.data,
+      repeatedStraight: disabledRepeat.capture.capture.data,
+    }, [...targets, ...controls], disabled.capture.canvasRect);
+    const targetResponses = responses.slice(0, targets.length).map((sample) => {
+      const meanRgbRms = Math.hypot(...sample.responseRgb) / Math.sqrt(3);
+      return {
+        ...sample,
+        spatialRgbRms: round(Math.sqrt(Math.max(0, sample.rgbRms ** 2 - meanRgbRms ** 2)), 3),
+      };
+    });
+    const controlResponses = responses.slice(targets.length);
+    assert(responses.every((sample) => sample.repeatRgbPeak === 0),
+      `E23 ${scale}x off -> on -> off was not deterministic (${JSON.stringify(responses)})`);
+    assert(targetResponses.length === 4 && targetResponses.every((sample) => {
+      const bounds = ROCK_ROUGHNESS_VFX_ACCEPTANCE[sample.name];
+      return bounds
+        && sample.rgbRms >= bounds.rgbRms[0] && sample.rgbRms <= bounds.rgbRms[1]
+        && sample.chromaRms >= bounds.chromaRms[0] && sample.chromaRms <= bounds.chromaRms[1]
+        && sample.rgbPeak >= bounds.rgbPeak[0] && sample.rgbPeak <= bounds.rgbPeak[1]
+        && sample.coverage >= bounds.coverage[0] && sample.coverage <= bounds.coverage[1]
+        && sample.signedMean >= bounds.signedMean[0] && sample.signedMean <= bounds.signedMean[1]
+        && sample.spatialRgbRms >= bounds.spatialRgbRms[0]
+        && sample.spatialRgbRms <= bounds.spatialRgbRms[1]
+        && sample.responseRgb[0] >= bounds.red[0] && sample.responseRgb[0] <= bounds.red[1]
+        && sample.responseRgb[1] >= bounds.green[0] && sample.responseRgb[1] <= bounds.green[1]
+        && sample.responseRgb[2] >= bounds.blue[0] && sample.responseRgb[2] <= bounds.blue[1];
+    }), `E23 ${scale}x ROCK response escaped its calibrated roughness envelope (${JSON.stringify(targetResponses)})`);
+    assert(controlResponses.every((sample) => sample.rgbPeak <= 1),
+      `E23 ${scale}x escaped a topology/material/contact/wall control (${JSON.stringify(controlResponses)})`);
+    const screenshots = screenshotRequest && (requestedScales.length === 1 || scale === 2)
+      ? await writeRockRoughnessVfxScreenshots(screenshotRequest, scale, disabled, enabled)
+      : undefined;
+    scales.push({
+      scale, backing: disabled.geometry.backing, depth: disabled.depth,
+      targetResponses, controlResponses, exactRepeatedOff: true, screenshots,
+    });
+  }
+  if (scales.length > 1) {
+    const spread = (values) => Math.max(...values) - Math.min(...values);
+    for (const name of Object.keys(ROCK_ROUGHNESS_VFX_ACCEPTANCE)) {
+      const samples = scales.map((entry) => entry.targetResponses.find((sample) => sample.name === name));
+      assert(samples.every(Boolean)
+        && spread(samples.map((sample) => sample.rgbRms)) <= 0.10
+        && spread(samples.map((sample) => sample.chromaRms)) <= 0.06
+        && spread(samples.map((sample) => sample.coverage)) <= 0.06
+        && spread(samples.map((sample) => sample.rgbPeak)) <= 1
+        && spread(samples.map((sample) => sample.signedMean)) <= 0.08
+        && spread(samples.map((sample) => sample.spatialRgbRms)) <= 0.08
+        && [0, 1, 2].every((channel) =>
+          spread(samples.map((sample) => sample.responseRgb[channel])) <= 0.12),
+      `E23 ${name} response drifted excessively across output scales (${JSON.stringify(samples)})`);
+    }
+  }
+  const trueEightX = await auditEightXRockRoughnessVfxExclusion(cdp, dpr);
+  return {
+    acceptance: ROCK_ROUGHNESS_VFX_ACCEPTANCE,
+    scales, trueEightXExcluded: true, trueEightX,
+  };
+}
+
+async function navigateRockRoughnessVfxState(cdp, mode, scale, enabled, label) {
+  const query = new URLSearchParams({
+    scene: 'render-lab', inputAudit: '1', blankAudit: '1', auditStage: 'blank',
+    rockRoughnessVfxAudit: '1', renderScale: String(scale), renderLook: 'realistic',
+    volumeVfx: '0', liquidBodyVfx: '0', liquidSurfaceVfx: '0', gasBodyVfx: '0',
+    gasMotionVfx: '0', powderBodyVfx: '0', powderLightVfx: '0', powderSolidContactVfx: '0',
+    translucentEdgeVfx: '0', organicSubsurfaceVfx: '0', wetSedimentVfx: '0',
+    gasLightVfx: '0', liquidSolidMeniscusVfx: '0', gasCoreDepthVfx: '0',
+    plasmaCoreVfx: '0', solidBodyVfx: '1', platinumBodyVfx: '0',
+    ceramicGlazeVfx: '0', botanicalBodyVfx: '0', glassBodyVfx: '0', oilBodyVfx: '0',
+    rockRoughnessVfx: enabled ? '1' : '0',
+  });
+  await cdp.send('Page.navigate', { url: `${AUDIT_BASE_URL}?${query}` });
+  await waitFor(() => evaluate(cdp, `(() => {
+    const p = new URLSearchParams(location.search);
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    return p.get('rockRoughnessVfxAudit') === '1'
+      && p.get('renderScale') === ${JSON.stringify(String(scale))}
+      && p.get('solidBodyVfx') === '1'
+      && p.get('rockRoughnessVfx') === ${JSON.stringify(enabled ? '1' : '0')}
+      && typeof audit?.prepareRockRoughnessVfxFixture === 'function'
+      && typeof audit?.rockRoughnessVfxFixture === 'function';
+  })()`), scale === 4 ? 45_000 : 15_000, `E23 ${label} ${scale}x page`);
+  await waitFor(() => evaluate(cdp,
+    `window.__ANIFOR_INPUT_AUDIT__.backend().backend === ${JSON.stringify(mode)}`),
+  scale === 4 ? 30_000 : 15_000, `E23 ${label} ${scale}x backend`);
+  const fixture = await evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    audit.setSolidOpticalDepth(true);
+    audit.setGeologicalSolidStyling(true);
+    audit.prepareRockRoughnessVfxFixture();
+    return audit.rockRoughnessVfxFixture();
+  })()`);
+  await waitFor(() => rockRoughnessVfxFixtureReady(cdp, fixture),
+    20_000, `E23 ${label} ${scale}x fixture/depth hydration`);
+  const hdrPipeline = await evaluate(cdp, `(() => {
+    const canvas = document.querySelector('canvas.semantic-field-canvas');
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    return canvas ? {
+      state: canvas.dataset.hdrPipeline, reason: canvas.dataset.hdrPipelineReason,
+      bloomBacking: canvas.dataset.bloomBacking,
+      solidBodyVfx: canvas.dataset.solidBodyVfx,
+      rockRoughnessVfx: canvas.dataset.rockRoughnessVfx,
+      geologicalSolidStyling: audit.geologicalSolidStylingEnabled(),
+      isolatedSelectors: {
+        volumeVfx: canvas.dataset.volumeVfx, liquidBodyVfx: canvas.dataset.liquidBodyVfx,
+        liquidSurfaceVfx: canvas.dataset.liquidSurfaceVfx, gasBodyVfx: canvas.dataset.gasBodyVfx,
+        gasMotionVfx: canvas.dataset.gasMotionVfx, powderBodyVfx: canvas.dataset.powderBodyVfx,
+        powderLightVfx: canvas.dataset.powderLightVfx,
+        powderSolidContactVfx: canvas.dataset.powderSolidContactVfx,
+        translucentEdgeVfx: canvas.dataset.translucentEdgeVfx,
+        organicSubsurfaceVfx: canvas.dataset.organicSubsurfaceVfx,
+        wetSedimentVfx: canvas.dataset.wetSedimentVfx,
+        gasLightVfx: canvas.dataset.gasLightVfx,
+        liquidSolidMeniscusVfx: canvas.dataset.liquidSolidMeniscusVfx,
+        gasCoreDepthVfx: canvas.dataset.gasCoreDepthVfx,
+        plasmaCoreVfx: canvas.dataset.plasmaCoreVfx,
+        platinumBodyVfx: canvas.dataset.platinumBodyVfx,
+        ceramicGlazeVfx: canvas.dataset.ceramicGlazeVfx,
+        botanicalBodyVfx: canvas.dataset.botanicalBodyVfx,
+        glassBodyVfx: canvas.dataset.glassBodyVfx,
+        oilBodyVfx: canvas.dataset.oilBodyVfx,
+      },
+    } : undefined;
+  })()`);
+  const expectedBloom = `${WORLD_WIDTH * scale / 2}x${WORLD_HEIGHT * scale / 2}`;
+  assert(hdrPipeline?.state === 'active' && hdrPipeline.bloomBacking === expectedBloom
+    && hdrPipeline.solidBodyVfx === 'active'
+    && hdrPipeline.geologicalSolidStyling === true
+    && Object.values(hdrPipeline.isolatedSelectors).every((state) => state === 'inactive')
+    && hdrPipeline.rockRoughnessVfx === (enabled ? 'active' : 'inactive'),
+  `E23 ${label} ${scale}x HDR/selector state resolved incorrectly (${JSON.stringify(hdrPipeline)})`);
+  const capture = await waitForStablePageCapture(
+    cdp, `E23 ${label} ${scale}x framebuffer`,
+    scale === 4 ? 120_000 : scale === 2 ? 30_000 : 15_000, 1,
+  );
+  return {
+    fixture, capture, geometry: await metrics(cdp), semantic: await hdrVfxSemanticDigest(cdp),
+    backing: await sampleVolumeVfxCanvasAlphaSupport(cdp),
+    walls: await rockRoughnessVfxWallDigest(cdp),
+    depth: await rockRoughnessVfxDepthDigest(cdp, fixture),
+    rawAll: await sampleVolumeVfxRawWorldPixels(cdp, rockRoughnessVfxAllRawPoints(fixture)),
+    rawControls: await sampleVolumeVfxRawWorldPixels(cdp, rockRoughnessVfxRawControlPoints(fixture)),
+    hdrPipeline,
+  };
+}
+
+async function rockRoughnessVfxFixtureReady(cdp, snapshot) {
+  return evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    const snapshot = ${JSON.stringify(snapshot)};
+    const inside = (rect, x, y) => x >= rect.x && x < rect.x + rect.width
+      && y >= rect.y && y < rect.y + rect.height;
+    const exactRect = (rect, material) => {
+      for (let y = rect.y; y < rect.y + rect.height; y++) for (let x = rect.x; x < rect.x + rect.width; x++) {
+        if (audit.cell(x, y) !== material) return false;
+      }
+      return true;
+    };
+    const depthRange = (rect) => {
+      let min = 255; let max = 0;
+      for (let y = rect.y; y < rect.y + rect.height; y++) for (let x = rect.x; x < rect.x + rect.width; x++) {
+        const value = audit.presentationAuxiliary(x, y);
+        min = Math.min(min, value); max = Math.max(max, value);
+      }
+      return { min, max };
+    };
+    const panesReady = snapshot.panes.every((pane) => {
+      for (let y = pane.body.y; y < pane.body.y + pane.body.height; y++) {
+        for (let x = pane.body.x; x < pane.body.x + pane.body.width; x++) {
+          const empty = inside(pane.authoredHole, x, y) || inside(pane.openNotch, x, y);
+          if (audit.cell(x, y) !== (empty ? 0 : pane.material)) return false;
+        }
+      }
+      const surface = depthRange(pane.surfaceLayer);
+      const first = depthRange(pane.firstInnerLayer);
+      const shallow = depthRange(pane.shallowBand);
+      const transition = depthRange(pane.transitionBand);
+      const mid = depthRange(pane.midBand);
+      const deep = depthRange(pane.deepCore);
+      return surface.min === 0 && surface.max === 0
+        && first.min === 6 && first.max === 6
+        && shallow.min === 12 && shallow.max === 30
+        && transition.min === 36 && transition.max === 66
+        && mid.min === 72 && mid.max === 126
+        && deep.min === 192 && deep.max === 255;
+    });
+    const contactsReady = Object.values(snapshot.contacts).every((entry) =>
+      exactRect(entry.rock, 78) && exactRect(entry.other, entry.otherMaterial)
+      && audit.cell(entry.rockProbe.x, entry.rockProbe.y) === 78
+      && audit.cell(entry.otherProbe.x, entry.otherProbe.y) === entry.otherMaterial);
+    const wallReady = exactRect(snapshot.nativeWall.rock, 78) && (() => {
+      for (let y = snapshot.nativeWall.wallRegion.y;
+        y < snapshot.nativeWall.wallRegion.y + snapshot.nativeWall.wallRegion.height; y++) {
+        for (let x = snapshot.nativeWall.wallRegion.x;
+          x < snapshot.nativeWall.wallRegion.x + snapshot.nativeWall.wallRegion.width; x++) {
+          if (audit.wall(x, y) !== snapshot.conductiveWall) return false;
+        }
+      }
+      return audit.wall(snapshot.nativeWall.wallProbe.x, snapshot.nativeWall.wallProbe.y)
+          === snapshot.conductiveWall
+        && audit.wall(snapshot.nativeWall.clearProbe.x, snapshot.nativeWall.clearProbe.y) === 0;
+    })();
+    return panesReady && contactsReady && wallReady
+      && exactRect(snapshot.thinLine, 78)
+      && audit.cell(snapshot.isolated.x, snapshot.isolated.y) === 78
+      && Object.values(snapshot.controls).every((entry) => exactRect(entry, entry.material))
+      && audit.presentationAuxiliary(snapshot.thinLine.x,
+        snapshot.thinLine.y + Math.floor(snapshot.thinLine.height / 2)) === 0
+      && audit.presentationAuxiliary(snapshot.isolated.x, snapshot.isolated.y) === 0
+      && audit.geologicalSolidStylingEnabled() === true;
+  })()`);
+}
+
+function rockRoughnessVfxTargetRegions(snapshot) {
+  const pane = snapshot.panes.find((entry) => entry.code === 'ROCK_TARGET');
+  assert(pane, 'E23 fixture has no exact ROCK target');
+  const rect = (name, candidate) => ({
+    name, target: true, x: candidate.x + candidate.width / 2, y: candidate.y + candidate.height / 2,
+    radiusX: Math.max(0.35, candidate.width / 2 - 0.2),
+    radiusY: Math.max(0.35, candidate.height / 2 - 0.2),
+  });
+  return [
+    rect('ROCK_TARGETShallow', pane.shallowBand),
+    rect('ROCK_TARGETTransition', pane.transitionBand),
+    rect('ROCK_TARGETMidBody', pane.midBand),
+    rect('ROCK_TARGETDeepCore', pane.deepCore),
+  ];
+}
+
+function rockRoughnessVfxControlRegions(snapshot) {
+  const point = (name, candidate) => ({
+    name, x: Math.floor(candidate.x) + 0.5, y: Math.floor(candidate.y) + 0.5, radius: 0,
+  });
+  const center = (name, rect) => point(name, {
+    x: rect.x + Math.floor(rect.width / 2), y: rect.y + Math.floor(rect.height / 2),
+  });
+  const region = (name, candidate) => ({
+    name, x: candidate.x + candidate.width / 2, y: candidate.y + candidate.height / 2,
+    radiusX: Math.max(0.35, candidate.width / 2 - 0.2),
+    radiusY: Math.max(0.35, candidate.height / 2 - 0.2),
+  });
+  const controls = [];
+  for (const pane of snapshot.panes) {
+    controls.push(region(`${pane.code}Surface`, pane.surfaceLayer));
+    controls.push(region(`${pane.code}FirstLayer`, pane.firstInnerLayer));
+    controls.push(center(`${pane.code}Hole`, pane.authoredHole));
+    controls.push(center(`${pane.code}Notch`, pane.openNotch));
+    if (pane.code === 'METAL_REFERENCE') {
+      controls.push(region('METAL_REFERENCEShallow', pane.shallowBand));
+      controls.push(region('METAL_REFERENCETransition', pane.transitionBand));
+      controls.push(region('METAL_REFERENCEMidBody', pane.midBand));
+      controls.push(region('METAL_REFERENCEDeepCore', pane.deepCore));
+    }
+  }
+  controls.push(center('ThinLine', snapshot.thinLine));
+  controls.push(point('Isolated', snapshot.isolated));
+  controls.push(point('NativeWallOccupied', snapshot.nativeWall.wallProbe));
+  for (const [name, rect] of Object.entries(snapshot.controls)) controls.push(center(name, rect));
+  for (const [name, entry] of Object.entries(snapshot.contacts)) {
+    controls.push(point(`${name}Rock`, entry.rockProbe));
+    controls.push(point(`${name}Other`, entry.otherProbe));
+  }
+  return controls;
+}
+
+function rockRoughnessVfxAllRawPoints(snapshot) {
+  const targets = rockRoughnessVfxTargetRegions(snapshot).map((region) => ({
+    name: region.name, x: Math.floor(region.x), y: Math.floor(region.y),
+  }));
+  return [...targets, ...rockRoughnessVfxRawControlPoints(snapshot)];
+}
+
+function rockRoughnessVfxRawControlPoints(snapshot) {
+  return rockRoughnessVfxControlRegions(snapshot).map((region) => ({
+    name: region.name, x: Math.floor(region.x), y: Math.floor(region.y),
+  }));
+}
+
+async function rockRoughnessVfxDepthDigest(cdp, snapshot) {
+  return evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    const sample = (rect) => {
+      let min = 255; let max = 0; let hash = 2166136261;
+      for (let y = rect.y; y < rect.y + rect.height; y++) for (let x = rect.x; x < rect.x + rect.width; x++) {
+        const value = audit.presentationAuxiliary(x, y);
+        min = Math.min(min, value); max = Math.max(max, value);
+        hash = Math.imul(hash ^ value ^ ((x + y * audit.width) & 255), 16777619) >>> 0;
+      }
+      return { min, max, hash };
+    };
+    const snapshot = ${JSON.stringify(snapshot)};
+    return {
+      panes: snapshot.panes.map((pane) => ({
+        code: pane.code, body: sample(pane.body), surface: sample(pane.surfaceLayer),
+        first: sample(pane.firstInnerLayer), shallow: sample(pane.shallowBand),
+        transition: sample(pane.transitionBand), mid: sample(pane.midBand), deep: sample(pane.deepCore),
+      })),
+      thin: sample(snapshot.thinLine),
+      isolated: audit.presentationAuxiliary(snapshot.isolated.x, snapshot.isolated.y),
+      nativeWallOccupied: audit.presentationAuxiliary(
+        snapshot.nativeWall.wallProbe.x, snapshot.nativeWall.wallProbe.y,
+      ),
+    };
+  })()`);
+}
+
+async function rockRoughnessVfxWallDigest(cdp) {
+  return evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    let occupied = 0; let hash = 2166136261;
+    for (let y = 0; y < audit.height; y++) for (let x = 0; x < audit.width; x++) {
+      const wall = audit.wall(x, y); occupied += Number(wall !== 0);
+      hash = Math.imul(hash ^ wall ^ ((x + y * audit.width) & 255), 16777619) >>> 0;
+    }
+    return { occupied, hash };
+  })()`);
+}
+
+async function writeRockRoughnessVfxScreenshots(source, scale, disabled, enabled) {
+  const paths = {
+    off: variantScreenshotPath(source, `e23-rock-roughness-${scale}x-off`),
+    on: variantScreenshotPath(source, `e23-rock-roughness-${scale}x-on`),
+  };
+  await writeFile(paths.off, Buffer.from(disabled.capture.capture.data, 'base64'));
+  await writeFile(paths.on, Buffer.from(enabled.capture.capture.data, 'base64'));
+  return paths;
+}
+
+async function auditEightXRockRoughnessVfxExclusion(cdp, dpr) {
+  await setDesktopMetrics(cdp, 1280, 720, dpr);
+  const query = new URLSearchParams({
+    scene: 'render-lab', inputAudit: '1', blankAudit: '1', renderScale: '8',
+    auditStage: 'eight-rock-roughness', rockRoughnessVfxAudit: '1', renderLook: 'realistic',
+    volumeVfx: '0', liquidBodyVfx: '0', liquidSurfaceVfx: '0', gasBodyVfx: '0',
+    gasMotionVfx: '0', powderBodyVfx: '0', powderLightVfx: '0', powderSolidContactVfx: '0',
+    translucentEdgeVfx: '0', organicSubsurfaceVfx: '0', wetSedimentVfx: '0',
+    gasLightVfx: '0', liquidSolidMeniscusVfx: '0', gasCoreDepthVfx: '0',
+    plasmaCoreVfx: '0', solidBodyVfx: '1', platinumBodyVfx: '0', ceramicGlazeVfx: '0',
+    botanicalBodyVfx: '0', glassBodyVfx: '0', oilBodyVfx: '0', rockRoughnessVfx: '1',
+  });
+  await cdp.send('Page.navigate', { url: `${AUDIT_BASE_URL}?${query}` });
+  const deadline = Date.now() + EIGHT_X_PRESENTATION_DEADLINE_MS;
+  await waitFor(() => evaluate(cdp, `(() => {
+    const p = new URLSearchParams(location.search);
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    return p.get('renderScale') === '8' && p.get('auditStage') === 'eight-rock-roughness'
+      && p.get('solidBodyVfx') === '1' && p.get('rockRoughnessVfx') === '1'
+      && audit?.geologicalSolidStylingEnabled() === true;
+  })()`), remainingDeadlineMs(deadline, 'true-8x E23 input audit API'),
+  'true-8x E23 input audit API');
+  const backend = await waitForEightXTerminalBackend(cdp, 'true-8x E23', deadline);
+  assertEightXWebGLBackend(backend, 'true-8x E23');
+  const promotionFence = 'signaled';
+  const geometry = await waitForStableCanvas(
+    cdp, 1280, 720, undefined,
+    Math.min(45_000, remainingDeadlineMs(deadline, 'true-8x E23 geometry')),
+    'true-8x E23 geometry',
+  );
+  assert(geometry.backing.width === WORLD_WIDTH * 8
+    && geometry.backing.height === WORLD_HEIGHT * 8 && geometry.outputScale === '8',
+  `true-8x E23 lost exact backing (${JSON.stringify(geometry.backing)})`);
+  const isolation = await evaluate(cdp, `(() => {
+    const canvas = document.querySelector('canvas.semantic-field-canvas');
+    return canvas ? {
+      renderer: canvas.dataset.renderer, look: canvas.dataset.renderLook,
+      state: canvas.dataset.hdrPipeline, reason: canvas.dataset.hdrPipelineReason,
+      bloomBacking: canvas.dataset.bloomBacking ?? null,
+      solidBodyVfx: canvas.dataset.solidBodyVfx,
+      rockRoughnessVfx: canvas.dataset.rockRoughnessVfx,
+      platinumBodyVfx: canvas.dataset.platinumBodyVfx,
+      ceramicGlazeVfx: canvas.dataset.ceramicGlazeVfx,
+      botanicalBodyVfx: canvas.dataset.botanicalBodyVfx,
+      glassBodyVfx: canvas.dataset.glassBodyVfx,
+      oilBodyVfx: canvas.dataset.oilBodyVfx,
+    } : undefined;
+  })()`, Math.min(1_000, remainingDeadlineMs(deadline, 'true-8x E23 isolation')));
+  assert(isolation?.renderer === 'semantic-field-webgl' && isolation.look === 'realistic'
+    && isolation.state === 'inactive' && isolation.reason === 'scale-8'
+    && isolation.bloomBacking === null && isolation.solidBodyVfx === 'inactive'
+    && isolation.rockRoughnessVfx === 'inactive'
+    && isolation.platinumBodyVfx === 'inactive' && isolation.ceramicGlazeVfx === 'inactive'
+    && isolation.botanicalBodyVfx === 'inactive' && isolation.glassBodyVfx === 'inactive'
+    && isolation.oilBodyVfx === 'inactive',
+  `true-8x E23 isolation failed (${JSON.stringify(isolation)})`);
+  // Promotion already completed inside its one total 30-second startup
+  // deadline. A requested post-promotion frame owns the renderer's separate
+  // 30-second fence watchdog; do not spend only the few milliseconds left from
+  // cold startup on this second, intentional 15-million-fragment submission.
+  const timing = await auditWebGLPresentationTiming(
+    cdp, 1, 12_000, EIGHT_X_PRESENTATION_DEADLINE_MS, 1,
+  );
+  assert(timing.source === 'gpu-query' || timing.source === 'gpu-fence'
+    || timing.source === 'gpu-finish',
+  `true-8x E23 did not complete GPU work (${JSON.stringify(timing)})`);
+  return {
+    backing: `${geometry.backing.width}x${geometry.backing.height}`,
+    promotionFence, isolation, timing,
+  };
 }
 
 /**
@@ -27682,7 +28224,7 @@ async function navigateGlassBodyVfxState(cdp, mode, scale, enabled, label) {
     gasLightVfx: '0', liquidSolidMeniscusVfx: '0', gasCoreDepthVfx: '0',
     plasmaCoreVfx: '0', solidBodyVfx: '0', platinumBodyVfx: '0',
     ceramicGlazeVfx: '0', botanicalBodyVfx: '0', glassBodyVfx: enabled ? '1' : '0',
-    oilBodyVfx: '0',
+    oilBodyVfx: '0', rockRoughnessVfx: '0',
   });
   await cdp.send('Page.navigate', { url: `${AUDIT_BASE_URL}?${query}` });
   await waitFor(() => evaluate(cdp, `(() => {
@@ -27691,6 +28233,7 @@ async function navigateGlassBodyVfxState(cdp, mode, scale, enabled, label) {
     return p.get('glassBodyVfxAudit') === '1'
       && p.get('renderScale') === ${JSON.stringify(String(scale))}
       && p.get('glassBodyVfx') === ${JSON.stringify(enabled ? '1' : '0')}
+      && p.get('rockRoughnessVfx') === '0'
       && typeof audit?.prepareGlassBodyVfxFixture === 'function'
       && typeof audit?.glassBodyVfxFixture === 'function';
   })()`), scale === 4 ? 45_000 : 15_000, `E21 ${label} ${scale}x page`);
@@ -27738,6 +28281,7 @@ async function navigateGlassBodyVfxState(cdp, mode, scale, enabled, label) {
         platinumBodyVfx: canvas.dataset.platinumBodyVfx,
         ceramicGlazeVfx: canvas.dataset.ceramicGlazeVfx,
         botanicalBodyVfx: canvas.dataset.botanicalBodyVfx,
+        rockRoughnessVfx: canvas.dataset.rockRoughnessVfx,
       },
     } : undefined;
   })()`);
@@ -27959,7 +28503,7 @@ async function auditEightXGlassBodyVfxExclusion(cdp, dpr) {
     translucentEdgeVfx: '0', organicSubsurfaceVfx: '0', wetSedimentVfx: '0',
     gasLightVfx: '0', liquidSolidMeniscusVfx: '0', gasCoreDepthVfx: '0',
     plasmaCoreVfx: '0', solidBodyVfx: '0', platinumBodyVfx: '0',
-    ceramicGlazeVfx: '0', botanicalBodyVfx: '0', glassBodyVfx: '1', oilBodyVfx: '0',
+    ceramicGlazeVfx: '0', botanicalBodyVfx: '0', glassBodyVfx: '1', oilBodyVfx: '0', rockRoughnessVfx: '0',
   });
   await cdp.send('Page.navigate', { url: `${AUDIT_BASE_URL}?${query}` });
   const deadline = Date.now() + EIGHT_X_PRESENTATION_DEADLINE_MS;
@@ -28123,7 +28667,7 @@ async function navigateTranslucentEdgeVfxState(cdp, mode, scale, enabled, label)
     translucentEdgeVfxAudit: '1', renderScale: String(scale), renderLook: 'realistic',
     volumeVfx: '0', liquidBodyVfx: '0', liquidSurfaceVfx: '0', gasBodyVfx: '0',
     gasMotionVfx: '0', powderBodyVfx: '0', powderLightVfx: '0', powderSolidContactVfx: '0',
-    translucentEdgeVfx: enabled ? '1' : '0', organicSubsurfaceVfx: '0', wetSedimentVfx: '0', gasLightVfx: '0', liquidSolidMeniscusVfx: '0', gasCoreDepthVfx: '0', plasmaCoreVfx: '0', solidBodyVfx: '0', platinumBodyVfx: '0', ceramicGlazeVfx: '0', botanicalBodyVfx: '0', glassBodyVfx: '0', oilBodyVfx: '0',
+    translucentEdgeVfx: enabled ? '1' : '0', organicSubsurfaceVfx: '0', wetSedimentVfx: '0', gasLightVfx: '0', liquidSolidMeniscusVfx: '0', gasCoreDepthVfx: '0', plasmaCoreVfx: '0', solidBodyVfx: '0', platinumBodyVfx: '0', ceramicGlazeVfx: '0', botanicalBodyVfx: '0', glassBodyVfx: '0', oilBodyVfx: '0', rockRoughnessVfx: '0',
   });
   await cdp.send('Page.navigate', { url: `${AUDIT_BASE_URL}?${query}` });
   await waitFor(() => evaluate(cdp, `(() => {
@@ -28341,7 +28885,7 @@ async function auditEightXTranslucentEdgeVfxExclusion(cdp, dpr) {
     auditStage: 'eight-translucent-edge', renderLook: 'realistic',
     volumeVfx: '0', liquidBodyVfx: '0', liquidSurfaceVfx: '0', gasBodyVfx: '0',
     gasMotionVfx: '0', powderBodyVfx: '0', powderLightVfx: '0', powderSolidContactVfx: '0',
-    translucentEdgeVfx: '1', organicSubsurfaceVfx: '0', wetSedimentVfx: '0', gasLightVfx: '0', liquidSolidMeniscusVfx: '0', gasCoreDepthVfx: '0', platinumBodyVfx: '0', ceramicGlazeVfx: '0', botanicalBodyVfx: '0', glassBodyVfx: '0', oilBodyVfx: '0',
+    translucentEdgeVfx: '1', organicSubsurfaceVfx: '0', wetSedimentVfx: '0', gasLightVfx: '0', liquidSolidMeniscusVfx: '0', gasCoreDepthVfx: '0', platinumBodyVfx: '0', ceramicGlazeVfx: '0', botanicalBodyVfx: '0', glassBodyVfx: '0', oilBodyVfx: '0', rockRoughnessVfx: '0',
   });
   await cdp.send('Page.navigate', { url: `${AUDIT_BASE_URL}?${query}` });
   const deadline = Date.now() + EIGHT_X_PRESENTATION_DEADLINE_MS;
@@ -28482,7 +29026,7 @@ async function navigateVolumeVfxState(cdp, mode, scale, enabled, label) {
     scene: 'render-lab', inputAudit: '1', auditStage: 'canonical',
     volumeVfxAudit: '1', renderScale: String(scale), renderLook: 'realistic',
     volumeVfx: enabled ? '1' : '0', liquidSurfaceVfx: '0',
-    powderBodyVfx: '0', powderLightVfx: '0', translucentEdgeVfx: '0', organicSubsurfaceVfx: '0', wetSedimentVfx: '0', gasLightVfx: '0', liquidSolidMeniscusVfx: '0', gasCoreDepthVfx: '0', plasmaCoreVfx: '0', solidBodyVfx: '0', platinumBodyVfx: '0', ceramicGlazeVfx: '0', botanicalBodyVfx: '0', glassBodyVfx: '0', oilBodyVfx: '0',
+    powderBodyVfx: '0', powderLightVfx: '0', translucentEdgeVfx: '0', organicSubsurfaceVfx: '0', wetSedimentVfx: '0', gasLightVfx: '0', liquidSolidMeniscusVfx: '0', gasCoreDepthVfx: '0', plasmaCoreVfx: '0', solidBodyVfx: '0', platinumBodyVfx: '0', ceramicGlazeVfx: '0', botanicalBodyVfx: '0', glassBodyVfx: '0', oilBodyVfx: '0', rockRoughnessVfx: '0',
   });
   await cdp.send('Page.navigate', { url: `${AUDIT_BASE_URL}?${query}` });
   await waitFor(() => evaluate(cdp, `(() => {
@@ -28570,7 +29114,7 @@ async function navigateLiquidBodyVfxState(cdp, mode, scale, enabled, label) {
   const query = new URLSearchParams({
     scene: 'render-lab', inputAudit: '1', auditStage: 'canonical',
     liquidBodyVfxAudit: '1', renderScale: String(scale), renderLook: 'realistic',
-    volumeVfx: '0', liquidBodyVfx: enabled ? '1' : '0', liquidSurfaceVfx: '0', organicSubsurfaceVfx: '0', wetSedimentVfx: '0', gasLightVfx: '0', liquidSolidMeniscusVfx: '0', gasCoreDepthVfx: '0', plasmaCoreVfx: '0', solidBodyVfx: '0', platinumBodyVfx: '0', ceramicGlazeVfx: '0', botanicalBodyVfx: '0', glassBodyVfx: '0', oilBodyVfx: '0',
+    volumeVfx: '0', liquidBodyVfx: enabled ? '1' : '0', liquidSurfaceVfx: '0', organicSubsurfaceVfx: '0', wetSedimentVfx: '0', gasLightVfx: '0', liquidSolidMeniscusVfx: '0', gasCoreDepthVfx: '0', plasmaCoreVfx: '0', solidBodyVfx: '0', platinumBodyVfx: '0', ceramicGlazeVfx: '0', botanicalBodyVfx: '0', glassBodyVfx: '0', oilBodyVfx: '0', rockRoughnessVfx: '0',
   });
   await cdp.send('Page.navigate', { url: `${AUDIT_BASE_URL}?${query}` });
   await waitFor(() => evaluate(cdp, `(() => {
@@ -28634,7 +29178,7 @@ async function navigateLiquidSurfaceVfxState(cdp, mode, scale, enabled, label) {
     liquidBodyVfxAudit: '1', liquidSurfaceVfxAudit: '1',
     renderScale: String(scale), renderLook: 'realistic',
     volumeVfx: '0', liquidBodyVfx: '1', liquidSurfaceVfx: enabled ? '1' : '0',
-    gasBodyVfx: '0', gasMotionVfx: '0', powderBodyVfx: '0', powderLightVfx: '0', organicSubsurfaceVfx: '0', wetSedimentVfx: '0', gasLightVfx: '0', liquidSolidMeniscusVfx: '0', gasCoreDepthVfx: '0', plasmaCoreVfx: '0', solidBodyVfx: '0', platinumBodyVfx: '0', ceramicGlazeVfx: '0', botanicalBodyVfx: '0', glassBodyVfx: '0', oilBodyVfx: '0',
+    gasBodyVfx: '0', gasMotionVfx: '0', powderBodyVfx: '0', powderLightVfx: '0', organicSubsurfaceVfx: '0', wetSedimentVfx: '0', gasLightVfx: '0', liquidSolidMeniscusVfx: '0', gasCoreDepthVfx: '0', plasmaCoreVfx: '0', solidBodyVfx: '0', platinumBodyVfx: '0', ceramicGlazeVfx: '0', botanicalBodyVfx: '0', glassBodyVfx: '0', oilBodyVfx: '0', rockRoughnessVfx: '0',
   });
   await cdp.send('Page.navigate', { url: `${AUDIT_BASE_URL}?${query}` });
   await waitFor(() => evaluate(cdp, `(() => {
@@ -28705,7 +29249,7 @@ async function navigateGasBodyVfxState(cdp, mode, scale, enabled, label) {
     scene: 'render-lab', inputAudit: '1', auditStage: 'canonical',
     gasBodyVfxAudit: '1', renderScale: String(scale), renderLook: 'realistic',
     volumeVfx: '0', liquidBodyVfx: '0', liquidSurfaceVfx: '0',
-    gasBodyVfx: enabled ? '1' : '0', gasMotionVfx: '0', organicSubsurfaceVfx: '0', wetSedimentVfx: '0', gasLightVfx: '0', liquidSolidMeniscusVfx: '0', gasCoreDepthVfx: '0', plasmaCoreVfx: '0', solidBodyVfx: '0', platinumBodyVfx: '0', ceramicGlazeVfx: '0', botanicalBodyVfx: '0', glassBodyVfx: '0', oilBodyVfx: '0',
+    gasBodyVfx: enabled ? '1' : '0', gasMotionVfx: '0', organicSubsurfaceVfx: '0', wetSedimentVfx: '0', gasLightVfx: '0', liquidSolidMeniscusVfx: '0', gasCoreDepthVfx: '0', plasmaCoreVfx: '0', solidBodyVfx: '0', platinumBodyVfx: '0', ceramicGlazeVfx: '0', botanicalBodyVfx: '0', glassBodyVfx: '0', oilBodyVfx: '0', rockRoughnessVfx: '0',
   });
   await cdp.send('Page.navigate', { url: `${AUDIT_BASE_URL}?${query}` });
   await waitFor(() => evaluate(cdp, `(() => {
@@ -28769,7 +29313,7 @@ async function navigatePowderBodyVfxState(cdp, mode, scale, enabled, label) {
     scene: 'render-lab', inputAudit: '1', auditStage: 'canonical',
     powderBodyVfxAudit: '1', renderScale: String(scale), renderLook: 'realistic',
     volumeVfx: '0', liquidBodyVfx: '0', liquidSurfaceVfx: '0',
-    gasBodyVfx: '0', powderBodyVfx: enabled ? '1' : '0', powderSolidContactVfx: '0', organicSubsurfaceVfx: '0', wetSedimentVfx: '0', gasLightVfx: '0', liquidSolidMeniscusVfx: '0', gasCoreDepthVfx: '0', plasmaCoreVfx: '0', solidBodyVfx: '0', platinumBodyVfx: '0', ceramicGlazeVfx: '0', botanicalBodyVfx: '0', glassBodyVfx: '0', oilBodyVfx: '0',
+    gasBodyVfx: '0', powderBodyVfx: enabled ? '1' : '0', powderSolidContactVfx: '0', organicSubsurfaceVfx: '0', wetSedimentVfx: '0', gasLightVfx: '0', liquidSolidMeniscusVfx: '0', gasCoreDepthVfx: '0', plasmaCoreVfx: '0', solidBodyVfx: '0', platinumBodyVfx: '0', ceramicGlazeVfx: '0', botanicalBodyVfx: '0', glassBodyVfx: '0', oilBodyVfx: '0', rockRoughnessVfx: '0',
   });
   await cdp.send('Page.navigate', { url: `${AUDIT_BASE_URL}?${query}` });
   await waitFor(() => evaluate(cdp, `(() => {
@@ -28865,7 +29409,7 @@ async function navigatePowderLightVfxState(cdp, mode, scale, enabled, label) {
     powderLightVfxAudit: '1', renderScale: String(scale), renderLook: 'realistic',
     // E06 compares its one selector on top of the accepted E02/E05 body base.
     volumeVfx: '1', powderBodyVfx: '1', liquidBodyVfx: '0', liquidSurfaceVfx: '0',
-    gasBodyVfx: '0', translucentEdgeVfx: '0', organicSubsurfaceVfx: '0', wetSedimentVfx: '0', gasLightVfx: '0', liquidSolidMeniscusVfx: '0', gasCoreDepthVfx: '0', plasmaCoreVfx: '0', solidBodyVfx: '0', platinumBodyVfx: '0', ceramicGlazeVfx: '0', botanicalBodyVfx: '0', glassBodyVfx: '0', oilBodyVfx: '0',
+    gasBodyVfx: '0', translucentEdgeVfx: '0', organicSubsurfaceVfx: '0', wetSedimentVfx: '0', gasLightVfx: '0', liquidSolidMeniscusVfx: '0', gasCoreDepthVfx: '0', plasmaCoreVfx: '0', solidBodyVfx: '0', platinumBodyVfx: '0', ceramicGlazeVfx: '0', botanicalBodyVfx: '0', glassBodyVfx: '0', oilBodyVfx: '0', rockRoughnessVfx: '0',
     powderLightVfx: enabled ? '1' : '0',
   });
   await cdp.send('Page.navigate', { url: `${AUDIT_BASE_URL}?${query}` });
@@ -29099,7 +29643,7 @@ function assertVolumeVfxRawAlphaInvariant(left, right, label) {
 async function navigateHdrVfxLook(cdp, mode, look, label) {
   const query = new URLSearchParams({
     scene: 'render-lab', inputAudit: '1', auditStage: 'canonical',
-    renderScale: '2', renderLook: look, organicSubsurfaceVfx: '0', wetSedimentVfx: '0', gasLightVfx: '0', liquidSolidMeniscusVfx: '0', gasCoreDepthVfx: '0', plasmaCoreVfx: '0', solidBodyVfx: '0', platinumBodyVfx: '0', ceramicGlazeVfx: '0', botanicalBodyVfx: '0', glassBodyVfx: '0', oilBodyVfx: '0',
+    renderScale: '2', renderLook: look, organicSubsurfaceVfx: '0', wetSedimentVfx: '0', gasLightVfx: '0', liquidSolidMeniscusVfx: '0', gasCoreDepthVfx: '0', plasmaCoreVfx: '0', solidBodyVfx: '0', platinumBodyVfx: '0', ceramicGlazeVfx: '0', botanicalBodyVfx: '0', glassBodyVfx: '0', oilBodyVfx: '0', rockRoughnessVfx: '0',
   });
   await cdp.send('Page.navigate', { url: `${AUDIT_BASE_URL}?${query}` });
   await waitFor(() => evaluate(cdp, `(() => {

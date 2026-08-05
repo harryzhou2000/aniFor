@@ -12,6 +12,7 @@ import {
   resolveOrganicSubsurfaceVfxEnabled,
   resolvePlasmaCoreVfxEnabled,
   resolvePlatinumBodyVfxEnabled,
+  resolveRockRoughnessVfxEnabled,
   resolveSolidBodyVfxEnabled,
   resolvePowderBodyVfxEnabled, resolvePowderLightVfxEnabled,
   resolvePowderSolidContactVfxEnabled, resolveRenderLook, resolveTranslucentEdgeVfxEnabled,
@@ -150,6 +151,22 @@ describe('resolveRenderLook', () => {
     )).toBe(true);
     expect(resolveSolidBodyVfxEnabled(
       'neon-lab', '?volumeVfx=1&solidBodyVfx=off',
+    )).toBe(false);
+  });
+
+  it('keeps exact ROCK roughness subordinate to opaque solid-body depth', () => {
+    expect(resolveRockRoughnessVfxEnabled('classic', '?rockRoughnessVfx=on')).toBe(false);
+    expect(resolveRockRoughnessVfxEnabled('realistic', '')).toBe(true);
+    expect(resolveRockRoughnessVfxEnabled('neon-lab', '')).toBe(true);
+    expect(resolveRockRoughnessVfxEnabled('realistic', '?solidBodyVfx=0')).toBe(false);
+    expect(resolveRockRoughnessVfxEnabled(
+      'realistic', '?solidBodyVfx=0&rockRoughnessVfx=1',
+    )).toBe(false);
+    expect(resolveRockRoughnessVfxEnabled(
+      'realistic', '?volumeVfx=0&solidBodyVfx=1&rockRoughnessVfx=true',
+    )).toBe(true);
+    expect(resolveRockRoughnessVfxEnabled(
+      'neon-lab', '?solidBodyVfx=1&rockRoughnessVfx=off',
     )).toBe(false);
   });
 

@@ -269,6 +269,19 @@ fixture covers both owners plus those protected controls. Run
 `npm run audit:geological-solid` for normal WebGL and
 `npm run audit:geological-solid:8x` for the fenced direct 4896×3072 path.
 
+Normal 1×–4× WebGL additionally applies an exact ROCK-only matte correction over
+the accepted E17 opaque-body relief. `rockRoughnessVfx` is subordinate to
+`solidBodyVfx`: it reduces ROCK's inherited micro-glint, broad gloss,
+environment/Fresnel reflection, and positive cool E17 key while preserving the
+absorptive pocket and geological strata/veins. Metal and every other
+SmoothRigid owner remain unchanged. The dedicated geometry-matched fixture
+pins exact depth bands, authored voids, fine ROCK, native-wall coexistence,
+material controls, and ROCK contacts through
+`npm run audit:vfx:rock-roughness`. Its accepted shallow/transition/mid/deep
+RGB RMS ranges are `0.82…0.87`, `2.39…2.40`, `1.84…1.85`, and `4.33…4.35`;
+all protected controls remain exact. Canvas and true 8× deliberately retain
+their established paths.
+
 HEAC, PTNM, and RSSS now receive a second exact-owner deep rigid-body layer:
 the rapid heat conductor has restrained warm channel lamellae, Platinum uses
 cool catalytic planes with sparse active sites, and solidified resist gains a

@@ -40,6 +40,9 @@ import {
   SOLID_BODY_VFX_AUDIT, prepareSolidBodyVfxFixture,
 } from './solid-body-vfx-audit';
 import {
+  ROCK_ROUGHNESS_VFX_AUDIT, prepareRockRoughnessVfxFixture,
+} from './rock-roughness-vfx-audit';
+import {
   CERAMIC_GLAZE_VFX_AUDIT, prepareCeramicGlazeVfxFixture,
 } from './ceramic-glaze-vfx-audit';
 import {
@@ -737,6 +740,12 @@ export class Game {
       solidBodyVfxFixture: () => SOLID_BODY_VFX_AUDIT,
       prepareSolidBodyVfxFixture: () => {
         prepareSolidBodyVfxFixture(this.simulation);
+        this.renderer.synchronizeFixtureMaterialPlane();
+        this.renderer.invalidateDynamicPresentation();
+      },
+      rockRoughnessVfxFixture: () => ROCK_ROUGHNESS_VFX_AUDIT,
+      prepareRockRoughnessVfxFixture: () => {
+        prepareRockRoughnessVfxFixture(this.simulation);
         this.renderer.synchronizeFixtureMaterialPlane();
         this.renderer.invalidateDynamicPresentation();
       },
