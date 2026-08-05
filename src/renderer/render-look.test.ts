@@ -9,7 +9,7 @@ import {
   resolveGasMotionVfxEnabled,
   resolveLiquidBodyVfxEnabled, resolveLiquidSolidMeniscusVfxEnabled,
   resolveLiquidSurfaceVfxEnabled,
-  resolveNobleGasBillowVfxEnabled,
+  resolveNobleGasBillowVfxEnabled, resolveSmokeSoftnessVfxEnabled,
   resolveOilBodyVfxEnabled,
   resolveOrganicSubsurfaceVfxEnabled,
   resolvePlasmaCoreVfxEnabled,
@@ -147,6 +147,24 @@ describe('resolveRenderLook', () => {
     )).toBe(false);
     expect(resolveNobleGasBillowVfxEnabled(
       'neon-lab', '?gasBodyVfx=on&nobleGasBillowVfx=off',
+    )).toBe(false);
+  });
+
+  it('keeps exact Smoke soft volume subordinate to the stable gas body', () => {
+    expect(resolveSmokeSoftnessVfxEnabled(
+      'classic', '?smokeSoftnessVfx=1',
+    )).toBe(false);
+    expect(resolveSmokeSoftnessVfxEnabled('realistic', '')).toBe(true);
+    expect(resolveSmokeSoftnessVfxEnabled('neon-lab', '')).toBe(true);
+    expect(resolveSmokeSoftnessVfxEnabled('realistic', '?volumeVfx=0')).toBe(false);
+    expect(resolveSmokeSoftnessVfxEnabled(
+      'realistic', '?volumeVfx=0&gasBodyVfx=1&smokeSoftnessVfx=true',
+    )).toBe(true);
+    expect(resolveSmokeSoftnessVfxEnabled(
+      'realistic', '?gasBodyVfx=0&smokeSoftnessVfx=1',
+    )).toBe(false);
+    expect(resolveSmokeSoftnessVfxEnabled(
+      'neon-lab', '?gasBodyVfx=on&smokeSoftnessVfx=off',
     )).toBe(false);
   });
 

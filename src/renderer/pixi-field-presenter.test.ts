@@ -685,6 +685,7 @@ describe('Pixi presenter startup configuration', () => {
     expect(source.match(/this\.uniforms\.uniforms\.uGasMotionVfx = 0;/g)).toHaveLength(2);
     expect(source.match(/this\.uniforms\.uniforms\.uGasLightVfx = 0;/g)).toHaveLength(2);
     expect(source.match(/this\.uniforms\.uniforms\.uGasCoreDepthVfx = 0;/g)).toHaveLength(2);
+    expect(source.match(/this\.uniforms\.uniforms\.uSmokeSoftnessVfx = 0;/g)).toHaveLength(2);
     expect(source.match(/this\.uniforms\.uniforms\.uPlasmaCoreVfx = 0;/g)).toHaveLength(2);
     expect(source.match(/this\.uniforms\.uniforms\.uLiquidBodyVfx = 0;/g)).toHaveLength(2);
     expect(source.match(/this\.uniforms\.uniforms\.uLiquidSolidMeniscusVfx = 0;/g)).toHaveLength(2);
@@ -1351,6 +1352,63 @@ describe('Pixi presenter startup configuration', () => {
     expect(preserveDrawingBufferStart).toBeGreaterThan(0);
     expect(preserveDrawingBufferEnd).toBeGreaterThan(preserveDrawingBufferStart);
     expect(preserveDrawingBuffer).toContain("get('nobleGasBillowVfxAudit') === '1'");
+  });
+
+  it('keeps E27 Smoke softness exact-style, E04-dependent, normal-WebGL-only, and RGB-only', () => {
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const canvasSource = readFileSync(new URL('./field-renderer.ts', import.meta.url), 'utf8');
+    const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');
+    const normalStart = source.indexOf('const FIELD_FRAGMENT = `', eightStart);
+    const normalEnd = source.indexOf('`;\n\n/** Primary WebGL presentation', normalStart);
+    const eight = source.slice(eightStart, normalStart);
+    const normal = source.slice(normalStart, normalEnd);
+    const e27Start = normal.indexOf('      // E27:');
+    const e27End = normal.indexOf('      // E25:', e27Start);
+    const e27 = normal.slice(e27Start, e27End);
+
+    expect(eightStart).toBeGreaterThanOrEqual(0);
+    expect(normalStart).toBeGreaterThan(eightStart);
+    expect(normalEnd).toBeGreaterThan(normalStart);
+    expect(e27Start).toBeGreaterThanOrEqual(0);
+    expect(e27End).toBeGreaterThan(e27Start);
+    expect(normal).toContain('uniform float uSmokeSoftnessVfx;');
+    expect(eight).not.toContain('uSmokeSoftnessVfx');
+    expect(eight).not.toContain('smokeSoftnessVfx');
+    expect(canvasSource).not.toContain('smokeSoftnessVfx');
+    for (const guard of [
+      'uSmokeSoftnessVfx > 0.5', 'uGasIdentityStyling > 0.5',
+      'wall < 0.5', '!materialEmissive',
+      'floor(gasStyleState.r * 255.0 + 0.5)',
+      'abs(smokeSoftnessStyle - 1.0)',
+    ]) expect(e27).toContain(guard);
+    for (const establishedFieldScalar of [
+      'gasVfxBodySupport', 'cloudNeighbourMean', 'atmosphereState.a',
+      'gasVfxBillow', 'gasVfxWaveC', 'gasDirectionalRelief', 'gasCurvature',
+      'gasVfxCrown', 'gasPocket',
+    ]) expect(e27).toContain(establishedFieldScalar);
+    expect(e27).not.toContain('foreignMatterContact');
+    expect(e27).not.toContain('unlikeMaterialContact');
+    expect(e27).not.toContain('texture(');
+    expect(e27).not.toContain('uTime');
+    expect(e27).not.toContain('gl_FragCoord');
+    expect(e27).not.toMatch(/\balpha\s*[+*]?=/);
+    expect(e27).not.toMatch(/\b(?:atmosphereState|finalColor)\.a\s*[+*]?=/);
+    expect(source.match(/this\.uniforms\.uniforms\.uSmokeSoftnessVfx = 0;/g))
+      .toHaveLength(2);
+    expect(source).toMatch(
+      /const smokeSoftnessVfxEnabled = outputScale < 8\s*&& resolveSmokeSoftnessVfxEnabled\(renderLook\);/,
+    );
+    expect(source).toContain('uSmokeSoftnessVfx: { value: smokeSoftnessVfxEnabled ? 1 : 0');
+    expect(source).toContain('presenter.app.canvas.dataset.smokeSoftnessVfx');
+    expect(source).toContain("this.app.canvas.dataset.smokeSoftnessVfx = 'inactive';");
+    const preserveDrawingBufferStart = source.indexOf('preserveDrawingBuffer:');
+    const preserveDrawingBufferEnd = source.indexOf(
+      'resolution: outputScale', preserveDrawingBufferStart,
+    );
+    const preserveDrawingBuffer = source.slice(
+      preserveDrawingBufferStart, preserveDrawingBufferEnd,
+    );
+    expect(preserveDrawingBuffer).toContain("get('smokeSoftnessVfxAudit') === '1'");
   });
 
   it('routes E08 liquid surfaces through existing normal-scale HDR resources only', () => {

@@ -60,8 +60,8 @@ describe('composed media evidence', () => {
   it('penalizes grain noise for liquid/gas while rewarding bounded powder detail', () => {
     const smoothLiquid = scoreComposedMediaSample(sample({ microContrast: 2 }), 'cohesive-liquid');
     const noisyLiquid = scoreComposedMediaSample(sample({ microContrast: 14 }), 'cohesive-liquid');
-    const smoothGas = scoreComposedMediaSample(sample({ microContrast: 3 }), 'diffuse-gas');
-    const noisyGas = scoreComposedMediaSample(sample({ microContrast: 22 }), 'diffuse-gas');
+    const smoothGas = scoreComposedMediaSample(sample({ microContrast: 0.35 }), 'diffuse-gas');
+    const noisyGas = scoreComposedMediaSample(sample({ microContrast: 1.5 }), 'diffuse-gas');
     const detailedPowder = scoreComposedMediaSample(sample({ microContrast: 8 }), 'granular-body');
     const flatPowder = scoreComposedMediaSample(sample({ microContrast: 2 }), 'granular-body');
     expect(smoothLiquid.qualityIndex).toBeGreaterThan(noisyLiquid.qualityIndex);
@@ -70,12 +70,30 @@ describe('composed media evidence', () => {
   });
 
   it('penalizes fragmented gas and clipped emission in their owning profiles', () => {
-    const joined = scoreComposedMediaSample(sample(), 'diffuse-gas');
-    const fragmented = scoreComposedMediaSample(sample({ dominantComponent: 0.2 }), 'diffuse-gas');
+    const joined = scoreComposedMediaSample(
+      sample({ microContrast: 0.35 }), 'diffuse-gas',
+    );
+    const fragmented = scoreComposedMediaSample(
+      sample({ microContrast: 0.35, dominantComponent: 0.2 }), 'diffuse-gas',
+    );
     const clean = scoreComposedMediaSample(sample(), 'emissive-volume');
     const clipped = scoreComposedMediaSample(sample({ clippedFraction: 0.2 }), 'emissive-volume');
     expect(joined.qualityIndex).toBeGreaterThan(fragmented.qualityIndex + 20);
     expect(clean.qualityIndex).toBeGreaterThan(clipped.qualityIndex + 20);
+  });
+
+  it('keeps the frozen pre-E27 Smoke frame soft while diagnosing broad billow depth', () => {
+    const smoke = scoreComposedMediaSample(sample({
+      lumaStdDev: 1.88,
+      macroLumaRange: 8,
+      microContrast: 0.37,
+      chromaticContrast: 0.54,
+      dominantComponent: 1,
+      clippedFraction: 0,
+    }), 'diffuse-gas');
+    expect(smoke.components.softness).toBe(1);
+    expect(smoke.weakestComponent).toBe('billowDepth');
+    expect(smoke.qualityIndex).toBe(45.542);
   });
 
   it('selects the weakest like-profile probe and rejects incompatible media', () => {

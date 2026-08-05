@@ -361,13 +361,34 @@ state. The final canonical 2× result is Wood micro/chroma/macro
 `1.50`/`.69`/`21` and Plant `1.51`/`.93`/`28`, with support recall/component
 count `1` and dark/clipped fractions `0`; Organic improves `2.463 → 33.569`
 (Wood `33.569`, Plant `48.031`). The family averages micro `1.505`, chroma
-`.81`, and macro `24.5`. Smoke softness (`gasSmoke`, `4.546`) is now the global
-weakest diagnosis and requires a bounded experiment, not another generic gas
-layer. The accepted full matrix keeps all 30 protected controls exact at
+`.81`, and macro `24.5`. The historical v3 survey then labelled Smoke softness
+`4.546`; v4 corrects that lower-bounded microcontrast error, and E27 below owns
+the remaining visible matte-body refinement. The accepted full matrix keeps all 30 protected controls exact at
 1×/2×/4×, repeats the disabled framebuffer byte-for-byte, and preserves 1,568
 native-wall cells plus the 3,840-cell lifecycle plane. Its requested-on 8× tail
 observes exact 4896×3072 WebGL promotion, E20/E26/HDR exclusion with reason
 `scale-8`, and a real `5607.1 ms` GPU fence with zero browser errors.
+
+E27 is the exact-Smoke soft-volume card selected with
+`?smokeSoftnessVfx=0|1`, strictly under E04 and limited to normal WebGL
+1×–4×. Exact propagated atmosphere style `1` reuses E04's existing third
+static carrier, composite billow, directional relief, curvature, density,
+crown, and pocket to add a broad warm-neutral crown and absorptive soot fold.
+It adds no noise, new wave, sample, texture, field, pass, allocation, clock,
+alpha/support/topology, or physics decision. Semantic gas does not populate the
+ordinary semantic-contact outputs, so those are not E27 guards: foreign gas
+style remains exact, while the exact-Smoke side of an unlike-gas seam may keep
+a bounded composed response. Foreign FOG remains raw-RGBA exact; only its named
+immediate HDR seam footprint may change one composed byte. Authored void/channel semantics, alpha, and
+support remain exact; only their already-supported atmosphere edge may receive
+the bounded RGB fold. Canonical 2× moves Smoke luma deviation `1.88 → 2.22`,
+macro range `8 → 10`, luma range `12 → 14`, and quality `45.542 → 66.914`,
+while microcontrast stays `0.39`, support recall/component count stay `1`, and
+clipping stays zero. Run `npm run audit:vfx:smoke-softness` for the isolated
+off→on→off matrix and requested-on true-8× exclusion. The accepted focused run
+passes at 1×/2×/4× with byte-exact repeated-off frames and zero browser errors;
+its true-8× tail promotes exact 4896×3072 WebGL and signals a real GPU fence in
+`3444.1 ms` while E27 and normal HDR remain excluded for `scale-8`.
 
 HEAC, PTNM, and RSSS now receive a second exact-owner deep rigid-body layer:
 the rapid heat conductor has restrained warm channel lamellae, Platinum uses
@@ -496,7 +517,7 @@ that the radius-8 Metal capsule contains exactly 880 cells in its symmetric 18-r
 has no cells outside the mask, renders every semantic centre, and leaves its
 three Water controls intact.
 
-The `composed-media-rank/v3` result scores granular body, cohesive liquid,
+The `composed-media-rank/v4` result scores granular body, cohesive liquid,
 diffuse gas, rigid body, organic body, emissive volume, and phase contact with
 different cue envelopes. Required cues use a weighted harmonic mean, so one
 missing cue cannot be hidden by an unrelated strong signal; each family is
@@ -511,6 +532,13 @@ rendered volume. Near-white clipping is measured separately from legitimate
 single-channel material saturation. A requested single scale reports null
 spread and `crossScaleVerified=false`; it is a local diagnostic reference, not
 a replacement for the full matrix.
+
+Version 4 changes only the diffuse-gas softness component from a lower-bounded
+band to `fall(microContrast, 0.50, 1.25)`. Macro range and luma deviation already
+reject flat gas; requiring minimum adjacent-pixel contrast rewarded stipple.
+The app-owned showcase fixture remains semantic version 3, but v3 and v4
+quality indices are not comparable. The frozen pre-E27 Smoke frame has
+softness `1`, billow depth as its weakest cue, and v4 quality `45.542`.
 
 Timing output is diagnostic rather than a cross-machine pass/fail threshold. It includes baseline Canvas atmosphere relief and the same full plane under a nonzero cardinal-gradient emission field, Canvas surface-lighting, deliberately pessimistic full-612×384 energy-core and trait-core passes, a fully dense Water cohesion pass, a full-height Water/Oil boundary pass, and an all-cells liquid-light gate in which every cell is pessimistically treated as a top-surface candidate and samples field relief. Dense translucent coupling is measured twice: an honest all-Glass/all-field ceiling and the ordinary single-localized-source path after `EmissionField.mayLightWorldCell` rejection. A separate pathological all-world Glass-over-wall refraction profile includes its diagnostic pixel reset; production admits only exact Glass/Ice cells that coexist with a wall, performs no allocation or field sample, and ordinary scenes touch a small fraction of that ceiling. Full-world caustic and lens-shell arithmetic diagnostics include repeated RGB scratch initialization that production already performs while styling. The latest lens-shell ceiling measured `11.25/11.58/12.61 ms` median/p90/max across all 235,008 world cells and adds zero runtime bytes; production additionally gates it to exact Glass/Ice and reuses the existing color scratch, relief, and contour response. Checksums are consumed sparsely outside the timed production-shaped loops and the solid-relief checksum remains independent. The atmosphere-light descriptor is module-scoped and reused, so the timed loop allocates no object or typed buffer. Trait profiling covers realistic masks, a synthetic all-bits mask, and a representative composite, and consumes representative output through a checksum outside the timed region so the JIT cannot discard the work without charging checksum arithmetic to production-like timings. Profiler-only storage is reported separately from runtime-known scratch and does not contribute to `combinedAllocatedBytes`.
 

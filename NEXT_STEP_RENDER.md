@@ -350,11 +350,26 @@ does not alter simulation, camera, semantic ownership, or `renderScale`.
   VINE/Wax/Metal, lifecycle cyan/magenta state, Canvas, and compact true 8×
   remain controls. E26 adds no noise, sample, texture, field, pass, resource,
   time, alpha/support/state/topology, or physics decision.
+- **E27 — exact Smoke soft volume (accepted checkpoint):** normal 1×–4×
+  WebGL uses `?smokeSoftnessVfx=0|1` only as a child of E04's connected gas
+  body. Exact propagated atmosphere style `1` reuses E04's existing third
+  static carrier, composite billow, directional relief, curvature, density,
+  crown, and pocket evidence to form one broad warm-neutral soot fold. It adds
+  no noise, new wave, clock, sample, texture, field, pass, resource, allocation,
+  alpha/support/silhouette/topology/ownership/state, or physics decision.
+  Sparse Smoke, foreign gas styles, Water/Metal contacts,
+  native walls, Canvas, and compact true 8× remain controls. Because semantic
+  gas uses `discreteShape`, ordinary semantic-contact outputs are not valid E27
+  guards: the exact-Smoke side of an unlike-gas seam may retain a bounded
+  composed response, while the foreign side remains raw-RGBA exact; only its
+  named immediate HDR seam footprint may move one composed byte. Authored gaps keep
+  exact semantic/alpha/support topology, but their already-supported atmosphere
+  edge is also a bounded composed footprint.
 - **Protected 8× rung:** `renderScale=8` deliberately reports
   `hdrPipeline=inactive` / `scale-8` and retains the proven direct single-mesh
   4896×3072 path. The experiment must earn a bounded 8× design rather than
   allocating a 115 MiB full-resolution float target beside that path.
-- **Current decision:** E01/E02/E03/E04/E05/E06/E07/E08/E09/E10/E11/E12/E13/E14/E15/E16/E17/E18/E19/E20/E21/E22/E23/E24/E25/E26 remain opt-in through the non-Classic looks
+- **Current decision:** E01/E02/E03/E04/E05/E06/E07/E08/E09/E10/E11/E12/E13/E14/E15/E16/E17/E18/E19/E20/E21/E22/E23/E24/E25/E26/E27 remain opt-in through the non-Classic looks
   until representative hardware timing and mobile thermal behavior are
   measured. E02 remains the safe family-wide baseline. E03 is accepted as the
   liquid-depth checkpoint: its fit-view crop is visibly more cohesive, retains
@@ -949,6 +964,22 @@ downsample-stable, material-distinct body spectra. Requested-on true 8× exclude
 E26 after observed exact 4896×3072 WebGL promotion and a `5607.1 ms` GPU fence,
 with zero browser errors.
 
+Run `npm run audit:vfx:smoke-softness` for E27. It owns the 1×/2×/4×
+`smokeSoftnessVfx=0 → 1 → 0` sequence under E04 while pinning every other
+optional visual selector off. It must preserve exact semantic,
+atmosphere-style/alpha/support, native-wall, and raw-alpha state; repeat the
+disabled framebuffer byte-for-byte; show a broad positive crown and negative
+pocket; keep adjacent-pixel Smoke contrast at or below `0.55`; and leave
+Oxygen/Hydrogen/Noble/FOG/CFLM, sparse, Water/Metal, wall, and blank controls
+exact. The already-supported authored-void/channel edges and the Smoke side
+of the Smoke/FOG seam are bounded composed controls; foreign FOG is raw exact,
+with its named immediate HDR seam footprint bounded to one composed byte.
+Requested-on true 8× must
+observe actual 4896×3072 WebGL promotion and a completed GPU fence while
+E04/E15/E25/E27/HDR report inactive for reason `scale-8`. The accepted run
+passes the full 1×/2×/4× off→on→off matrix with zero browser errors, then
+completes the exact 4896×3072 true-8× tail through a `3444.1 ms` GPU fence.
+
 The earlier post-E16 survey was invalid for Solid: it sampled native Stone `21`,
 which is Powder, while labelling that region Solid. The corrected post-E17
 showcase uses native ROCK `78`, asserts exactly `2769` matching Solid cells, and
@@ -1005,12 +1036,18 @@ next production 4× survey then selected Wood/PLNT as the largest remaining
   `gasNoble` from `2.454` to `4.609`, shifts Gas to `4.546` with `gasSmoke`
   softness now its weakest probe, and leaves Organic `2.463` as the global
   weakest family. E26 then raises Organic to `33.569` (Wood `33.569`, Plant
-  `48.031`) in the final canonical 2× run, making Smoke softness the global
-  weakest diagnosis. Do not widen E17–E26 owner sets by resemblance alone or stack
+  `48.031`) in the final canonical 2× run. That apparent Smoke-softness
+  diagnosis exposed a scorer error: v3 required a minimum adjacent-pixel gas
+  contrast and therefore rewarded stipple. Version 4 changes softness to the
+  one-sided ceiling `fall(microContrast, 0.50, 1.25)`; the unchanged pre-E27
+  Smoke frame scores `45.542`, not the obsolete v3 `4.546`. E27 raises exact
+  Smoke to `66.914` at canonical 2× while keeping microcontrast `0.39`; Gas is
+  now represented by Noble Gas at `52.710`, and Organic remains globally
+  weakest at `33.569`. Do not widen E17–E27 owner sets by resemblance alone or stack
   another generic gas layer over E04/E07/E13/E15; preserve their independent
   owner, exposure, topology, scale, and true-8× contracts.
 
-**Next visual experiments:** E03–E26 now provide accepted liquid body/surface,
+**Next visual experiments:** E03–E27 now provide accepted liquid body/surface,
 stable-gas, coherent-gas-motion, powder-depth, and powder-local-light
 checkpoints plus exact resting contact grounding, Glass/Ice transmission, and
 state-aware Wax/PLNT subsurface response, composed wet-mineral optics,
@@ -1020,11 +1057,12 @@ ROCK/Metal opaque-body relief, a distinct broad Platinum finish, an exact
 Ceramic fired-glaze response, recomposed clustered Wood/PLNT bodies, and deep
 Glass selective transmission, exact Oil amber-crown/cool-pocket body optics,
 an exact ROCK matte-body correction over E17, lower-anisotropy exact-Water
-depth-light recomposition, exact Noble Gas pearlescent billow depth, and exact
-Wood/PLNT mesostructure. E26's final canonical 2× result raises Organic to
-`33.569`. Smoke softness is now the global weakest diagnosis, but it requires
-its own bounded fit-view
-experiment rather than another generic gas layer. The radioactive-solid review
+depth-light recomposition, exact Noble Gas pearlescent billow depth, exact
+Wood/PLNT mesostructure, and exact Smoke soft soot volume. E27's final
+canonical 2× Smoke result is luma deviation `2.22`, microcontrast `.39`, macro
+range `10`, luma range `14`, full support recall, and no clipping. Under v4,
+Organic pigment/mesostructure is again the weakest ranked family; inspect its
+fit-view evidence before choosing a bounded E28 exact-owner card. The radioactive-solid review
 found no current identity bug, but also
 proved that the existing
 phase-permissive identity guard is not suitable for a future broad ISZS/VIBR
@@ -1033,8 +1071,8 @@ with topology-preserving, material-
 specific cards that reuse already-live evidence. Prefer the smallest
 arithmetic-only candidate that fixes a visible fit-view deficiency; do not add
 an isolated tint merely to continue the experiment number. Preserve the E14
-1× stencil snap and all E01–E26 selectors and controls while designing that
-bounded Smoke card.
+1× stencil snap and all E01–E27 selectors and controls while designing the
+next bounded card.
 
 ## Phase 1 — HDR pipeline & lighting core (biggest visual payoff)
 

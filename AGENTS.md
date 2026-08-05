@@ -13,7 +13,7 @@ powder, solid, liquid, gas, energy, and contact scenes across Canvas and WebGL a
 mobile gestures, save/load, CI, and Pages deployment as protected regression
 contracts rather than the primary feature stream.
 
-The accepted visual experiment ladder now runs through E26. E12 is the
+The accepted visual experiment ladder now runs through E27. E12 is the
 species-safe Sand/Clay/Concrete wet-sediment checkpoint; preserve its exact
 aqueous owner/stability proof, split moving-powder/stationary-Water control,
 Local/Grains no-op, fine structures, authored gaps, Canvas fallback, and true
@@ -311,6 +311,37 @@ Its true-8× tail observed exact 4896×3072 WebGL promotion and a real GPU fence
 at `5607.1 ms`, with E20/E26/HDR inactive for reason `scale-8` and zero browser
 errors.
 
+E27 is the calibrated normal-WebGL-only exact-Smoke soft-volume checkpoint,
+independently measurable with `?smokeSoftnessVfx=0|1` and subordinate to E04's
+connected gas body. Eligibility comes from exact propagated atmosphere style
+`1`, plus E04's established connected-body, cardinal-neighbour, wall, and
+non-emissive guards. Gas fragments do not populate ordinary semantic-contact
+outputs, so never cite `foreignMatterContact` or `unlikeMaterialContact` as an
+E27 gas guard. Reuse only the already-live static billow carriers,
+especially the third carrier's one-body-scale fold, directional relief,
+curvature, crown, pocket, and density evidence for a warm neutral crown and
+absorptive soot pocket. Add no noise, new wave, clock, sample, texture, field,
+resource, pass, target, allocation, alpha, support, silhouette, topology,
+ownership, state, or physics decision. Oxygen, Hydrogen, Noble Gas, FOG, CFLM,
+sparse carriers, Water/Metal contacts, native walls, Canvas, and compact true
+8× retain their established paths. Semantic authored gaps keep exact topology,
+alpha, and support; their already-supported atmosphere edge may keep a bounded
+composed response. The exact-Smoke side of an unlike-gas seam may do likewise;
+its foreign FOG side remains raw-RGBA exact, with only the named immediate HDR
+seam footprint allowed one composed byte.
+The media survey
+contract is now version 4: diffuse-gas softness is the one-sided ceiling
+`fall(microContrast, 0.50, 1.25)`, because macro depth and luma deviation
+already reject a featureless cloud and a lower microcontrast bound incorrectly
+rewards stipple. At canonical 2×, E27 raises exact Smoke luma deviation
+`1.88 → 2.22`, macro range `8 → 10`, luma range `12 → 14`, and v4 quality
+`45.542 → 66.914`, while microcontrast remains `0.39`, support recall and
+dominant component remain `1`, and clipping remains zero. The accepted focused
+gate completes the 1×/2×/4× off→on→off matrix with byte-exact repeated-off
+frames and zero browser errors. Its requested-on true-8× tail observes exact
+4896×3072 WebGL promotion, E04/E15/E25/E27/HDR exclusion for `scale-8`, and a
+real GPU fence at `3444.1 ms`.
+
 The radioactive-solid review found no current correctness bug: ISZS `105`
 and VIBR `113` already receive exact-species Solid depth, while the existing
 seven-owner radioactive identity motif is intentionally phase-permissive.
@@ -364,8 +395,13 @@ E26's final canonical 2× result raises Organic from `2.463` to `33.569`: Wood
 micro/chroma/macro is `1.50`/`.69`/`21` and Plant's is `1.51`/`.93`/`28`, with
 support recall/component count `1` and dark/clipped fractions `0`. The family
 average is micro `1.505`, chroma `.81`, and macro `24.5`. Smoke softness
-(`gasSmoke`, `4.546`) is now the global weakest diagnosis and needs its own
-bounded experiment, never a generic gas layer.
+was misdiagnosed by the v3 lower-bounded microcontrast band. Version 4 makes it
+a one-sided noise ceiling: the unchanged pre-E27 Smoke frame scores `45.542`,
+not the obsolete v3 `4.546`. E27 raises Smoke to `66.914`; Gas is now
+represented by exact Noble Gas at `52.710`, while Organic remains the global
+weakest family at `33.569`. Select the next experiment from v4 plus visible
+fit-view evidence; never compare v3 and v4 quality indices as if they shared
+one scoring contract.
 
 WebGL is the canonical visual release path. Canvas 2D remains a resilient,
 camera-preserving semantic fallback: keep its loading, input, material/state,

@@ -1,4 +1,4 @@
-export const COMPOSED_MEDIA_EVIDENCE_VERSION = 3;
+export const COMPOSED_MEDIA_EVIDENCE_VERSION = 4;
 
 const PROFILE_COMPONENTS = Object.freeze({
   'granular-body': Object.freeze({
@@ -18,7 +18,10 @@ const PROFILE_COMPONENTS = Object.freeze({
   'diffuse-gas': Object.freeze({
     macroDepth: [1, (sample) => rise(sample.macroLumaRange, 3, 10)],
     billowDepth: [1, (sample) => band(sample.lumaStdDev, 1.5, 4, 16, 30)],
-    softness: [1, (sample) => band(sample.microContrast, 0.5, 2, 10, 18)],
+    // Macro depth and luma deviation already reject a featureless body. Gas
+    // softness is therefore a one-sided ceiling: requiring a minimum adjacent
+    // contrast incorrectly rewards stipple in an otherwise coherent cloud.
+    softness: [1, (sample) => fall(sample.microContrast, 0.5, 1.25)],
     continuity: [1, (sample) => rise(sample.dominantComponent ?? 0, 0.82, 0.95)],
     highlightHeadroom: [1, (sample) => fall(sample.clippedFraction, 0.01, 0.05)],
   }),

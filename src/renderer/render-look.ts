@@ -154,6 +154,24 @@ export function resolveGasCoreDepthVfxEnabled(
 }
 
 /**
+ * Gives exact propagated Smoke a broad, low-frequency soot fold after E04 has
+ * established its connected atmosphere-owned body. This child selector never
+ * recreates the gas body on its own; it only admits bounded RGB arithmetic in
+ * normal WebGL, while Canvas and the compact true-8x path keep their existing
+ * semantic presentation.
+ */
+export function resolveSmokeSoftnessVfxEnabled(
+  look: RenderLook,
+  search = globalThis.location?.search ?? '',
+): boolean {
+  if (!resolveGasBodyVfxEnabled(look, search)) return false;
+  const requested = new URLSearchParams(search).get('smokeSoftnessVfx');
+  if (requested === '0' || requested === 'off' || requested === 'false') return false;
+  if (requested === '1' || requested === 'on' || requested === 'true') return true;
+  return true;
+}
+
+/**
  * Re-composes only exact Noble Gas billows after E04 has established the
  * connected, atmosphere-owned gas body. The child selector may refine that
  * species' volume cues, but it cannot recreate E04 when the parent gas-body
