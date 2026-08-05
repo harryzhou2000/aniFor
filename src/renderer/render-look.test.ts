@@ -7,6 +7,7 @@ import {
   resolveLiquidSurfaceVfxEnabled,
   resolveOrganicSubsurfaceVfxEnabled,
   resolvePlasmaCoreVfxEnabled,
+  resolvePlatinumBodyVfxEnabled,
   resolveSolidBodyVfxEnabled,
   resolvePowderBodyVfxEnabled, resolvePowderLightVfxEnabled,
   resolvePowderSolidContactVfxEnabled, resolveRenderLook, resolveTranslucentEdgeVfxEnabled,
@@ -145,6 +146,19 @@ describe('resolveRenderLook', () => {
     )).toBe(true);
     expect(resolveSolidBodyVfxEnabled(
       'neon-lab', '?volumeVfx=1&solidBodyVfx=off',
+    )).toBe(false);
+  });
+
+  it('keeps Platinum body optics independently measurable inside HDR looks', () => {
+    expect(resolvePlatinumBodyVfxEnabled('classic', '?platinumBodyVfx=on')).toBe(false);
+    expect(resolvePlatinumBodyVfxEnabled('realistic', '')).toBe(true);
+    expect(resolvePlatinumBodyVfxEnabled('neon-lab', '')).toBe(true);
+    expect(resolvePlatinumBodyVfxEnabled('realistic', '?volumeVfx=0')).toBe(false);
+    expect(resolvePlatinumBodyVfxEnabled(
+      'realistic', '?volumeVfx=0&platinumBodyVfx=on',
+    )).toBe(true);
+    expect(resolvePlatinumBodyVfxEnabled(
+      'neon-lab', '?volumeVfx=1&platinumBodyVfx=off',
     )).toBe(false);
   });
 

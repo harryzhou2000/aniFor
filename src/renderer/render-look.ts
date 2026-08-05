@@ -188,6 +188,22 @@ export function resolveSolidBodyVfxEnabled(
 }
 
 /**
+ * Keeps the exact Platinum body experiment independently measurable while
+ * retaining the same non-Classic preset policy as the broader volume studies.
+ * The renderer decides its strict native-owner and topology eligibility.
+ */
+export function resolvePlatinumBodyVfxEnabled(
+  look: RenderLook,
+  search = globalThis.location?.search ?? '',
+): boolean {
+  if (look === 'classic') return false;
+  const requested = new URLSearchParams(search).get('platinumBodyVfx');
+  if (requested === '0' || requested === 'off') return false;
+  if (requested === '1' || requested === 'on') return true;
+  return resolveVolumeVfxEnabled(look, search);
+}
+
+/**
  * Keeps the settled-powder crown experiment independently measurable without
  * changing liquid or gas. Ordinary realistic/neon presets retain the broad
  * volume default; the explicit query is reserved for comparison captures and

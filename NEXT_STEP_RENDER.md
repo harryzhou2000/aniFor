@@ -213,18 +213,30 @@ does not alter simulation, camera, semantic ownership, or `renderScale`.
   `?solidBodyVfx=0|1`. It reuses the existing exact-species optical-depth byte,
   interior proof, analytic key/fill/Fresnel, and signed macro relief. The
   response is deliberately bipolar rather than a uniform cool lift. Brick,
-  Ceramic, BMTL, Gold, Iron, Platinum, and Titanium remain excluded until each
-  has a measured colour/exposure card; holes, open notches, one-cell lines,
+  Ceramic, BMTL, Gold, Iron, Platinum, and Titanium remain excluded from E17;
+  Platinum instead earns its own E18 finish below. Holes, open notches, one-cell lines,
   isolated cells, unlike-solid seams, native walls, traits, emission,
   reconstructed support, powder, liquids, translucent solids, Canvas, and true
   8× are exact controls. E17 adds no texture read, field, resource, pass,
   target, upload, allocation, clock, alpha/support/silhouette/ownership,
   topology, or physics decision.
+- **E18 — exact Platinum broad-body finish (accepted checkpoint):** normal
+  1×–4× WebGL gives only authoritative deep ordinary PTNM `75` a broad
+  cool/warm rolled-silver reflection through `?platinumBodyVfx=0|1`. It reuses
+  the existing exact-species solid depth/interior, analytic key/fill/Fresnel/
+  environment, signed relief, and static world position. It deliberately runs
+  below and independently of PTNM's existing 19/43-cell catalytic plane/site
+  grammar rather than widening E17 or the structural-metal whitelist. HEAC,
+  RSSS, holes, one-cell lines, isolated cells, co-located walls, direct
+  solid/Water contacts, blank space, Canvas, and true 8× are exact controls.
+  E18 adds no sample, texture, field, resource, pass, target, upload,
+  allocation, clock, alpha/support/silhouette/ownership/topology, or physics
+  decision.
 - **Protected 8× rung:** `renderScale=8` deliberately reports
   `hdrPipeline=inactive` / `scale-8` and retains the proven direct single-mesh
   4896×3072 path. The experiment must earn a bounded 8× design rather than
   allocating a 115 MiB full-resolution float target beside that path.
-- **Current decision:** E01/E02/E03/E04/E05/E06/E07/E08/E09/E10/E11/E12/E13/E14/E15/E16/E17 remain opt-in through the non-Classic looks
+- **Current decision:** E01/E02/E03/E04/E05/E06/E07/E08/E09/E10/E11/E12/E13/E14/E15/E16/E17/E18 remain opt-in through the non-Classic looks
   until representative hardware timing and mobile thermal behavior are
   measured. E02 remains the safe family-wide baseline. E03 is accepted as the
   liquid-depth checkpoint: its fit-view crop is visibly more cohesive, retains
@@ -573,6 +585,23 @@ expanded renderer resource. The closing requested-on true-8× navigation keeps
 E17/HDR inactive with reason `scale-8`, retains exact 4896×3072 WebGL without
 bloom backing, and completes a GPU fence.
 
+Run `npm run audit:vfx:platinum-body` for E18. It reuses the paused
+thermal/catalytic atlas and reloads `platinumBodyVfx=0 → 1 → 0` at
+1×/2×/4× while every E01–E17 selector is pinned and PTNM's established
+catalytic identity remains enabled in every frame. The accepted response is
+nearly scale-invariant: the balanced transition core is `2.14–2.15` RGB RMS
+with a `5`-byte peak, the silver crown is `3.99–4.02` with signed mean
+`+4.03…+4.09`, and the absorptive pocket is `4.23–4.25` with signed mean
+`−2.05…−2.07` and an `8`-byte peak. The crown/pocket separation remains over
+six framebuffer bytes at every normal scale. Semantic material, raw alpha and
+support, backing/CSS geometry, HEAC/RSSS cores, authored holes, thin and
+isolated matter, native-wall coexistence, solid/Water contacts, blank space,
+and every repeated-off capture are exact; every protected framebuffer peak is
+zero. The closing requested-on true-8× navigation reports E18/HDR inactive
+with reason `scale-8`, retains exact 4896×3072 WebGL without a bloom backing,
+reports the promotion fence signalled, and completes its GPU sample inside the
+same 30-second deadline (about `5.68 s` on the final SwiftShader run).
+
 The earlier post-E16 survey was invalid for Solid: it sampled native Stone `21`,
 which is Powder, while labelling that region Solid. The corrected post-E17
 showcase uses native ROCK `78`, asserts exactly `2769` matching Solid cells, and
@@ -589,24 +618,28 @@ macro range `18 → 25` while every other family score is unchanged.
 Interpret this as a survey, not an instruction to stack a fifth generic gas
 layer: E04/E07/E13/E15 already own gas cohesion, motion, external light, and
 core depth, and a smooth coherent cloud is expected to score low on local
-contrast. Solid remains the next partially unclaimed family because E17 is
-intentionally restricted to ROCK and Metal. A candidate E18 should add one
-explicitly measured rigid colour/optics group at a time—warm matte Brick/
-Ceramic or reflective Gold/Iron/PTNM/TTAN—rather than silently widening E17's
-whitelist. Each group must earn distinct exposure/chroma bounds and preserve
-the E17 topology, signed-response, scale, and true-8× controls.
+contrast. E18 closes the demonstrated PTNM gap without changing this composed
+ranking because the showcase contains no Platinum. The selection audit also
+found that Gold, Iron, and Titanium already receive dedicated structural
+rolled-metal optics and that Brick is legible as warm masonry, so do not create
+an E19 by applying the PTNM finish to that group. Before another rigid card,
+capture a broad Ceramic body beside Brick and prove a real matte/glaze
+deficiency; otherwise select the next material or phase with a visible fit-view
+gap. Preserve the E17 and E18 owner, exposure, topology, scale, and true-8×
+contracts independently.
 
-**Next visual experiments:** E03–E17 now provide accepted liquid body/surface,
+**Next visual experiments:** E03–E18 now provide accepted liquid body/surface,
 stable-gas, coherent-gas-motion, powder-depth, and powder-local-light
 checkpoints plus exact resting contact grounding, Glass/Ice transmission, and
 state-aware Wax/PLNT subsurface response, composed wet-mineral optics,
 atmosphere-owned external-light spectra, exact liquid-side wet contacts, and
-species-aware gas-core optical depth, dense-Plasma containment, and exact
-ROCK/Metal opaque-body relief. Continue with topology-preserving, material-
+species-aware gas-core optical depth, dense-Plasma containment, exact
+ROCK/Metal opaque-body relief, and a distinct broad Platinum finish. Continue
+with topology-preserving, material-
 specific cards that reuse already-live evidence. Prefer the smallest
 arithmetic-only candidate that fixes a visible fit-view deficiency; do not add
 an isolated tint merely to continue the experiment number. Preserve the E14
-1× stencil snap and all E01–E17 selectors/controls while surveying.
+1× stencil snap and all E01–E18 selectors/controls while surveying.
 
 ## Phase 1 — HDR pipeline & lighting core (biggest visual payoff)
 

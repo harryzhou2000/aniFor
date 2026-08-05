@@ -41,6 +41,7 @@ import {
   resolveLiquidBodyVfxEnabled, resolveLiquidSolidMeniscusVfxEnabled,
   resolveLiquidSurfaceVfxEnabled,
   resolvePlasmaCoreVfxEnabled,
+  resolvePlatinumBodyVfxEnabled,
   resolveSolidBodyVfxEnabled,
   resolvePowderBodyVfxEnabled, resolvePowderLightVfxEnabled, resolveRenderLook,
   resolveOrganicSubsurfaceVfxEnabled,
@@ -3225,6 +3226,7 @@ uniform float uGasLightVfx;
 uniform float uGasCoreDepthVfx;
 uniform float uPlasmaCoreVfx;
 uniform float uSolidBodyVfx;
+uniform float uPlatinumBodyVfx;
 uniform float uLiquidBodyVfx;
 uniform float uLiquidSolidMeniscusVfx;
 uniform float uPowderBodyVfx;
@@ -8510,6 +8512,49 @@ void main() {
         * solidBodyKey;
       color *= vec3(1.0) - vec3(0.92, 0.80, 0.68) * solidBodyPocket;
     }
+    // E18: Platinum's established catalytic planes and sites identify the
+    // material at cell scale, but its broad body otherwise reads as a pale
+    // matte slab. Reuse the exact-species depth, analytic face light, Fresnel,
+    // and static world position already live here to add a calm rolled-silver
+    // reflection underneath that later identity grammar. Exact owner/contact/
+    // topology guards keep holes, seams, thin pieces, walls, traits, and
+    // reconstructed support byte-identical. This changes RGB only and adds no
+    // sample, texture, field, target, time term, or compact true-8x branch.
+    if (uPlatinumBodyVfx > 0.5 && material == 75.0
+      && family == 0.0 && profile == 2.0 && optics == 8.0
+      && !materialEmissive && traits < 0.5
+      && surfaceOnly < 0.5 && halo < 0.5 && wall < 0.5
+      && wallOnly < 0.5 && emissionOnly < 0.5
+      && granularSurface < 0.5 && translucentSurface < 0.5
+      && foreignMatterContact < 0.5 && unlikeMaterialContact < 0.5
+      && solidInterior > 0.001 && solidOpticalDepth > 6.0 / 255.0) {
+      float platinumDepth = solidInterior
+        * smoothstep(6.0 / 255.0, 42.0 / 255.0, solidOpticalDepth);
+      float platinumRelief = clamp(solidReliefTone * 255.0 / 7.0, -1.0, 1.0);
+      float platinumFace = clamp(
+        (solidKey - 0.684) * 1.65 + (solidFill - 0.735) * 0.42
+          + platinumRelief * 0.60,
+        -1.0, 1.0
+      );
+      float platinumRoll = 1.0 - abs(
+        fract(dot(fieldPosition, vec2(0.021, -0.011)) + 0.29) * 2.0 - 1.0
+      );
+      platinumRoll = platinumRoll * platinumRoll * (3.0 - platinumRoll * 2.0);
+      float platinumResponse = clamp(
+        (platinumRoll - 0.50) * 1.38 + platinumFace * 0.54
+          + smoothstep(0.035, 0.22, solidFresnel) * 0.22,
+        -1.0, 1.0
+      );
+      float platinumKey = platinumDepth * max(platinumResponse, 0.0) * 0.070;
+      float platinumPocket = platinumDepth * max(-platinumResponse, 0.0) * 0.050;
+      vec3 platinumEnvironment = mix(
+        vec3(0.58, 0.70, 0.88), vec3(0.92, 0.86, 0.72),
+        clamp(solidEnvironment.r * 7.5, 0.0, 1.0)
+      );
+      color += (vec3(1.0) - clamp(color, 0.0, 1.0))
+        * platinumEnvironment * platinumKey;
+      color *= vec3(1.0) - vec3(0.72, 0.78, 0.86) * platinumPocket;
+    }
   }
   if (uEnergyIdentityStyling > 0.5 && halo < 0.5 && surfaceOnly < 0.5
     && wallOnly < 0.5 && emissionOnly < 0.5
@@ -9307,6 +9352,11 @@ export class PixiFieldPresenter {
     // values. The compact true-8x shader has no selector or parallel branch.
     const solidBodyVfxEnabled = outputScale < 8
       && resolveSolidBodyVfxEnabled(renderLook);
+    // E18 is a normal-WebGL body finish over values already used by the
+    // established solid shader. The compact true-8x program declares neither
+    // this selector nor a parallel reflection branch.
+    const platinumBodyVfxEnabled = outputScale < 8
+      && resolvePlatinumBodyVfxEnabled(renderLook);
     // E03 is a normal-detail experiment. The true-8x shader intentionally has
     // no corresponding uniform or arithmetic, so its public capability state
     // must not advertise an effect that cannot run on that path.
@@ -9337,6 +9387,7 @@ export class PixiFieldPresenter {
       uGasCoreDepthVfx: { value: gasCoreDepthVfxEnabled ? 1 : 0, type: 'f32' },
       uPlasmaCoreVfx: { value: plasmaCoreVfxEnabled ? 1 : 0, type: 'f32' },
       uSolidBodyVfx: { value: solidBodyVfxEnabled ? 1 : 0, type: 'f32' },
+      uPlatinumBodyVfx: { value: platinumBodyVfxEnabled ? 1 : 0, type: 'f32' },
       uLiquidBodyVfx: { value: liquidBodyVfxEnabled ? 1 : 0, type: 'f32' },
       uLiquidSolidMeniscusVfx: {
         value: liquidSolidMeniscusVfxEnabled ? outputScale : 0, type: 'f32',
@@ -9554,6 +9605,7 @@ export class PixiFieldPresenter {
       this.uniforms.uniforms.uGasCoreDepthVfx = 0;
       this.uniforms.uniforms.uPlasmaCoreVfx = 0;
       this.uniforms.uniforms.uSolidBodyVfx = 0;
+      this.uniforms.uniforms.uPlatinumBodyVfx = 0;
       this.uniforms.uniforms.uLiquidBodyVfx = 0;
       this.uniforms.uniforms.uLiquidSolidMeniscusVfx = 0;
       this.uniforms.uniforms.uPowderBodyVfx = 0;
@@ -9594,6 +9646,7 @@ export class PixiFieldPresenter {
             || new URLSearchParams(location.search).get('gasCoreDepthVfxAudit') === '1'
             || new URLSearchParams(location.search).get('plasmaCoreVfxAudit') === '1'
             || new URLSearchParams(location.search).get('solidBodyVfxAudit') === '1'
+            || new URLSearchParams(location.search).get('platinumBodyVfxAudit') === '1'
             || new URLSearchParams(location.search).get('liquidBodyVfxAudit') === '1'
             || new URLSearchParams(location.search).get('liquidSolidMeniscusVfxAudit') === '1'
             || new URLSearchParams(location.search).get('liquidSurfaceVfxAudit') === '1'
@@ -9642,6 +9695,9 @@ export class PixiFieldPresenter {
     ) > 0.5 ? 'active' : 'inactive';
     presenter.app.canvas.dataset.solidBodyVfx = Number(
       presenter.uniforms.uniforms.uSolidBodyVfx
+    ) > 0.5 ? 'active' : 'inactive';
+    presenter.app.canvas.dataset.platinumBodyVfx = Number(
+      presenter.uniforms.uniforms.uPlatinumBodyVfx
     ) > 0.5 ? 'active' : 'inactive';
     presenter.app.canvas.dataset.liquidBodyVfx = Number(presenter.uniforms.uniforms.uLiquidBodyVfx) > 0.5
       ? 'active' : 'inactive';
@@ -11021,6 +11077,7 @@ export class PixiFieldPresenter {
         this.uniforms.uniforms.uGasCoreDepthVfx = 0;
         this.uniforms.uniforms.uPlasmaCoreVfx = 0;
         this.uniforms.uniforms.uSolidBodyVfx = 0;
+        this.uniforms.uniforms.uPlatinumBodyVfx = 0;
         this.uniforms.uniforms.uLiquidBodyVfx = 0;
         this.uniforms.uniforms.uLiquidSolidMeniscusVfx = 0;
         this.uniforms.uniforms.uPowderBodyVfx = 0;
@@ -11038,6 +11095,7 @@ export class PixiFieldPresenter {
         this.app.canvas.dataset.gasCoreDepthVfx = 'inactive';
         this.app.canvas.dataset.plasmaCoreVfx = 'inactive';
         this.app.canvas.dataset.solidBodyVfx = 'inactive';
+        this.app.canvas.dataset.platinumBodyVfx = 'inactive';
         this.app.canvas.dataset.liquidBodyVfx = 'inactive';
         this.app.canvas.dataset.liquidSolidMeniscusVfx = 'inactive';
         this.app.canvas.dataset.liquidSurfaceVfx = 'inactive';

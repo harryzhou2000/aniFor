@@ -13,7 +13,7 @@ powder, solid, liquid, gas, energy, and contact scenes across Canvas and WebGL a
 mobile gestures, save/load, CI, and Pages deployment as protected regression
 contracts rather than the primary feature stream.
 
-The accepted visual experiment ladder now runs through E17. E12 is the
+The accepted visual experiment ladder now runs through E18. E12 is the
 species-safe Sand/Clay/Concrete wet-sediment checkpoint; preserve its exact
 aqueous owner/stability proof, split moving-powder/stationary-Water control,
 Local/Grains no-op, fine structures, authored gaps, Canvas fallback, and true
@@ -70,9 +70,10 @@ authoritative native ROCK `78` and Metal `23` inside already-proven broad
 SmoothRigid support may reuse the existing exact-species solid-depth byte,
 interior proof, analytic key/fill/Fresnel, and signed macro relief for a bounded
 bipolar RGB response. Keep the analytic basis centred: a uniform cool lift is
-not acceptable evidence. Do not extend the owner whitelist to Brick, Ceramic,
-BMTL, Gold, Iron, Platinum, Titanium, or any special-state solid without an
-explicit colour/exposure card. Add no texture read, field, resource, pass,
+not acceptable evidence. Do not extend the E17 owner whitelist to Brick,
+Ceramic, BMTL, Gold, Iron, Platinum, Titanium, or any special-state solid.
+Platinum is owned separately by E18 rather than inheriting E17's cool bevel.
+Add no texture read, field, resource, pass,
 target, upload, allocation, clock, alpha/support/silhouette/ownership/topology,
 or physics decision. Holes, notches, one-cell lines, isolated cells,
 unlike-solid seams, co-located walls, traits, emission, reconstructed support,
@@ -81,6 +82,27 @@ Validate narrow 1×/2×/4× off→on→off key/pocket magnitude, cross-scale sta
 and requested-on true-8× inactive `scale-8` GPU-fence proof with
 `npm run audit:vfx:solid-body`; do not declare or branch on E17 in
 `FIELD_EIGHT_X_FRAGMENT`.
+
+E18 is the calibrated normal-WebGL-only exact-Platinum broad-body finish,
+independently measurable with `?platinumBodyVfx=0|1`. PTNM `75` was selected
+because Gold/Iron/Titanium already have structural rolled-metal bodies while
+PTNM previously had only its small 19/43-cell catalytic plane/site grammar and
+read as a pale matte slab at fit view. Only authoritative deep ordinary PTNM
+with `profile == 2`, `optics == 8`, and no wall, trait, emission,
+reconstruction, foreign contact, or unlike contact may reuse the existing
+solid-depth/interior, analytic key/fill/Fresnel/environment, signed relief, and
+static world position for a broad cool/warm silver roll. The catalytic grammar
+remains enabled as a separate later RGB layer. E18 adds no sample, texture,
+field, resource, pass, target, upload, allocation, clock, alpha, support,
+silhouette, ownership, topology, or physics decision. HEAC/RSSS cores, authored
+holes, one-cell lines, isolated cells, co-located walls, solid/Water contacts,
+blank space, Canvas, and true 8× are exact controls. Validate 1×/2×/4×
+off→on→off plus requested-on true-8× exclusion with
+`npm run audit:vfx:platinum-body`; never declare or branch on E18 in
+`FIELD_EIGHT_X_FRAGMENT`. The accepted crown/pocket signed means are roughly
+`+4.03…+4.09` and `−2.05…−2.07`, the balanced core is `2.14…2.15` RGB RMS,
+all protected controls and repeated-off peaks are zero, and the true-8× fence
+must complete at exact 4896×3072 with reason `scale-8`.
 
 The old post-E16 rank that labelled Stone `21` as Solid was invalid because
 Stone is native Powder. The corrected showcase uses native ROCK ground and

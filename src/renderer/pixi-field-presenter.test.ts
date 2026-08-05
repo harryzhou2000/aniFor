@@ -765,6 +765,7 @@ describe('Pixi presenter startup configuration', () => {
     expect(preserveDrawingBuffer).toContain("get('gasLightVfxAudit') === '1'");
     expect(preserveDrawingBuffer).toContain("get('gasCoreDepthVfxAudit') === '1'");
     expect(preserveDrawingBuffer).toContain("get('plasmaCoreVfxAudit') === '1'");
+    expect(preserveDrawingBuffer).toContain("get('platinumBodyVfxAudit') === '1'");
     expect(preserveDrawingBuffer).toContain("get('liquidSolidMeniscusVfxAudit') === '1'");
   });
 
@@ -777,7 +778,7 @@ describe('Pixi presenter startup configuration', () => {
     const eight = source.slice(eightStart, normalStart);
     const normal = source.slice(normalStart, normalEnd);
     const e17Start = normal.indexOf('    // E17:');
-    const e17End = normal.indexOf('  }\n  if (uEnergyIdentityStyling', e17Start);
+    const e17End = normal.indexOf('    // E18:', e17Start);
     const e17 = normal.slice(e17Start, e17End);
 
     expect(e17Start).toBeGreaterThanOrEqual(0);
@@ -814,6 +815,54 @@ describe('Pixi presenter startup configuration', () => {
     );
     expect(source).toContain('presenter.app.canvas.dataset.solidBodyVfx');
     expect(source).toContain("this.app.canvas.dataset.solidBodyVfx = 'inactive';");
+  });
+
+  it('keeps E18 Platinum body optics exact-owner and normal-WebGL-only', () => {
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const canvasSource = readFileSync(new URL('./field-renderer.ts', import.meta.url), 'utf8');
+    const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');
+    const normalStart = source.indexOf('const FIELD_FRAGMENT = `', eightStart);
+    const normalEnd = source.indexOf('`;\n\n/** Primary WebGL presentation', normalStart);
+    const eight = source.slice(eightStart, normalStart);
+    const normal = source.slice(normalStart, normalEnd);
+    const e18Start = normal.indexOf('    // E18:');
+    const e18End = normal.indexOf('  }\n  if (uEnergyIdentityStyling', e18Start);
+    const e18 = normal.slice(e18Start, e18End);
+
+    expect(e18Start).toBeGreaterThanOrEqual(0);
+    expect(e18End).toBeGreaterThan(e18Start);
+    expect(normal).toContain('uniform float uPlatinumBodyVfx;');
+    expect(eight).not.toContain('uPlatinumBodyVfx');
+    expect(eight).not.toContain('platinumBodyVfx');
+    expect(canvasSource).not.toContain('platinumBodyVfx');
+    expect(e18).toContain('material == 75.0');
+    for (const protectedOwner of ['22.0', '23.0', '25.0', '67.0', '70.0', '73.0', '78.0', '82.0']) {
+      expect(e18).not.toContain(`material == ${protectedOwner}`);
+    }
+    expect(e18).toContain('profile == 2.0');
+    expect(e18).toContain('optics == 8.0');
+    expect(e18).toContain('surfaceOnly < 0.5');
+    expect(e18).toContain('halo < 0.5');
+    expect(e18).toContain('wall < 0.5');
+    expect(e18).toContain('foreignMatterContact < 0.5');
+    expect(e18).toContain('unlikeMaterialContact < 0.5');
+    expect(e18).toContain('solidOpticalDepth > 6.0 / 255.0');
+    expect(e18).toContain('solidReliefTone');
+    expect(e18).toContain('solidKey');
+    expect(e18).toContain('solidFill');
+    expect(e18).toContain('solidFresnel');
+    expect(e18).toContain('solidEnvironment');
+    expect(e18).not.toContain('texture(');
+    expect(e18).not.toContain('uTime');
+    expect(e18).not.toContain('gl_FragCoord');
+    expect(e18).not.toMatch(/\balpha\s*[+*]?=/);
+    expect(source.match(/this\.uniforms\.uniforms\.uPlatinumBodyVfx = 0;/g)).toHaveLength(2);
+    expect(source).toContain("get('platinumBodyVfxAudit') === '1'");
+    expect(source).toMatch(
+      /const platinumBodyVfxEnabled = outputScale < 8\s*&& resolvePlatinumBodyVfxEnabled\(renderLook\);/,
+    );
+    expect(source).toContain('presenter.app.canvas.dataset.platinumBodyVfx');
+    expect(source).toContain("this.app.canvas.dataset.platinumBodyVfx = 'inactive';");
   });
 
   it('routes E08 liquid surfaces through existing normal-scale HDR resources only', () => {
