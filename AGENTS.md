@@ -281,14 +281,38 @@ Gas `1.944`, Energy `7.817`, Powder `10.553`, Liquid `11.233`, and Contact
 `15.849` stay fixed. That survey subsequently selected ROCK's overly polished
 macro response; E23 closes that demonstrated defect by reducing existing gloss
 carriers rather than changing E17's owner set or adding another material motif.
-The post-E23 rerun has authoritative 1× evidence only: its 2× exact-frame
-capture timed out twice, so never report it as a clean scale matrix. One generic
-local-contrast score also misranks smooth Water/gas against textured matter.
-Production review instead demonstrated Water's stripe/slab defect, and E24
-closes it through its exact fixture and directional metrics. Before E25, fix
-the showcase draw order that currently overwrites the intended Metal capsule
-with Water (the final showcase has zero Metal cells), then replace the conflated
-ranking with media-aware body, volume, contact, and emission metrics.
+The post-E24 showcase contract is app-owned by `MATERIAL_SHOWCASE_AUDIT`, not
+copied into the browser driver. Version 3 asserts semantic hash `595518258`,
+104,027 occupied cells, the complete 19-material histogram, and 14 named media
+probes over explicit half-open world rectangles.
+The Water pool is drawn before its radius-8 Metal capsule: the final scene must
+contain exactly 880 Metal cells, preserve the symmetric 18-row mask, keep all
+three surrounding Water controls, and have no Metal outside that mask. Every
+1×/2×/4× composed-rank capture must reproduce those exact semantics and CSS
+geometry before visual evidence is considered.
+
+The composed rank is media-aware. Screenshot evidence is differenced against a
+same-page canvas-hidden backdrop, and each pixel must also pass its app-owned
+semantic, propagated-atmosphere-style, or shared-emission support mask. The
+semantic proof and PNG sampler use the same half-open rectangle. Every probe
+has a minimum absolute support-recall requirement, field support/signatures are
+exact across scales, near-white clipping is separate from legitimate
+single-channel saturation, and raw metrics are bounded alongside saturated
+score components. Powder, liquid, gas, rigid, organic, emission, and contact
+probes have separate cue envelopes; required cues combine with a weighted
+harmonic mean, and a family is represented by its weakest required probe rather
+than its mean. Never compare these quality indices with the obsolete generic
+local-contrast scores. The first clean production WebGL v3 matrix ranks Gas
+`2.454` (weakest `gasNoble`, missing billow depth), Organic `2.463` (weakest
+`organicWood`, missing mesostructure), Solid `45.685`, Contact `88.235`, Liquid
+`91.033`, Emission `98.475`, and Powder `100.000` at canonical 2×. Exact
+semantics and field masks are invariant at 1×/2×/4×; semantic/atmosphere probes
+have full screenshot recall and Plasma recall remains at least `0.984`. A
+single-scale diagnostic must report `crossScaleVerified=false` and null spread.
+This selects an exact Noble Gas volume/billow card for E25; Wood/Plant
+body volume remains the next review target. Do not add a fifth generic gas
+layer: reuse E04/E07/E13/E15 evidence and keep the new change exact-owner,
+RGB-only, topology-preserving, and resource-neutral.
 
 WebGL is the canonical visual release path. Canvas 2D remains a resilient,
 camera-preserving semantic fallback: keep its loading, input, material/state,

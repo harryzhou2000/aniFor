@@ -80,6 +80,7 @@ import type { WaterBodyVfxAuditSnapshot } from './water-body-vfx-audit';
 import type { OilBodyVfxAuditSnapshot } from './oil-body-vfx-audit';
 import type { LiquidSolidMeniscusVfxAuditSnapshot } from './liquid-solid-meniscus-vfx-audit';
 import type { WetSedimentVfxAuditSnapshot } from './wet-sediment-vfx-audit';
+import type { MaterialShowcaseAuditSnapshot } from '../renderer/render-lab-scene';
 
 export interface BrowserInputAuditApi {
   readonly version: 1;
@@ -98,6 +99,12 @@ export interface BrowserInputAuditApi {
   sourceTarget(x: number, y: number): number;
   presentationAuxiliary(x: number, y: number): number;
   liquidFieldAlpha(x: number, y: number): number;
+  /** Bilinear atmosphere density at a world-cell centre, in byte space. */
+  atmosphereFieldAlpha(x: number, y: number): number;
+  /** Bilinear shared-emission density at a world-cell centre, in byte space. */
+  emissionFieldAlpha(x: number, y: number): number;
+  /** App-owned production-showcase topology and media-sampling contract. */
+  materialShowcaseFixture(): MaterialShowcaseAuditSnapshot;
   /** Queues one paused audit-only native/presentation-field refresh. */
   refreshPresentationFields(): void;
   geologicalSolidStylingEnabled(): boolean;

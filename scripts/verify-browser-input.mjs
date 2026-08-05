@@ -52,6 +52,11 @@ import {
   assertPairedSparkStateGraphics,
   auditSparkStateGraphics,
 } from './spark-state-graphics-audit.mjs';
+import {
+  COMPOSED_MEDIA_EVIDENCE_VERSION,
+  scoreComposedMediaSample,
+  selectWeakestComposedMediaEvidence,
+} from './composed-media-evidence.mjs';
 
 const ROOT = process.cwd();
 const requestedPort = Number.parseInt(process.env.ANIFORTPT_AUDIT_PORT ?? '5178', 10);
@@ -755,8 +760,8 @@ if (captureDpr !== undefined && captureDpr !== 1 && captureDpr !== 2) {
 if (showcaseScreenshotOnly && !screenshotRequest) {
   throw new Error('--showcase-screenshot requires --screenshot=<path>');
 }
-if (composedRankOnly && renderScaleArgument !== undefined) {
-  throw new Error('--composed-rank-only owns its 1x/2x/4x matrix; omit --render-scale');
+if (composedRankOnly && renderScaleArgument === '8') {
+  throw new Error('--composed-rank-only supports only its normal-detail 1x/2x/4x captures');
 }
 if (hdrVfxOnly && renderLook !== undefined) {
   throw new Error('--hdr-vfx-only owns classic -> realistic -> classic; omit --render-look');
@@ -806,25 +811,8 @@ const ROLE_GRAPHICS_REGIONS = [
   { name: 'forceGap', x: 557, y: 301, radius: 0.35 },
 ];
 
-// Fixed showcase regions intentionally span the material body rather than a
-// single hero pixel. `materials` filters use the semantic grid only in this
-// audit sampler; they never affect presentation. The few mixed/contact cards
-// retain both exact owners so their fit-view boundary remains part of the score.
-const COMPOSED_RANK_REGIONS = Object.freeze([
-  { name: 'powder', x: 140, y: 275, radiusX: 35, radiusY: 20, materials: [1] },
-  { name: 'liquid', x: 355, y: 260, radiusX: 42, radiusY: 38, materials: [2] },
-  { name: 'gas', x: 360, y: 92, radiusX: 33, radiusY: 26, materials: [5] },
-  // This must remain an authoritative native Solid. The showcase formerly used
-  // Powder-phase STNE here, which made the family rank a powder measurement
-  // while labelling it Solid and could falsely justify another rigid-body VFX.
-  { name: 'solid', x: 530, y: 331, radiusX: 35, radiusY: 19, materials: [78] },
-  // The broad Plasma capsule is the composition's actual Energy body. The
-  // Fire/ELEC strips beside the pool are intentionally uniform light sources,
-  // so ranking either strip would measure fixture function rather than visual
-  // vocabulary.
-  { name: 'energy', x: 311, y: 139, radiusX: 15, radiusY: 10, materials: [20] },
-  { name: 'contact', x: 282, y: 250, radiusX: 11, radiusY: 20, materials: [2, 24] },
-]);
+// The app owns showcase regions and exact semantics. This script owns only the
+// output-scale matrix and profile-aware screenshot arithmetic.
 const COMPOSED_RANK_SCALES = Object.freeze([1, 2, 4]);
 
 async function main() {
@@ -11586,18 +11574,17 @@ async function auditDesktopInput(cdp, mode, dpr) {
 }
 
 /**
- * Fit-view material-family survey used to choose the next graphics experiment.
- *
- * Lower `visualSignal` means less observable body variation at normal view:
- * 45% local luma standard deviation, 30% immediate luma contrast, 15%
- * chromatic contrast, and 10% macro luma range. This is deliberately a rank,
- * not a pass/fail claim of visual quality. It makes the next target explicit
- * while the cross-scale assertions only guard measurement stability.
+ * Fit-view media survey used to choose the next graphics experiment. Powder,
+ * liquid, gas, rigid, organic, emission, and contact regions retain their own
+ * visual vocabulary; one local-contrast formula must never rank them as if
+ * smooth volume and granular detail were interchangeable.
  */
 async function auditComposedRankShowcase(cdp, mode, dpr) {
   const captures = [];
   const composedLook = renderLook ?? 'realistic';
-  for (const scale of COMPOSED_RANK_SCALES) {
+  const requestedScales = renderScaleArgument === undefined
+    ? COMPOSED_RANK_SCALES : [Number(renderScaleArgument)];
+  for (const scale of requestedScales) {
     const query = new URLSearchParams({
       scene: 'showcase', inputAudit: '1', auditStage: 'composed-rank',
       renderScale: String(scale), renderLook: composedLook,
@@ -11616,7 +11603,7 @@ async function auditComposedRankShowcase(cdp, mode, dpr) {
         && parameters.get('plasmaCoreVfx') === ${JSON.stringify(plasmaCoreVfxArgument ?? null)}
         && parameters.get('solidBodyVfx') === ${JSON.stringify(solidBodyVfxArgument ?? null)}
         && document.querySelector('[data-scene="showcase"]') !== null
-        && Boolean(window.__ANIFOR_INPUT_AUDIT__);
+        && typeof window.__ANIFOR_INPUT_AUDIT__?.materialShowcaseFixture === 'function';
     })()`), 15_000, `composed rank ${scale}x showcase page`);
     await waitFor(() => evaluate(cdp,
       `window.__ANIFOR_INPUT_AUDIT__.backend().backend === ${JSON.stringify(mode)}`,
@@ -11624,6 +11611,12 @@ async function auditComposedRankShowcase(cdp, mode, dpr) {
     const powderStability = await waitForShowcasePowderStability(
       cdp, scale, `composed rank ${scale}x showcase`,
     );
+    const fixture = await evaluate(cdp,
+      'window.__ANIFOR_INPUT_AUDIT__.materialShowcaseFixture()');
+    assert(fixture?.version === 3 && fixture.regions?.length === 14
+      && fixture.semantic?.materialCounts?.length === 19
+      && COMPOSED_MEDIA_EVIDENCE_VERSION === 3,
+    `composed rank ${scale}x app-owned media fixture is unavailable (${JSON.stringify(fixture)})`);
     const indicator = await evaluate(cdp, `(() => {
       const nodes = [...document.querySelectorAll('.field-indicator')];
       for (const node of nodes) node.style.visibility = 'hidden';
@@ -11632,7 +11625,10 @@ async function auditComposedRankShowcase(cdp, mode, dpr) {
     assert(indicator.count > 0 && indicator.hidden,
       `composed rank ${scale}x did not hide only the field indicator overlay`);
     const capture = await waitForStablePageCapture(
-      cdp, `composed rank ${scale}x showcase framebuffer`, scale === 4 ? 20_000 : undefined,
+      cdp, `composed rank ${scale}x showcase framebuffer`, scale === 4 ? 45_000 : undefined,
+    );
+    const backdrop = await captureWorldCanvasBackdrop(
+      cdp, `composed rank ${scale}x canvas-hidden backdrop`,
     );
     const geometry = await metrics(cdp);
     assertGeometry(geometry, `composed rank ${scale}x`, scale);
@@ -11642,57 +11638,90 @@ async function auditComposedRankShowcase(cdp, mode, dpr) {
     );
     assert(hdrPipeline === 'active',
       `composed rank ${scale}x lost the ${composedLook} HDR pipeline`);
-    const semantic = await composedRankSemanticDigest(cdp, COMPOSED_RANK_REGIONS);
-    const rigidSemantic = semantic.regions.find(({ name }) => name === 'solid');
-    assert(rigidSemantic?.matching === 2_769,
-      `composed rank ${scale}x solid survey is not an exact native ROCK body (${JSON.stringify(rigidSemantic)})`);
+    const semantic = await composedRankSemanticDigest(cdp, fixture);
+    assert(semantic.hash === fixture.semantic.hash
+      && semantic.occupied === fixture.semantic.occupied
+      && JSON.stringify(semantic.materialCounts) === JSON.stringify(fixture.semantic.materialCounts)
+      && semantic.regions.every((region, index) => region.matching === region.expectedMatching
+        && region.supportCells > 0
+        && (fixture.regions[index].support.kind !== 'semantic'
+          || region.supportCells === region.expectedMatching)),
+    `composed rank ${scale}x lost exact showcase semantics (${JSON.stringify(semantic)})`);
+    assert(semantic.metal.count === fixture.metalInsert.expectedCells
+      && semantic.metal.outside === 0
+      && semantic.metal.core === fixture.metalInsert.material
+      && semantic.metal.waterControls.every((material) => material === 2)
+      && semantic.metal.renderedMismatches === 0
+      && JSON.stringify(semantic.metal.rowCounts) === JSON.stringify(fixture.metalInsert.rowCounts),
+    `composed rank ${scale}x lost the symmetric submerged Metal insert (${JSON.stringify(semantic.metal)})`);
     const samples = await samplePageRegions(
-      cdp, capture.capture.data, COMPOSED_RANK_REGIONS, undefined, undefined, capture.canvasRect,
+      cdp, capture.capture.data, fixture.regions, backdrop.data, undefined, capture.canvasRect,
     );
-    assert(samples.length === COMPOSED_RANK_REGIONS.length
-      && samples.every((sample) => sample.visible >= 2 && Number.isFinite(sample.lumaStdDev)),
+    assert(samples.length === fixture.regions.length
+      && samples.every((sample, index) => sample.visible >= 2
+        && sample.supportPixels > 0
+        && sample.supportRecall >= fixture.regions[index].support.minimumRecall
+        && Number.isFinite(sample.lumaStdDev)),
     `composed rank ${scale}x fixture regions did not present stable visible material (${JSON.stringify(samples)})`);
-    const regions = samples.map((sample) => ({
-      ...sample,
-      visualSignal: composedRankVisualSignal(sample),
-    }));
+    const regions = samples.map((sample, index) => {
+      const contract = fixture.regions[index];
+      assert(sample.name === contract.name,
+        `composed rank ${scale}x reordered ${sample.name}/${contract.name}`);
+      return {
+        ...sample,
+        family: contract.family,
+        profile: contract.profile,
+        evidence: scoreComposedMediaSample(sample, contract.profile),
+      };
+    });
     const screenshot = screenshotRequest
       ? variantScreenshotPath(screenshotRequest, `composed-rank-${scale}x`) : undefined;
     if (screenshot) await writeFile(screenshot, Buffer.from(capture.capture.data, 'base64'));
     captures.push({
-      scale, geometry, semantic, regions, hdrPipeline, powderStability,
+      scale, geometry, fixture, semantic, regions, hdrPipeline, powderStability,
       ...(screenshot ? { screenshot } : {}),
     });
   }
-  const reference = captures[0];
-  for (const capture of captures.slice(1)) {
+  const reference = captures.find(({ scale }) => scale === 2) ?? captures[0];
+  assert(reference, 'composed media rank requires at least one capture');
+  for (const capture of captures.filter(({ scale }) => scale !== reference.scale)) {
     assertCanvasRectsEqual(reference.geometry.canvas, capture.geometry.canvas,
       `composed rank ${reference.scale}x/${capture.scale}x CSS canvas geometry`);
     assert(reference.geometry.logical.worldSize === capture.geometry.logical.worldSize
+      && JSON.stringify(reference.fixture) === JSON.stringify(capture.fixture)
       && reference.semantic.hash === capture.semantic.hash
       && reference.semantic.occupied === capture.semantic.occupied
-      && JSON.stringify(reference.semantic.regions) === JSON.stringify(capture.semantic.regions),
+      && JSON.stringify(reference.semantic) === JSON.stringify(capture.semantic),
     `composed rank ${reference.scale}x/${capture.scale}x changed showcase semantics`);
     for (const baseline of reference.regions) {
       const current = capture.regions.find(({ name }) => name === baseline.name);
       assert(current, `composed rank ${capture.scale}x lost ${baseline.name} region`);
-      const drift = Math.abs(current.visualSignal - baseline.visualSignal)
-        / Math.max(3, baseline.visualSignal, current.visualSignal);
-      assert(drift <= 0.52,
-        `composed rank ${baseline.name} signal drifted excessively at ${capture.scale}x (${drift.toFixed(3)})`);
+      const drift = Math.abs(current.evidence.qualityIndex - baseline.evidence.qualityIndex);
+      const componentDrift = Math.max(...Object.keys(baseline.evidence.components).map((name) => (
+        Math.abs(current.evidence.components[name] - baseline.evidence.components[name])
+      )));
+      const coverageDrift = Math.abs(current.coverage - baseline.coverage);
+      const coverageLimit = baseline.family === 'gas' || baseline.family === 'emission' ? 0.05 : 0.02;
+      assert(drift <= 10 && componentDrift <= 0.15 && coverageDrift <= coverageLimit,
+        `composed rank ${baseline.name} profile evidence drifted excessively at ${capture.scale}x (${drift.toFixed(3)})`);
+      assertComposedMediaRawDrift(
+        baseline, current,
+        `composed rank ${baseline.name} ${reference.scale}x/${capture.scale}x`,
+      );
     }
   }
   const twoX = captures.find(({ scale }) => scale === 2);
   const fourX = captures.find(({ scale }) => scale === 4);
-  for (const name of ['powder', 'solid']) {
+  for (const name of ['powderSand', 'solidRock']) {
     const referenceRegion = twoX?.regions.find((sample) => sample.name === name);
     const highDetailRegion = fourX?.regions.find((sample) => sample.name === name);
-    assert(referenceRegion && highDetailRegion
+    if (!referenceRegion || !highDetailRegion) continue;
+    assert(
       // This fit-view detector is intentionally conservative but is not a
       // topology oracle: the native-grain pile has 17 legitimate low-light
       // occupied pixels at 4x without a spatial checker cluster. Raw support,
       // semantic ownership, and coverage remain exact guards above.
-      && highDetailRegion.darkFraction <= 0.015
+      highDetailRegion.darkFraction <= 0.015
       && (highDetailRegion.darkOccupiedSemanticPixels ?? 0) <= 18
       && Math.abs(highDetailRegion.meanLuma - referenceRegion.meanLuma) <= 5
       && highDetailRegion.coverage === referenceRegion.coverage,
@@ -11700,29 +11729,151 @@ async function auditComposedRankShowcase(cdp, mode, dpr) {
       twoX: referenceRegion, fourX: highDetailRegion,
     })})`);
   }
-  const aggregate = COMPOSED_RANK_REGIONS.map(({ name }) => {
-    const samples = captures.map(({ regions }) => regions.find((sample) => sample.name === name));
-    const visualSignal = samples.reduce((sum, sample) => sum + sample.visualSignal, 0) / samples.length;
+  const families = [...new Set(reference.fixture.regions.map(({ family }) => family))];
+  const aggregate = families.map((family) => {
+    const samples = reference.regions.filter((sample) => sample.family === family);
+    const evidence = selectWeakestComposedMediaEvidence(samples.map((sample) => sample.evidence));
+    const weakest = samples.find((sample) => sample.evidence === evidence);
+    const scaleScores = captures.map(({ scale, regions }) => {
+      const scaleSamples = regions.filter((sample) => sample.family === family);
+      const scaleEvidence = selectWeakestComposedMediaEvidence(
+        scaleSamples.map((sample) => sample.evidence),
+      );
+      const scaleWeakest = scaleSamples.find((sample) => sample.evidence === scaleEvidence);
+      return {
+        scale, qualityIndex: scaleEvidence.qualityIndex,
+        weakestProbe: scaleWeakest?.name, weakestComponent: scaleEvidence.weakestComponent,
+      };
+    });
+    const crossScaleSpread = scaleScores.length > 1
+      ? Math.max(...scaleScores.map(({ qualityIndex }) => qualityIndex))
+        - Math.min(...scaleScores.map(({ qualityIndex }) => qualityIndex))
+      : null;
     return {
-      family: name,
-      visualSignal: round(visualSignal, 3),
+      family,
+      profile: evidence.profile,
+      qualityIndex: evidence.qualityIndex,
+      priorityDeficit: evidence.priorityDeficit,
+      weakestProbe: weakest?.name,
+      weakestComponent: evidence.weakestComponent,
+      components: evidence.components,
+      probes: samples.map((sample) => ({
+        name: sample.name, qualityIndex: sample.evidence.qualityIndex,
+        priorityDeficit: sample.evidence.priorityDeficit,
+        weakestComponent: sample.evidence.weakestComponent,
+        components: sample.evidence.components,
+      })),
+      scaleScores,
+      crossScaleSpread: crossScaleSpread === null ? null : round(crossScaleSpread, 3),
       lumaStdDev: round(samples.reduce((sum, sample) => sum + sample.lumaStdDev, 0) / samples.length, 3),
       microContrast: round(samples.reduce((sum, sample) => sum + sample.microContrast, 0) / samples.length, 3),
       chromaticContrast: round(samples.reduce((sum, sample) => sum + sample.chromaticContrast, 0) / samples.length, 3),
       macroLumaRange: round(samples.reduce((sum, sample) => sum + sample.macroLumaRange, 0) / samples.length, 3),
+      coverage: round(samples.reduce((sum, sample) => sum + sample.coverage, 0) / samples.length, 4),
     };
-  }).sort((left, right) => left.visualSignal - right.visualSignal)
+  }).sort((left, right) => left.qualityIndex - right.qualityIndex)
     .map((sample, index) => ({ rank: index + 1, ...sample }));
   return {
-    scales: captures.map(({ geometry, semantic, regions, ...capture }) => ({
-      ...capture, backing: geometry.backing, cssCanvas: geometry.canvas, semantic, regions,
+    scales: captures.map(({ scale, geometry, semantic, regions, hdrPipeline, powderStability,
+      screenshot }) => ({
+      scale,
+      backing: geometry.backing,
+      cssCanvas: geometry.canvas,
+      hdrPipeline,
+      powderStability,
+      semanticHash: semantic.hash,
+      occupied: semantic.occupied,
+      metal: semantic.metal,
+      regions: regions.map((sample) => ({
+        name: sample.name, family: sample.family, profile: sample.profile,
+        supportPixels: sample.supportPixels, supportRecall: sample.supportRecall,
+        visible: sample.visible, coverage: sample.coverage,
+        lumaStdDev: sample.lumaStdDev, microContrast: sample.microContrast,
+        chromaticContrast: sample.chromaticContrast,
+        macroLumaRange: sample.macroLumaRange, lumaRange: sample.lumaRange,
+        dominantComponent: sample.dominantComponent,
+        darkFraction: sample.darkFraction, pinnedFraction: sample.pinnedFraction,
+        clippedFraction: sample.clippedFraction,
+        evidence: sample.evidence,
+      })),
+      ...(screenshot ? { screenshot } : {}),
     })),
-    rankingMethod: 'low visualSignal = 45% lumaStdDev + 30% microContrast + 15% chromaticContrast + 10% macroLumaRange',
+    semanticContract: {
+      fixtureVersion: reference.fixture.version,
+      hash: reference.semantic.hash,
+      occupied: reference.semantic.occupied,
+      materialCounts: reference.semantic.materialCounts,
+      regions: reference.semantic.regions,
+      metal: reference.semantic.metal,
+    },
+    rankingMethod: `media-aware evidence v${COMPOSED_MEDIA_EVIDENCE_VERSION}; low qualityIndex means the profile-specific expected vocabulary is least represented`,
     renderLook: composedLook,
     weakestFirst: aggregate,
-    exactGeometryAndSemanticScene: true,
+    schema: 'composed-media-rank/v3',
+    referenceScale: reference.scale,
+    exactSceneAtCapturedScales: true,
+    crossScaleVerified: captures.length > 1,
+    fullScaleMatrix: captures.length === COMPOSED_RANK_SCALES.length,
     fieldIndicatorHiddenOnlyForCapture: true,
   };
+}
+
+/** Captures the real page/viewport backdrop without navigating or touching renderer state. */
+async function captureWorldCanvasBackdrop(cdp, label) {
+  const previous = await evaluate(cdp, `(() => {
+    const canvas = document.querySelector('.world-canvas');
+    if (!(canvas instanceof HTMLCanvasElement)) throw new Error('World canvas unavailable');
+    const value = canvas.style.visibility;
+    canvas.style.visibility = 'hidden';
+    return value;
+  })()`);
+  try {
+    await evaluate(cdp, 'new Promise((resolve) => requestAnimationFrame(resolve))');
+    return await capturePageScreenshotWithin(cdp, 10_000, label);
+  } finally {
+    await evaluate(cdp, `(() => {
+      const canvas = document.querySelector('.world-canvas');
+      if (canvas instanceof HTMLCanvasElement) canvas.style.visibility = ${JSON.stringify(previous)};
+    })()`);
+    await evaluate(cdp, 'new Promise((resolve) => requestAnimationFrame(resolve))');
+  }
+}
+
+/**
+ * Score ramps deliberately saturate once a cue is present. Cross-scale safety
+ * therefore also compares the underlying measurements so a regression cannot
+ * disappear merely because both values lie beyond the same clamp.
+ */
+function assertComposedMediaRawDrift(reference, current, label) {
+  const checks = [
+    ['meanLuma', 5, 0.08],
+    ['lumaStdDev', 2, 0.35],
+    ['microContrast', 1.25, 0.50],
+    ['chromaticContrast', 1.5, 0.50],
+    // The compact one-third-resolution emission aura is sampled through a
+    // different output-pixel lattice at each detail level. Bound that known
+    // extremal statistic separately; its support/continuity remain strict.
+    ['macroLumaRange', 8, reference.family === 'emission' ? 0.45 : 0.35],
+    // Extremal range is the most output-scale-sensitive statistic: 1× cannot
+    // retain every subcell highlight that 2×/4× can, while mean/variance and
+    // support remain the stronger body-collapse guards above.
+    ['lumaRange', 12, 0.40],
+  ];
+  for (const [name, floor, proportion] of checks) {
+    const referenceValue = reference[name];
+    const currentValue = current[name];
+    const allowed = Math.max(floor, Math.max(Math.abs(referenceValue), Math.abs(currentValue)) * proportion);
+    assert(Math.abs(currentValue - referenceValue) <= allowed,
+      `${label} raw ${name} drifted (${referenceValue} -> ${currentValue}; allowed ${allowed.toFixed(3)})`);
+  }
+  for (const [name, allowed] of [
+    ['supportRecall', 0.04], ['dominantComponent', 0.04],
+    ['clippedFraction', 0.02], ['darkFraction', 0.03],
+  ]) {
+    if (reference[name] === undefined || current[name] === undefined) continue;
+    assert(Math.abs(current[name] - reference[name]) <= allowed,
+      `${label} raw ${name} drifted (${reference[name]} -> ${current[name]}; allowed ${allowed})`);
+  }
 }
 
 async function waitForShowcasePowderStability(cdp, scale, label) {
@@ -11738,34 +11889,71 @@ async function waitForShowcasePowderStability(cdp, scale, label) {
   })()`), scale === 4 ? 30_000 : 12_000, `${label} powder stability`);
 }
 
-function composedRankVisualSignal(sample) {
-  return sample.lumaStdDev * 0.45 + sample.microContrast * 0.30
-    + sample.chromaticContrast * 0.15 + sample.macroLumaRange * 0.10;
-}
-
-async function composedRankSemanticDigest(cdp, regions) {
+async function composedRankSemanticDigest(cdp, fixture) {
   return evaluate(cdp, `(() => {
     const audit = window.__ANIFOR_INPUT_AUDIT__;
+    const fixture = ${JSON.stringify(fixture)};
     let hash = 2166136261;
     let occupied = 0;
+    const materialCounts = new Uint32Array(256);
     for (let y = 0; y < ${WORLD_HEIGHT}; y++) for (let x = 0; x < ${WORLD_WIDTH}; x++) {
       const material = audit.cell(x, y) >>> 0;
+      materialCounts[material]++;
       occupied += Number(material !== 0);
       hash = Math.imul(hash ^ material ^ (y * ${WORLD_WIDTH} + x), 16777619) >>> 0;
     }
+    const metal = (() => {
+      const entry = fixture.metalInsert;
+      const rowCounts = [];
+      let count = 0;
+      let outside = materialCounts[entry.material];
+      let renderedMismatches = 0;
+      for (let y = entry.rect.y; y < entry.rect.y + entry.rect.height; y++) {
+        let rowCount = 0;
+        for (let x = entry.rect.x; x < entry.rect.x + entry.rect.width; x++) {
+          const material = audit.cell(x, y);
+          rowCount += Number(material === entry.material);
+          count += Number(material === entry.material);
+          renderedMismatches += Number(audit.renderedCell(x, y) !== material);
+        }
+        rowCounts.push(rowCount);
+      }
+      outside -= count;
+      return {
+        count, outside, rowCounts, renderedMismatches,
+        core: audit.cell(entry.coreProbe.x, entry.coreProbe.y),
+        waterControls: entry.waterControls.map(({ x, y }) => audit.cell(x, y)),
+      };
+    })();
     return {
-      hash, occupied,
-      regions: ${JSON.stringify(regions)}.map((region) => {
+      hash, occupied, metal,
+      materialCounts: fixture.semantic.materialCounts.map(({ material }) => ({
+        material, count: materialCounts[material],
+      })),
+      regions: fixture.regions.map((region) => {
         const radiusX = region.radiusX ?? region.radius ?? 3;
         const radiusY = region.radiusY ?? region.radius ?? 3;
         let matching = 0;
-        for (let y = Math.floor(region.y - radiusY); y <= Math.floor(region.y + radiusY); y++) {
-          for (let x = Math.floor(region.x - radiusX); x <= Math.floor(region.x + radiusX); x++) {
+        let supportCells = 0;
+        let supportSignature = 2166136261;
+        for (let y = Math.floor(region.y - radiusY); y < Math.ceil(region.y + radiusY); y++) {
+          for (let x = Math.floor(region.x - radiusX); x < Math.ceil(region.x + radiusX); x++) {
             const material = audit.cell(x, y);
-            matching += Number(!region.materials || region.materials.includes(material));
+            matching += Number(region.semanticMaterials.includes(material));
+            const support = region.support.kind === 'semantic'
+              ? region.support.materials.includes(material)
+              : region.support.kind === 'atmosphere'
+                ? audit.atmosphereFieldAlpha(x, y) >= region.support.minimumAlpha
+                  && audit.gasIdentityStyle(x, y) === region.support.style
+                : audit.emissionFieldAlpha(x, y) >= region.support.minimumAlpha;
+            supportCells += Number(support);
+            supportSignature = Math.imul(supportSignature ^ Number(support), 16777619) >>> 0;
           }
         }
-        return { name: region.name, matching };
+        return {
+          name: region.name, matching, expectedMatching: region.expectedMatching,
+          supportCells, supportSignature,
+        };
       }),
     };
   })()`);
@@ -31874,26 +32062,35 @@ async function samplePageRegions(
     const baselineReferenceSource = ${baselineReferenceBase64 ? JSON.stringify(`data:image/png;base64,${baselineReferenceBase64}`) : 'null'};
     let baselineContext;
     let baselineReferenceContext;
-    if (baselineSource && baselineReferenceSource) {
+    if (baselineSource) {
       const baselineImage = new Image();
-      const baselineReferenceImage = new Image();
       baselineImage.src = baselineSource;
-      baselineReferenceImage.src = baselineReferenceSource;
-      await Promise.all([baselineImage.decode(), baselineReferenceImage.decode()]);
-      if (baselineImage.naturalWidth !== image.naturalWidth || baselineImage.naturalHeight !== image.naturalHeight
-        || baselineReferenceImage.naturalWidth !== image.naturalWidth
-        || baselineReferenceImage.naturalHeight !== image.naturalHeight) {
+      await baselineImage.decode();
+      if (baselineImage.naturalWidth !== image.naturalWidth
+        || baselineImage.naturalHeight !== image.naturalHeight) {
         throw new Error('Baseline screenshot geometry mismatch');
       }
       const baselineCopy = document.createElement('canvas');
-      const baselineReferenceCopy = document.createElement('canvas');
-      baselineCopy.width = baselineReferenceCopy.width = image.naturalWidth;
-      baselineCopy.height = baselineReferenceCopy.height = image.naturalHeight;
+      baselineCopy.width = image.naturalWidth;
+      baselineCopy.height = image.naturalHeight;
       baselineContext = baselineCopy.getContext('2d', { willReadFrequently: true });
-      baselineReferenceContext = baselineReferenceCopy.getContext('2d', { willReadFrequently: true });
-      if (!baselineContext || !baselineReferenceContext) throw new Error('Baseline sampler unavailable');
+      if (!baselineContext) throw new Error('Baseline sampler unavailable');
       baselineContext.drawImage(baselineImage, 0, 0);
-      baselineReferenceContext.drawImage(baselineReferenceImage, 0, 0);
+      if (baselineReferenceSource) {
+        const baselineReferenceImage = new Image();
+        baselineReferenceImage.src = baselineReferenceSource;
+        await baselineReferenceImage.decode();
+        if (baselineReferenceImage.naturalWidth !== image.naturalWidth
+          || baselineReferenceImage.naturalHeight !== image.naturalHeight) {
+          throw new Error('Baseline reference screenshot geometry mismatch');
+        }
+        const baselineReferenceCopy = document.createElement('canvas');
+        baselineReferenceCopy.width = image.naturalWidth;
+        baselineReferenceCopy.height = image.naturalHeight;
+        baselineReferenceContext = baselineReferenceCopy.getContext('2d', { willReadFrequently: true });
+        if (!baselineReferenceContext) throw new Error('Baseline reference sampler unavailable');
+        baselineReferenceContext.drawImage(baselineReferenceImage, 0, 0);
+      }
     }
     const liveBounds = world.getBoundingClientRect();
     const suppliedBounds = ${captureCanvasRect ? JSON.stringify(captureCanvasRect) : 'null'};
@@ -31913,16 +32110,25 @@ async function samplePageRegions(
       const radiusY = region.radiusY ?? radius;
       const worldScaleX = bounds.width / ${WORLD_WIDTH};
       const worldScaleY = bounds.height / ${WORLD_HEIGHT};
-      const x = Math.floor((bounds.left + (region.x - radiusX) * worldScaleX - visualOffsetX) * pageScaleX);
-      const y = Math.floor((bounds.top + (region.y - radiusY) * worldScaleY - visualOffsetY) * pageScaleY);
-      const width = Math.max(1, Math.ceil(radiusX * 2 * worldScaleX * pageScaleX));
-      const height = Math.max(1, Math.ceil(radiusY * 2 * worldScaleY * pageScaleY));
+      // App-owned composed-media regions opt into one exact half-open world
+      // rectangle. The same bounds drive both semantic proof and PNG pixels;
+      // rounding the screenshot crop cannot silently add a positive-edge cell.
+      const exactSupport = region.support !== undefined;
+      const worldLeft = exactSupport ? Math.floor(region.x - radiusX) : region.x - radiusX;
+      const worldTop = exactSupport ? Math.floor(region.y - radiusY) : region.y - radiusY;
+      const worldRight = exactSupport ? Math.ceil(region.x + radiusX) : region.x + radiusX;
+      const worldBottom = exactSupport ? Math.ceil(region.y + radiusY) : region.y + radiusY;
+      const x = Math.floor((bounds.left + worldLeft * worldScaleX - visualOffsetX) * pageScaleX);
+      const y = Math.floor((bounds.top + worldTop * worldScaleY - visualOffsetY) * pageScaleY);
+      const width = Math.max(1, Math.ceil((worldRight - worldLeft) * worldScaleX * pageScaleX));
+      const height = Math.max(1, Math.ceil((worldBottom - worldTop) * worldScaleY * pageScaleY));
       const data = context.getImageData(x, y, width, height).data;
       const baselineData = baselineContext?.getImageData(x, y, width, height).data;
       const baselineReferenceData = baselineReferenceContext?.getImageData(x, y, width, height).data;
       const signalMinimum = region.signalMinimum ?? 4;
       const signalNoiseMargin = region.signalNoiseMargin ?? 3;
       const materialFilter = Array.isArray(region.materials) ? region.materials : undefined;
+      const supportContract = region.support;
       let signalThreshold = 0;
       if (baselineData && baselineReferenceData) {
         const noise = new Uint8Array(width * height);
@@ -31940,8 +32146,10 @@ async function samplePageRegions(
       }
       signalThreshold = Math.max(signalThreshold, region.signalFloor ?? 0, signalMinimum);
       const total = [0, 0, 0];
+      let supportPixels = 0;
       let visible = 0;
       let pinned = 0;
+      let clipped = 0;
       let minimumLuma = 255;
       let maximumLuma = 0;
       let peakLuma = -1;
@@ -31953,15 +32161,31 @@ async function samplePageRegions(
       const visiblePixels = new Uint8Array(width * height);
       for (let offset = 0; offset < data.length; offset += 4) {
         const sampleIndex = offset / 4;
-        if (materialFilter) {
+        if (materialFilter || supportContract) {
           const imageX = x + sampleIndex % width;
           const imageY = y + Math.floor(sampleIndex / width);
           const clientX = imageX / pageScaleX + visualOffsetX;
           const clientY = imageY / pageScaleY + visualOffsetY;
           const worldX = Math.floor((clientX - bounds.left) / worldScaleX);
           const worldY = Math.floor((clientY - bounds.top) / worldScaleY);
-          if (!semanticAudit?.cell || !materialFilter.includes(semanticAudit.cell(worldX, worldY))) continue;
+          if (supportContract) {
+            if (worldX < worldLeft || worldX >= worldRight
+              || worldY < worldTop || worldY >= worldBottom) continue;
+            if (supportContract.kind === 'semantic') {
+              if (!semanticAudit?.cell
+                || !supportContract.materials.includes(semanticAudit.cell(worldX, worldY))) continue;
+            } else if (supportContract.kind === 'atmosphere') {
+              if (!semanticAudit?.atmosphereFieldAlpha || !semanticAudit?.gasIdentityStyle
+                || semanticAudit.atmosphereFieldAlpha(worldX, worldY) < supportContract.minimumAlpha
+                || semanticAudit.gasIdentityStyle(worldX, worldY) !== supportContract.style) continue;
+            } else if (supportContract.kind === 'emission') {
+              if (!semanticAudit?.emissionFieldAlpha
+                || semanticAudit.emissionFieldAlpha(worldX, worldY) < supportContract.minimumAlpha) continue;
+            } else throw new Error('Unknown composed-media support contract');
+          } else if (!semanticAudit?.cell
+            || !materialFilter.includes(semanticAudit.cell(worldX, worldY))) continue;
         }
+        supportPixels++;
         if (region.signature) {
           signature = Math.imul(signature ^ data[offset], 16777619);
           signature = Math.imul(signature ^ data[offset + 1], 16777619);
@@ -31980,6 +32204,7 @@ async function samplePageRegions(
         total[0] += data[offset]; total[1] += data[offset + 1]; total[2] += data[offset + 2];
         if (data[offset] === 255 || data[offset + 1] === 255 || data[offset + 2] === 255) pinned++;
         const luma = (data[offset] * 54 + data[offset + 1] * 183 + data[offset + 2] * 19) / 256;
+        if (luma >= 250) clipped++;
         lumaValues[sampleIndex] = luma;
         visiblePixels[sampleIndex] = 1;
         lumaSquareTotal += luma * luma;
@@ -32146,6 +32371,8 @@ async function samplePageRegions(
       return {
         name: region.name,
         rgb: total.map((channel) => Math.round(channel / Math.max(1, visible))),
+        supportPixels,
+        supportRecall: Math.round(visible / Math.max(1, supportPixels) * 1000) / 1000,
         visible,
         coverage: Math.round(visible / Math.max(1, width * height) * 1000) / 1000,
         microContrast: Math.round(adjacentContrast / Math.max(1, adjacentPairs) * 100) / 100,
@@ -32163,6 +32390,7 @@ async function samplePageRegions(
           darkOccupiedSemanticPixels,
         } : {}),
         pinnedFraction: Math.round(pinned / Math.max(1, visible) * 1000) / 1000,
+        clippedFraction: Math.round(clipped / Math.max(1, visible) * 1000) / 1000,
         lumaRange: visible ? Math.round(maximumLuma - minimumLuma) : 0,
         ...(region.topology ? {
           dominantComponent: Math.round(dominantComponentPixels / Math.max(1, visible) * 1000) / 1000,

@@ -34,6 +34,8 @@ import {
   GAS_IDENTITY_MOTIF_TEXTURE_HEIGHT,
   GAS_IDENTITY_MOTIF_TEXTURE_WIDTH,
 } from './canvas-gas-identity-style';
+import { canvasAtmosphereAlphaAtWorldCell } from './canvas-atmosphere-relief';
+import { sampleCanvasFieldAlpha } from './canvas-surface-light';
 import { HDRVfxPipeline, type HDRPipelineInfo } from './hdr-vfx-pipeline';
 import {
   resolveBotanicalBodyVfxEnabled,
@@ -10210,6 +10212,24 @@ export class PixiFieldPresenter {
   liquidFieldAlphaAt(x: number, y: number): number {
     if (x < 0 || y < 0 || x >= this.width || y >= this.height) return -1;
     return this.fieldSet.liquid.bytes[(y * this.width + x) * 4 + 3];
+  }
+
+  /** Audit-only bilinear density shared with the uploaded atmosphere texture. */
+  atmosphereFieldAlphaAt(x: number, y: number): number {
+    if (x < 0 || y < 0 || x >= this.width || y >= this.height) return -1;
+    const field = this.fieldSet.atmosphere;
+    return canvasAtmosphereAlphaAtWorldCell(
+      field.bytes, field.width, field.height, this.width, this.height, x, y,
+    ) * 255;
+  }
+
+  /** Audit-only bilinear density shared with the uploaded emission texture. */
+  emissionFieldAlphaAt(x: number, y: number): number {
+    if (x < 0 || y < 0 || x >= this.width || y >= this.height) return -1;
+    const field = this.fieldSet.emission;
+    return sampleCanvasFieldAlpha(
+      field.bytes, field.width, field.height, this.width, this.height, x, y,
+    );
   }
 
   /** Narrow audit readback for an exact-owner optional presentation layer. */

@@ -6,6 +6,7 @@ import { renderOptics, RenderOptics } from './render-optics';
 import { hasRenderTrait, renderTraits, RenderTrait } from './render-traits';
 import {
   applyMaterialShowcaseScene, applyRenderLabScene, materialShowcaseRequested,
+  MATERIAL_SHOWCASE_AUDIT,
   RENDER_LAB_AMBIENT_TEMPERATURE, RENDER_LAB_COLD_TEMPERATURE,
   RENDER_LAB_ENERGY_SAMPLES, RENDER_LAB_HOT_TEMPERATURE, RENDER_LAB_STYLE_SAMPLES,
   renderLabRequested,
@@ -35,8 +36,54 @@ describe('render lab scene', () => {
       Material.ROCK, Material.Sand, Material.Clay, Material.Concrete,
       Material.Water, Material.Oil, Material.Glass, Material.Smoke,
       Material.Oxygen, Material.NobleGas, Material.Wood, Material.Plant,
-      Material.DTEC, Material.URAN, Material.POLO,
+      Material.Metal, Material.DTEC, Material.URAN, Material.POLO,
     ]) expect(counts[material]).toBeGreaterThan(100);
+    expect(MATERIAL_SHOWCASE_AUDIT.version).toBe(3);
+    expect(MATERIAL_SHOWCASE_AUDIT.semantic.materialCounts.map(({ material }) => (
+      [material, counts[material]]
+    ))).toEqual(MATERIAL_SHOWCASE_AUDIT.semantic.materialCounts.map(({ material, count }) => (
+      [material, count]
+    )));
+    expect(first.cells().length - counts[Material.Empty])
+      .toBe(MATERIAL_SHOWCASE_AUDIT.semantic.occupied);
+    expect(semanticHash(first.cells())).toBe(MATERIAL_SHOWCASE_AUDIT.semantic.hash);
+
+    // The submerged rigid insert is deliberately exact: this catches draw-order
+    // regressions where the later broad Water pool silently erases every Metal
+    // cell while the rest of the showcase still appears plausible. The row
+    // profile also prevents an overlarge radius from retaining the same count
+    // through an asymmetric mask.
+    const metal = MATERIAL_SHOWCASE_AUDIT.metalInsert;
+    expect(counts[metal.material]).toBe(metal.expectedCells);
+    expect(first.cells()[metal.coreProbe.y * 612 + metal.coreProbe.x]).toBe(metal.material);
+    for (const point of metal.waterControls) {
+      expect(first.cells()[point.y * 612 + point.x]).toBe(Material.Water);
+    }
+    expect(Array.from({ length: metal.rect.height }, (_, offsetY) => {
+      let rowCount = 0;
+      for (let x = metal.rect.x; x < metal.rect.x + metal.rect.width; x++) {
+        rowCount += Number(first.cells()[(metal.rect.y + offsetY) * 612 + x] === metal.material);
+      }
+      return rowCount;
+    })).toEqual(metal.rowCounts);
+    let outsideMetal = 0;
+    for (let y = 0; y < 384; y++) for (let x = 0; x < 612; x++) {
+      const inside = x >= metal.rect.x && x < metal.rect.x + metal.rect.width
+        && y >= metal.rect.y && y < metal.rect.y + metal.rect.height;
+      outsideMetal += Number(!inside && first.cells()[y * 612 + x] === metal.material);
+    }
+    expect(outsideMetal).toBe(0);
+    for (const region of MATERIAL_SHOWCASE_AUDIT.regions) {
+      let matching = 0;
+      for (let y = Math.floor(region.y - region.radiusY);
+        y < Math.ceil(region.y + region.radiusY); y++) {
+        for (let x = Math.floor(region.x - region.radiusX);
+          x < Math.ceil(region.x + region.radiusX); x++) {
+          matching += Number(region.semanticMaterials.includes(first.cells()[y * 612 + x]));
+        }
+      }
+      expect(matching, region.name).toBe(region.expectedMatching);
+    }
     expect(first.cells()[331 * 612 + 530]).toBe(Material.ROCK);
     expect(renderPhase(ALL_MATERIALS.find(({ id }) => id === Material.ROCK)!))
       .toBe(RenderPhase.Solid);
@@ -220,3 +267,11 @@ describe('render lab scene', () => {
     }
   });
 });
+
+function semanticHash(cells: Uint8Array): number {
+  let hash = 2166136261;
+  for (let index = 0; index < cells.length; index++) {
+    hash = Math.imul(hash ^ cells[index] ^ index, 16777619) >>> 0;
+  }
+  return hash;
+}

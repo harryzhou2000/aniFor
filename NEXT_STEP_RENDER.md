@@ -911,20 +911,35 @@ next production 4× survey then selected Wood/PLNT as the largest remaining
   defect with an exact liquid-body card rather than widening Oily optics to
   Diesel or Nitro. E23 closes ROCK's demonstrated overly polished macro response
   by reducing its inherited gloss carriers rather than widening or replacing
-  E17. The post-E23 composed rerun recovered an authoritative 1× frame with the
-  same `3702907786` semantic hash and 104,027 occupied cells, but its 2× exact-
-  frame capture timed out twice; do not describe that as a clean 1×/2×/4×
-  survey. Its scalar order (`Gas 1.936`, `Solid 4.991`, `Energy 7.647`,
-  `Powder 10.791`, `Liquid 11.220`, `Contact 15.107`) also cannot rank smooth
-  media against textured media by one local-contrast formula. Visual review of
-  the same production crop instead demonstrated Water's coherent stripe/slab
-  defect, which E24 closes with an exact Water fixture and directional metrics.
-  The showcase currently draws its intended Metal capsule before the Water pool
-  and therefore ends with zero Metal cells; repair that ordering and replace the
-  conflated rank with media-aware powder/liquid/gas/solid/organic/emissive
-  measures before selecting E25. Do not widen E17–E24 owner sets by resemblance
-  alone. Preserve their owner, exposure, topology, scale, and true-8× contracts
-  independently.
+  E17. The historical post-E23 composed rerun recovered only an authoritative
+  1× frame and used an invalid cross-media local-contrast scalar; retain it only
+  as the evidence that led to E24, never as the current ranking. The post-E24
+  showcase now draws the Water pool before its radius-8 Metal capsule and owns
+  its audit manifest in the app. The final scene has semantic hash `595518258`,
+  104,027 occupied cells, exactly 880 Metal cells in a symmetric 18-row mask,
+  intact surrounding Water controls, the exact 19-material histogram, and 14
+  named media probes over identical half-open world rectangles. A clean
+  production WebGL 1×/2×/4× matrix reproduces those semantics, rendered-cell
+  parity, CSS geometry, and field-support masks at every scale.
+
+  Ranking now uses separate granular-body, cohesive-liquid, diffuse-gas,
+  rigid-body, organic-body, emissive-volume, and phase-contact cue envelopes.
+  Required cues combine through a weighted harmonic mean, and each family is
+  represented by its weakest required probe rather than an average that can
+  hide a failed material. At canonical 2× the weakest-first quality indices are
+  Gas `2.454` (`gasNoble`, billow depth), Organic `2.463` (`organicWood`,
+  mesostructure), Solid `45.685`, Contact `88.235`, Liquid `91.033`, Emission
+  `98.475`, and Powder `100.000`.
+  The same order and exact semantics hold at 1×/2×/4× within the audit's raw and
+  normalized drift bounds. The PNG sampler subtracts a same-page canvas-hidden
+  backdrop and admits pixels only through the owning semantic,
+  propagated-atmosphere-style, or shared-emission support mask. All ordinary
+  and gas probes have full presentation recall; Plasma remains at least
+  `0.984`. This selects exact Noble Gas
+  volume/billow depth for E25, with Wood/Plant volume retained as the next
+  review target. Do not widen E17–E24 owner sets by resemblance alone, and do
+  not stack another generic gas layer over E04/E07/E13/E15. Preserve their
+  owner, exposure, topology, scale, and true-8× contracts independently.
 
 **Next visual experiments:** E03–E24 now provide accepted liquid body/surface,
 stable-gas, coherent-gas-motion, powder-depth, and powder-local-light
@@ -936,9 +951,12 @@ ROCK/Metal opaque-body relief, a distinct broad Platinum finish, an exact
 Ceramic fired-glaze response, recomposed clustered Wood/PLNT bodies, and deep
 Glass selective transmission, exact Oil amber-crown/cool-pocket body optics,
 an exact ROCK matte-body correction over E17, and lower-anisotropy exact-Water
-depth-light recomposition. First repair the overwritten Metal showcase sample
-and make the ranking media-aware; then re-rank the production fit-view before
-selecting another material card. The radioactive-solid review
+depth-light recomposition. The repaired, media-aware production rank selects
+an exact Noble Gas volume/billow card for E25; it must reuse the atmosphere,
+curvature, motion, light, and core-depth evidence already live under
+E04/E07/E13/E15, add no sample or resource, and leave gas support/alpha and
+other species unchanged. Wood/Plant body volume is the next ranked review
+target after that card. The radioactive-solid review
 found no current identity bug, but also
 proved that the existing
 phase-permissive identity guard is not suitable for a future broad ISZS/VIBR
@@ -947,7 +965,7 @@ with topology-preserving, material-
 specific cards that reuse already-live evidence. Prefer the smallest
 arithmetic-only candidate that fixes a visible fit-view deficiency; do not add
 an isolated tint merely to continue the experiment number. Preserve the E14
-1× stencil snap and all E01–E24 selectors/controls while surveying.
+1× stencil snap and all E01–E24 selectors/controls while implementing E25.
 
 ## Phase 1 — HDR pipeline & lighting core (biggest visual payoff)
 

@@ -633,6 +633,30 @@ export class MaterialRenderer {
     return bytes ? bytes[(y * this.simulation.width + x) * 4 + 3] : -1;
   }
 
+  /** Audit-only bilinear density of the shared atmosphere at a world-cell centre. */
+  atmosphereFieldAlphaAt(x: number, y: number): number {
+    if (x < 0 || y < 0 || x >= this.simulation.width || y >= this.simulation.height) return -1;
+    const presented = this.presenter?.atmosphereFieldAlphaAt(x, y);
+    if (presented !== undefined) return presented;
+    const field = this.fallbackFields?.atmosphere;
+    return field ? canvasAtmosphereAlphaAtWorldCell(
+      field.bytes, field.width, field.height,
+      this.simulation.width, this.simulation.height, x, y,
+    ) * 255 : -1;
+  }
+
+  /** Audit-only bilinear density of the compact shared-emission field. */
+  emissionFieldAlphaAt(x: number, y: number): number {
+    if (x < 0 || y < 0 || x >= this.simulation.width || y >= this.simulation.height) return -1;
+    const presented = this.presenter?.emissionFieldAlphaAt(x, y);
+    if (presented !== undefined) return presented;
+    const field = this.fallbackFields?.emission;
+    return field ? sampleCanvasFieldAlpha(
+      field.bytes, field.width, field.height,
+      this.simulation.width, this.simulation.height, x, y,
+    ) : -1;
+  }
+
   /** Audit-only state for the Coal/ROCK body styling control. */
   geologicalSolidStylingIsEnabled(): boolean {
     return this.presenter?.geologicalSolidStylingEnabled() ?? this.geologicalSolidStylingEnabled;

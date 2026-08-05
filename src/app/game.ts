@@ -1,6 +1,7 @@
 import { MaterialRenderer } from '../renderer/field-renderer';
 import {
-  applyMaterialShowcaseScene, applyRenderLabScene, materialShowcaseRequested, renderLabRequested,
+  applyMaterialShowcaseScene, applyRenderLabScene, MATERIAL_SHOWCASE_AUDIT,
+  materialShowcaseRequested, renderLabRequested,
 } from '../renderer/render-lab-scene';
 import { applyWallLabScene, wallLabRequested } from '../renderer/wall-lab-scene';
 import { ALL_MATERIALS, BROWSE_MATERIALS, Material } from '../shared/materials';
@@ -457,6 +458,7 @@ export class Game {
         return this.simulation.cells()[y * this.simulation.width + x];
       },
       renderedCell: (x, y) => this.renderer.renderedMaterialAt(x, y),
+      materialShowcaseFixture: () => MATERIAL_SHOWCASE_AUDIT,
       presentationState: (x, y) => {
         if (x < 0 || y < 0 || x >= this.simulation.width || y >= this.simulation.height) return -1;
         return this.simulation.presentationState?.()[y * this.simulation.width + x] ?? 0;
@@ -487,6 +489,8 @@ export class Game {
       sourceTarget: (x, y) => this.simulation.configuredSourceTargetAt?.(x, y) ?? Material.Empty,
       presentationAuxiliary: (x, y) => this.renderer.presentationAuxiliaryAt(x, y),
       liquidFieldAlpha: (x, y) => this.renderer.liquidFieldAlphaAt(x, y),
+      atmosphereFieldAlpha: (x, y) => this.renderer.atmosphereFieldAlphaAt(x, y),
+      emissionFieldAlpha: (x, y) => this.renderer.emissionFieldAlphaAt(x, y),
       refreshPresentationFields: () => this.renderer.invalidateDynamicPresentation(),
       geologicalSolidStylingEnabled: () => this.renderer.geologicalSolidStylingIsEnabled(),
       thermalCatalyticRigidStylingEnabled: () => this.renderer.thermalCatalyticRigidStylingIsEnabled(),

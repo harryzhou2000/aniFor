@@ -8,6 +8,218 @@ export const RENDER_LAB_COLD_TEMPERATURE = 1200;
 export { RENDER_LAB_AMBIENT_TEMPERATURE };
 export const RENDER_LAB_HOT_TEMPERATURE = 18000;
 
+export type MaterialShowcaseMediaProfile = 'granular-body' | 'cohesive-liquid'
+  | 'diffuse-gas' | 'rigid-body' | 'organic-body' | 'emissive-volume'
+  | 'phase-contact';
+
+export type MaterialShowcaseAuditSupport =
+  | {
+    readonly kind: 'semantic';
+    readonly materials: readonly Material[];
+    readonly minimumRecall: number;
+  }
+  | {
+    readonly kind: 'atmosphere';
+    readonly style: number;
+    readonly minimumAlpha: number;
+    readonly minimumRecall: number;
+  }
+  | {
+    readonly kind: 'emission';
+    readonly minimumAlpha: number;
+    readonly minimumRecall: number;
+  };
+
+export interface MaterialShowcaseAuditRegion {
+  readonly name: string;
+  readonly family: 'powder' | 'liquid' | 'gas' | 'solid' | 'organic'
+    | 'emission' | 'contact';
+  readonly profile: MaterialShowcaseMediaProfile;
+  readonly x: number;
+  readonly y: number;
+  readonly radiusX: number;
+  readonly radiusY: number;
+  /**
+   * Both semantic and screenshot sampling use the exact half-open rectangle
+   * `[x-radiusX, x+radiusX) × [y-radiusY, y+radiusY)`.
+   */
+  readonly support: MaterialShowcaseAuditSupport;
+  /** Exact owners counted independently of the composed screenshot sampler. */
+  readonly semanticMaterials: readonly Material[];
+  readonly topology?: boolean;
+  readonly silhouette?: boolean;
+  readonly expectedMatching: number;
+}
+
+export interface MaterialShowcaseAuditSnapshot {
+  readonly version: 3;
+  readonly semantic: {
+    readonly hash: number;
+    readonly occupied: number;
+    readonly materialCounts: readonly {
+      readonly material: Material;
+      readonly count: number;
+    }[];
+  };
+  readonly metalInsert: {
+    readonly material: Material.Metal;
+    readonly rect: { readonly x: number; readonly y: number; readonly width: number; readonly height: number };
+    readonly radius: 8;
+    readonly expectedCells: 880;
+    readonly rowCounts: readonly number[];
+    readonly coreProbe: { readonly x: number; readonly y: number };
+    readonly waterControls: readonly { readonly x: number; readonly y: number }[];
+  };
+  readonly regions: readonly MaterialShowcaseAuditRegion[];
+}
+
+/**
+ * App-owned contract for the production-fit visual survey. Keeping this beside
+ * the scene prevents the browser audit from silently measuring stale copied
+ * coordinates or accepting the same wrong topology at every output scale.
+ */
+export const MATERIAL_SHOWCASE_AUDIT: MaterialShowcaseAuditSnapshot = {
+  version: 3,
+  semantic: {
+    hash: 595_518_258,
+    occupied: 104_027,
+    materialCounts: [
+      { material: Material.Sand, count: 5_862 },
+      { material: Material.Water, count: 20_862 },
+      { material: Material.Fire, count: 216 },
+      { material: Material.Smoke, count: 6_806 },
+      { material: Material.Oil, count: 2_538 },
+      { material: Material.Wood, count: 2_374 },
+      { material: Material.Plant, count: 10_215 },
+      { material: Material.Plasma, count: 492 },
+      { material: Material.Metal, count: 880 },
+      { material: Material.Glass, count: 6_206 },
+      { material: Material.Concrete, count: 4_148 },
+      { material: Material.Clay, count: 4_720 },
+      { material: Material.Oxygen, count: 6_003 },
+      { material: Material.NobleGas, count: 4_300 },
+      { material: Material.ROCK, count: 23_090 },
+      { material: Material.ELEC, count: 150 },
+      { material: Material.POLO, count: 492 },
+      { material: Material.URAN, count: 1_804 },
+      { material: Material.DTEC, count: 2_869 },
+    ],
+  },
+  metalInsert: {
+    material: Material.Metal,
+    rect: { x: 315, y: 289, width: 54, height: 18 },
+    radius: 8,
+    expectedCells: 880,
+    rowCounts: [38, 44, 48, 50, 50, 52, 52, 52, 54, 54, 52, 52, 52, 50, 50, 48, 44, 38],
+    coreProbe: { x: 342, y: 298 },
+    waterControls: [{ x: 315, y: 289 }, { x: 342, y: 288 }, { x: 342, y: 307 }],
+  },
+  regions: [
+    {
+      name: 'powderSand', family: 'powder', profile: 'granular-body',
+      x: 140, y: 275, radiusX: 35, radiusY: 20,
+      support: { kind: 'semantic', materials: [Material.Sand], minimumRecall: 0.96 },
+      semanticMaterials: [Material.Sand],
+      topology: true, silhouette: true, expectedMatching: 800,
+    },
+    {
+      name: 'powderClay', family: 'powder', profile: 'granular-body',
+      x: 140, y: 275, radiusX: 35, radiusY: 20,
+      support: { kind: 'semantic', materials: [Material.Clay], minimumRecall: 0.96 },
+      semanticMaterials: [Material.Clay],
+      topology: true, silhouette: true, expectedMatching: 1_369,
+    },
+    {
+      name: 'powderConcrete', family: 'powder', profile: 'granular-body',
+      x: 140, y: 320, radiusX: 50, radiusY: 8,
+      support: { kind: 'semantic', materials: [Material.Concrete], minimumRecall: 0.96 },
+      semanticMaterials: [Material.Concrete],
+      topology: true, silhouette: true, expectedMatching: 1_600,
+    },
+    {
+      name: 'liquidWater', family: 'liquid', profile: 'cohesive-liquid',
+      x: 355, y: 260, radiusX: 42, radiusY: 38,
+      support: { kind: 'semantic', materials: [Material.Water], minimumRecall: 0.96 },
+      semanticMaterials: [Material.Water],
+      topology: true, silhouette: true, expectedMatching: 5_636,
+    },
+    {
+      name: 'liquidOil', family: 'liquid', profile: 'cohesive-liquid',
+      x: 420, y: 240, radiusX: 20, radiusY: 15,
+      support: { kind: 'semantic', materials: [Material.Oil], minimumRecall: 0.96 },
+      semanticMaterials: [Material.Oil],
+      topology: true, silhouette: true, expectedMatching: 1_200,
+    },
+    {
+      name: 'gasSmoke', family: 'gas', profile: 'diffuse-gas',
+      x: 360, y: 92, radiusX: 33, radiusY: 26,
+      support: { kind: 'atmosphere', style: 1, minimumAlpha: 12, minimumRecall: 0.78 },
+      semanticMaterials: [Material.Smoke], topology: true, silhouette: true,
+      expectedMatching: 2_185,
+    },
+    {
+      name: 'gasOxygen', family: 'gas', profile: 'diffuse-gas',
+      x: 427, y: 82, radiusX: 30, radiusY: 22,
+      support: { kind: 'atmosphere', style: 4, minimumAlpha: 12, minimumRecall: 0.78 },
+      semanticMaterials: [Material.Oxygen], topology: true, silhouette: true,
+      expectedMatching: 2_315,
+    },
+    {
+      name: 'gasNoble', family: 'gas', profile: 'diffuse-gas',
+      x: 497, y: 103, radiusX: 28, radiusY: 20,
+      support: { kind: 'atmosphere', style: 7, minimumAlpha: 12, minimumRecall: 0.78 },
+      semanticMaterials: [Material.NobleGas], topology: true, silhouette: true,
+      expectedMatching: 1_986,
+    },
+    {
+      name: 'solidRock', family: 'solid', profile: 'rigid-body',
+      x: 530, y: 331, radiusX: 35, radiusY: 19,
+      support: { kind: 'semantic', materials: [Material.ROCK], minimumRecall: 0.96 },
+      semanticMaterials: [Material.ROCK],
+      topology: true, silhouette: true, expectedMatching: 2_660,
+    },
+    {
+      name: 'organicWood', family: 'organic', profile: 'organic-body',
+      x: 122, y: 220, radiusX: 7, radiusY: 34,
+      support: { kind: 'semantic', materials: [Material.Wood], minimumRecall: 0.96 },
+      semanticMaterials: [Material.Wood],
+      topology: true, silhouette: true, expectedMatching: 952,
+    },
+    {
+      name: 'organicPlant', family: 'organic', profile: 'organic-body',
+      x: 116, y: 120, radiusX: 38, radiusY: 22,
+      support: { kind: 'semantic', materials: [Material.Plant], minimumRecall: 0.96 },
+      semanticMaterials: [Material.Plant],
+      topology: true, silhouette: true, expectedMatching: 3_344,
+    },
+    {
+      name: 'emissionPlasma', family: 'emission', profile: 'emissive-volume',
+      x: 311, y: 139, radiusX: 15, radiusY: 10,
+      support: { kind: 'emission', minimumAlpha: 8, minimumRecall: 0.72 },
+      semanticMaterials: [Material.Plasma], topology: true, silhouette: true,
+      expectedMatching: 492,
+    },
+    {
+      name: 'contactWaterGlass', family: 'contact', profile: 'phase-contact',
+      x: 282, y: 225, radiusX: 11, radiusY: 20,
+      support: {
+        kind: 'semantic', materials: [Material.Water, Material.Glass], minimumRecall: 0.96,
+      },
+      semanticMaterials: [Material.Water, Material.Glass],
+      topology: true, silhouette: true, expectedMatching: 880,
+    },
+    {
+      name: 'contactWaterMetal', family: 'contact', profile: 'phase-contact',
+      x: 342, y: 289, radiusX: 20, radiusY: 12,
+      support: {
+        kind: 'semantic', materials: [Material.Water, Material.Metal], minimumRecall: 0.96,
+      },
+      semanticMaterials: [Material.Water, Material.Metal],
+      topology: true, silhouette: true, expectedMatching: 960,
+    },
+  ],
+};
+
 export const RENDER_LAB_STYLE_SAMPLES = [
   // Granular surfaces, including emissive/reactive powders.
   Material.Sand, Material.Dust, Material.Salt, Material.Gunpowder, Material.Thermite,
@@ -52,7 +264,6 @@ export function applyMaterialShowcaseScene(simulation: SimulationBackend): void 
   // composed-rank solid region is deliberately sampled from this broad body.
   plot.roundedRect(24, 280, 564, 76, 18, Material.ROCK);
   plot.eraseRect(315, 280, 54, 18);
-  plot.roundedRect(315, 289, 54, 18, 11, Material.Metal);
 
   // Packed powder should read as one cohesive pile but keep its analytic slope
   // and a narrow natural ridge rather than a rectangular block.
@@ -62,8 +273,15 @@ export function applyMaterialShowcaseScene(simulation: SimulationBackend): void 
 
   // A broad connected pool with a controlled Oil inlet presents surface depth,
   // meniscus light, optical thickness, and an unlike-liquid seam at fit view.
+  // Draw the submerged Metal insert after the pool: drawing it beside the
+  // ground before Water used to erase all 880 intended Metal cells and made
+  // the production showcase incapable of reviewing a rigid/liquid contact.
   plot.roundedRect(252, 192, 232, 128, 28, Material.Water);
   plot.splitCapsule(332, 214, 116, 55, 24, 389, Material.Water, Material.Oil);
+  const metal = MATERIAL_SHOWCASE_AUDIT.metalInsert;
+  plot.roundedRect(
+    metal.rect.x, metal.rect.y, metal.rect.width, metal.rect.height, metal.radius, metal.material,
+  );
   plot.roundedRect(277, 185, 14, 143, 7, Material.Glass);
   plot.roundedRect(466, 185, 14, 143, 7, Material.Glass);
   plot.roundedRect(277, 313, 203, 15, 7, Material.Glass);

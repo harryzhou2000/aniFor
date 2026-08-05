@@ -425,6 +425,40 @@ confused with a backend-specific browser page DPR. The resulting files are
 visual review evidence, not a pixel-parity gate: WebGL remains canonical and
 Canvas preserves semantic fallback behavior within its bounded paired checks.
 
+For a deterministic media-aware production survey, run:
+
+```bash
+npm run audit:vfx:composed-rank
+# Optional independent retry while diagnosing one scale:
+npm run build
+node scripts/verify-browser-input.mjs --composed-rank-only --webgl-only \
+  --production-bundle --render-look=realistic --capture-dpr=1 --render-scale=4
+```
+
+The browser obtains regions and exact semantic expectations from the app-owned
+`MATERIAL_SHOWCASE_AUDIT`; the driver must not maintain copied coordinates.
+Version 3 fixes the scene at semantic hash `595518258`, 104,027 occupied cells,
+the full 19-material histogram, and 14 named half-open probes. It also proves
+that the radius-8 Metal capsule contains exactly 880 cells in its symmetric 18-row mask,
+has no cells outside the mask, renders every semantic centre, and leaves its
+three Water controls intact.
+
+The `composed-media-rank/v3` result scores granular body, cohesive liquid,
+diffuse gas, rigid body, organic body, emissive volume, and phase contact with
+different cue envelopes. Required cues use a weighted harmonic mean, so one
+missing cue cannot be hidden by an unrelated strong signal; each family is
+ranked by its weakest required probe. A full run treats 2× as the canonical
+reference and requires exact semantic and field-mask equality, stable CSS
+geometry, minimum rendered-support recall, and bounded raw plus normalized
+metric drift at 1×/2×/4×. Screenshot pixels are first differenced against a
+same-page capture with only the world canvas hidden, then admitted through the
+region's semantic, propagated gas-style, or shared-emission support mask. This
+prevents the viewport background or a neighbouring gas from masquerading as a
+rendered volume. Near-white clipping is measured separately from legitimate
+single-channel material saturation. A requested single scale reports null
+spread and `crossScaleVerified=false`; it is a local diagnostic reference, not
+a replacement for the full matrix.
+
 Timing output is diagnostic rather than a cross-machine pass/fail threshold. It includes baseline Canvas atmosphere relief and the same full plane under a nonzero cardinal-gradient emission field, Canvas surface-lighting, deliberately pessimistic full-612×384 energy-core and trait-core passes, a fully dense Water cohesion pass, a full-height Water/Oil boundary pass, and an all-cells liquid-light gate in which every cell is pessimistically treated as a top-surface candidate and samples field relief. Dense translucent coupling is measured twice: an honest all-Glass/all-field ceiling and the ordinary single-localized-source path after `EmissionField.mayLightWorldCell` rejection. A separate pathological all-world Glass-over-wall refraction profile includes its diagnostic pixel reset; production admits only exact Glass/Ice cells that coexist with a wall, performs no allocation or field sample, and ordinary scenes touch a small fraction of that ceiling. Full-world caustic and lens-shell arithmetic diagnostics include repeated RGB scratch initialization that production already performs while styling. The latest lens-shell ceiling measured `11.25/11.58/12.61 ms` median/p90/max across all 235,008 world cells and adds zero runtime bytes; production additionally gates it to exact Glass/Ice and reuses the existing color scratch, relief, and contour response. Checksums are consumed sparsely outside the timed production-shaped loops and the solid-relief checksum remains independent. The atmosphere-light descriptor is module-scoped and reused, so the timed loop allocates no object or typed buffer. Trait profiling covers realistic masks, a synthetic all-bits mask, and a representative composite, and consumes representative output through a checksum outside the timed region so the JIT cannot discard the work without charging checksum arithmetic to production-like timings. Profiler-only storage is reported separately from runtime-known scratch and does not contribute to `combinedAllocatedBytes`.
 
 Canvas also defers botanical classification until an Organic or Fibrous trait can
