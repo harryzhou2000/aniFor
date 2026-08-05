@@ -245,11 +245,26 @@ does not alter simulation, camera, semantic ownership, or `renderScale`.
   Metal, Canvas, and true 8× are exact controls. E19 adds no sample, texture,
   field, resource, pass, target, upload, allocation, clock, alpha/support/
   silhouette/ownership/topology, or physics decision.
+- **E20 — exact Wood/PLNT body recomposition (accepted checkpoint):** the
+  post-E19 production 4× fit-view showed mature canopies as inflated diagonal
+  tiles and Wood as a flat banded trunk. Normal 1×–4× WebGL now replaces those
+  competing legacy carriers only in deep authoritative Wood `9` and PLNT `10`
+  bodies through `?botanicalBodyVfx=0|1`. One shared exact owner/trait/depth/
+  interior/contact/wall/emission guard owns deterministic arithmetic leaf
+  clusters and bark ridges over the existing relief, Fresnel, and environment.
+  Sparse stems, isolated cells, holes/notches, walls, Water/Sand contacts,
+  reciprocal same-Solid-phase Wood/PLNT seams, VINE/Wax/Metal, native PLNT
+  lifecycle colour/state, Canvas, and true 8× keep their established paths.
+  The lifecycle composition contract is sampled on separate inherited-cyan
+  and inherited-magenta PLNT canopies while the main calibration bodies remain
+  zero-state. E20 adds no sampler, texture, field, resource,
+  pass, target, upload, allocation, clock, alpha/support/silhouette/ownership/
+  topology/state, or physics decision.
 - **Protected 8× rung:** `renderScale=8` deliberately reports
   `hdrPipeline=inactive` / `scale-8` and retains the proven direct single-mesh
   4896×3072 path. The experiment must earn a bounded 8× design rather than
   allocating a 115 MiB full-resolution float target beside that path.
-- **Current decision:** E01/E02/E03/E04/E05/E06/E07/E08/E09/E10/E11/E12/E13/E14/E15/E16/E17/E18/E19 remain opt-in through the non-Classic looks
+- **Current decision:** E01/E02/E03/E04/E05/E06/E07/E08/E09/E10/E11/E12/E13/E14/E15/E16/E17/E18/E19/E20 remain opt-in through the non-Classic looks
   until representative hardware timing and mobile thermal behavior are
   measured. E02 remains the safe family-wide baseline. E03 is accepted as the
   liquid-depth checkpoint: its fit-view crop is visibly more cohesive, retains
@@ -324,7 +339,14 @@ does not alter simulation, camera, semantic ownership, or `renderScale`.
   grade, or change to their existing family texture. Freeze its two-owner
   whitelist, centred analytic-light basis, signed relief weight, and four-to-six
   byte accepted peak envelope (the canonical survey observes five to six) until
-  more SmoothRigid owners receive explicit cards.
+  more SmoothRigid owners receive explicit cards. E18 and E19 remain exact
+  Platinum and Ceramic finishes rather than new family-wide rigid layers. E20
+  is accepted as the first body-carrier replacement: it removes competing
+  Wood/PLNT bands only after one strict owner/trait/depth/contact proof, then
+  substitutes clustered leaf volume or restrained bark rather than stacking a
+  second identity pattern. Freeze that shared eligibility gate, arithmetic
+  noise hash, lifecycle separation, and protected-control paths until another
+  production fit-view review.
   These are not the final material/VFX results.
   Sub-1.0 material colour stays on the established response; tonemapping owns
   only real HDR highlights so powder texture and liquid body contrast are not
@@ -635,6 +657,33 @@ navigation reports E19/HDR inactive with reason `scale-8`, retains exact
 and completes its GPU fence inside the same original 30-second startup
 deadline (about `4.02 s` on the final run).
 
+Run `npm run audit:vfx:botanical-body` for E20. It reloads a dedicated paused
+two-card Wood/PLNT RenderLab fixture as `botanicalBodyVfx=0 → 1 → 0` at
+1×/2×/4× while every E01–E19 selector is pinned off. The fixture proves broad
+body/core/crown/pocket response alongside authored cavities/open notches,
+one-cell stems, isolated owners, native-wall coexistence, direct Water/Sand
+contacts, reciprocal Wood↔PLNT same-phase seams, guarded blanks, VINE/Wax/Metal
+controls, zero-state main calibration bodies, and two isolated stateful PLNT
+canopies. Those canopies differ only in inherited-colour bits: all 3,840 state
+cells and their hash repeat exactly across off/on/off, while normalized
+inherited red share shifts by `0.084…0.086`, green share reverses by
+`0.056…0.058`, and chroma distance remains `0.105…0.108` after E20 composition.
+The accepted body response is strongly spatial rather than a uniform grade.
+Across 1×/2×/4×, Wood core/crown/pocket RGB RMS spans
+`12.18…12.39 / 10.38…10.62 / 7.36…7.58`; PLNT spans
+`12.67…12.83 / 11.15…11.20 / 11.68…11.89`. Every probe now owns a frozen
+per-target RGB/chroma/coverage/peak/signed/spatial envelope; the largest
+observed normal-scale spread is only `0.24` RGB RMS, `0.16` chroma RMS, `0.22`
+signed mean, `0.225` spatial RGB RMS, `0.028` coverage, and one peak byte.
+Semantic material, raw alpha/support, CSS/backing geometry, all 1,568
+native-wall cells, exact integer-cell control RGBA, and repeated-off
+framebuffers remain stable. Protected composed controls are bounded to one
+byte except the named HDR-filtered `WOODSandContactOwner` edge at three bytes.
+The closing requested-on true-8× navigation
+reports E20/HDR inactive with reason `scale-8`, no bloom, exact 4896×3072
+direct WebGL, a signalled promotion fence, and zero browser errors; the final
+full-matrix SwiftShader fence completed in about `5.13 s`.
+
 The earlier post-E16 survey was invalid for Solid: it sampled native Stone `21`,
 which is Powder, while labelling that region Solid. The corrected post-E17
 showcase uses native ROCK `78`, asserts exactly `2769` matching Solid cells, and
@@ -655,24 +704,30 @@ contrast. E18 closes the demonstrated PTNM gap without changing this composed
 ranking because the showcase contains no Platinum. The follow-up production
 capture proved Gold/Iron/Titanium already own rolled-metal optics, Brick is
 legible as warm masonry, and only Ceramic lacked a convincing surface finish.
-E19 closes that exact gap without applying PTNM's roll or altering Brick.
-Before another rigid card, survey a new material or phase and prove a visible
-fit-view defect; do not widen E17–E19 owner sets by resemblance alone. Preserve
+E19 closes that exact gap without applying PTNM's roll or altering Brick. The
+next production 4× survey then selected Wood/PLNT as the largest remaining
+fit-view defect, and E20 replaces their band-forming body carriers without
+changing sparse botanical topology or lifecycle state. Before another rigid
+card, survey a new material or phase and prove a visible fit-view defect; do
+not widen E17–E20 owner sets by resemblance alone. Preserve
 their owner, exposure, topology, scale, and true-8× contracts independently.
 
-**Next visual experiments:** E03–E19 now provide accepted liquid body/surface,
+**Next visual experiments:** E03–E20 now provide accepted liquid body/surface,
 stable-gas, coherent-gas-motion, powder-depth, and powder-local-light
 checkpoints plus exact resting contact grounding, Glass/Ice transmission, and
 state-aware Wax/PLNT subsurface response, composed wet-mineral optics,
 atmosphere-owned external-light spectra, exact liquid-side wet contacts, and
 species-aware gas-core optical depth, dense-Plasma containment, exact
-ROCK/Metal opaque-body relief, a distinct broad Platinum finish, and an exact
-Ceramic fired-glaze response. Continue
+ROCK/Metal opaque-body relief, a distinct broad Platinum finish, an exact
+Ceramic fired-glaze response, and recomposed clustered Wood/PLNT bodies. The
+same fit-view survey ranks thick Glass transmission, ROCK's overly polished
+macro response, and Oil's flat opaque plug next; separately audit the current
+radioactive-solid trait guard before adding another isotope finish. Continue
 with topology-preserving, material-
 specific cards that reuse already-live evidence. Prefer the smallest
 arithmetic-only candidate that fixes a visible fit-view deficiency; do not add
 an isolated tint merely to continue the experiment number. Preserve the E14
-1× stencil snap and all E01–E19 selectors/controls while surveying.
+1× stencil snap and all E01–E20 selectors/controls while surveying.
 
 ## Phase 1 — HDR pipeline & lighting core (biggest visual payoff)
 

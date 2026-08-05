@@ -73,6 +73,7 @@ import type { GasCoreDepthVfxAuditSnapshot } from './gas-core-depth-vfx-audit';
 import type { PlasmaCoreVfxAuditSnapshot } from './plasma-core-vfx-audit';
 import type { SolidBodyVfxAuditSnapshot } from './solid-body-vfx-audit';
 import type { CeramicGlazeVfxAuditSnapshot } from './ceramic-glaze-vfx-audit';
+import type { BotanicalBodyVfxAuditSnapshot } from './botanical-body-vfx-audit';
 import type { LiquidSolidMeniscusVfxAuditSnapshot } from './liquid-solid-meniscus-vfx-audit';
 import type { WetSedimentVfxAuditSnapshot } from './wet-sediment-vfx-audit';
 
@@ -194,6 +195,8 @@ export interface BrowserInputAuditApi {
   prepareSolidBodyVfxFixture(): void;
   ceramicGlazeVfxFixture(): CeramicGlazeVfxAuditSnapshot;
   prepareCeramicGlazeVfxFixture(): void;
+  botanicalBodyVfxFixture(): BotanicalBodyVfxAuditSnapshot;
+  prepareBotanicalBodyVfxFixture(): void;
   liquidSolidMeniscusVfxFixture(): LiquidSolidMeniscusVfxAuditSnapshot;
   prepareLiquidSolidMeniscusVfxFixture(): void;
   prepareContourStressFixture(): void;

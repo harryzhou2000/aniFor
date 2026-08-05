@@ -221,6 +221,23 @@ export function resolveCeramicGlazeVfxEnabled(
 }
 
 /**
+ * Re-composes broad exact Wood/PLNT bodies after the fit-view survey showed
+ * their older diagonal relief carriers reading as bands rather than organic
+ * volume. Normal WebGL owns the strict owner, thickness, contact, and topology
+ * guards; this selector only admits the bounded RGB replacement.
+ */
+export function resolveBotanicalBodyVfxEnabled(
+  look: RenderLook,
+  search = globalThis.location?.search ?? '',
+): boolean {
+  if (look === 'classic') return false;
+  const requested = new URLSearchParams(search).get('botanicalBodyVfx');
+  if (requested === '0' || requested === 'off' || requested === 'false') return false;
+  if (requested === '1' || requested === 'on' || requested === 'true') return true;
+  return resolveVolumeVfxEnabled(look, search);
+}
+
+/**
  * Keeps the settled-powder crown experiment independently measurable without
  * changing liquid or gas. Ordinary realistic/neon presets retain the broad
  * volume default; the explicit query is reserved for comparison captures and

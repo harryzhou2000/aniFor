@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  resolveBotanicalBodyVfxEnabled,
   resolveCeramicGlazeVfxEnabled,
   DEFAULT_RENDER_LOOK, resolveGasBodyVfxEnabled, resolveGasCoreDepthVfxEnabled,
   resolveGasLightVfxEnabled,
@@ -173,6 +174,19 @@ describe('resolveRenderLook', () => {
     )).toBe(true);
     expect(resolveCeramicGlazeVfxEnabled(
       'neon-lab', '?volumeVfx=1&ceramicGlazeVfx=false',
+    )).toBe(false);
+  });
+
+  it('keeps the exact Wood/PLNT body replacement independently measurable', () => {
+    expect(resolveBotanicalBodyVfxEnabled('classic', '?botanicalBodyVfx=true')).toBe(false);
+    expect(resolveBotanicalBodyVfxEnabled('realistic', '')).toBe(true);
+    expect(resolveBotanicalBodyVfxEnabled('neon-lab', '')).toBe(true);
+    expect(resolveBotanicalBodyVfxEnabled('realistic', '?volumeVfx=0')).toBe(false);
+    expect(resolveBotanicalBodyVfxEnabled(
+      'realistic', '?volumeVfx=0&botanicalBodyVfx=on',
+    )).toBe(true);
+    expect(resolveBotanicalBodyVfxEnabled(
+      'neon-lab', '?volumeVfx=1&botanicalBodyVfx=false',
     )).toBe(false);
   });
 

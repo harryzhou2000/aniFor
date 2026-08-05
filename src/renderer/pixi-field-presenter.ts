@@ -36,6 +36,7 @@ import {
 } from './canvas-gas-identity-style';
 import { HDRVfxPipeline, type HDRPipelineInfo } from './hdr-vfx-pipeline';
 import {
+  resolveBotanicalBodyVfxEnabled,
   resolveGasBodyVfxEnabled, resolveGasCoreDepthVfxEnabled, resolveGasLightVfxEnabled,
   resolveGasMotionVfxEnabled,
   resolveLiquidBodyVfxEnabled, resolveLiquidSolidMeniscusVfxEnabled,
@@ -3229,6 +3230,7 @@ uniform float uPlasmaCoreVfx;
 uniform float uSolidBodyVfx;
 uniform float uPlatinumBodyVfx;
 uniform float uCeramicGlazeVfx;
+uniform float uBotanicalBodyVfx;
 uniform float uLiquidBodyVfx;
 uniform float uLiquidSolidMeniscusVfx;
 uniform float uPowderBodyVfx;
@@ -3849,7 +3851,9 @@ vec3 liquidMaterialIdentityDelta(
   }
   return clamp(identity * support, vec3(-0.055), vec3(0.055));
 }
-vec3 botanicalIdentityDelta(float material, vec2 position, float plantFineGain) {
+vec3 botanicalIdentityDelta(
+  float material, vec2 position, float plantFineGain, float bodyReplacement
+) {
   float x = floor(position.x);
   float y = floor(position.y);
   vec3 delta = vec3(0.0);
@@ -3875,9 +3879,17 @@ vec3 botanicalIdentityDelta(float material, vec2 position, float plantFineGain) 
     // facet/cross identity remains fully legible in every topology.
     vec3 leafVein = vec3(leaf * 1.5 - vein * 3.0, leaf * 3.5 + vein * 6.0,
       leaf - vein * 2.5) * plantFineGain;
-    delta = leafVein
-      + canopyCrown * vec3(1.5, 4.5, 1.0)
-      - canopyPocket * vec3(1.7, 2.1, 0.8);
+    if (bodyReplacement > 0.5 && plantFineGain < 0.2) {
+      delta = leafVein + (
+        canopyCrown * vec3(1.5, 4.5, 1.0)
+        - canopyPocket * vec3(1.7, 2.1, 0.8)
+      ) * plantFineGain;
+    } else {
+      // Preserve the established disabled path's operation order exactly.
+      delta = leafVein
+        + canopyCrown * vec3(1.5, 4.5, 1.0)
+        - canopyPocket * vec3(1.7, 2.1, 0.8);
+    }
   } else if (material == 83.0) {
     float strand = mod(x + floor(y / 4.0) + material, 7.0) < 2.0 ? 1.0 : 0.0;
     float node = mod(x * 3.0 + y * 5.0 + material, 16.0) < 2.0 ? 1.0 : 0.0;
@@ -3905,6 +3917,26 @@ vec3 botanicalIdentityDelta(float material, vec2 position, float plantFineGain) 
 vec3 vividColor(vec3 color, float saturation) {
   float luminance = dot(color, vec3(0.2126, 0.7152, 0.0722));
   return mix(vec3(luminance), color, saturation);
+}
+float botanicalBodyHash(vec2 cell) {
+  // Arithmetic hash avoids multiplying several transcendental calls across a
+  // 4x backing while retaining deterministic, isotropic world-space clusters.
+  vec3 state = fract(vec3(cell.x, cell.y, cell.x) * vec3(0.1031, 0.1030, 0.0973));
+  state += dot(state, state.yzx + 33.33);
+  return fract((state.x + state.y) * state.z);
+}
+float botanicalBodyNoise(vec2 position) {
+  vec2 cell = floor(position);
+  vec2 local = fract(position);
+  local = local * local * (3.0 - 2.0 * local);
+  float lower = mix(
+    botanicalBodyHash(cell), botanicalBodyHash(cell + vec2(1.0, 0.0)), local.x
+  );
+  float upper = mix(
+    botanicalBodyHash(cell + vec2(0.0, 1.0)),
+    botanicalBodyHash(cell + vec2(1.0, 1.0)), local.x
+  );
+  return mix(lower, upper, local.y);
 }
 vec3 botanicalLifecycleDelta(
   float material, vec2 stateBytes, vec2 position, vec3 sourceColor
@@ -5842,6 +5874,16 @@ void main() {
     semanticSlope += solidRelief.xy * solidInterior;
     solidReliefTone = solidRelief.z * solidInterior;
   }
+  bool botanicalBodyOwner = material == 9.0 || material == 10.0;
+  bool botanicalBodyTrait = (material == 9.0 && abs(traits - 96.0) < 0.5)
+    || (material == 10.0 && abs(traits - 32.0) < 0.5);
+  float botanicalBodyReplacement = uBotanicalBodyVfx > 0.5
+    && botanicalBodyOwner && botanicalBodyTrait
+    && uSolidOpticalDepth > 0.5 && solidOpticalDepth > 6.0 / 255.0
+    && solidInterior > 0.001 && surfaceOnly < 0.5 && halo < 0.5
+    && wall < 0.5 && wallOnly < 0.5 && emissionOnly < 0.5
+    && !materialEmissive && foreignMatterContact < 0.5
+    && unlikeMaterialContact < 0.5 ? 1.0 : 0.0;
   vec3 normal = normalize(vec3(
     -semanticSlope.x - volumeSlope.x,
     -semanticSlope.y - volumeSlope.y,
@@ -6962,7 +7004,8 @@ void main() {
     // exact-species depth byte, changes RGB only, and adds no sample or target.
     // The first interior layer and reconstructed cavity support remain exact.
     if (uSolidOpticalDepth > 0.5 && solidOpticalDepth > 6.0 / 255.0
-      && solidInterior > 0.001 && surfaceOnly < 0.5) {
+      && solidInterior > 0.001 && surfaceOnly < 0.5
+      && botanicalBodyReplacement < 0.5) {
       float macroStrength = solidReliefParameters(optics, profile).z;
       if (macroStrength > 0.0) {
         float macroDepth = smoothstep(6.0 / 255.0, 42.0 / 255.0, solidOpticalDepth);
@@ -6995,7 +7038,7 @@ void main() {
     // depth-proven organic body response. It reuses the existing depth and
     // macro relief scalars, changing RGB without an additional field/sample or
     // ever broadening a seed, stem, leaf tip, gap, wall, or contact.
-    if (uSolidOpticalDepth > 0.5 && material == 10.0
+    if (botanicalBodyReplacement < 0.5 && uSolidOpticalDepth > 0.5 && material == 10.0
       && solidOpticalDepth > 6.0 / 255.0 && solidInterior > 0.001
       && surfaceOnly < 0.5) {
       float canopyDepth = smoothstep(6.0 / 255.0, 42.0 / 255.0, solidOpticalDepth);
@@ -7991,6 +8034,12 @@ void main() {
       // than evenly spaced horizontal bands at normal viewing distance.
       float organicMicroGain = material == 10.0 ? 0.055 : 1.0;
       float organicBaseline = material == 10.0 ? 1.0 : 0.95;
+      if (botanicalBodyReplacement > 0.5) {
+        // E20 owns the deep exact body below. Retain a trace of the old fibre
+        // at the pigment scale, but remove its broad band-forming exposure.
+        organicMicroGain = material == 10.0 ? 0.012 : 0.11;
+        organicBaseline = 1.0;
+      }
       // PLNT's generic fibre varies mainly along one world axis. Blend its
       // already-live two-axis pore signal into that deliberately tiny undertone
       // so a mature canopy reads as clustered living matter rather than quiet
@@ -8008,7 +8057,7 @@ void main() {
       // RGB-only arithmetic with no texture, field, pass, or support change.
       if (material == 9.0 && uSolidOpticalDepth > 0.5
         && solidOpticalDepth > 6.0 / 255.0 && solidInterior > 0.001
-        && surfaceOnly < 0.5) {
+        && surfaceOnly < 0.5 && botanicalBodyReplacement < 0.5) {
         float woodDepth = smoothstep(6.0 / 255.0, 42.0 / 255.0, solidOpticalDepth);
         float woodGrain = 0.5 + 0.5 * fibre;
         float woodRidge = smoothstep(0.64, 0.94, woodGrain);
@@ -8026,6 +8075,7 @@ void main() {
       // and environment already live in this branch. Seed, YEST, DYST, gaps,
       // walls, and reconstructed support never reach this exact-owner path.
       if ((material == 9.0 || material == 10.0 || material == 83.0)
+        && (material == 83.0 || botanicalBodyReplacement < 0.5)
         && uSolidOpticalDepth > 0.5 && solidOpticalDepth > 6.0 / 255.0
         && solidInterior > 0.001 && surfaceOnly < 0.5) {
         float organicDepth = smoothstep(6.0 / 255.0, 42.0 / 255.0, solidOpticalDepth);
@@ -8056,6 +8106,77 @@ void main() {
           color += (vec3(1.0) - clamp(color, 0.0, 1.0))
             * (vec3(0.20, 0.66, 0.28) * (organicCrown * 0.11 + organicGrazing * 0.052)
               + solidEnvironment * (0.034 + organicGrazing * 0.075)) * organicDepth;
+        }
+      }
+      // E20: replace the fit-view diagonal/banded Wood and PLNT carriers with
+      // one static, multi-scale organic body. Two smooth value-noise octaves
+      // reuse only world coordinates; body depth, relief, Fresnel, environment,
+      // and exact contact state were already live. This is RGB-only and adds no
+      // texture read, field, pass, target, clock, allocation, alpha, support,
+      // topology, lifecycle, or physics decision.
+      if (botanicalBodyReplacement > 0.5) {
+        float botanicalDepth = smoothstep(
+          6.0 / 255.0, 42.0 / 255.0, solidOpticalDepth
+        ) * solidInterior;
+        float botanicalMacro = botanicalBodyNoise(
+          fieldPosition / 18.0 + vec2(material * 0.71, material * 0.29)
+        );
+        float botanicalCluster = botanicalBodyNoise(
+          fieldPosition / 6.5 + vec2(material * 1.13, -material * 0.47)
+        );
+        float botanicalExistingRelief = clamp(
+          solidReliefTone * 255.0 / 6.0, -1.0, 1.0
+        );
+        float botanicalGrazing = smoothstep(0.018, 0.18, solidFresnel);
+        if (material == 10.0) {
+          float leafBody = clamp(
+            (botanicalMacro - 0.5) * 1.18
+              + (botanicalCluster - 0.5) * 0.72
+              + botanicalExistingRelief * 0.12,
+            -1.0, 1.0
+          );
+          float leafCrown = max(leafBody, 0.0);
+          float leafPocket = max(-leafBody, 0.0);
+          float leafBoundary = smoothstep(
+            0.20, 0.43, abs(botanicalCluster - botanicalMacro)
+          );
+          vec3 leafKey = mix(
+            vec3(0.22, 0.74, 0.26), vividColor(color, 1.10), 0.66
+          );
+          color *= vec3(1.0) - vec3(0.032, 0.014, 0.054)
+            * (leafPocket * 0.76 + (1.0 - botanicalGrazing) * 0.055)
+            * botanicalDepth;
+          color += (vec3(1.0) - clamp(color, 0.0, 1.0))
+            * (leafKey * (leafCrown * 0.095 + botanicalGrazing * 0.052)
+              + solidEnvironment * (0.030 + botanicalGrazing * 0.072))
+            * botanicalDepth;
+          color += vec3(-0.006, 0.014, -0.004)
+            * leafBoundary * botanicalDepth;
+        } else {
+          float barkWarp = botanicalBodyNoise(vec2(
+            fieldPosition.x * 0.050 + botanicalMacro * 0.82,
+            fieldPosition.y * 0.024 - botanicalCluster * 0.36
+          ));
+          float barkRidge = sin(
+            fieldPosition.x * 0.31 + fieldPosition.y * 0.012
+              + barkWarp * 4.2 + botanicalMacro * 2.1
+          );
+          float barkBody = clamp(
+            barkRidge * 0.52 + (botanicalCluster - 0.5) * 0.46
+              + botanicalExistingRelief * 0.10,
+            -1.0, 1.0
+          );
+          float barkCrown = max(barkBody, 0.0);
+          float barkPocket = max(-barkBody, 0.0);
+          float barkKnot = smoothstep(0.68, 0.91, botanicalMacro)
+            * smoothstep(0.56, 0.84, botanicalCluster);
+          color *= vec3(1.0) - vec3(0.062, 0.034, 0.015)
+            * (barkPocket * 0.68 + barkKnot * 0.22) * botanicalDepth;
+          color += (vec3(1.0) - clamp(color, 0.0, 1.0))
+            * (vec3(0.52, 0.28, 0.075)
+                * (barkCrown * 0.080 + botanicalGrazing * 0.040)
+              + solidEnvironment * (0.026 + botanicalGrazing * 0.060))
+            * botanicalDepth;
         }
       }
     } else if (radioactiveSurface > 0.5 || (optics < 0.5 && profile == 4.0)) {
@@ -8762,8 +8883,24 @@ void main() {
         float canopyFineBody = smoothstep(6.0 / 255.0, 42.0 / 255.0, solidOpticalDepth)
           * solidInterior;
         canopyFineIdentityGain = mix(1.0, 0.42, canopyFineBody);
+        if (botanicalBodyReplacement > 0.5) {
+          // The replacement body's clustered morphology now owns broad PLNT
+          // variation. Leave a restrained native leaf/vein trace beneath later
+          // lifecycle colour without retaining the old diagonal facet carrier.
+          canopyFineIdentityGain = mix(1.0, 0.14, canopyFineBody);
+        }
       }
-      color += botanicalIdentityDelta(material, fieldPosition, canopyFineIdentityGain);
+      if (material == 9.0 && botanicalBodyReplacement > 0.5) {
+        // Keep only a pigment-scale trace of the old ring/axial cadence inside
+        // an E20 Wood body; sparse branches and protected controls retain it.
+        color += botanicalIdentityDelta(
+          material, fieldPosition, canopyFineIdentityGain, botanicalBodyReplacement
+        ) * 0.14;
+      } else {
+        color += botanicalIdentityDelta(
+          material, fieldPosition, canopyFineIdentityGain, botanicalBodyReplacement
+        );
+      }
     }
     if (uBotanicalLifecycleStyling > 0.5 && (material == 10.0 || material == 50.0)) {
       color += botanicalLifecycleDelta(material, wallState.ba, fieldPosition, color);
@@ -9403,6 +9540,11 @@ export class PixiFieldPresenter {
     // its accepted static Ceramic identity and declares no E19 selector.
     const ceramicGlazeVfxEnabled = outputScale < 8
       && resolveCeramicGlazeVfxEnabled(renderLook);
+    // E20 replaces repeated band-forming Wood/PLNT body carriers with one
+    // organic volume response in normal WebGL. The compact true-8x shader keeps
+    // its established botanical grammar and declares no E20 selector.
+    const botanicalBodyVfxEnabled = outputScale < 8
+      && resolveBotanicalBodyVfxEnabled(renderLook);
     // E03 is a normal-detail experiment. The true-8x shader intentionally has
     // no corresponding uniform or arithmetic, so its public capability state
     // must not advertise an effect that cannot run on that path.
@@ -9435,6 +9577,7 @@ export class PixiFieldPresenter {
       uSolidBodyVfx: { value: solidBodyVfxEnabled ? 1 : 0, type: 'f32' },
       uPlatinumBodyVfx: { value: platinumBodyVfxEnabled ? 1 : 0, type: 'f32' },
       uCeramicGlazeVfx: { value: ceramicGlazeVfxEnabled ? 1 : 0, type: 'f32' },
+      uBotanicalBodyVfx: { value: botanicalBodyVfxEnabled ? 1 : 0, type: 'f32' },
       uLiquidBodyVfx: { value: liquidBodyVfxEnabled ? 1 : 0, type: 'f32' },
       uLiquidSolidMeniscusVfx: {
         value: liquidSolidMeniscusVfxEnabled ? outputScale : 0, type: 'f32',
@@ -9654,6 +9797,7 @@ export class PixiFieldPresenter {
       this.uniforms.uniforms.uSolidBodyVfx = 0;
       this.uniforms.uniforms.uPlatinumBodyVfx = 0;
       this.uniforms.uniforms.uCeramicGlazeVfx = 0;
+      this.uniforms.uniforms.uBotanicalBodyVfx = 0;
       this.uniforms.uniforms.uLiquidBodyVfx = 0;
       this.uniforms.uniforms.uLiquidSolidMeniscusVfx = 0;
       this.uniforms.uniforms.uPowderBodyVfx = 0;
@@ -9696,6 +9840,7 @@ export class PixiFieldPresenter {
             || new URLSearchParams(location.search).get('solidBodyVfxAudit') === '1'
             || new URLSearchParams(location.search).get('platinumBodyVfxAudit') === '1'
             || new URLSearchParams(location.search).get('ceramicGlazeVfxAudit') === '1'
+            || new URLSearchParams(location.search).get('botanicalBodyVfxAudit') === '1'
             || new URLSearchParams(location.search).get('liquidBodyVfxAudit') === '1'
             || new URLSearchParams(location.search).get('liquidSolidMeniscusVfxAudit') === '1'
             || new URLSearchParams(location.search).get('liquidSurfaceVfxAudit') === '1'
@@ -9750,6 +9895,9 @@ export class PixiFieldPresenter {
     ) > 0.5 ? 'active' : 'inactive';
     presenter.app.canvas.dataset.ceramicGlazeVfx = Number(
       presenter.uniforms.uniforms.uCeramicGlazeVfx
+    ) > 0.5 ? 'active' : 'inactive';
+    presenter.app.canvas.dataset.botanicalBodyVfx = Number(
+      presenter.uniforms.uniforms.uBotanicalBodyVfx
     ) > 0.5 ? 'active' : 'inactive';
     presenter.app.canvas.dataset.liquidBodyVfx = Number(presenter.uniforms.uniforms.uLiquidBodyVfx) > 0.5
       ? 'active' : 'inactive';
@@ -11131,6 +11279,7 @@ export class PixiFieldPresenter {
         this.uniforms.uniforms.uSolidBodyVfx = 0;
         this.uniforms.uniforms.uPlatinumBodyVfx = 0;
         this.uniforms.uniforms.uCeramicGlazeVfx = 0;
+        this.uniforms.uniforms.uBotanicalBodyVfx = 0;
         this.uniforms.uniforms.uLiquidBodyVfx = 0;
         this.uniforms.uniforms.uLiquidSolidMeniscusVfx = 0;
         this.uniforms.uniforms.uPowderBodyVfx = 0;
@@ -11150,6 +11299,7 @@ export class PixiFieldPresenter {
         this.app.canvas.dataset.solidBodyVfx = 'inactive';
         this.app.canvas.dataset.platinumBodyVfx = 'inactive';
         this.app.canvas.dataset.ceramicGlazeVfx = 'inactive';
+        this.app.canvas.dataset.botanicalBodyVfx = 'inactive';
         this.app.canvas.dataset.liquidBodyVfx = 'inactive';
         this.app.canvas.dataset.liquidSolidMeniscusVfx = 'inactive';
         this.app.canvas.dataset.liquidSurfaceVfx = 'inactive';

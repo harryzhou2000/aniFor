@@ -925,6 +925,88 @@ describe('Pixi presenter startup configuration', () => {
     expect(source).toContain("this.app.canvas.dataset.ceramicGlazeVfx = 'inactive';");
   });
 
+  it('keeps E20 botanical body recomposition exact-owner, normal-WebGL-only, and RGB-only', () => {
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const canvasSource = readFileSync(new URL('./field-renderer.ts', import.meta.url), 'utf8');
+    const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');
+    const normalStart = source.indexOf('const FIELD_FRAGMENT = `', eightStart);
+    const normalEnd = source.indexOf('`;\n\n/** Primary WebGL presentation', normalStart);
+    const eight = source.slice(eightStart, normalStart);
+    const normal = source.slice(normalStart, normalEnd);
+    const eligibilityStart = normal.indexOf('bool botanicalBodyOwner');
+    const eligibilityEnd = normal.indexOf(' ? 1.0 : 0.0;', eligibilityStart) + ' ? 1.0 : 0.0;'.length;
+    const eligibility = normal.slice(eligibilityStart, eligibilityEnd);
+    const e20Start = normal.indexOf('      // E20:');
+    const e20End = normal.indexOf('    } else if (radioactiveSurface', e20Start);
+    const e20 = normal.slice(e20Start, e20End);
+    const botanicalIdentityStart = normal.indexOf('    float botanicalIdentity =');
+    const botanicalIdentityEnd = normal.indexOf(
+      '    if (uBotanicalLifecycleStyling > 0.5', botanicalIdentityStart,
+    );
+    const botanicalIdentity = normal.slice(botanicalIdentityStart, botanicalIdentityEnd);
+    const preserveDrawingBufferStart = source.indexOf('preserveDrawingBuffer:');
+    const preserveDrawingBufferEnd = source.indexOf('resolution: outputScale', preserveDrawingBufferStart);
+    const preserveDrawingBuffer = source.slice(preserveDrawingBufferStart, preserveDrawingBufferEnd);
+
+    expect(eligibilityStart).toBeGreaterThanOrEqual(0);
+    expect(eligibilityEnd).toBeGreaterThan(eligibilityStart);
+    expect(e20Start).toBeGreaterThanOrEqual(0);
+    expect(e20End).toBeGreaterThan(e20Start);
+    expect(normal).toContain('uniform float uBotanicalBodyVfx;');
+    expect(normal.match(/uBotanicalBodyVfx > 0\.5/g)).toHaveLength(1);
+    expect(eight).not.toContain('uBotanicalBodyVfx');
+    expect(eight).not.toContain('botanicalBodyVfx');
+    expect(eight).not.toContain('botanicalBodyNoise');
+    expect(canvasSource).not.toContain('botanicalBodyVfx');
+    expect(eligibility).toContain('material == 9.0');
+    expect(eligibility).toContain('material == 10.0');
+    expect(eligibility).toContain('abs(traits - 96.0) < 0.5');
+    expect(eligibility).toContain('abs(traits - 32.0) < 0.5');
+    for (const guard of [
+      'uSolidOpticalDepth > 0.5', 'solidOpticalDepth > 6.0 / 255.0',
+      'solidInterior > 0.001', 'surfaceOnly < 0.5', 'halo < 0.5',
+      'wall < 0.5', 'wallOnly < 0.5', 'emissionOnly < 0.5',
+      '!materialEmissive', 'foreignMatterContact < 0.5', 'unlikeMaterialContact < 0.5',
+    ]) expect(eligibility).toContain(guard);
+    for (const existingValue of [
+      'solidOpticalDepth', 'solidInterior', 'solidReliefTone', 'solidFresnel', 'solidEnvironment',
+    ]) expect(e20).toContain(existingValue);
+    // Every superseded carrier must retain its previous path for protected
+    // walls, contacts, traits, emission, sparse stems, and selector-off frames.
+    expect(normal).toMatch(
+      /solidInterior > 0\.001 && surfaceOnly < 0\.5\s*&& botanicalBodyReplacement < 0\.5\) \{/,
+    );
+    expect(normal).toContain(
+      'if (botanicalBodyReplacement < 0.5 && uSolidOpticalDepth > 0.5 && material == 10.0',
+    );
+    expect(normal).toMatch(
+      /if \(material == 9\.0 && uSolidOpticalDepth > 0\.5[\s\S]*?surfaceOnly < 0\.5 && botanicalBodyReplacement < 0\.5\) \{/,
+    );
+    expect(normal).toContain('&& (material == 83.0 || botanicalBodyReplacement < 0.5)');
+    expect(normal).toContain('if (botanicalBodyReplacement > 0.5) {\n        // E20 owns the deep exact body below.');
+    expect(botanicalIdentity).toContain('if (botanicalBodyReplacement > 0.5) {');
+    expect(botanicalIdentity).toContain('if (material == 9.0 && botanicalBodyReplacement > 0.5)');
+    expect(botanicalIdentity).toContain(
+      'material, fieldPosition, canopyFineIdentityGain, botanicalBodyReplacement',
+    );
+    expect(botanicalIdentity).not.toContain('uBotanicalBodyVfx > 0.5');
+    expect(botanicalIdentity).not.toContain('foreignMatterContact < 0.5');
+    expect(botanicalIdentity).not.toContain('unlikeMaterialContact < 0.5');
+    expect(e20).toContain('botanicalBodyNoise');
+    expect(e20).not.toContain('texture(');
+    expect(e20).not.toContain('uTime');
+    expect(e20).not.toContain('gl_FragCoord');
+    expect(e20).not.toMatch(/\balpha\s*[+*]?=/);
+    expect(source.match(/this\.uniforms\.uniforms\.uBotanicalBodyVfx = 0;/g)).toHaveLength(2);
+    expect(source).toContain("get('botanicalBodyVfxAudit') === '1'");
+    expect(preserveDrawingBuffer).toContain("get('botanicalBodyVfxAudit') === '1'");
+    expect(source).toMatch(
+      /const botanicalBodyVfxEnabled = outputScale < 8\s*&& resolveBotanicalBodyVfxEnabled\(renderLook\);/,
+    );
+    expect(source).toContain('presenter.app.canvas.dataset.botanicalBodyVfx');
+    expect(source).toContain("this.app.canvas.dataset.botanicalBodyVfx = 'inactive';");
+  });
+
   it('routes E08 liquid surfaces through existing normal-scale HDR resources only', () => {
     const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
     const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');
@@ -4545,7 +4627,7 @@ describe('Pixi presenter startup configuration', () => {
     expect(presenter.app.render).toHaveBeenCalledOnce();
 
     const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
-    const start = source.indexOf('vec3 botanicalIdentityDelta(float material, vec2 position, float plantFineGain) {');
+    const start = source.indexOf('vec3 botanicalIdentityDelta(');
     const end = source.indexOf('vec3 vividColor', start);
     const helper = source.slice(start, end);
     const ids = [...helper.matchAll(/material == (\d+)\.0/g)].map((match) => Number(match[1]));
@@ -4560,6 +4642,8 @@ describe('Pixi presenter startup configuration', () => {
     }
     expect(helper).toContain('vec3 leafVein = vec3(leaf * 1.5 - vein * 3.0, leaf * 3.5 + vein * 6.0,');
     expect(helper).toContain('leaf - vein * 2.5) * plantFineGain;');
+    expect(helper).toContain('float material, vec2 position, float plantFineGain, float bodyReplacement');
+    expect(helper).toContain('if (bodyReplacement > 0.5 && plantFineGain < 0.2)');
     expect(helper).toContain('clamp(delta, vec3(-12.0), vec3(12.0)) / 255.0');
     expect(helper).not.toContain('texture(');
     expect(helper).not.toContain('uTime');
@@ -4569,7 +4653,9 @@ describe('Pixi presenter startup configuration', () => {
     expect(source).toContain('material == 10.0 && uSolidOpticalDepth > 0.5');
     expect(source).toContain('wallOnly < 0.5 && emissionOnly < 0.5');
     expect(source).toContain('canopyFineIdentityGain = mix(1.0, 0.42, canopyFineBody);');
-    expect(source).toContain('color += botanicalIdentityDelta(material, fieldPosition, canopyFineIdentityGain);');
+    expect(source).toContain(
+      'material, fieldPosition, canopyFineIdentityGain, botanicalBodyReplacement',
+    );
     const canopyStart = source.indexOf('// PLNT has native topology and lifecycle cues below;');
     const canopyEnd = source.indexOf('// Reuse the semantic Hermite normal', canopyStart);
     const canopy = source.slice(canopyStart, canopyEnd);

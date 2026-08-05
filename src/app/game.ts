@@ -43,6 +43,9 @@ import {
   CERAMIC_GLAZE_VFX_AUDIT, prepareCeramicGlazeVfxFixture,
 } from './ceramic-glaze-vfx-audit';
 import {
+  BOTANICAL_BODY_VFX_AUDIT, prepareBotanicalBodyVfxFixture,
+} from './botanical-body-vfx-audit';
+import {
   LIQUID_SOLID_MENISCUS_VFX_AUDIT, prepareLiquidSolidMeniscusVfxFixture,
 } from './liquid-solid-meniscus-vfx-audit';
 import { navigateToRenderScale } from './render-scale-navigation';
@@ -734,6 +737,12 @@ export class Game {
       ceramicGlazeVfxFixture: () => CERAMIC_GLAZE_VFX_AUDIT,
       prepareCeramicGlazeVfxFixture: () => {
         prepareCeramicGlazeVfxFixture(this.simulation);
+        this.renderer.synchronizeFixtureMaterialPlane();
+        this.renderer.invalidateDynamicPresentation();
+      },
+      botanicalBodyVfxFixture: () => BOTANICAL_BODY_VFX_AUDIT,
+      prepareBotanicalBodyVfxFixture: () => {
+        prepareBotanicalBodyVfxFixture(this.simulation);
         this.renderer.synchronizeFixtureMaterialPlane();
         this.renderer.invalidateDynamicPresentation();
       },
