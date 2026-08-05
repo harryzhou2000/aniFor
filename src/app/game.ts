@@ -40,6 +40,9 @@ import {
   SOLID_BODY_VFX_AUDIT, prepareSolidBodyVfxFixture,
 } from './solid-body-vfx-audit';
 import {
+  CERAMIC_GLAZE_VFX_AUDIT, prepareCeramicGlazeVfxFixture,
+} from './ceramic-glaze-vfx-audit';
+import {
   LIQUID_SOLID_MENISCUS_VFX_AUDIT, prepareLiquidSolidMeniscusVfxFixture,
 } from './liquid-solid-meniscus-vfx-audit';
 import { navigateToRenderScale } from './render-scale-navigation';
@@ -725,6 +728,12 @@ export class Game {
       solidBodyVfxFixture: () => SOLID_BODY_VFX_AUDIT,
       prepareSolidBodyVfxFixture: () => {
         prepareSolidBodyVfxFixture(this.simulation);
+        this.renderer.synchronizeFixtureMaterialPlane();
+        this.renderer.invalidateDynamicPresentation();
+      },
+      ceramicGlazeVfxFixture: () => CERAMIC_GLAZE_VFX_AUDIT,
+      prepareCeramicGlazeVfxFixture: () => {
+        prepareCeramicGlazeVfxFixture(this.simulation);
         this.renderer.synchronizeFixtureMaterialPlane();
         this.renderer.invalidateDynamicPresentation();
       },

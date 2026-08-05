@@ -826,7 +826,7 @@ describe('Pixi presenter startup configuration', () => {
     const eight = source.slice(eightStart, normalStart);
     const normal = source.slice(normalStart, normalEnd);
     const e18Start = normal.indexOf('    // E18:');
-    const e18End = normal.indexOf('  }\n  if (uEnergyIdentityStyling', e18Start);
+    const e18End = normal.indexOf('    // E19:', e18Start);
     const e18 = normal.slice(e18Start, e18End);
 
     expect(e18Start).toBeGreaterThanOrEqual(0);
@@ -863,6 +863,66 @@ describe('Pixi presenter startup configuration', () => {
     );
     expect(source).toContain('presenter.app.canvas.dataset.platinumBodyVfx');
     expect(source).toContain("this.app.canvas.dataset.platinumBodyVfx = 'inactive';");
+  });
+
+  it('keeps E19 Ceramic glaze exact-owner, normal-WebGL-only, and RGB-only', () => {
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const canvasSource = readFileSync(new URL('./field-renderer.ts', import.meta.url), 'utf8');
+    const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');
+    const normalStart = source.indexOf('const FIELD_FRAGMENT = `', eightStart);
+    const normalEnd = source.indexOf('`;\n\n/** Primary WebGL presentation', normalStart);
+    const eight = source.slice(eightStart, normalStart);
+    const normal = source.slice(normalStart, normalEnd);
+    const e19Start = normal.indexOf('    // E19:');
+    const e19End = normal.indexOf('  }\n  if (uEnergyIdentityStyling', e19Start);
+    const e19 = normal.slice(e19Start, e19End);
+    const preserveDrawingBufferStart = source.indexOf('preserveDrawingBuffer:');
+    const preserveDrawingBufferEnd = source.indexOf('resolution: outputScale', preserveDrawingBufferStart);
+    const preserveDrawingBuffer = source.slice(preserveDrawingBufferStart, preserveDrawingBufferEnd);
+
+    expect(e19Start).toBeGreaterThanOrEqual(0);
+    expect(e19End).toBeGreaterThan(e19Start);
+    expect(normal).toContain('uniform float uCeramicGlazeVfx;');
+    expect(eight).not.toContain('uCeramicGlazeVfx');
+    expect(eight).not.toContain('ceramicGlazeVfx');
+    expect(canvasSource).not.toContain('ceramicGlazeVfx');
+    expect(e19).toContain('material == 25.0');
+    for (const protectedOwner of ['22.0', '23.0', '67.0', '70.0', '73.0', '75.0', '78.0', '82.0']) {
+      expect(e19).not.toContain(`material == ${protectedOwner}`);
+    }
+    expect(e19).toContain('family == 0.0');
+    expect(e19).toContain('profile == 2.0');
+    expect(e19).toContain('optics == 8.0');
+    expect(e19).toContain('!materialEmissive');
+    expect(e19).toContain('traits < 0.5');
+    expect(e19).toContain('surfaceOnly < 0.5');
+    expect(e19).toContain('halo < 0.5');
+    expect(e19).toContain('wall < 0.5');
+    expect(e19).toContain('wallOnly < 0.5');
+    expect(e19).toContain('emissionOnly < 0.5');
+    expect(e19).toContain('granularSurface < 0.5');
+    expect(e19).toContain('translucentSurface < 0.5');
+    expect(e19).toContain('foreignMatterContact < 0.5');
+    expect(e19).toContain('unlikeMaterialContact < 0.5');
+    expect(e19).toContain('solidInterior > 0.001');
+    expect(e19).toContain('solidOpticalDepth > 6.0 / 255.0');
+    for (const optic of ['solidReliefTone', 'solidKey', 'solidFill', 'solidFresnel', 'solidEnvironment']) {
+      expect(e19).toContain(optic);
+    }
+    expect(e19).not.toContain('texture(');
+    expect(e19).not.toContain('fieldPosition');
+    expect(e19).not.toContain('uTime');
+    expect(e19).not.toContain('gl_FragCoord');
+    expect(e19).not.toMatch(/\balpha\b/);
+    expect(e19).not.toMatch(/\b(?:alpha|support|finalColor|semantic|material|profile|optics|wall)\s*(?:\+=|\*=|=(?!=))/);
+    expect(source.match(/this\.uniforms\.uniforms\.uCeramicGlazeVfx = 0;/g)).toHaveLength(2);
+    expect(source).toContain("get('ceramicGlazeVfxAudit') === '1'");
+    expect(preserveDrawingBuffer).toContain("get('ceramicGlazeVfxAudit') === '1'");
+    expect(source).toMatch(
+      /const ceramicGlazeVfxEnabled = outputScale < 8\s*&& resolveCeramicGlazeVfxEnabled\(renderLook\);/,
+    );
+    expect(source).toContain('presenter.app.canvas.dataset.ceramicGlazeVfx');
+    expect(source).toContain("this.app.canvas.dataset.ceramicGlazeVfx = 'inactive';");
   });
 
   it('routes E08 liquid surfaces through existing normal-scale HDR resources only', () => {

@@ -41,6 +41,7 @@ import {
   resolveLiquidBodyVfxEnabled, resolveLiquidSolidMeniscusVfxEnabled,
   resolveLiquidSurfaceVfxEnabled,
   resolvePlasmaCoreVfxEnabled,
+  resolveCeramicGlazeVfxEnabled,
   resolvePlatinumBodyVfxEnabled,
   resolveSolidBodyVfxEnabled,
   resolvePowderBodyVfxEnabled, resolvePowderLightVfxEnabled, resolveRenderLook,
@@ -3227,6 +3228,7 @@ uniform float uGasCoreDepthVfx;
 uniform float uPlasmaCoreVfx;
 uniform float uSolidBodyVfx;
 uniform float uPlatinumBodyVfx;
+uniform float uCeramicGlazeVfx;
 uniform float uLiquidBodyVfx;
 uniform float uLiquidSolidMeniscusVfx;
 uniform float uPowderBodyVfx;
@@ -8555,6 +8557,45 @@ void main() {
         * platinumEnvironment * platinumKey;
       color *= vec3(1.0) - vec3(0.72, 0.78, 0.86) * platinumPocket;
     }
+    // E19: Ceramic already carries a sparse glaze/craze identity, but broad
+    // bodies otherwise inherit the same generic SmoothRigid finish as Brick.
+    // Reuse the exact-species thickness, analytic face light, Fresnel, and
+    // environment values already live here to add a calm fired-glaze lobe.
+    // The exact Ceramic/contact/topology guards leave Brick, authored holes,
+    // seams, fine pieces, walls, traits, reconstructed support, and emission
+    // byte-identical. This changes RGB only and adds no sample, texture, field,
+    // target, clock, allocation, or compact true-8x branch.
+    if (uCeramicGlazeVfx > 0.5 && material == 25.0
+      && family == 0.0 && profile == 2.0 && optics == 8.0
+      && !materialEmissive && traits < 0.5
+      && surfaceOnly < 0.5 && halo < 0.5 && wall < 0.5
+      && wallOnly < 0.5 && emissionOnly < 0.5
+      && granularSurface < 0.5 && translucentSurface < 0.5
+      && foreignMatterContact < 0.5 && unlikeMaterialContact < 0.5
+      && solidInterior > 0.001 && solidOpticalDepth > 6.0 / 255.0) {
+      float ceramicDepth = solidInterior
+        * smoothstep(6.0 / 255.0, 42.0 / 255.0, solidOpticalDepth);
+      float ceramicRelief = clamp(solidReliefTone * 255.0 / 7.0, -1.0, 1.0);
+      float ceramicFace = clamp(
+        (solidKey - 0.684) * 1.55 + (solidFill - 0.735) * 0.38
+          + ceramicRelief * 0.66,
+        -1.0, 1.0
+      );
+      float ceramicGrazing = smoothstep(0.018, 0.18, solidFresnel);
+      float ceramicCrown = ceramicDepth * min(
+        0.105, max(ceramicFace, 0.0) * 0.116 + ceramicGrazing * 0.042
+      );
+      float ceramicPocket = ceramicDepth * min(
+        0.060, max(-ceramicFace, 0.0) * 0.078
+      );
+      vec3 ceramicReflection = mix(
+        vec3(0.62, 0.80, 1.0), vec3(1.0, 0.91, 0.76),
+        clamp(solidEnvironment.r * 7.5, 0.0, 1.0)
+      );
+      color += (vec3(1.0) - clamp(color, 0.0, 1.0))
+        * ceramicReflection * ceramicCrown;
+      color *= vec3(1.0) - vec3(0.58, 0.70, 0.90) * ceramicPocket;
+    }
   }
   if (uEnergyIdentityStyling > 0.5 && halo < 0.5 && surfaceOnly < 0.5
     && wallOnly < 0.5 && emissionOnly < 0.5
@@ -9357,6 +9398,11 @@ export class PixiFieldPresenter {
     // this selector nor a parallel reflection branch.
     const platinumBodyVfxEnabled = outputScale < 8
       && resolvePlatinumBodyVfxEnabled(renderLook);
+    // E19 is the exact-Ceramic normal-WebGL finish established by the broad
+    // Brick/Ceramic fit-view evidence. Compact true-8x deliberately retains
+    // its accepted static Ceramic identity and declares no E19 selector.
+    const ceramicGlazeVfxEnabled = outputScale < 8
+      && resolveCeramicGlazeVfxEnabled(renderLook);
     // E03 is a normal-detail experiment. The true-8x shader intentionally has
     // no corresponding uniform or arithmetic, so its public capability state
     // must not advertise an effect that cannot run on that path.
@@ -9388,6 +9434,7 @@ export class PixiFieldPresenter {
       uPlasmaCoreVfx: { value: plasmaCoreVfxEnabled ? 1 : 0, type: 'f32' },
       uSolidBodyVfx: { value: solidBodyVfxEnabled ? 1 : 0, type: 'f32' },
       uPlatinumBodyVfx: { value: platinumBodyVfxEnabled ? 1 : 0, type: 'f32' },
+      uCeramicGlazeVfx: { value: ceramicGlazeVfxEnabled ? 1 : 0, type: 'f32' },
       uLiquidBodyVfx: { value: liquidBodyVfxEnabled ? 1 : 0, type: 'f32' },
       uLiquidSolidMeniscusVfx: {
         value: liquidSolidMeniscusVfxEnabled ? outputScale : 0, type: 'f32',
@@ -9606,6 +9653,7 @@ export class PixiFieldPresenter {
       this.uniforms.uniforms.uPlasmaCoreVfx = 0;
       this.uniforms.uniforms.uSolidBodyVfx = 0;
       this.uniforms.uniforms.uPlatinumBodyVfx = 0;
+      this.uniforms.uniforms.uCeramicGlazeVfx = 0;
       this.uniforms.uniforms.uLiquidBodyVfx = 0;
       this.uniforms.uniforms.uLiquidSolidMeniscusVfx = 0;
       this.uniforms.uniforms.uPowderBodyVfx = 0;
@@ -9647,6 +9695,7 @@ export class PixiFieldPresenter {
             || new URLSearchParams(location.search).get('plasmaCoreVfxAudit') === '1'
             || new URLSearchParams(location.search).get('solidBodyVfxAudit') === '1'
             || new URLSearchParams(location.search).get('platinumBodyVfxAudit') === '1'
+            || new URLSearchParams(location.search).get('ceramicGlazeVfxAudit') === '1'
             || new URLSearchParams(location.search).get('liquidBodyVfxAudit') === '1'
             || new URLSearchParams(location.search).get('liquidSolidMeniscusVfxAudit') === '1'
             || new URLSearchParams(location.search).get('liquidSurfaceVfxAudit') === '1'
@@ -9698,6 +9747,9 @@ export class PixiFieldPresenter {
     ) > 0.5 ? 'active' : 'inactive';
     presenter.app.canvas.dataset.platinumBodyVfx = Number(
       presenter.uniforms.uniforms.uPlatinumBodyVfx
+    ) > 0.5 ? 'active' : 'inactive';
+    presenter.app.canvas.dataset.ceramicGlazeVfx = Number(
+      presenter.uniforms.uniforms.uCeramicGlazeVfx
     ) > 0.5 ? 'active' : 'inactive';
     presenter.app.canvas.dataset.liquidBodyVfx = Number(presenter.uniforms.uniforms.uLiquidBodyVfx) > 0.5
       ? 'active' : 'inactive';
@@ -11078,6 +11130,7 @@ export class PixiFieldPresenter {
         this.uniforms.uniforms.uPlasmaCoreVfx = 0;
         this.uniforms.uniforms.uSolidBodyVfx = 0;
         this.uniforms.uniforms.uPlatinumBodyVfx = 0;
+        this.uniforms.uniforms.uCeramicGlazeVfx = 0;
         this.uniforms.uniforms.uLiquidBodyVfx = 0;
         this.uniforms.uniforms.uLiquidSolidMeniscusVfx = 0;
         this.uniforms.uniforms.uPowderBodyVfx = 0;
@@ -11096,6 +11149,7 @@ export class PixiFieldPresenter {
         this.app.canvas.dataset.plasmaCoreVfx = 'inactive';
         this.app.canvas.dataset.solidBodyVfx = 'inactive';
         this.app.canvas.dataset.platinumBodyVfx = 'inactive';
+        this.app.canvas.dataset.ceramicGlazeVfx = 'inactive';
         this.app.canvas.dataset.liquidBodyVfx = 'inactive';
         this.app.canvas.dataset.liquidSolidMeniscusVfx = 'inactive';
         this.app.canvas.dataset.liquidSurfaceVfx = 'inactive';

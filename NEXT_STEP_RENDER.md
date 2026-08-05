@@ -232,11 +232,24 @@ does not alter simulation, camera, semantic ownership, or `renderScale`.
   E18 adds no sample, texture, field, resource, pass, target, upload,
   allocation, clock, alpha/support/silhouette/ownership/topology, or physics
   decision.
+- **E19 — exact Ceramic fired-glaze finish (accepted checkpoint):** a broad
+  production 2× Brick/Ceramic fit-view capture proved Brick already legible as
+  warm masonry while Ceramic remained visibly flat. Normal 1×–4× WebGL now
+  gives only authoritative deep ordinary Ceramic `25` a bounded cool/warm
+  fired-glaze reflection and opposing absorptive pocket through
+  `?ceramicGlazeVfx=0|1`. It reuses the existing exact-species solid depth,
+  interior proof, analytic key/fill/Fresnel/environment, and signed relief;
+  Ceramic's sparse glaze/craze identity remains independently enabled. Brick,
+  authored holes/open notches, one-cell lines, isolated cells, co-located
+  native walls, Ceramic-side Water/Metal contacts, blank space, Sand, Glass,
+  Metal, Canvas, and true 8× are exact controls. E19 adds no sample, texture,
+  field, resource, pass, target, upload, allocation, clock, alpha/support/
+  silhouette/ownership/topology, or physics decision.
 - **Protected 8× rung:** `renderScale=8` deliberately reports
   `hdrPipeline=inactive` / `scale-8` and retains the proven direct single-mesh
   4896×3072 path. The experiment must earn a bounded 8× design rather than
   allocating a 115 MiB full-resolution float target beside that path.
-- **Current decision:** E01/E02/E03/E04/E05/E06/E07/E08/E09/E10/E11/E12/E13/E14/E15/E16/E17/E18 remain opt-in through the non-Classic looks
+- **Current decision:** E01/E02/E03/E04/E05/E06/E07/E08/E09/E10/E11/E12/E13/E14/E15/E16/E17/E18/E19 remain opt-in through the non-Classic looks
   until representative hardware timing and mobile thermal behavior are
   measured. E02 remains the safe family-wide baseline. E03 is accepted as the
   liquid-depth checkpoint: its fit-view crop is visibly more cohesive, retains
@@ -602,6 +615,26 @@ with reason `scale-8`, retains exact 4896×3072 WebGL without a bloom backing,
 reports the promotion fence signalled, and completes its GPU sample inside the
 same 30-second deadline (about `5.68 s` on the final SwiftShader run).
 
+Run `npm run audit:vfx:ceramic-glaze` for E19. It reloads a dedicated paused
+two-card Brick/Ceramic RenderLab fixture as `ceramicGlazeVfx=0 → 1 → 0` at
+1×/2×/4× while every E01–E18 selector is pinned off. The named Ceramic core
+and crown isolate the positive signed solid-relief lobe, while the pocket
+isolates the negative lobe; Brick mirrors those exact regions as a no-op
+reference. The accepted result is nearly scale-invariant: core is
+`5.24–5.26` RGB RMS with signed mean `+5.02…+5.04`, crown is `5.65–5.67`
+with `+5.46…+5.50`, and pocket is `5.32–5.37` with `−5.12…−5.16`; all have
+full measured coverage and a seven-byte peak. Semantic material, raw alpha and
+support, CSS/backing geometry, 1,568 native-wall cells and their hash, authored
+holes/notches, thin and isolated matter, Ceramic-side Water and unlike-Metal
+contacts, Sand/Glass/Metal controls, and repeated-off captures remain exact;
+every protected framebuffer peak is zero. SwiftShader may need the bounded
+60-second stable-frame allowance for each accumulated 4× capture, matching the
+existing opaque-solid compositor contract. The closing requested-on true-8×
+navigation reports E19/HDR inactive with reason `scale-8`, retains exact
+4896×3072 direct WebGL without bloom, reports the promotion fence signalled,
+and completes its GPU fence inside the same original 30-second startup
+deadline (about `4.02 s` on the final run).
+
 The earlier post-E16 survey was invalid for Solid: it sampled native Stone `21`,
 which is Powder, while labelling that region Solid. The corrected post-E17
 showcase uses native ROCK `78`, asserts exactly `2769` matching Solid cells, and
@@ -619,27 +652,27 @@ Interpret this as a survey, not an instruction to stack a fifth generic gas
 layer: E04/E07/E13/E15 already own gas cohesion, motion, external light, and
 core depth, and a smooth coherent cloud is expected to score low on local
 contrast. E18 closes the demonstrated PTNM gap without changing this composed
-ranking because the showcase contains no Platinum. The selection audit also
-found that Gold, Iron, and Titanium already receive dedicated structural
-rolled-metal optics and that Brick is legible as warm masonry, so do not create
-an E19 by applying the PTNM finish to that group. Before another rigid card,
-capture a broad Ceramic body beside Brick and prove a real matte/glaze
-deficiency; otherwise select the next material or phase with a visible fit-view
-gap. Preserve the E17 and E18 owner, exposure, topology, scale, and true-8×
-contracts independently.
+ranking because the showcase contains no Platinum. The follow-up production
+capture proved Gold/Iron/Titanium already own rolled-metal optics, Brick is
+legible as warm masonry, and only Ceramic lacked a convincing surface finish.
+E19 closes that exact gap without applying PTNM's roll or altering Brick.
+Before another rigid card, survey a new material or phase and prove a visible
+fit-view defect; do not widen E17–E19 owner sets by resemblance alone. Preserve
+their owner, exposure, topology, scale, and true-8× contracts independently.
 
-**Next visual experiments:** E03–E18 now provide accepted liquid body/surface,
+**Next visual experiments:** E03–E19 now provide accepted liquid body/surface,
 stable-gas, coherent-gas-motion, powder-depth, and powder-local-light
 checkpoints plus exact resting contact grounding, Glass/Ice transmission, and
 state-aware Wax/PLNT subsurface response, composed wet-mineral optics,
 atmosphere-owned external-light spectra, exact liquid-side wet contacts, and
 species-aware gas-core optical depth, dense-Plasma containment, exact
-ROCK/Metal opaque-body relief, and a distinct broad Platinum finish. Continue
+ROCK/Metal opaque-body relief, a distinct broad Platinum finish, and an exact
+Ceramic fired-glaze response. Continue
 with topology-preserving, material-
 specific cards that reuse already-live evidence. Prefer the smallest
 arithmetic-only candidate that fixes a visible fit-view deficiency; do not add
 an isolated tint merely to continue the experiment number. Preserve the E14
-1× stencil snap and all E01–E18 selectors/controls while surveying.
+1× stencil snap and all E01–E19 selectors/controls while surveying.
 
 ## Phase 1 — HDR pipeline & lighting core (biggest visual payoff)
 

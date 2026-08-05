@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  resolveCeramicGlazeVfxEnabled,
   DEFAULT_RENDER_LOOK, resolveGasBodyVfxEnabled, resolveGasCoreDepthVfxEnabled,
   resolveGasLightVfxEnabled,
   resolveGasMotionVfxEnabled,
@@ -159,6 +160,19 @@ describe('resolveRenderLook', () => {
     )).toBe(true);
     expect(resolvePlatinumBodyVfxEnabled(
       'neon-lab', '?volumeVfx=1&platinumBodyVfx=off',
+    )).toBe(false);
+  });
+
+  it('keeps the exact Ceramic glaze independently measurable inside HDR looks', () => {
+    expect(resolveCeramicGlazeVfxEnabled('classic', '?ceramicGlazeVfx=true')).toBe(false);
+    expect(resolveCeramicGlazeVfxEnabled('realistic', '')).toBe(true);
+    expect(resolveCeramicGlazeVfxEnabled('neon-lab', '')).toBe(true);
+    expect(resolveCeramicGlazeVfxEnabled('realistic', '?volumeVfx=0')).toBe(false);
+    expect(resolveCeramicGlazeVfxEnabled(
+      'realistic', '?volumeVfx=0&ceramicGlazeVfx=on',
+    )).toBe(true);
+    expect(resolveCeramicGlazeVfxEnabled(
+      'neon-lab', '?volumeVfx=1&ceramicGlazeVfx=false',
     )).toBe(false);
   });
 

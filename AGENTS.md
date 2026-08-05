@@ -13,7 +13,7 @@ powder, solid, liquid, gas, energy, and contact scenes across Canvas and WebGL a
 mobile gestures, save/load, CI, and Pages deployment as protected regression
 contracts rather than the primary feature stream.
 
-The accepted visual experiment ladder now runs through E18. E12 is the
+The accepted visual experiment ladder now runs through E19. E12 is the
 species-safe Sand/Clay/Concrete wet-sediment checkpoint; preserve its exact
 aqueous owner/stability proof, split moving-powder/stationary-Water control,
 Local/Grains no-op, fine structures, authored gaps, Canvas fallback, and true
@@ -103,6 +103,28 @@ off→on→off plus requested-on true-8× exclusion with
 `+4.03…+4.09` and `−2.05…−2.07`, the balanced core is `2.14…2.15` RGB RMS,
 all protected controls and repeated-off peaks are zero, and the true-8× fence
 must complete at exact 4896×3072 with reason `scale-8`.
+
+E19 is the calibrated normal-WebGL-only exact-Ceramic fired-glaze checkpoint,
+independently measurable with `?ceramicGlazeVfx=0|1`. A production 2× fit-view
+capture proved Brick already legible as warm masonry while Ceramic remained a
+flat pale slab, so Brick is an exact reference control rather than an E19
+owner. Only authoritative deep ordinary Ceramic `25` with `profile == 2`,
+`optics == 8`, and no wall, trait, emission, reconstruction, foreign contact,
+or unlike contact may reuse the existing solid-depth/interior, analytic
+key/fill/Fresnel/environment, and signed relief for a bounded fired-glaze
+reflection and opposing absorptive pocket. Its established sparse glaze/craze
+identity stays independently enabled. E19 adds no sample, texture, field,
+resource, pass, target, upload, allocation, clock, alpha, support, silhouette,
+ownership, topology, or physics decision; Canvas and compact true 8× have no
+selector or branch. Preserve the dedicated two-card Brick/Ceramic fixture's
+authored hole, open notch, one-cell line, isolated cell, native-wall
+coexistence, Ceramic-side Water/Metal contact probes, blank, Sand, Glass, and
+Metal controls. Validate with `npm run audit:vfx:ceramic-glaze`: 1×/2×/4×
+core/crown/pocket responses are about `5.24…5.67` RGB RMS with signed means
+`+5.02…+5.50` / `−5.12…−5.16`, all protected and repeated-off peaks are exact
+zero, and requested-on true 8× must report inactive `scale-8`, exact
+4896×3072, no bloom, a signalled promotion fence, and completed GPU timing
+inside the original one-total 30-second deadline.
 
 The old post-E16 rank that labelled Stone `21` as Solid was invalid because
 Stone is native Powder. The corrected showcase uses native ROCK ground and
