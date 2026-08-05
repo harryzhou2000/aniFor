@@ -203,6 +203,13 @@ describe('Pixi presenter startup configuration', () => {
     const normal = source.slice(normalStart, normalEnd);
     const gasBody = normal.indexOf('    // Dense reconstructed gas should read as one mixed volume');
     const gasStart = normal.lastIndexOf('  } else if (gasVolume > 0.5) {', gasBody);
+    const energyStart = normal.lastIndexOf('  } else if (energyCore > 0.5) {', gasStart);
+    const energy = normal.slice(energyStart, gasStart);
+    const plasmaCoreVfxStart = energy.indexOf('    // E16:');
+    const plasmaCoreVfxBranchStart = energy.indexOf(
+      '    if (uPlasmaCoreVfx > 0.5', plasmaCoreVfxStart,
+    );
+    const plasmaCoreVfx = energy.slice(plasmaCoreVfxBranchStart);
     const liquidStart = normal.indexOf('  } else if (liquidVolume > 0.5) {', gasStart);
     const powderStart = normal.indexOf('    float powderVisualCohesion = 0.0;', liquidStart);
     const gas = normal.slice(gasStart, liquidStart);
@@ -307,6 +314,7 @@ describe('Pixi presenter startup configuration', () => {
     expect(normal).toContain('uniform float uGasMotionVfx;');
     expect(normal).toContain('uniform float uGasLightVfx;');
     expect(normal).toContain('uniform float uGasCoreDepthVfx;');
+    expect(normal).toContain('uniform float uPlasmaCoreVfx;');
     expect(normal).toContain('uniform float uLiquidBodyVfx;');
     expect(normal).toContain('uniform float uLiquidSolidMeniscusVfx;');
     expect(normal).toContain('uniform float uPowderBodyVfx;');
@@ -324,6 +332,9 @@ describe('Pixi presenter startup configuration', () => {
     expect(eight).not.toContain('uGasCoreDepthVfx');
     expect(eight).not.toContain('gasCoreDepthVfx');
     expect(canvasSource).not.toContain('gasCoreDepthVfx');
+    expect(eight).not.toContain('uPlasmaCoreVfx');
+    expect(eight).not.toContain('plasmaCoreVfx');
+    expect(canvasSource).not.toContain('plasmaCoreVfx');
     expect(eight).not.toContain('uLiquidBodyVfx');
     expect(eight).not.toContain('uLiquidSolidMeniscusVfx');
     expect(eight).not.toContain('liquidSolidMeniscusVfx');
@@ -412,6 +423,29 @@ describe('Pixi presenter startup configuration', () => {
     expect(gasCoreDepthVfx).not.toContain('uTime');
     expect(gasCoreDepthVfx).not.toContain('gl_FragCoord');
     expect(gasCoreDepthVfx).not.toMatch(/\balpha\s*[+*]?=/);
+
+    // E16 consumes only the exact Plasma core's already-live semantic and
+    // emission-support evidence. It must not sample, animate, or alter topology,
+    // and its owner/contact guards keep every control byte-identical.
+    expect(energyStart).toBeGreaterThanOrEqual(0);
+    expect(plasmaCoreVfxStart).toBeGreaterThanOrEqual(0);
+    expect(plasmaCoreVfxBranchStart).toBeGreaterThan(plasmaCoreVfxStart);
+    expect(plasmaCoreVfx).toContain('material == 20.0');
+    expect(plasmaCoreVfx).toContain('surfaceOnly < 0.5');
+    expect(plasmaCoreVfx).toContain('halo < 0.5');
+    expect(plasmaCoreVfx).toContain('wall < 0.5');
+    expect(plasmaCoreVfx).toContain('foreignMatterContact < 0.5');
+    expect(plasmaCoreVfx).toContain('unlikeMaterialContact < 0.5');
+    expect(plasmaCoreVfx).toContain('emissionState.a');
+    expect(plasmaCoreVfx).toContain('cohesiveEnergy');
+    expect(plasmaCoreVfx).toContain('plasmaMacroDepth');
+    expect(plasmaCoreVfx).toContain('plasmaShellPocket');
+    expect(plasmaCoreVfx).toContain('vec2(0.052, 0.031)');
+    expect(plasmaCoreVfx).toContain('vec2(-0.028, 0.074)');
+    expect(plasmaCoreVfx).not.toContain('texture(');
+    expect(plasmaCoreVfx).not.toContain('uTime');
+    expect(plasmaCoreVfx).not.toContain('gl_FragCoord');
+    expect(plasmaCoreVfx).not.toMatch(/\balpha\s*[+*]?=/);
     expect(gasVfx).toContain('* max(-gasMotionTone, 0.0) * (gasMotionShadowBytes / 255.0)');
     expect(gasVfx).toContain('gasMotionSpeedBytes > 0.5');
     expect(gasVfx.indexOf('if (uGasMotionVfx > 0.5)'))
@@ -651,6 +685,7 @@ describe('Pixi presenter startup configuration', () => {
     expect(source.match(/this\.uniforms\.uniforms\.uGasMotionVfx = 0;/g)).toHaveLength(2);
     expect(source.match(/this\.uniforms\.uniforms\.uGasLightVfx = 0;/g)).toHaveLength(2);
     expect(source.match(/this\.uniforms\.uniforms\.uGasCoreDepthVfx = 0;/g)).toHaveLength(2);
+    expect(source.match(/this\.uniforms\.uniforms\.uPlasmaCoreVfx = 0;/g)).toHaveLength(2);
     expect(source.match(/this\.uniforms\.uniforms\.uLiquidBodyVfx = 0;/g)).toHaveLength(2);
     expect(source.match(/this\.uniforms\.uniforms\.uLiquidSolidMeniscusVfx = 0;/g)).toHaveLength(2);
     expect(source.match(/this\.uniforms\.uniforms\.uPowderBodyVfx = 0;/g)).toHaveLength(2);
@@ -664,6 +699,7 @@ describe('Pixi presenter startup configuration', () => {
     expect(source).toContain("get('gasMotionVfxAudit') === '1'");
     expect(source).toContain("get('gasLightVfxAudit') === '1'");
     expect(source).toContain("get('gasCoreDepthVfxAudit') === '1'");
+    expect(source).toContain("get('plasmaCoreVfxAudit') === '1'");
     expect(source).toContain("get('liquidBodyVfxAudit') === '1'");
     expect(source).toContain("get('liquidSolidMeniscusVfxAudit') === '1'");
     expect(source).toContain("get('powderBodyVfxAudit') === '1'");
@@ -679,6 +715,9 @@ describe('Pixi presenter startup configuration', () => {
     );
     expect(source).toMatch(
       /const gasCoreDepthVfxEnabled = outputScale < 8\s*&& resolveGasCoreDepthVfxEnabled\(renderLook\);/,
+    );
+    expect(source).toMatch(
+      /const plasmaCoreVfxEnabled = outputScale < 8\s*&& resolvePlasmaCoreVfxEnabled\(renderLook\);/,
     );
     expect(source).toContain('const liquidBodyVfxEnabled = outputScale < 8');
     expect(source).toMatch(
@@ -710,6 +749,8 @@ describe('Pixi presenter startup configuration', () => {
     expect(source).toContain("this.app.canvas.dataset.gasLightVfx = 'inactive';");
     expect(source).toContain('presenter.app.canvas.dataset.gasCoreDepthVfx');
     expect(source).toContain("this.app.canvas.dataset.gasCoreDepthVfx = 'inactive';");
+    expect(source).toContain('presenter.app.canvas.dataset.plasmaCoreVfx');
+    expect(source).toContain("this.app.canvas.dataset.plasmaCoreVfx = 'inactive';");
     expect(source).toContain('presenter.app.canvas.dataset.liquidSolidMeniscusVfx');
     expect(source).toContain("this.app.canvas.dataset.liquidSolidMeniscusVfx = 'inactive';");
     const preserveDrawingBufferStart = source.indexOf('preserveDrawingBuffer:');
@@ -723,6 +764,7 @@ describe('Pixi presenter startup configuration', () => {
     expect(preserveDrawingBuffer).toContain("get('wetSedimentVfxAudit') === '1'");
     expect(preserveDrawingBuffer).toContain("get('gasLightVfxAudit') === '1'");
     expect(preserveDrawingBuffer).toContain("get('gasCoreDepthVfxAudit') === '1'");
+    expect(preserveDrawingBuffer).toContain("get('plasmaCoreVfxAudit') === '1'");
     expect(preserveDrawingBuffer).toContain("get('liquidSolidMeniscusVfxAudit') === '1'");
   });
 

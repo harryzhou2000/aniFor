@@ -6,6 +6,7 @@ import {
   resolveLiquidBodyVfxEnabled, resolveLiquidSolidMeniscusVfxEnabled,
   resolveLiquidSurfaceVfxEnabled,
   resolveOrganicSubsurfaceVfxEnabled,
+  resolvePlasmaCoreVfxEnabled,
   resolvePowderBodyVfxEnabled, resolvePowderLightVfxEnabled,
   resolvePowderSolidContactVfxEnabled, resolveRenderLook, resolveTranslucentEdgeVfxEnabled,
   resolveVolumeVfxEnabled, resolveWetSedimentVfxEnabled,
@@ -119,6 +120,18 @@ describe('resolveRenderLook', () => {
     )).toBe(true);
     expect(resolveGasCoreDepthVfxEnabled(
       'realistic', '?gasBodyVfx=off&gasCoreDepthVfx=on',
+    )).toBe(false);
+  });
+
+  it('keeps dense Plasma containment independently measurable inside HDR looks', () => {
+    expect(resolvePlasmaCoreVfxEnabled('classic', '?plasmaCoreVfx=on')).toBe(false);
+    expect(resolvePlasmaCoreVfxEnabled('realistic', '')).toBe(true);
+    expect(resolvePlasmaCoreVfxEnabled('realistic', '?volumeVfx=0')).toBe(false);
+    expect(resolvePlasmaCoreVfxEnabled(
+      'realistic', '?volumeVfx=0&plasmaCoreVfx=on',
+    )).toBe(true);
+    expect(resolvePlasmaCoreVfxEnabled(
+      'neon-lab', '?volumeVfx=1&plasmaCoreVfx=off',
     )).toBe(false);
   });
 

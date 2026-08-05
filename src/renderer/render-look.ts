@@ -154,6 +154,23 @@ export function resolveGasCoreDepthVfxEnabled(
 }
 
 /**
+ * Gives a dense exact Plasma body a restrained contained core. The normal
+ * WebGL presenter reuses its existing semantic core and emission-field support;
+ * an explicit override keeps E16 independently measurable while ordinary HDR
+ * looks continue to inherit the broad volume preset.
+ */
+export function resolvePlasmaCoreVfxEnabled(
+  look: RenderLook,
+  search = globalThis.location?.search ?? '',
+): boolean {
+  if (look === 'classic') return false;
+  const requested = new URLSearchParams(search).get('plasmaCoreVfx');
+  if (requested === '0' || requested === 'off') return false;
+  if (requested === '1' || requested === 'on') return true;
+  return resolveVolumeVfxEnabled(look, search);
+}
+
+/**
  * Keeps the settled-powder crown experiment independently measurable without
  * changing liquid or gas. Ordinary realistic/neon presets retain the broad
  * volume default; the explicit query is reserved for comparison captures and

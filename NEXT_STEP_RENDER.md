@@ -195,11 +195,23 @@ does not alter simulation, camera, semantic ownership, or `renderScale`.
   CFLM, sparse gas, contacts, walls, holes, channels, Canvas, and true 8× are
   exact controls; focused off/on/off and requested-on true-8× fence gates own
   the release proof.
+- **E16 — exact dense-Plasma containment (accepted checkpoint):** normal
+  1×–4× WebGL gives only authoritative `Material.Plasma` inside an
+  emission-supported cohesive Energy body a static signed macro key/pocket and
+  a shallow absorptive semantic-edge shell through `?plasmaCoreVfx=0|1`. It
+  reuses the existing centre emission sample, semantic core/edge, and cohesive
+  Energy proof, adding no texture read, field, texture resource, pass, target,
+  upload, persistent allocation, clock, alpha/support/silhouette/ownership,
+  topology, or physics decision. Sparse and isolated Plasma, authored holes
+  and channels, liquid/solid contacts, native walls, FIRE/ELEC/PHOT, Canvas,
+  and true 8× remain controls. The focused gate owns calibrated off/on/off
+  response, scale consistency, exact semantic/raw/support invariants, and the
+  requested-on true-8× inactive fence proof.
 - **Protected 8× rung:** `renderScale=8` deliberately reports
   `hdrPipeline=inactive` / `scale-8` and retains the proven direct single-mesh
   4896×3072 path. The experiment must earn a bounded 8× design rather than
   allocating a 115 MiB full-resolution float target beside that path.
-- **Current decision:** E01/E02/E03/E04/E05/E06/E07/E08/E09/E10/E11/E12/E13/E14/E15 remain opt-in through the non-Classic looks
+- **Current decision:** E01/E02/E03/E04/E05/E06/E07/E08/E09/E10/E11/E12/E13/E14/E15/E16 remain opt-in through the non-Classic looks
   until representative hardware timing and mobile thermal behavior are
   measured. E02 remains the safe family-wide baseline. E03 is accepted as the
   liquid-depth checkpoint: its fit-view crop is visibly more cohesive, retains
@@ -263,7 +275,13 @@ does not alter simulation, camera, semantic ownership, or `renderScale`.
   Noble gas receive distinct restrained crown/key and pocket absorption while
   FOG, CFLM, sparse carriers, contacts, walls, holes, and channels remain
   exact. Freeze its per-species spectra and billow/optical-depth gates until
-  another fit-view review. These are not the final material/VFX results.
+  another fit-view review. E16 is accepted as the first exact dense-Plasma
+  containment checkpoint: its broad body receives a scale-stable bipolar
+  magnetic volume rather than another cell motif, the violet chroma and
+  authored topology remain intact, and sparse Plasma plus all foreign Energy
+  owners remain exact. Freeze its two static macro frequencies, cohesive gate,
+  shell amplitude, and RGB-only ownership until another fit-view review. These
+  are not the final material/VFX results.
   Sub-1.0 material colour stays on the established response; tonemapping owns
   only real HDR highlights so powder texture and liquid body contrast are not
   washed out.
@@ -505,18 +523,47 @@ exact controls; repeated-off frames are byte exact. The requested-on true-8×
 navigation reports E15 inactive with reason `scale-8`, retains the direct
 4896×3072 WebGL path without bloom backing, and completes its GPU fence.
 
-**Next visual experiments:** E03–E15 now provide accepted liquid body/surface,
+Run `npm run audit:vfx:plasma-core` for E16. It reloads
+`plasmaCoreVfx=0 → 1 → 0` at 1×/2×/4× with all unrelated VFX pinned off. The
+accepted checkpoint is tightly scale-stable: the broad body measures
+`3.32–3.33` RGB RMS with `9`-byte peaks and a balanced bipolar response; the
+core key measures `3.87–3.88` RGB RMS with `+2.20` signed mean, the shoulder
+pocket `4.60–4.62` with `-3.15–-3.14`, and the quieter edge-body reference
+`2.32` with `+0.69–+0.70`. Chroma remains violet, no target clips, semantic and
+raw alpha/support/topology are invariant, and repeated-off frames are byte
+identical. Holes, channels, sparse/isolated Plasma, co-located walls,
+liquid/solid contact rails, FIRE/ELEC/PHOT, and blank space are protected; only
+the measured 4× radius-zero HDR seam quantization may reach two mixed-sign
+framebuffer bytes while its raw/semantic state remains exact. The closing
+requested-on true-8× navigation reports E16/HDR inactive with reason `scale-8`,
+keeps no bloom target, presents exact 4896×3072 WebGL, and completes its GPU
+fence.
+
+The post-E16 composed fit-view rerun is clean at 1×/2×/4× with identical
+`4058620408` semantic hashes, `104027` occupied cells, stable CSS geometry, and
+zero browser errors. Its weakest-first signal is Gas `1.944`, Solid `5.923`,
+Energy `7.817`, Powder `10.568`, Liquid `11.233`, and Contact `15.849`.
+Interpret that as a survey, not an instruction to stack a fifth generic gas
+layer: E04/E07/E13/E15 already own gas cohesion, motion, external light, and
+core depth. The next bounded experiment should therefore audit the broad
+ordinary rigid-body/solid region first and earn a family- or topology-specific
+depth treatment from an explicit normal-view defect. Preserve the current gas
+silhouette and all E16 controls while doing so.
+
+**Next visual experiments:** E03–E16 now provide accepted liquid body/surface,
 stable-gas, coherent-gas-motion, powder-depth, and powder-local-light
 checkpoints plus exact resting contact grounding, Glass/Ice transmission, and
 state-aware Wax/PLNT subsurface response, composed wet-mineral optics,
 atmosphere-owned external-light spectra, exact liquid-side wet contacts, and
-species-aware gas-core optical depth. Before naming E16, use one composed
-fit-view fixture to rank the remaining flat
+species-aware gas-core optical depth plus dense-Plasma containment. Before
+naming E17, use the composed fit-view fixture to rank the remaining flat
 or visually discontinuous powder, liquid, gas, solid, energy, and cross-contact
 regions. Prefer the smallest arithmetic-only candidate that improves the
 weakest family with already-live topology and light evidence. Do not stack a
-new isolated tint merely to continue the experiment number; preserve the E14
-1× stencil snap and all E01–E15 selectors/controls while surveying.
+new isolated tint merely to continue the experiment number. Current evidence
+rejects another generic gas layer; ordinary rigid-body/contact grounding is a
+candidate only if the normal-view scene demonstrates that defect. Preserve the
+E14 1× stencil snap and all E01–E16 selectors/controls while surveying.
 
 ## Phase 1 — HDR pipeline & lighting core (biggest visual payoff)
 

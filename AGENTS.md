@@ -13,7 +13,7 @@ powder, solid, liquid, gas, energy, and contact scenes across Canvas and WebGL a
 mobile gestures, save/load, CI, and Pages deployment as protected regression
 contracts rather than the primary feature stream.
 
-The accepted visual experiment ladder now runs through E15. E12 is the
+The accepted visual experiment ladder now runs through E16. E12 is the
 species-safe Sand/Clay/Concrete wet-sediment checkpoint; preserve its exact
 aqueous owner/stability proof, split moving-powder/stationary-Water control,
 Local/Grains no-op, fine structures, authored gaps, Canvas fallback, and true
@@ -45,9 +45,27 @@ decision. FOG, CFLM, sparse gas, contacts, walls, holes, channels, Canvas, and
 true 8× are exact controls. Validate the 1×/2×/4× off→on→off response and the
 requested-on true-8× inactive `scale-8` GPU-fence proof with
 `npm run audit:vfx:gas-core-depth`; do not declare or branch on E15 in
-`FIELD_EIGHT_X_FRAGMENT`. Before naming E16, rank the weakest remaining
-powder/liquid/gas/solid/energy region in a composed fit-view fixture and choose
-a bounded evidence-reusing experiment.
+`FIELD_EIGHT_X_FRAGMENT`. The subsequent composed fit-view ranking selected
+dense Plasma, rather than adding another generic gas layer, for E16.
+
+E16 is the calibrated normal-WebGL-only exact-Plasma containment checkpoint,
+independently measurable with `?plasmaCoreVfx=0|1`. Only authoritative
+`Material.Plasma` inside an already-cohesive semantic/emission body may receive
+its static world-anchored signed macro key/pocket and shallow semantic-edge
+shell. Reuse the existing centre emission sample, core/edge, and cohesive
+Energy evidence; add no texture read, field, resource, pass, target, upload,
+allocation, clock, alpha/support/silhouette/ownership/topology, or physics
+decision. Sparse/isolated Plasma, holes, channels, foreign contacts, co-located
+walls, FIRE/ELEC/PHOT, Canvas, and true 8× remain controls. Validate the
+calibrated 1×/2×/4× off→on→off response and requested-on true-8× inactive
+`scale-8` GPU-fence proof with `npm run audit:vfx:plasma-core`; do not declare
+or branch on E16 in `FIELD_EIGHT_X_FRAGMENT`. Before E17, re-rank the composed
+fixture; current evidence says further generic gas tint/noise is not justified,
+while rigid-body/contact depth remains a candidate only if a fit-view defect is
+demonstrated. The accepted post-E16 1×/2×/4× survey keeps exact scene semantics
+and ranks Gas `1.944`, Solid `5.923`, Energy `7.817`, Powder `10.568`, Liquid
+`11.233`, and Contact `15.849`; treat Solid as the next unclaimed broad-family
+audit target rather than layering a fifth generic Gas effect.
 
 WebGL is the canonical visual release path. Canvas 2D remains a resilient,
 camera-preserving semantic fallback: keep its loading, input, material/state,

@@ -40,6 +40,7 @@ import {
   resolveGasMotionVfxEnabled,
   resolveLiquidBodyVfxEnabled, resolveLiquidSolidMeniscusVfxEnabled,
   resolveLiquidSurfaceVfxEnabled,
+  resolvePlasmaCoreVfxEnabled,
   resolvePowderBodyVfxEnabled, resolvePowderLightVfxEnabled, resolveRenderLook,
   resolveOrganicSubsurfaceVfxEnabled,
   resolvePowderSolidContactVfxEnabled,
@@ -3221,6 +3222,7 @@ uniform float uGasBodyVfx;
 uniform float uGasMotionVfx;
 uniform float uGasLightVfx;
 uniform float uGasCoreDepthVfx;
+uniform float uPlasmaCoreVfx;
 uniform float uLiquidBodyVfx;
 uniform float uLiquidSolidMeniscusVfx;
 uniform float uPowderBodyVfx;
@@ -5995,6 +5997,32 @@ void main() {
       toneMapEnergy(energyComposed),
       smoothstep(0.08, 0.68, core)
     );
+    // E16: a broad exact Plasma body should read as contained luminous matter,
+    // not a uniformly violet marker. The already-sampled emission alpha proves
+    // a cohesive body; two static world-anchored macro lobes then form a broad
+    // signed magnetic key/pocket inside that support. This deliberately follows
+    // the animated Energy composition so it reads as body depth rather than
+    // another flashing carrier motif. The semantic edge receives a restrained
+    // absorptive shell, making the luminous interior feel contained without
+    // changing its silhouette. It is RGB-only and sample-free; sparse Plasma,
+    // authored voids, foreign contacts, walls, reconstructed support, and every
+    // non-Plasma owner are exact no-ops. Compact true 8x declares neither this
+    // selector nor branch.
+    if (uPlasmaCoreVfx > 0.5 && material == 20.0
+      && surfaceOnly < 0.5 && halo < 0.5 && wall < 0.5
+      && foreignMatterContact < 0.5 && unlikeMaterialContact < 0.5) {
+      float plasmaBodySupport = smoothstep(0.56, 0.76, emissionState.a)
+        * smoothstep(0.72, 0.96, core) * cohesiveEnergy;
+      float plasmaMacroA = sin(dot(fieldPosition, vec2(0.052, 0.031)) + 4.60);
+      float plasmaMacroB = sin(dot(fieldPosition, vec2(-0.028, 0.074)) + 4.67);
+      float plasmaMacroDepth = clamp(
+        plasmaMacroA * 0.62 + plasmaMacroB * 0.38, -1.0, 1.0
+      );
+      float plasmaShellPocket = edge * smoothstep(0.42, 0.82, cohesiveEnergy) * 0.020;
+      float plasmaContainment = plasmaMacroDepth * plasmaBodySupport * 0.040
+        - plasmaShellPocket;
+      color = max(color * (1.0 + plasmaContainment), vec3(0.0));
+    }
   } else if (gasVolume > 0.5) {
     float billow = 0.92 + atmosphere * 0.08 * (1.0 - gasInterior * 0.50);
     // Dense reconstructed gas should read as one mixed volume, not as the raw
@@ -9224,6 +9252,11 @@ export class PixiFieldPresenter {
     // parallel branch and retains its proven fragment-register budget.
     const gasCoreDepthVfxEnabled = outputScale < 8
       && resolveGasCoreDepthVfxEnabled(renderLook);
+    // E16 is RGB arithmetic over normal WebGL's existing semantic Energy core
+    // and centre emission sample. The compact true-8x shader has no selector or
+    // parallel branch and retains its established register/resource budget.
+    const plasmaCoreVfxEnabled = outputScale < 8
+      && resolvePlasmaCoreVfxEnabled(renderLook);
     // E03 is a normal-detail experiment. The true-8x shader intentionally has
     // no corresponding uniform or arithmetic, so its public capability state
     // must not advertise an effect that cannot run on that path.
@@ -9252,6 +9285,7 @@ export class PixiFieldPresenter {
       uGasMotionVfx: { value: gasMotionVfxEnabled ? 1 : 0, type: 'f32' },
       uGasLightVfx: { value: gasLightVfxEnabled ? 1 : 0, type: 'f32' },
       uGasCoreDepthVfx: { value: gasCoreDepthVfxEnabled ? 1 : 0, type: 'f32' },
+      uPlasmaCoreVfx: { value: plasmaCoreVfxEnabled ? 1 : 0, type: 'f32' },
       uLiquidBodyVfx: { value: liquidBodyVfxEnabled ? 1 : 0, type: 'f32' },
       uLiquidSolidMeniscusVfx: {
         value: liquidSolidMeniscusVfxEnabled ? outputScale : 0, type: 'f32',
@@ -9467,6 +9501,7 @@ export class PixiFieldPresenter {
       this.uniforms.uniforms.uGasMotionVfx = 0;
       this.uniforms.uniforms.uGasLightVfx = 0;
       this.uniforms.uniforms.uGasCoreDepthVfx = 0;
+      this.uniforms.uniforms.uPlasmaCoreVfx = 0;
       this.uniforms.uniforms.uLiquidBodyVfx = 0;
       this.uniforms.uniforms.uLiquidSolidMeniscusVfx = 0;
       this.uniforms.uniforms.uPowderBodyVfx = 0;
@@ -9505,6 +9540,7 @@ export class PixiFieldPresenter {
             || new URLSearchParams(location.search).get('gasMotionVfxAudit') === '1'
             || new URLSearchParams(location.search).get('gasLightVfxAudit') === '1'
             || new URLSearchParams(location.search).get('gasCoreDepthVfxAudit') === '1'
+            || new URLSearchParams(location.search).get('plasmaCoreVfxAudit') === '1'
             || new URLSearchParams(location.search).get('liquidBodyVfxAudit') === '1'
             || new URLSearchParams(location.search).get('liquidSolidMeniscusVfxAudit') === '1'
             || new URLSearchParams(location.search).get('liquidSurfaceVfxAudit') === '1'
@@ -9547,6 +9583,9 @@ export class PixiFieldPresenter {
       ? 'active' : 'inactive';
     presenter.app.canvas.dataset.gasCoreDepthVfx = Number(
       presenter.uniforms.uniforms.uGasCoreDepthVfx
+    ) > 0.5 ? 'active' : 'inactive';
+    presenter.app.canvas.dataset.plasmaCoreVfx = Number(
+      presenter.uniforms.uniforms.uPlasmaCoreVfx
     ) > 0.5 ? 'active' : 'inactive';
     presenter.app.canvas.dataset.liquidBodyVfx = Number(presenter.uniforms.uniforms.uLiquidBodyVfx) > 0.5
       ? 'active' : 'inactive';
@@ -10924,6 +10963,7 @@ export class PixiFieldPresenter {
         this.uniforms.uniforms.uGasMotionVfx = 0;
         this.uniforms.uniforms.uGasLightVfx = 0;
         this.uniforms.uniforms.uGasCoreDepthVfx = 0;
+        this.uniforms.uniforms.uPlasmaCoreVfx = 0;
         this.uniforms.uniforms.uLiquidBodyVfx = 0;
         this.uniforms.uniforms.uLiquidSolidMeniscusVfx = 0;
         this.uniforms.uniforms.uPowderBodyVfx = 0;
@@ -10939,6 +10979,7 @@ export class PixiFieldPresenter {
         this.app.canvas.dataset.gasMotionVfx = 'inactive';
         this.app.canvas.dataset.gasLightVfx = 'inactive';
         this.app.canvas.dataset.gasCoreDepthVfx = 'inactive';
+        this.app.canvas.dataset.plasmaCoreVfx = 'inactive';
         this.app.canvas.dataset.liquidBodyVfx = 'inactive';
         this.app.canvas.dataset.liquidSolidMeniscusVfx = 'inactive';
         this.app.canvas.dataset.liquidSurfaceVfx = 'inactive';
