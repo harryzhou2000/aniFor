@@ -229,12 +229,22 @@ describe('Pixi presenter startup configuration', () => {
     const powderLightVfxEnd = powder.indexOf(
       '    color += fieldLightContribution;', powderLightVfxStart,
     );
+    const powderSolidContactVfxStart = normal.indexOf('  // E09:');
+    const powderSolidContactVfxBranchStart = normal.indexOf(
+      '  if (uPowderSolidContactVfx > 0.5', powderSolidContactVfxStart,
+    );
+    const powderSolidContactVfxEnd = normal.indexOf(
+      '  if (halo > 0.5', powderSolidContactVfxBranchStart,
+    );
     const gasVfx = gas.slice(gasVfxStart, gasVfxEnd);
     const liquidVfx = liquid.slice(liquidVfxStart, liquidVfxEnd);
     const powderVfx = powder.slice(powderVfxStart, powderVfxEnd);
     const powderBodyVfx = powder.slice(powderBodyVfxStart, powderBodyVfxEnd);
     const powderLightCarrier = powder.slice(powderLightCarrierStart, powderLightCarrierEnd);
     const powderLightVfx = powder.slice(powderLightVfxStart, powderLightVfxEnd);
+    const powderSolidContactVfx = normal.slice(
+      powderSolidContactVfxBranchStart, powderSolidContactVfxEnd,
+    );
 
     expect(eightStart).toBeGreaterThanOrEqual(0);
     expect(normalStart).toBeGreaterThan(eightStart);
@@ -249,12 +259,15 @@ describe('Pixi presenter startup configuration', () => {
     expect(normal).toContain('uniform float uLiquidBodyVfx;');
     expect(normal).toContain('uniform float uPowderBodyVfx;');
     expect(normal).toContain('uniform float uPowderLightVfx;');
+    expect(normal).toContain('uniform float uPowderSolidContactVfx;');
     expect(eight).not.toContain('uVolumeVfx');
     expect(eight).not.toContain('uGasBodyVfx');
     expect(eight).not.toContain('uGasMotionVfx');
     expect(eight).not.toContain('uLiquidBodyVfx');
     expect(eight).not.toContain('uPowderBodyVfx');
     expect(eight).not.toContain('uPowderLightVfx');
+    expect(eight).not.toContain('uPowderSolidContactVfx');
+    expect(eight).not.toContain('powderSolidContactVfx');
 
     // Gas stays field-owned: its independent E04 selector reuses the
     // established mass/curvature/scatter scalars and never samples or assigns
@@ -366,6 +379,42 @@ describe('Pixi presenter startup configuration', () => {
     expect(powderLightVfx).not.toMatch(/\balpha\s*[+*]?=/);
     expect(normal.match(/texture\(\s*uEmissionTexture/g)).toHaveLength(7);
 
+    // E09 decodes exact value 254 from the already-sampled presenter-owned
+    // stability byte. The Canvas fallback retains ordinary settled value 255,
+    // and the normal shader adds no contact sampler or output-scale branch.
+    expect(normal).toContain('float powderSolidContactCell = 0.0;');
+    expect(normal).toContain('abs(boundaryStability * 255.0 - 254.0)');
+    expect(normal).toContain('boundaryStability + powderSolidContactCell * (1.0 / 255.0)');
+    expect(normal).not.toContain('powderSolidContactLight');
+    expect(source).toContain('const encodePowderSolidContact = this.outputScale < 8');
+    expect(source).toContain(
+      'Number(this.uniforms.uniforms.uPowderSolidContactVfx) > 0.5;',
+    );
+    expect(source).toContain('encodePowderSolidContact, walls,');
+    const markWallDirtyStart = source.indexOf('  markWallDirty(index: number): void {');
+    const markWallDirtyEnd = source.indexOf('\n  setContextLossHandler(', markWallDirtyStart);
+    expect(markWallDirtyStart).toBeGreaterThan(0);
+    expect(source.slice(markWallDirtyStart, markWallDirtyEnd)).toContain('this.chunks.markCell(index);');
+
+    // E09 is a normal-detail, dry Smooth-body RGB occlusion. Its branch must
+    // remain arithmetic-only over the carried contact/body scalars.
+    expect(powderSolidContactVfxStart).toBeGreaterThan(powderLightVfxEnd);
+    expect(powderSolidContactVfxBranchStart).toBeGreaterThan(powderSolidContactVfxStart);
+    expect(powderSolidContactVfxEnd).toBeGreaterThan(powderSolidContactVfxBranchStart);
+    expect(powderSolidContactVfx).toContain('uPowderSolidContactVfx > 0.5');
+    expect(normal).toContain('float powderSolidContactBodyGate = 0.0;');
+    expect(normal).toContain('powderSolidContactBodyGate = powderSolidContactCell');
+    expect(normal).not.toContain('powderSolidContactBodyDepth');
+    expect(powderSolidContactVfx).toContain('powderSolidContactBodyGate > 0.001');
+    expect(powderSolidContactVfx).toContain('powderSolidPlaneA');
+    expect(powderSolidContactVfx).toContain('powderSolidPlaneB');
+    expect(powderSolidContactVfx).toContain('powderSolidDepth');
+    expect(powderSolidContactVfx).toContain('5.0 / 255.0');
+    expect(powderSolidContactVfx).not.toContain('texture(');
+    expect(powderSolidContactVfx).not.toContain('uTime');
+    expect(powderSolidContactVfx).not.toContain('gl_FragCoord');
+    expect(powderSolidContactVfx).not.toMatch(/\b(?:alpha|support|sampler|resource|pass|target)\b/);
+
     // Capability/initialization and first-render failures must turn every HDR
     // arithmetic family off before continuing with the single-pass scene.
     expect(source.match(/this\.uniforms\.uniforms\.uHDRVfx = 0;/g)).toHaveLength(2);
@@ -375,17 +424,30 @@ describe('Pixi presenter startup configuration', () => {
     expect(source.match(/this\.uniforms\.uniforms\.uLiquidBodyVfx = 0;/g)).toHaveLength(2);
     expect(source.match(/this\.uniforms\.uniforms\.uPowderBodyVfx = 0;/g)).toHaveLength(2);
     expect(source.match(/this\.uniforms\.uniforms\.uPowderLightVfx = 0;/g)).toHaveLength(2);
+    expect(source.match(/this\.uniforms\.uniforms\.uPowderSolidContactVfx = 0;/g)).toHaveLength(2);
     expect(source).toContain("get('volumeVfxAudit') === '1'");
     expect(source).toContain("get('gasBodyVfxAudit') === '1'");
     expect(source).toContain("get('gasMotionVfxAudit') === '1'");
     expect(source).toContain("get('liquidBodyVfxAudit') === '1'");
     expect(source).toContain("get('powderBodyVfxAudit') === '1'");
     expect(source).toContain("get('powderLightVfxAudit') === '1'");
+    expect(source).toContain("get('powderSolidContactVfxAudit') === '1'");
     expect(source).toContain('const gasBodyVfxEnabled = outputScale < 8');
     expect(source).toContain('const gasMotionVfxEnabled = outputScale < 8');
     expect(source).toContain('const liquidBodyVfxEnabled = outputScale < 8');
     expect(source).toContain('const powderBodyVfxEnabled = outputScale < 8');
     expect(source).toContain('const powderLightVfxEnabled = outputScale < 8');
+    expect(source).toMatch(
+      /const powderSolidContactVfxEnabled = outputScale < 8\s*&& resolvePowderSolidContactVfxEnabled\(renderLook\);/,
+    );
+    expect(source).toContain('presenter.app.canvas.dataset.powderSolidContactVfx');
+    expect(source).toContain("this.app.canvas.dataset.powderSolidContactVfx = 'inactive';");
+    const preserveDrawingBufferStart = source.indexOf('preserveDrawingBuffer:');
+    const preserveDrawingBufferEnd = source.indexOf('resolution: outputScale', preserveDrawingBufferStart);
+    const preserveDrawingBuffer = source.slice(preserveDrawingBufferStart, preserveDrawingBufferEnd);
+    expect(preserveDrawingBufferStart).toBeGreaterThan(0);
+    expect(preserveDrawingBufferEnd).toBeGreaterThan(preserveDrawingBufferStart);
+    expect(preserveDrawingBuffer).toContain("get('powderSolidContactVfxAudit') === '1'");
   });
 
   it('routes E08 liquid surfaces through existing normal-scale HDR resources only', () => {

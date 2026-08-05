@@ -44,6 +44,7 @@ import type { StorStateGraphicsAuditSnapshot } from './stor-state-graphics-audit
 import type { DlayStateGraphicsAuditSnapshot } from './dlay-state-graphics-audit';
 import type { WifiStateGraphicsAuditSnapshot } from './wifi-state-graphics-audit';
 import type { PowderMesostrataGraphicsAuditSnapshot } from './powder-mesostrata-graphics-audit';
+import type { PowderSolidContactVfxAuditSnapshot } from './powder-solid-contact-vfx-audit';
 import type { GeologicalSolidGraphicsAuditSnapshot } from './geological-solid-graphics-audit';
 import type {
   ThermalCatalyticRigidGraphicsAuditSnapshot,
@@ -80,6 +81,8 @@ export interface BrowserInputAuditApi {
   atmosphereMotion(x: number, y: number): readonly [number, number, number];
   sourceTarget(x: number, y: number): number;
   presentationAuxiliary(x: number, y: number): number;
+  /** Queues one paused audit-only native/presentation-field refresh. */
+  refreshPresentationFields(): void;
   geologicalSolidStylingEnabled(): boolean;
   thermalCatalyticRigidStylingEnabled(): boolean;
   roleMaterialStylingEnabled(): boolean;
@@ -252,6 +255,8 @@ export interface BrowserInputAuditApi {
   prepareWifiStateGraphicsFixture(): void;
   powderMesostrataGraphicsAtlas(): PowderMesostrataGraphicsAuditSnapshot;
   preparePowderMesostrataGraphicsFixture(): void;
+  powderSolidContactVfxFixture(): PowderSolidContactVfxAuditSnapshot;
+  preparePowderSolidContactVfxAudit(): void;
   geologicalSolidGraphicsAtlas(): GeologicalSolidGraphicsAuditSnapshot;
   prepareGeologicalSolidGraphicsFixture(): void;
   thermalCatalyticRigidGraphicsAtlas(): ThermalCatalyticRigidGraphicsAuditSnapshot;

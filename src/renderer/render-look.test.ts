@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest';
 import {
   DEFAULT_RENDER_LOOK, resolveGasBodyVfxEnabled, resolveGasMotionVfxEnabled,
   resolveLiquidBodyVfxEnabled, resolveLiquidSurfaceVfxEnabled,
-  resolvePowderBodyVfxEnabled, resolvePowderLightVfxEnabled, resolveRenderLook,
+  resolvePowderBodyVfxEnabled, resolvePowderLightVfxEnabled,
+  resolvePowderSolidContactVfxEnabled, resolveRenderLook,
   resolveVolumeVfxEnabled,
 } from './render-look';
 
@@ -85,6 +86,25 @@ describe('resolveRenderLook', () => {
     expect(resolvePowderBodyVfxEnabled(
       'neon-lab', '?volumeVfx=1&powderBodyVfx=off',
     )).toBe(false);
+  });
+
+  it('keeps powder/solid contact VFX independent of the powder-body crown layer', () => {
+    expect(resolvePowderSolidContactVfxEnabled(
+      'classic', '?powderSolidContactVfx=on',
+    )).toBe(false);
+    expect(resolvePowderSolidContactVfxEnabled('realistic', '')).toBe(true);
+    expect(resolvePowderSolidContactVfxEnabled(
+      'realistic', '?volumeVfx=0',
+    )).toBe(false);
+    expect(resolvePowderSolidContactVfxEnabled(
+      'realistic', '?volumeVfx=0&powderSolidContactVfx=on',
+    )).toBe(true);
+    expect(resolvePowderSolidContactVfxEnabled(
+      'neon-lab', '?volumeVfx=1&powderSolidContactVfx=off',
+    )).toBe(false);
+    expect(resolvePowderSolidContactVfxEnabled(
+      'realistic', '?powderBodyVfx=off',
+    )).toBe(true);
   });
 
   it('lets powder-light VFX follow the preset or override broad volume styling', () => {

@@ -90,11 +90,26 @@ does not alter simulation, camera, semantic ownership, or `renderScale`.
   persistent allocation, clock, output-scale resource, or physics decision.
   Lava, isolated droplets, unlike seams, foreign contacts, reconstructed
   support, and non-liquid phases remain protected no-ops.
+- **E09 — settled Powder/Solid contact grounding (accepted checkpoint):**
+  normal 1×–4× WebGL gives only fully settled ordinary Smooth Powder a shallow
+  body-depth cue at direct ordinary Solid support. While
+  `?powderSolidContactVfx=1` is active, the existing phase-local r8 stability
+  plane reserves byte `254` for a logical settled value of `255` whose source
+  has exact Powder owners on both horizontal sides and an ordinary Solid owner
+  immediately above or below. Source/contact traits, emission, and native
+  walls reject the marker. The normal shader decodes it from its already-live
+  nearest sample, restores legacy stability to `1.0`, and applies a restrained
+  world-anchored RGB-only absorption to the authoritative contact cell. It adds
+  no GPU sample, texture, field, upload, pass, target, allocation, clock,
+  output-scale input, alpha/support/silhouette/ownership, or physics decision.
+  Disabled/Classic/Canvas paths retain ordinary `255`; Local, Grains, motion,
+  fine columns, isolated grains, suspension, walls, and unlike/air controls
+  remain exact no-ops. True 8× neither encodes nor declares E09.
 - **Protected 8× rung:** `renderScale=8` deliberately reports
   `hdrPipeline=inactive` / `scale-8` and retains the proven direct single-mesh
   4896×3072 path. The experiment must earn a bounded 8× design rather than
   allocating a 115 MiB full-resolution float target beside that path.
-- **Current decision:** E01/E02/E03/E04/E05/E06/E07/E08 remain opt-in through the non-Classic looks
+- **Current decision:** E01/E02/E03/E04/E05/E06/E07/E08/E09 remain opt-in through the non-Classic looks
   until representative hardware timing and mobile thermal behavior are
   measured. E02 remains the safe family-wide baseline. E03 is accepted as the
   liquid-depth checkpoint: its fit-view crop is visibly more cohesive, retains
@@ -121,7 +136,11 @@ does not alter simulation, camera, semantic ownership, or `renderScale`.
   while enlarged and amplified captures show coherent curved lips rather than
   a flat whole-body grade. Water, Oil, and Acid remain optically distinct and
   all protected topology/contact controls stay exact. Freeze this response
-  until another normal-view review. These are not the final material/VFX results.
+  until another normal-view review. E09 is accepted as the first exact
+  material-pair contact checkpoint: it grounds broad resting Sand/Brick,
+  Clay/Metal, and Concrete/Glass beds without becoming an outline or touching
+  fine structure. Its normal-view response is intentionally shallow; freeze it
+  until a new fit-view review. These are not the final material/VFX results.
   Sub-1.0 material colour stays on the established response; tonemapping owns
   only real HDR highlights so powder texture and liquid body contrast are not
   washed out.
@@ -172,6 +191,9 @@ and square Grains. Clay/Concrete crowns remain positive while their cores and
 the sampled Sand body provide the opposing fill; target peaks stay within
 `3–8` display bytes. The retained local microchroma is `99.1–100.5%` of the
 disabled body at every scale, and every repeated-off comparison is byte-exact.
+The paused fixture explicitly drives seven observed presentation refreshes and
+requires exact settled byte `255`; identical screenshots alone are not a
+settling condition.
 Pass `--render-scale=1`, `2`, or `4` to tune one scale; true 8× rejects E05 and
 retains its protected direct shader.
 
@@ -217,11 +239,27 @@ same command finishes by requesting E08 on the true 4896×3072 SPNG route,
 which must report E08/HDR inactive with reason `scale-8`, no bloom backing, and
 a completed GPU fence.
 
-**Next visual experiments:** E03–E08 now provide accepted liquid body/surface,
+Run `npm run audit:vfx:powder-solid-contact` for E09. It pins every other VFX
+selector off and reloads paused Sand/Brick, Clay/Metal, and Concrete/Glass beds
+as `powderSolidContactVfx=0 → 1 → 0` at 1×/2×/4×. The gate requires real
+WebGL/HDR, exact CSS/backing geometry, semantics, auxiliary ownership, raw
+alpha/support, and repeated-off framebuffer output. Moving Sand, a one-cell
+Clay column, isolated Sand, wet Sand/Water, co-located native walls, an unlike
+Sand/Clay seam, an air gap, every Solid-side probe, Local, and square Grains
+remain byte-exact. The accepted contact band holds `0.93–1.30` RGB RMS,
+`0.90–1.21` spatial RMS, `4–5`-byte peaks, and `14.1–14.3%` response coverage
+across the sampled five-cell band at all normal scales. The closing true-8×
+navigation explicitly requests E09 and proves it inactive with reason
+`scale-8`, no bloom backing, exact 4896×3072 WebGL, and a completed GPU fence.
+
+**Next visual experiments:** E03–E09 now provide accepted liquid body/surface,
 stable-gas, coherent-gas-motion, powder-depth, and powder-local-light
-checkpoints. The next candidate should add a visibly distinct material cue
-rather than another global grade: prefer a low-frequency powder/solid
-contact-depth experiment that reuses existing stability/contact evidence.
+checkpoints plus exact resting contact grounding. The next candidate should add
+a visibly distinct material cue rather than another global grade: prefer
+bounded thin-edge transmission for authoritative ordinary Glass/Ice, reusing
+the existing solid optical-depth byte, body normal/light, and arithmetic only.
+Opaque solids, walls, holes, one-cell lines, unlike seams, traits, emission,
+reconstructed support, Canvas, and true 8× should remain exact controls.
 Return to advected gas detail only if it can remain atmosphere-owned and
 counterflow-coherent; expand liquid curvature/thickness architecture only with
 an explicit bounded-resource design. Each experiment keeps its own off/on/off

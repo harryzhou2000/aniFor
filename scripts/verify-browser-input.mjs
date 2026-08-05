@@ -165,10 +165,16 @@ const powderLightVfxOnly = process.argv.includes('--powder-light-vfx-only');
 if (powderLightVfxOnly && (modes.length !== 1 || modes[0] !== 'webgl')) {
   throw new Error('--powder-light-vfx-only requires --webgl-only');
 }
+// E09 isolates one settled Powder/Solid contact-depth layer. It is a
+// normal-detail HDR experiment; the true-8x direct mesh must reject it.
+const powderSolidContactVfxOnly = process.argv.includes('--powder-solid-contact-vfx-only');
+if (powderSolidContactVfxOnly && (modes.length !== 1 || modes[0] !== 'webgl')) {
+  throw new Error('--powder-solid-contact-vfx-only requires --webgl-only');
+}
 if ([hdrVfxOnly, volumeVfxOnly, liquidBodyVfxOnly, liquidSurfaceVfxOnly, gasBodyVfxOnly,
-  gasMotionVfxOnly, powderBodyVfxOnly, powderLightVfxOnly]
+  gasMotionVfxOnly, powderBodyVfxOnly, powderLightVfxOnly, powderSolidContactVfxOnly]
   .filter(Boolean).length > 1) {
-  throw new Error('HDR/volume/liquid-body/liquid-surface/gas-body/gas-motion/powder-body/powder-light focused audits are mutually exclusive');
+  throw new Error('HDR/volume/liquid-body/liquid-surface/gas-body/gas-motion/powder-body/powder-light/powder-solid-contact focused audits are mutually exclusive');
 }
 const layoutOnly = process.argv.includes('--layout-only');
 const visualScaleMatrixNormalOnly = process.argv.includes('--visual-scale-matrix-normal-only');
@@ -252,7 +258,7 @@ const liveScaleOnly = process.argv.includes('--live-scale-only');
 const productionBundle = process.argv.includes('--production-bundle');
 const usesProductionBundle = productionBundle || showcaseScreenshotOnly || hdrVfxOnly || volumeVfxOnly
   || liquidBodyVfxOnly || liquidSurfaceVfxOnly || gasBodyVfxOnly || gasMotionVfxOnly
-  || powderBodyVfxOnly || powderLightVfxOnly || cellularGraphicsOnly || sensorGraphicsOnly
+  || powderBodyVfxOnly || powderLightVfxOnly || powderSolidContactVfxOnly || cellularGraphicsOnly || sensorGraphicsOnly
   || unusualPowderGraphicsOnly || earthenPowderGraphicsOnly || explosivePowderGraphicsOnly || unusualSolidGraphicsOnly
   || deviceIdentityGraphicsOnly
   || fieldProfileGraphicsOnly
@@ -429,6 +435,11 @@ if (powderLightVfxOnly && powderLightVfxArgument !== undefined) {
 if (powderLightVfxOnly && gasMotionVfxArgument !== undefined) {
   throw new Error('--powder-light-vfx-only keeps gas-motion VFX defaulted; omit --gas-motion-vfx');
 }
+if (powderSolidContactVfxOnly && (volumeVfxArgument !== undefined || liquidBodyVfxArgument !== undefined
+  || liquidSurfaceVfxArgument !== undefined || gasBodyVfxArgument !== undefined || gasMotionVfxArgument !== undefined
+  || powderBodyVfxArgument !== undefined || powderLightVfxArgument !== undefined)) {
+  throw new Error('--powder-solid-contact-vfx-only pins all unrelated VFX selectors off; omit overrides');
+}
 if (renderScaleArgument !== undefined && !['1', '2', '4', '8'].includes(renderScaleArgument)) {
   throw new Error('--render-scale must be 1, 2, 4, or 8');
 }
@@ -446,6 +457,9 @@ if (powderBodyVfxOnly && renderScaleArgument === '8') {
 }
 if (powderLightVfxOnly && renderScaleArgument === '8') {
   throw new Error('--powder-light-vfx-only is a normal-detail 1x/2x/4x experiment');
+}
+if (powderSolidContactVfxOnly && renderScaleArgument === '8') {
+  throw new Error('--powder-solid-contact-vfx-only is a normal-detail 1x/2x/4x experiment');
 }
 const captureDpr = captureDprArgument === undefined ? undefined : Number(captureDprArgument);
 if (captureDpr !== undefined && captureDpr !== 1 && captureDpr !== 2) {
@@ -521,7 +535,7 @@ async function main() {
     for (const mode of modes) results.push(await auditMode(mode));
     const reducedAudit = quickScreenshot || showcaseScreenshotOnly || hdrVfxOnly || volumeVfxOnly
       || liquidBodyVfxOnly || liquidSurfaceVfxOnly || gasBodyVfxOnly || gasMotionVfxOnly
-      || powderBodyVfxOnly || powderLightVfxOnly || layoutOnly || mobileOnly || mobileGestureOnly
+      || powderBodyVfxOnly || powderLightVfxOnly || powderSolidContactVfxOnly || layoutOnly || mobileOnly || mobileGestureOnly
       || desktopInputOnly || visualScaleMatrixOnly || powderBodyOnly || liquidDepthOnly
       || solidDepthOnly || gasChromaOnly || surfaceContourOnly || solidFieldOnly
       || roleGraphicsOnly || cellularGraphicsOnly || sensorGraphicsOnly
@@ -619,7 +633,7 @@ async function auditMode(mode) {
   // canonical paused scene there and prove real material delivery/occupancy.
   const startsBlank = !canvasFallbackAudit && (hdrVfxOnly || volumeVfxOnly
     || liquidBodyVfxOnly || liquidSurfaceVfxOnly || gasBodyVfxOnly || gasMotionVfxOnly
-    || powderBodyVfxOnly || powderLightVfxOnly || cellularGraphicsOnly || sensorGraphicsOnly
+    || powderBodyVfxOnly || powderLightVfxOnly || powderSolidContactVfxOnly || cellularGraphicsOnly || sensorGraphicsOnly
     || unusualPowderGraphicsOnly || earthenPowderGraphicsOnly || explosivePowderGraphicsOnly
     || unusualSolidGraphicsOnly || deviceIdentityGraphicsOnly || fieldProfileGraphicsOnly
     || electricDischargeGraphicsOnly || liquidIdentityGraphicsOnly
@@ -891,6 +905,13 @@ async function auditMode(mode) {
       assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
       cdp.close();
       return { backend: mode, powderLightVfx, browserErrors: errors.length };
+    }
+    if (powderSolidContactVfxOnly) {
+      assert(mode === 'webgl', '--powder-solid-contact-vfx-only requires --webgl-only');
+      const powderSolidContactVfx = await auditPowderSolidContactVfxExperiment(cdp, mode, dpr);
+      assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
+      cdp.close();
+      return { backend: mode, powderSolidContactVfx, browserErrors: errors.length };
     }
     if (pausedPresentationOnly) {
       const pausedPresentation = await auditPausedPresentation(cdp, mode);
@@ -22562,6 +22583,312 @@ async function auditPowderLightVfxExperiment(cdp, mode) {
   return { scales, trueEightXExcluded: true };
 }
 
+/**
+ * E09 keeps every prior volume/body selector inactive and measures only the
+ * proposed settled Smooth Powder/Solid contact depth. The fixture itself is
+ * semantic-only; this gate owns the off -> on -> off query navigation.
+ */
+async function auditPowderSolidContactVfxExperiment(cdp, mode, dpr) {
+  const scales = [];
+  const requestedScales = renderScaleArgument === undefined
+    ? VOLUME_VFX_SCALES : [Number(renderScaleArgument)];
+  for (const scale of requestedScales) {
+    const captures = {};
+    for (const enabled of [false, true, false]) {
+      const key = enabled ? 'enabled' : captures.disabled ? 'disabledRepeat' : 'disabled';
+      const variant = await navigatePowderSolidContactVfxState(cdp, mode, scale, enabled, key);
+      // E09 is strictly a Smooth-only contact layer. Reuse the established
+      // style capture helper for every state, then require its complete
+      // Grains/Local framebuffer to remain byte-identical across off/on/off.
+      variant.references = await capturePowderBodyVfxReferenceStyles(cdp, scale, `E09 ${key}`);
+      captures[key] = variant;
+    }
+    const { disabled, enabled, disabledRepeat } = captures;
+    const fixture = disabled.fixture;
+    assert(JSON.stringify(fixture) === JSON.stringify(enabled.fixture)
+      && JSON.stringify(fixture) === JSON.stringify(disabledRepeat.fixture),
+    `E09 ${scale}x fixture metadata changed (${JSON.stringify({
+      disabled: fixture, enabled: enabled.fixture, repeat: disabledRepeat.fixture,
+    })})`);
+    for (const [label, variant] of Object.entries(captures)) {
+      assertGeometry(variant.geometry, `E09 ${label} ${scale}x`, scale);
+      assert(variant.geometry.backend.backend === 'webgl',
+        `E09 ${label} ${scale}x lost WebGL presentation`);
+      assert(variant.hdrPipeline?.state === 'active',
+        `E09 ${label} ${scale}x HDR pipeline was not active (${JSON.stringify(variant.hdrPipeline)})`);
+    }
+    assertCanvasRectsEqual(disabled.geometry.canvas, enabled.geometry.canvas,
+      `E09 ${scale}x disabled/enabled CSS geometry`);
+    assertCanvasRectsEqual(disabled.geometry.canvas, disabledRepeat.geometry.canvas,
+      `E09 ${scale}x disabled/repeated CSS geometry`);
+    assert(JSON.stringify(disabled.geometry.backing) === JSON.stringify(enabled.geometry.backing)
+      && JSON.stringify(disabled.geometry.backing) === JSON.stringify(disabledRepeat.geometry.backing),
+    `E09 ${scale}x backing geometry changed (${JSON.stringify({
+      disabled: disabled.geometry.backing, enabled: enabled.geometry.backing,
+      repeat: disabledRepeat.geometry.backing,
+    })})`);
+    assertHdrVfxSemanticEquality(disabled.semantic, enabled.semantic, `E09 ${scale}x disabled/enabled`);
+    assertHdrVfxSemanticEquality(disabled.semantic, disabledRepeat.semantic, `E09 ${scale}x disabled/repeated`);
+    assertVolumeVfxBackingInvariant(disabled.backing, enabled.backing, `E09 ${scale}x disabled/enabled`);
+    assertVolumeVfxBackingInvariant(disabled.backing, disabledRepeat.backing, `E09 ${scale}x disabled/repeated`);
+    assert(JSON.stringify(disabled.rawControls) === JSON.stringify(enabled.rawControls)
+      && JSON.stringify(disabled.rawControls) === JSON.stringify(disabledRepeat.rawControls),
+    `E09 ${scale}x changed an exact raw control owner (${JSON.stringify({
+      disabled: disabled.rawControls, enabled: enabled.rawControls, repeat: disabledRepeat.rawControls,
+    })})`);
+    assert(JSON.stringify(disabled.rgbDigest) === JSON.stringify(disabledRepeat.rgbDigest)
+      && disabled.capture.capture.data === disabledRepeat.capture.capture.data,
+    `E09 ${scale}x repeated off framebuffer was not byte exact`);
+
+    const targets = powderSolidContactTargetRegions(fixture);
+    const controls = powderSolidContactControlRegions(fixture);
+    const rawResponses = await sampleBackdropRefractionRegions(cdp, {
+      straight: disabled.capture.capture.data,
+      refracted: enabled.capture.capture.data,
+      repeatedStraight: disabledRepeat.capture.capture.data,
+    }, [...targets, ...controls], disabled.capture.canvasRect);
+    const responses = rawResponses.map((sample, index) => ({
+      ...sample,
+      ...(index < targets.length ? targets[index] : controls[index - targets.length]),
+      spatialRgbRms: round(Math.sqrt(Math.max(0,
+        sample.rgbRms ** 2 - (Math.hypot(...sample.responseRgb) / Math.sqrt(3)) ** 2,
+      )), 3),
+    }));
+    // Preserve the diagnostic comparison even when a proposed shader branch
+    // is still inert, so a focused failure can be inspected without relaxing
+    // any assertion below.
+    const screenshots = screenshotRequest && (requestedScales.length === 1 || scale === 2)
+      ? await writePowderSolidContactVfxScreenshots(screenshotRequest, disabled, enabled)
+      : undefined;
+    assert(responses.every((sample) => sample.repeatRgbPeak === 0),
+      `E09 ${scale}x off -> on -> off was not deterministic (${JSON.stringify(responses)})`);
+    const targetResponses = responses.filter((sample) => sample.target);
+    // Accepted 1x/2x/4x measurements keep the one-cell grounding readable and
+    // scale-stable: a restrained absorptive response, never a heavy outline.
+    assert(targetResponses.every((sample) => sample.rgbRms >= 0.7 && sample.rgbRms <= 1.8
+      && sample.spatialRgbRms >= 0.65 && sample.spatialRgbRms <= 1.7
+      && sample.rgbPeak >= 3 && sample.rgbPeak <= 8
+      && sample.coverage >= 0.12 && sample.coverage <= 0.17
+      && sample.signedMean <= -0.25 && sample.signedMean >= -0.7),
+    `E09 ${scale}x settled Powder/Solid seam response lost its bounded absorptive scale parity (${JSON.stringify(responses)})`);
+    const controlResponses = responses.filter((sample) => !sample.target);
+    assert(controlResponses.every((sample) => sample.rgbPeak === 0),
+      `E09 ${scale}x escaped a moving/fine/isolated/wet/wall/unlike/air or solid-side control (${JSON.stringify(controlResponses)})`);
+    const references = {};
+    for (const style of ['grains', 'local']) {
+      const disabledReference = disabled.references[style].capture.data;
+      const enabledReference = enabled.references[style].capture.data;
+      const repeatReference = disabledRepeat.references[style].capture.data;
+      assert(enabledReference === disabledReference && enabledReference === repeatReference,
+        `E09 ${scale}x escaped its exact ${style} style exclusion`);
+      references[style] = { byteExact: true, bytes: Buffer.byteLength(disabledReference, 'base64') };
+    }
+    scales.push({
+      scale,
+      backing: disabled.geometry.backing,
+      alphaSupport: disabled.backing,
+      rawControls: disabled.rawControls,
+      responses,
+      references,
+      exactRepeatedOff: true,
+      screenshots,
+    });
+  }
+  const trueEightX = await auditEightXPowderSolidContactVfxExclusion(cdp, dpr);
+  return { scales, trueEightXExcluded: true, trueEightX };
+}
+
+async function navigatePowderSolidContactVfxState(cdp, mode, scale, enabled, label) {
+  const query = new URLSearchParams({
+    scene: 'render-lab', inputAudit: '1', blankAudit: '1', auditStage: 'blank',
+    powderSolidContactVfxAudit: '1', renderScale: String(scale), renderLook: 'realistic',
+    volumeVfx: '0', liquidBodyVfx: '0', liquidSurfaceVfx: '0', gasBodyVfx: '0',
+    gasMotionVfx: '0', powderBodyVfx: '0', powderLightVfx: '0',
+    powderSolidContactVfx: enabled ? '1' : '0',
+  });
+  await cdp.send('Page.navigate', { url: `${AUDIT_BASE_URL}?${query}` });
+  await waitFor(() => evaluate(cdp, `(() => {
+    const parameters = new URLSearchParams(location.search);
+    return parameters.get('scene') === 'render-lab' && parameters.get('inputAudit') === '1'
+      && parameters.get('blankAudit') === '1' && parameters.get('auditStage') === 'blank'
+      && parameters.get('powderSolidContactVfxAudit') === '1'
+      && parameters.get('renderScale') === ${JSON.stringify(String(scale))}
+      && parameters.get('renderLook') === 'realistic'
+      && parameters.get('volumeVfx') === '0' && parameters.get('liquidBodyVfx') === '0'
+      && parameters.get('liquidSurfaceVfx') === '0' && parameters.get('gasBodyVfx') === '0'
+      && parameters.get('gasMotionVfx') === '0' && parameters.get('powderBodyVfx') === '0'
+      && parameters.get('powderLightVfx') === '0'
+      && parameters.get('powderSolidContactVfx') === ${JSON.stringify(enabled ? '1' : '0')}
+      && typeof window.__ANIFOR_INPUT_AUDIT__?.preparePowderSolidContactVfxAudit === 'function'
+      && typeof window.__ANIFOR_INPUT_AUDIT__?.powderSolidContactVfxFixture === 'function';
+  })()`), 15_000, `E09 ${label} ${scale}x page`);
+  await waitFor(() => evaluate(cdp,
+    `window.__ANIFOR_INPUT_AUDIT__.backend().backend === ${JSON.stringify(mode)}`),
+  15_000, `E09 ${label} ${scale}x backend`);
+  const fixture = await evaluate(cdp, `(async () => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    // RenderLab has a live velocity plane, so a new powder owner begins at
+    // stability zero. Drive seven distinct presentation opportunities rather
+    // than synchronously coalescing fixture writes into one first frame.
+    for (let pass = 0; pass < 7; pass++) {
+      audit.preparePowderSolidContactVfxAudit();
+      await new Promise((resolve) => requestAnimationFrame(() => setTimeout(resolve, 70)));
+    }
+    return audit.powderSolidContactVfxFixture();
+  })()`);
+  await waitFor(() => evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    const fixture = audit.powderSolidContactVfxFixture();
+    const exactRect = (rect, material) => {
+      for (let y = rect.y; y < rect.y + rect.height; y++) for (let x = rect.x; x < rect.x + rect.width; x++) {
+        if (audit.cell(x, y) !== material) return false;
+      }
+      return true;
+    };
+    const moving = fixture.moving;
+    const movingVelocity = audit.velocity(moving.probe.x, moving.probe.y);
+    const expectedTargetStability = ${enabled ? 254 : 255};
+    const contactStateReady = fixture.targets.every((target) => (
+      audit.presentationAuxiliary(target.seam.x, target.seam.y) === expectedTargetStability
+    ));
+    // The categorical marker belongs only to fully settled bulk Powder/Solid
+    // contact. Movement, one-cell structures, and native-wall coexistence must
+    // remain ordinary stability bytes and are exact framebuffer no-ops below.
+    const contactMarkerExcluded = [
+      moving.probe, fixture.fine.probe, fixture.isolated.powder, fixture.wall.probe,
+    ].every((probe) => audit.presentationAuxiliary(probe.x, probe.y) !== 254);
+    return fixture.targets.every((target) => exactRect(target.powder, target.powderMaterial)
+        && exactRect(target.solid, target.solidMaterial))
+      && exactRect(moving.powder, 1) && audit.cell(moving.solid.x, moving.solid.y) !== 0
+      && movingVelocity[0] === moving.velocity[0] && movingVelocity[1] === moving.velocity[1]
+      && audit.cell(fixture.fine.powder.x, fixture.fine.powder.y) !== 0
+      && audit.cell(fixture.isolated.powder.x, fixture.isolated.powder.y) === 1
+      && audit.cell(fixture.wet.probe.x, fixture.wet.probe.y) === 1
+      && audit.wall(fixture.wall.wallPoint.x, fixture.wall.wallPoint.y) === fixture.conductiveWall
+      && audit.cell(fixture.wall.wallPoint.x, fixture.wall.wallPoint.y) !== 0
+      && audit.wall(fixture.wall.probe.x, fixture.wall.probe.y) === fixture.conductiveWall
+      && audit.cell(fixture.unlikePowder.seam.x, fixture.unlikePowder.seam.y) !== 0
+      && audit.cell(fixture.airGap.probe.x, fixture.airGap.probe.y) === 0
+      && contactStateReady && contactMarkerExcluded;
+  })()`), 15_000, `E09 ${label} ${scale}x fixture`);
+  await sleep(350);
+  const hdrPipeline = await evaluate(cdp, `(() => {
+    const canvas = document.querySelector('canvas.semantic-field-canvas');
+    return canvas ? {
+      look: canvas.dataset.renderLook, state: canvas.dataset.hdrPipeline,
+      reason: canvas.dataset.hdrPipelineReason, bloomBacking: canvas.dataset.bloomBacking,
+      volumeVfx: canvas.dataset.volumeVfx, liquidBodyVfx: canvas.dataset.liquidBodyVfx,
+      liquidSurfaceVfx: canvas.dataset.liquidSurfaceVfx, gasBodyVfx: canvas.dataset.gasBodyVfx,
+      gasMotionVfx: canvas.dataset.gasMotionVfx, powderBodyVfx: canvas.dataset.powderBodyVfx,
+      powderLightVfx: canvas.dataset.powderLightVfx,
+      powderSolidContactVfx: canvas.dataset.powderSolidContactVfx,
+    } : undefined;
+  })()`);
+  const expectedBloom = `${WORLD_WIDTH * scale / 2}x${WORLD_HEIGHT * scale / 2}`;
+  assert(hdrPipeline?.look === 'realistic' && hdrPipeline?.state === 'active'
+    && hdrPipeline?.bloomBacking === expectedBloom && hdrPipeline?.volumeVfx === 'inactive'
+    && hdrPipeline?.liquidBodyVfx === 'inactive' && hdrPipeline?.liquidSurfaceVfx === 'inactive'
+    && hdrPipeline?.gasBodyVfx === 'inactive' && hdrPipeline?.gasMotionVfx === 'inactive'
+    && hdrPipeline?.powderBodyVfx === 'inactive' && hdrPipeline?.powderLightVfx === 'inactive'
+    && hdrPipeline?.powderSolidContactVfx === (enabled ? 'active' : 'inactive'),
+  `E09 ${label} ${scale}x HDR/selector state resolved incorrectly (${JSON.stringify(hdrPipeline)})`);
+  const capture = await waitForStablePageCapture(
+    cdp, `E09 ${label} ${scale}x framebuffer`, scale === 4 ? 20_000 : undefined,
+  );
+  return {
+    fixture, capture, geometry: await metrics(cdp), semantic: await hdrVfxSemanticDigest(cdp),
+    backing: await sampleVolumeVfxCanvasAlphaSupport(cdp),
+    rgbDigest: await sampleLiquidSurfaceVfxCanvasRgbDigest(cdp),
+    rawControls: await sampleVolumeVfxRawWorldPixels(cdp, powderSolidContactRawControlPoints(fixture)),
+    hdrPipeline,
+  };
+}
+
+function powderSolidContactTargetRegions(fixture) {
+  return fixture.targets.map((target) => ({
+    name: `${target.code.toLowerCase()}PowderBand`, target: true,
+    x: target.powder.x + target.powder.width / 2, y: target.seam.y - 2,
+    radiusX: target.powder.width / 2 - 8, radiusY: 2.5,
+  }));
+}
+
+function powderSolidContactControlRegions(fixture) {
+  const point = (name, candidate) => ({ name, x: candidate.x, y: candidate.y, radius: 0.35 });
+  return [
+    ...fixture.targets.map((target) => ({
+      name: `${target.code.toLowerCase()}SolidSide`, x: target.seam.x,
+      y: target.solid.y + 7, radiusX: 10, radiusY: 1.5,
+    })),
+    point('moving', fixture.moving.probe), point('fine', fixture.fine.probe),
+    point('isolated', fixture.isolated.powder), point('wet', fixture.wet.probe),
+    point('coLocatedWall', fixture.wall.probe), point('unlikePowder', fixture.unlikePowder.seam),
+    point('airGap', fixture.airGap.probe),
+  ];
+}
+
+function powderSolidContactRawControlPoints(fixture) {
+  return [
+    ...fixture.targets.map((target) => ({ name: `${target.code}SolidSide`,
+      x: target.seam.x, y: target.solid.y + 7 })),
+    { name: 'moving', ...fixture.moving.probe }, { name: 'fine', ...fixture.fine.probe },
+    { name: 'isolated', ...fixture.isolated.powder }, { name: 'wet', ...fixture.wet.probe },
+    { name: 'coLocatedWall', ...fixture.wall.probe },
+    { name: 'unlikePowder', ...fixture.unlikePowder.seam }, { name: 'airGap', ...fixture.airGap.probe },
+  ];
+}
+
+async function writePowderSolidContactVfxScreenshots(source, disabled, enabled) {
+  const paths = {
+    off: variantScreenshotPath(source, 'e09-off'),
+    on: variantScreenshotPath(source, 'e09-on'),
+  };
+  await writeFile(paths.off, Buffer.from(disabled.capture.capture.data, 'base64'));
+  await writeFile(paths.on, Buffer.from(enabled.capture.capture.data, 'base64'));
+  return paths;
+}
+
+async function auditEightXPowderSolidContactVfxExclusion(cdp, dpr) {
+  await setDesktopMetrics(cdp, 1280, 720, dpr);
+  const query = new URLSearchParams({
+    scene: 'render-lab', inputAudit: '1', blankAudit: '1', renderScale: '8',
+    auditStage: 'eight-powder-solid-contact', renderLook: 'realistic',
+    volumeVfx: '0', liquidBodyVfx: '0', liquidSurfaceVfx: '0', gasBodyVfx: '0',
+    gasMotionVfx: '0', powderBodyVfx: '0', powderLightVfx: '0', powderSolidContactVfx: '1',
+  });
+  await cdp.send('Page.navigate', { url: `${AUDIT_BASE_URL}?${query}` });
+  const deadline = Date.now() + EIGHT_X_PRESENTATION_DEADLINE_MS;
+  await waitFor(() => evaluate(cdp, `(() => {
+    const parameters = new URLSearchParams(location.search);
+    return parameters.get('renderScale') === '8' && parameters.get('auditStage') === 'eight-powder-solid-contact'
+      && parameters.get('powderSolidContactVfx') === '1' && Boolean(window.__ANIFOR_INPUT_AUDIT__);
+  })()`), remainingDeadlineMs(deadline, 'true-8x E09 input audit API'), 'true-8x E09 input audit API');
+  const backend = await waitForEightXTerminalBackend(cdp, 'true-8x E09', deadline);
+  assertEightXWebGLBackend(backend, 'true-8x E09');
+  const geometry = await waitForStableCanvas(
+    cdp, 1280, 720, undefined, 45_000, 'true-8x E09 geometry',
+  );
+  assert(geometry.backing.width === WORLD_WIDTH * 8 && geometry.backing.height === WORLD_HEIGHT * 8
+    && geometry.outputScale === '8',
+  `true-8x E09 lost exact backing (${JSON.stringify(geometry.backing)})`);
+  const isolation = await evaluate(cdp, `(() => {
+    const canvas = document.querySelector('canvas.semantic-field-canvas');
+    return canvas ? {
+      renderer: canvas.dataset.renderer, look: canvas.dataset.renderLook,
+      state: canvas.dataset.hdrPipeline, reason: canvas.dataset.hdrPipelineReason,
+      bloomBacking: canvas.dataset.bloomBacking ?? null,
+      powderSolidContactVfx: canvas.dataset.powderSolidContactVfx,
+    } : undefined;
+  })()`);
+  assert(isolation?.renderer === 'semantic-field-webgl' && isolation.look === 'realistic'
+    && isolation.state === 'inactive' && isolation.reason === 'scale-8' && isolation.bloomBacking === null
+    && isolation.powderSolidContactVfx === 'inactive',
+  `true-8x E09 isolation failed (${JSON.stringify(isolation)})`);
+  const timing = await auditWebGLPresentationTiming(cdp, 1, 12_000, 30_000, 1);
+  assert(timing.source === 'gpu-query' || timing.source === 'gpu-fence' || timing.source === 'gpu-finish',
+    `true-8x E09 did not complete GPU work (${JSON.stringify(timing)})`);
+  return { backing: `${geometry.backing.width}x${geometry.backing.height}`, isolation, timing };
+}
+
 function powderLightTargetRegions(fixture) {
   return fixture.cards.flatMap((card) => {
     const centreY = card.body.y + card.body.height / 2;
@@ -22915,7 +23242,7 @@ async function navigatePowderBodyVfxState(cdp, mode, scale, enabled, label) {
     scene: 'render-lab', inputAudit: '1', auditStage: 'canonical',
     powderBodyVfxAudit: '1', renderScale: String(scale), renderLook: 'realistic',
     volumeVfx: '0', liquidBodyVfx: '0', liquidSurfaceVfx: '0',
-    gasBodyVfx: '0', powderBodyVfx: enabled ? '1' : '0',
+    gasBodyVfx: '0', powderBodyVfx: enabled ? '1' : '0', powderSolidContactVfx: '0',
   });
   await cdp.send('Page.navigate', { url: `${AUDIT_BASE_URL}?${query}` });
   await waitFor(() => evaluate(cdp, `(() => {
@@ -22931,11 +23258,42 @@ async function navigatePowderBodyVfxState(cdp, mode, scale, enabled, label) {
       && parameters.get('liquidSurfaceVfx') === '0'
       && parameters.get('gasBodyVfx') === '0'
       && parameters.get('powderBodyVfx') === ${JSON.stringify(enabled ? '1' : '0')}
+      && parameters.get('powderSolidContactVfx') === '0'
+      && typeof window.__ANIFOR_INPUT_AUDIT__?.refreshPresentationFields === 'function'
       && Boolean(window.__ANIFOR_INPUT_AUDIT__);
   })()`), 15_000, `E05 ${label} ${scale}x page`);
   await waitFor(() => evaluate(cdp,
     `window.__ANIFOR_INPUT_AUDIT__.backend().backend === ${JSON.stringify(mode)}`),
   15_000, `E05 ${label} ${scale}x backend`);
+  const stabilityProbes = POWDER_BODY_VFX_TARGET_REGIONS.filter(
+    ({ family }) => family !== 'sand',
+  ).map(
+    ({ x, y }) => ({ x: Math.round(x), y: Math.round(y) }),
+  );
+  // A paused RenderLab does not continuously repack native velocity. Drive
+  // seven separately observed presentation opportunities so the owner frame
+  // plus six allocation-free +48 stability steps reach exact settled byte 255.
+  for (let pass = 0; pass < 7; pass++) {
+    const before = await evaluate(cdp,
+      'window.__ANIFOR_INPUT_AUDIT__.presentationRefreshAudit()');
+    await evaluate(cdp,
+      'window.__ANIFOR_INPUT_AUDIT__.refreshPresentationFields(); true');
+    await waitFor(() => evaluate(cdp, `(() => {
+      const current = window.__ANIFOR_INPUT_AUDIT__.presentationRefreshAudit();
+      return current?.dynamicSequence > ${before.dynamicSequence} ? current : false;
+    })()`), 5_000, `E05 ${label} ${scale}x stability pass ${pass + 1}`);
+  }
+  const stability = await evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    return ${JSON.stringify(stabilityProbes)}.map((probe) => ({
+      ...probe,
+      material: audit.cell(probe.x, probe.y),
+      auxiliary: audit.presentationAuxiliary(probe.x, probe.y),
+      velocity: audit.velocity(probe.x, probe.y),
+    }));
+  })()`);
+  assert(stability.every((probe) => probe.material !== 0 && probe.auxiliary === 255),
+    `E05 ${label} ${scale}x powder did not reach exact settled readiness (${JSON.stringify(stability)})`);
   const hdrPipeline = await evaluate(cdp, `(() => {
     const canvas = document.querySelector('.semantic-field-canvas');
     return canvas ? {

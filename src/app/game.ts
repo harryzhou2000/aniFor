@@ -141,6 +141,9 @@ import {
   POWDER_MESOSTRATA_GRAPHICS_AUDIT, preparePowderMesostrataGraphicsAuditFixture,
 } from './powder-mesostrata-graphics-audit';
 import {
+  POWDER_SOLID_CONTACT_VFX_AUDIT, preparePowderSolidContactVfxAudit,
+} from './powder-solid-contact-vfx-audit';
+import {
   GEOLOGICAL_SOLID_GRAPHICS_AUDIT, prepareGeologicalSolidGraphicsAuditFixture,
 } from './geological-solid-graphics-audit';
 import {
@@ -440,6 +443,7 @@ export class Game {
       atmosphereMotion: (x, y) => this.renderer.atmosphereMotionAt(x, y),
       sourceTarget: (x, y) => this.simulation.configuredSourceTargetAt?.(x, y) ?? Material.Empty,
       presentationAuxiliary: (x, y) => this.renderer.presentationAuxiliaryAt(x, y),
+      refreshPresentationFields: () => this.renderer.invalidateDynamicPresentation(),
       geologicalSolidStylingEnabled: () => this.renderer.geologicalSolidStylingIsEnabled(),
       thermalCatalyticRigidStylingEnabled: () => this.renderer.thermalCatalyticRigidStylingIsEnabled(),
       roleMaterialStylingEnabled: () => this.renderer.roleMaterialStylingIsEnabled(),
@@ -860,6 +864,12 @@ export class Game {
       powderMesostrataGraphicsAtlas: () => POWDER_MESOSTRATA_GRAPHICS_AUDIT,
       preparePowderMesostrataGraphicsFixture: () => {
         preparePowderMesostrataGraphicsAuditFixture(this.simulation);
+        this.renderer.synchronizeFixtureMaterialPlane();
+        this.renderer.invalidateDynamicPresentation();
+      },
+      powderSolidContactVfxFixture: () => POWDER_SOLID_CONTACT_VFX_AUDIT,
+      preparePowderSolidContactVfxAudit: () => {
+        preparePowderSolidContactVfxAudit(this.simulation);
         this.renderer.synchronizeFixtureMaterialPlane();
         this.renderer.invalidateDynamicPresentation();
       },

@@ -56,6 +56,30 @@ describe('slope-aware powder surface field', () => {
     expect(field.bytes.some(Boolean)).toBe(false);
   });
 
+  it('treats the packed 254 powder/solid-contact stability byte exactly like settled 255', () => {
+    const width = 15;
+    const height = 12;
+    const materials = new Uint8Array(width * height);
+    const settled = new Uint8Array(materials.length);
+    const packedContact = new Uint8Array(materials.length);
+    for (let y = 3; y < 9; y++) for (let x = 3; x < 12; x++) {
+      const index = y * width + x;
+      materials[index] = Material.Sand;
+      settled[index] = 255;
+      packedContact[index] = 254;
+    }
+    for (let x = 2; x < 13; x++) materials[9 * width + x] = Material.Brick;
+
+    const legacy = new PowderSurfaceField(width, height, lookups.styleBytes);
+    const contact = new PowderSurfaceField(width, height, lookups.styleBytes);
+    expect(legacy.update(materials, settled)).toBe(true);
+    expect(contact.update(materials, packedContact)).toBe(true);
+
+    expect(contact.hasSurface).toBe(legacy.hasSurface);
+    expect(contact.bytes).toEqual(legacy.bytes);
+    expect(contact.exteriorAirBytes).toEqual(legacy.exteriorAirBytes);
+  });
+
   it('routes native PLUT through powder reconstruction but excludes solid VIBR', () => {
     const width = 9;
     const height = 7;

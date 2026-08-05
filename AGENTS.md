@@ -91,6 +91,12 @@ normal-view visual review. Capability/runtime HDR fallback must disable
 `uPowderBodyVfx`; `FIELD_EIGHT_X_FRAGMENT` must not declare or use it, and true
 8× must report E05 inactive.
 
+A paused RenderLab opts out of continuous dynamic-field repacking. A stable
+PNG therefore does not prove settled-powder readiness: focused gates that need
+the temporal stability byte must explicitly invalidate and observe distinct
+presentation refreshes, then assert byte `255` at authoritative bulk probes
+before capture. Do not replace that condition with an arbitrary sleep.
+
 E06 is the accepted first dry-powder local-light layer, independently measurable
 with `?powderLightVfx=0|1`. Normal 1×–4× WebGL may reuse only the existing centre
 emission sample and the strict E05 deep/dry/stable/authoritative Smooth-body
@@ -156,6 +162,34 @@ and prove E08/HDR inactive, reason `scale-8`, no bloom, exact 4896×3072 WebGL,
 SPNG state, and completed GPU work. Do not declare or branch on E08 in
 `FIELD_EIGHT_X_FRAGMENT`; freeze the accepted amplitude until a new normal-view
 review.
+
+E09 is the accepted first exact Powder/Solid contact-grounding layer,
+independently measurable with `?powderSolidContactVfx=0|1`. It is normal
+1×–4× WebGL Smooth-only work and must remain independent of E05/E06. Reuse the
+existing phase-local r8 boundary/stability plane: while E09 is active, raw byte
+`254` may represent only a logical raw-`255` fully settled authoritative
+ordinary Powder owner with exact Powder owners on both horizontal sides and a
+direct vertical ordinary Solid contact. Source and contacted Solid must be
+trait-free, non-emissive, and free of co-located native walls. Re-expand `254`
+to logical `255` before normal stability evolution and restore it to `1.0` in
+the normal shader before any established powder path consumes it. When E09 is
+disabled, rewrite the reserved Powder marker to ordinary `255`; same-owner
+Liquid/Solid auxiliary bytes remain phase-local and untouched. Native-wall
+changes must invalidate the semantic chunk as well as the wall chunk so the
+marker cannot become stale. Keep the producer's full-grid path allocation-free.
+E09 alone may consume the marker for a restrained world-anchored RGB-only
+response across the authoritative contact cell. Add no GPU sample, texture,
+field, upload, pass, target, persistent allocation, clock, output-scale input,
+alpha/support/silhouette/ownership, or physics decision. Moving/lost-contact
+powder, fine columns, isolated grains, suspension, traits, emission, native
+walls, reconstructed support, Local, and Grains are exact no-ops. Canvas keeps
+the legacy `255` convention and no E09 branch. At true 8×, do not encode the
+marker and do not declare, decode, or branch on E09 in
+`FIELD_EIGHT_X_FRAGMENT`; requested E09 must report inactive with reason
+`scale-8`. `npm run audit:vfx:powder-solid-contact` owns the 1×/2×/4×
+off→on→off matrix, exact protected controls and reference styles, bounded
+3–8-byte absorptive response, exact geometry/topology, and closing 4896×3072
+GPU-fence proof. Freeze the accepted amplitude until a new normal-view review.
 
 ## CodeGraph
 

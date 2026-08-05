@@ -39,6 +39,7 @@ import {
   resolveGasBodyVfxEnabled, resolveGasMotionVfxEnabled, resolveLiquidBodyVfxEnabled,
   resolveLiquidSurfaceVfxEnabled,
   resolvePowderBodyVfxEnabled, resolvePowderLightVfxEnabled, resolveRenderLook,
+  resolvePowderSolidContactVfxEnabled,
   resolveVolumeVfxEnabled,
 } from './render-look';
 interface PresenterViewport { readonly width: number; readonly height: number }
@@ -3209,6 +3210,7 @@ uniform float uGasMotionVfx;
 uniform float uLiquidBodyVfx;
 uniform float uPowderBodyVfx;
 uniform float uPowderLightVfx;
+uniform float uPowderSolidContactVfx;
 uniform float uHighQuality;
 uniform float uAnalyticLightingQuality;
 uniform float uGasFieldLighting;
@@ -5629,6 +5631,7 @@ void main() {
         contourCurvature, phaseContactLight, foreignMatterContact, unlikeMaterialContact
       )))));
   float boundaryStability = 0.0;
+  float powderSolidContactCell = 0.0;
   float liquidOpticalDepth = 0.0;
   float solidOpticalDepth = 0.0;
   float powderSurfaceBlend = 0.0;
@@ -5639,6 +5642,17 @@ void main() {
     boundaryStability = surfaceOnly > 0.5
       ? nearbyPowderStability(fieldUv, material)
       : (halo < 0.5 ? boundaryStabilityAt(fieldUv) : 0.0);
+    // The presenter-owned stability byte reserves exact value 254 for a fully
+    // settled ordinary Powder cell with direct ordinary Solid contact. Decode
+    // the already-live nearest sample before the broad Smooth-body proof; the
+    // Canvas fallback retains its unmodified 255 stability convention.
+    powderSolidContactCell = surfaceOnly < 0.5 && halo < 0.5
+      ? 1.0 - step(0.5, abs(boundaryStability * 255.0 - 254.0)) : 0.0;
+    // All established powder paths continue to see exact settled value 1.0;
+    // only E09 consumes the separately decoded categorical marker.
+    boundaryStability = min(
+      1.0, boundaryStability + powderSolidContactCell * (1.0 / 255.0)
+    );
   } else if (family == 2.0 && liquidOnly < 0.5 && halo < 0.5) {
     // Powder stability and liquid column depth are phase-exclusive occupants
     // of the same already allocated r8 auxiliary texture.
@@ -5802,13 +5816,15 @@ void main() {
   float alpha;
   vec3 color;
   float liquidLightResponse = 0.0;
-  // E06 carries only the smallest three scalars from the strict settled-body
-  // proof to the terminal field-light compositor. Keeping the existing centre
-  // emission sample there avoids another texture read or a branch-local GLSL
-  // value escaping its scope.
+  // E06 carries the deep-body proof used by local light transport. E09 keeps a
+  // separate one-scalar packed resting-contact proof because a rigid floor
+  // cannot satisfy E06's deliberate requirement for two more powder rows below
+  // it. Both reuse already-live presenter state and carry no vectors out of the
+  // powder branch.
   float powderLightBodyGate = 0.0;
   float powderLightBodyDepth = 0.0;
   float powderLightBodySlope = 0.0;
+  float powderSolidContactBodyGate = 0.0;
   vec2 liquidBackdropOffset = vec2(0.0);
   if (wallOnly > 0.5) {
     alpha = smoothstep(0.30, 0.70, density) * 0.96;
@@ -6919,6 +6935,17 @@ void main() {
           ? powderDirectedSlope * 0.070
           : powderDirectedSlope * 0.080;
         powderMacroRelief = powderDirectedRelief * powderVisualCohesion;
+        // The presenter-owned sentinel already proves a fully settled,
+        // ordinary, laterally supported Powder cell at direct ordinary Solid
+        // contact. Keep only the live shader-side ownership/wall/suspension
+        // defenses here; reapplying the linearly sampled broad density field
+        // would make coverage vary with output-scale subpixel position.
+        powderSolidContactBodyGate = powderSolidContactCell
+          * (1.0 - step(0.5, halo))
+          * (1.0 - step(0.5, wall))
+          * (1.0 - step(0.5, wallOnly))
+          * (1.0 - step(0.5, emissionOnly))
+          * (1.0 - step(0.01, powderSuspensionCohesion));
         // Stable two-dimensional bulk gets a coherent family-aware volume from the
         // existing powder field: upper-left key, opposing fill, and dense-core
         // absorption. Exact semantic depth and lateral support remain
@@ -8485,6 +8512,41 @@ void main() {
       lateSuspension * mix(0.96, 1.0, sedimentCompaction)
     );
   }
+  // E09: ground only the authoritative, dry, settled Smooth-powder side of an
+  // exact rigid contact. Its categorical, laterally supported resting-bed proof
+  // is packed into the already-live presenter-owned stability byte without
+  // inheriting E06's deep-body gate.
+  // Two very broad world-anchored mineral planes keep the response from
+  // reading as a flat dark outline while preserving the established local
+  // pigment cadence. Source-space RGB absorption is capped at five bytes
+  // and the composed audit independently bounds the displayed response; alpha,
+  // support, ownership, silhouette, physics, clocks, fields, and resources are
+  // untouched. Local/Grains, motion, fine structure, suspension, traits,
+  // emission, reconstructed support, and co-located native walls remain exact
+  // no-ops through the existing gate.
+  if (uPowderSolidContactVfx > 0.5 && powderSolidContactBodyGate > 0.001) {
+    float powderSolidPlaneA = 1.0 - 2.0 * abs(
+      fract(dot(fieldPosition, vec2(0.0137, 0.0049)) + 0.173) * 2.0 - 1.0
+    );
+    float powderSolidPlaneB = 1.0 - 2.0 * abs(
+      fract(dot(fieldPosition, vec2(-0.0071, 0.0193)) + 0.421) * 2.0 - 1.0
+    );
+    float powderSolidStrata = clamp(
+      0.52 + powderSolidPlaneA * 0.29 + powderSolidPlaneB * 0.19, 0.0, 1.0
+    );
+    float powderSolidDepth = powderSolidContactBodyGate;
+    float powderSolidOcclusion = min(
+      5.0 / 255.0,
+      powderSolidDepth * mix(3.0 / 255.0, 5.0 / 255.0, powderSolidStrata)
+    );
+    vec3 powderSolidAbsorption = mix(
+      vec3(0.70, 0.84, 1.0), vividColor(base, 1.06), 0.10
+    );
+    // A bounded subtractive absorption remains readable on bright Sand and
+    // dark Concrete alike, while preserving their existing local pigment
+    // differences instead of scaling that microcontrast toward zero.
+    color = max(vec3(0.0), color - powderSolidAbsorption * powderSolidOcclusion);
+  }
   if (halo > 0.5 && wallOnly < 0.5 && emissionOnly < 0.5 && surfaceOnly < 0.5
     && gasVolume < 0.5 && liquidVolume < 0.5 && energyCore < 0.5) alpha = volume * 0.52;
   alpha = clamp(alpha, 0.0, 1.0);
@@ -8724,6 +8786,11 @@ export class PixiFieldPresenter {
     // The protected compact shader retains its one established emission sample.
     const powderLightVfxEnabled = outputScale < 8
       && resolvePowderLightVfxEnabled(renderLook);
+    // E09 is arithmetic over the normal shader's existing packed stability
+    // sample. The protected compact true-8x shader deliberately
+    // declares neither its selector nor its contact-depth branch.
+    const powderSolidContactVfxEnabled = outputScale < 8
+      && resolvePowderSolidContactVfxEnabled(renderLook);
     // E04 follows the same normal-detail boundary as E03. The protected true
     // 8x shader deliberately has neither this uniform nor its arithmetic.
     const gasBodyVfxEnabled = outputScale < 8
@@ -8757,6 +8824,9 @@ export class PixiFieldPresenter {
       uLiquidBodyVfx: { value: liquidBodyVfxEnabled ? 1 : 0, type: 'f32' },
       uPowderBodyVfx: { value: powderBodyVfxEnabled ? 1 : 0, type: 'f32' },
       uPowderLightVfx: { value: powderLightVfxEnabled ? 1 : 0, type: 'f32' },
+      uPowderSolidContactVfx: {
+        value: powderSolidContactVfxEnabled ? 1 : 0, type: 'f32',
+      },
       // At 8x, the supersampled analytic boundary already supplies detail. Drop
       // diagonal/ring probes so the 15M-pixel frame remains watchdog-safe.
       uHighQuality: {
@@ -8959,6 +9029,7 @@ export class PixiFieldPresenter {
       this.uniforms.uniforms.uLiquidBodyVfx = 0;
       this.uniforms.uniforms.uPowderBodyVfx = 0;
       this.uniforms.uniforms.uPowderLightVfx = 0;
+      this.uniforms.uniforms.uPowderSolidContactVfx = 0;
       this.app.stage.addChild(this.scene);
     }
   }
@@ -8990,7 +9061,8 @@ export class PixiFieldPresenter {
             || new URLSearchParams(location.search).get('liquidBodyVfxAudit') === '1'
             || new URLSearchParams(location.search).get('liquidSurfaceVfxAudit') === '1'
             || new URLSearchParams(location.search).get('powderBodyVfxAudit') === '1'
-            || new URLSearchParams(location.search).get('powderLightVfxAudit') === '1'),
+            || new URLSearchParams(location.search).get('powderLightVfxAudit') === '1'
+            || new URLSearchParams(location.search).get('powderSolidContactVfxAudit') === '1'),
         resolution: outputScale, autoDensity: true, autoStart: false,
       });
     } catch (error) {
@@ -9028,6 +9100,9 @@ export class PixiFieldPresenter {
       ? 'active' : 'inactive';
     presenter.app.canvas.dataset.powderLightVfx = Number(presenter.uniforms.uniforms.uPowderLightVfx) > 0.5
       ? 'active' : 'inactive';
+    presenter.app.canvas.dataset.powderSolidContactVfx = Number(
+      presenter.uniforms.uniforms.uPowderSolidContactVfx
+    ) > 0.5 ? 'active' : 'inactive';
     if (presenter.hdrPipelineInfo.reason) {
       presenter.app.canvas.dataset.hdrPipelineReason = presenter.hdrPipelineInfo.reason;
     }
@@ -9182,6 +9257,10 @@ export class PixiFieldPresenter {
 
   markWallDirty(index: number): void {
     this.wallChunks.markCell(index);
+    // E09 packs exact ordinary Powder/Solid contact into the existing normal-
+    // scale stability byte. Revisit the same halo when an independent native
+    // wall changes so a 254 marker can neither survive nor appear stale.
+    this.chunks.markCell(index);
     this.fieldSet.markAtmosphereBlockerDirty(index);
     this.powderSurfaceDirty = true;
     this.solidOpticalDepthDirty = true;
@@ -9772,10 +9851,13 @@ export class PixiFieldPresenter {
     if (refreshDynamicFields) this.chunks.markAll();
     const rectangles = this.chunks.consume();
     let boundaryTextureDirty = false;
+    const encodePowderSolidContact = this.outputScale < 8
+      && Number(this.uniforms.uniforms.uPowderSolidContactVfx) > 0.5;
     for (const rect of rectangles) {
       updateBoundaryStabilityRect(
         this.boundaryStabilityBytes, this.boundaryStabilityOwners, materials, velocities,
         this.fieldSet.lookups.styleBytes, this.fieldSource.width, rect, this.boundaryDirtyMarker,
+        encodePowderSolidContact, walls,
       );
       packSemanticRect(this.fieldBytes, this.fieldSource.width, materials, temperatures, velocities, rect);
       if (presentationState) {
@@ -10322,6 +10404,7 @@ export class PixiFieldPresenter {
         this.uniforms.uniforms.uLiquidBodyVfx = 0;
         this.uniforms.uniforms.uPowderBodyVfx = 0;
         this.uniforms.uniforms.uPowderLightVfx = 0;
+        this.uniforms.uniforms.uPowderSolidContactVfx = 0;
         this.app.canvas.dataset.hdrPipeline = 'inactive';
         this.app.canvas.dataset.hdrPipelineReason = 'runtime-error';
         this.app.canvas.dataset.volumeVfx = 'inactive';
@@ -10331,6 +10414,7 @@ export class PixiFieldPresenter {
         this.app.canvas.dataset.liquidSurfaceVfx = 'inactive';
         this.app.canvas.dataset.powderBodyVfx = 'inactive';
         this.app.canvas.dataset.powderLightVfx = 'inactive';
+        this.app.canvas.dataset.powderSolidContactVfx = 'inactive';
         delete this.app.canvas.dataset.bloomBacking;
         if (!this.scene.parent) this.app.stage.addChild(this.scene);
       }

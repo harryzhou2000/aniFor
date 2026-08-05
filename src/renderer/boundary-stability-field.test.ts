@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
+import { Material } from '../shared/materials';
 import {
-  BOUNDARY_STABILITY_STEP, updateBoundaryStabilityRect,
+  BOUNDARY_STABILITY_STEP, POWDER_RELEASE_SPEED, POWDER_SOLID_CONTACT_STABILITY,
+  updateBoundaryStabilityRect,
 } from './boundary-stability-field';
 import { RenderPhase } from './render-profile';
 
@@ -14,6 +16,11 @@ function styles(): Uint8Array {
   result[3 * 4] = RenderPhase.Solid;
   result[4 * 4] = RenderPhase.Liquid;
   result[5 * 4] = RenderPhase.Gas;
+  result[6 * 4] = RenderPhase.Solid;
+  result[7 * 4] = RenderPhase.Solid;
+  result[7 * 4 + 2] = 255;
+  result[8 * 4] = RenderPhase.Solid;
+  result[8 * 4 + 3] = 1;
   return result;
 }
 
@@ -53,6 +60,94 @@ describe('boundary stability field', () => {
     expect(target[center]).toBe(144);
     velocities[center * 2] = 10;
     updateBoundaryStabilityRect(target, previous, materials, velocities, styles(), WIDTH, FULL_RECT);
+    expect(target[center]).toBe(0);
+  });
+
+  it('optionally packs only fully settled ordinary Powder-to-Solid contact as byte 254', () => {
+    const materials = new Uint8Array([
+      0, 1, 0,
+      1, 1, 1,
+      0, 6, 0,
+    ]);
+    const previous = previousField(materials);
+    const target = new Uint8Array(materials.length);
+    const walls = new Uint8Array(materials.length);
+    const center = 1 * WIDTH + 1;
+    const solid = 2 * WIDTH + 1;
+    const styleBytes = styles();
+
+    updateBoundaryStabilityRect(
+      target, previous, materials, undefined, styleBytes, WIDTH, FULL_RECT,
+    );
+    expect(target[center]).toBe(255);
+    updateBoundaryStabilityRect(
+      target, previous, materials, undefined, styleBytes, WIDTH, FULL_RECT, undefined, true, walls,
+    );
+    expect(target[center]).toBe(POWDER_SOLID_CONTACT_STABILITY);
+    updateBoundaryStabilityRect(
+      target, previous, materials, undefined, styleBytes, WIDTH, FULL_RECT, undefined, true, walls,
+    );
+    expect(target[center]).toBe(POWDER_SOLID_CONTACT_STABILITY);
+
+    updateBoundaryStabilityRect(
+      target, previous, materials, undefined, styleBytes, WIDTH, FULL_RECT, undefined, false, walls,
+    );
+    expect(target[center]).toBe(255);
+    updateBoundaryStabilityRect(
+      target, previous, materials, undefined, styleBytes, WIDTH, FULL_RECT, undefined, true, walls,
+    );
+    expect(target[center]).toBe(POWDER_SOLID_CONTACT_STABILITY);
+
+    walls[center] = 1;
+    updateBoundaryStabilityRect(
+      target, previous, materials, undefined, styleBytes, WIDTH, FULL_RECT, undefined, true, walls,
+    );
+    expect(target[center]).toBe(255);
+    walls[center] = 0;
+    updateBoundaryStabilityRect(
+      target, previous, materials, undefined, styleBytes, WIDTH, FULL_RECT, undefined, true, walls,
+    );
+    expect(target[center]).toBe(POWDER_SOLID_CONTACT_STABILITY);
+
+    walls[solid] = 1;
+    updateBoundaryStabilityRect(
+      target, previous, materials, undefined, styleBytes, WIDTH, FULL_RECT, undefined, true, walls,
+    );
+    expect(target[center]).toBe(255);
+    walls[solid] = 0;
+    updateBoundaryStabilityRect(
+      target, previous, materials, undefined, styleBytes, WIDTH, FULL_RECT, undefined, true, walls,
+    );
+    expect(target[center]).toBe(POWDER_SOLID_CONTACT_STABILITY);
+
+    styleBytes[1 * 4 + 2] = 255;
+    updateBoundaryStabilityRect(
+      target, previous, materials, undefined, styleBytes, WIDTH, FULL_RECT, undefined, true, walls,
+    );
+    expect(target[center]).toBe(255);
+    styleBytes[1 * 4 + 2] = 0;
+    styleBytes[1 * 4 + 3] = 1;
+    updateBoundaryStabilityRect(
+      target, previous, materials, undefined, styleBytes, WIDTH, FULL_RECT, undefined, true, walls,
+    );
+    expect(target[center]).toBe(255);
+    styleBytes[1 * 4 + 3] = 0;
+
+    for (const ineligible of [2, Material.Wall, 7, 8]) {
+      materials[2 * WIDTH + 1] = ineligible;
+      updateBoundaryStabilityRect(
+        target, previous, materials, undefined, styleBytes, WIDTH, FULL_RECT, undefined, true, walls,
+      );
+      expect(target[center]).toBe(255);
+    }
+
+    materials[2 * WIDTH + 1] = 6;
+    const velocities = new Int8Array(materials.length * 2);
+    velocities[center * 2] = POWDER_RELEASE_SPEED;
+    target[center] = POWDER_SOLID_CONTACT_STABILITY;
+    updateBoundaryStabilityRect(
+      target, previous, materials, velocities, styleBytes, WIDTH, FULL_RECT, undefined, true, walls,
+    );
     expect(target[center]).toBe(0);
   });
 
