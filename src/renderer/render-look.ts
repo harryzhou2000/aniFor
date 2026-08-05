@@ -273,6 +273,22 @@ export function resolveBotanicalBodyVfxEnabled(
 }
 
 /**
+ * Adds material-scale bark plates and leaf clusters only after E20 has proven
+ * an exact, ordinary Wood/PLNT body. The child selector cannot recreate the
+ * parent body when E20 or its containing HDR look is disabled.
+ */
+export function resolveBotanicalMesostructureVfxEnabled(
+  look: RenderLook,
+  search = globalThis.location?.search ?? '',
+): boolean {
+  if (!resolveBotanicalBodyVfxEnabled(look, search)) return false;
+  const requested = new URLSearchParams(search).get('botanicalMesostructureVfx');
+  if (requested === '0' || requested === 'off' || requested === 'false') return false;
+  if (requested === '1' || requested === 'on' || requested === 'true') return true;
+  return true;
+}
+
+/**
  * Keeps the exact thick-Glass body-transmission experiment independently
  * measurable inside the broader volume study. Normal WebGL owns the strict
  * Glass owner, depth, contact, and topology guards; Canvas and compact true 8x

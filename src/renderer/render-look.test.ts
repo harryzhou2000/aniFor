@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   resolveBotanicalBodyVfxEnabled,
+  resolveBotanicalMesostructureVfxEnabled,
   resolveCeramicGlazeVfxEnabled,
   DEFAULT_RENDER_LOOK, resolveGasBodyVfxEnabled, resolveGasCoreDepthVfxEnabled,
   resolveGasLightVfxEnabled,
@@ -225,6 +226,26 @@ describe('resolveRenderLook', () => {
     )).toBe(true);
     expect(resolveBotanicalBodyVfxEnabled(
       'neon-lab', '?volumeVfx=1&botanicalBodyVfx=false',
+    )).toBe(false);
+  });
+
+  it('keeps Wood/PLNT mesostructure subordinate to the exact E20 body', () => {
+    expect(resolveBotanicalMesostructureVfxEnabled(
+      'classic', '?botanicalMesostructureVfx=1',
+    )).toBe(false);
+    expect(resolveBotanicalMesostructureVfxEnabled('realistic', '')).toBe(true);
+    expect(resolveBotanicalMesostructureVfxEnabled('neon-lab', '')).toBe(true);
+    expect(resolveBotanicalMesostructureVfxEnabled(
+      'realistic', '?volumeVfx=0&botanicalMesostructureVfx=1',
+    )).toBe(false);
+    expect(resolveBotanicalMesostructureVfxEnabled(
+      'realistic', '?volumeVfx=0&botanicalBodyVfx=1&botanicalMesostructureVfx=on',
+    )).toBe(true);
+    expect(resolveBotanicalMesostructureVfxEnabled(
+      'neon-lab', '?botanicalBodyVfx=0&botanicalMesostructureVfx=1',
+    )).toBe(false);
+    expect(resolveBotanicalMesostructureVfxEnabled(
+      'realistic', '?botanicalBodyVfx=1&botanicalMesostructureVfx=off',
     )).toBe(false);
   });
 

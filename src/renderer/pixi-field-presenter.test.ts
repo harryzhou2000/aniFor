@@ -1007,6 +1007,65 @@ describe('Pixi presenter startup configuration', () => {
     expect(source).toContain("this.app.canvas.dataset.botanicalBodyVfx = 'inactive';");
   });
 
+  it('keeps E26 botanical mesostructure subordinate to E20 and resource-neutral', () => {
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const canvasSource = readFileSync(new URL('./field-renderer.ts', import.meta.url), 'utf8');
+    const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');
+    const normalStart = source.indexOf('const FIELD_FRAGMENT = `', eightStart);
+    const normalEnd = source.indexOf('`;\n\n/** Primary WebGL presentation', normalStart);
+    const eight = source.slice(eightStart, normalStart);
+    const normal = source.slice(normalStart, normalEnd);
+    const e20Start = normal.indexOf('      // E20:');
+    const e20End = normal.indexOf('    } else if (radioactiveSurface', e20Start);
+    const e20 = normal.slice(e20Start, e20End);
+    const e26Start = e20.indexOf('        // E26');
+    const preserveDrawingBufferStart = source.indexOf('preserveDrawingBuffer:');
+    const preserveDrawingBufferEnd = source.indexOf(
+      'resolution: outputScale', preserveDrawingBufferStart,
+    );
+    const preserveDrawingBuffer = source.slice(
+      preserveDrawingBufferStart, preserveDrawingBufferEnd,
+    );
+
+    expect(e20Start).toBeGreaterThanOrEqual(0);
+    expect(e20End).toBeGreaterThan(e20Start);
+    expect(e26Start).toBeGreaterThanOrEqual(0);
+    expect(normal).toContain('uniform float uBotanicalMesostructureVfx;');
+    expect(normal.match(/uBotanicalMesostructureVfx > 0\.5/g)).toHaveLength(1);
+    expect(eight).not.toContain('uBotanicalMesostructureVfx');
+    expect(eight).not.toContain('botanicalMesostructureVfx');
+    expect(canvasSource).not.toContain('botanicalMesostructureVfx');
+    expect(e20.indexOf('if (botanicalBodyReplacement > 0.5)')).toBeLessThan(e26Start);
+    expect(e20).toContain(
+      'float botanicalMesostructure = uBotanicalMesostructureVfx > 0.5\n          ? botanicalDepth : 0.0;',
+    );
+    for (const establishedValue of [
+      'botanicalDepth', 'botanicalMacro', 'botanicalCluster',
+      'leafBoundary', 'barkBody', 'barkKnot',
+    ]) expect(e20.slice(e26Start)).toContain(establishedValue);
+    expect(e20.match(/botanicalBodyNoise\(/g)).toHaveLength(3);
+    expect(e20).not.toContain('texture(');
+    expect(e20).not.toContain('uTime');
+    expect(e20).not.toContain('gl_FragCoord');
+    expect(e20).not.toMatch(/\balpha\s*[+*]?=/);
+    expect(source.match(/this\.uniforms\.uniforms\.uBotanicalMesostructureVfx = 0;/g))
+      .toHaveLength(2);
+    expect(source).toMatch(
+      /const botanicalMesostructureVfxEnabled = outputScale < 8\s*&& resolveBotanicalMesostructureVfxEnabled\(renderLook\);/,
+    );
+    expect(source).toContain(
+      'uBotanicalMesostructureVfx: {\n        value: botanicalMesostructureVfxEnabled ? 1 : 0',
+    );
+    expect(source).toContain("get('botanicalMesostructureVfxAudit') === '1'");
+    expect(preserveDrawingBuffer).toContain(
+      "get('botanicalMesostructureVfxAudit') === '1'",
+    );
+    expect(source).toContain('presenter.app.canvas.dataset.botanicalMesostructureVfx');
+    expect(source).toContain(
+      "this.app.canvas.dataset.botanicalMesostructureVfx = 'inactive';",
+    );
+  });
+
   it('keeps E21 thick-Glass transmission exact-owner, normal-WebGL-only, and RGB-only', () => {
     const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
     const canvasSource = readFileSync(new URL('./field-renderer.ts', import.meta.url), 'utf8');

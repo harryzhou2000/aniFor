@@ -344,6 +344,31 @@ The true-8× tail must prove actual WebGL promotion and exact `4896×3072`, whil
 E04/E15/E25/HDR report inactive with reason `scale-8`; a separate
 post-promotion GPU fence must complete and report its timing source.
 
+E26 is an independently measurable exact-Wood/PLNT mesostructure card, selected
+by `?botanicalMesostructureVfx=0|1` and strictly subordinate to E20's body
+eligibility. Normal WebGL 1×–4× is its only path. Exact ordinary Wood `9`
+(`traits == 96`) and PLNT `10` (`traits == 32`) reuse only `botanicalDepth`,
+`botanicalMacro`, `botanicalCluster`, and existing `barkBody`/`knot` evidence:
+PLNT receives smooth 6.5-cell lobe/vein contours and near-luminance-neutral
+chlorophyll/young-growth pigment, while Wood receives irregular longitudinal
+bark plates/fissures and warm/umber pigment. It adds no noise, sample, texture,
+field, pass, resource, time, alpha/support/state/topology, or physics decision.
+
+The focused `npm run audit:vfx:botanical-mesostructure` gate runs 1×/2×/4×
+off→on→off and protects sparse/thin owners, holes/notches, walls, contacts,
+VINE/Wax/Metal, Canvas, compact true 8×, and inherited cyan/magenta lifecycle
+state. The final canonical 2× result is Wood micro/chroma/macro
+`1.50`/`.69`/`21` and Plant `1.51`/`.93`/`28`, with support recall/component
+count `1` and dark/clipped fractions `0`; Organic improves `2.463 → 33.569`
+(Wood `33.569`, Plant `48.031`). The family averages micro `1.505`, chroma
+`.81`, and macro `24.5`. Smoke softness (`gasSmoke`, `4.546`) is now the global
+weakest diagnosis and requires a bounded experiment, not another generic gas
+layer. The accepted full matrix keeps all 30 protected controls exact at
+1×/2×/4×, repeats the disabled framebuffer byte-for-byte, and preserves 1,568
+native-wall cells plus the 3,840-cell lifecycle plane. Its requested-on 8× tail
+observes exact 4896×3072 WebGL promotion, E20/E26/HDR exclusion with reason
+`scale-8`, and a real `5607.1 ms` GPU fence with zero browser errors.
+
 HEAC, PTNM, and RSSS now receive a second exact-owner deep rigid-body layer:
 the rapid heat conductor has restrained warm channel lamellae, Platinum uses
 cool catalytic planes with sparse active sites, and solidified resist gains a

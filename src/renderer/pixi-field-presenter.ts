@@ -39,6 +39,7 @@ import { sampleCanvasFieldAlpha } from './canvas-surface-light';
 import { HDRVfxPipeline, type HDRPipelineInfo } from './hdr-vfx-pipeline';
 import {
   resolveBotanicalBodyVfxEnabled,
+  resolveBotanicalMesostructureVfxEnabled,
   resolveGlassBodyVfxEnabled,
   resolveGasBodyVfxEnabled, resolveGasCoreDepthVfxEnabled, resolveGasLightVfxEnabled,
   resolveGasMotionVfxEnabled,
@@ -3240,6 +3241,7 @@ uniform float uRockRoughnessVfx;
 uniform float uPlatinumBodyVfx;
 uniform float uCeramicGlazeVfx;
 uniform float uBotanicalBodyVfx;
+uniform float uBotanicalMesostructureVfx;
 uniform float uGlassBodyVfx;
 uniform float uLiquidBodyVfx;
 uniform float uOilBodyVfx;
@@ -8350,6 +8352,14 @@ void main() {
           solidReliefTone * 255.0 / 6.0, -1.0, 1.0
         );
         float botanicalGrazing = smoothstep(0.018, 0.18, solidFresnel);
+        // E26 is a child of the already-proven E20 body. It strengthens only
+        // material-scale pigment/relief organization: irregular leaf lobes and
+        // veins for PLNT, broken bark plates/fissures for Wood. Reuse E20's two
+        // value-noise octaves and exact body weight; no additional noise call,
+        // sample, texture, field, pass, target, clock, alpha, support, state,
+        // topology, or physics decision is introduced.
+        float botanicalMesostructure = uBotanicalMesostructureVfx > 0.5
+          ? botanicalDepth : 0.0;
         if (material == 10.0) {
           float leafBody = clamp(
             (botanicalMacro - 0.5) * 1.18
@@ -8374,6 +8384,25 @@ void main() {
             * botanicalDepth;
           color += vec3(-0.006, 0.014, -0.004)
             * leafBoundary * botanicalDepth;
+          float leafPigment = clamp(
+            (botanicalCluster - 0.5) * 2.20
+              + (botanicalMacro - 0.5) * 0.55,
+            -1.0, 1.0
+          );
+          float leafPigmentCrown = max(leafPigment, 0.0);
+          float leafPigmentPocket = max(-leafPigment, 0.0);
+          float leafVein = 1.0 - smoothstep(0.055, 0.19, abs(leafPigment));
+          color *= 1.0 - (leafPigmentPocket * 0.032 + leafVein * 0.075)
+            * botanicalMesostructure;
+          color += (vec3(1.0) - clamp(color, 0.0, 1.0))
+            * vec3(0.16, 0.20, 0.12)
+            * (leafPigmentCrown * 0.120 + leafVein * 0.026)
+            * botanicalMesostructure;
+          // Shift alternating lobes between cool chlorophyll and warm young
+          // growth with a nearly luminance-neutral key. This keeps E20's broad
+          // crown/pocket volume while making the 6.5-cell clusters legible.
+          color += vec3(-0.052, 0.021, -0.064) * leafPigment
+            * botanicalMesostructure;
         } else {
           float barkWarp = botanicalBodyNoise(vec2(
             fieldPosition.x * 0.050 + botanicalMacro * 0.82,
@@ -8399,6 +8428,27 @@ void main() {
                 * (barkCrown * 0.080 + botanicalGrazing * 0.040)
               + solidEnvironment * (0.026 + botanicalGrazing * 0.060))
             * botanicalDepth;
+          float barkPlate = clamp(
+            barkBody * 1.14 + (botanicalMacro - 0.5) * 0.34,
+            -1.0, 1.0
+          );
+          float barkPlateCrown = max(barkPlate, 0.0);
+          float barkPlatePocket = max(-barkPlate, 0.0);
+          float barkFissure = 1.0 - smoothstep(
+            0.045, 0.18,
+            abs(barkBody + (botanicalMacro - 0.5) * 0.28)
+          );
+          color *= 1.0 - (barkPlatePocket * 0.065 + barkFissure * 0.125)
+            * botanicalMesostructure;
+          color += (vec3(1.0) - clamp(color, 0.0, 1.0))
+            * vec3(0.20, 0.16, 0.09)
+            * (barkPlateCrown * 0.210 + barkKnot * 0.060)
+            * botanicalMesostructure;
+          // Broken plates alternate warm and umber pigment independently of
+          // their shallow lighting, avoiding both a flat cylinder and regular
+          // one-cell scanlines.
+          color += vec3(0.050, -0.012, -0.026) * barkPlate
+            * botanicalMesostructure;
         }
       }
     } else if (radioactiveSurface > 0.5 || (optics < 0.5 && profile == 4.0)) {
@@ -9783,6 +9833,11 @@ export class PixiFieldPresenter {
     // its established botanical grammar and declares no E20 selector.
     const botanicalBodyVfxEnabled = outputScale < 8
       && resolveBotanicalBodyVfxEnabled(renderLook);
+    // E26 is arithmetic over E20's exact body and two existing noise octaves.
+    // Canvas and compact true 8x keep their established botanical grammar and
+    // declare neither this selector nor a parallel branch.
+    const botanicalMesostructureVfxEnabled = outputScale < 8
+      && resolveBotanicalMesostructureVfxEnabled(renderLook);
     // E21 replaces only normal-WebGL's deep exact-Glass body grade. The
     // compact true-8x shader retains its separately proven transmission path
     // and deliberately declares neither this selector nor its arithmetic.
@@ -9833,6 +9888,9 @@ export class PixiFieldPresenter {
       uPlatinumBodyVfx: { value: platinumBodyVfxEnabled ? 1 : 0, type: 'f32' },
       uCeramicGlazeVfx: { value: ceramicGlazeVfxEnabled ? 1 : 0, type: 'f32' },
       uBotanicalBodyVfx: { value: botanicalBodyVfxEnabled ? 1 : 0, type: 'f32' },
+      uBotanicalMesostructureVfx: {
+        value: botanicalMesostructureVfxEnabled ? 1 : 0, type: 'f32',
+      },
       uGlassBodyVfx: { value: glassBodyVfxEnabled ? 1 : 0, type: 'f32' },
       uLiquidBodyVfx: { value: liquidBodyVfxEnabled ? 1 : 0, type: 'f32' },
       uOilBodyVfx: { value: oilBodyVfxEnabled ? 1 : 0, type: 'f32' },
@@ -10058,6 +10116,7 @@ export class PixiFieldPresenter {
       this.uniforms.uniforms.uPlatinumBodyVfx = 0;
       this.uniforms.uniforms.uCeramicGlazeVfx = 0;
       this.uniforms.uniforms.uBotanicalBodyVfx = 0;
+      this.uniforms.uniforms.uBotanicalMesostructureVfx = 0;
       this.uniforms.uniforms.uGlassBodyVfx = 0;
       this.uniforms.uniforms.uLiquidBodyVfx = 0;
       this.uniforms.uniforms.uOilBodyVfx = 0;
@@ -10106,6 +10165,7 @@ export class PixiFieldPresenter {
             || new URLSearchParams(location.search).get('platinumBodyVfxAudit') === '1'
             || new URLSearchParams(location.search).get('ceramicGlazeVfxAudit') === '1'
             || new URLSearchParams(location.search).get('botanicalBodyVfxAudit') === '1'
+            || new URLSearchParams(location.search).get('botanicalMesostructureVfxAudit') === '1'
             || new URLSearchParams(location.search).get('glassBodyVfxAudit') === '1'
             || new URLSearchParams(location.search).get('oilBodyVfxAudit') === '1'
             || new URLSearchParams(location.search).get('waterBodyVfxAudit') === '1'
@@ -10172,6 +10232,9 @@ export class PixiFieldPresenter {
     ) > 0.5 ? 'active' : 'inactive';
     presenter.app.canvas.dataset.botanicalBodyVfx = Number(
       presenter.uniforms.uniforms.uBotanicalBodyVfx
+    ) > 0.5 ? 'active' : 'inactive';
+    presenter.app.canvas.dataset.botanicalMesostructureVfx = Number(
+      presenter.uniforms.uniforms.uBotanicalMesostructureVfx
     ) > 0.5 ? 'active' : 'inactive';
     presenter.app.canvas.dataset.glassBodyVfx = Number(
       presenter.uniforms.uniforms.uGlassBodyVfx
@@ -11583,6 +11646,7 @@ export class PixiFieldPresenter {
         this.uniforms.uniforms.uPlatinumBodyVfx = 0;
         this.uniforms.uniforms.uCeramicGlazeVfx = 0;
         this.uniforms.uniforms.uBotanicalBodyVfx = 0;
+        this.uniforms.uniforms.uBotanicalMesostructureVfx = 0;
         this.uniforms.uniforms.uGlassBodyVfx = 0;
         this.uniforms.uniforms.uLiquidBodyVfx = 0;
         this.uniforms.uniforms.uOilBodyVfx = 0;
@@ -11608,6 +11672,7 @@ export class PixiFieldPresenter {
         this.app.canvas.dataset.platinumBodyVfx = 'inactive';
         this.app.canvas.dataset.ceramicGlazeVfx = 'inactive';
         this.app.canvas.dataset.botanicalBodyVfx = 'inactive';
+        this.app.canvas.dataset.botanicalMesostructureVfx = 'inactive';
         this.app.canvas.dataset.glassBodyVfx = 'inactive';
         this.app.canvas.dataset.liquidBodyVfx = 'inactive';
         this.app.canvas.dataset.oilBodyVfx = 'inactive';

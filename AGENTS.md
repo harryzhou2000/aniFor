@@ -13,7 +13,7 @@ powder, solid, liquid, gas, energy, and contact scenes across Canvas and WebGL a
 mobile gestures, save/load, CI, and Pages deployment as protected regression
 contracts rather than the primary feature stream.
 
-The accepted visual experiment ladder now runs through E25. E12 is the
+The accepted visual experiment ladder now runs through E26. E12 is the
 species-safe Sand/Clay/Concrete wet-sediment checkpoint; preserve its exact
 aqueous owner/stability proof, split moving-powder/stationary-Water control,
 Local/Grains no-op, fine structures, authored gaps, Canvas fallback, and true
@@ -290,6 +290,27 @@ report E04/E15/E25/HDR inactive with reason `scale-8`, exact 4896×3072,
 completed GPU-fence timing, and zero browser errors. Never declare or branch on
 E25 in `FIELD_EIGHT_X_FRAGMENT`; Canvas contains no E25 path.
 
+E26 is the calibrated normal-WebGL-only exact-Wood/PLNT mesostructure
+checkpoint, independently measurable with `?botanicalMesostructureVfx=0|1`
+and subordinate to E20's body eligibility. Only ordinary authoritative Wood
+`9` (`traits == 96`) and PLNT `10` (`traits == 32`) that inherit E20's body
+proof may reuse `botanicalDepth`, `botanicalMacro`, `botanicalCluster`, and the
+existing `barkBody`/`knot` evidence. PLNT gains smooth 6.5-cell lobe/vein
+contours with near-luminance-neutral chlorophyll/young-growth pigment; Wood
+gains irregular longitudinal bark plates/fissures with warm/umber pigment. Add
+no noise, sample, texture, field, pass, resource, time, alpha, support, state,
+topology, or physics decision. Sparse/thin bodies, holes/notches, walls,
+contacts, VINE/Wax/Metal, Canvas, and compact true 8× retain their established
+paths; inherited cyan/magenta lifecycle state remains exact. Validate with
+`npm run audit:vfx:botanical-mesostructure` at 1×/2×/4× off→on→off, followed
+by the requested-on true-8× exclusion. The accepted full matrix keeps all 30
+named topology/contact/foreign-owner controls exact, the repeated-off
+framebuffer byte-identical, 1,568 native-wall cells and 3,840 lifecycle-state
+cells unchanged, and the four broad body probes bipolar and material-distinct.
+Its true-8× tail observed exact 4896×3072 WebGL promotion and a real GPU fence
+at `5607.1 ms`, with E20/E26/HDR inactive for reason `scale-8` and zero browser
+errors.
+
 The radioactive-solid review found no current correctness bug: ISZS `105`
 and VIBR `113` already receive exact-species Solid depth, while the existing
 seven-owner radioactive identity motif is intentionally phase-permissive.
@@ -339,11 +360,12 @@ rerank is Organic `2.463`, Gas `4.546` (now weakest `gasSmoke`, softness), Solid
 semantics and field masks are invariant at 1×/2×/4×; semantic/atmosphere probes
 have full screenshot recall and Plasma recall remains at least `0.984`. A
 single-scale diagnostic must report `crossScaleVerified=false` and null spread.
-The post-E25 evidence is a canonical 2× rerank, not yet a replacement full
-cross-scale rank. It closes the ranked Noble Gas defect and selects exact
-Wood/Plant mesostructure as the next review target. Treat Smoke softness as a
-separate runner-up diagnosis, not permission to add another family-wide gas
-layer.
+E26's final canonical 2× result raises Organic from `2.463` to `33.569`: Wood
+micro/chroma/macro is `1.50`/`.69`/`21` and Plant's is `1.51`/`.93`/`28`, with
+support recall/component count `1` and dark/clipped fractions `0`. The family
+average is micro `1.505`, chroma `.81`, and macro `24.5`. Smoke softness
+(`gasSmoke`, `4.546`) is now the global weakest diagnosis and needs its own
+bounded experiment, never a generic gas layer.
 
 WebGL is the canonical visual release path. Canvas 2D remains a resilient,
 camera-preserving semantic fallback: keep its loading, input, material/state,

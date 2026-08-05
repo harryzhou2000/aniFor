@@ -339,11 +339,22 @@ does not alter simulation, camera, semantic ownership, or `renderScale`.
   texture, field, resource, pass, target, upload, allocation, clock,
   output-scale input, alpha, support, silhouette,
   ownership, topology, state, or physics decision.
+- **E26 — exact Wood/PLNT mesostructure (accepted checkpoint):** normal
+  1×–4× WebGL now uses `?botanicalMesostructureVfx=0|1` only as a child of
+  E20's exact ordinary Wood `9` (`traits == 96`) and PLNT `10` (`traits == 32`)
+  body eligibility. It reuses `botanicalDepth`, `botanicalMacro`,
+  `botanicalCluster`, and existing `barkBody`/`knot`: PLNT gets smooth
+  6.5-cell lobe/vein contours with near-luminance-neutral chlorophyll/young-
+  growth pigment, while Wood gets irregular longitudinal bark plates/fissures
+  with warm/umber pigment. Sparse/thin owners, holes/notches, walls, contacts,
+  VINE/Wax/Metal, lifecycle cyan/magenta state, Canvas, and compact true 8×
+  remain controls. E26 adds no noise, sample, texture, field, pass, resource,
+  time, alpha/support/state/topology, or physics decision.
 - **Protected 8× rung:** `renderScale=8` deliberately reports
   `hdrPipeline=inactive` / `scale-8` and retains the proven direct single-mesh
   4896×3072 path. The experiment must earn a bounded 8× design rather than
   allocating a 115 MiB full-resolution float target beside that path.
-- **Current decision:** E01/E02/E03/E04/E05/E06/E07/E08/E09/E10/E11/E12/E13/E14/E15/E16/E17/E18/E19/E20/E21/E22/E23/E24/E25 remain opt-in through the non-Classic looks
+- **Current decision:** E01/E02/E03/E04/E05/E06/E07/E08/E09/E10/E11/E12/E13/E14/E15/E16/E17/E18/E19/E20/E21/E22/E23/E24/E25/E26 remain opt-in through the non-Classic looks
   until representative hardware timing and mobile thermal behavior are
   measured. E02 remains the safe family-wide baseline. E03 is accepted as the
   liquid-depth checkpoint: its fit-view crop is visibly more cohesive, retains
@@ -923,6 +934,21 @@ HDR inactive with reason `scale-8`; a separate post-promotion GPU fence
 completed in about `5.26 s` in the final accepted full matrix, with zero browser
 errors.
 
+Run `npm run audit:vfx:botanical-mesostructure` for E26. It verifies
+`botanicalMesostructureVfx=0 → 1 → 0` at 1×/2×/4× under E20's existing body
+proof, with sparse/thin owners, authored holes/notches, walls, contacts,
+VINE/Wax/Metal, Canvas, and compact true 8× protected. Lifecycle inherited
+cyan/magenta PLNT state remains exact. The final canonical 2× result is Wood
+micro/chroma/macro `1.50`/`.69`/`21` and Plant `1.51`/`.93`/`28`; support recall
+and component count are `1`, with dark/clipped fractions `0`. Organic quality
+is `33.569` (from `2.463`), with family-average micro/chroma/macro
+`1.505`/`.81`/`24.5`. The accepted full 1×/2×/4× matrix keeps all 30 named
+controls exact, repeats the disabled framebuffer byte-for-byte, preserves the
+1,568-cell wall and 3,840-cell lifecycle planes, and retains bipolar,
+downsample-stable, material-distinct body spectra. Requested-on true 8× excludes
+E26 after observed exact 4896×3072 WebGL promotion and a `5607.1 ms` GPU fence,
+with zero browser errors.
+
 The earlier post-E16 survey was invalid for Solid: it sampled native Stone `21`,
 which is Powder, while labelling that region Solid. The corrected post-E17
 showcase uses native ROCK `78`, asserts exactly `2769` matching Solid cells, and
@@ -978,12 +1004,13 @@ next production 4× survey then selected Wood/PLNT as the largest remaining
   `0.984`. E25 closes that exact target: a fresh canonical 2× rerank raises
   `gasNoble` from `2.454` to `4.609`, shifts Gas to `4.546` with `gasSmoke`
   softness now its weakest probe, and leaves Organic `2.463` as the global
-  weakest family. Exact Wood/Plant mesostructure is therefore the next ranked
-  review target. Do not widen E17–E25 owner sets by resemblance alone or stack
+  weakest family. E26 then raises Organic to `33.569` (Wood `33.569`, Plant
+  `48.031`) in the final canonical 2× run, making Smoke softness the global
+  weakest diagnosis. Do not widen E17–E26 owner sets by resemblance alone or stack
   another generic gas layer over E04/E07/E13/E15; preserve their independent
   owner, exposure, topology, scale, and true-8× contracts.
 
-**Next visual experiments:** E03–E25 now provide accepted liquid body/surface,
+**Next visual experiments:** E03–E26 now provide accepted liquid body/surface,
 stable-gas, coherent-gas-motion, powder-depth, and powder-local-light
 checkpoints plus exact resting contact grounding, Glass/Ice transmission, and
 state-aware Wax/PLNT subsurface response, composed wet-mineral optics,
@@ -993,10 +1020,10 @@ ROCK/Metal opaque-body relief, a distinct broad Platinum finish, an exact
 Ceramic fired-glaze response, recomposed clustered Wood/PLNT bodies, and deep
 Glass selective transmission, exact Oil amber-crown/cool-pocket body optics,
 an exact ROCK matte-body correction over E17, lower-anisotropy exact-Water
-depth-light recomposition, and exact Noble Gas pearlescent billow depth. E25's
-full 1×/2×/4× off→on→off matrix and real 4896×3072 exclusion gate are accepted;
-the post-E25 rank selects exact Wood/Plant mesostructure as the next card. Smoke
-softness is the runner-up diagnosis, but it requires its own bounded fit-view
+depth-light recomposition, exact Noble Gas pearlescent billow depth, and exact
+Wood/PLNT mesostructure. E26's final canonical 2× result raises Organic to
+`33.569`. Smoke softness is now the global weakest diagnosis, but it requires
+its own bounded fit-view
 experiment rather than another generic gas layer. The radioactive-solid review
 found no current identity bug, but also
 proved that the existing
@@ -1006,8 +1033,8 @@ with topology-preserving, material-
 specific cards that reuse already-live evidence. Prefer the smallest
 arithmetic-only candidate that fixes a visible fit-view deficiency; do not add
 an isolated tint merely to continue the experiment number. Preserve the E14
-1× stencil snap and all E01–E25 selectors and controls while designing the
-next exact organic card.
+1× stencil snap and all E01–E26 selectors and controls while designing that
+bounded Smoke card.
 
 ## Phase 1 — HDR pipeline & lighting core (biggest visual payoff)
 
