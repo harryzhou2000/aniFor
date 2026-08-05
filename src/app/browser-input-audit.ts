@@ -46,6 +46,7 @@ import type { WifiStateGraphicsAuditSnapshot } from './wifi-state-graphics-audit
 import type { PowderMesostrataGraphicsAuditSnapshot } from './powder-mesostrata-graphics-audit';
 import type { PowderSolidContactVfxAuditSnapshot } from './powder-solid-contact-vfx-audit';
 import type { TranslucentEdgeVfxAuditSnapshot } from './translucent-edge-vfx-audit';
+import type { OrganicSubsurfaceVfxAuditSnapshot } from './organic-subsurface-vfx-audit';
 import type { GeologicalSolidGraphicsAuditSnapshot } from './geological-solid-graphics-audit';
 import type {
   ThermalCatalyticRigidGraphicsAuditSnapshot,
@@ -260,6 +261,8 @@ export interface BrowserInputAuditApi {
   preparePowderSolidContactVfxAudit(): void;
   translucentEdgeVfxFixture(): TranslucentEdgeVfxAuditSnapshot;
   prepareTranslucentEdgeVfxAudit(): void;
+  organicSubsurfaceVfxFixture(): OrganicSubsurfaceVfxAuditSnapshot;
+  prepareOrganicSubsurfaceVfxAudit(): void;
   geologicalSolidGraphicsAtlas(): GeologicalSolidGraphicsAuditSnapshot;
   prepareGeologicalSolidGraphicsFixture(): void;
   thermalCatalyticRigidGraphicsAtlas(): ThermalCatalyticRigidGraphicsAuditSnapshot;

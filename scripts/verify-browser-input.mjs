@@ -177,10 +177,17 @@ const translucentEdgeVfxOnly = process.argv.includes('--translucent-edge-vfx-onl
 if (translucentEdgeVfxOnly && (modes.length !== 1 || modes[0] !== 'webgl')) {
   throw new Error('--translucent-edge-vfx-only requires --webgl-only');
 }
+// E11 is a normal-detail HDR organic-body experiment. Its browser gate owns
+// every selector so the WAX/PLNT response has no inherited volume ambiguity.
+const organicSubsurfaceVfxOnly = process.argv.includes('--organic-subsurface-vfx-only');
+if (organicSubsurfaceVfxOnly && (modes.length !== 1 || modes[0] !== 'webgl')) {
+  throw new Error('--organic-subsurface-vfx-only requires --webgl-only');
+}
 if ([hdrVfxOnly, volumeVfxOnly, liquidBodyVfxOnly, liquidSurfaceVfxOnly, gasBodyVfxOnly,
-  gasMotionVfxOnly, powderBodyVfxOnly, powderLightVfxOnly, powderSolidContactVfxOnly, translucentEdgeVfxOnly]
+  gasMotionVfxOnly, powderBodyVfxOnly, powderLightVfxOnly, powderSolidContactVfxOnly,
+  translucentEdgeVfxOnly, organicSubsurfaceVfxOnly]
   .filter(Boolean).length > 1) {
-  throw new Error('HDR/volume/liquid-body/liquid-surface/gas-body/gas-motion/powder-body/powder-light/powder-solid-contact/translucent-edge focused audits are mutually exclusive');
+  throw new Error('HDR/volume/liquid-body/liquid-surface/gas-body/gas-motion/powder-body/powder-light/powder-solid-contact/translucent-edge/organic-subsurface focused audits are mutually exclusive');
 }
 const layoutOnly = process.argv.includes('--layout-only');
 const visualScaleMatrixNormalOnly = process.argv.includes('--visual-scale-matrix-normal-only');
@@ -264,7 +271,7 @@ const liveScaleOnly = process.argv.includes('--live-scale-only');
 const productionBundle = process.argv.includes('--production-bundle');
 const usesProductionBundle = productionBundle || showcaseScreenshotOnly || hdrVfxOnly || volumeVfxOnly
   || liquidBodyVfxOnly || liquidSurfaceVfxOnly || gasBodyVfxOnly || gasMotionVfxOnly
-  || powderBodyVfxOnly || powderLightVfxOnly || powderSolidContactVfxOnly || translucentEdgeVfxOnly || cellularGraphicsOnly || sensorGraphicsOnly
+  || powderBodyVfxOnly || powderLightVfxOnly || powderSolidContactVfxOnly || translucentEdgeVfxOnly || organicSubsurfaceVfxOnly || cellularGraphicsOnly || sensorGraphicsOnly
   || unusualPowderGraphicsOnly || earthenPowderGraphicsOnly || explosivePowderGraphicsOnly || unusualSolidGraphicsOnly
   || deviceIdentityGraphicsOnly
   || fieldProfileGraphicsOnly
@@ -311,6 +318,8 @@ const powderLightVfxArgument = process.argv.find((argument) => argument.startsWi
   ?.slice('--powder-light-vfx='.length);
 const translucentEdgeVfxArgument = process.argv.find((argument) => argument.startsWith('--translucent-edge-vfx='))
   ?.slice('--translucent-edge-vfx='.length);
+const organicSubsurfaceVfxArgument = process.argv.find((argument) => argument.startsWith('--organic-subsurface-vfx='))
+  ?.slice('--organic-subsurface-vfx='.length);
 const requireHdrPipeline = process.argv.includes('--require-hdr-pipeline');
 const renderScaleArgument = process.argv.find((argument) => argument.startsWith('--render-scale='))
   ?.slice('--render-scale='.length);
@@ -342,6 +351,9 @@ if (powderLightVfxArgument !== undefined && !['0', '1', 'off', 'on'].includes(po
 }
 if (translucentEdgeVfxArgument !== undefined && !['0', '1', 'off', 'on'].includes(translucentEdgeVfxArgument)) {
   throw new Error('--translucent-edge-vfx must be 0, 1, off, or on');
+}
+if (organicSubsurfaceVfxArgument !== undefined && !['0', '1', 'off', 'on'].includes(organicSubsurfaceVfxArgument)) {
+  throw new Error('--organic-subsurface-vfx must be 0, 1, off, or on');
 }
 if (volumeVfxOnly && volumeVfxArgument !== undefined) {
   throw new Error('--volume-vfx-only owns its off -> on -> off sequence; omit --volume-vfx');
@@ -454,8 +466,19 @@ if (powderSolidContactVfxOnly && (volumeVfxArgument !== undefined || liquidBodyV
 if (translucentEdgeVfxOnly && (volumeVfxArgument !== undefined || liquidBodyVfxArgument !== undefined
   || liquidSurfaceVfxArgument !== undefined || gasBodyVfxArgument !== undefined || gasMotionVfxArgument !== undefined
   || powderBodyVfxArgument !== undefined || powderLightVfxArgument !== undefined
-  || translucentEdgeVfxArgument !== undefined)) {
+  || translucentEdgeVfxArgument !== undefined || organicSubsurfaceVfxArgument !== undefined)) {
   throw new Error('--translucent-edge-vfx-only pins all VFX selectors and owns its off -> on -> off sequence; omit overrides');
+}
+if (organicSubsurfaceVfxOnly && (volumeVfxArgument !== undefined || liquidBodyVfxArgument !== undefined
+  || liquidSurfaceVfxArgument !== undefined || gasBodyVfxArgument !== undefined || gasMotionVfxArgument !== undefined
+  || powderBodyVfxArgument !== undefined || powderLightVfxArgument !== undefined
+  || translucentEdgeVfxArgument !== undefined || organicSubsurfaceVfxArgument !== undefined)) {
+  throw new Error('--organic-subsurface-vfx-only pins all VFX selectors and owns its off -> on -> off sequence; omit overrides');
+}
+if ((hdrVfxOnly || volumeVfxOnly || liquidBodyVfxOnly || liquidSurfaceVfxOnly || gasBodyVfxOnly
+  || gasMotionVfxOnly || powderBodyVfxOnly || powderLightVfxOnly || powderSolidContactVfxOnly
+  || translucentEdgeVfxOnly) && organicSubsurfaceVfxArgument !== undefined) {
+  throw new Error('E01-E10 focused audits pin organicSubsurfaceVfx=0; omit --organic-subsurface-vfx');
 }
 if (renderScaleArgument !== undefined && !['1', '2', '4', '8'].includes(renderScaleArgument)) {
   throw new Error('--render-scale must be 1, 2, 4, or 8');
@@ -480,6 +503,9 @@ if (powderSolidContactVfxOnly && renderScaleArgument === '8') {
 }
 if (translucentEdgeVfxOnly && renderScaleArgument === '8') {
   throw new Error('--translucent-edge-vfx-only is a normal-detail 1x/2x/4x experiment');
+}
+if (organicSubsurfaceVfxOnly && renderScaleArgument === '8') {
+  throw new Error('--organic-subsurface-vfx-only is a normal-detail 1x/2x/4x experiment');
 }
 const captureDpr = captureDprArgument === undefined ? undefined : Number(captureDprArgument);
 if (captureDpr !== undefined && captureDpr !== 1 && captureDpr !== 2) {
@@ -555,7 +581,7 @@ async function main() {
     for (const mode of modes) results.push(await auditMode(mode));
     const reducedAudit = quickScreenshot || showcaseScreenshotOnly || hdrVfxOnly || volumeVfxOnly
       || liquidBodyVfxOnly || liquidSurfaceVfxOnly || gasBodyVfxOnly || gasMotionVfxOnly
-      || powderBodyVfxOnly || powderLightVfxOnly || powderSolidContactVfxOnly || translucentEdgeVfxOnly || layoutOnly || mobileOnly || mobileGestureOnly
+      || powderBodyVfxOnly || powderLightVfxOnly || powderSolidContactVfxOnly || translucentEdgeVfxOnly || organicSubsurfaceVfxOnly || layoutOnly || mobileOnly || mobileGestureOnly
       || desktopInputOnly || visualScaleMatrixOnly || powderBodyOnly || liquidDepthOnly
       || solidDepthOnly || gasChromaOnly || surfaceContourOnly || solidFieldOnly
       || roleGraphicsOnly || cellularGraphicsOnly || sensorGraphicsOnly
@@ -653,7 +679,7 @@ async function auditMode(mode) {
   // canonical paused scene there and prove real material delivery/occupancy.
   const startsBlank = !canvasFallbackAudit && (hdrVfxOnly || volumeVfxOnly
     || liquidBodyVfxOnly || liquidSurfaceVfxOnly || gasBodyVfxOnly || gasMotionVfxOnly
-    || powderBodyVfxOnly || powderLightVfxOnly || powderSolidContactVfxOnly || translucentEdgeVfxOnly || cellularGraphicsOnly || sensorGraphicsOnly
+    || powderBodyVfxOnly || powderLightVfxOnly || powderSolidContactVfxOnly || translucentEdgeVfxOnly || organicSubsurfaceVfxOnly || cellularGraphicsOnly || sensorGraphicsOnly
     || unusualPowderGraphicsOnly || earthenPowderGraphicsOnly || explosivePowderGraphicsOnly
     || unusualSolidGraphicsOnly || deviceIdentityGraphicsOnly || fieldProfileGraphicsOnly
     || electricDischargeGraphicsOnly || liquidIdentityGraphicsOnly
@@ -680,6 +706,7 @@ async function auditMode(mode) {
     ...(powderBodyVfxArgument ? { powderBodyVfx: powderBodyVfxArgument } : {}),
     ...(powderLightVfxArgument ? { powderLightVfx: powderLightVfxArgument } : {}),
     ...(translucentEdgeVfxArgument ? { translucentEdgeVfx: translucentEdgeVfxArgument } : {}),
+    ...(organicSubsurfaceVfxArgument ? { organicSubsurfaceVfx: organicSubsurfaceVfxArgument } : {}),
     renderScale: renderScaleArgument ?? ((pqrtStateGraphicsEight || filtStateGraphicsEight || lcryStateGraphicsEight
       || pipeStateGraphicsEight || swchStateGraphicsEight || storStateGraphicsEight
       || dlayStateGraphicsEight || wifiStateGraphicsEight || powderMesostrataGraphicsEight
@@ -940,6 +967,13 @@ async function auditMode(mode) {
       assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
       cdp.close();
       return { backend: mode, translucentEdgeVfx, browserErrors: errors.length };
+    }
+    if (organicSubsurfaceVfxOnly) {
+      assert(mode === 'webgl', '--organic-subsurface-vfx-only requires --webgl-only');
+      const organicSubsurfaceVfx = await auditOrganicSubsurfaceVfxExperiment(cdp, mode, dpr);
+      assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
+      cdp.close();
+      return { backend: mode, organicSubsurfaceVfx, browserErrors: errors.length };
     }
     if (pausedPresentationOnly) {
       const pausedPresentation = await auditPausedPresentation(cdp, mode);
@@ -13559,7 +13593,7 @@ async function auditEightXSpngStateOnly(cdp, dpr) {
   await setDesktopMetrics(cdp, 1280, 720, dpr);
   const query = new URLSearchParams({
     scene: 'render-lab', inputAudit: '1', renderScale: '8', auditStage: 'eight-spng', blankAudit: '1',
-    renderLook: 'realistic', gasMotionVfx: '1', liquidSurfaceVfx: '1',
+    renderLook: 'realistic', gasMotionVfx: '1', liquidSurfaceVfx: '1', organicSubsurfaceVfx: '0',
   });
   await cdp.send('Page.navigate', { url: `${AUDIT_BASE_URL}?${query}` });
   const startupDeadline = Date.now() + EIGHT_X_PRESENTATION_DEADLINE_MS;
@@ -22275,7 +22309,7 @@ async function navigateGasMotionVfxState(cdp, mode, scale, fixtureMode, enabled,
     gasMotionVfxAudit: '1', renderScale: String(scale), renderLook: 'realistic',
     volumeVfx: '0', liquidBodyVfx: '0', liquidSurfaceVfx: '0',
     gasBodyVfx: '1', gasMotionVfx: enabled ? '1' : '0',
-    powderBodyVfx: '0', powderLightVfx: '0',
+    powderBodyVfx: '0', powderLightVfx: '0', organicSubsurfaceVfx: '0',
   });
   await cdp.send('Page.navigate', { url: `${AUDIT_BASE_URL}?${query}` });
   await waitFor(() => evaluate(cdp, `(() => {
@@ -22293,6 +22327,7 @@ async function navigateGasMotionVfxState(cdp, mode, scale, fixtureMode, enabled,
   await waitFor(() => evaluate(cdp,
     `window.__ANIFOR_INPUT_AUDIT__.backend().backend === ${JSON.stringify(mode)}`),
   15_000, `E07 ${label} ${scale}x backend`);
+  await assertFocusedOrganicSubsurfaceVfxInactive(cdp, `E07 ${label} ${scale}x`);
   const fixture = await evaluate(cdp, `(() => {
     const audit = window.__ANIFOR_INPUT_AUDIT__;
     audit.prepareGasMotionVfxFixture(${JSON.stringify(fixtureMode)});
@@ -22746,7 +22781,7 @@ async function navigatePowderSolidContactVfxState(cdp, mode, scale, enabled, lab
     powderSolidContactVfxAudit: '1', renderScale: String(scale), renderLook: 'realistic',
     volumeVfx: '0', liquidBodyVfx: '0', liquidSurfaceVfx: '0', gasBodyVfx: '0',
     gasMotionVfx: '0', powderBodyVfx: '0', powderLightVfx: '0',
-    powderSolidContactVfx: enabled ? '1' : '0',
+    powderSolidContactVfx: enabled ? '1' : '0', organicSubsurfaceVfx: '0',
   });
   await cdp.send('Page.navigate', { url: `${AUDIT_BASE_URL}?${query}` });
   await waitFor(() => evaluate(cdp, `(() => {
@@ -22767,6 +22802,7 @@ async function navigatePowderSolidContactVfxState(cdp, mode, scale, enabled, lab
   await waitFor(() => evaluate(cdp,
     `window.__ANIFOR_INPUT_AUDIT__.backend().backend === ${JSON.stringify(mode)}`),
   15_000, `E09 ${label} ${scale}x backend`);
+  await assertFocusedOrganicSubsurfaceVfxInactive(cdp, `E09 ${label} ${scale}x`);
   const fixture = await evaluate(cdp, `(async () => {
     const audit = window.__ANIFOR_INPUT_AUDIT__;
     // RenderLab has a live velocity plane, so a new powder owner begins at
@@ -22895,7 +22931,7 @@ async function auditEightXPowderSolidContactVfxExclusion(cdp, dpr) {
     scene: 'render-lab', inputAudit: '1', blankAudit: '1', renderScale: '8',
     auditStage: 'eight-powder-solid-contact', renderLook: 'realistic',
     volumeVfx: '0', liquidBodyVfx: '0', liquidSurfaceVfx: '0', gasBodyVfx: '0',
-    gasMotionVfx: '0', powderBodyVfx: '0', powderLightVfx: '0', powderSolidContactVfx: '1',
+    gasMotionVfx: '0', powderBodyVfx: '0', powderLightVfx: '0', powderSolidContactVfx: '1', organicSubsurfaceVfx: '0',
   });
   await cdp.send('Page.navigate', { url: `${AUDIT_BASE_URL}?${query}` });
   const deadline = Date.now() + EIGHT_X_PRESENTATION_DEADLINE_MS;
@@ -22919,15 +22955,393 @@ async function auditEightXPowderSolidContactVfxExclusion(cdp, dpr) {
       state: canvas.dataset.hdrPipeline, reason: canvas.dataset.hdrPipelineReason,
       bloomBacking: canvas.dataset.bloomBacking ?? null,
       powderSolidContactVfx: canvas.dataset.powderSolidContactVfx,
+      organicSubsurfaceVfx: canvas.dataset.organicSubsurfaceVfx,
     } : undefined;
   })()`);
   assert(isolation?.renderer === 'semantic-field-webgl' && isolation.look === 'realistic'
     && isolation.state === 'inactive' && isolation.reason === 'scale-8' && isolation.bloomBacking === null
-    && isolation.powderSolidContactVfx === 'inactive',
+    && isolation.powderSolidContactVfx === 'inactive' && isolation.organicSubsurfaceVfx === 'inactive',
   `true-8x E09 isolation failed (${JSON.stringify(isolation)})`);
   const timing = await auditWebGLPresentationTiming(cdp, 1, 12_000, 30_000, 1);
   assert(timing.source === 'gpu-query' || timing.source === 'gpu-fence' || timing.source === 'gpu-finish',
     `true-8x E09 did not complete GPU work (${JSON.stringify(timing)})`);
+  return { backing: `${geometry.backing.width}x${geometry.backing.height}`, isolation, timing };
+}
+
+/**
+ * E11 is a narrowly gated RGB-only organic solid subsurface treatment. The
+ * paused fixture combines WAX with native-state PLNT owners, then fences all
+ * phase, state, wall, topology, and deep-core controls before screenshots.
+ */
+async function auditOrganicSubsurfaceVfxExperiment(cdp, mode, dpr) {
+  const scales = [];
+  const requestedScales = renderScaleArgument === undefined
+    ? VOLUME_VFX_SCALES : [Number(renderScaleArgument)];
+  for (const scale of requestedScales) {
+    const captures = {};
+    for (const enabled of [false, true, false]) {
+      const key = enabled ? 'enabled' : captures.disabled ? 'disabledRepeat' : 'disabled';
+      captures[key] = await navigateOrganicSubsurfaceVfxState(cdp, mode, scale, enabled, key);
+    }
+    const { disabled, enabled, disabledRepeat } = captures;
+    const fixture = disabled.fixture;
+    assert(JSON.stringify(fixture) === JSON.stringify(enabled.fixture)
+      && JSON.stringify(fixture) === JSON.stringify(disabledRepeat.fixture),
+    `E11 ${scale}x fixture metadata changed`);
+    for (const [label, variant] of Object.entries(captures)) {
+      assertGeometry(variant.geometry, `E11 ${label} ${scale}x`, scale);
+      assert(variant.geometry.backend.backend === 'webgl',
+        `E11 ${label} ${scale}x lost WebGL presentation`);
+      assert(variant.hdrPipeline?.state === 'active',
+        `E11 ${label} ${scale}x HDR pipeline was not active (${JSON.stringify(variant.hdrPipeline)})`);
+    }
+    assertCanvasRectsEqual(disabled.geometry.canvas, enabled.geometry.canvas,
+      `E11 ${scale}x disabled/enabled CSS geometry`);
+    assertCanvasRectsEqual(disabled.geometry.canvas, disabledRepeat.geometry.canvas,
+      `E11 ${scale}x disabled/repeated CSS geometry`);
+    assert(JSON.stringify(disabled.geometry.backing) === JSON.stringify(enabled.geometry.backing)
+      && JSON.stringify(disabled.geometry.backing) === JSON.stringify(disabledRepeat.geometry.backing),
+    `E11 ${scale}x backing geometry changed`);
+    assertHdrVfxSemanticEquality(disabled.semantic, enabled.semantic, `E11 ${scale}x disabled/enabled`);
+    assertHdrVfxSemanticEquality(disabled.semantic, disabledRepeat.semantic, `E11 ${scale}x disabled/repeated`);
+    assertVolumeVfxBackingInvariant(disabled.backing, enabled.backing, `E11 ${scale}x disabled/enabled`);
+    assertVolumeVfxBackingInvariant(disabled.backing, disabledRepeat.backing, `E11 ${scale}x disabled/repeated`);
+    assert(JSON.stringify(disabled.rawControls) === JSON.stringify(enabled.rawControls)
+      && JSON.stringify(disabled.rawControls) === JSON.stringify(disabledRepeat.rawControls),
+    `E11 ${scale}x changed an exact protected raw control`);
+    assert(JSON.stringify(disabled.depth) === JSON.stringify(enabled.depth)
+      && JSON.stringify(disabled.depth) === JSON.stringify(disabledRepeat.depth),
+    `E11 ${scale}x solid-depth auxiliary bands changed across a presentation selector`);
+    assert(JSON.stringify(disabled.rgbDigest) === JSON.stringify(disabledRepeat.rgbDigest)
+      && disabled.capture.capture.data === disabledRepeat.capture.capture.data,
+    `E11 ${scale}x repeated off framebuffer was not byte exact`);
+
+    const targets = organicSubsurfaceVfxTargetRegions(fixture);
+    const controls = organicSubsurfaceVfxControlRegions(fixture);
+    const responses = await sampleBackdropRefractionRegions(cdp, {
+      straight: disabled.capture.capture.data,
+      refracted: enabled.capture.capture.data,
+      repeatedStraight: disabledRepeat.capture.capture.data,
+    }, [...targets, ...controls], disabled.capture.canvasRect);
+    const targetResponses = responses.slice(0, targets.length);
+    const controlResponses = responses.slice(targets.length);
+    const screenshots = screenshotRequest && (requestedScales.length === 1 || scale === 2)
+      ? await writeOrganicSubsurfaceVfxScreenshots(screenshotRequest, disabled, enabled)
+      : undefined;
+    assert(responses.every((sample) => sample.repeatRgbPeak === 0),
+      `E11 ${scale}x off -> on -> off was not deterministic (${JSON.stringify(responses)})`);
+    // These envelopes freeze the accepted 2026-08-05 1x/2x/4x calibration.
+    // Keep the broad-body cards spatially partial and the single-cell native
+    // state discriminator fully covered; a generic positive-response check can
+    // silently admit either a body-wide grade or a nearly invisible effect.
+    const calibratedTargetBounds = {
+      WAXEdgeBand: { rgbRms: [2.3, 2.9], rgbPeak: [4, 7], coverage: [0.6, 0.78], signedMean: [2, 2.5] },
+      WAXDepthBand: { rgbRms: [2.65, 3.05], rgbPeak: [5, 7], coverage: [0.8, 0.93], signedMean: [2.55, 2.95] },
+      WAXFadeTip: { rgbRms: [0.7, 1.6], rgbPeak: [1, 2], coverage: [0, 1], signedMean: [0.6, 1.9] },
+      PLNTHydratedTreeEdgeBand: {
+        rgbRms: [1.7, 2.3], rgbPeak: [3, 5], coverage: [0.55, 0.8], signedMean: [1.55, 2.2],
+      },
+      PLNTHydratedTreeDepthBand: {
+        rgbRms: [1.75, 2.2], rgbPeak: [3, 5], coverage: [0.62, 0.82], signedMean: [1.7, 2.15],
+      },
+      PLNTHydratedTreeFadeTip: {
+        rgbRms: [0.6, 1.2], rgbPeak: [1, 2], coverage: [0, 1], signedMean: [0.15, 1.3],
+      },
+      PLNTHydratedNonTree: {
+        rgbRms: [2.45, 3], rgbPeak: [2, 4], coverage: [0.95, 1], signedMean: [2.5, 3.1],
+      },
+    };
+    assert(targetResponses.length === Object.keys(calibratedTargetBounds).length
+      && targetResponses.every((sample) => {
+        const bounds = calibratedTargetBounds[sample.name];
+        return bounds
+          && sample.rgbRms >= bounds.rgbRms[0] && sample.rgbRms <= bounds.rgbRms[1]
+          && sample.rgbPeak >= bounds.rgbPeak[0] && sample.rgbPeak <= bounds.rgbPeak[1]
+          && sample.coverage >= bounds.coverage[0] && sample.coverage <= bounds.coverage[1]
+          && sample.signedMean >= bounds.signedMean[0] && sample.signedMean <= bounds.signedMean[1];
+      }),
+    `E11 ${scale}x organic target response left its calibrated envelope (${JSON.stringify(targetResponses)})`);
+    const targetByName = Object.fromEntries(targetResponses.map((sample) => [sample.name, sample]));
+    for (const owner of ['WAX', 'PLNTHydratedTree']) {
+      assert(targetByName[`${owner}DepthBand`].rgbRms
+        >= targetByName[`${owner}FadeTip`].rgbRms * 1.5,
+      `E11 ${scale}x ${owner} depth fade lost its body-to-byte-66 falloff (${JSON.stringify(targetResponses)})`);
+    }
+    // The authoritative Molten-Wax centre is byte-exact in raw WebGL readback.
+    // At 2x Chrome can quantize one blue byte on the broad page-level card
+    // crop while reporting zero response coverage; keep that compositor-only
+    // allowance narrower than a single perceptible pixel response.
+    assert(controlResponses.every((sample) => sample.rgbPeak === 0
+      || (scale === 2 && sample.name === 'moltenWax' && sample.rgbPeak <= 1
+        && sample.rgbRms <= 0.05 && sample.coverage === 0)),
+      `E11 ${scale}x escaped a dry/zero/foreign/wall/topology/deep-core control (${JSON.stringify(controlResponses)})`);
+    scales.push({
+      scale, backing: disabled.geometry.backing, alphaSupport: disabled.backing,
+      rawControls: disabled.rawControls, depth: disabled.depth, responses,
+      exactRepeatedOff: true, screenshots,
+    });
+  }
+  const trueEightX = await auditEightXOrganicSubsurfaceVfxExclusion(cdp, dpr);
+  return { scales, trueEightXExcluded: true, trueEightX };
+}
+
+async function navigateOrganicSubsurfaceVfxState(cdp, mode, scale, enabled, label) {
+  const query = new URLSearchParams({
+    scene: 'render-lab', inputAudit: '1', blankAudit: '1', auditStage: 'blank',
+    organicSubsurfaceVfxAudit: '1', renderScale: String(scale), renderLook: 'realistic',
+    volumeVfx: '0', liquidBodyVfx: '0', liquidSurfaceVfx: '0', gasBodyVfx: '0',
+    gasMotionVfx: '0', powderBodyVfx: '0', powderLightVfx: '0', powderSolidContactVfx: '0',
+    translucentEdgeVfx: '0', organicSubsurfaceVfx: enabled ? '1' : '0',
+  });
+  await cdp.send('Page.navigate', { url: `${AUDIT_BASE_URL}?${query}` });
+  await waitFor(() => evaluate(cdp, `(() => {
+    const parameters = new URLSearchParams(location.search);
+    return parameters.get('scene') === 'render-lab' && parameters.get('inputAudit') === '1'
+      && parameters.get('blankAudit') === '1' && parameters.get('auditStage') === 'blank'
+      && parameters.get('organicSubsurfaceVfxAudit') === '1'
+      && parameters.get('renderScale') === ${JSON.stringify(String(scale))}
+      && parameters.get('renderLook') === 'realistic'
+      && ['volumeVfx', 'liquidBodyVfx', 'liquidSurfaceVfx', 'gasBodyVfx', 'gasMotionVfx',
+        'powderBodyVfx', 'powderLightVfx', 'powderSolidContactVfx', 'translucentEdgeVfx']
+        .every((name) => parameters.get(name) === '0')
+      && parameters.get('organicSubsurfaceVfx') === ${JSON.stringify(enabled ? '1' : '0')}
+      && typeof window.__ANIFOR_INPUT_AUDIT__?.prepareOrganicSubsurfaceVfxAudit === 'function'
+      && typeof window.__ANIFOR_INPUT_AUDIT__?.organicSubsurfaceVfxFixture === 'function';
+  })()`), 15_000, `E11 ${label} ${scale}x page`);
+  await waitFor(() => evaluate(cdp,
+    `window.__ANIFOR_INPUT_AUDIT__.backend().backend === ${JSON.stringify(mode)}`),
+  15_000, `E11 ${label} ${scale}x backend`);
+  const fixture = await evaluate(cdp, `(async () => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    audit.setTranslucentLensShell(false);
+    audit.setTranslucentFieldTransmission(false);
+    audit.setSolidOpticalDepth(true);
+    for (let pass = 0; pass < 7; pass++) {
+      audit.prepareOrganicSubsurfaceVfxAudit();
+      await new Promise((resolve) => requestAnimationFrame(() => setTimeout(resolve, 70)));
+    }
+    return audit.organicSubsurfaceVfxFixture();
+  })()`);
+  await waitFor(() => evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    const fixture = audit.organicSubsurfaceVfxFixture();
+    const exactRect = (rect, material, state) => {
+      for (let y = rect.y; y < rect.y + rect.height; y++) for (let x = rect.x; x < rect.x + rect.width; x++) {
+        if (audit.cell(x, y) !== material || audit.presentationState(x, y) !== state) return false;
+      }
+      return true;
+    };
+    const emptyRect = (rect) => exactRect(rect, 0, 0);
+    const allDepth = (rect, predicate) => {
+      for (let y = rect.y; y < rect.y + rect.height; y++) for (let x = rect.x; x < rect.x + rect.width; x++) {
+        if (!predicate(audit.presentationAuxiliary(x, y))) return false;
+      }
+      return true;
+    };
+    const panesReady = fixture.panes.every((pane) => {
+      let bodyExact = true;
+      for (let y = pane.body.y; y < pane.body.y + pane.body.height; y++) for (let x = pane.body.x; x < pane.body.x + pane.body.width; x++) {
+        const empty = (x >= pane.authoredHole.x && x < pane.authoredHole.x + pane.authoredHole.width
+          && y >= pane.authoredHole.y && y < pane.authoredHole.y + pane.authoredHole.height)
+          || (x >= pane.openNotch.x && x < pane.openNotch.x + pane.openNotch.width
+            && y >= pane.openNotch.y && y < pane.openNotch.y + pane.openNotch.height);
+        bodyExact = bodyExact && audit.cell(x, y) === (empty ? 0 : pane.material)
+          && audit.presentationState(x, y) === (empty ? 0 : pane.presentationState);
+      }
+      return bodyExact && emptyRect(pane.authoredHole) && emptyRect(pane.openNotch)
+        && exactRect(pane.attachedLine, pane.material, pane.presentationState)
+        && audit.cell(pane.isolated.x, pane.isolated.y) === pane.material
+        && audit.presentationState(pane.isolated.x, pane.isolated.y) === pane.presentationState
+        && allDepth(pane.firstInnerLayer, (depth) => depth === 6)
+        && allDepth(pane.edgeBand, (depth) => depth > 6 && depth <= 30)
+        && allDepth(pane.depthBand, (depth) => depth > 30 && depth <= 66)
+        && audit.presentationAuxiliary(pane.fadeTip.x, pane.fadeTip.y) === 66
+        && allDepth(pane.deepCore, (depth) => depth >= 72);
+    });
+    const exactControl = (control) => exactRect(control.body, control.material, control.presentationState);
+    const controls = fixture.controls;
+    const depthQualifiedNoOps = [controls.activeDryPlant, controls.hydratedNoPresentPlant]
+      .every((control) => {
+        const depth = audit.presentationAuxiliary(control.probe.x, control.probe.y);
+        return depth > 6 && depth < 72;
+      });
+    return panesReady
+      && Object.entries(controls).filter(([name]) => name !== 'guardedBlank')
+        .every(([, control]) => exactControl(control))
+      && emptyRect(controls.guardedBlank)
+      && fixture.directUnlikeSeams.every((seam) => exactControl(seam.left) && exactControl(seam.right)
+        && audit.presentationAuxiliary(seam.leftBoundaryProbe.x, seam.leftBoundaryProbe.y) === 0)
+      && audit.wall(controls.waxWall.probe.x, controls.waxWall.probe.y) === fixture.conductiveWall
+      && audit.wall(controls.plantWall.probe.x, controls.plantWall.probe.y) === fixture.conductiveWall
+      && depthQualifiedNoOps;
+  })()`), 20_000, `E11 ${label} ${scale}x fixture/state/depth hydration`);
+  await sleep(350);
+  const hdrPipeline = await evaluate(cdp, `(() => {
+    const canvas = document.querySelector('canvas.semantic-field-canvas');
+    return canvas ? {
+      look: canvas.dataset.renderLook, state: canvas.dataset.hdrPipeline,
+      reason: canvas.dataset.hdrPipelineReason, bloomBacking: canvas.dataset.bloomBacking,
+      volumeVfx: canvas.dataset.volumeVfx, liquidBodyVfx: canvas.dataset.liquidBodyVfx,
+      liquidSurfaceVfx: canvas.dataset.liquidSurfaceVfx, gasBodyVfx: canvas.dataset.gasBodyVfx,
+      gasMotionVfx: canvas.dataset.gasMotionVfx, powderBodyVfx: canvas.dataset.powderBodyVfx,
+      powderLightVfx: canvas.dataset.powderLightVfx,
+      powderSolidContactVfx: canvas.dataset.powderSolidContactVfx,
+      translucentEdgeVfx: canvas.dataset.translucentEdgeVfx,
+      organicSubsurfaceVfx: canvas.dataset.organicSubsurfaceVfx,
+    } : undefined;
+  })()`);
+  const expectedBloom = `${WORLD_WIDTH * scale / 2}x${WORLD_HEIGHT * scale / 2}`;
+  assert(hdrPipeline?.look === 'realistic' && hdrPipeline?.state === 'active'
+    && hdrPipeline?.bloomBacking === expectedBloom
+    && ['volumeVfx', 'liquidBodyVfx', 'liquidSurfaceVfx', 'gasBodyVfx', 'gasMotionVfx',
+      'powderBodyVfx', 'powderLightVfx', 'powderSolidContactVfx', 'translucentEdgeVfx']
+      .every((name) => hdrPipeline[name] === 'inactive')
+    && hdrPipeline?.organicSubsurfaceVfx === (enabled ? 'active' : 'inactive'),
+  `E11 ${label} ${scale}x HDR/selector state resolved incorrectly (${JSON.stringify(hdrPipeline)})`);
+  const capture = await waitForStablePageCapture(
+    cdp, `E11 ${label} ${scale}x framebuffer`, scale === 4 ? 20_000 : undefined,
+  );
+  return {
+    fixture, capture, geometry: await metrics(cdp), semantic: await hdrVfxSemanticDigest(cdp),
+    backing: await sampleVolumeVfxCanvasAlphaSupport(cdp),
+    rgbDigest: await sampleLiquidSurfaceVfxCanvasRgbDigest(cdp),
+    rawControls: await sampleVolumeVfxRawWorldPixels(cdp, organicSubsurfaceVfxRawControlPoints(fixture)),
+    depth: await organicSubsurfaceVfxDepthDigest(cdp, fixture), hdrPipeline,
+  };
+}
+
+function organicSubsurfaceVfxTargetRegions(fixture) {
+  const rect = (name, candidate) => ({ name, target: true,
+    x: candidate.x + candidate.width / 2, y: candidate.y + candidate.height / 2,
+    radiusX: Math.max(0.35, candidate.width / 2 - 0.2), radiusY: Math.max(0.35, candidate.height / 2 - 0.2) });
+  const wax = fixture.panes.find((pane) => pane.code === 'WAX');
+  const treePlant = fixture.panes.find((pane) => pane.code === 'PLNT');
+  assert(wax && treePlant, 'E11 fixture lacks WAX/hydrated tree PLNT target panes');
+  return [
+    rect('WAXEdgeBand', wax.edgeBand), rect('WAXDepthBand', wax.depthBand),
+    { name: 'WAXFadeTip', target: true, x: wax.fadeTip.x + 0.5, y: wax.fadeTip.y + 0.5, radius: 0 },
+    rect('PLNTHydratedTreeEdgeBand', treePlant.edgeBand),
+    rect('PLNTHydratedTreeDepthBand', treePlant.depthBand),
+    { name: 'PLNTHydratedTreeFadeTip', target: true,
+      x: treePlant.fadeTip.x + 0.5, y: treePlant.fadeTip.y + 0.5, radius: 0 },
+    { name: 'PLNTHydratedNonTree', target: true,
+      x: fixture.controls.hydratedNonTreePlant.probe.x + 0.5,
+      y: fixture.controls.hydratedNonTreePlant.probe.y + 0.5, radius: 0 },
+  ];
+}
+
+function organicSubsurfaceVfxControlRegions(fixture) {
+  const point = (name, candidate) => ({ name, x: candidate.x + 0.5, y: candidate.y + 0.5, radius: 0 });
+  const rect = (name, candidate) => ({ name, x: candidate.x + candidate.width / 2,
+    y: candidate.y + candidate.height / 2, radiusX: Math.max(0.35, candidate.width / 2 - 0.2),
+    radiusY: Math.max(0.35, candidate.height / 2 - 0.2) });
+  return [
+    ...fixture.panes.flatMap((pane) => [
+      rect(`${pane.code}FirstLayer`, pane.firstInnerLayer), rect(`${pane.code}Hole`, pane.authoredHole),
+      rect(`${pane.code}Notch`, pane.openNotch), rect(`${pane.code}Line`, pane.attachedLine),
+      point(`${pane.code}Isolated`, pane.isolated), rect(`${pane.code}DeepCore`, pane.deepCore),
+    ]),
+    ...fixture.directUnlikeSeams.map((seam, index) => point(`unlikeSeam${index}`, seam.leftBoundaryProbe)),
+    ...Object.entries(fixture.controls).flatMap(([name, control]) => (
+      name === 'hydratedNonTreePlant' ? [] : name === 'guardedBlank'
+        ? [rect(name, control)] : [rect(name, control.body)
+        ])),
+  ];
+}
+
+function organicSubsurfaceVfxRawControlPoints(fixture) {
+  const rectPoint = (name, rect) => ({ name, x: rect.x + Math.floor(rect.width / 2), y: rect.y + Math.floor(rect.height / 2) });
+  return [
+    ...fixture.panes.flatMap((pane) => [
+      rectPoint(`${pane.code}FirstLayer`, pane.firstInnerLayer), rectPoint(`${pane.code}Hole`, pane.authoredHole),
+      rectPoint(`${pane.code}Notch`, pane.openNotch), rectPoint(`${pane.code}Line`, pane.attachedLine),
+      { name: `${pane.code}Isolated`, ...pane.isolated }, rectPoint(`${pane.code}DeepCore`, pane.deepCore),
+    ]),
+    ...fixture.directUnlikeSeams.map((seam, index) => ({ name: `unlikeSeam${index}`, ...seam.leftBoundaryProbe })),
+    ...Object.entries(fixture.controls).flatMap(([name, control]) => (
+      name === 'hydratedNonTreePlant' ? [] : [name === 'guardedBlank'
+        ? rectPoint(name, control) : { name, ...control.probe }
+      ])),
+  ];
+}
+
+async function writeOrganicSubsurfaceVfxScreenshots(source, disabled, enabled) {
+  const paths = {
+    off: variantScreenshotPath(source, 'e11-off'),
+    on: variantScreenshotPath(source, 'e11-on'),
+  };
+  await writeFile(paths.off, Buffer.from(disabled.capture.capture.data, 'base64'));
+  await writeFile(paths.on, Buffer.from(enabled.capture.capture.data, 'base64'));
+  return paths;
+}
+
+async function organicSubsurfaceVfxDepthDigest(cdp, fixture) {
+  return evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    const sample = (rect) => {
+      let min = 255; let max = 0;
+      for (let y = rect.y; y < rect.y + rect.height; y++) for (let x = rect.x; x < rect.x + rect.width; x++) {
+        const value = audit.presentationAuxiliary(x, y); min = Math.min(min, value); max = Math.max(max, value);
+      }
+      return { min, max };
+    };
+    const controls = ${JSON.stringify(fixture.controls)};
+    return {
+      panes: ${JSON.stringify(fixture.panes)}.map((pane) => ({ code: pane.code,
+      firstInnerLayer: sample(pane.firstInnerLayer), edgeBand: sample(pane.edgeBand),
+      depthBand: sample(pane.depthBand), deepCore: sample(pane.deepCore),
+      })),
+      activeDryPlant: {
+        body: sample(controls.activeDryPlant.body),
+        probe: audit.presentationAuxiliary(controls.activeDryPlant.probe.x, controls.activeDryPlant.probe.y),
+      },
+      hydratedNoPresentPlant: {
+        body: sample(controls.hydratedNoPresentPlant.body),
+        probe: audit.presentationAuxiliary(
+          controls.hydratedNoPresentPlant.probe.x, controls.hydratedNoPresentPlant.probe.y,
+        ),
+      },
+    };
+  })()`);
+}
+
+async function auditEightXOrganicSubsurfaceVfxExclusion(cdp, dpr) {
+  await setDesktopMetrics(cdp, 1280, 720, dpr);
+  const query = new URLSearchParams({
+    scene: 'render-lab', inputAudit: '1', blankAudit: '1', renderScale: '8',
+    auditStage: 'eight-organic-subsurface', renderLook: 'realistic',
+    volumeVfx: '0', liquidBodyVfx: '0', liquidSurfaceVfx: '0', gasBodyVfx: '0',
+    gasMotionVfx: '0', powderBodyVfx: '0', powderLightVfx: '0', powderSolidContactVfx: '0',
+    translucentEdgeVfx: '0', organicSubsurfaceVfx: '1',
+  });
+  await cdp.send('Page.navigate', { url: `${AUDIT_BASE_URL}?${query}` });
+  const deadline = Date.now() + EIGHT_X_PRESENTATION_DEADLINE_MS;
+  await waitFor(() => evaluate(cdp, `(() => {
+    const parameters = new URLSearchParams(location.search);
+    return parameters.get('renderScale') === '8' && parameters.get('auditStage') === 'eight-organic-subsurface'
+      && parameters.get('organicSubsurfaceVfx') === '1' && Boolean(window.__ANIFOR_INPUT_AUDIT__);
+  })()`), remainingDeadlineMs(deadline, 'true-8x E11 input audit API'), 'true-8x E11 input audit API');
+  const backend = await waitForEightXTerminalBackend(cdp, 'true-8x E11', deadline);
+  assertEightXWebGLBackend(backend, 'true-8x E11');
+  const geometry = await waitForStableCanvas(cdp, 1280, 720, undefined, 45_000, 'true-8x E11 geometry');
+  assert(geometry.backing.width === WORLD_WIDTH * 8 && geometry.backing.height === WORLD_HEIGHT * 8
+    && geometry.outputScale === '8', `true-8x E11 lost exact backing (${JSON.stringify(geometry.backing)})`);
+  const isolation = await evaluate(cdp, `(() => {
+    const canvas = document.querySelector('canvas.semantic-field-canvas');
+    return canvas ? {
+      renderer: canvas.dataset.renderer, look: canvas.dataset.renderLook,
+      state: canvas.dataset.hdrPipeline, reason: canvas.dataset.hdrPipelineReason,
+      bloomBacking: canvas.dataset.bloomBacking ?? null,
+      organicSubsurfaceVfx: canvas.dataset.organicSubsurfaceVfx,
+    } : undefined;
+  })()`);
+  assert(isolation?.renderer === 'semantic-field-webgl' && isolation.look === 'realistic'
+    && isolation.state === 'inactive' && isolation.reason === 'scale-8' && isolation.bloomBacking === null
+    && isolation.organicSubsurfaceVfx === 'inactive',
+  `true-8x E11 isolation failed (${JSON.stringify(isolation)})`);
+  const timing = await auditWebGLPresentationTiming(cdp, 1, 12_000, 30_000, 1);
+  assert(timing.source === 'gpu-query' || timing.source === 'gpu-fence' || timing.source === 'gpu-finish',
+    `true-8x E11 did not complete GPU work (${JSON.stringify(timing)})`);
   return { backing: `${geometry.backing.width}x${geometry.backing.height}`, isolation, timing };
 }
 
@@ -23047,7 +23461,7 @@ async function navigateTranslucentEdgeVfxState(cdp, mode, scale, enabled, label)
     translucentEdgeVfxAudit: '1', renderScale: String(scale), renderLook: 'realistic',
     volumeVfx: '0', liquidBodyVfx: '0', liquidSurfaceVfx: '0', gasBodyVfx: '0',
     gasMotionVfx: '0', powderBodyVfx: '0', powderLightVfx: '0', powderSolidContactVfx: '0',
-    translucentEdgeVfx: enabled ? '1' : '0',
+    translucentEdgeVfx: enabled ? '1' : '0', organicSubsurfaceVfx: '0',
   });
   await cdp.send('Page.navigate', { url: `${AUDIT_BASE_URL}?${query}` });
   await waitFor(() => evaluate(cdp, `(() => {
@@ -23068,6 +23482,7 @@ async function navigateTranslucentEdgeVfxState(cdp, mode, scale, enabled, label)
   await waitFor(() => evaluate(cdp,
     `window.__ANIFOR_INPUT_AUDIT__.backend().backend === ${JSON.stringify(mode)}`),
   15_000, `E10 ${label} ${scale}x backend`);
+  await assertFocusedOrganicSubsurfaceVfxInactive(cdp, `E10 ${label} ${scale}x`);
   const fixture = await evaluate(cdp, `(async () => {
     const audit = window.__ANIFOR_INPUT_AUDIT__;
     // E10 reuses the paced solid-depth writer.  Keep the older lens and field
@@ -23263,7 +23678,7 @@ async function auditEightXTranslucentEdgeVfxExclusion(cdp, dpr) {
     auditStage: 'eight-translucent-edge', renderLook: 'realistic',
     volumeVfx: '0', liquidBodyVfx: '0', liquidSurfaceVfx: '0', gasBodyVfx: '0',
     gasMotionVfx: '0', powderBodyVfx: '0', powderLightVfx: '0', powderSolidContactVfx: '0',
-    translucentEdgeVfx: '1',
+    translucentEdgeVfx: '1', organicSubsurfaceVfx: '0',
   });
   await cdp.send('Page.navigate', { url: `${AUDIT_BASE_URL}?${query}` });
   const deadline = Date.now() + EIGHT_X_PRESENTATION_DEADLINE_MS;
@@ -23284,11 +23699,12 @@ async function auditEightXTranslucentEdgeVfxExclusion(cdp, dpr) {
       renderer: canvas.dataset.renderer, look: canvas.dataset.renderLook,
       state: canvas.dataset.hdrPipeline, reason: canvas.dataset.hdrPipelineReason,
       bloomBacking: canvas.dataset.bloomBacking ?? null, translucentEdgeVfx: canvas.dataset.translucentEdgeVfx,
+      organicSubsurfaceVfx: canvas.dataset.organicSubsurfaceVfx,
     } : undefined;
   })()`);
   assert(isolation?.renderer === 'semantic-field-webgl' && isolation.look === 'realistic'
     && isolation.state === 'inactive' && isolation.reason === 'scale-8' && isolation.bloomBacking === null
-    && isolation.translucentEdgeVfx === 'inactive',
+    && isolation.translucentEdgeVfx === 'inactive' && isolation.organicSubsurfaceVfx === 'inactive',
   `true-8x E10 isolation failed (${JSON.stringify(isolation)})`);
   const timing = await auditWebGLPresentationTiming(cdp, 1, 12_000, 30_000, 1);
   assert(timing.source === 'gpu-query' || timing.source === 'gpu-fence' || timing.source === 'gpu-finish',
@@ -23400,7 +23816,7 @@ async function navigateVolumeVfxState(cdp, mode, scale, enabled, label) {
     scene: 'render-lab', inputAudit: '1', auditStage: 'canonical',
     volumeVfxAudit: '1', renderScale: String(scale), renderLook: 'realistic',
     volumeVfx: enabled ? '1' : '0', liquidSurfaceVfx: '0',
-    powderBodyVfx: '0', powderLightVfx: '0', translucentEdgeVfx: '0',
+    powderBodyVfx: '0', powderLightVfx: '0', translucentEdgeVfx: '0', organicSubsurfaceVfx: '0',
   });
   await cdp.send('Page.navigate', { url: `${AUDIT_BASE_URL}?${query}` });
   await waitFor(() => evaluate(cdp, `(() => {
@@ -23421,6 +23837,7 @@ async function navigateVolumeVfxState(cdp, mode, scale, enabled, label) {
   await waitFor(() => evaluate(cdp,
     `window.__ANIFOR_INPUT_AUDIT__.backend().backend === ${JSON.stringify(mode)}`),
   15_000, `E02 ${label} ${scale}x backend`);
+  await assertFocusedOrganicSubsurfaceVfxInactive(cdp, `E02 ${label} ${scale}x`);
   const stabilityProbes = VOLUME_VFX_TARGET_REGIONS.filter(
     ({ family }) => family === 'powder',
   ).map(({ name, x, y }) => ({ name, x: Math.round(x), y: Math.round(y) }));
@@ -23485,7 +23902,7 @@ async function navigateLiquidBodyVfxState(cdp, mode, scale, enabled, label) {
   const query = new URLSearchParams({
     scene: 'render-lab', inputAudit: '1', auditStage: 'canonical',
     liquidBodyVfxAudit: '1', renderScale: String(scale), renderLook: 'realistic',
-    volumeVfx: '0', liquidBodyVfx: enabled ? '1' : '0', liquidSurfaceVfx: '0',
+    volumeVfx: '0', liquidBodyVfx: enabled ? '1' : '0', liquidSurfaceVfx: '0', organicSubsurfaceVfx: '0',
   });
   await cdp.send('Page.navigate', { url: `${AUDIT_BASE_URL}?${query}` });
   await waitFor(() => evaluate(cdp, `(() => {
@@ -23504,6 +23921,7 @@ async function navigateLiquidBodyVfxState(cdp, mode, scale, enabled, label) {
   await waitFor(() => evaluate(cdp,
     `window.__ANIFOR_INPUT_AUDIT__.backend().backend === ${JSON.stringify(mode)}`),
   15_000, `E03 ${label} ${scale}x backend`);
+  await assertFocusedOrganicSubsurfaceVfxInactive(cdp, `E03 ${label} ${scale}x`);
   const hdrPipeline = await evaluate(cdp, `(() => {
     const canvas = document.querySelector('.semantic-field-canvas');
     return canvas ? {
@@ -23547,7 +23965,7 @@ async function navigateLiquidSurfaceVfxState(cdp, mode, scale, enabled, label) {
     liquidBodyVfxAudit: '1', liquidSurfaceVfxAudit: '1',
     renderScale: String(scale), renderLook: 'realistic',
     volumeVfx: '0', liquidBodyVfx: '1', liquidSurfaceVfx: enabled ? '1' : '0',
-    gasBodyVfx: '0', gasMotionVfx: '0', powderBodyVfx: '0', powderLightVfx: '0',
+    gasBodyVfx: '0', gasMotionVfx: '0', powderBodyVfx: '0', powderLightVfx: '0', organicSubsurfaceVfx: '0',
   });
   await cdp.send('Page.navigate', { url: `${AUDIT_BASE_URL}?${query}` });
   await waitFor(() => evaluate(cdp, `(() => {
@@ -23571,6 +23989,7 @@ async function navigateLiquidSurfaceVfxState(cdp, mode, scale, enabled, label) {
   await waitFor(() => evaluate(cdp,
     `window.__ANIFOR_INPUT_AUDIT__.backend().backend === ${JSON.stringify(mode)}`),
   15_000, `E08 ${label} ${scale}x backend`);
+  await assertFocusedOrganicSubsurfaceVfxInactive(cdp, `E08 ${label} ${scale}x`);
   const hdrPipeline = await evaluate(cdp, `(() => {
     const canvas = document.querySelector('.semantic-field-canvas');
     return canvas ? {
@@ -23616,7 +24035,7 @@ async function navigateGasBodyVfxState(cdp, mode, scale, enabled, label) {
     scene: 'render-lab', inputAudit: '1', auditStage: 'canonical',
     gasBodyVfxAudit: '1', renderScale: String(scale), renderLook: 'realistic',
     volumeVfx: '0', liquidBodyVfx: '0', liquidSurfaceVfx: '0',
-    gasBodyVfx: enabled ? '1' : '0', gasMotionVfx: '0',
+    gasBodyVfx: enabled ? '1' : '0', gasMotionVfx: '0', organicSubsurfaceVfx: '0',
   });
   await cdp.send('Page.navigate', { url: `${AUDIT_BASE_URL}?${query}` });
   await waitFor(() => evaluate(cdp, `(() => {
@@ -23637,6 +24056,7 @@ async function navigateGasBodyVfxState(cdp, mode, scale, enabled, label) {
   await waitFor(() => evaluate(cdp,
     `window.__ANIFOR_INPUT_AUDIT__.backend().backend === ${JSON.stringify(mode)}`),
   15_000, `E04 ${label} ${scale}x backend`);
+  await assertFocusedOrganicSubsurfaceVfxInactive(cdp, `E04 ${label} ${scale}x`);
   const hdrPipeline = await evaluate(cdp, `(() => {
     const canvas = document.querySelector('.semantic-field-canvas');
     return canvas ? {
@@ -23678,7 +24098,7 @@ async function navigatePowderBodyVfxState(cdp, mode, scale, enabled, label) {
     scene: 'render-lab', inputAudit: '1', auditStage: 'canonical',
     powderBodyVfxAudit: '1', renderScale: String(scale), renderLook: 'realistic',
     volumeVfx: '0', liquidBodyVfx: '0', liquidSurfaceVfx: '0',
-    gasBodyVfx: '0', powderBodyVfx: enabled ? '1' : '0', powderSolidContactVfx: '0',
+    gasBodyVfx: '0', powderBodyVfx: enabled ? '1' : '0', powderSolidContactVfx: '0', organicSubsurfaceVfx: '0',
   });
   await cdp.send('Page.navigate', { url: `${AUDIT_BASE_URL}?${query}` });
   await waitFor(() => evaluate(cdp, `(() => {
@@ -23701,6 +24121,7 @@ async function navigatePowderBodyVfxState(cdp, mode, scale, enabled, label) {
   await waitFor(() => evaluate(cdp,
     `window.__ANIFOR_INPUT_AUDIT__.backend().backend === ${JSON.stringify(mode)}`),
   15_000, `E05 ${label} ${scale}x backend`);
+  await assertFocusedOrganicSubsurfaceVfxInactive(cdp, `E05 ${label} ${scale}x`);
   const stabilityProbes = POWDER_BODY_VFX_TARGET_REGIONS.filter(
     ({ family }) => family !== 'sand',
   ).map(
@@ -23772,7 +24193,7 @@ async function navigatePowderLightVfxState(cdp, mode, scale, enabled, label) {
     powderLightVfxAudit: '1', renderScale: String(scale), renderLook: 'realistic',
     // E06 compares its one selector on top of the accepted E02/E05 body base.
     volumeVfx: '1', powderBodyVfx: '1', liquidBodyVfx: '0', liquidSurfaceVfx: '0',
-    gasBodyVfx: '0', translucentEdgeVfx: '0',
+    gasBodyVfx: '0', translucentEdgeVfx: '0', organicSubsurfaceVfx: '0',
     powderLightVfx: enabled ? '1' : '0',
   });
   await cdp.send('Page.navigate', { url: `${AUDIT_BASE_URL}?${query}` });
@@ -23797,6 +24218,7 @@ async function navigatePowderLightVfxState(cdp, mode, scale, enabled, label) {
   await waitFor(() => evaluate(cdp,
     `window.__ANIFOR_INPUT_AUDIT__.backend().backend === ${JSON.stringify(mode)}`),
   15_000, `E06 ${label} ${scale}x backend`);
+  await assertFocusedOrganicSubsurfaceVfxInactive(cdp, `E06 ${label} ${scale}x`);
   const fixture = await evaluate(cdp, `(() => {
     const audit = window.__ANIFOR_INPUT_AUDIT__;
     audit.preparePowderLightVfxFixture();
@@ -24003,7 +24425,7 @@ function assertVolumeVfxRawAlphaInvariant(left, right, label) {
 async function navigateHdrVfxLook(cdp, mode, look, label) {
   const query = new URLSearchParams({
     scene: 'render-lab', inputAudit: '1', auditStage: 'canonical',
-    renderScale: '2', renderLook: look,
+    renderScale: '2', renderLook: look, organicSubsurfaceVfx: '0',
   });
   await cdp.send('Page.navigate', { url: `${AUDIT_BASE_URL}?${query}` });
   await waitFor(() => evaluate(cdp, `(() => {
@@ -24018,6 +24440,7 @@ async function navigateHdrVfxLook(cdp, mode, look, label) {
   await waitFor(() => evaluate(cdp,
     `window.__ANIFOR_INPUT_AUDIT__.backend().backend === ${JSON.stringify(mode)}`),
   15_000, `${label} HDR experiment backend`);
+  await assertFocusedOrganicSubsurfaceVfxInactive(cdp, `${label} HDR experiment`);
   const hdrPipeline = await evaluate(cdp, `(() => {
     const canvas = document.querySelector('.semantic-field-canvas');
     return canvas ? {
@@ -24049,6 +24472,19 @@ async function navigateHdrVfxLook(cdp, mode, look, label) {
 function assertHdrVfxGeometry(variant, label) {
   assertGeometry(variant.geometry, label, 2);
   assert(variant.geometry.backend.backend === 'webgl', `${label}: WebGL presentation was lost`);
+}
+
+async function assertFocusedOrganicSubsurfaceVfxInactive(cdp, label) {
+  const state = await evaluate(cdp, `(() => {
+    const parameters = new URLSearchParams(location.search);
+    const canvas = document.querySelector('canvas.semantic-field-canvas');
+    return {
+      query: parameters.get('organicSubsurfaceVfx'),
+      dataset: canvas?.dataset.organicSubsurfaceVfx,
+    };
+  })()`);
+  assert(state.query === '0' && state.dataset === 'inactive',
+    `${label}: E11 was not explicitly pinned inactive (${JSON.stringify(state)})`);
 }
 
 function assertHdrVfxSemanticEquality(left, right, label) {

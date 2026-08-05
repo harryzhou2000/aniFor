@@ -13,6 +13,14 @@ powder, solid, liquid, gas, energy, and contact scenes across Canvas and WebGL a
 mobile gestures, save/load, CI, and Pages deployment as protected regression
 contracts rather than the primary feature stream.
 
+The accepted visual experiment ladder now runs through E11, the state-aware
+Wax/PLNT subsurface checkpoint. The next bounded experiment is a species-safe
+wet-sediment response for exact Sand, Clay, and Concrete already carried by the
+aqueous suspension field. Reuse existing suspension, depth, and lighting data;
+do not add a field, texture, or pass. Preserve dry/moving powder, foreign or
+non-aqueous liquid, emissive/molten matter, Local/Grains, fine structures,
+authored gaps, ownership, silhouette, Canvas fallback, and true 8× as controls.
+
 WebGL is the canonical visual release path. Canvas 2D remains a resilient,
 camera-preserving semantic fallback: keep its loading, input, material/state,
 and bounded-resource contracts strict, but treat advanced-optics visual parity
@@ -216,6 +224,45 @@ at least 5%, with no lower coverage or signed mean. The gate closes on exact
 The E02 volume and E06 powder-light focused gates explicitly pin E10 off so
 their intentional `volumeVfx=1` baselines cannot inherit the newer optic.
 Freeze the accepted gain and depth window until a new normal-view review.
+
+E11 is the accepted first state-aware Wax/PLNT subsurface layer, independently
+measurable with `?organicSubsurfaceVfx=0|1`. It is normal 1×–4× WebGL-only RGB
+arithmetic over the already-live exact-species solid-depth byte, main-scope
+normal/diffuse response, relief tone, and packed presentation state. Exact WAX
+(`27`) requires the ordinary zero-trait lookup. Exact PLNT (`10`) requires its
+static Organic trait byte `32`, the native owner-present bit 15, and a nonzero
+hydration class in bits 12–13; growth activity and the tree/genome bits do not
+substitute for hydration. Apply E11 after botanical lifecycle/inherited colour
+and before HDR blackbody composition. Depth byte `6` is protected, bytes
+`12–66` own the accepted shallow wrap/fade, and byte `72+` is an exact no-op.
+Add no sample, texture, field, upload, pass, target, allocation, clock,
+output-scale input, alpha/support/silhouette/ownership/reconstruction, or
+physics decision. Dry/dormant/active-dry PLNT, hydration without the
+owner-present marker, zero state, SEED, MWAX, foreign owners, native walls,
+unlike seams, authored holes/notches, one-cell lines, isolated cells, and deep
+cores are exact controls. Canvas contains no E11 renderer path and
+`FIELD_EIGHT_X_FRAGMENT` declares no E11 selector or branch; a requested true
+8× E11 reports inactive with reason `scale-8`, no bloom, exact 4896×3072
+backing, and completed GPU work. `npm run audit:vfx:e11` owns the real-HDR
+1×/2×/4× off→on→off matrix and closing 8× exclusion. Keep the calibrated Wax
+edge band inside `2.3–2.9` RGB RMS, `4–7` peak bytes, `0.60–0.78` coverage, and
+`2.0–2.5` signed mean; hydrated tree PLNT inside `1.7–2.3`, `3–5`,
+`0.55–0.80`, and `1.55–2.2`; and the hydrated non-tree discriminator inside
+`2.45–3.0`, `2–4`, `0.95–1.0`, and `2.5–3.1`, respectively. The exact 36–66
+fade aggregate must keep Wax inside `2.65–3.05` RGB RMS, `5–7` peak bytes,
+`0.80–0.93` coverage, and `2.55–2.95` signed mean; tree PLNT stays inside
+`1.75–2.2`, `3–5`, `0.62–0.82`, and `1.7–2.15`. Each exact byte-66 tip must
+retain a positive `1–2`-byte RGB response: Wax remains within `0.7–1.6` RMS
+and `0.6–1.9` signed mean, tree PLNT within `0.6–1.2` and `0.15–1.3`; its
+thresholded one-cell coverage may quantize between zero and one. Require an
+aggregate-to-tip RMS ratio of at least 1.5. Protected controls are exact except
+that Chrome may quantize one display byte in the broad 2× MWAX page crop only
+when its raw authoritative centre and response coverage remain exact. Every
+E01–E10 focused gate explicitly pins E11 off. When a gate compares whole-frame
+alpha across separate navigations, do not stage animated Energy matter merely
+as an emission control: its legitimate time-varying semantic alpha makes an
+unrelated RGB-only experiment nondeterministic. Use a time-invariant emissive
+foreign phase such as Lava while retaining exact raw owner controls.
 
 ## CodeGraph
 

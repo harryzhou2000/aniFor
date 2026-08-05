@@ -154,6 +154,23 @@ export function resolveTranslucentEdgeVfxEnabled(
 }
 
 /**
+ * Keeps the Wax/hydrated-PLNT subsurface experiment independently measurable
+ * from the generic solid-depth and botanical lifecycle layers. Ordinary
+ * realistic/neon presets retain the broad volume default; the explicit query
+ * is reserved for comparison captures and capability audits.
+ */
+export function resolveOrganicSubsurfaceVfxEnabled(
+  look: RenderLook,
+  search = globalThis.location?.search ?? '',
+): boolean {
+  if (look === 'classic') return false;
+  const requested = new URLSearchParams(search).get('organicSubsurfaceVfx');
+  if (requested === '0' || requested === 'off') return false;
+  if (requested === '1' || requested === 'on') return true;
+  return resolveVolumeVfxEnabled(look, search);
+}
+
+/**
  * Keeps the dry-powder local-light experiment independently measurable without
  * changing the established powder body-depth response. Ordinary realistic/neon
  * presets retain the broad volume default; the explicit query is reserved for

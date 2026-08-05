@@ -118,11 +118,28 @@ does not alter simulation, camera, semantic ownership, or `renderScale`.
   structures, isolated cells, authored holes/notches, reconstructed cavities,
   unlike seams, native walls, traits, emission, opaque solids, Canvas, and
   true 8× remain exact controls.
+- **E11 — state-aware Wax/PLNT subsurface wrap (accepted checkpoint):** normal
+  1×–4× WebGL gives exact authoritative Wax and genuinely hydrated PLNT a
+  restrained family-coloured transmitted-light shell inside a broad solid
+  body. It reuses the existing phase-local solid optical-depth byte, main body
+  normal/diffuse response, relief tone, and packed native presentation state.
+  Wax requires exact owner `27` and the ordinary zero-trait lookup. PLNT
+  requires exact owner `10`, its static Organic trait byte `32`, native
+  owner-present bit 15, and hydration class 1–3 in bits 12–13; tree/genome and
+  active-growth bits do not substitute for hydration. Byte `6` remains the
+  protected first interior layer, bytes `12–66` form the shallow wrap/fade,
+  and depth `72+` is excluded. `?organicSubsurfaceVfx=0|1` isolates E11. It
+  adds no sample, texture, field, upload, pass, target, allocation, clock,
+  output-scale input, alpha/support, silhouette, ownership, reconstruction, or
+  physics decision. Dry/dormant/active-dry PLNT, hydration without presence,
+  zero state, hydrated/dry SEED, Molten Wax, unlike seams, native walls,
+  traits, time-invariant emissive matter, holes/notches, one-cell structures,
+  isolated cells, Canvas, and true 8× remain exact controls.
 - **Protected 8× rung:** `renderScale=8` deliberately reports
   `hdrPipeline=inactive` / `scale-8` and retains the proven direct single-mesh
   4896×3072 path. The experiment must earn a bounded 8× design rather than
   allocating a 115 MiB full-resolution float target beside that path.
-- **Current decision:** E01/E02/E03/E04/E05/E06/E07/E08/E09/E10 remain opt-in through the non-Classic looks
+- **Current decision:** E01/E02/E03/E04/E05/E06/E07/E08/E09/E10/E11 remain opt-in through the non-Classic looks
   until representative hardware timing and mobile thermal behavior are
   measured. E02 remains the safe family-wide baseline. E03 is accepted as the
   liquid-depth checkpoint: its fit-view crop is visibly more cohesive, retains
@@ -157,7 +174,12 @@ does not alter simulation, camera, semantic ownership, or `renderScale`.
   solid-thickness transmission checkpoint: the Glass/Ice response is a cool
   inner shell with a measured depth falloff, not a body-wide colour grade, and
   every categorical/topology control remains exact. Freeze its amplitude and
-  depth window until another normal-view review. These are not the final
+  depth window until another normal-view review. E11 is accepted as the first
+  native-state-aware organic thickness checkpoint: Wax receives a warm amber
+  wrap while hydrated tree and non-tree PLNT retain lifecycle colour under a
+  cool organic fill. Dry/activity-only and presence-free hydration states stay
+  exact. Freeze its amplitude and depth window until another normal-view
+  review. These are not the final
   material/VFX results.
   Sub-1.0 material colour stays on the established response; tonemapping owns
   only real HDR highlights so powder texture and liquid body contrast are not
@@ -175,7 +197,7 @@ lab as `volumeVfx=0 → 1 → 0` at 1×, 2×, and 4×, requires the real HDR pip
 and proves exact semantic/staging state plus raw presented alpha/support hashes.
 Its paused powder probes drive seven separately observed presentation refreshes
 and require exact auxiliary byte `255` before capture; an inert first PNG is not
-settled-body evidence. E10 is explicitly pinned off in this baseline.
+settled-body evidence. E10 and E11 are explicitly pinned off in this baseline.
 The accepted response is spatial rather than a uniform grade: the current
 fixture reaches 6 framebuffer bytes in settled Clay, 13 in connected liquids,
 and 3 in gas while isolated Sand/Water, authored holes, Metal, and repeat
@@ -220,7 +242,7 @@ Pass `--render-scale=1`, `2`, or `4` to tune one scale; true 8× rejects E05 and
 retains its protected direct shader.
 
 Run `npm run audit:vfx:powder-light` for E06. It keeps E02 and E05 enabled as
-the fixed body baseline, pins E10 off, then reloads
+the fixed body baseline, pins E10 and E11 off, then reloads
 `powderLightVfx=0 → 1 → 0` at 1×/2×/4×.
 The dedicated paused fixture contains Fire/ELEC-facing Sand, Clay, and Concrete
 cards plus exact sources, two-cell gaps, authored holes, fine columns, isolated
@@ -277,10 +299,11 @@ across the sampled five-cell band at all normal scales. The closing true-8×
 navigation explicitly requests E09 and proves it inactive with reason
 `scale-8`, no bloom backing, exact 4896×3072 WebGL, and a completed GPU fence.
 
-Run `npm run audit:vfx:translucent-edge` for E10. It pins every earlier VFX
-selector off, disables the established translucent lens/field effects, and
-reloads four broad exact Glass/Ice panes as `translucentEdgeVfx=0 → 1 → 0` at
-1×/2×/4×. The gate proves exact depth bands (`6`, `12–30`, `36–60`, and
+Run `npm run audit:vfx:translucent-edge` for E10. It pins every other VFX
+selector, including E11, off; disables the established translucent lens/field
+effects; and reloads four broad exact Glass/Ice panes as
+`translucentEdgeVfx=0 → 1 → 0` at 1×/2×/4×. The gate proves exact depth bands
+(`6`, `12–30`, `36–60`, and
 `120–234`), semantics, raw alpha/support, protected framebuffer centres, and
 repeated-off output. Across the accepted matrix the two target bands hold
 `1.83–2.63` RGB RMS, `3–6`-byte peaks, `55.4–71.9%` response coverage, and
@@ -292,15 +315,36 @@ compositor byte with zero response coverage while its authoritative centre is
 byte-exact. The closing true-8× navigation proves E10/HDR inactive with reason
 `scale-8`, no bloom, exact 4896×3072 WebGL, and a completed GPU fence.
 
-**Next visual experiments:** E03–E10 now provide accepted liquid body/surface,
+Run `npm run audit:vfx:e11` for E11. It pins E01–E10 off and reloads exact Wax,
+hydrated tree PLNT, and hydrated non-tree PLNT as
+`organicSubsurfaceVfx=0 → 1 → 0` at 1×/2×/4×. The accepted matrix holds Wax at
+`2.59–2.62` RGB RMS with `5–6`-byte peaks and `68.9–69.3%` coverage, hydrated
+tree PLNT at `1.97–2.02` RGB RMS with four-byte peaks and `65.9–71.5%`
+coverage, and the native-state discriminator at `2.71` RGB RMS with a
+three-byte fully covered response. The exact 36–66 fade aggregates remain
+scale-stable (`2.86–2.88` Wax and `1.96–2.02` tree PLNT RGB RMS), while their
+exact byte-66 tips retain a positive `1–2`-byte response; thresholded coverage
+may quantize at that single cell, but the body-to-tip RMS ratio remains at
+least 1.5. Dry/activity-only PLNT, presence-free hydration, dormant/zero-state
+PLNT, SEED, Molten Wax, wrong owners, traits,
+emission, walls, seams, holes, notches, one-cell structures, isolated cells,
+deep cores, and blank space remain exact semantic and raw controls. Chrome may
+quantize one blue display byte in the 2× broad MWAX page crop while its raw
+authoritative centre and response coverage remain exact. Repeated-off captures
+are byte-identical. The closing true-8× navigation proves E11/HDR inactive,
+has no bloom allocation, presents exact 4896×3072 WebGL, and completes a GPU
+fence.
+
+**Next visual experiments:** E03–E11 now provide accepted liquid body/surface,
 stable-gas, coherent-gas-motion, powder-depth, and powder-local-light
-checkpoints plus exact resting contact grounding and Glass/Ice transmission.
-The next candidate should broaden state-aware material delicacy rather than add
-another global grade: prefer a bounded subsurface cue for authoritative Wax and
-hydrated botanical bodies, reusing existing solid depth and native lifecycle or
-hydration state without inventing occupancy. Dry/dormant states, Molten Wax,
-walls, holes, one-cell structures, unlike seams, traits, emission,
-reconstructed support, Canvas, and true 8× should remain exact controls.
+checkpoints plus exact resting contact grounding, Glass/Ice transmission, and
+state-aware Wax/PLNT subsurface response. The next candidate should improve a
+composed material rather than add another global grade: prefer a species-safe
+wet-sediment cue for exact Sand, Clay, and Concrete already supported by the
+aqueous suspension field. It must preserve dry or moving powder, unlike and
+non-aqueous liquid, emissive/molten matter, Local and Grains styles, fine
+columns, authored gaps, ownership, and silhouette; it should reuse existing
+suspension/depth/light data without another field, texture, or pass.
 Return to advected gas detail only if it can remain atmosphere-owned and
 counterflow-coherent; expand liquid curvature/thickness architecture only with
 an explicit bounded-resource design. Each experiment keeps its own off/on/off

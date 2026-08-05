@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   DEFAULT_RENDER_LOOK, resolveGasBodyVfxEnabled, resolveGasMotionVfxEnabled,
   resolveLiquidBodyVfxEnabled, resolveLiquidSurfaceVfxEnabled,
+  resolveOrganicSubsurfaceVfxEnabled,
   resolvePowderBodyVfxEnabled, resolvePowderLightVfxEnabled,
   resolvePowderSolidContactVfxEnabled, resolveRenderLook, resolveTranslucentEdgeVfxEnabled,
   resolveVolumeVfxEnabled,
@@ -120,6 +121,22 @@ describe('resolveRenderLook', () => {
     )).toBe(true);
     expect(resolveTranslucentEdgeVfxEnabled(
       'neon-lab', '?volumeVfx=1&translucentEdgeVfx=off',
+    )).toBe(false);
+  });
+
+  it('keeps Wax/PLNT subsurface optics independently switchable', () => {
+    expect(resolveOrganicSubsurfaceVfxEnabled(
+      'classic', '?organicSubsurfaceVfx=on',
+    )).toBe(false);
+    expect(resolveOrganicSubsurfaceVfxEnabled('realistic', '')).toBe(true);
+    expect(resolveOrganicSubsurfaceVfxEnabled(
+      'realistic', '?volumeVfx=0',
+    )).toBe(false);
+    expect(resolveOrganicSubsurfaceVfxEnabled(
+      'realistic', '?volumeVfx=0&organicSubsurfaceVfx=on',
+    )).toBe(true);
+    expect(resolveOrganicSubsurfaceVfxEnabled(
+      'neon-lab', '?volumeVfx=1&organicSubsurfaceVfx=off',
     )).toBe(false);
   });
 

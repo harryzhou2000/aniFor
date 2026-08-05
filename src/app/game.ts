@@ -147,6 +147,9 @@ import {
   TRANSLUCENT_EDGE_VFX_AUDIT, prepareTranslucentEdgeVfxAudit,
 } from './translucent-edge-vfx-audit';
 import {
+  ORGANIC_SUBSURFACE_VFX_AUDIT, prepareOrganicSubsurfaceVfxFixture,
+} from './organic-subsurface-vfx-audit';
+import {
   GEOLOGICAL_SOLID_GRAPHICS_AUDIT, prepareGeologicalSolidGraphicsAuditFixture,
 } from './geological-solid-graphics-audit';
 import {
@@ -879,6 +882,12 @@ export class Game {
       translucentEdgeVfxFixture: () => TRANSLUCENT_EDGE_VFX_AUDIT,
       prepareTranslucentEdgeVfxAudit: () => {
         prepareTranslucentEdgeVfxAudit(this.simulation);
+        this.renderer.synchronizeFixtureMaterialPlane();
+        this.renderer.invalidateDynamicPresentation();
+      },
+      organicSubsurfaceVfxFixture: () => ORGANIC_SUBSURFACE_VFX_AUDIT,
+      prepareOrganicSubsurfaceVfxAudit: () => {
+        prepareOrganicSubsurfaceVfxFixture(this.simulation);
         this.renderer.synchronizeFixtureMaterialPlane();
         this.renderer.invalidateDynamicPresentation();
       },

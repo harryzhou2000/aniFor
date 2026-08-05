@@ -39,6 +39,7 @@ import {
   resolveGasBodyVfxEnabled, resolveGasMotionVfxEnabled, resolveLiquidBodyVfxEnabled,
   resolveLiquidSurfaceVfxEnabled,
   resolvePowderBodyVfxEnabled, resolvePowderLightVfxEnabled, resolveRenderLook,
+  resolveOrganicSubsurfaceVfxEnabled,
   resolvePowderSolidContactVfxEnabled,
   resolveTranslucentEdgeVfxEnabled,
   resolveVolumeVfxEnabled,
@@ -3213,6 +3214,7 @@ uniform float uPowderBodyVfx;
 uniform float uPowderLightVfx;
 uniform float uPowderSolidContactVfx;
 uniform float uTranslucentEdgeVfx;
+uniform float uOrganicSubsurfaceVfx;
 uniform float uHighQuality;
 uniform float uAnalyticLightingQuality;
 uniform float uGasFieldLighting;
@@ -8416,6 +8418,59 @@ void main() {
       color += carrierTint * (0.012 + carrierPulse * 0.038) * (0.40 + traitEdge * 0.60);
     }
   }
+  // E11: Wax and genuinely hydrated PLNT carry a shallow, coloured
+  // subsurface wrap through a proven broad body. The existing exact-species
+  // depth byte rejects exposed cells, the first inner layer, fine strokes,
+  // holes, foreign seams, native walls, and the protected deep core. PLNT
+  // additionally proves exact owner presence and a nonzero native hydration
+  // class from its established packed lifecycle word. This is deterministic
+  // normal-WebGL RGB arithmetic over values already live in the main scope.
+  if (uOrganicSubsurfaceVfx > 0.5 && (material == 27.0 || material == 10.0)
+    && !materialEmissive && surfaceOnly < 0.5 && halo < 0.5 && wall < 0.5
+    && wallOnly < 0.5 && emissionOnly < 0.5 && solidInterior > 0.001
+    && solidOpticalDepth > 6.0 / 255.0) {
+    float organicPackedState = floor(wallState.b * 255.0 + 0.5)
+      + floor(wallState.a * 255.0 + 0.5) * 256.0;
+    float organicPlantPresent = mod(floor(organicPackedState / 32768.0), 2.0);
+    float organicPlantHydration = mod(floor(organicPackedState / 4096.0), 4.0);
+    float organicWaxEligible = material == 27.0 && traits < 0.5 ? 1.0 : 0.0;
+    float organicPlantEligible = material == 10.0 && abs(traits - 32.0) < 0.5
+      && organicPlantPresent > 0.5
+      && organicPlantHydration > 0.5 ? 1.0 : 0.0;
+    float organicSubsurfaceEligible = max(organicWaxEligible, organicPlantEligible);
+    if (organicSubsurfaceEligible > 0.5) {
+      float organicSubsurfaceRise = smoothstep(
+        6.0 / 255.0, 18.0 / 255.0, solidOpticalDepth
+      );
+      float organicSubsurfaceFall = 1.0 - smoothstep(
+        42.0 / 255.0, 72.0 / 255.0, solidOpticalDepth
+      );
+      float organicSubsurfaceBand = organicSubsurfaceRise * organicSubsurfaceFall
+        * solidInterior;
+      float organicSubsurfaceRelief = clamp(
+        solidReliefTone * (255.0 / 6.0), -1.0, 1.0
+      );
+      float organicSubsurfaceKey = clamp((diffuse - 0.72) / 0.42, 0.0, 1.0);
+      float organicSubsurfaceFresnel = pow(
+        1.0 - clamp(normal.z, 0.0, 1.0), 2.0
+      );
+      float organicSubsurfaceWrap = clamp(
+        0.48 + (1.0 - organicSubsurfaceKey) * 0.28
+          + max(organicSubsurfaceRelief, 0.0) * 0.16
+          + organicSubsurfaceFresnel * 0.30,
+        0.34, 1.0
+      );
+      float organicHydrationGain = organicWaxEligible > 0.5
+        ? 1.0 : 0.58 + organicPlantHydration * 0.14;
+      vec3 organicSubsurfaceTint = organicWaxEligible > 0.5
+        ? vec3(1.08, 0.70, 0.34)
+        : mix(vec3(0.44, 0.92, 0.58), vividColor(color, 1.08), 0.52);
+      float organicSubsurfaceGain = organicWaxEligible > 0.5 ? 0.060 : 0.052;
+      color += (vec3(1.14) - clamp(color, 0.0, 1.14))
+        * organicSubsurfaceTint * organicSubsurfaceBand
+        * organicSubsurfaceWrap * organicSubsurfaceGain * organicHydrationGain;
+    }
+  }
   if (uHDRVfx > 0.5) {
     float temperatureByte = floor(materialTemperature * 255.0 + 0.5);
     float radiance = blackbodyHdrRadiance(temperatureByte);
@@ -8832,6 +8887,11 @@ export class PixiFieldPresenter {
     // protected compact true-8x shader deliberately declares no E10 selector.
     const translucentEdgeVfxEnabled = outputScale < 8
       && resolveTranslucentEdgeVfxEnabled(renderLook);
+    // E11 is state-aware arithmetic over the normal shader's existing solid
+    // depth and presentation-state sample. The compact true-8x shader declares
+    // neither this selector nor a parallel branch.
+    const organicSubsurfaceVfxEnabled = outputScale < 8
+      && resolveOrganicSubsurfaceVfxEnabled(renderLook);
     // E04 follows the same normal-detail boundary as E03. The protected true
     // 8x shader deliberately has neither this uniform nor its arithmetic.
     const gasBodyVfxEnabled = outputScale < 8
@@ -8869,6 +8929,9 @@ export class PixiFieldPresenter {
         value: powderSolidContactVfxEnabled ? 1 : 0, type: 'f32',
       },
       uTranslucentEdgeVfx: { value: translucentEdgeVfxEnabled ? 1 : 0, type: 'f32' },
+      uOrganicSubsurfaceVfx: {
+        value: organicSubsurfaceVfxEnabled ? 1 : 0, type: 'f32',
+      },
       // At 8x, the supersampled analytic boundary already supplies detail. Drop
       // diagonal/ring probes so the 15M-pixel frame remains watchdog-safe.
       uHighQuality: {
@@ -9073,6 +9136,7 @@ export class PixiFieldPresenter {
       this.uniforms.uniforms.uPowderLightVfx = 0;
       this.uniforms.uniforms.uPowderSolidContactVfx = 0;
       this.uniforms.uniforms.uTranslucentEdgeVfx = 0;
+      this.uniforms.uniforms.uOrganicSubsurfaceVfx = 0;
       this.app.stage.addChild(this.scene);
     }
   }
@@ -9106,7 +9170,8 @@ export class PixiFieldPresenter {
             || new URLSearchParams(location.search).get('powderBodyVfxAudit') === '1'
             || new URLSearchParams(location.search).get('powderLightVfxAudit') === '1'
             || new URLSearchParams(location.search).get('powderSolidContactVfxAudit') === '1'
-            || new URLSearchParams(location.search).get('translucentEdgeVfxAudit') === '1'),
+            || new URLSearchParams(location.search).get('translucentEdgeVfxAudit') === '1'
+            || new URLSearchParams(location.search).get('organicSubsurfaceVfxAudit') === '1'),
         resolution: outputScale, autoDensity: true, autoStart: false,
       });
     } catch (error) {
@@ -9149,6 +9214,9 @@ export class PixiFieldPresenter {
     ) > 0.5 ? 'active' : 'inactive';
     presenter.app.canvas.dataset.translucentEdgeVfx = Number(
       presenter.uniforms.uniforms.uTranslucentEdgeVfx
+    ) > 0.5 ? 'active' : 'inactive';
+    presenter.app.canvas.dataset.organicSubsurfaceVfx = Number(
+      presenter.uniforms.uniforms.uOrganicSubsurfaceVfx
     ) > 0.5 ? 'active' : 'inactive';
     if (presenter.hdrPipelineInfo.reason) {
       presenter.app.canvas.dataset.hdrPipelineReason = presenter.hdrPipelineInfo.reason;
@@ -10453,6 +10521,7 @@ export class PixiFieldPresenter {
         this.uniforms.uniforms.uPowderLightVfx = 0;
         this.uniforms.uniforms.uPowderSolidContactVfx = 0;
         this.uniforms.uniforms.uTranslucentEdgeVfx = 0;
+        this.uniforms.uniforms.uOrganicSubsurfaceVfx = 0;
         this.app.canvas.dataset.hdrPipeline = 'inactive';
         this.app.canvas.dataset.hdrPipelineReason = 'runtime-error';
         this.app.canvas.dataset.volumeVfx = 'inactive';
@@ -10464,6 +10533,7 @@ export class PixiFieldPresenter {
         this.app.canvas.dataset.powderLightVfx = 'inactive';
         this.app.canvas.dataset.powderSolidContactVfx = 'inactive';
         this.app.canvas.dataset.translucentEdgeVfx = 'inactive';
+        this.app.canvas.dataset.organicSubsurfaceVfx = 'inactive';
         delete this.app.canvas.dataset.bloomBacking;
         if (!this.scene.parent) this.app.stage.addChild(this.scene);
       }
