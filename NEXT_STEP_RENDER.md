@@ -166,11 +166,30 @@ does not alter simulation, camera, semantic ownership, or `renderScale`.
   CFLM and other gas styles, sparse carriers/midpoints/gaps, isolated gas,
   unlit shoulders, deep cores, holes/channels, solid/liquid contacts, native
   walls, blank space, Canvas, and true 8× remain exact controls.
+- **E14 — exact Liquid/Solid wet-contact meniscus (accepted checkpoint):**
+  normal 1×–4× WebGL gives authoritative ordinary Water, Oil, and Acid a
+  narrow family-coloured absorption/key band on the liquid side of an ordinary
+  Solid contact. It reuses `occupancyShape`'s four semantic/style probes, the
+  existing liquid density/depth and Fresnel basis, and the signed Hermite
+  phase-contact light. The enabled selector carries its immutable normal
+  output scale: 1× uses a categorical contact shadow because one sample per
+  cell cannot resolve the Hermite derivative, while 2×/4× retain the signed
+  subcell response. A `0.001` integer-grid snap removes the otherwise unstable
+  `floor()` choice at exact 1× cell centres; the nearest real 4× subcell offset
+  is `0.125`, so higher-detail sample positions remain unchanged. A second
+  scalar derived from the same four probes rejects liquid/solid/foreign triple
+  junctions. `?liquidSolidMeniscusVfx=0|1` isolates E14 and is subordinate to
+  E03 liquid-body ownership. It adds no texture read, field, texture resource,
+  pass, target, upload, allocation, clock, alpha/support/silhouette/ownership,
+  reconstruction, or physics decision. Deep liquid, the Solid side, air
+  surfaces, unlike-liquid seams, Lava, powder/gas contacts, strands/droplets,
+  holes/channels and their liquid lips, traits, emission, native walls, blank
+  space, Canvas, and true 8× remain controls.
 - **Protected 8× rung:** `renderScale=8` deliberately reports
   `hdrPipeline=inactive` / `scale-8` and retains the proven direct single-mesh
   4896×3072 path. The experiment must earn a bounded 8× design rather than
   allocating a 115 MiB full-resolution float target beside that path.
-- **Current decision:** E01/E02/E03/E04/E05/E06/E07/E08/E09/E10/E11/E12/E13 remain opt-in through the non-Classic looks
+- **Current decision:** E01/E02/E03/E04/E05/E06/E07/E08/E09/E10/E11/E12/E13/E14 remain opt-in through the non-Classic looks
   until representative hardware timing and mobile thermal behavior are
   measured. E02 remains the safe family-wide baseline. E03 is accepted as the
   liquid-depth checkpoint: its fit-view crop is visibly more cohesive, retains
@@ -222,7 +241,14 @@ does not alter simulation, camera, semantic ownership, or `renderScale`.
   chains, other species, contacts, walls, holes, and channels remain exact.
   The normal screenshot is intentionally delicate while an amplified
   difference exposes only the two intended shoulder bands; freeze its spectra,
-  density gate, and amplitude until another fit-view review. These are not the
+  density gate, and amplitude until another fit-view review. E14 is accepted as
+  the first liquid-side exact Solid-contact optics checkpoint. It gives Water,
+  Oil, and Acid distinct continuous contact bands at both fixture orientations,
+  while the shared 1× stencil snap removes position-dependent half-lines rather
+  than hiding them with a weaker gate. Deep cores, Solid interiors, air and
+  unlike-liquid boundaries, foreign phases, native walls, fine topology, and
+  authored voids remain exact; freeze its classifier, snap epsilon, family
+  spectra, and amplitude until another fit-view review. These are not the
   final material/VFX results.
   Sub-1.0 material colour stays on the established response; tonemapping owns
   only real HDR highlights so powder texture and liquid body contrast are not
@@ -418,22 +444,39 @@ geometry, and repeated-off framebuffers are exact. The closing requested-on
 true-8× navigation proves E13/HDR inactive with reason `scale-8`, no bloom
 allocation, exact 4896×3072 WebGL, and a completed GPU fence.
 
-**Next visual experiments:** E03–E13 now provide accepted liquid body/surface,
+Run `npm run audit:vfx:liquid-solid-meniscus` for E14. It pins unrelated VFX
+off, keeps E03 liquid-body ownership on, and reloads the exact Water/Metal,
+Oil/Glass, and Acid/Brick horizontal/vertical fixture as
+`liquidSolidMeniscusVfx=0 → 1 → 0` at 1×/2×/4×. The accepted checkpoint
+measured Water at `0.82–3.76` RGB RMS, `0.49–1.85` chroma RMS, and `3–12`-byte
+peaks; Oil at `1.10–1.39`, `0.89–1.11`, and `4–5`; and Acid at
+`1.75–3.63`, `1.50–2.80`, and `6–11`. Water retains stronger red/green than
+blue absorption, Oil retains blue-dominant absorption, and Acid retains
+red/blue absorption with a nonnegative green key. The script holds separate
+family/orientation/scale bounds rather than accepting an arbitrary nonzero rim.
+Every liquid-field contact/core probe is fully hydrated (`255`), semantic and
+backing alpha/support are invariant, and repeated-off screenshots are byte
+identical. Deep liquid, two-cell Solid interiors, air surfaces, both sides of
+the Water/Oil seam, Lava, powder/gas contacts, sparse strands/droplets,
+authored holes/channels plus adjacent liquid lips, trait/emissive owners,
+native walls, and blank space have zero composed response. The exact triple
+corner is semantically unchanged and permits only one byte at 1× in the
+CSS-scaled page capture; it is exact at 2×/4×. The closing requested-on true-8×
+navigation proves E14/E03/HDR inactive with reason `scale-8`, no bloom target,
+exact 4896×3072 WebGL, zero browser errors, and a completed GPU fence (about
+`5.2 s` in the final SwiftShader gate).
+
+**Next visual experiments:** E03–E14 now provide accepted liquid body/surface,
 stable-gas, coherent-gas-motion, powder-depth, and powder-local-light
 checkpoints plus exact resting contact grounding, Glass/Ice transmission, and
 state-aware Wax/PLNT subsurface response, composed wet-mineral optics, and
-atmosphere-owned external-light spectra. The next bounded candidate is E14, an
-exact Liquid/Solid wet-contact meniscus for ordinary Water, Oil, and Acid.
-Reuse the four existing semantic/contact probes, liquid density and vertical
-depth, Fresnel/meniscus basis, signed phase-contact light, and family colours
-to form a narrow liquid-side key/absorption rim in both horizontal and vertical
-contacts. Add no sample, texture, field, pass, target, upload, allocation,
-clock, alpha/support/silhouette/ownership, reconstruction, or physics decision.
-Air surfaces, unlike-liquid seams, Lava, powder/gas contacts, sparse strands
-and droplets, holes/channels, traits, emission, walls, Canvas, and true 8× are
-controls. Keep its own off/on/off selector and require the same topology,
-contact, scale, resource, fallback, and true-8× isolation proof before it can
-become a preset default.
+atmosphere-owned external-light spectra and exact liquid-side wet contacts.
+Before naming E15, use one composed fit-view fixture to rank the remaining flat
+or visually discontinuous powder, liquid, gas, solid, energy, and cross-contact
+regions. Prefer the smallest arithmetic-only candidate that improves the
+weakest family with already-live topology and light evidence. Do not stack a
+new isolated tint merely to continue the experiment number; preserve the E14
+1× stencil snap and all E01–E14 selectors/controls while surveying.
 
 ## Phase 1 — HDR pipeline & lighting core (biggest visual payoff)
 

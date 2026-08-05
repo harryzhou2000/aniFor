@@ -30,6 +30,9 @@ import {
 import {
   GAS_LIGHT_VFX_AUDIT, prepareGasLightVfxFixture,
 } from './gas-light-vfx-audit';
+import {
+  LIQUID_SOLID_MENISCUS_VFX_AUDIT, prepareLiquidSolidMeniscusVfxFixture,
+} from './liquid-solid-meniscus-vfx-audit';
 import { navigateToRenderScale } from './render-scale-navigation';
 import {
   MATERIAL_ATLAS, materialAtlasAuditRequested, prepareMaterialAtlasAuditFixture,
@@ -456,6 +459,7 @@ export class Game {
       suspensionAt: (x, y) => this.renderer.suspensionAt(x, y),
       sourceTarget: (x, y) => this.simulation.configuredSourceTargetAt?.(x, y) ?? Material.Empty,
       presentationAuxiliary: (x, y) => this.renderer.presentationAuxiliaryAt(x, y),
+      liquidFieldAlpha: (x, y) => this.renderer.liquidFieldAlphaAt(x, y),
       refreshPresentationFields: () => this.renderer.invalidateDynamicPresentation(),
       geologicalSolidStylingEnabled: () => this.renderer.geologicalSolidStylingIsEnabled(),
       thermalCatalyticRigidStylingEnabled: () => this.renderer.thermalCatalyticRigidStylingIsEnabled(),
@@ -694,6 +698,12 @@ export class Game {
       gasLightVfxFixture: () => GAS_LIGHT_VFX_AUDIT,
       prepareGasLightVfxFixture: () => {
         prepareGasLightVfxFixture(this.simulation);
+        this.renderer.synchronizeFixtureMaterialPlane();
+        this.renderer.invalidateDynamicPresentation();
+      },
+      liquidSolidMeniscusVfxFixture: () => LIQUID_SOLID_MENISCUS_VFX_AUDIT,
+      prepareLiquidSolidMeniscusVfxFixture: () => {
+        prepareLiquidSolidMeniscusVfxFixture(this.simulation);
         this.renderer.synchronizeFixtureMaterialPlane();
         this.renderer.invalidateDynamicPresentation();
       },

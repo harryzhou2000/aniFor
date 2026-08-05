@@ -69,6 +69,7 @@ import type {
   GasMotionVfxAuditSnapshot, GasMotionVfxFixtureMode,
 } from './gas-motion-vfx-audit';
 import type { GasLightVfxAuditSnapshot } from './gas-light-vfx-audit';
+import type { LiquidSolidMeniscusVfxAuditSnapshot } from './liquid-solid-meniscus-vfx-audit';
 import type { WetSedimentVfxAuditSnapshot } from './wet-sediment-vfx-audit';
 
 export interface BrowserInputAuditApi {
@@ -87,6 +88,7 @@ export interface BrowserInputAuditApi {
   suspensionAt(x: number, y: number): readonly [number, number, number, number];
   sourceTarget(x: number, y: number): number;
   presentationAuxiliary(x: number, y: number): number;
+  liquidFieldAlpha(x: number, y: number): number;
   /** Queues one paused audit-only native/presentation-field refresh. */
   refreshPresentationFields(): void;
   geologicalSolidStylingEnabled(): boolean;
@@ -180,6 +182,8 @@ export interface BrowserInputAuditApi {
   prepareGasMotionVfxFixture(mode: GasMotionVfxFixtureMode): void;
   gasLightVfxFixture(): GasLightVfxAuditSnapshot;
   prepareGasLightVfxFixture(): void;
+  liquidSolidMeniscusVfxFixture(): LiquidSolidMeniscusVfxAuditSnapshot;
+  prepareLiquidSolidMeniscusVfxFixture(): void;
   prepareContourStressFixture(): void;
   toggleDenseSolidProbe(): void;
   materialAtlas(): readonly MaterialAtlasEntry[];

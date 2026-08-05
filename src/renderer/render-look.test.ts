@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest';
 import {
   DEFAULT_RENDER_LOOK, resolveGasBodyVfxEnabled, resolveGasLightVfxEnabled,
   resolveGasMotionVfxEnabled,
-  resolveLiquidBodyVfxEnabled, resolveLiquidSurfaceVfxEnabled,
+  resolveLiquidBodyVfxEnabled, resolveLiquidSolidMeniscusVfxEnabled,
+  resolveLiquidSurfaceVfxEnabled,
   resolveOrganicSubsurfaceVfxEnabled,
   resolvePowderBodyVfxEnabled, resolvePowderLightVfxEnabled,
   resolvePowderSolidContactVfxEnabled, resolveRenderLook, resolveTranslucentEdgeVfxEnabled,
@@ -51,6 +52,22 @@ describe('resolveRenderLook', () => {
     )).toBe(true);
     expect(resolveLiquidSurfaceVfxEnabled(
       'realistic', '?liquidBodyVfx=off&liquidSurfaceVfx=on',
+    )).toBe(false);
+  });
+
+  it('keeps liquid/solid meniscus VFX subordinate to the connected liquid body', () => {
+    expect(resolveLiquidSolidMeniscusVfxEnabled(
+      'classic', '?liquidSolidMeniscusVfx=on',
+    )).toBe(false);
+    expect(resolveLiquidSolidMeniscusVfxEnabled('realistic', '')).toBe(true);
+    expect(resolveLiquidSolidMeniscusVfxEnabled(
+      'realistic', '?liquidBodyVfx=on&liquidSolidMeniscusVfx=off',
+    )).toBe(false);
+    expect(resolveLiquidSolidMeniscusVfxEnabled(
+      'realistic', '?volumeVfx=0&liquidBodyVfx=on&liquidSolidMeniscusVfx=on',
+    )).toBe(true);
+    expect(resolveLiquidSolidMeniscusVfxEnabled(
+      'realistic', '?liquidBodyVfx=off&liquidSolidMeniscusVfx=on',
     )).toBe(false);
   });
 

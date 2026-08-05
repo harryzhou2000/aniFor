@@ -37,7 +37,7 @@ import {
 import { HDRVfxPipeline, type HDRPipelineInfo } from './hdr-vfx-pipeline';
 import {
   resolveGasBodyVfxEnabled, resolveGasLightVfxEnabled, resolveGasMotionVfxEnabled,
-  resolveLiquidBodyVfxEnabled,
+  resolveLiquidBodyVfxEnabled, resolveLiquidSolidMeniscusVfxEnabled,
   resolveLiquidSurfaceVfxEnabled,
   resolvePowderBodyVfxEnabled, resolvePowderLightVfxEnabled, resolveRenderLook,
   resolveOrganicSubsurfaceVfxEnabled,
@@ -3220,6 +3220,7 @@ uniform float uGasBodyVfx;
 uniform float uGasMotionVfx;
 uniform float uGasLightVfx;
 uniform float uLiquidBodyVfx;
+uniform float uLiquidSolidMeniscusVfx;
 uniform float uPowderBodyVfx;
 uniform float uPowderLightVfx;
 uniform float uPowderSolidContactVfx;
@@ -5035,19 +5036,26 @@ vec4 contactSample(vec2 uv, float material, float family) {
 vec4 occupancyShape(
   vec2 uv, float material, float family, float contourSmoothing,
   out float contourCurvature, out float phaseContactLight,
-  out float foreignMatterContact, out float unlikeMaterialContact
+  out vec2 crossPhaseContact, out float foreignMatterContact,
+  out float unlikeMaterialContact
 ) {
   contourCurvature = 0.0;
   phaseContactLight = 0.0;
+  crossPhaseContact = vec2(0.0);
   foreignMatterContact = 0.0;
   unlikeMaterialContact = 0.0;
   vec2 grid = uv * uFieldSize - 0.5;
-  vec2 blend = fract(grid);
+  // A 1x fragment is mathematically centred on an integer grid coordinate,
+  // but interpolation error can put it a few ulps below that integer and make
+  // floor() select the previous 2x2 stencil. Snap only that tiny ambiguity;
+  // the nearest real 2x/4x subcell offset is 0.25/0.125 and is unaffected.
+  vec2 gridCell = floor(grid + vec2(0.001));
+  vec2 blend = clamp(grid - gridCell, vec2(0.0), vec2(1.0));
   vec2 hermite = blend * blend * (3.0 - 2.0 * blend);
   vec2 hermiteDerivative = 6.0 * blend * (1.0 - blend);
   vec2 weight = mix(blend, hermite, contourSmoothing);
   vec2 weightDerivative = mix(vec2(1.0), hermiteDerivative, contourSmoothing);
-  vec2 origin = (floor(grid) + 0.5) * uTexel;
+  vec2 origin = (gridCell + 0.5) * uTexel;
   vec4 s00 = contactSample(origin, material, family);
   vec4 s10 = contactSample(origin + vec2(uTexel.x, 0.0), material, family);
   vec4 s01 = contactSample(origin + vec2(0.0, uTexel.y), material, family);
@@ -5065,13 +5073,25 @@ vec4 occupancyShape(
   float density = mix(top, bottom, weight.y);
   float gradientX = mix(q10 - q00, q11 - q01, weight.y) * weightDerivative.x;
   float gradientY = mix(q01 - q00, q11 - q10, weight.x) * weightDerivative.y;
-  float phaseContactX = mix(s10.z - s00.z, s11.z - s01.z, weight.y)
-    * weightDerivative.x;
-  float phaseContactY = mix(s01.z - s00.z, s11.z - s10.z, weight.x)
-    * weightDerivative.y;
+  float crossPhaseX = mix(s10.z - s00.z, s11.z - s01.z, weight.y);
+  float crossPhaseY = mix(s01.z - s00.z, s11.z - s10.z, weight.x);
+  float phaseContactX = crossPhaseX * weightDerivative.x;
+  float phaseContactY = crossPhaseY * weightDerivative.y;
   // The Hermite derivative is itself the contact-local band: it is exactly
   // zero in dense cores, air silhouettes, and same-phase seams.
   phaseContactLight = dot(vec2(phaseContactX, phaseContactY), vec2(-0.55, -0.80));
+  // X is exact categorical presence, allowing a one-sample-per-cell 1x
+  // fragment to retain a bounded inner wet band instead of quantising the
+  // otherwise-correct smooth derivative to zero. Y rejects a mixed foreign
+  // neighbour which is not the proven cross-phase owner (for example a
+  // liquid/solid/gas triple junction), reusing the same four samples.
+  crossPhaseContact = vec2(
+    max(max(s00.z, s10.z), max(s01.z, s11.z)),
+    max(
+      max(s00.w * (1.0 - s00.z), s10.w * (1.0 - s10.z)),
+      max(s01.w * (1.0 - s01.z), s11.w * (1.0 - s11.z))
+    )
+  );
   foreignMatterContact = max(max(s00.w, s10.w), max(s01.w, s11.w));
   unlikeMaterialContact = max(max(s00.y, s10.y), max(s01.y, s11.y));
   float supportOrContact = q00 + q10 + q01 + q11;
@@ -5623,6 +5643,7 @@ void main() {
   vec2 velocity = halo > 0.5 ? vec2(0.0) : state.ba * 2.0 - 1.0;
   float contourCurvature = 0.0;
   float phaseContactLight = 0.0;
+  vec2 crossPhaseContact = vec2(0.0);
   float foreignMatterContact = 0.0;
   float unlikeMaterialContact = 0.0;
   vec4 shape = wallOnly > 0.5
@@ -5631,7 +5652,7 @@ void main() {
     ? (family == 4.0
       ? occupancyShape(
         fieldUv, material, family, 1.0, contourCurvature, phaseContactLight,
-        foreignMatterContact, unlikeMaterialContact
+        crossPhaseContact, foreignMatterContact, unlikeMaterialContact
       )
       : vec4(enclosedSurfaceShape(fieldUv, material), 0.0))
     : ((cloudOnly > 0.5 || emissionOnly > 0.5)
@@ -5643,7 +5664,8 @@ void main() {
       : occupancyShape(
         fieldUv, material, family,
         (family == 0.0 || family == 2.0 || family == 4.0) ? 1.0 : 0.0,
-        contourCurvature, phaseContactLight, foreignMatterContact, unlikeMaterialContact
+        contourCurvature, phaseContactLight, crossPhaseContact,
+        foreignMatterContact, unlikeMaterialContact
       )))));
   float boundaryStability = 0.0;
   float powderSolidContactCell = 0.0;
@@ -6669,6 +6691,55 @@ void main() {
             * mix(liquidFresnelKey, edgeTint, 0.18) * liquidVfxSurface;
         }
       }
+    }
+    // E14: give exact ordinary Water/Oil/Acid a shallow wet optical band on
+    // the liquid side of an ordinary Solid contact. crossPhaseContact and the
+    // signed Hermite derivative come from occupancyShape's four existing
+    // semantic/style probes; the connected liquid field supplies body support.
+    // This branch changes RGB only and adds no sampler, field, pass, target,
+    // clock, support, ownership, reconstruction, or physics decision.
+    if (uLiquidSolidMeniscusVfx > 0.5
+      && (material == 2.0 || material == 8.0 || material == 13.0)
+      && liquidOnly < 0.5 && halo < 0.5 && surfaceOnly < 0.5
+      && wall < 0.5 && emissionOnly < 0.5 && family == 2.0
+      && traits < 0.5 && !materialEmissive && molten < 0.5
+      && crossPhaseContact.x > 0.5 && foreignMatterContact > 0.5
+      && crossPhaseContact.y < 0.5 && unlikeMaterialContact < 0.5
+      && liquidDepth > 0.30 && liquidNeighbourMean > 0.38) {
+      float wetContactBody = smoothstep(0.30, 0.72, liquidDepth)
+        * smoothstep(0.38, 0.76, liquidNeighbourMean);
+      // The enabled selector carries its immutable normal output scale
+      // (1/2/4) rather than a second uniform. Only 1x needs the categorical
+      // fallback; 2x/4x retain the continuous Hermite contact derivative.
+      float wetContactFallback = crossPhaseContact.x
+        * (1.0 - step(1.5, uLiquidSolidMeniscusVfx));
+      float wetContactSigned = abs(phaseContactLight) > 0.001
+        ? phaseContactLight : -wetContactFallback;
+      float wetContactShape = max(
+        abs(phaseContactLight), abs(wetContactFallback) * 0.55
+      );
+      float wetContactBand = smoothstep(0.025, 0.34, wetContactShape)
+        * wetContactBody;
+      float wetContactFacing = clamp(wetContactSigned * 1.55, -1.0, 1.0);
+      float wetContactCrown = max(wetContactFacing, 0.0);
+      float wetContactPocket = max(-wetContactFacing, 0.0);
+      vec3 wetContactKey = material == 2.0 ? vec3(0.25, 0.84, 1.00)
+        : (material == 8.0 ? vec3(1.00, 0.68, 0.24)
+        : vec3(0.44, 1.00, 0.62));
+      vec3 wetContactAbsorption = material == 2.0 ? vec3(0.96, 0.48, 0.18)
+        : (material == 8.0 ? vec3(0.18, 0.48, 1.00)
+        : vec3(0.78, 0.18, 0.62));
+      float wetContactFamilyGain = material == 2.0 ? 2.40
+        : (material == 8.0 ? 2.20 : 0.90);
+      float wetContactKeyGain = wetContactBand * wetContactFamilyGain * (
+        0.009 + wetContactCrown * 0.075 + liquidFresnelContour * 0.012
+      );
+      float wetContactAbsorptionGain = wetContactBand * wetContactFamilyGain * (
+        0.028 + wetContactPocket * 0.092
+      );
+      color += (vec3(1.16) - clamp(color, 0.0, 1.16))
+        * wetContactKey * wetContactKeyGain;
+      color *= vec3(1.0) - wetContactAbsorption * wetContactAbsorptionGain;
     }
     // Twenty ordinary, unusual, metallic, cryogenic, and radioactive liquids retain a world-anchored material signature
     // after generic body optics. The authoritative semantic fragment is the
@@ -9073,6 +9144,10 @@ export class PixiFieldPresenter {
     // must not advertise an effect that cannot run on that path.
     const liquidBodyVfxEnabled = outputScale < 8
       && resolveLiquidBodyVfxEnabled(renderLook);
+    // E14 is arithmetic over normal WebGL's existing liquid body and contact
+    // probes. The compact true-8x shader declares neither selector nor branch.
+    const liquidSolidMeniscusVfxEnabled = outputScale < 8
+      && resolveLiquidSolidMeniscusVfxEnabled(renderLook);
     // E08 is a normal-detail HDR-composite experiment. Its displaced transport
     // reuses existing presenter textures and never enters the direct 8x shader.
     const liquidSurfaceVfxEnabled = outputScale < 8
@@ -9092,6 +9167,9 @@ export class PixiFieldPresenter {
       uGasMotionVfx: { value: gasMotionVfxEnabled ? 1 : 0, type: 'f32' },
       uGasLightVfx: { value: gasLightVfxEnabled ? 1 : 0, type: 'f32' },
       uLiquidBodyVfx: { value: liquidBodyVfxEnabled ? 1 : 0, type: 'f32' },
+      uLiquidSolidMeniscusVfx: {
+        value: liquidSolidMeniscusVfxEnabled ? outputScale : 0, type: 'f32',
+      },
       uPowderBodyVfx: { value: powderBodyVfxEnabled ? 1 : 0, type: 'f32' },
       uPowderLightVfx: { value: powderLightVfxEnabled ? 1 : 0, type: 'f32' },
       uPowderSolidContactVfx: {
@@ -9303,6 +9381,7 @@ export class PixiFieldPresenter {
       this.uniforms.uniforms.uGasMotionVfx = 0;
       this.uniforms.uniforms.uGasLightVfx = 0;
       this.uniforms.uniforms.uLiquidBodyVfx = 0;
+      this.uniforms.uniforms.uLiquidSolidMeniscusVfx = 0;
       this.uniforms.uniforms.uPowderBodyVfx = 0;
       this.uniforms.uniforms.uPowderLightVfx = 0;
       this.uniforms.uniforms.uPowderSolidContactVfx = 0;
@@ -9339,6 +9418,7 @@ export class PixiFieldPresenter {
             || new URLSearchParams(location.search).get('gasMotionVfxAudit') === '1'
             || new URLSearchParams(location.search).get('gasLightVfxAudit') === '1'
             || new URLSearchParams(location.search).get('liquidBodyVfxAudit') === '1'
+            || new URLSearchParams(location.search).get('liquidSolidMeniscusVfxAudit') === '1'
             || new URLSearchParams(location.search).get('liquidSurfaceVfxAudit') === '1'
             || new URLSearchParams(location.search).get('powderBodyVfxAudit') === '1'
             || new URLSearchParams(location.search).get('powderLightVfxAudit') === '1'
@@ -9379,6 +9459,9 @@ export class PixiFieldPresenter {
       ? 'active' : 'inactive';
     presenter.app.canvas.dataset.liquidBodyVfx = Number(presenter.uniforms.uniforms.uLiquidBodyVfx) > 0.5
       ? 'active' : 'inactive';
+    presenter.app.canvas.dataset.liquidSolidMeniscusVfx = Number(
+      presenter.uniforms.uniforms.uLiquidSolidMeniscusVfx
+    ) > 0.5 ? 'active' : 'inactive';
     presenter.app.canvas.dataset.liquidSurfaceVfx = presenter.hdrPipelineInfo.active
       && presenter.hdrPipelineInfo.liquidSurfaceVfx ? 'active' : 'inactive';
     presenter.app.canvas.dataset.powderBodyVfx = Number(presenter.uniforms.uniforms.uPowderBodyVfx) > 0.5
@@ -9453,6 +9536,12 @@ export class PixiFieldPresenter {
   presentationAuxiliaryAt(x: number, y: number): number {
     if (x < 0 || y < 0 || x >= this.width || y >= this.height) return -1;
     return this.boundaryStabilityBytes[y * this.width + x];
+  }
+
+  /** Audit-only CPU-side density byte shared with the uploaded liquid texture. */
+  liquidFieldAlphaAt(x: number, y: number): number {
+    if (x < 0 || y < 0 || x >= this.width || y >= this.height) return -1;
+    return this.fieldSet.liquid.bytes[(y * this.width + x) * 4 + 3];
   }
 
   /** Narrow audit readback for an exact-owner optional presentation layer. */
@@ -10726,6 +10815,7 @@ export class PixiFieldPresenter {
         this.uniforms.uniforms.uGasMotionVfx = 0;
         this.uniforms.uniforms.uGasLightVfx = 0;
         this.uniforms.uniforms.uLiquidBodyVfx = 0;
+        this.uniforms.uniforms.uLiquidSolidMeniscusVfx = 0;
         this.uniforms.uniforms.uPowderBodyVfx = 0;
         this.uniforms.uniforms.uPowderLightVfx = 0;
         this.uniforms.uniforms.uPowderSolidContactVfx = 0;
@@ -10739,6 +10829,7 @@ export class PixiFieldPresenter {
         this.app.canvas.dataset.gasMotionVfx = 'inactive';
         this.app.canvas.dataset.gasLightVfx = 'inactive';
         this.app.canvas.dataset.liquidBodyVfx = 'inactive';
+        this.app.canvas.dataset.liquidSolidMeniscusVfx = 'inactive';
         this.app.canvas.dataset.liquidSurfaceVfx = 'inactive';
         this.app.canvas.dataset.powderBodyVfx = 'inactive';
         this.app.canvas.dataset.powderLightVfx = 'inactive';

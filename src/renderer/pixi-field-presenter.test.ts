@@ -219,7 +219,17 @@ describe('Pixi presenter startup configuration', () => {
     );
     const gasLightVfx = gas.slice(gasLightVfxBranchStart, gasLightVfxEnd);
     const liquidVfxStart = liquid.indexOf('        if (uLiquidBodyVfx > 0.5');
-    const liquidVfxEnd = liquid.indexOf('    // Twenty ordinary, unusual, metallic', liquidVfxStart);
+    const liquidVfxEnd = liquid.indexOf('    // E14:', liquidVfxStart);
+    const liquidSolidMeniscusVfxStart = liquid.indexOf('    // E14:', liquidVfxEnd);
+    const liquidSolidMeniscusVfxBranchStart = liquid.indexOf(
+      '    if (uLiquidSolidMeniscusVfx > 0.5', liquidSolidMeniscusVfxStart,
+    );
+    const liquidSolidMeniscusVfxEnd = liquid.indexOf(
+      '    // Twenty ordinary, unusual, metallic', liquidSolidMeniscusVfxBranchStart,
+    );
+    const liquidSolidMeniscusVfx = liquid.slice(
+      liquidSolidMeniscusVfxBranchStart, liquidSolidMeniscusVfxEnd,
+    );
     const powderVfxStart = powder.indexOf('        if (uVolumeVfx > 0.5');
     const powderVfxEnd = powder.indexOf('        // E05:', powderVfxStart);
     const powderBodyVfxStart = powder.indexOf('        if (uPowderBodyVfx > 0.5', powderVfxEnd);
@@ -291,6 +301,7 @@ describe('Pixi presenter startup configuration', () => {
     expect(normal).toContain('uniform float uGasMotionVfx;');
     expect(normal).toContain('uniform float uGasLightVfx;');
     expect(normal).toContain('uniform float uLiquidBodyVfx;');
+    expect(normal).toContain('uniform float uLiquidSolidMeniscusVfx;');
     expect(normal).toContain('uniform float uPowderBodyVfx;');
     expect(normal).toContain('uniform float uPowderLightVfx;');
     expect(normal).toContain('uniform float uPowderSolidContactVfx;');
@@ -304,6 +315,9 @@ describe('Pixi presenter startup configuration', () => {
     expect(eight).not.toContain('gasLightVfx');
     expect(canvasSource).not.toContain('gasLightVfx');
     expect(eight).not.toContain('uLiquidBodyVfx');
+    expect(eight).not.toContain('uLiquidSolidMeniscusVfx');
+    expect(eight).not.toContain('liquidSolidMeniscusVfx');
+    expect(canvasSource).not.toContain('liquidSolidMeniscusVfx');
     expect(eight).not.toContain('uPowderBodyVfx');
     expect(eight).not.toContain('uPowderLightVfx');
     expect(eight).not.toContain('uPowderSolidContactVfx');
@@ -388,6 +402,42 @@ describe('Pixi presenter startup configuration', () => {
     expect(liquidVfxStart).toBeGreaterThanOrEqual(0);
     expect(liquidVfxEnd).toBeGreaterThan(liquidVfxStart);
     expect(liquidVfx).not.toMatch(/\balpha\s*[+*]?=/);
+
+    // E14 carries categorical cross-phase presence and a mixed-foreign
+    // rejection bit out of occupancyShape's four existing
+    // contact probes. Its selector-packed scale fallback is isolated to 1x
+    // from the normal 2x/4x Hermite band and cannot widen semantic support.
+    expect(normal).toContain('vec2 crossPhaseContact = vec2(0.0);');
+    expect(normal).toContain('vec2 gridCell = floor(grid + vec2(0.001));');
+    expect(normal).toContain('clamp(grid - gridCell, vec2(0.0), vec2(1.0))');
+    expect(normal).toContain(
+      'max(max(s00.z, s10.z), max(s01.z, s11.z)),',
+    );
+    expect(normal).toContain('s00.w * (1.0 - s00.z)');
+    expect(normal).toContain('s10.w * (1.0 - s10.z)');
+    expect(normal).toContain('s01.w * (1.0 - s01.z)');
+    expect(normal).toContain('s11.w * (1.0 - s11.z)');
+    expect(liquidSolidMeniscusVfxStart).toBeGreaterThan(liquidVfxStart);
+    expect(liquidSolidMeniscusVfxBranchStart).toBeGreaterThan(liquidSolidMeniscusVfxStart);
+    expect(liquidSolidMeniscusVfxEnd).toBeGreaterThan(liquidSolidMeniscusVfxBranchStart);
+    expect(liquidSolidMeniscusVfx).toContain('material == 2.0');
+    expect(liquidSolidMeniscusVfx).toContain('material == 8.0');
+    expect(liquidSolidMeniscusVfx).toContain('material == 13.0');
+    expect(liquidSolidMeniscusVfx).toContain('crossPhaseContact.x > 0.5');
+    expect(liquidSolidMeniscusVfx).toContain('crossPhaseContact.y < 0.5');
+    expect(liquidSolidMeniscusVfx).toContain('foreignMatterContact > 0.5');
+    expect(liquidSolidMeniscusVfx).toContain('unlikeMaterialContact < 0.5');
+    expect(liquidSolidMeniscusVfx).toContain('abs(phaseContactLight)');
+    expect(liquidSolidMeniscusVfx).toContain('step(1.5, uLiquidSolidMeniscusVfx)');
+    expect(liquidSolidMeniscusVfx).toContain('? phaseContactLight : -wetContactFallback');
+    expect(source).toContain('value: liquidSolidMeniscusVfxEnabled ? outputScale : 0');
+    expect(liquidSolidMeniscusVfx).toContain('liquidDepth > 0.30');
+    expect(liquidSolidMeniscusVfx).toContain('wetContactKey');
+    expect(liquidSolidMeniscusVfx).toContain('wetContactAbsorption');
+    expect(liquidSolidMeniscusVfx).not.toContain('texture(');
+    expect(liquidSolidMeniscusVfx).not.toContain('uTime');
+    expect(liquidSolidMeniscusVfx).not.toContain('gl_FragCoord');
+    expect(liquidSolidMeniscusVfx).not.toMatch(/\balpha\s*[+*]?=/);
 
     // Powder remains the temporally stable, dry Smooth-body-only path; Local,
     // Grains, moving powder, and suspension cannot gain an HDR body treatment.
@@ -565,6 +615,7 @@ describe('Pixi presenter startup configuration', () => {
     expect(source.match(/this\.uniforms\.uniforms\.uGasMotionVfx = 0;/g)).toHaveLength(2);
     expect(source.match(/this\.uniforms\.uniforms\.uGasLightVfx = 0;/g)).toHaveLength(2);
     expect(source.match(/this\.uniforms\.uniforms\.uLiquidBodyVfx = 0;/g)).toHaveLength(2);
+    expect(source.match(/this\.uniforms\.uniforms\.uLiquidSolidMeniscusVfx = 0;/g)).toHaveLength(2);
     expect(source.match(/this\.uniforms\.uniforms\.uPowderBodyVfx = 0;/g)).toHaveLength(2);
     expect(source.match(/this\.uniforms\.uniforms\.uPowderLightVfx = 0;/g)).toHaveLength(2);
     expect(source.match(/this\.uniforms\.uniforms\.uPowderSolidContactVfx = 0;/g)).toHaveLength(2);
@@ -576,6 +627,7 @@ describe('Pixi presenter startup configuration', () => {
     expect(source).toContain("get('gasMotionVfxAudit') === '1'");
     expect(source).toContain("get('gasLightVfxAudit') === '1'");
     expect(source).toContain("get('liquidBodyVfxAudit') === '1'");
+    expect(source).toContain("get('liquidSolidMeniscusVfxAudit') === '1'");
     expect(source).toContain("get('powderBodyVfxAudit') === '1'");
     expect(source).toContain("get('powderLightVfxAudit') === '1'");
     expect(source).toContain("get('powderSolidContactVfxAudit') === '1'");
@@ -588,6 +640,9 @@ describe('Pixi presenter startup configuration', () => {
       /const gasLightVfxEnabled = outputScale < 8\s*&& resolveGasLightVfxEnabled\(renderLook\);/,
     );
     expect(source).toContain('const liquidBodyVfxEnabled = outputScale < 8');
+    expect(source).toMatch(
+      /const liquidSolidMeniscusVfxEnabled = outputScale < 8\s*&& resolveLiquidSolidMeniscusVfxEnabled\(renderLook\);/,
+    );
     expect(source).toContain('const powderBodyVfxEnabled = outputScale < 8');
     expect(source).toContain('const powderLightVfxEnabled = outputScale < 8');
     expect(source).toMatch(
@@ -612,6 +667,8 @@ describe('Pixi presenter startup configuration', () => {
     expect(source).toContain("this.app.canvas.dataset.wetSedimentVfx = 'inactive';");
     expect(source).toContain('presenter.app.canvas.dataset.gasLightVfx');
     expect(source).toContain("this.app.canvas.dataset.gasLightVfx = 'inactive';");
+    expect(source).toContain('presenter.app.canvas.dataset.liquidSolidMeniscusVfx');
+    expect(source).toContain("this.app.canvas.dataset.liquidSolidMeniscusVfx = 'inactive';");
     const preserveDrawingBufferStart = source.indexOf('preserveDrawingBuffer:');
     const preserveDrawingBufferEnd = source.indexOf('resolution: outputScale', preserveDrawingBufferStart);
     const preserveDrawingBuffer = source.slice(preserveDrawingBufferStart, preserveDrawingBufferEnd);
@@ -622,6 +679,7 @@ describe('Pixi presenter startup configuration', () => {
     expect(preserveDrawingBuffer).toContain("get('organicSubsurfaceVfxAudit') === '1'");
     expect(preserveDrawingBuffer).toContain("get('wetSedimentVfxAudit') === '1'");
     expect(preserveDrawingBuffer).toContain("get('gasLightVfxAudit') === '1'");
+    expect(preserveDrawingBuffer).toContain("get('liquidSolidMeniscusVfxAudit') === '1'");
   });
 
   it('routes E08 liquid surfaces through existing normal-scale HDR resources only', () => {

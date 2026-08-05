@@ -69,6 +69,23 @@ export function resolveLiquidSurfaceVfxEnabled(
 }
 
 /**
+ * Adds a narrow liquid-side optical response at exact ordinary Solid contact.
+ * E14 reuses E03's connected-liquid body proof and the semantic contact probes
+ * already consumed by the normal shader; an explicit override cannot bypass
+ * either the non-Classic look or that liquid-body baseline.
+ */
+export function resolveLiquidSolidMeniscusVfxEnabled(
+  look: RenderLook,
+  search = globalThis.location?.search ?? '',
+): boolean {
+  if (!resolveLiquidBodyVfxEnabled(look, search)) return false;
+  const requested = new URLSearchParams(search).get('liquidSolidMeniscusVfx');
+  if (requested === '0' || requested === 'off') return false;
+  if (requested === '1' || requested === 'on') return true;
+  return true;
+}
+
+/**
  * Keeps the gas-body experiment independently measurable without also
  * changing powder or liquid. Ordinary realistic/neon presets retain the broad
  * volume default; the explicit query is reserved for visual captures and
