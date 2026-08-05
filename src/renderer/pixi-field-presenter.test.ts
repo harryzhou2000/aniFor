@@ -1007,6 +1007,79 @@ describe('Pixi presenter startup configuration', () => {
     expect(source).toContain("this.app.canvas.dataset.botanicalBodyVfx = 'inactive';");
   });
 
+  it('keeps E21 thick-Glass transmission exact-owner, normal-WebGL-only, and RGB-only', () => {
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const canvasSource = readFileSync(new URL('./field-renderer.ts', import.meta.url), 'utf8');
+    const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');
+    const normalStart = source.indexOf('const FIELD_FRAGMENT = `', eightStart);
+    const normalEnd = source.indexOf('`;\n\n/** Primary WebGL presentation', normalStart);
+    const eight = source.slice(eightStart, normalStart);
+    const normal = source.slice(normalStart, normalEnd);
+    const eligibilityStart = normal.indexOf('float glassBodyWeight = uGlassBodyVfx');
+    const eligibilityEnd = normal.indexOf('        : 0.0;', eligibilityStart)
+      + '        : 0.0;'.length;
+    const eligibility = normal.slice(eligibilityStart, eligibilityEnd);
+    const e21Start = normal.indexOf('      // E21:');
+    const e21End = normal.indexOf('      float exactPrismatic', e21Start);
+    const e21 = normal.slice(e21Start, e21End);
+    const handoffEnd = normal.indexOf('        } else if (material == 12.0) {', e21End);
+    const handoff = normal.slice(eligibilityStart, handoffEnd);
+    const preserveDrawingBufferStart = source.indexOf('preserveDrawingBuffer:');
+    const preserveDrawingBufferEnd = source.indexOf('resolution: outputScale', preserveDrawingBufferStart);
+    const preserveDrawingBuffer = source.slice(preserveDrawingBufferStart, preserveDrawingBufferEnd);
+
+    expect(eligibilityStart).toBeGreaterThanOrEqual(0);
+    expect(eligibilityEnd).toBeGreaterThan(eligibilityStart);
+    expect(e21Start).toBeGreaterThanOrEqual(0);
+    expect(e21End).toBeGreaterThan(e21Start);
+    expect(handoffEnd).toBeGreaterThan(e21End);
+    const translucentBranchStart = normal.lastIndexOf(
+      '    if (translucentSurface > 0.5) {', eligibilityStart,
+    );
+    expect(translucentBranchStart).toBeGreaterThanOrEqual(0);
+    expect(eligibilityStart).toBeGreaterThan(translucentBranchStart);
+    expect(eligibilityEnd).toBeLessThan(e21Start);
+    expect(normal).toContain('uniform float uGlassBodyVfx;');
+    expect(normal.match(/uGlassBodyVfx > 0\.5/g)).toHaveLength(1);
+    expect(eight).not.toContain('uGlassBodyVfx');
+    expect(eight).not.toContain('glassBodyWeight');
+    expect(canvasSource).not.toContain('glassBodyVfx');
+    for (const guard of [
+      'material == 24.0', 'family == 0.0', 'optics == 12.0', 'traits < 0.5',
+      '!materialEmissive', 'uSolidOpticalDepth > 0.5',
+      'solidOpticalDepth > 30.0 / 255.0', 'solidInterior > 0.001',
+      'surfaceOnly < 0.5', 'halo < 0.5', 'wall < 0.5', 'wallOnly < 0.5',
+      'emissionOnly < 0.5', 'foreignMatterContact < 0.5',
+      'unlikeMaterialContact < 0.5',
+    ]) expect(eligibility).toContain(guard);
+    for (const existingValue of [
+      'solidReliefTone', 'solidKey', 'solidFresnel', 'solidEnvironment',
+    ]) expect(e21).toContain(existingValue);
+    expect(eligibility).toContain('? smoothstep(30.0 / 255.0, 78.0 / 255.0, solidOpticalDepth) * solidInterior');
+    expect(normal).toContain('float glassBodyDepth = glassBodyWeight;');
+    expect(normal).toContain('vec3 glassPreLegacy = color;');
+    expect(normal.match(/if \(glassBodyWeight > 0\.0\) \{/g)).toHaveLength(2);
+    expect(normal).toContain('color = mix(glassPreLegacy, color, 1.0 - glassBodyWeight);');
+    expect(normal).toContain('color *= 1.0 - solidDepth * 0.010 - valley * 0.70;');
+    expect(normal).not.toContain('glassLegacyWeight');
+    expect(e21).not.toContain('texture(');
+    expect(e21).not.toContain('uTime');
+    expect(e21).not.toContain('gl_FragCoord');
+    expect(e21).not.toMatch(/\balpha\s*[+*]?=/);
+    expect(handoff).not.toContain('texture(');
+    expect(handoff).not.toContain('uTime');
+    expect(handoff).not.toContain('gl_FragCoord');
+    expect(handoff).not.toMatch(/\balpha\s*[+*]?=/);
+    expect(source.match(/this\.uniforms\.uniforms\.uGlassBodyVfx = 0;/g)).toHaveLength(2);
+    expect(source).toContain("get('glassBodyVfxAudit') === '1'");
+    expect(preserveDrawingBuffer).toContain("get('glassBodyVfxAudit') === '1'");
+    expect(source).toMatch(
+      /const glassBodyVfxEnabled = outputScale < 8\s*&& resolveGlassBodyVfxEnabled\(renderLook\);/,
+    );
+    expect(source).toContain('presenter.app.canvas.dataset.glassBodyVfx');
+    expect(source).toContain("this.app.canvas.dataset.glassBodyVfx = 'inactive';");
+  });
+
   it('routes E08 liquid surfaces through existing normal-scale HDR resources only', () => {
     const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
     const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');

@@ -260,11 +260,28 @@ does not alter simulation, camera, semantic ownership, or `renderScale`.
   zero-state. E20 adds no sampler, texture, field, resource,
   pass, target, upload, allocation, clock, alpha/support/silhouette/ownership/
   topology/state, or physics decision.
+- **E21 — exact thick-Glass body transmission (accepted checkpoint):** the
+  post-E20 fit-view showed the tank's Glass frame reading as opaque blue-gray
+  even though E10 already supplied a useful shallow edge. Normal 1×–4× WebGL
+  now recomposes only projected Glass `24` after exact-species depth byte 30
+  through `?glassBodyVfx=0|1`. The single exact owner/phase/optics/trait/
+  depth/interior/contact/wall guard reuses existing analytic key, relief,
+  Fresnel, and environment evidence for selective warm absorption, cool body
+  transmission, crown reflection, and pocket absorption. One depth weight
+  fades the established lens carrier's delta as the new body rises, avoiding
+  a byte-30→36 ring while keeping the original disabled/shallow operation
+  order exact. E10's byte-12–30 shallow band remains exact, and presentation alpha is unchanged because it
+  owns premultiplication and native-wall visibility. Ice/QRTZ, authored holes
+  and notches, reconstructed cavities, thin/isolated Glass, Glass/Ice/Metal/
+  Water contacts, patterned native walls, traits, emission, powder/liquid,
+  Canvas, and true 8× remain controls. E21 adds no sampler, texture read,
+  field, resource, pass, target, upload, allocation, clock, output-scale
+  input, alpha/support/silhouette/ownership/topology, or physics decision.
 - **Protected 8× rung:** `renderScale=8` deliberately reports
   `hdrPipeline=inactive` / `scale-8` and retains the proven direct single-mesh
   4896×3072 path. The experiment must earn a bounded 8× design rather than
   allocating a 115 MiB full-resolution float target beside that path.
-- **Current decision:** E01/E02/E03/E04/E05/E06/E07/E08/E09/E10/E11/E12/E13/E14/E15/E16/E17/E18/E19/E20 remain opt-in through the non-Classic looks
+- **Current decision:** E01/E02/E03/E04/E05/E06/E07/E08/E09/E10/E11/E12/E13/E14/E15/E16/E17/E18/E19/E20/E21 remain opt-in through the non-Classic looks
   until representative hardware timing and mobile thermal behavior are
   measured. E02 remains the safe family-wide baseline. E03 is accepted as the
   liquid-depth checkpoint: its fit-view crop is visibly more cohesive, retains
@@ -684,6 +701,36 @@ reports E20/HDR inactive with reason `scale-8`, no bloom, exact 4896×3072
 direct WebGL, a signalled promotion fence, and zero browser errors; the final
 full-matrix SwiftShader fence completed in about `5.13 s`.
 
+Run `npm run audit:vfx:glass-body` for E21. It reloads a dedicated two-pane
+exact-Glass fixture as `glassBodyVfx=0 → 1 → 0` at 1×/2×/4× while E10 stays
+on as the accepted shallow-edge baseline and every unrelated E01–E20 selector
+is pinned off and runtime-asserted inactive. Both panes expose exact depth
+bytes 0, 6, 12–30, 36–66, and
+192–255 plus authored holes/open notches and reconstructable cavities; the
+last byte-30 cell is an explicit raw and composed control. The second pane
+also carries a deterministic 3,072-cell checker of co-located native walls.
+That checker is deliberately disjoint from the wall-free transition/core
+calibration bands: native walls force depth zero and adjacent clear 4×4 blocks
+remain shallow, so the checker is a protected no-op guard rather than a
+through-wall E21 transmission target. Thin and isolated Glass, Glass/Ice,
+Glass/Metal, and Glass/Water
+contacts, Ice/QRTZ/Metal/CLNE/Lava/Sand/Water, and blank space are protected.
+Across the accepted 1×/2×/4× calibration, transition RGB RMS is
+`1.71…1.92` with a restrained `−1.18…−1.04` signed absorption, while the saturated
+core is `4.99…5.23` RGB RMS with `−4.57…−4.49` signed absorption. The
+ordered red/green/blue response proves selective transmission rather than a
+uniform tint. The final 2× off/on capture shows a quieter continuous shoulder
+into a cooler/deeper broad body, with no byte-30→36 ring or loss of the authored
+holes, notch, cavity, thin line, contacts, or checker. All non-wall composed
+controls and every repeated-off frame are
+exact; occupied/clear native-wall probes are bounded to one composed byte.
+Semantic material, raw alpha/support, CSS/backing geometry, wall hash, and
+solid-depth hashes repeat exactly. Normal-scale captures use two identical
+compositor reads per state plus an independent repeated-off navigation, so 4×
+PNG encoding cannot consume the renderer-health deadline. Requested-on true 8× reports E21/HDR
+inactive with reason `scale-8`, no bloom, exact 4896×3072, and completed
+GPU-fence timing (`5.16 s` in the final package-matrix run).
+
 The earlier post-E16 survey was invalid for Solid: it sampled native Stone `21`,
 which is Powder, while labelling that region Solid. The corrected post-E17
 showcase uses native ROCK `78`, asserts exactly `2769` matching Solid cells, and
@@ -707,27 +754,31 @@ legible as warm masonry, and only Ceramic lacked a convincing surface finish.
 E19 closes that exact gap without applying PTNM's roll or altering Brick. The
 next production 4× survey then selected Wood/PLNT as the largest remaining
 fit-view defect, and E20 replaces their band-forming body carriers without
-changing sparse botanical topology or lifecycle state. Before another rigid
+changing sparse botanical topology or lifecycle state. E21 closes the next
+ranked defect by replacing only deep exact Glass while retaining E10's shallow
+edge and the established alpha/refraction contracts. Before another rigid
 card, survey a new material or phase and prove a visible fit-view defect; do
-not widen E17–E20 owner sets by resemblance alone. Preserve
+not widen E17–E21 owner sets by resemblance alone. Preserve
 their owner, exposure, topology, scale, and true-8× contracts independently.
 
-**Next visual experiments:** E03–E20 now provide accepted liquid body/surface,
+**Next visual experiments:** E03–E21 now provide accepted liquid body/surface,
 stable-gas, coherent-gas-motion, powder-depth, and powder-local-light
 checkpoints plus exact resting contact grounding, Glass/Ice transmission, and
 state-aware Wax/PLNT subsurface response, composed wet-mineral optics,
 atmosphere-owned external-light spectra, exact liquid-side wet contacts, and
 species-aware gas-core optical depth, dense-Plasma containment, exact
 ROCK/Metal opaque-body relief, a distinct broad Platinum finish, an exact
-Ceramic fired-glaze response, and recomposed clustered Wood/PLNT bodies. The
-same fit-view survey ranks thick Glass transmission, ROCK's overly polished
-macro response, and Oil's flat opaque plug next; separately audit the current
-radioactive-solid trait guard before adding another isotope finish. Continue
+Ceramic fired-glaze response, recomposed clustered Wood/PLNT bodies, and deep
+Glass selective transmission. The same fit-view survey now ranks ROCK's overly
+polished macro response and Oil's flat opaque plug next. The radioactive-solid
+review found no current identity bug, but also proved that the existing
+phase-permissive identity guard is not suitable for a future broad ISZS/VIBR
+finish; such work needs its own exact solid-only fixture and gate. Continue
 with topology-preserving, material-
 specific cards that reuse already-live evidence. Prefer the smallest
 arithmetic-only candidate that fixes a visible fit-view deficiency; do not add
 an isolated tint merely to continue the experiment number. Preserve the E14
-1× stencil snap and all E01–E20 selectors/controls while surveying.
+1× stencil snap and all E01–E21 selectors/controls while surveying.
 
 ## Phase 1 — HDR pipeline & lighting core (biggest visual payoff)
 

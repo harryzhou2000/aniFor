@@ -13,7 +13,7 @@ powder, solid, liquid, gas, energy, and contact scenes across Canvas and WebGL a
 mobile gestures, save/load, CI, and Pages deployment as protected regression
 contracts rather than the primary feature stream.
 
-The accepted visual experiment ladder now runs through E20. E12 is the
+The accepted visual experiment ladder now runs through E21. E12 is the
 species-safe Sand/Clay/Concrete wet-sediment checkpoint; preserve its exact
 aqueous owner/stability proof, split moving-powder/stationary-Water control,
 Local/Grains no-op, fine structures, authored gaps, Canvas fallback, and true
@@ -155,6 +155,41 @@ bounds from the accepted 1×/2×/4× matrix, not a family-wide envelope.
 Requested-on true 8× must report E20/HDR
 inactive with `scale-8`, no bloom, exact 4896×3072, a signalled promotion
 fence, completed GPU timing, and zero browser errors.
+
+E21 is the calibrated normal-WebGL-only exact-Glass deep-body transmission
+checkpoint, independently measurable with `?glassBodyVfx=0|1`. It replaces
+the old flat Glass lens grade only after exact-species depth byte 30, handing
+off continuously from E10's shallow edge band. One shared
+`glassBodyWeight` proof requires projected Glass `24`, Solid family,
+TranslucentRigid optics, ordinary traits, authoritative deep interior, no
+emission/reconstruction/halo/native wall, and no foreign or unlike contact.
+Reuse only the already-live solid-depth, interior, relief, analytic key,
+Fresnel, and environment values for selective warm absorption, cool
+transmission, crown reflection, and pocket absorption. Do not change
+presentation alpha: it owns premultiplication and independent native-wall
+visibility. E21 adds no texture read, field, resource, pass, target, upload,
+allocation, clock, output-scale input, alpha, support, silhouette, ownership,
+topology, or physics decision. E10, Ice/QRTZ, holes, notches, reconstructed
+cavities, one-cell lines, isolated Glass, Glass/Ice/Metal/Water contacts,
+co-located native walls, traits, emission, powder/liquid controls, Canvas, and
+compact true 8× retain their established paths. Validate with
+`npm run audit:vfx:glass-body`: the 1×/2×/4× off→on→off matrix uses frozen
+per-target transition/core RGB, chroma, coverage, peak, signed, and spectral
+bounds, explicitly samples the byte-30 handoff, proves exact 192–255 deep
+range, and runtime-asserts every pinned peer selector inactive. The second
+pane's checker is a disjoint protected no-op: its transition/core targets stay
+wall-free because occupied native walls force depth zero and the clear 4×4
+blocks remain shallow. All non-wall controls are exact and the two wall probes
+are bounded to one composed byte. Requested-on true 8× must report E21/HDR inactive with
+`scale-8`, no bloom, exact 4896×3072, completed GPU timing, and zero browser
+errors. Never declare or branch on E21 in `FIELD_EIGHT_X_FRAGMENT`.
+
+The radioactive-solid review found no current correctness bug: ISZS `105`
+and VIBR `113` already receive exact-species Solid depth, while the existing
+seven-owner radioactive identity motif is intentionally phase-permissive.
+Before adding any broad isotope finish, create a separate exact ISZS/VIBR
+solid-only eligibility proof and fixture; never reuse that permissive identity
+guard as a deep-body gate.
 
 The old post-E16 rank that labelled Stone `21` as Solid was invalid because
 Stone is native Powder. The corrected showcase uses native ROCK ground and

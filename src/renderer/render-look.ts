@@ -238,6 +238,23 @@ export function resolveBotanicalBodyVfxEnabled(
 }
 
 /**
+ * Keeps the exact thick-Glass body-transmission experiment independently
+ * measurable inside the broader volume study. Normal WebGL owns the strict
+ * Glass owner, depth, contact, and topology guards; Canvas and compact true 8x
+ * remain controls while this selector admits only its bounded RGB response.
+ */
+export function resolveGlassBodyVfxEnabled(
+  look: RenderLook,
+  search = globalThis.location?.search ?? '',
+): boolean {
+  if (look === 'classic') return false;
+  const requested = new URLSearchParams(search).get('glassBodyVfx');
+  if (requested === '0' || requested === 'off' || requested === 'false') return false;
+  if (requested === '1' || requested === 'on' || requested === 'true') return true;
+  return resolveVolumeVfxEnabled(look, search);
+}
+
+/**
  * Keeps the settled-powder crown experiment independently measurable without
  * changing liquid or gas. Ordinary realistic/neon presets retain the broad
  * volume default; the explicit query is reserved for comparison captures and

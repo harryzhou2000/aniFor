@@ -37,6 +37,7 @@ import {
 import { HDRVfxPipeline, type HDRPipelineInfo } from './hdr-vfx-pipeline';
 import {
   resolveBotanicalBodyVfxEnabled,
+  resolveGlassBodyVfxEnabled,
   resolveGasBodyVfxEnabled, resolveGasCoreDepthVfxEnabled, resolveGasLightVfxEnabled,
   resolveGasMotionVfxEnabled,
   resolveLiquidBodyVfxEnabled, resolveLiquidSolidMeniscusVfxEnabled,
@@ -3231,6 +3232,7 @@ uniform float uSolidBodyVfx;
 uniform float uPlatinumBodyVfx;
 uniform float uCeramicGlazeVfx;
 uniform float uBotanicalBodyVfx;
+uniform float uGlassBodyVfx;
 uniform float uLiquidBodyVfx;
 uniform float uLiquidSolidMeniscusVfx;
 uniform float uPowderBodyVfx;
@@ -7426,6 +7428,67 @@ void main() {
     // semantic cell as generic solid cavity support.
     if (cellularSurface > 0.5 && surfaceOnly > 0.5) alpha = 0.0;
     if (translucentSurface > 0.5) {
+      // E21 is the deep-body complement to E10's shallow Glass edge band.
+      // Define its one exact-owner proof only where it is consumed: carrying
+      // these scalars through the whole large fragment program creates severe
+      // normal-4x register pressure on software GPUs. The depth hand-off begins
+      // after E10's strongest near-edge response, retaining thin panes and the
+      // first interior layers exactly.
+      float glassBodyWeight = uGlassBodyVfx > 0.5
+        && material == 24.0 && family == 0.0 && optics == 12.0
+        && traits < 0.5 && !materialEmissive
+        && uSolidOpticalDepth > 0.5 && solidOpticalDepth > 30.0 / 255.0
+        && solidInterior > 0.001 && surfaceOnly < 0.5 && halo < 0.5
+        && wall < 0.5 && wallOnly < 0.5 && emissionOnly < 0.5
+        && foreignMatterContact < 0.5 && unlikeMaterialContact < 0.5
+        ? smoothstep(30.0 / 255.0, 78.0 / 255.0, solidOpticalDepth) * solidInterior
+        : 0.0;
+      // Optical depth advances in six-byte steps, so fade both carriers with
+      // one continuous weight instead of dropping the old shell at byte 36.
+      // Folding the exact-owner predicate into that weight also avoids carrying
+      // a redundant scalar through this large normal-scale fragment program.
+      // E21: replace the old flat deep-Glass grade with a bounded transmitted
+      // body. Exact-species optical thickness provides a continuous surface-
+      // to-core ramp; the already-live relief, key, Fresnel, and environment
+      // values recover asymmetric crown light and grazing reflection after
+      // warm wavelengths are absorbed. This is RGB-only normal-WebGL
+      // arithmetic. It adds no sample, texture, field, pass, target, upload,
+      // allocation, clock, output-scale input, alpha, support, reconstruction,
+      // ownership, or physics decision, and the compact true-8x shader remains
+      // on its independently proven Glass path.
+      if (glassBodyWeight > 0.0) {
+        float glassBodyDepth = glassBodyWeight;
+        float glassBodyRelief = clamp(
+          solidReliefTone * (255.0 / 6.0), -1.0, 1.0
+        );
+        float glassBodyFacing = clamp(
+          (solidKey - 0.58) * 1.65 + glassBodyRelief * 0.34,
+          -1.0, 1.0
+        );
+        // Beer-like selective absorption makes a thick body clearer and
+        // cooler without reducing its authoritative presentation alpha.
+        color *= vec3(1.0) - vec3(0.090, 0.043, 0.015) * glassBodyDepth;
+        float glassBodyTransmission = glassBodyDepth * clamp(
+          0.48 + (1.0 - solidKey) * 0.22 - max(-glassBodyFacing, 0.0) * 0.12,
+          0.34, 0.72
+        );
+        color = mix(
+          color, color * vec3(0.84, 0.965, 1.075), glassBodyTransmission * 0.42
+        );
+        float glassBodyCrown = glassBodyDepth * min(
+          0.060,
+          max(glassBodyFacing, 0.0) * 0.044
+            + smoothstep(0.018, 0.18, solidFresnel) * 0.026
+        );
+        float glassBodyPocket = glassBodyDepth
+          * min(0.036, max(-glassBodyFacing, 0.0) * 0.040);
+        vec3 glassBodyReflection = mix(
+          vec3(0.34, 0.68, 1.0), vividColor(solidEnvironment, 1.08), 0.38
+        );
+        color += (vec3(1.12) - clamp(color, 0.0, 1.12))
+          * glassBodyReflection * glassBodyCrown;
+        color *= vec3(1.0) - vec3(0.86, 0.74, 0.58) * glassBodyPocket;
+      }
       float exactPrismatic = (material == 12.0 || material == 24.0) ? 1.0 : 0.0;
       float prismGain = material == 24.0 ? 1.0 : -0.42;
       float prism = solidReliefTone * prismGain * exactPrismatic
@@ -7442,17 +7505,24 @@ void main() {
           // The semantic wall compositor already supplies the actual backdrop
           // refraction. This is only the body optic: deeper Glass absorbs a
           // little warm base light, carries a cool transmission, and catches
-          // the existing environment at a grazing angle. It is deliberately
-          // local RGB arithmetic, so it cannot disturb support or alpha.
+          // the existing environment at a grazing angle. Stage the already-
+          // E21-composed input, run the established legacy
+          // carrier once in its exact original order, then fade only that
+          // carrier's delta. This keeps disabled/shallow bytes exact without
+          // duplicating a large branch in an already register-heavy shader.
+          vec3 glassPreLegacy = color;
           float glassCore = smoothstep(0.28, 0.90, solidDepth);
           float glassGrazing = smoothstep(0.018, 0.18, solidFresnel);
+          vec3 glassReflection = solidEnvironment * (0.045 + glassGrazing * 0.20)
+            + solidSpecularTint * (0.006 + glassGrazing * 0.018);
           color = mix(color, color * vec3(0.86, 0.965, 1.075), glassCore * 0.30);
           color *= 1.0 - solidDepth * 0.010 - valley * 0.70;
           color += vec3(0.45, 0.78, 1.0) * (shellRim + crown * 1.50);
-          vec3 glassReflection = solidEnvironment * (0.045 + glassGrazing * 0.20)
-            + solidSpecularTint * (0.006 + glassGrazing * 0.018);
           color += (vec3(1.0) - clamp(color, 0.0, 1.0)) * glassReflection
             * (0.30 + glassCore * 0.70);
+          if (glassBodyWeight > 0.0) {
+            color = mix(glassPreLegacy, color, 1.0 - glassBodyWeight);
+          }
         } else if (material == 12.0) {
           float frostedRidge = abs(solidReliefTone) * 0.70;
           // Deep Ice remains translucent rather than simply pale: its body
@@ -9545,6 +9615,11 @@ export class PixiFieldPresenter {
     // its established botanical grammar and declares no E20 selector.
     const botanicalBodyVfxEnabled = outputScale < 8
       && resolveBotanicalBodyVfxEnabled(renderLook);
+    // E21 replaces only normal-WebGL's deep exact-Glass body grade. The
+    // compact true-8x shader retains its separately proven transmission path
+    // and deliberately declares neither this selector nor its arithmetic.
+    const glassBodyVfxEnabled = outputScale < 8
+      && resolveGlassBodyVfxEnabled(renderLook);
     // E03 is a normal-detail experiment. The true-8x shader intentionally has
     // no corresponding uniform or arithmetic, so its public capability state
     // must not advertise an effect that cannot run on that path.
@@ -9578,6 +9653,7 @@ export class PixiFieldPresenter {
       uPlatinumBodyVfx: { value: platinumBodyVfxEnabled ? 1 : 0, type: 'f32' },
       uCeramicGlazeVfx: { value: ceramicGlazeVfxEnabled ? 1 : 0, type: 'f32' },
       uBotanicalBodyVfx: { value: botanicalBodyVfxEnabled ? 1 : 0, type: 'f32' },
+      uGlassBodyVfx: { value: glassBodyVfxEnabled ? 1 : 0, type: 'f32' },
       uLiquidBodyVfx: { value: liquidBodyVfxEnabled ? 1 : 0, type: 'f32' },
       uLiquidSolidMeniscusVfx: {
         value: liquidSolidMeniscusVfxEnabled ? outputScale : 0, type: 'f32',
@@ -9798,6 +9874,7 @@ export class PixiFieldPresenter {
       this.uniforms.uniforms.uPlatinumBodyVfx = 0;
       this.uniforms.uniforms.uCeramicGlazeVfx = 0;
       this.uniforms.uniforms.uBotanicalBodyVfx = 0;
+      this.uniforms.uniforms.uGlassBodyVfx = 0;
       this.uniforms.uniforms.uLiquidBodyVfx = 0;
       this.uniforms.uniforms.uLiquidSolidMeniscusVfx = 0;
       this.uniforms.uniforms.uPowderBodyVfx = 0;
@@ -9841,6 +9918,7 @@ export class PixiFieldPresenter {
             || new URLSearchParams(location.search).get('platinumBodyVfxAudit') === '1'
             || new URLSearchParams(location.search).get('ceramicGlazeVfxAudit') === '1'
             || new URLSearchParams(location.search).get('botanicalBodyVfxAudit') === '1'
+            || new URLSearchParams(location.search).get('glassBodyVfxAudit') === '1'
             || new URLSearchParams(location.search).get('liquidBodyVfxAudit') === '1'
             || new URLSearchParams(location.search).get('liquidSolidMeniscusVfxAudit') === '1'
             || new URLSearchParams(location.search).get('liquidSurfaceVfxAudit') === '1'
@@ -9898,6 +9976,9 @@ export class PixiFieldPresenter {
     ) > 0.5 ? 'active' : 'inactive';
     presenter.app.canvas.dataset.botanicalBodyVfx = Number(
       presenter.uniforms.uniforms.uBotanicalBodyVfx
+    ) > 0.5 ? 'active' : 'inactive';
+    presenter.app.canvas.dataset.glassBodyVfx = Number(
+      presenter.uniforms.uniforms.uGlassBodyVfx
     ) > 0.5 ? 'active' : 'inactive';
     presenter.app.canvas.dataset.liquidBodyVfx = Number(presenter.uniforms.uniforms.uLiquidBodyVfx) > 0.5
       ? 'active' : 'inactive';
@@ -11280,6 +11361,7 @@ export class PixiFieldPresenter {
         this.uniforms.uniforms.uPlatinumBodyVfx = 0;
         this.uniforms.uniforms.uCeramicGlazeVfx = 0;
         this.uniforms.uniforms.uBotanicalBodyVfx = 0;
+        this.uniforms.uniforms.uGlassBodyVfx = 0;
         this.uniforms.uniforms.uLiquidBodyVfx = 0;
         this.uniforms.uniforms.uLiquidSolidMeniscusVfx = 0;
         this.uniforms.uniforms.uPowderBodyVfx = 0;
@@ -11300,6 +11382,7 @@ export class PixiFieldPresenter {
         this.app.canvas.dataset.platinumBodyVfx = 'inactive';
         this.app.canvas.dataset.ceramicGlazeVfx = 'inactive';
         this.app.canvas.dataset.botanicalBodyVfx = 'inactive';
+        this.app.canvas.dataset.glassBodyVfx = 'inactive';
         this.app.canvas.dataset.liquidBodyVfx = 'inactive';
         this.app.canvas.dataset.liquidSolidMeniscusVfx = 'inactive';
         this.app.canvas.dataset.liquidSurfaceVfx = 'inactive';

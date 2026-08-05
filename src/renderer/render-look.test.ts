@@ -4,6 +4,7 @@ import {
   resolveCeramicGlazeVfxEnabled,
   DEFAULT_RENDER_LOOK, resolveGasBodyVfxEnabled, resolveGasCoreDepthVfxEnabled,
   resolveGasLightVfxEnabled,
+  resolveGlassBodyVfxEnabled,
   resolveGasMotionVfxEnabled,
   resolveLiquidBodyVfxEnabled, resolveLiquidSolidMeniscusVfxEnabled,
   resolveLiquidSurfaceVfxEnabled,
@@ -188,6 +189,23 @@ describe('resolveRenderLook', () => {
     expect(resolveBotanicalBodyVfxEnabled(
       'neon-lab', '?volumeVfx=1&botanicalBodyVfx=false',
     )).toBe(false);
+  });
+
+  it('keeps exact thick-Glass body transmission independently measurable', () => {
+    expect(resolveGlassBodyVfxEnabled('classic', '?glassBodyVfx=true')).toBe(false);
+    expect(resolveGlassBodyVfxEnabled('realistic', '')).toBe(true);
+    expect(resolveGlassBodyVfxEnabled('neon-lab', '')).toBe(true);
+    expect(resolveGlassBodyVfxEnabled('realistic', '?volumeVfx=0')).toBe(false);
+    expect(resolveGlassBodyVfxEnabled(
+      'realistic', '?volumeVfx=0&glassBodyVfx=1',
+    )).toBe(true);
+    expect(resolveGlassBodyVfxEnabled(
+      'neon-lab', '?volumeVfx=1&glassBodyVfx=0',
+    )).toBe(false);
+    expect(resolveGlassBodyVfxEnabled('realistic', '?glassBodyVfx=on')).toBe(true);
+    expect(resolveGlassBodyVfxEnabled('realistic', '?glassBodyVfx=true')).toBe(true);
+    expect(resolveGlassBodyVfxEnabled('realistic', '?glassBodyVfx=off')).toBe(false);
+    expect(resolveGlassBodyVfxEnabled('realistic', '?glassBodyVfx=false')).toBe(false);
   });
 
   it('lets powder-body VFX follow the preset or override broad volume styling', () => {
