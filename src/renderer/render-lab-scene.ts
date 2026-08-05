@@ -46,10 +46,11 @@ export function applyMaterialShowcaseScene(simulation: SimulationBackend): void 
   simulation.clear();
   const plot = new ScenePlotter(simulation);
 
-  // A deep, ordinary solid ground gives the liquid, pile, tree, and devices a
-  // common contact surface. The small carved channel keeps the composition from
-  // becoming a set of disconnected cards.
-  plot.roundedRect(24, 280, 564, 76, 18, Material.Stone);
+  // A deep, native-solid ROCK ground gives the liquid, pile, tree, and devices
+  // a common contact surface. The small carved channel keeps the composition
+  // from becoming a set of disconnected cards. Keep this an actual Solid: the
+  // composed-rank solid region is deliberately sampled from this broad body.
+  plot.roundedRect(24, 280, 564, 76, 18, Material.ROCK);
   plot.eraseRect(315, 280, 54, 18);
   plot.roundedRect(315, 289, 54, 18, 11, Material.Metal);
 

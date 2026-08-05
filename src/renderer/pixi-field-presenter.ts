@@ -41,6 +41,7 @@ import {
   resolveLiquidBodyVfxEnabled, resolveLiquidSolidMeniscusVfxEnabled,
   resolveLiquidSurfaceVfxEnabled,
   resolvePlasmaCoreVfxEnabled,
+  resolveSolidBodyVfxEnabled,
   resolvePowderBodyVfxEnabled, resolvePowderLightVfxEnabled, resolveRenderLook,
   resolveOrganicSubsurfaceVfxEnabled,
   resolvePowderSolidContactVfxEnabled,
@@ -3223,6 +3224,7 @@ uniform float uGasMotionVfx;
 uniform float uGasLightVfx;
 uniform float uGasCoreDepthVfx;
 uniform float uPlasmaCoreVfx;
+uniform float uSolidBodyVfx;
 uniform float uLiquidBodyVfx;
 uniform float uLiquidSolidMeniscusVfx;
 uniform float uPowderBodyVfx;
@@ -8464,6 +8466,50 @@ void main() {
       float solidAmbientLift = min(5.0 / 255.0, solidAmbientBody * 5.0 / 255.0);
       color *= 1.0 + solidAmbientLift;
     }
+    // E17: turn the already-proven exact-species thickness and analytic face
+    // lighting into a restrained broad-body bevel. The strict SmoothRigid,
+    // semantic-owner, contact, and depth guards keep authored holes, seams,
+    // thin structure, walls, traits, reconstructed support, and moving powder
+    // exact. This is RGB-only arithmetic in normal WebGL: no sample, resource,
+    // field, time term, alpha, or compact true-8x branch is added.
+    // Keep the first accepted owner set as narrow as its browser evidence:
+    // broad ROCK and Metal bodies are both represented in the exact fixture.
+    // Other SmoothRigid owners can join only with their own colour/exposure
+    // cards instead of inheriting an unmeasured cool-key response.
+    bool solidBodyOwner = material == 23.0 || material == 78.0;
+    if (uSolidBodyVfx > 0.5 && solidBodyOwner
+      && family == 0.0 && optics == 8.0 && !materialEmissive && traits < 0.5
+      && surfaceOnly < 0.5 && halo < 0.5 && wall < 0.5
+      && wallOnly < 0.5 && emissionOnly < 0.5
+      && granularSurface < 0.5 && translucentSurface < 0.5
+      && foreignMatterContact < 0.5 && unlikeMaterialContact < 0.5
+      && solidInterior > 0.001 && solidOpticalDepth > 6.0 / 255.0) {
+      float solidBodyDepth = solidInterior
+        * smoothstep(6.0 / 255.0, 42.0 / 255.0, solidOpticalDepth);
+      float solidBodyRelief = clamp(solidReliefTone * 255.0 / 7.0, -1.0, 1.0);
+      float solidBodyFace = clamp(
+        (solidKey - 0.684) * 2.0 + (solidFill - 0.735) * 0.50
+          + solidBodyRelief * 0.72,
+        -1.0, 1.0
+      );
+      float solidBodyKey = solidBodyDepth * min(
+        0.052,
+        max(solidBodyFace, 0.0) * 0.068
+          + smoothstep(0.035, 0.22, solidFresnel) * 0.012
+      );
+      float solidBodyPocket = solidBodyDepth * min(
+        0.050, max(-solidBodyFace, 0.0) * 0.078
+      );
+      vec3 solidBodyKeyColor = mix(
+        vec3(0.70, 0.84, 1.0), vividColor(clamp(color, 0.0, 1.0), 1.04), 0.68
+      );
+      // A small neutral diffuse lift keeps pale Metal from quantizing the
+      // deliberately cool spectral headroom term away at one sample per cell.
+      color *= 1.0 + solidBodyKey * 0.10;
+      color += (vec3(1.0) - clamp(color, 0.0, 1.0)) * solidBodyKeyColor
+        * solidBodyKey;
+      color *= vec3(1.0) - vec3(0.92, 0.80, 0.68) * solidBodyPocket;
+    }
   }
   if (uEnergyIdentityStyling > 0.5 && halo < 0.5 && surfaceOnly < 0.5
     && wallOnly < 0.5 && emissionOnly < 0.5
@@ -9257,6 +9303,10 @@ export class PixiFieldPresenter {
     // parallel branch and retains its established register/resource budget.
     const plasmaCoreVfxEnabled = outputScale < 8
       && resolvePlasmaCoreVfxEnabled(renderLook);
+    // E17 uses only normal WebGL's existing solid-depth and analytic-light
+    // values. The compact true-8x shader has no selector or parallel branch.
+    const solidBodyVfxEnabled = outputScale < 8
+      && resolveSolidBodyVfxEnabled(renderLook);
     // E03 is a normal-detail experiment. The true-8x shader intentionally has
     // no corresponding uniform or arithmetic, so its public capability state
     // must not advertise an effect that cannot run on that path.
@@ -9286,6 +9336,7 @@ export class PixiFieldPresenter {
       uGasLightVfx: { value: gasLightVfxEnabled ? 1 : 0, type: 'f32' },
       uGasCoreDepthVfx: { value: gasCoreDepthVfxEnabled ? 1 : 0, type: 'f32' },
       uPlasmaCoreVfx: { value: plasmaCoreVfxEnabled ? 1 : 0, type: 'f32' },
+      uSolidBodyVfx: { value: solidBodyVfxEnabled ? 1 : 0, type: 'f32' },
       uLiquidBodyVfx: { value: liquidBodyVfxEnabled ? 1 : 0, type: 'f32' },
       uLiquidSolidMeniscusVfx: {
         value: liquidSolidMeniscusVfxEnabled ? outputScale : 0, type: 'f32',
@@ -9502,6 +9553,7 @@ export class PixiFieldPresenter {
       this.uniforms.uniforms.uGasLightVfx = 0;
       this.uniforms.uniforms.uGasCoreDepthVfx = 0;
       this.uniforms.uniforms.uPlasmaCoreVfx = 0;
+      this.uniforms.uniforms.uSolidBodyVfx = 0;
       this.uniforms.uniforms.uLiquidBodyVfx = 0;
       this.uniforms.uniforms.uLiquidSolidMeniscusVfx = 0;
       this.uniforms.uniforms.uPowderBodyVfx = 0;
@@ -9541,6 +9593,7 @@ export class PixiFieldPresenter {
             || new URLSearchParams(location.search).get('gasLightVfxAudit') === '1'
             || new URLSearchParams(location.search).get('gasCoreDepthVfxAudit') === '1'
             || new URLSearchParams(location.search).get('plasmaCoreVfxAudit') === '1'
+            || new URLSearchParams(location.search).get('solidBodyVfxAudit') === '1'
             || new URLSearchParams(location.search).get('liquidBodyVfxAudit') === '1'
             || new URLSearchParams(location.search).get('liquidSolidMeniscusVfxAudit') === '1'
             || new URLSearchParams(location.search).get('liquidSurfaceVfxAudit') === '1'
@@ -9586,6 +9639,9 @@ export class PixiFieldPresenter {
     ) > 0.5 ? 'active' : 'inactive';
     presenter.app.canvas.dataset.plasmaCoreVfx = Number(
       presenter.uniforms.uniforms.uPlasmaCoreVfx
+    ) > 0.5 ? 'active' : 'inactive';
+    presenter.app.canvas.dataset.solidBodyVfx = Number(
+      presenter.uniforms.uniforms.uSolidBodyVfx
     ) > 0.5 ? 'active' : 'inactive';
     presenter.app.canvas.dataset.liquidBodyVfx = Number(presenter.uniforms.uniforms.uLiquidBodyVfx) > 0.5
       ? 'active' : 'inactive';
@@ -10964,6 +11020,7 @@ export class PixiFieldPresenter {
         this.uniforms.uniforms.uGasLightVfx = 0;
         this.uniforms.uniforms.uGasCoreDepthVfx = 0;
         this.uniforms.uniforms.uPlasmaCoreVfx = 0;
+        this.uniforms.uniforms.uSolidBodyVfx = 0;
         this.uniforms.uniforms.uLiquidBodyVfx = 0;
         this.uniforms.uniforms.uLiquidSolidMeniscusVfx = 0;
         this.uniforms.uniforms.uPowderBodyVfx = 0;
@@ -10980,6 +11037,7 @@ export class PixiFieldPresenter {
         this.app.canvas.dataset.gasLightVfx = 'inactive';
         this.app.canvas.dataset.gasCoreDepthVfx = 'inactive';
         this.app.canvas.dataset.plasmaCoreVfx = 'inactive';
+        this.app.canvas.dataset.solidBodyVfx = 'inactive';
         this.app.canvas.dataset.liquidBodyVfx = 'inactive';
         this.app.canvas.dataset.liquidSolidMeniscusVfx = 'inactive';
         this.app.canvas.dataset.liquidSurfaceVfx = 'inactive';

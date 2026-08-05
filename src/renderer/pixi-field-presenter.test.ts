@@ -768,6 +768,54 @@ describe('Pixi presenter startup configuration', () => {
     expect(preserveDrawingBuffer).toContain("get('liquidSolidMeniscusVfxAudit') === '1'");
   });
 
+  it('keeps E17 opaque solid-body depth on bounded normal WebGL arithmetic', () => {
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const canvasSource = readFileSync(new URL('./field-renderer.ts', import.meta.url), 'utf8');
+    const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');
+    const normalStart = source.indexOf('const FIELD_FRAGMENT = `', eightStart);
+    const normalEnd = source.indexOf('`;\n\n/** Primary WebGL presentation', normalStart);
+    const eight = source.slice(eightStart, normalStart);
+    const normal = source.slice(normalStart, normalEnd);
+    const e17Start = normal.indexOf('    // E17:');
+    const e17End = normal.indexOf('  }\n  if (uEnergyIdentityStyling', e17Start);
+    const e17 = normal.slice(e17Start, e17End);
+
+    expect(e17Start).toBeGreaterThanOrEqual(0);
+    expect(e17End).toBeGreaterThan(e17Start);
+    expect(normal).toContain('uniform float uSolidBodyVfx;');
+    expect(eight).not.toContain('uSolidBodyVfx');
+    expect(eight).not.toContain('solidBodyVfx');
+    expect(canvasSource).not.toContain('solidBodyVfx');
+    for (const owner of ['23.0', '78.0']) {
+      expect(e17).toContain(`material == ${owner}`);
+    }
+    for (const unmeasuredOwner of ['22.0', '25.0', '67.0', '70.0', '73.0', '75.0', '82.0']) {
+      expect(e17).not.toContain(`material == ${unmeasuredOwner}`);
+    }
+    expect(e17).toContain('optics == 8.0');
+    expect(e17).toContain('surfaceOnly < 0.5');
+    expect(e17).toContain('halo < 0.5');
+    expect(e17).toContain('wall < 0.5');
+    expect(e17).toContain('foreignMatterContact < 0.5');
+    expect(e17).toContain('unlikeMaterialContact < 0.5');
+    expect(e17).toContain('solidOpticalDepth > 6.0 / 255.0');
+    expect(e17).toContain('solidReliefTone');
+    expect(e17).toContain('solidKey');
+    expect(e17).toContain('solidFill');
+    expect(e17).toContain('solidFresnel');
+    expect(e17).not.toContain('texture(');
+    expect(e17).not.toContain('uTime');
+    expect(e17).not.toContain('gl_FragCoord');
+    expect(e17).not.toMatch(/\balpha\s*[+*]?=/);
+    expect(source.match(/this\.uniforms\.uniforms\.uSolidBodyVfx = 0;/g)).toHaveLength(2);
+    expect(source).toContain("get('solidBodyVfxAudit') === '1'");
+    expect(source).toMatch(
+      /const solidBodyVfxEnabled = outputScale < 8\s*&& resolveSolidBodyVfxEnabled\(renderLook\);/,
+    );
+    expect(source).toContain('presenter.app.canvas.dataset.solidBodyVfx');
+    expect(source).toContain("this.app.canvas.dataset.solidBodyVfx = 'inactive';");
+  });
+
   it('routes E08 liquid surfaces through existing normal-scale HDR resources only', () => {
     const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
     const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');

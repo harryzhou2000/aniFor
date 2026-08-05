@@ -13,7 +13,7 @@ powder, solid, liquid, gas, energy, and contact scenes across Canvas and WebGL a
 mobile gestures, save/load, CI, and Pages deployment as protected regression
 contracts rather than the primary feature stream.
 
-The accepted visual experiment ladder now runs through E16. E12 is the
+The accepted visual experiment ladder now runs through E17. E12 is the
 species-safe Sand/Clay/Concrete wet-sediment checkpoint; preserve its exact
 aqueous owner/stability proof, split moving-powder/stationary-Water control,
 Local/Grains no-op, fine structures, authored gaps, Canvas fallback, and true
@@ -62,10 +62,34 @@ calibrated 1×/2×/4× off→on→off response and requested-on true-8× inactiv
 or branch on E16 in `FIELD_EIGHT_X_FRAGMENT`. Before E17, re-rank the composed
 fixture; current evidence says further generic gas tint/noise is not justified,
 while rigid-body/contact depth remains a candidate only if a fit-view defect is
-demonstrated. The accepted post-E16 1×/2×/4× survey keeps exact scene semantics
-and ranks Gas `1.944`, Solid `5.923`, Energy `7.817`, Powder `10.568`, Liquid
-`11.233`, and Contact `15.849`; treat Solid as the next unclaimed broad-family
-audit target rather than layering a fifth generic Gas effect.
+demonstrated.
+
+E17 is the calibrated normal-WebGL-only exact ROCK/Metal opaque-body relief
+checkpoint, independently measurable with `?solidBodyVfx=0|1`. Only
+authoritative native ROCK `78` and Metal `23` inside already-proven broad
+SmoothRigid support may reuse the existing exact-species solid-depth byte,
+interior proof, analytic key/fill/Fresnel, and signed macro relief for a bounded
+bipolar RGB response. Keep the analytic basis centred: a uniform cool lift is
+not acceptable evidence. Do not extend the owner whitelist to Brick, Ceramic,
+BMTL, Gold, Iron, Platinum, Titanium, or any special-state solid without an
+explicit colour/exposure card. Add no texture read, field, resource, pass,
+target, upload, allocation, clock, alpha/support/silhouette/ownership/topology,
+or physics decision. Holes, notches, one-cell lines, isolated cells,
+unlike-solid seams, co-located walls, traits, emission, reconstructed support,
+powder, liquid, translucent solids, Canvas, and true 8× are exact controls.
+Validate narrow 1×/2×/4× off→on→off key/pocket magnitude, cross-scale stability,
+and requested-on true-8× inactive `scale-8` GPU-fence proof with
+`npm run audit:vfx:solid-body`; do not declare or branch on E17 in
+`FIELD_EIGHT_X_FRAGMENT`.
+
+The old post-E16 rank that labelled Stone `21` as Solid was invalid because
+Stone is native Powder. The corrected showcase uses native ROCK ground and
+asserts 2,769 matching Solid cells before ranking; never use the old Solid
+`5.923` value to select another experiment. With identical `3702907786`
+semantics and 104,027 occupied cells, the corrected E17 off/on survey moves
+only native-ROCK Solid from `4.182` to `5.975` visual signal (`+42.9%`), while
+Gas `1.944`, Energy `7.817`, Powder `10.553`, Liquid `11.233`, and Contact
+`15.849` stay fixed.
 
 WebGL is the canonical visual release path. Canvas 2D remains a resilient,
 camera-preserving semantic fallback: keep its loading, input, material/state,

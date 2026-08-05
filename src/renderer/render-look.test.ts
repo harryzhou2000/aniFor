@@ -7,6 +7,7 @@ import {
   resolveLiquidSurfaceVfxEnabled,
   resolveOrganicSubsurfaceVfxEnabled,
   resolvePlasmaCoreVfxEnabled,
+  resolveSolidBodyVfxEnabled,
   resolvePowderBodyVfxEnabled, resolvePowderLightVfxEnabled,
   resolvePowderSolidContactVfxEnabled, resolveRenderLook, resolveTranslucentEdgeVfxEnabled,
   resolveVolumeVfxEnabled, resolveWetSedimentVfxEnabled,
@@ -132,6 +133,18 @@ describe('resolveRenderLook', () => {
     )).toBe(true);
     expect(resolvePlasmaCoreVfxEnabled(
       'neon-lab', '?volumeVfx=1&plasmaCoreVfx=off',
+    )).toBe(false);
+  });
+
+  it('keeps opaque solid-body depth independently measurable inside HDR looks', () => {
+    expect(resolveSolidBodyVfxEnabled('classic', '?solidBodyVfx=on')).toBe(false);
+    expect(resolveSolidBodyVfxEnabled('realistic', '')).toBe(true);
+    expect(resolveSolidBodyVfxEnabled('realistic', '?volumeVfx=0')).toBe(false);
+    expect(resolveSolidBodyVfxEnabled(
+      'realistic', '?volumeVfx=0&solidBodyVfx=on',
+    )).toBe(true);
+    expect(resolveSolidBodyVfxEnabled(
+      'neon-lab', '?volumeVfx=1&solidBodyVfx=off',
     )).toBe(false);
   });
 

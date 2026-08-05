@@ -32,11 +32,14 @@ describe('render lab scene', () => {
     const counts = new Uint32Array(256);
     for (const material of first.cells()) counts[material]++;
     for (const material of [
-      Material.Stone, Material.Sand, Material.Clay, Material.Concrete,
+      Material.ROCK, Material.Sand, Material.Clay, Material.Concrete,
       Material.Water, Material.Oil, Material.Glass, Material.Smoke,
       Material.Oxygen, Material.NobleGas, Material.Wood, Material.Plant,
       Material.DTEC, Material.URAN, Material.POLO,
     ]) expect(counts[material]).toBeGreaterThan(100);
+    expect(first.cells()[331 * 612 + 530]).toBe(Material.ROCK);
+    expect(renderPhase(ALL_MATERIALS.find(({ id }) => id === Material.ROCK)!))
+      .toBe(RenderPhase.Solid);
     expect(first.cells()[235 * 612 + 360]).toBe(Material.Water);
     expect(first.cells()[235 * 612 + 420]).toBe(Material.Oil);
     expect(first.cells()[265 * 612 + 285]).toBe(Material.Glass);

@@ -207,11 +207,24 @@ does not alter simulation, camera, semantic ownership, or `renderScale`.
   and true 8× remain controls. The focused gate owns calibrated off/on/off
   response, scale consistency, exact semantic/raw/support invariants, and the
   requested-on true-8× inactive fence proof.
+- **E17 — exact ROCK/Metal opaque-body relief (accepted checkpoint):** normal
+  1×–4× WebGL gives only authoritative native ROCK and Metal inside a proven
+  broad SmoothRigid body a restrained signed key/pocket response through
+  `?solidBodyVfx=0|1`. It reuses the existing exact-species optical-depth byte,
+  interior proof, analytic key/fill/Fresnel, and signed macro relief. The
+  response is deliberately bipolar rather than a uniform cool lift. Brick,
+  Ceramic, BMTL, Gold, Iron, Platinum, and Titanium remain excluded until each
+  has a measured colour/exposure card; holes, open notches, one-cell lines,
+  isolated cells, unlike-solid seams, native walls, traits, emission,
+  reconstructed support, powder, liquids, translucent solids, Canvas, and true
+  8× are exact controls. E17 adds no texture read, field, resource, pass,
+  target, upload, allocation, clock, alpha/support/silhouette/ownership,
+  topology, or physics decision.
 - **Protected 8× rung:** `renderScale=8` deliberately reports
   `hdrPipeline=inactive` / `scale-8` and retains the proven direct single-mesh
   4896×3072 path. The experiment must earn a bounded 8× design rather than
   allocating a 115 MiB full-resolution float target beside that path.
-- **Current decision:** E01/E02/E03/E04/E05/E06/E07/E08/E09/E10/E11/E12/E13/E14/E15/E16 remain opt-in through the non-Classic looks
+- **Current decision:** E01/E02/E03/E04/E05/E06/E07/E08/E09/E10/E11/E12/E13/E14/E15/E16/E17 remain opt-in through the non-Classic looks
   until representative hardware timing and mobile thermal behavior are
   measured. E02 remains the safe family-wide baseline. E03 is accepted as the
   liquid-depth checkpoint: its fit-view crop is visibly more cohesive, retains
@@ -280,8 +293,14 @@ does not alter simulation, camera, semantic ownership, or `renderScale`.
   magnetic volume rather than another cell motif, the violet chroma and
   authored topology remain intact, and sparse Plasma plus all foreign Energy
   owners remain exact. Freeze its two static macro frequencies, cohesive gate,
-  shell amplitude, and RGB-only ownership until another fit-view review. These
-  are not the final material/VFX results.
+  shell amplitude, and RGB-only ownership until another fit-view review. E17 is
+  accepted as the first exact opaque rigid-body relief checkpoint: ROCK and
+  Metal gain scale-stable signed body modulation without a new motif, uniform
+  grade, or change to their existing family texture. Freeze its two-owner
+  whitelist, centred analytic-light basis, signed relief weight, and four-to-six
+  byte accepted peak envelope (the canonical survey observes five to six) until
+  more SmoothRigid owners receive explicit cards.
+  These are not the final material/VFX results.
   Sub-1.0 material colour stays on the established response; tonemapping owns
   only real HDR highlights so powder texture and liquid body contrast are not
   washed out.
@@ -539,31 +558,55 @@ requested-on true-8× navigation reports E16/HDR inactive with reason `scale-8`,
 keeps no bloom target, presents exact 4896×3072 WebGL, and completes its GPU
 fence.
 
-The post-E16 composed fit-view rerun is clean at 1×/2×/4× with identical
-`4058620408` semantic hashes, `104027` occupied cells, stable CSS geometry, and
-zero browser errors. Its weakest-first signal is Gas `1.944`, Solid `5.923`,
-Energy `7.817`, Powder `10.568`, Liquid `11.233`, and Contact `15.849`.
-Interpret that as a survey, not an instruction to stack a fifth generic gas
-layer: E04/E07/E13/E15 already own gas cohesion, motion, external light, and
-core depth. The next bounded experiment should therefore audit the broad
-ordinary rigid-body/solid region first and earn a family- or topology-specific
-depth treatment from an explicit normal-view defect. Preserve the current gas
-silhouette and all E16 controls while doing so.
+Run `npm run audit:vfx:solid-body` for E17. It reloads an exact paused
+ROCK/Metal fixture as `solidBodyVfx=0 → 1 → 0` at 1×/2×/4× with every unrelated
+VFX selector pinned off. The accepted response is tightly scale-stable and
+bipolar: ROCK core/surface measure about `2.74/3.06` RGB RMS, Metal about
+`2.65/2.81`, target peaks stay at `5–6` bytes, and every measured region
+contains both positive and negative pixels rather than accepting a uniform
+body lift. Semantic material, raw alpha/support, CSS/backing geometry, authored
+holes/notches, one-cell structures, isolated cells, wall coexistence,
+unlike-solid seams, Sand, Water, Glass, and repeated-off captures remain exact.
+SwiftShader may need the gate's bounded 60-second window to establish three
+identical full-page PNGs at 4×; that is compositor-settling evidence, not an
+expanded renderer resource. The closing requested-on true-8× navigation keeps
+E17/HDR inactive with reason `scale-8`, retains exact 4896×3072 WebGL without
+bloom backing, and completes a GPU fence.
 
-**Next visual experiments:** E03–E16 now provide accepted liquid body/surface,
+The earlier post-E16 survey was invalid for Solid: it sampled native Stone `21`,
+which is Powder, while labelling that region Solid. The corrected post-E17
+showcase uses native ROCK `78`, asserts exactly `2769` matching Solid cells, and
+is clean at 1×/2×/4× with identical `3702907786` semantic hashes, `104027`
+occupied cells, stable CSS geometry, and zero browser errors. Its weakest-first
+signal is Gas `1.944`, Solid `5.975`, Energy `7.817`, Powder `10.553`, Liquid
+`11.233`, and Contact `15.849`. Never compare the new Solid score with the old
+`5.923` value as though they measured the same material family.
+The paired corrected native-ROCK run with E17 explicitly off retains the same
+hash/occupancy and measures Solid `4.182`; enabling E17 raises only that sampled
+family to `5.975` (`+42.9%`), with luma standard deviation `4.930 → 7.280` and
+macro range `18 → 25` while every other family score is unchanged.
+
+Interpret this as a survey, not an instruction to stack a fifth generic gas
+layer: E04/E07/E13/E15 already own gas cohesion, motion, external light, and
+core depth, and a smooth coherent cloud is expected to score low on local
+contrast. Solid remains the next partially unclaimed family because E17 is
+intentionally restricted to ROCK and Metal. A candidate E18 should add one
+explicitly measured rigid colour/optics group at a time—warm matte Brick/
+Ceramic or reflective Gold/Iron/PTNM/TTAN—rather than silently widening E17's
+whitelist. Each group must earn distinct exposure/chroma bounds and preserve
+the E17 topology, signed-response, scale, and true-8× controls.
+
+**Next visual experiments:** E03–E17 now provide accepted liquid body/surface,
 stable-gas, coherent-gas-motion, powder-depth, and powder-local-light
 checkpoints plus exact resting contact grounding, Glass/Ice transmission, and
 state-aware Wax/PLNT subsurface response, composed wet-mineral optics,
 atmosphere-owned external-light spectra, exact liquid-side wet contacts, and
-species-aware gas-core optical depth plus dense-Plasma containment. Before
-naming E17, use the composed fit-view fixture to rank the remaining flat
-or visually discontinuous powder, liquid, gas, solid, energy, and cross-contact
-regions. Prefer the smallest arithmetic-only candidate that improves the
-weakest family with already-live topology and light evidence. Do not stack a
-new isolated tint merely to continue the experiment number. Current evidence
-rejects another generic gas layer; ordinary rigid-body/contact grounding is a
-candidate only if the normal-view scene demonstrates that defect. Preserve the
-E14 1× stencil snap and all E01–E16 selectors/controls while surveying.
+species-aware gas-core optical depth, dense-Plasma containment, and exact
+ROCK/Metal opaque-body relief. Continue with topology-preserving, material-
+specific cards that reuse already-live evidence. Prefer the smallest
+arithmetic-only candidate that fixes a visible fit-view deficiency; do not add
+an isolated tint merely to continue the experiment number. Preserve the E14
+1× stencil snap and all E01–E17 selectors/controls while surveying.
 
 ## Phase 1 — HDR pipeline & lighting core (biggest visual payoff)
 

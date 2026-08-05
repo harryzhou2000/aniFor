@@ -41,6 +41,7 @@
     "audit:vfx:liquid-solid-meniscus": "npm run build && node scripts/verify-browser-input.mjs --liquid-solid-meniscus-vfx-only --webgl-only --production-bundle --capture-dpr=1",
     "audit:vfx:gas-core-depth": "npm run build && node scripts/verify-browser-input.mjs --gas-core-depth-vfx-only --webgl-only --production-bundle --capture-dpr=1",
     "audit:vfx:plasma-core": "npm run build && node scripts/verify-browser-input.mjs --plasma-core-vfx-only --webgl-only --production-bundle --capture-dpr=1",
+    "audit:vfx:solid-body": "npm run build && node scripts/verify-browser-input.mjs --solid-body-vfx-only --webgl-only --production-bundle --capture-dpr=1",
     "audit:8x": "node scripts/verify-browser-input.mjs --scale-eight-only",
     "audit:powder:8x": "npm run build && node scripts/verify-browser-input.mjs --eight-powder-only --production-bundle",
     "audit:spng:8x": "npm run build && node scripts/verify-browser-input.mjs --eight-spng-only --production-bundle",

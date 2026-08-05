@@ -37,6 +37,9 @@ import {
   PLASMA_CORE_VFX_AUDIT, preparePlasmaCoreVfxFixture,
 } from './plasma-core-vfx-audit';
 import {
+  SOLID_BODY_VFX_AUDIT, prepareSolidBodyVfxFixture,
+} from './solid-body-vfx-audit';
+import {
   LIQUID_SOLID_MENISCUS_VFX_AUDIT, prepareLiquidSolidMeniscusVfxFixture,
 } from './liquid-solid-meniscus-vfx-audit';
 import { navigateToRenderScale } from './render-scale-navigation';
@@ -716,6 +719,12 @@ export class Game {
       plasmaCoreVfxFixture: () => PLASMA_CORE_VFX_AUDIT,
       preparePlasmaCoreVfxFixture: () => {
         preparePlasmaCoreVfxFixture(this.simulation);
+        this.renderer.synchronizeFixtureMaterialPlane();
+        this.renderer.invalidateDynamicPresentation();
+      },
+      solidBodyVfxFixture: () => SOLID_BODY_VFX_AUDIT,
+      prepareSolidBodyVfxFixture: () => {
+        prepareSolidBodyVfxFixture(this.simulation);
         this.renderer.synchronizeFixtureMaterialPlane();
         this.renderer.invalidateDynamicPresentation();
       },
