@@ -152,11 +152,25 @@ does not alter simulation, camera, semantic ownership, or `renderScale`.
   stationary Water beside moving powder, Salt, Oil, Lava, unlike aqueous
   owners, walls, traits, emission, fine columns, isolated grains, holes,
   notches, gaps, Local, Grains, Canvas, and true 8× remain controls.
+- **E13 — atmosphere-owned gas-light spectral scattering (accepted checkpoint):**
+  normal 1×–4× WebGL gives exact field-owned Smoke and FOG a shallow coloured
+  shoulder where external emission light reaches a dense body. It reuses the
+  propagated atmosphere identity/density and curvature, the unconditional
+  centre emission sample, and the already-computed high-quality outward-light
+  result. Smoke keeps a warm absorption order while FOG carries a cooler
+  forward-scatter spectrum. `?gasLightVfx=0|1` isolates E13 and is subordinate
+  to E04 gas-body ownership. E13 does not enable the identity/style fetch by
+  itself, does not consume E07 coherent motion, and adds no texture fetch,
+  field, texture resource, pass, target, upload, allocation, clock,
+  output-scale input, alpha/support/silhouette/ownership, or physics decision.
+  CFLM and other gas styles, sparse carriers/midpoints/gaps, isolated gas,
+  unlit shoulders, deep cores, holes/channels, solid/liquid contacts, native
+  walls, blank space, Canvas, and true 8× remain exact controls.
 - **Protected 8× rung:** `renderScale=8` deliberately reports
   `hdrPipeline=inactive` / `scale-8` and retains the proven direct single-mesh
   4896×3072 path. The experiment must earn a bounded 8× design rather than
   allocating a 115 MiB full-resolution float target beside that path.
-- **Current decision:** E01/E02/E03/E04/E05/E06/E07/E08/E09/E10/E11/E12 remain opt-in through the non-Classic looks
+- **Current decision:** E01/E02/E03/E04/E05/E06/E07/E08/E09/E10/E11/E12/E13 remain opt-in through the non-Classic looks
   until representative hardware timing and mobile thermal behavior are
   measured. E02 remains the safe family-wide baseline. E03 is accepted as the
   liquid-depth checkpoint: its fit-view crop is visibly more cohesive, retains
@@ -201,8 +215,15 @@ does not alter simulation, camera, semantic ownership, or `renderScale`.
   scale-stable family key/fill and damp sheen. Its split moving-powder /
   stationary-Water control is exact, so the effect cannot hide a cross-phase
   stability mismatch. Freeze its owner classifiers, settled-Water proof, and
-  amplitude until another fit-view review. These are not the final
-  material/VFX results.
+  amplitude until another fit-view review. E13 is accepted as the first
+  atmosphere-owned external-light checkpoint: warm Smoke and cool FOG gain
+  separate shallow spectral shoulders only where the existing emission field
+  reaches dense, identity-proven gas. Unlit shoulders, deep cores, sparse
+  chains, other species, contacts, walls, holes, and channels remain exact.
+  The normal screenshot is intentionally delicate while an amplified
+  difference exposes only the two intended shoulder bands; freeze its spectra,
+  density gate, and amplitude until another fit-view review. These are not the
+  final material/VFX results.
   Sub-1.0 material colour stays on the established response; tonemapping owns
   only real HDR highlights so powder texture and liquid body contrast are not
   washed out.
@@ -219,7 +240,7 @@ lab as `volumeVfx=0 → 1 → 0` at 1×, 2×, and 4×, requires the real HDR pip
 and proves exact semantic/staging state plus raw presented alpha/support hashes.
 Its paused powder probes drive seven separately observed presentation refreshes
 and require exact auxiliary byte `255` before capture; an inert first PNG is not
-settled-body evidence. E10, E11, and E12 are explicitly pinned off in this baseline.
+settled-body evidence. E10, E11, E12, and E13 are explicitly pinned off in this baseline.
 The accepted response is spatial rather than a uniform grade: the current
 fixture reaches 6 framebuffer bytes in settled Clay, 13 in connected liquids,
 and 3 in gas while isolated Sand/Water, authored holes, Metal, and repeat
@@ -379,21 +400,40 @@ observations: family-specific bounds span `1.35–2.00` RGB RMS, `4–7`-byte
 peaks, `22–46%` coverage, and `0.55–1.40` signed means. These are acceptance
 limits, not the measured checkpoint values above.
 
-**Next visual experiments:** E03–E12 now provide accepted liquid body/surface,
+Run `npm run audit:vfx:gas-light` for E13. It pins unrelated VFX off, keeps E04
+gas-body ownership on, and reloads the exact Smoke/FOG external-light fixture
+as `gasLightVfx=0 → 1 → 0` at 1×/2×/4×. The accepted checkpoint measured Smoke
+at `1.08–1.13` RGB RMS, `0.58–0.61` chroma RMS, a `2`-byte peak, and
+`0.84–0.88` signed mean; FOG measured `1.65–1.67` RGB RMS, `0.48–0.52` chroma
+RMS, a `3`-byte peak, `1.49–1.54` signed mean, and `56.3–62.5%` response
+coverage. Smoke retains red > green > blue response while FOG retains green
+and blue > red. The calibrated gate permits Smoke `0.95–1.30` RGB RMS,
+`0.45–0.72` chroma RMS, `2–3`-byte peaks, and `0.70–1.05` signed mean; FOG
+permits `1.45–1.90`, `0.35–0.68`, `2–4`, and `1.25–1.80` respectively, with
+`45–72%` coverage. Cross-scale RMS/chroma/signed/channel spreads are bounded
+independently. Unlit shoulders and deep cores are exact zero response, as are
+CFLM/other gas species, sparse chains, isolated gas, holes/channels, contacts,
+native walls, and blank space. Semantic topology, raw controls, support,
+geometry, and repeated-off framebuffers are exact. The closing requested-on
+true-8× navigation proves E13/HDR inactive with reason `scale-8`, no bloom
+allocation, exact 4896×3072 WebGL, and a completed GPU fence.
+
+**Next visual experiments:** E03–E13 now provide accepted liquid body/surface,
 stable-gas, coherent-gas-motion, powder-depth, and powder-local-light
 checkpoints plus exact resting contact grounding, Glass/Ice transmission, and
-state-aware Wax/PLNT subsurface response, and composed wet-mineral optics. The
-next bounded candidate is atmosphere-owned external-light spectral scattering
-for exact Smoke and FOG: reuse existing atmosphere density/identity,
-curvature, coherent motion, and already-sampled emission light to create a
-coloured forward-scatter shoulder and family-specific core absorption. It must
-exclude CFLM self-feedback, other gas species, sparse carriers, unlit cores,
-walls, contacts, holes, Canvas, and true 8×; add no field, texture, sample,
-pass, target, upload, or topology decision. A liquid/solid contact meniscus is
-the alternate candidate if the gas fixture cannot separate lit and unlit
-field-owned support without widening E04/E07. Each experiment keeps its own off/on/off
-switch and must pass the same topology, contact, scale, resource, fallback,
-and true-8× isolation controls before it can become a preset default.
+state-aware Wax/PLNT subsurface response, composed wet-mineral optics, and
+atmosphere-owned external-light spectra. The next bounded candidate is E14, an
+exact Liquid/Solid wet-contact meniscus for ordinary Water, Oil, and Acid.
+Reuse the four existing semantic/contact probes, liquid density and vertical
+depth, Fresnel/meniscus basis, signed phase-contact light, and family colours
+to form a narrow liquid-side key/absorption rim in both horizontal and vertical
+contacts. Add no sample, texture, field, pass, target, upload, allocation,
+clock, alpha/support/silhouette/ownership, reconstruction, or physics decision.
+Air surfaces, unlike-liquid seams, Lava, powder/gas contacts, sparse strands
+and droplets, holes/channels, traits, emission, walls, Canvas, and true 8× are
+controls. Keep its own off/on/off selector and require the same topology,
+contact, scale, resource, fallback, and true-8× isolation proof before it can
+become a preset default.
 
 ## Phase 1 — HDR pipeline & lighting core (biggest visual payoff)
 

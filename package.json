@@ -36,6 +36,7 @@
     "audit:vfx:translucent-edge": "npm run build && node scripts/verify-browser-input.mjs --translucent-edge-vfx-only --webgl-only --production-bundle --capture-dpr=1",
     "audit:vfx:e11": "npm run build && node scripts/verify-browser-input.mjs --organic-subsurface-vfx-only --webgl-only --production-bundle --capture-dpr=1",
     "audit:vfx:wet-sediment": "npm run build && node scripts/verify-browser-input.mjs --wet-sediment-vfx-only --webgl-only --production-bundle --capture-dpr=1",
+    "audit:vfx:gas-light": "npm run build && node scripts/verify-browser-input.mjs --gas-light-vfx-only --webgl-only --production-bundle --capture-dpr=1",
     "audit:8x": "node scripts/verify-browser-input.mjs --scale-eight-only",
     "audit:powder:8x": "npm run build && node scripts/verify-browser-input.mjs --eight-powder-only --production-bundle",
     "audit:spng:8x": "npm run build && node scripts/verify-browser-input.mjs --eight-spng-only --production-bundle",

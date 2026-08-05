@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
-  DEFAULT_RENDER_LOOK, resolveGasBodyVfxEnabled, resolveGasMotionVfxEnabled,
+  DEFAULT_RENDER_LOOK, resolveGasBodyVfxEnabled, resolveGasLightVfxEnabled,
+  resolveGasMotionVfxEnabled,
   resolveLiquidBodyVfxEnabled, resolveLiquidSurfaceVfxEnabled,
   resolveOrganicSubsurfaceVfxEnabled,
   resolvePowderBodyVfxEnabled, resolvePowderLightVfxEnabled,
@@ -74,6 +75,18 @@ describe('resolveRenderLook', () => {
     )).toBe(true);
     expect(resolveGasMotionVfxEnabled(
       'realistic', '?gasBodyVfx=off&gasMotionVfx=on',
+    )).toBe(false);
+  });
+
+  it('keeps spectral external gas lighting subordinate to the stable gas body', () => {
+    expect(resolveGasLightVfxEnabled('classic', '?gasLightVfx=on')).toBe(false);
+    expect(resolveGasLightVfxEnabled('realistic', '')).toBe(true);
+    expect(resolveGasLightVfxEnabled('realistic', '?gasLightVfx=off')).toBe(false);
+    expect(resolveGasLightVfxEnabled(
+      'realistic', '?volumeVfx=0&gasBodyVfx=on&gasLightVfx=on',
+    )).toBe(true);
+    expect(resolveGasLightVfxEnabled(
+      'realistic', '?gasBodyVfx=off&gasLightVfx=on',
     )).toBe(false);
   });
 

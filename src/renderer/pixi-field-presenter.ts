@@ -36,7 +36,8 @@ import {
 } from './canvas-gas-identity-style';
 import { HDRVfxPipeline, type HDRPipelineInfo } from './hdr-vfx-pipeline';
 import {
-  resolveGasBodyVfxEnabled, resolveGasMotionVfxEnabled, resolveLiquidBodyVfxEnabled,
+  resolveGasBodyVfxEnabled, resolveGasLightVfxEnabled, resolveGasMotionVfxEnabled,
+  resolveLiquidBodyVfxEnabled,
   resolveLiquidSurfaceVfxEnabled,
   resolvePowderBodyVfxEnabled, resolvePowderLightVfxEnabled, resolveRenderLook,
   resolveOrganicSubsurfaceVfxEnabled,
@@ -3217,6 +3218,7 @@ uniform float uHDRVfx;
 uniform float uVolumeVfx;
 uniform float uGasBodyVfx;
 uniform float uGasMotionVfx;
+uniform float uGasLightVfx;
 uniform float uLiquidBodyVfx;
 uniform float uPowderBodyVfx;
 uniform float uPowderLightVfx;
@@ -6068,6 +6070,58 @@ void main() {
       * (0.060 + gasLightIncidence * 0.78 + silverLining * 0.040)
       * (1.0 - opticalDepth * 0.48) * uGasFieldLighting;
     color += vividColor(gasLightColor, 1.12) * gasLightScatter;
+    // E13: use the atmosphere's exact propagated species byte and the light
+    // values already consumed above to give field-owned Smoke and FOG distinct
+    // spectral transport. Requiring the established identity path is also the
+    // resource guard: disabling it makes E13 an exact no-op instead of causing
+    // a new style-texture fetch. The desktop outward-light probe remains under
+    // its existing quality gate; compact rendering uses the centre emission
+    // sample with zero incidence. This branch changes RGB only.
+    if (uGasLightVfx > 0.5 && uGasFieldLighting > 0.5
+      && uGasIdentityStyling > 0.5 && wall < 0.5
+      && gasLightReach > 0.001 && gasInterior > 0.5) {
+      float gasLightStyle = floor(gasStyleState.r * 255.0 + 0.5);
+      float gasLightSmoke = 1.0 - step(0.5, abs(gasLightStyle - 1.0));
+      float gasLightFog = 1.0 - step(0.5, abs(gasLightStyle - 10.0));
+      float gasLightSpecies = max(gasLightSmoke, gasLightFog);
+      if (gasLightSpecies > 0.5) {
+        float gasLightBody = gasInterior
+          * smoothstep(0.035, 0.28, gasShadeDensity)
+          * (1.0 - opticalDepth * 0.35);
+        float gasLightTransport = gasLightSpecies * gasLightBody
+          * smoothstep(0.006, 0.30, gasLightReach);
+        float gasLightFacing = clamp(
+          0.28 + gasLightIncidence * 0.62 + silverLining * 0.55
+            + gasForwardScatter * 3.2 + gasCrown * 0.16 - gasPocket * 0.08,
+          0.0, 1.12
+        );
+        float gasLightPeak = max(
+          max(gasLightColor.r, gasLightColor.g), gasLightColor.b
+        );
+        vec3 gasLightHue = gasLightColor / max(gasLightPeak, 0.0001);
+        float gasLightLuma = dot(gasLightHue, vec3(0.2126, 0.7152, 0.0722));
+        vec3 gasSmokeKey = mix(
+          vec3(1.00, 0.70, 0.44), gasLightHue, 0.56
+        );
+        vec3 gasFogSpectrum = mix(vec3(gasLightLuma), gasLightHue, 0.42);
+        vec3 gasFogKey = mix(vec3(0.68, 0.84, 1.00), gasFogSpectrum, 0.52);
+        vec3 gasSpectralKey = mix(gasSmokeKey, gasFogKey, gasLightFog);
+        float gasSpectralGain = gasLightTransport
+          * mix(0.135, 0.150, gasLightFog)
+          * (0.42 + gasLightFacing * 0.58);
+        color += (vec3(1.08) - clamp(color, 0.0, 1.08))
+          * gasSpectralKey * gasSpectralGain;
+        // Lit Smoke retains a warmer, lower-albedo interior than transmissive
+        // FOG. Unlit cores have zero transport; optical depth only attenuates
+        // a genuinely lit dense shoulder instead of erasing it outright.
+        float gasSpectralAbsorption = gasLightTransport * opticalDepth
+          * (1.0 - gasLightFacing * 0.38) * mix(0.055, 0.016, gasLightFog);
+        vec3 gasAbsorptionTint = mix(
+          vec3(0.72, 0.54, 0.36), vec3(0.34, 0.50, 0.72), gasLightFog
+        );
+        color *= vec3(1.0) - gasAbsorptionTint * gasSpectralAbsorption;
+      }
+    }
     // The atmosphere's existing cardinal field samples also supply a signed
     // billow normal and curvature. Reuse them as a restrained hue-aware
     // key/fill after scene lighting: RGB only, with no new sampler, field,
@@ -9009,6 +9063,11 @@ export class PixiFieldPresenter {
     // true-8x shader neither declares its selector nor decodes particle flow.
     const gasMotionVfxEnabled = outputScale < 8
       && resolveGasMotionVfxEnabled(renderLook);
+    // E13 consumes only normal WebGL's established atmosphere identity and
+    // emission-light values. The compact true-8x shader declares no selector
+    // or parallel branch and retains its existing register/sample budget.
+    const gasLightVfxEnabled = outputScale < 8
+      && resolveGasLightVfxEnabled(renderLook);
     // E03 is a normal-detail experiment. The true-8x shader intentionally has
     // no corresponding uniform or arithmetic, so its public capability state
     // must not advertise an effect that cannot run on that path.
@@ -9031,6 +9090,7 @@ export class PixiFieldPresenter {
       uVolumeVfx: { value: volumeVfxEnabled ? 1 : 0, type: 'f32' },
       uGasBodyVfx: { value: gasBodyVfxEnabled ? 1 : 0, type: 'f32' },
       uGasMotionVfx: { value: gasMotionVfxEnabled ? 1 : 0, type: 'f32' },
+      uGasLightVfx: { value: gasLightVfxEnabled ? 1 : 0, type: 'f32' },
       uLiquidBodyVfx: { value: liquidBodyVfxEnabled ? 1 : 0, type: 'f32' },
       uPowderBodyVfx: { value: powderBodyVfxEnabled ? 1 : 0, type: 'f32' },
       uPowderLightVfx: { value: powderLightVfxEnabled ? 1 : 0, type: 'f32' },
@@ -9241,6 +9301,7 @@ export class PixiFieldPresenter {
       this.uniforms.uniforms.uVolumeVfx = 0;
       this.uniforms.uniforms.uGasBodyVfx = 0;
       this.uniforms.uniforms.uGasMotionVfx = 0;
+      this.uniforms.uniforms.uGasLightVfx = 0;
       this.uniforms.uniforms.uLiquidBodyVfx = 0;
       this.uniforms.uniforms.uPowderBodyVfx = 0;
       this.uniforms.uniforms.uPowderLightVfx = 0;
@@ -9276,6 +9337,7 @@ export class PixiFieldPresenter {
             || new URLSearchParams(location.search).get('volumeVfxAudit') === '1'
             || new URLSearchParams(location.search).get('gasBodyVfxAudit') === '1'
             || new URLSearchParams(location.search).get('gasMotionVfxAudit') === '1'
+            || new URLSearchParams(location.search).get('gasLightVfxAudit') === '1'
             || new URLSearchParams(location.search).get('liquidBodyVfxAudit') === '1'
             || new URLSearchParams(location.search).get('liquidSurfaceVfxAudit') === '1'
             || new URLSearchParams(location.search).get('powderBodyVfxAudit') === '1'
@@ -9312,6 +9374,8 @@ export class PixiFieldPresenter {
     presenter.app.canvas.dataset.gasBodyVfx = Number(presenter.uniforms.uniforms.uGasBodyVfx) > 0.5
       ? 'active' : 'inactive';
     presenter.app.canvas.dataset.gasMotionVfx = Number(presenter.uniforms.uniforms.uGasMotionVfx) > 0.5
+      ? 'active' : 'inactive';
+    presenter.app.canvas.dataset.gasLightVfx = Number(presenter.uniforms.uniforms.uGasLightVfx) > 0.5
       ? 'active' : 'inactive';
     presenter.app.canvas.dataset.liquidBodyVfx = Number(presenter.uniforms.uniforms.uLiquidBodyVfx) > 0.5
       ? 'active' : 'inactive';
@@ -10660,6 +10724,7 @@ export class PixiFieldPresenter {
         this.uniforms.uniforms.uVolumeVfx = 0;
         this.uniforms.uniforms.uGasBodyVfx = 0;
         this.uniforms.uniforms.uGasMotionVfx = 0;
+        this.uniforms.uniforms.uGasLightVfx = 0;
         this.uniforms.uniforms.uLiquidBodyVfx = 0;
         this.uniforms.uniforms.uPowderBodyVfx = 0;
         this.uniforms.uniforms.uPowderLightVfx = 0;
@@ -10672,6 +10737,7 @@ export class PixiFieldPresenter {
         this.app.canvas.dataset.volumeVfx = 'inactive';
         this.app.canvas.dataset.gasBodyVfx = 'inactive';
         this.app.canvas.dataset.gasMotionVfx = 'inactive';
+        this.app.canvas.dataset.gasLightVfx = 'inactive';
         this.app.canvas.dataset.liquidBodyVfx = 'inactive';
         this.app.canvas.dataset.liquidSurfaceVfx = 'inactive';
         this.app.canvas.dataset.powderBodyVfx = 'inactive';

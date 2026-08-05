@@ -13,24 +13,27 @@ powder, solid, liquid, gas, energy, and contact scenes across Canvas and WebGL a
 mobile gestures, save/load, CI, and Pages deployment as protected regression
 contracts rather than the primary feature stream.
 
-The accepted visual experiment ladder now runs through E12, the species-safe
-Sand/Clay/Concrete wet-sediment checkpoint. E12 reuses the existing aqueous
-suspension owner/density and body lighting; its exact Water side additionally
-requires one guarded read from the existing settled-powder surface texture so
-stationary Water cannot remain styled beside moving sediment. It adds no field,
-texture resource, pass, target, upload, persistent allocation, topology, or
-physics decision. Preserve the accepted owner classifiers, split
-moving-powder/stationary-Water control, Local/Grains no-op, fine structures,
-authored gaps, Canvas fallback, and true 8× exclusion.
+The accepted visual experiment ladder now runs through E13. E12 is the
+species-safe Sand/Clay/Concrete wet-sediment checkpoint; preserve its exact
+aqueous owner/stability proof, split moving-powder/stationary-Water control,
+Local/Grains no-op, fine structures, authored gaps, Canvas fallback, and true
+8× exclusion. E13 is the atmosphere-owned external-light checkpoint for exact
+Smoke and FOG. It reuses atmosphere density/identity/curvature, the centre
+emission sample, and the already-computed high-quality outward-light result to
+give dense lit shoulders distinct warm-smoke and cool-fog spectra. It does not
+consume E07 coherent motion and adds no sample, field, texture resource, pass,
+target, upload, persistent allocation, topology, or physics decision. Preserve
+its exact unlit/deep-core, foreign-gas, sparse-chain, contact, wall, Canvas, and
+true-8× controls.
 
-The next bounded visual candidate is atmosphere-owned external-light spectral
-scattering for exact Smoke and FOG. Reuse the already-live atmosphere
-density/identity, curvature, coherent flow, and existing emission-light values;
-add no sample, field, texture, pass, target, upload, alpha/support, silhouette,
-or physics decision. CFLM self-light, other gas species, sparse carriers,
-unlit cores, contacts, walls, Canvas, and true 8× are protected controls. Use a
-liquid/solid contact-meniscus experiment instead only if the gas fixture cannot
-separate lit and unlit field-owned support without weakening E04/E07.
+The next bounded visual candidate is E14, an exact Liquid/Solid wet-contact
+meniscus for ordinary Water, Oil, and Acid. Reuse the existing semantic contact
+probes, liquid density/depth, Fresnel/meniscus basis, signed phase-contact light,
+and family colours to add a narrow liquid-side key/absorption rim without a new
+sample or resource. Protect air surfaces, unlike-liquid seams, Lava, powder/gas
+contacts, sparse strands/droplets, holes/channels, traits, emission, walls,
+Canvas, and true 8×. Keep it RGB-only and normal-WebGL-only until an independent
+1×/2×/4× off→on→off fixture proves both contact orientations and exact controls.
 
 WebGL is the canonical visual release path. Canvas 2D remains a resilient,
 camera-preserving semantic fallback: keep its loading, input, material/state,
@@ -328,6 +331,7 @@ The non-negotiable contract is:
 - The default render backing is 2× per axis (1224×768 for the 612×384 world). The in-app Detail control and `?renderScale=1|2|4|8` select true per-cell sampling; canonical 8× is 4896×3072. WebGL 8× is supported inside the explicit 8,192-axis/16,777,216-pixel budget. Render the semantic shader directly on one world-sized mesh; attaching it as a Pixi Filter can create a redundant full-resolution input pass/target even when the shader never samples that input. The semantic texture must remain `no-premultiply-alpha`, but the direct mesh's marker texture must be premultiplied (`Texture.WHITE`) because Pixi's `MeshPipe` derives its output blend equation from `mesh.texture.alphaMode`; pointing that property at the semantic texture multiplies translucent shader RGB by alpha twice. Disable redundant MSAA and extra high-quality diagonal/ring probes at 8×, but retain the desktop analytic lighting-normal basis through a separate arithmetic-only scalar so output scale does not darken bodies. Use only a 2× temporary automatic Canvas while an 8× candidate starts, and zero every fallback/contour canvas plus its ImageData after promotion. Keep no more than one 8× GPU frame in flight: use a WebGL fence, coalesce pending texture/uniform mutations latest-wins, poll without blocking, and release the fence on signal, context loss, or destruction. Keep the fallback mounted during a bounded 30-second cold warm-up; 1×–4× retain 10 seconds. A slow first 15-million-fragment draw is not evidence that 8× is unsupported. The browser gate must prove effective 8×, exact 4896×3072 backing, zero browser errors, identical 2×/8× CSS geometry, full Smooth/Local powder-column support, preserved authored holes, and an exact high-zoom square in Grains; backing scale never enters pointer/camera math.
 - A soft powder-in-liquid body belongs in a half-resolution RGB field, not in physics occupancy or a full-resolution post-process. Reuse the liquid field's exact aqueous RGB support, reject unlike/non-aqueous/trait/emissive/wall ownership before blur, and keep alpha untouched. Dense eligible powder and aqueous pixels should converge on one shared wet-sediment albedo; retain only bounded existing facet/relief variation rather than a dark powder-only checkerboard. Canvas styles authoritative powder after common lighting, then styles aqueous semantic liquid and reconstructed Empty support in the existing sparse post-reconstruction tile walk; styling semantic liquid earlier is ineffective because liquid reconstruction legitimately rewrites its RGB. WebGL must guard the texture fetch behind both a scene-wide active uniform and eligible liquid/powder branches so true 8× does not pay a 15-million-sample tax on dry scenes. A presenter promoted over a Canvas-built shared field must hydrate `uSuspensionActive` from current field state even when no refresh is due; a paused fixture otherwise leaves valid bytes permanently disabled. Pace this aesthetic volume independently (currently 6 Hz), while exact particle semantics continue at simulation/render cadence. The canonical even-grid CPU path uses one 512-byte material-class LUT and separate wall/no-wall kernels; keep byte-differential tests against the generic odd-grid implementation. Grains and Local are exact no-ops. Because Sand and Water intentionally retain different alpha, browser phase-parity gates compare normalized chroma and report raw RGB distance separately; topology, opacity, and macro-luminance remain independently gated.
 - E12 wet-sediment mineral optics is normal-WebGL-only RGB styling for exact suspension RGB owners Sand `[215,170,104]`, Clay `[184,121,85]`, and Concrete `[134,131,125]`, paired only with the matching exact powder or Water. Smooth powder requires existing stability, velocity, and bulk-depth proofs. Water must also reject its own motion and take exactly one guarded `powderSurfaceShape(fieldUv).x` read from the existing settled-powder surface texture; this cross-phase proof prevents stationary Water from remaining styled beside moving/unstable sediment. Add no field, texture resource, pass, target, upload, persistent allocation, clock, alpha/support/silhouette/ownership, or physics decision. The release fixture must split moving powder from stationary Water, prove exact suspension RGB plus invariant field digest, preserve dry/foreign/non-aqueous/molten/wall/fine/isolated/hole/notch/gap controls, keep Local and Grains exact, repeat off byte-for-byte, and explicitly request E12 at true 4896×3072 where it must report inactive and complete a GPU fence.
+- E13 gas-light spectral scattering is normal-WebGL-only RGB styling and is subordinate to E04 gas-body ownership. Exact propagated Smoke style `1` and FOG style `10` may reuse atmosphere density/curvature, the unconditional centre emission sample, and the already-computed high-quality outward-light result to form a shallow species-distinct lit shoulder and bounded core absorption. E13 must not enable the atmosphere-style fetch by itself: disabling identity styling is an exact no-op. It does not consume E07 motion and adds no texture fetch, field, texture resource, pass, target, upload, allocation, clock, alpha/support/silhouette/ownership, or physics decision. CFLM and every other propagated style, sparse carriers/midpoints/gaps, isolated gas, unlit shoulders, deep cores, authored holes/channels, solid/liquid contacts, native walls, blanks, Canvas, and true 8× are exact controls. The release gate must prove calibrated and scale-stable warm Smoke versus cool FOG response at 1×/2×/4×, exact off→on→off semantics/raw controls/backing, and requested-on inactive E13/HDR with exact 4896×3072 WebGL plus a completed GPU fence at true 8×.
 - Pixi filter `vTextureCoord` is not a world UV. The semantic field shader must use the sprite-local `vFieldCoord` supplied by `FIELD_VERTEX`.
 - A promoted WebGL context may be lost after its startup Canvas has been released. Cancel the loss event, destroy the failed presenter, recreate the bounded Canvas fallback from the semantic grid, preserve the camera, and expose `webgl-context-lost`; never retain a permanent duplicate 8× backing for recovery.
 - Treat Detail changes as navigation: synchronously save an ordinary world before reloading with the new `renderScale`, but never let render-lab or wall-lab diagnostics overwrite that autosave. Seed all presenter uniforms without rendering, submit one initial semantic frame, and keep CSS-only camera transforms render-free; repeated 8× startup or pan frames can multiply a 15-million-fragment cost into a browser timeout.

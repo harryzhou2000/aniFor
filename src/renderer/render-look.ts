@@ -103,6 +103,23 @@ export function resolveGasMotionVfxEnabled(
 }
 
 /**
+ * Adds a species-safe external-light response on top of E04's field-owned gas
+ * body. Smoke and FOG remain atmosphere-owned; this selector admits only a
+ * bounded normal-WebGL RGB key/fill from light data the gas branch already
+ * samples. It cannot bypass the stable gas-body baseline.
+ */
+export function resolveGasLightVfxEnabled(
+  look: RenderLook,
+  search = globalThis.location?.search ?? '',
+): boolean {
+  if (!resolveGasBodyVfxEnabled(look, search)) return false;
+  const requested = new URLSearchParams(search).get('gasLightVfx');
+  if (requested === '0' || requested === 'off') return false;
+  if (requested === '1' || requested === 'on') return true;
+  return true;
+}
+
+/**
  * Keeps the settled-powder crown experiment independently measurable without
  * changing liquid or gas. Ordinary realistic/neon presets retain the broad
  * volume default; the explicit query is reserved for comparison captures and

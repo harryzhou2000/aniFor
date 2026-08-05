@@ -27,6 +27,9 @@ import {
 import {
   GAS_MOTION_VFX_AUDIT, prepareGasMotionVfxFixture,
 } from './gas-motion-vfx-audit';
+import {
+  GAS_LIGHT_VFX_AUDIT, prepareGasLightVfxFixture,
+} from './gas-light-vfx-audit';
 import { navigateToRenderScale } from './render-scale-navigation';
 import {
   MATERIAL_ATLAS, materialAtlasAuditRequested, prepareMaterialAtlasAuditFixture,
@@ -685,6 +688,12 @@ export class Game {
       gasMotionVfxFixture: () => GAS_MOTION_VFX_AUDIT,
       prepareGasMotionVfxFixture: (mode) => {
         prepareGasMotionVfxFixture(this.simulation, mode);
+        this.renderer.synchronizeFixtureMaterialPlane();
+        this.renderer.invalidateDynamicPresentation();
+      },
+      gasLightVfxFixture: () => GAS_LIGHT_VFX_AUDIT,
+      prepareGasLightVfxFixture: () => {
+        prepareGasLightVfxFixture(this.simulation);
         this.renderer.synchronizeFixtureMaterialPlane();
         this.renderer.invalidateDynamicPresentation();
       },

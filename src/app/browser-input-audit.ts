@@ -68,6 +68,7 @@ import type { PowderLightVfxAuditSnapshot } from './powder-light-vfx-audit';
 import type {
   GasMotionVfxAuditSnapshot, GasMotionVfxFixtureMode,
 } from './gas-motion-vfx-audit';
+import type { GasLightVfxAuditSnapshot } from './gas-light-vfx-audit';
 import type { WetSedimentVfxAuditSnapshot } from './wet-sediment-vfx-audit';
 
 export interface BrowserInputAuditApi {
@@ -177,6 +178,8 @@ export interface BrowserInputAuditApi {
   preparePowderLightVfxFixture(): void;
   gasMotionVfxFixture(): GasMotionVfxAuditSnapshot;
   prepareGasMotionVfxFixture(mode: GasMotionVfxFixtureMode): void;
+  gasLightVfxFixture(): GasLightVfxAuditSnapshot;
+  prepareGasLightVfxFixture(): void;
   prepareContourStressFixture(): void;
   toggleDenseSolidProbe(): void;
   materialAtlas(): readonly MaterialAtlasEntry[];
