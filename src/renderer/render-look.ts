@@ -154,6 +154,24 @@ export function resolveGasCoreDepthVfxEnabled(
 }
 
 /**
+ * Re-composes only exact Noble Gas billows after E04 has established the
+ * connected, atmosphere-owned gas body. The child selector may refine that
+ * species' volume cues, but it cannot recreate E04 when the parent gas-body
+ * experiment or containing HDR look is disabled. True 8x remains excluded by
+ * the parent's normal-detail presenter gate.
+ */
+export function resolveNobleGasBillowVfxEnabled(
+  look: RenderLook,
+  search = globalThis.location?.search ?? '',
+): boolean {
+  if (!resolveGasBodyVfxEnabled(look, search)) return false;
+  const requested = new URLSearchParams(search).get('nobleGasBillowVfx');
+  if (requested === '0' || requested === 'off' || requested === 'false') return false;
+  if (requested === '1' || requested === 'on' || requested === 'true') return true;
+  return true;
+}
+
+/**
  * Gives a dense exact Plasma body a restrained contained core. The normal
  * WebGL presenter reuses its existing semantic core and emission-field support;
  * an explicit override keeps E16 independently measurable while ordinary HDR

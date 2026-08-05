@@ -42,6 +42,7 @@ import {
   resolveGlassBodyVfxEnabled,
   resolveGasBodyVfxEnabled, resolveGasCoreDepthVfxEnabled, resolveGasLightVfxEnabled,
   resolveGasMotionVfxEnabled,
+  resolveNobleGasBillowVfxEnabled,
   resolveLiquidBodyVfxEnabled, resolveLiquidSolidMeniscusVfxEnabled,
   resolveLiquidSurfaceVfxEnabled,
   resolveOilBodyVfxEnabled,
@@ -3232,6 +3233,7 @@ uniform float uGasBodyVfx;
 uniform float uGasMotionVfx;
 uniform float uGasLightVfx;
 uniform float uGasCoreDepthVfx;
+uniform float uNobleGasBillowVfx;
 uniform float uPlasmaCoreVfx;
 uniform float uSolidBodyVfx;
 uniform float uRockRoughnessVfx;
@@ -6340,6 +6342,48 @@ void main() {
               + max(gasDirectionalRelief, 0.0) * 0.100);
           color += (vec3(1.10) - clamp(color, 0.0, 1.10))
             * gasCoreKeyTint * gasCoreKey;
+        }
+      }
+
+      // E25: the media-aware fit-view rank found that the otherwise coherent
+      // Noble Gas body retained almost no billow depth. Recompose only the
+      // exact propagated style-7 volume, using E04's existing static billow,
+      // cardinal relief, curvature, connected-body, and optical-depth values.
+      // Peak on connected mid-density shoulders and retain a restrained lobe
+      // through the fully dense atmosphere core, so the broad body gains
+      // readable volume
+      // without becoming another flat species tint. RGB only: no sample,
+      // texture, field, pass, clock,
+      // allocation, alpha, support, silhouette, ownership, or physics change.
+      if (uNobleGasBillowVfx > 0.5 && uGasIdentityStyling > 0.5
+        && wall < 0.5 && !materialEmissive) {
+        float nobleBillowStyle = floor(gasStyleState.r * 255.0 + 0.5);
+        float nobleBillowOwner = 1.0 - step(0.5, abs(nobleBillowStyle - 7.0));
+        if (nobleBillowOwner > 0.5) {
+          float nobleBillowDensity = smoothstep(0.12, 0.38, atmosphereState.a)
+            * (1.0 - smoothstep(0.78, 0.98, atmosphereState.a) * 0.52);
+          float nobleBillowSupport = nobleBillowOwner * gasVfxBodySupport
+            * smoothstep(0.14, 0.50, cloudNeighbourMean)
+            * nobleBillowDensity;
+          float nobleBillowLobe = clamp(
+            gasVfxBillow * 0.58 + gasDirectionalRelief * 0.27
+              + gasCurvature * 0.15,
+            -1.0, 1.0
+          );
+          float nobleBillowCrown = max(nobleBillowLobe, 0.0);
+          float nobleBillowPocket = max(-nobleBillowLobe, 0.0);
+          vec3 nobleBillowKey = mix(
+            vec3(0.42, 0.82, 1.00), vec3(0.96, 0.54, 1.00),
+            clamp(0.48 + gasDirectionalRelief * 0.22, 0.0, 1.0)
+          );
+          float nobleBillowKeyAmount = nobleBillowSupport
+            * (nobleBillowCrown * 0.420 + gasCrown * 0.055);
+          color += (vec3(1.12) - clamp(color, 0.0, 1.12))
+            * nobleBillowKey * nobleBillowKeyAmount;
+          vec3 nobleBillowAbsorption = vec3(0.22, 0.52, 0.18);
+          float nobleBillowPocketAmount = nobleBillowSupport
+            * (nobleBillowPocket * 0.300 + gasPocket * 0.045);
+          color *= vec3(1.0) - nobleBillowAbsorption * nobleBillowPocketAmount;
         }
       }
 
@@ -9705,6 +9749,11 @@ export class PixiFieldPresenter {
     // parallel branch and retains its proven fragment-register budget.
     const gasCoreDepthVfxEnabled = outputScale < 8
       && resolveGasCoreDepthVfxEnabled(renderLook);
+    // E25 is an arithmetic-only exact Noble Gas recomposition over E04's
+    // connected body. Compact true 8x retains its established style-7 path and
+    // declares neither this selector nor a parallel branch.
+    const nobleGasBillowVfxEnabled = outputScale < 8
+      && resolveNobleGasBillowVfxEnabled(renderLook);
     // E16 is RGB arithmetic over normal WebGL's existing semantic Energy core
     // and centre emission sample. The compact true-8x shader has no selector or
     // parallel branch and retains its established register/resource budget.
@@ -9777,6 +9826,7 @@ export class PixiFieldPresenter {
       uGasMotionVfx: { value: gasMotionVfxEnabled ? 1 : 0, type: 'f32' },
       uGasLightVfx: { value: gasLightVfxEnabled ? 1 : 0, type: 'f32' },
       uGasCoreDepthVfx: { value: gasCoreDepthVfxEnabled ? 1 : 0, type: 'f32' },
+      uNobleGasBillowVfx: { value: nobleGasBillowVfxEnabled ? 1 : 0, type: 'f32' },
       uPlasmaCoreVfx: { value: plasmaCoreVfxEnabled ? 1 : 0, type: 'f32' },
       uSolidBodyVfx: { value: solidBodyVfxEnabled ? 1 : 0, type: 'f32' },
       uRockRoughnessVfx: { value: rockRoughnessVfxEnabled ? 1 : 0, type: 'f32' },
@@ -10001,6 +10051,7 @@ export class PixiFieldPresenter {
       this.uniforms.uniforms.uGasMotionVfx = 0;
       this.uniforms.uniforms.uGasLightVfx = 0;
       this.uniforms.uniforms.uGasCoreDepthVfx = 0;
+      this.uniforms.uniforms.uNobleGasBillowVfx = 0;
       this.uniforms.uniforms.uPlasmaCoreVfx = 0;
       this.uniforms.uniforms.uSolidBodyVfx = 0;
       this.uniforms.uniforms.uRockRoughnessVfx = 0;
@@ -10048,6 +10099,7 @@ export class PixiFieldPresenter {
             || new URLSearchParams(location.search).get('gasMotionVfxAudit') === '1'
             || new URLSearchParams(location.search).get('gasLightVfxAudit') === '1'
             || new URLSearchParams(location.search).get('gasCoreDepthVfxAudit') === '1'
+            || new URLSearchParams(location.search).get('nobleGasBillowVfxAudit') === '1'
             || new URLSearchParams(location.search).get('plasmaCoreVfxAudit') === '1'
             || new URLSearchParams(location.search).get('solidBodyVfxAudit') === '1'
             || new URLSearchParams(location.search).get('rockRoughnessVfxAudit') === '1'
@@ -10099,6 +10151,9 @@ export class PixiFieldPresenter {
       ? 'active' : 'inactive';
     presenter.app.canvas.dataset.gasCoreDepthVfx = Number(
       presenter.uniforms.uniforms.uGasCoreDepthVfx
+    ) > 0.5 ? 'active' : 'inactive';
+    presenter.app.canvas.dataset.nobleGasBillowVfx = Number(
+      presenter.uniforms.uniforms.uNobleGasBillowVfx
     ) > 0.5 ? 'active' : 'inactive';
     presenter.app.canvas.dataset.plasmaCoreVfx = Number(
       presenter.uniforms.uniforms.uPlasmaCoreVfx
@@ -11521,6 +11576,7 @@ export class PixiFieldPresenter {
         this.uniforms.uniforms.uGasMotionVfx = 0;
         this.uniforms.uniforms.uGasLightVfx = 0;
         this.uniforms.uniforms.uGasCoreDepthVfx = 0;
+        this.uniforms.uniforms.uNobleGasBillowVfx = 0;
         this.uniforms.uniforms.uPlasmaCoreVfx = 0;
         this.uniforms.uniforms.uSolidBodyVfx = 0;
         this.uniforms.uniforms.uRockRoughnessVfx = 0;
@@ -11545,6 +11601,7 @@ export class PixiFieldPresenter {
         this.app.canvas.dataset.gasMotionVfx = 'inactive';
         this.app.canvas.dataset.gasLightVfx = 'inactive';
         this.app.canvas.dataset.gasCoreDepthVfx = 'inactive';
+        this.app.canvas.dataset.nobleGasBillowVfx = 'inactive';
         this.app.canvas.dataset.plasmaCoreVfx = 'inactive';
         this.app.canvas.dataset.solidBodyVfx = 'inactive';
         this.app.canvas.dataset.rockRoughnessVfx = 'inactive';

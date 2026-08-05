@@ -316,6 +316,34 @@ requested-on true-8× exclusion. The latter must report E24/HDR inactive with
 reason `scale-8`, no bloom backing, completed GPU work, and exact
 `4896×3072` WebGL output.
 
+E25 is an independently measurable exact-Noble-Gas pearlescent-billow card,
+selected by `?nobleGasBillowVfx=0|1` and strictly subordinate to E04
+(`?gasBodyVfx=0|1`). It uses propagated atmosphere style `7`, so continuous
+reconstructed Noble volume—not merely semantic carrier cells—receives the same
+bounded violet/cyan key and complementary absorption. Normal WebGL 1×–4× is the
+only implementation path. It reuses the existing connected gas-body support,
+static billow, directional relief, curvature, density, crown, pocket, and four-
+cardinal mean. No sample, sampler, texture, field, target, pass, upload,
+resource, allocation, clock, output-scale input, alpha/support/silhouette/
+ownership/topology/state, or physics decision is added. A fully dense Noble
+core keeps an attenuated response because the production showcase's atmosphere
+alpha is 255 throughout that body.
+
+The dedicated fixture protects Smoke, Oxygen, Hydrogen, FOG, CFLM, both sparse
+Noble carriers, their midpoint/gap/isolated probes, authored void/channel,
+Noble/FOG seam, Water/Metal contacts, a native wall, and blank. Run
+`npm run audit:vfx:noble-gas-billow` for the 1×/2×/4× off→on→off matrix plus
+the requested-on true-8× exclusion. Frozen core/crown/pocket RGB RMS is
+`2.43…2.44`, `3.00`, and `0.81…0.83`; signed polarity is approximately
+`+2.54`, `+3.27…+3.29`, and `−0.76…−0.74`. Repeated-off frames, semantic and
+sampled atmosphere style/density, alpha/support, and wall state remain exact.
+Authored void/channel composed footprints and the Noble side of the Noble/FOG
+seam are bounded to one byte; foreign FOG and every other raw/control probe are
+exact.
+The true-8× tail must prove actual WebGL promotion and exact `4896×3072`, while
+E04/E15/E25/HDR report inactive with reason `scale-8`; a separate
+post-promotion GPU fence must complete and report its timing source.
+
 HEAC, PTNM, and RSSS now receive a second exact-owner deep rigid-body layer:
 the rapid heat conductor has restrained warm channel lamellae, Platinum uses
 cool catalytic planes with sparse active sites, and solidified resist gains a

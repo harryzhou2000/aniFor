@@ -229,7 +229,7 @@ describe('Pixi presenter startup configuration', () => {
     const gasCoreDepthVfxBranchStart = gas.indexOf(
       '      if (uGasCoreDepthVfx > 0.5', gasCoreDepthVfxStart,
     );
-    const gasCoreDepthVfxEnd = gas.indexOf('      // E07:', gasCoreDepthVfxBranchStart);
+    const gasCoreDepthVfxEnd = gas.indexOf('      // E25:', gasCoreDepthVfxBranchStart);
     const gasCoreDepthVfx = gas.slice(gasCoreDepthVfxBranchStart, gasCoreDepthVfxEnd);
     const liquidVfxStart = liquid.indexOf('        if (uLiquidBodyVfx > 0.5');
     const liquidVfxEnd = liquid.indexOf('    // E14:', liquidVfxStart);
@@ -1233,6 +1233,65 @@ describe('Pixi presenter startup configuration', () => {
     );
     expect(source).toContain('presenter.app.canvas.dataset.waterBodyVfx');
     expect(source).toContain("this.app.canvas.dataset.waterBodyVfx = 'inactive';");
+  });
+
+  it('keeps E25 Noble Gas billows exact-style, E04-dependent, normal-WebGL-only, and RGB-only', () => {
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const canvasSource = readFileSync(new URL('./field-renderer.ts', import.meta.url), 'utf8');
+    const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');
+    const normalStart = source.indexOf('const FIELD_FRAGMENT = `', eightStart);
+    const normalEnd = source.indexOf('`;\n\n/** Primary WebGL presentation', normalStart);
+    const eight = source.slice(eightStart, normalStart);
+    const normal = source.slice(normalStart, normalEnd);
+    const e25Start = normal.indexOf('      // E25:');
+    const e25End = normal.indexOf('      // E07:', e25Start);
+    const e25 = normal.slice(e25Start, e25End);
+
+    expect(eightStart).toBeGreaterThanOrEqual(0);
+    expect(normalStart).toBeGreaterThan(eightStart);
+    expect(normalEnd).toBeGreaterThan(normalStart);
+    expect(e25Start).toBeGreaterThanOrEqual(0);
+    expect(e25End).toBeGreaterThan(e25Start);
+    expect(normal).toContain('uniform float uNobleGasBillowVfx;');
+    expect(eight).not.toContain('uNobleGasBillowVfx');
+    expect(eight).not.toContain('nobleGasBillowVfx');
+    expect(canvasSource).not.toContain('nobleGasBillowVfx');
+    for (const guard of [
+      'uNobleGasBillowVfx > 0.5', 'uGasIdentityStyling > 0.5',
+      'wall < 0.5', '!materialEmissive',
+      'floor(gasStyleState.r * 255.0 + 0.5)',
+      'abs(nobleBillowStyle - 7.0)', 'nobleBillowOwner > 0.5',
+    ]) expect(e25).toContain(guard);
+    for (const establishedFieldScalar of [
+      'gasVfxBodySupport', 'cloudNeighbourMean',
+      'gasVfxBillow', 'gasDirectionalRelief', 'gasCurvature',
+      'gasCrown', 'gasPocket',
+    ]) expect(e25).toContain(establishedFieldScalar);
+    expect(e25).toContain('smoothstep(0.12, 0.38, atmosphereState.a)');
+    expect(e25).toContain('smoothstep(0.78, 0.98, atmosphereState.a) * 0.52');
+    expect(e25).not.toContain('texture(');
+    expect(e25).not.toContain('uTime');
+    expect(e25).not.toContain('gl_FragCoord');
+    expect(e25).not.toMatch(/\balpha\s*[+*]?=/);
+    expect(e25).not.toMatch(/\b(?:atmosphereState|finalColor)\.a\s*[+*]?=/);
+    expect(source.match(/this\.uniforms\.uniforms\.uNobleGasBillowVfx = 0;/g))
+      .toHaveLength(2);
+    expect(source).toMatch(
+      /const nobleGasBillowVfxEnabled = outputScale < 8\s*&& resolveNobleGasBillowVfxEnabled\(renderLook\);/,
+    );
+    expect(source).toContain('uNobleGasBillowVfx: { value: nobleGasBillowVfxEnabled ? 1 : 0');
+    expect(source).toContain('presenter.app.canvas.dataset.nobleGasBillowVfx');
+    expect(source).toContain("this.app.canvas.dataset.nobleGasBillowVfx = 'inactive';");
+    const preserveDrawingBufferStart = source.indexOf('preserveDrawingBuffer:');
+    const preserveDrawingBufferEnd = source.indexOf(
+      'resolution: outputScale', preserveDrawingBufferStart,
+    );
+    const preserveDrawingBuffer = source.slice(
+      preserveDrawingBufferStart, preserveDrawingBufferEnd,
+    );
+    expect(preserveDrawingBufferStart).toBeGreaterThan(0);
+    expect(preserveDrawingBufferEnd).toBeGreaterThan(preserveDrawingBufferStart);
+    expect(preserveDrawingBuffer).toContain("get('nobleGasBillowVfxAudit') === '1'");
   });
 
   it('routes E08 liquid surfaces through existing normal-scale HDR resources only', () => {

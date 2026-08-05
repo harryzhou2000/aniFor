@@ -35,6 +35,9 @@ import {
   GAS_CORE_DEPTH_VFX_AUDIT, prepareGasCoreDepthVfxFixture,
 } from './gas-core-depth-vfx-audit';
 import {
+  NOBLE_GAS_BILLOW_VFX_AUDIT, prepareNobleGasBillowVfxFixture,
+} from './noble-gas-billow-vfx-audit';
+import {
   PLASMA_CORE_VFX_AUDIT, preparePlasmaCoreVfxFixture,
 } from './plasma-core-vfx-audit';
 import {
@@ -735,6 +738,12 @@ export class Game {
       gasCoreDepthVfxFixture: () => GAS_CORE_DEPTH_VFX_AUDIT,
       prepareGasCoreDepthVfxFixture: () => {
         prepareGasCoreDepthVfxFixture(this.simulation);
+        this.renderer.synchronizeFixtureMaterialPlane();
+        this.renderer.invalidateDynamicPresentation();
+      },
+      nobleGasBillowVfxFixture: () => NOBLE_GAS_BILLOW_VFX_AUDIT,
+      prepareNobleGasBillowVfxFixture: () => {
+        prepareNobleGasBillowVfxFixture(this.simulation);
         this.renderer.synchronizeFixtureMaterialPlane();
         this.renderer.invalidateDynamicPresentation();
       },

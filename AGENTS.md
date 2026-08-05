@@ -13,7 +13,7 @@ powder, solid, liquid, gas, energy, and contact scenes across Canvas and WebGL a
 mobile gestures, save/load, CI, and Pages deployment as protected regression
 contracts rather than the primary feature stream.
 
-The accepted visual experiment ladder now runs through E24. E12 is the
+The accepted visual experiment ladder now runs through E25. E12 is the
 species-safe Sand/Clay/Concrete wet-sediment checkpoint; preserve its exact
 aqueous owner/stability proof, split moving-powder/stationary-Water control,
 Local/Grains no-op, fine structures, authored gaps, Canvas fallback, and true
@@ -264,6 +264,32 @@ inactive with `scale-8`, no bloom, exact 4896×3072, a signalled promotion fence
 completed GPU timing, and zero browser errors. Never declare or branch on E24
 in `FIELD_EIGHT_X_FRAGMENT`; Canvas contains no E24 path.
 
+E25 is the calibrated normal-WebGL-only exact-Noble-Gas pearlescent-billow
+checkpoint, independently measurable with `?nobleGasBillowVfx=0|1` and
+strictly subordinate to E04's `?gasBodyVfx=0|1`. Eligibility comes from exact
+propagated atmosphere style `7`, not semantic particles alone, so reconstructed
+Noble volume receives the same treatment without claiming new support. Reuse
+only E04's already-live connected-body, static billow, directional-relief,
+curvature, crown, pocket, density, and cardinal-neighbour evidence for
+a violet/cyan pearlescent key and complementary absorption. The response stays
+bounded but attenuated—not forced to zero—in a fully dense core because the
+production showcase's Noble body is atmosphere-alpha 255 throughout. Smoke,
+Oxygen, Hydrogen, FOG, CFLM, sparse carriers/midpoints/gaps/isolated cells,
+Water/Metal contacts, walls, blank, Canvas, and compact true 8× retain their
+established paths. E25 adds no sample, sampler,
+texture, field, resource, pass, target, upload, allocation, clock, alpha,
+support, silhouette, ownership, topology, state, or physics decision. Validate
+with `npm run audit:vfx:noble-gas-billow`: the 1×/2×/4× off→on→off matrix
+must keep exact semantic/atmosphere/alpha/wall/raw-control state, byte-identical
+repeated-off frames, positive crown and negative pocket polarity, broad spectral
+response, and negligible cross-scale drift. Accepted core/crown/pocket RGB RMS
+is about `2.43…2.44`, `3.00`, and `0.81…0.83`. Authored void and open-channel
+composed footprints plus the Noble side of the Noble/FOG seam are bounded to
+one byte; foreign FOG and all other controls remain exact. Requested-on true 8× must
+report E04/E15/E25/HDR inactive with reason `scale-8`, exact 4896×3072,
+completed GPU-fence timing, and zero browser errors. Never declare or branch on
+E25 in `FIELD_EIGHT_X_FRAGMENT`; Canvas contains no E25 path.
+
 The radioactive-solid review found no current correctness bug: ISZS `105`
 and VIBR `113` already receive exact-species Solid depth, while the existing
 seven-owner radioactive identity motif is intentionally phase-permissive.
@@ -302,17 +328,22 @@ score components. Powder, liquid, gas, rigid, organic, emission, and contact
 probes have separate cue envelopes; required cues combine with a weighted
 harmonic mean, and a family is represented by its weakest required probe rather
 than its mean. Never compare these quality indices with the obsolete generic
-local-contrast scores. The first clean production WebGL v3 matrix ranks Gas
+local-contrast scores. The first clean production WebGL v3 matrix ranked Gas
 `2.454` (weakest `gasNoble`, missing billow depth), Organic `2.463` (weakest
 `organicWood`, missing mesostructure), Solid `45.685`, Contact `88.235`, Liquid
-`91.033`, Emission `98.475`, and Powder `100.000` at canonical 2×. Exact
+`91.033`, Emission `98.475`, and Powder `100.000` at canonical 2×. E25 raises
+the exact `gasNoble` probe from `2.454` to `4.609`; the post-E25 canonical
+rerank is Organic `2.463`, Gas `4.546` (now weakest `gasSmoke`, softness), Solid
+`45.685`, Contact `88.235`, Liquid `91.033`, Emission `98.475`, and Powder
+`100.000`. That pre-E25 matrix's exact
 semantics and field masks are invariant at 1×/2×/4×; semantic/atmosphere probes
 have full screenshot recall and Plasma recall remains at least `0.984`. A
 single-scale diagnostic must report `crossScaleVerified=false` and null spread.
-This selects an exact Noble Gas volume/billow card for E25; Wood/Plant
-body volume remains the next review target. Do not add a fifth generic gas
-layer: reuse E04/E07/E13/E15 evidence and keep the new change exact-owner,
-RGB-only, topology-preserving, and resource-neutral.
+The post-E25 evidence is a canonical 2× rerank, not yet a replacement full
+cross-scale rank. It closes the ranked Noble Gas defect and selects exact
+Wood/Plant mesostructure as the next review target. Treat Smoke softness as a
+separate runner-up diagnosis, not permission to add another family-wide gas
+layer.
 
 WebGL is the canonical visual release path. Canvas 2D remains a resilient,
 camera-preserving semantic fallback: keep its loading, input, material/state,

@@ -70,6 +70,7 @@ import type {
 } from './gas-motion-vfx-audit';
 import type { GasLightVfxAuditSnapshot } from './gas-light-vfx-audit';
 import type { GasCoreDepthVfxAuditSnapshot } from './gas-core-depth-vfx-audit';
+import type { NobleGasBillowVfxAuditSnapshot } from './noble-gas-billow-vfx-audit';
 import type { PlasmaCoreVfxAuditSnapshot } from './plasma-core-vfx-audit';
 import type { SolidBodyVfxAuditSnapshot } from './solid-body-vfx-audit';
 import type { RockRoughnessVfxAuditSnapshot } from './rock-roughness-vfx-audit';
@@ -200,6 +201,8 @@ export interface BrowserInputAuditApi {
   prepareGasLightVfxFixture(): void;
   gasCoreDepthVfxFixture(): GasCoreDepthVfxAuditSnapshot;
   prepareGasCoreDepthVfxFixture(): void;
+  nobleGasBillowVfxFixture(): NobleGasBillowVfxAuditSnapshot;
+  prepareNobleGasBillowVfxFixture(): void;
   plasmaCoreVfxFixture(): PlasmaCoreVfxAuditSnapshot;
   preparePlasmaCoreVfxFixture(): void;
   solidBodyVfxFixture(): SolidBodyVfxAuditSnapshot;

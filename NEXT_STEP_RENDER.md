@@ -323,11 +323,27 @@ does not alter simulation, camera, semantic ownership, or `renderScale`.
   native walls, Canvas, and compact true 8× remain controls. E24 adds no wave,
   clock, sample, sampler, texture, field, pass, target, upload, allocation,
   alpha/support/silhouette/ownership/topology, state, or physics decision.
+- **E25 — exact Noble Gas pearlescent-billow depth (accepted checkpoint):**
+  the media-aware post-E24 rank identified exact Noble Gas as the weakest gas
+  card. Normal 1×–4× WebGL now uses `?nobleGasBillowVfx=0|1`, strictly
+  subordinate to `?gasBodyVfx=0|1`, to give propagated atmosphere style `7`
+  a bounded violet/cyan key and complementary absorptive pocket. It reuses only
+  E04's connected-body, static billow, directional relief,
+  curvature, density, crown, pocket, and cardinal-neighbour evidence. The
+  production Noble core is fully dense, so E25 attenuates rather than zeros its
+  deep response; it still changes RGB only and never claims field support.
+  Smoke, Oxygen, Hydrogen, FOG, CFLM, sparse gas topology, Water/Metal contacts,
+  walls, Canvas, and compact true 8× remain controls. Authored void/channel
+  footprints and the Noble side of the Noble/FOG seam are bounded to one
+  composed byte; foreign FOG remains exact. E25 adds no sample, sampler,
+  texture, field, resource, pass, target, upload, allocation, clock,
+  output-scale input, alpha, support, silhouette,
+  ownership, topology, state, or physics decision.
 - **Protected 8× rung:** `renderScale=8` deliberately reports
   `hdrPipeline=inactive` / `scale-8` and retains the proven direct single-mesh
   4896×3072 path. The experiment must earn a bounded 8× design rather than
   allocating a 115 MiB full-resolution float target beside that path.
-- **Current decision:** E01/E02/E03/E04/E05/E06/E07/E08/E09/E10/E11/E12/E13/E14/E15/E16/E17/E18/E19/E20/E21/E22/E23/E24 remain opt-in through the non-Classic looks
+- **Current decision:** E01/E02/E03/E04/E05/E06/E07/E08/E09/E10/E11/E12/E13/E14/E15/E16/E17/E18/E19/E20/E21/E22/E23/E24/E25 remain opt-in through the non-Classic looks
   until representative hardware timing and mobile thermal behavior are
   measured. E02 remains the safe family-wide baseline. E03 is accepted as the
   liquid-depth checkpoint: its fit-view crop is visibly more cohesive, retains
@@ -883,6 +899,30 @@ E24 and HDR inactive with reason `scale-8`, no bloom, exact `4896×3072`, and a
 completed GPU fence. The final frozen full-matrix fence completed in `5.56 s`
 with zero browser errors.
 
+Run `npm run audit:vfx:noble-gas-billow` for E25. It reloads a dedicated
+propagated-Noble atmosphere fixture as `nobleGasBillowVfx=0 → 1 → 0` at
+1×/2×/4× with E04 active and every unrelated experiment pinned off. The fixture
+contains a broad rounded Noble body with deterministic crown and pocket lobes,
+a dense core, authored void and open channel, two sparse carriers plus midpoint,
+gap, and isolated probes, a Noble/FOG seam, Smoke/Oxygen/Hydrogen/FOG/CFLM
+controls, Water and Metal contacts, a native wall, and guarded blank. Semantic
+ownership, sampled atmosphere style/density, full-frame alpha/support,
+native-wall state, raw controls, and repeated-off framebuffers remain invariant.
+Only the authored void, open channel, and Noble side of the unlike-gas seam may
+receive the audited one-byte HDR-neighbour footprint; all other composed
+controls are exact.
+
+Across the accepted matrix, dense-core RGB RMS is `2.43…2.44` with signed mean
+about `+2.54`, peak `4`, and coverage about `0.87`; crown RGB RMS is `3.00`
+with signed mean `+3.27…+3.29`, peak `4`, and full coverage; pocket RGB RMS is
+`0.81…0.83` with signed mean `−0.76…−0.74` and peak `1`. Cross-scale drift is
+negligible, the response remains spectrally broad, and every protected sibling,
+sparse, contact, wall, and blank probe is byte-stable. Requested-on true 8×
+proves actual WebGL promotion at exact `4896×3072`, then reports E04/E15/E25/
+HDR inactive with reason `scale-8`; a separate post-promotion GPU fence
+completed in about `5.26 s` in the final accepted full matrix, with zero browser
+errors.
+
 The earlier post-E16 survey was invalid for Solid: it sampled native Stone `21`,
 which is Powder, while labelling that region Solid. The corrected post-E17
 showcase uses native ROCK `78`, asserts exactly `2769` matching Solid cells, and
@@ -922,7 +962,7 @@ next production 4× survey then selected Wood/PLNT as the largest remaining
   production WebGL 1×/2×/4× matrix reproduces those semantics, rendered-cell
   parity, CSS geometry, and field-support masks at every scale.
 
-  Ranking now uses separate granular-body, cohesive-liquid, diffuse-gas,
+  The pre-E25 ranking used separate granular-body, cohesive-liquid, diffuse-gas,
   rigid-body, organic-body, emissive-volume, and phase-contact cue envelopes.
   Required cues combine through a weighted harmonic mean, and each family is
   represented by its weakest required probe rather than an average that can
@@ -930,18 +970,20 @@ next production 4× survey then selected Wood/PLNT as the largest remaining
   Gas `2.454` (`gasNoble`, billow depth), Organic `2.463` (`organicWood`,
   mesostructure), Solid `45.685`, Contact `88.235`, Liquid `91.033`, Emission
   `98.475`, and Powder `100.000`.
-  The same order and exact semantics hold at 1×/2×/4× within the audit's raw and
+  The same order and exact semantics held at 1×/2×/4× within the audit's raw and
   normalized drift bounds. The PNG sampler subtracts a same-page canvas-hidden
   backdrop and admits pixels only through the owning semantic,
   propagated-atmosphere-style, or shared-emission support mask. All ordinary
   and gas probes have full presentation recall; Plasma remains at least
-  `0.984`. This selects exact Noble Gas
-  volume/billow depth for E25, with Wood/Plant volume retained as the next
-  review target. Do not widen E17–E24 owner sets by resemblance alone, and do
-  not stack another generic gas layer over E04/E07/E13/E15. Preserve their
-  owner, exposure, topology, scale, and true-8× contracts independently.
+  `0.984`. E25 closes that exact target: a fresh canonical 2× rerank raises
+  `gasNoble` from `2.454` to `4.609`, shifts Gas to `4.546` with `gasSmoke`
+  softness now its weakest probe, and leaves Organic `2.463` as the global
+  weakest family. Exact Wood/Plant mesostructure is therefore the next ranked
+  review target. Do not widen E17–E25 owner sets by resemblance alone or stack
+  another generic gas layer over E04/E07/E13/E15; preserve their independent
+  owner, exposure, topology, scale, and true-8× contracts.
 
-**Next visual experiments:** E03–E24 now provide accepted liquid body/surface,
+**Next visual experiments:** E03–E25 now provide accepted liquid body/surface,
 stable-gas, coherent-gas-motion, powder-depth, and powder-local-light
 checkpoints plus exact resting contact grounding, Glass/Ice transmission, and
 state-aware Wax/PLNT subsurface response, composed wet-mineral optics,
@@ -950,13 +992,12 @@ species-aware gas-core optical depth, dense-Plasma containment, exact
 ROCK/Metal opaque-body relief, a distinct broad Platinum finish, an exact
 Ceramic fired-glaze response, recomposed clustered Wood/PLNT bodies, and deep
 Glass selective transmission, exact Oil amber-crown/cool-pocket body optics,
-an exact ROCK matte-body correction over E17, and lower-anisotropy exact-Water
-depth-light recomposition. The repaired, media-aware production rank selects
-an exact Noble Gas volume/billow card for E25; it must reuse the atmosphere,
-curvature, motion, light, and core-depth evidence already live under
-E04/E07/E13/E15, add no sample or resource, and leave gas support/alpha and
-other species unchanged. Wood/Plant body volume is the next ranked review
-target after that card. The radioactive-solid review
+an exact ROCK matte-body correction over E17, lower-anisotropy exact-Water
+depth-light recomposition, and exact Noble Gas pearlescent billow depth. E25's
+full 1×/2×/4× off→on→off matrix and real 4896×3072 exclusion gate are accepted;
+the post-E25 rank selects exact Wood/Plant mesostructure as the next card. Smoke
+softness is the runner-up diagnosis, but it requires its own bounded fit-view
+experiment rather than another generic gas layer. The radioactive-solid review
 found no current identity bug, but also
 proved that the existing
 phase-permissive identity guard is not suitable for a future broad ISZS/VIBR
@@ -965,7 +1006,8 @@ with topology-preserving, material-
 specific cards that reuse already-live evidence. Prefer the smallest
 arithmetic-only candidate that fixes a visible fit-view deficiency; do not add
 an isolated tint merely to continue the experiment number. Preserve the E14
-1× stencil snap and all E01–E24 selectors/controls while implementing E25.
+1× stencil snap and all E01–E25 selectors and controls while designing the
+next exact organic card.
 
 ## Phase 1 — HDR pipeline & lighting core (biggest visual payoff)
 

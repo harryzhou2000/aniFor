@@ -8,6 +8,7 @@ import {
   resolveGasMotionVfxEnabled,
   resolveLiquidBodyVfxEnabled, resolveLiquidSolidMeniscusVfxEnabled,
   resolveLiquidSurfaceVfxEnabled,
+  resolveNobleGasBillowVfxEnabled,
   resolveOilBodyVfxEnabled,
   resolveOrganicSubsurfaceVfxEnabled,
   resolvePlasmaCoreVfxEnabled,
@@ -127,6 +128,24 @@ describe('resolveRenderLook', () => {
     )).toBe(true);
     expect(resolveGasCoreDepthVfxEnabled(
       'realistic', '?gasBodyVfx=off&gasCoreDepthVfx=on',
+    )).toBe(false);
+  });
+
+  it('keeps exact Noble Gas billows subordinate to the stable gas body', () => {
+    expect(resolveNobleGasBillowVfxEnabled(
+      'classic', '?nobleGasBillowVfx=1',
+    )).toBe(false);
+    expect(resolveNobleGasBillowVfxEnabled('realistic', '')).toBe(true);
+    expect(resolveNobleGasBillowVfxEnabled('neon-lab', '')).toBe(true);
+    expect(resolveNobleGasBillowVfxEnabled('realistic', '?volumeVfx=0')).toBe(false);
+    expect(resolveNobleGasBillowVfxEnabled(
+      'realistic', '?volumeVfx=0&gasBodyVfx=1&nobleGasBillowVfx=true',
+    )).toBe(true);
+    expect(resolveNobleGasBillowVfxEnabled(
+      'realistic', '?gasBodyVfx=0&nobleGasBillowVfx=1',
+    )).toBe(false);
+    expect(resolveNobleGasBillowVfxEnabled(
+      'neon-lab', '?gasBodyVfx=on&nobleGasBillowVfx=off',
     )).toBe(false);
   });
 
