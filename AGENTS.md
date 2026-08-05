@@ -13,7 +13,7 @@ powder, solid, liquid, gas, energy, and contact scenes across Canvas and WebGL a
 mobile gestures, save/load, CI, and Pages deployment as protected regression
 contracts rather than the primary feature stream.
 
-The accepted visual experiment ladder now runs through E21. E12 is the
+The accepted visual experiment ladder now runs through E22. E12 is the
 species-safe Sand/Clay/Concrete wet-sediment checkpoint; preserve its exact
 aqueous owner/stability proof, split moving-powder/stationary-Water control,
 Local/Grains no-op, fine structures, authored gaps, Canvas fallback, and true
@@ -183,6 +183,31 @@ blocks remain shallow. All non-wall controls are exact and the two wall probes
 are bounded to one composed byte. Requested-on true 8× must report E21/HDR inactive with
 `scale-8`, no bloom, exact 4896×3072, completed GPU timing, and zero browser
 errors. Never declare or branch on E21 in `FIELD_EIGHT_X_FRAGMENT`.
+
+E22 is the calibrated normal-WebGL-only exact-Oil volumetric body checkpoint,
+independently measurable with `?oilBodyVfx=0|1` and strictly subordinate to
+E03. Only authoritative Oil `8` with Oily optics inside E03's already-proven
+connected, ordinary, same-species liquid body may receive the effect. Its
+exact-depth weight is zero at byte 30 and reaches full strength at byte 78.
+Reuse only the existing `liquidVfxBody`, Fresnel contour, broad sheen, macro
+relief, reflected environment, caustic, and vertical optical-depth values for a
+bounded warm amber crown and opposing cool absorptive pocket. Add no sample,
+sampler, texture, field, resource, pass, target, upload, allocation, clock,
+output-scale input, alpha, support, silhouette, ownership, topology, or physics
+decision. Diesel and Nitro are exact Oily-sibling controls; shallow Oil,
+surfaces, thin strands, droplets, isolated cells, authored holes/chimneys,
+Oil/Diesel and Oil/Water seams, Oil/Glass/Metal/Sand/Smoke contacts, traits,
+emission, co-located walls, Canvas, and compact true 8× retain their established
+paths. Validate with `npm run audit:vfx:oil-body`: E03/E08/E14 stay enabled
+throughout the 1×/2×/4× off→on→off matrix, every unrelated selector stays
+inactive, semantics and full alpha/support remain exact, integer-cell
+protected-control RGBA and repeated-off frames remain byte-identical, and the six
+transition/mid/core targets use frozen per-target response envelopes. Name any
+accepted HDR-filtered neighbour footprint explicitly; never replace exact raw
+controls with a family-wide composed allowance. Requested-on true 8× must
+report E03/E08/E14/E22 and HDR inactive with `scale-8`, no bloom, exact
+4896×3072, completed GPU timing, and zero browser errors. Never declare or
+branch on E22 in `FIELD_EIGHT_X_FRAGMENT`.
 
 The radioactive-solid review found no current correctness bug: ISZS `105`
 and VIBR `113` already receive exact-species Solid depth, while the existing

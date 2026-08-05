@@ -42,6 +42,7 @@ import {
   resolveGasMotionVfxEnabled,
   resolveLiquidBodyVfxEnabled, resolveLiquidSolidMeniscusVfxEnabled,
   resolveLiquidSurfaceVfxEnabled,
+  resolveOilBodyVfxEnabled,
   resolvePlasmaCoreVfxEnabled,
   resolveCeramicGlazeVfxEnabled,
   resolvePlatinumBodyVfxEnabled,
@@ -3234,6 +3235,7 @@ uniform float uCeramicGlazeVfx;
 uniform float uBotanicalBodyVfx;
 uniform float uGlassBodyVfx;
 uniform float uLiquidBodyVfx;
+uniform float uOilBodyVfx;
 uniform float uLiquidSolidMeniscusVfx;
 uniform float uPowderBodyVfx;
 uniform float uPowderLightVfx;
@@ -6814,6 +6816,33 @@ void main() {
             * mix(0.74, 1.0, liquidVfxBody);
           color += (vec3(1.35) - clamp(color, 0.0, 1.35))
             * mix(liquidFresnelKey, edgeTint, 0.18) * liquidVfxSurface;
+          // E22: exact Oil needs a shaped body finish after E03's accepted
+          // column absorption. Reuse only the already-live connected-body,
+          // depth, broad-sheen, macro-relief, Fresnel, and environment terms:
+          // a warm crown catches reflected light while a cool absorptive
+          // pocket makes the same dense plug read as volume rather than a flat
+          // opaque fill. The response starts beyond E03's byte-30 shallow band
+          // and changes RGB only. Exact ownership deliberately excludes Diesel
+          // and Nitro even though all three share Oily RenderOptics.
+          if (uOilBodyVfx > 0.5 && material == 8.0 && optics == 2.0
+            && surfaceOnly < 0.5 && emissionOnly < 0.5) {
+            float oilBodyWeight = smoothstep(
+              30.0 / 255.0, 78.0 / 255.0, liquidOpticalDepth
+            ) * liquidVfxBody * (1.0 - liquidFresnelContour);
+            float oilBodyRoll = clamp(
+              (broadSheen - 0.5) * 1.12 + liquidMacroRelief * 4.20,
+              -1.0, 1.0
+            );
+            float oilBodyCrown = max(oilBodyRoll, 0.0) * oilBodyWeight;
+            float oilBodyPocket = max(-oilBodyRoll, 0.0) * oilBodyWeight;
+            vec3 oilBodyReflection = mix(
+              vec3(1.00, 0.60, 0.18), reflectedEnvironment, 0.16
+            );
+            color += (vec3(1.18) - clamp(color, 0.0, 1.18))
+              * oilBodyReflection * oilBodyCrown * (0.052 + broadSheen * 0.024);
+            color *= vec3(1.0) - vec3(0.030, 0.060, 0.145)
+              * oilBodyPocket * (0.54 + caustic * 0.20);
+          }
         }
       }
     }
@@ -9620,6 +9649,11 @@ export class PixiFieldPresenter {
     // and deliberately declares neither this selector nor its arithmetic.
     const glassBodyVfxEnabled = outputScale < 8
       && resolveGlassBodyVfxEnabled(renderLook);
+    // E22 is an exact-Oil normal-WebGL recomposition layered on E03. Compact
+    // true 8x keeps its independently calibrated Oil exposure and declares no
+    // E22 selector or arithmetic.
+    const oilBodyVfxEnabled = outputScale < 8
+      && resolveOilBodyVfxEnabled(renderLook);
     // E03 is a normal-detail experiment. The true-8x shader intentionally has
     // no corresponding uniform or arithmetic, so its public capability state
     // must not advertise an effect that cannot run on that path.
@@ -9655,6 +9689,7 @@ export class PixiFieldPresenter {
       uBotanicalBodyVfx: { value: botanicalBodyVfxEnabled ? 1 : 0, type: 'f32' },
       uGlassBodyVfx: { value: glassBodyVfxEnabled ? 1 : 0, type: 'f32' },
       uLiquidBodyVfx: { value: liquidBodyVfxEnabled ? 1 : 0, type: 'f32' },
+      uOilBodyVfx: { value: oilBodyVfxEnabled ? 1 : 0, type: 'f32' },
       uLiquidSolidMeniscusVfx: {
         value: liquidSolidMeniscusVfxEnabled ? outputScale : 0, type: 'f32',
       },
@@ -9876,6 +9911,7 @@ export class PixiFieldPresenter {
       this.uniforms.uniforms.uBotanicalBodyVfx = 0;
       this.uniforms.uniforms.uGlassBodyVfx = 0;
       this.uniforms.uniforms.uLiquidBodyVfx = 0;
+      this.uniforms.uniforms.uOilBodyVfx = 0;
       this.uniforms.uniforms.uLiquidSolidMeniscusVfx = 0;
       this.uniforms.uniforms.uPowderBodyVfx = 0;
       this.uniforms.uniforms.uPowderLightVfx = 0;
@@ -9919,6 +9955,7 @@ export class PixiFieldPresenter {
             || new URLSearchParams(location.search).get('ceramicGlazeVfxAudit') === '1'
             || new URLSearchParams(location.search).get('botanicalBodyVfxAudit') === '1'
             || new URLSearchParams(location.search).get('glassBodyVfxAudit') === '1'
+            || new URLSearchParams(location.search).get('oilBodyVfxAudit') === '1'
             || new URLSearchParams(location.search).get('liquidBodyVfxAudit') === '1'
             || new URLSearchParams(location.search).get('liquidSolidMeniscusVfxAudit') === '1'
             || new URLSearchParams(location.search).get('liquidSurfaceVfxAudit') === '1'
@@ -9982,6 +10019,9 @@ export class PixiFieldPresenter {
     ) > 0.5 ? 'active' : 'inactive';
     presenter.app.canvas.dataset.liquidBodyVfx = Number(presenter.uniforms.uniforms.uLiquidBodyVfx) > 0.5
       ? 'active' : 'inactive';
+    presenter.app.canvas.dataset.oilBodyVfx = Number(
+      presenter.uniforms.uniforms.uOilBodyVfx
+    ) > 0.5 ? 'active' : 'inactive';
     presenter.app.canvas.dataset.liquidSolidMeniscusVfx = Number(
       presenter.uniforms.uniforms.uLiquidSolidMeniscusVfx
     ) > 0.5 ? 'active' : 'inactive';
@@ -11363,6 +11403,7 @@ export class PixiFieldPresenter {
         this.uniforms.uniforms.uBotanicalBodyVfx = 0;
         this.uniforms.uniforms.uGlassBodyVfx = 0;
         this.uniforms.uniforms.uLiquidBodyVfx = 0;
+        this.uniforms.uniforms.uOilBodyVfx = 0;
         this.uniforms.uniforms.uLiquidSolidMeniscusVfx = 0;
         this.uniforms.uniforms.uPowderBodyVfx = 0;
         this.uniforms.uniforms.uPowderLightVfx = 0;
@@ -11384,6 +11425,7 @@ export class PixiFieldPresenter {
         this.app.canvas.dataset.botanicalBodyVfx = 'inactive';
         this.app.canvas.dataset.glassBodyVfx = 'inactive';
         this.app.canvas.dataset.liquidBodyVfx = 'inactive';
+        this.app.canvas.dataset.oilBodyVfx = 'inactive';
         this.app.canvas.dataset.liquidSolidMeniscusVfx = 'inactive';
         this.app.canvas.dataset.liquidSurfaceVfx = 'inactive';
         this.app.canvas.dataset.powderBodyVfx = 'inactive';

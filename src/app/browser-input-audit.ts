@@ -75,6 +75,7 @@ import type { SolidBodyVfxAuditSnapshot } from './solid-body-vfx-audit';
 import type { CeramicGlazeVfxAuditSnapshot } from './ceramic-glaze-vfx-audit';
 import type { BotanicalBodyVfxAuditSnapshot } from './botanical-body-vfx-audit';
 import type { GlassBodyVfxAuditSnapshot } from './glass-body-vfx-audit';
+import type { OilBodyVfxAuditSnapshot } from './oil-body-vfx-audit';
 import type { LiquidSolidMeniscusVfxAuditSnapshot } from './liquid-solid-meniscus-vfx-audit';
 import type { WetSedimentVfxAuditSnapshot } from './wet-sediment-vfx-audit';
 
@@ -200,6 +201,8 @@ export interface BrowserInputAuditApi {
   prepareBotanicalBodyVfxFixture(): void;
   glassBodyVfxFixture(): GlassBodyVfxAuditSnapshot;
   prepareGlassBodyVfxFixture(): void;
+  oilBodyVfxFixture(): OilBodyVfxAuditSnapshot;
+  prepareOilBodyVfxFixture(): void;
   liquidSolidMeniscusVfxFixture(): LiquidSolidMeniscusVfxAuditSnapshot;
   prepareLiquidSolidMeniscusVfxFixture(): void;
   prepareContourStressFixture(): void;

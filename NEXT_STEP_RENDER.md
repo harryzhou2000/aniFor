@@ -277,11 +277,24 @@ does not alter simulation, camera, semantic ownership, or `renderScale`.
   Canvas, and true 8× remain controls. E21 adds no sampler, texture read,
   field, resource, pass, target, upload, allocation, clock, output-scale
   input, alpha/support/silhouette/ownership/topology, or physics decision.
+- **E22 — exact Oil volumetric body optics (accepted checkpoint):** the
+  post-E21 fit-view showed Oil as a flat opaque plug. Normal 1×–4× WebGL now
+  recomposes only authoritative Oil `8` with Oily optics inside E03's connected
+  ordinary-liquid proof through `?oilBodyVfx=0|1`. Its exact-depth weight is
+  zero at byte 30 and reaches full strength at byte 78. It reuses the existing
+  connected-body weight, Fresnel contour, broad sheen, macro relief, reflected
+  environment, and caustic evidence for a warm amber crown and opposing cool
+  absorptive pocket. Diesel/Nitro, Water/Acid/Lava/Soap, shallow Oil, sparse
+  strands/droplets, authored holes/chimneys, unlike seams, foreign contacts,
+  co-located walls, Canvas, and compact true 8× remain controls. E22 adds no
+  sampler, texture read, field, resource, pass, target, upload, allocation,
+  clock, output-scale input, alpha/support/silhouette/ownership/topology, or
+  physics decision.
 - **Protected 8× rung:** `renderScale=8` deliberately reports
   `hdrPipeline=inactive` / `scale-8` and retains the proven direct single-mesh
   4896×3072 path. The experiment must earn a bounded 8× design rather than
   allocating a 115 MiB full-resolution float target beside that path.
-- **Current decision:** E01/E02/E03/E04/E05/E06/E07/E08/E09/E10/E11/E12/E13/E14/E15/E16/E17/E18/E19/E20/E21 remain opt-in through the non-Classic looks
+- **Current decision:** E01/E02/E03/E04/E05/E06/E07/E08/E09/E10/E11/E12/E13/E14/E15/E16/E17/E18/E19/E20/E21/E22 remain opt-in through the non-Classic looks
   until representative hardware timing and mobile thermal behavior are
   measured. E02 remains the safe family-wide baseline. E03 is accepted as the
   liquid-depth checkpoint: its fit-view crop is visibly more cohesive, retains
@@ -363,6 +376,14 @@ does not alter simulation, camera, semantic ownership, or `renderScale`.
   substitutes clustered leaf volume or restrained bark rather than stacking a
   second identity pattern. Freeze that shared eligibility gate, arithmetic
   noise hash, lifecycle separation, and protected-control paths until another
+  production fit-view review. E21 is accepted as the exact deep-Glass
+  transmission checkpoint: it hands off continuously from E10's shallow shell
+  while preserving alpha, cavities, contacts, and native-wall visibility. E22
+  is accepted as the first exact broad Oil-body checkpoint: it replaces the
+  flat plug with a spatial amber-crown/cool-pocket response while remaining
+  subordinate to E03 and preserving exact Oil ownership, connected support,
+  and every sparse/contact control. Freeze E22's exact owner, byte-30–78
+  handoff, spectra, and existing-evidence-only construction until another
   production fit-view review.
   These are not the final material/VFX results.
   Sub-1.0 material colour stays on the established response; tonemapping owns
@@ -731,6 +752,35 @@ PNG encoding cannot consume the renderer-health deadline. Requested-on true 8× 
 inactive with reason `scale-8`, no bloom, exact 4896×3072, and completed
 GPU-fence timing (`5.16 s` in the final package-matrix run).
 
+Run `npm run audit:vfx:oil-body` for E22. It reloads a dedicated paired
+exact-Oil fixture as `oilBodyVfx=0 → 1 → 0` at 1×/2×/4× while E03, E08, and E14
+remain on as the accepted composed liquid stack and every unrelated selector
+is pinned off. Both panes expose exact depth bytes 0, 6, 12–30, 36–66, 72–126,
+and 192–255; the second also contains a deterministic 3,072-cell native-wall
+checker whose occupied/clear runs remain depth 0–18. The fixture protects
+authored holes, open chimneys, a reconstructable pinhole, thin/isolated Oil,
+Diesel/Nitro Oily siblings, Water/Acid/Lava/Soap, Oil/Diesel and Oil/Water
+seams, Oil/Glass/Metal/Sand/Smoke contacts, walls, and blank space. Semantic
+ownership, full-frame alpha/support, wall/depth hashes, six liquid-field alpha
+probes, integer-cell control RGBA, and repeated-off framebuffers remain
+invariant.
+Across the accepted matrix, open transition/mid/core RGB RMS is respectively
+`0.89…0.91`, `1.40…1.41`, and `0.80`; the first two retain an ordered positive
+amber spectrum while the deep core retains ordered blue-selective absorption
+at signed mean `−0.53…−0.52`. The second pane's transition/mid/core is
+`0.32…0.34`, `0.48…0.49`, and `3.31…3.32` RGB RMS; its deep amber crown is
+`+2.60…+2.62` signed mean with spatial RGB RMS `2.024…2.031`. The largest
+normal-scale RGB-RMS drift is `0.02`. All composed controls are bounded to one
+byte except the explicitly named HDR-filtered `WALL_CONTROLPinhole` at three
+and `oilGlassOil` at four; their exact integer-cell RGBA remains byte-identical.
+Freeze the six probes to these per-target RGB, chroma, coverage, peak, signed,
+spatial, and spectral envelopes; any permitted HDR neighbour footprint must be
+named individually rather than allowed by a broad suffix rule. Requested-on
+true 8× must report E03/E08/E14/E22 and HDR inactive with reason `scale-8`, no
+bloom, exact 4896×3072, and completed GPU timing.
+The final frozen full-matrix SwiftShader fence completed in `11.05 s`, inside
+the original one-total 30-second promotion deadline, with zero browser errors.
+
 The earlier post-E16 survey was invalid for Solid: it sampled native Stone `21`,
 which is Powder, while labelling that region Solid. The corrected post-E17
 showcase uses native ROCK `78`, asserts exactly `2769` matching Solid cells, and
@@ -753,15 +803,17 @@ capture proved Gold/Iron/Titanium already own rolled-metal optics, Brick is
 legible as warm masonry, and only Ceramic lacked a convincing surface finish.
 E19 closes that exact gap without applying PTNM's roll or altering Brick. The
 next production 4× survey then selected Wood/PLNT as the largest remaining
-fit-view defect, and E20 replaces their band-forming body carriers without
-changing sparse botanical topology or lifecycle state. E21 closes the next
-ranked defect by replacing only deep exact Glass while retaining E10's shallow
-edge and the established alpha/refraction contracts. Before another rigid
-card, survey a new material or phase and prove a visible fit-view defect; do
-not widen E17–E21 owner sets by resemblance alone. Preserve
-their owner, exposure, topology, scale, and true-8× contracts independently.
+  fit-view defect, and E20 replaces their band-forming body carriers without
+  changing sparse botanical topology or lifecycle state. E21 closes the deep-
+  Glass defect while retaining E10's shallow edge. E22 closes the flat Oil-plug
+  defect with an exact liquid-body card rather than widening Oily optics to
+  Diesel or Nitro. The remaining demonstrated fit-view candidate is ROCK's
+  overly polished macro response; survey it independently before changing E17
+  or adding another material card. Do not widen E17–E22 owner sets by
+  resemblance alone. Preserve their owner, exposure, topology, scale, and true-
+  8× contracts independently.
 
-**Next visual experiments:** E03–E21 now provide accepted liquid body/surface,
+**Next visual experiments:** E03–E22 now provide accepted liquid body/surface,
 stable-gas, coherent-gas-motion, powder-depth, and powder-local-light
 checkpoints plus exact resting contact grounding, Glass/Ice transmission, and
 state-aware Wax/PLNT subsurface response, composed wet-mineral optics,
@@ -769,16 +821,17 @@ atmosphere-owned external-light spectra, exact liquid-side wet contacts, and
 species-aware gas-core optical depth, dense-Plasma containment, exact
 ROCK/Metal opaque-body relief, a distinct broad Platinum finish, an exact
 Ceramic fired-glaze response, recomposed clustered Wood/PLNT bodies, and deep
-Glass selective transmission. The same fit-view survey now ranks ROCK's overly
-polished macro response and Oil's flat opaque plug next. The radioactive-solid
-review found no current identity bug, but also proved that the existing
+Glass selective transmission plus exact Oil amber-crown/cool-pocket body
+optics. The same fit-view survey now ranks ROCK's overly polished macro response
+next. The radioactive-solid review found no current identity bug, but also
+proved that the existing
 phase-permissive identity guard is not suitable for a future broad ISZS/VIBR
 finish; such work needs its own exact solid-only fixture and gate. Continue
 with topology-preserving, material-
 specific cards that reuse already-live evidence. Prefer the smallest
 arithmetic-only candidate that fixes a visible fit-view deficiency; do not add
 an isolated tint merely to continue the experiment number. Preserve the E14
-1× stencil snap and all E01–E21 selectors/controls while surveying.
+1× stencil snap and all E01–E22 selectors/controls while surveying.
 
 ## Phase 1 — HDR pipeline & lighting core (biggest visual payoff)
 

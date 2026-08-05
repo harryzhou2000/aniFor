@@ -8,6 +8,7 @@ import {
   resolveGasMotionVfxEnabled,
   resolveLiquidBodyVfxEnabled, resolveLiquidSolidMeniscusVfxEnabled,
   resolveLiquidSurfaceVfxEnabled,
+  resolveOilBodyVfxEnabled,
   resolveOrganicSubsurfaceVfxEnabled,
   resolvePlasmaCoreVfxEnabled,
   resolvePlatinumBodyVfxEnabled,
@@ -206,6 +207,33 @@ describe('resolveRenderLook', () => {
     expect(resolveGlassBodyVfxEnabled('realistic', '?glassBodyVfx=true')).toBe(true);
     expect(resolveGlassBodyVfxEnabled('realistic', '?glassBodyVfx=off')).toBe(false);
     expect(resolveGlassBodyVfxEnabled('realistic', '?glassBodyVfx=false')).toBe(false);
+  });
+
+  it('keeps exact Oil recomposition subordinate to the liquid-body baseline', () => {
+    expect(resolveOilBodyVfxEnabled('classic', '?oilBodyVfx=on')).toBe(false);
+    expect(resolveOilBodyVfxEnabled('classic', '?oilBodyVfx=true')).toBe(false);
+    expect(resolveOilBodyVfxEnabled('realistic', '')).toBe(true);
+    expect(resolveOilBodyVfxEnabled('neon-lab', '')).toBe(true);
+    expect(resolveOilBodyVfxEnabled('realistic', '?volumeVfx=0')).toBe(false);
+    expect(resolveOilBodyVfxEnabled(
+      'realistic', '?volumeVfx=0&liquidBodyVfx=1',
+    )).toBe(true);
+    expect(resolveOilBodyVfxEnabled(
+      'realistic', '?volumeVfx=0&liquidBodyVfx=on&oilBodyVfx=true',
+    )).toBe(true);
+    expect(resolveOilBodyVfxEnabled(
+      'realistic', '?liquidBodyVfx=0&oilBodyVfx=1',
+    )).toBe(false);
+    expect(resolveOilBodyVfxEnabled(
+      'neon-lab', '?liquidBodyVfx=off&oilBodyVfx=on',
+    )).toBe(false);
+    expect(resolveOilBodyVfxEnabled(
+      'realistic', '?liquidBodyVfx=1&oilBodyVfx=0',
+    )).toBe(false);
+    expect(resolveOilBodyVfxEnabled('realistic', '?oilBodyVfx=on')).toBe(true);
+    expect(resolveOilBodyVfxEnabled('realistic', '?oilBodyVfx=true')).toBe(true);
+    expect(resolveOilBodyVfxEnabled('realistic', '?oilBodyVfx=off')).toBe(false);
+    expect(resolveOilBodyVfxEnabled('realistic', '?oilBodyVfx=false')).toBe(false);
   });
 
   it('lets powder-body VFX follow the preset or override broad volume styling', () => {

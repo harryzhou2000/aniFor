@@ -49,6 +49,9 @@ import {
   GLASS_BODY_VFX_AUDIT, prepareGlassBodyVfxFixture,
 } from './glass-body-vfx-audit';
 import {
+  OIL_BODY_VFX_AUDIT, prepareOilBodyVfxFixture,
+} from './oil-body-vfx-audit';
+import {
   LIQUID_SOLID_MENISCUS_VFX_AUDIT, prepareLiquidSolidMeniscusVfxFixture,
 } from './liquid-solid-meniscus-vfx-audit';
 import { navigateToRenderScale } from './render-scale-navigation';
@@ -752,6 +755,12 @@ export class Game {
       glassBodyVfxFixture: () => GLASS_BODY_VFX_AUDIT,
       prepareGlassBodyVfxFixture: () => {
         prepareGlassBodyVfxFixture(this.simulation);
+        this.renderer.synchronizeFixtureMaterialPlane();
+        this.renderer.invalidateDynamicPresentation();
+      },
+      oilBodyVfxFixture: () => OIL_BODY_VFX_AUDIT,
+      prepareOilBodyVfxFixture: () => {
+        prepareOilBodyVfxFixture(this.simulation);
         this.renderer.synchronizeFixtureMaterialPlane();
         this.renderer.invalidateDynamicPresentation();
       },

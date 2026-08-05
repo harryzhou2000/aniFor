@@ -255,6 +255,22 @@ export function resolveGlassBodyVfxEnabled(
 }
 
 /**
+ * Re-composes only the exact Oil body on top of E03's connected-liquid
+ * baseline. The explicit selector keeps the experiment independently
+ * measurable, but it cannot bypass the parent liquid-body ownership proof.
+ */
+export function resolveOilBodyVfxEnabled(
+  look: RenderLook,
+  search = globalThis.location?.search ?? '',
+): boolean {
+  if (!resolveLiquidBodyVfxEnabled(look, search)) return false;
+  const requested = new URLSearchParams(search).get('oilBodyVfx');
+  if (requested === '0' || requested === 'off' || requested === 'false') return false;
+  if (requested === '1' || requested === 'on' || requested === 'true') return true;
+  return true;
+}
+
+/**
  * Keeps the settled-powder crown experiment independently measurable without
  * changing liquid or gas. Ordinary realistic/neon presets retain the broad
  * volume default; the explicit query is reserved for comparison captures and
