@@ -306,11 +306,28 @@ does not alter simulation, camera, semantic ownership, or `renderScale`.
   texture, field, resource, pass, target, upload, allocation, clock,
   output-scale input, alpha/support/silhouette/ownership/topology, or physics
   decision. Canvas and compact true 8× contain no E23 branch.
+- **E24 — exact Water depth-light recomposition (accepted checkpoint):** the
+  post-E23 production capture exposed broad exact Water as a cyan slab crossed
+  by coherent diagonal sheen/caustic bands. Normal 1×–4× WebGL now uses
+  `?waterBodyVfx=0|1`, strictly subordinate to `?liquidBodyVfx=0|1`, to
+  attenuate only that inherited positive carrier after depth byte 30 and
+  recombine its already-live sheen, caustic, macro-relief, reflected-
+  environment, and optical-depth evidence into soft reflective crowns and
+  absorptive pockets. Eligibility requires authoritative Water `2`, Aqueous
+  optics, ordinary connected Liquid, exact same-species support, at least three
+  of the already-computed semantic 2×2 occupancy samples (`shape.w > 2.5`),
+  byte-30–78 depth handoff, and no wall, trait, emission, reconstruction,
+  molten state, or foreign/unlike contact. SaltWater, DistilledWater, DEUT,
+  Oil, Acid, Lava, surfaces, shallow bands, one-cell strands, droplets,
+  isolated cells, authored holes/chimneys, seams, Solid/Powder/Gas contacts,
+  native walls, Canvas, and compact true 8× remain controls. E24 adds no wave,
+  clock, sample, sampler, texture, field, pass, target, upload, allocation,
+  alpha/support/silhouette/ownership/topology, state, or physics decision.
 - **Protected 8× rung:** `renderScale=8` deliberately reports
   `hdrPipeline=inactive` / `scale-8` and retains the proven direct single-mesh
   4896×3072 path. The experiment must earn a bounded 8× design rather than
   allocating a 115 MiB full-resolution float target beside that path.
-- **Current decision:** E01/E02/E03/E04/E05/E06/E07/E08/E09/E10/E11/E12/E13/E14/E15/E16/E17/E18/E19/E20/E21/E22/E23 remain opt-in through the non-Classic looks
+- **Current decision:** E01/E02/E03/E04/E05/E06/E07/E08/E09/E10/E11/E12/E13/E14/E15/E16/E17/E18/E19/E20/E21/E22/E23/E24 remain opt-in through the non-Classic looks
   until representative hardware timing and mobile thermal behavior are
   measured. E02 remains the safe family-wide baseline. E03 is accepted as the
   liquid-depth checkpoint: its fit-view crop is visibly more cohesive, retains
@@ -406,7 +423,13 @@ does not alter simulation, camera, semantic ownership, or `renderScale`.
   changing Metal, or replacing the established geological identity. Freeze its
   E17 dependency, exact-owner/depth/contact proof, three gloss attenuation
   factors, and positive-key attenuation until another production fit-view
-  review.
+  review. E24 is accepted as the exact deep-Water carrier recomposition: it
+  replaces the two dominant diagonal bands with a lower-anisotropy broad crown/
+  pocket response while leaving shallow Water and sparse/foreign topology on
+  their established path. Freeze its E03 dependency, exact Water owner,
+  byte-30–78 handoff, semantic `shape.w > 2.5` support proof, carrier factor,
+  crown/pocket spectra, and compact-8× exclusion until another production
+  fit-view review.
   These are not the final material/VFX results.
   Sub-1.0 material colour stays on the established response; tonemapping owns
   only real HDR highlights so powder texture and liquid body contrast are not
@@ -830,6 +853,36 @@ inactive with reason `scale-8`, no bloom, exact `4896×3072`, and a completed
 GPU fence. The final calibration fence completed in `8.60 s` with zero browser
 errors.
 
+Run `npm run audit:vfx:water-body` for E24. It reloads a dedicated paired Water
+fixture as `waterBodyVfx=0 → 1 → 0` at 1×/2×/4× with E03, E08, and E14 active
+and every unrelated experiment pinned off. Both panes prove liquid-depth bytes
+`0`, `6`, `12–30`, `36–66`, `72–126`, and `192–255`; the second pane adds
+3,072 co-located native-wall cells. The fixture protects SaltWater, Distilled
+Water, DEUT, Oil, Acid, Lava, exact Water/unlike-liquid seams, Glass/Metal/Sand/
+Smoke contacts, surface and shallow bands, one-cell strands, droplets,
+isolated cells, holes, chimneys, reconstructed pinholes, and blank space.
+Semantic ownership, full-frame alpha/support, native-wall count/hash, liquid-
+depth and field support, exact integer-cell raw controls, and repeated-off
+framebuffers remain invariant. The one-cell strand initially exposed a real
+4× subpixel eligibility leak; the accepted shader closes it with the already-
+live `shape.w > 2.5` semantic-support proof rather than an output-scale test.
+
+Across the frozen matrix, open-pool transition/mid/deep RGB RMS is
+`1.33…1.35`, `1.94…1.95`, and `5.64…5.65`; RGB peaks are exactly `4`, `5`, and
+`13`. Transition and mid are visibly bipolar (`+0.13 / −0.93…−0.96` and
+`+0.24…+0.26 / −1.44…−1.49` luminance), while the core stays primarily
+absorptive at signed mean `−4.51…−4.50`. Most importantly, open-pool
+directional anisotropy falls from `0.192…0.202` to `0.160…0.180` in the
+transition, `0.484…0.509` to `0.428…0.438` in the mid body, and
+`0.125…0.144` to `0.061…0.090` in the deep core. The wall-backed pane retains
+the same checker ownership with RGB RMS `0.75…0.77`, `1.46…1.47`, and
+`2.07…2.08`. Named HDR-filtered neighbour footprints are bounded individually:
+all foreign owners remain exact, while the largest Water-side/pinhole/contact
+display response is five bytes. Requested-on true 8× reports E03/E08/E14/E22/
+E24 and HDR inactive with reason `scale-8`, no bloom, exact `4896×3072`, and a
+completed GPU fence. The final frozen full-matrix fence completed in `5.56 s`
+with zero browser errors.
+
 The earlier post-E16 survey was invalid for Solid: it sampled native Stone `21`,
 which is Powder, while labelling that region Solid. The corrected post-E17
 showcase uses native ROCK `78`, asserts exactly `2769` matching Solid cells, and
@@ -858,12 +911,22 @@ next production 4× survey then selected Wood/PLNT as the largest remaining
   defect with an exact liquid-body card rather than widening Oily optics to
   Diesel or Nitro. E23 closes ROCK's demonstrated overly polished macro response
   by reducing its inherited gloss carriers rather than widening or replacing
-  E17. Re-run the composed fit-view ranking before selecting E24; the previous
-  ordering has now served its final demonstrated defect. Do not widen E17–E23
-  owner sets by resemblance alone. Preserve their owner, exposure, topology,
-  scale, and true-8× contracts independently.
+  E17. The post-E23 composed rerun recovered an authoritative 1× frame with the
+  same `3702907786` semantic hash and 104,027 occupied cells, but its 2× exact-
+  frame capture timed out twice; do not describe that as a clean 1×/2×/4×
+  survey. Its scalar order (`Gas 1.936`, `Solid 4.991`, `Energy 7.647`,
+  `Powder 10.791`, `Liquid 11.220`, `Contact 15.107`) also cannot rank smooth
+  media against textured media by one local-contrast formula. Visual review of
+  the same production crop instead demonstrated Water's coherent stripe/slab
+  defect, which E24 closes with an exact Water fixture and directional metrics.
+  The showcase currently draws its intended Metal capsule before the Water pool
+  and therefore ends with zero Metal cells; repair that ordering and replace the
+  conflated rank with media-aware powder/liquid/gas/solid/organic/emissive
+  measures before selecting E25. Do not widen E17–E24 owner sets by resemblance
+  alone. Preserve their owner, exposure, topology, scale, and true-8× contracts
+  independently.
 
-**Next visual experiments:** E03–E23 now provide accepted liquid body/surface,
+**Next visual experiments:** E03–E24 now provide accepted liquid body/surface,
 stable-gas, coherent-gas-motion, powder-depth, and powder-local-light
 checkpoints plus exact resting contact grounding, Glass/Ice transmission, and
 state-aware Wax/PLNT subsurface response, composed wet-mineral optics,
@@ -872,8 +935,10 @@ species-aware gas-core optical depth, dense-Plasma containment, exact
 ROCK/Metal opaque-body relief, a distinct broad Platinum finish, an exact
 Ceramic fired-glaze response, recomposed clustered Wood/PLNT bodies, and deep
 Glass selective transmission, exact Oil amber-crown/cool-pocket body optics,
-and an exact ROCK matte-body correction over E17. Re-rank the production
-fit-view before selecting another material card. The radioactive-solid review
+an exact ROCK matte-body correction over E17, and lower-anisotropy exact-Water
+depth-light recomposition. First repair the overwritten Metal showcase sample
+and make the ranking media-aware; then re-rank the production fit-view before
+selecting another material card. The radioactive-solid review
 found no current identity bug, but also
 proved that the existing
 phase-permissive identity guard is not suitable for a future broad ISZS/VIBR
@@ -882,7 +947,7 @@ with topology-preserving, material-
 specific cards that reuse already-live evidence. Prefer the smallest
 arithmetic-only candidate that fixes a visible fit-view deficiency; do not add
 an isolated tint merely to continue the experiment number. Preserve the E14
-1× stencil snap and all E01–E23 selectors/controls while surveying.
+1× stencil snap and all E01–E24 selectors/controls while surveying.
 
 ## Phase 1 — HDR pipeline & lighting core (biggest visual payoff)
 

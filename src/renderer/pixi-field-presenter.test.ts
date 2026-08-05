@@ -1187,6 +1187,54 @@ describe('Pixi presenter startup configuration', () => {
     expect(source).toContain("this.app.canvas.dataset.rockRoughnessVfx = 'inactive';");
   });
 
+  it('keeps E24 Water recomposition exact-owner, E03-dependent, normal-WebGL-only, and RGB-only', () => {
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const canvasSource = readFileSync(new URL('./field-renderer.ts', import.meta.url), 'utf8');
+    const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');
+    const normalStart = source.indexOf('const FIELD_FRAGMENT = `', eightStart);
+    const normalEnd = source.indexOf('`;\n\n/** Primary WebGL presentation', normalStart);
+    const eight = source.slice(eightStart, normalStart);
+    const normal = source.slice(normalStart, normalEnd);
+    const carrierStart = normal.indexOf('    // E24 first removes');
+    const bodyStart = normal.indexOf('          // E24:', carrierStart);
+    const bodyEnd = normal.indexOf('          // E22:', bodyStart);
+    const carrier = normal.slice(carrierStart, bodyStart);
+    const body = normal.slice(bodyStart, bodyEnd);
+
+    expect(carrierStart).toBeGreaterThanOrEqual(0);
+    expect(bodyStart).toBeGreaterThan(carrierStart);
+    expect(bodyEnd).toBeGreaterThan(bodyStart);
+    expect(normal).toContain('uniform float uWaterBodyVfx;');
+    expect(eight).not.toContain('uWaterBodyVfx');
+    expect(eight).not.toContain('waterBodyRecompose');
+    expect(canvasSource).not.toContain('waterBodyVfx');
+    for (const guard of [
+      'uWaterBodyVfx > 0.5', 'material == 2.0', 'optics == 1.0',
+      'liquidOnly < 0.5', 'halo < 0.5', 'surfaceOnly < 0.5',
+      'wall < 0.5', 'emissionOnly < 0.5', 'family == 2.0',
+      'traits < 0.5', '!materialEmissive', 'molten < 0.5',
+      'foreignMatterContact < 0.5', 'unlikeMaterialContact < 0.5',
+      'dot(liquidSpeciesSlope, liquidSpeciesSlope) < 0.0004',
+      'shape.w > 2.5',
+      'liquidDepth > 0.48', 'liquidNeighbourMean > 0.56',
+    ]) expect(carrier).toContain(guard);
+    expect(carrier).toContain('30.0 / 255.0, 78.0 / 255.0, liquidOpticalDepth');
+    expect(carrier).toContain('inheritedLiquidCarrier *= mix(1.0, 0.50, waterBodyRecompose);');
+    expect(body).toContain('(broadSheen - 0.5) * (causticWave - 0.5) * 3.25');
+    expect(body).toContain('waterCausticLine * waterCausticLine');
+    expect(body).toContain('waterBodyCrown * 0.160 + waterCausticFilament * 0.008');
+    expect(body).toContain('vec3(0.042, 0.030, 0.016)');
+    expect(`${carrier}\n${body}`).not.toContain('texture(');
+    expect(`${carrier}\n${body}`).not.toMatch(/\balpha\s*[+*]?=/);
+    expect(source.match(/this\.uniforms\.uniforms\.uWaterBodyVfx = 0;/g)).toHaveLength(2);
+    expect(source).toContain("get('waterBodyVfxAudit') === '1'");
+    expect(source).toMatch(
+      /const waterBodyVfxEnabled = outputScale < 8\s*&& resolveWaterBodyVfxEnabled\(renderLook\);/,
+    );
+    expect(source).toContain('presenter.app.canvas.dataset.waterBodyVfx');
+    expect(source).toContain("this.app.canvas.dataset.waterBodyVfx = 'inactive';");
+  });
+
   it('routes E08 liquid surfaces through existing normal-scale HDR resources only', () => {
     const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
     const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');

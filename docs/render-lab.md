@@ -282,6 +282,40 @@ RGB RMS ranges are `0.82…0.87`, `2.39…2.40`, `1.84…1.85`, and `4.33…4.35
 all protected controls remain exact. Canvas and true 8× deliberately retain
 their established paths.
 
+E24 is an independently measurable exact-Water body recomposition selected by
+`?waterBodyVfx=0|1`. It is strictly subordinate to E03
+(`?liquidBodyVfx=0|1`): an explicit E24 request cannot recreate the parent body
+layer when E03 or its containing non-Classic HDR look is inactive. Normal WebGL
+1×–4× is the only implementation path. Eligibility begins beyond E03's
+byte-30 hand-off and requires authoritative ordinary Water, connected
+same-species liquid support, `shape.w > 2.5`, deep liquid/neighbor support, a
+flat species field, and no surface-only, halo, reconstructed, wall, trait,
+emissive, molten, foreign-contact, or unlike-contact ownership. It recombines
+the already-live broad sheen, caustic wave, macro relief, reflected environment,
+Fresnel, liquid depth, and exact vertical optical depth into a centred crown,
+pocket, and narrow caustic filament while damping Water's inherited bright
+stripe carrier. The change is RGB-only arithmetic: it adds no sample, sampler,
+texture, field, resource, pass, target, upload, allocation, clock, output-scale
+input, alpha/support/silhouette/ownership/topology change, or physics decision.
+
+The E24 fixture keeps both panes' surface/first/shallow bands, authored holes,
+open chimneys, reconstructable pinholes, thin strand, droplet, isolated Water,
+native-wall checker, Salt Water, Distilled Water, DEUT, Oil, Acid, Lava,
+Water/Salt-Water and Water/Oil seams, Water/Glass, Water/Metal, Water/Sand and
+Water/Smoke contacts, and guarded blank exact in semantic and raw output.
+Because E24 precedes the accepted HDR composite, only these named neighboring
+filter footprints have bounded composed peaks: `OPEN_POOLPinhole≤1`,
+`WALL_CONTROLSurface≤1`, `WALL_CONTROLFirstLayer≤1`,
+`WALL_CONTROLShallow≤1`, `WALL_CONTROLChimney≤1`,
+`WALL_CONTROLPinhole≤5`, `NativeWallOccupied≤1`, `NativeWallClear≤1`,
+`waterSaltWaterWater≤4`, `waterGlassWater≤1`, `waterMetalWater≤5`,
+`waterSandWater≤3`, and `waterSmokeWater≤3` bytes; the thin strand,
+Water/Oil seam, and every other composed control remain exact. Run
+`npm run audit:vfx:water-body` for the 1×/2×/4× off→on→off matrix and the
+requested-on true-8× exclusion. The latter must report E24/HDR inactive with
+reason `scale-8`, no bloom backing, completed GPU work, and exact
+`4896×3072` WebGL output.
+
 HEAC, PTNM, and RSSS now receive a second exact-owner deep rigid-body layer:
 the rapid heat conductor has restrained warm channel lamellae, Platinum uses
 cool catalytic planes with sparse active sites, and solidified resist gains a

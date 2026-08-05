@@ -16,7 +16,7 @@ import {
   resolveSolidBodyVfxEnabled,
   resolvePowderBodyVfxEnabled, resolvePowderLightVfxEnabled,
   resolvePowderSolidContactVfxEnabled, resolveRenderLook, resolveTranslucentEdgeVfxEnabled,
-  resolveVolumeVfxEnabled, resolveWetSedimentVfxEnabled,
+  resolveVolumeVfxEnabled, resolveWaterBodyVfxEnabled, resolveWetSedimentVfxEnabled,
 } from './render-look';
 
 describe('resolveRenderLook', () => {
@@ -251,6 +251,22 @@ describe('resolveRenderLook', () => {
     expect(resolveOilBodyVfxEnabled('realistic', '?oilBodyVfx=true')).toBe(true);
     expect(resolveOilBodyVfxEnabled('realistic', '?oilBodyVfx=off')).toBe(false);
     expect(resolveOilBodyVfxEnabled('realistic', '?oilBodyVfx=false')).toBe(false);
+  });
+
+  it('keeps exact Water recomposition subordinate to the liquid-body baseline', () => {
+    expect(resolveWaterBodyVfxEnabled('classic', '?waterBodyVfx=on')).toBe(false);
+    expect(resolveWaterBodyVfxEnabled('realistic', '')).toBe(true);
+    expect(resolveWaterBodyVfxEnabled('neon-lab', '')).toBe(true);
+    expect(resolveWaterBodyVfxEnabled('realistic', '?volumeVfx=0')).toBe(false);
+    expect(resolveWaterBodyVfxEnabled(
+      'realistic', '?volumeVfx=0&liquidBodyVfx=1&waterBodyVfx=true',
+    )).toBe(true);
+    expect(resolveWaterBodyVfxEnabled(
+      'realistic', '?liquidBodyVfx=0&waterBodyVfx=1',
+    )).toBe(false);
+    expect(resolveWaterBodyVfxEnabled(
+      'neon-lab', '?liquidBodyVfx=on&waterBodyVfx=off',
+    )).toBe(false);
   });
 
   it('lets powder-body VFX follow the preset or override broad volume styling', () => {

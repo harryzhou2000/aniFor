@@ -13,7 +13,7 @@ powder, solid, liquid, gas, energy, and contact scenes across Canvas and WebGL a
 mobile gestures, save/load, CI, and Pages deployment as protected regression
 contracts rather than the primary feature stream.
 
-The accepted visual experiment ladder now runs through E23. E12 is the
+The accepted visual experiment ladder now runs through E24. E12 is the
 species-safe Sand/Clay/Concrete wet-sediment checkpoint; preserve its exact
 aqueous owner/stability proof, split moving-powder/stationary-Water control,
 Local/Grains no-op, fine structures, authored gaps, Canvas fallback, and true
@@ -236,6 +236,34 @@ HDR inactive with `scale-8`, no bloom, exact `4896×3072`, completed GPU timing,
 and zero browser errors. Never declare or branch on E23 in
 `FIELD_EIGHT_X_FRAGMENT`; Canvas contains no E23 path.
 
+E24 is the calibrated normal-WebGL-only exact-Water depth-light recomposition,
+independently measurable with `?waterBodyVfx=0|1` and strictly subordinate to
+E03's `?liquidBodyVfx=0|1`. Only authoritative Water `2` with Aqueous optics
+inside ordinary, same-species connected Liquid may receive it. Its exact-depth
+weight is zero through byte 30 and reaches full strength at byte 78. In addition
+to field density and neighbour support, require `shape.w > 2.5` from the
+already-computed semantic 2×2 occupancy proof; this rejects the 4× subpixel
+one-cell-strand leak without adding a sample or output-scale branch. Reuse only
+the existing broad sheen, caustic wave, macro relief, reflected environment,
+Fresnel contour, connected-body, and vertical optical-depth evidence: attenuate
+the inherited positive stripe carrier, then form soft reflected crowns and
+absorptive pockets. Add no wave, clock, sample, sampler, texture, field,
+resource, pass, target, upload, allocation, alpha, support, silhouette,
+ownership, topology, state, or physics decision. SaltWater, DistilledWater,
+DEUT, Oil, Acid, Lava, shallow Water, one-cell strands, droplets, isolated
+cells, holes/chimneys, reconstructed pinholes, unlike seams, Glass/Metal/Sand/
+Smoke contacts, co-located walls, Canvas, and compact true 8× retain their
+established paths. Validate with `npm run audit:vfx:water-body`: the frozen
+1×/2×/4× off→on→off matrix must prove exact semantic/alpha/support/wall/depth/
+raw-control state and byte-identical repeated-off frames. Open-pool transition,
+mid, and deep RGB RMS is `1.33…1.35`, `1.94…1.95`, and `5.64…5.65`, with exact
+peaks `4/5/13`; directional anisotropy must fall at every scale. Name and bound
+only the audited HDR neighbour footprints, never replace them with a broad
+control allowance. Requested-on true 8× must report E03/E08/E14/E22/E24/HDR
+inactive with `scale-8`, no bloom, exact 4896×3072, a signalled promotion fence,
+completed GPU timing, and zero browser errors. Never declare or branch on E24
+in `FIELD_EIGHT_X_FRAGMENT`; Canvas contains no E24 path.
+
 The radioactive-solid review found no current correctness bug: ISZS `105`
 and VIBR `113` already receive exact-species Solid depth, while the existing
 seven-owner radioactive identity motif is intentionally phase-permissive.
@@ -253,7 +281,14 @@ Gas `1.944`, Energy `7.817`, Powder `10.553`, Liquid `11.233`, and Contact
 `15.849` stay fixed. That survey subsequently selected ROCK's overly polished
 macro response; E23 closes that demonstrated defect by reducing existing gloss
 carriers rather than changing E17's owner set or adding another material motif.
-Re-run the composed fit-view ranking before selecting E24.
+The post-E23 rerun has authoritative 1× evidence only: its 2× exact-frame
+capture timed out twice, so never report it as a clean scale matrix. One generic
+local-contrast score also misranks smooth Water/gas against textured matter.
+Production review instead demonstrated Water's stripe/slab defect, and E24
+closes it through its exact fixture and directional metrics. Before E25, fix
+the showcase draw order that currently overwrites the intended Metal capsule
+with Water (the final showcase has zero Metal cells), then replace the conflated
+ranking with media-aware body, volume, contact, and emission metrics.
 
 WebGL is the canonical visual release path. Canvas 2D remains a resilient,
 camera-preserving semantic fallback: keep its loading, input, material/state,

@@ -52,6 +52,9 @@ import {
   GLASS_BODY_VFX_AUDIT, prepareGlassBodyVfxFixture,
 } from './glass-body-vfx-audit';
 import {
+  WATER_BODY_VFX_AUDIT, prepareWaterBodyVfxFixture,
+} from './water-body-vfx-audit';
+import {
   OIL_BODY_VFX_AUDIT, prepareOilBodyVfxFixture,
 } from './oil-body-vfx-audit';
 import {
@@ -764,6 +767,12 @@ export class Game {
       glassBodyVfxFixture: () => GLASS_BODY_VFX_AUDIT,
       prepareGlassBodyVfxFixture: () => {
         prepareGlassBodyVfxFixture(this.simulation);
+        this.renderer.synchronizeFixtureMaterialPlane();
+        this.renderer.invalidateDynamicPresentation();
+      },
+      waterBodyVfxFixture: () => WATER_BODY_VFX_AUDIT,
+      prepareWaterBodyVfxFixture: () => {
+        prepareWaterBodyVfxFixture(this.simulation);
         this.renderer.synchronizeFixtureMaterialPlane();
         this.renderer.invalidateDynamicPresentation();
       },

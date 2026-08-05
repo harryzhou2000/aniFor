@@ -43,6 +43,7 @@ import {
   resolveLiquidBodyVfxEnabled, resolveLiquidSolidMeniscusVfxEnabled,
   resolveLiquidSurfaceVfxEnabled,
   resolveOilBodyVfxEnabled,
+  resolveWaterBodyVfxEnabled,
   resolvePlasmaCoreVfxEnabled,
   resolveCeramicGlazeVfxEnabled,
   resolvePlatinumBodyVfxEnabled,
@@ -3238,6 +3239,7 @@ uniform float uBotanicalBodyVfx;
 uniform float uGlassBodyVfx;
 uniform float uLiquidBodyVfx;
 uniform float uOilBodyVfx;
+uniform float uWaterBodyVfx;
 uniform float uLiquidSolidMeniscusVfx;
 uniform float uPowderBodyVfx;
 uniform float uPowderLightVfx;
@@ -6728,8 +6730,29 @@ void main() {
       + liquidFresnelAbsorption * liquidFresnelAbsorptionResponse
     );
     color *= 1.0 + topLip * 0.08 - lowerShade * 0.05;
+    // E24 first removes only the exact deep-Water share of the common
+    // positive-only stripe carrier. Its replacement is applied inside E03's
+    // stronger exact-species/depth proof below, where the same two analytic
+    // signals can form a centred crown/pocket response instead of bright bands.
+    float waterBodyRecompose = 0.0;
+    if (uWaterBodyVfx > 0.5 && material == 2.0 && optics == 1.0
+      && liquidOnly < 0.5 && halo < 0.5 && surfaceOnly < 0.5
+      && wall < 0.5 && emissionOnly < 0.5 && family == 2.0
+      && traits < 0.5 && !materialEmissive && molten < 0.5
+      && foreignMatterContact < 0.5 && unlikeMaterialContact < 0.5
+      && dot(liquidSpeciesSlope, liquidSpeciesSlope) < 0.0004
+      && shape.w > 2.5 && liquidDepth > 0.48 && liquidNeighbourMean > 0.56) {
+      waterBodyRecompose = smoothstep(
+        30.0 / 255.0, 78.0 / 255.0, liquidOpticalDepth
+      ) * smoothstep(0.48, 0.90, liquidDepth)
+        * smoothstep(0.56, 0.90, liquidNeighbourMean)
+        * (1.0 - liquidFresnelContour);
+    }
+    float inheritedLiquidCarrier = broadSheen * mix(0.016, 0.052 * gloss, liquidDepth)
+      + caustic * causticStrength;
+    inheritedLiquidCarrier *= mix(1.0, 0.50, waterBodyRecompose);
     color += mix(vec3(0.52, 0.68, 0.76), liquidBase, 0.50)
-      * (broadSheen * mix(0.016, 0.052 * gloss, liquidDepth) + caustic * causticStrength);
+      * inheritedLiquidCarrier;
     color += liquidBase * (0.025 + atmosphere * 0.030) + vec3(0.055, 0.090, 0.105) * rim;
     // Lava's wide glow is deliberately left to the shared emission field, so
     // it never feeds light back into its own body. Its dense, exact liquid
@@ -6818,6 +6841,37 @@ void main() {
             * mix(0.74, 1.0, liquidVfxBody);
           color += (vec3(1.35) - clamp(color, 0.0, 1.35))
             * mix(liquidFresnelKey, edgeTint, 0.18) * liquidVfxSurface;
+          // E24: the broad production Water pool read as an opaque cyan slab
+          // crossed by two coherent diagonal bands. Recombine those same
+          // already-live sheen/caustic carriers into an interference roll:
+          // reflected crowns and absorptive pockets now share one centred
+          // volume response, while a narrow high-caustic ridge retains moving
+          // sparkle. No new wave, sample, clock, field, or support decision is
+          // introduced, and E03's byte-30 shallow hand-off remains exact.
+          if (waterBodyRecompose > 0.0) {
+            float waterBodyRoll = clamp(
+              (broadSheen - 0.5) * (causticWave - 0.5) * 3.25
+                + (causticWave - 0.5) * 0.12
+                + liquidMacroRelief * 2.20,
+              -1.0, 1.0
+            );
+            float waterBodyCrown = smoothstep(0.025, 0.58, max(waterBodyRoll, 0.0))
+              * waterBodyRecompose;
+            float waterBodyPocket = smoothstep(0.025, 0.54, max(-waterBodyRoll, 0.0))
+              * waterBodyRecompose;
+            float waterCausticLine = smoothstep(0.70, 0.96, causticWave);
+            float waterCausticFilament = waterCausticLine * waterCausticLine
+              * smoothstep(0.04, 0.34, abs(broadSheen - 0.5))
+              * waterBodyRecompose;
+            vec3 waterBodyReflection = mix(
+              vec3(0.12, 0.70, 1.00), reflectedEnvironment, 0.18
+            );
+            color += (vec3(1.16) - clamp(color, 0.0, 1.16))
+              * waterBodyReflection
+              * (waterBodyCrown * 0.160 + waterCausticFilament * 0.008);
+            color *= vec3(1.0) - vec3(0.042, 0.030, 0.016)
+              * waterBodyPocket * (0.66 + liquidDepth * 0.16);
+          }
           // E22: exact Oil needs a shaped body finish after E03's accepted
           // column absorption. Reuse only the already-live connected-body,
           // depth, broad-sheen, macro-relief, Fresnel, and environment terms:
@@ -9688,6 +9742,11 @@ export class PixiFieldPresenter {
     // E22 selector or arithmetic.
     const oilBodyVfxEnabled = outputScale < 8
       && resolveOilBodyVfxEnabled(renderLook);
+    // E24 replaces only normal-WebGL's exact deep-Water stripe carrier. The
+    // compact true-8x shader retains its independently proven aqueous grammar
+    // and deliberately declares neither this selector nor its arithmetic.
+    const waterBodyVfxEnabled = outputScale < 8
+      && resolveWaterBodyVfxEnabled(renderLook);
     // E03 is a normal-detail experiment. The true-8x shader intentionally has
     // no corresponding uniform or arithmetic, so its public capability state
     // must not advertise an effect that cannot run on that path.
@@ -9725,6 +9784,7 @@ export class PixiFieldPresenter {
       uGlassBodyVfx: { value: glassBodyVfxEnabled ? 1 : 0, type: 'f32' },
       uLiquidBodyVfx: { value: liquidBodyVfxEnabled ? 1 : 0, type: 'f32' },
       uOilBodyVfx: { value: oilBodyVfxEnabled ? 1 : 0, type: 'f32' },
+      uWaterBodyVfx: { value: waterBodyVfxEnabled ? 1 : 0, type: 'f32' },
       uLiquidSolidMeniscusVfx: {
         value: liquidSolidMeniscusVfxEnabled ? outputScale : 0, type: 'f32',
       },
@@ -9948,6 +10008,7 @@ export class PixiFieldPresenter {
       this.uniforms.uniforms.uGlassBodyVfx = 0;
       this.uniforms.uniforms.uLiquidBodyVfx = 0;
       this.uniforms.uniforms.uOilBodyVfx = 0;
+      this.uniforms.uniforms.uWaterBodyVfx = 0;
       this.uniforms.uniforms.uLiquidSolidMeniscusVfx = 0;
       this.uniforms.uniforms.uPowderBodyVfx = 0;
       this.uniforms.uniforms.uPowderLightVfx = 0;
@@ -9993,6 +10054,7 @@ export class PixiFieldPresenter {
             || new URLSearchParams(location.search).get('botanicalBodyVfxAudit') === '1'
             || new URLSearchParams(location.search).get('glassBodyVfxAudit') === '1'
             || new URLSearchParams(location.search).get('oilBodyVfxAudit') === '1'
+            || new URLSearchParams(location.search).get('waterBodyVfxAudit') === '1'
             || new URLSearchParams(location.search).get('liquidBodyVfxAudit') === '1'
             || new URLSearchParams(location.search).get('liquidSolidMeniscusVfxAudit') === '1'
             || new URLSearchParams(location.search).get('liquidSurfaceVfxAudit') === '1'
@@ -10061,6 +10123,9 @@ export class PixiFieldPresenter {
       ? 'active' : 'inactive';
     presenter.app.canvas.dataset.oilBodyVfx = Number(
       presenter.uniforms.uniforms.uOilBodyVfx
+    ) > 0.5 ? 'active' : 'inactive';
+    presenter.app.canvas.dataset.waterBodyVfx = Number(
+      presenter.uniforms.uniforms.uWaterBodyVfx
     ) > 0.5 ? 'active' : 'inactive';
     presenter.app.canvas.dataset.liquidSolidMeniscusVfx = Number(
       presenter.uniforms.uniforms.uLiquidSolidMeniscusVfx
@@ -11445,6 +11510,7 @@ export class PixiFieldPresenter {
         this.uniforms.uniforms.uGlassBodyVfx = 0;
         this.uniforms.uniforms.uLiquidBodyVfx = 0;
         this.uniforms.uniforms.uOilBodyVfx = 0;
+        this.uniforms.uniforms.uWaterBodyVfx = 0;
         this.uniforms.uniforms.uLiquidSolidMeniscusVfx = 0;
         this.uniforms.uniforms.uPowderBodyVfx = 0;
         this.uniforms.uniforms.uPowderLightVfx = 0;
@@ -11468,6 +11534,7 @@ export class PixiFieldPresenter {
         this.app.canvas.dataset.glassBodyVfx = 'inactive';
         this.app.canvas.dataset.liquidBodyVfx = 'inactive';
         this.app.canvas.dataset.oilBodyVfx = 'inactive';
+        this.app.canvas.dataset.waterBodyVfx = 'inactive';
         this.app.canvas.dataset.liquidSolidMeniscusVfx = 'inactive';
         this.app.canvas.dataset.liquidSurfaceVfx = 'inactive';
         this.app.canvas.dataset.powderBodyVfx = 'inactive';

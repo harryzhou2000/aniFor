@@ -288,6 +288,23 @@ export function resolveOilBodyVfxEnabled(
 }
 
 /**
+ * Re-composes only the exact native Water body after E03 has established a
+ * connected, same-species liquid volume. The child selector may replace
+ * Water's inherited broad stripe carrier, but it cannot recreate E03 when the
+ * parent liquid-body experiment or containing HDR look is disabled.
+ */
+export function resolveWaterBodyVfxEnabled(
+  look: RenderLook,
+  search = globalThis.location?.search ?? '',
+): boolean {
+  if (!resolveLiquidBodyVfxEnabled(look, search)) return false;
+  const requested = new URLSearchParams(search).get('waterBodyVfx');
+  if (requested === '0' || requested === 'off' || requested === 'false') return false;
+  if (requested === '1' || requested === 'on' || requested === 'true') return true;
+  return true;
+}
+
+/**
  * Keeps the settled-powder crown experiment independently measurable without
  * changing liquid or gas. Ordinary realistic/neon presets retain the broad
  * volume default; the explicit query is reserved for comparison captures and
