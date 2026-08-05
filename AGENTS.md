@@ -191,6 +191,32 @@ off→on→off matrix, exact protected controls and reference styles, bounded
 3–8-byte absorptive response, exact geometry/topology, and closing 4896×3072
 GPU-fence proof. Freeze the accepted amplitude until a new normal-view review.
 
+E10 is the accepted first exact Glass/Ice thin-edge transmission layer,
+independently measurable with `?translucentEdgeVfx=0|1`. It is normal 1×–4×
+WebGL-only arithmetic and must remain independent of the older translucent lens
+shell and field/backdrop transmission. Run only for exact authoritative
+ordinary Glass (`24`) or Ice (`12`) after proving no emission, trait, wall,
+halo, or reconstructed-surface ownership. Reuse the already-live phase-local
+solid optical-depth byte, `solidKey`, `solidReliefTone`, `solidFresnel`, and
+arithmetic only. Byte `6` is the protected first interior layer; bytes `12–60`
+own the accepted inner shell/fade; depth `66+` must contribute exactly zero.
+Add no sample, texture, field, upload, pass, target, allocation, clock,
+output-scale input, alpha/support/silhouette/ownership/reconstruction, or
+physics decision. One-cell lines, isolated cells, authored holes/notches,
+reconstructed cavities, unlike Glass/Ice seams, opaque matter, traits,
+emission, co-located native walls, and blanks are exact controls. Canvas must
+contain no E10 renderer path. Do not declare or branch on E10 in
+`FIELD_EIGHT_X_FRAGMENT`; a requested true-8× E10 must report inactive with
+reason `scale-8`. `npm run audit:vfx:translucent-edge` owns the real-HDR
+1×/2×/4× off→on→off matrix, exact depth/topology/centre-framebuffer controls,
+`1.75–2.75` RGB-RMS, `3–7`-byte peak, `0.50–0.78` coverage, and `1.45–2.40`
+signed-mean bounds. Every pane's near-edge RMS must exceed its deeper fade by
+at least 5%, with no lower coverage or signed mean. The gate closes on exact
+4896×3072 WebGL and a completed GPU fence while E10/HDR/bloom remain absent.
+The E02 volume and E06 powder-light focused gates explicitly pin E10 off so
+their intentional `volumeVfx=1` baselines cannot inherit the newer optic.
+Freeze the accepted gain and depth window until a new normal-view review.
+
 ## CodeGraph
 
 When `.codegraph/` exists, use `codegraph explore` before grep/find or broad file reads when locating or understanding code. Ask it for the relevant symbols, complete source, and call paths. Use `rg` only after CodeGraph has established the area to inspect.

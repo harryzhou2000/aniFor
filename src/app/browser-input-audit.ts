@@ -45,6 +45,7 @@ import type { DlayStateGraphicsAuditSnapshot } from './dlay-state-graphics-audit
 import type { WifiStateGraphicsAuditSnapshot } from './wifi-state-graphics-audit';
 import type { PowderMesostrataGraphicsAuditSnapshot } from './powder-mesostrata-graphics-audit';
 import type { PowderSolidContactVfxAuditSnapshot } from './powder-solid-contact-vfx-audit';
+import type { TranslucentEdgeVfxAuditSnapshot } from './translucent-edge-vfx-audit';
 import type { GeologicalSolidGraphicsAuditSnapshot } from './geological-solid-graphics-audit';
 import type {
   ThermalCatalyticRigidGraphicsAuditSnapshot,
@@ -257,6 +258,8 @@ export interface BrowserInputAuditApi {
   preparePowderMesostrataGraphicsFixture(): void;
   powderSolidContactVfxFixture(): PowderSolidContactVfxAuditSnapshot;
   preparePowderSolidContactVfxAudit(): void;
+  translucentEdgeVfxFixture(): TranslucentEdgeVfxAuditSnapshot;
+  prepareTranslucentEdgeVfxAudit(): void;
   geologicalSolidGraphicsAtlas(): GeologicalSolidGraphicsAuditSnapshot;
   prepareGeologicalSolidGraphicsFixture(): void;
   thermalCatalyticRigidGraphicsAtlas(): ThermalCatalyticRigidGraphicsAuditSnapshot;

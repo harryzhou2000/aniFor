@@ -195,6 +195,7 @@ describe('Pixi presenter startup configuration', () => {
 
   it('keeps opt-in field volume VFX on the normal HDR compositor only', () => {
     const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const canvasSource = readFileSync(new URL('./field-renderer.ts', import.meta.url), 'utf8');
     const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');
     const normalStart = source.indexOf('const FIELD_FRAGMENT = `', eightStart);
     const normalEnd = source.indexOf('`;\n\n/** Primary WebGL presentation', normalStart);
@@ -236,6 +237,13 @@ describe('Pixi presenter startup configuration', () => {
     const powderSolidContactVfxEnd = normal.indexOf(
       '  if (halo > 0.5', powderSolidContactVfxBranchStart,
     );
+    const translucentEdgeVfxStart = normal.indexOf('      // E10:');
+    const translucentEdgeVfxBranchStart = normal.indexOf(
+      '      if (uTranslucentEdgeVfx > 0.5', translucentEdgeVfxStart,
+    );
+    const translucentEdgeVfxEnd = normal.indexOf(
+      '      float translucentAlpha', translucentEdgeVfxBranchStart,
+    );
     const gasVfx = gas.slice(gasVfxStart, gasVfxEnd);
     const liquidVfx = liquid.slice(liquidVfxStart, liquidVfxEnd);
     const powderVfx = powder.slice(powderVfxStart, powderVfxEnd);
@@ -245,6 +253,7 @@ describe('Pixi presenter startup configuration', () => {
     const powderSolidContactVfx = normal.slice(
       powderSolidContactVfxBranchStart, powderSolidContactVfxEnd,
     );
+    const translucentEdgeVfx = normal.slice(translucentEdgeVfxBranchStart, translucentEdgeVfxEnd);
 
     expect(eightStart).toBeGreaterThanOrEqual(0);
     expect(normalStart).toBeGreaterThan(eightStart);
@@ -260,6 +269,7 @@ describe('Pixi presenter startup configuration', () => {
     expect(normal).toContain('uniform float uPowderBodyVfx;');
     expect(normal).toContain('uniform float uPowderLightVfx;');
     expect(normal).toContain('uniform float uPowderSolidContactVfx;');
+    expect(normal).toContain('uniform float uTranslucentEdgeVfx;');
     expect(eight).not.toContain('uVolumeVfx');
     expect(eight).not.toContain('uGasBodyVfx');
     expect(eight).not.toContain('uGasMotionVfx');
@@ -268,6 +278,9 @@ describe('Pixi presenter startup configuration', () => {
     expect(eight).not.toContain('uPowderLightVfx');
     expect(eight).not.toContain('uPowderSolidContactVfx');
     expect(eight).not.toContain('powderSolidContactVfx');
+    expect(eight).not.toContain('uTranslucentEdgeVfx');
+    expect(eight).not.toContain('translucentEdgeVfx');
+    expect(canvasSource).not.toContain('translucentEdgeVfx');
 
     // Gas stays field-owned: its independent E04 selector reuses the
     // established mass/curvature/scatter scalars and never samples or assigns
@@ -415,6 +428,25 @@ describe('Pixi presenter startup configuration', () => {
     expect(powderSolidContactVfx).not.toContain('gl_FragCoord');
     expect(powderSolidContactVfx).not.toMatch(/\b(?:alpha|support|sampler|resource|pass|target)\b/);
 
+    // E10 remains exact-owner normal-WebGL arithmetic over the already-live
+    // solid depth, body normal, Fresnel, and relief. Its band starts after the
+    // protected first interior layer and fades before the deep core.
+    expect(translucentEdgeVfxStart).toBeGreaterThan(0);
+    expect(translucentEdgeVfxBranchStart).toBeGreaterThan(translucentEdgeVfxStart);
+    expect(translucentEdgeVfxEnd).toBeGreaterThan(translucentEdgeVfxBranchStart);
+    expect(translucentEdgeVfx).toContain('(material == 12.0 || material == 24.0)');
+    expect(translucentEdgeVfx).toContain('solidOpticalDepth > 6.0 / 255.0');
+    expect(translucentEdgeVfx).toContain('surfaceOnly < 0.5');
+    expect(translucentEdgeVfx).toContain('wall < 0.5');
+    expect(translucentEdgeVfx).toContain('18.0 / 255.0');
+    expect(translucentEdgeVfx).toContain('66.0 / 255.0');
+    expect(translucentEdgeVfx).toContain('solidKey');
+    expect(translucentEdgeVfx).toContain('solidFresnel');
+    expect(translucentEdgeVfx).not.toContain('texture(');
+    expect(translucentEdgeVfx).not.toContain('uTime');
+    expect(translucentEdgeVfx).not.toContain('gl_FragCoord');
+    expect(translucentEdgeVfx).not.toMatch(/\b(?:alpha|support|sampler|resource|pass|target)\b/);
+
     // Capability/initialization and first-render failures must turn every HDR
     // arithmetic family off before continuing with the single-pass scene.
     expect(source.match(/this\.uniforms\.uniforms\.uHDRVfx = 0;/g)).toHaveLength(2);
@@ -425,6 +457,7 @@ describe('Pixi presenter startup configuration', () => {
     expect(source.match(/this\.uniforms\.uniforms\.uPowderBodyVfx = 0;/g)).toHaveLength(2);
     expect(source.match(/this\.uniforms\.uniforms\.uPowderLightVfx = 0;/g)).toHaveLength(2);
     expect(source.match(/this\.uniforms\.uniforms\.uPowderSolidContactVfx = 0;/g)).toHaveLength(2);
+    expect(source.match(/this\.uniforms\.uniforms\.uTranslucentEdgeVfx = 0;/g)).toHaveLength(2);
     expect(source).toContain("get('volumeVfxAudit') === '1'");
     expect(source).toContain("get('gasBodyVfxAudit') === '1'");
     expect(source).toContain("get('gasMotionVfxAudit') === '1'");
@@ -432,6 +465,7 @@ describe('Pixi presenter startup configuration', () => {
     expect(source).toContain("get('powderBodyVfxAudit') === '1'");
     expect(source).toContain("get('powderLightVfxAudit') === '1'");
     expect(source).toContain("get('powderSolidContactVfxAudit') === '1'");
+    expect(source).toContain("get('translucentEdgeVfxAudit') === '1'");
     expect(source).toContain('const gasBodyVfxEnabled = outputScale < 8');
     expect(source).toContain('const gasMotionVfxEnabled = outputScale < 8');
     expect(source).toContain('const liquidBodyVfxEnabled = outputScale < 8');
@@ -440,14 +474,20 @@ describe('Pixi presenter startup configuration', () => {
     expect(source).toMatch(
       /const powderSolidContactVfxEnabled = outputScale < 8\s*&& resolvePowderSolidContactVfxEnabled\(renderLook\);/,
     );
+    expect(source).toMatch(
+      /const translucentEdgeVfxEnabled = outputScale < 8\s*&& resolveTranslucentEdgeVfxEnabled\(renderLook\);/,
+    );
     expect(source).toContain('presenter.app.canvas.dataset.powderSolidContactVfx');
     expect(source).toContain("this.app.canvas.dataset.powderSolidContactVfx = 'inactive';");
+    expect(source).toContain('presenter.app.canvas.dataset.translucentEdgeVfx');
+    expect(source).toContain("this.app.canvas.dataset.translucentEdgeVfx = 'inactive';");
     const preserveDrawingBufferStart = source.indexOf('preserveDrawingBuffer:');
     const preserveDrawingBufferEnd = source.indexOf('resolution: outputScale', preserveDrawingBufferStart);
     const preserveDrawingBuffer = source.slice(preserveDrawingBufferStart, preserveDrawingBufferEnd);
     expect(preserveDrawingBufferStart).toBeGreaterThan(0);
     expect(preserveDrawingBufferEnd).toBeGreaterThan(preserveDrawingBufferStart);
     expect(preserveDrawingBuffer).toContain("get('powderSolidContactVfxAudit') === '1'");
+    expect(preserveDrawingBuffer).toContain("get('translucentEdgeVfxAudit') === '1'");
   });
 
   it('routes E08 liquid surfaces through existing normal-scale HDR resources only', () => {

@@ -3,7 +3,7 @@ import {
   DEFAULT_RENDER_LOOK, resolveGasBodyVfxEnabled, resolveGasMotionVfxEnabled,
   resolveLiquidBodyVfxEnabled, resolveLiquidSurfaceVfxEnabled,
   resolvePowderBodyVfxEnabled, resolvePowderLightVfxEnabled,
-  resolvePowderSolidContactVfxEnabled, resolveRenderLook,
+  resolvePowderSolidContactVfxEnabled, resolveRenderLook, resolveTranslucentEdgeVfxEnabled,
   resolveVolumeVfxEnabled,
 } from './render-look';
 
@@ -105,6 +105,22 @@ describe('resolveRenderLook', () => {
     expect(resolvePowderSolidContactVfxEnabled(
       'realistic', '?powderBodyVfx=off',
     )).toBe(true);
+  });
+
+  it('keeps Glass/Ice edge transmission independent of the older translucent shell', () => {
+    expect(resolveTranslucentEdgeVfxEnabled(
+      'classic', '?translucentEdgeVfx=on',
+    )).toBe(false);
+    expect(resolveTranslucentEdgeVfxEnabled('realistic', '')).toBe(true);
+    expect(resolveTranslucentEdgeVfxEnabled(
+      'realistic', '?volumeVfx=0',
+    )).toBe(false);
+    expect(resolveTranslucentEdgeVfxEnabled(
+      'realistic', '?volumeVfx=0&translucentEdgeVfx=on',
+    )).toBe(true);
+    expect(resolveTranslucentEdgeVfxEnabled(
+      'neon-lab', '?volumeVfx=1&translucentEdgeVfx=off',
+    )).toBe(false);
   });
 
   it('lets powder-light VFX follow the preset or override broad volume styling', () => {

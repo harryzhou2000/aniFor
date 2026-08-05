@@ -171,10 +171,16 @@ const powderSolidContactVfxOnly = process.argv.includes('--powder-solid-contact-
 if (powderSolidContactVfxOnly && (modes.length !== 1 || modes[0] !== 'webgl')) {
   throw new Error('--powder-solid-contact-vfx-only requires --webgl-only');
 }
+// E10 confines the new Glass/Ice edge transmission arithmetic to normal WebGL.
+// Its true-8x request is a deliberate exclusion proof, never a shader route.
+const translucentEdgeVfxOnly = process.argv.includes('--translucent-edge-vfx-only');
+if (translucentEdgeVfxOnly && (modes.length !== 1 || modes[0] !== 'webgl')) {
+  throw new Error('--translucent-edge-vfx-only requires --webgl-only');
+}
 if ([hdrVfxOnly, volumeVfxOnly, liquidBodyVfxOnly, liquidSurfaceVfxOnly, gasBodyVfxOnly,
-  gasMotionVfxOnly, powderBodyVfxOnly, powderLightVfxOnly, powderSolidContactVfxOnly]
+  gasMotionVfxOnly, powderBodyVfxOnly, powderLightVfxOnly, powderSolidContactVfxOnly, translucentEdgeVfxOnly]
   .filter(Boolean).length > 1) {
-  throw new Error('HDR/volume/liquid-body/liquid-surface/gas-body/gas-motion/powder-body/powder-light/powder-solid-contact focused audits are mutually exclusive');
+  throw new Error('HDR/volume/liquid-body/liquid-surface/gas-body/gas-motion/powder-body/powder-light/powder-solid-contact/translucent-edge focused audits are mutually exclusive');
 }
 const layoutOnly = process.argv.includes('--layout-only');
 const visualScaleMatrixNormalOnly = process.argv.includes('--visual-scale-matrix-normal-only');
@@ -258,7 +264,7 @@ const liveScaleOnly = process.argv.includes('--live-scale-only');
 const productionBundle = process.argv.includes('--production-bundle');
 const usesProductionBundle = productionBundle || showcaseScreenshotOnly || hdrVfxOnly || volumeVfxOnly
   || liquidBodyVfxOnly || liquidSurfaceVfxOnly || gasBodyVfxOnly || gasMotionVfxOnly
-  || powderBodyVfxOnly || powderLightVfxOnly || powderSolidContactVfxOnly || cellularGraphicsOnly || sensorGraphicsOnly
+  || powderBodyVfxOnly || powderLightVfxOnly || powderSolidContactVfxOnly || translucentEdgeVfxOnly || cellularGraphicsOnly || sensorGraphicsOnly
   || unusualPowderGraphicsOnly || earthenPowderGraphicsOnly || explosivePowderGraphicsOnly || unusualSolidGraphicsOnly
   || deviceIdentityGraphicsOnly
   || fieldProfileGraphicsOnly
@@ -303,6 +309,8 @@ const powderBodyVfxArgument = process.argv.find((argument) => argument.startsWit
   ?.slice('--powder-body-vfx='.length);
 const powderLightVfxArgument = process.argv.find((argument) => argument.startsWith('--powder-light-vfx='))
   ?.slice('--powder-light-vfx='.length);
+const translucentEdgeVfxArgument = process.argv.find((argument) => argument.startsWith('--translucent-edge-vfx='))
+  ?.slice('--translucent-edge-vfx='.length);
 const requireHdrPipeline = process.argv.includes('--require-hdr-pipeline');
 const renderScaleArgument = process.argv.find((argument) => argument.startsWith('--render-scale='))
   ?.slice('--render-scale='.length);
@@ -331,6 +339,9 @@ if (powderBodyVfxArgument !== undefined && !['0', '1', 'off', 'on'].includes(pow
 }
 if (powderLightVfxArgument !== undefined && !['0', '1', 'off', 'on'].includes(powderLightVfxArgument)) {
   throw new Error('--powder-light-vfx must be 0, 1, off, or on');
+}
+if (translucentEdgeVfxArgument !== undefined && !['0', '1', 'off', 'on'].includes(translucentEdgeVfxArgument)) {
+  throw new Error('--translucent-edge-vfx must be 0, 1, off, or on');
 }
 if (volumeVfxOnly && volumeVfxArgument !== undefined) {
   throw new Error('--volume-vfx-only owns its off -> on -> off sequence; omit --volume-vfx');
@@ -437,8 +448,14 @@ if (powderLightVfxOnly && gasMotionVfxArgument !== undefined) {
 }
 if (powderSolidContactVfxOnly && (volumeVfxArgument !== undefined || liquidBodyVfxArgument !== undefined
   || liquidSurfaceVfxArgument !== undefined || gasBodyVfxArgument !== undefined || gasMotionVfxArgument !== undefined
-  || powderBodyVfxArgument !== undefined || powderLightVfxArgument !== undefined)) {
+  || powderBodyVfxArgument !== undefined || powderLightVfxArgument !== undefined || translucentEdgeVfxArgument !== undefined)) {
   throw new Error('--powder-solid-contact-vfx-only pins all unrelated VFX selectors off; omit overrides');
+}
+if (translucentEdgeVfxOnly && (volumeVfxArgument !== undefined || liquidBodyVfxArgument !== undefined
+  || liquidSurfaceVfxArgument !== undefined || gasBodyVfxArgument !== undefined || gasMotionVfxArgument !== undefined
+  || powderBodyVfxArgument !== undefined || powderLightVfxArgument !== undefined
+  || translucentEdgeVfxArgument !== undefined)) {
+  throw new Error('--translucent-edge-vfx-only pins all VFX selectors and owns its off -> on -> off sequence; omit overrides');
 }
 if (renderScaleArgument !== undefined && !['1', '2', '4', '8'].includes(renderScaleArgument)) {
   throw new Error('--render-scale must be 1, 2, 4, or 8');
@@ -460,6 +477,9 @@ if (powderLightVfxOnly && renderScaleArgument === '8') {
 }
 if (powderSolidContactVfxOnly && renderScaleArgument === '8') {
   throw new Error('--powder-solid-contact-vfx-only is a normal-detail 1x/2x/4x experiment');
+}
+if (translucentEdgeVfxOnly && renderScaleArgument === '8') {
+  throw new Error('--translucent-edge-vfx-only is a normal-detail 1x/2x/4x experiment');
 }
 const captureDpr = captureDprArgument === undefined ? undefined : Number(captureDprArgument);
 if (captureDpr !== undefined && captureDpr !== 1 && captureDpr !== 2) {
@@ -535,7 +555,7 @@ async function main() {
     for (const mode of modes) results.push(await auditMode(mode));
     const reducedAudit = quickScreenshot || showcaseScreenshotOnly || hdrVfxOnly || volumeVfxOnly
       || liquidBodyVfxOnly || liquidSurfaceVfxOnly || gasBodyVfxOnly || gasMotionVfxOnly
-      || powderBodyVfxOnly || powderLightVfxOnly || powderSolidContactVfxOnly || layoutOnly || mobileOnly || mobileGestureOnly
+      || powderBodyVfxOnly || powderLightVfxOnly || powderSolidContactVfxOnly || translucentEdgeVfxOnly || layoutOnly || mobileOnly || mobileGestureOnly
       || desktopInputOnly || visualScaleMatrixOnly || powderBodyOnly || liquidDepthOnly
       || solidDepthOnly || gasChromaOnly || surfaceContourOnly || solidFieldOnly
       || roleGraphicsOnly || cellularGraphicsOnly || sensorGraphicsOnly
@@ -633,7 +653,7 @@ async function auditMode(mode) {
   // canonical paused scene there and prove real material delivery/occupancy.
   const startsBlank = !canvasFallbackAudit && (hdrVfxOnly || volumeVfxOnly
     || liquidBodyVfxOnly || liquidSurfaceVfxOnly || gasBodyVfxOnly || gasMotionVfxOnly
-    || powderBodyVfxOnly || powderLightVfxOnly || powderSolidContactVfxOnly || cellularGraphicsOnly || sensorGraphicsOnly
+    || powderBodyVfxOnly || powderLightVfxOnly || powderSolidContactVfxOnly || translucentEdgeVfxOnly || cellularGraphicsOnly || sensorGraphicsOnly
     || unusualPowderGraphicsOnly || earthenPowderGraphicsOnly || explosivePowderGraphicsOnly
     || unusualSolidGraphicsOnly || deviceIdentityGraphicsOnly || fieldProfileGraphicsOnly
     || electricDischargeGraphicsOnly || liquidIdentityGraphicsOnly
@@ -659,6 +679,7 @@ async function auditMode(mode) {
     ...(gasMotionVfxArgument ? { gasMotionVfx: gasMotionVfxArgument } : {}),
     ...(powderBodyVfxArgument ? { powderBodyVfx: powderBodyVfxArgument } : {}),
     ...(powderLightVfxArgument ? { powderLightVfx: powderLightVfxArgument } : {}),
+    ...(translucentEdgeVfxArgument ? { translucentEdgeVfx: translucentEdgeVfxArgument } : {}),
     renderScale: renderScaleArgument ?? ((pqrtStateGraphicsEight || filtStateGraphicsEight || lcryStateGraphicsEight
       || pipeStateGraphicsEight || swchStateGraphicsEight || storStateGraphicsEight
       || dlayStateGraphicsEight || wifiStateGraphicsEight || powderMesostrataGraphicsEight
@@ -912,6 +933,13 @@ async function auditMode(mode) {
       assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
       cdp.close();
       return { backend: mode, powderSolidContactVfx, browserErrors: errors.length };
+    }
+    if (translucentEdgeVfxOnly) {
+      assert(mode === 'webgl', '--translucent-edge-vfx-only requires --webgl-only');
+      const translucentEdgeVfx = await auditTranslucentEdgeVfxExperiment(cdp, mode, dpr);
+      assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
+      cdp.close();
+      return { backend: mode, translucentEdgeVfx, browserErrors: errors.length };
     }
     if (pausedPresentationOnly) {
       const pausedPresentation = await auditPausedPresentation(cdp, mode);
@@ -21317,7 +21345,9 @@ async function auditHdrVfxExperiment(cdp, mode) {
  */
 async function auditVolumeVfxExperiment(cdp, mode) {
   const scales = [];
-  for (const scale of VOLUME_VFX_SCALES) {
+  const requestedScales = renderScaleArgument === undefined
+    ? VOLUME_VFX_SCALES : [Number(renderScaleArgument)];
+  for (const scale of requestedScales) {
     const captures = {};
     for (const enabled of [false, true, false]) {
       const key = enabled ? 'enabled' : captures.disabled ? 'disabledRepeat' : 'disabled';
@@ -21349,6 +21379,11 @@ async function auditVolumeVfxExperiment(cdp, mode) {
       `E02 ${scale}x disabled/enabled`);
     assertVolumeVfxBackingInvariant(disabled.backing, disabledRepeat.backing,
       `E02 ${scale}x disabled/repeated`);
+    assert(JSON.stringify(disabled.stability) === JSON.stringify(enabled.stability)
+      && JSON.stringify(disabled.stability) === JSON.stringify(disabledRepeat.stability),
+    `E02 ${scale}x powder readiness changed across an RGB selector (${JSON.stringify({
+      disabled: disabled.stability, enabled: enabled.stability, repeat: disabledRepeat.stability,
+    })})`);
 
     const responseRegions = [...VOLUME_VFX_TARGET_REGIONS, ...VOLUME_VFX_CONTROL_REGIONS];
     const rawResponses = await sampleBackdropRefractionRegions(cdp, {
@@ -22494,6 +22529,7 @@ async function auditPowderLightVfxExperiment(cdp, mode) {
         && variant.hdrPipeline?.liquidBodyVfx === 'inactive'
         && variant.hdrPipeline?.liquidSurfaceVfx === 'inactive'
         && variant.hdrPipeline?.gasBodyVfx === 'inactive'
+        && variant.hdrPipeline?.translucentEdgeVfx === 'inactive'
         && variant.hdrPipeline?.powderLightVfx === (label === 'enabled' ? 'active' : 'inactive'),
       `E06 ${label} ${scale}x did not retain its fixed E02/E05 baseline (${JSON.stringify(variant.hdrPipeline)})`);
     }
@@ -22514,6 +22550,11 @@ async function auditPowderLightVfxExperiment(cdp, mode) {
       `E06 ${scale}x disabled/enabled`);
     assertVolumeVfxRawControlInvariant(disabled.rawControls, disabledRepeat.rawControls,
       `E06 ${scale}x disabled/repeated`);
+    assert(JSON.stringify(disabled.stability) === JSON.stringify(enabled.stability)
+      && JSON.stringify(disabled.stability) === JSON.stringify(disabledRepeat.stability),
+    `E06 ${scale}x powder readiness changed across an RGB selector (${JSON.stringify({
+      disabled: disabled.stability, enabled: enabled.stability, repeat: disabledRepeat.stability,
+    })})`);
 
     const targets = powderLightTargetRegions(fixture);
     const controls = powderLightControlRegions(fixture);
@@ -22577,7 +22618,8 @@ async function auditPowderLightVfxExperiment(cdp, mode) {
     }
     scales.push({
       scale, backing: disabled.geometry.backing, alphaSupport: disabled.backing,
-      rawControls: disabled.rawControls, responses, microchroma, references, screenshots,
+      rawControls: disabled.rawControls, stability: disabled.stability,
+      responses, microchroma, references, screenshots,
     });
   }
   return { scales, trueEightXExcluded: true };
@@ -22889,6 +22931,371 @@ async function auditEightXPowderSolidContactVfxExclusion(cdp, dpr) {
   return { backing: `${geometry.backing.width}x${geometry.backing.height}`, isolation, timing };
 }
 
+/**
+ * E10 is a narrowly gated RGB-only Glass/Ice edge treatment.  The semantic
+ * fixture provides both writer-depth bands and deliberately hostile topology
+ * controls; this browser gate owns the off -> on -> off navigation.
+ */
+async function auditTranslucentEdgeVfxExperiment(cdp, mode, dpr) {
+  const scales = [];
+  const requestedScales = renderScaleArgument === undefined
+    ? VOLUME_VFX_SCALES : [Number(renderScaleArgument)];
+  for (const scale of requestedScales) {
+    const captures = {};
+    for (const enabled of [false, true, false]) {
+      const key = enabled ? 'enabled' : captures.disabled ? 'disabledRepeat' : 'disabled';
+      captures[key] = await navigateTranslucentEdgeVfxState(cdp, mode, scale, enabled, key);
+    }
+    const { disabled, enabled, disabledRepeat } = captures;
+    const fixture = disabled.fixture;
+    assert(JSON.stringify(fixture) === JSON.stringify(enabled.fixture)
+      && JSON.stringify(fixture) === JSON.stringify(disabledRepeat.fixture),
+    `E10 ${scale}x fixture metadata changed (${JSON.stringify({
+      disabled: fixture, enabled: enabled.fixture, repeat: disabledRepeat.fixture,
+    })})`);
+    for (const [label, variant] of Object.entries(captures)) {
+      assertGeometry(variant.geometry, `E10 ${label} ${scale}x`, scale);
+      assert(variant.geometry.backend.backend === 'webgl',
+        `E10 ${label} ${scale}x lost WebGL presentation`);
+      assert(variant.hdrPipeline?.state === 'active',
+        `E10 ${label} ${scale}x HDR pipeline was not active (${JSON.stringify(variant.hdrPipeline)})`);
+    }
+    assertCanvasRectsEqual(disabled.geometry.canvas, enabled.geometry.canvas,
+      `E10 ${scale}x disabled/enabled CSS geometry`);
+    assertCanvasRectsEqual(disabled.geometry.canvas, disabledRepeat.geometry.canvas,
+      `E10 ${scale}x disabled/repeated CSS geometry`);
+    assert(JSON.stringify(disabled.geometry.backing) === JSON.stringify(enabled.geometry.backing)
+      && JSON.stringify(disabled.geometry.backing) === JSON.stringify(disabledRepeat.geometry.backing),
+    `E10 ${scale}x backing geometry changed (${JSON.stringify({
+      disabled: disabled.geometry.backing, enabled: enabled.geometry.backing,
+      repeat: disabledRepeat.geometry.backing,
+    })})`);
+    assertHdrVfxSemanticEquality(disabled.semantic, enabled.semantic, `E10 ${scale}x disabled/enabled`);
+    assertHdrVfxSemanticEquality(disabled.semantic, disabledRepeat.semantic, `E10 ${scale}x disabled/repeated`);
+    assertVolumeVfxBackingInvariant(disabled.backing, enabled.backing, `E10 ${scale}x disabled/enabled`);
+    assertVolumeVfxBackingInvariant(disabled.backing, disabledRepeat.backing, `E10 ${scale}x disabled/repeated`);
+    assert(JSON.stringify(disabled.rawControls) === JSON.stringify(enabled.rawControls)
+      && JSON.stringify(disabled.rawControls) === JSON.stringify(disabledRepeat.rawControls),
+    `E10 ${scale}x changed an exact protected raw control (${JSON.stringify({
+      disabled: disabled.rawControls, enabled: enabled.rawControls, repeat: disabledRepeat.rawControls,
+    })})`);
+    assert(JSON.stringify(disabled.depth) === JSON.stringify(enabled.depth)
+      && JSON.stringify(disabled.depth) === JSON.stringify(disabledRepeat.depth),
+    `E10 ${scale}x solid-depth auxiliary bands changed across a presentation selector (${JSON.stringify({
+      disabled: disabled.depth, enabled: enabled.depth, repeat: disabledRepeat.depth,
+    })})`);
+    assert(JSON.stringify(disabled.rgbDigest) === JSON.stringify(disabledRepeat.rgbDigest)
+      && disabled.capture.capture.data === disabledRepeat.capture.capture.data,
+    `E10 ${scale}x repeated off framebuffer was not byte exact`);
+
+    const targets = translucentEdgeVfxTargetRegions(fixture);
+    const controls = translucentEdgeVfxControlRegions(fixture);
+    const responses = await sampleBackdropRefractionRegions(cdp, {
+      straight: disabled.capture.capture.data,
+      refracted: enabled.capture.capture.data,
+      repeatedStraight: disabledRepeat.capture.capture.data,
+    }, [...targets, ...controls], disabled.capture.canvasRect);
+    const targetResponses = responses.slice(0, targets.length);
+    const controlResponses = responses.slice(targets.length);
+    const screenshots = screenshotRequest && (requestedScales.length === 1 || scale === 2)
+      ? await writeTranslucentEdgeVfxScreenshots(screenshotRequest, disabled, enabled)
+      : undefined;
+    assert(responses.every((sample) => sample.repeatRgbPeak === 0),
+      `E10 ${scale}x off -> on -> off was not deterministic (${JSON.stringify(responses)})`);
+    assert(targetResponses.every((sample) => sample.rgbRms >= 1.75 && sample.rgbRms <= 2.75
+      && sample.rgbPeak >= 3 && sample.rgbPeak <= 7
+      && sample.coverage >= 0.50 && sample.coverage <= 0.78
+      && sample.signedMean >= 1.45 && sample.signedMean <= 2.40),
+    `E10 ${scale}x Glass/Ice edge/depth response escaped its accepted visual bounds (${JSON.stringify(targetResponses)})`);
+    const depthFalloff = fixture.panes.map((pane, index) => {
+      const edge = targetResponses[index * 2];
+      const depth = targetResponses[index * 2 + 1];
+      return { code: pane.code, edgeRgbRms: edge.rgbRms, depthRgbRms: depth.rgbRms,
+        edgeCoverage: edge.coverage, depthCoverage: depth.coverage,
+        edgeSignedMean: edge.signedMean, depthSignedMean: depth.signedMean };
+    });
+    assert(depthFalloff.every((sample) => sample.edgeRgbRms >= sample.depthRgbRms * 1.05
+      && sample.edgeCoverage >= sample.depthCoverage
+      && sample.edgeSignedMean >= sample.depthSignedMean),
+    `E10 ${scale}x did not preserve a brighter, broader near-edge band over its depth fade (${JSON.stringify(depthFalloff)})`);
+    // Authoritative raw world pixels above are byte-exact. A broad page-level
+    // Ice core can quantize one composed byte at its antialiased sample fringe
+    // even though E10's depth band is mathematically zero there; retain that
+    // narrow tolerance only for named deep-core screenshot regions.
+    assert(controlResponses.every((sample) => sample.rgbPeak === 0
+      || (sample.name.endsWith('DeepCore') && sample.rgbPeak <= 1)),
+      `E10 ${scale}x escaped a first-layer/topology/foreign/wall/blank control (${JSON.stringify(controlResponses)})`);
+    scales.push({
+      scale,
+      backing: disabled.geometry.backing,
+      alphaSupport: disabled.backing,
+      rawControls: disabled.rawControls,
+      depth: disabled.depth,
+      responses,
+      depthFalloff,
+      exactRepeatedOff: true,
+      screenshots,
+    });
+  }
+  const trueEightX = await auditEightXTranslucentEdgeVfxExclusion(cdp, dpr);
+  return { scales, trueEightXExcluded: true, trueEightX };
+}
+
+async function navigateTranslucentEdgeVfxState(cdp, mode, scale, enabled, label) {
+  const query = new URLSearchParams({
+    scene: 'render-lab', inputAudit: '1', blankAudit: '1', auditStage: 'blank',
+    translucentEdgeVfxAudit: '1', renderScale: String(scale), renderLook: 'realistic',
+    volumeVfx: '0', liquidBodyVfx: '0', liquidSurfaceVfx: '0', gasBodyVfx: '0',
+    gasMotionVfx: '0', powderBodyVfx: '0', powderLightVfx: '0', powderSolidContactVfx: '0',
+    translucentEdgeVfx: enabled ? '1' : '0',
+  });
+  await cdp.send('Page.navigate', { url: `${AUDIT_BASE_URL}?${query}` });
+  await waitFor(() => evaluate(cdp, `(() => {
+    const parameters = new URLSearchParams(location.search);
+    return parameters.get('scene') === 'render-lab' && parameters.get('inputAudit') === '1'
+      && parameters.get('blankAudit') === '1' && parameters.get('auditStage') === 'blank'
+      && parameters.get('translucentEdgeVfxAudit') === '1'
+      && parameters.get('renderScale') === ${JSON.stringify(String(scale))}
+      && parameters.get('renderLook') === 'realistic'
+      && parameters.get('volumeVfx') === '0' && parameters.get('liquidBodyVfx') === '0'
+      && parameters.get('liquidSurfaceVfx') === '0' && parameters.get('gasBodyVfx') === '0'
+      && parameters.get('gasMotionVfx') === '0' && parameters.get('powderBodyVfx') === '0'
+      && parameters.get('powderLightVfx') === '0' && parameters.get('powderSolidContactVfx') === '0'
+      && parameters.get('translucentEdgeVfx') === ${JSON.stringify(enabled ? '1' : '0')}
+      && typeof window.__ANIFOR_INPUT_AUDIT__?.prepareTranslucentEdgeVfxAudit === 'function'
+      && typeof window.__ANIFOR_INPUT_AUDIT__?.translucentEdgeVfxFixture === 'function';
+  })()`), 15_000, `E10 ${label} ${scale}x page`);
+  await waitFor(() => evaluate(cdp,
+    `window.__ANIFOR_INPUT_AUDIT__.backend().backend === ${JSON.stringify(mode)}`),
+  15_000, `E10 ${label} ${scale}x backend`);
+  const fixture = await evaluate(cdp, `(async () => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    // E10 reuses the paced solid-depth writer.  Keep the older lens and field
+    // experiments off before every fixture refresh, retain optical depth, and
+    // issue distinct presentation opportunities rather than coalescing setup.
+    audit.setTranslucentLensShell(false);
+    audit.setTranslucentFieldTransmission(false);
+    audit.setSolidOpticalDepth(true);
+    for (let pass = 0; pass < 7; pass++) {
+      audit.prepareTranslucentEdgeVfxAudit();
+      await new Promise((resolve) => requestAnimationFrame(() => setTimeout(resolve, 70)));
+    }
+    return audit.translucentEdgeVfxFixture();
+  })()`);
+  await waitFor(() => evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    const fixture = audit.translucentEdgeVfxFixture();
+    const exactRect = (rect, material) => {
+      for (let y = rect.y; y < rect.y + rect.height; y++) for (let x = rect.x; x < rect.x + rect.width; x++) {
+        if (audit.cell(x, y) !== material) return false;
+      }
+      return true;
+    };
+    const emptyRect = (rect) => exactRect(rect, 0);
+    const allDepth = (rect, predicate) => {
+      for (let y = rect.y; y < rect.y + rect.height; y++) for (let x = rect.x; x < rect.x + rect.width; x++) {
+        if (!predicate(audit.presentationAuxiliary(x, y))) return false;
+      }
+      return true;
+    };
+    const panesReady = fixture.panes.every((pane) => {
+      const exactPane = () => {
+        for (let y = pane.body.y; y < pane.body.y + pane.body.height; y++) {
+          for (let x = pane.body.x; x < pane.body.x + pane.body.width; x++) {
+            const empty = x >= pane.authoredHole.x && x < pane.authoredHole.x + pane.authoredHole.width
+              && y >= pane.authoredHole.y && y < pane.authoredHole.y + pane.authoredHole.height
+              || x >= pane.openNotch.x && x < pane.openNotch.x + pane.openNotch.width
+                && y >= pane.openNotch.y && y < pane.openNotch.y + pane.openNotch.height
+              || x === pane.reconstructableCavity.x && y === pane.reconstructableCavity.y;
+            if (audit.cell(x, y) !== (empty ? 0 : pane.material)) return false;
+          }
+        }
+        return true;
+      };
+      return exactPane()
+      && emptyRect(pane.authoredHole) && emptyRect(pane.openNotch)
+      && audit.cell(pane.reconstructableCavity.x, pane.reconstructableCavity.y) === 0
+      && exactRect(pane.attachedLine, pane.material)
+      && audit.cell(pane.isolated.x, pane.isolated.y) === pane.material
+      && allDepth(pane.firstInnerLayer, (depth) => depth === 6)
+      && allDepth(pane.edgeBand, (depth) => depth > 6 && depth <= 60)
+      && allDepth(pane.depthBand, (depth) => depth > 6 && depth <= 60)
+      && allDepth(pane.deepCore, (depth) => depth > 66);
+    });
+    const controls = fixture.controls;
+    const glass = fixture.panes.find((pane) => pane.code.startsWith('GLAS'))?.material;
+    const ice = fixture.panes.find((pane) => pane.code.startsWith('ICE'))?.material;
+    return panesReady
+      && glass !== undefined && ice !== undefined
+      && exactRect(fixture.unlikeSeam.glass, glass) && exactRect(fixture.unlikeSeam.ice, ice)
+      && audit.cell(fixture.unlikeSeam.probe.x, fixture.unlikeSeam.probe.y) === ice
+      && audit.cell(controls.opaqueMetal.x, controls.opaqueMetal.y) !== 0
+      && audit.cell(controls.emitterTrait.x, controls.emitterTrait.y) !== 0
+      && audit.cell(controls.emissiveFire.x, controls.emissiveFire.y) !== 0
+      && exactRect(controls.guardedBlank, 0)
+      && audit.wall(controls.glassWall.probe.x, controls.glassWall.probe.y) === fixture.conductiveWall
+      && audit.wall(controls.iceWall.probe.x, controls.iceWall.probe.y) === fixture.conductiveWall;
+  })()`), 20_000, `E10 ${label} ${scale}x fixture/depth hydration`);
+  await sleep(350);
+  const hdrPipeline = await evaluate(cdp, `(() => {
+    const canvas = document.querySelector('canvas.semantic-field-canvas');
+    return canvas ? {
+      look: canvas.dataset.renderLook, state: canvas.dataset.hdrPipeline,
+      reason: canvas.dataset.hdrPipelineReason, bloomBacking: canvas.dataset.bloomBacking,
+      volumeVfx: canvas.dataset.volumeVfx, liquidBodyVfx: canvas.dataset.liquidBodyVfx,
+      liquidSurfaceVfx: canvas.dataset.liquidSurfaceVfx, gasBodyVfx: canvas.dataset.gasBodyVfx,
+      gasMotionVfx: canvas.dataset.gasMotionVfx, powderBodyVfx: canvas.dataset.powderBodyVfx,
+      powderLightVfx: canvas.dataset.powderLightVfx, powderSolidContactVfx: canvas.dataset.powderSolidContactVfx,
+      translucentEdgeVfx: canvas.dataset.translucentEdgeVfx,
+    } : undefined;
+  })()`);
+  const expectedBloom = `${WORLD_WIDTH * scale / 2}x${WORLD_HEIGHT * scale / 2}`;
+  assert(hdrPipeline?.look === 'realistic' && hdrPipeline?.state === 'active'
+    && hdrPipeline?.bloomBacking === expectedBloom && hdrPipeline?.volumeVfx === 'inactive'
+    && hdrPipeline?.liquidBodyVfx === 'inactive' && hdrPipeline?.liquidSurfaceVfx === 'inactive'
+    && hdrPipeline?.gasBodyVfx === 'inactive' && hdrPipeline?.gasMotionVfx === 'inactive'
+    && hdrPipeline?.powderBodyVfx === 'inactive' && hdrPipeline?.powderLightVfx === 'inactive'
+    && hdrPipeline?.powderSolidContactVfx === 'inactive'
+    && hdrPipeline?.translucentEdgeVfx === (enabled ? 'active' : 'inactive'),
+  `E10 ${label} ${scale}x HDR/selector state resolved incorrectly (${JSON.stringify(hdrPipeline)})`);
+  const capture = await waitForStablePageCapture(
+    cdp, `E10 ${label} ${scale}x framebuffer`, scale === 4 ? 20_000 : undefined,
+  );
+  return {
+    fixture, capture, geometry: await metrics(cdp), semantic: await hdrVfxSemanticDigest(cdp),
+    backing: await sampleVolumeVfxCanvasAlphaSupport(cdp),
+    rgbDigest: await sampleLiquidSurfaceVfxCanvasRgbDigest(cdp),
+    rawControls: await sampleVolumeVfxRawWorldPixels(cdp, translucentEdgeVfxRawControlPoints(fixture)),
+    depth: await translucentEdgeVfxDepthDigest(cdp, fixture), hdrPipeline,
+  };
+}
+
+function translucentEdgeVfxTargetRegions(fixture) {
+  return fixture.panes.flatMap((pane) => [
+    { name: `${pane.code}EdgeBand`, target: true,
+      x: pane.edgeBand.x + pane.edgeBand.width / 2, y: pane.edgeBand.y + pane.edgeBand.height / 2,
+      radiusX: Math.max(0.35, pane.edgeBand.width / 2 - 0.2), radiusY: pane.edgeBand.height / 2 - 1 },
+    { name: `${pane.code}DepthBand`, target: true,
+      x: pane.depthBand.x + pane.depthBand.width / 2, y: pane.depthBand.y + pane.depthBand.height / 2,
+      radiusX: Math.max(0.35, pane.depthBand.width / 2 - 0.2), radiusY: pane.depthBand.height / 2 - 1 },
+  ]);
+}
+
+function translucentEdgeVfxControlRegions(fixture) {
+  // Sample categorical one-cell controls at their exact centre. A fractional
+  // page crop can straddle the eligible second depth layer at 1x even while
+  // the authoritative centre framebuffer byte remains an exact no-op.
+  const point = (name, candidate) => ({
+    name, x: candidate.x + 0.5, y: candidate.y + 0.5, radius: 0,
+  });
+  const rect = (name, candidate) => ({ name, x: candidate.x + candidate.width / 2,
+    y: candidate.y + candidate.height / 2, radiusX: Math.max(0.35, candidate.width / 2 - 0.2),
+    radiusY: Math.max(0.35, candidate.height / 2 - 0.2) });
+  return [
+    ...fixture.panes.flatMap((pane) => [
+      rect(`${pane.code}FirstLayer`, pane.firstInnerLayer), rect(`${pane.code}Hole`, pane.authoredHole),
+      rect(`${pane.code}Notch`, pane.openNotch), rect(`${pane.code}Line`, pane.attachedLine),
+      point(`${pane.code}Isolated`, pane.isolated), point(`${pane.code}Cavity`, pane.reconstructableCavity),
+      rect(`${pane.code}DeepCore`, pane.deepCore),
+    ]),
+    point('unlikeGlassIceSeam', fixture.unlikeSeam.probe), rect('opaqueMetal', fixture.controls.opaqueMetal),
+    rect('emitterTraitCLNE', fixture.controls.emitterTrait), rect('emissiveFire', fixture.controls.emissiveFire),
+    point('coLocatedGlassWall', fixture.controls.glassWall.probe),
+    point('coLocatedIceWall', fixture.controls.iceWall.probe), rect('guardedBlank', fixture.controls.guardedBlank),
+  ];
+}
+
+function translucentEdgeVfxRawControlPoints(fixture) {
+  return [
+    ...fixture.panes.flatMap((pane) => [
+      { name: `${pane.code}FirstLayer`, x: pane.firstInnerLayer.x, y: pane.firstInnerLayer.y + 2 },
+      { name: `${pane.code}Hole`, x: pane.authoredHole.x + 2, y: pane.authoredHole.y + 2 },
+      { name: `${pane.code}Notch`, x: pane.openNotch.x + 2, y: pane.openNotch.y + 2 },
+      { name: `${pane.code}Line`, x: pane.attachedLine.x, y: pane.attachedLine.y + 2 },
+      { name: `${pane.code}Isolated`, ...pane.isolated },
+      { name: `${pane.code}Cavity`, ...pane.reconstructableCavity },
+      { name: `${pane.code}DeepCore`, x: pane.deepCore.x + 2, y: pane.deepCore.y + 2 },
+    ]),
+    { name: 'unlikeGlassIceSeam', ...fixture.unlikeSeam.probe },
+    { name: 'opaqueMetal', x: fixture.controls.opaqueMetal.x + 2, y: fixture.controls.opaqueMetal.y + 2 },
+    { name: 'emitterTraitCLNE', x: fixture.controls.emitterTrait.x + 2, y: fixture.controls.emitterTrait.y + 2 },
+    { name: 'emissiveFire', x: fixture.controls.emissiveFire.x + 2, y: fixture.controls.emissiveFire.y + 2 },
+    { name: 'coLocatedGlassWall', ...fixture.controls.glassWall.probe },
+    { name: 'coLocatedIceWall', ...fixture.controls.iceWall.probe },
+    { name: 'guardedBlank', x: fixture.controls.guardedBlank.x + 2, y: fixture.controls.guardedBlank.y + 2 },
+  ];
+}
+
+async function writeTranslucentEdgeVfxScreenshots(source, disabled, enabled) {
+  const paths = {
+    off: variantScreenshotPath(source, 'e10-off'),
+    on: variantScreenshotPath(source, 'e10-on'),
+  };
+  await writeFile(paths.off, Buffer.from(disabled.capture.capture.data, 'base64'));
+  await writeFile(paths.on, Buffer.from(enabled.capture.capture.data, 'base64'));
+  return paths;
+}
+
+async function translucentEdgeVfxDepthDigest(cdp, fixture) {
+  return evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    const sample = (rect) => {
+      let min = 255;
+      let max = 0;
+      for (let y = rect.y; y < rect.y + rect.height; y++) for (let x = rect.x; x < rect.x + rect.width; x++) {
+        const value = audit.presentationAuxiliary(x, y);
+        min = Math.min(min, value);
+        max = Math.max(max, value);
+      }
+      return { min, max };
+    };
+    return ${JSON.stringify(fixture.panes)}.map((pane) => ({ code: pane.code,
+      firstInnerLayer: sample(pane.firstInnerLayer), edgeBand: sample(pane.edgeBand),
+      depthBand: sample(pane.depthBand), deepCore: sample(pane.deepCore),
+    }));
+  })()`);
+}
+
+async function auditEightXTranslucentEdgeVfxExclusion(cdp, dpr) {
+  await setDesktopMetrics(cdp, 1280, 720, dpr);
+  const query = new URLSearchParams({
+    scene: 'render-lab', inputAudit: '1', blankAudit: '1', renderScale: '8',
+    auditStage: 'eight-translucent-edge', renderLook: 'realistic',
+    volumeVfx: '0', liquidBodyVfx: '0', liquidSurfaceVfx: '0', gasBodyVfx: '0',
+    gasMotionVfx: '0', powderBodyVfx: '0', powderLightVfx: '0', powderSolidContactVfx: '0',
+    translucentEdgeVfx: '1',
+  });
+  await cdp.send('Page.navigate', { url: `${AUDIT_BASE_URL}?${query}` });
+  const deadline = Date.now() + EIGHT_X_PRESENTATION_DEADLINE_MS;
+  await waitFor(() => evaluate(cdp, `(() => {
+    const parameters = new URLSearchParams(location.search);
+    return parameters.get('renderScale') === '8' && parameters.get('auditStage') === 'eight-translucent-edge'
+      && parameters.get('translucentEdgeVfx') === '1' && Boolean(window.__ANIFOR_INPUT_AUDIT__);
+  })()`), remainingDeadlineMs(deadline, 'true-8x E10 input audit API'), 'true-8x E10 input audit API');
+  const backend = await waitForEightXTerminalBackend(cdp, 'true-8x E10', deadline);
+  assertEightXWebGLBackend(backend, 'true-8x E10');
+  const geometry = await waitForStableCanvas(cdp, 1280, 720, undefined, 45_000, 'true-8x E10 geometry');
+  assert(geometry.backing.width === WORLD_WIDTH * 8 && geometry.backing.height === WORLD_HEIGHT * 8
+    && geometry.outputScale === '8',
+  `true-8x E10 lost exact backing (${JSON.stringify(geometry.backing)})`);
+  const isolation = await evaluate(cdp, `(() => {
+    const canvas = document.querySelector('canvas.semantic-field-canvas');
+    return canvas ? {
+      renderer: canvas.dataset.renderer, look: canvas.dataset.renderLook,
+      state: canvas.dataset.hdrPipeline, reason: canvas.dataset.hdrPipelineReason,
+      bloomBacking: canvas.dataset.bloomBacking ?? null, translucentEdgeVfx: canvas.dataset.translucentEdgeVfx,
+    } : undefined;
+  })()`);
+  assert(isolation?.renderer === 'semantic-field-webgl' && isolation.look === 'realistic'
+    && isolation.state === 'inactive' && isolation.reason === 'scale-8' && isolation.bloomBacking === null
+    && isolation.translucentEdgeVfx === 'inactive',
+  `true-8x E10 isolation failed (${JSON.stringify(isolation)})`);
+  const timing = await auditWebGLPresentationTiming(cdp, 1, 12_000, 30_000, 1);
+  assert(timing.source === 'gpu-query' || timing.source === 'gpu-fence' || timing.source === 'gpu-finish',
+    `true-8x E10 did not complete GPU work (${JSON.stringify(timing)})`);
+  return { backing: `${geometry.backing.width}x${geometry.backing.height}`, isolation, timing };
+}
+
 function powderLightTargetRegions(fixture) {
   return fixture.cards.flatMap((card) => {
     const centreY = card.body.y + card.body.height / 2;
@@ -22993,7 +23400,7 @@ async function navigateVolumeVfxState(cdp, mode, scale, enabled, label) {
     scene: 'render-lab', inputAudit: '1', auditStage: 'canonical',
     volumeVfxAudit: '1', renderScale: String(scale), renderLook: 'realistic',
     volumeVfx: enabled ? '1' : '0', liquidSurfaceVfx: '0',
-    powderBodyVfx: '0', powderLightVfx: '0',
+    powderBodyVfx: '0', powderLightVfx: '0', translucentEdgeVfx: '0',
   });
   await cdp.send('Page.navigate', { url: `${AUDIT_BASE_URL}?${query}` });
   await waitFor(() => evaluate(cdp, `(() => {
@@ -23008,11 +23415,38 @@ async function navigateVolumeVfxState(cdp, mode, scale, enabled, label) {
       && parameters.get('liquidSurfaceVfx') === '0'
       && parameters.get('powderBodyVfx') === '0'
       && parameters.get('powderLightVfx') === '0'
+      && parameters.get('translucentEdgeVfx') === '0'
       && Boolean(window.__ANIFOR_INPUT_AUDIT__);
   })()`), 15_000, `E02 ${label} ${scale}x page`);
   await waitFor(() => evaluate(cdp,
     `window.__ANIFOR_INPUT_AUDIT__.backend().backend === ${JSON.stringify(mode)}`),
   15_000, `E02 ${label} ${scale}x backend`);
+  const stabilityProbes = VOLUME_VFX_TARGET_REGIONS.filter(
+    ({ family }) => family === 'powder',
+  ).map(({ name, x, y }) => ({ name, x: Math.round(x), y: Math.round(y) }));
+  // A paused RenderLab does not continuously advance the caller-owned powder
+  // stability field. E02 consumes that field, so require separately observed
+  // refreshes and exact settled readiness instead of accepting an inert PNG.
+  for (let pass = 0; pass < 7; pass++) {
+    const before = await evaluate(cdp,
+      'window.__ANIFOR_INPUT_AUDIT__.presentationRefreshAudit()');
+    await evaluate(cdp,
+      'window.__ANIFOR_INPUT_AUDIT__.refreshPresentationFields(); true');
+    await waitFor(() => evaluate(cdp, `(() => {
+      const current = window.__ANIFOR_INPUT_AUDIT__.presentationRefreshAudit();
+      return current?.dynamicSequence > ${before.dynamicSequence} ? current : false;
+    })()`), 5_000, `E02 ${label} ${scale}x stability pass ${pass + 1}`);
+  }
+  const stability = await evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    return ${JSON.stringify(stabilityProbes)}.map((probe) => ({
+      ...probe, material: audit.cell(probe.x, probe.y),
+      auxiliary: audit.presentationAuxiliary(probe.x, probe.y),
+      velocity: audit.velocity(probe.x, probe.y),
+    }));
+  })()`);
+  assert(stability.every((probe) => probe.material !== 0 && probe.auxiliary === 255),
+    `E02 ${label} ${scale}x powder did not reach exact settled readiness (${JSON.stringify(stability)})`);
   const hdrPipeline = await evaluate(cdp, `(() => {
     const canvas = document.querySelector('.semantic-field-canvas');
     return canvas ? {
@@ -23024,6 +23458,7 @@ async function navigateVolumeVfxState(cdp, mode, scale, enabled, label) {
       liquidSurfaceVfx: canvas.dataset.liquidSurfaceVfx,
       powderBodyVfx: canvas.dataset.powderBodyVfx,
       powderLightVfx: canvas.dataset.powderLightVfx,
+      translucentEdgeVfx: canvas.dataset.translucentEdgeVfx,
     } : undefined;
   })()`);
   const expectedBloom = `${WORLD_WIDTH * scale / 2}x${WORLD_HEIGHT * scale / 2}`;
@@ -23031,7 +23466,8 @@ async function navigateVolumeVfxState(cdp, mode, scale, enabled, label) {
     && hdrPipeline?.bloomBacking === expectedBloom
     && hdrPipeline?.volumeVfx === (enabled ? 'active' : 'inactive')
     && hdrPipeline?.liquidSurfaceVfx === 'inactive'
-    && hdrPipeline?.powderBodyVfx === 'inactive' && hdrPipeline?.powderLightVfx === 'inactive',
+    && hdrPipeline?.powderBodyVfx === 'inactive' && hdrPipeline?.powderLightVfx === 'inactive'
+    && hdrPipeline?.translucentEdgeVfx === 'inactive',
   `E02 ${label} ${scale}x HDR/volume state resolved incorrectly (${JSON.stringify(hdrPipeline)})`);
   const capture = await waitForStablePageCapture(
     cdp, `E02 ${label} ${scale}x framebuffer`, scale === 4 ? 20_000 : undefined,
@@ -23041,7 +23477,7 @@ async function navigateVolumeVfxState(cdp, mode, scale, enabled, label) {
     geometry: await metrics(cdp),
     semantic: await hdrVfxSemanticDigest(cdp),
     backing: await sampleVolumeVfxCanvasAlphaSupport(cdp),
-    hdrPipeline,
+    stability, hdrPipeline,
   };
 }
 
@@ -23336,7 +23772,7 @@ async function navigatePowderLightVfxState(cdp, mode, scale, enabled, label) {
     powderLightVfxAudit: '1', renderScale: String(scale), renderLook: 'realistic',
     // E06 compares its one selector on top of the accepted E02/E05 body base.
     volumeVfx: '1', powderBodyVfx: '1', liquidBodyVfx: '0', liquidSurfaceVfx: '0',
-    gasBodyVfx: '0',
+    gasBodyVfx: '0', translucentEdgeVfx: '0',
     powderLightVfx: enabled ? '1' : '0',
   });
   await cdp.send('Page.navigate', { url: `${AUDIT_BASE_URL}?${query}` });
@@ -23354,6 +23790,7 @@ async function navigatePowderLightVfxState(cdp, mode, scale, enabled, label) {
       && parameters.get('liquidBodyVfx') === '0'
       && parameters.get('liquidSurfaceVfx') === '0'
       && parameters.get('gasBodyVfx') === '0'
+      && parameters.get('translucentEdgeVfx') === '0'
       && parameters.get('powderLightVfx') === ${JSON.stringify(enabled ? '1' : '0')}
       && typeof window.__ANIFOR_INPUT_AUDIT__?.preparePowderLightVfxFixture === 'function';
   })()`), 15_000, `E06 ${label} ${scale}x page`);
@@ -23381,6 +23818,32 @@ async function navigatePowderLightVfxState(cdp, mode, scale, enabled, label) {
       && audit.wall(fixture.nativeWall.x, fixture.nativeWall.y) === 1
       && audit.wall(fixture.wallFreeControl.x + 2, fixture.wallFreeControl.y + 2) === 0;
   })()`), 15_000, `E06 ${label} ${scale}x fixture`);
+  const stabilityProbes = powderLightTargetRegions(fixture).map(({ name, x, y }) => ({
+    name, x: Math.round(x), y: Math.round(y),
+  }));
+  // E06's E02/E05 baseline is valid only after the paused body reaches exact
+  // settled readiness. Observe every refresh separately so a coalesced sleep
+  // cannot turn the local-light experiment into an inert false pass/failure.
+  for (let pass = 0; pass < 7; pass++) {
+    const before = await evaluate(cdp,
+      'window.__ANIFOR_INPUT_AUDIT__.presentationRefreshAudit()');
+    await evaluate(cdp,
+      'window.__ANIFOR_INPUT_AUDIT__.refreshPresentationFields(); true');
+    await waitFor(() => evaluate(cdp, `(() => {
+      const current = window.__ANIFOR_INPUT_AUDIT__.presentationRefreshAudit();
+      return current?.dynamicSequence > ${before.dynamicSequence} ? current : false;
+    })()`), 5_000, `E06 ${label} ${scale}x stability pass ${pass + 1}`);
+  }
+  const stability = await evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    return ${JSON.stringify(stabilityProbes)}.map((probe) => ({
+      ...probe, material: audit.cell(probe.x, probe.y),
+      auxiliary: audit.presentationAuxiliary(probe.x, probe.y),
+      velocity: audit.velocity(probe.x, probe.y),
+    }));
+  })()`);
+  assert(stability.every((probe) => probe.material !== 0 && probe.auxiliary === 255),
+    `E06 ${label} ${scale}x powder did not reach exact settled readiness (${JSON.stringify(stability)})`);
   // RenderFieldSet services its compact fields round-robin. Allow the new
   // paint plane to reach the emission/powder refresh before capture; this is a
   // bounded presentation wait, never a simulation step.
@@ -23394,6 +23857,7 @@ async function navigatePowderLightVfxState(cdp, mode, scale, enabled, label) {
       liquidSurfaceVfx: canvas.dataset.liquidSurfaceVfx,
       gasBodyVfx: canvas.dataset.gasBodyVfx, powderBodyVfx: canvas.dataset.powderBodyVfx,
       powderLightVfx: canvas.dataset.powderLightVfx,
+      translucentEdgeVfx: canvas.dataset.translucentEdgeVfx,
     } : undefined;
   })()`);
   const expectedBloom = `${WORLD_WIDTH * scale / 2}x${WORLD_HEIGHT * scale / 2}`;
@@ -23402,6 +23866,7 @@ async function navigatePowderLightVfxState(cdp, mode, scale, enabled, label) {
     && hdrPipeline?.powderBodyVfx === 'active' && hdrPipeline?.liquidBodyVfx === 'inactive'
     && hdrPipeline?.liquidSurfaceVfx === 'inactive'
     && hdrPipeline?.gasBodyVfx === 'inactive'
+    && hdrPipeline?.translucentEdgeVfx === 'inactive'
     && hdrPipeline?.powderLightVfx === (enabled ? 'active' : 'inactive'),
   `E06 ${label} ${scale}x HDR/powder-light state resolved incorrectly (${JSON.stringify(hdrPipeline)})`);
   const capture = await waitForStablePageCapture(
@@ -23411,7 +23876,7 @@ async function navigatePowderLightVfxState(cdp, mode, scale, enabled, label) {
     fixture, capture, geometry: await metrics(cdp), semantic: await hdrVfxSemanticDigest(cdp),
     backing: await sampleVolumeVfxCanvasAlphaSupport(cdp),
     rawControls: await sampleVolumeVfxRawWorldPixels(cdp, powderLightRawControlPoints(fixture)),
-    hdrPipeline,
+    stability, hdrPipeline,
   };
 }
 

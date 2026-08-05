@@ -40,6 +40,7 @@ import {
   resolveLiquidSurfaceVfxEnabled,
   resolvePowderBodyVfxEnabled, resolvePowderLightVfxEnabled, resolveRenderLook,
   resolvePowderSolidContactVfxEnabled,
+  resolveTranslucentEdgeVfxEnabled,
   resolveVolumeVfxEnabled,
 } from './render-look';
 interface PresenterViewport { readonly width: number; readonly height: number }
@@ -3211,6 +3212,7 @@ uniform float uLiquidBodyVfx;
 uniform float uPowderBodyVfx;
 uniform float uPowderLightVfx;
 uniform float uPowderSolidContactVfx;
+uniform float uTranslucentEdgeVfx;
 uniform float uHighQuality;
 uniform float uAnalyticLightingQuality;
 uniform float uGasFieldLighting;
@@ -7226,6 +7228,41 @@ void main() {
           }
         }
       }
+      // E10: a real broad Glass/Ice body carries a shallow transmitted-light
+      // band just inside its semantic edge. The existing exact-species r8
+      // optical-depth byte rejects the exposed surface, first interior layer,
+      // thin strokes, holes, unlike seams, walls, and reconstructed support;
+      // the established body normal and relief keep the band from becoming a
+      // flat outline. This is normal-WebGL RGB arithmetic only: no texture,
+      // sample, field, upload, pass, target, allocation, clock, output-scale,
+      // alpha, support, ownership, reconstruction, or physics decision.
+      if (uTranslucentEdgeVfx > 0.5 && (material == 12.0 || material == 24.0)
+        && !materialEmissive && traits < 0.5 && surfaceOnly < 0.5
+        && halo < 0.5 && wall < 0.5 && solidInterior > 0.001
+        && solidOpticalDepth > 6.0 / 255.0) {
+        float translucentEdgeRise = smoothstep(
+          6.0 / 255.0, 18.0 / 255.0, solidOpticalDepth
+        );
+        float translucentEdgeFall = 1.0 - smoothstep(
+          30.0 / 255.0, 66.0 / 255.0, solidOpticalDepth
+        );
+        float translucentEdgeBand = translucentEdgeRise * translucentEdgeFall
+          * solidInterior;
+        float translucentRelief = clamp(
+          solidReliefTone * (255.0 / 6.0), -1.0, 1.0
+        );
+        float translucentWrap = clamp(
+          0.52 + (1.0 - solidKey) * 0.28
+            + max(translucentRelief, 0.0) * 0.18 + solidFresnel * 0.38,
+          0.32, 1.0
+        );
+        vec3 translucentEdgeTint = material == 24.0
+          ? vec3(0.32, 0.78, 1.15) : vec3(0.60, 0.94, 1.10);
+        float translucentEdgeGain = material == 24.0 ? 0.066 : 0.056;
+        color += (vec3(1.18) - clamp(color, 0.0, 1.18))
+          * translucentEdgeTint * translucentEdgeBand
+          * translucentWrap * translucentEdgeGain;
+      }
       float translucentAlpha = (material == 12.0 || material == 24.0)
         ? mix(0.62, 0.76, solidDepth) : mix(0.74, 0.88, solidDepth);
       alpha *= translucentAlpha;
@@ -8791,6 +8828,10 @@ export class PixiFieldPresenter {
     // declares neither its selector nor its contact-depth branch.
     const powderSolidContactVfxEnabled = outputScale < 8
       && resolvePowderSolidContactVfxEnabled(renderLook);
+    // E10 uses normal WebGL's existing solid-depth/normal arithmetic. The
+    // protected compact true-8x shader deliberately declares no E10 selector.
+    const translucentEdgeVfxEnabled = outputScale < 8
+      && resolveTranslucentEdgeVfxEnabled(renderLook);
     // E04 follows the same normal-detail boundary as E03. The protected true
     // 8x shader deliberately has neither this uniform nor its arithmetic.
     const gasBodyVfxEnabled = outputScale < 8
@@ -8827,6 +8868,7 @@ export class PixiFieldPresenter {
       uPowderSolidContactVfx: {
         value: powderSolidContactVfxEnabled ? 1 : 0, type: 'f32',
       },
+      uTranslucentEdgeVfx: { value: translucentEdgeVfxEnabled ? 1 : 0, type: 'f32' },
       // At 8x, the supersampled analytic boundary already supplies detail. Drop
       // diagonal/ring probes so the 15M-pixel frame remains watchdog-safe.
       uHighQuality: {
@@ -9030,6 +9072,7 @@ export class PixiFieldPresenter {
       this.uniforms.uniforms.uPowderBodyVfx = 0;
       this.uniforms.uniforms.uPowderLightVfx = 0;
       this.uniforms.uniforms.uPowderSolidContactVfx = 0;
+      this.uniforms.uniforms.uTranslucentEdgeVfx = 0;
       this.app.stage.addChild(this.scene);
     }
   }
@@ -9062,7 +9105,8 @@ export class PixiFieldPresenter {
             || new URLSearchParams(location.search).get('liquidSurfaceVfxAudit') === '1'
             || new URLSearchParams(location.search).get('powderBodyVfxAudit') === '1'
             || new URLSearchParams(location.search).get('powderLightVfxAudit') === '1'
-            || new URLSearchParams(location.search).get('powderSolidContactVfxAudit') === '1'),
+            || new URLSearchParams(location.search).get('powderSolidContactVfxAudit') === '1'
+            || new URLSearchParams(location.search).get('translucentEdgeVfxAudit') === '1'),
         resolution: outputScale, autoDensity: true, autoStart: false,
       });
     } catch (error) {
@@ -9102,6 +9146,9 @@ export class PixiFieldPresenter {
       ? 'active' : 'inactive';
     presenter.app.canvas.dataset.powderSolidContactVfx = Number(
       presenter.uniforms.uniforms.uPowderSolidContactVfx
+    ) > 0.5 ? 'active' : 'inactive';
+    presenter.app.canvas.dataset.translucentEdgeVfx = Number(
+      presenter.uniforms.uniforms.uTranslucentEdgeVfx
     ) > 0.5 ? 'active' : 'inactive';
     if (presenter.hdrPipelineInfo.reason) {
       presenter.app.canvas.dataset.hdrPipelineReason = presenter.hdrPipelineInfo.reason;
@@ -10405,6 +10452,7 @@ export class PixiFieldPresenter {
         this.uniforms.uniforms.uPowderBodyVfx = 0;
         this.uniforms.uniforms.uPowderLightVfx = 0;
         this.uniforms.uniforms.uPowderSolidContactVfx = 0;
+        this.uniforms.uniforms.uTranslucentEdgeVfx = 0;
         this.app.canvas.dataset.hdrPipeline = 'inactive';
         this.app.canvas.dataset.hdrPipelineReason = 'runtime-error';
         this.app.canvas.dataset.volumeVfx = 'inactive';
@@ -10415,6 +10463,7 @@ export class PixiFieldPresenter {
         this.app.canvas.dataset.powderBodyVfx = 'inactive';
         this.app.canvas.dataset.powderLightVfx = 'inactive';
         this.app.canvas.dataset.powderSolidContactVfx = 'inactive';
+        this.app.canvas.dataset.translucentEdgeVfx = 'inactive';
         delete this.app.canvas.dataset.bloomBacking;
         if (!this.scene.parent) this.app.stage.addChild(this.scene);
       }

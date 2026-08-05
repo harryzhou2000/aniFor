@@ -144,6 +144,9 @@ import {
   POWDER_SOLID_CONTACT_VFX_AUDIT, preparePowderSolidContactVfxAudit,
 } from './powder-solid-contact-vfx-audit';
 import {
+  TRANSLUCENT_EDGE_VFX_AUDIT, prepareTranslucentEdgeVfxAudit,
+} from './translucent-edge-vfx-audit';
+import {
   GEOLOGICAL_SOLID_GRAPHICS_AUDIT, prepareGeologicalSolidGraphicsAuditFixture,
 } from './geological-solid-graphics-audit';
 import {
@@ -870,6 +873,12 @@ export class Game {
       powderSolidContactVfxFixture: () => POWDER_SOLID_CONTACT_VFX_AUDIT,
       preparePowderSolidContactVfxAudit: () => {
         preparePowderSolidContactVfxAudit(this.simulation);
+        this.renderer.synchronizeFixtureMaterialPlane();
+        this.renderer.invalidateDynamicPresentation();
+      },
+      translucentEdgeVfxFixture: () => TRANSLUCENT_EDGE_VFX_AUDIT,
+      prepareTranslucentEdgeVfxAudit: () => {
+        prepareTranslucentEdgeVfxAudit(this.simulation);
         this.renderer.synchronizeFixtureMaterialPlane();
         this.renderer.invalidateDynamicPresentation();
       },

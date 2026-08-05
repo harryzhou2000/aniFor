@@ -105,11 +105,24 @@ does not alter simulation, camera, semantic ownership, or `renderScale`.
   Disabled/Classic/Canvas paths retain ordinary `255`; Local, Grains, motion,
   fine columns, isolated grains, suspension, walls, and unlike/air controls
   remain exact no-ops. True 8× neither encodes nor declares E09.
+- **E10 — Glass/Ice thin-edge transmission (accepted checkpoint):** normal
+  1×–4× WebGL gives exact authoritative ordinary Glass and Ice a restrained
+  cool transmitted-light band inside a broad solid edge. It reuses the
+  existing phase-local solid optical-depth byte, body key, relief tone, and
+  Fresnel response: byte `6` is the protected first interior layer, bytes
+  `12–60` form the measured shell/fade, and depth `66+` is excluded from the
+  experiment. `?translucentEdgeVfx=0|1` isolates E10 from the older lens-shell
+  and backdrop-transmission effects. It adds no sample, texture, field,
+  upload, pass, target, allocation, clock, output-scale input, alpha/support,
+  silhouette, ownership, reconstruction, or physics decision. One-cell
+  structures, isolated cells, authored holes/notches, reconstructed cavities,
+  unlike seams, native walls, traits, emission, opaque solids, Canvas, and
+  true 8× remain exact controls.
 - **Protected 8× rung:** `renderScale=8` deliberately reports
   `hdrPipeline=inactive` / `scale-8` and retains the proven direct single-mesh
   4896×3072 path. The experiment must earn a bounded 8× design rather than
   allocating a 115 MiB full-resolution float target beside that path.
-- **Current decision:** E01/E02/E03/E04/E05/E06/E07/E08/E09 remain opt-in through the non-Classic looks
+- **Current decision:** E01/E02/E03/E04/E05/E06/E07/E08/E09/E10 remain opt-in through the non-Classic looks
   until representative hardware timing and mobile thermal behavior are
   measured. E02 remains the safe family-wide baseline. E03 is accepted as the
   liquid-depth checkpoint: its fit-view crop is visibly more cohesive, retains
@@ -140,7 +153,12 @@ does not alter simulation, camera, semantic ownership, or `renderScale`.
   material-pair contact checkpoint: it grounds broad resting Sand/Brick,
   Clay/Metal, and Concrete/Glass beds without becoming an outline or touching
   fine structure. Its normal-view response is intentionally shallow; freeze it
-  until a new fit-view review. These are not the final material/VFX results.
+  until a new fit-view review. E10 is accepted as the first narrow
+  solid-thickness transmission checkpoint: the Glass/Ice response is a cool
+  inner shell with a measured depth falloff, not a body-wide colour grade, and
+  every categorical/topology control remains exact. Freeze its amplitude and
+  depth window until another normal-view review. These are not the final
+  material/VFX results.
   Sub-1.0 material colour stays on the established response; tonemapping owns
   only real HDR highlights so powder texture and liquid body contrast are not
   washed out.
@@ -155,12 +173,16 @@ accepts `--render-scale=1|2|4|8` for capability/degradation checks.
 Run `npm run audit:vfx:volume` for E02. It reloads the paused composed material
 lab as `volumeVfx=0 → 1 → 0` at 1×, 2×, and 4×, requires the real HDR pipeline,
 and proves exact semantic/staging state plus raw presented alpha/support hashes.
+Its paused powder probes drive seven separately observed presentation refreshes
+and require exact auxiliary byte `255` before capture; an inert first PNG is not
+settled-body evidence. E10 is explicitly pinned off in this baseline.
 The accepted response is spatial rather than a uniform grade: the current
 fixture reaches 6 framebuffer bytes in settled Clay, 13 in connected liquids,
 and 3 in gas while isolated Sand/Water, authored holes, Metal, and repeat
 captures remain exact. The sub-cell Water/Oil page probe permits four bytes of
 filtered neighbouring-body RGB; E03 separately proves both exact raw seam
-owners and whole-frame alpha/support unchanged.
+owners and whole-frame alpha/support unchanged. Pass `--render-scale=1`, `2`,
+or `4` to the underlying focused command when tuning one scale.
 
 Run `npm run audit:vfx:liquid-body` for E03. It holds E02 powder/gas styling
 off, reloads `liquidBodyVfx=0 → 1 → 0` at 1×/2×/4×, requires the real HDR
@@ -198,11 +220,14 @@ Pass `--render-scale=1`, `2`, or `4` to tune one scale; true 8× rejects E05 and
 retains its protected direct shader.
 
 Run `npm run audit:vfx:powder-light` for E06. It keeps E02 and E05 enabled as
-the fixed body baseline, then reloads `powderLightVfx=0 → 1 → 0` at 1×/2×/4×.
+the fixed body baseline, pins E10 off, then reloads
+`powderLightVfx=0 → 1 → 0` at 1×/2×/4×.
 The dedicated paused fixture contains Fire/ELEC-facing Sand, Clay, and Concrete
 cards plus exact sources, two-cell gaps, authored holes, fine columns, isolated
 Sand, wet Sand/Water suspension, a native wall, and a wall-free blank. The gate
-requires real WebGL/HDR, exact geometry/semantics/raw alpha/support, warm/cool
+drives seven separately observed presentation refreshes per state and requires
+exact auxiliary byte `255` at every warm/cool/core body probe before capture.
+It requires real WebGL/HDR, exact geometry/semantics/raw alpha/support, warm/cool
 spectral direction, a non-uniform shallow shoulder, byte-exact protected
 controls and repeated-off captures, 97–103% retained local microchroma, exact
 Local/Grains references, and zero browser errors. The normal shader retains its
@@ -252,13 +277,29 @@ across the sampled five-cell band at all normal scales. The closing true-8×
 navigation explicitly requests E09 and proves it inactive with reason
 `scale-8`, no bloom backing, exact 4896×3072 WebGL, and a completed GPU fence.
 
-**Next visual experiments:** E03–E09 now provide accepted liquid body/surface,
+Run `npm run audit:vfx:translucent-edge` for E10. It pins every earlier VFX
+selector off, disables the established translucent lens/field effects, and
+reloads four broad exact Glass/Ice panes as `translucentEdgeVfx=0 → 1 → 0` at
+1×/2×/4×. The gate proves exact depth bands (`6`, `12–30`, `36–60`, and
+`120–234`), semantics, raw alpha/support, protected framebuffer centres, and
+repeated-off output. Across the accepted matrix the two target bands hold
+`1.83–2.63` RGB RMS, `3–6`-byte peaks, `55.4–71.9%` response coverage, and
+positive `1.59–2.27` signed means. In every pane the near-edge RMS remains at
+least 5% above the deeper fade. Holes, notches, one-cell lines, isolated cells,
+reconstructed cavities, unlike seams, Metal, CLNE, Fire, native walls, and
+blank space remain exact; one broad Ice deep-core page crop may expose one
+compositor byte with zero response coverage while its authoritative centre is
+byte-exact. The closing true-8× navigation proves E10/HDR inactive with reason
+`scale-8`, no bloom, exact 4896×3072 WebGL, and a completed GPU fence.
+
+**Next visual experiments:** E03–E10 now provide accepted liquid body/surface,
 stable-gas, coherent-gas-motion, powder-depth, and powder-local-light
-checkpoints plus exact resting contact grounding. The next candidate should add
-a visibly distinct material cue rather than another global grade: prefer
-bounded thin-edge transmission for authoritative ordinary Glass/Ice, reusing
-the existing solid optical-depth byte, body normal/light, and arithmetic only.
-Opaque solids, walls, holes, one-cell lines, unlike seams, traits, emission,
+checkpoints plus exact resting contact grounding and Glass/Ice transmission.
+The next candidate should broaden state-aware material delicacy rather than add
+another global grade: prefer a bounded subsurface cue for authoritative Wax and
+hydrated botanical bodies, reusing existing solid depth and native lifecycle or
+hydration state without inventing occupancy. Dry/dormant states, Molten Wax,
+walls, holes, one-cell structures, unlike seams, traits, emission,
 reconstructed support, Canvas, and true 8× should remain exact controls.
 Return to advected gas detail only if it can remain atmosphere-owned and
 counterflow-coherent; expand liquid curvature/thickness architecture only with
