@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
-  DEFAULT_RENDER_LOOK, resolveGasBodyVfxEnabled, resolveGasLightVfxEnabled,
+  DEFAULT_RENDER_LOOK, resolveGasBodyVfxEnabled, resolveGasCoreDepthVfxEnabled,
+  resolveGasLightVfxEnabled,
   resolveGasMotionVfxEnabled,
   resolveLiquidBodyVfxEnabled, resolveLiquidSolidMeniscusVfxEnabled,
   resolveLiquidSurfaceVfxEnabled,
@@ -104,6 +105,20 @@ describe('resolveRenderLook', () => {
     )).toBe(true);
     expect(resolveGasLightVfxEnabled(
       'realistic', '?gasBodyVfx=off&gasLightVfx=on',
+    )).toBe(false);
+  });
+
+  it('keeps dense gas optical depth subordinate to the stable gas body', () => {
+    expect(resolveGasCoreDepthVfxEnabled('classic', '?gasCoreDepthVfx=on')).toBe(false);
+    expect(resolveGasCoreDepthVfxEnabled('realistic', '')).toBe(true);
+    expect(resolveGasCoreDepthVfxEnabled(
+      'realistic', '?gasBodyVfx=on&gasCoreDepthVfx=off',
+    )).toBe(false);
+    expect(resolveGasCoreDepthVfxEnabled(
+      'realistic', '?volumeVfx=0&gasBodyVfx=on&gasCoreDepthVfx=on',
+    )).toBe(true);
+    expect(resolveGasCoreDepthVfxEnabled(
+      'realistic', '?gasBodyVfx=off&gasCoreDepthVfx=on',
     )).toBe(false);
   });
 

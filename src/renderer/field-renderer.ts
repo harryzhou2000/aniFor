@@ -265,9 +265,12 @@ export class MaterialRenderer {
     markCell: (index: number): void => {
       this.contourChunks.markCell(index);
       this.powderSurfaceDirty = true;
+      this.boundaryEvolutionPending = true;
     },
   };
   private presenter?: PixiFieldPresenter;
+  /** Bounded follow-up cadence while a slow powder owner evolves 0 -> 255. */
+  private boundaryEvolutionPending = false;
   private readonly view: ViewTransform;
   private basePixels?: ImageData;
   private liquidPixels?: ImageData;
@@ -527,11 +530,13 @@ export class MaterialRenderer {
     );
     const powderRefreshDue = this.powderSurfaceDirty
       && time - this.lastPowderSurfaceRefresh >= POWDER_SURFACE_REFRESH_INTERVAL;
+    const boundaryEvolutionDue = !this.presenter && this.boundaryEvolutionPending
+      && time - this.lastPowderSurfaceRefresh >= POWDER_SURFACE_REFRESH_INTERVAL;
     const solidDepthRefreshDue = this.solidOpticalDepthDirty
       && time - this.lastSolidOpticalDepthRefresh >= POWDER_SURFACE_REFRESH_INTERVAL;
     const visualRefreshDue = this.presenter?.visualRefreshDue(time)
       ?? ((this.fallbackFields?.due(time) ?? false) || powderRefreshDue || solidDepthRefreshDue);
-    if (!this.changed && !refreshDynamicFields && !visualRefreshDue) return;
+    if (!this.changed && !refreshDynamicFields && !visualRefreshDue && !boundaryEvolutionDue) return;
     if (refreshDynamicFields) {
       this.lastDynamicFieldRefresh = time;
       this.dynamicPresentationInvalidated = false;
@@ -1653,6 +1658,7 @@ export class MaterialRenderer {
       || !atmospherePixels || !emissionPixels || !liquidSurfaceScratch) {
       throw new Error('Canvas render fields unavailable');
     }
+    this.boundaryEvolutionPending = false;
     updateBoundaryStabilityRect(
       this.boundaryStability, this.boundaryStabilityOwners, this.rendered, velocities,
       fields.lookups.styleBytes, width, { x: 0, y: 0, width, height }, this.boundaryDirtyMarker,

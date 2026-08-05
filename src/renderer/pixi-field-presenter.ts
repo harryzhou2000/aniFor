@@ -36,7 +36,8 @@ import {
 } from './canvas-gas-identity-style';
 import { HDRVfxPipeline, type HDRPipelineInfo } from './hdr-vfx-pipeline';
 import {
-  resolveGasBodyVfxEnabled, resolveGasLightVfxEnabled, resolveGasMotionVfxEnabled,
+  resolveGasBodyVfxEnabled, resolveGasCoreDepthVfxEnabled, resolveGasLightVfxEnabled,
+  resolveGasMotionVfxEnabled,
   resolveLiquidBodyVfxEnabled, resolveLiquidSolidMeniscusVfxEnabled,
   resolveLiquidSurfaceVfxEnabled,
   resolvePowderBodyVfxEnabled, resolvePowderLightVfxEnabled, resolveRenderLook,
@@ -3219,6 +3220,7 @@ uniform float uVolumeVfx;
 uniform float uGasBodyVfx;
 uniform float uGasMotionVfx;
 uniform float uGasLightVfx;
+uniform float uGasCoreDepthVfx;
 uniform float uLiquidBodyVfx;
 uniform float uLiquidSolidMeniscusVfx;
 uniform float uPowderBodyVfx;
@@ -6210,6 +6212,51 @@ void main() {
         * gasVfxTint * gasVfxKey;
       color *= 1.0 - gasVfxPocket;
 
+      // E15: deepen only the connected atmosphere-owned cores selected by the
+      // already propagated gas identity. The existing E04 static billow,
+      // cardinal density, curvature, and optical-depth values are the complete
+      // input set: this branch adds no sample, texture, field, pass, clock, or
+      // output-scale resource. Smoke, Oxygen, and Noble Gas receive distinct
+      // absorption/key spectra while alpha, support, silhouette, authored
+      // gaps, material ownership, Canvas recovery, and compact true-8x remain
+      // exactly on their established paths.
+      if (uGasCoreDepthVfx > 0.5 && uGasIdentityStyling > 0.5
+        && wall < 0.5 && !materialEmissive) {
+        float gasCoreStyle = floor(gasStyleState.r * 255.0 + 0.5);
+        float gasCoreSmoke = 1.0 - step(0.5, abs(gasCoreStyle - 1.0));
+        float gasCoreOxygen = 1.0 - step(0.5, abs(gasCoreStyle - 4.0));
+        float gasCoreNoble = 1.0 - step(0.5, abs(gasCoreStyle - 7.0));
+        float gasCoreSpecies = max(gasCoreSmoke, max(gasCoreOxygen, gasCoreNoble));
+        if (gasCoreSpecies > 0.5) {
+          float gasCoreBody = gasVfxBodySupport
+            * smoothstep(0.14, 0.50, cloudNeighbourMean)
+            * smoothstep(0.12, 0.42, atmosphereState.a);
+          float gasCorePositiveBillow = max(gasVfxBillow, 0.0);
+          float gasCoreNegativeBillow = max(-gasVfxBillow, 0.0);
+          vec3 gasCoreAbsorption = mix(
+            vec3(0.34, 0.43, 0.62), vec3(0.58, 0.34, 0.18), gasCoreOxygen
+          );
+          gasCoreAbsorption = mix(
+            gasCoreAbsorption, vec3(0.20, 0.62, 0.18), gasCoreNoble
+          );
+          vec3 gasCoreKeyTint = mix(
+            vec3(0.92, 0.72, 0.50), vec3(0.38, 0.76, 1.00), gasCoreOxygen
+          );
+          gasCoreKeyTint = mix(
+            gasCoreKeyTint, vec3(0.96, 0.46, 1.00), gasCoreNoble
+          );
+          float gasCoreAbsorptionAmount = gasCoreSpecies * gasCoreBody
+            * opticalDepth
+            * (0.090 + gasCoreNegativeBillow * 0.270 + gasPocket * 0.080);
+          color *= vec3(1.0) - gasCoreAbsorption * gasCoreAbsorptionAmount;
+          float gasCoreKey = gasCoreSpecies * gasCoreBody
+            * (gasCorePositiveBillow * 0.250 + gasCrown * 0.150
+              + max(gasDirectionalRelief, 0.0) * 0.100);
+          color += (vec3(1.10) - clamp(color, 0.0, 1.10))
+            * gasCoreKeyTint * gasCoreKey;
+        }
+      }
+
       // E07: the existing atmosphere-style plane carries density-weighted
       // momentum through the same separable blur as gas mass. Alternating
       // particle velocity cancels before presentation, while reconstructed
@@ -7485,15 +7532,22 @@ void main() {
       // still owns every contour, alpha, support, and material decision.
       float lowDetailShoulder = 1.0 - smoothstep(1.15, 2.25, detailEstimate);
       float lowDetailTaper = 1.0 - smoothstep(2.25, 4.0, detailEstimate);
-      // Four-times backing resolves the smooth coverage transition crisply,
-      // yet its final cell-frequency pigment still filters below the 2x body
-      // in a fit viewport. Recover that distinct high-normal-detail loss with
-      // a separate 4x band rather than raising the 1x shoulder or changing
-      // the already calibrated 2x body. The true 8x direct mesh does not run
-      // this normal compositor.
+      // Identify the distinct high-normal-detail band without changing the
+      // calibrated 1x/2x shoulders. The true 8x direct mesh does not run this
+      // normal compositor.
       float fourXMineralRecovery = smoothstep(2.75, 4.0, detailEstimate);
+      // A true 4x backing resolves the world-cell key itself, so the old full
+      // recovery turned a broad Smooth body into a regular checker at fit
+      // view. Smooth is itself the user's continuous-body presentation choice:
+      // calm its resolved cell key while retaining a small mineral response and
+      // the unscaled mesostrata. This changes pigment amplitude only, so thin
+      // columns, authored holes, and moving contours keep their exact geometry;
+      // Local, Grains, and true 8x retain their independent reference paths.
+      float fourXSmoothCalm = fourXMineralRecovery
+        * step(1.5, uPowderStyle) * stablePowderMineral;
       float lowDetailMineralGain = 1.0 + 0.85 * lowDetailTaper
-        + 1.05 * lowDetailShoulder + 0.90 * fourXMineralRecovery;
+        + 1.05 * lowDetailShoulder
+        + 0.90 * fourXMineralRecovery * (1.0 - 0.70 * fourXSmoothCalm);
       cellGrainRetention = mix(1.0, cellGrainRetention * lowDetailMineralGain,
         settledMineralRetention);
       // At fit view the low-detail recovery must leave a material readable, but
@@ -7532,9 +7586,15 @@ void main() {
       );
       float deepPowderChromaDamping = mix(1.0, 0.78, deepStoneBody);
       float facetRetention = mix(1.0, 1.20, settledMineralRetention);
+      // The same deep 4x proof attenuates only random cell/facet amplitude.
+      // Family mesostrata, radioactive identity, body depth, and the mean
+      // mineral albedo remain on their established paths.
+      float fourXMicroRetention = 1.0 - 0.45 * fourXSmoothCalm;
       float powderMineralFactor = 0.91
-        + grain * (0.20 + roughSurface * 0.05) * cellGrainRetention * facetGain
-        + grainFacet * (0.10 + roughSurface * 0.04) * facetRetention * facetGain;
+        + fourXMicroRetention * (
+          grain * (0.20 + roughSurface * 0.05) * cellGrainRetention * facetGain
+          + grainFacet * (0.10 + roughSurface * 0.04) * facetRetention * facetGain
+        );
       color *= mix(1.0, powderMineralFactor, powderContourTextureRetention);
       // A large, fully settled Smooth body should retain its mineral vocabulary
       // without reading as a dense cell-frequency pepper field at fit view.
@@ -8040,7 +8100,19 @@ void main() {
         sensorPanelCore = smoothstep(6.0 / 255.0, 42.0 / 255.0, solidOpticalDepth)
           * solidInterior;
       }
-      float circuitInteriorGain = mix(1.0, 0.26, sensorPanelCore);
+      // At 4x the eight-cell trace is fully resolved before the page fit and
+      // can overpower a thick instrument face. Retain the stable 24-cell
+      // bezel/glyph below while reducing only the repeated deep-panel lattice;
+      // edges, holes, thin wires, 1x/2x, and true 8x are unchanged.
+      float deviceDetailEstimate = min(
+        (gl_FragCoord.x + 0.5) / max(fieldPosition.x, 0.5),
+        (gl_FragCoord.y + 0.5) / max(fieldPosition.y, 0.5)
+      );
+      float fourXDeviceCalm = smoothstep(2.75, 4.0, deviceDetailEstimate)
+        * (material >= 164.0 && material <= 170.0 ? 1.0 : 0.0)
+        * sensorPanelCore;
+      float circuitInteriorGain = mix(1.0, 0.26, sensorPanelCore)
+        * mix(1.0, 0.38, fourXDeviceCalm);
       color *= 0.96 + trace * 0.025 * interiorMicroGain * circuitInteriorGain;
       color += mix(color, vec3(0.34, 0.76, 1.0), 0.58)
         * (trace * (0.12 + deviceSurface * 0.035) + node * (0.10 + deviceSurface * 0.045))
@@ -8941,7 +9013,11 @@ export class PixiFieldPresenter {
   private readonly chunks: DirtyChunkGrid;
   private readonly wallChunks: DirtyChunkGrid;
   private readonly boundaryDirtyMarker = {
-    markCell: (): void => { this.powderSurfaceDirty = true; },
+    markCell: (index: number): void => {
+      this.powderSurfaceDirty = true;
+      this.boundaryEvolutionPending = true;
+      this.chunks.markCell(index);
+    },
   };
   private readonly uniforms: UniformGroup;
   private webGLTimingEnabled = false;
@@ -8957,6 +9033,10 @@ export class PixiFieldPresenter {
   private webGLTimingDiscarded = 0;
   private webGLTimingSequence = 0;
   private powderSurfaceDirty = true;
+  /** Bounded follow-up cadence while a slow powder owner evolves 0 -> 255. */
+  private boundaryEvolutionPending = false;
+  /** Distinguishes real semantic/wall/state delivery from auxiliary-only settling. */
+  private semanticTextureMutationPending = true;
   private solidOpticalDepthDirty = true;
   private photonStateActive = false;
   private photonStateHydrated = false;
@@ -9139,6 +9219,11 @@ export class PixiFieldPresenter {
     // or parallel branch and retains its existing register/sample budget.
     const gasLightVfxEnabled = outputScale < 8
       && resolveGasLightVfxEnabled(renderLook);
+    // E15 is normal-WebGL RGB arithmetic over E04's existing atmosphere
+    // samples and identity state. Compact true-8x declares no selector or
+    // parallel branch and retains its proven fragment-register budget.
+    const gasCoreDepthVfxEnabled = outputScale < 8
+      && resolveGasCoreDepthVfxEnabled(renderLook);
     // E03 is a normal-detail experiment. The true-8x shader intentionally has
     // no corresponding uniform or arithmetic, so its public capability state
     // must not advertise an effect that cannot run on that path.
@@ -9166,6 +9251,7 @@ export class PixiFieldPresenter {
       uGasBodyVfx: { value: gasBodyVfxEnabled ? 1 : 0, type: 'f32' },
       uGasMotionVfx: { value: gasMotionVfxEnabled ? 1 : 0, type: 'f32' },
       uGasLightVfx: { value: gasLightVfxEnabled ? 1 : 0, type: 'f32' },
+      uGasCoreDepthVfx: { value: gasCoreDepthVfxEnabled ? 1 : 0, type: 'f32' },
       uLiquidBodyVfx: { value: liquidBodyVfxEnabled ? 1 : 0, type: 'f32' },
       uLiquidSolidMeniscusVfx: {
         value: liquidSolidMeniscusVfxEnabled ? outputScale : 0, type: 'f32',
@@ -9380,6 +9466,7 @@ export class PixiFieldPresenter {
       this.uniforms.uniforms.uGasBodyVfx = 0;
       this.uniforms.uniforms.uGasMotionVfx = 0;
       this.uniforms.uniforms.uGasLightVfx = 0;
+      this.uniforms.uniforms.uGasCoreDepthVfx = 0;
       this.uniforms.uniforms.uLiquidBodyVfx = 0;
       this.uniforms.uniforms.uLiquidSolidMeniscusVfx = 0;
       this.uniforms.uniforms.uPowderBodyVfx = 0;
@@ -9417,6 +9504,7 @@ export class PixiFieldPresenter {
             || new URLSearchParams(location.search).get('gasBodyVfxAudit') === '1'
             || new URLSearchParams(location.search).get('gasMotionVfxAudit') === '1'
             || new URLSearchParams(location.search).get('gasLightVfxAudit') === '1'
+            || new URLSearchParams(location.search).get('gasCoreDepthVfxAudit') === '1'
             || new URLSearchParams(location.search).get('liquidBodyVfxAudit') === '1'
             || new URLSearchParams(location.search).get('liquidSolidMeniscusVfxAudit') === '1'
             || new URLSearchParams(location.search).get('liquidSurfaceVfxAudit') === '1'
@@ -9457,6 +9545,9 @@ export class PixiFieldPresenter {
       ? 'active' : 'inactive';
     presenter.app.canvas.dataset.gasLightVfx = Number(presenter.uniforms.uniforms.uGasLightVfx) > 0.5
       ? 'active' : 'inactive';
+    presenter.app.canvas.dataset.gasCoreDepthVfx = Number(
+      presenter.uniforms.uniforms.uGasCoreDepthVfx
+    ) > 0.5 ? 'active' : 'inactive';
     presenter.app.canvas.dataset.liquidBodyVfx = Number(presenter.uniforms.uniforms.uLiquidBodyVfx) > 0.5
       ? 'active' : 'inactive';
     presenter.app.canvas.dataset.liquidSolidMeniscusVfx = Number(
@@ -9656,6 +9747,7 @@ export class PixiFieldPresenter {
 
   markDirty(index: number, nextMaterial: number): void {
     const previousMaterial = this.fieldBytes[index * 4];
+    this.semanticTextureMutationPending = true;
     this.chunks.markCell(index);
     this.fieldSet.markDirty(previousMaterial, nextMaterial, index);
     if (this.powderRelevant(previousMaterial) || this.powderRelevant(nextMaterial)
@@ -9668,6 +9760,7 @@ export class PixiFieldPresenter {
   }
 
   markWallDirty(index: number): void {
+    this.semanticTextureMutationPending = true;
     this.wallChunks.markCell(index);
     // E09 packs exact ordinary Powder/Solid contact into the existing normal-
     // scale stability byte. Revisit the same halo when an independent native
@@ -10243,6 +10336,8 @@ export class PixiFieldPresenter {
 
   visualRefreshDue(time: number): boolean {
     return this.fieldSet.due(time)
+      || (this.boundaryEvolutionPending
+        && time - this.lastPowderSurfaceRefresh >= POWDER_SURFACE_REFRESH_INTERVAL)
       || (this.powderSurfaceDirty
         && time - this.lastPowderSurfaceRefresh >= POWDER_SURFACE_REFRESH_INTERVAL)
       || (this.solidOpticalDepthDirty
@@ -10261,6 +10356,10 @@ export class PixiFieldPresenter {
     refreshDynamicFields: boolean,
   ): void {
     if (refreshDynamicFields) this.chunks.markAll();
+    const hasExternalPresentationMutation = this.semanticTextureMutationPending
+      || refreshDynamicFields;
+    this.semanticTextureMutationPending = false;
+    this.boundaryEvolutionPending = false;
     const rectangles = this.chunks.consume();
     let boundaryTextureDirty = false;
     const encodePowderSolidContact = this.outputScale < 8
@@ -10380,6 +10479,16 @@ export class PixiFieldPresenter {
     }
     if (boundaryTextureDirty) this.boundaryStabilitySource.update();
     this.uniforms.uniforms.uTime = visualTime * 0.001;
+    // A newly authored supported powder body needs several CPU stability
+    // passes before it reaches the established Smooth boundary. At true 8x,
+    // presenting every intermediate byte would serialize several 15-million-
+    // fragment frames because software WebGL may block JavaScript during draw
+    // submission. Deliver the real semantic mutation immediately, then
+    // coalesce auxiliary-only 0 -> 255 evolution until its final pass. New
+    // matter/wall/state delivery always interrupts this deferral, and 1x-4x
+    // retain their visible temporal settling cadence.
+    if (this.outputScale === 8 && this.boundaryEvolutionPending
+      && !hasExternalPresentationMutation) return;
     this.renderApplication();
   }
 
@@ -10814,6 +10923,7 @@ export class PixiFieldPresenter {
         this.uniforms.uniforms.uGasBodyVfx = 0;
         this.uniforms.uniforms.uGasMotionVfx = 0;
         this.uniforms.uniforms.uGasLightVfx = 0;
+        this.uniforms.uniforms.uGasCoreDepthVfx = 0;
         this.uniforms.uniforms.uLiquidBodyVfx = 0;
         this.uniforms.uniforms.uLiquidSolidMeniscusVfx = 0;
         this.uniforms.uniforms.uPowderBodyVfx = 0;
@@ -10828,6 +10938,7 @@ export class PixiFieldPresenter {
         this.app.canvas.dataset.gasBodyVfx = 'inactive';
         this.app.canvas.dataset.gasMotionVfx = 'inactive';
         this.app.canvas.dataset.gasLightVfx = 'inactive';
+        this.app.canvas.dataset.gasCoreDepthVfx = 'inactive';
         this.app.canvas.dataset.liquidBodyVfx = 'inactive';
         this.app.canvas.dataset.liquidSolidMeniscusVfx = 'inactive';
         this.app.canvas.dataset.liquidSurfaceVfx = 'inactive';

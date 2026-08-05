@@ -13,7 +13,7 @@ powder, solid, liquid, gas, energy, and contact scenes across Canvas and WebGL a
 mobile gestures, save/load, CI, and Pages deployment as protected regression
 contracts rather than the primary feature stream.
 
-The accepted visual experiment ladder now runs through E14. E12 is the
+The accepted visual experiment ladder now runs through E15. E12 is the
 species-safe Sand/Clay/Concrete wet-sediment checkpoint; preserve its exact
 aqueous owner/stability proof, split moving-powder/stationary-Water control,
 Local/Grains no-op, fine structures, authored gaps, Canvas fallback, and true
@@ -32,9 +32,22 @@ packed 1× categorical fallback, signed 2×/4× Hermite response, family spectra
 and `0.001` integer-grid snap. That snap fixes an actual one-sample-per-cell
 `floor()` ambiguity; do not remove or widen it without a full 1×/2×/4× topology
 and response rerun. Deep liquid, Solid interiors, air/unlike boundaries, foreign
-phases, walls, fine topology, Canvas, and true 8× remain controls. Before naming
-E15, rank the weakest remaining powder/liquid/gas/solid/energy region in a
-composed fit-view fixture and choose a bounded evidence-reusing experiment.
+phases, walls, fine topology, Canvas, and true 8× remain controls.
+
+E15 is the calibrated normal-WebGL-only gas-core optical-depth checkpoint,
+independently measurable with `?gasCoreDepthVfx=0|1` and subordinate to E04
+atmosphere ownership. Exact propagated Smoke, Oxygen, and Noble gas may reuse
+only the already-live atmosphere identity/density/cardinal shape, optical depth,
+and static billow evidence for a species-aware RGB crown/key and pocket
+absorption response. Add no resource, sample, field, pass, target, upload,
+allocation, clock, alpha/support/silhouette/ownership/topology, or physics
+decision. FOG, CFLM, sparse gas, contacts, walls, holes, channels, Canvas, and
+true 8× are exact controls. Validate the 1×/2×/4× off→on→off response and the
+requested-on true-8× inactive `scale-8` GPU-fence proof with
+`npm run audit:vfx:gas-core-depth`; do not declare or branch on E15 in
+`FIELD_EIGHT_X_FRAGMENT`. Before naming E16, rank the weakest remaining
+powder/liquid/gas/solid/energy region in a composed fit-view fixture and choose
+a bounded evidence-reusing experiment.
 
 WebGL is the canonical visual release path. Canvas 2D remains a resilient,
 camera-preserving semantic fallback: keep its loading, input, material/state,
@@ -118,7 +131,22 @@ A paused RenderLab opts out of continuous dynamic-field repacking. A stable
 PNG therefore does not prove settled-powder readiness: focused gates that need
 the temporal stability byte must explicitly invalidate and observe distinct
 presentation refreshes, then assert byte `255` at authoritative bulk probes
-before capture. Do not replace that condition with an arbitrary sleep.
+before capture. A newly authored supported powder owner may begin at byte `0`,
+so it must schedule bounded follow-up boundary passes even when its first byte
+remains `0`. Static/paused showcase captures must wait for deep auxiliary
+stability of at least `224`; that weaker observation does not replace a gate's
+required exact `255` proof. Keep boundary alpha continuous: per-cell rounded
+alpha creates a 4× lattice/checker artifact. Do not replace these conditions
+with an arbitrary sleep.
+
+True 8× must not serialize each intermediate powder-stability byte into its own
+15-million-fragment frame. Present the real semantic/wall/state mutation first,
+then coalesce auxiliary-only stability evolution latest-wins until the final
+settled pass. A new external mutation always interrupts that deferral. Protect
+this with `npm run audit:powder-mesostrata:4x` and
+`npm run audit:powder-mesostrata:8x`: both must retain authored holes, thin and
+unstable powder, wet/wall controls, Local, square Grains, RGB-only styling, and
+exact off→on→off samples.
 
 E06 is the accepted first dry-powder local-light layer, independently measurable
 with `?powderLightVfx=0|1`. Normal 1×–4× WebGL may reuse only the existing centre

@@ -185,11 +185,21 @@ does not alter simulation, camera, semantic ownership, or `renderScale`.
   surfaces, unlike-liquid seams, Lava, powder/gas contacts, strands/droplets,
   holes/channels and their liquid lips, traits, emission, native walls, blank
   space, Canvas, and true 8× remain controls.
+- **E15 — atmosphere-owned gas-core optical depth (accepted checkpoint):**
+  normal 1×–4× WebGL, subordinate to E04's connected atmosphere ownership,
+  gives exact Smoke, Oxygen, and Noble gas a calibrated RGB-only crown/key and
+  pocket-absorption response through `?gasCoreDepthVfx=0|1`. It reuses the live
+  atmosphere identity, density, cardinal shape, optical depth, and static
+  billow evidence and adds no resource, sample, pass, allocation, clock,
+  alpha/support/silhouette, ownership, topology, or physics decision. FOG,
+  CFLM, sparse gas, contacts, walls, holes, channels, Canvas, and true 8× are
+  exact controls; focused off/on/off and requested-on true-8× fence gates own
+  the release proof.
 - **Protected 8× rung:** `renderScale=8` deliberately reports
   `hdrPipeline=inactive` / `scale-8` and retains the proven direct single-mesh
   4896×3072 path. The experiment must earn a bounded 8× design rather than
   allocating a 115 MiB full-resolution float target beside that path.
-- **Current decision:** E01/E02/E03/E04/E05/E06/E07/E08/E09/E10/E11/E12/E13/E14 remain opt-in through the non-Classic looks
+- **Current decision:** E01/E02/E03/E04/E05/E06/E07/E08/E09/E10/E11/E12/E13/E14/E15 remain opt-in through the non-Classic looks
   until representative hardware timing and mobile thermal behavior are
   measured. E02 remains the safe family-wide baseline. E03 is accepted as the
   liquid-depth checkpoint: its fit-view crop is visibly more cohesive, retains
@@ -248,8 +258,12 @@ does not alter simulation, camera, semantic ownership, or `renderScale`.
   than hiding them with a weaker gate. Deep cores, Solid interiors, air and
   unlike-liquid boundaries, foreign phases, native walls, fine topology, and
   authored voids remain exact; freeze its classifier, snap epsilon, family
-  spectra, and amplitude until another fit-view review. These are not the
-  final material/VFX results.
+  spectra, and amplitude until another fit-view review. E15 is accepted as the
+  first atmosphere-owned gas-core optical-depth checkpoint: Smoke, Oxygen, and
+  Noble gas receive distinct restrained crown/key and pocket absorption while
+  FOG, CFLM, sparse carriers, contacts, walls, holes, and channels remain
+  exact. Freeze its per-species spectra and billow/optical-depth gates until
+  another fit-view review. These are not the final material/VFX results.
   Sub-1.0 material colour stays on the established response; tonemapping owns
   only real HDR highlights so powder texture and liquid body contrast are not
   washed out.
@@ -309,6 +323,22 @@ requires exact settled byte `255`; identical screenshots alone are not a
 settling condition.
 Pass `--render-scale=1`, `2`, or `4` to tune one scale; true 8× rejects E05 and
 retains its protected direct shader.
+
+The 4× powder warm-up regression is protected separately: a newly authored,
+supported powder owner may begin with stability byte `0`, so it must schedule
+bounded follow-up boundary passes even if its first byte remains `0`. A
+static/paused showcase waits for a deep auxiliary stability probe of at least
+`224` before capture; that does not replace the focused gate's exact `255`
+proof. Keep the boundary alpha continuous—per-cell rounded alpha produces a
+4× lattice/checker artifact.
+
+At true 8×, do not present every intermediate stability byte as a separate
+15-million-fragment frame. The presenter delivers the real semantic/wall/state
+mutation, coalesces only auxiliary follow-up passes, and submits the final
+settled texture latest-wins; a later external mutation always interrupts the
+deferral. `npm run audit:powder-mesostrata:4x` and
+`npm run audit:powder-mesostrata:8x` own the corresponding exact hole, thin,
+unstable, wet/wall, Local, square-Grains, RGB-only, and off→on→off proofs.
 
 Run `npm run audit:vfx:powder-light` for E06. It keeps E02 and E05 enabled as
 the fixed body baseline, pins E10 and E11 off, then reloads
@@ -466,17 +496,27 @@ navigation proves E14/E03/HDR inactive with reason `scale-8`, no bloom target,
 exact 4896×3072 WebGL, zero browser errors, and a completed GPU fence (about
 `5.2 s` in the final SwiftShader gate).
 
-**Next visual experiments:** E03–E14 now provide accepted liquid body/surface,
+Run `npm run audit:vfx:gas-core-depth` for E15. It reloads
+`gasCoreDepthVfx=0 → 1 → 0` at 1×/2×/4× while retaining E04 atmosphere
+ownership, and proves the calibrated species-aware Smoke/Oxygen/Noble
+crown/key and pocket response is RGB-only. FOG, CFLM, sparse gas, foreign
+contacts, native walls, holes, channels, semantics, raw alpha, and support are
+exact controls; repeated-off frames are byte exact. The requested-on true-8×
+navigation reports E15 inactive with reason `scale-8`, retains the direct
+4896×3072 WebGL path without bloom backing, and completes its GPU fence.
+
+**Next visual experiments:** E03–E15 now provide accepted liquid body/surface,
 stable-gas, coherent-gas-motion, powder-depth, and powder-local-light
 checkpoints plus exact resting contact grounding, Glass/Ice transmission, and
-state-aware Wax/PLNT subsurface response, composed wet-mineral optics, and
-atmosphere-owned external-light spectra and exact liquid-side wet contacts.
-Before naming E15, use one composed fit-view fixture to rank the remaining flat
+state-aware Wax/PLNT subsurface response, composed wet-mineral optics,
+atmosphere-owned external-light spectra, exact liquid-side wet contacts, and
+species-aware gas-core optical depth. Before naming E16, use one composed
+fit-view fixture to rank the remaining flat
 or visually discontinuous powder, liquid, gas, solid, energy, and cross-contact
 regions. Prefer the smallest arithmetic-only candidate that improves the
 weakest family with already-live topology and light evidence. Do not stack a
 new isolated tint merely to continue the experiment number; preserve the E14
-1× stencil snap and all E01–E14 selectors/controls while surveying.
+1× stencil snap and all E01–E15 selectors/controls while surveying.
 
 ## Phase 1 — HDR pipeline & lighting core (biggest visual payoff)
 

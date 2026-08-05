@@ -218,6 +218,12 @@ describe('Pixi presenter startup configuration', () => {
       "    // The atmosphere's existing cardinal field samples", gasLightVfxBranchStart,
     );
     const gasLightVfx = gas.slice(gasLightVfxBranchStart, gasLightVfxEnd);
+    const gasCoreDepthVfxStart = gas.indexOf('      // E15:');
+    const gasCoreDepthVfxBranchStart = gas.indexOf(
+      '      if (uGasCoreDepthVfx > 0.5', gasCoreDepthVfxStart,
+    );
+    const gasCoreDepthVfxEnd = gas.indexOf('      // E07:', gasCoreDepthVfxBranchStart);
+    const gasCoreDepthVfx = gas.slice(gasCoreDepthVfxBranchStart, gasCoreDepthVfxEnd);
     const liquidVfxStart = liquid.indexOf('        if (uLiquidBodyVfx > 0.5');
     const liquidVfxEnd = liquid.indexOf('    // E14:', liquidVfxStart);
     const liquidSolidMeniscusVfxStart = liquid.indexOf('    // E14:', liquidVfxEnd);
@@ -300,6 +306,7 @@ describe('Pixi presenter startup configuration', () => {
     expect(normal).toContain('uniform float uGasBodyVfx;');
     expect(normal).toContain('uniform float uGasMotionVfx;');
     expect(normal).toContain('uniform float uGasLightVfx;');
+    expect(normal).toContain('uniform float uGasCoreDepthVfx;');
     expect(normal).toContain('uniform float uLiquidBodyVfx;');
     expect(normal).toContain('uniform float uLiquidSolidMeniscusVfx;');
     expect(normal).toContain('uniform float uPowderBodyVfx;');
@@ -314,6 +321,9 @@ describe('Pixi presenter startup configuration', () => {
     expect(eight).not.toContain('uGasLightVfx');
     expect(eight).not.toContain('gasLightVfx');
     expect(canvasSource).not.toContain('gasLightVfx');
+    expect(eight).not.toContain('uGasCoreDepthVfx');
+    expect(eight).not.toContain('gasCoreDepthVfx');
+    expect(canvasSource).not.toContain('gasCoreDepthVfx');
     expect(eight).not.toContain('uLiquidBodyVfx');
     expect(eight).not.toContain('uLiquidSolidMeniscusVfx');
     expect(eight).not.toContain('liquidSolidMeniscusVfx');
@@ -376,6 +386,32 @@ describe('Pixi presenter startup configuration', () => {
     expect(gasLightVfx).not.toContain('uTime');
     expect(gasLightVfx).not.toContain('gl_FragCoord');
     expect(gasLightVfx).not.toMatch(/\balpha\s*[+*]?=/);
+
+    // E15 is a species-aware RGB grade over E04's already-live body values.
+    // It cannot sample, animate, widen support, or leak into the compact 8x or
+    // Canvas paths. Exact style guards keep foreign/emissive gases unchanged.
+    expect(gasCoreDepthVfxStart).toBeGreaterThanOrEqual(0);
+    expect(gasCoreDepthVfxBranchStart).toBeGreaterThan(gasCoreDepthVfxStart);
+    expect(gasCoreDepthVfxEnd).toBeGreaterThan(gasCoreDepthVfxBranchStart);
+    expect(gasCoreDepthVfx).toContain('uGasIdentityStyling > 0.5');
+    expect(gasCoreDepthVfx).toContain('wall < 0.5');
+    expect(gasCoreDepthVfx).toContain('!materialEmissive');
+    expect(gasCoreDepthVfx).toContain('gasCoreStyle - 1.0');
+    expect(gasCoreDepthVfx).toContain('gasCoreStyle - 4.0');
+    expect(gasCoreDepthVfx).toContain('gasCoreStyle - 7.0');
+    expect(gasCoreDepthVfx).toContain('gasVfxBodySupport');
+    expect(gasCoreDepthVfx).toContain('cloudNeighbourMean');
+    expect(gasCoreDepthVfx).toContain('atmosphereState.a');
+    expect(gasCoreDepthVfx).toContain('gasVfxBillow');
+    expect(gas).toContain('sin(dot(fieldPosition, vec2(0.055, 0.031)) + 0.80)');
+    expect(gas).toContain('sin(dot(fieldPosition, vec2(-0.029, 0.081)) + 2.15)');
+    expect(gas).toContain('sin(dot(fieldPosition, vec2(0.097, -0.043)) + 4.05)');
+    expect(gas).toContain('gasVfxWaveA * 0.50 + gasVfxWaveB * 0.31 + gasVfxWaveC * 0.19');
+    expect(gasCoreDepthVfx).toContain('opticalDepth');
+    expect(gasCoreDepthVfx).not.toContain('texture(');
+    expect(gasCoreDepthVfx).not.toContain('uTime');
+    expect(gasCoreDepthVfx).not.toContain('gl_FragCoord');
+    expect(gasCoreDepthVfx).not.toMatch(/\balpha\s*[+*]?=/);
     expect(gasVfx).toContain('* max(-gasMotionTone, 0.0) * (gasMotionShadowBytes / 255.0)');
     expect(gasVfx).toContain('gasMotionSpeedBytes > 0.5');
     expect(gasVfx.indexOf('if (uGasMotionVfx > 0.5)'))
@@ -614,6 +650,7 @@ describe('Pixi presenter startup configuration', () => {
     expect(source.match(/this\.uniforms\.uniforms\.uGasBodyVfx = 0;/g)).toHaveLength(2);
     expect(source.match(/this\.uniforms\.uniforms\.uGasMotionVfx = 0;/g)).toHaveLength(2);
     expect(source.match(/this\.uniforms\.uniforms\.uGasLightVfx = 0;/g)).toHaveLength(2);
+    expect(source.match(/this\.uniforms\.uniforms\.uGasCoreDepthVfx = 0;/g)).toHaveLength(2);
     expect(source.match(/this\.uniforms\.uniforms\.uLiquidBodyVfx = 0;/g)).toHaveLength(2);
     expect(source.match(/this\.uniforms\.uniforms\.uLiquidSolidMeniscusVfx = 0;/g)).toHaveLength(2);
     expect(source.match(/this\.uniforms\.uniforms\.uPowderBodyVfx = 0;/g)).toHaveLength(2);
@@ -626,6 +663,7 @@ describe('Pixi presenter startup configuration', () => {
     expect(source).toContain("get('gasBodyVfxAudit') === '1'");
     expect(source).toContain("get('gasMotionVfxAudit') === '1'");
     expect(source).toContain("get('gasLightVfxAudit') === '1'");
+    expect(source).toContain("get('gasCoreDepthVfxAudit') === '1'");
     expect(source).toContain("get('liquidBodyVfxAudit') === '1'");
     expect(source).toContain("get('liquidSolidMeniscusVfxAudit') === '1'");
     expect(source).toContain("get('powderBodyVfxAudit') === '1'");
@@ -638,6 +676,9 @@ describe('Pixi presenter startup configuration', () => {
     expect(source).toContain('const gasMotionVfxEnabled = outputScale < 8');
     expect(source).toMatch(
       /const gasLightVfxEnabled = outputScale < 8\s*&& resolveGasLightVfxEnabled\(renderLook\);/,
+    );
+    expect(source).toMatch(
+      /const gasCoreDepthVfxEnabled = outputScale < 8\s*&& resolveGasCoreDepthVfxEnabled\(renderLook\);/,
     );
     expect(source).toContain('const liquidBodyVfxEnabled = outputScale < 8');
     expect(source).toMatch(
@@ -667,6 +708,8 @@ describe('Pixi presenter startup configuration', () => {
     expect(source).toContain("this.app.canvas.dataset.wetSedimentVfx = 'inactive';");
     expect(source).toContain('presenter.app.canvas.dataset.gasLightVfx');
     expect(source).toContain("this.app.canvas.dataset.gasLightVfx = 'inactive';");
+    expect(source).toContain('presenter.app.canvas.dataset.gasCoreDepthVfx');
+    expect(source).toContain("this.app.canvas.dataset.gasCoreDepthVfx = 'inactive';");
     expect(source).toContain('presenter.app.canvas.dataset.liquidSolidMeniscusVfx');
     expect(source).toContain("this.app.canvas.dataset.liquidSolidMeniscusVfx = 'inactive';");
     const preserveDrawingBufferStart = source.indexOf('preserveDrawingBuffer:');
@@ -679,6 +722,7 @@ describe('Pixi presenter startup configuration', () => {
     expect(preserveDrawingBuffer).toContain("get('organicSubsurfaceVfxAudit') === '1'");
     expect(preserveDrawingBuffer).toContain("get('wetSedimentVfxAudit') === '1'");
     expect(preserveDrawingBuffer).toContain("get('gasLightVfxAudit') === '1'");
+    expect(preserveDrawingBuffer).toContain("get('gasCoreDepthVfxAudit') === '1'");
     expect(preserveDrawingBuffer).toContain("get('liquidSolidMeniscusVfxAudit') === '1'");
   });
 
@@ -3185,8 +3229,10 @@ describe('Pixi presenter startup configuration', () => {
     expect(source).toContain('float lowDetailShoulder = 1.0 - smoothstep(1.15, 2.25, detailEstimate);');
     expect(source).toContain('float lowDetailTaper = 1.0 - smoothstep(2.25, 4.0, detailEstimate);');
     expect(source).toContain('float fourXMineralRecovery = smoothstep(2.75, 4.0, detailEstimate);');
+    expect(source).toContain('float fourXSmoothCalm = fourXMineralRecovery');
+    expect(source).toContain('* step(1.5, uPowderStyle) * stablePowderMineral;');
     expect(source).toContain('float lowDetailMineralGain = 1.0 + 0.85 * lowDetailTaper');
-    expect(source).toContain('+ 1.05 * lowDetailShoulder + 0.90 * fourXMineralRecovery;');
+    expect(source).toContain('+ 0.90 * fourXMineralRecovery * (1.0 - 0.70 * fourXSmoothCalm);');
     expect(source).toContain('mix(1.0, 1.20, settledMineralRetention)');
     expect(source).toContain('float broadPowderPigmentDamping = 1.0 - smoothstep(');
     expect(source).toContain('0.72, 0.98, powderVisualCohesion');
@@ -3201,6 +3247,8 @@ describe('Pixi presenter startup configuration', () => {
     expect(source).toContain('min(cellGrainRetention, 1.20), settledPowderColorCalm * 0.85');
     expect(source).toContain('powderBodyBase, settledPowderColorCalm * commonEarthenPowder * 0.42');
     expect(source).toContain('float deepPowderChromaDamping = mix(1.0, 0.78, deepStoneBody);');
+    expect(source).toContain('float fourXMicroRetention = 1.0 - 0.45 * fourXSmoothCalm;');
+    expect(source).toContain('+ fourXMicroRetention * (');
     expect(source).toContain('color += base * grain * vec3(0.178, 0.044, -0.112)');
     expect(source).toContain('* stablePowderMineral * lowDetailMineralGain * powderContourTextureRetention');
     expect(source).toContain('* broadPowderPigmentDamping * deepPowderChromaDamping;');
@@ -3216,6 +3264,36 @@ describe('Pixi presenter startup configuration', () => {
     expect(source).toContain('float sandInteriorPigment = (powderGrain * 0.365 + powderFacet * 0.285)');
     expect(source).toContain('if (family == 4.0 && uPowderStyle > 1.5 && powderFieldBlend > 0.001)');
     expect(source).toContain('density = smoothstep(0.04, 0.96, density);');
+  });
+
+  it('coalesces only auxiliary powder settling between true-8x semantic frames', () => {
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    expect(source).toContain('private semanticTextureMutationPending = true;');
+    expect(source).toContain('this.semanticTextureMutationPending = true;\n    this.chunks.markCell(index);');
+    expect(source).toContain('const hasExternalPresentationMutation = this.semanticTextureMutationPending');
+    expect(source).toContain('this.semanticTextureMutationPending = false;');
+    expect(source).toContain('if (this.outputScale === 8 && this.boundaryEvolutionPending');
+    expect(source).toContain('&& !hasExternalPresentationMutation) return;');
+  });
+
+  it('calms only deep 4x sensor lattices while preserving the separate glyph and true-8x path', () => {
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');
+    const normalStart = source.indexOf('const FIELD_FRAGMENT = `', eightStart);
+    const eight = source.slice(eightStart, normalStart);
+    const normal = source.slice(normalStart);
+    const deviceStart = normal.indexOf('} else if (deviceSurface > 0.5');
+    const deviceEnd = normal.indexOf('} else if (organicSurface > 0.5', deviceStart);
+    const device = normal.slice(deviceStart, deviceEnd);
+
+    expect(device).toContain('float fourXDeviceCalm = smoothstep(2.75, 4.0, deviceDetailEstimate)');
+    expect(device).toContain('* (material >= 164.0 && material <= 170.0 ? 1.0 : 0.0)');
+    expect(device).toContain('* sensorPanelCore;');
+    expect(device).toContain('* mix(1.0, 0.38, fourXDeviceCalm);');
+    expect(device).toContain('vec2 sensorTile = fract(fieldPosition / 24.0) - 0.5;');
+    expect(device).toContain('sensorGlyph');
+    expect(eight).not.toContain('fourXDeviceCalm');
+    expect(eight).not.toContain('fourXSmoothCalm');
   });
 
   it('lets settled mixed powders share only their broad Smooth exterior proof', () => {
@@ -4178,7 +4256,8 @@ describe('Pixi presenter startup configuration', () => {
     expect(source).toContain('uniform float uSensorMaterialStyling;');
     expect(source).toContain('float sensorPanelCore = 0.0;');
     expect(source).toContain('solidOpticalDepth > 6.0 / 255.0 && solidInterior > 0.001');
-    expect(source).toContain('float circuitInteriorGain = mix(1.0, 0.26, sensorPanelCore);');
+    expect(source).toContain('float circuitInteriorGain = mix(1.0, 0.26, sensorPanelCore)');
+    expect(source).toContain('* mix(1.0, 0.38, fourXDeviceCalm);');
     expect(source).toContain('* interiorMicroGain * circuitInteriorGain;');
     expect(sensorBlock).toContain('uSensorMaterialStyling > 0.5 && material >= 164.0 && material <= 170.0');
     expect(sensorBlock).toContain('fieldPosition / 24.0');

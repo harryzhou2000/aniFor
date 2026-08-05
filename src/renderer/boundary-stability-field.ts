@@ -61,6 +61,13 @@ export function updateBoundaryStabilityRect(
 
     const support = compatiblePowderSupport(materials, styleBytes, fieldWidth, fieldHeight, x, y);
     const sameOwner = previousMaterials[index] === material;
+    // A freshly authored slow powder cell intentionally spends its first pass
+    // at zero so an owner change cannot inherit stale stability. Its byte has
+    // not changed yet, but the caller still needs one bounded follow-up pass to
+    // begin temporal settling; otherwise a paused/static scene remains round
+    // grains forever after this owner hand-off.
+    const needsOwnerSettlePass = support >= POWDER_SETTLE_SUPPORT
+      && velocities !== undefined && !sameOwner;
     // Byte 254 is reserved for this Powder-only marker. Always restore the
     // logical settled value before evolution so disabling E09 clears it without
     // a second state plane; Liquid/Solid bytes returned above remain untouched.
@@ -86,7 +93,7 @@ export function updateBoundaryStabilityRect(
         materials, walls, styleBytes, fieldWidth, fieldHeight, x, y,
       )
       ? POWDER_SOLID_CONTACT_STABILITY : stability;
-    if (target[index] !== packedStability) dirty?.markCell(index);
+    if (target[index] !== packedStability || needsOwnerSettlePass) dirty?.markCell(index);
     target[index] = packedStability;
     previousMaterials[index] = material;
   }

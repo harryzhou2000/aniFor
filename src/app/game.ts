@@ -31,6 +31,9 @@ import {
   GAS_LIGHT_VFX_AUDIT, prepareGasLightVfxFixture,
 } from './gas-light-vfx-audit';
 import {
+  GAS_CORE_DEPTH_VFX_AUDIT, prepareGasCoreDepthVfxFixture,
+} from './gas-core-depth-vfx-audit';
+import {
   LIQUID_SOLID_MENISCUS_VFX_AUDIT, prepareLiquidSolidMeniscusVfxFixture,
 } from './liquid-solid-meniscus-vfx-audit';
 import { navigateToRenderScale } from './render-scale-navigation';
@@ -698,6 +701,12 @@ export class Game {
       gasLightVfxFixture: () => GAS_LIGHT_VFX_AUDIT,
       prepareGasLightVfxFixture: () => {
         prepareGasLightVfxFixture(this.simulation);
+        this.renderer.synchronizeFixtureMaterialPlane();
+        this.renderer.invalidateDynamicPresentation();
+      },
+      gasCoreDepthVfxFixture: () => GAS_CORE_DEPTH_VFX_AUDIT,
+      prepareGasCoreDepthVfxFixture: () => {
+        prepareGasCoreDepthVfxFixture(this.simulation);
         this.renderer.synchronizeFixtureMaterialPlane();
         this.renderer.invalidateDynamicPresentation();
       },

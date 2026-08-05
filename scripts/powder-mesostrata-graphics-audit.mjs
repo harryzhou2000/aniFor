@@ -30,7 +30,10 @@ export async function auditPowderMesostrataGraphics({
       await captureSettledPage(cdp, label, 450);
       return captureSettledPage(cdp, `${label} confirmed presentation`, 0);
     }
-    : (label) => waitForStablePageCapture(cdp, label);
+    // A cold 4x normal-WebGL frame can need longer than the generic eight
+    // seconds to reach exact consecutive PNG equality under SwiftShader. Keep
+    // the same stability proof and extend only its bounded deadline.
+    : (label) => waitForStablePageCapture(cdp, label, outputScale === 4 ? 30_000 : undefined);
   const dpr = await evaluate(cdp, 'window.devicePixelRatio');
   assert(dpr === 1, `Powder mesostrata gate requires WebGL DPR 1 (received ${dpr})`);
   await settle('WebGL initial powder-mesostrata framebuffer');

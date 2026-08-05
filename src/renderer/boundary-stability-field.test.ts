@@ -185,6 +185,33 @@ describe('boundary stability field', () => {
     expect(target[1 * WIDTH + 1]).toBe(0);
   });
 
+  it('queues one follow-up settle pass when a supported powder owner first arrives at byte zero', () => {
+    const materials = new Uint8Array([
+      0, 1, 0,
+      1, 2, 1,
+      0, 1, 0,
+    ]);
+    const previous = new Uint8Array(materials.length);
+    const target = new Uint8Array(materials.length);
+    const dirty = new Set<number>();
+    const center = 1 * WIDTH + 1;
+
+    updateBoundaryStabilityRect(
+      target, previous, materials, new Int8Array(materials.length * 2), styles(), WIDTH,
+      FULL_RECT, { markCell: (index) => dirty.add(index) },
+    );
+    expect(target[center]).toBe(0);
+    expect(dirty).toContain(center);
+
+    dirty.clear();
+    updateBoundaryStabilityRect(
+      target, previous, materials, new Int8Array(materials.length * 2), styles(), WIDTH,
+      FULL_RECT, { markCell: (index) => dirty.add(index) },
+    );
+    expect(target[center]).toBe(BOUNDARY_STABILITY_STEP);
+    expect(dirty).toContain(center);
+  });
+
   it('preserves same-owner liquid depth and clears a changed liquid owner', () => {
     const materials = new Uint8Array([
       0, 0, 0,

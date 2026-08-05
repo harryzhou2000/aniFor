@@ -69,6 +69,7 @@ import type {
   GasMotionVfxAuditSnapshot, GasMotionVfxFixtureMode,
 } from './gas-motion-vfx-audit';
 import type { GasLightVfxAuditSnapshot } from './gas-light-vfx-audit';
+import type { GasCoreDepthVfxAuditSnapshot } from './gas-core-depth-vfx-audit';
 import type { LiquidSolidMeniscusVfxAuditSnapshot } from './liquid-solid-meniscus-vfx-audit';
 import type { WetSedimentVfxAuditSnapshot } from './wet-sediment-vfx-audit';
 
@@ -182,6 +183,8 @@ export interface BrowserInputAuditApi {
   prepareGasMotionVfxFixture(mode: GasMotionVfxFixtureMode): void;
   gasLightVfxFixture(): GasLightVfxAuditSnapshot;
   prepareGasLightVfxFixture(): void;
+  gasCoreDepthVfxFixture(): GasCoreDepthVfxAuditSnapshot;
+  prepareGasCoreDepthVfxFixture(): void;
   liquidSolidMeniscusVfxFixture(): LiquidSolidMeniscusVfxAuditSnapshot;
   prepareLiquidSolidMeniscusVfxFixture(): void;
   prepareContourStressFixture(): void;

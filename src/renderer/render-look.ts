@@ -137,6 +137,23 @@ export function resolveGasLightVfxEnabled(
 }
 
 /**
+ * Adds species-aware optical depth inside E04's already-connected gas body.
+ * The normal WebGL presenter reuses its propagated atmosphere identity,
+ * density, cardinal slope, and static billow basis; this selector therefore
+ * changes RGB only and cannot enable itself without the stable gas baseline.
+ */
+export function resolveGasCoreDepthVfxEnabled(
+  look: RenderLook,
+  search = globalThis.location?.search ?? '',
+): boolean {
+  if (!resolveGasBodyVfxEnabled(look, search)) return false;
+  const requested = new URLSearchParams(search).get('gasCoreDepthVfx');
+  if (requested === '0' || requested === 'off') return false;
+  if (requested === '1' || requested === 'on') return true;
+  return true;
+}
+
+/**
  * Keeps the settled-powder crown experiment independently measurable without
  * changing liquid or gas. Ordinary realistic/neon presets retain the broad
  * volume default; the explicit query is reserved for comparison captures and
