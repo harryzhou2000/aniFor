@@ -183,11 +183,17 @@ const organicSubsurfaceVfxOnly = process.argv.includes('--organic-subsurface-vfx
 if (organicSubsurfaceVfxOnly && (modes.length !== 1 || modes[0] !== 'webgl')) {
   throw new Error('--organic-subsurface-vfx-only requires --webgl-only');
 }
+// E12 keeps the existing half-resolution aqueous suspension field, changing
+// only normal-detail WebGL RGB after its field proof has been established.
+const wetSedimentVfxOnly = process.argv.includes('--wet-sediment-vfx-only');
+if (wetSedimentVfxOnly && (modes.length !== 1 || modes[0] !== 'webgl')) {
+  throw new Error('--wet-sediment-vfx-only requires --webgl-only');
+}
 if ([hdrVfxOnly, volumeVfxOnly, liquidBodyVfxOnly, liquidSurfaceVfxOnly, gasBodyVfxOnly,
   gasMotionVfxOnly, powderBodyVfxOnly, powderLightVfxOnly, powderSolidContactVfxOnly,
-  translucentEdgeVfxOnly, organicSubsurfaceVfxOnly]
+  translucentEdgeVfxOnly, organicSubsurfaceVfxOnly, wetSedimentVfxOnly]
   .filter(Boolean).length > 1) {
-  throw new Error('HDR/volume/liquid-body/liquid-surface/gas-body/gas-motion/powder-body/powder-light/powder-solid-contact/translucent-edge/organic-subsurface focused audits are mutually exclusive');
+  throw new Error('HDR/volume/liquid-body/liquid-surface/gas-body/gas-motion/powder-body/powder-light/powder-solid-contact/translucent-edge/organic-subsurface/wet-sediment focused audits are mutually exclusive');
 }
 const layoutOnly = process.argv.includes('--layout-only');
 const visualScaleMatrixNormalOnly = process.argv.includes('--visual-scale-matrix-normal-only');
@@ -271,7 +277,7 @@ const liveScaleOnly = process.argv.includes('--live-scale-only');
 const productionBundle = process.argv.includes('--production-bundle');
 const usesProductionBundle = productionBundle || showcaseScreenshotOnly || hdrVfxOnly || volumeVfxOnly
   || liquidBodyVfxOnly || liquidSurfaceVfxOnly || gasBodyVfxOnly || gasMotionVfxOnly
-  || powderBodyVfxOnly || powderLightVfxOnly || powderSolidContactVfxOnly || translucentEdgeVfxOnly || organicSubsurfaceVfxOnly || cellularGraphicsOnly || sensorGraphicsOnly
+  || powderBodyVfxOnly || powderLightVfxOnly || powderSolidContactVfxOnly || translucentEdgeVfxOnly || organicSubsurfaceVfxOnly || wetSedimentVfxOnly || cellularGraphicsOnly || sensorGraphicsOnly
   || unusualPowderGraphicsOnly || earthenPowderGraphicsOnly || explosivePowderGraphicsOnly || unusualSolidGraphicsOnly
   || deviceIdentityGraphicsOnly
   || fieldProfileGraphicsOnly
@@ -320,6 +326,8 @@ const translucentEdgeVfxArgument = process.argv.find((argument) => argument.star
   ?.slice('--translucent-edge-vfx='.length);
 const organicSubsurfaceVfxArgument = process.argv.find((argument) => argument.startsWith('--organic-subsurface-vfx='))
   ?.slice('--organic-subsurface-vfx='.length);
+const wetSedimentVfxArgument = process.argv.find((argument) => argument.startsWith('--wet-sediment-vfx='))
+  ?.slice('--wet-sediment-vfx='.length);
 const requireHdrPipeline = process.argv.includes('--require-hdr-pipeline');
 const renderScaleArgument = process.argv.find((argument) => argument.startsWith('--render-scale='))
   ?.slice('--render-scale='.length);
@@ -354,6 +362,9 @@ if (translucentEdgeVfxArgument !== undefined && !['0', '1', 'off', 'on'].include
 }
 if (organicSubsurfaceVfxArgument !== undefined && !['0', '1', 'off', 'on'].includes(organicSubsurfaceVfxArgument)) {
   throw new Error('--organic-subsurface-vfx must be 0, 1, off, or on');
+}
+if (wetSedimentVfxArgument !== undefined && !['0', '1', 'off', 'on'].includes(wetSedimentVfxArgument)) {
+  throw new Error('--wet-sediment-vfx must be 0, 1, off, or on');
 }
 if (volumeVfxOnly && volumeVfxArgument !== undefined) {
   throw new Error('--volume-vfx-only owns its off -> on -> off sequence; omit --volume-vfx');
@@ -466,19 +477,33 @@ if (powderSolidContactVfxOnly && (volumeVfxArgument !== undefined || liquidBodyV
 if (translucentEdgeVfxOnly && (volumeVfxArgument !== undefined || liquidBodyVfxArgument !== undefined
   || liquidSurfaceVfxArgument !== undefined || gasBodyVfxArgument !== undefined || gasMotionVfxArgument !== undefined
   || powderBodyVfxArgument !== undefined || powderLightVfxArgument !== undefined
-  || translucentEdgeVfxArgument !== undefined || organicSubsurfaceVfxArgument !== undefined)) {
+  || translucentEdgeVfxArgument !== undefined || organicSubsurfaceVfxArgument !== undefined
+  || wetSedimentVfxArgument !== undefined)) {
   throw new Error('--translucent-edge-vfx-only pins all VFX selectors and owns its off -> on -> off sequence; omit overrides');
 }
 if (organicSubsurfaceVfxOnly && (volumeVfxArgument !== undefined || liquidBodyVfxArgument !== undefined
   || liquidSurfaceVfxArgument !== undefined || gasBodyVfxArgument !== undefined || gasMotionVfxArgument !== undefined
   || powderBodyVfxArgument !== undefined || powderLightVfxArgument !== undefined
-  || translucentEdgeVfxArgument !== undefined || organicSubsurfaceVfxArgument !== undefined)) {
+  || translucentEdgeVfxArgument !== undefined || organicSubsurfaceVfxArgument !== undefined
+  || wetSedimentVfxArgument !== undefined)) {
   throw new Error('--organic-subsurface-vfx-only pins all VFX selectors and owns its off -> on -> off sequence; omit overrides');
+}
+if ((hdrVfxOnly || volumeVfxOnly || liquidBodyVfxOnly || liquidSurfaceVfxOnly || gasBodyVfxOnly
+  || gasMotionVfxOnly || powderBodyVfxOnly || powderLightVfxOnly || powderSolidContactVfxOnly
+  || translucentEdgeVfxOnly || organicSubsurfaceVfxOnly) && wetSedimentVfxArgument !== undefined) {
+  throw new Error('E01-E11 focused audits pin wetSedimentVfx=0; omit --wet-sediment-vfx');
 }
 if ((hdrVfxOnly || volumeVfxOnly || liquidBodyVfxOnly || liquidSurfaceVfxOnly || gasBodyVfxOnly
   || gasMotionVfxOnly || powderBodyVfxOnly || powderLightVfxOnly || powderSolidContactVfxOnly
   || translucentEdgeVfxOnly) && organicSubsurfaceVfxArgument !== undefined) {
   throw new Error('E01-E10 focused audits pin organicSubsurfaceVfx=0; omit --organic-subsurface-vfx');
+}
+if (wetSedimentVfxOnly && (volumeVfxArgument !== undefined || liquidBodyVfxArgument !== undefined
+  || liquidSurfaceVfxArgument !== undefined || gasBodyVfxArgument !== undefined || gasMotionVfxArgument !== undefined
+  || powderBodyVfxArgument !== undefined || powderLightVfxArgument !== undefined
+  || translucentEdgeVfxArgument !== undefined
+  || organicSubsurfaceVfxArgument !== undefined || wetSedimentVfxArgument !== undefined)) {
+  throw new Error('--wet-sediment-vfx-only pins all VFX selectors and owns its off -> on -> off sequence; omit overrides');
 }
 if (renderScaleArgument !== undefined && !['1', '2', '4', '8'].includes(renderScaleArgument)) {
   throw new Error('--render-scale must be 1, 2, 4, or 8');
@@ -506,6 +531,9 @@ if (translucentEdgeVfxOnly && renderScaleArgument === '8') {
 }
 if (organicSubsurfaceVfxOnly && renderScaleArgument === '8') {
   throw new Error('--organic-subsurface-vfx-only is a normal-detail 1x/2x/4x experiment');
+}
+if (wetSedimentVfxOnly && renderScaleArgument === '8') {
+  throw new Error('--wet-sediment-vfx-only is a normal-detail 1x/2x/4x experiment');
 }
 const captureDpr = captureDprArgument === undefined ? undefined : Number(captureDprArgument);
 if (captureDpr !== undefined && captureDpr !== 1 && captureDpr !== 2) {
@@ -581,7 +609,7 @@ async function main() {
     for (const mode of modes) results.push(await auditMode(mode));
     const reducedAudit = quickScreenshot || showcaseScreenshotOnly || hdrVfxOnly || volumeVfxOnly
       || liquidBodyVfxOnly || liquidSurfaceVfxOnly || gasBodyVfxOnly || gasMotionVfxOnly
-      || powderBodyVfxOnly || powderLightVfxOnly || powderSolidContactVfxOnly || translucentEdgeVfxOnly || organicSubsurfaceVfxOnly || layoutOnly || mobileOnly || mobileGestureOnly
+      || powderBodyVfxOnly || powderLightVfxOnly || powderSolidContactVfxOnly || translucentEdgeVfxOnly || organicSubsurfaceVfxOnly || wetSedimentVfxOnly || layoutOnly || mobileOnly || mobileGestureOnly
       || desktopInputOnly || visualScaleMatrixOnly || powderBodyOnly || liquidDepthOnly
       || solidDepthOnly || gasChromaOnly || surfaceContourOnly || solidFieldOnly
       || roleGraphicsOnly || cellularGraphicsOnly || sensorGraphicsOnly
@@ -679,7 +707,7 @@ async function auditMode(mode) {
   // canonical paused scene there and prove real material delivery/occupancy.
   const startsBlank = !canvasFallbackAudit && (hdrVfxOnly || volumeVfxOnly
     || liquidBodyVfxOnly || liquidSurfaceVfxOnly || gasBodyVfxOnly || gasMotionVfxOnly
-    || powderBodyVfxOnly || powderLightVfxOnly || powderSolidContactVfxOnly || translucentEdgeVfxOnly || organicSubsurfaceVfxOnly || cellularGraphicsOnly || sensorGraphicsOnly
+    || powderBodyVfxOnly || powderLightVfxOnly || powderSolidContactVfxOnly || translucentEdgeVfxOnly || organicSubsurfaceVfxOnly || wetSedimentVfxOnly || cellularGraphicsOnly || sensorGraphicsOnly
     || unusualPowderGraphicsOnly || earthenPowderGraphicsOnly || explosivePowderGraphicsOnly
     || unusualSolidGraphicsOnly || deviceIdentityGraphicsOnly || fieldProfileGraphicsOnly
     || electricDischargeGraphicsOnly || liquidIdentityGraphicsOnly
@@ -707,6 +735,7 @@ async function auditMode(mode) {
     ...(powderLightVfxArgument ? { powderLightVfx: powderLightVfxArgument } : {}),
     ...(translucentEdgeVfxArgument ? { translucentEdgeVfx: translucentEdgeVfxArgument } : {}),
     ...(organicSubsurfaceVfxArgument ? { organicSubsurfaceVfx: organicSubsurfaceVfxArgument } : {}),
+    ...(wetSedimentVfxArgument ? { wetSedimentVfx: wetSedimentVfxArgument } : {}),
     renderScale: renderScaleArgument ?? ((pqrtStateGraphicsEight || filtStateGraphicsEight || lcryStateGraphicsEight
       || pipeStateGraphicsEight || swchStateGraphicsEight || storStateGraphicsEight
       || dlayStateGraphicsEight || wifiStateGraphicsEight || powderMesostrataGraphicsEight
@@ -974,6 +1003,13 @@ async function auditMode(mode) {
       assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
       cdp.close();
       return { backend: mode, organicSubsurfaceVfx, browserErrors: errors.length };
+    }
+    if (wetSedimentVfxOnly) {
+      assert(mode === 'webgl', '--wet-sediment-vfx-only requires --webgl-only');
+      const wetSedimentVfx = await auditWetSedimentVfxExperiment(cdp, mode, dpr);
+      assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
+      cdp.close();
+      return { backend: mode, wetSedimentVfx, browserErrors: errors.length };
     }
     if (pausedPresentationOnly) {
       const pausedPresentation = await auditPausedPresentation(cdp, mode);
@@ -13593,7 +13629,7 @@ async function auditEightXSpngStateOnly(cdp, dpr) {
   await setDesktopMetrics(cdp, 1280, 720, dpr);
   const query = new URLSearchParams({
     scene: 'render-lab', inputAudit: '1', renderScale: '8', auditStage: 'eight-spng', blankAudit: '1',
-    renderLook: 'realistic', gasMotionVfx: '1', liquidSurfaceVfx: '1', organicSubsurfaceVfx: '0',
+    renderLook: 'realistic', gasMotionVfx: '1', liquidSurfaceVfx: '1', organicSubsurfaceVfx: '0', wetSedimentVfx: '0',
   });
   await cdp.send('Page.navigate', { url: `${AUDIT_BASE_URL}?${query}` });
   const startupDeadline = Date.now() + EIGHT_X_PRESENTATION_DEADLINE_MS;
@@ -22309,7 +22345,7 @@ async function navigateGasMotionVfxState(cdp, mode, scale, fixtureMode, enabled,
     gasMotionVfxAudit: '1', renderScale: String(scale), renderLook: 'realistic',
     volumeVfx: '0', liquidBodyVfx: '0', liquidSurfaceVfx: '0',
     gasBodyVfx: '1', gasMotionVfx: enabled ? '1' : '0',
-    powderBodyVfx: '0', powderLightVfx: '0', organicSubsurfaceVfx: '0',
+    powderBodyVfx: '0', powderLightVfx: '0', organicSubsurfaceVfx: '0', wetSedimentVfx: '0',
   });
   await cdp.send('Page.navigate', { url: `${AUDIT_BASE_URL}?${query}` });
   await waitFor(() => evaluate(cdp, `(() => {
@@ -22781,7 +22817,7 @@ async function navigatePowderSolidContactVfxState(cdp, mode, scale, enabled, lab
     powderSolidContactVfxAudit: '1', renderScale: String(scale), renderLook: 'realistic',
     volumeVfx: '0', liquidBodyVfx: '0', liquidSurfaceVfx: '0', gasBodyVfx: '0',
     gasMotionVfx: '0', powderBodyVfx: '0', powderLightVfx: '0',
-    powderSolidContactVfx: enabled ? '1' : '0', organicSubsurfaceVfx: '0',
+    powderSolidContactVfx: enabled ? '1' : '0', organicSubsurfaceVfx: '0', wetSedimentVfx: '0',
   });
   await cdp.send('Page.navigate', { url: `${AUDIT_BASE_URL}?${query}` });
   await waitFor(() => evaluate(cdp, `(() => {
@@ -22931,7 +22967,7 @@ async function auditEightXPowderSolidContactVfxExclusion(cdp, dpr) {
     scene: 'render-lab', inputAudit: '1', blankAudit: '1', renderScale: '8',
     auditStage: 'eight-powder-solid-contact', renderLook: 'realistic',
     volumeVfx: '0', liquidBodyVfx: '0', liquidSurfaceVfx: '0', gasBodyVfx: '0',
-    gasMotionVfx: '0', powderBodyVfx: '0', powderLightVfx: '0', powderSolidContactVfx: '1', organicSubsurfaceVfx: '0',
+    gasMotionVfx: '0', powderBodyVfx: '0', powderLightVfx: '0', powderSolidContactVfx: '1', organicSubsurfaceVfx: '0', wetSedimentVfx: '0',
   });
   await cdp.send('Page.navigate', { url: `${AUDIT_BASE_URL}?${query}` });
   const deadline = Date.now() + EIGHT_X_PRESENTATION_DEADLINE_MS;
@@ -22956,11 +22992,13 @@ async function auditEightXPowderSolidContactVfxExclusion(cdp, dpr) {
       bloomBacking: canvas.dataset.bloomBacking ?? null,
       powderSolidContactVfx: canvas.dataset.powderSolidContactVfx,
       organicSubsurfaceVfx: canvas.dataset.organicSubsurfaceVfx,
+      wetSedimentVfx: canvas.dataset.wetSedimentVfx,
     } : undefined;
   })()`);
   assert(isolation?.renderer === 'semantic-field-webgl' && isolation.look === 'realistic'
     && isolation.state === 'inactive' && isolation.reason === 'scale-8' && isolation.bloomBacking === null
-    && isolation.powderSolidContactVfx === 'inactive' && isolation.organicSubsurfaceVfx === 'inactive',
+    && isolation.powderSolidContactVfx === 'inactive' && isolation.organicSubsurfaceVfx === 'inactive'
+    && isolation.wetSedimentVfx === 'inactive',
   `true-8x E09 isolation failed (${JSON.stringify(isolation)})`);
   const timing = await auditWebGLPresentationTiming(cdp, 1, 12_000, 30_000, 1);
   assert(timing.source === 'gpu-query' || timing.source === 'gpu-fence' || timing.source === 'gpu-finish',
@@ -23091,7 +23129,7 @@ async function navigateOrganicSubsurfaceVfxState(cdp, mode, scale, enabled, labe
     organicSubsurfaceVfxAudit: '1', renderScale: String(scale), renderLook: 'realistic',
     volumeVfx: '0', liquidBodyVfx: '0', liquidSurfaceVfx: '0', gasBodyVfx: '0',
     gasMotionVfx: '0', powderBodyVfx: '0', powderLightVfx: '0', powderSolidContactVfx: '0',
-    translucentEdgeVfx: '0', organicSubsurfaceVfx: enabled ? '1' : '0',
+    translucentEdgeVfx: '0', organicSubsurfaceVfx: enabled ? '1' : '0', wetSedimentVfx: '0',
   });
   await cdp.send('Page.navigate', { url: `${AUDIT_BASE_URL}?${query}` });
   await waitFor(() => evaluate(cdp, `(() => {
@@ -23102,7 +23140,7 @@ async function navigateOrganicSubsurfaceVfxState(cdp, mode, scale, enabled, labe
       && parameters.get('renderScale') === ${JSON.stringify(String(scale))}
       && parameters.get('renderLook') === 'realistic'
       && ['volumeVfx', 'liquidBodyVfx', 'liquidSurfaceVfx', 'gasBodyVfx', 'gasMotionVfx',
-        'powderBodyVfx', 'powderLightVfx', 'powderSolidContactVfx', 'translucentEdgeVfx']
+        'powderBodyVfx', 'powderLightVfx', 'powderSolidContactVfx', 'translucentEdgeVfx', 'wetSedimentVfx']
         .every((name) => parameters.get(name) === '0')
       && parameters.get('organicSubsurfaceVfx') === ${JSON.stringify(enabled ? '1' : '0')}
       && typeof window.__ANIFOR_INPUT_AUDIT__?.prepareOrganicSubsurfaceVfxAudit === 'function'
@@ -23188,13 +23226,14 @@ async function navigateOrganicSubsurfaceVfxState(cdp, mode, scale, enabled, labe
       powderSolidContactVfx: canvas.dataset.powderSolidContactVfx,
       translucentEdgeVfx: canvas.dataset.translucentEdgeVfx,
       organicSubsurfaceVfx: canvas.dataset.organicSubsurfaceVfx,
+      wetSedimentVfx: canvas.dataset.wetSedimentVfx,
     } : undefined;
   })()`);
   const expectedBloom = `${WORLD_WIDTH * scale / 2}x${WORLD_HEIGHT * scale / 2}`;
   assert(hdrPipeline?.look === 'realistic' && hdrPipeline?.state === 'active'
     && hdrPipeline?.bloomBacking === expectedBloom
     && ['volumeVfx', 'liquidBodyVfx', 'liquidSurfaceVfx', 'gasBodyVfx', 'gasMotionVfx',
-      'powderBodyVfx', 'powderLightVfx', 'powderSolidContactVfx', 'translucentEdgeVfx']
+      'powderBodyVfx', 'powderLightVfx', 'powderSolidContactVfx', 'translucentEdgeVfx', 'wetSedimentVfx']
       .every((name) => hdrPipeline[name] === 'inactive')
     && hdrPipeline?.organicSubsurfaceVfx === (enabled ? 'active' : 'inactive'),
   `E11 ${label} ${scale}x HDR/selector state resolved incorrectly (${JSON.stringify(hdrPipeline)})`);
@@ -23312,7 +23351,7 @@ async function auditEightXOrganicSubsurfaceVfxExclusion(cdp, dpr) {
     auditStage: 'eight-organic-subsurface', renderLook: 'realistic',
     volumeVfx: '0', liquidBodyVfx: '0', liquidSurfaceVfx: '0', gasBodyVfx: '0',
     gasMotionVfx: '0', powderBodyVfx: '0', powderLightVfx: '0', powderSolidContactVfx: '0',
-    translucentEdgeVfx: '0', organicSubsurfaceVfx: '1',
+    translucentEdgeVfx: '0', organicSubsurfaceVfx: '1', wetSedimentVfx: '0',
   });
   await cdp.send('Page.navigate', { url: `${AUDIT_BASE_URL}?${query}` });
   const deadline = Date.now() + EIGHT_X_PRESENTATION_DEADLINE_MS;
@@ -23333,15 +23372,347 @@ async function auditEightXOrganicSubsurfaceVfxExclusion(cdp, dpr) {
       state: canvas.dataset.hdrPipeline, reason: canvas.dataset.hdrPipelineReason,
       bloomBacking: canvas.dataset.bloomBacking ?? null,
       organicSubsurfaceVfx: canvas.dataset.organicSubsurfaceVfx,
+      wetSedimentVfx: canvas.dataset.wetSedimentVfx,
     } : undefined;
   })()`);
   assert(isolation?.renderer === 'semantic-field-webgl' && isolation.look === 'realistic'
     && isolation.state === 'inactive' && isolation.reason === 'scale-8' && isolation.bloomBacking === null
-    && isolation.organicSubsurfaceVfx === 'inactive',
+    && isolation.organicSubsurfaceVfx === 'inactive' && isolation.wetSedimentVfx === 'inactive',
   `true-8x E11 isolation failed (${JSON.stringify(isolation)})`);
   const timing = await auditWebGLPresentationTiming(cdp, 1, 12_000, 30_000, 1);
   assert(timing.source === 'gpu-query' || timing.source === 'gpu-fence' || timing.source === 'gpu-finish',
     `true-8x E11 did not complete GPU work (${JSON.stringify(timing)})`);
+  return { backing: `${geometry.backing.width}x${geometry.backing.height}`, isolation, timing };
+}
+
+/** E12: exact Sand/Clay/Concrete wet-sediment RGB over the existing shared field. */
+async function auditWetSedimentVfxExperiment(cdp, mode, dpr) {
+  const scales = [];
+  const requestedScales = renderScaleArgument === undefined
+    ? VOLUME_VFX_SCALES : [Number(renderScaleArgument)];
+  for (const scale of requestedScales) {
+    const captures = {};
+    for (const enabled of [false, true, false]) {
+      const key = enabled ? 'enabled' : captures.disabled ? 'disabledRepeat' : 'disabled';
+      captures[key] = await navigateWetSedimentVfxState(cdp, mode, scale, enabled, key);
+    }
+    const { disabled, enabled, disabledRepeat } = captures;
+    assert(JSON.stringify(disabled.fixture) === JSON.stringify(enabled.fixture)
+      && JSON.stringify(disabled.fixture) === JSON.stringify(disabledRepeat.fixture),
+    `E12 ${scale}x fixture metadata changed`);
+    for (const [label, variant] of Object.entries(captures)) {
+      assertGeometry(variant.geometry, `E12 ${label} ${scale}x`, scale);
+      assert(variant.geometry.backend.backend === 'webgl', `E12 ${label} ${scale}x lost WebGL presentation`);
+      assert(variant.hdrPipeline?.state === 'active',
+        `E12 ${label} ${scale}x HDR pipeline was not active (${JSON.stringify(variant.hdrPipeline)})`);
+    }
+    assertCanvasRectsEqual(disabled.geometry.canvas, enabled.geometry.canvas,
+      `E12 ${scale}x disabled/enabled CSS geometry`);
+    assertCanvasRectsEqual(disabled.geometry.canvas, disabledRepeat.geometry.canvas,
+      `E12 ${scale}x disabled/repeated CSS geometry`);
+    assert(JSON.stringify(disabled.geometry.backing) === JSON.stringify(enabled.geometry.backing)
+      && JSON.stringify(disabled.geometry.backing) === JSON.stringify(disabledRepeat.geometry.backing),
+    `E12 ${scale}x backing geometry changed`);
+    assertHdrVfxSemanticEquality(disabled.semantic, enabled.semantic, `E12 ${scale}x disabled/enabled`);
+    assertHdrVfxSemanticEquality(disabled.semantic, disabledRepeat.semantic, `E12 ${scale}x disabled/repeated`);
+    assertVolumeVfxBackingInvariant(disabled.backing, enabled.backing, `E12 ${scale}x disabled/enabled`);
+    assertVolumeVfxBackingInvariant(disabled.backing, disabledRepeat.backing, `E12 ${scale}x disabled/repeated`);
+    assert(JSON.stringify(disabled.suspension) === JSON.stringify(enabled.suspension)
+      && JSON.stringify(disabled.suspension) === JSON.stringify(disabledRepeat.suspension),
+    `E12 ${scale}x selector changed the shared suspension field`);
+    assert(JSON.stringify(disabled.rawControls) === JSON.stringify(enabled.rawControls)
+      && JSON.stringify(disabled.rawControls) === JSON.stringify(disabledRepeat.rawControls),
+    `E12 ${scale}x changed an exact protected raw control`);
+    assert(JSON.stringify(disabled.rgbDigest) === JSON.stringify(disabledRepeat.rgbDigest)
+      && disabled.capture.capture.data === disabledRepeat.capture.capture.data,
+    `E12 ${scale}x repeated off framebuffer was not byte exact`);
+
+    const targets = wetSedimentVfxTargetRegions(disabled.fixture);
+    const controls = wetSedimentVfxControlRegions(disabled.fixture);
+    const responses = await sampleBackdropRefractionRegions(cdp, {
+      straight: disabled.capture.capture.data,
+      refracted: enabled.capture.capture.data,
+      repeatedStraight: disabledRepeat.capture.capture.data,
+    }, [...targets, ...controls], disabled.capture.canvasRect);
+    const targetResponses = responses.slice(0, targets.length);
+    const controlResponses = responses.slice(targets.length);
+    const acceptedTargets = [
+      { name: 'SAND', rms: [1.55, 2.00], peak: [5, 7], coverage: [0.32, 0.46], mean: [0.55, 1.35] },
+      { name: 'CLAY', rms: [1.55, 1.90], peak: [5, 7], coverage: [0.30, 0.38], mean: [0.70, 1.40] },
+      { name: 'CONC', rms: [1.35, 1.52], peak: [4, 5], coverage: [0.22, 0.30], mean: [0.55, 1.10] },
+    ];
+    assert(targetResponses.length === acceptedTargets.length
+      && targetResponses.every((sample, index) => {
+        const accepted = acceptedTargets[index];
+        return sample.name === accepted.name
+          && sample.rgbRms >= accepted.rms[0] && sample.rgbRms <= accepted.rms[1]
+          && sample.rgbPeak >= accepted.peak[0] && sample.rgbPeak <= accepted.peak[1]
+          && sample.coverage >= accepted.coverage[0] && sample.coverage <= accepted.coverage[1]
+          && sample.signedMean >= accepted.mean[0] && sample.signedMean <= accepted.mean[1];
+      }),
+    `E12 ${scale}x wet-mineral key/fill response escaped its accepted visual bounds (${JSON.stringify(targetResponses)})`);
+    // Exact raw world samples above prove the Empty holes remain unchanged.
+    // Their broad page regions include the antialiased body fringe, where the
+    // changed neighbouring sediment can quantize one composed RGB byte.
+    assert(controlResponses.every((sample) => sample.repeatRgbPeak === 0
+      && (sample.rgbPeak === 0 || (sample.name.endsWith('Hole')
+        && sample.rgbPeak <= 2 && sample.rgbRms <= 0.20 && sample.coverage <= 0.01))),
+      `E12 ${scale}x escaped a dry/moving/foreign/wall/fine/Local/Grains/gap control (${JSON.stringify(controlResponses)})`);
+    assert(responses.every((sample) => sample.repeatRgbPeak === 0),
+      `E12 ${scale}x off -> on -> off was not deterministic (${JSON.stringify(responses)})`);
+    const phaseParity = await wetSedimentVfxPhaseParity(cdp, disabled.fixture, disabled, enabled);
+    assert(phaseParity.every((sample) => sample.disabled.leftCount > 100 && sample.disabled.rightCount > 100
+      && sample.enabled.leftCount > 100 && sample.enabled.rightCount > 100
+      && sample.enabled.distance >= 0 && sample.enabled.distance <= 1.20
+      && sample.enabled.rawDistance >= 0 && sample.enabled.rawDistance <= 36
+      && sample.enabled.distance <= sample.disabled.distance + 0.25),
+    `E12 ${scale}x did not retain bounded aqueous/powder chroma convergence (${JSON.stringify(phaseParity)})`);
+    const powderStyleControls = await wetSedimentVfxPowderStyleControls(cdp, mode, scale, disabled.fixture);
+    const screenshots = screenshotRequest && (requestedScales.length === 1 || scale === 2)
+      ? await writeWetSedimentVfxScreenshots(screenshotRequest, disabled, enabled) : undefined;
+    scales.push({
+      scale, backing: disabled.geometry.backing, alphaSupport: disabled.backing,
+      suspension: disabled.suspension, rawControls: disabled.rawControls,
+      responses, phaseParity, powderStyleControls, exactRepeatedOff: true, screenshots,
+    });
+  }
+  const trueEightX = await auditEightXWetSedimentVfxExclusion(cdp, dpr);
+  return { scales, trueEightXExcluded: true, trueEightX };
+}
+
+async function navigateWetSedimentVfxState(cdp, mode, scale, enabled, label, powderStyle = 'smooth') {
+  const query = new URLSearchParams({
+    scene: 'render-lab', inputAudit: '1', blankAudit: '1', auditStage: 'blank',
+    wetSedimentVfxAudit: '1', renderScale: String(scale), renderLook: 'realistic',
+    volumeVfx: '0', liquidBodyVfx: '0', liquidSurfaceVfx: '0', gasBodyVfx: '0', gasMotionVfx: '0',
+    powderBodyVfx: '0', powderLightVfx: '0', powderSolidContactVfx: '0', translucentEdgeVfx: '0',
+    organicSubsurfaceVfx: '0', wetSedimentVfx: enabled ? '1' : '0',
+  });
+  await cdp.send('Page.navigate', { url: `${AUDIT_BASE_URL}?${query}` });
+  await waitFor(() => evaluate(cdp, `(() => {
+    const parameters = new URLSearchParams(location.search);
+    return parameters.get('scene') === 'render-lab' && parameters.get('inputAudit') === '1'
+      && parameters.get('blankAudit') === '1' && parameters.get('auditStage') === 'blank'
+      && parameters.get('wetSedimentVfxAudit') === '1'
+      && parameters.get('renderScale') === ${JSON.stringify(String(scale))}
+      && parameters.get('renderLook') === 'realistic'
+      && ['volumeVfx', 'liquidBodyVfx', 'liquidSurfaceVfx', 'gasBodyVfx', 'gasMotionVfx',
+        'powderBodyVfx', 'powderLightVfx', 'powderSolidContactVfx', 'translucentEdgeVfx',
+        'organicSubsurfaceVfx'].every((name) => parameters.get(name) === '0')
+      && parameters.get('wetSedimentVfx') === ${JSON.stringify(enabled ? '1' : '0')}
+      && typeof window.__ANIFOR_INPUT_AUDIT__?.prepareWetSedimentVfxAudit === 'function'
+      && typeof window.__ANIFOR_INPUT_AUDIT__?.wetSedimentVfxFixture === 'function'
+      && typeof window.__ANIFOR_INPUT_AUDIT__?.suspensionAt === 'function'
+      && typeof window.__ANIFOR_INPUT_AUDIT__?.suspensionSupportAudit === 'function';
+  })()`), 15_000, `E12 ${label} ${scale}x page`);
+  await waitFor(() => evaluate(cdp,
+    `window.__ANIFOR_INPUT_AUDIT__.backend().backend === ${JSON.stringify(mode)}`),
+  15_000, `E12 ${label} ${scale}x backend`);
+  const fixture = await evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    audit.prepareWetSedimentVfxAudit();
+    audit.setPowderRenderStyle(${JSON.stringify(powderStyle)});
+    return audit.wetSedimentVfxFixture();
+  })()`);
+  for (let pass = 0; pass < 7; pass++) {
+    const before = await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.presentationRefreshAudit()');
+    await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.refreshPresentationFields(); true');
+    await waitFor(() => evaluate(cdp, `(() => {
+      const current = window.__ANIFOR_INPUT_AUDIT__.presentationRefreshAudit();
+      return current?.dynamicSequence > ${before.dynamicSequence} ? current : false;
+    })()`), scale === 4 ? 15_000 : 5_000,
+    `E12 ${label} ${scale}x presentation refresh ${pass + 1}`);
+  }
+  await waitFor(() => wetSedimentVfxFixtureReady(cdp, fixture), 20_000,
+    `E12 ${label} ${scale}x fixture/suspension hydration`);
+  const suspension = await wetSedimentVfxSuspensionDigest(cdp, fixture);
+  assert(suspension.summary.active && suspension.summary.nonzero > 0 && suspension.summary.alphaSum > 0,
+    `E12 ${label} ${scale}x did not hydrate the shared suspension field (${JSON.stringify(suspension)})`);
+  const expectedOwnerRgb = { SAND: [215, 170, 104], CLAY: [184, 121, 85], CONC: [134, 131, 125] };
+  assert(suspension.positive.every((sample) => sample.rgba[3] > 0
+      && sample.rgba.slice(0, 3).every((channel, index) => channel === expectedOwnerRgb[sample.name]?.[index]))
+    && suspension.rejected.every((sample) => sample.rgba[3] === 0)
+    && suspension.liveRejected.every((sample) => sample.rgba[3] > 0),
+  `E12 ${label} ${scale}x suspension ownership field drifted (${JSON.stringify(suspension)})`);
+  const hdrPipeline = await evaluate(cdp, `(() => {
+    const canvas = document.querySelector('canvas.semantic-field-canvas');
+    return canvas ? {
+      look: canvas.dataset.renderLook, state: canvas.dataset.hdrPipeline, bloomBacking: canvas.dataset.bloomBacking,
+      volumeVfx: canvas.dataset.volumeVfx, liquidBodyVfx: canvas.dataset.liquidBodyVfx,
+      liquidSurfaceVfx: canvas.dataset.liquidSurfaceVfx, gasBodyVfx: canvas.dataset.gasBodyVfx,
+      gasMotionVfx: canvas.dataset.gasMotionVfx, powderBodyVfx: canvas.dataset.powderBodyVfx,
+      powderLightVfx: canvas.dataset.powderLightVfx, powderSolidContactVfx: canvas.dataset.powderSolidContactVfx,
+      translucentEdgeVfx: canvas.dataset.translucentEdgeVfx,
+      organicSubsurfaceVfx: canvas.dataset.organicSubsurfaceVfx, wetSedimentVfx: canvas.dataset.wetSedimentVfx,
+    } : undefined;
+  })()`);
+  const expectedBloom = `${WORLD_WIDTH * scale / 2}x${WORLD_HEIGHT * scale / 2}`;
+  assert(hdrPipeline?.look === 'realistic' && hdrPipeline?.state === 'active'
+    && hdrPipeline?.bloomBacking === expectedBloom
+    && ['volumeVfx', 'liquidBodyVfx', 'liquidSurfaceVfx', 'gasBodyVfx', 'gasMotionVfx', 'powderBodyVfx',
+      'powderLightVfx', 'powderSolidContactVfx', 'translucentEdgeVfx', 'organicSubsurfaceVfx']
+      .every((name) => hdrPipeline[name] === 'inactive')
+    && hdrPipeline?.wetSedimentVfx === (enabled ? 'active' : 'inactive'),
+  `E12 ${label} ${scale}x HDR/selector state resolved incorrectly (${JSON.stringify(hdrPipeline)})`);
+  const capture = await waitForStablePageCapture(cdp, `E12 ${label} ${scale}x framebuffer`, scale === 4 ? 20_000 : undefined);
+  return {
+    fixture, suspension, capture, geometry: await metrics(cdp), semantic: await hdrVfxSemanticDigest(cdp),
+    backing: await sampleVolumeVfxCanvasAlphaSupport(cdp), rgbDigest: await sampleLiquidSurfaceVfxCanvasRgbDigest(cdp),
+    rawControls: await sampleVolumeVfxRawWorldPixels(cdp, wetSedimentVfxRawControlPoints(fixture)), hdrPipeline,
+  };
+}
+
+async function wetSedimentVfxFixtureReady(cdp, fixture) {
+  return evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    const fixture = ${JSON.stringify(fixture)};
+    const inRect = (point, rect) => point.x >= rect.x && point.x < rect.x + rect.width
+      && point.y >= rect.y && point.y < rect.y + rect.height;
+    const cards = fixture.cards.every((card) => {
+      let body = true;
+      for (let y = card.body.y; y < card.body.y + card.body.height; y++) for (let x = card.body.x; x < card.body.x + card.body.width; x++) {
+        const empty = inRect({ x, y }, card.authoredHole) || inRect({ x, y }, card.openNotch);
+        const material = audit.cell(x, y);
+        body = body && (empty ? material === 0 : material === 2 || material === card.material);
+      }
+      return body && audit.cell(card.powderProbe.x, card.powderProbe.y) === card.material
+        && audit.cell(card.waterProbe.x, card.waterProbe.y) === 2
+        && audit.cell(card.fineColumn.x, card.fineColumn.y) === card.material;
+    });
+    const moving = fixture.movingWetSand;
+    const velocity = audit.velocity(moving.powderProbe.x, moving.powderProbe.y);
+    const waterVelocity = audit.velocity(moving.waterProbe.x, moving.waterProbe.y);
+    return cards && fixture.dry.every((control) => audit.cell(control.probe.x, control.probe.y) === control.material)
+      && audit.cell(moving.powderProbe.x, moving.powderProbe.y) === 1
+      && velocity[0] === moving.velocity[0] && velocity[1] === moving.velocity[1]
+      && audit.cell(moving.waterProbe.x, moving.waterProbe.y) === 2
+      && waterVelocity[0] === 0 && waterVelocity[1] === 0
+      && audit.cell(fixture.oil.body.x + 2, fixture.oil.body.y + 2) !== 0
+      && audit.cell(fixture.lava.body.x + 2, fixture.lava.body.y + 2) !== 0
+      && audit.cell(fixture.foreignSalt.powderProbe.x, fixture.foreignSalt.powderProbe.y) !== 0
+      && audit.wall(fixture.nativeWall.wallAnchor.x, fixture.nativeWall.wallAnchor.y) === fixture.conductiveWall
+      && audit.cell(fixture.fineColumn.column.x, fixture.fineColumn.column.y) === 1
+      && audit.cell(fixture.isolated.point.x, fixture.isolated.point.y) === 1
+      && audit.cell(fixture.gap.gapProbe.x, fixture.gap.gapProbe.y) === 0
+      && audit.cell(fixture.guardedBlank.x, fixture.guardedBlank.y) === 0;
+  })()`);
+}
+
+async function wetSedimentVfxPowderStyleControls(cdp, mode, scale, fixture) {
+  const result = [];
+  const targets = wetSedimentVfxTargetRegions(fixture);
+  for (const style of ['local', 'grains']) {
+    const off = await navigateWetSedimentVfxState(cdp, mode, scale, false, `${style}-off`, style);
+    const on = await navigateWetSedimentVfxState(cdp, mode, scale, true, `${style}-on`, style);
+    const samples = await sampleBackdropRefractionRegions(cdp, {
+      straight: off.capture.capture.data, refracted: on.capture.capture.data,
+      repeatedStraight: off.capture.capture.data,
+    }, targets, off.capture.canvasRect);
+    assert(samples.every((sample) => sample.rgbPeak === 0 && sample.repeatRgbPeak === 0),
+      `E12 ${scale}x ${style} powder style was not an exact no-op (${JSON.stringify(samples)})`);
+    result.push({ style, samples, exactNoop: true });
+  }
+  return result;
+}
+
+async function wetSedimentVfxSuspensionDigest(cdp, fixture) {
+  const positive = fixture.cards.map((card) => ({ name: card.code, ...card.fieldProbe }));
+  const rejected = [
+    { name: 'oil', ...fixture.oil.fieldProbe }, { name: 'lava', ...fixture.lava.fieldProbe },
+    { name: 'unlikeAqueous', ...fixture.unlikeAqueous.fieldProbe }, { name: 'nativeWall', ...fixture.nativeWall.fieldProbe },
+  ];
+  const liveRejected = [
+    { name: 'movingWetSand', ...fixture.movingWetSand.fieldProbe }, { name: 'foreignSalt', ...fixture.foreignSalt.fieldProbe },
+  ];
+  return evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    const sample = (point) => ({ ...point, rgba: Array.from(audit.suspensionAt(point.x, point.y)) });
+    return { summary: audit.suspensionSupportAudit(), positive: ${JSON.stringify(positive)}.map(sample),
+      rejected: ${JSON.stringify(rejected)}.map(sample), liveRejected: ${JSON.stringify(liveRejected)}.map(sample) };
+  })()`);
+}
+
+function wetSedimentVfxTargetRegions(fixture) {
+  return fixture.cards.map((card) => ({ name: card.code, target: true,
+    x: card.aggregateBody.x + card.aggregateBody.width / 2, y: card.aggregateBody.y + card.aggregateBody.height / 2,
+    radiusX: card.aggregateBody.width / 2 - 1, radiusY: card.aggregateBody.height / 2 - 1 }));
+}
+
+function wetSedimentVfxControlRegions(fixture) {
+  const point = (name, candidate) => ({ name, x: candidate.x + 0.5, y: candidate.y + 0.5, radius: 0 });
+  const rect = (name, candidate) => ({ name, x: candidate.x + candidate.width / 2, y: candidate.y + candidate.height / 2,
+    radiusX: Math.max(0.35, candidate.width / 2 - 0.2), radiusY: Math.max(0.35, candidate.height / 2 - 0.2) });
+  return [
+    ...fixture.cards.flatMap((card) => [rect(`${card.code}Hole`, card.authoredHole), rect(`${card.code}Notch`, card.openNotch), rect(`${card.code}Fine`, card.fineColumn)]),
+    ...fixture.dry.map((control) => point(`dry${control.material}`, control.probe)),
+    rect('movingWetSand', fixture.movingWetSand.aggregateBody), point('oil', fixture.oil.fieldProbe), point('lava', fixture.lava.fieldProbe),
+    point('unlikeAqueous', fixture.unlikeAqueous.fieldProbe), point('foreignSalt', fixture.foreignSalt.powderProbe),
+    point('nativeWall', fixture.nativeWall.fieldProbe), point('fineColumn', fixture.fineColumn.column), point('isolated', fixture.isolated.point),
+    point('authoredGap', fixture.gap.gapProbe), rect('guardedBlank', fixture.guardedBlank),
+  ];
+}
+
+function wetSedimentVfxRawControlPoints(fixture) {
+  const point = (name, candidate) => ({ name, x: Math.floor(candidate.x), y: Math.floor(candidate.y) });
+  const rectPoint = (name, rect) => point(name, { x: rect.x + Math.floor(rect.width / 2), y: rect.y + Math.floor(rect.height / 2) });
+  return [
+    ...fixture.cards.flatMap((card) => [rectPoint(`${card.code}Hole`, card.authoredHole), rectPoint(`${card.code}Notch`, card.openNotch), rectPoint(`${card.code}Fine`, card.fineColumn)]),
+    ...fixture.dry.map((control) => point(`dry${control.material}`, control.probe)),
+    point('movingWetSand', fixture.movingWetSand.powderProbe),
+    point('stationaryMovingWater', fixture.movingWetSand.waterProbe),
+    point('oil', fixture.oil.fieldProbe), point('lava', fixture.lava.fieldProbe),
+    point('unlikeAqueous', fixture.unlikeAqueous.fieldProbe), point('foreignSalt', fixture.foreignSalt.powderProbe),
+    point('nativeWall', fixture.nativeWall.fieldProbe), point('fineColumn', fixture.fineColumn.column), point('isolated', fixture.isolated.point),
+    point('authoredGap', fixture.gap.gapProbe), rectPoint('guardedBlank', fixture.guardedBlank),
+  ];
+}
+
+async function wetSedimentVfxPhaseParity(cdp, fixture, disabled, enabled) {
+  const result = [];
+  for (const card of fixture.cards) {
+    const region = { left: card.aggregateBody.x, top: card.aggregateBody.y,
+      right: card.aggregateBody.x + card.aggregateBody.width, bottom: card.aggregateBody.y + card.aggregateBody.height };
+    const cells = await captureMaterialCells(cdp, region, card.material, 2);
+    result.push({ code: card.code,
+      disabled: await sampleMaterialPhaseContrast(cdp, disabled.capture.capture.data, disabled.capture.canvasRect, cells, card.material, 2),
+      enabled: await sampleMaterialPhaseContrast(cdp, enabled.capture.capture.data, enabled.capture.canvasRect, cells, card.material, 2) });
+  }
+  return result;
+}
+
+async function writeWetSedimentVfxScreenshots(source, disabled, enabled) {
+  const paths = { off: variantScreenshotPath(source, 'e12-wet-sediment-off'), on: variantScreenshotPath(source, 'e12-wet-sediment-on') };
+  await writeFile(paths.off, Buffer.from(disabled.capture.capture.data, 'base64'));
+  await writeFile(paths.on, Buffer.from(enabled.capture.capture.data, 'base64'));
+  return paths;
+}
+
+async function auditEightXWetSedimentVfxExclusion(cdp, dpr) {
+  await setDesktopMetrics(cdp, 1280, 720, dpr);
+  const query = new URLSearchParams({ scene: 'render-lab', inputAudit: '1', blankAudit: '1', renderScale: '8',
+    auditStage: 'eight-wet-sediment', renderLook: 'realistic', volumeVfx: '0', liquidBodyVfx: '0', liquidSurfaceVfx: '0',
+    gasBodyVfx: '0', gasMotionVfx: '0', powderBodyVfx: '0', powderLightVfx: '0', powderSolidContactVfx: '0',
+    translucentEdgeVfx: '0', organicSubsurfaceVfx: '0', wetSedimentVfx: '1' });
+  await cdp.send('Page.navigate', { url: `${AUDIT_BASE_URL}?${query}` });
+  const deadline = Date.now() + EIGHT_X_PRESENTATION_DEADLINE_MS;
+  await waitFor(() => evaluate(cdp, `(() => { const parameters = new URLSearchParams(location.search);
+    return parameters.get('renderScale') === '8' && parameters.get('auditStage') === 'eight-wet-sediment'
+      && parameters.get('wetSedimentVfx') === '1' && Boolean(window.__ANIFOR_INPUT_AUDIT__); })()`),
+  remainingDeadlineMs(deadline, 'true-8x E12 input audit API'), 'true-8x E12 input audit API');
+  const backend = await waitForEightXTerminalBackend(cdp, 'true-8x E12', deadline);
+  assertEightXWebGLBackend(backend, 'true-8x E12');
+  const geometry = await waitForStableCanvas(cdp, 1280, 720, undefined, 45_000, 'true-8x E12 geometry');
+  assert(geometry.backing.width === WORLD_WIDTH * 8 && geometry.backing.height === WORLD_HEIGHT * 8 && geometry.outputScale === '8',
+    `true-8x E12 lost exact backing (${JSON.stringify(geometry.backing)})`);
+  const isolation = await evaluate(cdp, `(() => { const canvas = document.querySelector('canvas.semantic-field-canvas');
+    return canvas ? { renderer: canvas.dataset.renderer, look: canvas.dataset.renderLook, state: canvas.dataset.hdrPipeline,
+      reason: canvas.dataset.hdrPipelineReason, bloomBacking: canvas.dataset.bloomBacking ?? null, wetSedimentVfx: canvas.dataset.wetSedimentVfx } : undefined; })()`);
+  assert(isolation?.renderer === 'semantic-field-webgl' && isolation.look === 'realistic' && isolation.state === 'inactive'
+    && isolation.reason === 'scale-8' && isolation.bloomBacking === null && isolation.wetSedimentVfx === 'inactive',
+  `true-8x E12 isolation failed (${JSON.stringify(isolation)})`);
+  const timing = await auditWebGLPresentationTiming(cdp, 1, 12_000, 30_000, 1);
+  assert(timing.source === 'gpu-query' || timing.source === 'gpu-fence' || timing.source === 'gpu-finish',
+    `true-8x E12 did not complete GPU work (${JSON.stringify(timing)})`);
   return { backing: `${geometry.backing.width}x${geometry.backing.height}`, isolation, timing };
 }
 
@@ -23461,7 +23832,7 @@ async function navigateTranslucentEdgeVfxState(cdp, mode, scale, enabled, label)
     translucentEdgeVfxAudit: '1', renderScale: String(scale), renderLook: 'realistic',
     volumeVfx: '0', liquidBodyVfx: '0', liquidSurfaceVfx: '0', gasBodyVfx: '0',
     gasMotionVfx: '0', powderBodyVfx: '0', powderLightVfx: '0', powderSolidContactVfx: '0',
-    translucentEdgeVfx: enabled ? '1' : '0', organicSubsurfaceVfx: '0',
+    translucentEdgeVfx: enabled ? '1' : '0', organicSubsurfaceVfx: '0', wetSedimentVfx: '0',
   });
   await cdp.send('Page.navigate', { url: `${AUDIT_BASE_URL}?${query}` });
   await waitFor(() => evaluate(cdp, `(() => {
@@ -23678,7 +24049,7 @@ async function auditEightXTranslucentEdgeVfxExclusion(cdp, dpr) {
     auditStage: 'eight-translucent-edge', renderLook: 'realistic',
     volumeVfx: '0', liquidBodyVfx: '0', liquidSurfaceVfx: '0', gasBodyVfx: '0',
     gasMotionVfx: '0', powderBodyVfx: '0', powderLightVfx: '0', powderSolidContactVfx: '0',
-    translucentEdgeVfx: '1', organicSubsurfaceVfx: '0',
+    translucentEdgeVfx: '1', organicSubsurfaceVfx: '0', wetSedimentVfx: '0',
   });
   await cdp.send('Page.navigate', { url: `${AUDIT_BASE_URL}?${query}` });
   const deadline = Date.now() + EIGHT_X_PRESENTATION_DEADLINE_MS;
@@ -23700,11 +24071,13 @@ async function auditEightXTranslucentEdgeVfxExclusion(cdp, dpr) {
       state: canvas.dataset.hdrPipeline, reason: canvas.dataset.hdrPipelineReason,
       bloomBacking: canvas.dataset.bloomBacking ?? null, translucentEdgeVfx: canvas.dataset.translucentEdgeVfx,
       organicSubsurfaceVfx: canvas.dataset.organicSubsurfaceVfx,
+      wetSedimentVfx: canvas.dataset.wetSedimentVfx,
     } : undefined;
   })()`);
   assert(isolation?.renderer === 'semantic-field-webgl' && isolation.look === 'realistic'
     && isolation.state === 'inactive' && isolation.reason === 'scale-8' && isolation.bloomBacking === null
-    && isolation.translucentEdgeVfx === 'inactive' && isolation.organicSubsurfaceVfx === 'inactive',
+    && isolation.translucentEdgeVfx === 'inactive' && isolation.organicSubsurfaceVfx === 'inactive'
+    && isolation.wetSedimentVfx === 'inactive',
   `true-8x E10 isolation failed (${JSON.stringify(isolation)})`);
   const timing = await auditWebGLPresentationTiming(cdp, 1, 12_000, 30_000, 1);
   assert(timing.source === 'gpu-query' || timing.source === 'gpu-fence' || timing.source === 'gpu-finish',
@@ -23816,7 +24189,7 @@ async function navigateVolumeVfxState(cdp, mode, scale, enabled, label) {
     scene: 'render-lab', inputAudit: '1', auditStage: 'canonical',
     volumeVfxAudit: '1', renderScale: String(scale), renderLook: 'realistic',
     volumeVfx: enabled ? '1' : '0', liquidSurfaceVfx: '0',
-    powderBodyVfx: '0', powderLightVfx: '0', translucentEdgeVfx: '0', organicSubsurfaceVfx: '0',
+    powderBodyVfx: '0', powderLightVfx: '0', translucentEdgeVfx: '0', organicSubsurfaceVfx: '0', wetSedimentVfx: '0',
   });
   await cdp.send('Page.navigate', { url: `${AUDIT_BASE_URL}?${query}` });
   await waitFor(() => evaluate(cdp, `(() => {
@@ -23902,7 +24275,7 @@ async function navigateLiquidBodyVfxState(cdp, mode, scale, enabled, label) {
   const query = new URLSearchParams({
     scene: 'render-lab', inputAudit: '1', auditStage: 'canonical',
     liquidBodyVfxAudit: '1', renderScale: String(scale), renderLook: 'realistic',
-    volumeVfx: '0', liquidBodyVfx: enabled ? '1' : '0', liquidSurfaceVfx: '0', organicSubsurfaceVfx: '0',
+    volumeVfx: '0', liquidBodyVfx: enabled ? '1' : '0', liquidSurfaceVfx: '0', organicSubsurfaceVfx: '0', wetSedimentVfx: '0',
   });
   await cdp.send('Page.navigate', { url: `${AUDIT_BASE_URL}?${query}` });
   await waitFor(() => evaluate(cdp, `(() => {
@@ -23965,7 +24338,7 @@ async function navigateLiquidSurfaceVfxState(cdp, mode, scale, enabled, label) {
     liquidBodyVfxAudit: '1', liquidSurfaceVfxAudit: '1',
     renderScale: String(scale), renderLook: 'realistic',
     volumeVfx: '0', liquidBodyVfx: '1', liquidSurfaceVfx: enabled ? '1' : '0',
-    gasBodyVfx: '0', gasMotionVfx: '0', powderBodyVfx: '0', powderLightVfx: '0', organicSubsurfaceVfx: '0',
+    gasBodyVfx: '0', gasMotionVfx: '0', powderBodyVfx: '0', powderLightVfx: '0', organicSubsurfaceVfx: '0', wetSedimentVfx: '0',
   });
   await cdp.send('Page.navigate', { url: `${AUDIT_BASE_URL}?${query}` });
   await waitFor(() => evaluate(cdp, `(() => {
@@ -24035,7 +24408,7 @@ async function navigateGasBodyVfxState(cdp, mode, scale, enabled, label) {
     scene: 'render-lab', inputAudit: '1', auditStage: 'canonical',
     gasBodyVfxAudit: '1', renderScale: String(scale), renderLook: 'realistic',
     volumeVfx: '0', liquidBodyVfx: '0', liquidSurfaceVfx: '0',
-    gasBodyVfx: enabled ? '1' : '0', gasMotionVfx: '0', organicSubsurfaceVfx: '0',
+    gasBodyVfx: enabled ? '1' : '0', gasMotionVfx: '0', organicSubsurfaceVfx: '0', wetSedimentVfx: '0',
   });
   await cdp.send('Page.navigate', { url: `${AUDIT_BASE_URL}?${query}` });
   await waitFor(() => evaluate(cdp, `(() => {
@@ -24098,7 +24471,7 @@ async function navigatePowderBodyVfxState(cdp, mode, scale, enabled, label) {
     scene: 'render-lab', inputAudit: '1', auditStage: 'canonical',
     powderBodyVfxAudit: '1', renderScale: String(scale), renderLook: 'realistic',
     volumeVfx: '0', liquidBodyVfx: '0', liquidSurfaceVfx: '0',
-    gasBodyVfx: '0', powderBodyVfx: enabled ? '1' : '0', powderSolidContactVfx: '0', organicSubsurfaceVfx: '0',
+    gasBodyVfx: '0', powderBodyVfx: enabled ? '1' : '0', powderSolidContactVfx: '0', organicSubsurfaceVfx: '0', wetSedimentVfx: '0',
   });
   await cdp.send('Page.navigate', { url: `${AUDIT_BASE_URL}?${query}` });
   await waitFor(() => evaluate(cdp, `(() => {
@@ -24193,7 +24566,7 @@ async function navigatePowderLightVfxState(cdp, mode, scale, enabled, label) {
     powderLightVfxAudit: '1', renderScale: String(scale), renderLook: 'realistic',
     // E06 compares its one selector on top of the accepted E02/E05 body base.
     volumeVfx: '1', powderBodyVfx: '1', liquidBodyVfx: '0', liquidSurfaceVfx: '0',
-    gasBodyVfx: '0', translucentEdgeVfx: '0', organicSubsurfaceVfx: '0',
+    gasBodyVfx: '0', translucentEdgeVfx: '0', organicSubsurfaceVfx: '0', wetSedimentVfx: '0',
     powderLightVfx: enabled ? '1' : '0',
   });
   await cdp.send('Page.navigate', { url: `${AUDIT_BASE_URL}?${query}` });
@@ -24425,7 +24798,7 @@ function assertVolumeVfxRawAlphaInvariant(left, right, label) {
 async function navigateHdrVfxLook(cdp, mode, look, label) {
   const query = new URLSearchParams({
     scene: 'render-lab', inputAudit: '1', auditStage: 'canonical',
-    renderScale: '2', renderLook: look, organicSubsurfaceVfx: '0',
+    renderScale: '2', renderLook: look, organicSubsurfaceVfx: '0', wetSedimentVfx: '0',
   });
   await cdp.send('Page.navigate', { url: `${AUDIT_BASE_URL}?${query}` });
   await waitFor(() => evaluate(cdp, `(() => {
@@ -24481,10 +24854,13 @@ async function assertFocusedOrganicSubsurfaceVfxInactive(cdp, label) {
     return {
       query: parameters.get('organicSubsurfaceVfx'),
       dataset: canvas?.dataset.organicSubsurfaceVfx,
+      wetSedimentQuery: parameters.get('wetSedimentVfx'),
+      wetSedimentDataset: canvas?.dataset.wetSedimentVfx,
     };
   })()`);
-  assert(state.query === '0' && state.dataset === 'inactive',
-    `${label}: E11 was not explicitly pinned inactive (${JSON.stringify(state)})`);
+  assert(state.query === '0' && state.dataset === 'inactive'
+    && state.wetSedimentQuery === '0' && state.wetSedimentDataset === 'inactive',
+  `${label}: E11/E12 was not explicitly pinned inactive (${JSON.stringify(state)})`);
 }
 
 function assertHdrVfxSemanticEquality(left, right, label) {

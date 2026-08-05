@@ -168,6 +168,14 @@ export interface AtmosphereSupportAudit {
   readonly signature: number;
 }
 
+/** Exact CPU evidence for the shared powder-in-aqueous suspension field. */
+export interface SuspensionSupportAudit {
+  readonly active: boolean;
+  readonly nonzero: number;
+  readonly alphaSum: number;
+  readonly signature: number;
+}
+
 /**
  * Continuous native state (temperature, velocity, ctype projections, photons)
  * needs a bounded refresh while the simulation steps. A queued state mutation
@@ -690,6 +698,41 @@ export class MaterialRenderer {
   /** WebGL audit surface; the fallback has no advanced gas-chroma shader path. */
   getAtmosphereSupportAudit(): AtmosphereSupportAudit | undefined {
     return this.presenter?.atmosphereSupportAudit();
+  }
+
+  /** Audit-only readback of the exact half-resolution suspension RGBA texel. */
+  suspensionAt(x: number, y: number): readonly [number, number, number, number] {
+    if (x < 0 || y < 0 || x >= this.simulation.width || y >= this.simulation.height) {
+      return [0, 0, 0, 0];
+    }
+    if (this.presenter) return this.presenter.suspensionAt(x, y);
+    const field = this.fallbackFields?.suspension;
+    if (!field) return [0, 0, 0, 0];
+    const fieldX = Math.min(field.width - 1, Math.floor(x / 2));
+    const fieldY = Math.min(field.height - 1, Math.floor(y / 2));
+    const offset = (fieldY * field.width + fieldX) * 4;
+    return [field.bytes[offset], field.bytes[offset + 1], field.bytes[offset + 2], field.bytes[offset + 3]];
+  }
+
+  /** Backend-neutral digest used to prove selector/support independence. */
+  getSuspensionSupportAudit(): SuspensionSupportAudit | undefined {
+    if (this.presenter) return this.presenter.suspensionSupportAudit();
+    const field = this.fallbackFields?.suspension;
+    if (!field) return undefined;
+    const bytes = field.bytes;
+    let nonzero = 0;
+    let alphaSum = 0;
+    let signature = 2166136261;
+    for (let offset = 0; offset < bytes.length; offset += 4) {
+      const alpha = bytes[offset + 3];
+      nonzero += Number(alpha !== 0);
+      alphaSum += alpha;
+      signature = Math.imul(signature ^ bytes[offset], 16777619) >>> 0;
+      signature = Math.imul(signature ^ bytes[offset + 1], 16777619) >>> 0;
+      signature = Math.imul(signature ^ bytes[offset + 2], 16777619) >>> 0;
+      signature = Math.imul(signature ^ alpha, 16777619) >>> 0;
+    }
+    return { active: field.hasSuspension, nonzero, alphaSum, signature };
   }
 
 

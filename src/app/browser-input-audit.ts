@@ -1,5 +1,6 @@
 import type {
   AtmosphereSupportAudit, CanvasPresentationTiming, PresentationRefreshAudit, RendererBackendInfo,
+  SuspensionSupportAudit,
 } from '../renderer/field-renderer';
 import type { WebGLPresentationTiming } from '../renderer/pixi-field-presenter';
 import type { PowderRenderStyle } from '../renderer/powder-render-style';
@@ -67,6 +68,7 @@ import type { PowderLightVfxAuditSnapshot } from './powder-light-vfx-audit';
 import type {
   GasMotionVfxAuditSnapshot, GasMotionVfxFixtureMode,
 } from './gas-motion-vfx-audit';
+import type { WetSedimentVfxAuditSnapshot } from './wet-sediment-vfx-audit';
 
 export interface BrowserInputAuditApi {
   readonly version: 1;
@@ -81,6 +83,7 @@ export interface BrowserInputAuditApi {
   velocity(x: number, y: number): readonly [number, number];
   renderedVelocity(x: number, y: number): readonly [number, number];
   atmosphereMotion(x: number, y: number): readonly [number, number, number];
+  suspensionAt(x: number, y: number): readonly [number, number, number, number];
   sourceTarget(x: number, y: number): number;
   presentationAuxiliary(x: number, y: number): number;
   /** Queues one paused audit-only native/presentation-field refresh. */
@@ -93,6 +96,7 @@ export interface BrowserInputAuditApi {
   gbmbForceStylingEnabled(): boolean;
   gasIdentityStyle(x: number, y: number): number;
   atmosphereSupportAudit(): AtmosphereSupportAudit | undefined;
+  suspensionSupportAudit(): SuspensionSupportAudit | undefined;
   occupiedCells(): number;
   setGasFieldLighting(enabled: boolean): void;
   setGasVolumeChroma(enabled: boolean): void;
@@ -263,6 +267,8 @@ export interface BrowserInputAuditApi {
   prepareTranslucentEdgeVfxAudit(): void;
   organicSubsurfaceVfxFixture(): OrganicSubsurfaceVfxAuditSnapshot;
   prepareOrganicSubsurfaceVfxAudit(): void;
+  wetSedimentVfxFixture(): WetSedimentVfxAuditSnapshot;
+  prepareWetSedimentVfxAudit(): void;
   geologicalSolidGraphicsAtlas(): GeologicalSolidGraphicsAuditSnapshot;
   prepareGeologicalSolidGraphicsFixture(): void;
   thermalCatalyticRigidGraphicsAtlas(): ThermalCatalyticRigidGraphicsAuditSnapshot;

@@ -171,6 +171,23 @@ export function resolveOrganicSubsurfaceVfxEnabled(
 }
 
 /**
+ * Keeps the Sand/Clay/Concrete aqueous-suspension optics independently
+ * measurable from the established shared wet-material albedo. The additional
+ * family light/depth response belongs only to normal WebGL; Canvas and the
+ * compact true-8x shader retain the existing cohesive suspension baseline.
+ */
+export function resolveWetSedimentVfxEnabled(
+  look: RenderLook,
+  search = globalThis.location?.search ?? '',
+): boolean {
+  if (look === 'classic') return false;
+  const requested = new URLSearchParams(search).get('wetSedimentVfx');
+  if (requested === '0' || requested === 'off') return false;
+  if (requested === '1' || requested === 'on') return true;
+  return resolveVolumeVfxEnabled(look, search);
+}
+
+/**
  * Keeps the dry-powder local-light experiment independently measurable without
  * changing the established powder body-depth response. Ordinary realistic/neon
  * presets retain the broad volume default; the explicit query is reserved for

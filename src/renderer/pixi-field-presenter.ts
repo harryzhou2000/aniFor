@@ -42,12 +42,20 @@ import {
   resolveOrganicSubsurfaceVfxEnabled,
   resolvePowderSolidContactVfxEnabled,
   resolveTranslucentEdgeVfxEnabled,
-  resolveVolumeVfxEnabled,
+  resolveVolumeVfxEnabled, resolveWetSedimentVfxEnabled,
 } from './render-look';
 interface PresenterViewport { readonly width: number; readonly height: number }
 
 /** Audit-only digest of the field that owns reconstructed gas support. */
 export interface AtmosphereSupportAudit {
+  readonly nonzero: number;
+  readonly alphaSum: number;
+  readonly signature: number;
+}
+
+/** Audit-only digest of the shared powder-in-aqueous suspension field. */
+export interface SuspensionSupportAudit {
+  readonly active: boolean;
   readonly nonzero: number;
   readonly alphaSum: number;
   readonly signature: number;
@@ -3215,6 +3223,7 @@ uniform float uPowderLightVfx;
 uniform float uPowderSolidContactVfx;
 uniform float uTranslucentEdgeVfx;
 uniform float uOrganicSubsurfaceVfx;
+uniform float uWetSedimentVfx;
 uniform float uHighQuality;
 uniform float uAnalyticLightingQuality;
 uniform float uGasFieldLighting;
@@ -8603,6 +8612,101 @@ void main() {
       color, wetSediment + vec3(relief),
       lateSuspension * mix(0.96, 1.0, sedimentCompaction)
     );
+    // E12: the shared field has already joined exact Water with one coherent
+    // Sand, Clay, or Concrete owner. Give only authoritative semantic members
+    // of that dense body a restrained mineral key/fill and damp surface sheen.
+    // Powder and liquid receive the same owner-derived response after their
+    // common wet albedo, so this cannot reintroduce a phase checkerboard.
+    // Static world-space planes add broad mesostructure without a clock, field,
+    // pass, target, allocation, alpha, support, or silhouette decision. Water
+    // takes one guarded read from the existing settled-powder surface texture
+    // so moving powder cannot leave a styled stationary aqueous checkerboard.
+    if (uWetSedimentVfx > 0.5 && uPowderStyle > 1.5 && material > 0.5
+      && liquidOnly < 0.5 && halo < 0.5 && surfaceOnly < 0.5
+      && wall < 0.5 && wallOnly < 0.5 && emissionOnly < 0.5
+      && traits < 0.5 && !materialEmissive) {
+      float sedimentSandOwner = 1.0 - smoothstep(
+        0.018, 0.065,
+        length(suspensionState.rgb - vec3(215.0, 170.0, 104.0) / 255.0)
+      );
+      float sedimentConcreteOwner = 1.0 - smoothstep(
+        0.018, 0.065,
+        length(suspensionState.rgb - vec3(134.0, 131.0, 125.0) / 255.0)
+      );
+      float sedimentClayOwner = 1.0 - smoothstep(
+        0.018, 0.065,
+        length(suspensionState.rgb - vec3(184.0, 121.0, 85.0) / 255.0)
+      );
+      float sedimentPowderOwner = material == 1.0 ? sedimentSandOwner
+        : (material == 26.0 ? sedimentConcreteOwner
+        : (material == 28.0 ? sedimentClayOwner : 0.0));
+      float sedimentWaterOwner = material == 2.0
+        ? max(sedimentSandOwner, max(sedimentConcreteOwner, sedimentClayOwner)) : 0.0;
+      float sedimentOwner = max(sedimentPowderOwner, sedimentWaterOwner);
+      float sedimentMotionStill = 1.0
+        - smoothstep(0.025, 0.075, length(velocity));
+      float sedimentStill = sedimentMotionStill * (family == 4.0
+        ? smoothstep(0.96, 1.0, boundaryStability) : 1.0);
+      float sedimentTopology = 0.0;
+      if (family == 4.0) {
+        sedimentTopology = smoothstep(0.42, 0.72, powderBulkDepth);
+      } else if (material == 2.0 && sedimentOwner > 0.001) {
+        sedimentTopology = smoothstep(
+          0.30, 0.58, powderSurfaceShape(fieldUv).x
+        );
+      }
+      float sedimentOpticalBody = sedimentOwner * sedimentStill * sedimentTopology
+        * smoothstep(0.30, 0.72, suspensionState.a)
+        * smoothstep(0.42, 0.86, lateSuspension);
+      if (sedimentOpticalBody > 0.001) {
+        float sedimentPlaneA = 1.0 - 2.0 * abs(
+          fract(dot(fieldPosition, vec2(0.0113, 0.0039)) + 0.173) * 2.0 - 1.0
+        );
+        float sedimentPlaneB = 1.0 - 2.0 * abs(
+          fract(dot(fieldPosition, vec2(-0.0047, 0.0151)) + 0.419) * 2.0 - 1.0
+        );
+        float sedimentMesostructure = clamp(
+          sedimentPlaneA * 0.62 + sedimentPlaneB * 0.38, -1.0, 1.0
+        );
+        float sedimentLightKey = clamp(
+          (diffuse - 0.68) / 0.42 + specular * 0.14
+            + (1.0 - clamp(normal.z, 0.0, 1.0)) * 0.08,
+          0.0, 1.0
+        );
+        float sedimentRelief = clamp(
+          (sedimentLightKey - 0.54) * 0.90
+            + sedimentMesostructure * 0.30 - sedimentCompaction * 0.05,
+          -1.0, 1.0
+        );
+        vec3 sedimentKey = vec3(1.00, 0.78, 0.46);
+        vec3 sedimentShadow = vec3(0.76, 0.58, 0.40);
+        float sedimentReliefGain = 0.062;
+        float sedimentSheenGain = 5.2 / 255.0;
+        if (sedimentConcreteOwner > max(sedimentSandOwner, sedimentClayOwner)) {
+          sedimentKey = vec3(0.78, 0.88, 1.00);
+          sedimentShadow = vec3(0.62, 0.68, 0.76);
+          sedimentReliefGain = 0.050;
+          sedimentSheenGain = 3.0 / 255.0;
+        } else if (sedimentClayOwner > sedimentSandOwner) {
+          sedimentKey = vec3(1.00, 0.64, 0.44);
+          sedimentShadow = vec3(0.82, 0.54, 0.40);
+          sedimentReliefGain = 0.056;
+          sedimentSheenGain = 4.0 / 255.0;
+        }
+        float sedimentSignedResponse = sedimentOpticalBody
+          * sedimentRelief * sedimentReliefGain;
+        if (sedimentSignedResponse > 0.0) {
+          color += (vec3(1.10) - clamp(color, 0.0, 1.10))
+            * sedimentKey * sedimentSignedResponse;
+        } else {
+          color *= vec3(1.0) - sedimentShadow * (-sedimentSignedResponse) * 1.08;
+        }
+        float sedimentSheen = sedimentOpticalBody * pow(sedimentLightKey, 3.0)
+          * mix(1.0, 0.58, sedimentCompaction) * sedimentSheenGain;
+        color += (vec3(1.12) - clamp(color, 0.0, 1.12))
+          * sedimentKey * sedimentSheen;
+      }
+    }
   }
   // E09: ground only the authoritative, dry, settled Smooth-powder side of an
   // exact rigid contact. Its categorical, laterally supported resting-bed proof
@@ -8892,6 +8996,11 @@ export class PixiFieldPresenter {
     // neither this selector nor a parallel branch.
     const organicSubsurfaceVfxEnabled = outputScale < 8
       && resolveOrganicSubsurfaceVfxEnabled(renderLook);
+    // E12 adds family-specific light/depth to the existing shared suspension
+    // albedo only in normal WebGL. Canvas and compact true-8x retain their
+    // established wet-material baseline without this selector or branch.
+    const wetSedimentVfxEnabled = outputScale < 8
+      && resolveWetSedimentVfxEnabled(renderLook);
     // E04 follows the same normal-detail boundary as E03. The protected true
     // 8x shader deliberately has neither this uniform nor its arithmetic.
     const gasBodyVfxEnabled = outputScale < 8
@@ -8932,6 +9041,7 @@ export class PixiFieldPresenter {
       uOrganicSubsurfaceVfx: {
         value: organicSubsurfaceVfxEnabled ? 1 : 0, type: 'f32',
       },
+      uWetSedimentVfx: { value: wetSedimentVfxEnabled ? 1 : 0, type: 'f32' },
       // At 8x, the supersampled analytic boundary already supplies detail. Drop
       // diagonal/ring probes so the 15M-pixel frame remains watchdog-safe.
       uHighQuality: {
@@ -9137,6 +9247,7 @@ export class PixiFieldPresenter {
       this.uniforms.uniforms.uPowderSolidContactVfx = 0;
       this.uniforms.uniforms.uTranslucentEdgeVfx = 0;
       this.uniforms.uniforms.uOrganicSubsurfaceVfx = 0;
+      this.uniforms.uniforms.uWetSedimentVfx = 0;
       this.app.stage.addChild(this.scene);
     }
   }
@@ -9171,7 +9282,8 @@ export class PixiFieldPresenter {
             || new URLSearchParams(location.search).get('powderLightVfxAudit') === '1'
             || new URLSearchParams(location.search).get('powderSolidContactVfxAudit') === '1'
             || new URLSearchParams(location.search).get('translucentEdgeVfxAudit') === '1'
-            || new URLSearchParams(location.search).get('organicSubsurfaceVfxAudit') === '1'),
+            || new URLSearchParams(location.search).get('organicSubsurfaceVfxAudit') === '1'
+            || new URLSearchParams(location.search).get('wetSedimentVfxAudit') === '1'),
         resolution: outputScale, autoDensity: true, autoStart: false,
       });
     } catch (error) {
@@ -9217,6 +9329,9 @@ export class PixiFieldPresenter {
     ) > 0.5 ? 'active' : 'inactive';
     presenter.app.canvas.dataset.organicSubsurfaceVfx = Number(
       presenter.uniforms.uniforms.uOrganicSubsurfaceVfx
+    ) > 0.5 ? 'active' : 'inactive';
+    presenter.app.canvas.dataset.wetSedimentVfx = Number(
+      presenter.uniforms.uniforms.uWetSedimentVfx
     ) > 0.5 ? 'active' : 'inactive';
     if (presenter.hdrPipelineInfo.reason) {
       presenter.app.canvas.dataset.hdrPipelineReason = presenter.hdrPipelineInfo.reason;
@@ -9355,6 +9470,35 @@ export class PixiFieldPresenter {
       signature = Math.imul(signature ^ alpha, 16777619) >>> 0;
     }
     return { nonzero, alphaSum, signature };
+  }
+
+  /** Exact half-resolution RGBA sample used by wet-sediment browser fixtures. */
+  suspensionAt(x: number, y: number): readonly [number, number, number, number] {
+    if (x < 0 || y < 0 || x >= this.width || y >= this.height) return [0, 0, 0, 0];
+    const field = this.fieldSet.suspension;
+    const fieldX = Math.min(field.width - 1, Math.floor(x / 2));
+    const fieldY = Math.min(field.height - 1, Math.floor(y / 2));
+    const offset = (fieldY * field.width + fieldX) * 4;
+    return [field.bytes[offset], field.bytes[offset + 1], field.bytes[offset + 2], field.bytes[offset + 3]];
+  }
+
+  /** Exact CPU-field evidence that an RGB-only selector cannot mutate support. */
+  suspensionSupportAudit(): SuspensionSupportAudit {
+    const field = this.fieldSet.suspension;
+    const bytes = field.bytes;
+    let nonzero = 0;
+    let alphaSum = 0;
+    let signature = 2166136261;
+    for (let offset = 0; offset < bytes.length; offset += 4) {
+      const alpha = bytes[offset + 3];
+      nonzero += Number(alpha !== 0);
+      alphaSum += alpha;
+      signature = Math.imul(signature ^ bytes[offset], 16777619) >>> 0;
+      signature = Math.imul(signature ^ bytes[offset + 1], 16777619) >>> 0;
+      signature = Math.imul(signature ^ bytes[offset + 2], 16777619) >>> 0;
+      signature = Math.imul(signature ^ alpha, 16777619) >>> 0;
+    }
+    return { active: field.hasSuspension, nonzero, alphaSum, signature };
   }
 
   markDirty(index: number, nextMaterial: number): void {
@@ -10522,6 +10666,7 @@ export class PixiFieldPresenter {
         this.uniforms.uniforms.uPowderSolidContactVfx = 0;
         this.uniforms.uniforms.uTranslucentEdgeVfx = 0;
         this.uniforms.uniforms.uOrganicSubsurfaceVfx = 0;
+        this.uniforms.uniforms.uWetSedimentVfx = 0;
         this.app.canvas.dataset.hdrPipeline = 'inactive';
         this.app.canvas.dataset.hdrPipelineReason = 'runtime-error';
         this.app.canvas.dataset.volumeVfx = 'inactive';
@@ -10534,6 +10679,7 @@ export class PixiFieldPresenter {
         this.app.canvas.dataset.powderSolidContactVfx = 'inactive';
         this.app.canvas.dataset.translucentEdgeVfx = 'inactive';
         this.app.canvas.dataset.organicSubsurfaceVfx = 'inactive';
+        this.app.canvas.dataset.wetSedimentVfx = 'inactive';
         delete this.app.canvas.dataset.bloomBacking;
         if (!this.scene.parent) this.app.stage.addChild(this.scene);
       }

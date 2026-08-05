@@ -150,6 +150,9 @@ import {
   ORGANIC_SUBSURFACE_VFX_AUDIT, prepareOrganicSubsurfaceVfxFixture,
 } from './organic-subsurface-vfx-audit';
 import {
+  WET_SEDIMENT_VFX_AUDIT, prepareWetSedimentVfxFixture,
+} from './wet-sediment-vfx-audit';
+import {
   GEOLOGICAL_SOLID_GRAPHICS_AUDIT, prepareGeologicalSolidGraphicsAuditFixture,
 } from './geological-solid-graphics-audit';
 import {
@@ -447,6 +450,7 @@ export class Game {
       },
       renderedVelocity: (x, y) => this.renderer.renderedVelocityAt(x, y),
       atmosphereMotion: (x, y) => this.renderer.atmosphereMotionAt(x, y),
+      suspensionAt: (x, y) => this.renderer.suspensionAt(x, y),
       sourceTarget: (x, y) => this.simulation.configuredSourceTargetAt?.(x, y) ?? Material.Empty,
       presentationAuxiliary: (x, y) => this.renderer.presentationAuxiliaryAt(x, y),
       refreshPresentationFields: () => this.renderer.invalidateDynamicPresentation(),
@@ -458,6 +462,7 @@ export class Game {
       gbmbForceStylingEnabled: () => this.renderer.gbmbForceStylingIsEnabled(),
       gasIdentityStyle: (x, y) => this.renderer.gasIdentityStyleAt(x, y),
       atmosphereSupportAudit: () => this.renderer.getAtmosphereSupportAudit(),
+      suspensionSupportAudit: () => this.renderer.getSuspensionSupportAudit(),
       occupiedCells: () => {
         let occupied = 0;
         for (const material of this.simulation.cells()) if (material !== Material.Empty) occupied++;
@@ -888,6 +893,12 @@ export class Game {
       organicSubsurfaceVfxFixture: () => ORGANIC_SUBSURFACE_VFX_AUDIT,
       prepareOrganicSubsurfaceVfxAudit: () => {
         prepareOrganicSubsurfaceVfxFixture(this.simulation);
+        this.renderer.synchronizeFixtureMaterialPlane();
+        this.renderer.invalidateDynamicPresentation();
+      },
+      wetSedimentVfxFixture: () => WET_SEDIMENT_VFX_AUDIT,
+      prepareWetSedimentVfxAudit: () => {
+        prepareWetSedimentVfxFixture(this.simulation);
         this.renderer.synchronizeFixtureMaterialPlane();
         this.renderer.invalidateDynamicPresentation();
       },

@@ -121,6 +121,11 @@ export class RenderFieldSet {
     // liquid optical-depth plane. Reuse the bounded liquid cadence so a wall
     // edit cannot leave stale depth even when liquid semantics did not change.
     this.liquidDirty = true;
+    // The half-resolution suspension field rejects native-wall ownership while
+    // deriving and packing its supported powder/liquid clusters. A wall-only
+    // edit must therefore refresh that shared field too; otherwise valid bytes
+    // can survive behind a newly placed wall until an unrelated material edit.
+    this.suspensionDirty = true;
   }
 
   /** Reuses the existing atmosphere cadence when only native gas flow changed. */

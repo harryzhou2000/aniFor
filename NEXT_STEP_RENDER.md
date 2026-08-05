@@ -135,11 +135,28 @@ does not alter simulation, camera, semantic ownership, or `renderScale`.
   zero state, hydrated/dry SEED, Molten Wax, unlike seams, native walls,
   traits, time-invariant emissive matter, holes/notches, one-cell structures,
   isolated cells, Canvas, and true 8× remain exact controls.
+- **E12 — species-safe wet-sediment mineral optics (accepted checkpoint):**
+  normal 1×–4× WebGL gives dense exact Sand/Water, Clay/Water, and
+  Concrete/Water suspension bodies one shared mineral key/fill, broad static
+  mesostructure, and a restrained damp sheen after the established common wet
+  albedo. It reuses the exact RGB owner and density in the existing
+  half-resolution suspension field plus the already-live body lighting.
+  Powder keeps its existing stability and bulk-depth proof; authoritative
+  Water takes one guarded sample from the existing settled-powder surface
+  texture so stationary Water cannot remain styled beside moving sediment.
+  `?wetSedimentVfx=0|1` isolates E12. It adds no field, texture resource, pass, target,
+  upload, persistent allocation, clock, output-scale input, alpha/support,
+  silhouette, ownership, reconstruction, or physics decision. Its single
+  additional existing-texture read occurs only for exact Water inside an
+  already-proven supported suspension body. Dry or moving sediment,
+  stationary Water beside moving powder, Salt, Oil, Lava, unlike aqueous
+  owners, walls, traits, emission, fine columns, isolated grains, holes,
+  notches, gaps, Local, Grains, Canvas, and true 8× remain controls.
 - **Protected 8× rung:** `renderScale=8` deliberately reports
   `hdrPipeline=inactive` / `scale-8` and retains the proven direct single-mesh
   4896×3072 path. The experiment must earn a bounded 8× design rather than
   allocating a 115 MiB full-resolution float target beside that path.
-- **Current decision:** E01/E02/E03/E04/E05/E06/E07/E08/E09/E10/E11 remain opt-in through the non-Classic looks
+- **Current decision:** E01/E02/E03/E04/E05/E06/E07/E08/E09/E10/E11/E12 remain opt-in through the non-Classic looks
   until representative hardware timing and mobile thermal behavior are
   measured. E02 remains the safe family-wide baseline. E03 is accepted as the
   liquid-depth checkpoint: its fit-view crop is visibly more cohesive, retains
@@ -179,7 +196,12 @@ does not alter simulation, camera, semantic ownership, or `renderScale`.
   wrap while hydrated tree and non-tree PLNT retain lifecycle colour under a
   cool organic fill. Dry/activity-only and presence-free hydration states stay
   exact. Freeze its amplitude and depth window until another normal-view
-  review. These are not the final
+  review. E12 is accepted as the first composed wet-mineral optics checkpoint:
+  all three exact powder families retain a shared aqueous body while gaining a
+  scale-stable family key/fill and damp sheen. Its split moving-powder /
+  stationary-Water control is exact, so the effect cannot hide a cross-phase
+  stability mismatch. Freeze its owner classifiers, settled-Water proof, and
+  amplitude until another fit-view review. These are not the final
   material/VFX results.
   Sub-1.0 material colour stays on the established response; tonemapping owns
   only real HDR highlights so powder texture and liquid body contrast are not
@@ -197,7 +219,7 @@ lab as `volumeVfx=0 → 1 → 0` at 1×, 2×, and 4×, requires the real HDR pip
 and proves exact semantic/staging state plus raw presented alpha/support hashes.
 Its paused powder probes drive seven separately observed presentation refreshes
 and require exact auxiliary byte `255` before capture; an inert first PNG is not
-settled-body evidence. E10 and E11 are explicitly pinned off in this baseline.
+settled-body evidence. E10, E11, and E12 are explicitly pinned off in this baseline.
 The accepted response is spatial rather than a uniform grade: the current
 fixture reaches 6 framebuffer bytes in settled Clay, 13 in connected liquids,
 and 3 in gas while isolated Sand/Water, authored holes, Metal, and repeat
@@ -300,7 +322,7 @@ navigation explicitly requests E09 and proves it inactive with reason
 `scale-8`, no bloom backing, exact 4896×3072 WebGL, and a completed GPU fence.
 
 Run `npm run audit:vfx:translucent-edge` for E10. It pins every other VFX
-selector, including E11, off; disables the established translucent lens/field
+selector, including E11 and E12, off; disables the established translucent lens/field
 effects; and reloads four broad exact Glass/Ice panes as
 `translucentEdgeVfx=0 → 1 → 0` at 1×/2×/4×. The gate proves exact depth bands
 (`6`, `12–30`, `36–60`, and
@@ -335,19 +357,41 @@ are byte-identical. The closing true-8× navigation proves E11/HDR inactive,
 has no bloom allocation, presents exact 4896×3072 WebGL, and completes a GPU
 fence.
 
-**Next visual experiments:** E03–E11 now provide accepted liquid body/surface,
+Run `npm run audit:vfx:wet-sediment` for E12. It pins E01–E11 off and reloads
+exact Sand/Water, Clay/Water, and Concrete/Water bodies as
+`wetSedimentVfx=0 → 1 → 0` at 1×/2×/4×. The accepted checkpoint run measured the three
+families at `1.39–1.90` RGB RMS, `4–7`-byte peaks, `22.8–43.9%` response
+coverage, and positive `0.58–1.29` signed means. Normalized powder/Water
+chroma distance remains at or below `1.15` while raw distance is reported
+separately and remains below `35` bytes. The exact suspension digest and RGB
+owner probes are identical across selector states. Dry bodies, moving powder
+beside stationary Water, Salt, Oil, Lava, unlike aqueous owners, a co-located
+native wall, fine columns, isolated grains, holes, notches, authored gaps,
+blank space, Local, and square Grains remain exact semantic/raw controls;
+only a broad antialiased hole fringe may quantize at most two composed RGB
+bytes while its authoritative Empty centre remains exact. Repeated-off frames
+are byte-identical. The closing requested-on true-8× navigation proves E12/HDR
+inactive with reason `scale-8`, no bloom allocation, exact 4896×3072 WebGL,
+and a completed GPU fence.
+
+The gate deliberately leaves narrow cross-browser headroom around those
+observations: family-specific bounds span `1.35–2.00` RGB RMS, `4–7`-byte
+peaks, `22–46%` coverage, and `0.55–1.40` signed means. These are acceptance
+limits, not the measured checkpoint values above.
+
+**Next visual experiments:** E03–E12 now provide accepted liquid body/surface,
 stable-gas, coherent-gas-motion, powder-depth, and powder-local-light
 checkpoints plus exact resting contact grounding, Glass/Ice transmission, and
-state-aware Wax/PLNT subsurface response. The next candidate should improve a
-composed material rather than add another global grade: prefer a species-safe
-wet-sediment cue for exact Sand, Clay, and Concrete already supported by the
-aqueous suspension field. It must preserve dry or moving powder, unlike and
-non-aqueous liquid, emissive/molten matter, Local and Grains styles, fine
-columns, authored gaps, ownership, and silhouette; it should reuse existing
-suspension/depth/light data without another field, texture, or pass.
-Return to advected gas detail only if it can remain atmosphere-owned and
-counterflow-coherent; expand liquid curvature/thickness architecture only with
-an explicit bounded-resource design. Each experiment keeps its own off/on/off
+state-aware Wax/PLNT subsurface response, and composed wet-mineral optics. The
+next bounded candidate is atmosphere-owned external-light spectral scattering
+for exact Smoke and FOG: reuse existing atmosphere density/identity,
+curvature, coherent motion, and already-sampled emission light to create a
+coloured forward-scatter shoulder and family-specific core absorption. It must
+exclude CFLM self-feedback, other gas species, sparse carriers, unlit cores,
+walls, contacts, holes, Canvas, and true 8×; add no field, texture, sample,
+pass, target, upload, or topology decision. A liquid/solid contact meniscus is
+the alternate candidate if the gas fixture cannot separate lit and unlit
+field-owned support without widening E04/E07. Each experiment keeps its own off/on/off
 switch and must pass the same topology, contact, scale, resource, fallback,
 and true-8× isolation controls before it can become a preset default.
 

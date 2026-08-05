@@ -264,6 +264,12 @@ describe('Pixi presenter startup configuration', () => {
     const organicSubsurfaceVfx = normal.slice(
       organicSubsurfaceVfxBranchStart, organicSubsurfaceVfxEnd,
     );
+    const wetSedimentVfxStart = normal.indexOf('    // E12:');
+    const wetSedimentVfxBranchStart = normal.indexOf(
+      '    if (uWetSedimentVfx > 0.5', wetSedimentVfxStart,
+    );
+    const wetSedimentVfxEnd = normal.indexOf('  // E09:', wetSedimentVfxBranchStart);
+    const wetSedimentVfx = normal.slice(wetSedimentVfxBranchStart, wetSedimentVfxEnd);
 
     expect(eightStart).toBeGreaterThanOrEqual(0);
     expect(normalStart).toBeGreaterThan(eightStart);
@@ -281,6 +287,7 @@ describe('Pixi presenter startup configuration', () => {
     expect(normal).toContain('uniform float uPowderSolidContactVfx;');
     expect(normal).toContain('uniform float uTranslucentEdgeVfx;');
     expect(normal).toContain('uniform float uOrganicSubsurfaceVfx;');
+    expect(normal).toContain('uniform float uWetSedimentVfx;');
     expect(eight).not.toContain('uVolumeVfx');
     expect(eight).not.toContain('uGasBodyVfx');
     expect(eight).not.toContain('uGasMotionVfx');
@@ -295,6 +302,9 @@ describe('Pixi presenter startup configuration', () => {
     expect(eight).not.toContain('uOrganicSubsurfaceVfx');
     expect(eight).not.toContain('organicSubsurfaceVfx');
     expect(canvasSource).not.toContain('organicSubsurfaceVfx');
+    expect(eight).not.toContain('uWetSedimentVfx');
+    expect(eight).not.toContain('wetSedimentVfx');
+    expect(canvasSource).not.toContain('wetSedimentVfx');
 
     // Gas stays field-owned: its independent E04 selector reuses the
     // established mass/curvature/scatter scalars and never samples or assigns
@@ -486,6 +496,33 @@ describe('Pixi presenter startup configuration', () => {
       /\b(?:alpha|support|sampler|resource|pass|target|outputScale)\b/,
     );
 
+    // E12 is normal-WebGL arithmetic over the established suspension sample.
+    // Exact Sand/Concrete/Clay RGB owners and exact semantic Water or matching
+    // powder IDs are required. Powder reuses its live stability/bulk proof;
+    // Water takes one guarded read from the existing settled-powder surface so
+    // a moving powder phase cannot leave a styled stationary liquid phase.
+    expect(wetSedimentVfxStart).toBeGreaterThan(0);
+    expect(wetSedimentVfxBranchStart).toBeGreaterThan(wetSedimentVfxStart);
+    expect(wetSedimentVfxEnd).toBeGreaterThan(wetSedimentVfxBranchStart);
+    expect(wetSedimentVfx).toContain('vec3(215.0, 170.0, 104.0) / 255.0');
+    expect(wetSedimentVfx).toContain('vec3(134.0, 131.0, 125.0) / 255.0');
+    expect(wetSedimentVfx).toContain('vec3(184.0, 121.0, 85.0) / 255.0');
+    expect(wetSedimentVfx).toContain('material == 1.0');
+    expect(wetSedimentVfx).toContain('material == 26.0');
+    expect(wetSedimentVfx).toContain('material == 28.0');
+    expect(wetSedimentVfx).toContain('material == 2.0');
+    expect(wetSedimentVfx).toContain('uPowderStyle > 1.5');
+    expect(wetSedimentVfx).toContain('smoothstep(0.96, 1.0, boundaryStability)');
+    expect(wetSedimentVfx).toContain('sedimentMotionStill');
+    expect(wetSedimentVfx).toContain('smoothstep(0.42, 0.72, powderBulkDepth)');
+    expect(wetSedimentVfx.match(/powderSurfaceShape\(fieldUv\)\.x/g)).toHaveLength(1);
+    expect(wetSedimentVfx).toContain('sedimentPlaneA');
+    expect(wetSedimentVfx).toContain('sedimentSheen');
+    expect(wetSedimentVfx).not.toContain('texture(');
+    expect(wetSedimentVfx).not.toContain('uTime');
+    expect(wetSedimentVfx).not.toContain('gl_FragCoord');
+    expect(wetSedimentVfx).not.toMatch(/\balpha\s*[+*]?=/);
+
     // Capability/initialization and first-render failures must turn every HDR
     // arithmetic family off before continuing with the single-pass scene.
     expect(source.match(/this\.uniforms\.uniforms\.uHDRVfx = 0;/g)).toHaveLength(2);
@@ -498,6 +535,7 @@ describe('Pixi presenter startup configuration', () => {
     expect(source.match(/this\.uniforms\.uniforms\.uPowderSolidContactVfx = 0;/g)).toHaveLength(2);
     expect(source.match(/this\.uniforms\.uniforms\.uTranslucentEdgeVfx = 0;/g)).toHaveLength(2);
     expect(source.match(/this\.uniforms\.uniforms\.uOrganicSubsurfaceVfx = 0;/g)).toHaveLength(2);
+    expect(source.match(/this\.uniforms\.uniforms\.uWetSedimentVfx = 0;/g)).toHaveLength(2);
     expect(source).toContain("get('volumeVfxAudit') === '1'");
     expect(source).toContain("get('gasBodyVfxAudit') === '1'");
     expect(source).toContain("get('gasMotionVfxAudit') === '1'");
@@ -507,6 +545,7 @@ describe('Pixi presenter startup configuration', () => {
     expect(source).toContain("get('powderSolidContactVfxAudit') === '1'");
     expect(source).toContain("get('translucentEdgeVfxAudit') === '1'");
     expect(source).toContain("get('organicSubsurfaceVfxAudit') === '1'");
+    expect(source).toContain("get('wetSedimentVfxAudit') === '1'");
     expect(source).toContain('const gasBodyVfxEnabled = outputScale < 8');
     expect(source).toContain('const gasMotionVfxEnabled = outputScale < 8');
     expect(source).toContain('const liquidBodyVfxEnabled = outputScale < 8');
@@ -521,12 +560,17 @@ describe('Pixi presenter startup configuration', () => {
     expect(source).toMatch(
       /const organicSubsurfaceVfxEnabled = outputScale < 8\s*&& resolveOrganicSubsurfaceVfxEnabled\(renderLook\);/,
     );
+    expect(source).toMatch(
+      /const wetSedimentVfxEnabled = outputScale < 8\s*&& resolveWetSedimentVfxEnabled\(renderLook\);/,
+    );
     expect(source).toContain('presenter.app.canvas.dataset.powderSolidContactVfx');
     expect(source).toContain("this.app.canvas.dataset.powderSolidContactVfx = 'inactive';");
     expect(source).toContain('presenter.app.canvas.dataset.translucentEdgeVfx');
     expect(source).toContain("this.app.canvas.dataset.translucentEdgeVfx = 'inactive';");
     expect(source).toContain('presenter.app.canvas.dataset.organicSubsurfaceVfx');
     expect(source).toContain("this.app.canvas.dataset.organicSubsurfaceVfx = 'inactive';");
+    expect(source).toContain('presenter.app.canvas.dataset.wetSedimentVfx');
+    expect(source).toContain("this.app.canvas.dataset.wetSedimentVfx = 'inactive';");
     const preserveDrawingBufferStart = source.indexOf('preserveDrawingBuffer:');
     const preserveDrawingBufferEnd = source.indexOf('resolution: outputScale', preserveDrawingBufferStart);
     const preserveDrawingBuffer = source.slice(preserveDrawingBufferStart, preserveDrawingBufferEnd);
@@ -535,6 +579,7 @@ describe('Pixi presenter startup configuration', () => {
     expect(preserveDrawingBuffer).toContain("get('powderSolidContactVfxAudit') === '1'");
     expect(preserveDrawingBuffer).toContain("get('translucentEdgeVfxAudit') === '1'");
     expect(preserveDrawingBuffer).toContain("get('organicSubsurfaceVfxAudit') === '1'");
+    expect(preserveDrawingBuffer).toContain("get('wetSedimentVfxAudit') === '1'");
   });
 
   it('routes E08 liquid surfaces through existing normal-scale HDR resources only', () => {

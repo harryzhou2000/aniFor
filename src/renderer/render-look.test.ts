@@ -5,7 +5,7 @@ import {
   resolveOrganicSubsurfaceVfxEnabled,
   resolvePowderBodyVfxEnabled, resolvePowderLightVfxEnabled,
   resolvePowderSolidContactVfxEnabled, resolveRenderLook, resolveTranslucentEdgeVfxEnabled,
-  resolveVolumeVfxEnabled,
+  resolveVolumeVfxEnabled, resolveWetSedimentVfxEnabled,
 } from './render-look';
 
 describe('resolveRenderLook', () => {
@@ -137,6 +137,18 @@ describe('resolveRenderLook', () => {
     )).toBe(true);
     expect(resolveOrganicSubsurfaceVfxEnabled(
       'neon-lab', '?volumeVfx=1&organicSubsurfaceVfx=off',
+    )).toBe(false);
+  });
+
+  it('keeps wet-sediment optics independently switchable', () => {
+    expect(resolveWetSedimentVfxEnabled('classic', '?wetSedimentVfx=on')).toBe(false);
+    expect(resolveWetSedimentVfxEnabled('realistic', '')).toBe(true);
+    expect(resolveWetSedimentVfxEnabled('realistic', '?volumeVfx=0')).toBe(false);
+    expect(resolveWetSedimentVfxEnabled(
+      'realistic', '?volumeVfx=0&wetSedimentVfx=on',
+    )).toBe(true);
+    expect(resolveWetSedimentVfxEnabled(
+      'neon-lab', '?volumeVfx=1&wetSedimentVfx=off',
     )).toBe(false);
   });
 

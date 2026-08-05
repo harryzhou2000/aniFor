@@ -191,6 +191,41 @@ describe('shared render field set', () => {
     expect(fields.refreshSuspension(materials, 2 + SUSPENSION_FIELD_REFRESH_INTERVAL)).toBe(false);
   });
 
+  it('invalidates suspension on a wall-only edit at its bounded cadence', () => {
+    const width = 8;
+    const height = 8;
+    const materials = new Uint8Array(width * height).fill(Material.Water);
+    const sandIndex = 3 * width + 3;
+    const walls = new Uint8Array(width * height);
+    materials[sandIndex] = Material.Sand;
+    const fields = new RenderFieldSet(width, height, ALL_MATERIALS);
+
+    // Establish the liquid source and the initial supported Sand/Water cluster.
+    fields.updateNext(materials, 0, walls);
+    fields.updateNext(materials, 1, walls);
+    fields.updateNext(materials, 2, walls);
+    expect(fields.refreshSuspension(materials, 2, walls)).toBe(true);
+    expect(fields.suspension.hasSuspension).toBe(true);
+
+    walls[sandIndex] = 1;
+    fields.markAtmosphereBlockerDirty(sandIndex);
+    expect(fields.refreshSuspension(
+      materials, 2 + SUSPENSION_FIELD_REFRESH_INTERVAL - 1, walls,
+    )).toBeUndefined();
+    expect(fields.due(2 + SUSPENSION_FIELD_REFRESH_INTERVAL)).toBe(true);
+    expect(fields.refreshSuspension(
+      materials, 2 + SUSPENSION_FIELD_REFRESH_INTERVAL, walls,
+    )).toBe(true);
+    expect(fields.suspension.hasSuspension).toBe(false);
+    expect(fields.suspension.bytes.some(Boolean)).toBe(false);
+
+    walls[sandIndex] = 0;
+    fields.markAtmosphereBlockerDirty(sandIndex);
+    const restoreTime = 2 + SUSPENSION_FIELD_REFRESH_INTERVAL * 2;
+    expect(fields.refreshSuspension(materials, restoreTime, walls)).toBe(true);
+    expect(fields.suspension.hasSuspension).toBe(true);
+  });
+
   it('keeps shared field memory bounded at the native world size', () => {
     const fields = new RenderFieldSet(612, 384, ALL_MATERIALS);
     const lookupBytes = fields.lookups.paletteBytes.byteLength
