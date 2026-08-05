@@ -13,7 +13,7 @@ powder, solid, liquid, gas, energy, and contact scenes across Canvas and WebGL a
 mobile gestures, save/load, CI, and Pages deployment as protected regression
 contracts rather than the primary feature stream.
 
-The accepted visual experiment ladder now runs through E28. E12 is the
+The accepted visual experiment ladder now runs through E29. E12 is the
 species-safe Sand/Clay/Concrete wet-sediment checkpoint; preserve its exact
 aqueous owner/stability proof, split moving-powder/stationary-Water control,
 Local/Grains no-op, fine structures, authored gaps, Canvas fallback, and true
@@ -365,6 +365,35 @@ bounded cross-scale spatial frequency. Requested-on true 8× reports E20/E26/
 E28/HDR inactive for reason `scale-8`, promotes exact 4896×3072 WebGL, and
 signals a real GPU fence in `3113.6 ms` with zero browser errors.
 
+E29 is the accepted normal-WebGL-only exact-ROCK mesostructure checkpoint,
+strictly subordinate to E17 solid-body relief and E23 ROCK roughness. Only
+authoritative native ROCK `78` with ordinary SmoothRigid `profile == 2`, a
+deep, stable connected body proof, and no wall, trait, emission,
+reconstruction, foreign contact, or unlike contact may receive it. It reuses
+one 3.5-cell smooth value-noise facet plus a masked, warped, interrupted
+lamina for RGB-only surface depth; the prior continuous-striped tune was
+rejected. E29 adds no sample, texture, field, pass, target, allocation, clock,
+alpha, support, topology, or physics decision. Canvas and compact true 8×
+retain their established paths. The canonical 2× composed capture improves
+ROCK quality `45.685 → 90.2`, micro `.43 → 1.06`, and macro `21 → 30`, with
+luma SD `6.58`, range `36`, exact support/component, and zero dark, clipped,
+and browser-error counts. `npm run audit:vfx:rock-mesostructure` is the focused
+package gate and passed its frozen 1×/2×/4× matrix at exact backings
+612×384, 1224×768, and 2448×1536. Off→on→off framebuffer restoration has a
+repeat peak of zero; semantic, alpha, support, walls, depth, and raw controls
+are unchanged across four depth targets and all 30 unique controls. Meso/cell
+frequency ranges are `1.7989–2.1292`/`1.6378–1.8512`, downsample retention is
+`.9605–.9654`, and transition/mid/deep RGB RMS is `3.56–3.99` with 12–14-byte
+peaks and zero browser errors. Requested-on true 8× remains inactive with
+E17/E23/E29/HDR for `scale-8`, no bloom, exact 4896×3072, and a `5397.6 ms`
+GPU fence within the shared total deadline.
+
+The full composed production matrix also passed with zero errors,
+`crossScaleVerified=true`, and `fullScaleMatrix=true`. ROCK quality/micro/macro
+is `88.235`/`1.00`/`30` at 1×, `90.2`/`1.06`/`30` at 2×, and
+`90.81`/`1.08`/`30` at 4×; every scale has support recall and dominant
+component `1`, zero dark/clipped fraction, and luma range `35`/`36`/`36`.
+
 The radioactive-solid review found no current correctness bug: ISZS `105`
 and VIBR `113` already receive exact-species Solid depth, while the existing
 seven-owner radioactive identity motif is intentionally phase-permissive.
@@ -427,11 +456,13 @@ weakest family at `33.569`. E28's accepted full 1×/2×/4× matrix is
 occupied cells, and zero browser errors. At canonical 2×, Wood reaches quality
 `50.781` with micro/chroma/macro `1.52`/`1.00`/`21`, while PLNT reaches
 `56.122` with `1.55`/`1.16`/`33`; both have zero dark and clipped fractions.
-PLNT remains bounded at quality `46.355` at 1× and `59.540` at 4×. Organic is
-therefore represented by Wood at `50.781`, leaving Solid/ROCK surface detail
-as the weakest canonical family at `45.685`. Inspect that fit-view evidence
-before selecting the next bounded exact-owner experiment, and never compare v3
-and v4 quality indices as if they shared one scoring contract.
+PLNT remains bounded at quality `46.355` at 1× and `59.540` at 4×. E29's
+canonical 2× composed ROCK capture lifts the prior Solid/ROCK weakness from
+`45.685` to `90.2`; its focused audit passed. Organic is now the
+next weakness: Wood is `50.781` with mesostructure `.26`, while PLNT is
+`56.122`; Gas is next at `52.710`. Inspect that fit-view evidence before selecting another bounded
+exact-owner experiment, and never compare v3 and v4 quality indices as if they
+shared one scoring contract.
 
 WebGL is the canonical visual release path. Canvas 2D remains a resilient,
 camera-preserving semantic fallback: keep its loading, input, material/state,

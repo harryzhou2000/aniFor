@@ -53,6 +53,7 @@ import {
   resolvePlasmaCoreVfxEnabled,
   resolveCeramicGlazeVfxEnabled,
   resolvePlatinumBodyVfxEnabled,
+  resolveRockMesostructureVfxEnabled,
   resolveRockRoughnessVfxEnabled,
   resolveSolidBodyVfxEnabled,
   resolvePowderBodyVfxEnabled, resolvePowderLightVfxEnabled, resolveRenderLook,
@@ -3241,6 +3242,7 @@ uniform float uSmokeSoftnessVfx;
 uniform float uPlasmaCoreVfx;
 uniform float uSolidBodyVfx;
 uniform float uRockRoughnessVfx;
+uniform float uRockMesostructureVfx;
 uniform float uPlatinumBodyVfx;
 uniform float uCeramicGlazeVfx;
 uniform float uBotanicalBodyVfx;
@@ -8985,6 +8987,43 @@ void main() {
       color += (vec3(1.0) - clamp(color, 0.0, 1.0)) * solidBodyKeyColor
         * solidBodyKey;
       color *= vec3(1.0) - vec3(0.92, 0.80, 0.68) * solidBodyPocket;
+      // E29: E23 correctly removes ROCK's inherited Metal polish, but the
+      // resulting fit-view body is too uniform for stone. Reuse E20's existing
+      // smooth value-noise arithmetic as one short mineral-facet carrier, then
+      // warp a weak diagonal lamina through it so the body reads as layered rock
+      // rather than isotropic cloud. E17 relief and E23's exact depth/contact
+      // proof keep that detail inside stable, connected ROCK. This remains
+      // world-anchored RGB only: no sample, texture, field, pass, target,
+      // allocation, clock, alpha, support, topology, or physics decision.
+      float rockMesostructure = uSolidBodyVfx > 0.5
+          && uRockRoughnessVfx > 0.5
+          && uGeologicalSolidStyling > 0.5
+          && uSolidOpticalDepth > 0.5
+          && uRockMesostructureVfx > 0.5
+          && material == 78.0 && profile == 2.0
+        ? rockRoughness : 0.0;
+      if (rockMesostructure > 0.0) {
+        float rockFacet = botanicalBodyNoise(
+          fieldPosition / 3.5 + vec2(17.3, -8.1)
+        ) * 2.0 - 1.0;
+        float rockLaminaMask = smoothstep(0.20, 0.85, abs(rockFacet));
+        float rockLamina = sin(
+          fieldPosition.x * 0.70 + fieldPosition.y * 0.19
+            + rockFacet * 2.20 + solidBodyRelief * 0.45
+        );
+        float rockFacetBody = clamp(
+          rockFacet * 0.72 + rockLamina * 0.28 * rockLaminaMask, -1.0, 1.0
+        );
+        float rockFacetCrown = max(rockFacetBody, 0.0);
+        float rockFacetPocket = max(-rockFacetBody, 0.0);
+        color += (vec3(1.0) - clamp(color, 0.0, 1.0))
+          * vec3(0.075, 0.090, 0.110) * rockFacetCrown
+          * rockMesostructure;
+        color *= vec3(1.0) - vec3(0.070, 0.063, 0.054)
+          * rockFacetPocket * rockMesostructure;
+        color += vec3(0.008, -0.001, -0.014) * rockFacetBody
+          * rockMesostructure;
+      }
     }
     // E18: Platinum's established catalytic planes and sites identify the
     // material at cell scale, but its broad body otherwise reads as a pale
@@ -9896,6 +9935,10 @@ export class PixiFieldPresenter {
     // selector or parallel arithmetic.
     const rockRoughnessVfxEnabled = outputScale < 8
       && resolveRockRoughnessVfxEnabled(renderLook);
+    // E29 reuses E17/E23's exact ROCK body proof and normal-shader value noise.
+    // Canvas and compact true 8x retain their accepted geological grammar.
+    const rockMesostructureVfxEnabled = outputScale < 8
+      && resolveRockMesostructureVfxEnabled(renderLook);
     // E18 is a normal-WebGL body finish over values already used by the
     // established solid shader. The compact true-8x program declares neither
     // this selector nor a parallel reflection branch.
@@ -9968,6 +10011,7 @@ export class PixiFieldPresenter {
       uPlasmaCoreVfx: { value: plasmaCoreVfxEnabled ? 1 : 0, type: 'f32' },
       uSolidBodyVfx: { value: solidBodyVfxEnabled ? 1 : 0, type: 'f32' },
       uRockRoughnessVfx: { value: rockRoughnessVfxEnabled ? 1 : 0, type: 'f32' },
+      uRockMesostructureVfx: { value: rockMesostructureVfxEnabled ? 1 : 0, type: 'f32' },
       uPlatinumBodyVfx: { value: platinumBodyVfxEnabled ? 1 : 0, type: 'f32' },
       uCeramicGlazeVfx: { value: ceramicGlazeVfxEnabled ? 1 : 0, type: 'f32' },
       uBotanicalBodyVfx: { value: botanicalBodyVfxEnabled ? 1 : 0, type: 'f32' },
@@ -10198,6 +10242,7 @@ export class PixiFieldPresenter {
       this.uniforms.uniforms.uPlasmaCoreVfx = 0;
       this.uniforms.uniforms.uSolidBodyVfx = 0;
       this.uniforms.uniforms.uRockRoughnessVfx = 0;
+      this.uniforms.uniforms.uRockMesostructureVfx = 0;
       this.uniforms.uniforms.uPlatinumBodyVfx = 0;
       this.uniforms.uniforms.uCeramicGlazeVfx = 0;
       this.uniforms.uniforms.uBotanicalBodyVfx = 0;
@@ -10249,6 +10294,7 @@ export class PixiFieldPresenter {
             || new URLSearchParams(location.search).get('plasmaCoreVfxAudit') === '1'
             || new URLSearchParams(location.search).get('solidBodyVfxAudit') === '1'
             || new URLSearchParams(location.search).get('rockRoughnessVfxAudit') === '1'
+            || new URLSearchParams(location.search).get('rockMesostructureVfxAudit') === '1'
             || new URLSearchParams(location.search).get('platinumBodyVfxAudit') === '1'
             || new URLSearchParams(location.search).get('ceramicGlazeVfxAudit') === '1'
             || new URLSearchParams(location.search).get('botanicalBodyVfxAudit') === '1'
@@ -10314,6 +10360,9 @@ export class PixiFieldPresenter {
     ) > 0.5 ? 'active' : 'inactive';
     presenter.app.canvas.dataset.rockRoughnessVfx = Number(
       presenter.uniforms.uniforms.uRockRoughnessVfx
+    ) > 0.5 ? 'active' : 'inactive';
+    presenter.app.canvas.dataset.rockMesostructureVfx = Number(
+      presenter.uniforms.uniforms.uRockMesostructureVfx
     ) > 0.5 ? 'active' : 'inactive';
     presenter.app.canvas.dataset.platinumBodyVfx = Number(
       presenter.uniforms.uniforms.uPlatinumBodyVfx
@@ -11738,6 +11787,7 @@ export class PixiFieldPresenter {
         this.uniforms.uniforms.uPlasmaCoreVfx = 0;
         this.uniforms.uniforms.uSolidBodyVfx = 0;
         this.uniforms.uniforms.uRockRoughnessVfx = 0;
+        this.uniforms.uniforms.uRockMesostructureVfx = 0;
         this.uniforms.uniforms.uPlatinumBodyVfx = 0;
         this.uniforms.uniforms.uCeramicGlazeVfx = 0;
         this.uniforms.uniforms.uBotanicalBodyVfx = 0;
@@ -11766,6 +11816,7 @@ export class PixiFieldPresenter {
         this.app.canvas.dataset.plasmaCoreVfx = 'inactive';
         this.app.canvas.dataset.solidBodyVfx = 'inactive';
         this.app.canvas.dataset.rockRoughnessVfx = 'inactive';
+        this.app.canvas.dataset.rockMesostructureVfx = 'inactive';
         this.app.canvas.dataset.platinumBodyVfx = 'inactive';
         this.app.canvas.dataset.ceramicGlazeVfx = 'inactive';
         this.app.canvas.dataset.botanicalBodyVfx = 'inactive';

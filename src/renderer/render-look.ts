@@ -241,6 +241,23 @@ export function resolveRockRoughnessVfxEnabled(
 }
 
 /**
+ * E29 restores smooth mineral-scale variation only after E23 has removed the
+ * inherited polished ROCK lobe. The normal WebGL shader owns the exact owner,
+ * geological-style, depth, contact, and topology proof; this child selector
+ * cannot revive E23, E17, or their containing HDR look.
+ */
+export function resolveRockMesostructureVfxEnabled(
+  look: RenderLook,
+  search = globalThis.location?.search ?? '',
+): boolean {
+  if (!resolveRockRoughnessVfxEnabled(look, search)) return false;
+  const requested = new URLSearchParams(search).get('rockMesostructureVfx');
+  if (requested === '0' || requested === 'off' || requested === 'false') return false;
+  if (requested === '1' || requested === 'on' || requested === 'true') return true;
+  return true;
+}
+
+/**
  * Keeps the exact Platinum body experiment independently measurable while
  * retaining the same non-Classic preset policy as the broader volume studies.
  * The renderer decides its strict native-owner and topology eligibility.

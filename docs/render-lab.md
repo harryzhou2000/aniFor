@@ -412,6 +412,33 @@ true-8× tail promotes exact 4896×3072 WebGL while E20/E26/E28/HDR are inactive
 for reason `scale-8`, then signals a real GPU fence in `3113.6 ms` with zero
 browser errors.
 
+E29 is the accepted visual exact-ROCK mesostructure card, constrained to normal
+WebGL 1×–4× and strictly subordinate to E17 solid-body relief and E23 ROCK
+roughness. It runs only for authoritative ROCK `78` with ordinary SmoothRigid
+`profile == 2`, a deep stable connected body proof, and no wall, trait,
+emission, reconstruction, foreign contact, or unlike contact. A single
+3.5-cell smooth value-noise facet and masked, warped, interrupted lamina add
+RGB-only depth; the earlier continuous-striped tune was rejected. There is no
+new sample, texture, field, pass, target, allocation, clock, alpha, support,
+topology, or physics decision, and Canvas plus compact true 8× remain on their
+established paths. The canonical 2× composed capture raises ROCK quality
+`45.685 → 90.2`, micro `.43 → 1.06`, and macro `21 → 30`, with luma SD `6.58`,
+range `36`, exact support/component, and zero dark, clipped, and browser-error
+counts. `npm run audit:vfx:rock-mesostructure` passed its frozen 1×/2×/4×
+matrix at exact 612×384, 1224×768, and 2448×1536 backings. Off→on→off frames
+restore with repeat peak zero; semantic, alpha, support, walls, depth, and raw
+state are unchanged across four depth targets and all 30 unique controls.
+Meso/cell frequency ranges are `1.7989–2.1292`/`1.6378–1.8512`, downsample
+retention is `.9605–.9654`, and transition/mid/deep RGB RMS is `3.56–3.99`
+with 12–14-byte peaks and zero browser errors. Requested-on true 8× retains
+exact 4896×3072 while E17/E23/E29/HDR are inactive for `scale-8`, bloom is
+absent, and the GPU fence completes in `5397.6 ms` within the shared deadline.
+The full composed production matrix also passed with zero errors,
+`crossScaleVerified=true`, and `fullScaleMatrix=true`. ROCK quality/micro/macro
+is `88.235`/`1.00`/`30` at 1×, `90.2`/`1.06`/`30` at 2×, and
+`90.81`/`1.08`/`30` at 4×. Every scale retains support recall and dominant
+component `1`, zero dark/clipped fractions, and luma range `35`/`36`/`36`.
+
 HEAC, PTNM, and RSSS now receive a second exact-owner deep rigid-body layer:
 the rapid heat conductor has restrained warm channel lamellae, Platinum uses
 cool catalytic planes with sparse active sites, and solidified resist gains a
@@ -568,9 +595,10 @@ browser errors. At canonical 2×, Wood quality is `50.781` with
 micro/chroma/macro `1.52`/`1.00`/`21`, and PLNT quality is `56.122` with
 `1.55`/`1.16`/`33`; both report zero dark and clipped fractions. PLNT quality
 is `46.355` at 1× and `59.540` at 4×, inside the accepted cross-scale bound.
-Organic is now represented by Wood at `50.781`, leaving Solid/ROCK surface
-detail as the weakest canonical family at `45.685` and the next fit-view review
-target.
+E29's canonical 2× composed ROCK capture raises the former Solid/ROCK weakness
+from `45.685` to `90.2`, and its focused audit passed. Organic is
+now represented by Wood at `50.781` with mesostructure `.26`; PLNT is `56.122`.
+Gas follows at `52.710`; Organic is the next fit-view review target.
 
 Timing output is diagnostic rather than a cross-machine pass/fail threshold. It includes baseline Canvas atmosphere relief and the same full plane under a nonzero cardinal-gradient emission field, Canvas surface-lighting, deliberately pessimistic full-612×384 energy-core and trait-core passes, a fully dense Water cohesion pass, a full-height Water/Oil boundary pass, and an all-cells liquid-light gate in which every cell is pessimistically treated as a top-surface candidate and samples field relief. Dense translucent coupling is measured twice: an honest all-Glass/all-field ceiling and the ordinary single-localized-source path after `EmissionField.mayLightWorldCell` rejection. A separate pathological all-world Glass-over-wall refraction profile includes its diagnostic pixel reset; production admits only exact Glass/Ice cells that coexist with a wall, performs no allocation or field sample, and ordinary scenes touch a small fraction of that ceiling. Full-world caustic and lens-shell arithmetic diagnostics include repeated RGB scratch initialization that production already performs while styling. The latest lens-shell ceiling measured `11.25/11.58/12.61 ms` median/p90/max across all 235,008 world cells and adds zero runtime bytes; production additionally gates it to exact Glass/Ice and reuses the existing color scratch, relief, and contour response. Checksums are consumed sparsely outside the timed production-shaped loops and the solid-relief checksum remains independent. The atmosphere-light descriptor is module-scoped and reused, so the timed loop allocates no object or typed buffer. Trait profiling covers realistic masks, a synthetic all-bits mask, and a representative composite, and consumes representative output through a checksum outside the timed region so the JIT cannot discard the work without charging checksum arithmetic to production-like timings. Profiler-only storage is reported separately from runtime-known scratch and does not contribute to `combinedAllocatedBytes`.
 

@@ -15,6 +15,7 @@ import {
   resolveOrganicSubsurfaceVfxEnabled,
   resolvePlasmaCoreVfxEnabled,
   resolvePlatinumBodyVfxEnabled,
+  resolveRockMesostructureVfxEnabled,
   resolveRockRoughnessVfxEnabled,
   resolveSolidBodyVfxEnabled,
   resolvePowderBodyVfxEnabled, resolvePowderLightVfxEnabled,
@@ -206,6 +207,26 @@ describe('resolveRenderLook', () => {
     )).toBe(true);
     expect(resolveRockRoughnessVfxEnabled(
       'neon-lab', '?solidBodyVfx=1&rockRoughnessVfx=off',
+    )).toBe(false);
+  });
+
+  it('keeps ROCK mesostructure subordinate to the accepted E23 matte body', () => {
+    expect(resolveRockMesostructureVfxEnabled(
+      'classic', '?rockMesostructureVfx=1',
+    )).toBe(false);
+    expect(resolveRockMesostructureVfxEnabled('realistic', '')).toBe(true);
+    expect(resolveRockMesostructureVfxEnabled('neon-lab', '')).toBe(true);
+    expect(resolveRockMesostructureVfxEnabled(
+      'realistic', '?solidBodyVfx=0&rockRoughnessVfx=1&rockMesostructureVfx=1',
+    )).toBe(false);
+    expect(resolveRockMesostructureVfxEnabled(
+      'realistic', '?rockRoughnessVfx=0&rockMesostructureVfx=on',
+    )).toBe(false);
+    expect(resolveRockMesostructureVfxEnabled(
+      'realistic', '?volumeVfx=0&solidBodyVfx=1&rockRoughnessVfx=1&rockMesostructureVfx=true',
+    )).toBe(true);
+    expect(resolveRockMesostructureVfxEnabled(
+      'neon-lab', '?rockMesostructureVfx=false',
     )).toBe(false);
   });
 

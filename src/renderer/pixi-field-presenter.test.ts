@@ -1280,7 +1280,9 @@ describe('Pixi presenter startup configuration', () => {
     expect(e23Start).toBeGreaterThanOrEqual(0);
     expect(e23End).toBeGreaterThan(e23Start);
     expect(normal).toContain('uniform float uRockRoughnessVfx;');
-    expect(normal.match(/uRockRoughnessVfx > 0\.5/g)).toHaveLength(2);
+    // E23 owns its two gloss/body gates and the E29 child repeats the parent
+    // predicate locally so an inconsistent child uniform cannot revive it.
+    expect(normal.match(/uRockRoughnessVfx > 0\.5/g)).toHaveLength(3);
     expect(eight).not.toContain('uRockRoughnessVfx');
     expect(eight).not.toContain('rockRoughness');
     expect(canvasSource).not.toContain('rockRoughnessVfx');
@@ -1311,6 +1313,65 @@ describe('Pixi presenter startup configuration', () => {
     );
     expect(source).toContain('presenter.app.canvas.dataset.rockRoughnessVfx');
     expect(source).toContain("this.app.canvas.dataset.rockRoughnessVfx = 'inactive';");
+  });
+
+  it('keeps E29 ROCK mesostructure subordinate, smooth, and resource-neutral', () => {
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const canvasSource = readFileSync(new URL('./field-renderer.ts', import.meta.url), 'utf8');
+    const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');
+    const normalStart = source.indexOf('const FIELD_FRAGMENT = `', eightStart);
+    const normalEnd = source.indexOf('`;\n\n/** Primary WebGL presentation', normalStart);
+    const eight = source.slice(eightStart, normalStart);
+    const normal = source.slice(normalStart, normalEnd);
+    const e17Start = normal.indexOf('    // E17:');
+    const e29Start = normal.indexOf('      // E29:');
+    const e29End = normal.indexOf('    // E18:', e29Start);
+    const e29 = normal.slice(e29Start, e29End);
+    const preserveDrawingBufferStart = source.indexOf('preserveDrawingBuffer:');
+    const preserveDrawingBufferEnd = source.indexOf(
+      'resolution: outputScale', preserveDrawingBufferStart,
+    );
+    const preserveDrawingBuffer = source.slice(
+      preserveDrawingBufferStart, preserveDrawingBufferEnd,
+    );
+
+    expect(e17Start).toBeGreaterThanOrEqual(0);
+    expect(e29Start).toBeGreaterThan(e17Start);
+    expect(e29End).toBeGreaterThan(e29Start);
+    expect(normal).toContain('uniform float uRockMesostructureVfx;');
+    expect(normal.match(/uRockMesostructureVfx > 0\.5/g)).toHaveLength(1);
+    expect(eight).not.toContain('uRockMesostructureVfx');
+    expect(eight).not.toContain('rockMesostructureVfx');
+    expect(canvasSource).not.toContain('rockMesostructureVfx');
+    for (const parent of [
+      'uSolidBodyVfx > 0.5', 'uRockRoughnessVfx > 0.5',
+      'uGeologicalSolidStyling > 0.5', 'uSolidOpticalDepth > 0.5',
+      'uRockMesostructureVfx > 0.5',
+      'material == 78.0', 'profile == 2.0', '? rockRoughness : 0.0',
+    ]) expect(e29).toContain(parent);
+    for (const reused of [
+      'botanicalBodyNoise(', 'fieldPosition / 3.5', 'solidBodyRelief',
+      'rockLaminaMask = smoothstep(0.20, 0.85, abs(rockFacet))',
+      'rockLamina = sin(', 'rockFacet * 2.20',
+      'rockLamina * 0.28 * rockLaminaMask',
+      'rockFacetCrown', 'rockFacetPocket', 'rockMesostructure',
+    ]) expect(e29).toContain(reused);
+    expect(e29.match(/botanicalBodyNoise\(/g)).toHaveLength(1);
+    expect(e29).not.toContain('texture(');
+    expect(e29).not.toContain('uTime');
+    expect(e29).not.toContain('gl_FragCoord');
+    expect(e29).not.toMatch(/\balpha\s*[+*]?=/);
+    expect(source.match(/this\.uniforms\.uniforms\.uRockMesostructureVfx = 0;/g))
+      .toHaveLength(2);
+    expect(source).toMatch(
+      /const rockMesostructureVfxEnabled = outputScale < 8\s*&& resolveRockMesostructureVfxEnabled\(renderLook\);/,
+    );
+    expect(source).toContain(
+      'uRockMesostructureVfx: { value: rockMesostructureVfxEnabled ? 1 : 0',
+    );
+    expect(preserveDrawingBuffer).toContain("get('rockMesostructureVfxAudit') === '1'");
+    expect(source).toContain('presenter.app.canvas.dataset.rockMesostructureVfx');
+    expect(source).toContain("this.app.canvas.dataset.rockMesostructureVfx = 'inactive';");
   });
 
   it('keeps E24 Water recomposition exact-owner, E03-dependent, normal-WebGL-only, and RGB-only', () => {

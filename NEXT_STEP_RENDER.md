@@ -379,11 +379,39 @@ does not alter simulation, camera, semantic ownership, or `renderScale`.
   target, upload, allocation, clock, alpha/support/topology/lifecycle state, or
   physics decision. E26's focused gate explicitly pins E28 off so its accepted
   evidence remains an isolated E26 measurement.
+- **E29 — exact ROCK mesostructure (accepted visual checkpoint):** normal
+  1×–4× WebGL uses `?rockMesostructureVfx=0|1` only as a strict child of E17
+  solid-body relief and E23 ROCK roughness. Exact authoritative ROCK `78` with
+  ordinary SmoothRigid `profile == 2`, a deep stable connected body, and no
+  wall, trait, emission, reconstruction, foreign contact, or unlike contact
+  may reuse one 3.5-cell smooth value-noise facet and a masked, warped,
+  interrupted lamina. It is RGB-only; the prior continuous-striped tune was
+  rejected. E29 adds no sample, texture, field, pass, target, allocation,
+  clock, alpha, support, topology, or physics decision, while Canvas and
+  compact true 8× retain their established paths. Its 2× composed capture
+  improves ROCK quality `45.685 → 90.2`, micro `.43 → 1.06`, and macro
+  `21 → 30`, with luma SD `6.58`, range `36`, exact support/component, and
+  zero dark, clipped, and browser-error counts. The focused package gate,
+  `npm run audit:vfx:rock-mesostructure`, passed its frozen 1×/2×/4× matrix at
+  exact 612×384, 1224×768, and 2448×1536 backings. Off→on→off restoration has
+  repeat peak zero; semantic/alpha/support/walls/depth/raw state is unchanged
+  across four depth targets and all 30 unique controls. Meso/cell frequency is
+  `1.7989–2.1292`/`1.6378–1.8512`, downsample retention `.9605–.9654`, and
+  transition/mid/deep RGB RMS `3.56–3.99` with 12–14-byte peaks and zero
+  browser errors. Requested-on true 8× is exact 4896×3072 with E17/E23/E29/HDR
+  inactive for `scale-8`, no bloom, and a `5397.6 ms` GPU fence inside the
+  shared total deadline.
+  The full composed production matrix also passed with zero errors,
+  `crossScaleVerified=true`, and `fullScaleMatrix=true`: ROCK quality/micro/
+  macro is `88.235`/`1.00`/`30` at 1×, `90.2`/`1.06`/`30` at 2×, and
+  `90.81`/`1.08`/`30` at 4×. Support recall and dominant component are `1`,
+  dark/clipped fractions are zero at every scale, and luma range is
+  `35`/`36`/`36`.
 - **Protected 8× rung:** `renderScale=8` deliberately reports
   `hdrPipeline=inactive` / `scale-8` and retains the proven direct single-mesh
   4896×3072 path. The experiment must earn a bounded 8× design rather than
   allocating a 115 MiB full-resolution float target beside that path.
-- **Current decision:** E01/E02/E03/E04/E05/E06/E07/E08/E09/E10/E11/E12/E13/E14/E15/E16/E17/E18/E19/E20/E21/E22/E23/E24/E25/E26/E27/E28 remain opt-in through the non-Classic looks
+- **Current decision:** E01/E02/E03/E04/E05/E06/E07/E08/E09/E10/E11/E12/E13/E14/E15/E16/E17/E18/E19/E20/E21/E22/E23/E24/E25/E26/E27/E28/E29 remain opt-in through the non-Classic looks
   until representative hardware timing and mobile thermal behavior are
   measured. E02 remains the safe family-wide baseline. E03 is accepted as the
   liquid-depth checkpoint: its fit-view crop is visibly more cohesive, retains
@@ -490,6 +518,11 @@ does not alter simulation, camera, semantic ownership, or `renderScale`.
   carrier, sample, state plane, or lifecycle decision. Freeze its two-parent
   dependency, exact-owner/trait/body proof, reused pigment carriers, and true-
   8× exclusion until another production fit-view review.
+  E29 is the accepted visual exact-ROCK mesostructure checkpoint: freeze its
+  E17/E23 dependencies, exact owner/profile/deep-stable-connected/no-contact
+  proof, 3.5-cell facet, and masked interrupted lamina. Its continuous-striped
+  predecessor remains rejected. Its package gate passed the frozen cross-scale
+  matrix and true-8× exclusion/fence proof.
   These are not the final material/VFX results.
   Sub-1.0 material colour stays on the established response; tonemapping owns
   only real HDR highlights so powder texture and liquid body contrast are not
@@ -1080,11 +1113,14 @@ next production 4× survey then selected Wood/PLNT as the largest remaining
   `1.52`/`1.00`/`21`; PLNT is `56.122` with `1.55`/`1.16`/`33`; both have zero
   dark and clipped fractions. PLNT quality remains `46.355` at 1× and `59.540`
   at 4×. Organic is therefore represented by Wood at `50.781`, and Solid/ROCK
-  surface detail becomes the weakest canonical family at `45.685`. Do not widen E17–E28 owner sets by resemblance alone or stack
+  surface detail becomes the weakest canonical family at `45.685`. E29's 2×
+  composed ROCK capture raises that target to `90.2`, and its focused audit
+  passed. Organic is now the next weakness: Wood is `50.781` with
+  mesostructure `.26`, and PLNT is `56.122`; Gas follows at `52.710`. Do not widen E17–E29 owner sets by resemblance alone or stack
   another generic gas layer over E04/E07/E13/E15; preserve their independent
   owner, exposure, topology, scale, and true-8× contracts.
 
-**Next visual experiments:** E03–E28 now provide accepted liquid body/surface,
+**Next visual experiments:** E03–E29 now provide accepted liquid body/surface,
 stable-gas, coherent-gas-motion, powder-depth, and powder-local-light
 checkpoints plus exact resting contact grounding, Glass/Ice transmission, and
 state-aware Wax/PLNT subsurface response, composed wet-mineral optics,
@@ -1099,9 +1135,10 @@ Wood/PLNT mesostructure, and exact Smoke soft soot volume. E27's final
 canonical 2× Smoke result is luma deviation `2.22`, microcontrast `.39`, macro
 range `10`, luma range `14`, full support recall, and no clipping. E28 adds
 exact Wood/PLNT pigment/body depth without disturbing E20/E26 topology or
-lifecycle state. Under v4, Solid/ROCK surface detail is now the weakest ranked
-family at `45.685`; inspect its fit-view evidence before choosing a bounded
-E29 exact-owner card. The radioactive-solid review
+lifecycle state. E29's 2× composed capture adds exact ROCK mesostructure with
+the rejected continuous stripe replaced by an interrupted lamina; its focused
+audit passed. Organic is now the next weakness: Wood quality is
+`50.781` with mesostructure `.26`, while PLNT is `56.122`; Gas is `52.710`. The radioactive-solid review
 found no current identity bug, but also
 proved that the existing
 phase-permissive identity guard is not suitable for a future broad ISZS/VIBR
@@ -1110,7 +1147,7 @@ with topology-preserving, material-
 specific cards that reuse already-live evidence. Prefer the smallest
 arithmetic-only candidate that fixes a visible fit-view deficiency; do not add
 an isolated tint merely to continue the experiment number. Preserve the E14
-1× stencil snap and all E01–E28 selectors and controls while designing the
+1× stencil snap and all E01–E29 selectors and controls while designing the
 next bounded card.
 
 ## Phase 1 — HDR pipeline & lighting core (biggest visual payoff)
