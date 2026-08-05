@@ -13,7 +13,7 @@ powder, solid, liquid, gas, energy, and contact scenes across Canvas and WebGL a
 mobile gestures, save/load, CI, and Pages deployment as protected regression
 contracts rather than the primary feature stream.
 
-The accepted visual experiment ladder now runs through E27. E12 is the
+The accepted visual experiment ladder now runs through E28. E12 is the
 species-safe Sand/Clay/Concrete wet-sediment checkpoint; preserve its exact
 aqueous owner/stability proof, split moving-powder/stationary-Water control,
 Local/Grains no-op, fine structures, authored gaps, Canvas fallback, and true
@@ -342,6 +342,29 @@ frames and zero browser errors. Its requested-on true-8× tail observes exact
 4896×3072 WebGL promotion, E04/E15/E25/E27/HDR exclusion for `scale-8`, and a
 real GPU fence at `3444.1 ms`.
 
+E28 is the calibrated normal-WebGL-only exact-Wood/PLNT pigment/body-depth
+checkpoint, independently measurable with `?botanicalPigmentVfx=0|1`. It is a
+strict child of both E20 body recomposition and E26 mesostructure: the selector
+defaults on only when those parents are active, and the shader locally ANDs
+E26 with E28 before applying the response. E26's focused gate explicitly pins
+E28 off so its frozen evidence remains isolated. Only ordinary authoritative
+Wood `9` (`traits == 96`) and PLNT `10` (`traits == 32`) inside the inherited
+body proof may reuse the existing `botanicalDepth`, `botanicalMacro`,
+`botanicalCluster`, `leafPigment`, and `barkPlate` evidence for bounded warm/
+umber Wood depth and chlorophyll/young-growth PLNT volume. E28 adds no noise,
+sample, sampler, texture, field, resource, pass, target, upload, allocation,
+clock, alpha, support, topology, lifecycle state, or physics decision. Sparse
+and thin owners, holes/notches, walls, contacts, VINE/Wax/Metal, lifecycle
+colour/state, Canvas, and compact true 8× retain their established paths.
+
+Validate E28 with `npm run audit:vfx:botanical-pigment`. The accepted focused
+1×/2×/4× off→on→off matrix keeps all 30 named controls exact, repeats the
+disabled framebuffer byte-for-byte, preserves semantic, alpha/support,
+auxiliary, 1,568-cell wall, and 3,840-cell lifecycle planes, and retains
+bounded cross-scale spatial frequency. Requested-on true 8× reports E20/E26/
+E28/HDR inactive for reason `scale-8`, promotes exact 4896×3072 WebGL, and
+signals a real GPU fence in `3113.6 ms` with zero browser errors.
+
 The radioactive-solid review found no current correctness bug: ISZS `105`
 and VIBR `113` already receive exact-species Solid depth, while the existing
 seven-owner radioactive identity motif is intentionally phase-permissive.
@@ -399,9 +422,16 @@ was misdiagnosed by the v3 lower-bounded microcontrast band. Version 4 makes it
 a one-sided noise ceiling: the unchanged pre-E27 Smoke frame scores `45.542`,
 not the obsolete v3 `4.546`. E27 raises Smoke to `66.914`; Gas is now
 represented by exact Noble Gas at `52.710`, while Organic remains the global
-weakest family at `33.569`. Select the next experiment from v4 plus visible
-fit-view evidence; never compare v3 and v4 quality indices as if they shared
-one scoring contract.
+weakest family at `33.569`. E28's accepted full 1×/2×/4× matrix is
+`crossScaleVerified=true` with the same semantic hash `595518258`, 104,027
+occupied cells, and zero browser errors. At canonical 2×, Wood reaches quality
+`50.781` with micro/chroma/macro `1.52`/`1.00`/`21`, while PLNT reaches
+`56.122` with `1.55`/`1.16`/`33`; both have zero dark and clipped fractions.
+PLNT remains bounded at quality `46.355` at 1× and `59.540` at 4×. Organic is
+therefore represented by Wood at `50.781`, leaving Solid/ROCK surface detail
+as the weakest canonical family at `45.685`. Inspect that fit-view evidence
+before selecting the next bounded exact-owner experiment, and never compare v3
+and v4 quality indices as if they shared one scoring contract.
 
 WebGL is the canonical visual release path. Canvas 2D remains a resilient,
 camera-preserving semantic fallback: keep its loading, input, material/state,

@@ -1032,7 +1032,9 @@ describe('Pixi presenter startup configuration', () => {
     expect(e20End).toBeGreaterThan(e20Start);
     expect(e26Start).toBeGreaterThanOrEqual(0);
     expect(normal).toContain('uniform float uBotanicalMesostructureVfx;');
-    expect(normal.match(/uBotanicalMesostructureVfx > 0\.5/g)).toHaveLength(1);
+    // E26 owns its body gate and the E28 child repeats the same predicate so
+    // an inconsistent child uniform cannot bypass its parent in GLSL.
+    expect(normal.match(/uBotanicalMesostructureVfx > 0\.5/g)).toHaveLength(2);
     expect(eight).not.toContain('uBotanicalMesostructureVfx');
     expect(eight).not.toContain('botanicalMesostructureVfx');
     expect(canvasSource).not.toContain('botanicalMesostructureVfx');
@@ -1065,6 +1067,70 @@ describe('Pixi presenter startup configuration', () => {
     expect(source).toContain(
       "this.app.canvas.dataset.botanicalMesostructureVfx = 'inactive';",
     );
+  });
+
+  it('keeps E28 botanical pigment subordinate to E26, exact-owner, and RGB-only', () => {
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const canvasSource = readFileSync(new URL('./field-renderer.ts', import.meta.url), 'utf8');
+    const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');
+    const normalStart = source.indexOf('const FIELD_FRAGMENT = `', eightStart);
+    const normalEnd = source.indexOf('`;\n\n/** Primary WebGL presentation', normalStart);
+    const eight = source.slice(eightStart, normalStart);
+    const normal = source.slice(normalStart, normalEnd);
+    const e20Start = normal.indexOf('      // E20:');
+    const e20End = normal.indexOf('    } else if (radioactiveSurface', e20Start);
+    const e20 = normal.slice(e20Start, e20End);
+    const pigmentGate = e20.indexOf('        float botanicalPigment =');
+    const plantFinish = e20.indexOf('          // E28:');
+    const woodFinish = e20.indexOf('          // E28 keeps');
+    const preserveDrawingBufferStart = source.indexOf('preserveDrawingBuffer:');
+    const preserveDrawingBufferEnd = source.indexOf(
+      'resolution: outputScale', preserveDrawingBufferStart,
+    );
+    const preserveDrawingBuffer = source.slice(
+      preserveDrawingBufferStart, preserveDrawingBufferEnd,
+    );
+
+    expect(e20Start).toBeGreaterThanOrEqual(0);
+    expect(e20End).toBeGreaterThan(e20Start);
+    expect(pigmentGate).toBeGreaterThan(e20.indexOf('if (botanicalBodyReplacement > 0.5)'));
+    expect(plantFinish).toBeGreaterThan(pigmentGate);
+    expect(woodFinish).toBeGreaterThan(plantFinish);
+    expect(normal).toContain('uniform float uBotanicalPigmentVfx;');
+    expect(normal.match(/uBotanicalPigmentVfx > 0\.5/g)).toHaveLength(1);
+    expect(eight).not.toContain('uBotanicalPigmentVfx');
+    expect(eight).not.toContain('botanicalPigmentVfx');
+    expect(canvasSource).not.toContain('botanicalPigmentVfx');
+    expect(e20).toContain(
+      'float botanicalPigment = uBotanicalMesostructureVfx > 0.5\n'
+        + '            && uBotanicalPigmentVfx > 0.5\n'
+        + '          ? botanicalDepth : 0.0;',
+    );
+    for (const establishedValue of [
+      'botanicalDepth', 'botanicalMacro', 'botanicalCluster',
+      'leafPigment', 'barkPlate', 'botanicalPigment',
+    ]) expect(e20.slice(pigmentGate)).toContain(establishedValue);
+    expect(e20).toContain('leafVein * 0.075');
+    expect(e20).toContain('leafPigmentBody * 0.068 * botanicalPigment');
+    expect(e20).toContain('vec3(-0.052, 0.022, -0.060) * leafPigmentBody');
+    expect(e20).toContain('barkPigmentBody * 0.026 * botanicalPigment');
+    expect(e20).toContain('vec3(0.085, -0.017, -0.052) * barkPigmentBody');
+    expect(e20.match(/botanicalBodyNoise\(/g)).toHaveLength(3);
+    expect(e20).not.toContain('texture(');
+    expect(e20).not.toContain('uTime');
+    expect(e20).not.toContain('gl_FragCoord');
+    expect(e20).not.toMatch(/\balpha\s*[+*]?=/);
+    expect(source.match(/this\.uniforms\.uniforms\.uBotanicalPigmentVfx = 0;/g))
+      .toHaveLength(2);
+    expect(source).toMatch(
+      /const botanicalPigmentVfxEnabled = outputScale < 8\s*&& resolveBotanicalPigmentVfxEnabled\(renderLook\);/,
+    );
+    expect(source).toContain(
+      'uBotanicalPigmentVfx: { value: botanicalPigmentVfxEnabled ? 1 : 0',
+    );
+    expect(preserveDrawingBuffer).toContain("get('botanicalPigmentVfxAudit') === '1'");
+    expect(source).toContain('presenter.app.canvas.dataset.botanicalPigmentVfx');
+    expect(source).toContain("this.app.canvas.dataset.botanicalPigmentVfx = 'inactive';");
   });
 
   it('keeps E21 thick-Glass transmission exact-owner, normal-WebGL-only, and RGB-only', () => {

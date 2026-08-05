@@ -390,6 +390,28 @@ passes at 1×/2×/4× with byte-exact repeated-off frames and zero browser error
 its true-8× tail promotes exact 4896×3072 WebGL and signals a real GPU fence in
 `3444.1 ms` while E27 and normal HDR remain excluded for `scale-8`.
 
+E28 is the exact-Wood/PLNT pigment/body-depth card selected with
+`?botanicalPigmentVfx=0|1`, strictly under both E20 body recomposition and E26
+mesostructure and limited to normal WebGL 1×–4×. Its resolver defaults on only
+when both parents are active, and the shader locally ANDs the E26 and E28
+selectors. Exact ordinary Wood `9` (`traits == 96`) and PLNT `10`
+(`traits == 32`) reuse only the already-live `botanicalDepth`,
+`botanicalMacro`, `botanicalCluster`, `leafPigment`, and `barkPlate` values for
+bounded warm/umber bark depth and chlorophyll/young-growth leaf volume. It adds
+no noise, sample, sampler, texture, field, pass, resource, target, upload,
+allocation, clock, alpha/support/topology/lifecycle state, or physics decision.
+E26's focused gate pins E28 off explicitly, preserving the earlier E26 matrix
+as an isolated measurement.
+
+Run `npm run audit:vfx:botanical-pigment` for E28's 1×/2×/4× off→on→off
+matrix and requested-on true-8× exclusion. The accepted focused gate keeps all
+30 named controls exact, repeats the disabled framebuffer byte-for-byte, and
+preserves semantic, alpha/support, auxiliary, 1,568-cell native-wall, and
+3,840-cell lifecycle planes with bounded cross-scale frequency retention. The
+true-8× tail promotes exact 4896×3072 WebGL while E20/E26/E28/HDR are inactive
+for reason `scale-8`, then signals a real GPU fence in `3113.6 ms` with zero
+browser errors.
+
 HEAC, PTNM, and RSSS now receive a second exact-owner deep rigid-body layer:
 the rapid heat conductor has restrained warm channel lamellae, Platinum uses
 cool catalytic planes with sparse active sites, and solidified resist gains a
@@ -539,6 +561,16 @@ reject flat gas; requiring minimum adjacent-pixel contrast rewarded stipple.
 The app-owned showcase fixture remains semantic version 3, but v3 and v4
 quality indices are not comparable. The frozen pre-E27 Smoke frame has
 softness `1`, billow depth as its weakest cue, and v4 quality `45.542`.
+
+The accepted post-E28 production matrix is `crossScaleVerified=true` at
+1×/2×/4× with semantic hash `595518258`, 104,027 occupied cells, and zero
+browser errors. At canonical 2×, Wood quality is `50.781` with
+micro/chroma/macro `1.52`/`1.00`/`21`, and PLNT quality is `56.122` with
+`1.55`/`1.16`/`33`; both report zero dark and clipped fractions. PLNT quality
+is `46.355` at 1× and `59.540` at 4×, inside the accepted cross-scale bound.
+Organic is now represented by Wood at `50.781`, leaving Solid/ROCK surface
+detail as the weakest canonical family at `45.685` and the next fit-view review
+target.
 
 Timing output is diagnostic rather than a cross-machine pass/fail threshold. It includes baseline Canvas atmosphere relief and the same full plane under a nonzero cardinal-gradient emission field, Canvas surface-lighting, deliberately pessimistic full-612×384 energy-core and trait-core passes, a fully dense Water cohesion pass, a full-height Water/Oil boundary pass, and an all-cells liquid-light gate in which every cell is pessimistically treated as a top-surface candidate and samples field relief. Dense translucent coupling is measured twice: an honest all-Glass/all-field ceiling and the ordinary single-localized-source path after `EmissionField.mayLightWorldCell` rejection. A separate pathological all-world Glass-over-wall refraction profile includes its diagnostic pixel reset; production admits only exact Glass/Ice cells that coexist with a wall, performs no allocation or field sample, and ordinary scenes touch a small fraction of that ceiling. Full-world caustic and lens-shell arithmetic diagnostics include repeated RGB scratch initialization that production already performs while styling. The latest lens-shell ceiling measured `11.25/11.58/12.61 ms` median/p90/max across all 235,008 world cells and adds zero runtime bytes; production additionally gates it to exact Glass/Ice and reuses the existing color scratch, relief, and contour response. Checksums are consumed sparsely outside the timed production-shaped loops and the solid-relief checksum remains independent. The atmosphere-light descriptor is module-scoped and reused, so the timed loop allocates no object or typed buffer. Trait profiling covers realistic masks, a synthetic all-bits mask, and a representative composite, and consumes representative output through a checksum outside the timed region so the JIT cannot discard the work without charging checksum arithmetic to production-like timings. Profiler-only storage is reported separately from runtime-known scratch and does not contribute to `combinedAllocatedBytes`.
 

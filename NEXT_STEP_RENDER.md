@@ -365,11 +365,25 @@ does not alter simulation, camera, semantic ownership, or `renderScale`.
   named immediate HDR seam footprint may move one composed byte. Authored gaps keep
   exact semantic/alpha/support topology, but their already-supported atmosphere
   edge is also a bounded composed footprint.
+- **E28 — exact Wood/PLNT pigment and body depth (accepted checkpoint):**
+  normal 1×–4× WebGL uses `?botanicalPigmentVfx=0|1` only as a strict child
+  of both E20 body recomposition and E26 mesostructure. The selector defaults
+  on when both parents are active, while the shader locally ANDs E26 and E28
+  before applying the response. Ordinary authoritative Wood `9`
+  (`traits == 96`) and PLNT `10` (`traits == 32`) may reuse only the existing
+  `botanicalDepth`, `botanicalMacro`, `botanicalCluster`, `leafPigment`, and
+  `barkPlate` evidence for bounded warm/umber Wood depth and chlorophyll/young-
+  growth PLNT volume. Sparse/thin bodies, holes/notches, walls, contacts,
+  VINE/Wax/Metal, lifecycle colour/state, Canvas, and compact true 8× remain
+  controls. E28 adds no noise, sample, sampler, texture, field, pass, resource,
+  target, upload, allocation, clock, alpha/support/topology/lifecycle state, or
+  physics decision. E26's focused gate explicitly pins E28 off so its accepted
+  evidence remains an isolated E26 measurement.
 - **Protected 8× rung:** `renderScale=8` deliberately reports
   `hdrPipeline=inactive` / `scale-8` and retains the proven direct single-mesh
   4896×3072 path. The experiment must earn a bounded 8× design rather than
   allocating a 115 MiB full-resolution float target beside that path.
-- **Current decision:** E01/E02/E03/E04/E05/E06/E07/E08/E09/E10/E11/E12/E13/E14/E15/E16/E17/E18/E19/E20/E21/E22/E23/E24/E25/E26/E27 remain opt-in through the non-Classic looks
+- **Current decision:** E01/E02/E03/E04/E05/E06/E07/E08/E09/E10/E11/E12/E13/E14/E15/E16/E17/E18/E19/E20/E21/E22/E23/E24/E25/E26/E27/E28 remain opt-in through the non-Classic looks
   until representative hardware timing and mobile thermal behavior are
   measured. E02 remains the safe family-wide baseline. E03 is accepted as the
   liquid-depth checkpoint: its fit-view crop is visibly more cohesive, retains
@@ -471,7 +485,11 @@ does not alter simulation, camera, semantic ownership, or `renderScale`.
   their established path. Freeze its E03 dependency, exact Water owner,
   byte-30–78 handoff, semantic `shape.w > 2.5` support proof, carrier factor,
   crown/pocket spectra, and compact-8× exclusion until another production
-  fit-view review.
+  fit-view review. E28 is accepted as the exact botanical pigment/body-depth
+  refinement over E20+E26: it lifts Wood and PLNT fit-view volume without a new
+  carrier, sample, state plane, or lifecycle decision. Freeze its two-parent
+  dependency, exact-owner/trait/body proof, reused pigment carriers, and true-
+  8× exclusion until another production fit-view review.
   These are not the final material/VFX results.
   Sub-1.0 material colour stays on the established response; tonemapping owns
   only real HDR highlights so powder texture and liquid body contrast are not
@@ -980,6 +998,18 @@ E04/E15/E25/E27/HDR report inactive for reason `scale-8`. The accepted run
 passes the full 1×/2×/4× off→on→off matrix with zero browser errors, then
 completes the exact 4896×3072 true-8× tail through a `3444.1 ms` GPU fence.
 
+Run `npm run audit:vfx:botanical-pigment` for E28. It owns the normal-WebGL
+1×/2×/4× `botanicalPigmentVfx=0 → 1 → 0` sequence under E20 and E26,
+while E26's independent focused gate pins E28 off. The E28 shader path locally
+ANDs both selectors, and the default resolver enables E28 only when its parents
+are active. The accepted matrix preserves exact semantic, alpha/support,
+auxiliary, native-wall, and lifecycle state; all 30 named controls are exact,
+and the disabled framebuffer repeats byte-for-byte. Its spatial response and
+frequency retention remain bounded across scales. Requested-on true 8× must
+promote actual WebGL at exact 4896×3072 while E20/E26/E28/HDR report inactive
+for reason `scale-8`. The accepted tail signals a real GPU fence in `3113.6 ms`
+with zero browser errors.
+
 The earlier post-E16 survey was invalid for Solid: it sampled native Stone `21`,
 which is Powder, while labelling that region Solid. The corrected post-E17
 showcase uses native ROCK `78`, asserts exactly `2769` matching Solid cells, and
@@ -1043,11 +1073,18 @@ next production 4× survey then selected Wood/PLNT as the largest remaining
   Smoke frame scores `45.542`, not the obsolete v3 `4.546`. E27 raises exact
   Smoke to `66.914` at canonical 2× while keeping microcontrast `0.39`; Gas is
   now represented by Noble Gas at `52.710`, and Organic remains globally
-  weakest at `33.569`. Do not widen E17–E27 owner sets by resemblance alone or stack
+  weakest at `33.569`. E28 then completes a full
+  `crossScaleVerified=true` 1×/2×/4× matrix with the unchanged semantic hash
+  `595518258`, 104,027 occupied cells, and zero browser errors. At canonical
+  2×, Wood quality is `50.781` with micro/chroma/macro
+  `1.52`/`1.00`/`21`; PLNT is `56.122` with `1.55`/`1.16`/`33`; both have zero
+  dark and clipped fractions. PLNT quality remains `46.355` at 1× and `59.540`
+  at 4×. Organic is therefore represented by Wood at `50.781`, and Solid/ROCK
+  surface detail becomes the weakest canonical family at `45.685`. Do not widen E17–E28 owner sets by resemblance alone or stack
   another generic gas layer over E04/E07/E13/E15; preserve their independent
   owner, exposure, topology, scale, and true-8× contracts.
 
-**Next visual experiments:** E03–E27 now provide accepted liquid body/surface,
+**Next visual experiments:** E03–E28 now provide accepted liquid body/surface,
 stable-gas, coherent-gas-motion, powder-depth, and powder-local-light
 checkpoints plus exact resting contact grounding, Glass/Ice transmission, and
 state-aware Wax/PLNT subsurface response, composed wet-mineral optics,
@@ -1060,9 +1097,11 @@ an exact ROCK matte-body correction over E17, lower-anisotropy exact-Water
 depth-light recomposition, exact Noble Gas pearlescent billow depth, exact
 Wood/PLNT mesostructure, and exact Smoke soft soot volume. E27's final
 canonical 2× Smoke result is luma deviation `2.22`, microcontrast `.39`, macro
-range `10`, luma range `14`, full support recall, and no clipping. Under v4,
-Organic pigment/mesostructure is again the weakest ranked family; inspect its
-fit-view evidence before choosing a bounded E28 exact-owner card. The radioactive-solid review
+range `10`, luma range `14`, full support recall, and no clipping. E28 adds
+exact Wood/PLNT pigment/body depth without disturbing E20/E26 topology or
+lifecycle state. Under v4, Solid/ROCK surface detail is now the weakest ranked
+family at `45.685`; inspect its fit-view evidence before choosing a bounded
+E29 exact-owner card. The radioactive-solid review
 found no current identity bug, but also
 proved that the existing
 phase-permissive identity guard is not suitable for a future broad ISZS/VIBR
@@ -1071,7 +1110,7 @@ with topology-preserving, material-
 specific cards that reuse already-live evidence. Prefer the smallest
 arithmetic-only candidate that fixes a visible fit-view deficiency; do not add
 an isolated tint merely to continue the experiment number. Preserve the E14
-1× stencil snap and all E01–E27 selectors and controls while designing the
+1× stencil snap and all E01–E28 selectors and controls while designing the
 next bounded card.
 
 ## Phase 1 — HDR pipeline & lighting core (biggest visual payoff)

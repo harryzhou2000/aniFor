@@ -307,6 +307,22 @@ export function resolveBotanicalMesostructureVfxEnabled(
 }
 
 /**
+ * E28 adds a restrained Wood/PLNT pigment response only after E26 has proven
+ * the parent mesostructure path. The shader keeps exact owner/contact/topology
+ * eligibility; this selector cannot revive either parent when it is disabled.
+ */
+export function resolveBotanicalPigmentVfxEnabled(
+  look: RenderLook,
+  search = globalThis.location?.search ?? '',
+): boolean {
+  if (!resolveBotanicalMesostructureVfxEnabled(look, search)) return false;
+  const requested = new URLSearchParams(search).get('botanicalPigmentVfx');
+  if (requested === '0' || requested === 'off' || requested === 'false') return false;
+  if (requested === '1' || requested === 'on' || requested === 'true') return true;
+  return true;
+}
+
+/**
  * Keeps the exact thick-Glass body-transmission experiment independently
  * measurable inside the broader volume study. Normal WebGL owns the strict
  * Glass owner, depth, contact, and topology guards; Canvas and compact true 8x

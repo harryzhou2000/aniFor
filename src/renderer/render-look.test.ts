@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   resolveBotanicalBodyVfxEnabled,
   resolveBotanicalMesostructureVfxEnabled,
+  resolveBotanicalPigmentVfxEnabled,
   resolveCeramicGlazeVfxEnabled,
   DEFAULT_RENDER_LOOK, resolveGasBodyVfxEnabled, resolveGasCoreDepthVfxEnabled,
   resolveGasLightVfxEnabled,
@@ -264,6 +265,29 @@ describe('resolveRenderLook', () => {
     )).toBe(false);
     expect(resolveBotanicalMesostructureVfxEnabled(
       'realistic', '?botanicalBodyVfx=1&botanicalMesostructureVfx=off',
+    )).toBe(false);
+  });
+
+  it('keeps Wood/PLNT pigment subordinate to the exact E26 mesostructure parent', () => {
+    expect(resolveBotanicalPigmentVfxEnabled(
+      'classic', '?botanicalPigmentVfx=1',
+    )).toBe(false);
+    expect(resolveBotanicalPigmentVfxEnabled('realistic', '')).toBe(true);
+    expect(resolveBotanicalPigmentVfxEnabled('neon-lab', '')).toBe(true);
+    expect(resolveBotanicalPigmentVfxEnabled(
+      'realistic', '?volumeVfx=0&botanicalPigmentVfx=1',
+    )).toBe(false);
+    expect(resolveBotanicalPigmentVfxEnabled(
+      'realistic', '?volumeVfx=0&botanicalBodyVfx=1&botanicalMesostructureVfx=1&botanicalPigmentVfx=on',
+    )).toBe(true);
+    expect(resolveBotanicalPigmentVfxEnabled(
+      'neon-lab', '?botanicalBodyVfx=0&botanicalMesostructureVfx=1&botanicalPigmentVfx=1',
+    )).toBe(false);
+    expect(resolveBotanicalPigmentVfxEnabled(
+      'realistic', '?botanicalMesostructureVfx=off&botanicalPigmentVfx=1',
+    )).toBe(false);
+    expect(resolveBotanicalPigmentVfxEnabled(
+      'realistic', '?botanicalPigmentVfx=false',
     )).toBe(false);
   });
 

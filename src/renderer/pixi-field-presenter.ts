@@ -40,6 +40,7 @@ import { HDRVfxPipeline, type HDRPipelineInfo } from './hdr-vfx-pipeline';
 import {
   resolveBotanicalBodyVfxEnabled,
   resolveBotanicalMesostructureVfxEnabled,
+  resolveBotanicalPigmentVfxEnabled,
   resolveGlassBodyVfxEnabled,
   resolveGasBodyVfxEnabled, resolveGasCoreDepthVfxEnabled, resolveGasLightVfxEnabled,
   resolveGasMotionVfxEnabled,
@@ -3244,6 +3245,7 @@ uniform float uPlatinumBodyVfx;
 uniform float uCeramicGlazeVfx;
 uniform float uBotanicalBodyVfx;
 uniform float uBotanicalMesostructureVfx;
+uniform float uBotanicalPigmentVfx;
 uniform float uGlassBodyVfx;
 uniform float uLiquidBodyVfx;
 uniform float uOilBodyVfx;
@@ -8403,6 +8405,9 @@ void main() {
         // topology, or physics decision is introduced.
         float botanicalMesostructure = uBotanicalMesostructureVfx > 0.5
           ? botanicalDepth : 0.0;
+        float botanicalPigment = uBotanicalMesostructureVfx > 0.5
+            && uBotanicalPigmentVfx > 0.5
+          ? botanicalDepth : 0.0;
         if (material == 10.0) {
           float leafBody = clamp(
             (botanicalMacro - 0.5) * 1.18
@@ -8446,6 +8451,19 @@ void main() {
           // crown/pocket volume while making the 6.5-cell clusters legible.
           color += vec3(-0.052, 0.021, -0.064) * leafPigment
             * botanicalMesostructure;
+          // E28: the canonical fit view retains convincing lobe depth but too
+          // little species pigment variation. Recombine only E20/E26's broad
+          // signed lobes into a near-luminance-neutral chlorophyll/young-growth
+          // finish. No new noise, sample, light basis, state, or topology is
+          // introduced; native lifecycle colour still layers afterward.
+          float leafPigmentBody = clamp(
+            leafPigment * 0.56
+              + (botanicalMacro - botanicalCluster) * 0.70,
+            -1.0, 1.0
+          );
+          color *= 1.0 + leafPigmentBody * 0.068 * botanicalPigment;
+          color += vec3(-0.052, 0.022, -0.060) * leafPigmentBody
+            * botanicalPigment;
         } else {
           float barkWarp = botanicalBodyNoise(vec2(
             fieldPosition.x * 0.050 + botanicalMacro * 0.82,
@@ -8492,6 +8510,18 @@ void main() {
           // one-cell scanlines.
           color += vec3(0.050, -0.012, -0.026) * barkPlate
             * botanicalMesostructure;
+          // E28 keeps the accepted broken-plate relief while organizing its
+          // amber/umber pigment at a broader heartwood scale. The key is
+          // nearly Rec.709-neutral, so it adds material colour rather than a
+          // second lighting gradient or another repeated ridge frequency.
+          float barkPigmentBody = clamp(
+            (botanicalMacro - 0.5) * 1.25
+              + (botanicalCluster - 0.5) * 0.45 + barkPlate * 0.20,
+            -1.0, 1.0
+          );
+          color *= 1.0 + barkPigmentBody * 0.026 * botanicalPigment;
+          color += vec3(0.085, -0.017, -0.052) * barkPigmentBody
+            * botanicalPigment;
         }
       }
     } else if (radioactiveSurface > 0.5 || (optics < 0.5 && profile == 4.0)) {
@@ -9886,6 +9916,10 @@ export class PixiFieldPresenter {
     // declare neither this selector nor a parallel branch.
     const botanicalMesostructureVfxEnabled = outputScale < 8
       && resolveBotanicalMesostructureVfxEnabled(renderLook);
+    // E28 is a pigment-only child of E26's exact Wood/PLNT mesostructure.
+    // Canvas and compact true 8x retain their established botanical grammar.
+    const botanicalPigmentVfxEnabled = outputScale < 8
+      && resolveBotanicalPigmentVfxEnabled(renderLook);
     // E21 replaces only normal-WebGL's deep exact-Glass body grade. The
     // compact true-8x shader retains its separately proven transmission path
     // and deliberately declares neither this selector nor its arithmetic.
@@ -9940,6 +9974,7 @@ export class PixiFieldPresenter {
       uBotanicalMesostructureVfx: {
         value: botanicalMesostructureVfxEnabled ? 1 : 0, type: 'f32',
       },
+      uBotanicalPigmentVfx: { value: botanicalPigmentVfxEnabled ? 1 : 0, type: 'f32' },
       uGlassBodyVfx: { value: glassBodyVfxEnabled ? 1 : 0, type: 'f32' },
       uLiquidBodyVfx: { value: liquidBodyVfxEnabled ? 1 : 0, type: 'f32' },
       uOilBodyVfx: { value: oilBodyVfxEnabled ? 1 : 0, type: 'f32' },
@@ -10167,6 +10202,7 @@ export class PixiFieldPresenter {
       this.uniforms.uniforms.uCeramicGlazeVfx = 0;
       this.uniforms.uniforms.uBotanicalBodyVfx = 0;
       this.uniforms.uniforms.uBotanicalMesostructureVfx = 0;
+      this.uniforms.uniforms.uBotanicalPigmentVfx = 0;
       this.uniforms.uniforms.uGlassBodyVfx = 0;
       this.uniforms.uniforms.uLiquidBodyVfx = 0;
       this.uniforms.uniforms.uOilBodyVfx = 0;
@@ -10217,6 +10253,7 @@ export class PixiFieldPresenter {
             || new URLSearchParams(location.search).get('ceramicGlazeVfxAudit') === '1'
             || new URLSearchParams(location.search).get('botanicalBodyVfxAudit') === '1'
             || new URLSearchParams(location.search).get('botanicalMesostructureVfxAudit') === '1'
+            || new URLSearchParams(location.search).get('botanicalPigmentVfxAudit') === '1'
             || new URLSearchParams(location.search).get('glassBodyVfxAudit') === '1'
             || new URLSearchParams(location.search).get('oilBodyVfxAudit') === '1'
             || new URLSearchParams(location.search).get('waterBodyVfxAudit') === '1'
@@ -10289,6 +10326,9 @@ export class PixiFieldPresenter {
     ) > 0.5 ? 'active' : 'inactive';
     presenter.app.canvas.dataset.botanicalMesostructureVfx = Number(
       presenter.uniforms.uniforms.uBotanicalMesostructureVfx
+    ) > 0.5 ? 'active' : 'inactive';
+    presenter.app.canvas.dataset.botanicalPigmentVfx = Number(
+      presenter.uniforms.uniforms.uBotanicalPigmentVfx
     ) > 0.5 ? 'active' : 'inactive';
     presenter.app.canvas.dataset.glassBodyVfx = Number(
       presenter.uniforms.uniforms.uGlassBodyVfx
@@ -11702,6 +11742,7 @@ export class PixiFieldPresenter {
         this.uniforms.uniforms.uCeramicGlazeVfx = 0;
         this.uniforms.uniforms.uBotanicalBodyVfx = 0;
         this.uniforms.uniforms.uBotanicalMesostructureVfx = 0;
+        this.uniforms.uniforms.uBotanicalPigmentVfx = 0;
         this.uniforms.uniforms.uGlassBodyVfx = 0;
         this.uniforms.uniforms.uLiquidBodyVfx = 0;
         this.uniforms.uniforms.uOilBodyVfx = 0;
@@ -11729,6 +11770,7 @@ export class PixiFieldPresenter {
         this.app.canvas.dataset.ceramicGlazeVfx = 'inactive';
         this.app.canvas.dataset.botanicalBodyVfx = 'inactive';
         this.app.canvas.dataset.botanicalMesostructureVfx = 'inactive';
+        this.app.canvas.dataset.botanicalPigmentVfx = 'inactive';
         this.app.canvas.dataset.glassBodyVfx = 'inactive';
         this.app.canvas.dataset.liquidBodyVfx = 'inactive';
         this.app.canvas.dataset.oilBodyVfx = 'inactive';
