@@ -18,6 +18,7 @@ import {
   resolveNobleGasBillowVfxEnabled, resolveNobleGasPrismVfxEnabled,
   resolveSmokeBillowDepthVfxEnabled,
   resolveSmokeSoftnessVfxEnabled,
+  resolveAcidBodyVfxEnabled,
   resolveOilBodyVfxEnabled,
   resolveOilVolumeFinishVfxEnabled,
   resolveOrganicSubsurfaceVfxEnabled,
@@ -601,6 +602,29 @@ describe('resolveRenderLook', () => {
     expect(resolveWaterBodyVfxEnabled(
       'neon-lab', '?liquidBodyVfx=on&waterBodyVfx=off',
     )).toBe(false);
+  });
+
+  it('keeps exact Acid recomposition independently measurable but subordinate to the liquid-body baseline', () => {
+    expect(resolveAcidBodyVfxEnabled('classic', '?acidBodyVfx=on')).toBe(false);
+    expect(resolveAcidBodyVfxEnabled('classic', '?acidBodyVfx=true')).toBe(false);
+    expect(resolveAcidBodyVfxEnabled('realistic', '')).toBe(true);
+    expect(resolveAcidBodyVfxEnabled('neon-lab', '')).toBe(true);
+    expect(resolveAcidBodyVfxEnabled('realistic', '?volumeVfx=0')).toBe(false);
+    expect(resolveAcidBodyVfxEnabled(
+      'realistic', '?volumeVfx=0&liquidBodyVfx=1&acidBodyVfx=true',
+    )).toBe(true);
+    expect(resolveAcidBodyVfxEnabled(
+      'realistic', '?liquidBodyVfx=0&acidBodyVfx=1',
+    )).toBe(false);
+    expect(resolveAcidBodyVfxEnabled(
+      'neon-lab', '?liquidBodyVfx=off&acidBodyVfx=on',
+    )).toBe(false);
+    expect(resolveAcidBodyVfxEnabled('realistic', '?acidBodyVfx=1')).toBe(true);
+    expect(resolveAcidBodyVfxEnabled('realistic', '?acidBodyVfx=on')).toBe(true);
+    expect(resolveAcidBodyVfxEnabled('realistic', '?acidBodyVfx=true')).toBe(true);
+    expect(resolveAcidBodyVfxEnabled('realistic', '?acidBodyVfx=0')).toBe(false);
+    expect(resolveAcidBodyVfxEnabled('realistic', '?acidBodyVfx=off')).toBe(false);
+    expect(resolveAcidBodyVfxEnabled('realistic', '?acidBodyVfx=false')).toBe(false);
   });
 
   it('lets powder-body VFX follow the preset or override broad volume styling', () => {

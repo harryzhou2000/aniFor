@@ -56,6 +56,7 @@ import {
   resolveLiquidBodyVfxEnabled, resolveLiquidSolidMeniscusVfxEnabled,
   resolveMetalWaterContactVfxEnabled,
   resolveLiquidSurfaceVfxEnabled,
+  resolveAcidBodyVfxEnabled,
   resolveOilBodyVfxEnabled,
   resolveOilVolumeFinishVfxEnabled,
   resolveWaterBodyVfxEnabled,
@@ -3266,6 +3267,7 @@ uniform float uWoodBarkReliefVfx;
 uniform float uWoodTanninVfx;
 uniform float uGlassBodyVfx;
 uniform float uLiquidBodyVfx;
+uniform float uAcidBodyVfx;
 uniform float uOilBodyVfx;
 uniform float uOilVolumeFinishVfx;
 uniform float uWaterBodyVfx;
@@ -7098,6 +7100,50 @@ void main() {
               * oilBodyPocket * (uOilVolumeFinishVfx > 0.5
                 ? (0.60 + caustic * 0.22) : (0.54 + caustic * 0.20));
           }
+          // E39: exact Acid already has a corrosive chroma identity, but its
+          // deep production body was exclusively absorptive. Recompose only
+          // the dense connected interior into a broad reactive crown and a
+          // complementary pocket. The crossed sheen/caustic roll and macro
+          // relief are already live; no wave, sample, field, clock, support,
+          // or ownership decision is added. SaltWater 16 and BASE remain exact
+          // controls even though they can share related liquid presentation.
+          if (uAcidBodyVfx > 0.5 && material == 13.0 && optics == 3.0
+            && surfaceOnly < 0.5 && emissionOnly < 0.5
+            && shape.w > 3.5 && exposedLiquidSide < 0.5) {
+            float acidBodyWeight = smoothstep(
+              30.0 / 255.0, 78.0 / 255.0, liquidOpticalDepth
+            ) * liquidVfxBody * (1.0 - liquidFresnelContour)
+              * smoothstep(0.80, 0.97, liquidNeighbourMean)
+              * (1.0 - smoothstep(
+                0.00002, 0.00024,
+                dot(liquidSpeciesSlope, liquidSpeciesSlope)
+              ));
+            float acidBodyRoll = clamp(
+              (broadSheen - 0.5) * (causticWave - 0.5) * -3.35
+                + (broadSheen - 0.5) * 0.28
+                + (causticWave - 0.5) * 0.18
+                + liquidMacroRelief * 1.55,
+              -1.0, 1.0
+            );
+            float acidBodyCrown = smoothstep(
+              0.025, 0.50, max(acidBodyRoll, 0.0)
+            ) * acidBodyWeight;
+            float acidBodyPocket = smoothstep(
+              0.025, 0.52, max(-acidBodyRoll, 0.0)
+            ) * acidBodyWeight;
+            vec3 acidBodyReflection = mix(
+              vec3(0.42, 1.00, 0.58), reflectedEnvironment, 0.22
+            );
+            color += (vec3(1.20) - clamp(color, 0.0, 1.20))
+              * acidBodyReflection * acidBodyCrown
+              * (0.098 + broadSheen * 0.020 + caustic * 0.018);
+            // Acid's magenta body carries little green, so absorbing mainly
+            // that channel produced no useful pocket. Remove red/blue energy
+            // instead: the crown remains reactive while the opposing lobe
+            // genuinely recedes into a dense violet core.
+            color *= vec3(1.0) - vec3(0.100, 0.045, 0.140)
+              * acidBodyPocket * (0.62 + caustic * 0.20);
+          }
         }
       }
     }
@@ -10352,6 +10398,10 @@ export class PixiFieldPresenter {
     // must not advertise an effect that cannot run on that path.
     const liquidBodyVfxEnabled = outputScale < 8
       && resolveLiquidBodyVfxEnabled(renderLook);
+    // E39 recomposes only the exact Acid body established by E03. Compact
+    // true-8x deliberately declares neither this selector nor its arithmetic.
+    const acidBodyVfxEnabled = outputScale < 8
+      && resolveAcidBodyVfxEnabled(renderLook);
     // E14 is arithmetic over normal WebGL's existing liquid body and contact
     // probes. The compact true-8x shader declares neither selector nor branch.
     const liquidSolidMeniscusVfxEnabled = outputScale < 8
@@ -10401,6 +10451,7 @@ export class PixiFieldPresenter {
       uWoodTanninVfx: { value: woodTanninVfxEnabled ? 1 : 0, type: 'f32' },
       uGlassBodyVfx: { value: glassBodyVfxEnabled ? 1 : 0, type: 'f32' },
       uLiquidBodyVfx: { value: liquidBodyVfxEnabled ? 1 : 0, type: 'f32' },
+      uAcidBodyVfx: { value: acidBodyVfxEnabled ? 1 : 0, type: 'f32' },
       uOilBodyVfx: { value: oilBodyVfxEnabled ? 1 : 0, type: 'f32' },
       uOilVolumeFinishVfx: { value: oilVolumeFinishVfxEnabled ? 1 : 0, type: 'f32' },
       uWaterBodyVfx: { value: waterBodyVfxEnabled ? 1 : 0, type: 'f32' },
@@ -10641,6 +10692,7 @@ export class PixiFieldPresenter {
       this.uniforms.uniforms.uWoodTanninVfx = 0;
       this.uniforms.uniforms.uGlassBodyVfx = 0;
       this.uniforms.uniforms.uLiquidBodyVfx = 0;
+      this.uniforms.uniforms.uAcidBodyVfx = 0;
       this.uniforms.uniforms.uOilBodyVfx = 0;
       this.uniforms.uniforms.uOilVolumeFinishVfx = 0;
       this.uniforms.uniforms.uWaterBodyVfx = 0;
@@ -10703,6 +10755,7 @@ export class PixiFieldPresenter {
             || new URLSearchParams(location.search).get('woodTanninVfxAudit') === '1'
             || new URLSearchParams(location.search).get('glassBodyVfxAudit') === '1'
             || new URLSearchParams(location.search).get('oilBodyVfxAudit') === '1'
+            || new URLSearchParams(location.search).get('acidBodyVfxAudit') === '1'
             || new URLSearchParams(location.search).get('waterBodyVfxAudit') === '1'
             || new URLSearchParams(location.search).get('liquidBodyVfxAudit') === '1'
             || new URLSearchParams(location.search).get('liquidSolidMeniscusVfxAudit') === '1'
@@ -10806,6 +10859,9 @@ export class PixiFieldPresenter {
     ) > 0.5 ? 'active' : 'inactive';
     presenter.app.canvas.dataset.liquidBodyVfx = Number(presenter.uniforms.uniforms.uLiquidBodyVfx) > 0.5
       ? 'active' : 'inactive';
+    presenter.app.canvas.dataset.acidBodyVfx = Number(
+      presenter.uniforms.uniforms.uAcidBodyVfx
+    ) > 0.5 ? 'active' : 'inactive';
     presenter.app.canvas.dataset.oilBodyVfx = Number(
       presenter.uniforms.uniforms.uOilBodyVfx
     ) > 0.5 ? 'active' : 'inactive';
@@ -12230,6 +12286,7 @@ export class PixiFieldPresenter {
         this.uniforms.uniforms.uWoodTanninVfx = 0;
         this.uniforms.uniforms.uGlassBodyVfx = 0;
         this.uniforms.uniforms.uLiquidBodyVfx = 0;
+        this.uniforms.uniforms.uAcidBodyVfx = 0;
         this.uniforms.uniforms.uOilBodyVfx = 0;
         this.uniforms.uniforms.uOilVolumeFinishVfx = 0;
         this.uniforms.uniforms.uWaterBodyVfx = 0;
@@ -12268,6 +12325,7 @@ export class PixiFieldPresenter {
         this.app.canvas.dataset.woodTanninVfx = 'inactive';
         this.app.canvas.dataset.glassBodyVfx = 'inactive';
         this.app.canvas.dataset.liquidBodyVfx = 'inactive';
+        this.app.canvas.dataset.acidBodyVfx = 'inactive';
         this.app.canvas.dataset.oilBodyVfx = 'inactive';
         this.app.canvas.dataset.oilVolumeFinishVfx = 'inactive';
         this.app.canvas.dataset.waterBodyVfx = 'inactive';

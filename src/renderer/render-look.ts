@@ -521,6 +521,23 @@ export function resolveOilVolumeFinishVfxEnabled(
 }
 
 /**
+ * Re-composes only the exact native Acid body after E03 has established a
+ * connected, same-species liquid volume. The child remains independently
+ * measurable, but cannot recreate the liquid-body baseline when its parent or
+ * containing HDR look is disabled.
+ */
+export function resolveAcidBodyVfxEnabled(
+  look: RenderLook,
+  search = globalThis.location?.search ?? '',
+): boolean {
+  if (!resolveLiquidBodyVfxEnabled(look, search)) return false;
+  const requested = new URLSearchParams(search).get('acidBodyVfx');
+  if (requested === '0' || requested === 'off' || requested === 'false') return false;
+  if (requested === '1' || requested === 'on' || requested === 'true') return true;
+  return true;
+}
+
+/**
  * Re-composes only the exact native Water body after E03 has established a
  * connected, same-species liquid volume. The child selector may replace
  * Water's inherited broad stripe carrier, but it cannot recreate E03 when the

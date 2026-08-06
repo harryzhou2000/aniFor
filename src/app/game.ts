@@ -65,6 +65,9 @@ import {
   OIL_BODY_VFX_AUDIT, prepareOilBodyVfxFixture,
 } from './oil-body-vfx-audit';
 import {
+  ACID_BODY_VFX_AUDIT, prepareAcidBodyVfxFixture,
+} from './acid-body-vfx-audit';
+import {
   LIQUID_SOLID_MENISCUS_VFX_AUDIT, prepareLiquidSolidMeniscusVfxFixture,
 } from './liquid-solid-meniscus-vfx-audit';
 import { navigateToRenderScale } from './render-scale-navigation';
@@ -801,6 +804,12 @@ export class Game {
       oilBodyVfxFixture: () => OIL_BODY_VFX_AUDIT,
       prepareOilBodyVfxFixture: () => {
         prepareOilBodyVfxFixture(this.simulation);
+        this.renderer.synchronizeFixtureMaterialPlane();
+        this.renderer.invalidateDynamicPresentation();
+      },
+      acidBodyVfxFixture: () => ACID_BODY_VFX_AUDIT,
+      prepareAcidBodyVfxFixture: () => {
+        prepareAcidBodyVfxFixture(this.simulation);
         this.renderer.synchronizeFixtureMaterialPlane();
         this.renderer.invalidateDynamicPresentation();
       },

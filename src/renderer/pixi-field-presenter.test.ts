@@ -1629,6 +1629,70 @@ describe('Pixi presenter startup configuration', () => {
     expect(source).toContain("this.app.canvas.dataset.oilVolumeFinishVfx = 'inactive';");
   });
 
+  it('keeps E39 Acid body optics exact-owner, E03-dependent, normal-WebGL-only, and RGB-only', () => {
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const canvasSource = readFileSync(new URL('./field-renderer.ts', import.meta.url), 'utf8');
+    const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');
+    const normalStart = source.indexOf('const FIELD_FRAGMENT = `', eightStart);
+    const normalEnd = source.indexOf('`;\n\n/** Primary WebGL presentation', normalStart);
+    const eight = source.slice(eightStart, normalStart);
+    const normal = source.slice(normalStart, normalEnd);
+    const e39Start = normal.indexOf('          // E39:');
+    const e39End = normal.indexOf('    // E14:', e39Start);
+    const e39 = normal.slice(e39Start, e39End);
+    const parentStart = normal.lastIndexOf(
+      '    if (liquidOnly < 0.5 && halo < 0.5', e39Start,
+    );
+    const parent = normal.slice(parentStart, e39End);
+    const preserveDrawingBufferStart = source.indexOf('preserveDrawingBuffer:');
+    const preserveDrawingBufferEnd = source.indexOf(
+      'resolution: outputScale', preserveDrawingBufferStart,
+    );
+    const preserveDrawingBuffer = source.slice(
+      preserveDrawingBufferStart, preserveDrawingBufferEnd,
+    );
+
+    expect(e39Start).toBeGreaterThanOrEqual(0);
+    expect(e39End).toBeGreaterThan(e39Start);
+    expect(parentStart).toBeGreaterThanOrEqual(0);
+    expect(normal).toContain('uniform float uAcidBodyVfx;');
+    expect(normal.match(/uAcidBodyVfx > 0\.5/g)).toHaveLength(1);
+    expect(eight).not.toContain('uAcidBodyVfx');
+    expect(eight).not.toContain('acidBodyWeight');
+    expect(canvasSource).not.toContain('acidBodyVfx');
+    expect(e39).toContain('material == 13.0 && optics == 3.0');
+    expect(e39).not.toContain('material == 16.0');
+    expect(e39).not.toContain('uLiquidVolumeChroma > 0.5');
+    expect(e39).toContain('30.0 / 255.0, 78.0 / 255.0, liquidOpticalDepth');
+    expect(e39).toContain('(broadSheen - 0.5) * (causticWave - 0.5) * -3.35');
+    expect(e39).toContain('vec3(0.42, 1.00, 0.58)');
+    for (const existingValue of [
+      'liquidVfxBody', 'liquidFresnelContour', 'broadSheen', 'causticWave',
+      'liquidMacroRelief', 'reflectedEnvironment', 'liquidNeighbourMean',
+      'liquidSpeciesSlope', 'shape.w', 'exposedLiquidSide',
+    ]) expect(e39).toContain(existingValue);
+    for (const guard of [
+      'liquidOnly < 0.5', 'halo < 0.5', 'wall < 0.5', 'family == 2.0',
+      'traits < 0.5', '!materialEmissive', 'molten < 0.5',
+      'foreignMatterContact < 0.5', 'unlikeMaterialContact < 0.5',
+      'dot(liquidSpeciesSlope, liquidSpeciesSlope) < 0.0004',
+      'uLiquidBodyVfx > 0.5', 'surfaceOnly < 0.5', 'emissionOnly < 0.5',
+    ]) expect(parent).toContain(guard);
+    expect(e39).not.toContain('texture(');
+    expect(e39).not.toContain('uTime');
+    expect(e39).not.toContain('sin(');
+    expect(e39).not.toContain('gl_FragCoord');
+    expect(e39).not.toMatch(/\balpha\s*[+*]?=/);
+    expect(source.match(/this\.uniforms\.uniforms\.uAcidBodyVfx = 0;/g)).toHaveLength(2);
+    expect(source).toContain("get('acidBodyVfxAudit') === '1'");
+    expect(preserveDrawingBuffer).toContain("get('acidBodyVfxAudit') === '1'");
+    expect(source).toMatch(
+      /const acidBodyVfxEnabled = outputScale < 8\s*&& resolveAcidBodyVfxEnabled\(renderLook\);/,
+    );
+    expect(source).toContain('presenter.app.canvas.dataset.acidBodyVfx');
+    expect(source).toContain("this.app.canvas.dataset.acidBodyVfx = 'inactive';");
+  });
+
   it('keeps E23 ROCK roughness exact-owner, E17-dependent, normal-WebGL-only, and RGB-only', () => {
     const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
     const canvasSource = readFileSync(new URL('./field-renderer.ts', import.meta.url), 'utf8');

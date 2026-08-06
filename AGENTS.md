@@ -13,7 +13,7 @@ powder, solid, liquid, gas, energy, and contact scenes across Canvas and WebGL a
 mobile gestures, save/load, CI, and Pages deployment as protected regression
 contracts rather than the primary feature stream.
 
-The accepted visual experiment ladder now runs through E38. E12 is the
+The accepted visual experiment ladder now runs through E39. E12 is the
 species-safe Sand/Clay/Concrete wet-sediment checkpoint; preserve its exact
 aqueous owner/stability proof, split moving-powder/stationary-Water control,
 Local/Grains no-op, fine structures, authored gaps, Canvas fallback, and true
@@ -624,10 +624,38 @@ frames, named bounded HDR neighbour footprints, and cross-scale stability.
 Acid is material `13`; material `16` is SaltWater and must never be used as the
 exact-Acid body guard.
 
-The next visual work should return to a different weak broad material family,
-selected from fresh composed fit-view evidence—currently Wood, ROCK, or Acid—
-and improve distinctive powder, liquid, gas, solid, energy, transmission,
-reflection, and depth rather than stacking another Oil/contact tint.
+E39 is the accepted normal-WebGL-only exact-Acid reactive-body checkpoint.
+`?acidBodyVfx=0|1` is a strict child of E03 and applies only to authoritative
+Acid `13` with Corrosive optics in a connected, deep, ordinary interior.
+It reuses E03's existing broad sheen, caustic wave, macro relief, reflected
+environment, liquid depth, and species-slope evidence to add a broad reactive
+green crown and violet absorptive pockets. SaltWater `16`, BASE, other liquid
+families, contacts, walls, traits, emission, shallow/sparse support, unlike
+owners, reconstructed space, and raw semantic owners remain controls. The
+result is RGB-only and adds no texture read, sampler, field, pass, target,
+allocation, upload, output-scale resource, animated carrier, alpha, support,
+silhouette, ownership, state, or physics decision. Normal 1×/2×/4× WebGL
+alone contains the E39 uniform and branch; compact true 8× must report it
+inactive for `scale-8`, promote exact 4896×3072 WebGL, and complete its GPU
+fence. `npm run audit:vfx:acid-body` owns the dedicated two-pane exact-Acid
+off→on→off proof: exact depth bands, two whole bodies, transition/mid/deep
+response, raw/semantic/alpha/support/wall/depth invariants, explicit named
+control footprints, byte-exact repeated-off frames, and narrow cross-scale
+envelopes. Do not widen its exact material guard to SaltWater or generic
+Corrosive optics, and do not stack another Acid-only finish over E39.
+
+The next planned experiment is E40 carbonaceous sooty-powder body optics for
+exact native GUNP `14` and BCOL `217`. Both are Powder with SootyGranular
+optics but currently receive only generic dark attenuation plus sparse identity
+marks. Make it a strict normal-WebGL 1×–4× child of E05, limited to stable,
+dry Smooth bodies, and reuse only existing powder depth/slope/macro/facet
+evidence for a porous charcoal crown and absorptive pocket. Ordinary solid Coal
+`19`, Sand/Salt/Thermite/C4/BREC/BRMT, radioactive SING, moving/wet powder,
+contacts, traits, walls, emission, Local, Grains, Canvas, and compact true 8×
+are controls. Add no texture read, sample, field, pass, target, clock, alpha,
+support, ownership, topology, state, or physics decision. Exact Hydrogen `40`
+and trait-bearing DEUT `100` remain strong later gas/radioactive-liquid body
+candidates; do not use them to widen E04 or bypass E03's trait-free contract.
 
 The radioactive-solid review found no current correctness bug: ISZS `105`
 and VIBR `113` already receive exact-species Solid depth, while the existing

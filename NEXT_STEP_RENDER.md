@@ -611,11 +611,28 @@ does not alter simulation, camera, semantic ownership, or `renderScale`.
   `scale-8`, promote exact 4896×3072 WebGL, and complete its GPU fence. The
   corrected exact-Acid liquid-volume branch uses material `13`; material `16`
   is SaltWater.
+- **E39 — exact Acid reactive body (accepted visual checkpoint):** normal
+  1×–4× WebGL exposes `?acidBodyVfx=0|1` as a strict child of E03. Only
+  authoritative Acid `13` with Corrosive optics in an already-proven
+  connected, deep, ordinary interior may respond. It recombines the existing
+  broad-sheen, caustic-wave, macro-relief, reflected-environment,
+  liquid-depth, and species-slope evidence into broad reactive green crowns
+  and violet absorptive pockets. SaltWater `16`, BASE, other liquids, walls,
+  contacts, traits, emission, sparse/shallow support, unlike owners, and
+  reconstructed space remain controls. The response is RGB-only and adds no
+  texture read, sampler, field, resource, pass, target, upload, allocation,
+  output-scale resource, clock, wave, alpha/support, silhouette, ownership,
+  topology, state, or physics decision. Canvas retains E03 and compact true
+  8× has no E39 uniform or branch. `npm run audit:vfx:acid-body` owns the
+  two-pane 1×/2×/4× whole-body, transition/mid/deep, invariant, explicit
+  control, repeated-off, and cross-scale proof. Requested-on true 8× must
+  report E39 inactive for `scale-8`, promote exact 4896×3072 WebGL, and
+  complete its GPU fence.
 - **Protected 8× rung:** `renderScale=8` deliberately reports
   `hdrPipeline=inactive` / `scale-8` and retains the proven direct single-mesh
   4896×3072 path. The experiment must earn a bounded 8× design rather than
   allocating a 115 MiB full-resolution float target beside that path.
-- **Current decision:** E01/E02/E03/E04/E05/E06/E07/E08/E09/E10/E11/E12/E13/E14/E15/E16/E17/E18/E19/E20/E21/E22/E23/E24/E25/E26/E27/E28/E29/E30/E31/E32/E33/E34/E35/E36/E37/E38 remain opt-in through the non-Classic looks
+- **Current decision:** E01/E02/E03/E04/E05/E06/E07/E08/E09/E10/E11/E12/E13/E14/E15/E16/E17/E18/E19/E20/E21/E22/E23/E24/E25/E26/E27/E28/E29/E30/E31/E32/E33/E34/E35/E36/E37/E38/E39 remain opt-in through the non-Classic looks
   until representative hardware timing and mobile thermal behavior are
   measured. E02 remains the safe family-wide baseline. E03 is accepted as the
   liquid-depth checkpoint: its fit-view crop is visibly more cohesive, retains
@@ -785,6 +802,14 @@ does not alter simulation, camera, semantic ownership, or `renderScale`.
   named bounded HDR-neighbour controls, and Canvas/compact-8× exclusion. The
   frozen E22 parent must run first with E38 disabled; do not replace its prior
   Oil acceptance with the child result or stack another Oil layer over E38.
+  E39 is accepted as the exact-Acid broad reactive-body checkpoint: freeze its
+  strict E03 dependency, exact Acid `13`/Corrosive/deep-connected-interior
+  proof, reuse of the existing sheen/caustic/macro/environment/depth/species
+  carriers, broad whole-body bipolar response, transition/mid/deep envelopes,
+  raw and topology invariants, named bounded compositor-neighbour controls,
+  narrow 1×–4× stability, and Canvas/compact-8× exclusion. SaltWater `16`
+  and BASE remain explicit controls. Do not widen this into generic Corrosive
+  styling or stack another Acid-only layer over E39.
   These are not the final material/VFX results.
   Sub-1.0 material colour stays on the established response; tonemapping owns
   only real HDR highlights so powder texture and liquid body contrast are not
@@ -1204,6 +1229,36 @@ their dedicated limits. These are CSS/compositor footprints, not permission to
 mutate raw owners. Requested-on true 8× keeps E38 inactive for `scale-8`, with
 no E38 shader branch, exact 4896×3072 WebGL, and a completed GPU fence.
 
+Run `npm run audit:vfx:acid-body` for E39. It reloads a dedicated two-pane
+exact-Acid fixture as `acidBodyVfx=0 → 1 → 0` at 1×/2×/4× with E03
+active and unrelated experiments pinned off. Both 264×176 bodies expose exact
+liquid-depth bytes `0`, `6`, `12–30`, `36–66`, `72–126`, and `192–255`; the
+second carries a deterministic 3,072-cell native-wall checker. Authored holes,
+open chimneys, a reconstructable pinhole, a strand, droplet, isolated Acid,
+SaltWater/Water/Oil/Lava/BASE/DistilledWater, five unlike-liquid seams, four
+foreign-phase contacts, walls, and blank space are explicit controls.
+Semantic ownership, raw alpha/support, wall/depth/field state, exact raw
+control RGBA, and the repeated-off framebuffer must remain invariant.
+
+The accepted open whole-body response is scale-stable at RGB RMS
+`5.28–5.29`, chroma RMS `3.92–3.93`, coverage `.625–.628`, signed mean
+`2.55–2.56`, a `20`-byte peak, and spatial RGB RMS `4.757–4.766`; it retains
+both a positive green crown (`3.16–3.17`) and opposing violet pocket
+(`.61`). The checker-backed whole body remains bipolar at RGB RMS
+`4.69–4.70`, chroma RMS `3.49–3.50`, coverage `.516–.518`, signed mean
+`2.24`, positive/negative means `2.68–2.69/.44`, the same `20`-byte peak,
+and spatial RGB RMS `4.263–4.274`. Transition/mid/deep bands have separate
+frozen RGB/chroma/coverage/signed/spatial envelopes so the response cannot
+collapse into a narrow highlight or flat tint. Normal-scale RGB and spatial
+RMS spread is capped at `.08`, chroma at `.10`, coverage at `.04`, signed
+mean at `.06`, and peak must be identical. All composed controls are exact
+except individually named one-byte filtered Acid-side/wall-neighbour samples
+and the wall-backed pinhole at three bytes; every opposite owner and every raw
+owner remains byte-identical. Requested-on true 8× keeps E39 inactive for
+`scale-8`, has no E39 uniform or shader branch, promotes exact 4896×3072
+WebGL, and must complete its GPU fence with zero browser errors. The final
+frozen production-WebGL matrix completed that fence in `5.25 s`.
+
 Run `npm run audit:vfx:rock-roughness` for E23. It reloads a dedicated
 geometry-matched ROCK/Metal fixture as `rockRoughnessVfx=0 → 1 → 0` at
 1×/2×/4× with E17 and geological styling active and every unrelated experiment
@@ -1557,7 +1612,7 @@ next production 4× survey then selected Wood/PLNT as the largest remaining
   lower seam density, lower local contrast, stronger macro hierarchy, unchanged
   semantic support, and byte-exact selector-off recovery.
 
-**Next visual experiments:** E03–E38 now provide accepted liquid body/surface,
+**Next visual experiments:** E03–E39 now provide accepted liquid body/surface,
 stable-gas, coherent-gas-motion, powder-depth, and powder-local-light
 checkpoints plus exact resting contact grounding, Glass/Ice transmission, and
 state-aware Wax/PLNT subsurface response, composed wet-mineral optics,
@@ -1590,11 +1645,20 @@ E37 adds exact Metal-side Water-contact spectral separation over the joint E14+
 E17 proof without changing either body's topology. E38 turns the previously
 flat, opaque-looking exact-Oil pool into a broad bipolar amber/cool volume by
 recombining already-live E22/E03 evidence; it deliberately ends the current
-Oil stack. The next phase returns to a different weak broad material family,
-chosen from fresh composed fit-view evidence—currently Wood, ROCK, or Acid—for
-distinctive depth, transmission, reflection, lighting, and mesostructure across
-powder, liquid, gas, solid, and energy families. Do not stack another narrow
-Oil/contact tint or generic PLNT/gas layer.
+Oil stack. E39 turns the formerly one-sided exact-Acid absorption into a broad
+reactive green crown with opposing violet pockets by recombining existing E03
+evidence; it deliberately ends the current Acid stack. The next phase returns
+to exact GUNP `14` and BCOL `217`: their SootyGranular powder bodies currently
+have only generic attenuation and sparse identity marks. E40 should be a strict
+normal-WebGL child of E05 for stable, dry Smooth bodies, recombining existing
+powder depth/slope/macro/facet evidence into a porous charcoal crown and
+absorptive pocket. Coal `19`, other explosive/mineral/radioactive owners,
+moving or wet powder, walls, contacts, Local, Grains, Canvas, and compact 8×
+remain controls. Exact Hydrogen `40` and trait-bearing DEUT `100` are the next
+survey-backed gas/radioactive-liquid candidates after the powder checkpoint.
+Improve distinctive depth, transmission, reflection, lighting, and
+mesostructure without stacking another narrow Oil/Acid/contact tint or generic
+PLNT/gas layer.
 The
 radioactive-solid review
 found no current identity bug, but also
@@ -1605,7 +1669,7 @@ with topology-preserving, material-
 specific cards that reuse already-live evidence. Prefer the smallest
 arithmetic-only candidate that fixes a visible fit-view deficiency; do not add
 an isolated tint merely to continue the experiment number. Preserve the E14
-1× stencil snap and all E01–E38 selectors and controls while designing the
+1× stencil snap and all E01–E39 selectors and controls while designing the
 next bounded card.
 
 ## Phase 1 — HDR pipeline & lighting core (biggest visual payoff)

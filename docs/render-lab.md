@@ -205,6 +205,26 @@ foreign materials, and a byte-exact repeated-off frame. Canvas and compact
 true 8× remain excluded controls; requested-on true 8× must report E38
 inactive for `scale-8` and complete the exact 4896×3072 GPU fence.
 
+E39 adds a separate normal-WebGL exact-Acid Reactive Body capture at
+1×/2×/4×. It is a strict child of E03 and affects only authoritative Acid
+`13` with Corrosive optics in an already-proven connected, deep, ordinary
+interior. The shader reuses E03's broad sheen, caustic wave, macro relief,
+reflected environment, liquid depth, and species slope to form a broad reactive
+green crown with opposing violet absorption pockets. It changes RGB only and
+adds no texture read, field, pass, target, allocation, upload, output-scale
+resource, or animated carrier. The dedicated two-pane fixture exposes two
+whole 264×176 Acid bodies and exact surface/first/shallow/transition/mid/deep
+depth bands, plus holes, chimney, pinhole, sparse Acid, a 3,072-cell native-wall
+checker, unlike seams, foreign contacts, and material controls. SaltWater `16`
+and BASE are exact controls; never treat material `16` as Acid. The audit
+captures off→on→off at 1×/2×/4×, freezes whole-body and bandwise response,
+requires byte-identical raw owners and repeated-off presentation, names every
+bounded compositor-neighbour footprint, and caps cross-scale drift. Canvas and
+compact true 8× remain excluded controls; requested-on true 8× reports E39
+inactive for `scale-8`, promotes exact 4896×3072 WebGL, and completes its GPU
+fence. The frozen production-WebGL matrix completed it in `5.25 s` with zero
+browser errors.
+
 The Canvas liquid-body profiler compares the former scalar relief loop with the new helper under the deliberately impossible ceiling where every one of the `235,008` world cells is dense, exposed Water. Production invokes the helper only for actual authoritative liquid cells, reuses the existing three-float RGB scratch and field values, and adds no runtime-known scratch bytes, sample, reconstruction, upload, pass, or render-scale-dependent work. Qualified body cells calculate the curved caustic phase once and reuse that scalar for both the broad reflected band and narrow caustic lobe, so the Canvas fallback retains the exact composed signal without repeating its two trigonometric terms per cell.
 
 Dense exact-material solid interiors add restrained low-frequency RGB/normal relief without a new field, pass, or silhouette change. Gas relief uses signed local curvature from the same four cardinal atmosphere-alpha samples already required for slope: convex crowns catch bounded broad light and concave overlap pockets self-shadow. Canvas chooses the outward-facing one of its four existing emission neighbours for bounded coloured scatter. Desktop/high-quality WebGL takes one additional emission sample two low-resolution field texels along the reconstructed outward normal; compact/mobile width performs no additional directional fetch. Both fall with optical depth, preserve atmosphere alpha/support, and re-style Canvas after either atmosphere or emission rebuilds. No neighbouring gas RGB, new field, pass, persistent buffer, or semantic/support change is introduced.
