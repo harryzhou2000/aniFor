@@ -29,6 +29,7 @@ import {
   resolveMetalWaterContactVfxEnabled,
   resolveSolidBodyVfxEnabled,
   resolvePowderBodyVfxEnabled, resolvePowderLightVfxEnabled,
+  resolveSootyPowderBodyVfxEnabled,
   resolvePowderSolidContactVfxEnabled, resolveRenderLook, resolveTranslucentEdgeVfxEnabled,
   resolveVolumeVfxEnabled, resolveWaterBodyVfxEnabled, resolveWetSedimentVfxEnabled,
 } from './render-look';
@@ -636,6 +637,29 @@ describe('resolveRenderLook', () => {
     )).toBe(true);
     expect(resolvePowderBodyVfxEnabled(
       'neon-lab', '?volumeVfx=1&powderBodyVfx=off',
+    )).toBe(false);
+  });
+
+  it('keeps exact sooty-powder recomposition subordinate to the E05 body', () => {
+    expect(resolveSootyPowderBodyVfxEnabled(
+      'classic', '?sootyPowderBodyVfx=on',
+    )).toBe(false);
+    expect(resolveSootyPowderBodyVfxEnabled('realistic', '')).toBe(true);
+    expect(resolveSootyPowderBodyVfxEnabled('neon-lab', '')).toBe(true);
+    expect(resolveSootyPowderBodyVfxEnabled(
+      'realistic', '?powderBodyVfx=0&sootyPowderBodyVfx=1',
+    )).toBe(false);
+    expect(resolveSootyPowderBodyVfxEnabled(
+      'realistic', '?volumeVfx=0&powderBodyVfx=1&sootyPowderBodyVfx=true',
+    )).toBe(true);
+    expect(resolveSootyPowderBodyVfxEnabled(
+      'realistic', '?sootyPowderBodyVfx=0',
+    )).toBe(false);
+    expect(resolveSootyPowderBodyVfxEnabled(
+      'realistic', '?sootyPowderBodyVfx=off',
+    )).toBe(false);
+    expect(resolveSootyPowderBodyVfxEnabled(
+      'realistic', '?sootyPowderBodyVfx=false',
     )).toBe(false);
   });
 

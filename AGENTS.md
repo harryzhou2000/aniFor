@@ -13,7 +13,7 @@ powder, solid, liquid, gas, energy, and contact scenes across Canvas and WebGL a
 mobile gestures, save/load, CI, and Pages deployment as protected regression
 contracts rather than the primary feature stream.
 
-The accepted visual experiment ladder now runs through E39. E12 is the
+The accepted visual experiment ladder now runs through E40. E12 is the
 species-safe Sand/Clay/Concrete wet-sediment checkpoint; preserve its exact
 aqueous owner/stability proof, split moving-powder/stationary-Water control,
 Local/Grains no-op, fine structures, authored gaps, Canvas fallback, and true
@@ -644,18 +644,30 @@ control footprints, byte-exact repeated-off frames, and narrow cross-scale
 envelopes. Do not widen its exact material guard to SaltWater or generic
 Corrosive optics, and do not stack another Acid-only finish over E39.
 
-The next planned experiment is E40 carbonaceous sooty-powder body optics for
-exact native GUNP `14` and BCOL `217`. Both are Powder with SootyGranular
-optics but currently receive only generic dark attenuation plus sparse identity
-marks. Make it a strict normal-WebGL 1×–4× child of E05, limited to stable,
-dry Smooth bodies, and reuse only existing powder depth/slope/macro/facet
-evidence for a porous charcoal crown and absorptive pocket. Ordinary solid Coal
-`19`, Sand/Salt/Thermite/C4/BREC/BRMT, radioactive SING, moving/wet powder,
-contacts, traits, walls, emission, Local, Grains, Canvas, and compact true 8×
-are controls. Add no texture read, sample, field, pass, target, clock, alpha,
-support, ownership, topology, state, or physics decision. Exact Hydrogen `40`
-and trait-bearing DEUT `100` remain strong later gas/radioactive-liquid body
-candidates; do not use them to widen E04 or bypass E03's trait-free contract.
+E40 is the accepted normal-WebGL-only exact sooty-powder body checkpoint.
+`?sootyPowderBodyVfx=0|1` is a strict child of E05 and applies only to
+authoritative GUNP `14` and BCOL `217` with SootyGranular optics inside E05's
+settled, dry Smooth powder-body proof. It reuses only E05's existing powder
+depth, stability, slope, macro/facet balance, and body gate to form a porous
+warm Gunpowder or cool BCOL crown, an opposing absorptive pocket, and a
+restrained core; the later explosive and BCOL fracture identities remain
+authoritative. Coal `19`, Sand, Salt, Thermite, C4, BREC, BRMT, SING, genuine
+wet Sand/GUNP/BCOL mixtures, authored moving targets, holes, chimneys, thin
+columns, isolated grains, native walls, Metal/Fire contacts, traits, emission,
+Local, Grains, Canvas, and compact true 8× remain controls. The response is
+RGB-only and adds no sample, texture, field, pass, target, upload, allocation,
+clock, alpha/support, silhouette, owner, topology, state, or physics decision.
+`npm run audit:vfx:sooty-powder-body` owns the frozen 1×/2×/4× off→on→off
+matrix, exact semantic/alpha/support/wall/velocity/auxiliary/suspension proof,
+internal-microchroma retention, Local/Grains exclusions, named compositor
+footprints, narrow cross-scale limits, and byte-exact repeated-off frames.
+Compact true 8× has no E40 uniform or branch; requested-on 8× reports
+`scale-8`, promotes exact 4896×3072 WebGL, and completes its GPU fence.
+
+The next survey should compare exact Hydrogen `40` as an E04-owned gas-body
+candidate with trait-bearing DEUT `100` as a separate radioactive-liquid
+eligibility study. Do not widen E04 gas styling or bypass E03's trait-free
+liquid contract; either candidate needs its own exact-owner fixture and gate.
 
 The radioactive-solid review found no current correctness bug: ISZS `105`
 and VIBR `113` already receive exact-species Solid depth, while the existing

@@ -225,6 +225,23 @@ inactive for `scale-8`, promotes exact 4896×3072 WebGL, and completes its GPU
 fence. The frozen production-WebGL matrix completed it in `5.25 s` with zero
 browser errors.
 
+E40 adds a separate normal-WebGL exact GUNP/BCOL Sooty Powder Body capture at
+1×/2×/4×. It is a strict child of E05 and reuses the existing settled dry
+Smooth powder depth, stability, slope, macro/facet balance, and body gate for a
+porous warm Gunpowder or cool Broken-Coal crown, an opposing absorptive pocket,
+and a restrained distinct core. The response changes RGB only and adds no
+sample, texture, field, pass, target, upload, allocation, clock, alpha/support,
+silhouette, owner, topology, state, or physics decision. The fixture includes
+two broad exact-owner bodies, holes, open chimneys, thin columns, isolated
+grains, full moving rectangles, a 3,072-cell BCOL native-wall checker, eight
+material controls, Sand/Water and target-owner contacts, guarded blank space,
+and genuine aqueous Sand/GUNP/BCOL mixtures. Its gate captures off→on→off plus
+Local/Grains references, scans complete velocity/stability regions, freezes
+whole/crown/pocket/core response and material spectra, retains internal
+microchroma, and caps named compositor footprints and 1×–4× drift. Canvas and
+compact true 8× remain excluded; requested-on true 8× reports E40 inactive for
+`scale-8`, promotes exact 4896×3072 WebGL, and completes its GPU fence.
+
 The Canvas liquid-body profiler compares the former scalar relief loop with the new helper under the deliberately impossible ceiling where every one of the `235,008` world cells is dense, exposed Water. Production invokes the helper only for actual authoritative liquid cells, reuses the existing three-float RGB scratch and field values, and adds no runtime-known scratch bytes, sample, reconstruction, upload, pass, or render-scale-dependent work. Qualified body cells calculate the curved caustic phase once and reuse that scalar for both the broad reflected band and narrow caustic lobe, so the Canvas fallback retains the exact composed signal without repeating its two trigonometric terms per cell.
 
 Dense exact-material solid interiors add restrained low-frequency RGB/normal relief without a new field, pass, or silhouette change. Gas relief uses signed local curvature from the same four cardinal atmosphere-alpha samples already required for slope: convex crowns catch bounded broad light and concave overlap pockets self-shadow. Canvas chooses the outward-facing one of its four existing emission neighbours for bounded coloured scatter. Desktop/high-quality WebGL takes one additional emission sample two low-resolution field texels along the reconstructed outward normal; compact/mobile width performs no additional directional fetch. Both fall with optical depth, preserve atmosphere alpha/support, and re-style Canvas after either atmosphere or emission rebuilds. No neighbouring gas RGB, new field, pass, persistent buffer, or semantic/support change is introduced.

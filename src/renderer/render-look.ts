@@ -572,6 +572,22 @@ export function resolvePowderBodyVfxEnabled(
 }
 
 /**
+ * Re-composes only exact native Gunpowder and BCOL after E05 has established
+ * a dry, settled Smooth powder body. The independently measurable child can
+ * never resurrect that parent when the broad powder-body experiment is off.
+ */
+export function resolveSootyPowderBodyVfxEnabled(
+  look: RenderLook,
+  search = globalThis.location?.search ?? '',
+): boolean {
+  if (!resolvePowderBodyVfxEnabled(look, search)) return false;
+  const requested = new URLSearchParams(search).get('sootyPowderBodyVfx');
+  if (requested === '0' || requested === 'off' || requested === 'false') return false;
+  if (requested === '1' || requested === 'on' || requested === 'true') return true;
+  return true;
+}
+
+/**
  * Keeps the settled powder/solid contact experiment independently measurable
  * without requiring the powder-body crown layer. Ordinary realistic/neon
  * presets retain the broad volume default; the explicit query is reserved for

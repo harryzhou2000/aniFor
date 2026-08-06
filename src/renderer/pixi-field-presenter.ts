@@ -67,6 +67,7 @@ import {
   resolveRockRoughnessVfxEnabled,
   resolveSolidBodyVfxEnabled,
   resolvePowderBodyVfxEnabled, resolvePowderLightVfxEnabled, resolveRenderLook,
+  resolveSootyPowderBodyVfxEnabled,
   resolveOrganicSubsurfaceVfxEnabled,
   resolvePowderSolidContactVfxEnabled,
   resolveTranslucentEdgeVfxEnabled,
@@ -3274,6 +3275,7 @@ uniform float uWaterBodyVfx;
 uniform float uLiquidSolidMeniscusVfx;
 uniform float uMetalWaterContactVfx;
 uniform float uPowderBodyVfx;
+uniform float uSootyPowderBodyVfx;
 uniform float uPowderLightVfx;
 uniform float uPowderSolidContactVfx;
 uniform float uTranslucentEdgeVfx;
@@ -7662,6 +7664,38 @@ void main() {
           color += (vec3(1.35) - clamp(color, 0.0, 1.35))
             * powderVfxFacetKey * powderVfxCrownResponse;
           color *= vec3(1.0) - vec3(0.82, 0.91, 1.0) * powderVfxPocketResponse;
+          // E40: exact Gunpowder and BCOL share SootyGranular optics but their
+          // broad settled bodies currently stop at E05's generic mineral
+          // response. Reuse that already-proven facet balance and body depth
+          // for a porous graphite crown with an opposing carbon pocket. The
+          // later explosive/fracture identities remain authoritative; no
+          // sample, wave, support, owner, or time-varying decision is added.
+          if (uSootyPowderBodyVfx > 0.5 && optics == 14.0
+            && (material == 14.0 || material == 217.0)) {
+            float brokenCoal = material == 217.0 ? 1.0 : 0.0;
+            float sootyBodyRelief = clamp(
+              powderVfxFacetBalance + brokenCoal * 0.06, -1.0, 1.0
+            );
+            float sootyBodyCrown = powderBodyGate
+              * smoothstep(0.01, 0.58, sootyBodyRelief)
+              * (0.62 + (1.0 - powderBodyVolumeDepth) * 0.28);
+            float sootyBodyPocket = powderBodyGate
+              * smoothstep(0.01, 0.58, -sootyBodyRelief)
+              * (0.52 + powderBodyVolumeDepth * 0.46);
+            float sootyBodyCore = powderBodyGate
+              * smoothstep(0.34, 0.86, powderBodyVolumeDepth)
+              * (1.0 - abs(sootyBodyRelief)) * 0.34;
+            vec3 sootyBodyKey = mix(
+              vec3(0.92, 0.72, 0.52), vec3(0.46, 0.65, 0.92), brokenCoal
+            );
+            // Scale the existing pigment instead of laying a uniform bright
+            // wash over it: the body lobe becomes visible while BCOL's fine
+            // fracture/mineral chroma remains locally intact.
+            color *= vec3(1.0) + sootyBodyKey * sootyBodyCrown * 0.125;
+            color *= vec3(1.0) - mix(
+              vec3(0.066, 0.082, 0.108), vec3(0.108, 0.078, 0.052), brokenCoal
+            ) * (sootyBodyPocket + sootyBodyCore);
+          }
         }
         // This is intentionally stricter than a generic settled-powder
         // classification. It names only a proven, deep compatible interior;
@@ -10253,6 +10287,10 @@ export class PixiFieldPresenter {
     // retains its established powder body and does not declare this uniform.
     const powderBodyVfxEnabled = outputScale < 8
       && resolvePowderBodyVfxEnabled(renderLook);
+    // E40 is exact-owner arithmetic inside E05's stable Smooth body. Compact
+    // true-8x retains the accepted sooty identity and declares no E40 branch.
+    const sootyPowderBodyVfxEnabled = outputScale < 8
+      && resolveSootyPowderBodyVfxEnabled(renderLook);
     // E06 is a normal-detail recomposition of the existing centre-field light.
     // The protected compact shader retains its one established emission sample.
     const powderLightVfxEnabled = outputScale < 8
@@ -10462,6 +10500,7 @@ export class PixiFieldPresenter {
         value: metalWaterContactVfxEnabled ? outputScale : 0, type: 'f32',
       },
       uPowderBodyVfx: { value: powderBodyVfxEnabled ? 1 : 0, type: 'f32' },
+      uSootyPowderBodyVfx: { value: sootyPowderBodyVfxEnabled ? 1 : 0, type: 'f32' },
       uPowderLightVfx: { value: powderLightVfxEnabled ? 1 : 0, type: 'f32' },
       uPowderSolidContactVfx: {
         value: powderSolidContactVfxEnabled ? 1 : 0, type: 'f32',
@@ -10699,6 +10738,7 @@ export class PixiFieldPresenter {
       this.uniforms.uniforms.uLiquidSolidMeniscusVfx = 0;
       this.uniforms.uniforms.uMetalWaterContactVfx = 0;
       this.uniforms.uniforms.uPowderBodyVfx = 0;
+      this.uniforms.uniforms.uSootyPowderBodyVfx = 0;
       this.uniforms.uniforms.uPowderLightVfx = 0;
       this.uniforms.uniforms.uPowderSolidContactVfx = 0;
       this.uniforms.uniforms.uTranslucentEdgeVfx = 0;
@@ -10761,6 +10801,7 @@ export class PixiFieldPresenter {
             || new URLSearchParams(location.search).get('liquidSolidMeniscusVfxAudit') === '1'
             || new URLSearchParams(location.search).get('liquidSurfaceVfxAudit') === '1'
             || new URLSearchParams(location.search).get('powderBodyVfxAudit') === '1'
+            || new URLSearchParams(location.search).get('sootyPowderBodyVfxAudit') === '1'
             || new URLSearchParams(location.search).get('powderLightVfxAudit') === '1'
             || new URLSearchParams(location.search).get('powderSolidContactVfxAudit') === '1'
             || new URLSearchParams(location.search).get('translucentEdgeVfxAudit') === '1'
@@ -10881,6 +10922,9 @@ export class PixiFieldPresenter {
       && presenter.hdrPipelineInfo.liquidSurfaceVfx ? 'active' : 'inactive';
     presenter.app.canvas.dataset.powderBodyVfx = Number(presenter.uniforms.uniforms.uPowderBodyVfx) > 0.5
       ? 'active' : 'inactive';
+    presenter.app.canvas.dataset.sootyPowderBodyVfx = Number(
+      presenter.uniforms.uniforms.uSootyPowderBodyVfx
+    ) > 0.5 ? 'active' : 'inactive';
     presenter.app.canvas.dataset.powderLightVfx = Number(presenter.uniforms.uniforms.uPowderLightVfx) > 0.5
       ? 'active' : 'inactive';
     presenter.app.canvas.dataset.powderSolidContactVfx = Number(
@@ -12293,6 +12337,7 @@ export class PixiFieldPresenter {
         this.uniforms.uniforms.uLiquidSolidMeniscusVfx = 0;
         this.uniforms.uniforms.uMetalWaterContactVfx = 0;
         this.uniforms.uniforms.uPowderBodyVfx = 0;
+        this.uniforms.uniforms.uSootyPowderBodyVfx = 0;
         this.uniforms.uniforms.uPowderLightVfx = 0;
         this.uniforms.uniforms.uPowderSolidContactVfx = 0;
         this.uniforms.uniforms.uTranslucentEdgeVfx = 0;
@@ -12333,6 +12378,7 @@ export class PixiFieldPresenter {
         this.app.canvas.dataset.metalWaterContactVfx = 'inactive';
         this.app.canvas.dataset.liquidSurfaceVfx = 'inactive';
         this.app.canvas.dataset.powderBodyVfx = 'inactive';
+        this.app.canvas.dataset.sootyPowderBodyVfx = 'inactive';
         this.app.canvas.dataset.powderLightVfx = 'inactive';
         this.app.canvas.dataset.powderSolidContactVfx = 'inactive';
         this.app.canvas.dataset.translucentEdgeVfx = 'inactive';

@@ -1693,6 +1693,66 @@ describe('Pixi presenter startup configuration', () => {
     expect(source).toContain("this.app.canvas.dataset.acidBodyVfx = 'inactive';");
   });
 
+  it('keeps E40 sooty-powder optics exact-owner, E05-dependent, normal-WebGL-only, and RGB-only', () => {
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const canvasSource = readFileSync(new URL('./field-renderer.ts', import.meta.url), 'utf8');
+    const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');
+    const normalStart = source.indexOf('const FIELD_FRAGMENT = `', eightStart);
+    const normalEnd = source.indexOf('`;\n\n/** Primary WebGL presentation', normalStart);
+    const eight = source.slice(eightStart, normalStart);
+    const normal = source.slice(normalStart, normalEnd);
+    const e40Start = normal.indexOf('          // E40:');
+    const e40End = normal.indexOf(
+      '        // This is intentionally stricter than a generic settled-powder', e40Start,
+    );
+    const e40 = normal.slice(e40Start, e40End);
+    const parentStart = normal.lastIndexOf(
+      '        if (uPowderBodyVfx > 0.5', e40Start,
+    );
+    const parent = normal.slice(parentStart, e40End);
+    const powderScopeStart = normal.lastIndexOf('    if (family == 4.0)', e40Start);
+    const powderScope = normal.slice(powderScopeStart, e40End);
+    const preserveStart = source.indexOf('preserveDrawingBuffer:');
+    const preserveEnd = source.indexOf('resolution: outputScale', preserveStart);
+    const preserve = source.slice(preserveStart, preserveEnd);
+
+    expect(e40Start).toBeGreaterThanOrEqual(0);
+    expect(e40End).toBeGreaterThan(e40Start);
+    expect(parentStart).toBeGreaterThanOrEqual(0);
+    expect(powderScopeStart).toBeGreaterThanOrEqual(0);
+    expect(normal).toContain('uniform float uSootyPowderBodyVfx;');
+    expect(normal.match(/uSootyPowderBodyVfx > 0\.5/g)).toHaveLength(1);
+    expect(eight).not.toContain('uSootyPowderBodyVfx');
+    expect(eight).not.toContain('sootyBodyCrown');
+    expect(canvasSource).not.toContain('sootyPowderBodyVfx');
+    expect(e40).toContain('optics == 14.0');
+    expect(e40).toContain('material == 14.0 || material == 217.0');
+    expect(e40).toContain('powderBodyGate');
+    expect(e40).toContain('powderBodyVolumeDepth');
+    expect(e40).toContain('powderVfxFacetBalance');
+    expect(parent).toContain('uPowderBodyVfx > 0.5');
+    expect(parent).toContain('powderSuspensionCohesion < 0.01');
+    for (const guard of [
+      'family == 4.0', 'uPowderStyle > 1.5', 'surfaceOnly < 0.5',
+      'traits < 0.5', '!materialEmissive', 'halo < 0.5', 'wall < 0.5',
+      'wallOnly < 0.5', 'emissionOnly < 0.5',
+      'step(224.0 / 255.0, boundaryStability)', 'step(5.5, widePowderShape.w)',
+    ]) expect(powderScope).toContain(guard);
+    expect(e40).not.toContain('texture(');
+    expect(e40).not.toContain('uTime');
+    expect(e40).not.toContain('sin(');
+    expect(e40).not.toContain('gl_FragCoord');
+    expect(e40).not.toMatch(/\balpha\s*[+*]?=/);
+    expect(source).toMatch(
+      /const sootyPowderBodyVfxEnabled = outputScale < 8\s*&& resolveSootyPowderBodyVfxEnabled\(renderLook\);/,
+    );
+    expect(source.match(/this\.uniforms\.uniforms\.uSootyPowderBodyVfx = 0;/g))
+      .toHaveLength(2);
+    expect(source).toContain('presenter.app.canvas.dataset.sootyPowderBodyVfx');
+    expect(source).toContain("this.app.canvas.dataset.sootyPowderBodyVfx = 'inactive';");
+    expect(preserve).toContain("get('sootyPowderBodyVfxAudit') === '1'");
+  });
+
   it('keeps E23 ROCK roughness exact-owner, E17-dependent, normal-WebGL-only, and RGB-only', () => {
     const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
     const canvasSource = readFileSync(new URL('./field-renderer.ts', import.meta.url), 'utf8');

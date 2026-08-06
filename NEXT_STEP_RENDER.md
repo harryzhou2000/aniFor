@@ -628,11 +628,28 @@ does not alter simulation, camera, semantic ownership, or `renderScale`.
   control, repeated-off, and cross-scale proof. Requested-on true 8× must
   report E39 inactive for `scale-8`, promote exact 4896×3072 WebGL, and
   complete its GPU fence.
+- **E40 — exact sooty-powder body (accepted visual checkpoint):** normal
+  1×–4× WebGL exposes `?sootyPowderBodyVfx=0|1` as a strict child of E05.
+  Only authoritative GUNP `14` and BCOL `217` with SootyGranular optics inside
+  E05's settled, dry Smooth body proof may respond. It reuses the existing
+  depth, stability, slope, macro/facet balance, and body gate for a porous
+  warm/cool crown, opposing absorptive pocket, and restrained core while the
+  later explosive and BCOL fracture identities remain authoritative. Coal
+  `19`, other granular/explosive/radioactive owners, genuine wet GUNP/BCOL,
+  moving targets, holes, chimneys, fine topology, walls, contacts, Local,
+  Grains, Canvas, and compact true 8× remain controls. The response changes RGB
+  only and adds no sample, texture, field, pass, target, upload, allocation,
+  clock, alpha/support, silhouette, owner, topology, state, or physics
+  decision. `npm run audit:vfx:sooty-powder-body` owns the frozen
+  1×/2×/4× off→on→off response, invariant, microchroma, style-reference,
+  control-footprint, repeated-off, and cross-scale proof. Requested-on true 8×
+  reports E40 inactive for `scale-8`, promotes exact 4896×3072 WebGL, and
+  completes its GPU fence.
 - **Protected 8× rung:** `renderScale=8` deliberately reports
   `hdrPipeline=inactive` / `scale-8` and retains the proven direct single-mesh
   4896×3072 path. The experiment must earn a bounded 8× design rather than
   allocating a 115 MiB full-resolution float target beside that path.
-- **Current decision:** E01/E02/E03/E04/E05/E06/E07/E08/E09/E10/E11/E12/E13/E14/E15/E16/E17/E18/E19/E20/E21/E22/E23/E24/E25/E26/E27/E28/E29/E30/E31/E32/E33/E34/E35/E36/E37/E38/E39 remain opt-in through the non-Classic looks
+- **Current decision:** E01/E02/E03/E04/E05/E06/E07/E08/E09/E10/E11/E12/E13/E14/E15/E16/E17/E18/E19/E20/E21/E22/E23/E24/E25/E26/E27/E28/E29/E30/E31/E32/E33/E34/E35/E36/E37/E38/E39/E40 remain opt-in through the non-Classic looks
   until representative hardware timing and mobile thermal behavior are
   measured. E02 remains the safe family-wide baseline. E03 is accepted as the
   liquid-depth checkpoint: its fit-view crop is visibly more cohesive, retains
@@ -810,6 +827,14 @@ does not alter simulation, camera, semantic ownership, or `renderScale`.
   narrow 1×–4× stability, and Canvas/compact-8× exclusion. SaltWater `16`
   and BASE remain explicit controls. Do not widen this into generic Corrosive
   styling or stack another Acid-only layer over E39.
+  E40 is accepted as the exact GUNP/BCOL sooty-powder body checkpoint: freeze
+  its strict E05 dependency, exact SootyGranular owner proof, settled dry
+  Smooth body gate, reuse of the existing depth/stability/slope/facet carriers,
+  warm-GUNP/cool-BCOL crown spectra, opposing pockets, distinct cores, genuine
+  wet-target and authored-motion exclusions, Local/Grains no-ops, internal
+  microchroma retention, narrow 1×–4× response spread, and Canvas/compact-8×
+  exclusion. Coal and the other granular/explosive/radioactive controls must
+  remain exact; do not turn E40 into a family-wide carbon or explosive grade.
   These are not the final material/VFX results.
   Sub-1.0 material colour stays on the established response; tonemapping owns
   only real HDR highlights so powder texture and liquid body contrast are not
@@ -1259,6 +1284,33 @@ owner remains byte-identical. Requested-on true 8× keeps E39 inactive for
 WebGL, and must complete its GPU fence with zero browser errors. The final
 frozen production-WebGL matrix completed that fence in `5.25 s`.
 
+Run `npm run audit:vfx:sooty-powder-body` for E40. It reloads a paused exact
+GUNP `14` / BCOL `217` fixture as `sootyPowderBodyVfx=0 → 1 → 0` at
+1×/2×/4× with E05 active and unrelated experiments pinned off. Both broad
+bodies expose named crown, pocket, and core probes, holes, open chimneys, thin
+columns, isolated grains, and full 24×30 authored-velocity rectangles. BCOL
+also carries an exact 3,072-cell native-wall checker. Coal, Sand, Salt,
+Thermite, C4, BREC, BRMT, SING, Sand/Water, GUNP/Metal, BCOL/Fire, guarded
+blank space, and genuine 2:1 aqueous Sand/GUNP/BCOL weaves are explicit
+controls. The gate scans the complete velocity and stability regions, requires
+exact semantic/alpha/support/wall/suspension state, and proves Local and Grains
+are exact no-ops.
+
+The frozen normal-WebGL matrix holds GUNP whole-body RGB RMS at `2.27–2.28`,
+BCOL at `.86–.87`, with spatial RGB RMS `1.488–1.503` and `.745–.751`.
+GUNP's warm crown has RGB RMS `1.51–1.53` and signed mean `.03–.10`; its
+cooler pocket reaches `4.00–4.02` and `−3.64…−3.62`. BCOL's cool crown is
+`.95–.99` with signed mean `.03–.09`; its warmer absorptive pocket is
+`2.03–2.08` and `−1.92…−1.87`. Each core has a distinct frozen response.
+Incremental internal microchroma retention stays within `.9738–1.0174`, while
+repeated-off frames are byte-exact. Cross-scale RGB/chroma/spatial spread is
+capped at `.06/.06/.04`, coverage at `.045`, signed mean at `.08`, and peak
+spread at one byte. Every composed control is exact except named one-byte
+filtered BCOL-chimney/native-clear/contact-side footprints; raw owners and
+support remain exact. Requested-on true 8× has no E40 uniform or branch,
+reports `scale-8`, promotes exact 4896×3072 WebGL, and completed its GPU fence
+in `5.209 s` with zero browser errors.
+
 Run `npm run audit:vfx:rock-roughness` for E23. It reloads a dedicated
 geometry-matched ROCK/Metal fixture as `rockRoughnessVfx=0 → 1 → 0` at
 1×/2×/4× with E17 and geological styling active and every unrelated experiment
@@ -1612,7 +1664,7 @@ next production 4× survey then selected Wood/PLNT as the largest remaining
   lower seam density, lower local contrast, stronger macro hierarchy, unchanged
   semantic support, and byte-exact selector-off recovery.
 
-**Next visual experiments:** E03–E39 now provide accepted liquid body/surface,
+**Next visual experiments:** E03–E40 now provide accepted liquid body/surface,
 stable-gas, coherent-gas-motion, powder-depth, and powder-local-light
 checkpoints plus exact resting contact grounding, Glass/Ice transmission, and
 state-aware Wax/PLNT subsurface response, composed wet-mineral optics,
@@ -1647,15 +1699,15 @@ flat, opaque-looking exact-Oil pool into a broad bipolar amber/cool volume by
 recombining already-live E22/E03 evidence; it deliberately ends the current
 Oil stack. E39 turns the formerly one-sided exact-Acid absorption into a broad
 reactive green crown with opposing violet pockets by recombining existing E03
-evidence; it deliberately ends the current Acid stack. The next phase returns
-to exact GUNP `14` and BCOL `217`: their SootyGranular powder bodies currently
-have only generic attenuation and sparse identity marks. E40 should be a strict
-normal-WebGL child of E05 for stable, dry Smooth bodies, recombining existing
-powder depth/slope/macro/facet evidence into a porous charcoal crown and
-absorptive pocket. Coal `19`, other explosive/mineral/radioactive owners,
-moving or wet powder, walls, contacts, Local, Grains, Canvas, and compact 8×
-remain controls. Exact Hydrogen `40` and trait-bearing DEUT `100` are the next
-survey-backed gas/radioactive-liquid candidates after the powder checkpoint.
+evidence; it deliberately ends the current Acid stack. E40 gives exact GUNP
+`14` and BCOL `217` stable dry Smooth bodies a porous warm/cool crown,
+absorptive pocket, and restrained core without flattening their sparse identity
+marks or internal grain cadence; Coal `19`, other owners, wet/moving powder,
+fine topology, walls, contacts, Local, Grains, Canvas, and compact 8× remain
+controls. The next survey should compare exact Hydrogen `40` as an E04-owned
+gas-body candidate with trait-bearing DEUT `100` as a separate radioactive-
+liquid eligibility study. Do not widen E04 or bypass E03's trait-free liquid
+contract; either direction needs its own exact-owner fixture and browser gate.
 Improve distinctive depth, transmission, reflection, lighting, and
 mesostructure without stacking another narrow Oil/Acid/contact tint or generic
 PLNT/gas layer.
