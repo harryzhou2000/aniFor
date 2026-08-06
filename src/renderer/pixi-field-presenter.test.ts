@@ -1190,6 +1190,62 @@ describe('Pixi presenter startup configuration', () => {
     expect(source).toContain("this.app.canvas.dataset.plantLaminaVfx = 'inactive';");
   });
 
+  it('keeps E34 PLNT lobe depth subordinate to E32, normal-WebGL-only, and resource-neutral', () => {
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const canvasSource = readFileSync(new URL('./field-renderer.ts', import.meta.url), 'utf8');
+    const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');
+    const normalStart = source.indexOf('const FIELD_FRAGMENT = `', eightStart);
+    const normalEnd = source.indexOf('`;\n\n/** Primary WebGL presentation', normalStart);
+    const eight = source.slice(eightStart, normalStart);
+    const normal = source.slice(normalStart, normalEnd);
+    const e34Start = normal.indexOf("          // E34: E32's fine carrier");
+    const e34End = normal.indexOf('        } else {', e34Start);
+    const e34 = normal.slice(e34Start, e34End);
+    const preserveDrawingBufferStart = source.indexOf('preserveDrawingBuffer:');
+    const preserveDrawingBufferEnd = source.indexOf(
+      'resolution: outputScale', preserveDrawingBufferStart,
+    );
+    const preserveDrawingBuffer = source.slice(
+      preserveDrawingBufferStart, preserveDrawingBufferEnd,
+    );
+
+    expect(e34Start).toBeGreaterThanOrEqual(0);
+    expect(e34End).toBeGreaterThan(e34Start);
+    expect(normal).toContain('uniform float uPlantLobeDepthVfx;');
+    expect(normal.match(/uPlantLobeDepthVfx > 0\.5/g)).toHaveLength(1);
+    expect(eight).not.toContain('uPlantLobeDepthVfx');
+    expect(eight).not.toContain('plantLobeDepthVfx');
+    expect(canvasSource).not.toContain('plantLobeDepthVfx');
+    expect(normal).toContain(
+      'float plantLobeDepth = plantLamina > 0.001\n'
+        + '              && uPlantLobeDepthVfx > 0.5\n'
+        + '            ? botanicalDepth : 0.0;',
+    );
+    for (const establishedValue of [
+      'leafLaminaBody', 'leafBoundary', 'leafLaminaSegment',
+      'plantLobeDepth', 'solidEnvironment',
+    ]) expect(e34).toContain(establishedValue);
+    expect(e34).toContain('leafLobePocket * 0.92 + leafLobeVein * 0.52');
+    expect(e34).toContain('leafLobeCrown * 0.145');
+    expect(e34).not.toContain('botanicalBodyNoise(');
+    expect(e34).not.toContain('sin(');
+    expect(e34).not.toContain('texture(');
+    expect(e34).not.toContain('uTime');
+    expect(e34).not.toContain('gl_FragCoord');
+    expect(e34).not.toMatch(/\balpha\s*[+*]?=/);
+    expect(source.match(/this\.uniforms\.uniforms\.uPlantLobeDepthVfx = 0;/g))
+      .toHaveLength(2);
+    expect(source).toMatch(
+      /const plantLobeDepthVfxEnabled = outputScale < 8\s*&& resolvePlantLobeDepthVfxEnabled\(renderLook\);/,
+    );
+    expect(source).toContain(
+      'uPlantLobeDepthVfx: { value: plantLobeDepthVfxEnabled ? 1 : 0',
+    );
+    expect(preserveDrawingBuffer).toContain("get('plantLobeDepthVfxAudit') === '1'");
+    expect(source).toContain('presenter.app.canvas.dataset.plantLobeDepthVfx');
+    expect(source).toContain("this.app.canvas.dataset.plantLobeDepthVfx = 'inactive';");
+  });
+
   it('keeps E30 Wood bark relief exact-owner, normal-WebGL-only, and resource-neutral', () => {
     const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
     const canvasSource = readFileSync(new URL('./field-renderer.ts', import.meta.url), 'utf8');

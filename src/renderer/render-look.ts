@@ -405,6 +405,22 @@ export function resolvePlantLaminaVfxEnabled(
 }
 
 /**
+ * E34 turns E32's exact zero-state PLNT lamina into a coherent signed lobe
+ * contour. The child cannot revive any earlier botanical body layer and stays
+ * independently switchable for fit-view, lifecycle, topology, and 8x audits.
+ */
+export function resolvePlantLobeDepthVfxEnabled(
+  look: RenderLook,
+  search = globalThis.location?.search ?? '',
+): boolean {
+  if (!resolvePlantLaminaVfxEnabled(look, search)) return false;
+  const requested = new URLSearchParams(search).get('plantLobeDepthVfx');
+  if (requested === '0' || requested === 'off' || requested === 'false') return false;
+  if (requested === '1' || requested === 'on' || requested === 'true') return true;
+  return true;
+}
+
+/**
  * Keeps the exact thick-Glass body-transmission experiment independently
  * measurable inside the broader volume study. Normal WebGL owns the strict
  * Glass owner, depth, contact, and topology guards; Canvas and compact true 8x

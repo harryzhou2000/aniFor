@@ -727,6 +727,41 @@ Organic/PLNT `78.733`, Contact `88.235`, Solid `90.2`, Liquid `91.033`, Gas
 remains the historical accepted soft-volume baseline, and Wood's `80.251`
 remains an individual E30 probe rather than a family-rank entry.
 
+E34 is the accepted exact-PLNT lobe-depth card for normal WebGL 1×–4×.
+`plantLobeDepthVfx=0|1` is a strict child of E20 body recomposition, E26
+mesostructure, E28 pigment, and E32 lamina. It therefore reaches only E32's
+authoritative ordinary zero-state or presence-only PLNT `10` proof. The shader
+reuses its already-live lamina body, lobe, vein, boundary, pigment, and
+environment evidence for a bounded signed crown/pocket/vein-depth response:
+the goal is to quiet E32's closed fine-loop read at fit view, not add another
+cell-scale pattern. The response is RGB-only and adds no noise call, sample,
+sampler, texture, field, resource, pass, target, upload, allocation, clock,
+alpha/support, silhouette, ownership, lifecycle, topology, state, or physics
+decision. Canvas and compact true 8× retain E32.
+
+Run `npm run audit:vfx:plant-lobe-depth` for the isolated E20+E26+E28+E32
+off→on→off matrix. Two exact PLNT bodies must retain semantic/depth state;
+34 Wood, lifecycle, topology, contact, wall, and foreign-owner controls plus
+the raw controls remain exact, and disabled frames repeat byte-for-byte. The
+frozen per-target gate requires bipolar response and frequency evidence rather
+than a whole-body tint: PLNTLeft is `1.10–1.21` RGB RMS with a 7-byte peak,
+and PLNTRight is `1.47–1.62` with a 9-byte peak, each with target-specific
+coverage, signed, meso/cell, and cross-scale limits. Requested-on true 8×
+promotes exact 4896×3072 WebGL while E20/E26/E28/E32/E34/HDR report inactive
+for `scale-8`, with no bloom and a completed GPU fence.
+
+The final composed rerun remains `crossScaleVerified=true` and
+`fullScaleMatrix=true`, with semantic hash `595518258`, exact PLNT support
+recall `1`, coverage `.971`, and zero dark/clipped fractions or browser errors.
+E34 raises PLNT quality from E32's `69.928`/`78.733`/`82.641` to
+`74.414`/`82.892`/`86.238` at 1×/2×/4×. At canonical 2× it improves
+`78.733 → 82.892`: mesostructure `.465 → .535`, pigment `.8333 → .8600`,
+macro range `36 → 40`, and luma SD/range `7.99/42 → 8.72/49`. Wood `80.251`
+is consequently the organic family floor and has pigment variation as its
+weakest cue. The next measured card should be E35, a bounded exact-Wood
+pigment/volume finish over the existing E20/E26/E28/E30 proof—not another
+generic PLNT or gas layer.
+
 Timing output is diagnostic rather than a cross-machine pass/fail threshold. It includes baseline Canvas atmosphere relief and the same full plane under a nonzero cardinal-gradient emission field, Canvas surface-lighting, deliberately pessimistic full-612×384 energy-core and trait-core passes, a fully dense Water cohesion pass, a full-height Water/Oil boundary pass, and an all-cells liquid-light gate in which every cell is pessimistically treated as a top-surface candidate and samples field relief. Dense translucent coupling is measured twice: an honest all-Glass/all-field ceiling and the ordinary single-localized-source path after `EmissionField.mayLightWorldCell` rejection. A separate pathological all-world Glass-over-wall refraction profile includes its diagnostic pixel reset; production admits only exact Glass/Ice cells that coexist with a wall, performs no allocation or field sample, and ordinary scenes touch a small fraction of that ceiling. Full-world caustic and lens-shell arithmetic diagnostics include repeated RGB scratch initialization that production already performs while styling. The latest lens-shell ceiling measured `11.25/11.58/12.61 ms` median/p90/max across all 235,008 world cells and adds zero runtime bytes; production additionally gates it to exact Glass/Ice and reuses the existing color scratch, relief, and contour response. Checksums are consumed sparsely outside the timed production-shaped loops and the solid-relief checksum remains independent. The atmosphere-light descriptor is module-scoped and reused, so the timed loop allocates no object or typed buffer. Trait profiling covers realistic masks, a synthetic all-bits mask, and a representative composite, and consumes representative output through a checksum outside the timed region so the JIT cannot discard the work without charging checksum arithmetic to production-like timings. Profiler-only storage is reported separately from runtime-known scratch and does not contribute to `combinedAllocatedBytes`.
 
 Canvas also defers botanical classification until an Organic or Fibrous trait can

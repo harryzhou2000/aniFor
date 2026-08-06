@@ -13,7 +13,7 @@ powder, solid, liquid, gas, energy, and contact scenes across Canvas and WebGL a
 mobile gestures, save/load, CI, and Pages deployment as protected regression
 contracts rather than the primary feature stream.
 
-The accepted visual experiment ladder now runs through E33. E12 is the
+The accepted visual experiment ladder now runs through E34. E12 is the
 species-safe Sand/Clay/Concrete wet-sediment checkpoint; preserve its exact
 aqueous owner/stability proof, split moving-powder/stationary-Water control,
 Local/Grains no-op, fine structures, authored gaps, Canvas fallback, and true
@@ -499,6 +499,27 @@ hash `595518258`, support recall `1`, coverage `.647`, and zero dark/clipped
 fractions or browser errors. Smoke quality is `100` at 1×/2×/4×; luma SD is
 `4.12` throughout, microcontrast `.43`/`.46`/`.48`, chroma
 `.55`/`.57`/`.58`, macro range `18` throughout, and luma range `20`/`21`/`21`.
+
+E34 is the accepted normal-WebGL-only exact-PLNT lobe-depth checkpoint,
+independently measurable with `?plantLobeDepthVfx=0|1` and strictly subordinate
+to E20 body recomposition, E26 mesostructure, E28 pigment, and E32 lamina.
+Only E32's exact ordinary zero-state or presence-only PLNT `10` body proof may
+reuse the already-live lamina body, lobe, vein, boundary, pigment, and
+environment evidence to recompose a bounded signed crown/pocket/vein depth.
+It quiets E32's closed fine-loop read at fit view without adding a noise call,
+sample, texture, field, resource, pass, target, upload, allocation, clock,
+alpha, support, silhouette, ownership, lifecycle, topology, state, or physics
+decision. Canvas and true 8× retain E32. `npm run audit:vfx:plant-lobe-depth`
+freezes per-target bipolar response/frequency envelopes, keeps 34 Wood,
+lifecycle, topology, contact, wall, and foreign-owner controls exact, and
+requires byte-exact repeated-off frames. Requested-on true 8× promotes exact
+4896×3072 WebGL while E20/E26/E28/E32/E34/HDR remain inactive for `scale-8`,
+with no bloom and a completed GPU fence. The final composed PLNT quality is
+`74.414`/`82.892`/`86.238` at 1×/2×/4×; canonical 2× improves `78.733 →
+82.892`, with support recall `1`, coverage `.971`, and zero dark/clipped
+fractions or browser errors. Wood is now the organic family floor at `80.251`
+with pigment variation its weakest cue; measure a bounded exact-Wood pigment/
+volume candidate next rather than stacking another PLNT layer.
 
 The radioactive-solid review found no current correctness bug: ISZS `105`
 and VIBR `113` already receive exact-species Solid depth, while the existing

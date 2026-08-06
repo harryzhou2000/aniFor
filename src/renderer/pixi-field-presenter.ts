@@ -42,6 +42,7 @@ import {
   resolveBotanicalMesostructureVfxEnabled,
   resolveBotanicalPigmentVfxEnabled,
   resolvePlantLaminaVfxEnabled,
+  resolvePlantLobeDepthVfxEnabled,
   resolveWoodBarkReliefVfxEnabled,
   resolveGlassBodyVfxEnabled,
   resolveGasBodyVfxEnabled, resolveGasCoreDepthVfxEnabled, resolveGasLightVfxEnabled,
@@ -3255,6 +3256,7 @@ uniform float uBotanicalBodyVfx;
 uniform float uBotanicalMesostructureVfx;
 uniform float uBotanicalPigmentVfx;
 uniform float uPlantLaminaVfx;
+uniform float uPlantLobeDepthVfx;
 uniform float uWoodBarkReliefVfx;
 uniform float uGlassBodyVfx;
 uniform float uLiquidBodyVfx;
@@ -8575,13 +8577,42 @@ void main() {
           float leafLaminaRib = 1.0 - smoothstep(
             0.05, 0.18, abs(leafLaminaCarrier)
           );
+          float plantLobeDepth = plantLamina > 0.001
+              && uPlantLobeDepthVfx > 0.5
+            ? botanicalDepth : 0.0;
           color *= 1.0 - leafLaminaPocket * 0.050 * plantLamina;
           color += (vec3(1.0) - clamp(color, 0.0, 1.0))
             * vec3(0.34, 0.42, 0.22)
-            * (leafLaminaCrown * 0.075 + leafLaminaRib * 0.055)
+            * (leafLaminaCrown * 0.075
+              + leafLaminaRib * mix(0.055, 0.050, step(0.001, plantLobeDepth)))
             * plantLamina;
           color += vec3(0.026, -0.0035, -0.042) * leafLaminaCarrier
             * plantLamina;
+          // E34: E32's fine carrier makes the canopy tactile, but its closed
+          // zero-crossings can read as unrelated cells at fit view. Recompose
+          // only E20/E26/E28's accepted signed lobe and boundary evidence into
+          // a broader transmitted crown and absorptive pocket, while quieting
+          // the fine loop highlight above. This exact zero-state PLNT child is
+          // RGB-only and adds no noise, sample, texture, field, pass, target,
+          // upload, allocation, clock, alpha, support, lifecycle, topology,
+          // ownership, state, or physics decision. Canvas and true 8x keep E32.
+          float leafLobeContour = clamp(
+            leafLaminaBody * mix(0.44, 1.0, leafBoundary), -1.0, 1.0
+          );
+          float leafLobeCrown = max(leafLobeContour, 0.0);
+          float leafLobePocket = max(-leafLobeContour, 0.0);
+          float leafLobeVein = leafLaminaSegment
+            * mix(0.65, 1.0, leafBoundary);
+          color *= vec3(1.0) - vec3(0.080, 0.050, 0.092)
+            * (leafLobePocket * 0.92 + leafLobeVein * 0.52)
+            * plantLobeDepth;
+          color += (vec3(1.0) - clamp(color, 0.0, 1.0))
+            * (vec3(0.25, 0.66, 0.22)
+                * leafLobeCrown * 0.145
+              + solidEnvironment * leafLobeCrown * 0.052)
+            * plantLobeDepth;
+          color += vec3(-0.032, 0.016, -0.038) * leafLobeContour
+            * plantLobeDepth;
         } else {
           float barkWarp = botanicalBodyNoise(vec2(
             fieldPosition.x * 0.050 + botanicalMacro * 0.82,
@@ -10121,6 +10152,10 @@ export class PixiFieldPresenter {
     // lobe, vein, and pigment evidence. Canvas and compact true 8x keep E28.
     const plantLaminaVfxEnabled = outputScale < 8
       && resolvePlantLaminaVfxEnabled(renderLook);
+    // E34 reuses only E32's already-live exact-PLNT lobe/lamina scalars.
+    // Canvas and compact true 8x keep the accepted E32 presentation.
+    const plantLobeDepthVfxEnabled = outputScale < 8
+      && resolvePlantLobeDepthVfxEnabled(renderLook);
     // E21 replaces only normal-WebGL's deep exact-Glass body grade. The
     // compact true-8x shader retains its separately proven transmission path
     // and deliberately declares neither this selector nor its arithmetic.
@@ -10180,6 +10215,7 @@ export class PixiFieldPresenter {
       },
       uBotanicalPigmentVfx: { value: botanicalPigmentVfxEnabled ? 1 : 0, type: 'f32' },
       uPlantLaminaVfx: { value: plantLaminaVfxEnabled ? 1 : 0, type: 'f32' },
+      uPlantLobeDepthVfx: { value: plantLobeDepthVfxEnabled ? 1 : 0, type: 'f32' },
       uWoodBarkReliefVfx: { value: woodBarkReliefVfxEnabled ? 1 : 0, type: 'f32' },
       uGlassBodyVfx: { value: glassBodyVfxEnabled ? 1 : 0, type: 'f32' },
       uLiquidBodyVfx: { value: liquidBodyVfxEnabled ? 1 : 0, type: 'f32' },
@@ -10413,6 +10449,7 @@ export class PixiFieldPresenter {
       this.uniforms.uniforms.uBotanicalMesostructureVfx = 0;
       this.uniforms.uniforms.uBotanicalPigmentVfx = 0;
       this.uniforms.uniforms.uPlantLaminaVfx = 0;
+      this.uniforms.uniforms.uPlantLobeDepthVfx = 0;
       this.uniforms.uniforms.uWoodBarkReliefVfx = 0;
       this.uniforms.uniforms.uGlassBodyVfx = 0;
       this.uniforms.uniforms.uLiquidBodyVfx = 0;
@@ -10469,6 +10506,7 @@ export class PixiFieldPresenter {
             || new URLSearchParams(location.search).get('botanicalMesostructureVfxAudit') === '1'
             || new URLSearchParams(location.search).get('botanicalPigmentVfxAudit') === '1'
             || new URLSearchParams(location.search).get('plantLaminaVfxAudit') === '1'
+            || new URLSearchParams(location.search).get('plantLobeDepthVfxAudit') === '1'
             || new URLSearchParams(location.search).get('woodBarkReliefVfxAudit') === '1'
             || new URLSearchParams(location.search).get('glassBodyVfxAudit') === '1'
             || new URLSearchParams(location.search).get('oilBodyVfxAudit') === '1'
@@ -10557,6 +10595,9 @@ export class PixiFieldPresenter {
     ) > 0.5 ? 'active' : 'inactive';
     presenter.app.canvas.dataset.plantLaminaVfx = Number(
       presenter.uniforms.uniforms.uPlantLaminaVfx
+    ) > 0.5 ? 'active' : 'inactive';
+    presenter.app.canvas.dataset.plantLobeDepthVfx = Number(
+      presenter.uniforms.uniforms.uPlantLobeDepthVfx
     ) > 0.5 ? 'active' : 'inactive';
     presenter.app.canvas.dataset.woodBarkReliefVfx = Number(
       presenter.uniforms.uniforms.uWoodBarkReliefVfx
@@ -11978,6 +12019,7 @@ export class PixiFieldPresenter {
         this.uniforms.uniforms.uBotanicalMesostructureVfx = 0;
         this.uniforms.uniforms.uBotanicalPigmentVfx = 0;
         this.uniforms.uniforms.uPlantLaminaVfx = 0;
+        this.uniforms.uniforms.uPlantLobeDepthVfx = 0;
         this.uniforms.uniforms.uWoodBarkReliefVfx = 0;
         this.uniforms.uniforms.uGlassBodyVfx = 0;
         this.uniforms.uniforms.uLiquidBodyVfx = 0;
@@ -12011,6 +12053,7 @@ export class PixiFieldPresenter {
         this.app.canvas.dataset.botanicalMesostructureVfx = 'inactive';
         this.app.canvas.dataset.botanicalPigmentVfx = 'inactive';
         this.app.canvas.dataset.plantLaminaVfx = 'inactive';
+        this.app.canvas.dataset.plantLobeDepthVfx = 'inactive';
         this.app.canvas.dataset.woodBarkReliefVfx = 'inactive';
         this.app.canvas.dataset.glassBodyVfx = 'inactive';
         this.app.canvas.dataset.liquidBodyVfx = 'inactive';

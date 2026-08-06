@@ -4,6 +4,7 @@ import {
   resolveBotanicalMesostructureVfxEnabled,
   resolveBotanicalPigmentVfxEnabled,
   resolvePlantLaminaVfxEnabled,
+  resolvePlantLobeDepthVfxEnabled,
   resolveWoodBarkReliefVfxEnabled,
   resolveCeramicGlazeVfxEnabled,
   DEFAULT_RENDER_LOOK, resolveGasBodyVfxEnabled, resolveGasCoreDepthVfxEnabled,
@@ -380,6 +381,29 @@ describe('resolveRenderLook', () => {
     )).toBe(true);
     expect(resolvePlantLaminaVfxEnabled(
       'realistic', '?plantLaminaVfx=false',
+    )).toBe(false);
+  });
+
+  it('keeps exact PLNT lobe depth subordinate to the E32 lamina parent', () => {
+    expect(resolvePlantLobeDepthVfxEnabled(
+      'classic', '?plantLobeDepthVfx=1',
+    )).toBe(false);
+    expect(resolvePlantLobeDepthVfxEnabled('realistic', '')).toBe(true);
+    expect(resolvePlantLobeDepthVfxEnabled('neon-lab', '')).toBe(true);
+    for (const parentOff of [
+      'botanicalBodyVfx=0', 'botanicalMesostructureVfx=0',
+      'botanicalPigmentVfx=0', 'plantLaminaVfx=0',
+    ]) {
+      expect(resolvePlantLobeDepthVfxEnabled(
+        'realistic', `?${parentOff}&plantLobeDepthVfx=1`,
+      )).toBe(false);
+    }
+    expect(resolvePlantLobeDepthVfxEnabled(
+      'realistic',
+      '?volumeVfx=0&botanicalBodyVfx=1&botanicalMesostructureVfx=1&botanicalPigmentVfx=1&plantLaminaVfx=1&plantLobeDepthVfx=on',
+    )).toBe(true);
+    expect(resolvePlantLobeDepthVfxEnabled(
+      'realistic', '?plantLobeDepthVfx=false',
     )).toBe(false);
   });
 
