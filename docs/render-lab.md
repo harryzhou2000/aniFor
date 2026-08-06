@@ -472,6 +472,31 @@ The composed production matrix is `crossScaleVerified=true` and
 cells, support/component `1`, zero dark/clipped fractions, and zero browser
 errors remain exact.
 
+E31 is the accepted exact-Noble Gas prismatic-interior card for normal WebGL
+1×–4×. `nobleGasPrismVfx=0|1` is subordinate to E25 billow depth and E04
+atmosphere ownership. It requires exact propagated atmosphere style `7` and
+recombines only the already-live broad `gasVfxBillow` and `gasVfxWaveC`
+evidence into a restrained bipolar pearlescent fold. The branch is RGB-only
+and adds no wave, sample, sampler, texture, field, resource, pass, target,
+upload, allocation, clock, output-scale, alpha, support, silhouette,
+ownership, topology, state, or physics decision. Canvas and compact true 8×
+retain their existing gas presentation.
+
+`npm run audit:vfx:noble-gas-prism` runs E31 off→on→off at 1×/2×/4× while
+pinning unrelated optional VFX off. Its exact Noble Gas key, pocket, and broad
+inner-body targets respond; semantic, atmosphere, wall, alpha/support,
+geometry, raw controls, authored voids/channels, seams, sparse carriers, and
+foreign species remain frozen, and the disabled framebuffer repeats
+byte-for-byte. Key/pocket/broad RGB RMS is about
+`7.04`/`.87`/`5.59`, target peak is `9`, and the broad spatial response is
+stable across scale. Requested-on true 8× promotes exact 4896×3072 WebGL with
+E04/E25/E31/HDR inactive for `scale-8` and signals a real GPU fence with zero
+browser errors. The composed production matrix is `crossScaleVerified=true`
+and `fullScaleMatrix=true`: Noble quality becomes
+`95.351`/`95.463`/`95.463` at 1×/2×/4×, luma deviation is
+`3.51`/`3.52`/`3.52`, support/component remain `1`, and dark/clipped fractions
+remain zero.
+
 HEAC, PTNM, and RSSS now receive a second exact-owner deep rigid-body layer:
 the rapid heat conductor has restrained warm channel lamellae, Platinum uses
 cool catalytic planes with sparse active sites, and solidified resist gains a
@@ -622,7 +647,7 @@ The app-owned showcase fixture remains semantic version 3, but v3 and v4
 quality indices are not comparable. The frozen pre-E27 Smoke frame has
 softness `1`, billow depth as its weakest cue, and v4 quality `45.542`.
 
-The accepted post-E30 production matrix is `crossScaleVerified=true` and
+The accepted post-E31 production matrix is `crossScaleVerified=true` and
 `fullScaleMatrix=true` at 1×/2×/4× with semantic hash `595518258`, 104,027
 occupied cells, and zero browser errors. E29 first raises canonical ROCK from
 `45.685` to `90.2`. E30 then raises Wood from `50.781` to `80.251` at 2×.
@@ -631,8 +656,10 @@ Wood quality/micro/chroma/macro is `71.833`/`1.97`/`1.29`/`26` at 1×,
 `83.247`/`2.37`/`1.47`/`26` at 4×. Support recall and dominant component remain
 `1`, dark/clipped fractions are zero, and luma range is `37`/`42`/`41`.
 PLNT is unchanged at quality `46.355`/`56.122`/`59.540`; it now represents
-Organic at canonical 2×. Gas/Noble remains `52.710`, so Noble Gas billow depth
-is the next measured fit-view review target rather than another Wood layer.
+Organic at canonical 2×. E31 raises Noble Gas from `52.710` to
+`95.351`/`95.463`/`95.463` at 1×/2×/4× while preserving exact support and zero
+clipping. PLNT at `56.122` is therefore the next measured fit-view review
+target; Smoke at `66.914` is second.
 
 Timing output is diagnostic rather than a cross-machine pass/fail threshold. It includes baseline Canvas atmosphere relief and the same full plane under a nonzero cardinal-gradient emission field, Canvas surface-lighting, deliberately pessimistic full-612×384 energy-core and trait-core passes, a fully dense Water cohesion pass, a full-height Water/Oil boundary pass, and an all-cells liquid-light gate in which every cell is pessimistically treated as a top-surface candidate and samples field relief. Dense translucent coupling is measured twice: an honest all-Glass/all-field ceiling and the ordinary single-localized-source path after `EmissionField.mayLightWorldCell` rejection. A separate pathological all-world Glass-over-wall refraction profile includes its diagnostic pixel reset; production admits only exact Glass/Ice cells that coexist with a wall, performs no allocation or field sample, and ordinary scenes touch a small fraction of that ceiling. Full-world caustic and lens-shell arithmetic diagnostics include repeated RGB scratch initialization that production already performs while styling. The latest lens-shell ceiling measured `11.25/11.58/12.61 ms` median/p90/max across all 235,008 world cells and adds zero runtime bytes; production additionally gates it to exact Glass/Ice and reuses the existing color scratch, relief, and contour response. Checksums are consumed sparsely outside the timed production-shaped loops and the solid-relief checksum remains independent. The atmosphere-light descriptor is module-scoped and reused, so the timed loop allocates no object or typed buffer. Trait profiling covers realistic masks, a synthetic all-bits mask, and a representative composite, and consumes representative output through a checksum outside the timed region so the JIT cannot discard the work without charging checksum arithmetic to production-like timings. Profiler-only storage is reported separately from runtime-known scratch and does not contribute to `combinedAllocatedBytes`.
 

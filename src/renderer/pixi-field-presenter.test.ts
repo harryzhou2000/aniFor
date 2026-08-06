@@ -1549,6 +1549,68 @@ describe('Pixi presenter startup configuration', () => {
     expect(preserveDrawingBuffer).toContain("get('nobleGasBillowVfxAudit') === '1'");
   });
 
+  it('keeps E31 Noble Gas prism exact-style, E25-dependent, normal-WebGL-only, and RGB-only', () => {
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const canvasSource = readFileSync(new URL('./field-renderer.ts', import.meta.url), 'utf8');
+    const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');
+    const normalStart = source.indexOf('const FIELD_FRAGMENT = `', eightStart);
+    const normalEnd = source.indexOf('`;\n\n/** Primary WebGL presentation', normalStart);
+    const eight = source.slice(eightStart, normalStart);
+    const normal = source.slice(normalStart, normalEnd);
+    const e31Start = normal.indexOf('      // E31 gives exact Noble Gas');
+    const e31End = normal.indexOf('      // E07:', e31Start);
+    const e31 = normal.slice(e31Start, e31End);
+    const preserveDrawingBufferStart = source.indexOf('preserveDrawingBuffer:');
+    const preserveDrawingBufferEnd = source.indexOf(
+      'resolution: outputScale', preserveDrawingBufferStart,
+    );
+    const preserveDrawingBuffer = source.slice(
+      preserveDrawingBufferStart, preserveDrawingBufferEnd,
+    );
+
+    expect(eightStart).toBeGreaterThanOrEqual(0);
+    expect(normalStart).toBeGreaterThan(eightStart);
+    expect(normalEnd).toBeGreaterThan(normalStart);
+    expect(e31Start).toBeGreaterThanOrEqual(0);
+    expect(e31End).toBeGreaterThan(e31Start);
+    expect(normal).toContain('uniform float uNobleGasPrismVfx;');
+    expect(normal.match(/uNobleGasPrismVfx > 0\.5/g)).toHaveLength(1);
+    expect(eight).not.toContain('uNobleGasPrismVfx');
+    expect(eight).not.toContain('nobleGasPrismVfx');
+    expect(canvasSource).not.toContain('nobleGasPrismVfx');
+    for (const guard of [
+      'uNobleGasPrismVfx > 0.5', 'uNobleGasBillowVfx > 0.5',
+      'uGasIdentityStyling > 0.5', 'wall < 0.5', '!materialEmissive',
+      'floor(gasStyleState.r * 255.0 + 0.5)',
+      'abs(noblePrismStyle - 7.0)', 'noblePrismOwner > 0.5',
+    ]) expect(e31).toContain(guard);
+    for (const establishedInput of [
+      'gasVfxBodySupport', 'cloudNeighbourMean', 'atmosphereState.a',
+      'gasVfxBillow', 'gasVfxWaveC', 'gasDirectionalRelief',
+    ]) expect(e31).toContain(establishedInput);
+    expect(e31).toContain('gasVfxBillow * 0.30 + gasVfxWaveC * 0.70');
+    expect(e31).not.toContain('fieldPosition');
+    expect(e31).not.toContain('gasVfxWaveA');
+    expect(e31).not.toContain('gasVfxWaveB');
+    expect(e31).not.toContain('sin(');
+    expect(e31).not.toContain('texture(');
+    expect(e31).not.toContain('uTime');
+    expect(e31).not.toContain('gl_FragCoord');
+    expect(e31).not.toMatch(/\balpha\s*[+*]?=/);
+    expect(e31).not.toMatch(/\b(?:atmosphereState|finalColor)\.a\s*[+*]?=/);
+    expect(source.match(/this\.uniforms\.uniforms\.uNobleGasPrismVfx = 0;/g))
+      .toHaveLength(2);
+    expect(source).toMatch(
+      /const nobleGasPrismVfxEnabled = outputScale < 8\s*&& resolveNobleGasPrismVfxEnabled\(renderLook\);/,
+    );
+    expect(source).toContain(
+      'uNobleGasPrismVfx: { value: nobleGasPrismVfxEnabled ? 1 : 0',
+    );
+    expect(source).toContain('presenter.app.canvas.dataset.nobleGasPrismVfx');
+    expect(source).toContain("this.app.canvas.dataset.nobleGasPrismVfx = 'inactive';");
+    expect(preserveDrawingBuffer).toContain("get('nobleGasPrismVfxAudit') === '1'");
+  });
+
   it('keeps E27 Smoke softness exact-style, E04-dependent, normal-WebGL-only, and RGB-only', () => {
     const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
     const canvasSource = readFileSync(new URL('./field-renderer.ts', import.meta.url), 'utf8');

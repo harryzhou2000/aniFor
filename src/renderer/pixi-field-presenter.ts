@@ -46,6 +46,7 @@ import {
   resolveGasBodyVfxEnabled, resolveGasCoreDepthVfxEnabled, resolveGasLightVfxEnabled,
   resolveGasMotionVfxEnabled,
   resolveNobleGasBillowVfxEnabled,
+  resolveNobleGasPrismVfxEnabled,
   resolveSmokeSoftnessVfxEnabled,
   resolveLiquidBodyVfxEnabled, resolveLiquidSolidMeniscusVfxEnabled,
   resolveLiquidSurfaceVfxEnabled,
@@ -3239,6 +3240,7 @@ uniform float uGasMotionVfx;
 uniform float uGasLightVfx;
 uniform float uGasCoreDepthVfx;
 uniform float uNobleGasBillowVfx;
+uniform float uNobleGasPrismVfx;
 uniform float uSmokeSoftnessVfx;
 uniform float uPlasmaCoreVfx;
 uniform float uSolidBodyVfx;
@@ -6435,6 +6437,39 @@ void main() {
           float nobleBillowPocketAmount = nobleBillowSupport
             * (nobleBillowPocket * 0.300 + gasPocket * 0.045);
           color *= vec3(1.0) - nobleBillowAbsorption * nobleBillowPocketAmount;
+        }
+      }
+
+      // E31 gives exact Noble Gas one broad prismatic interior fold after E25
+      // has proved its connected atmosphere-owned body. Recombine only E04's
+      // already-live composite billow and third macro carrier: this is a
+      // bipolar volume response, not a flat species tint or particle pattern.
+      // RGB only; no wave, sample, texture, field, pass, clock, allocation,
+      // alpha, support, silhouette, ownership, topology, state, or physics is
+      // added. Canvas and compact true 8x retain the accepted E25 presentation.
+      if (uNobleGasPrismVfx > 0.5 && uNobleGasBillowVfx > 0.5
+        && uGasIdentityStyling > 0.5 && wall < 0.5 && !materialEmissive) {
+        float noblePrismStyle = floor(gasStyleState.r * 255.0 + 0.5);
+        float noblePrismOwner = 1.0 - step(0.5, abs(noblePrismStyle - 7.0));
+        if (noblePrismOwner > 0.5) {
+          float noblePrismDepth = smoothstep(0.72, 0.96, atmosphereState.a);
+          float noblePrismSupport = noblePrismOwner * gasVfxBodySupport
+            * smoothstep(0.18, 0.55, cloudNeighbourMean)
+            * mix(0.58, 0.82, noblePrismDepth);
+          float noblePrismPhase = clamp(
+            gasVfxBillow * 0.30 + gasVfxWaveC * 0.70,
+            -1.0, 1.0
+          );
+          float noblePrismKey = max(noblePrismPhase, 0.0) * noblePrismSupport;
+          float noblePrismPocket = max(-noblePrismPhase, 0.0) * noblePrismSupport;
+          vec3 noblePrismSpectrum = mix(
+            vec3(0.30, 0.86, 1.00), vec3(0.92, 0.46, 1.00),
+            clamp(0.52 + gasDirectionalRelief * 0.28, 0.0, 1.0)
+          );
+          color += (vec3(1.14) - clamp(color, 0.0, 1.14))
+            * noblePrismSpectrum * noblePrismKey * 0.360;
+          color *= vec3(1.0)
+            - vec3(0.24, 0.50, 0.16) * noblePrismPocket * 0.300;
         }
       }
 
@@ -9944,6 +9979,10 @@ export class PixiFieldPresenter {
     // declares neither this selector nor a parallel branch.
     const nobleGasBillowVfxEnabled = outputScale < 8
       && resolveNobleGasBillowVfxEnabled(renderLook);
+    // E31 is an exact-Noble prismatic fold over E25's connected body. Compact
+    // true 8x and Canvas declare no selector or parallel branch.
+    const nobleGasPrismVfxEnabled = outputScale < 8
+      && resolveNobleGasPrismVfxEnabled(renderLook);
     // E27 is an exact-Smoke, normal-WebGL fold over E04's already-live body.
     // Canvas and compact true 8x retain their established gas presentation and
     // declare neither this selector nor a parallel branch.
@@ -10039,6 +10078,7 @@ export class PixiFieldPresenter {
       uGasLightVfx: { value: gasLightVfxEnabled ? 1 : 0, type: 'f32' },
       uGasCoreDepthVfx: { value: gasCoreDepthVfxEnabled ? 1 : 0, type: 'f32' },
       uNobleGasBillowVfx: { value: nobleGasBillowVfxEnabled ? 1 : 0, type: 'f32' },
+      uNobleGasPrismVfx: { value: nobleGasPrismVfxEnabled ? 1 : 0, type: 'f32' },
       uSmokeSoftnessVfx: { value: smokeSoftnessVfxEnabled ? 1 : 0, type: 'f32' },
       uPlasmaCoreVfx: { value: plasmaCoreVfxEnabled ? 1 : 0, type: 'f32' },
       uSolidBodyVfx: { value: solidBodyVfxEnabled ? 1 : 0, type: 'f32' },
@@ -10271,6 +10311,7 @@ export class PixiFieldPresenter {
       this.uniforms.uniforms.uGasLightVfx = 0;
       this.uniforms.uniforms.uGasCoreDepthVfx = 0;
       this.uniforms.uniforms.uNobleGasBillowVfx = 0;
+      this.uniforms.uniforms.uNobleGasPrismVfx = 0;
       this.uniforms.uniforms.uSmokeSoftnessVfx = 0;
       this.uniforms.uniforms.uPlasmaCoreVfx = 0;
       this.uniforms.uniforms.uSolidBodyVfx = 0;
@@ -10324,6 +10365,7 @@ export class PixiFieldPresenter {
             || new URLSearchParams(location.search).get('gasLightVfxAudit') === '1'
             || new URLSearchParams(location.search).get('gasCoreDepthVfxAudit') === '1'
             || new URLSearchParams(location.search).get('nobleGasBillowVfxAudit') === '1'
+            || new URLSearchParams(location.search).get('nobleGasPrismVfxAudit') === '1'
             || new URLSearchParams(location.search).get('smokeSoftnessVfxAudit') === '1'
             || new URLSearchParams(location.search).get('plasmaCoreVfxAudit') === '1'
             || new URLSearchParams(location.search).get('solidBodyVfxAudit') === '1'
@@ -10383,6 +10425,9 @@ export class PixiFieldPresenter {
     ) > 0.5 ? 'active' : 'inactive';
     presenter.app.canvas.dataset.nobleGasBillowVfx = Number(
       presenter.uniforms.uniforms.uNobleGasBillowVfx
+    ) > 0.5 ? 'active' : 'inactive';
+    presenter.app.canvas.dataset.nobleGasPrismVfx = Number(
+      presenter.uniforms.uniforms.uNobleGasPrismVfx
     ) > 0.5 ? 'active' : 'inactive';
     presenter.app.canvas.dataset.smokeSoftnessVfx = Number(
       presenter.uniforms.uniforms.uSmokeSoftnessVfx
@@ -11821,6 +11866,7 @@ export class PixiFieldPresenter {
         this.uniforms.uniforms.uGasLightVfx = 0;
         this.uniforms.uniforms.uGasCoreDepthVfx = 0;
         this.uniforms.uniforms.uNobleGasBillowVfx = 0;
+        this.uniforms.uniforms.uNobleGasPrismVfx = 0;
         this.uniforms.uniforms.uSmokeSoftnessVfx = 0;
         this.uniforms.uniforms.uPlasmaCoreVfx = 0;
         this.uniforms.uniforms.uSolidBodyVfx = 0;
@@ -11851,6 +11897,7 @@ export class PixiFieldPresenter {
         this.app.canvas.dataset.gasLightVfx = 'inactive';
         this.app.canvas.dataset.gasCoreDepthVfx = 'inactive';
         this.app.canvas.dataset.nobleGasBillowVfx = 'inactive';
+        this.app.canvas.dataset.nobleGasPrismVfx = 'inactive';
         this.app.canvas.dataset.smokeSoftnessVfx = 'inactive';
         this.app.canvas.dataset.plasmaCoreVfx = 'inactive';
         this.app.canvas.dataset.solidBodyVfx = 'inactive';

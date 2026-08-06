@@ -190,6 +190,23 @@ export function resolveNobleGasBillowVfxEnabled(
 }
 
 /**
+ * E31 adds a broad prismatic interior lobe only after E25 has established the
+ * exact Noble Gas billow. It cannot revive E04/E25, and remains independently
+ * switchable so its bipolar volume response can be measured without changing
+ * the accepted parent card.
+ */
+export function resolveNobleGasPrismVfxEnabled(
+  look: RenderLook,
+  search = globalThis.location?.search ?? '',
+): boolean {
+  if (!resolveNobleGasBillowVfxEnabled(look, search)) return false;
+  const requested = new URLSearchParams(search).get('nobleGasPrismVfx');
+  if (requested === '0' || requested === 'off' || requested === 'false') return false;
+  if (requested === '1' || requested === 'on' || requested === 'true') return true;
+  return true;
+}
+
+/**
  * Gives a dense exact Plasma body a restrained contained core. The normal
  * WebGL presenter reuses its existing semantic core and emission-field support;
  * an explicit override keeps E16 independently measurable while ordinary HDR

@@ -13,7 +13,7 @@ powder, solid, liquid, gas, energy, and contact scenes across Canvas and WebGL a
 mobile gestures, save/load, CI, and Pages deployment as protected regression
 contracts rather than the primary feature stream.
 
-The accepted visual experiment ladder now runs through E30. E12 is the
+The accepted visual experiment ladder now runs through E31. E12 is the
 species-safe Sand/Clay/Concrete wet-sediment checkpoint; preserve its exact
 aqueous owner/stability proof, split moving-powder/stationary-Water control,
 Local/Grains no-op, fine structures, authored gaps, Canvas fallback, and true
@@ -426,6 +426,25 @@ The composed production matrix is `crossScaleVerified=true` and
 cells, support recall/component `1`, zero dark/clipped fractions, and zero
 browser errors remain exact.
 
+E31 is the accepted normal-WebGL-only exact-Noble Gas prismatic-interior
+checkpoint. `?nobleGasPrismVfx=0|1` is a strict child of E25 billow depth and
+E04 atmosphere ownership, requires exact propagated atmosphere style `7`, and
+reuses only the existing `gasVfxBillow` and broad `gasVfxWaveC` evidence. Its
+bipolar interior fold is RGB-only: it adds no sample, texture, field, upload,
+pass, target, allocation, time, output-scale, alpha/support, silhouette,
+ownership, or physics decision. Canvas and true 8× remain exact exclusions.
+Validate it with `npm run audit:vfx:noble-gas-prism`; the frozen 1×/2×/4×
+off→on→off matrix preserves semantic, atmosphere, wall, support, geometry, and
+all raw controls, with repeated-off peak zero. Key/pocket/broad RGB RMS is
+about `7.04`/`.87`/`5.59`, the response remains broad and bipolar across all
+three scales, and requested-on true 8× promotes exact 4896×3072 WebGL while
+E04/E25/E31/HDR report inactive for `scale-8`, then signals a real GPU fence
+with zero browser errors. The full composed matrix remains
+`crossScaleVerified=true` and `fullScaleMatrix=true`; Noble quality rises from
+`52.710` to `95.351`/`95.463`/`95.463` at 1×/2×/4×, support recall/component
+stay `1`, dark/clipped fractions stay zero, and the semantic hash/count remain
+`595518258`/104,027.
+
 The radioactive-solid review found no current correctness bug: ISZS `105`
 and VIBR `113` already receive exact-species Solid depth, while the existing
 seven-owner radioactive identity motif is intentionally phase-permissive.
@@ -497,9 +516,11 @@ macro is `71.833`/`1.97`/`1.29`/`26` at 1×,
 `80.251`/`2.25`/`1.42`/`26` at 2×, and
 `83.247`/`2.37`/`1.47`/`26` at 4×. Support recall and dominant component remain
 `1`, dark/clipped fractions remain zero, and luma range is `37`/`42`/`41`.
-PLNT now represents Organic at `56.122`, while Gas/Noble at `52.710` is the
-next measured weakest family. Inspect that exact Noble Gas billow-depth evidence
-before selecting another bounded experiment, and never compare v3 and v4
+E31 raises exact Noble Gas to `95.351`/`95.463`/`95.463` quality at
+1×/2×/4×, with luma deviation about `3.51`/`3.52`/`3.52`, full support recall,
+and no clipping. Organic/PLNT at `56.122` is now the weakest canonical 2×
+family; Smoke at `66.914` is second. Inspect PLNT's current fit-view evidence
+before selecting the next bounded experiment, and never compare v3 and v4
 quality indices as if they shared one scoring contract.
 
 WebGL is the canonical visual release path. Canvas 2D remains a resilient,

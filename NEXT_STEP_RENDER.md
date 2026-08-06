@@ -434,11 +434,31 @@ does not alter simulation, camera, semantic ownership, or `renderScale`.
   `80.251`/`2.25`/`1.42`/`26` at 2×, and
   `83.247`/`2.37`/`1.47`/`26` at 4×, with exact semantic hash/count,
   support/component `1`, zero dark/clipped fractions, and zero browser errors.
+- **E31 — exact Noble Gas prismatic interior (accepted visual checkpoint):**
+  normal 1×–4× WebGL uses `?nobleGasPrismVfx=0|1` as a strict child of E25
+  billow depth and E04 atmosphere ownership. Only exact propagated atmosphere
+  style `7` may receive it. The shader recombines the already-live broad
+  `gasVfxBillow` and `gasVfxWaveC` evidence into a restrained bipolar
+  pearlescent fold inside the connected Noble Gas body. It is RGB-only and
+  adds no wave, sample, sampler, texture, field, upload, pass, target,
+  allocation, clock, output-scale, alpha/support, silhouette, ownership,
+  topology, state, or physics decision. Canvas and compact true 8× retain
+  their established paths. `npm run audit:vfx:noble-gas-prism` proves
+  off→on→off restoration at 1×/2×/4× with exact semantic, atmosphere,
+  wall, support, geometry, and raw-control state; repeated-off peak is zero.
+  Key/pocket/broad RGB RMS is about `7.04`/`.87`/`5.59`, with a broad stable
+  spatial response at all three scales. Requested-on true 8× remains exact
+  4896×3072 with E04/E25/E31/HDR inactive for `scale-8` and a real GPU fence.
+  The full composed matrix is `crossScaleVerified=true` and
+  `fullScaleMatrix=true`: Noble quality becomes
+  `95.351`/`95.463`/`95.463` at 1×/2×/4×, luma deviation is
+  `3.51`/`3.52`/`3.52`, support/component remain `1`, dark/clipped fractions
+  remain zero, and semantic hash/count and browser-error contracts stay exact.
 - **Protected 8× rung:** `renderScale=8` deliberately reports
   `hdrPipeline=inactive` / `scale-8` and retains the proven direct single-mesh
   4896×3072 path. The experiment must earn a bounded 8× design rather than
   allocating a 115 MiB full-resolution float target beside that path.
-- **Current decision:** E01/E02/E03/E04/E05/E06/E07/E08/E09/E10/E11/E12/E13/E14/E15/E16/E17/E18/E19/E20/E21/E22/E23/E24/E25/E26/E27/E28/E29/E30 remain opt-in through the non-Classic looks
+- **Current decision:** E01/E02/E03/E04/E05/E06/E07/E08/E09/E10/E11/E12/E13/E14/E15/E16/E17/E18/E19/E20/E21/E22/E23/E24/E25/E26/E27/E28/E29/E30/E31 remain opt-in through the non-Classic looks
   until representative hardware timing and mobile thermal behavior are
   measured. E02 remains the safe family-wide baseline. E03 is accepted as the
   liquid-depth checkpoint: its fit-view crop is visibly more cohesive, retains
@@ -555,6 +575,11 @@ does not alter simulation, camera, semantic ownership, or `renderScale`.
   only irregular segment mask, 32-byte focused peak, longitudinal direction
   bound, and compact-8× exclusion. Its rejected y-periodic predecessor must
   remain rejected.
+  E31 is the accepted exact-Noble Gas prismatic-interior checkpoint: freeze its
+  E04/E25 dependencies, exact propagated-style-7 body proof, broad existing-
+  evidence-only bipolar fold, accepted cross-scale envelope, and compact-8×
+  exclusion. Do not replace its broad `gasVfxWaveC` carrier with a cell-scale
+  motif or stack it onto foreign atmosphere species.
   These are not the final material/VFX results.
   Sub-1.0 material colour stays on the established response; tonemapping owns
   only real HDR highlights so powder texture and liquid body contrast are not
@@ -1086,6 +1111,19 @@ Requested-on true 8× must promote exact 4896×3072 WebGL while E20/E26/E28/E30/
 HDR remain inactive for `scale-8`; the accepted tail signals a `5692.4 ms` GPU
 fence with zero browser errors.
 
+Run `npm run audit:vfx:noble-gas-prism` for E31. It isolates E04+E25 and runs
+`nobleGasPrismVfx=0 → 1 → 0` at 1×/2×/4× while pinning the other optional
+visual selectors off. The exact Noble Gas key, pocket, and broad inner-body
+targets respond; semantics, atmosphere bytes, alpha/support, native walls,
+CSS/backing geometry, authored voids/channels, Noble and FOG seams, sparse
+carriers, foreign species, liquid/solid contacts, and blank controls remain
+frozen. The disabled framebuffer repeats byte-for-byte. The accepted
+cross-scale response is broad and bipolar: key/pocket/broad RGB RMS is about
+`7.04`/`.87`/`5.59`, target peak remains `9` bytes, and control peak remains
+at most `3`. Requested-on true 8× must promote exact 4896×3072 WebGL while
+E04/E25/E31/HDR remain inactive for `scale-8`; the accepted tail signals a
+real GPU fence with zero browser errors.
+
 The earlier post-E16 survey was invalid for Solid: it sampled native Stone `21`,
 which is Powder, while labelling that region Solid. The corrected post-E17
 showcase uses native ROCK `78`, asserts exactly `2769` matching Solid cells, and
@@ -1163,13 +1201,15 @@ next production 4× survey then selected Wood/PLNT as the largest remaining
   micro/chroma/macro becomes `71.833`/`1.97`/`1.29`/`26` at 1×,
   `80.251`/`2.25`/`1.42`/`26` at 2×, and
   `83.247`/`2.37`/`1.47`/`26` at 4×. Support/component remain `1`, dark/clipped
-  remain zero, and luma range is `37`/`42`/`41`. PLNT now represents Organic
-  at `56.122`; Gas/Noble at `52.710` is the next measured weakness. Do not widen
-  E17–E30 owner sets by resemblance alone or stack
+  remain zero, and luma range is `37`/`42`/`41`. E31 then raises Noble Gas from
+  `52.710` to `95.351`/`95.463`/`95.463` at 1×/2×/4×, with full support recall
+  and zero clipping. PLNT now represents Organic and the global canonical 2×
+  weakness at `56.122`; Smoke at `66.914` is second. Do not widen E17–E31
+  owner sets by resemblance alone or stack
   another generic gas layer over E04/E07/E13/E15; preserve their independent
   owner, exposure, topology, scale, and true-8× contracts.
 
-**Next visual experiments:** E03–E30 now provide accepted liquid body/surface,
+**Next visual experiments:** E03–E31 now provide accepted liquid body/surface,
 stable-gas, coherent-gas-motion, powder-depth, and powder-local-light
 checkpoints plus exact resting contact grounding, Glass/Ice transmission, and
 state-aware Wax/PLNT subsurface response, composed wet-mineral optics,
@@ -1187,10 +1227,11 @@ exact Wood/PLNT pigment/body depth without disturbing E20/E26 topology or
 lifecycle state. E29's 2× composed capture adds exact ROCK mesostructure with
 the rejected continuous stripe replaced by an interrupted lamina; its focused
 audit passed. E30 adds exact Wood interrupted bark relief without changing
-PLNT, lifecycle state, or topology. Wood quality is `80.251` at canonical 2×,
-while PLNT is `56.122`; Gas/Noble is now
-the global weakest at `52.710` through billow depth. Review that exact gas
-fixture before changing E15 or adding another owner-specific gas layer. The
+PLNT, lifecycle state, or topology. E31 adds an exact Noble Gas prismatic
+inner-volume fold without changing atmosphere ownership, topology, or compact
+8×. Noble quality is `95.463` at canonical 2×; PLNT is now the global weakest
+at `56.122`, followed by Smoke at `66.914`. Review the exact PLNT fit-view
+fixture before adding another organic layer. The
 radioactive-solid review
 found no current identity bug, but also
 proved that the existing
@@ -1200,7 +1241,7 @@ with topology-preserving, material-
 specific cards that reuse already-live evidence. Prefer the smallest
 arithmetic-only candidate that fixes a visible fit-view deficiency; do not add
 an isolated tint merely to continue the experiment number. Preserve the E14
-1× stencil snap and all E01–E30 selectors and controls while designing the
+1× stencil snap and all E01–E31 selectors and controls while designing the
 next bounded card.
 
 ## Phase 1 — HDR pipeline & lighting core (biggest visual payoff)

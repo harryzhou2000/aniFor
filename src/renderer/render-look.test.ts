@@ -11,7 +11,8 @@ import {
   resolveGasMotionVfxEnabled,
   resolveLiquidBodyVfxEnabled, resolveLiquidSolidMeniscusVfxEnabled,
   resolveLiquidSurfaceVfxEnabled,
-  resolveNobleGasBillowVfxEnabled, resolveSmokeSoftnessVfxEnabled,
+  resolveNobleGasBillowVfxEnabled, resolveNobleGasPrismVfxEnabled,
+  resolveSmokeSoftnessVfxEnabled,
   resolveOilBodyVfxEnabled,
   resolveOrganicSubsurfaceVfxEnabled,
   resolvePlasmaCoreVfxEnabled,
@@ -150,6 +151,26 @@ describe('resolveRenderLook', () => {
     )).toBe(false);
     expect(resolveNobleGasBillowVfxEnabled(
       'neon-lab', '?gasBodyVfx=on&nobleGasBillowVfx=off',
+    )).toBe(false);
+  });
+
+  it('keeps Noble Gas prismatic depth subordinate to E25', () => {
+    expect(resolveNobleGasPrismVfxEnabled(
+      'classic', '?nobleGasPrismVfx=1',
+    )).toBe(false);
+    expect(resolveNobleGasPrismVfxEnabled('realistic', '')).toBe(true);
+    expect(resolveNobleGasPrismVfxEnabled('neon-lab', '')).toBe(true);
+    expect(resolveNobleGasPrismVfxEnabled(
+      'realistic', '?volumeVfx=0&gasBodyVfx=1&nobleGasBillowVfx=1&nobleGasPrismVfx=on',
+    )).toBe(true);
+    expect(resolveNobleGasPrismVfxEnabled(
+      'realistic', '?gasBodyVfx=0&nobleGasBillowVfx=1&nobleGasPrismVfx=1',
+    )).toBe(false);
+    expect(resolveNobleGasPrismVfxEnabled(
+      'realistic', '?nobleGasBillowVfx=0&nobleGasPrismVfx=1',
+    )).toBe(false);
+    expect(resolveNobleGasPrismVfxEnabled(
+      'realistic', '?nobleGasPrismVfx=false',
     )).toBe(false);
   });
 
