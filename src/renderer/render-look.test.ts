@@ -3,6 +3,7 @@ import {
   resolveBotanicalBodyVfxEnabled,
   resolveBotanicalMesostructureVfxEnabled,
   resolveBotanicalPigmentVfxEnabled,
+  resolvePlantLaminaVfxEnabled,
   resolveWoodBarkReliefVfxEnabled,
   resolveCeramicGlazeVfxEnabled,
   DEFAULT_RENDER_LOOK, resolveGasBodyVfxEnabled, resolveGasCoreDepthVfxEnabled,
@@ -331,6 +332,30 @@ describe('resolveRenderLook', () => {
     )).toBe(false);
     expect(resolveBotanicalPigmentVfxEnabled(
       'realistic', '?botanicalPigmentVfx=false',
+    )).toBe(false);
+  });
+
+  it('keeps exact PLNT lamina relief subordinate to the E28 pigment parent', () => {
+    expect(resolvePlantLaminaVfxEnabled(
+      'classic', '?plantLaminaVfx=1',
+    )).toBe(false);
+    expect(resolvePlantLaminaVfxEnabled('realistic', '')).toBe(true);
+    expect(resolvePlantLaminaVfxEnabled('neon-lab', '')).toBe(true);
+    expect(resolvePlantLaminaVfxEnabled(
+      'realistic', '?botanicalBodyVfx=0&plantLaminaVfx=1',
+    )).toBe(false);
+    expect(resolvePlantLaminaVfxEnabled(
+      'realistic', '?botanicalMesostructureVfx=0&plantLaminaVfx=on',
+    )).toBe(false);
+    expect(resolvePlantLaminaVfxEnabled(
+      'realistic', '?botanicalPigmentVfx=0&plantLaminaVfx=true',
+    )).toBe(false);
+    expect(resolvePlantLaminaVfxEnabled(
+      'realistic',
+      '?volumeVfx=0&botanicalBodyVfx=1&botanicalMesostructureVfx=1&botanicalPigmentVfx=1&plantLaminaVfx=1',
+    )).toBe(true);
+    expect(resolvePlantLaminaVfxEnabled(
+      'realistic', '?plantLaminaVfx=false',
     )).toBe(false);
   });
 

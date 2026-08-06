@@ -497,6 +497,37 @@ and `fullScaleMatrix=true`: Noble quality becomes
 `3.51`/`3.52`/`3.52`, support/component remain `1`, and dark/clipped fractions
 remain zero.
 
+E32 is the accepted exact-PLNT lamina-detail card for normal WebGL 1×–4×.
+`plantLaminaVfx=0|1` is a strict child of E28 pigment/body depth, E26
+mesostructure, and E20 body recomposition. It requires authoritative PLNT `10`
+inside the inherited ordinary body proof and a packed native lifecycle word
+that is either exact zero or the presence-only `0x8000` marker. Hydration,
+growth, direction, phase, and inherited-colour payloads remain protected
+controls. The eligible branch combines the existing leaf body, pigment, vein,
+and boundary evidence with one deterministic world-anchored 2.8-cell
+procedural value-noise octave. It changes RGB only and adds no texture or field
+sample, sampler, GPU resource, upload, pass, target, persistent allocation,
+clock, alpha/support, silhouette, ownership, topology, lifecycle state, or
+physics decision. Canvas and compact true 8× retain their previous paths.
+
+`npm run audit:vfx:plant-lamina` runs E32 off→on→off at 1×/2×/4× while
+pinning unrelated optional VFX off. Both exact eligible PLNT bodies respond;
+34 topology/contact/wall/foreign-owner and lifecycle controls remain exact,
+and the disabled framebuffer repeats with peak zero. Requested-on true 8×
+promotes exact 4896×3072 WebGL while E20/E26/E28/E32/HDR remain inactive for
+`scale-8`; observed GPU fences complete in roughly `5.2–5.8 s` with zero
+browser errors. The accepted canonical 2× composed candidate raises PLNT
+quality `56.122 → 78.733`; microcontrast/chroma/macro become
+`1.93`/`1.75`/`36`, luma SD/range becomes `7.99`/`42`, support recall and
+dominant component remain `1`, and clipping remains zero. The final production
+matrix is `crossScaleVerified=true` and `fullScaleMatrix=true`, with HDR and
+E32 active at all three scales, identical semantic hash `595518258`, and zero
+browser errors. At 1×/2×/4×, PLNT quality is
+`69.928`/`78.733`/`82.641`, support recall is `1`/`1`/`1`, coverage is
+`.971`/`.971`/`.971`, luma SD is `7.90`/`7.99`/`8.06`, microcontrast is
+`1.70`/`1.93`/`2.07`, chroma is `1.66`/`1.75`/`1.77`, and macro range is
+`36`/`36`/`36`. Dark and clipped fractions are zero throughout.
+
 HEAC, PTNM, and RSSS now receive a second exact-owner deep rigid-body layer:
 the rapid heat conductor has restrained warm channel lamellae, Platinum uses
 cool catalytic planes with sparse active sites, and solidified resist gains a
@@ -647,19 +678,25 @@ The app-owned showcase fixture remains semantic version 3, but v3 and v4
 quality indices are not comparable. The frozen pre-E27 Smoke frame has
 softness `1`, billow depth as its weakest cue, and v4 quality `45.542`.
 
-The accepted post-E31 production matrix is `crossScaleVerified=true` and
-`fullScaleMatrix=true` at 1×/2×/4× with semantic hash `595518258`, 104,027
-occupied cells, and zero browser errors. E29 first raises canonical ROCK from
-`45.685` to `90.2`. E30 then raises Wood from `50.781` to `80.251` at 2×.
-Wood quality/micro/chroma/macro is `71.833`/`1.97`/`1.29`/`26` at 1×,
-`80.251`/`2.25`/`1.42`/`26` at 2×, and
-`83.247`/`2.37`/`1.47`/`26` at 4×. Support recall and dominant component remain
-`1`, dark/clipped fractions are zero, and luma range is `37`/`42`/`41`.
-PLNT is unchanged at quality `46.355`/`56.122`/`59.540`; it now represents
-Organic at canonical 2×. E31 raises Noble Gas from `52.710` to
-`95.351`/`95.463`/`95.463` at 1×/2×/4× while preserving exact support and zero
-clipping. PLNT at `56.122` is therefore the next measured fit-view review
-target; Smoke at `66.914` is second.
+The accepted production matrix through E32 is `crossScaleVerified=true` and
+`fullScaleMatrix=true` at 1×/2×/4×, with HDR and E32 active, semantic hash
+`595518258`, 104,027 occupied cells, and zero browser errors at every scale.
+Preserve the preceding history: E29 first raised canonical ROCK from `45.685`
+to `90.2`; E30 then raised the individual Wood probe from `50.781` to
+`80.251` at 2×, with Wood quality/micro/chroma/macro
+`71.833`/`1.97`/`1.29`/`26`, `80.251`/`2.25`/`1.42`/`26`, and
+`83.247`/`2.37`/`1.47`/`26` at 1×/2×/4×. E31 raised Noble Gas from `52.710`
+to `95.351`/`95.463`/`95.463` while the then-unchanged PLNT remained
+`46.355`/`56.122`/`59.540`.
+
+E32 now raises PLNT to `69.928`/`78.733`/`82.641` quality at 1×/2×/4×.
+Support recall is `1` and coverage is `.971` at every scale; luma SD is
+`7.90`/`7.99`/`8.06`, microcontrast is `1.70`/`1.93`/`2.07`, chroma is
+`1.66`/`1.75`/`1.77`, and macro range remains `36`. Dark and clipped
+fractions stay zero. The canonical family order is therefore Gas/Smoke
+`66.914`, Organic/PLNT `78.733`, Contact `88.235`, Solid `90.2`, Liquid
+`91.033`, Emission `98.475`, and Powder `100.000`. Wood's `80.251` remains an
+individual historical E30 probe, not a family-rank entry.
 
 Timing output is diagnostic rather than a cross-machine pass/fail threshold. It includes baseline Canvas atmosphere relief and the same full plane under a nonzero cardinal-gradient emission field, Canvas surface-lighting, deliberately pessimistic full-612×384 energy-core and trait-core passes, a fully dense Water cohesion pass, a full-height Water/Oil boundary pass, and an all-cells liquid-light gate in which every cell is pessimistically treated as a top-surface candidate and samples field relief. Dense translucent coupling is measured twice: an honest all-Glass/all-field ceiling and the ordinary single-localized-source path after `EmissionField.mayLightWorldCell` rejection. A separate pathological all-world Glass-over-wall refraction profile includes its diagnostic pixel reset; production admits only exact Glass/Ice cells that coexist with a wall, performs no allocation or field sample, and ordinary scenes touch a small fraction of that ceiling. Full-world caustic and lens-shell arithmetic diagnostics include repeated RGB scratch initialization that production already performs while styling. The latest lens-shell ceiling measured `11.25/11.58/12.61 ms` median/p90/max across all 235,008 world cells and adds zero runtime bytes; production additionally gates it to exact Glass/Ice and reuses the existing color scratch, relief, and contour response. Checksums are consumed sparsely outside the timed production-shaped loops and the solid-relief checksum remains independent. The atmosphere-light descriptor is module-scoped and reused, so the timed loop allocates no object or typed buffer. Trait profiling covers realistic masks, a synthetic all-bits mask, and a representative composite, and consumes representative output through a checksum outside the timed region so the JIT cannot discard the work without charging checksum arithmetic to production-like timings. Profiler-only storage is reported separately from runtime-known scratch and does not contribute to `combinedAllocatedBytes`.
 

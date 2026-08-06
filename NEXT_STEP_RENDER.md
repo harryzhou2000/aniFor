@@ -454,11 +454,38 @@ does not alter simulation, camera, semantic ownership, or `renderScale`.
   `95.351`/`95.463`/`95.463` at 1×/2×/4×, luma deviation is
   `3.51`/`3.52`/`3.52`, support/component remain `1`, dark/clipped fractions
   remain zero, and semantic hash/count and browser-error contracts stay exact.
+- **E32 — exact PLNT lamina detail (accepted visual checkpoint):** normal
+  1×–4× WebGL uses `?plantLaminaVfx=0|1` as a strict child of E28 pigment,
+  E26 mesostructure, and E20 body recomposition. Only authoritative PLNT `10`
+  inside the inherited ordinary body proof may respond, and only when its
+  packed native lifecycle word is exact zero or the presence-only `0x8000`
+  marker. Hydration, growth, direction, phase, and inherited-colour payloads
+  remain controls. Inside that eligible branch, the shader evaluates one
+  deterministic world-anchored 2.8-cell procedural value-noise octave and
+  combines it with the established leaf body, pigment, vein, and boundary
+  evidence for irregular lamina grain. This is RGB-only and adds no texture or
+  field sample, sampler, resource, upload, pass, target, persistent allocation,
+  clock, alpha/support, silhouette, ownership, topology, lifecycle state, or
+  physics decision. Canvas and compact true 8× retain their established paths.
+  `npm run audit:vfx:plant-lamina` proves 1×/2×/4× off→on→off restoration,
+  34 exact controls, repeated-off peak zero, and requested-on true-8× exclusion
+  at exact 4896×3072 with a real `5.2–5.8 s` GPU fence and zero browser errors.
+  The accepted canonical 2× composed candidate lifts PLNT quality
+  `56.122 → 78.733`; microcontrast/chroma/macro become `1.93`/`1.75`/`36`,
+  luma SD/range becomes `7.99`/`42`, support/component stay `1`, and clipping
+  stays zero. The final full production matrix is `crossScaleVerified=true`
+  and `fullScaleMatrix=true`, with HDR and E32 active at every scale, identical
+  semantic hash `595518258`, and zero browser errors. At 1×/2×/4×, PLNT
+  quality is `69.928`/`78.733`/`82.641`, support recall is `1`/`1`/`1`,
+  coverage is `.971`/`.971`/`.971`, luma SD is `7.90`/`7.99`/`8.06`,
+  microcontrast is `1.70`/`1.93`/`2.07`, chroma is
+  `1.66`/`1.75`/`1.77`, and macro range is `36`/`36`/`36`; dark and clipped
+  fractions remain zero.
 - **Protected 8× rung:** `renderScale=8` deliberately reports
   `hdrPipeline=inactive` / `scale-8` and retains the proven direct single-mesh
   4896×3072 path. The experiment must earn a bounded 8× design rather than
   allocating a 115 MiB full-resolution float target beside that path.
-- **Current decision:** E01/E02/E03/E04/E05/E06/E07/E08/E09/E10/E11/E12/E13/E14/E15/E16/E17/E18/E19/E20/E21/E22/E23/E24/E25/E26/E27/E28/E29/E30/E31 remain opt-in through the non-Classic looks
+- **Current decision:** E01/E02/E03/E04/E05/E06/E07/E08/E09/E10/E11/E12/E13/E14/E15/E16/E17/E18/E19/E20/E21/E22/E23/E24/E25/E26/E27/E28/E29/E30/E31/E32 remain opt-in through the non-Classic looks
   until representative hardware timing and mobile thermal behavior are
   measured. E02 remains the safe family-wide baseline. E03 is accepted as the
   liquid-depth checkpoint: its fit-view crop is visibly more cohesive, retains
@@ -580,6 +607,11 @@ does not alter simulation, camera, semantic ownership, or `renderScale`.
   evidence-only bipolar fold, accepted cross-scale envelope, and compact-8×
   exclusion. Do not replace its broad `gasVfxWaveC` carrier with a cell-scale
   motif or stack it onto foreign atmosphere species.
+  E32 is the accepted exact-PLNT lamina checkpoint: freeze its E20/E26/E28
+  dependency chain, exact zero-or-presence-only lifecycle gate, one branch-
+  gated world-anchored 2.8-cell value-noise octave, and compact-8× exclusion.
+  Do not widen it to stateful PLNT, add another octave, or turn its RGB grain
+  into silhouette or topology.
   These are not the final material/VFX results.
   Sub-1.0 material colour stays on the established response; tonemapping owns
   only real HDR highlights so powder texture and liquid body contrast are not
@@ -1124,6 +1156,25 @@ at most `3`. Requested-on true 8× must promote exact 4896×3072 WebGL while
 E04/E25/E31/HDR remain inactive for `scale-8`; the accepted tail signals a
 real GPU fence with zero browser errors.
 
+Run `npm run audit:vfx:plant-lamina` for E32. It isolates E20+E26+E28 and runs
+`plantLaminaVfx=0 → 1 → 0` at normal WebGL 1×/2×/4× while pinning unrelated
+optional visual selectors off. The two exact zero-state/presence-only PLNT
+bodies respond; both stateful lifecycle canopies and all earlier topology,
+contact, wall, and foreign-owner probes remain among 34 exact controls.
+Semantics, alpha/support, auxiliary depth, native walls, lifecycle state, and
+the disabled framebuffer remain exact, with repeated-off peak zero. The one
+2.8-cell procedural octave is evaluated only inside the exact eligible PLNT
+branch; no texture sample or GPU resource is added. Requested-on true 8× must
+promote exact 4896×3072 WebGL while E20/E26/E28/E32/HDR remain inactive for
+`scale-8`; accepted runs signal real GPU fences in roughly `5.2–5.8 s` with
+zero browser errors. The final production rerun keeps HDR and E32 active at
+1×/2×/4× and reports `crossScaleVerified=true`, `fullScaleMatrix=true`, exact
+semantic hash `595518258`, and zero browser errors. PLNT quality is
+`69.928`/`78.733`/`82.641`; support recall is exact `1`, coverage is exact
+`.971`, macro range is exact `36`, and dark/clipped fractions are zero at all
+three scales. Luma SD is `7.90`/`7.99`/`8.06`, microcontrast is
+`1.70`/`1.93`/`2.07`, and chroma is `1.66`/`1.75`/`1.77`.
+
 The earlier post-E16 survey was invalid for Solid: it sampled native Stone `21`,
 which is Powder, while labelling that region Solid. The corrected post-E17
 showcase uses native ROCK `78`, asserts exactly `2769` matching Solid cells, and
@@ -1203,13 +1254,18 @@ next production 4× survey then selected Wood/PLNT as the largest remaining
   `83.247`/`2.37`/`1.47`/`26` at 4×. Support/component remain `1`, dark/clipped
   remain zero, and luma range is `37`/`42`/`41`. E31 then raises Noble Gas from
   `52.710` to `95.351`/`95.463`/`95.463` at 1×/2×/4×, with full support recall
-  and zero clipping. PLNT now represents Organic and the global canonical 2×
-  weakness at `56.122`; Smoke at `66.914` is second. Do not widen E17–E31
+  and zero clipping. E32 then raises canonical 2× PLNT from `56.122` to
+  `78.733`, with microcontrast/chroma/macro `1.93`/`1.75`/`36`, luma SD/range
+  `7.99`/`42`, support/component `1`, and zero clipping. Smoke at `66.914` is
+  now the weakest canonical family probe, Organic/PLNT at `78.733` is second,
+  followed by Contact `88.235`, Solid `90.2`, Liquid `91.033`, Emission
+  `98.475`, and Powder `100.000`. Wood's `80.251` remains an individual
+  historical E30 probe, not a family-rank entry. Do not widen E17–E32
   owner sets by resemblance alone or stack
   another generic gas layer over E04/E07/E13/E15; preserve their independent
   owner, exposure, topology, scale, and true-8× contracts.
 
-**Next visual experiments:** E03–E31 now provide accepted liquid body/surface,
+**Next visual experiments:** E03–E32 now provide accepted liquid body/surface,
 stable-gas, coherent-gas-motion, powder-depth, and powder-local-light
 checkpoints plus exact resting contact grounding, Glass/Ice transmission, and
 state-aware Wax/PLNT subsurface response, composed wet-mineral optics,
@@ -1229,9 +1285,13 @@ the rejected continuous stripe replaced by an interrupted lamina; its focused
 audit passed. E30 adds exact Wood interrupted bark relief without changing
 PLNT, lifecycle state, or topology. E31 adds an exact Noble Gas prismatic
 inner-volume fold without changing atmosphere ownership, topology, or compact
-8×. Noble quality is `95.463` at canonical 2×; PLNT is now the global weakest
-at `56.122`, followed by Smoke at `66.914`. Review the exact PLNT fit-view
-fixture before adding another organic layer. The
+8×. E32 adds exact zero-state/presence-only PLNT lamina grain without changing
+lifecycle state, topology, or compact 8×. Noble quality is `95.463` at
+canonical 2×; the current canonical family order is Smoke `66.914`, PLNT
+`78.733`, Contact `88.235`, Solid `90.2`, Liquid `91.033`, Emission `98.475`,
+and Powder `100.000`. The earlier Wood `80.251` value remains its individual
+E30 probe, not a family-rank entry. Review the exact Smoke fit-view fixture
+before adding another volumetric gas layer. The
 radioactive-solid review
 found no current identity bug, but also
 proved that the existing
@@ -1241,7 +1301,7 @@ with topology-preserving, material-
 specific cards that reuse already-live evidence. Prefer the smallest
 arithmetic-only candidate that fixes a visible fit-view deficiency; do not add
 an isolated tint merely to continue the experiment number. Preserve the E14
-1× stencil snap and all E01–E31 selectors and controls while designing the
+1× stencil snap and all E01–E32 selectors and controls while designing the
 next bounded card.
 
 ## Phase 1 — HDR pipeline & lighting core (biggest visual payoff)

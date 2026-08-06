@@ -13,7 +13,7 @@ powder, solid, liquid, gas, energy, and contact scenes across Canvas and WebGL a
 mobile gestures, save/load, CI, and Pages deployment as protected regression
 contracts rather than the primary feature stream.
 
-The accepted visual experiment ladder now runs through E31. E12 is the
+The accepted visual experiment ladder now runs through E32. E12 is the
 species-safe Sand/Clay/Concrete wet-sediment checkpoint; preserve its exact
 aqueous owner/stability proof, split moving-powder/stationary-Water control,
 Local/Grains no-op, fine structures, authored gaps, Canvas fallback, and true
@@ -445,6 +445,38 @@ with zero browser errors. The full composed matrix remains
 stay `1`, dark/clipped fractions stay zero, and the semantic hash/count remain
 `595518258`/104,027.
 
+E32 is the accepted normal-WebGL-only exact-PLNT lamina checkpoint.
+`?plantLaminaVfx=0|1` is a strict child of E28 pigment/body depth, E26
+mesostructure, and E20 body recomposition. It may style only authoritative
+PLNT `10` inside the inherited ordinary body proof when the packed native
+lifecycle word is either exact zero or the presence-only `0x8000` marker;
+hydration, growth, direction, phase, and inherited-colour payloads remain
+controls. The eligible branch reuses the established leaf body, pigment,
+vein, and boundary evidence and evaluates one deterministic world-anchored
+2.8-cell procedural value-noise octave for irregular lamina grain. The effect
+is RGB-only and adds no texture or field sample, sampler, resource, upload, pass,
+target, persistent allocation, clock, alpha, support, silhouette, ownership,
+topology, lifecycle state, or physics decision. Canvas and compact true 8×
+retain their established botanical presentation.
+
+Validate E32 with `npm run audit:vfx:plant-lamina`: its 1×/2×/4×
+off→on→off matrix preserves 34 exact topology/contact/wall/foreign-owner and
+lifecycle controls, and the disabled framebuffer repeats with peak zero. The
+requested-on true-8× tail keeps E20/E26/E28/E32/HDR inactive for `scale-8`,
+promotes exact 4896×3072 WebGL, and signals a real GPU fence in roughly
+`5.2–5.8 s` with zero browser errors. The accepted canonical 2× composed
+candidate raises PLNT quality from `56.122` to `78.733`; microcontrast,
+chroma, macro range, and luma SD/range become `1.93`, `1.75`, `36`, and
+`7.99`/`42`. Support recall/dominant component remain `1`, and clipping
+remains zero. The subsequent full production matrix is
+`crossScaleVerified=true` and `fullScaleMatrix=true` with HDR and E32 active
+at every scale, identical semantic hash `595518258`, and zero browser errors.
+At 1×/2×/4×, PLNT quality is `69.928`/`78.733`/`82.641`, support recall is
+`1`/`1`/`1`, rendered coverage is `.971`/`.971`/`.971`, luma SD is
+`7.90`/`7.99`/`8.06`, microcontrast is `1.70`/`1.93`/`2.07`, chroma is
+`1.66`/`1.75`/`1.77`, and macro range remains `36` at every scale. Dark and
+clipped fractions remain zero.
+
 The radioactive-solid review found no current correctness bug: ISZS `105`
 and VIBR `113` already receive exact-species Solid depth, while the existing
 seven-owner radioactive identity motif is intentionally phase-permissive.
@@ -518,10 +550,14 @@ macro is `71.833`/`1.97`/`1.29`/`26` at 1×,
 `1`, dark/clipped fractions remain zero, and luma range is `37`/`42`/`41`.
 E31 raises exact Noble Gas to `95.351`/`95.463`/`95.463` quality at
 1×/2×/4×, with luma deviation about `3.51`/`3.52`/`3.52`, full support recall,
-and no clipping. Organic/PLNT at `56.122` is now the weakest canonical 2×
-family; Smoke at `66.914` is second. Inspect PLNT's current fit-view evidence
-before selecting the next bounded experiment, and never compare v3 and v4
-quality indices as if they shared one scoring contract.
+and no clipping. E32 then raises canonical 2× PLNT from `56.122` to `78.733`
+without changing its support, dominant component, or clipping. Smoke at
+`66.914` is therefore the weakest canonical family probe, Organic/PLNT at
+`78.733` is second, followed by Contact `88.235`, Solid `90.2`, Liquid
+`91.033`, Emission `98.475`, and Powder `100.000`. Wood's `80.251` remains an
+individual historical E30 probe, not a family-rank entry. Inspect Smoke's
+current fit-view evidence before selecting the next bounded experiment, and
+never compare v3 and v4 quality indices as if they shared one scoring contract.
 
 WebGL is the canonical visual release path. Canvas 2D remains a resilient,
 camera-preserving semantic fallback: keep its loading, input, material/state,

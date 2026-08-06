@@ -1034,7 +1034,7 @@ describe('Pixi presenter startup configuration', () => {
     expect(normal).toContain('uniform float uBotanicalMesostructureVfx;');
     // E26 owns its body gate and both exact children repeat the same predicate
     // so an inconsistent child uniform cannot bypass its parent in GLSL.
-    expect(normal.match(/uBotanicalMesostructureVfx > 0\.5/g)).toHaveLength(3);
+    expect(normal.match(/uBotanicalMesostructureVfx > 0\.5/g)).toHaveLength(4);
     expect(eight).not.toContain('uBotanicalMesostructureVfx');
     expect(eight).not.toContain('botanicalMesostructureVfx');
     expect(canvasSource).not.toContain('botanicalMesostructureVfx');
@@ -1046,7 +1046,7 @@ describe('Pixi presenter startup configuration', () => {
       'botanicalDepth', 'botanicalMacro', 'botanicalCluster',
       'leafBoundary', 'barkBody', 'barkKnot',
     ]) expect(e20.slice(e26Start)).toContain(establishedValue);
-    expect(e20.match(/botanicalBodyNoise\(/g)).toHaveLength(3);
+    expect(e20.match(/botanicalBodyNoise\(/g)).toHaveLength(4);
     expect(e20).not.toContain('texture(');
     expect(e20).not.toContain('uTime');
     expect(e20).not.toContain('gl_FragCoord');
@@ -1097,7 +1097,7 @@ describe('Pixi presenter startup configuration', () => {
     expect(plantFinish).toBeGreaterThan(pigmentGate);
     expect(woodFinish).toBeGreaterThan(plantFinish);
     expect(normal).toContain('uniform float uBotanicalPigmentVfx;');
-    expect(normal.match(/uBotanicalPigmentVfx > 0\.5/g)).toHaveLength(1);
+    expect(normal.match(/uBotanicalPigmentVfx > 0\.5/g)).toHaveLength(2);
     expect(eight).not.toContain('uBotanicalPigmentVfx');
     expect(eight).not.toContain('botanicalPigmentVfx');
     expect(canvasSource).not.toContain('botanicalPigmentVfx');
@@ -1115,7 +1115,7 @@ describe('Pixi presenter startup configuration', () => {
     expect(e20).toContain('vec3(-0.052, 0.022, -0.060) * leafPigmentBody');
     expect(e20).toContain('barkPigmentBody * 0.026 * botanicalPigment');
     expect(e20).toContain('vec3(0.085, -0.017, -0.052) * barkPigmentBody');
-    expect(e20.match(/botanicalBodyNoise\(/g)).toHaveLength(3);
+    expect(e20.match(/botanicalBodyNoise\(/g)).toHaveLength(4);
     expect(e20).not.toContain('texture(');
     expect(e20).not.toContain('uTime');
     expect(e20).not.toContain('gl_FragCoord');
@@ -1131,6 +1131,61 @@ describe('Pixi presenter startup configuration', () => {
     expect(preserveDrawingBuffer).toContain("get('botanicalPigmentVfxAudit') === '1'");
     expect(source).toContain('presenter.app.canvas.dataset.botanicalPigmentVfx');
     expect(source).toContain("this.app.canvas.dataset.botanicalPigmentVfx = 'inactive';");
+  });
+
+  it('keeps E32 PLNT lamina exact-owner/state, E28-dependent, normal-WebGL-only, and RGB-only', () => {
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const canvasSource = readFileSync(new URL('./field-renderer.ts', import.meta.url), 'utf8');
+    const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');
+    const normalStart = source.indexOf('const FIELD_FRAGMENT = `', eightStart);
+    const normalEnd = source.indexOf('`;\n\n/** Primary WebGL presentation', normalStart);
+    const eight = source.slice(eightStart, normalStart);
+    const normal = source.slice(normalStart, normalEnd);
+    const e32Start = normal.indexOf('          // E32: exact PLNT');
+    const e32End = normal.indexOf('        } else {', e32Start);
+    const e32 = normal.slice(e32Start, e32End);
+    const preserveDrawingBufferStart = source.indexOf('preserveDrawingBuffer:');
+    const preserveDrawingBufferEnd = source.indexOf(
+      'resolution: outputScale', preserveDrawingBufferStart,
+    );
+    const preserveDrawingBuffer = source.slice(
+      preserveDrawingBufferStart, preserveDrawingBufferEnd,
+    );
+
+    expect(e32Start).toBeGreaterThanOrEqual(0);
+    expect(e32End).toBeGreaterThan(e32Start);
+    expect(normal).toContain('uniform float uPlantLaminaVfx;');
+    expect(normal.match(/uPlantLaminaVfx > 0\.5/g)).toHaveLength(1);
+    expect(eight).not.toContain('uPlantLaminaVfx');
+    expect(eight).not.toContain('plantLaminaVfx');
+    expect(canvasSource).not.toContain('plantLaminaVfx');
+    for (const guard of [
+      'material == 10.0', 'botanicalBodyReplacement > 0.5',
+      'uBotanicalMesostructureVfx > 0.5', 'uBotanicalPigmentVfx > 0.5',
+      'uPlantLaminaVfx > 0.5', 'wallState.b', 'wallState.a', '32768.0',
+    ]) expect(e32).toContain(guard);
+    for (const establishedValue of [
+      'botanicalDepth', 'leafPigmentBody', 'leafBody', 'leafVein', 'leafBoundary',
+    ]) expect(e32).toContain(establishedValue);
+    expect(e32).toContain('fieldPosition / 2.8');
+    expect(e32.match(/botanicalBodyNoise\(/g)).toHaveLength(1);
+    expect(e32).toContain('if (plantLamina > 0.001)');
+    expect(e32).not.toContain('sin(');
+    expect(e32).not.toContain('texture(');
+    expect(e32).not.toContain('uTime');
+    expect(e32).not.toContain('gl_FragCoord');
+    expect(e32).not.toMatch(/\balpha\s*[+*]?=/);
+    expect(source.match(/this\.uniforms\.uniforms\.uPlantLaminaVfx = 0;/g))
+      .toHaveLength(2);
+    expect(source).toMatch(
+      /const plantLaminaVfxEnabled = outputScale < 8\s*&& resolvePlantLaminaVfxEnabled\(renderLook\);/,
+    );
+    expect(source).toContain(
+      'uPlantLaminaVfx: { value: plantLaminaVfxEnabled ? 1 : 0',
+    );
+    expect(preserveDrawingBuffer).toContain("get('plantLaminaVfxAudit') === '1'");
+    expect(source).toContain('presenter.app.canvas.dataset.plantLaminaVfx');
+    expect(source).toContain("this.app.canvas.dataset.plantLaminaVfx = 'inactive';");
   });
 
   it('keeps E30 Wood bark relief exact-owner, normal-WebGL-only, and resource-neutral', () => {

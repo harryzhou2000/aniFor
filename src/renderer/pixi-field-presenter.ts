@@ -41,6 +41,7 @@ import {
   resolveBotanicalBodyVfxEnabled,
   resolveBotanicalMesostructureVfxEnabled,
   resolveBotanicalPigmentVfxEnabled,
+  resolvePlantLaminaVfxEnabled,
   resolveWoodBarkReliefVfxEnabled,
   resolveGlassBodyVfxEnabled,
   resolveGasBodyVfxEnabled, resolveGasCoreDepthVfxEnabled, resolveGasLightVfxEnabled,
@@ -3251,6 +3252,7 @@ uniform float uCeramicGlazeVfx;
 uniform float uBotanicalBodyVfx;
 uniform float uBotanicalMesostructureVfx;
 uniform float uBotanicalPigmentVfx;
+uniform float uPlantLaminaVfx;
 uniform float uWoodBarkReliefVfx;
 uniform float uGlassBodyVfx;
 uniform float uLiquidBodyVfx;
@@ -8503,6 +8505,57 @@ void main() {
           color *= 1.0 + leafPigmentBody * 0.068 * botanicalPigment;
           color += vec3(-0.052, 0.022, -0.060) * leafPigmentBody
             * botanicalPigment;
+          // E32: exact PLNT retains a cohesive canopy, but its accepted E28
+          // body is too uniform at fit view. One static 2.8-cell octave adds a
+          // subordinate lamina grain while the established signed lobe and
+          // segmented vein keep that fine carrier organized as leaf tissue.
+          // The octave is evaluated only for eligible zero-payload PLNT in a
+          // raw-zero or ordinary owner-present state. This normal-shader path
+          // remains RGB-only and adds no texture fetch,
+          // field, pass, target, allocation, clock, alpha, support, lifecycle
+          // state, topology, ownership, or physics decision. Canvas and compact
+          // true 8x retain the accepted E28 presentation.
+          float plantLamina = material == 10.0
+              && botanicalBodyReplacement > 0.5
+              && uBotanicalMesostructureVfx > 0.5
+              && uBotanicalPigmentVfx > 0.5
+              && uPlantLaminaVfx > 0.5
+              && mod(
+                floor(wallState.b * 255.0 + 0.5)
+                  + floor(wallState.a * 255.0 + 0.5) * 256.0,
+                32768.0
+              ) < 0.5
+            ? botanicalDepth : 0.0;
+          float leafLaminaBody = clamp(
+            leafPigmentBody * 0.62 + leafBody * 0.38, -1.0, 1.0
+          );
+          float leafLaminaSegment = leafVein
+            * smoothstep(0.14, 0.64, leafBoundary)
+            * (0.90 + leafLaminaBody * 0.10);
+          float leafLaminaPhase = leafLaminaSegment
+            * clamp(leafPigment / 0.19, -1.0, 1.0);
+          float leafLaminaFine = 0.5;
+          if (plantLamina > 0.001) {
+            leafLaminaFine = botanicalBodyNoise(
+              fieldPosition / 2.8 + vec2(13.7, -8.9)
+            );
+          }
+          float leafLaminaCarrier = clamp(
+            (leafLaminaFine - 0.5) * 2.0 + leafLaminaPhase * 0.12,
+            -1.0, 1.0
+          );
+          float leafLaminaCrown = max(leafLaminaCarrier, 0.0);
+          float leafLaminaPocket = max(-leafLaminaCarrier, 0.0);
+          float leafLaminaRib = 1.0 - smoothstep(
+            0.05, 0.18, abs(leafLaminaCarrier)
+          );
+          color *= 1.0 - leafLaminaPocket * 0.050 * plantLamina;
+          color += (vec3(1.0) - clamp(color, 0.0, 1.0))
+            * vec3(0.34, 0.42, 0.22)
+            * (leafLaminaCrown * 0.075 + leafLaminaRib * 0.055)
+            * plantLamina;
+          color += vec3(0.026, -0.0035, -0.042) * leafLaminaCarrier
+            * plantLamina;
         } else {
           float barkWarp = botanicalBodyNoise(vec2(
             fieldPosition.x * 0.050 + botanicalMacro * 0.82,
@@ -10034,6 +10087,10 @@ export class PixiFieldPresenter {
     // Canvas and compact true 8x retain their established botanical grammar.
     const botanicalPigmentVfxEnabled = outputScale < 8
       && resolveBotanicalPigmentVfxEnabled(renderLook);
+    // E32 adds one exact-PLNT static fine octave over E20/E26/E28's existing
+    // lobe, vein, and pigment evidence. Canvas and compact true 8x keep E28.
+    const plantLaminaVfxEnabled = outputScale < 8
+      && resolvePlantLaminaVfxEnabled(renderLook);
     // E21 replaces only normal-WebGL's deep exact-Glass body grade. The
     // compact true-8x shader retains its separately proven transmission path
     // and deliberately declares neither this selector nor its arithmetic.
@@ -10091,6 +10148,7 @@ export class PixiFieldPresenter {
         value: botanicalMesostructureVfxEnabled ? 1 : 0, type: 'f32',
       },
       uBotanicalPigmentVfx: { value: botanicalPigmentVfxEnabled ? 1 : 0, type: 'f32' },
+      uPlantLaminaVfx: { value: plantLaminaVfxEnabled ? 1 : 0, type: 'f32' },
       uWoodBarkReliefVfx: { value: woodBarkReliefVfxEnabled ? 1 : 0, type: 'f32' },
       uGlassBodyVfx: { value: glassBodyVfxEnabled ? 1 : 0, type: 'f32' },
       uLiquidBodyVfx: { value: liquidBodyVfxEnabled ? 1 : 0, type: 'f32' },
@@ -10322,6 +10380,7 @@ export class PixiFieldPresenter {
       this.uniforms.uniforms.uBotanicalBodyVfx = 0;
       this.uniforms.uniforms.uBotanicalMesostructureVfx = 0;
       this.uniforms.uniforms.uBotanicalPigmentVfx = 0;
+      this.uniforms.uniforms.uPlantLaminaVfx = 0;
       this.uniforms.uniforms.uWoodBarkReliefVfx = 0;
       this.uniforms.uniforms.uGlassBodyVfx = 0;
       this.uniforms.uniforms.uLiquidBodyVfx = 0;
@@ -10376,6 +10435,7 @@ export class PixiFieldPresenter {
             || new URLSearchParams(location.search).get('botanicalBodyVfxAudit') === '1'
             || new URLSearchParams(location.search).get('botanicalMesostructureVfxAudit') === '1'
             || new URLSearchParams(location.search).get('botanicalPigmentVfxAudit') === '1'
+            || new URLSearchParams(location.search).get('plantLaminaVfxAudit') === '1'
             || new URLSearchParams(location.search).get('woodBarkReliefVfxAudit') === '1'
             || new URLSearchParams(location.search).get('glassBodyVfxAudit') === '1'
             || new URLSearchParams(location.search).get('oilBodyVfxAudit') === '1'
@@ -10458,6 +10518,9 @@ export class PixiFieldPresenter {
     ) > 0.5 ? 'active' : 'inactive';
     presenter.app.canvas.dataset.botanicalPigmentVfx = Number(
       presenter.uniforms.uniforms.uBotanicalPigmentVfx
+    ) > 0.5 ? 'active' : 'inactive';
+    presenter.app.canvas.dataset.plantLaminaVfx = Number(
+      presenter.uniforms.uniforms.uPlantLaminaVfx
     ) > 0.5 ? 'active' : 'inactive';
     presenter.app.canvas.dataset.woodBarkReliefVfx = Number(
       presenter.uniforms.uniforms.uWoodBarkReliefVfx
@@ -11877,6 +11940,7 @@ export class PixiFieldPresenter {
         this.uniforms.uniforms.uBotanicalBodyVfx = 0;
         this.uniforms.uniforms.uBotanicalMesostructureVfx = 0;
         this.uniforms.uniforms.uBotanicalPigmentVfx = 0;
+        this.uniforms.uniforms.uPlantLaminaVfx = 0;
         this.uniforms.uniforms.uWoodBarkReliefVfx = 0;
         this.uniforms.uniforms.uGlassBodyVfx = 0;
         this.uniforms.uniforms.uLiquidBodyVfx = 0;
@@ -11908,6 +11972,7 @@ export class PixiFieldPresenter {
         this.app.canvas.dataset.botanicalBodyVfx = 'inactive';
         this.app.canvas.dataset.botanicalMesostructureVfx = 'inactive';
         this.app.canvas.dataset.botanicalPigmentVfx = 'inactive';
+        this.app.canvas.dataset.plantLaminaVfx = 'inactive';
         this.app.canvas.dataset.woodBarkReliefVfx = 'inactive';
         this.app.canvas.dataset.glassBodyVfx = 'inactive';
         this.app.canvas.dataset.liquidBodyVfx = 'inactive';

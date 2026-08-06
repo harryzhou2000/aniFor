@@ -373,6 +373,22 @@ export function resolveBotanicalPigmentVfxEnabled(
 }
 
 /**
+ * E32 gives exact PLNT a bounded leaf-lamina and vein response only after E28
+ * has established its body pigment. The child cannot revive E20/E26/E28 and
+ * remains independently switchable for exact lifecycle/topology audits.
+ */
+export function resolvePlantLaminaVfxEnabled(
+  look: RenderLook,
+  search = globalThis.location?.search ?? '',
+): boolean {
+  if (!resolveBotanicalPigmentVfxEnabled(look, search)) return false;
+  const requested = new URLSearchParams(search).get('plantLaminaVfx');
+  if (requested === '0' || requested === 'off' || requested === 'false') return false;
+  if (requested === '1' || requested === 'on' || requested === 'true') return true;
+  return true;
+}
+
+/**
  * Keeps the exact thick-Glass body-transmission experiment independently
  * measurable inside the broader volume study. Normal WebGL owns the strict
  * Glass owner, depth, contact, and topology guards; Canvas and compact true 8x
