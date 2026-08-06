@@ -26,6 +26,9 @@ import {
   POWDER_LIGHT_VFX_AUDIT, preparePowderLightVfxFixture,
 } from './powder-light-vfx-audit';
 import {
+  THERMITE_BODY_VFX_AUDIT, prepareThermiteBodyVfxAuditFixture,
+} from './thermite-body-vfx-audit';
+import {
   GAS_MOTION_VFX_AUDIT, prepareGasMotionVfxFixture,
 } from './gas-motion-vfx-audit';
 import {
@@ -742,6 +745,12 @@ export class Game {
       powderLightVfxFixture: () => POWDER_LIGHT_VFX_AUDIT,
       preparePowderLightVfxFixture: () => {
         preparePowderLightVfxFixture(this.simulation);
+        this.renderer.invalidateDynamicPresentation();
+      },
+      thermiteBodyVfxFixture: () => THERMITE_BODY_VFX_AUDIT,
+      prepareThermiteBodyVfxFixture: () => {
+        prepareThermiteBodyVfxAuditFixture(this.simulation);
+        this.renderer.synchronizeFixtureMaterialPlane();
         this.renderer.invalidateDynamicPresentation();
       },
       gasMotionVfxFixture: () => GAS_MOTION_VFX_AUDIT,

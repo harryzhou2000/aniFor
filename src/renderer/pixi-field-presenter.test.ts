@@ -1753,6 +1753,70 @@ describe('Pixi presenter startup configuration', () => {
     expect(preserve).toContain("get('sootyPowderBodyVfxAudit') === '1'");
   });
 
+  it('keeps E45 Thermite optics exact-owner, E05-dependent, normal-WebGL-only, and RGB-only', () => {
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const canvasSource = readFileSync(new URL('./field-renderer.ts', import.meta.url), 'utf8');
+    const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');
+    const normalStart = source.indexOf('const FIELD_FRAGMENT = `', eightStart);
+    const normalEnd = source.indexOf('`;\n\n/** Primary WebGL presentation', normalStart);
+    const eight = source.slice(eightStart, normalStart);
+    const normal = source.slice(normalStart, normalEnd);
+    const e45Start = normal.indexOf('          // E45:');
+    const e45End = normal.indexOf(
+      '        // This is intentionally stricter than a generic settled-powder', e45Start,
+    );
+    const e45 = normal.slice(e45Start, e45End);
+    const parentStart = normal.lastIndexOf(
+      '        if (uPowderBodyVfx > 0.5', e45Start,
+    );
+    const parent = normal.slice(parentStart, e45End);
+    const powderScopeStart = normal.lastIndexOf('    if (family == 4.0)', e45Start);
+    const powderScope = normal.slice(powderScopeStart, e45End);
+    const preserveStart = source.indexOf('preserveDrawingBuffer:');
+    const preserveEnd = source.indexOf('resolution: outputScale', preserveStart);
+    const preserve = source.slice(preserveStart, preserveEnd);
+
+    expect(e45Start).toBeGreaterThanOrEqual(0);
+    expect(e45End).toBeGreaterThan(e45Start);
+    expect(parentStart).toBeGreaterThanOrEqual(0);
+    expect(powderScopeStart).toBeGreaterThanOrEqual(0);
+    expect(normal).toContain('uniform float uThermiteBodyVfx;');
+    expect(normal.match(/uThermiteBodyVfx > 0\.5/g)).toHaveLength(1);
+    expect(eight).not.toContain('uThermiteBodyVfx');
+    expect(eight).not.toContain('thermiteBodyCrown');
+    expect(canvasSource).not.toContain('thermiteBodyVfx');
+    expect(e45).toContain('optics == 15.0');
+    expect(e45).toContain('material == 30.0');
+    expect(e45).toContain('powderBodyGate');
+    expect(e45).toContain('powderBodyVolumeDepth');
+    expect(e45).toContain('powderVfxFacetBalance');
+    expect(e45).toContain('powderDirectedSlope');
+    expect(parent).toContain('uPowderBodyVfx > 0.5');
+    expect(parent).toContain('powderSuspensionCohesion < 0.01');
+    for (const guard of [
+      'family == 4.0', 'uPowderStyle > 1.5', 'surfaceOnly < 0.5',
+      'traits < 0.5', '!materialEmissive', 'halo < 0.5', 'wall < 0.5',
+      'wallOnly < 0.5', 'emissionOnly < 0.5',
+      'step(224.0 / 255.0, boundaryStability)', 'step(5.5, widePowderShape.w)',
+    ]) expect(powderScope).toContain(guard);
+    expect(e45).not.toContain('texture(');
+    expect(e45).not.toContain('uTime');
+    expect(e45).not.toContain('sin(');
+    expect(e45).not.toContain('gl_FragCoord');
+    expect(e45).not.toMatch(/\balpha\s*[+*]?=/);
+    expect(source).toMatch(
+      /const thermiteBodyVfxEnabled = outputScale < 8\s*&& resolveThermiteBodyVfxEnabled\(renderLook\);/,
+    );
+    expect(source.match(/this\.uniforms\.uniforms\.uThermiteBodyVfx = 0;/g))
+      .toHaveLength(2);
+    expect(source).toContain(
+      'uThermiteBodyVfx: { value: thermiteBodyVfxEnabled ? 1 : 0',
+    );
+    expect(source).toContain('presenter.app.canvas.dataset.thermiteBodyVfx');
+    expect(source).toContain("this.app.canvas.dataset.thermiteBodyVfx = 'inactive';");
+    expect(preserve).toContain("get('thermiteBodyVfxAudit') === '1'");
+  });
+
   it('keeps E41 DEUT concentration-volume exact-owner, trait-aware, normal-WebGL-only, and RGB-only', () => {
     const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
     const canvasSource = readFileSync(new URL('./field-renderer.ts', import.meta.url), 'utf8');

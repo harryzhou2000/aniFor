@@ -298,6 +298,13 @@ const sootyPowderBodyVfxOnly = process.argv.includes('--sooty-powder-body-vfx-on
 if (sootyPowderBodyVfxOnly && (modes.length !== 1 || modes[0] !== 'webgl')) {
   throw new Error('--sooty-powder-body-vfx-only requires --webgl-only');
 }
+// E45 is a normal-detail exact-Thermite body study. It composes over E05's
+// settled Smooth-powder base while the compact true-8x mesh remains an explicit
+// selector/resource exclusion.
+const thermiteBodyVfxOnly = process.argv.includes('--thermite-body-vfx-only');
+if (thermiteBodyVfxOnly && (modes.length !== 1 || modes[0] !== 'webgl')) {
+  throw new Error('--thermite-body-vfx-only requires --webgl-only');
+}
 // E41 is a normal-detail DEUT concentration/body experiment. Its focused route
 // owns a paused native-state fixture; Canvas and compact true 8x are controls.
 const deutBodyVfxOnly = process.argv.includes('--deut-body-vfx-only');
@@ -398,7 +405,8 @@ const focusedVfxOnlyFlags = [
   plasmaCoreVfxOnly, solidBodyVfxOnly,
   platinumBodyVfxOnly, ceramicGlazeVfxOnly, botanicalBodyVfxOnly, glassBodyVfxOnly,
   oilBodyVfxOnly, rockRoughnessVfxOnly, rockMesostructureVfxOnly, waterBodyVfxOnly, acidBodyVfxOnly,
-  sootyPowderBodyVfxOnly, deutBodyVfxOnly, hydrogenBodyVfxOnly, carbonDioxideBodyVfxOnly,
+  sootyPowderBodyVfxOnly, thermiteBodyVfxOnly, deutBodyVfxOnly, hydrogenBodyVfxOnly,
+  carbonDioxideBodyVfxOnly,
   radioactiveSolidBodyVfxOnly,
   nobleGasBillowVfxOnly, nobleGasPrismVfxOnly,
   smokeSoftnessVfxOnly, smokeBillowDepthVfxOnly, botanicalMesostructureVfxOnly, woodBarkReliefVfxOnly,
@@ -406,7 +414,7 @@ const focusedVfxOnlyFlags = [
   woodTanninVfxOnly,
 ];
 if (focusedVfxOnlyFlags.filter(Boolean).length > 1) {
-  throw new Error('HDR/volume/liquid-body/liquid-surface/gas-body/gas-motion/powder-body/powder-light/powder-solid-contact/translucent-edge/organic-subsurface/wet-sediment/gas-light/liquid-solid-meniscus/metal-water-contact/gas-core-depth/plasma-core/solid-body/platinum-body/ceramic-glaze/botanical-body/glass-body/oil-body/rock-roughness/rock-mesostructure/water-body/acid-body/sooty-powder-body/deut-body/hydrogen-body/carbon-dioxide-body/radioactive-solid-body/noble-gas-billow/noble-gas-prism/smoke-softness/smoke-billow-depth/botanical-mesostructure/wood-bark-relief/botanical-pigment/plant-lamina/plant-lobe-depth/plant-canopy-mass/wood-tannin focused audits are mutually exclusive');
+  throw new Error('HDR/volume/liquid-body/liquid-surface/gas-body/gas-motion/powder-body/powder-light/powder-solid-contact/translucent-edge/organic-subsurface/wet-sediment/gas-light/liquid-solid-meniscus/metal-water-contact/gas-core-depth/plasma-core/solid-body/platinum-body/ceramic-glaze/botanical-body/glass-body/oil-body/rock-roughness/rock-mesostructure/water-body/acid-body/sooty-powder-body/thermite-body/deut-body/hydrogen-body/carbon-dioxide-body/radioactive-solid-body/noble-gas-billow/noble-gas-prism/smoke-softness/smoke-billow-depth/botanical-mesostructure/wood-bark-relief/botanical-pigment/plant-lamina/plant-lobe-depth/plant-canopy-mass/wood-tannin focused audits are mutually exclusive');
 }
 const layoutOnly = process.argv.includes('--layout-only');
 const visualScaleMatrixNormalOnly = process.argv.includes('--visual-scale-matrix-normal-only');
@@ -490,7 +498,7 @@ const liveScaleOnly = process.argv.includes('--live-scale-only');
 const productionBundle = process.argv.includes('--production-bundle');
 const usesProductionBundle = productionBundle || showcaseScreenshotOnly || composedRankOnly || hdrVfxOnly || volumeVfxOnly
   || liquidBodyVfxOnly || liquidSurfaceVfxOnly || gasBodyVfxOnly || gasMotionVfxOnly
-    || powderBodyVfxOnly || powderLightVfxOnly || powderSolidContactVfxOnly || translucentEdgeVfxOnly || organicSubsurfaceVfxOnly || wetSedimentVfxOnly || gasLightVfxOnly || liquidSolidMeniscusVfxOnly || metalWaterContactVfxOnly || gasCoreDepthVfxOnly || plasmaCoreVfxOnly || solidBodyVfxOnly || platinumBodyVfxOnly || ceramicGlazeVfxOnly || botanicalBodyVfxOnly || glassBodyVfxOnly || oilBodyVfxOnly || rockRoughnessVfxOnly || rockMesostructureVfxOnly || waterBodyVfxOnly || acidBodyVfxOnly || sootyPowderBodyVfxOnly || deutBodyVfxOnly || hydrogenBodyVfxOnly || carbonDioxideBodyVfxOnly || radioactiveSolidBodyVfxOnly || nobleGasBillowVfxOnly || nobleGasPrismVfxOnly || smokeSoftnessVfxOnly || smokeBillowDepthVfxOnly || botanicalMesostructureVfxOnly || woodBarkReliefVfxOnly || botanicalPigmentVfxOnly || plantLaminaVfxOnly || plantLobeDepthVfxOnly || woodTanninVfxOnly || cellularGraphicsOnly || sensorGraphicsOnly
+    || powderBodyVfxOnly || powderLightVfxOnly || powderSolidContactVfxOnly || translucentEdgeVfxOnly || organicSubsurfaceVfxOnly || wetSedimentVfxOnly || gasLightVfxOnly || liquidSolidMeniscusVfxOnly || metalWaterContactVfxOnly || gasCoreDepthVfxOnly || plasmaCoreVfxOnly || solidBodyVfxOnly || platinumBodyVfxOnly || ceramicGlazeVfxOnly || botanicalBodyVfxOnly || glassBodyVfxOnly || oilBodyVfxOnly || rockRoughnessVfxOnly || rockMesostructureVfxOnly || waterBodyVfxOnly || acidBodyVfxOnly || sootyPowderBodyVfxOnly || thermiteBodyVfxOnly || deutBodyVfxOnly || hydrogenBodyVfxOnly || carbonDioxideBodyVfxOnly || radioactiveSolidBodyVfxOnly || nobleGasBillowVfxOnly || nobleGasPrismVfxOnly || smokeSoftnessVfxOnly || smokeBillowDepthVfxOnly || botanicalMesostructureVfxOnly || woodBarkReliefVfxOnly || botanicalPigmentVfxOnly || plantLaminaVfxOnly || plantLobeDepthVfxOnly || woodTanninVfxOnly || cellularGraphicsOnly || sensorGraphicsOnly
   || unusualPowderGraphicsOnly || earthenPowderGraphicsOnly || explosivePowderGraphicsOnly || unusualSolidGraphicsOnly
   || deviceIdentityGraphicsOnly
   || fieldProfileGraphicsOnly
@@ -535,6 +543,8 @@ const powderBodyVfxArgument = process.argv.find((argument) => argument.startsWit
   ?.slice('--powder-body-vfx='.length);
 const sootyPowderBodyVfxArgument = process.argv.find((argument) => argument.startsWith('--sooty-powder-body-vfx='))
   ?.slice('--sooty-powder-body-vfx='.length);
+const thermiteBodyVfxArgument = process.argv.find((argument) => argument.startsWith('--thermite-body-vfx='))
+  ?.slice('--thermite-body-vfx='.length);
 const deutBodyVfxArgument = process.argv.find((argument) => argument.startsWith('--deut-body-vfx='))
   ?.slice('--deut-body-vfx='.length);
 const hydrogenBodyVfxArgument = process.argv.find((argument) => argument.startsWith('--hydrogen-body-vfx='))
@@ -626,6 +636,9 @@ if (powderBodyVfxArgument !== undefined && !['0', '1', 'off', 'on'].includes(pow
 if (sootyPowderBodyVfxArgument !== undefined && !['0', '1', 'off', 'on'].includes(sootyPowderBodyVfxArgument)) {
   throw new Error('--sooty-powder-body-vfx must be 0, 1, off, or on');
 }
+if (thermiteBodyVfxArgument !== undefined && !['0', '1', 'off', 'on'].includes(thermiteBodyVfxArgument)) {
+  throw new Error('--thermite-body-vfx must be 0, 1, off, or on');
+}
 if (powderLightVfxArgument !== undefined && !['0', '1', 'off', 'on'].includes(powderLightVfxArgument)) {
   throw new Error('--powder-light-vfx must be 0, 1, off, or on');
 }
@@ -653,6 +666,9 @@ if (focusedVfxOnlyFlags.some(Boolean) && metalWaterContactVfxArgument !== undefi
 }
 if (focusedVfxOnlyFlags.some(Boolean) && sootyPowderBodyVfxArgument !== undefined) {
   throw new Error('focused VFX audits own sootyPowderBodyVfx state; omit --sooty-powder-body-vfx');
+}
+if (focusedVfxOnlyFlags.some(Boolean) && thermiteBodyVfxArgument !== undefined) {
+  throw new Error('focused VFX audits own thermiteBodyVfx state; omit --thermite-body-vfx');
 }
 if (gasCoreDepthVfxArgument !== undefined && !['0', '1', 'off', 'on'].includes(gasCoreDepthVfxArgument)) {
   throw new Error('--gas-core-depth-vfx must be 0, 1, off, or on');
@@ -1043,6 +1059,21 @@ if (carbonDioxideBodyVfxOnly && (volumeVfxArgument !== undefined
   || solidBodyVfxArgument !== undefined || carbonDioxideBodyVfxArgument !== undefined)) {
   throw new Error('--carbon-dioxide-body-vfx-only pins E04 and owns off -> on -> off; omit overrides');
 }
+if (thermiteBodyVfxOnly && (volumeVfxArgument !== undefined
+  || liquidBodyVfxArgument !== undefined || liquidSurfaceVfxArgument !== undefined
+  || gasBodyVfxArgument !== undefined || gasMotionVfxArgument !== undefined
+  || powderBodyVfxArgument !== undefined || sootyPowderBodyVfxArgument !== undefined
+  || powderLightVfxArgument !== undefined || translucentEdgeVfxArgument !== undefined
+  || organicSubsurfaceVfxArgument !== undefined || wetSedimentVfxArgument !== undefined
+  || gasLightVfxArgument !== undefined || liquidSolidMeniscusVfxArgument !== undefined
+  || metalWaterContactVfxArgument !== undefined || gasCoreDepthVfxArgument !== undefined
+  || nobleGasBillowVfxArgument !== undefined || nobleGasPrismVfxArgument !== undefined
+  || smokeSoftnessVfxArgument !== undefined || smokeBillowDepthVfxArgument !== undefined
+  || plasmaCoreVfxArgument !== undefined || solidBodyVfxArgument !== undefined
+  || deutBodyVfxArgument !== undefined || hydrogenBodyVfxArgument !== undefined
+  || carbonDioxideBodyVfxArgument !== undefined)) {
+  throw new Error('--thermite-body-vfx-only pins E05 and owns off -> on -> off; omit overrides');
+}
 if (renderScaleArgument !== undefined && !['1', '2', '4', '8'].includes(renderScaleArgument)) {
   throw new Error('--render-scale must be 1, 2, 4, or 8');
 }
@@ -1120,6 +1151,9 @@ if (acidBodyVfxOnly && renderScaleArgument === '8') {
 }
 if (sootyPowderBodyVfxOnly && renderScaleArgument === '8') {
   throw new Error('--sooty-powder-body-vfx-only is a normal-detail 1x/2x/4x experiment');
+}
+if (thermiteBodyVfxOnly && renderScaleArgument === '8') {
+  throw new Error('--thermite-body-vfx-only is a normal-detail 1x/2x/4x experiment');
 }
 if (nobleGasBillowVfxOnly && renderScaleArgument === '8') {
   throw new Error('--noble-gas-billow-vfx-only is a normal-detail 1x/2x/4x experiment');
@@ -1247,7 +1281,7 @@ async function main() {
     for (const mode of modes) results.push(await auditMode(mode));
     const reducedAudit = quickScreenshot || showcaseScreenshotOnly || composedRankOnly || hdrVfxOnly || volumeVfxOnly
       || liquidBodyVfxOnly || liquidSurfaceVfxOnly || gasBodyVfxOnly || gasMotionVfxOnly
-      || powderBodyVfxOnly || powderLightVfxOnly || powderSolidContactVfxOnly || translucentEdgeVfxOnly || organicSubsurfaceVfxOnly || wetSedimentVfxOnly || gasLightVfxOnly || liquidSolidMeniscusVfxOnly || metalWaterContactVfxOnly || gasCoreDepthVfxOnly || plasmaCoreVfxOnly || solidBodyVfxOnly || platinumBodyVfxOnly || ceramicGlazeVfxOnly || botanicalBodyVfxOnly || glassBodyVfxOnly || oilBodyVfxOnly || rockRoughnessVfxOnly || rockMesostructureVfxOnly || waterBodyVfxOnly || acidBodyVfxOnly || sootyPowderBodyVfxOnly || deutBodyVfxOnly || hydrogenBodyVfxOnly || carbonDioxideBodyVfxOnly || radioactiveSolidBodyVfxOnly || nobleGasBillowVfxOnly || nobleGasPrismVfxOnly || smokeSoftnessVfxOnly || smokeBillowDepthVfxOnly || botanicalMesostructureVfxOnly || woodBarkReliefVfxOnly || botanicalPigmentVfxOnly || plantLaminaVfxOnly || plantLobeDepthVfxOnly || woodTanninVfxOnly || layoutOnly || mobileOnly || mobileGestureOnly
+      || powderBodyVfxOnly || powderLightVfxOnly || powderSolidContactVfxOnly || translucentEdgeVfxOnly || organicSubsurfaceVfxOnly || wetSedimentVfxOnly || gasLightVfxOnly || liquidSolidMeniscusVfxOnly || metalWaterContactVfxOnly || gasCoreDepthVfxOnly || plasmaCoreVfxOnly || solidBodyVfxOnly || platinumBodyVfxOnly || ceramicGlazeVfxOnly || botanicalBodyVfxOnly || glassBodyVfxOnly || oilBodyVfxOnly || rockRoughnessVfxOnly || rockMesostructureVfxOnly || waterBodyVfxOnly || acidBodyVfxOnly || sootyPowderBodyVfxOnly || thermiteBodyVfxOnly || deutBodyVfxOnly || hydrogenBodyVfxOnly || carbonDioxideBodyVfxOnly || radioactiveSolidBodyVfxOnly || nobleGasBillowVfxOnly || nobleGasPrismVfxOnly || smokeSoftnessVfxOnly || smokeBillowDepthVfxOnly || botanicalMesostructureVfxOnly || woodBarkReliefVfxOnly || botanicalPigmentVfxOnly || plantLaminaVfxOnly || plantLobeDepthVfxOnly || woodTanninVfxOnly || layoutOnly || mobileOnly || mobileGestureOnly
       || desktopInputOnly || visualScaleMatrixOnly || powderBodyOnly || liquidDepthOnly
       || solidDepthOnly || gasChromaOnly || surfaceContourOnly || solidFieldOnly
       || roleGraphicsOnly || cellularGraphicsOnly || sensorGraphicsOnly
@@ -1345,7 +1379,7 @@ async function auditMode(mode) {
   // canonical paused scene there and prove real material delivery/occupancy.
   const startsBlank = !canvasFallbackAudit && (hdrVfxOnly || volumeVfxOnly
     || liquidBodyVfxOnly || liquidSurfaceVfxOnly || gasBodyVfxOnly || gasMotionVfxOnly
-    || powderBodyVfxOnly || powderLightVfxOnly || powderSolidContactVfxOnly || translucentEdgeVfxOnly || organicSubsurfaceVfxOnly || wetSedimentVfxOnly || gasLightVfxOnly || liquidSolidMeniscusVfxOnly || metalWaterContactVfxOnly || gasCoreDepthVfxOnly || plasmaCoreVfxOnly || solidBodyVfxOnly || platinumBodyVfxOnly || ceramicGlazeVfxOnly || botanicalBodyVfxOnly || glassBodyVfxOnly || oilBodyVfxOnly || rockRoughnessVfxOnly || rockMesostructureVfxOnly || waterBodyVfxOnly || acidBodyVfxOnly || sootyPowderBodyVfxOnly || deutBodyVfxOnly || hydrogenBodyVfxOnly || carbonDioxideBodyVfxOnly || radioactiveSolidBodyVfxOnly || nobleGasBillowVfxOnly || nobleGasPrismVfxOnly || smokeSoftnessVfxOnly || smokeBillowDepthVfxOnly || botanicalMesostructureVfxOnly || woodBarkReliefVfxOnly || botanicalPigmentVfxOnly || plantLaminaVfxOnly || plantLobeDepthVfxOnly || woodTanninVfxOnly || cellularGraphicsOnly || sensorGraphicsOnly
+    || powderBodyVfxOnly || powderLightVfxOnly || powderSolidContactVfxOnly || translucentEdgeVfxOnly || organicSubsurfaceVfxOnly || wetSedimentVfxOnly || gasLightVfxOnly || liquidSolidMeniscusVfxOnly || metalWaterContactVfxOnly || gasCoreDepthVfxOnly || plasmaCoreVfxOnly || solidBodyVfxOnly || platinumBodyVfxOnly || ceramicGlazeVfxOnly || botanicalBodyVfxOnly || glassBodyVfxOnly || oilBodyVfxOnly || rockRoughnessVfxOnly || rockMesostructureVfxOnly || waterBodyVfxOnly || acidBodyVfxOnly || sootyPowderBodyVfxOnly || thermiteBodyVfxOnly || deutBodyVfxOnly || hydrogenBodyVfxOnly || carbonDioxideBodyVfxOnly || radioactiveSolidBodyVfxOnly || nobleGasBillowVfxOnly || nobleGasPrismVfxOnly || smokeSoftnessVfxOnly || smokeBillowDepthVfxOnly || botanicalMesostructureVfxOnly || woodBarkReliefVfxOnly || botanicalPigmentVfxOnly || plantLaminaVfxOnly || plantLobeDepthVfxOnly || woodTanninVfxOnly || cellularGraphicsOnly || sensorGraphicsOnly
     || unusualPowderGraphicsOnly || earthenPowderGraphicsOnly || explosivePowderGraphicsOnly
     || unusualSolidGraphicsOnly || deviceIdentityGraphicsOnly || fieldProfileGraphicsOnly
     || electricDischargeGraphicsOnly || liquidIdentityGraphicsOnly
@@ -1371,6 +1405,7 @@ async function auditMode(mode) {
     ...(gasMotionVfxArgument ? { gasMotionVfx: gasMotionVfxArgument } : {}),
     ...(powderBodyVfxArgument ? { powderBodyVfx: powderBodyVfxArgument } : {}),
     ...(sootyPowderBodyVfxArgument ? { sootyPowderBodyVfx: sootyPowderBodyVfxArgument } : {}),
+    ...(thermiteBodyVfxArgument ? { thermiteBodyVfx: thermiteBodyVfxArgument } : {}),
     ...(powderLightVfxArgument ? { powderLightVfx: powderLightVfxArgument } : {}),
     ...(translucentEdgeVfxArgument ? { translucentEdgeVfx: translucentEdgeVfxArgument } : {}),
     ...(organicSubsurfaceVfxArgument ? { organicSubsurfaceVfx: organicSubsurfaceVfxArgument } : {}),
@@ -1385,6 +1420,7 @@ async function auditMode(mode) {
     ...(focusedVfxOnlyFlags.some(Boolean) || liquidDepthOnly || volumeVfxOnly
       ? { acidBodyVfx: '0' } : {}),
     ...(focusedVfxOnlyFlags.some(Boolean) ? { sootyPowderBodyVfx: '0' } : {}),
+    ...(focusedVfxOnlyFlags.some(Boolean) ? { thermiteBodyVfx: '0' } : {}),
     // E41 defaults on in normal realistic WebGL once implemented. Existing
     // focused baselines must remain byte-stable while its own reload loop owns
     // the explicit off -> on -> off sequence.
@@ -1976,6 +2012,13 @@ async function auditMode(mode) {
       assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
       cdp.close();
       return { backend: mode, sootyPowderBodyVfx, browserErrors: errors.length };
+    }
+    if (thermiteBodyVfxOnly) {
+      assert(mode === 'webgl', '--thermite-body-vfx-only requires --webgl-only');
+      const thermiteBodyVfx = await auditThermiteBodyVfxExperiment(cdp, mode, dpr);
+      assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
+      cdp.close();
+      return { backend: mode, thermiteBodyVfx, browserErrors: errors.length };
     }
     if (deutBodyVfxOnly) {
       assert(mode === 'webgl', '--deut-body-vfx-only requires --webgl-only');
@@ -12236,6 +12279,7 @@ async function auditComposedRankShowcase(cdp, mode, dpr) {
   const composedSolidBodyVfx = solidBodyVfxArgument ?? '1';
   const composedRadioactiveSolidBodyVfx = '1';
   const composedCarbonDioxideBodyVfx = carbonDioxideBodyVfxArgument ?? '1';
+  const composedThermiteBodyVfx = thermiteBodyVfxArgument ?? '1';
   const requestedScales = renderScaleArgument === undefined
     ? COMPOSED_RANK_SCALES : [Number(renderScaleArgument)];
   for (const scale of requestedScales) {
@@ -12255,6 +12299,7 @@ async function auditComposedRankShowcase(cdp, mode, dpr) {
       ...(deutBodyVfxArgument ? { deutBodyVfx: deutBodyVfxArgument } : {}),
       ...(hydrogenBodyVfxArgument ? { hydrogenBodyVfx: hydrogenBodyVfxArgument } : {}),
       carbonDioxideBodyVfx: composedCarbonDioxideBodyVfx,
+      thermiteBodyVfx: composedThermiteBodyVfx,
       ...(plasmaCoreVfxArgument ? { plasmaCoreVfx: plasmaCoreVfxArgument } : {}),
       solidBodyVfx: composedSolidBodyVfx,
       radioactiveSolidBodyVfx: composedRadioactiveSolidBodyVfx,
@@ -12294,6 +12339,7 @@ async function auditComposedRankShowcase(cdp, mode, dpr) {
         && parameters.get('deutBodyVfx') === ${JSON.stringify(deutBodyVfxArgument ?? null)}
         && parameters.get('hydrogenBodyVfx') === ${JSON.stringify(hydrogenBodyVfxArgument ?? null)}
         && parameters.get('carbonDioxideBodyVfx') === ${JSON.stringify(composedCarbonDioxideBodyVfx)}
+        && parameters.get('thermiteBodyVfx') === ${JSON.stringify(composedThermiteBodyVfx)}
         && parameters.get('plasmaCoreVfx') === ${JSON.stringify(plasmaCoreVfxArgument ?? null)}
         && parameters.get('solidBodyVfx') === ${JSON.stringify(composedSolidBodyVfx)}
         && parameters.get('radioactiveSolidBodyVfx') === ${JSON.stringify(composedRadioactiveSolidBodyVfx)}
@@ -12382,6 +12428,16 @@ async function auditComposedRankShowcase(cdp, mode, dpr) {
     assert(sootyPowderBodyVfx === expectedSootyPowderBodyState,
       `composed rank ${scale}x sooty-powder body VFX resolved incorrectly (${JSON.stringify({
         composedLook, sootyPowderBodyVfx, expectedSootyPowderBodyState,
+      })})`);
+    const thermiteBodyVfx = await evaluate(cdp,
+      `document.querySelector('canvas.world-canvas')?.dataset.thermiteBodyVfx ?? 'missing'`,
+    );
+    const expectedThermiteBodyState = composedLook !== 'classic'
+      && ['1', 'on'].includes(composedThermiteBodyVfx) ? 'active' : 'inactive';
+    assert(thermiteBodyVfx === expectedThermiteBodyState,
+      `composed rank ${scale}x Thermite body VFX resolved incorrectly (${JSON.stringify({
+        argument: composedThermiteBodyVfx, composedLook, thermiteBodyVfx,
+        expectedThermiteBodyState,
       })})`);
     const smokeBillowDepthVfx = await evaluate(cdp,
       `document.querySelector('canvas.world-canvas')?.dataset.smokeBillowDepthVfx ?? 'missing'`,
@@ -12551,7 +12607,8 @@ async function auditComposedRankShowcase(cdp, mode, dpr) {
     captures.push({
       scale, geometry, fixture, semantic, regions, hdrPipeline, botanicalMesostructureVfx,
       botanicalPigmentVfx, plantLaminaVfx, plantLobeDepthVfx, plantCanopyMassVfx, woodTanninVfx,
-      oilVolumeFinishVfx, acidBodyVfx, sootyPowderBodyVfx, smokeBillowDepthVfx, powderStability,
+      oilVolumeFinishVfx, acidBodyVfx, sootyPowderBodyVfx, thermiteBodyVfx,
+      smokeBillowDepthVfx, powderStability,
       deutBodyVfx, hydrogenBodyVfx, carbonDioxideBodyVfx,
       solidBodyVfx, radioactiveSolidBodyVfx,
       ...(metalWaterContactVfxArgument !== undefined ? { metalWaterContactVfx } : {}),
@@ -12657,7 +12714,7 @@ async function auditComposedRankShowcase(cdp, mode, dpr) {
   return {
     scales: captures.map(({ scale, geometry, semantic, regions, hdrPipeline, botanicalMesostructureVfx,
       botanicalPigmentVfx, plantLaminaVfx, plantLobeDepthVfx, plantCanopyMassVfx, woodTanninVfx,
-      smokeBillowDepthVfx, metalWaterContactVfx, powderStability,
+      smokeBillowDepthVfx, thermiteBodyVfx, metalWaterContactVfx, powderStability,
       deutBodyVfx, hydrogenBodyVfx, carbonDioxideBodyVfx,
       solidBodyVfx, radioactiveSolidBodyVfx,
       screenshot }) => ({
@@ -12672,6 +12729,7 @@ async function auditComposedRankShowcase(cdp, mode, dpr) {
       plantCanopyMassVfx,
       woodTanninVfx,
       smokeBillowDepthVfx,
+      thermiteBodyVfx,
       deutBodyVfx,
       hydrogenBodyVfx,
       carbonDioxideBodyVfx,
@@ -34109,7 +34167,8 @@ async function navigateSootyPowderBodyVfxState(cdp, mode, scale, enabled, label)
     sootyPowderBodyVfxAudit: '1', renderScale: String(scale), renderLook: 'realistic',
     volumeVfx: '0', liquidBodyVfx: '0', liquidSurfaceVfx: '0', gasBodyVfx: '0', gasMotionVfx: '0',
     powderBodyVfx: '1', powderLightVfx: '0', powderSolidContactVfx: '0',
-    sootyPowderBodyVfx: enabled ? '1' : '0', translucentEdgeVfx: '0', organicSubsurfaceVfx: '0',
+    sootyPowderBodyVfx: enabled ? '1' : '0', thermiteBodyVfx: '0',
+    translucentEdgeVfx: '0', organicSubsurfaceVfx: '0',
     wetSedimentVfx: '0', gasLightVfx: '0', liquidSolidMeniscusVfx: '0', metalWaterContactVfx: '0',
     gasCoreDepthVfx: '0', nobleGasBillowVfx: '0', nobleGasPrismVfx: '0', smokeSoftnessVfx: '0',
     smokeBillowDepthVfx: '0', plasmaCoreVfx: '0', solidBodyVfx: '0', platinumBodyVfx: '0',
@@ -34125,6 +34184,7 @@ async function navigateSootyPowderBodyVfxState(cdp, mode, scale, enabled, label)
     return p.get('sootyPowderBodyVfxAudit') === '1' && p.get('renderScale') === ${JSON.stringify(String(scale))}
       && p.get('renderLook') === 'realistic' && p.get('powderBodyVfx') === '1'
       && p.get('sootyPowderBodyVfx') === ${JSON.stringify(enabled ? '1' : '0')}
+      && p.get('thermiteBodyVfx') === '0'
       && typeof audit?.prepareSootyPowderBodyVfxFixture === 'function'
       && typeof audit?.sootyPowderBodyVfxFixture === 'function';
   })()`), scale === 4 ? 45_000 : 15_000, `E40 ${label} ${scale}x page`);
@@ -34165,7 +34225,7 @@ async function navigateSootyPowderBodyVfxState(cdp, mode, scale, enabled, label)
       'botanicalPigmentVfx', 'plantLaminaVfx', 'plantLobeDepthVfx', 'plantCanopyMassVfx',
       'woodBarkReliefVfx', 'woodTanninVfx', 'glassBodyVfx', 'oilBodyVfx',
       'oilVolumeFinishVfx', 'rockRoughnessVfx', 'rockMesostructureVfx', 'waterBodyVfx',
-      'acidBodyVfx',
+      'acidBodyVfx', 'thermiteBodyVfx',
     ];
     return {
       state: canvas.dataset.hdrPipeline, reason: canvas.dataset.hdrPipelineReason,
@@ -34349,6 +34409,7 @@ async function auditEightXSootyPowderBodyVfxExclusion(cdp, dpr) {
     sootyPowderBodyVfxAudit: '1', renderScale: '8', renderLook: 'realistic', volumeVfx: '0',
     liquidBodyVfx: '0', liquidSurfaceVfx: '0', gasBodyVfx: '0', gasMotionVfx: '0', powderBodyVfx: '1',
     powderLightVfx: '0', powderSolidContactVfx: '0', sootyPowderBodyVfx: '1',
+    thermiteBodyVfx: '0',
     translucentEdgeVfx: '0', organicSubsurfaceVfx: '0', wetSedimentVfx: '0', gasLightVfx: '0',
     liquidSolidMeniscusVfx: '0', metalWaterContactVfx: '0', gasCoreDepthVfx: '0', plasmaCoreVfx: '0',
     solidBodyVfx: '0', platinumBodyVfx: '0', ceramicGlazeVfx: '0', botanicalBodyVfx: '0', glassBodyVfx: '0',
@@ -34365,15 +34426,702 @@ async function auditEightXSootyPowderBodyVfxExclusion(cdp, dpr) {
   assert(geometry.backing.width === WORLD_WIDTH * 8 && geometry.backing.height === WORLD_HEIGHT * 8 && geometry.outputScale === '8', `true-8x E40 lost exact backing (${JSON.stringify(geometry.backing)})`);
   const isolation = await evaluate(cdp, `(() => { const canvas = document.querySelector('canvas.semantic-field-canvas'); return canvas ? {
     renderer: canvas.dataset.renderer, state: canvas.dataset.hdrPipeline, reason: canvas.dataset.hdrPipelineReason,
-    powderBodyVfx: canvas.dataset.powderBodyVfx, sootyPowderBodyVfx: canvas.dataset.sootyPowderBodyVfx,
+    powderBodyVfx: canvas.dataset.powderBodyVfx,
+    sootyPowderBodyVfx: canvas.dataset.sootyPowderBodyVfx,
+    thermiteBodyVfx: canvas.dataset.thermiteBodyVfx,
   } : undefined; })()`);
   assert(isolation?.renderer === 'semantic-field-webgl' && isolation.state === 'inactive' && isolation.reason === 'scale-8'
-    && isolation.powderBodyVfx === 'inactive' && isolation.sootyPowderBodyVfx === 'inactive',
+    && isolation.powderBodyVfx === 'inactive' && isolation.sootyPowderBodyVfx === 'inactive'
+    && isolation.thermiteBodyVfx === 'inactive',
   `true-8x E40 isolation failed (${JSON.stringify(isolation)})`);
   const timingBudget = remainingDeadlineMs(deadline, 'true-8x E40 GPU completion');
   const timing = await auditWebGLPresentationTiming(cdp, 1, Math.min(12_000, timingBudget), timingBudget, 1);
   assert(['gpu-query', 'gpu-fence', 'gpu-finish'].includes(timing.source), `true-8x E40 did not complete GPU work (${JSON.stringify(timing)})`);
   return { backing: `${geometry.backing.width}x${geometry.backing.height}`, promotionFence: 'signaled', isolation, timing };
+}
+
+// Frozen E45 production-WebGL envelopes. These retain deliberate tolerance for
+// byte composition while rejecting an inert, flat, one-sided, rescaled, or
+// overdriven Thermite response at every normal detail level.
+const THERMITE_BODY_VFX_ACCEPTANCE = Object.freeze({
+  THRMWholeBody: Object.freeze({
+    rgbRms: [3.30, 3.65], chromaRms: [1.85, 2.10], coverage: [0.48, 0.54],
+    signedMean: [-0.98, -0.80], rgbPeak: [36, 45], spatialRgbRms: [3.10, 3.42],
+  }),
+  THRMCrown: Object.freeze({
+    rgbRms: [5.35, 5.80], chromaRms: [2.95, 3.25], coverage: [0.54, 0.61],
+    signedMean: [2.30, 2.62], rgbPeak: [22, 27], spatialRgbRms: [4.50, 4.90],
+  }),
+  THRMPocket: Object.freeze({
+    rgbRms: [3.95, 4.25], chromaRms: [2.20, 2.45], coverage: [0.76, 0.84],
+    signedMean: [-3.02, -2.78], rgbPeak: [11, 14], spatialRgbRms: [1.65, 1.90],
+  }),
+  THRMCore: Object.freeze({
+    rgbRms: [3.60, 3.95], chromaRms: [2.02, 2.27], coverage: [0.56, 0.63],
+    signedMean: [-1.34, -1.14], rgbPeak: [22, 29], spatialRgbRms: [3.25, 3.55],
+  }),
+});
+
+const THERMITE_BODY_VFX_MICROCHROMA = Object.freeze({
+  minimumBaseline: 5.0,
+  minimumRetention: 0.96,
+  maximumRetention: 1.04,
+  maximumRepeatDelta: 0.001,
+  minimumSamples: 16,
+});
+
+// Exact sibling cards are dynamically named and default to zero below. Only
+// compositor footprints immediately adjacent to an eligible Thermite body get
+// a provisional nonzero allowance; raw owners remain byte exact in every case.
+const THERMITE_BODY_VFX_CONTROL_PEAK = Object.freeze({
+  THRMHole: 0,
+  THRMOpenChannel: 0,
+  FineColumn: 0,
+  FineLine: 0,
+  Isolated: 0,
+  Moving: 0,
+  NativeWallOccupied: 0,
+  // This exact Thermite cell is wall-free and can remain eligible; it is not a
+  // foreign-owner no-op. Freeze its response independently after calibration.
+  NativeWallClear: 6,
+  WetThermite: 0,
+  WetWater: 0,
+  ThermiteMetal: 0,
+  Metal: 0,
+  ThermiteWater: 0,
+  Water: 0,
+  GuardedBlank: 0,
+});
+
+/** E45: exact native Thermite body optics over E05's settled Smooth proof. */
+async function auditThermiteBodyVfxExperiment(cdp, mode, dpr) {
+  const scales = [];
+  const requestedScales = renderScaleArgument === undefined
+    ? VOLUME_VFX_SCALES : [Number(renderScaleArgument)];
+  for (const scale of requestedScales) {
+    const captures = {};
+    for (const enabled of [false, true, false]) {
+      const key = enabled ? 'enabled' : captures.disabled ? 'disabledRepeat' : 'disabled';
+      const variant = await navigateThermiteBodyVfxState(cdp, mode, scale, enabled, key);
+      variant.references = await capturePowderBodyVfxReferenceStyles(
+        cdp, scale, key, 'E45',
+      );
+      captures[key] = variant;
+    }
+    const { disabled, enabled, disabledRepeat } = captures;
+    const fixture = disabled.fixture;
+    assert(JSON.stringify(fixture) === JSON.stringify(enabled.fixture)
+      && JSON.stringify(fixture) === JSON.stringify(disabledRepeat.fixture),
+    `E45 ${scale}x fixture metadata changed`);
+    for (const [label, variant] of Object.entries(captures)) {
+      assertGeometry(variant.geometry, `E45 ${label} ${scale}x`, scale);
+      assert(variant.geometry.backend.backend === 'webgl',
+        `E45 ${label} ${scale}x lost WebGL presentation`);
+      assert(variant.hdrPipeline?.state === 'active'
+        && variant.hdrPipeline.powderBodyVfx === 'active'
+        && variant.hdrPipeline.sootyPowderBodyVfx === 'inactive'
+        && variant.hdrPipeline.thermiteBodyVfx === (label === 'enabled' ? 'active' : 'inactive'),
+      `E45 ${label} ${scale}x selector/HDR state was wrong (${JSON.stringify(variant.hdrPipeline)})`);
+    }
+    assertCanvasRectsEqual(disabled.geometry.canvas, enabled.geometry.canvas,
+      `E45 ${scale}x disabled/enabled CSS geometry`);
+    assertCanvasRectsEqual(disabled.geometry.canvas, disabledRepeat.geometry.canvas,
+      `E45 ${scale}x disabled/repeated CSS geometry`);
+    assert(JSON.stringify(disabled.geometry.backing) === JSON.stringify(enabled.geometry.backing)
+      && JSON.stringify(disabled.geometry.backing) === JSON.stringify(disabledRepeat.geometry.backing),
+    `E45 ${scale}x backing geometry changed`);
+    assertHdrVfxSemanticEquality(disabled.semantic, enabled.semantic, `E45 ${scale}x disabled/enabled`);
+    assertHdrVfxSemanticEquality(disabled.semantic, disabledRepeat.semantic,
+      `E45 ${scale}x disabled/repeated`);
+    assertVolumeVfxBackingInvariant(disabled.backing, enabled.backing,
+      `E45 ${scale}x disabled/enabled`);
+    assertVolumeVfxBackingInvariant(disabled.backing, disabledRepeat.backing,
+      `E45 ${scale}x disabled/repeated`);
+    assert(JSON.stringify(disabled.walls) === JSON.stringify(enabled.walls)
+      && JSON.stringify(disabled.walls) === JSON.stringify(disabledRepeat.walls)
+      && disabled.walls.occupied === disabled.walls.expectedOccupied
+      && disabled.walls.mismatches === 0 && disabled.walls.matterMismatches === 0,
+    `E45 ${scale}x changed native-wall topology (${JSON.stringify(disabled.walls)})`);
+    assert(JSON.stringify(disabled.velocity) === JSON.stringify(enabled.velocity)
+      && JSON.stringify(disabled.velocity) === JSON.stringify(disabledRepeat.velocity)
+      && disabled.velocity.cells === disabled.velocity.expectedCells
+      && disabled.velocity.mismatches === 0,
+    `E45 ${scale}x changed authored Thermite velocity (${JSON.stringify(disabled.velocity)})`);
+    assert(JSON.stringify(disabled.auxiliary) === JSON.stringify(enabled.auxiliary)
+      && JSON.stringify(disabled.auxiliary) === JSON.stringify(disabledRepeat.auxiliary),
+    `E45 ${scale}x changed powder stability auxiliary state (${JSON.stringify(disabled.auxiliary)})`);
+    assert(Object.values(disabled.auxiliary.stable).every((range) => (
+      range.min === 255 && range.max === 255
+    )) && disabled.auxiliary.moving.min < 255 && disabled.auxiliary.moving.max < 255,
+    `E45 ${scale}x lost settled-body or moving-region stability proof (${JSON.stringify(disabled.auxiliary)})`);
+    assert(JSON.stringify(disabled.suspension) === JSON.stringify(enabled.suspension)
+      && JSON.stringify(disabled.suspension) === JSON.stringify(disabledRepeat.suspension),
+    `E45 ${scale}x changed wet suspension support (${JSON.stringify(disabled.suspension)})`);
+    const wetThermite = disabled.suspension.find(({ name }) => name === 'WetThermite');
+    const wetWater = disabled.suspension.find(({ name }) => name === 'WetWater');
+    assert(wetThermite?.cell === fixture.target.material && wetThermite.rgba[3] > 0
+      && wetThermite.liquidAlpha > 0 && wetWater?.cell === 2 && wetWater.liquidAlpha > 0,
+    `E45 ${scale}x did not establish genuine wet Thermite support (${JSON.stringify(disabled.suspension)})`);
+    assertVolumeVfxRawAlphaInvariant(disabled.rawAll, enabled.rawAll,
+      `E45 ${scale}x disabled/enabled`);
+    assertVolumeVfxRawAlphaInvariant(disabled.rawAll, disabledRepeat.rawAll,
+      `E45 ${scale}x disabled/repeated`);
+    assert(JSON.stringify(disabled.rawControls) === JSON.stringify(enabled.rawControls)
+      && JSON.stringify(disabled.rawControls) === JSON.stringify(disabledRepeat.rawControls),
+    `E45 ${scale}x changed an exact raw topology/material/contact control (${JSON.stringify({
+      disabled: disabled.rawControls, enabled: enabled.rawControls,
+    })})`);
+    assert(disabled.capture.capture.data === disabledRepeat.capture.capture.data,
+      `E45 ${scale}x repeated off framebuffer was not byte exact`);
+
+    const targets = thermiteBodyVfxTargetRegions(fixture);
+    const controls = thermiteBodyVfxControlRegions(fixture);
+    const responses = await sampleBackdropRefractionRegions(cdp, {
+      straight: disabled.capture.capture.data,
+      refracted: enabled.capture.capture.data,
+      repeatedStraight: disabledRepeat.capture.capture.data,
+    }, [...targets, ...controls], disabled.capture.canvasRect);
+    const targetResponses = responses.slice(0, targets.length).map((sample) => ({
+      ...sample,
+      spatialRgbRms: round(Math.sqrt(Math.max(0, sample.rgbRms ** 2
+        - (Math.hypot(...sample.responseRgb) / Math.sqrt(3)) ** 2)), 3),
+    }));
+    const controlResponses = responses.slice(targets.length);
+    assert(responses.every((sample) => sample.repeatRgbPeak === 0),
+      `E45 ${scale}x off -> on -> off was not deterministic (${JSON.stringify(responses)})`);
+    assert(targetResponses.length === Object.keys(THERMITE_BODY_VFX_ACCEPTANCE).length
+      && targetResponses.every((sample) => [
+        sample.rgbRms, sample.chromaRms, sample.rgbPeak, sample.coverage,
+        sample.signedMean, sample.spatialRgbRms,
+      ].every(Number.isFinite)),
+    `E45 ${scale}x exact Thermite target metrics were incomplete (${JSON.stringify(targetResponses)})`);
+    assert(targetResponses.every((sample) => {
+      const bounds = THERMITE_BODY_VFX_ACCEPTANCE[sample.name];
+      return bounds
+        && sample.rgbRms >= bounds.rgbRms[0] && sample.rgbRms <= bounds.rgbRms[1]
+        && sample.chromaRms >= bounds.chromaRms[0] && sample.chromaRms <= bounds.chromaRms[1]
+        && sample.coverage >= bounds.coverage[0] && sample.coverage <= bounds.coverage[1]
+        && sample.signedMean >= bounds.signedMean[0] && sample.signedMean <= bounds.signedMean[1]
+        && sample.rgbPeak >= bounds.rgbPeak[0] && sample.rgbPeak <= bounds.rgbPeak[1]
+        && sample.spatialRgbRms >= bounds.spatialRgbRms[0]
+        && sample.spatialRgbRms <= bounds.spatialRgbRms[1];
+    }), `E45 ${scale}x Thermite body escaped its frozen response envelope (${JSON.stringify(targetResponses)})`);
+    const byName = Object.fromEntries(targetResponses.map((sample) => [sample.name, sample]));
+    assert(byName.THRMCrown.signedMean > 0 && byName.THRMPocket.signedMean < 0
+      && byName.THRMCrown.signedMean - byName.THRMPocket.signedMean >= 0.10
+      && byName.THRMCrown.responseRgb[0] >= byName.THRMCrown.responseRgb[2] + 0.05
+      && byName.THRMPocket.responseRgb[0] <= byName.THRMPocket.responseRgb[2] - 0.05,
+    `E45 ${scale}x lost its warm metallic crown / cool compacted pocket (${JSON.stringify(byName)})`);
+    assert(byName.THRMWholeBody.positiveMean >= 0.01
+      && byName.THRMWholeBody.negativeMean >= 0.01,
+    `E45 ${scale}x whole-body response lost an opposing lobe (${JSON.stringify(byName.THRMWholeBody)})`);
+    assert(byName.THRMCore.responseSignature !== byName.THRMCrown.responseSignature
+      && byName.THRMCore.responseSignature !== byName.THRMPocket.responseSignature,
+    `E45 ${scale}x core collapsed into a crown/pocket grade (${JSON.stringify(byName)})`);
+    assert(controlResponses.length === controls.length
+      && controlResponses.every((sample) => sample.rgbPeak
+        <= (THERMITE_BODY_VFX_CONTROL_PEAK[sample.name] ?? 0)),
+    `E45 ${scale}x escaped a named topology/material/contact control (${JSON.stringify(controlResponses)})`);
+
+    const microchromaRegions = targets.filter(({ name }) => name !== 'THRMWholeBody');
+    const microchroma = await samplePowderBodyVfxMicrochroma(cdp, {
+      disabled: disabled.capture.capture.data,
+      enabled: enabled.capture.capture.data,
+      disabledRepeat: disabledRepeat.capture.capture.data,
+    }, microchromaRegions);
+    assert(microchroma.every((sample) => sample.samples
+      >= THERMITE_BODY_VFX_MICROCHROMA.minimumSamples
+      && sample.disabled >= THERMITE_BODY_VFX_MICROCHROMA.minimumBaseline
+      && sample.retention >= THERMITE_BODY_VFX_MICROCHROMA.minimumRetention
+      && sample.retention <= THERMITE_BODY_VFX_MICROCHROMA.maximumRetention
+      && sample.repeatDelta <= THERMITE_BODY_VFX_MICROCHROMA.maximumRepeatDelta),
+    `E45 ${scale}x damped or destabilized Thermite cell-scale microchroma (${JSON.stringify({
+      limits: THERMITE_BODY_VFX_MICROCHROMA, microchroma,
+    })})`);
+
+    const references = {};
+    const referenceRegions = thermiteBodyVfxReferenceRegions(fixture);
+    for (const style of ['grains', 'local']) {
+      const samples = await sampleBackdropRefractionRegions(cdp, {
+        straight: disabled.references[style].capture.data,
+        refracted: enabled.references[style].capture.data,
+        repeatedStraight: disabledRepeat.references[style].capture.data,
+      }, referenceRegions, disabled.references[style].canvasRect);
+      assert(samples.every((sample) => sample.rgbPeak === 0 && sample.repeatRgbPeak === 0),
+        `E45 ${scale}x escaped the ${style} reference mode (${JSON.stringify(samples)})`);
+      references[style] = samples;
+    }
+    const screenshots = screenshotRequest && (requestedScales.length === 1 || scale === 2)
+      ? await writeThermiteBodyVfxScreenshots(screenshotRequest, scale, disabled, enabled)
+      : undefined;
+    scales.push({
+      scale, geometry: disabled.geometry, semantic: disabled.semantic,
+      backing: disabled.geometry.backing, alphaSupport: disabled.backing,
+      walls: disabled.walls, velocity: disabled.velocity, auxiliary: disabled.auxiliary,
+      suspension: disabled.suspension, rawControls: disabled.rawControls,
+      targetResponses, controlResponses, microchroma, references,
+      exactRepeatedOff: true, screenshots,
+    });
+  }
+  if (scales.length > 1) {
+    const reference = scales.find(({ scale }) => scale === 2) ?? scales[0];
+    for (const sample of scales.filter(({ scale }) => scale !== reference.scale)) {
+      assertCanvasRectsEqual(reference.geometry.canvas, sample.geometry.canvas,
+        `E45 ${reference.scale}x/${sample.scale}x CSS geometry`);
+      assert(JSON.stringify(reference.semantic) === JSON.stringify(sample.semantic)
+        && JSON.stringify(reference.walls) === JSON.stringify(sample.walls)
+        && JSON.stringify(reference.velocity) === JSON.stringify(sample.velocity)
+        && JSON.stringify(reference.auxiliary) === JSON.stringify(sample.auxiliary)
+        && JSON.stringify(reference.suspension) === JSON.stringify(sample.suspension),
+      `E45 ${sample.scale}x changed exact fixture state across output scales`);
+    }
+    const spread = (values) => Math.max(...values) - Math.min(...values);
+    for (const name of Object.keys(THERMITE_BODY_VFX_ACCEPTANCE)) {
+      const samples = scales.map((entry) => (
+        entry.targetResponses.find((sample) => sample.name === name)
+      ));
+      assert(samples.every(Boolean)
+        && spread(samples.map((sample) => sample.rgbRms)) <= 0.15
+        && spread(samples.map((sample) => sample.chromaRms)) <= 0.12
+        && spread(samples.map((sample) => sample.coverage)) <= 0.04
+        && spread(samples.map((sample) => sample.signedMean)) <= 0.10
+        && spread(samples.map((sample) => sample.spatialRgbRms)) <= 0.15
+        && spread(samples.map((sample) => sample.rgbPeak)) <= 6,
+      `E45 ${name} response exceeded its frozen cross-scale budget (${JSON.stringify(samples)})`);
+    }
+  }
+  const trueEightX = await auditEightXThermiteBodyVfxExclusion(cdp, dpr);
+  return {
+    calibration: 'e45-frozen-1x-4x',
+    acceptance: THERMITE_BODY_VFX_ACCEPTANCE,
+    microchromaLimits: THERMITE_BODY_VFX_MICROCHROMA,
+    controlPeakCaps: THERMITE_BODY_VFX_CONTROL_PEAK,
+    scales, trueEightXExcluded: true, trueEightX,
+  };
+}
+
+async function navigateThermiteBodyVfxState(cdp, mode, scale, enabled, label) {
+  const query = new URLSearchParams({
+    scene: 'render-lab', inputAudit: '1', blankAudit: '1', auditStage: 'blank',
+    thermiteBodyVfxAudit: '1', renderScale: String(scale), renderLook: 'realistic',
+    volumeVfx: '0', liquidBodyVfx: '0', liquidSurfaceVfx: '0', gasBodyVfx: '0',
+    gasMotionVfx: '0', powderBodyVfx: '1', sootyPowderBodyVfx: '0',
+    thermiteBodyVfx: enabled ? '1' : '0', powderLightVfx: '0', powderSolidContactVfx: '0',
+    translucentEdgeVfx: '0', organicSubsurfaceVfx: '0', wetSedimentVfx: '0',
+    gasLightVfx: '0', liquidSolidMeniscusVfx: '0', metalWaterContactVfx: '0',
+    gasCoreDepthVfx: '0', nobleGasBillowVfx: '0', nobleGasPrismVfx: '0',
+    smokeSoftnessVfx: '0', smokeBillowDepthVfx: '0', plasmaCoreVfx: '0',
+    solidBodyVfx: '0', radioactiveSolidBodyVfx: '0', platinumBodyVfx: '0',
+    ceramicGlazeVfx: '0', botanicalBodyVfx: '0', botanicalMesostructureVfx: '0',
+    botanicalPigmentVfx: '0', plantLaminaVfx: '0', plantLobeDepthVfx: '0',
+    plantCanopyMassVfx: '0', woodBarkReliefVfx: '0', woodTanninVfx: '0',
+    glassBodyVfx: '0', acidBodyVfx: '0', deutBodyVfx: '0', oilBodyVfx: '0',
+    oilVolumeFinishVfx: '0', rockRoughnessVfx: '0', rockMesostructureVfx: '0',
+    waterBodyVfx: '0', hydrogenBodyVfx: '0', carbonDioxideBodyVfx: '0',
+  });
+  await cdp.send('Page.navigate', { url: `${AUDIT_BASE_URL}?${query}` });
+  await waitFor(() => evaluate(cdp, `(() => {
+    const p = new URLSearchParams(location.search);
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    const isolated = [
+      'volumeVfx', 'liquidBodyVfx', 'liquidSurfaceVfx', 'gasBodyVfx', 'gasMotionVfx',
+      'sootyPowderBodyVfx', 'powderLightVfx', 'powderSolidContactVfx',
+      'translucentEdgeVfx', 'organicSubsurfaceVfx', 'wetSedimentVfx', 'gasLightVfx',
+      'liquidSolidMeniscusVfx', 'metalWaterContactVfx', 'gasCoreDepthVfx',
+      'nobleGasBillowVfx', 'nobleGasPrismVfx', 'smokeSoftnessVfx',
+      'smokeBillowDepthVfx', 'plasmaCoreVfx', 'solidBodyVfx',
+      'radioactiveSolidBodyVfx', 'platinumBodyVfx', 'ceramicGlazeVfx',
+      'botanicalBodyVfx', 'botanicalMesostructureVfx', 'botanicalPigmentVfx',
+      'plantLaminaVfx', 'plantLobeDepthVfx', 'plantCanopyMassVfx',
+      'woodBarkReliefVfx', 'woodTanninVfx', 'glassBodyVfx', 'acidBodyVfx',
+      'deutBodyVfx', 'oilBodyVfx', 'oilVolumeFinishVfx', 'rockRoughnessVfx',
+      'rockMesostructureVfx', 'waterBodyVfx', 'hydrogenBodyVfx',
+      'carbonDioxideBodyVfx',
+    ];
+    return p.get('thermiteBodyVfxAudit') === '1'
+      && p.get('renderScale') === ${JSON.stringify(String(scale))}
+      && p.get('renderLook') === 'realistic' && p.get('powderBodyVfx') === '1'
+      && p.get('thermiteBodyVfx') === ${JSON.stringify(enabled ? '1' : '0')}
+      && isolated.every((name) => p.get(name) === '0')
+      && typeof audit?.prepareThermiteBodyVfxFixture === 'function'
+      && typeof audit?.thermiteBodyVfxFixture === 'function';
+  })()`), scale === 4 ? 45_000 : 15_000, `E45 ${label} ${scale}x page`);
+  await waitFor(() => evaluate(cdp,
+    `window.__ANIFOR_INPUT_AUDIT__.backend().backend === ${JSON.stringify(mode)}`),
+  scale === 4 ? 30_000 : 15_000, `E45 ${label} ${scale}x backend`);
+  const fixture = await evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    audit.prepareThermiteBodyVfxFixture(); audit.setPowderRenderStyle('smooth');
+    return audit.thermiteBodyVfxFixture();
+  })()`);
+  // The paused fixture needs seven separately observed presentation refreshes:
+  // stable target probes reach byte 255 while authored velocity stays unsettled.
+  for (let pass = 0; pass < 7; pass++) {
+    const before = await evaluate(cdp,
+      'window.__ANIFOR_INPUT_AUDIT__.presentationRefreshAudit()');
+    await evaluate(cdp,
+      'window.__ANIFOR_INPUT_AUDIT__.refreshPresentationFields(); true');
+    await waitFor(() => evaluate(cdp, `(() => {
+      const current = window.__ANIFOR_INPUT_AUDIT__.presentationRefreshAudit();
+      return current?.dynamicSequence > ${before.dynamicSequence} ? current : false;
+    })()`), scale === 4 ? 15_000 : 5_000,
+    `E45 ${label} ${scale}x stability pass ${pass + 1}`);
+  }
+  await waitFor(() => thermiteBodyVfxFixtureReady(cdp, fixture), 20_000,
+    `E45 ${label} ${scale}x fixture/stability hydration`);
+  await sleep(350);
+  const hdrPipeline = await evaluate(cdp, `(() => {
+    const canvas = document.querySelector('canvas.semantic-field-canvas');
+    if (!canvas) return undefined;
+    const isolated = [
+      'volumeVfx', 'liquidBodyVfx', 'liquidSurfaceVfx', 'gasBodyVfx', 'gasMotionVfx',
+      'sootyPowderBodyVfx', 'powderLightVfx', 'powderSolidContactVfx',
+      'translucentEdgeVfx', 'organicSubsurfaceVfx', 'wetSedimentVfx', 'gasLightVfx',
+      'liquidSolidMeniscusVfx', 'metalWaterContactVfx', 'gasCoreDepthVfx',
+      'nobleGasBillowVfx', 'nobleGasPrismVfx', 'smokeSoftnessVfx',
+      'smokeBillowDepthVfx', 'plasmaCoreVfx', 'solidBodyVfx',
+      'radioactiveSolidBodyVfx', 'platinumBodyVfx', 'ceramicGlazeVfx',
+      'botanicalBodyVfx', 'botanicalMesostructureVfx', 'botanicalPigmentVfx',
+      'plantLaminaVfx', 'plantLobeDepthVfx', 'plantCanopyMassVfx',
+      'woodBarkReliefVfx', 'woodTanninVfx', 'glassBodyVfx', 'acidBodyVfx',
+      'deutBodyVfx', 'oilBodyVfx', 'oilVolumeFinishVfx', 'rockRoughnessVfx',
+      'rockMesostructureVfx', 'waterBodyVfx', 'hydrogenBodyVfx',
+      'carbonDioxideBodyVfx',
+    ];
+    return {
+      look: canvas.dataset.renderLook, state: canvas.dataset.hdrPipeline,
+      reason: canvas.dataset.hdrPipelineReason, bloomBacking: canvas.dataset.bloomBacking,
+      powderBodyVfx: canvas.dataset.powderBodyVfx,
+      sootyPowderBodyVfx: canvas.dataset.sootyPowderBodyVfx,
+      thermiteBodyVfx: canvas.dataset.thermiteBodyVfx,
+      isolatedSelectors: Object.fromEntries(isolated.map((name) => [name, canvas.dataset[name]])),
+    };
+  })()`);
+  const expectedBloom = `${WORLD_WIDTH * scale / 2}x${WORLD_HEIGHT * scale / 2}`;
+  assert(hdrPipeline?.look === 'realistic' && hdrPipeline.state === 'active'
+    && hdrPipeline.bloomBacking === expectedBloom && hdrPipeline.powderBodyVfx === 'active'
+    && hdrPipeline.sootyPowderBodyVfx === 'inactive'
+    && Object.values(hdrPipeline.isolatedSelectors).every((state) => state === 'inactive')
+    && hdrPipeline.thermiteBodyVfx === (enabled ? 'active' : 'inactive'),
+  `E45 ${label} ${scale}x HDR/selector isolation failed (${JSON.stringify(hdrPipeline)})`);
+  return {
+    fixture,
+    capture: await waitForStablePageCapture(
+      cdp, `E45 ${label} ${scale}x framebuffer`,
+      scale === 4 ? 45_000 : scale === 2 ? 30_000 : 15_000,
+    ),
+    geometry: await metrics(cdp), semantic: await hdrVfxSemanticDigest(cdp),
+    backing: await sampleVolumeVfxCanvasAlphaSupport(cdp),
+    walls: await thermiteBodyVfxWallDigest(cdp, fixture),
+    velocity: await thermiteBodyVfxVelocityDigest(cdp, fixture),
+    auxiliary: await thermiteBodyVfxAuxiliaryDigest(cdp, fixture),
+    suspension: await thermiteBodyVfxSuspensionDigest(cdp, fixture),
+    rawAll: await sampleVolumeVfxRawWorldPixels(cdp, thermiteBodyVfxAllRawPoints(fixture)),
+    rawControls: await sampleVolumeVfxRawWorldPixels(
+      cdp, thermiteBodyVfxRawControlPoints(fixture),
+    ),
+    hdrPipeline,
+  };
+}
+
+async function thermiteBodyVfxFixtureReady(cdp, fixture) {
+  return evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    const fixture = ${JSON.stringify(fixture)};
+    if (fixture?.version !== 1 || fixture.world?.width !== audit.width
+      || fixture.world?.height !== audit.height || fixture.target?.material !== 30) return false;
+    const inside = (rect, x, y) => x >= rect.x && x < rect.x + rect.width
+      && y >= rect.y && y < rect.y + rect.height;
+    const exactRect = (rect, material) => {
+      for (let y = rect.y; y < rect.y + rect.height; y++) {
+        for (let x = rect.x; x < rect.x + rect.width; x++) {
+          if (audit.cell(x, y) !== material) return false;
+        }
+      }
+      return true;
+    };
+    const exactAuxiliary = (rect, predicate) => {
+      for (let y = rect.y; y < rect.y + rect.height; y++) {
+        for (let x = rect.x; x < rect.x + rect.width; x++) {
+          if (!predicate(audit.presentationAuxiliary(x, y))) return false;
+        }
+      }
+      return true;
+    };
+    const target = fixture.target;
+    for (let y = target.body.y; y < target.body.y + target.body.height; y++) {
+      for (let x = target.body.x; x < target.body.x + target.body.width; x++) {
+        const empty = inside(target.authoredHole, x, y) || inside(target.openChannel, x, y);
+        if (audit.cell(x, y) !== (empty ? 0 : target.material)) return false;
+      }
+    }
+    if (![target.core, target.crown, target.pocket].every((rect) => (
+      exactRect(rect, target.material) && exactAuxiliary(rect, (value) => value === 255)
+    ))) return false;
+    const wall = target.wallCoexistence;
+    for (let y = wall.region.y; y < wall.region.y + wall.region.height; y++) {
+      for (let x = wall.region.x; x < wall.region.x + wall.region.width; x++) {
+        const blockX = Math.floor((x - wall.region.x) / wall.blockSize);
+        const blockY = Math.floor((y - wall.region.y) / wall.blockSize);
+        const expected = (blockX + blockY) % 2 === wall.occupiedParity
+          ? fixture.conductiveWall : 0;
+        if (audit.cell(x, y) !== target.material || audit.wall(x, y) !== expected) return false;
+      }
+    }
+    if (!exactRect(fixture.fineTopology.column, target.material)
+      || !exactRect(fixture.fineTopology.line, target.material)
+      || audit.cell(fixture.fineTopology.isolated.x, fixture.fineTopology.isolated.y)
+        !== target.material) return false;
+    const moving = fixture.movingControl;
+    if (!exactRect(moving, target.material)
+      || !exactAuxiliary(moving, (value) => value < 255)) return false;
+    for (let y = moving.y; y < moving.y + moving.height; y++) {
+      for (let x = moving.x; x < moving.x + moving.width; x++) {
+        const velocity = audit.velocity(x, y);
+        if (velocity[0] !== moving.velocityX || velocity[1] !== moving.velocityY) return false;
+      }
+    }
+    const wet = fixture.wetControl;
+    const wetThermite = new Set(wet.thermitePoints.map((point) => point.x + ',' + point.y));
+    for (let y = wet.region.y; y < wet.region.y + wet.region.height; y++) {
+      for (let x = wet.region.x; x < wet.region.x + wet.region.width; x++) {
+        if (audit.cell(x, y) !== (wetThermite.has(x + ',' + y) ? target.material : 2)) return false;
+      }
+    }
+    const boundary = (entry) => exactRect(entry.thermite, target.material)
+      && exactRect(entry.other, entry.otherMaterial);
+    return Object.values(fixture.siblingPowders).every((entry) => exactRect(entry, entry.material))
+      && Object.values(fixture.contacts).every(boundary)
+      && audit.cell(wet.thermiteProbe.x, wet.thermiteProbe.y) === target.material
+      && audit.cell(wet.waterProbe.x, wet.waterProbe.y) === 2
+      && exactRect(fixture.guardedBlank, 0)
+      && JSON.stringify(fixture.powderStyleMatrix) === JSON.stringify([
+        { style: 'smooth', expectation: 'target' },
+        { style: 'local', expectation: 'exact-no-op' },
+        { style: 'grains', expectation: 'exact-no-op' },
+      ]);
+  })()`);
+}
+
+async function thermiteBodyVfxWallDigest(cdp, fixture) {
+  return evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__; const fixture = ${JSON.stringify(fixture)};
+    const pattern = fixture.target.wallCoexistence;
+    let occupied = 0; let expectedOccupied = 0; let mismatches = 0; let matterMismatches = 0;
+    for (let y = pattern.region.y; y < pattern.region.y + pattern.region.height; y++) {
+      for (let x = pattern.region.x; x < pattern.region.x + pattern.region.width; x++) {
+        const blockX = Math.floor((x - pattern.region.x) / pattern.blockSize);
+        const blockY = Math.floor((y - pattern.region.y) / pattern.blockSize);
+        const expected = (blockX + blockY) % 2 === pattern.occupiedParity
+          ? fixture.conductiveWall : 0;
+        occupied += Number(audit.wall(x, y) === fixture.conductiveWall);
+        expectedOccupied += Number(expected === fixture.conductiveWall);
+        mismatches += Number(audit.wall(x, y) !== expected);
+        matterMismatches += Number(audit.cell(x, y) !== fixture.target.material);
+      }
+    }
+    return { occupied, expectedOccupied, mismatches, matterMismatches,
+      wallProbe: audit.wall(pattern.wallProbe.x, pattern.wallProbe.y),
+      clearProbe: audit.wall(pattern.clearProbe.x, pattern.clearProbe.y) };
+  })()`);
+}
+
+async function thermiteBodyVfxVelocityDigest(cdp, fixture) {
+  return evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__; const rect = ${JSON.stringify(fixture.movingControl)};
+    let cells = 0; let mismatches = 0; let minimumX = 127; let maximumX = -128;
+    let minimumY = 127; let maximumY = -128;
+    for (let y = rect.y; y < rect.y + rect.height; y++) {
+      for (let x = rect.x; x < rect.x + rect.width; x++) {
+        const velocity = audit.velocity(x, y); cells++;
+        minimumX = Math.min(minimumX, velocity[0]); maximumX = Math.max(maximumX, velocity[0]);
+        minimumY = Math.min(minimumY, velocity[1]); maximumY = Math.max(maximumY, velocity[1]);
+        mismatches += Number(velocity[0] !== rect.velocityX || velocity[1] !== rect.velocityY);
+      }
+    }
+    return { cells, expectedCells: rect.width * rect.height, mismatches,
+      range: [minimumX, maximumX, minimumY, maximumY] };
+  })()`);
+}
+
+async function thermiteBodyVfxAuxiliaryDigest(cdp, fixture) {
+  return evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__; const fixture = ${JSON.stringify(fixture)};
+    const range = (rect) => {
+      let min = 255; let max = 0;
+      for (let y = rect.y; y < rect.y + rect.height; y++) {
+        for (let x = rect.x; x < rect.x + rect.width; x++) {
+          const value = audit.presentationAuxiliary(x, y);
+          min = Math.min(min, value); max = Math.max(max, value);
+        }
+      }
+      return { min, max };
+    };
+    return { stable: { core: range(fixture.target.core), crown: range(fixture.target.crown),
+      pocket: range(fixture.target.pocket) }, moving: range(fixture.movingControl) };
+  })()`);
+}
+
+async function thermiteBodyVfxSuspensionDigest(cdp, fixture) {
+  return evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__; const fixture = ${JSON.stringify(fixture)};
+    return [
+      { name: 'WetThermite', material: fixture.target.material, point: fixture.wetControl.thermiteProbe },
+      { name: 'WetWater', material: 2, point: fixture.wetControl.waterProbe },
+    ].map((entry) => ({ name: entry.name, material: entry.material,
+      cell: audit.cell(entry.point.x, entry.point.y),
+      rgba: audit.suspensionAt(entry.point.x, entry.point.y),
+      liquidAlpha: audit.liquidFieldAlpha(entry.point.x, entry.point.y) }));
+  })()`);
+}
+
+function thermiteBodyVfxTargetRegions(fixture) {
+  const rect = (name, candidate) => ({
+    name, target: true,
+    x: candidate.x + candidate.width / 2, y: candidate.y + candidate.height / 2,
+    radiusX: Math.max(0.35, candidate.width / 2 - 0.2),
+    radiusY: Math.max(0.35, candidate.height / 2 - 0.2),
+  });
+  return [
+    rect('THRMWholeBody', fixture.target.body),
+    rect('THRMCrown', fixture.target.crown),
+    rect('THRMPocket', fixture.target.pocket),
+    rect('THRMCore', fixture.target.core),
+  ];
+}
+
+function thermiteBodyVfxReferenceRegions(fixture) {
+  return thermiteBodyVfxTargetRegions(fixture).map(({ target: _target, ...region }) => region);
+}
+
+function thermiteBodyVfxControlRegions(fixture) {
+  const point = (name, candidate) => ({
+    name, x: Math.floor(candidate.x) + 0.5, y: Math.floor(candidate.y) + 0.5, radius: 0,
+  });
+  const center = (name, rect) => point(name, {
+    x: rect.x + Math.floor(rect.width / 2), y: rect.y + Math.floor(rect.height / 2),
+  });
+  const controls = [
+    center('THRMHole', fixture.target.authoredHole),
+    center('THRMOpenChannel', fixture.target.openChannel),
+    center('FineColumn', fixture.fineTopology.column),
+    center('FineLine', fixture.fineTopology.line),
+    point('Isolated', fixture.fineTopology.isolated),
+    center('Moving', fixture.movingControl),
+    point('NativeWallOccupied', fixture.target.wallCoexistence.wallProbe),
+    point('NativeWallClear', fixture.target.wallCoexistence.clearProbe),
+  ];
+  for (const [name, rect] of Object.entries(fixture.siblingPowders)) {
+    controls.push(center(`Sibling${name[0].toUpperCase()}${name.slice(1)}`, rect));
+  }
+  controls.push(
+    point('WetThermite', fixture.wetControl.thermiteProbe),
+    point('WetWater', fixture.wetControl.waterProbe),
+    point('ThermiteMetal', fixture.contacts.metal.thermiteProbe),
+    point('Metal', fixture.contacts.metal.otherProbe),
+    point('ThermiteWater', fixture.contacts.water.thermiteProbe),
+    point('Water', fixture.contacts.water.otherProbe),
+    center('GuardedBlank', fixture.guardedBlank),
+  );
+  return controls;
+}
+
+function thermiteBodyVfxAllRawPoints(fixture) {
+  return [
+    ...thermiteBodyVfxTargetRegions(fixture).map(({ name, x, y }) => ({
+      name, x: Math.floor(x), y: Math.floor(y),
+    })),
+    ...thermiteBodyVfxRawControlPoints(fixture),
+  ];
+}
+
+function thermiteBodyVfxRawControlPoints(fixture) {
+  return thermiteBodyVfxControlRegions(fixture).map(({ name, x, y }) => ({
+    name, x: Math.floor(x), y: Math.floor(y),
+  }));
+}
+
+async function writeThermiteBodyVfxScreenshots(source, scale, disabled, enabled) {
+  const paths = {
+    off: variantScreenshotPath(source, `e45-thermite-body-${scale}x-off`),
+    on: variantScreenshotPath(source, `e45-thermite-body-${scale}x-on`),
+  };
+  await writeFile(paths.off, Buffer.from(disabled.capture.capture.data, 'base64'));
+  await writeFile(paths.on, Buffer.from(enabled.capture.capture.data, 'base64'));
+  return paths;
+}
+
+async function auditEightXThermiteBodyVfxExclusion(cdp, dpr) {
+  await setDesktopMetrics(cdp, 1280, 720, dpr);
+  const query = new URLSearchParams({
+    scene: 'render-lab', inputAudit: '1', blankAudit: '1', renderScale: '8',
+    auditStage: 'eight-thermite-body', thermiteBodyVfxAudit: '1', renderLook: 'realistic',
+    volumeVfx: '0', liquidBodyVfx: '0', liquidSurfaceVfx: '0', gasBodyVfx: '0',
+    gasMotionVfx: '0', powderBodyVfx: '1', sootyPowderBodyVfx: '0', thermiteBodyVfx: '1',
+    powderLightVfx: '0', powderSolidContactVfx: '0', translucentEdgeVfx: '0',
+    organicSubsurfaceVfx: '0', wetSedimentVfx: '0', gasLightVfx: '0',
+    liquidSolidMeniscusVfx: '0', metalWaterContactVfx: '0', gasCoreDepthVfx: '0',
+    nobleGasBillowVfx: '0', nobleGasPrismVfx: '0', smokeSoftnessVfx: '0',
+    smokeBillowDepthVfx: '0', plasmaCoreVfx: '0', solidBodyVfx: '0',
+    radioactiveSolidBodyVfx: '0', platinumBodyVfx: '0', ceramicGlazeVfx: '0',
+    botanicalBodyVfx: '0', glassBodyVfx: '0', oilBodyVfx: '0', rockRoughnessVfx: '0',
+    rockMesostructureVfx: '0', waterBodyVfx: '0', acidBodyVfx: '0',
+    hydrogenBodyVfx: '0', carbonDioxideBodyVfx: '0',
+  });
+  await cdp.send('Page.navigate', { url: `${AUDIT_BASE_URL}?${query}` });
+  const deadline = Date.now() + EIGHT_X_PRESENTATION_DEADLINE_MS;
+  await waitFor(() => evaluate(cdp, `(() => {
+    const p = new URLSearchParams(location.search);
+    return p.get('renderScale') === '8' && p.get('auditStage') === 'eight-thermite-body'
+      && p.get('powderBodyVfx') === '1' && p.get('thermiteBodyVfx') === '1'
+      && p.get('sootyPowderBodyVfx') === '0' && Boolean(window.__ANIFOR_INPUT_AUDIT__);
+  })()`), remainingDeadlineMs(deadline, 'true-8x E45 input audit API'),
+  'true-8x E45 input audit API');
+  const backend = await waitForEightXTerminalBackend(cdp, 'true-8x E45', deadline);
+  assertEightXWebGLBackend(backend, 'true-8x E45');
+  const geometry = await waitForStableCanvas(
+    cdp, 1280, 720, undefined,
+    Math.min(45_000, remainingDeadlineMs(deadline, 'true-8x E45 geometry')),
+    'true-8x E45 geometry',
+  );
+  assert(geometry.backing.width === WORLD_WIDTH * 8
+    && geometry.backing.height === WORLD_HEIGHT * 8 && geometry.outputScale === '8',
+  `true-8x E45 lost exact backing (${JSON.stringify(geometry.backing)})`);
+  const isolation = await evaluate(cdp, `(() => {
+    const canvas = document.querySelector('canvas.semantic-field-canvas');
+    return canvas ? {
+      renderer: canvas.dataset.renderer, look: canvas.dataset.renderLook,
+      state: canvas.dataset.hdrPipeline, reason: canvas.dataset.hdrPipelineReason,
+      bloomBacking: canvas.dataset.bloomBacking ?? null,
+      powderBodyVfx: canvas.dataset.powderBodyVfx,
+      sootyPowderBodyVfx: canvas.dataset.sootyPowderBodyVfx,
+      thermiteBodyVfx: canvas.dataset.thermiteBodyVfx,
+    } : undefined;
+  })()`, Math.min(1_000, remainingDeadlineMs(deadline, 'true-8x E45 isolation')));
+  assert(isolation?.renderer === 'semantic-field-webgl' && isolation.look === 'realistic'
+    && isolation.state === 'inactive' && isolation.reason === 'scale-8'
+    && isolation.bloomBacking === null && isolation.powderBodyVfx === 'inactive'
+    && isolation.sootyPowderBodyVfx === 'inactive'
+    && isolation.thermiteBodyVfx === 'inactive',
+  `true-8x E45 isolation failed (${JSON.stringify(isolation)})`);
+  // E45 owns no compact-shader path. Avoid uploading the dense fixture here:
+  // this tail proves selector/resource exclusion on one already-fenced 8x frame.
+  const stateBefore = await hdrVfxSemanticDigest(cdp);
+  const timingBudget = remainingDeadlineMs(deadline, 'true-8x E45 GPU completion');
+  const timing = await auditWebGLPresentationTiming(
+    cdp, 1, Math.min(12_000, timingBudget), timingBudget, 1,
+  );
+  assert(['gpu-query', 'gpu-fence', 'gpu-finish'].includes(timing.source),
+    `true-8x E45 did not complete GPU work (${JSON.stringify(timing)})`);
+  const stateAfter = await hdrVfxSemanticDigest(cdp);
+  assertHdrVfxSemanticEquality(stateBefore, stateAfter, 'true-8x E45 GPU completion');
+  return {
+    backing: `${geometry.backing.width}x${geometry.backing.height}`,
+    promotedWebGLObserved: geometry.outputScale === '8'
+      && geometry.backend.backend === 'webgl',
+    selectorExcluded: true, resourcesIdentical: isolation.bloomBacking === null,
+    semanticStable: true, isolation, timing,
+  };
 }
 
 // E25's accepted SwiftShader matrix freezes the body response without making

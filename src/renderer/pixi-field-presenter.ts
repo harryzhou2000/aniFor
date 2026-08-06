@@ -72,6 +72,7 @@ import {
   resolveSolidBodyVfxEnabled,
   resolvePowderBodyVfxEnabled, resolvePowderLightVfxEnabled, resolveRenderLook,
   resolveSootyPowderBodyVfxEnabled,
+  resolveThermiteBodyVfxEnabled,
   resolveOrganicSubsurfaceVfxEnabled,
   resolvePowderSolidContactVfxEnabled,
   resolveTranslucentEdgeVfxEnabled,
@@ -3284,6 +3285,7 @@ uniform float uLiquidSolidMeniscusVfx;
 uniform float uMetalWaterContactVfx;
 uniform float uPowderBodyVfx;
 uniform float uSootyPowderBodyVfx;
+uniform float uThermiteBodyVfx;
 uniform float uPowderLightVfx;
 uniform float uPowderSolidContactVfx;
 uniform float uTranslucentEdgeVfx;
@@ -7856,6 +7858,35 @@ void main() {
               vec3(0.066, 0.082, 0.108), vec3(0.108, 0.078, 0.052), brokenCoal
             ) * (sootyBodyPocket + sootyBodyCore);
           }
+          // E45: exact Thermite is a reactive-metal powder, not another sooty
+          // explosive. Recombine E05's already-proven facet/depth response into
+          // a burnished iron/copper crown and cool compacted pocket. Multiplying
+          // the live pigment retains Thermite's later cell-scale reaction marks;
+          // no sample, wave, clock, support, owner, or resource is introduced.
+          if (uThermiteBodyVfx > 0.5 && optics == 15.0 && material == 30.0) {
+            float thermiteBodyRelief = clamp(
+              powderVfxFacetBalance + powderDirectedSlope * 0.10
+                + (0.46 - powderBodyVolumeDepth) * 0.08 + 0.035,
+              -1.0, 1.0
+            );
+            float thermiteBodyCrown = powderBodyGate
+              * smoothstep(0.015, 0.60, thermiteBodyRelief)
+              * (0.58 + (1.0 - powderBodyVolumeDepth) * 0.30);
+            float thermiteBodyPocket = powderBodyGate
+              * smoothstep(0.015, 0.60, -thermiteBodyRelief)
+              * (0.50 + powderBodyVolumeDepth * 0.48);
+            float thermiteBodyCore = powderBodyGate
+              * smoothstep(0.36, 0.88, powderBodyVolumeDepth)
+              * (1.0 - abs(thermiteBodyRelief)) * 0.30;
+            color *= vec3(1.0) + vec3(0.320, 0.190, 0.085)
+              * thermiteBodyCrown;
+            color += (vec3(1.24) - clamp(color, 0.0, 1.24))
+              * vec3(0.96, 0.56, 0.30) * thermiteBodyCrown * 0.070;
+            // Preferentially absorb the warm channels so compacted pockets
+            // turn toward iron-blue shadow rather than a sooty warm brown.
+            color *= vec3(1.0) - vec3(0.092, 0.072, 0.052)
+              * (thermiteBodyPocket + thermiteBodyCore);
+          }
         }
         // This is intentionally stricter than a generic settled-powder
         // classification. It names only a proven, deep compatible interior;
@@ -10458,6 +10489,10 @@ export class PixiFieldPresenter {
     // true-8x retains the accepted sooty identity and declares no E40 branch.
     const sootyPowderBodyVfxEnabled = outputScale < 8
       && resolveSootyPowderBodyVfxEnabled(renderLook);
+    // E45 is exact-owner arithmetic inside E05's stable Smooth body. Compact
+    // true-8x retains Thermite's established identity and declares no E45 path.
+    const thermiteBodyVfxEnabled = outputScale < 8
+      && resolveThermiteBodyVfxEnabled(renderLook);
     // E06 is a normal-detail recomposition of the existing centre-field light.
     // The protected compact shader retains its one established emission sample.
     const powderLightVfxEnabled = outputScale < 8
@@ -10694,6 +10729,7 @@ export class PixiFieldPresenter {
       },
       uPowderBodyVfx: { value: powderBodyVfxEnabled ? 1 : 0, type: 'f32' },
       uSootyPowderBodyVfx: { value: sootyPowderBodyVfxEnabled ? 1 : 0, type: 'f32' },
+      uThermiteBodyVfx: { value: thermiteBodyVfxEnabled ? 1 : 0, type: 'f32' },
       uPowderLightVfx: { value: powderLightVfxEnabled ? 1 : 0, type: 'f32' },
       uPowderSolidContactVfx: {
         value: powderSolidContactVfxEnabled ? 1 : 0, type: 'f32',
@@ -10936,6 +10972,7 @@ export class PixiFieldPresenter {
       this.uniforms.uniforms.uMetalWaterContactVfx = 0;
       this.uniforms.uniforms.uPowderBodyVfx = 0;
       this.uniforms.uniforms.uSootyPowderBodyVfx = 0;
+      this.uniforms.uniforms.uThermiteBodyVfx = 0;
       this.uniforms.uniforms.uPowderLightVfx = 0;
       this.uniforms.uniforms.uPowderSolidContactVfx = 0;
       this.uniforms.uniforms.uTranslucentEdgeVfx = 0;
@@ -11003,6 +11040,7 @@ export class PixiFieldPresenter {
             || new URLSearchParams(location.search).get('liquidSurfaceVfxAudit') === '1'
             || new URLSearchParams(location.search).get('powderBodyVfxAudit') === '1'
             || new URLSearchParams(location.search).get('sootyPowderBodyVfxAudit') === '1'
+            || new URLSearchParams(location.search).get('thermiteBodyVfxAudit') === '1'
             || new URLSearchParams(location.search).get('powderLightVfxAudit') === '1'
             || new URLSearchParams(location.search).get('powderSolidContactVfxAudit') === '1'
             || new URLSearchParams(location.search).get('translucentEdgeVfxAudit') === '1'
@@ -11137,6 +11175,9 @@ export class PixiFieldPresenter {
       ? 'active' : 'inactive';
     presenter.app.canvas.dataset.sootyPowderBodyVfx = Number(
       presenter.uniforms.uniforms.uSootyPowderBodyVfx
+    ) > 0.5 ? 'active' : 'inactive';
+    presenter.app.canvas.dataset.thermiteBodyVfx = Number(
+      presenter.uniforms.uniforms.uThermiteBodyVfx
     ) > 0.5 ? 'active' : 'inactive';
     presenter.app.canvas.dataset.powderLightVfx = Number(presenter.uniforms.uniforms.uPowderLightVfx) > 0.5
       ? 'active' : 'inactive';
@@ -12555,6 +12596,7 @@ export class PixiFieldPresenter {
         this.uniforms.uniforms.uMetalWaterContactVfx = 0;
         this.uniforms.uniforms.uPowderBodyVfx = 0;
         this.uniforms.uniforms.uSootyPowderBodyVfx = 0;
+        this.uniforms.uniforms.uThermiteBodyVfx = 0;
         this.uniforms.uniforms.uPowderLightVfx = 0;
         this.uniforms.uniforms.uPowderSolidContactVfx = 0;
         this.uniforms.uniforms.uTranslucentEdgeVfx = 0;
@@ -12600,6 +12642,7 @@ export class PixiFieldPresenter {
         this.app.canvas.dataset.liquidSurfaceVfx = 'inactive';
         this.app.canvas.dataset.powderBodyVfx = 'inactive';
         this.app.canvas.dataset.sootyPowderBodyVfx = 'inactive';
+        this.app.canvas.dataset.thermiteBodyVfx = 'inactive';
         this.app.canvas.dataset.powderLightVfx = 'inactive';
         this.app.canvas.dataset.powderSolidContactVfx = 'inactive';
         this.app.canvas.dataset.translucentEdgeVfx = 'inactive';

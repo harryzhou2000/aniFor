@@ -13,7 +13,7 @@ powder, solid, liquid, gas, energy, and contact scenes across Canvas and WebGL a
 mobile gestures, save/load, CI, and Pages deployment as protected regression
 contracts rather than the primary feature stream.
 
-The accepted visual experiment ladder now runs through E44. E12 is the
+The accepted visual experiment ladder now runs through E45. E12 is the
 species-safe Sand/Clay/Concrete wet-sediment checkpoint; preserve its exact
 aqueous owner/stability proof, split moving-powder/stationary-Water control,
 Local/Grains no-op, fine structures, authored gaps, Canvas fallback, and true
@@ -769,17 +769,46 @@ bytes. Requested-on true 8× reports E04/E42/E44/HDR inactive with no bloom,
 preserves semantics, presents exact 4896×3072 WebGL, and completes a real GPU
 fence (accepted frozen run `5358.6 ms`) with zero browser errors.
 
-The corrected v5 composed survey now explicitly enables E17/E43/E44 under
+E45 is the accepted normal-WebGL-only exact Thermite `30` reactive-metal body
+checkpoint. `?thermiteBodyVfx=0|1` is a strict child of E05 and remains
+inactive for unrelated `inputAudit=1` fixtures unless explicitly selected.
+Only MetallicGranular Thermite inside E05's stable, dry Smooth powder-body
+proof may respond. Reuse E05's existing facet balance, directed slope, volume
+depth, and body gate for a restrained iron/copper crown, cooler compacted
+pocket, and bounded core absorption. Apply this fold before Thermite's existing
+cell-scale reactive-metal marks so their pigment cadence survives. Add no
+sample, texture, field, resource, pass, target, upload, allocation, clock,
+alpha/support, silhouette, ownership, topology, state, or physics decision.
+Canvas, Local, Grains, moving or wet Thermite, and compact true 8× retain their
+established paths.
+
+Validate E45 with `npm run audit:vfx:thermite-body`. Its frozen 1×/2×/4×
+off→on→off matrix holds whole-body RGB RMS at `3.44–3.50`, crown at
+`5.53–5.63`, pocket at `4.09–4.10`, and core at `3.76–3.79`; the signed crown,
+pocket, and core responses are respectively `+2.44…+2.50`, `−2.89…−2.91`,
+and `−1.23…−1.24`. Crown/pocket/core microchroma retention stays within
+`0.9765–1.0260`, proving the broad fold does not flatten the internal grain
+marks. Fifteen sibling owners, authored holes and channel, fine structures,
+moving and genuine wet controls, contacts, blank, alpha/support/auxiliary/
+suspension state, and repeated-off frames remain exact; the wall-occupied half
+is exact while its wall-free Thermite control may retain the eligible response
+at a six-byte peak. Requested-on true 8× reports E05/E40/E45/HDR inactive,
+retains no bloom resource, preserves semantics, presents exact 4896×3072
+WebGL, and completes a real GPU fence (accepted frozen run `4943.1 ms`) with
+zero browser errors.
+
+The corrected v5 composed survey now explicitly enables E17/E43/E44/E45 under
 `inputAudit=1` and freezes 22 material counts, 17 scored regions, semantic hash
 `2677171272`, and 112,795 occupied cells across 1×/2×/4×. Its family floor is
 Organic `67.661` (the known PLNT scorer blind spot), followed by Solid `70.694`
 (ISZS surface detail), Contact `88.768`, Gas `95.463`, Emission `98.475`, and
 saturated Powder/Liquid `100`. Do not reopen E36 or E43 from those score-only
 floors: their focused gates remain authoritative. E44 raises its scored CO2
-body to about `99.0`, so the next owner-specific experiment should return to
-the underserved material inventory rather than stacking another generic gas
-layer: inspect exact Thermite powder first and Soap liquid second, require a
-dedicated fixture, and reuse live semantic/field/depth evidence.
+body to about `99.0`, and E45 leaves the composed family order and semantic
+fixture byte-identical while closing Thermite's generic dense-body gap. Exact
+Soap `38` is now the immediate owner-specific candidate: require a dedicated
+topology/control fixture and reuse live semantic/field/depth evidence rather
+than stacking another generic liquid layer.
 
 The old post-E16 rank that labelled Stone `21` as Solid was invalid because
 Stone is native Powder. The corrected showcase uses native ROCK ground and

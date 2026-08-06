@@ -34,6 +34,7 @@ import {
   resolveSolidBodyVfxEnabled,
   resolvePowderBodyVfxEnabled, resolvePowderLightVfxEnabled,
   resolveSootyPowderBodyVfxEnabled,
+  resolveThermiteBodyVfxEnabled,
   resolvePowderSolidContactVfxEnabled, resolveRenderLook, resolveTranslucentEdgeVfxEnabled,
   resolveVolumeVfxEnabled, resolveWaterBodyVfxEnabled, resolveWetSedimentVfxEnabled,
 } from './render-look';
@@ -777,6 +778,36 @@ describe('resolveRenderLook', () => {
     expect(resolveSootyPowderBodyVfxEnabled(
       'realistic', '?sootyPowderBodyVfx=false',
     )).toBe(false);
+  });
+
+  it('keeps exact Thermite body optics subordinate to E05 and isolated from older input audits', () => {
+    expect(resolveThermiteBodyVfxEnabled(
+      'classic', '?thermiteBodyVfx=on',
+    )).toBe(false);
+    expect(resolveThermiteBodyVfxEnabled('realistic', '')).toBe(true);
+    expect(resolveThermiteBodyVfxEnabled('neon-lab', '')).toBe(true);
+    expect(resolveThermiteBodyVfxEnabled('realistic', '?inputAudit=1')).toBe(false);
+    expect(resolveThermiteBodyVfxEnabled(
+      'realistic', '?inputAudit=1&thermiteBodyVfx=true',
+    )).toBe(true);
+    expect(resolveThermiteBodyVfxEnabled(
+      'realistic', '?thermiteBodyVfx=off',
+    )).toBe(false);
+    expect(resolveThermiteBodyVfxEnabled(
+      'realistic', '?thermiteBodyVfx=0',
+    )).toBe(false);
+    expect(resolveThermiteBodyVfxEnabled(
+      'realistic', '?thermiteBodyVfx=false',
+    )).toBe(false);
+    expect(resolveThermiteBodyVfxEnabled(
+      'realistic', '?thermiteBodyVfx=on',
+    )).toBe(true);
+    expect(resolveThermiteBodyVfxEnabled(
+      'realistic', '?powderBodyVfx=0&thermiteBodyVfx=on',
+    )).toBe(false);
+    expect(resolveThermiteBodyVfxEnabled(
+      'realistic', '?volumeVfx=0&powderBodyVfx=on&thermiteBodyVfx=1',
+    )).toBe(true);
   });
 
   it('keeps powder/solid contact VFX independent of the powder-body crown layer', () => {

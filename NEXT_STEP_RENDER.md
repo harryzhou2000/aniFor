@@ -717,11 +717,31 @@ does not alter simulation, camera, semantic ownership, or `renderScale`.
   two composed bytes. Requested-on true 8× reports E04/E42/E44/HDR inactive,
   retains no bloom resource, preserves semantics, presents exact 4896×3072
   WebGL, and completed a `5358.6 ms` GPU fence with zero browser errors.
+- **E45 accepted:** exact Thermite `30` gains a normal-WebGL-only reactive-
+  metal body fold as a strict child of E05 (`?thermiteBodyVfx=0|1`). Exact
+  MetallicGranular ownership plus E05's stable, dry Smooth body proof, facet
+  balance, directed slope, volume depth, and body gate are the complete inputs.
+  The broad body receives a restrained iron/copper crown and cooler compacted
+  pocket before the existing cell-scale reactive-metal marks, preserving their
+  pigment cadence. The path is RGB-only and adds no sample, texture, field,
+  resource, pass, target, upload, allocation, clock, alpha/support, silhouette,
+  ownership, topology, state, or physics decision. `npm run
+  audit:vfx:thermite-body` freezes exact off→on→off semantics and 1×/2×/4× RGB
+  RMS at `3.44–3.50` (whole body), `5.53–5.63` (crown), `4.09–4.10` (pocket),
+  and `3.76–3.79` (core); signed crown/pocket/core means remain
+  `+2.44…+2.50`/`−2.89…−2.91`/`−1.23…−1.24`, while sampled microchroma
+  retention remains `0.9765–1.0260`. Fifteen sibling owners, moving/wet and
+  fine-topology controls, contacts, the wall-occupied half, blank, raw fields,
+  Local, Grains, and repeated-off frames remain exact; the wall-free Thermite
+  half remains eligible with a bounded six-byte peak. Requested-on true 8×
+  reports E05/E40/E45/HDR inactive, retains no bloom resource, preserves
+  semantics, presents exact 4896×3072 WebGL, and completed a `4943.1 ms` GPU
+  fence with zero browser errors.
 - **Protected 8× rung:** `renderScale=8` deliberately reports
   `hdrPipeline=inactive` / `scale-8` and retains the proven direct single-mesh
   4896×3072 path. The experiment must earn a bounded 8× design rather than
   allocating a 115 MiB full-resolution float target beside that path.
-- **Current decision:** E01/E02/E03/E04/E05/E06/E07/E08/E09/E10/E11/E12/E13/E14/E15/E16/E17/E18/E19/E20/E21/E22/E23/E24/E25/E26/E27/E28/E29/E30/E31/E32/E33/E34/E35/E36/E37/E38/E39/E40/E41/E42/E43/E44 remain opt-in through the non-Classic looks
+- **Current decision:** E01/E02/E03/E04/E05/E06/E07/E08/E09/E10/E11/E12/E13/E14/E15/E16/E17/E18/E19/E20/E21/E22/E23/E24/E25/E26/E27/E28/E29/E30/E31/E32/E33/E34/E35/E36/E37/E38/E39/E40/E41/E42/E43/E44/E45 remain opt-in through the non-Classic looks
   until representative hardware timing and mobile thermal behavior are
   measured. E02 remains the safe family-wide baseline. E03 is accepted as the
   liquid-depth checkpoint: its fit-view crop is visibly more cohesive, retains
@@ -1771,7 +1791,7 @@ next production 4× survey then selected Wood/PLNT as the largest remaining
   lower seam density, lower local contrast, stronger macro hierarchy, unchanged
   semantic support, and byte-exact selector-off recovery.
 
-**Next visual experiments:** E03–E44 now provide accepted liquid body/surface,
+**Next visual experiments:** E03–E45 now provide accepted liquid body/surface,
 stable-gas, coherent-gas-motion, powder-depth, and powder-local-light
 checkpoints plus exact resting contact grounding, Glass/Ice transmission, and
 state-aware Wax/PLNT subsurface response, composed wet-mineral optics,
@@ -1822,24 +1842,28 @@ an accepted trait-aware connected radioactive-liquid body without widening
 E03. E44 gives exact Carbon Dioxide `41` a distinct cool-grey connected-volume
 crown/pocket response without touching foreign gas identities, sparse
 topology, contacts, Canvas, or compact 8×. Its frozen all-scale browser matrix
-and v5 composed cloud close CO2 as the immediate gas candidate.
+and v5 composed cloud close CO2 as the immediate gas candidate. E45 gives exact
+Thermite `30` a restrained reactive-metal crown/pocket/core fold without
+flattening its existing internal marks or touching wet/moving/fine powder,
+sibling owners, Local, Grains, Canvas, or compact 8×; its frozen all-scale gate
+closes Thermite as the immediate powder candidate.
 Improve distinctive depth, transmission, reflection, lighting, and
 mesostructure without stacking another narrow Oil/Acid/contact tint or generic
 PLNT/gas layer.
-The fresh composed-family/material survey is now complete with E17/E43/E44
+The fresh composed-family/material survey is now complete with E17/E43/E44/E45
 explicitly enabled under `inputAudit=1`. Fixture v5 freezes 22 materials, 17
 regions, hash `2677171272`, and 112,795 occupied cells at 1×/2×/4×. The final
 family floors are Organic `67.661`, Solid `70.694`, Contact `88.768`, Gas
 `95.463`, Emission `98.475`, Powder `100`, and Liquid `100`. Organic remains the
 known E36 scorer blind spot; Solid is exact ISZS surface-detail undersampling,
-not a focused E43 regression. Do not reopen E36/E38/E39/E41/E42/E43/E44 from
-those score-only floors. Return to the owner inventory: exact Thermite `30` is
-the first powder candidate because its dense settled body still relies on the
-generic E05 relief plus cell-scale reactive-metal marks; exact Soap `38` is the
-second liquid candidate because its broad body remains generic beneath its
-thin-film motif. Require a dedicated topology/control fixture and reuse live
-semantic/field/depth/static-light evidence. Preserve the E14 1× stencil snap
-and all E01–E44 selectors and controls while designing the next bounded card.
+not a focused E43 regression. Do not reopen E36/E38/E39/E41/E42/E43/E44/E45
+from those score-only floors. E45 leaves this ranking and the v5 semantic
+fixture unchanged while closing Thermite's dense-body gap. Return to the owner
+inventory with exact Soap `38` as the immediate liquid candidate because its
+broad body remains generic beneath its thin-film motif. Require a dedicated
+topology/control fixture and reuse live semantic/field/depth/static-light
+evidence. Preserve the E14 1× stencil snap and all E01–E45 selectors and
+controls while designing the next bounded card.
 
 ## Phase 1 — HDR pipeline & lighting core (biggest visual payoff)
 
