@@ -23,6 +23,7 @@ import {
   resolveAcidBodyVfxEnabled,
   resolveSoapBodyVfxEnabled,
   resolveDeutBodyVfxEnabled,
+  resolveIszsCrystallineVfxEnabled,
   resolveRadioactiveSolidBodyVfxEnabled,
   resolveOilBodyVfxEnabled,
   resolveOilVolumeFinishVfxEnabled,
@@ -763,6 +764,38 @@ describe('resolveRenderLook', () => {
     )).toBe(false);
     expect(resolveRadioactiveSolidBodyVfxEnabled(
       'realistic', '?radioactiveSolidBodyVfx=false',
+    )).toBe(false);
+  });
+
+  it('keeps exact ISZS crystal optics subordinate to the E43 body proof', () => {
+    expect(resolveIszsCrystallineVfxEnabled(
+      'classic', '?iszsCrystallineVfx=on',
+    )).toBe(false);
+    expect(resolveIszsCrystallineVfxEnabled('realistic', '')).toBe(true);
+    expect(resolveIszsCrystallineVfxEnabled('neon-lab', '')).toBe(true);
+    expect(resolveIszsCrystallineVfxEnabled('realistic', '?inputAudit=1')).toBe(false);
+    expect(resolveIszsCrystallineVfxEnabled(
+      'realistic',
+      '?inputAudit=1&solidBodyVfx=1&radioactiveSolidBodyVfx=1&iszsCrystallineVfx=1',
+    )).toBe(true);
+    expect(resolveIszsCrystallineVfxEnabled(
+      'realistic', '?radioactiveSolidBodyVfx=0&iszsCrystallineVfx=on',
+    )).toBe(false);
+    expect(resolveIszsCrystallineVfxEnabled(
+      'realistic', '?solidBodyVfx=0&radioactiveSolidBodyVfx=on&iszsCrystallineVfx=on',
+    )).toBe(false);
+    expect(resolveIszsCrystallineVfxEnabled(
+      'realistic',
+      '?volumeVfx=0&solidBodyVfx=on&radioactiveSolidBodyVfx=on&iszsCrystallineVfx=on',
+    )).toBe(true);
+    expect(resolveIszsCrystallineVfxEnabled(
+      'realistic', '?iszsCrystallineVfx=0',
+    )).toBe(false);
+    expect(resolveIszsCrystallineVfxEnabled(
+      'realistic', '?iszsCrystallineVfx=off',
+    )).toBe(false);
+    expect(resolveIszsCrystallineVfxEnabled(
+      'realistic', '?iszsCrystallineVfx=false',
     )).toBe(false);
   });
 

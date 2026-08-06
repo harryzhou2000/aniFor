@@ -765,11 +765,34 @@ does not alter simulation, camera, semantic ownership, or `renderScale`.
   requirement. Production showcase v6 adds a disjoint 1,220-cell SOAP body and
   a 384-cell `liquidSoap` probe while freezing semantic hash `3610338776`,
   114,015 occupied cells, 23 material counts, and 18 scored regions.
+- **E47 accepted:** exact ISZS `105` gains a normal-WebGL-only crystalline-
+  depth finish as a strict child of E43 and E17
+  (`?iszsCrystallineVfx=0|1`). Only E43's already-authoritative deep,
+  connected, wall-free, contact-free ISZS body may respond. The shader
+  recombines E43's existing static macro/facet carriers with exact depth,
+  interior, and contact evidence for broad cyan/violet crystal planes, a cool
+  raised crown, and an opposing decay pocket. The path is RGB-only and adds no
+  sample, noise call, texture, field, resource, pass, target, upload,
+  allocation, clock, alpha/support, silhouette, ownership, native state,
+  topology, or physics decision. VIBR `113` and every E43 topology, wall,
+  seam, contact, state, and foreign-owner control remain exact no-ops. `npm run
+  audit:vfx:iszs-crystalline` freezes the 1×/2×/4× off→on→off matrix: core RGB
+  RMS is `2.30–2.31` with signed mean about `+0.58`, crown is `17.31–17.40`
+  with signed mean `+10.63…+10.70`, and pocket is `2.94–2.95` with signed mean
+  `−1.03…−1.06`. All 51 protected controls peak at zero, repeated-off output
+  is byte-exact, semantic/rendered/depth/wall/native-state digests are stable,
+  and browser errors remain zero. Requested-on compact true 8× has no E47
+  selector or branch, presents exact 4896×3072 WebGL, and completed the
+  final frozen full-matrix GPU fence in `5161.0 ms`; repeated calibration tails
+  ranged `4169.7–5248.3 ms`. Composed v6 explicit-selector telemetry
+  raises `solidISZS` quality `70.694→93.047`, luma standard deviation
+  `2.52→7.68`, microcontrast `.80→1.16`, chromatic contrast to `2.19`, and
+  macro range `10→28`, with full support and zero dark/clipped fraction.
 - **Protected 8× rung:** `renderScale=8` deliberately reports
   `hdrPipeline=inactive` / `scale-8` and retains the proven direct single-mesh
   4896×3072 path. The experiment must earn a bounded 8× design rather than
   allocating a 115 MiB full-resolution float target beside that path.
-- **Current decision:** E01/E02/E03/E04/E05/E06/E07/E08/E09/E10/E11/E12/E13/E14/E15/E16/E17/E18/E19/E20/E21/E22/E23/E24/E25/E26/E27/E28/E29/E30/E31/E32/E33/E34/E35/E36/E37/E38/E39/E40/E41/E42/E43/E44/E45/E46 remain opt-in through the non-Classic looks
+- **Current decision:** E01/E02/E03/E04/E05/E06/E07/E08/E09/E10/E11/E12/E13/E14/E15/E16/E17/E18/E19/E20/E21/E22/E23/E24/E25/E26/E27/E28/E29/E30/E31/E32/E33/E34/E35/E36/E37/E38/E39/E40/E41/E42/E43/E44/E45/E46/E47 remain opt-in through the non-Classic looks
   until representative hardware timing and mobile thermal behavior are
   measured. E02 remains the safe family-wide baseline. E03 is accepted as the
   liquid-depth checkpoint: its fit-view crop is visibly more cohesive, retains
@@ -972,6 +995,14 @@ does not alter simulation, camera, semantic ownership, or `renderScale`.
   bubble rendering. Foreign owners remain exact; retain only the audited 1×
   Soap-side CSS-footprint allowance. Canvas remains a fallback control without
   an E46 parity requirement.
+  E47 is accepted as the exact-ISZS crystalline-depth checkpoint: freeze its
+  strict E43/E17 dependency, exact ISZS `105` ownership, reuse of E43's static
+  macro/facet and exact depth/interior/contact evidence, broad cyan/violet
+  planes, positive crown, restrained negative pocket, 51 exact controls,
+  byte-identical repeated-off output, stable raw digests, narrow 1×–4×
+  response spread, and compact-8× exclusion. VIBR `113` and its native-state
+  overlay remain exact controls; do not widen E47 back to E43's two-owner set,
+  add another procedural carrier, or claim Canvas parity.
   These are not the final material/VFX results.
   Sub-1.0 material colour stays on the established response; tonemapping owns
   only real HDR highlights so powder texture and liquid body contrast are not
@@ -1829,7 +1860,7 @@ next production 4× survey then selected Wood/PLNT as the largest remaining
   lower seam density, lower local contrast, stronger macro hierarchy, unchanged
   semantic support, and byte-exact selector-off recovery.
 
-**Next visual experiments:** E03–E46 now provide accepted liquid body/surface,
+**Next visual experiments:** E03–E47 now provide accepted liquid body/surface,
 stable-gas, coherent-gas-motion, powder-depth, and powder-local-light
 checkpoints plus exact resting contact grounding, Glass/Ice transmission, and
 state-aware Wax/PLNT subsurface response, composed wet-mineral optics,
@@ -1890,10 +1921,15 @@ thin-film identity. It remains state-agnostic because native SOAP bubble/link
 state is unprojected, preserves every foreign owner and raw plane, requires no
 Canvas parity, and remains excluded from compact 8×; its frozen all-scale gate
 closes Soap as the immediate liquid candidate.
+E47 gives exact ISZS `105` a strict E43/E17-owned crystalline-depth finish by
+recombining the already-live static macro/facet and exact body evidence. Its
+cyan/violet crystal planes close the demonstrated ISZS surface-detail gap while
+VIBR `113`, native state, topology, contacts, Canvas, and compact 8× remain
+unchanged.
 Improve distinctive depth, transmission, reflection, lighting, and
 mesostructure without stacking another narrow Oil/Acid/contact tint or generic
 PLNT/gas layer.
-The fresh composed-family/material survey now uses E17/E43/E44/E45/E46 under
+The fresh composed-family/material survey now uses E17/E43/E44/E45/E46/E47 under
 `inputAudit=1`. Fixture v6 freezes 23 material counts, 18 scored regions,
 semantic hash `3610338776`, and 114,015 occupied cells at 1×/2×/4×; its exact
 SOAP body owns 1,220 cells and the deep `liquidSoap` region owns 384. The
@@ -1901,17 +1937,17 @@ accepted v6 WebGL matrix scores that Soap probe `100` at every scale with suppor
 `1`, coverage `.910`, luma standard deviation `7.37–7.42`, microcontrast
 `.54–.56`, chromatic contrast `.65–.68`, and macro range `20`. The Liquid
 family remains `99.866/100/100` across 1×/2×/4× with a `.134` spread; the full
-matrix and exact-scene checks pass with zero browser errors. The preceding v5
-family floors—Organic `67.661`, Solid `70.694`, Contact `88.768`, Gas
-`95.463`, Emission `98.475`, Powder `100`, and Liquid `100`—predate the new
-Soap probe and are historical ranking evidence, not a v6 score claim. Organic
-remains the known E36 scorer blind spot; Solid was exact ISZS surface-detail
-undersampling, not a focused E43 regression. Do not reopen
-E36/E38/E39/E41/E42/E43/E44/E45/E46 from those score-only floors. E46 closes
-the demonstrated Soap body gap without choosing a successor experiment. No
-next material/VFX owner is selected here: preserve the E14 1× stencil snap and
-all E01–E46 selectors and controls until a fresh inventory or composed review
-demonstrates the next bounded deficiency.
+matrix and exact-scene checks pass with zero browser errors. The earlier v5
+Solid floor `70.694` was the exact ISZS surface-detail gap that fresh fit-view
+evidence selected for E47, not a reason to reopen E43's broad two-owner
+checkpoint. With explicit E47 telemetry, canonical v6 `solidISZS` quality
+reaches `93.047`: luma standard deviation is `7.68`, microcontrast `1.16`,
+chromatic contrast `2.19`, and macro range `28`, with full support and zero
+dark/clipped fraction. Keep the broad visual objective active. The fresh
+inventory's unselected candidates are Nitro `32`, Snow `18`, BASE `53`, C4
+`31`, BGLA, and Quartz. Preserve the E14 1× stencil snap and all E01–E47
+selectors and controls, and do not choose among those candidates without fresh
+composed or showcase evidence of a bounded deficiency.
 
 ## Phase 1 — HDR pipeline & lighting core (biggest visual payoff)
 

@@ -4013,6 +4013,75 @@ describe('Pixi presenter startup configuration', () => {
     expect(browserGate).toContain('radioactiveSolidBodyVfxStateDigest(cdp, fixture)');
   });
 
+  it('layers E47 only over exact deep ISZS using E43 static evidence', () => {
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const canvasSource = readFileSync(new URL('./field-renderer.ts', import.meta.url), 'utf8');
+    const browserGate = readFileSync(
+      new URL('../../scripts/verify-browser-input.mjs', import.meta.url), 'utf8',
+    );
+    const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');
+    const normalStart = source.indexOf('const FIELD_FRAGMENT = `');
+    const e47Start = source.indexOf('        // E47:', normalStart);
+    const end = source.indexOf('    } else if (deviceSurface > 0.5', e47Start);
+    const eight = source.slice(eightStart, normalStart);
+    const block = source.slice(e47Start, end);
+    const preserveStart = source.indexOf('preserveDrawingBuffer:');
+    const preserveEnd = source.indexOf('resolution: outputScale', preserveStart);
+    const preserve = source.slice(preserveStart, preserveEnd);
+
+    expect(eightStart).toBeGreaterThanOrEqual(0);
+    expect(normalStart).toBeGreaterThan(0);
+    expect(e47Start).toBeGreaterThan(normalStart);
+    expect(end).toBeGreaterThan(e47Start);
+    expect(block).toContain('if (uIszsCrystallineVfx > 0.5 && material == 105.0)');
+    for (const establishedScalar of [
+      'radioactiveSolidDepth', 'radioactiveSolidCore',
+      'radioactiveSolidMacro', 'radioactiveSolidFacet',
+    ]) expect(block).toContain(establishedScalar);
+    for (const derivedScalar of [
+      'iszsCrystalVolume', 'iszsCrystalPlane', 'iszsFacetLow', 'iszsFacetMid',
+      'iszsFacetHigh', 'iszsFacetPlateau', 'iszsCrystalCrown',
+      'iszsCrystalPocket', 'iszsFacetKey',
+    ]) expect(block).toContain(derivedScalar);
+    expect(block).not.toContain('material == 113.0');
+    expect(block).not.toContain('botanicalBodyNoise(');
+    expect(block).not.toContain('texture(');
+    expect(block).not.toContain('uTime');
+    expect(block).not.toContain('sin(');
+    expect(block).not.toContain('gl_FragCoord');
+    expect(block).not.toMatch(/\balpha\s*[+*]?=/);
+    expect(eight).not.toContain('uIszsCrystallineVfx');
+    expect(eight).not.toContain('iszsCrystalVolume');
+    expect(canvasSource).not.toContain('iszsCrystallineVfx');
+    expect(source).toMatch(
+      /const iszsCrystallineVfxEnabled = outputScale < 8\s*&& resolveIszsCrystallineVfxEnabled\(renderLook\);/,
+    );
+    expect(source).toContain(
+      'uIszsCrystallineVfx: { value: iszsCrystallineVfxEnabled ? 1 : 0',
+    );
+    expect(source.match(/this\.uniforms\.uniforms\.uIszsCrystallineVfx = 0;/g))
+      .toHaveLength(2);
+    expect(source).toContain('presenter.app.canvas.dataset.iszsCrystallineVfx');
+    expect(source).toContain("this.app.canvas.dataset.iszsCrystallineVfx = 'inactive';");
+    expect(preserve).toContain("get('iszsCrystallineVfxAudit') === '1'");
+    expect(browserGate).toContain('--iszs-crystalline-vfx-only');
+    expect(browserGate).toContain('iszsCrystallineVfx');
+    for (const gateSymbol of [
+      'auditIszsCrystallineVfxExperiment', 'navigateIszsCrystallineVfxState',
+      'auditEightXIszsCrystallineVfxExclusion',
+      'radioactiveSolidBodyVfxFixtureReady', 'radioactiveSolidBodyVfxStateDigest',
+      'audit.prepareRadioactiveSolidBodyVfxFixture();',
+      'ISZS_CRYSTALLINE_VFX_ACCEPTANCE', "calibration: 'e47-iszs-crystalline-v1'",
+      'ISZS_CRYSTALLINE_VFX_TARGET_NAMES', 'ISZS_CRYSTALLINE_VFX_CONTROL_NAMES',
+      'controls.length === 51',
+      "rect('SeamISZSStrip'", 'TargetStrip', 'ForeignStrip',
+      'const composedIszsCrystallineVfx',
+      'iszsCrystallineVfx: composedIszsCrystallineVfx',
+      "iszsCrystallineVfxEvidence: 'showcase-v6-solidISZS-region'",
+      "regions.find(({ name }) => name === 'solidISZS')",
+    ]) expect(browserGate).toContain(gateSymbol);
+  });
+
   it('gives only deep settled radioactive powders an RGB-only Smooth body', () => {
     const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
     const normalStart = source.indexOf('const FIELD_FRAGMENT = `');

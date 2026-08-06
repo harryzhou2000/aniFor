@@ -13,7 +13,7 @@ powder, solid, liquid, gas, energy, and contact scenes across Canvas and WebGL a
 mobile gestures, save/load, CI, and Pages deployment as protected regression
 contracts rather than the primary feature stream.
 
-The accepted visual experiment ladder now runs through E46. E12 is the
+The accepted visual experiment ladder now runs through E47. E12 is the
 species-safe Sand/Clay/Concrete wet-sediment checkpoint; preserve its exact
 aqueous owner/stability proof, split moving-powder/stationary-Water control,
 Local/Grains no-op, fine structures, authored gaps, Canvas fallback, and true
@@ -820,7 +820,33 @@ fold, and then promote requested-on true 8× to exact 4896×3072 with a real GPU
 fence. Compact 8× has no E46 selector, branch, or resource and retains the
 established Soap identity unchanged.
 
-The corrected v6 composed survey now explicitly enables E17/E43/E44/E45/E46
+E47 is the accepted normal-WebGL-only exact ISZS `105` crystalline-depth
+checkpoint. `?iszsCrystallineVfx=0|1` is a strict child of both E43 and E17:
+it cannot revive either parent and may style only E43's already-authoritative
+deep, connected, wall-free, contact-free ISZS body. Reuse E43's existing
+static macro/facet carriers together with the exact solid-depth, interior, and
+contact guards for broad cyan/violet crystal planes, an illuminated crown,
+and a restrained negative-luma decay pocket. The response is RGB-only and
+adds no sample, noise call, sampler, texture, field, resource, pass, target,
+upload, allocation, clock, alpha, support, silhouette, ownership, topology,
+native state, or physics decision. VIBR `113`, including every native-state
+card, and all of E43's topology, wall, seam, contact, and foreign-owner
+controls are exact no-ops. Canvas and compact true 8× retain their established
+radioactive identities; the compact shader has no E47 selector or branch.
+
+Validate E47 with `npm run audit:vfx:iszs-crystalline`. Its frozen
+1×/2×/4× off→on→off matrix holds ISZS core RGB RMS at `2.30–2.31` with signed
+mean about `+0.58`, crown RGB RMS at `17.31–17.40` with signed mean
+`+10.63…+10.70`, and pocket RGB RMS at `2.94–2.95` with signed mean
+`−1.03…−1.06`. All 51 protected controls retain peak zero, repeated-off
+framebuffers are byte-identical, semantic/rendered/depth/wall/native-state
+digests remain stable, and browser errors stay zero. Requested-on true 8×
+reports E47 inactive, presents exact 4896×3072 WebGL, and completed a real GPU
+fence in `5161.0 ms` in the final frozen full matrix; repeated calibration
+tails ranged from `4169.7–5248.3 ms` under the same deadline.
+
+The corrected v6 composed survey now explicitly enables
+E17/E43/E44/E45/E46/E47
 under `inputAudit=1` and freezes 23 material counts, 18 scored regions,
 semantic hash `3610338776`, and 114,015 occupied cells across 1×/2×/4×. Its
 new exact-owner evidence is 1,220 Soap cells and a `liquidSoap` cohesive-liquid
@@ -830,15 +856,15 @@ quality `100` at 1×/2×/4× with exact support recall `1`, coverage `.910`, lum
 standard deviation `7.37–7.42`, microcontrast `.54–.56`, chromatic contrast
 `.65–.68`, and macro range `20`; the Liquid family remains
 `99.866/100/100`, with a `.134` cross-scale spread and zero browser errors.
-The immediately preceding v5 ranking had a
-family floor of Organic `67.661` (the known PLNT scorer blind spot), followed
-by Solid `70.694` (ISZS surface detail), Contact `88.768`, Gas `95.463`,
-Emission `98.475`, and saturated Powder/Liquid `100`; treat those numbers as
-the pre-Soap baseline, not as measurements of the new v6 region. Do not reopen
-E36 or E43 from those score-only floors: their focused gates remain
-authoritative. E44 raises its scored CO2 body to about `99.0`, E45 closes
-Thermite's generic dense-body gap, and E46 closes Soap's generic dense-liquid
-gap without stacking another family-wide liquid layer.
+E47's explicit composed-selector telemetry raises `solidISZS` quality from
+`70.694` to `93.047`: luma standard deviation rises `2.52→7.68`,
+microcontrast `.80→1.16`, chromatic contrast reaches `2.19`, and macro range
+rises `10→28`, with full support recall and zero dark or clipped fraction.
+This closes the demonstrated ISZS surface-detail deficiency without replacing
+E43's broader ISZS/VIBR checkpoint. Keep the broad material-and-graphics goal
+active. Fresh inventory candidates are Nitro `32`, Snow `18`, BASE `53`, C4
+`31`, BGLA, and Quartz; do not select the next owner without fresh composed or
+showcase evidence demonstrating a bounded visual deficiency.
 
 The old post-E16 rank that labelled Stone `21` as Solid was invalid because
 Stone is native Powder. The corrected showcase uses native ROCK ground and

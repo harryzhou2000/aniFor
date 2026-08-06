@@ -642,6 +642,24 @@ export function resolveRadioactiveSolidBodyVfxEnabled(
 }
 
 /**
+ * E47 adds an exact-ISZS crystalline-decay finish only after E43 has proved
+ * the radioactive Solid body. The child cannot revive E43, and focused input
+ * fixtures remain frozen until they explicitly request this selector.
+ */
+export function resolveIszsCrystallineVfxEnabled(
+  look: RenderLook,
+  search = globalThis.location?.search ?? '',
+): boolean {
+  if (!resolveRadioactiveSolidBodyVfxEnabled(look, search)) return false;
+  const parameters = new URLSearchParams(search);
+  const requested = parameters.get('iszsCrystallineVfx');
+  if (requested === '0' || requested === 'off' || requested === 'false') return false;
+  if (requested === '1' || requested === 'on' || requested === 'true') return true;
+  if (parameters.get('inputAudit') === '1') return false;
+  return true;
+}
+
+/**
  * Re-composes only the exact native Water body after E03 has established a
  * connected, same-species liquid volume. The child selector may replace
  * Water's inherited broad stripe carrier, but it cannot recreate E03 when the

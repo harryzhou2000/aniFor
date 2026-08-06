@@ -51,6 +51,7 @@ import {
   resolveGasMotionVfxEnabled,
   resolveCarbonDioxideBodyVfxEnabled,
   resolveHydrogenBodyVfxEnabled,
+  resolveIszsCrystallineVfxEnabled,
   resolveRadioactiveSolidBodyVfxEnabled,
   resolveNobleGasBillowVfxEnabled,
   resolveNobleGasPrismVfxEnabled,
@@ -3263,6 +3264,7 @@ uniform float uSmokeBillowDepthVfx;
 uniform float uPlasmaCoreVfx;
 uniform float uSolidBodyVfx;
 uniform float uRadioactiveSolidBodyVfx;
+uniform float uIszsCrystallineVfx;
 uniform float uRockRoughnessVfx;
 uniform float uRockMesostructureVfx;
 uniform float uPlatinumBodyVfx;
@@ -9226,6 +9228,43 @@ void main() {
               * (1.0 - abs(radioactiveSolidFold))
                 * (material == 105.0 ? 0.012 : 0.006))
           * radioactiveSolidDepth;
+        // E47: exact ISZS is a decaying crystal rather than a uniformly
+        // coloured radioactive slab. Recombine E43's two static, broad noise
+        // carriers into softly intersecting crystal planes, a cool directional
+        // facet key, and restrained violet decay pockets. The depth/interior,
+        // contact, wall, trait, and exact-owner proofs above stay authoritative.
+        // This branch is RGB-only and introduces no position carrier, sample,
+        // texture, field, pass, target, upload, allocation, clock, state decode,
+        // alpha, support, silhouette, ownership, topology, or physics.
+        if (uIszsCrystallineVfx > 0.5 && material == 105.0) {
+          float iszsCrystalVolume = radioactiveSolidDepth
+            * smoothstep(0.08, 0.82, radioactiveSolidCore);
+          float iszsCrystalPlane = clamp(
+            radioactiveSolidFacet * 0.76 + radioactiveSolidMacro * 0.32,
+            -1.0, 1.0
+          );
+          float iszsFacetLow = smoothstep(-0.58, -0.38, iszsCrystalPlane);
+          float iszsFacetMid = smoothstep(-0.12, 0.08, iszsCrystalPlane);
+          float iszsFacetHigh = smoothstep(0.34, 0.54, iszsCrystalPlane);
+          float iszsFacetPlateau = iszsFacetLow * 0.28
+            + iszsFacetMid * 0.34 + iszsFacetHigh * 0.38;
+          float iszsCrystalCrown = max(iszsFacetPlateau - 0.48, 0.0) * 1.90;
+          float iszsCrystalPocket = max(0.48 - iszsFacetPlateau, 0.0) * 1.55
+            * (0.72 + max(-radioactiveSolidMacro, 0.0) * 0.28);
+          float iszsFacetKey = iszsFacetHigh
+            * (0.62 + max(radioactiveSolidMacro, 0.0) * 0.38);
+          color *= vec3(1.0) - vec3(0.068, 0.040, 0.018)
+            * iszsCrystalPocket * iszsCrystalVolume;
+          color += (vec3(1.04) - clamp(color, 0.0, 1.04))
+            * (vec3(0.12, 0.78, 1.00)
+                * iszsCrystalCrown * 0.078
+              + vec3(0.50, 0.18, 0.94)
+                * (iszsFacetKey * 0.052 + iszsFacetMid * 0.016))
+            * iszsCrystalVolume;
+          color += (vec3(-0.024, 0.014, 0.068) * iszsFacetKey
+              + vec3(0.016, -0.012, 0.036) * iszsCrystalPocket)
+            * iszsCrystalVolume;
+        }
       }
     } else if (deviceSurface > 0.5 || (optics < 0.5 && profile == 5.0)) {
       vec2 circuitCell = abs(fract((fieldPosition + vec2(material * 0.37, material * 0.19)) / 8.0) - 0.5);
@@ -10621,6 +10660,11 @@ export class PixiFieldPresenter {
     // radioactive identity/state grammar and declare no E43 selector.
     const radioactiveSolidBodyVfxEnabled = outputScale < 8
       && resolveRadioactiveSolidBodyVfxEnabled(renderLook);
+    // E47 is exact-ISZS arithmetic over E43's already-live depth and static
+    // value-noise evidence. Compact true 8x retains the accepted isotope body
+    // and declares neither this selector nor a parallel branch.
+    const iszsCrystallineVfxEnabled = outputScale < 8
+      && resolveIszsCrystallineVfxEnabled(renderLook);
     // E23 is an exact-ROCK normal-WebGL correction to E17's inherited polished
     // lobe. Compact true 8x retains its established mineral grammar and has no
     // selector or parallel arithmetic.
@@ -10751,6 +10795,7 @@ export class PixiFieldPresenter {
       uRadioactiveSolidBodyVfx: {
         value: radioactiveSolidBodyVfxEnabled ? 1 : 0, type: 'f32',
       },
+      uIszsCrystallineVfx: { value: iszsCrystallineVfxEnabled ? 1 : 0, type: 'f32' },
       uRockRoughnessVfx: { value: rockRoughnessVfxEnabled ? 1 : 0, type: 'f32' },
       uRockMesostructureVfx: { value: rockMesostructureVfxEnabled ? 1 : 0, type: 'f32' },
       uPlatinumBodyVfx: { value: platinumBodyVfxEnabled ? 1 : 0, type: 'f32' },
@@ -11001,6 +11046,7 @@ export class PixiFieldPresenter {
       this.uniforms.uniforms.uPlasmaCoreVfx = 0;
       this.uniforms.uniforms.uSolidBodyVfx = 0;
       this.uniforms.uniforms.uRadioactiveSolidBodyVfx = 0;
+      this.uniforms.uniforms.uIszsCrystallineVfx = 0;
       this.uniforms.uniforms.uRockRoughnessVfx = 0;
       this.uniforms.uniforms.uRockMesostructureVfx = 0;
       this.uniforms.uniforms.uPlatinumBodyVfx = 0;
@@ -11070,6 +11116,7 @@ export class PixiFieldPresenter {
             || new URLSearchParams(location.search).get('plasmaCoreVfxAudit') === '1'
             || new URLSearchParams(location.search).get('solidBodyVfxAudit') === '1'
             || new URLSearchParams(location.search).get('radioactiveSolidBodyVfxAudit') === '1'
+            || new URLSearchParams(location.search).get('iszsCrystallineVfxAudit') === '1'
             || new URLSearchParams(location.search).get('rockRoughnessVfxAudit') === '1'
             || new URLSearchParams(location.search).get('rockMesostructureVfxAudit') === '1'
             || new URLSearchParams(location.search).get('platinumBodyVfxAudit') === '1'
@@ -11160,6 +11207,9 @@ export class PixiFieldPresenter {
     ) > 0.5 ? 'active' : 'inactive';
     presenter.app.canvas.dataset.radioactiveSolidBodyVfx = Number(
       presenter.uniforms.uniforms.uRadioactiveSolidBodyVfx
+    ) > 0.5 ? 'active' : 'inactive';
+    presenter.app.canvas.dataset.iszsCrystallineVfx = Number(
+      presenter.uniforms.uniforms.uIszsCrystallineVfx
     ) > 0.5 ? 'active' : 'inactive';
     presenter.app.canvas.dataset.rockRoughnessVfx = Number(
       presenter.uniforms.uniforms.uRockRoughnessVfx
@@ -12630,6 +12680,7 @@ export class PixiFieldPresenter {
         this.uniforms.uniforms.uPlasmaCoreVfx = 0;
         this.uniforms.uniforms.uSolidBodyVfx = 0;
         this.uniforms.uniforms.uRadioactiveSolidBodyVfx = 0;
+        this.uniforms.uniforms.uIszsCrystallineVfx = 0;
         this.uniforms.uniforms.uRockRoughnessVfx = 0;
         this.uniforms.uniforms.uRockMesostructureVfx = 0;
         this.uniforms.uniforms.uPlatinumBodyVfx = 0;
@@ -12676,6 +12727,7 @@ export class PixiFieldPresenter {
         this.app.canvas.dataset.plasmaCoreVfx = 'inactive';
         this.app.canvas.dataset.solidBodyVfx = 'inactive';
         this.app.canvas.dataset.radioactiveSolidBodyVfx = 'inactive';
+        this.app.canvas.dataset.iszsCrystallineVfx = 'inactive';
         this.app.canvas.dataset.rockRoughnessVfx = 'inactive';
         this.app.canvas.dataset.rockMesostructureVfx = 'inactive';
         this.app.canvas.dataset.platinumBodyVfx = 'inactive';
