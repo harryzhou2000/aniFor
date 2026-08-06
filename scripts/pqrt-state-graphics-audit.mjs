@@ -24,6 +24,25 @@ export async function auditPqrtStateGraphics({
     audit.preparePqrtStateGraphicsFixture();
     return true;
   })()`);
+  // PQRT is a Powder owner. Hydrate the shared boundary/stability field before
+  // toggling only its native tmp2 presentation layer, otherwise the generic
+  // identical-frame waiter can observe legitimate 0 -> 255 Smooth settling and
+  // misreport it as state-style animation. Compact true 8x has its own direct
+  // atlas/fence proof and must not pay seven additional 15-million-fragment
+  // refreshes here.
+  if (outputScale < 8) {
+    for (let pass = 0; pass < 7; pass++) {
+      const before = await evaluate(cdp,
+        'window.__ANIFOR_INPUT_AUDIT__.presentationRefreshAudit()');
+      await evaluate(cdp,
+        'window.__ANIFOR_INPUT_AUDIT__.refreshPresentationFields(); true');
+      await waitFor(() => evaluate(cdp, `(() => {
+        const current = window.__ANIFOR_INPUT_AUDIT__.presentationRefreshAudit();
+        return current?.dynamicSequence > ${before.dynamicSequence} ? current : false;
+      })()`), outputScale === 4 ? 15_000 : 5_000,
+      `PQRT state stability pass ${pass + 1}`);
+    }
+  }
   const atlas = await waitFor(() => evaluate(cdp, `(() => {
     const cards = window.__ANIFOR_INPUT_AUDIT__.pqrtStateGraphicsAtlas()?.cards;
     return cards?.length === 5 ? cards : false;

@@ -33,6 +33,9 @@ import {
   SNOWPACK_BODY_VFX_AUDIT, prepareSnowpackBodyVfxAuditFixture,
 } from './snowpack-body-vfx-audit';
 import {
+  QUARTZ_MESOSTRUCTURE_VFX_AUDIT, prepareQuartzMesostructureVfxAuditFixture,
+} from './quartz-mesostructure-vfx-audit';
+import {
   SOAP_BODY_VFX_AUDIT, prepareSoapBodyVfxAuditFixture,
 } from './soap-body-vfx-audit';
 import {
@@ -798,6 +801,12 @@ export class Game {
       snowpackBodyVfxFixture: () => SNOWPACK_BODY_VFX_AUDIT,
       prepareSnowpackBodyVfxFixture: () => {
         prepareSnowpackBodyVfxAuditFixture(this.simulation);
+        this.renderer.synchronizeFixtureMaterialPlane();
+        this.renderer.invalidateDynamicPresentation();
+      },
+      quartzMesostructureVfxFixture: () => QUARTZ_MESOSTRUCTURE_VFX_AUDIT,
+      prepareQuartzMesostructureVfxFixture: () => {
+        prepareQuartzMesostructureVfxAuditFixture(this.simulation);
         this.renderer.synchronizeFixtureMaterialPlane();
         this.renderer.invalidateDynamicPresentation();
       },

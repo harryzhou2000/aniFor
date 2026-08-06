@@ -748,6 +748,24 @@ export function resolveSnowpackBodyVfxEnabled(
 }
 
 /**
+ * E49 re-composes only exact native powder Quartz after E05 has proved a dry,
+ * settled Smooth body. Native PQRT tmp2 crystal brightness remains a later,
+ * independent state layer, and this child cannot revive its E05 parent.
+ */
+export function resolveQuartzMesostructureVfxEnabled(
+  look: RenderLook,
+  search = globalThis.location?.search ?? '',
+): boolean {
+  if (!resolvePowderBodyVfxEnabled(look, search)) return false;
+  const parameters = new URLSearchParams(search);
+  const requested = parameters.get('quartzMesostructureVfx');
+  if (requested === '0' || requested === 'off' || requested === 'false') return false;
+  if (requested === '1' || requested === 'on' || requested === 'true') return true;
+  if (parameters.get('inputAudit') === '1') return false;
+  return true;
+}
+
+/**
  * Keeps the settled powder/solid contact experiment independently measurable
  * without requiring the powder-body crown layer. Ordinary realistic/neon
  * presets retain the broad volume default; the explicit query is reserved for

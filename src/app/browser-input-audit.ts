@@ -68,6 +68,9 @@ import type { PhotonSpectrumGraphicsAuditSnapshot } from './photon-spectrum-grap
 import type { PowderLightVfxAuditSnapshot } from './powder-light-vfx-audit';
 import type { ThermiteBodyVfxAuditSnapshot } from './thermite-body-vfx-audit';
 import type { SnowpackBodyVfxAuditSnapshot } from './snowpack-body-vfx-audit';
+import type {
+  QuartzMesostructureVfxAuditSnapshot,
+} from './quartz-mesostructure-vfx-audit';
 import type { SoapBodyVfxAuditSnapshot } from './soap-body-vfx-audit';
 import type {
   GasMotionVfxAuditSnapshot, GasMotionVfxFixtureMode,
@@ -229,6 +232,8 @@ export interface BrowserInputAuditApi {
   prepareThermiteBodyVfxFixture(): void;
   snowpackBodyVfxFixture(): SnowpackBodyVfxAuditSnapshot;
   prepareSnowpackBodyVfxFixture(): void;
+  quartzMesostructureVfxFixture(): QuartzMesostructureVfxAuditSnapshot;
+  prepareQuartzMesostructureVfxFixture(): void;
   soapBodyVfxFixture(): SoapBodyVfxAuditSnapshot;
   prepareSoapBodyVfxFixture(): void;
   gasMotionVfxFixture(): GasMotionVfxAuditSnapshot;

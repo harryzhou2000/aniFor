@@ -1955,6 +1955,86 @@ describe('Pixi presenter startup configuration', () => {
     expect(preserve).toContain("get('snowpackBodyVfxAudit') === '1'");
   });
 
+  it('keeps E49 powder-Quartz plates exact-owner, state-safe, E05-dependent, and normal-only', () => {
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const canvasSource = readFileSync(new URL('./field-renderer.ts', import.meta.url), 'utf8');
+    const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');
+    const normalStart = source.indexOf('const FIELD_FRAGMENT = `', eightStart);
+    const normalEnd = source.indexOf('`;\n\n/** Primary WebGL presentation', normalStart);
+    const eight = source.slice(eightStart, normalStart);
+    const normal = source.slice(normalStart, normalEnd);
+    const e49Start = normal.indexOf('          // E49:');
+    const e49End = normal.indexOf('          // E40:', e49Start);
+    const e49 = normal.slice(e49Start, e49End);
+    const calmStart = normal.indexOf("      // E49's dense-body calm", e49End);
+    const calmEnd = normal.indexOf('      // Fourteen native explosive powders', calmStart);
+    const calm = normal.slice(calmStart, calmEnd);
+    const parentStart = normal.lastIndexOf('        if (uPowderBodyVfx > 0.5', e49Start);
+    const parent = normal.slice(parentStart, e49End);
+    const powderScopeStart = normal.lastIndexOf('    if (family == 4.0)', e49Start);
+    const powderScope = normal.slice(powderScopeStart, calmEnd);
+    const stateStart = normal.indexOf(
+      'if (uQuartzCrystalStateStyling > 0.5 && (material == 29.0 || material == 76.0)',
+      calmEnd,
+    );
+    const preserveStart = source.indexOf('preserveDrawingBuffer:');
+    const preserveEnd = source.indexOf('resolution: outputScale', preserveStart);
+    const preserve = source.slice(preserveStart, preserveEnd);
+
+    expect(e49Start).toBeGreaterThanOrEqual(0);
+    expect(e49End).toBeGreaterThan(e49Start);
+    expect(calmStart).toBeGreaterThan(e49End);
+    expect(calmEnd).toBeGreaterThan(calmStart);
+    expect(parentStart).toBeGreaterThanOrEqual(0);
+    expect(powderScopeStart).toBeGreaterThanOrEqual(0);
+    expect(stateStart).toBeGreaterThan(calmEnd);
+    expect(normal).toContain('uniform float uQuartzMesostructureVfx;');
+    expect(normal.match(/uQuartzMesostructureVfx > 0\.5/g)).toHaveLength(1);
+    expect(eight).not.toContain('uQuartzMesostructureVfx');
+    expect(eight).not.toContain('quartzPowderCalm');
+    expect(canvasSource).not.toContain('quartzMesostructureVfx');
+    expect(e49).toContain('optics == 13.0');
+    expect(e49).toContain('material == 29.0');
+    expect(e49).not.toContain('material == 76.0');
+    expect(e49).toContain('powderBodyGate');
+    expect(e49).toContain('powderBodyVolumeDepth');
+    expect(e49).toContain('powderVfxPlaneA');
+    expect(e49).toContain('powderVfxPlaneB');
+    expect(e49).toContain('powderVfxPlaneC');
+    expect(e49).toContain('powderDirectedSlope');
+    expect(e49).toContain('foreignMatterContact < 0.5');
+    expect(e49).toContain('unlikeMaterialContact < 0.5');
+    expect(calm).toContain('powderBodyBase');
+    expect(calm).toContain('quartzPowderCalm');
+    expect(parent).toContain('uPowderBodyVfx > 0.5');
+    expect(parent).toContain('powderSuspensionCohesion < 0.01');
+    for (const guard of [
+      'family == 4.0', 'uPowderStyle > 1.5', 'surfaceOnly < 0.5',
+      'traits < 0.5', '!materialEmissive', 'halo < 0.5', 'wall < 0.5',
+      'wallOnly < 0.5', 'emissionOnly < 0.5',
+      'step(224.0 / 255.0, boundaryStability)', 'step(5.5, widePowderShape.w)',
+    ]) expect(powderScope).toContain(guard);
+    for (const branch of [e49, calm]) {
+      expect(branch).not.toContain('texture(');
+      expect(branch).not.toContain('uTime');
+      expect(branch).not.toContain('sin(');
+      expect(branch).not.toContain('gl_FragCoord');
+      expect(branch).not.toContain('wallState');
+      expect(branch).not.toMatch(/\balpha\s*[+*]?=/);
+    }
+    expect(source).toMatch(
+      /const quartzMesostructureVfxEnabled = outputScale < 8\s*&& resolveQuartzMesostructureVfxEnabled\(renderLook\);/,
+    );
+    expect(source.match(/this\.uniforms\.uniforms\.uQuartzMesostructureVfx = 0;/g))
+      .toHaveLength(2);
+    expect(source).toContain(
+      'uQuartzMesostructureVfx: {\n        value: quartzMesostructureVfxEnabled ? 1 : 0',
+    );
+    expect(source).toContain('presenter.app.canvas.dataset.quartzMesostructureVfx');
+    expect(source).toContain("this.app.canvas.dataset.quartzMesostructureVfx = 'inactive';");
+    expect(preserve).toContain("get('quartzMesostructureVfxAudit') === '1'");
+  });
+
   it('keeps E41 DEUT concentration-volume exact-owner, trait-aware, normal-WebGL-only, and RGB-only', () => {
     const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
     const canvasSource = readFileSync(new URL('./field-renderer.ts', import.meta.url), 'utf8');

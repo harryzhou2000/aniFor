@@ -78,7 +78,7 @@ export interface MaterialShowcaseAuditSnapshot {
 /**
  * The candidate survey deliberately owns a smaller contract than the production
  * showcase. It selects the next bounded owner and retains accepted candidates
- * as before/after references; it must not silently alter the E01–E48 ladder.
+ * as before/after references; it must not silently alter the E01–E49 ladder.
  */
 export interface MaterialCandidateSurveyRegion {
   readonly name: string;

@@ -13,7 +13,7 @@ powder, solid, liquid, gas, energy, and contact scenes across Canvas and WebGL a
 mobile gestures, save/load, CI, and Pages deployment as protected regression
 contracts rather than the primary feature stream.
 
-The accepted visual experiment ladder now runs through E48. E12 is the
+The accepted visual experiment ladder now runs through E49. E12 is the
 species-safe Sand/Clay/Concrete wet-sediment checkpoint; preserve its exact
 aqueous owner/stability proof, split moving-powder/stationary-Water control,
 Local/Grains no-op, fine structures, authored gaps, Canvas fallback, and true
@@ -863,8 +863,8 @@ rises `10→28`, with full support recall and zero dark or clipped fraction.
 This closes the demonstrated ISZS surface-detail deficiency without replacing
 E43's broader ISZS/VIBR checkpoint. Keep the broad material-and-graphics goal
 active. That inventory seeded the isolated six-owner candidate survey below;
-its Snow result is now historical selection evidence rather than an open
-candidate list.
+its sequential Snow and Quartz results are now historical selection evidence
+rather than an open candidate list.
 
 E48 is the accepted normal-WebGL-only exact Snow `18` snowpack checkpoint.
 `?snowpackBodyVfx=0|1` is a strict child of E05 and may recompose only an
@@ -891,6 +891,37 @@ raw/topology controls and Local/Grains have zero response, and browser errors
 remain zero. Requested-on compact true 8× reports E48 inactive, presents exact
 4896×3072 WebGL with no HDR target, and completed its GPU fence in `5260.1 ms`.
 
+E49 is the accepted normal-WebGL-only exact powder-Quartz/PQRT `29`
+mesostructure checkpoint. `?quartzMesostructureVfx=0|1` is a strict child of
+E05 and may recompose only an authoritative, trait-free, non-emissive, dry,
+contact-free PQRT cell inside E05's already-proven settled Smooth body. Reuse
+only E05's existing three broad facet planes, directed slope, volume depth,
+body gate, and pre-grain lit body to form lilac/cool interlocking plate crown,
+pocket, core, and cleavage responses, then calm only the dense common/PQRT
+cell grain. Native PQRT `tmp2` crystal brightness remains a later independent
+layer. Solid QRTZ `76`, authored holes/channels, one-cell structures, moving
+PQRT, genuine 2:1 PQRT/Water suspension, direct Metal/Water contacts, native
+walls, Local, Grains, foreign owners, Canvas, and compact true 8× are controls.
+Add no sample, noise carrier, texture, field, pass, target, upload, allocation,
+clock, alpha, support, silhouette, ownership, topology, state, or physics
+decision.
+
+Validate E49 with `npm run audit:vfx:quartz-mesostructure`. Its frozen v1
+fixture owns 98,713 occupied cells: 62,841 PQRT, 3,872 Water, 1,280 Metal,
+2,048 co-located native-wall cells, and 4,480 authored-velocity cells. The
+1×/2×/4× off→on→off matrix retains dense microcontrast at
+`0.4327–0.4431` of the raw PQRT carrier and broad macro range at
+`0.6078–1.2143`; support recall is exactly `1`, clipping is zero, repeated-off
+frames are byte-identical, Local/Grains and every named raw control are exact
+apart from one bounded one-byte 2× composed footprint at the independently
+eligible wall-free PQRT probe. Native dark/neutral/bright state-span retention
+is `0.9998–1.0097`, QRTZ remains an exact non-owner, and the separately
+hydrated five-state PQRT/QRTZ gate preserves signed `0/2/5/8/10` response with
+an exact neutral no-op. Requested-on compact true 8× reports E49 inactive,
+presents exact 4896×3072 WebGL without an HDR target, preserves the full
+five-state compact atlas, and completes startup/final state fences in
+`3608.0–5433.1 ms` with zero browser errors.
+
 The isolated candidate-survey v1 route is app-owned and must use the
 deterministic 612×384 RenderLab backend unless `simulation=native` is explicit.
 It freezes semantic hash `2255453673`, 115,368 occupied cells, all six exact
@@ -898,8 +929,14 @@ candidate counts, and six 2,880-cell scored regions at 1×/2×/4×. The pre-E48
 survey selected Snow from visible fit-view evidence (`microContrast 23.702`,
 quality `4.808` at canonical 2×); with E48 explicitly enabled, Snow reaches
 microcontrast `5.702`, quality `92.916`, full support, and zero dark/clipped
-fraction. Quartz remains the next demonstrated crystalline-powder deficiency;
-do not widen E48 to Salt/Quartz/BGLA or replace their exact identities.
+fraction. The next survey selected Quartz from canonical quality `75.98`,
+microcontrast `18.900`, and a visibly stippled body; explicit E49 raises
+Quartz to quality `100`, microcontrast `8.313`, luma deviation `10.159`,
+chromatic contrast `2.833`, and macro range `30.375`, with full support and
+zero dark/clipped fraction. C4 `31` is now the next visibly over-busy unclosed
+candidate (canonical quality `90.186`, microcontrast `16.819`); select its
+bounded exact-owner body experiment without widening E48 or E49 to neighbouring
+crystalline/explosive powders.
 
 The old post-E16 rank that labelled Stone `21` as Solid was invalid because
 Stone is native Powder. The corrected showcase uses native ROCK ground and
@@ -1397,8 +1434,10 @@ npm run audit:vfx:candidate-rank
 The candidate-survey route is a separate app-owned deterministic fixture; its
 frozen six-region 1×/2×/4× production-WebGL matrix selects bounded exact-owner
 experiments without mutating the accepted showcase contract. The package gate
-explicitly enables accepted E48; use the underlying driver's
-`--candidate-snowpack-body-vfx=0` only to reproduce the pre-E48 baseline.
+explicitly enables accepted E48 and E49. Use the underlying driver's
+`--candidate-snowpack-body-vfx=0` only to reproduce the pre-E48 baseline, and
+`--candidate-quartz-mesostructure-vfx=0` only to reproduce the pre-E49 Quartz
+baseline.
 
 The desktop gate performs a paired `renderScale=2` then `renderScale=1` navigation at the same explicit CSS viewport. It must report identical CSS canvas geometry while the backing changes only from 1224×768 to 612×384, and it repeats exact landmark painting, cursor-anchored wheel zoom, and 42×27 CSS-pixel middle-pan at 1×. Do not compare geometry captured under different device-emulation viewports; that tests browser setup rather than backing-scale independence.
 

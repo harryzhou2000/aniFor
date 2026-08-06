@@ -37,6 +37,7 @@ import {
   resolvePowderBodyVfxEnabled, resolvePowderLightVfxEnabled,
   resolveSootyPowderBodyVfxEnabled,
   resolveSnowpackBodyVfxEnabled,
+  resolveQuartzMesostructureVfxEnabled,
   resolveThermiteBodyVfxEnabled,
   resolvePowderSolidContactVfxEnabled, resolveRenderLook, resolveTranslucentEdgeVfxEnabled,
   resolveVolumeVfxEnabled, resolveWaterBodyVfxEnabled, resolveWetSedimentVfxEnabled,
@@ -892,6 +893,36 @@ describe('resolveRenderLook', () => {
     )).toBe(false);
     expect(resolveSnowpackBodyVfxEnabled(
       'realistic', '?volumeVfx=0&powderBodyVfx=on&snowpackBodyVfx=1',
+    )).toBe(true);
+  });
+
+  it('keeps exact powder-Quartz mesostructure subordinate to E05 and audit-isolated', () => {
+    expect(resolveQuartzMesostructureVfxEnabled(
+      'classic', '?quartzMesostructureVfx=on',
+    )).toBe(false);
+    expect(resolveQuartzMesostructureVfxEnabled('realistic', '')).toBe(true);
+    expect(resolveQuartzMesostructureVfxEnabled('neon-lab', '')).toBe(true);
+    expect(resolveQuartzMesostructureVfxEnabled('realistic', '?inputAudit=1')).toBe(false);
+    expect(resolveQuartzMesostructureVfxEnabled(
+      'realistic', '?inputAudit=1&quartzMesostructureVfx=true',
+    )).toBe(true);
+    expect(resolveQuartzMesostructureVfxEnabled(
+      'realistic', '?quartzMesostructureVfx=off',
+    )).toBe(false);
+    expect(resolveQuartzMesostructureVfxEnabled(
+      'realistic', '?quartzMesostructureVfx=0',
+    )).toBe(false);
+    expect(resolveQuartzMesostructureVfxEnabled(
+      'realistic', '?quartzMesostructureVfx=false',
+    )).toBe(false);
+    expect(resolveQuartzMesostructureVfxEnabled(
+      'realistic', '?quartzMesostructureVfx=on',
+    )).toBe(true);
+    expect(resolveQuartzMesostructureVfxEnabled(
+      'realistic', '?powderBodyVfx=0&quartzMesostructureVfx=on',
+    )).toBe(false);
+    expect(resolveQuartzMesostructureVfxEnabled(
+      'realistic', '?volumeVfx=0&powderBodyVfx=on&quartzMesostructureVfx=1',
     )).toBe(true);
   });
 

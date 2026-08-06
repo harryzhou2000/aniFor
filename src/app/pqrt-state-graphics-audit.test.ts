@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { Material } from '../shared/materials';
 import { QUARTZ_PRESENTATION_STATE } from '../simulation/types';
@@ -38,5 +39,20 @@ describe('PQRT/QRTZ native state graphics fixture', () => {
       expect(cells[wrongOwnerIndex]).toBe(Material.Water);
       expect(states[wrongOwnerIndex]).toBe(entry.encodedState);
     }
+  });
+
+  it('hydrates normal-detail powder stability without multiplying true-8x frames', () => {
+    const source = readFileSync(
+      new URL('../../scripts/pqrt-state-graphics-audit.mjs', import.meta.url), 'utf8',
+    );
+    const hydrationStart = source.indexOf('if (outputScale < 8) {');
+    const hydrationEnd = source.indexOf('  const atlas = await waitFor', hydrationStart);
+    const hydration = source.slice(hydrationStart, hydrationEnd);
+    expect(hydrationStart).toBeGreaterThanOrEqual(0);
+    expect(hydrationEnd).toBeGreaterThan(hydrationStart);
+    expect(hydration).toContain('pass < 7');
+    expect(hydration).toContain('refreshPresentationFields()');
+    expect(hydration).toContain('dynamicSequence');
+    expect(hydration).toContain("outputScale === 4 ? 15_000 : 5_000");
   });
 });

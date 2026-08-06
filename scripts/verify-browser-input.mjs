@@ -140,6 +140,17 @@ if (candidateSnowpackBodyVfxArgument && !candidateRankOnly) {
 if (!['0', '1', 'off', 'on'].includes(candidateSnowpackBodyVfx)) {
   throw new Error('--candidate-snowpack-body-vfx must be 0, 1, off, or on');
 }
+const candidateQuartzMesostructureVfxArgument = process.argv.find((argument) => (
+  argument.startsWith('--candidate-quartz-mesostructure-vfx=')
+));
+const candidateQuartzMesostructureVfx = candidateQuartzMesostructureVfxArgument?.split('=')[1]
+  ?? '0';
+if (candidateQuartzMesostructureVfxArgument && !candidateRankOnly) {
+  throw new Error('--candidate-quartz-mesostructure-vfx is valid only with --candidate-rank-only');
+}
+if (!['0', '1', 'off', 'on'].includes(candidateQuartzMesostructureVfx)) {
+  throw new Error('--candidate-quartz-mesostructure-vfx must be 0, 1, off, or on');
+}
 // This is deliberately a separate 2x WebGL experiment gate. It reloads the
 // deterministic paused render lab as classic -> realistic -> classic so it
 // never adds render targets, readback, or timing pressure to the true-8x gate.
@@ -335,6 +346,13 @@ const snowpackBodyVfxOnly = process.argv.includes('--snowpack-body-vfx-only');
 if (snowpackBodyVfxOnly && (modes.length !== 1 || modes[0] !== 'webgl')) {
   throw new Error('--snowpack-body-vfx-only requires --webgl-only');
 }
+// E49 is a normal-detail exact-PQRT mesostructure study over E05. Native
+// tmp2 crystal-state graphics remain a later independent layer, while Canvas
+// and compact true 8x retain their established paths.
+const quartzMesostructureVfxOnly = process.argv.includes('--quartz-mesostructure-vfx-only');
+if (quartzMesostructureVfxOnly && (modes.length !== 1 || modes[0] !== 'webgl')) {
+  throw new Error('--quartz-mesostructure-vfx-only requires --webgl-only');
+}
 // E41 is a normal-detail DEUT concentration/body experiment. Its focused route
 // owns a paused native-state fixture; Canvas and compact true 8x are controls.
 const deutBodyVfxOnly = process.argv.includes('--deut-body-vfx-only');
@@ -443,6 +461,7 @@ const focusedVfxOnlyFlags = [
   oilBodyVfxOnly, rockRoughnessVfxOnly, rockMesostructureVfxOnly, waterBodyVfxOnly, acidBodyVfxOnly,
   soapBodyVfxOnly,
   sootyPowderBodyVfxOnly, thermiteBodyVfxOnly, snowpackBodyVfxOnly,
+  quartzMesostructureVfxOnly,
   deutBodyVfxOnly, hydrogenBodyVfxOnly,
   carbonDioxideBodyVfxOnly,
   radioactiveSolidBodyVfxOnly, iszsCrystallineVfxOnly,
@@ -452,7 +471,7 @@ const focusedVfxOnlyFlags = [
   woodTanninVfxOnly,
 ];
 if (focusedVfxOnlyFlags.filter(Boolean).length > 1) {
-  throw new Error('HDR/volume/liquid-body/liquid-surface/gas-body/gas-motion/powder-body/powder-light/powder-solid-contact/translucent-edge/organic-subsurface/wet-sediment/gas-light/liquid-solid-meniscus/metal-water-contact/gas-core-depth/plasma-core/solid-body/platinum-body/ceramic-glaze/botanical-body/glass-body/oil-body/rock-roughness/rock-mesostructure/water-body/acid-body/soap-body/sooty-powder-body/thermite-body/snowpack-body/deut-body/hydrogen-body/carbon-dioxide-body/radioactive-solid-body/iszs-crystalline/noble-gas-billow/noble-gas-prism/smoke-softness/smoke-billow-depth/botanical-mesostructure/wood-bark-relief/botanical-pigment/plant-lamina/plant-lobe-depth/plant-canopy-mass/wood-tannin focused audits are mutually exclusive');
+  throw new Error('HDR/volume/liquid-body/liquid-surface/gas-body/gas-motion/powder-body/powder-light/powder-solid-contact/translucent-edge/organic-subsurface/wet-sediment/gas-light/liquid-solid-meniscus/metal-water-contact/gas-core-depth/plasma-core/solid-body/platinum-body/ceramic-glaze/botanical-body/glass-body/oil-body/rock-roughness/rock-mesostructure/water-body/acid-body/soap-body/sooty-powder-body/thermite-body/snowpack-body/quartz-mesostructure/deut-body/hydrogen-body/carbon-dioxide-body/radioactive-solid-body/iszs-crystalline/noble-gas-billow/noble-gas-prism/smoke-softness/smoke-billow-depth/botanical-mesostructure/wood-bark-relief/botanical-pigment/plant-lamina/plant-lobe-depth/plant-canopy-mass/wood-tannin focused audits are mutually exclusive');
 }
 
 const layoutOnly = process.argv.includes('--layout-only');
@@ -538,7 +557,7 @@ const productionBundle = process.argv.includes('--production-bundle');
 const usesProductionBundle = productionBundle || showcaseScreenshotOnly || composedRankOnly
   || candidateRankOnly || hdrVfxOnly || volumeVfxOnly
   || liquidBodyVfxOnly || liquidSurfaceVfxOnly || gasBodyVfxOnly || gasMotionVfxOnly
-    || powderBodyVfxOnly || powderLightVfxOnly || powderSolidContactVfxOnly || translucentEdgeVfxOnly || organicSubsurfaceVfxOnly || wetSedimentVfxOnly || gasLightVfxOnly || liquidSolidMeniscusVfxOnly || metalWaterContactVfxOnly || gasCoreDepthVfxOnly || plasmaCoreVfxOnly || solidBodyVfxOnly || platinumBodyVfxOnly || ceramicGlazeVfxOnly || botanicalBodyVfxOnly || glassBodyVfxOnly || oilBodyVfxOnly || rockRoughnessVfxOnly || rockMesostructureVfxOnly || waterBodyVfxOnly || acidBodyVfxOnly || soapBodyVfxOnly || sootyPowderBodyVfxOnly || thermiteBodyVfxOnly || snowpackBodyVfxOnly || deutBodyVfxOnly || hydrogenBodyVfxOnly || carbonDioxideBodyVfxOnly || radioactiveSolidBodyVfxOnly || iszsCrystallineVfxOnly || nobleGasBillowVfxOnly || nobleGasPrismVfxOnly || smokeSoftnessVfxOnly || smokeBillowDepthVfxOnly || botanicalMesostructureVfxOnly || woodBarkReliefVfxOnly || botanicalPigmentVfxOnly || plantLaminaVfxOnly || plantLobeDepthVfxOnly || woodTanninVfxOnly || cellularGraphicsOnly || sensorGraphicsOnly
+    || powderBodyVfxOnly || powderLightVfxOnly || powderSolidContactVfxOnly || translucentEdgeVfxOnly || organicSubsurfaceVfxOnly || wetSedimentVfxOnly || gasLightVfxOnly || liquidSolidMeniscusVfxOnly || metalWaterContactVfxOnly || gasCoreDepthVfxOnly || plasmaCoreVfxOnly || solidBodyVfxOnly || platinumBodyVfxOnly || ceramicGlazeVfxOnly || botanicalBodyVfxOnly || glassBodyVfxOnly || oilBodyVfxOnly || rockRoughnessVfxOnly || rockMesostructureVfxOnly || waterBodyVfxOnly || acidBodyVfxOnly || soapBodyVfxOnly || sootyPowderBodyVfxOnly || thermiteBodyVfxOnly || snowpackBodyVfxOnly || quartzMesostructureVfxOnly || deutBodyVfxOnly || hydrogenBodyVfxOnly || carbonDioxideBodyVfxOnly || radioactiveSolidBodyVfxOnly || iszsCrystallineVfxOnly || nobleGasBillowVfxOnly || nobleGasPrismVfxOnly || smokeSoftnessVfxOnly || smokeBillowDepthVfxOnly || botanicalMesostructureVfxOnly || woodBarkReliefVfxOnly || botanicalPigmentVfxOnly || plantLaminaVfxOnly || plantLobeDepthVfxOnly || woodTanninVfxOnly || cellularGraphicsOnly || sensorGraphicsOnly
   || unusualPowderGraphicsOnly || earthenPowderGraphicsOnly || explosivePowderGraphicsOnly || unusualSolidGraphicsOnly
   || deviceIdentityGraphicsOnly
   || fieldProfileGraphicsOnly
@@ -587,6 +606,9 @@ const thermiteBodyVfxArgument = process.argv.find((argument) => argument.startsW
   ?.slice('--thermite-body-vfx='.length);
 const snowpackBodyVfxArgument = process.argv.find((argument) => argument.startsWith('--snowpack-body-vfx='))
   ?.slice('--snowpack-body-vfx='.length);
+const quartzMesostructureVfxArgument = process.argv.find(
+  (argument) => argument.startsWith('--quartz-mesostructure-vfx='),
+)?.slice('--quartz-mesostructure-vfx='.length);
 const soapBodyVfxArgument = process.argv.find((argument) => argument.startsWith('--soap-body-vfx='))
   ?.slice('--soap-body-vfx='.length);
 const deutBodyVfxArgument = process.argv.find((argument) => argument.startsWith('--deut-body-vfx='))
@@ -693,6 +715,10 @@ if (thermiteBodyVfxArgument !== undefined && !['0', '1', 'off', 'on'].includes(t
 if (snowpackBodyVfxArgument !== undefined && !['0', '1', 'off', 'on'].includes(snowpackBodyVfxArgument)) {
   throw new Error('--snowpack-body-vfx must be 0, 1, off, or on');
 }
+if (quartzMesostructureVfxArgument !== undefined
+  && !['0', '1', 'off', 'on'].includes(quartzMesostructureVfxArgument)) {
+  throw new Error('--quartz-mesostructure-vfx must be 0, 1, off, or on');
+}
 if (soapBodyVfxArgument !== undefined && !['0', '1', 'off', 'on'].includes(soapBodyVfxArgument)) {
   throw new Error('--soap-body-vfx must be 0, 1, off, or on');
 }
@@ -729,6 +755,9 @@ if (focusedVfxOnlyFlags.some(Boolean) && thermiteBodyVfxArgument !== undefined) 
 }
 if (focusedVfxOnlyFlags.some(Boolean) && snowpackBodyVfxArgument !== undefined) {
   throw new Error('focused VFX audits own snowpackBodyVfx state; omit --snowpack-body-vfx');
+}
+if (focusedVfxOnlyFlags.some(Boolean) && quartzMesostructureVfxArgument !== undefined) {
+  throw new Error('focused VFX audits own quartzMesostructureVfx state; omit --quartz-mesostructure-vfx');
 }
 if (focusedVfxOnlyFlags.some(Boolean) && soapBodyVfxArgument !== undefined) {
   throw new Error('focused VFX audits own soapBodyVfx state; omit --soap-body-vfx');
@@ -1156,6 +1185,23 @@ if (snowpackBodyVfxOnly && (volumeVfxArgument !== undefined
   || carbonDioxideBodyVfxArgument !== undefined)) {
   throw new Error('--snowpack-body-vfx-only pins E05 and owns off -> on -> off; omit overrides');
 }
+if (quartzMesostructureVfxOnly && (volumeVfxArgument !== undefined
+  || liquidBodyVfxArgument !== undefined || liquidSurfaceVfxArgument !== undefined
+  || gasBodyVfxArgument !== undefined || gasMotionVfxArgument !== undefined
+  || powderBodyVfxArgument !== undefined || sootyPowderBodyVfxArgument !== undefined
+  || thermiteBodyVfxArgument !== undefined || snowpackBodyVfxArgument !== undefined
+  || quartzMesostructureVfxArgument !== undefined
+  || powderLightVfxArgument !== undefined || translucentEdgeVfxArgument !== undefined
+  || organicSubsurfaceVfxArgument !== undefined || wetSedimentVfxArgument !== undefined
+  || gasLightVfxArgument !== undefined || liquidSolidMeniscusVfxArgument !== undefined
+  || metalWaterContactVfxArgument !== undefined || gasCoreDepthVfxArgument !== undefined
+  || nobleGasBillowVfxArgument !== undefined || nobleGasPrismVfxArgument !== undefined
+  || smokeSoftnessVfxArgument !== undefined || smokeBillowDepthVfxArgument !== undefined
+  || plasmaCoreVfxArgument !== undefined || solidBodyVfxArgument !== undefined
+  || deutBodyVfxArgument !== undefined || hydrogenBodyVfxArgument !== undefined
+  || carbonDioxideBodyVfxArgument !== undefined)) {
+  throw new Error('--quartz-mesostructure-vfx-only pins E05/native PQRT state and owns off -> on -> off; omit overrides');
+}
 if (soapBodyVfxOnly && (volumeVfxArgument !== undefined
   || liquidBodyVfxArgument !== undefined || liquidSurfaceVfxArgument !== undefined
   || gasBodyVfxArgument !== undefined || gasMotionVfxArgument !== undefined
@@ -1258,6 +1304,9 @@ if (thermiteBodyVfxOnly && renderScaleArgument === '8') {
 }
 if (snowpackBodyVfxOnly && renderScaleArgument === '8') {
   throw new Error('--snowpack-body-vfx-only is a normal-detail 1x/2x/4x experiment');
+}
+if (quartzMesostructureVfxOnly && renderScaleArgument === '8') {
+  throw new Error('--quartz-mesostructure-vfx-only is a normal-detail 1x/2x/4x experiment');
 }
 if (nobleGasBillowVfxOnly && renderScaleArgument === '8') {
   throw new Error('--noble-gas-billow-vfx-only is a normal-detail 1x/2x/4x experiment');
@@ -1392,7 +1441,7 @@ async function main() {
     const reducedAudit = quickScreenshot || showcaseScreenshotOnly || composedRankOnly
       || candidateRankOnly || hdrVfxOnly || volumeVfxOnly
       || liquidBodyVfxOnly || liquidSurfaceVfxOnly || gasBodyVfxOnly || gasMotionVfxOnly
-      || powderBodyVfxOnly || powderLightVfxOnly || powderSolidContactVfxOnly || translucentEdgeVfxOnly || organicSubsurfaceVfxOnly || wetSedimentVfxOnly || gasLightVfxOnly || liquidSolidMeniscusVfxOnly || metalWaterContactVfxOnly || gasCoreDepthVfxOnly || plasmaCoreVfxOnly || solidBodyVfxOnly || platinumBodyVfxOnly || ceramicGlazeVfxOnly || botanicalBodyVfxOnly || glassBodyVfxOnly || oilBodyVfxOnly || rockRoughnessVfxOnly || rockMesostructureVfxOnly || waterBodyVfxOnly || acidBodyVfxOnly || soapBodyVfxOnly || sootyPowderBodyVfxOnly || thermiteBodyVfxOnly || snowpackBodyVfxOnly || deutBodyVfxOnly || hydrogenBodyVfxOnly || carbonDioxideBodyVfxOnly || radioactiveSolidBodyVfxOnly || iszsCrystallineVfxOnly || nobleGasBillowVfxOnly || nobleGasPrismVfxOnly || smokeSoftnessVfxOnly || smokeBillowDepthVfxOnly || botanicalMesostructureVfxOnly || woodBarkReliefVfxOnly || botanicalPigmentVfxOnly || plantLaminaVfxOnly || plantLobeDepthVfxOnly || woodTanninVfxOnly || layoutOnly || mobileOnly || mobileGestureOnly
+      || powderBodyVfxOnly || powderLightVfxOnly || powderSolidContactVfxOnly || translucentEdgeVfxOnly || organicSubsurfaceVfxOnly || wetSedimentVfxOnly || gasLightVfxOnly || liquidSolidMeniscusVfxOnly || metalWaterContactVfxOnly || gasCoreDepthVfxOnly || plasmaCoreVfxOnly || solidBodyVfxOnly || platinumBodyVfxOnly || ceramicGlazeVfxOnly || botanicalBodyVfxOnly || glassBodyVfxOnly || oilBodyVfxOnly || rockRoughnessVfxOnly || rockMesostructureVfxOnly || waterBodyVfxOnly || acidBodyVfxOnly || soapBodyVfxOnly || sootyPowderBodyVfxOnly || thermiteBodyVfxOnly || snowpackBodyVfxOnly || quartzMesostructureVfxOnly || deutBodyVfxOnly || hydrogenBodyVfxOnly || carbonDioxideBodyVfxOnly || radioactiveSolidBodyVfxOnly || iszsCrystallineVfxOnly || nobleGasBillowVfxOnly || nobleGasPrismVfxOnly || smokeSoftnessVfxOnly || smokeBillowDepthVfxOnly || botanicalMesostructureVfxOnly || woodBarkReliefVfxOnly || botanicalPigmentVfxOnly || plantLaminaVfxOnly || plantLobeDepthVfxOnly || woodTanninVfxOnly || layoutOnly || mobileOnly || mobileGestureOnly
       || desktopInputOnly || visualScaleMatrixOnly || powderBodyOnly || liquidDepthOnly
       || solidDepthOnly || gasChromaOnly || surfaceContourOnly || solidFieldOnly
       || roleGraphicsOnly || cellularGraphicsOnly || sensorGraphicsOnly
@@ -1490,7 +1539,7 @@ async function auditMode(mode) {
   // canonical paused scene there and prove real material delivery/occupancy.
   const startsBlank = !canvasFallbackAudit && (hdrVfxOnly || volumeVfxOnly
     || liquidBodyVfxOnly || liquidSurfaceVfxOnly || gasBodyVfxOnly || gasMotionVfxOnly
-    || powderBodyVfxOnly || powderLightVfxOnly || powderSolidContactVfxOnly || translucentEdgeVfxOnly || organicSubsurfaceVfxOnly || wetSedimentVfxOnly || gasLightVfxOnly || liquidSolidMeniscusVfxOnly || metalWaterContactVfxOnly || gasCoreDepthVfxOnly || plasmaCoreVfxOnly || solidBodyVfxOnly || platinumBodyVfxOnly || ceramicGlazeVfxOnly || botanicalBodyVfxOnly || glassBodyVfxOnly || oilBodyVfxOnly || rockRoughnessVfxOnly || rockMesostructureVfxOnly || waterBodyVfxOnly || acidBodyVfxOnly || soapBodyVfxOnly || sootyPowderBodyVfxOnly || thermiteBodyVfxOnly || snowpackBodyVfxOnly || deutBodyVfxOnly || hydrogenBodyVfxOnly || carbonDioxideBodyVfxOnly || radioactiveSolidBodyVfxOnly || iszsCrystallineVfxOnly || nobleGasBillowVfxOnly || nobleGasPrismVfxOnly || smokeSoftnessVfxOnly || smokeBillowDepthVfxOnly || botanicalMesostructureVfxOnly || woodBarkReliefVfxOnly || botanicalPigmentVfxOnly || plantLaminaVfxOnly || plantLobeDepthVfxOnly || woodTanninVfxOnly || cellularGraphicsOnly || sensorGraphicsOnly
+    || powderBodyVfxOnly || powderLightVfxOnly || powderSolidContactVfxOnly || translucentEdgeVfxOnly || organicSubsurfaceVfxOnly || wetSedimentVfxOnly || gasLightVfxOnly || liquidSolidMeniscusVfxOnly || metalWaterContactVfxOnly || gasCoreDepthVfxOnly || plasmaCoreVfxOnly || solidBodyVfxOnly || platinumBodyVfxOnly || ceramicGlazeVfxOnly || botanicalBodyVfxOnly || glassBodyVfxOnly || oilBodyVfxOnly || rockRoughnessVfxOnly || rockMesostructureVfxOnly || waterBodyVfxOnly || acidBodyVfxOnly || soapBodyVfxOnly || sootyPowderBodyVfxOnly || thermiteBodyVfxOnly || snowpackBodyVfxOnly || quartzMesostructureVfxOnly || deutBodyVfxOnly || hydrogenBodyVfxOnly || carbonDioxideBodyVfxOnly || radioactiveSolidBodyVfxOnly || iszsCrystallineVfxOnly || nobleGasBillowVfxOnly || nobleGasPrismVfxOnly || smokeSoftnessVfxOnly || smokeBillowDepthVfxOnly || botanicalMesostructureVfxOnly || woodBarkReliefVfxOnly || botanicalPigmentVfxOnly || plantLaminaVfxOnly || plantLobeDepthVfxOnly || woodTanninVfxOnly || cellularGraphicsOnly || sensorGraphicsOnly
     || unusualPowderGraphicsOnly || earthenPowderGraphicsOnly || explosivePowderGraphicsOnly
     || unusualSolidGraphicsOnly || deviceIdentityGraphicsOnly || fieldProfileGraphicsOnly
     || electricDischargeGraphicsOnly || liquidIdentityGraphicsOnly
@@ -1519,6 +1568,8 @@ async function auditMode(mode) {
     ...(sootyPowderBodyVfxArgument ? { sootyPowderBodyVfx: sootyPowderBodyVfxArgument } : {}),
     ...(thermiteBodyVfxArgument ? { thermiteBodyVfx: thermiteBodyVfxArgument } : {}),
     ...(snowpackBodyVfxArgument ? { snowpackBodyVfx: snowpackBodyVfxArgument } : {}),
+    ...(quartzMesostructureVfxArgument
+      ? { quartzMesostructureVfx: quartzMesostructureVfxArgument } : {}),
     ...(focusedVfxOnlyFlags.some(Boolean)
       ? { soapBodyVfx: '0' }
       : soapBodyVfxArgument !== undefined ? { soapBodyVfx: soapBodyVfxArgument } : {}),
@@ -1538,6 +1589,7 @@ async function auditMode(mode) {
     ...(focusedVfxOnlyFlags.some(Boolean) ? { sootyPowderBodyVfx: '0' } : {}),
     ...(focusedVfxOnlyFlags.some(Boolean) ? { thermiteBodyVfx: '0' } : {}),
     ...(focusedVfxOnlyFlags.some(Boolean) ? { snowpackBodyVfx: '0' } : {}),
+    ...(focusedVfxOnlyFlags.some(Boolean) ? { quartzMesostructureVfx: '0' } : {}),
     // E41 defaults on in normal realistic WebGL once implemented. Existing
     // focused baselines must remain byte-stable while its own reload loop owns
     // the explicit off -> on -> off sequence.
@@ -2162,6 +2214,15 @@ async function auditMode(mode) {
       assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
       cdp.close();
       return { backend: mode, snowpackBodyVfx, browserErrors: errors.length };
+    }
+    if (quartzMesostructureVfxOnly) {
+      assert(mode === 'webgl', '--quartz-mesostructure-vfx-only requires --webgl-only');
+      const quartzMesostructureVfx = await auditQuartzMesostructureVfxExperiment(
+        cdp, mode, dpr,
+      );
+      assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
+      cdp.close();
+      return { backend: mode, quartzMesostructureVfx, browserErrors: errors.length };
     }
     if (deutBodyVfxOnly) {
       assert(mode === 'webgl', '--deut-body-vfx-only requires --webgl-only');
@@ -12431,6 +12492,7 @@ async function auditMaterialCandidateSurvey(cdp, mode, dpr) {
       renderScale: String(scale), renderLook: candidateLook,
       candidateRankAudit: '1', volumeVfx: '1', liquidBodyVfx: '1', powderBodyVfx: '1',
       snowpackBodyVfx: candidateSnowpackBodyVfx,
+      quartzMesostructureVfx: candidateQuartzMesostructureVfx,
     });
     await cdp.send('Page.navigate', { url: `${AUDIT_BASE_URL}?${query}` });
     await waitFor(() => evaluate(cdp, `(() => {
@@ -12445,6 +12507,8 @@ async function auditMaterialCandidateSurvey(cdp, mode, dpr) {
         && parameters.get('liquidBodyVfx') === '1'
         && parameters.get('powderBodyVfx') === '1'
         && parameters.get('snowpackBodyVfx') === ${JSON.stringify(candidateSnowpackBodyVfx)}
+        && parameters.get('quartzMesostructureVfx')
+          === ${JSON.stringify(candidateQuartzMesostructureVfx)}
         && document.querySelector('[data-scene="candidate-survey"]') !== null
         && typeof window.__ANIFOR_INPUT_AUDIT__?.materialCandidateSurveyFixture === 'function';
     })()`), 15_000, `candidate rank ${scale}x survey page`);
@@ -12506,14 +12570,19 @@ async function auditMaterialCandidateSurvey(cdp, mode, dpr) {
         liquidBodyVfx: canvas?.dataset.liquidBodyVfx ?? 'missing',
         powderBodyVfx: canvas?.dataset.powderBodyVfx ?? 'missing',
         snowpackBodyVfx: canvas?.dataset.snowpackBodyVfx ?? 'missing',
+        quartzMesostructureVfx: canvas?.dataset.quartzMesostructureVfx ?? 'missing',
       };
     })()`);
     const expectedSnowpackBodyVfx = ['1', 'on'].includes(candidateSnowpackBodyVfx)
       ? 'active' : 'inactive';
+    const expectedQuartzMesostructureVfx = ['1', 'on'].includes(
+      candidateQuartzMesostructureVfx,
+    ) ? 'active' : 'inactive';
     assert(presentation.hdrPipeline === 'active'
       && presentation.liquidBodyVfx === 'active'
       && presentation.powderBodyVfx === 'active'
-      && presentation.snowpackBodyVfx === expectedSnowpackBodyVfx,
+      && presentation.snowpackBodyVfx === expectedSnowpackBodyVfx
+      && presentation.quartzMesostructureVfx === expectedQuartzMesostructureVfx,
     `candidate rank ${scale}x lost canonical body presentation (${JSON.stringify(presentation)})`);
     stage('telemetry-proven');
     const semantic = await candidateRankSemanticDigest(cdp, fixture);
@@ -12668,6 +12737,7 @@ async function auditMaterialCandidateSurvey(cdp, mode, dpr) {
     rankingMethod: `media-aware evidence v${COMPOSED_MEDIA_EVIDENCE_VERSION}; candidate selection still requires visible fit-view diagnosis`,
     renderLook: candidateLook,
     snowpackBodyVfx: candidateSnowpackBodyVfx,
+    quartzMesostructureVfx: candidateQuartzMesostructureVfx,
     weakestFirst,
     crossScaleDrift,
     schema: 'material-candidate-rank/v1',
@@ -36708,6 +36778,7 @@ async function navigateSnowpackBodyVfxState(cdp, mode, scale, enabled, label) {
     volumeVfx: '0', liquidBodyVfx: '0', liquidSurfaceVfx: '0', gasBodyVfx: '0',
     gasMotionVfx: '0', powderBodyVfx: '1', sootyPowderBodyVfx: '0',
     thermiteBodyVfx: '0', snowpackBodyVfx: enabled ? '1' : '0',
+    quartzMesostructureVfx: '0',
     powderLightVfx: '0', powderSolidContactVfx: '0', translucentEdgeVfx: '0',
     organicSubsurfaceVfx: '0', wetSedimentVfx: '0', gasLightVfx: '0',
     liquidSolidMeniscusVfx: '0', metalWaterContactVfx: '0', gasCoreDepthVfx: '0',
@@ -36804,7 +36875,8 @@ async function navigateSnowpackBodyVfxState(cdp, mode, scale, enabled, label) {
 
 const SNOWPACK_BODY_VFX_ISOLATED_SELECTORS = Object.freeze([
   'volumeVfx', 'liquidBodyVfx', 'liquidSurfaceVfx', 'gasBodyVfx', 'gasMotionVfx',
-  'sootyPowderBodyVfx', 'thermiteBodyVfx', 'powderLightVfx', 'powderSolidContactVfx',
+  'sootyPowderBodyVfx', 'thermiteBodyVfx', 'quartzMesostructureVfx',
+  'powderLightVfx', 'powderSolidContactVfx',
   'translucentEdgeVfx', 'organicSubsurfaceVfx', 'wetSedimentVfx', 'gasLightVfx',
   'liquidSolidMeniscusVfx', 'metalWaterContactVfx', 'gasCoreDepthVfx',
   'nobleGasBillowVfx', 'nobleGasPrismVfx', 'smokeSoftnessVfx',
@@ -37065,7 +37137,8 @@ async function auditEightXSnowpackBodyVfxExclusion(cdp, dpr) {
     auditStage: 'eight-snowpack-body', snowpackBodyVfxAudit: '1', renderLook: 'realistic',
     volumeVfx: '0', liquidBodyVfx: '0', liquidSurfaceVfx: '0', gasBodyVfx: '0',
     gasMotionVfx: '0', powderBodyVfx: '1', sootyPowderBodyVfx: '0',
-    thermiteBodyVfx: '0', snowpackBodyVfx: '1', powderLightVfx: '0',
+    thermiteBodyVfx: '0', snowpackBodyVfx: '1', quartzMesostructureVfx: '0',
+    powderLightVfx: '0',
     powderSolidContactVfx: '0', translucentEdgeVfx: '0', organicSubsurfaceVfx: '0',
     wetSedimentVfx: '0', gasLightVfx: '0', liquidSolidMeniscusVfx: '0',
     metalWaterContactVfx: '0', gasCoreDepthVfx: '0', nobleGasBillowVfx: '0',
@@ -37083,6 +37156,7 @@ async function auditEightXSnowpackBodyVfxExclusion(cdp, dpr) {
     return p.get('renderScale') === '8' && p.get('auditStage') === 'eight-snowpack-body'
       && p.get('powderBodyVfx') === '1' && p.get('snowpackBodyVfx') === '1'
       && p.get('sootyPowderBodyVfx') === '0' && p.get('thermiteBodyVfx') === '0'
+      && p.get('quartzMesostructureVfx') === '0'
       && Boolean(window.__ANIFOR_INPUT_AUDIT__);
   })()`), remainingDeadlineMs(deadline, 'true-8x E48 input audit API'),
   'true-8x E48 input audit API');
@@ -37106,6 +37180,7 @@ async function auditEightXSnowpackBodyVfxExclusion(cdp, dpr) {
       sootyPowderBodyVfx: canvas.dataset.sootyPowderBodyVfx,
       thermiteBodyVfx: canvas.dataset.thermiteBodyVfx,
       snowpackBodyVfx: canvas.dataset.snowpackBodyVfx,
+      quartzMesostructureVfx: canvas.dataset.quartzMesostructureVfx,
     } : undefined;
   })()`, Math.min(1_000, remainingDeadlineMs(deadline, 'true-8x E48 isolation')));
   assert(isolation?.renderer === 'semantic-field-webgl' && isolation.look === 'realistic'
@@ -37113,7 +37188,8 @@ async function auditEightXSnowpackBodyVfxExclusion(cdp, dpr) {
     && isolation.bloomBacking === null && isolation.powderBodyVfx === 'inactive'
     && isolation.sootyPowderBodyVfx === 'inactive'
     && isolation.thermiteBodyVfx === 'inactive'
-    && isolation.snowpackBodyVfx === 'inactive',
+    && isolation.snowpackBodyVfx === 'inactive'
+    && isolation.quartzMesostructureVfx === 'inactive',
   `true-8x E48 isolation failed (${JSON.stringify(isolation)})`);
   // E48 owns no compact-shader path. Avoid uploading the dense fixture here:
   // this tail proves selector/resource exclusion on one already-fenced 8x frame.
@@ -37132,6 +37208,1075 @@ async function auditEightXSnowpackBodyVfxExclusion(cdp, dpr) {
       && geometry.backend.backend === 'webgl',
     selectorExcluded: true, resourcesIdentical: isolation.bloomBacking === null,
     semanticStable: true, isolation, timing,
+  };
+}
+
+// E49's accepted 1x/2x/4x SwiftShader matrix freezes a cohesive Quartz body:
+// common cell-frequency grain falls to roughly 43--44%, while broad plate
+// relief, native tmp2 contrast, exact support, and material/contact isolation
+// remain intact. Keep enough headroom for compositor rounding without letting
+// the branch collapse back to the bootstrap's merely non-inert proof.
+const QUARTZ_MESOSTRUCTURE_VFX_TEXTURE_LIMITS = Object.freeze({
+  minimumBaselineMicro: 12.0,
+  minimumEnabledMicro: 5.5,
+  maximumEnabledMicro: 10.0,
+  minimumMicroRetention: 0.41,
+  maximumMicroRetention: 0.47,
+  minimumEnabledMacro: 10.0,
+  maximumEnabledMacro: 34.0,
+  minimumMacroRetention: 0.55,
+  maximumMacroRetention: 1.30,
+  minimumEnabledLumaStdDev: 6.2,
+  maximumEnabledLumaStdDev: 11.0,
+  maximumClippedFraction: 0,
+});
+const QUARTZ_MESOSTRUCTURE_VFX_RESPONSE_LIMITS = Object.freeze({
+  minimumRgbRms: 9.0,
+  maximumRgbRms: 15.0,
+  maximumRgbPeak: 75,
+  minimumCoverage: 0.70,
+});
+const QUARTZ_MESOSTRUCTURE_VFX_TARGET_ENVELOPES = Object.freeze({
+  PQRTWholeBody: Object.freeze({
+    rgbRms: [9.2, 13.5], chromaRms: [3.8, 6.7], rgbPeak: [40, 74],
+    coverage: [0.70, 0.82], signedMean: [1.7, 3.3], spatialRgbRms: [8.8, 13.0],
+  }),
+  PQRTCrown: Object.freeze({
+    rgbRms: [9.4, 14.4], chromaRms: [4.0, 7.3], rgbPeak: [34, 58],
+    coverage: [0.84, 0.93], signedMean: [1.7, 5.6], spatialRgbRms: [9.0, 13.8],
+  }),
+  PQRTPocket: Object.freeze({
+    rgbRms: [9.2, 13.3], chromaRms: [4.2, 7.3], rgbPeak: [28, 56],
+    coverage: [0.85, 0.93], signedMean: [-0.9, 2.5], spatialRgbRms: [9.1, 13.3],
+  }),
+  PQRTCore: Object.freeze({
+    rgbRms: [9.8, 14.4], chromaRms: [4.1, 7.2], rgbPeak: [37, 58],
+    coverage: [0.85, 0.92], signedMean: [-0.35, 2.3], spatialRgbRms: [9.4, 14.4],
+  }),
+});
+const QUARTZ_MESOSTRUCTURE_STATE_LIMITS = Object.freeze({
+  maximumPeak: 40,
+  minimumSignedMagnitude: 20,
+  minimumSpanRetention: 0.97,
+  maximumSpanRetention: 1.04,
+});
+
+// Raw RGBA remains exact for every control. These allowances name only the
+// page-compositor/HDR footprint adjoining an eligible exact-PQRT body.
+const QUARTZ_MESOSTRUCTURE_VFX_CONTROL_PEAK = Object.freeze({
+  PQRTHole: 0,
+  PQRTOpenChannel: 0,
+  FineColumn: 0,
+  FineLine: 0,
+  Isolated: 0,
+  Moving: 0,
+  NativeWallOccupied: 0,
+  NativeWallClear: 1,
+  SuspendedQuartz: 0,
+  SuspensionWater: 0,
+  QuartzMetal: 0,
+  Metal: 0,
+  QuartzWater: 0,
+  Water: 0,
+  GuardedBlank: 0,
+});
+
+/** E49: exact native PQRT plate mesostructure over E05's settled Smooth proof. */
+async function auditQuartzMesostructureVfxExperiment(cdp, mode, dpr) {
+  const scales = [];
+  const requestedScales = renderScaleArgument === undefined
+    ? VOLUME_VFX_SCALES : [Number(renderScaleArgument)];
+  for (const scale of requestedScales) {
+    const captures = {};
+    for (const enabled of [false, true, false]) {
+      const key = enabled ? 'enabled' : captures.disabled ? 'disabledRepeat' : 'disabled';
+      const variant = await navigateQuartzMesostructureVfxState(
+        cdp, mode, scale, enabled, key,
+      );
+      variant.references = await capturePowderBodyVfxReferenceStyles(
+        cdp, scale, key, 'E49',
+      );
+      captures[key] = variant;
+    }
+    const { disabled, enabled, disabledRepeat } = captures;
+    const fixture = disabled.fixture;
+    assert(JSON.stringify(fixture) === JSON.stringify(enabled.fixture)
+      && JSON.stringify(fixture) === JSON.stringify(disabledRepeat.fixture),
+    `E49 ${scale}x fixture metadata changed`);
+    for (const [label, variant] of Object.entries(captures)) {
+      assertGeometry(variant.geometry, `E49 ${label} ${scale}x`, scale);
+      assert(variant.geometry.backend.backend === 'webgl',
+        `E49 ${label} ${scale}x lost WebGL presentation`);
+      assert(variant.hdrPipeline?.state === 'active'
+        && variant.hdrPipeline.powderBodyVfx === 'active'
+        && variant.hdrPipeline.snowpackBodyVfx === 'inactive'
+        && variant.hdrPipeline.quartzMesostructureVfx
+          === (label === 'enabled' ? 'active' : 'inactive')
+        && Object.values(variant.hdrPipeline.isolatedSelectors)
+          .every((state) => state === 'inactive'),
+      `E49 ${label} ${scale}x selector/HDR state was wrong (${JSON.stringify(
+        variant.hdrPipeline,
+      )})`);
+    }
+    assertCanvasRectsEqual(disabled.geometry.canvas, enabled.geometry.canvas,
+      `E49 ${scale}x disabled/enabled CSS geometry`);
+    assertCanvasRectsEqual(disabled.geometry.canvas, disabledRepeat.geometry.canvas,
+      `E49 ${scale}x disabled/repeated CSS geometry`);
+    assert(JSON.stringify(disabled.geometry.backing) === JSON.stringify(enabled.geometry.backing)
+      && JSON.stringify(disabled.geometry.backing)
+        === JSON.stringify(disabledRepeat.geometry.backing),
+    `E49 ${scale}x backing geometry changed`);
+    assertHdrVfxSemanticEquality(disabled.semantic, enabled.semantic,
+      `E49 ${scale}x disabled/enabled`);
+    assertHdrVfxSemanticEquality(disabled.semantic, disabledRepeat.semantic,
+      `E49 ${scale}x disabled/repeated`);
+    assert(JSON.stringify(disabled.materialPlane) === JSON.stringify(enabled.materialPlane)
+      && JSON.stringify(disabled.materialPlane) === JSON.stringify(disabledRepeat.materialPlane)
+      && disabled.materialPlane.occupied === fixture.expected.occupiedCells
+      && disabled.materialPlane.materialCounts[fixture.target.material]
+        === fixture.expected.quartzCells
+      && disabled.materialPlane.materialCounts[2] === fixture.expected.waterCells
+      && disabled.materialPlane.materialCounts[23] === fixture.expected.metalCells
+      && Object.values(fixture.materialControls).every((entry) => (
+        disabled.materialPlane.materialCounts[entry.material]
+          === fixture.expected.cellsPerMaterialControl
+      )),
+    `E49 ${scale}x changed exact material-plane cardinalities (${JSON.stringify({
+      materialPlane: disabled.materialPlane, expected: fixture.expected,
+    })})`);
+    assertVolumeVfxBackingInvariant(disabled.backing, enabled.backing,
+      `E49 ${scale}x disabled/enabled`);
+    assertVolumeVfxBackingInvariant(disabled.backing, disabledRepeat.backing,
+      `E49 ${scale}x disabled/repeated`);
+    for (const key of ['walls', 'velocity', 'auxiliary', 'suspension', 'state']) {
+      assert(JSON.stringify(disabled[key]) === JSON.stringify(enabled[key])
+        && JSON.stringify(disabled[key]) === JSON.stringify(disabledRepeat[key]),
+      `E49 ${scale}x changed exact ${key} data (${JSON.stringify({
+        disabled: disabled[key], enabled: enabled[key], repeated: disabledRepeat[key],
+      })})`);
+    }
+    assert(disabled.walls.occupied === fixture.expected.wallCells
+      && disabled.walls.expectedOccupied === fixture.expected.wallCells
+      && disabled.walls.mismatches === 0 && disabled.walls.matterMismatches === 0
+      && disabled.walls.stateMismatches === 0,
+    `E49 ${scale}x lost native-wall coexistence (${JSON.stringify(disabled.walls)})`);
+    assert(disabled.velocity.cells === fixture.expected.movingVelocityCells
+      && disabled.velocity.expectedCells === fixture.expected.movingVelocityCells
+      && disabled.velocity.mismatches === 0,
+    `E49 ${scale}x lost authored PQRT motion (${JSON.stringify(disabled.velocity)})`);
+    assert(Object.values(disabled.auxiliary.stable).every((range) => (
+      range.min === 255 && range.max === 255
+    )) && disabled.auxiliary.moving.min < 255 && disabled.auxiliary.moving.max < 255,
+    `E49 ${scale}x lost settled-body or moving-region stability (${JSON.stringify(
+      disabled.auxiliary,
+    )})`);
+    assert(disabled.state.invalidQuartzReservedBits === 0
+      && disabled.state.quartzCounts.dark === fixture.expected.stateCounts.dark
+      && disabled.state.quartzCounts.neutral === fixture.expected.stateCounts.neutral
+      && disabled.state.quartzCounts.bright === fixture.expected.stateCounts.bright
+      && disabled.state.qrtzControl.observed === fixture.expected.qrtzState,
+    `E49 ${scale}x lost exact PQRT/QRTZ native state (${JSON.stringify(disabled.state)})`);
+    const suspendedQuartz = disabled.suspension.find(({ name }) => name === 'SuspendedQuartz');
+    const suspensionWater = disabled.suspension.find(({ name }) => name === 'SuspensionWater');
+    assert(suspendedQuartz?.cell === fixture.target.material && suspendedQuartz.rgba[3] > 0
+      && suspendedQuartz.liquidAlpha > 0 && suspensionWater?.cell === 2
+      && suspensionWater.rgba[3] > 0 && suspensionWater.liquidAlpha > 0,
+    `E49 ${scale}x did not establish genuine PQRT/Water suspension support (${JSON.stringify(
+      disabled.suspension,
+    )})`);
+    assertVolumeVfxRawAlphaInvariant(disabled.rawAll, enabled.rawAll,
+      `E49 ${scale}x disabled/enabled`);
+    assertVolumeVfxRawAlphaInvariant(disabled.rawAll, disabledRepeat.rawAll,
+      `E49 ${scale}x disabled/repeated`);
+    assert(JSON.stringify(disabled.rawControls) === JSON.stringify(enabled.rawControls)
+      && JSON.stringify(disabled.rawControls) === JSON.stringify(disabledRepeat.rawControls),
+    `E49 ${scale}x changed an exact raw topology/material/contact control (${JSON.stringify({
+      disabled: disabled.rawControls, enabled: enabled.rawControls,
+    })})`);
+    assert(disabled.capture.capture.data === disabledRepeat.capture.capture.data,
+      `E49 ${scale}x repeated off framebuffer was not byte exact`);
+
+    const targets = quartzMesostructureVfxTargetRegions(fixture);
+    const controls = quartzMesostructureVfxControlRegions(fixture);
+    const responses = await sampleBackdropRefractionRegions(cdp, {
+      straight: disabled.capture.capture.data,
+      refracted: enabled.capture.capture.data,
+      repeatedStraight: disabledRepeat.capture.capture.data,
+    }, [...targets, ...controls], disabled.capture.canvasRect);
+    const targetResponses = responses.slice(0, targets.length).map((sample) => ({
+      ...sample,
+      spatialRgbRms: round(Math.sqrt(Math.max(0, sample.rgbRms ** 2
+        - (Math.hypot(...sample.responseRgb) / Math.sqrt(3)) ** 2)), 3),
+    }));
+    const controlResponses = responses.slice(targets.length);
+    assert(responses.every((sample) => sample.repeatRgbPeak === 0),
+      `E49 ${scale}x off -> on -> off was not deterministic (${JSON.stringify(responses)})`);
+    assert(targetResponses.every((sample) => [
+      sample.rgbRms, sample.chromaRms, sample.rgbPeak, sample.coverage,
+      sample.signedMean, sample.spatialRgbRms,
+    ].every(Number.isFinite)
+      && sample.rgbRms >= QUARTZ_MESOSTRUCTURE_VFX_RESPONSE_LIMITS.minimumRgbRms
+      && sample.rgbRms <= QUARTZ_MESOSTRUCTURE_VFX_RESPONSE_LIMITS.maximumRgbRms
+      && sample.rgbPeak <= QUARTZ_MESOSTRUCTURE_VFX_RESPONSE_LIMITS.maximumRgbPeak
+      && sample.coverage >= QUARTZ_MESOSTRUCTURE_VFX_RESPONSE_LIMITS.minimumCoverage),
+    `E49 ${scale}x PQRT response was absent or unbounded (${JSON.stringify(
+      targetResponses,
+    )})`);
+    assert(targetResponses.every((sample) => {
+      const envelope = QUARTZ_MESOSTRUCTURE_VFX_TARGET_ENVELOPES[sample.name];
+      return envelope
+        && sample.rgbRms >= envelope.rgbRms[0] && sample.rgbRms <= envelope.rgbRms[1]
+        && sample.chromaRms >= envelope.chromaRms[0]
+        && sample.chromaRms <= envelope.chromaRms[1]
+        && sample.rgbPeak >= envelope.rgbPeak[0] && sample.rgbPeak <= envelope.rgbPeak[1]
+        && sample.coverage >= envelope.coverage[0] && sample.coverage <= envelope.coverage[1]
+        && sample.signedMean >= envelope.signedMean[0]
+        && sample.signedMean <= envelope.signedMean[1]
+        && sample.spatialRgbRms >= envelope.spatialRgbRms[0]
+        && sample.spatialRgbRms <= envelope.spatialRgbRms[1];
+    }),
+    `E49 ${scale}x escaped the accepted Quartz target envelope (${JSON.stringify({
+      envelopes: QUARTZ_MESOSTRUCTURE_VFX_TARGET_ENVELOPES, targetResponses,
+    })})`);
+    const targetByName = Object.fromEntries(
+      targetResponses.map((sample) => [sample.name, sample]),
+    );
+    assert(targetByName.PQRTCrown?.signedMean
+        > targetByName.PQRTPocket?.signedMean + 0.10
+      && targetByName.PQRTWholeBody?.positiveMean >= 0.01
+      && targetByName.PQRTWholeBody?.negativeMean >= 0.01
+      && targetByName.PQRTCore?.responseSignature
+        !== targetByName.PQRTCrown?.responseSignature
+      && targetByName.PQRTCore?.responseSignature
+        !== targetByName.PQRTPocket?.responseSignature,
+    `E49 ${scale}x lost broad crystal-plate crown/pocket relief (${JSON.stringify(
+      targetByName,
+    )})`);
+    assert(controlResponses.length === controls.length
+      && controlResponses.every((sample) => sample.rgbPeak
+        <= (QUARTZ_MESOSTRUCTURE_VFX_CONTROL_PEAK[sample.name] ?? 0)),
+    `E49 ${scale}x escaped a named topology/material/contact control (${JSON.stringify(
+      controlResponses,
+    )})`);
+
+    const textureRegions = quartzMesostructureVfxTextureRegions(fixture);
+    const texture = {};
+    for (const [name, variant] of Object.entries(captures)) {
+      texture[name] = await samplePageRegions(
+        cdp, variant.capture.capture.data, textureRegions,
+        undefined, undefined, variant.capture.canvasRect,
+      );
+    }
+    const textureResponse = texture.disabled.map((baseline, index) => {
+      const current = texture.enabled[index];
+      const repeated = texture.disabledRepeat[index];
+      assert(current?.name === baseline.name && repeated?.name === baseline.name,
+        `E49 ${scale}x reordered Quartz texture regions`);
+      return {
+        name: baseline.name,
+        disabledMicro: baseline.microContrast,
+        enabledMicro: current.microContrast,
+        microRetention: round(current.microContrast / Math.max(0.001, baseline.microContrast), 4),
+        disabledMacro: baseline.macroLumaRange,
+        enabledMacro: current.macroLumaRange,
+        macroRetention: round(current.macroLumaRange / Math.max(0.001, baseline.macroLumaRange), 4),
+        enabledLumaStdDev: current.lumaStdDev,
+        supportRecall: current.supportRecall,
+        clippedFraction: current.clippedFraction,
+        repeatExact: JSON.stringify(baseline) === JSON.stringify(repeated),
+      };
+    });
+    assert(textureResponse.every((sample) => sample.disabledMicro
+      >= QUARTZ_MESOSTRUCTURE_VFX_TEXTURE_LIMITS.minimumBaselineMicro
+      && sample.enabledMicro >= QUARTZ_MESOSTRUCTURE_VFX_TEXTURE_LIMITS.minimumEnabledMicro
+      && sample.enabledMicro <= QUARTZ_MESOSTRUCTURE_VFX_TEXTURE_LIMITS.maximumEnabledMicro
+      && sample.microRetention
+        >= QUARTZ_MESOSTRUCTURE_VFX_TEXTURE_LIMITS.minimumMicroRetention
+      && sample.microRetention
+        <= QUARTZ_MESOSTRUCTURE_VFX_TEXTURE_LIMITS.maximumMicroRetention
+      && sample.enabledMacro >= QUARTZ_MESOSTRUCTURE_VFX_TEXTURE_LIMITS.minimumEnabledMacro
+      && sample.enabledMacro <= QUARTZ_MESOSTRUCTURE_VFX_TEXTURE_LIMITS.maximumEnabledMacro
+      && sample.macroRetention
+        >= QUARTZ_MESOSTRUCTURE_VFX_TEXTURE_LIMITS.minimumMacroRetention
+      && sample.macroRetention
+        <= QUARTZ_MESOSTRUCTURE_VFX_TEXTURE_LIMITS.maximumMacroRetention
+      && sample.enabledLumaStdDev
+        >= QUARTZ_MESOSTRUCTURE_VFX_TEXTURE_LIMITS.minimumEnabledLumaStdDev
+      && sample.enabledLumaStdDev
+        <= QUARTZ_MESOSTRUCTURE_VFX_TEXTURE_LIMITS.maximumEnabledLumaStdDev
+      && sample.supportRecall === 1
+      && sample.clippedFraction
+        <= QUARTZ_MESOSTRUCTURE_VFX_TEXTURE_LIMITS.maximumClippedFraction
+      && sample.repeatExact),
+    `E49 ${scale}x did not calm PQRT cell grain while retaining plate relief (${JSON.stringify({
+      limits: QUARTZ_MESOSTRUCTURE_VFX_TEXTURE_LIMITS, textureResponse,
+    })})`);
+
+    const stateResponses = {};
+    for (const label of ['disabled', 'enabled']) {
+      const matrix = captures[label].stateMatrix;
+      assert(matrix, `E49 ${scale}x ${label} native-state matrix is missing`);
+      stateResponses[label] = await sampleBackdropRefractionRegions(cdp, {
+        straight: matrix.disabled.capture.data,
+        refracted: matrix.enabled.capture.data,
+        repeatedStraight: matrix.disabledRepeat.capture.data,
+      }, quartzMesostructureNativeStateRegions(fixture), matrix.disabled.canvasRect);
+      assertQuartzMesostructureNativeStateResponses(
+        stateResponses[label], `E49 ${scale}x ${label}`,
+      );
+    }
+    const disabledStateByName = Object.fromEntries(
+      stateResponses.disabled.map((sample) => [sample.name, sample]),
+    );
+    const enabledStateByName = Object.fromEntries(
+      stateResponses.enabled.map((sample) => [sample.name, sample]),
+    );
+    const disabledSpan = disabledStateByName['PQRTState-bright'].signedMean
+      - disabledStateByName['PQRTState-dark'].signedMean;
+    const enabledSpan = enabledStateByName['PQRTState-bright'].signedMean
+      - enabledStateByName['PQRTState-dark'].signedMean;
+    const stateSpanRetention = enabledSpan / Math.max(0.001, disabledSpan);
+    assert(stateSpanRetention >= QUARTZ_MESOSTRUCTURE_STATE_LIMITS.minimumSpanRetention
+      && stateSpanRetention <= QUARTZ_MESOSTRUCTURE_STATE_LIMITS.maximumSpanRetention
+      && Math.abs(enabledStateByName['QRTZState-bright'].signedMean
+        - disabledStateByName['QRTZState-bright'].signedMean) <= 0.50,
+    `E49 ${scale}x obscured native PQRT/QRTZ state separation (${JSON.stringify({
+      disabledSpan, enabledSpan, stateSpanRetention,
+      disabled: stateResponses.disabled, enabled: stateResponses.enabled,
+    })})`);
+
+    const references = {};
+    const referenceRegions = quartzMesostructureVfxReferenceRegions(fixture);
+    for (const style of ['grains', 'local']) {
+      const samples = await sampleBackdropRefractionRegions(cdp, {
+        straight: disabled.references[style].capture.data,
+        refracted: enabled.references[style].capture.data,
+        repeatedStraight: disabledRepeat.references[style].capture.data,
+      }, referenceRegions, disabled.references[style].canvasRect);
+      assert(samples.every((sample) => sample.rgbPeak === 0 && sample.repeatRgbPeak === 0),
+        `E49 ${scale}x escaped the exact ${style} reference mode (${JSON.stringify(samples)})`);
+      references[style] = samples;
+    }
+
+    // The E49 fixture proves body/state composition for native 0/5/10 PQRT and
+    // bright QRTZ at every normal output scale. Do not stage the independent
+    // five-state atlas here: preparing it restarts E05 boundary evolution, so a
+    // generic identical-frame wait would measure legitimate powder settling
+    // rather than native-state composition. The dedicated normal PQRT gate
+    // retains 0/2/5/8/10 coverage, and E49's true-8x tail below exercises the
+    // full compact five-state atlas after E49 has been selector-excluded.
+    const nativeStateComposition = {
+      pqrtStates: [0, fixture.target.neutralSpeckle, 10],
+      qrtzState: fixture.expected.qrtzState,
+      exactNeutralNoOp: true,
+      exactRepeatedOff: true,
+    };
+    const screenshots = screenshotRequest && (requestedScales.length === 1 || scale === 2)
+      ? await writeQuartzMesostructureVfxScreenshots(
+        screenshotRequest, scale, disabled, enabled,
+      ) : undefined;
+    scales.push({
+      scale, geometry: disabled.geometry, semantic: disabled.semantic,
+      backing: disabled.geometry.backing, alphaSupport: disabled.backing,
+      materialPlane: disabled.materialPlane, walls: disabled.walls,
+      velocity: disabled.velocity, auxiliary: disabled.auxiliary,
+      suspension: disabled.suspension, state: disabled.state,
+      rawControls: disabled.rawControls, targetResponses, controlResponses,
+      textureResponse, stateResponses, stateSpanRetention, references,
+      nativeStateComposition, exactRepeatedOff: true, screenshots,
+    });
+  }
+  if (scales.length > 1) {
+    const reference = scales.find(({ scale }) => scale === 2) ?? scales[0];
+    for (const sample of scales.filter(({ scale }) => scale !== reference.scale)) {
+      assertCanvasRectsEqual(reference.geometry.canvas, sample.geometry.canvas,
+        `E49 ${reference.scale}x/${sample.scale}x CSS geometry`);
+      for (const key of ['semantic', 'materialPlane', 'walls', 'velocity', 'auxiliary',
+        'suspension', 'state']) {
+        assert(JSON.stringify(reference[key]) === JSON.stringify(sample[key]),
+          `E49 ${sample.scale}x changed exact ${key} data across output scales`);
+      }
+      for (const baseline of reference.textureResponse) {
+        const current = sample.textureResponse.find(({ name }) => name === baseline.name);
+        assert(current && Math.abs(current.microRetention - baseline.microRetention) <= 0.03
+          && Math.abs(current.macroRetention - baseline.macroRetention) <= 0.62,
+        `E49 ${baseline.name} texture response drifted at ${sample.scale}x (${JSON.stringify({
+          reference: baseline, current,
+        })})`);
+      }
+      assert(Math.abs(sample.stateSpanRetention - reference.stateSpanRetention) <= 0.03,
+        `E49 ${sample.scale}x native-state retention drifted (${JSON.stringify({
+          reference: reference.stateSpanRetention, current: sample.stateSpanRetention,
+        })})`);
+    }
+  }
+  return {
+    calibration: 'accepted-e49-1x-4x',
+    textureLimits: QUARTZ_MESOSTRUCTURE_VFX_TEXTURE_LIMITS,
+    responseLimits: QUARTZ_MESOSTRUCTURE_VFX_RESPONSE_LIMITS,
+    targetEnvelopes: QUARTZ_MESOSTRUCTURE_VFX_TARGET_ENVELOPES,
+    stateLimits: QUARTZ_MESOSTRUCTURE_STATE_LIMITS,
+    controlPeakCaps: QUARTZ_MESOSTRUCTURE_VFX_CONTROL_PEAK,
+    scales, trueEightXExcluded: true,
+    trueEightX: await auditEightXQuartzMesostructureVfxExclusion(cdp, dpr),
+  };
+}
+
+async function navigateQuartzMesostructureVfxState(cdp, mode, scale, enabled, label) {
+  const query = new URLSearchParams({
+    scene: 'render-lab', inputAudit: '1', blankAudit: '1', auditStage: 'blank',
+    quartzMesostructureVfxAudit: '1', renderScale: String(scale), renderLook: 'realistic',
+    volumeVfx: '0', liquidBodyVfx: '0', liquidSurfaceVfx: '0', gasBodyVfx: '0',
+    gasMotionVfx: '0', powderBodyVfx: '1', sootyPowderBodyVfx: '0',
+    thermiteBodyVfx: '0', snowpackBodyVfx: '0',
+    quartzMesostructureVfx: enabled ? '1' : '0',
+    powderLightVfx: '0', powderSolidContactVfx: '0', translucentEdgeVfx: '0',
+    organicSubsurfaceVfx: '0', wetSedimentVfx: '0', gasLightVfx: '0',
+    liquidSolidMeniscusVfx: '0', metalWaterContactVfx: '0', gasCoreDepthVfx: '0',
+    nobleGasBillowVfx: '0', nobleGasPrismVfx: '0', smokeSoftnessVfx: '0',
+    smokeBillowDepthVfx: '0', plasmaCoreVfx: '0', solidBodyVfx: '0',
+    radioactiveSolidBodyVfx: '0', iszsCrystallineVfx: '0', platinumBodyVfx: '0',
+    ceramicGlazeVfx: '0', botanicalBodyVfx: '0', botanicalMesostructureVfx: '0',
+    botanicalPigmentVfx: '0', plantLaminaVfx: '0', plantLobeDepthVfx: '0',
+    plantCanopyMassVfx: '0', woodBarkReliefVfx: '0', woodTanninVfx: '0',
+    glassBodyVfx: '0', acidBodyVfx: '0', deutBodyVfx: '0', oilBodyVfx: '0',
+    oilVolumeFinishVfx: '0', rockRoughnessVfx: '0', rockMesostructureVfx: '0',
+    waterBodyVfx: '0', hydrogenBodyVfx: '0', carbonDioxideBodyVfx: '0',
+  });
+  await cdp.send('Page.navigate', { url: `${AUDIT_BASE_URL}?${query}` });
+  await waitFor(() => evaluate(cdp, `(() => {
+    const p = new URLSearchParams(location.search);
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    const isolated = ${JSON.stringify(QUARTZ_MESOSTRUCTURE_VFX_ISOLATED_SELECTORS)};
+    return p.get('quartzMesostructureVfxAudit') === '1'
+      && p.get('renderScale') === ${JSON.stringify(String(scale))}
+      && p.get('renderLook') === 'realistic' && p.get('powderBodyVfx') === '1'
+      && p.get('quartzMesostructureVfx') === ${JSON.stringify(enabled ? '1' : '0')}
+      && isolated.every((name) => p.get(name) === '0')
+      && typeof audit?.prepareQuartzMesostructureVfxFixture === 'function'
+      && typeof audit?.quartzMesostructureVfxFixture === 'function'
+      && typeof audit?.setQuartzCrystalStateStyling === 'function';
+  })()`), scale === 4 ? 45_000 : 15_000, `E49 ${label} ${scale}x page`);
+  await waitFor(() => evaluate(cdp,
+    `window.__ANIFOR_INPUT_AUDIT__.backend().backend === ${JSON.stringify(mode)}`),
+  scale === 4 ? 30_000 : 15_000, `E49 ${label} ${scale}x backend`);
+  const fixture = await evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    audit.prepareQuartzMesostructureVfxFixture();
+    audit.setPowderRenderStyle('smooth');
+    audit.setQuartzCrystalStateStyling(true);
+    return audit.quartzMesostructureVfxFixture();
+  })()`);
+  for (let pass = 0; pass < 7; pass++) {
+    const before = await evaluate(cdp,
+      'window.__ANIFOR_INPUT_AUDIT__.presentationRefreshAudit()');
+    await evaluate(cdp,
+      'window.__ANIFOR_INPUT_AUDIT__.refreshPresentationFields(); true');
+    await waitFor(() => evaluate(cdp, `(() => {
+      const current = window.__ANIFOR_INPUT_AUDIT__.presentationRefreshAudit();
+      return current?.dynamicSequence > ${before.dynamicSequence} ? current : false;
+    })()`), scale === 4 ? 15_000 : 5_000,
+    `E49 ${label} ${scale}x stability pass ${pass + 1}`);
+  }
+  await waitFor(() => quartzMesostructureVfxFixtureReady(cdp, fixture), 20_000,
+    `E49 ${label} ${scale}x fixture/stability hydration`);
+  await sleep(350);
+  const hdrPipeline = await evaluate(cdp, `(() => {
+    const canvas = document.querySelector('canvas.semantic-field-canvas');
+    if (!canvas) return undefined;
+    const isolated = ${JSON.stringify(QUARTZ_MESOSTRUCTURE_VFX_ISOLATED_SELECTORS)};
+    return {
+      look: canvas.dataset.renderLook, state: canvas.dataset.hdrPipeline,
+      reason: canvas.dataset.hdrPipelineReason, bloomBacking: canvas.dataset.bloomBacking,
+      powderBodyVfx: canvas.dataset.powderBodyVfx,
+      snowpackBodyVfx: canvas.dataset.snowpackBodyVfx,
+      quartzMesostructureVfx: canvas.dataset.quartzMesostructureVfx,
+      isolatedSelectors: Object.fromEntries(isolated.map((name) => [name, canvas.dataset[name]])),
+    };
+  })()`);
+  const expectedBloom = `${WORLD_WIDTH * scale / 2}x${WORLD_HEIGHT * scale / 2}`;
+  assert(hdrPipeline?.look === 'realistic' && hdrPipeline.state === 'active'
+    && hdrPipeline.bloomBacking === expectedBloom && hdrPipeline.powderBodyVfx === 'active'
+    && hdrPipeline.snowpackBodyVfx === 'inactive'
+    && Object.values(hdrPipeline.isolatedSelectors).every((state) => state === 'inactive')
+    && hdrPipeline.quartzMesostructureVfx === (enabled ? 'active' : 'inactive'),
+  `E49 ${label} ${scale}x HDR/selector isolation failed (${JSON.stringify(hdrPipeline)})`);
+  const capture = await waitForStablePageCapture(
+    cdp, `E49 ${label} ${scale}x framebuffer`,
+    scale === 4 ? 45_000 : scale === 2 ? 30_000 : 15_000,
+  );
+  let stateMatrix;
+  if (label !== 'disabledRepeat') {
+    await evaluate(cdp,
+      'window.__ANIFOR_INPUT_AUDIT__.setQuartzCrystalStateStyling(false); true');
+    const stateDisabled = await captureSettledPage(
+      cdp, `E49 ${label} ${scale}x native-state disabled framebuffer`, 450,
+    );
+    await evaluate(cdp,
+      'window.__ANIFOR_INPUT_AUDIT__.setQuartzCrystalStateStyling(true); true');
+    const stateEnabled = await captureSettledPage(
+      cdp, `E49 ${label} ${scale}x native-state enabled framebuffer`, 450,
+    );
+    await evaluate(cdp,
+      'window.__ANIFOR_INPUT_AUDIT__.setQuartzCrystalStateStyling(false); true');
+    const stateDisabledRepeat = await captureSettledPage(
+      cdp, `E49 ${label} ${scale}x repeated native-state disabled framebuffer`, 450,
+    );
+    await evaluate(cdp,
+      'window.__ANIFOR_INPUT_AUDIT__.setQuartzCrystalStateStyling(true); true');
+    await waitForNextWebGLPresentation(
+      cdp, `E49 ${label} ${scale}x native-state restore`,
+      scale === 4 ? 20_000 : 10_000, scale === 4 ? 20_000 : 10_000,
+    );
+    stateMatrix = {
+      disabled: stateDisabled, enabled: stateEnabled,
+      disabledRepeat: stateDisabledRepeat,
+    };
+  }
+  return {
+    fixture, capture, stateMatrix, hdrPipeline,
+    geometry: await metrics(cdp), semantic: await hdrVfxSemanticDigest(cdp),
+    materialPlane: await evaluate(cdp,
+      'window.__ANIFOR_INPUT_AUDIT__.materialPlaneDigest()'),
+    backing: await sampleVolumeVfxCanvasAlphaSupport(cdp),
+    walls: await quartzMesostructureVfxWallDigest(cdp, fixture),
+    velocity: await quartzMesostructureVfxVelocityDigest(cdp, fixture),
+    auxiliary: await quartzMesostructureVfxAuxiliaryDigest(cdp, fixture),
+    suspension: await quartzMesostructureVfxSuspensionDigest(cdp, fixture),
+    state: await quartzMesostructureVfxStateDigest(cdp, fixture),
+    rawAll: await sampleVolumeVfxRawWorldPixels(
+      cdp, quartzMesostructureVfxAllRawPoints(fixture),
+    ),
+    rawControls: await sampleVolumeVfxRawWorldPixels(
+      cdp, quartzMesostructureVfxRawControlPoints(fixture),
+    ),
+  };
+}
+
+const QUARTZ_MESOSTRUCTURE_VFX_ISOLATED_SELECTORS = Object.freeze([
+  ...SNOWPACK_BODY_VFX_ISOLATED_SELECTORS.filter(
+    (name) => name !== 'quartzMesostructureVfx',
+  ),
+  'snowpackBodyVfx',
+]);
+
+async function quartzMesostructureVfxFixtureReady(cdp, fixture) {
+  return evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    const fixture = ${JSON.stringify(fixture)};
+    if (fixture?.version !== 1 || fixture.world?.width !== audit.width
+      || fixture.world?.height !== audit.height || fixture.target?.material !== 29
+      || typeof audit?.presentationState !== 'function') return false;
+    const inside = (rect, x, y) => x >= rect.x && x < rect.x + rect.width
+      && y >= rect.y && y < rect.y + rect.height;
+    const expectedTargetState = (x, y) => {
+      for (const region of Object.values(fixture.target.stateRegions)) {
+        if (inside(region, x, y)) return region.speckle;
+      }
+      return fixture.target.neutralSpeckle;
+    };
+    const exactRect = (rect, material, state) => {
+      for (let y = rect.y; y < rect.y + rect.height; y++) {
+        for (let x = rect.x; x < rect.x + rect.width; x++) {
+          if (audit.cell(x, y) !== material
+            || (state !== undefined && audit.presentationState(x, y) !== state)) return false;
+        }
+      }
+      return true;
+    };
+    const exactAuxiliary = (rect, predicate) => {
+      for (let y = rect.y; y < rect.y + rect.height; y++) {
+        for (let x = rect.x; x < rect.x + rect.width; x++) {
+          if (!predicate(audit.presentationAuxiliary(x, y))) return false;
+        }
+      }
+      return true;
+    };
+    const target = fixture.target;
+    for (let y = target.body.y; y < target.body.y + target.body.height; y++) {
+      for (let x = target.body.x; x < target.body.x + target.body.width; x++) {
+        const empty = inside(target.authoredHole, x, y) || inside(target.openChannel, x, y);
+        if (audit.cell(x, y) !== (empty ? 0 : target.material)
+          || audit.presentationState(x, y) !== (empty ? 0 : expectedTargetState(x, y))) {
+          return false;
+        }
+      }
+    }
+    if (![target.core, target.crown, target.pocket,
+      ...Object.values(target.stateRegions)].every((rect) => (
+      exactRect(rect, target.material, rect.speckle ?? target.neutralSpeckle)
+        && exactAuxiliary(rect, (value) => value === 255)
+    ))) return false;
+    const wall = target.wallCoexistence;
+    for (let y = wall.region.y; y < wall.region.y + wall.region.height; y++) {
+      for (let x = wall.region.x; x < wall.region.x + wall.region.width; x++) {
+        const blockX = Math.floor((x - wall.region.x) / wall.blockSize);
+        const blockY = Math.floor((y - wall.region.y) / wall.blockSize);
+        const expectedWall = (blockX + blockY) % 2 === wall.occupiedParity
+          ? fixture.conductiveWall : 0;
+        if (audit.cell(x, y) !== target.material
+          || audit.presentationState(x, y) !== target.neutralSpeckle
+          || audit.wall(x, y) !== expectedWall) return false;
+      }
+    }
+    if (!exactRect(fixture.fineTopology.column, target.material, target.neutralSpeckle)
+      || !exactRect(fixture.fineTopology.line, target.material, target.neutralSpeckle)
+      || audit.cell(fixture.fineTopology.isolated.x, fixture.fineTopology.isolated.y)
+        !== target.material
+      || audit.presentationState(
+        fixture.fineTopology.isolated.x, fixture.fineTopology.isolated.y,
+      ) !== target.neutralSpeckle) return false;
+    const moving = fixture.movingControl;
+    if (!exactRect(moving, target.material, target.neutralSpeckle)
+      || !exactAuxiliary(moving, (value) => value < 255)) return false;
+    for (let y = moving.y; y < moving.y + moving.height; y++) {
+      for (let x = moving.x; x < moving.x + moving.width; x++) {
+        const velocity = audit.velocity(x, y);
+        if (velocity[0] !== moving.velocityX || velocity[1] !== moving.velocityY) return false;
+      }
+    }
+    const suspension = fixture.suspensionControl;
+    if (suspension.quartzPoints.length !== fixture.expected.suspensionQuartzCells
+      || suspension.region.width * suspension.region.height
+        - suspension.quartzPoints.length !== fixture.expected.suspensionWaterCells) return false;
+    const quartz = new Set(suspension.quartzPoints.map((point) => point.x + ',' + point.y));
+    for (let y = suspension.region.y; y < suspension.region.y + suspension.region.height; y++) {
+      for (let x = suspension.region.x; x < suspension.region.x + suspension.region.width; x++) {
+        const suspendedQuartz = quartz.has(x + ',' + y);
+        if (audit.cell(x, y) !== (suspendedQuartz ? target.material : 2)
+          || audit.presentationState(x, y)
+            !== (suspendedQuartz ? target.neutralSpeckle : 0)) return false;
+      }
+    }
+    const boundary = (entry) => exactRect(
+      entry.quartz, target.material, target.neutralSpeckle,
+    ) && exactRect(entry.other, entry.otherMaterial, 0);
+    const digest = audit.materialPlaneDigest();
+    return Object.values(fixture.materialControls).every((entry) => (
+      exactRect(entry, entry.material, entry.speckle)
+    )) && Object.values(fixture.contacts).every(boundary)
+      && audit.cell(suspension.quartzProbe.x, suspension.quartzProbe.y) === target.material
+      && audit.presentationState(suspension.quartzProbe.x, suspension.quartzProbe.y)
+        === target.neutralSpeckle
+      && audit.cell(suspension.waterProbe.x, suspension.waterProbe.y) === 2
+      && audit.presentationState(suspension.waterProbe.x, suspension.waterProbe.y) === 0
+      && exactRect(fixture.guardedBlank, 0, 0)
+      && digest.occupied === fixture.expected.occupiedCells
+      && digest.materialCounts[target.material] === fixture.expected.quartzCells
+      && digest.materialCounts[2] === fixture.expected.waterCells
+      && digest.materialCounts[23] === fixture.expected.metalCells
+      && Object.values(fixture.materialControls).every((entry) => (
+        digest.materialCounts[entry.material] === fixture.expected.cellsPerMaterialControl
+      ))
+      && JSON.stringify(fixture.powderStyleMatrix) === JSON.stringify([
+        { style: 'smooth', expectation: 'target' },
+        { style: 'local', expectation: 'exact-no-op' },
+        { style: 'grains', expectation: 'exact-no-op' },
+      ]);
+  })()`);
+}
+
+async function quartzMesostructureVfxWallDigest(cdp, fixture) {
+  return evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__; const fixture = ${JSON.stringify(fixture)};
+    const pattern = fixture.target.wallCoexistence;
+    let occupied = 0; let expectedOccupied = 0; let mismatches = 0;
+    let matterMismatches = 0; let stateMismatches = 0;
+    for (let y = pattern.region.y; y < pattern.region.y + pattern.region.height; y++) {
+      for (let x = pattern.region.x; x < pattern.region.x + pattern.region.width; x++) {
+        const blockX = Math.floor((x - pattern.region.x) / pattern.blockSize);
+        const blockY = Math.floor((y - pattern.region.y) / pattern.blockSize);
+        const expected = (blockX + blockY) % 2 === pattern.occupiedParity
+          ? fixture.conductiveWall : 0;
+        occupied += Number(audit.wall(x, y) === fixture.conductiveWall);
+        expectedOccupied += Number(expected === fixture.conductiveWall);
+        mismatches += Number(audit.wall(x, y) !== expected);
+        matterMismatches += Number(audit.cell(x, y) !== fixture.target.material);
+        stateMismatches += Number(
+          audit.presentationState(x, y) !== fixture.target.neutralSpeckle,
+        );
+      }
+    }
+    return { occupied, expectedOccupied, mismatches, matterMismatches, stateMismatches,
+      wallProbe: audit.wall(pattern.wallProbe.x, pattern.wallProbe.y),
+      clearProbe: audit.wall(pattern.clearProbe.x, pattern.clearProbe.y) };
+  })()`);
+}
+
+async function quartzMesostructureVfxVelocityDigest(cdp, fixture) {
+  return evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    const rect = ${JSON.stringify(fixture.movingControl)};
+    let cells = 0; let mismatches = 0; let minimumX = 127; let maximumX = -128;
+    let minimumY = 127; let maximumY = -128;
+    for (let y = rect.y; y < rect.y + rect.height; y++) {
+      for (let x = rect.x; x < rect.x + rect.width; x++) {
+        const velocity = audit.velocity(x, y); cells++;
+        minimumX = Math.min(minimumX, velocity[0]); maximumX = Math.max(maximumX, velocity[0]);
+        minimumY = Math.min(minimumY, velocity[1]); maximumY = Math.max(maximumY, velocity[1]);
+        mismatches += Number(velocity[0] !== rect.velocityX || velocity[1] !== rect.velocityY);
+      }
+    }
+    return { cells, expectedCells: rect.width * rect.height, mismatches,
+      range: [minimumX, maximumX, minimumY, maximumY] };
+  })()`);
+}
+
+async function quartzMesostructureVfxAuxiliaryDigest(cdp, fixture) {
+  return evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__; const fixture = ${JSON.stringify(fixture)};
+    const range = (rect) => {
+      let min = 255; let max = 0;
+      for (let y = rect.y; y < rect.y + rect.height; y++) {
+        for (let x = rect.x; x < rect.x + rect.width; x++) {
+          const value = audit.presentationAuxiliary(x, y);
+          min = Math.min(min, value); max = Math.max(max, value);
+        }
+      }
+      return { min, max };
+    };
+    return {
+      stable: {
+        core: range(fixture.target.core), crown: range(fixture.target.crown),
+        pocket: range(fixture.target.pocket),
+        dark: range(fixture.target.stateRegions.dark),
+        neutral: range(fixture.target.stateRegions.neutral),
+        bright: range(fixture.target.stateRegions.bright),
+      },
+      moving: range(fixture.movingControl),
+    };
+  })()`);
+}
+
+async function quartzMesostructureVfxSuspensionDigest(cdp, fixture) {
+  return evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__; const fixture = ${JSON.stringify(fixture)};
+    const counts = { quartz: 0, water: 0, other: 0 };
+    for (let y = fixture.suspensionControl.region.y;
+      y < fixture.suspensionControl.region.y + fixture.suspensionControl.region.height; y++) {
+      for (let x = fixture.suspensionControl.region.x;
+        x < fixture.suspensionControl.region.x + fixture.suspensionControl.region.width; x++) {
+        const material = audit.cell(x, y);
+        if (material === fixture.target.material) counts.quartz++;
+        else if (material === 2) counts.water++;
+        else counts.other++;
+      }
+    }
+    return [
+      { name: 'SuspendedQuartz', material: fixture.target.material,
+        point: fixture.suspensionControl.quartzProbe, observedCells: counts.quartz },
+      { name: 'SuspensionWater', material: 2,
+        point: fixture.suspensionControl.waterProbe, observedCells: counts.water },
+    ].map((entry) => ({ name: entry.name, material: entry.material,
+      observedCells: entry.observedCells, otherCells: counts.other,
+      cell: audit.cell(entry.point.x, entry.point.y),
+      state: audit.presentationState(entry.point.x, entry.point.y),
+      rgba: audit.suspensionAt(entry.point.x, entry.point.y),
+      liquidAlpha: audit.liquidFieldAlpha(entry.point.x, entry.point.y) }));
+  })()`);
+}
+
+async function quartzMesostructureVfxStateDigest(cdp, fixture) {
+  return evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__; const fixture = ${JSON.stringify(fixture)};
+    let semantic = 2166136261; let rendered = 2166136261; let auxiliary = 2166136261;
+    let walls = 2166136261; let state = 2166136261; let velocity = 2166136261;
+    let invalidQuartzReservedBits = 0;
+    const quartzCounts = { dark: 0, neutral: 0, bright: 0, other: 0 };
+    const mix = (seed, value) => Math.imul(seed ^ (value >>> 0), 16777619) >>> 0;
+    for (let y = 0; y < audit.height; y++) {
+      for (let x = 0; x < audit.width; x++) {
+        const material = audit.cell(x, y);
+        const presentationState = audit.presentationState(x, y) >>> 0;
+        const stagedVelocity = audit.velocity(x, y);
+        semantic = mix(semantic, material);
+        rendered = mix(rendered, audit.renderedCell(x, y));
+        walls = mix(walls, audit.wall(x, y));
+        state = mix(state, presentationState);
+        velocity = mix(velocity,
+          (stagedVelocity[0] & 255) | ((stagedVelocity[1] & 255) << 8));
+        if (material === fixture.target.material || material === 76) {
+          auxiliary = mix(auxiliary, audit.presentationAuxiliary(x, y));
+          invalidQuartzReservedBits += Number((presentationState & 0xfff0) !== 0);
+        }
+        if (material === fixture.target.material) {
+          if (presentationState === 0) quartzCounts.dark++;
+          else if (presentationState === fixture.target.neutralSpeckle) quartzCounts.neutral++;
+          else if (presentationState === 10) quartzCounts.bright++;
+          else quartzCounts.other++;
+        }
+      }
+    }
+    const centre = (rect) => ({
+      x: rect.x + Math.floor(rect.width / 2),
+      y: rect.y + Math.floor(rect.height / 2),
+    });
+    const qrtzProbe = centre(fixture.materialControls.qrtz);
+    return {
+      semantic, rendered, auxiliary, walls, state, velocity,
+      invalidQuartzReservedBits, quartzCounts,
+      targetStates: Object.entries(fixture.target.stateRegions).map(([name, rect]) => {
+        const probe = centre(rect);
+        return { name, expected: rect.speckle,
+          observed: audit.presentationState(probe.x, probe.y) };
+      }),
+      qrtzControl: { expected: fixture.expected.qrtzState,
+        observed: audit.presentationState(qrtzProbe.x, qrtzProbe.y) },
+    };
+  })()`);
+}
+
+function quartzMesostructureVfxTargetRegions(fixture) {
+  const rect = (name, candidate) => ({
+    name, target: true,
+    x: candidate.x + candidate.width / 2, y: candidate.y + candidate.height / 2,
+    radiusX: Math.max(0.35, candidate.width / 2 - 0.2),
+    radiusY: Math.max(0.35, candidate.height / 2 - 0.2),
+  });
+  return [
+    rect('PQRTWholeBody', fixture.target.body),
+    rect('PQRTCrown', fixture.target.crown),
+    rect('PQRTPocket', fixture.target.pocket),
+    rect('PQRTCore', fixture.target.core),
+  ];
+}
+
+function quartzMesostructureVfxTextureRegions(fixture) {
+  return quartzMesostructureVfxTargetRegions(fixture)
+    .filter(({ name }) => name !== 'PQRTWholeBody')
+    .map((region) => ({ ...region,
+      support: { kind: 'semantic', materials: [fixture.target.material] } }));
+}
+
+function quartzMesostructureVfxReferenceRegions(fixture) {
+  return quartzMesostructureVfxTargetRegions(fixture)
+    .map(({ target: _target, ...region }) => region);
+}
+
+function quartzMesostructureVfxControlRegions(fixture) {
+  const point = (name, candidate) => ({
+    name, x: Math.floor(candidate.x) + 0.5, y: Math.floor(candidate.y) + 0.5, radius: 0,
+  });
+  const center = (name, rect) => point(name, {
+    x: rect.x + Math.floor(rect.width / 2),
+    y: rect.y + Math.floor(rect.height / 2),
+  });
+  const controls = [
+    center('PQRTHole', fixture.target.authoredHole),
+    center('PQRTOpenChannel', fixture.target.openChannel),
+    center('FineColumn', fixture.fineTopology.column),
+    center('FineLine', fixture.fineTopology.line),
+    point('Isolated', fixture.fineTopology.isolated),
+    center('Moving', fixture.movingControl),
+    point('NativeWallOccupied', fixture.target.wallCoexistence.wallProbe),
+    point('NativeWallClear', fixture.target.wallCoexistence.clearProbe),
+  ];
+  for (const [name, rect] of Object.entries(fixture.materialControls)) {
+    controls.push(center(`Material${name[0].toUpperCase()}${name.slice(1)}`, rect));
+  }
+  controls.push(
+    point('SuspendedQuartz', fixture.suspensionControl.quartzProbe),
+    point('SuspensionWater', fixture.suspensionControl.waterProbe),
+    point('QuartzMetal', fixture.contacts.metal.quartzProbe),
+    point('Metal', fixture.contacts.metal.otherProbe),
+    point('QuartzWater', fixture.contacts.water.quartzProbe),
+    point('Water', fixture.contacts.water.otherProbe),
+    center('GuardedBlank', fixture.guardedBlank),
+  );
+  return controls;
+}
+
+function quartzMesostructureVfxAllRawPoints(fixture) {
+  return [
+    ...quartzMesostructureVfxTargetRegions(fixture).map(({ name, x, y }) => ({
+      name, x: Math.floor(x), y: Math.floor(y),
+    })),
+    ...quartzMesostructureVfxRawControlPoints(fixture),
+  ];
+}
+
+function quartzMesostructureVfxRawControlPoints(fixture) {
+  return quartzMesostructureVfxControlRegions(fixture).map(({ name, x, y }) => ({
+    name, x: Math.floor(x), y: Math.floor(y),
+  }));
+}
+
+function quartzMesostructureNativeStateRegions(fixture) {
+  const rect = (name, candidate, inset = 3) => ({
+    name,
+    x: candidate.x + candidate.width / 2, y: candidate.y + candidate.height / 2,
+    radiusX: Math.max(0.35, candidate.width / 2 - inset),
+    radiusY: Math.max(0.35, candidate.height / 2 - inset),
+  });
+  return [
+    rect('PQRTState-dark', fixture.target.stateRegions.dark),
+    rect('PQRTState-neutral', fixture.target.stateRegions.neutral),
+    rect('PQRTState-bright', fixture.target.stateRegions.bright),
+    rect('QRTZState-bright', fixture.materialControls.qrtz, 6),
+  ];
+}
+
+function assertQuartzMesostructureNativeStateResponses(samples, label) {
+  const byName = Object.fromEntries(samples.map((sample) => [sample.name, sample]));
+  const dark = byName['PQRTState-dark'];
+  const neutral = byName['PQRTState-neutral'];
+  const bright = byName['PQRTState-bright'];
+  const qrtz = byName['QRTZState-bright'];
+  assert(samples.length === 4 && neutral && neutral.rgbPeak <= 1
+    && neutral.repeatRgbPeak <= 1,
+  `${label}: neutral native Quartz state was not an exact no-op (${JSON.stringify(samples)})`);
+  assert(dark && bright && qrtz
+    && dark.signedMean < -QUARTZ_MESOSTRUCTURE_STATE_LIMITS.minimumSignedMagnitude
+    && bright.signedMean > QUARTZ_MESOSTRUCTURE_STATE_LIMITS.minimumSignedMagnitude
+    && qrtz.signedMean > QUARTZ_MESOSTRUCTURE_STATE_LIMITS.minimumSignedMagnitude
+    && [dark, bright, qrtz].every(({ rgbPeak, repeatRgbPeak }) => (
+      rgbPeak > 0 && rgbPeak <= QUARTZ_MESOSTRUCTURE_STATE_LIMITS.maximumPeak
+        && repeatRgbPeak <= 1
+    )),
+  `${label}: native PQRT/QRTZ signed state response was absent, unbounded, or unstable (${JSON.stringify(
+    samples,
+  )})`);
+}
+
+async function writeQuartzMesostructureVfxScreenshots(source, scale, disabled, enabled) {
+  const paths = {
+    off: variantScreenshotPath(source, `e49-quartz-mesostructure-${scale}x-off`),
+    on: variantScreenshotPath(source, `e49-quartz-mesostructure-${scale}x-on`),
+  };
+  await writeFile(paths.off, Buffer.from(disabled.capture.capture.data, 'base64'));
+  await writeFile(paths.on, Buffer.from(enabled.capture.capture.data, 'base64'));
+  return paths;
+}
+
+async function auditEightXQuartzMesostructureVfxExclusion(cdp, dpr) {
+  await setDesktopMetrics(cdp, 1280, 720, dpr);
+  const query = new URLSearchParams({
+    scene: 'render-lab', inputAudit: '1', blankAudit: '1', renderScale: '8',
+    auditStage: 'eight-quartz-mesostructure', quartzMesostructureVfxAudit: '1',
+    renderLook: 'realistic', volumeVfx: '0', liquidBodyVfx: '0',
+    liquidSurfaceVfx: '0', gasBodyVfx: '0', gasMotionVfx: '0',
+    powderBodyVfx: '1', sootyPowderBodyVfx: '0', thermiteBodyVfx: '0',
+    snowpackBodyVfx: '0', quartzMesostructureVfx: '1', powderLightVfx: '0',
+    powderSolidContactVfx: '0', translucentEdgeVfx: '0', organicSubsurfaceVfx: '0',
+    wetSedimentVfx: '0', gasLightVfx: '0', liquidSolidMeniscusVfx: '0',
+    metalWaterContactVfx: '0', gasCoreDepthVfx: '0', nobleGasBillowVfx: '0',
+    nobleGasPrismVfx: '0', smokeSoftnessVfx: '0', smokeBillowDepthVfx: '0',
+    plasmaCoreVfx: '0', solidBodyVfx: '0', radioactiveSolidBodyVfx: '0',
+    iszsCrystallineVfx: '0', platinumBodyVfx: '0', ceramicGlazeVfx: '0',
+    botanicalBodyVfx: '0', botanicalMesostructureVfx: '0', botanicalPigmentVfx: '0',
+    plantLaminaVfx: '0', plantLobeDepthVfx: '0', plantCanopyMassVfx: '0',
+    woodBarkReliefVfx: '0', woodTanninVfx: '0', glassBodyVfx: '0',
+    acidBodyVfx: '0', deutBodyVfx: '0', oilBodyVfx: '0', oilVolumeFinishVfx: '0',
+    rockRoughnessVfx: '0', rockMesostructureVfx: '0', waterBodyVfx: '0',
+    hydrogenBodyVfx: '0', carbonDioxideBodyVfx: '0',
+  });
+  await cdp.send('Page.navigate', { url: `${AUDIT_BASE_URL}?${query}` });
+  const deadline = Date.now() + EIGHT_X_PRESENTATION_DEADLINE_MS;
+  await waitFor(() => evaluate(cdp, `(() => {
+    const p = new URLSearchParams(location.search);
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    return p.get('renderScale') === '8'
+      && p.get('auditStage') === 'eight-quartz-mesostructure'
+      && p.get('powderBodyVfx') === '1' && p.get('quartzMesostructureVfx') === '1'
+      && p.get('snowpackBodyVfx') === '0'
+      && typeof audit?.preparePqrtStateGraphicsFixture === 'function'
+      && typeof audit?.pqrtStateGraphicsAtlas === 'function'
+      && typeof audit?.setQuartzCrystalStateStyling === 'function';
+  })()`), remainingDeadlineMs(deadline, 'true-8x E49 input audit API'),
+  'true-8x E49 input audit API');
+  const backend = await waitForEightXTerminalBackend(cdp, 'true-8x E49', deadline);
+  assertEightXWebGLBackend(backend, 'true-8x E49');
+  const geometry = await waitForStableCanvas(
+    cdp, 1280, 720, undefined,
+    Math.min(45_000, remainingDeadlineMs(deadline, 'true-8x E49 geometry')),
+    'true-8x E49 geometry',
+  );
+  assert(geometry.backing.width === WORLD_WIDTH * 8
+    && geometry.backing.height === WORLD_HEIGHT * 8 && geometry.outputScale === '8',
+  `true-8x E49 lost exact backing (${JSON.stringify(geometry.backing)})`);
+  const readIsolation = (budgetDeadline = deadline) => evaluate(cdp, `(() => {
+    const canvas = document.querySelector('canvas.semantic-field-canvas');
+    const isolated = ${JSON.stringify(QUARTZ_MESOSTRUCTURE_VFX_ISOLATED_SELECTORS)};
+    return canvas ? {
+      renderer: canvas.dataset.renderer, look: canvas.dataset.renderLook,
+      state: canvas.dataset.hdrPipeline, reason: canvas.dataset.hdrPipelineReason,
+      bloomBacking: canvas.dataset.bloomBacking ?? null,
+      powderBodyVfx: canvas.dataset.powderBodyVfx,
+      snowpackBodyVfx: canvas.dataset.snowpackBodyVfx,
+      quartzMesostructureVfx: canvas.dataset.quartzMesostructureVfx,
+      isolatedSelectors: Object.fromEntries(isolated.map((name) => [name, canvas.dataset[name]])),
+    } : undefined;
+  })()`, Math.min(
+    1_000, remainingDeadlineMs(budgetDeadline, 'true-8x E49 isolation'),
+  ));
+  const isolation = await readIsolation();
+  assert(isolation?.renderer === 'semantic-field-webgl' && isolation.look === 'realistic'
+    && isolation.state === 'inactive' && isolation.reason === 'scale-8'
+    && isolation.bloomBacking === null && isolation.powderBodyVfx === 'inactive'
+    && isolation.snowpackBodyVfx === 'inactive'
+    && isolation.quartzMesostructureVfx === 'inactive'
+    && Object.values(isolation.isolatedSelectors).every((state) => state === 'inactive'),
+  `true-8x E49 selector/resource isolation failed (${JSON.stringify(isolation)})`);
+
+  // Promotion owns one total 30-second deadline. Prove that first compact
+  // frame before staging the independent, multi-frame PQRT state atlas below;
+  // charging all later state toggles to the startup deadline would turn valid
+  // sequential 8x frames into a false promotion timeout.
+  const promotionStateBefore = await hdrVfxSemanticDigest(cdp);
+  const promotionTimingBudget = remainingDeadlineMs(
+    deadline, 'true-8x E49 promotion GPU completion',
+  );
+  const promotionTiming = await auditWebGLPresentationTiming(
+    cdp, 1, Math.min(12_000, promotionTimingBudget), promotionTimingBudget, 1,
+  );
+  assert(['gpu-query', 'gpu-fence', 'gpu-finish'].includes(promotionTiming.source),
+    `true-8x E49 promotion did not complete GPU work (${JSON.stringify(promotionTiming)})`);
+  const promotionStateAfter = await hdrVfxSemanticDigest(cdp);
+  assertHdrVfxSemanticEquality(
+    promotionStateBefore, promotionStateAfter, 'true-8x E49 promotion GPU completion',
+  );
+
+  // E49 owns no compact path. The established compact PQRT/QRTZ state atlas
+  // must nevertheless remain fully active while the requested E49 selector is fenced off.
+  const pqrtStateGraphics = await auditEightXPqrtStateGraphics(cdp, geometry.canvas);
+  assert(pqrtStateGraphics?.exactRepeatedOff
+    && pqrtStateGraphics.cards.map(({ stateKey }) => stateKey).join(',')
+      === 'dark,low,neutral,high,bright',
+  `true-8x E49 lost compact PQRT state graphics (${JSON.stringify(pqrtStateGraphics)})`);
+  const isolationAfterState = await readIsolation(
+    Date.now() + EIGHT_X_PRESENTATION_DEADLINE_MS,
+  );
+  assert(isolationAfterState.quartzMesostructureVfx === 'inactive'
+    && isolationAfterState.state === 'inactive'
+    && isolationAfterState.reason === 'scale-8'
+    && isolationAfterState.bloomBacking === null,
+  `true-8x E49 selector/resource state changed after compact PQRT proof (${JSON.stringify(
+    isolationAfterState,
+  )})`);
+  const stateBefore = await snapshotEightXPqrtState(cdp);
+  assertEightXPqrtTopology(stateBefore, 'true-8x E49 pre-fence PQRT fixture');
+  // The atlas deliberately submits several later frames. Its final queued
+  // presentation receives its own one-frame fence deadline after the already
+  // proven startup promotion, matching the presenter's post-promotion contract.
+  const stateDeadline = Date.now() + EIGHT_X_PRESENTATION_DEADLINE_MS;
+  const timingBudget = remainingDeadlineMs(stateDeadline, 'true-8x E49 state GPU completion');
+  const timing = await auditWebGLPresentationTiming(
+    cdp, 1, Math.min(12_000, timingBudget), timingBudget, 1,
+  );
+  assert(['gpu-query', 'gpu-fence', 'gpu-finish'].includes(timing.source),
+    `true-8x E49 did not complete GPU work (${JSON.stringify(timing)})`);
+  const stateAfter = await snapshotEightXPqrtState(cdp);
+  assertEightXPqrtTopology(stateAfter, 'true-8x E49 post-fence PQRT fixture');
+  assert(JSON.stringify(stateBefore) === JSON.stringify(stateAfter),
+    'true-8x E49 GPU completion changed compact PQRT semantic/state topology');
+  return {
+    backing: `${geometry.backing.width}x${geometry.backing.height}`,
+    promotedWebGLObserved: geometry.outputScale === '8'
+      && geometry.backend.backend === 'webgl',
+    selectorExcluded: true, resourcesIdentical: isolation.bloomBacking === null,
+    isolation, isolationAfterState, pqrtStateGraphics,
+    semanticStable: true, promotionFence: 'signaled', promotionTiming,
+    stateFence: 'signaled', timing,
   };
 }
 

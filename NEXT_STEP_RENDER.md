@@ -810,13 +810,38 @@ does not alter simulation, camera, semantic ownership, or `renderScale`.
   candidate counts, and six 2,880-cell regions. At canonical 2× it selected
   Snow from a visible baseline deficiency (quality `4.808`, microcontrast
   `23.702`); explicit E48 raises Snow to quality `92.916` and microcontrast
-  `5.702` with full support and no dark or clipped fraction. Quartz is now the
-  next demonstrated crystalline-powder deficiency; E48 must not widen to it.
+  `5.702` with full support and no dark or clipped fraction. That evidence
+  selected Quartz for bounded E49; E48 itself must not widen to it.
+- **E49 accepted:** exact powder Quartz/PQRT `29` gains a normal-WebGL-only
+  cohesive crystal-plate finish as a strict child of E05
+  (`?quartzMesostructureVfx=0|1`). Only authoritative, trait-free,
+  non-emissive, dry, contact-free PQRT inside E05's settled Smooth body may
+  respond. The shader reuses only the existing three facet planes, directed
+  slope, volume depth, body gate, and pre-grain lit body to form lilac/cool
+  plate crown, pocket, core, and cleavage responses, then calms dense PQRT
+  cell grain. Native `tmp2` brightness remains a later independent layer.
+  QRTZ `76`, holes/channels, one-cell structures, moving PQRT, 2:1 PQRT/Water
+  suspension, direct Metal/Water contacts, native walls, Local, Grains,
+  foreign owners, Canvas, and compact true 8× remain controls. The path is
+  RGB-only and adds no sample/noise carrier, texture, field, pass, target,
+  upload, allocation, clock, alpha/support, silhouette, ownership, topology,
+  state, or physics decision. `npm run audit:vfx:quartz-mesostructure` freezes
+  byte-stable off→on→off output at 1×/2×/4×: support recall is `1`, clipping
+  is zero, dense microcontrast retention is `.4327–.4431`, broad macro-range
+  retention is `.6078–1.2143`, and native-state span retention is
+  `.9998–1.0097`; Local/Grains and named raw controls are exact, with only one
+  bounded one-byte 2× composed footprint at an eligible wall-free PQRT probe.
+  Requested-on compact true 8× excludes E49, presents exact 4896×3072 WebGL
+  without an HDR target, preserves the five-state PQRT/QRTZ atlas, and signals
+  startup/final state fences in `3608.0–5433.1 ms` with zero browser errors.
+  The post-E49 survey raises canonical Quartz quality `75.98→100` and
+  microcontrast `18.900→8.313`, with full support and no dark/clipped pixels;
+  C4 `31` is the next visibly over-busy unclosed candidate.
 - **Protected 8× rung:** `renderScale=8` deliberately reports
   `hdrPipeline=inactive` / `scale-8` and retains the proven direct single-mesh
   4896×3072 path. The experiment must earn a bounded 8× design rather than
   allocating a 115 MiB full-resolution float target beside that path.
-- **Current decision:** E01/E02/E03/E04/E05/E06/E07/E08/E09/E10/E11/E12/E13/E14/E15/E16/E17/E18/E19/E20/E21/E22/E23/E24/E25/E26/E27/E28/E29/E30/E31/E32/E33/E34/E35/E36/E37/E38/E39/E40/E41/E42/E43/E44/E45/E46/E47/E48 remain opt-in through the non-Classic looks
+- **Current decision:** E01/E02/E03/E04/E05/E06/E07/E08/E09/E10/E11/E12/E13/E14/E15/E16/E17/E18/E19/E20/E21/E22/E23/E24/E25/E26/E27/E28/E29/E30/E31/E32/E33/E34/E35/E36/E37/E38/E39/E40/E41/E42/E43/E44/E45/E46/E47/E48/E49 remain opt-in through the non-Classic looks
   until representative hardware timing and mobile thermal behavior are
   measured. E02 remains the safe family-wide baseline. E03 is accepted as the
   liquid-depth checkpoint: its fit-view crop is visibly more cohesive, retains
@@ -1036,6 +1061,18 @@ does not alter simulation, camera, semantic ownership, or `renderScale`.
   exclusion. Same-phase powder boundaries keep exact ownership on both sides;
   do not widen E48 to Salt, Quartz, BGLA, moving Snow, or wet suspension, add a
   new procedural carrier, or claim Canvas parity.
+  E49 is accepted as the exact-PQRT crystal-plate checkpoint: freeze its strict
+  E05 dependency, exact powder Quartz `29` ownership, settled/dry/Smooth/body/
+  depth/contact proof, reuse of E05's three facet planes, directed slope,
+  volume depth, and pre-grain lit body, broad lilac/cool plate relief,
+  dense-only pigment calm, exact raw/topology/foreign-owner controls, native
+  `tmp2` state independence, Local and Grains no-ops, narrow 1×–4× texture and
+  state-retention envelope, and Canvas/compact-8× exclusion. Solid QRTZ `76`
+  remains a non-owner state control; do not widen E49 to Salt, Snow, BGLA,
+  moving/wet PQRT, or C4, add another procedural carrier, or claim Canvas
+  parity. The normal five-state PQRT gate must explicitly hydrate boundary
+  stability before state toggles; compact 8× keeps its direct atlas/fence path
+  and must not pay seven extra 15-million-fragment refreshes.
   These are not the final material/VFX results.
   Sub-1.0 material colour stays on the established response; tonemapping owns
   only real HDR highlights so powder texture and liquid body contrast are not
@@ -1054,9 +1091,11 @@ survey. It drives
 612×384 RenderLab backend, freezes the semantic hash/material counts/region
 support, and compares the same six candidate cards at 1×/2×/4× production
 WebGL. Keep candidate selectors explicit when evaluating an accepted child;
-the package command explicitly enables accepted E48 so current ranking selects
-the next owner. Pass `--candidate-snowpack-body-vfx=0` to the underlying driver
-only when reproducing the frozen pre-E48 Snow baseline.
+the package command explicitly enables accepted E48 and E49 so current ranking
+selects the next owner. Pass `--candidate-snowpack-body-vfx=0` to the underlying
+driver only when reproducing the frozen pre-E48 Snow baseline, and pass
+`--candidate-quartz-mesostructure-vfx=0` only for the frozen pre-E49 Quartz
+baseline.
 
 Run `npm run audit:vfx:volume` for E02. It reloads the paused composed material
 lab as `volumeVfx=0 → 1 → 0` at 1×, 2×, and 4×, requires the real HDR pipeline,
@@ -1903,7 +1942,7 @@ next production 4× survey then selected Wood/PLNT as the largest remaining
   lower seam density, lower local contrast, stronger macro hierarchy, unchanged
   semantic support, and byte-exact selector-off recovery.
 
-**Next visual experiments:** E03–E48 now provide accepted liquid body/surface,
+**Next visual experiments:** E03–E49 now provide accepted liquid body/surface,
 stable-gas, coherent-gas-motion, powder-depth, and powder-local-light
 checkpoints plus exact resting contact grounding, Glass/Ice transmission, and
 state-aware Wax/PLNT subsurface response, composed wet-mineral optics,
@@ -1975,6 +2014,13 @@ lighting evidence. It calms only dense Snow pigment beneath a broad blue-white
 crown/cool pocket while sparse flakes, fine topology, motion, wet suspension,
 foreign contacts and owners, Local, Grains, Canvas, and compact 8× remain
 unchanged.
+E49 gives exact powder Quartz/PQRT `29` a strict E05-owned crystalline
+mesostructure over the same settled, dry, Smooth proof. It recombines existing
+facet, directed-slope, body-depth, and pre-grain evidence into lilac/cool plate
+crown, pocket, core, and cleavage relief, then calms dense common grain without
+obscuring native PQRT `tmp2` state. QRTZ, authored holes and channels, moving or
+wet Quartz, fine topology, material/contact controls, Local, Grains, Canvas,
+and compact true 8× remain exact controls.
 Improve distinctive depth, transmission, reflection, lighting, and
 mesostructure without stacking another narrow Oil/Acid/contact tint or generic
 PLNT/gas layer.
@@ -1999,11 +2045,14 @@ six candidate counts, and six 2,880-cell scored regions at 1×/2×/4×. The
 pre-E48 canonical 2× survey selected Snow from quality `4.808`, microcontrast
 `23.702`, and visibly granular fit-view evidence. With E48 explicitly enabled,
 Snow reaches quality `92.916`, microcontrast `5.702`, full support, and zero
-dark/clipped fraction. Keep the broad visual objective active. The remaining
-unselected inventory is Nitro `32`, BASE `53`, C4 `31`, BGLA, and Quartz;
-Quartz is the next demonstrated crystalline-powder deficiency, but selection
-still requires a bounded dedicated experiment. Preserve the E14 1× stencil
-snap and all E01–E48 selectors and controls.
+dark/clipped fraction. That accepted result selected Quartz next: E49 raises
+canonical 2× Quartz quality from `75.98` to `100`, lowers microcontrast from
+`18.900` to `8.313`, and retains luma deviation `10.159`, chromatic contrast
+`2.833`, macro range `30.375`, full support, and zero dark/clipped fraction.
+Keep the broad visual objective active. C4 `31` is now the next visible
+over-busy unclosed candidate (quality `90.186`, microcontrast `16.819`); the
+remaining unselected inventory is Nitro `32`, BASE `53`, C4 `31`, and BGLA.
+Preserve the E14 1× stencil snap and all E01–E49 selectors and controls.
 
 ## Phase 1 — HDR pipeline & lighting core (biggest visual payoff)
 

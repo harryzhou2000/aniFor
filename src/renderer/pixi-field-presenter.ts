@@ -75,6 +75,7 @@ import {
   resolvePowderBodyVfxEnabled, resolvePowderLightVfxEnabled, resolveRenderLook,
   resolveSootyPowderBodyVfxEnabled,
   resolveSnowpackBodyVfxEnabled,
+  resolveQuartzMesostructureVfxEnabled,
   resolveThermiteBodyVfxEnabled,
   resolveOrganicSubsurfaceVfxEnabled,
   resolvePowderSolidContactVfxEnabled,
@@ -3292,6 +3293,7 @@ uniform float uPowderBodyVfx;
 uniform float uSootyPowderBodyVfx;
 uniform float uThermiteBodyVfx;
 uniform float uSnowpackBodyVfx;
+uniform float uQuartzMesostructureVfx;
 uniform float uPowderLightVfx;
 uniform float uPowderSolidContactVfx;
 uniform float uTranslucentEdgeVfx;
@@ -7469,6 +7471,7 @@ void main() {
     float powderMesostrataStrength = 0.0;
     float powderMesostrataSlope = 0.0;
     float snowpackBodyCalm = 0.0;
+    float quartzPowderCalm = 0.0;
     // Smooth's field owns the stable outer silhouette; retain the material's
     // grain vocabulary in the proven body, but do not let per-cell pigment
     // move the first composed edge crossing from one slope column to another.
@@ -7909,6 +7912,39 @@ void main() {
               * (snowpackPocket + snowpackCore);
             color += vec3(-0.006, 0.002, 0.012)
               * (snowpackPocket + snowpackCore);
+          }
+          // E49: powder Quartz should read as interlocking crystal plates, not
+          // a field of independently coloured cells. Recombine only E05's
+          // existing broad world facets, body slope, and depth into lilac/cool
+          // faces, then retain a bounded share of the later exact PQRT grain.
+          // Native tmp2 brightness is composed afterward and stays independent.
+          if (uQuartzMesostructureVfx > 0.5 && optics == 13.0 && material == 29.0
+            && foreignMatterContact < 0.5 && unlikeMaterialContact < 0.5) {
+            quartzPowderCalm = powderBodyGate
+              * mix(0.44, 0.56, smoothstep(0.32, 0.90, powderBodyVolumeDepth));
+            float quartzPlateRelief = clamp(
+              powderVfxPlaneA * 0.50 - powderVfxPlaneB * 0.31
+                + powderVfxPlaneC * 0.21 + powderDirectedSlope * 0.22
+                + (0.48 - powderBodyVolumeDepth) * 0.08,
+              -1.0, 1.0
+            );
+            float quartzPlateCrown = powderBodyGate
+              * smoothstep(0.03, 0.64, quartzPlateRelief)
+              * (0.56 + (1.0 - powderBodyVolumeDepth) * 0.28);
+            float quartzPlatePocket = powderBodyGate
+              * smoothstep(0.03, 0.64, -quartzPlateRelief)
+              * (0.50 + powderBodyVolumeDepth * 0.42);
+            float quartzPlateCore = powderBodyGate
+              * smoothstep(0.38, 0.90, powderBodyVolumeDepth)
+              * (1.0 - abs(quartzPlateRelief)) * 0.22;
+            float quartzCleavage = powderBodyGate
+              * smoothstep(0.68, 0.94, abs(powderVfxPlaneA - powderVfxPlaneB))
+              * (0.36 + powderBodyVolumeDepth * 0.34);
+            color += (vec3(1.18) - clamp(color, 0.0, 1.18))
+              * vec3(0.86, 0.72, 1.00) * quartzPlateCrown * 0.13;
+            color *= vec3(1.0) - vec3(0.052, 0.068, 0.036)
+              * (quartzPlatePocket + quartzPlateCore);
+            color += vec3(0.018, 0.012, 0.026) * quartzCleavage;
           }
           // E40: exact Gunpowder and BCOL share SootyGranular optics but their
           // broad settled bodies currently stop at E05's generic mineral
@@ -8545,6 +8581,12 @@ void main() {
       // gate is identically zero for every topology and style control.
       if (snowpackBodyCalm > 0.0) {
         color = mix(color, powderBodyBase, snowpackBodyCalm);
+      }
+      // E49's dense-body calm attenuates only the common cell grain and PQRT's
+      // small legacy identity motif. The broad plate body is already present in
+      // powderBodyBase, and the independent native tmp2 state is applied later.
+      if (quartzPowderCalm > 0.0) {
+        color = mix(color, powderBodyBase, quartzPowderCalm);
       }
       // Fourteen native explosive powders retain the same semantic/powder
       // topology but receive stable identity marks. This is arithmetic-only
@@ -10626,6 +10668,10 @@ export class PixiFieldPresenter {
     // true-8x retains Snow's established flake identity and declares no E48 path.
     const snowpackBodyVfxEnabled = outputScale < 8
       && resolveSnowpackBodyVfxEnabled(renderLook);
+    // E49 is exact-PQRT arithmetic inside E05's stable Smooth body. Compact
+    // true-8x keeps the established PQRT/QRTZ identity and native-state path.
+    const quartzMesostructureVfxEnabled = outputScale < 8
+      && resolveQuartzMesostructureVfxEnabled(renderLook);
     // E06 is a normal-detail recomposition of the existing centre-field light.
     // The protected compact shader retains its one established emission sample.
     const powderLightVfxEnabled = outputScale < 8
@@ -10875,6 +10921,9 @@ export class PixiFieldPresenter {
       uSootyPowderBodyVfx: { value: sootyPowderBodyVfxEnabled ? 1 : 0, type: 'f32' },
       uThermiteBodyVfx: { value: thermiteBodyVfxEnabled ? 1 : 0, type: 'f32' },
       uSnowpackBodyVfx: { value: snowpackBodyVfxEnabled ? 1 : 0, type: 'f32' },
+      uQuartzMesostructureVfx: {
+        value: quartzMesostructureVfxEnabled ? 1 : 0, type: 'f32',
+      },
       uPowderLightVfx: { value: powderLightVfxEnabled ? 1 : 0, type: 'f32' },
       uPowderSolidContactVfx: {
         value: powderSolidContactVfxEnabled ? 1 : 0, type: 'f32',
@@ -11121,6 +11170,7 @@ export class PixiFieldPresenter {
       this.uniforms.uniforms.uSootyPowderBodyVfx = 0;
       this.uniforms.uniforms.uThermiteBodyVfx = 0;
       this.uniforms.uniforms.uSnowpackBodyVfx = 0;
+      this.uniforms.uniforms.uQuartzMesostructureVfx = 0;
       this.uniforms.uniforms.uPowderLightVfx = 0;
       this.uniforms.uniforms.uPowderSolidContactVfx = 0;
       this.uniforms.uniforms.uTranslucentEdgeVfx = 0;
@@ -11193,6 +11243,7 @@ export class PixiFieldPresenter {
             || new URLSearchParams(location.search).get('sootyPowderBodyVfxAudit') === '1'
             || new URLSearchParams(location.search).get('thermiteBodyVfxAudit') === '1'
             || new URLSearchParams(location.search).get('snowpackBodyVfxAudit') === '1'
+            || new URLSearchParams(location.search).get('quartzMesostructureVfxAudit') === '1'
             || new URLSearchParams(location.search).get('powderLightVfxAudit') === '1'
             || new URLSearchParams(location.search).get('powderSolidContactVfxAudit') === '1'
             || new URLSearchParams(location.search).get('translucentEdgeVfxAudit') === '1'
@@ -11339,6 +11390,9 @@ export class PixiFieldPresenter {
     ) > 0.5 ? 'active' : 'inactive';
     presenter.app.canvas.dataset.snowpackBodyVfx = Number(
       presenter.uniforms.uniforms.uSnowpackBodyVfx
+    ) > 0.5 ? 'active' : 'inactive';
+    presenter.app.canvas.dataset.quartzMesostructureVfx = Number(
+      presenter.uniforms.uniforms.uQuartzMesostructureVfx
     ) > 0.5 ? 'active' : 'inactive';
     presenter.app.canvas.dataset.powderLightVfx = Number(presenter.uniforms.uniforms.uPowderLightVfx) > 0.5
       ? 'active' : 'inactive';
@@ -12761,6 +12815,7 @@ export class PixiFieldPresenter {
         this.uniforms.uniforms.uSootyPowderBodyVfx = 0;
         this.uniforms.uniforms.uThermiteBodyVfx = 0;
         this.uniforms.uniforms.uSnowpackBodyVfx = 0;
+        this.uniforms.uniforms.uQuartzMesostructureVfx = 0;
         this.uniforms.uniforms.uPowderLightVfx = 0;
         this.uniforms.uniforms.uPowderSolidContactVfx = 0;
         this.uniforms.uniforms.uTranslucentEdgeVfx = 0;
@@ -12810,6 +12865,7 @@ export class PixiFieldPresenter {
         this.app.canvas.dataset.sootyPowderBodyVfx = 'inactive';
         this.app.canvas.dataset.thermiteBodyVfx = 'inactive';
         this.app.canvas.dataset.snowpackBodyVfx = 'inactive';
+        this.app.canvas.dataset.quartzMesostructureVfx = 'inactive';
         this.app.canvas.dataset.powderLightVfx = 'inactive';
         this.app.canvas.dataset.powderSolidContactVfx = 'inactive';
         this.app.canvas.dataset.translucentEdgeVfx = 'inactive';
