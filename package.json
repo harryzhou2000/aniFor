@@ -33,6 +33,7 @@
     "audit:vfx:gas-motion": "npm run build && node scripts/verify-browser-input.mjs --gas-motion-vfx-only --webgl-only --production-bundle --capture-dpr=1",
     "audit:vfx:powder-body": "npm run build && node scripts/verify-browser-input.mjs --powder-body-vfx-only --webgl-only --production-bundle --capture-dpr=1",
     "audit:vfx:sooty-powder-body": "npm run build && node scripts/verify-browser-input.mjs --sooty-powder-body-vfx-only --webgl-only --production-bundle --capture-dpr=1",
+    "audit:vfx:deut-body": "npm run build && node scripts/verify-browser-input.mjs --deut-body-vfx-only --webgl-only --production-bundle --capture-dpr=1",
     "audit:vfx:powder-light": "npm run build && node scripts/verify-browser-input.mjs --powder-light-vfx-only --webgl-only --production-bundle --capture-dpr=1",
     "audit:vfx:powder-solid-contact": "npm run build && node scripts/verify-browser-input.mjs --powder-solid-contact-vfx-only --webgl-only --production-bundle --capture-dpr=1",
     "audit:vfx:translucent-edge": "npm run build && node scripts/verify-browser-input.mjs --translucent-edge-vfx-only --webgl-only --production-bundle --capture-dpr=1",

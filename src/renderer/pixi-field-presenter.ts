@@ -57,6 +57,7 @@ import {
   resolveMetalWaterContactVfxEnabled,
   resolveLiquidSurfaceVfxEnabled,
   resolveAcidBodyVfxEnabled,
+  resolveDeutBodyVfxEnabled,
   resolveOilBodyVfxEnabled,
   resolveOilVolumeFinishVfxEnabled,
   resolveWaterBodyVfxEnabled,
@@ -3269,6 +3270,7 @@ uniform float uWoodTanninVfx;
 uniform float uGlassBodyVfx;
 uniform float uLiquidBodyVfx;
 uniform float uAcidBodyVfx;
+uniform float uDeutBodyVfx;
 uniform float uOilBodyVfx;
 uniform float uOilVolumeFinishVfx;
 uniform float uWaterBodyVfx;
@@ -7220,6 +7222,74 @@ void main() {
       && wall < 0.5 && emissionOnly < 0.5 && family == 2.0 && !materialEmissive) {
       color += deutStateDelta(material, wallState.ba, fieldPosition);
     }
+    // E41: native DEUT is intentionally excluded from E03 because its
+    // radioactive trait must remain authoritative. Give only that exact owner
+    // a separate connected-liquid proof, then use its already-fetched native
+    // concentration, existing liquid-depth evidence, and a stable world-space
+    // carrier for a broad cobalt pressure body. This is RGB-only: no trait,
+    // field, state, topology, alpha, support, or reconstruction decision is
+    // rewritten.
+    if (uDeutBodyVfx > 0.5 && material == 100.0 && optics == 1.0
+      && traits == 16.0 && liquidOnly < 0.5 && halo < 0.5
+      && surfaceOnly < 0.5 && wall < 0.5 && emissionOnly < 0.5
+      && family == 2.0 && !materialEmissive && molten < 0.5
+      && foreignMatterContact < 0.5 && unlikeMaterialContact < 0.5
+      && dot(liquidSpeciesSlope, liquidSpeciesSlope) < 0.0004
+      && shape.w > 3.5 && exposedLiquidSide < 0.5
+      && liquidDepth > 0.48 && liquidNeighbourMean > 0.56) {
+      float deutBodyConcentration = floor(wallState.b * 255.0 + 0.5)
+        + floor(wallState.a * 255.0 + 0.5) * 256.0;
+      float deutBodyOrdinary = min(1.0, deutBodyConcentration / 240.0);
+      float deutBodyCompressed = clamp(
+        (deutBodyConcentration - 240.0) / 5760.0, 0.0, 1.0
+      );
+      float deutBodyState = min(
+        1.0, sqrt(deutBodyOrdinary) * 0.28 + sqrt(deutBodyCompressed) * 0.72
+      );
+      float deutBodyPresent = step(0.5, deutBodyConcentration);
+      float deutBodyStateGate = deutBodyPresent * (0.18 + deutBodyState * 0.82);
+      float deutBodySupport = smoothstep(
+        30.0 / 255.0, 78.0 / 255.0, liquidOpticalDepth
+      ) * smoothstep(0.48, 0.90, liquidDepth)
+        * smoothstep(0.56, 0.90, liquidNeighbourMean)
+        * (1.0 - liquidFresnelContour);
+      // A stable 24x16/48-cell parabolic carrier gives the radioactive body
+      // broad curved crowns and pockets without inheriting the ordinary
+      // liquid animation clock. The DEUT atlas strides are exact multiples of
+      // every period, so concentration cards compare the same geometry.
+      vec2 deutBodyMotif = fract(fieldPosition / vec2(24.0, 16.0));
+      float deutBodyArcX = deutBodyMotif.x * (1.0 - deutBodyMotif.x) * 8.0 - 1.0;
+      float deutBodyArcY = deutBodyMotif.y * (1.0 - deutBodyMotif.y) * 8.0 - 1.0;
+      float deutBodyDiagonalPhase = fract(
+        (fieldPosition.x + fieldPosition.y) / 48.0 + 0.18
+      );
+      float deutBodyDiagonal = deutBodyDiagonalPhase
+        * (1.0 - deutBodyDiagonalPhase) * 8.0 - 1.0;
+      float deutBodyRelief = clamp(
+        deutBodyArcX * 0.42 + deutBodyArcY * 0.28 + deutBodyDiagonal * 0.30,
+        -1.0, 1.0
+      );
+      float deutBodyCrown = deutBodySupport
+        * smoothstep(0.025, 0.52, max(deutBodyRelief, 0.0));
+      float deutBodyPocket = deutBodySupport
+        * smoothstep(0.025, 0.52, max(-deutBodyRelief, 0.0));
+      float deutBodyCore = deutBodySupport
+        * smoothstep(90.0 / 255.0, 192.0 / 255.0, liquidOpticalDepth)
+        * (1.0 - abs(deutBodyRelief)) * 0.42;
+      vec3 deutBodyKey = mix(
+        vec3(0.20, 0.52, 0.92), vec3(0.16, 0.82, 1.00), deutBodyCompressed
+      );
+      float deutBodyCrownGain = deutBodyCrown * deutBodyPresent
+        * (0.012 + deutBodyStateGate * 0.055);
+      color += (vec3(1.18) - clamp(color, 0.0, 1.18))
+        * deutBodyKey * deutBodyCrownGain;
+      vec3 deutBodyAbsorption = mix(
+        vec3(0.036, 0.052, 0.092), vec3(0.058, 0.042, 0.088), deutBodyCompressed
+      );
+      color *= vec3(1.0) - deutBodyAbsorption
+        * (deutBodyPocket + deutBodyCore) * deutBodyPresent
+        * (0.38 + deutBodyStateGate * 0.62);
+    }
     if (uGelHydrationStyling > 0.5 && material == 56.0
       && liquidOnly < 0.5 && halo < 0.5 && surfaceOnly < 0.5
       && wall < 0.5 && emissionOnly < 0.5 && family == 2.0 && !materialEmissive) {
@@ -10436,6 +10506,11 @@ export class PixiFieldPresenter {
     // must not advertise an effect that cannot run on that path.
     const liquidBodyVfxEnabled = outputScale < 8
       && resolveLiquidBodyVfxEnabled(renderLook);
+    // E41 is a separate exact-DEUT radioactive-liquid proof, not a relaxation
+    // of E03's trait-free body. Compact true 8x keeps its native DEUT identity
+    // and state grammar and deliberately declares no E41 selector or branch.
+    const deutBodyVfxEnabled = outputScale < 8
+      && resolveDeutBodyVfxEnabled(renderLook);
     // E39 recomposes only the exact Acid body established by E03. Compact
     // true-8x deliberately declares neither this selector nor its arithmetic.
     const acidBodyVfxEnabled = outputScale < 8
@@ -10490,6 +10565,7 @@ export class PixiFieldPresenter {
       uGlassBodyVfx: { value: glassBodyVfxEnabled ? 1 : 0, type: 'f32' },
       uLiquidBodyVfx: { value: liquidBodyVfxEnabled ? 1 : 0, type: 'f32' },
       uAcidBodyVfx: { value: acidBodyVfxEnabled ? 1 : 0, type: 'f32' },
+      uDeutBodyVfx: { value: deutBodyVfxEnabled ? 1 : 0, type: 'f32' },
       uOilBodyVfx: { value: oilBodyVfxEnabled ? 1 : 0, type: 'f32' },
       uOilVolumeFinishVfx: { value: oilVolumeFinishVfxEnabled ? 1 : 0, type: 'f32' },
       uWaterBodyVfx: { value: waterBodyVfxEnabled ? 1 : 0, type: 'f32' },
@@ -10732,6 +10808,7 @@ export class PixiFieldPresenter {
       this.uniforms.uniforms.uGlassBodyVfx = 0;
       this.uniforms.uniforms.uLiquidBodyVfx = 0;
       this.uniforms.uniforms.uAcidBodyVfx = 0;
+      this.uniforms.uniforms.uDeutBodyVfx = 0;
       this.uniforms.uniforms.uOilBodyVfx = 0;
       this.uniforms.uniforms.uOilVolumeFinishVfx = 0;
       this.uniforms.uniforms.uWaterBodyVfx = 0;
@@ -10796,6 +10873,7 @@ export class PixiFieldPresenter {
             || new URLSearchParams(location.search).get('glassBodyVfxAudit') === '1'
             || new URLSearchParams(location.search).get('oilBodyVfxAudit') === '1'
             || new URLSearchParams(location.search).get('acidBodyVfxAudit') === '1'
+            || new URLSearchParams(location.search).get('deutBodyVfxAudit') === '1'
             || new URLSearchParams(location.search).get('waterBodyVfxAudit') === '1'
             || new URLSearchParams(location.search).get('liquidBodyVfxAudit') === '1'
             || new URLSearchParams(location.search).get('liquidSolidMeniscusVfxAudit') === '1'
@@ -10902,6 +10980,9 @@ export class PixiFieldPresenter {
       ? 'active' : 'inactive';
     presenter.app.canvas.dataset.acidBodyVfx = Number(
       presenter.uniforms.uniforms.uAcidBodyVfx
+    ) > 0.5 ? 'active' : 'inactive';
+    presenter.app.canvas.dataset.deutBodyVfx = Number(
+      presenter.uniforms.uniforms.uDeutBodyVfx
     ) > 0.5 ? 'active' : 'inactive';
     presenter.app.canvas.dataset.oilBodyVfx = Number(
       presenter.uniforms.uniforms.uOilBodyVfx
@@ -12331,6 +12412,7 @@ export class PixiFieldPresenter {
         this.uniforms.uniforms.uGlassBodyVfx = 0;
         this.uniforms.uniforms.uLiquidBodyVfx = 0;
         this.uniforms.uniforms.uAcidBodyVfx = 0;
+        this.uniforms.uniforms.uDeutBodyVfx = 0;
         this.uniforms.uniforms.uOilBodyVfx = 0;
         this.uniforms.uniforms.uOilVolumeFinishVfx = 0;
         this.uniforms.uniforms.uWaterBodyVfx = 0;
@@ -12371,6 +12453,7 @@ export class PixiFieldPresenter {
         this.app.canvas.dataset.glassBodyVfx = 'inactive';
         this.app.canvas.dataset.liquidBodyVfx = 'inactive';
         this.app.canvas.dataset.acidBodyVfx = 'inactive';
+        this.app.canvas.dataset.deutBodyVfx = 'inactive';
         this.app.canvas.dataset.oilBodyVfx = 'inactive';
         this.app.canvas.dataset.oilVolumeFinishVfx = 'inactive';
         this.app.canvas.dataset.waterBodyVfx = 'inactive';

@@ -1753,6 +1753,65 @@ describe('Pixi presenter startup configuration', () => {
     expect(preserve).toContain("get('sootyPowderBodyVfxAudit') === '1'");
   });
 
+  it('keeps E41 DEUT concentration-volume exact-owner, trait-aware, normal-WebGL-only, and RGB-only', () => {
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const canvasSource = readFileSync(new URL('./field-renderer.ts', import.meta.url), 'utf8');
+    const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');
+    const normalStart = source.indexOf('const FIELD_FRAGMENT = `', eightStart);
+    const normalEnd = source.indexOf('`;\n\n/** Primary WebGL presentation', normalStart);
+    const eight = source.slice(eightStart, normalStart);
+    const normal = source.slice(normalStart, normalEnd);
+    const e41Start = normal.indexOf('    // E41:');
+    const e41End = normal.indexOf('    if (uGelHydrationStyling > 0.5', e41Start);
+    const e41 = normal.slice(e41Start, e41End);
+    const preserveStart = source.indexOf('preserveDrawingBuffer:');
+    const preserveEnd = source.indexOf('resolution: outputScale', preserveStart);
+    const preserve = source.slice(preserveStart, preserveEnd);
+
+    expect(e41Start).toBeGreaterThanOrEqual(0);
+    expect(e41End).toBeGreaterThan(e41Start);
+    expect(normal).toContain('uniform float uDeutBodyVfx;');
+    expect(normal.match(/uDeutBodyVfx > 0\.5/g)).toHaveLength(1);
+    expect(eight).not.toContain('uDeutBodyVfx');
+    expect(eight).not.toContain('deutBodyRelief');
+    expect(canvasSource).not.toContain('deutBodyVfx');
+    for (const guard of [
+      'material == 100.0', 'optics == 1.0', 'traits == 16.0',
+      'liquidOnly < 0.5', 'halo < 0.5', 'surfaceOnly < 0.5', 'wall < 0.5',
+      'emissionOnly < 0.5', 'family == 2.0', '!materialEmissive', 'molten < 0.5',
+      'foreignMatterContact < 0.5', 'unlikeMaterialContact < 0.5',
+      'dot(liquidSpeciesSlope, liquidSpeciesSlope) < 0.0004',
+      'shape.w > 3.5', 'exposedLiquidSide < 0.5',
+      'liquidDepth > 0.48', 'liquidNeighbourMean > 0.56',
+    ]) expect(e41).toContain(guard);
+    expect(e41).toContain('30.0 / 255.0, 78.0 / 255.0, liquidOpticalDepth');
+    expect(e41).toContain('(deutBodyConcentration - 240.0) / 5760.0');
+    expect(e41).toContain('sqrt(deutBodyOrdinary) * 0.28');
+    expect(e41).toContain('float deutBodyPresent = step(0.5, deutBodyConcentration);');
+    expect(e41).toContain('deutBodyCrown * deutBodyPresent');
+    expect(e41).toContain('(deutBodyPocket + deutBodyCore) * deutBodyPresent');
+    expect(e41).toContain('fract(fieldPosition / vec2(24.0, 16.0))');
+    expect(e41).toContain('(fieldPosition.x + fieldPosition.y) / 48.0');
+    expect(e41).not.toContain('broadSheen');
+    expect(e41).not.toContain('causticWave');
+    expect(e41).not.toContain('liquidMacroRelief');
+    expect(e41).toContain('wallState.b * 255.0');
+    expect(e41).toContain('wallState.a * 255.0');
+    expect(e41).not.toContain('uLiquidBodyVfx');
+    expect(e41).not.toContain('texture(');
+    expect(e41).not.toContain('uTime');
+    expect(e41).not.toContain('sin(');
+    expect(e41).not.toContain('gl_FragCoord');
+    expect(e41).not.toMatch(/\balpha\s*[+*]?=/);
+    expect(source).toMatch(
+      /const deutBodyVfxEnabled = outputScale < 8\s*&& resolveDeutBodyVfxEnabled\(renderLook\);/,
+    );
+    expect(source.match(/this\.uniforms\.uniforms\.uDeutBodyVfx = 0;/g)).toHaveLength(2);
+    expect(source).toContain('presenter.app.canvas.dataset.deutBodyVfx');
+    expect(source).toContain("this.app.canvas.dataset.deutBodyVfx = 'inactive';");
+    expect(preserve).toContain("get('deutBodyVfxAudit') === '1'");
+  });
+
   it('keeps E23 ROCK roughness exact-owner, E17-dependent, normal-WebGL-only, and RGB-only', () => {
     const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
     const canvasSource = readFileSync(new URL('./field-renderer.ts', import.meta.url), 'utf8');

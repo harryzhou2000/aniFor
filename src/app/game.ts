@@ -144,6 +144,9 @@ import {
   DEUT_STATE_GRAPHICS_ATLAS, DEUT_STATE_GRAPHICS_AUDIT, prepareDeutStateGraphicsAuditFixture,
 } from './deut-state-graphics-audit';
 import {
+  DEUT_BODY_VFX_AUDIT, prepareDeutBodyVfxAuditFixture,
+} from './deut-body-vfx-audit';
+import {
   SOURCE_TARGET_GRAPHICS_AUDIT, SOURCE_TARGET_RECOVERY_PROBE,
   placeSourceTargetRecoveryProbe, prepareSourceTargetGraphicsAuditFixture,
 } from './source-target-graphics-audit';
@@ -929,6 +932,12 @@ export class Game {
           SOURCE_TARGET_RECOVERY_PROBE.owner,
           SOURCE_TARGET_RECOVERY_PROBE.target,
         );
+        this.renderer.invalidateDynamicPresentation();
+      },
+      deutBodyVfxFixture: () => DEUT_BODY_VFX_AUDIT,
+      prepareDeutBodyVfxFixture: () => {
+        prepareDeutBodyVfxAuditFixture(this.simulation);
+        this.renderer.synchronizeFixtureMaterialPlane();
         this.renderer.invalidateDynamicPresentation();
       },
       toggleRetainedPresentationProbe: () => {

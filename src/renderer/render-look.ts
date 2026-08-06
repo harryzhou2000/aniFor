@@ -538,6 +538,30 @@ export function resolveAcidBodyVfxEnabled(
 }
 
 /**
+ * Gives exact native DEUT a trait-aware connected-liquid body without
+ * weakening E03's deliberately trait-free eligibility. This is a sibling of
+ * E03 inside a non-Classic HDR look: an explicit selector can isolate E41
+ * while broad volume styling is off, and `liquidBodyVfx=0` remains an
+ * independent E03-only comparison control. Without an override it follows the
+ * broad volume preset like the other first-level material-body experiments.
+ */
+export function resolveDeutBodyVfxEnabled(
+  look: RenderLook,
+  search = globalThis.location?.search ?? '',
+): boolean {
+  if (look === 'classic') return false;
+  const parameters = new URLSearchParams(search);
+  const requested = parameters.get('deutBodyVfx');
+  if (requested === '0' || requested === 'off' || requested === 'false') return false;
+  if (requested === '1' || requested === 'on' || requested === 'true') return true;
+  // Focused browser fixtures predate E41 and construct their own isolated
+  // query strings. Keep those audits unchanged unless they explicitly opt in;
+  // ordinary realistic/neon play still inherits the broad volume preset.
+  if (parameters.get('inputAudit') === '1') return false;
+  return resolveVolumeVfxEnabled(look, search);
+}
+
+/**
  * Re-composes only the exact native Water body after E03 has established a
  * connected, same-species liquid volume. The child selector may replace
  * Water's inherited broad stripe carrier, but it cannot recreate E03 when the

@@ -242,6 +242,38 @@ microchroma, and caps named compositor footprints and 1×–4× drift. Canvas an
 compact true 8× remain excluded; requested-on true 8× reports E40 inactive for
 `scale-8`, promotes exact 4896×3072 WebGL, and completes its GPU fence.
 
+E41 adds a separate normal-WebGL exact DEUT Concentration Body capture at
+1×/2×/4×. DEUT is excluded from E03 because its Radioactive trait is
+authoritative, so E41 is a sibling selector rather than a weakened liquid-body
+guard. The shader requires exact material `100`, Aqueous optics, Radioactive
+trait, connected deep ordinary Liquid, same-species support, no reconstruction,
+wall, emission, molten state, or foreign/unlike contact. It decodes the full
+existing native `Uint16` state from the wall texture's B/A bytes. State zero is
+flat; ordinary concentration controls a restrained cobalt response and the
+compressed contribution saturates at `6000`. Two matched deep blocks prove
+that `17000` and `65535` therefore render equivalently. A static allocation-free
+parabolic carrier based on 24×16 world periods and a 48-cell diagonal supplies
+curved cyan crowns, absorptive pockets, and core depth. The periods divide the
+fixture's 144×192 card stride, so every state samples identical geometry and no
+liquid animation clock enters the experiment. E41 changes RGB only and adds no
+sample, texture, field, pass, target, upload, allocation, alpha/support,
+silhouette, owner, native state, or physics decision.
+
+The focused gate prepares all seven native concentrations plus expanded
+high-word bodies, exact holes/notches/fine structure, zero/wrong-owner/species/
+wall/contact/blank controls, and waits on a real WebGL completion before every
+backing read. It freezes per-state body/chroma/spatial ranges, positive crown
+and opposing-pocket grammar, full-word saturation, exact raw controls and
+off→on→off repetition. The accepted run observed a `.37` maximum
+cross-scale target RMS spread against the frozen `.50` cap. Normal composed
+contact shoulders remain bounded to 12 framebuffer bytes as post-filter
+footprints while raw boundary pixels stay exact. The composed realistic-rank
+audit passes with E41 active and full support/zero clipping for every material
+family. Canvas and compact true 8× remain excluded; requested-on true 8× reports E41 inactive for
+`scale-8`, preserves all semantic/state/liquid/depth/wall/support digests,
+promotes exact 4896×3072 WebGL, and completed its shared-deadline GPU fence in
+`5.2105 s` with zero browser errors.
+
 The Canvas liquid-body profiler compares the former scalar relief loop with the new helper under the deliberately impossible ceiling where every one of the `235,008` world cells is dense, exposed Water. Production invokes the helper only for actual authoritative liquid cells, reuses the existing three-float RGB scratch and field values, and adds no runtime-known scratch bytes, sample, reconstruction, upload, pass, or render-scale-dependent work. Qualified body cells calculate the curved caustic phase once and reuse that scalar for both the broad reflected band and narrow caustic lobe, so the Canvas fallback retains the exact composed signal without repeating its two trigonometric terms per cell.
 
 Dense exact-material solid interiors add restrained low-frequency RGB/normal relief without a new field, pass, or silhouette change. Gas relief uses signed local curvature from the same four cardinal atmosphere-alpha samples already required for slope: convex crowns catch bounded broad light and concave overlap pockets self-shadow. Canvas chooses the outward-facing one of its four existing emission neighbours for bounded coloured scatter. Desktop/high-quality WebGL takes one additional emission sample two low-resolution field texels along the reconstructed outward normal; compact/mobile width performs no additional directional fetch. Both fall with optical depth, preserve atmosphere alpha/support, and re-style Canvas after either atmosphere or emission rebuilds. No neighbouring gas RGB, new field, pass, persistent buffer, or semantic/support change is introduced.

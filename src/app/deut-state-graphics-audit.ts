@@ -95,11 +95,15 @@ export const DEUT_STATE_VIBR_RECOVERY_STATE = 100 | (192 << 7);
 const DEUT_STATE_VIBR_RECOVERY_RECT = { x: 452, y: 220, width: 20, height: 20 };
 const DEUT_STATE_HIGH_RANGE = [
   {
-    stateKey: 'reactionYield', rect: { x: 484, y: 220, width: 16, height: 16 },
+    // The two blocks have identical 48-cell carrier phase and enough vertical
+    // depth for the concentration-aware connected-body experiment. Their
+    // lower calibration probes therefore compare high-word saturation on
+    // matched geometry instead of sampling shallow ineligible liquid.
+    stateKey: 'reactionYield', rect: { x: 491, y: 260, width: 24, height: 40 },
     encodedState: DEUT_PRESENTATION_STATE.reactionYieldSaturation,
   },
   {
-    stateKey: 'maximum', rect: { x: 516, y: 220, width: 16, height: 16 },
+    stateKey: 'maximum', rect: { x: 539, y: 260, width: 24, height: 40 },
     encodedState: DEUT_PRESENTATION_STATE.maximumConcentration,
   },
 ] as const;

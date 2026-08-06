@@ -13,7 +13,7 @@ powder, solid, liquid, gas, energy, and contact scenes across Canvas and WebGL a
 mobile gestures, save/load, CI, and Pages deployment as protected regression
 contracts rather than the primary feature stream.
 
-The accepted visual experiment ladder now runs through E40. E12 is the
+The accepted visual experiment ladder now runs through E41. E12 is the
 species-safe Sand/Clay/Concrete wet-sediment checkpoint; preserve its exact
 aqueous owner/stability proof, split moving-powder/stationary-Water control,
 Local/Grains no-op, fine structures, authored gaps, Canvas fallback, and true
@@ -664,10 +664,38 @@ footprints, narrow cross-scale limits, and byte-exact repeated-off frames.
 Compact true 8× has no E40 uniform or branch; requested-on 8× reports
 `scale-8`, promotes exact 4896×3072 WebGL, and completes its GPU fence.
 
-The next survey should compare exact Hydrogen `40` as an E04-owned gas-body
-candidate with trait-bearing DEUT `100` as a separate radioactive-liquid
-eligibility study. Do not widen E04 gas styling or bypass E03's trait-free
-liquid contract; either candidate needs its own exact-owner fixture and gate.
+E41 is the accepted normal-WebGL-only exact DEUT concentration-body checkpoint.
+`?deutBodyVfx=0|1` is a sibling of E03: an explicit selector may isolate it
+while `volumeVfx=0` and `liquidBodyVfx=0`, because E03 intentionally rejects
+trait-bearing liquid. It applies only to authoritative DEUT `100` with Aqueous
+optics, Radioactive trait, ordinary Liquid phase, no wall/emission/molten/
+reconstructed owner, no foreign/unlike contact or species slope, and dense
+connected support (`shape.w > 3.5`, liquid depth/neighbor/depth-byte gates).
+Decode the existing wall-texture B/A native-state word as the full unsigned
+concentration; zero is an exact no-op, ordinary `1..240` remains restrained,
+and the compressed contribution saturates at `6000` so `17000` and `65535`
+remain visually equivalent. The stable parabolic carrier uses only
+`fract(fieldPosition / vec2(24,16))` plus a 48-cell diagonal. Those periods
+divide the 144×192 atlas stride, giving every concentration matched geometry
+without inheriting the ordinary liquid animation clock. Keep the calibrated
+cobalt/cyan crown, opposing pocket, and core RGB-only: add no texture read,
+sampler, field, pass, target, upload, allocation, alpha/support, topology,
+ownership, state, or physics decision. `npm run audit:vfx:deut-body` owns the
+frozen 1×/2×/4× off→on→off matrix, exact native/semantic/liquid/depth/wall/
+raw-control proof, stable crown/pocket grammar, full-word saturation blocks,
+and cross-scale drift (accepted maximum target RMS spread `0.37`). Compact true
+8× has no E41 uniform or branch; requested-on reports `scale-8`, promotes exact
+4896×3072 WebGL, and must complete one shared-deadline fence (accepted run
+`5210.5 ms`). Canvas remains the camera/state-safe fallback, not an advanced-
+optics parity requirement. Under `inputAudit=1`, an omitted E41 selector is
+inactive so older focused fixtures cannot silently inherit it; composed audits
+must opt in explicitly.
+
+The next survey should revisit exact Hydrogen `40` as an E04-owned gas-body
+candidate, or build the separate exact ISZS/VIBR solid-only eligibility proof
+described below. Do not widen E04 gas styling, E03's trait-free liquid contract,
+or E41 into generic radioactive liquid. Prefer the candidate with the clearest
+fit-view deficiency and its own exact-owner fixture/gate.
 
 The radioactive-solid review found no current correctness bug: ISZS `105`
 and VIBR `113` already receive exact-species Solid depth, while the existing

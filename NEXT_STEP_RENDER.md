@@ -645,11 +645,29 @@ does not alter simulation, camera, semantic ownership, or `renderScale`.
   control-footprint, repeated-off, and cross-scale proof. Requested-on true 8×
   reports E40 inactive for `scale-8`, promotes exact 4896×3072 WebGL, and
   completes its GPU fence.
+- **E41 — exact DEUT concentration body (accepted visual checkpoint):** normal
+  1×–4× WebGL exposes `?deutBodyVfx=0|1` as a trait-aware sibling of E03,
+  not a widening of E03's trait-free liquid gate. Only authoritative DEUT
+  `100` with Aqueous optics, Radioactive trait, ordinary connected Liquid,
+  dense semantic/field/depth support, no wall/emission/molten/reconstruction,
+  and no foreign/unlike/species contact may respond. It decodes the full
+  existing B/A native concentration word, keeps zero exact-flat, increases a
+  restrained ordinary response through `240`, and saturates compressed optics
+  at `6000` so reaction-yield `17000` and maximum `65535` remain equivalent.
+  A static parabolic 24×16 carrier plus 48-cell diagonal gives matched atlas
+  cards broad cobalt/cyan crowns, opposing pockets, and core absorption without
+  inheriting the ordinary liquid clock. The response is RGB-only and adds no
+  sampler, texture read, field, resource, pass, target, upload, allocation,
+  alpha/support, silhouette, owner, topology, native state, or physics
+  decision. `npm run audit:vfx:deut-body` owns the frozen 1×/2×/4× off→on→off
+  state/body/role/control/cross-scale matrix plus true-8× exclusion. Requested-
+  on true 8× reports E41 inactive for `scale-8`, promotes exact 4896×3072
+  WebGL, and completes its shared-deadline GPU fence.
 - **Protected 8× rung:** `renderScale=8` deliberately reports
   `hdrPipeline=inactive` / `scale-8` and retains the proven direct single-mesh
   4896×3072 path. The experiment must earn a bounded 8× design rather than
   allocating a 115 MiB full-resolution float target beside that path.
-- **Current decision:** E01/E02/E03/E04/E05/E06/E07/E08/E09/E10/E11/E12/E13/E14/E15/E16/E17/E18/E19/E20/E21/E22/E23/E24/E25/E26/E27/E28/E29/E30/E31/E32/E33/E34/E35/E36/E37/E38/E39/E40 remain opt-in through the non-Classic looks
+- **Current decision:** E01/E02/E03/E04/E05/E06/E07/E08/E09/E10/E11/E12/E13/E14/E15/E16/E17/E18/E19/E20/E21/E22/E23/E24/E25/E26/E27/E28/E29/E30/E31/E32/E33/E34/E35/E36/E37/E38/E39/E40/E41 remain opt-in through the non-Classic looks
   until representative hardware timing and mobile thermal behavior are
   measured. E02 remains the safe family-wide baseline. E03 is accepted as the
   liquid-depth checkpoint: its fit-view crop is visibly more cohesive, retains
@@ -835,6 +853,13 @@ does not alter simulation, camera, semantic ownership, or `renderScale`.
   microchroma retention, narrow 1×–4× response spread, and Canvas/compact-8×
   exclusion. Coal and the other granular/explosive/radioactive controls must
   remain exact; do not turn E40 into a family-wide carbon or explosive grade.
+  E41 is accepted as the exact DEUT radioactive-liquid body checkpoint: freeze
+  its separate trait-aware eligibility, full native `Uint16` concentration
+  decode, zero-state no-op, connected/deep owner proof, matched static
+  24×16/48-cell carrier, cobalt/cyan crown and absorptive pocket grammar,
+  `6000` visual saturation, exact raw controls, narrow 1×–4× response spread,
+  and Canvas/compact-8× exclusion. Do not make DEUT eligible for E03, copy E41
+  onto other radioactive liquids, or reintroduce a time-varying carrier.
   These are not the final material/VFX results.
   Sub-1.0 material colour stays on the established response; tonemapping owns
   only real HDR highlights so powder texture and liquid body contrast are not
@@ -1311,6 +1336,34 @@ support remain exact. Requested-on true 8× has no E40 uniform or branch,
 reports `scale-8`, promotes exact 4896×3072 WebGL, and completed its GPU fence
 in `5.209 s` with zero browser errors.
 
+Run `npm run audit:vfx:deut-body` for E41. It reuses the complete seven-card
+DEUT native-state fixture, adds matched deep body/crown/pocket/core calibration
+regions, and expands the two high-word probes to wall-free 24×40 connected
+bodies. The gate reloads `deutBodyVfx=0 → 1 → 0` at 1×/2×/4× with every other
+HDR experiment pinned off, waits for a completed WebGL frame before copying the
+backing, and hashes semantic matter, exact DEUT state, liquid field, phase-local
+depth, native walls, alpha, and support. Zero-state DEUT, shallow bands, holes,
+open notches, one-cell structure, isolated particles, wrong-owner Sand, Water,
+Metal, EXOT, ISOZ, wall coexistence, liquid/solid contacts, and guarded blanks
+remain controls; every raw control pixel is byte-exact.
+
+The accepted production matrix holds default/low/medium/pre-glow/glow/
+compressed whole-body RGB RMS at `1.82–1.85`, `2.21–2.22`, `.33–.45`,
+`2.40–2.47`, `2.42–2.46`, and `5.62–5.68`. The `239/240` E41 response ratio
+is `.992–1.025`, while the stronger compressed body remains at least 1.5× the
+ordinary peak. Reaction-yield `17000` and maximum `65535` matched deep probes
+visually saturate at `5.99–6.03` and `5.65–5.75` RGB RMS with the same 13-byte
+peak. Named crowns stay positive and pockets negative except the deliberately
+near-neutral medium native albedo; cores retain non-uniform spatial response.
+In the accepted run, the largest target RGB-RMS spread across output scales was
+`.37`; non-contact compositor controls stayed within two bytes and direct
+contact shoulders within 11. The frozen gate permits at most `.50` cross-scale
+target RMS and 12-byte contact shoulders, while raw controls and repeated-off
+frames remain exact. Requested-on true 8× has no E41 uniform or shader branch,
+reports `scale-8`, promotes exact
+4896×3072 WebGL, preserves every state/topology digest, and completed its
+shared-deadline GPU fence in `5.2105 s` with zero browser errors.
+
 Run `npm run audit:vfx:rock-roughness` for E23. It reloads a dedicated
 geometry-matched ROCK/Metal fixture as `rockRoughnessVfx=0 → 1 → 0` at
 1×/2×/4× with E17 and geological styling active and every unrelated experiment
@@ -1664,7 +1717,7 @@ next production 4× survey then selected Wood/PLNT as the largest remaining
   lower seam density, lower local contrast, stronger macro hierarchy, unchanged
   semantic support, and byte-exact selector-off recovery.
 
-**Next visual experiments:** E03–E40 now provide accepted liquid body/surface,
+**Next visual experiments:** E03–E41 now provide accepted liquid body/surface,
 stable-gas, coherent-gas-motion, powder-depth, and powder-local-light
 checkpoints plus exact resting contact grounding, Glass/Ice transmission, and
 state-aware Wax/PLNT subsurface response, composed wet-mineral optics,
@@ -1705,9 +1758,11 @@ absorptive pocket, and restrained core without flattening their sparse identity
 marks or internal grain cadence; Coal `19`, other owners, wet/moving powder,
 fine topology, walls, contacts, Local, Grains, Canvas, and compact 8× remain
 controls. The next survey should compare exact Hydrogen `40` as an E04-owned
-gas-body candidate with trait-bearing DEUT `100` as a separate radioactive-
-liquid eligibility study. Do not widen E04 or bypass E03's trait-free liquid
-contract; either direction needs its own exact-owner fixture and browser gate.
+gas-body candidate against a separate exact ISZS/VIBR solid-only eligibility
+proof. DEUT `100` is no longer a survey candidate: E41 now gives it an accepted
+trait-aware connected radioactive-liquid body without widening E03. Do not
+widen E04, E03, or E41; either next direction needs its own exact-owner fixture
+and browser gate.
 Improve distinctive depth, transmission, reflection, lighting, and
 mesostructure without stacking another narrow Oil/Acid/contact tint or generic
 PLNT/gas layer.
@@ -1721,7 +1776,7 @@ with topology-preserving, material-
 specific cards that reuse already-live evidence. Prefer the smallest
 arithmetic-only candidate that fixes a visible fit-view deficiency; do not add
 an isolated tint merely to continue the experiment number. Preserve the E14
-1× stencil snap and all E01–E39 selectors and controls while designing the
+1× stencil snap and all E01–E41 selectors and controls while designing the
 next bounded card.
 
 ## Phase 1 — HDR pipeline & lighting core (biggest visual payoff)

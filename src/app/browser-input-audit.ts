@@ -30,6 +30,7 @@ import type { CrystallineGraphicsAuditSnapshot } from './crystalline-graphics-au
 import type { PasteResistGraphicsAuditSnapshot } from './paste-resist-graphics-audit';
 import type { VibrStateGraphicsAuditSnapshot } from './vibr-state-graphics-audit';
 import type { DeutStateGraphicsAuditSnapshot } from './deut-state-graphics-audit';
+import type { DeutBodyVfxAuditSnapshot } from './deut-body-vfx-audit';
 import type { SourceTargetGraphicsAuditSnapshot } from './source-target-graphics-audit';
 import type { NativeSeedGrowthAuditSnapshot } from './native-seed-growth-audit';
 import type { ForceActivityGraphicsAuditSnapshot } from './force-activity-graphics-audit';
@@ -278,6 +279,8 @@ export interface BrowserInputAuditApi {
   prepareVibrStateGraphicsFixture(): void;
   deutStateGraphicsAtlas(): DeutStateGraphicsAuditSnapshot;
   prepareDeutStateGraphicsFixture(): void;
+  deutBodyVfxFixture(): DeutBodyVfxAuditSnapshot;
+  prepareDeutBodyVfxFixture(): void;
   /** Changes only a retained native presentation-state word in a prepared DEUT card. */
   toggleRetainedPresentationProbe(): {
     readonly x: number;

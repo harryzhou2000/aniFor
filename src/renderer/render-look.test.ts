@@ -19,6 +19,7 @@ import {
   resolveSmokeBillowDepthVfxEnabled,
   resolveSmokeSoftnessVfxEnabled,
   resolveAcidBodyVfxEnabled,
+  resolveDeutBodyVfxEnabled,
   resolveOilBodyVfxEnabled,
   resolveOilVolumeFinishVfxEnabled,
   resolveOrganicSubsurfaceVfxEnabled,
@@ -626,6 +627,29 @@ describe('resolveRenderLook', () => {
     expect(resolveAcidBodyVfxEnabled('realistic', '?acidBodyVfx=0')).toBe(false);
     expect(resolveAcidBodyVfxEnabled('realistic', '?acidBodyVfx=off')).toBe(false);
     expect(resolveAcidBodyVfxEnabled('realistic', '?acidBodyVfx=false')).toBe(false);
+  });
+
+  it('keeps exact DEUT body optics separate from E03 but inside the broad volume experiment', () => {
+    expect(resolveDeutBodyVfxEnabled('classic', '?deutBodyVfx=on')).toBe(false);
+    expect(resolveDeutBodyVfxEnabled('realistic', '')).toBe(true);
+    expect(resolveDeutBodyVfxEnabled('neon-lab', '')).toBe(true);
+    expect(resolveDeutBodyVfxEnabled('realistic', '?inputAudit=1')).toBe(false);
+    expect(resolveDeutBodyVfxEnabled(
+      'realistic', '?inputAudit=1&deutBodyVfx=1',
+    )).toBe(true);
+    expect(resolveDeutBodyVfxEnabled(
+      'realistic', '?volumeVfx=0&deutBodyVfx=1',
+    )).toBe(true);
+    expect(resolveDeutBodyVfxEnabled('realistic', '?volumeVfx=0')).toBe(false);
+    expect(resolveDeutBodyVfxEnabled(
+      'realistic', '?liquidBodyVfx=0&deutBodyVfx=1',
+    )).toBe(true);
+    expect(resolveDeutBodyVfxEnabled(
+      'realistic', '?liquidBodyVfx=0&deutBodyVfx=on',
+    )).toBe(true);
+    expect(resolveDeutBodyVfxEnabled('realistic', '?deutBodyVfx=0')).toBe(false);
+    expect(resolveDeutBodyVfxEnabled('realistic', '?deutBodyVfx=off')).toBe(false);
+    expect(resolveDeutBodyVfxEnabled('realistic', '?deutBodyVfx=false')).toBe(false);
   });
 
   it('lets powder-body VFX follow the preset or override broad volume styling', () => {
