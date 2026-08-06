@@ -729,6 +729,25 @@ export function resolveThermiteBodyVfxEnabled(
 }
 
 /**
+ * E48 re-composes only exact native Snow after E05 has proved a dry, settled
+ * Smooth powder body. The child cannot revive its parent. Existing input-audit
+ * scenes default it off until they explicitly opt in, preserving their frozen
+ * selector and framebuffer contracts.
+ */
+export function resolveSnowpackBodyVfxEnabled(
+  look: RenderLook,
+  search = globalThis.location?.search ?? '',
+): boolean {
+  if (!resolvePowderBodyVfxEnabled(look, search)) return false;
+  const parameters = new URLSearchParams(search);
+  const requested = parameters.get('snowpackBodyVfx');
+  if (requested === '0' || requested === 'off' || requested === 'false') return false;
+  if (requested === '1' || requested === 'on' || requested === 'true') return true;
+  if (parameters.get('inputAudit') === '1') return false;
+  return true;
+}
+
+/**
  * Keeps the settled powder/solid contact experiment independently measurable
  * without requiring the powder-body crown layer. Ordinary realistic/neon
  * presets retain the broad volume default; the explicit query is reserved for

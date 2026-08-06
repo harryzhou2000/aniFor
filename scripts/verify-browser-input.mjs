@@ -124,6 +124,22 @@ const composedRankOnly = process.argv.includes('--composed-rank-only');
 if (composedRankOnly && (modes.length !== 1 || modes[0] !== 'webgl')) {
   throw new Error('--composed-rank-only requires --webgl-only');
 }
+// A separate app-owned scene ranks the still-unselected exact material owners
+// without perturbing the accepted production showcase or its frozen evidence.
+const candidateRankOnly = process.argv.includes('--candidate-rank-only');
+if (candidateRankOnly && (modes.length !== 1 || modes[0] !== 'webgl')) {
+  throw new Error('--candidate-rank-only requires --webgl-only');
+}
+const candidateSnowpackBodyVfxArgument = process.argv.find((argument) => (
+  argument.startsWith('--candidate-snowpack-body-vfx=')
+));
+const candidateSnowpackBodyVfx = candidateSnowpackBodyVfxArgument?.split('=')[1] ?? '0';
+if (candidateSnowpackBodyVfxArgument && !candidateRankOnly) {
+  throw new Error('--candidate-snowpack-body-vfx is valid only with --candidate-rank-only');
+}
+if (!['0', '1', 'off', 'on'].includes(candidateSnowpackBodyVfx)) {
+  throw new Error('--candidate-snowpack-body-vfx must be 0, 1, off, or on');
+}
 // This is deliberately a separate 2x WebGL experiment gate. It reloads the
 // deterministic paused render lab as classic -> realistic -> classic so it
 // never adds render targets, readback, or timing pressure to the true-8x gate.
@@ -312,6 +328,13 @@ const thermiteBodyVfxOnly = process.argv.includes('--thermite-body-vfx-only');
 if (thermiteBodyVfxOnly && (modes.length !== 1 || modes[0] !== 'webgl')) {
   throw new Error('--thermite-body-vfx-only requires --webgl-only');
 }
+// E48 is a normal-detail exact-Snow snowpack study. It deliberately calms
+// dense Smooth-powder stipple while sparse snow, Local, Grains, and compact
+// true 8x retain their established exact presentation.
+const snowpackBodyVfxOnly = process.argv.includes('--snowpack-body-vfx-only');
+if (snowpackBodyVfxOnly && (modes.length !== 1 || modes[0] !== 'webgl')) {
+  throw new Error('--snowpack-body-vfx-only requires --webgl-only');
+}
 // E41 is a normal-detail DEUT concentration/body experiment. Its focused route
 // owns a paused native-state fixture; Canvas and compact true 8x are controls.
 const deutBodyVfxOnly = process.argv.includes('--deut-body-vfx-only');
@@ -419,7 +442,8 @@ const focusedVfxOnlyFlags = [
   platinumBodyVfxOnly, ceramicGlazeVfxOnly, botanicalBodyVfxOnly, glassBodyVfxOnly,
   oilBodyVfxOnly, rockRoughnessVfxOnly, rockMesostructureVfxOnly, waterBodyVfxOnly, acidBodyVfxOnly,
   soapBodyVfxOnly,
-  sootyPowderBodyVfxOnly, thermiteBodyVfxOnly, deutBodyVfxOnly, hydrogenBodyVfxOnly,
+  sootyPowderBodyVfxOnly, thermiteBodyVfxOnly, snowpackBodyVfxOnly,
+  deutBodyVfxOnly, hydrogenBodyVfxOnly,
   carbonDioxideBodyVfxOnly,
   radioactiveSolidBodyVfxOnly, iszsCrystallineVfxOnly,
   nobleGasBillowVfxOnly, nobleGasPrismVfxOnly,
@@ -428,7 +452,7 @@ const focusedVfxOnlyFlags = [
   woodTanninVfxOnly,
 ];
 if (focusedVfxOnlyFlags.filter(Boolean).length > 1) {
-  throw new Error('HDR/volume/liquid-body/liquid-surface/gas-body/gas-motion/powder-body/powder-light/powder-solid-contact/translucent-edge/organic-subsurface/wet-sediment/gas-light/liquid-solid-meniscus/metal-water-contact/gas-core-depth/plasma-core/solid-body/platinum-body/ceramic-glaze/botanical-body/glass-body/oil-body/rock-roughness/rock-mesostructure/water-body/acid-body/soap-body/sooty-powder-body/thermite-body/deut-body/hydrogen-body/carbon-dioxide-body/radioactive-solid-body/iszs-crystalline/noble-gas-billow/noble-gas-prism/smoke-softness/smoke-billow-depth/botanical-mesostructure/wood-bark-relief/botanical-pigment/plant-lamina/plant-lobe-depth/plant-canopy-mass/wood-tannin focused audits are mutually exclusive');
+  throw new Error('HDR/volume/liquid-body/liquid-surface/gas-body/gas-motion/powder-body/powder-light/powder-solid-contact/translucent-edge/organic-subsurface/wet-sediment/gas-light/liquid-solid-meniscus/metal-water-contact/gas-core-depth/plasma-core/solid-body/platinum-body/ceramic-glaze/botanical-body/glass-body/oil-body/rock-roughness/rock-mesostructure/water-body/acid-body/soap-body/sooty-powder-body/thermite-body/snowpack-body/deut-body/hydrogen-body/carbon-dioxide-body/radioactive-solid-body/iszs-crystalline/noble-gas-billow/noble-gas-prism/smoke-softness/smoke-billow-depth/botanical-mesostructure/wood-bark-relief/botanical-pigment/plant-lamina/plant-lobe-depth/plant-canopy-mass/wood-tannin focused audits are mutually exclusive');
 }
 
 const layoutOnly = process.argv.includes('--layout-only');
@@ -511,9 +535,10 @@ const liveScaleOnly = process.argv.includes('--live-scale-only');
 // bundle without starting Vite. That keeps screenshot evidence independent of
 // dev-server navigation timing while leaving all default audit paths unchanged.
 const productionBundle = process.argv.includes('--production-bundle');
-const usesProductionBundle = productionBundle || showcaseScreenshotOnly || composedRankOnly || hdrVfxOnly || volumeVfxOnly
+const usesProductionBundle = productionBundle || showcaseScreenshotOnly || composedRankOnly
+  || candidateRankOnly || hdrVfxOnly || volumeVfxOnly
   || liquidBodyVfxOnly || liquidSurfaceVfxOnly || gasBodyVfxOnly || gasMotionVfxOnly
-    || powderBodyVfxOnly || powderLightVfxOnly || powderSolidContactVfxOnly || translucentEdgeVfxOnly || organicSubsurfaceVfxOnly || wetSedimentVfxOnly || gasLightVfxOnly || liquidSolidMeniscusVfxOnly || metalWaterContactVfxOnly || gasCoreDepthVfxOnly || plasmaCoreVfxOnly || solidBodyVfxOnly || platinumBodyVfxOnly || ceramicGlazeVfxOnly || botanicalBodyVfxOnly || glassBodyVfxOnly || oilBodyVfxOnly || rockRoughnessVfxOnly || rockMesostructureVfxOnly || waterBodyVfxOnly || acidBodyVfxOnly || soapBodyVfxOnly || sootyPowderBodyVfxOnly || thermiteBodyVfxOnly || deutBodyVfxOnly || hydrogenBodyVfxOnly || carbonDioxideBodyVfxOnly || radioactiveSolidBodyVfxOnly || iszsCrystallineVfxOnly || nobleGasBillowVfxOnly || nobleGasPrismVfxOnly || smokeSoftnessVfxOnly || smokeBillowDepthVfxOnly || botanicalMesostructureVfxOnly || woodBarkReliefVfxOnly || botanicalPigmentVfxOnly || plantLaminaVfxOnly || plantLobeDepthVfxOnly || woodTanninVfxOnly || cellularGraphicsOnly || sensorGraphicsOnly
+    || powderBodyVfxOnly || powderLightVfxOnly || powderSolidContactVfxOnly || translucentEdgeVfxOnly || organicSubsurfaceVfxOnly || wetSedimentVfxOnly || gasLightVfxOnly || liquidSolidMeniscusVfxOnly || metalWaterContactVfxOnly || gasCoreDepthVfxOnly || plasmaCoreVfxOnly || solidBodyVfxOnly || platinumBodyVfxOnly || ceramicGlazeVfxOnly || botanicalBodyVfxOnly || glassBodyVfxOnly || oilBodyVfxOnly || rockRoughnessVfxOnly || rockMesostructureVfxOnly || waterBodyVfxOnly || acidBodyVfxOnly || soapBodyVfxOnly || sootyPowderBodyVfxOnly || thermiteBodyVfxOnly || snowpackBodyVfxOnly || deutBodyVfxOnly || hydrogenBodyVfxOnly || carbonDioxideBodyVfxOnly || radioactiveSolidBodyVfxOnly || iszsCrystallineVfxOnly || nobleGasBillowVfxOnly || nobleGasPrismVfxOnly || smokeSoftnessVfxOnly || smokeBillowDepthVfxOnly || botanicalMesostructureVfxOnly || woodBarkReliefVfxOnly || botanicalPigmentVfxOnly || plantLaminaVfxOnly || plantLobeDepthVfxOnly || woodTanninVfxOnly || cellularGraphicsOnly || sensorGraphicsOnly
   || unusualPowderGraphicsOnly || earthenPowderGraphicsOnly || explosivePowderGraphicsOnly || unusualSolidGraphicsOnly
   || deviceIdentityGraphicsOnly
   || fieldProfileGraphicsOnly
@@ -560,6 +585,8 @@ const sootyPowderBodyVfxArgument = process.argv.find((argument) => argument.star
   ?.slice('--sooty-powder-body-vfx='.length);
 const thermiteBodyVfxArgument = process.argv.find((argument) => argument.startsWith('--thermite-body-vfx='))
   ?.slice('--thermite-body-vfx='.length);
+const snowpackBodyVfxArgument = process.argv.find((argument) => argument.startsWith('--snowpack-body-vfx='))
+  ?.slice('--snowpack-body-vfx='.length);
 const soapBodyVfxArgument = process.argv.find((argument) => argument.startsWith('--soap-body-vfx='))
   ?.slice('--soap-body-vfx='.length);
 const deutBodyVfxArgument = process.argv.find((argument) => argument.startsWith('--deut-body-vfx='))
@@ -663,6 +690,9 @@ if (sootyPowderBodyVfxArgument !== undefined && !['0', '1', 'off', 'on'].include
 if (thermiteBodyVfxArgument !== undefined && !['0', '1', 'off', 'on'].includes(thermiteBodyVfxArgument)) {
   throw new Error('--thermite-body-vfx must be 0, 1, off, or on');
 }
+if (snowpackBodyVfxArgument !== undefined && !['0', '1', 'off', 'on'].includes(snowpackBodyVfxArgument)) {
+  throw new Error('--snowpack-body-vfx must be 0, 1, off, or on');
+}
 if (soapBodyVfxArgument !== undefined && !['0', '1', 'off', 'on'].includes(soapBodyVfxArgument)) {
   throw new Error('--soap-body-vfx must be 0, 1, off, or on');
 }
@@ -696,6 +726,9 @@ if (focusedVfxOnlyFlags.some(Boolean) && sootyPowderBodyVfxArgument !== undefine
 }
 if (focusedVfxOnlyFlags.some(Boolean) && thermiteBodyVfxArgument !== undefined) {
   throw new Error('focused VFX audits own thermiteBodyVfx state; omit --thermite-body-vfx');
+}
+if (focusedVfxOnlyFlags.some(Boolean) && snowpackBodyVfxArgument !== undefined) {
+  throw new Error('focused VFX audits own snowpackBodyVfx state; omit --snowpack-body-vfx');
 }
 if (focusedVfxOnlyFlags.some(Boolean) && soapBodyVfxArgument !== undefined) {
   throw new Error('focused VFX audits own soapBodyVfx state; omit --soap-body-vfx');
@@ -1107,6 +1140,22 @@ if (thermiteBodyVfxOnly && (volumeVfxArgument !== undefined
   || carbonDioxideBodyVfxArgument !== undefined)) {
   throw new Error('--thermite-body-vfx-only pins E05 and owns off -> on -> off; omit overrides');
 }
+if (snowpackBodyVfxOnly && (volumeVfxArgument !== undefined
+  || liquidBodyVfxArgument !== undefined || liquidSurfaceVfxArgument !== undefined
+  || gasBodyVfxArgument !== undefined || gasMotionVfxArgument !== undefined
+  || powderBodyVfxArgument !== undefined || sootyPowderBodyVfxArgument !== undefined
+  || thermiteBodyVfxArgument !== undefined || snowpackBodyVfxArgument !== undefined
+  || powderLightVfxArgument !== undefined || translucentEdgeVfxArgument !== undefined
+  || organicSubsurfaceVfxArgument !== undefined || wetSedimentVfxArgument !== undefined
+  || gasLightVfxArgument !== undefined || liquidSolidMeniscusVfxArgument !== undefined
+  || metalWaterContactVfxArgument !== undefined || gasCoreDepthVfxArgument !== undefined
+  || nobleGasBillowVfxArgument !== undefined || nobleGasPrismVfxArgument !== undefined
+  || smokeSoftnessVfxArgument !== undefined || smokeBillowDepthVfxArgument !== undefined
+  || plasmaCoreVfxArgument !== undefined || solidBodyVfxArgument !== undefined
+  || deutBodyVfxArgument !== undefined || hydrogenBodyVfxArgument !== undefined
+  || carbonDioxideBodyVfxArgument !== undefined)) {
+  throw new Error('--snowpack-body-vfx-only pins E05 and owns off -> on -> off; omit overrides');
+}
 if (soapBodyVfxOnly && (volumeVfxArgument !== undefined
   || liquidBodyVfxArgument !== undefined || liquidSurfaceVfxArgument !== undefined
   || gasBodyVfxArgument !== undefined || gasMotionVfxArgument !== undefined
@@ -1207,6 +1256,9 @@ if (sootyPowderBodyVfxOnly && renderScaleArgument === '8') {
 if (thermiteBodyVfxOnly && renderScaleArgument === '8') {
   throw new Error('--thermite-body-vfx-only is a normal-detail 1x/2x/4x experiment');
 }
+if (snowpackBodyVfxOnly && renderScaleArgument === '8') {
+  throw new Error('--snowpack-body-vfx-only is a normal-detail 1x/2x/4x experiment');
+}
 if (nobleGasBillowVfxOnly && renderScaleArgument === '8') {
   throw new Error('--noble-gas-billow-vfx-only is a normal-detail 1x/2x/4x experiment');
 }
@@ -1264,6 +1316,9 @@ if (showcaseScreenshotOnly && !screenshotRequest) {
 }
 if (composedRankOnly && renderScaleArgument === '8') {
   throw new Error('--composed-rank-only supports only its normal-detail 1x/2x/4x captures');
+}
+if (candidateRankOnly && renderScaleArgument === '8') {
+  throw new Error('--candidate-rank-only supports only its normal-detail 1x/2x/4x captures');
 }
 if (hdrVfxOnly && renderLook !== undefined) {
   throw new Error('--hdr-vfx-only owns classic -> realistic -> classic; omit --render-look');
@@ -1334,9 +1389,10 @@ async function main() {
       }, 15_000, 'Vite browser-audit server');
     const results = [];
     for (const mode of modes) results.push(await auditMode(mode));
-    const reducedAudit = quickScreenshot || showcaseScreenshotOnly || composedRankOnly || hdrVfxOnly || volumeVfxOnly
+    const reducedAudit = quickScreenshot || showcaseScreenshotOnly || composedRankOnly
+      || candidateRankOnly || hdrVfxOnly || volumeVfxOnly
       || liquidBodyVfxOnly || liquidSurfaceVfxOnly || gasBodyVfxOnly || gasMotionVfxOnly
-      || powderBodyVfxOnly || powderLightVfxOnly || powderSolidContactVfxOnly || translucentEdgeVfxOnly || organicSubsurfaceVfxOnly || wetSedimentVfxOnly || gasLightVfxOnly || liquidSolidMeniscusVfxOnly || metalWaterContactVfxOnly || gasCoreDepthVfxOnly || plasmaCoreVfxOnly || solidBodyVfxOnly || platinumBodyVfxOnly || ceramicGlazeVfxOnly || botanicalBodyVfxOnly || glassBodyVfxOnly || oilBodyVfxOnly || rockRoughnessVfxOnly || rockMesostructureVfxOnly || waterBodyVfxOnly || acidBodyVfxOnly || soapBodyVfxOnly || sootyPowderBodyVfxOnly || thermiteBodyVfxOnly || deutBodyVfxOnly || hydrogenBodyVfxOnly || carbonDioxideBodyVfxOnly || radioactiveSolidBodyVfxOnly || iszsCrystallineVfxOnly || nobleGasBillowVfxOnly || nobleGasPrismVfxOnly || smokeSoftnessVfxOnly || smokeBillowDepthVfxOnly || botanicalMesostructureVfxOnly || woodBarkReliefVfxOnly || botanicalPigmentVfxOnly || plantLaminaVfxOnly || plantLobeDepthVfxOnly || woodTanninVfxOnly || layoutOnly || mobileOnly || mobileGestureOnly
+      || powderBodyVfxOnly || powderLightVfxOnly || powderSolidContactVfxOnly || translucentEdgeVfxOnly || organicSubsurfaceVfxOnly || wetSedimentVfxOnly || gasLightVfxOnly || liquidSolidMeniscusVfxOnly || metalWaterContactVfxOnly || gasCoreDepthVfxOnly || plasmaCoreVfxOnly || solidBodyVfxOnly || platinumBodyVfxOnly || ceramicGlazeVfxOnly || botanicalBodyVfxOnly || glassBodyVfxOnly || oilBodyVfxOnly || rockRoughnessVfxOnly || rockMesostructureVfxOnly || waterBodyVfxOnly || acidBodyVfxOnly || soapBodyVfxOnly || sootyPowderBodyVfxOnly || thermiteBodyVfxOnly || snowpackBodyVfxOnly || deutBodyVfxOnly || hydrogenBodyVfxOnly || carbonDioxideBodyVfxOnly || radioactiveSolidBodyVfxOnly || iszsCrystallineVfxOnly || nobleGasBillowVfxOnly || nobleGasPrismVfxOnly || smokeSoftnessVfxOnly || smokeBillowDepthVfxOnly || botanicalMesostructureVfxOnly || woodBarkReliefVfxOnly || botanicalPigmentVfxOnly || plantLaminaVfxOnly || plantLobeDepthVfxOnly || woodTanninVfxOnly || layoutOnly || mobileOnly || mobileGestureOnly
       || desktopInputOnly || visualScaleMatrixOnly || powderBodyOnly || liquidDepthOnly
       || solidDepthOnly || gasChromaOnly || surfaceContourOnly || solidFieldOnly
       || roleGraphicsOnly || cellularGraphicsOnly || sensorGraphicsOnly
@@ -1434,7 +1490,7 @@ async function auditMode(mode) {
   // canonical paused scene there and prove real material delivery/occupancy.
   const startsBlank = !canvasFallbackAudit && (hdrVfxOnly || volumeVfxOnly
     || liquidBodyVfxOnly || liquidSurfaceVfxOnly || gasBodyVfxOnly || gasMotionVfxOnly
-    || powderBodyVfxOnly || powderLightVfxOnly || powderSolidContactVfxOnly || translucentEdgeVfxOnly || organicSubsurfaceVfxOnly || wetSedimentVfxOnly || gasLightVfxOnly || liquidSolidMeniscusVfxOnly || metalWaterContactVfxOnly || gasCoreDepthVfxOnly || plasmaCoreVfxOnly || solidBodyVfxOnly || platinumBodyVfxOnly || ceramicGlazeVfxOnly || botanicalBodyVfxOnly || glassBodyVfxOnly || oilBodyVfxOnly || rockRoughnessVfxOnly || rockMesostructureVfxOnly || waterBodyVfxOnly || acidBodyVfxOnly || soapBodyVfxOnly || sootyPowderBodyVfxOnly || thermiteBodyVfxOnly || deutBodyVfxOnly || hydrogenBodyVfxOnly || carbonDioxideBodyVfxOnly || radioactiveSolidBodyVfxOnly || iszsCrystallineVfxOnly || nobleGasBillowVfxOnly || nobleGasPrismVfxOnly || smokeSoftnessVfxOnly || smokeBillowDepthVfxOnly || botanicalMesostructureVfxOnly || woodBarkReliefVfxOnly || botanicalPigmentVfxOnly || plantLaminaVfxOnly || plantLobeDepthVfxOnly || woodTanninVfxOnly || cellularGraphicsOnly || sensorGraphicsOnly
+    || powderBodyVfxOnly || powderLightVfxOnly || powderSolidContactVfxOnly || translucentEdgeVfxOnly || organicSubsurfaceVfxOnly || wetSedimentVfxOnly || gasLightVfxOnly || liquidSolidMeniscusVfxOnly || metalWaterContactVfxOnly || gasCoreDepthVfxOnly || plasmaCoreVfxOnly || solidBodyVfxOnly || platinumBodyVfxOnly || ceramicGlazeVfxOnly || botanicalBodyVfxOnly || glassBodyVfxOnly || oilBodyVfxOnly || rockRoughnessVfxOnly || rockMesostructureVfxOnly || waterBodyVfxOnly || acidBodyVfxOnly || soapBodyVfxOnly || sootyPowderBodyVfxOnly || thermiteBodyVfxOnly || snowpackBodyVfxOnly || deutBodyVfxOnly || hydrogenBodyVfxOnly || carbonDioxideBodyVfxOnly || radioactiveSolidBodyVfxOnly || iszsCrystallineVfxOnly || nobleGasBillowVfxOnly || nobleGasPrismVfxOnly || smokeSoftnessVfxOnly || smokeBillowDepthVfxOnly || botanicalMesostructureVfxOnly || woodBarkReliefVfxOnly || botanicalPigmentVfxOnly || plantLaminaVfxOnly || plantLobeDepthVfxOnly || woodTanninVfxOnly || cellularGraphicsOnly || sensorGraphicsOnly
     || unusualPowderGraphicsOnly || earthenPowderGraphicsOnly || explosivePowderGraphicsOnly
     || unusualSolidGraphicsOnly || deviceIdentityGraphicsOnly || fieldProfileGraphicsOnly
     || electricDischargeGraphicsOnly || liquidIdentityGraphicsOnly
@@ -1451,7 +1507,8 @@ async function auditMode(mode) {
     || sparkStateGraphicsOnly
     || nativeSeedGrowthOnly);
   const query = new URLSearchParams({
-    scene: showcaseScreenshotOnly || composedRankOnly ? 'showcase' : 'render-lab', inputAudit: '1',
+    scene: candidateRankOnly ? 'candidate-survey'
+      : showcaseScreenshotOnly || composedRankOnly ? 'showcase' : 'render-lab', inputAudit: '1',
     ...(renderLook ? { renderLook } : {}),
     ...(volumeVfxArgument ? { volumeVfx: volumeVfxArgument } : {}),
     ...(liquidBodyVfxArgument ? { liquidBodyVfx: liquidBodyVfxArgument } : {}),
@@ -1461,6 +1518,7 @@ async function auditMode(mode) {
     ...(powderBodyVfxArgument ? { powderBodyVfx: powderBodyVfxArgument } : {}),
     ...(sootyPowderBodyVfxArgument ? { sootyPowderBodyVfx: sootyPowderBodyVfxArgument } : {}),
     ...(thermiteBodyVfxArgument ? { thermiteBodyVfx: thermiteBodyVfxArgument } : {}),
+    ...(snowpackBodyVfxArgument ? { snowpackBodyVfx: snowpackBodyVfxArgument } : {}),
     ...(focusedVfxOnlyFlags.some(Boolean)
       ? { soapBodyVfx: '0' }
       : soapBodyVfxArgument !== undefined ? { soapBodyVfx: soapBodyVfxArgument } : {}),
@@ -1479,6 +1537,7 @@ async function auditMode(mode) {
       ? { acidBodyVfx: '0' } : {}),
     ...(focusedVfxOnlyFlags.some(Boolean) ? { sootyPowderBodyVfx: '0' } : {}),
     ...(focusedVfxOnlyFlags.some(Boolean) ? { thermiteBodyVfx: '0' } : {}),
+    ...(focusedVfxOnlyFlags.some(Boolean) ? { snowpackBodyVfx: '0' } : {}),
     // E41 defaults on in normal realistic WebGL once implemented. Existing
     // focused baselines must remain byte-stable while its own reload loop owns
     // the explicit off -> on -> off sequence.
@@ -1729,6 +1788,13 @@ async function auditMode(mode) {
     }
     if (!usesProductionBundle) {
       await cdp.send('Page.navigate', { url: auditUrl });
+    }
+    if (candidateRankOnly) {
+      assert(mode === 'webgl', '--candidate-rank-only requires --webgl-only');
+      const candidateRank = await auditMaterialCandidateSurvey(cdp, mode, dpr);
+      assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
+      cdp.close();
+      return { backend: mode, candidateRank, browserErrors: errors.length };
     }
     if (composedRankOnly) {
       assert(mode === 'webgl', '--composed-rank-only requires --webgl-only');
@@ -2089,6 +2155,13 @@ async function auditMode(mode) {
       assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
       cdp.close();
       return { backend: mode, thermiteBodyVfx, browserErrors: errors.length };
+    }
+    if (snowpackBodyVfxOnly) {
+      assert(mode === 'webgl', '--snowpack-body-vfx-only requires --webgl-only');
+      const snowpackBodyVfx = await auditSnowpackBodyVfxExperiment(cdp, mode, dpr);
+      assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
+      cdp.close();
+      return { backend: mode, snowpackBodyVfx, browserErrors: errors.length };
     }
     if (deutBodyVfxOnly) {
       assert(mode === 'webgl', '--deut-body-vfx-only requires --webgl-only');
@@ -12341,6 +12414,272 @@ async function auditDesktopInput(cdp, mode, dpr) {
 }
 
 /**
+ * Fit-view survey of the explicitly unselected material candidates. This uses
+ * its own deterministic app scene so evidence gathering cannot rewrite the
+ * accepted production-showcase contract merely to make a candidate score well.
+ */
+async function auditMaterialCandidateSurvey(cdp, mode, dpr) {
+  const captures = [];
+  const candidateLook = renderLook ?? 'realistic';
+  const requestedScales = renderScaleArgument === undefined
+    ? COMPOSED_RANK_SCALES : [Number(renderScaleArgument)];
+  for (const scale of requestedScales) {
+    const stage = (name) => console.error(`[candidate-rank ${scale}x] ${name}`);
+    stage('navigate');
+    const query = new URLSearchParams({
+      scene: 'candidate-survey', inputAudit: '1', auditStage: 'candidate-rank',
+      renderScale: String(scale), renderLook: candidateLook,
+      candidateRankAudit: '1', volumeVfx: '1', liquidBodyVfx: '1', powderBodyVfx: '1',
+      snowpackBodyVfx: candidateSnowpackBodyVfx,
+    });
+    await cdp.send('Page.navigate', { url: `${AUDIT_BASE_URL}?${query}` });
+    await waitFor(() => evaluate(cdp, `(() => {
+      const parameters = new URLSearchParams(location.search);
+      return parameters.get('scene') === 'candidate-survey'
+        && parameters.get('inputAudit') === '1'
+        && parameters.get('auditStage') === 'candidate-rank'
+        && parameters.get('renderScale') === ${JSON.stringify(String(scale))}
+        && parameters.get('renderLook') === ${JSON.stringify(candidateLook)}
+        && parameters.get('candidateRankAudit') === '1'
+        && parameters.get('volumeVfx') === '1'
+        && parameters.get('liquidBodyVfx') === '1'
+        && parameters.get('powderBodyVfx') === '1'
+        && parameters.get('snowpackBodyVfx') === ${JSON.stringify(candidateSnowpackBodyVfx)}
+        && document.querySelector('[data-scene="candidate-survey"]') !== null
+        && typeof window.__ANIFOR_INPUT_AUDIT__?.materialCandidateSurveyFixture === 'function';
+    })()`), 15_000, `candidate rank ${scale}x survey page`);
+    await waitFor(() => evaluate(cdp,
+      `window.__ANIFOR_INPUT_AUDIT__.backend().backend === ${JSON.stringify(mode)}`,
+    ), 15_000, `candidate rank ${scale}x WebGL backend`);
+    stage('backend-ready');
+    const fixture = await evaluate(cdp,
+      'window.__ANIFOR_INPUT_AUDIT__.materialCandidateSurveyFixture()');
+    assert(fixture?.version === 1 && fixture.world?.width === WORLD_WIDTH
+      && fixture.world?.height === WORLD_HEIGHT
+      && fixture.regions?.length === 6
+      && fixture.semantic?.materialCounts?.length === 7
+      && new Set(fixture.regions.map(({ name }) => name)).size === 6
+      && new Set(fixture.regions.map(({ material }) => material)).size === 6
+      && fixture.regions.every(({ material }) => (
+        fixture.semantic.materialCounts.some((entry) => entry.material === material)
+      ))
+      && COMPOSED_MEDIA_EVIDENCE_VERSION === 4,
+    `candidate rank ${scale}x app-owned fixture is unavailable (${JSON.stringify(fixture)})`);
+    const powderProbes = fixture.powderStabilityProbes
+      ?? fixture.regions.filter(({ phase }) => phase === 'powder')
+        .map(({ name, x, y }) => ({ name, x, y }));
+    const powderStability = await waitFor(() => evaluate(cdp, `(() => {
+      const audit = window.__ANIFOR_INPUT_AUDIT__;
+      const probes = ${JSON.stringify(powderProbes)};
+      const states = probes.map(({ name, x, y }) => ({
+        name, x, y, material: audit.cell(x, y), auxiliary: audit.presentationAuxiliary(x, y),
+      }));
+      return states.every(({ material, auxiliary }) => material !== 0 && auxiliary === 255)
+        ? states : false;
+    })()`), scale === 4 ? 30_000 : 12_000, `candidate rank ${scale}x powder stability`);
+    stage('powder-stable');
+    await waitForNextWebGLPresentation(
+      cdp, `candidate rank ${scale}x settled presentation`,
+      scale === 4 ? 30_000 : 15_000, scale === 4 ? 30_000 : 15_000,
+    );
+    stage('presentation-settled');
+    const indicator = await evaluate(cdp, `(() => {
+      const nodes = [...document.querySelectorAll('.field-indicator')];
+      for (const node of nodes) node.style.visibility = 'hidden';
+      return { count: nodes.length, hidden: nodes.every((node) => getComputedStyle(node).visibility === 'hidden') };
+    })()`);
+    assert(indicator.count > 0 && indicator.hidden,
+      `candidate rank ${scale}x did not hide only the field indicator overlay`);
+    stage('indicator-hidden');
+    // Gather every semantic and telemetry invariant before the one GPU readback.
+    // Software WebGL is allowed to become slow after readPixels/toDataURL; the
+    // capture call below therefore also computes its image evidence atomically.
+    const geometry = await metrics(cdp);
+    assertGeometry(geometry, `candidate rank ${scale}x`, scale);
+    assert(geometry.backend.backend === 'webgl',
+      `candidate rank ${scale}x lost WebGL presentation`);
+    stage('geometry-proven');
+    const presentation = await evaluate(cdp, `(() => {
+      const canvas = document.querySelector('canvas.world-canvas');
+      return {
+        hdrPipeline: canvas?.dataset.hdrPipeline ?? 'missing',
+        liquidBodyVfx: canvas?.dataset.liquidBodyVfx ?? 'missing',
+        powderBodyVfx: canvas?.dataset.powderBodyVfx ?? 'missing',
+        snowpackBodyVfx: canvas?.dataset.snowpackBodyVfx ?? 'missing',
+      };
+    })()`);
+    const expectedSnowpackBodyVfx = ['1', 'on'].includes(candidateSnowpackBodyVfx)
+      ? 'active' : 'inactive';
+    assert(presentation.hdrPipeline === 'active'
+      && presentation.liquidBodyVfx === 'active'
+      && presentation.powderBodyVfx === 'active'
+      && presentation.snowpackBodyVfx === expectedSnowpackBodyVfx,
+    `candidate rank ${scale}x lost canonical body presentation (${JSON.stringify(presentation)})`);
+    stage('telemetry-proven');
+    const semantic = await candidateRankSemanticDigest(cdp, fixture);
+    stage('semantics-sampled');
+    assert(semantic.hash === fixture.semantic.hash
+      && semantic.occupied === fixture.semantic.occupied
+      && JSON.stringify(semantic.materialCounts) === JSON.stringify(fixture.semantic.materialCounts)
+      && semantic.regions.every((region, index) => region.matching === region.expectedMatching
+        && region.supportCells === region.expectedMatching),
+    `candidate rank ${scale}x lost exact fixture semantics (${JSON.stringify(semantic)})`);
+    // Preserve and read the settled WebGL canvas directly into one page-sized
+    // 2D composite. CDP's full compositor screenshot can leave software WebGL
+    // unresponsive after a valid readback; this bounded diagnostic path keeps
+    // the same fit-view mapping without asking Chrome to capture every UI layer.
+    const capture = await captureWorldCanvasComposite(
+      cdp, `candidate rank ${scale}x framebuffer`, fixture.regions,
+      scale === 4 ? 60_000 : 45_000,
+    );
+    stage('framebuffer-captured');
+    const samples = capture.samples;
+    stage('regions-sampled');
+    assert(samples.length === fixture.regions.length
+      && samples.every((sample, index) => sample.visible >= 2
+        && sample.supportPixels > 0
+        && sample.supportRecall >= fixture.regions[index].support.minimumRecall
+        && Number.isFinite(sample.lumaStdDev)),
+    `candidate rank ${scale}x regions did not present stable material (${JSON.stringify(samples)})`);
+    const regions = samples.map((sample, index) => {
+      const contract = fixture.regions[index];
+      assert(sample.name === contract.name,
+        `candidate rank ${scale}x reordered ${sample.name}/${contract.name}`);
+      return {
+        ...sample,
+        family: contract.phase,
+        profile: contract.profile,
+        material: contract.semanticMaterials[0],
+        evidence: scoreComposedMediaSample(sample, contract.profile),
+      };
+    });
+    const screenshot = screenshotRequest
+      ? variantScreenshotPath(screenshotRequest, `candidate-rank-${scale}x`) : undefined;
+    if (screenshot) await writeFile(screenshot, Buffer.from(capture.capture.data, 'base64'));
+    captures.push({
+      scale, geometry, fixture, semantic, regions, presentation, powderStability,
+      ...(screenshot ? { screenshot } : {}),
+    });
+    stage('complete');
+  }
+  const reference = captures.find(({ scale }) => scale === 2) ?? captures[0];
+  assert(reference, 'candidate material rank requires at least one capture');
+  const crossScaleDrift = [];
+  for (const capture of captures.filter(({ scale }) => scale !== reference.scale)) {
+    assertCanvasRectsEqual(reference.geometry.canvas, capture.geometry.canvas,
+      `candidate rank ${reference.scale}x/${capture.scale}x CSS canvas geometry`);
+    assert(reference.geometry.logical.worldSize === capture.geometry.logical.worldSize
+      && JSON.stringify(reference.fixture) === JSON.stringify(capture.fixture)
+      && JSON.stringify(reference.semantic) === JSON.stringify(capture.semantic),
+    `candidate rank ${reference.scale}x/${capture.scale}x changed fixture semantics`);
+    for (const baseline of reference.regions) {
+      const current = capture.regions.find(({ name }) => name === baseline.name);
+      assert(current, `candidate rank ${capture.scale}x lost ${baseline.name}`);
+      const qualityDrift = Math.abs(
+        current.evidence.qualityIndex - baseline.evidence.qualityIndex,
+      );
+      const componentDrift = Math.max(...Object.keys(baseline.evidence.components).map((name) => (
+        Math.abs(current.evidence.components[name] - baseline.evidence.components[name])
+      )));
+      const coverageDrift = Math.abs(current.coverage - baseline.coverage);
+      const supportRecallDrift = Math.abs(current.supportRecall - baseline.supportRecall);
+      const meanLumaDrift = Math.abs(current.meanLuma - baseline.meanLuma);
+      assert(coverageDrift <= 0.02 && supportRecallDrift <= 0.02
+        && meanLumaDrift <= 25 && current.visible > 0
+        && current.clippedFraction <= 0.10,
+      `candidate rank ${baseline.name} lost bounded cross-scale presentation at ${capture.scale}x (${JSON.stringify({
+        coverageDrift, supportRecallDrift, meanLumaDrift, visible: current.visible,
+        clippedFraction: current.clippedFraction,
+      })})`);
+      // This is a selection survey: large detail/quality drift is evidence that
+      // a candidate needs work, not a reason to discard the evidence. Freeze it
+      // explicitly so E48 can target the observed defect without weakening the
+      // accepted production showcase's stricter drift gate.
+      crossScaleDrift.push({
+        name: baseline.name,
+        scale: capture.scale,
+        qualityDrift: round(qualityDrift, 3),
+        componentDrift: round(componentDrift, 4),
+        meanLumaDrift: round(meanLumaDrift, 3),
+        microContrast: [baseline.microContrast, current.microContrast],
+        chromaticContrast: [baseline.chromaticContrast, current.chromaticContrast],
+        macroLumaRange: [baseline.macroLumaRange, current.macroLumaRange],
+      });
+    }
+  }
+  const weakestFirst = [...reference.regions]
+    .sort((left, right) => left.evidence.qualityIndex - right.evidence.qualityIndex)
+    .map((sample, index) => ({
+      rank: index + 1,
+      name: sample.name,
+      material: sample.material,
+      family: sample.family,
+      profile: sample.profile,
+      qualityIndex: sample.evidence.qualityIndex,
+      priorityDeficit: sample.evidence.priorityDeficit,
+      weakestComponent: sample.evidence.weakestComponent,
+      components: sample.evidence.components,
+      lumaStdDev: sample.lumaStdDev,
+      microContrast: sample.microContrast,
+      chromaticContrast: sample.chromaticContrast,
+      macroLumaRange: sample.macroLumaRange,
+      coverage: sample.coverage,
+      supportRecall: sample.supportRecall,
+      darkFraction: sample.darkFraction,
+      clippedFraction: sample.clippedFraction,
+    }));
+  return {
+    scales: captures.map(({ scale, geometry, semantic, regions, presentation,
+      powderStability, screenshot }) => ({
+      scale,
+      backing: geometry.backing,
+      cssCanvas: geometry.canvas,
+      semanticHash: semantic.hash,
+      occupied: semantic.occupied,
+      presentation,
+      powderStability,
+      regions: regions.map((sample) => ({
+        name: sample.name,
+        material: sample.material,
+        family: sample.family,
+        profile: sample.profile,
+        supportPixels: sample.supportPixels,
+        supportRecall: sample.supportRecall,
+        visible: sample.visible,
+        coverage: sample.coverage,
+        lumaStdDev: sample.lumaStdDev,
+        microContrast: sample.microContrast,
+        chromaticContrast: sample.chromaticContrast,
+        macroLumaRange: sample.macroLumaRange,
+        lumaRange: sample.lumaRange,
+        darkFraction: sample.darkFraction,
+        clippedFraction: sample.clippedFraction,
+        evidence: sample.evidence,
+      })),
+      ...(screenshot ? { screenshot } : {}),
+    })),
+    semanticContract: {
+      fixtureVersion: reference.fixture.version,
+      hash: reference.semantic.hash,
+      occupied: reference.semantic.occupied,
+      materialCounts: reference.semantic.materialCounts,
+      regions: reference.semantic.regions,
+    },
+    rankingMethod: `media-aware evidence v${COMPOSED_MEDIA_EVIDENCE_VERSION}; candidate selection still requires visible fit-view diagnosis`,
+    renderLook: candidateLook,
+    snowpackBodyVfx: candidateSnowpackBodyVfx,
+    weakestFirst,
+    crossScaleDrift,
+    schema: 'material-candidate-rank/v1',
+    referenceScale: reference.scale,
+    exactSceneAtCapturedScales: true,
+    crossScaleVerified: captures.length > 1,
+    fullScaleMatrix: captures.length === COMPOSED_RANK_SCALES.length,
+    fieldIndicatorHiddenOnlyForCapture: true,
+  };
+}
+
+/**
  * Fit-view media survey used to choose the next graphics experiment. Powder,
  * liquid, gas, rigid, organic, emission, and contact regions retain their own
  * visual vocabulary; one local-contrast formula must never rank them as if
@@ -12985,7 +13324,7 @@ async function composedRankSemanticDigest(cdp, fixture) {
       occupied += Number(material !== 0);
       hash = Math.imul(hash ^ material ^ (y * ${WORLD_WIDTH} + x), 16777619) >>> 0;
     }
-    const metal = (() => {
+    const metal = fixture.metalInsert ? (() => {
       const entry = fixture.metalInsert;
       const rowCounts = [];
       let count = 0;
@@ -13007,7 +13346,7 @@ async function composedRankSemanticDigest(cdp, fixture) {
         core: audit.cell(entry.coreProbe.x, entry.coreProbe.y),
         waterControls: entry.waterControls.map(({ x, y }) => audit.cell(x, y)),
       };
-    })();
+    })() : undefined;
     return {
       hash, occupied, metal,
       materialCounts: fixture.semantic.materialCounts.map(({ material }) => ({
@@ -13036,6 +13375,38 @@ async function composedRankSemanticDigest(cdp, fixture) {
         return {
           name: region.name, matching, expectedMatching: region.expectedMatching,
           supportCells, supportSignature,
+        };
+      }),
+    };
+  })()`);
+}
+
+/** Uses one direct app-owned plane scan, avoiding 235k audit-method calls. */
+async function candidateRankSemanticDigest(cdp, fixture) {
+  return evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    const fixture = ${JSON.stringify(fixture)};
+    const digest = audit.materialPlaneDigest();
+    const regionCounts = audit.materialRegionCounts(fixture.regions.map((region) => ({
+      x: region.x,
+      y: region.y,
+      radiusX: region.radiusX,
+      radiusY: region.radiusY,
+      materials: region.semanticMaterials,
+    })));
+    return {
+      hash: digest.hash,
+      occupied: digest.occupied,
+      materialCounts: fixture.semantic.materialCounts.map(({ material }) => ({
+        material, count: digest.materialCounts[material],
+      })),
+      regions: fixture.regions.map((region, index) => {
+        const matching = regionCounts[index];
+        return {
+          name: region.name,
+          matching,
+          expectedMatching: region.expectedMatching,
+          supportCells: matching,
         };
       }),
     };
@@ -36051,6 +36422,719 @@ async function auditEightXThermiteBodyVfxExclusion(cdp, dpr) {
   };
 }
 
+// E48 intentionally removes most of exact Snow's inherited cell-scale flake
+// carrier inside an already-proven stable Smooth body. Unlike E05/E45, the
+// metric is therefore a bounded reduction, not a near-1.0 retention target.
+const SNOWPACK_BODY_VFX_TEXTURE_LIMITS = Object.freeze({
+  minimumBaselineMicro: 4.0,
+  minimumMicroRetention: 0.08,
+  maximumMicroRetention: 0.55,
+  minimumEnabledMicro: 0.75,
+  minimumEnabledMacro: 4.0,
+  minimumMacroRetention: 0.25,
+  maximumClippedFraction: 0.02,
+});
+
+const SNOWPACK_BODY_VFX_RESPONSE_LIMITS = Object.freeze({
+  minimumRgbRms: 0.35,
+  maximumRgbRms: 48,
+  maximumRgbPeak: 96,
+  minimumCoverage: 0.04,
+});
+
+// Raw semantic/control pixels remain exact separately. These small composed
+// allowances cover only the HDR footprint immediately adjoining an eligible
+// bright snowpack or the independently eligible wall-free body probe.
+const SNOWPACK_BODY_VFX_CONTROL_PEAK = Object.freeze({
+  SNOWHole: 4,
+  SNOWOpenChannel: 4,
+  FineColumn: 0,
+  FineLine: 0,
+  Isolated: 0,
+  Moving: 0,
+  NativeWallOccupied: 0,
+  NativeWallClear: 32,
+  SuspendedSnow: 0,
+  SuspensionWater: 0,
+  SnowMetal: 2,
+  Metal: 1,
+  SnowWater: 2,
+  Water: 1,
+  GuardedBlank: 0,
+});
+
+/** E48: exact native Snow snowpack optics over E05's settled Smooth proof. */
+async function auditSnowpackBodyVfxExperiment(cdp, mode, dpr) {
+  const scales = [];
+  const requestedScales = renderScaleArgument === undefined
+    ? VOLUME_VFX_SCALES : [Number(renderScaleArgument)];
+  for (const scale of requestedScales) {
+    const captures = {};
+    for (const enabled of [false, true, false]) {
+      const key = enabled ? 'enabled' : captures.disabled ? 'disabledRepeat' : 'disabled';
+      const variant = await navigateSnowpackBodyVfxState(cdp, mode, scale, enabled, key);
+      variant.references = await capturePowderBodyVfxReferenceStyles(cdp, scale, key, 'E48');
+      captures[key] = variant;
+    }
+    const { disabled, enabled, disabledRepeat } = captures;
+    const fixture = disabled.fixture;
+    assert(JSON.stringify(fixture) === JSON.stringify(enabled.fixture)
+      && JSON.stringify(fixture) === JSON.stringify(disabledRepeat.fixture),
+    `E48 ${scale}x fixture metadata changed`);
+    for (const [label, variant] of Object.entries(captures)) {
+      assertGeometry(variant.geometry, `E48 ${label} ${scale}x`, scale);
+      assert(variant.geometry.backend.backend === 'webgl',
+        `E48 ${label} ${scale}x lost WebGL presentation`);
+      assert(variant.hdrPipeline?.state === 'active'
+        && variant.hdrPipeline.powderBodyVfx === 'active'
+        && variant.hdrPipeline.sootyPowderBodyVfx === 'inactive'
+        && variant.hdrPipeline.thermiteBodyVfx === 'inactive'
+        && variant.hdrPipeline.snowpackBodyVfx === (label === 'enabled' ? 'active' : 'inactive'),
+      `E48 ${label} ${scale}x selector/HDR state was wrong (${JSON.stringify(variant.hdrPipeline)})`);
+    }
+    assertCanvasRectsEqual(disabled.geometry.canvas, enabled.geometry.canvas,
+      `E48 ${scale}x disabled/enabled CSS geometry`);
+    assertCanvasRectsEqual(disabled.geometry.canvas, disabledRepeat.geometry.canvas,
+      `E48 ${scale}x disabled/repeated CSS geometry`);
+    assert(JSON.stringify(disabled.geometry.backing) === JSON.stringify(enabled.geometry.backing)
+      && JSON.stringify(disabled.geometry.backing) === JSON.stringify(disabledRepeat.geometry.backing),
+    `E48 ${scale}x backing geometry changed`);
+    assertHdrVfxSemanticEquality(disabled.semantic, enabled.semantic, `E48 ${scale}x disabled/enabled`);
+    assertHdrVfxSemanticEquality(disabled.semantic, disabledRepeat.semantic,
+      `E48 ${scale}x disabled/repeated`);
+    assert(disabled.semantic.occupied === fixture.expected.occupiedCells,
+      `E48 ${scale}x occupied-cell cardinality drifted (${JSON.stringify(disabled.semantic)})`);
+    assert(JSON.stringify(disabled.materialPlane) === JSON.stringify(enabled.materialPlane)
+      && JSON.stringify(disabled.materialPlane) === JSON.stringify(disabledRepeat.materialPlane)
+      && disabled.materialPlane.occupied === fixture.expected.occupiedCells
+      && disabled.materialPlane.materialCounts[fixture.target.material] === fixture.expected.snowCells
+      && disabled.materialPlane.materialCounts[2] === fixture.expected.waterCells
+      && disabled.materialPlane.materialCounts[23] === fixture.expected.metalCells
+      && Object.values(fixture.materialControls).every((entry) => (
+        disabled.materialPlane.materialCounts[entry.material]
+          === fixture.expected.cellsPerMaterialControl
+      )),
+    `E48 ${scale}x changed exact material-plane cardinalities (${JSON.stringify({
+      occupied: disabled.materialPlane.occupied,
+      snow: disabled.materialPlane.materialCounts[fixture.target.material],
+      water: disabled.materialPlane.materialCounts[2],
+      metal: disabled.materialPlane.materialCounts[23],
+    })})`);
+    assertVolumeVfxBackingInvariant(disabled.backing, enabled.backing,
+      `E48 ${scale}x disabled/enabled`);
+    assertVolumeVfxBackingInvariant(disabled.backing, disabledRepeat.backing,
+      `E48 ${scale}x disabled/repeated`);
+    assert(JSON.stringify(disabled.walls) === JSON.stringify(enabled.walls)
+      && JSON.stringify(disabled.walls) === JSON.stringify(disabledRepeat.walls)
+      && disabled.walls.occupied === fixture.expected.wallCells
+      && disabled.walls.expectedOccupied === fixture.expected.wallCells
+      && disabled.walls.mismatches === 0 && disabled.walls.matterMismatches === 0,
+    `E48 ${scale}x changed native-wall topology (${JSON.stringify(disabled.walls)})`);
+    assert(JSON.stringify(disabled.velocity) === JSON.stringify(enabled.velocity)
+      && JSON.stringify(disabled.velocity) === JSON.stringify(disabledRepeat.velocity)
+      && disabled.velocity.cells === fixture.expected.movingVelocityCells
+      && disabled.velocity.expectedCells === fixture.expected.movingVelocityCells
+      && disabled.velocity.mismatches === 0,
+    `E48 ${scale}x changed authored Snow velocity (${JSON.stringify(disabled.velocity)})`);
+    assert(JSON.stringify(disabled.auxiliary) === JSON.stringify(enabled.auxiliary)
+      && JSON.stringify(disabled.auxiliary) === JSON.stringify(disabledRepeat.auxiliary),
+    `E48 ${scale}x changed powder stability auxiliary state (${JSON.stringify(disabled.auxiliary)})`);
+    assert(Object.values(disabled.auxiliary.stable).every((range) => (
+      range.min === 255 && range.max === 255
+    )) && disabled.auxiliary.moving.min < 255 && disabled.auxiliary.moving.max < 255,
+    `E48 ${scale}x lost settled-body or moving-region stability proof (${JSON.stringify(disabled.auxiliary)})`);
+    assert(JSON.stringify(disabled.suspension) === JSON.stringify(enabled.suspension)
+      && JSON.stringify(disabled.suspension) === JSON.stringify(disabledRepeat.suspension),
+    `E48 ${scale}x changed Snow/Water suspension support (${JSON.stringify(disabled.suspension)})`);
+    const suspendedSnow = disabled.suspension.find(({ name }) => name === 'SuspendedSnow');
+    const suspensionWater = disabled.suspension.find(({ name }) => name === 'SuspensionWater');
+    assert(suspendedSnow?.cell === fixture.target.material && suspendedSnow.rgba[3] > 0
+      && suspendedSnow.liquidAlpha > 0 && suspensionWater?.cell === 2
+      && suspensionWater.rgba[3] > 0 && suspensionWater.liquidAlpha > 0,
+    `E48 ${scale}x did not establish genuine Snow/Water suspension support (${JSON.stringify(disabled.suspension)})`);
+    assertVolumeVfxRawAlphaInvariant(disabled.rawAll, enabled.rawAll,
+      `E48 ${scale}x disabled/enabled`);
+    assertVolumeVfxRawAlphaInvariant(disabled.rawAll, disabledRepeat.rawAll,
+      `E48 ${scale}x disabled/repeated`);
+    assert(JSON.stringify(disabled.rawControls) === JSON.stringify(enabled.rawControls)
+      && JSON.stringify(disabled.rawControls) === JSON.stringify(disabledRepeat.rawControls),
+    `E48 ${scale}x changed an exact raw topology/material/contact control (${JSON.stringify({
+      disabled: disabled.rawControls, enabled: enabled.rawControls,
+    })})`);
+    assert(disabled.capture.capture.data === disabledRepeat.capture.capture.data,
+      `E48 ${scale}x repeated off framebuffer was not byte exact`);
+
+    const targets = snowpackBodyVfxTargetRegions(fixture);
+    const controls = snowpackBodyVfxControlRegions(fixture);
+    const responses = await sampleBackdropRefractionRegions(cdp, {
+      straight: disabled.capture.capture.data,
+      refracted: enabled.capture.capture.data,
+      repeatedStraight: disabledRepeat.capture.capture.data,
+    }, [...targets, ...controls], disabled.capture.canvasRect);
+    const targetResponses = responses.slice(0, targets.length).map((sample) => ({
+      ...sample,
+      spatialRgbRms: round(Math.sqrt(Math.max(0, sample.rgbRms ** 2
+        - (Math.hypot(...sample.responseRgb) / Math.sqrt(3)) ** 2)), 3),
+    }));
+    const controlResponses = responses.slice(targets.length);
+    assert(responses.every((sample) => sample.repeatRgbPeak === 0),
+      `E48 ${scale}x off -> on -> off was not deterministic (${JSON.stringify(responses)})`);
+    assert(targetResponses.every((sample) => [
+      sample.rgbRms, sample.chromaRms, sample.rgbPeak, sample.coverage,
+      sample.signedMean, sample.spatialRgbRms,
+    ].every(Number.isFinite)
+      && sample.rgbRms >= SNOWPACK_BODY_VFX_RESPONSE_LIMITS.minimumRgbRms
+      && sample.rgbRms <= SNOWPACK_BODY_VFX_RESPONSE_LIMITS.maximumRgbRms
+      && sample.rgbPeak <= SNOWPACK_BODY_VFX_RESPONSE_LIMITS.maximumRgbPeak
+      && sample.coverage >= SNOWPACK_BODY_VFX_RESPONSE_LIMITS.minimumCoverage),
+    `E48 ${scale}x Snowpack response was absent or unbounded (${JSON.stringify(targetResponses)})`);
+    const byName = Object.fromEntries(targetResponses.map((sample) => [sample.name, sample]));
+    // Calming the dark/light flake carrier can raise a pocket's net mean even
+    // while the retained macro lobe remains locally absorptive. Require that
+    // differentiated negative lobe directly instead of inventing a net-dark
+    // grade that the renderer does not promise.
+    assert(byName.SNOWCrown.signedMean > byName.SNOWPocket.signedMean + 0.50
+      && byName.SNOWPocket.negativeMean >= 0.50
+      && byName.SNOWWholeBody.positiveMean >= 0.01
+      && byName.SNOWWholeBody.negativeMean >= 0.01
+      && byName.SNOWCore.responseSignature !== byName.SNOWCrown.responseSignature
+      && byName.SNOWCore.responseSignature !== byName.SNOWPocket.responseSignature,
+    `E48 ${scale}x lost broad differentiated snow crown/pocket relief (${JSON.stringify(byName)})`);
+    assert(controlResponses.length === controls.length
+      && controlResponses.every((sample) => sample.rgbPeak
+        <= (SNOWPACK_BODY_VFX_CONTROL_PEAK[sample.name] ?? 0)),
+    `E48 ${scale}x escaped a named topology/material/contact control (${JSON.stringify(controlResponses)})`);
+
+    const textureRegions = snowpackBodyVfxTextureRegions(fixture);
+    const texture = {};
+    for (const [name, variant] of Object.entries(captures)) {
+      texture[name] = await samplePageRegions(
+        cdp, variant.capture.capture.data, textureRegions,
+        undefined, undefined, variant.capture.canvasRect,
+      );
+    }
+    const textureResponse = texture.disabled.map((baseline, index) => {
+      const current = texture.enabled[index];
+      const repeated = texture.disabledRepeat[index];
+      assert(current?.name === baseline.name && repeated?.name === baseline.name,
+        `E48 ${scale}x reordered Snow texture regions`);
+      return {
+        name: baseline.name,
+        disabledMicro: baseline.microContrast,
+        enabledMicro: current.microContrast,
+        microRetention: round(current.microContrast / Math.max(0.001, baseline.microContrast), 4),
+        disabledMacro: baseline.macroLumaRange,
+        enabledMacro: current.macroLumaRange,
+        macroRetention: round(current.macroLumaRange / Math.max(0.001, baseline.macroLumaRange), 4),
+        enabledLumaStdDev: current.lumaStdDev,
+        supportRecall: current.supportRecall,
+        clippedFraction: current.clippedFraction,
+        repeatExact: JSON.stringify(baseline) === JSON.stringify(repeated),
+      };
+    });
+    assert(textureResponse.every((sample) => sample.disabledMicro
+      >= SNOWPACK_BODY_VFX_TEXTURE_LIMITS.minimumBaselineMicro
+      && sample.enabledMicro >= SNOWPACK_BODY_VFX_TEXTURE_LIMITS.minimumEnabledMicro
+      && sample.microRetention >= SNOWPACK_BODY_VFX_TEXTURE_LIMITS.minimumMicroRetention
+      && sample.microRetention <= SNOWPACK_BODY_VFX_TEXTURE_LIMITS.maximumMicroRetention
+      && sample.enabledMacro >= SNOWPACK_BODY_VFX_TEXTURE_LIMITS.minimumEnabledMacro
+      && sample.macroRetention >= SNOWPACK_BODY_VFX_TEXTURE_LIMITS.minimumMacroRetention
+      && sample.enabledLumaStdDev >= 1.0 && sample.supportRecall === 1
+      && sample.clippedFraction <= SNOWPACK_BODY_VFX_TEXTURE_LIMITS.maximumClippedFraction
+      && sample.repeatExact),
+    `E48 ${scale}x did not calm dense Snow while retaining macro relief (${JSON.stringify({
+      limits: SNOWPACK_BODY_VFX_TEXTURE_LIMITS, textureResponse,
+    })})`);
+
+    const references = {};
+    const referenceRegions = snowpackBodyVfxReferenceRegions(fixture);
+    for (const style of ['grains', 'local']) {
+      const samples = await sampleBackdropRefractionRegions(cdp, {
+        straight: disabled.references[style].capture.data,
+        refracted: enabled.references[style].capture.data,
+        repeatedStraight: disabledRepeat.references[style].capture.data,
+      }, referenceRegions, disabled.references[style].canvasRect);
+      assert(samples.every((sample) => sample.rgbPeak === 0 && sample.repeatRgbPeak === 0),
+        `E48 ${scale}x escaped the exact ${style} reference mode (${JSON.stringify(samples)})`);
+      references[style] = samples;
+    }
+    const screenshots = screenshotRequest && (requestedScales.length === 1 || scale === 2)
+      ? await writeSnowpackBodyVfxScreenshots(screenshotRequest, scale, disabled, enabled)
+      : undefined;
+    scales.push({
+      scale, geometry: disabled.geometry, semantic: disabled.semantic,
+      backing: disabled.geometry.backing, alphaSupport: disabled.backing,
+      walls: disabled.walls, velocity: disabled.velocity, auxiliary: disabled.auxiliary,
+      suspension: disabled.suspension, rawControls: disabled.rawControls,
+      targetResponses, controlResponses, textureResponse, references,
+      exactRepeatedOff: true, screenshots,
+    });
+  }
+  if (scales.length > 1) {
+    const reference = scales.find(({ scale }) => scale === 2) ?? scales[0];
+    for (const sample of scales.filter(({ scale }) => scale !== reference.scale)) {
+      assertCanvasRectsEqual(reference.geometry.canvas, sample.geometry.canvas,
+        `E48 ${reference.scale}x/${sample.scale}x CSS geometry`);
+      assert(JSON.stringify(reference.semantic) === JSON.stringify(sample.semantic)
+        && JSON.stringify(reference.walls) === JSON.stringify(sample.walls)
+        && JSON.stringify(reference.velocity) === JSON.stringify(sample.velocity)
+        && JSON.stringify(reference.auxiliary) === JSON.stringify(sample.auxiliary)
+        && JSON.stringify(reference.suspension) === JSON.stringify(sample.suspension),
+      `E48 ${sample.scale}x changed exact fixture state across output scales`);
+      for (const baseline of reference.textureResponse) {
+        const current = sample.textureResponse.find(({ name }) => name === baseline.name);
+        assert(current && Math.abs(current.microRetention - baseline.microRetention) <= 0.30
+          && Math.abs(current.macroRetention - baseline.macroRetention) <= 0.55,
+        `E48 ${baseline.name} texture response drifted at ${sample.scale}x (${JSON.stringify({
+          reference: baseline, current,
+        })})`);
+      }
+    }
+  }
+  const trueEightX = await auditEightXSnowpackBodyVfxExclusion(cdp, dpr);
+  return {
+    calibration: 'e48-relational-1x-4x',
+    textureLimits: SNOWPACK_BODY_VFX_TEXTURE_LIMITS,
+    responseLimits: SNOWPACK_BODY_VFX_RESPONSE_LIMITS,
+    controlPeakCaps: SNOWPACK_BODY_VFX_CONTROL_PEAK,
+    scales, trueEightXExcluded: true, trueEightX,
+  };
+}
+
+async function navigateSnowpackBodyVfxState(cdp, mode, scale, enabled, label) {
+  const query = new URLSearchParams({
+    scene: 'render-lab', inputAudit: '1', blankAudit: '1', auditStage: 'blank',
+    snowpackBodyVfxAudit: '1', renderScale: String(scale), renderLook: 'realistic',
+    volumeVfx: '0', liquidBodyVfx: '0', liquidSurfaceVfx: '0', gasBodyVfx: '0',
+    gasMotionVfx: '0', powderBodyVfx: '1', sootyPowderBodyVfx: '0',
+    thermiteBodyVfx: '0', snowpackBodyVfx: enabled ? '1' : '0',
+    powderLightVfx: '0', powderSolidContactVfx: '0', translucentEdgeVfx: '0',
+    organicSubsurfaceVfx: '0', wetSedimentVfx: '0', gasLightVfx: '0',
+    liquidSolidMeniscusVfx: '0', metalWaterContactVfx: '0', gasCoreDepthVfx: '0',
+    nobleGasBillowVfx: '0', nobleGasPrismVfx: '0', smokeSoftnessVfx: '0',
+    smokeBillowDepthVfx: '0', plasmaCoreVfx: '0', solidBodyVfx: '0',
+    radioactiveSolidBodyVfx: '0', iszsCrystallineVfx: '0', platinumBodyVfx: '0',
+    ceramicGlazeVfx: '0', botanicalBodyVfx: '0', botanicalMesostructureVfx: '0',
+    botanicalPigmentVfx: '0', plantLaminaVfx: '0', plantLobeDepthVfx: '0',
+    plantCanopyMassVfx: '0', woodBarkReliefVfx: '0', woodTanninVfx: '0',
+    glassBodyVfx: '0', acidBodyVfx: '0', deutBodyVfx: '0', oilBodyVfx: '0',
+    oilVolumeFinishVfx: '0', rockRoughnessVfx: '0', rockMesostructureVfx: '0',
+    waterBodyVfx: '0', hydrogenBodyVfx: '0', carbonDioxideBodyVfx: '0',
+  });
+  await cdp.send('Page.navigate', { url: `${AUDIT_BASE_URL}?${query}` });
+  await waitFor(() => evaluate(cdp, `(() => {
+    const p = new URLSearchParams(location.search);
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    const isolated = ${JSON.stringify(SNOWPACK_BODY_VFX_ISOLATED_SELECTORS)};
+    return p.get('snowpackBodyVfxAudit') === '1'
+      && p.get('renderScale') === ${JSON.stringify(String(scale))}
+      && p.get('renderLook') === 'realistic' && p.get('powderBodyVfx') === '1'
+      && p.get('snowpackBodyVfx') === ${JSON.stringify(enabled ? '1' : '0')}
+      && isolated.every((name) => p.get(name) === '0')
+      && typeof audit?.prepareSnowpackBodyVfxFixture === 'function'
+      && typeof audit?.snowpackBodyVfxFixture === 'function';
+  })()`), scale === 4 ? 45_000 : 15_000, `E48 ${label} ${scale}x page`);
+  await waitFor(() => evaluate(cdp,
+    `window.__ANIFOR_INPUT_AUDIT__.backend().backend === ${JSON.stringify(mode)}`),
+  scale === 4 ? 30_000 : 15_000, `E48 ${label} ${scale}x backend`);
+  const fixture = await evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    audit.prepareSnowpackBodyVfxFixture(); audit.setPowderRenderStyle('smooth');
+    return audit.snowpackBodyVfxFixture();
+  })()`);
+  // Seven independently observed refreshes settle the broad body at byte 255
+  // while the authored-velocity control remains below the stability threshold.
+  for (let pass = 0; pass < 7; pass++) {
+    const before = await evaluate(cdp,
+      'window.__ANIFOR_INPUT_AUDIT__.presentationRefreshAudit()');
+    await evaluate(cdp,
+      'window.__ANIFOR_INPUT_AUDIT__.refreshPresentationFields(); true');
+    await waitFor(() => evaluate(cdp, `(() => {
+      const current = window.__ANIFOR_INPUT_AUDIT__.presentationRefreshAudit();
+      return current?.dynamicSequence > ${before.dynamicSequence} ? current : false;
+    })()`), scale === 4 ? 15_000 : 5_000,
+    `E48 ${label} ${scale}x stability pass ${pass + 1}`);
+  }
+  await waitFor(() => snowpackBodyVfxFixtureReady(cdp, fixture), 20_000,
+    `E48 ${label} ${scale}x fixture/stability hydration`);
+  await sleep(350);
+  const hdrPipeline = await evaluate(cdp, `(() => {
+    const canvas = document.querySelector('canvas.semantic-field-canvas');
+    if (!canvas) return undefined;
+    const isolated = ${JSON.stringify(SNOWPACK_BODY_VFX_ISOLATED_SELECTORS)};
+    return {
+      look: canvas.dataset.renderLook, state: canvas.dataset.hdrPipeline,
+      reason: canvas.dataset.hdrPipelineReason, bloomBacking: canvas.dataset.bloomBacking,
+      powderBodyVfx: canvas.dataset.powderBodyVfx,
+      sootyPowderBodyVfx: canvas.dataset.sootyPowderBodyVfx,
+      thermiteBodyVfx: canvas.dataset.thermiteBodyVfx,
+      snowpackBodyVfx: canvas.dataset.snowpackBodyVfx,
+      isolatedSelectors: Object.fromEntries(isolated.map((name) => [name, canvas.dataset[name]])),
+    };
+  })()`);
+  const expectedBloom = `${WORLD_WIDTH * scale / 2}x${WORLD_HEIGHT * scale / 2}`;
+  assert(hdrPipeline?.look === 'realistic' && hdrPipeline.state === 'active'
+    && hdrPipeline.bloomBacking === expectedBloom && hdrPipeline.powderBodyVfx === 'active'
+    && hdrPipeline.sootyPowderBodyVfx === 'inactive'
+    && hdrPipeline.thermiteBodyVfx === 'inactive'
+    && Object.values(hdrPipeline.isolatedSelectors).every((state) => state === 'inactive')
+    && hdrPipeline.snowpackBodyVfx === (enabled ? 'active' : 'inactive'),
+  `E48 ${label} ${scale}x HDR/selector isolation failed (${JSON.stringify(hdrPipeline)})`);
+  return {
+    fixture,
+    capture: await waitForStablePageCapture(
+      cdp, `E48 ${label} ${scale}x framebuffer`,
+      scale === 4 ? 45_000 : scale === 2 ? 30_000 : 15_000,
+    ),
+    geometry: await metrics(cdp), semantic: await hdrVfxSemanticDigest(cdp),
+    materialPlane: await evaluate(cdp,
+      'window.__ANIFOR_INPUT_AUDIT__.materialPlaneDigest()'),
+    backing: await sampleVolumeVfxCanvasAlphaSupport(cdp),
+    walls: await snowpackBodyVfxWallDigest(cdp, fixture),
+    velocity: await snowpackBodyVfxVelocityDigest(cdp, fixture),
+    auxiliary: await snowpackBodyVfxAuxiliaryDigest(cdp, fixture),
+    suspension: await snowpackBodyVfxSuspensionDigest(cdp, fixture),
+    rawAll: await sampleVolumeVfxRawWorldPixels(cdp, snowpackBodyVfxAllRawPoints(fixture)),
+    rawControls: await sampleVolumeVfxRawWorldPixels(
+      cdp, snowpackBodyVfxRawControlPoints(fixture),
+    ),
+    hdrPipeline,
+  };
+}
+
+const SNOWPACK_BODY_VFX_ISOLATED_SELECTORS = Object.freeze([
+  'volumeVfx', 'liquidBodyVfx', 'liquidSurfaceVfx', 'gasBodyVfx', 'gasMotionVfx',
+  'sootyPowderBodyVfx', 'thermiteBodyVfx', 'powderLightVfx', 'powderSolidContactVfx',
+  'translucentEdgeVfx', 'organicSubsurfaceVfx', 'wetSedimentVfx', 'gasLightVfx',
+  'liquidSolidMeniscusVfx', 'metalWaterContactVfx', 'gasCoreDepthVfx',
+  'nobleGasBillowVfx', 'nobleGasPrismVfx', 'smokeSoftnessVfx',
+  'smokeBillowDepthVfx', 'plasmaCoreVfx', 'solidBodyVfx',
+  'radioactiveSolidBodyVfx', 'iszsCrystallineVfx', 'platinumBodyVfx',
+  'ceramicGlazeVfx', 'botanicalBodyVfx', 'botanicalMesostructureVfx',
+  'botanicalPigmentVfx', 'plantLaminaVfx', 'plantLobeDepthVfx',
+  'plantCanopyMassVfx', 'woodBarkReliefVfx', 'woodTanninVfx', 'glassBodyVfx',
+  'acidBodyVfx', 'deutBodyVfx', 'oilBodyVfx', 'oilVolumeFinishVfx',
+  'rockRoughnessVfx', 'rockMesostructureVfx', 'waterBodyVfx',
+  'hydrogenBodyVfx', 'carbonDioxideBodyVfx',
+]);
+
+async function snowpackBodyVfxFixtureReady(cdp, fixture) {
+  return evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    const fixture = ${JSON.stringify(fixture)};
+    if (fixture?.version !== 1 || fixture.world?.width !== audit.width
+      || fixture.world?.height !== audit.height || fixture.target?.material !== 18) return false;
+    const inside = (rect, x, y) => x >= rect.x && x < rect.x + rect.width
+      && y >= rect.y && y < rect.y + rect.height;
+    const exactRect = (rect, material) => {
+      for (let y = rect.y; y < rect.y + rect.height; y++) {
+        for (let x = rect.x; x < rect.x + rect.width; x++) {
+          if (audit.cell(x, y) !== material) return false;
+        }
+      }
+      return true;
+    };
+    const exactAuxiliary = (rect, predicate) => {
+      for (let y = rect.y; y < rect.y + rect.height; y++) {
+        for (let x = rect.x; x < rect.x + rect.width; x++) {
+          if (!predicate(audit.presentationAuxiliary(x, y))) return false;
+        }
+      }
+      return true;
+    };
+    const target = fixture.target;
+    for (let y = target.body.y; y < target.body.y + target.body.height; y++) {
+      for (let x = target.body.x; x < target.body.x + target.body.width; x++) {
+        const empty = inside(target.authoredHole, x, y) || inside(target.openChannel, x, y);
+        if (audit.cell(x, y) !== (empty ? 0 : target.material)) return false;
+      }
+    }
+    if (![target.core, target.crown, target.pocket].every((rect) => (
+      exactRect(rect, target.material) && exactAuxiliary(rect, (value) => value === 255)
+    ))) return false;
+    const wall = target.wallCoexistence;
+    for (let y = wall.region.y; y < wall.region.y + wall.region.height; y++) {
+      for (let x = wall.region.x; x < wall.region.x + wall.region.width; x++) {
+        const blockX = Math.floor((x - wall.region.x) / wall.blockSize);
+        const blockY = Math.floor((y - wall.region.y) / wall.blockSize);
+        const expected = (blockX + blockY) % 2 === wall.occupiedParity
+          ? fixture.conductiveWall : 0;
+        if (audit.cell(x, y) !== target.material || audit.wall(x, y) !== expected) return false;
+      }
+    }
+    if (!exactRect(fixture.fineTopology.column, target.material)
+      || !exactRect(fixture.fineTopology.line, target.material)
+      || audit.cell(fixture.fineTopology.isolated.x, fixture.fineTopology.isolated.y)
+        !== target.material) return false;
+    const moving = fixture.movingControl;
+    if (!exactRect(moving, target.material)
+      || !exactAuxiliary(moving, (value) => value < 255)) return false;
+    for (let y = moving.y; y < moving.y + moving.height; y++) {
+      for (let x = moving.x; x < moving.x + moving.width; x++) {
+        const velocity = audit.velocity(x, y);
+        if (velocity[0] !== moving.velocityX || velocity[1] !== moving.velocityY) return false;
+      }
+    }
+    const suspension = fixture.suspensionControl;
+    const snow = new Set(suspension.snowPoints.map((point) => point.x + ',' + point.y));
+    for (let y = suspension.region.y; y < suspension.region.y + suspension.region.height; y++) {
+      for (let x = suspension.region.x; x < suspension.region.x + suspension.region.width; x++) {
+        if (audit.cell(x, y) !== (snow.has(x + ',' + y) ? target.material : 2)) return false;
+      }
+    }
+    const boundary = (entry) => exactRect(entry.snow, target.material)
+      && exactRect(entry.other, entry.otherMaterial);
+    const digest = audit.materialPlaneDigest();
+    return Object.values(fixture.materialControls).every((entry) => exactRect(entry, entry.material))
+      && Object.values(fixture.contacts).every(boundary)
+      && audit.cell(suspension.snowProbe.x, suspension.snowProbe.y) === target.material
+      && audit.cell(suspension.waterProbe.x, suspension.waterProbe.y) === 2
+      && exactRect(fixture.guardedBlank, 0)
+      && digest.occupied === fixture.expected.occupiedCells
+      && digest.materialCounts[target.material] === fixture.expected.snowCells
+      && digest.materialCounts[2] === fixture.expected.waterCells
+      && digest.materialCounts[23] === fixture.expected.metalCells
+      && JSON.stringify(fixture.powderStyleMatrix) === JSON.stringify([
+        { style: 'smooth', expectation: 'target' },
+        { style: 'local', expectation: 'exact-no-op' },
+        { style: 'grains', expectation: 'exact-no-op' },
+      ]);
+  })()`);
+}
+
+async function snowpackBodyVfxWallDigest(cdp, fixture) {
+  return evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__; const fixture = ${JSON.stringify(fixture)};
+    const pattern = fixture.target.wallCoexistence;
+    let occupied = 0; let expectedOccupied = 0; let mismatches = 0; let matterMismatches = 0;
+    for (let y = pattern.region.y; y < pattern.region.y + pattern.region.height; y++) {
+      for (let x = pattern.region.x; x < pattern.region.x + pattern.region.width; x++) {
+        const blockX = Math.floor((x - pattern.region.x) / pattern.blockSize);
+        const blockY = Math.floor((y - pattern.region.y) / pattern.blockSize);
+        const expected = (blockX + blockY) % 2 === pattern.occupiedParity
+          ? fixture.conductiveWall : 0;
+        occupied += Number(audit.wall(x, y) === fixture.conductiveWall);
+        expectedOccupied += Number(expected === fixture.conductiveWall);
+        mismatches += Number(audit.wall(x, y) !== expected);
+        matterMismatches += Number(audit.cell(x, y) !== fixture.target.material);
+      }
+    }
+    return { occupied, expectedOccupied, mismatches, matterMismatches,
+      wallProbe: audit.wall(pattern.wallProbe.x, pattern.wallProbe.y),
+      clearProbe: audit.wall(pattern.clearProbe.x, pattern.clearProbe.y) };
+  })()`);
+}
+
+async function snowpackBodyVfxVelocityDigest(cdp, fixture) {
+  return evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__; const rect = ${JSON.stringify(fixture.movingControl)};
+    let cells = 0; let mismatches = 0; let minimumX = 127; let maximumX = -128;
+    let minimumY = 127; let maximumY = -128;
+    for (let y = rect.y; y < rect.y + rect.height; y++) {
+      for (let x = rect.x; x < rect.x + rect.width; x++) {
+        const velocity = audit.velocity(x, y); cells++;
+        minimumX = Math.min(minimumX, velocity[0]); maximumX = Math.max(maximumX, velocity[0]);
+        minimumY = Math.min(minimumY, velocity[1]); maximumY = Math.max(maximumY, velocity[1]);
+        mismatches += Number(velocity[0] !== rect.velocityX || velocity[1] !== rect.velocityY);
+      }
+    }
+    return { cells, expectedCells: rect.width * rect.height, mismatches,
+      range: [minimumX, maximumX, minimumY, maximumY] };
+  })()`);
+}
+
+async function snowpackBodyVfxAuxiliaryDigest(cdp, fixture) {
+  return evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__; const fixture = ${JSON.stringify(fixture)};
+    const range = (rect) => {
+      let min = 255; let max = 0;
+      for (let y = rect.y; y < rect.y + rect.height; y++) {
+        for (let x = rect.x; x < rect.x + rect.width; x++) {
+          const value = audit.presentationAuxiliary(x, y);
+          min = Math.min(min, value); max = Math.max(max, value);
+        }
+      }
+      return { min, max };
+    };
+    return { stable: { core: range(fixture.target.core), crown: range(fixture.target.crown),
+      pocket: range(fixture.target.pocket) }, moving: range(fixture.movingControl) };
+  })()`);
+}
+
+async function snowpackBodyVfxSuspensionDigest(cdp, fixture) {
+  return evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__; const fixture = ${JSON.stringify(fixture)};
+    return [
+      { name: 'SuspendedSnow', material: fixture.target.material,
+        point: fixture.suspensionControl.snowProbe },
+      { name: 'SuspensionWater', material: 2, point: fixture.suspensionControl.waterProbe },
+    ].map((entry) => ({ name: entry.name, material: entry.material,
+      cell: audit.cell(entry.point.x, entry.point.y),
+      rgba: audit.suspensionAt(entry.point.x, entry.point.y),
+      liquidAlpha: audit.liquidFieldAlpha(entry.point.x, entry.point.y) }));
+  })()`);
+}
+
+function snowpackBodyVfxTargetRegions(fixture) {
+  const rect = (name, candidate) => ({
+    name, target: true,
+    x: candidate.x + candidate.width / 2, y: candidate.y + candidate.height / 2,
+    radiusX: Math.max(0.35, candidate.width / 2 - 0.2),
+    radiusY: Math.max(0.35, candidate.height / 2 - 0.2),
+  });
+  return [
+    rect('SNOWWholeBody', fixture.target.body),
+    rect('SNOWCrown', fixture.target.crown),
+    rect('SNOWPocket', fixture.target.pocket),
+    rect('SNOWCore', fixture.target.core),
+  ];
+}
+
+function snowpackBodyVfxTextureRegions(fixture) {
+  return snowpackBodyVfxTargetRegions(fixture)
+    .filter(({ name }) => name !== 'SNOWWholeBody')
+    .map((region) => ({ ...region,
+      support: { kind: 'semantic', materials: [fixture.target.material] } }));
+}
+
+function snowpackBodyVfxReferenceRegions(fixture) {
+  return snowpackBodyVfxTargetRegions(fixture).map(({ target: _target, ...region }) => region);
+}
+
+function snowpackBodyVfxControlRegions(fixture) {
+  const point = (name, candidate) => ({
+    name, x: Math.floor(candidate.x) + 0.5, y: Math.floor(candidate.y) + 0.5, radius: 0,
+  });
+  const center = (name, rect) => point(name, {
+    x: rect.x + Math.floor(rect.width / 2), y: rect.y + Math.floor(rect.height / 2),
+  });
+  const controls = [
+    center('SNOWHole', fixture.target.authoredHole),
+    center('SNOWOpenChannel', fixture.target.openChannel),
+    center('FineColumn', fixture.fineTopology.column),
+    center('FineLine', fixture.fineTopology.line),
+    point('Isolated', fixture.fineTopology.isolated),
+    center('Moving', fixture.movingControl),
+    point('NativeWallOccupied', fixture.target.wallCoexistence.wallProbe),
+    point('NativeWallClear', fixture.target.wallCoexistence.clearProbe),
+  ];
+  for (const [name, rect] of Object.entries(fixture.materialControls)) {
+    controls.push(center(`Material${name[0].toUpperCase()}${name.slice(1)}`, rect));
+  }
+  controls.push(
+    point('SuspendedSnow', fixture.suspensionControl.snowProbe),
+    point('SuspensionWater', fixture.suspensionControl.waterProbe),
+    point('SnowMetal', fixture.contacts.metal.snowProbe),
+    point('Metal', fixture.contacts.metal.otherProbe),
+    point('SnowWater', fixture.contacts.water.snowProbe),
+    point('Water', fixture.contacts.water.otherProbe),
+    center('GuardedBlank', fixture.guardedBlank),
+  );
+  return controls;
+}
+
+function snowpackBodyVfxAllRawPoints(fixture) {
+  return [
+    ...snowpackBodyVfxTargetRegions(fixture).map(({ name, x, y }) => ({
+      name, x: Math.floor(x), y: Math.floor(y),
+    })),
+    ...snowpackBodyVfxRawControlPoints(fixture),
+  ];
+}
+
+function snowpackBodyVfxRawControlPoints(fixture) {
+  return snowpackBodyVfxControlRegions(fixture).map(({ name, x, y }) => ({
+    name, x: Math.floor(x), y: Math.floor(y),
+  }));
+}
+
+async function writeSnowpackBodyVfxScreenshots(source, scale, disabled, enabled) {
+  const paths = {
+    off: variantScreenshotPath(source, `e48-snowpack-body-${scale}x-off`),
+    on: variantScreenshotPath(source, `e48-snowpack-body-${scale}x-on`),
+  };
+  await writeFile(paths.off, Buffer.from(disabled.capture.capture.data, 'base64'));
+  await writeFile(paths.on, Buffer.from(enabled.capture.capture.data, 'base64'));
+  return paths;
+}
+
+async function auditEightXSnowpackBodyVfxExclusion(cdp, dpr) {
+  await setDesktopMetrics(cdp, 1280, 720, dpr);
+  const query = new URLSearchParams({
+    scene: 'render-lab', inputAudit: '1', blankAudit: '1', renderScale: '8',
+    auditStage: 'eight-snowpack-body', snowpackBodyVfxAudit: '1', renderLook: 'realistic',
+    volumeVfx: '0', liquidBodyVfx: '0', liquidSurfaceVfx: '0', gasBodyVfx: '0',
+    gasMotionVfx: '0', powderBodyVfx: '1', sootyPowderBodyVfx: '0',
+    thermiteBodyVfx: '0', snowpackBodyVfx: '1', powderLightVfx: '0',
+    powderSolidContactVfx: '0', translucentEdgeVfx: '0', organicSubsurfaceVfx: '0',
+    wetSedimentVfx: '0', gasLightVfx: '0', liquidSolidMeniscusVfx: '0',
+    metalWaterContactVfx: '0', gasCoreDepthVfx: '0', nobleGasBillowVfx: '0',
+    nobleGasPrismVfx: '0', smokeSoftnessVfx: '0', smokeBillowDepthVfx: '0',
+    plasmaCoreVfx: '0', solidBodyVfx: '0', radioactiveSolidBodyVfx: '0',
+    iszsCrystallineVfx: '0', platinumBodyVfx: '0', ceramicGlazeVfx: '0',
+    botanicalBodyVfx: '0', glassBodyVfx: '0', oilBodyVfx: '0',
+    rockRoughnessVfx: '0', rockMesostructureVfx: '0', waterBodyVfx: '0',
+    acidBodyVfx: '0', hydrogenBodyVfx: '0', carbonDioxideBodyVfx: '0',
+  });
+  await cdp.send('Page.navigate', { url: `${AUDIT_BASE_URL}?${query}` });
+  const deadline = Date.now() + EIGHT_X_PRESENTATION_DEADLINE_MS;
+  await waitFor(() => evaluate(cdp, `(() => {
+    const p = new URLSearchParams(location.search);
+    return p.get('renderScale') === '8' && p.get('auditStage') === 'eight-snowpack-body'
+      && p.get('powderBodyVfx') === '1' && p.get('snowpackBodyVfx') === '1'
+      && p.get('sootyPowderBodyVfx') === '0' && p.get('thermiteBodyVfx') === '0'
+      && Boolean(window.__ANIFOR_INPUT_AUDIT__);
+  })()`), remainingDeadlineMs(deadline, 'true-8x E48 input audit API'),
+  'true-8x E48 input audit API');
+  const backend = await waitForEightXTerminalBackend(cdp, 'true-8x E48', deadline);
+  assertEightXWebGLBackend(backend, 'true-8x E48');
+  const geometry = await waitForStableCanvas(
+    cdp, 1280, 720, undefined,
+    Math.min(45_000, remainingDeadlineMs(deadline, 'true-8x E48 geometry')),
+    'true-8x E48 geometry',
+  );
+  assert(geometry.backing.width === WORLD_WIDTH * 8
+    && geometry.backing.height === WORLD_HEIGHT * 8 && geometry.outputScale === '8',
+  `true-8x E48 lost exact backing (${JSON.stringify(geometry.backing)})`);
+  const isolation = await evaluate(cdp, `(() => {
+    const canvas = document.querySelector('canvas.semantic-field-canvas');
+    return canvas ? {
+      renderer: canvas.dataset.renderer, look: canvas.dataset.renderLook,
+      state: canvas.dataset.hdrPipeline, reason: canvas.dataset.hdrPipelineReason,
+      bloomBacking: canvas.dataset.bloomBacking ?? null,
+      powderBodyVfx: canvas.dataset.powderBodyVfx,
+      sootyPowderBodyVfx: canvas.dataset.sootyPowderBodyVfx,
+      thermiteBodyVfx: canvas.dataset.thermiteBodyVfx,
+      snowpackBodyVfx: canvas.dataset.snowpackBodyVfx,
+    } : undefined;
+  })()`, Math.min(1_000, remainingDeadlineMs(deadline, 'true-8x E48 isolation')));
+  assert(isolation?.renderer === 'semantic-field-webgl' && isolation.look === 'realistic'
+    && isolation.state === 'inactive' && isolation.reason === 'scale-8'
+    && isolation.bloomBacking === null && isolation.powderBodyVfx === 'inactive'
+    && isolation.sootyPowderBodyVfx === 'inactive'
+    && isolation.thermiteBodyVfx === 'inactive'
+    && isolation.snowpackBodyVfx === 'inactive',
+  `true-8x E48 isolation failed (${JSON.stringify(isolation)})`);
+  // E48 owns no compact-shader path. Avoid uploading the dense fixture here:
+  // this tail proves selector/resource exclusion on one already-fenced 8x frame.
+  const stateBefore = await hdrVfxSemanticDigest(cdp);
+  const timingBudget = remainingDeadlineMs(deadline, 'true-8x E48 GPU completion');
+  const timing = await auditWebGLPresentationTiming(
+    cdp, 1, Math.min(12_000, timingBudget), timingBudget, 1,
+  );
+  assert(['gpu-query', 'gpu-fence', 'gpu-finish'].includes(timing.source),
+    `true-8x E48 did not complete GPU work (${JSON.stringify(timing)})`);
+  const stateAfter = await hdrVfxSemanticDigest(cdp);
+  assertHdrVfxSemanticEquality(stateBefore, stateAfter, 'true-8x E48 GPU completion');
+  return {
+    backing: `${geometry.backing.width}x${geometry.backing.height}`,
+    promotedWebGLObserved: geometry.outputScale === '8'
+      && geometry.backend.backend === 'webgl',
+    selectorExcluded: true, resourcesIdentical: isolation.bloomBacking === null,
+    semanticStable: true, isolation, timing,
+  };
+}
+
 // E25's accepted SwiftShader matrix freezes the body response without making
 // the bounds sensitive to sub-byte browser composition. Exact raw controls
 // remain byte-identical; only named neighbours of an eligible Noble Gas body
@@ -41686,6 +42770,220 @@ function worldClient(rect, world) {
 
 async function screenWorld(cdp, point) {
   return evaluate(cdp, `window.__ANIFOR_INPUT_AUDIT__.screenToWorld(${point.x}, ${point.y})`);
+}
+
+/**
+ * Captures only the fitted world canvas into a page-sized 2D surface. The
+ * candidate survey has no relevant DOM overlays, and its exact semantic masks
+ * are sampled separately, so this avoids a fragile full-page compositor read
+ * while retaining the same CSS/world coordinate mapping used by screenshots.
+ */
+async function captureWorldCanvasComposite(cdp, label, regions, timeoutMs = 45_000) {
+  const composite = await evaluate(cdp, `(() => {
+    const world = document.querySelector('.world-canvas');
+    if (!(world instanceof HTMLCanvasElement)) throw new Error('World canvas unavailable');
+    const rect = world.getBoundingClientRect();
+    const visual = window.visualViewport;
+    const visualWidth = visual?.width ?? innerWidth;
+    const visualHeight = visual?.height ?? innerHeight;
+    const visualOffsetX = visual?.offsetLeft ?? 0;
+    const visualOffsetY = visual?.offsetTop ?? 0;
+    const dpr = devicePixelRatio || 1;
+    const page = document.createElement('canvas');
+    page.width = Math.max(1, Math.round(visualWidth * dpr));
+    page.height = Math.max(1, Math.round(visualHeight * dpr));
+    const context = page.getContext('2d');
+    if (!context) throw new Error('Candidate composite context unavailable');
+    let background = getComputedStyle(document.documentElement).backgroundColor;
+    if (!background || background === 'rgba(0, 0, 0, 0)') {
+      background = getComputedStyle(document.body).backgroundColor;
+    }
+    context.fillStyle = !background || background === 'rgba(0, 0, 0, 0)'
+      ? '#070a10' : background;
+    context.fillRect(0, 0, page.width, page.height);
+    context.drawImage(
+      world,
+      (rect.left - visualOffsetX) * dpr,
+      (rect.top - visualOffsetY) * dpr,
+      rect.width * dpr,
+      rect.height * dpr,
+    );
+    const worldScaleX = rect.width / ${WORLD_WIDTH};
+    const worldScaleY = rect.height / ${WORLD_HEIGHT};
+    const rounded = (value, digits = 4) => {
+      const factor = 10 ** digits;
+      return Math.round(value * factor) / factor;
+    };
+    const samples = ${JSON.stringify(regions)}.map((region) => {
+      const worldLeft = Math.floor(region.x - region.radiusX);
+      const worldTop = Math.floor(region.y - region.radiusY);
+      const worldRight = Math.ceil(region.x + region.radiusX);
+      const worldBottom = Math.ceil(region.y + region.radiusY);
+      const x = Math.floor((rect.left + worldLeft * worldScaleX - visualOffsetX) * dpr);
+      const y = Math.floor((rect.top + worldTop * worldScaleY - visualOffsetY) * dpr);
+      const width = Math.max(1, Math.ceil((worldRight - worldLeft) * worldScaleX * dpr));
+      const height = Math.max(1, Math.ceil((worldBottom - worldTop) * worldScaleY * dpr));
+      const pixels = context.getImageData(x, y, width, height).data;
+      const supported = new Uint8Array(width * height);
+      const luma = new Float32Array(width * height);
+      let supportPixels = 0;
+      let visible = 0;
+      let red = 0;
+      let green = 0;
+      let blue = 0;
+      let lumaTotal = 0;
+      let lumaSquareTotal = 0;
+      let minimumLuma = 255;
+      let maximumLuma = 0;
+      let pinned = 0;
+      let clipped = 0;
+      for (let sample = 0; sample < width * height; sample++) {
+        // The semantic digest proves every world cell in this scored rectangle
+        // has the exact owner. Keeping the crop fully supported avoids calling
+        // a native-backed cells accessor once per output pixel.
+        supportPixels++;
+        const offset = sample * 4;
+        if (pixels[offset + 3] < 48
+          || Math.max(pixels[offset], pixels[offset + 1], pixels[offset + 2]) < 12) continue;
+        supported[sample] = 1;
+        visible++;
+        red += pixels[offset];
+        green += pixels[offset + 1];
+        blue += pixels[offset + 2];
+        const value = (pixels[offset] * 54 + pixels[offset + 1] * 183
+          + pixels[offset + 2] * 19) / 256;
+        luma[sample] = value;
+        lumaTotal += value;
+        lumaSquareTotal += value * value;
+        minimumLuma = Math.min(minimumLuma, value);
+        maximumLuma = Math.max(maximumLuma, value);
+        pinned += Number(pixels[offset] === 255 || pixels[offset + 1] === 255
+          || pixels[offset + 2] === 255);
+        clipped += Number(value >= 250);
+      }
+      const meanLuma = lumaTotal / Math.max(1, visible);
+      const lumaStdDev = Math.sqrt(Math.max(
+        0, lumaSquareTotal / Math.max(1, visible) - meanLuma * meanLuma,
+      ));
+      let adjacentContrast = 0;
+      let adjacentChromaContrast = 0;
+      let adjacentPairs = 0;
+      const chromaDistance = (leftSample, rightSample) => {
+        const left = leftSample * 4;
+        const right = rightSample * 4;
+        const leftScale = 255 / Math.max(
+          1, pixels[left] + pixels[left + 1] + pixels[left + 2],
+        );
+        const rightScale = 255 / Math.max(
+          1, pixels[right] + pixels[right + 1] + pixels[right + 2],
+        );
+        return Math.hypot(
+          pixels[left] * leftScale - pixels[right] * rightScale,
+          pixels[left + 1] * leftScale - pixels[right + 1] * rightScale,
+          pixels[left + 2] * leftScale - pixels[right + 2] * rightScale,
+        ) / Math.sqrt(3);
+      };
+      for (let py = 0; py < height; py++) for (let px = 0; px < width; px++) {
+        const sample = py * width + px;
+        if (!supported[sample]) continue;
+        if (px + 1 < width && supported[sample + 1]) {
+          adjacentContrast += Math.abs(luma[sample] - luma[sample + 1]);
+          adjacentChromaContrast += chromaDistance(sample, sample + 1);
+          adjacentPairs++;
+        }
+        if (py + 1 < height && supported[sample + width]) {
+          adjacentContrast += Math.abs(luma[sample] - luma[sample + width]);
+          adjacentChromaContrast += chromaDistance(sample, sample + width);
+          adjacentPairs++;
+        }
+      }
+      let minimumMacroLuma = 255;
+      let maximumMacroLuma = 0;
+      let macroSamples = 0;
+      for (let py = 2; py < height - 2; py++) for (let px = 2; px < width - 2; px++) {
+        let sum = 0;
+        let complete = true;
+        for (let oy = -2; oy <= 2 && complete; oy++) for (let ox = -2; ox <= 2; ox++) {
+          const neighbour = (py + oy) * width + px + ox;
+          if (!supported[neighbour]) { complete = false; break; }
+          sum += luma[neighbour];
+        }
+        if (!complete) continue;
+        const macro = sum / 25;
+        minimumMacroLuma = Math.min(minimumMacroLuma, macro);
+        maximumMacroLuma = Math.max(maximumMacroLuma, macro);
+        macroSamples++;
+      }
+      const visited = new Uint8Array(supported.length);
+      const stack = new Int32Array(supported.length);
+      let dominant = 0;
+      for (let origin = 0; origin < supported.length; origin++) {
+        if (!supported[origin] || visited[origin]) continue;
+        let stackLength = 1;
+        let component = 0;
+        stack[0] = origin;
+        visited[origin] = 1;
+        while (stackLength > 0) {
+          const current = stack[--stackLength];
+          component++;
+          const px = current % width;
+          const py = Math.floor(current / width);
+          for (const neighbour of [
+            px > 0 ? current - 1 : -1,
+            px + 1 < width ? current + 1 : -1,
+            py > 0 ? current - width : -1,
+            py + 1 < height ? current + width : -1,
+          ]) {
+            if (neighbour < 0 || !supported[neighbour] || visited[neighbour]) continue;
+            visited[neighbour] = 1;
+            stack[stackLength++] = neighbour;
+          }
+        }
+        dominant = Math.max(dominant, component);
+      }
+      let dark = 0;
+      for (let sample = 0; sample < supported.length; sample++) {
+        dark += Number(supported[sample] && luma[sample] < meanLuma * 0.70);
+      }
+      return {
+        name: region.name,
+        supportPixels,
+        supportRecall: rounded(visible / Math.max(1, supportPixels), 4),
+        visible,
+        coverage: rounded(visible / Math.max(1, width * height), 4),
+        mean: [
+          rounded(red / Math.max(1, visible), 3),
+          rounded(green / Math.max(1, visible), 3),
+          rounded(blue / Math.max(1, visible), 3),
+        ],
+        meanLuma: rounded(meanLuma, 3),
+        lumaStdDev: rounded(lumaStdDev, 3),
+        microContrast: rounded(adjacentContrast / Math.max(1, adjacentPairs), 3),
+        chromaticContrast: rounded(adjacentChromaContrast / Math.max(1, adjacentPairs), 3),
+        macroLumaRange: rounded(macroSamples > 0 ? maximumMacroLuma - minimumMacroLuma : 0, 3),
+        lumaRange: rounded(visible > 0 ? maximumLuma - minimumLuma : 0, 3),
+        dominantComponent: rounded(dominant / Math.max(1, visible), 4),
+        darkFraction: rounded(dark / Math.max(1, visible), 4),
+        pinnedFraction: rounded(pinned / Math.max(1, visible), 4),
+        clippedFraction: rounded(clipped / Math.max(1, visible), 4),
+      };
+    });
+    const encoded = page.toDataURL('image/png');
+    return {
+      data: encoded.slice(encoded.indexOf(',') + 1),
+      canvasRect: { left: rect.left, top: rect.top, width: rect.width, height: rect.height },
+      samples,
+    };
+  })()`, timeoutMs);
+  assert(composite?.data && composite?.canvasRect && composite?.samples,
+    `${label}: fitted canvas composite was unavailable`);
+  return {
+    capture: { data: composite.data },
+    reference: { data: composite.data },
+    canvasRect: composite.canvasRect,
+    referenceCanvasRect: composite.canvasRect,
+    samples: composite.samples,
+  };
 }
 
 async function waitForStablePageCaptures(cdp, label, timeoutMs = 8_000, requiredStableSamples = 2) {

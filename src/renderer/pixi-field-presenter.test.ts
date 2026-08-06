@@ -1882,6 +1882,79 @@ describe('Pixi presenter startup configuration', () => {
     expect(preserve).toContain("get('thermiteBodyVfxAudit') === '1'");
   });
 
+  it('keeps E48 Snowpack optics exact-owner, E05-dependent, normal-WebGL-only, and RGB-only', () => {
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const canvasSource = readFileSync(new URL('./field-renderer.ts', import.meta.url), 'utf8');
+    const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');
+    const normalStart = source.indexOf('const FIELD_FRAGMENT = `', eightStart);
+    const normalEnd = source.indexOf('`;\n\n/** Primary WebGL presentation', normalStart);
+    const eight = source.slice(eightStart, normalStart);
+    const normal = source.slice(normalStart, normalEnd);
+    const e48Start = normal.indexOf('          // E48:');
+    const e48End = normal.indexOf('          // E40:', e48Start);
+    const e48 = normal.slice(e48Start, e48End);
+    const calmStart = normal.indexOf('      // Dense Snow keeps', e48End);
+    const calmEnd = normal.indexOf('      // Fourteen native explosive powders', calmStart);
+    const calm = normal.slice(calmStart, calmEnd);
+    const parentStart = normal.lastIndexOf(
+      '        if (uPowderBodyVfx > 0.5', e48Start,
+    );
+    const parent = normal.slice(parentStart, e48End);
+    const powderScopeStart = normal.lastIndexOf('    if (family == 4.0)', e48Start);
+    const powderScope = normal.slice(powderScopeStart, calmEnd);
+    const preserveStart = source.indexOf('preserveDrawingBuffer:');
+    const preserveEnd = source.indexOf('resolution: outputScale', preserveStart);
+    const preserve = source.slice(preserveStart, preserveEnd);
+
+    expect(e48Start).toBeGreaterThanOrEqual(0);
+    expect(e48End).toBeGreaterThan(e48Start);
+    expect(calmStart).toBeGreaterThan(e48End);
+    expect(calmEnd).toBeGreaterThan(calmStart);
+    expect(parentStart).toBeGreaterThanOrEqual(0);
+    expect(powderScopeStart).toBeGreaterThanOrEqual(0);
+    expect(normal).toContain('uniform float uSnowpackBodyVfx;');
+    expect(normal.match(/uSnowpackBodyVfx > 0\.5/g)).toHaveLength(1);
+    expect(eight).not.toContain('uSnowpackBodyVfx');
+    expect(eight).not.toContain('snowpackBodyCalm');
+    expect(canvasSource).not.toContain('snowpackBodyVfx');
+    expect(e48).toContain('optics == 13.0');
+    expect(e48).toContain('material == 18.0');
+    expect(e48).toContain('powderBodyGate');
+    expect(e48).toContain('powderBodyVolumeDepth');
+    expect(e48).toContain('powderVfxFacetBalance');
+    expect(e48).toContain('powderDirectedSlope');
+    expect(e48).toContain('foreignMatterContact < 0.5');
+    expect(e48).toContain('unlikeMaterialContact < 0.5');
+    expect(calm).toContain('powderBodyBase');
+    expect(calm).toContain('snowpackBodyCalm');
+    expect(parent).toContain('uPowderBodyVfx > 0.5');
+    expect(parent).toContain('powderSuspensionCohesion < 0.01');
+    for (const guard of [
+      'family == 4.0', 'uPowderStyle > 1.5', 'surfaceOnly < 0.5',
+      'traits < 0.5', '!materialEmissive', 'halo < 0.5', 'wall < 0.5',
+      'wallOnly < 0.5', 'emissionOnly < 0.5',
+      'step(224.0 / 255.0, boundaryStability)', 'step(5.5, widePowderShape.w)',
+    ]) expect(powderScope).toContain(guard);
+    for (const branch of [e48, calm]) {
+      expect(branch).not.toContain('texture(');
+      expect(branch).not.toContain('uTime');
+      expect(branch).not.toContain('sin(');
+      expect(branch).not.toContain('gl_FragCoord');
+      expect(branch).not.toMatch(/\balpha\s*[+*]?=/);
+    }
+    expect(source).toMatch(
+      /const snowpackBodyVfxEnabled = outputScale < 8\s*&& resolveSnowpackBodyVfxEnabled\(renderLook\);/,
+    );
+    expect(source.match(/this\.uniforms\.uniforms\.uSnowpackBodyVfx = 0;/g))
+      .toHaveLength(2);
+    expect(source).toContain(
+      'uSnowpackBodyVfx: { value: snowpackBodyVfxEnabled ? 1 : 0',
+    );
+    expect(source).toContain('presenter.app.canvas.dataset.snowpackBodyVfx');
+    expect(source).toContain("this.app.canvas.dataset.snowpackBodyVfx = 'inactive';");
+    expect(preserve).toContain("get('snowpackBodyVfxAudit') === '1'");
+  });
+
   it('keeps E41 DEUT concentration-volume exact-owner, trait-aware, normal-WebGL-only, and RGB-only', () => {
     const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
     const canvasSource = readFileSync(new URL('./field-renderer.ts', import.meta.url), 'utf8');

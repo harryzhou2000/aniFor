@@ -1,7 +1,8 @@
 import { MaterialRenderer } from '../renderer/field-renderer';
 import {
-  applyMaterialShowcaseScene, applyRenderLabScene, MATERIAL_SHOWCASE_AUDIT,
-  materialShowcaseRequested, renderLabRequested,
+  applyMaterialCandidateSurveyScene, applyMaterialShowcaseScene, applyRenderLabScene,
+  MATERIAL_CANDIDATE_SURVEY_AUDIT, MATERIAL_SHOWCASE_AUDIT,
+  materialCandidateSurveyRequested, materialShowcaseRequested, renderLabRequested,
 } from '../renderer/render-lab-scene';
 import { applyWallLabScene, wallLabRequested } from '../renderer/wall-lab-scene';
 import { ALL_MATERIALS, BROWSE_MATERIALS, Material } from '../shared/materials';
@@ -28,6 +29,9 @@ import {
 import {
   THERMITE_BODY_VFX_AUDIT, prepareThermiteBodyVfxAuditFixture,
 } from './thermite-body-vfx-audit';
+import {
+  SNOWPACK_BODY_VFX_AUDIT, prepareSnowpackBodyVfxAuditFixture,
+} from './snowpack-body-vfx-audit';
 import {
   SOAP_BODY_VFX_AUDIT, prepareSoapBodyVfxAuditFixture,
 } from './soap-body-vfx-audit';
@@ -291,6 +295,7 @@ export class Game {
     await this.renderer.init();
     const renderLab = renderLabRequested();
     const materialShowcase = materialShowcaseRequested();
+    const materialCandidateSurvey = materialCandidateSurveyRequested();
     const wallLab = wallLabRequested();
     if (renderLab) {
       if (materialAtlasAuditRequested()) prepareMaterialAtlasAuditFixture(this.simulation);
@@ -302,6 +307,10 @@ export class Game {
       applyMaterialShowcaseScene(this.simulation);
       this.paused = true;
       this.root.dataset.scene = 'showcase';
+    } else if (materialCandidateSurvey) {
+      applyMaterialCandidateSurveyScene(this.simulation);
+      this.paused = true;
+      this.root.dataset.scene = 'candidate-survey';
     } else if (wallLab) {
       applyWallLabScene(this.simulation);
       this.paused = true;
@@ -444,9 +453,11 @@ export class Game {
       lifePresets: Boolean(this.simulation.paintLifePreset),
       signs: Boolean(this.simulation.signs && this.simulation.upsertSign && this.simulation.removeSign),
     }));
-    if (renderLab || materialShowcase || wallLab) {
+    if (renderLab || materialShowcase || materialCandidateSurvey || wallLab) {
       const status = this.root.querySelector('.status');
-      const sceneName = renderLab ? 'render lab' : materialShowcase ? 'material showcase' : 'native wall lab';
+      const sceneName = renderLab ? 'render lab'
+        : materialShowcase ? 'material showcase'
+          : materialCandidateSurvey ? 'material candidate survey' : 'native wall lab';
       if (status) status.textContent = `${this.simulation.name} · paused ${sceneName}`;
     } else {
       this.seedIfEmpty();
@@ -455,7 +466,9 @@ export class Game {
     // The showcase is a deterministic paused scene too. Giving it the same
     // opt-in audit clock keeps production visual captures stable without
     // changing normal gameplay or the public showcase URL.
-    if ((renderLab || materialShowcase) && browserInputAuditRequested()) this.installBrowserInputAudit();
+    if ((renderLab || materialShowcase || materialCandidateSurvey) && browserInputAuditRequested()) {
+      this.installBrowserInputAudit();
+    }
     this.renderer.setSimulationRunning(!this.paused);
     requestAnimationFrame(this.frame);
   }
@@ -489,6 +502,7 @@ export class Game {
       },
       renderedCell: (x, y) => this.renderer.renderedMaterialAt(x, y),
       materialShowcaseFixture: () => MATERIAL_SHOWCASE_AUDIT,
+      materialCandidateSurveyFixture: () => MATERIAL_CANDIDATE_SURVEY_AUDIT,
       presentationState: (x, y) => {
         if (x < 0 || y < 0 || x >= this.simulation.width || y >= this.simulation.height) return -1;
         return this.simulation.presentationState?.()[y * this.simulation.width + x] ?? 0;
@@ -521,6 +535,31 @@ export class Game {
       liquidFieldAlpha: (x, y) => this.renderer.liquidFieldAlphaAt(x, y),
       atmosphereFieldAlpha: (x, y) => this.renderer.atmosphereFieldAlphaAt(x, y),
       emissionFieldAlpha: (x, y) => this.renderer.emissionFieldAlphaAt(x, y),
+      materialPlaneDigest: () => {
+        const counts = new Uint32Array(256);
+        let hash = 2_166_136_261;
+        let occupied = 0;
+        const cells = this.simulation.cells();
+        for (let index = 0; index < cells.length; index++) {
+          const material = cells[index] >>> 0;
+          counts[material]++;
+          occupied += Number(material !== Material.Empty);
+          hash = Math.imul(hash ^ material ^ index, 16_777_619) >>> 0;
+        }
+        return { hash, occupied, materialCounts: Array.from(counts) };
+      },
+      materialRegionCounts: (regions) => {
+        const cells = this.simulation.cells();
+        return regions.map((region) => {
+          let matching = 0;
+          for (let y = region.y - region.radiusY; y < region.y + region.radiusY; y++) {
+            for (let x = region.x - region.radiusX; x < region.x + region.radiusX; x++) {
+              matching += Number(region.materials.includes(cells[y * this.simulation.width + x]));
+            }
+          }
+          return matching;
+        });
+      },
       refreshPresentationFields: () => this.renderer.invalidateDynamicPresentation(),
       geologicalSolidStylingEnabled: () => this.renderer.geologicalSolidStylingIsEnabled(),
       thermalCatalyticRigidStylingEnabled: () => this.renderer.thermalCatalyticRigidStylingIsEnabled(),
@@ -753,6 +792,12 @@ export class Game {
       thermiteBodyVfxFixture: () => THERMITE_BODY_VFX_AUDIT,
       prepareThermiteBodyVfxFixture: () => {
         prepareThermiteBodyVfxAuditFixture(this.simulation);
+        this.renderer.synchronizeFixtureMaterialPlane();
+        this.renderer.invalidateDynamicPresentation();
+      },
+      snowpackBodyVfxFixture: () => SNOWPACK_BODY_VFX_AUDIT,
+      prepareSnowpackBodyVfxFixture: () => {
+        prepareSnowpackBodyVfxAuditFixture(this.simulation);
         this.renderer.synchronizeFixtureMaterialPlane();
         this.renderer.invalidateDynamicPresentation();
       },

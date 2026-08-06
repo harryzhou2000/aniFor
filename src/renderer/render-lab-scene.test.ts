@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { RenderLabBackend } from '../simulation/render-lab-backend';
 import { ALL_MATERIALS, Material } from '../shared/materials';
@@ -5,8 +6,9 @@ import { renderPhase, renderProfile, RenderPhase, RenderProfile } from './render
 import { renderOptics, RenderOptics } from './render-optics';
 import { hasRenderTrait, renderTraits, RenderTrait } from './render-traits';
 import {
-  applyMaterialShowcaseScene, applyRenderLabScene, materialShowcaseRequested,
-  MATERIAL_SHOWCASE_AUDIT,
+  applyMaterialCandidateSurveyScene, applyMaterialShowcaseScene, applyRenderLabScene,
+  materialCandidateSurveyRequested, materialShowcaseRequested,
+  MATERIAL_CANDIDATE_SURVEY_AUDIT, MATERIAL_SHOWCASE_AUDIT,
   RENDER_LAB_AMBIENT_TEMPERATURE, RENDER_LAB_COLD_TEMPERATURE,
   RENDER_LAB_ENERGY_SAMPLES, RENDER_LAB_HOT_TEMPERATURE, RENDER_LAB_STYLE_SAMPLES,
   renderLabRequested,
@@ -105,6 +107,79 @@ describe('render lab scene', () => {
     expect(first.cells()[73 * 612 + 232]).toBe(Material.ISZS);
     expect(first.cells()[154 * 612 + 253]).toBe(Material.VIBR);
     expect(first.cells()[166 * 612 + 398]).toBe(Material.CarbonDioxide);
+  });
+
+  it('freezes a separate deterministic candidate survey without mutating showcase v6', () => {
+    const first = new RenderLabBackend(612, 384);
+    const second = new RenderLabBackend(612, 384);
+    applyMaterialCandidateSurveyScene(first);
+    applyMaterialCandidateSurveyScene(second);
+
+    expect(first.cells()).toEqual(second.cells());
+    expect(first.walls()).toEqual(second.walls());
+    expect(materialCandidateSurveyRequested('?scene=candidate-survey')).toBe(true);
+    expect(materialCandidateSurveyRequested('?scene=showcase')).toBe(false);
+    expect(materialShowcaseRequested('?scene=candidate-survey')).toBe(false);
+    expect(MATERIAL_SHOWCASE_AUDIT.version).toBe(6);
+    expect(MATERIAL_CANDIDATE_SURVEY_AUDIT.version).toBe(1);
+    expect(MATERIAL_CANDIDATE_SURVEY_AUDIT.world).toEqual({ width: 612, height: 384 });
+
+    const counts = new Uint32Array(256);
+    for (const material of first.cells()) counts[material]++;
+    const candidateMaterials = [
+      Material.Nitro, Material.Snow, Material.BASE, Material.C4, Material.BGLA, Material.Quartz,
+    ] as const;
+    expect(MATERIAL_CANDIDATE_SURVEY_AUDIT.regions.map(({ material }) => material))
+      .toEqual(candidateMaterials);
+    expect(MATERIAL_CANDIDATE_SURVEY_AUDIT.semantic.materialCounts.map(({ material }) => (
+      [material, counts[material]]
+    ))).toEqual(MATERIAL_CANDIDATE_SURVEY_AUDIT.semantic.materialCounts.map(({ material, count }) => (
+      [material, count]
+    )));
+    expect(first.cells().length - counts[Material.Empty])
+      .toBe(MATERIAL_CANDIDATE_SURVEY_AUDIT.semantic.occupied);
+    expect(semanticHash(first.cells())).toBe(MATERIAL_CANDIDATE_SURVEY_AUDIT.semantic.hash);
+
+    for (const region of MATERIAL_CANDIDATE_SURVEY_AUDIT.regions) {
+      let matching = 0;
+      for (let y = region.y - region.radiusY; y < region.y + region.radiusY; y++) {
+        for (let x = region.x - region.radiusX; x < region.x + region.radiusX; x++) {
+          matching += Number(region.semanticMaterials.includes(first.cells()[y * 612 + x]));
+        }
+      }
+      expect(matching, region.name).toBe(region.expectedMatching);
+      expect(region.support).toMatchObject({
+        kind: 'semantic', materials: [region.material], minimumRecall: 0.96,
+      });
+      const material = ALL_MATERIALS.find(({ id }) => id === region.material)!;
+      expect(renderPhase(material)).toBe(region.phase === 'powder' ? RenderPhase.Powder : RenderPhase.Liquid);
+    }
+
+    for (const probe of MATERIAL_CANDIDATE_SURVEY_AUDIT.sharedContext.contactProbes) {
+      expect(first.cells()[probe.y * 612 + probe.x]).toBe(probe.material);
+      expect(first.cells()[(probe.y + (probe.y < 200 ? 1 : -1)) * 612 + probe.x])
+        .toBe(MATERIAL_CANDIDATE_SURVEY_AUDIT.sharedContext.material);
+    }
+    for (const probe of MATERIAL_CANDIDATE_SURVEY_AUDIT.sharedContext.wallProbes) {
+      expect(first.walls()[probe.y * 612 + probe.x]).not.toBe(0);
+      expect(first.cells()[probe.y * 612 + probe.x])
+        .toBe(MATERIAL_CANDIDATE_SURVEY_AUDIT.sharedContext.material);
+    }
+
+    expect(first.cells()[76 * 612 + 70]).toBe(Material.Empty);
+    expect(first.cells()[90 * 612 + 252]).toBe(Material.Empty);
+    expect(first.cells()[32 * 612 + 502]).toBe(Material.BASE);
+    expect(first.cells()[268 * 612 + 70]).toBe(Material.Empty);
+    expect(first.cells()[276 * 612 + 252]).toBe(Material.Empty);
+    expect(first.cells()[350 * 612 + 502]).toBe(Material.Quartz);
+  });
+
+  it('routes the candidate survey through the deterministic RenderLab backend', () => {
+    const main = readFileSync(new URL('../main.ts', import.meta.url), 'utf8');
+    expect(main).toContain(
+      'renderLabRequested() || materialShowcaseRequested() || materialCandidateSurveyRequested()',
+    );
+    expect(main).toContain(') && !nativeLab');
   });
 
   it('builds a deterministic atlas with representative material families', () => {

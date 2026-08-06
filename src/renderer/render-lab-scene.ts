@@ -4,6 +4,8 @@ import { RENDER_LAB_AMBIENT_TEMPERATURE } from '../simulation/render-lab-backend
 
 export const RENDER_LAB_QUERY = 'render-lab';
 export const MATERIAL_SHOWCASE_QUERY = 'showcase';
+/** An opt-in diagnostic composition; it is intentionally not the v6 showcase. */
+export const MATERIAL_CANDIDATE_SURVEY_QUERY = 'candidate-survey';
 export const RENDER_LAB_COLD_TEMPERATURE = 1200;
 export { RENDER_LAB_AMBIENT_TEMPERATURE };
 export const RENDER_LAB_HOT_TEMPERATURE = 18000;
@@ -72,6 +74,118 @@ export interface MaterialShowcaseAuditSnapshot {
   };
   readonly regions: readonly MaterialShowcaseAuditRegion[];
 }
+
+/**
+ * The candidate survey deliberately owns a smaller contract than the production
+ * showcase. It selects the next bounded owner and retains accepted candidates
+ * as before/after references; it must not silently alter the E01–E48 ladder.
+ */
+export interface MaterialCandidateSurveyRegion {
+  readonly name: string;
+  readonly material: Material;
+  readonly phase: 'powder' | 'liquid';
+  readonly profile: 'granular-body' | 'cohesive-liquid';
+  readonly x: number;
+  readonly y: number;
+  readonly radiusX: number;
+  readonly radiusY: number;
+  /** The exact half-open rectangle `[x-radiusX, x+radiusX) × [y-radiusY, y+radiusY)`. */
+  readonly support: Extract<MaterialShowcaseAuditSupport, { readonly kind: 'semantic' }>;
+  readonly semanticMaterials: readonly Material[];
+  readonly expectedMatching: number;
+}
+
+export interface MaterialCandidateSurveyAuditSnapshot {
+  readonly version: 1;
+  readonly world: { readonly width: 612; readonly height: 384 };
+  readonly semantic: {
+    readonly hash: number;
+    readonly occupied: number;
+    readonly materialCounts: readonly {
+      readonly material: Material;
+      readonly count: number;
+    }[];
+  };
+  readonly regions: readonly MaterialCandidateSurveyRegion[];
+  readonly sharedContext: {
+    readonly material: Material.ROCK;
+    readonly contactProbes: readonly { readonly x: number; readonly y: number; readonly material: Material }[];
+    readonly wallProbes: readonly { readonly x: number; readonly y: number }[];
+  };
+}
+
+/**
+ * Frozen source-of-truth for the next-owner survey. Its compact cards leave
+ * each candidate's broad body, one intentionally authored topology defect, and
+ * a common ROCK/wall context inspectable without disturbing showcase v6.
+ */
+export const MATERIAL_CANDIDATE_SURVEY_AUDIT: MaterialCandidateSurveyAuditSnapshot = {
+  version: 1,
+  world: { width: 612, height: 384 },
+  semantic: {
+    hash: 2_255_453_673,
+    occupied: 115_368,
+    materialCounts: [
+      { material: Material.Nitro, count: 14_692 },
+      { material: Material.Snow, count: 14_612 },
+      { material: Material.BASE, count: 14_936 },
+      { material: Material.C4, count: 14_692 },
+      { material: Material.BGLA, count: 14_612 },
+      { material: Material.Quartz, count: 14_936 },
+      { material: Material.ROCK, count: 26_888 },
+    ],
+  },
+  regions: [
+    {
+      name: 'candidateNitro', material: Material.Nitro, phase: 'liquid', profile: 'cohesive-liquid',
+      x: 110, y: 120, radiusX: 30, radiusY: 24,
+      support: { kind: 'semantic', materials: [Material.Nitro], minimumRecall: 0.96 },
+      semanticMaterials: [Material.Nitro], expectedMatching: 2_880,
+    },
+    {
+      name: 'candidateSnow', material: Material.Snow, phase: 'powder', profile: 'granular-body',
+      x: 306, y: 120, radiusX: 30, radiusY: 24,
+      support: { kind: 'semantic', materials: [Material.Snow], minimumRecall: 0.96 },
+      semanticMaterials: [Material.Snow], expectedMatching: 2_880,
+    },
+    {
+      name: 'candidateBASE', material: Material.BASE, phase: 'liquid', profile: 'cohesive-liquid',
+      x: 502, y: 120, radiusX: 30, radiusY: 24,
+      support: { kind: 'semantic', materials: [Material.BASE], minimumRecall: 0.96 },
+      semanticMaterials: [Material.BASE], expectedMatching: 2_880,
+    },
+    {
+      name: 'candidateC4', material: Material.C4, phase: 'powder', profile: 'granular-body',
+      x: 110, y: 280, radiusX: 30, radiusY: 24,
+      support: { kind: 'semantic', materials: [Material.C4], minimumRecall: 0.96 },
+      semanticMaterials: [Material.C4], expectedMatching: 2_880,
+    },
+    {
+      name: 'candidateBGLA', material: Material.BGLA, phase: 'powder', profile: 'granular-body',
+      x: 306, y: 280, radiusX: 30, radiusY: 24,
+      support: { kind: 'semantic', materials: [Material.BGLA], minimumRecall: 0.96 },
+      semanticMaterials: [Material.BGLA], expectedMatching: 2_880,
+    },
+    {
+      name: 'candidateQuartz', material: Material.Quartz, phase: 'powder', profile: 'granular-body',
+      x: 502, y: 280, radiusX: 30, radiusY: 24,
+      support: { kind: 'semantic', materials: [Material.Quartz], minimumRecall: 0.96 },
+      semanticMaterials: [Material.Quartz], expectedMatching: 2_880,
+    },
+  ],
+  sharedContext: {
+    material: Material.ROCK,
+    contactProbes: [
+      { x: 110, y: 167, material: Material.Nitro },
+      { x: 306, y: 167, material: Material.Snow },
+      { x: 502, y: 167, material: Material.BASE },
+      { x: 110, y: 216, material: Material.C4 },
+      { x: 306, y: 216, material: Material.BGLA },
+      { x: 502, y: 216, material: Material.Quartz },
+    ],
+    wallProbes: [{ x: 252, y: 180 }, { x: 360, y: 204 }],
+  },
+};
 
 /**
  * App-owned contract for the production-fit visual survey. Keeping this beside
@@ -280,6 +394,11 @@ export function materialShowcaseRequested(search = globalThis.location?.search ?
   return new URLSearchParams(search).get('scene') === MATERIAL_SHOWCASE_QUERY;
 }
 
+/** True only for the isolated remaining-owner diagnostic fixture. */
+export function materialCandidateSurveyRequested(search = globalThis.location?.search ?? ''): boolean {
+  return new URLSearchParams(search).get('scene') === MATERIAL_CANDIDATE_SURVEY_QUERY;
+}
+
 /**
  * Stages dense, connected bodies so an artist can inspect the normal-fit look
  * without mistaking the deliberately sparse regression atlas for the intended
@@ -352,6 +471,37 @@ export function applyMaterialShowcaseScene(simulation: SimulationBackend): void 
   plot.curvaturePlate(510, 226, 54, 58, 14, Material.DTEC);
   plot.roundedRect(522, 144, 38, 62, 15, Material.URAN);
   plot.roundedRect(548, 166, 20, 30, 9, Material.POLO);
+}
+
+/**
+ * Paused v1 candidate survey. The explicit diagnostic route owns this scene;
+ * v6 remains the production composition while this provides a deterministic
+ * evidence surface for Nitro/Snow/BASE/C4/BGLA/Quartz comparisons.
+ */
+export function applyMaterialCandidateSurveyScene(simulation: SimulationBackend): void {
+  simulation.clear();
+  const plot = new ScenePlotter(simulation);
+
+  // A single grounded stage is shared by all six cards. Each candidate touches
+  // the ROCK face while the patterned wall stays on the independent wall plane.
+  plot.roundedRect(24, 168, 564, 48, 12, Material.ROCK);
+  plot.wallPatternRect(248, 168, 116, 48, 6);
+
+  // Upper row: two broad cards plus one authored hole/notch/needle context.
+  plot.roundedRect(50, 40, 120, 128, 22, Material.Nitro);
+  plot.eraseRect(65, 68, 10, 16);
+  plot.roundedRect(246, 40, 120, 128, 22, Material.Snow);
+  plot.eraseRect(246, 82, 12, 20);
+  plot.roundedRect(442, 40, 120, 128, 22, Material.BASE);
+  plot.rect(499, 26, 6, 14, Material.BASE, 1, 0);
+
+  // Lower row mirrors the common contact while retaining independent topology.
+  plot.roundedRect(50, 216, 120, 128, 22, Material.C4);
+  plot.eraseRect(65, 260, 10, 16);
+  plot.roundedRect(246, 216, 120, 128, 22, Material.BGLA);
+  plot.eraseRect(246, 266, 12, 20);
+  plot.roundedRect(442, 216, 120, 128, 22, Material.Quartz);
+  plot.rect(499, 344, 6, 14, Material.Quartz, 1, 0);
 }
 
 /** A paused, deterministic material atlas for visual regression screenshots. */

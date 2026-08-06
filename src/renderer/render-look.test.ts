@@ -36,6 +36,7 @@ import {
   resolveSolidBodyVfxEnabled,
   resolvePowderBodyVfxEnabled, resolvePowderLightVfxEnabled,
   resolveSootyPowderBodyVfxEnabled,
+  resolveSnowpackBodyVfxEnabled,
   resolveThermiteBodyVfxEnabled,
   resolvePowderSolidContactVfxEnabled, resolveRenderLook, resolveTranslucentEdgeVfxEnabled,
   resolveVolumeVfxEnabled, resolveWaterBodyVfxEnabled, resolveWetSedimentVfxEnabled,
@@ -861,6 +862,36 @@ describe('resolveRenderLook', () => {
     )).toBe(false);
     expect(resolveThermiteBodyVfxEnabled(
       'realistic', '?volumeVfx=0&powderBodyVfx=on&thermiteBodyVfx=1',
+    )).toBe(true);
+  });
+
+  it('keeps exact Snow body optics subordinate to E05 and isolated from older input audits', () => {
+    expect(resolveSnowpackBodyVfxEnabled(
+      'classic', '?snowpackBodyVfx=on',
+    )).toBe(false);
+    expect(resolveSnowpackBodyVfxEnabled('realistic', '')).toBe(true);
+    expect(resolveSnowpackBodyVfxEnabled('neon-lab', '')).toBe(true);
+    expect(resolveSnowpackBodyVfxEnabled('realistic', '?inputAudit=1')).toBe(false);
+    expect(resolveSnowpackBodyVfxEnabled(
+      'realistic', '?inputAudit=1&snowpackBodyVfx=true',
+    )).toBe(true);
+    expect(resolveSnowpackBodyVfxEnabled(
+      'realistic', '?snowpackBodyVfx=off',
+    )).toBe(false);
+    expect(resolveSnowpackBodyVfxEnabled(
+      'realistic', '?snowpackBodyVfx=0',
+    )).toBe(false);
+    expect(resolveSnowpackBodyVfxEnabled(
+      'realistic', '?snowpackBodyVfx=false',
+    )).toBe(false);
+    expect(resolveSnowpackBodyVfxEnabled(
+      'realistic', '?snowpackBodyVfx=on',
+    )).toBe(true);
+    expect(resolveSnowpackBodyVfxEnabled(
+      'realistic', '?powderBodyVfx=0&snowpackBodyVfx=on',
+    )).toBe(false);
+    expect(resolveSnowpackBodyVfxEnabled(
+      'realistic', '?volumeVfx=0&powderBodyVfx=on&snowpackBodyVfx=1',
     )).toBe(true);
   });
 

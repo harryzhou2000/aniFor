@@ -788,11 +788,35 @@ does not alter simulation, camera, semantic ownership, or `renderScale`.
   raises `solidISZS` quality `70.694→93.047`, luma standard deviation
   `2.52→7.68`, microcontrast `.80→1.16`, chromatic contrast to `2.19`, and
   macro range `10→28`, with full support and zero dark/clipped fraction.
+- **E48 accepted:** exact Snow `18` gains a normal-WebGL-only cohesive snowpack
+  finish as a strict child of E05 (`?snowpackBodyVfx=0|1`). Only an
+  authoritative, trait-free, non-emissive, dry, contact-free Snow cell inside
+  E05's already-settled Smooth body may respond. The shader recombines the
+  existing broad facet balance, directional slope, volume depth, and pre-grain
+  lit body into a blue-white crown, cool compacted pocket, and dense-only
+  pigment calm. Sparse flakes, authored holes/channels, one-cell structures,
+  moving Snow, Snow/Water suspension, direct foreign contacts, native walls,
+  Local, Grains, foreign owners, Canvas, and compact true 8× remain controls.
+  The path is RGB-only and adds no sample, texture, field, pass, target, upload,
+  allocation, clock, alpha/support, silhouette, ownership, topology, state, or
+  physics decision. `npm run audit:vfx:snowpack-body` freezes byte-stable
+  off→on→off output at 1×/2×/4×: support recall is `1`, clipping is zero,
+  dense-body microcontrast retention is `.2405–.2443`, and broad macro-range
+  retention is `.3333–.6897`; all named raw/topology controls plus Local and
+  Grains have zero response. Requested-on compact true 8× excludes E48,
+  presents exact 4896×3072 WebGL without an HDR target, and completed its GPU
+  fence in `5260.1 ms` with zero browser errors. The isolated candidate-survey
+  v1 route freezes semantic hash `2255453673`, 115,368 occupied cells, all six
+  candidate counts, and six 2,880-cell regions. At canonical 2× it selected
+  Snow from a visible baseline deficiency (quality `4.808`, microcontrast
+  `23.702`); explicit E48 raises Snow to quality `92.916` and microcontrast
+  `5.702` with full support and no dark or clipped fraction. Quartz is now the
+  next demonstrated crystalline-powder deficiency; E48 must not widen to it.
 - **Protected 8× rung:** `renderScale=8` deliberately reports
   `hdrPipeline=inactive` / `scale-8` and retains the proven direct single-mesh
   4896×3072 path. The experiment must earn a bounded 8× design rather than
   allocating a 115 MiB full-resolution float target beside that path.
-- **Current decision:** E01/E02/E03/E04/E05/E06/E07/E08/E09/E10/E11/E12/E13/E14/E15/E16/E17/E18/E19/E20/E21/E22/E23/E24/E25/E26/E27/E28/E29/E30/E31/E32/E33/E34/E35/E36/E37/E38/E39/E40/E41/E42/E43/E44/E45/E46/E47 remain opt-in through the non-Classic looks
+- **Current decision:** E01/E02/E03/E04/E05/E06/E07/E08/E09/E10/E11/E12/E13/E14/E15/E16/E17/E18/E19/E20/E21/E22/E23/E24/E25/E26/E27/E28/E29/E30/E31/E32/E33/E34/E35/E36/E37/E38/E39/E40/E41/E42/E43/E44/E45/E46/E47/E48 remain opt-in through the non-Classic looks
   until representative hardware timing and mobile thermal behavior are
   measured. E02 remains the safe family-wide baseline. E03 is accepted as the
   liquid-depth checkpoint: its fit-view crop is visibly more cohesive, retains
@@ -1003,6 +1027,15 @@ does not alter simulation, camera, semantic ownership, or `renderScale`.
   response spread, and compact-8× exclusion. VIBR `113` and its native-state
   overlay remain exact controls; do not widen E47 back to E43's two-owner set,
   add another procedural carrier, or claim Canvas parity.
+  E48 is accepted as the exact-Snow cohesive snowpack checkpoint: freeze its
+  strict E05 dependency, exact Snow `18` ownership, settled/dry/Smooth/body/
+  depth/contact proof, reuse of the established powder facet/slope/volume and
+  pre-grain body evidence, broad blue-white crown, cool compacted pocket,
+  dense-only pigment calm, exact raw/topology/foreign-owner controls, Local and
+  Grains no-ops, narrow 1×–4× response envelope, and Canvas/compact-8×
+  exclusion. Same-phase powder boundaries keep exact ownership on both sides;
+  do not widen E48 to Salt, Quartz, BGLA, moving Snow, or wet suspension, add a
+  new procedural carrier, or claim Canvas parity.
   These are not the final material/VFX results.
   Sub-1.0 material colour stays on the established response; tonemapping owns
   only real HDR highlights so powder texture and liquid body contrast are not
@@ -1014,6 +1047,16 @@ gate: it reloads a paused fixture as classic → realistic → classic and check
 the hot-material RGB response, repeatability, semantic/staging topology, exact
 geometry, active float pipeline, and browser errors. The browser gate also
 accepts `--render-scale=1|2|4|8` for capability/degradation checks.
+
+Run `npm run audit:vfx:candidate-rank` for the isolated app-owned material
+survey. It drives
+`?scene=candidate-survey&renderScale=2&inputAudit=1` through the deterministic
+612×384 RenderLab backend, freezes the semantic hash/material counts/region
+support, and compares the same six candidate cards at 1×/2×/4× production
+WebGL. Keep candidate selectors explicit when evaluating an accepted child;
+the package command explicitly enables accepted E48 so current ranking selects
+the next owner. Pass `--candidate-snowpack-body-vfx=0` to the underlying driver
+only when reproducing the frozen pre-E48 Snow baseline.
 
 Run `npm run audit:vfx:volume` for E02. It reloads the paused composed material
 lab as `volumeVfx=0 → 1 → 0` at 1×, 2×, and 4×, requires the real HDR pipeline,
@@ -1860,7 +1903,7 @@ next production 4× survey then selected Wood/PLNT as the largest remaining
   lower seam density, lower local contrast, stronger macro hierarchy, unchanged
   semantic support, and byte-exact selector-off recovery.
 
-**Next visual experiments:** E03–E47 now provide accepted liquid body/surface,
+**Next visual experiments:** E03–E48 now provide accepted liquid body/surface,
 stable-gas, coherent-gas-motion, powder-depth, and powder-local-light
 checkpoints plus exact resting contact grounding, Glass/Ice transmission, and
 state-aware Wax/PLNT subsurface response, composed wet-mineral optics,
@@ -1926,6 +1969,12 @@ recombining the already-live static macro/facet and exact body evidence. Its
 cyan/violet crystal planes close the demonstrated ISZS surface-detail gap while
 VIBR `113`, native state, topology, contacts, Canvas, and compact 8× remain
 unchanged.
+E48 gives exact Snow `18` a strict E05-owned cohesive snowpack body by
+recombining the already-live settled-body facet, slope, volume, and pre-grain
+lighting evidence. It calms only dense Snow pigment beneath a broad blue-white
+crown/cool pocket while sparse flakes, fine topology, motion, wet suspension,
+foreign contacts and owners, Local, Grains, Canvas, and compact 8× remain
+unchanged.
 Improve distinctive depth, transmission, reflection, lighting, and
 mesostructure without stacking another narrow Oil/Acid/contact tint or generic
 PLNT/gas layer.
@@ -1943,11 +1992,18 @@ evidence selected for E47, not a reason to reopen E43's broad two-owner
 checkpoint. With explicit E47 telemetry, canonical v6 `solidISZS` quality
 reaches `93.047`: luma standard deviation is `7.68`, microcontrast `1.16`,
 chromatic contrast `2.19`, and macro range `28`, with full support and zero
-dark/clipped fraction. Keep the broad visual objective active. The fresh
-inventory's unselected candidates are Nitro `32`, Snow `18`, BASE `53`, C4
-`31`, BGLA, and Quartz. Preserve the E14 1× stencil snap and all E01–E47
-selectors and controls, and do not choose among those candidates without fresh
-composed or showcase evidence of a bounded deficiency.
+dark/clipped fraction. The separate app-owned candidate-survey v1 fixture uses
+the deterministic 612×384 RenderLab backend unless `simulation=native` is
+explicit. It freezes semantic hash `2255453673`, 115,368 occupied cells, all
+six candidate counts, and six 2,880-cell scored regions at 1×/2×/4×. The
+pre-E48 canonical 2× survey selected Snow from quality `4.808`, microcontrast
+`23.702`, and visibly granular fit-view evidence. With E48 explicitly enabled,
+Snow reaches quality `92.916`, microcontrast `5.702`, full support, and zero
+dark/clipped fraction. Keep the broad visual objective active. The remaining
+unselected inventory is Nitro `32`, BASE `53`, C4 `31`, BGLA, and Quartz;
+Quartz is the next demonstrated crystalline-powder deficiency, but selection
+still requires a bounded dedicated experiment. Preserve the E14 1× stencil
+snap and all E01–E48 selectors and controls.
 
 ## Phase 1 — HDR pipeline & lighting core (biggest visual payoff)
 

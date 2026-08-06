@@ -13,7 +13,7 @@ powder, solid, liquid, gas, energy, and contact scenes across Canvas and WebGL a
 mobile gestures, save/load, CI, and Pages deployment as protected regression
 contracts rather than the primary feature stream.
 
-The accepted visual experiment ladder now runs through E47. E12 is the
+The accepted visual experiment ladder now runs through E48. E12 is the
 species-safe Sand/Clay/Concrete wet-sediment checkpoint; preserve its exact
 aqueous owner/stability proof, split moving-powder/stationary-Water control,
 Local/Grains no-op, fine structures, authored gaps, Canvas fallback, and true
@@ -862,9 +862,44 @@ microcontrast `.80→1.16`, chromatic contrast reaches `2.19`, and macro range
 rises `10→28`, with full support recall and zero dark or clipped fraction.
 This closes the demonstrated ISZS surface-detail deficiency without replacing
 E43's broader ISZS/VIBR checkpoint. Keep the broad material-and-graphics goal
-active. Fresh inventory candidates are Nitro `32`, Snow `18`, BASE `53`, C4
-`31`, BGLA, and Quartz; do not select the next owner without fresh composed or
-showcase evidence demonstrating a bounded visual deficiency.
+active. That inventory seeded the isolated six-owner candidate survey below;
+its Snow result is now historical selection evidence rather than an open
+candidate list.
+
+E48 is the accepted normal-WebGL-only exact Snow `18` snowpack checkpoint.
+`?snowpackBodyVfx=0|1` is a strict child of E05 and may recompose only an
+authoritative, trait-free, non-emissive, dry, contact-free Snow cell inside
+E05's already-proven temporally settled Smooth body. Reuse the existing broad
+facet balance, directional slope, volume depth, and pre-grain lit body for a
+blue-white crown, cool compacted pocket, and dense-only pigment calm. Sparse
+flakes, authored holes/channels, one-cell structures, moving Snow, genuine
+Snow/Water suspension, direct Metal/Water contacts, native walls, Local,
+Grains, foreign owners, Canvas, and compact true 8× are controls. Same-phase
+powder boundaries retain exact semantic ownership on both sides; E48 may style
+the authoritative Snow side up to that boundary and must never claim or blend
+the foreign owner. Add no sample, texture, field, pass, target, upload,
+allocation, clock, alpha, support, silhouette, ownership, topology, state, or
+physics decision.
+
+Validate E48 with `npm run audit:vfx:snowpack-body`. Its frozen v1 fixture owns
+98,713 occupied cells, including 62,841 exact Snow cells, 2,048 co-located
+native-wall cells, and 4,480 authored-velocity cells. The 1×/2×/4× off→on→off
+matrix retains dense Snow microcontrast at `0.2405–0.2443` of the raw flake
+carrier while retaining `0.3333–0.6897` of broad macro range; support recall is
+exactly `1`, clipping is zero, repeated-off frames are byte-identical, named
+raw/topology controls and Local/Grains have zero response, and browser errors
+remain zero. Requested-on compact true 8× reports E48 inactive, presents exact
+4896×3072 WebGL with no HDR target, and completed its GPU fence in `5260.1 ms`.
+
+The isolated candidate-survey v1 route is app-owned and must use the
+deterministic 612×384 RenderLab backend unless `simulation=native` is explicit.
+It freezes semantic hash `2255453673`, 115,368 occupied cells, all six exact
+candidate counts, and six 2,880-cell scored regions at 1×/2×/4×. The pre-E48
+survey selected Snow from visible fit-view evidence (`microContrast 23.702`,
+quality `4.808` at canonical 2×); with E48 explicitly enabled, Snow reaches
+microcontrast `5.702`, quality `92.916`, full support, and zero dark/clipped
+fraction. Quartz remains the next demonstrated crystalline-powder deficiency;
+do not widen E48 to Salt/Quartz/BGLA or replace their exact identities.
 
 The old post-E16 rank that labelled Stone `21` as Solid was invalid because
 Stone is native Powder. The corrected showcase uses native ROCK ground and
@@ -1343,6 +1378,7 @@ Use the paused deterministic material atlas before and after material-shader cha
 ?scene=render-lab&renderScale=2
 ?scene=render-lab&renderScale=2&renderer=canvas2d
 ?scene=render-lab&simulation=native&renderScale=2
+?scene=candidate-survey&renderScale=2&inputAudit=1
 ?scene=wall-lab&renderScale=2
 ?scene=wall-lab&renderScale=2&renderer=canvas2d
 ```
@@ -1355,7 +1391,14 @@ Use the automated real-browser capture/interaction gate after shader or mapping 
 mkdir -p .artifacts
 npm run audit:browser-input -- --webgl-only --screenshot=.artifacts/render-lab-webgl.png
 npm run audit:browser-input -- --canvas-only --screenshot=.artifacts/render-lab-canvas2d.png
+npm run audit:vfx:candidate-rank
 ```
+
+The candidate-survey route is a separate app-owned deterministic fixture; its
+frozen six-region 1×/2×/4× production-WebGL matrix selects bounded exact-owner
+experiments without mutating the accepted showcase contract. The package gate
+explicitly enables accepted E48; use the underlying driver's
+`--candidate-snowpack-body-vfx=0` only to reproduce the pre-E48 baseline.
 
 The desktop gate performs a paired `renderScale=2` then `renderScale=1` navigation at the same explicit CSS viewport. It must report identical CSS canvas geometry while the backing changes only from 1224×768 to 612×384, and it repeats exact landmark painting, cursor-anchored wheel zoom, and 42×27 CSS-pixel middle-pan at 1×. Do not compare geometry captured under different device-emulation viewports; that tests browser setup rather than backing-scale independence.
 

@@ -74,6 +74,7 @@ import {
   resolveSolidBodyVfxEnabled,
   resolvePowderBodyVfxEnabled, resolvePowderLightVfxEnabled, resolveRenderLook,
   resolveSootyPowderBodyVfxEnabled,
+  resolveSnowpackBodyVfxEnabled,
   resolveThermiteBodyVfxEnabled,
   resolveOrganicSubsurfaceVfxEnabled,
   resolvePowderSolidContactVfxEnabled,
@@ -3290,6 +3291,7 @@ uniform float uMetalWaterContactVfx;
 uniform float uPowderBodyVfx;
 uniform float uSootyPowderBodyVfx;
 uniform float uThermiteBodyVfx;
+uniform float uSnowpackBodyVfx;
 uniform float uPowderLightVfx;
 uniform float uPowderSolidContactVfx;
 uniform float uTranslucentEdgeVfx;
@@ -7466,6 +7468,7 @@ void main() {
     float stablePowderMineral = 0.0;
     float powderMesostrataStrength = 0.0;
     float powderMesostrataSlope = 0.0;
+    float snowpackBodyCalm = 0.0;
     // Smooth's field owns the stable outer silhouette; retain the material's
     // grain vocabulary in the proven body, but do not let per-cell pigment
     // move the first composed edge crossing from one slope column to another.
@@ -7875,6 +7878,38 @@ void main() {
           color += (vec3(1.35) - clamp(color, 0.0, 1.35))
             * powderVfxFacetKey * powderVfxCrownResponse;
           color *= vec3(1.0) - vec3(0.82, 0.91, 1.0) * powderVfxPocketResponse;
+          // E48: exact Snow is a cohesive snowpack in a proven settled Smooth
+          // interior, not a checker of independently lit flakes. Reuse E05's
+          // body/depth/facet evidence for broad blue-white scattering and an
+          // opposing compacted pocket. The later flake identity is retained at
+          // reduced strength only inside this body gate; sparse flakes, holes,
+          // fine structures, motion, wet material, Local, and Grains never
+          // enter this branch. This is static RGB arithmetic only.
+          if (uSnowpackBodyVfx > 0.5 && optics == 13.0 && material == 18.0
+            && foreignMatterContact < 0.5 && unlikeMaterialContact < 0.5) {
+            snowpackBodyCalm = powderBodyGate
+              * mix(0.62, 0.76, smoothstep(0.34, 0.90, powderBodyVolumeDepth));
+            float snowpackRelief = clamp(
+              powderVfxFacetBalance * 0.72 + powderDirectedSlope * 0.16
+                + (0.50 - powderBodyVolumeDepth) * 0.10,
+              -1.0, 1.0
+            );
+            float snowpackCrown = powderBodyGate
+              * smoothstep(0.02, 0.62, snowpackRelief)
+              * (0.56 + (1.0 - powderBodyVolumeDepth) * 0.32);
+            float snowpackPocket = powderBodyGate
+              * smoothstep(0.02, 0.62, -snowpackRelief)
+              * (0.48 + powderBodyVolumeDepth * 0.46);
+            float snowpackCore = powderBodyGate
+              * smoothstep(0.38, 0.90, powderBodyVolumeDepth)
+              * (1.0 - abs(snowpackRelief)) * 0.24;
+            color += (vec3(1.18) - clamp(color, 0.0, 1.18))
+              * vec3(0.76, 0.91, 1.00) * snowpackCrown * 0.16;
+            color *= vec3(1.0) - vec3(0.066, 0.040, 0.020)
+              * (snowpackPocket + snowpackCore);
+            color += vec3(-0.006, 0.002, 0.012)
+              * (snowpackPocket + snowpackCore);
+          }
           // E40: exact Gunpowder and BCOL share SootyGranular optics but their
           // broad settled bodies currently stop at E05's generic mineral
           // response. Reuse that already-proven facet balance and body depth
@@ -8502,6 +8537,14 @@ void main() {
           color += vec3(0.090, 0.038, 0.010) * inclusion;
         }
         color = clamp(color, 0.0, 1.0);
+      }
+      // Dense Snow keeps a restrained trace of its exact flake motif while the
+      // broad body established above owns the fit-view read. Recompose toward
+      // the already lit pre-grain body rather than a palette constant, so
+      // thermal/light response and E05's crown/pocket remain intact. The body
+      // gate is identically zero for every topology and style control.
+      if (snowpackBodyCalm > 0.0) {
+        color = mix(color, powderBodyBase, snowpackBodyCalm);
       }
       // Fourteen native explosive powders retain the same semantic/powder
       // topology but receive stable identity marks. This is arithmetic-only
@@ -10579,6 +10622,10 @@ export class PixiFieldPresenter {
     // true-8x retains Thermite's established identity and declares no E45 path.
     const thermiteBodyVfxEnabled = outputScale < 8
       && resolveThermiteBodyVfxEnabled(renderLook);
+    // E48 is exact-owner arithmetic inside E05's stable Smooth body. Compact
+    // true-8x retains Snow's established flake identity and declares no E48 path.
+    const snowpackBodyVfxEnabled = outputScale < 8
+      && resolveSnowpackBodyVfxEnabled(renderLook);
     // E06 is a normal-detail recomposition of the existing centre-field light.
     // The protected compact shader retains its one established emission sample.
     const powderLightVfxEnabled = outputScale < 8
@@ -10827,6 +10874,7 @@ export class PixiFieldPresenter {
       uPowderBodyVfx: { value: powderBodyVfxEnabled ? 1 : 0, type: 'f32' },
       uSootyPowderBodyVfx: { value: sootyPowderBodyVfxEnabled ? 1 : 0, type: 'f32' },
       uThermiteBodyVfx: { value: thermiteBodyVfxEnabled ? 1 : 0, type: 'f32' },
+      uSnowpackBodyVfx: { value: snowpackBodyVfxEnabled ? 1 : 0, type: 'f32' },
       uPowderLightVfx: { value: powderLightVfxEnabled ? 1 : 0, type: 'f32' },
       uPowderSolidContactVfx: {
         value: powderSolidContactVfxEnabled ? 1 : 0, type: 'f32',
@@ -11072,6 +11120,7 @@ export class PixiFieldPresenter {
       this.uniforms.uniforms.uPowderBodyVfx = 0;
       this.uniforms.uniforms.uSootyPowderBodyVfx = 0;
       this.uniforms.uniforms.uThermiteBodyVfx = 0;
+      this.uniforms.uniforms.uSnowpackBodyVfx = 0;
       this.uniforms.uniforms.uPowderLightVfx = 0;
       this.uniforms.uniforms.uPowderSolidContactVfx = 0;
       this.uniforms.uniforms.uTranslucentEdgeVfx = 0;
@@ -11102,6 +11151,7 @@ export class PixiFieldPresenter {
         preserveDrawingBuffer: typeof location !== 'undefined'
           && new URLSearchParams(location.search).get('inputAudit') === '1'
           && (new URLSearchParams(location.search).get('blankAudit') === '1'
+            || new URLSearchParams(location.search).get('candidateRankAudit') === '1'
             || new URLSearchParams(location.search).get('volumeVfxAudit') === '1'
             || new URLSearchParams(location.search).get('gasBodyVfxAudit') === '1'
             || new URLSearchParams(location.search).get('gasMotionVfxAudit') === '1'
@@ -11142,6 +11192,7 @@ export class PixiFieldPresenter {
             || new URLSearchParams(location.search).get('powderBodyVfxAudit') === '1'
             || new URLSearchParams(location.search).get('sootyPowderBodyVfxAudit') === '1'
             || new URLSearchParams(location.search).get('thermiteBodyVfxAudit') === '1'
+            || new URLSearchParams(location.search).get('snowpackBodyVfxAudit') === '1'
             || new URLSearchParams(location.search).get('powderLightVfxAudit') === '1'
             || new URLSearchParams(location.search).get('powderSolidContactVfxAudit') === '1'
             || new URLSearchParams(location.search).get('translucentEdgeVfxAudit') === '1'
@@ -11285,6 +11336,9 @@ export class PixiFieldPresenter {
     ) > 0.5 ? 'active' : 'inactive';
     presenter.app.canvas.dataset.thermiteBodyVfx = Number(
       presenter.uniforms.uniforms.uThermiteBodyVfx
+    ) > 0.5 ? 'active' : 'inactive';
+    presenter.app.canvas.dataset.snowpackBodyVfx = Number(
+      presenter.uniforms.uniforms.uSnowpackBodyVfx
     ) > 0.5 ? 'active' : 'inactive';
     presenter.app.canvas.dataset.powderLightVfx = Number(presenter.uniforms.uniforms.uPowderLightVfx) > 0.5
       ? 'active' : 'inactive';
@@ -12706,6 +12760,7 @@ export class PixiFieldPresenter {
         this.uniforms.uniforms.uPowderBodyVfx = 0;
         this.uniforms.uniforms.uSootyPowderBodyVfx = 0;
         this.uniforms.uniforms.uThermiteBodyVfx = 0;
+        this.uniforms.uniforms.uSnowpackBodyVfx = 0;
         this.uniforms.uniforms.uPowderLightVfx = 0;
         this.uniforms.uniforms.uPowderSolidContactVfx = 0;
         this.uniforms.uniforms.uTranslucentEdgeVfx = 0;
@@ -12754,6 +12809,7 @@ export class PixiFieldPresenter {
         this.app.canvas.dataset.powderBodyVfx = 'inactive';
         this.app.canvas.dataset.sootyPowderBodyVfx = 'inactive';
         this.app.canvas.dataset.thermiteBodyVfx = 'inactive';
+        this.app.canvas.dataset.snowpackBodyVfx = 'inactive';
         this.app.canvas.dataset.powderLightVfx = 'inactive';
         this.app.canvas.dataset.powderSolidContactVfx = 'inactive';
         this.app.canvas.dataset.translucentEdgeVfx = 'inactive';

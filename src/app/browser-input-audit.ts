@@ -67,6 +67,7 @@ import type { SparkStateGraphicsAuditSnapshot } from './spark-state-graphics-aud
 import type { PhotonSpectrumGraphicsAuditSnapshot } from './photon-spectrum-graphics-audit';
 import type { PowderLightVfxAuditSnapshot } from './powder-light-vfx-audit';
 import type { ThermiteBodyVfxAuditSnapshot } from './thermite-body-vfx-audit';
+import type { SnowpackBodyVfxAuditSnapshot } from './snowpack-body-vfx-audit';
 import type { SoapBodyVfxAuditSnapshot } from './soap-body-vfx-audit';
 import type {
   GasMotionVfxAuditSnapshot, GasMotionVfxFixtureMode,
@@ -92,7 +93,9 @@ import type { AcidBodyVfxAuditSnapshot } from './acid-body-vfx-audit';
 import type { SootyPowderBodyVfxAuditSnapshot } from './sooty-powder-body-vfx-audit';
 import type { LiquidSolidMeniscusVfxAuditSnapshot } from './liquid-solid-meniscus-vfx-audit';
 import type { WetSedimentVfxAuditSnapshot } from './wet-sediment-vfx-audit';
-import type { MaterialShowcaseAuditSnapshot } from '../renderer/render-lab-scene';
+import type {
+  MaterialCandidateSurveyAuditSnapshot, MaterialShowcaseAuditSnapshot,
+} from '../renderer/render-lab-scene';
 
 export interface BrowserInputAuditApi {
   readonly version: 1;
@@ -115,8 +118,24 @@ export interface BrowserInputAuditApi {
   atmosphereFieldAlpha(x: number, y: number): number;
   /** Bilinear shared-emission density at a world-cell centre, in byte space. */
   emissionFieldAlpha(x: number, y: number): number;
+  /** Allocation-bounded direct digest of the current semantic material plane. */
+  materialPlaneDigest(): {
+    readonly hash: number;
+    readonly occupied: number;
+    readonly materialCounts: readonly number[];
+  };
+  /** Direct rectangular owner counts without repeatedly copying the native plane. */
+  materialRegionCounts(regions: readonly {
+    readonly x: number;
+    readonly y: number;
+    readonly radiusX: number;
+    readonly radiusY: number;
+    readonly materials: readonly number[];
+  }[]): readonly number[];
   /** App-owned production-showcase topology and media-sampling contract. */
   materialShowcaseFixture(): MaterialShowcaseAuditSnapshot;
+  /** App-owned unstyled-candidate survey used to select the next exact-owner experiment. */
+  materialCandidateSurveyFixture(): MaterialCandidateSurveyAuditSnapshot;
   /** Queues one paused audit-only native/presentation-field refresh. */
   refreshPresentationFields(): void;
   geologicalSolidStylingEnabled(): boolean;
@@ -208,6 +227,8 @@ export interface BrowserInputAuditApi {
   preparePowderLightVfxFixture(): void;
   thermiteBodyVfxFixture(): ThermiteBodyVfxAuditSnapshot;
   prepareThermiteBodyVfxFixture(): void;
+  snowpackBodyVfxFixture(): SnowpackBodyVfxAuditSnapshot;
+  prepareSnowpackBodyVfxFixture(): void;
   soapBodyVfxFixture(): SoapBodyVfxAuditSnapshot;
   prepareSoapBodyVfxFixture(): void;
   gasMotionVfxFixture(): GasMotionVfxAuditSnapshot;
