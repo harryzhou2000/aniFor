@@ -699,11 +699,29 @@ does not alter simulation, camera, semantic ownership, or `renderScale`.
   inactive for `scale-8`, preserves exact semantic/rendered/depth/wall/native-
   state hashes, promotes exact 4896×3072 WebGL, and completed a `5200.3 ms` GPU
   fence with zero browser errors. Canvas retains its established identity path.
+- **E44 accepted:** exact Carbon Dioxide `41` gains a normal-WebGL-only broad
+  connected-volume fold as a strict child of E04
+  (`?carbonDioxideBodyVfx=0|1`). Exact propagated atmosphere style `6`, E04's
+  connected-density proof, static three-wave billow, cardinal relief,
+  curvature, and optical depth are the complete inputs. The deep body and crown
+  receive a cool grey-blue transmission key while the opposing pocket remains
+  absorptive. The path is RGB-only and adds no wave, sample, texture, field,
+  resource, pass, target, upload, allocation, clock, alpha/support, silhouette,
+  ownership, topology, state, or physics decision. `npm run
+  audit:vfx:carbon-dioxide-body` freezes exact off→on→off semantics and
+  1×/2×/4× RMS at `6.40–6.41` (deep body), `7.79–7.80` (crown), and
+  `1.51–1.53` (pocket), with signed means `+5.83…+5.85`, `+7.57…+7.59`, and
+  `−1.46…−1.49`. Seven sibling gases, sparse topology, authored void/channel,
+  Water/Metal contacts, wall, blank, alpha/support/field bytes, and raw controls
+  remain exact; only the eligible CO2 side of the FOG seam may move by at most
+  two composed bytes. Requested-on true 8× reports E04/E42/E44/HDR inactive,
+  retains no bloom resource, preserves semantics, presents exact 4896×3072
+  WebGL, and completed a `5358.6 ms` GPU fence with zero browser errors.
 - **Protected 8× rung:** `renderScale=8` deliberately reports
   `hdrPipeline=inactive` / `scale-8` and retains the proven direct single-mesh
   4896×3072 path. The experiment must earn a bounded 8× design rather than
   allocating a 115 MiB full-resolution float target beside that path.
-- **Current decision:** E01/E02/E03/E04/E05/E06/E07/E08/E09/E10/E11/E12/E13/E14/E15/E16/E17/E18/E19/E20/E21/E22/E23/E24/E25/E26/E27/E28/E29/E30/E31/E32/E33/E34/E35/E36/E37/E38/E39/E40/E41/E42/E43 remain opt-in through the non-Classic looks
+- **Current decision:** E01/E02/E03/E04/E05/E06/E07/E08/E09/E10/E11/E12/E13/E14/E15/E16/E17/E18/E19/E20/E21/E22/E23/E24/E25/E26/E27/E28/E29/E30/E31/E32/E33/E34/E35/E36/E37/E38/E39/E40/E41/E42/E43/E44 remain opt-in through the non-Classic looks
   until representative hardware timing and mobile thermal behavior are
   measured. E02 remains the safe family-wide baseline. E03 is accepted as the
   liquid-depth checkpoint: its fit-view crop is visibly more cohesive, retains
@@ -1753,7 +1771,7 @@ next production 4× survey then selected Wood/PLNT as the largest remaining
   lower seam density, lower local contrast, stronger macro hierarchy, unchanged
   semantic support, and byte-exact selector-off recovery.
 
-**Next visual experiments:** E03–E43 now provide accepted liquid body/surface,
+**Next visual experiments:** E03–E44 now provide accepted liquid body/surface,
 stable-gas, coherent-gas-motion, powder-depth, and powder-local-light
 checkpoints plus exact resting contact grounding, Glass/Ice transmission, and
 state-aware Wax/PLNT subsurface response, composed wet-mineral optics,
@@ -1801,20 +1819,27 @@ unreachable old phase-permissive deep-radioactive branch while preserving
 VIBR's later native state grammar, every fine/contact/wall control, Canvas, and
 compact 8×. DEUT `100` is no longer a survey candidate: E41 already gives it
 an accepted trait-aware connected radioactive-liquid body without widening
-E03.
+E03. E44 gives exact Carbon Dioxide `41` a distinct cool-grey connected-volume
+crown/pocket response without touching foreign gas identities, sparse
+topology, contacts, Canvas, or compact 8×. Its frozen all-scale browser matrix
+and v5 composed cloud close CO2 as the immediate gas candidate.
 Improve distinctive depth, transmission, reflection, lighting, and
 mesostructure without stacking another narrow Oil/Acid/contact tint or generic
 PLNT/gas layer.
-The next selection requires a fresh composed-family/material survey with E43
-enabled. Prioritize an underserved exact powder, liquid, or gas whose fit-view
-body still lacks macro depth or optical identity; do not reopen E38/E39/E41/
-E42/E43 without new owner-specific evidence. Continue with topology-preserving,
-material-specific cards that reuse already-live semantic, field, depth, and
-static-light evidence. Prefer the smallest arithmetic-only candidate that
-fixes a visible deficiency and build its exact fixture/gate first; do not add
-an isolated tint merely to continue the experiment number. Preserve the E14
-1× stencil snap and all E01–E43 selectors and controls while designing the next
-bounded card.
+The fresh composed-family/material survey is now complete with E17/E43/E44
+explicitly enabled under `inputAudit=1`. Fixture v5 freezes 22 materials, 17
+regions, hash `2677171272`, and 112,795 occupied cells at 1×/2×/4×. The final
+family floors are Organic `67.661`, Solid `70.694`, Contact `88.768`, Gas
+`95.463`, Emission `98.475`, Powder `100`, and Liquid `100`. Organic remains the
+known E36 scorer blind spot; Solid is exact ISZS surface-detail undersampling,
+not a focused E43 regression. Do not reopen E36/E38/E39/E41/E42/E43/E44 from
+those score-only floors. Return to the owner inventory: exact Thermite `30` is
+the first powder candidate because its dense settled body still relies on the
+generic E05 relief plus cell-scale reactive-metal marks; exact Soap `38` is the
+second liquid candidate because its broad body remains generic beneath its
+thin-film motif. Require a dedicated topology/control fixture and reuse live
+semantic/field/depth/static-light evidence. Preserve the E14 1× stencil snap
+and all E01–E44 selectors and controls while designing the next bounded card.
 
 ## Phase 1 — HDR pipeline & lighting core (biggest visual payoff)
 

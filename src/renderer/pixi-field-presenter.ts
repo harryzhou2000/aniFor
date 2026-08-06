@@ -49,6 +49,7 @@ import {
   resolveGlassBodyVfxEnabled,
   resolveGasBodyVfxEnabled, resolveGasCoreDepthVfxEnabled, resolveGasLightVfxEnabled,
   resolveGasMotionVfxEnabled,
+  resolveCarbonDioxideBodyVfxEnabled,
   resolveHydrogenBodyVfxEnabled,
   resolveRadioactiveSolidBodyVfxEnabled,
   resolveNobleGasBillowVfxEnabled,
@@ -3252,6 +3253,7 @@ uniform float uGasMotionVfx;
 uniform float uGasLightVfx;
 uniform float uGasCoreDepthVfx;
 uniform float uHydrogenBodyVfx;
+uniform float uCarbonDioxideBodyVfx;
 uniform float uNobleGasBillowVfx;
 uniform float uNobleGasPrismVfx;
 uniform float uSmokeSoftnessVfx;
@@ -6424,6 +6426,49 @@ void main() {
             * hydrogenBodyKey * hydrogenBodyCrown * 0.390;
           color *= vec3(1.0)
             - vec3(0.40, 0.26, 0.10) * hydrogenBodyPocket * 0.270;
+        }
+      }
+
+      // E44: dense exact Carbon Dioxide otherwise converges on E04's generic
+      // CleanGas volume while its style-6 motif fades under atmosphere
+      // ownership. Recompose only that propagated owner into a broad cool-grey
+      // carbonic crown, restrained depth absorption, and an opposing pocket.
+      // The accepted E04 billow carriers, cardinal relief, curvature, optical
+      // depth, and connected-density proof are the complete input set. RGB
+      // only: no wave, sample, texture, field, pass, target, upload, clock,
+      // allocation, alpha, support, silhouette, ownership, topology, state, or
+      // physics change. Canvas and compact true 8x retain style-6 identity.
+      if (uCarbonDioxideBodyVfx > 0.5 && uGasIdentityStyling > 0.5
+        && wall < 0.5 && !materialEmissive) {
+        float carbonDioxideBodyStyle = floor(gasStyleState.r * 255.0 + 0.5);
+        float carbonDioxideBodyOwner = 1.0
+          - step(0.5, abs(carbonDioxideBodyStyle - 6.0));
+        if (carbonDioxideBodyOwner > 0.5) {
+          float carbonDioxideBodyDensity = smoothstep(
+            0.12, 0.44, atmosphereState.a
+          ) * (1.0 - smoothstep(0.84, 1.0, atmosphereState.a) * 0.18);
+          float carbonDioxideBodySupport = carbonDioxideBodyOwner * gasVfxBodySupport
+            * smoothstep(0.16, 0.52, cloudNeighbourMean)
+            * carbonDioxideBodyDensity;
+          float carbonDioxideBodyPhase = clamp(
+            gasVfxBillow * 0.58 + gasVfxWaveC * 0.42
+              + gasDirectionalRelief * 0.10 - gasCurvature * 0.04,
+            -1.0, 1.0
+          );
+          float carbonDioxideBodyCrown = carbonDioxideBodySupport
+            * (max(carbonDioxideBodyPhase, 0.0) + gasCrown * 0.12);
+          float carbonDioxideBodyPocket = carbonDioxideBodySupport
+            * (max(-carbonDioxideBodyPhase, 0.0) + gasPocket * 0.12);
+          float carbonDioxideBodyCore = carbonDioxideBodySupport * opticalDepth;
+          vec3 carbonDioxideBodyKey = mix(
+            vec3(0.54, 0.72, 0.88), vec3(0.78, 0.88, 0.94),
+            clamp(0.52 + gasDirectionalRelief * 0.24, 0.0, 1.0)
+          );
+          color += (vec3(1.10) - clamp(color, 0.0, 1.10))
+            * carbonDioxideBodyKey * carbonDioxideBodyCrown * 0.330;
+          color *= vec3(1.0)
+            - vec3(0.20, 0.14, 0.08) * carbonDioxideBodyPocket * 0.500
+            - vec3(0.07, 0.06, 0.045) * carbonDioxideBodyCore * 0.080;
         }
       }
 
@@ -10458,6 +10503,10 @@ export class PixiFieldPresenter {
     // retains its existing propagated style-5 key and declares no E42 branch.
     const hydrogenBodyVfxEnabled = outputScale < 8
       && resolveHydrogenBodyVfxEnabled(renderLook);
+    // E44 is an arithmetic-only exact-Carbon-Dioxide child of E04. Canvas and
+    // compact true 8x retain their existing propagated style-6 presentation.
+    const carbonDioxideBodyVfxEnabled = outputScale < 8
+      && resolveCarbonDioxideBodyVfxEnabled(renderLook);
     // E25 is an arithmetic-only exact Noble Gas recomposition over E04's
     // connected body. Compact true 8x retains its established style-7 path and
     // declares neither this selector nor a parallel branch.
@@ -10604,6 +10653,9 @@ export class PixiFieldPresenter {
       uGasLightVfx: { value: gasLightVfxEnabled ? 1 : 0, type: 'f32' },
       uGasCoreDepthVfx: { value: gasCoreDepthVfxEnabled ? 1 : 0, type: 'f32' },
       uHydrogenBodyVfx: { value: hydrogenBodyVfxEnabled ? 1 : 0, type: 'f32' },
+      uCarbonDioxideBodyVfx: {
+        value: carbonDioxideBodyVfxEnabled ? 1 : 0, type: 'f32',
+      },
       uNobleGasBillowVfx: { value: nobleGasBillowVfxEnabled ? 1 : 0, type: 'f32' },
       uNobleGasPrismVfx: { value: nobleGasPrismVfxEnabled ? 1 : 0, type: 'f32' },
       uSmokeSoftnessVfx: { value: smokeSoftnessVfxEnabled ? 1 : 0, type: 'f32' },
@@ -10853,6 +10905,7 @@ export class PixiFieldPresenter {
       this.uniforms.uniforms.uGasLightVfx = 0;
       this.uniforms.uniforms.uGasCoreDepthVfx = 0;
       this.uniforms.uniforms.uHydrogenBodyVfx = 0;
+      this.uniforms.uniforms.uCarbonDioxideBodyVfx = 0;
       this.uniforms.uniforms.uNobleGasBillowVfx = 0;
       this.uniforms.uniforms.uNobleGasPrismVfx = 0;
       this.uniforms.uniforms.uSmokeSoftnessVfx = 0;
@@ -10919,6 +10972,7 @@ export class PixiFieldPresenter {
             || new URLSearchParams(location.search).get('gasLightVfxAudit') === '1'
             || new URLSearchParams(location.search).get('gasCoreDepthVfxAudit') === '1'
             || new URLSearchParams(location.search).get('hydrogenBodyVfxAudit') === '1'
+            || new URLSearchParams(location.search).get('carbonDioxideBodyVfxAudit') === '1'
             || new URLSearchParams(location.search).get('nobleGasBillowVfxAudit') === '1'
             || new URLSearchParams(location.search).get('nobleGasPrismVfxAudit') === '1'
             || new URLSearchParams(location.search).get('smokeSoftnessVfxAudit') === '1'
@@ -10990,6 +11044,9 @@ export class PixiFieldPresenter {
     ) > 0.5 ? 'active' : 'inactive';
     presenter.app.canvas.dataset.hydrogenBodyVfx = Number(
       presenter.uniforms.uniforms.uHydrogenBodyVfx
+    ) > 0.5 ? 'active' : 'inactive';
+    presenter.app.canvas.dataset.carbonDioxideBodyVfx = Number(
+      presenter.uniforms.uniforms.uCarbonDioxideBodyVfx
     ) > 0.5 ? 'active' : 'inactive';
     presenter.app.canvas.dataset.nobleGasBillowVfx = Number(
       presenter.uniforms.uniforms.uNobleGasBillowVfx
@@ -12467,6 +12524,7 @@ export class PixiFieldPresenter {
         this.uniforms.uniforms.uGasLightVfx = 0;
         this.uniforms.uniforms.uGasCoreDepthVfx = 0;
         this.uniforms.uniforms.uHydrogenBodyVfx = 0;
+        this.uniforms.uniforms.uCarbonDioxideBodyVfx = 0;
         this.uniforms.uniforms.uNobleGasBillowVfx = 0;
         this.uniforms.uniforms.uNobleGasPrismVfx = 0;
         this.uniforms.uniforms.uSmokeSoftnessVfx = 0;
@@ -12510,6 +12568,7 @@ export class PixiFieldPresenter {
         this.app.canvas.dataset.gasLightVfx = 'inactive';
         this.app.canvas.dataset.gasCoreDepthVfx = 'inactive';
         this.app.canvas.dataset.hydrogenBodyVfx = 'inactive';
+        this.app.canvas.dataset.carbonDioxideBodyVfx = 'inactive';
         this.app.canvas.dataset.nobleGasBillowVfx = 'inactive';
         this.app.canvas.dataset.nobleGasPrismVfx = 'inactive';
         this.app.canvas.dataset.smokeSoftnessVfx = 'inactive';

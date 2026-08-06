@@ -73,6 +73,9 @@ import type { GasLightVfxAuditSnapshot } from './gas-light-vfx-audit';
 import type { GasCoreDepthVfxAuditSnapshot } from './gas-core-depth-vfx-audit';
 import type { NobleGasBillowVfxAuditSnapshot } from './noble-gas-billow-vfx-audit';
 import type { HydrogenBodyVfxAuditSnapshot } from './hydrogen-body-vfx-audit';
+import type {
+  CarbonDioxideBodyVfxAuditSnapshot,
+} from './carbon-dioxide-body-vfx-audit';
 import type { RadioactiveSolidBodyVfxAuditSnapshot } from './radioactive-solid-body-vfx-audit';
 import type { SmokeSoftnessVfxAuditSnapshot } from './smoke-softness-vfx-audit';
 import type { PlasmaCoreVfxAuditSnapshot } from './plasma-core-vfx-audit';
@@ -211,6 +214,8 @@ export interface BrowserInputAuditApi {
   prepareNobleGasBillowVfxFixture(): void;
   hydrogenBodyVfxFixture(): HydrogenBodyVfxAuditSnapshot;
   prepareHydrogenBodyVfxFixture(): void;
+  carbonDioxideBodyVfxFixture(): CarbonDioxideBodyVfxAuditSnapshot;
+  prepareCarbonDioxideBodyVfxFixture(): void;
   radioactiveSolidBodyVfxFixture(): RadioactiveSolidBodyVfxAuditSnapshot;
   prepareRadioactiveSolidBodyVfxFixture(): void;
   smokeSoftnessVfxFixture(): SmokeSoftnessVfxAuditSnapshot;

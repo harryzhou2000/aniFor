@@ -8,6 +8,7 @@ import {
   resolvePlantLobeDepthVfxEnabled,
   resolveWoodBarkReliefVfxEnabled,
   resolveWoodTanninVfxEnabled,
+  resolveCarbonDioxideBodyVfxEnabled,
   resolveCeramicGlazeVfxEnabled,
   DEFAULT_RENDER_LOOK, resolveGasBodyVfxEnabled, resolveGasCoreDepthVfxEnabled,
   resolveGasLightVfxEnabled,
@@ -656,6 +657,36 @@ describe('resolveRenderLook', () => {
     )).toBe(false);
     expect(resolveHydrogenBodyVfxEnabled(
       'realistic', '?volumeVfx=0&gasBodyVfx=on&hydrogenBodyVfx=1',
+    )).toBe(true);
+  });
+
+  it('keeps exact Carbon Dioxide body optics subordinate to E04 and isolated from older input audits', () => {
+    expect(resolveCarbonDioxideBodyVfxEnabled(
+      'classic', '?carbonDioxideBodyVfx=on',
+    )).toBe(false);
+    expect(resolveCarbonDioxideBodyVfxEnabled('realistic', '')).toBe(true);
+    expect(resolveCarbonDioxideBodyVfxEnabled('neon-lab', '')).toBe(true);
+    expect(resolveCarbonDioxideBodyVfxEnabled('realistic', '?inputAudit=1')).toBe(false);
+    expect(resolveCarbonDioxideBodyVfxEnabled(
+      'realistic', '?inputAudit=1&carbonDioxideBodyVfx=true',
+    )).toBe(true);
+    expect(resolveCarbonDioxideBodyVfxEnabled(
+      'realistic', '?carbonDioxideBodyVfx=off',
+    )).toBe(false);
+    expect(resolveCarbonDioxideBodyVfxEnabled(
+      'realistic', '?carbonDioxideBodyVfx=0',
+    )).toBe(false);
+    expect(resolveCarbonDioxideBodyVfxEnabled(
+      'realistic', '?carbonDioxideBodyVfx=false',
+    )).toBe(false);
+    expect(resolveCarbonDioxideBodyVfxEnabled(
+      'realistic', '?carbonDioxideBodyVfx=on',
+    )).toBe(true);
+    expect(resolveCarbonDioxideBodyVfxEnabled(
+      'realistic', '?gasBodyVfx=0&carbonDioxideBodyVfx=on',
+    )).toBe(false);
+    expect(resolveCarbonDioxideBodyVfxEnabled(
+      'realistic', '?volumeVfx=0&gasBodyVfx=on&carbonDioxideBodyVfx=1',
     )).toBe(true);
   });
 

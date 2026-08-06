@@ -52,7 +52,7 @@ export interface MaterialShowcaseAuditRegion {
 }
 
 export interface MaterialShowcaseAuditSnapshot {
-  readonly version: 3;
+  readonly version: 5;
   readonly semantic: {
     readonly hash: number;
     readonly occupied: number;
@@ -79,10 +79,10 @@ export interface MaterialShowcaseAuditSnapshot {
  * coordinates or accepting the same wrong topology at every output scale.
  */
 export const MATERIAL_SHOWCASE_AUDIT: MaterialShowcaseAuditSnapshot = {
-  version: 3,
+  version: 5,
   semantic: {
-    hash: 595_518_258,
-    occupied: 104_027,
+    hash: 2_677_171_272,
+    occupied: 112_795,
     materialCounts: [
       { material: Material.Sand, count: 5_862 },
       { material: Material.Water, count: 20_862 },
@@ -97,11 +97,14 @@ export const MATERIAL_SHOWCASE_AUDIT: MaterialShowcaseAuditSnapshot = {
       { material: Material.Concrete, count: 4_148 },
       { material: Material.Clay, count: 4_720 },
       { material: Material.Oxygen, count: 6_003 },
+      { material: Material.CarbonDioxide, count: 2_184 },
       { material: Material.NobleGas, count: 4_300 },
       { material: Material.ROCK, count: 23_090 },
       { material: Material.ELEC, count: 150 },
       { material: Material.POLO, count: 492 },
       { material: Material.URAN, count: 1_804 },
+      { material: Material.ISZS, count: 3_488 },
+      { material: Material.VIBR, count: 3_096 },
       { material: Material.DTEC, count: 2_869 },
     ],
   },
@@ -165,6 +168,13 @@ export const MATERIAL_SHOWCASE_AUDIT: MaterialShowcaseAuditSnapshot = {
       expectedMatching: 2_315,
     },
     {
+      name: 'gasCarbonDioxide', family: 'gas', profile: 'diffuse-gas',
+      x: 398, y: 166, radiusX: 34, radiusY: 12,
+      support: { kind: 'atmosphere', style: 6, minimumAlpha: 12, minimumRecall: 0.78 },
+      semanticMaterials: [Material.CarbonDioxide], topology: true, silhouette: true,
+      expectedMatching: 1_528,
+    },
+    {
       name: 'gasNoble', family: 'gas', profile: 'diffuse-gas',
       x: 497, y: 103, radiusX: 28, radiusY: 20,
       support: { kind: 'atmosphere', style: 7, minimumAlpha: 12, minimumRecall: 0.78 },
@@ -177,6 +187,20 @@ export const MATERIAL_SHOWCASE_AUDIT: MaterialShowcaseAuditSnapshot = {
       support: { kind: 'semantic', materials: [Material.ROCK], minimumRecall: 0.96 },
       semanticMaterials: [Material.ROCK],
       topology: true, silhouette: true, expectedMatching: 2_660,
+    },
+    {
+      name: 'solidISZS', family: 'solid', profile: 'rigid-body',
+      x: 232, y: 73, radiusX: 18, radiusY: 24,
+      support: { kind: 'semantic', materials: [Material.ISZS], minimumRecall: 0.96 },
+      semanticMaterials: [Material.ISZS],
+      topology: true, silhouette: true, expectedMatching: 1_728,
+    },
+    {
+      name: 'solidVIBR', family: 'solid', profile: 'rigid-body',
+      x: 253, y: 154, radiusX: 18, radiusY: 21,
+      support: { kind: 'semantic', materials: [Material.VIBR], minimumRecall: 0.96 },
+      semanticMaterials: [Material.VIBR],
+      topology: true, silhouette: true, expectedMatching: 1_512,
     },
     {
       name: 'organicWood', family: 'organic', profile: 'organic-body',
@@ -293,7 +317,18 @@ export function applyMaterialShowcaseScene(simulation: SimulationBackend): void 
   plot.ellipse(360, 92, 94, 49, Material.Smoke, 0.96, 811, 0.30);
   plot.ellipse(427, 82, 82, 43, Material.Oxygen, 0.92, 823, 0.34);
   plot.ellipse(497, 103, 64, 37, Material.NobleGas, 0.88, 827, 0.40);
+  // A lower, exact-CO2 cloud occupies the clear air band above the pool. Its
+  // semantic carrier remains separated from every existing cloud and surface,
+  // leaving atmosphere style 6 solely responsible for its connected volume.
+  plot.ellipse(398, 166, 55, 18, Material.CarbonDioxide, 0.96, 841, 0.30);
   plot.roundedRect(296, 129, 30, 20, 9, Material.Plasma);
+
+  // Broad, separated radioactive solids make their deep-body optics visible at
+  // normal fit without letting gas, liquid, or unlike-solid contact influence
+  // the scored interiors. Their staggered silhouettes also avoid card-like
+  // repetition while retaining a generous exact-owner core at every scale.
+  plot.roundedRect(205, 38, 54, 70, 16, Material.ISZS);
+  plot.roundedRect(226, 123, 54, 62, 15, Material.VIBR);
 
   // A small living silhouette and a device/radioactive cluster keep organic,
   // hard-surface, energy, and native-state visual vocabulary in one scene.

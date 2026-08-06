@@ -13,7 +13,7 @@ powder, solid, liquid, gas, energy, and contact scenes across Canvas and WebGL a
 mobile gestures, save/load, CI, and Pages deployment as protected regression
 contracts rather than the primary feature stream.
 
-The accepted visual experiment ladder now runs through E43. E12 is the
+The accepted visual experiment ladder now runs through E44. E12 is the
 species-safe Sand/Clay/Concrete wet-sediment checkpoint; preserve its exact
 aqueous owner/stability proof, split moving-powder/stationary-Water control,
 Local/Grains no-op, fine structures, authored gaps, Canvas fallback, and true
@@ -746,12 +746,40 @@ WebGL, and completes a real GPU fence (accepted full matrix `5200.3 ms`) with
 zero browser errors. Do not widen the old phase-permissive seven-owner identity
 branch or E04/E03/E41/E42.
 
-The next visual selection must come from a fresh composed-family/material
-survey with E43 enabled. Prefer an underserved exact powder, liquid, or gas
-whose fit-view body still lacks macro depth; keep E38/E39/E41/E42/E43 closed
-unless new owner-specific evidence demonstrates a regression. Reuse live
-semantic/field/depth evidence and require a dedicated fixture before adding a
-new selector.
+E44 is the accepted normal-WebGL-only exact Carbon Dioxide `41` connected-body
+checkpoint. `?carbonDioxideBodyVfx=0|1` is a strict child of E04 and remains
+inactive for unrelated `inputAudit=1` fixtures unless explicitly selected.
+Only propagated atmosphere style `6` inside E04's connected, non-emissive,
+non-wall gas body may respond. Reuse the already-live static three-wave billow,
+cardinal density/curvature, optical depth, crown/pocket, and connected support
+for a broad cool-grey/blue deep-body key with an opposing carbonic pocket. Add
+no sample, wave, texture, field, resource, pass, target, upload, allocation,
+clock, alpha/support, silhouette, ownership, topology, state, or physics
+decision. Canvas and compact true 8× retain their established style-6 identity.
+
+Validate E44 with `npm run audit:vfx:carbon-dioxide-body`. Its frozen
+1×/2×/4× off→on→off matrix holds deep-body RGB RMS at `6.40–6.41`, crown at
+`7.79–7.80`, and pocket at `1.51–1.53`; signed means are respectively
+`+5.83…+5.85`, `+7.57…+7.59`, and `−1.46…−1.49`. The pocket is deliberately
+weaker but must retain `0.30–0.52` sampled coverage and peak `2–4`. Sibling gas
+styles, sparse carriers/midpoint/gap/isolate, Water/Metal contacts, native wall,
+blank, semantic/alpha/support/field bytes, and raw controls are exact no-ops;
+only the eligible CO2 side of the FOG seam may move by at most two composed
+bytes. Requested-on true 8× reports E04/E42/E44/HDR inactive with no bloom,
+preserves semantics, presents exact 4896×3072 WebGL, and completes a real GPU
+fence (accepted frozen run `5358.6 ms`) with zero browser errors.
+
+The corrected v5 composed survey now explicitly enables E17/E43/E44 under
+`inputAudit=1` and freezes 22 material counts, 17 scored regions, semantic hash
+`2677171272`, and 112,795 occupied cells across 1×/2×/4×. Its family floor is
+Organic `67.661` (the known PLNT scorer blind spot), followed by Solid `70.694`
+(ISZS surface detail), Contact `88.768`, Gas `95.463`, Emission `98.475`, and
+saturated Powder/Liquid `100`. Do not reopen E36 or E43 from those score-only
+floors: their focused gates remain authoritative. E44 raises its scored CO2
+body to about `99.0`, so the next owner-specific experiment should return to
+the underserved material inventory rather than stacking another generic gas
+layer: inspect exact Thermite powder first and Soap liquid second, require a
+dedicated fixture, and reuse live semantic/field/depth evidence.
 
 The old post-E16 rank that labelled Stone `21` as Solid was invalid because
 Stone is native Powder. The corrected showcase uses native ROCK ground and
@@ -1250,7 +1278,7 @@ The mobile gate must run for both Canvas2D and WebGL. Enable touch and mobile me
 
 The composed-output gate samples representative energy, dense solid, liquid, and gas regions. Keep dense fluid-core coverage, bounded luma range, and clipping checks in both Canvas2D and WebGL. The homogeneous lower Water/Oil/Acid/Lava columns additionally enforce bounded adjacent-pixel micro-contrast, nonzero five-by-five low-pass macro depth, stable family hue, a WebGL/Canvas macro-depth ratio of `0.65–2.0`, and a mean-exposure ratio of `0.65–1.6`; this rejects flat matte fill, raw-cell glitter, backend washout, or clipped Lava. Dense rounded energy bodies must retain one dominant connected component and whole-body macro relief while remaining locally smooth; use the independent relief toggle to prove bipolar RGB response, exact support, repetition, and backend parity. The high-energy core of the sparse PHOT strip must retain quiet gaps. Keep explicit Smoke/Oxygen/Noble Gas hue assertions because uniform curvature math alone does not protect later additive composition. Prove gas lighting by capturing the identical canonical scene with only the gas-light coupling toggled off; source aura or intrinsic gas hue is not evidence. Semantic unit tests alone cannot prove that a shader, compositor, or fallback draw order still presents the field.
 
-Framebuffer coverage must be measured against a stable same-geometry blank audit, not screenshot alpha or a raw RGB floor: composed page screenshots are opaque and the viewport background itself is nonzero. Wait for three identical frames separated by at least one field-refresh interval, record the canvas rectangle with every capture, reject canonical/control/blank rectangle drift, derive the per-region signal threshold from blank-frame noise, and count only canonical pixels that differ beyond it. Guard every post-navigation wait with the expected query stage so an old document cannot satisfy it. Keep matrix separators as zero-signal probes and preserve the separate semantic-mask/footprint checks for brush placement.
+Framebuffer coverage must be measured against a stable same-geometry blank audit, not screenshot alpha or a raw RGB floor: composed page screenshots are opaque and the viewport background itself is nonzero. Wait for three identical frames separated by at least one field-refresh interval when that is the evidence contract, record the canvas rectangle with every capture, reject canonical/control/blank rectangle drift, derive the per-region signal threshold from blank-frame noise, and count only canonical pixels that differ beyond it. A large WebGL atlas may instead use `captureSettledPage`: wait for the completed presentation fence plus compositor hand-off, then retain exact downstream off→on→off backing/raw checks. Requiring three identical full-page PNG transfers for the 21-card Energy/radioactive atlas exhausted its eight-second SwiftShader budget even with frozen visual time; that was a harness timeout, not material animation. Guard every post-navigation wait with the expected query stage so an old document cannot satisfy it. Keep matrix separators as zero-signal probes and preserve the separate semantic-mask/footprint checks for brush placement.
 
 Liquid native-wall refraction may move only the analytic wall-pattern coordinate. Restrict ownership to authoritative semantic non-emissive liquid cells; reconstructed empty support has no trustworthy species/optics and must retain a straight backdrop, though it may stabilize phase-categorical shore classification for neighbouring semantic liquid. Unlike-liquid seams are not outer shores, and molten/Lava is an exact no-op. Keep displacement deterministic and quantized in world-cell space, with no time ripple, framebuffer copy, extra texture/pass/target, alpha/support change, or duplicate 8× surface. Preserve the Water/Oil response controls, wall-backed Lava reconstructed-pinhole zero control, exact off→on→off repeat, and Canvas/WebGL parity gate.
 

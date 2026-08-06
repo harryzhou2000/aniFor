@@ -35,10 +35,12 @@ describe('render lab scene', () => {
     for (const material of [
       Material.ROCK, Material.Sand, Material.Clay, Material.Concrete,
       Material.Water, Material.Oil, Material.Glass, Material.Smoke,
-      Material.Oxygen, Material.NobleGas, Material.Wood, Material.Plant,
+      Material.Oxygen, Material.CarbonDioxide, Material.NobleGas,
+      Material.Wood, Material.Plant,
       Material.Metal, Material.DTEC, Material.URAN, Material.POLO,
+      Material.ISZS, Material.VIBR,
     ]) expect(counts[material]).toBeGreaterThan(100);
-    expect(MATERIAL_SHOWCASE_AUDIT.version).toBe(3);
+    expect(MATERIAL_SHOWCASE_AUDIT.version).toBe(5);
     expect(MATERIAL_SHOWCASE_AUDIT.semantic.materialCounts.map(({ material }) => (
       [material, counts[material]]
     ))).toEqual(MATERIAL_SHOWCASE_AUDIT.semantic.materialCounts.map(({ material, count }) => (
@@ -92,6 +94,9 @@ describe('render lab scene', () => {
     expect(first.cells()[265 * 612 + 285]).toBe(Material.Glass);
     expect(first.cells()[270 * 612 + 512]).toBe(Material.DTEC);
     expect(first.cells()[173 * 612 + 554]).toBe(Material.POLO);
+    expect(first.cells()[73 * 612 + 232]).toBe(Material.ISZS);
+    expect(first.cells()[154 * 612 + 253]).toBe(Material.VIBR);
+    expect(first.cells()[166 * 612 + 398]).toBe(Material.CarbonDioxide);
   });
 
   it('builds a deterministic atlas with representative material families', () => {

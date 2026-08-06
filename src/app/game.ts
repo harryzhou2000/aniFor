@@ -41,6 +41,9 @@ import {
   HYDROGEN_BODY_VFX_AUDIT, prepareHydrogenBodyVfxFixture,
 } from './hydrogen-body-vfx-audit';
 import {
+  CARBON_DIOXIDE_BODY_VFX_AUDIT, prepareCarbonDioxideBodyVfxFixture,
+} from './carbon-dioxide-body-vfx-audit';
+import {
   RADIOACTIVE_SOLID_BODY_VFX_AUDIT, prepareRadioactiveSolidBodyVfxFixture,
 } from './radioactive-solid-body-vfx-audit';
 import {
@@ -768,6 +771,12 @@ export class Game {
       hydrogenBodyVfxFixture: () => HYDROGEN_BODY_VFX_AUDIT,
       prepareHydrogenBodyVfxFixture: () => {
         prepareHydrogenBodyVfxFixture(this.simulation);
+        this.renderer.synchronizeFixtureMaterialPlane();
+        this.renderer.invalidateDynamicPresentation();
+      },
+      carbonDioxideBodyVfxFixture: () => CARBON_DIOXIDE_BODY_VFX_AUDIT,
+      prepareCarbonDioxideBodyVfxFixture: () => {
+        prepareCarbonDioxideBodyVfxFixture(this.simulation);
         this.renderer.synchronizeFixtureMaterialPlane();
         this.renderer.invalidateDynamicPresentation();
       },
