@@ -43,6 +43,7 @@ import {
   resolveBotanicalPigmentVfxEnabled,
   resolvePlantLaminaVfxEnabled,
   resolvePlantLobeDepthVfxEnabled,
+  resolvePlantCanopyMassVfxEnabled,
   resolveWoodBarkReliefVfxEnabled,
   resolveWoodTanninVfxEnabled,
   resolveGlassBodyVfxEnabled,
@@ -3258,6 +3259,7 @@ uniform float uBotanicalMesostructureVfx;
 uniform float uBotanicalPigmentVfx;
 uniform float uPlantLaminaVfx;
 uniform float uPlantLobeDepthVfx;
+uniform float uPlantCanopyMassVfx;
 uniform float uWoodBarkReliefVfx;
 uniform float uWoodTanninVfx;
 uniform float uGlassBodyVfx;
@@ -8511,11 +8513,43 @@ void main() {
           float leafPigmentCrown = max(leafPigment, 0.0);
           float leafPigmentPocket = max(-leafPigment, 0.0);
           float leafVein = 1.0 - smoothstep(0.055, 0.19, abs(leafPigment));
-          color *= 1.0 - (leafPigmentPocket * 0.032 + leafVein * 0.075)
+          // Resolve E36's exact zero-state PLNT proof before E26 draws its
+          // closed pigment zero-crossing. The accepted E26 value remains live,
+          // but the new child can subordinate that contour to a broad ranked
+          // canopy without a second procedural evaluation.
+          float plantCanopyMass = botanicalBodyReplacement > 0.5
+              && uPlantCanopyMassVfx > 0.5
+              && mod(
+                floor(wallState.b * 255.0 + 0.5)
+                  + floor(wallState.a * 255.0 + 0.5) * 256.0,
+                32768.0
+              ) < 0.5
+            ? botanicalDepth : 0.0;
+          float leafCanopyRank = 0.0;
+          float leafCanopyFront = 0.0;
+          float leafCanopyRear = 0.0;
+          float leafCanopyOverlap = 0.0;
+          float leafVeinGain = 1.0;
+          if (plantCanopyMass > 0.001) {
+            leafCanopyRank = clamp(
+              (botanicalMacro - 0.5) * 1.55
+                + leafBody * 0.22
+                + botanicalExistingRelief * 0.10,
+              -1.0, 1.0
+            );
+            leafCanopyFront = smoothstep(-0.18, 0.52, leafCanopyRank);
+            leafCanopyRear = 1.0 - leafCanopyFront;
+            leafCanopyOverlap = smoothstep(
+              0.16, 0.58, abs(leafBody - leafCanopyRank * 0.72)
+            ) * mix(0.30, 1.0, leafBoundary);
+            leafVeinGain = 0.0;
+          }
+          color *= 1.0 - (leafPigmentPocket * 0.032
+              + leafVein * 0.075 * leafVeinGain)
             * botanicalMesostructure;
           color += (vec3(1.0) - clamp(color, 0.0, 1.0))
             * vec3(0.16, 0.20, 0.12)
-            * (leafPigmentCrown * 0.120 + leafVein * 0.026)
+            * (leafPigmentCrown * 0.120 + leafVein * 0.026 * leafVeinGain)
             * botanicalMesostructure;
           // Shift alternating lobes between cool chlorophyll and warm young
           // growth with a nearly luminance-neutral key. This keeps E20's broad
@@ -8559,7 +8593,7 @@ void main() {
           float leafLaminaBody = clamp(
             leafPigmentBody * 0.62 + leafBody * 0.38, -1.0, 1.0
           );
-          float leafLaminaSegment = leafVein
+          float leafLaminaSegment = leafVein * leafVeinGain
             * smoothstep(0.14, 0.64, leafBoundary)
             * (0.90 + leafLaminaBody * 0.10);
           float leafLaminaPhase = leafLaminaSegment
@@ -8582,14 +8616,6 @@ void main() {
           float plantLobeDepth = plantLamina > 0.001
               && uPlantLobeDepthVfx > 0.5
             ? botanicalDepth : 0.0;
-          color *= 1.0 - leafLaminaPocket * 0.050 * plantLamina;
-          color += (vec3(1.0) - clamp(color, 0.0, 1.0))
-            * vec3(0.34, 0.42, 0.22)
-            * (leafLaminaCrown * 0.075
-              + leafLaminaRib * mix(0.055, 0.050, step(0.001, plantLobeDepth)))
-            * plantLamina;
-          color += vec3(0.026, -0.0035, -0.042) * leafLaminaCarrier
-            * plantLamina;
           // E34: E32's fine carrier makes the canopy tactile, but its closed
           // zero-crossings can read as unrelated cells at fit view. Recompose
           // only E20/E26/E28's accepted signed lobe and boundary evidence into
@@ -8605,6 +8631,27 @@ void main() {
           float leafLobePocket = max(-leafLobeContour, 0.0);
           float leafLobeVein = leafLaminaSegment
             * mix(0.65, 1.0, leafBoundary);
+          // E36 is a strict E34 child. The early exact-state proof ranks the
+          // already-live broad lobe into front/rear masses before E26 can draw
+          // a closed contour. The fine E32 carrier remains continuous tissue,
+          // not a second outline network. This is static RGB arithmetic only.
+          float leafLaminaRibGain = mix(
+            0.055, 0.050, step(0.001, plantLobeDepth)
+          );
+          float leafLaminaCarrierGain = 1.0;
+          if (plantCanopyMass > 0.001) {
+            leafLaminaRibGain = 0.0;
+            leafLaminaCarrierGain = 0.72 + leafCanopyFront * 0.18;
+            leafLobeVein = 0.0;
+          }
+          color *= 1.0 - leafLaminaPocket * 0.050 * plantLamina;
+          color += (vec3(1.0) - clamp(color, 0.0, 1.0))
+            * vec3(0.34, 0.42, 0.22)
+            * (leafLaminaCrown * 0.075
+              + leafLaminaRib * leafLaminaRibGain)
+            * plantLamina;
+          color += vec3(0.026, -0.0035, -0.042) * leafLaminaCarrier
+            * leafLaminaCarrierGain * plantLamina;
           color *= vec3(1.0) - vec3(0.080, 0.050, 0.092)
             * (leafLobePocket * 0.92 + leafLobeVein * 0.52)
             * plantLobeDepth;
@@ -8615,6 +8662,37 @@ void main() {
             * plantLobeDepth;
           color += vec3(-0.032, 0.016, -0.038) * leafLobeContour
             * plantLobeDepth;
+          if (plantCanopyMass > 0.001) {
+            float leafCanopyFold = clamp(
+              leafCanopyRank * 0.78 + leafBody * 0.22,
+              -1.0, 1.0
+            );
+            float leafCanopyCrown = smoothstep(0.04, 0.64, leafCanopyFold);
+            float leafCanopyPocket = smoothstep(0.04, 0.64, -leafCanopyFold);
+            float leafCanopyTissue = leafLaminaCarrier
+              * (0.38 + leafCanopyFront * 0.62);
+            color *= vec3(1.0) - vec3(0.060, 0.027, 0.080)
+              * (leafCanopyPocket * (0.52 + leafCanopyRear * 0.22)
+                + leafCanopyOverlap * leafCanopyRear * 0.18)
+              * plantCanopyMass;
+            color += (vec3(1.0) - clamp(color, 0.0, 1.0))
+              * (vec3(0.23, 0.72, 0.25)
+                  * (leafCanopyCrown * (0.060 + leafCanopyFront * 0.034)
+                    + leafCanopyOverlap * leafCanopyFront * 0.018)
+                + solidEnvironment
+                  * (leafCanopyCrown * 0.034
+                    + leafCanopyOverlap * leafCanopyFront * 0.012))
+              * plantCanopyMass;
+            // Continuous signed lamina relief restores tactile detail without
+            // thresholding the carrier into another closed rib. Its strength
+            // remains subordinate to the broad front/rear volume.
+            color *= 1.0 + leafCanopyTissue * 0.030 * plantCanopyMass;
+            color += vec3(0.012, 0.003, -0.016)
+              * leafCanopyTissue * plantCanopyMass;
+            color += vec3(-0.018, 0.009, -0.020)
+              * (leafCanopyCrown - leafCanopyPocket)
+              * plantCanopyMass;
+          }
         } else {
           float barkWarp = botanicalBodyNoise(vec2(
             fieldPosition.x * 0.050 + botanicalMacro * 0.82,
@@ -10192,6 +10270,10 @@ export class PixiFieldPresenter {
     // Canvas and compact true 8x keep the accepted E32 presentation.
     const plantLobeDepthVfxEnabled = outputScale < 8
       && resolvePlantLobeDepthVfxEnabled(renderLook);
+    // E36 ranks E34's already-live exact-PLNT lobe evidence into overlapping
+    // canopy masses. Canvas and compact true 8x keep the accepted E34 path.
+    const plantCanopyMassVfxEnabled = outputScale < 8
+      && resolvePlantCanopyMassVfxEnabled(renderLook);
     // E21 replaces only normal-WebGL's deep exact-Glass body grade. The
     // compact true-8x shader retains its separately proven transmission path
     // and deliberately declares neither this selector nor its arithmetic.
@@ -10252,6 +10334,7 @@ export class PixiFieldPresenter {
       uBotanicalPigmentVfx: { value: botanicalPigmentVfxEnabled ? 1 : 0, type: 'f32' },
       uPlantLaminaVfx: { value: plantLaminaVfxEnabled ? 1 : 0, type: 'f32' },
       uPlantLobeDepthVfx: { value: plantLobeDepthVfxEnabled ? 1 : 0, type: 'f32' },
+      uPlantCanopyMassVfx: { value: plantCanopyMassVfxEnabled ? 1 : 0, type: 'f32' },
       uWoodBarkReliefVfx: { value: woodBarkReliefVfxEnabled ? 1 : 0, type: 'f32' },
       uWoodTanninVfx: { value: woodTanninVfxEnabled ? 1 : 0, type: 'f32' },
       uGlassBodyVfx: { value: glassBodyVfxEnabled ? 1 : 0, type: 'f32' },
@@ -10487,6 +10570,7 @@ export class PixiFieldPresenter {
       this.uniforms.uniforms.uBotanicalPigmentVfx = 0;
       this.uniforms.uniforms.uPlantLaminaVfx = 0;
       this.uniforms.uniforms.uPlantLobeDepthVfx = 0;
+      this.uniforms.uniforms.uPlantCanopyMassVfx = 0;
       this.uniforms.uniforms.uWoodBarkReliefVfx = 0;
       this.uniforms.uniforms.uWoodTanninVfx = 0;
       this.uniforms.uniforms.uGlassBodyVfx = 0;
@@ -10545,6 +10629,7 @@ export class PixiFieldPresenter {
             || new URLSearchParams(location.search).get('botanicalPigmentVfxAudit') === '1'
             || new URLSearchParams(location.search).get('plantLaminaVfxAudit') === '1'
             || new URLSearchParams(location.search).get('plantLobeDepthVfxAudit') === '1'
+            || new URLSearchParams(location.search).get('plantCanopyMassVfxAudit') === '1'
             || new URLSearchParams(location.search).get('woodBarkReliefVfxAudit') === '1'
             || new URLSearchParams(location.search).get('woodTanninVfxAudit') === '1'
             || new URLSearchParams(location.search).get('glassBodyVfxAudit') === '1'
@@ -10637,6 +10722,9 @@ export class PixiFieldPresenter {
     ) > 0.5 ? 'active' : 'inactive';
     presenter.app.canvas.dataset.plantLobeDepthVfx = Number(
       presenter.uniforms.uniforms.uPlantLobeDepthVfx
+    ) > 0.5 ? 'active' : 'inactive';
+    presenter.app.canvas.dataset.plantCanopyMassVfx = Number(
+      presenter.uniforms.uniforms.uPlantCanopyMassVfx
     ) > 0.5 ? 'active' : 'inactive';
     presenter.app.canvas.dataset.woodBarkReliefVfx = Number(
       presenter.uniforms.uniforms.uWoodBarkReliefVfx
@@ -12062,6 +12150,7 @@ export class PixiFieldPresenter {
         this.uniforms.uniforms.uBotanicalPigmentVfx = 0;
         this.uniforms.uniforms.uPlantLaminaVfx = 0;
         this.uniforms.uniforms.uPlantLobeDepthVfx = 0;
+        this.uniforms.uniforms.uPlantCanopyMassVfx = 0;
         this.uniforms.uniforms.uWoodBarkReliefVfx = 0;
         this.uniforms.uniforms.uWoodTanninVfx = 0;
         this.uniforms.uniforms.uGlassBodyVfx = 0;
@@ -12097,6 +12186,7 @@ export class PixiFieldPresenter {
         this.app.canvas.dataset.botanicalPigmentVfx = 'inactive';
         this.app.canvas.dataset.plantLaminaVfx = 'inactive';
         this.app.canvas.dataset.plantLobeDepthVfx = 'inactive';
+        this.app.canvas.dataset.plantCanopyMassVfx = 'inactive';
         this.app.canvas.dataset.woodBarkReliefVfx = 'inactive';
         this.app.canvas.dataset.woodTanninVfx = 'inactive';
         this.app.canvas.dataset.glassBodyVfx = 'inactive';

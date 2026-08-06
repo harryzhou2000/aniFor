@@ -59,6 +59,7 @@
     "audit:vfx:botanical-pigment": "npm run build && node scripts/verify-browser-input.mjs --botanical-pigment-vfx-only --webgl-only --production-bundle --capture-dpr=1",
     "audit:vfx:plant-lamina": "npm run build && node scripts/verify-browser-input.mjs --plant-lamina-vfx-only --webgl-only --production-bundle --capture-dpr=1",
     "audit:vfx:plant-lobe-depth": "npm run build && node scripts/verify-browser-input.mjs --plant-lobe-depth-vfx-only --webgl-only --production-bundle --capture-dpr=1",
+    "audit:vfx:plant-canopy-mass": "npm run build && node scripts/verify-browser-input.mjs --plant-canopy-mass-vfx-only --webgl-only --production-bundle --capture-dpr=1",
     "audit:vfx:wood-tannin": "npm run build && node scripts/verify-browser-input.mjs --wood-tannin-vfx-only --webgl-only --production-bundle --capture-dpr=1",
     "audit:8x": "node scripts/verify-browser-input.mjs --scale-eight-only",
     "audit:powder:8x": "npm run build && node scripts/verify-browser-input.mjs --eight-powder-only --production-bundle",

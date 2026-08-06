@@ -1246,6 +1246,65 @@ describe('Pixi presenter startup configuration', () => {
     expect(source).toContain("this.app.canvas.dataset.plantLobeDepthVfx = 'inactive';");
   });
 
+  it('keeps E36 PLNT canopy masses E34-dependent, exact-state, and resource-neutral', () => {
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const canvasSource = readFileSync(new URL('./field-renderer.ts', import.meta.url), 'utf8');
+    const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');
+    const normalStart = source.indexOf('const FIELD_FRAGMENT = `', eightStart);
+    const normalEnd = source.indexOf('`;\n\n/** Primary WebGL presentation', normalStart);
+    const eight = source.slice(eightStart, normalStart);
+    const normal = source.slice(normalStart, normalEnd);
+    const proofStart = normal.indexOf("          // Resolve E36's exact zero-state PLNT proof");
+    const proofEnd = normal.indexOf('          color *= 1.0 - (leafPigmentPocket', proofStart);
+    const finishStart = normal.indexOf('          // E36 is a strict E34 child', proofEnd);
+    const finishEnd = normal.indexOf('        } else {', finishStart);
+    const e36 = normal.slice(proofStart, proofEnd) + normal.slice(finishStart, finishEnd);
+    const preserveDrawingBufferStart = source.indexOf('preserveDrawingBuffer:');
+    const preserveDrawingBufferEnd = source.indexOf(
+      'resolution: outputScale', preserveDrawingBufferStart,
+    );
+    const preserveDrawingBuffer = source.slice(
+      preserveDrawingBufferStart, preserveDrawingBufferEnd,
+    );
+
+    expect(proofStart).toBeGreaterThanOrEqual(0);
+    expect(proofEnd).toBeGreaterThan(proofStart);
+    expect(finishStart).toBeGreaterThan(proofEnd);
+    expect(finishEnd).toBeGreaterThan(finishStart);
+    expect(normal).toContain('uniform float uPlantCanopyMassVfx;');
+    expect(normal.match(/uPlantCanopyMassVfx > 0\.5/g)).toHaveLength(1);
+    expect(eight).not.toContain('uPlantCanopyMassVfx');
+    expect(eight).not.toContain('plantCanopyMassVfx');
+    expect(canvasSource).not.toContain('plantCanopyMassVfx');
+    for (const proof of [
+      'botanicalBodyReplacement > 0.5', 'uPlantCanopyMassVfx > 0.5',
+      'wallState.b', 'wallState.a', '32768.0', 'botanicalDepth',
+    ]) expect(e36).toContain(proof);
+    for (const establishedValue of [
+      'botanicalMacro', 'leafBody', 'botanicalExistingRelief', 'leafBoundary',
+      'leafLaminaCarrier', 'leafLobeVein', 'solidEnvironment',
+    ]) expect(e36).toContain(establishedValue);
+    expect(e36).toContain('leafVeinGain = 0.0');
+    expect(e36).toContain('leafLaminaRibGain = 0.0');
+    expect(e36).not.toContain('botanicalBodyNoise(');
+    expect(e36).not.toContain('sin(');
+    expect(e36).not.toContain('texture(');
+    expect(e36).not.toContain('uTime');
+    expect(e36).not.toContain('gl_FragCoord');
+    expect(e36).not.toMatch(/\balpha\s*[+*]?=/);
+    expect(source.match(/this\.uniforms\.uniforms\.uPlantCanopyMassVfx = 0;/g))
+      .toHaveLength(2);
+    expect(source).toMatch(
+      /const plantCanopyMassVfxEnabled = outputScale < 8\s*&& resolvePlantCanopyMassVfxEnabled\(renderLook\);/,
+    );
+    expect(source).toContain(
+      'uPlantCanopyMassVfx: { value: plantCanopyMassVfxEnabled ? 1 : 0',
+    );
+    expect(preserveDrawingBuffer).toContain("get('plantCanopyMassVfxAudit') === '1'");
+    expect(source).toContain('presenter.app.canvas.dataset.plantCanopyMassVfx');
+    expect(source).toContain("this.app.canvas.dataset.plantCanopyMassVfx = 'inactive';");
+  });
+
   it('keeps E30 Wood bark relief exact-owner, normal-WebGL-only, and resource-neutral', () => {
     const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
     const canvasSource = readFileSync(new URL('./field-renderer.ts', import.meta.url), 'utf8');

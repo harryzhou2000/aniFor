@@ -3,6 +3,7 @@ import {
   resolveBotanicalBodyVfxEnabled,
   resolveBotanicalMesostructureVfxEnabled,
   resolveBotanicalPigmentVfxEnabled,
+  resolvePlantCanopyMassVfxEnabled,
   resolvePlantLaminaVfxEnabled,
   resolvePlantLobeDepthVfxEnabled,
   resolveWoodBarkReliefVfxEnabled,
@@ -405,6 +406,29 @@ describe('resolveRenderLook', () => {
     )).toBe(true);
     expect(resolvePlantLobeDepthVfxEnabled(
       'realistic', '?plantLobeDepthVfx=false',
+    )).toBe(false);
+  });
+
+  it('keeps exact PLNT canopy mass subordinate to the E34 lobe-depth parent', () => {
+    expect(resolvePlantCanopyMassVfxEnabled(
+      'classic', '?plantCanopyMassVfx=1',
+    )).toBe(false);
+    expect(resolvePlantCanopyMassVfxEnabled('realistic', '')).toBe(true);
+    expect(resolvePlantCanopyMassVfxEnabled('neon-lab', '')).toBe(true);
+    for (const parentOff of [
+      'botanicalBodyVfx=0', 'botanicalMesostructureVfx=0',
+      'botanicalPigmentVfx=0', 'plantLaminaVfx=0', 'plantLobeDepthVfx=0',
+    ]) {
+      expect(resolvePlantCanopyMassVfxEnabled(
+        'realistic', `?${parentOff}&plantCanopyMassVfx=1`,
+      )).toBe(false);
+    }
+    expect(resolvePlantCanopyMassVfxEnabled(
+      'realistic',
+      '?volumeVfx=0&botanicalBodyVfx=1&botanicalMesostructureVfx=1&botanicalPigmentVfx=1&plantLaminaVfx=1&plantLobeDepthVfx=1&plantCanopyMassVfx=on',
+    )).toBe(true);
+    expect(resolvePlantCanopyMassVfxEnabled(
+      'realistic', '?plantCanopyMassVfx=false',
     )).toBe(false);
   });
 

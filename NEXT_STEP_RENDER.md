@@ -546,11 +546,36 @@ does not alter simulation, camera, semantic ownership, or `renderScale`.
   1×/2×/4×. Pigment rises `.5267/.6133/.6467 → .7200/.8067/.8467`, macro
   range rises `26 → 28`, support recall remains `1`, coverage remains `.933`,
   and dark/clipped fractions plus browser errors remain zero.
+- **E36 — exact PLNT canopy-mass recomposition (accepted visual checkpoint):**
+  normal 1×–4× WebGL uses `?plantCanopyMassVfx=0|1` only as a strict child of
+  E34 lobe depth. Only E34's authoritative ordinary zero-state or
+  presence-only PLNT `10` body proof may respond. It reuses E20 body
+  depth/macro/cluster, E26 lobe/boundary/vein, E28 pigment, E32 lamina, and
+  E34 lobe-depth evidence for bounded broad front/rear/overlap canopy mass
+  shading. Only while active, E36 suppresses the thresholded E26/E32/E34
+  vein-loop carriers that produce repeated enclosed outlines; it does not
+  change their owners or selector-off operation order. It adds no sample, noise
+  call, sampler, texture, field, resource, pass, target, upload, allocation,
+  clock, state, topology, alpha/support, silhouette, ownership, or physics
+  decision. Canvas and compact true 8× retain E34. `npm run
+  audit:vfx:plant-canopy-mass` owns direct focused seam metrics plus frozen
+  1×/2×/4× off→on→off semantic/alpha/support, lifecycle, wall, topology,
+  contact, and foreign-owner proof with byte-exact repeated-off frames.
+  Requested-on true 8× keeps E20/E26/E28/E32/E34/E36/HDR inactive for
+  `scale-8`, with no bloom, exact 4896×3072 promotion, and a completed GPU
+  fence. A composed-rank drop after E36 is a scorer blind spot and must not be
+  gamed: preserve the direct seam evidence and visible hierarchy/overlap. The
+  frozen 1×/2×/4× matrix reduces left-body dark seams
+  `.0573/.0775/.0861 → .0360/.0476/.0496` and right-body seams
+  `.0643/.0805/.0924 → .0401/.0502/.0514`; enabled strong seams remain at most
+  `.0046`, all `4416`/`4048` target cells map uniquely, and 15-cell macro range
+  rises from about `14.1 → 17.3` / `16.4 → 22.1`. The true-8× fence signalled
+  in `5268.1 ms` with zero browser errors.
 - **Protected 8× rung:** `renderScale=8` deliberately reports
   `hdrPipeline=inactive` / `scale-8` and retains the proven direct single-mesh
   4896×3072 path. The experiment must earn a bounded 8× design rather than
   allocating a 115 MiB full-resolution float target beside that path.
-- **Current decision:** E01/E02/E03/E04/E05/E06/E07/E08/E09/E10/E11/E12/E13/E14/E15/E16/E17/E18/E19/E20/E21/E22/E23/E24/E25/E26/E27/E28/E29/E30/E31/E32/E33/E34/E35 remain opt-in through the non-Classic looks
+- **Current decision:** E01/E02/E03/E04/E05/E06/E07/E08/E09/E10/E11/E12/E13/E14/E15/E16/E17/E18/E19/E20/E21/E22/E23/E24/E25/E26/E27/E28/E29/E30/E31/E32/E33/E34/E35/E36 remain opt-in through the non-Classic looks
   until representative hardware timing and mobile thermal behavior are
   measured. E02 remains the safe family-wide baseline. E03 is accepted as the
   liquid-depth checkpoint: its fit-view crop is visibly more cohesive, retains
@@ -695,6 +720,15 @@ does not alter simulation, camera, semantic ownership, or `renderScale`.
   frequency envelopes, 34 exact controls, and compact-8× exclusion. Do not add
   another Wood noise carrier, widen it to sparse/contact/stateful Wood, or let
   its RGB absorption/exposure alter alpha, support, topology, state, or Canvas.
+  E36 is the accepted exact-PLNT canopy-mass recomposition checkpoint: freeze
+  its strict E34 child gate, exact zero-or-presence-only lifecycle proof,
+  existing E20/E26/E28/E32/E34 scalar reuse, direct focused seam metrics,
+  thresholded vein-loop suppression only while active, 34 exact controls, and
+  compact-8× exclusion. A composed-rank drop is a scorer blind spot, not a
+  mandate to game the scorer or weaken the hierarchy/overlap proof. Its final
+  composed PLNT score is `62.215`/`67.661`/`69.253`; that score fell because
+  the current organic scorer rewards cell-scale contrast, while E36's direct
+  seam gate proves that the repeated enclosed mesh was actually removed.
   These are not the final material/VFX results.
   Sub-1.0 material colour stays on the established response; tonemapping owns
   only real HDR highlights so powder texture and liquid body contrast are not
@@ -1317,6 +1351,18 @@ Wood quality is `79.215`/`86.709`/`89.610`, mesostructure is
 `1.58`/`1.71`/`1.77`, macro range is `28`, support recall is `1`, coverage is
 `.933`, and dark/clipped fractions are zero.
 
+Run `npm run audit:vfx:plant-canopy-mass` for E36. It isolates the strict
+E20+E26+E28+E32+E34 parent chain and runs `plantCanopyMassVfx=0 → 1 → 0` at
+normal WebGL 1×/2×/4× while pinning unrelated optional selectors off. Its
+direct focused seam metrics must prove the broad front/rear/overlap canopy
+result while the thresholded E26/E32/E34 vein loops are suppressed only for
+the enabled E36 frame. Semantic, alpha, support, lifecycle, native walls,
+topology/contact/foreign-owner controls, and repeated-off framebuffer remain
+exact. Requested-on true 8× promotes exact 4896×3072 WebGL while
+E20/E26/E28/E32/E34/E36/HDR remain inactive for `scale-8`, with no bloom and a
+completed GPU fence. Do not use a composed-rank drop to game the scorer; the
+direct seam metrics and visible hierarchy are the acceptance evidence.
+
 The earlier post-E16 survey was invalid for Solid: it sampled native Stone `21`,
 which is Powder, while labelling that region Solid. The corrected post-E17
 showcase uses native ROCK `78`, asserts exactly `2769` matching Solid cells, and
@@ -1408,9 +1454,18 @@ next production 4× survey then selected Wood/PLNT as the largest remaining
   widen E17–E34
   owner sets by resemblance alone or stack
   another generic gas layer over E04/E07/E13/E15; preserve their independent
-  owner, exposure, topology, scale, and true-8× contracts.
+  owner, exposure, topology, scale, and true-8× contracts. E35 then raises
+  Wood to `79.215`/`86.709`/`89.610`; the fresh post-E35 canonical survey made
+  PLNT `82.892` the organic floor and visibly exposed its repeated enclosed
+  mesh. E36 deliberately removes that mesh. Its final composed PLNT score is
+  `62.215`/`67.661`/`69.253`, while Contact `88.235`, Solid `90.2`, Liquid
+  `91.033`, Gas `95.463`, Emission `98.475`, and Powder `100.000` remain
+  unchanged. This numeric decrease is a known scorer blind spot: the scorer
+  rewards cell-scale contrast, while E36's exact focused appearance gate proves
+  lower seam density, lower local contrast, stronger macro hierarchy, unchanged
+  semantic support, and byte-exact selector-off recovery.
 
-**Next visual experiments:** E03–E34 now provide accepted liquid body/surface,
+**Next visual experiments:** E03–E36 now provide accepted liquid body/surface,
 stable-gas, coherent-gas-motion, powder-depth, and powder-local-light
 checkpoints plus exact resting contact grounding, Glass/Ice transmission, and
 state-aware Wax/PLNT subsurface response, composed wet-mineral optics,
@@ -1435,12 +1490,12 @@ inner-volume fold without changing atmosphere ownership, topology, or compact
 lifecycle state, topology, or compact 8×. E33 adds exact Smoke billow depth
 without changing atmosphere ownership, topology, Canvas, or compact 8×. E34
 recomposes exact zero-state/presence-only PLNT lobe depth without widening the
-E32 lifecycle gate or compact 8×. Wood `80.251` is now the canonical organic
-floor, followed by Contact `88.235`, Solid `90.2`, Liquid `91.033`, Gas
-`95.463`, Emission `98.475`, and Powder `100.000`. Measure E35 as a bounded
-exact-Wood pigment/volume candidate over the existing E20/E26/E28/E30 proof;
-its demonstrated weak cue is pigment variation, so do not add another generic
-PLNT or volumetric-gas layer without a new exact-owner fit-view gap.
+E32 lifecycle gate or compact 8×. E35 adds exact Wood tannin/cambium volume
+over E20/E26/E28/E30. E36 adds exact PLNT broad front/rear/overlap canopy mass
+recomposition over E34 while suppressing thresholded vein loops only when
+active; its composed-rank drop is a scorer blind spot and must not be gamed.
+Continue only from a fresh exact-owner fit-view gap; do not add another generic
+PLNT or volumetric-gas layer.
 The
 radioactive-solid review
 found no current identity bug, but also
@@ -1451,7 +1506,7 @@ with topology-preserving, material-
 specific cards that reuse already-live evidence. Prefer the smallest
 arithmetic-only candidate that fixes a visible fit-view deficiency; do not add
 an isolated tint merely to continue the experiment number. Preserve the E14
-1× stencil snap and all E01–E34 selectors and controls while designing the
+1× stencil snap and all E01–E36 selectors and controls while designing the
 next bounded card.
 
 ## Phase 1 — HDR pipeline & lighting core (biggest visual payoff)

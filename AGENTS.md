@@ -13,7 +13,7 @@ powder, solid, liquid, gas, energy, and contact scenes across Canvas and WebGL a
 mobile gestures, save/load, CI, and Pages deployment as protected regression
 contracts rather than the primary feature stream.
 
-The accepted visual experiment ladder now runs through E35. E12 is the
+The accepted visual experiment ladder now runs through E36. E12 is the
 species-safe Sand/Clay/Concrete wet-sediment checkpoint; preserve its exact
 aqueous owner/stability proof, split moving-powder/stationary-Water control,
 Local/Grains no-op, fine structures, authored gaps, Canvas fallback, and true
@@ -540,8 +540,39 @@ E34 baseline `71.833`/`80.251`/`83.247`; support recall remains `1`, coverage
 `.933`, and dark/clipped fractions plus browser errors remain zero. Freeze the
 joint parent chain, existing-evidence-only carrier, coefficients, per-target
 envelopes, controls, and true-8× exclusion until another production fit-view
-review. The next experiment must come from a fresh composed family ranking;
-do not add another Wood or PLNT layer merely because E35 is now available.
+review. The next experiment had to come from a fresh composed family ranking;
+that review exposed E34's repeated enclosed PLNT mesh and selected E36 below.
+Do not extend either family again without new exact-owner fit-view evidence.
+
+E36 is the accepted normal-WebGL-only exact-PLNT canopy-mass recomposition
+checkpoint, independently measurable with `?plantCanopyMassVfx=0|1` and a
+strict child of E34 lobe depth. Only E34's exact ordinary zero-state or
+presence-only PLNT `10` body proof may respond. Reuse the already-live E20
+body depth/macro/cluster, E26 lobe/boundary/vein, E28 pigment, E32 lamina, and
+E34 lobe-depth scalars to form bounded broad front/rear/overlap canopy mass
+shading. While and only while E36 is active, it suppresses the thresholded
+E26/E32/E34 vein-loop carriers that read as repeated enclosed outlines; it
+does not widen their owners or alter their selector-off operation order. Add
+no sample, noise call, texture, field, resource, pass, target, upload,
+allocation, clock, state, topology, alpha, support, silhouette, ownership, or
+physics decision. Canvas and compact true 8× retain E34. `npm run
+audit:vfx:plant-canopy-mass` owns the direct focused seam metrics and frozen
+off→on→off 1×/2×/4× proof, including exact semantic/alpha/support, lifecycle,
+wall, topology/contact/foreign-owner controls, and byte-exact repeated-off
+frames. Requested-on true 8× must promote exact 4896×3072 WebGL while
+E20/E26/E28/E32/E34/E36/HDR remain inactive for `scale-8`, with no bloom and a
+completed GPU fence. A composed-rank drop after E36 is a scorer blind spot,
+not a reason to weaken hierarchy evidence or game the scorer; preserve the
+direct seam proof and the visible front/rear overlap result. Across 1×/2×/4×,
+the left body's dark-seam fraction changes `.0573/.0775/.0861 →
+.0360/.0476/.0496`, and the right changes `.0643/.0805/.0924 →
+.0401/.0502/.0514`; strong seams remain at most `.0046`, while 15-cell macro
+range rises from roughly `14.1 → 17.3` and `16.4 → 22.1`. Every one of the
+`4416`/`4048` target world cells maps to a unique sampled pixel. The accepted
+true-8× production run signalled its GPU fence at `5268.1 ms` with zero browser
+errors. The composed scorer reports PLNT `62.215`/`67.661`/`69.253` because it
+rewards the very cell-scale contrast E36 removes; do not restore the mesh to
+raise that number.
 
 The radioactive-solid review found no current correctness bug: ISZS `105`
 and VIBR `113` already receive exact-species Solid depth, while the existing

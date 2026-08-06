@@ -334,6 +334,12 @@ const plantLobeDepthVfxOnly = process.argv.includes('--plant-lobe-depth-vfx-only
 if (plantLobeDepthVfxOnly && (modes.length !== 1 || modes[0] !== 'webgl')) {
   throw new Error('--plant-lobe-depth-vfx-only requires --webgl-only');
 }
+// E36 is a normal-detail PLNT canopy-mass child of E34. Its focused route
+// reuses the exact botanical fixture while compact true 8x remains excluded.
+const plantCanopyMassVfxOnly = process.argv.includes('--plant-canopy-mass-vfx-only');
+if (plantCanopyMassVfxOnly && (modes.length !== 1 || modes[0] !== 'webgl')) {
+  throw new Error('--plant-canopy-mass-vfx-only requires --webgl-only');
+}
 // E35 is an exact-Wood tannin child of E20/E26/E28/E30. Its focused route
 // keeps PLNT-only children disabled while compact true 8x remains excluded.
 const woodTanninVfxOnly = process.argv.includes('--wood-tannin-vfx-only');
@@ -349,10 +355,11 @@ const focusedVfxOnlyFlags = [
   oilBodyVfxOnly, rockRoughnessVfxOnly, rockMesostructureVfxOnly, waterBodyVfxOnly,
   nobleGasBillowVfxOnly, nobleGasPrismVfxOnly,
   smokeSoftnessVfxOnly, smokeBillowDepthVfxOnly, botanicalMesostructureVfxOnly, woodBarkReliefVfxOnly,
-  botanicalPigmentVfxOnly, plantLaminaVfxOnly, plantLobeDepthVfxOnly, woodTanninVfxOnly,
+  botanicalPigmentVfxOnly, plantLaminaVfxOnly, plantLobeDepthVfxOnly, plantCanopyMassVfxOnly,
+  woodTanninVfxOnly,
 ];
 if (focusedVfxOnlyFlags.filter(Boolean).length > 1) {
-  throw new Error('HDR/volume/liquid-body/liquid-surface/gas-body/gas-motion/powder-body/powder-light/powder-solid-contact/translucent-edge/organic-subsurface/wet-sediment/gas-light/liquid-solid-meniscus/gas-core-depth/plasma-core/solid-body/platinum-body/ceramic-glaze/botanical-body/glass-body/oil-body/rock-roughness/rock-mesostructure/water-body/noble-gas-billow/noble-gas-prism/smoke-softness/smoke-billow-depth/botanical-mesostructure/wood-bark-relief/botanical-pigment/plant-lamina/plant-lobe-depth/wood-tannin focused audits are mutually exclusive');
+  throw new Error('HDR/volume/liquid-body/liquid-surface/gas-body/gas-motion/powder-body/powder-light/powder-solid-contact/translucent-edge/organic-subsurface/wet-sediment/gas-light/liquid-solid-meniscus/gas-core-depth/plasma-core/solid-body/platinum-body/ceramic-glaze/botanical-body/glass-body/oil-body/rock-roughness/rock-mesostructure/water-body/noble-gas-billow/noble-gas-prism/smoke-softness/smoke-billow-depth/botanical-mesostructure/wood-bark-relief/botanical-pigment/plant-lamina/plant-lobe-depth/plant-canopy-mass/wood-tannin focused audits are mutually exclusive');
 }
 const layoutOnly = process.argv.includes('--layout-only');
 const visualScaleMatrixNormalOnly = process.argv.includes('--visual-scale-matrix-normal-only');
@@ -513,6 +520,9 @@ const plantLaminaVfxArgument = process.argv.find(
 const plantLobeDepthVfxArgument = process.argv.find(
   (argument) => argument.startsWith('--plant-lobe-depth-vfx='),
 )?.slice('--plant-lobe-depth-vfx='.length);
+const plantCanopyMassVfxArgument = process.argv.find(
+  (argument) => argument.startsWith('--plant-canopy-mass-vfx='),
+)?.slice('--plant-canopy-mass-vfx='.length);
 const woodTanninVfxArgument = process.argv.find(
   (argument) => argument.startsWith('--wood-tannin-vfx='),
  )?.slice('--wood-tannin-vfx='.length);
@@ -598,6 +608,10 @@ if (plantLaminaVfxArgument !== undefined
 if (plantLobeDepthVfxArgument !== undefined
   && !['0', '1', 'off', 'on'].includes(plantLobeDepthVfxArgument)) {
   throw new Error('--plant-lobe-depth-vfx must be 0, 1, off, or on');
+}
+if (plantCanopyMassVfxArgument !== undefined
+  && !['0', '1', 'off', 'on'].includes(plantCanopyMassVfxArgument)) {
+  throw new Error('--plant-canopy-mass-vfx must be 0, 1, off, or on');
 }
 if (woodTanninVfxArgument !== undefined
   && !['0', '1', 'off', 'on'].includes(woodTanninVfxArgument)) {
@@ -783,8 +797,9 @@ if (focusedVfxOnlyFlags.some(Boolean) && !smokeBillowDepthVfxOnly
 }
 if (focusedVfxOnlyFlags.some(Boolean) && (botanicalMesostructureVfxArgument !== undefined
   || botanicalPigmentVfxArgument !== undefined || plantLaminaVfxArgument !== undefined
-  || plantLobeDepthVfxArgument !== undefined || woodTanninVfxArgument !== undefined)) {
-  throw new Error('focused VFX audits own botanicalMesostructureVfx, botanicalPigmentVfx, plantLaminaVfx, plantLobeDepthVfx, and woodTanninVfx state; omit their overrides');
+  || plantLobeDepthVfxArgument !== undefined || plantCanopyMassVfxArgument !== undefined
+  || woodTanninVfxArgument !== undefined)) {
+  throw new Error('focused VFX audits own botanicalMesostructureVfx, botanicalPigmentVfx, plantLaminaVfx, plantLobeDepthVfx, plantCanopyMassVfx, and woodTanninVfx state; omit their overrides');
 }
 if (gasLightVfxOnly && (volumeVfxArgument !== undefined || liquidBodyVfxArgument !== undefined
   || liquidSurfaceVfxArgument !== undefined || gasBodyVfxArgument !== undefined || gasMotionVfxArgument !== undefined
@@ -984,6 +999,9 @@ if (plantLaminaVfxOnly && renderScaleArgument === '8') {
 }
 if (plantLobeDepthVfxOnly && renderScaleArgument === '8') {
   throw new Error('--plant-lobe-depth-vfx-only is a normal-detail 1x/2x/4x experiment');
+}
+if (plantCanopyMassVfxOnly && renderScaleArgument === '8') {
+  throw new Error('--plant-canopy-mass-vfx-only is a normal-detail 1x/2x/4x experiment');
 }
 if (woodTanninVfxOnly && renderScaleArgument === '8') {
   throw new Error('--wood-tannin-vfx-only is a normal-detail 1x/2x/4x experiment');
@@ -1310,6 +1328,11 @@ async function auditMode(mode) {
       ? { plantLobeDepthVfx: '0' }
       : plantLobeDepthVfxArgument !== undefined
         ? { plantLobeDepthVfx: plantLobeDepthVfxArgument }
+        : {}),
+    ...(focusedVfxOnlyFlags.some(Boolean)
+      ? { plantCanopyMassVfx: '0' }
+      : plantCanopyMassVfxArgument !== undefined
+        ? { plantCanopyMassVfx: plantCanopyMassVfxArgument }
         : {}),
     ...(focusedVfxOnlyFlags.some(Boolean)
       ? { woodTanninVfx: '0' }
@@ -1806,6 +1829,13 @@ async function auditMode(mode) {
       assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
       cdp.close();
       return { backend: mode, plantLobeDepthVfx, browserErrors: errors.length };
+    }
+    if (plantCanopyMassVfxOnly) {
+      assert(mode === 'webgl', '--plant-canopy-mass-vfx-only requires --webgl-only');
+      const plantCanopyMassVfx = await auditPlantCanopyMassVfxExperiment(cdp, mode, dpr);
+      assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
+      cdp.close();
+      return { backend: mode, plantCanopyMassVfx, browserErrors: errors.length };
     }
     if (woodTanninVfxOnly) {
       assert(mode === 'webgl', '--wood-tannin-vfx-only requires --webgl-only');
@@ -11979,6 +12009,9 @@ async function auditComposedRankShowcase(cdp, mode, dpr) {
       ...(plantLobeDepthVfxArgument !== undefined ? {
         plantLobeDepthVfx: plantLobeDepthVfxArgument,
       } : {}),
+      ...(plantCanopyMassVfxArgument !== undefined ? {
+        plantCanopyMassVfx: plantCanopyMassVfxArgument,
+      } : {}),
       ...(woodTanninVfxArgument !== undefined ? {
         woodTanninVfx: woodTanninVfxArgument,
       } : {}),
@@ -12000,6 +12033,7 @@ async function auditComposedRankShowcase(cdp, mode, dpr) {
         && parameters.get('botanicalPigmentVfx') === ${JSON.stringify(botanicalPigmentVfxArgument ?? null)}
         && parameters.get('plantLaminaVfx') === ${JSON.stringify(plantLaminaVfxArgument ?? null)}
         && parameters.get('plantLobeDepthVfx') === ${JSON.stringify(plantLobeDepthVfxArgument ?? null)}
+        && parameters.get('plantCanopyMassVfx') === ${JSON.stringify(plantCanopyMassVfxArgument ?? null)}
         && parameters.get('woodTanninVfx') === ${JSON.stringify(woodTanninVfxArgument ?? null)}
         && document.querySelector('[data-scene="showcase"]') !== null
         && typeof window.__ANIFOR_INPUT_AUDIT__?.materialShowcaseFixture === 'function';
@@ -12049,6 +12083,9 @@ async function auditComposedRankShowcase(cdp, mode, dpr) {
     const plantLobeDepthVfx = await evaluate(cdp,
       `document.querySelector('canvas.world-canvas')?.dataset.plantLobeDepthVfx ?? 'missing'`,
     );
+    const plantCanopyMassVfx = await evaluate(cdp,
+      `document.querySelector('canvas.world-canvas')?.dataset.plantCanopyMassVfx ?? 'missing'`,
+    );
     const woodTanninVfx = await evaluate(cdp,
       `document.querySelector('canvas.world-canvas')?.dataset.woodTanninVfx ?? 'missing'`,
     );
@@ -12086,6 +12123,16 @@ async function auditComposedRankShowcase(cdp, mode, dpr) {
       `composed rank ${scale}x plant lobe-depth selector resolved incorrectly (${JSON.stringify({
         argument: plantLobeDepthVfxArgument ?? 'default-on', plantLaminaVfx,
         plantLobeDepthVfx, expectedPlantLobeDepthState,
+      })})`);
+    const plantCanopyMassRequestedOn = plantCanopyMassVfxArgument === undefined
+      || ['1', 'on'].includes(plantCanopyMassVfxArgument);
+    const expectedPlantCanopyMassState = plantCanopyMassRequestedOn
+        && plantLobeDepthVfx === 'active'
+      ? 'active' : 'inactive';
+    assert(plantCanopyMassVfx === expectedPlantCanopyMassState,
+      `composed rank ${scale}x plant canopy-mass selector resolved incorrectly (${JSON.stringify({
+        argument: plantCanopyMassVfxArgument ?? 'default-on', plantLobeDepthVfx,
+        plantCanopyMassVfx, expectedPlantCanopyMassState,
       })})`);
     if (woodTanninVfxArgument !== undefined) {
       const requestedOn = ['1', 'on'].includes(woodTanninVfxArgument);
@@ -12150,7 +12197,8 @@ async function auditComposedRankShowcase(cdp, mode, dpr) {
     if (screenshot) await writeFile(screenshot, Buffer.from(capture.capture.data, 'base64'));
     captures.push({
       scale, geometry, fixture, semantic, regions, hdrPipeline, botanicalMesostructureVfx,
-      botanicalPigmentVfx, plantLaminaVfx, plantLobeDepthVfx, woodTanninVfx, smokeBillowDepthVfx, powderStability,
+      botanicalPigmentVfx, plantLaminaVfx, plantLobeDepthVfx, plantCanopyMassVfx, woodTanninVfx,
+      smokeBillowDepthVfx, powderStability,
       ...(screenshot ? { screenshot } : {}),
     });
   }
@@ -12247,7 +12295,8 @@ async function auditComposedRankShowcase(cdp, mode, dpr) {
     .map((sample, index) => ({ rank: index + 1, ...sample }));
   return {
     scales: captures.map(({ scale, geometry, semantic, regions, hdrPipeline, botanicalMesostructureVfx,
-      botanicalPigmentVfx, plantLaminaVfx, plantLobeDepthVfx, woodTanninVfx, smokeBillowDepthVfx, powderStability,
+      botanicalPigmentVfx, plantLaminaVfx, plantLobeDepthVfx, plantCanopyMassVfx, woodTanninVfx,
+      smokeBillowDepthVfx, powderStability,
       screenshot }) => ({
       scale,
       backing: geometry.backing,
@@ -12257,6 +12306,7 @@ async function auditComposedRankShowcase(cdp, mode, dpr) {
       botanicalPigmentVfx,
       plantLaminaVfx,
       plantLobeDepthVfx,
+      plantCanopyMassVfx,
       woodTanninVfx,
       smokeBillowDepthVfx,
       powderStability,
@@ -27436,7 +27486,7 @@ async function navigateBotanicalBodyVfxState(cdp, mode, scale, enabled, label) {
     platinumBodyVfx: '0', ceramicGlazeVfx: '0', botanicalBodyVfx: enabled ? '1' : '0',
     glassBodyVfx: '0', oilBodyVfx: '0', rockRoughnessVfx: '0', waterBodyVfx: '0',
     nobleGasBillowVfx: '0', botanicalMesostructureVfx: '0', botanicalPigmentVfx: '0',
-    plantLaminaVfx: '0', plantLobeDepthVfx: '0', woodBarkReliefVfx: '0', woodTanninVfx: '0',
+    plantLaminaVfx: '0', plantLobeDepthVfx: '0', plantCanopyMassVfx: '0', woodBarkReliefVfx: '0', woodTanninVfx: '0',
   });
   await cdp.send('Page.navigate', { url: `${AUDIT_BASE_URL}?${query}` });
   await waitFor(() => evaluate(cdp, `(() => {
@@ -27451,7 +27501,7 @@ async function navigateBotanicalBodyVfxState(cdp, mode, scale, enabled, label) {
         'organicSubsurfaceVfx', 'wetSedimentVfx', 'gasLightVfx', 'liquidSolidMeniscusVfx',
         'gasCoreDepthVfx', 'plasmaCoreVfx', 'solidBodyVfx', 'platinumBodyVfx',
         'ceramicGlazeVfx', 'nobleGasBillowVfx', 'botanicalMesostructureVfx',
-        'botanicalPigmentVfx', 'plantLaminaVfx', 'plantLobeDepthVfx', 'woodBarkReliefVfx', 'woodTanninVfx']
+        'botanicalPigmentVfx', 'plantLaminaVfx', 'plantLobeDepthVfx', 'plantCanopyMassVfx', 'woodBarkReliefVfx', 'woodTanninVfx']
         .every((name) => parameters.get(name) === '0')
       && typeof audit?.prepareBotanicalBodyVfxFixture === 'function'
       && typeof audit?.botanicalBodyVfxFixture === 'function';
@@ -27775,7 +27825,7 @@ async function auditEightXBotanicalBodyVfxExclusion(cdp, dpr) {
     liquidSolidMeniscusVfx: '0', gasCoreDepthVfx: '0', plasmaCoreVfx: '0', solidBodyVfx: '0',
     platinumBodyVfx: '0', ceramicGlazeVfx: '0', botanicalBodyVfx: '1', glassBodyVfx: '0',
     oilBodyVfx: '0', rockRoughnessVfx: '0', waterBodyVfx: '0', nobleGasBillowVfx: '0',
-    botanicalMesostructureVfx: '0', botanicalPigmentVfx: '0', plantLaminaVfx: '0', plantLobeDepthVfx: '0',
+    botanicalMesostructureVfx: '0', botanicalPigmentVfx: '0', plantLaminaVfx: '0', plantLobeDepthVfx: '0', plantCanopyMassVfx: '0',
     woodBarkReliefVfx: '0', woodTanninVfx: '0',
   });
   await cdp.send('Page.navigate', { url: `${AUDIT_BASE_URL}?${query}` });
@@ -27785,6 +27835,7 @@ async function auditEightXBotanicalBodyVfxExclusion(cdp, dpr) {
     && p.get('botanicalMesostructureVfx') === '0'
     && p.get('botanicalPigmentVfx') === '0' && p.get('plantLaminaVfx') === '0'
     && p.get('plantLobeDepthVfx') === '0'
+    && p.get('plantCanopyMassVfx') === '0'
     && p.get('woodBarkReliefVfx') === '0'
     && Boolean(window.__ANIFOR_INPUT_AUDIT__); })()`),
   remainingDeadlineMs(deadline, 'true-8x E20 input audit API'), 'true-8x E20 input audit API');
@@ -28511,7 +28562,7 @@ async function navigateBotanicalPigmentVfxState(cdp, mode, scale, enabled, label
     platinumBodyVfx: '0', ceramicGlazeVfx: '0', botanicalBodyVfx: '1',
     botanicalMesostructureVfx: '1', botanicalPigmentVfx: enabled ? '1' : '0', glassBodyVfx: '0',
     oilBodyVfx: '0', rockRoughnessVfx: '0', waterBodyVfx: '0', nobleGasBillowVfx: '0',
-    smokeSoftnessVfx: '0', plantLaminaVfx: '0', plantLobeDepthVfx: '0', woodBarkReliefVfx: '0', woodTanninVfx: '0',
+    smokeSoftnessVfx: '0', plantLaminaVfx: '0', plantLobeDepthVfx: '0', plantCanopyMassVfx: '0', woodBarkReliefVfx: '0', woodTanninVfx: '0',
   });
   await cdp.send('Page.navigate', { url: `${AUDIT_BASE_URL}?${query}` });
   await waitFor(() => evaluate(cdp, `(() => {
@@ -28639,7 +28690,7 @@ async function auditEightXBotanicalMesostructureVfxExclusion(cdp, dpr) {
     plasmaCoreVfx: '0', solidBodyVfx: '0', platinumBodyVfx: '0', ceramicGlazeVfx: '0',
     botanicalBodyVfx: '1', glassBodyVfx: '0', oilBodyVfx: '0', rockRoughnessVfx: '0',
     waterBodyVfx: '0', nobleGasBillowVfx: '0', botanicalMesostructureVfx: '1',
-    botanicalPigmentVfx: '0', plantLaminaVfx: '0', plantLobeDepthVfx: '0', woodBarkReliefVfx: '0', woodTanninVfx: '0',
+    botanicalPigmentVfx: '0', plantLaminaVfx: '0', plantLobeDepthVfx: '0', plantCanopyMassVfx: '0', woodBarkReliefVfx: '0', woodTanninVfx: '0',
   });
   await cdp.send('Page.navigate', { url: `${AUDIT_BASE_URL}?${query}` });
   const deadline = Date.now() + EIGHT_X_PRESENTATION_DEADLINE_MS;
@@ -28914,7 +28965,7 @@ async function navigateWoodBarkReliefVfxState(cdp, mode, scale, enabled, label) 
     botanicalMesostructureVfx: '1', botanicalPigmentVfx: '0',
     woodBarkReliefVfx: enabled ? '1' : '0', woodTanninVfx: '0', glassBodyVfx: '0', oilBodyVfx: '0',
     rockRoughnessVfx: '0', rockMesostructureVfx: '0', waterBodyVfx: '0',
-    nobleGasBillowVfx: '0', smokeSoftnessVfx: '0', plantLaminaVfx: '0', plantLobeDepthVfx: '0',
+    nobleGasBillowVfx: '0', smokeSoftnessVfx: '0', plantLaminaVfx: '0', plantLobeDepthVfx: '0', plantCanopyMassVfx: '0',
   });
   await cdp.send('Page.navigate', { url: `${AUDIT_BASE_URL}?${query}` });
   await waitFor(() => evaluate(cdp, `(() => {
@@ -29142,7 +29193,7 @@ async function auditEightXWoodBarkReliefVfxExclusion(cdp, dpr) {
     wetSedimentVfx: '0', gasLightVfx: '0', liquidSolidMeniscusVfx: '0', gasCoreDepthVfx: '0',
     plasmaCoreVfx: '0', solidBodyVfx: '0', platinumBodyVfx: '0', ceramicGlazeVfx: '0',
     botanicalBodyVfx: '1', botanicalMesostructureVfx: '1', botanicalPigmentVfx: '0',
-    plantLaminaVfx: '0', plantLobeDepthVfx: '0', woodBarkReliefVfx: '1', woodTanninVfx: '0', glassBodyVfx: '0', oilBodyVfx: '0', rockRoughnessVfx: '0',
+    plantLaminaVfx: '0', plantLobeDepthVfx: '0', plantCanopyMassVfx: '0', woodBarkReliefVfx: '1', woodTanninVfx: '0', glassBodyVfx: '0', oilBodyVfx: '0', rockRoughnessVfx: '0',
     rockMesostructureVfx: '0', waterBodyVfx: '0', nobleGasBillowVfx: '0', smokeSoftnessVfx: '0',
   });
   await cdp.send('Page.navigate', { url: `${AUDIT_BASE_URL}?${query}` });
@@ -29394,7 +29445,8 @@ async function navigatePlantLaminaVfxState(cdp, mode, scale, enabled, label) {
     nobleGasPrismVfx: '0', smokeSoftnessVfx: '0', plasmaCoreVfx: '0', solidBodyVfx: '0',
     platinumBodyVfx: '0', ceramicGlazeVfx: '0', botanicalBodyVfx: '1',
     botanicalMesostructureVfx: '1', botanicalPigmentVfx: '1',
-    plantLaminaVfx: enabled ? '1' : '0', plantLobeDepthVfx: '0', woodBarkReliefVfx: '0', woodTanninVfx: '0', glassBodyVfx: '0',
+    plantLaminaVfx: enabled ? '1' : '0', plantLobeDepthVfx: '0', plantCanopyMassVfx: '0',
+    woodBarkReliefVfx: '0', woodTanninVfx: '0', glassBodyVfx: '0',
     oilBodyVfx: '0', rockRoughnessVfx: '0', rockMesostructureVfx: '0', waterBodyVfx: '0',
   });
   await cdp.send('Page.navigate', { url: `${AUDIT_BASE_URL}?${query}` });
@@ -29408,6 +29460,7 @@ async function navigatePlantLaminaVfxState(cdp, mode, scale, enabled, label) {
       && p.get('botanicalPigmentVfx') === '1'
       && p.get('plantLaminaVfx') === ${JSON.stringify(enabled ? '1' : '0')}
       && p.get('plantLobeDepthVfx') === '0'
+      && p.get('plantCanopyMassVfx') === '0'
       && p.get('woodBarkReliefVfx') === '0'
       && ['volumeVfx', 'liquidBodyVfx', 'liquidSurfaceVfx', 'gasBodyVfx', 'gasMotionVfx',
         'powderBodyVfx', 'powderLightVfx', 'powderSolidContactVfx', 'translucentEdgeVfx',
@@ -29437,7 +29490,7 @@ async function navigatePlantLaminaVfxState(cdp, mode, scale, enabled, label) {
       'gasCoreDepthVfx', 'nobleGasBillowVfx', 'nobleGasPrismVfx', 'smokeSoftnessVfx',
       'plasmaCoreVfx', 'solidBodyVfx', 'platinumBodyVfx', 'ceramicGlazeVfx',
       'botanicalBodyVfx', 'botanicalMesostructureVfx', 'botanicalPigmentVfx',
-      'plantLaminaVfx', 'plantLobeDepthVfx', 'woodBarkReliefVfx', 'woodTanninVfx', 'glassBodyVfx', 'oilBodyVfx',
+      'plantLaminaVfx', 'plantLobeDepthVfx', 'plantCanopyMassVfx', 'woodBarkReliefVfx', 'woodTanninVfx', 'glassBodyVfx', 'oilBodyVfx',
       'rockRoughnessVfx', 'rockMesostructureVfx', 'waterBodyVfx',
     ];
     return canvas ? {
@@ -29453,7 +29506,7 @@ async function navigatePlantLaminaVfxState(cdp, mode, scale, enabled, label) {
     'organicSubsurfaceVfx', 'wetSedimentVfx', 'gasLightVfx', 'liquidSolidMeniscusVfx',
     'gasCoreDepthVfx', 'nobleGasBillowVfx', 'nobleGasPrismVfx', 'smokeSoftnessVfx',
     'plasmaCoreVfx', 'solidBodyVfx', 'platinumBodyVfx', 'ceramicGlazeVfx',
-    'plantLobeDepthVfx', 'woodBarkReliefVfx', 'woodTanninVfx', 'glassBodyVfx', 'oilBodyVfx', 'rockRoughnessVfx',
+    'plantLobeDepthVfx', 'plantCanopyMassVfx', 'woodBarkReliefVfx', 'woodTanninVfx', 'glassBodyVfx', 'oilBodyVfx', 'rockRoughnessVfx',
     'rockMesostructureVfx', 'waterBodyVfx',
   ];
   assert(hdrPipeline?.look === 'realistic' && hdrPipeline.state === 'active'
@@ -29657,7 +29710,8 @@ async function auditEightXPlantLaminaVfxExclusion(cdp, dpr) {
     nobleGasBillowVfx: '0', nobleGasPrismVfx: '0', smokeSoftnessVfx: '0',
     plasmaCoreVfx: '0', solidBodyVfx: '0', platinumBodyVfx: '0', ceramicGlazeVfx: '0',
     botanicalBodyVfx: '1', botanicalMesostructureVfx: '1', botanicalPigmentVfx: '1',
-    plantLaminaVfx: '1', plantLobeDepthVfx: '0', woodBarkReliefVfx: '0', woodTanninVfx: '0', glassBodyVfx: '0', oilBodyVfx: '0',
+    plantLaminaVfx: '1', plantLobeDepthVfx: '0', plantCanopyMassVfx: '0',
+    woodBarkReliefVfx: '0', woodTanninVfx: '0', glassBodyVfx: '0', oilBodyVfx: '0',
     rockRoughnessVfx: '0', rockMesostructureVfx: '0', waterBodyVfx: '0',
   });
   await cdp.send('Page.navigate', { url: `${AUDIT_BASE_URL}?${query}` });
@@ -29668,6 +29722,7 @@ async function auditEightXPlantLaminaVfxExclusion(cdp, dpr) {
       && p.get('botanicalBodyVfx') === '1' && p.get('botanicalMesostructureVfx') === '1'
       && p.get('botanicalPigmentVfx') === '1' && p.get('plantLaminaVfx') === '1'
       && p.get('plantLobeDepthVfx') === '0'
+      && p.get('plantCanopyMassVfx') === '0'
       && p.get('woodBarkReliefVfx') === '0'
       && p.get('woodTanninVfx') === '0'
       && Boolean(window.__ANIFOR_INPUT_AUDIT__);
@@ -29695,6 +29750,7 @@ async function auditEightXPlantLaminaVfxExclusion(cdp, dpr) {
       botanicalPigmentVfx: canvas.dataset.botanicalPigmentVfx,
       plantLaminaVfx: canvas.dataset.plantLaminaVfx,
       plantLobeDepthVfx: canvas.dataset.plantLobeDepthVfx,
+      plantCanopyMassVfx: canvas.dataset.plantCanopyMassVfx,
       woodBarkReliefVfx: canvas.dataset.woodBarkReliefVfx,
       woodTanninVfx: canvas.dataset.woodTanninVfx,
     } : undefined;
@@ -29706,6 +29762,7 @@ async function auditEightXPlantLaminaVfxExclusion(cdp, dpr) {
     && isolation.botanicalPigmentVfx === 'inactive'
     && isolation.plantLaminaVfx === 'inactive'
     && isolation.plantLobeDepthVfx === 'inactive'
+    && isolation.plantCanopyMassVfx === 'inactive'
     && isolation.woodBarkReliefVfx === 'inactive' && isolation.woodTanninVfx === 'inactive',
   `true-8x E32 isolation failed (${JSON.stringify(isolation)})`);
   const timingBudget = remainingDeadlineMs(deadline, 'true-8x E32 GPU completion');
@@ -29892,7 +29949,8 @@ async function navigatePlantLobeDepthVfxState(cdp, mode, scale, enabled, label) 
     nobleGasPrismVfx: '0', smokeSoftnessVfx: '0', plasmaCoreVfx: '0', solidBodyVfx: '0',
     platinumBodyVfx: '0', ceramicGlazeVfx: '0', botanicalBodyVfx: '1',
     botanicalMesostructureVfx: '1', botanicalPigmentVfx: '1', plantLaminaVfx: '1',
-    plantLobeDepthVfx: enabled ? '1' : '0', woodBarkReliefVfx: '0', woodTanninVfx: '0', glassBodyVfx: '0',
+    plantLobeDepthVfx: enabled ? '1' : '0', plantCanopyMassVfx: '0',
+    woodBarkReliefVfx: '0', woodTanninVfx: '0', glassBodyVfx: '0',
     oilBodyVfx: '0', rockRoughnessVfx: '0', rockMesostructureVfx: '0', waterBodyVfx: '0',
   });
   await cdp.send('Page.navigate', { url: `${AUDIT_BASE_URL}?${query}` });
@@ -29904,6 +29962,7 @@ async function navigatePlantLobeDepthVfxState(cdp, mode, scale, enabled, label) 
       && p.get('botanicalMesostructureVfx') === '1' && p.get('botanicalPigmentVfx') === '1'
       && p.get('plantLaminaVfx') === '1'
       && p.get('plantLobeDepthVfx') === ${JSON.stringify(enabled ? '1' : '0')}
+      && p.get('plantCanopyMassVfx') === '0'
       && p.get('woodBarkReliefVfx') === '0'
       && p.get('woodTanninVfx') === '0'
       && ['volumeVfx', 'liquidBodyVfx', 'liquidSurfaceVfx', 'gasBodyVfx', 'gasMotionVfx',
@@ -29936,7 +29995,7 @@ async function navigatePlantLobeDepthVfxState(cdp, mode, scale, enabled, label) 
       'gasCoreDepthVfx', 'nobleGasBillowVfx', 'nobleGasPrismVfx', 'smokeSoftnessVfx',
       'plasmaCoreVfx', 'solidBodyVfx', 'platinumBodyVfx', 'ceramicGlazeVfx',
       'botanicalBodyVfx', 'botanicalMesostructureVfx', 'botanicalPigmentVfx',
-      'plantLaminaVfx', 'plantLobeDepthVfx', 'woodBarkReliefVfx', 'woodTanninVfx', 'glassBodyVfx', 'oilBodyVfx',
+      'plantLaminaVfx', 'plantLobeDepthVfx', 'plantCanopyMassVfx', 'woodBarkReliefVfx', 'woodTanninVfx', 'glassBodyVfx', 'oilBodyVfx',
       'rockRoughnessVfx', 'rockMesostructureVfx', 'waterBodyVfx',
     ];
     return canvas ? {
@@ -29952,7 +30011,7 @@ async function navigatePlantLobeDepthVfxState(cdp, mode, scale, enabled, label) 
     'organicSubsurfaceVfx', 'wetSedimentVfx', 'gasLightVfx', 'liquidSolidMeniscusVfx',
     'gasCoreDepthVfx', 'nobleGasBillowVfx', 'nobleGasPrismVfx', 'smokeSoftnessVfx',
     'plasmaCoreVfx', 'solidBodyVfx', 'platinumBodyVfx', 'ceramicGlazeVfx',
-    'woodBarkReliefVfx', 'woodTanninVfx', 'glassBodyVfx', 'oilBodyVfx', 'rockRoughnessVfx',
+    'plantCanopyMassVfx', 'woodBarkReliefVfx', 'woodTanninVfx', 'glassBodyVfx', 'oilBodyVfx', 'rockRoughnessVfx',
     'rockMesostructureVfx', 'waterBodyVfx',
   ];
   assert(hdrPipeline?.look === 'realistic' && hdrPipeline.state === 'active'
@@ -29960,6 +30019,7 @@ async function navigatePlantLobeDepthVfxState(cdp, mode, scale, enabled, label) 
     && hdrPipeline.botanicalMesostructureVfx === 'active'
     && hdrPipeline.botanicalPigmentVfx === 'active' && hdrPipeline.plantLaminaVfx === 'active'
     && hdrPipeline.plantLobeDepthVfx === (enabled ? 'active' : 'inactive')
+    && hdrPipeline.plantCanopyMassVfx === 'inactive'
     && siblings.every((name) => hdrPipeline[name] === 'inactive'),
   `E34 ${label} ${scale}x HDR/selector state resolved incorrectly (${JSON.stringify(hdrPipeline)})`);
   const indicator = await evaluate(cdp, `(() => {
@@ -30086,7 +30146,8 @@ async function auditEightXPlantLobeDepthVfxExclusion(cdp, dpr) {
     nobleGasBillowVfx: '0', nobleGasPrismVfx: '0', smokeSoftnessVfx: '0',
     plasmaCoreVfx: '0', solidBodyVfx: '0', platinumBodyVfx: '0', ceramicGlazeVfx: '0',
     botanicalBodyVfx: '1', botanicalMesostructureVfx: '1', botanicalPigmentVfx: '1',
-    plantLaminaVfx: '1', plantLobeDepthVfx: '1', woodBarkReliefVfx: '0', woodTanninVfx: '0', glassBodyVfx: '0',
+    plantLaminaVfx: '1', plantLobeDepthVfx: '1', plantCanopyMassVfx: '0',
+    woodBarkReliefVfx: '0', woodTanninVfx: '0', glassBodyVfx: '0',
     oilBodyVfx: '0', rockRoughnessVfx: '0', rockMesostructureVfx: '0', waterBodyVfx: '0',
   });
   await cdp.send('Page.navigate', { url: `${AUDIT_BASE_URL}?${query}` });
@@ -30097,6 +30158,7 @@ async function auditEightXPlantLobeDepthVfxExclusion(cdp, dpr) {
       && p.get('botanicalBodyVfx') === '1' && p.get('botanicalMesostructureVfx') === '1'
       && p.get('botanicalPigmentVfx') === '1' && p.get('plantLaminaVfx') === '1'
       && p.get('plantLobeDepthVfx') === '1' && p.get('woodBarkReliefVfx') === '0'
+      && p.get('plantCanopyMassVfx') === '0'
       && p.get('woodTanninVfx') === '0'
       && Boolean(window.__ANIFOR_INPUT_AUDIT__);
   })()`), remainingDeadlineMs(deadline, 'true-8x E34 input audit API'),
@@ -30123,6 +30185,7 @@ async function auditEightXPlantLobeDepthVfxExclusion(cdp, dpr) {
       botanicalPigmentVfx: canvas.dataset.botanicalPigmentVfx,
       plantLaminaVfx: canvas.dataset.plantLaminaVfx,
       plantLobeDepthVfx: canvas.dataset.plantLobeDepthVfx,
+      plantCanopyMassVfx: canvas.dataset.plantCanopyMassVfx,
       woodBarkReliefVfx: canvas.dataset.woodBarkReliefVfx,
       woodTanninVfx: canvas.dataset.woodTanninVfx,
     } : undefined;
@@ -30134,6 +30197,7 @@ async function auditEightXPlantLobeDepthVfxExclusion(cdp, dpr) {
     && isolation.botanicalPigmentVfx === 'inactive'
     && isolation.plantLaminaVfx === 'inactive'
     && isolation.plantLobeDepthVfx === 'inactive'
+    && isolation.plantCanopyMassVfx === 'inactive'
     && isolation.woodBarkReliefVfx === 'inactive' && isolation.woodTanninVfx === 'inactive',
   `true-8x E34 isolation failed (${JSON.stringify(isolation)})`);
   const timingBudget = remainingDeadlineMs(deadline, 'true-8x E34 GPU completion');
@@ -30147,6 +30211,590 @@ async function auditEightXPlantLobeDepthVfxExclusion(cdp, dpr) {
     backing: `${geometry.backing.width}x${geometry.backing.height}`,
     promotionFence, isolation, timing,
   };
+}
+
+/** Frozen from the accepted production-WebGL 1x/2x/4x calibration matrix. */
+const PLANT_CANOPY_MASS_VFX_ACCEPTANCE = Object.freeze({
+  targets: Object.freeze({
+    PLNTLeft: Object.freeze({
+      response: Object.freeze({ rgbRms: [3.70, 4.06], chromaRms: [2.75, 2.90],
+        rgbPeak: [24, 25], coverage: [0.625, 0.650], signedMean: [1.94, 2.05],
+        spatialRgbRms: [3.35, 3.75], responseMicroContrast: [1.12, 1.60],
+        meanBiasRatio: [0.40, 0.46], bipolarBalance: [0.21, 0.28],
+        red: [0.58, 0.69], green: [2.45, 2.60], blue: [0.64, 0.78] }),
+      frequency: Object.freeze({ mesoRgbRms: [1.50, 1.60], cellRgbRms: [1.82, 2.38],
+        mesoShare: [0.30, 0.42], positiveCoverage: [0.41, 0.45],
+        negativeCoverage: [0.48, 0.53], mesoMeanBiasRatio: [0.004, 0.012],
+        downsampleRetention: [0.954, 0.964], gradientRatio: [0.99, 1.07],
+        rgbPeak: [24, 25] }),
+      appearance: Object.freeze({ disabledDarkSeam: [0.050, 0.105],
+        disabledStrongSeam: [0.005, 0.030],
+        enabledDarkSeam: [0.030, 0.065], enabledStrongSeam: [0, 0.008],
+        seamRetention: [0.50, 0.70], enabledMacro: [15, 20], macroGain: [2, 6],
+        enabledLumaStdDev: [9, 11], enabledLocalContrastRms: [2.6, 3.3],
+        localContrastRetention: [0.82, 0.97], meanLumaGain: [1.5, 2.5] }),
+    }),
+    PLNTRight: Object.freeze({
+      response: Object.freeze({ rgbRms: [3.88, 4.26], chromaRms: [3.34, 3.51],
+        rgbPeak: [24, 26], coverage: [0.688, 0.713], signedMean: [1.93, 2.06],
+        spatialRgbRms: [3.55, 3.96], responseMicroContrast: [1.05, 1.52],
+        meanBiasRatio: [0.39, 0.44], bipolarBalance: [0.25, 0.32],
+        red: [0.30, 0.43], green: [2.55, 2.72], blue: [0.36, 0.50] }),
+      frequency: Object.freeze({ mesoRgbRms: [1.45, 1.54], cellRgbRms: [1.72, 2.24],
+        mesoShare: [0.31, 0.43], positiveCoverage: [0.395, 0.43],
+        negativeCoverage: [0.50, 0.535], mesoMeanBiasRatio: [0.034, 0.047],
+        downsampleRetention: [0.958, 0.968], gradientRatio: [0.93, 1.02],
+        rgbPeak: [24, 26] }),
+      appearance: Object.freeze({ disabledDarkSeam: [0.055, 0.105],
+        disabledStrongSeam: [0.007, 0.030],
+        enabledDarkSeam: [0.035, 0.067], enabledStrongSeam: [0, 0.008],
+        seamRetention: [0.50, 0.72], enabledMacro: [19, 25], macroGain: [3, 8],
+        enabledLumaStdDev: [10, 13], enabledLocalContrastRms: [2.6, 3.3],
+        localContrastRetention: [0.85, 0.99], meanLumaGain: [1.5, 2.5] }),
+    }),
+  }),
+  spread: Object.freeze({ rgbRms: 0.30, chromaRms: 0.08, coverage: 0.01, rgbPeak: 2,
+    signedMean: 0.05, spatialRgbRms: 0.33, responseMicroContrast: 0.40,
+    mesoRgbRms: 0.06, cellRgbRms: 0.52, downsampleRetention: 0.006,
+    gradientRatio: 0.05, appearanceDisabledDarkSeam: 0.050,
+    appearanceEnabledDarkSeam: 0.035, appearanceDisabledStrongSeam: 0.025,
+    appearanceEnabledStrongSeam: 0.008, appearanceSeamRetention: 0.10,
+    appearanceEnabledMacro: 0.25, appearanceMacroGain: 0.25,
+    appearanceEnabledLumaStdDev: 0.35, appearanceLocalContrastRms: 0.45,
+    appearanceLocalContrastRetention: 0.12, appearanceMeanLumaGain: 0.12 }),
+});
+
+/** E36: exact-PLNT canopy-mass child of E20/E26/E28/E32/E34. */
+async function auditPlantCanopyMassVfxExperiment(cdp, mode, dpr) {
+  const scales = [];
+  const requestedScales = renderScaleArgument === undefined
+    ? VOLUME_VFX_SCALES : [Number(renderScaleArgument)];
+  for (const scale of requestedScales) {
+    const captures = {};
+    for (const enabled of [false, true, false]) {
+      const key = enabled ? 'enabled' : captures.disabled ? 'disabledRepeat' : 'disabled';
+      captures[key] = await navigatePlantCanopyMassVfxState(cdp, mode, scale, enabled, key);
+    }
+    const { disabled, enabled, disabledRepeat } = captures;
+    assert(JSON.stringify(disabled.fixture) === JSON.stringify(enabled.fixture)
+      && JSON.stringify(disabled.fixture) === JSON.stringify(disabledRepeat.fixture),
+    `E36 ${scale}x fixture metadata changed`);
+    for (const [label, variant] of Object.entries(captures)) {
+      assertGeometry(variant.geometry, `E36 ${label} ${scale}x`, scale);
+      assert(variant.geometry.backend.backend === 'webgl',
+        `E36 ${label} ${scale}x lost WebGL presentation`);
+      assert(variant.hdrPipeline?.state === 'active'
+        && variant.hdrPipeline.botanicalBodyVfx === 'active'
+        && variant.hdrPipeline.botanicalMesostructureVfx === 'active'
+        && variant.hdrPipeline.botanicalPigmentVfx === 'active'
+        && variant.hdrPipeline.plantLaminaVfx === 'active'
+        && variant.hdrPipeline.plantLobeDepthVfx === 'active'
+        && variant.hdrPipeline.plantCanopyMassVfx
+          === (label === 'enabled' ? 'active' : 'inactive')
+        && variant.hdrPipeline.woodBarkReliefVfx === 'inactive'
+        && variant.hdrPipeline.woodTanninVfx === 'inactive',
+      `E36 ${label} ${scale}x parent/selector state was wrong (${JSON.stringify(variant.hdrPipeline)})`);
+      assertBotanicalBodyVfxLifecycleDigest(variant.lifecycleDigest, `E36 ${label} ${scale}x`);
+      assertPlantLaminaVfxTargetDigest(variant.targetDigest, scale);
+    }
+    assertCanvasRectsEqual(disabled.geometry.canvas, enabled.geometry.canvas,
+      `E36 ${scale}x disabled/enabled CSS geometry`);
+    assertCanvasRectsEqual(disabled.geometry.canvas, disabledRepeat.geometry.canvas,
+      `E36 ${scale}x disabled/repeated CSS geometry`);
+    assert(JSON.stringify(disabled.geometry.backing) === JSON.stringify(enabled.geometry.backing)
+      && JSON.stringify(disabled.geometry.backing) === JSON.stringify(disabledRepeat.geometry.backing),
+    `E36 ${scale}x backing geometry changed`);
+    assertHdrVfxSemanticEquality(disabled.semantic, enabled.semantic, `E36 ${scale}x disabled/enabled`);
+    assertHdrVfxSemanticEquality(disabled.semantic, disabledRepeat.semantic,
+      `E36 ${scale}x disabled/repeated`);
+    assertVolumeVfxBackingInvariant(disabled.backing, enabled.backing, `E36 ${scale}x disabled/enabled`);
+    assertVolumeVfxBackingInvariant(disabled.backing, disabledRepeat.backing,
+      `E36 ${scale}x disabled/repeated`);
+    assert(JSON.stringify(disabled.walls) === JSON.stringify(enabled.walls)
+      && JSON.stringify(disabled.walls) === JSON.stringify(disabledRepeat.walls),
+    `E36 ${scale}x changed native-wall topology`);
+    assert(JSON.stringify(disabled.lifecycleDigest) === JSON.stringify(enabled.lifecycleDigest)
+      && JSON.stringify(disabled.lifecycleDigest) === JSON.stringify(disabledRepeat.lifecycleDigest),
+    `E36 ${scale}x changed native PLNT lifecycle state`);
+    assert(JSON.stringify(disabled.auxiliaryDigest) === JSON.stringify(enabled.auxiliaryDigest)
+      && JSON.stringify(disabled.auxiliaryDigest) === JSON.stringify(disabledRepeat.auxiliaryDigest),
+    `E36 ${scale}x changed scoped solid-depth/contact auxiliary evidence`);
+    assert(JSON.stringify(disabled.targetDigest) === JSON.stringify(enabled.targetDigest)
+      && JSON.stringify(disabled.targetDigest) === JSON.stringify(disabledRepeat.targetDigest),
+    `E36 ${scale}x changed exact PLNT target semantics, state, or depth`);
+    assert(JSON.stringify(disabled.rawControls) === JSON.stringify(enabled.rawControls)
+      && JSON.stringify(disabled.rawControls) === JSON.stringify(disabledRepeat.rawControls),
+    `E36 ${scale}x changed an exact protected raw control`);
+    assert(disabled.capture.capture.data === disabledRepeat.capture.capture.data,
+      `E36 ${scale}x repeated off framebuffer was not byte exact`);
+
+    const { targets, controls } = plantLaminaVfxRegions(disabled.fixture);
+    const sampled = await sampleBackdropRefractionRegions(cdp, {
+      straight: disabled.capture.capture.data,
+      refracted: enabled.capture.capture.data,
+      repeatedStraight: disabledRepeat.capture.capture.data,
+    }, [...targets, ...controls], disabled.capture.canvasRect);
+    const responses = sampled.map((sample) => {
+      const meanRgbRms = Math.hypot(...sample.responseRgb) / Math.sqrt(3);
+      return { ...sample,
+        spatialRgbRms: round(Math.sqrt(Math.max(0, sample.rgbRms ** 2 - meanRgbRms ** 2)), 3) };
+    });
+    const byName = Object.fromEntries(responses.map((sample) => [sample.name, sample]));
+    const targetResponses = targets.map(({ name }) => byName[name]);
+    const controlResponses = controls.map(({ name }) => byName[name]);
+    assertPlantCanopyMassVfxResponses(targetResponses, scale);
+    assert(controlResponses.length === 34
+      && new Set(controlResponses.map(({ name }) => name)).size === 34
+      && controlResponses.every((sample) => sample?.rgbPeak === 0 && sample.repeatRgbPeak === 0),
+    `E36 ${scale}x escaped a Wood/lifecycle/topology/contact/wall/foreign-owner control (${JSON.stringify(controlResponses)})`);
+    assert(responses.every((sample) => sample.repeatRgbPeak === 0),
+      `E36 ${scale}x off -> on -> off was not deterministic (${JSON.stringify(responses)})`);
+
+    const frequency = await sampleBotanicalMesostructureFrequency(cdp, {
+      disabled: disabled.capture.capture.data,
+      enabled: enabled.capture.capture.data,
+      disabledRepeat: disabledRepeat.capture.capture.data,
+    }, targets, 'E36');
+    assertPlantCanopyMassVfxFrequency(frequency, scale);
+    const appearance = await samplePlantCanopyMassAppearance(cdp, {
+      disabled: disabled.capture.capture.data,
+      enabled: enabled.capture.capture.data,
+    }, targets);
+    assertPlantCanopyMassAppearance(appearance, scale);
+    const lifecycleSamples = await samplePageRegions(
+      cdp, enabled.capture.capture.data, botanicalBodyVfxLifecycleRegions(disabled.fixture),
+      undefined, undefined, enabled.capture.canvasRect,
+    );
+    const lifecycleAppearance = assertBotanicalBodyVfxLifecycleColors(lifecycleSamples, scale, 'E36');
+    const screenshots = screenshotRequest && (requestedScales.length === 1 || scale === 2)
+      ? await writePlantCanopyMassVfxScreenshots(screenshotRequest, scale, disabled, enabled)
+      : undefined;
+    scales.push({
+      scale, backing: disabled.geometry.backing, targetDigest: disabled.targetDigest,
+      auxiliaryDigest: disabled.auxiliaryDigest, lifecycleDigest: disabled.lifecycleDigest,
+      walls: disabled.walls, rawControls: disabled.rawControls, targetResponses,
+      controlResponses, frequency, appearance, lifecycleSamples, lifecycleAppearance,
+      repeatedOffPeak: Math.max(...responses.map((sample) => sample.repeatRgbPeak)), screenshots,
+    });
+  }
+  if (scales.length > 1) assertPlantCanopyMassVfxCrossScale(scales);
+  const trueEightX = await auditEightXPlantCanopyMassVfxExclusion(cdp, dpr);
+  return {
+    calibration: 'frozen', acceptance: PLANT_CANOPY_MASS_VFX_ACCEPTANCE,
+    scales, trueEightXExcluded: true, trueEightX,
+  };
+}
+
+async function navigatePlantCanopyMassVfxState(cdp, mode, scale, enabled, label) {
+  const query = new URLSearchParams({
+    scene: 'render-lab', inputAudit: '1', blankAudit: '1', auditStage: 'blank',
+    plantCanopyMassVfxAudit: '1', renderScale: String(scale), renderLook: 'realistic',
+    volumeVfx: '0', liquidBodyVfx: '0', liquidSurfaceVfx: '0', gasBodyVfx: '0',
+    gasMotionVfx: '0', powderBodyVfx: '0', powderLightVfx: '0', powderSolidContactVfx: '0',
+    translucentEdgeVfx: '0', organicSubsurfaceVfx: '0', wetSedimentVfx: '0', gasLightVfx: '0',
+    liquidSolidMeniscusVfx: '0', gasCoreDepthVfx: '0', nobleGasBillowVfx: '0',
+    nobleGasPrismVfx: '0', smokeSoftnessVfx: '0', plasmaCoreVfx: '0', solidBodyVfx: '0',
+    platinumBodyVfx: '0', ceramicGlazeVfx: '0', botanicalBodyVfx: '1',
+    botanicalMesostructureVfx: '1', botanicalPigmentVfx: '1', plantLaminaVfx: '1',
+    plantLobeDepthVfx: '1', plantCanopyMassVfx: enabled ? '1' : '0',
+    woodBarkReliefVfx: '0', woodTanninVfx: '0', glassBodyVfx: '0', oilBodyVfx: '0',
+    rockRoughnessVfx: '0', rockMesostructureVfx: '0', waterBodyVfx: '0',
+  });
+  await cdp.send('Page.navigate', { url: `${AUDIT_BASE_URL}?${query}` });
+  await waitFor(() => evaluate(cdp, `(() => {
+    const p = new URLSearchParams(location.search); const audit = window.__ANIFOR_INPUT_AUDIT__;
+    return p.get('plantCanopyMassVfxAudit') === '1'
+      && p.get('renderScale') === ${JSON.stringify(String(scale))}
+      && p.get('renderLook') === 'realistic' && p.get('botanicalBodyVfx') === '1'
+      && p.get('botanicalMesostructureVfx') === '1' && p.get('botanicalPigmentVfx') === '1'
+      && p.get('plantLaminaVfx') === '1' && p.get('plantLobeDepthVfx') === '1'
+      && p.get('plantCanopyMassVfx') === ${JSON.stringify(enabled ? '1' : '0')}
+      && p.get('woodBarkReliefVfx') === '0' && p.get('woodTanninVfx') === '0'
+      && ['volumeVfx', 'liquidBodyVfx', 'liquidSurfaceVfx', 'gasBodyVfx', 'gasMotionVfx',
+        'powderBodyVfx', 'powderLightVfx', 'powderSolidContactVfx', 'translucentEdgeVfx',
+        'organicSubsurfaceVfx', 'wetSedimentVfx', 'gasLightVfx', 'liquidSolidMeniscusVfx',
+        'gasCoreDepthVfx', 'nobleGasBillowVfx', 'nobleGasPrismVfx', 'smokeSoftnessVfx',
+        'plasmaCoreVfx', 'solidBodyVfx', 'platinumBodyVfx', 'ceramicGlazeVfx',
+        'woodBarkReliefVfx', 'woodTanninVfx', 'glassBodyVfx', 'oilBodyVfx', 'rockRoughnessVfx',
+        'rockMesostructureVfx', 'waterBodyVfx'].every((name) => p.get(name) === '0')
+      && typeof audit?.prepareBotanicalBodyVfxFixture === 'function'
+      && typeof audit?.botanicalBodyVfxFixture === 'function';
+  })()`), scale === 4 ? 90_000 : scale === 2 ? 45_000 : 20_000,
+  `E36 ${label} ${scale}x page`);
+  await waitFor(() => evaluate(cdp,
+    `window.__ANIFOR_INPUT_AUDIT__.backend().backend === ${JSON.stringify(mode)}`),
+  scale === 4 ? 90_000 : scale === 2 ? 45_000 : 20_000,
+  `E36 ${label} ${scale}x backend`);
+  const fixture = await evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    audit.prepareBotanicalBodyVfxFixture(); return audit.botanicalBodyVfxFixture();
+  })()`);
+  await waitFor(() => botanicalBodyVfxFixtureReady(cdp, fixture), 20_000,
+    `E36 ${label} ${scale}x fixture hydration`);
+  const hdrPipeline = await evaluate(cdp, `(() => {
+    const canvas = document.querySelector('canvas.semantic-field-canvas');
+    const names = ['volumeVfx', 'liquidBodyVfx', 'liquidSurfaceVfx', 'gasBodyVfx', 'gasMotionVfx',
+      'powderBodyVfx', 'powderLightVfx', 'powderSolidContactVfx', 'translucentEdgeVfx',
+      'organicSubsurfaceVfx', 'wetSedimentVfx', 'gasLightVfx', 'liquidSolidMeniscusVfx',
+      'gasCoreDepthVfx', 'nobleGasBillowVfx', 'nobleGasPrismVfx', 'smokeSoftnessVfx',
+      'plasmaCoreVfx', 'solidBodyVfx', 'platinumBodyVfx', 'ceramicGlazeVfx',
+      'botanicalBodyVfx', 'botanicalMesostructureVfx', 'botanicalPigmentVfx',
+      'plantLaminaVfx', 'plantLobeDepthVfx', 'plantCanopyMassVfx', 'woodBarkReliefVfx',
+      'woodTanninVfx', 'glassBodyVfx', 'oilBodyVfx', 'rockRoughnessVfx',
+      'rockMesostructureVfx', 'waterBodyVfx'];
+    return canvas ? { look: canvas.dataset.renderLook, state: canvas.dataset.hdrPipeline,
+      bloomBacking: canvas.dataset.bloomBacking,
+      ...Object.fromEntries(names.map((name) => [name, canvas.dataset[name]])) } : undefined;
+  })()`);
+  const expectedBloom = `${WORLD_WIDTH * scale / 2}x${WORLD_HEIGHT * scale / 2}`;
+  const siblings = [
+    'volumeVfx', 'liquidBodyVfx', 'liquidSurfaceVfx', 'gasBodyVfx', 'gasMotionVfx',
+    'powderBodyVfx', 'powderLightVfx', 'powderSolidContactVfx', 'translucentEdgeVfx',
+    'organicSubsurfaceVfx', 'wetSedimentVfx', 'gasLightVfx', 'liquidSolidMeniscusVfx',
+    'gasCoreDepthVfx', 'nobleGasBillowVfx', 'nobleGasPrismVfx', 'smokeSoftnessVfx',
+    'plasmaCoreVfx', 'solidBodyVfx', 'platinumBodyVfx', 'ceramicGlazeVfx',
+    'woodBarkReliefVfx', 'woodTanninVfx', 'glassBodyVfx', 'oilBodyVfx', 'rockRoughnessVfx',
+    'rockMesostructureVfx', 'waterBodyVfx',
+  ];
+  assert(hdrPipeline?.look === 'realistic' && hdrPipeline.state === 'active'
+    && hdrPipeline.bloomBacking === expectedBloom && hdrPipeline.botanicalBodyVfx === 'active'
+    && hdrPipeline.botanicalMesostructureVfx === 'active'
+    && hdrPipeline.botanicalPigmentVfx === 'active' && hdrPipeline.plantLaminaVfx === 'active'
+    && hdrPipeline.plantLobeDepthVfx === 'active'
+    && hdrPipeline.plantCanopyMassVfx === (enabled ? 'active' : 'inactive')
+    && siblings.every((name) => hdrPipeline[name] === 'inactive'),
+  `E36 ${label} ${scale}x HDR/selector state resolved incorrectly (${JSON.stringify(hdrPipeline)})`);
+  const indicator = await evaluate(cdp, `(() => {
+    const nodes = [...document.querySelectorAll('.field-indicator')];
+    for (const node of nodes) node.style.visibility = 'hidden';
+    return { count: nodes.length, hidden: nodes.every((node) => getComputedStyle(node).visibility === 'hidden') };
+  })()`);
+  assert(indicator.count > 0 && indicator.hidden,
+    `E36 ${label} ${scale}x did not hide only the field indicator overlay`);
+  const capture = await waitForStablePageCapture(cdp, `E36 ${label} ${scale}x framebuffer`,
+    scale === 4 ? 120_000 : scale === 2 ? 30_000 : 15_000, 1);
+  const { targets } = plantLaminaVfxRegions(fixture);
+  return {
+    fixture, capture, geometry: await metrics(cdp), semantic: await hdrVfxSemanticDigest(cdp),
+    walls: await botanicalBodyVfxWallDigest(cdp), backing: await sampleVolumeVfxCanvasAlphaSupport(cdp),
+    rawControls: await sampleVolumeVfxRawWorldPixels(cdp, plantLaminaVfxRawControlPoints(fixture)),
+    lifecycleDigest: await botanicalBodyVfxLifecycleDigest(cdp, fixture),
+    auxiliaryDigest: await botanicalMesostructureVfxAuxiliaryDigest(cdp, fixture),
+    targetDigest: await plantLaminaVfxTargetDigest(cdp, targets), hdrPipeline,
+  };
+}
+
+function assertPlantCanopyMassVfxResponses(samples, scale) {
+  assert(samples.length === 2 && new Set(samples.map(({ name }) => name)).size === 2
+    && samples.every((sample) => {
+      const bounds = PLANT_CANOPY_MASS_VFX_ACCEPTANCE.targets[sample?.name]?.response;
+      return sample && bounds
+        && sample.rgbRms >= bounds.rgbRms[0] && sample.rgbRms <= bounds.rgbRms[1]
+        && sample.chromaRms >= bounds.chromaRms[0] && sample.chromaRms <= bounds.chromaRms[1]
+        && sample.coverage >= bounds.coverage[0] && sample.coverage <= bounds.coverage[1]
+        && sample.rgbPeak >= bounds.rgbPeak[0] && sample.rgbPeak <= bounds.rgbPeak[1]
+        && sample.signedMean >= bounds.signedMean[0] && sample.signedMean <= bounds.signedMean[1]
+        && sample.spatialRgbRms >= bounds.spatialRgbRms[0] && sample.spatialRgbRms <= bounds.spatialRgbRms[1]
+        && sample.responseMicroContrast >= bounds.responseMicroContrast[0]
+        && sample.responseMicroContrast <= bounds.responseMicroContrast[1]
+        && sample.meanBiasRatio >= bounds.meanBiasRatio[0] && sample.meanBiasRatio <= bounds.meanBiasRatio[1]
+        && sample.bipolarBalance >= bounds.bipolarBalance[0] && sample.bipolarBalance <= bounds.bipolarBalance[1]
+        && sample.responseRgb[0] >= bounds.red[0] && sample.responseRgb[0] <= bounds.red[1]
+        && sample.responseRgb[1] >= bounds.green[0] && sample.responseRgb[1] <= bounds.green[1]
+        && sample.responseRgb[2] >= bounds.blue[0] && sample.responseRgb[2] <= bounds.blue[1]
+        && sample.repeatRgbPeak === 0;
+    }),
+  `E36 ${scale}x PLNT canopy-mass response escaped its frozen envelope (${JSON.stringify(samples)})`);
+}
+
+function assertPlantCanopyMassVfxFrequency(samples, scale) {
+  assert(samples.length === 2 && new Set(samples.map(({ name }) => name)).size === 2
+    && samples.every(({ code }) => code === 'PLNT'),
+  `E36 ${scale}x frequency targets were incomplete (${JSON.stringify(samples)})`);
+  for (const sample of samples) {
+    const bounds = PLANT_CANOPY_MASS_VFX_ACCEPTANCE.targets[sample.name]?.frequency;
+    assert(bounds && sample.mesoRgbRms >= bounds.mesoRgbRms[0] && sample.mesoRgbRms <= bounds.mesoRgbRms[1]
+      && sample.cellRgbRms >= bounds.cellRgbRms[0] && sample.cellRgbRms <= bounds.cellRgbRms[1]
+      && sample.mesoShare >= bounds.mesoShare[0] && sample.mesoShare <= bounds.mesoShare[1]
+      && sample.positiveCoverage >= bounds.positiveCoverage[0]
+      && sample.positiveCoverage <= bounds.positiveCoverage[1]
+      && sample.negativeCoverage >= bounds.negativeCoverage[0]
+      && sample.negativeCoverage <= bounds.negativeCoverage[1]
+      && sample.mesoMeanBiasRatio >= bounds.mesoMeanBiasRatio[0]
+      && sample.mesoMeanBiasRatio <= bounds.mesoMeanBiasRatio[1]
+      && sample.downsampleRetention >= bounds.downsampleRetention[0]
+      && sample.downsampleRetention <= bounds.downsampleRetention[1]
+      && sample.gradientRatio >= bounds.gradientRatio[0] && sample.gradientRatio <= bounds.gradientRatio[1]
+      && sample.rgbPeak >= bounds.rgbPeak[0] && sample.rgbPeak <= bounds.rgbPeak[1]
+      && sample.repeatRgbPeak === 0,
+    `E36 ${scale}x ${sample.name} canopy-mass frequency was absent or unbounded (${JSON.stringify(sample)})`);
+  }
+}
+
+function assertPlantCanopyMassVfxCrossScale(scales) {
+  const bounds = PLANT_CANOPY_MASS_VFX_ACCEPTANCE.spread;
+  const spread = (values) => Math.max(...values) - Math.min(...values);
+  for (const name of ['PLNTLeft', 'PLNTRight']) {
+    const responses = scales.map((entry) => entry.targetResponses.find((sample) => sample.name === name));
+    const frequency = scales.map((entry) => entry.frequency.find((sample) => sample.name === name));
+    const appearance = scales.map((entry) => entry.appearance.find((sample) => sample.name === name));
+    assert(responses.every(Boolean) && frequency.every(Boolean) && appearance.every(Boolean)
+      && spread(responses.map((sample) => sample.rgbRms)) <= bounds.rgbRms
+      && spread(responses.map((sample) => sample.chromaRms)) <= bounds.chromaRms
+      && spread(responses.map((sample) => sample.coverage)) <= bounds.coverage
+      && spread(responses.map((sample) => sample.rgbPeak)) <= bounds.rgbPeak
+      && spread(responses.map((sample) => sample.signedMean)) <= bounds.signedMean
+      && spread(responses.map((sample) => sample.spatialRgbRms)) <= bounds.spatialRgbRms
+      && spread(responses.map((sample) => sample.responseMicroContrast)) <= bounds.responseMicroContrast
+      && spread(frequency.map((sample) => sample.mesoRgbRms)) <= bounds.mesoRgbRms
+      && spread(frequency.map((sample) => sample.cellRgbRms)) <= bounds.cellRgbRms
+      && spread(frequency.map((sample) => sample.downsampleRetention)) <= bounds.downsampleRetention
+      && spread(frequency.map((sample) => sample.gradientRatio)) <= bounds.gradientRatio
+      && spread(appearance.map((sample) => sample.disabled.darkSeamFraction))
+        <= bounds.appearanceDisabledDarkSeam
+      && spread(appearance.map((sample) => sample.enabled.darkSeamFraction))
+        <= bounds.appearanceEnabledDarkSeam
+      && spread(appearance.map((sample) => sample.disabled.strongSeamFraction))
+        <= bounds.appearanceDisabledStrongSeam
+      && spread(appearance.map((sample) => sample.enabled.strongSeamFraction))
+        <= bounds.appearanceEnabledStrongSeam
+      && spread(appearance.map((sample) => sample.seamRetention))
+        <= bounds.appearanceSeamRetention
+      && spread(appearance.map((sample) => sample.enabled.macroP90P10))
+        <= bounds.appearanceEnabledMacro
+      && spread(appearance.map((sample) => sample.enabled.macroP90P10
+        - sample.disabled.macroP90P10)) <= bounds.appearanceMacroGain
+      && spread(appearance.map((sample) => sample.enabled.lumaStdDev))
+        <= bounds.appearanceEnabledLumaStdDev
+      && spread(appearance.map((sample) => sample.enabled.localContrastRms))
+        <= bounds.appearanceLocalContrastRms
+      && spread(appearance.map((sample) => sample.localContrastRetention))
+        <= bounds.appearanceLocalContrastRetention
+      && spread(appearance.map((sample) => sample.enabled.meanLuma
+        - sample.disabled.meanLuma)) <= bounds.appearanceMeanLumaGain,
+    `E36 ${name} response drifted beyond its frozen cross-scale envelope`);
+  }
+}
+
+/**
+ * Measures the shipped PLNT body rather than only the E36 difference image.
+ * A seven-cell local mean catches the rejected E26 cellular seam network;
+ * a fifteen-cell mean retains the intended broad front/rear canopy hierarchy.
+ */
+async function samplePlantCanopyMassAppearance(cdp, screenshots, regions) {
+  return evaluate(cdp, `(async () => {
+    const sources = ${JSON.stringify(Object.fromEntries(
+    Object.entries(screenshots).map(([name, data]) => [name, `data:image/png;base64,${data}`]),
+  ))};
+    const images = {};
+    let imageWidth = 0; let imageHeight = 0;
+    for (const [name, source] of Object.entries(sources)) {
+      const image = new Image(); image.src = source; await image.decode();
+      if (imageWidth && (image.naturalWidth !== imageWidth || image.naturalHeight !== imageHeight)) {
+        throw new Error('E36 appearance screenshot geometry mismatch');
+      }
+      imageWidth = image.naturalWidth; imageHeight = image.naturalHeight;
+      const copy = document.createElement('canvas'); copy.width = imageWidth; copy.height = imageHeight;
+      const context = copy.getContext('2d', { willReadFrequently: true });
+      if (!context) throw new Error('E36 appearance sampler unavailable');
+      context.drawImage(image, 0, 0);
+      images[name] = context.getImageData(0, 0, imageWidth, imageHeight).data;
+    }
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    const viewport = window.visualViewport;
+    const pageScaleX = imageWidth / Math.max(1, viewport?.width ?? innerWidth);
+    const pageScaleY = imageHeight / Math.max(1, viewport?.height ?? innerHeight);
+    const offsetX = viewport?.offsetLeft ?? 0; const offsetY = viewport?.offsetTop ?? 0;
+    const fixed = (value) => Math.round(value * 10000) / 10000;
+    const percentile = (values, fraction) => {
+      const sorted = [...values].sort((left, right) => left - right);
+      return sorted[Math.max(0, Math.min(sorted.length - 1,
+        Math.floor((sorted.length - 1) * fraction)))];
+    };
+    const statistics = (luma, width, height) => {
+      const stride = width + 1; const integral = new Float64Array(stride * (height + 1));
+      let sum = 0; let squared = 0;
+      for (let y = 0; y < height; y++) {
+        let row = 0;
+        for (let x = 0; x < width; x++) {
+          const value = luma[y * width + x]; row += value; sum += value; squared += value * value;
+          integral[(y + 1) * stride + x + 1] = integral[y * stride + x + 1] + row;
+        }
+      }
+      const areaMean = (x0, y0, x1, y1) => {
+        const total = integral[y1 * stride + x1] - integral[y0 * stride + x1]
+          - integral[y1 * stride + x0] + integral[y0 * stride + x0];
+        return total / Math.max(1, (x1 - x0) * (y1 - y0));
+      };
+      let seams = 0; let strongSeams = 0; let localSquared = 0; let interior = 0;
+      for (let y = 3; y < height - 3; y++) for (let x = 3; x < width - 3; x++) {
+        const value = luma[y * width + x];
+        const local = areaMean(x - 3, y - 3, x + 4, y + 4);
+        const drop = local - value;
+        seams += Number(drop >= 5); strongSeams += Number(drop >= 8);
+        localSquared += drop * drop; interior++;
+      }
+      const broad = [];
+      for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) {
+        broad.push(areaMean(
+          Math.max(0, x - 7), Math.max(0, y - 7),
+          Math.min(width, x + 8), Math.min(height, y + 8),
+        ));
+      }
+      const mean = sum / luma.length;
+      return {
+        meanLuma: fixed(mean),
+        lumaStdDev: fixed(Math.sqrt(Math.max(0, squared / luma.length - mean * mean))),
+        darkSeamFraction: fixed(seams / Math.max(1, interior)),
+        strongSeamFraction: fixed(strongSeams / Math.max(1, interior)),
+        localContrastRms: fixed(Math.sqrt(localSquared / Math.max(1, interior))),
+        macroP90P10: fixed(percentile(broad, 0.90) - percentile(broad, 0.10)),
+      };
+    };
+    return ${JSON.stringify(regions)}.map((region) => {
+      const width = region.worldWidth; const height = region.worldHeight;
+      const positions = new Uint32Array(width * height * 2);
+      const sampledPixels = new Set();
+      for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) {
+        const worldX = region.worldX + x; const worldY = region.worldY + y;
+        if (audit.cell(worldX, worldY) !== 10 || audit.wall(worldX, worldY) !== 0) {
+          throw new Error('E36 appearance sampler escaped exact wall-free PLNT support');
+        }
+        const screen = audit.worldToScreen(worldX + 0.5, worldY + 0.5);
+        const pixelX = Math.max(0, Math.min(imageWidth - 1,
+          Math.floor((screen.x - offsetX) * pageScaleX)));
+        const pixelY = Math.max(0, Math.min(imageHeight - 1,
+          Math.floor((screen.y - offsetY) * pageScaleY)));
+        const positionOffset = (y * width + x) * 2;
+        positions[positionOffset] = pixelX; positions[positionOffset + 1] = pixelY;
+        sampledPixels.add(pixelY * imageWidth + pixelX);
+      }
+      if (sampledPixels.size !== width * height) {
+        throw new Error('E36 appearance sampler aliased adjacent world-cell centres');
+      }
+      const planes = {};
+      for (const [name, pixels] of Object.entries(images)) {
+        const luma = new Float64Array(width * height);
+        for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) {
+          const positionOffset = (y * width + x) * 2;
+          const pixelX = positions[positionOffset]; const pixelY = positions[positionOffset + 1];
+          const sourceOffset = (pixelY * imageWidth + pixelX) * 4;
+          luma[y * width + x] = pixels[sourceOffset] * 0.2126
+            + pixels[sourceOffset + 1] * 0.7152 + pixels[sourceOffset + 2] * 0.0722;
+        }
+        planes[name] = statistics(luma, width, height);
+      }
+      return {
+        name: region.name, code: region.code, side: region.side, width, height,
+        uniqueSamplePixels: sampledPixels.size,
+        disabled: planes.disabled, enabled: planes.enabled,
+        seamRetention: fixed(planes.enabled.darkSeamFraction
+          / Math.max(0.0001, planes.disabled.darkSeamFraction)),
+        localContrastRetention: fixed(planes.enabled.localContrastRms
+          / Math.max(0.0001, planes.disabled.localContrastRms)),
+      };
+    });
+  })()`);
+}
+
+function assertPlantCanopyMassAppearance(samples, scale) {
+  assert(samples.length === 2 && new Set(samples.map(({ name }) => name)).size === 2
+    && samples.every((sample) => {
+      const bounds = PLANT_CANOPY_MASS_VFX_ACCEPTANCE.targets[sample?.name]?.appearance;
+      const macroGain = sample?.enabled.macroP90P10 - sample?.disabled.macroP90P10;
+      const meanLumaGain = sample?.enabled.meanLuma - sample?.disabled.meanLuma;
+      return sample?.code === 'PLNT' && bounds
+        && sample.uniqueSamplePixels === sample.width * sample.height
+        && sample.disabled.darkSeamFraction >= bounds.disabledDarkSeam[0]
+        && sample.disabled.darkSeamFraction <= bounds.disabledDarkSeam[1]
+        && sample.disabled.strongSeamFraction >= bounds.disabledStrongSeam[0]
+        && sample.disabled.strongSeamFraction <= bounds.disabledStrongSeam[1]
+        && sample.enabled.darkSeamFraction >= bounds.enabledDarkSeam[0]
+        && sample.enabled.darkSeamFraction <= bounds.enabledDarkSeam[1]
+        && sample.enabled.strongSeamFraction >= bounds.enabledStrongSeam[0]
+        && sample.enabled.strongSeamFraction <= bounds.enabledStrongSeam[1]
+        && sample.seamRetention >= bounds.seamRetention[0]
+        && sample.seamRetention <= bounds.seamRetention[1]
+        && sample.enabled.macroP90P10 >= bounds.enabledMacro[0]
+        && sample.enabled.macroP90P10 <= bounds.enabledMacro[1]
+        && macroGain >= bounds.macroGain[0] && macroGain <= bounds.macroGain[1]
+        && sample.enabled.lumaStdDev >= bounds.enabledLumaStdDev[0]
+        && sample.enabled.lumaStdDev <= bounds.enabledLumaStdDev[1]
+        && sample.enabled.localContrastRms >= bounds.enabledLocalContrastRms[0]
+        && sample.enabled.localContrastRms <= bounds.enabledLocalContrastRms[1]
+        && sample.localContrastRetention >= bounds.localContrastRetention[0]
+        && sample.localContrastRetention <= bounds.localContrastRetention[1]
+        && meanLumaGain >= bounds.meanLumaGain[0] && meanLumaGain <= bounds.meanLumaGain[1];
+    }),
+  `E36 ${scale}x did not replace cellular seams with a frozen broad canopy body (${JSON.stringify(samples)})`);
+}
+
+async function writePlantCanopyMassVfxScreenshots(source, scale, disabled, enabled) {
+  const paths = {
+    off: variantScreenshotPath(source, `e36-plant-canopy-mass-${scale}x-off`),
+    on: variantScreenshotPath(source, `e36-plant-canopy-mass-${scale}x-on`),
+  };
+  await writeFile(paths.off, Buffer.from(disabled.capture.capture.data, 'base64'));
+  await writeFile(paths.on, Buffer.from(enabled.capture.capture.data, 'base64'));
+  return paths;
+}
+
+async function auditEightXPlantCanopyMassVfxExclusion(cdp, dpr) {
+  await setDesktopMetrics(cdp, 1280, 720, dpr);
+  const query = new URLSearchParams({
+    scene: 'render-lab', inputAudit: '1', blankAudit: '1', renderScale: '8',
+    auditStage: 'eight-plant-canopy-mass', plantCanopyMassVfxAudit: '1', renderLook: 'realistic',
+    volumeVfx: '0', liquidBodyVfx: '0', liquidSurfaceVfx: '0', gasBodyVfx: '0', gasMotionVfx: '0',
+    powderBodyVfx: '0', powderLightVfx: '0', powderSolidContactVfx: '0', translucentEdgeVfx: '0',
+    organicSubsurfaceVfx: '0', wetSedimentVfx: '0', gasLightVfx: '0', liquidSolidMeniscusVfx: '0',
+    gasCoreDepthVfx: '0', nobleGasBillowVfx: '0', nobleGasPrismVfx: '0', smokeSoftnessVfx: '0',
+    plasmaCoreVfx: '0', solidBodyVfx: '0', platinumBodyVfx: '0', ceramicGlazeVfx: '0',
+    botanicalBodyVfx: '1', botanicalMesostructureVfx: '1', botanicalPigmentVfx: '1',
+    plantLaminaVfx: '1', plantLobeDepthVfx: '1', plantCanopyMassVfx: '1',
+    woodBarkReliefVfx: '0', woodTanninVfx: '0', glassBodyVfx: '0', oilBodyVfx: '0',
+    rockRoughnessVfx: '0', rockMesostructureVfx: '0', waterBodyVfx: '0',
+  });
+  await cdp.send('Page.navigate', { url: `${AUDIT_BASE_URL}?${query}` });
+  const deadline = Date.now() + EIGHT_X_PRESENTATION_DEADLINE_MS;
+  await waitFor(() => evaluate(cdp, `(() => {
+    const p = new URLSearchParams(location.search);
+    return p.get('renderScale') === '8' && p.get('auditStage') === 'eight-plant-canopy-mass'
+      && p.get('plantCanopyMassVfxAudit') === '1' && p.get('botanicalBodyVfx') === '1'
+      && p.get('botanicalMesostructureVfx') === '1' && p.get('botanicalPigmentVfx') === '1'
+      && p.get('plantLaminaVfx') === '1' && p.get('plantLobeDepthVfx') === '1'
+      && p.get('plantCanopyMassVfx') === '1' && Boolean(window.__ANIFOR_INPUT_AUDIT__);
+  })()`), remainingDeadlineMs(deadline, 'true-8x E36 input audit API'),
+  'true-8x E36 input audit API');
+  const backend = await waitForEightXTerminalBackend(cdp, 'true-8x E36', deadline);
+  assertEightXWebGLBackend(backend, 'true-8x E36');
+  const promotionFence = 'signaled';
+  const geometry = await waitForStableCanvas(cdp, 1280, 720, undefined,
+    Math.min(45_000, remainingDeadlineMs(deadline, 'true-8x E36 geometry')),
+    'true-8x E36 geometry');
+  assert(geometry.backing.width === WORLD_WIDTH * 8
+    && geometry.backing.height === WORLD_HEIGHT * 8 && geometry.outputScale === '8',
+  `true-8x E36 lost exact backing (${JSON.stringify(geometry.backing)})`);
+  const isolation = await evaluate(cdp, `(() => {
+    const canvas = document.querySelector('canvas.semantic-field-canvas');
+    return canvas ? { renderer: canvas.dataset.renderer, look: canvas.dataset.renderLook,
+      state: canvas.dataset.hdrPipeline, reason: canvas.dataset.hdrPipelineReason,
+      bloomBacking: canvas.dataset.bloomBacking ?? null, botanicalBodyVfx: canvas.dataset.botanicalBodyVfx,
+      botanicalMesostructureVfx: canvas.dataset.botanicalMesostructureVfx,
+      botanicalPigmentVfx: canvas.dataset.botanicalPigmentVfx, plantLaminaVfx: canvas.dataset.plantLaminaVfx,
+      plantLobeDepthVfx: canvas.dataset.plantLobeDepthVfx,
+      plantCanopyMassVfx: canvas.dataset.plantCanopyMassVfx } : undefined;
+  })()`, Math.min(1_000, remainingDeadlineMs(deadline, 'true-8x E36 isolation')));
+  assert(isolation?.renderer === 'semantic-field-webgl' && isolation.look === 'realistic'
+    && isolation.state === 'inactive' && isolation.reason === 'scale-8' && isolation.bloomBacking === null
+    && ['botanicalBodyVfx', 'botanicalMesostructureVfx', 'botanicalPigmentVfx',
+      'plantLaminaVfx', 'plantLobeDepthVfx', 'plantCanopyMassVfx']
+      .every((name) => isolation[name] === 'inactive'),
+  `true-8x E36 isolation failed (${JSON.stringify(isolation)})`);
+  const timingBudget = remainingDeadlineMs(deadline, 'true-8x E36 GPU completion');
+  const timing = await auditWebGLPresentationTiming(cdp, 1, Math.min(12_000, timingBudget), timingBudget, 1);
+  assert(timing.source === 'gpu-query' || timing.source === 'gpu-fence' || timing.source === 'gpu-finish',
+    `true-8x E36 did not complete GPU work (${JSON.stringify(timing)})`);
+  return { backing: `${geometry.backing.width}x${geometry.backing.height}`, promotionFence, isolation, timing };
 }
 
 // Frozen from two clean accepted 1x/2x/4x production-WebGL matrices. Keep the
@@ -30277,7 +30925,7 @@ async function navigateWoodTanninVfxState(cdp, mode, scale, enabled, label) {
     plasmaCoreVfx: '0', solidBodyVfx: '0', platinumBodyVfx: '0', ceramicGlazeVfx: '0',
     botanicalBodyVfx: '1', botanicalMesostructureVfx: '1', botanicalPigmentVfx: '1',
     woodBarkReliefVfx: '1', woodTanninVfx: enabled ? '1' : '0', plantLaminaVfx: '0',
-    plantLobeDepthVfx: '0', glassBodyVfx: '0', oilBodyVfx: '0', rockRoughnessVfx: '0',
+    plantLobeDepthVfx: '0', plantCanopyMassVfx: '0', glassBodyVfx: '0', oilBodyVfx: '0', rockRoughnessVfx: '0',
     rockMesostructureVfx: '0', waterBodyVfx: '0',
   });
   await cdp.send('Page.navigate', { url: `${AUDIT_BASE_URL}?${query}` });
@@ -30377,7 +31025,7 @@ async function auditEightXWoodTanninVfxExclusion(cdp, dpr) {
   const query = new URLSearchParams({ scene: 'render-lab', inputAudit: '1', blankAudit: '1', renderScale: '8',
     auditStage: 'eight-wood-tannin', woodTanninVfxAudit: '1', renderLook: 'realistic',
     botanicalBodyVfx: '1', botanicalMesostructureVfx: '1', botanicalPigmentVfx: '1', woodBarkReliefVfx: '1',
-    woodTanninVfx: '1', plantLaminaVfx: '0', plantLobeDepthVfx: '0', volumeVfx: '0', liquidBodyVfx: '0',
+    woodTanninVfx: '1', plantLaminaVfx: '0', plantLobeDepthVfx: '0', plantCanopyMassVfx: '0', volumeVfx: '0', liquidBodyVfx: '0',
     liquidSurfaceVfx: '0', gasBodyVfx: '0', gasMotionVfx: '0', powderBodyVfx: '0', powderLightVfx: '0',
     powderSolidContactVfx: '0', translucentEdgeVfx: '0', organicSubsurfaceVfx: '0', wetSedimentVfx: '0',
     gasLightVfx: '0', liquidSolidMeniscusVfx: '0', gasCoreDepthVfx: '0', nobleGasBillowVfx: '0',
