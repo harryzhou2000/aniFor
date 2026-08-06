@@ -53,6 +53,7 @@
     "audit:vfx:noble-gas-billow": "npm run build && node scripts/verify-browser-input.mjs --noble-gas-billow-vfx-only --webgl-only --production-bundle --capture-dpr=1",
     "audit:vfx:smoke-softness": "npm run build && node scripts/verify-browser-input.mjs --smoke-softness-vfx-only --webgl-only --production-bundle --capture-dpr=1",
     "audit:vfx:botanical-mesostructure": "npm run build && node scripts/verify-browser-input.mjs --botanical-mesostructure-vfx-only --webgl-only --production-bundle --capture-dpr=1",
+    "audit:vfx:wood-bark-relief": "npm run build && node scripts/verify-browser-input.mjs --wood-bark-relief-vfx-only --webgl-only --production-bundle --capture-dpr=1",
     "audit:vfx:botanical-pigment": "npm run build && node scripts/verify-browser-input.mjs --botanical-pigment-vfx-only --webgl-only --production-bundle --capture-dpr=1",
     "audit:8x": "node scripts/verify-browser-input.mjs --scale-eight-only",
     "audit:powder:8x": "npm run build && node scripts/verify-browser-input.mjs --eight-powder-only --production-bundle",

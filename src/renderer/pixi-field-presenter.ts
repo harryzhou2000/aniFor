@@ -41,6 +41,7 @@ import {
   resolveBotanicalBodyVfxEnabled,
   resolveBotanicalMesostructureVfxEnabled,
   resolveBotanicalPigmentVfxEnabled,
+  resolveWoodBarkReliefVfxEnabled,
   resolveGlassBodyVfxEnabled,
   resolveGasBodyVfxEnabled, resolveGasCoreDepthVfxEnabled, resolveGasLightVfxEnabled,
   resolveGasMotionVfxEnabled,
@@ -3248,6 +3249,7 @@ uniform float uCeramicGlazeVfx;
 uniform float uBotanicalBodyVfx;
 uniform float uBotanicalMesostructureVfx;
 uniform float uBotanicalPigmentVfx;
+uniform float uWoodBarkReliefVfx;
 uniform float uGlassBodyVfx;
 uniform float uLiquidBodyVfx;
 uniform float uOilBodyVfx;
@@ -8512,6 +8514,32 @@ void main() {
           // one-cell scanlines.
           color += vec3(0.050, -0.012, -0.026) * barkPlate
             * botanicalMesostructure;
+          // E30 interrupts the established longitudinal grain into irregular
+          // bark plates. Recombine only E20/E26's existing macro, cluster,
+          // warp, and signed plate evidence: no new procedural carrier, noise,
+          // texture, sample, clock, alpha, support, or topology is introduced.
+          // Bright fissure gaps cancel the older continuous stripe only between
+          // plates; active segments retain a bounded neutral relief.
+          float woodBarkRelief = material == 9.0
+              && uBotanicalMesostructureVfx > 0.5
+              && uWoodBarkReliefVfx > 0.5
+            ? botanicalDepth : 0.0;
+          float barkSegmentEvidence = clamp(
+            (botanicalCluster - 0.5) * 1.25
+              + (botanicalMacro - 0.5) * 0.45
+              + (barkWarp - 0.5) * 0.55 + barkPlate * 0.20,
+            -1.0, 1.0
+          );
+          float barkSegment = smoothstep(-0.08, 0.12, barkSegmentEvidence);
+          float barkSegmentedCrown = barkPlateCrown * mix(0.32, 1.0, barkSegment);
+          float barkSegmentedPocket = barkPlatePocket * mix(0.32, 1.0, barkSegment);
+          float barkSegmentedFissure = barkFissure * mix(0.18, 1.0, barkSegment);
+          color *= 1.0 - (barkSegmentedPocket * 0.105
+              + barkSegmentedFissure * 0.070) * woodBarkRelief;
+          color += (vec3(1.0) - clamp(color, 0.0, 1.0))
+            * (barkSegmentedCrown * 0.130 + barkKnot * 0.023
+              + barkFissure * (1.0 - barkSegment) * 0.145)
+            * woodBarkRelief;
           // E28 keeps the accepted broken-plate relief while organizing its
           // amber/umber pigment at a broader heartwood scale. The key is
           // nearly Rec.709-neutral, so it adds material colour rather than a
@@ -9959,6 +9987,10 @@ export class PixiFieldPresenter {
     // declare neither this selector nor a parallel branch.
     const botanicalMesostructureVfxEnabled = outputScale < 8
       && resolveBotanicalMesostructureVfxEnabled(renderLook);
+    // E30 is exact-Wood arithmetic over E26's accepted plate evidence. Compact
+    // true 8x and Canvas keep their established botanical grammar.
+    const woodBarkReliefVfxEnabled = outputScale < 8
+      && resolveWoodBarkReliefVfxEnabled(renderLook);
     // E28 is a pigment-only child of E26's exact Wood/PLNT mesostructure.
     // Canvas and compact true 8x retain their established botanical grammar.
     const botanicalPigmentVfxEnabled = outputScale < 8
@@ -10019,6 +10051,7 @@ export class PixiFieldPresenter {
         value: botanicalMesostructureVfxEnabled ? 1 : 0, type: 'f32',
       },
       uBotanicalPigmentVfx: { value: botanicalPigmentVfxEnabled ? 1 : 0, type: 'f32' },
+      uWoodBarkReliefVfx: { value: woodBarkReliefVfxEnabled ? 1 : 0, type: 'f32' },
       uGlassBodyVfx: { value: glassBodyVfxEnabled ? 1 : 0, type: 'f32' },
       uLiquidBodyVfx: { value: liquidBodyVfxEnabled ? 1 : 0, type: 'f32' },
       uOilBodyVfx: { value: oilBodyVfxEnabled ? 1 : 0, type: 'f32' },
@@ -10248,6 +10281,7 @@ export class PixiFieldPresenter {
       this.uniforms.uniforms.uBotanicalBodyVfx = 0;
       this.uniforms.uniforms.uBotanicalMesostructureVfx = 0;
       this.uniforms.uniforms.uBotanicalPigmentVfx = 0;
+      this.uniforms.uniforms.uWoodBarkReliefVfx = 0;
       this.uniforms.uniforms.uGlassBodyVfx = 0;
       this.uniforms.uniforms.uLiquidBodyVfx = 0;
       this.uniforms.uniforms.uOilBodyVfx = 0;
@@ -10300,6 +10334,7 @@ export class PixiFieldPresenter {
             || new URLSearchParams(location.search).get('botanicalBodyVfxAudit') === '1'
             || new URLSearchParams(location.search).get('botanicalMesostructureVfxAudit') === '1'
             || new URLSearchParams(location.search).get('botanicalPigmentVfxAudit') === '1'
+            || new URLSearchParams(location.search).get('woodBarkReliefVfxAudit') === '1'
             || new URLSearchParams(location.search).get('glassBodyVfxAudit') === '1'
             || new URLSearchParams(location.search).get('oilBodyVfxAudit') === '1'
             || new URLSearchParams(location.search).get('waterBodyVfxAudit') === '1'
@@ -10378,6 +10413,9 @@ export class PixiFieldPresenter {
     ) > 0.5 ? 'active' : 'inactive';
     presenter.app.canvas.dataset.botanicalPigmentVfx = Number(
       presenter.uniforms.uniforms.uBotanicalPigmentVfx
+    ) > 0.5 ? 'active' : 'inactive';
+    presenter.app.canvas.dataset.woodBarkReliefVfx = Number(
+      presenter.uniforms.uniforms.uWoodBarkReliefVfx
     ) > 0.5 ? 'active' : 'inactive';
     presenter.app.canvas.dataset.glassBodyVfx = Number(
       presenter.uniforms.uniforms.uGlassBodyVfx
@@ -11793,6 +11831,7 @@ export class PixiFieldPresenter {
         this.uniforms.uniforms.uBotanicalBodyVfx = 0;
         this.uniforms.uniforms.uBotanicalMesostructureVfx = 0;
         this.uniforms.uniforms.uBotanicalPigmentVfx = 0;
+        this.uniforms.uniforms.uWoodBarkReliefVfx = 0;
         this.uniforms.uniforms.uGlassBodyVfx = 0;
         this.uniforms.uniforms.uLiquidBodyVfx = 0;
         this.uniforms.uniforms.uOilBodyVfx = 0;
@@ -11822,6 +11861,7 @@ export class PixiFieldPresenter {
         this.app.canvas.dataset.botanicalBodyVfx = 'inactive';
         this.app.canvas.dataset.botanicalMesostructureVfx = 'inactive';
         this.app.canvas.dataset.botanicalPigmentVfx = 'inactive';
+        this.app.canvas.dataset.woodBarkReliefVfx = 'inactive';
         this.app.canvas.dataset.glassBodyVfx = 'inactive';
         this.app.canvas.dataset.liquidBodyVfx = 'inactive';
         this.app.canvas.dataset.oilBodyVfx = 'inactive';

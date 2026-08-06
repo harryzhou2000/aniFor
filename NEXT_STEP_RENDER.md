@@ -407,11 +407,38 @@ does not alter simulation, camera, semantic ownership, or `renderScale`.
   `90.81`/`1.08`/`30` at 4×. Support recall and dominant component are `1`,
   dark/clipped fractions are zero at every scale, and luma range is
   `35`/`36`/`36`.
+- **E30 — exact Wood interrupted bark relief (accepted visual checkpoint):**
+  normal 1×–4× WebGL uses `?woodBarkReliefVfx=0|1` as a strict child of E26
+  mesostructure while remaining independent of E28 pigment. Only E20's exact
+  authoritative Wood `9`, ordinary `traits == 96`, deep interior/contact/wall/
+  emission proof may receive it. E30 recombines the existing
+  `botanicalCluster`, `botanicalMacro`, `barkWarp`, and signed `barkPlate`
+  evidence to break continuous longitudinal fissures into irregular plates.
+  The rejected candidate used a new five-cell y-periodic sine and could form
+  horizontal scanlines; never restore that independent carrier. E30 is
+  RGB-only and adds no noise call, sample, sampler, texture, field, resource,
+  pass, target, upload, allocation, clock, alpha, support, silhouette,
+  ownership, topology, state, or physics decision. Canvas and compact true 8×
+  retain their established paths. `npm run audit:vfx:wood-bark-relief` proves
+  off→on→off restoration at 1×/2×/4× over two exact Wood bodies and 34 exact
+  PLNT/lifecycle/topology/contact/wall/foreign-owner controls. Target RGB/
+  chroma/spatial RMS is `7.77–9.68`/`1.68–2.09`/`6.603–8.407`, peak is 32
+  bytes, response microcontrast is `1.92–2.35`, meso/cell RMS is
+  `3.7535–4.4430`/`3.8513–5.1776`, retention is `.9667–.9765`, and the
+  longitudinal gradient ratio is `2.3334–2.5150`. Requested-on true 8× remains
+  exact 4896×3072 with E20/E26/E28/E30/HDR inactive for `scale-8` and a real
+  GPU fence in about `5.69 s`.
+  The full composed matrix is `crossScaleVerified=true` and
+  `fullScaleMatrix=true`: Wood quality/micro/chroma/macro is
+  `71.833`/`1.97`/`1.29`/`26` at 1×,
+  `80.251`/`2.25`/`1.42`/`26` at 2×, and
+  `83.247`/`2.37`/`1.47`/`26` at 4×, with exact semantic hash/count,
+  support/component `1`, zero dark/clipped fractions, and zero browser errors.
 - **Protected 8× rung:** `renderScale=8` deliberately reports
   `hdrPipeline=inactive` / `scale-8` and retains the proven direct single-mesh
   4896×3072 path. The experiment must earn a bounded 8× design rather than
   allocating a 115 MiB full-resolution float target beside that path.
-- **Current decision:** E01/E02/E03/E04/E05/E06/E07/E08/E09/E10/E11/E12/E13/E14/E15/E16/E17/E18/E19/E20/E21/E22/E23/E24/E25/E26/E27/E28/E29 remain opt-in through the non-Classic looks
+- **Current decision:** E01/E02/E03/E04/E05/E06/E07/E08/E09/E10/E11/E12/E13/E14/E15/E16/E17/E18/E19/E20/E21/E22/E23/E24/E25/E26/E27/E28/E29/E30 remain opt-in through the non-Classic looks
   until representative hardware timing and mobile thermal behavior are
   measured. E02 remains the safe family-wide baseline. E03 is accepted as the
   liquid-depth checkpoint: its fit-view crop is visibly more cohesive, retains
@@ -523,6 +550,11 @@ does not alter simulation, camera, semantic ownership, or `renderScale`.
   proof, 3.5-cell facet, and masked interrupted lamina. Its continuous-striped
   predecessor remains rejected. Its package gate passed the frozen cross-scale
   matrix and true-8× exclusion/fence proof.
+  E30 is the accepted exact-Wood interrupted-bark checkpoint: freeze its E26
+  dependency, E28 independence, E20 exact-owner/body proof, existing-evidence-
+  only irregular segment mask, 32-byte focused peak, longitudinal direction
+  bound, and compact-8× exclusion. Its rejected y-periodic predecessor must
+  remain rejected.
   These are not the final material/VFX results.
   Sub-1.0 material colour stays on the established response; tonemapping owns
   only real HDR highlights so powder texture and liquid body contrast are not
@@ -1043,6 +1075,17 @@ promote actual WebGL at exact 4896×3072 while E20/E26/E28/HDR report inactive
 for reason `scale-8`. The accepted tail signals a real GPU fence in `3113.6 ms`
 with zero browser errors.
 
+Run `npm run audit:vfx:wood-bark-relief` for E30. It isolates E20+E26 with E28
+off and runs `woodBarkReliefVfx=0 → 1 → 0` at 1×/2×/4×. Two deep Wood targets
+respond while both broad PLNT bodies, both inherited-colour lifecycle canopies,
+and all 30 earlier topology/contact/wall/foreign-owner controls remain exact.
+The frozen gate requires the existing-evidence-only irregular segment mask,
+32-byte peak, bipolar response, `.9667–.9765` downsample retention, and
+`2.3334–2.5150` longitudinal gradient ratio; repeated-off peak is zero.
+Requested-on true 8× must promote exact 4896×3072 WebGL while E20/E26/E28/E30/
+HDR remain inactive for `scale-8`; the accepted tail signals a `5692.4 ms` GPU
+fence with zero browser errors.
+
 The earlier post-E16 survey was invalid for Solid: it sampled native Stone `21`,
 which is Powder, while labelling that region Solid. The corrected post-E17
 showcase uses native ROCK `78`, asserts exactly `2769` matching Solid cells, and
@@ -1115,12 +1158,18 @@ next production 4× survey then selected Wood/PLNT as the largest remaining
   at 4×. Organic is therefore represented by Wood at `50.781`, and Solid/ROCK
   surface detail becomes the weakest canonical family at `45.685`. E29's 2×
   composed ROCK capture raises that target to `90.2`, and its focused audit
-  passed. Organic is now the next weakness: Wood is `50.781` with
-  mesostructure `.26`, and PLNT is `56.122`; Gas follows at `52.710`. Do not widen E17–E29 owner sets by resemblance alone or stack
+  passed. E30 then completes another exact full 1×/2×/4× production matrix
+  with the same semantic hash/count and zero browser errors. Wood quality/
+  micro/chroma/macro becomes `71.833`/`1.97`/`1.29`/`26` at 1×,
+  `80.251`/`2.25`/`1.42`/`26` at 2×, and
+  `83.247`/`2.37`/`1.47`/`26` at 4×. Support/component remain `1`, dark/clipped
+  remain zero, and luma range is `37`/`42`/`41`. PLNT now represents Organic
+  at `56.122`; Gas/Noble at `52.710` is the next measured weakness. Do not widen
+  E17–E30 owner sets by resemblance alone or stack
   another generic gas layer over E04/E07/E13/E15; preserve their independent
   owner, exposure, topology, scale, and true-8× contracts.
 
-**Next visual experiments:** E03–E29 now provide accepted liquid body/surface,
+**Next visual experiments:** E03–E30 now provide accepted liquid body/surface,
 stable-gas, coherent-gas-motion, powder-depth, and powder-local-light
 checkpoints plus exact resting contact grounding, Glass/Ice transmission, and
 state-aware Wax/PLNT subsurface response, composed wet-mineral optics,
@@ -1137,8 +1186,12 @@ range `10`, luma range `14`, full support recall, and no clipping. E28 adds
 exact Wood/PLNT pigment/body depth without disturbing E20/E26 topology or
 lifecycle state. E29's 2× composed capture adds exact ROCK mesostructure with
 the rejected continuous stripe replaced by an interrupted lamina; its focused
-audit passed. Organic is now the next weakness: Wood quality is
-`50.781` with mesostructure `.26`, while PLNT is `56.122`; Gas is `52.710`. The radioactive-solid review
+audit passed. E30 adds exact Wood interrupted bark relief without changing
+PLNT, lifecycle state, or topology. Wood quality is `80.251` at canonical 2×,
+while PLNT is `56.122`; Gas/Noble is now
+the global weakest at `52.710` through billow depth. Review that exact gas
+fixture before changing E15 or adding another owner-specific gas layer. The
+radioactive-solid review
 found no current identity bug, but also
 proved that the existing
 phase-permissive identity guard is not suitable for a future broad ISZS/VIBR
@@ -1147,7 +1200,7 @@ with topology-preserving, material-
 specific cards that reuse already-live evidence. Prefer the smallest
 arithmetic-only candidate that fixes a visible fit-view deficiency; do not add
 an isolated tint merely to continue the experiment number. Preserve the E14
-1× stencil snap and all E01–E29 selectors and controls while designing the
+1× stencil snap and all E01–E30 selectors and controls while designing the
 next bounded card.
 
 ## Phase 1 — HDR pipeline & lighting core (biggest visual payoff)

@@ -1032,9 +1032,9 @@ describe('Pixi presenter startup configuration', () => {
     expect(e20End).toBeGreaterThan(e20Start);
     expect(e26Start).toBeGreaterThanOrEqual(0);
     expect(normal).toContain('uniform float uBotanicalMesostructureVfx;');
-    // E26 owns its body gate and the E28 child repeats the same predicate so
-    // an inconsistent child uniform cannot bypass its parent in GLSL.
-    expect(normal.match(/uBotanicalMesostructureVfx > 0\.5/g)).toHaveLength(2);
+    // E26 owns its body gate and both exact children repeat the same predicate
+    // so an inconsistent child uniform cannot bypass its parent in GLSL.
+    expect(normal.match(/uBotanicalMesostructureVfx > 0\.5/g)).toHaveLength(3);
     expect(eight).not.toContain('uBotanicalMesostructureVfx');
     expect(eight).not.toContain('botanicalMesostructureVfx');
     expect(canvasSource).not.toContain('botanicalMesostructureVfx');
@@ -1131,6 +1131,74 @@ describe('Pixi presenter startup configuration', () => {
     expect(preserveDrawingBuffer).toContain("get('botanicalPigmentVfxAudit') === '1'");
     expect(source).toContain('presenter.app.canvas.dataset.botanicalPigmentVfx');
     expect(source).toContain("this.app.canvas.dataset.botanicalPigmentVfx = 'inactive';");
+  });
+
+  it('keeps E30 Wood bark relief exact-owner, normal-WebGL-only, and resource-neutral', () => {
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const canvasSource = readFileSync(new URL('./field-renderer.ts', import.meta.url), 'utf8');
+    const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');
+    const normalStart = source.indexOf('const FIELD_FRAGMENT = `', eightStart);
+    const normalEnd = source.indexOf('`;\n\n/** Primary WebGL presentation', normalStart);
+    const eight = source.slice(eightStart, normalStart);
+    const normal = source.slice(normalStart, normalEnd);
+    const e20Start = normal.indexOf('      // E20:');
+    const e20End = normal.indexOf('    } else if (radioactiveSurface', e20Start);
+    const e20 = normal.slice(e20Start, e20End);
+    const e30Start = e20.indexOf('          // E30 interrupts');
+    const e30End = e20.indexOf('          // E28 keeps', e30Start);
+    const e30 = e20.slice(e30Start, e30End);
+    const preserveDrawingBufferStart = source.indexOf('preserveDrawingBuffer:');
+    const preserveDrawingBufferEnd = source.indexOf(
+      'resolution: outputScale', preserveDrawingBufferStart,
+    );
+    const preserveDrawingBuffer = source.slice(
+      preserveDrawingBufferStart, preserveDrawingBufferEnd,
+    );
+
+    expect(e20Start).toBeGreaterThanOrEqual(0);
+    expect(e20End).toBeGreaterThan(e20Start);
+    expect(e30Start).toBeGreaterThanOrEqual(0);
+    expect(e30End).toBeGreaterThan(e30Start);
+    expect(normal).toContain('uniform float uWoodBarkReliefVfx;');
+    expect(normal.match(/uWoodBarkReliefVfx > 0\.5/g)).toHaveLength(1);
+    expect(eight).not.toContain('uWoodBarkReliefVfx');
+    expect(eight).not.toContain('woodBarkReliefVfx');
+    expect(canvasSource).not.toContain('woodBarkReliefVfx');
+    expect(e20.indexOf('if (botanicalBodyReplacement > 0.5)')).toBeLessThan(e30Start);
+    expect(e30).toContain(
+      'float woodBarkRelief = material == 9.0\n'
+        + '              && uBotanicalMesostructureVfx > 0.5\n'
+        + '              && uWoodBarkReliefVfx > 0.5\n'
+        + '            ? botanicalDepth : 0.0;',
+    );
+    for (const establishedValue of [
+      'botanicalDepth', 'botanicalCluster', 'barkWarp', 'barkPlateCrown',
+      'barkPlatePocket', 'barkFissure', 'barkKnot',
+    ]) expect(e30).toContain(establishedValue);
+    expect(e30).toContain(
+      'float barkSegmentEvidence = clamp(\n'
+        + '            (botanicalCluster - 0.5) * 1.25\n'
+        + '              + (botanicalMacro - 0.5) * 0.45\n'
+        + '              + (barkWarp - 0.5) * 0.55 + barkPlate * 0.20,',
+    );
+    expect(e30).not.toContain('fieldPosition');
+    expect(e30).not.toContain('botanicalBodyNoise(');
+    expect(e30).not.toContain('sin(');
+    expect(e30).not.toContain('texture(');
+    expect(e30).not.toContain('uTime');
+    expect(e30).not.toContain('gl_FragCoord');
+    expect(e30).not.toMatch(/\balpha\s*[+*]?=/);
+    expect(source.match(/this\.uniforms\.uniforms\.uWoodBarkReliefVfx = 0;/g))
+      .toHaveLength(2);
+    expect(source).toMatch(
+      /const woodBarkReliefVfxEnabled = outputScale < 8\s*&& resolveWoodBarkReliefVfxEnabled\(renderLook\);/,
+    );
+    expect(source).toContain(
+      'uWoodBarkReliefVfx: { value: woodBarkReliefVfxEnabled ? 1 : 0',
+    );
+    expect(preserveDrawingBuffer).toContain("get('woodBarkReliefVfxAudit') === '1'");
+    expect(source).toContain('presenter.app.canvas.dataset.woodBarkReliefVfx');
+    expect(source).toContain("this.app.canvas.dataset.woodBarkReliefVfx = 'inactive';");
   });
 
   it('keeps E21 thick-Glass transmission exact-owner, normal-WebGL-only, and RGB-only', () => {

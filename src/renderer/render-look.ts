@@ -324,6 +324,22 @@ export function resolveBotanicalMesostructureVfxEnabled(
 }
 
 /**
+ * E30 breaks exact-Wood bark relief into bounded plates and fissures after E26
+ * has established the botanical body mesostructure. It is independent of the
+ * E28 pigment finish, but cannot revive either of its structural parents.
+ */
+export function resolveWoodBarkReliefVfxEnabled(
+  look: RenderLook,
+  search = globalThis.location?.search ?? '',
+): boolean {
+  if (!resolveBotanicalMesostructureVfxEnabled(look, search)) return false;
+  const requested = new URLSearchParams(search).get('woodBarkReliefVfx');
+  if (requested === '0' || requested === 'off' || requested === 'false') return false;
+  if (requested === '1' || requested === 'on' || requested === 'true') return true;
+  return true;
+}
+
+/**
  * E28 adds a restrained Wood/PLNT pigment response only after E26 has proven
  * the parent mesostructure path. The shader keeps exact owner/contact/topology
  * eligibility; this selector cannot revive either parent when it is disabled.

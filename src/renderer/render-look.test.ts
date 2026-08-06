@@ -3,6 +3,7 @@ import {
   resolveBotanicalBodyVfxEnabled,
   resolveBotanicalMesostructureVfxEnabled,
   resolveBotanicalPigmentVfxEnabled,
+  resolveWoodBarkReliefVfxEnabled,
   resolveCeramicGlazeVfxEnabled,
   DEFAULT_RENDER_LOOK, resolveGasBodyVfxEnabled, resolveGasCoreDepthVfxEnabled,
   resolveGasLightVfxEnabled,
@@ -309,6 +310,30 @@ describe('resolveRenderLook', () => {
     )).toBe(false);
     expect(resolveBotanicalPigmentVfxEnabled(
       'realistic', '?botanicalPigmentVfx=false',
+    )).toBe(false);
+  });
+
+  it('keeps exact-Wood bark relief subordinate to E26 but independent of E28 pigment', () => {
+    expect(resolveWoodBarkReliefVfxEnabled(
+      'classic', '?woodBarkReliefVfx=1',
+    )).toBe(false);
+    expect(resolveWoodBarkReliefVfxEnabled('realistic', '')).toBe(true);
+    expect(resolveWoodBarkReliefVfxEnabled('neon-lab', '')).toBe(true);
+    expect(resolveWoodBarkReliefVfxEnabled(
+      'realistic', '?volumeVfx=0&woodBarkReliefVfx=1',
+    )).toBe(false);
+    expect(resolveWoodBarkReliefVfxEnabled(
+      'realistic',
+      '?volumeVfx=0&botanicalBodyVfx=1&botanicalMesostructureVfx=1&woodBarkReliefVfx=on',
+    )).toBe(true);
+    expect(resolveWoodBarkReliefVfxEnabled(
+      'realistic', '?botanicalMesostructureVfx=off&woodBarkReliefVfx=1',
+    )).toBe(false);
+    expect(resolveWoodBarkReliefVfxEnabled(
+      'realistic', '?botanicalPigmentVfx=off&woodBarkReliefVfx=1',
+    )).toBe(true);
+    expect(resolveWoodBarkReliefVfxEnabled(
+      'realistic', '?woodBarkReliefVfx=false',
     )).toBe(false);
   });
 
