@@ -16,6 +16,7 @@ import {
   resolveLiquidBodyVfxEnabled, resolveLiquidSolidMeniscusVfxEnabled,
   resolveLiquidSurfaceVfxEnabled,
   resolveNobleGasBillowVfxEnabled, resolveNobleGasPrismVfxEnabled,
+  resolveHydrogenBodyVfxEnabled,
   resolveSmokeBillowDepthVfxEnabled,
   resolveSmokeSoftnessVfxEnabled,
   resolveAcidBodyVfxEnabled,
@@ -627,6 +628,34 @@ describe('resolveRenderLook', () => {
     expect(resolveAcidBodyVfxEnabled('realistic', '?acidBodyVfx=0')).toBe(false);
     expect(resolveAcidBodyVfxEnabled('realistic', '?acidBodyVfx=off')).toBe(false);
     expect(resolveAcidBodyVfxEnabled('realistic', '?acidBodyVfx=false')).toBe(false);
+  });
+
+  it('keeps exact Hydrogen body optics subordinate to E04 and isolated from older input audits', () => {
+    expect(resolveHydrogenBodyVfxEnabled('classic', '?hydrogenBodyVfx=on')).toBe(false);
+    expect(resolveHydrogenBodyVfxEnabled('realistic', '')).toBe(true);
+    expect(resolveHydrogenBodyVfxEnabled('neon-lab', '')).toBe(true);
+    expect(resolveHydrogenBodyVfxEnabled('realistic', '?inputAudit=1')).toBe(false);
+    expect(resolveHydrogenBodyVfxEnabled(
+      'realistic', '?inputAudit=1&hydrogenBodyVfx=true',
+    )).toBe(true);
+    expect(resolveHydrogenBodyVfxEnabled(
+      'realistic', '?hydrogenBodyVfx=off',
+    )).toBe(false);
+    expect(resolveHydrogenBodyVfxEnabled(
+      'realistic', '?hydrogenBodyVfx=0',
+    )).toBe(false);
+    expect(resolveHydrogenBodyVfxEnabled(
+      'realistic', '?hydrogenBodyVfx=false',
+    )).toBe(false);
+    expect(resolveHydrogenBodyVfxEnabled(
+      'realistic', '?hydrogenBodyVfx=on',
+    )).toBe(true);
+    expect(resolveHydrogenBodyVfxEnabled(
+      'realistic', '?gasBodyVfx=0&hydrogenBodyVfx=on',
+    )).toBe(false);
+    expect(resolveHydrogenBodyVfxEnabled(
+      'realistic', '?volumeVfx=0&gasBodyVfx=on&hydrogenBodyVfx=1',
+    )).toBe(true);
   });
 
   it('keeps exact DEUT body optics separate from E03 but inside the broad volume experiment', () => {

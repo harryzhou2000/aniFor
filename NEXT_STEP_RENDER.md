@@ -663,11 +663,27 @@ does not alter simulation, camera, semantic ownership, or `renderScale`.
   state/body/role/control/cross-scale matrix plus true-8× exclusion. Requested-
   on true 8× reports E41 inactive for `scale-8`, promotes exact 4896×3072
   WebGL, and completes its shared-deadline GPU fence.
+- **E42 accepted:** exact Hydrogen `40` gains a normal-WebGL-only body fold as
+  a strict child of E04 (`?hydrogenBodyVfx=0|1`). Propagated style `5`, dense
+  connected wall-free non-emissive atmosphere support, and E04's existing
+  density/relief/static carriers are the complete owner/input set. The result
+  is an RGB-only blue-white transmission crown with an opposing cool pocket;
+  it adds no wave, sample, texture, field, resource, pass, target, upload,
+  allocation, clock, alpha/support, silhouette, ownership, topology, or physics
+  decision. `npm run audit:vfx:hydrogen-body` freezes the 1×/2×/4×
+  off→on→off response, seven foreign gas identities, sparse topology, authored
+  void/channel, unlike-gas seam, Water/Metal contacts, native wall, exact raw
+  controls, and byte-exact repeated-off frames. Target RMS is `5.04–5.05`
+  (core), `6.03–6.06` (crown), and `2.03–2.05` (pocket), with cross-scale
+  spread at most `0.03`. Requested-on true 8× reports E42 inactive for
+  `scale-8`, promotes exact 4896×3072 WebGL, preserves semantics, and completed
+  the accepted GPU fence in `5114.9 ms`; Canvas retains its established H2
+  identity fallback.
 - **Protected 8× rung:** `renderScale=8` deliberately reports
   `hdrPipeline=inactive` / `scale-8` and retains the proven direct single-mesh
   4896×3072 path. The experiment must earn a bounded 8× design rather than
   allocating a 115 MiB full-resolution float target beside that path.
-- **Current decision:** E01/E02/E03/E04/E05/E06/E07/E08/E09/E10/E11/E12/E13/E14/E15/E16/E17/E18/E19/E20/E21/E22/E23/E24/E25/E26/E27/E28/E29/E30/E31/E32/E33/E34/E35/E36/E37/E38/E39/E40/E41 remain opt-in through the non-Classic looks
+- **Current decision:** E01/E02/E03/E04/E05/E06/E07/E08/E09/E10/E11/E12/E13/E14/E15/E16/E17/E18/E19/E20/E21/E22/E23/E24/E25/E26/E27/E28/E29/E30/E31/E32/E33/E34/E35/E36/E37/E38/E39/E40/E41/E42 remain opt-in through the non-Classic looks
   until representative hardware timing and mobile thermal behavior are
   measured. E02 remains the safe family-wide baseline. E03 is accepted as the
   liquid-depth checkpoint: its fit-view crop is visibly more cohesive, retains
@@ -1757,26 +1773,27 @@ evidence; it deliberately ends the current Acid stack. E40 gives exact GUNP
 absorptive pocket, and restrained core without flattening their sparse identity
 marks or internal grain cadence; Coal `19`, other owners, wet/moving powder,
 fine topology, walls, contacts, Local, Grains, Canvas, and compact 8× remain
-controls. The next survey should compare exact Hydrogen `40` as an E04-owned
-gas-body candidate against a separate exact ISZS/VIBR solid-only eligibility
-proof. DEUT `100` is no longer a survey candidate: E41 now gives it an accepted
-trait-aware connected radioactive-liquid body without widening E03. Do not
-widen E04, E03, or E41; either next direction needs its own exact-owner fixture
-and browser gate.
+controls. E42 now gives exact Hydrogen `40` a strict E04-owned connected-body
+transmission fold without touching foreign gas identities, sparse topology,
+liquid/solid contacts, Canvas, or compact 8×. DEUT `100` is no longer a survey
+candidate: E41 already gives it an accepted trait-aware connected
+radioactive-liquid body without widening E03. The next survey should build a
+separate exact ISZS/VIBR radioactive-Solid eligibility proof and browser gate;
+do not widen E04, E03, E41, or E42.
 Improve distinctive depth, transmission, reflection, lighting, and
 mesostructure without stacking another narrow Oil/Acid/contact tint or generic
 PLNT/gas layer.
-The
-radioactive-solid review
-found no current identity bug, but also
-proved that the existing
-phase-permissive identity guard is not suitable for a future broad ISZS/VIBR
-finish; such work needs its own exact solid-only fixture and gate. Continue
+ISZS `105` and VIBR `113` retain their current exact Solid-depth,
+radioactive-identity, and (for VIBR) packed charge/countdown/alternate-state
+contracts, but no strict radioactive-Solid deep-body proof exists. The next
+candidate needs its own exact solid-only fixture and gate and must not reuse the
+phase-permissive seven-owner identity guard as a deep-body eligibility test.
+Continue
 with topology-preserving, material-
 specific cards that reuse already-live evidence. Prefer the smallest
 arithmetic-only candidate that fixes a visible fit-view deficiency; do not add
 an isolated tint merely to continue the experiment number. Preserve the E14
-1× stencil snap and all E01–E41 selectors and controls while designing the
+1× stencil snap and all E01–E42 selectors and controls while designing the
 next bounded card.
 
 ## Phase 1 — HDR pipeline & lighting core (biggest visual payoff)

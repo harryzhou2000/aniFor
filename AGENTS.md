@@ -13,7 +13,7 @@ powder, solid, liquid, gas, energy, and contact scenes across Canvas and WebGL a
 mobile gestures, save/load, CI, and Pages deployment as protected regression
 contracts rather than the primary feature stream.
 
-The accepted visual experiment ladder now runs through E41. E12 is the
+The accepted visual experiment ladder now runs through E42. E12 is the
 species-safe Sand/Clay/Concrete wet-sediment checkpoint; preserve its exact
 aqueous owner/stability proof, split moving-powder/stationary-Water control,
 Local/Grains no-op, fine structures, authored gaps, Canvas fallback, and true
@@ -691,18 +691,34 @@ optics parity requirement. Under `inputAudit=1`, an omitted E41 selector is
 inactive so older focused fixtures cannot silently inherit it; composed audits
 must opt in explicitly.
 
-The next survey should revisit exact Hydrogen `40` as an E04-owned gas-body
-candidate, or build the separate exact ISZS/VIBR solid-only eligibility proof
-described below. Do not widen E04 gas styling, E03's trait-free liquid contract,
-or E41 into generic radioactive liquid. Prefer the candidate with the clearest
-fit-view deficiency and its own exact-owner fixture/gate.
+E42 is the accepted normal-WebGL-only exact Hydrogen body-optics checkpoint.
+`?hydrogenBodyVfx=0|1` is a strict child of E04: it cannot bypass
+`gasBodyVfx=0`, and omitted selectors remain inactive under `inputAudit=1`.
+Only propagated atmosphere style `5` with connected dense, wall-free,
+non-emissive support receives its RGB-only blue-white transmission crown and
+opposing cool absorptive pocket. It reuses E04's density, cardinal relief,
+curvature, directional key, and three static billow carriers; add no wave,
+sample, texture, field, pass, target, upload, allocation, clock, alpha/support,
+silhouette, ownership, topology, or physics decision. `npm run
+audit:vfx:hydrogen-body` owns the exact fixture, 1×/2×/4× off→on→off matrix,
+seven sibling gases, sparse carrier/midpoint/gap, authored void/channel,
+H2/FOG seam, H2/Water and H2/Metal contacts, native wall, raw field, and
+cross-scale proof. The accepted RMS response is `5.04–5.05` in the deep core,
+`6.03–6.06` at the crown, and `2.03–2.05` in the pocket; repeated-off frames
+are byte exact. The H2 side of the unlike-gas seam keeps a bounded cool body
+response, its foreign FOG shoulder is at most two composed bytes, and both
+sides of liquid/solid contacts remain exact no-ops. Canvas and compact true 8×
+retain their established Hydrogen identity. Requested-on 8× reports E42
+inactive for `scale-8`, promotes exact 4896×3072 WebGL, preserves semantics,
+and completed the accepted GPU fence in `5114.9 ms`.
 
-The radioactive-solid review found no current correctness bug: ISZS `105`
-and VIBR `113` already receive exact-species Solid depth, while the existing
-seven-owner radioactive identity motif is intentionally phase-permissive.
-Before adding any broad isotope finish, create a separate exact ISZS/VIBR
-solid-only eligibility proof and fixture; never reuse that permissive identity
-guard as a deep-body gate.
+The next bounded candidate is a separate exact ISZS/VIBR radioactive-Solid
+body proof. ISZS `105` and VIBR `113` retain their existing exact Solid-depth,
+radioactive-identity, and (for VIBR) packed native-state contracts, but no
+strict radioactive-Solid deep-body proof exists. Build a dedicated fixture and
+gate that preserves VIBR charge/countdown/alternate-state presentation; never
+reuse the phase-permissive seven-owner identity guard as a deep-body gate, and
+do not widen E04, E03, E41, or E42.
 
 The old post-E16 rank that labelled Stone `21` as Solid was invalid because
 Stone is native Powder. The corrected showcase uses native ROCK ground and

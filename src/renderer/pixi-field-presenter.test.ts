@@ -2028,6 +2028,62 @@ describe('Pixi presenter startup configuration', () => {
     expect(preserveDrawingBuffer).toContain("get('nobleGasBillowVfxAudit') === '1'");
   });
 
+  it('keeps E42 Hydrogen transmission exact-style, E04-dependent, normal-WebGL-only, and RGB-only', () => {
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const canvasSource = readFileSync(new URL('./field-renderer.ts', import.meta.url), 'utf8');
+    const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');
+    const normalStart = source.indexOf('const FIELD_FRAGMENT = `', eightStart);
+    const normalEnd = source.indexOf('`;\n\n/** Primary WebGL presentation', normalStart);
+    const eight = source.slice(eightStart, normalStart);
+    const normal = source.slice(normalStart, normalEnd);
+    const e42Start = normal.indexOf('      // E42:');
+    const e42End = normal.indexOf('      // E27:', e42Start);
+    const e42 = normal.slice(e42Start, e42End);
+    const parentStart = normal.lastIndexOf('    if (uGasBodyVfx > 0.5)', e42Start);
+    const preserveStart = source.indexOf('preserveDrawingBuffer:');
+    const preserveEnd = source.indexOf('resolution: outputScale', preserveStart);
+    const preserve = source.slice(preserveStart, preserveEnd);
+
+    expect(eightStart).toBeGreaterThanOrEqual(0);
+    expect(normalStart).toBeGreaterThan(eightStart);
+    expect(normalEnd).toBeGreaterThan(normalStart);
+    expect(e42Start).toBeGreaterThanOrEqual(0);
+    expect(e42End).toBeGreaterThan(e42Start);
+    expect(parentStart).toBeGreaterThanOrEqual(0);
+    expect(normal).toContain('uniform float uHydrogenBodyVfx;');
+    expect(normal.match(/uHydrogenBodyVfx > 0\.5/g)).toHaveLength(1);
+    expect(eight).not.toContain('uHydrogenBodyVfx');
+    expect(eight).not.toContain('hydrogenBodyPhase');
+    expect(canvasSource).not.toContain('hydrogenBodyVfx');
+    for (const guard of [
+      'uHydrogenBodyVfx > 0.5', 'uGasIdentityStyling > 0.5',
+      'wall < 0.5', '!materialEmissive',
+      'floor(gasStyleState.r * 255.0 + 0.5)',
+      'abs(hydrogenBodyStyle - 5.0)', 'hydrogenBodyOwner > 0.5',
+    ]) expect(e42).toContain(guard);
+    for (const establishedFieldScalar of [
+      'gasVfxBodySupport', 'cloudNeighbourMean', 'atmosphereState.a',
+      'gasVfxBillow', 'gasVfxWaveC', 'gasDirectionalRelief', 'gasCurvature',
+      'gasCrown', 'gasPocket',
+    ]) expect(e42).toContain(establishedFieldScalar);
+    expect(e42).not.toContain('texture(');
+    expect(e42).not.toContain('uTime');
+    expect(e42).not.toContain('sin(');
+    expect(e42).not.toContain('gl_FragCoord');
+    expect(e42).not.toMatch(/\balpha\s*[+*]?=/);
+    expect(source).toMatch(
+      /const hydrogenBodyVfxEnabled = outputScale < 8\s*&& resolveHydrogenBodyVfxEnabled\(renderLook\);/,
+    );
+    expect(source.match(/this\.uniforms\.uniforms\.uHydrogenBodyVfx = 0;/g))
+      .toHaveLength(2);
+    expect(source).toContain(
+      'uHydrogenBodyVfx: { value: hydrogenBodyVfxEnabled ? 1 : 0',
+    );
+    expect(source).toContain('presenter.app.canvas.dataset.hydrogenBodyVfx');
+    expect(source).toContain("this.app.canvas.dataset.hydrogenBodyVfx = 'inactive';");
+    expect(preserve).toContain("get('hydrogenBodyVfxAudit') === '1'");
+  });
+
   it('keeps E31 Noble Gas prism exact-style, E25-dependent, normal-WebGL-only, and RGB-only', () => {
     const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
     const canvasSource = readFileSync(new URL('./field-renderer.ts', import.meta.url), 'utf8');

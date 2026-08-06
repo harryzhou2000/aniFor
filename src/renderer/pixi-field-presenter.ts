@@ -49,6 +49,7 @@ import {
   resolveGlassBodyVfxEnabled,
   resolveGasBodyVfxEnabled, resolveGasCoreDepthVfxEnabled, resolveGasLightVfxEnabled,
   resolveGasMotionVfxEnabled,
+  resolveHydrogenBodyVfxEnabled,
   resolveNobleGasBillowVfxEnabled,
   resolveNobleGasPrismVfxEnabled,
   resolveSmokeBillowDepthVfxEnabled,
@@ -3249,6 +3250,7 @@ uniform float uGasBodyVfx;
 uniform float uGasMotionVfx;
 uniform float uGasLightVfx;
 uniform float uGasCoreDepthVfx;
+uniform float uHydrogenBodyVfx;
 uniform float uNobleGasBillowVfx;
 uniform float uNobleGasPrismVfx;
 uniform float uSmokeSoftnessVfx;
@@ -6379,6 +6381,47 @@ void main() {
               + max(gasDirectionalRelief, 0.0) * 0.100);
           color += (vec3(1.10) - clamp(color, 0.0, 1.10))
             * gasCoreKeyTint * gasCoreKey;
+        }
+      }
+
+      // E42: a dense exact Hydrogen cloud currently converges on E04's generic
+      // CleanGas body while its fine style-5 motif deliberately fades under
+      // atmosphere ownership. Recompose only that propagated style into a
+      // broad blue-white transmission fold with an opposing cool pocket. The
+      // existing E04 billow, third carrier, cardinal relief, curvature, and
+      // connected-density proof are the complete input set. This changes RGB
+      // only: no wave, sample, texture, field, pass, target, upload, clock,
+      // allocation, alpha, support, silhouette, ownership, or physics change.
+      // Canvas and compact true 8x retain their established Hydrogen identity.
+      if (uHydrogenBodyVfx > 0.5 && uGasIdentityStyling > 0.5
+        && wall < 0.5 && !materialEmissive) {
+        float hydrogenBodyStyle = floor(gasStyleState.r * 255.0 + 0.5);
+        float hydrogenBodyOwner = 1.0
+          - step(0.5, abs(hydrogenBodyStyle - 5.0));
+        if (hydrogenBodyOwner > 0.5) {
+          float hydrogenBodyDensity = smoothstep(
+            0.12, 0.42, atmosphereState.a
+          ) * (1.0 - smoothstep(0.82, 1.0, atmosphereState.a) * 0.24);
+          float hydrogenBodySupport = hydrogenBodyOwner * gasVfxBodySupport
+            * smoothstep(0.16, 0.52, cloudNeighbourMean)
+            * hydrogenBodyDensity;
+          float hydrogenBodyPhase = clamp(
+            gasVfxBillow * 0.36 + gasVfxWaveC * 0.64
+              + gasDirectionalRelief * 0.12 + gasCurvature * 0.06,
+            -1.0, 1.0
+          );
+          float hydrogenBodyCrown = hydrogenBodySupport
+            * (max(hydrogenBodyPhase, 0.0) + gasCrown * 0.10);
+          float hydrogenBodyPocket = hydrogenBodySupport
+            * (max(-hydrogenBodyPhase, 0.0) + gasPocket * 0.08);
+          vec3 hydrogenBodyKey = mix(
+            vec3(0.58, 0.82, 1.00), vec3(0.82, 0.94, 1.00),
+            clamp(0.52 + gasDirectionalRelief * 0.26, 0.0, 1.0)
+          );
+          color += (vec3(1.12) - clamp(color, 0.0, 1.12))
+            * hydrogenBodyKey * hydrogenBodyCrown * 0.390;
+          color *= vec3(1.0)
+            - vec3(0.40, 0.26, 0.10) * hydrogenBodyPocket * 0.270;
         }
       }
 
@@ -10402,6 +10445,10 @@ export class PixiFieldPresenter {
     // parallel branch and retains its proven fragment-register budget.
     const gasCoreDepthVfxEnabled = outputScale < 8
       && resolveGasCoreDepthVfxEnabled(renderLook);
+    // E42 is an arithmetic-only exact-Hydrogen child of E04. Compact true 8x
+    // retains its existing propagated style-5 key and declares no E42 branch.
+    const hydrogenBodyVfxEnabled = outputScale < 8
+      && resolveHydrogenBodyVfxEnabled(renderLook);
     // E25 is an arithmetic-only exact Noble Gas recomposition over E04's
     // connected body. Compact true 8x retains its established style-7 path and
     // declares neither this selector nor a parallel branch.
@@ -10542,6 +10589,7 @@ export class PixiFieldPresenter {
       uGasMotionVfx: { value: gasMotionVfxEnabled ? 1 : 0, type: 'f32' },
       uGasLightVfx: { value: gasLightVfxEnabled ? 1 : 0, type: 'f32' },
       uGasCoreDepthVfx: { value: gasCoreDepthVfxEnabled ? 1 : 0, type: 'f32' },
+      uHydrogenBodyVfx: { value: hydrogenBodyVfxEnabled ? 1 : 0, type: 'f32' },
       uNobleGasBillowVfx: { value: nobleGasBillowVfxEnabled ? 1 : 0, type: 'f32' },
       uNobleGasPrismVfx: { value: nobleGasPrismVfxEnabled ? 1 : 0, type: 'f32' },
       uSmokeSoftnessVfx: { value: smokeSoftnessVfxEnabled ? 1 : 0, type: 'f32' },
@@ -10787,6 +10835,7 @@ export class PixiFieldPresenter {
       this.uniforms.uniforms.uGasMotionVfx = 0;
       this.uniforms.uniforms.uGasLightVfx = 0;
       this.uniforms.uniforms.uGasCoreDepthVfx = 0;
+      this.uniforms.uniforms.uHydrogenBodyVfx = 0;
       this.uniforms.uniforms.uNobleGasBillowVfx = 0;
       this.uniforms.uniforms.uNobleGasPrismVfx = 0;
       this.uniforms.uniforms.uSmokeSoftnessVfx = 0;
@@ -10851,6 +10900,7 @@ export class PixiFieldPresenter {
             || new URLSearchParams(location.search).get('gasMotionVfxAudit') === '1'
             || new URLSearchParams(location.search).get('gasLightVfxAudit') === '1'
             || new URLSearchParams(location.search).get('gasCoreDepthVfxAudit') === '1'
+            || new URLSearchParams(location.search).get('hydrogenBodyVfxAudit') === '1'
             || new URLSearchParams(location.search).get('nobleGasBillowVfxAudit') === '1'
             || new URLSearchParams(location.search).get('nobleGasPrismVfxAudit') === '1'
             || new URLSearchParams(location.search).get('smokeSoftnessVfxAudit') === '1'
@@ -10918,6 +10968,9 @@ export class PixiFieldPresenter {
       ? 'active' : 'inactive';
     presenter.app.canvas.dataset.gasCoreDepthVfx = Number(
       presenter.uniforms.uniforms.uGasCoreDepthVfx
+    ) > 0.5 ? 'active' : 'inactive';
+    presenter.app.canvas.dataset.hydrogenBodyVfx = Number(
+      presenter.uniforms.uniforms.uHydrogenBodyVfx
     ) > 0.5 ? 'active' : 'inactive';
     presenter.app.canvas.dataset.nobleGasBillowVfx = Number(
       presenter.uniforms.uniforms.uNobleGasBillowVfx
@@ -12391,6 +12444,7 @@ export class PixiFieldPresenter {
         this.uniforms.uniforms.uGasMotionVfx = 0;
         this.uniforms.uniforms.uGasLightVfx = 0;
         this.uniforms.uniforms.uGasCoreDepthVfx = 0;
+        this.uniforms.uniforms.uHydrogenBodyVfx = 0;
         this.uniforms.uniforms.uNobleGasBillowVfx = 0;
         this.uniforms.uniforms.uNobleGasPrismVfx = 0;
         this.uniforms.uniforms.uSmokeSoftnessVfx = 0;
@@ -12432,6 +12486,7 @@ export class PixiFieldPresenter {
         this.app.canvas.dataset.gasMotionVfx = 'inactive';
         this.app.canvas.dataset.gasLightVfx = 'inactive';
         this.app.canvas.dataset.gasCoreDepthVfx = 'inactive';
+        this.app.canvas.dataset.hydrogenBodyVfx = 'inactive';
         this.app.canvas.dataset.nobleGasBillowVfx = 'inactive';
         this.app.canvas.dataset.nobleGasPrismVfx = 'inactive';
         this.app.canvas.dataset.smokeSoftnessVfx = 'inactive';

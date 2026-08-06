@@ -206,6 +206,27 @@ export function resolveNobleGasBillowVfxEnabled(
 }
 
 /**
+ * Controls the accepted independently measurable exact-Hydrogen volume
+ * response. Hydrogen remains a strict child of the
+ * stable gas body: an explicit selector can enable or disable the child, but
+ * it cannot recreate E04 when the parent or non-Classic HDR look is inactive.
+ * Focused input fixtures default the new child off until they opt in, so older
+ * gas audits keep their calibrated selector sets unchanged.
+ */
+export function resolveHydrogenBodyVfxEnabled(
+  look: RenderLook,
+  search = globalThis.location?.search ?? '',
+): boolean {
+  if (!resolveGasBodyVfxEnabled(look, search)) return false;
+  const parameters = new URLSearchParams(search);
+  const requested = parameters.get('hydrogenBodyVfx');
+  if (requested === '0' || requested === 'off' || requested === 'false') return false;
+  if (requested === '1' || requested === 'on' || requested === 'true') return true;
+  if (parameters.get('inputAudit') === '1') return false;
+  return true;
+}
+
+/**
  * E31 adds a broad prismatic interior lobe only after E25 has established the
  * exact Noble Gas billow. It cannot revive E04/E25, and remains independently
  * switchable so its bipolar volume response can be measured without changing

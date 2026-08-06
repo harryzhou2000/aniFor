@@ -38,6 +38,9 @@ import {
   NOBLE_GAS_BILLOW_VFX_AUDIT, prepareNobleGasBillowVfxFixture,
 } from './noble-gas-billow-vfx-audit';
 import {
+  HYDROGEN_BODY_VFX_AUDIT, prepareHydrogenBodyVfxFixture,
+} from './hydrogen-body-vfx-audit';
+import {
   SMOKE_SOFTNESS_VFX_AUDIT, prepareSmokeSoftnessVfxFixture,
 } from './smoke-softness-vfx-audit';
 import {
@@ -756,6 +759,12 @@ export class Game {
       nobleGasBillowVfxFixture: () => NOBLE_GAS_BILLOW_VFX_AUDIT,
       prepareNobleGasBillowVfxFixture: () => {
         prepareNobleGasBillowVfxFixture(this.simulation);
+        this.renderer.synchronizeFixtureMaterialPlane();
+        this.renderer.invalidateDynamicPresentation();
+      },
+      hydrogenBodyVfxFixture: () => HYDROGEN_BODY_VFX_AUDIT,
+      prepareHydrogenBodyVfxFixture: () => {
+        prepareHydrogenBodyVfxFixture(this.simulation);
         this.renderer.synchronizeFixtureMaterialPlane();
         this.renderer.invalidateDynamicPresentation();
       },
