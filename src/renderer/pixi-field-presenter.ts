@@ -57,6 +57,7 @@ import {
   resolveMetalWaterContactVfxEnabled,
   resolveLiquidSurfaceVfxEnabled,
   resolveOilBodyVfxEnabled,
+  resolveOilVolumeFinishVfxEnabled,
   resolveWaterBodyVfxEnabled,
   resolvePlasmaCoreVfxEnabled,
   resolveCeramicGlazeVfxEnabled,
@@ -3266,6 +3267,7 @@ uniform float uWoodTanninVfx;
 uniform float uGlassBodyVfx;
 uniform float uLiquidBodyVfx;
 uniform float uOilBodyVfx;
+uniform float uOilVolumeFinishVfx;
 uniform float uWaterBodyVfx;
 uniform float uLiquidSolidMeniscusVfx;
 uniform float uMetalWaterContactVfx;
@@ -6885,7 +6887,7 @@ void main() {
     // corrosive chroma shift instead. No sampler, field, alpha, support, or
     // species decision is added; shores, droplets, seams, walls, traits, and
     // emissive owners remain on their exact generic paths.
-    if (uLiquidVolumeChroma > 0.5 && material == 16.0
+    if (uLiquidVolumeChroma > 0.5 && material == 13.0
       && liquidOnly < 0.5 && halo < 0.5 && wall < 0.5
       && traits < 0.5 && !materialEmissive && foreignMatterContact < 0.5
       && unlikeMaterialContact < 0.5 && liquidDepth > 0.48 && liquidNeighbourMean > 0.56) {
@@ -7057,20 +7059,44 @@ void main() {
             && surfaceOnly < 0.5 && emissionOnly < 0.5) {
             float oilBodyWeight = smoothstep(
               30.0 / 255.0, 78.0 / 255.0, liquidOpticalDepth
-            ) * liquidVfxBody * (1.0 - liquidFresnelContour);
-            float oilBodyRoll = clamp(
-              (broadSheen - 0.5) * 1.12 + liquidMacroRelief * 4.20,
-              -1.0, 1.0
-            );
-            float oilBodyCrown = max(oilBodyRoll, 0.0) * oilBodyWeight;
-            float oilBodyPocket = max(-oilBodyRoll, 0.0) * oilBodyWeight;
+            ) * liquidVfxBody * (1.0 - liquidFresnelContour)
+              * (uOilVolumeFinishVfx > 0.5 ? (
+                smoothstep(0.82, 0.98, liquidNeighbourMean)
+                  * (1.0 - smoothstep(
+                    0.00002, 0.00024,
+                    dot(liquidSpeciesSlope, liquidSpeciesSlope)
+                  )) * step(3.5, shape.w) * (1.0 - exposedLiquidSide)
+              ) : 1.0);
+            // E38 keeps E22's exact ownership and byte-30 hand-off, but lets
+            // its broader finish recombine two already-live carriers. E22's
+            // almost pure broad-sheen roll could leave a whole production Oil
+            // lobe inside one phase; crossing that slow signal with the finer
+            // caustic carrier produces coherent amber crowns and cool pockets
+            // across the body without another wave, sample, or live local.
+            float oilBodyRoll = clamp(uOilVolumeFinishVfx > 0.5 ? (
+              (broadSheen - 0.5) * (causticWave - 0.5) * 3.10
+                + (causticWave - 0.5) * 0.34
+                + liquidMacroRelief * 1.80
+            ) : ((broadSheen - 0.5) * 1.12 + liquidMacroRelief * 4.20), -1.0, 1.0);
+            float oilBodyCrown = (uOilVolumeFinishVfx > 0.5
+              ? smoothstep(0.025, 0.50, max(oilBodyRoll, 0.0))
+              : max(oilBodyRoll, 0.0)) * oilBodyWeight;
+            float oilBodyPocket = (uOilVolumeFinishVfx > 0.5
+              ? smoothstep(0.025, 0.48, max(-oilBodyRoll, 0.0))
+              : max(-oilBodyRoll, 0.0)) * oilBodyWeight;
             vec3 oilBodyReflection = mix(
-              vec3(1.00, 0.60, 0.18), reflectedEnvironment, 0.16
+              vec3(1.00, 0.60, 0.18), reflectedEnvironment,
+              uOilVolumeFinishVfx > 0.5 ? 0.32 : 0.16
             );
             color += (vec3(1.18) - clamp(color, 0.0, 1.18))
-              * oilBodyReflection * oilBodyCrown * (0.052 + broadSheen * 0.024);
-            color *= vec3(1.0) - vec3(0.030, 0.060, 0.145)
-              * oilBodyPocket * (0.54 + caustic * 0.20);
+              * oilBodyReflection * oilBodyCrown
+              * (uOilVolumeFinishVfx > 0.5
+                ? (0.090 + broadSheen * 0.025 + caustic * 0.015)
+                : (0.052 + broadSheen * 0.024));
+            color *= vec3(1.0) - (uOilVolumeFinishVfx > 0.5
+              ? vec3(0.038, 0.075, 0.160) : vec3(0.030, 0.060, 0.145))
+              * oilBodyPocket * (uOilVolumeFinishVfx > 0.5
+                ? (0.60 + caustic * 0.22) : (0.54 + caustic * 0.20));
           }
         }
       }
@@ -10312,6 +10338,10 @@ export class PixiFieldPresenter {
     // E22 selector or arithmetic.
     const oilBodyVfxEnabled = outputScale < 8
       && resolveOilBodyVfxEnabled(renderLook);
+    // E38 broadens only E22's already-proven exact-Oil finish. The compact
+    // true-8x path deliberately declares neither this selector nor arithmetic.
+    const oilVolumeFinishVfxEnabled = outputScale < 8
+      && resolveOilVolumeFinishVfxEnabled(renderLook);
     // E24 replaces only normal-WebGL's exact deep-Water stripe carrier. The
     // compact true-8x shader retains its independently proven aqueous grammar
     // and deliberately declares neither this selector nor its arithmetic.
@@ -10372,6 +10402,7 @@ export class PixiFieldPresenter {
       uGlassBodyVfx: { value: glassBodyVfxEnabled ? 1 : 0, type: 'f32' },
       uLiquidBodyVfx: { value: liquidBodyVfxEnabled ? 1 : 0, type: 'f32' },
       uOilBodyVfx: { value: oilBodyVfxEnabled ? 1 : 0, type: 'f32' },
+      uOilVolumeFinishVfx: { value: oilVolumeFinishVfxEnabled ? 1 : 0, type: 'f32' },
       uWaterBodyVfx: { value: waterBodyVfxEnabled ? 1 : 0, type: 'f32' },
       uLiquidSolidMeniscusVfx: {
         value: liquidSolidMeniscusVfxEnabled ? outputScale : 0, type: 'f32',
@@ -10611,6 +10642,7 @@ export class PixiFieldPresenter {
       this.uniforms.uniforms.uGlassBodyVfx = 0;
       this.uniforms.uniforms.uLiquidBodyVfx = 0;
       this.uniforms.uniforms.uOilBodyVfx = 0;
+      this.uniforms.uniforms.uOilVolumeFinishVfx = 0;
       this.uniforms.uniforms.uWaterBodyVfx = 0;
       this.uniforms.uniforms.uLiquidSolidMeniscusVfx = 0;
       this.uniforms.uniforms.uMetalWaterContactVfx = 0;
@@ -10776,6 +10808,9 @@ export class PixiFieldPresenter {
       ? 'active' : 'inactive';
     presenter.app.canvas.dataset.oilBodyVfx = Number(
       presenter.uniforms.uniforms.uOilBodyVfx
+    ) > 0.5 ? 'active' : 'inactive';
+    presenter.app.canvas.dataset.oilVolumeFinishVfx = Number(
+      presenter.uniforms.uniforms.uOilVolumeFinishVfx
     ) > 0.5 ? 'active' : 'inactive';
     presenter.app.canvas.dataset.waterBodyVfx = Number(
       presenter.uniforms.uniforms.uWaterBodyVfx
@@ -12196,6 +12231,7 @@ export class PixiFieldPresenter {
         this.uniforms.uniforms.uGlassBodyVfx = 0;
         this.uniforms.uniforms.uLiquidBodyVfx = 0;
         this.uniforms.uniforms.uOilBodyVfx = 0;
+        this.uniforms.uniforms.uOilVolumeFinishVfx = 0;
         this.uniforms.uniforms.uWaterBodyVfx = 0;
         this.uniforms.uniforms.uLiquidSolidMeniscusVfx = 0;
         this.uniforms.uniforms.uMetalWaterContactVfx = 0;
@@ -12233,6 +12269,7 @@ export class PixiFieldPresenter {
         this.app.canvas.dataset.glassBodyVfx = 'inactive';
         this.app.canvas.dataset.liquidBodyVfx = 'inactive';
         this.app.canvas.dataset.oilBodyVfx = 'inactive';
+        this.app.canvas.dataset.oilVolumeFinishVfx = 'inactive';
         this.app.canvas.dataset.waterBodyVfx = 'inactive';
         this.app.canvas.dataset.liquidSolidMeniscusVfx = 'inactive';
         this.app.canvas.dataset.metalWaterContactVfx = 'inactive';

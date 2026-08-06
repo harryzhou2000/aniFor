@@ -593,11 +593,29 @@ does not alter simulation, camera, semantic ownership, or `renderScale`.
   them with one permissive family-wide bound.
   Requested-on true 8× must keep E03/E14/E17/E37/HDR inactive for `scale-8`,
   with no bloom, exact 4896×3072 promotion, and a completed GPU fence.
+- **E38 — exact Oil volume finish (accepted visual checkpoint):** normal
+  1×–4× WebGL uses `?oilVolumeFinishVfx=0|1` only as a strict child of E22 and
+  therefore E03. Only authoritative Oil `8` with Oily optics in an
+  already-proven connected, deep, ordinary interior may respond. It recombines
+  the existing broad-sheen, caustic-wave, macro-relief,
+  reflected-environment, and liquid-depth evidence into broad amber crowns and
+  cooler absorption pockets. Walls, contacts, traits, emission, sparse
+  support, unlike owners, and reconstructed space remain controls. It changes
+  RGB only and adds no sample, sampler, texture, field, resource, pass, target,
+  upload, allocation, clock, wave, alpha/support, silhouette, ownership,
+  topology, state, or physics decision. Canvas retains E22 and compact true 8×
+  has no E38 uniform or shader branch. `npm run audit:vfx:oil-body` first
+  preserves the frozen E22 parent with E38 disabled, then owns the E38
+  1×/2×/4× off→on→off whole-body, transition/mid/deep, invariant, control, and
+  cross-scale proof. Requested-on true 8× must report E38 inactive for
+  `scale-8`, promote exact 4896×3072 WebGL, and complete its GPU fence. The
+  corrected exact-Acid liquid-volume branch uses material `13`; material `16`
+  is SaltWater.
 - **Protected 8× rung:** `renderScale=8` deliberately reports
   `hdrPipeline=inactive` / `scale-8` and retains the proven direct single-mesh
   4896×3072 path. The experiment must earn a bounded 8× design rather than
   allocating a 115 MiB full-resolution float target beside that path.
-- **Current decision:** E01/E02/E03/E04/E05/E06/E07/E08/E09/E10/E11/E12/E13/E14/E15/E16/E17/E18/E19/E20/E21/E22/E23/E24/E25/E26/E27/E28/E29/E30/E31/E32/E33/E34/E35/E36/E37 remain opt-in through the non-Classic looks
+- **Current decision:** E01/E02/E03/E04/E05/E06/E07/E08/E09/E10/E11/E12/E13/E14/E15/E16/E17/E18/E19/E20/E21/E22/E23/E24/E25/E26/E27/E28/E29/E30/E31/E32/E33/E34/E35/E36/E37/E38 remain opt-in through the non-Classic looks
   until representative hardware timing and mobile thermal behavior are
   measured. E02 remains the safe family-wide baseline. E03 is accepted as the
   liquid-depth checkpoint: its fit-view crop is visibly more cohesive, retains
@@ -760,6 +778,13 @@ does not alter simulation, camera, semantic ownership, or `renderScale`.
   The failed extra-output/local-carrier prototypes blanked normal WebGL, so the
   compact packed-tag implementation and its real-browser gate are part of the
   checkpoint.
+  E38 is accepted as the exact-Oil broad volume-finish checkpoint: freeze its
+  strict E22/E03 dependency, exact Oil `8`/Oily/deep-connected-interior proof,
+  reuse of the existing sheen/caustic/macro/environment/depth carriers, two
+  whole-body plus transition/mid/deep response envelopes, exact raw invariants,
+  named bounded HDR-neighbour controls, and Canvas/compact-8× exclusion. The
+  frozen E22 parent must run first with E38 disabled; do not replace its prior
+  Oil acceptance with the child result or stack another Oil layer over E38.
   These are not the final material/VFX results.
   Sub-1.0 material colour stays on the established response; tonemapping owns
   only real HDR highlights so powder texture and liquid body contrast are not
@@ -1127,10 +1152,12 @@ PNG encoding cannot consume the renderer-health deadline. Requested-on true 8× 
 inactive with reason `scale-8`, no bloom, exact 4896×3072, and completed
 GPU-fence timing (`5.16 s` in the final package-matrix run).
 
-Run `npm run audit:vfx:oil-body` for E22. It reloads a dedicated paired
+Run `npm run audit:vfx:oil-body` for the frozen E22 parent and the E38 child. It
+first reloads a dedicated paired
 exact-Oil fixture as `oilBodyVfx=0 → 1 → 0` at 1×/2×/4× while E03, E08, and E14
 remain on as the accepted composed liquid stack and every unrelated selector
-is pinned off. Both panes expose exact depth bytes 0, 6, 12–30, 36–66, 72–126,
+is pinned off, including E38. Both panes expose exact depth bytes 0, 6, 12–30,
+36–66, 72–126,
 and 192–255; the second also contains a deterministic 3,072-cell native-wall
 checker whose occupied/clear runs remain depth 0–18. The fixture protects
 authored holes, open chimneys, a reconstructable pinhole, thin/isolated Oil,
@@ -1155,6 +1182,27 @@ true 8× must report E03/E08/E14/E22 and HDR inactive with reason `scale-8`, no
 bloom, exact 4896×3072, and completed GPU timing.
 The final frozen full-matrix SwiftShader fence completed in `11.05 s`, inside
 the original one-total 30-second promotion deadline, with zero browser errors.
+
+The same command then holds E22 on and reloads E38 as
+`oilVolumeFinishVfx=0 → 1 → 0` at 1×/2×/4×. In addition to the six frozen depth
+bands, it measures both complete Oil bodies so a narrow phase-locked highlight
+cannot pass as volume. The accepted open-body response is scale-stable at RGB
+RMS `3.44`, chroma RMS `1.38`, coverage `.411–.412`, signed mean `.53`,
+positive/negative means `1.39/.86`, a `14`-byte peak, and spatial RGB RMS
+`3.396–3.397`. The wall-backed body remains bipolar at RGB RMS `2.82`, chroma
+RMS `1.15`, coverage `.294–.295`, positive/negative means `.96–.97/.66`, and
+the same `14`-byte peak. The production composed Oil card rises from roughly
+`91.033` at canonical 2× to `100.000`; luma deviation rises `4.01 → 5.02`,
+macro range `16 → 20`, and microcontrast `.24 → .29`, while coverage remains
+`.953`, the dominant component remains `1`, and clipping remains zero.
+Semantic ownership, raw alpha/support, walls, auxiliary depth, liquid-field
+alpha, and repeated-off framebuffers stay exact. Every filtered neighbour
+footprint is named and bounded: the 1× Oil/Water Oil-side probe may reach eight
+bytes while the Water owner remains exact, the 1× Oil/Glass Oil-side probe may
+reach four, and the smaller scale-dependent pinhole/contact footprints retain
+their dedicated limits. These are CSS/compositor footprints, not permission to
+mutate raw owners. Requested-on true 8× keeps E38 inactive for `scale-8`, with
+no E38 shader branch, exact 4896×3072 WebGL, and a completed GPU fence.
 
 Run `npm run audit:vfx:rock-roughness` for E23. It reloads a dedicated
 geometry-matched ROCK/Metal fixture as `rockRoughnessVfx=0 → 1 → 0` at
@@ -1509,7 +1557,7 @@ next production 4× survey then selected Wood/PLNT as the largest remaining
   lower seam density, lower local contrast, stronger macro hierarchy, unchanged
   semantic support, and byte-exact selector-off recovery.
 
-**Next visual experiments:** E03–E37 now provide accepted liquid body/surface,
+**Next visual experiments:** E03–E38 now provide accepted liquid body/surface,
 stable-gas, coherent-gas-motion, powder-depth, and powder-local-light
 checkpoints plus exact resting contact grounding, Glass/Ice transmission, and
 state-aware Wax/PLNT subsurface response, composed wet-mineral optics,
@@ -1539,11 +1587,14 @@ over E20/E26/E28/E30. E36 adds exact PLNT broad front/rear/overlap canopy mass
 recomposition over E34 while suppressing thresholded vein loops only when
 active; its composed-rank drop is a scorer blind spot and must not be gamed.
 E37 adds exact Metal-side Water-contact spectral separation over the joint E14+
-E17 proof without changing either body's topology. The next phase returns to
-broader volumetric material-body aesthetics: distinctive depth, transmission,
-reflection, lighting, and mesostructure across powder, liquid, gas, solid, and
-energy families. Continue only from fresh composed fit-view evidence and exact
-ownership; do not stack another narrow contact tint or generic PLNT/gas layer.
+E17 proof without changing either body's topology. E38 turns the previously
+flat, opaque-looking exact-Oil pool into a broad bipolar amber/cool volume by
+recombining already-live E22/E03 evidence; it deliberately ends the current
+Oil stack. The next phase returns to a different weak broad material family,
+chosen from fresh composed fit-view evidence—currently Wood, ROCK, or Acid—for
+distinctive depth, transmission, reflection, lighting, and mesostructure across
+powder, liquid, gas, solid, and energy families. Do not stack another narrow
+Oil/contact tint or generic PLNT/gas layer.
 The
 radioactive-solid review
 found no current identity bug, but also
@@ -1554,7 +1605,7 @@ with topology-preserving, material-
 specific cards that reuse already-live evidence. Prefer the smallest
 arithmetic-only candidate that fixes a visible fit-view deficiency; do not add
 an isolated tint merely to continue the experiment number. Preserve the E14
-1× stencil snap and all E01–E37 selectors and controls while designing the
+1× stencil snap and all E01–E38 selectors and controls while designing the
 next bounded card.
 
 ## Phase 1 — HDR pipeline & lighting core (biggest visual payoff)

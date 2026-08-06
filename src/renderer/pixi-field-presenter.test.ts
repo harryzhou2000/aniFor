@@ -1558,7 +1558,7 @@ describe('Pixi presenter startup configuration', () => {
     expect(source).toContain("this.app.canvas.dataset.glassBodyVfx = 'inactive';");
   });
 
-  it('keeps E22 Oil body optics exact-owner, E03-dependent, normal-WebGL-only, and RGB-only', () => {
+  it('keeps E22/E38 Oil body optics exact-owner, parented, normal-WebGL-only, and RGB-only', () => {
     const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
     const canvasSource = readFileSync(new URL('./field-renderer.ts', import.meta.url), 'utf8');
     const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');
@@ -1585,12 +1585,18 @@ describe('Pixi presenter startup configuration', () => {
     expect(e22End).toBeGreaterThan(e22Start);
     expect(parentStart).toBeGreaterThanOrEqual(0);
     expect(normal).toContain('uniform float uOilBodyVfx;');
+    expect(normal).toContain('uniform float uOilVolumeFinishVfx;');
     expect(normal.match(/uOilBodyVfx > 0\.5/g)).toHaveLength(1);
     expect(eight).not.toContain('uOilBodyVfx');
+    expect(eight).not.toContain('uOilVolumeFinishVfx');
     expect(eight).not.toContain('oilBodyWeight');
     expect(canvasSource).not.toContain('oilBodyVfx');
     expect(e22).toContain('uOilBodyVfx > 0.5 && material == 8.0 && optics == 2.0');
+    expect(e22).toContain('uOilVolumeFinishVfx > 0.5');
     expect(e22).toContain('30.0 / 255.0, 78.0 / 255.0, liquidOpticalDepth');
+    expect(e22).toContain('(broadSheen - 0.5) * (causticWave - 0.5) * 3.10');
+    expect(e22).toContain('step(3.5, shape.w) * (1.0 - exposedLiquidSide)');
+    expect(e22).toContain('smoothstep(0.025, 0.50, max(oilBodyRoll, 0.0))');
     for (const existingValue of [
       'liquidVfxBody', 'liquidFresnelContour', 'broadSheen',
       'liquidMacroRelief', 'reflectedEnvironment', 'caustic',
@@ -1608,13 +1614,19 @@ describe('Pixi presenter startup configuration', () => {
     expect(e22).not.toContain('gl_FragCoord');
     expect(e22).not.toMatch(/\balpha\s*[+*]?=/);
     expect(source.match(/this\.uniforms\.uniforms\.uOilBodyVfx = 0;/g)).toHaveLength(2);
+    expect(source.match(/this\.uniforms\.uniforms\.uOilVolumeFinishVfx = 0;/g)).toHaveLength(2);
     expect(source).toContain("get('oilBodyVfxAudit') === '1'");
     expect(preserveDrawingBuffer).toContain("get('oilBodyVfxAudit') === '1'");
     expect(source).toMatch(
       /const oilBodyVfxEnabled = outputScale < 8\s*&& resolveOilBodyVfxEnabled\(renderLook\);/,
     );
+    expect(source).toMatch(
+      /const oilVolumeFinishVfxEnabled = outputScale < 8\s*&& resolveOilVolumeFinishVfxEnabled\(renderLook\);/,
+    );
     expect(source).toContain('presenter.app.canvas.dataset.oilBodyVfx');
+    expect(source).toContain('presenter.app.canvas.dataset.oilVolumeFinishVfx');
     expect(source).toContain("this.app.canvas.dataset.oilBodyVfx = 'inactive';");
+    expect(source).toContain("this.app.canvas.dataset.oilVolumeFinishVfx = 'inactive';");
   });
 
   it('keeps E23 ROCK roughness exact-owner, E17-dependent, normal-WebGL-only, and RGB-only', () => {
@@ -5275,7 +5287,8 @@ describe('Pixi presenter startup configuration', () => {
     expect(normal).toContain('smoothstep(0.56, 0.86, liquidNeighbourMean)');
     expect(normal).toContain('vec3(0.082, 0.050, 0.024) * aqueousCoreVolume');
     expect(normal).toContain('* (0.010 + broadSheen * 0.014 + caustic * 0.008)');
-    expect(normal).toContain('if (uLiquidVolumeChroma > 0.5 && material == 16.0');
+    expect(normal).toContain('if (uLiquidVolumeChroma > 0.5 && material == 13.0');
+    expect(normal).not.toContain('if (uLiquidVolumeChroma > 0.5 && material == 16.0');
     expect(normal).toContain('float acidCoreVolume = liquidDepth * (1.0 - liquidFresnelContour)');
     expect(normal).toContain('vec3(0.28, -0.15, 0.65) * acidCoreGlaze');
     expect(normal).not.toContain('texture(');

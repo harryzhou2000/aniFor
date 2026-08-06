@@ -504,6 +504,23 @@ export function resolveOilBodyVfxEnabled(
 }
 
 /**
+ * Adds a final exact-Oil volume finish only after the Oil body recomposition
+ * has established its connected, same-species ownership. The child selector
+ * remains independently measurable, but cannot revive an inactive Oil-body
+ * parent or the underlying liquid-body baseline.
+ */
+export function resolveOilVolumeFinishVfxEnabled(
+  look: RenderLook,
+  search = globalThis.location?.search ?? '',
+): boolean {
+  if (!resolveOilBodyVfxEnabled(look, search)) return false;
+  const requested = new URLSearchParams(search).get('oilVolumeFinishVfx');
+  if (requested === '0' || requested === 'off' || requested === 'false') return false;
+  if (requested === '1' || requested === 'on' || requested === 'true') return true;
+  return true;
+}
+
+/**
  * Re-composes only the exact native Water body after E03 has established a
  * connected, same-species liquid volume. The child selector may replace
  * Water's inherited broad stripe carrier, but it cannot recreate E03 when the

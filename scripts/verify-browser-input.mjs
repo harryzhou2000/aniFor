@@ -12136,6 +12136,14 @@ async function auditComposedRankShowcase(cdp, mode, dpr) {
     const woodTanninVfx = await evaluate(cdp,
       `document.querySelector('canvas.world-canvas')?.dataset.woodTanninVfx ?? 'missing'`,
     );
+    const oilVolumeFinishVfx = await evaluate(cdp,
+      `document.querySelector('canvas.world-canvas')?.dataset.oilVolumeFinishVfx ?? 'missing'`,
+    );
+    const expectedOilVolumeFinishState = composedLook === 'classic' ? 'inactive' : 'active';
+    assert(oilVolumeFinishVfx === expectedOilVolumeFinishState,
+      `composed rank ${scale}x Oil volume finish resolved incorrectly (${JSON.stringify({
+        composedLook, oilVolumeFinishVfx, expectedOilVolumeFinishState,
+      })})`);
     const smokeBillowDepthVfx = await evaluate(cdp,
       `document.querySelector('canvas.world-canvas')?.dataset.smokeBillowDepthVfx ?? 'missing'`,
     );
@@ -12256,7 +12264,7 @@ async function auditComposedRankShowcase(cdp, mode, dpr) {
     captures.push({
       scale, geometry, fixture, semantic, regions, hdrPipeline, botanicalMesostructureVfx,
       botanicalPigmentVfx, plantLaminaVfx, plantLobeDepthVfx, plantCanopyMassVfx, woodTanninVfx,
-      smokeBillowDepthVfx, powderStability,
+      oilVolumeFinishVfx, smokeBillowDepthVfx, powderStability,
       ...(metalWaterContactVfxArgument !== undefined ? { metalWaterContactVfx } : {}),
       ...(screenshot ? { screenshot } : {}),
     });
@@ -31709,6 +31717,44 @@ const OIL_BODY_VFX_ACCEPTANCE = Object.freeze({
   }),
 });
 
+// Frozen from E38's production-WebGL 1x/2x/4x matrix. Whole-body bounds prove
+// a broad, low-bias bipolar finish; depth-band bounds prevent that response
+// from collapsing into one flat tint or one phase-sensitive fixture pane.
+const OIL_VOLUME_FINISH_ACCEPTANCE = Object.freeze({
+  OPEN_POOLWholeBody: Object.freeze({
+    rgbRms: [3.35, 3.53], chromaRms: [1.32, 1.44], coverage: [0.400, 0.420],
+    signedMean: [0.48, 0.58], rgbPeak: [14, 14], spatialRgbRms: [3.33, 3.46],
+  }),
+  WALL_CONTROLWholeBody: Object.freeze({
+    rgbRms: [2.74, 2.90], chromaRms: [1.09, 1.21], coverage: [0.285, 0.305],
+    signedMean: [0.25, 0.36], rgbPeak: [14, 14], spatialRgbRms: [2.74, 2.86],
+  }),
+  OPEN_POOLTransition: Object.freeze({
+    rgbRms: [1.24, 1.37], chromaRms: [0.39, 0.50], coverage: [0.155, 0.190],
+    signedMean: [-0.62, -0.51], rgbPeak: [6, 6], spatialRgbRms: [1.15, 1.24],
+  }),
+  OPEN_POOLMidBody: Object.freeze({
+    rgbRms: [2.06, 2.20], chromaRms: [0.58, 0.68], coverage: [0.350, 0.390],
+    signedMean: [-1.58, -1.45], rgbPeak: [7, 7], spatialRgbRms: [1.51, 1.62],
+  }),
+  OPEN_POOLDeepCore: Object.freeze({
+    rgbRms: [1.76, 1.90], chromaRms: [0.68, 0.79], coverage: [0.210, 0.240],
+    signedMean: [0.69, 0.81], rgbPeak: [9, 9], spatialRgbRms: [1.61, 1.72],
+  }),
+  WALL_CONTROLTransition: Object.freeze({
+    rgbRms: [0.30, 0.43], chromaRms: [0.24, 0.35], coverage: [0, 0],
+    signedMean: [-0.17, -0.06], rgbPeak: [1, 1], spatialRgbRms: [0.28, 0.39],
+  }),
+  WALL_CONTROLMidBody: Object.freeze({
+    rgbRms: [0.48, 0.65], chromaRms: [0.34, 0.48], coverage: [0, 0],
+    signedMean: [-0.36, -0.24], rgbPeak: [1, 1], spatialRgbRms: [0.41, 0.54],
+  }),
+  WALL_CONTROLDeepCore: Object.freeze({
+    rgbRms: [3.65, 3.82], chromaRms: [1.33, 1.45], coverage: [0.520, 0.540],
+    signedMean: [-2.26, -2.12], rgbPeak: [10, 10], spatialRgbRms: [2.98, 3.11],
+  }),
+});
+
 async function auditOilBodyVfxExperiment(cdp, mode, dpr) {
   const scales = [];
   const requestedScales = renderScaleArgument === undefined
@@ -31838,14 +31884,151 @@ async function auditOilBodyVfxExperiment(cdp, mode, dpr) {
       && spread(samples.map((sample) => sample.spatialRgbRms)) <= bounds.spatialRgbRms,
     `E22 ${name} response drifted across output scales (${JSON.stringify(samples)})`);
   }
+  const volumeFinish = await auditOilVolumeFinishVfxExperiment(
+    cdp, mode, requestedScales,
+  );
   const trueEightX = await auditEightXOilBodyVfxExclusion(cdp, dpr);
   return {
     acceptance: OIL_BODY_VFX_ACCEPTANCE,
-    scales, trueEightXExcluded: true, trueEightX,
+    scales, volumeFinish, trueEightXExcluded: true, trueEightX,
   };
 }
 
-async function navigateOilBodyVfxState(cdp, mode, scale, enabled, label) {
+async function auditOilVolumeFinishVfxExperiment(cdp, mode, requestedScales) {
+  const scales = [];
+  for (const scale of requestedScales) {
+    const captures = {};
+    for (const enabled of [false, true, false]) {
+      const key = enabled ? 'enabled' : captures.disabled ? 'disabledRepeat' : 'disabled';
+      captures[key] = await navigateOilBodyVfxState(
+        cdp, mode, scale, true, key, enabled, 'E38',
+      );
+    }
+    const { disabled, enabled, disabledRepeat } = captures;
+    const fixture = disabled.fixture;
+    assert(JSON.stringify(fixture) === JSON.stringify(enabled.fixture)
+      && JSON.stringify(fixture) === JSON.stringify(disabledRepeat.fixture),
+    `E38 ${scale}x fixture metadata changed`);
+    for (const [label, variant] of Object.entries(captures)) {
+      assertGeometry(variant.geometry, `E38 ${label} ${scale}x`, scale);
+      assert(variant.geometry.backend.backend === 'webgl',
+        `E38 ${label} ${scale}x lost WebGL presentation`);
+    }
+    assertCanvasRectsEqual(disabled.geometry.canvas, enabled.geometry.canvas,
+      `E38 ${scale}x disabled/enabled CSS geometry`);
+    assertCanvasRectsEqual(disabled.geometry.canvas, disabledRepeat.geometry.canvas,
+      `E38 ${scale}x disabled/repeated CSS geometry`);
+    assert(JSON.stringify(disabled.geometry.backing) === JSON.stringify(enabled.geometry.backing)
+      && JSON.stringify(disabled.geometry.backing) === JSON.stringify(disabledRepeat.geometry.backing),
+    `E38 ${scale}x backing geometry changed`);
+    assertHdrVfxSemanticEquality(disabled.semantic, enabled.semantic, `E38 ${scale}x disabled/enabled`);
+    assertHdrVfxSemanticEquality(
+      disabled.semantic, disabledRepeat.semantic, `E38 ${scale}x disabled/repeated`,
+    );
+    assertVolumeVfxBackingInvariant(disabled.backing, enabled.backing,
+      `E38 ${scale}x disabled/enabled`);
+    assertVolumeVfxBackingInvariant(disabled.backing, disabledRepeat.backing,
+      `E38 ${scale}x disabled/repeated`);
+    assert(JSON.stringify(disabled.walls) === JSON.stringify(enabled.walls)
+      && JSON.stringify(disabled.walls) === JSON.stringify(disabledRepeat.walls),
+    `E38 ${scale}x changed native-wall topology`);
+    assert(JSON.stringify(disabled.depth) === JSON.stringify(enabled.depth)
+      && JSON.stringify(disabled.depth) === JSON.stringify(disabledRepeat.depth),
+    `E38 ${scale}x changed the liquid-depth auxiliary plane`);
+    assert(JSON.stringify(disabled.field) === JSON.stringify(enabled.field)
+      && JSON.stringify(disabled.field) === JSON.stringify(disabledRepeat.field),
+    `E38 ${scale}x changed liquid-field ownership`);
+    assertVolumeVfxRawAlphaInvariant(disabled.rawAll, enabled.rawAll,
+      `E38 ${scale}x disabled/enabled`);
+    assertVolumeVfxRawAlphaInvariant(disabled.rawAll, disabledRepeat.rawAll,
+      `E38 ${scale}x disabled/repeated`);
+    assert(JSON.stringify(disabled.rawControls) === JSON.stringify(enabled.rawControls)
+      && JSON.stringify(disabled.rawControls) === JSON.stringify(disabledRepeat.rawControls),
+    `E38 ${scale}x changed an exact protected raw control`);
+    assert(disabled.capture.capture.data === disabledRepeat.capture.capture.data,
+      `E38 ${scale}x repeated off framebuffer was not byte exact`);
+
+    const bodyTargets = fixture.panes.map((pane) => ({
+      name: `${pane.code}WholeBody`, target: true,
+      x: pane.body.x + pane.body.width / 2,
+      y: pane.body.y + pane.body.height / 2,
+      radiusX: pane.body.width / 2 - 0.2,
+      radiusY: pane.body.height / 2 - 0.2,
+    }));
+    const bandTargets = oilBodyVfxTargetRegions(fixture);
+    const controls = oilBodyVfxControlRegions(fixture);
+    const responses = await sampleBackdropRefractionRegions(cdp, {
+      straight: disabled.capture.capture.data,
+      refracted: enabled.capture.capture.data,
+      repeatedStraight: disabledRepeat.capture.capture.data,
+    }, [...bodyTargets, ...bandTargets, ...controls], disabled.capture.canvasRect);
+    const targetCount = bodyTargets.length + bandTargets.length;
+    const targetResponses = responses.slice(0, targetCount).map((sample) => {
+      const meanRgbRms = Math.hypot(...sample.responseRgb) / Math.sqrt(3);
+      return {
+        ...sample,
+        spatialRgbRms: round(Math.sqrt(Math.max(0, sample.rgbRms ** 2 - meanRgbRms ** 2)), 3),
+      };
+    });
+    const controlResponses = responses.slice(targetCount);
+    assert(responses.every((sample) => sample.repeatRgbPeak === 0),
+      `E38 ${scale}x off -> on -> off was not deterministic (${JSON.stringify(responses)})`);
+    assert(targetResponses.length === Object.keys(OIL_VOLUME_FINISH_ACCEPTANCE).length
+      && targetResponses.every((sample) => {
+        const bounds = OIL_VOLUME_FINISH_ACCEPTANCE[sample.name];
+        return bounds
+          && sample.rgbRms >= bounds.rgbRms[0] && sample.rgbRms <= bounds.rgbRms[1]
+          && sample.chromaRms >= bounds.chromaRms[0] && sample.chromaRms <= bounds.chromaRms[1]
+          && sample.coverage >= bounds.coverage[0] && sample.coverage <= bounds.coverage[1]
+          && sample.signedMean >= bounds.signedMean[0] && sample.signedMean <= bounds.signedMean[1]
+          && sample.rgbPeak >= bounds.rgbPeak[0] && sample.rgbPeak <= bounds.rgbPeak[1]
+          && sample.spatialRgbRms >= bounds.spatialRgbRms[0]
+          && sample.spatialRgbRms <= bounds.spatialRgbRms[1];
+      }), `E38 ${scale}x Oil finish escaped its calibrated volume bounds (${JSON.stringify(targetResponses)})`);
+    const openBody = targetResponses.find((sample) => sample.name === 'OPEN_POOLWholeBody');
+    const wallBody = targetResponses.find((sample) => sample.name === 'WALL_CONTROLWholeBody');
+    assert(openBody && wallBody
+      && openBody.positiveMean >= 1.34 && openBody.negativeMean >= 0.81
+      && openBody.bipolarBalance >= 0.59 && openBody.meanBiasRatio <= 0.18
+      && wallBody.positiveMean >= 0.91 && wallBody.negativeMean >= 0.61
+      && wallBody.bipolarBalance >= 0.65 && wallBody.meanBiasRatio <= 0.14,
+    `E38 ${scale}x Oil finish lost broad bipolar balance (${JSON.stringify({ openBody, wallBody })})`);
+    assert(controlResponses.every((sample) => {
+      const composedPeakLimit = sample.name === 'WALL_CONTROLPinhole' ? 3
+        // At 1x the CSS-fit sample of the last exact Oil cell can include a
+        // bounded neighbouring interior footprint. The Water owner remains
+        // byte-exact and 2x/4x resolve the categorical seam independently.
+        : sample.name === 'oilWaterOil' ? 8
+        : sample.name === 'oilGlassOil' ? 4
+        : 1;
+      return sample.rgbPeak <= composedPeakLimit;
+    }), `E38 ${scale}x escaped a protected control (${JSON.stringify(controlResponses)})`);
+    const screenshots = screenshotRequest && (requestedScales.length === 1 || scale === 2)
+      ? await writeOilVolumeFinishVfxScreenshots(screenshotRequest, scale, disabled, enabled)
+      : undefined;
+    scales.push({
+      scale, backing: disabled.geometry.backing, targetResponses, controlResponses,
+      exactRepeatedOff: true, screenshots,
+    });
+  }
+  const spread = (values) => Math.max(...values) - Math.min(...values);
+  for (const name of Object.keys(OIL_VOLUME_FINISH_ACCEPTANCE)) {
+    const samples = scales.map((entry) => entry.targetResponses.find((sample) => sample.name === name));
+    assert(samples.every(Boolean)
+      && spread(samples.map((sample) => sample.rgbRms)) <= 0.06
+      && spread(samples.map((sample) => sample.chromaRms)) <= 0.06
+      && spread(samples.map((sample) => sample.coverage)) <= 0.020
+      && spread(samples.map((sample) => sample.signedMean)) <= 0.05
+      && spread(samples.map((sample) => sample.spatialRgbRms)) <= 0.06
+      && spread(samples.map((sample) => sample.rgbPeak)) === 0,
+    `E38 ${name} response drifted across output scales (${JSON.stringify(samples)})`);
+  }
+  return { acceptance: OIL_VOLUME_FINISH_ACCEPTANCE, scales };
+}
+
+async function navigateOilBodyVfxState(
+  cdp, mode, scale, enabled, label, finishEnabled = false, phase = 'E22',
+) {
   const query = new URLSearchParams({
     scene: 'render-lab', inputAudit: '1', blankAudit: '1', auditStage: 'blank',
     oilBodyVfxAudit: '1', renderScale: String(scale), renderLook: 'realistic',
@@ -31855,7 +32038,8 @@ async function navigateOilBodyVfxState(cdp, mode, scale, enabled, label) {
     gasLightVfx: '0', liquidSolidMeniscusVfx: '1', gasCoreDepthVfx: '0',
     plasmaCoreVfx: '0', solidBodyVfx: '0', platinumBodyVfx: '0',
     ceramicGlazeVfx: '0', botanicalBodyVfx: '0', glassBodyVfx: '0',
-    oilBodyVfx: enabled ? '1' : '0', rockRoughnessVfx: '0', waterBodyVfx: '0',
+    oilBodyVfx: enabled ? '1' : '0', oilVolumeFinishVfx: finishEnabled ? '1' : '0',
+    rockRoughnessVfx: '0', waterBodyVfx: '0',
   });
   await cdp.send('Page.navigate', { url: `${AUDIT_BASE_URL}?${query}` });
   await waitFor(() => evaluate(cdp, `(() => {
@@ -31864,13 +32048,14 @@ async function navigateOilBodyVfxState(cdp, mode, scale, enabled, label) {
     return p.get('oilBodyVfxAudit') === '1'
       && p.get('renderScale') === ${JSON.stringify(String(scale))}
       && p.get('oilBodyVfx') === ${JSON.stringify(enabled ? '1' : '0')}
+      && p.get('oilVolumeFinishVfx') === ${JSON.stringify(finishEnabled ? '1' : '0')}
       && p.get('rockRoughnessVfx') === '0'
       && typeof audit?.prepareOilBodyVfxFixture === 'function'
       && typeof audit?.oilBodyVfxFixture === 'function';
-  })()`), scale === 4 ? 45_000 : 15_000, `E22 ${label} ${scale}x page`);
+  })()`), scale === 4 ? 45_000 : 15_000, `${phase} ${label} ${scale}x page`);
   await waitFor(() => evaluate(cdp,
     `window.__ANIFOR_INPUT_AUDIT__.backend().backend === ${JSON.stringify(mode)}`),
-  scale === 4 ? 30_000 : 15_000, `E22 ${label} ${scale}x backend`);
+  scale === 4 ? 30_000 : 15_000, `${phase} ${label} ${scale}x backend`);
   const fixture = await evaluate(cdp, `(() => {
     const audit = window.__ANIFOR_INPUT_AUDIT__;
     audit.setLiquidOpticalDepth(true);
@@ -31878,7 +32063,7 @@ async function navigateOilBodyVfxState(cdp, mode, scale, enabled, label) {
     return audit.oilBodyVfxFixture();
   })()`);
   await waitFor(() => oilBodyVfxFixtureReady(cdp, fixture),
-    20_000, `E22 ${label} ${scale}x fixture/depth hydration`);
+    20_000, `${phase} ${label} ${scale}x fixture/depth hydration`);
   await sleep(350);
   const hdrPipeline = await evaluate(cdp, `(() => {
     const canvas = document.querySelector('canvas.semantic-field-canvas');
@@ -31889,6 +32074,7 @@ async function navigateOilBodyVfxState(cdp, mode, scale, enabled, label) {
       liquidSurfaceVfx: canvas.dataset.liquidSurfaceVfx,
       liquidSolidMeniscusVfx: canvas.dataset.liquidSolidMeniscusVfx,
       oilBodyVfx: canvas.dataset.oilBodyVfx,
+      oilVolumeFinishVfx: canvas.dataset.oilVolumeFinishVfx,
       isolatedSelectors: {
         volumeVfx: canvas.dataset.volumeVfx, gasBodyVfx: canvas.dataset.gasBodyVfx,
         gasMotionVfx: canvas.dataset.gasMotionVfx, powderBodyVfx: canvas.dataset.powderBodyVfx,
@@ -31912,10 +32098,11 @@ async function navigateOilBodyVfxState(cdp, mode, scale, enabled, label) {
     && hdrPipeline.liquidBodyVfx === 'active' && hdrPipeline.liquidSurfaceVfx === 'active'
     && hdrPipeline.liquidSolidMeniscusVfx === 'active'
     && Object.values(hdrPipeline.isolatedSelectors).every((state) => state === 'inactive')
-    && hdrPipeline.oilBodyVfx === (enabled ? 'active' : 'inactive'),
-  `E22 ${label} ${scale}x HDR/selector state resolved incorrectly (${JSON.stringify(hdrPipeline)})`);
+    && hdrPipeline.oilBodyVfx === (enabled ? 'active' : 'inactive')
+    && hdrPipeline.oilVolumeFinishVfx === (enabled && finishEnabled ? 'active' : 'inactive'),
+  `${phase} ${label} ${scale}x HDR/selector state resolved incorrectly (${JSON.stringify(hdrPipeline)})`);
   const capture = await waitForStablePageCapture(
-    cdp, `E22 ${label} ${scale}x framebuffer`,
+    cdp, `${phase} ${label} ${scale}x framebuffer`,
     scale === 4 ? 120_000 : scale === 2 ? 30_000 : 15_000, 1,
   );
   return {
@@ -32127,6 +32314,16 @@ async function writeOilBodyVfxScreenshots(source, scale, disabled, enabled) {
   return paths;
 }
 
+async function writeOilVolumeFinishVfxScreenshots(source, scale, disabled, enabled) {
+  const paths = {
+    off: variantScreenshotPath(source, `e38-oil-volume-finish-${scale}x-off`),
+    on: variantScreenshotPath(source, `e38-oil-volume-finish-${scale}x-on`),
+  };
+  await writeFile(paths.off, Buffer.from(disabled.capture.capture.data, 'base64'));
+  await writeFile(paths.on, Buffer.from(enabled.capture.capture.data, 'base64'));
+  return paths;
+}
+
 async function auditEightXOilBodyVfxExclusion(cdp, dpr) {
   await setDesktopMetrics(cdp, 1280, 720, dpr);
   const query = new URLSearchParams({
@@ -32138,6 +32335,7 @@ async function auditEightXOilBodyVfxExclusion(cdp, dpr) {
     gasLightVfx: '0', liquidSolidMeniscusVfx: '1', gasCoreDepthVfx: '0',
     plasmaCoreVfx: '0', solidBodyVfx: '0', platinumBodyVfx: '0',
     ceramicGlazeVfx: '0', botanicalBodyVfx: '0', glassBodyVfx: '0', oilBodyVfx: '1',
+    oilVolumeFinishVfx: '1',
     rockRoughnessVfx: '0', waterBodyVfx: '0',
   });
   await cdp.send('Page.navigate', { url: `${AUDIT_BASE_URL}?${query}` });
@@ -32145,7 +32343,8 @@ async function auditEightXOilBodyVfxExclusion(cdp, dpr) {
   await waitFor(() => evaluate(cdp, `(() => {
     const p = new URLSearchParams(location.search);
     return p.get('renderScale') === '8' && p.get('auditStage') === 'eight-oil-body'
-      && p.get('oilBodyVfx') === '1' && Boolean(window.__ANIFOR_INPUT_AUDIT__);
+      && p.get('oilBodyVfx') === '1' && p.get('oilVolumeFinishVfx') === '1'
+      && Boolean(window.__ANIFOR_INPUT_AUDIT__);
   })()`), remainingDeadlineMs(deadline, 'true-8x E22 input audit API'),
   'true-8x E22 input audit API');
   const backend = await waitForEightXTerminalBackend(cdp, 'true-8x E22', deadline);
@@ -32168,6 +32367,7 @@ async function auditEightXOilBodyVfxExclusion(cdp, dpr) {
       liquidSurfaceVfx: canvas.dataset.liquidSurfaceVfx,
       liquidSolidMeniscusVfx: canvas.dataset.liquidSolidMeniscusVfx,
       glassBodyVfx: canvas.dataset.glassBodyVfx, oilBodyVfx: canvas.dataset.oilBodyVfx,
+      oilVolumeFinishVfx: canvas.dataset.oilVolumeFinishVfx,
     } : undefined;
   })()`, Math.min(1_000, remainingDeadlineMs(deadline, 'true-8x E22 isolation')));
   assert(isolation?.renderer === 'semantic-field-webgl' && isolation.look === 'realistic'
@@ -32176,7 +32376,8 @@ async function auditEightXOilBodyVfxExclusion(cdp, dpr) {
     && isolation.liquidSurfaceVfx === 'inactive'
     && isolation.liquidSolidMeniscusVfx === 'inactive'
     && isolation.glassBodyVfx === 'inactive'
-    && isolation.oilBodyVfx === 'inactive',
+    && isolation.oilBodyVfx === 'inactive'
+    && isolation.oilVolumeFinishVfx === 'inactive',
   `true-8x E22 isolation failed (${JSON.stringify(isolation)})`);
   const timingBudget = remainingDeadlineMs(deadline, 'true-8x E22 GPU completion');
   const timing = await auditWebGLPresentationTiming(

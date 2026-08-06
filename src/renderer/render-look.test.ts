@@ -19,6 +19,7 @@ import {
   resolveSmokeBillowDepthVfxEnabled,
   resolveSmokeSoftnessVfxEnabled,
   resolveOilBodyVfxEnabled,
+  resolveOilVolumeFinishVfxEnabled,
   resolveOrganicSubsurfaceVfxEnabled,
   resolvePlasmaCoreVfxEnabled,
   resolvePlatinumBodyVfxEnabled,
@@ -546,6 +547,44 @@ describe('resolveRenderLook', () => {
     expect(resolveOilBodyVfxEnabled('realistic', '?oilBodyVfx=true')).toBe(true);
     expect(resolveOilBodyVfxEnabled('realistic', '?oilBodyVfx=off')).toBe(false);
     expect(resolveOilBodyVfxEnabled('realistic', '?oilBodyVfx=false')).toBe(false);
+  });
+
+  it('keeps the exact Oil volume finish subordinate to Oil-body recomposition', () => {
+    expect(resolveOilVolumeFinishVfxEnabled('classic', '?oilVolumeFinishVfx=on')).toBe(false);
+    expect(resolveOilVolumeFinishVfxEnabled('classic', '?oilVolumeFinishVfx=true')).toBe(false);
+    expect(resolveOilVolumeFinishVfxEnabled('realistic', '')).toBe(true);
+    expect(resolveOilVolumeFinishVfxEnabled('neon-lab', '')).toBe(true);
+    expect(resolveOilVolumeFinishVfxEnabled('realistic', '?volumeVfx=0')).toBe(false);
+    expect(resolveOilVolumeFinishVfxEnabled(
+      'realistic', '?volumeVfx=0&liquidBodyVfx=1&oilBodyVfx=on&oilVolumeFinishVfx=true',
+    )).toBe(true);
+    expect(resolveOilVolumeFinishVfxEnabled(
+      'realistic', '?liquidBodyVfx=0&oilBodyVfx=1&oilVolumeFinishVfx=on',
+    )).toBe(false);
+    expect(resolveOilVolumeFinishVfxEnabled(
+      'neon-lab', '?oilBodyVfx=off&oilVolumeFinishVfx=on',
+    )).toBe(false);
+    expect(resolveOilVolumeFinishVfxEnabled(
+      'realistic', '?oilBodyVfx=0&oilVolumeFinishVfx=1',
+    )).toBe(false);
+    expect(resolveOilVolumeFinishVfxEnabled(
+      'realistic', '?oilVolumeFinishVfx=1',
+    )).toBe(true);
+    expect(resolveOilVolumeFinishVfxEnabled(
+      'realistic', '?oilVolumeFinishVfx=on',
+    )).toBe(true);
+    expect(resolveOilVolumeFinishVfxEnabled(
+      'realistic', '?oilVolumeFinishVfx=true',
+    )).toBe(true);
+    expect(resolveOilVolumeFinishVfxEnabled(
+      'realistic', '?oilVolumeFinishVfx=0',
+    )).toBe(false);
+    expect(resolveOilVolumeFinishVfxEnabled(
+      'realistic', '?oilVolumeFinishVfx=off',
+    )).toBe(false);
+    expect(resolveOilVolumeFinishVfxEnabled(
+      'realistic', '?oilVolumeFinishVfx=false',
+    )).toBe(false);
   });
 
   it('keeps exact Water recomposition subordinate to the liquid-body baseline', () => {

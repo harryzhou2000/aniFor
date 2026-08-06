@@ -13,7 +13,7 @@ powder, solid, liquid, gas, energy, and contact scenes across Canvas and WebGL a
 mobile gestures, save/load, CI, and Pages deployment as protected regression
 contracts rather than the primary feature stream.
 
-The accepted visual experiment ladder now runs through E37. E12 is the
+The accepted visual experiment ladder now runs through E38. E12 is the
 species-safe Sand/Clay/Concrete wet-sediment checkpoint; preserve its exact
 aqueous owner/stability proof, split moving-powder/stationary-Water control,
 Local/Grains no-op, fine structures, authored gaps, Canvas fallback, and true
@@ -602,10 +602,32 @@ normal WebGL even though TypeScript tests passed. Packing the tag into the
 existing contact result and applying one compact response at the established
 phase-contact site restored the real browser path. Do not add an E37 output,
 second contact call, or local carrier without a production WebGL 1×/2×/4× gate
-and true-8× exclusion run. The next visual work should return to broader
-volumetric material-body aesthetics—distinctive powder, liquid, gas, solid,
-energy, transmission, reflection, and depth—not stack another narrow contact
-tint without a newly demonstrated fit-view defect.
+and true-8× exclusion run.
+
+E38 is the accepted normal-WebGL-only exact-Oil volume-finish checkpoint.
+`?oilVolumeFinishVfx=0|1` is a strict child of E22 and therefore of E03; only
+authoritative Oil `8` with Oily optics in an already-proven connected, deep,
+ordinary interior may respond. Recombine only the existing `broadSheen`,
+`causticWave`, `liquidMacroRelief`, reflected-environment, and liquid-depth
+evidence into broad amber crowns and cooler absorption pockets. Walls,
+contacts, traits, emission, sparse support, unlike owners, and reconstructed
+space remain controls. The result is RGB-only and adds no sample, sampler,
+texture, field, resource, pass, target, upload, allocation, clock, wave, alpha,
+support, silhouette, ownership, topology, state, or physics decision. Normal
+1×/2×/4× WebGL alone compiles the branch; compact true 8× has no E38 shader
+uniform or branch and must report the selector inactive for `scale-8` while
+promoting exact 4896×3072 WebGL and completing its GPU fence. The Oil audit
+must first preserve the frozen E22 parent with E38 disabled, then prove the
+E38 off→on→off pair across two whole bodies and their transition/mid/deep
+bands, exact semantics/alpha/support/walls/depth, byte-exact repeated-off
+frames, named bounded HDR neighbour footprints, and cross-scale stability.
+Acid is material `13`; material `16` is SaltWater and must never be used as the
+exact-Acid body guard.
+
+The next visual work should return to a different weak broad material family,
+selected from fresh composed fit-view evidence—currently Wood, ROCK, or Acid—
+and improve distinctive powder, liquid, gas, solid, energy, transmission,
+reflection, and depth rather than stacking another Oil/contact tint.
 
 The radioactive-solid review found no current correctness bug: ISZS `105`
 and VIBR `113` already receive exact-species Solid depth, while the existing
