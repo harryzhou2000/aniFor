@@ -13,7 +13,7 @@ powder, solid, liquid, gas, energy, and contact scenes across Canvas and WebGL a
 mobile gestures, save/load, CI, and Pages deployment as protected regression
 contracts rather than the primary feature stream.
 
-The accepted visual experiment ladder now runs through E45. E12 is the
+The accepted visual experiment ladder now runs through E46. E12 is the
 species-safe Sand/Clay/Concrete wet-sediment checkpoint; preserve its exact
 aqueous owner/stability proof, split moving-powder/stationary-Water control,
 Local/Grains no-op, fine structures, authored gaps, Canvas fallback, and true
@@ -797,18 +797,48 @@ retains no bloom resource, preserves semantics, presents exact 4896×3072
 WebGL, and completes a real GPU fence (accepted frozen run `4943.1 ms`) with
 zero browser errors.
 
-The corrected v5 composed survey now explicitly enables E17/E43/E44/E45 under
-`inputAudit=1` and freezes 22 material counts, 17 scored regions, semantic hash
-`2677171272`, and 112,795 occupied cells across 1×/2×/4×. Its family floor is
-Organic `67.661` (the known PLNT scorer blind spot), followed by Solid `70.694`
-(ISZS surface detail), Contact `88.768`, Gas `95.463`, Emission `98.475`, and
-saturated Powder/Liquid `100`. Do not reopen E36 or E43 from those score-only
-floors: their focused gates remain authoritative. E44 raises its scored CO2
-body to about `99.0`, and E45 leaves the composed family order and semantic
-fixture byte-identical while closing Thermite's generic dense-body gap. Exact
-Soap `38` is now the immediate owner-specific candidate: require a dedicated
-topology/control fixture and reuse live semantic/field/depth evidence rather
-than stacking another generic liquid layer.
+E46 is the accepted normal-WebGL-only exact native Soap `38` pearlescent-body
+checkpoint. `?soapBodyVfx=0|1` is a strict child of E03 and may style only
+ViscousLiquid Soap inside E03's already-proven dense, connected, depth-bearing,
+non-wall body support at 1×/2×/4×. It is deliberately state-agnostic: native
+SOAP `ctype` link/bubble state is not projected into the presentation planes
+and must never be inferred by the renderer. Reuse only the already-live broad
+sheen, caustic, and macro-relief evidence for a bounded mint/rose pearlescent
+crown, opposing pocket, and restrained core response. Apply the body fold
+without replacing or flattening Soap's established crossed thin-film motif.
+E46 is RGB-only and adds no sampler, texture, field, pass, target, buffer,
+upload, allocation, clock, or wave, and no alpha, support, silhouette,
+ownership, topology, state, or physics decision.
+
+Preserve the exact shallow layer, sparse strand, droplet, isolated cell,
+authored hole, open channel, reconstructable-pinhole semantics, native-wall
+coexistence, sibling liquids, unlike-liquid seams, matter contacts, and the
+existing thin-film identity. Validate E46 with `npm run audit:vfx:soap-body`:
+the focused production-WebGL gate must complete byte-stable off→on→off passes
+at 1×/2×/4×, prove the crossed-film microstructure survives the broad body
+fold, and then promote requested-on true 8× to exact 4896×3072 with a real GPU
+fence. Compact 8× has no E46 selector, branch, or resource and retains the
+established Soap identity unchanged.
+
+The corrected v6 composed survey now explicitly enables E17/E43/E44/E45/E46
+under `inputAudit=1` and freezes 23 material counts, 18 scored regions,
+semantic hash `3610338776`, and 114,015 occupied cells across 1×/2×/4×. Its
+new exact-owner evidence is 1,220 Soap cells and a `liquidSoap` cohesive-liquid
+region with 384 exact matching cells; every preceding scored-region geometry
+and material count remains frozen. The accepted v6 WebGL matrix gives Soap
+quality `100` at 1×/2×/4× with exact support recall `1`, coverage `.910`, luma
+standard deviation `7.37–7.42`, microcontrast `.54–.56`, chromatic contrast
+`.65–.68`, and macro range `20`; the Liquid family remains
+`99.866/100/100`, with a `.134` cross-scale spread and zero browser errors.
+The immediately preceding v5 ranking had a
+family floor of Organic `67.661` (the known PLNT scorer blind spot), followed
+by Solid `70.694` (ISZS surface detail), Contact `88.768`, Gas `95.463`,
+Emission `98.475`, and saturated Powder/Liquid `100`; treat those numbers as
+the pre-Soap baseline, not as measurements of the new v6 region. Do not reopen
+E36 or E43 from those score-only floors: their focused gates remain
+authoritative. E44 raises its scored CO2 body to about `99.0`, E45 closes
+Thermite's generic dense-body gap, and E46 closes Soap's generic dense-liquid
+gap without stacking another family-wide liquid layer.
 
 The old post-E16 rank that labelled Stone `21` as Solid was invalid because
 Stone is native Powder. The corrected showcase uses native ROCK ground and

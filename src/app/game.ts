@@ -29,6 +29,9 @@ import {
   THERMITE_BODY_VFX_AUDIT, prepareThermiteBodyVfxAuditFixture,
 } from './thermite-body-vfx-audit';
 import {
+  SOAP_BODY_VFX_AUDIT, prepareSoapBodyVfxAuditFixture,
+} from './soap-body-vfx-audit';
+import {
   GAS_MOTION_VFX_AUDIT, prepareGasMotionVfxFixture,
 } from './gas-motion-vfx-audit';
 import {
@@ -750,6 +753,12 @@ export class Game {
       thermiteBodyVfxFixture: () => THERMITE_BODY_VFX_AUDIT,
       prepareThermiteBodyVfxFixture: () => {
         prepareThermiteBodyVfxAuditFixture(this.simulation);
+        this.renderer.synchronizeFixtureMaterialPlane();
+        this.renderer.invalidateDynamicPresentation();
+      },
+      soapBodyVfxFixture: () => SOAP_BODY_VFX_AUDIT,
+      prepareSoapBodyVfxFixture: () => {
+        prepareSoapBodyVfxAuditFixture(this.simulation);
         this.renderer.synchronizeFixtureMaterialPlane();
         this.renderer.invalidateDynamicPresentation();
       },

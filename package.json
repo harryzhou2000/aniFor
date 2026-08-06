@@ -58,6 +58,7 @@
     "audit:vfx:rock-mesostructure": "npm run build && node scripts/verify-browser-input.mjs --rock-mesostructure-vfx-only --webgl-only --production-bundle --capture-dpr=1",
     "audit:vfx:water-body": "npm run build && node scripts/verify-browser-input.mjs --water-body-vfx-only --webgl-only --production-bundle --capture-dpr=1",
     "audit:vfx:acid-body": "npm run build && node scripts/verify-browser-input.mjs --acid-body-vfx-only --webgl-only --production-bundle --capture-dpr=1",
+    "audit:vfx:soap-body": "npm run build && node scripts/verify-browser-input.mjs --soap-body-vfx-only --webgl-only --production-bundle --capture-dpr=1",
     "audit:vfx:noble-gas-billow": "npm run build && node scripts/verify-browser-input.mjs --noble-gas-billow-vfx-only --webgl-only --production-bundle --capture-dpr=1",
     "audit:vfx:noble-gas-prism": "npm run build && node scripts/verify-browser-input.mjs --noble-gas-prism-vfx-only --webgl-only --production-bundle --capture-dpr=1",
     "audit:vfx:smoke-softness": "npm run build && node scripts/verify-browser-input.mjs --smoke-softness-vfx-only --webgl-only --production-bundle --capture-dpr=1",

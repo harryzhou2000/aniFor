@@ -67,6 +67,7 @@ import type { SparkStateGraphicsAuditSnapshot } from './spark-state-graphics-aud
 import type { PhotonSpectrumGraphicsAuditSnapshot } from './photon-spectrum-graphics-audit';
 import type { PowderLightVfxAuditSnapshot } from './powder-light-vfx-audit';
 import type { ThermiteBodyVfxAuditSnapshot } from './thermite-body-vfx-audit';
+import type { SoapBodyVfxAuditSnapshot } from './soap-body-vfx-audit';
 import type {
   GasMotionVfxAuditSnapshot, GasMotionVfxFixtureMode,
 } from './gas-motion-vfx-audit';
@@ -207,6 +208,8 @@ export interface BrowserInputAuditApi {
   preparePowderLightVfxFixture(): void;
   thermiteBodyVfxFixture(): ThermiteBodyVfxAuditSnapshot;
   prepareThermiteBodyVfxFixture(): void;
+  soapBodyVfxFixture(): SoapBodyVfxAuditSnapshot;
+  prepareSoapBodyVfxFixture(): void;
   gasMotionVfxFixture(): GasMotionVfxAuditSnapshot;
   prepareGasMotionVfxFixture(mode: GasMotionVfxFixtureMode): void;
   gasLightVfxFixture(): GasLightVfxAuditSnapshot;

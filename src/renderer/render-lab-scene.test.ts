@@ -36,11 +36,12 @@ describe('render lab scene', () => {
       Material.ROCK, Material.Sand, Material.Clay, Material.Concrete,
       Material.Water, Material.Oil, Material.Glass, Material.Smoke,
       Material.Oxygen, Material.CarbonDioxide, Material.NobleGas,
+      Material.Soap,
       Material.Wood, Material.Plant,
       Material.Metal, Material.DTEC, Material.URAN, Material.POLO,
       Material.ISZS, Material.VIBR,
     ]) expect(counts[material]).toBeGreaterThan(100);
-    expect(MATERIAL_SHOWCASE_AUDIT.version).toBe(5);
+    expect(MATERIAL_SHOWCASE_AUDIT.version).toBe(6);
     expect(MATERIAL_SHOWCASE_AUDIT.semantic.materialCounts.map(({ material }) => (
       [material, counts[material]]
     ))).toEqual(MATERIAL_SHOWCASE_AUDIT.semantic.materialCounts.map(({ material, count }) => (
@@ -86,6 +87,13 @@ describe('render lab scene', () => {
       }
       expect(matching, region.name).toBe(region.expectedMatching);
     }
+    const soapRegion = MATERIAL_SHOWCASE_AUDIT.regions.find(({ name }) => name === 'liquidSoap');
+    expect(soapRegion).toMatchObject({
+      family: 'liquid', profile: 'cohesive-liquid',
+      x: 76, y: 216, radiusX: 16, radiusY: 6,
+      semanticMaterials: [Material.Soap], expectedMatching: 384,
+    });
+    expect(first.cells()[216 * 612 + 76]).toBe(Material.Soap);
     expect(first.cells()[331 * 612 + 530]).toBe(Material.ROCK);
     expect(renderPhase(ALL_MATERIALS.find(({ id }) => id === Material.ROCK)!))
       .toBe(RenderPhase.Solid);

@@ -60,6 +60,7 @@ import {
   resolveMetalWaterContactVfxEnabled,
   resolveLiquidSurfaceVfxEnabled,
   resolveAcidBodyVfxEnabled,
+  resolveSoapBodyVfxEnabled,
   resolveDeutBodyVfxEnabled,
   resolveOilBodyVfxEnabled,
   resolveOilVolumeFinishVfxEnabled,
@@ -3277,6 +3278,7 @@ uniform float uWoodTanninVfx;
 uniform float uGlassBodyVfx;
 uniform float uLiquidBodyVfx;
 uniform float uAcidBodyVfx;
+uniform float uSoapBodyVfx;
 uniform float uDeutBodyVfx;
 uniform float uOilBodyVfx;
 uniform float uOilVolumeFinishVfx;
@@ -7240,6 +7242,51 @@ void main() {
             color *= vec3(1.0) - vec3(0.100, 0.045, 0.140)
               * acidBodyPocket * (0.62 + caustic * 0.20);
           }
+          // E46: exact Soap keeps its existing crossed thin-film identity, but
+          // a dense plug needs a broader pearlescent body underneath it. Reuse
+          // E03's exact depth/support proof and its already-live sheen, caustic,
+          // and macro-relief carriers for a translucent mint/rose crown with an
+          // opposing compacted pocket. The identity motif is layered later, so
+          // no sample, wave, clock, alpha, support, or resource is introduced.
+          if (uSoapBodyVfx > 0.5 && material == 38.0 && optics == 18.0
+            && surfaceOnly < 0.5 && emissionOnly < 0.5
+            && shape.w > 3.5 && exposedLiquidSide < 0.5) {
+            float soapBodyWeight = smoothstep(
+              30.0 / 255.0, 78.0 / 255.0, liquidOpticalDepth
+            ) * liquidVfxBody * (1.0 - liquidFresnelContour)
+              * smoothstep(0.80, 0.97, liquidNeighbourMean)
+              * (1.0 - smoothstep(
+                0.00002, 0.00024,
+                dot(liquidSpeciesSlope, liquidSpeciesSlope)
+              ));
+            float soapBodyRoll = clamp(
+              (broadSheen - 0.5) * (causticWave - 0.5) * 2.90
+                + (broadSheen - 0.5) * 0.24
+                - (causticWave - 0.5) * 0.16
+                + liquidMacroRelief * 1.65,
+              -1.0, 1.0
+            );
+            float soapBodyCrown = smoothstep(
+              0.025, 0.50, max(soapBodyRoll, 0.0)
+            ) * soapBodyWeight;
+            float soapBodyPocket = smoothstep(
+              0.025, 0.52, max(-soapBodyRoll, 0.0)
+            ) * soapBodyWeight;
+            float soapBodyCore = smoothstep(
+              78.0 / 255.0, 126.0 / 255.0, liquidOpticalDepth
+            ) * soapBodyWeight * (1.0 - abs(soapBodyRoll));
+            vec3 soapBodyReflection = mix(
+              vec3(0.26, 1.00, 0.78), vec3(1.00, 0.48, 0.88),
+              smoothstep(0.30, 0.70, causticWave)
+            );
+            color += (vec3(1.18) - clamp(color, 0.0, 1.18))
+              * soapBodyReflection * soapBodyCrown
+              * (0.092 + broadSheen * 0.022 + caustic * 0.016);
+            color *= vec3(1.0) - vec3(0.070, 0.040, 0.058)
+              * soapBodyPocket * (0.60 + caustic * 0.18);
+            color *= vec3(1.0) - vec3(0.032, 0.024, 0.020)
+              * soapBodyCore * 0.42;
+          }
         }
       }
     }
@@ -10660,6 +10707,10 @@ export class PixiFieldPresenter {
     // true-8x deliberately declares neither this selector nor its arithmetic.
     const acidBodyVfxEnabled = outputScale < 8
       && resolveAcidBodyVfxEnabled(renderLook);
+    // E46 is exact-owner arithmetic inside E03's dense viscous-liquid proof.
+    // Compact true-8x retains Soap's established thin-film identity unchanged.
+    const soapBodyVfxEnabled = outputScale < 8
+      && resolveSoapBodyVfxEnabled(renderLook);
     // E14 is arithmetic over normal WebGL's existing liquid body and contact
     // probes. The compact true-8x shader declares neither selector nor branch.
     const liquidSolidMeniscusVfxEnabled = outputScale < 8
@@ -10717,6 +10768,7 @@ export class PixiFieldPresenter {
       uGlassBodyVfx: { value: glassBodyVfxEnabled ? 1 : 0, type: 'f32' },
       uLiquidBodyVfx: { value: liquidBodyVfxEnabled ? 1 : 0, type: 'f32' },
       uAcidBodyVfx: { value: acidBodyVfxEnabled ? 1 : 0, type: 'f32' },
+      uSoapBodyVfx: { value: soapBodyVfxEnabled ? 1 : 0, type: 'f32' },
       uDeutBodyVfx: { value: deutBodyVfxEnabled ? 1 : 0, type: 'f32' },
       uOilBodyVfx: { value: oilBodyVfxEnabled ? 1 : 0, type: 'f32' },
       uOilVolumeFinishVfx: { value: oilVolumeFinishVfxEnabled ? 1 : 0, type: 'f32' },
@@ -10964,6 +11016,7 @@ export class PixiFieldPresenter {
       this.uniforms.uniforms.uGlassBodyVfx = 0;
       this.uniforms.uniforms.uLiquidBodyVfx = 0;
       this.uniforms.uniforms.uAcidBodyVfx = 0;
+      this.uniforms.uniforms.uSoapBodyVfx = 0;
       this.uniforms.uniforms.uDeutBodyVfx = 0;
       this.uniforms.uniforms.uOilBodyVfx = 0;
       this.uniforms.uniforms.uOilVolumeFinishVfx = 0;
@@ -11033,6 +11086,7 @@ export class PixiFieldPresenter {
             || new URLSearchParams(location.search).get('glassBodyVfxAudit') === '1'
             || new URLSearchParams(location.search).get('oilBodyVfxAudit') === '1'
             || new URLSearchParams(location.search).get('acidBodyVfxAudit') === '1'
+            || new URLSearchParams(location.search).get('soapBodyVfxAudit') === '1'
             || new URLSearchParams(location.search).get('deutBodyVfxAudit') === '1'
             || new URLSearchParams(location.search).get('waterBodyVfxAudit') === '1'
             || new URLSearchParams(location.search).get('liquidBodyVfxAudit') === '1'
@@ -11150,6 +11204,9 @@ export class PixiFieldPresenter {
       ? 'active' : 'inactive';
     presenter.app.canvas.dataset.acidBodyVfx = Number(
       presenter.uniforms.uniforms.uAcidBodyVfx
+    ) > 0.5 ? 'active' : 'inactive';
+    presenter.app.canvas.dataset.soapBodyVfx = Number(
+      presenter.uniforms.uniforms.uSoapBodyVfx
     ) > 0.5 ? 'active' : 'inactive';
     presenter.app.canvas.dataset.deutBodyVfx = Number(
       presenter.uniforms.uniforms.uDeutBodyVfx
@@ -12588,6 +12645,7 @@ export class PixiFieldPresenter {
         this.uniforms.uniforms.uGlassBodyVfx = 0;
         this.uniforms.uniforms.uLiquidBodyVfx = 0;
         this.uniforms.uniforms.uAcidBodyVfx = 0;
+        this.uniforms.uniforms.uSoapBodyVfx = 0;
         this.uniforms.uniforms.uDeutBodyVfx = 0;
         this.uniforms.uniforms.uOilBodyVfx = 0;
         this.uniforms.uniforms.uOilVolumeFinishVfx = 0;
@@ -12633,6 +12691,7 @@ export class PixiFieldPresenter {
         this.app.canvas.dataset.glassBodyVfx = 'inactive';
         this.app.canvas.dataset.liquidBodyVfx = 'inactive';
         this.app.canvas.dataset.acidBodyVfx = 'inactive';
+        this.app.canvas.dataset.soapBodyVfx = 'inactive';
         this.app.canvas.dataset.deutBodyVfx = 'inactive';
         this.app.canvas.dataset.oilBodyVfx = 'inactive';
         this.app.canvas.dataset.oilVolumeFinishVfx = 'inactive';

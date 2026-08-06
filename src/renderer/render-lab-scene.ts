@@ -52,7 +52,7 @@ export interface MaterialShowcaseAuditRegion {
 }
 
 export interface MaterialShowcaseAuditSnapshot {
-  readonly version: 5;
+  readonly version: 6;
   readonly semantic: {
     readonly hash: number;
     readonly occupied: number;
@@ -79,10 +79,10 @@ export interface MaterialShowcaseAuditSnapshot {
  * coordinates or accepting the same wrong topology at every output scale.
  */
 export const MATERIAL_SHOWCASE_AUDIT: MaterialShowcaseAuditSnapshot = {
-  version: 5,
+  version: 6,
   semantic: {
-    hash: 2_677_171_272,
-    occupied: 112_795,
+    hash: 3_610_338_776,
+    occupied: 114_015,
     materialCounts: [
       { material: Material.Sand, count: 5_862 },
       { material: Material.Water, count: 20_862 },
@@ -106,6 +106,7 @@ export const MATERIAL_SHOWCASE_AUDIT: MaterialShowcaseAuditSnapshot = {
       { material: Material.ISZS, count: 3_488 },
       { material: Material.VIBR, count: 3_096 },
       { material: Material.DTEC, count: 2_869 },
+      { material: Material.Soap, count: 1_220 },
     ],
   },
   metalInsert: {
@@ -152,6 +153,13 @@ export const MATERIAL_SHOWCASE_AUDIT: MaterialShowcaseAuditSnapshot = {
       support: { kind: 'semantic', materials: [Material.Oil], minimumRecall: 0.96 },
       semanticMaterials: [Material.Oil],
       topology: true, silhouette: true, expectedMatching: 1_200,
+    },
+    {
+      name: 'liquidSoap', family: 'liquid', profile: 'cohesive-liquid',
+      x: 76, y: 216, radiusX: 16, radiusY: 6,
+      support: { kind: 'semantic', materials: [Material.Soap], minimumRecall: 0.96 },
+      semanticMaterials: [Material.Soap],
+      topology: true, silhouette: true, expectedMatching: 384,
     },
     {
       name: 'gasSmoke', family: 'gas', profile: 'diffuse-gas',
@@ -281,6 +289,12 @@ export function materialShowcaseRequested(search = globalThis.location?.search ?
 export function applyMaterialShowcaseScene(simulation: SimulationBackend): void {
   simulation.clear();
   const plot = new ScenePlotter(simulation);
+
+  // A broad exact-Soap body floats in the unused air above the powder slope.
+  // Its scored interior spans both established sheen lobes at deep column
+  // support, so the survey measures pearlescent volume rather than one surface
+  // band or a sparse film.
+  plot.roundedRect(52, 196, 48, 28, 10, Material.Soap);
 
   // A deep, native-solid ROCK ground gives the liquid, pile, tree, and devices
   // a common contact surface. The small carved channel keeps the composition

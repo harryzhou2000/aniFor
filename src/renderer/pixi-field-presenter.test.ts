@@ -1638,7 +1638,7 @@ describe('Pixi presenter startup configuration', () => {
     const eight = source.slice(eightStart, normalStart);
     const normal = source.slice(normalStart, normalEnd);
     const e39Start = normal.indexOf('          // E39:');
-    const e39End = normal.indexOf('    // E14:', e39Start);
+    const e39End = normal.indexOf('          // E46:', e39Start);
     const e39 = normal.slice(e39Start, e39End);
     const parentStart = normal.lastIndexOf(
       '    if (liquidOnly < 0.5 && halo < 0.5', e39Start,
@@ -1691,6 +1691,71 @@ describe('Pixi presenter startup configuration', () => {
     );
     expect(source).toContain('presenter.app.canvas.dataset.acidBodyVfx');
     expect(source).toContain("this.app.canvas.dataset.acidBodyVfx = 'inactive';");
+  });
+
+  it('keeps E46 Soap optics exact-owner, E03-dependent, normal-WebGL-only, RGB-only, and below its film identity', () => {
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const canvasSource = readFileSync(new URL('./field-renderer.ts', import.meta.url), 'utf8');
+    const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');
+    const normalStart = source.indexOf('const FIELD_FRAGMENT = `', eightStart);
+    const normalEnd = source.indexOf('`;\n\n/** Primary WebGL presentation', normalStart);
+    const eight = source.slice(eightStart, normalStart);
+    const normal = source.slice(normalStart, normalEnd);
+    const e46Start = normal.indexOf('          // E46:');
+    const e46End = normal.indexOf('    // E14:', e46Start);
+    const e46 = normal.slice(e46Start, e46End);
+    const parentStart = normal.lastIndexOf(
+      '    if (liquidOnly < 0.5 && halo < 0.5', e46Start,
+    );
+    const parent = normal.slice(parentStart, e46End);
+    const identityApplication = normal.indexOf('color += liquidMaterialIdentityDelta(', e46End);
+    const preserveDrawingBufferStart = source.indexOf('preserveDrawingBuffer:');
+    const preserveDrawingBufferEnd = source.indexOf(
+      'resolution: outputScale', preserveDrawingBufferStart,
+    );
+    const preserveDrawingBuffer = source.slice(
+      preserveDrawingBufferStart, preserveDrawingBufferEnd,
+    );
+
+    expect(e46Start).toBeGreaterThanOrEqual(0);
+    expect(e46End).toBeGreaterThan(e46Start);
+    expect(parentStart).toBeGreaterThanOrEqual(0);
+    expect(identityApplication).toBeGreaterThan(e46End);
+    expect(normal).toContain('uniform float uSoapBodyVfx;');
+    expect(normal.match(/uSoapBodyVfx > 0\.5/g)).toHaveLength(1);
+    expect(eight).not.toContain('uSoapBodyVfx');
+    expect(eight).not.toContain('soapBodyWeight');
+    expect(canvasSource).not.toContain('soapBodyVfx');
+    expect(e46).toContain('material == 38.0 && optics == 18.0');
+    expect(e46).not.toContain('material == 56.0');
+    expect(e46).toContain('30.0 / 255.0, 78.0 / 255.0, liquidOpticalDepth');
+    expect(e46).toContain('vec3(0.26, 1.00, 0.78)');
+    expect(e46).toContain('vec3(1.00, 0.48, 0.88)');
+    for (const existingValue of [
+      'liquidVfxBody', 'liquidFresnelContour', 'broadSheen', 'causticWave',
+      'liquidMacroRelief', 'liquidNeighbourMean', 'liquidSpeciesSlope',
+      'shape.w', 'exposedLiquidSide',
+    ]) expect(e46).toContain(existingValue);
+    for (const guard of [
+      'liquidOnly < 0.5', 'halo < 0.5', 'wall < 0.5', 'family == 2.0',
+      'traits < 0.5', '!materialEmissive', 'molten < 0.5',
+      'foreignMatterContact < 0.5', 'unlikeMaterialContact < 0.5',
+      'dot(liquidSpeciesSlope, liquidSpeciesSlope) < 0.0004',
+      'uLiquidBodyVfx > 0.5', 'surfaceOnly < 0.5', 'emissionOnly < 0.5',
+    ]) expect(parent).toContain(guard);
+    expect(e46).not.toContain('texture(');
+    expect(e46).not.toContain('uTime');
+    expect(e46).not.toContain('sin(');
+    expect(e46).not.toContain('gl_FragCoord');
+    expect(e46).not.toMatch(/\balpha\s*[+*]?=/);
+    expect(source.match(/this\.uniforms\.uniforms\.uSoapBodyVfx = 0;/g)).toHaveLength(2);
+    expect(source).toContain("get('soapBodyVfxAudit') === '1'");
+    expect(preserveDrawingBuffer).toContain("get('soapBodyVfxAudit') === '1'");
+    expect(source).toMatch(
+      /const soapBodyVfxEnabled = outputScale < 8\s*&& resolveSoapBodyVfxEnabled\(renderLook\);/,
+    );
+    expect(source).toContain('presenter.app.canvas.dataset.soapBodyVfx');
+    expect(source).toContain("this.app.canvas.dataset.soapBodyVfx = 'inactive';");
   });
 
   it('keeps E40 sooty-powder optics exact-owner, E05-dependent, normal-WebGL-only, and RGB-only', () => {

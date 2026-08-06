@@ -21,6 +21,7 @@ import {
   resolveSmokeBillowDepthVfxEnabled,
   resolveSmokeSoftnessVfxEnabled,
   resolveAcidBodyVfxEnabled,
+  resolveSoapBodyVfxEnabled,
   resolveDeutBodyVfxEnabled,
   resolveRadioactiveSolidBodyVfxEnabled,
   resolveOilBodyVfxEnabled,
@@ -631,6 +632,26 @@ describe('resolveRenderLook', () => {
     expect(resolveAcidBodyVfxEnabled('realistic', '?acidBodyVfx=0')).toBe(false);
     expect(resolveAcidBodyVfxEnabled('realistic', '?acidBodyVfx=off')).toBe(false);
     expect(resolveAcidBodyVfxEnabled('realistic', '?acidBodyVfx=false')).toBe(false);
+  });
+
+  it('keeps exact Soap body optics subordinate to E03 and isolated from older input audits', () => {
+    expect(resolveSoapBodyVfxEnabled('classic', '?soapBodyVfx=on')).toBe(false);
+    expect(resolveSoapBodyVfxEnabled('realistic', '')).toBe(true);
+    expect(resolveSoapBodyVfxEnabled('neon-lab', '')).toBe(true);
+    expect(resolveSoapBodyVfxEnabled('realistic', '?inputAudit=1')).toBe(false);
+    expect(resolveSoapBodyVfxEnabled(
+      'realistic', '?inputAudit=1&soapBodyVfx=true',
+    )).toBe(true);
+    expect(resolveSoapBodyVfxEnabled('realistic', '?soapBodyVfx=off')).toBe(false);
+    expect(resolveSoapBodyVfxEnabled('realistic', '?soapBodyVfx=0')).toBe(false);
+    expect(resolveSoapBodyVfxEnabled('realistic', '?soapBodyVfx=false')).toBe(false);
+    expect(resolveSoapBodyVfxEnabled('realistic', '?soapBodyVfx=on')).toBe(true);
+    expect(resolveSoapBodyVfxEnabled(
+      'realistic', '?liquidBodyVfx=0&soapBodyVfx=on',
+    )).toBe(false);
+    expect(resolveSoapBodyVfxEnabled(
+      'realistic', '?volumeVfx=0&liquidBodyVfx=1&soapBodyVfx=1',
+    )).toBe(true);
   });
 
   it('keeps exact Hydrogen body optics subordinate to E04 and isolated from older input audits', () => {

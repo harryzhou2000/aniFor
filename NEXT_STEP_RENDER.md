@@ -737,11 +737,39 @@ does not alter simulation, camera, semantic ownership, or `renderScale`.
   reports E05/E40/E45/HDR inactive, retains no bloom resource, preserves
   semantics, presents exact 4896×3072 WebGL, and completed a `4943.1 ms` GPU
   fence with zero browser errors.
+- **E46 accepted:** exact SOAP `38` gains a normal-WebGL-only pearlescent body
+  fold as a strict child of E03 (`?soapBodyVfx=0|1`). Exact authoritative
+  Liquid ownership, ViscousLiquid optics, deep connected same-species support,
+  and E03's existing wall/contact/emission/reconstruction exclusions are the
+  complete eligibility proof. It recombines only the already-live broad sheen,
+  caustic, macro relief, reflected environment, and exact vertical depth into a
+  translucent mint/rose crown, opposing compacted pocket, and balanced core;
+  the established crossed thin-film identity remains layered later. Native
+  SOAP `ctype` bubble/link state and its particle-index links are not projected,
+  so E46 is deliberately state-agnostic and must not interpret the zero
+  presentation word as an unlinked native particle. The response is RGB-only
+  and adds no sample, texture, field, resource, pass, target, upload,
+  allocation, clock, alpha/support, silhouette, ownership, topology, state, or
+  physics decision. `npm run audit:vfx:soap-body` freezes deterministic exact
+  off→on→off output and the 1×/2×/4× whole-body response at RGB RMS
+  `4.37–4.39`, chroma RMS `1.78–1.79`, signed mean `+0.65`, coverage
+  `.337–.338`, and peak `24`; the opposing pocket remains negative at
+  `−2.77…−2.79` signed mean and the core stays balanced. Crossed-film chroma
+  retention is `.9887–1.0118` and microcontrast retention is
+  `.9726–1.0143`. Semantics, support, alpha, walls, exact depth, and the zero
+  presentation-state/velocity planes remain unchanged; foreign owners remain
+  exact, with only the named bounded CSS-footprint display spill on the eligible
+  Soap side at 1×. Requested-on compact true 8× excludes the E46 selector and
+  resources, presents exact 4896×3072 WebGL, and completed its GPU fence in
+  `5.107 s` in the final frozen rerun. Canvas retains its established fallback; E46 has no Canvas parity
+  requirement. Production showcase v6 adds a disjoint 1,220-cell SOAP body and
+  a 384-cell `liquidSoap` probe while freezing semantic hash `3610338776`,
+  114,015 occupied cells, 23 material counts, and 18 scored regions.
 - **Protected 8× rung:** `renderScale=8` deliberately reports
   `hdrPipeline=inactive` / `scale-8` and retains the proven direct single-mesh
   4896×3072 path. The experiment must earn a bounded 8× design rather than
   allocating a 115 MiB full-resolution float target beside that path.
-- **Current decision:** E01/E02/E03/E04/E05/E06/E07/E08/E09/E10/E11/E12/E13/E14/E15/E16/E17/E18/E19/E20/E21/E22/E23/E24/E25/E26/E27/E28/E29/E30/E31/E32/E33/E34/E35/E36/E37/E38/E39/E40/E41/E42/E43/E44/E45 remain opt-in through the non-Classic looks
+- **Current decision:** E01/E02/E03/E04/E05/E06/E07/E08/E09/E10/E11/E12/E13/E14/E15/E16/E17/E18/E19/E20/E21/E22/E23/E24/E25/E26/E27/E28/E29/E30/E31/E32/E33/E34/E35/E36/E37/E38/E39/E40/E41/E42/E43/E44/E45/E46 remain opt-in through the non-Classic looks
   until representative hardware timing and mobile thermal behavior are
   measured. E02 remains the safe family-wide baseline. E03 is accepted as the
   liquid-depth checkpoint: its fit-view crop is visibly more cohesive, retains
@@ -934,6 +962,16 @@ does not alter simulation, camera, semantic ownership, or `renderScale`.
   `6000` visual saturation, exact raw controls, narrow 1×–4× response spread,
   and Canvas/compact-8× exclusion. Do not make DEUT eligible for E03, copy E41
   onto other radioactive liquids, or reintroduce a time-varying carrier.
+  E46 is accepted as the exact SOAP pearlescent-body checkpoint: freeze its
+  strict E03 dependency, exact `38`/ViscousLiquid/deep-connected owner proof,
+  reuse of the existing sheen/caustic/macro/environment/depth carriers, broad
+  bipolar response, balanced core, crossed-film retention envelopes, exact
+  raw/topology/state/velocity controls, narrow 1×–4× response spread, and
+  compact-8× exclusion. The adapter does not project native SOAP bubble/link
+  state, so do not add a false zero-state eligibility rule or claim state-aware
+  bubble rendering. Foreign owners remain exact; retain only the audited 1×
+  Soap-side CSS-footprint allowance. Canvas remains a fallback control without
+  an E46 parity requirement.
   These are not the final material/VFX results.
   Sub-1.0 material colour stays on the established response; tonemapping owns
   only real HDR highlights so powder texture and liquid body contrast are not
@@ -1791,7 +1829,7 @@ next production 4× survey then selected Wood/PLNT as the largest remaining
   lower seam density, lower local contrast, stronger macro hierarchy, unchanged
   semantic support, and byte-exact selector-off recovery.
 
-**Next visual experiments:** E03–E45 now provide accepted liquid body/surface,
+**Next visual experiments:** E03–E46 now provide accepted liquid body/surface,
 stable-gas, coherent-gas-motion, powder-depth, and powder-local-light
 checkpoints plus exact resting contact grounding, Glass/Ice transmission, and
 state-aware Wax/PLNT subsurface response, composed wet-mineral optics,
@@ -1846,24 +1884,34 @@ and v5 composed cloud close CO2 as the immediate gas candidate. E45 gives exact
 Thermite `30` a restrained reactive-metal crown/pocket/core fold without
 flattening its existing internal marks or touching wet/moving/fine powder,
 sibling owners, Local, Grains, Canvas, or compact 8×; its frozen all-scale gate
-closes Thermite as the immediate powder candidate.
+closes Thermite as the immediate powder candidate. E46 gives exact SOAP `38` a
+strict E03-owned pearlescent crown/pocket/core fold beneath its retained crossed
+thin-film identity. It remains state-agnostic because native SOAP bubble/link
+state is unprojected, preserves every foreign owner and raw plane, requires no
+Canvas parity, and remains excluded from compact 8×; its frozen all-scale gate
+closes Soap as the immediate liquid candidate.
 Improve distinctive depth, transmission, reflection, lighting, and
 mesostructure without stacking another narrow Oil/Acid/contact tint or generic
 PLNT/gas layer.
-The fresh composed-family/material survey is now complete with E17/E43/E44/E45
-explicitly enabled under `inputAudit=1`. Fixture v5 freezes 22 materials, 17
-regions, hash `2677171272`, and 112,795 occupied cells at 1×/2×/4×. The final
-family floors are Organic `67.661`, Solid `70.694`, Contact `88.768`, Gas
-`95.463`, Emission `98.475`, Powder `100`, and Liquid `100`. Organic remains the
-known E36 scorer blind spot; Solid is exact ISZS surface-detail undersampling,
-not a focused E43 regression. Do not reopen E36/E38/E39/E41/E42/E43/E44/E45
-from those score-only floors. E45 leaves this ranking and the v5 semantic
-fixture unchanged while closing Thermite's dense-body gap. Return to the owner
-inventory with exact Soap `38` as the immediate liquid candidate because its
-broad body remains generic beneath its thin-film motif. Require a dedicated
-topology/control fixture and reuse live semantic/field/depth/static-light
-evidence. Preserve the E14 1× stencil snap and all E01–E45 selectors and
-controls while designing the next bounded card.
+The fresh composed-family/material survey now uses E17/E43/E44/E45/E46 under
+`inputAudit=1`. Fixture v6 freezes 23 material counts, 18 scored regions,
+semantic hash `3610338776`, and 114,015 occupied cells at 1×/2×/4×; its exact
+SOAP body owns 1,220 cells and the deep `liquidSoap` region owns 384. The
+accepted v6 WebGL matrix scores that Soap probe `100` at every scale with support recall
+`1`, coverage `.910`, luma standard deviation `7.37–7.42`, microcontrast
+`.54–.56`, chromatic contrast `.65–.68`, and macro range `20`. The Liquid
+family remains `99.866/100/100` across 1×/2×/4× with a `.134` spread; the full
+matrix and exact-scene checks pass with zero browser errors. The preceding v5
+family floors—Organic `67.661`, Solid `70.694`, Contact `88.768`, Gas
+`95.463`, Emission `98.475`, Powder `100`, and Liquid `100`—predate the new
+Soap probe and are historical ranking evidence, not a v6 score claim. Organic
+remains the known E36 scorer blind spot; Solid was exact ISZS surface-detail
+undersampling, not a focused E43 regression. Do not reopen
+E36/E38/E39/E41/E42/E43/E44/E45/E46 from those score-only floors. E46 closes
+the demonstrated Soap body gap without choosing a successor experiment. No
+next material/VFX owner is selected here: preserve the E14 1× stencil snap and
+all E01–E46 selectors and controls until a fresh inventory or composed review
+demonstrates the next bounded deficiency.
 
 ## Phase 1 — HDR pipeline & lighting core (biggest visual payoff)
 
