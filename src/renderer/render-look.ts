@@ -583,6 +583,26 @@ export function resolveDeutBodyVfxEnabled(
 }
 
 /**
+ * Reserves an independently measurable exact ISZS/VIBR solid-body response
+ * without widening the phase-permissive radioactive identity layer. It is a
+ * strict child of E17's solid-body proof: an explicit child request cannot
+ * revive the response while `solidBodyVfx=0`, and older focused fixtures stay
+ * unchanged until they explicitly opt in.
+ */
+export function resolveRadioactiveSolidBodyVfxEnabled(
+  look: RenderLook,
+  search = globalThis.location?.search ?? '',
+): boolean {
+  if (!resolveSolidBodyVfxEnabled(look, search)) return false;
+  const parameters = new URLSearchParams(search);
+  const requested = parameters.get('radioactiveSolidBodyVfx');
+  if (requested === '0' || requested === 'off' || requested === 'false') return false;
+  if (requested === '1' || requested === 'on' || requested === 'true') return true;
+  if (parameters.get('inputAudit') === '1') return false;
+  return resolveVolumeVfxEnabled(look, search);
+}
+
+/**
  * Re-composes only the exact native Water body after E03 has established a
  * connected, same-species liquid volume. The child selector may replace
  * Water's inherited broad stripe carrier, but it cannot recreate E03 when the

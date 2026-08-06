@@ -21,6 +21,7 @@ import {
   resolveSmokeSoftnessVfxEnabled,
   resolveAcidBodyVfxEnabled,
   resolveDeutBodyVfxEnabled,
+  resolveRadioactiveSolidBodyVfxEnabled,
   resolveOilBodyVfxEnabled,
   resolveOilVolumeFinishVfxEnabled,
   resolveOrganicSubsurfaceVfxEnabled,
@@ -679,6 +680,37 @@ describe('resolveRenderLook', () => {
     expect(resolveDeutBodyVfxEnabled('realistic', '?deutBodyVfx=0')).toBe(false);
     expect(resolveDeutBodyVfxEnabled('realistic', '?deutBodyVfx=off')).toBe(false);
     expect(resolveDeutBodyVfxEnabled('realistic', '?deutBodyVfx=false')).toBe(false);
+  });
+
+  it('keeps exact radioactive solid body optics separate from the broad identity layer', () => {
+    expect(resolveRadioactiveSolidBodyVfxEnabled(
+      'classic', '?radioactiveSolidBodyVfx=on',
+    )).toBe(false);
+    expect(resolveRadioactiveSolidBodyVfxEnabled('realistic', '')).toBe(true);
+    expect(resolveRadioactiveSolidBodyVfxEnabled('neon-lab', '')).toBe(true);
+    expect(resolveRadioactiveSolidBodyVfxEnabled('realistic', '?inputAudit=1')).toBe(false);
+    expect(resolveRadioactiveSolidBodyVfxEnabled(
+      'realistic', '?inputAudit=1&radioactiveSolidBodyVfx=1',
+    )).toBe(true);
+    expect(resolveRadioactiveSolidBodyVfxEnabled(
+      'realistic', '?solidBodyVfx=0&radioactiveSolidBodyVfx=on',
+    )).toBe(false);
+    expect(resolveRadioactiveSolidBodyVfxEnabled(
+      'realistic', '?volumeVfx=0&radioactiveSolidBodyVfx=on',
+    )).toBe(false);
+    expect(resolveRadioactiveSolidBodyVfxEnabled(
+      'realistic', '?volumeVfx=0&solidBodyVfx=on&radioactiveSolidBodyVfx=on',
+    )).toBe(true);
+    expect(resolveRadioactiveSolidBodyVfxEnabled('realistic', '?volumeVfx=0')).toBe(false);
+    expect(resolveRadioactiveSolidBodyVfxEnabled(
+      'realistic', '?radioactiveSolidBodyVfx=0',
+    )).toBe(false);
+    expect(resolveRadioactiveSolidBodyVfxEnabled(
+      'realistic', '?radioactiveSolidBodyVfx=off',
+    )).toBe(false);
+    expect(resolveRadioactiveSolidBodyVfxEnabled(
+      'realistic', '?radioactiveSolidBodyVfx=false',
+    )).toBe(false);
   });
 
   it('lets powder-body VFX follow the preset or override broad volume styling', () => {

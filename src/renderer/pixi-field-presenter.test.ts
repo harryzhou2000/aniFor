@@ -3752,25 +3752,80 @@ describe('Pixi presenter startup configuration', () => {
     expect(block).not.toMatch(/\balpha\s*[+*]?=/);
   });
 
-  it('gives dense radioactive solids an exact-owner depth body without changing support', () => {
+  it('keeps E43 exact-radioactive-Solid, depth-proven, state-independent, and normal-WebGL-only', () => {
     const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const canvasSource = readFileSync(new URL('./field-renderer.ts', import.meta.url), 'utf8');
+    const browserGate = readFileSync(
+      new URL('../../scripts/verify-browser-input.mjs', import.meta.url), 'utf8',
+    );
+    const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');
     const normalStart = source.indexOf('const FIELD_FRAGMENT = `');
     const start = source.indexOf('    } else if (radioactiveSurface > 0.5 || (optics < 0.5 && profile == 4.0)) {', normalStart);
     const end = source.indexOf('    } else if (deviceSurface > 0.5 || (optics < 0.5 && profile == 5.0)) {', start);
+    const eight = source.slice(eightStart, normalStart);
     const block = source.slice(start, end);
+    const e43Start = block.indexOf('      // E43:');
+    const e43 = block.slice(e43Start);
+    const preserveStart = source.indexOf('preserveDrawingBuffer:');
+    const preserveEnd = source.indexOf('resolution: outputScale', preserveStart);
+    const preserve = source.slice(preserveStart, preserveEnd);
 
+    expect(eightStart).toBeGreaterThanOrEqual(0);
     expect(normalStart).toBeGreaterThan(0);
     expect(start).toBeGreaterThan(normalStart);
     expect(end).toBeGreaterThan(start);
-    expect(block).toContain('uEnergyIdentityStyling > 0.5 && radioactiveBody');
-    for (const material of ['99.0', '105.0', '108.0', '109.0', '111.0', '112.0', '113.0']) {
-      expect(block).toContain(`material == ${material}`);
+    expect(e43Start).toBeGreaterThanOrEqual(0);
+    expect(e43).toContain('bool radioactiveSolidBodyOwner = material == 105.0 || material == 113.0;');
+    for (const guard of [
+      'uRadioactiveSolidBodyVfx > 0.5', 'uSolidBodyVfx > 0.5',
+      'uEnergyIdentityStyling > 0.5', 'uSolidOpticalDepth > 0.5',
+      'family == 0.0', 'profile == 4.0', 'optics == 11.0',
+      'abs(traits - 16.0) < 0.5', 'surfaceOnly < 0.5',
+      'halo < 0.5', 'wall < 0.5', 'wallOnly < 0.5',
+      'emissionOnly < 0.5', '!materialEmissive',
+      'foreignMatterContact < 0.5', 'unlikeMaterialContact < 0.5',
+      'solidOpticalDepth > 6.0 / 255.0', 'solidInterior > 0.001',
+    ]) expect(e43).toContain(guard);
+    for (const establishedScalar of [
+      'botanicalBodyNoise', 'radioactiveSolidMacro', 'radioactiveSolidFacet',
+      'radioactiveSolidDepth', 'radioactiveSolidCore',
+    ]) expect(e43).toContain(establishedScalar);
+    for (const stripedCarrier of [
+      'solidReliefTone', 'solidKey', 'solidFill', 'solidFresnel', 'solidEnvironment',
+    ]) expect(e43).not.toContain(stripedCarrier);
+    for (const rejectedOwner of ['99.0', '108.0', '109.0', '111.0', '112.0']) {
+      expect(e43).not.toContain(`material == ${rejectedOwner}`);
     }
-    expect(block).toContain('solidOpticalDepth > 6.0 / 255.0 && solidInterior > 0.001');
-    expect(block).toContain('float radioactiveGrazing = smoothstep(0.018, 0.18, solidFresnel);');
-    expect(block).toContain('solidEnvironment * (0.040 + radioactiveGrazing * radioactiveReflection)');
-    expect(block).not.toContain('texture(');
-    expect(block).not.toMatch(/\balpha\s*[+*]?=/);
+    expect(e43).not.toContain('wallState');
+    expect(e43).not.toContain('texture(');
+    expect(e43).not.toContain('uTime');
+    expect(e43).not.toContain('sin(');
+    expect(e43).not.toContain('gl_FragCoord');
+    expect(e43).not.toMatch(/\balpha\s*[+*]?=/);
+    expect(eight).not.toContain('uRadioactiveSolidBodyVfx');
+    expect(eight).not.toContain('radioactiveSolidBodyOwner');
+    expect(canvasSource).not.toContain('radioactiveSolidBodyVfx');
+    expect(source).toMatch(
+      /const radioactiveSolidBodyVfxEnabled = outputScale < 8\s*&& resolveRadioactiveSolidBodyVfxEnabled\(renderLook\);/,
+    );
+    expect(source).toContain(
+      'uRadioactiveSolidBodyVfx: {\n        value: radioactiveSolidBodyVfxEnabled ? 1 : 0',
+    );
+    expect(source.match(/this\.uniforms\.uniforms\.uRadioactiveSolidBodyVfx = 0;/g))
+      .toHaveLength(2);
+    expect(source).toContain('presenter.app.canvas.dataset.radioactiveSolidBodyVfx');
+    expect(source).toContain("this.app.canvas.dataset.radioactiveSolidBodyVfx = 'inactive';");
+    expect(preserve).toContain("get('radioactiveSolidBodyVfxAudit') === '1'");
+    for (const probe of [
+      'ISZSCore', 'ISZSCrown', 'ISZSPocket', 'VIBRCore', 'VIBRCrown', 'VIBRPocket',
+    ]) expect(browserGate).toContain(`${probe}: Object.freeze({`);
+    expect(browserGate).toContain('inRange(sample.signedMean, acceptance.signedMean)');
+    expect(browserGate).toContain('sample.rgbPeak === 0');
+    expect(browserGate).toContain('disabledRawControls, enabledRawControls, repeatedRawControls');
+    expect(browserGate).toContain('radioactiveSolidBodyVfxStateSeparation');
+    expect(browserGate).toContain('audit.prepareRadioactiveSolidBodyVfxFixture();');
+    expect(browserGate).toContain('radioactiveSolidBodyVfxFixtureReady(cdp, fixture)');
+    expect(browserGate).toContain('radioactiveSolidBodyVfxStateDigest(cdp, fixture)');
   });
 
   it('gives only deep settled radioactive powders an RGB-only Smooth body', () => {

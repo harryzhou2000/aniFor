@@ -50,6 +50,7 @@ import {
   resolveGasBodyVfxEnabled, resolveGasCoreDepthVfxEnabled, resolveGasLightVfxEnabled,
   resolveGasMotionVfxEnabled,
   resolveHydrogenBodyVfxEnabled,
+  resolveRadioactiveSolidBodyVfxEnabled,
   resolveNobleGasBillowVfxEnabled,
   resolveNobleGasPrismVfxEnabled,
   resolveSmokeBillowDepthVfxEnabled,
@@ -3257,6 +3258,7 @@ uniform float uSmokeSoftnessVfx;
 uniform float uSmokeBillowDepthVfx;
 uniform float uPlasmaCoreVfx;
 uniform float uSolidBodyVfx;
+uniform float uRadioactiveSolidBodyVfx;
 uniform float uRockRoughnessVfx;
 uniform float uRockMesostructureVfx;
 uniform float uPlatinumBodyVfx;
@@ -9041,59 +9043,66 @@ void main() {
       float decayPulse = 0.5 + 0.5 * sin(uTime * 1.55 + material * 0.73 + isotope * 1.8);
       color *= 0.97 + isotope * 0.038 * interiorMicroGain + decayPulse * 0.012;
       color += vec3(0.10, 0.25, 0.13) * radioactiveSurface * decayPulse * 0.035;
-      // Exact dense radioactive bodies need a coherent core before their
-      // static isotope marks and retained POLO/VIBR state are layered below.
-      // This consumes the existing solid thickness/relief/Fresnel response
-      // only; phase, support, alpha, native state, and Energy emission remain
-      // owned by their established paths.
-      bool radioactiveBody = material == 99.0 || material == 105.0 || material == 108.0
-        || material == 109.0 || material == 111.0 || material == 112.0 || material == 113.0;
-      if (uEnergyIdentityStyling > 0.5 && radioactiveBody
+      // E43: the old seven-owner body block was unreachable because every
+      // native radioactive owner carries the Radioactive trait. Admit only
+      // the two exact radioactive Solids, ISZS and VIBR, after the established
+      // exact-species thickness, interior, and contact proofs. Their static
+      // crystalline/conductive volume fold is composed before the independent
+      // VIBR state overlay below, so native charge/countdown/alternate state
+      // remains authoritative. This reuses established depth and static
+      // value-noise arithmetic and changes RGB only: no sample, field, pass,
+      // target, state decode, clock, alpha, support, silhouette, ownership,
+      // topology, or physics.
+      bool radioactiveSolidBodyOwner = material == 105.0 || material == 113.0;
+      if (uRadioactiveSolidBodyVfx > 0.5 && uSolidBodyVfx > 0.5
+        && uEnergyIdentityStyling > 0.5 && radioactiveSolidBodyOwner
         && uSolidOpticalDepth > 0.5 && family == 0.0
+        && profile == 4.0 && optics == 11.0 && abs(traits - 16.0) < 0.5
         && surfaceOnly < 0.5 && halo < 0.5 && wall < 0.5
-        && traits < 0.5 && !materialEmissive
+        && wallOnly < 0.5 && emissionOnly < 0.5 && !materialEmissive
+        && foreignMatterContact < 0.5 && unlikeMaterialContact < 0.5
         && solidOpticalDepth > 6.0 / 255.0 && solidInterior > 0.001) {
-        float radioactiveDepth = smoothstep(6.0 / 255.0, 42.0 / 255.0, solidOpticalDepth);
-        float radioactiveRelief = clamp(solidReliefTone * 255.0 / 6.0, -1.0, 1.0)
-          * radioactiveDepth;
-        float radioactiveCrown = max(radioactiveRelief, 0.0);
-        float radioactivePocket = max(-radioactiveRelief, 0.0);
-        float radioactiveGrazing = smoothstep(0.018, 0.18, solidFresnel);
-        vec3 radioactiveAbsorption = vec3(0.038, 0.052, 0.046);
-        vec3 radioactiveKey = vec3(0.24, 0.62, 0.34);
-        float radioactiveReflection = 0.075;
-        if (material == 99.0) {
-          radioactiveAbsorption = vec3(0.052, 0.030, 0.072);
-          radioactiveKey = vec3(0.46, 0.28, 0.78);
-          radioactiveReflection = 0.088;
-        } else if (material == 105.0) {
-          radioactiveAbsorption = vec3(0.026, 0.060, 0.070);
-          radioactiveKey = vec3(0.22, 0.72, 0.80);
-          radioactiveReflection = 0.092;
-        } else if (material == 108.0 || material == 112.0) {
-          radioactiveAbsorption = vec3(0.060, 0.050, 0.018);
-          radioactiveKey = vec3(0.60, 0.78, 0.20);
-          radioactiveReflection = 0.070;
-        } else if (material == 109.0) {
-          radioactiveAbsorption = vec3(0.044, 0.062, 0.026);
-          radioactiveKey = vec3(0.38, 0.88, 0.34);
-          radioactiveReflection = 0.095;
-        } else if (material == 111.0) {
-          radioactiveAbsorption = vec3(0.070, 0.038, 0.080);
-          radioactiveKey = vec3(0.48, 0.30, 0.76);
-          radioactiveReflection = 0.110;
-        } else if (material == 113.0) {
-          radioactiveAbsorption = vec3(0.024, 0.052, 0.070);
-          radioactiveKey = vec3(0.24, 0.62, 0.88);
-          radioactiveReflection = 0.102;
-        }
-        color *= vec3(1.0) - radioactiveAbsorption
-          * (radioactivePocket * 0.72 + (1.0 - radioactiveGrazing) * 0.055)
-          * radioactiveDepth;
-        color += (vec3(1.0) - clamp(color, 0.0, 1.0))
-          * (radioactiveKey * (radioactiveCrown * 0.16 + radioactiveGrazing * 0.070)
-            + solidEnvironment * (0.040 + radioactiveGrazing * radioactiveReflection))
-          * radioactiveDepth;
+        float radioactiveSolidDepth = smoothstep(
+          6.0 / 255.0, 42.0 / 255.0, solidOpticalDepth
+        ) * solidInterior;
+        float radioactiveSolidCore = smoothstep(
+          18.0 / 255.0, 72.0 / 255.0, solidOpticalDepth
+        ) * solidInterior;
+        // The shared rigid relief is a long diagonal triangle wave. It is
+        // useful as a restrained normal basis, but amplifying it here produced
+        // bright repeated bands across an isotope slab. Instead, reuse the
+        // established allocation-free value-noise arithmetic at two broad
+        // scales. The result is smooth, isotropic, world-anchored volume mass:
+        // no repeated stripe, cell grid, texture, sampler, or animated carrier.
+        vec2 radioactiveSolidOffset = material == 105.0
+          ? vec2(11.7, -7.3) : vec2(-9.1, 13.4);
+        float radioactiveSolidMacro = botanicalBodyNoise(
+          fieldPosition / 30.0 + radioactiveSolidOffset
+        ) * 2.0 - 1.0;
+        float radioactiveSolidFacet = botanicalBodyNoise(
+          fieldPosition / 11.0 + radioactiveSolidOffset * 1.7
+        ) * 2.0 - 1.0;
+        float radioactiveSolidFold = clamp(
+          radioactiveSolidMacro * 0.82
+            + radioactiveSolidFacet * (material == 105.0 ? 0.22 : 0.12),
+          -1.0, 1.0
+        ) * radioactiveSolidDepth;
+        float radioactiveSolidCrown = max(radioactiveSolidFold, 0.0);
+        float radioactiveSolidPocket = max(-radioactiveSolidFold, 0.0);
+        vec3 radioactiveSolidAbsorption = material == 105.0
+          ? vec3(0.12, 0.18, 0.07) : vec3(0.18, 0.14, 0.15);
+        vec3 radioactiveSolidKey = material == 105.0
+          ? vec3(0.52, 0.82, 1.00) : vec3(0.30, 0.92, 0.70);
+        vec3 radioactiveSolidFill = material == 105.0
+          ? vec3(0.34, 0.20, 0.72) : vec3(0.10, 0.42, 0.48);
+        color *= vec3(1.0) - radioactiveSolidAbsorption
+          * (radioactiveSolidCore * 0.10 + radioactiveSolidPocket * 0.32);
+        color += (vec3(1.02) - clamp(color, 0.0, 1.02))
+          * (radioactiveSolidKey * radioactiveSolidCrown * 0.10
+            + radioactiveSolidFill * radioactiveSolidCore
+              * (1.0 - abs(radioactiveSolidFold))
+                * (material == 105.0 ? 0.012 : 0.006))
+          * radioactiveSolidDepth;
       }
     } else if (deviceSurface > 0.5 || (optics < 0.5 && profile == 5.0)) {
       vec2 circuitCell = abs(fract((fieldPosition + vec2(material * 0.37, material * 0.19)) / 8.0) - 0.5);
@@ -10476,6 +10485,11 @@ export class PixiFieldPresenter {
     // values. The compact true-8x shader has no selector or parallel branch.
     const solidBodyVfxEnabled = outputScale < 8
       && resolveSolidBodyVfxEnabled(renderLook);
+    // E43 is an exact ISZS/VIBR child of E17's normal-WebGL solid-depth
+    // baseline. Canvas and compact true 8x retain their independently proven
+    // radioactive identity/state grammar and declare no E43 selector.
+    const radioactiveSolidBodyVfxEnabled = outputScale < 8
+      && resolveRadioactiveSolidBodyVfxEnabled(renderLook);
     // E23 is an exact-ROCK normal-WebGL correction to E17's inherited polished
     // lobe. Compact true 8x retains its established mineral grammar and has no
     // selector or parallel arithmetic.
@@ -10596,6 +10610,9 @@ export class PixiFieldPresenter {
       uSmokeBillowDepthVfx: { value: smokeBillowDepthVfxEnabled ? 1 : 0, type: 'f32' },
       uPlasmaCoreVfx: { value: plasmaCoreVfxEnabled ? 1 : 0, type: 'f32' },
       uSolidBodyVfx: { value: solidBodyVfxEnabled ? 1 : 0, type: 'f32' },
+      uRadioactiveSolidBodyVfx: {
+        value: radioactiveSolidBodyVfxEnabled ? 1 : 0, type: 'f32',
+      },
       uRockRoughnessVfx: { value: rockRoughnessVfxEnabled ? 1 : 0, type: 'f32' },
       uRockMesostructureVfx: { value: rockMesostructureVfxEnabled ? 1 : 0, type: 'f32' },
       uPlatinumBodyVfx: { value: platinumBodyVfxEnabled ? 1 : 0, type: 'f32' },
@@ -10842,6 +10859,7 @@ export class PixiFieldPresenter {
       this.uniforms.uniforms.uSmokeBillowDepthVfx = 0;
       this.uniforms.uniforms.uPlasmaCoreVfx = 0;
       this.uniforms.uniforms.uSolidBodyVfx = 0;
+      this.uniforms.uniforms.uRadioactiveSolidBodyVfx = 0;
       this.uniforms.uniforms.uRockRoughnessVfx = 0;
       this.uniforms.uniforms.uRockMesostructureVfx = 0;
       this.uniforms.uniforms.uPlatinumBodyVfx = 0;
@@ -10907,6 +10925,7 @@ export class PixiFieldPresenter {
             || new URLSearchParams(location.search).get('smokeBillowDepthVfxAudit') === '1'
             || new URLSearchParams(location.search).get('plasmaCoreVfxAudit') === '1'
             || new URLSearchParams(location.search).get('solidBodyVfxAudit') === '1'
+            || new URLSearchParams(location.search).get('radioactiveSolidBodyVfxAudit') === '1'
             || new URLSearchParams(location.search).get('rockRoughnessVfxAudit') === '1'
             || new URLSearchParams(location.search).get('rockMesostructureVfxAudit') === '1'
             || new URLSearchParams(location.search).get('platinumBodyVfxAudit') === '1'
@@ -10989,6 +11008,9 @@ export class PixiFieldPresenter {
     ) > 0.5 ? 'active' : 'inactive';
     presenter.app.canvas.dataset.solidBodyVfx = Number(
       presenter.uniforms.uniforms.uSolidBodyVfx
+    ) > 0.5 ? 'active' : 'inactive';
+    presenter.app.canvas.dataset.radioactiveSolidBodyVfx = Number(
+      presenter.uniforms.uniforms.uRadioactiveSolidBodyVfx
     ) > 0.5 ? 'active' : 'inactive';
     presenter.app.canvas.dataset.rockRoughnessVfx = Number(
       presenter.uniforms.uniforms.uRockRoughnessVfx
@@ -12451,6 +12473,7 @@ export class PixiFieldPresenter {
         this.uniforms.uniforms.uSmokeBillowDepthVfx = 0;
         this.uniforms.uniforms.uPlasmaCoreVfx = 0;
         this.uniforms.uniforms.uSolidBodyVfx = 0;
+        this.uniforms.uniforms.uRadioactiveSolidBodyVfx = 0;
         this.uniforms.uniforms.uRockRoughnessVfx = 0;
         this.uniforms.uniforms.uRockMesostructureVfx = 0;
         this.uniforms.uniforms.uPlatinumBodyVfx = 0;
@@ -12493,6 +12516,7 @@ export class PixiFieldPresenter {
         this.app.canvas.dataset.smokeBillowDepthVfx = 'inactive';
         this.app.canvas.dataset.plasmaCoreVfx = 'inactive';
         this.app.canvas.dataset.solidBodyVfx = 'inactive';
+        this.app.canvas.dataset.radioactiveSolidBodyVfx = 'inactive';
         this.app.canvas.dataset.rockRoughnessVfx = 'inactive';
         this.app.canvas.dataset.rockMesostructureVfx = 'inactive';
         this.app.canvas.dataset.platinumBodyVfx = 'inactive';

@@ -13,7 +13,7 @@ powder, solid, liquid, gas, energy, and contact scenes across Canvas and WebGL a
 mobile gestures, save/load, CI, and Pages deployment as protected regression
 contracts rather than the primary feature stream.
 
-The accepted visual experiment ladder now runs through E42. E12 is the
+The accepted visual experiment ladder now runs through E43. E12 is the
 species-safe Sand/Clay/Concrete wet-sediment checkpoint; preserve its exact
 aqueous owner/stability proof, split moving-powder/stationary-Water control,
 Local/Grains no-op, fine structures, authored gaps, Canvas fallback, and true
@@ -712,13 +712,46 @@ retain their established Hydrogen identity. Requested-on 8× reports E42
 inactive for `scale-8`, promotes exact 4896×3072 WebGL, preserves semantics,
 and completed the accepted GPU fence in `5114.9 ms`.
 
-The next bounded candidate is a separate exact ISZS/VIBR radioactive-Solid
-body proof. ISZS `105` and VIBR `113` retain their existing exact Solid-depth,
-radioactive-identity, and (for VIBR) packed native-state contracts, but no
-strict radioactive-Solid deep-body proof exists. Build a dedicated fixture and
-gate that preserves VIBR charge/countdown/alternate-state presentation; never
-reuse the phase-permissive seven-owner identity guard as a deep-body gate, and
-do not widen E04, E03, E41, or E42.
+E43 is the accepted normal-WebGL-only exact ISZS/VIBR radioactive-Solid
+body-optics checkpoint. `?radioactiveSolidBodyVfx=0|1` is a strict child of
+E17 and cannot bypass `solidBodyVfx=0`; omitted selectors remain inactive under
+`inputAudit=1`. Only authoritative ISZS `105` or VIBR `113` with exact Solid,
+profile `4`, Radioactive optics `11`, trait byte `16`, deep exact-species
+optical thickness, connected interior support, and no wall, reconstruction,
+emission, foreign, or unlike contact may respond. The shader reuses the
+existing depth/interior proof plus two static allocation-free value-noise
+scales for a broad isotropic crystalline/conductive fold. It deliberately does
+not amplify E17's diagonal triangle-wave relief: the rejected tune produced
+repeated bright bands across both slabs. ISZS receives a cool-violet/cyan
+volume and VIBR a green/teal conductive volume before VIBR's later native
+charge/countdown/alternate overlay. Add no sample, texture, field, resource,
+pass, target, upload, allocation, clock, alpha/support, silhouette, ownership,
+topology, native-state, or physics decision. Canvas and compact true 8× retain
+their established radioactive identities.
+
+Validate E43 with `npm run audit:vfx:radioactive-solid-body`. Its frozen
+1×/2×/4× off→on→off matrix requires per-probe—not family-wide—RGB, chroma,
+peak, coverage, signed, and spatial envelopes. Accepted RGB RMS is
+`4.21–4.22`/`10.82–10.84`/`2.26–2.27` for ISZS core/crown/pocket and
+`5.91–5.93`/`9.98`/`1.10–1.11` for VIBR; signed means are respectively about
+`+3.71`/`+11.84`/`−1.82` and `+4.21`/`+9.85`/`−1.22…−1.24`. Every authored
+hole/notch, thin line, isolate, co-located wall, guarded blank, ISZS/VIBR seam,
+Metal/Water/Sand/Smoke contact, BVBR/URAN/PLUT/POLO/ISOZ/EXOT owner, and BVBR
+state card is an exact framebuffer and raw-pixel no-op; repeated-off frames are
+byte-identical. Both disabled and enabled VIBR cards must preserve pairwise
+native-state separation. Requested-on true 8× prepares this same complete
+fixture after promotion, reports E17/E43/HDR inactive for `scale-8`, preserves
+semantic/rendered/depth/wall/native-state hashes, presents exact 4896×3072
+WebGL, and completes a real GPU fence (accepted full matrix `5200.3 ms`) with
+zero browser errors. Do not widen the old phase-permissive seven-owner identity
+branch or E04/E03/E41/E42.
+
+The next visual selection must come from a fresh composed-family/material
+survey with E43 enabled. Prefer an underserved exact powder, liquid, or gas
+whose fit-view body still lacks macro depth; keep E38/E39/E41/E42/E43 closed
+unless new owner-specific evidence demonstrates a regression. Reuse live
+semantic/field/depth evidence and require a dedicated fixture before adding a
+new selector.
 
 The old post-E16 rank that labelled Stone `21` as Solid was invalid because
 Stone is native Powder. The corrected showcase uses native ROCK ground and

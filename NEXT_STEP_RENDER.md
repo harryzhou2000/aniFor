@@ -679,11 +679,31 @@ does not alter simulation, camera, semantic ownership, or `renderScale`.
   `scale-8`, promotes exact 4896×3072 WebGL, preserves semantics, and completed
   the accepted GPU fence in `5114.9 ms`; Canvas retains its established H2
   identity fallback.
+- **E43 accepted:** exact radioactive Solids ISZS `105` and VIBR `113` gain a
+  normal-WebGL-only crystalline/conductive body fold as a strict child of E17
+  (`?radioactiveSolidBodyVfx=0|1`). Exact Solid/profile/Radioactive-optics/trait
+  ownership, deep exact-species thickness, connected interior support, and the
+  existing contact/wall/emission exclusions are the complete eligibility
+  proof. Two static broad value-noise scales replace a rejected tune that
+  amplified E17's diagonal relief into repeated bright bands. The accepted
+  path is RGB-only, state-independent, and composed before VIBR's native
+  charge/countdown/alternate overlay; it adds no sample, texture, field,
+  resource, pass, target, upload, allocation, clock, alpha/support, silhouette,
+  ownership, topology, native-state, or physics decision. `npm run
+  audit:vfx:radioactive-solid-body` freezes the 1×/2×/4× off→on→off matrix with
+  per-probe envelopes, exact raw/framebuffer controls, byte-identical repeated
+  off, and VIBR state separation measured both disabled and enabled. ISZS
+  core/crown/pocket RGB RMS is `4.21–4.22`/`10.82–10.84`/`2.26–2.27`; VIBR is
+  `5.91–5.93`/`9.98`/`1.10–1.11`, and both pockets are negative. Requested-on
+  true 8× prepares and verifies the full same fixture, reports E17/E43/HDR
+  inactive for `scale-8`, preserves exact semantic/rendered/depth/wall/native-
+  state hashes, promotes exact 4896×3072 WebGL, and completed a `5200.3 ms` GPU
+  fence with zero browser errors. Canvas retains its established identity path.
 - **Protected 8× rung:** `renderScale=8` deliberately reports
   `hdrPipeline=inactive` / `scale-8` and retains the proven direct single-mesh
   4896×3072 path. The experiment must earn a bounded 8× design rather than
   allocating a 115 MiB full-resolution float target beside that path.
-- **Current decision:** E01/E02/E03/E04/E05/E06/E07/E08/E09/E10/E11/E12/E13/E14/E15/E16/E17/E18/E19/E20/E21/E22/E23/E24/E25/E26/E27/E28/E29/E30/E31/E32/E33/E34/E35/E36/E37/E38/E39/E40/E41/E42 remain opt-in through the non-Classic looks
+- **Current decision:** E01/E02/E03/E04/E05/E06/E07/E08/E09/E10/E11/E12/E13/E14/E15/E16/E17/E18/E19/E20/E21/E22/E23/E24/E25/E26/E27/E28/E29/E30/E31/E32/E33/E34/E35/E36/E37/E38/E39/E40/E41/E42/E43 remain opt-in through the non-Classic looks
   until representative hardware timing and mobile thermal behavior are
   measured. E02 remains the safe family-wide baseline. E03 is accepted as the
   liquid-depth checkpoint: its fit-view crop is visibly more cohesive, retains
@@ -1733,7 +1753,7 @@ next production 4× survey then selected Wood/PLNT as the largest remaining
   lower seam density, lower local contrast, stronger macro hierarchy, unchanged
   semantic support, and byte-exact selector-off recovery.
 
-**Next visual experiments:** E03–E41 now provide accepted liquid body/surface,
+**Next visual experiments:** E03–E43 now provide accepted liquid body/surface,
 stable-gas, coherent-gas-motion, powder-depth, and powder-local-light
 checkpoints plus exact resting contact grounding, Glass/Ice transmission, and
 state-aware Wax/PLNT subsurface response, composed wet-mineral optics,
@@ -1775,26 +1795,26 @@ marks or internal grain cadence; Coal `19`, other owners, wet/moving powder,
 fine topology, walls, contacts, Local, Grains, Canvas, and compact 8× remain
 controls. E42 now gives exact Hydrogen `40` a strict E04-owned connected-body
 transmission fold without touching foreign gas identities, sparse topology,
-liquid/solid contacts, Canvas, or compact 8×. DEUT `100` is no longer a survey
-candidate: E41 already gives it an accepted trait-aware connected
-radioactive-liquid body without widening E03. The next survey should build a
-separate exact ISZS/VIBR radioactive-Solid eligibility proof and browser gate;
-do not widen E04, E03, E41, or E42.
+liquid/solid contacts, Canvas, or compact 8×. E43 gives exact ISZS `105` and
+VIBR `113` a separate Solid-only crystalline/conductive body fold, closing the
+unreachable old phase-permissive deep-radioactive branch while preserving
+VIBR's later native state grammar, every fine/contact/wall control, Canvas, and
+compact 8×. DEUT `100` is no longer a survey candidate: E41 already gives it
+an accepted trait-aware connected radioactive-liquid body without widening
+E03.
 Improve distinctive depth, transmission, reflection, lighting, and
 mesostructure without stacking another narrow Oil/Acid/contact tint or generic
 PLNT/gas layer.
-ISZS `105` and VIBR `113` retain their current exact Solid-depth,
-radioactive-identity, and (for VIBR) packed charge/countdown/alternate-state
-contracts, but no strict radioactive-Solid deep-body proof exists. The next
-candidate needs its own exact solid-only fixture and gate and must not reuse the
-phase-permissive seven-owner identity guard as a deep-body eligibility test.
-Continue
-with topology-preserving, material-
-specific cards that reuse already-live evidence. Prefer the smallest
-arithmetic-only candidate that fixes a visible fit-view deficiency; do not add
+The next selection requires a fresh composed-family/material survey with E43
+enabled. Prioritize an underserved exact powder, liquid, or gas whose fit-view
+body still lacks macro depth or optical identity; do not reopen E38/E39/E41/
+E42/E43 without new owner-specific evidence. Continue with topology-preserving,
+material-specific cards that reuse already-live semantic, field, depth, and
+static-light evidence. Prefer the smallest arithmetic-only candidate that
+fixes a visible deficiency and build its exact fixture/gate first; do not add
 an isolated tint merely to continue the experiment number. Preserve the E14
-1× stencil snap and all E01–E42 selectors and controls while designing the
-next bounded card.
+1× stencil snap and all E01–E43 selectors and controls while designing the next
+bounded card.
 
 ## Phase 1 — HDR pipeline & lighting core (biggest visual payoff)
 
