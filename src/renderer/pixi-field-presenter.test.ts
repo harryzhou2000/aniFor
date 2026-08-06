@@ -686,6 +686,7 @@ describe('Pixi presenter startup configuration', () => {
     expect(source.match(/this\.uniforms\.uniforms\.uGasLightVfx = 0;/g)).toHaveLength(2);
     expect(source.match(/this\.uniforms\.uniforms\.uGasCoreDepthVfx = 0;/g)).toHaveLength(2);
     expect(source.match(/this\.uniforms\.uniforms\.uSmokeSoftnessVfx = 0;/g)).toHaveLength(2);
+    expect(source.match(/this\.uniforms\.uniforms\.uSmokeBillowDepthVfx = 0;/g)).toHaveLength(2);
     expect(source.match(/this\.uniforms\.uniforms\.uPlasmaCoreVfx = 0;/g)).toHaveLength(2);
     expect(source.match(/this\.uniforms\.uniforms\.uLiquidBodyVfx = 0;/g)).toHaveLength(2);
     expect(source.match(/this\.uniforms\.uniforms\.uLiquidSolidMeniscusVfx = 0;/g)).toHaveLength(2);
@@ -700,6 +701,7 @@ describe('Pixi presenter startup configuration', () => {
     expect(source).toContain("get('gasMotionVfxAudit') === '1'");
     expect(source).toContain("get('gasLightVfxAudit') === '1'");
     expect(source).toContain("get('gasCoreDepthVfxAudit') === '1'");
+    expect(source).toContain("get('smokeBillowDepthVfxAudit') === '1'");
     expect(source).toContain("get('plasmaCoreVfxAudit') === '1'");
     expect(source).toContain("get('liquidBodyVfxAudit') === '1'");
     expect(source).toContain("get('liquidSolidMeniscusVfxAudit') === '1'");
@@ -1721,6 +1723,74 @@ describe('Pixi presenter startup configuration', () => {
       preserveDrawingBufferStart, preserveDrawingBufferEnd,
     );
     expect(preserveDrawingBuffer).toContain("get('smokeSoftnessVfxAudit') === '1'");
+  });
+
+  it('keeps E33 Smoke billow depth exact-style, E27-dependent, normal-WebGL-only, and RGB-only', () => {
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const canvasSource = readFileSync(new URL('./field-renderer.ts', import.meta.url), 'utf8');
+    const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');
+    const normalStart = source.indexOf('const FIELD_FRAGMENT = `', eightStart);
+    const normalEnd = source.indexOf('`;\n\n/** Primary WebGL presentation', normalStart);
+    const eight = source.slice(eightStart, normalStart);
+    const normal = source.slice(normalStart, normalEnd);
+    const e27Start = normal.indexOf('      // E27:');
+    const e33Start = normal.indexOf('        // E33:', e27Start);
+    const e33End = normal.indexOf('      // E25:', e33Start);
+    const e33Parent = normal.slice(e27Start, e33End);
+    const e33 = normal.slice(e33Start, e33End);
+    const preserveDrawingBufferStart = source.indexOf('preserveDrawingBuffer:');
+    const preserveDrawingBufferEnd = source.indexOf(
+      'resolution: outputScale', preserveDrawingBufferStart,
+    );
+    const preserveDrawingBuffer = source.slice(
+      preserveDrawingBufferStart, preserveDrawingBufferEnd,
+    );
+
+    expect(eightStart).toBeGreaterThanOrEqual(0);
+    expect(normalStart).toBeGreaterThan(eightStart);
+    expect(normalEnd).toBeGreaterThan(normalStart);
+    expect(e27Start).toBeGreaterThanOrEqual(0);
+    expect(e33Start).toBeGreaterThan(e27Start);
+    expect(e33End).toBeGreaterThan(e33Start);
+    expect(normal).toContain('uniform float uSmokeBillowDepthVfx;');
+    expect(normal.match(/uSmokeBillowDepthVfx > 0\.5/g)).toHaveLength(1);
+    expect(eight).not.toContain('uSmokeBillowDepthVfx');
+    expect(eight).not.toContain('smokeBillowDepthVfx');
+    expect(canvasSource).not.toContain('smokeBillowDepthVfx');
+    for (const parentGuard of [
+      'uSmokeSoftnessVfx > 0.5', 'uGasIdentityStyling > 0.5',
+      'wall < 0.5', '!materialEmissive',
+      'floor(gasStyleState.r * 255.0 + 0.5)',
+      'abs(smokeSoftnessStyle - 1.0)', 'smokeSoftnessOwner',
+    ]) expect(e33Parent).toContain(parentGuard);
+    for (const establishedInput of [
+      'uSmokeBillowDepthVfx > 0.5', 'smokeSoftnessMacroFold',
+      'gasVfxBillow', 'gasDirectionalRelief', 'gasVfxBodySupport',
+      'cloudNeighbourMean', 'atmosphereState.a',
+    ]) expect(e33).toContain(establishedInput);
+    expect(e33).toContain('smoothstep(0.20, 0.56, cloudNeighbourMean)');
+    expect(e33).toContain('smoothstep(0.34, 0.72, atmosphereState.a)');
+    expect(e33).not.toContain('gasVfxWaveA');
+    expect(e33).not.toContain('gasVfxWaveB');
+    expect(e33).not.toContain('sin(');
+    expect(e33).not.toContain('cos(');
+    expect(e33).not.toMatch(/\bnoise\b/i);
+    expect(e33).not.toContain('texture(');
+    expect(e33).not.toContain('uTime');
+    expect(e33).not.toContain('gl_FragCoord');
+    expect(e33).not.toMatch(/\balpha\s*[+*]?=/);
+    expect(e33).not.toMatch(/\b(?:atmosphereState|finalColor)\.a\s*[+*]?=/);
+    expect(source.match(/this\.uniforms\.uniforms\.uSmokeBillowDepthVfx = 0;/g))
+      .toHaveLength(2);
+    expect(source).toMatch(
+      /const smokeBillowDepthVfxEnabled = outputScale < 8\s*&& resolveSmokeBillowDepthVfxEnabled\(renderLook\);/,
+    );
+    expect(source).toContain(
+      'uSmokeBillowDepthVfx: { value: smokeBillowDepthVfxEnabled ? 1 : 0',
+    );
+    expect(preserveDrawingBuffer).toContain("get('smokeBillowDepthVfxAudit') === '1'");
+    expect(source).toContain('presenter.app.canvas.dataset.smokeBillowDepthVfx');
+    expect(source).toContain("this.app.canvas.dataset.smokeBillowDepthVfx = 'inactive';");
   });
 
   it('routes E08 liquid surfaces through existing normal-scale HDR resources only', () => {

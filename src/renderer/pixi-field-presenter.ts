@@ -48,6 +48,7 @@ import {
   resolveGasMotionVfxEnabled,
   resolveNobleGasBillowVfxEnabled,
   resolveNobleGasPrismVfxEnabled,
+  resolveSmokeBillowDepthVfxEnabled,
   resolveSmokeSoftnessVfxEnabled,
   resolveLiquidBodyVfxEnabled, resolveLiquidSolidMeniscusVfxEnabled,
   resolveLiquidSurfaceVfxEnabled,
@@ -3243,6 +3244,7 @@ uniform float uGasCoreDepthVfx;
 uniform float uNobleGasBillowVfx;
 uniform float uNobleGasPrismVfx;
 uniform float uSmokeSoftnessVfx;
+uniform float uSmokeBillowDepthVfx;
 uniform float uPlasmaCoreVfx;
 uniform float uSolidBodyVfx;
 uniform float uRockRoughnessVfx;
@@ -6398,6 +6400,30 @@ void main() {
           * smokeSoftnessKey * smokeSoftnessCrown;
         color *= vec3(1.0)
           - vec3(0.28, 0.20, 0.14) * smokeSoftnessPocket;
+
+        // E33: E27 makes exact Smoke coherent and soft, but its dense core is
+        // still nearly flat at fit view. Reuse that accepted broad fold and
+        // E04's already-live density proof for a deeper bipolar soot volume.
+        // Only propagated style 1 with connected core support can respond.
+        // RGB only: no new wave, sample, texture, field, pass, target, upload,
+        // allocation, clock, alpha, support, silhouette, ownership, topology,
+        // state, or physics decision. Canvas and compact true 8x retain E27.
+        if (uSmokeBillowDepthVfx > 0.5) {
+          float smokeDepthSupport = smokeSoftnessOwner * gasVfxBodySupport
+            * smoothstep(0.20, 0.56, cloudNeighbourMean)
+            * smoothstep(0.34, 0.72, atmosphereState.a);
+          float smokeDepthPhase = clamp(
+            smokeSoftnessMacroFold * 0.72 + gasVfxBillow * 0.28
+              + gasDirectionalRelief * 0.06,
+            -1.0, 1.0
+          );
+          float smokeDepthCrown = max(smokeDepthPhase, 0.0) * smokeDepthSupport;
+          float smokeDepthPocket = max(-smokeDepthPhase, 0.0) * smokeDepthSupport;
+          color += (vec3(1.10) - clamp(color, 0.0, 1.10))
+            * vec3(0.72, 0.60, 0.50) * smokeDepthCrown * 0.400;
+          color *= vec3(1.0)
+            - vec3(0.30, 0.22, 0.16) * smokeDepthPocket * 0.340;
+        }
       }
 
       // E25: the media-aware fit-view rank found that the otherwise coherent
@@ -10041,6 +10067,10 @@ export class PixiFieldPresenter {
     // declare neither this selector nor a parallel branch.
     const smokeSoftnessVfxEnabled = outputScale < 8
       && resolveSmokeSoftnessVfxEnabled(renderLook);
+    // E33 reuses E27's exact-Smoke fold only in dense connected cores. Canvas
+    // and compact true 8x keep the accepted E27 presentation.
+    const smokeBillowDepthVfxEnabled = outputScale < 8
+      && resolveSmokeBillowDepthVfxEnabled(renderLook);
     // E16 is RGB arithmetic over normal WebGL's existing semantic Energy core
     // and centre emission sample. The compact true-8x shader has no selector or
     // parallel branch and retains its established register/resource budget.
@@ -10137,6 +10167,7 @@ export class PixiFieldPresenter {
       uNobleGasBillowVfx: { value: nobleGasBillowVfxEnabled ? 1 : 0, type: 'f32' },
       uNobleGasPrismVfx: { value: nobleGasPrismVfxEnabled ? 1 : 0, type: 'f32' },
       uSmokeSoftnessVfx: { value: smokeSoftnessVfxEnabled ? 1 : 0, type: 'f32' },
+      uSmokeBillowDepthVfx: { value: smokeBillowDepthVfxEnabled ? 1 : 0, type: 'f32' },
       uPlasmaCoreVfx: { value: plasmaCoreVfxEnabled ? 1 : 0, type: 'f32' },
       uSolidBodyVfx: { value: solidBodyVfxEnabled ? 1 : 0, type: 'f32' },
       uRockRoughnessVfx: { value: rockRoughnessVfxEnabled ? 1 : 0, type: 'f32' },
@@ -10371,6 +10402,7 @@ export class PixiFieldPresenter {
       this.uniforms.uniforms.uNobleGasBillowVfx = 0;
       this.uniforms.uniforms.uNobleGasPrismVfx = 0;
       this.uniforms.uniforms.uSmokeSoftnessVfx = 0;
+      this.uniforms.uniforms.uSmokeBillowDepthVfx = 0;
       this.uniforms.uniforms.uPlasmaCoreVfx = 0;
       this.uniforms.uniforms.uSolidBodyVfx = 0;
       this.uniforms.uniforms.uRockRoughnessVfx = 0;
@@ -10426,6 +10458,7 @@ export class PixiFieldPresenter {
             || new URLSearchParams(location.search).get('nobleGasBillowVfxAudit') === '1'
             || new URLSearchParams(location.search).get('nobleGasPrismVfxAudit') === '1'
             || new URLSearchParams(location.search).get('smokeSoftnessVfxAudit') === '1'
+            || new URLSearchParams(location.search).get('smokeBillowDepthVfxAudit') === '1'
             || new URLSearchParams(location.search).get('plasmaCoreVfxAudit') === '1'
             || new URLSearchParams(location.search).get('solidBodyVfxAudit') === '1'
             || new URLSearchParams(location.search).get('rockRoughnessVfxAudit') === '1'
@@ -10491,6 +10524,9 @@ export class PixiFieldPresenter {
     ) > 0.5 ? 'active' : 'inactive';
     presenter.app.canvas.dataset.smokeSoftnessVfx = Number(
       presenter.uniforms.uniforms.uSmokeSoftnessVfx
+    ) > 0.5 ? 'active' : 'inactive';
+    presenter.app.canvas.dataset.smokeBillowDepthVfx = Number(
+      presenter.uniforms.uniforms.uSmokeBillowDepthVfx
     ) > 0.5 ? 'active' : 'inactive';
     presenter.app.canvas.dataset.plasmaCoreVfx = Number(
       presenter.uniforms.uniforms.uPlasmaCoreVfx
@@ -11931,6 +11967,7 @@ export class PixiFieldPresenter {
         this.uniforms.uniforms.uNobleGasBillowVfx = 0;
         this.uniforms.uniforms.uNobleGasPrismVfx = 0;
         this.uniforms.uniforms.uSmokeSoftnessVfx = 0;
+        this.uniforms.uniforms.uSmokeBillowDepthVfx = 0;
         this.uniforms.uniforms.uPlasmaCoreVfx = 0;
         this.uniforms.uniforms.uSolidBodyVfx = 0;
         this.uniforms.uniforms.uRockRoughnessVfx = 0;
@@ -11963,6 +12000,7 @@ export class PixiFieldPresenter {
         this.app.canvas.dataset.nobleGasBillowVfx = 'inactive';
         this.app.canvas.dataset.nobleGasPrismVfx = 'inactive';
         this.app.canvas.dataset.smokeSoftnessVfx = 'inactive';
+        this.app.canvas.dataset.smokeBillowDepthVfx = 'inactive';
         this.app.canvas.dataset.plasmaCoreVfx = 'inactive';
         this.app.canvas.dataset.solidBodyVfx = 'inactive';
         this.app.canvas.dataset.rockRoughnessVfx = 'inactive';

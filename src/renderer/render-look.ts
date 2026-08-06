@@ -172,6 +172,22 @@ export function resolveSmokeSoftnessVfxEnabled(
 }
 
 /**
+ * E33 deepens only the connected exact-Smoke body after E27 has established
+ * its soft soot fold. This child cannot revive E04/E27 and remains separately
+ * switchable for billow-depth, topology, and recovery audits.
+ */
+export function resolveSmokeBillowDepthVfxEnabled(
+  look: RenderLook,
+  search = globalThis.location?.search ?? '',
+): boolean {
+  if (!resolveSmokeSoftnessVfxEnabled(look, search)) return false;
+  const requested = new URLSearchParams(search).get('smokeBillowDepthVfx');
+  if (requested === '0' || requested === 'off' || requested === 'false') return false;
+  if (requested === '1' || requested === 'on' || requested === 'true') return true;
+  return true;
+}
+
+/**
  * Re-composes only exact Noble Gas billows after E04 has established the
  * connected, atmosphere-owned gas body. The child selector may refine that
  * species' volume cues, but it cannot recreate E04 when the parent gas-body

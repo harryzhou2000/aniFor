@@ -481,11 +481,33 @@ does not alter simulation, camera, semantic ownership, or `renderScale`.
   microcontrast is `1.70`/`1.93`/`2.07`, chroma is
   `1.66`/`1.75`/`1.77`, and macro range is `36`/`36`/`36`; dark and clipped
   fractions remain zero.
+- **E33 — exact Smoke billow depth (accepted visual checkpoint):** normal
+  1×–4× WebGL uses `?smokeBillowDepthVfx=0|1` as a strict child of E27 soft
+  volume and E04 atmosphere ownership. Only propagated atmosphere style `1`
+  that inherits E27's connected-body, cardinal-neighbour, wall, and
+  non-emissive Smoke proof may respond. It recombines only the accepted static
+  fold/billow, directional relief, connected-body support, cardinal-neighbour
+  density, and atmosphere alpha into a bounded RGB-only deep soot-volume
+  response. It adds no wave, noise, sample, texture, field, resource, pass,
+  target, upload, allocation,
+  clock, alpha/support, silhouette, ownership, topology, state, or physics
+  decision. Canvas and compact true 8× remain excluded. `npm run
+  audit:vfx:smoke-billow-depth` proves off→on→off at 1×/2×/4×, deep/crown/
+  pocket and density mid/rim response, 18 exact controls including the
+  authored void/channel, and only two bounded SMKE/FOG interface footprints.
+  Requested-on true 8× keeps E04/E15/E25/E27/E33/HDR inactive for `scale-8`,
+  promotes exact 4896×3072, and signals a real GPU fence in about `5.2 s` with
+  zero browser errors. The full production matrix is `crossScaleVerified=true`
+  and `fullScaleMatrix=true`: semantic hash remains `595518258`, support recall
+  is `1`, coverage `.647`, and dark/clipped fractions plus browser errors are
+  zero. Smoke quality is `100` at 1×/2×/4×; luma SD is `4.12` throughout,
+  microcontrast `.43`/`.46`/`.48`, chroma `.55`/`.57`/`.58`, macro range `18`,
+  and luma range `20`/`21`/`21`.
 - **Protected 8× rung:** `renderScale=8` deliberately reports
   `hdrPipeline=inactive` / `scale-8` and retains the proven direct single-mesh
   4896×3072 path. The experiment must earn a bounded 8× design rather than
   allocating a 115 MiB full-resolution float target beside that path.
-- **Current decision:** E01/E02/E03/E04/E05/E06/E07/E08/E09/E10/E11/E12/E13/E14/E15/E16/E17/E18/E19/E20/E21/E22/E23/E24/E25/E26/E27/E28/E29/E30/E31/E32 remain opt-in through the non-Classic looks
+- **Current decision:** E01/E02/E03/E04/E05/E06/E07/E08/E09/E10/E11/E12/E13/E14/E15/E16/E17/E18/E19/E20/E21/E22/E23/E24/E25/E26/E27/E28/E29/E30/E31/E32/E33 remain opt-in through the non-Classic looks
   until representative hardware timing and mobile thermal behavior are
   measured. E02 remains the safe family-wide baseline. E03 is accepted as the
   liquid-depth checkpoint: its fit-view crop is visibly more cohesive, retains
@@ -612,6 +634,12 @@ does not alter simulation, camera, semantic ownership, or `renderScale`.
   gated world-anchored 2.8-cell value-noise octave, and compact-8× exclusion.
   Do not widen it to stateful PLNT, add another octave, or turn its RGB grain
   into silhouette or topology.
+  E33 is the accepted exact-Smoke billow-depth checkpoint: freeze its E27/E04
+  dependency chain, propagated-style-1 connected Smoke proof, and reuse of the
+  accepted static fold/billow, directional relief, connected-body support,
+  cardinal-neighbour density, and atmosphere alpha. Do not add a
+  wave/noise/resource or widen its RGB response
+  into support, topology, state, or the compact 8× path.
   These are not the final material/VFX results.
   Sub-1.0 material colour stays on the established response; tonemapping owns
   only real HDR highlights so powder texture and liquid body contrast are not
@@ -1175,6 +1203,25 @@ semantic hash `595518258`, and zero browser errors. PLNT quality is
 three scales. Luma SD is `7.90`/`7.99`/`8.06`, microcontrast is
 `1.70`/`1.93`/`2.07`, and chroma is `1.66`/`1.75`/`1.77`.
 
+Run `npm run audit:vfx:smoke-billow-depth` for E33. It isolates E04+E27 and
+runs `smokeBillowDepthVfx=0 → 1 → 0` at normal WebGL 1×/2×/4× while pinning
+unrelated optional selectors off. Exact Smoke deep/crown/pocket and density
+mid/rim targets respond; 18 controls, including the authored void/channel,
+remain exact apart from the two named bounded SMKE/FOG interface footprints.
+Semantic and atmosphere state, alpha/support, native walls, CSS/backing
+geometry, and the disabled framebuffer remain exact, with repeated-off peak
+zero. The effect only recombines E27's accepted static signals; it adds no
+wave, noise, texture, field, GPU resource, or state/topology decision.
+Requested-on true 8× promotes exact 4896×3072 WebGL while E04/E15/E25/E27/E33/
+HDR remain inactive for `scale-8`; the accepted tail signals a real GPU fence
+in about `5.2 s` with zero browser errors. The final production rerun keeps HDR
+and E33 active at 1×/2×/4× with `crossScaleVerified=true`,
+`fullScaleMatrix=true`, and exact semantic hash `595518258`. Smoke quality is
+`100` at every scale; support recall is `1`, coverage `.647`, luma SD `4.12`,
+microcontrast `.43`/`.46`/`.48`, chroma `.55`/`.57`/`.58`, macro range `18`,
+and luma range `20`/`21`/`21`; dark/clipped fractions and browser errors are
+zero.
+
 The earlier post-E16 survey was invalid for Solid: it sampled native Stone `21`,
 which is Powder, while labelling that region Solid. The corrected post-E17
 showcase uses native ROCK `78`, asserts exactly `2769` matching Solid cells, and
@@ -1256,16 +1303,18 @@ next production 4× survey then selected Wood/PLNT as the largest remaining
   `52.710` to `95.351`/`95.463`/`95.463` at 1×/2×/4×, with full support recall
   and zero clipping. E32 then raises canonical 2× PLNT from `56.122` to
   `78.733`, with microcontrast/chroma/macro `1.93`/`1.75`/`36`, luma SD/range
-  `7.99`/`42`, support/component `1`, and zero clipping. Smoke at `66.914` is
-  now the weakest canonical family probe, Organic/PLNT at `78.733` is second,
-  followed by Contact `88.235`, Solid `90.2`, Liquid `91.033`, Emission
-  `98.475`, and Powder `100.000`. Wood's `80.251` remains an individual
-  historical E30 probe, not a family-rank entry. Do not widen E17–E32
+  `7.99`/`42`, support/component `1`, and zero clipping. E33 then raises
+  canonical Smoke from E27's `66.914` to `100.000` while retaining exact
+  semantic support and topology. Organic/PLNT at `78.733` is now the weakest
+  canonical family probe, followed by Contact `88.235`, Solid `90.2`, Liquid
+  `91.033`, Gas `95.463`, Emission `98.475`, and Powder `100.000`.
+  Wood's `80.251` remains an individual historical E30 probe, not a family-rank
+  entry. Do not widen E17–E33
   owner sets by resemblance alone or stack
   another generic gas layer over E04/E07/E13/E15; preserve their independent
   owner, exposure, topology, scale, and true-8× contracts.
 
-**Next visual experiments:** E03–E32 now provide accepted liquid body/surface,
+**Next visual experiments:** E03–E33 now provide accepted liquid body/surface,
 stable-gas, coherent-gas-motion, powder-depth, and powder-local-light
 checkpoints plus exact resting contact grounding, Glass/Ice transmission, and
 state-aware Wax/PLNT subsurface response, composed wet-mineral optics,
@@ -1276,7 +1325,8 @@ Ceramic fired-glaze response, recomposed clustered Wood/PLNT bodies, and deep
 Glass selective transmission, exact Oil amber-crown/cool-pocket body optics,
 an exact ROCK matte-body correction over E17, lower-anisotropy exact-Water
 depth-light recomposition, exact Noble Gas pearlescent billow depth, exact
-Wood/PLNT mesostructure, and exact Smoke soft soot volume. E27's final
+Wood/PLNT mesostructure, exact Smoke soft soot volume, and exact Smoke
+billow-depth. E27's final
 canonical 2× Smoke result is luma deviation `2.22`, microcontrast `.39`, macro
 range `10`, luma range `14`, full support recall, and no clipping. E28 adds
 exact Wood/PLNT pigment/body depth without disturbing E20/E26 topology or
@@ -1286,12 +1336,14 @@ audit passed. E30 adds exact Wood interrupted bark relief without changing
 PLNT, lifecycle state, or topology. E31 adds an exact Noble Gas prismatic
 inner-volume fold without changing atmosphere ownership, topology, or compact
 8×. E32 adds exact zero-state/presence-only PLNT lamina grain without changing
-lifecycle state, topology, or compact 8×. Noble quality is `95.463` at
-canonical 2×; the current canonical family order is Smoke `66.914`, PLNT
-`78.733`, Contact `88.235`, Solid `90.2`, Liquid `91.033`, Emission `98.475`,
-and Powder `100.000`. The earlier Wood `80.251` value remains its individual
-E30 probe, not a family-rank entry. Review the exact Smoke fit-view fixture
-before adding another volumetric gas layer. The
+lifecycle state, topology, or compact 8×. E33 adds exact Smoke billow depth
+without changing atmosphere ownership, topology, Canvas, or compact 8×. Noble
+quality is `95.463` at canonical 2×; the current canonical family order is
+PLNT `78.733`, Contact `88.235`, Solid `90.2`, Liquid `91.033`, Gas `95.463`,
+Emission `98.475`, and Powder `100.000`. The earlier Wood `80.251`
+value remains its individual E30 probe, not a family-rank entry. Do not stack
+another volumetric gas layer without a demonstrated exact-owner fit-view gap.
+The
 radioactive-solid review
 found no current identity bug, but also
 proved that the existing
@@ -1301,7 +1353,7 @@ with topology-preserving, material-
 specific cards that reuse already-live evidence. Prefer the smallest
 arithmetic-only candidate that fixes a visible fit-view deficiency; do not add
 an isolated tint merely to continue the experiment number. Preserve the E14
-1× stencil snap and all E01–E32 selectors and controls while designing the
+1× stencil snap and all E01–E33 selectors and controls while designing the
 next bounded card.
 
 ## Phase 1 — HDR pipeline & lighting core (biggest visual payoff)

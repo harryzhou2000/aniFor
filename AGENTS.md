@@ -13,7 +13,7 @@ powder, solid, liquid, gas, energy, and contact scenes across Canvas and WebGL a
 mobile gestures, save/load, CI, and Pages deployment as protected regression
 contracts rather than the primary feature stream.
 
-The accepted visual experiment ladder now runs through E32. E12 is the
+The accepted visual experiment ladder now runs through E33. E12 is the
 species-safe Sand/Clay/Concrete wet-sediment checkpoint; preserve its exact
 aqueous owner/stability proof, split moving-powder/stationary-Water control,
 Local/Grains no-op, fine structures, authored gaps, Canvas fallback, and true
@@ -477,6 +477,29 @@ At 1×/2×/4×, PLNT quality is `69.928`/`78.733`/`82.641`, support recall is
 `1.66`/`1.75`/`1.77`, and macro range remains `36` at every scale. Dark and
 clipped fractions remain zero.
 
+E33 is the accepted normal-WebGL-only exact-Smoke billow-depth checkpoint.
+`?smokeBillowDepthVfx=0|1` is a strict child of E27 soft volume and E04
+atmosphere ownership. It may style only propagated atmosphere style `1` that
+inherits E27's connected-body, cardinal-neighbour, wall, and non-emissive
+Smoke proof. It reuses E27's accepted static fold/billow, E04 directional
+relief, connected-body support, cardinal-neighbour density, and atmosphere
+alpha for a bounded RGB-only deep soot-volume response. It adds no wave,
+noise, sample, texture, field, resource, pass, target, upload, allocation,
+clock, alpha, support, silhouette, ownership,
+topology, state, or physics decision. Oxygen, Hydrogen, Noble Gas, FOG, CFLM,
+sparse carriers/gaps, contacts, walls, Canvas, and compact true 8× remain
+controls. `npm run audit:vfx:smoke-billow-depth` proves 1×/2×/4× off→on→off,
+deep/crown/pocket plus density mid/rim response, 18 exact controls including
+the authored void/channel, and only two bounded SMKE/FOG interface footprints.
+Requested-on true 8× keeps E04/E15/E25/E27/E33/HDR inactive for `scale-8`,
+promotes exact 4896×3072 WebGL, signals a real GPU fence in about `5.2 s`, and
+reports zero browser errors. The full production matrix is
+`crossScaleVerified=true` and `fullScaleMatrix=true` with identical semantic
+hash `595518258`, support recall `1`, coverage `.647`, and zero dark/clipped
+fractions or browser errors. Smoke quality is `100` at 1×/2×/4×; luma SD is
+`4.12` throughout, microcontrast `.43`/`.46`/`.48`, chroma
+`.55`/`.57`/`.58`, macro range `18` throughout, and luma range `20`/`21`/`21`.
+
 The radioactive-solid review found no current correctness bug: ISZS `105`
 and VIBR `113` already receive exact-species Solid depth, while the existing
 seven-owner radioactive identity motif is intentionally phase-permissive.
@@ -551,13 +574,13 @@ macro is `71.833`/`1.97`/`1.29`/`26` at 1×,
 E31 raises exact Noble Gas to `95.351`/`95.463`/`95.463` quality at
 1×/2×/4×, with luma deviation about `3.51`/`3.52`/`3.52`, full support recall,
 and no clipping. E32 then raises canonical 2× PLNT from `56.122` to `78.733`
-without changing its support, dominant component, or clipping. Smoke at
-`66.914` is therefore the weakest canonical family probe, Organic/PLNT at
-`78.733` is second, followed by Contact `88.235`, Solid `90.2`, Liquid
-`91.033`, Emission `98.475`, and Powder `100.000`. Wood's `80.251` remains an
-individual historical E30 probe, not a family-rank entry. Inspect Smoke's
-current fit-view evidence before selecting the next bounded experiment, and
-never compare v3 and v4 quality indices as if they shared one scoring contract.
+without changing its support, dominant component, or clipping. E33 raises the
+same canonical Smoke probe from E27's `66.914` to `100.000` without changing
+semantic support or topology. The canonical family order is therefore
+Organic/PLNT `78.733`, Contact `88.235`, Solid `90.2`, Liquid `91.033`, Gas
+`95.463`, Emission `98.475`, and Powder `100.000`. Wood's `80.251`
+remains an individual historical E30 probe, not a family-rank entry. Never
+compare v3 and v4 quality indices as if they shared one scoring contract.
 
 WebGL is the canonical visual release path. Canvas 2D remains a resilient,
 camera-preserving semantic fallback: keep its loading, input, material/state,

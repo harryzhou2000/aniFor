@@ -13,6 +13,7 @@ import {
   resolveLiquidBodyVfxEnabled, resolveLiquidSolidMeniscusVfxEnabled,
   resolveLiquidSurfaceVfxEnabled,
   resolveNobleGasBillowVfxEnabled, resolveNobleGasPrismVfxEnabled,
+  resolveSmokeBillowDepthVfxEnabled,
   resolveSmokeSoftnessVfxEnabled,
   resolveOilBodyVfxEnabled,
   resolveOrganicSubsurfaceVfxEnabled,
@@ -190,6 +191,29 @@ describe('resolveRenderLook', () => {
     )).toBe(false);
     expect(resolveSmokeSoftnessVfxEnabled(
       'neon-lab', '?gasBodyVfx=on&smokeSoftnessVfx=off',
+    )).toBe(false);
+  });
+
+  it('keeps exact Smoke billow depth subordinate to the E27 soft-volume parent', () => {
+    expect(resolveSmokeBillowDepthVfxEnabled(
+      'classic', '?smokeSoftnessVfx=1&smokeBillowDepthVfx=1',
+    )).toBe(false);
+    expect(resolveSmokeBillowDepthVfxEnabled('realistic', '')).toBe(true);
+    expect(resolveSmokeBillowDepthVfxEnabled('neon-lab', '')).toBe(true);
+    expect(resolveSmokeBillowDepthVfxEnabled(
+      'realistic', '?gasBodyVfx=0&smokeSoftnessVfx=1&smokeBillowDepthVfx=1',
+    )).toBe(false);
+    expect(resolveSmokeBillowDepthVfxEnabled(
+      'realistic', '?smokeSoftnessVfx=0&smokeBillowDepthVfx=1',
+    )).toBe(false);
+    expect(resolveSmokeBillowDepthVfxEnabled(
+      'realistic', '?volumeVfx=0&gasBodyVfx=1&smokeSoftnessVfx=1&smokeBillowDepthVfx=on',
+    )).toBe(true);
+    expect(resolveSmokeBillowDepthVfxEnabled(
+      'neon-lab', '?smokeBillowDepthVfx=off',
+    )).toBe(false);
+    expect(resolveSmokeBillowDepthVfxEnabled(
+      'realistic', '?smokeBillowDepthVfx=false',
     )).toBe(false);
   });
 
