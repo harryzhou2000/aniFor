@@ -13,7 +13,7 @@ powder, solid, liquid, gas, energy, and contact scenes across Canvas and WebGL a
 mobile gestures, save/load, CI, and Pages deployment as protected regression
 contracts rather than the primary feature stream.
 
-The accepted visual experiment ladder now runs through E36. E12 is the
+The accepted visual experiment ladder now runs through E37. E12 is the
 species-safe Sand/Clay/Concrete wet-sediment checkpoint; preserve its exact
 aqueous owner/stability proof, split moving-powder/stationary-Water control,
 Local/Grains no-op, fine structures, authored gaps, Canvas fallback, and true
@@ -573,6 +573,39 @@ true-8× production run signalled its GPU fence at `5268.1 ms` with zero browser
 errors. The composed scorer reports PLNT `62.215`/`67.661`/`69.253` because it
 rewards the very cell-scale contrast E36 removes; do not restore the mesh to
 raise that number.
+
+E37 is the accepted normal-WebGL-only exact Metal-side Water-contact polish,
+independently measurable with `?metalWaterContactVfx=0|1` and strictly
+subordinate to both E14 liquid/Solid meniscus optics and E17 opaque-Solid body
+relief. Only authoritative Metal `23` on the Solid side of a clean exact-Water
+contact may respond; Oil/Metal, mixed Water/Metal/Smoke, unlike owners, deep
+cores, air, walls, traits, emission, reconstructed support, Canvas, and compact
+true 8× remain controls. At 1×, reuse the already-unconditional species-aware
+liquid-field sample because a cell-centred fragment cannot resolve E14's
+Hermite derivative. At 2×/4×, reuse `contactSample`'s four existing probes and
+pack the exact-Water tag above its categorical foreign bit; established
+consumers retain their `0.5` threshold while E37 alone decodes the tag above
+`1.5`. The result is RGB-only spectral separation and adds no sample, sampler,
+texture, field, resource, pass, target, upload, persistent allocation, clock,
+alpha, support, silhouette, ownership, topology, state, or physics decision.
+`npm run audit:vfx:metal-water-contact` owns the 1×/2×/4× off→on→off,
+per-scale/per-orientation response, exact-owner/control, parent-dependency, and
+byte-exact repeated-off proof; requested-on true 8× must keep E03/E14/E17/E37/
+HDR inactive for `scale-8`, with no bloom, exact 4896×3072 promotion, and a
+completed GPU fence. The accepted per-scale/per-orientation envelopes and the
+2.2 maximum cross-scale/orientation strength ratio live only in that gate; do
+not replace them with a permissive family-wide bound.
+
+The E37 shader shape is a register-pressure contract. Attempts to add another
+`occupancyShape` output or carry an extra branch-local ownership scalar blanked
+normal WebGL even though TypeScript tests passed. Packing the tag into the
+existing contact result and applying one compact response at the established
+phase-contact site restored the real browser path. Do not add an E37 output,
+second contact call, or local carrier without a production WebGL 1×/2×/4× gate
+and true-8× exclusion run. The next visual work should return to broader
+volumetric material-body aesthetics—distinctive powder, liquid, gas, solid,
+energy, transmission, reflection, and depth—not stack another narrow contact
+tint without a newly demonstrated fit-view defect.
 
 The radioactive-solid review found no current correctness bug: ISZS `105`
 and VIBR `113` already receive exact-species Solid depth, while the existing

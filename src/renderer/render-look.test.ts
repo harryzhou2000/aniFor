@@ -24,6 +24,7 @@ import {
   resolvePlatinumBodyVfxEnabled,
   resolveRockMesostructureVfxEnabled,
   resolveRockRoughnessVfxEnabled,
+  resolveMetalWaterContactVfxEnabled,
   resolveSolidBodyVfxEnabled,
   resolvePowderBodyVfxEnabled, resolvePowderLightVfxEnabled,
   resolvePowderSolidContactVfxEnabled, resolveRenderLook, resolveTranslucentEdgeVfxEnabled,
@@ -241,6 +242,30 @@ describe('resolveRenderLook', () => {
     )).toBe(true);
     expect(resolveSolidBodyVfxEnabled(
       'neon-lab', '?volumeVfx=1&solidBodyVfx=off',
+    )).toBe(false);
+  });
+
+  it('keeps Metal/Water contact VFX subordinate to both solid-body and meniscus parents', () => {
+    expect(resolveMetalWaterContactVfxEnabled(
+      'classic', '?metalWaterContactVfx=on',
+    )).toBe(false);
+    expect(resolveMetalWaterContactVfxEnabled('realistic', '')).toBe(true);
+    expect(resolveMetalWaterContactVfxEnabled('neon-lab', '')).toBe(true);
+    expect(resolveMetalWaterContactVfxEnabled(
+      'realistic', '?solidBodyVfx=0&metalWaterContactVfx=on',
+    )).toBe(false);
+    expect(resolveMetalWaterContactVfxEnabled(
+      'realistic', '?liquidSolidMeniscusVfx=0&metalWaterContactVfx=on',
+    )).toBe(false);
+    expect(resolveMetalWaterContactVfxEnabled(
+      'realistic', '?liquidBodyVfx=0&metalWaterContactVfx=on',
+    )).toBe(false);
+    expect(resolveMetalWaterContactVfxEnabled(
+      'realistic',
+      '?volumeVfx=0&solidBodyVfx=on&liquidBodyVfx=on&liquidSolidMeniscusVfx=on&metalWaterContactVfx=true',
+    )).toBe(true);
+    expect(resolveMetalWaterContactVfxEnabled(
+      'neon-lab', '?metalWaterContactVfx=false',
     )).toBe(false);
   });
 

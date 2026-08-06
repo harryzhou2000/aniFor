@@ -63,7 +63,18 @@ describe('liquid-solid meniscus VFX audit fixture', () => {
     expectRect(cells, simulation.width, fixture.mixedTripleContact.solid, Material.Metal);
     expectRect(cells, simulation.width, fixture.mixedTripleContact.foreign, Material.Smoke);
     expect(at(cells, simulation.width, fixture.mixedTripleContact.liquidProbe)).toBe(Material.Water);
+    expectRect(cells, simulation.width, fixture.oilMetalControl.liquid, Material.Oil);
+    expectRect(cells, simulation.width, fixture.oilMetalControl.solid, Material.Metal);
+    expect(at(cells, simulation.width, fixture.oilMetalControl.liquidContactProbe)).toBe(Material.Oil);
+    expect(at(cells, simulation.width, fixture.oilMetalControl.solidContactProbe)).toBe(Material.Metal);
+    expect(fixture.oilMetalControl.liquidContactProbe.x + 1)
+      .toBe(fixture.oilMetalControl.solidContactProbe.x);
+    expect(fixture.oilMetalControl.liquidContactProbe.y)
+      .toBe(fixture.oilMetalControl.solidContactProbe.y);
+    expect(intersects(fixture.oilMetalControl.liquid, fixture.oilMetalControl.solid)).toBe(false);
     expectRect(cells, simulation.width, fixture.guardedBlank, Material.Empty);
+    expect(fixture.guardedBlank.width).toBeGreaterThan(0);
+    expect(fixture.guardedBlank.height).toBeGreaterThan(0);
   });
 
   it('keeps every authored top-level region non-overlapping and inside the 612x384 world', () => {
@@ -76,6 +87,7 @@ describe('liquid-solid meniscus VFX audit fixture', () => {
       fixture.ownerControls.traitLike, fixture.ownerControls.traitLike.owner,
       fixture.ownerControls.emissive, fixture.ownerControls.emissive.owner, fixture.guardedBlank,
       fixture.mixedTripleContact.liquid, fixture.mixedTripleContact.solid, fixture.mixedTripleContact.foreign,
+      fixture.oilMetalControl.liquid, fixture.oilMetalControl.solid,
     ];
     for (const region of regions) {
       expect(region.x).toBeGreaterThanOrEqual(0);

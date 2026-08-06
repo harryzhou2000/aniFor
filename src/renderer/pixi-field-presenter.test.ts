@@ -820,6 +820,58 @@ describe('Pixi presenter startup configuration', () => {
     expect(source).toContain("this.app.canvas.dataset.solidBodyVfx = 'inactive';");
   });
 
+  it('keeps E37 exact Metal/Water contact polish parented, compact, and RGB-only', () => {
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const canvasSource = readFileSync(new URL('./field-renderer.ts', import.meta.url), 'utf8');
+    const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');
+    const normalStart = source.indexOf('const FIELD_FRAGMENT = `', eightStart);
+    const normalEnd = source.indexOf('`;\n\n/** Primary WebGL presentation', normalStart);
+    const eight = source.slice(eightStart, normalStart);
+    const normal = source.slice(normalStart, normalEnd);
+    const e37Start = normal.indexOf('  // E37:');
+    const e37End = normal.indexOf('  // Geological owners', e37Start);
+    const e37 = normal.slice(e37Start, e37End);
+
+    expect(e37Start).toBeGreaterThanOrEqual(0);
+    expect(e37End).toBeGreaterThan(e37Start);
+    expect(normal).toContain('uniform float uMetalWaterContactVfx;');
+    expect(eight).not.toContain('uMetalWaterContactVfx');
+    expect(eight).not.toContain('metalWaterContactVfx');
+    expect(canvasSource).not.toContain('metalWaterContactVfx');
+    expect(normal).toContain('abs(candidate - 2.0) < 0.5 ? 1.0 : 0.0');
+    expect(normal).toContain('float packedForeignMatter = foreignMatter + exactWaterCandidate;');
+    expect(normal.match(/contactSample\(/g)).toHaveLength(5);
+    expect(e37).toContain('uMetalWaterContactVfx > 0.5');
+    expect(e37).toContain('uSolidBodyVfx > 0.5');
+    expect(e37).toContain('uLiquidSolidMeniscusVfx > 0.5');
+    expect(e37).toContain('phaseContactOwner > 0.5');
+    expect(e37).toContain('material == 23.0');
+    expect(e37).toContain('foreignMatterContact > 1.5');
+    expect(e37).toContain('crossPhaseContact.x > 0.5');
+    expect(e37).toContain('crossPhaseContact.y < 0.5');
+    expect(e37).toContain('unlikeMaterialContact < 0.5');
+    expect(e37).toContain('liquidState.a > 0.25');
+    expect(e37).toContain('vec3(92.0, 185.0, 200.0) / 255.0');
+    expect(e37).toContain('1.0 - step(1.5, uMetalWaterContactVfx)');
+    expect(e37).toContain('* (2.0 / 255.0)');
+    expect(e37).toContain('max(phaseContactTone, 0.0)');
+    expect(e37).toContain('max(-phaseContactTone, 0.0)');
+    expect(e37).not.toContain('contactSample(');
+    expect(e37).not.toContain('texture(');
+    expect(e37).not.toContain('uTime');
+    expect(e37).not.toContain('gl_FragCoord');
+    expect(e37).not.toMatch(/\b(?:float|vec[234])\s+[A-Za-z_]/);
+    expect(e37).not.toMatch(/\b(?:alpha|support)\s*[+*]?=/);
+    expect(source).toContain('value: metalWaterContactVfxEnabled ? outputScale : 0');
+    expect(source.match(/this\.uniforms\.uniforms\.uMetalWaterContactVfx = 0;/g)).toHaveLength(2);
+    expect(source).toContain('presenter.app.canvas.dataset.metalWaterContactVfx');
+    expect(source).toContain("this.app.canvas.dataset.metalWaterContactVfx = 'inactive';");
+    expect(source).toContain("get('metalWaterContactVfxAudit') === '1'");
+    expect(source).toMatch(
+      /const metalWaterContactVfxEnabled = outputScale < 8\s*&& resolveMetalWaterContactVfxEnabled\(renderLook\);/,
+    );
+  });
+
   it('keeps E18 Platinum body optics exact-owner and normal-WebGL-only', () => {
     const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
     const canvasSource = readFileSync(new URL('./field-renderer.ts', import.meta.url), 'utf8');

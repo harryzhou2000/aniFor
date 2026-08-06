@@ -54,6 +54,7 @@ import {
   resolveSmokeBillowDepthVfxEnabled,
   resolveSmokeSoftnessVfxEnabled,
   resolveLiquidBodyVfxEnabled, resolveLiquidSolidMeniscusVfxEnabled,
+  resolveMetalWaterContactVfxEnabled,
   resolveLiquidSurfaceVfxEnabled,
   resolveOilBodyVfxEnabled,
   resolveWaterBodyVfxEnabled,
@@ -3267,6 +3268,7 @@ uniform float uLiquidBodyVfx;
 uniform float uOilBodyVfx;
 uniform float uWaterBodyVfx;
 uniform float uLiquidSolidMeniscusVfx;
+uniform float uMetalWaterContactVfx;
 uniform float uPowderBodyVfx;
 uniform float uPowderLightVfx;
 uniform float uPowderSolidContactVfx;
@@ -5073,6 +5075,7 @@ vec3 sourceTargetDelta(float material, vec2 stateBytes, vec2 position) {
 }
 vec4 contactSample(vec2 uv, float material, float family) {
   float candidate = materialAt(uv);
+  float exactWaterCandidate = abs(candidate - 2.0) < 0.5 ? 1.0 : 0.0;
   if (abs(candidate - material) < 0.5) return vec4(1.0, 0.0, 0.0, 0.0);
   if (candidate < 0.5) return vec4(0.0);
   vec4 candidateStyle = texture(
@@ -5082,7 +5085,11 @@ vec4 contactSample(vec2 uv, float material, float family) {
   float candidateTraits = floor(candidateStyle.a * 255.0 + 0.5);
   float ordinaryCandidate = candidateStyle.b < 0.5 && candidateTraits < 0.5
     && candidate != 3.0 ? 1.0 : 0.0;
+  // Preserve the established categorical foreign bit in the low range and
+  // carry an exact-Water tag above one. Existing consumers compare only with
+  // the 0.5 categorical threshold; E37 decodes > 1.5 from the same probes.
   float foreignMatter = candidateFamily != family ? 1.0 : 0.0;
+  float packedForeignMatter = foreignMatter + exactWaterCandidate;
   // The third component marks only cross-phase contacts that can be lit without
   // another semantic/style probe. A solid deliberately does not mark powder:
   // its neighbour stability is unavailable here, so only the authoritative
@@ -5100,14 +5107,14 @@ vec4 contactSample(vec2 uv, float material, float family) {
   // moving powder support, so gas/liquid/powder contact cannot wobble its edge.
   if (family == 0.0 && candidateFamily == 0.0) return vec4(1.0, 1.0, 0.0, 0.0);
   if (family == 4.0 && (candidateFamily == 4.0 || candidateFamily == 0.0)) {
-    return vec4(1.0, 0.0, crossPhase, foreignMatter);
+    return vec4(1.0, 0.0, crossPhase, packedForeignMatter);
   }
   if ((family == 1.0 || family == 2.0) && candidateFamily == family) {
     // The second component is otherwise solid-contact-only. Liquid consumes it
     // as an exact unlike-species marker, avoiding an RGB-distance heuristic.
     return vec4(1.0, 1.0, 0.0, 0.0);
   }
-  return vec4(0.0, 0.0, crossPhase, foreignMatter);
+  return vec4(0.0, 0.0, crossPhase, packedForeignMatter);
 }
 vec4 occupancyShape(
   vec2 uv, float material, float family, float contourSmoothing,
@@ -9414,6 +9421,27 @@ void main() {
     phaseContactLight * (4.0 / 255.0), -6.0 / 255.0, 6.0 / 255.0
   ) * phaseContactOwner * stablePhaseContact * uPhaseContactLighting;
   color += vec3(phaseContactTone);
+  // E37: reuse the established signed contact band for the exact submerged
+  // Metal/Water pair. contactSample packs exact Water above its categorical
+  // foreign bit, so this adds no sample, output, or branch-local carrier.
+  if (uMetalWaterContactVfx > 0.5 && uSolidBodyVfx > 0.5
+    && uLiquidSolidMeniscusVfx > 0.5 && phaseContactOwner > 0.5
+    && material == 23.0
+    && ((uMetalWaterContactVfx > 1.5
+      && foreignMatterContact > 1.5 && crossPhaseContact.x > 0.5)
+      || (uMetalWaterContactVfx < 1.5 && liquidState.a > 0.25
+        && distance(liquidState.rgb, vec3(92.0, 185.0, 200.0) / 255.0)
+          < 1.5 / 255.0))
+    && crossPhaseContact.y < 0.5 && unlikeMaterialContact < 0.5) {
+    // As in E14, a 1x fragment lands at the cell centre and cannot resolve the
+    // Hermite derivative. Its already-unconditional species-aware liquid-field
+    // sample supplies an orientation-independent direct-contact proof; 2x/4x
+    // retain the exact semantic tag above. No new sample or uniform is added.
+    phaseContactTone -= (1.0 - step(1.5, uMetalWaterContactVfx))
+      * (2.0 / 255.0);
+    color += max(phaseContactTone, 0.0) * vec3(0.95, 0.25, -0.80)
+      + max(-phaseContactTone, 0.0) * vec3(0.78, 0.10, -0.82);
+  }
   // Geological owners may use the shared solid-body proof even when their
   // optical class is granular (Coal). Keeping this after the family branches
   // avoids making owner identity depend on the generic Smooth path, while the
@@ -10298,6 +10326,10 @@ export class PixiFieldPresenter {
     // probes. The compact true-8x shader declares neither selector nor branch.
     const liquidSolidMeniscusVfxEnabled = outputScale < 8
       && resolveLiquidSolidMeniscusVfxEnabled(renderLook);
+    // E37 polishes only the exact Metal side of E14's clean Water/Solid pair.
+    // It reuses the normal shader's four contact probes and is absent at 8x.
+    const metalWaterContactVfxEnabled = outputScale < 8
+      && resolveMetalWaterContactVfxEnabled(renderLook);
     // E08 is a normal-detail HDR-composite experiment. Its displaced transport
     // reuses existing presenter textures and never enters the direct 8x shader.
     const liquidSurfaceVfxEnabled = outputScale < 8
@@ -10343,6 +10375,9 @@ export class PixiFieldPresenter {
       uWaterBodyVfx: { value: waterBodyVfxEnabled ? 1 : 0, type: 'f32' },
       uLiquidSolidMeniscusVfx: {
         value: liquidSolidMeniscusVfxEnabled ? outputScale : 0, type: 'f32',
+      },
+      uMetalWaterContactVfx: {
+        value: metalWaterContactVfxEnabled ? outputScale : 0, type: 'f32',
       },
       uPowderBodyVfx: { value: powderBodyVfxEnabled ? 1 : 0, type: 'f32' },
       uPowderLightVfx: { value: powderLightVfxEnabled ? 1 : 0, type: 'f32' },
@@ -10578,6 +10613,7 @@ export class PixiFieldPresenter {
       this.uniforms.uniforms.uOilBodyVfx = 0;
       this.uniforms.uniforms.uWaterBodyVfx = 0;
       this.uniforms.uniforms.uLiquidSolidMeniscusVfx = 0;
+      this.uniforms.uniforms.uMetalWaterContactVfx = 0;
       this.uniforms.uniforms.uPowderBodyVfx = 0;
       this.uniforms.uniforms.uPowderLightVfx = 0;
       this.uniforms.uniforms.uPowderSolidContactVfx = 0;
@@ -10630,6 +10666,7 @@ export class PixiFieldPresenter {
             || new URLSearchParams(location.search).get('plantLaminaVfxAudit') === '1'
             || new URLSearchParams(location.search).get('plantLobeDepthVfxAudit') === '1'
             || new URLSearchParams(location.search).get('plantCanopyMassVfxAudit') === '1'
+            || new URLSearchParams(location.search).get('metalWaterContactVfxAudit') === '1'
             || new URLSearchParams(location.search).get('woodBarkReliefVfxAudit') === '1'
             || new URLSearchParams(location.search).get('woodTanninVfxAudit') === '1'
             || new URLSearchParams(location.search).get('glassBodyVfxAudit') === '1'
@@ -10745,6 +10782,9 @@ export class PixiFieldPresenter {
     ) > 0.5 ? 'active' : 'inactive';
     presenter.app.canvas.dataset.liquidSolidMeniscusVfx = Number(
       presenter.uniforms.uniforms.uLiquidSolidMeniscusVfx
+    ) > 0.5 ? 'active' : 'inactive';
+    presenter.app.canvas.dataset.metalWaterContactVfx = Number(
+      presenter.uniforms.uniforms.uMetalWaterContactVfx
     ) > 0.5 ? 'active' : 'inactive';
     presenter.app.canvas.dataset.liquidSurfaceVfx = presenter.hdrPipelineInfo.active
       && presenter.hdrPipelineInfo.liquidSurfaceVfx ? 'active' : 'inactive';
@@ -12158,6 +12198,7 @@ export class PixiFieldPresenter {
         this.uniforms.uniforms.uOilBodyVfx = 0;
         this.uniforms.uniforms.uWaterBodyVfx = 0;
         this.uniforms.uniforms.uLiquidSolidMeniscusVfx = 0;
+        this.uniforms.uniforms.uMetalWaterContactVfx = 0;
         this.uniforms.uniforms.uPowderBodyVfx = 0;
         this.uniforms.uniforms.uPowderLightVfx = 0;
         this.uniforms.uniforms.uPowderSolidContactVfx = 0;
@@ -12194,6 +12235,7 @@ export class PixiFieldPresenter {
         this.app.canvas.dataset.oilBodyVfx = 'inactive';
         this.app.canvas.dataset.waterBodyVfx = 'inactive';
         this.app.canvas.dataset.liquidSolidMeniscusVfx = 'inactive';
+        this.app.canvas.dataset.metalWaterContactVfx = 'inactive';
         this.app.canvas.dataset.liquidSurfaceVfx = 'inactive';
         this.app.canvas.dataset.powderBodyVfx = 'inactive';
         this.app.canvas.dataset.powderLightVfx = 'inactive';

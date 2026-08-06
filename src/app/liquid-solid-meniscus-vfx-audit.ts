@@ -76,6 +76,13 @@ export interface LiquidSolidMeniscusVfxAuditSnapshot {
     /** Liquid cell whose forward 2x2 contact stencil sees both owners. */
     readonly liquidProbe: LiquidSolidMeniscusVfxPoint;
   };
+  /** Same Metal owner beside Oil proves an exact-Water response cannot follow phase alone. */
+  readonly oilMetalControl: {
+    readonly liquid: LiquidSolidMeniscusVfxRect & { readonly material: Material.Oil };
+    readonly solid: LiquidSolidMeniscusVfxRect & { readonly material: Material.Metal };
+    readonly liquidContactProbe: LiquidSolidMeniscusVfxPoint;
+    readonly solidContactProbe: LiquidSolidMeniscusVfxPoint;
+  };
   readonly guardedBlank: LiquidSolidMeniscusVfxRect;
   readonly conductiveWall: number;
 }
@@ -162,7 +169,13 @@ export const LIQUID_SOLID_MENISCUS_VFX_AUDIT: LiquidSolidMeniscusVfxAuditSnapsho
     foreign: { x: 360, y: 345, width: 20, height: 13 },
     liquidProbe: { x: 359, y: 344 },
   },
-  guardedBlank: { x: 500, y: 332, width: 70, height: 36 },
+  oilMetalControl: {
+    liquid: { x: 500, y: 332, width: 24, height: 26, material: Material.Oil },
+    solid: { x: 524, y: 332, width: 24, height: 26, material: Material.Metal },
+    liquidContactProbe: { x: 523, y: 345 },
+    solidContactProbe: { x: 524, y: 345 },
+  },
+  guardedBlank: { x: 558, y: 332, width: 32, height: 36 },
   conductiveWall: CONDUCTIVE_WALL,
 };
 
@@ -205,6 +218,8 @@ export function prepareLiquidSolidMeniscusVfxFixture(simulation: SimulationBacke
   fillRect(cells, simulation.width, fixture.mixedTripleContact.liquid, Material.Water);
   fillRect(cells, simulation.width, fixture.mixedTripleContact.solid, Material.Metal);
   fillRect(cells, simulation.width, fixture.mixedTripleContact.foreign, Material.Smoke);
+  fillRect(cells, simulation.width, fixture.oilMetalControl.liquid, fixture.oilMetalControl.liquid.material);
+  fillRect(cells, simulation.width, fixture.oilMetalControl.solid, fixture.oilMetalControl.solid.material);
   fillRect(cells, simulation.width, fixture.guardedBlank, Material.Empty);
 }
 

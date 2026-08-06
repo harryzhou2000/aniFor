@@ -257,6 +257,23 @@ export function resolveSolidBodyVfxEnabled(
 }
 
 /**
+ * Keeps the exact Metal/Water contact response independently measurable only
+ * after both its opaque-solid body and liquid-side meniscus parents are live.
+ * An explicit child override cannot recreate either ownership proof.
+ */
+export function resolveMetalWaterContactVfxEnabled(
+  look: RenderLook,
+  search = globalThis.location?.search ?? '',
+): boolean {
+  if (!resolveSolidBodyVfxEnabled(look, search)
+    || !resolveLiquidSolidMeniscusVfxEnabled(look, search)) return false;
+  const requested = new URLSearchParams(search).get('metalWaterContactVfx');
+  if (requested === '0' || requested === 'off' || requested === 'false') return false;
+  if (requested === '1' || requested === 'on' || requested === 'true') return true;
+  return true;
+}
+
+/**
  * Rebalances only deep native ROCK after E17 has proved the opaque-body
  * topology. The correction is deliberately subordinate to solid-body VFX: it
  * may reduce ROCK's inherited SmoothRigid polish, but it cannot recreate E17

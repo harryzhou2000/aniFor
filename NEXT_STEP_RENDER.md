@@ -571,11 +571,33 @@ does not alter simulation, camera, semantic ownership, or `renderScale`.
   `.0046`, all `4416`/`4048` target cells map uniquely, and 15-cell macro range
   rises from about `14.1 → 17.3` / `16.4 → 22.1`. The true-8× fence signalled
   in `5268.1 ms` with zero browser errors.
+- **E37 — exact Metal-side Water-contact polish (accepted checkpoint):** normal
+  1×–4× WebGL uses `?metalWaterContactVfx=0|1` only as a strict child of both
+  E14 liquid/Solid meniscus optics and E17 opaque-Solid body relief. Only
+  authoritative Metal `23` on the Solid side of a clean exact-Water contact may
+  respond. At 1×, E37 reuses the already-unconditional species-aware liquid
+  field sample because a cell-centred fragment cannot resolve E14's Hermite
+  derivative. At 2×/4×, it reuses the same four `contactSample` probes and packs
+  exact Water above the established categorical foreign bit, leaving existing
+  `0.5` consumers unchanged while E37 decodes the tag above `1.5`. It changes
+  RGB only and adds no sample, sampler, texture, field, resource, pass, target,
+  upload, allocation, clock, alpha/support, silhouette, ownership, topology,
+  state, or physics decision. Oil/Metal, mixed Water/Metal/Smoke, unlike owners,
+  deep cores, air, walls, traits, emission, reconstructed support, Canvas, and
+  compact true 8× remain controls. `npm run audit:vfx:metal-water-contact` owns
+  the 1×/2×/4× off→on→off, per-scale/per-orientation response, exact-owner,
+  parent-dependency, and byte-exact repeated-off proof. Its normalized
+  horizontal/vertical RGB RMS is `0.95/0.89`, `1.06/0.81`, and `0.56/1.02` at
+  1×/2×/4×; the frozen cross-scale/orientation ratio remains below `2.2`.
+  Keep those per-target numeric envelopes in the gate rather than replacing
+  them with one permissive family-wide bound.
+  Requested-on true 8× must keep E03/E14/E17/E37/HDR inactive for `scale-8`,
+  with no bloom, exact 4896×3072 promotion, and a completed GPU fence.
 - **Protected 8× rung:** `renderScale=8` deliberately reports
   `hdrPipeline=inactive` / `scale-8` and retains the proven direct single-mesh
   4896×3072 path. The experiment must earn a bounded 8× design rather than
   allocating a 115 MiB full-resolution float target beside that path.
-- **Current decision:** E01/E02/E03/E04/E05/E06/E07/E08/E09/E10/E11/E12/E13/E14/E15/E16/E17/E18/E19/E20/E21/E22/E23/E24/E25/E26/E27/E28/E29/E30/E31/E32/E33/E34/E35/E36 remain opt-in through the non-Classic looks
+- **Current decision:** E01/E02/E03/E04/E05/E06/E07/E08/E09/E10/E11/E12/E13/E14/E15/E16/E17/E18/E19/E20/E21/E22/E23/E24/E25/E26/E27/E28/E29/E30/E31/E32/E33/E34/E35/E36/E37 remain opt-in through the non-Classic looks
   until representative hardware timing and mobile thermal behavior are
   measured. E02 remains the safe family-wide baseline. E03 is accepted as the
   liquid-depth checkpoint: its fit-view crop is visibly more cohesive, retains
@@ -729,6 +751,15 @@ does not alter simulation, camera, semantic ownership, or `renderScale`.
   composed PLNT score is `62.215`/`67.661`/`69.253`; that score fell because
   the current organic scorer rewards cell-scale contrast, while E36's direct
   seam gate proves that the repeated enclosed mesh was actually removed.
+  E37 is the accepted exact Metal-side Water-contact checkpoint: freeze its
+  joint E14+E17 dependency, exact Water/Metal ownership, scale-specific reuse
+  of the existing liquid/contact evidence, Oil/Metal and mixed-contact controls,
+  RGB/topology invariants, and Canvas/compact-8× exclusion. Its response
+  envelopes and cross-scale strength ceiling remain frozen in the dedicated
+  gate; do not replace them with one permissive family-wide bound.
+  The failed extra-output/local-carrier prototypes blanked normal WebGL, so the
+  compact packed-tag implementation and its real-browser gate are part of the
+  checkpoint.
   These are not the final material/VFX results.
   Sub-1.0 material colour stays on the established response; tonemapping owns
   only real HDR highlights so powder texture and liquid body contrast are not
@@ -1363,6 +1394,19 @@ E20/E26/E28/E32/E34/E36/HDR remain inactive for `scale-8`, with no bloom and a
 completed GPU fence. Do not use a composed-rank drop to game the scorer; the
 direct seam metrics and visible hierarchy are the acceptance evidence.
 
+Run `npm run audit:vfx:metal-water-contact` for E37. It keeps E14 and E17 live,
+runs `metalWaterContactVfx=0 → 1 → 0` at normal WebGL 1×/2×/4×, and samples the
+exact Metal side of horizontal and vertical Water/Metal contacts. The same
+fixture supplies a clean Oil/Metal exact-owner control plus mixed contact,
+deep-body, air, wall, trait, emissive, and topology controls. Semantic, alpha,
+support, auxiliary/wall state, CSS/backing geometry, raw protected pixels, and
+the repeated-off framebuffer must remain exact. Separate dependency probes
+prove that an explicit child request cannot resurrect disabled E14, E17, or
+E03 liquid-body ownership. Requested-on true 8× promotes exact 4896×3072 WebGL
+while E03/E14/E17/E37/HDR remain inactive for `scale-8`, with no bloom and a
+completed GPU fence. The numeric response bounds and cross-scale strength
+ceiling are intentionally frozen in the gate rather than duplicated here.
+
 The earlier post-E16 survey was invalid for Solid: it sampled native Stone `21`,
 which is Powder, while labelling that region Solid. The corrected post-E17
 showcase uses native ROCK `78`, asserts exactly `2769` matching Solid cells, and
@@ -1465,7 +1509,7 @@ next production 4× survey then selected Wood/PLNT as the largest remaining
   lower seam density, lower local contrast, stronger macro hierarchy, unchanged
   semantic support, and byte-exact selector-off recovery.
 
-**Next visual experiments:** E03–E36 now provide accepted liquid body/surface,
+**Next visual experiments:** E03–E37 now provide accepted liquid body/surface,
 stable-gas, coherent-gas-motion, powder-depth, and powder-local-light
 checkpoints plus exact resting contact grounding, Glass/Ice transmission, and
 state-aware Wax/PLNT subsurface response, composed wet-mineral optics,
@@ -1494,8 +1538,12 @@ E32 lifecycle gate or compact 8×. E35 adds exact Wood tannin/cambium volume
 over E20/E26/E28/E30. E36 adds exact PLNT broad front/rear/overlap canopy mass
 recomposition over E34 while suppressing thresholded vein loops only when
 active; its composed-rank drop is a scorer blind spot and must not be gamed.
-Continue only from a fresh exact-owner fit-view gap; do not add another generic
-PLNT or volumetric-gas layer.
+E37 adds exact Metal-side Water-contact spectral separation over the joint E14+
+E17 proof without changing either body's topology. The next phase returns to
+broader volumetric material-body aesthetics: distinctive depth, transmission,
+reflection, lighting, and mesostructure across powder, liquid, gas, solid, and
+energy families. Continue only from fresh composed fit-view evidence and exact
+ownership; do not stack another narrow contact tint or generic PLNT/gas layer.
 The
 radioactive-solid review
 found no current identity bug, but also
@@ -1506,7 +1554,7 @@ with topology-preserving, material-
 specific cards that reuse already-live evidence. Prefer the smallest
 arithmetic-only candidate that fixes a visible fit-view deficiency; do not add
 an isolated tint merely to continue the experiment number. Preserve the E14
-1× stencil snap and all E01–E36 selectors and controls while designing the
+1× stencil snap and all E01–E37 selectors and controls while designing the
 next bounded card.
 
 ## Phase 1 — HDR pipeline & lighting core (biggest visual payoff)
