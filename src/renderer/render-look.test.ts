@@ -6,6 +6,7 @@ import {
   resolvePlantLaminaVfxEnabled,
   resolvePlantLobeDepthVfxEnabled,
   resolveWoodBarkReliefVfxEnabled,
+  resolveWoodTanninVfxEnabled,
   resolveCeramicGlazeVfxEnabled,
   DEFAULT_RENDER_LOOK, resolveGasBodyVfxEnabled, resolveGasCoreDepthVfxEnabled,
   resolveGasLightVfxEnabled,
@@ -428,6 +429,29 @@ describe('resolveRenderLook', () => {
     )).toBe(true);
     expect(resolveWoodBarkReliefVfxEnabled(
       'realistic', '?woodBarkReliefVfx=false',
+    )).toBe(false);
+  });
+
+  it('keeps exact-Wood tannin volume subordinate to both E28 pigment and E30 bark relief', () => {
+    expect(resolveWoodTanninVfxEnabled(
+      'classic', '?woodTanninVfx=1',
+    )).toBe(false);
+    expect(resolveWoodTanninVfxEnabled('realistic', '')).toBe(true);
+    expect(resolveWoodTanninVfxEnabled('neon-lab', '')).toBe(true);
+    for (const parentOff of [
+      'botanicalBodyVfx=0', 'botanicalMesostructureVfx=0',
+      'botanicalPigmentVfx=0', 'woodBarkReliefVfx=0',
+    ]) {
+      expect(resolveWoodTanninVfxEnabled(
+        'realistic', `?${parentOff}&woodTanninVfx=1`,
+      )).toBe(false);
+    }
+    expect(resolveWoodTanninVfxEnabled(
+      'realistic',
+      '?volumeVfx=0&botanicalBodyVfx=1&botanicalMesostructureVfx=1&botanicalPigmentVfx=1&woodBarkReliefVfx=1&woodTanninVfx=on',
+    )).toBe(true);
+    expect(resolveWoodTanninVfxEnabled(
+      'realistic', '?woodTanninVfx=false',
     )).toBe(false);
   });
 

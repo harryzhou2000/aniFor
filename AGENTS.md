@@ -13,7 +13,7 @@ powder, solid, liquid, gas, energy, and contact scenes across Canvas and WebGL a
 mobile gestures, save/load, CI, and Pages deployment as protected regression
 contracts rather than the primary feature stream.
 
-The accepted visual experiment ladder now runs through E34. E12 is the
+The accepted visual experiment ladder now runs through E35. E12 is the
 species-safe Sand/Clay/Concrete wet-sediment checkpoint; preserve its exact
 aqueous owner/stability proof, split moving-powder/stationary-Water control,
 Local/Grains no-op, fine structures, authored gaps, Canvas fallback, and true
@@ -518,8 +518,30 @@ with no bloom and a completed GPU fence. The final composed PLNT quality is
 `74.414`/`82.892`/`86.238` at 1×/2×/4×; canonical 2× improves `78.733 →
 82.892`, with support recall `1`, coverage `.971`, and zero dark/clipped
 fractions or browser errors. Wood is now the organic family floor at `80.251`
-with pigment variation its weakest cue; measure a bounded exact-Wood pigment/
-volume candidate next rather than stacking another PLNT layer.
+with pigment variation its weakest cue; E35 below closes that measured gap
+with a bounded exact-Wood pigment/volume child rather than another PLNT layer.
+
+E35 is the accepted normal-WebGL-only exact-Wood tannin/cambium volume
+checkpoint, independently measurable with `?woodTanninVfx=0|1` and strictly
+subordinate to both E28 pigment/body depth and E30 interrupted bark relief.
+Only their shared authoritative ordinary Wood `9` proof may reuse the existing
+signed heartwood pigment, segment evidence, plate/fissure, optical depth, and
+environment to form bounded absorptive tannin pockets and restrained warm
+cambium/crown exposure. Add no position carrier, noise call, sample, texture,
+field, resource, pass, target, upload, allocation, clock, alpha, support,
+silhouette, ownership, lifecycle, topology, state, or physics decision. Canvas
+and compact true 8× retain E28+E30. `npm run audit:vfx:wood-tannin` freezes two
+target-specific response/frequency envelopes, 34 exact PLNT/lifecycle/
+topology/contact/wall/foreign-owner controls, and a byte-exact repeated-off
+frame. Requested-on true 8× must keep E20/E26/E28/E30/E35/HDR inactive for
+`scale-8`, promote exact 4896×3072 WebGL, and signal a GPU fence. The accepted
+composed Wood quality is `79.215`/`86.709`/`89.610` at 1×/2×/4×, versus the
+E34 baseline `71.833`/`80.251`/`83.247`; support recall remains `1`, coverage
+`.933`, and dark/clipped fractions plus browser errors remain zero. Freeze the
+joint parent chain, existing-evidence-only carrier, coefficients, per-target
+envelopes, controls, and true-8× exclusion until another production fit-view
+review. The next experiment must come from a fresh composed family ranking;
+do not add another Wood or PLNT layer merely because E35 is now available.
 
 The radioactive-solid review found no current correctness bug: ISZS `105`
 and VIBR `113` already receive exact-species Solid depth, while the existing

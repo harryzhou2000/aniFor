@@ -44,6 +44,7 @@ import {
   resolvePlantLaminaVfxEnabled,
   resolvePlantLobeDepthVfxEnabled,
   resolveWoodBarkReliefVfxEnabled,
+  resolveWoodTanninVfxEnabled,
   resolveGlassBodyVfxEnabled,
   resolveGasBodyVfxEnabled, resolveGasCoreDepthVfxEnabled, resolveGasLightVfxEnabled,
   resolveGasMotionVfxEnabled,
@@ -3258,6 +3259,7 @@ uniform float uBotanicalPigmentVfx;
 uniform float uPlantLaminaVfx;
 uniform float uPlantLobeDepthVfx;
 uniform float uWoodBarkReliefVfx;
+uniform float uWoodTanninVfx;
 uniform float uGlassBodyVfx;
 uniform float uLiquidBodyVfx;
 uniform float uOilBodyVfx;
@@ -8697,6 +8699,36 @@ void main() {
           color *= 1.0 + barkPigmentBody * 0.026 * botanicalPigment;
           color += vec3(0.085, -0.017, -0.052) * barkPigmentBody
             * botanicalPigment;
+          // E35: E28's broad heartwood polarity remains too uniform over
+          // E30's accepted interrupted plates. Recombine only those already-
+          // live pigment, plate, fissure, depth, and environment signals into
+          // warm exposed cambium and absorptive tannin pockets. This exact-
+          // Wood child is RGB-only and adds no position carrier, noise, sample,
+          // texture, field, pass, target, upload, allocation, clock, alpha,
+          // support, silhouette, ownership, state, topology, or physics.
+          float woodTanninVolume = woodBarkRelief > 0.001
+              && botanicalPigment > 0.001
+              && uWoodTanninVfx > 0.5
+            ? botanicalDepth : 0.0;
+          float barkTanninCarrier = clamp(
+            barkPigmentBody * 0.50
+              + barkSegmentEvidence * 0.35 + barkPlate * 0.15,
+            -1.0, 1.0
+          );
+          float barkTanninCrown = max(barkTanninCarrier, 0.0);
+          float barkTanninPocket = max(-barkTanninCarrier, 0.0);
+          float cambiumGap = barkFissure * (1.0 - barkSegment)
+            * (0.30 + barkPlateCrown * 0.70);
+          color *= vec3(1.0) - vec3(0.070, 0.038, 0.015)
+            * (barkTanninPocket * 0.65 + barkSegmentedPocket * 0.50)
+            * woodTanninVolume;
+          color += (vec3(1.0) - clamp(color, 0.0, 1.0))
+            * (vec3(0.42, 0.19, 0.055)
+                * (barkTanninCrown * 0.100 + cambiumGap * 0.048)
+              + solidEnvironment * barkTanninCrown * 0.030)
+            * woodTanninVolume;
+          color += vec3(0.058, -0.015, -0.036) * barkTanninCarrier
+            * woodTanninVolume;
         }
       }
     } else if (radioactiveSurface > 0.5 || (optics < 0.5 && profile == 4.0)) {
@@ -10148,6 +10180,10 @@ export class PixiFieldPresenter {
     // Canvas and compact true 8x retain their established botanical grammar.
     const botanicalPigmentVfxEnabled = outputScale < 8
       && resolveBotanicalPigmentVfxEnabled(renderLook);
+    // E35 is arithmetic over the joint E28 pigment and E30 plate proof.
+    // Canvas and compact true 8x retain the accepted E28/E30 presentation.
+    const woodTanninVfxEnabled = outputScale < 8
+      && resolveWoodTanninVfxEnabled(renderLook);
     // E32 adds one exact-PLNT static fine octave over E20/E26/E28's existing
     // lobe, vein, and pigment evidence. Canvas and compact true 8x keep E28.
     const plantLaminaVfxEnabled = outputScale < 8
@@ -10217,6 +10253,7 @@ export class PixiFieldPresenter {
       uPlantLaminaVfx: { value: plantLaminaVfxEnabled ? 1 : 0, type: 'f32' },
       uPlantLobeDepthVfx: { value: plantLobeDepthVfxEnabled ? 1 : 0, type: 'f32' },
       uWoodBarkReliefVfx: { value: woodBarkReliefVfxEnabled ? 1 : 0, type: 'f32' },
+      uWoodTanninVfx: { value: woodTanninVfxEnabled ? 1 : 0, type: 'f32' },
       uGlassBodyVfx: { value: glassBodyVfxEnabled ? 1 : 0, type: 'f32' },
       uLiquidBodyVfx: { value: liquidBodyVfxEnabled ? 1 : 0, type: 'f32' },
       uOilBodyVfx: { value: oilBodyVfxEnabled ? 1 : 0, type: 'f32' },
@@ -10451,6 +10488,7 @@ export class PixiFieldPresenter {
       this.uniforms.uniforms.uPlantLaminaVfx = 0;
       this.uniforms.uniforms.uPlantLobeDepthVfx = 0;
       this.uniforms.uniforms.uWoodBarkReliefVfx = 0;
+      this.uniforms.uniforms.uWoodTanninVfx = 0;
       this.uniforms.uniforms.uGlassBodyVfx = 0;
       this.uniforms.uniforms.uLiquidBodyVfx = 0;
       this.uniforms.uniforms.uOilBodyVfx = 0;
@@ -10508,6 +10546,7 @@ export class PixiFieldPresenter {
             || new URLSearchParams(location.search).get('plantLaminaVfxAudit') === '1'
             || new URLSearchParams(location.search).get('plantLobeDepthVfxAudit') === '1'
             || new URLSearchParams(location.search).get('woodBarkReliefVfxAudit') === '1'
+            || new URLSearchParams(location.search).get('woodTanninVfxAudit') === '1'
             || new URLSearchParams(location.search).get('glassBodyVfxAudit') === '1'
             || new URLSearchParams(location.search).get('oilBodyVfxAudit') === '1'
             || new URLSearchParams(location.search).get('waterBodyVfxAudit') === '1'
@@ -10601,6 +10640,9 @@ export class PixiFieldPresenter {
     ) > 0.5 ? 'active' : 'inactive';
     presenter.app.canvas.dataset.woodBarkReliefVfx = Number(
       presenter.uniforms.uniforms.uWoodBarkReliefVfx
+    ) > 0.5 ? 'active' : 'inactive';
+    presenter.app.canvas.dataset.woodTanninVfx = Number(
+      presenter.uniforms.uniforms.uWoodTanninVfx
     ) > 0.5 ? 'active' : 'inactive';
     presenter.app.canvas.dataset.glassBodyVfx = Number(
       presenter.uniforms.uniforms.uGlassBodyVfx
@@ -12021,6 +12063,7 @@ export class PixiFieldPresenter {
         this.uniforms.uniforms.uPlantLaminaVfx = 0;
         this.uniforms.uniforms.uPlantLobeDepthVfx = 0;
         this.uniforms.uniforms.uWoodBarkReliefVfx = 0;
+        this.uniforms.uniforms.uWoodTanninVfx = 0;
         this.uniforms.uniforms.uGlassBodyVfx = 0;
         this.uniforms.uniforms.uLiquidBodyVfx = 0;
         this.uniforms.uniforms.uOilBodyVfx = 0;
@@ -12055,6 +12098,7 @@ export class PixiFieldPresenter {
         this.app.canvas.dataset.plantLaminaVfx = 'inactive';
         this.app.canvas.dataset.plantLobeDepthVfx = 'inactive';
         this.app.canvas.dataset.woodBarkReliefVfx = 'inactive';
+        this.app.canvas.dataset.woodTanninVfx = 'inactive';
         this.app.canvas.dataset.glassBodyVfx = 'inactive';
         this.app.canvas.dataset.liquidBodyVfx = 'inactive';
         this.app.canvas.dataset.oilBodyVfx = 'inactive';

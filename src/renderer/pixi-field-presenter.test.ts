@@ -1314,6 +1314,66 @@ describe('Pixi presenter startup configuration', () => {
     expect(source).toContain("this.app.canvas.dataset.woodBarkReliefVfx = 'inactive';");
   });
 
+  it('keeps E35 Wood tannin volume subordinate to E28/E30, normal-WebGL-only, and RGB-only', () => {
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const canvasSource = readFileSync(new URL('./field-renderer.ts', import.meta.url), 'utf8');
+    const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');
+    const normalStart = source.indexOf('const FIELD_FRAGMENT = `', eightStart);
+    const normalEnd = source.indexOf('`;\n\n/** Primary WebGL presentation', normalStart);
+    const eight = source.slice(eightStart, normalStart);
+    const normal = source.slice(normalStart, normalEnd);
+    const e20Start = normal.indexOf('      // E20:');
+    const e20End = normal.indexOf('    } else if (radioactiveSurface', e20Start);
+    const e20 = normal.slice(e20Start, e20End);
+    const e35Start = e20.indexOf("          // E35: E28's broad heartwood");
+    const e35 = e20.slice(e35Start);
+    const preserveDrawingBufferStart = source.indexOf('preserveDrawingBuffer:');
+    const preserveDrawingBufferEnd = source.indexOf(
+      'resolution: outputScale', preserveDrawingBufferStart,
+    );
+    const preserveDrawingBuffer = source.slice(
+      preserveDrawingBufferStart, preserveDrawingBufferEnd,
+    );
+
+    expect(e20Start).toBeGreaterThanOrEqual(0);
+    expect(e20End).toBeGreaterThan(e20Start);
+    expect(e35Start).toBeGreaterThanOrEqual(0);
+    expect(normal).toContain('uniform float uWoodTanninVfx;');
+    expect(normal.match(/uWoodTanninVfx > 0\.5/g)).toHaveLength(1);
+    expect(eight).not.toContain('uWoodTanninVfx');
+    expect(eight).not.toContain('woodTanninVfx');
+    expect(canvasSource).not.toContain('woodTanninVfx');
+    expect(e35).toContain(
+      'float woodTanninVolume = woodBarkRelief > 0.001\n'
+        + '              && botanicalPigment > 0.001\n'
+        + '              && uWoodTanninVfx > 0.5\n'
+        + '            ? botanicalDepth : 0.0;',
+    );
+    for (const establishedValue of [
+      'barkPigmentBody', 'barkSegmentEvidence', 'barkPlate',
+      'barkSegmentedPocket', 'barkFissure', 'barkSegment',
+      'barkPlateCrown', 'solidEnvironment', 'woodTanninVolume',
+    ]) expect(e35).toContain(establishedValue);
+    expect(e35).not.toContain('fieldPosition');
+    expect(e35).not.toContain('botanicalBodyNoise(');
+    expect(e35).not.toContain('sin(');
+    expect(e35).not.toContain('texture(');
+    expect(e35).not.toContain('uTime');
+    expect(e35).not.toContain('gl_FragCoord');
+    expect(e35).not.toMatch(/\balpha\s*[+*]?=/);
+    expect(source.match(/this\.uniforms\.uniforms\.uWoodTanninVfx = 0;/g))
+      .toHaveLength(2);
+    expect(source).toMatch(
+      /const woodTanninVfxEnabled = outputScale < 8\s*&& resolveWoodTanninVfxEnabled\(renderLook\);/,
+    );
+    expect(source).toContain(
+      'uWoodTanninVfx: { value: woodTanninVfxEnabled ? 1 : 0',
+    );
+    expect(preserveDrawingBuffer).toContain("get('woodTanninVfxAudit') === '1'");
+    expect(source).toContain('presenter.app.canvas.dataset.woodTanninVfx');
+    expect(source).toContain("this.app.canvas.dataset.woodTanninVfx = 'inactive';");
+  });
+
   it('keeps E21 thick-Glass transmission exact-owner, normal-WebGL-only, and RGB-only', () => {
     const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
     const canvasSource = readFileSync(new URL('./field-renderer.ts', import.meta.url), 'utf8');

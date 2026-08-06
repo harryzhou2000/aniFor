@@ -524,11 +524,33 @@ does not alter simulation, camera, semantic ownership, or `renderScale`.
   macro range `36 → 40`, luma SD/range `7.99/42 → 8.72/49`, exact support
   recall `1`, coverage `.971`, and zero dark/clipped fractions or browser
   errors.
+- **E35 — exact Wood tannin/cambium volume (accepted visual checkpoint):**
+  normal 1×–4× WebGL uses `?woodTanninVfx=0|1` only as a strict child of both
+  E28 pigment/body depth and E30 interrupted bark relief. Only their shared
+  authoritative ordinary Wood `9` body proof may respond. E35 recombines the
+  already-live signed heartwood pigment, segment evidence, bark plate/fissure,
+  optical depth, and environment into absorptive tannin pockets and restrained
+  warm cambium/crown exposure. It adds no position carrier, noise call, sample,
+  sampler, texture, field, resource, pass, target, upload, allocation, clock,
+  alpha/support, silhouette, ownership, lifecycle, topology, state, or physics
+  decision. Canvas and compact true 8× retain E28+E30. `npm run
+  audit:vfx:wood-tannin` freezes two target-specific response/frequency
+  envelopes, the same 34 PLNT/lifecycle/topology/contact/wall/foreign-owner
+  controls, and a byte-exact repeated-off framebuffer. Target RGB/chroma RMS
+  is `3.35–4.07`/`3.22–3.90`, peak is 16–17 bytes, meso/cell RMS is
+  `1.8667–2.0323`/`.6623–.7006`, downsample retention is `.9791–.9826`, and
+  gradient ratio is `1.6188–1.7980`. Requested-on true 8× keeps
+  E20/E26/E28/E30/E35/HDR inactive for `scale-8`, with no bloom, exact
+  4896×3072 promotion, and a completed GPU fence. The final composed Wood
+  quality improves `71.833/80.251/83.247 → 79.215/86.709/89.610` at
+  1×/2×/4×. Pigment rises `.5267/.6133/.6467 → .7200/.8067/.8467`, macro
+  range rises `26 → 28`, support recall remains `1`, coverage remains `.933`,
+  and dark/clipped fractions plus browser errors remain zero.
 - **Protected 8× rung:** `renderScale=8` deliberately reports
   `hdrPipeline=inactive` / `scale-8` and retains the proven direct single-mesh
   4896×3072 path. The experiment must earn a bounded 8× design rather than
   allocating a 115 MiB full-resolution float target beside that path.
-- **Current decision:** E01/E02/E03/E04/E05/E06/E07/E08/E09/E10/E11/E12/E13/E14/E15/E16/E17/E18/E19/E20/E21/E22/E23/E24/E25/E26/E27/E28/E29/E30/E31/E32/E33/E34 remain opt-in through the non-Classic looks
+- **Current decision:** E01/E02/E03/E04/E05/E06/E07/E08/E09/E10/E11/E12/E13/E14/E15/E16/E17/E18/E19/E20/E21/E22/E23/E24/E25/E26/E27/E28/E29/E30/E31/E32/E33/E34/E35 remain opt-in through the non-Classic looks
   until representative hardware timing and mobile thermal behavior are
   measured. E02 remains the safe family-wide baseline. E03 is accepted as the
   liquid-depth checkpoint: its fit-view crop is visibly more cohesive, retains
@@ -667,6 +689,12 @@ does not alter simulation, camera, semantic ownership, or `renderScale`.
   frequency envelopes, 34 exact controls, and compact-8× exclusion. Do not
   add another PLNT noise octave, widen it to stateful PLNT, or let its RGB
   contour alter alpha, support, lifecycle, topology, or Canvas.
+  E35 is the accepted exact-Wood tannin/cambium volume checkpoint: freeze its
+  joint E28+E30 dependency, exact ordinary-Wood proof, reused pigment/segment/
+  plate/fissure/depth/environment evidence, two target-specific response and
+  frequency envelopes, 34 exact controls, and compact-8× exclusion. Do not add
+  another Wood noise carrier, widen it to sparse/contact/stateful Wood, or let
+  its RGB absorption/exposure alter alpha, support, topology, state, or Canvas.
   These are not the final material/VFX results.
   Sub-1.0 material colour stays on the established response; tonemapping owns
   only real HDR highlights so powder texture and liquid body contrast are not
@@ -1267,6 +1295,27 @@ is `1`, coverage `.971`, macro range `40`, and dark/clipped fractions are zero
 at every scale. At canonical 2× E34 improves PLNT `78.733 → 82.892`, with
 mesostructure `.465 → .535`, pigment `.8333 → .8600`, and luma SD/range
 `7.99/42 → 8.72/49`.
+
+Run `npm run audit:vfx:wood-tannin` for E35. It isolates E20+E26+E28+E30 and
+runs `woodTanninVfx=0 → 1 → 0` at normal WebGL 1×/2×/4× while pinning both
+PLNT-only children and unrelated optional selectors off. The two exact Wood
+bodies retain their frozen material/depth digests; 34 PLNT, lifecycle,
+topology, contact, wall, and foreign-owner controls plus raw control points
+remain exact, and the disabled framebuffer repeats byte-for-byte. The frozen
+per-target gate requires RGB/chroma RMS `3.30–3.42`/`3.17–3.29` for WOODLeft
+and `3.98–4.14`/`3.81–3.97` for WOODRight, with their separate coverage,
+peak, meso/cell, retention, gradient, bipolar, and cross-scale envelopes.
+Requested-on true 8× promotes exact 4896×3072 WebGL while
+E20/E26/E28/E30/E35/HDR remain inactive for `scale-8`, with no bloom and a
+completed GPU fence (about `5.26 s` on the final frozen run). The parent E28
+and E30 package gates independently pass with E35 pinned off. The final
+production matrix keeps exact semantic hash `595518258`, `104027` occupied
+cells, and `952/952` Wood support at every scale with zero browser errors.
+Wood quality is `79.215`/`86.709`/`89.610`, mesostructure is
+`.520`/`.655`/`.715`, pigment is `.7200`/`.8067`/`.8467`, luma SD is
+`7.64`/`7.90`/`8.02`, microcontrast is `2.04`/`2.31`/`2.43`, chroma is
+`1.58`/`1.71`/`1.77`, macro range is `28`, support recall is `1`, coverage is
+`.933`, and dark/clipped fractions are zero.
 
 The earlier post-E16 survey was invalid for Solid: it sampled native Stone `21`,
 which is Powder, while labelling that region Solid. The corrected post-E17

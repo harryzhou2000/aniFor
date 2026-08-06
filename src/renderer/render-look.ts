@@ -389,6 +389,23 @@ export function resolveBotanicalPigmentVfxEnabled(
 }
 
 /**
+ * E35 combines E28's exact-Wood heartwood pigment with E30's interrupted bark
+ * plates. Both parents must remain live: this child cannot recreate pigment or
+ * structural relief when either independently measurable layer is disabled.
+ */
+export function resolveWoodTanninVfxEnabled(
+  look: RenderLook,
+  search = globalThis.location?.search ?? '',
+): boolean {
+  if (!resolveBotanicalPigmentVfxEnabled(look, search)
+    || !resolveWoodBarkReliefVfxEnabled(look, search)) return false;
+  const requested = new URLSearchParams(search).get('woodTanninVfx');
+  if (requested === '0' || requested === 'off' || requested === 'false') return false;
+  if (requested === '1' || requested === 'on' || requested === 'true') return true;
+  return true;
+}
+
+/**
  * E32 gives exact PLNT a bounded leaf-lamina and vein response only after E28
  * has established its body pigment. The child cannot revive E20/E26/E28 and
  * remains independently switchable for exact lifecycle/topology audits.
