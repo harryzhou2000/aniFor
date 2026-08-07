@@ -1081,11 +1081,38 @@ does not alter simulation, camera, semantic ownership, or `renderScale`.
   composed matrix keeps the canonical family rank unchanged; exact Oxygen is
   quality `100/100/99.73` at 1×/2×/4×, coverage `.929`, luma SD
   `5.32–5.33`, microcontrast `.48–.51`, chroma `.45–.49`, and macro range `24`.
+- **E63 accepted Nitro body recomposition:** exact NITR/Nitro `32` gains a
+  normal-WebGL-only energetic amber crown, opposing olive absorptive pocket,
+  and restrained transmitted-green fill as a strict E03 child
+  (`?nitroBodyVfx=0|1`). It runs only after exact Oily/liquid/profile-1,
+  trait-free, non-emissive dense-body proof with no surface, wall,
+  unlike-material, or foreign-phase contact. It reuses E03's optical depth,
+  connected-body weight, species slope/neighbour mean, broad sheen, caustic
+  carrier, macro relief, Fresnel contour, and reflected environment. It adds
+  no sample, texture, field, resource, pass, target, upload, allocation, clock,
+  alpha, support, silhouette, ownership, topology, state, or physics decision.
+  Canvas and compact true 8× retain the established Oily presentation.
+
+  `npm run audit:vfx:nitro-body` holds the accepted candidate stack active
+  while toggling only E63 off→on→off at 1×/2×/4×. The broad-body RGB
+  RMS/spatial RMS/coverage bounds are `2.8–3.5`/`2.7–3.4`/`.48–.55`, with
+  signed mean `.60–1.20` and peak `12–16`. Crown/pocket/core RGB RMS is
+  `6–13`/`3–9`/`1.5–6`, signed mean `6–14`/`−7…−2`/`1–6`, and peaks
+  `8–22`/`6–18`/`6–16`. The accepted 1×/2×/4× run measured broad-body RMS
+  `3.13/3.12/3.12`, crown `8.72/8.74/8.74`, pocket `5.39/5.40/5.40`, and core
+  `3.47/3.43/3.42`, with fixed peaks `14/14/11/10`. Semantics, alpha/support,
+  backing, all five sibling candidate bodies, Oil and Diesel exact-owner
+  controls, the shared ROCK stage,
+  and repeated-off frames remain invariant. The authored hole is limited to a
+  one-byte composed HDR fringe and the final NITR contact row to three bytes
+  over `.04` coverage, with support unchanged. Requested-on true 8× reports
+  E03/E63/HDR inactive for `scale-8`, presents exact 4896×3072 WebGL, and
+  completes a GPU fence (accepted run `5.1513 s`) with zero browser errors.
 - **Protected 8× rung:** `renderScale=8` deliberately reports
   `hdrPipeline=inactive` / `scale-8` and retains the proven direct single-mesh
   4896×3072 path. The experiment must earn a bounded 8× design rather than
   allocating a 115 MiB full-resolution float target beside that path.
-- **Current decision:** E01/E02/E03/E04/E05/E06/E07/E08/E09/E10/E11/E12/E13/E14/E15/E16/E17/E18/E19/E20/E21/E22/E23/E24/E25/E26/E27/E28/E29/E30/E31/E32/E33/E34/E35/E36/E37/E38/E39/E40/E41/E42/E43/E44/E45/E46/E47/E48/E49/E50/E51/E52/E53/E54/E55/E56/E57/E58/E59/E60/E61/E62 remain opt-in through the non-Classic looks
+- **Current decision:** E01/E02/E03/E04/E05/E06/E07/E08/E09/E10/E11/E12/E13/E14/E15/E16/E17/E18/E19/E20/E21/E22/E23/E24/E25/E26/E27/E28/E29/E30/E31/E32/E33/E34/E35/E36/E37/E38/E39/E40/E41/E42/E43/E44/E45/E46/E47/E48/E49/E50/E51/E52/E53/E54/E55/E56/E57/E58/E59/E60/E61/E62/E63 remain opt-in through the non-Classic looks
   until representative hardware timing and mobile thermal behavior are
   measured. E02 remains the safe family-wide baseline. E03 is accepted as the
   liquid-depth checkpoint: its fit-view crop is visibly more cohesive, retains
@@ -1382,7 +1409,7 @@ survey. It drives
 612×384 RenderLab backend, freezes the semantic hash/material counts/region
 support, and compares the same six candidate cards at 1×/2×/4× production
 WebGL. Keep candidate selectors explicit when evaluating an accepted child;
-the package command retains the four accepted E48/E49/E50/E52 selectors. E51
+the package command retains the five accepted E48/E49/E50/E52/E63 selectors. E51
 has no candidate-survey selector and is proved by its separate authentic-state
 fixture, so this route cannot establish a pre/post-E51 rank. Pass
 `--candidate-snowpack-body-vfx=0` to the underlying
@@ -1391,6 +1418,8 @@ driver only when reproducing the frozen pre-E48 Snow baseline, and pass
 baseline. Pass `--candidate-c4-body-vfx=0` only for the frozen pre-E50 C4
 baseline, and pass `--candidate-bgla-body-vfx=0` only when reproducing the
 pre-E52 BGLA card.
+Pass `--candidate-nitro-body-vfx=0` only when reproducing the frozen pre-E63
+flat-Nitro baseline.
 
 Run `npm run audit:vfx:volume` for E02. It reloads the paused composed material
 lab as `volumeVfx=0 → 1 → 0` at 1×, 2×, and 4×, requires the real HDR pipeline,
@@ -2298,7 +2327,7 @@ next production 4× survey then selected Wood/PLNT as the largest remaining
   coverage `.971`, macro range `50`, zero dark/clipped fraction, and exact
   semantics across the full composed matrix.
 
-**Next visual experiments:** E03–E62 provide accepted liquid body/surface,
+**Next visual experiments:** E03–E63 provide accepted liquid body/surface,
 stable-gas, coherent-gas-motion, powder-depth, and powder-local-light
 checkpoints plus exact resting contact grounding, Glass/Ice transmission, and
 state-aware Wax/PLNT subsurface response, composed wet-mineral optics,
@@ -2356,6 +2385,15 @@ cyan-white transmission shoulder and cool absorptive pocket while keeping the
 neutral core quiet; foreign gases, sparse topology, Canvas, and compact true
 8× remain controls. Do not immediately stack another Oxygen or generic-gas
 layer after this checkpoint.
+E63 closes the visibly flat exact-Nitro candidate diagnosis as a strict E03
+child. It recombines only established dense-liquid evidence into a broad warm
+crown, opposing olive pocket, and quiet transmitted fill, while exact Oil and
+Diesel prove that shared Oily optics do not broaden ownership. The canonical
+2× candidate card keeps full support/coverage and zero clipping while luma SD,
+microcontrast, chromatic contrast, and macro range move from
+`6.287/.202/.271/24.365` to `7.129/.321/.332/27.918`. Do not immediately stack
+another Nitro or generic-Oily layer; select the next target from a new visible
+fit-view diagnosis rather than the already-saturated aggregate score.
 E37 adds exact Metal-side Water-contact spectral separation over the joint E14+
 E17 proof without changing either body's topology. E56 completes only the
 exact WATR side beside exact METL through E03/E14/E17/E37's inherited clean
@@ -2603,8 +2641,9 @@ Requested-on true 8× keeps E17/E43/E47/E60/HDR inactive for `scale-8`, promotes
 exact 4896×3072 WebGL, and completes a GPU fence in `5.4102 s`.
 Improve distinctive depth, transmission, reflection, lighting, and
 mesostructure without stacking another narrow Oil/Acid/contact tint or another
-generic PLNT/gas layer. E62 closes the current exact-Oxygen diagnosis; choose
-the next owner only from fresh visible fit-view evidence.
+generic PLNT/gas layer. E62 closes the exact-Oxygen diagnosis and E63 closes
+the visibly flat exact-Nitro diagnosis; choose the next owner only from fresh
+visible fit-view evidence.
 The fresh composed-family/material survey now uses
 E17/E37/E43/E44/E45/E46/E47/E53/E54/E55/E56/E58/E59/E60/E61/E62 under
 `inputAudit=1`. Fixture v6 freezes 23 material counts, 18 scored regions,
@@ -2679,10 +2718,14 @@ Oil→SOAP, freezing/evaporation products, corrosion, and pressure reactions sta
 authoritative. The focused matrix proves Canvas and realistic WebGL 1×/2×/4×,
 then true 4896×3072 compact WebGL with a completed fence, byte-exact off
 repetition, stable support/topology, protected walls and foreign owners, and
-zero browser errors. Nitro `32` remains an exact quality-`100` control. BGLA's
-historical quality-`100` candidate card selected E52; it is not its acceptance
-evidence. With E52 explicitly enabled, BGLA remains quality `100` at every
-scale, with microcontrast `9.393/10.971/8.452`, chromatic contrast
+zero browser errors. Nitro's saturated quality-`100` score masked a visibly
+flat olive body: canonical 2× luma SD/microcontrast/chroma/macro range was
+`6.287/.202/.271/24.365`. E63 was selected from that fit-view deficit, and the
+explicit selector raises those measures to `7.129/.321/.332/27.918` with full
+support/coverage and zero clipping while adding coherent crown/pocket volume.
+BGLA's historical quality-`100` candidate card selected E52; it is not its
+acceptance evidence. With E52 explicitly enabled, BGLA remains quality `100`
+at every scale, with microcontrast `9.393/10.971/8.452`, chromatic contrast
 `5.872/5.614/4.136`, macro range `34.213/29.575/24.387`, full support, and zero
 clipping. The explicit-selector candidate matrix closes Snow's former 4×
 fit-view loss: quality is `93.614/92.916/93.274`, microcontrast is
@@ -2691,7 +2734,7 @@ is `24.657/23.679/22.240` at 1×/2×/4×, with full support and zero dark/clippe
 fraction. Do not alter E48 from candidate-rank evidence; its focused exact-owner
 fixture remains the acceptance contract. Choose any later experiment only from
 a new visible fit-view diagnosis. Preserve the E14 1× stencil snap and all
-E01–E58 selectors and controls.
+E01–E63 selectors and controls.
 
 ## Phase 1 — HDR pipeline & lighting core (biggest visual payoff)
 

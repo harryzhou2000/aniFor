@@ -130,6 +130,25 @@ const candidateRankOnly = process.argv.includes('--candidate-rank-only');
 if (candidateRankOnly && (modes.length !== 1 || modes[0] !== 'webgl')) {
   throw new Error('--candidate-rank-only requires --webgl-only');
 }
+// The NitRO treatment reuses the candidate-rank scene but owns a strict
+// off -> on -> off body-optics matrix and its normal-detail 8x exclusion.
+const nitroBodyVfxOnly = process.argv.includes('--nitro-body-vfx-only');
+if (nitroBodyVfxOnly && (modes.length !== 1 || modes[0] !== 'webgl')) {
+  throw new Error('--nitro-body-vfx-only requires --webgl-only');
+}
+if (nitroBodyVfxOnly && candidateRankOnly) {
+  throw new Error('--nitro-body-vfx-only cannot be combined with --candidate-rank-only');
+}
+const candidateNitroBodyVfxArgument = process.argv.find((argument) => (
+  argument.startsWith('--candidate-nitro-body-vfx=')
+));
+const candidateNitroBodyVfx = candidateNitroBodyVfxArgument?.split('=')[1] ?? '0';
+if (candidateNitroBodyVfxArgument && !candidateRankOnly) {
+  throw new Error('--candidate-nitro-body-vfx is valid only with --candidate-rank-only');
+}
+if (!['0', '1', 'off', 'on'].includes(candidateNitroBodyVfx)) {
+  throw new Error('--candidate-nitro-body-vfx must be 0, 1, off, or on');
+}
 const candidateSnowpackBodyVfxArgument = process.argv.find((argument) => (
   argument.startsWith('--candidate-snowpack-body-vfx=')
 ));
@@ -554,7 +573,7 @@ const focusedVfxOnlyFlags = [
   platinumBodyVfxOnly, ceramicGlazeVfxOnly, botanicalBodyVfxOnly, glassBodyVfxOnly,
   oilBodyVfxOnly, rockRoughnessVfxOnly, rockMesostructureVfxOnly, rockWeatheredFacetVfxOnly,
   waterBodyVfxOnly, waterVolumeRecessionVfxOnly, acidBodyVfxOnly,
-  soapBodyVfxOnly,
+  soapBodyVfxOnly, nitroBodyVfxOnly,
   sootyPowderBodyVfxOnly, thermiteBodyVfxOnly, snowpackBodyVfxOnly,
   quartzMesostructureVfxOnly, c4BodyVfxOnly, bglaBodyVfxOnly,
   deutBodyVfxOnly, hydrogenBodyVfxOnly,
@@ -568,7 +587,7 @@ const focusedVfxOnlyFlags = [
   woodTanninVfxOnly,
 ];
 if (focusedVfxOnlyFlags.filter(Boolean).length > 1) {
-  throw new Error('HDR/volume/liquid-body/liquid-surface/gas-body/gas-motion/powder-body/powder-light/powder-solid-contact/translucent-edge/organic-subsurface/wet-sediment/gas-light/liquid-solid-meniscus/metal-water-contact/water-metal-transmission/gas-core-depth/plasma-core/solid-body/platinum-body/ceramic-glaze/botanical-body/glass-body/oil-body/rock-roughness/rock-mesostructure/rock-weathered-facet/water-body/water-volume-recession/acid-body/soap-body/sooty-powder-body/thermite-body/snowpack-body/quartz-mesostructure/c4-body/deut-body/hydrogen-body/carbon-dioxide-body/fog-core-diffuse/radioactive-solid-body/iszs-crystalline/iszs-crystal-hierarchy/vibr-macro-relief/noble-gas-billow/noble-gas-prism/smoke-softness/smoke-billow-depth/botanical-mesostructure/wood-bark-relief/botanical-pigment/plant-lamina/plant-lobe-depth/plant-canopy-mass/plant-canopy-tissue/plant-canopy-interlock/plant-canopy-hierarchy/wood-tannin focused audits are mutually exclusive');
+  throw new Error('HDR/volume/liquid-body/liquid-surface/gas-body/gas-motion/powder-body/powder-light/powder-solid-contact/translucent-edge/organic-subsurface/wet-sediment/gas-light/liquid-solid-meniscus/metal-water-contact/water-metal-transmission/gas-core-depth/plasma-core/solid-body/platinum-body/ceramic-glaze/botanical-body/glass-body/oil-body/rock-roughness/rock-mesostructure/rock-weathered-facet/water-body/water-volume-recession/acid-body/soap-body/nitro-body/sooty-powder-body/thermite-body/snowpack-body/quartz-mesostructure/c4-body/deut-body/hydrogen-body/carbon-dioxide-body/fog-core-diffuse/radioactive-solid-body/iszs-crystalline/iszs-crystal-hierarchy/vibr-macro-relief/noble-gas-billow/noble-gas-prism/smoke-softness/smoke-billow-depth/botanical-mesostructure/wood-bark-relief/botanical-pigment/plant-lamina/plant-lobe-depth/plant-canopy-mass/plant-canopy-tissue/plant-canopy-interlock/plant-canopy-hierarchy/wood-tannin focused audits are mutually exclusive');
 }
 
 const layoutOnly = process.argv.includes('--layout-only');
@@ -654,7 +673,7 @@ const liveScaleOnly = process.argv.includes('--live-scale-only');
 // dev-server navigation timing while leaving all default audit paths unchanged.
 const productionBundle = process.argv.includes('--production-bundle');
 const usesProductionBundle = productionBundle || showcaseScreenshotOnly || composedRankOnly
-  || candidateRankOnly || hdrVfxOnly || volumeVfxOnly || plantCanopyInterlockVfxOnly || plantCanopyHierarchyVfxOnly
+  || candidateRankOnly || nitroBodyVfxOnly || hdrVfxOnly || volumeVfxOnly || plantCanopyInterlockVfxOnly || plantCanopyHierarchyVfxOnly
   || liquidBodyVfxOnly || liquidSurfaceVfxOnly || gasBodyVfxOnly || gasMotionVfxOnly
   || powderBodyVfxOnly || powderLightVfxOnly || powderSolidContactVfxOnly || translucentEdgeVfxOnly || organicSubsurfaceVfxOnly || wetSedimentVfxOnly || gasLightVfxOnly || liquidSolidMeniscusVfxOnly || metalWaterContactVfxOnly || waterMetalTransmissionVfxOnly || gasCoreDepthVfxOnly || plasmaCoreVfxOnly || solidBodyVfxOnly || platinumBodyVfxOnly || ceramicGlazeVfxOnly || botanicalBodyVfxOnly || glassBodyVfxOnly || oilBodyVfxOnly || rockRoughnessVfxOnly || rockMesostructureVfxOnly || rockWeatheredFacetVfxOnly || waterBodyVfxOnly || waterVolumeRecessionVfxOnly || acidBodyVfxOnly || soapBodyVfxOnly || sootyPowderBodyVfxOnly || thermiteBodyVfxOnly || snowpackBodyVfxOnly || quartzMesostructureVfxOnly || c4BodyVfxOnly || bglaBodyVfxOnly || deutBodyVfxOnly || hydrogenBodyVfxOnly || carbonDioxideBodyVfxOnly || fogCoreDiffuseVfxOnly || radioactiveSolidBodyVfxOnly || iszsCrystallineVfxOnly || iszsCrystalHierarchyVfxOnly || nobleGasBillowVfxOnly || nobleGasPrismVfxOnly || smokeSoftnessVfxOnly || smokeBillowDepthVfxOnly || botanicalMesostructureVfxOnly || woodBarkReliefVfxOnly || botanicalPigmentVfxOnly || plantLaminaVfxOnly || plantLobeDepthVfxOnly || woodTanninVfxOnly || cellularGraphicsOnly || sensorGraphicsOnly
   || unusualPowderGraphicsOnly || earthenPowderGraphicsOnly || explosivePowderGraphicsOnly || unusualSolidGraphicsOnly
@@ -1457,6 +1476,9 @@ if (glassBodyVfxOnly && renderScaleArgument === '8') {
 if (oilBodyVfxOnly && renderScaleArgument === '8') {
   throw new Error('--oil-body-vfx-only is a normal-detail 1x/2x/4x experiment');
 }
+if (nitroBodyVfxOnly && renderScaleArgument === '8') {
+  throw new Error('--nitro-body-vfx-only is a normal-detail 1x/2x/4x experiment');
+}
 if (rockRoughnessVfxOnly && renderScaleArgument === '8') {
   throw new Error('--rock-roughness-vfx-only is a normal-detail 1x/2x/4x experiment');
 }
@@ -1642,7 +1664,7 @@ async function main() {
     const results = [];
     for (const mode of modes) results.push(await auditMode(mode));
     const reducedAudit = quickScreenshot || showcaseScreenshotOnly || composedRankOnly
-      || candidateRankOnly || hdrVfxOnly || volumeVfxOnly || plantCanopyInterlockVfxOnly || plantCanopyHierarchyVfxOnly
+      || candidateRankOnly || nitroBodyVfxOnly || hdrVfxOnly || volumeVfxOnly || plantCanopyInterlockVfxOnly || plantCanopyHierarchyVfxOnly
       || liquidBodyVfxOnly || liquidSurfaceVfxOnly || gasBodyVfxOnly || gasMotionVfxOnly
       || powderBodyVfxOnly || powderLightVfxOnly || powderSolidContactVfxOnly || translucentEdgeVfxOnly || organicSubsurfaceVfxOnly || wetSedimentVfxOnly || gasLightVfxOnly || liquidSolidMeniscusVfxOnly || metalWaterContactVfxOnly || waterMetalTransmissionVfxOnly || gasCoreDepthVfxOnly || oxygenVolumeFoldVfxOnly || plasmaCoreVfxOnly || solidBodyVfxOnly || platinumBodyVfxOnly || ceramicGlazeVfxOnly || botanicalBodyVfxOnly || glassBodyVfxOnly || oilBodyVfxOnly || rockRoughnessVfxOnly || rockMesostructureVfxOnly || rockWeatheredFacetVfxOnly || waterBodyVfxOnly || waterVolumeRecessionVfxOnly || acidBodyVfxOnly || soapBodyVfxOnly || sootyPowderBodyVfxOnly || thermiteBodyVfxOnly || snowpackBodyVfxOnly || quartzMesostructureVfxOnly || c4BodyVfxOnly || deutBodyVfxOnly || hydrogenBodyVfxOnly || carbonDioxideBodyVfxOnly || fogCoreDiffuseVfxOnly || radioactiveSolidBodyVfxOnly || iszsCrystallineVfxOnly || iszsCrystalHierarchyVfxOnly || nobleGasBillowVfxOnly || nobleGasPrismVfxOnly || smokeSoftnessVfxOnly || smokeBillowDepthVfxOnly || botanicalMesostructureVfxOnly || woodBarkReliefVfxOnly || botanicalPigmentVfxOnly || plantLaminaVfxOnly || plantLobeDepthVfxOnly || woodTanninVfxOnly || layoutOnly || mobileOnly || mobileGestureOnly
       || desktopInputOnly || visualScaleMatrixOnly || powderBodyOnly || liquidDepthOnly
@@ -2085,6 +2107,13 @@ async function auditMode(mode) {
     }
     if (!usesProductionBundle) {
       await cdp.send('Page.navigate', { url: auditUrl });
+    }
+    if (nitroBodyVfxOnly) {
+      assert(mode === 'webgl', '--nitro-body-vfx-only requires --webgl-only');
+      const nitroBodyVfx = await auditNitroBodyVfxExperiment(cdp, mode, dpr);
+      assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
+      cdp.close();
+      return { backend: mode, nitroBodyVfx, browserErrors: errors.length };
     }
     if (candidateRankOnly) {
       assert(mode === 'webgl', '--candidate-rank-only requires --webgl-only');
@@ -13212,6 +13241,7 @@ async function auditMaterialCandidateSurvey(cdp, mode, dpr) {
       renderScale: String(scale), renderLook: candidateLook,
       candidateRankAudit: '1', volumeVfx: '1', liquidBodyVfx: '1', powderBodyVfx: '1',
       powderLightVfx: '1', powderSolidContactVfx: '1',
+      nitroBodyVfx: candidateNitroBodyVfx,
       snowpackBodyVfx: candidateSnowpackBodyVfx,
       quartzMesostructureVfx: candidateQuartzMesostructureVfx,
       c4BodyVfx: candidateC4BodyVfx,
@@ -13231,6 +13261,7 @@ async function auditMaterialCandidateSurvey(cdp, mode, dpr) {
         && parameters.get('powderBodyVfx') === '1'
         && parameters.get('powderLightVfx') === '1'
         && parameters.get('powderSolidContactVfx') === '1'
+        && parameters.get('nitroBodyVfx') === ${JSON.stringify(candidateNitroBodyVfx)}
         && parameters.get('snowpackBodyVfx') === ${JSON.stringify(candidateSnowpackBodyVfx)}
         && parameters.get('quartzMesostructureVfx')
           === ${JSON.stringify(candidateQuartzMesostructureVfx)}
@@ -13302,6 +13333,7 @@ async function auditMaterialCandidateSurvey(cdp, mode, dpr) {
       return {
         hdrPipeline: canvas?.dataset.hdrPipeline ?? 'missing',
         liquidBodyVfx: canvas?.dataset.liquidBodyVfx ?? 'missing',
+        nitroBodyVfx: canvas?.dataset.nitroBodyVfx ?? 'missing',
         powderBodyVfx: canvas?.dataset.powderBodyVfx ?? 'missing',
         powderLightVfx: canvas?.dataset.powderLightVfx ?? 'missing',
         powderSolidContactVfx: canvas?.dataset.powderSolidContactVfx ?? 'missing',
@@ -13311,6 +13343,8 @@ async function auditMaterialCandidateSurvey(cdp, mode, dpr) {
         bglaBodyVfx: canvas?.dataset.bglaBodyVfx ?? 'missing',
       };
     })()`);
+    const expectedNitroBodyVfx = ['1', 'on'].includes(candidateNitroBodyVfx)
+      ? 'active' : 'inactive';
     const expectedSnowpackBodyVfx = ['1', 'on'].includes(candidateSnowpackBodyVfx)
       ? 'active' : 'inactive';
     const expectedQuartzMesostructureVfx = ['1', 'on'].includes(
@@ -13320,6 +13354,7 @@ async function auditMaterialCandidateSurvey(cdp, mode, dpr) {
     const expectedBglaBodyVfx = ['1', 'on'].includes(candidateBglaBodyVfx) ? 'active' : 'inactive';
     assert(presentation.hdrPipeline === 'active'
       && presentation.liquidBodyVfx === 'active'
+      && presentation.nitroBodyVfx === expectedNitroBodyVfx
       && presentation.powderBodyVfx === 'active'
       && presentation.powderLightVfx === 'active'
       && presentation.powderSolidContactVfx === 'active'
@@ -13497,6 +13532,7 @@ async function auditMaterialCandidateSurvey(cdp, mode, dpr) {
     },
     rankingMethod: `media-aware evidence v${COMPOSED_MEDIA_EVIDENCE_VERSION}; candidate selection still requires visible fit-view diagnosis`,
     renderLook: candidateLook,
+    nitroBodyVfx: candidateNitroBodyVfx,
     snowpackBodyVfx: candidateSnowpackBodyVfx,
     quartzMesostructureVfx: candidateQuartzMesostructureVfx,
     c4BodyVfx: candidateC4BodyVfx,
@@ -13511,6 +13547,483 @@ async function auditMaterialCandidateSurvey(cdp, mode, dpr) {
     fullScaleMatrix: captures.length === COMPOSED_RANK_SCALES.length,
     fieldIndicatorHiddenOnlyForCapture: true,
   };
+}
+
+/**
+ * Exact-NitRO body audit over the existing candidate-rank scene. Snow, Quartz,
+ * C4, and BGLA remain explicitly enabled so the only off -> on delta belongs
+ * to the exact cohesive NitRO card; no app fixture is recreated for this gate.
+ */
+const NITRO_BODY_VFX_CROSS_SCALE = Object.freeze({
+  NitROExactBody: Object.freeze({
+    rgbRms: 0.30, chromaRms: 0.25, coverage: 0.05, rgbPeak: 2,
+    signedMean: 0.35, spatialRgbRms: 0.35, polarity: 1,
+  }),
+  NitROCrown: Object.freeze({
+    rgbRms: 1.10, chromaRms: 0.85, coverage: 0.10, rgbPeak: 3,
+    signedMean: 1.20, spatialRgbRms: 1.05, polarity: 1,
+  }),
+  NitROPocket: Object.freeze({
+    rgbRms: 0.85, chromaRms: 0.70, coverage: 0.10, rgbPeak: 3,
+    signedMean: 0.95, spatialRgbRms: 0.85, polarity: -1,
+  }),
+  NitROCore: Object.freeze({
+    rgbRms: 0.65, chromaRms: 0.50, coverage: 0.10, rgbPeak: 2,
+    signedMean: 0.60, spatialRgbRms: 0.70, polarity: 1,
+  }),
+});
+
+async function auditNitroBodyVfxExperiment(cdp, mode, dpr) {
+  const scales = [];
+  const requestedScales = renderScaleArgument === undefined
+    ? VOLUME_VFX_SCALES : [Number(renderScaleArgument)];
+  for (const scale of requestedScales) {
+    const captures = {};
+    for (const enabled of [false, true, false]) {
+      const key = enabled ? 'enabled' : captures.disabled ? 'disabledRepeat' : 'disabled';
+      captures[key] = await navigateNitroBodyVfxState(cdp, mode, scale, enabled, key);
+    }
+    const { disabled, enabled, disabledRepeat } = captures;
+    assert(JSON.stringify(disabled.fixture) === JSON.stringify(enabled.fixture)
+      && JSON.stringify(disabled.fixture) === JSON.stringify(disabledRepeat.fixture),
+    `NitRO ${scale}x candidate fixture metadata changed`);
+    for (const [label, variant] of Object.entries(captures)) {
+      assertGeometry(variant.geometry, `NitRO ${label} ${scale}x`, scale);
+      assert(variant.geometry.backend.backend === 'webgl'
+        && variant.presentation.hdrPipeline === 'active'
+        && variant.presentation.liquidBodyVfx === 'active'
+        && variant.presentation.nitroBodyVfx === (label === 'enabled' ? 'active' : 'inactive')
+        && variant.presentation.snowpackBodyVfx === 'active'
+        && variant.presentation.quartzMesostructureVfx === 'active'
+        && variant.presentation.c4BodyVfx === 'active'
+        && variant.presentation.bglaBodyVfx === 'active',
+      `NitRO ${label} ${scale}x selector/dataset lifecycle was wrong (${JSON.stringify(
+        variant.presentation,
+      )})`);
+    }
+    assertCanvasRectsEqual(disabled.geometry.canvas, enabled.geometry.canvas,
+      `NitRO ${scale}x disabled/enabled CSS geometry`);
+    assertCanvasRectsEqual(disabled.geometry.canvas, disabledRepeat.geometry.canvas,
+      `NitRO ${scale}x disabled/repeated CSS geometry`);
+    assert(JSON.stringify(disabled.geometry.backing) === JSON.stringify(enabled.geometry.backing)
+      && JSON.stringify(disabled.geometry.backing) === JSON.stringify(disabledRepeat.geometry.backing),
+    `NitRO ${scale}x backing geometry changed`);
+    assert(JSON.stringify(disabled.semantic) === JSON.stringify(enabled.semantic)
+      && JSON.stringify(disabled.semantic) === JSON.stringify(disabledRepeat.semantic),
+    `NitRO ${scale}x changed exact candidate semantic/support state`);
+    assertVolumeVfxBackingInvariant(disabled.backing, enabled.backing,
+      `NitRO ${scale}x disabled/enabled`);
+    assertVolumeVfxBackingInvariant(disabled.backing, disabledRepeat.backing,
+      `NitRO ${scale}x disabled/repeated`);
+    assertVolumeVfxRawAlphaInvariant(disabled.rawAll, enabled.rawAll,
+      `NitRO ${scale}x disabled/enabled`);
+    assertVolumeVfxRawAlphaInvariant(disabled.rawAll, disabledRepeat.rawAll,
+      `NitRO ${scale}x disabled/repeated`);
+    assertVolumeVfxRawControlInvariant(disabled.rawControls, enabled.rawControls,
+      `NitRO ${scale}x disabled/enabled`);
+    assertVolumeVfxRawControlInvariant(disabled.rawControls, disabledRepeat.rawControls,
+      `NitRO ${scale}x disabled/repeated`);
+    assert(disabled.capture.capture.data === disabledRepeat.capture.capture.data,
+      `NitRO ${scale}x repeated-off framebuffer was not byte exact`);
+
+    const targets = nitroBodyVfxTargetRegions(disabled.fixture);
+    const controls = nitroBodyVfxControlRegions(disabled.fixture);
+    const responses = await sampleBackdropRefractionRegions(cdp, {
+      straight: disabled.capture.capture.data,
+      refracted: enabled.capture.capture.data,
+      repeatedStraight: disabledRepeat.capture.capture.data,
+    }, [...targets, ...controls], disabled.capture.canvasRect);
+    const targetResponses = responses.slice(0, targets.length).map((sample) => ({
+      ...sample,
+      spatialRgbRms: round(Math.sqrt(Math.max(0, sample.rgbRms ** 2
+        - (Math.hypot(...sample.responseRgb) / Math.sqrt(3)) ** 2)), 3),
+    }));
+    const controlResponses = responses.slice(targets.length);
+    assert(responses.every((sample) => sample.repeatRgbPeak === 0),
+      `NitRO ${scale}x off -> on -> off was not deterministic (${JSON.stringify(responses)})`);
+    const targetByName = Object.fromEntries(targetResponses.map((sample) => [sample.name, sample]));
+    const body = targetByName.NitROExactBody;
+    const crown = targetByName.NitROCrown;
+    const pocket = targetByName.NitROPocket;
+    const core = targetByName.NitROCore;
+    assert(targetResponses.length === 4
+      && body?.rgbRms >= 2.8 && body.rgbRms <= 3.5
+      && body.spatialRgbRms >= 2.7 && body.spatialRgbRms <= 3.4
+      && body.rgbPeak >= 12 && body.rgbPeak <= 16
+      && body.coverage >= 0.48 && body.coverage <= 0.55
+      && body.signedMean >= 0.60 && body.signedMean <= 1.20
+      && crown?.rgbRms >= 6 && crown.rgbRms <= 13
+      && crown.signedMean >= 6 && crown.signedMean <= 14
+      && crown.rgbPeak >= 8 && crown.rgbPeak <= 22
+      && pocket?.rgbRms >= 3 && pocket.rgbRms <= 9
+      && pocket.signedMean >= -7 && pocket.signedMean <= -2
+      && pocket.rgbPeak >= 6 && pocket.rgbPeak <= 18
+      && core?.rgbRms >= 1.5 && core.rgbRms <= 6
+      && core.signedMean >= 1 && core.signedMean <= 6
+      && core.rgbPeak >= 6 && core.rgbPeak <= 16,
+    `NitRO ${scale}x lost its bounded crown/pocket/core body response (${JSON.stringify(
+      targetResponses,
+    )})`);
+    const controlByName = Object.fromEntries(controlResponses.map((sample) => [sample.name, sample]));
+    const exactMaterialControls = [
+      'candidateSnow', 'candidateBASE', 'candidateC4', 'candidateBGLA', 'candidateQuartz',
+    ];
+    const authoredHole = controlByName.NitROAuthoredHole;
+    const rockContact = controlByName.NitRORockContact;
+    const rockStage = controlByName.SharedROCKStage;
+    assert(controlResponses.length === controls.length
+      && exactMaterialControls.every((name) => controlByName[name]?.rgbPeak === 0)
+      && authoredHole?.rgbPeak <= 1 && authoredHole.rgbRms <= 0.10
+      && rockContact?.rgbPeak <= 3 && rockContact.rgbRms <= 1
+      && rockContact.coverage <= 0.04
+      && rockStage?.rgbPeak === 0,
+    `NitRO ${scale}x escaped its bounded exact/edge controls (${JSON.stringify(
+      controlResponses,
+    )})`);
+    scales.push({
+      scale, geometry: disabled.geometry, semantic: disabled.semantic, backing: disabled.backing,
+      presentation: disabled.presentation,
+      targets: targetResponses, controls: controlResponses,
+      rawControls: disabled.rawControls, exactRepeatedOff: true,
+    });
+  }
+  if (scales.length > 1) {
+    const reference = scales.find(({ scale }) => scale === 2) ?? scales[0];
+    for (const current of scales.filter(({ scale }) => scale !== reference.scale)) {
+      assertCanvasRectsEqual(reference.geometry.canvas, current.geometry.canvas,
+        `NitRO ${reference.scale}x/${current.scale}x CSS geometry`);
+      // The raw presentation backing is intentionally output-scale-sized, so
+      // its dimensions, hashes, sums, and supported-pixel count cannot be
+      // byte-identical between 1x/2x/4x. Each scale has already proved exact
+      // off/on/off alpha and support above; only the world-space semantic
+      // contract is scale-invariant here.
+      assert(JSON.stringify(reference.semantic) === JSON.stringify(current.semantic),
+      `NitRO ${current.scale}x changed exact candidate state across output scales`);
+    }
+    const spread = (values) => Math.max(...values) - Math.min(...values);
+    for (const [name, bounds] of Object.entries(NITRO_BODY_VFX_CROSS_SCALE)) {
+      const samples = scales.map((entry) => entry.targets.find((sample) => sample.name === name));
+      assert(samples.every(Boolean)
+        && samples.every((sample) => bounds.polarity * sample.signedMean > 0)
+        && spread(samples.map((sample) => sample.rgbRms)) <= bounds.rgbRms
+        && spread(samples.map((sample) => sample.chromaRms)) <= bounds.chromaRms
+        && spread(samples.map((sample) => sample.coverage)) <= bounds.coverage
+        && spread(samples.map((sample) => sample.rgbPeak)) <= bounds.rgbPeak
+        && spread(samples.map((sample) => sample.signedMean)) <= bounds.signedMean
+        && spread(samples.map((sample) => sample.spatialRgbRms)) <= bounds.spatialRgbRms,
+      `NitRO ${name} drifted or reversed polarity across normal output scales (${JSON.stringify({
+        bounds, samples,
+      })})`);
+    }
+  }
+  const oilySiblingIsolation = await auditNitroBodyVfxOilySiblingIsolation(cdp, mode);
+  return {
+    schema: 'nitro-body-vfx/v1', scales, trueEightXExcluded: true,
+    oilySiblingIsolation,
+    trueEightX: await auditEightXNitroBodyVfxExclusion(cdp, dpr),
+  };
+}
+
+async function navigateNitroBodyVfxState(cdp, mode, scale, enabled, label) {
+  const query = new URLSearchParams({
+    scene: 'candidate-survey', inputAudit: '1', candidateRankAudit: '1',
+    nitroBodyVfxAudit: '1', auditStage: 'nitro-body', renderScale: String(scale),
+    renderLook: 'realistic', volumeVfx: '1', liquidBodyVfx: '1', powderBodyVfx: '1',
+    powderLightVfx: '1', powderSolidContactVfx: '1', nitroBodyVfx: enabled ? '1' : '0',
+    snowpackBodyVfx: '1', quartzMesostructureVfx: '1', c4BodyVfx: '1', bglaBodyVfx: '1',
+  });
+  await cdp.send('Page.navigate', { url: `${AUDIT_BASE_URL}?${query}` });
+  await waitFor(() => evaluate(cdp, `(() => {
+    const p = new URLSearchParams(location.search); const audit = window.__ANIFOR_INPUT_AUDIT__;
+    return p.get('scene') === 'candidate-survey' && p.get('nitroBodyVfxAudit') === '1'
+      && p.get('renderScale') === ${JSON.stringify(String(scale))}
+      && p.get('nitroBodyVfx') === ${JSON.stringify(enabled ? '1' : '0')}
+      && ['snowpackBodyVfx', 'quartzMesostructureVfx', 'c4BodyVfx', 'bglaBodyVfx']
+        .every((name) => p.get(name) === '1')
+      && document.querySelector('[data-scene="candidate-survey"]') !== null
+      && typeof audit?.materialCandidateSurveyFixture === 'function';
+  })()`), scale === 4 ? 45_000 : 15_000, `NitRO ${label} ${scale}x page`);
+  await waitFor(() => evaluate(cdp,
+    `window.__ANIFOR_INPUT_AUDIT__.backend().backend === ${JSON.stringify(mode)}`),
+  scale === 4 ? 30_000 : 15_000, `NitRO ${label} ${scale}x backend`);
+  const fixture = await evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    audit.setPowderRenderStyle?.('smooth');
+    return audit.materialCandidateSurveyFixture();
+  })()`);
+  assert(fixture?.version === 1 && fixture.world?.width === WORLD_WIDTH
+    && fixture.world?.height === WORLD_HEIGHT && fixture.regions?.length === 6,
+  `NitRO ${label} ${scale}x candidate fixture is unavailable (${JSON.stringify(fixture)})`);
+  const powderProbes = fixture.powderStabilityProbes
+    ?? fixture.regions.filter(({ phase }) => phase === 'powder')
+      .map(({ name, x, y }) => ({ name, x, y }));
+  await waitFor(() => evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    const probes = ${JSON.stringify(powderProbes)};
+    return probes.every(({ x, y }) => audit.cell(x, y) !== 0
+      && audit.presentationAuxiliary(x, y) === 255);
+  })()`), scale === 4 ? 30_000 : 12_000, `NitRO ${label} ${scale}x powder stability`);
+  await waitForNextWebGLPresentation(cdp, `NitRO ${label} ${scale}x settled presentation`,
+    scale === 4 ? 30_000 : 15_000, scale === 4 ? 30_000 : 15_000);
+  const semantic = await candidateRankSemanticDigest(cdp, fixture);
+  assert(semantic.hash === fixture.semantic.hash && semantic.occupied === fixture.semantic.occupied
+    && JSON.stringify(semantic.materialCounts) === JSON.stringify(fixture.semantic.materialCounts)
+    && semantic.regions.every((region) => region.matching === region.expectedMatching
+      && region.supportCells === region.expectedMatching),
+  `NitRO ${label} ${scale}x lost candidate semantic/support ownership (${JSON.stringify(semantic)})`);
+  const presentation = await evaluate(cdp, `(() => {
+    const canvas = document.querySelector('canvas.world-canvas');
+    return canvas ? {
+      hdrPipeline: canvas.dataset.hdrPipeline, liquidBodyVfx: canvas.dataset.liquidBodyVfx,
+      nitroBodyVfx: canvas.dataset.nitroBodyVfx,
+      snowpackBodyVfx: canvas.dataset.snowpackBodyVfx,
+      quartzMesostructureVfx: canvas.dataset.quartzMesostructureVfx,
+      c4BodyVfx: canvas.dataset.c4BodyVfx, bglaBodyVfx: canvas.dataset.bglaBodyVfx,
+    } : undefined;
+  })()`);
+  const indicator = await evaluate(cdp, `(() => {
+    const nodes = [...document.querySelectorAll('.field-indicator')];
+    for (const node of nodes) node.style.visibility = 'hidden';
+    return nodes.length > 0 && nodes.every((node) => getComputedStyle(node).visibility === 'hidden');
+  })()`);
+  assert(indicator, `NitRO ${label} ${scale}x could not hide the field indicator overlay`);
+  const target = nitroBodyVfxTargetRegions(fixture);
+  const controls = nitroBodyVfxControlRegions(fixture);
+  return {
+    fixture, semantic, presentation, geometry: await metrics(cdp),
+    backing: await sampleVolumeVfxCanvasAlphaSupport(cdp),
+    capture: await captureWorldCanvasComposite(cdp, `NitRO ${label} ${scale}x framebuffer`,
+      fixture.regions, scale === 4 ? 60_000 : 45_000),
+    rawAll: await sampleVolumeVfxRawWorldPixels(cdp, [...target, ...controls].map(({ name, x, y }) => ({
+      name, x: Math.floor(x), y: Math.floor(y),
+    }))),
+    rawControls: await sampleVolumeVfxRawWorldPixels(cdp, controls.map(({ name, x, y }) => ({
+      name, x: Math.floor(x), y: Math.floor(y),
+    }))),
+  };
+}
+
+function nitroBodyVfxTargetRegions(fixture) {
+  const nitro = fixture.regions.find(({ name }) => name === 'candidateNitro');
+  assert(nitro?.phase === 'liquid' && nitro?.profile === 'cohesive-liquid',
+    `NitRO candidate target is unavailable (${JSON.stringify(nitro)})`);
+  return [
+    {
+      name: 'NitROExactBody', target: true, x: nitro.x, y: nitro.y,
+      radiusX: Math.max(1, nitro.radiusX - 5), radiusY: Math.max(1, nitro.radiusY - 5),
+    },
+    { name: 'NitROCrown', target: true, x: 107.5, y: 102.5, radiusX: 6.5, radiusY: 6.5 },
+    { name: 'NitROPocket', target: true, x: 133.5, y: 102.5, radiusX: 6.5, radiusY: 6.5 },
+    { name: 'NitROCore', target: true, x: 113.5, y: 115.5, radiusX: 6.5, radiusY: 6.5 },
+  ];
+}
+
+function nitroBodyVfxControlRegions(fixture) {
+  const materialControls = fixture.regions.filter(({ name }) => name !== 'candidateNitro').map((region) => ({
+    name: region.name, x: region.x, y: region.y,
+    radiusX: Math.max(1, region.radiusX - 5), radiusY: Math.max(1, region.radiusY - 5),
+  }));
+  return [
+    ...materialControls,
+    // The candidate card's authored air and its exact last NITR row against
+    // the shared ROCK stage are scale-stable controls for support/contact leak.
+    { name: 'NitROAuthoredHole', x: 70, y: 76, radiusX: 5, radiusY: 8 },
+    { name: 'NitRORockContact', x: 110, y: 167.5, radiusX: 30, radiusY: 0.5 },
+    { name: 'SharedROCKStage', x: 110, y: 169.5, radiusX: 30, radiusY: 0.5 },
+  ];
+}
+
+/**
+ * The candidate card proves the intended fit-view response; this second,
+ * fixture-backed 2x capture rejects accidentally widening the new exact owner
+ * to either of its Oily siblings. It deliberately reuses the existing Oil
+ * body fixture/API and leaves the accepted E22 audit itself untouched.
+ */
+async function auditNitroBodyVfxOilySiblingIsolation(cdp, mode) {
+  const captures = {};
+  for (const enabled of [false, true, false]) {
+    const key = enabled ? 'enabled' : captures.disabled ? 'disabledRepeat' : 'disabled';
+    captures[key] = await navigateNitroBodyVfxOilySiblingState(cdp, mode, enabled, key);
+  }
+  const { disabled, enabled, disabledRepeat } = captures;
+  assert(JSON.stringify(disabled.fixture) === JSON.stringify(enabled.fixture)
+    && JSON.stringify(disabled.fixture) === JSON.stringify(disabledRepeat.fixture),
+  'NitRO/Oily sibling fixture metadata changed');
+  for (const [label, variant] of Object.entries(captures)) {
+    assertGeometry(variant.geometry, `NitRO/Oily sibling ${label} 2x`, 2);
+    assert(variant.geometry.backend.backend === 'webgl'
+      && variant.presentation.hdrPipeline === 'active'
+      && variant.presentation.liquidBodyVfx === 'active'
+      && variant.presentation.nitroBodyVfx === (label === 'enabled' ? 'active' : 'inactive')
+      && variant.presentation.oilBodyVfx === 'inactive',
+    `NitRO/Oily sibling ${label} selector lifecycle was wrong (${JSON.stringify(
+      variant.presentation,
+    )})`);
+  }
+  assertCanvasRectsEqual(disabled.geometry.canvas, enabled.geometry.canvas,
+    'NitRO/Oily sibling disabled/enabled CSS geometry');
+  assertCanvasRectsEqual(disabled.geometry.canvas, disabledRepeat.geometry.canvas,
+    'NitRO/Oily sibling disabled/repeated CSS geometry');
+  assert(JSON.stringify(disabled.geometry.backing) === JSON.stringify(enabled.geometry.backing)
+    && JSON.stringify(disabled.geometry.backing) === JSON.stringify(disabledRepeat.geometry.backing),
+  'NitRO/Oily sibling backing geometry changed');
+  assertHdrVfxSemanticEquality(disabled.semantic, enabled.semantic,
+    'NitRO/Oily sibling disabled/enabled');
+  assertHdrVfxSemanticEquality(disabled.semantic, disabledRepeat.semantic,
+    'NitRO/Oily sibling disabled/repeated');
+  assertVolumeVfxBackingInvariant(disabled.backing, enabled.backing,
+    'NitRO/Oily sibling disabled/enabled');
+  assertVolumeVfxBackingInvariant(disabled.backing, disabledRepeat.backing,
+    'NitRO/Oily sibling disabled/repeated');
+  assertVolumeVfxRawAlphaInvariant(disabled.rawAll, enabled.rawAll,
+    'NitRO/Oily sibling disabled/enabled');
+  assertVolumeVfxRawAlphaInvariant(disabled.rawAll, disabledRepeat.rawAll,
+    'NitRO/Oily sibling disabled/repeated');
+  assertVolumeVfxRawControlInvariant(disabled.rawControls, enabled.rawControls,
+    'NitRO/Oily sibling disabled/enabled');
+  assertVolumeVfxRawControlInvariant(disabled.rawControls, disabledRepeat.rawControls,
+    'NitRO/Oily sibling disabled/repeated');
+  assert(disabled.capture.capture.data === disabledRepeat.capture.capture.data,
+    'NitRO/Oily sibling repeated-off framebuffer was not byte exact');
+
+  const regions = nitroBodyVfxOilySiblingRegions(disabled.fixture);
+  const responses = await sampleBackdropRefractionRegions(cdp, {
+    straight: disabled.capture.capture.data,
+    refracted: enabled.capture.capture.data,
+    repeatedStraight: disabledRepeat.capture.capture.data,
+  }, regions, disabled.capture.canvasRect);
+  const byName = Object.fromEntries(responses.map((sample) => [sample.name, sample]));
+  assert(responses.every((sample) => sample.repeatRgbPeak === 0)
+    && byName.NitroControl?.rgbRms > 0 && byName.NitroControl.rgbPeak > 0
+    && byName.NitroControl.coverage > 0 && byName.NitroControl.rgbPeak <= 96
+    && byName.OilControl?.rgbPeak === 0 && byName.DieselControl?.rgbPeak === 0,
+  `NitRO/Oily sibling isolation leaked ownership (${JSON.stringify(responses)})`);
+  return {
+    scale: 2, semantic: disabled.semantic, backing: disabled.backing,
+    presentation: disabled.presentation, responses, exactRepeatedOff: true,
+  };
+}
+
+async function navigateNitroBodyVfxOilySiblingState(cdp, mode, enabled, label) {
+  const query = new URLSearchParams({
+    scene: 'render-lab', inputAudit: '1', blankAudit: '1', oilBodyVfxAudit: '1',
+    nitroBodyVfxAudit: '1', auditStage: 'nitro-oily-siblings', renderScale: '2',
+    renderLook: 'realistic', volumeVfx: '0', liquidBodyVfx: '1', liquidSurfaceVfx: '1',
+    liquidSolidMeniscusVfx: '1', nitroBodyVfx: enabled ? '1' : '0', oilBodyVfx: '0',
+    oilVolumeFinishVfx: '0', acidBodyVfx: '0', soapBodyVfx: '0', deutBodyVfx: '0',
+    waterBodyVfx: '0', waterVolumeRecessionVfx: '0', gasBodyVfx: '0', gasMotionVfx: '0',
+    powderBodyVfx: '0', powderLightVfx: '0', powderSolidContactVfx: '0',
+    solidBodyVfx: '0', platinumBodyVfx: '0', ceramicGlazeVfx: '0', botanicalBodyVfx: '0',
+    glassBodyVfx: '0', rockRoughnessVfx: '0', rockMesostructureVfx: '0',
+  });
+  await cdp.send('Page.navigate', { url: `${AUDIT_BASE_URL}?${query}` });
+  await waitFor(() => evaluate(cdp, `(() => {
+    const p = new URLSearchParams(location.search); const audit = window.__ANIFOR_INPUT_AUDIT__;
+    return p.get('auditStage') === 'nitro-oily-siblings' && p.get('renderScale') === '2'
+      && p.get('nitroBodyVfx') === ${JSON.stringify(enabled ? '1' : '0')}
+      && p.get('oilBodyVfx') === '0'
+      && typeof audit?.prepareOilBodyVfxFixture === 'function'
+      && typeof audit?.oilBodyVfxFixture === 'function';
+  })()`), 15_000, `NitRO/Oily sibling ${label} 2x page`);
+  await waitFor(() => evaluate(cdp,
+    `window.__ANIFOR_INPUT_AUDIT__.backend().backend === ${JSON.stringify(mode)}`),
+  15_000, `NitRO/Oily sibling ${label} 2x backend`);
+  const fixture = await evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    audit.setLiquidOpticalDepth(true); audit.prepareOilBodyVfxFixture();
+    return audit.oilBodyVfxFixture();
+  })()`);
+  await waitFor(() => oilBodyVfxFixtureReady(cdp, fixture), 20_000,
+    `NitRO/Oily sibling ${label} 2x fixture/depth hydration`);
+  await sleep(350);
+  const presentation = await evaluate(cdp, `(() => {
+    const canvas = document.querySelector('canvas.semantic-field-canvas');
+    return canvas ? {
+      hdrPipeline: canvas.dataset.hdrPipeline, liquidBodyVfx: canvas.dataset.liquidBodyVfx,
+      nitroBodyVfx: canvas.dataset.nitroBodyVfx, oilBodyVfx: canvas.dataset.oilBodyVfx,
+    } : undefined;
+  })()`);
+  const capture = await waitForStablePageCapture(cdp,
+    `NitRO/Oily sibling ${label} 2x framebuffer`, 30_000, 1);
+  const regions = nitroBodyVfxOilySiblingRegions(fixture);
+  return {
+    fixture, presentation, capture, geometry: await metrics(cdp),
+    semantic: await hdrVfxSemanticDigest(cdp), backing: await sampleVolumeVfxCanvasAlphaSupport(cdp),
+    rawAll: await sampleVolumeVfxRawWorldPixels(cdp, regions.map(({ name, x, y }) => ({
+      name, x: Math.floor(x), y: Math.floor(y),
+    }))),
+    rawControls: await sampleVolumeVfxRawWorldPixels(cdp, regions.filter(({ name }) => name !== 'NitroControl')
+      .map(({ name, x, y }) => ({ name, x: Math.floor(x), y: Math.floor(y) }))),
+  };
+}
+
+function nitroBodyVfxOilySiblingRegions(fixture) {
+  const centered = (name, rect) => ({
+    name, x: rect.x + rect.width / 2, y: rect.y + rect.height * 0.62,
+    radiusX: Math.max(1, rect.width / 2 - 8), radiusY: Math.max(1, rect.height / 2 - 14),
+  });
+  const controls = fixture.materialControls;
+  assert(controls?.nitro && controls?.oil === undefined && controls?.diesel,
+    `NitRO/Oily sibling fixture controls are unavailable (${JSON.stringify(controls)})`);
+  // Exact Oil lives in the deep open pool, while Diesel and NitRO occupy their
+  // own dense material-control cards. This covers every shared-Oily owner.
+  const oilPane = fixture.panes?.find((pane) => pane.code === 'OPEN_POOL');
+  assert(oilPane?.deepCore, `NitRO/Oily sibling Oil core is unavailable (${JSON.stringify(oilPane)})`);
+  return [
+    centered('NitroControl', controls.nitro),
+    centered('DieselControl', controls.diesel),
+    centered('OilControl', oilPane.deepCore),
+  ];
+}
+
+async function auditEightXNitroBodyVfxExclusion(cdp, dpr) {
+  await setDesktopMetrics(cdp, 1280, 720, dpr);
+  const query = new URLSearchParams({
+    scene: 'candidate-survey', inputAudit: '1', candidateRankAudit: '1',
+    nitroBodyVfxAudit: '1', auditStage: 'eight-nitro-body', renderScale: '8',
+    renderLook: 'realistic', volumeVfx: '1', liquidBodyVfx: '1', powderBodyVfx: '1',
+    powderLightVfx: '1', powderSolidContactVfx: '1', nitroBodyVfx: '1',
+    snowpackBodyVfx: '1', quartzMesostructureVfx: '1', c4BodyVfx: '1', bglaBodyVfx: '1',
+  });
+  await cdp.send('Page.navigate', { url: `${AUDIT_BASE_URL}?${query}` });
+  const deadline = Date.now() + EIGHT_X_PRESENTATION_DEADLINE_MS;
+  await waitFor(() => evaluate(cdp, `(() => {
+    const p = new URLSearchParams(location.search);
+    return p.get('scene') === 'candidate-survey' && p.get('renderScale') === '8'
+      && p.get('auditStage') === 'eight-nitro-body' && p.get('nitroBodyVfx') === '1'
+      && Boolean(window.__ANIFOR_INPUT_AUDIT__);
+  })()`), remainingDeadlineMs(deadline, 'true-8x NitRO input audit API'),
+  'true-8x NitRO input audit API');
+  const backend = await waitForEightXTerminalBackend(cdp, 'true-8x NitRO', deadline);
+  assertEightXWebGLBackend(backend, 'true-8x NitRO');
+  const geometry = await waitForStableCanvas(cdp, 1280, 720, undefined,
+    Math.min(45_000, remainingDeadlineMs(deadline, 'true-8x NitRO geometry')),
+    'true-8x NitRO geometry');
+  assert(geometry.backing.width === WORLD_WIDTH * 8 && geometry.backing.height === WORLD_HEIGHT * 8
+    && geometry.outputScale === '8',
+  `true-8x NitRO lost exact backing (${JSON.stringify(geometry.backing)})`);
+  const state = await evaluate(cdp, `(() => {
+    const canvas = document.querySelector('canvas.semantic-field-canvas');
+    return canvas ? {
+      renderer: canvas.dataset.renderer, look: canvas.dataset.renderLook,
+      hdrPipeline: canvas.dataset.hdrPipeline, reason: canvas.dataset.hdrPipelineReason,
+      bloomBacking: canvas.dataset.bloomBacking ?? null, liquidBodyVfx: canvas.dataset.liquidBodyVfx,
+      nitroBodyVfx: canvas.dataset.nitroBodyVfx, snowpackBodyVfx: canvas.dataset.snowpackBodyVfx,
+      quartzMesostructureVfx: canvas.dataset.quartzMesostructureVfx,
+      c4BodyVfx: canvas.dataset.c4BodyVfx, bglaBodyVfx: canvas.dataset.bglaBodyVfx,
+    } : undefined;
+  })()`, Math.min(1_000, remainingDeadlineMs(deadline, 'true-8x NitRO isolation')));
+  assert(state?.renderer === 'semantic-field-webgl' && state.look === 'realistic'
+    && state.hdrPipeline === 'inactive' && state.reason === 'scale-8' && state.bloomBacking === null
+    && state.liquidBodyVfx === 'inactive' && state.nitroBodyVfx === 'inactive'
+    && state.snowpackBodyVfx === 'inactive' && state.quartzMesostructureVfx === 'inactive'
+    && state.c4BodyVfx === 'inactive' && state.bglaBodyVfx === 'inactive',
+  `true-8x NitRO selector isolation failed (${JSON.stringify(state)})`);
+  const timingBudget = remainingDeadlineMs(deadline, 'true-8x NitRO GPU completion');
+  const timing = await auditWebGLPresentationTiming(cdp, 1, Math.min(12_000, timingBudget), timingBudget, 1);
+  assert(['gpu-query', 'gpu-fence', 'gpu-finish'].includes(timing.source),
+    `true-8x NitRO did not complete GPU work (${JSON.stringify(timing)})`);
+  return { backing: `${geometry.backing.width}x${geometry.backing.height}`, state, timing };
 }
 
 /**

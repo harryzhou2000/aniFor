@@ -2994,6 +2994,68 @@ describe('Pixi presenter startup configuration', () => {
     expect(source).toContain("this.app.canvas.dataset.oxygenVolumeFoldVfx = 'inactive';");
   });
 
+  it('keeps E63 Nitro body exact-owner, E03-dependent, normal-WebGL-only, and RGB-only', () => {
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const canvasSource = readFileSync(new URL('./field-renderer.ts', import.meta.url), 'utf8');
+    const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');
+    const normalStart = source.indexOf('const FIELD_FRAGMENT = `', eightStart);
+    const normalEnd = source.indexOf('`;\n\n/** Primary WebGL presentation', normalStart);
+    const eight = source.slice(eightStart, normalStart);
+    const normal = source.slice(normalStart, normalEnd);
+    const e03ParentStart = normal.lastIndexOf('    if (liquidOnly < 0.5');
+    const e03Start = normal.indexOf('        if (uLiquidBodyVfx > 0.5', e03ParentStart);
+    const e63Start = normal.indexOf('          // E63:', e03Start);
+    const e03End = normal.indexOf('    // E14:', e63Start);
+    const e03 = normal.slice(e03ParentStart, e03End);
+    const e63 = normal.slice(e63Start, e03End);
+    const preserveStart = source.indexOf('preserveDrawingBuffer:');
+    const preserveEnd = source.indexOf('resolution: outputScale', preserveStart);
+    const preserve = source.slice(preserveStart, preserveEnd);
+
+    expect(eightStart).toBeGreaterThanOrEqual(0);
+    expect(normalStart).toBeGreaterThan(eightStart);
+    expect(normalEnd).toBeGreaterThan(normalStart);
+    expect(e03ParentStart).toBeGreaterThanOrEqual(0);
+    expect(e03Start).toBeGreaterThan(e03ParentStart);
+    expect(e63Start).toBeGreaterThan(e03Start);
+    expect(e03End).toBeGreaterThan(e63Start);
+    expect(normal).toContain('uniform float uNitroBodyVfx;');
+    expect(normal.match(/uNitroBodyVfx > 0\.5/g)).toHaveLength(1);
+    expect(eight).not.toContain('uNitroBodyVfx');
+    expect(eight).not.toContain('nitroBody');
+    expect(canvasSource).not.toContain('nitroBodyVfx');
+    for (const guard of [
+      'uNitroBodyVfx > 0.5', 'material == 32.0', 'optics == 2.0',
+      'profile == 1.0', 'surfaceOnly < 0.5', 'emissionOnly < 0.5',
+      'shape.w > 3.5', 'exposedLiquidSide < 0.5',
+    ]) expect(e63).toContain(guard);
+    for (const parentProof of [
+      'uLiquidBodyVfx > 0.5', 'family == 2.0', 'traits < 0.5',
+      '!materialEmissive', 'liquidOnly < 0.5', 'halo < 0.5', 'wall < 0.5',
+      'molten < 0.5', 'foreignMatterContact < 0.5',
+      'unlikeMaterialContact < 0.5', 'dot(liquidSpeciesSlope, liquidSpeciesSlope) < 0.0004',
+    ]) expect(e03).toContain(parentProof);
+    for (const establishedScalar of [
+      'liquidVfxBody', 'liquidOpticalDepth', 'liquidFresnelContour',
+      'liquidNeighbourMean', 'liquidSpeciesSlope', 'broadSheen',
+    ]) expect(e63).toContain(establishedScalar);
+    expect(e63).not.toMatch(/\b(?:texture|textureLod|texelFetch)\s*\(/);
+    expect(e63).not.toContain('uTime');
+    expect(e63).not.toContain('gl_FragCoord');
+    expect(e63).not.toContain('discard');
+    expect(e63).not.toMatch(/\balpha\s*[+*]?=/);
+    expect(e63).not.toMatch(/\b(?:density|shape|support)\s*[+*]?=/);
+    expect(source.match(/this\.uniforms\.uniforms\.uNitroBodyVfx = 0;/g))
+      .toHaveLength(2);
+    expect(source).toMatch(
+      /const nitroBodyVfxEnabled = outputScale < 8\s*&& resolveNitroBodyVfxEnabled\(renderLook\);/,
+    );
+    expect(source).toContain('uNitroBodyVfx: { value: nitroBodyVfxEnabled ? 1 : 0');
+    expect(preserve).toContain("get('nitroBodyVfxAudit') === '1'");
+    expect(source).toContain('presenter.app.canvas.dataset.nitroBodyVfx');
+    expect(source).toContain("this.app.canvas.dataset.nitroBodyVfx = 'inactive';");
+  });
+
   it('keeps E25 Noble Gas billows exact-style, E04-dependent, normal-WebGL-only, and RGB-only', () => {
     const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
     const canvasSource = readFileSync(new URL('./field-renderer.ts', import.meta.url), 'utf8');

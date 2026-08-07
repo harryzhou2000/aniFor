@@ -71,6 +71,7 @@ import {
   resolveAcidBodyVfxEnabled,
   resolveSoapBodyVfxEnabled,
   resolveDeutBodyVfxEnabled,
+  resolveNitroBodyVfxEnabled,
   resolveOilBodyVfxEnabled,
   resolveOilVolumeFinishVfxEnabled,
   resolveWaterBodyVfxEnabled,
@@ -3326,6 +3327,7 @@ uniform float uLiquidBodyVfx;
 uniform float uAcidBodyVfx;
 uniform float uSoapBodyVfx;
 uniform float uDeutBodyVfx;
+uniform float uNitroBodyVfx;
 uniform float uOilBodyVfx;
 uniform float uOilVolumeFinishVfx;
 uniform float uWaterBodyVfx;
@@ -7376,6 +7378,53 @@ void main() {
               ? vec3(0.038, 0.075, 0.160) : vec3(0.030, 0.060, 0.145))
               * oilBodyPocket * (uOilVolumeFinishVfx > 0.5
                 ? (0.60 + caustic * 0.22) : (0.54 + caustic * 0.20));
+          }
+          // E63: exact Nitro shares Oily optics with Oil and Diesel, but the
+          // broad candidate-survey body still reads as a flat ochre plate.
+          // Recombine E03's already-live connected-body, optical-depth,
+          // sheen/caustic, macro-relief, and environment evidence into a pale
+          // energetic crown and an opposing olive absorptive pocket. This is
+          // RGB-only arithmetic: liquid support, alpha, species ownership,
+          // authored holes, contacts, Canvas, and compact true 8x stay on their
+          // established paths.
+          if (uNitroBodyVfx > 0.5 && uLiquidBodyVfx > 0.5
+            && material == 32.0 && optics == 2.0 && family == 2.0
+            && profile == 1.0 && traits < 0.5 && !materialEmissive
+            && surfaceOnly < 0.5 && emissionOnly < 0.5 && wall < 0.5
+            && foreignMatterContact < 0.5 && unlikeMaterialContact < 0.5
+            && shape.w > 3.5 && exposedLiquidSide < 0.5
+            && liquidNeighbourMean > 0.80
+            && dot(liquidSpeciesSlope, liquidSpeciesSlope) < 0.00024) {
+            float nitroBodyWeight = smoothstep(
+              30.0 / 255.0, 78.0 / 255.0, liquidOpticalDepth
+            ) * liquidVfxBody * (1.0 - liquidFresnelContour)
+              * smoothstep(0.80, 0.97, liquidNeighbourMean)
+              * (1.0 - smoothstep(
+                0.00002, 0.00024,
+                dot(liquidSpeciesSlope, liquidSpeciesSlope)
+              ));
+            float nitroBodyRoll = clamp(
+              (broadSheen - 0.5) * (causticWave - 0.5) * -3.05
+                + (causticWave - 0.5) * 0.46
+                + liquidMacroRelief * 1.45,
+              -1.0, 1.0
+            );
+            float nitroBodyCrown = smoothstep(
+              0.025, 0.50, max(nitroBodyRoll, 0.0)
+            ) * nitroBodyWeight;
+            float nitroBodyPocket = smoothstep(
+              0.025, 0.52, max(-nitroBodyRoll, 0.0)
+            ) * nitroBodyWeight;
+            vec3 nitroBodyReflection = mix(
+              vec3(1.00, 0.86, 0.26), reflectedEnvironment, 0.20
+            );
+            color += (vec3(1.16) - clamp(color, 0.0, 1.16))
+              * nitroBodyReflection * nitroBodyCrown
+              * (0.164 + broadSheen * 0.030 + caustic * 0.022);
+            color *= vec3(1.0) - vec3(0.160, 0.094, 0.026)
+              * nitroBodyPocket * (0.66 + caustic * 0.22);
+            color += (vec3(1.0) - clamp(color, 0.0, 1.0))
+              * vec3(0.36, 0.49, 0.12) * nitroBodyWeight * 0.018;
           }
           // E39: exact Acid already has a corrosive chroma identity, but its
           // deep production body was exclusively absorptive. Recompose only
@@ -11448,6 +11497,10 @@ export class PixiFieldPresenter {
     // must not advertise an effect that cannot run on that path.
     const liquidBodyVfxEnabled = outputScale < 8
       && resolveLiquidBodyVfxEnabled(renderLook);
+    // E63 recomposes only exact Nitro after E03 has proved a dense connected
+    // liquid body. Canvas and compact true 8x retain the established Oily path.
+    const nitroBodyVfxEnabled = outputScale < 8
+      && resolveNitroBodyVfxEnabled(renderLook);
     // E41 is a separate exact-DEUT radioactive-liquid proof, not a relaxation
     // of E03's trait-free body. Compact true 8x keeps its native DEUT identity
     // and state grammar and deliberately declares no E41 selector or branch.
@@ -11532,6 +11585,7 @@ export class PixiFieldPresenter {
       uWoodTanninVfx: { value: woodTanninVfxEnabled ? 1 : 0, type: 'f32' },
       uGlassBodyVfx: { value: glassBodyVfxEnabled ? 1 : 0, type: 'f32' },
       uLiquidBodyVfx: { value: liquidBodyVfxEnabled ? 1 : 0, type: 'f32' },
+      uNitroBodyVfx: { value: nitroBodyVfxEnabled ? 1 : 0, type: 'f32' },
       uAcidBodyVfx: { value: acidBodyVfxEnabled ? 1 : 0, type: 'f32' },
       uSoapBodyVfx: { value: soapBodyVfxEnabled ? 1 : 0, type: 'f32' },
       uDeutBodyVfx: { value: deutBodyVfxEnabled ? 1 : 0, type: 'f32' },
@@ -11802,6 +11856,7 @@ export class PixiFieldPresenter {
       this.uniforms.uniforms.uWoodTanninVfx = 0;
       this.uniforms.uniforms.uGlassBodyVfx = 0;
       this.uniforms.uniforms.uLiquidBodyVfx = 0;
+      this.uniforms.uniforms.uNitroBodyVfx = 0;
       this.uniforms.uniforms.uAcidBodyVfx = 0;
       this.uniforms.uniforms.uSoapBodyVfx = 0;
       this.uniforms.uniforms.uDeutBodyVfx = 0;
@@ -11895,6 +11950,7 @@ export class PixiFieldPresenter {
             || new URLSearchParams(location.search).get('waterBodyVfxAudit') === '1'
             || new URLSearchParams(location.search).get('waterVolumeRecessionVfxAudit') === '1'
             || new URLSearchParams(location.search).get('liquidBodyVfxAudit') === '1'
+            || new URLSearchParams(location.search).get('nitroBodyVfxAudit') === '1'
             || new URLSearchParams(location.search).get('liquidSolidMeniscusVfxAudit') === '1'
             || new URLSearchParams(location.search).get('liquidSurfaceVfxAudit') === '1'
             || new URLSearchParams(location.search).get('powderBodyVfxAudit') === '1'
@@ -12038,6 +12094,9 @@ export class PixiFieldPresenter {
     ) > 0.5 ? 'active' : 'inactive';
     presenter.app.canvas.dataset.liquidBodyVfx = Number(presenter.uniforms.uniforms.uLiquidBodyVfx) > 0.5
       ? 'active' : 'inactive';
+    presenter.app.canvas.dataset.nitroBodyVfx = Number(
+      presenter.uniforms.uniforms.uNitroBodyVfx
+    ) > 0.5 ? 'active' : 'inactive';
     presenter.app.canvas.dataset.acidBodyVfx = Number(
       presenter.uniforms.uniforms.uAcidBodyVfx
     ) > 0.5 ? 'active' : 'inactive';
@@ -13579,6 +13638,7 @@ export class PixiFieldPresenter {
         this.uniforms.uniforms.uWoodTanninVfx = 0;
         this.uniforms.uniforms.uGlassBodyVfx = 0;
         this.uniforms.uniforms.uLiquidBodyVfx = 0;
+        this.uniforms.uniforms.uNitroBodyVfx = 0;
         this.uniforms.uniforms.uAcidBodyVfx = 0;
         this.uniforms.uniforms.uSoapBodyVfx = 0;
         this.uniforms.uniforms.uDeutBodyVfx = 0;
@@ -13640,6 +13700,7 @@ export class PixiFieldPresenter {
         this.app.canvas.dataset.woodTanninVfx = 'inactive';
         this.app.canvas.dataset.glassBodyVfx = 'inactive';
         this.app.canvas.dataset.liquidBodyVfx = 'inactive';
+        this.app.canvas.dataset.nitroBodyVfx = 'inactive';
         this.app.canvas.dataset.acidBodyVfx = 'inactive';
         this.app.canvas.dataset.soapBodyVfx = 'inactive';
         this.app.canvas.dataset.deutBodyVfx = 'inactive';

@@ -13,7 +13,7 @@ powder, solid, liquid, gas, energy, and contact scenes across Canvas and WebGL a
 mobile gestures, save/load, CI, and Pages deployment as protected regression
 contracts rather than the primary feature stream.
 
-The accepted visual experiment ladder now runs through E62. E12 is the
+The accepted visual experiment ladder now runs through E63. E12 is the
 species-safe Sand/Clay/Concrete wet-sediment checkpoint; preserve its exact
 aqueous owner/stability proof, split moving-powder/stationary-Water control,
 Local/Grains no-op, fine structures, authored gaps, Canvas fallback, and true
@@ -1284,10 +1284,44 @@ one-byte HDR fringe. Requested-on true 8× reports E04/E15/E62/HDR inactive for
 `scale-8`, presents exact 4896×3072 WebGL, and completes a GPU fence (accepted
 run `5.2279 s`) with zero browser errors.
 
+E63 is the accepted normal-WebGL-only exact NITR/Nitro `32` connected-body
+recomposition, independently measurable with `?nitroBodyVfx=0|1` and a strict
+child of E03. It runs only for the exact Oily/liquid/profile-1, trait-free,
+non-emissive owner after E03 has proved a dense interior with no surface,
+wall, unlike-material, or foreign-phase contact. Recombine only the existing
+liquid optical depth, connected-body weight, cardinal species slope and
+neighbour mean, broad sheen, caustic carrier, macro relief, Fresnel contour,
+and reflected environment into a pale energetic amber crown, opposing olive
+absorptive pocket, and restrained transmitted-green fill. This is RGB-only
+arithmetic: add no sample, texture, field, resource, pass, target, upload,
+allocation, clock, alpha, support, silhouette, ownership, topology, state, or
+physics decision. Canvas and compact true 8× retain the established Oily
+presentation and declare no E63 uniform or branch.
+
+`npm run audit:vfx:nitro-body` toggles only E63 off→on→off at 1×/2×/4× on the
+frozen candidate-survey v1 scene, with the accepted Snow/Quartz/C4/BGLA stack
+explicitly active. The broad NITR body's frozen RGB RMS/spatial RMS/coverage is
+`2.8–3.5`/`2.7–3.4`/`.48–.55`, with signed mean `.60–1.20` and peak `12–16`
+bytes. Separate crown/pocket/core gates require RGB RMS `6–13`/`3–9`/`1.5–6`,
+signed mean `6–14`/`−7…−2`/`1–6`, and peaks `8–22`/`6–18`/`6–16`. The accepted
+1×/2×/4× run measured broad-body RGB RMS
+`3.13/3.12/3.12`, crown `8.72/8.74/8.74`, pocket `5.39/5.40/5.40`, and core
+`3.47/3.43/3.42`; fixed peaks are `14/14/11/10`, and crown/pocket/core signed
+means retain the intended positive/negative/positive polarity. Exact semantics,
+alpha/support, backing, all five sibling candidate bodies, the
+shared ROCK stage, and repeated-off framebuffers remain unchanged. The
+authored air hole may retain at most one composed HDR fringe byte and the last
+NITR row against ROCK at most three bytes over `.04` coverage; neither changes
+support. A secondary exact-owner proof uses the existing Oil fixture: its deep
+NITR control responds at RGB RMS `12.06` and peak `29`, while Oil and Diesel
+remain exact despite sharing Oily optics. Requested-on true 8× reports
+E03/E63/HDR inactive for `scale-8`, presents exact 4896×3072 WebGL, and
+completes a GPU fence (accepted run `5.1513 s`) with zero browser errors.
+
 Visual-audit lesson: `inputAudit=1` disables opt-in child selectors unless the
 composed route names them explicitly, so canonical evidence must request and
-prove every accepted child it claims (notably E37/E56/E61/E62). Keep the audited
-depth endpoint identical to the shader activation boundary, and describe only
+prove every accepted child it claims (notably E37/E56/E61/E62/E63). Keep the
+audited depth endpoint identical to the shader activation boundary, and describe only
 structures the frozen measurements actually establish; an absorptive response
 does not prove a positive caustic arc merely because the shader reuses a
 filament scalar.
@@ -1315,11 +1349,17 @@ optical-variation component `0.8361`, stable within `0.015` quality across
 1×–4×. E51 now closes that result with exact native concentration and spark
 state rather than inferred palette or neighbour state, while preserving real
 dilution, Acid/CAUS neutralisation, Oil→SOAP, phase products, corrosion,
-pressure reactions, and OPS state. Nitro remains a quality `100` control.
-BGLA's historical quality-`100` candidate card selected E52 but remains context
-rather than its acceptance evidence. The post-E52 survey must explicitly enable
-all four candidate-facing accepted selectors. BGLA then remains quality `100`
-at 1×/2×/4×, with microcontrast `9.393/10.971/8.452`, chromatic contrast
+pressure reactions, and OPS state. BGLA's historical quality-`100` candidate
+card selected E52 but remains context rather than its acceptance evidence.
+The post-E52 survey exposed a scorer blind spot: exact Nitro still scored
+`100`, yet the canonical 2× fit view was a broad flat olive plate with luma SD
+`6.287`, microcontrast `.202`, chromatic contrast `.271`, and macro range
+`24.365`. E63 was selected from that visible deficit. With E63 enabled, Nitro
+retains quality `100`, full support/coverage, zero dark/clipped fraction, and
+raises those measures to `7.129`/`.321`/`.332`/`27.918` while replacing the
+flat body with a coherent crown/pocket volume. The candidate survey command
+must explicitly enable all five candidate-facing accepted selectors. BGLA then
+remains quality `100` at 1×/2×/4×, with microcontrast `9.393/10.971/8.452`, chromatic contrast
 `5.872/5.614/4.136`, macro range `34.213/29.575/24.387`, full support, and zero
 clipping. Snow's formerly measured candidate deficit is closed: quality is
 `93.614/92.916/93.274` at 1×/2×/4× after the bounded 4× fit-view refinement;
@@ -1328,7 +1368,8 @@ microcontrast is `4.815/5.702/5.424`, chromatic contrast is
 support and zero dark/clipped fraction. The former 4× pigment-variation loss is
 therefore no longer an open candidate deficit. Do not alter E48 from
 candidate-rank evidence or widen E50, E51, or E52; select any later experiment
-only from a new visible fit-view diagnosis.
+only from a new visible fit-view diagnosis. Do not treat a saturated aggregate
+score as evidence that a material already reads well at fit view.
 
 The composed showcase remains a separate roadmap signal. Its refreshed
 E37/E56/E58/E59/E60/E61/E62-active 1×/2×/4× matrix is exact and cross-scale
@@ -1861,8 +1902,9 @@ npm run audit:vfx:candidate-rank
 
 The candidate-survey route is a separate app-owned deterministic fixture; its
 frozen six-region 1×/2×/4× production-WebGL matrix selects bounded exact-owner
-experiments without mutating the accepted showcase contract. Its four
-candidate-facing selectors explicitly enable accepted E48, E49, E50, and E52.
+experiments without mutating the accepted showcase contract. Its five
+candidate-facing selectors explicitly enable accepted E48, E49, E50, E52, and
+E63.
 E51 has no candidate-survey selector and is proved separately by its authentic
 native-state fixture; do not use this route to claim a pre/post-E51 rank. Use
 the underlying driver's

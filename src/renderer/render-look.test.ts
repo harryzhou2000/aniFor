@@ -33,6 +33,7 @@ import {
   resolveRadioactiveSolidBodyVfxEnabled,
   resolveVibrMacroReliefVfxEnabled,
   resolveOilBodyVfxEnabled,
+  resolveNitroBodyVfxEnabled,
   resolveOilVolumeFinishVfxEnabled,
   resolveOrganicSubsurfaceVfxEnabled,
   resolvePlasmaCoreVfxEnabled,
@@ -887,6 +888,34 @@ describe('resolveRenderLook', () => {
     expect(resolveSoapBodyVfxEnabled(
       'realistic', '?volumeVfx=0&liquidBodyVfx=1&soapBodyVfx=1',
     )).toBe(true);
+  });
+
+  it('keeps exact NitRO body recomposition subordinate to E03, audit-isolated, and independent of Oil', () => {
+    expect(resolveNitroBodyVfxEnabled('classic', '?nitroBodyVfx=on')).toBe(false);
+    expect(resolveNitroBodyVfxEnabled('realistic', '')).toBe(true);
+    expect(resolveNitroBodyVfxEnabled('neon-lab', '')).toBe(true);
+    expect(resolveNitroBodyVfxEnabled('realistic', '?inputAudit=1')).toBe(false);
+    expect(resolveNitroBodyVfxEnabled(
+      'realistic', '?inputAudit=1&nitroBodyVfx=true',
+    )).toBe(true);
+    expect(resolveNitroBodyVfxEnabled('realistic', '?nitroBodyVfx=0')).toBe(false);
+    expect(resolveNitroBodyVfxEnabled('realistic', '?nitroBodyVfx=off')).toBe(false);
+    expect(resolveNitroBodyVfxEnabled('realistic', '?nitroBodyVfx=false')).toBe(false);
+    expect(resolveNitroBodyVfxEnabled('realistic', '?nitroBodyVfx=1')).toBe(true);
+    expect(resolveNitroBodyVfxEnabled('realistic', '?nitroBodyVfx=on')).toBe(true);
+    expect(resolveNitroBodyVfxEnabled('realistic', '?nitroBodyVfx=true')).toBe(true);
+    expect(resolveNitroBodyVfxEnabled(
+      'realistic', '?liquidBodyVfx=0&nitroBodyVfx=on',
+    )).toBe(false);
+    expect(resolveNitroBodyVfxEnabled(
+      'realistic', '?volumeVfx=0&liquidBodyVfx=on&nitroBodyVfx=1',
+    )).toBe(true);
+    expect(resolveNitroBodyVfxEnabled(
+      'realistic', '?oilBodyVfx=0&nitroBodyVfx=on',
+    )).toBe(true);
+    expect(resolveNitroBodyVfxEnabled(
+      'realistic', '?oilBodyVfx=on&nitroBodyVfx=off',
+    )).toBe(false);
   });
 
   it('keeps exact Hydrogen body optics subordinate to E04 and isolated from older input audits', () => {

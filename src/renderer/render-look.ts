@@ -729,6 +729,25 @@ export function resolveSoapBodyVfxEnabled(
 }
 
 /**
+ * Re-composes only exact native NITR after E03 has proved its connected,
+ * ordinary liquid body. This child is independent of Oil-body recomposition,
+ * cannot revive the liquid-body parent, and keeps input-audit scenes frozen
+ * until they explicitly opt in.
+ */
+export function resolveNitroBodyVfxEnabled(
+  look: RenderLook,
+  search = globalThis.location?.search ?? '',
+): boolean {
+  if (!resolveLiquidBodyVfxEnabled(look, search)) return false;
+  const parameters = new URLSearchParams(search);
+  const requested = parameters.get('nitroBodyVfx');
+  if (requested === '0' || requested === 'off' || requested === 'false') return false;
+  if (requested === '1' || requested === 'on' || requested === 'true') return true;
+  if (parameters.get('inputAudit') === '1') return false;
+  return true;
+}
+
+/**
  * Gives exact native DEUT a trait-aware connected-liquid body without
  * weakening E03's deliberately trait-free eligibility. This is a sibling of
  * E03 inside a non-Classic HDR look: an explicit selector can isolate E41
