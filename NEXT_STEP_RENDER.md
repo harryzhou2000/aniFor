@@ -700,7 +700,9 @@ does not alter simulation, camera, semantic ownership, or `renderScale`.
   true 8× prepares and verifies the full same fixture, reports E17/E43/HDR
   inactive for `scale-8`, preserves exact semantic/rendered/depth/wall/native-
   state hashes, promotes exact 4896×3072 WebGL, and completed a `5200.3 ms` GPU
-  fence with zero browser errors. Canvas retains its established identity path.
+  fence with zero browser errors. The parent gate pins E54 off; its latest full
+  1×/2×/4×/8× rerun stayed exact and completed the 8× fence in `5295.8 ms`.
+  Canvas retains its established identity path.
 - **E44 accepted:** exact Carbon Dioxide `41` gains a normal-WebGL-only broad
   connected-volume fold as a strict child of E04
   (`?carbonDioxideBodyVfx=0|1`). Exact propagated atmosphere style `6`, E04's
@@ -786,7 +788,9 @@ does not alter simulation, camera, semantic ownership, or `renderScale`.
   and browser errors remain zero. Requested-on compact true 8× has no E47
   selector or branch, presents exact 4896×3072 WebGL, and completed the
   final frozen full-matrix GPU fence in `5161.0 ms`; repeated calibration tails
-  ranged `4169.7–5248.3 ms`. Composed v6 explicit-selector telemetry
+  ranged `4169.7–5248.3 ms`. The parent gate pins E54 off; its latest full
+  1×/2×/4×/8× rerun preserved every control and completed the 8× fence in
+  `5214.9 ms`. Composed v6 explicit-selector telemetry
   raises `solidISZS` quality `70.694→93.047`, luma standard deviation
   `2.52→7.68`, microcontrast `.80→1.16`, chromatic contrast to `2.19`, and
   macro range `10→28`, with full support and zero dark/clipped fraction.
@@ -898,11 +902,23 @@ does not alter simulation, camera, semantic ownership, or `renderScale`.
   envelopes, 34 controls, exact off repetition, all-scale frequency retention,
   and requested-on true-8× exclusion without a new carrier, sample, resource,
   state, support, or topology decision.
+- **E54 accepted:** exact zero-state VIBR `113` gains a normal-WebGL-only
+  continuous conductive macro relief as a strict E43/E17 child
+  (`?vibrMacroReliefVfx=0|1`). It reuses E43's already-live macro, facet, fold,
+  depth, core, and environment evidence for a teal/cyan crown, absorptive
+  pocket, and restrained conductive shoulder. Nonzero charge/countdown/
+  alternate VIBR and every BVBR state remain exact controls; the later native
+  state grammar stays authoritative. Canvas and compact true 8× retain their
+  established paths. `npm run audit:vfx:vibr-macro-relief` freezes the
+  1×/2×/4× off→on→off matrix, 41 named controls, byte-exact repeated-off
+  output, cross-scale appearance, and requested-on true-8× exclusion without a
+  new sample, noise call, texture, field, resource, state, support, topology, or
+  physics decision.
 - **Protected 8× rung:** `renderScale=8` deliberately reports
   `hdrPipeline=inactive` / `scale-8` and retains the proven direct single-mesh
   4896×3072 path. The experiment must earn a bounded 8× design rather than
   allocating a 115 MiB full-resolution float target beside that path.
-- **Current decision:** E01/E02/E03/E04/E05/E06/E07/E08/E09/E10/E11/E12/E13/E14/E15/E16/E17/E18/E19/E20/E21/E22/E23/E24/E25/E26/E27/E28/E29/E30/E31/E32/E33/E34/E35/E36/E37/E38/E39/E40/E41/E42/E43/E44/E45/E46/E47/E48/E49/E50/E51/E52/E53 remain opt-in through the non-Classic looks
+- **Current decision:** E01/E02/E03/E04/E05/E06/E07/E08/E09/E10/E11/E12/E13/E14/E15/E16/E17/E18/E19/E20/E21/E22/E23/E24/E25/E26/E27/E28/E29/E30/E31/E32/E33/E34/E35/E36/E37/E38/E39/E40/E41/E42/E43/E44/E45/E46/E47/E48/E49/E50/E51/E52/E53/E54 remain opt-in through the non-Classic looks
   until representative hardware timing and mobile thermal behavior are
   measured. E02 remains the safe family-wide baseline. E03 is accepted as the
   liquid-depth checkpoint: its fit-view crop is visibly more cohesive, retains
@@ -1062,6 +1078,13 @@ does not alter simulation, camera, semantic ownership, or `renderScale`.
   target-specific response/frequency/appearance envelopes, 34 exact controls,
   and Canvas/compact-8× exclusion. Never revive the thresholded rib/vein mesh,
   add another carrier, or widen the owner to stateful/contact PLNT.
+  E54 is the accepted exact zero-state VIBR conductive-macro checkpoint: freeze
+  its strict E43/E17 dependency, exact owner and packed-zero-state proof, reuse
+  of the already-live macro/facet/fold/depth/core/environment evidence, three
+  target-specific response/frequency/appearance envelopes, 41 controls, and
+  Canvas/compact-8× exclusion. Never widen it to BVBR or nonzero VIBR state,
+  displace the later native-state grammar, add another carrier, or turn its RGB
+  relief into support, topology, state, or physics.
   E37 is the accepted exact Metal-side Water-contact checkpoint: freeze its
   joint E14+E17 dependency, exact Water/Metal ownership, scale-specific reuse
   of the existing liquid/contact evidence, Oil/Metal and mixed-contact controls,
@@ -2037,7 +2060,7 @@ next production 4× survey then selected Wood/PLNT as the largest remaining
   coverage `.971`, macro range `50`, zero dark/clipped fraction, and exact
   semantics across the full composed matrix.
 
-**Next visual experiments:** E03–E53 provide accepted liquid body/surface,
+**Next visual experiments:** E03–E54 provide accepted liquid body/surface,
 stable-gas, coherent-gas-motion, powder-depth, and powder-local-light
 checkpoints plus exact resting contact grounding, Glass/Ice transmission, and
 state-aware Wax/PLNT subsurface response, composed wet-mineral optics,
@@ -2107,6 +2130,13 @@ cyan/violet crystal planes close the demonstrated ISZS surface-detail gap while
 VIBR `113`, native state, topology, contacts, Canvas, and compact 8× remain
 unchanged. Its 1× composed-survey floor remains contextual ranking evidence;
 the frozen focused matrix remains the E47 acceptance gate.
+E54 gives exact zero-state VIBR `113` a strict E43/E17-owned continuous
+conductive macro relief by recombining only E43's existing macro, facet, fold,
+depth, core, and environment evidence. It closes the broad, flat conductive-body
+read without reopening E43 or changing nonzero VIBR charge/countdown/alternate
+state, any BVBR state, topology, contacts, Canvas, or compact 8×. The later
+native-state grammar remains authoritative, and this closes the current VIBR
+stack.
 E48 gives exact Snow `18` a strict E05-owned cohesive snowpack body by
 recombining the already-live settled-body facet, slope, volume, and pre-grain
 lighting evidence. It calms only dense Snow pigment beneath a broad blue-white
@@ -2177,10 +2207,31 @@ proves E20/E26/E28/E32/E34/E36/E53/HDR/bloom exclusion, exact 4896×3072
 WebGL, stable semantics, zero browser errors, and a signalled `gpu-fence` in
 `5373.1 ms`. The focused release gate is
 `npm run audit:vfx:plant-canopy-tissue`.
+E54 is the accepted exact zero-state VIBR `113` conductive-macro checkpoint, a
+normal-WebGL-only strict E43/E17 child (`?vibrMacroReliefVfx=0|1`). It reuses
+only E43's existing static macro/facet/fold, exact-species thickness/core, and
+solid-environment evidence for broad teal/cyan conductive crown, absorptive
+pocket, shoulder, and signed chroma. Nonzero charge/countdown/alternate state,
+every BVBR state, holes, thin structures, walls, contacts, foreign owners,
+Canvas, and compact true 8× remain controls; the later native VIBR state grammar
+is unchanged. The path is RGB-only and adds no sample, noise call, texture,
+field, resource, pass, target, upload, allocation, clock, alpha, support,
+silhouette, ownership, topology, native-state, or physics decision. Its frozen
+1×/2×/4× focused matrix observes core/crown/pocket RGB RMS at
+`15.29–15.32`/`22.38–22.40`/`4.46–4.52`, with calibrated headroom in the
+executable envelopes; core and crown stay positive while the pocket stays
+negative. All 41 controls remain exact except a named 1×
+post-compositor `VIBRThin` blue-channel allowance of one byte; its semantic,
+raw framebuffer, exact depth, and repeated-off evidence remain exact, and every
+2×/4× control is byte-exact. Requested-on true 8× proves
+E17/E43/E47/E54/HDR/bloom exclusion, exact 4896×3072 WebGL, stable semantics,
+zero browser errors, and a signalled `gpu-fence` in `5226.8 ms`. The focused
+release gate is `npm run audit:vfx:vibr-macro-relief`.
 Improve distinctive depth, transmission, reflection, lighting, and
 mesostructure without stacking another narrow Oil/Acid/contact tint or generic
 PLNT/gas layer.
-The fresh composed-family/material survey now uses E17/E43/E44/E45/E46/E47 under
+The fresh composed-family/material survey now uses
+E17/E43/E44/E45/E46/E47/E53/E54 under
 `inputAudit=1`. Fixture v6 freezes 23 material counts, 18 scored regions,
 semantic hash `3610338776`, and 114,015 occupied cells at 1×/2×/4×; its exact
 SOAP body owns 1,220 cells and the deep `liquidSoap` region owns 384. The
@@ -2199,11 +2250,18 @@ showcase v6 has no authoritative BGLA evidence. With E53 active, exact PLNT
 quality becomes `72.165`/`77.290`/`78.704` at 1×/2×/4×. Its
 microcontrast/chroma are `1.70`/`1.90`, `1.81`/`2.00`, and `1.85`/`2.03`;
 macro range stays `50`, support stays `1`, coverage stays `.971`, and dark and
-clipped fractions remain zero. The current canonical 2× family rank is Organic
-`77.290` (exact PLNT mesostructure), Solid `86.207` (VIBR macro
-relief), Contact `88.768` (Water/Metal chromatic separation), Gas `95.463`,
-Emission `98.475`, and Powder/Liquid `100`; exact 1×/2×/4× semantics and CSS
-geometry remain fixed with zero browser errors. Because E36 already proved that
+clipped fractions remain zero. With E54 active, `solidVIBR` quality is
+`97.731/100/100` at 1×/2×/4×, raising the canonical 2× result from `86.207`
+to `100`. Its canonical luma deviation is `4.37`, microcontrast `1.65`,
+chromatic contrast `3.15`, and macro range `20`, while support `1`, coverage
+`.959`, and zero dark/clipped fractions are unchanged. The current canonical
+2× family rank is Organic `77.290` (exact PLNT mesostructure), Contact `88.768`
+(Water/Metal chromatic separation), Solid `90.2` (ROCK surface detail), Gas
+`95.463`, Emission `98.475`, and Powder/Liquid `100`; exact 1×/2×/4×
+semantics and CSS geometry remain fixed with zero browser errors. The next
+fit-view candidates are PLNT mesostructure, Water/Metal chromatic separation,
+and ROCK surface detail; do not stack another VIBR layer. Because E36 already
+proved that
 the PLNT aggregate scorer can penalize accepted broad canopy recomposition,
 select the next experiment from a new fit-view diagnosis rather than tuning
 only to the rank.
@@ -2245,7 +2303,7 @@ is `24.657/23.679/22.240` at 1×/2×/4×, with full support and zero dark/clippe
 fraction. Do not alter E48 from candidate-rank evidence; its focused exact-owner
 fixture remains the acceptance contract. Choose any later experiment only from
 a new visible fit-view diagnosis. Preserve the E14 1× stencil snap and all
-E01–E53 selectors and controls.
+E01–E54 selectors and controls.
 
 ## Phase 1 — HDR pipeline & lighting core (biggest visual payoff)
 

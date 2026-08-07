@@ -4325,7 +4325,8 @@ describe('Pixi presenter startup configuration', () => {
     const eight = source.slice(eightStart, normalStart);
     const block = source.slice(start, end);
     const e43Start = block.indexOf('      // E43:');
-    const e43 = block.slice(e43Start);
+    const e43End = block.indexOf('        // E54:', e43Start);
+    const e43 = block.slice(e43Start, e43End);
     const preserveStart = source.indexOf('preserveDrawingBuffer:');
     const preserveEnd = source.indexOf('resolution: outputScale', preserveStart);
     const preserve = source.slice(preserveStart, preserveEnd);
@@ -4335,6 +4336,7 @@ describe('Pixi presenter startup configuration', () => {
     expect(start).toBeGreaterThan(normalStart);
     expect(end).toBeGreaterThan(start);
     expect(e43Start).toBeGreaterThanOrEqual(0);
+    expect(e43End).toBeGreaterThan(e43Start);
     expect(e43).toContain('bool radioactiveSolidBodyOwner = material == 105.0 || material == 113.0;');
     for (const guard of [
       'uRadioactiveSolidBodyVfx > 0.5', 'uSolidBodyVfx > 0.5',
@@ -4386,6 +4388,59 @@ describe('Pixi presenter startup configuration', () => {
     expect(browserGate).toContain('audit.prepareRadioactiveSolidBodyVfxFixture();');
     expect(browserGate).toContain('radioactiveSolidBodyVfxFixtureReady(cdp, fixture)');
     expect(browserGate).toContain('radioactiveSolidBodyVfxStateDigest(cdp, fixture)');
+  });
+
+  it('layers E54 only over deep zero-state VIBR using E43 static evidence', () => {
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const canvasSource = readFileSync(new URL('./field-renderer.ts', import.meta.url), 'utf8');
+    const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');
+    const normalStart = source.indexOf('const FIELD_FRAGMENT = `');
+    const e54Start = source.indexOf('        // E54:', normalStart);
+    const e54End = source.indexOf('        // E47:', e54Start);
+    const eight = source.slice(eightStart, normalStart);
+    const block = source.slice(e54Start, e54End);
+    const preserveStart = source.indexOf('preserveDrawingBuffer:');
+    const preserveEnd = source.indexOf('resolution: outputScale', preserveStart);
+    const preserve = source.slice(preserveStart, preserveEnd);
+
+    expect(eightStart).toBeGreaterThanOrEqual(0);
+    expect(normalStart).toBeGreaterThan(0);
+    expect(e54Start).toBeGreaterThan(normalStart);
+    expect(e54End).toBeGreaterThan(e54Start);
+    expect(block).toContain('if (uVibrMacroReliefVfx > 0.5 && material == 113.0');
+    expect(block).toContain('vibrPackedState < 0.5');
+    expect(block).toContain('floor(wallState.b * 255.0 + 0.5)');
+    expect(block).toContain('floor(wallState.a * 255.0 + 0.5) * 256.0');
+    for (const establishedScalar of [
+      'radioactiveSolidDepth', 'radioactiveSolidCore', 'radioactiveSolidMacro',
+      'radioactiveSolidFacet', 'radioactiveSolidFold', 'solidEnvironment',
+    ]) expect(block).toContain(establishedScalar);
+    for (const derivedScalar of [
+      'vibrBulkVolume', 'vibrConductiveRoll', 'vibrConductiveCrown',
+      'vibrConductivePocket', 'vibrConductiveShoulder',
+    ]) expect(block).toContain(derivedScalar);
+    expect(block).not.toContain('material == 105.0');
+    expect(block).not.toContain('material == 99.0');
+    expect(block).not.toContain('botanicalBodyNoise(');
+    expect(block).not.toContain('texture(');
+    expect(block).not.toContain('uTime');
+    expect(block).not.toContain('sin(');
+    expect(block).not.toContain('gl_FragCoord');
+    expect(block).not.toMatch(/\balpha\s*[+*]?=/);
+    expect(eight).not.toContain('uVibrMacroReliefVfx');
+    expect(eight).not.toContain('vibrConductiveRoll');
+    expect(canvasSource).not.toContain('vibrMacroReliefVfx');
+    expect(source).toMatch(
+      /const vibrMacroReliefVfxEnabled = outputScale < 8\s*&& resolveVibrMacroReliefVfxEnabled\(renderLook\);/,
+    );
+    expect(source).toContain(
+      'uVibrMacroReliefVfx: { value: vibrMacroReliefVfxEnabled ? 1 : 0',
+    );
+    expect(source.match(/this\.uniforms\.uniforms\.uVibrMacroReliefVfx = 0;/g))
+      .toHaveLength(2);
+    expect(source).toContain('presenter.app.canvas.dataset.vibrMacroReliefVfx');
+    expect(source).toContain("this.app.canvas.dataset.vibrMacroReliefVfx = 'inactive';");
+    expect(preserve).toContain("get('vibrMacroReliefVfxAudit') === '1'");
   });
 
   it('layers E47 only over exact deep ISZS using E43 static evidence', () => {

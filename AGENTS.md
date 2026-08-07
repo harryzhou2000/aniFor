@@ -13,7 +13,7 @@ powder, solid, liquid, gas, energy, and contact scenes across Canvas and WebGL a
 mobile gestures, save/load, CI, and Pages deployment as protected regression
 contracts rather than the primary feature stream.
 
-The accepted visual experiment ladder now runs through E53. E12 is the
+The accepted visual experiment ladder now runs through E54. E12 is the
 species-safe Sand/Clay/Concrete wet-sediment checkpoint; preserve its exact
 aqueous owner/stability proof, split moving-powder/stationary-Water control,
 Local/Grains no-op, fine structures, authored gaps, Canvas fallback, and true
@@ -748,6 +748,10 @@ WebGL, and completes a real GPU fence (accepted full matrix `5200.3 ms`) with
 zero browser errors. Do not widen the old phase-permissive seven-owner identity
 branch or E04/E03/E41/E42.
 
+E54 is a separately measured strict E43 child, so every E43 navigation and the
+accepted full parent matrix pins `vibrMacroReliefVfx=0`; E43's
+state-independent envelope and VIBR native-state separation remain frozen.
+
 E44 is the accepted normal-WebGL-only exact Carbon Dioxide `41` connected-body
 checkpoint. `?carbonDioxideBodyVfx=0|1` is a strict child of E04 and remains
 inactive for unrelated `inputAudit=1` fixtures unless explicitly selected.
@@ -849,8 +853,12 @@ tails ranged from `4169.7–5248.3 ms` under the same deadline.
 E47's 1× composed-survey floor remains contextual ranking evidence only; its
 frozen focused matrix remains the acceptance gate.
 
+Every E47 navigation and the accepted full parent matrix pins
+`vibrMacroReliefVfx=0`: E47 remains ISZS-only, and E54 must not perturb its
+exact VIBR/native-state controls.
+
 The corrected v6 composed survey now explicitly enables
-E17/E43/E44/E45/E46/E47
+E17/E43/E44/E45/E46/E47/E53/E54
 under `inputAudit=1` and freezes 23 material counts, 18 scored regions,
 semantic hash `3610338776`, and 114,015 occupied cells across 1×/2×/4×. Its
 new exact-owner evidence is 1,220 Soap cells and a `liquidSoap` cohesive-liquid
@@ -1029,6 +1037,35 @@ semantic/alpha/support/wall/lifecycle data, and repeated-off output remain
 exact; browser errors are zero. Requested-on true 8× promotes exact 4896×3072
 WebGL while E20/E26/E28/E32/E34/E36/E53/HDR are inactive for `scale-8`, with
 no bloom, a signalled fence, and completed GPU timing of `5373.1 ms`.
+Focused E53 navigation also pins the unrelated E54 selector inactive, preserving
+the full isolated-selector contract.
+
+E54 is the accepted normal-WebGL-only exact zero-state VIBR `113` conductive
+macro-relief checkpoint, independently measurable with
+`?vibrMacroReliefVfx=0|1` and a strict child of E43/E17. It may style only
+E43's authoritative deep, ordinary, wall-free, contact-free VIBR body whose
+packed native presentation word is exactly zero. It reuses only E43's existing
+static macro/facet/fold, exact solid depth/interior, and environment evidence
+for a broad conductive crown, opposing absorptive pocket, and restrained core.
+The later native VIBR charge/countdown/alternate grammar remains authoritative:
+every nonzero VIBR state card, all BVBR, ISZS/E47, holes, notches, thin and
+isolated VIBR, walls, seams, contacts, foreign owners, Canvas, and compact true
+8× retain their established paths. E54 adds no sample, noise, texture, field,
+resource, pass, target, upload, allocation, clock, alpha, support, silhouette,
+ownership, native-state, topology, or physics decision.
+
+`npm run audit:vfx:vibr-macro-relief` freezes the 1×/2×/4× off→on→off matrix.
+Observed core/crown/pocket RGB RMS is
+`15.29–15.32`/`22.38–22.40`/`4.46–4.52`, with calibrated headroom in the
+executable acceptance envelopes; the conductive core/crown stay positive and
+the opposing pocket stays negative. Semantic,
+rendered, backing, raw, depth, wall, and native-state ownership remain exact;
+the repeated disabled framebuffer is byte-identical. The sole named composed
+allowance is the post-compositor 1× `VIBRThin` footprint at `+1` blue byte;
+it is not permission to widen any raw or family-wide control. E43 and E47's
+full parent matrices pass with E54 pinned inactive. Requested-on true 8× keeps
+E17/E43/E47/E54/HDR/bloom inactive for `scale-8`, promotes exact 4896×3072
+WebGL, and completes the final stricter-gate GPU fence in `5226.8 ms`.
 
 The isolated candidate-survey v1 route is app-owned and must use the
 deterministic 612×384 RenderLab backend unless `simulation=native` is explicit.
@@ -1069,16 +1106,23 @@ candidate-rank evidence or widen E50, E51, or E52; select any later experiment
 only from a new visible fit-view diagnosis.
 
 The composed showcase remains a separate roadmap signal. Its refreshed
-E53-active 1×/2×/4× matrix is exact and cross-scale verified with zero browser
+E54-active 1×/2×/4× matrix is exact and cross-scale verified with zero browser
 errors, while E52 remains explicitly inactive because showcase v6 contains no
 authoritative BGLA region. Organic remains the lowest family, led by exact PLNT
 at quality `72.165/77.290/78.704`; its remaining weakest cue is mesostructure
 `.350/.405/.425`. PLNT keeps support `1`, coverage `.971`, macro range `50`,
 and zero dark/clipped fraction, with microcontrast `1.70/1.81/1.85`, chroma
-`1.90/2.00/2.03`, and luma deviation `10.80/10.90/10.93`. At canonical 2×,
-Organic is `77.290`, followed by Solid `86.207`, Contact `88.768`, Gas `95.463`,
-Emission `98.475`, and Powder/Liquid `100`. Select the next experiment from a
-new visible diagnosis rather than tuning merely to raise this rank.
+`1.90/2.00/2.03`, and luma deviation `10.80/10.90/10.93`. E54 raises exact
+zero-state VIBR to `97.731/100/100` at 1×/2×/4×; at canonical 2× its luma
+standard deviation/microcontrast/chroma/macro range is `4.37`/`1.65`/`3.15`/`20`,
+with unchanged support, coverage, and clipping. The Solid floor is therefore
+native ROCK `78` at `90.2`, from its remaining surface-detail cue rather than
+VIBR macro relief. At canonical 2×, Organic is `77.290`, Contact `88.768`,
+Solid `90.2`, Gas `95.463`, Emission `98.475`, and Powder/Liquid `100`. E54
+closes the demonstrated VIBR fit-view defect; do not stack another VIBR layer.
+Select a future target only from a new visible diagnosis, with PLNT
+mesostructure, Water/Metal chromatic separation, and ROCK surface detail as
+current contextual cues rather than an automatic implementation queue.
 
 The old post-E16 rank that labelled Stone `21` as Solid was invalid because
 Stone is native Powder. The corrected showcase uses native ROCK ground and

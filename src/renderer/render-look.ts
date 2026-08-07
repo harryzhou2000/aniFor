@@ -678,6 +678,25 @@ export function resolveIszsCrystallineVfxEnabled(
 }
 
 /**
+ * E54 refines only the exact VIBR conductive macro body after E43 has proved
+ * the radioactive Solid parent. It is intentionally a sibling of E47: neither
+ * child can revive E43/E17, and focused input fixtures remain isolated until
+ * they explicitly request the child selector.
+ */
+export function resolveVibrMacroReliefVfxEnabled(
+  look: RenderLook,
+  search = globalThis.location?.search ?? '',
+): boolean {
+  if (!resolveRadioactiveSolidBodyVfxEnabled(look, search)) return false;
+  const parameters = new URLSearchParams(search);
+  const requested = parameters.get('vibrMacroReliefVfx');
+  if (requested === '0' || requested === 'off' || requested === 'false') return false;
+  if (requested === '1' || requested === 'on' || requested === 'true') return true;
+  if (parameters.get('inputAudit') === '1') return false;
+  return true;
+}
+
+/**
  * Re-composes only the exact native Water body after E03 has established a
  * connected, same-species liquid volume. The child selector may replace
  * Water's inherited broad stripe carrier, but it cannot recreate E03 when the

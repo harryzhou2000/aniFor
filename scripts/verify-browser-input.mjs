@@ -484,6 +484,12 @@ const plantCanopyTissueVfxOnly = process.argv.includes('--plant-canopy-tissue-vf
 if (plantCanopyTissueVfxOnly && (modes.length !== 1 || modes[0] !== 'webgl')) {
   throw new Error('--plant-canopy-tissue-vfx-only requires --webgl-only');
 }
+// E54 is an exact VIBR macro-relief child of E43. Its focused route reuses the
+// paused radioactive-Solid fixture and keeps compact true 8x as an exclusion.
+const vibrMacroReliefVfxOnly = process.argv.includes('--vibr-macro-relief-vfx-only');
+if (vibrMacroReliefVfxOnly && (modes.length !== 1 || modes[0] !== 'webgl')) {
+  throw new Error('--vibr-macro-relief-vfx-only requires --webgl-only');
+}
 // E35 is an exact-Wood tannin child of E20/E26/E28/E30. Its focused route
 // keeps PLNT-only children disabled while compact true 8x remains excluded.
 const woodTanninVfxOnly = process.argv.includes('--wood-tannin-vfx-only');
@@ -508,10 +514,11 @@ const focusedVfxOnlyFlags = [
   smokeSoftnessVfxOnly, smokeBillowDepthVfxOnly, botanicalMesostructureVfxOnly, woodBarkReliefVfxOnly,
   botanicalPigmentVfxOnly, plantLaminaVfxOnly, plantLobeDepthVfxOnly, plantCanopyMassVfxOnly,
   plantCanopyTissueVfxOnly,
+  vibrMacroReliefVfxOnly,
   woodTanninVfxOnly,
 ];
 if (focusedVfxOnlyFlags.filter(Boolean).length > 1) {
-  throw new Error('HDR/volume/liquid-body/liquid-surface/gas-body/gas-motion/powder-body/powder-light/powder-solid-contact/translucent-edge/organic-subsurface/wet-sediment/gas-light/liquid-solid-meniscus/metal-water-contact/gas-core-depth/plasma-core/solid-body/platinum-body/ceramic-glaze/botanical-body/glass-body/oil-body/rock-roughness/rock-mesostructure/water-body/acid-body/soap-body/sooty-powder-body/thermite-body/snowpack-body/quartz-mesostructure/c4-body/deut-body/hydrogen-body/carbon-dioxide-body/radioactive-solid-body/iszs-crystalline/noble-gas-billow/noble-gas-prism/smoke-softness/smoke-billow-depth/botanical-mesostructure/wood-bark-relief/botanical-pigment/plant-lamina/plant-lobe-depth/plant-canopy-mass/plant-canopy-tissue/wood-tannin focused audits are mutually exclusive');
+  throw new Error('HDR/volume/liquid-body/liquid-surface/gas-body/gas-motion/powder-body/powder-light/powder-solid-contact/translucent-edge/organic-subsurface/wet-sediment/gas-light/liquid-solid-meniscus/metal-water-contact/gas-core-depth/plasma-core/solid-body/platinum-body/ceramic-glaze/botanical-body/glass-body/oil-body/rock-roughness/rock-mesostructure/water-body/acid-body/soap-body/sooty-powder-body/thermite-body/snowpack-body/quartz-mesostructure/c4-body/deut-body/hydrogen-body/carbon-dioxide-body/radioactive-solid-body/iszs-crystalline/vibr-macro-relief/noble-gas-billow/noble-gas-prism/smoke-softness/smoke-billow-depth/botanical-mesostructure/wood-bark-relief/botanical-pigment/plant-lamina/plant-lobe-depth/plant-canopy-mass/plant-canopy-tissue/wood-tannin focused audits are mutually exclusive');
 }
 
 const layoutOnly = process.argv.includes('--layout-only');
@@ -710,6 +717,9 @@ const plantCanopyMassVfxArgument = process.argv.find(
 const plantCanopyTissueVfxArgument = process.argv.find(
   (argument) => argument.startsWith('--plant-canopy-tissue-vfx='),
 )?.slice('--plant-canopy-tissue-vfx='.length);
+const vibrMacroReliefVfxArgument = process.argv.find(
+  (argument) => argument.startsWith('--vibr-macro-relief-vfx='),
+)?.slice('--vibr-macro-relief-vfx='.length);
 const woodTanninVfxArgument = process.argv.find(
   (argument) => argument.startsWith('--wood-tannin-vfx='),
  )?.slice('--wood-tannin-vfx='.length);
@@ -868,6 +878,10 @@ if (plantCanopyMassVfxArgument !== undefined
 if (plantCanopyTissueVfxArgument !== undefined
   && !['0', '1', 'off', 'on'].includes(plantCanopyTissueVfxArgument)) {
   throw new Error('--plant-canopy-tissue-vfx must be 0, 1, off, or on');
+}
+if (vibrMacroReliefVfxArgument !== undefined
+  && !['0', '1', 'off', 'on'].includes(vibrMacroReliefVfxArgument)) {
+  throw new Error('--vibr-macro-relief-vfx must be 0, 1, off, or on');
 }
 if (woodTanninVfxArgument !== undefined
   && !['0', '1', 'off', 'on'].includes(woodTanninVfxArgument)) {
@@ -1066,8 +1080,9 @@ if (focusedVfxOnlyFlags.some(Boolean) && !carbonDioxideBodyVfxOnly
 if (focusedVfxOnlyFlags.some(Boolean) && (botanicalMesostructureVfxArgument !== undefined
   || botanicalPigmentVfxArgument !== undefined || plantLaminaVfxArgument !== undefined
   || plantLobeDepthVfxArgument !== undefined || plantCanopyMassVfxArgument !== undefined
-  || plantCanopyTissueVfxArgument !== undefined || woodTanninVfxArgument !== undefined)) {
-  throw new Error('focused VFX audits own botanicalMesostructureVfx, botanicalPigmentVfx, plantLaminaVfx, plantLobeDepthVfx, plantCanopyMassVfx, plantCanopyTissueVfx, and woodTanninVfx state; omit their overrides');
+  || plantCanopyTissueVfxArgument !== undefined || vibrMacroReliefVfxArgument !== undefined
+  || woodTanninVfxArgument !== undefined)) {
+  throw new Error('focused VFX audits own botanicalMesostructureVfx, botanicalPigmentVfx, plantLaminaVfx, plantLobeDepthVfx, plantCanopyMassVfx, plantCanopyTissueVfx, vibrMacroReliefVfx, and woodTanninVfx state; omit their overrides');
 }
 if (gasLightVfxOnly && (volumeVfxArgument !== undefined || liquidBodyVfxArgument !== undefined
   || liquidSurfaceVfxArgument !== undefined || gasBodyVfxArgument !== undefined || gasMotionVfxArgument !== undefined
@@ -1423,6 +1438,9 @@ if (plantCanopyMassVfxOnly && renderScaleArgument === '8') {
 }
 if (plantCanopyTissueVfxOnly && renderScaleArgument === '8') {
   throw new Error('--plant-canopy-tissue-vfx-only is a normal-detail 1x/2x/4x experiment');
+}
+if (vibrMacroReliefVfxOnly && renderScaleArgument === '8') {
+  throw new Error('--vibr-macro-relief-vfx-only is a normal-detail 1x/2x/4x experiment');
 }
 if (woodTanninVfxOnly && renderScaleArgument === '8') {
   throw new Error('--wood-tannin-vfx-only is a normal-detail 1x/2x/4x experiment');
@@ -1814,6 +1832,13 @@ async function auditMode(mode) {
       ? { plantCanopyTissueVfx: '0' }
       : plantCanopyTissueVfxArgument !== undefined
         ? { plantCanopyTissueVfx: plantCanopyTissueVfxArgument }
+        : {}),
+    // E54 is an E43 child. Every focused audit starts from its no-op path;
+    // the E54 navigation owns its own off -> on -> off reload sequence.
+    ...(focusedVfxOnlyFlags.some(Boolean)
+      ? { vibrMacroReliefVfx: '0' }
+      : vibrMacroReliefVfxArgument !== undefined
+        ? { vibrMacroReliefVfx: vibrMacroReliefVfxArgument }
         : {}),
     ...(focusedVfxOnlyFlags.some(Boolean)
       ? { woodTanninVfx: '0' }
@@ -2358,6 +2383,13 @@ async function auditMode(mode) {
       assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
       cdp.close();
       return { backend: mode, iszsCrystallineVfx, browserErrors: errors.length };
+    }
+    if (vibrMacroReliefVfxOnly) {
+      assert(mode === 'webgl', '--vibr-macro-relief-vfx-only requires --webgl-only');
+      const vibrMacroReliefVfx = await auditVibrMacroReliefVfxExperiment(cdp, mode, dpr);
+      assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
+      cdp.close();
+      return { backend: mode, vibrMacroReliefVfx, browserErrors: errors.length };
     }
     if (nobleGasBillowVfxOnly) {
       assert(mode === 'webgl', '--noble-gas-billow-vfx-only requires --webgl-only');
@@ -13301,6 +13333,7 @@ async function auditComposedRankShowcase(cdp, mode, dpr) {
   const composedSolidBodyVfx = solidBodyVfxArgument ?? '1';
   const composedRadioactiveSolidBodyVfx = '1';
   const composedIszsCrystallineVfx = iszsCrystallineVfxArgument ?? '1';
+  const composedVibrMacroReliefVfx = vibrMacroReliefVfxArgument ?? '1';
   const composedCarbonDioxideBodyVfx = carbonDioxideBodyVfxArgument ?? '1';
   const composedThermiteBodyVfx = thermiteBodyVfxArgument ?? '1';
   // Showcase v6 adds an authoritative deep SOAP body and a scored liquidSoap
@@ -13334,6 +13367,7 @@ async function auditComposedRankShowcase(cdp, mode, dpr) {
       solidBodyVfx: composedSolidBodyVfx,
       radioactiveSolidBodyVfx: composedRadioactiveSolidBodyVfx,
       iszsCrystallineVfx: composedIszsCrystallineVfx,
+      vibrMacroReliefVfx: composedVibrMacroReliefVfx,
       ...(metalWaterContactVfxArgument !== undefined ? {
         metalWaterContactVfx: metalWaterContactVfxArgument,
       } : {}),
@@ -13380,6 +13414,7 @@ async function auditComposedRankShowcase(cdp, mode, dpr) {
         && parameters.get('solidBodyVfx') === ${JSON.stringify(composedSolidBodyVfx)}
         && parameters.get('radioactiveSolidBodyVfx') === ${JSON.stringify(composedRadioactiveSolidBodyVfx)}
         && parameters.get('iszsCrystallineVfx') === ${JSON.stringify(composedIszsCrystallineVfx)}
+        && parameters.get('vibrMacroReliefVfx') === ${JSON.stringify(composedVibrMacroReliefVfx)}
         && parameters.get('metalWaterContactVfx') === ${JSON.stringify(metalWaterContactVfxArgument ?? null)}
         && parameters.get('botanicalMesostructureVfx') === ${JSON.stringify(botanicalMesostructureVfxArgument ?? null)}
         && parameters.get('botanicalPigmentVfx') === ${JSON.stringify(botanicalPigmentVfxArgument ?? null)}
@@ -13511,20 +13546,28 @@ async function auditComposedRankShowcase(cdp, mode, dpr) {
     const iszsCrystallineVfx = await evaluate(cdp,
       `document.querySelector('canvas.world-canvas')?.dataset.iszsCrystallineVfx ?? 'missing'`,
     );
+    const vibrMacroReliefVfx = await evaluate(cdp,
+      `document.querySelector('canvas.world-canvas')?.dataset.vibrMacroReliefVfx ?? 'missing'`,
+    );
     const expectedSolidBodyState = ['1', 'on'].includes(composedSolidBodyVfx)
       && composedLook !== 'classic' ? 'active' : 'inactive';
     const expectedRadioactiveSolidBodyState = expectedSolidBodyState === 'active'
       && ['1', 'on'].includes(composedRadioactiveSolidBodyVfx) ? 'active' : 'inactive';
     const expectedIszsCrystallineState = expectedRadioactiveSolidBodyState === 'active'
       && ['1', 'on'].includes(composedIszsCrystallineVfx) ? 'active' : 'inactive';
+    const expectedVibrMacroReliefState = expectedRadioactiveSolidBodyState === 'active'
+      && ['1', 'on'].includes(composedVibrMacroReliefVfx) ? 'active' : 'inactive';
     assert(solidBodyVfx === expectedSolidBodyState
       && radioactiveSolidBodyVfx === expectedRadioactiveSolidBodyState
-      && iszsCrystallineVfx === expectedIszsCrystallineState,
+      && iszsCrystallineVfx === expectedIszsCrystallineState
+      && vibrMacroReliefVfx === expectedVibrMacroReliefState,
     `composed rank ${scale}x radioactive-Solid stack resolved incorrectly (${JSON.stringify({
       composedLook, composedSolidBodyVfx, solidBodyVfx,
       composedRadioactiveSolidBodyVfx, radioactiveSolidBodyVfx,
       composedIszsCrystallineVfx, iszsCrystallineVfx,
+      composedVibrMacroReliefVfx, vibrMacroReliefVfx,
       expectedSolidBodyState, expectedRadioactiveSolidBodyState, expectedIszsCrystallineState,
+      expectedVibrMacroReliefState,
     })})`);
     const deutBodyVfx = await evaluate(cdp,
       `document.querySelector('canvas.world-canvas')?.dataset.deutBodyVfx ?? 'missing'`,
@@ -13709,7 +13752,7 @@ async function auditComposedRankShowcase(cdp, mode, dpr) {
       bglaBodyVfx,
       smokeBillowDepthVfx, powderStability,
       deutBodyVfx, hydrogenBodyVfx, carbonDioxideBodyVfx,
-      solidBodyVfx, radioactiveSolidBodyVfx, iszsCrystallineVfx,
+      solidBodyVfx, radioactiveSolidBodyVfx, iszsCrystallineVfx, vibrMacroReliefVfx,
       ...(metalWaterContactVfxArgument !== undefined ? { metalWaterContactVfx } : {}),
       ...(screenshot ? { screenshot } : {}),
     });
@@ -13817,7 +13860,7 @@ async function auditComposedRankShowcase(cdp, mode, dpr) {
       smokeBillowDepthVfx, thermiteBodyVfx, bglaBodyVfx, soapBodyVfx,
       metalWaterContactVfx, powderStability,
       deutBodyVfx, hydrogenBodyVfx, carbonDioxideBodyVfx,
-      solidBodyVfx, radioactiveSolidBodyVfx, iszsCrystallineVfx,
+      solidBodyVfx, radioactiveSolidBodyVfx, iszsCrystallineVfx, vibrMacroReliefVfx,
       screenshot }) => ({
       scale,
       backing: geometry.backing,
@@ -13842,6 +13885,7 @@ async function auditComposedRankShowcase(cdp, mode, dpr) {
       solidBodyVfx,
       radioactiveSolidBodyVfx,
       iszsCrystallineVfx,
+      vibrMacroReliefVfx,
       powderStability,
       ...(metalWaterContactVfxArgument !== undefined ? { metalWaterContactVfx } : {}),
       semanticHash: semantic.hash,
@@ -49156,7 +49200,7 @@ async function navigateRadioactiveSolidBodyVfxState(cdp, mode, scale, enabled, l
     gasCoreDepthVfx: '0', nobleGasBillowVfx: '0', nobleGasPrismVfx: '0',
     smokeSoftnessVfx: '0', smokeBillowDepthVfx: '0', plasmaCoreVfx: '0',
     solidBodyVfx: '1', radioactiveSolidBodyVfx: enabled ? '1' : '0',
-    iszsCrystallineVfx: '0',
+    iszsCrystallineVfx: '0', vibrMacroReliefVfx: '0',
     platinumBodyVfx: '0', ceramicGlazeVfx: '0', botanicalBodyVfx: '0',
     botanicalMesostructureVfx: '0', botanicalPigmentVfx: '0', plantLaminaVfx: '0',
     plantLobeDepthVfx: '0', plantCanopyMassVfx: '0', woodBarkReliefVfx: '0',
@@ -49173,6 +49217,7 @@ async function navigateRadioactiveSolidBodyVfxState(cdp, mode, scale, enabled, l
       && p.get('solidBodyVfx') === '1'
       && p.get('radioactiveSolidBodyVfx') === ${JSON.stringify(enabled ? '1' : '0')}
       && p.get('iszsCrystallineVfx') === '0'
+      && p.get('vibrMacroReliefVfx') === '0'
       && typeof audit?.prepareRadioactiveSolidBodyVfxFixture === 'function'
       && typeof audit?.radioactiveSolidBodyVfxFixture === 'function';
   })()`), scale === 4 ? 45_000 : 15_000, `E43 ${label} ${scale}x page`);
@@ -49209,7 +49254,7 @@ async function navigateRadioactiveSolidBodyVfxState(cdp, mode, scale, enabled, l
       'plantCanopyMassVfx', 'woodBarkReliefVfx', 'woodTanninVfx', 'glassBodyVfx',
       'oilBodyVfx', 'oilVolumeFinishVfx', 'rockRoughnessVfx',
       'rockMesostructureVfx', 'waterBodyVfx', 'acidBodyVfx', 'deutBodyVfx',
-      'iszsCrystallineVfx'];
+      'iszsCrystallineVfx', 'vibrMacroReliefVfx'];
     return {
       state: canvas.dataset.hdrPipeline,
       bloomBacking: canvas.dataset.bloomBacking,
@@ -49272,6 +49317,16 @@ async function radioactiveSolidBodyVfxFixtureReady(cdp, fixture) {
         || !exactRect(target.authoredHole, 0, 0)
         || !exactRect(target.openNotch, 0, 0)
         || !exactRect(target.guardedBlank, 0, 0)) return false;
+      // A one-cell line and an isolated solid are exposed on every Manhattan
+      // path, so the exact-species thickness field must keep them at byte zero.
+      // This independently proves that E43/E54's >6 deep-body guard cannot own
+      // their fragments even when a 1x CSS-projected capture rounds by a byte.
+      for (let y = target.thinLine.y; y < target.thinLine.y + target.thinLine.height; y++) {
+        for (let x = target.thinLine.x; x < target.thinLine.x + target.thinLine.width; x++) {
+          if (audit.presentationAuxiliary(x, y) !== 0) return false;
+        }
+      }
+      if (audit.presentationAuxiliary(target.isolated.x, target.isolated.y) !== 0) return false;
       const wallX = target.wallCoexistence.x + Math.floor(target.wallCoexistence.width / 2);
       const wallY = target.wallCoexistence.y + Math.floor(target.wallCoexistence.height / 2);
       if (!exactRect(target.wallCoexistence, target.material, 0)
@@ -49414,7 +49469,7 @@ async function auditEightXRadioactiveSolidBodyVfxExclusion(cdp, dpr) {
     scene: 'render-lab', inputAudit: '1', blankAudit: '1', renderScale: '8',
     auditStage: 'eight-radioactive-solid-body', radioactiveSolidBodyVfxAudit: '1',
     renderLook: 'realistic', solidBodyVfx: '1', radioactiveSolidBodyVfx: '1',
-    iszsCrystallineVfx: '0',
+    iszsCrystallineVfx: '0', vibrMacroReliefVfx: '0',
   });
   await cdp.send('Page.navigate', { url: `${AUDIT_BASE_URL}?${query}` });
   const deadline = Date.now() + EIGHT_X_PRESENTATION_DEADLINE_MS;
@@ -49424,6 +49479,7 @@ async function auditEightXRadioactiveSolidBodyVfxExclusion(cdp, dpr) {
       && p.get('auditStage') === 'eight-radioactive-solid-body'
       && p.get('solidBodyVfx') === '1' && p.get('radioactiveSolidBodyVfx') === '1'
       && p.get('iszsCrystallineVfx') === '0'
+      && p.get('vibrMacroReliefVfx') === '0'
       && Boolean(window.__ANIFOR_INPUT_AUDIT__);
   })()`), remainingDeadlineMs(deadline, 'true-8x E43 input audit API'),
   'true-8x E43 input audit API');
@@ -49459,13 +49515,15 @@ async function auditEightXRadioactiveSolidBodyVfxExclusion(cdp, dpr) {
       solidBodyVfx: canvas.dataset.solidBodyVfx,
       radioactiveSolidBodyVfx: canvas.dataset.radioactiveSolidBodyVfx,
       iszsCrystallineVfx: canvas.dataset.iszsCrystallineVfx,
+      vibrMacroReliefVfx: canvas.dataset.vibrMacroReliefVfx,
     } : undefined;
   })()`, Math.min(1_000, remainingDeadlineMs(deadline, 'true-8x E43 isolation')));
   assert(isolation?.renderer === 'semantic-field-webgl'
     && isolation.state === 'inactive' && isolation.reason === 'scale-8'
     && isolation.bloomBacking === null && isolation.solidBodyVfx === 'inactive'
     && isolation.radioactiveSolidBodyVfx === 'inactive'
-    && isolation.iszsCrystallineVfx === 'inactive',
+    && isolation.iszsCrystallineVfx === 'inactive'
+    && isolation.vibrMacroReliefVfx === 'inactive',
   `true-8x E43 selector isolation failed (${JSON.stringify(isolation)})`);
   const stateBefore = await radioactiveSolidBodyVfxStateDigest(cdp, fixture);
   const timingBudget = remainingDeadlineMs(deadline, 'true-8x E43 GPU completion');
@@ -49483,6 +49541,547 @@ async function auditEightXRadioactiveSolidBodyVfxExclusion(cdp, dpr) {
     backing: `${geometry.backing.width}x${geometry.backing.height}`,
     promotedWebGLObserved: true, selectorExcluded: true,
     semanticStable: true, isolation, timing, state: stateBefore,
+  };
+}
+
+// Frozen from the accepted 1x/2x/4x SwiftShader matrix. VIBR keeps a broad,
+// positive conductive crown, a mixed green/cyan core, and a smaller opposing
+// pocket; the separately measured frequency bands prevent a flat tint or a
+// high-frequency lattice from satisfying the RGB-only response gate.
+const VIBR_MACRO_RELIEF_VFX_ACCEPTANCE = Object.freeze({
+  VIBRCore: Object.freeze({
+    response: Object.freeze({
+      rgbRms: [15.0, 15.6], chromaRms: [8.9, 9.5], rgbPeak: [32, 36],
+      coverage: [0.84, 0.89], spatialRgbRms: [9.65, 10.25], signedMean: [9.35, 9.9],
+      responseMicroContrast: [0.60, 0.80],
+    }),
+    frequency: Object.freeze({
+      mesoRgbRms: [2.6, 3.1], cellRgbRms: [0.65, 0.92], mesoShare: [0.89, 0.96],
+      positiveCoverage: [0.48, 0.55], negativeCoverage: [0.40, 0.46],
+      mesoMeanBiasRatio: [0.02, 0.08], rgbPeak: [32, 36],
+      downsampleRetention: [0.985, 0.998], gradientRatio: [0.50, 0.66],
+    }),
+    appearance: Object.freeze({
+      rgbRms: [15.0, 15.6], signedMean: [9.35, 9.9], spatialRgbRms: [9.65, 10.25],
+      responseMicroContrast: [0.60, 0.80], coverage: [0.84, 0.89], rgbPeak: [32, 36],
+    }),
+  }),
+  VIBRCrown: Object.freeze({
+    response: Object.freeze({
+      rgbRms: [22.0, 22.8], chromaRms: [13.3, 13.9], rgbPeak: [33, 37],
+      coverage: [0.98, 1], spatialRgbRms: [1.85, 2.3], signedMean: [17.9, 18.5],
+      responseMicroContrast: [0.34, 0.55],
+    }),
+    frequency: Object.freeze({
+      mesoRgbRms: [1.4, 1.75], cellRgbRms: [0.52, 0.75], mesoShare: [0.82, 0.91],
+      positiveCoverage: [0.54, 0.63], negativeCoverage: [0.24, 0.33],
+      mesoMeanBiasRatio: [0.12, 0.20], rgbPeak: [33, 37],
+      downsampleRetention: [0.975, 0.993], gradientRatio: [0.78, 1.0],
+    }),
+    appearance: Object.freeze({
+      rgbRms: [22.0, 22.8], signedMean: [17.9, 18.5], spatialRgbRms: [1.85, 2.3],
+      responseMicroContrast: [0.34, 0.55], coverage: [0.98, 1], rgbPeak: [33, 37],
+    }),
+  }),
+  VIBRPocket: Object.freeze({
+    response: Object.freeze({
+      rgbRms: [4.2, 4.8], chromaRms: [4.2, 4.85], rgbPeak: [8, 13],
+      coverage: [0.79, 0.86], spatialRgbRms: [1.4, 1.95], signedMean: [-2.8, -2.2],
+      responseMicroContrast: [0.40, 0.70],
+    }),
+    frequency: Object.freeze({
+      mesoRgbRms: [0.7, 1.0], cellRgbRms: [0.78, 1.2], mesoShare: [0.34, 0.52],
+      positiveCoverage: [0.38, 0.50], negativeCoverage: [0.40, 0.50],
+      mesoMeanBiasRatio: [0.11, 0.20], rgbPeak: [7, 13],
+      downsampleRetention: [0.955, 0.985], gradientRatio: [1.25, 1.7],
+    }),
+    appearance: Object.freeze({
+      rgbRms: [4.2, 4.8], signedMean: [-2.8, -2.2], spatialRgbRms: [1.4, 1.95],
+      responseMicroContrast: [0.40, 0.70], coverage: [0.79, 0.86], rgbPeak: [8, 13],
+    }),
+  }),
+});
+const VIBR_MACRO_RELIEF_VFX_TARGET_NAMES = Object.freeze([
+  'VIBRCore', 'VIBRCrown', 'VIBRPocket',
+]);
+const VIBR_MACRO_RELIEF_VFX_CONTROL_NAMES = Object.freeze([
+  'ISZSCore', 'ISZSCrown', 'ISZSPocket',
+  'ISZSHole', 'ISZSNotch', 'ISZSThin', 'ISZSIsolate', 'ISZSWall', 'ISZSBlank',
+  'VIBRHole', 'VIBRNotch', 'VIBRThin', 'VIBRIsolate', 'VIBRWall', 'VIBRBlank',
+  'SeamISZS', 'SeamVIBR',
+  'ISZSMetalTarget', 'ISZSMetalForeign', 'VIBRWaterTarget', 'VIBRWaterForeign',
+  'ISZSSandTarget', 'ISZSSandForeign', 'VIBRSmokeTarget', 'VIBRSmokeForeign',
+  'ProtectedBVBR', 'ProtectedURAN', 'ProtectedPLUT', 'ProtectedPOLO',
+  'ProtectedISOZ', 'ProtectedEXOT',
+  'BVBRState-low', 'BVBRState-mid', 'BVBRState-high',
+  'BVBRState-exploding', 'BVBRState-alternate',
+  'VIBRState-low', 'VIBRState-mid', 'VIBRState-high',
+  'VIBRState-exploding', 'VIBRState-alternate',
+]);
+const VIBR_MACRO_RELIEF_VFX_CROSS_SCALE_ACCEPTANCE = Object.freeze({
+  response: Object.freeze({
+    rgbRms: 0.25, chromaRms: 0.25, signedMean: 0.20, spatialRgbRms: 0.25,
+    responseMicroContrast: 0.12, coverage: 0.02, rgbPeak: 2,
+  }),
+  frequency: Object.freeze({
+    mesoRgbRms: 0.15, cellRgbRms: 0.25, mesoShare: 0.08, positiveCoverage: 0.08,
+    negativeCoverage: 0.08, mesoMeanBiasRatio: 0.05, rgbPeak: 4,
+    downsampleRetention: 0.01, gradientRatio: 0.15,
+  }),
+  appearance: Object.freeze({
+    rgbRms: 0.25, signedMean: 0.20, spatialRgbRms: 0.25,
+    responseMicroContrast: 0.12, coverage: 0.02, rgbPeak: 2,
+  }),
+});
+
+/** E54: exact zero-state VIBR macro relief, strictly subordinate to E43. */
+async function auditVibrMacroReliefVfxExperiment(cdp, mode, dpr) {
+  const scales = [];
+  const requestedScales = renderScaleArgument === undefined
+    ? VOLUME_VFX_SCALES : [Number(renderScaleArgument)];
+  for (const scale of requestedScales) {
+    const captures = {};
+    for (const enabled of [false, true, false]) {
+      const key = enabled ? 'enabled' : captures.disabled ? 'disabledRepeat' : 'disabled';
+      captures[key] = await navigateVibrMacroReliefVfxState(cdp, mode, scale, enabled, key);
+    }
+    const { disabled, enabled, disabledRepeat } = captures;
+    assert(JSON.stringify(disabled.fixture) === JSON.stringify(enabled.fixture)
+      && JSON.stringify(disabled.fixture) === JSON.stringify(disabledRepeat.fixture),
+    `E54 ${scale}x fixture metadata changed`);
+    for (const [label, variant] of Object.entries(captures)) {
+      assertGeometry(variant.geometry, `E54 ${label} ${scale}x`, scale);
+      assert(variant.geometry.backend.backend === 'webgl'
+        && variant.pipeline?.state === 'active'
+        && variant.pipeline.solidBodyVfx === 'active'
+        && variant.pipeline.radioactiveSolidBodyVfx === 'active'
+        && variant.pipeline.iszsCrystallineVfx === 'inactive'
+        && variant.pipeline.vibrMacroReliefVfx === (label === 'enabled' ? 'active' : 'inactive')
+        && Object.values(variant.pipeline.isolatedSelectors).every((state) => state === 'inactive'),
+      `E54 ${label} ${scale}x parent/selector isolation failed (${JSON.stringify(variant.pipeline)})`);
+    }
+    assertCanvasRectsEqual(disabled.geometry.canvas, enabled.geometry.canvas,
+      `E54 ${scale}x disabled/enabled CSS geometry`);
+    assertCanvasRectsEqual(disabled.geometry.canvas, disabledRepeat.geometry.canvas,
+      `E54 ${scale}x disabled/repeated CSS geometry`);
+    assert(JSON.stringify(disabled.geometry.backing) === JSON.stringify(enabled.geometry.backing)
+      && JSON.stringify(disabled.geometry.backing) === JSON.stringify(disabledRepeat.geometry.backing),
+    `E54 ${scale}x backing geometry changed`);
+    assert(JSON.stringify(disabled.state) === JSON.stringify(enabled.state)
+      && JSON.stringify(disabled.state) === JSON.stringify(disabledRepeat.state),
+    `E54 ${scale}x changed semantic/depth/wall/presentation-state data`);
+    assertVolumeVfxRawAlphaInvariant(disabled.rawControls, enabled.rawControls,
+      `E54 ${scale}x disabled/enabled raw controls`);
+    assertVolumeVfxRawAlphaInvariant(disabled.rawControls, disabledRepeat.rawControls,
+      `E54 ${scale}x disabled/repeated raw controls`);
+    assert(JSON.stringify(disabled.rawControls) === JSON.stringify(enabled.rawControls)
+      && JSON.stringify(disabled.rawControls) === JSON.stringify(disabledRepeat.rawControls),
+    `E54 ${scale}x changed an exact protected raw control`);
+    assert(disabled.capture.capture.data === disabledRepeat.capture.capture.data,
+      `E54 ${scale}x repeated off framebuffer was not byte exact`);
+
+    const targets = vibrMacroReliefVfxTargetRegions(disabled.fixture);
+    const controls = vibrMacroReliefVfxControlRegions(disabled.fixture);
+    assert(JSON.stringify(targets.map(({ name }) => name))
+      === JSON.stringify(VIBR_MACRO_RELIEF_VFX_TARGET_NAMES),
+    `E54 ${scale}x target probe contract changed (${JSON.stringify(targets.map(({ name }) => name))})`);
+    assert(controls.length === 41 && new Set(controls.map(({ name }) => name)).size === 41
+      && JSON.stringify(controls.map(({ name }) => name))
+        === JSON.stringify(VIBR_MACRO_RELIEF_VFX_CONTROL_NAMES),
+    `E54 ${scale}x protected-control contract changed (${JSON.stringify(controls.map(({ name }) => name))})`);
+    const responses = withSpatialRgbRms(await sampleBackdropRefractionRegions(cdp, {
+      straight: disabled.capture.capture.data,
+      refracted: enabled.capture.capture.data,
+      repeatedStraight: disabledRepeat.capture.capture.data,
+    }, [...targets, ...controls], disabled.capture.canvasRect));
+    const targetResponses = responses.slice(0, targets.length);
+    const controlResponses = responses.slice(targets.length);
+    assertVibrMacroReliefVfxResponses(targetResponses, scale);
+    assert(controlResponses.length === controls.length
+      && controlResponses.every((sample) => (
+        sample.rgbPeak === 0 && sample.repeatRgbPeak === 0
+      ) || isBoundedVibrMacroReliefComposedFootprint(sample, scale)),
+    `E54 ${scale}x escaped an ISZS/topology/wall/seam/contact/sibling/native-state control (${JSON.stringify(controlResponses)})`);
+    assert(responses.every((sample) => sample.repeatRgbPeak === 0),
+      `E54 ${scale}x off -> on -> off was not deterministic (${JSON.stringify(responses)})`);
+
+    const frequency = await sampleBotanicalMesostructureFrequency(cdp, {
+      disabled: disabled.capture.capture.data,
+      enabled: enabled.capture.capture.data,
+      disabledRepeat: disabledRepeat.capture.capture.data,
+    }, vibrMacroReliefVfxFrequencyRegions(disabled.fixture), 'E54');
+    assertVibrMacroReliefVfxFrequency(frequency, scale);
+    const appearance = vibrMacroReliefVfxAppearance(targetResponses);
+    assertVibrMacroReliefVfxAppearance(appearance, scale);
+    const screenshots = screenshotRequest && (requestedScales.length === 1 || scale === 2)
+      ? await writeVibrMacroReliefVfxScreenshots(screenshotRequest, scale, disabled, enabled)
+      : undefined;
+    scales.push({
+      scale, geometry: disabled.geometry, state: disabled.state, targetResponses,
+      controlResponses, frequency, appearance, exactRepeatedOff: true,
+      boundedComposedFootprint: controlResponses
+        .filter((sample) => isBoundedVibrMacroReliefComposedFootprint(sample, scale))
+        .map(({ name, responseRgb, rgbPeak, coverage }) => ({
+          name, responseRgb, rgbPeak, coverage,
+        })),
+      screenshots,
+    });
+  }
+  if (scales.length > 1) assertVibrMacroReliefVfxCrossScale(scales);
+  return {
+    calibration: 'e54-vibr-macro-relief-v1',
+    acceptance: VIBR_MACRO_RELIEF_VFX_ACCEPTANCE,
+    scales, trueEightXExcluded: true,
+    trueEightX: await auditEightXVibrMacroReliefVfxExclusion(cdp, dpr),
+  };
+}
+
+async function navigateVibrMacroReliefVfxState(cdp, mode, scale, enabled, label) {
+  const query = new URLSearchParams({
+    scene: 'render-lab', inputAudit: '1', blankAudit: '1', auditStage: 'blank',
+    radioactiveSolidBodyVfxAudit: '1', vibrMacroReliefVfxAudit: '1',
+    renderScale: String(scale), renderLook: 'realistic',
+    volumeVfx: '0', liquidBodyVfx: '0', liquidSurfaceVfx: '0', gasBodyVfx: '0',
+    hydrogenBodyVfx: '0', carbonDioxideBodyVfx: '0', gasMotionVfx: '0',
+    powderBodyVfx: '0', sootyPowderBodyVfx: '0', thermiteBodyVfx: '0',
+    powderLightVfx: '0', powderSolidContactVfx: '0', translucentEdgeVfx: '0',
+    organicSubsurfaceVfx: '0', wetSedimentVfx: '0', gasLightVfx: '0',
+    liquidSolidMeniscusVfx: '0', metalWaterContactVfx: '0', gasCoreDepthVfx: '0',
+    nobleGasBillowVfx: '0', nobleGasPrismVfx: '0', smokeSoftnessVfx: '0',
+    smokeBillowDepthVfx: '0', plasmaCoreVfx: '0', solidBodyVfx: '1',
+    radioactiveSolidBodyVfx: '1', iszsCrystallineVfx: '0',
+    vibrMacroReliefVfx: enabled ? '1' : '0',
+    platinumBodyVfx: '0', ceramicGlazeVfx: '0', botanicalBodyVfx: '0',
+    botanicalMesostructureVfx: '0', botanicalPigmentVfx: '0', plantLaminaVfx: '0',
+    plantLobeDepthVfx: '0', plantCanopyMassVfx: '0', plantCanopyTissueVfx: '0',
+    woodBarkReliefVfx: '0', woodTanninVfx: '0', glassBodyVfx: '0', oilBodyVfx: '0',
+    oilVolumeFinishVfx: '0', rockRoughnessVfx: '0', rockMesostructureVfx: '0',
+    waterBodyVfx: '0', acidBodyVfx: '0', soapBodyVfx: '0', deutBodyVfx: '0',
+  });
+  await cdp.send('Page.navigate', { url: `${AUDIT_BASE_URL}?${query}` });
+  await waitFor(() => evaluate(cdp, `(() => {
+    const p = new URLSearchParams(location.search); const audit = window.__ANIFOR_INPUT_AUDIT__;
+    return p.get('radioactiveSolidBodyVfxAudit') === '1'
+      && p.get('vibrMacroReliefVfxAudit') === '1'
+      && p.get('renderScale') === ${JSON.stringify(String(scale))}
+      && p.get('solidBodyVfx') === '1' && p.get('radioactiveSolidBodyVfx') === '1'
+      && p.get('iszsCrystallineVfx') === '0'
+      && p.get('vibrMacroReliefVfx') === ${JSON.stringify(enabled ? '1' : '0')}
+      && typeof audit?.prepareRadioactiveSolidBodyVfxFixture === 'function'
+      && typeof audit?.radioactiveSolidBodyVfxFixture === 'function';
+  })()`), scale === 4 ? 45_000 : 15_000, `E54 ${label} ${scale}x page`);
+  await waitFor(() => evaluate(cdp,
+    `window.__ANIFOR_INPUT_AUDIT__.backend().backend === ${JSON.stringify(mode)}`),
+  scale === 4 ? 30_000 : 15_000, `E54 ${label} ${scale}x backend`);
+  const fixture = await evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    audit.prepareRadioactiveSolidBodyVfxFixture();
+    return audit.radioactiveSolidBodyVfxFixture();
+  })()`);
+  for (let pass = 0; pass < 5; pass++) {
+    const before = await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.presentationRefreshAudit()');
+    await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.refreshPresentationFields(); true');
+    await waitFor(() => evaluate(cdp,
+      `window.__ANIFOR_INPUT_AUDIT__.presentationRefreshAudit()?.dynamicSequence > ${before.dynamicSequence}`),
+    scale === 4 ? 15_000 : 5_000, `E54 ${label} ${scale}x presentation refresh ${pass + 1}`);
+  }
+  await waitFor(() => radioactiveSolidBodyVfxFixtureReady(cdp, fixture), 20_000,
+    `E54 ${label} ${scale}x fixture/depth hydration`);
+  const pipeline = await evaluate(cdp, `(() => {
+    const canvas = document.querySelector('canvas.semantic-field-canvas');
+    if (!canvas) return undefined;
+    const names = ['volumeVfx', 'liquidBodyVfx', 'liquidSurfaceVfx', 'gasBodyVfx',
+      'hydrogenBodyVfx', 'carbonDioxideBodyVfx', 'gasMotionVfx', 'powderBodyVfx',
+      'sootyPowderBodyVfx', 'thermiteBodyVfx', 'powderLightVfx',
+      'powderSolidContactVfx', 'translucentEdgeVfx', 'organicSubsurfaceVfx',
+      'wetSedimentVfx', 'gasLightVfx', 'liquidSolidMeniscusVfx',
+      'metalWaterContactVfx', 'gasCoreDepthVfx', 'nobleGasBillowVfx',
+      'nobleGasPrismVfx', 'smokeSoftnessVfx', 'smokeBillowDepthVfx',
+      'plasmaCoreVfx', 'platinumBodyVfx', 'ceramicGlazeVfx', 'botanicalBodyVfx',
+      'botanicalMesostructureVfx', 'botanicalPigmentVfx', 'plantLaminaVfx',
+      'plantLobeDepthVfx', 'plantCanopyMassVfx', 'plantCanopyTissueVfx',
+      'woodBarkReliefVfx', 'woodTanninVfx', 'glassBodyVfx', 'oilBodyVfx',
+      'oilVolumeFinishVfx', 'rockRoughnessVfx', 'rockMesostructureVfx',
+      'waterBodyVfx', 'acidBodyVfx', 'soapBodyVfx', 'deutBodyVfx'];
+    return {
+      state: canvas.dataset.hdrPipeline, bloomBacking: canvas.dataset.bloomBacking,
+      solidBodyVfx: canvas.dataset.solidBodyVfx,
+      radioactiveSolidBodyVfx: canvas.dataset.radioactiveSolidBodyVfx,
+      iszsCrystallineVfx: canvas.dataset.iszsCrystallineVfx,
+      vibrMacroReliefVfx: canvas.dataset.vibrMacroReliefVfx,
+      isolatedSelectors: Object.fromEntries(names.map((name) => [name, canvas.dataset[name]])),
+    };
+  })()`);
+  const expectedBloom = `${WORLD_WIDTH * scale / 2}x${WORLD_HEIGHT * scale / 2}`;
+  assert(pipeline?.state === 'active' && pipeline.bloomBacking === expectedBloom
+    && pipeline.solidBodyVfx === 'active' && pipeline.radioactiveSolidBodyVfx === 'active'
+    && pipeline.iszsCrystallineVfx === 'inactive'
+    && pipeline.vibrMacroReliefVfx === (enabled ? 'active' : 'inactive')
+    && Object.values(pipeline.isolatedSelectors).every((state) => state === 'inactive'),
+  `E54 ${label} ${scale}x HDR/selector isolation failed (${JSON.stringify(pipeline)})`);
+  const capture = await captureSettledPage(cdp, `E54 ${label} ${scale}x framebuffer`, 900);
+  return {
+    fixture, pipeline, capture, geometry: await metrics(cdp),
+    state: await radioactiveSolidBodyVfxStateDigest(cdp, fixture),
+    rawControls: await sampleVolumeVfxRawWorldPixels(cdp, vibrMacroReliefVfxRawControlPoints(fixture)),
+  };
+}
+
+function vibrMacroReliefVfxTargetRegions(fixture) {
+  return radioactiveSolidBodyVfxTargetRegions(fixture).filter(({ name }) => name.startsWith('VIBR'));
+}
+
+function vibrMacroReliefVfxControlRegions(fixture) {
+  const rect = (name, candidate, inset = 0) => ({
+    name, target: false,
+    x: candidate.x + candidate.width / 2, y: candidate.y + candidate.height / 2,
+    radiusX: Math.max(0.35, candidate.width / 2 - inset - 0.2),
+    radiusY: Math.max(0.35, candidate.height / 2 - inset - 0.2),
+  });
+  const iszsBody = radioactiveSolidBodyVfxTargetRegions(fixture)
+    .filter(({ name }) => name.startsWith('ISZS'))
+    .map(({ target: _target, ...region }) => ({ ...region, target: false }));
+  return [
+    ...iszsBody,
+    ...radioactiveSolidBodyVfxControlRegions(fixture),
+    ...fixture.vibrStateCards.map((entry) => rect(`VIBRState-${entry.stateKey}`, entry.body, 5)),
+  ];
+}
+
+function vibrMacroReliefVfxRawControlPoints(fixture) {
+  return vibrMacroReliefVfxControlRegions(fixture).map(({ name, x, y }) => ({
+    name, x: Math.floor(x), y: Math.floor(y),
+  }));
+}
+
+/**
+ * At 1x the CSS-projected page capture can blend one positive blue byte into
+ * the one-cell VIBR line. The integer backing control remains byte-exact, and
+ * fixture hydration below proves every line auxiliary byte is zero, so E43's
+ * deep-solid guard makes direct E54 ownership impossible. Keep this allowance
+ * named, scale-specific, sub-visible, and compositor-only; every other control
+ * and every 2x/4x control remains exact.
+ */
+function isBoundedVibrMacroReliefComposedFootprint(sample, scale) {
+  return scale === 1 && sample.name === 'VIBRThin'
+    && sample.rgbPeak <= 1 && sample.repeatRgbPeak === 0 && sample.coverage === 0
+    && sample.responseRgb[0] === 0 && sample.responseRgb[1] === 0
+    && sample.responseRgb[2] >= 0 && sample.responseRgb[2] <= 0.1;
+}
+
+function vibrMacroReliefVfxFrequencyRegions(fixture) {
+  const byName = Object.fromEntries(vibrMacroReliefVfxTargetRegions(fixture).map((region) => [region.name, region]));
+  const target = fixture.targets.find(({ code }) => code === 'VIBR');
+  assert(target, 'E54 fixture lost exact VIBR target');
+  const probeByName = { VIBRCore: target.core, VIBRCrown: target.crown, VIBRPocket: target.pocket };
+  return Object.entries(probeByName).map(([name, probe]) => {
+    const region = byName[name];
+    assert(region, `E54 fixture lost ${name} response region`);
+    return {
+      ...region, worldX: probe.x, worldY: probe.y,
+      worldWidth: probe.width, worldHeight: probe.height, code: 'VIBR', side: name.slice(4),
+    };
+  });
+}
+
+function assertVibrMacroReliefVfxResponses(samples, scale) {
+  const inRange = (value, range) => value >= range[0] && value <= range[1];
+  assert(samples.length === VIBR_MACRO_RELIEF_VFX_TARGET_NAMES.length
+    && JSON.stringify(samples.map(({ name }) => name))
+      === JSON.stringify(VIBR_MACRO_RELIEF_VFX_TARGET_NAMES)
+    && samples.every((sample) => {
+      const acceptance = VIBR_MACRO_RELIEF_VFX_ACCEPTANCE[sample.name]?.response;
+      return acceptance && inRange(sample.rgbRms, acceptance.rgbRms)
+        && inRange(sample.chromaRms, acceptance.chromaRms)
+        && inRange(sample.rgbPeak, acceptance.rgbPeak)
+        && inRange(sample.coverage, acceptance.coverage)
+        && inRange(sample.spatialRgbRms, acceptance.spatialRgbRms)
+        && inRange(sample.signedMean, acceptance.signedMean)
+        && inRange(sample.responseMicroContrast, acceptance.responseMicroContrast)
+        && sample.repeatRgbPeak === 0;
+    }) && new Set(samples.map(({ responseSignature }) => responseSignature)).size >= 2,
+  `E54 ${scale}x VIBR response escaped frozen macro-relief bounds (${JSON.stringify(samples)})`);
+}
+
+function assertVibrMacroReliefVfxFrequency(samples, scale) {
+  const inRange = (value, range) => value >= range[0] && value <= range[1];
+  assert(samples.length === VIBR_MACRO_RELIEF_VFX_TARGET_NAMES.length
+    && JSON.stringify(samples.map(({ name }) => name))
+      === JSON.stringify(VIBR_MACRO_RELIEF_VFX_TARGET_NAMES)
+    && samples.every((sample) => {
+      const acceptance = VIBR_MACRO_RELIEF_VFX_ACCEPTANCE[sample.name]?.frequency;
+      return sample.code === 'VIBR' && acceptance
+        && inRange(sample.mesoRgbRms, acceptance.mesoRgbRms)
+        && inRange(sample.cellRgbRms, acceptance.cellRgbRms)
+        && inRange(sample.mesoShare, acceptance.mesoShare)
+        && inRange(sample.positiveCoverage, acceptance.positiveCoverage)
+        && inRange(sample.negativeCoverage, acceptance.negativeCoverage)
+        && inRange(sample.mesoMeanBiasRatio, acceptance.mesoMeanBiasRatio)
+        && inRange(sample.rgbPeak, acceptance.rgbPeak)
+        && inRange(sample.downsampleRetention, acceptance.downsampleRetention)
+        && inRange(sample.gradientRatio, acceptance.gradientRatio)
+        && sample.repeatRgbPeak === 0;
+    }), `E54 ${scale}x VIBR frequency escaped frozen macro-relief bounds (${JSON.stringify(samples)})`);
+}
+
+function vibrMacroReliefVfxAppearance(samples) {
+  return samples.map((sample) => ({
+    name: sample.name, rgbRms: sample.rgbRms, signedMean: sample.signedMean,
+    spatialRgbRms: sample.spatialRgbRms, responseMicroContrast: sample.responseMicroContrast,
+    coverage: sample.coverage, rgbPeak: sample.rgbPeak,
+  }));
+}
+
+function assertVibrMacroReliefVfxAppearance(samples, scale) {
+  const inRange = (value, range) => value >= range[0] && value <= range[1];
+  assert(samples.length === VIBR_MACRO_RELIEF_VFX_TARGET_NAMES.length
+    && JSON.stringify(samples.map(({ name }) => name))
+      === JSON.stringify(VIBR_MACRO_RELIEF_VFX_TARGET_NAMES)
+    && samples.every((sample) => {
+      const acceptance = VIBR_MACRO_RELIEF_VFX_ACCEPTANCE[sample.name]?.appearance;
+      return acceptance && inRange(sample.rgbRms, acceptance.rgbRms)
+        && inRange(sample.signedMean, acceptance.signedMean)
+        && inRange(sample.spatialRgbRms, acceptance.spatialRgbRms)
+        && inRange(sample.responseMicroContrast, acceptance.responseMicroContrast)
+        && inRange(sample.coverage, acceptance.coverage)
+        && inRange(sample.rgbPeak, acceptance.rgbPeak);
+    }), `E54 ${scale}x VIBR appearance escaped frozen macro-relief bounds (${JSON.stringify(samples)})`);
+}
+
+function assertVibrMacroReliefVfxCrossScale(scales) {
+  const acceptance = VIBR_MACRO_RELIEF_VFX_CROSS_SCALE_ACCEPTANCE;
+  const reference = scales.find(({ scale }) => scale === 2) ?? scales[0];
+  for (const candidate of scales.filter(({ scale }) => scale !== reference.scale)) {
+    assertCanvasRectsEqual(reference.geometry.canvas, candidate.geometry.canvas,
+      `E54 ${reference.scale}x/${candidate.scale}x CSS geometry`);
+    assert(JSON.stringify(reference.state) === JSON.stringify(candidate.state),
+      `E54 ${candidate.scale}x changed exact fixture/state across output scales`);
+    for (const baseline of reference.targetResponses) {
+      const current = candidate.targetResponses.find(({ name }) => name === baseline.name);
+      assert(current && Math.abs(current.rgbRms - baseline.rgbRms) <= acceptance.response.rgbRms
+        && Math.abs(current.chromaRms - baseline.chromaRms) <= acceptance.response.chromaRms
+        && Math.abs(current.signedMean - baseline.signedMean) <= acceptance.response.signedMean
+        && Math.abs(current.spatialRgbRms - baseline.spatialRgbRms)
+          <= acceptance.response.spatialRgbRms
+        && Math.abs(current.responseMicroContrast - baseline.responseMicroContrast)
+          <= acceptance.response.responseMicroContrast
+        && Math.abs(current.coverage - baseline.coverage) <= acceptance.response.coverage
+        && Math.abs(current.rgbPeak - baseline.rgbPeak) <= acceptance.response.rgbPeak,
+      `E54 ${candidate.scale}x response drifted for ${baseline.name} (${JSON.stringify({ baseline, current, acceptance: acceptance.response })})`);
+    }
+    for (const baseline of reference.frequency) {
+      const current = candidate.frequency.find(({ name }) => name === baseline.name);
+      assert(current && Math.abs(current.mesoRgbRms - baseline.mesoRgbRms)
+          <= acceptance.frequency.mesoRgbRms
+        && Math.abs(current.cellRgbRms - baseline.cellRgbRms) <= acceptance.frequency.cellRgbRms
+        && Math.abs(current.mesoShare - baseline.mesoShare) <= acceptance.frequency.mesoShare
+        && Math.abs(current.positiveCoverage - baseline.positiveCoverage)
+          <= acceptance.frequency.positiveCoverage
+        && Math.abs(current.negativeCoverage - baseline.negativeCoverage)
+          <= acceptance.frequency.negativeCoverage
+        && Math.abs(current.mesoMeanBiasRatio - baseline.mesoMeanBiasRatio)
+          <= acceptance.frequency.mesoMeanBiasRatio
+        && Math.abs(current.rgbPeak - baseline.rgbPeak) <= acceptance.frequency.rgbPeak
+        && Math.abs(current.downsampleRetention - baseline.downsampleRetention)
+          <= acceptance.frequency.downsampleRetention
+        && Math.abs(current.gradientRatio - baseline.gradientRatio) <= acceptance.frequency.gradientRatio,
+      `E54 ${candidate.scale}x frequency drifted for ${baseline.name} (${JSON.stringify({ baseline, current, acceptance: acceptance.frequency })})`);
+    }
+    for (const baseline of reference.appearance) {
+      const current = candidate.appearance.find(({ name }) => name === baseline.name);
+      assert(current && Math.abs(current.rgbRms - baseline.rgbRms) <= acceptance.appearance.rgbRms
+        && Math.abs(current.signedMean - baseline.signedMean) <= acceptance.appearance.signedMean
+        && Math.abs(current.spatialRgbRms - baseline.spatialRgbRms)
+          <= acceptance.appearance.spatialRgbRms
+        && Math.abs(current.responseMicroContrast - baseline.responseMicroContrast)
+          <= acceptance.appearance.responseMicroContrast
+        && Math.abs(current.coverage - baseline.coverage) <= acceptance.appearance.coverage
+        && Math.abs(current.rgbPeak - baseline.rgbPeak) <= acceptance.appearance.rgbPeak,
+      `E54 ${candidate.scale}x appearance drifted for ${baseline.name} (${JSON.stringify({ baseline, current, acceptance: acceptance.appearance })})`);
+    }
+  }
+}
+
+async function writeVibrMacroReliefVfxScreenshots(source, scale, disabled, enabled) {
+  const paths = {
+    off: variantScreenshotPath(source, `e54-vibr-macro-relief-${scale}x-off`),
+    on: variantScreenshotPath(source, `e54-vibr-macro-relief-${scale}x-on`),
+  };
+  await writeFile(paths.off, Buffer.from(disabled.capture.capture.data, 'base64'));
+  await writeFile(paths.on, Buffer.from(enabled.capture.capture.data, 'base64'));
+  return paths;
+}
+
+async function auditEightXVibrMacroReliefVfxExclusion(cdp, dpr) {
+  await setDesktopMetrics(cdp, 1280, 720, dpr);
+  const query = new URLSearchParams({
+    scene: 'render-lab', inputAudit: '1', blankAudit: '1', renderScale: '8',
+    auditStage: 'eight-vibr-macro-relief', radioactiveSolidBodyVfxAudit: '1',
+    vibrMacroReliefVfxAudit: '1', renderLook: 'realistic', solidBodyVfx: '1',
+    radioactiveSolidBodyVfx: '1', iszsCrystallineVfx: '0', vibrMacroReliefVfx: '1',
+  });
+  await cdp.send('Page.navigate', { url: `${AUDIT_BASE_URL}?${query}` });
+  const deadline = Date.now() + EIGHT_X_PRESENTATION_DEADLINE_MS;
+  await waitFor(() => evaluate(cdp, `(() => {
+    const p = new URLSearchParams(location.search);
+    return p.get('renderScale') === '8' && p.get('auditStage') === 'eight-vibr-macro-relief'
+      && p.get('radioactiveSolidBodyVfxAudit') === '1' && p.get('vibrMacroReliefVfxAudit') === '1'
+      && p.get('solidBodyVfx') === '1' && p.get('radioactiveSolidBodyVfx') === '1'
+      && p.get('iszsCrystallineVfx') === '0' && p.get('vibrMacroReliefVfx') === '1'
+      && Boolean(window.__ANIFOR_INPUT_AUDIT__);
+  })()`), remainingDeadlineMs(deadline, 'true-8x E54 input audit API'),
+  'true-8x E54 input audit API');
+  const backend = await waitForEightXTerminalBackend(cdp, 'true-8x E54', deadline);
+  assertEightXWebGLBackend(backend, 'true-8x E54');
+  const fixture = await evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    audit.prepareRadioactiveSolidBodyVfxFixture();
+    for (let pass = 0; pass < 5; pass++) audit.refreshPresentationFields();
+    return audit.radioactiveSolidBodyVfxFixture();
+  })()`, Math.min(2_000, remainingDeadlineMs(deadline, 'true-8x E54 fixture setup')));
+  await waitFor(() => radioactiveSolidBodyVfxFixtureReady(cdp, fixture),
+    Math.min(20_000, remainingDeadlineMs(deadline, 'true-8x E54 fixture hydration')),
+    'true-8x E54 fixture hydration');
+  const geometry = await waitForStableCanvas(cdp, 1280, 720, undefined,
+    Math.min(45_000, remainingDeadlineMs(deadline, 'true-8x E54 geometry')),
+    'true-8x E54 geometry');
+  assert(geometry.backing.width === WORLD_WIDTH * 8
+    && geometry.backing.height === WORLD_HEIGHT * 8 && geometry.outputScale === '8',
+  `true-8x E54 lost exact backing (${JSON.stringify(geometry.backing)})`);
+  const isolation = await evaluate(cdp, `(() => {
+    const canvas = document.querySelector('canvas.semantic-field-canvas');
+    return canvas ? {
+      renderer: canvas.dataset.renderer, state: canvas.dataset.hdrPipeline,
+      reason: canvas.dataset.hdrPipelineReason, bloomBacking: canvas.dataset.bloomBacking ?? null,
+      solidBodyVfx: canvas.dataset.solidBodyVfx,
+      radioactiveSolidBodyVfx: canvas.dataset.radioactiveSolidBodyVfx,
+      iszsCrystallineVfx: canvas.dataset.iszsCrystallineVfx,
+      vibrMacroReliefVfx: canvas.dataset.vibrMacroReliefVfx,
+    } : undefined;
+  })()`, Math.min(1_000, remainingDeadlineMs(deadline, 'true-8x E54 isolation')));
+  assert(isolation?.renderer === 'semantic-field-webgl'
+    && isolation.state === 'inactive' && isolation.reason === 'scale-8'
+    && isolation.bloomBacking === null && isolation.solidBodyVfx === 'inactive'
+    && isolation.radioactiveSolidBodyVfx === 'inactive'
+    && isolation.iszsCrystallineVfx === 'inactive'
+    && isolation.vibrMacroReliefVfx === 'inactive',
+  `true-8x E54 selector isolation failed (${JSON.stringify(isolation)})`);
+  const stateBefore = await radioactiveSolidBodyVfxStateDigest(cdp, fixture);
+  const timingBudget = remainingDeadlineMs(deadline, 'true-8x E54 GPU completion');
+  const timing = await auditWebGLPresentationTiming(cdp, 1, Math.min(12_000, timingBudget), timingBudget, 1);
+  // enableWebGLPresentationTiming deliberately disables timer queries at true
+  // 8x, so this must be the presenter's completion fence rather than a generic
+  // completion fallback. Promotion and the audit frame are accepted only after
+  // their respective fences signal.
+  assert(timing.source === 'gpu-fence',
+    `true-8x E54 did not signal its GPU fence (${JSON.stringify(timing)})`);
+  const stateAfter = await radioactiveSolidBodyVfxStateDigest(cdp, fixture);
+  assert(JSON.stringify(stateBefore) === JSON.stringify(stateAfter),
+    `true-8x E54 changed VIBR semantic/depth/wall/native-state data (${JSON.stringify({ stateBefore, stateAfter })})`);
+  return {
+    backing: `${geometry.backing.width}x${geometry.backing.height}`,
+    promotedWebGLObserved: true, selectorExcluded: true, semanticStable: true,
+    isolation, timing, state: stateBefore,
   };
 }
 
@@ -49695,7 +50294,7 @@ async function navigateIszsCrystallineVfxState(cdp, mode, scale, enabled, label)
     liquidSolidMeniscusVfx: '0', metalWaterContactVfx: '0', gasCoreDepthVfx: '0',
     nobleGasBillowVfx: '0', nobleGasPrismVfx: '0', smokeSoftnessVfx: '0',
     smokeBillowDepthVfx: '0', plasmaCoreVfx: '0', solidBodyVfx: '1',
-    radioactiveSolidBodyVfx: '1', iszsCrystallineVfx: enabled ? '1' : '0',
+    radioactiveSolidBodyVfx: '1', iszsCrystallineVfx: enabled ? '1' : '0', vibrMacroReliefVfx: '0',
     platinumBodyVfx: '0', ceramicGlazeVfx: '0', botanicalBodyVfx: '0',
     botanicalMesostructureVfx: '0', botanicalPigmentVfx: '0', plantLaminaVfx: '0',
     plantLobeDepthVfx: '0', plantCanopyMassVfx: '0', woodBarkReliefVfx: '0',
@@ -49712,6 +50311,7 @@ async function navigateIszsCrystallineVfxState(cdp, mode, scale, enabled, label)
       && p.get('renderScale') === ${JSON.stringify(String(scale))}
       && p.get('solidBodyVfx') === '1' && p.get('radioactiveSolidBodyVfx') === '1'
       && p.get('iszsCrystallineVfx') === ${JSON.stringify(enabled ? '1' : '0')}
+      && p.get('vibrMacroReliefVfx') === '0'
       && typeof audit?.prepareRadioactiveSolidBodyVfxFixture === 'function'
       && typeof audit?.radioactiveSolidBodyVfxFixture === 'function';
   })()`), scale === 4 ? 45_000 : 15_000, `E47 ${label} ${scale}x page`);
@@ -49748,7 +50348,7 @@ async function navigateIszsCrystallineVfxState(cdp, mode, scale, enabled, label)
       'plantLobeDepthVfx', 'plantCanopyMassVfx', 'woodBarkReliefVfx',
       'woodTanninVfx', 'glassBodyVfx', 'oilBodyVfx', 'oilVolumeFinishVfx',
       'rockRoughnessVfx', 'rockMesostructureVfx', 'waterBodyVfx', 'acidBodyVfx',
-      'soapBodyVfx', 'deutBodyVfx'];
+      'soapBodyVfx', 'deutBodyVfx', 'vibrMacroReliefVfx'];
     return {
       state: canvas.dataset.hdrPipeline, bloomBacking: canvas.dataset.bloomBacking,
       solidBodyVfx: canvas.dataset.solidBodyVfx,
@@ -49840,7 +50440,7 @@ async function auditEightXIszsCrystallineVfxExclusion(cdp, dpr) {
     scene: 'render-lab', inputAudit: '1', blankAudit: '1', renderScale: '8',
     auditStage: 'eight-iszs-crystalline', radioactiveSolidBodyVfxAudit: '1',
     iszsCrystallineVfxAudit: '1', renderLook: 'realistic', solidBodyVfx: '1',
-    radioactiveSolidBodyVfx: '1', iszsCrystallineVfx: '1',
+    radioactiveSolidBodyVfx: '1', iszsCrystallineVfx: '1', vibrMacroReliefVfx: '0',
   });
   await cdp.send('Page.navigate', { url: `${AUDIT_BASE_URL}?${query}` });
   const deadline = Date.now() + EIGHT_X_PRESENTATION_DEADLINE_MS;
@@ -49850,7 +50450,8 @@ async function auditEightXIszsCrystallineVfxExclusion(cdp, dpr) {
       && p.get('radioactiveSolidBodyVfxAudit') === '1'
       && p.get('iszsCrystallineVfxAudit') === '1'
       && p.get('solidBodyVfx') === '1' && p.get('radioactiveSolidBodyVfx') === '1'
-      && p.get('iszsCrystallineVfx') === '1' && Boolean(window.__ANIFOR_INPUT_AUDIT__);
+      && p.get('iszsCrystallineVfx') === '1' && p.get('vibrMacroReliefVfx') === '0'
+      && Boolean(window.__ANIFOR_INPUT_AUDIT__);
   })()`), remainingDeadlineMs(deadline, 'true-8x E47 input audit API'),
   'true-8x E47 input audit API');
   const backend = await waitForEightXTerminalBackend(cdp, 'true-8x E47', deadline);
@@ -49885,13 +50486,15 @@ async function auditEightXIszsCrystallineVfxExclusion(cdp, dpr) {
       solidBodyVfx: canvas.dataset.solidBodyVfx,
       radioactiveSolidBodyVfx: canvas.dataset.radioactiveSolidBodyVfx,
       iszsCrystallineVfx: canvas.dataset.iszsCrystallineVfx,
+      vibrMacroReliefVfx: canvas.dataset.vibrMacroReliefVfx,
     } : undefined;
   })()`, Math.min(1_000, remainingDeadlineMs(deadline, 'true-8x E47 isolation')));
   assert(isolation?.renderer === 'semantic-field-webgl'
     && isolation.state === 'inactive' && isolation.reason === 'scale-8'
     && isolation.bloomBacking === null && isolation.solidBodyVfx === 'inactive'
     && isolation.radioactiveSolidBodyVfx === 'inactive'
-    && isolation.iszsCrystallineVfx === 'inactive',
+    && isolation.iszsCrystallineVfx === 'inactive'
+    && isolation.vibrMacroReliefVfx === 'inactive',
   `true-8x E47 selector isolation failed (${JSON.stringify(isolation)})`);
   const stateBefore = await radioactiveSolidBodyVfxStateDigest(cdp, fixture);
   const timingBudget = remainingDeadlineMs(deadline, 'true-8x E47 GPU completion');

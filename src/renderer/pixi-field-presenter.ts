@@ -54,6 +54,7 @@ import {
   resolveHydrogenBodyVfxEnabled,
   resolveIszsCrystallineVfxEnabled,
   resolveRadioactiveSolidBodyVfxEnabled,
+  resolveVibrMacroReliefVfxEnabled,
   resolveNobleGasBillowVfxEnabled,
   resolveNobleGasPrismVfxEnabled,
   resolveSmokeBillowDepthVfxEnabled,
@@ -3291,6 +3292,7 @@ uniform float uSmokeBillowDepthVfx;
 uniform float uPlasmaCoreVfx;
 uniform float uSolidBodyVfx;
 uniform float uRadioactiveSolidBodyVfx;
+uniform float uVibrMacroReliefVfx;
 uniform float uIszsCrystallineVfx;
 uniform float uRockRoughnessVfx;
 uniform float uRockMesostructureVfx;
@@ -9520,6 +9522,45 @@ void main() {
               * (1.0 - abs(radioactiveSolidFold))
                 * (material == 105.0 ? 0.012 : 0.006))
           * radioactiveSolidDepth;
+        // E54: the composed fit-view exposes zero-state VIBR as a flat green
+        // slab whose eight-cell conductor lattice is its only broad reading.
+        // Recombine E43's already-live macro/facet/fold, depth, and reflected
+        // environment into one continuous conductive roll. Nonzero native
+        // charge/countdown/alternate state remains an exact control and keeps
+        // the established late VIBR state grammar as its sole state response.
+        // This is static RGB arithmetic only: no new carrier, noise, sample,
+        // texture, field, pass, target, allocation, clock, alpha, support,
+        // silhouette, ownership, lifecycle, topology, or physics decision.
+        if (uVibrMacroReliefVfx > 0.5 && material == 113.0) {
+          float vibrPackedState = floor(wallState.b * 255.0 + 0.5)
+            + floor(wallState.a * 255.0 + 0.5) * 256.0;
+          if (vibrPackedState < 0.5) {
+            float vibrBulkVolume = radioactiveSolidDepth
+              * smoothstep(0.10, 0.82, radioactiveSolidCore);
+            float vibrConductiveRoll = clamp(
+              radioactiveSolidMacro * 0.76
+                + radioactiveSolidFacet * 0.26
+                + radioactiveSolidFold * 0.20,
+              -1.0, 1.0
+            );
+            float vibrConductiveCrown = smoothstep(0.02, 0.72, vibrConductiveRoll);
+            float vibrConductivePocket = smoothstep(0.02, 0.70, -vibrConductiveRoll);
+            float vibrConductiveShoulder = (1.0 - abs(vibrConductiveRoll))
+              * radioactiveSolidCore;
+            color *= vec3(1.0) - vec3(0.070, 0.046, 0.056)
+              * (vibrConductivePocket * 0.72 + radioactiveSolidCore * 0.18)
+              * vibrBulkVolume;
+            color += (vec3(1.04) - clamp(color, 0.0, 1.04))
+              * (vec3(0.18, 0.88, 0.72) * vibrConductiveCrown * 0.105
+                + vec3(0.10, 0.36, 0.52) * vibrConductiveShoulder * 0.025)
+              * vibrBulkVolume;
+            color += solidEnvironment
+              * (vibrConductiveCrown * 0.038 + vibrConductiveShoulder * 0.014)
+              * vibrBulkVolume;
+            color += vec3(-0.030, 0.026, 0.060)
+              * vibrConductiveRoll * vibrBulkVolume;
+          }
+        }
         // E47: exact ISZS is a decaying crystal rather than a uniformly
         // coloured radioactive slab. Recombine E43's two static, broad noise
         // carriers into softly intersecting crystal planes, a cool directional
@@ -10968,6 +11009,10 @@ export class PixiFieldPresenter {
     // radioactive identity/state grammar and declare no E43 selector.
     const radioactiveSolidBodyVfxEnabled = outputScale < 8
       && resolveRadioactiveSolidBodyVfxEnabled(renderLook);
+    // E54 is exact zero-state VIBR arithmetic inside E43's normal-WebGL body.
+    // Canvas and compact true 8x retain the accepted VIBR identity/state path.
+    const vibrMacroReliefVfxEnabled = outputScale < 8
+      && resolveVibrMacroReliefVfxEnabled(renderLook);
     // E47 is exact-ISZS arithmetic over E43's already-live depth and static
     // value-noise evidence. Compact true 8x retains the accepted isotope body
     // and declares neither this selector nor a parallel branch.
@@ -11107,6 +11152,7 @@ export class PixiFieldPresenter {
       uRadioactiveSolidBodyVfx: {
         value: radioactiveSolidBodyVfxEnabled ? 1 : 0, type: 'f32',
       },
+      uVibrMacroReliefVfx: { value: vibrMacroReliefVfxEnabled ? 1 : 0, type: 'f32' },
       uIszsCrystallineVfx: { value: iszsCrystallineVfxEnabled ? 1 : 0, type: 'f32' },
       uRockRoughnessVfx: { value: rockRoughnessVfxEnabled ? 1 : 0, type: 'f32' },
       uRockMesostructureVfx: { value: rockMesostructureVfxEnabled ? 1 : 0, type: 'f32' },
@@ -11366,6 +11412,7 @@ export class PixiFieldPresenter {
       this.uniforms.uniforms.uPlasmaCoreVfx = 0;
       this.uniforms.uniforms.uSolidBodyVfx = 0;
       this.uniforms.uniforms.uRadioactiveSolidBodyVfx = 0;
+      this.uniforms.uniforms.uVibrMacroReliefVfx = 0;
       this.uniforms.uniforms.uIszsCrystallineVfx = 0;
       this.uniforms.uniforms.uRockRoughnessVfx = 0;
       this.uniforms.uniforms.uRockMesostructureVfx = 0;
@@ -11442,6 +11489,7 @@ export class PixiFieldPresenter {
             || new URLSearchParams(location.search).get('plasmaCoreVfxAudit') === '1'
             || new URLSearchParams(location.search).get('solidBodyVfxAudit') === '1'
             || new URLSearchParams(location.search).get('radioactiveSolidBodyVfxAudit') === '1'
+            || new URLSearchParams(location.search).get('vibrMacroReliefVfxAudit') === '1'
             || new URLSearchParams(location.search).get('iszsCrystallineVfxAudit') === '1'
             || new URLSearchParams(location.search).get('rockRoughnessVfxAudit') === '1'
             || new URLSearchParams(location.search).get('rockMesostructureVfxAudit') === '1'
@@ -11538,6 +11586,9 @@ export class PixiFieldPresenter {
     ) > 0.5 ? 'active' : 'inactive';
     presenter.app.canvas.dataset.radioactiveSolidBodyVfx = Number(
       presenter.uniforms.uniforms.uRadioactiveSolidBodyVfx
+    ) > 0.5 ? 'active' : 'inactive';
+    presenter.app.canvas.dataset.vibrMacroReliefVfx = Number(
+      presenter.uniforms.uniforms.uVibrMacroReliefVfx
     ) > 0.5 ? 'active' : 'inactive';
     presenter.app.canvas.dataset.iszsCrystallineVfx = Number(
       presenter.uniforms.uniforms.uIszsCrystallineVfx
@@ -13033,6 +13084,7 @@ export class PixiFieldPresenter {
         this.uniforms.uniforms.uPlasmaCoreVfx = 0;
         this.uniforms.uniforms.uSolidBodyVfx = 0;
         this.uniforms.uniforms.uRadioactiveSolidBodyVfx = 0;
+        this.uniforms.uniforms.uVibrMacroReliefVfx = 0;
         this.uniforms.uniforms.uIszsCrystallineVfx = 0;
         this.uniforms.uniforms.uRockRoughnessVfx = 0;
         this.uniforms.uniforms.uRockMesostructureVfx = 0;
@@ -13085,6 +13137,7 @@ export class PixiFieldPresenter {
         this.app.canvas.dataset.plasmaCoreVfx = 'inactive';
         this.app.canvas.dataset.solidBodyVfx = 'inactive';
         this.app.canvas.dataset.radioactiveSolidBodyVfx = 'inactive';
+        this.app.canvas.dataset.vibrMacroReliefVfx = 'inactive';
         this.app.canvas.dataset.iszsCrystallineVfx = 'inactive';
         this.app.canvas.dataset.rockRoughnessVfx = 'inactive';
         this.app.canvas.dataset.rockMesostructureVfx = 'inactive';

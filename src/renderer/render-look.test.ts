@@ -26,6 +26,7 @@ import {
   resolveDeutBodyVfxEnabled,
   resolveIszsCrystallineVfxEnabled,
   resolveRadioactiveSolidBodyVfxEnabled,
+  resolveVibrMacroReliefVfxEnabled,
   resolveOilBodyVfxEnabled,
   resolveOilVolumeFinishVfxEnabled,
   resolveOrganicSubsurfaceVfxEnabled,
@@ -833,6 +834,37 @@ describe('resolveRenderLook', () => {
     expect(resolveIszsCrystallineVfxEnabled(
       'realistic', '?iszsCrystallineVfx=false',
     )).toBe(false);
+  });
+
+  it('keeps exact VIBR macro relief subordinate to E43 and isolated in input audits', () => {
+    expect(resolveVibrMacroReliefVfxEnabled(
+      'classic', '?vibrMacroReliefVfx=on',
+    )).toBe(false);
+    expect(resolveVibrMacroReliefVfxEnabled('realistic', '')).toBe(true);
+    expect(resolveVibrMacroReliefVfxEnabled('neon-lab', '')).toBe(true);
+    expect(resolveVibrMacroReliefVfxEnabled('realistic', '?inputAudit=1')).toBe(false);
+
+    for (const requested of ['1', 'on', 'true']) {
+      expect(resolveVibrMacroReliefVfxEnabled(
+        'realistic', `?inputAudit=1&solidBodyVfx=1&radioactiveSolidBodyVfx=1&vibrMacroReliefVfx=${requested}`,
+      )).toBe(true);
+    }
+    for (const requested of ['0', 'off', 'false']) {
+      expect(resolveVibrMacroReliefVfxEnabled(
+        'realistic', `?vibrMacroReliefVfx=${requested}`,
+      )).toBe(false);
+    }
+
+    for (const parentOff of [
+      '?radioactiveSolidBodyVfx=0&vibrMacroReliefVfx=on',
+      '?solidBodyVfx=0&radioactiveSolidBodyVfx=on&vibrMacroReliefVfx=on',
+      '?volumeVfx=0&radioactiveSolidBodyVfx=on&vibrMacroReliefVfx=on',
+    ]) {
+      expect(resolveVibrMacroReliefVfxEnabled('realistic', parentOff)).toBe(false);
+    }
+    expect(resolveVibrMacroReliefVfxEnabled(
+      'realistic', '?volumeVfx=0&solidBodyVfx=on&radioactiveSolidBodyVfx=on&vibrMacroReliefVfx=on',
+    )).toBe(true);
   });
 
   it('lets powder-body VFX follow the preset or override broad volume styling', () => {
