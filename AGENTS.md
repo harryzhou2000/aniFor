@@ -844,6 +844,8 @@ digests remain stable, and browser errors stay zero. Requested-on true 8×
 reports E47 inactive, presents exact 4896×3072 WebGL, and completed a real GPU
 fence in `5161.0 ms` in the final frozen full matrix; repeated calibration
 tails ranged from `4169.7–5248.3 ms` under the same deadline.
+E47's 1× composed-survey floor remains contextual ranking evidence only; its
+frozen focused matrix remains the acceptance gate.
 
 The corrected v6 composed survey now explicitly enables
 E17/E43/E44/E45/E46/E47

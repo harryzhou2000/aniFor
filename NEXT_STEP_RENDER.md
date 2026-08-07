@@ -2060,7 +2060,8 @@ E47 gives exact ISZS `105` a strict E43/E17-owned crystalline-depth finish by
 recombining the already-live static macro/facet and exact body evidence. Its
 cyan/violet crystal planes close the demonstrated ISZS surface-detail gap while
 VIBR `113`, native state, topology, contacts, Canvas, and compact 8× remain
-unchanged.
+unchanged. Its 1× composed-survey floor remains contextual ranking evidence;
+the frozen focused matrix remains the E47 acceptance gate.
 E48 gives exact Snow `18` a strict E05-owned cohesive snowpack body by
 recombining the already-live settled-body facet, slope, volume, and pre-grain
 lighting evidence. It calms only dense Snow pigment beneath a broad blue-white
