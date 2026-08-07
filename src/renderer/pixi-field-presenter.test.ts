@@ -1928,6 +1928,9 @@ describe('Pixi presenter startup configuration', () => {
     expect(e48).toContain('unlikeMaterialContact < 0.5');
     expect(calm).toContain('powderBodyBase');
     expect(calm).toContain('snowpackBodyCalm');
+    expect(calm).toContain('float snowpackPigmentCalm = snowpackBodyCalm');
+    expect(calm).toContain('1.0 - 0.12 * fourXMineralRecovery');
+    expect(calm).toContain('mix(color, powderBodyBase, snowpackPigmentCalm)');
     expect(parent).toContain('uPowderBodyVfx > 0.5');
     expect(parent).toContain('powderSuspensionCohesion < 0.01');
     for (const guard of [

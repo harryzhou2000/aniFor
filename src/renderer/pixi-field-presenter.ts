@@ -8748,7 +8748,16 @@ void main() {
       // thermal/light response and E05's crown/pocket remain intact. The body
       // gate is identically zero for every topology and style control.
       if (snowpackBodyCalm > 0.0) {
-        color = mix(color, powderBodyBase, snowpackBodyCalm);
+        // A 4x backing resolves Snow's world-cell pigment before the fitted
+        // canvas downsamples it. The shared Smooth calm above has already
+        // attenuated that carrier, so applying E48's full second calm makes
+        // the displayed body visibly flatter than its 1x/2x presentations.
+        // Retain a restrained share of the existing pigment only in that
+        // already-proven 4x band; this adds no carrier, sample, resource, or
+        // support decision and leaves normal 1x/2x plus compact 8x unchanged.
+        float snowpackPigmentCalm = snowpackBodyCalm
+          * (1.0 - 0.12 * fourXMineralRecovery);
+        color = mix(color, powderBodyBase, snowpackPigmentCalm);
       }
       // E49's dense-body calm attenuates only the common cell grain and PQRT's
       // small legacy identity motif. The broad plate body is already present in

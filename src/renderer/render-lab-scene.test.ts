@@ -155,6 +155,29 @@ describe('render lab scene', () => {
       expect(renderPhase(material)).toBe(region.phase === 'powder' ? RenderPhase.Powder : RenderPhase.Liquid);
     }
 
+    const snowRegion = MATERIAL_CANDIDATE_SURVEY_AUDIT.regions.find(
+      ({ name }) => name === 'candidateSnow',
+    )!;
+    const snowBounds = {
+      left: snowRegion.x - snowRegion.radiusX,
+      right: snowRegion.x + snowRegion.radiusX,
+      top: snowRegion.y - snowRegion.radiusY,
+      bottom: snowRegion.y + snowRegion.radiusY,
+    };
+    // The scored Snow interior must not derive its cross-scale evidence from
+    // the authored left notch, rounded outer edge, ROCK contact, or wall plane.
+    expect(snowBounds).toEqual({ left: 276, right: 336, top: 96, bottom: 144 });
+    expect(snowBounds.left).toBeGreaterThanOrEqual(258);
+    expect(snowBounds.right).toBeLessThan(366);
+    expect(snowBounds.top).toBeGreaterThan(62);
+    expect(snowBounds.bottom).toBeLessThan(168);
+    for (let y = snowBounds.top; y < snowBounds.bottom; y++) {
+      for (let x = snowBounds.left; x < snowBounds.right; x++) {
+        expect(first.cells()[y * 612 + x]).toBe(Material.Snow);
+        expect(first.walls()[y * 612 + x]).toBe(0);
+      }
+    }
+
     for (const probe of MATERIAL_CANDIDATE_SURVEY_AUDIT.sharedContext.contactProbes) {
       expect(first.cells()[probe.y * 612 + probe.x]).toBe(probe.material);
       expect(first.cells()[(probe.y + (probe.y < 200 ? 1 : -1)) * 612 + probe.x])

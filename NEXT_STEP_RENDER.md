@@ -801,11 +801,12 @@ does not alter simulation, camera, semantic ownership, or `renderScale`.
   allocation, clock, alpha/support, silhouette, ownership, topology, state, or
   physics decision. `npm run audit:vfx:snowpack-body` freezes byte-stable
   off→on→off output at 1×/2×/4×: support recall is `1`, clipping is zero,
-  dense-body microcontrast retention is `.2405–.2443`, and broad macro-range
-  retention is `.3333–.6897`; all named raw/topology controls plus Local and
-  Grains have zero response. Requested-on compact true 8× excludes E48,
+  dense-body microcontrast retention is `.2405–.2443` at 1×/2× and
+  `.3313–.3325` at 4×, and broad macro-range retention is `.3333–.7241`; all
+  named raw/topology controls plus Local and Grains have zero response.
+  Requested-on compact true 8× excludes E48,
   presents exact 4896×3072 WebGL without an HDR target, and completed its GPU
-  fence in `5260.1 ms` with zero browser errors. The isolated candidate-survey
+  fence in `5303.2 ms` with zero browser errors. The isolated candidate-survey
   v1 route freezes semantic hash `2255453673`, 115,368 occupied cells, all six
   candidate counts, and six 2,880-cell regions. At canonical 2× it selected
   Snow from a visible baseline deficiency (quality `4.808`, microcontrast
@@ -1097,7 +1098,8 @@ does not alter simulation, camera, semantic ownership, or `renderScale`.
   depth/contact proof, reuse of the established powder facet/slope/volume and
   pre-grain body evidence, broad blue-white crown, cool compacted pocket,
   dense-only pigment calm, exact raw/topology/foreign-owner controls, Local and
-  Grains no-ops, narrow 1×–4× response envelope, and Canvas/compact-8×
+  Grains no-ops, frozen relational 1×–4× response and texture-retention
+  envelope, and Canvas/compact-8×
   exclusion. Same-phase powder boundaries keep exact ownership on both sides;
   do not widen E48 to Salt, Quartz, BGLA, moving Snow, or wet suspension, add a
   new procedural carrier, or claim Canvas parity.
@@ -2172,12 +2174,14 @@ historical quality-`100` candidate card selected E52; it is not its acceptance
 evidence. With E52 explicitly enabled, BGLA remains quality `100` at every
 scale, with microcontrast `9.393/10.971/8.452`, chromatic contrast
 `5.872/5.614/4.136`, macro range `34.213/29.575/24.387`, full support, and zero
-clipping. Snow is now the only measured candidate deficit: quality
-`93.614/92.916/66.112` at 1×/2×/4×, with the 4× loss isolated to
-pigment-variation evidence. Make that a bounded cross-scale visual
-investigation before changing E48; its focused exact-owner fixture remains the
-acceptance contract. Preserve the E14 1× stencil snap and all E01–E52 selectors
-and controls.
+clipping. The explicit-selector candidate matrix closes Snow's former 4×
+fit-view loss: quality is `93.614/92.916/93.274`, microcontrast is
+`4.815/5.702/5.424`, chromatic contrast is `1.307/1.224/1.235`, and macro range
+is `24.657/23.679/22.240` at 1×/2×/4×, with full support and zero dark/clipped
+fraction. Do not alter E48 from candidate-rank evidence; its focused exact-owner
+fixture remains the acceptance contract. Choose any later experiment only from
+a new visible fit-view diagnosis. Preserve the E14 1× stencil snap and all
+E01–E52 selectors and controls.
 
 ## Phase 1 — HDR pipeline & lighting core (biggest visual payoff)
 

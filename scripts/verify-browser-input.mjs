@@ -12927,6 +12927,21 @@ async function auditDesktopInput(cdp, mode, dpr) {
  * its own deterministic app scene so evidence gathering cannot rewrite the
  * accepted production-showcase contract merely to make a candidate score well.
  */
+const CANDIDATE_SNOW_ACCEPTED_ENVELOPES = Object.freeze({
+  1: Object.freeze({
+    quality: [90, 97], micro: [4.5, 5.2], chroma: [1.20, 1.40],
+    macro: [23, 27], lumaStdDev: [6.2, 7.4],
+  }),
+  2: Object.freeze({
+    quality: [90, 97], micro: [5.3, 6.1], chroma: [1.15, 1.32],
+    macro: [22, 26], lumaStdDev: [6.5, 7.7],
+  }),
+  4: Object.freeze({
+    quality: [89, 97], micro: [5.0, 5.9], chroma: [1.12, 1.35],
+    macro: [20.5, 24.5], lumaStdDev: [6.2, 7.6],
+  }),
+});
+
 async function auditMaterialCandidateSurvey(cdp, mode, dpr) {
   const captures = [];
   const candidateLook = renderLook ?? 'realistic';
@@ -12939,6 +12954,7 @@ async function auditMaterialCandidateSurvey(cdp, mode, dpr) {
       scene: 'candidate-survey', inputAudit: '1', auditStage: 'candidate-rank',
       renderScale: String(scale), renderLook: candidateLook,
       candidateRankAudit: '1', volumeVfx: '1', liquidBodyVfx: '1', powderBodyVfx: '1',
+      powderLightVfx: '1', powderSolidContactVfx: '1',
       snowpackBodyVfx: candidateSnowpackBodyVfx,
       quartzMesostructureVfx: candidateQuartzMesostructureVfx,
       c4BodyVfx: candidateC4BodyVfx,
@@ -12956,6 +12972,8 @@ async function auditMaterialCandidateSurvey(cdp, mode, dpr) {
         && parameters.get('volumeVfx') === '1'
         && parameters.get('liquidBodyVfx') === '1'
         && parameters.get('powderBodyVfx') === '1'
+        && parameters.get('powderLightVfx') === '1'
+        && parameters.get('powderSolidContactVfx') === '1'
         && parameters.get('snowpackBodyVfx') === ${JSON.stringify(candidateSnowpackBodyVfx)}
         && parameters.get('quartzMesostructureVfx')
           === ${JSON.stringify(candidateQuartzMesostructureVfx)}
@@ -12981,6 +12999,13 @@ async function auditMaterialCandidateSurvey(cdp, mode, dpr) {
       ))
       && COMPOSED_MEDIA_EVIDENCE_VERSION === 4,
     `candidate rank ${scale}x app-owned fixture is unavailable (${JSON.stringify(fixture)})`);
+    const smoothStylePinned = await evaluate(cdp, `(() => {
+      const audit = window.__ANIFOR_INPUT_AUDIT__;
+      if (typeof audit?.setPowderRenderStyle !== 'function') return false;
+      audit.setPowderRenderStyle('smooth');
+      return true;
+    })()`);
+    assert(smoothStylePinned, `candidate rank ${scale}x could not pin Smooth powder style`);
     const powderProbes = fixture.powderStabilityProbes
       ?? fixture.regions.filter(({ phase }) => phase === 'powder')
         .map(({ name, x, y }) => ({ name, x, y }));
@@ -13021,6 +13046,8 @@ async function auditMaterialCandidateSurvey(cdp, mode, dpr) {
         hdrPipeline: canvas?.dataset.hdrPipeline ?? 'missing',
         liquidBodyVfx: canvas?.dataset.liquidBodyVfx ?? 'missing',
         powderBodyVfx: canvas?.dataset.powderBodyVfx ?? 'missing',
+        powderLightVfx: canvas?.dataset.powderLightVfx ?? 'missing',
+        powderSolidContactVfx: canvas?.dataset.powderSolidContactVfx ?? 'missing',
         snowpackBodyVfx: canvas?.dataset.snowpackBodyVfx ?? 'missing',
         quartzMesostructureVfx: canvas?.dataset.quartzMesostructureVfx ?? 'missing',
         c4BodyVfx: canvas?.dataset.c4BodyVfx ?? 'missing',
@@ -13037,6 +13064,8 @@ async function auditMaterialCandidateSurvey(cdp, mode, dpr) {
     assert(presentation.hdrPipeline === 'active'
       && presentation.liquidBodyVfx === 'active'
       && presentation.powderBodyVfx === 'active'
+      && presentation.powderLightVfx === 'active'
+      && presentation.powderSolidContactVfx === 'active'
       && presentation.snowpackBodyVfx === expectedSnowpackBodyVfx
       && presentation.quartzMesostructureVfx === expectedQuartzMesostructureVfx
       && presentation.c4BodyVfx === expectedC4BodyVfx
@@ -13080,6 +13109,23 @@ async function auditMaterialCandidateSurvey(cdp, mode, dpr) {
         evidence: scoreComposedMediaSample(sample, contract.profile),
       };
     });
+    if (expectedSnowpackBodyVfx === 'active') {
+      const snow = regions.find(({ name }) => name === 'candidateSnow');
+      const envelope = CANDIDATE_SNOW_ACCEPTED_ENVELOPES[scale];
+      const inRange = (value, range) => Number.isFinite(value)
+        && value >= range[0] && value <= range[1];
+      assert(snow && envelope
+        && inRange(snow.evidence.qualityIndex, envelope.quality)
+        && inRange(snow.microContrast, envelope.micro)
+        && inRange(snow.chromaticContrast, envelope.chroma)
+        && inRange(snow.macroLumaRange, envelope.macro)
+        && inRange(snow.lumaStdDev, envelope.lumaStdDev)
+        && snow.supportRecall === 1 && snow.coverage === 1
+        && snow.darkFraction === 0 && snow.clippedFraction === 0,
+      `candidate rank ${scale}x lost accepted fit-view Snow detail (${JSON.stringify({
+        envelope, snow,
+      })})`);
+    }
     const screenshot = screenshotRequest
       ? variantScreenshotPath(screenshotRequest, `candidate-rank-${scale}x`) : undefined;
     if (screenshot) await writeFile(screenshot, Buffer.from(capture.capture.data, 'base64'));
@@ -13198,6 +13244,7 @@ async function auditMaterialCandidateSurvey(cdp, mode, dpr) {
     quartzMesostructureVfx: candidateQuartzMesostructureVfx,
     c4BodyVfx: candidateC4BodyVfx,
     bglaBodyVfx: candidateBglaBodyVfx,
+    snowAcceptedEnvelopes: CANDIDATE_SNOW_ACCEPTED_ENVELOPES,
     weakestFirst,
     crossScaleDrift,
     schema: 'material-candidate-rank/v1',
@@ -36989,6 +37036,115 @@ const SNOWPACK_BODY_VFX_RESPONSE_LIMITS = Object.freeze({
   minimumCoverage: 0.04,
 });
 
+// E48's cross-scale refinement preserves its original broad body response at
+// 1x/2x and restores only enough existing Snow pigment at 4x to survive the
+// fitted-canvas downsample. These envelopes freeze the displayed result rather
+// than rewarding raw backing detail that an end user cannot see.
+const SNOWPACK_BODY_VFX_ACCEPTED_SCALE_ENVELOPES = Object.freeze({
+  1: Object.freeze({
+    targets: Object.freeze({
+      SNOWWholeBody: Object.freeze({
+        rgbRms: [17.8, 19.4], chromaRms: [8.3, 9.2], rgbPeak: [78, 94],
+        coverage: [0.77, 0.85], signedMean: [4.3, 5.8], spatialRgbRms: [17.2, 18.6],
+      }),
+      SNOWCrown: Object.freeze({
+        rgbRms: [19.5, 21.5], chromaRms: [9.2, 10.4], rgbPeak: [67, 81],
+        coverage: [0.91, 0.97], signedMean: [7.5, 9.5], spatialRgbRms: [17.5, 19.2],
+      }),
+      SNOWPocket: Object.freeze({
+        rgbRms: [18.3, 20.3], chromaRms: [9.1, 10.3], rgbPeak: [58, 72],
+        coverage: [0.90, 0.96], signedMean: [5.2, 7.0], spatialRgbRms: [17.0, 18.8],
+      }),
+      SNOWCore: Object.freeze({
+        rgbRms: [18.7, 20.7], chromaRms: [8.9, 10.0], rgbPeak: [72, 86],
+        coverage: [0.91, 0.97], signedMean: [0.2, 1.2], spatialRgbRms: [18.7, 20.6],
+      }),
+    }),
+    textures: Object.freeze({
+      SNOWCrown: Object.freeze({
+        enabledMicro: [4.8, 5.5], microRetention: [0.23, 0.255],
+        enabledMacro: [9, 13], macroRetention: [0.35, 0.44], enabledLumaStdDev: [6.1, 6.9],
+      }),
+      SNOWPocket: Object.freeze({
+        enabledMicro: [4.4, 5.1], microRetention: [0.23, 0.255],
+        enabledMacro: [12, 16], macroRetention: [0.30, 0.37], enabledLumaStdDev: [6.2, 7.0],
+      }),
+      SNOWCore: Object.freeze({
+        enabledMicro: [4.9, 5.6], microRetention: [0.23, 0.255],
+        enabledMacro: [21, 27], macroRetention: [0.35, 0.43], enabledLumaStdDev: [6.7, 7.6],
+      }),
+    }),
+  }),
+  2: Object.freeze({
+    targets: Object.freeze({
+      SNOWWholeBody: Object.freeze({
+        rgbRms: [17.3, 18.8], chromaRms: [7.1, 8.0], rgbPeak: [69, 83],
+        coverage: [0.77, 0.85], signedMean: [2.6, 3.9], spatialRgbRms: [17.0, 18.5],
+      }),
+      SNOWCrown: Object.freeze({
+        rgbRms: [18.9, 20.8], chromaRms: [7.7, 8.7], rgbPeak: [63, 76],
+        coverage: [0.92, 0.97], signedMean: [2.4, 3.7], spatialRgbRms: [18.6, 20.3],
+      }),
+      SNOWPocket: Object.freeze({
+        rgbRms: [18.3, 20.1], chromaRms: [7.7, 8.8], rgbPeak: [54, 67],
+        coverage: [0.91, 0.97], signedMean: [0.7, 1.7], spatialRgbRms: [18.1, 19.8],
+      }),
+      SNOWCore: Object.freeze({
+        rgbRms: [18.6, 20.5], chromaRms: [7.8, 8.8], rgbPeak: [63, 76],
+        coverage: [0.92, 0.98], signedMean: [2.7, 4.0], spatialRgbRms: [18.3, 20.0],
+      }),
+    }),
+    textures: Object.freeze({
+      SNOWCrown: Object.freeze({
+        enabledMicro: [5.9, 6.8], microRetention: [0.23, 0.255],
+        enabledMacro: [10, 14], macroRetention: [0.40, 0.49], enabledLumaStdDev: [6.5, 7.3],
+      }),
+      SNOWPocket: Object.freeze({
+        enabledMicro: [5.4, 6.3], microRetention: [0.23, 0.255],
+        enabledMacro: [10, 14], macroRetention: [0.35, 0.43], enabledLumaStdDev: [6.7, 7.5],
+      }),
+      SNOWCore: Object.freeze({
+        enabledMicro: [5.4, 6.3], microRetention: [0.23, 0.255],
+        enabledMacro: [20, 26], macroRetention: [0.41, 0.50], enabledLumaStdDev: [6.8, 7.6],
+      }),
+    }),
+  }),
+  4: Object.freeze({
+    targets: Object.freeze({
+      SNOWWholeBody: Object.freeze({
+        rgbRms: [10.8, 12.1], chromaRms: [4.5, 5.4], rgbPeak: [44, 57],
+        coverage: [0.73, 0.82], signedMean: [1.9, 2.9], spatialRgbRms: [10.5, 11.8],
+      }),
+      SNOWCrown: Object.freeze({
+        rgbRms: [11.9, 13.4], chromaRms: [4.9, 5.9], rgbPeak: [34, 45],
+        coverage: [0.87, 0.95], signedMean: [2.5, 3.6], spatialRgbRms: [11.5, 12.9],
+      }),
+      SNOWPocket: Object.freeze({
+        rgbRms: [11.6, 13.0], chromaRms: [5.1, 6.0], rgbPeak: [35, 46],
+        coverage: [0.86, 0.94], signedMean: [0.7, 1.5], spatialRgbRms: [11.3, 12.7],
+      }),
+      SNOWCore: Object.freeze({
+        rgbRms: [11.7, 13.2], chromaRms: [5.0, 6.0], rgbPeak: [36, 48],
+        coverage: [0.87, 0.95], signedMean: [2.2, 3.2], spatialRgbRms: [11.4, 12.8],
+      }),
+    }),
+    textures: Object.freeze({
+      SNOWCrown: Object.freeze({
+        enabledMicro: [5.4, 6.2], microRetention: [0.315, 0.345],
+        enabledMacro: [8, 12], macroRetention: [0.57, 0.68], enabledLumaStdDev: [6.0, 6.9],
+      }),
+      SNOWPocket: Object.freeze({
+        enabledMicro: [5.2, 6.0], microRetention: [0.315, 0.345],
+        enabledMacro: [10, 14], macroRetention: [0.55, 0.66], enabledLumaStdDev: [6.5, 7.4],
+      }),
+      SNOWCore: Object.freeze({
+        enabledMicro: [5.1, 5.9], microRetention: [0.315, 0.345],
+        enabledMacro: [18, 24], macroRetention: [0.67, 0.78], enabledLumaStdDev: [6.5, 7.4],
+      }),
+    }),
+  }),
+});
+
 // Raw semantic/control pixels remain exact separately. These small composed
 // allowances cover only the HDR footprint immediately adjoining an eligible
 // bright snowpack or the independently eligible wall-free body probe.
@@ -37152,6 +37308,22 @@ async function auditSnowpackBodyVfxExperiment(cdp, mode, dpr) {
         <= (SNOWPACK_BODY_VFX_CONTROL_PEAK[sample.name] ?? 0)),
     `E48 ${scale}x escaped a named topology/material/contact control (${JSON.stringify(controlResponses)})`);
 
+    const acceptedEnvelope = SNOWPACK_BODY_VFX_ACCEPTED_SCALE_ENVELOPES[scale];
+    const inAcceptedRange = (value, range) => Number.isFinite(value)
+      && value >= range[0] && value <= range[1];
+    assert(acceptedEnvelope && targetResponses.every((sample) => {
+      const range = acceptedEnvelope.targets[sample.name];
+      return range
+        && inAcceptedRange(sample.rgbRms, range.rgbRms)
+        && inAcceptedRange(sample.chromaRms, range.chromaRms)
+        && inAcceptedRange(sample.rgbPeak, range.rgbPeak)
+        && inAcceptedRange(sample.coverage, range.coverage)
+        && inAcceptedRange(sample.signedMean, range.signedMean)
+        && inAcceptedRange(sample.spatialRgbRms, range.spatialRgbRms);
+    }), `E48 ${scale}x escaped its accepted displayed-body envelope (${JSON.stringify({
+      acceptedEnvelope: acceptedEnvelope?.targets, targetResponses,
+    })})`);
+
     const textureRegions = snowpackBodyVfxTextureRegions(fixture);
     const texture = {};
     for (const [name, variant] of Object.entries(captures)) {
@@ -37191,6 +37363,17 @@ async function auditSnowpackBodyVfxExperiment(cdp, mode, dpr) {
       && sample.repeatExact),
     `E48 ${scale}x did not calm dense Snow while retaining macro relief (${JSON.stringify({
       limits: SNOWPACK_BODY_VFX_TEXTURE_LIMITS, textureResponse,
+    })})`);
+    assert(textureResponse.every((sample) => {
+      const range = acceptedEnvelope.textures[sample.name];
+      return range
+        && inAcceptedRange(sample.enabledMicro, range.enabledMicro)
+        && inAcceptedRange(sample.microRetention, range.microRetention)
+        && inAcceptedRange(sample.enabledMacro, range.enabledMacro)
+        && inAcceptedRange(sample.macroRetention, range.macroRetention)
+        && inAcceptedRange(sample.enabledLumaStdDev, range.enabledLumaStdDev);
+    }), `E48 ${scale}x escaped its accepted displayed-texture envelope (${JSON.stringify({
+      acceptedEnvelope: acceptedEnvelope.textures, textureResponse,
     })})`);
 
     const references = {};
@@ -37243,6 +37426,7 @@ async function auditSnowpackBodyVfxExperiment(cdp, mode, dpr) {
     calibration: 'e48-relational-1x-4x',
     textureLimits: SNOWPACK_BODY_VFX_TEXTURE_LIMITS,
     responseLimits: SNOWPACK_BODY_VFX_RESPONSE_LIMITS,
+    acceptedScaleEnvelopes: SNOWPACK_BODY_VFX_ACCEPTED_SCALE_ENVELOPES,
     controlPeakCaps: SNOWPACK_BODY_VFX_CONTROL_PEAK,
     scales, trueEightXExcluded: true, trueEightX,
   };
@@ -37353,6 +37537,7 @@ async function navigateSnowpackBodyVfxState(cdp, mode, scale, enabled, label) {
 const SNOWPACK_BODY_VFX_ISOLATED_SELECTORS = Object.freeze([
   'volumeVfx', 'liquidBodyVfx', 'liquidSurfaceVfx', 'gasBodyVfx', 'gasMotionVfx',
   'sootyPowderBodyVfx', 'thermiteBodyVfx', 'quartzMesostructureVfx', 'c4BodyVfx',
+  'bglaBodyVfx',
   'powderLightVfx', 'powderSolidContactVfx',
   'translucentEdgeVfx', 'organicSubsurfaceVfx', 'wetSedimentVfx', 'gasLightVfx',
   'liquidSolidMeniscusVfx', 'metalWaterContactVfx', 'gasCoreDepthVfx',
@@ -37661,6 +37846,7 @@ async function auditEightXSnowpackBodyVfxExclusion(cdp, dpr) {
       snowpackBodyVfx: canvas.dataset.snowpackBodyVfx,
       quartzMesostructureVfx: canvas.dataset.quartzMesostructureVfx,
       c4BodyVfx: canvas.dataset.c4BodyVfx,
+      bglaBodyVfx: canvas.dataset.bglaBodyVfx,
     } : undefined;
   })()`, Math.min(1_000, remainingDeadlineMs(deadline, 'true-8x E48 isolation')));
   assert(isolation?.renderer === 'semantic-field-webgl' && isolation.look === 'realistic'
@@ -37670,7 +37856,8 @@ async function auditEightXSnowpackBodyVfxExclusion(cdp, dpr) {
     && isolation.thermiteBodyVfx === 'inactive'
     && isolation.snowpackBodyVfx === 'inactive'
     && isolation.quartzMesostructureVfx === 'inactive'
-    && isolation.c4BodyVfx === 'inactive',
+    && isolation.c4BodyVfx === 'inactive'
+    && isolation.bglaBodyVfx === 'inactive',
   `true-8x E48 isolation failed (${JSON.stringify(isolation)})`);
   // E48 owns no compact-shader path. Avoid uploading the dense fixture here:
   // this tail proves selector/resource exclusion on one already-fenced 8x frame.

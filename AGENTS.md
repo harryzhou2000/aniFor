@@ -887,11 +887,12 @@ Validate E48 with `npm run audit:vfx:snowpack-body`. Its frozen v1 fixture owns
 98,713 occupied cells, including 62,841 exact Snow cells, 2,048 co-located
 native-wall cells, and 4,480 authored-velocity cells. The 1×/2×/4× off→on→off
 matrix retains dense Snow microcontrast at `0.2405–0.2443` of the raw flake
-carrier while retaining `0.3333–0.6897` of broad macro range; support recall is
+carrier at 1×/2× and `0.3313–0.3325` at 4×, while retaining
+`0.3333–0.7241` of broad macro range; support recall is
 exactly `1`, clipping is zero, repeated-off frames are byte-identical, named
 raw/topology controls and Local/Grains have zero response, and browser errors
 remain zero. Requested-on compact true 8× reports E48 inactive, presents exact
-4896×3072 WebGL with no HDR target, and completed its GPU fence in `5260.1 ms`.
+4896×3072 WebGL with no HDR target, and completed its GPU fence in `5303.2 ms`.
 
 E49 is the accepted normal-WebGL-only exact powder-Quartz/PQRT `29`
 mesostructure checkpoint. `?quartzMesostructureVfx=0|1` is a strict child of
@@ -1037,11 +1038,14 @@ rather than its acceptance evidence. The post-E52 survey must explicitly enable
 all four candidate-facing accepted selectors. BGLA then remains quality `100`
 at 1×/2×/4×, with microcontrast `9.393/10.971/8.452`, chromatic contrast
 `5.872/5.614/4.136`, macro range `34.213/29.575/24.387`, full support, and zero
-clipping. Snow is now the only measured candidate deficit: quality
-`93.614/92.916/66.112` at 1×/2×/4×, with the 4× loss isolated to the broad
-survey's pigment-variation evidence. Treat that as the next bounded cross-scale
-investigation, not permission to weaken E48's exact focused gate or widen E50,
-E51, or E52.
+clipping. Snow's formerly measured candidate deficit is closed: quality is
+`93.614/92.916/93.274` at 1×/2×/4× after the bounded 4× fit-view refinement;
+microcontrast is `4.815/5.702/5.424`, chromatic contrast is
+`1.307/1.224/1.235`, and macro range is `24.657/23.679/22.240`, with full
+support and zero dark/clipped fraction. The former 4× pigment-variation loss is
+therefore no longer an open candidate deficit. Do not alter E48 from
+candidate-rank evidence or widen E50, E51, or E52; select any later experiment
+only from a new visible fit-view diagnosis.
 
 The composed showcase remains a separate roadmap signal. Its current exact
 1×/2×/4× matrix has zero browser errors and keeps E52 explicitly inactive
@@ -1548,8 +1552,8 @@ npm run audit:vfx:candidate-rank
 
 The candidate-survey route is a separate app-owned deterministic fixture; its
 frozen six-region 1×/2×/4× production-WebGL matrix selects bounded exact-owner
-experiments without mutating the accepted showcase contract. Its three
-historical candidate selectors explicitly enable accepted E48, E49, and E50.
+experiments without mutating the accepted showcase contract. Its four
+candidate-facing selectors explicitly enable accepted E48, E49, E50, and E52.
 E51 has no candidate-survey selector and is proved separately by its authentic
 native-state fixture; do not use this route to claim a pre/post-E51 rank. Use
 the underlying driver's
