@@ -36,6 +36,7 @@ import {
   resolveSolidBodyVfxEnabled,
   resolvePowderBodyVfxEnabled, resolvePowderLightVfxEnabled,
   resolveSootyPowderBodyVfxEnabled,
+  resolveC4BodyVfxEnabled,
   resolveSnowpackBodyVfxEnabled,
   resolveQuartzMesostructureVfxEnabled,
   resolveThermiteBodyVfxEnabled,
@@ -923,6 +924,28 @@ describe('resolveRenderLook', () => {
     )).toBe(false);
     expect(resolveQuartzMesostructureVfxEnabled(
       'realistic', '?volumeVfx=0&powderBodyVfx=on&quartzMesostructureVfx=1',
+    )).toBe(true);
+  });
+
+  it('keeps exact C4 body recomposition subordinate to E05 and audit-isolated', () => {
+    expect(resolveC4BodyVfxEnabled('classic', '?c4BodyVfx=on')).toBe(false);
+    expect(resolveC4BodyVfxEnabled('realistic', '')).toBe(true);
+    expect(resolveC4BodyVfxEnabled('neon-lab', '')).toBe(true);
+    expect(resolveC4BodyVfxEnabled('realistic', '?inputAudit=1')).toBe(false);
+    expect(resolveC4BodyVfxEnabled(
+      'realistic', '?inputAudit=1&c4BodyVfx=true',
+    )).toBe(true);
+    expect(resolveC4BodyVfxEnabled('realistic', '?c4BodyVfx=0')).toBe(false);
+    expect(resolveC4BodyVfxEnabled('realistic', '?c4BodyVfx=off')).toBe(false);
+    expect(resolveC4BodyVfxEnabled('realistic', '?c4BodyVfx=false')).toBe(false);
+    expect(resolveC4BodyVfxEnabled('realistic', '?c4BodyVfx=1')).toBe(true);
+    expect(resolveC4BodyVfxEnabled('realistic', '?c4BodyVfx=on')).toBe(true);
+    expect(resolveC4BodyVfxEnabled('realistic', '?c4BodyVfx=true')).toBe(true);
+    expect(resolveC4BodyVfxEnabled(
+      'realistic', '?powderBodyVfx=0&c4BodyVfx=on',
+    )).toBe(false);
+    expect(resolveC4BodyVfxEnabled(
+      'realistic', '?volumeVfx=0&powderBodyVfx=on&c4BodyVfx=1',
     )).toBe(true);
   });
 

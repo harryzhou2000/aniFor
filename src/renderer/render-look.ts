@@ -766,6 +766,24 @@ export function resolveQuartzMesostructureVfxEnabled(
 }
 
 /**
+ * E50 re-composes only exact native C4/PLEX after E05 has proved a dry,
+ * settled Smooth body. The existing explosive-powder signature remains a
+ * later identity layer and this child cannot revive its E05 parent.
+ */
+export function resolveC4BodyVfxEnabled(
+  look: RenderLook,
+  search = globalThis.location?.search ?? '',
+): boolean {
+  if (!resolvePowderBodyVfxEnabled(look, search)) return false;
+  const parameters = new URLSearchParams(search);
+  const requested = parameters.get('c4BodyVfx');
+  if (requested === '0' || requested === 'off' || requested === 'false') return false;
+  if (requested === '1' || requested === 'on' || requested === 'true') return true;
+  if (parameters.get('inputAudit') === '1') return false;
+  return true;
+}
+
+/**
  * Keeps the settled powder/solid contact experiment independently measurable
  * without requiring the powder-body crown layer. Ordinary realistic/neon
  * presets retain the broad volume default; the explicit query is reserved for

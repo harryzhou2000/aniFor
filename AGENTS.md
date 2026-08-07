@@ -13,7 +13,7 @@ powder, solid, liquid, gas, energy, and contact scenes across Canvas and WebGL a
 mobile gestures, save/load, CI, and Pages deployment as protected regression
 contracts rather than the primary feature stream.
 
-The accepted visual experiment ladder now runs through E49. E12 is the
+The accepted visual experiment ladder now runs through E50. E12 is the
 species-safe Sand/Clay/Concrete wet-sediment checkpoint; preserve its exact
 aqueous owner/stability proof, split moving-powder/stationary-Water control,
 Local/Grains no-op, fine structures, authored gaps, Canvas fallback, and true
@@ -922,6 +922,33 @@ presents exact 4896×3072 WebGL without an HDR target, preserves the full
 five-state compact atlas, and completes startup/final state fences in
 `3608.0–5433.1 ms` with zero browser errors.
 
+E50 is the accepted normal-WebGL-only exact C4/PLEX `31` pressed-body
+checkpoint. `?c4BodyVfx=0|1` is a strict child of E05 and may recompose only an
+authoritative optics-7, trait-free, non-emissive, dry, contact-free C4 cell
+inside E05's already-proven settled Smooth body. Reuse only E05's existing
+three broad facet planes, directed slope, volume depth, body gate, and
+pre-grain lit body to form a matte moulded crown, cool plasticizer pocket,
+compact core, and restrained compression fold, then calm the dense common and
+exact explosive grain together. The established later exact explosive motif
+remains visible at bounded strength. Authored holes/channels, one-cell
+structures, moving C4, genuine 2:1 C4/Water suspension, direct Metal/Water
+contacts, native walls, Local, Grains, foreign owners, Canvas, and compact true
+8× are controls. Add no sample, noise carrier, texture, field, pass, target,
+upload, allocation, clock, alpha, support, silhouette, ownership, topology,
+state, or physics decision.
+
+Validate E50 with `npm run audit:vfx:c4-body`. Its frozen v1 fixture owns
+98,713 occupied cells: 62,841 C4, 3,872 Water, 1,280 Metal, 2,048 co-located
+native-wall cells, and 4,480 authored-velocity cells. The accepted 1×/2×/4×
+off→on→off matrix retains dense microcontrast at `0.4260–0.4357` of the raw
+C4 carrier and broad macro range at `0.4516–1.1538`; whole-body RGB RMS is
+`7.99–11.56`, support recall is exactly `1`, clipping is zero, repeated-off
+frames are byte-identical, and every named raw/material/contact control plus
+Local and Grains is exact. Requested-on compact true 8× reports E50 inactive,
+presents exact 4896×3072 WebGL without an HDR target, and completes a real GPU
+fence while keeping E48/E49 inactive. This true-8× tail is deliberately
+fixture-free: it proves selector/resource exclusion, not an E50 compact atlas.
+
 The isolated candidate-survey v1 route is app-owned and must use the
 deterministic 612×384 RenderLab backend unless `simulation=native` is explicit.
 It freezes semantic hash `2255453673`, 115,368 occupied cells, all six exact
@@ -933,10 +960,27 @@ fraction. The next survey selected Quartz from canonical quality `75.98`,
 microcontrast `18.900`, and a visibly stippled body; explicit E49 raises
 Quartz to quality `100`, microcontrast `8.313`, luma deviation `10.159`,
 chromatic contrast `2.833`, and macro range `30.375`, with full support and
-zero dark/clipped fraction. C4 `31` is now the next visibly over-busy unclosed
-candidate (canonical quality `90.186`, microcontrast `16.819`); select its
-bounded exact-owner body experiment without widening E48 or E49 to neighbouring
-crystalline/explosive powders.
+zero dark/clipped fraction. That evidence selected visibly over-busy C4 `31`
+(canonical quality `90.186`, microcontrast `16.819`) for the bounded E50
+exact-owner body experiment without widening E48 or E49 to neighbouring
+crystalline/explosive powders. With E48/E49/E50 explicitly enabled, the
+post-E50 survey raises canonical C4 to quality `100`, microcontrast `7.204`,
+luma deviation `8.691`, chromatic contrast `2.095`, and macro range `26.172`,
+with full support and zero dark/clipped fraction. Among the remaining unselected
+owners, BASE `53` is the only persistent measured deficit: canonical quality
+`96.226`, optical-variation component `0.8361`, and the same result within
+`0.015` quality across 1×–4×. Nitro and BGLA score `100`; select BASE for the
+next bounded exact-owner liquid experiment. BASE is public material `53`, maps
+bidirectionally to native `PT_BASE`, and shares Corrosive optics with Acid, but
+its upstream graphics are concentration-aware: native `life` is clamped to
+`1..100` (default `76`) and `tmp == 1` owns a spark cue. The adapter does not
+yet project either value. Before any E51 finish claims concentration or spark
+identity, add and prove an exact-owner packed-state contract through native
+reactions and OPS; otherwise keep E51 explicitly geometry-only under E03 and
+do not infer state from palette or neighbours. Preserve native dilution,
+Acid/CAUS neutralisation, Oil→SOAP, phase products, corrosion, and pressure
+reactions. Snow's separate 4× candidate score remains a diagnostic for future
+E48 tuning, not permission to widen E50.
 
 The old post-E16 rank that labelled Stone `21` as Solid was invalid because
 Stone is native Powder. The corrected showcase uses native ROCK ground and
@@ -1386,7 +1430,7 @@ The non-negotiable contract is:
 - Temperature styling belongs to ordinary matter RGB, not phase support. Quantize through the existing semantic temperature byte, keep a room-temperature dead band, and exclude walls, fluids, energy, fields, emissive matter, and role-bearing particles. Apply Canvas tint to source RGB before `setPixel`/`compositePixel`; post-composite tint is not equivalent after source clamping and Uint8 rounding, especially over independent native walls. Reconstructed contours should inherit already-styled donor RGB. Backends with a static diagnostic temperature plane must declare it static so true 8× does not redraw at the dynamic-field cadence. Keep paired cold/ambient/hot rigid/granular fixtures, wall-backed translucent controls, off→on→off repetition, support invariance, backend parity, and an 8× presentation watchdog.
 - PSTE/PSTS and RSST/RSSS are phase-continuous presentation families. PSTE/PSTS keep one 32-cell sediment topology; RSST/RSSS keep one 32-cell crossed-laminate topology. Liquid and solid phases may change only the bounded RGB interpretation—never alpha, silhouette, support, ownership, reconstruction, or physics. PSTS is a real native but nonselectable projection and must not cross the ordinary brush ABI. Canvas uses the one 12,288-byte module-static family lookup; WebGL mirrors it with sample-free arithmetic under the existing liquid-identity and unusual-solid toggles. Add no texture, sampler, field, pass, target, upload, persistent buffer, clock, or output-scale allocation. Preserve exact native pressure, heat, photon, neutron, electron, spark, and explosive reactions. The paired 2× four-card browser gate must retain cavities, open chimneys, thin structures, isolated cells, phase-partner contacts, Metal controls, positive within-family phase correlation, Canvas/WebGL RGB-direction parity, and exact flat→styled→flat topology. The independent renderer-wide true-8× gate must prove the enabled final shader, complete material atlas, exact input/topology controls, and both recovery paths; do not present it as a dedicated four-card 8× capture.
 - A rendered botanical-growth proof must originate in the official native SEED lifecycle, not a deterministic hand-authored tree. Keep the canonical five-SEED soil+water planter alongside no-water and no-soil controls for 900 native ticks. Checkpoint and resume the positive world through OPS1, prove post-checkpoint Wood/Plant through `consumeDirtyCells()`, and ensure any browser fixture that inspects the dirty stream reloads the exact final OPS save so MaterialRenderer still receives the complete final world. Paired Canvas/WebGL captures must prove exact native Wood/Plant counts, visible support for every grown cell, RGB-only botanical A/B/A repetition, and zero control growth.
-- Explosive-powder identity is presentation-only and covers exactly GUNP, THRM, PLEX/C4, FWRK, BANG, BOMB, C5, DEST, FIRW, FSEP, FUSE, IGNT, LITH, and RBDM. Keep the motifs deterministic in integer world space, RGB-only, sample-free, time-free, and bounded to ±14 source bytes. Apply them only to authoritative non-wall, trait-free, non-emissive Powder owners; Nitro, CFLM, LIGH, LRBD, THDR, unrelated phases, reconstructed support, holes, and guarded blanks are controls. Canvas and WebGL must retain distinct per-material signatures, exact off→on→off repetition, authored holes/notches/thin columns/isolated cells, square Grains, Local/Smooth fine-structure recall, and representative true-8× presentation without adding a texture, field, pass, target, upload, persistent allocation, or output-scale resource.
+- Explosive-powder identity is presentation-only and covers exactly GUNP, THRM, PLEX/C4, FWRK, BANG, BOMB, C5, DEST, FIRW, FSEP, FUSE, IGNT, LITH, and RBDM. Keep the motifs deterministic in integer world space, RGB-only, sample-free, time-free, and bounded to ±14 source bytes. Apply them only to authoritative non-wall, trait-free, non-emissive Powder owners; Nitro, CFLM, LIGH, LRBD, THDR, unrelated phases, reconstructed support, holes, and guarded blanks are controls. Canvas and WebGL must retain distinct per-material signatures, exact off→on→off repetition, authored holes/notches/thin columns/isolated cells, square Grains, Local/Smooth fine-structure recall, and representative true-8× presentation without adding a texture, field, pass, target, upload, persistent allocation, or output-scale resource. E50 is a separate normal-WebGL-only C4 body child which calms this later motif only inside E05's proven dense settled body; its Canvas/compact-8× exclusion must never remove or narrow the established cross-backend explosive identity.
 - Compact portrait layout may use a square interaction panel, but zoom 1 must contain the full 612×384 field with a uniform scale and letterboxing. Do not crop the world merely to fill the square.
 - On compact mobile layouts, the single shared Draw/Eraser mode group must be fully visible at initial `scrollY=0` above the tool catalog at both 390×844 and 360×640. Do not duplicate mode state between a quick bar and the actions card; one button group owns `onEraseMode`. Keep the search entry visible at the same time, preserve one-touch drawing/two-touch navigation, and prove exact erase then continuous draw without `scrollIntoView()` in the browser gate.
 - One touch is the mobile brush and two touches are camera pan/pinch. Defer the initial touch mark until the gesture is known to be single-touch so every two-finger gesture does not leave an accidental dot.
@@ -1434,10 +1478,12 @@ npm run audit:vfx:candidate-rank
 The candidate-survey route is a separate app-owned deterministic fixture; its
 frozen six-region 1×/2×/4× production-WebGL matrix selects bounded exact-owner
 experiments without mutating the accepted showcase contract. The package gate
-explicitly enables accepted E48 and E49. Use the underlying driver's
+explicitly enables accepted E48, E49, and E50. Use the underlying driver's
 `--candidate-snowpack-body-vfx=0` only to reproduce the pre-E48 baseline, and
 `--candidate-quartz-mesostructure-vfx=0` only to reproduce the pre-E49 Quartz
-baseline.
+baseline. Use `--candidate-c4-body-vfx=0` only to reproduce the pre-E50 C4
+baseline; matching `=1` flags isolate an accepted child without relying on
+renderer defaults.
 
 The desktop gate performs a paired `renderScale=2` then `renderScale=1` navigation at the same explicit CSS viewport. It must report identical CSS canvas geometry while the backing changes only from 1224×768 to 612×384, and it repeats exact landmark painting, cursor-anchored wheel zoom, and 42×27 CSS-pixel middle-pan at 1×. Do not compare geometry captured under different device-emulation viewports; that tests browser setup rather than backing-scale independence.
 

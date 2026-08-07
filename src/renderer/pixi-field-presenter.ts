@@ -76,6 +76,7 @@ import {
   resolveSootyPowderBodyVfxEnabled,
   resolveSnowpackBodyVfxEnabled,
   resolveQuartzMesostructureVfxEnabled,
+  resolveC4BodyVfxEnabled,
   resolveThermiteBodyVfxEnabled,
   resolveOrganicSubsurfaceVfxEnabled,
   resolvePowderSolidContactVfxEnabled,
@@ -3294,6 +3295,7 @@ uniform float uSootyPowderBodyVfx;
 uniform float uThermiteBodyVfx;
 uniform float uSnowpackBodyVfx;
 uniform float uQuartzMesostructureVfx;
+uniform float uC4BodyVfx;
 uniform float uPowderLightVfx;
 uniform float uPowderSolidContactVfx;
 uniform float uTranslucentEdgeVfx;
@@ -7472,6 +7474,7 @@ void main() {
     float powderMesostrataSlope = 0.0;
     float snowpackBodyCalm = 0.0;
     float quartzPowderCalm = 0.0;
+    float c4BodyCalm = 0.0;
     // Smooth's field owns the stable outer silhouette; retain the material's
     // grain vocabulary in the proven body, but do not let per-cell pigment
     // move the first composed edge crossing from one slope column to another.
@@ -7945,6 +7948,43 @@ void main() {
             color *= vec3(1.0) - vec3(0.052, 0.068, 0.036)
               * (quartzPlatePocket + quartzPlateCore);
             color += vec3(0.018, 0.012, 0.026) * quartzCleavage;
+          }
+          // E50: exact C4/PLEX is a pressed plastic explosive, not a loose
+          // salt-and-pepper powder. Recombine E05's existing broad facets,
+          // directed slope, and body depth into a matte compacted matrix with
+          // shallow moulded crowns and cool plasticizer pockets. The later
+          // exact explosive signature is retained at bounded strength; every
+          // sparse, moving, wet, contacted, Local, and Grains control remains
+          // outside this already-proven body gate.
+          if (uC4BodyVfx > 0.5 && optics == 7.0 && material == 31.0
+            && foreignMatterContact < 0.5 && unlikeMaterialContact < 0.5) {
+            c4BodyCalm = powderBodyGate
+              * mix(0.47, 0.57, smoothstep(0.34, 0.90, powderBodyVolumeDepth));
+            float c4PressedRelief = clamp(
+              powderVfxPlaneA * 0.34 + powderVfxPlaneB * 0.17
+                - powderVfxPlaneC * 0.31 + powderDirectedSlope * 0.24
+                + (0.50 - powderBodyVolumeDepth) * 0.07,
+              -1.0, 1.0
+            );
+            float c4PressedCrown = powderBodyGate
+              * smoothstep(0.025, 0.62, c4PressedRelief)
+              * (0.54 + (1.0 - powderBodyVolumeDepth) * 0.30);
+            float c4PressedPocket = powderBodyGate
+              * smoothstep(0.025, 0.62, -c4PressedRelief)
+              * (0.48 + powderBodyVolumeDepth * 0.44);
+            float c4PressedCore = powderBodyGate
+              * smoothstep(0.40, 0.90, powderBodyVolumeDepth)
+              * (1.0 - abs(c4PressedRelief)) * 0.26;
+            float c4CompressionFold = powderBodyGate
+              * smoothstep(0.70, 0.94, abs(powderVfxPlaneB - powderVfxPlaneC))
+              * (0.26 + powderBodyVolumeDepth * 0.30);
+            color += (vec3(1.16) - clamp(color, 0.0, 1.16))
+              * vec3(0.94, 0.88, 0.64) * c4PressedCrown * 0.115;
+            color *= vec3(1.0) - vec3(0.066, 0.049, 0.034)
+              * (c4PressedPocket + c4PressedCore);
+            color += vec3(-0.004, 0.002, 0.010)
+              * (c4PressedPocket + c4PressedCore);
+            color *= vec3(1.0) - vec3(0.030, 0.025, 0.020) * c4CompressionFold;
           }
           // E40: exact Gunpowder and BCOL share SootyGranular optics but their
           // broad settled bodies currently stop at E05's generic mineral
@@ -8662,6 +8702,13 @@ void main() {
         float explosiveGain = materialMark > 0.5 ? 1.0
           : (crossMark > 0.5 ? 0.68 : (familyMark > 0.5 ? 0.38 : 0.14));
         color = clamp(color + explosiveKey * (explosiveGain / 255.0), 0.0, 1.0);
+      }
+      // E50 calms common granular pigment and the exact C4 identity together
+      // only inside the dense pressed-body proof. Mixing toward the already
+      // lit C4 body retains a restrained exact signature while keeping holes,
+      // thin pieces, motion, wet matter, Local, and Grains byte-independent.
+      if (c4BodyCalm > 0.0) {
+        color = mix(color, powderBodyBase, c4BodyCalm);
       }
       // This exact-owner RGB identity sits after the shared granular body.
       // The helper's local scope keeps the true-8x composed body compact.
@@ -10672,6 +10719,10 @@ export class PixiFieldPresenter {
     // true-8x keeps the established PQRT/QRTZ identity and native-state path.
     const quartzMesostructureVfxEnabled = outputScale < 8
       && resolveQuartzMesostructureVfxEnabled(renderLook);
+    // E50 is exact-C4 arithmetic inside E05's settled Smooth proof. Compact
+    // true-8x retains the established PLEX identity and declares no E50 path.
+    const c4BodyVfxEnabled = outputScale < 8
+      && resolveC4BodyVfxEnabled(renderLook);
     // E06 is a normal-detail recomposition of the existing centre-field light.
     // The protected compact shader retains its one established emission sample.
     const powderLightVfxEnabled = outputScale < 8
@@ -10924,6 +10975,7 @@ export class PixiFieldPresenter {
       uQuartzMesostructureVfx: {
         value: quartzMesostructureVfxEnabled ? 1 : 0, type: 'f32',
       },
+      uC4BodyVfx: { value: c4BodyVfxEnabled ? 1 : 0, type: 'f32' },
       uPowderLightVfx: { value: powderLightVfxEnabled ? 1 : 0, type: 'f32' },
       uPowderSolidContactVfx: {
         value: powderSolidContactVfxEnabled ? 1 : 0, type: 'f32',
@@ -11171,6 +11223,7 @@ export class PixiFieldPresenter {
       this.uniforms.uniforms.uThermiteBodyVfx = 0;
       this.uniforms.uniforms.uSnowpackBodyVfx = 0;
       this.uniforms.uniforms.uQuartzMesostructureVfx = 0;
+      this.uniforms.uniforms.uC4BodyVfx = 0;
       this.uniforms.uniforms.uPowderLightVfx = 0;
       this.uniforms.uniforms.uPowderSolidContactVfx = 0;
       this.uniforms.uniforms.uTranslucentEdgeVfx = 0;
@@ -11244,6 +11297,7 @@ export class PixiFieldPresenter {
             || new URLSearchParams(location.search).get('thermiteBodyVfxAudit') === '1'
             || new URLSearchParams(location.search).get('snowpackBodyVfxAudit') === '1'
             || new URLSearchParams(location.search).get('quartzMesostructureVfxAudit') === '1'
+            || new URLSearchParams(location.search).get('c4BodyVfxAudit') === '1'
             || new URLSearchParams(location.search).get('powderLightVfxAudit') === '1'
             || new URLSearchParams(location.search).get('powderSolidContactVfxAudit') === '1'
             || new URLSearchParams(location.search).get('translucentEdgeVfxAudit') === '1'
@@ -11393,6 +11447,9 @@ export class PixiFieldPresenter {
     ) > 0.5 ? 'active' : 'inactive';
     presenter.app.canvas.dataset.quartzMesostructureVfx = Number(
       presenter.uniforms.uniforms.uQuartzMesostructureVfx
+    ) > 0.5 ? 'active' : 'inactive';
+    presenter.app.canvas.dataset.c4BodyVfx = Number(
+      presenter.uniforms.uniforms.uC4BodyVfx
     ) > 0.5 ? 'active' : 'inactive';
     presenter.app.canvas.dataset.powderLightVfx = Number(presenter.uniforms.uniforms.uPowderLightVfx) > 0.5
       ? 'active' : 'inactive';
@@ -12816,6 +12873,7 @@ export class PixiFieldPresenter {
         this.uniforms.uniforms.uThermiteBodyVfx = 0;
         this.uniforms.uniforms.uSnowpackBodyVfx = 0;
         this.uniforms.uniforms.uQuartzMesostructureVfx = 0;
+        this.uniforms.uniforms.uC4BodyVfx = 0;
         this.uniforms.uniforms.uPowderLightVfx = 0;
         this.uniforms.uniforms.uPowderSolidContactVfx = 0;
         this.uniforms.uniforms.uTranslucentEdgeVfx = 0;
@@ -12866,6 +12924,7 @@ export class PixiFieldPresenter {
         this.app.canvas.dataset.thermiteBodyVfx = 'inactive';
         this.app.canvas.dataset.snowpackBodyVfx = 'inactive';
         this.app.canvas.dataset.quartzMesostructureVfx = 'inactive';
+        this.app.canvas.dataset.c4BodyVfx = 'inactive';
         this.app.canvas.dataset.powderLightVfx = 'inactive';
         this.app.canvas.dataset.powderSolidContactVfx = 'inactive';
         this.app.canvas.dataset.translucentEdgeVfx = 'inactive';

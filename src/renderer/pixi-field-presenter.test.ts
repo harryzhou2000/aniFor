@@ -2035,6 +2035,62 @@ describe('Pixi presenter startup configuration', () => {
     expect(preserve).toContain("get('quartzMesostructureVfxAudit') === '1'");
   });
 
+  it('keeps E50 C4 body recomposition exact-owner, E05-dependent, late, and normal-only', () => {
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const canvasSource = readFileSync(new URL('./field-renderer.ts', import.meta.url), 'utf8');
+    const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');
+    const normalStart = source.indexOf('const FIELD_FRAGMENT = `', eightStart);
+    const normalEnd = source.indexOf('`;\n\n/** Primary WebGL presentation', normalStart);
+    const eight = source.slice(eightStart, normalStart);
+    const normal = source.slice(normalStart, normalEnd);
+    const e50Start = normal.indexOf('          // E50:');
+    const e50End = normal.indexOf('          // E40:', e50Start);
+    const e50 = normal.slice(e50Start, e50End);
+    const explosiveIdentityStart = normal.indexOf('      // Fourteen native explosive powders');
+    const calmStart = normal.indexOf('      if (c4BodyCalm > 0.0)', explosiveIdentityStart);
+    const calmEnd = normal.indexOf('      // This exact-owner RGB identity', calmStart);
+    const calm = normal.slice(calmStart, calmEnd);
+    const parentStart = normal.lastIndexOf('        if (uPowderBodyVfx > 0.5', e50Start);
+    const parent = normal.slice(parentStart, e50End);
+    const preserveStart = source.indexOf('preserveDrawingBuffer:');
+    const preserveEnd = source.indexOf('resolution: outputScale', preserveStart);
+    const preserve = source.slice(preserveStart, preserveEnd);
+
+    expect(e50Start).toBeGreaterThanOrEqual(0);
+    expect(e50End).toBeGreaterThan(e50Start);
+    expect(explosiveIdentityStart).toBeGreaterThanOrEqual(0);
+    expect(calmStart).toBeGreaterThan(explosiveIdentityStart);
+    expect(calmEnd).toBeGreaterThan(calmStart);
+    expect(parentStart).toBeGreaterThanOrEqual(0);
+    expect(normal).toContain('uniform float uC4BodyVfx;');
+    expect(normal.match(/uC4BodyVfx > 0\.5/g)).toHaveLength(1);
+    expect(eight).not.toContain('uC4BodyVfx');
+    expect(eight).not.toContain('c4BodyCalm');
+    expect(canvasSource).not.toContain('c4BodyVfx');
+    expect(e50).toContain('optics == 7.0');
+    expect(e50).toContain('material == 31.0');
+    expect(e50).toContain('powderBodyGate');
+    expect(e50).toContain('powderBodyVolumeDepth');
+    expect(e50).toContain('foreignMatterContact < 0.5');
+    expect(e50).toContain('unlikeMaterialContact < 0.5');
+    expect(normal.match(/if \(c4BodyCalm > 0\.0\)/g)).toHaveLength(1);
+    expect(calm).toContain('color = mix(color, powderBodyBase, c4BodyCalm);');
+    expect(parent).toContain('uPowderBodyVfx > 0.5');
+    for (const branch of [e50, calm]) {
+      expect(branch).not.toContain('texture(');
+      expect(branch).not.toContain('uTime');
+      expect(branch).not.toMatch(/\balpha\s*[+*]?=/);
+    }
+    expect(source).toMatch(
+      /const c4BodyVfxEnabled = outputScale < 8\s*&& resolveC4BodyVfxEnabled\(renderLook\);/,
+    );
+    expect(source.match(/this\.uniforms\.uniforms\.uC4BodyVfx = 0;/g)).toHaveLength(2);
+    expect(source).toContain('uC4BodyVfx: { value: c4BodyVfxEnabled ? 1 : 0');
+    expect(source).toContain('presenter.app.canvas.dataset.c4BodyVfx');
+    expect(source).toContain("this.app.canvas.dataset.c4BodyVfx = 'inactive';");
+    expect(preserve).toContain("get('c4BodyVfxAudit') === '1'");
+  });
+
   it('keeps E41 DEUT concentration-volume exact-owner, trait-aware, normal-WebGL-only, and RGB-only', () => {
     const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
     const canvasSource = readFileSync(new URL('./field-renderer.ts', import.meta.url), 'utf8');
