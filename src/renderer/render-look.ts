@@ -784,6 +784,25 @@ export function resolveC4BodyVfxEnabled(
 }
 
 /**
+ * E52 re-composes only exact native BGLA after E05 has proved a dry,
+ * settled Smooth body. This child cannot revive its powder-body/volume parent,
+ * and input-audit scenes retain their frozen selector contracts until they
+ * explicitly opt in.
+ */
+export function resolveBglaBodyVfxEnabled(
+  look: RenderLook,
+  search = globalThis.location?.search ?? '',
+): boolean {
+  if (!resolvePowderBodyVfxEnabled(look, search)) return false;
+  const parameters = new URLSearchParams(search);
+  const requested = parameters.get('bglaBodyVfx');
+  if (requested === '0' || requested === 'off' || requested === 'false') return false;
+  if (requested === '1' || requested === 'on' || requested === 'true') return true;
+  if (parameters.get('inputAudit') === '1') return false;
+  return true;
+}
+
+/**
  * Keeps the settled powder/solid contact experiment independently measurable
  * without requiring the powder-body crown layer. Ordinary realistic/neon
  * presets retain the broad volume default; the explicit query is reserved for

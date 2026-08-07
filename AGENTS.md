@@ -13,7 +13,7 @@ powder, solid, liquid, gas, energy, and contact scenes across Canvas and WebGL a
 mobile gestures, save/load, CI, and Pages deployment as protected regression
 contracts rather than the primary feature stream.
 
-The accepted visual experiment ladder now runs through E51. E12 is the
+The accepted visual experiment ladder now runs through E52. E12 is the
 species-safe Sand/Clay/Concrete wet-sediment checkpoint; preserve its exact
 aqueous owner/stability proof, split moving-powder/stationary-Water control,
 Local/Grains no-op, fine structures, authored gaps, Canvas fallback, and true
@@ -984,6 +984,30 @@ True 4896×3072 WebGL proves compact concentration responses (`0/25` RMS
 spark RMS `8.838`, peak `27`, a completed GPU fence, byte-exact repetition,
 unchanged support, and zero browser errors.
 
+E52 is the accepted exact-BGLA `44` / native `PT_BGLA` shard-pack body-optics
+checkpoint. It is a normal-WebGL-only strict child of E05
+(`?bglaBodyVfx=0|1`) and may style only authoritative,
+trait-free, non-emissive, dry, wall-free, contact-free BGLA inside E05's
+already-settled Smooth `powderBodyGate`. It reuses the existing derived facet
+balance, body-volume depth, and contour-retention scalar for a bounded broad
+cool shard-pack crown/pocket response while retaining BGLA's fine splinter
+identity. Moving BGLA, genuine BGLA/Water
+suspension, authored holes/channels, one-cell columns/lines/isolates,
+co-located walls, BGLA/ROCK/Metal/Water contacts, Salt/Snow/Quartz/FRZZ/SLCN/
+Sand/Thermite/C4/Ice/Oil, Local, Grains, Canvas, and compact true 8× are
+controls. Add no sample, texture, field, resource, pass, target, upload,
+allocation, clock, alpha, support, silhouette, ownership, topology, state, or
+physics decision. The frozen focused 1×/2×/4× matrix holds core RGB RMS at
+`4.64–4.67`, crown at `8.35–8.49`, and pocket at `2.38–2.43`; crown signed
+mean remains `5.76–5.83`, pocket remains absorptive at `-0.42–-0.35`, and the
+only nonzero named control is the eligible clear half of the wall checker at a
+two-byte peak. Off→on→off is exact, Local and Grains are exact no-ops, semantic
+and backing state stay fixed, splinter microdetail retention is `0.9953–1.0703`,
+support recall is one with zero clipping, and browser errors remain zero. Requested-on true
+8× keeps E52/HDR/bloom inactive, proves a blank material plane at exact
+4896×3072, and completes a real GPU fence in `5172.5 ms`. Use
+`npm run audit:vfx:bgla-body` for the focused release gate.
+
 The isolated candidate-survey v1 route is app-owned and must use the
 deterministic 612×384 RenderLab backend unless `simulation=native` is explicit.
 It freezes semantic hash `2255453673`, 115,368 occupied cells, all six exact
@@ -1007,9 +1031,26 @@ optical-variation component `0.8361`, stable within `0.015` quality across
 1×–4×. E51 now closes that result with exact native concentration and spark
 state rather than inferred palette or neighbour state, while preserving real
 dilution, Acid/CAUS neutralisation, Oil→SOAP, phase products, corrosion,
-pressure reactions, and OPS state. Nitro and BGLA remain quality `100` controls.
-Snow's separate 4× candidate score remains a diagnostic for future E48 tuning,
-not permission to widen E50 or E51.
+pressure reactions, and OPS state. Nitro remains a quality `100` control.
+BGLA's historical quality-`100` candidate card selected E52 but remains context
+rather than its acceptance evidence. The post-E52 survey must explicitly enable
+all four candidate-facing accepted selectors. BGLA then remains quality `100`
+at 1×/2×/4×, with microcontrast `9.393/10.971/8.452`, chromatic contrast
+`5.872/5.614/4.136`, macro range `34.213/29.575/24.387`, full support, and zero
+clipping. Snow is now the only measured candidate deficit: quality
+`93.614/92.916/66.112` at 1×/2×/4×, with the 4× loss isolated to the broad
+survey's pigment-variation evidence. Treat that as the next bounded cross-scale
+investigation, not permission to weaken E48's exact focused gate or widen E50,
+E51, or E52.
+
+The composed showcase remains a separate roadmap signal. Its current exact
+1×/2×/4× matrix has zero browser errors and keeps E52 explicitly inactive
+because showcase v6 contains no authoritative BGLA region. At canonical 2×,
+Organic is the weakest family (`67.661`, exact PLNT mesostructure), followed by
+Solid (`86.207`, VIBR macro relief) and Contact (`88.768`, Water/Metal chromatic
+separation). E36 already established that the PLNT aggregate scorer can punish
+accepted broad canopy mass, so require paired fit-view evidence before selecting
+another organic layer; never tune merely to raise this rank.
 
 The old post-E16 rank that labelled Stone `21` as Solid was invalid because
 Stone is native Powder. The corrected showcase uses native ROCK ground and

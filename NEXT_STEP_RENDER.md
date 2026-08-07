@@ -881,7 +881,7 @@ does not alter simulation, camera, semantic ownership, or `renderScale`.
   `hdrPipeline=inactive` / `scale-8` and retains the proven direct single-mesh
   4896×3072 path. The experiment must earn a bounded 8× design rather than
   allocating a 115 MiB full-resolution float target beside that path.
-- **Current decision:** E01/E02/E03/E04/E05/E06/E07/E08/E09/E10/E11/E12/E13/E14/E15/E16/E17/E18/E19/E20/E21/E22/E23/E24/E25/E26/E27/E28/E29/E30/E31/E32/E33/E34/E35/E36/E37/E38/E39/E40/E41/E42/E43/E44/E45/E46/E47/E48/E49/E50/E51 remain opt-in through the non-Classic looks
+- **Current decision:** E01/E02/E03/E04/E05/E06/E07/E08/E09/E10/E11/E12/E13/E14/E15/E16/E17/E18/E19/E20/E21/E22/E23/E24/E25/E26/E27/E28/E29/E30/E31/E32/E33/E34/E35/E36/E37/E38/E39/E40/E41/E42/E43/E44/E45/E46/E47/E48/E49/E50/E51/E52 remain opt-in through the non-Classic looks
   until representative hardware timing and mobile thermal behavior are
   measured. E02 remains the safe family-wide baseline. E03 is accepted as the
   liquid-depth checkpoint: its fit-view crop is visibly more cohesive, retains
@@ -1141,14 +1141,15 @@ survey. It drives
 612×384 RenderLab backend, freezes the semantic hash/material counts/region
 support, and compares the same six candidate cards at 1×/2×/4× production
 WebGL. Keep candidate selectors explicit when evaluating an accepted child;
-the package command retains the three historical E48/E49/E50 selectors. E51
+the package command retains the four accepted E48/E49/E50/E52 selectors. E51
 has no candidate-survey selector and is proved by its separate authentic-state
 fixture, so this route cannot establish a pre/post-E51 rank. Pass
 `--candidate-snowpack-body-vfx=0` to the underlying
 driver only when reproducing the frozen pre-E48 Snow baseline, and pass
 `--candidate-quartz-mesostructure-vfx=0` only for the frozen pre-E49 Quartz
 baseline. Pass `--candidate-c4-body-vfx=0` only for the frozen pre-E50 C4
-baseline.
+baseline, and pass `--candidate-bgla-body-vfx=0` only when reproducing the
+pre-E52 BGLA card.
 
 Run `npm run audit:vfx:volume` for E02. It reloads the paused composed material
 lab as `volumeVfx=0 → 1 → 0` at 1×, 2×, and 4×, requires the real HDR pipeline,
@@ -1995,7 +1996,7 @@ next production 4× survey then selected Wood/PLNT as the largest remaining
   lower seam density, lower local contrast, stronger macro hierarchy, unchanged
   semantic support, and byte-exact selector-off recovery.
 
-**Next visual experiments:** E03–E51 now provide accepted liquid body/surface,
+**Next visual experiments:** E03–E52 provide accepted liquid body/surface,
 stable-gas, coherent-gas-motion, powder-depth, and powder-local-light
 checkpoints plus exact resting contact grounding, Glass/Ice transmission, and
 state-aware Wax/PLNT subsurface response, composed wet-mineral optics,
@@ -2094,6 +2095,26 @@ spark cue.
 Native dilution, neutralisation, Oil→SOAP, phase products, corrosion, pressure
 reactions, holes, thin structures, foreign materials, walls, topology, and
 resources remain controls.
+E52 is the accepted exact-BGLA `44` / native `PT_BGLA` shard-pack checkpoint, a
+normal-WebGL-only strict E05 child (`?bglaBodyVfx=0|1`). It uses only E05's
+settled Smooth `powderBodyGate`, derived facet balance, body-volume depth, and
+contour-retention scalar, and only for authoritative trait-free, non-emissive,
+dry, wall-free, contact-free BGLA. It preserves the existing fine splinter
+identity and leaves moving BGLA,
+genuine BGLA/Water suspension, holes/channels, one-cell structures, walls,
+BGLA/ROCK/Metal/Water contacts, sibling/material controls, Local, Grains,
+Canvas, and compact true 8× unchanged. It adds no sample, texture, field,
+resource, pass, target, upload, allocation, clock, alpha, support, silhouette,
+ownership, topology, state, or physics decision. Its frozen 1×/2×/4× matrix
+holds core/crown/pocket RGB RMS at `4.64–4.67`, `8.35–8.49`, and `2.38–2.43`,
+respectively; crown signed mean stays `5.76–5.83`, the pocket stays absorptive
+at `-0.42–-0.35`, Local and Grains are exact no-ops, off repetition is exact,
+and every named control is byte-exact except the eligible wall-clear BGLA probe
+at a two-byte peak. Splinter microdetail retention is `0.9953–1.0703`, support
+recall is one, and clipping remains zero. Requested-on true 8× proves
+E52/HDR/bloom exclusion, a blank material plane, exact 4896×3072 WebGL, and a
+completed `gpu-fence` in `5172.5 ms`, with stable semantics and zero browser errors. The focused release
+gate is `npm run audit:vfx:bgla-body`.
 Improve distinctive depth, transmission, reflection, lighting, and
 mesostructure without stacking another narrow Oil/Acid/contact tint or generic
 PLNT/gas layer.
@@ -2111,7 +2132,17 @@ evidence selected for E47, not a reason to reopen E43's broad two-owner
 checkpoint. With explicit E47 telemetry, canonical v6 `solidISZS` quality
 reaches `93.047`: luma standard deviation is `7.68`, microcontrast `1.16`,
 chromatic contrast `2.19`, and macro range `28`, with full support and zero
-dark/clipped fraction. The separate app-owned candidate-survey v1 fixture uses
+dark/clipped fraction. E52 is explicitly inactive in this matrix because
+showcase v6 has no authoritative BGLA evidence. The current canonical 2× family
+rank is Organic `67.661` (exact PLNT mesostructure), Solid `86.207` (VIBR macro
+relief), Contact `88.768` (Water/Metal chromatic separation), Gas `95.463`,
+Emission `98.475`, and Powder/Liquid `100`; exact 1×/2×/4× semantics and CSS
+geometry remain fixed with zero browser errors. Because E36 already proved that
+the PLNT aggregate scorer can penalize accepted broad canopy recomposition,
+require paired fit-view evidence before selecting another organic experiment
+instead of tuning only to the rank.
+
+The separate app-owned candidate-survey v1 fixture uses
 the deterministic 612×384 RenderLab backend unless `simulation=native` is
 explicit. It freezes semantic hash `2255453673`, 115,368 occupied cells, all
 six candidate counts, and six 2,880-cell scored regions at 1×/2×/4×. The
@@ -2136,9 +2167,17 @@ Oil→SOAP, freezing/evaporation products, corrosion, and pressure reactions sta
 authoritative. The focused matrix proves Canvas and realistic WebGL 1×/2×/4×,
 then true 4896×3072 compact WebGL with a completed fence, byte-exact off
 repetition, stable support/topology, protected walls and foreign owners, and
-zero browser errors. Nitro `32` and BGLA remain exact quality-`100` controls.
-Snow's separate 4× candidate score remains a diagnostic for future E48 tuning.
-Preserve the E14 1× stencil snap and all E01–E51 selectors and controls.
+zero browser errors. Nitro `32` remains an exact quality-`100` control. BGLA's
+historical quality-`100` candidate card selected E52; it is not its acceptance
+evidence. With E52 explicitly enabled, BGLA remains quality `100` at every
+scale, with microcontrast `9.393/10.971/8.452`, chromatic contrast
+`5.872/5.614/4.136`, macro range `34.213/29.575/24.387`, full support, and zero
+clipping. Snow is now the only measured candidate deficit: quality
+`93.614/92.916/66.112` at 1×/2×/4×, with the 4× loss isolated to
+pigment-variation evidence. Make that a bounded cross-scale visual
+investigation before changing E48; its focused exact-owner fixture remains the
+acceptance contract. Preserve the E14 1× stencil snap and all E01–E52 selectors
+and controls.
 
 ## Phase 1 — HDR pipeline & lighting core (biggest visual payoff)
 

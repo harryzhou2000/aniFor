@@ -69,6 +69,7 @@ import type { PhotonSpectrumGraphicsAuditSnapshot } from './photon-spectrum-grap
 import type { PowderLightVfxAuditSnapshot } from './powder-light-vfx-audit';
 import type { ThermiteBodyVfxAuditSnapshot } from './thermite-body-vfx-audit';
 import type { SnowpackBodyVfxAuditSnapshot } from './snowpack-body-vfx-audit';
+import type { BglaBodyVfxAuditSnapshot } from './bgla-body-vfx-audit';
 import type { C4BodyVfxAuditSnapshot } from './c4-body-vfx-audit';
 import type {
   QuartzMesostructureVfxAuditSnapshot,
@@ -235,6 +236,8 @@ export interface BrowserInputAuditApi {
   prepareThermiteBodyVfxFixture(): void;
   snowpackBodyVfxFixture(): SnowpackBodyVfxAuditSnapshot;
   prepareSnowpackBodyVfxFixture(): void;
+  bglaBodyVfxFixture(): BglaBodyVfxAuditSnapshot;
+  prepareBglaBodyVfxFixture(): void;
   c4BodyVfxFixture(): C4BodyVfxAuditSnapshot;
   prepareC4BodyVfxFixture(): void;
   quartzMesostructureVfxFixture(): QuartzMesostructureVfxAuditSnapshot;

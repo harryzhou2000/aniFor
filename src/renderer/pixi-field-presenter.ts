@@ -77,6 +77,7 @@ import {
   resolveSnowpackBodyVfxEnabled,
   resolveQuartzMesostructureVfxEnabled,
   resolveC4BodyVfxEnabled,
+  resolveBglaBodyVfxEnabled,
   resolveThermiteBodyVfxEnabled,
   resolveOrganicSubsurfaceVfxEnabled,
   resolvePowderSolidContactVfxEnabled,
@@ -3318,6 +3319,7 @@ uniform float uThermiteBodyVfx;
 uniform float uSnowpackBodyVfx;
 uniform float uQuartzMesostructureVfx;
 uniform float uC4BodyVfx;
+uniform float uBglaBodyVfx;
 uniform float uPowderLightVfx;
 uniform float uPowderSolidContactVfx;
 uniform float uTranslucentEdgeVfx;
@@ -8092,6 +8094,26 @@ void main() {
               * (c4PressedPocket + c4PressedCore);
             color *= vec3(1.0) - vec3(0.030, 0.025, 0.020) * c4CompressionFold;
           }
+          // E52: exact BGLA reuses only E05's already-live broad facet, depth,
+          // and contour-retention scalars. Keeping this compact at the proven
+          // body site avoids extending the normal shader's live register set,
+          // while suppressing cell pepper and giving the shard pack a cool
+          // opposing crown/pocket. The later native splinter motif stays sharp.
+          if (uBglaBodyVfx > 0.5 && optics == 13.0 && material == 44.0
+            && foreignMatterContact < 0.5 && unlikeMaterialContact < 0.5) {
+            powderContourTextureRetention = mix(
+              powderContourTextureRetention, 0.28, powderBodyGate
+            );
+            color += (vec3(1.14) - clamp(color, 0.0, 1.14))
+              * vec3(0.56, 0.78, 1.00) * powderBodyGate
+              * max(powderVfxFacetBalance, 0.0) * 0.20;
+            color *= vec3(1.0) - vec3(0.080, 0.063, 0.038)
+              * powderBodyGate * (
+                max(-powderVfxFacetBalance, 0.0) + powderBodyVolumeDepth * 0.10
+              );
+            color += vec3(-0.003, 0.005, 0.016)
+              * powderBodyGate * powderBodyVolumeDepth;
+          }
           // E40: exact Gunpowder and BCOL share SootyGranular optics but their
           // broad settled bodies currently stop at E05's generic mineral
           // response. Reuse that already-proven facet balance and body depth
@@ -10829,6 +10851,10 @@ export class PixiFieldPresenter {
     // true-8x retains the established PLEX identity and declares no E50 path.
     const c4BodyVfxEnabled = outputScale < 8
       && resolveC4BodyVfxEnabled(renderLook);
+    // E52 is exact-BGLA arithmetic inside E05's settled Smooth proof. Compact
+    // true-8x retains the established splinter identity and declares no E52 path.
+    const bglaBodyVfxEnabled = outputScale < 8
+      && resolveBglaBodyVfxEnabled(renderLook);
     // E06 is a normal-detail recomposition of the existing centre-field light.
     // The protected compact shader retains its one established emission sample.
     const powderLightVfxEnabled = outputScale < 8
@@ -11082,6 +11108,7 @@ export class PixiFieldPresenter {
         value: quartzMesostructureVfxEnabled ? 1 : 0, type: 'f32',
       },
       uC4BodyVfx: { value: c4BodyVfxEnabled ? 1 : 0, type: 'f32' },
+      uBglaBodyVfx: { value: bglaBodyVfxEnabled ? 1 : 0, type: 'f32' },
       uPowderLightVfx: { value: powderLightVfxEnabled ? 1 : 0, type: 'f32' },
       uPowderSolidContactVfx: {
         value: powderSolidContactVfxEnabled ? 1 : 0, type: 'f32',
@@ -11331,6 +11358,7 @@ export class PixiFieldPresenter {
       this.uniforms.uniforms.uSnowpackBodyVfx = 0;
       this.uniforms.uniforms.uQuartzMesostructureVfx = 0;
       this.uniforms.uniforms.uC4BodyVfx = 0;
+      this.uniforms.uniforms.uBglaBodyVfx = 0;
       this.uniforms.uniforms.uPowderLightVfx = 0;
       this.uniforms.uniforms.uPowderSolidContactVfx = 0;
       this.uniforms.uniforms.uTranslucentEdgeVfx = 0;
@@ -11405,6 +11433,7 @@ export class PixiFieldPresenter {
             || new URLSearchParams(location.search).get('snowpackBodyVfxAudit') === '1'
             || new URLSearchParams(location.search).get('quartzMesostructureVfxAudit') === '1'
             || new URLSearchParams(location.search).get('c4BodyVfxAudit') === '1'
+            || new URLSearchParams(location.search).get('bglaBodyVfxAudit') === '1'
             || new URLSearchParams(location.search).get('powderLightVfxAudit') === '1'
             || new URLSearchParams(location.search).get('powderSolidContactVfxAudit') === '1'
             || new URLSearchParams(location.search).get('translucentEdgeVfxAudit') === '1'
@@ -11557,6 +11586,9 @@ export class PixiFieldPresenter {
     ) > 0.5 ? 'active' : 'inactive';
     presenter.app.canvas.dataset.c4BodyVfx = Number(
       presenter.uniforms.uniforms.uC4BodyVfx
+    ) > 0.5 ? 'active' : 'inactive';
+    presenter.app.canvas.dataset.bglaBodyVfx = Number(
+      presenter.uniforms.uniforms.uBglaBodyVfx
     ) > 0.5 ? 'active' : 'inactive';
     presenter.app.canvas.dataset.powderLightVfx = Number(presenter.uniforms.uniforms.uPowderLightVfx) > 0.5
       ? 'active' : 'inactive';
@@ -12988,6 +13020,7 @@ export class PixiFieldPresenter {
         this.uniforms.uniforms.uSnowpackBodyVfx = 0;
         this.uniforms.uniforms.uQuartzMesostructureVfx = 0;
         this.uniforms.uniforms.uC4BodyVfx = 0;
+        this.uniforms.uniforms.uBglaBodyVfx = 0;
         this.uniforms.uniforms.uPowderLightVfx = 0;
         this.uniforms.uniforms.uPowderSolidContactVfx = 0;
         this.uniforms.uniforms.uTranslucentEdgeVfx = 0;
@@ -13039,6 +13072,7 @@ export class PixiFieldPresenter {
         this.app.canvas.dataset.snowpackBodyVfx = 'inactive';
         this.app.canvas.dataset.quartzMesostructureVfx = 'inactive';
         this.app.canvas.dataset.c4BodyVfx = 'inactive';
+        this.app.canvas.dataset.bglaBodyVfx = 'inactive';
         this.app.canvas.dataset.powderLightVfx = 'inactive';
         this.app.canvas.dataset.powderSolidContactVfx = 'inactive';
         this.app.canvas.dataset.translucentEdgeVfx = 'inactive';

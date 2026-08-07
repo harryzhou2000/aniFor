@@ -2092,6 +2092,65 @@ describe('Pixi presenter startup configuration', () => {
     expect(preserve).toContain("get('c4BodyVfxAudit') === '1'");
   });
 
+  it('keeps E52 BGLA shard-pack recomposition exact-owner, E05-dependent, late, and normal-only', () => {
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const canvasSource = readFileSync(new URL('./field-renderer.ts', import.meta.url), 'utf8');
+    const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');
+    const normalStart = source.indexOf('const FIELD_FRAGMENT = `', eightStart);
+    const normalEnd = source.indexOf('`;\n\n/** Primary WebGL presentation', normalStart);
+    const eight = source.slice(eightStart, normalStart);
+    const normal = source.slice(normalStart, normalEnd);
+    const e52Start = normal.indexOf('          // E52:');
+    const e52End = normal.indexOf('          // E40:', e52Start);
+    const e52 = normal.slice(e52Start, e52End);
+    const gateStart = normal.indexOf(
+      '  if (family == 4.0 && boundaryStability > 0.001 && uPowderStyle > 1.5)',
+    );
+    const gateEnd = normal.indexOf('          // E40:', gateStart);
+    const gate = normal.slice(gateStart, gateEnd);
+    const preserveStart = source.indexOf('preserveDrawingBuffer:');
+    const preserveEnd = source.indexOf('resolution: outputScale', preserveStart);
+    const preserve = source.slice(preserveStart, preserveEnd);
+
+    expect(e52Start).toBeGreaterThanOrEqual(0);
+    expect(e52End).toBeGreaterThan(e52Start);
+    expect(gateStart).toBeGreaterThanOrEqual(0);
+    expect(gateEnd).toBeGreaterThan(gateStart);
+    expect(normal).toContain('uniform float uBglaBodyVfx;');
+    expect(normal.match(/uBglaBodyVfx > 0\.5/g)).toHaveLength(1);
+    expect(eight).not.toContain('uBglaBodyVfx');
+    expect(normal).not.toContain('bglaBodyCalm');
+    expect(canvasSource).not.toContain('bglaBodyVfx');
+    expect(e52).toContain('material == 44.0');
+    expect(e52).toContain('optics == 13.0');
+    expect(e52).toContain('powderBodyGate');
+    expect(e52).toContain('powderBodyVolumeDepth');
+    expect(e52).toContain('powderVfxFacetBalance');
+    expect(e52).toContain('powderContourTextureRetention = mix(');
+    expect(e52).not.toMatch(/float bgla|vec[234] bgla/);
+    expect(e52).toContain('foreignMatterContact < 0.5');
+    expect(e52).toContain('unlikeMaterialContact < 0.5');
+    for (const guard of [
+      'family == 4.0', 'uPowderStyle > 1.5', 'surfaceOnly < 0.5',
+      'traits < 0.5', '!materialEmissive', 'halo < 0.5', 'wall < 0.5',
+      'wallOnly < 0.5', 'emissionOnly < 0.5',
+      'step(224.0 / 255.0, boundaryStability)', 'step(5.5, widePowderShape.w)',
+    ]) expect(gate).toContain(guard);
+    expect(e52).not.toContain('texture(');
+    expect(e52).not.toContain('uTime');
+    expect(e52).not.toContain('sin(');
+    expect(e52).not.toContain('gl_FragCoord');
+    expect(e52).not.toMatch(/\balpha\s*[+*]?=/);
+    expect(source).toMatch(
+      /const bglaBodyVfxEnabled = outputScale < 8\s*&& resolveBglaBodyVfxEnabled\(renderLook\);/,
+    );
+    expect(source.match(/this\.uniforms\.uniforms\.uBglaBodyVfx = 0;/g)).toHaveLength(2);
+    expect(source).toContain('uBglaBodyVfx: { value: bglaBodyVfxEnabled ? 1 : 0');
+    expect(source).toContain('presenter.app.canvas.dataset.bglaBodyVfx');
+    expect(source).toContain("this.app.canvas.dataset.bglaBodyVfx = 'inactive';");
+    expect(preserve).toContain("get('bglaBodyVfxAudit') === '1'");
+  });
+
   it('keeps E41 DEUT concentration-volume exact-owner, trait-aware, normal-WebGL-only, and RGB-only', () => {
     const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
     const canvasSource = readFileSync(new URL('./field-renderer.ts', import.meta.url), 'utf8');
@@ -3710,6 +3769,8 @@ describe('Pixi presenter startup configuration', () => {
     expect(branchEnd).toBeGreaterThan(branchStart);
     expect(eight).toContain('uniform float uUnusualPowderStyling;');
     for (const material of materials) expect(helper).toContain(`material == ${material}.0`);
+    expect(helper).toContain('if (material == 44.0) return 2.0; // BGLA');
+    expect(helper).toContain('style == 2.0 ? vec3(3.0, 11.0, 15.0)');
     expect(branch).toContain('uUnusualPowderStyling > 0.5 && uPowderStyle > 1.5');
     expect(branch).toContain('unusualPowderEightXStyle(material) > 0.5');
     expect(branch).toContain('traits < 0.5 && !materialEmissive');

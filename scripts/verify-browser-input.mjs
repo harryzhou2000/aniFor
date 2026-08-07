@@ -161,6 +161,16 @@ if (candidateC4BodyVfxArgument && !candidateRankOnly) {
 if (!['0', '1', 'off', 'on'].includes(candidateC4BodyVfx)) {
   throw new Error('--candidate-c4-body-vfx must be 0, 1, off, or on');
 }
+const candidateBglaBodyVfxArgument = process.argv.find((argument) => (
+  argument.startsWith('--candidate-bgla-body-vfx=')
+));
+const candidateBglaBodyVfx = candidateBglaBodyVfxArgument?.split('=')[1] ?? '0';
+if (candidateBglaBodyVfxArgument && !candidateRankOnly) {
+  throw new Error('--candidate-bgla-body-vfx is valid only with --candidate-rank-only');
+}
+if (!['0', '1', 'off', 'on'].includes(candidateBglaBodyVfx)) {
+  throw new Error('--candidate-bgla-body-vfx must be 0, 1, off, or on');
+}
 // This is deliberately a separate 2x WebGL experiment gate. It reloads the
 // deterministic paused render lab as classic -> realistic -> classic so it
 // never adds render targets, readback, or timing pressure to the true-8x gate.
@@ -370,6 +380,12 @@ const c4BodyVfxOnly = process.argv.includes('--c4-body-vfx-only');
 if (c4BodyVfxOnly && (modes.length !== 1 || modes[0] !== 'webgl')) {
   throw new Error('--c4-body-vfx-only requires --webgl-only');
 }
+// E52 is the exact BGLA crystalline-granular body experiment. It shares E05's
+// settled Smooth proof; sparse, wet, moving, contact, wall, and 8x paths stay controls.
+const bglaBodyVfxOnly = process.argv.includes('--bgla-body-vfx-only');
+if (bglaBodyVfxOnly && (modes.length !== 1 || modes[0] !== 'webgl')) {
+  throw new Error('--bgla-body-vfx-only requires --webgl-only');
+}
 // E41 is a normal-detail DEUT concentration/body experiment. Its focused route
 // owns a paused native-state fixture; Canvas and compact true 8x are controls.
 const deutBodyVfxOnly = process.argv.includes('--deut-body-vfx-only');
@@ -478,7 +494,7 @@ const focusedVfxOnlyFlags = [
   oilBodyVfxOnly, rockRoughnessVfxOnly, rockMesostructureVfxOnly, waterBodyVfxOnly, acidBodyVfxOnly,
   soapBodyVfxOnly,
   sootyPowderBodyVfxOnly, thermiteBodyVfxOnly, snowpackBodyVfxOnly,
-  quartzMesostructureVfxOnly, c4BodyVfxOnly,
+  quartzMesostructureVfxOnly, c4BodyVfxOnly, bglaBodyVfxOnly,
   deutBodyVfxOnly, hydrogenBodyVfxOnly,
   carbonDioxideBodyVfxOnly,
   radioactiveSolidBodyVfxOnly, iszsCrystallineVfxOnly,
@@ -576,7 +592,7 @@ const productionBundle = process.argv.includes('--production-bundle');
 const usesProductionBundle = productionBundle || showcaseScreenshotOnly || composedRankOnly
   || candidateRankOnly || hdrVfxOnly || volumeVfxOnly
   || liquidBodyVfxOnly || liquidSurfaceVfxOnly || gasBodyVfxOnly || gasMotionVfxOnly
-  || powderBodyVfxOnly || powderLightVfxOnly || powderSolidContactVfxOnly || translucentEdgeVfxOnly || organicSubsurfaceVfxOnly || wetSedimentVfxOnly || gasLightVfxOnly || liquidSolidMeniscusVfxOnly || metalWaterContactVfxOnly || gasCoreDepthVfxOnly || plasmaCoreVfxOnly || solidBodyVfxOnly || platinumBodyVfxOnly || ceramicGlazeVfxOnly || botanicalBodyVfxOnly || glassBodyVfxOnly || oilBodyVfxOnly || rockRoughnessVfxOnly || rockMesostructureVfxOnly || waterBodyVfxOnly || acidBodyVfxOnly || soapBodyVfxOnly || sootyPowderBodyVfxOnly || thermiteBodyVfxOnly || snowpackBodyVfxOnly || quartzMesostructureVfxOnly || c4BodyVfxOnly || deutBodyVfxOnly || hydrogenBodyVfxOnly || carbonDioxideBodyVfxOnly || radioactiveSolidBodyVfxOnly || iszsCrystallineVfxOnly || nobleGasBillowVfxOnly || nobleGasPrismVfxOnly || smokeSoftnessVfxOnly || smokeBillowDepthVfxOnly || botanicalMesostructureVfxOnly || woodBarkReliefVfxOnly || botanicalPigmentVfxOnly || plantLaminaVfxOnly || plantLobeDepthVfxOnly || woodTanninVfxOnly || cellularGraphicsOnly || sensorGraphicsOnly
+  || powderBodyVfxOnly || powderLightVfxOnly || powderSolidContactVfxOnly || translucentEdgeVfxOnly || organicSubsurfaceVfxOnly || wetSedimentVfxOnly || gasLightVfxOnly || liquidSolidMeniscusVfxOnly || metalWaterContactVfxOnly || gasCoreDepthVfxOnly || plasmaCoreVfxOnly || solidBodyVfxOnly || platinumBodyVfxOnly || ceramicGlazeVfxOnly || botanicalBodyVfxOnly || glassBodyVfxOnly || oilBodyVfxOnly || rockRoughnessVfxOnly || rockMesostructureVfxOnly || waterBodyVfxOnly || acidBodyVfxOnly || soapBodyVfxOnly || sootyPowderBodyVfxOnly || thermiteBodyVfxOnly || snowpackBodyVfxOnly || quartzMesostructureVfxOnly || c4BodyVfxOnly || bglaBodyVfxOnly || deutBodyVfxOnly || hydrogenBodyVfxOnly || carbonDioxideBodyVfxOnly || radioactiveSolidBodyVfxOnly || iszsCrystallineVfxOnly || nobleGasBillowVfxOnly || nobleGasPrismVfxOnly || smokeSoftnessVfxOnly || smokeBillowDepthVfxOnly || botanicalMesostructureVfxOnly || woodBarkReliefVfxOnly || botanicalPigmentVfxOnly || plantLaminaVfxOnly || plantLobeDepthVfxOnly || woodTanninVfxOnly || cellularGraphicsOnly || sensorGraphicsOnly
   || unusualPowderGraphicsOnly || earthenPowderGraphicsOnly || explosivePowderGraphicsOnly || unusualSolidGraphicsOnly
   || deviceIdentityGraphicsOnly
   || fieldProfileGraphicsOnly
@@ -630,6 +646,8 @@ const quartzMesostructureVfxArgument = process.argv.find(
 )?.slice('--quartz-mesostructure-vfx='.length);
 const c4BodyVfxArgument = process.argv.find((argument) => argument.startsWith('--c4-body-vfx='))
   ?.slice('--c4-body-vfx='.length);
+const bglaBodyVfxArgument = process.argv.find((argument) => argument.startsWith('--bgla-body-vfx='))
+  ?.slice('--bgla-body-vfx='.length);
 const soapBodyVfxArgument = process.argv.find((argument) => argument.startsWith('--soap-body-vfx='))
   ?.slice('--soap-body-vfx='.length);
 const deutBodyVfxArgument = process.argv.find((argument) => argument.startsWith('--deut-body-vfx='))
@@ -743,6 +761,9 @@ if (quartzMesostructureVfxArgument !== undefined
 if (c4BodyVfxArgument !== undefined && !['0', '1', 'off', 'on'].includes(c4BodyVfxArgument)) {
   throw new Error('--c4-body-vfx must be 0, 1, off, or on');
 }
+if (bglaBodyVfxArgument !== undefined && !['0', '1', 'off', 'on'].includes(bglaBodyVfxArgument)) {
+  throw new Error('--bgla-body-vfx must be 0, 1, off, or on');
+}
 if (soapBodyVfxArgument !== undefined && !['0', '1', 'off', 'on'].includes(soapBodyVfxArgument)) {
   throw new Error('--soap-body-vfx must be 0, 1, off, or on');
 }
@@ -785,6 +806,9 @@ if (focusedVfxOnlyFlags.some(Boolean) && quartzMesostructureVfxArgument !== unde
 }
 if (focusedVfxOnlyFlags.some(Boolean) && c4BodyVfxArgument !== undefined) {
   throw new Error('focused VFX audits own c4BodyVfx state; omit --c4-body-vfx');
+}
+if (focusedVfxOnlyFlags.some(Boolean) && bglaBodyVfxArgument !== undefined) {
+  throw new Error('focused VFX audits own bglaBodyVfx state; omit --bgla-body-vfx');
 }
 if (focusedVfxOnlyFlags.some(Boolean) && soapBodyVfxArgument !== undefined) {
   throw new Error('focused VFX audits own soapBodyVfx state; omit --soap-body-vfx');
@@ -1569,7 +1593,7 @@ async function auditMode(mode) {
   // canonical paused scene there and prove real material delivery/occupancy.
   const startsBlank = !canvasFallbackAudit && (hdrVfxOnly || volumeVfxOnly
     || liquidBodyVfxOnly || liquidSurfaceVfxOnly || gasBodyVfxOnly || gasMotionVfxOnly
-    || powderBodyVfxOnly || powderLightVfxOnly || powderSolidContactVfxOnly || translucentEdgeVfxOnly || organicSubsurfaceVfxOnly || wetSedimentVfxOnly || gasLightVfxOnly || liquidSolidMeniscusVfxOnly || metalWaterContactVfxOnly || gasCoreDepthVfxOnly || plasmaCoreVfxOnly || solidBodyVfxOnly || platinumBodyVfxOnly || ceramicGlazeVfxOnly || botanicalBodyVfxOnly || glassBodyVfxOnly || oilBodyVfxOnly || rockRoughnessVfxOnly || rockMesostructureVfxOnly || waterBodyVfxOnly || acidBodyVfxOnly || soapBodyVfxOnly || sootyPowderBodyVfxOnly || thermiteBodyVfxOnly || snowpackBodyVfxOnly || quartzMesostructureVfxOnly || c4BodyVfxOnly || deutBodyVfxOnly || hydrogenBodyVfxOnly || carbonDioxideBodyVfxOnly || radioactiveSolidBodyVfxOnly || iszsCrystallineVfxOnly || nobleGasBillowVfxOnly || nobleGasPrismVfxOnly || smokeSoftnessVfxOnly || smokeBillowDepthVfxOnly || botanicalMesostructureVfxOnly || woodBarkReliefVfxOnly || botanicalPigmentVfxOnly || plantLaminaVfxOnly || plantLobeDepthVfxOnly || woodTanninVfxOnly || cellularGraphicsOnly || sensorGraphicsOnly
+  || powderBodyVfxOnly || powderLightVfxOnly || powderSolidContactVfxOnly || translucentEdgeVfxOnly || organicSubsurfaceVfxOnly || wetSedimentVfxOnly || gasLightVfxOnly || liquidSolidMeniscusVfxOnly || metalWaterContactVfxOnly || gasCoreDepthVfxOnly || plasmaCoreVfxOnly || solidBodyVfxOnly || platinumBodyVfxOnly || ceramicGlazeVfxOnly || botanicalBodyVfxOnly || glassBodyVfxOnly || oilBodyVfxOnly || rockRoughnessVfxOnly || rockMesostructureVfxOnly || waterBodyVfxOnly || acidBodyVfxOnly || soapBodyVfxOnly || sootyPowderBodyVfxOnly || thermiteBodyVfxOnly || snowpackBodyVfxOnly || quartzMesostructureVfxOnly || c4BodyVfxOnly || bglaBodyVfxOnly || deutBodyVfxOnly || hydrogenBodyVfxOnly || carbonDioxideBodyVfxOnly || radioactiveSolidBodyVfxOnly || iszsCrystallineVfxOnly || nobleGasBillowVfxOnly || nobleGasPrismVfxOnly || smokeSoftnessVfxOnly || smokeBillowDepthVfxOnly || botanicalMesostructureVfxOnly || woodBarkReliefVfxOnly || botanicalPigmentVfxOnly || plantLaminaVfxOnly || plantLobeDepthVfxOnly || woodTanninVfxOnly || cellularGraphicsOnly || sensorGraphicsOnly
     || unusualPowderGraphicsOnly || earthenPowderGraphicsOnly || explosivePowderGraphicsOnly
     || unusualSolidGraphicsOnly || deviceIdentityGraphicsOnly || fieldProfileGraphicsOnly
     || electricDischargeGraphicsOnly || liquidIdentityGraphicsOnly
@@ -1603,6 +1627,9 @@ async function auditMode(mode) {
     ...(focusedVfxOnlyFlags.some(Boolean)
       ? { c4BodyVfx: '0' }
       : c4BodyVfxArgument ? { c4BodyVfx: c4BodyVfxArgument } : {}),
+    ...(focusedVfxOnlyFlags.some(Boolean)
+      ? { bglaBodyVfx: '0' }
+      : bglaBodyVfxArgument ? { bglaBodyVfx: bglaBodyVfxArgument } : {}),
     ...(focusedVfxOnlyFlags.some(Boolean)
       ? { soapBodyVfx: '0' }
       : soapBodyVfxArgument !== undefined ? { soapBodyVfx: soapBodyVfxArgument } : {}),
@@ -2263,6 +2290,13 @@ async function auditMode(mode) {
       assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
       cdp.close();
       return { backend: mode, c4BodyVfx, browserErrors: errors.length };
+    }
+    if (bglaBodyVfxOnly) {
+      assert(mode === 'webgl', '--bgla-body-vfx-only requires --webgl-only');
+      const bglaBodyVfx = await auditBglaBodyVfxExperiment(cdp, mode, dpr);
+      assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
+      cdp.close();
+      return { backend: mode, bglaBodyVfx, browserErrors: errors.length };
     }
     if (deutBodyVfxOnly) {
       assert(mode === 'webgl', '--deut-body-vfx-only requires --webgl-only');
@@ -12908,6 +12942,7 @@ async function auditMaterialCandidateSurvey(cdp, mode, dpr) {
       snowpackBodyVfx: candidateSnowpackBodyVfx,
       quartzMesostructureVfx: candidateQuartzMesostructureVfx,
       c4BodyVfx: candidateC4BodyVfx,
+      bglaBodyVfx: candidateBglaBodyVfx,
     });
     await cdp.send('Page.navigate', { url: `${AUDIT_BASE_URL}?${query}` });
     await waitFor(() => evaluate(cdp, `(() => {
@@ -12925,6 +12960,7 @@ async function auditMaterialCandidateSurvey(cdp, mode, dpr) {
         && parameters.get('quartzMesostructureVfx')
           === ${JSON.stringify(candidateQuartzMesostructureVfx)}
         && parameters.get('c4BodyVfx') === ${JSON.stringify(candidateC4BodyVfx)}
+        && parameters.get('bglaBodyVfx') === ${JSON.stringify(candidateBglaBodyVfx)}
         && document.querySelector('[data-scene="candidate-survey"]') !== null
         && typeof window.__ANIFOR_INPUT_AUDIT__?.materialCandidateSurveyFixture === 'function';
     })()`), 15_000, `candidate rank ${scale}x survey page`);
@@ -12988,6 +13024,7 @@ async function auditMaterialCandidateSurvey(cdp, mode, dpr) {
         snowpackBodyVfx: canvas?.dataset.snowpackBodyVfx ?? 'missing',
         quartzMesostructureVfx: canvas?.dataset.quartzMesostructureVfx ?? 'missing',
         c4BodyVfx: canvas?.dataset.c4BodyVfx ?? 'missing',
+        bglaBodyVfx: canvas?.dataset.bglaBodyVfx ?? 'missing',
       };
     })()`);
     const expectedSnowpackBodyVfx = ['1', 'on'].includes(candidateSnowpackBodyVfx)
@@ -12996,12 +13033,14 @@ async function auditMaterialCandidateSurvey(cdp, mode, dpr) {
       candidateQuartzMesostructureVfx,
     ) ? 'active' : 'inactive';
     const expectedC4BodyVfx = ['1', 'on'].includes(candidateC4BodyVfx) ? 'active' : 'inactive';
+    const expectedBglaBodyVfx = ['1', 'on'].includes(candidateBglaBodyVfx) ? 'active' : 'inactive';
     assert(presentation.hdrPipeline === 'active'
       && presentation.liquidBodyVfx === 'active'
       && presentation.powderBodyVfx === 'active'
       && presentation.snowpackBodyVfx === expectedSnowpackBodyVfx
       && presentation.quartzMesostructureVfx === expectedQuartzMesostructureVfx
-      && presentation.c4BodyVfx === expectedC4BodyVfx,
+      && presentation.c4BodyVfx === expectedC4BodyVfx
+      && presentation.bglaBodyVfx === expectedBglaBodyVfx,
     `candidate rank ${scale}x lost canonical body presentation (${JSON.stringify(presentation)})`);
     stage('telemetry-proven');
     const semantic = await candidateRankSemanticDigest(cdp, fixture);
@@ -13158,6 +13197,7 @@ async function auditMaterialCandidateSurvey(cdp, mode, dpr) {
     snowpackBodyVfx: candidateSnowpackBodyVfx,
     quartzMesostructureVfx: candidateQuartzMesostructureVfx,
     c4BodyVfx: candidateC4BodyVfx,
+    bglaBodyVfx: candidateBglaBodyVfx,
     weakestFirst,
     crossScaleDrift,
     schema: 'material-candidate-rank/v1',
@@ -13210,6 +13250,9 @@ async function auditComposedRankShowcase(cdp, mode, dpr) {
       ...(hydrogenBodyVfxArgument ? { hydrogenBodyVfx: hydrogenBodyVfxArgument } : {}),
       carbonDioxideBodyVfx: composedCarbonDioxideBodyVfx,
       thermiteBodyVfx: composedThermiteBodyVfx,
+      // Showcase v6 has no authoritative BGLA evidence; keep E52 fenced off
+      // instead of silently grading some unrelated powder through its selector.
+      bglaBodyVfx: '0',
       soapBodyVfx: composedSoapBodyVfx,
       ...(plasmaCoreVfxArgument ? { plasmaCoreVfx: plasmaCoreVfxArgument } : {}),
       solidBodyVfx: composedSolidBodyVfx,
@@ -13252,6 +13295,7 @@ async function auditComposedRankShowcase(cdp, mode, dpr) {
         && parameters.get('hydrogenBodyVfx') === ${JSON.stringify(hydrogenBodyVfxArgument ?? null)}
         && parameters.get('carbonDioxideBodyVfx') === ${JSON.stringify(composedCarbonDioxideBodyVfx)}
         && parameters.get('thermiteBodyVfx') === ${JSON.stringify(composedThermiteBodyVfx)}
+        && parameters.get('bglaBodyVfx') === '0'
         && parameters.get('soapBodyVfx') === ${JSON.stringify(composedSoapBodyVfx)}
         && parameters.get('plasmaCoreVfx') === ${JSON.stringify(plasmaCoreVfxArgument ?? null)}
         && parameters.get('solidBodyVfx') === ${JSON.stringify(composedSolidBodyVfx)}
@@ -13367,6 +13411,11 @@ async function auditComposedRankShowcase(cdp, mode, dpr) {
         argument: composedThermiteBodyVfx, composedLook, thermiteBodyVfx,
         expectedThermiteBodyState,
       })})`);
+    const bglaBodyVfx = await evaluate(cdp,
+      `document.querySelector('canvas.world-canvas')?.dataset.bglaBodyVfx ?? 'missing'`,
+    );
+    assert(bglaBodyVfx === 'inactive',
+      `composed rank ${scale}x activated E52 without BGLA evidence (${bglaBodyVfx})`);
     const smokeBillowDepthVfx = await evaluate(cdp,
       `document.querySelector('canvas.world-canvas')?.dataset.smokeBillowDepthVfx ?? 'missing'`,
     );
@@ -13563,6 +13612,7 @@ async function auditComposedRankShowcase(cdp, mode, dpr) {
       scale, geometry, fixture, semantic, regions, hdrPipeline, botanicalMesostructureVfx,
       botanicalPigmentVfx, plantLaminaVfx, plantLobeDepthVfx, plantCanopyMassVfx, woodTanninVfx,
       oilVolumeFinishVfx, acidBodyVfx, soapBodyVfx, sootyPowderBodyVfx, thermiteBodyVfx,
+      bglaBodyVfx,
       smokeBillowDepthVfx, powderStability,
       deutBodyVfx, hydrogenBodyVfx, carbonDioxideBodyVfx,
       solidBodyVfx, radioactiveSolidBodyVfx, iszsCrystallineVfx,
@@ -13669,7 +13719,8 @@ async function auditComposedRankShowcase(cdp, mode, dpr) {
   return {
     scales: captures.map(({ scale, geometry, semantic, regions, hdrPipeline, botanicalMesostructureVfx,
       botanicalPigmentVfx, plantLaminaVfx, plantLobeDepthVfx, plantCanopyMassVfx, woodTanninVfx,
-      smokeBillowDepthVfx, thermiteBodyVfx, soapBodyVfx, metalWaterContactVfx, powderStability,
+      smokeBillowDepthVfx, thermiteBodyVfx, bglaBodyVfx, soapBodyVfx,
+      metalWaterContactVfx, powderStability,
       deutBodyVfx, hydrogenBodyVfx, carbonDioxideBodyVfx,
       solidBodyVfx, radioactiveSolidBodyVfx, iszsCrystallineVfx,
       screenshot }) => ({
@@ -13685,6 +13736,7 @@ async function auditComposedRankShowcase(cdp, mode, dpr) {
       woodTanninVfx,
       smokeBillowDepthVfx,
       thermiteBodyVfx,
+      bglaBodyVfx,
       soapBodyVfx,
       soapBodyVfxEvidence: 'showcase-v6-liquidSoap-region',
       iszsCrystallineVfxEvidence: 'showcase-v6-solidISZS-region',
@@ -37203,7 +37255,7 @@ async function navigateSnowpackBodyVfxState(cdp, mode, scale, enabled, label) {
     volumeVfx: '0', liquidBodyVfx: '0', liquidSurfaceVfx: '0', gasBodyVfx: '0',
     gasMotionVfx: '0', powderBodyVfx: '1', sootyPowderBodyVfx: '0',
     thermiteBodyVfx: '0', snowpackBodyVfx: enabled ? '1' : '0',
-    quartzMesostructureVfx: '0', c4BodyVfx: '0',
+    quartzMesostructureVfx: '0', c4BodyVfx: '0', bglaBodyVfx: '0',
     powderLightVfx: '0', powderSolidContactVfx: '0', translucentEdgeVfx: '0',
     organicSubsurfaceVfx: '0', wetSedimentVfx: '0', gasLightVfx: '0',
     liquidSolidMeniscusVfx: '0', metalWaterContactVfx: '0', gasCoreDepthVfx: '0',
@@ -37563,7 +37615,7 @@ async function auditEightXSnowpackBodyVfxExclusion(cdp, dpr) {
     volumeVfx: '0', liquidBodyVfx: '0', liquidSurfaceVfx: '0', gasBodyVfx: '0',
     gasMotionVfx: '0', powderBodyVfx: '1', sootyPowderBodyVfx: '0',
     thermiteBodyVfx: '0', snowpackBodyVfx: '1', quartzMesostructureVfx: '0',
-    c4BodyVfx: '0',
+    c4BodyVfx: '0', bglaBodyVfx: '0',
     powderLightVfx: '0',
     powderSolidContactVfx: '0', translucentEdgeVfx: '0', organicSubsurfaceVfx: '0',
     wetSedimentVfx: '0', gasLightVfx: '0', liquidSolidMeniscusVfx: '0',
@@ -37697,6 +37749,518 @@ const C4_BODY_VFX_ISOLATED_SELECTORS = Object.freeze([
   ...SNOWPACK_BODY_VFX_ISOLATED_SELECTORS.filter((name) => name !== 'c4BodyVfx'),
   'snowpackBodyVfx',
 ]);
+
+const BGLA_BODY_VFX_ISOLATED_SELECTORS = Object.freeze([
+  ...C4_BODY_VFX_ISOLATED_SELECTORS.filter((name) => name !== 'c4BodyVfx'),
+  'c4BodyVfx', 'soapBodyVfx',
+]);
+
+// The clear half of the native wall checker is still authoritative BGLA, so
+// the page compositor may carry a tiny eligible-body response there. Every
+// other named topology/material/contact control remains exact.
+const BGLA_BODY_VFX_CONTROL_PEAK = Object.freeze({ WallClear: 2 });
+
+// Accepted normal-WebGL E52 envelope. BGLA keeps its cell-scale splinters;
+// this child adds broad cool shard-pack relief instead of erasing grain.
+const BGLA_BODY_VFX_TARGET_ENVELOPES = Object.freeze({
+  BGLACore: Object.freeze({
+    rgbRms: [4.2, 5.2], chromaRms: [2.3, 3.0], rgbPeak: [20, 30],
+    coverage: [0.34, 0.44], signedMean: [1.3, 1.9], spatialRgbRms: [2.9, 3.7],
+  }),
+  BGLACrown: Object.freeze({
+    rgbRms: [7.7, 9.2], chromaRms: [3.1, 4.1], rgbPeak: [19, 31],
+    coverage: [0.79, 0.90], signedMean: [5.2, 6.4], spatialRgbRms: [3.6, 4.7],
+  }),
+  BGLAPocket: Object.freeze({
+    rgbRms: [2.0, 2.8], chromaRms: [2.0, 2.7], rgbPeak: [6, 13],
+    coverage: [0.04, 0.12], signedMean: [-0.70, -0.15], spatialRgbRms: [0.75, 1.25],
+  }),
+});
+
+const BGLA_BODY_VFX_TEXTURE_LIMITS = Object.freeze({
+  minimumBaselineMicro: 8.0,
+  minimumEnabledMicro: 8.0,
+  maximumEnabledMicro: 14.0,
+  minimumMicroRetention: 0.90,
+  maximumMicroRetention: 1.15,
+  minimumEnabledMacro: 9.0,
+  maximumEnabledMacro: 36.0,
+  minimumMacroRetention: 0.90,
+  maximumMacroRetention: 2.10,
+  minimumEnabledLumaStdDev: 8.3,
+  maximumEnabledLumaStdDev: 15.0,
+});
+
+const BGLA_BODY_VFX_CROSS_SCALE_LIMITS = Object.freeze({
+  maximumRgbRmsDrift: 0.20,
+  maximumChromaRmsDrift: 0.15,
+  maximumCoverageDrift: 0.04,
+  maximumSignedMeanDrift: 0.15,
+  maximumSpatialRgbRmsDrift: 0.20,
+  maximumMicroRetentionDrift: 0.04,
+  maximumMacroRetentionDrift: 0.60,
+});
+
+/** E52: exact BGLA settled crystalline shard-pack, subordinate to E05 Smooth. */
+async function auditBglaBodyVfxExperiment(cdp, mode, dpr) {
+  if (Number(renderScaleArgument) === 8) {
+    return {
+      scales: [], trueEightXExcluded: true,
+      trueEightX: await auditEightXBglaBodyVfxExclusion(cdp, dpr),
+    };
+  }
+  const normalScales = renderScaleArgument === undefined ? VOLUME_VFX_SCALES : [Number(renderScaleArgument)];
+  const scales = [];
+  for (const scale of normalScales) {
+    assert([1, 2, 4].includes(scale), 'E52 normal matrix requires 1x/2x/4x');
+    const frames = {};
+    for (const enabled of [false, true, false]) {
+      const name = enabled ? 'on' : frames.off ? 'offRepeat' : 'off';
+      frames[name] = await navigateBglaBodyVfxState(cdp, mode, scale, enabled, name);
+      frames[name].references = await capturePowderBodyVfxReferenceStyles(
+        cdp, scale, name, 'E52',
+      );
+    }
+    const { off, on, offRepeat } = frames;
+    assert(JSON.stringify(off.fixture) === JSON.stringify(on.fixture)
+      && JSON.stringify(off.fixture) === JSON.stringify(offRepeat.fixture),
+    'E52 fixture metadata changed');
+    assert(off.capture.capture.data === offRepeat.capture.capture.data,
+      'E52 repeated-off framebuffer changed');
+    for (const frame of [off, on, offRepeat]) {
+      assertGeometry(frame.geometry, 'E52 ' + scale + 'x', scale);
+      assert(frame.geometry.backend.backend === 'webgl'
+        && frame.pipeline.state === 'active'
+        && frame.pipeline.powderBodyVfx === 'active'
+        && frame.pipeline.bglaBodyVfx === (frame === on ? 'active' : 'inactive')
+        && Object.values(frame.pipeline.isolatedSelectors)
+          .every((state) => state === 'inactive'),
+      'E52 selector/backend state changed: ' + JSON.stringify(frame.pipeline));
+    }
+    assertHdrVfxSemanticEquality(off.semantic, on.semantic, 'E52 off/on');
+    assertHdrVfxSemanticEquality(off.semantic, offRepeat.semantic, 'E52 off/repeat');
+    assertVolumeVfxBackingInvariant(off.backing, on.backing, 'E52 off/on');
+    assertVolumeVfxBackingInvariant(off.backing, offRepeat.backing, 'E52 off/repeat');
+    assertBglaBodyVfxMaterialPlane(off.materialPlane, off.fixture, `E52 ${scale}x`);
+    assert(JSON.stringify(off.materialPlane) === JSON.stringify(on.materialPlane)
+      && JSON.stringify(off.materialPlane) === JSON.stringify(offRepeat.materialPlane),
+    `E52 ${scale}x changed exact material-plane cardinalities`);
+    assert(JSON.stringify(off.digest) === JSON.stringify(on.digest)
+      && JSON.stringify(off.digest) === JSON.stringify(offRepeat.digest) && off.digest.ok,
+    'E52 changed a protected BGLA fixture control: ' + JSON.stringify(off.digest));
+    for (const name of ['walls', 'velocity', 'auxiliary', 'wet', 'state']) {
+      assert(JSON.stringify(off[name]) === JSON.stringify(on[name])
+        && JSON.stringify(off[name]) === JSON.stringify(offRepeat[name]),
+      `E52 ${scale}x changed ${name} fixture state`);
+    }
+    assert(off.walls.occupied === off.fixture.expected.wallCells
+      && off.walls.mismatches === 0 && off.walls.matterMismatches === 0
+      && off.velocity.cells === off.fixture.expected.movingVelocityCells
+      && off.velocity.mismatches === 0
+      && Object.values(off.auxiliary.stable).every(({ min, max }) => min === 255 && max === 255)
+      && off.auxiliary.moving.min < 255 && off.auxiliary.moving.max < 255
+      && off.wet.bgla === off.fixture.expected.suspensionBglaCells
+      && off.wet.water === off.fixture.expected.suspensionWaterCells && off.wet.other === 0
+      && off.wet.bgla === off.wet.water * 2 && off.wet.mismatches === 0
+      && off.wet.bglaProbe === 44 && off.wet.waterProbe === 2
+      && off.state.nonZero === off.state.expectedNonZero,
+    `E52 ${scale}x lost wall/velocity/auxiliary/wet/state contract (${JSON.stringify({
+      walls: off.walls, velocity: off.velocity, auxiliary: off.auxiliary, wet: off.wet, state: off.state,
+    })})`);
+    assertVolumeVfxRawAlphaInvariant(off.rawAll, on.rawAll, `E52 ${scale}x off/on`);
+    assertVolumeVfxRawAlphaInvariant(off.rawAll, offRepeat.rawAll, `E52 ${scale}x off/repeat`);
+    assert(JSON.stringify(off.rawControls) === JSON.stringify(on.rawControls)
+      && JSON.stringify(off.rawControls) === JSON.stringify(offRepeat.rawControls),
+    `E52 ${scale}x changed a raw topology/material/contact control`);
+    const targets = bglaBodyVfxTargetRegions(off.fixture);
+    const controls = bglaBodyVfxControlRegions(off.fixture);
+    const samples = await sampleBackdropRefractionRegions(cdp, {
+      straight: off.capture.capture.data, refracted: on.capture.capture.data,
+      repeatedStraight: offRepeat.capture.capture.data,
+    }, [...targets, ...controls], off.capture.canvasRect);
+    const targetResponses = samples.slice(0, targets.length).map((sample) => ({
+      ...sample,
+      spatialRgbRms: round(Math.sqrt(Math.max(0, sample.rgbRms ** 2
+        - (Math.hypot(...sample.responseRgb) / Math.sqrt(3)) ** 2)), 3),
+    }));
+    const controlResponses = samples.slice(targets.length);
+    assert(samples.every((sample) => sample.repeatRgbPeak === 0),
+      'E52 off/on/off was not deterministic: ' + JSON.stringify(samples));
+    assert(targetResponses.every((sample) => {
+      const envelope = BGLA_BODY_VFX_TARGET_ENVELOPES[sample.name];
+      return envelope
+        && sample.rgbRms >= envelope.rgbRms[0] && sample.rgbRms <= envelope.rgbRms[1]
+        && sample.chromaRms >= envelope.chromaRms[0]
+        && sample.chromaRms <= envelope.chromaRms[1]
+        && sample.rgbPeak >= envelope.rgbPeak[0] && sample.rgbPeak <= envelope.rgbPeak[1]
+        && sample.coverage >= envelope.coverage[0] && sample.coverage <= envelope.coverage[1]
+        && sample.signedMean >= envelope.signedMean[0]
+        && sample.signedMean <= envelope.signedMean[1]
+        && sample.spatialRgbRms >= envelope.spatialRgbRms[0]
+        && sample.spatialRgbRms <= envelope.spatialRgbRms[1];
+    }), 'E52 escaped the accepted BGLA target envelope: ' + JSON.stringify({
+      envelopes: BGLA_BODY_VFX_TARGET_ENVELOPES, targetResponses,
+    }));
+    const target = Object.fromEntries(targetResponses.map((sample) => [sample.name, sample]));
+    assert(target.BGLACrown.signedMean > target.BGLAPocket.signedMean + 5.5
+      && target.BGLACrown.positiveMean >= 5.6
+      && target.BGLAPocket.negativeMean >= 0.55
+      && target.BGLACore.positiveMean >= 1.8 && target.BGLACore.negativeMean >= 0.28
+      && target.BGLACore.responseSignature !== target.BGLACrown.responseSignature
+      && target.BGLACore.responseSignature !== target.BGLAPocket.responseSignature,
+    'E52 core/crown/pocket separation changed: ' + JSON.stringify(target));
+    assert(controlResponses.every((sample) => sample.rgbPeak
+      <= (BGLA_BODY_VFX_CONTROL_PEAK[sample.name] ?? 0)),
+    'E52 leaked into a protected BGLA control: ' + JSON.stringify(controlResponses));
+    const texture = {};
+    for (const [name, frame] of Object.entries(frames)) {
+      texture[name] = await samplePageRegions(cdp, frame.capture.capture.data,
+        bglaBodyVfxTextureRegions(off.fixture), undefined, undefined, frame.capture.canvasRect);
+    }
+    const textureResponse = texture.off.map((baseline, index) => {
+      const current = texture.on[index], repeated = texture.offRepeat[index];
+      assert(current?.name === baseline.name && repeated?.name === baseline.name,
+        `E52 ${scale}x reordered BGLA texture regions`);
+      return { name: baseline.name, disabledMicro: baseline.microContrast,
+        enabledMicro: current.microContrast,
+        microRetention: round(current.microContrast / Math.max(0.001, baseline.microContrast), 4),
+        disabledMacro: baseline.macroLumaRange, enabledMacro: current.macroLumaRange,
+        macroRetention: round(current.macroLumaRange / Math.max(0.001, baseline.macroLumaRange), 4),
+        enabledLumaStdDev: current.lumaStdDev,
+        supportRecall: current.supportRecall, clippedFraction: current.clippedFraction,
+        repeatExact: JSON.stringify(baseline) === JSON.stringify(repeated) };
+    });
+    assert(textureResponse.every((sample) => sample.disabledMicro
+      >= BGLA_BODY_VFX_TEXTURE_LIMITS.minimumBaselineMicro
+      && sample.enabledMicro >= BGLA_BODY_VFX_TEXTURE_LIMITS.minimumEnabledMicro
+      && sample.enabledMicro <= BGLA_BODY_VFX_TEXTURE_LIMITS.maximumEnabledMicro
+      && sample.microRetention >= BGLA_BODY_VFX_TEXTURE_LIMITS.minimumMicroRetention
+      && sample.microRetention <= BGLA_BODY_VFX_TEXTURE_LIMITS.maximumMicroRetention
+      && sample.enabledMacro >= BGLA_BODY_VFX_TEXTURE_LIMITS.minimumEnabledMacro
+      && sample.enabledMacro <= BGLA_BODY_VFX_TEXTURE_LIMITS.maximumEnabledMacro
+      && sample.macroRetention >= BGLA_BODY_VFX_TEXTURE_LIMITS.minimumMacroRetention
+      && sample.macroRetention <= BGLA_BODY_VFX_TEXTURE_LIMITS.maximumMacroRetention
+      && sample.enabledLumaStdDev >= BGLA_BODY_VFX_TEXTURE_LIMITS.minimumEnabledLumaStdDev
+      && sample.enabledLumaStdDev <= BGLA_BODY_VFX_TEXTURE_LIMITS.maximumEnabledLumaStdDev
+      && sample.supportRecall === 1 && sample.clippedFraction === 0 && sample.repeatExact),
+    `E52 ${scale}x lost splinter detail or bounded shard-pack relief (${JSON.stringify({
+      limits: BGLA_BODY_VFX_TEXTURE_LIMITS, textureResponse,
+    })})`);
+    const references = {};
+    for (const style of ['grains', 'local']) {
+      const referenceResponses = await sampleBackdropRefractionRegions(cdp, {
+        straight: off.references[style].capture.data,
+        refracted: on.references[style].capture.data,
+        repeatedStraight: offRepeat.references[style].capture.data,
+      }, targets, off.references[style].canvasRect);
+      assert(referenceResponses.every((sample) => (
+        sample.rgbPeak === 0 && sample.repeatRgbPeak === 0
+      )), `E52 escaped the exact ${style} reference mode: ${JSON.stringify(referenceResponses)}`);
+      references[style] = referenceResponses;
+    }
+    const screenshots = screenshotRequest
+      ? await writeBglaBodyVfxScreenshots(screenshotRequest, scale, off, on)
+      : undefined;
+    scales.push({ scale, geometry: off.geometry, semantic: off.semantic, materialPlane: off.materialPlane,
+      walls: off.walls, velocity: off.velocity, auxiliary: off.auxiliary, wet: off.wet, state: off.state,
+      rawControls: off.rawControls, targets: targetResponses, controls: controlResponses,
+      textureResponse, digest: off.digest, references, screenshots, exactRepeatedOff: true });
+  }
+  if (scales.length > 1) {
+    const reference = scales.find(({ scale }) => scale === 2) ?? scales[0];
+    for (const current of scales.filter(({ scale }) => scale !== reference.scale)) {
+      // Raw framebuffer probe bytes legitimately quantize with backing scale;
+      // their exact off/on/off invariants are asserted within each scale above.
+      assertCanvasRectsEqual(reference.geometry.canvas, current.geometry.canvas,
+        `E52 ${reference.scale}x/${current.scale}x CSS geometry`);
+      assert(JSON.stringify(reference.semantic) === JSON.stringify(current.semantic)
+        && JSON.stringify(reference.materialPlane) === JSON.stringify(current.materialPlane)
+        && JSON.stringify(reference.walls) === JSON.stringify(current.walls)
+        && JSON.stringify(reference.velocity) === JSON.stringify(current.velocity)
+        && JSON.stringify(reference.auxiliary) === JSON.stringify(current.auxiliary)
+        && JSON.stringify(reference.wet) === JSON.stringify(current.wet)
+        && JSON.stringify(reference.state) === JSON.stringify(current.state),
+      `E52 ${current.scale}x changed exact fixture state across scales`);
+      for (const baseline of reference.targets) {
+        const sample = current.targets.find(({ name }) => name === baseline.name);
+        assert(sample
+          && Math.abs(sample.rgbRms - baseline.rgbRms)
+            <= BGLA_BODY_VFX_CROSS_SCALE_LIMITS.maximumRgbRmsDrift
+          && Math.abs(sample.chromaRms - baseline.chromaRms)
+            <= BGLA_BODY_VFX_CROSS_SCALE_LIMITS.maximumChromaRmsDrift
+          && Math.abs(sample.coverage - baseline.coverage)
+            <= BGLA_BODY_VFX_CROSS_SCALE_LIMITS.maximumCoverageDrift
+          && Math.abs(sample.signedMean - baseline.signedMean)
+            <= BGLA_BODY_VFX_CROSS_SCALE_LIMITS.maximumSignedMeanDrift
+          && Math.abs(sample.spatialRgbRms - baseline.spatialRgbRms)
+            <= BGLA_BODY_VFX_CROSS_SCALE_LIMITS.maximumSpatialRgbRmsDrift,
+        `E52 ${baseline.name} response drifted at ${current.scale}x (${JSON.stringify({
+          reference: baseline, current: sample,
+        })})`);
+      }
+      for (const baseline of reference.textureResponse) {
+        const sample = current.textureResponse.find(({ name }) => name === baseline.name);
+        assert(sample
+          && Math.abs(sample.microRetention - baseline.microRetention)
+            <= BGLA_BODY_VFX_CROSS_SCALE_LIMITS.maximumMicroRetentionDrift
+          && Math.abs(sample.macroRetention - baseline.macroRetention)
+            <= BGLA_BODY_VFX_CROSS_SCALE_LIMITS.maximumMacroRetentionDrift,
+        `E52 ${baseline.name} texture response drifted at ${current.scale}x (${JSON.stringify({
+          reference: baseline, current: sample,
+        })})`);
+      }
+    }
+  }
+  return { calibration: 'accepted-e52-1x-4x',
+    targetEnvelopes: BGLA_BODY_VFX_TARGET_ENVELOPES,
+    textureLimits: BGLA_BODY_VFX_TEXTURE_LIMITS,
+    controlPeakCaps: BGLA_BODY_VFX_CONTROL_PEAK,
+    crossScaleLimits: BGLA_BODY_VFX_CROSS_SCALE_LIMITS,
+    scales, trueEightXExcluded: true,
+    trueEightX: await auditEightXBglaBodyVfxExclusion(cdp, dpr) };
+}
+
+async function navigateBglaBodyVfxState(cdp, mode, scale, enabled, label) {
+  const query = new URLSearchParams({
+    scene: 'render-lab', inputAudit: '1', blankAudit: '1', auditStage: 'blank',
+    bglaBodyVfxAudit: '1', renderScale: String(scale), renderLook: 'realistic',
+    volumeVfx: '0', liquidBodyVfx: '0', liquidSurfaceVfx: '0', gasBodyVfx: '0',
+    gasMotionVfx: '0', powderBodyVfx: '1', sootyPowderBodyVfx: '0', thermiteBodyVfx: '0',
+    snowpackBodyVfx: '0', quartzMesostructureVfx: '0', c4BodyVfx: '0',
+    bglaBodyVfx: enabled ? '1' : '0', powderLightVfx: '0', powderSolidContactVfx: '0',
+    translucentEdgeVfx: '0', organicSubsurfaceVfx: '0', wetSedimentVfx: '0',
+    gasLightVfx: '0', liquidSolidMeniscusVfx: '0', metalWaterContactVfx: '0',
+    gasCoreDepthVfx: '0', nobleGasBillowVfx: '0', nobleGasPrismVfx: '0',
+    smokeSoftnessVfx: '0', smokeBillowDepthVfx: '0', plasmaCoreVfx: '0',
+    solidBodyVfx: '0', radioactiveSolidBodyVfx: '0', iszsCrystallineVfx: '0',
+    platinumBodyVfx: '0', ceramicGlazeVfx: '0', botanicalBodyVfx: '0',
+    botanicalMesostructureVfx: '0', botanicalPigmentVfx: '0', plantLaminaVfx: '0',
+    plantLobeDepthVfx: '0', plantCanopyMassVfx: '0', woodBarkReliefVfx: '0',
+    woodTanninVfx: '0', glassBodyVfx: '0', acidBodyVfx: '0', deutBodyVfx: '0',
+    oilBodyVfx: '0', oilVolumeFinishVfx: '0', rockRoughnessVfx: '0',
+    rockMesostructureVfx: '0', waterBodyVfx: '0', hydrogenBodyVfx: '0',
+    carbonDioxideBodyVfx: '0',
+  });
+  for (const selector of BGLA_BODY_VFX_ISOLATED_SELECTORS) query.set(selector, '0');
+  await cdp.send('Page.navigate', { url: AUDIT_BASE_URL + '?' + query });
+  const api = '(() => { const p = new URLSearchParams(location.search); const a = window.__ANIFOR_INPUT_AUDIT__;'
+    + ' return p.get("bglaBodyVfxAudit") === "1" && p.get("renderScale") === ' + JSON.stringify(String(scale))
+    + ' && p.get("bglaBodyVfx") === ' + JSON.stringify(enabled ? '1' : '0')
+    + ' && ' + JSON.stringify(BGLA_BODY_VFX_ISOLATED_SELECTORS) + '.every((name) => p.get(name) === "0")'
+    + ' && typeof a?.prepareBglaBodyVfxFixture === "function" && typeof a?.bglaBodyVfxFixture === "function"; })()';
+  await waitFor(() => evaluate(cdp, api), scale === 4 ? 45_000 : 15_000, 'E52 ' + label + ' page');
+  await waitFor(() => evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.backend().backend === ' + JSON.stringify(mode)),
+    scale === 4 ? 30_000 : 15_000, 'E52 ' + label + ' backend');
+  const fixture = await evaluate(cdp,
+    '(() => { const a = window.__ANIFOR_INPUT_AUDIT__; a.prepareBglaBodyVfxFixture(); a.setPowderRenderStyle("smooth"); a.setUnusualPowderStyling(true); return a.bglaBodyVfxFixture(); })()');
+  for (let pass = 0; pass < 7; pass++) {
+    const before = await evaluate(cdp,
+      'window.__ANIFOR_INPUT_AUDIT__.presentationRefreshAudit()');
+    await evaluate(cdp,
+      'window.__ANIFOR_INPUT_AUDIT__.refreshPresentationFields(); true');
+    await waitFor(() => evaluate(cdp, `(() => {
+      const current = window.__ANIFOR_INPUT_AUDIT__.presentationRefreshAudit();
+      return current?.dynamicSequence > ${before.dynamicSequence} ? current : false;
+    })()`), scale === 4 ? 15_000 : 5_000,
+    `E52 ${label} ${scale}x stability pass ${pass + 1}`);
+  }
+  await sleep(350);
+  const pipeline = await evaluate(cdp, `(() => {
+    const c = document.querySelector('canvas.semantic-field-canvas');
+    const isolated = ${JSON.stringify(BGLA_BODY_VFX_ISOLATED_SELECTORS)};
+    return c ? { state: c.dataset.hdrPipeline, powderBodyVfx: c.dataset.powderBodyVfx,
+      bglaBodyVfx: c.dataset.bglaBodyVfx,
+      isolatedSelectors: Object.fromEntries(isolated.map((name) => [name, c.dataset[name]]))
+    } : undefined;
+  })()`);
+  const controls = bglaBodyVfxControlRegions(fixture);
+  const targets = bglaBodyVfxTargetRegions(fixture);
+  return { fixture, pipeline, digest: await bglaBodyVfxFixtureDigest(cdp, fixture),
+    capture: await waitForStablePageCapture(cdp, 'E52 ' + label + ' ' + scale + 'x framebuffer',
+      scale === 4 ? 45_000 : scale === 2 ? 30_000 : 15_000),
+    geometry: await metrics(cdp), semantic: await hdrVfxSemanticDigest(cdp),
+    backing: await sampleVolumeVfxCanvasAlphaSupport(cdp),
+    materialPlane: await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.materialPlaneDigest()'),
+    walls: await bglaBodyVfxWallDigest(cdp, fixture), velocity: await bglaBodyVfxVelocityDigest(cdp, fixture),
+    auxiliary: await bglaBodyVfxAuxiliaryDigest(cdp, fixture), wet: await bglaBodyVfxWetDigest(cdp, fixture),
+    state: await bglaBodyVfxStateDigest(cdp, fixture),
+    rawAll: await sampleVolumeVfxRawWorldPixels(cdp, [...targets, ...controls].map(({ name, x, y }) => ({
+      name, x: Math.floor(x), y: Math.floor(y),
+    }))),
+    rawControls: await sampleVolumeVfxRawWorldPixels(cdp, controls.map(({ name, x, y }) => ({
+      name, x: Math.floor(x), y: Math.floor(y),
+    }))), };
+}
+
+async function bglaBodyVfxFixtureDigest(cdp, fixture) {
+  return evaluate(cdp, '(() => { const a = window.__ANIFOR_INPUT_AUDIT__; const f = ' + JSON.stringify(fixture) + ';'
+    + ' const exact = (r,m) => r && (() => { for(let y=r.y;y<r.y+r.height;y++) for(let x=r.x;x<r.x+r.width;x++) if(a.cell(x,y)!==m) return false; return true; })();'
+    + ' const t=f.target, inside=(r,x,y)=>r&&x>=r.x&&x<r.x+r.width&&y>=r.y&&y<r.y+r.height; let body=true;'
+    + ' for(let y=t.body.y;y<t.body.y+t.body.height;y++) for(let x=t.body.x;x<t.body.x+t.body.width;x++) if(a.cell(x,y)!==((inside(t.authoredHole,x,y)||inside(t.openChannel,x,y))?0:44)) body=false;'
+    + ' const wet=f.suspensionControl, contacts=Object.values(f.contacts||{}); return { ok: f.version===1 && body'
+    + ' && [t.core,t.crown,t.pocket,f.fineTopology.column,f.fineTopology.line,f.movingControl].every(r=>exact(r,44))'
+    + ' && a.cell(f.fineTopology.isolated.x,f.fineTopology.isolated.y)===44 && exact(t.authoredHole,0) && exact(t.openChannel,0) && exact(f.guardedBlank,0)'
+    + ' && Object.values(f.materialControls||{}).every(r=>exact(r,r.material)) && contacts.every(c=>exact(c.bgla,44)&&exact(c.other,c.otherMaterial))'
+    + ' && a.cell(wet.bglaProbe.x,wet.bglaProbe.y)===44 && a.cell(wet.waterProbe.x,wet.waterProbe.y)===2'
+    + ' && (()=>{for(let y=f.movingControl.y;y<f.movingControl.y+f.movingControl.height;y++) for(let x=f.movingControl.x;x<f.movingControl.x+f.movingControl.width;x++){const v=a.velocity(x,y);if(v[0]!==f.movingControl.velocityX||v[1]!==f.movingControl.velocityY)return false;}return true;})()'
+    + ' && (()=>{const w=t.wallCoexistence;for(let y=w.region.y;y<w.region.y+w.region.height;y++)for(let x=w.region.x;x<w.region.x+w.region.width;x++){const bx=Math.floor((x-w.region.x)/w.blockSize),by=Math.floor((y-w.region.y)/w.blockSize),expected=(bx+by)%2===w.occupiedParity?f.conductiveWall:0;if(a.wall(x,y)!==expected||a.cell(x,y)!==44)return false;}return true;})() }; })()');
+}
+
+function assertBglaBodyVfxMaterialPlane(plane, fixture, label) {
+  const expected = fixture.expected, controls = Object.values(fixture.materialControls ?? {});
+  assert(plane.occupied === expected.occupiedCells
+    && plane.materialCounts[44] === expected.bglaCells && plane.materialCounts[2] === expected.waterCells
+    && plane.materialCounts[78] === expected.rockCells && plane.materialCounts[23] === expected.metalCells
+    && controls.length === 10 && controls.every((entry) => (
+      plane.materialCounts[entry.material] === expected.cellsPerMaterialControl
+    )), `${label} changed BGLA/material-control cardinalities (${JSON.stringify({
+      occupied: plane.occupied, counts: plane.materialCounts, expected,
+    })})`);
+}
+
+async function bglaBodyVfxWallDigest(cdp, fixture) {
+  return evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__; const wall = ${JSON.stringify(fixture.target.wallCoexistence)};
+    let occupied = 0, expectedOccupied = 0, mismatches = 0, matterMismatches = 0;
+    for (let y = wall.region.y; y < wall.region.y + wall.region.height; y++) for (let x = wall.region.x; x < wall.region.x + wall.region.width; x++) {
+      const bx = Math.floor((x - wall.region.x) / wall.blockSize), by = Math.floor((y - wall.region.y) / wall.blockSize);
+      const expected = (bx + by) % 2 === wall.occupiedParity ? ${fixture.conductiveWall} : 0;
+      occupied += Number(audit.wall(x, y) === ${fixture.conductiveWall}); expectedOccupied += Number(expected === ${fixture.conductiveWall});
+      mismatches += Number(audit.wall(x, y) !== expected); matterMismatches += Number(audit.cell(x, y) !== 44);
+    }
+    return { occupied, expectedOccupied, mismatches, matterMismatches };
+  })()`);
+}
+
+async function bglaBodyVfxVelocityDigest(cdp, fixture) {
+  return evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__; const rect = ${JSON.stringify(fixture.movingControl)};
+    let cells = 0, mismatches = 0;
+    for (let y = rect.y; y < rect.y + rect.height; y++) for (let x = rect.x; x < rect.x + rect.width; x++) {
+      const velocity = audit.velocity(x, y); cells++;
+      mismatches += Number(velocity[0] !== rect.velocityX || velocity[1] !== rect.velocityY);
+    }
+    return { cells, expectedCells: rect.width * rect.height, mismatches };
+  })()`);
+}
+
+async function bglaBodyVfxAuxiliaryDigest(cdp, fixture) {
+  return evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__; const fixture = ${JSON.stringify(fixture)};
+    const range = (rect) => { let min = 255, max = 0;
+      for (let y = rect.y; y < rect.y + rect.height; y++) for (let x = rect.x; x < rect.x + rect.width; x++) {
+        const value = audit.presentationAuxiliary(x, y); min = Math.min(min, value); max = Math.max(max, value);
+      } return { min, max }; };
+    return { stable: { core: range(fixture.target.core), crown: range(fixture.target.crown), pocket: range(fixture.target.pocket) },
+      moving: range(fixture.movingControl) };
+  })()`);
+}
+
+async function bglaBodyVfxWetDigest(cdp, fixture) {
+  return evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__; const wet = ${JSON.stringify(fixture.suspensionControl)};
+    let bgla = 0, water = 0, other = 0;
+    const points = new Set(wet.bglaPoints.map(({ x, y }) => x + ',' + y));
+    let mismatches = 0;
+    for (let y = wet.region.y; y < wet.region.y + wet.region.height; y++) for (let x = wet.region.x; x < wet.region.x + wet.region.width; x++) {
+      const material = audit.cell(x, y); if (material === 44) bgla++; else if (material === 2) water++; else other++;
+      mismatches += Number(material !== (points.has(x + ',' + y) ? 44 : 2));
+    }
+    return { bgla, water, other, mismatches,
+      bglaProbe: audit.cell(wet.bglaProbe.x, wet.bglaProbe.y), waterProbe: audit.cell(wet.waterProbe.x, wet.waterProbe.y) };
+  })()`);
+}
+
+async function bglaBodyVfxStateDigest(cdp, fixture) {
+  return evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__; let nonZero = 0;
+    for (let y = 0; y < audit.height; y++) for (let x = 0; x < audit.width; x++) nonZero += Number(audit.presentationState(x, y) !== 0);
+    return { nonZero, expectedNonZero: ${JSON.stringify(fixture.expected.presentationStateCells ?? 0)} };
+  })()`);
+}
+
+function bglaBodyVfxTargetRegions(fixture) {
+  const rect = (name, r) => ({ name, target: true, x: r.x + r.width / 2, y: r.y + r.height / 2,
+    radiusX: Math.max(.35, r.width / 2 - .2), radiusY: Math.max(.35, r.height / 2 - .2) });
+  return [rect('BGLACore', fixture.target.core), rect('BGLACrown', fixture.target.crown), rect('BGLAPocket', fixture.target.pocket)];
+}
+
+function bglaBodyVfxTextureRegions(fixture) {
+  return bglaBodyVfxTargetRegions(fixture).map((region) => ({ ...region,
+    support: { kind: 'semantic', materials: [fixture.target.material] },
+  }));
+}
+
+function bglaBodyVfxControlRegions(fixture) {
+  const point = (name, p) => p && ({ name, x: Math.floor(p.x) + .5, y: Math.floor(p.y) + .5, radius: 0 });
+  const center = (name, r) => point(name, { x: r.x + Math.floor(r.width / 2), y: r.y + Math.floor(r.height / 2) });
+  const values = [center('BGLAHole', fixture.target.authoredHole), center('BGLAChannel', fixture.target.openChannel),
+    center('ThinColumn', fixture.fineTopology.column), center('ThinLine', fixture.fineTopology.line), point('Isolated', fixture.fineTopology.isolated),
+    center('Moving', fixture.movingControl), point('Wall', fixture.target.wallCoexistence.wallProbe), point('WallClear', fixture.target.wallCoexistence.clearProbe),
+    point('WetBGLA', fixture.suspensionControl.bglaProbe), point('WetWater', fixture.suspensionControl.waterProbe), center('Blank', fixture.guardedBlank)];
+  for (const [name, r] of Object.entries(fixture.materialControls || {})) values.push(center('Material' + name, r));
+  for (const [name, c] of Object.entries(fixture.contacts || {})) { values.push(point('BGLA' + name, c.bglaProbe)); values.push(point(name, c.otherProbe)); }
+  return values.filter(Boolean);
+}
+
+async function writeBglaBodyVfxScreenshots(source, scale, disabled, enabled) {
+  const paths = {
+    off: variantScreenshotPath(source, `e52-bgla-body-${scale}x-off`),
+    on: variantScreenshotPath(source, `e52-bgla-body-${scale}x-on`),
+  };
+  await writeFile(paths.off, Buffer.from(disabled.capture.capture.data, 'base64'));
+  await writeFile(paths.on, Buffer.from(enabled.capture.capture.data, 'base64'));
+  return paths;
+}
+
+async function auditEightXBglaBodyVfxExclusion(cdp, dpr) {
+  await setDesktopMetrics(cdp, 1280, 720, dpr);
+  const query = new URLSearchParams({ scene: 'render-lab', inputAudit: '1', blankAudit: '1', auditStage: 'eight-bgla-body',
+    bglaBodyVfxAudit: '1', renderScale: '8', renderLook: 'realistic', powderBodyVfx: '1', bglaBodyVfx: '1', c4BodyVfx: '0',
+    snowpackBodyVfx: '0', quartzMesostructureVfx: '0', volumeVfx: '0', liquidBodyVfx: '0', liquidSurfaceVfx: '0', gasBodyVfx: '0', gasMotionVfx: '0' });
+  for (const selector of BGLA_BODY_VFX_ISOLATED_SELECTORS) query.set(selector, '0');
+  await cdp.send('Page.navigate', { url: AUDIT_BASE_URL + '?' + query });
+  const deadline = Date.now() + EIGHT_X_PRESENTATION_DEADLINE_MS;
+  await waitFor(() => evaluate(cdp, 'new URLSearchParams(location.search).get("renderScale") === "8" && Boolean(window.__ANIFOR_INPUT_AUDIT__)'),
+    remainingDeadlineMs(deadline, 'true-8x E52 API'), 'true-8x E52 API');
+  const backend = await waitForEightXTerminalBackend(cdp, 'true-8x E52', deadline);
+  assertEightXWebGLBackend(backend, 'true-8x E52');
+  const geometry = await waitForStableCanvas(cdp, 1280, 720, undefined, Math.min(45_000, remainingDeadlineMs(deadline, 'true-8x E52 geometry')), 'true-8x E52 geometry');
+  assert(geometry.backing.width === WORLD_WIDTH * 8 && geometry.backing.height === WORLD_HEIGHT * 8 && geometry.outputScale === '8',
+    'true-8x E52 lost exact backing');
+  const state = await evaluate(cdp, `(() => {
+    const c = document.querySelector('canvas.semantic-field-canvas');
+    const isolated = ${JSON.stringify(BGLA_BODY_VFX_ISOLATED_SELECTORS)};
+    return c ? { renderer: c.dataset.renderer, look: c.dataset.renderLook,
+      selector: c.dataset.bglaBodyVfx, powderBodyVfx: c.dataset.powderBodyVfx,
+      hdr: c.dataset.hdrPipeline, reason: c.dataset.hdrPipelineReason,
+      bloom: c.dataset.bloomBacking ?? null,
+      isolatedSelectors: Object.fromEntries(isolated.map((name) => [name, c.dataset[name]]))
+    } : undefined;
+  })()`);
+  assert(state?.renderer === 'semantic-field-webgl' && state.look === 'realistic'
+    && state.selector === 'inactive' && state.powderBodyVfx === 'inactive'
+    && state.hdr === 'inactive' && state.reason === 'scale-8' && state.bloom === null
+    && Object.values(state.isolatedSelectors).every((selector) => selector === 'inactive'),
+    'true-8x E52 selector/resource exclusion failed: ' + JSON.stringify(state));
+  // Deliberately do not stage E52's 101,593-cell fixture at true 8x. Observe
+  // the blank material plane, then require a completed compact GPU frame.
+  const materialPlane = await evaluate(cdp,
+    'window.__ANIFOR_INPUT_AUDIT__.materialPlaneDigest()');
+  assert(materialPlane.occupied === 0 && (materialPlane.materialCounts[44] ?? 0) === 0,
+    'true-8x E52 unexpectedly uploaded its dense fixture: ' + JSON.stringify(materialPlane));
+  const semanticBefore = await hdrVfxSemanticDigest(cdp);
+  const timingBudget = remainingDeadlineMs(deadline, 'true-8x E52 GPU completion');
+  const timing = await auditWebGLPresentationTiming(
+    cdp, 1, Math.min(12_000, timingBudget), timingBudget, 1,
+  );
+  assert(['gpu-query', 'gpu-fence', 'gpu-finish'].includes(timing.source),
+    'true-8x E52 did not complete GPU work: ' + JSON.stringify(timing));
+  const semanticAfter = await hdrVfxSemanticDigest(cdp);
+  assertHdrVfxSemanticEquality(semanticBefore, semanticAfter, 'true-8x E52 GPU completion');
+  return { geometry, backend, state, materialPlane, fixtureUploaded: false,
+    semanticStable: true, timing };
+}
 
 /** E50: exact C4 granular body with no native presentation-state contract. */
 async function auditC4BodyVfxExperiment(cdp, mode, dpr) {
@@ -38700,7 +39264,7 @@ async function navigateQuartzMesostructureVfxState(cdp, mode, scale, enabled, la
     volumeVfx: '0', liquidBodyVfx: '0', liquidSurfaceVfx: '0', gasBodyVfx: '0',
     gasMotionVfx: '0', powderBodyVfx: '1', sootyPowderBodyVfx: '0',
     thermiteBodyVfx: '0', snowpackBodyVfx: '0',
-    quartzMesostructureVfx: enabled ? '1' : '0', c4BodyVfx: '0',
+    quartzMesostructureVfx: enabled ? '1' : '0', c4BodyVfx: '0', bglaBodyVfx: '0',
     powderLightVfx: '0', powderSolidContactVfx: '0', translucentEdgeVfx: '0',
     organicSubsurfaceVfx: '0', wetSedimentVfx: '0', gasLightVfx: '0',
     liquidSolidMeniscusVfx: '0', metalWaterContactVfx: '0', gasCoreDepthVfx: '0',
@@ -39227,7 +39791,7 @@ async function auditEightXQuartzMesostructureVfxExclusion(cdp, dpr) {
     renderLook: 'realistic', volumeVfx: '0', liquidBodyVfx: '0',
     liquidSurfaceVfx: '0', gasBodyVfx: '0', gasMotionVfx: '0',
     powderBodyVfx: '1', sootyPowderBodyVfx: '0', thermiteBodyVfx: '0',
-    snowpackBodyVfx: '0', quartzMesostructureVfx: '1', c4BodyVfx: '0',
+    snowpackBodyVfx: '0', quartzMesostructureVfx: '1', c4BodyVfx: '0', bglaBodyVfx: '0',
     powderLightVfx: '0',
     powderSolidContactVfx: '0', translucentEdgeVfx: '0', organicSubsurfaceVfx: '0',
     wetSedimentVfx: '0', gasLightVfx: '0', liquidSolidMeniscusVfx: '0',
