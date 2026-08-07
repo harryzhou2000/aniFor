@@ -359,6 +359,25 @@ export function resolvePlasmaCoreVfxEnabled(
 }
 
 /**
+ * E67 gives exact Fire a temperature-stratified luminous body and a restrained
+ * velocity-shaped tongue inside the normal HDR presenter. It is independent of
+ * Plasma's E16 containment and audit URLs keep their frozen reference unless
+ * they explicitly request this child.
+ */
+export function resolveFireFlameVfxEnabled(
+  look: RenderLook,
+  search = globalThis.location?.search ?? '',
+): boolean {
+  if (look === 'classic') return false;
+  const parameters = new URLSearchParams(search);
+  const requested = parameters.get('fireFlameVfx');
+  if (requested === '0' || requested === 'off' || requested === 'false') return false;
+  if (requested === '1' || requested === 'on' || requested === 'true') return true;
+  if (parameters.get('inputAudit') === '1') return false;
+  return true;
+}
+
+/**
  * Gives a genuinely thick opaque SmoothRigid body a restrained bevel, crown,
  * and pocket response. Normal WebGL reuses the existing exact-species solid
  * depth and analytic-light scalars; the independent selector keeps E17

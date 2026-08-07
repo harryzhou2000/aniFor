@@ -77,6 +77,7 @@ import {
   resolveOilVolumeFinishVfxEnabled,
   resolveWaterBodyVfxEnabled,
   resolveWaterVolumeRecessionVfxEnabled,
+  resolveFireFlameVfxEnabled,
   resolvePlasmaCoreVfxEnabled,
   resolveCeramicGlazeVfxEnabled,
   resolvePlatinumBodyVfxEnabled,
@@ -3302,6 +3303,7 @@ uniform float uNobleGasBillowVfx;
 uniform float uNobleGasPrismVfx;
 uniform float uSmokeSoftnessVfx;
 uniform float uSmokeBillowDepthVfx;
+uniform float uFireFlameVfx;
 uniform float uPlasmaCoreVfx;
 uniform float uSolidBodyVfx;
 uniform float uRadioactiveSolidBodyVfx;
@@ -6187,6 +6189,61 @@ void main() {
       toneMapEnergy(energyComposed),
       smoothstep(0.08, 0.68, core)
     );
+    // E67: exact Fire receives a temperature-stratified luminous body instead
+    // of inheriting only the generic Energy carrier palette. Reuse the already
+    // live semantic density, compact emission support, packed velocity,
+    // blackbody ramp, flow wave, pulse, and analytic normal. The hot interior
+    // gains yellow-white radiance, a cooler pocket keeps red/orange absorption,
+    // and genuinely upward native flow lifts its connected tongue body and
+    // exposed shoulder.
+    // This changes RGB only and adds no sample, texture, field, pass, target,
+    // upload, allocation, clock, noise source, or compact true-8x branch.
+    if (uFireFlameVfx > 0.5 && uHDRVfx > 0.5 && material == 4.0
+      && surfaceOnly < 0.5 && halo < 0.5 && wall < 0.5
+      && traits < 0.5 && foreignMatterContact < 0.5
+      && unlikeMaterialContact < 0.5) {
+      float fireTemperatureByte = floor(materialTemperature * 255.0 + 0.5);
+      float fireThermalSupport = smoothstep(32.0, 48.0, fireTemperatureByte);
+      // shape.w is the exact four-sample same-owner support already returned
+      // by occupancyShape. Requiring its full 2x2 neighbourhood keeps a lone
+      // particle or one-cell flame strand on the generic Energy path without
+      // adding another semantic fetch. The broad body and tapered tongue keep
+      // an interior carrier; their post-composite bloom supplies the soft lip.
+      float fireBodyTopology = smoothstep(2.5, 3.5, shape.w);
+      float fireBodySupport = fireThermalSupport * cohesiveEnergy
+        * smoothstep(0.42, 0.88, core) * fireBodyTopology;
+      float fireHotCore = fireBodySupport
+        * smoothstep(74.0, 142.0, fireTemperatureByte);
+      float fireCoolPocket = fireBodySupport
+        * (1.0 - smoothstep(56.0, 88.0, fireTemperatureByte));
+      // Let the established HDR thermal tail perform the one authoritative
+      // logarithmic blackbody evaluation. This compact hue ramp uses the
+      // already-live heat scalar, avoiding duplicate log/pow work at 4x.
+      vec3 fireThermalColor = mix(
+        vec3(1.08, 0.25, 0.035), vec3(1.04, 0.88, 0.62),
+        smoothstep(0.18, 0.92, heat)
+      );
+      float fireBodyGlow = fireBodySupport
+        * smoothstep(48.0, 88.0, fireTemperatureByte);
+      color += (vec3(1.18) - clamp(color, 0.0, 1.18))
+        * fireThermalColor * (fireBodyGlow * 0.045 + fireHotCore * 0.34);
+      color *= vec3(1.0) - vec3(0.018, 0.050, 0.092) * fireCoolPocket;
+
+      float fireUpwardFlow = smoothstep(0.14, 0.72, -velocity.y);
+      float fireFlowFacing = max(
+        smoothstep(
+          0.04, 0.68,
+          max(0.0, dot(normal.xy, velocity)) / max(length(velocity), 0.0001)
+        ),
+        max(edge * 0.30, core * 0.72)
+      );
+      float fireTonguePattern = smoothstep(-0.50, 0.72, flowWave);
+      float fireTongueShoulder = fireThermalSupport * cohesiveEnergy * fireBodyTopology
+        * fireUpwardFlow * fireFlowFacing * mix(0.55, 1.0, edge)
+        * fireTonguePattern * (0.76 + pulse * 0.24);
+      color += (vec3(1.20) - clamp(color, 0.0, 1.20))
+        * vec3(1.00, 0.54, 0.16) * fireTongueShoulder * 0.38;
+    }
     // E16: a broad exact Plasma body should read as contained luminous matter,
     // not a uniformly violet marker. The already-sampled emission alpha proves
     // a cohesive body; two static world-anchored macro lobes then form a broad
@@ -11398,6 +11455,11 @@ export class PixiFieldPresenter {
     // and compact true 8x keep the accepted E27 presentation.
     const smokeBillowDepthVfxEnabled = outputScale < 8
       && resolveSmokeBillowDepthVfxEnabled(renderLook);
+    // E67 is exact-Fire RGB arithmetic over the normal shader's established
+    // energy, temperature, velocity, and emission evidence. Compact true 8x
+    // retains its proven energy path and declares no E67 selector or branch.
+    const fireFlameVfxEnabled = outputScale < 8
+      && resolveFireFlameVfxEnabled(renderLook);
     // E16 is RGB arithmetic over normal WebGL's existing semantic Energy core
     // and centre emission sample. The compact true-8x shader has no selector or
     // parallel branch and retains its established register/resource budget.
@@ -11588,6 +11650,7 @@ export class PixiFieldPresenter {
       uNobleGasPrismVfx: { value: nobleGasPrismVfxEnabled ? 1 : 0, type: 'f32' },
       uSmokeSoftnessVfx: { value: smokeSoftnessVfxEnabled ? 1 : 0, type: 'f32' },
       uSmokeBillowDepthVfx: { value: smokeBillowDepthVfxEnabled ? 1 : 0, type: 'f32' },
+      uFireFlameVfx: { value: fireFlameVfxEnabled ? 1 : 0, type: 'f32' },
       uPlasmaCoreVfx: { value: plasmaCoreVfxEnabled ? 1 : 0, type: 'f32' },
       uSolidBodyVfx: { value: solidBodyVfxEnabled ? 1 : 0, type: 'f32' },
       uRadioactiveSolidBodyVfx: {
@@ -11868,6 +11931,7 @@ export class PixiFieldPresenter {
       this.uniforms.uniforms.uNobleGasPrismVfx = 0;
       this.uniforms.uniforms.uSmokeSoftnessVfx = 0;
       this.uniforms.uniforms.uSmokeBillowDepthVfx = 0;
+      this.uniforms.uniforms.uFireFlameVfx = 0;
       this.uniforms.uniforms.uPlasmaCoreVfx = 0;
       this.uniforms.uniforms.uSolidBodyVfx = 0;
       this.uniforms.uniforms.uRadioactiveSolidBodyVfx = 0;
@@ -11956,6 +12020,7 @@ export class PixiFieldPresenter {
             || new URLSearchParams(location.search).get('smokeSoftnessVfxAudit') === '1'
             || new URLSearchParams(location.search).get('smokeBillowDepthVfxAudit') === '1'
             || new URLSearchParams(location.search).get('plasmaCoreVfxAudit') === '1'
+            || new URLSearchParams(location.search).get('fireFlameVfxAudit') === '1'
             || new URLSearchParams(location.search).get('solidBodyVfxAudit') === '1'
             || new URLSearchParams(location.search).get('radioactiveSolidBodyVfxAudit') === '1'
             || new URLSearchParams(location.search).get('vibrMacroReliefVfxAudit') === '1'
@@ -12062,6 +12127,9 @@ export class PixiFieldPresenter {
     ) > 0.5 ? 'active' : 'inactive';
     presenter.app.canvas.dataset.smokeBillowDepthVfx = Number(
       presenter.uniforms.uniforms.uSmokeBillowDepthVfx
+    ) > 0.5 ? 'active' : 'inactive';
+    presenter.app.canvas.dataset.fireFlameVfx = Number(
+      presenter.uniforms.uniforms.uFireFlameVfx
     ) > 0.5 ? 'active' : 'inactive';
     presenter.app.canvas.dataset.plasmaCoreVfx = Number(
       presenter.uniforms.uniforms.uPlasmaCoreVfx
@@ -13661,6 +13729,7 @@ export class PixiFieldPresenter {
         this.uniforms.uniforms.uNobleGasPrismVfx = 0;
         this.uniforms.uniforms.uSmokeSoftnessVfx = 0;
         this.uniforms.uniforms.uSmokeBillowDepthVfx = 0;
+        this.uniforms.uniforms.uFireFlameVfx = 0;
         this.uniforms.uniforms.uPlasmaCoreVfx = 0;
         this.uniforms.uniforms.uSolidBodyVfx = 0;
         this.uniforms.uniforms.uRadioactiveSolidBodyVfx = 0;
@@ -13725,6 +13794,7 @@ export class PixiFieldPresenter {
         this.app.canvas.dataset.smokeSoftnessVfx = 'inactive';
         this.app.canvas.dataset.smokeBillowDepthVfx = 'inactive';
         this.app.canvas.dataset.plasmaCoreVfx = 'inactive';
+        this.app.canvas.dataset.fireFlameVfx = 'inactive';
         this.app.canvas.dataset.solidBodyVfx = 'inactive';
         this.app.canvas.dataset.radioactiveSolidBodyVfx = 'inactive';
         this.app.canvas.dataset.vibrMacroReliefVfx = 'inactive';

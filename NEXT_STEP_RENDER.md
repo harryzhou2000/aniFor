@@ -2350,7 +2350,7 @@ next production 4× survey then selected Wood/PLNT as the largest remaining
   coverage `.971`, macro range `50`, zero dark/clipped fraction, and exact
   semantics across the full composed matrix.
 
-**Next visual experiments:** E03–E66 provide accepted liquid body/surface,
+**Next visual experiments:** E03–E67 provide accepted liquid body/surface,
 stable-gas, coherent-gas-motion, powder-depth, and powder-local-light
 checkpoints plus exact resting contact grounding, Glass/Ice transmission, and
 state-aware Wax/PLNT subsurface response, composed wet-mineral optics,
@@ -2362,7 +2362,7 @@ Glass selective transmission, exact Oil amber-crown/cool-pocket body optics,
 an exact ROCK matte-body correction over E17, lower-anisotropy exact-Water
 depth-light recomposition, exact Noble Gas pearlescent billow depth, exact
 Wood/PLNT mesostructure, exact Smoke soft soot volume, and exact Smoke
-billow-depth. E27's final
+billow-depth, plus an exact temperature- and velocity-driven Fire identity. E27's final
 canonical 2× Smoke result is luma deviation `2.22`, microcontrast `.39`, macro
 range `10`, luma range `14`, full support recall, and no clipping. E28 adds
 exact Wood/PLNT pigment/body depth without disturbing E20/E26 topology or
@@ -2780,7 +2780,7 @@ is `24.657/23.679/22.240` at 1×/2×/4×, with full support and zero dark/clippe
 fraction. Do not alter E48 from candidate-rank evidence; its focused exact-owner
 fixture remains the acceptance contract. Choose any later experiment only from
 a new visible fit-view diagnosis. Preserve the E14 1× stencil snap and all
-E01–E66 selectors and controls.
+E01–E67 selectors and controls.
 
 E65 is the first accepted Phase-2 velocity-reactive liquid checkpoint. It is a
 strict normal-WebGL child of E08/E03, independently selectable with
@@ -2835,8 +2835,36 @@ HDR inactive for `scale-8`, keep the dense fixture absent, present exact
 4896×3072 WebGL, and complete the canonical GPU-fence proof while preserving
 the recovery contract (accepted full-matrix fence `5.2063 s`, zero browser
 errors). Detached spray remains deferred until a real air-side state/support
-source exists. The next recommended visual experiment is an exact-owner Fire
-blackbody/velocity-tongue identity; it is not implemented yet.
+source exists.
+
+E67 is the accepted exact-Fire temperature/velocity identity checkpoint,
+independently selectable with `?fireFlameVfx=0|1`. Normal 1×–4× WebGL HDR
+reuses the existing quantized semantic temperature, cohesive Energy/emission
+support, packed native velocity, flow/pulse carrier, analytic normal, and the
+four-sample same-owner count already returned by `occupancyShape`. Requiring a
+full 2×2 exact-Fire neighbourhood preserves one-cell strands and isolated Fire
+while broad bodies gain a hot yellow-white core, cool orange-red absorption,
+and an additional warm lifted tongue only under genuine upward velocity. The
+effect changes RGB only and adds one uniform but no sample, sampler, texture,
+field, pass, target, upload, allocation, scheduler stage, new clock/noise,
+alpha, support, silhouette, ownership, topology, or physics decision. Canvas
+and compact true 8× remain E67-inactive.
+
+`npm run audit:vfx:fire-flame` owns topology-identical paused still/moving
+fixtures with 48,833 Fire cells and exactly 4,484 moving Fire velocity cells.
+At 1×/2×/4× the hot-core RGB RMS is `9.80/9.78/9.77`, the cool-pocket response
+is `1.80/1.80/1.80`, the moving tongue is `4.98/5.03/5.05`, and the matched
+still tongue is `1.51/1.52/1.51`; maximum cross-scale RGB/spatial drift is
+`.07/.109`. Every per-mode off→on→off proof preserves exact semantic,
+material, temperature, wall, velocity, alpha, and support state and a
+byte-identical repeated-off framebuffer. Sparse and disjoint non-Fire controls
+are RGB-exact. The post-HDR composite separately bounds Fire/contact and wall
+spill to eight bytes (accepted peak `6`) and empty hole/channel bloom to three
+bytes (accepted probe peak `0`) while their alpha/support remain exact. Requested-on
+true 8× reports E67/HDR inactive with `scale-8`, no bloom or dense fixture,
+exact 4896×3072 WebGL, and a real GPU fence (accepted full-matrix run
+`3.1667 s`, zero browser errors). Choose a later owner/effect from a fresh
+composed fit-view diagnosis rather than widening E67 by resemblance.
 
 ## Phase 1 — HDR pipeline & lighting core (biggest visual payoff)
 
@@ -2855,7 +2883,7 @@ blackbody/velocity-tongue identity; it is not implemented yet.
 - **Screen-space fluid rendering** (Müller-style, the classic 2007 technique): liquid coverage → depth/thickness buffer → **curvature flow smoothing** for a real meniscus → reconstruct normals → **Fresnel reflection + refraction of the background/wall pattern behind** → specular glints. Your current per-species depth gradient is the seed of the thickness buffer.
 - **Foam, spray & meniscus:** E65 supplies a bounded exact-Water whitecap/refraction response from packed native velocity on already-connected E08 surfaces. E66 adds an independent optical curvature finish for resting convex crests and concave inlets; it does not smooth geometric alpha. Detached spray support, divergence-aware foam persistence, and non-Water family treatments remain open and must retain exact topology controls.
 - **Gases as participating media:** extend your density/colour field with a **noise-animated volume** — FBM curl noise advected by the velocity field, modulated by density, lit by the dynamic lights (light shafts through smoke are extremely high-impact). Approximate with 2–3 octave noise at half res, upsampled.
-- **Fire:** the next recommended visual experiment is an exact-owner blackbody core plus velocity-shaped tongue identity. Keep procedural licking edges and ember streaks subordinate to authentic temperature/velocity state; this work is not yet implemented.
+- **Fire:** E67 now adds an exact-owner temperature-stratified body and velocity-shaped tongue on the normal HDR path. Its procedural flow remains subordinate to authentic temperature/velocity state, sparse Fire stays discrete, and compact true 8× keeps the established generic Energy presentation. Persistent advected flame volume, ember/spray support, and dynamic light transport remain separate future experiments.
 
 ## Phase 3 — Material delicacy
 

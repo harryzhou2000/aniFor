@@ -13,7 +13,7 @@ powder, solid, liquid, gas, energy, and contact scenes across Canvas and WebGL a
 mobile gestures, save/load, CI, and Pages deployment as protected regression
 contracts rather than the primary feature stream.
 
-The accepted visual experiment ladder now runs through E66. E12 is the
+The accepted visual experiment ladder now runs through E67. E12 is the
 species-safe Sand/Clay/Concrete wet-sediment checkpoint; preserve its exact
 aqueous owner/stability proof, split moving-powder/stationary-Water control,
 Local/Grains no-op, fine structures, authored gaps, Canvas fallback, and true
@@ -1397,8 +1397,43 @@ must report E03/E08/E65/E66/HDR inactive for `scale-8`, present exact
 4896×3072 WebGL, and complete the canonical GPU-fence proof while retaining
 the recovery contract (accepted full-matrix fence `5.2063 s`, zero browser
 errors). Detached spray remains deferred until real air-side state/support
-exists. The next recommended visual experiment is an exact-owner Fire
-blackbody/velocity-tongue identity; it is not yet implemented.
+exists.
+
+E67 is the accepted normal-WebGL HDR-only exact-Fire identity checkpoint,
+independently measurable with `?fireFlameVfx=0|1`. It reuses the already-live
+quantized semantic temperature, cohesive Energy/emission support, packed native
+velocity, flow/pulse carrier, analytic normal, and `occupancyShape`'s existing
+four-sample support. A full 2×2 exact-Fire neighbourhood is required, keeping a
+one-cell strand and isolated Fire on the generic Energy path. Hot Fire trades a
+few saturated-red bytes for a yellow-white green/blue lift, cool Fire receives
+bounded red/orange absorption, and genuinely upward velocity adds a broad warm
+tongue over the temperature-matched still response. This is RGB-only optical
+identity: add one selector uniform but no sample, sampler, texture, field, pass,
+target, upload, allocation, scheduler stage, new clock/noise source, alpha,
+support, silhouette, ownership, topology, or physics decision. Canvas and the
+compact true-8× fragment remain E67-inactive.
+
+`npm run audit:vfx:fire-flame` owns topology-identical paused still/moving
+fixtures with 48,833 Fire cells and exactly 4,484 Fire velocity cells in moving
+mode; material, temperature, native-wall, holes/channels, and every non-Fire
+owner are otherwise byte-identical. At 1×/2×/4×, hot-core RGB RMS is
+`9.80/9.78/9.77`, cool-pocket RGB RMS is `1.80/1.80/1.80`, moving-tongue RGB
+RMS is `4.98/5.03/5.05`, and the temperature-matched still tongue remains
+`1.51/1.52/1.51`. Cross-scale drift is at most `.109` spatial RMS and `.07`
+RGB RMS. Each still or moving off→on→off sequence preserves exact semantic,
+material, temperature, wall, velocity, alpha, and support state and has a
+byte-identical repeated-off framebuffer. Sparse Fire, disjoint ELEC/Plasma/
+Lava/Smoke, and guarded blank controls are exact. Because HDR bloom follows the
+guarded semantic branch, direct Fire/Smoke, Fire/Metal, and co-located-wall
+probes may receive at most eight final RGB bytes (accepted peak `6`), while
+authored holes/channels retain exact zero support with at most three bloom bytes
+(accepted probe peak `0`); both classes repeat at peak zero. Do not describe those
+final-composite probes as RGB-exact. Requested-on true 8× must report E67/HDR
+inactive with `scale-8`, no bloom or dense fixture, exact 4896×3072 WebGL, and a
+real GPU fence (accepted strengthened full-matrix fence `3.1667 s`, zero browser errors).
+Select any E68 owner/effect only from a fresh composed fit-view diagnosis; do
+not widen E67 to Plasma, ELEC, Lava, Smoke, traits, walls, sparse Fire, or the
+compact shader by visual resemblance.
 
 Visual-audit lesson: `inputAudit=1` disables opt-in child selectors unless the
 composed route names them explicitly, so canonical evidence must request and

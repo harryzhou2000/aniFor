@@ -32,6 +32,7 @@
     "audit:vfx:liquid-surface": "npm run build && node scripts/verify-browser-input.mjs --liquid-surface-vfx-only --webgl-only --production-bundle --capture-dpr=1",
     "audit:vfx:liquid-motion": "npm run build && node scripts/verify-browser-input.mjs --liquid-motion-vfx-only --webgl-only --production-bundle --capture-dpr=1",
     "audit:vfx:water-curvature": "npm run build && node scripts/verify-browser-input.mjs --water-curvature-vfx-only --webgl-only --production-bundle --capture-dpr=1",
+    "audit:vfx:fire-flame": "npm run build && node scripts/verify-browser-input.mjs --fire-flame-vfx-only --webgl-only --production-bundle --capture-dpr=1",
     "audit:vfx:gas-body": "npm run build && node scripts/verify-browser-input.mjs --gas-body-vfx-only --webgl-only --production-bundle --capture-dpr=1",
     "audit:vfx:gas-motion": "npm run build && node scripts/verify-browser-input.mjs --gas-motion-vfx-only --webgl-only --production-bundle --capture-dpr=1",
     "audit:vfx:powder-body": "npm run build && node scripts/verify-browser-input.mjs --powder-body-vfx-only --webgl-only --production-bundle --capture-dpr=1",

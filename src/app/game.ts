@@ -54,6 +54,9 @@ import {
   WATER_CURVATURE_VFX_AUDIT, prepareWaterCurvatureVfxFixture,
 } from './water-curvature-vfx-audit';
 import {
+  FIRE_FLAME_VFX_AUDIT, prepareFireFlameVfxFixture,
+} from './fire-flame-vfx-audit';
+import {
   GAS_LIGHT_VFX_AUDIT, prepareGasLightVfxFixture,
 } from './gas-light-vfx-audit';
 import {
@@ -880,6 +883,14 @@ export class Game {
         prepareWaterCurvatureVfxFixture(this.simulation, mode);
         // E66 has authored flow vectors. Synchronize both semantic and
         // velocity projections before the static browser-audit capture.
+        this.renderer.synchronizeFixtureMaterialPlane();
+        this.renderer.invalidateDynamicPresentation();
+      },
+      fireFlameVfxFixture: () => FIRE_FLAME_VFX_AUDIT,
+      prepareFireFlameVfxFixture: (mode) => {
+        prepareFireFlameVfxFixture(this.simulation, mode);
+        // E67 owns native temperature and velocity state in addition to its
+        // semantic plane, so refresh every packed presentation channel.
         this.renderer.synchronizeFixtureMaterialPlane();
         this.renderer.invalidateDynamicPresentation();
       },

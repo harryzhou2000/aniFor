@@ -37,6 +37,7 @@ import {
   resolveNitroBodyVfxEnabled,
   resolveOilVolumeFinishVfxEnabled,
   resolveOrganicSubsurfaceVfxEnabled,
+  resolveFireFlameVfxEnabled,
   resolvePlasmaCoreVfxEnabled,
   resolvePlatinumBodyVfxEnabled,
   resolveRockMesostructureVfxEnabled,
@@ -344,6 +345,25 @@ describe('resolveRenderLook', () => {
     expect(resolvePlasmaCoreVfxEnabled(
       'neon-lab', '?volumeVfx=1&plasmaCoreVfx=off',
     )).toBe(false);
+  });
+
+  it('keeps exact Fire flame identity inside normal HDR looks and frozen audits', () => {
+    expect(resolveFireFlameVfxEnabled('classic', '?fireFlameVfx=on')).toBe(false);
+    expect(resolveFireFlameVfxEnabled('realistic', '')).toBe(true);
+    expect(resolveFireFlameVfxEnabled('neon-lab', '')).toBe(true);
+    expect(resolveFireFlameVfxEnabled('realistic', '?inputAudit=1')).toBe(false);
+    expect(resolveFireFlameVfxEnabled(
+      'realistic', '?inputAudit=1&fireFlameVfx=true',
+    )).toBe(true);
+    for (const disabled of ['0', 'off', 'false']) {
+      expect(resolveFireFlameVfxEnabled('realistic', `?fireFlameVfx=${disabled}`)).toBe(false);
+    }
+    for (const enabled of ['1', 'on', 'true']) {
+      expect(resolveFireFlameVfxEnabled('realistic', `?fireFlameVfx=${enabled}`)).toBe(true);
+    }
+    expect(resolveFireFlameVfxEnabled(
+      'realistic', '?volumeVfx=0&plasmaCoreVfx=0&fireFlameVfx=1',
+    )).toBe(true);
   });
 
   it('keeps opaque solid-body depth independently measurable inside HDR looks', () => {

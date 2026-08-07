@@ -84,6 +84,9 @@ import type {
 import type {
   WaterCurvatureVfxAuditSnapshot, WaterCurvatureVfxFixtureMode,
 } from './water-curvature-vfx-audit';
+import type {
+  FireFlameVfxAuditSnapshot, FireFlameVfxFixtureMode,
+} from './fire-flame-vfx-audit';
 import type { GasLightVfxAuditSnapshot } from './gas-light-vfx-audit';
 import type { GasCoreDepthVfxAuditSnapshot } from './gas-core-depth-vfx-audit';
 import type { NobleGasBillowVfxAuditSnapshot } from './noble-gas-billow-vfx-audit';
@@ -266,6 +269,9 @@ export interface BrowserInputAuditApi {
   /** E66 uses the same exact material topology in still/moving forms. */
   waterCurvatureVfxFixture(): WaterCurvatureVfxAuditSnapshot;
   prepareWaterCurvatureVfxFixture(mode: WaterCurvatureVfxFixtureMode): void;
+  /** E67 holds topology fixed while temperature and velocity drive Fire optics. */
+  fireFlameVfxFixture(): FireFlameVfxAuditSnapshot;
+  prepareFireFlameVfxFixture(mode: FireFlameVfxFixtureMode): void;
   gasLightVfxFixture(): GasLightVfxAuditSnapshot;
   prepareGasLightVfxFixture(): void;
   gasCoreDepthVfxFixture(): GasCoreDepthVfxAuditSnapshot;

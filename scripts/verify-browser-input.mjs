@@ -240,6 +240,13 @@ const waterCurvatureVfxOnly = process.argv.includes('--water-curvature-vfx-only'
 if (waterCurvatureVfxOnly && (modes.length !== 1 || modes[0] !== 'webgl')) {
   throw new Error('--water-curvature-vfx-only requires --webgl-only');
 }
+// E67 is an exact-Fire normal-detail optical experiment. Its static/moving
+// fixture keeps topology fixed while authored native temperature and velocity
+// state drive the flame body; compact true 8x remains an explicit exclusion.
+const fireFlameVfxOnly = process.argv.includes('--fire-flame-vfx-only');
+if (fireFlameVfxOnly && (modes.length !== 1 || modes[0] !== 'webgl')) {
+  throw new Error('--fire-flame-vfx-only requires --webgl-only');
+}
 // E04 keeps the atmospheric body experiment separate from both the broad E02
 // treatment and E03's liquid-only optics. It remains normal-detail only.
 const gasBodyVfxOnly = process.argv.includes('--gas-body-vfx-only');
@@ -594,7 +601,7 @@ if (woodTanninVfxOnly && (modes.length !== 1 || modes[0] !== 'webgl')) {
 }
 const focusedVfxOnlyFlags = [
   hdrVfxOnly, volumeVfxOnly, liquidBodyVfxOnly, liquidSurfaceVfxOnly, liquidMotionVfxOnly,
-  waterCurvatureVfxOnly, gasBodyVfxOnly,
+  waterCurvatureVfxOnly, fireFlameVfxOnly, gasBodyVfxOnly,
   gasMotionVfxOnly, powderBodyVfxOnly, powderLightVfxOnly, powderSolidContactVfxOnly,
   translucentEdgeVfxOnly, organicSubsurfaceVfxOnly, wetSedimentVfxOnly, gasLightVfxOnly,
   liquidSolidMeniscusVfxOnly, metalWaterContactVfxOnly, waterMetalTransmissionVfxOnly,
@@ -617,7 +624,7 @@ const focusedVfxOnlyFlags = [
   woodTanninVfxOnly,
 ];
 if (focusedVfxOnlyFlags.filter(Boolean).length > 1) {
-  throw new Error('HDR/volume/liquid-body/liquid-surface/liquid-motion/water-curvature/gas-body/gas-motion/powder-body/powder-light/powder-solid-contact/translucent-edge/organic-subsurface/wet-sediment/gas-light/liquid-solid-meniscus/metal-water-contact/water-metal-transmission/gas-core-depth/plasma-core/solid-body/platinum-body/ceramic-glaze/botanical-body/glass-body/oil-body/rock-roughness/rock-mesostructure/rock-weathered-facet/water-body/water-volume-recession/acid-body/soap-body/nitro-body/sooty-powder-body/thermite-body/snowpack-body/quartz-mesostructure/c4-body/deut-body/hydrogen-body/carbon-dioxide-body/fog-core-diffuse/radioactive-solid-body/iszs-crystalline/iszs-crystal-hierarchy/vibr-macro-relief/noble-gas-billow/noble-gas-prism/smoke-softness/smoke-billow-depth/botanical-mesostructure/wood-bark-relief/botanical-pigment/plant-lamina/plant-lobe-depth/plant-canopy-mass/plant-canopy-tissue/plant-canopy-interlock/plant-canopy-hierarchy/wood-tannin focused audits are mutually exclusive');
+  throw new Error('HDR/volume/liquid-body/liquid-surface/liquid-motion/water-curvature/fire-flame/gas-body/gas-motion/powder-body/powder-light/powder-solid-contact/translucent-edge/organic-subsurface/wet-sediment/gas-light/liquid-solid-meniscus/metal-water-contact/water-metal-transmission/gas-core-depth/plasma-core/solid-body/platinum-body/ceramic-glaze/botanical-body/glass-body/oil-body/rock-roughness/rock-mesostructure/rock-weathered-facet/water-body/water-volume-recession/acid-body/soap-body/nitro-body/sooty-powder-body/thermite-body/snowpack-body/quartz-mesostructure/c4-body/deut-body/hydrogen-body/carbon-dioxide-body/fog-core-diffuse/radioactive-solid-body/iszs-crystalline/iszs-crystal-hierarchy/vibr-macro-relief/noble-gas-billow/noble-gas-prism/smoke-softness/smoke-billow-depth/botanical-mesostructure/wood-bark-relief/botanical-pigment/plant-lamina/plant-lobe-depth/plant-canopy-mass/plant-canopy-tissue/plant-canopy-interlock/plant-canopy-hierarchy/wood-tannin focused audits are mutually exclusive');
 }
 
 const layoutOnly = process.argv.includes('--layout-only');
@@ -704,7 +711,7 @@ const liveScaleOnly = process.argv.includes('--live-scale-only');
 const productionBundle = process.argv.includes('--production-bundle');
 const usesProductionBundle = productionBundle || showcaseScreenshotOnly || composedRankOnly
   || candidateRankOnly || nitroBodyVfxOnly || hdrVfxOnly || volumeVfxOnly || plantCanopyInterlockVfxOnly || plantCanopyHierarchyVfxOnly
-  || liquidBodyVfxOnly || liquidSurfaceVfxOnly || liquidMotionVfxOnly || waterCurvatureVfxOnly || gasBodyVfxOnly || gasMotionVfxOnly
+  || liquidBodyVfxOnly || liquidSurfaceVfxOnly || liquidMotionVfxOnly || waterCurvatureVfxOnly || fireFlameVfxOnly || gasBodyVfxOnly || gasMotionVfxOnly
   || powderBodyVfxOnly || powderLightVfxOnly || powderSolidContactVfxOnly || translucentEdgeVfxOnly || organicSubsurfaceVfxOnly || wetSedimentVfxOnly || gasLightVfxOnly || liquidSolidMeniscusVfxOnly || metalWaterContactVfxOnly || waterMetalTransmissionVfxOnly || gasCoreDepthVfxOnly || plasmaCoreVfxOnly || solidBodyVfxOnly || platinumBodyVfxOnly || ceramicGlazeVfxOnly || botanicalBodyVfxOnly || glassBodyVfxOnly || oilBodyVfxOnly || rockRoughnessVfxOnly || rockMesostructureVfxOnly || rockWeatheredFacetVfxOnly || waterBodyVfxOnly || waterVolumeRecessionVfxOnly || acidBodyVfxOnly || soapBodyVfxOnly || sootyPowderBodyVfxOnly || thermiteBodyVfxOnly || snowpackBodyVfxOnly || quartzMesostructureVfxOnly || c4BodyVfxOnly || bglaBodyVfxOnly || bglaClusterVfxOnly || deutBodyVfxOnly || hydrogenBodyVfxOnly || carbonDioxideBodyVfxOnly || fogCoreDiffuseVfxOnly || radioactiveSolidBodyVfxOnly || iszsCrystallineVfxOnly || iszsCrystalHierarchyVfxOnly || nobleGasBillowVfxOnly || nobleGasPrismVfxOnly || smokeSoftnessVfxOnly || smokeBillowDepthVfxOnly || botanicalMesostructureVfxOnly || woodBarkReliefVfxOnly || botanicalPigmentVfxOnly || plantLaminaVfxOnly || plantLobeDepthVfxOnly || woodTanninVfxOnly || cellularGraphicsOnly || sensorGraphicsOnly
   || unusualPowderGraphicsOnly || earthenPowderGraphicsOnly || explosivePowderGraphicsOnly || unusualSolidGraphicsOnly
   || deviceIdentityGraphicsOnly
@@ -746,6 +753,8 @@ const liquidMotionVfxArgument = process.argv.find((argument) => argument.startsW
   ?.slice('--liquid-motion-vfx='.length);
 const waterCurvatureVfxArgument = process.argv.find((argument) => argument.startsWith('--water-curvature-vfx='))
   ?.slice('--water-curvature-vfx='.length);
+const fireFlameVfxArgument = process.argv.find((argument) => argument.startsWith('--fire-flame-vfx='))
+  ?.slice('--fire-flame-vfx='.length);
 const gasBodyVfxArgument = process.argv.find((argument) => argument.startsWith('--gas-body-vfx='))
   ?.slice('--gas-body-vfx='.length);
 const gasMotionVfxArgument = process.argv.find((argument) => argument.startsWith('--gas-motion-vfx='))
@@ -867,6 +876,9 @@ if (liquidMotionVfxArgument !== undefined && !['0', '1', 'off', 'on'].includes(l
 }
 if (waterCurvatureVfxArgument !== undefined && !['0', '1', 'off', 'on'].includes(waterCurvatureVfxArgument)) {
   throw new Error('--water-curvature-vfx must be 0, 1, off, or on');
+}
+if (fireFlameVfxArgument !== undefined && !['0', '1', 'off', 'on'].includes(fireFlameVfxArgument)) {
+  throw new Error('--fire-flame-vfx must be 0, 1, off, or on');
 }
 if (gasBodyVfxArgument !== undefined && !['0', '1', 'off', 'on'].includes(gasBodyVfxArgument)) {
   throw new Error('--gas-body-vfx must be 0, 1, off, or on');
@@ -1119,6 +1131,20 @@ if (waterCurvatureVfxOnly && waterCurvatureVfxArgument !== undefined) {
 if (!waterCurvatureVfxOnly && focusedVfxOnlyFlags.some(Boolean)
   && waterCurvatureVfxArgument !== undefined) {
   throw new Error('focused VFX audits pin waterCurvatureVfx=0; omit --water-curvature-vfx');
+}
+if (fireFlameVfxOnly && (volumeVfxArgument !== undefined || liquidBodyVfxArgument !== undefined
+  || liquidSurfaceVfxArgument !== undefined || liquidMotionVfxArgument !== undefined
+  || waterCurvatureVfxArgument !== undefined || gasBodyVfxArgument !== undefined
+  || gasMotionVfxArgument !== undefined || powderBodyVfxArgument !== undefined
+  || powderLightVfxArgument !== undefined)) {
+  throw new Error('--fire-flame-vfx-only owns its isolated HDR baseline and other VFX selectors; omit overrides');
+}
+if (fireFlameVfxOnly && fireFlameVfxArgument !== undefined) {
+  throw new Error('--fire-flame-vfx-only owns its off -> on -> off sequence; omit --fire-flame-vfx');
+}
+if (!fireFlameVfxOnly && focusedVfxOnlyFlags.some(Boolean)
+  && fireFlameVfxArgument !== undefined) {
+  throw new Error('focused VFX audits pin fireFlameVfx=0; omit --fire-flame-vfx');
 }
 if (gasBodyVfxOnly && (volumeVfxArgument !== undefined || liquidBodyVfxArgument !== undefined)) {
   throw new Error('--gas-body-vfx-only fixes volumeVfx=0 and liquidBodyVfx=0; omit those flags');
@@ -1830,7 +1856,7 @@ async function auditMode(mode) {
   // canonical paused scene there and prove real material delivery/occupancy.
   const startsBlank = !canvasFallbackAudit && (hdrVfxOnly || volumeVfxOnly
     || plantCanopyHierarchyVfxOnly
-    || liquidBodyVfxOnly || liquidSurfaceVfxOnly || liquidMotionVfxOnly || waterCurvatureVfxOnly || gasBodyVfxOnly || gasMotionVfxOnly
+    || liquidBodyVfxOnly || liquidSurfaceVfxOnly || liquidMotionVfxOnly || waterCurvatureVfxOnly || fireFlameVfxOnly || gasBodyVfxOnly || gasMotionVfxOnly
   || powderBodyVfxOnly || powderLightVfxOnly || powderSolidContactVfxOnly || translucentEdgeVfxOnly || organicSubsurfaceVfxOnly || wetSedimentVfxOnly || gasLightVfxOnly || liquidSolidMeniscusVfxOnly || metalWaterContactVfxOnly || waterMetalTransmissionVfxOnly || gasCoreDepthVfxOnly || oxygenVolumeFoldVfxOnly || plasmaCoreVfxOnly || solidBodyVfxOnly || platinumBodyVfxOnly || ceramicGlazeVfxOnly || botanicalBodyVfxOnly || glassBodyVfxOnly || oilBodyVfxOnly || rockRoughnessVfxOnly || rockMesostructureVfxOnly || rockWeatheredFacetVfxOnly || waterBodyVfxOnly || waterVolumeRecessionVfxOnly || acidBodyVfxOnly || soapBodyVfxOnly || sootyPowderBodyVfxOnly || thermiteBodyVfxOnly || snowpackBodyVfxOnly || quartzMesostructureVfxOnly || c4BodyVfxOnly || bglaBodyVfxOnly || bglaClusterVfxOnly || deutBodyVfxOnly || hydrogenBodyVfxOnly || carbonDioxideBodyVfxOnly || fogCoreDiffuseVfxOnly || radioactiveSolidBodyVfxOnly || iszsCrystallineVfxOnly || iszsCrystalHierarchyVfxOnly || nobleGasBillowVfxOnly || nobleGasPrismVfxOnly || smokeSoftnessVfxOnly || smokeBillowDepthVfxOnly || botanicalMesostructureVfxOnly || woodBarkReliefVfxOnly || botanicalPigmentVfxOnly || plantLaminaVfxOnly || plantLobeDepthVfxOnly || woodTanninVfxOnly || cellularGraphicsOnly || sensorGraphicsOnly
     || unusualPowderGraphicsOnly || earthenPowderGraphicsOnly || explosivePowderGraphicsOnly
     || unusualSolidGraphicsOnly || deviceIdentityGraphicsOnly || fieldProfileGraphicsOnly
@@ -1862,6 +1888,11 @@ async function auditMode(mode) {
     ...(focusedVfxOnlyFlags.some(Boolean)
       ? { waterCurvatureVfx: '0' }
       : waterCurvatureVfxArgument ? { waterCurvatureVfx: waterCurvatureVfxArgument } : {}),
+    // E67 is independently reload-toggled only by its own focused route.
+    // Every other focused audit receives an explicit byte-stable exclusion.
+    ...(focusedVfxOnlyFlags.some(Boolean)
+      ? { fireFlameVfx: '0' }
+      : fireFlameVfxArgument ? { fireFlameVfx: fireFlameVfxArgument } : {}),
     ...(gasBodyVfxArgument ? { gasBodyVfx: gasBodyVfxArgument } : {}),
     ...(gasMotionVfxArgument ? { gasMotionVfx: gasMotionVfxArgument } : {}),
     ...(powderBodyVfxArgument ? { powderBodyVfx: powderBodyVfxArgument } : {}),
@@ -2387,6 +2418,13 @@ async function auditMode(mode) {
       assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
       cdp.close();
       return { backend: mode, waterCurvatureVfx, browserErrors: errors.length };
+    }
+    if (fireFlameVfxOnly) {
+      assert(mode === 'webgl', '--fire-flame-vfx-only requires --webgl-only');
+      const fireFlameVfx = await auditFireFlameVfxExperiment(cdp, mode, dpr);
+      assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
+      cdp.close();
+      return { backend: mode, fireFlameVfx, browserErrors: errors.length };
     }
     if (gasBodyVfxOnly) {
       assert(mode === 'webgl', '--gas-body-vfx-only requires --webgl-only');
@@ -26037,7 +26075,7 @@ async function navigateLiquidMotionVfxState(cdp, mode, scale, fixtureMode, enabl
     liquidBodyVfxAudit: '1', liquidSurfaceVfxAudit: '1', liquidMotionVfxAudit: '1',
     renderScale: String(scale), renderLook: 'realistic',
     volumeVfx: '0', liquidBodyVfx: '1', liquidSurfaceVfx: '1',
-    liquidMotionVfx: enabled ? '1' : '0', waterCurvatureVfx: '0',
+    liquidMotionVfx: enabled ? '1' : '0', waterCurvatureVfx: '0', fireFlameVfx: '0',
     gasBodyVfx: '0', gasMotionVfx: '0',
     powderBodyVfx: '0', powderLightVfx: '0', organicSubsurfaceVfx: '0',
     wetSedimentVfx: '0', gasLightVfx: '0', liquidSolidMeniscusVfx: '0',
@@ -26058,6 +26096,7 @@ async function navigateLiquidMotionVfxState(cdp, mode, scale, fixtureMode, enabl
       && parameters.get('liquidBodyVfx') === '1'
       && parameters.get('liquidSurfaceVfx') === '1'
       && parameters.get('liquidMotionVfx') === ${JSON.stringify(enabled ? '1' : '0')}
+      && parameters.get('fireFlameVfx') === '0'
       && typeof window.__ANIFOR_INPUT_AUDIT__?.prepareLiquidMotionVfxFixture === 'function';
   })()`), 15_000, `E65 ${label} ${scale}x page`);
   await waitFor(() => evaluate(cdp,
@@ -26087,6 +26126,7 @@ async function navigateLiquidMotionVfxState(cdp, mode, scale, fixtureMode, enabl
       liquidBodyVfx: canvas.dataset.liquidBodyVfx,
       liquidSurfaceVfx: canvas.dataset.liquidSurfaceVfx,
       liquidMotionVfx: canvas.dataset.liquidMotionVfx,
+      fireFlameVfx: canvas.dataset.fireFlameVfx,
       gasBodyVfx: canvas.dataset.gasBodyVfx,
       gasMotionVfx: canvas.dataset.gasMotionVfx,
       powderBodyVfx: canvas.dataset.powderBodyVfx,
@@ -26100,6 +26140,7 @@ async function navigateLiquidMotionVfxState(cdp, mode, scale, fixtureMode, enabl
     && hdrPipeline?.liquidBodyVfx === 'active'
     && hdrPipeline?.liquidSurfaceVfx === 'active'
     && hdrPipeline?.liquidMotionVfx === (enabled ? 'active' : 'inactive')
+    && hdrPipeline?.fireFlameVfx === 'inactive'
     && hdrPipeline?.gasBodyVfx === 'inactive'
     && hdrPipeline?.gasMotionVfx === 'inactive'
     && hdrPipeline?.powderBodyVfx === 'inactive'
@@ -26137,12 +26178,14 @@ async function auditEightXLiquidMotionVfxExclusion(cdp, dpr) {
     auditStage: 'eight-liquid-motion', liquidMotionVfxAudit: '1',
     renderScale: '8', renderLook: 'realistic',
     liquidBodyVfx: '1', liquidSurfaceVfx: '1', liquidMotionVfx: '1', waterCurvatureVfx: '0',
+    fireFlameVfx: '0',
   });
   await cdp.send('Page.navigate', { url: `${AUDIT_BASE_URL}?${query}` });
   const deadline = Date.now() + EIGHT_X_PRESENTATION_DEADLINE_MS;
   await waitFor(() => evaluate(cdp,
     `new URLSearchParams(location.search).get('renderScale') === '8'
       && new URLSearchParams(location.search).get('liquidMotionVfx') === '1'
+      && new URLSearchParams(location.search).get('fireFlameVfx') === '0'
       && Boolean(window.__ANIFOR_INPUT_AUDIT__)`),
   remainingDeadlineMs(deadline, 'true-8x E65 API'), 'true-8x E65 API');
   const backend = await waitForEightXTerminalBackend(cdp, 'true-8x E65', deadline);
@@ -26163,6 +26206,7 @@ async function auditEightXLiquidMotionVfxExclusion(cdp, dpr) {
       liquidBodyVfx: canvas.dataset.liquidBodyVfx,
       liquidSurfaceVfx: canvas.dataset.liquidSurfaceVfx,
       liquidMotionVfx: canvas.dataset.liquidMotionVfx,
+      fireFlameVfx: canvas.dataset.fireFlameVfx,
       hdr: canvas.dataset.hdrPipeline,
       reason: canvas.dataset.hdrPipelineReason,
       bloom: canvas.dataset.bloomBacking ?? null,
@@ -26172,6 +26216,7 @@ async function auditEightXLiquidMotionVfxExclusion(cdp, dpr) {
     && state.liquidBodyVfx === 'inactive'
     && state.liquidSurfaceVfx === 'inactive'
     && state.liquidMotionVfx === 'inactive'
+    && state.fireFlameVfx === 'inactive'
     && state.hdr === 'inactive' && state.reason === 'scale-8' && state.bloom === null,
   `true-8x E65 selector/resource exclusion failed: ${JSON.stringify(state)}`);
   const materialPlane = await evaluate(cdp,
@@ -26549,7 +26594,8 @@ async function navigateWaterCurvatureVfxState(cdp, mode, scale, fixtureMode, ena
     liquidBodyVfxAudit: '1', liquidSurfaceVfxAudit: '1', waterCurvatureVfxAudit: '1',
     renderScale: String(scale), renderLook: 'realistic',
     volumeVfx: '0', liquidBodyVfx: '1', liquidSurfaceVfx: '1', liquidMotionVfx: '0',
-    waterCurvatureVfx: enabled ? '1' : '0', gasBodyVfx: '0', gasMotionVfx: '0',
+    waterCurvatureVfx: enabled ? '1' : '0', fireFlameVfx: '0',
+    gasBodyVfx: '0', gasMotionVfx: '0',
     powderBodyVfx: '0', powderLightVfx: '0', organicSubsurfaceVfx: '0',
     wetSedimentVfx: '0', gasLightVfx: '0', liquidSolidMeniscusVfx: '0',
     gasCoreDepthVfx: '0', nobleGasBillowVfx: '0', smokeSoftnessVfx: '0',
@@ -26567,6 +26613,7 @@ async function navigateWaterCurvatureVfxState(cdp, mode, scale, fixtureMode, ena
       && parameters.get('liquidBodyVfx') === '1' && parameters.get('liquidSurfaceVfx') === '1'
       && parameters.get('liquidMotionVfx') === '0'
       && parameters.get('waterCurvatureVfx') === ${JSON.stringify(enabled ? '1' : '0')}
+      && parameters.get('fireFlameVfx') === '0'
       && typeof window.__ANIFOR_INPUT_AUDIT__?.prepareWaterCurvatureVfxFixture === 'function';
   })()`), 15_000, `E66 ${label} ${scale}x page`);
   await waitFor(() => evaluate(cdp,
@@ -26594,6 +26641,7 @@ async function navigateWaterCurvatureVfxState(cdp, mode, scale, fixtureMode, ena
       volumeVfx: canvas.dataset.volumeVfx, liquidBodyVfx: canvas.dataset.liquidBodyVfx,
       liquidSurfaceVfx: canvas.dataset.liquidSurfaceVfx, liquidMotionVfx: canvas.dataset.liquidMotionVfx,
       waterCurvatureVfx: canvas.dataset.waterCurvatureVfx, gasBodyVfx: canvas.dataset.gasBodyVfx,
+      fireFlameVfx: canvas.dataset.fireFlameVfx,
       gasMotionVfx: canvas.dataset.gasMotionVfx, powderBodyVfx: canvas.dataset.powderBodyVfx,
       powderLightVfx: canvas.dataset.powderLightVfx,
     } : undefined;
@@ -26604,6 +26652,7 @@ async function navigateWaterCurvatureVfxState(cdp, mode, scale, fixtureMode, ena
     && hdrPipeline?.liquidBodyVfx === 'active' && hdrPipeline?.liquidSurfaceVfx === 'active'
     && hdrPipeline?.liquidMotionVfx === 'inactive'
     && hdrPipeline?.waterCurvatureVfx === (enabled ? 'active' : 'inactive')
+    && hdrPipeline?.fireFlameVfx === 'inactive'
     && hdrPipeline?.gasBodyVfx === 'inactive' && hdrPipeline?.gasMotionVfx === 'inactive'
     && hdrPipeline?.powderBodyVfx === 'inactive' && hdrPipeline?.powderLightVfx === 'inactive',
   `E66 ${label} ${scale}x HDR/water-curvature state resolved incorrectly (${JSON.stringify(hdrPipeline)})`);
@@ -26623,12 +26672,14 @@ async function auditEightXWaterCurvatureVfxExclusion(cdp, dpr) {
     scene: 'render-lab', inputAudit: '1', blankAudit: '1', auditStage: 'eight-water-curvature',
     waterCurvatureVfxAudit: '1', renderScale: '8', renderLook: 'realistic',
     liquidBodyVfx: '1', liquidSurfaceVfx: '1', liquidMotionVfx: '0', waterCurvatureVfx: '1',
+    fireFlameVfx: '0',
   });
   await cdp.send('Page.navigate', { url: `${AUDIT_BASE_URL}?${query}` });
   const deadline = Date.now() + EIGHT_X_PRESENTATION_DEADLINE_MS;
   await waitFor(() => evaluate(cdp, `new URLSearchParams(location.search).get('renderScale') === '8'
     && new URLSearchParams(location.search).get('waterCurvatureVfx') === '1'
     && new URLSearchParams(location.search).get('liquidMotionVfx') === '0'
+    && new URLSearchParams(location.search).get('fireFlameVfx') === '0'
     && Boolean(window.__ANIFOR_INPUT_AUDIT__)`),
   remainingDeadlineMs(deadline, 'true-8x E66 API'), 'true-8x E66 API');
   const backend = await waitForEightXTerminalBackend(cdp, 'true-8x E66', deadline);
@@ -26643,6 +26694,7 @@ async function auditEightXWaterCurvatureVfxExclusion(cdp, dpr) {
       renderer: canvas.dataset.renderer, look: canvas.dataset.renderLook,
       liquidBodyVfx: canvas.dataset.liquidBodyVfx, liquidSurfaceVfx: canvas.dataset.liquidSurfaceVfx,
       liquidMotionVfx: canvas.dataset.liquidMotionVfx, waterCurvatureVfx: canvas.dataset.waterCurvatureVfx,
+      fireFlameVfx: canvas.dataset.fireFlameVfx,
       hdr: canvas.dataset.hdrPipeline, reason: canvas.dataset.hdrPipelineReason,
       bloom: canvas.dataset.bloomBacking ?? null,
     } : undefined;
@@ -26650,6 +26702,7 @@ async function auditEightXWaterCurvatureVfxExclusion(cdp, dpr) {
   assert(state?.renderer === 'semantic-field-webgl' && state.look === 'realistic'
     && state.liquidBodyVfx === 'inactive' && state.liquidSurfaceVfx === 'inactive'
     && state.liquidMotionVfx === 'inactive' && state.waterCurvatureVfx === 'inactive'
+    && state.fireFlameVfx === 'inactive'
     && state.hdr === 'inactive' && state.reason === 'scale-8' && state.bloom === null,
   `true-8x E66 selector/resource exclusion failed: ${JSON.stringify(state)}`);
   const materialPlane = await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.materialPlaneDigest()');
@@ -26663,6 +26716,623 @@ async function auditEightXWaterCurvatureVfxExclusion(cdp, dpr) {
   const semanticAfter = await hdrVfxSemanticDigest(cdp);
   assertHdrVfxSemanticEquality(semanticBefore, semanticAfter, 'true-8x E66 GPU completion');
   return { geometry, backend, state, materialPlane, fixtureUploaded: false, semanticStable: true, timing };
+}
+
+// Frozen from the accepted deterministic SwiftShader 1x/2x/4x matrix. Hot
+// Fire whitens by exchanging a few saturated-red bytes for green/blue;
+// cool Fire absorbs all channels; native upward velocity adds a separate warm
+// tongue response over the temperature-matched still carrier.
+const FIRE_FLAME_VFX_TARGET_ENVELOPES = {
+  1: {
+    hotCore: {
+      rgb: [9.55, 10.05], spatial: [0.75, 1.30], peak: [14, 18], coverage: [0.96, 1],
+      signed: [5.30, 5.90], micro: [0.05, 0.50],
+      channels: [[-3.30, -2.20], [6.50, 7.80], [14.30, 15.80]],
+    },
+    coolPocket: {
+      rgb: [1.60, 2.00], spatial: [0.15, 0.60], peak: [2, 5], coverage: [0.82, 0.94],
+      signed: [-2.00, -1.55], micro: [0, 0.40],
+      channels: [[-1.70, -0.95], [-2.25, -1.50], [-2.35, -1.55]],
+    },
+    movingTongue: {
+      rgb: [4.60, 5.40], spatial: [2.10, 3.00], peak: [8, 12], coverage: [0.75, 0.91],
+      signed: [3.45, 4.25], micro: [0.10, 0.65],
+      channels: [[-3.30, -2.00], [5.00, 6.50], [3.10, 4.80]],
+    },
+    stillTongue: {
+      rgb: [1.25, 1.80], spatial: [0.20, 0.75], peak: [1, 4], coverage: [0.38, 0.58],
+      signed: [1.10, 1.70], micro: [0, 0.45],
+      channels: [[-0.90, -0.15], [1.45, 2.30], [1.05, 2.00]],
+    },
+  },
+  2: {
+    hotCore: {
+      rgb: [9.55, 10.02], spatial: [0.72, 1.22], peak: [14, 18], coverage: [0.96, 1],
+      signed: [5.30, 5.86], micro: [0.04, 0.46],
+      channels: [[-3.25, -2.20], [6.45, 7.72], [14.30, 15.80]],
+    },
+    coolPocket: {
+      rgb: [1.60, 2.00], spatial: [0.14, 0.56], peak: [2, 6], coverage: [0.82, 0.93],
+      signed: [-2.00, -1.55], micro: [0, 0.40],
+      channels: [[-1.70, -0.95], [-2.25, -1.50], [-2.36, -1.55]],
+    },
+    movingTongue: {
+      rgb: [4.65, 5.42], spatial: [2.18, 3.02], peak: [8, 12], coverage: [0.76, 0.91],
+      signed: [3.48, 4.28], micro: [0.10, 0.65],
+      channels: [[-3.25, -1.95], [5.05, 6.55], [3.10, 4.80]],
+    },
+    stillTongue: {
+      rgb: [1.25, 1.80], spatial: [0.20, 0.78], peak: [1, 4], coverage: [0.36, 0.56],
+      signed: [1.08, 1.68], micro: [0, 0.48],
+      channels: [[-0.95, -0.15], [1.45, 2.30], [1.05, 2.00]],
+    },
+  },
+  4: {
+    hotCore: {
+      rgb: [9.52, 10.00], spatial: [0.70, 1.18], peak: [14, 18], coverage: [0.97, 1],
+      signed: [5.28, 5.84], micro: [0.03, 0.44],
+      channels: [[-3.22, -2.18], [6.42, 7.70], [14.30, 15.80]],
+    },
+    coolPocket: {
+      rgb: [1.60, 2.00], spatial: [0.15, 0.58], peak: [2, 6], coverage: [0.82, 0.93],
+      signed: [-2.00, -1.55], micro: [0, 0.40],
+      channels: [[-1.70, -0.95], [-2.25, -1.50], [-2.35, -1.55]],
+    },
+    movingTongue: {
+      rgb: [4.68, 5.44], spatial: [2.20, 3.05], peak: [8, 12], coverage: [0.78, 0.92],
+      signed: [3.50, 4.30], micro: [0.10, 0.68],
+      channels: [[-3.20, -1.92], [5.08, 6.58], [3.10, 4.82]],
+    },
+    stillTongue: {
+      rgb: [1.25, 1.80], spatial: [0.18, 0.76], peak: [1, 4], coverage: [0.36, 0.56],
+      signed: [1.06, 1.66], micro: [0, 0.50],
+      channels: [[-0.95, -0.12], [1.43, 2.28], [1.05, 2.00]],
+    },
+  },
+};
+// E67 is authored before HDR bloom, so a directly guarded Fire/contact or
+// Fire/wall pixel can still receive a few final-composite bytes from a nearby
+// eligible body pixel. Keep that optical spill explicit and tightly bounded;
+// disjoint owners, sparse Fire, alpha/support, and repeated-off captures stay
+// byte-exact.
+const FIRE_FLAME_COMPOSITE_SPILL_PEAK = 8;
+const FIRE_FLAME_TOPOLOGY_BLOOM_PEAK = 3;
+
+/**
+ * E67 measures exact-Fire thermal depth and upward-flow flame shaping while
+ * preserving one byte-identical semantic scene in still and moving forms.
+ */
+async function auditFireFlameVfxExperiment(cdp, mode, dpr) {
+  const requestedScale = renderScaleArgument === undefined
+    ? undefined : Number(renderScaleArgument);
+  const requestedScales = requestedScale === undefined
+    ? VOLUME_VFX_SCALES : requestedScale < 8 ? [requestedScale] : [];
+  const scales = [];
+  for (const scale of requestedScales) {
+    const movingOff = await navigateFireFlameVfxState(cdp, mode, scale, 'moving', false, 'movingOff');
+    const movingOn = await navigateFireFlameVfxState(cdp, mode, scale, 'moving', true, 'movingOn');
+    const movingRepeat = await navigateFireFlameVfxState(cdp, mode, scale, 'moving', false, 'movingRepeat');
+    const stillOff = await navigateFireFlameVfxState(cdp, mode, scale, 'still', false, 'stillOff');
+    const stillOn = await navigateFireFlameVfxState(cdp, mode, scale, 'still', true, 'stillOn');
+    const stillRepeat = await navigateFireFlameVfxState(cdp, mode, scale, 'still', false, 'stillRepeat');
+    const variants = { movingOff, movingOn, movingRepeat, stillOff, stillOn, stillRepeat };
+    // Persist visual evidence before numerical assertions so a failed
+    // calibration run still leaves inspectable off/on/repeat captures.
+    const screenshots = screenshotRequest
+      ? await writeFireFlameVfxScreenshots(screenshotRequest, scale, variants)
+      : undefined;
+    const fixture = movingOff.fixture;
+    assert(Object.values(variants).every((variant) =>
+      JSON.stringify(variant.fixture) === JSON.stringify(fixture)),
+    `E67 ${scale}x fixture metadata changed`);
+
+    for (const [label, variant] of Object.entries(variants)) {
+      const enabled = label === 'movingOn' || label === 'stillOn';
+      assertGeometry(variant.geometry, `E67 ${label} ${scale}x`, scale);
+      assert(variant.geometry.backend.backend === 'webgl',
+        `E67 ${label} ${scale}x lost WebGL presentation`);
+      assert(variant.hdrPipeline?.state === 'active'
+        && variant.hdrPipeline?.fireFlameVfx === (enabled ? 'active' : 'inactive')
+        && variant.hdrPipeline?.volumeVfx === 'inactive'
+        && variant.hdrPipeline?.liquidBodyVfx === 'inactive'
+        && variant.hdrPipeline?.liquidSurfaceVfx === 'inactive'
+        && variant.hdrPipeline?.liquidMotionVfx === 'inactive'
+        && variant.hdrPipeline?.waterCurvatureVfx === 'inactive'
+        && variant.hdrPipeline?.gasBodyVfx === 'inactive'
+        && variant.hdrPipeline?.gasMotionVfx === 'inactive'
+        && variant.hdrPipeline?.powderBodyVfx === 'inactive'
+        && variant.hdrPipeline?.powderLightVfx === 'inactive',
+      `E67 ${label} ${scale}x selector state resolved incorrectly (${JSON.stringify(
+        variant.hdrPipeline,
+      )})`);
+      assertFireFlameFixtureState(
+        variant.fixtureState, fixture, label.startsWith('moving') ? 'moving' : 'still',
+        `E67 ${label} ${scale}x`,
+      );
+    }
+
+    for (const [leftName, rightName] of [
+      ['movingOff', 'movingOn'], ['movingOff', 'movingRepeat'],
+      ['stillOff', 'stillOn'], ['stillOff', 'stillRepeat'], ['movingOff', 'stillOff'],
+    ]) {
+      const left = variants[leftName];
+      const right = variants[rightName];
+      assertCanvasRectsEqual(left.geometry.canvas, right.geometry.canvas,
+        `E67 ${scale}x ${leftName}/${rightName} CSS geometry`);
+      assert(JSON.stringify(left.geometry.backing) === JSON.stringify(right.geometry.backing),
+        `E67 ${scale}x ${leftName}/${rightName} backing geometry changed`);
+      assertHdrVfxSemanticEquality(left.semantic, right.semantic,
+        `E67 ${scale}x ${leftName}/${rightName}`);
+      assert(left.fixtureState.materialHash === right.fixtureState.materialHash
+        && left.fixtureState.temperatureHash === right.fixtureState.temperatureHash
+        && left.fixtureState.wallHash === right.fixtureState.wallHash
+        && JSON.stringify(left.fixtureState.materialCounts)
+          === JSON.stringify(right.fixtureState.materialCounts)
+        && JSON.stringify(left.fixtureState.temperatureCounts)
+          === JSON.stringify(right.fixtureState.temperatureCounts),
+      `E67 ${scale}x ${leftName}/${rightName} changed material/temperature/wall state (${JSON.stringify({
+        left: left.fixtureState, right: right.fixtureState,
+      })})`);
+      const sameVelocityPlane = leftName.startsWith('moving') === rightName.startsWith('moving');
+      if (sameVelocityPlane) {
+        assertVolumeVfxBackingInvariant(left.backing, right.backing,
+          `E67 ${scale}x ${leftName}/${rightName}`);
+        assertVolumeVfxRawAlphaInvariant(left.rawControls, right.rawControls,
+          `E67 ${scale}x ${leftName}/${rightName}`);
+        assert(left.fixtureState.velocityHash === right.fixtureState.velocityHash
+          && left.fixtureState.renderedVelocityHash === right.fixtureState.renderedVelocityHash,
+        `E67 ${scale}x ${leftName}/${rightName} changed packed velocity bytes`);
+      } else {
+        // Native velocity already participates in the generic Energy carrier's
+        // subpixel alpha before E67. Across the deliberately different still
+        // and moving fixtures require identical support/topology, not an
+        // invented equality of their baseline fractional alpha.
+        assert(left.backing.width === right.backing.width
+          && left.backing.height === right.backing.height
+          && left.backing.supportSignature === right.backing.supportSignature
+          && left.backing.supported === right.backing.supported,
+        `E67 ${scale}x still/moving velocity changed framebuffer support (${JSON.stringify({
+          left: left.backing, right: right.backing,
+        })})`);
+      }
+    }
+    assert(movingOff.fixtureState.velocityHash === fixture.expected.movingVelocityHash
+      && stillOff.fixtureState.velocityHash === fixture.expected.stillVelocityHash
+      && movingOff.fixtureState.velocityHash !== stillOff.fixtureState.velocityHash
+      && movingOff.fixtureState.nonzeroVelocityCells === fixture.expected.movingVelocityCells
+      && stillOff.fixtureState.nonzeroVelocityCells === 0,
+    `E67 ${scale}x still/moving fixture did not isolate Fire velocity (${JSON.stringify({
+      moving: movingOff.fixtureState, still: stillOff.fixtureState,
+    })})`);
+    assert(movingOff.capture.capture.data === movingRepeat.capture.capture.data,
+      `E67 ${scale}x moving repeated-off full framebuffer was not byte-exact`);
+    assert(stillOff.capture.capture.data === stillRepeat.capture.capture.data,
+      `E67 ${scale}x still repeated-off full framebuffer was not byte-exact`);
+    assertFireFlameRawControlInvariant(movingOff.rawControls, movingOn.rawControls,
+      `E67 ${scale}x moving protected controls`);
+    assertVolumeVfxRawControlInvariant(movingOff.rawControls, movingRepeat.rawControls,
+      `E67 ${scale}x moving repeated controls`);
+    assertFireFlameRawControlInvariant(stillOff.rawControls, stillOn.rawControls,
+      `E67 ${scale}x still protected controls`);
+    assertVolumeVfxRawControlInvariant(stillOff.rawControls, stillRepeat.rawControls,
+      `E67 ${scale}x still repeated controls`);
+
+    const regions = fireFlameVfxRegions(fixture);
+    const compare = async (off, on, repeat, phase) => {
+      const raw = await sampleBackdropRefractionRegions(cdp, {
+        straight: off.capture.capture.data,
+        refracted: on.capture.capture.data,
+        repeatedStraight: repeat.capture.capture.data,
+      }, regions, off.capture.canvasRect);
+      const responses = raw.map((sample, index) => {
+        const meanRgbRms = Math.hypot(...sample.responseRgb) / Math.sqrt(3);
+        return {
+          ...sample, ...regions[index], phase,
+          spatialRgbRms: round(Math.sqrt(Math.max(0,
+            sample.rgbRms ** 2 - meanRgbRms ** 2)), 3),
+        };
+      });
+      const targets = responses.filter((sample) => sample.role === 'target');
+      const controls = responses.filter((sample) => sample.role === 'control');
+      const compositeSpillControls = responses.filter((sample) => sample.role === 'composite-spill');
+      const references = responses.filter((sample) => sample.role === 'reference');
+      const topologyControls = responses.filter((sample) => sample.role === 'topology');
+      const inRange = (value, bounds) => value >= bounds[0] && value <= bounds[1];
+      const targetByName = Object.fromEntries(targets.map((sample) => [sample.name, sample]));
+      const targetNames = ['hotCore', 'coolPocket', 'velocityTongue'];
+      assert(targetNames.every((name) => {
+        const sample = targetByName[name];
+        const envelopeName = name === 'velocityTongue' ? `${phase}Tongue` : name;
+        const bounds = FIRE_FLAME_VFX_TARGET_ENVELOPES[scale]?.[envelopeName];
+        // The HDR shoulder can trade a little saturated red for green/blue as
+        // a hot orange body approaches yellow-white. Require positive total
+        // exposure and both whitening channels rather than misclassifying that
+        // useful chroma shift as a darkening response. The cool pocket remains
+        // strictly absorptive in every channel.
+        const signedChannels = name === 'coolPocket'
+          ? sample?.responseRgb.every((value) => value < 0)
+          : sample?.signedMean > 0 && sample?.responseRgb[1] > 0
+            && sample?.responseRgb[2] > 0 && sample?.responseRgb[0] > -12;
+        return sample && bounds && signedChannels
+          && inRange(sample.rgbRms, bounds.rgb)
+          && inRange(sample.spatialRgbRms, bounds.spatial)
+          && inRange(sample.rgbPeak, bounds.peak)
+          && inRange(sample.coverage, bounds.coverage)
+          && inRange(sample.signedMean, bounds.signed)
+          && inRange(sample.responseMicroContrast, bounds.micro)
+          && sample.responseRgb.every((value, index) => inRange(value, bounds.channels[index]))
+          && sample.repeatRgbPeak === 0;
+      }), `E67 ${scale}x ${phase} response escaped calibrated target ranges (${JSON.stringify(
+        targets,
+      )})`);
+      if (phase === 'still') {
+        const tongue = targetByName.velocityTongue;
+        assert(tongue && tongue.repeatRgbPeak === 0,
+          `E67 ${scale}x still tongue was not repeat-stable (${JSON.stringify(tongue)})`);
+      }
+      assert(controls.every((sample) => sample.rgbPeak === 0 && sample.repeatRgbPeak === 0),
+        `E67 ${scale}x ${phase} escaped an exact control (${JSON.stringify(controls)})`);
+      assert(compositeSpillControls.every((sample) =>
+        sample.rgbPeak <= FIRE_FLAME_COMPOSITE_SPILL_PEAK && sample.repeatRgbPeak === 0),
+      `E67 ${scale}x ${phase} exceeded bounded HDR contact/wall spill (${JSON.stringify(
+        compositeSpillControls,
+      )})`);
+      assert(references.every((sample) => sample.repeatRgbPeak === 0),
+        `E67 ${scale}x ${phase} thermal/velocity references were not repeat-stable (${JSON.stringify(
+          references,
+        )})`);
+      // Transparent authored voids keep zero semantic support, but the normal
+      // HDR compositor may cast a tiny optical bloom into that empty page
+      // footprint. Bound it independently from material/contact spill so an
+      // accidental body fill or broad glow cannot hide behind repeatability.
+      assert(topologyControls.every((sample) =>
+        sample.rgbPeak <= FIRE_FLAME_TOPOLOGY_BLOOM_PEAK && sample.repeatRgbPeak === 0),
+      `E67 ${scale}x ${phase} topology controls exceeded bounded void bloom (${JSON.stringify(
+          topologyControls,
+        )})`);
+      return { targets, references, protectedControls: controls.length,
+        boundedCompositeSpill: {
+          controls: compositeSpillControls.length,
+          peak: Math.max(0, ...compositeSpillControls.map((sample) => sample.rgbPeak)),
+          repeatPeak: Math.max(0, ...compositeSpillControls.map((sample) => sample.repeatRgbPeak)),
+        },
+        boundedTopologyBloom: {
+          controls: topologyControls.length,
+          peak: Math.max(0, ...topologyControls.map((sample) => sample.rgbPeak)),
+          repeatPeak: Math.max(0, ...topologyControls.map((sample) => sample.repeatRgbPeak)),
+        } };
+    };
+    const moving = await compare(movingOff, movingOn, movingRepeat, 'moving');
+    const still = await compare(stillOff, stillOn, stillRepeat, 'still');
+    const movingTongue = moving.targets.find((target) => target.name === 'velocityTongue');
+    const stillTongue = still.targets.find((target) => target.name === 'velocityTongue');
+    assert(movingTongue.rgbRms >= stillTongue.rgbRms + 0.05
+      && movingTongue.signedMean >= stillTongue.signedMean + 0.01,
+    `E67 ${scale}x upward velocity did not strengthen its tongue (${JSON.stringify({
+      moving: movingTongue, still: stillTongue,
+    })})`);
+    scales.push({
+      scale, backing: movingOff.geometry.backing, alphaSupport: movingOff.backing,
+      fixtureState: movingOff.fixtureState, moving, still,
+      ...(screenshots ? { screenshots } : {}),
+    });
+  }
+
+  let crossScale;
+  if (scales.length === VOLUME_VFX_SCALES.length
+    && scales.every(({ scale }, index) => scale === VOLUME_VFX_SCALES[index])) {
+    const responseByName = (phase, name) => scales.map(({ [phase]: response }) =>
+      response.targets.find((target) => target.name === name));
+    const spread = (samples, read) => Math.max(...samples.map(read)) - Math.min(...samples.map(read));
+    crossScale = Object.fromEntries([
+      ...['moving', 'still'].flatMap((phase) => ['hotCore', 'coolPocket'].map((name) => [phase, name])),
+      ['moving', 'velocityTongue'], ['still', 'velocityTongue'],
+    ].map(([phase, name]) => {
+      const samples = responseByName(phase, name);
+      return [`${phase}:${name}`, {
+        rgbRms: round(spread(samples, (sample) => sample.rgbRms), 3),
+        spatialRgbRms: round(spread(samples, (sample) => sample.spatialRgbRms), 3),
+        coverage: round(spread(samples, (sample) => sample.coverage), 3),
+        signedMean: round(spread(samples, (sample) => sample.signedMean), 3),
+        microContrast: round(spread(samples, (sample) => sample.responseMicroContrast), 3),
+        peak: spread(samples, (sample) => sample.rgbPeak),
+      }];
+    }));
+    assert(Object.values(crossScale).every((entry) => entry.rgbRms <= 0.15
+      && entry.spatialRgbRms <= 0.20 && entry.coverage <= 0.06
+      && entry.signedMean <= 0.12 && entry.microContrast <= 0.12 && entry.peak <= 2),
+    `E67 response drifted across 1x/2x/4x (${JSON.stringify(crossScale)})`);
+  }
+  const trueEightX = renderScaleArgument === undefined || renderScaleArgument === '8'
+    ? await auditEightXFireFlameVfxExclusion(cdp, dpr)
+    : undefined;
+  return { scales, calibratedEnvelopes: true,
+    ...(crossScale ? { crossScale } : {}), ...(trueEightX ? { trueEightX } : {}) };
+}
+
+async function writeFireFlameVfxScreenshots(source, scale, variants) {
+  const paths = {};
+  for (const [variant, capture] of Object.entries(variants)) {
+    paths[variant] = variantScreenshotPath(source, `fire-flame-${scale}x-${variant}`);
+    await writeFile(paths[variant], Buffer.from(capture.capture.capture.data, 'base64'));
+  }
+  return paths;
+}
+
+function fireFlameVfxRegions(fixture) {
+  const centre = (rect) => ({ x: rect.x + rect.width / 2, y: rect.y + rect.height / 2 });
+  const point = (name, entry, extra = {}) => ({
+    name, x: entry.x, y: entry.y, radius: 0.35, role: 'control', ...extra,
+  });
+  const { body } = fixture;
+  return [
+    { name: 'hotCore', role: 'target', ...rectRegion(body.hotCore) },
+    { name: 'coolPocket', role: 'target', ...rectRegion(body.coolPocket) },
+    { name: 'velocityTongue', role: 'target',
+      x: body.velocityTongue.x + body.velocityTongue.width / 2,
+      y: body.velocityTongue.y + body.velocityTongue.height / 2,
+      radiusX: 14, radiusY: 14 },
+    { name: 'straightNeutral', role: 'reference', ...rectRegion(body.straightNeutral) },
+    { name: 'baseFire', role: 'reference', x: body.base.x + 14,
+      y: body.base.y + body.base.height - 14, radiusX: 8, radiusY: 8 },
+    point('thinFireStrand', centre(fixture.sparse.strand)),
+    point('isolatedFire', fixture.sparse.isolated),
+    ...Object.entries(fixture.protectedControls).map(([name, control]) =>
+      point(name, control.probe)),
+    ...Object.entries(fixture.contacts).flatMap(([name, contact]) => [
+      point(`${name}Fire`, contact.fireProbe, { role: 'composite-spill' }),
+      point(`${name}Other`, contact.otherProbe, { role: 'composite-spill' }),
+    ]),
+    point('nativeWall', fixture.wallCoexistence.wallProbe, { role: 'composite-spill' }),
+    point('wallClear', fixture.wallCoexistence.clearProbe, { role: 'reference' }),
+    point('authoredHole', centre(body.authoredHole), { role: 'topology' }),
+    point('openChannel', centre(body.openChannel), { role: 'topology' }),
+    point('guardedBlank', centre(fixture.guardedBlank)),
+  ];
+}
+
+function fireFlameRawControlPoints(fixture) {
+  return fireFlameVfxRegions(fixture)
+    .filter(({ role }) => role === 'control' || role === 'composite-spill')
+    .map(({ name, x, y }) => ({ name, x: Math.floor(x), y: Math.floor(y) }));
+}
+
+function assertFireFlameFixtureState(state, fixture, mode, label) {
+  const expectedVelocityHash = mode === 'moving'
+    ? fixture.expected.movingVelocityHash : fixture.expected.stillVelocityHash;
+  assert(state.mode === mode
+    && state.mainBodyFireCells === fixture.expected.mainBodyFireCells
+    && state.materialCounts.fire === fixture.expected.fireCells
+    && state.materialCounts.energy === fixture.expected.energyCells
+    && state.materialCounts.plasma === fixture.expected.plasmaCells
+    && state.materialCounts.lava === fixture.expected.lavaCells
+    && state.materialCounts.smoke === fixture.expected.smokeCells
+    && state.materialCounts.metal === fixture.expected.metalCells
+    && state.wallCells === fixture.expected.wallCells
+    && state.nonzeroVelocityCells === (mode === 'moving' ? fixture.expected.movingVelocityCells : 0)
+    && JSON.stringify(state.temperatureCounts) === JSON.stringify(fixture.expected.temperatureCounts)
+    && state.materialHash === fixture.expected.materialHash
+    && state.temperatureHash === fixture.expected.temperatureHash
+    && state.wallHash === fixture.expected.wallHash
+    && state.velocityHash === expectedVelocityHash
+    && state.renderedVelocityHash === expectedVelocityHash
+    && state.velocityStagingMismatches === 0 && state.velocityOwnershipExact
+    && state.wallFireCoexistence && state.wallPatternExact
+    && state.authoredVoidsExact && state.sparseExact && state.protectedControlsExact
+    && state.contactsExact && state.guardedBlankExact,
+  `${label}: fixture state was not exact (${JSON.stringify(state)})`);
+}
+
+async function sampleFireFlameVfxFixtureState(cdp, mode) {
+  return evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    if (typeof audit?.temperature !== 'function' || typeof audit?.velocity !== 'function'
+      || typeof audit?.renderedVelocity !== 'function' || typeof audit?.wall !== 'function'
+      || typeof audit?.fireFlameVfxFixture !== 'function') {
+      throw new Error('E67 material/temperature/wall/velocity audit API unavailable');
+    }
+    const fixture = audit.fireFlameVfxFixture();
+    const inRect = (x, y, rect) => x >= rect.x && x < rect.x + rect.width
+      && y >= rect.y && y < rect.y + rect.height;
+    const hashByte = (hash, value) => Math.imul(hash ^ (value & 255), 16777619) >>> 0;
+    let materialHash = 2166136261, temperatureHash = 2166136261, wallHash = 2166136261;
+    let velocityHash = 2166136261, renderedVelocityHash = 2166136261;
+    let mainBodyFireCells = 0, wallCells = 0, nonzeroVelocityCells = 0;
+    let velocityStagingMismatches = 0, velocityOwnershipExact = true;
+    let wallFireCoexistence = true, wallPatternExact = true;
+    const materialCounts = { fire: 0, energy: 0, plasma: 0, lava: 0, smoke: 0, metal: 0 };
+    const temperatures = new Map();
+    for (let y = 0; y < ${WORLD_HEIGHT}; y++) for (let x = 0; x < ${WORLD_WIDTH}; x++) {
+      const material = audit.cell(x, y), temperature = audit.temperature(x, y), wall = audit.wall(x, y);
+      const velocity = audit.velocity(x, y), rendered = audit.renderedVelocity(x, y);
+      materialHash = hashByte(materialHash, material);
+      temperatureHash = hashByte(temperatureHash, temperature);
+      temperatureHash = hashByte(temperatureHash, temperature >>> 8);
+      wallHash = hashByte(wallHash, wall);
+      velocityHash = hashByte(hashByte(velocityHash, velocity[0]), velocity[1]);
+      renderedVelocityHash = hashByte(hashByte(renderedVelocityHash, rendered[0]), rendered[1]);
+      temperatures.set(temperature, (temperatures.get(temperature) ?? 0) + 1);
+      mainBodyFireCells += Number(inRect(x, y, fixture.body.bounds) && material === fixture.material);
+      materialCounts.fire += Number(material === fixture.material);
+      materialCounts.energy += Number(material === fixture.protectedControls.energy.material);
+      materialCounts.plasma += Number(material === fixture.protectedControls.plasma.material);
+      materialCounts.lava += Number(material === fixture.protectedControls.lava.material);
+      materialCounts.smoke += Number(material === fixture.protectedControls.smoke.material);
+      materialCounts.metal += Number(material === fixture.contacts.fireMetal.otherMaterial);
+      wallCells += Number(wall !== 0);
+      nonzeroVelocityCells += Number(velocity[0] !== 0 || velocity[1] !== 0);
+      velocityStagingMismatches += Number(
+        velocity[0] !== rendered[0] || velocity[1] !== rendered[1]
+      );
+      const velocityOwned = ${JSON.stringify(mode)} === 'moving'
+        && material === fixture.material && inRect(x, y, fixture.body.velocityTongue);
+      const expectedX = velocityOwned ? fixture.body.velocityTongue.velocity.x : 0;
+      const expectedY = velocityOwned ? fixture.body.velocityTongue.velocity.y : 0;
+      velocityOwnershipExact = velocityOwnershipExact
+        && velocity[0] === expectedX && velocity[1] === expectedY
+        && rendered[0] === expectedX && rendered[1] === expectedY;
+      if (wall !== 0) wallFireCoexistence = wallFireCoexistence && material === fixture.material;
+      if (inRect(x, y, fixture.wallCoexistence.region)) {
+        const blockX = Math.floor((x - fixture.wallCoexistence.region.x) / fixture.wallCoexistence.blockSize);
+        const blockY = Math.floor((y - fixture.wallCoexistence.region.y) / fixture.wallCoexistence.blockSize);
+        const expectedWall = (blockX + blockY) % 2 === fixture.wallCoexistence.occupiedParity
+          ? fixture.conductiveWall : 0;
+        wallPatternExact = wallPatternExact && wall === expectedWall;
+      }
+    }
+    const emptyRect = (rect) => {
+      for (let y = rect.y; y < rect.y + rect.height; y++) for (let x = rect.x; x < rect.x + rect.width; x++) {
+        if (audit.cell(x, y) !== 0) return false;
+      }
+      return true;
+    };
+    const authoredVoidsExact = emptyRect(fixture.body.authoredHole)
+      && emptyRect(fixture.body.openChannel);
+    const sparseExact = audit.cell(fixture.sparse.strand.x, fixture.sparse.strand.y) === fixture.material
+      && audit.cell(fixture.sparse.isolated.x, fixture.sparse.isolated.y) === fixture.material;
+    const protectedControlsExact = Object.values(fixture.protectedControls).every((control) =>
+      audit.cell(control.probe.x, control.probe.y) === control.material
+      && audit.temperature(control.probe.x, control.probe.y) === control.temperature);
+    const contactsExact = Object.values(fixture.contacts).every((contact) =>
+      audit.cell(contact.fireProbe.x, contact.fireProbe.y) === fixture.material
+      && audit.cell(contact.otherProbe.x, contact.otherProbe.y) === contact.otherMaterial
+      && audit.temperature(contact.fireProbe.x, contact.fireProbe.y) === contact.fireTemperature
+      && audit.temperature(contact.otherProbe.x, contact.otherProbe.y) === contact.otherTemperature);
+    return {
+      mode: ${JSON.stringify(mode)}, mainBodyFireCells, materialCounts,
+      temperatureCounts: [...temperatures].sort(([left], [right]) => left - right)
+        .map(([temperature, cells]) => ({ temperature, cells })),
+      materialHash, temperatureHash, wallHash, velocityHash, renderedVelocityHash,
+      wallCells, nonzeroVelocityCells, velocityStagingMismatches, velocityOwnershipExact,
+      wallFireCoexistence, wallPatternExact, authoredVoidsExact, sparseExact,
+      protectedControlsExact, contactsExact, guardedBlankExact: emptyRect(fixture.guardedBlank),
+    };
+  })()`);
+}
+
+async function navigateFireFlameVfxState(cdp, mode, scale, fixtureMode, enabled, label) {
+  const query = new URLSearchParams({
+    scene: 'render-lab', inputAudit: '1', blankAudit: '1', auditStage: 'blank',
+    fireFlameVfxAudit: '1', renderScale: String(scale), renderLook: 'realistic',
+    volumeVfx: '0', liquidBodyVfx: '0', liquidSurfaceVfx: '0', liquidMotionVfx: '0',
+    waterCurvatureVfx: '0', fireFlameVfx: enabled ? '1' : '0',
+    gasBodyVfx: '0', gasMotionVfx: '0', powderBodyVfx: '0', powderLightVfx: '0',
+    organicSubsurfaceVfx: '0', wetSedimentVfx: '0', gasLightVfx: '0',
+    liquidSolidMeniscusVfx: '0', gasCoreDepthVfx: '0', nobleGasBillowVfx: '0',
+    nobleGasPrismVfx: '0', smokeSoftnessVfx: '0', smokeBillowDepthVfx: '0',
+    plasmaCoreVfx: '0', solidBodyVfx: '0', platinumBodyVfx: '0',
+    ceramicGlazeVfx: '0', botanicalBodyVfx: '0', glassBodyVfx: '0', oilBodyVfx: '0',
+    rockRoughnessVfx: '0', waterBodyVfx: '0', waterVolumeRecessionVfx: '0', acidBodyVfx: '0',
+  });
+  await cdp.send('Page.navigate', { url: `${AUDIT_BASE_URL}?${query}` });
+  await waitFor(() => evaluate(cdp, `(() => {
+    const parameters = new URLSearchParams(location.search);
+    return parameters.get('scene') === 'render-lab' && parameters.get('inputAudit') === '1'
+      && parameters.get('blankAudit') === '1' && parameters.get('fireFlameVfxAudit') === '1'
+      && parameters.get('renderScale') === ${JSON.stringify(String(scale))}
+      && parameters.get('volumeVfx') === '0'
+      && parameters.get('waterCurvatureVfx') === '0'
+      && parameters.get('fireFlameVfx') === ${JSON.stringify(enabled ? '1' : '0')}
+      && typeof window.__ANIFOR_INPUT_AUDIT__?.prepareFireFlameVfxFixture === 'function';
+  })()`), 15_000, `E67 ${label} ${scale}x page`);
+  await waitFor(() => evaluate(cdp,
+    `window.__ANIFOR_INPUT_AUDIT__.backend().backend === ${JSON.stringify(mode)}`),
+  15_000, `E67 ${label} ${scale}x backend`);
+  const fixture = await evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    audit.prepareFireFlameVfxFixture(${JSON.stringify(fixtureMode)});
+    audit.resetView();
+    return audit.fireFlameVfxFixture();
+  })()`);
+  const fixtureState = await waitFor(async () => {
+    const candidate = await sampleFireFlameVfxFixtureState(cdp, fixtureMode);
+    try {
+      assertFireFlameFixtureState(candidate, fixture, fixtureMode,
+        `E67 ${label} ${scale}x readiness`);
+      return candidate;
+    } catch { return undefined; }
+  }, 8_000, `E67 ${label} ${scale}x semantic temperature/velocity staging`);
+  const hdrPipeline = await evaluate(cdp, `(() => {
+    const canvas = document.querySelector('.semantic-field-canvas');
+    return canvas ? {
+      look: canvas.dataset.renderLook, state: canvas.dataset.hdrPipeline,
+      reason: canvas.dataset.hdrPipelineReason, bloomBacking: canvas.dataset.bloomBacking,
+      volumeVfx: canvas.dataset.volumeVfx, liquidBodyVfx: canvas.dataset.liquidBodyVfx,
+      liquidSurfaceVfx: canvas.dataset.liquidSurfaceVfx, liquidMotionVfx: canvas.dataset.liquidMotionVfx,
+      waterCurvatureVfx: canvas.dataset.waterCurvatureVfx, fireFlameVfx: canvas.dataset.fireFlameVfx,
+      gasBodyVfx: canvas.dataset.gasBodyVfx, gasMotionVfx: canvas.dataset.gasMotionVfx,
+      powderBodyVfx: canvas.dataset.powderBodyVfx, powderLightVfx: canvas.dataset.powderLightVfx,
+    } : undefined;
+  })()`);
+  const expectedBloom = `${WORLD_WIDTH * scale / 2}x${WORLD_HEIGHT * scale / 2}`;
+  assert(hdrPipeline?.look === 'realistic' && hdrPipeline?.state === 'active'
+    && hdrPipeline?.bloomBacking === expectedBloom
+    && hdrPipeline?.fireFlameVfx === (enabled ? 'active' : 'inactive'),
+  `E67 ${label} ${scale}x HDR/fire-flame state resolved incorrectly (${JSON.stringify(
+    hdrPipeline,
+  )})`);
+  const capture = await waitForStablePageCapture(cdp,
+    `E67 ${label} ${scale}x framebuffer`, scale === 4 ? 25_000 : undefined);
+  return {
+    fixture, fixtureState, capture, geometry: await metrics(cdp),
+    semantic: await hdrVfxSemanticDigest(cdp),
+    backing: await sampleVolumeVfxCanvasAlphaSupport(cdp),
+    rawControls: await sampleVolumeVfxRawWorldPixels(cdp, fireFlameRawControlPoints(fixture)),
+    hdrPipeline,
+  };
+}
+
+async function auditEightXFireFlameVfxExclusion(cdp, dpr) {
+  await setDesktopMetrics(cdp, 1280, 720, dpr);
+  const query = new URLSearchParams({
+    scene: 'render-lab', inputAudit: '1', blankAudit: '1', auditStage: 'eight-fire-flame',
+    fireFlameVfxAudit: '1', renderScale: '8', renderLook: 'realistic',
+    volumeVfx: '0', liquidBodyVfx: '0', liquidSurfaceVfx: '0', liquidMotionVfx: '0',
+    waterCurvatureVfx: '0', fireFlameVfx: '1', gasBodyVfx: '0', gasMotionVfx: '0',
+  });
+  await cdp.send('Page.navigate', { url: `${AUDIT_BASE_URL}?${query}` });
+  const deadline = Date.now() + EIGHT_X_PRESENTATION_DEADLINE_MS;
+  await waitFor(() => evaluate(cdp, `(() => {
+    const parameters = new URLSearchParams(location.search);
+    return parameters.get('renderScale') === '8'
+      && parameters.get('fireFlameVfxAudit') === '1'
+      && parameters.get('fireFlameVfx') === '1'
+      && Boolean(window.__ANIFOR_INPUT_AUDIT__);
+  })()`), remainingDeadlineMs(deadline, 'true-8x E67 API'), 'true-8x E67 API');
+  const backend = await waitForEightXTerminalBackend(cdp, 'true-8x E67', deadline);
+  assertEightXWebGLBackend(backend, 'true-8x E67');
+  const geometry = await waitForStableCanvas(cdp, 1280, 720, undefined,
+    Math.min(45_000, remainingDeadlineMs(deadline, 'true-8x E67 geometry')),
+    'true-8x E67 geometry');
+  assert(geometry.backing.width === WORLD_WIDTH * 8
+    && geometry.backing.height === WORLD_HEIGHT * 8 && geometry.outputScale === '8',
+  'true-8x E67 lost exact backing');
+  const state = await evaluate(cdp, `(() => {
+    const canvas = document.querySelector('canvas.semantic-field-canvas');
+    return canvas ? {
+      renderer: canvas.dataset.renderer, look: canvas.dataset.renderLook,
+      fireFlameVfx: canvas.dataset.fireFlameVfx, hdr: canvas.dataset.hdrPipeline,
+      reason: canvas.dataset.hdrPipelineReason, bloom: canvas.dataset.bloomBacking ?? null,
+    } : undefined;
+  })()`);
+  assert(state?.renderer === 'semantic-field-webgl' && state.look === 'realistic'
+    && state.fireFlameVfx === 'inactive' && state.hdr === 'inactive'
+    && state.reason === 'scale-8' && state.bloom === null,
+  `true-8x E67 selector/resource exclusion failed: ${JSON.stringify(state)}`);
+  const materialPlane = await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.materialPlaneDigest()');
+  assert(materialPlane.occupied === 0,
+    `true-8x E67 unexpectedly uploaded its dense fixture: ${JSON.stringify(materialPlane)}`);
+  const semanticBefore = await hdrVfxSemanticDigest(cdp);
+  const timingBudget = remainingDeadlineMs(deadline, 'true-8x E67 GPU completion');
+  const timing = await auditWebGLPresentationTiming(
+    cdp, 1, Math.min(12_000, timingBudget), timingBudget, 1,
+  );
+  assert(timing.source === 'gpu-fence',
+    `true-8x E67 did not complete a real GPU fence: ${JSON.stringify(timing)}`);
+  const semanticAfter = await hdrVfxSemanticDigest(cdp);
+  assertHdrVfxSemanticEquality(semanticBefore, semanticAfter, 'true-8x E67 GPU completion');
+  return { geometry, backend, state, materialPlane, fixtureUploaded: false,
+    semanticStable: true, timing };
 }
 
 /**
@@ -50747,6 +51417,25 @@ async function sampleVolumeVfxRawWorldPixels(cdp, points) {
 function assertVolumeVfxRawControlInvariant(left, right, label) {
   assert(JSON.stringify(left) === JSON.stringify(right),
     `${label}: liquid-body VFX changed an exact raw control owner (${JSON.stringify({ left, right })})`);
+}
+
+function assertFireFlameRawControlInvariant(left, right, label) {
+  const boundedSpill = new Set([
+    'fireSmokeFire', 'fireSmokeOther', 'fireMetalFire', 'fireMetalOther', 'nativeWall',
+  ]);
+  const same = left.length === right.length && left.every((point, index) => {
+    const candidate = right[index];
+    if (point.name !== candidate.name || point.x !== candidate.x || point.y !== candidate.y
+      || point.rgba[3] !== candidate.rgba[3]) return false;
+    const peak = Math.max(...point.rgba.slice(0, 3).map((value, channel) =>
+      Math.abs(value - candidate.rgba[channel])));
+    return boundedSpill.has(point.name)
+      ? peak <= FIRE_FLAME_COMPOSITE_SPILL_PEAK : peak === 0;
+  });
+  assert(same,
+    `${label}: Fire VFX escaped exact controls or bounded HDR contact/wall spill (${JSON.stringify({
+      left, right,
+    })})`);
 }
 
 function assertVolumeVfxRawAlphaInvariant(left, right, label) {

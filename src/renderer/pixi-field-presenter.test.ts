@@ -3642,6 +3642,47 @@ describe('Pixi presenter startup configuration', () => {
     expect(eight).not.toContain('uWaterCurvatureVfx');
   });
 
+  it('routes E67 exact-Fire thermal tongues through existing normal-WebGL evidence only', () => {
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');
+    const normalStart = source.indexOf('const FIELD_FRAGMENT = `', eightStart);
+    const eight = source.slice(eightStart, normalStart);
+    const branchStart = source.indexOf('// E67: exact Fire receives');
+    const branchEnd = source.indexOf('// E16: a broad exact Plasma body', branchStart);
+    const branch = source.slice(branchStart, branchEnd);
+
+    expect(source).toContain('resolveFireFlameVfxEnabled');
+    expect(source).toMatch(
+      /const fireFlameVfxEnabled = outputScale < 8\s*&& resolveFireFlameVfxEnabled\(renderLook\);/,
+    );
+    expect(source).toContain('uniform float uFireFlameVfx;');
+    expect(source).toContain('uFireFlameVfx: { value: fireFlameVfxEnabled ? 1 : 0');
+    expect(source).toMatch(
+      /presenter\.app\.canvas\.dataset\.fireFlameVfx\s*=[\s\S]*?\? 'active' : 'inactive';/,
+    );
+    expect(source).toContain("this.app.canvas.dataset.fireFlameVfx = 'inactive';");
+    expect(source).toContain("get('fireFlameVfxAudit') === '1'");
+    expect(branch).toMatch(
+      /if \(uFireFlameVfx > 0\.5 && uHDRVfx > 0\.5 && material == 4\.0/,
+    );
+    for (const reusedEvidence of [
+      'shape.w', 'cohesiveEnergy', 'core', 'edge', 'velocity.y',
+      'dot(normal.xy, velocity)', 'flowWave', 'pulse', 'smoothstep(0.18, 0.92, heat)',
+    ]) expect(branch).toContain(reusedEvidence);
+    expect(branch).toContain('fireHotCore');
+    expect(branch).toContain('fireCoolPocket');
+    expect(branch).toContain('fireTongueShoulder');
+    expect(branch).not.toContain('texture(');
+    expect(branch).not.toContain('uTime');
+    expect(branch).not.toContain('blackbodyColor(');
+    expect(branch).not.toContain('gl_FragCoord');
+    expect(branch).not.toContain('valueNoise');
+    expect(branch).not.toMatch(/\balpha\s*=/);
+    expect(source.indexOf('blackbodyColor(temperatureByte)', branchEnd)).toBeGreaterThan(branchEnd);
+    expect(eight).not.toContain('fireFlameVfx');
+    expect(eight).not.toContain('uFireFlameVfx');
+  });
+
   it('advances fallback presentation timing only after its GPU fence signals', () => {
     const callbacks: FrameRequestCallback[] = [];
     vi.stubGlobal('requestAnimationFrame', vi.fn((callback: FrameRequestCallback) => {
