@@ -1320,6 +1320,12 @@ export class MaterialRenderer {
     // Preserve the hydrated E29 fixture and submit only the causal uniform.
   }
 
+  /** Normal-WebGL audit-only in-place uniform toggle; Canvas keeps its path. */
+  setIszsCrystalHierarchyVfxEnabled(enabled: boolean): void {
+    this.presenter?.setIszsCrystalHierarchyVfxEnabled(enabled);
+    // Preserve the hydrated E47 fixture and submit only the causal uniform.
+  }
+
   setSparkStateStylingEnabled(enabled: boolean): void {
     if (enabled === this.sparkStateStylingEnabled) return;
     this.sparkStateStylingEnabled = enabled;

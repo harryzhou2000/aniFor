@@ -27,6 +27,7 @@ import {
   resolveAcidBodyVfxEnabled,
   resolveSoapBodyVfxEnabled,
   resolveDeutBodyVfxEnabled,
+  resolveIszsCrystalHierarchyVfxEnabled,
   resolveIszsCrystallineVfxEnabled,
   resolveRadioactiveSolidBodyVfxEnabled,
   resolveVibrMacroReliefVfxEnabled,
@@ -997,6 +998,35 @@ describe('resolveRenderLook', () => {
     expect(resolveIszsCrystallineVfxEnabled(
       'realistic', '?iszsCrystallineVfx=false',
     )).toBe(false);
+  });
+
+  it('keeps ISZS crystal hierarchy subordinate to E47 and frozen in input audits', () => {
+    expect(resolveIszsCrystalHierarchyVfxEnabled(
+      'classic', '?iszsCrystalHierarchyVfx=on',
+    )).toBe(false);
+    expect(resolveIszsCrystalHierarchyVfxEnabled('realistic', '')).toBe(true);
+    expect(resolveIszsCrystalHierarchyVfxEnabled('neon-lab', '')).toBe(true);
+    expect(resolveIszsCrystalHierarchyVfxEnabled(
+      'realistic', '?inputAudit=1',
+    )).toBe(false);
+    expect(resolveIszsCrystalHierarchyVfxEnabled(
+      'realistic',
+      '?inputAudit=1&solidBodyVfx=1&radioactiveSolidBodyVfx=1&iszsCrystallineVfx=1&iszsCrystalHierarchyVfx=true',
+    )).toBe(true);
+    expect(resolveIszsCrystalHierarchyVfxEnabled(
+      'realistic', '?iszsCrystallineVfx=0&iszsCrystalHierarchyVfx=on',
+    )).toBe(false);
+    expect(resolveIszsCrystalHierarchyVfxEnabled(
+      'realistic', '?radioactiveSolidBodyVfx=0&iszsCrystallineVfx=1&iszsCrystalHierarchyVfx=on',
+    )).toBe(false);
+    expect(resolveIszsCrystalHierarchyVfxEnabled(
+      'realistic', '?solidBodyVfx=0&radioactiveSolidBodyVfx=1&iszsCrystallineVfx=1&iszsCrystalHierarchyVfx=on',
+    )).toBe(false);
+    for (const requested of ['0', 'off', 'false']) {
+      expect(resolveIszsCrystalHierarchyVfxEnabled(
+        'neon-lab', `?iszsCrystalHierarchyVfx=${requested}`,
+      )).toBe(false);
+    }
   });
 
   it('keeps exact VIBR macro relief subordinate to E43 and isolated in input audits', () => {

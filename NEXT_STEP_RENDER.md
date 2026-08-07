@@ -1000,11 +1000,35 @@ does not alter simulation, camera, semantic ownership, or `renderScale`.
   GPU fence; the frozen run was `3276.7 ms` with zero browser errors. The
   canonical 2× composed survey raises ROCK quality `90.2 → 98.651` and
   microcontrast `1.06 → 1.42`, with unchanged `.967` coverage and no clipping.
+- **E60 accepted ISZS crystal hierarchy:** exact native ISZS `105` gains a
+  normal-WebGL-only hierarchy as a strict E47/E43/E17 child
+  (`?iszsCrystalHierarchyVfx=0|1`). It defaults on in non-Classic looks but is
+  input-audit-off unless explicit; Canvas and compact true 8× retain E47. It
+  recombines only the existing 30-cell `radioactiveSolidMacro` and 11-cell
+  facet/fold/core evidence into an aperiodic broad cyan near face, negative-
+  luma indigo far/recess face, and purple absorptive interstice. It is RGB-only:
+  add no carrier/noise, sample, texture, field, pass, target, upload,
+  allocation, clock, state, alpha, support, topology, or physics decision. The
+  facet-owned single-lens retint was too subtle; the slow rigid directional
+  triangle looked compactly good but formed repeating diagonal bands on broad
+  slabs and remains rejected. `npm run audit:vfx:iszs-crystal-hierarchy`
+  freezes off→on→off at 1×/2×/4× with E47's 51 exact controls and exact raw
+  alpha/state/depth/walls. E17/E43/E47/Classic each collapse E60. Requested-on
+  true 8× excludes E17/E43/E47/E60/HDR at exact 4896×3072 and completes a GPU
+  fence in `5.4102 s`. Frozen Core RGB/chroma/spatial/signed values are
+  `10.57–10.60`/`6.59–6.61`/`6.363–6.409`/`6.48–6.51`; Crown RGB/chroma/signed
+  is `12.15–12.20`/`7.18–7.21`/`10.25–10.30`; Pocket is
+  `9.39–9.40`/`9.65–9.67`/`−3.62…−3.60`. Canonical composed 2× ISZS quality
+  rises `93.047 → 98.291`, luma SD `7.68 → 12.29`, micro `1.16 → 1.40`, chroma
+  `2.19 → 2.38`, and macro range `28 → 43`, while support `1`, coverage `.961`,
+  and clipped fraction `0` remain exact. The final composed matrix is exact and
+  cross-scale verified with zero browser errors; ISZS quality is
+  `95.463/98.291/99.174` at 1×/2×/4×.
 - **Protected 8× rung:** `renderScale=8` deliberately reports
   `hdrPipeline=inactive` / `scale-8` and retains the proven direct single-mesh
   4896×3072 path. The experiment must earn a bounded 8× design rather than
   allocating a 115 MiB full-resolution float target beside that path.
-- **Current decision:** E01/E02/E03/E04/E05/E06/E07/E08/E09/E10/E11/E12/E13/E14/E15/E16/E17/E18/E19/E20/E21/E22/E23/E24/E25/E26/E27/E28/E29/E30/E31/E32/E33/E34/E35/E36/E37/E38/E39/E40/E41/E42/E43/E44/E45/E46/E47/E48/E49/E50/E51/E52/E53/E54/E55/E56/E57/E58/E59 remain opt-in through the non-Classic looks
+- **Current decision:** E01/E02/E03/E04/E05/E06/E07/E08/E09/E10/E11/E12/E13/E14/E15/E16/E17/E18/E19/E20/E21/E22/E23/E24/E25/E26/E27/E28/E29/E30/E31/E32/E33/E34/E35/E36/E37/E38/E39/E40/E41/E42/E43/E44/E45/E46/E47/E48/E49/E50/E51/E52/E53/E54/E55/E56/E57/E58/E59/E60 remain opt-in through the non-Classic looks
   until representative hardware timing and mobile thermal behavior are
   measured. E02 remains the safe family-wide baseline. E03 is accepted as the
   liquid-depth checkpoint: its fit-view crop is visibly more cohesive, retains
@@ -1123,6 +1147,14 @@ does not alter simulation, camera, semantic ownership, or `renderScale`.
   to restore E29's rejected continuous stripes, introduce a hard ridge or
   threshold, add cell-scale stipple, or widen the response to reconstructed,
   contacted, trait-bearing, emissive, wall, fine-topology, or non-ROCK matter.
+  E60 is the accepted exact-ISZS crystal-hierarchy checkpoint: freeze its
+  strict E47/E43/E17 dependency, existing 30-cell macro and 11-cell
+  facet/fold/core evidence, cyan/indigo/purple RGB hierarchy, 51 exact
+  controls, and compact-8× exclusion. Its rejected single-lens retint and slow
+  directional triangle remain rejected. The canonical 2× result closes the
+  ISZS surface-detail diagnosis; the final exact ISZS quality is
+  `95.463/98.291/99.174` at 1×/2×/4×, and ISZS is no longer the Solid floor.
+  Queue no additional Solid layer without a fresh visible diagnosis.
   E30 is the accepted exact-Wood interrupted-bark checkpoint: freeze its E26
   dependency, E28 independence, E20 exact-owner/body proof, existing-evidence-
   only irregular segment mask, 32-byte focused peak, longitudinal direction
@@ -2209,7 +2241,7 @@ next production 4× survey then selected Wood/PLNT as the largest remaining
   coverage `.971`, macro range `50`, zero dark/clipped fraction, and exact
   semantics across the full composed matrix.
 
-**Next visual experiments:** E03–E59 provide accepted liquid body/surface,
+**Next visual experiments:** E03–E60 provide accepted liquid body/surface,
 stable-gas, coherent-gas-motion, powder-depth, and powder-local-light
 checkpoints plus exact resting contact grounding, Glass/Ice transmission, and
 state-aware Wax/PLNT subsurface response, composed wet-mineral optics,
@@ -2252,6 +2284,11 @@ it strengthens only the existing interrupted facet vocabulary, materially
 raising the composed ROCK score while retaining exact topology and a quiet
 fit-view response. Do not treat Water/Metal as an automatic queued tint after
 this checkpoint; select the next owner from a fresh full-scene fit-view review.
+E60 closes the exact ISZS surface-detail diagnosis as a strict E47/E43/E17
+child: its broad aperiodic crystal-face hierarchy raises the canonical fit-view
+without reviving E47's rejected lens or a repeated directional band. ISZS is no
+longer the Solid floor; its final exact quality is `95.463/98.291/99.174` at
+1×/2×/4×. Do not immediately queue another Solid layer.
 E37 adds exact Metal-side Water-contact spectral separation over the joint E14+
 E17 proof without changing either body's topology. E56 completes only the
 exact WATR side beside exact METL through E03/E14/E17/E37's inherited clean
@@ -2477,11 +2514,31 @@ frozen run was `3276.7 ms` with zero browser errors. Canonical 2× ROCK quality
 rises `90.2 → 98.651`, microcontrast `1.06 → 1.42`, chromatic contrast
 `.43 → .47`, and macro range `30 → 35`, while coverage `.967`, support,
 continuity, cavity control, and zero clipping stay unchanged.
+E60 is the accepted normal-WebGL-only exact ISZS `105` crystal-hierarchy
+checkpoint, independently measurable with `?iszsCrystalHierarchyVfx=0|1` and a
+strict E47/E43/E17 child. Non-Classic defaults it on, while `inputAudit=1`
+requires the explicit selector; Canvas and compact true 8× retain E47. It
+recombines only the 30-cell `radioactiveSolidMacro` with the 11-cell existing
+facet/fold/core evidence into an aperiodic broad cyan near face, negative-luma
+indigo far/recess face, and purple absorptive interstice. It is RGB-only and
+adds no carrier/noise, sample, texture, field, pass, target, upload, allocation,
+clock, state, alpha, support, topology, or physics decision. The facet-owned
+single-lens retint was too subtle; the slow rigid directional triangle created
+repeated diagonal bands across broad slabs and remains rejected.
+
+`npm run audit:vfx:iszs-crystal-hierarchy` freezes production-WebGL 1×/2×/4×
+off→on→off evidence with E47's 51 exact controls and exact raw alpha/state/
+depth/walls. Core RGB RMS/chroma/spatial RMS/signed mean is
+`10.57–10.60`/`6.59–6.61`/`6.363–6.409`/`6.48–6.51`; Crown RGB RMS/chroma/
+signed mean is `12.15–12.20`/`7.18–7.21`/`10.25–10.30`; Pocket is
+`9.39–9.40`/`9.65–9.67`/`−3.62…−3.60`. E17/E43/E47/Classic each collapse E60.
+Requested-on true 8× keeps E17/E43/E47/E60/HDR inactive for `scale-8`, promotes
+exact 4896×3072 WebGL, and completes a GPU fence in `5.4102 s`.
 Improve distinctive depth, transmission, reflection, lighting, and
 mesostructure without stacking another narrow Oil/Acid/contact tint or generic
 PLNT/gas layer.
 The fresh composed-family/material survey now uses
-E17/E43/E44/E45/E46/E47/E53/E54/E55/E58/E59 under
+E17/E43/E44/E45/E46/E47/E53/E54/E55/E58/E59/E60 under
 `inputAudit=1`. Fixture v6 freezes 23 material counts, 18 scored regions,
 semantic hash `3610338776`, and 114,015 occupied cells at 1×/2×/4×; its exact
 SOAP body owns 1,220 cells and the deep `liquidSoap` region owns 384. The
@@ -2512,14 +2569,13 @@ exact PLNT `73.893/79.044/80.357` at 1×/2×/4×. With E59 active, exact ROCK
 quality becomes `97.345/98.651/99.174`; canonical microcontrast rises
 `1.06 → 1.42`, chromatic contrast `.43 → .47`, and macro range `30 → 35`,
 with support `1`, coverage `.967`, continuity/cavity control `1`, and zero
-clipping. The current canonical 2× family rank is Organic `79.044`, Contact
-`88.768` (Water/Metal chromatic separation), Solid `93.047` (ISZS surface
-detail), Gas `95.463`, Emission `98.475`, and Powder/Liquid `100`; exact
-1×/2×/4× semantics and CSS geometry remain fixed with zero browser errors.
-The next contextual cues are PLNT mesostructure, Water/Metal chromatic
-separation, ISZS surface detail, and Noble Gas billow depth; ROCK is no longer
-the Solid floor. Do not immediately stack another PLNT, contact, ROCK, or VIBR
-layer. Because E36 already
+clipping. E60 exact ISZS quality is `95.463/98.291/99.174` at 1×/2×/4×; the
+full composed matrix is exact and cross-scale verified with zero browser
+errors. The current canonical 2× family rank is Organic `79.044`, Contact
+`88.768` (Water/Metal chromatic separation), Gas `95.463`, Solid `98.291`
+(E60 exact ISZS crystal hierarchy), Emission `98.475`, and Powder/Liquid `100`.
+ISZS is no longer the Solid floor. Do not
+immediately stack another PLNT, contact, ROCK, VIBR, or ISZS layer. Because E36 already
 proved that
 the PLNT aggregate scorer can penalize accepted broad canopy recomposition,
 select the next experiment from a new fit-view diagnosis rather than tuning

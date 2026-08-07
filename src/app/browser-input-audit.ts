@@ -216,6 +216,8 @@ export interface BrowserInputAuditApi {
   setPlantCanopyHierarchyVfx(enabled: boolean): void;
   /** Normal-WebGL audit-only in-place uniform toggle; Canvas keeps its path. */
   setRockWeatheredFacetVfx(enabled: boolean): void;
+  /** Normal-WebGL audit-only in-place uniform toggle; Canvas keeps its path. */
+  setIszsCrystalHierarchyVfx(enabled: boolean): void;
   setSparkStateStyling(enabled: boolean): void;
   setPowderBodyDepth(enabled: boolean): void;
   setPowderMesostrataStyling(enabled: boolean): void;

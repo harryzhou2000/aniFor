@@ -1212,6 +1212,30 @@ control, and zero clipping. Every later normal-fragment edit must retain a
 real production-browser shader gate; TypeScript and shader-string tests are
 not acceptance evidence by themselves.
 
+E60 is the accepted normal-WebGL-only exact ISZS `105` crystal-hierarchy
+checkpoint, independently measurable with `?iszsCrystalHierarchyVfx=0|1` and a
+strict E47/E43/E17 child. It is non-Classic default-on but input-audit-off
+unless explicit; Canvas and compact true 8× retain E47. Recombine only the
+existing 30-cell `radioactiveSolidMacro` and 11-cell facet/fold/core evidence
+into an aperiodic broad cyan near face, negative-luma indigo far/recess face,
+and purple absorptive interstice. It is RGB-only: add no carrier/noise, sample,
+texture, field, pass, target, upload, allocation, clock, state, alpha, support,
+topology, or physics decision. The facet-owned single-lens retint was too
+subtle; the slow rigid directional triangle repeated diagonal bands across a
+broad slab and remains rejected. `npm run audit:vfx:iszs-crystal-hierarchy`
+freezes 1×/2×/4× off→on→off with E47's 51 exact controls and exact raw
+alpha/state/depth/walls. Core RGB RMS/chroma/spatial/signed is
+`10.57–10.60`/`6.59–6.61`/`6.363–6.409`/`6.48–6.51`; Crown RGB/chroma/signed is
+`12.15–12.20`/`7.18–7.21`/`10.25–10.30`; Pocket is
+`9.39–9.40`/`9.65–9.67`/`−3.62…−3.60`. E17/E43/E47/Classic each collapse E60.
+Requested-on true 8× keeps E17/E43/E47/E60/HDR inactive for `scale-8`, promotes
+exact 4896×3072 WebGL, and completes a GPU fence in `5.4102 s`. The final
+composed 1×/2×/4× matrix is exact and cross-scale verified with zero browser
+errors; ISZS quality is `95.463/98.291/99.174`. Canonical 2× ISZS rises
+`93.047 → 98.291`, luma SD `7.68 → 12.29`, micro
+`1.16 → 1.40`, chroma `2.19 → 2.38`, and macro range `28 → 43`, with support
+`1`, coverage `.961`, and clipped fraction `0` unchanged.
+
 The isolated candidate-survey v1 route is app-owned and must use the
 deterministic 612×384 RenderLab backend unless `simulation=native` is explicit.
 It freezes semantic hash `2255453673`, 115,368 occupied cells, all six exact
@@ -1259,14 +1283,17 @@ mesostructure `.405 → .430` and macro range `40 → 45.5` without changing
 continuity or scene semantics. E59 raises exact native ROCK `78` to quality
 `97.345/98.651/99.174`; canonical microcontrast/chroma/macro range becomes
 `1.42`/`.47`/`35`, with support `1`, coverage `.967`, and zero clipping. The
-Solid floor is therefore exact ISZS at `89.245/93.047/94.303`, from its
-remaining surface-detail cue rather than ROCK or VIBR. At canonical 2×,
-Organic is `79.044`, Contact `88.768`, Solid `93.047`, Gas `95.463`, Emission
-`98.475`, and Powder/Liquid `100`. Do not stack another PLNT, Water/Metal,
-ROCK, or VIBR layer merely to chase that order. Select a future target only
-from a new visible fit-view diagnosis; PLNT mesostructure, Water/Metal
-chromatic separation, ISZS surface detail, and Noble Gas billow depth are
-contextual cues rather than an automatic implementation queue.
+E60 raises canonical 2× exact ISZS from `93.047` to `98.291`; luma SD is
+`12.29`, microcontrast `1.40`, chroma `2.38`, and macro range `43`, while
+support `1`, coverage `.961`, and clipped fraction `0` remain unchanged. The
+final exact ISZS quality is `95.463/98.291/99.174` at 1×/2×/4×. Canonical
+family rank is Organic `79.044`, Contact `88.768`, Gas `95.463`, Solid
+`98.291`, Emission `98.475`, and Powder/Liquid `100`. ISZS is no longer the
+Solid floor or an automatic next diagnosis. Do not stack another PLNT,
+Water/Metal, ROCK, VIBR, or ISZS layer merely to chase rank. Select a future
+target only from a new visible fit-view diagnosis; PLNT mesostructure,
+Water/Metal chromatic separation, and Noble Gas billow depth remain contextual
+cues rather than an implementation queue.
 
 The old post-E16 rank that labelled Stone `21` as Solid was invalid because
 Stone is native Powder. The corrected showcase uses native ROCK ground and

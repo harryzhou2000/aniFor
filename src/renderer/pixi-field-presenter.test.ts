@@ -60,6 +60,7 @@ interface PresenterHarness {
   setPlantCanopyInterlockVfxEnabled: PixiFieldPresenter['setPlantCanopyInterlockVfxEnabled'];
   setPlantCanopyHierarchyVfxEnabled: PixiFieldPresenter['setPlantCanopyHierarchyVfxEnabled'];
   setRockWeatheredFacetVfxEnabled: PixiFieldPresenter['setRockWeatheredFacetVfxEnabled'];
+  setIszsCrystalHierarchyVfxEnabled: PixiFieldPresenter['setIszsCrystalHierarchyVfxEnabled'];
   setSparkStateStylingEnabled: PixiFieldPresenter['setSparkStateStylingEnabled'];
   setLiquidSilhouetteCohesionEnabled: PixiFieldPresenter['setLiquidSilhouetteCohesionEnabled'];
   setRenderStallHandler: PixiFieldPresenter['setRenderStallHandler'];
@@ -2751,6 +2752,91 @@ describe('Pixi presenter startup configuration', () => {
     presenter.setRockWeatheredFacetVfxEnabled(true);
     expect(presenter.uniforms.uniforms.uRockWeatheredFacetVfx).toBe(0);
     expect(presenter.app.canvas.dataset.rockWeatheredFacetVfx).toBe('inactive');
+    expect(presenter.app.render).not.toHaveBeenCalled();
+  });
+
+  it('keeps E60 ISZS crystal hierarchy E47-dependent and resource-neutral', () => {
+    const presenter = presenterHarness();
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const canvasSource = readFileSync(new URL('./field-renderer.ts', import.meta.url), 'utf8');
+    const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');
+    const normalStart = source.indexOf('const FIELD_FRAGMENT = `', eightStart);
+    const normalEnd = source.indexOf('`;\n\n/** Primary WebGL presentation', normalStart);
+    const eight = source.slice(eightStart, normalStart);
+    const normal = source.slice(normalStart, normalEnd);
+    const e47Start = normal.indexOf('        // E47:');
+    const e60Start = normal.indexOf('          // E60:', e47Start);
+    const e60End = normal.indexOf('          }\n        }\n      }\n    } else', e60Start);
+    const e47Parent = normal.slice(e47Start, e60Start);
+    const e60 = normal.slice(e60Start, e60End);
+    const preserveDrawingBufferStart = source.indexOf('preserveDrawingBuffer:');
+    const preserveDrawingBufferEnd = source.indexOf(
+      'resolution: outputScale', preserveDrawingBufferStart,
+    );
+    const preserveDrawingBuffer = source.slice(
+      preserveDrawingBufferStart, preserveDrawingBufferEnd,
+    );
+
+    expect(e47Start).toBeGreaterThanOrEqual(0);
+    expect(e60Start).toBeGreaterThan(e47Start);
+    expect(e60End).toBeGreaterThan(e60Start);
+    expect(e47Parent).toContain('if (uIszsCrystallineVfx > 0.5 && material == 105.0)');
+    expect(normal).toContain('uniform float uIszsCrystalHierarchyVfx;');
+    expect(normal.match(/uIszsCrystalHierarchyVfx > 0\.5/g)).toHaveLength(1);
+    expect(eight).not.toContain('uIszsCrystalHierarchyVfx');
+    expect(eight).not.toContain('iszsCrystalHierarchyVfx');
+    for (const reused of [
+      'iszsCrystalVolume', 'radioactiveSolidCore', 'radioactiveSolidFold',
+      'radioactiveSolidFacet', 'radioactiveSolidMacro',
+      'iszsHierarchyNear', 'iszsHierarchyFar', 'iszsHierarchyInterstice',
+    ]) expect(e60).toContain(reused);
+    expect(e60).not.toContain('botanicalBodyNoise(');
+    expect(e60).not.toContain('sin(');
+    expect(e60).not.toContain('smoothstep(');
+    expect(e60).not.toContain('texture(');
+    expect(e60).not.toContain('uTime');
+    expect(e60).not.toContain('gl_FragCoord');
+    expect(e60).not.toMatch(/\balpha\s*[+*]?=/);
+    expect(source.match(/this\.uniforms\.uniforms\.uIszsCrystalHierarchyVfx = 0;/g))
+      .toHaveLength(3);
+    expect(source).toMatch(
+      /const iszsCrystalHierarchyVfxEnabled = outputScale < 8\s*&& resolveIszsCrystalHierarchyVfxEnabled\(renderLook\);/,
+    );
+    expect(source).toContain(
+      'uIszsCrystalHierarchyVfx: {\n        value: iszsCrystalHierarchyVfxEnabled ? 1 : 0',
+    );
+    expect(preserveDrawingBuffer).toContain("get('iszsCrystalHierarchyVfxAudit') === '1'");
+    expect(source).toContain('presenter.app.canvas.dataset.iszsCrystalHierarchyVfx');
+    expect(source).toContain("this.app.canvas.dataset.iszsCrystalHierarchyVfx = 'inactive';");
+    const auditSetterStart = canvasSource.indexOf('setIszsCrystalHierarchyVfxEnabled(');
+    const auditSetterEnd = canvasSource.indexOf('\n  }', auditSetterStart);
+    const auditSetter = canvasSource.slice(auditSetterStart, auditSetterEnd);
+    expect(auditSetterStart).toBeGreaterThan(0);
+    expect(auditSetter).toContain('this.presenter?.setIszsCrystalHierarchyVfxEnabled(enabled)');
+    expect(auditSetter).not.toContain('fallbackFields');
+    expect(auditSetter).not.toContain('contourChunks');
+
+    presenter.uniforms.uniforms.uIszsCrystallineVfx = 1;
+    presenter.setIszsCrystalHierarchyVfxEnabled(true);
+    expect(presenter.uniforms.uniforms.uIszsCrystalHierarchyVfx).toBe(1);
+    expect(presenter.app.canvas.dataset.iszsCrystalHierarchyVfx).toBe('active');
+    expect(presenter.app.render).toHaveBeenCalledOnce();
+    presenter.app.render.mockClear();
+    presenter.setIszsCrystalHierarchyVfxEnabled(false);
+    expect(presenter.uniforms.uniforms.uIszsCrystalHierarchyVfx).toBe(0);
+    expect(presenter.app.canvas.dataset.iszsCrystalHierarchyVfx).toBe('inactive');
+    expect(presenter.app.render).toHaveBeenCalledOnce();
+    presenter.app.render.mockClear();
+    presenter.uniforms.uniforms.uIszsCrystallineVfx = 0;
+    presenter.setIszsCrystalHierarchyVfxEnabled(true);
+    expect(presenter.uniforms.uniforms.uIszsCrystalHierarchyVfx).toBe(0);
+    expect(presenter.app.canvas.dataset.iszsCrystalHierarchyVfx).toBe('inactive');
+    expect(presenter.app.render).not.toHaveBeenCalled();
+    presenter.uniforms.uniforms.uIszsCrystallineVfx = 1;
+    Object.assign(presenter, { outputScale: 8 });
+    presenter.setIszsCrystalHierarchyVfxEnabled(true);
+    expect(presenter.uniforms.uniforms.uIszsCrystalHierarchyVfx).toBe(0);
+    expect(presenter.app.canvas.dataset.iszsCrystalHierarchyVfx).toBe('inactive');
     expect(presenter.app.render).not.toHaveBeenCalled();
   });
 

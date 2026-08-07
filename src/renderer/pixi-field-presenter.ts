@@ -55,6 +55,7 @@ import {
   resolveCarbonDioxideBodyVfxEnabled,
   resolveFogCoreDiffuseVfxEnabled,
   resolveHydrogenBodyVfxEnabled,
+  resolveIszsCrystalHierarchyVfxEnabled,
   resolveIszsCrystallineVfxEnabled,
   resolveRadioactiveSolidBodyVfxEnabled,
   resolveVibrMacroReliefVfxEnabled,
@@ -3300,6 +3301,7 @@ uniform float uSolidBodyVfx;
 uniform float uRadioactiveSolidBodyVfx;
 uniform float uVibrMacroReliefVfx;
 uniform float uIszsCrystallineVfx;
+uniform float uIszsCrystalHierarchyVfx;
 uniform float uRockRoughnessVfx;
 uniform float uRockMesostructureVfx;
 uniform float uRockWeatheredFacetVfx;
@@ -9784,6 +9786,47 @@ void main() {
           color += (vec3(-0.024, 0.014, 0.068) * iszsFacetKey
               + vec3(0.016, -0.012, 0.036) * iszsCrystalPocket)
             * iszsCrystalVolume;
+          // E60: make E47's compact fit-view body read as intersecting crystal
+          // planes rather than one isolated cyan lens. Recombine only E47's
+          // live smooth facet and macro carriers into a quiet cyan near plane,
+          // violet far plane, and absorptive interstitial core. The
+          // exact E43/E47 depth, owner, contact, wall, trait, and topology proof
+          // remains authoritative. This adds no carrier, noise, sample,
+          // texture, field, pass, target, upload, allocation, clock, state,
+          // alpha, support, silhouette, ownership, topology, or physics path.
+          if (uIszsCrystalHierarchyVfx > 0.5) {
+            float iszsHierarchyVolume = iszsCrystalVolume * radioactiveSolidCore;
+            // Let the slower 30-cell carrier own the broad face split. The
+            // existing 11-cell facet only bends that divide and modulates each
+            // face; making the facet itself own the split merely retinted
+            // E47's already-bright cyan lens at fit view. A directional
+            // triangle was also rejected because it repeated obvious bands
+            // across the large exact-owner slab.
+            float iszsHierarchySplit = clamp(
+              radioactiveSolidMacro * 1.06 + radioactiveSolidFacet * 0.16,
+              -1.0, 1.0
+            );
+            float iszsHierarchyNear = clamp(
+              (iszsHierarchySplit - 0.03) / 0.32, 0.0, 1.0
+            ) * (0.82 + max(radioactiveSolidFacet, 0.0) * 0.18);
+            float iszsHierarchyFar = clamp(
+              (-iszsHierarchySplit - 0.03) / 0.34, 0.0, 1.0
+            ) * (0.82 + max(-radioactiveSolidFacet, 0.0) * 0.18);
+            float iszsHierarchyInterstice = (1.0 - clamp(
+              (abs(iszsHierarchySplit) - 0.05) / 0.20, 0.0, 1.0
+            )) * (0.78 + (1.0 - abs(radioactiveSolidFold)) * 0.22);
+            color += (vec3(1.03) - clamp(color, 0.0, 1.03))
+              * (vec3(0.10, 0.55, 0.80) * iszsHierarchyNear * 0.092
+                + vec3(0.32, 0.18, 0.96) * iszsHierarchyFar * 0.030)
+              * iszsHierarchyVolume;
+            color *= vec3(1.0) - (vec3(0.070, 0.050, 0.080)
+                * iszsHierarchyInterstice
+              + vec3(0.092, 0.070, 0.022) * iszsHierarchyFar)
+              * iszsHierarchyVolume;
+            color += (vec3(-0.006, 0.016, 0.040) * iszsHierarchyNear
+                + vec3(-0.032, -0.010, 0.040) * iszsHierarchyFar)
+              * iszsHierarchyVolume;
+          }
         }
       }
     } else if (deviceSurface > 0.5 || (optics < 0.5 && profile == 5.0)) {
@@ -11236,6 +11279,10 @@ export class PixiFieldPresenter {
     // and declares neither this selector nor a parallel branch.
     const iszsCrystallineVfxEnabled = outputScale < 8
       && resolveIszsCrystallineVfxEnabled(renderLook);
+    // E60 is a compact arithmetic child of E47's existing ISZS plane stack.
+    // Canvas and true 8x retain the accepted E47 presentation unchanged.
+    const iszsCrystalHierarchyVfxEnabled = outputScale < 8
+      && resolveIszsCrystalHierarchyVfxEnabled(renderLook);
     // E23 is an exact-ROCK normal-WebGL correction to E17's inherited polished
     // lobe. Compact true 8x retains its established mineral grammar and has no
     // selector or parallel arithmetic.
@@ -11389,6 +11436,9 @@ export class PixiFieldPresenter {
       },
       uVibrMacroReliefVfx: { value: vibrMacroReliefVfxEnabled ? 1 : 0, type: 'f32' },
       uIszsCrystallineVfx: { value: iszsCrystallineVfxEnabled ? 1 : 0, type: 'f32' },
+      uIszsCrystalHierarchyVfx: {
+        value: iszsCrystalHierarchyVfxEnabled ? 1 : 0, type: 'f32',
+      },
       uRockRoughnessVfx: { value: rockRoughnessVfxEnabled ? 1 : 0, type: 'f32' },
       uRockMesostructureVfx: { value: rockMesostructureVfxEnabled ? 1 : 0, type: 'f32' },
       uRockWeatheredFacetVfx: { value: rockWeatheredFacetVfxEnabled ? 1 : 0, type: 'f32' },
@@ -11656,6 +11706,7 @@ export class PixiFieldPresenter {
       this.uniforms.uniforms.uRadioactiveSolidBodyVfx = 0;
       this.uniforms.uniforms.uVibrMacroReliefVfx = 0;
       this.uniforms.uniforms.uIszsCrystallineVfx = 0;
+      this.uniforms.uniforms.uIszsCrystalHierarchyVfx = 0;
       this.uniforms.uniforms.uRockRoughnessVfx = 0;
       this.uniforms.uniforms.uRockMesostructureVfx = 0;
       this.uniforms.uniforms.uRockWeatheredFacetVfx = 0;
@@ -11738,6 +11789,7 @@ export class PixiFieldPresenter {
             || new URLSearchParams(location.search).get('radioactiveSolidBodyVfxAudit') === '1'
             || new URLSearchParams(location.search).get('vibrMacroReliefVfxAudit') === '1'
             || new URLSearchParams(location.search).get('iszsCrystallineVfxAudit') === '1'
+            || new URLSearchParams(location.search).get('iszsCrystalHierarchyVfxAudit') === '1'
             || new URLSearchParams(location.search).get('rockRoughnessVfxAudit') === '1'
             || new URLSearchParams(location.search).get('rockMesostructureVfxAudit') === '1'
             || new URLSearchParams(location.search).get('rockWeatheredFacetVfxAudit') === '1'
@@ -11846,6 +11898,9 @@ export class PixiFieldPresenter {
     ) > 0.5 ? 'active' : 'inactive';
     presenter.app.canvas.dataset.iszsCrystallineVfx = Number(
       presenter.uniforms.uniforms.uIszsCrystallineVfx
+    ) > 0.5 ? 'active' : 'inactive';
+    presenter.app.canvas.dataset.iszsCrystalHierarchyVfx = Number(
+      presenter.uniforms.uniforms.uIszsCrystalHierarchyVfx
     ) > 0.5 ? 'active' : 'inactive';
     presenter.app.canvas.dataset.rockRoughnessVfx = Number(
       presenter.uniforms.uniforms.uRockRoughnessVfx
@@ -12728,6 +12783,22 @@ export class PixiFieldPresenter {
     this.renderApplication();
   }
 
+  /**
+   * Audit-only causal toggle for E60. It cannot revive E47 and is absent from
+   * the compact true-8x shader; normal product state comes from render-look.
+   */
+  setIszsCrystalHierarchyVfxEnabled(enabled: boolean): void {
+    if (this.outputScale >= 8
+      || Number(this.uniforms.uniforms.uIszsCrystallineVfx) <= 0.5) {
+      this.uniforms.uniforms.uIszsCrystalHierarchyVfx = 0;
+      this.app.canvas.dataset.iszsCrystalHierarchyVfx = 'inactive';
+      return;
+    }
+    this.uniforms.uniforms.uIszsCrystalHierarchyVfx = enabled ? 1 : 0;
+    this.app.canvas.dataset.iszsCrystalHierarchyVfx = enabled ? 'active' : 'inactive';
+    this.renderApplication();
+  }
+
   setSparkStateStylingEnabled(enabled: boolean): void {
     this.uniforms.uniforms.uSparkStateStyling = enabled ? 1 : 0;
     this.renderApplication();
@@ -13402,6 +13473,7 @@ export class PixiFieldPresenter {
         this.uniforms.uniforms.uRadioactiveSolidBodyVfx = 0;
         this.uniforms.uniforms.uVibrMacroReliefVfx = 0;
         this.uniforms.uniforms.uIszsCrystallineVfx = 0;
+        this.uniforms.uniforms.uIszsCrystalHierarchyVfx = 0;
         this.uniforms.uniforms.uRockRoughnessVfx = 0;
         this.uniforms.uniforms.uRockMesostructureVfx = 0;
         this.uniforms.uniforms.uRockWeatheredFacetVfx = 0;
@@ -13460,6 +13532,7 @@ export class PixiFieldPresenter {
         this.app.canvas.dataset.radioactiveSolidBodyVfx = 'inactive';
         this.app.canvas.dataset.vibrMacroReliefVfx = 'inactive';
         this.app.canvas.dataset.iszsCrystallineVfx = 'inactive';
+        this.app.canvas.dataset.iszsCrystalHierarchyVfx = 'inactive';
         this.app.canvas.dataset.rockRoughnessVfx = 'inactive';
         this.app.canvas.dataset.rockMesostructureVfx = 'inactive';
         this.app.canvas.dataset.rockWeatheredFacetVfx = 'inactive';

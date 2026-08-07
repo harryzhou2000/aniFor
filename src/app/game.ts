@@ -756,6 +756,9 @@ export class Game {
       setRockWeatheredFacetVfx: (enabled) => {
         this.renderer.setRockWeatheredFacetVfxEnabled(enabled);
       },
+      setIszsCrystalHierarchyVfx: (enabled) => {
+        this.renderer.setIszsCrystalHierarchyVfxEnabled(enabled);
+      },
       setSparkStateStyling: (enabled) => {
         this.renderer.setSparkStateStylingEnabled(enabled);
       },

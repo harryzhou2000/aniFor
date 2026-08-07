@@ -770,6 +770,25 @@ export function resolveIszsCrystallineVfxEnabled(
 }
 
 /**
+ * E60 organizes only E47's proven ISZS crystalline finish into a bounded
+ * hierarchy response. This strict child cannot revive the radioactive,
+ * solid-body, or HDR parents, and generic input audits retain it as an
+ * explicit opt-in comparison selector.
+ */
+export function resolveIszsCrystalHierarchyVfxEnabled(
+  look: RenderLook,
+  search = globalThis.location?.search ?? '',
+): boolean {
+  if (!resolveIszsCrystallineVfxEnabled(look, search)) return false;
+  const parameters = new URLSearchParams(search);
+  const requested = parameters.get('iszsCrystalHierarchyVfx');
+  if (requested === '0' || requested === 'off' || requested === 'false') return false;
+  if (requested === '1' || requested === 'on' || requested === 'true') return true;
+  if (parameters.get('inputAudit') === '1') return false;
+  return true;
+}
+
+/**
  * E54 refines only the exact VIBR conductive macro body after E43 has proved
  * the radioactive Solid parent. It is intentionally a sibling of E47: neither
  * child can revive E43/E17, and focused input fixtures remain isolated until
