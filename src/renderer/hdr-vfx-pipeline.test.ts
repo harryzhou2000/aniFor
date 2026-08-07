@@ -164,6 +164,7 @@ describe('HDR liquid-surface composite contract', () => {
       'uWallTexture',
     ]);
     expect(HDR_TONEMAP_FRAGMENT).toMatch(/uniform\s+float\s+uLiquidSurfaceVfx\s*;/);
+    expect(HDR_TONEMAP_FRAGMENT).toMatch(/uniform\s+float\s+uLiquidMotionVfx\s*;/);
     expect(HDR_TONEMAP_FRAGMENT).toMatch(/uniform\s+vec2\s+uWorldTexel\s*;/);
 
     for (const sampler of ['uHdrTexture', 'uBloomTexture', 'uSemanticTexture',
@@ -190,5 +191,21 @@ describe('HDR liquid-surface composite contract', () => {
     expect(HDR_TONEMAP_FRAGMENT).not.toMatch(/(?:finalColor|scene)\.a\s*=/);
     expect(HDR_TONEMAP_FRAGMENT).not.toContain('uTime');
     expect(HDR_TONEMAP_FRAGMENT).not.toMatch(/uniform\s+sampler2D\s+\w*(?:Target|Pass)\w*/i);
+  });
+
+  it('reuses E08 semantic cardinals for exact-Water velocity and changes RGB only', () => {
+    expect(HDR_TONEMAP_FRAGMENT).toContain('state.ba * 2.0 - 1.0');
+    for (const cardinal of ['semanticLeft', 'semanticRight', 'semanticTop', 'semanticBottom']) {
+      expect(HDR_TONEMAP_FRAGMENT).toContain(`vec4 ${cardinal} = semanticState(`);
+    }
+    expect(HDR_TONEMAP_FRAGMENT).toMatch(
+      /float\s+liquidMotion\s*=\s*uLiquidMotionVfx[\s\S]*?exactMaterial\(material, MATERIAL_WATER\)/,
+    );
+    expect(HDR_TONEMAP_FRAGMENT).toContain('velocityShear');
+    expect(HDR_TONEMAP_FRAGMENT).toContain('liquidAgitation');
+    expect(HDR_TONEMAP_FRAGMENT).toContain('whitecap');
+    expect(HDR_TONEMAP_FRAGMENT).not.toContain('uVelocityTexture');
+    expect(HDR_TONEMAP_FRAGMENT).not.toContain('uMotionTexture');
+    expect(HDR_TONEMAP_FRAGMENT).not.toContain('uTime');
   });
 });

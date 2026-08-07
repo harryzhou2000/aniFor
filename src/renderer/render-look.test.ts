@@ -19,7 +19,7 @@ import {
   resolveGlassBodyVfxEnabled,
   resolveGasMotionVfxEnabled,
   resolveLiquidBodyVfxEnabled, resolveLiquidSolidMeniscusVfxEnabled,
-  resolveLiquidSurfaceVfxEnabled,
+  resolveLiquidSurfaceVfxEnabled, resolveLiquidMotionVfxEnabled,
   resolveNobleGasBillowVfxEnabled, resolveNobleGasPrismVfxEnabled,
   resolveHydrogenBodyVfxEnabled,
   resolveOxygenVolumeFoldVfxEnabled,
@@ -99,6 +99,32 @@ describe('resolveRenderLook', () => {
     )).toBe(true);
     expect(resolveLiquidSurfaceVfxEnabled(
       'realistic', '?liquidBodyVfx=off&liquidSurfaceVfx=on',
+    )).toBe(false);
+  });
+
+  it('keeps velocity-reactive liquid transport subordinate to E08 and audit-isolated', () => {
+    expect(resolveLiquidMotionVfxEnabled('classic', '?liquidMotionVfx=on')).toBe(false);
+    expect(resolveLiquidMotionVfxEnabled('realistic', '')).toBe(true);
+    expect(resolveLiquidMotionVfxEnabled('neon-lab', '')).toBe(true);
+    expect(resolveLiquidMotionVfxEnabled('realistic', '?inputAudit=1')).toBe(false);
+    expect(resolveLiquidMotionVfxEnabled(
+      'realistic', '?inputAudit=1&liquidBodyVfx=1&liquidSurfaceVfx=1&liquidMotionVfx=true',
+    )).toBe(true);
+    for (const disabled of ['0', 'off', 'false']) {
+      expect(resolveLiquidMotionVfxEnabled(
+        'realistic', `?liquidMotionVfx=${disabled}`,
+      )).toBe(false);
+    }
+    for (const enabled of ['1', 'on', 'true']) {
+      expect(resolveLiquidMotionVfxEnabled(
+        'realistic', `?liquidMotionVfx=${enabled}`,
+      )).toBe(true);
+    }
+    expect(resolveLiquidMotionVfxEnabled(
+      'realistic', '?liquidSurfaceVfx=0&liquidMotionVfx=1',
+    )).toBe(false);
+    expect(resolveLiquidMotionVfxEnabled(
+      'realistic', '?liquidBodyVfx=0&liquidSurfaceVfx=1&liquidMotionVfx=1',
     )).toBe(false);
   });
 

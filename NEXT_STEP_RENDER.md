@@ -2780,7 +2780,36 @@ is `24.657/23.679/22.240` at 1×/2×/4×, with full support and zero dark/clippe
 fraction. Do not alter E48 from candidate-rank evidence; its focused exact-owner
 fixture remains the acceptance contract. Choose any later experiment only from
 a new visible fit-view diagnosis. Preserve the E14 1× stencil snap and all
-E01–E64 selectors and controls.
+E01–E65 selectors and controls.
+
+E65 is the first accepted Phase-2 velocity-reactive liquid checkpoint. It is a
+strict normal-WebGL child of E08/E03, independently selectable with
+`?liquidMotionVfx=0|1`. Exact authoritative Water reuses the semantic texture's
+already-packed signed velocity `.ba` and E08's existing centre/four-cardinal
+semantic reads. Coherent motion bends the established same-owner transmission
+lookup and adds a world-anchored cyan-white crest only where E08 has already
+proved a connected air-facing liquid-field slope. This is RGB whitecap light,
+not detached spray support: it adds no texture, sampler, field, pass, target,
+upload, allocation, scheduler stage, clock, alpha, silhouette, ownership,
+topology, or physics decision. Stationary Water, deep Water, moving Oil/Acid,
+one-cell Water, isolated Water, authored holes/chimneys, Water/Metal and
+Water/Oil contacts, co-located native walls, Canvas, and compact true 8× are
+exact controls.
+
+`npm run audit:vfx:liquid-motion` owns a paused topology-identical
+still/moving fixture with 53,121 Water, 7,232 Oil, 4,992 Acid, 2,240 Metal,
+1,232 native-wall, and exactly 34,013 moving-velocity cells. Its WebGL
+moving and fully still off→on→off proofs are byte-exact for the complete
+framebuffer, semantics, material/wall topology, packed/staged velocity, alpha,
+and support at 1×/2×/4×. The accepted moving-surface response has RGB RMS
+`1.60/1.52/1.31`, spatial RMS `1.475/1.409/1.244`, peak `9/9/8`, coverage
+`.154/.119/.086`, and signed mean `.53/.49/.36`; every named control is an
+exact RGB no-op and the fully still fixture remains exact with the selector on.
+Requested-on true 8× reports E03/E08/E65/HDR inactive for `scale-8`, keeps the
+fixture absent, presents exact 4896×3072 WebGL, and completed the accepted GPU
+fence in `5.3166 s` in the strengthened full matrix with zero browser errors.
+This closes the first whitecap/flow-refraction slice only; detached spray,
+curvature-flow menisci, and advected gas/fire volumes remain open Phase-2 work.
 
 ## Phase 1 — HDR pipeline & lighting core (biggest visual payoff)
 
@@ -2797,7 +2826,7 @@ E01–E64 selectors and controls.
 **Goal:** liquids read as one continuous body with a surface; gases read as volumetric media.
 
 - **Screen-space fluid rendering** (Müller-style, the classic 2007 technique): liquid coverage → depth/thickness buffer → **curvature flow smoothing** for a real meniscus → reconstruct normals → **Fresnel reflection + refraction of the background/wall pattern behind** → specular glints. Your current per-species depth gradient is the seed of the thickness buffer.
-- **Foam & spray:** whitecap tint where velocity divergence or surface agitation is high; tiny detached particles get spray sprites.
+- **Foam & spray:** E65 now supplies a bounded exact-Water whitecap/refraction response from packed native velocity on already-connected E08 surfaces. Detached spray support, divergence-aware foam persistence, and non-Water family treatments remain open and must retain exact topology controls.
 - **Gases as participating media:** extend your density/colour field with a **noise-animated volume** — FBM curl noise advected by the velocity field, modulated by density, lit by the dynamic lights (light shafts through smoke are extremely high-impact). Approximate with 2–3 octave noise at half res, upsampled.
 - **Fire:** blackbody core + procedural licking edges (domain-warped FBM along the temperature gradient), ember streaks from velocity.
 

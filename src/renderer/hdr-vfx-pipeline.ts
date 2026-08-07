@@ -23,11 +23,13 @@ export interface HDRPipelineInfo {
   readonly bloomWidth?: number;
   readonly bloomHeight?: number;
   readonly liquidSurfaceVfx?: boolean;
+  readonly liquidMotionVfx?: boolean;
 }
 
 /** Existing presenter textures reused by the HDR liquid-transport composite. */
 export interface HDRLiquidSurfaceResources {
   readonly enabled: boolean;
+  readonly motionEnabled: boolean;
   readonly semanticTexture: TextureSource;
   readonly wallTexture: TextureSource;
   readonly liquidTexture: TextureSource;
@@ -109,6 +111,7 @@ uniform sampler2D uWallTexture;
 uniform sampler2D uLiquidTexture;
 uniform vec2 uWorldTexel;
 uniform float uLiquidSurfaceVfx;
+uniform float uLiquidMotionVfx;
 uniform float uBloomIntensity;
 uniform float uExposure;
 uniform float uSaturation;
@@ -121,8 +124,20 @@ vec2 boundedUv(vec2 uv) {
   return clamp(uv, uWorldTexel * 0.5, vec2(1.0) - uWorldTexel * 0.5);
 }
 
+vec4 semanticState(vec2 uv) {
+  return texture(uSemanticTexture, boundedUv(uv));
+}
+
+float materialFromSemantic(vec4 state) {
+  return floor(state.r * 255.0 + 0.5);
+}
+
 float semanticMaterial(vec2 uv) {
-  return floor(texture(uSemanticTexture, boundedUv(uv)).r * 255.0 + 0.5);
+  return materialFromSemantic(semanticState(uv));
+}
+
+vec2 velocityFromSemantic(vec4 state) {
+  return state.ba * 2.0 - 1.0;
 }
 
 float exactMaterial(float candidate, float owner) {
@@ -143,15 +158,24 @@ vec3 straightRadiance(vec4 sampleValue) {
  * Acid surface before any displaced HDR or bloom read occurs. Displaced alpha
  * is never used as support and the caller always emits the original scene.a.
  */
-vec3 liquidSurfaceTransport(vec3 sourceRadiance, float material) {
+vec3 liquidSurfaceTransport(
+  vec3 sourceRadiance, float material, vec4 semanticCentre
+) {
   vec2 leftUv = boundedUv(vUv - vec2(uWorldTexel.x, 0.0));
   vec2 rightUv = boundedUv(vUv + vec2(uWorldTexel.x, 0.0));
   vec2 topUv = boundedUv(vUv - vec2(0.0, uWorldTexel.y));
   vec2 bottomUv = boundedUv(vUv + vec2(0.0, uWorldTexel.y));
-  float materialLeft = semanticMaterial(leftUv);
-  float materialRight = semanticMaterial(rightUv);
-  float materialTop = semanticMaterial(topUv);
-  float materialBottom = semanticMaterial(bottomUv);
+  // Keep E65 resource-neutral: E08 already reads these four semantic
+  // cardinals. Retain each RGBA sample so its packed velocity can be consumed
+  // without another texture lookup or a velocity-only field.
+  vec4 semanticLeft = semanticState(leftUv);
+  vec4 semanticRight = semanticState(rightUv);
+  vec4 semanticTop = semanticState(topUv);
+  vec4 semanticBottom = semanticState(bottomUv);
+  float materialLeft = materialFromSemantic(semanticLeft);
+  float materialRight = materialFromSemantic(semanticRight);
+  float materialTop = materialFromSemantic(semanticTop);
+  float materialBottom = materialFromSemantic(semanticBottom);
   float sameLeft = exactMaterial(materialLeft, material);
   float sameRight = exactMaterial(materialRight, material);
   float sameTop = exactMaterial(materialTop, material);
@@ -192,6 +216,28 @@ vec3 liquidSurfaceTransport(vec3 sourceRadiance, float material) {
 
   vec2 worldPosition = vUv / uWorldTexel;
   vec2 tangent = vec2(-outward.y, outward.x);
+  vec2 centreVelocity = velocityFromSemantic(semanticCentre);
+  vec2 neighbourVelocity = (
+    velocityFromSemantic(semanticLeft) * sameLeft
+      + velocityFromSemantic(semanticRight) * sameRight
+      + velocityFromSemantic(semanticTop) * sameTop
+      + velocityFromSemantic(semanticBottom) * sameBottom
+  ) / max(1.0, sameCount);
+  float motionSpeed = length(centreVelocity);
+  float velocityShear = length(centreVelocity - neighbourVelocity);
+  float motionEnergy = max(motionSpeed * 0.90, velocityShear * 1.35);
+  float liquidMotion = uLiquidMotionVfx
+    * exactMaterial(material, MATERIAL_WATER)
+    * smoothstep(0.10, 0.58, motionEnergy);
+  float motionFacing = clamp(
+    abs(dot(centreVelocity, outward)) * 0.72
+      + abs(dot(centreVelocity, tangent)) * 0.28
+      + velocityShear * 0.62,
+    0.0, 1.0
+  );
+  float liquidAgitation = liquidMotion * (0.42 + motionFacing * 0.58);
+  vec2 flowDirection = motionSpeed > 0.01
+    ? centreVelocity / motionSpeed : vec2(0.0);
   float ripple = sin(dot(worldPosition, vec2(0.071, 0.047)) + material * 0.61)
     * sin(dot(worldPosition, vec2(-0.039, 0.083)) + material * 0.37);
   float wallBacked = step(
@@ -202,6 +248,7 @@ vec3 liquidSurfaceTransport(vec3 sourceRadiance, float material) {
   vec2 transmissionUv = boundedUv(
     vUv - outward * uWorldTexel * familyOffset * (1.0 + wallBacked * 0.28)
       + tangent * uWorldTexel * ripple * (0.44 + wallBacked * 0.22)
+      - flowDirection * uWorldTexel * liquidAgitation * 3.40
   );
   if (exactMaterial(semanticMaterial(transmissionUv), material) < 0.5) {
     return sourceRadiance;
@@ -233,8 +280,18 @@ vec3 liquidSurfaceTransport(vec3 sourceRadiance, float material) {
   vec3 transported = mix(transmitted * transmissionTint, reflected, reflectionShare);
   float transportAmount = surface * (
     material == MATERIAL_WATER ? 0.18 : (material == MATERIAL_OIL ? 0.15 : 0.16)
-  ) * (1.0 + wallBacked * 0.24);
-  return mix(sourceRadiance, transported, min(0.24, transportAmount));
+  ) * (1.0 + wallBacked * 0.24 + liquidAgitation);
+  vec3 result = mix(sourceRadiance, transported, min(0.24, transportAmount));
+  // E65: the same velocity proof that bends transmission may lift only exact
+  // Water's already-authoritative air-facing surface. This is a restrained
+  // RGB whitecap, not spray support: scene alpha and every semantic/liquid
+  // topology decision remain owned by the established E08 inputs.
+  float whitecapPattern = smoothstep(0.18, 0.88, ripple * 0.5 + 0.5);
+  float whitecap = surface * liquidAgitation
+    * (0.380 + whitecapPattern * 0.720 + min(0.280, velocityShear * 0.36));
+  result += (vec3(1.18) - clamp(result, 0.0, 1.18))
+    * vec3(0.82, 0.96, 1.08) * whitecap;
+  return result;
 }
 
 vec3 acesFilm(vec3 value) {
@@ -254,9 +311,10 @@ void main() {
   }
   vec3 radiance = scene.rgb / scene.a;
   if (uLiquidSurfaceVfx > 0.5) {
-    float material = semanticMaterial(vUv);
+    vec4 semanticCentre = semanticState(vUv);
+    float material = materialFromSemantic(semanticCentre);
     if (material == MATERIAL_WATER || material == MATERIAL_OIL || material == MATERIAL_ACID) {
-      radiance = liquidSurfaceTransport(radiance, material);
+      radiance = liquidSurfaceTransport(radiance, material, semanticCentre);
     }
   }
   // Bloom is presentation-only RGB. Existing scene alpha remains the sole
@@ -417,6 +475,10 @@ export class HDRVfxPipeline {
               value: new Float32Array([1 / width, 1 / height]), type: 'vec2<f32>',
             },
             uLiquidSurfaceVfx: { value: liquidSurface.enabled ? 1 : 0, type: 'f32' },
+            uLiquidMotionVfx: {
+              value: liquidSurface.enabled && liquidSurface.motionEnabled ? 1 : 0,
+              type: 'f32',
+            },
           }),
           uHdrTexture: hdrTarget.source,
           uHdrSampler: hdrTarget.source.style,
@@ -436,6 +498,7 @@ export class HDRVfxPipeline {
       this.bloomB = bloomB;
       this.info = {
         active: true, look, liquidSurfaceVfx: liquidSurface.enabled,
+        liquidMotionVfx: liquidSurface.enabled && liquidSurface.motionEnabled,
         bloomWidth: bloomWidth * outputScale,
         bloomHeight: bloomHeight * outputScale,
       };

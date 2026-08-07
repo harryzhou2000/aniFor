@@ -78,6 +78,9 @@ import type { SoapBodyVfxAuditSnapshot } from './soap-body-vfx-audit';
 import type {
   GasMotionVfxAuditSnapshot, GasMotionVfxFixtureMode,
 } from './gas-motion-vfx-audit';
+import type {
+  LiquidMotionVfxAuditSnapshot, LiquidMotionVfxFixtureMode,
+} from './liquid-motion-vfx-audit';
 import type { GasLightVfxAuditSnapshot } from './gas-light-vfx-audit';
 import type { GasCoreDepthVfxAuditSnapshot } from './gas-core-depth-vfx-audit';
 import type { NobleGasBillowVfxAuditSnapshot } from './noble-gas-billow-vfx-audit';
@@ -255,6 +258,8 @@ export interface BrowserInputAuditApi {
   prepareSoapBodyVfxFixture(): void;
   gasMotionVfxFixture(): GasMotionVfxAuditSnapshot;
   prepareGasMotionVfxFixture(mode: GasMotionVfxFixtureMode): void;
+  liquidMotionVfxFixture(): LiquidMotionVfxAuditSnapshot;
+  prepareLiquidMotionVfxFixture(mode: LiquidMotionVfxFixtureMode): void;
   gasLightVfxFixture(): GasLightVfxAuditSnapshot;
   prepareGasLightVfxFixture(): void;
   gasCoreDepthVfxFixture(): GasCoreDepthVfxAuditSnapshot;

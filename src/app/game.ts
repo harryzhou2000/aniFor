@@ -48,6 +48,9 @@ import {
   GAS_MOTION_VFX_AUDIT, prepareGasMotionVfxFixture,
 } from './gas-motion-vfx-audit';
 import {
+  LIQUID_MOTION_VFX_AUDIT, prepareLiquidMotionVfxFixture,
+} from './liquid-motion-vfx-audit';
+import {
   GAS_LIGHT_VFX_AUDIT, prepareGasLightVfxFixture,
 } from './gas-light-vfx-audit';
 import {
@@ -858,6 +861,14 @@ export class Game {
       gasMotionVfxFixture: () => GAS_MOTION_VFX_AUDIT,
       prepareGasMotionVfxFixture: (mode) => {
         prepareGasMotionVfxFixture(this.simulation, mode);
+        this.renderer.synchronizeFixtureMaterialPlane();
+        this.renderer.invalidateDynamicPresentation();
+      },
+      liquidMotionVfxFixture: () => LIQUID_MOTION_VFX_AUDIT,
+      prepareLiquidMotionVfxFixture: (mode) => {
+        prepareLiquidMotionVfxFixture(this.simulation, mode);
+        // The fixture changes packed velocity bytes as well as the material
+        // plane. Refresh both projections before browser capture reads .ba.
         this.renderer.synchronizeFixtureMaterialPlane();
         this.renderer.invalidateDynamicPresentation();
       },

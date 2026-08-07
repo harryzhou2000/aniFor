@@ -67,7 +67,7 @@ import {
   resolveLiquidBodyVfxEnabled, resolveLiquidSolidMeniscusVfxEnabled,
   resolveMetalWaterContactVfxEnabled,
   resolveWaterMetalTransmissionVfxEnabled,
-  resolveLiquidSurfaceVfxEnabled,
+  resolveLiquidSurfaceVfxEnabled, resolveLiquidMotionVfxEnabled,
   resolveAcidBodyVfxEnabled,
   resolveSoapBodyVfxEnabled,
   resolveDeutBodyVfxEnabled,
@@ -11554,6 +11554,10 @@ export class PixiFieldPresenter {
     // reuses existing presenter textures and never enters the direct 8x shader.
     const liquidSurfaceVfxEnabled = outputScale < 8
       && resolveLiquidSurfaceVfxEnabled(renderLook);
+    // E65 consumes velocity already packed in E08's semantic texture. It adds
+    // no pass or resource and remains absent with the entire HDR path at 8x.
+    const liquidMotionVfxEnabled = outputScale < 8
+      && resolveLiquidMotionVfxEnabled(renderLook);
     this.uniforms = new UniformGroup({
       uTexel: { value: new Float32Array([1 / width, 1 / height]), type: 'vec2<f32>' },
       uFieldSize: { value: new Float32Array([width, height]), type: 'vec2<f32>' },
@@ -11831,6 +11835,7 @@ export class PixiFieldPresenter {
       this.app, this.scene, width, height, outputScale, renderLook,
       {
         enabled: liquidSurfaceVfxEnabled,
+        motionEnabled: liquidMotionVfxEnabled,
         semanticTexture: this.fieldSource,
         wallTexture: this.wallSource,
         liquidTexture: this.liquidSource,
@@ -11979,6 +11984,7 @@ export class PixiFieldPresenter {
             || new URLSearchParams(location.search).get('nitroBodyVfxAudit') === '1'
             || new URLSearchParams(location.search).get('liquidSolidMeniscusVfxAudit') === '1'
             || new URLSearchParams(location.search).get('liquidSurfaceVfxAudit') === '1'
+            || new URLSearchParams(location.search).get('liquidMotionVfxAudit') === '1'
             || new URLSearchParams(location.search).get('powderBodyVfxAudit') === '1'
             || new URLSearchParams(location.search).get('sootyPowderBodyVfxAudit') === '1'
             || new URLSearchParams(location.search).get('thermiteBodyVfxAudit') === '1'
@@ -12156,6 +12162,8 @@ export class PixiFieldPresenter {
     ) > 0.5 ? 'active' : 'inactive';
     presenter.app.canvas.dataset.liquidSurfaceVfx = presenter.hdrPipelineInfo.active
       && presenter.hdrPipelineInfo.liquidSurfaceVfx ? 'active' : 'inactive';
+    presenter.app.canvas.dataset.liquidMotionVfx = presenter.hdrPipelineInfo.active
+      && presenter.hdrPipelineInfo.liquidMotionVfx ? 'active' : 'inactive';
     presenter.app.canvas.dataset.powderBodyVfx = Number(presenter.uniforms.uniforms.uPowderBodyVfx) > 0.5
       ? 'active' : 'inactive';
     presenter.app.canvas.dataset.sootyPowderBodyVfx = Number(
@@ -13743,6 +13751,7 @@ export class PixiFieldPresenter {
         this.app.canvas.dataset.metalWaterContactVfx = 'inactive';
         this.app.canvas.dataset.waterMetalTransmissionVfx = 'inactive';
         this.app.canvas.dataset.liquidSurfaceVfx = 'inactive';
+        this.app.canvas.dataset.liquidMotionVfx = 'inactive';
         this.app.canvas.dataset.powderBodyVfx = 'inactive';
         this.app.canvas.dataset.sootyPowderBodyVfx = 'inactive';
         this.app.canvas.dataset.thermiteBodyVfx = 'inactive';

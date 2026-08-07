@@ -69,6 +69,24 @@ export function resolveLiquidSurfaceVfxEnabled(
 }
 
 /**
+ * E65 adds velocity-reactive transport only after E08 has proved an exact,
+ * connected liquid surface. Audit URLs stay on the frozen E08 reference until
+ * they explicitly request this child; ordinary non-Classic play enables it.
+ */
+export function resolveLiquidMotionVfxEnabled(
+  look: RenderLook,
+  search = globalThis.location?.search ?? '',
+): boolean {
+  if (!resolveLiquidSurfaceVfxEnabled(look, search)) return false;
+  const parameters = new URLSearchParams(search);
+  const requested = parameters.get('liquidMotionVfx');
+  if (requested === '0' || requested === 'off' || requested === 'false') return false;
+  if (requested === '1' || requested === 'on' || requested === 'true') return true;
+  if (parameters.get('inputAudit') === '1') return false;
+  return true;
+}
+
+/**
  * Adds a narrow liquid-side optical response at exact ordinary Solid contact.
  * E14 reuses E03's connected-liquid body proof and the semantic contact probes
  * already consumed by the normal shader; an explicit override cannot bypass

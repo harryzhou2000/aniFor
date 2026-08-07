@@ -13,7 +13,7 @@ powder, solid, liquid, gas, energy, and contact scenes across Canvas and WebGL a
 mobile gestures, save/load, CI, and Pages deployment as protected regression
 contracts rather than the primary feature stream.
 
-The accepted visual experiment ladder now runs through E63. E12 is the
+The accepted visual experiment ladder now runs through E65. E12 is the
 species-safe Sand/Clay/Concrete wet-sediment checkpoint; preserve its exact
 aqueous owner/stability proof, split moving-powder/stationary-Water control,
 Local/Grains no-op, fine structures, authored gaps, Canvas fallback, and true
@@ -1343,6 +1343,36 @@ Local and Grains are exact no-ops, repeated-off output is byte-identical, and
 browser errors are zero. Requested-on true 8× reports E05/E52/E64/HDR inactive
 for `scale-8`, presents exact 4896×3072 WebGL, keeps the dense fixture absent,
 and completes a GPU fence in `5.3813 s`.
+
+E65 is the accepted first velocity-reactive Water surface checkpoint,
+independently measurable with `?liquidMotionVfx=0|1` and a strict child of
+E08/E03. At normal 1×–4× WebGL, reuse the semantic texture's packed signed
+velocity `.ba`, E08's existing centre/four-cardinal semantic samples, its
+species-aware liquid samples, HDR scene, bloom, and native-wall source. Exact
+Water alone may bend the established same-owner transmission lookup and add a
+world-anchored cyan-white crest after E08 has already proved connected
+same-owner cardinals, an air-facing aligned liquid slope, and no foreign
+contact. This is RGB-only whitecap light, not spray support. Add no texture,
+sampler, field, pass, target, upload, allocation, scheduler stage, clock,
+alpha, support, silhouette, ownership, topology, or physics decision. Canvas
+and compact true 8× advertise E65 inactive.
+
+`npm run audit:vfx:liquid-motion` owns the paused topology-identical
+still/moving fixture. Preserve its exact counts: 53,121 Water, 7,232 Oil,
+4,992 Acid, 2,240 Metal, 1,232 native-wall, and 34,013 moving-velocity cells.
+At 1×/2×/4×, both moving and fully still off→on→off framebuffers, semantics,
+material/wall topology, packed and staged velocity, alpha, and support are
+exact. The frozen target
+RGB RMS is `1.60/1.52/1.31`, spatial RMS `1.475/1.409/1.244`, peak `9/9/8`,
+coverage `.154/.119/.086`, and signed mean `.53/.49/.36`. Stationary Water,
+deep Water, moving Oil/Acid, thin and isolated Water, authored holes/chimneys,
+Water/Metal and Water/Oil contacts, wall/clear checker probes, blank space,
+and the fully still fixture are exact RGB controls. Requested-on true 8× must
+report E03/E08/E65/HDR inactive with reason `scale-8`, no bloom, no dense
+fixture, exact 4896×3072 WebGL, and a completed GPU fence (accepted run
+`5.3166 s` in the strengthened full matrix). Freeze this amplitude until a new
+normal-view review; detached spray, persistent foam, and curvature-flow support
+remain separate work.
 
 Visual-audit lesson: `inputAudit=1` disables opt-in child selectors unless the
 composed route names them explicitly, so canonical evidence must request and
