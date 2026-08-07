@@ -18,6 +18,19 @@ export const DEUT_PRESENTATION_STATE = {
   maximumConcentration: 0xffff,
 } as const;
 
+/**
+ * Native BASE concentration (`life`) and one-frame corrosion spark (`tmp`) in
+ * the owner-multiplexed presentation word. BASE itself is the owner guard, so
+ * a zero concentration remains a valid dark native graphics state.
+ */
+export const BASE_PRESENTATION_STATE = {
+  concentrationMask: 0x007f,
+  concentrationMaximum: 100,
+  defaultConcentration: 76,
+  sparkMask: 0x0080,
+  reservedMask: 0xff00,
+} as const;
+
 /** Native ACEL/DCEL latest-update activity flag in the owner-multiplexed state word. */
 export const FORCE_ACTIVITY_PRESENTATION_STATE = {
   activeMask: 0x0001,

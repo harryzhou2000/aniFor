@@ -218,6 +218,7 @@ uniform float uSourceTargetStyling;
 uniform float uForceActivityStyling;
 uniform float uVibrStateStyling;
 uniform float uDeutStateStyling;
+uniform float uBaseStateStyling;
 uniform float uLavaAncestryStyling;
 uniform float uMoltenBodyOptics;
 uniform float uBotanicalIdentityStyling;
@@ -755,10 +756,25 @@ vec3 poloStateEightXDelta(float packedState, vec2 position) {
   }
   return clamp(delta, vec3(-16.0), vec3(16.0)) / 255.0;
 }
-// SPNG and GEL carry disjoint owner-guarded hydration meanings in the same
-// packed B/A word. Keeping both in this one already-compiled call site avoids
-// another state helper/register class in the 15M-fragment shader.
+// BASE, SPNG, and GEL carry disjoint exact-owner meanings in the same packed
+// B/A word. Keeping them in this one already-compiled call site avoids another
+// state helper/register class in the 15M-fragment shader.
 vec3 hydrationStateEightXDelta(float material, float packedState, vec2 position) {
+  if (material == 53.0) {
+    float concentration = min(100.0, mod(packedState, 128.0));
+    vec3 delta = concentration <= 25.0 ? vec3(-93.0, -137.0, -39.0)
+      : concentration <= 50.0 ? vec3(-56.0, -82.0, -23.0)
+      : concentration <= 75.0 ? vec3(-19.0, -27.0, -8.0)
+      : vec3(0.0);
+    if (mod(floor(packedState / 128.0), 2.0) > 0.5) {
+      vec2 world = floor(position);
+      float carrier = mod(world.x * 3.0 + world.y * 5.0, 11.0) <= 1.0 ? 1.0 : 0.0;
+      float junction = mod(world.x - world.y * 2.0, 17.0) == 0.0 ? 1.0 : 0.0;
+      float gain = carrier > 0.5 ? 1.0 : junction > 0.5 ? 0.64 : 0.24;
+      delta += vec3(14.0, 27.0, 30.0) * gain;
+    }
+    return delta / 255.0;
+  }
   if (material == 56.0) {
     float hydration = min(100.0, mod(packedState, 128.0));
     if (hydration < 0.5) return vec3(0.0);
@@ -2861,6 +2877,7 @@ void main() {
   bool poloOwner = material == 109.0;
   bool spngOwner = material == 81.0;
   bool gelOwner = material == 56.0;
+  bool baseOwner = material == 53.0;
   bool filtOwner = material == 69.0;
   bool quartzCrystalOwner = material == 29.0 || material == 76.0;
   bool lcryOwner = material == 157.0;
@@ -2883,6 +2900,10 @@ void main() {
     || (uPoloStateStyling > 0.5 && poloOwner)
     || (uSpngStateStyling > 0.5 && spngOwner)
     || (uGelHydrationStyling > 0.5 && gelOwner)
+    // Keep the packed wall read invariant across BASE's off/on audit whenever
+    // native walls exist. Otherwise disabling only the RGB cue also changes
+    // whether a co-located wall reaches the compact final compositor.
+    || (baseOwner && (uBaseStateStyling > 0.5 || uNativeWallsActive > 0.5))
     || (uFiltSpectrumStyling > 0.5 && filtOwner)
     || (uQuartzCrystalStateStyling > 0.5 && quartzCrystalOwner)
     || (uLcryStateStyling > 0.5 && lcryOwner)
@@ -3032,7 +3053,8 @@ void main() {
     color += poloStateEightXDelta(sourceTarget, uv * uFieldSize);
   }
   if ((uSpngStateStyling > 0.5 && spngOwner)
-    || (uGelHydrationStyling > 0.5 && gelOwner)) {
+    || (uGelHydrationStyling > 0.5 && gelOwner)
+    || (uBaseStateStyling > 0.5 && baseOwner && nativeWall < 0.5)) {
     color += hydrationStateEightXDelta(material, sourceTarget, uv * uFieldSize);
   }
   if (uFiltSpectrumStyling > 0.5 && filtOwner && nativeWall < 0.5) {
@@ -3345,6 +3367,7 @@ uniform float uEnergyCoreRelief;
 uniform float uEnergyIdentityStyling;
 uniform float uVibrStateStyling;
 uniform float uDeutStateStyling;
+uniform float uBaseStateStyling;
 uniform float uSourceTargetStyling;
 uniform float uForceActivityStyling;
 uniform float uPoloStateStyling;
@@ -4888,6 +4911,26 @@ vec3 spongeHydrationDelta(float material, vec2 stateBytes, vec2 position) {
   else if (poreCore) delta += vec3(-4.0, -2.0, 8.0);
   else if (firstWall || secondWall) delta += vec3(-2.0, 1.0, 6.0);
   return clamp(delta * moisture, vec3(-20.0), vec3(20.0)) / 255.0;
+}
+vec3 baseStateDelta(float material, vec2 stateBytes, vec2 position) {
+  if (material != 53.0) return vec3(0.0);
+  float packedState = floor(stateBytes.x * 255.0 + 0.5)
+    + floor(stateBytes.y * 255.0 + 0.5) * 256.0;
+  float concentration = min(100.0, mod(packedState, 128.0));
+  // Upstream BASE uses four exact life bands. Express them as offsets from
+  // the canonical 76+ colour so the existing liquid relief remains intact.
+  vec3 delta = concentration <= 25.0 ? vec3(-93.0, -137.0, -39.0)
+    : concentration <= 50.0 ? vec3(-56.0, -82.0, -23.0)
+    : concentration <= 75.0 ? vec3(-19.0, -27.0, -8.0)
+    : vec3(0.0);
+  if (mod(floor(packedState / 128.0), 2.0) > 0.5) {
+    vec2 world = floor(position);
+    float carrier = mod(world.x * 3.0 + world.y * 5.0, 11.0) <= 1.0 ? 1.0 : 0.0;
+    float junction = mod(world.x - world.y * 2.0, 17.0) == 0.0 ? 1.0 : 0.0;
+    float gain = carrier > 0.5 ? 1.0 : junction > 0.5 ? 0.64 : 0.24;
+    delta += vec3(14.0, 27.0, 30.0) * gain;
+  }
+  return delta / 255.0;
 }
 vec3 gelHydrationDelta(float material, vec2 stateBytes, vec2 position) {
   if (material != 56.0) return vec3(0.0);
@@ -7250,6 +7293,64 @@ void main() {
             color *= vec3(1.0) - vec3(0.100, 0.045, 0.140)
               * acidBodyPocket * (0.62 + caustic * 0.20);
           }
+          // E51: BASE shares the corrosive optical family with Acid, but its
+          // native concentration belongs to a cool alkaline solution rather
+          // than Acid's magenta reactive body. Recombine E03's existing
+          // sheen/caustic/depth carriers into a cyan ionic crown and a cobalt
+          // absorptive pocket. The packed life value only scales that RGB
+          // response; ownership, alpha, support, topology, and physics remain
+          // exact, with no additional texture read, wave, field, or resource.
+          if (uBaseStateStyling > 0.5 && material == 53.0 && optics == 3.0
+            && surfaceOnly < 0.5 && emissionOnly < 0.5
+            && shape.w > 3.5 && exposedLiquidSide < 0.5) {
+            float baseBodyPackedState = floor(wallState.b * 255.0 + 0.5)
+              + floor(wallState.a * 255.0 + 0.5) * 256.0;
+            float baseBodyConcentration = min(
+              100.0, mod(baseBodyPackedState, 128.0)
+            ) / 100.0;
+            float baseBodyWeight = smoothstep(
+              30.0 / 255.0, 78.0 / 255.0, liquidOpticalDepth
+            ) * liquidVfxBody * (1.0 - liquidFresnelContour)
+              * smoothstep(0.80, 0.97, liquidNeighbourMean)
+              * (1.0 - smoothstep(
+                0.00002, 0.00024,
+                dot(liquidSpeciesSlope, liquidSpeciesSlope)
+              ));
+            float baseBodyRoll = clamp(
+              (broadSheen - 0.5) * (causticWave - 0.5) * 3.05
+                - (broadSheen - 0.5) * 0.20
+                + (causticWave - 0.5) * 0.30
+                + liquidMacroRelief * 1.75,
+              -1.0, 1.0
+            );
+            float baseBodyCrown = smoothstep(
+              0.025, 0.50, max(baseBodyRoll, 0.0)
+            ) * baseBodyWeight;
+            float baseBodyPocket = smoothstep(
+              0.025, 0.52, max(-baseBodyRoll, 0.0)
+            ) * baseBodyWeight;
+            float baseBodyCore = smoothstep(
+              78.0 / 255.0, 150.0 / 255.0, liquidOpticalDepth
+            ) * baseBodyWeight * (1.0 - abs(baseBodyRoll));
+            vec3 baseBodyReflection = mix(
+              vec3(0.28, 0.58, 1.00), vec3(0.18, 0.92, 1.00),
+              baseBodyConcentration
+            );
+            color += (vec3(1.20) - clamp(color, 0.0, 1.20))
+              * baseBodyReflection * baseBodyCrown
+              * (0.080 + baseBodyConcentration * 0.028
+                + broadSheen * 0.016 + caustic * 0.014);
+            vec3 baseBodyAbsorption = mix(
+              vec3(0.105, 0.062, 0.025), vec3(0.040, 0.064, 0.125),
+              baseBodyConcentration
+            );
+            color *= vec3(1.0) - baseBodyAbsorption
+              * baseBodyPocket * (0.60 + caustic * 0.18);
+            color *= vec3(1.0) - mix(
+              vec3(0.040, 0.024, 0.010), vec3(0.018, 0.030, 0.054),
+              baseBodyConcentration
+            ) * baseBodyCore * 0.52;
+          }
           // E46: exact Soap keeps its existing crossed thin-film identity, but
           // a dense plug needs a broader pearlescent body underneath it. Reuse
           // E03's exact depth/support proof and its already-live sheen, caustic,
@@ -7363,6 +7464,11 @@ void main() {
         material, fieldPosition, liquidSurfaceDensity, liquidDepth,
         semanticSlope + volumeSlope
       ) * uLiquidIdentityStyling;
+    }
+    if (uBaseStateStyling > 0.5 && material == 53.0
+      && liquidOnly < 0.5 && halo < 0.5 && surfaceOnly < 0.5
+      && wall < 0.5 && emissionOnly < 0.5 && family == 2.0 && !materialEmissive) {
+      color += baseStateDelta(material, wallState.ba, fieldPosition);
     }
     if (uDeutStateStyling > 0.5 && material == 100.0
       && liquidOnly < 0.5 && halo < 0.5 && surfaceOnly < 0.5
@@ -11042,6 +11148,7 @@ export class PixiFieldPresenter {
       uEnergyIdentityStyling: { value: 1, type: 'f32' },
       uVibrStateStyling: { value: 1, type: 'f32' },
       uDeutStateStyling: { value: 1, type: 'f32' },
+      uBaseStateStyling: { value: 1, type: 'f32' },
       uSourceTargetStyling: { value: 1, type: 'f32' },
       uForceActivityStyling: { value: 1, type: 'f32' },
       uPoloStateStyling: { value: 1, type: 'f32' },
@@ -11776,6 +11883,7 @@ export class PixiFieldPresenter {
     botanicalIdentityStylingEnabled = true,
     vibrStateStylingEnabled = true,
     deutStateStylingEnabled = true,
+    baseStateStylingEnabled = true,
     sourceTargetStylingEnabled = true,
     explosivePowderStylingEnabled = true,
     forceActivityStylingEnabled = true,
@@ -11853,6 +11961,7 @@ export class PixiFieldPresenter {
     uniforms.uEnergyIdentityStyling = energyIdentityStylingEnabled ? 1 : 0;
     uniforms.uVibrStateStyling = vibrStateStylingEnabled ? 1 : 0;
     uniforms.uDeutStateStyling = deutStateStylingEnabled ? 1 : 0;
+    uniforms.uBaseStateStyling = baseStateStylingEnabled ? 1 : 0;
     uniforms.uSourceTargetStyling = sourceTargetStylingEnabled ? 1 : 0;
     uniforms.uForceActivityStyling = forceActivityStylingEnabled ? 1 : 0;
     uniforms.uPoloStateStyling = poloStateStylingEnabled ? 1 : 0;
@@ -12085,6 +12194,11 @@ export class PixiFieldPresenter {
 
   setDeutStateStylingEnabled(enabled: boolean): void {
     this.uniforms.uniforms.uDeutStateStyling = enabled ? 1 : 0;
+    this.renderApplication();
+  }
+
+  setBaseStateStylingEnabled(enabled: boolean): void {
+    this.uniforms.uniforms.uBaseStateStyling = enabled ? 1 : 0;
     this.renderApplication();
   }
 

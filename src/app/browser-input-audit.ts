@@ -37,6 +37,7 @@ import type { ForceActivityGraphicsAuditSnapshot } from './force-activity-graphi
 import type { PoloStateGraphicsAuditSnapshot } from './polo-state-graphics-audit';
 import type { SpngStateGraphicsAuditSnapshot } from './spng-state-graphics-audit';
 import type { GelStateGraphicsAuditSnapshot } from './gel-state-graphics-audit';
+import type { BaseStateGraphicsAuditSnapshot } from './base-state-graphics-audit';
 import type { PqrtStateGraphicsAuditSnapshot } from './pqrt-state-graphics-audit';
 import type { FiltStateGraphicsAuditSnapshot } from './filt-state-graphics-audit';
 import type { LcryStateGraphicsAuditSnapshot } from './lcry-state-graphics-audit';
@@ -189,6 +190,7 @@ export interface BrowserInputAuditApi {
   setEnergyIdentityStyling(enabled: boolean): void;
   setVibrStateStyling(enabled: boolean): void;
   setDeutStateStyling(enabled: boolean): void;
+  setBaseStateStyling(enabled: boolean): void;
   setSourceTargetStyling(enabled: boolean): void;
   setForceActivityStyling(enabled: boolean): void;
   setPoloStateStyling(enabled: boolean): void;
@@ -345,6 +347,8 @@ export interface BrowserInputAuditApi {
   prepareSpngStateGraphicsFixture(): void;
   gelStateGraphicsAtlas(): GelStateGraphicsAuditSnapshot;
   prepareGelStateGraphicsFixture(): void;
+  baseStateGraphicsAtlas(): BaseStateGraphicsAuditSnapshot;
+  prepareBaseStateGraphicsFixture(): void;
   pqrtStateGraphicsAtlas(): PqrtStateGraphicsAuditSnapshot;
   preparePqrtStateGraphicsFixture(): void;
   filtStateGraphicsAtlas(): FiltStateGraphicsAuditSnapshot;

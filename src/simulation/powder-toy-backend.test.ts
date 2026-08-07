@@ -3,7 +3,7 @@ import { MATERIALS, Material } from '../shared/materials';
 import { PowderToyBackend } from './powder-toy-backend';
 import { SimulationTool } from './simulation-tools';
 import {
-  DEUT_PRESENTATION_STATE, DLAY_PRESENTATION_STATE, GEL_PRESENTATION_STATE, LAVA_PRESENTATION_STATE, POLO_PRESENTATION_STATE,
+  BASE_PRESENTATION_STATE, DEUT_PRESENTATION_STATE, DLAY_PRESENTATION_STATE, GEL_PRESENTATION_STATE, LAVA_PRESENTATION_STATE, POLO_PRESENTATION_STATE,
   PLNT_PRESENTATION_STATE, SEED_PRESENTATION_STATE, SPNG_PRESENTATION_STATE,
   FILT_PRESENTATION_STATE, LCRY_PRESENTATION_STATE, QUARTZ_PRESENTATION_STATE,
   PIPE_PRESENTATION_STATE, SPRK_PRESENTATION_STATE, STOR_PRESENTATION_STATE,
@@ -44,6 +44,7 @@ describe('direct Powder Toy backend', () => {
     expect(adapter).toContain('auto const countdown = life > 0');
     expect(adapter).toContain('? std::max(1, (life * 255 + 375) / 750) : 0;');
     expect(adapter).toContain('std::clamp(part.life, 0, 0xFFFF)');
+    expect(adapter).toContain('part.tmp == 1 ? 0x0080 : 0');
   });
 
   it('loads the pinned 612x384 engine and exposes rendering fields', async () => {
@@ -1288,6 +1289,98 @@ describe('direct Powder Toy backend', () => {
     restored.loadFile(file);
     expect(owner(restored)).toBe(Material.GEL);
     expect(state(restored)).toBe(hydratedState);
+  });
+
+  it('projects native BASE concentration and exact corrosion sparks through OPS1', async () => {
+    const count = (simulation: PowderToyBackend, material: Material): number => (
+      simulation.cells().reduce((total, owner) => total + Number(owner === material), 0)
+    );
+    const baseWords = (simulation: PowderToyBackend): number[] => {
+      const cells = simulation.cells();
+      const states = simulation.presentationState();
+      const words: number[] = [];
+      for (let index = 0; index < cells.length; index++) {
+        if (cells[index] === Material.BASE) words.push(states[index]);
+      }
+      return words;
+    };
+
+    const placement = await PowderToyBackend.load(moduleArtifact.href);
+    const point = { x: 306, y: 180 };
+    const pointIndex = point.y * placement.width + point.x;
+    placement.paint(point.x, point.y, Material.BASE, 0);
+    expect(placement.cells()[pointIndex]).toBe(Material.BASE);
+    expect(placement.presentationState()[pointIndex]).toBe(
+      BASE_PRESENTATION_STATE.defaultConcentration,
+    );
+    placement.clear();
+    placement.paint(point.x, point.y, Material.Water, 0);
+    expect(placement.cells()[pointIndex]).toBe(Material.Water);
+    expect(placement.presentationState()[pointIndex]).toBe(0);
+
+    const dilution = await PowderToyBackend.load(moduleArtifact.href);
+    const baseRegion = { left: 286, top: 160, width: 20, height: 20 };
+    const waterRegion = { left: 306, top: 160, width: 20, height: 20 };
+    for (let y = baseRegion.top; y < baseRegion.top + baseRegion.height; y++) {
+      for (let x = baseRegion.left; x < waterRegion.left + waterRegion.width; x++) {
+        dilution.paint(x, y, x < waterRegion.left ? Material.BASE : Material.Water, 0);
+      }
+    }
+    const initialBaseCount = count(dilution, Material.BASE);
+    const initialWaterCount = count(dilution, Material.Water);
+    let diluted = false;
+    for (let step = 0; step < 128; step++) {
+      dilution.step();
+      const words = baseWords(dilution);
+      diluted = count(dilution, Material.BASE) > initialBaseCount
+        && count(dilution, Material.Water) < initialWaterCount
+        && words.some((word) => {
+          const concentration = word & BASE_PRESENTATION_STATE.concentrationMask;
+          return concentration > 0 && concentration < BASE_PRESENTATION_STATE.defaultConcentration;
+        });
+      if (diluted) break;
+    }
+    expect(diluted).toBe(true);
+    expect(baseWords(dilution).every((word) => (
+      (word & BASE_PRESENTATION_STATE.reservedMask) === 0
+      && (word & BASE_PRESENTATION_STATE.concentrationMask)
+        <= BASE_PRESENTATION_STATE.concentrationMaximum
+    ))).toBe(true);
+
+    const dilutedCells = dilution.cells().slice();
+    const dilutedState = dilution.presentationState().slice();
+    const dilutedFile = dilution.saveFile();
+    expect(new TextDecoder().decode(dilutedFile.slice(0, 4))).toBe('OPS1');
+    const dilutedRestored = await PowderToyBackend.load(moduleArtifact.href);
+    dilutedRestored.loadFile(dilutedFile);
+    expect(dilutedRestored.cells()).toEqual(dilutedCells);
+    expect(dilutedRestored.presentationState()).toEqual(dilutedState);
+
+    const corrosion = await PowderToyBackend.load(moduleArtifact.href);
+    // A broad set of independent native BASE/Metal contacts makes the exact
+    // 1-in-10 rust path deterministic under the pinned seeded engine, without
+    // inventing a test-only tmp write. Save on that same update: BASE resets
+    // tmp at the beginning of its next native update.
+    for (let y = 160; y < 220; y += 3) {
+      for (let x = 280; x < 340; x += 3) {
+        corrosion.paint(x, y, Material.BASE, 0);
+        corrosion.paint(x + 1, y, Material.Metal, 0);
+      }
+    }
+    corrosion.step();
+    const corrosionCells = corrosion.cells().slice();
+    const corrosionState = corrosion.presentationState().slice();
+    expect(corrosionCells.some((material) => material === Material.BMTL)).toBe(true);
+    expect(corrosionCells.some((material, index) => (
+      material === Material.BASE
+      && (corrosionState[index] & BASE_PRESENTATION_STATE.sparkMask)
+        === BASE_PRESENTATION_STATE.sparkMask
+    ))).toBe(true);
+    const corrosionFile = corrosion.saveFile();
+    const corrosionRestored = await PowderToyBackend.load(moduleArtifact.href);
+    corrosionRestored.loadFile(corrosionFile);
+    expect(corrosionRestored.cells()).toEqual(corrosionCells);
+    expect(corrosionRestored.presentationState()).toEqual(corrosionState);
   });
 
   it('extracts exact native DEUT concentration and follows native coalescing', async () => {

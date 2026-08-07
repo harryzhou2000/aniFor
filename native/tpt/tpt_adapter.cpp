@@ -707,6 +707,17 @@ void ExtractFields()
 					charge | (countdown << 7) | (part.tmp2 ? 0x8000 : 0)
 				);
 			}
+			else if (part.type == PT_BASE)
+			{
+				// BASE keeps its solution concentration in life. Its update clamps the
+				// live range to 1..100, while an imported/unstepped zero remains a
+				// legitimate dark graphics state. Upstream draws a spark only for
+				// tmp == 1, so do not treat arbitrary nonzero tmp as active.
+				auto const concentration = std::clamp(part.life, 0, 100);
+				presentationStateField[offset] = uint16_t(
+					concentration | (part.tmp == 1 ? 0x0080 : 0)
+				);
+			}
 			else if (part.type == PT_DEUT)
 			{
 				// DEUT stores the number of absorbed deuterium particles in life.

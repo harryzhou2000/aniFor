@@ -527,6 +527,8 @@ const forceActivityGraphicsOnly = process.argv.includes('--force-activity-graphi
 const poloStateGraphicsOnly = process.argv.includes('--polo-state-graphics-only');
 const spngStateGraphicsOnly = process.argv.includes('--spng-state-graphics-only');
 const gelStateGraphicsOnly = process.argv.includes('--gel-state-graphics-only');
+const baseStateGraphicsOnly = process.argv.includes('--base-state-graphics-only');
+const baseStateGraphicsEight = baseStateGraphicsOnly && process.argv.includes('--render-scale=8');
 const pqrtStateGraphicsOnly = process.argv.includes('--pqrt-state-graphics-only');
 const pqrtStateGraphicsEight = pqrtStateGraphicsOnly && process.argv.includes('--render-scale=8');
 const filtStateGraphicsOnly = process.argv.includes('--filt-state-graphics-only');
@@ -583,7 +585,7 @@ const usesProductionBundle = productionBundle || showcaseScreenshotOnly || compo
   || organicPlantGraphicsOnly || spongeGraphicsOnly || virusGraphicsOnly || waxGraphicsOnly
   || crystalGraphicsOnly || pasteResistGraphicsOnly || vibrStateGraphicsOnly
   || deutStateGraphicsOnly || sourceTargetGraphicsOnly || forceActivityGraphicsOnly
-  || poloStateGraphicsOnly || spngStateGraphicsOnly || gelStateGraphicsOnly || lavaStateGraphicsOnly
+  || poloStateGraphicsOnly || spngStateGraphicsOnly || gelStateGraphicsOnly || baseStateGraphicsOnly || lavaStateGraphicsOnly
   || pqrtStateGraphicsOnly || filtStateGraphicsOnly || lcryStateGraphicsOnly
   || pipeStateGraphicsOnly
   || swchStateGraphicsOnly
@@ -1482,7 +1484,7 @@ async function main() {
       || spongeGraphicsOnly || virusGraphicsOnly || waxGraphicsOnly || crystalGraphicsOnly
       || pasteResistGraphicsOnly || vibrStateGraphicsOnly || deutStateGraphicsOnly
       || sourceTargetGraphicsOnly || forceActivityGraphicsOnly || poloStateGraphicsOnly
-      || spngStateGraphicsOnly || gelStateGraphicsOnly || lavaStateGraphicsOnly || botanicalLifecycleGraphicsOnly
+      || spngStateGraphicsOnly || gelStateGraphicsOnly || baseStateGraphicsOnly || lavaStateGraphicsOnly || botanicalLifecycleGraphicsOnly
       || pqrtStateGraphicsOnly || filtStateGraphicsOnly || lcryStateGraphicsOnly
       || geologicalSolidGraphicsOnly
       || thermalCatalyticRigidGraphicsOnly
@@ -1561,7 +1563,7 @@ async function auditMode(mode) {
   const dpr = captureDpr ?? (mode === 'canvas2d' ? 2 : 1);
   const canvasFallbackAudit = mode === 'canvas2d' && !materialAtlasOnly && !mobileOnly && !layoutOnly
     && !shortDesktopOnly && !liveScaleOnly && !requireCanvasVisuals && !deviceIdentityGraphicsOnly
-    && !fieldProfileGraphicsOnly && !electricDischargeGraphicsOnly;
+    && !fieldProfileGraphicsOnly && !electricDischargeGraphicsOnly && !baseStateGraphicsOnly;
   // Advanced fixtures begin blank so WebGL can author exactly the state it
   // measures. Canvas fallback has no advanced optics obligation, so retain the
   // canonical paused scene there and prove real material delivery/occupancy.
@@ -1575,7 +1577,7 @@ async function auditMode(mode) {
     || spongeGraphicsOnly || virusGraphicsOnly || waxGraphicsOnly || crystalGraphicsOnly
     || pasteResistGraphicsOnly || vibrStateGraphicsOnly || deutStateGraphicsOnly
     || sourceTargetGraphicsOnly || forceActivityGraphicsOnly || poloStateGraphicsOnly
-    || spngStateGraphicsOnly || gelStateGraphicsOnly || lavaStateGraphicsOnly || botanicalLifecycleGraphicsOnly
+    || spngStateGraphicsOnly || gelStateGraphicsOnly || baseStateGraphicsOnly || lavaStateGraphicsOnly || botanicalLifecycleGraphicsOnly
     || pqrtStateGraphicsOnly || filtStateGraphicsOnly || lcryStateGraphicsOnly
     || pipeStateGraphicsOnly || swchStateGraphicsOnly || storStateGraphicsOnly
     || dlayStateGraphicsOnly || wifiStateGraphicsOnly || powderMesostrataGraphicsOnly
@@ -1772,7 +1774,7 @@ async function auditMode(mode) {
     // E30 defaults on with E26, so every focused audit starts from an explicit
     // no-op. Its own reload loop later owns the off -> on -> off sequence.
     ...(focusedVfxOnlyFlags.some(Boolean) ? { woodBarkReliefVfx: '0' } : {}),
-    renderScale: renderScaleArgument ?? ((pqrtStateGraphicsEight || filtStateGraphicsEight || lcryStateGraphicsEight
+    renderScale: renderScaleArgument ?? ((baseStateGraphicsEight || pqrtStateGraphicsEight || filtStateGraphicsEight || lcryStateGraphicsEight
       || pipeStateGraphicsEight || swchStateGraphicsEight || storStateGraphicsEight
       || dlayStateGraphicsEight || wifiStateGraphicsEight || powderMesostrataGraphicsEight
       || geologicalSolidGraphicsEight || thermalCatalyticRigidGraphicsEight || gooSolidGraphicsEight || frayForceGraphicsEight || gbmbForceGraphicsEight || distilledDieselLiquidGraphicsEight || denseBodyAmbientEight) ? '8' : '2'),
@@ -1989,7 +1991,7 @@ async function auditMode(mode) {
         browserErrors: errors.length,
       };
     }
-    const dedicatedEightX = pqrtStateGraphicsEight || filtStateGraphicsEight || lcryStateGraphicsEight
+    const dedicatedEightX = baseStateGraphicsEight || pqrtStateGraphicsEight || filtStateGraphicsEight || lcryStateGraphicsEight
       || denseBodyAmbientEight || wifiStateGraphicsEight || powderMesostrataGraphicsEight
       || geologicalSolidGraphicsEight || thermalCatalyticRigidGraphicsEight || gooSolidGraphicsEight
       || frayForceGraphicsEight || gbmbForceGraphicsEight || distilledDieselLiquidGraphicsEight;
@@ -1999,7 +2001,7 @@ async function auditMode(mode) {
       const parameters = new URLSearchParams(location.search);
       const ready = parameters.get('scene') === 'render-lab'
         && parameters.get('inputAudit') === '1'
-        && parameters.get('renderScale') === ${JSON.stringify(renderScaleArgument ?? ((pqrtStateGraphicsEight || filtStateGraphicsEight || lcryStateGraphicsEight || pipeStateGraphicsEight || swchStateGraphicsEight || storStateGraphicsEight || dlayStateGraphicsEight || wifiStateGraphicsEight || powderMesostrataGraphicsEight || geologicalSolidGraphicsEight || thermalCatalyticRigidGraphicsEight || gooSolidGraphicsEight || frayForceGraphicsEight || gbmbForceGraphicsEight || distilledDieselLiquidGraphicsEight || denseBodyAmbientEight) ? '8' : '2'))}
+        && parameters.get('renderScale') === ${JSON.stringify(renderScaleArgument ?? ((baseStateGraphicsEight || pqrtStateGraphicsEight || filtStateGraphicsEight || lcryStateGraphicsEight || pipeStateGraphicsEight || swchStateGraphicsEight || storStateGraphicsEight || dlayStateGraphicsEight || wifiStateGraphicsEight || powderMesostrataGraphicsEight || geologicalSolidGraphicsEight || thermalCatalyticRigidGraphicsEight || gooSolidGraphicsEight || frayForceGraphicsEight || gbmbForceGraphicsEight || distilledDieselLiquidGraphicsEight || denseBodyAmbientEight) ? '8' : '2'))}
         && parameters.get('auditStage') === ${JSON.stringify(startsBlank ? 'blank' : 'canonical')}
         && parameters.has('blankAudit') === ${startsBlank}
         && Boolean(window.__ANIFOR_INPUT_AUDIT__ && document.documentElement);
@@ -2641,6 +2643,14 @@ async function auditMode(mode) {
       assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
       cdp.close();
       return { backend: mode, gelStateGraphics, browserErrors: errors.length };
+    }
+    if (baseStateGraphicsOnly) {
+      const baseStateGraphics = await auditBaseStateGraphics(
+        cdp, mode, baseStateGraphicsEight ? 8 : Number(renderScaleArgument ?? 2),
+      );
+      assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
+      cdp.close();
+      return { backend: mode, baseStateGraphics, browserErrors: errors.length };
     }
     if (pqrtStateGraphicsOnly) {
       const pqrtStateGraphics = await auditPqrtStateGraphics({ cdp, mode, evaluate, waitFor,
@@ -10286,6 +10296,372 @@ function summarizePasteResistBackingResponses(flat, styled, repeated) {
       profile: Array.from(buckets, (value) => total > 0 ? value / total : 0),
       axisMap, signedChromaMap, motifResponse,
     };
+  });
+}
+
+/**
+ * Focused real-framebuffer proof for owner-guarded BASE concentration and
+ * electrical presentation state. Zero concentration is deliberately a valid
+ * BASE state here, so all state checks keep material ownership explicit.
+ */
+async function auditBaseStateGraphics(cdp, mode, outputScale) {
+  const started = performance.now();
+  const stage = (name) => console.error(
+    `[base-state-graphics:${mode}@${outputScale}x] ${name} ${Math.round(performance.now() - started)}ms`,
+  );
+  await waitForStablePageCapture(cdp, `${mode} initial blank BASE-state framebuffer`);
+  await evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    if (typeof audit.prepareBaseStateGraphicsFixture !== 'function'
+      || typeof audit.baseStateGraphicsAtlas !== 'function'
+      || typeof audit.setBaseStateStyling !== 'function'
+      || typeof audit.presentationState !== 'function') {
+      throw new Error('BASE state graphics audit API unavailable');
+    }
+    audit.prepareBaseStateGraphicsFixture();
+    return true;
+  })()`);
+  const atlas = await waitFor(() => evaluate(cdp, `(() => {
+    const snapshot = window.__ANIFOR_INPUT_AUDIT__.baseStateGraphicsAtlas();
+    const cards = Array.isArray(snapshot) ? snapshot : snapshot?.cards;
+    return cards?.length === 6 ? snapshot : false;
+  })()`), 15_000, `${mode} BASE state graphics fixture`);
+  const cards = Array.isArray(atlas) ? atlas : atlas.cards;
+  const expected = [
+    ['empty', 0, false, 0], ['dilute', 25, false, 25], ['balanced', 50, false, 50],
+    ['concentrated', 76, false, 76], ['saturated', 100, false, 100],
+    ['spark', 76, true, 204],
+  ];
+  assert(cards.every((entry, index) => entry.code === 'BASE' && entry.material === 53
+      && entry.key === expected[index][0] && entry.concentration === expected[index][1]
+      && entry.spark === expected[index][2] && entry.encodedState === expected[index][3]),
+  `${mode}: BASE state atlas contract changed (${JSON.stringify(cards.map(
+    ({ key, material, concentration, spark, encodedState }) => (
+      { key, material, concentration, spark, encodedState }
+    ),
+  ))})`);
+
+  const semantics = await evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    const snapshot = audit.baseStateGraphicsAtlas();
+    const cards = Array.isArray(snapshot) ? snapshot : snapshot.cards;
+    const inside = (x, y, rect) => x >= rect.x && x < rect.x + rect.width
+      && y >= rect.y && y < rect.y + rect.height;
+    const exact = (rect, material, state) => {
+      for (let y = rect.y; y < rect.y + rect.height; y++) for (let x = rect.x; x < rect.x + rect.width; x++) {
+        if (audit.cell(x, y) !== material || audit.presentationState(x, y) !== state) return false;
+      }
+      return true;
+    };
+    return cards.map((entry) => {
+      const state = audit.presentationState(entry.surfaceProbe.x, entry.surfaceProbe.y);
+      let bodyExact = true;
+      for (let y = entry.body.y; y < entry.body.y + entry.body.height; y++) {
+        for (let x = entry.body.x; x < entry.body.x + entry.body.width; x++) {
+          const empty = inside(x, y, entry.authoredHole) || inside(x, y, entry.openNotch);
+          bodyExact &&= audit.cell(x, y) === (empty ? 0 : 53)
+            && audit.presentationState(x, y) === (empty ? 0 : state);
+        }
+      }
+      return {
+        bodyExact,
+        coreAuxiliary: audit.presentationAuxiliary(
+          entry.coreProbe.x + Math.floor(entry.coreProbe.width / 2),
+          entry.coreProbe.y + Math.floor(entry.coreProbe.height / 2),
+        ),
+        coreLiquidAlpha: audit.liquidFieldAlpha(
+          entry.coreProbe.x + Math.floor(entry.coreProbe.width / 2),
+          entry.coreProbe.y + Math.floor(entry.coreProbe.height / 2),
+        ),
+        hole: exact(entry.authoredHole, 0, 0),
+        notch: exact(entry.openNotch, 0, 0),
+        thin: exact(entry.thinStrand, 53, state),
+        isolated: audit.cell(entry.isolated.x, entry.isolated.y) === 53
+          && audit.presentationState(entry.isolated.x, entry.isolated.y) === state,
+        zeroConcentration: exact(entry.zeroConcentration, 53, 0),
+        controls: [
+          exact(entry.wrongOwner, 1, state), exact(entry.waterControl, 2, state),
+          exact(entry.acidControl, 13, state), exact(entry.causControl, 64, state),
+          exact(entry.saltWaterControl, 16, state), exact(entry.oilControl, 8, state),
+          exact(entry.soapControl, 38, state), exact(entry.gelControl, 56, state),
+          exact(entry.metalControl, 23, state), exact(entry.bmtlControl, 67, state),
+          exact(entry.boylControl, 63, state),
+          exact(entry.nativeWallControl, 53, state) && (() => {
+            for (let y = entry.nativeWallControl.y;
+              y < entry.nativeWallControl.y + entry.nativeWallControl.height; y += 4) {
+              for (let x = entry.nativeWallControl.x;
+                x < entry.nativeWallControl.x + entry.nativeWallControl.width; x += 4) {
+                if (audit.wall(x, y) !== 8) return false;
+              }
+            }
+            return true;
+          })(),
+        ],
+        blank: exact(entry.guardedBlank, 0, 0),
+      };
+    });
+  })()`);
+  assert(semantics.every((entry) => entry.bodyExact && entry.hole && entry.notch && entry.thin
+      && entry.isolated && entry.zeroConcentration && entry.blank
+      && entry.coreAuxiliary >= 78 && entry.coreLiquidAlpha >= 160
+      && entry.controls.every(Boolean)),
+  `${mode}: BASE state fixture lost semantic owner/state topology (${JSON.stringify(semantics)})`);
+  const live = await metrics(cdp);
+  assert(live.backing.width === WORLD_WIDTH * outputScale
+      && live.backing.height === WORLD_HEIGHT * outputScale
+      && Number(live.outputScale) === outputScale,
+  `${mode}: BASE state requested ${outputScale}x lost exact backing (${JSON.stringify(live.backing)})`);
+  if (outputScale === 8) {
+    const backend = await evaluate(cdp, `window.__ANIFOR_INPUT_AUDIT__.backend()`);
+    assertEightXWebGLBackend(backend, `${mode} BASE state dedicated 8x`);
+  }
+  stage('fixture-ready');
+
+  const setStyling = (enabled) => evaluate(cdp, `(() => {
+    window.__ANIFOR_INPUT_AUDIT__.setBaseStateStyling(${enabled}); return true;
+  })()`);
+  const settle = async (label) => {
+    if (mode !== 'webgl') return waitForStablePageCapture(cdp, label, 30_000, 1);
+    // This focused gate reads the canvas backing directly below; a full-page
+    // PNG adds no evidence and can spend the entire 4x/8x budget in Chrome's
+    // compositor after the renderer's fence has already signalled. Prove one
+    // latest-wins WebGL presentation; drawImage then reads that backing without
+    // depending on a throttled compositor requestAnimationFrame.
+    await sleep(outputScale === 8 ? 900 : 350);
+    await waitForNextWebGLPresentation(cdp, label, 30_000, 30_000);
+    await sleep(150);
+    return undefined;
+  };
+  if (mode === 'webgl' && outputScale >= 4) {
+    // A slow high-resolution fixture can outrun the shared field scheduler:
+    // atmosphere, liquid, and emission intentionally rebuild on separate
+    // frames. Discard one complete off/on pair so the measured sequence starts
+    // only after those caller-owned fields and liquid depth have all presented.
+    await setStyling(false);
+    await settle(`${mode} warm flat BASE-state framebuffer`);
+    await setStyling(true);
+    await settle(`${mode} warm styled BASE-state framebuffer`);
+    // Prime Chrome's WebGL-to-2D backing copy once after the final shared-field
+    // frame. The first high-resolution drawImage can still expose the previous
+    // front buffer even though the owning fence has signalled; it is warm-up,
+    // not evidence for either side of the toggle.
+    await sampleBaseStateBacking(cdp);
+  }
+  await setStyling(false);
+  await settle(`${mode} flat BASE-state framebuffer`);
+  const flat = await sampleBaseStateBacking(cdp);
+  await setStyling(true);
+  await settle(`${mode} styled BASE-state framebuffer`);
+  const styled = await sampleBaseStateBacking(cdp);
+  await setStyling(false);
+  await settle(`${mode} repeated flat BASE-state framebuffer`);
+  const repeatedFlat = await sampleBaseStateBacking(cdp);
+  await setStyling(true);
+  await settle(`${mode} repeated styled BASE-state framebuffer`);
+  const repeatedStyled = await sampleBaseStateBacking(cdp);
+
+  for (const [label, backing] of [
+    ['flat', flat], ['styled', styled], ['repeated-flat', repeatedFlat], ['repeated-styled', repeatedStyled],
+  ]) assertBaseStateBacking(backing, `${mode} ${label}`);
+  for (let index = 0; index < cards.length; index++) {
+    const base = flat.cards[index], changed = styled.cards[index];
+    const returned = repeatedFlat.cards[index], restyled = repeatedStyled.cards[index];
+    assert(base.semanticSignature === changed.semanticSignature
+        && base.semanticSignature === returned.semanticSignature
+        && base.semanticSignature === restyled.semanticSignature
+        && base.alphaSignature === changed.alphaSignature
+        && base.alphaSignature === returned.alphaSignature
+        && base.alphaSignature === restyled.alphaSignature
+        && base.supportSignature === changed.supportSignature
+        && base.supportSignature === returned.supportSignature
+        && base.supportSignature === restyled.supportSignature,
+    `${mode}: BASE/${base.key} styling changed semantic, alpha, or support topology (${JSON.stringify({
+      flat: { semantic: base.semanticSignature, alpha: base.alphaSignature, support: base.supportSignature },
+      styled: { semantic: changed.semanticSignature, alpha: changed.alphaSignature,
+        support: changed.supportSignature },
+      repeatedFlat: { semantic: returned.semanticSignature, alpha: returned.alphaSignature,
+        support: returned.supportSignature },
+      repeatedStyled: { semantic: restyled.semanticSignature, alpha: restyled.alphaSignature,
+        support: restyled.supportSignature },
+    })})`);
+    for (const control of Object.keys(base.controlsRgb)) {
+      assert(arraysEqual(base.controlsRgb[control], changed.controlsRgb[control])
+          && arraysEqual(base.controlsRgb[control], returned.controlsRgb[control])
+          && arraysEqual(base.controlsRgb[control], restyled.controlsRgb[control]),
+      `${mode}: BASE/${base.key} styling leaked into ${control}`);
+    }
+  }
+  const responses = summarizeBaseStateResponses(flat, styled, repeatedFlat, repeatedStyled);
+  const byKey = Object.fromEntries(responses.map((entry) => [entry.key, entry]));
+  const normalBodyActive = outputScale < 8 && renderLook !== undefined && renderLook !== 'classic';
+  for (const key of ['empty', 'dilute', 'balanced', 'concentrated', 'saturated']) {
+    const response = byKey[key];
+    const nativeBandNoop = !normalBodyActive && (key === 'concentrated' || key === 'saturated');
+    assert((nativeBandNoop
+      ? response.rgbRms === 0 && response.rgbPeak === 0
+      : response.rgbRms >= 0.02 && response.rgbPeak > 0 && response.rgbPeak <= 160)
+        && response.repeatFlatPeak === 0 && response.repeatStyledPeak === 0,
+    `${mode}: BASE/${key} response is absent, unbounded, or non-deterministic (${JSON.stringify(response)})`);
+  }
+  const bandDistance = (left, right) => Math.sqrt(left.meanDeltaRgb.reduce(
+    (sum, value, index) => sum + (value - right.meanDeltaRgb[index]) ** 2, 0,
+  ) / 3);
+  assert(byKey.empty.deltaLuma < -0.02 && byKey.dilute.deltaLuma < -0.02
+      // The native 0/25 colour band is exact. Normal realistic WebGL may add a
+      // small continuous concentration-weighted body-depth response on top.
+      && bandDistance(byKey.empty, byKey.dilute) <= (normalBodyActive ? 2.5 : 1.25)
+      && bandDistance(byKey.empty, byKey.balanced) >= 0.25
+      && Math.max(byKey.empty.styledLuma, byKey.dilute.styledLuma) < byKey.balanced.styledLuma
+      && byKey.balanced.styledLuma < Math.min(byKey.concentrated.styledLuma, byKey.saturated.styledLuma),
+  `${mode}: BASE native concentration bands lost dark-to-bright ordering (${JSON.stringify(responses)})`);
+  if (!normalBodyActive) {
+    assert(bandDistance(byKey.concentrated, byKey.saturated) <= 0.35,
+      `${mode}: BASE 76/100 native no-op bands diverged (${JSON.stringify({
+        concentrated: byKey.concentrated, saturated: byKey.saturated,
+      })})`);
+  }
+  assert(byKey.spark.rgbRms > 0 && byKey.spark.sparkRgbPeak > 0
+      && byKey.spark.sparkDifferenceRms > 0.25
+      && byKey.spark.repeatFlatPeak === 0 && byKey.spark.repeatStyledPeak === 0,
+  `${mode}: BASE spark card is absent or indistinguishable from concentration-only BASE (${JSON.stringify({
+    spark: byKey.spark, concentrated: byKey.concentrated,
+  })})`);
+  stage('responses-ready');
+  return { cards: responses, exactRepeatedOff: responses.every(
+    ({ repeatFlatPeak, repeatStyledPeak }) => repeatFlatPeak === 0 && repeatStyledPeak === 0,
+  ) };
+}
+
+async function sampleBaseStateBacking(cdp) {
+  return evaluate(cdp, `(() => {
+    const world = document.querySelector('.world-canvas');
+    if (!(world instanceof HTMLCanvasElement)) throw new Error('World canvas unavailable');
+    const copy = document.createElement('canvas'); copy.width = world.width; copy.height = world.height;
+    const context = copy.getContext('2d', { willReadFrequently: true });
+    if (!context) throw new Error('BASE state backing sampler unavailable');
+    context.drawImage(world, 0, 0);
+    const pixels = context.getImageData(0, 0, copy.width, copy.height).data;
+    const scaleX = copy.width / ${WORLD_WIDTH}, scaleY = copy.height / ${WORLD_HEIGHT};
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    const snapshot = audit.baseStateGraphicsAtlas();
+    const cards = Array.isArray(snapshot) ? snapshot : snapshot.cards;
+    const key = ({ x, y }) => x + ',' + y;
+    const points = (rect, step = 1) => { const result = [];
+      for (let y = rect.y; y < rect.y + rect.height; y += step) {
+        for (let x = rect.x; x < rect.x + rect.width; x += step) result.push({ x, y });
+      }
+      return result;
+    };
+    const alpha = ({ x, y }) => { let peak = 0;
+      const left = Math.floor(x * scaleX), top = Math.floor(y * scaleY);
+      const right = Math.max(left + 1, Math.floor((x + 1) * scaleX));
+      const bottom = Math.max(top + 1, Math.floor((y + 1) * scaleY));
+      for (let py = top; py < bottom; py++) for (let px = left; px < right; px++) {
+        peak = Math.max(peak, pixels[(py * copy.width + px) * 4 + 3]);
+      }
+      return peak;
+    };
+    const rgb = (samples) => samples.flatMap(({ x, y }) => {
+      const px = Math.min(copy.width - 1, Math.floor((x + .5) * scaleX));
+      const py = Math.min(copy.height - 1, Math.floor((y + .5) * scaleY));
+      const offset = (py * copy.width + px) * 4;
+      return [pixels[offset], pixels[offset + 1], pixels[offset + 2]];
+    });
+    const signature = (entry) => {
+      let semantic = 2166136261, alphaSignature = 2166136261, support = 2166136261;
+      for (let y = entry.card.y; y < entry.card.y + entry.card.height; y++) {
+        for (let x = entry.card.x; x < entry.card.x + entry.card.width; x++) {
+          semantic = Math.imul(semantic ^ audit.cell(x, y), 16777619) >>> 0;
+          const px = Math.min(copy.width - 1, Math.floor((x + .5) * scaleX));
+          const py = Math.min(copy.height - 1, Math.floor((y + .5) * scaleY));
+          const value = pixels[(py * copy.width + px) * 4 + 3];
+          alphaSignature = Math.imul(alphaSignature ^ value, 16777619) >>> 0;
+          support = Math.imul(support ^ Number(value > 0), 16777619) >>> 0;
+        }
+      }
+      return { semantic, alphaSignature, support };
+    };
+    const controlNames = ['wrongOwner', 'waterControl', 'acidControl', 'causControl',
+      'saltWaterControl', 'oilControl', 'soapControl', 'gelControl', 'metalControl', 'bmtlControl',
+      'boylControl', 'nativeWallControl', 'guardedBlank'];
+    return { scaleX, scaleY, cards: cards.map((entry) => {
+      const omitted = new Set([...points(entry.authoredHole), ...points(entry.openNotch)].map(key));
+      const body = points(entry.body, 2).filter((point) => !omitted.has(key(point)));
+      const signatures = signature(entry);
+      return {
+        key: entry.key, semanticSignature: signatures.semantic, alphaSignature: signatures.alphaSignature,
+        supportSignature: signatures.support, bodyRgb: rgb(body), sparkRgb: rgb(points(entry.sparkProbe)),
+        bodyExpected: points(entry.body).filter((point) => !omitted.has(key(point))).length,
+        bodySupported: points(entry.body).filter((point) => !omitted.has(key(point)) && alpha(point) > 0).length,
+        thinExpected: points(entry.thinStrand).length,
+        thinSupported: points(entry.thinStrand).filter((point) => alpha(point) > 0).length,
+        isolatedAlpha: alpha(entry.isolated),
+        holeExpected: points(entry.authoredHole).length,
+        holeTransparent: points(entry.authoredHole).filter((point) => alpha(point) === 0).length,
+        notchExpected: points(entry.openNotch).length,
+        notchTransparent: points(entry.openNotch).filter((point) => alpha(point) === 0).length,
+        controlsRgb: Object.fromEntries(controlNames.map((name) => [name, rgb(points(entry[name]))])),
+      };
+    }) };
+  })()`);
+}
+
+function assertBaseStateBacking(backing, label) {
+  assert(Number.isInteger(backing.scaleX) && Number.isInteger(backing.scaleY)
+      && backing.scaleX > 0 && backing.scaleY > 0
+      && backing.cards.every((entry) => entry.bodyExpected === 4_508
+        && entry.bodySupported === entry.bodyExpected
+        && entry.thinExpected === 30 && entry.thinSupported === entry.thinExpected
+        && entry.isolatedAlpha > 0
+        // Semantic emptiness is asserted separately. Connected-liquid presentation may conservatively
+        // reconstruct part of these shapes, but it must retain a clearly open centre and mouth.
+        && entry.holeExpected === 36 && entry.holeTransparent >= 12
+        && entry.notchExpected === 64 && entry.notchTransparent >= 32),
+  `${label}: BASE state backing changed authored body/hole/notch/thin/isolated support (${JSON.stringify(
+    backing.cards.map(({ bodyRgb, sparkRgb, controlsRgb, ...entry }) => entry),
+  )})`);
+}
+
+function summarizeBaseStateResponses(flat, styled, repeatedFlat, repeatedStyled) {
+  return flat.cards.map((base, index) => {
+    const changed = styled.cards[index], returned = repeatedFlat.cards[index];
+    const restyled = repeatedStyled.cards[index];
+    let squared = 0, peak = 0, repeatFlatPeak = 0, repeatStyledPeak = 0;
+    const signed = [0, 0, 0];
+    let flatLuma = 0, styledLuma = 0, styledChroma = 0;
+    let sparkSquared = 0, sparkPeak = 0;
+    for (let offset = 0; offset < base.bodyRgb.length; offset++) {
+      const delta = changed.bodyRgb[offset] - base.bodyRgb[offset];
+      squared += delta * delta; peak = Math.max(peak, Math.abs(delta));
+      signed[offset % 3] += delta;
+      repeatFlatPeak = Math.max(repeatFlatPeak, Math.abs(returned.bodyRgb[offset] - base.bodyRgb[offset]));
+      repeatStyledPeak = Math.max(repeatStyledPeak, Math.abs(restyled.bodyRgb[offset] - changed.bodyRgb[offset]));
+      if (offset % 3 === 2) {
+        const pixel = offset - 2;
+        flatLuma += base.bodyRgb[pixel] * .2126 + base.bodyRgb[pixel + 1] * .7152 + base.bodyRgb[pixel + 2] * .0722;
+        styledLuma += changed.bodyRgb[pixel] * .2126 + changed.bodyRgb[pixel + 1] * .7152 + changed.bodyRgb[pixel + 2] * .0722;
+        styledChroma += Math.max(changed.bodyRgb[pixel], changed.bodyRgb[pixel + 1], changed.bodyRgb[pixel + 2])
+          - Math.min(changed.bodyRgb[pixel], changed.bodyRgb[pixel + 1], changed.bodyRgb[pixel + 2]);
+      }
+    }
+    for (let offset = 0; offset < base.sparkRgb.length; offset++) {
+      const delta = changed.sparkRgb[offset] - base.sparkRgb[offset];
+      sparkSquared += delta * delta; sparkPeak = Math.max(sparkPeak, Math.abs(delta));
+    }
+    const concentrated = flat.cards[3], concentratedStyled = styled.cards[3];
+    let cardDifference = 0;
+    for (let offset = 0; offset < changed.sparkRgb.length; offset++) {
+      const delta = changed.sparkRgb[offset] - concentratedStyled.sparkRgb[offset];
+      cardDifference += delta * delta;
+    }
+    const samples = Math.max(1, base.bodyRgb.length / 3);
+    return { key: base.key, rgbRms: Math.sqrt(squared / Math.max(1, base.bodyRgb.length)),
+      rgbPeak: peak, meanDeltaRgb: signed.map((value) => value / samples),
+      deltaLuma: (signed[0] * .2126 + signed[1] * .7152 + signed[2] * .0722) / samples,
+      flatLuma: flatLuma / samples, styledLuma: styledLuma / samples, styledChroma: styledChroma / samples,
+      sparkRgbPeak: sparkPeak,
+      sparkDifferenceRms: Math.sqrt(cardDifference / Math.max(1, changed.sparkRgb.length)),
+      repeatFlatPeak, repeatStyledPeak };
   });
 }
 

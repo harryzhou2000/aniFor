@@ -43,6 +43,7 @@ interface PresenterHarness {
   setEnergyIdentityStylingEnabled: PixiFieldPresenter['setEnergyIdentityStylingEnabled'];
   setVibrStateStylingEnabled: PixiFieldPresenter['setVibrStateStylingEnabled'];
   setDeutStateStylingEnabled: PixiFieldPresenter['setDeutStateStylingEnabled'];
+  setBaseStateStylingEnabled: PixiFieldPresenter['setBaseStateStylingEnabled'];
   setSourceTargetStylingEnabled: PixiFieldPresenter['setSourceTargetStylingEnabled'];
   setForceActivityStylingEnabled: PixiFieldPresenter['setForceActivityStylingEnabled'];
   setPoloStateStylingEnabled: PixiFieldPresenter['setPoloStateStylingEnabled'];
@@ -2148,6 +2149,58 @@ describe('Pixi presenter startup configuration', () => {
     expect(source).toContain('presenter.app.canvas.dataset.deutBodyVfx');
     expect(source).toContain("this.app.canvas.dataset.deutBodyVfx = 'inactive';");
     expect(preserve).toContain("get('deutBodyVfxAudit') === '1'");
+  });
+
+  it('keeps E51 BASE concentration optics exact-owner, state-backed, resource-free, and true-8x compact', () => {
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const canvasSource = readFileSync(new URL('./field-renderer.ts', import.meta.url), 'utf8');
+    const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');
+    const normalStart = source.indexOf('const FIELD_FRAGMENT = `', eightStart);
+    const normalEnd = source.indexOf('`;\n\n/** Primary WebGL presentation', normalStart);
+    const eight = source.slice(eightStart, normalStart);
+    const normal = source.slice(normalStart, normalEnd);
+    const e51Start = normal.indexOf('          // E51:');
+    const e51End = normal.indexOf('          // E46:', e51Start);
+    const e51 = normal.slice(e51Start, e51End);
+    const stateStart = normal.indexOf('vec3 baseStateDelta(');
+    const stateEnd = normal.indexOf('vec3 gelHydrationDelta(', stateStart);
+    const normalState = normal.slice(stateStart, stateEnd);
+    const directStateStart = eight.indexOf('vec3 hydrationStateEightXDelta(');
+    const directStateEnd = eight.indexOf('bool solidEightXGranular(', directStateStart);
+    const directState = eight.slice(directStateStart, directStateEnd);
+
+    expect(e51Start).toBeGreaterThanOrEqual(0);
+    expect(e51End).toBeGreaterThan(e51Start);
+    for (const guard of [
+      'uBaseStateStyling > 0.5', 'material == 53.0', 'optics == 3.0',
+      'surfaceOnly < 0.5', 'emissionOnly < 0.5', 'shape.w > 3.5',
+      'exposedLiquidSide < 0.5',
+    ]) expect(e51).toContain(guard);
+    expect(e51).toContain('wallState.b * 255.0');
+    expect(e51).toContain('wallState.a * 255.0');
+    expect(e51).toContain('mod(baseBodyPackedState, 128.0)');
+    expect(e51).toContain('broadSheen');
+    expect(e51).toContain('causticWave');
+    expect(e51).toContain('liquidMacroRelief');
+    expect(e51).not.toContain('texture(');
+    expect(e51).not.toContain('uTime');
+    expect(e51).not.toMatch(/\balpha\s*[+*]?=/);
+
+    for (const shaderState of [normalState, directState]) {
+      expect(shaderState).toMatch(/material [!=]= 53\.0/);
+      expect(shaderState).toContain('mod(packedState, 128.0)');
+      expect(shaderState).toContain('vec3(-93.0, -137.0, -39.0)');
+      expect(shaderState).toContain('mod(floor(packedState / 128.0), 2.0) > 0.5');
+      expect(shaderState).not.toContain('texture(');
+      expect(shaderState).not.toContain('uTime');
+      expect(shaderState).not.toMatch(/\balpha\s*[+*]?=/);
+    }
+    expect(normal).toContain('color += baseStateDelta(material, wallState.ba, fieldPosition);');
+    expect(eight).toContain(
+      '|| (baseOwner && (uBaseStateStyling > 0.5 || uNativeWallsActive > 0.5))',
+    );
+    expect(eight).toContain('color += hydrationStateEightXDelta(material, sourceTarget, uv * uFieldSize);');
+    expect(canvasSource).toContain('applyCanvasBaseStateStyle(');
   });
 
   it('keeps E23 ROCK roughness exact-owner, E17-dependent, normal-WebGL-only, and RGB-only', () => {
@@ -4979,7 +5032,7 @@ describe('Pixi presenter startup configuration', () => {
     expect(eight.match(/texture\(uWallTexture, uv\)/g)).toHaveLength(4);
   });
 
-  it('restores true-8x SPNG and GEL hydration through one packed-state read', () => {
+  it('restores true-8x BASE, SPNG, and GEL state through one packed-state read', () => {
     const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
     const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');
     const eightEnd = source.indexOf('const FIELD_FRAGMENT = `', eightStart);
@@ -5000,12 +5053,17 @@ describe('Pixi presenter startup configuration', () => {
     expect(applicationEnd).toBeGreaterThan(applicationStart);
     expect(eight).toContain('uniform float uSpngStateStyling;');
     expect(eight).toContain('uniform float uGelHydrationStyling;');
+    expect(eight).toContain('uniform float uBaseStateStyling;');
     expect(eight).toContain('uniform float uQuartzCrystalStateStyling;');
     expect(eight).toContain('bool spngOwner = material == 81.0;');
     expect(eight).toContain('bool gelOwner = material == 56.0;');
+    expect(eight).toContain('bool baseOwner = material == 53.0;');
     expect(eight).toContain('bool quartzCrystalOwner = material == 29.0 || material == 76.0;');
     expect(packed).toContain('|| (uSpngStateStyling > 0.5 && spngOwner)');
     expect(packed).toContain('|| (uGelHydrationStyling > 0.5 && gelOwner)');
+    expect(packed).toContain(
+      '|| (baseOwner && (uBaseStateStyling > 0.5 || uNativeWallsActive > 0.5))',
+    );
     expect(packed).toContain('|| (uQuartzCrystalStateStyling > 0.5 && quartzCrystalOwner)');
     expect(helper).toContain('mod(floor(packedState / 64.0), 2.0) < 0.5');
     expect(helper).toContain('float hydration = min(50.0, mod(packedState, 64.0));');
@@ -5014,9 +5072,14 @@ describe('Pixi presenter startup configuration', () => {
     expect(helper).toContain('delta += vec3(-9.0, -6.0, -2.0) * soakedCore;');
     expect(helper).toContain('return clamp(delta * moisture, vec3(-28.0), vec3(20.0)) / 255.0;');
     expect(helper).toContain('if (material == 56.0) {');
+    expect(helper).toContain('if (material == 53.0) {');
+    expect(helper).toContain('float concentration = min(100.0, mod(packedState, 128.0));');
+    expect(helper).toContain('vec3(-93.0, -137.0, -39.0)');
+    expect(helper).toContain('mod(floor(packedState / 128.0), 2.0) > 0.5');
     expect(helper).toContain('float hydration = min(100.0, mod(packedState, 128.0));');
     expect(helper).toContain('return clamp(delta, vec3(-124.0), vec3(124.0)) / 255.0;');
     expect(application).toContain('color += hydrationStateEightXDelta(material, sourceTarget, uv * uFieldSize);');
+    expect(application).toContain('uBaseStateStyling > 0.5 && baseOwner && nativeWall < 0.5');
     expect(eight).toContain('vec3 quartzCrystalStateEightXDelta(float material, float packedState)');
     expect(eight).toContain('color += quartzCrystalStateEightXDelta(material, sourceTarget);');
     expect(helper).not.toContain('texture(');
@@ -5931,6 +5994,18 @@ describe('Pixi presenter startup configuration', () => {
 
     presenter.setSpngStateStylingEnabled(true);
     expect(presenter.uniforms.uniforms.uSpngStateStyling).toBe(1);
+    expect(presenter.app.render).toHaveBeenCalledTimes(2);
+  });
+
+  it('redraws the independent native BASE-state toggle', () => {
+    const presenter = presenterHarness();
+
+    presenter.setBaseStateStylingEnabled(false);
+    expect(presenter.uniforms.uniforms.uBaseStateStyling).toBe(0);
+    expect(presenter.app.render).toHaveBeenCalledOnce();
+
+    presenter.setBaseStateStylingEnabled(true);
+    expect(presenter.uniforms.uniforms.uBaseStateStyling).toBe(1);
     expect(presenter.app.render).toHaveBeenCalledTimes(2);
   });
 

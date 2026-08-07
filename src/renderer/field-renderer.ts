@@ -30,6 +30,7 @@ import {
   canvasLiquidEmissionSurfaceExposure, canvasLiquidSpeciesRelief, canvasLiquidSurfaceExposure,
 } from './canvas-liquid-light';
 import { applyCanvasLiquidIdentityStyle } from './canvas-liquid-identity-style';
+import { applyCanvasBaseStateStyle } from './canvas-base-state-style';
 import { applyCanvasGelHydrationStyle } from './canvas-gel-hydration-style';
 import { applyCanvasFiltSpectrumStyle } from './canvas-filt-spectrum-style';
 import { applyCanvasQuartzCrystalStateStyle } from './canvas-quartz-crystal-state-style';
@@ -349,6 +350,7 @@ export class MaterialRenderer {
   private energyIdentityStylingEnabled = true;
   private vibrStateStylingEnabled = true;
   private deutStateStylingEnabled = true;
+  private baseStateStylingEnabled = true;
   private sourceTargetStylingEnabled = true;
   private forceActivityStylingEnabled = true;
   private poloStateStylingEnabled = true;
@@ -1200,6 +1202,14 @@ export class MaterialRenderer {
     this.changed = true;
   }
 
+  setBaseStateStylingEnabled(enabled: boolean): void {
+    if (enabled === this.baseStateStylingEnabled) return;
+    this.baseStateStylingEnabled = enabled;
+    this.presenter?.setBaseStateStylingEnabled(enabled);
+    this.contourChunks.markAll();
+    this.changed = true;
+  }
+
   setQuartzCrystalStateStylingEnabled(enabled: boolean): void {
     if (enabled === this.quartzCrystalStateStylingEnabled) return;
     this.quartzCrystalStateStylingEnabled = enabled;
@@ -1488,6 +1498,7 @@ export class MaterialRenderer {
       this.botanicalIdentityStylingEnabled,
       this.vibrStateStylingEnabled,
       this.deutStateStylingEnabled,
+      this.baseStateStylingEnabled,
       this.sourceTargetStylingEnabled,
       this.explosivePowderStylingEnabled,
       this.forceActivityStylingEnabled,
@@ -2461,6 +2472,12 @@ export class MaterialRenderer {
             fields.liquid.bytes[pixel + 3], liquidFieldRelief,
             liquidSurfaceExposure, this.boundaryStability[index],
           );
+          if (this.baseStateStylingEnabled && presentationState
+            && material === Material.BASE && wall === 0) {
+            applyCanvasBaseStateStyle(
+              this.styledColor, material, presentationState[index], x, y,
+            );
+          }
           if (this.gelHydrationStylingEnabled && presentationState
             && material === Material.GEL && wall === 0) {
             applyCanvasGelHydrationStyle(

@@ -858,11 +858,30 @@ does not alter simulation, camera, semantic ownership, or `renderScale`.
   Requested-on compact true 8× excludes E50, preserves the exact 4896×3072
   direct WebGL path and completed GPU fence, and explicitly keeps E48/E49
   inactive without uploading E50's dense fixture.
+- **E51 accepted:** exact BASE `53` / native `PT_BASE` gains a
+  concentration-and-spark identity backed by real native state. Bits `0..6` of
+  the existing owner-multiplexed presentation word carry native `life` clamped
+  to `0..100`; bit 7 carries exact `tmp == 1`, zero is valid, and default BASE
+  remains `76`. The exact ladder is `0/25/50/76/100` plus `76|spark`; zero is
+  a real BASE owner, not empty matter. Canvas and normal WebGL share four
+  bounded concentration bands and a static world-anchored RGB spark cue after
+  exact owner and native-wall guards. Normal realistic WebGL additionally
+  recomposes only the existing E03
+  connected-liquid sheen, caustic, and optical-depth evidence for concentrated
+  `76/100` bodies. Direct true 8× folds BASE into the existing single SPNG/GEL
+  compact state helper: `0/25/50` retain bounded state response, canonical
+  `76/100` remain exact body no-ops, and spark remains visible; that richer body
+  response stays off. Alpha, support, species ownership,
+  holes/notches/thin structures, and physics remain unchanged; native state is
+  read but never mutated, and no resource class is added. `npm run audit:vfx:base-state`
+  proves native default/dilution/corrosion/OPS behavior, Canvas 2×, realistic
+  WebGL 1×/2×/4×, and fence-completed 4896×3072 WebGL with exact off repetition,
+  foreign-material/wall controls, stable topology, and zero browser errors.
 - **Protected 8× rung:** `renderScale=8` deliberately reports
   `hdrPipeline=inactive` / `scale-8` and retains the proven direct single-mesh
   4896×3072 path. The experiment must earn a bounded 8× design rather than
   allocating a 115 MiB full-resolution float target beside that path.
-- **Current decision:** E01/E02/E03/E04/E05/E06/E07/E08/E09/E10/E11/E12/E13/E14/E15/E16/E17/E18/E19/E20/E21/E22/E23/E24/E25/E26/E27/E28/E29/E30/E31/E32/E33/E34/E35/E36/E37/E38/E39/E40/E41/E42/E43/E44/E45/E46/E47/E48/E49/E50 remain opt-in through the non-Classic looks
+- **Current decision:** E01/E02/E03/E04/E05/E06/E07/E08/E09/E10/E11/E12/E13/E14/E15/E16/E17/E18/E19/E20/E21/E22/E23/E24/E25/E26/E27/E28/E29/E30/E31/E32/E33/E34/E35/E36/E37/E38/E39/E40/E41/E42/E43/E44/E45/E46/E47/E48/E49/E50/E51 remain opt-in through the non-Classic looks
   until representative hardware timing and mobile thermal behavior are
   measured. E02 remains the safe family-wide baseline. E03 is accepted as the
   liquid-depth checkpoint: its fit-view crop is visibly more cohesive, retains
@@ -1122,8 +1141,10 @@ survey. It drives
 612×384 RenderLab backend, freezes the semantic hash/material counts/region
 support, and compares the same six candidate cards at 1×/2×/4× production
 WebGL. Keep candidate selectors explicit when evaluating an accepted child;
-the package command explicitly enables accepted E48, E49, and E50 so current ranking
-selects the next owner. Pass `--candidate-snowpack-body-vfx=0` to the underlying
+the package command retains the three historical E48/E49/E50 selectors. E51
+has no candidate-survey selector and is proved by its separate authentic-state
+fixture, so this route cannot establish a pre/post-E51 rank. Pass
+`--candidate-snowpack-body-vfx=0` to the underlying
 driver only when reproducing the frozen pre-E48 Snow baseline, and pass
 `--candidate-quartz-mesostructure-vfx=0` only for the frozen pre-E49 Quartz
 baseline. Pass `--candidate-c4-body-vfx=0` only for the frozen pre-E50 C4
@@ -1974,7 +1995,7 @@ next production 4× survey then selected Wood/PLNT as the largest remaining
   lower seam density, lower local contrast, stronger macro hierarchy, unchanged
   semantic support, and byte-exact selector-off recovery.
 
-**Next visual experiments:** E03–E50 now provide accepted liquid body/surface,
+**Next visual experiments:** E03–E51 now provide accepted liquid body/surface,
 stable-gas, coherent-gas-motion, powder-depth, and powder-local-light
 checkpoints plus exact resting contact grounding, Glass/Ice transmission, and
 state-aware Wax/PLNT subsurface response, composed wet-mineral optics,
@@ -2060,6 +2081,18 @@ compact core, and restrained compression fold, then calms dense C4 grain while
 preserving its established later explosive identity at bounded strength.
 Authored holes/channels, moving or wet C4, fine topology, material/contact
 controls, Local, Grains, Canvas, and compact true 8× remain exact controls.
+E51 gives exact BASE `53` / native `PT_BASE` a state-authentic corrosive-liquid
+identity. Native `life` concentration and `tmp == 1` spark state now cross the
+owner-multiplexed presentation plane and OPS boundary. The exact ladder is
+`0/25/50/76/100` plus `76|spark`, with zero remaining real BASE rather than
+empty matter. Canvas and normal WebGL render the four bounded concentration
+bands plus a static spark cue. Normal realistic WebGL also gives concentrated
+connected bodies a restrained E03-owned sheen/depth recomposition; compact true
+8× retains bounded `0/25/50` state response, exact `76/100` body no-op, and the
+spark cue.
+Native dilution, neutralisation, Oil→SOAP, phase products, corrosion, pressure
+reactions, holes, thin structures, foreign materials, walls, topology, and
+resources remain controls.
 Improve distinctive depth, transmission, reflection, lighting, and
 mesostructure without stacking another narrow Oil/Acid/contact tint or generic
 PLNT/gas layer.
@@ -2092,20 +2125,19 @@ That post-E49 evidence selected visibly over-busy C4 `31` (quality `90.186`,
 microcontrast `16.819`) for E50. With E48/E49/E50 explicitly enabled, the
 post-E50 canonical survey raises C4 to quality `100`, microcontrast `7.204`,
 luma deviation `8.691`, chromatic contrast `2.095`, and macro range `26.172`,
-with full support and no dark/clipped pixels. Among the remaining unselected
-owners, BASE `53` is the only persistent measured deficit: quality `96.226`
-and optical-variation component `.8361`, stable within `.015` quality across
-1×–4×. Nitro `32` and BGLA score `100`; select exact BASE for the next bounded
-liquid experiment. BASE is public `53` mapped exactly to native `PT_BASE`, but
-upstream presentation depends on native concentration `life` (`1..100`, default
-`76`) and a `tmp == 1` spark cue which the adapter does not currently project.
-Make an exact-owner native-state/OPS contract the prerequisite for any E51
-concentration-aware finish; a geometry-only E03 child must say so explicitly
-and may not infer concentration from palette or neighbours. Preserve dilution,
-Acid/CAUS neutralisation, Oil→SOAP, freezing/evaporation products, corrosion,
-and pressure reactions as controls. Snow's separate 4× candidate score remains
-a diagnostic for future E48 tuning. Preserve the E14 1× stencil snap and all
-E01–E50 selectors and controls.
+with full support and no dark/clipped pixels. That result selected BASE `53`,
+the only persistent measured deficit at quality `96.226` and optical-variation
+component `.8361`, stable within `.015` quality across 1×–4×. E51 now closes
+the deficit with an exact native-state/OPS contract: public BASE maps exactly
+to native `PT_BASE`; `life` concentration `0..100` and `tmp == 1` spark state
+are projected without inference; and real dilution, Acid/CAUS neutralisation,
+Oil→SOAP, freezing/evaporation products, corrosion, and pressure reactions stay
+authoritative. The focused matrix proves Canvas and realistic WebGL 1×/2×/4×,
+then true 4896×3072 compact WebGL with a completed fence, byte-exact off
+repetition, stable support/topology, protected walls and foreign owners, and
+zero browser errors. Nitro `32` and BGLA remain exact quality-`100` controls.
+Snow's separate 4× candidate score remains a diagnostic for future E48 tuning.
+Preserve the E14 1× stencil snap and all E01–E51 selectors and controls.
 
 ## Phase 1 — HDR pipeline & lighting core (biggest visual payoff)
 

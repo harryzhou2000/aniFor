@@ -188,6 +188,9 @@ import {
   GEL_STATE_GRAPHICS_AUDIT, prepareGelStateGraphicsAuditFixture,
 } from './gel-state-graphics-audit';
 import {
+  BASE_STATE_GRAPHICS_AUDIT, prepareBaseStateGraphicsAuditFixture,
+} from './base-state-graphics-audit';
+import {
   PQRT_STATE_GRAPHICS_AUDIT, preparePqrtStateGraphicsAuditFixture,
 } from './pqrt-state-graphics-audit';
 import {
@@ -684,6 +687,9 @@ export class Game {
       setDeutStateStyling: (enabled) => {
         this.renderer.setDeutStateStylingEnabled(enabled);
       },
+      setBaseStateStyling: (enabled) => {
+        this.renderer.setBaseStateStylingEnabled(enabled);
+      },
       setSourceTargetStyling: (enabled) => {
         this.renderer.setSourceTargetStylingEnabled(enabled);
       },
@@ -1086,6 +1092,22 @@ export class Game {
       gelStateGraphicsAtlas: () => GEL_STATE_GRAPHICS_AUDIT,
       prepareGelStateGraphicsFixture: () => {
         prepareGelStateGraphicsAuditFixture(this.simulation);
+      },
+      baseStateGraphicsAtlas: () => BASE_STATE_GRAPHICS_AUDIT,
+      prepareBaseStateGraphicsFixture: () => {
+        prepareBaseStateGraphicsAuditFixture(this.simulation);
+        this.renderer.synchronizeFixtureMaterialPlane();
+        this.renderer.invalidateDynamicPresentation();
+        // Render fields intentionally rebuild one bounded class per scheduled
+        // presentation. At 4x/8x a browser audit can otherwise toggle BASE
+        // before liquid depth, walls, suspension, and the remaining shared
+        // fields have all consumed the fixture. Advance the audit-only CPU
+        // schedule synchronously; WebGL's latest-wins fence still coalesces the
+        // submissions into the single final candidate frame.
+        const fixtureSchedule = performance.now();
+        for (let step = 1; step <= 8; step++) {
+          this.renderer.render(fixtureSchedule + step * 100, fixtureSchedule);
+        }
       },
       pqrtStateGraphicsAtlas: () => PQRT_STATE_GRAPHICS_AUDIT,
       preparePqrtStateGraphicsFixture: () => {

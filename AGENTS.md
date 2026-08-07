@@ -13,7 +13,7 @@ powder, solid, liquid, gas, energy, and contact scenes across Canvas and WebGL a
 mobile gestures, save/load, CI, and Pages deployment as protected regression
 contracts rather than the primary feature stream.
 
-The accepted visual experiment ladder now runs through E50. E12 is the
+The accepted visual experiment ladder now runs through E51. E12 is the
 species-safe Sand/Clay/Concrete wet-sediment checkpoint; preserve its exact
 aqueous owner/stability proof, split moving-powder/stationary-Water control,
 Local/Grains no-op, fine structures, authored gaps, Canvas fallback, and true
@@ -949,6 +949,39 @@ presents exact 4896×3072 WebGL without an HDR target, and completes a real GPU
 fence while keeping E48/E49 inactive. This true-8× tail is deliberately
 fixture-free: it proves selector/resource exclusion, not an E50 compact atlas.
 
+E51 is the accepted exact BASE `53` / native `PT_BASE` concentration-and-spark
+checkpoint. Its owner-multiplexed presentation word stores native `life`
+clamped to `0..100` in bits `0..6` and exact `tmp == 1` spark state in bit 7;
+zero is a valid empty-concentration BASE state and native default BASE remains
+`76`. The release ladder is exact `0/25/50/76/100` plus `76|spark`; zero means
+a real zero-concentration BASE owner, not empty matter. Canvas and normal WebGL
+apply the same four bounded concentration bands relative to the canonical `76`
+body plus a deterministic world-anchored RGB spark cue, only after exact BASE
+ownership and native-wall rejection. Normal realistic WebGL may additionally
+recompose the already-proven E03 connected-liquid
+sheen, caustic, and optical-depth evidence for concentrated `76/100` bodies.
+The direct true-8× path stays compact by folding BASE into the existing single
+SPNG/GEL state helper: `0/25/50` retain the bounded state response, canonical
+`76/100` remain exact body no-ops, and spark remains visible, while the richer
+body recomposition is deliberately omitted. No BASE path changes alpha,
+support, species ownership, topology, or physics, mutates native state, or adds
+a sampler, texture, field, pass, target, upload, persistent
+allocation, clock, or output-scale resource.
+
+Validate E51 with `npm run audit:vfx:base-state`. Its native tests prove the
+default state, real Water dilution, corrosion-to-BMTL spark transition, and OPS
+round trips. The Canvas 2× and realistic WebGL 1×/2×/4× matrices prove exact
+flat→styled→flat repetition, stable holes/notches/thin and isolated structures,
+native-wall rejection, and foreign Water/Acid/CAUS/SaltWater/Oil/Soap/GEL/
+Metal/BMTL/BOYL/blank controls. Across normal WebGL, the `76` body response is
+RGB RMS `4.508–4.520` with peak `15`, `100` is `4.130–4.168` with peak
+`15–16`, and spark is `12.346–12.509` with peak `39–42`. Canvas preserves
+the richer-body no-op at `76/100` and reports spark RMS `10.568`, peak `28`.
+True 4896×3072 WebGL proves compact concentration responses (`0/25` RMS
+`97.586`, peak `137`; `50` RMS `58.319`, peak `82`), exact `76/100` no-op,
+spark RMS `8.838`, peak `27`, a completed GPU fence, byte-exact repetition,
+unchanged support, and zero browser errors.
+
 The isolated candidate-survey v1 route is app-owned and must use the
 deterministic 612×384 RenderLab backend unless `simulation=native` is explicit.
 It freezes semantic hash `2255453673`, 115,368 occupied cells, all six exact
@@ -966,21 +999,15 @@ exact-owner body experiment without widening E48 or E49 to neighbouring
 crystalline/explosive powders. With E48/E49/E50 explicitly enabled, the
 post-E50 survey raises canonical C4 to quality `100`, microcontrast `7.204`,
 luma deviation `8.691`, chromatic contrast `2.095`, and macro range `26.172`,
-with full support and zero dark/clipped fraction. Among the remaining unselected
-owners, BASE `53` is the only persistent measured deficit: canonical quality
-`96.226`, optical-variation component `0.8361`, and the same result within
-`0.015` quality across 1×–4×. Nitro and BGLA score `100`; select BASE for the
-next bounded exact-owner liquid experiment. BASE is public material `53`, maps
-bidirectionally to native `PT_BASE`, and shares Corrosive optics with Acid, but
-its upstream graphics are concentration-aware: native `life` is clamped to
-`1..100` (default `76`) and `tmp == 1` owns a spark cue. The adapter does not
-yet project either value. Before any E51 finish claims concentration or spark
-identity, add and prove an exact-owner packed-state contract through native
-reactions and OPS; otherwise keep E51 explicitly geometry-only under E03 and
-do not infer state from palette or neighbours. Preserve native dilution,
-Acid/CAUS neutralisation, Oil→SOAP, phase products, corrosion, and pressure
-reactions. Snow's separate 4× candidate score remains a diagnostic for future
-E48 tuning, not permission to widen E50.
+with full support and zero dark/clipped fraction. That evidence selected BASE
+`53`, the only persistent measured deficit at canonical quality `96.226` and
+optical-variation component `0.8361`, stable within `0.015` quality across
+1×–4×. E51 now closes that result with exact native concentration and spark
+state rather than inferred palette or neighbour state, while preserving real
+dilution, Acid/CAUS neutralisation, Oil→SOAP, phase products, corrosion,
+pressure reactions, and OPS state. Nitro and BGLA remain quality `100` controls.
+Snow's separate 4× candidate score remains a diagnostic for future E48 tuning,
+not permission to widen E50 or E51.
 
 The old post-E16 rank that labelled Stone `21` as Solid was invalid because
 Stone is native Powder. The corrected showcase uses native ROCK ground and
@@ -1418,6 +1445,7 @@ The non-negotiable contract is:
 - Native POLO lifecycle state also reuses the owner-multiplexed word. For exact POLO only, bits 0–2 are `tmp` neutron-emission count `0..5`, bits 3–6 are native `life` cooldown `0..15`, bits 7–10 are absorbed-proton dose `tmp2` `0..10`, and bit 11 is an explicit owner-present marker because default neutron-ready POLO otherwise has an all-zero payload; high bits stay reserved and every non-POLO owner projects zero. Keep native proton capture, OPS persistence, and the next-update POLO→PLUT conversion authoritative. Canvas and WebGL may interpret the word only as a bounded RGB-only, world-anchored readiness/cooldown/dose/spent cue after proving exact ownership, with an independent toggle and no clock, sample, texture, field, pass, target, upload, allocation, alpha, support, ownership, or physics change. The paired release gate must cover all five lifecycle states, exact flat→styled→flat repetition, holes/notches/fine structures, and zero-state/wrong-owner/PLUT/PROT/NEUT/blank controls; every shader change must still compile and recover at true 4896×3072.
 - Native SPNG hydration uses the same owner-multiplexed state word: bits 0–5 store exact absorbed-fluid reservoir `life` clamped to `0..50`, bit 6 marks even authoritative dry SPNG as present, and bits 7–15 remain reserved; every non-SPNG owner projects zero. Preserve upstream WATR/SLTW/CBNW/PSTE absorption, diffusion, heated release, phase products, and OPS state rather than inferring wetness from nearby liquid. Hydration graphics layer after the existing porous morphology and change RGB only: dry/presence-only SPNG is an exact no-op, while wet owners may gain bounded saturation, absorption, and pore-lip sheen without changing alpha, support, holes, notches, ribs, contacts, ownership, or physics. Canvas and WebGL must mirror one deterministic integer-world grammar with an independent toggle and add no sample, texture, field, pass, target, upload, allocation, clock, or output-scale resource. The paired release gate covers dry/low/mid/high/saturated state, monotonic response, exact flat→styled→flat repetition, zero-state and Sand/Water/Steam/Salt/blank controls, and the existing porous-body contract; the complete shader must pass true 4896×3072 completion and both recovery paths.
 - Native GEL hydration uses that same owner-multiplexed word but has a distinct exact owner: low bits `0..6` retain upstream `tmp` hydration clamped to `0..100`, high bits stay reserved, and a zero word is the valid dry GEL no-op. Preserve native GEL's WATR/DSTW/FRZW/PSTE/SLTW/CBNW absorption/exchange and OPS `tmp`; never infer wetness from neighbours or change particle physics. Canvas and WebGL may apply only the upstream-inspired bounded orange-to-blue RGB body response, with static world-anchored pore/vein variation, after ordinary liquid styling and only for semantic GEL without a native wall. It must preserve alpha, support, species seams, holes, thin strands, contacts, ownership, native state, and all Canvas/WebGL resources. The normal-detail paired gate stages exactly `0/10/35/70/100`, proves dry/zero/non-owner Water/SPNG/BASE/blank controls and flat→styled→flat topology, and requires monotonic chroma parity. True 4896×3072 reuses the single existing SPNG/GEL packed-state helper/read, proves the same five-owner fixture and controls after a completed fence, then retains it through forced-stall and context-loss recovery.
+- Native BASE concentration/spark state reuses that same owner-multiplexed word under exact public BASE `53` / native `PT_BASE` ownership: bits `0..6` store native `life` clamped to `0..100`, bit 7 is one exactly for native `tmp == 1`, and bits `8..15` stay reserved. Zero is valid, default BASE projects `76`, and non-BASE owners project zero. Preserve native Water dilution, Acid/CAUS neutralisation, Oil→SOAP, phase products, corrosion, pressure reactions, `life`/`tmp`, and OPS bytes; never infer concentration or spark from palette, temperature, or neighbours. Canvas and normal WebGL apply the same four bounded concentration bands and static RGB spark grammar after exact ownership and native-wall rejection. Only normal realistic WebGL may add the E03-owned connected-body sheen/depth response at `76/100`; direct true 8× folds BASE into the existing single SPNG/GEL packed-state helper/read and keeps that richer body response off. Add no texture, sampler, field, pass, target, upload, allocation, clock, alpha, support, ownership, topology, physics, or output-scale resource. The release gate covers exact `0/25/50/76/100` plus `76|spark`, real native reactions and OPS restoration, holes/notches/thin/isolated topology, foreign-material and wall controls, Canvas, realistic WebGL 1×/2×/4×, and completed-fence true 4896×3072 output.
 - Native PQRT/QRTZ crystal state reuses the owner-multiplexed word: bits `0..3` carry exact upstream `tmp2` clamped to `0..10`; the semantic Quartz/QRTZ owner is the only guard, and zero is a legitimate dark seed while `5` is the exact neutral seed. Preserve native `tmp`, `life`, phase conversion, growth, and OPS state instead of synthesising a second state map. Canvas and WebGL may apply only the bounded RGB expression derived from upstream `(tmp2 - 5) * 16`, after common body optics and only to an authoritative owner with no native wall. It must not alter alpha, support, holes, contacts, ownership, physics, texture count, fields, passes, or 8× state-fetch count. The state path requires a two-owner 0/2/5/8/10 fixture, with neutral no-op, monotonic dark/bright response, wrong-owner controls, OPS round-trip, and true-8× completion/recovery coverage.
 - Native FILT spectrum state also reuses the owner-multiplexed word: bit 15 is exact FILT presence, bits `0..3`, `4..7`, and `8..11` hold the red/green/blue population counts of the native thirty-bit `ctype` wavelength mask, and bits `12..14` hold native `life` clamped to its visual range `0..4`. Zero RGB populations are not black: only for the exact FILT owner/present marker, reconstruct upstream's five adjacent wavelength bits from `clamp(int((temp - 273) * .025), 0, 25)`. Preserve `ctype`, `tmp`, `life`, photon interaction, OPS persistence, semantic alpha/support, topology, and native walls. Canvas and WebGL may RGB-mix that native spectrum after ordinary body optics; native blend life is a bounded RGB reveal only, never a presentation alpha change. The direct 8× path must fold FILT into the existing owner-gated packed-state fetch and semantic-temperature byte, adding no sampler, field, texture, pass, target, upload, allocation, or output-scale work. Any future state fixture must cover spectral primaries/mixes, zero-ctype cold/hot fallback, life 0/4, wrong owners, holes, fine structures, exact off→on→off, OPS round trips, completed-fence true 4896×3072 output, and fallback recovery.
 - Native PIPE/PPIP transport state reuses that same word without replacing TPT storage: bits `0..7` carry an exact public `ctype` payload where representable, bit 8 records any non-empty native payload (including unknown identities), bits `9..10` carry upstream `tmp & PFLAG_COLORS`, and bit 11 is exact PPIP-only pause. Exact PIPE/PPIP ownership is mandatory before decoding; retain native `ctype`, `tmp`, particle transfer, routing, pause semantics, OPS state, walls, alpha, and support. Canvas and WebGL may add only a static RGB transport cue after ordinary device-body styling: public payloads use a deterministic compact material family, unknown retained payloads use a neutral cue, empty carriers show route state, and PPIP pause is restrained. The normal and true-8× WebGL paths must reuse the existing packed B/A state fetch, with no palette lookup, sampler, field, pass, target, upload, allocation, or output-scale work. A release fixture must prove a genuine multi-pipe native payload transfer and OPS round trip, owner/wall/empty/unknown controls, flat→styled→flat topology, and completed-fence true-8× recovery.
@@ -1477,8 +1505,11 @@ npm run audit:vfx:candidate-rank
 
 The candidate-survey route is a separate app-owned deterministic fixture; its
 frozen six-region 1×/2×/4× production-WebGL matrix selects bounded exact-owner
-experiments without mutating the accepted showcase contract. The package gate
-explicitly enables accepted E48, E49, and E50. Use the underlying driver's
+experiments without mutating the accepted showcase contract. Its three
+historical candidate selectors explicitly enable accepted E48, E49, and E50.
+E51 has no candidate-survey selector and is proved separately by its authentic
+native-state fixture; do not use this route to claim a pre/post-E51 rank. Use
+the underlying driver's
 `--candidate-snowpack-body-vfx=0` only to reproduce the pre-E48 baseline, and
 `--candidate-quartz-mesostructure-vfx=0` only to reproduce the pre-E49 Quartz
 baseline. Use `--candidate-c4-body-vfx=0` only to reproduce the pre-E50 C4
