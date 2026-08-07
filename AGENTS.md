@@ -13,7 +13,7 @@ powder, solid, liquid, gas, energy, and contact scenes across Canvas and WebGL a
 mobile gestures, save/load, CI, and Pages deployment as protected regression
 contracts rather than the primary feature stream.
 
-The accepted visual experiment ladder now runs through E61. E12 is the
+The accepted visual experiment ladder now runs through E62. E12 is the
 species-safe Sand/Clay/Concrete wet-sediment checkpoint; preserve its exact
 aqueous owner/stability proof, split moving-powder/stationary-Water control,
 Local/Grains no-op, fine structures, authored gaps, Canvas fallback, and true
@@ -1259,9 +1259,34 @@ exact 4896×3072 after a GPU fence. The frozen ramp/core RGB RMS is
 Water. Canvas and true 8× deliberately advertise E61 inactive; the accepted
 true-8× fence completed in `5.2559 s` with zero browser errors.
 
+E62 is the accepted normal-WebGL-only exact Oxygen `39` limpid-volume fold,
+independently measurable with `?oxygenVolumeFoldVfx=0|1` and a strict child of
+E04/E15. It applies only inside E15's exact propagated atmosphere style `4`,
+connected-body, wall-free, non-emissive proof. Recombine only E04/E15's
+already-live static billow and third carrier, cardinal directional relief and
+curvature, cloud-neighbour density, atmosphere alpha, crown/pocket, and optical
+depth into a broad cyan-white transmission fold with an opposing cool-blue
+absorptive pocket. Keep the neutral deep core quiet so the result remains a
+spatial volume rather than a uniform Oxygen tint. This is bounded RGB-only
+arithmetic: add no wave, noise, sample, texture, field, resource, pass, target,
+upload, allocation, clock, alpha, support, silhouette, ownership, topology,
+state, or physics decision. Canvas and compact true 8× retain the established
+style-4 presentation and declare no E62 uniform or branch.
+
+`npm run audit:vfx:oxygen-volume-fold` holds E04/E15 active while toggling only
+E62 off→on→off at 1×/2×/4×. Its accepted core/crown/pocket RGB RMS is
+`1.11–1.12`/`6.01–6.02`/`1.80–1.81`, signed mean is
+`−.51…−.50`/`6.10–6.13`/`−1.99…−1.98`, and fixed peaks are `5/9/3`
+bytes. Semantics, atmosphere/alpha/support, walls, raw controls, Smoke/Noble
+and all foreign gas/contact/sparse controls, and repeated-off framebuffers
+remain exact; only the named authored O2 channel may retain the established
+one-byte HDR fringe. Requested-on true 8× reports E04/E15/E62/HDR inactive for
+`scale-8`, presents exact 4896×3072 WebGL, and completes a GPU fence (accepted
+run `5.2279 s`) with zero browser errors.
+
 Visual-audit lesson: `inputAudit=1` disables opt-in child selectors unless the
 composed route names them explicitly, so canonical evidence must request and
-prove every accepted child it claims (notably E37/E56/E61). Keep the audited
+prove every accepted child it claims (notably E37/E56/E61/E62). Keep the audited
 depth endpoint identical to the shader activation boundary, and describe only
 structures the frozen measurements actually establish; an absorptive response
 does not prove a positive caustic arc merely because the shader reuses a
@@ -1306,7 +1331,7 @@ candidate-rank evidence or widen E50, E51, or E52; select any later experiment
 only from a new visible fit-view diagnosis.
 
 The composed showcase remains a separate roadmap signal. Its refreshed
-E37/E56/E58/E59/E60/E61-active 1×/2×/4× matrix is exact and cross-scale
+E37/E56/E58/E59/E60/E61/E62-active 1×/2×/4× matrix is exact and cross-scale
 verified with zero browser errors, while E52 remains explicitly inactive
 because showcase v6 has no authoritative BGLA region. Organic remains the
 lowest family, led by exact
@@ -1321,9 +1346,13 @@ support `1`, coverage `.961`, and clipped fraction `0` remain unchanged. The
 final exact ISZS quality is `95.463/98.291/99.174` at 1×/2×/4×. Canonical
 family rank is Organic `79.044`, Contact `91.216`, Gas `95.463`, Solid
 `98.291`, Emission `98.475`, and Powder/Liquid `100`. ISZS is no longer the
-Solid floor or an automatic next diagnosis. Do not stack another PLNT,
-Water/Metal, ROCK, VIBR, or ISZS layer merely to chase rank. Select a future
-target only from a new visible fit-view diagnosis; PLNT mesostructure,
+Solid floor or an automatic next diagnosis. With E62 active, exact Oxygen is
+quality `100/100/99.73` at 1×/2×/4×, with `.929` coverage, luma SD
+`5.32–5.33`, microcontrast `.48–.51`, chroma `.45–.49`, and macro range `24`.
+Noble Gas remains the Gas-family floor, so E62 does not manufacture a ranking
+win by perturbing unrelated species. Do not stack another PLNT, Water/Metal,
+ROCK, VIBR, ISZS, Oxygen, or generic-gas layer merely to chase rank. Select a
+future target only from a new visible fit-view diagnosis; PLNT mesostructure,
 Water/Metal chromatic separation, and Noble Gas billow depth remain contextual
 cues rather than an implementation queue.
 

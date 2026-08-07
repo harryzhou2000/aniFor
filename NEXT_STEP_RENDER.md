@@ -1055,11 +1055,37 @@ does not alter simulation, camera, semantic ownership, or `renderScale`.
   cross-scale verified: Contact quality is `87.058/91.216/91.667` at
   1×/2×/4×, and canonical Water/Metal support recall `1`, coverage `.947`,
   dark/clipped fraction `0`, and Liquid quality `100` remain protected.
+- **E62 accepted Oxygen volume fold:** exact Oxygen `39` gains a restrained
+  normal-WebGL-only limpid-body fold as a strict E04/E15 child
+  (`?oxygenVolumeFoldVfx=0|1`). It runs only inside E15's exact propagated
+  atmosphere style `4`, connected-body, wall-free, non-emissive proof and
+  recombines already-live static billow/third-carrier, cardinal directional
+  relief/curvature, cloud-neighbour density, atmosphere alpha, crown/pocket,
+  and optical-depth evidence. The result is a broad cyan-white transmission
+  fold with an opposing cool-blue absorptive pocket and a deliberately quiet
+  neutral core. It is RGB-only arithmetic with no new wave/noise, sample,
+  texture, field, resource, pass, target, upload, allocation, clock, alpha,
+  support, silhouette, ownership, topology, state, or physics decision. Canvas
+  and compact true 8× retain the established style-4 presentation.
+
+  `npm run audit:vfx:oxygen-volume-fold` holds E04/E15 active while toggling
+  only E62 off→on→off at 1×/2×/4×. Frozen core/crown/pocket RGB RMS is
+  `1.11–1.12`/`6.01–6.02`/`1.80–1.81`, signed mean is
+  `−.51…−.50`/`6.10–6.13`/`−1.99…−1.98`, and fixed peaks are
+  `5/9/3` bytes. Semantics, atmosphere/alpha/support, walls, raw controls,
+  Smoke/Noble and every foreign gas/contact/sparse control, and repeated-off
+  framebuffers remain exact; only the named authored O2 channel retains the
+  established bounded one-byte HDR fringe. Requested-on true 8× reports
+  E04/E15/E62/HDR inactive for `scale-8`, presents exact 4896×3072 WebGL, and
+  completes a GPU fence in `5.2279 s` with zero browser errors. The refreshed
+  composed matrix keeps the canonical family rank unchanged; exact Oxygen is
+  quality `100/100/99.73` at 1×/2×/4×, coverage `.929`, luma SD
+  `5.32–5.33`, microcontrast `.48–.51`, chroma `.45–.49`, and macro range `24`.
 - **Protected 8× rung:** `renderScale=8` deliberately reports
   `hdrPipeline=inactive` / `scale-8` and retains the proven direct single-mesh
   4896×3072 path. The experiment must earn a bounded 8× design rather than
   allocating a 115 MiB full-resolution float target beside that path.
-- **Current decision:** E01/E02/E03/E04/E05/E06/E07/E08/E09/E10/E11/E12/E13/E14/E15/E16/E17/E18/E19/E20/E21/E22/E23/E24/E25/E26/E27/E28/E29/E30/E31/E32/E33/E34/E35/E36/E37/E38/E39/E40/E41/E42/E43/E44/E45/E46/E47/E48/E49/E50/E51/E52/E53/E54/E55/E56/E57/E58/E59/E60/E61 remain opt-in through the non-Classic looks
+- **Current decision:** E01/E02/E03/E04/E05/E06/E07/E08/E09/E10/E11/E12/E13/E14/E15/E16/E17/E18/E19/E20/E21/E22/E23/E24/E25/E26/E27/E28/E29/E30/E31/E32/E33/E34/E35/E36/E37/E38/E39/E40/E41/E42/E43/E44/E45/E46/E47/E48/E49/E50/E51/E52/E53/E54/E55/E56/E57/E58/E59/E60/E61/E62 remain opt-in through the non-Classic looks
   until representative hardware timing and mobile thermal behavior are
   measured. E02 remains the safe family-wide baseline. E03 is accepted as the
   liquid-depth checkpoint: its fit-view crop is visibly more cohesive, retains
@@ -2272,7 +2298,7 @@ next production 4× survey then selected Wood/PLNT as the largest remaining
   coverage `.971`, macro range `50`, zero dark/clipped fraction, and exact
   semantics across the full composed matrix.
 
-**Next visual experiments:** E03–E61 provide accepted liquid body/surface,
+**Next visual experiments:** E03–E62 provide accepted liquid body/surface,
 stable-gas, coherent-gas-motion, powder-depth, and powder-local-light
 checkpoints plus exact resting contact grounding, Glass/Ice transmission, and
 state-aware Wax/PLNT subsurface response, composed wet-mineral optics,
@@ -2324,6 +2350,12 @@ E61 closes the diagnosed deep-Water luminous-curtain excess as a strict
 E24/E03 child. It begins only beyond the exact byte-192 hand-off and applies a
 measured spatially varying absorptive recession without adding a carrier,
 sample, resource, alpha, support, topology, Canvas path, or compact-8× branch.
+E62 gives exact Oxygen `39` a limpid-volume fold as a strict E04/E15 child. It
+recombines the existing static connected-cloud evidence into a broad
+cyan-white transmission shoulder and cool absorptive pocket while keeping the
+neutral core quiet; foreign gases, sparse topology, Canvas, and compact true
+8× remain controls. Do not immediately stack another Oxygen or generic-gas
+layer after this checkpoint.
 E37 adds exact Metal-side Water-contact spectral separation over the joint E14+
 E17 proof without changing either body's topology. E56 completes only the
 exact WATR side beside exact METL through E03/E14/E17/E37's inherited clean
@@ -2570,10 +2602,11 @@ signed mean is `12.15–12.20`/`7.18–7.21`/`10.25–10.30`; Pocket is
 Requested-on true 8× keeps E17/E43/E47/E60/HDR inactive for `scale-8`, promotes
 exact 4896×3072 WebGL, and completes a GPU fence in `5.4102 s`.
 Improve distinctive depth, transmission, reflection, lighting, and
-mesostructure without stacking another narrow Oil/Acid/contact tint or generic
-PLNT/gas layer.
+mesostructure without stacking another narrow Oil/Acid/contact tint or another
+generic PLNT/gas layer. E62 closes the current exact-Oxygen diagnosis; choose
+the next owner only from fresh visible fit-view evidence.
 The fresh composed-family/material survey now uses
-E17/E37/E43/E44/E45/E46/E47/E53/E54/E55/E56/E58/E59/E60/E61 under
+E17/E37/E43/E44/E45/E46/E47/E53/E54/E55/E56/E58/E59/E60/E61/E62 under
 `inputAudit=1`. Fixture v6 freezes 23 material counts, 18 scored regions,
 semantic hash `3610338776`, and 114,015 occupied cells at 1×/2×/4×; its exact
 SOAP body owns 1,220 cells and the deep `liquidSoap` region owns 384. The
@@ -2606,11 +2639,16 @@ quality becomes `97.345/98.651/99.174`; canonical microcontrast rises
 with support `1`, coverage `.967`, continuity/cavity control `1`, and zero
 clipping. E60 exact ISZS quality is `95.463/98.291/99.174` at 1×/2×/4×; the
 full composed matrix is exact and cross-scale verified with zero browser
-errors. The current canonical 2× family rank is Organic `79.044`, Contact
+errors. With E62 active, exact Oxygen quality is `100/100/99.73`, coverage is
+`.929`, luma SD is `5.32–5.33`, microcontrast is `.48–.51`, chroma is
+`.45–.49`, and macro range is `24` at 1×/2×/4×. Smoke and Noble controls
+remain stable, and Noble remains the Gas-family floor. The current canonical
+2× family rank is Organic `79.044`, Contact
 `91.216` (Water/Metal chromatic separation), Gas `95.463`, Solid `98.291`
 (E60 exact ISZS crystal hierarchy), Emission `98.475`, and Powder/Liquid `100`.
 ISZS is no longer the Solid floor. Do not
-immediately stack another PLNT, contact, ROCK, VIBR, or ISZS layer. Because E36 already
+immediately stack another PLNT, contact, ROCK, VIBR, ISZS, Oxygen, or generic-
+gas layer. Because E36 already
 proved that
 the PLNT aggregate scorer can penalize accepted broad canopy recomposition,
 select the next experiment from a new fit-view diagnosis rather than tuning

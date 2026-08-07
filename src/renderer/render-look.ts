@@ -154,6 +154,27 @@ export function resolveGasCoreDepthVfxEnabled(
 }
 
 /**
+ * E62 gives exact Oxygen a separately measurable volume fold only after E04
+ * owns the connected gas body and E15 has established species-aware core
+ * depth. Input-audit fixtures default this new child off so established gas
+ * captures retain their frozen selector stack until they opt in explicitly.
+ */
+export function resolveOxygenVolumeFoldVfxEnabled(
+  look: RenderLook,
+  search = globalThis.location?.search ?? '',
+): boolean {
+  if (!resolveGasBodyVfxEnabled(look, search) || !resolveGasCoreDepthVfxEnabled(look, search)) {
+    return false;
+  }
+  const parameters = new URLSearchParams(search);
+  const requested = parameters.get('oxygenVolumeFoldVfx');
+  if (requested === '0' || requested === 'off' || requested === 'false') return false;
+  if (requested === '1' || requested === 'on' || requested === 'true') return true;
+  if (parameters.get('inputAudit') === '1') return false;
+  return true;
+}
+
+/**
  * Gives exact propagated Smoke a broad, low-frequency soot fold after E04 has
  * established its connected atmosphere-owned body. This child selector never
  * recreates the gas body on its own; it only admits bounded RGB arithmetic in

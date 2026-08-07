@@ -2936,6 +2936,64 @@ describe('Pixi presenter startup configuration', () => {
     expect(source).toContain("this.app.canvas.dataset.waterVolumeRecessionVfx = 'inactive';");
   });
 
+  it('keeps E62 Oxygen volume fold exact-style, E04/E15-dependent, normal-WebGL-only, and RGB-only', () => {
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const canvasSource = readFileSync(new URL('./field-renderer.ts', import.meta.url), 'utf8');
+    const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');
+    const normalStart = source.indexOf('const FIELD_FRAGMENT = `', eightStart);
+    const normalEnd = source.indexOf('`;\n\n/** Primary WebGL presentation', normalStart);
+    const eight = source.slice(eightStart, normalStart);
+    const normal = source.slice(normalStart, normalEnd);
+    const e15Start = normal.indexOf('      // E15:');
+    const e62Start = normal.indexOf('      // E62:');
+    const e62End = normal.indexOf('      // E42:', e62Start);
+    const e15 = normal.slice(e15Start, e62End);
+    const e62 = normal.slice(e62Start, e62End);
+
+    expect(eightStart).toBeGreaterThanOrEqual(0);
+    expect(normalStart).toBeGreaterThan(eightStart);
+    expect(normalEnd).toBeGreaterThan(normalStart);
+    expect(e15Start).toBeGreaterThanOrEqual(0);
+    expect(e62Start).toBeGreaterThanOrEqual(0);
+    expect(e62Start).toBeGreaterThan(e15Start);
+    expect(e62End).toBeGreaterThan(e62Start);
+    expect(normal).toContain('uniform float uOxygenVolumeFoldVfx;');
+    expect(eight).not.toContain('uOxygenVolumeFoldVfx');
+    expect(eight).not.toContain('oxygenVolumeFold');
+    expect(canvasSource).not.toContain('oxygenVolumeFoldVfx');
+    for (const guard of [
+      'uOxygenVolumeFoldVfx > 0.5', 'gasCoreOxygen > 0.5',
+    ]) expect(e62).toContain(guard);
+    for (const parentProof of [
+      'uGasCoreDepthVfx > 0.5', 'uGasIdentityStyling > 0.5',
+      'wall < 0.5', '!materialEmissive',
+      'floor(gasStyleState.r * 255.0 + 0.5)',
+      'abs(gasCoreStyle - 4.0)', 'float gasCoreOxygen', 'float gasCoreBody',
+    ]) expect(e15).toContain(parentProof);
+    for (const establishedFieldScalar of [
+      'gasCoreBody', 'cloudNeighbourMean', 'atmosphereState.a',
+      'gasVfxBillow', 'gasVfxWaveC', 'gasDirectionalRelief', 'gasCurvature',
+      'gasCrown', 'gasPocket', 'opticalDepth',
+    ]) expect(e62).toContain(establishedFieldScalar);
+    expect(e62).not.toMatch(/\b(?:texture|textureLod|texelFetch)\s*\(/);
+    expect(e62).not.toContain('uTime');
+    expect(e62).not.toContain('gl_FragCoord');
+    expect(e62).not.toContain('discard');
+    expect(e62).not.toMatch(/\balpha\s*[+*]?=/);
+    expect(e62).not.toMatch(/\b(?:atmosphereState|finalColor)\.a\s*[+*]?=/);
+    expect(source.match(/this\.uniforms\.uniforms\.uOxygenVolumeFoldVfx = 0;/g))
+      .toHaveLength(2);
+    expect(source).toMatch(
+      /const oxygenVolumeFoldVfxEnabled = outputScale < 8\s*&& resolveOxygenVolumeFoldVfxEnabled\(renderLook\);/,
+    );
+    expect(source).toContain(
+      'uOxygenVolumeFoldVfx: { value: oxygenVolumeFoldVfxEnabled ? 1 : 0',
+    );
+    expect(source).toContain("get('oxygenVolumeFoldVfxAudit') === '1'");
+    expect(source).toContain('presenter.app.canvas.dataset.oxygenVolumeFoldVfx');
+    expect(source).toContain("this.app.canvas.dataset.oxygenVolumeFoldVfx = 'inactive';");
+  });
+
   it('keeps E25 Noble Gas billows exact-style, E04-dependent, normal-WebGL-only, and RGB-only', () => {
     const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
     const canvasSource = readFileSync(new URL('./field-renderer.ts', import.meta.url), 'utf8');

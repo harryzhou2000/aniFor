@@ -55,6 +55,7 @@ import {
   resolveCarbonDioxideBodyVfxEnabled,
   resolveFogCoreDiffuseVfxEnabled,
   resolveHydrogenBodyVfxEnabled,
+  resolveOxygenVolumeFoldVfxEnabled,
   resolveIszsCrystalHierarchyVfxEnabled,
   resolveIszsCrystallineVfxEnabled,
   resolveRadioactiveSolidBodyVfxEnabled,
@@ -3290,6 +3291,7 @@ uniform float uGasBodyVfx;
 uniform float uGasMotionVfx;
 uniform float uGasLightVfx;
 uniform float uGasCoreDepthVfx;
+uniform float uOxygenVolumeFoldVfx;
 uniform float uHydrogenBodyVfx;
 uniform float uCarbonDioxideBodyVfx;
 uniform float uFogCoreDiffuseVfx;
@@ -6465,6 +6467,42 @@ void main() {
               + max(gasDirectionalRelief, 0.0) * 0.100);
           color += (vec3(1.10) - clamp(color, 0.0, 1.10))
             * gasCoreKeyTint * gasCoreKey;
+
+          // E62: exact Oxygen's E15 core should read as a limpid, folded
+          // volume rather than the same generic cyan atmosphere as every
+          // clean gas. Recombine only E04/E15 values already live in this
+          // exact propagated-style branch: the static billow and third wave,
+          // cardinal relief/curvature, optical depth, crown, and pocket. The
+          // result is bounded RGB arithmetic; atmosphere support, semantic
+          // carriers, authored gaps, alpha, ownership, and compact true 8x
+          // stay on their established paths.
+          if (uOxygenVolumeFoldVfx > 0.5 && gasCoreOxygen > 0.5) {
+            float oxygenFoldPhase = clamp(
+              gasVfxBillow * 0.50 + gasVfxWaveC * 0.50
+                + gasDirectionalRelief * 0.12 + gasCurvature * 0.035,
+              -1.0, 1.0
+            );
+            float oxygenFoldSupport = gasCoreBody
+              * smoothstep(0.18, 0.58, cloudNeighbourMean)
+              * smoothstep(0.16, 0.52, atmosphereState.a);
+            float oxygenFoldCrown = oxygenFoldSupport
+              * (max(oxygenFoldPhase, 0.0) + gasCrown * 0.10)
+              * (1.0 - opticalDepth * 0.18);
+            float oxygenFoldPocket = oxygenFoldSupport
+              * (max(-oxygenFoldPhase, 0.0) + gasPocket * 0.10);
+            float oxygenFoldCore = oxygenFoldSupport
+              * smoothstep(0.38, 0.86, opticalDepth)
+              * (1.0 - abs(oxygenFoldPhase)) * 0.20;
+            vec3 oxygenFoldKey = mix(
+              vec3(0.42, 0.78, 1.00), vec3(0.82, 0.96, 1.00),
+              clamp(0.54 + gasDirectionalRelief * 0.24, 0.0, 1.0)
+            );
+            color += (vec3(1.12) - clamp(color, 0.0, 1.12))
+              * oxygenFoldKey * oxygenFoldCrown * 0.420;
+            color *= vec3(1.0)
+              - vec3(0.28, 0.18, 0.07) * oxygenFoldPocket * 0.340
+              - vec3(0.045, 0.030, 0.010) * oxygenFoldCore;
+          }
         }
       }
 
@@ -11252,6 +11290,10 @@ export class PixiFieldPresenter {
     // parallel branch and retains its proven fragment-register budget.
     const gasCoreDepthVfxEnabled = outputScale < 8
       && resolveGasCoreDepthVfxEnabled(renderLook);
+    // E62 is an arithmetic-only exact-Oxygen child of E04 and E15. Canvas and
+    // compact true 8x retain the accepted propagated style-4 presentation.
+    const oxygenVolumeFoldVfxEnabled = outputScale < 8
+      && resolveOxygenVolumeFoldVfxEnabled(renderLook);
     // E42 is an arithmetic-only exact-Hydrogen child of E04. Compact true 8x
     // retains its existing propagated style-5 key and declares no E42 branch.
     const hydrogenBodyVfxEnabled = outputScale < 8
@@ -11450,6 +11492,7 @@ export class PixiFieldPresenter {
       uGasMotionVfx: { value: gasMotionVfxEnabled ? 1 : 0, type: 'f32' },
       uGasLightVfx: { value: gasLightVfxEnabled ? 1 : 0, type: 'f32' },
       uGasCoreDepthVfx: { value: gasCoreDepthVfxEnabled ? 1 : 0, type: 'f32' },
+      uOxygenVolumeFoldVfx: { value: oxygenVolumeFoldVfxEnabled ? 1 : 0, type: 'f32' },
       uHydrogenBodyVfx: { value: hydrogenBodyVfxEnabled ? 1 : 0, type: 'f32' },
       uCarbonDioxideBodyVfx: {
         value: carbonDioxideBodyVfxEnabled ? 1 : 0, type: 'f32',
@@ -11727,6 +11770,7 @@ export class PixiFieldPresenter {
       this.uniforms.uniforms.uGasMotionVfx = 0;
       this.uniforms.uniforms.uGasLightVfx = 0;
       this.uniforms.uniforms.uGasCoreDepthVfx = 0;
+      this.uniforms.uniforms.uOxygenVolumeFoldVfx = 0;
       this.uniforms.uniforms.uHydrogenBodyVfx = 0;
       this.uniforms.uniforms.uCarbonDioxideBodyVfx = 0;
       this.uniforms.uniforms.uFogCoreDiffuseVfx = 0;
@@ -11811,6 +11855,7 @@ export class PixiFieldPresenter {
             || new URLSearchParams(location.search).get('gasMotionVfxAudit') === '1'
             || new URLSearchParams(location.search).get('gasLightVfxAudit') === '1'
             || new URLSearchParams(location.search).get('gasCoreDepthVfxAudit') === '1'
+            || new URLSearchParams(location.search).get('oxygenVolumeFoldVfxAudit') === '1'
             || new URLSearchParams(location.search).get('hydrogenBodyVfxAudit') === '1'
             || new URLSearchParams(location.search).get('carbonDioxideBodyVfxAudit') === '1'
             || new URLSearchParams(location.search).get('fogCoreDiffuseVfxAudit') === '1'
@@ -11897,6 +11942,9 @@ export class PixiFieldPresenter {
       ? 'active' : 'inactive';
     presenter.app.canvas.dataset.gasCoreDepthVfx = Number(
       presenter.uniforms.uniforms.uGasCoreDepthVfx
+    ) > 0.5 ? 'active' : 'inactive';
+    presenter.app.canvas.dataset.oxygenVolumeFoldVfx = Number(
+      presenter.uniforms.uniforms.uOxygenVolumeFoldVfx
     ) > 0.5 ? 'active' : 'inactive';
     presenter.app.canvas.dataset.hydrogenBodyVfx = Number(
       presenter.uniforms.uniforms.uHydrogenBodyVfx
@@ -13499,6 +13547,7 @@ export class PixiFieldPresenter {
         this.uniforms.uniforms.uGasMotionVfx = 0;
         this.uniforms.uniforms.uGasLightVfx = 0;
         this.uniforms.uniforms.uGasCoreDepthVfx = 0;
+        this.uniforms.uniforms.uOxygenVolumeFoldVfx = 0;
         this.uniforms.uniforms.uHydrogenBodyVfx = 0;
         this.uniforms.uniforms.uCarbonDioxideBodyVfx = 0;
         this.uniforms.uniforms.uFogCoreDiffuseVfx = 0;
@@ -13559,6 +13608,7 @@ export class PixiFieldPresenter {
         this.app.canvas.dataset.gasMotionVfx = 'inactive';
         this.app.canvas.dataset.gasLightVfx = 'inactive';
         this.app.canvas.dataset.gasCoreDepthVfx = 'inactive';
+        this.app.canvas.dataset.oxygenVolumeFoldVfx = 'inactive';
         this.app.canvas.dataset.hydrogenBodyVfx = 'inactive';
         this.app.canvas.dataset.carbonDioxideBodyVfx = 'inactive';
         this.app.canvas.dataset.fogCoreDiffuseVfx = 'inactive';

@@ -56,6 +56,7 @@
     "audit:vfx:metal-water-contact": "npm run build && node scripts/verify-browser-input.mjs --metal-water-contact-vfx-only --webgl-only --production-bundle --capture-dpr=1",
     "audit:vfx:water-metal-transmission": "npm run build && node scripts/verify-browser-input.mjs --water-metal-transmission-vfx-only --webgl-only --production-bundle --capture-dpr=1",
     "audit:vfx:gas-core-depth": "npm run build && node scripts/verify-browser-input.mjs --gas-core-depth-vfx-only --webgl-only --production-bundle --capture-dpr=1",
+    "audit:vfx:oxygen-volume-fold": "npm run build && node scripts/verify-browser-input.mjs --oxygen-volume-fold-vfx-only --webgl-only --production-bundle --capture-dpr=1",
     "audit:vfx:plasma-core": "npm run build && node scripts/verify-browser-input.mjs --plasma-core-vfx-only --webgl-only --production-bundle --capture-dpr=1",
     "audit:vfx:solid-body": "npm run build && node scripts/verify-browser-input.mjs --solid-body-vfx-only --webgl-only --production-bundle --capture-dpr=1",
     "audit:vfx:platinum-body": "npm run build && node scripts/verify-browser-input.mjs --platinum-body-vfx-only --webgl-only --production-bundle --capture-dpr=1",
