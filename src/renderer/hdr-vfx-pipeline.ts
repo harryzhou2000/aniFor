@@ -24,12 +24,14 @@ export interface HDRPipelineInfo {
   readonly bloomHeight?: number;
   readonly liquidSurfaceVfx?: boolean;
   readonly liquidMotionVfx?: boolean;
+  readonly waterCurvatureVfx?: boolean;
 }
 
 /** Existing presenter textures reused by the HDR liquid-transport composite. */
 export interface HDRLiquidSurfaceResources {
   readonly enabled: boolean;
   readonly motionEnabled: boolean;
+  readonly curvatureEnabled: boolean;
   readonly semanticTexture: TextureSource;
   readonly wallTexture: TextureSource;
   readonly liquidTexture: TextureSource;
@@ -112,6 +114,7 @@ uniform sampler2D uLiquidTexture;
 uniform vec2 uWorldTexel;
 uniform float uLiquidSurfaceVfx;
 uniform float uLiquidMotionVfx;
+uniform float uWaterCurvatureVfx;
 uniform float uBloomIntensity;
 uniform float uExposure;
 uniform float uSaturation;
@@ -291,6 +294,50 @@ vec3 liquidSurfaceTransport(
     * (0.380 + whitecapPattern * 0.720 + min(0.280, velocityShear * 0.36));
   result += (vec3(1.18) - clamp(result, 0.0, 1.18))
     * vec3(0.82, 0.96, 1.08) * whitecap;
+  // E66: sample the existing species-aware liquid plane at two mesoscopic
+  // tangent shoulders around the already-proven Water/air interface. A flat
+  // shore sees equal density at both shoulders; a convex crest recedes from
+  // them, while a concave pocket wraps around them. This is a single guarded
+  // curvature-flow-inspired optical step, not a new field or support rule.
+  if (uWaterCurvatureVfx > 0.5
+    && exactMaterial(material, MATERIAL_WATER) > 0.5 && wallBacked < 0.5) {
+    float outwardWeight = max(0.0001, abs(outward.x) + abs(outward.y));
+    float outwardDensity = (
+      max(outward.x, 0.0) * liquidRight.a
+        + max(-outward.x, 0.0) * liquidLeft.a
+        + max(outward.y, 0.0) * liquidBottom.a
+        + max(-outward.y, 0.0) * liquidTop.a
+    ) / outwardWeight;
+    vec2 curvatureEdgeUv = boundedUv(vUv + outward * uWorldTexel * 0.72);
+    vec4 curvaturePlus = texture(
+      uLiquidTexture, boundedUv(curvatureEdgeUv + tangent * uWorldTexel * 12.0)
+    );
+    vec4 curvatureMinus = texture(
+      uLiquidTexture, boundedUv(curvatureEdgeUv - tangent * uWorldTexel * 12.0)
+    );
+    float plusCompatible = max(
+      1.0 - step(0.035, curvaturePlus.a),
+      1.0 - step(0.075, length(curvaturePlus.rgb - liquidCentre.rgb))
+    );
+    float minusCompatible = max(
+      1.0 - step(0.035, curvatureMinus.a),
+      1.0 - step(0.075, length(curvatureMinus.rgb - liquidCentre.rgb))
+    );
+    float edgeDensity = mix(liquidCentre.a, outwardDensity, 0.72);
+    float curvatureResidual = edgeDensity
+      - (curvaturePlus.a + curvatureMinus.a) * 0.5;
+    float convexCrest = surface * plusCompatible * minusCompatible
+      * smoothstep(0.12, 0.46, curvatureResidual);
+    float concavePocket = surface * plusCompatible * minusCompatible
+      * smoothstep(0.12, 0.46, -curvatureResidual);
+    float curvatureKey = 0.72 + 0.28 * max(
+      0.0, dot(outward, normalize(vec2(-0.58, -0.815)))
+    );
+    result += (vec3(1.16) - clamp(result, 0.0, 1.16))
+      * vec3(0.30, 0.82, 1.08) * convexCrest * curvatureKey * 0.28;
+    result *= vec3(1.0) - vec3(0.050, 0.070, 0.100)
+      * concavePocket * (0.74 + curvatureKey * 0.26);
+  }
   return result;
 }
 
@@ -479,6 +526,10 @@ export class HDRVfxPipeline {
               value: liquidSurface.enabled && liquidSurface.motionEnabled ? 1 : 0,
               type: 'f32',
             },
+            uWaterCurvatureVfx: {
+              value: liquidSurface.enabled && liquidSurface.curvatureEnabled ? 1 : 0,
+              type: 'f32',
+            },
           }),
           uHdrTexture: hdrTarget.source,
           uHdrSampler: hdrTarget.source.style,
@@ -499,6 +550,7 @@ export class HDRVfxPipeline {
       this.info = {
         active: true, look, liquidSurfaceVfx: liquidSurface.enabled,
         liquidMotionVfx: liquidSurface.enabled && liquidSurface.motionEnabled,
+        waterCurvatureVfx: liquidSurface.enabled && liquidSurface.curvatureEnabled,
         bloomWidth: bloomWidth * outputScale,
         bloomHeight: bloomHeight * outputScale,
       };

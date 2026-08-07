@@ -165,6 +165,7 @@ describe('HDR liquid-surface composite contract', () => {
     ]);
     expect(HDR_TONEMAP_FRAGMENT).toMatch(/uniform\s+float\s+uLiquidSurfaceVfx\s*;/);
     expect(HDR_TONEMAP_FRAGMENT).toMatch(/uniform\s+float\s+uLiquidMotionVfx\s*;/);
+    expect(HDR_TONEMAP_FRAGMENT).toMatch(/uniform\s+float\s+uWaterCurvatureVfx\s*;/);
     expect(HDR_TONEMAP_FRAGMENT).toMatch(/uniform\s+vec2\s+uWorldTexel\s*;/);
 
     for (const sampler of ['uHdrTexture', 'uBloomTexture', 'uSemanticTexture',
@@ -206,6 +207,21 @@ describe('HDR liquid-surface composite contract', () => {
     expect(HDR_TONEMAP_FRAGMENT).toContain('whitecap');
     expect(HDR_TONEMAP_FRAGMENT).not.toContain('uVelocityTexture');
     expect(HDR_TONEMAP_FRAGMENT).not.toContain('uMotionTexture');
+    expect(HDR_TONEMAP_FRAGMENT).not.toContain('uTime');
+  });
+
+  it('derives E66 Water curvature from guarded tangent probes on the existing liquid plane', () => {
+    expect(HDR_TONEMAP_FRAGMENT).toMatch(
+      /if \(uWaterCurvatureVfx > 0\.5[\s\S]*?exactMaterial\(material, MATERIAL_WATER\) > 0\.5[\s\S]*?wallBacked < 0\.5\)/,
+    );
+    expect(HDR_TONEMAP_FRAGMENT).toContain('vec4 curvaturePlus = texture(');
+    expect(HDR_TONEMAP_FRAGMENT).toContain('vec4 curvatureMinus = texture(');
+    expect(HDR_TONEMAP_FRAGMENT).toContain('tangent * uWorldTexel * 12.0');
+    expect(HDR_TONEMAP_FRAGMENT).toContain('float curvatureResidual = edgeDensity');
+    expect(HDR_TONEMAP_FRAGMENT).toContain('convexCrest');
+    expect(HDR_TONEMAP_FRAGMENT).toContain('concavePocket');
+    expect(HDR_TONEMAP_FRAGMENT).not.toContain('uCurvatureTexture');
+    expect(HDR_TONEMAP_FRAGMENT).not.toContain('uWaterSurfaceTexture');
     expect(HDR_TONEMAP_FRAGMENT).not.toContain('uTime');
   });
 });

@@ -3612,6 +3612,36 @@ describe('Pixi presenter startup configuration', () => {
     expect(eight).not.toContain('uLiquidMotionVfx');
   });
 
+  it('routes E66 Water curvature through E08 liquid density without an 8x branch', () => {
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const hdrSource = readFileSync(new URL('./hdr-vfx-pipeline.ts', import.meta.url), 'utf8');
+    const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');
+    const normalStart = source.indexOf('const FIELD_FRAGMENT = `', eightStart);
+    const eight = source.slice(eightStart, normalStart);
+    const hdrCreateStart = source.indexOf('const hdr = HDRVfxPipeline.create(');
+    const hdrCreateEnd = source.indexOf(');', hdrCreateStart);
+    const hdrCreate = source.slice(hdrCreateStart, hdrCreateEnd);
+
+    expect(source).toContain('resolveWaterCurvatureVfxEnabled');
+    expect(source).toMatch(
+      /const waterCurvatureVfxEnabled = outputScale < 8\s*&& resolveWaterCurvatureVfxEnabled\(renderLook\);/,
+    );
+    expect(hdrCreate).toContain('curvatureEnabled: waterCurvatureVfxEnabled');
+    for (const existingResource of [
+      'this.fieldSource', 'this.wallSource', 'this.liquidSource',
+    ]) expect(hdrCreate).toContain(existingResource);
+    expect(source).toMatch(
+      /presenter\.app\.canvas\.dataset\.waterCurvatureVfx\s*=[\s\S]*?\? 'active' : 'inactive';/,
+    );
+    expect(source).toContain("this.app.canvas.dataset.waterCurvatureVfx = 'inactive';");
+    expect(source).toContain("get('waterCurvatureVfxAudit') === '1'");
+    expect(hdrSource).toContain('uWaterCurvatureVfx');
+    expect(hdrSource).toContain('curvaturePlus');
+    expect(hdrSource).toContain('curvatureResidual');
+    expect(eight).not.toContain('waterCurvatureVfx');
+    expect(eight).not.toContain('uWaterCurvatureVfx');
+  });
+
   it('advances fallback presentation timing only after its GPU fence signals', () => {
     const callbacks: FrameRequestCallback[] = [];
     vi.stubGlobal('requestAnimationFrame', vi.fn((callback: FrameRequestCallback) => {

@@ -68,6 +68,7 @@ import {
   resolveMetalWaterContactVfxEnabled,
   resolveWaterMetalTransmissionVfxEnabled,
   resolveLiquidSurfaceVfxEnabled, resolveLiquidMotionVfxEnabled,
+  resolveWaterCurvatureVfxEnabled,
   resolveAcidBodyVfxEnabled,
   resolveSoapBodyVfxEnabled,
   resolveDeutBodyVfxEnabled,
@@ -11558,6 +11559,10 @@ export class PixiFieldPresenter {
     // no pass or resource and remains absent with the entire HDR path at 8x.
     const liquidMotionVfxEnabled = outputScale < 8
       && resolveLiquidMotionVfxEnabled(renderLook);
+    // E66 is a Water-only arithmetic fold over E08's existing density stencil.
+    // It remains absent with the HDR path at true 8x and allocates no resource.
+    const waterCurvatureVfxEnabled = outputScale < 8
+      && resolveWaterCurvatureVfxEnabled(renderLook);
     this.uniforms = new UniformGroup({
       uTexel: { value: new Float32Array([1 / width, 1 / height]), type: 'vec2<f32>' },
       uFieldSize: { value: new Float32Array([width, height]), type: 'vec2<f32>' },
@@ -11836,6 +11841,7 @@ export class PixiFieldPresenter {
       {
         enabled: liquidSurfaceVfxEnabled,
         motionEnabled: liquidMotionVfxEnabled,
+        curvatureEnabled: waterCurvatureVfxEnabled,
         semanticTexture: this.fieldSource,
         wallTexture: this.wallSource,
         liquidTexture: this.liquidSource,
@@ -11985,6 +11991,7 @@ export class PixiFieldPresenter {
             || new URLSearchParams(location.search).get('liquidSolidMeniscusVfxAudit') === '1'
             || new URLSearchParams(location.search).get('liquidSurfaceVfxAudit') === '1'
             || new URLSearchParams(location.search).get('liquidMotionVfxAudit') === '1'
+            || new URLSearchParams(location.search).get('waterCurvatureVfxAudit') === '1'
             || new URLSearchParams(location.search).get('powderBodyVfxAudit') === '1'
             || new URLSearchParams(location.search).get('sootyPowderBodyVfxAudit') === '1'
             || new URLSearchParams(location.search).get('thermiteBodyVfxAudit') === '1'
@@ -12164,6 +12171,8 @@ export class PixiFieldPresenter {
       && presenter.hdrPipelineInfo.liquidSurfaceVfx ? 'active' : 'inactive';
     presenter.app.canvas.dataset.liquidMotionVfx = presenter.hdrPipelineInfo.active
       && presenter.hdrPipelineInfo.liquidMotionVfx ? 'active' : 'inactive';
+    presenter.app.canvas.dataset.waterCurvatureVfx = presenter.hdrPipelineInfo.active
+      && presenter.hdrPipelineInfo.waterCurvatureVfx ? 'active' : 'inactive';
     presenter.app.canvas.dataset.powderBodyVfx = Number(presenter.uniforms.uniforms.uPowderBodyVfx) > 0.5
       ? 'active' : 'inactive';
     presenter.app.canvas.dataset.sootyPowderBodyVfx = Number(
@@ -13752,6 +13761,7 @@ export class PixiFieldPresenter {
         this.app.canvas.dataset.waterMetalTransmissionVfx = 'inactive';
         this.app.canvas.dataset.liquidSurfaceVfx = 'inactive';
         this.app.canvas.dataset.liquidMotionVfx = 'inactive';
+        this.app.canvas.dataset.waterCurvatureVfx = 'inactive';
         this.app.canvas.dataset.powderBodyVfx = 'inactive';
         this.app.canvas.dataset.sootyPowderBodyVfx = 'inactive';
         this.app.canvas.dataset.thermiteBodyVfx = 'inactive';

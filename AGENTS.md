@@ -13,7 +13,7 @@ powder, solid, liquid, gas, energy, and contact scenes across Canvas and WebGL a
 mobile gestures, save/load, CI, and Pages deployment as protected regression
 contracts rather than the primary feature stream.
 
-The accepted visual experiment ladder now runs through E65. E12 is the
+The accepted visual experiment ladder now runs through E66. E12 is the
 species-safe Sand/Clay/Concrete wet-sediment checkpoint; preserve its exact
 aqueous owner/stability proof, split moving-powder/stationary-Water control,
 Local/Grains no-op, fine structures, authored gaps, Canvas fallback, and true
@@ -1371,8 +1371,34 @@ and the fully still fixture are exact RGB controls. Requested-on true 8× must
 report E03/E08/E65/HDR inactive with reason `scale-8`, no bloom, no dense
 fixture, exact 4896×3072 WebGL, and a completed GPU fence (accepted run
 `5.3166 s` in the strengthened full matrix). Freeze this amplitude until a new
-normal-view review; detached spray, persistent foam, and curvature-flow support
-remain separate work.
+normal-view review; detached spray, persistent foam, and geometric-alpha
+curvature-flow support remain separate work.
+
+E66 is the accepted exact-Water curvature-flow-inspired optical-meniscus
+checkpoint, independently measurable with `?waterCurvatureVfx=0|1`. It is a
+strict child of E08/E03 but independent of E65, so a resting curved shoreline
+may respond without velocity. At normal 1×/2×/4× WebGL HDR only, reuse the
+existing `uLiquidTexture` and take exactly two guarded tangent samples at ±12
+world cells around an already-proven ordinary connected Water surface. The
+signed curvature residual gives a bounded cyan lift to convex crests and blue
+absorption to concave inlets. This is optical curvature styling, not geometric
+alpha smoothing: scene alpha, support, silhouette, topology, ownership, and
+physics stay unchanged. Add no texture, sampler, field, pass, target, upload,
+allocation, scheduler stage, or clock. Flat shore, deep core, other liquid
+species, strands/droplets, holes/channels, contacts, walls, blank space, Canvas,
+and compact true 8× remain exact controls.
+
+`npm run audit:vfx:water-curvature` owns the paused topology-identical moving
+and still fixtures. At 1×/2×/4×, each fixture runs off→on→off and must prove
+positive convex and negative concave signed response, byte-exact repeated-off
+output, and unchanged semantic/material/wall/velocity/alpha/support state;
+the flat shore and all protected controls remain exact. Requested-on true 8×
+must report E03/E08/E65/E66/HDR inactive for `scale-8`, present exact
+4896×3072 WebGL, and complete the canonical GPU-fence proof while retaining
+the recovery contract (accepted full-matrix fence `5.2063 s`, zero browser
+errors). Detached spray remains deferred until real air-side state/support
+exists. The next recommended visual experiment is an exact-owner Fire
+blackbody/velocity-tongue identity; it is not yet implemented.
 
 Visual-audit lesson: `inputAudit=1` disables opt-in child selectors unless the
 composed route names them explicitly, so canonical evidence must request and

@@ -51,6 +51,9 @@ import {
   LIQUID_MOTION_VFX_AUDIT, prepareLiquidMotionVfxFixture,
 } from './liquid-motion-vfx-audit';
 import {
+  WATER_CURVATURE_VFX_AUDIT, prepareWaterCurvatureVfxFixture,
+} from './water-curvature-vfx-audit';
+import {
   GAS_LIGHT_VFX_AUDIT, prepareGasLightVfxFixture,
 } from './gas-light-vfx-audit';
 import {
@@ -869,6 +872,14 @@ export class Game {
         prepareLiquidMotionVfxFixture(this.simulation, mode);
         // The fixture changes packed velocity bytes as well as the material
         // plane. Refresh both projections before browser capture reads .ba.
+        this.renderer.synchronizeFixtureMaterialPlane();
+        this.renderer.invalidateDynamicPresentation();
+      },
+      waterCurvatureVfxFixture: () => WATER_CURVATURE_VFX_AUDIT,
+      prepareWaterCurvatureVfxFixture: (mode) => {
+        prepareWaterCurvatureVfxFixture(this.simulation, mode);
+        // E66 has authored flow vectors. Synchronize both semantic and
+        // velocity projections before the static browser-audit capture.
         this.renderer.synchronizeFixtureMaterialPlane();
         this.renderer.invalidateDynamicPresentation();
       },

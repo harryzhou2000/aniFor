@@ -2350,7 +2350,7 @@ next production 4× survey then selected Wood/PLNT as the largest remaining
   coverage `.971`, macro range `50`, zero dark/clipped fraction, and exact
   semantics across the full composed matrix.
 
-**Next visual experiments:** E03–E63 provide accepted liquid body/surface,
+**Next visual experiments:** E03–E66 provide accepted liquid body/surface,
 stable-gas, coherent-gas-motion, powder-depth, and powder-local-light
 checkpoints plus exact resting contact grounding, Glass/Ice transmission, and
 state-aware Wax/PLNT subsurface response, composed wet-mineral optics,
@@ -2780,7 +2780,7 @@ is `24.657/23.679/22.240` at 1×/2×/4×, with full support and zero dark/clippe
 fraction. Do not alter E48 from candidate-rank evidence; its focused exact-owner
 fixture remains the acceptance contract. Choose any later experiment only from
 a new visible fit-view diagnosis. Preserve the E14 1× stencil snap and all
-E01–E65 selectors and controls.
+E01–E66 selectors and controls.
 
 E65 is the first accepted Phase-2 velocity-reactive liquid checkpoint. It is a
 strict normal-WebGL child of E08/E03, independently selectable with
@@ -2809,7 +2809,34 @@ Requested-on true 8× reports E03/E08/E65/HDR inactive for `scale-8`, keeps the
 fixture absent, presents exact 4896×3072 WebGL, and completed the accepted GPU
 fence in `5.3166 s` in the strengthened full matrix with zero browser errors.
 This closes the first whitecap/flow-refraction slice only; detached spray,
-curvature-flow menisci, and advected gas/fire volumes remain open Phase-2 work.
+geometric-alpha curvature-flow smoothing, and advected gas/fire volumes remain
+open Phase-2 work.
+
+E66 is the accepted exact-Water curvature-flow-inspired optical-meniscus
+checkpoint, independently selectable with `?waterCurvatureVfx=0|1`. It is a
+strict normal-WebGL HDR child of E08/E03 but remains independent of E65, so a
+resting curved shoreline may respond without velocity. At true 1×/2×/4× it
+reuses `uLiquidTexture` and takes exactly two guarded tangent samples at ±12
+world cells around an already-proven ordinary connected Water surface. Their
+signed curvature residual gives a bounded cyan lift to convex crests and blue
+absorption to concave inlets. This is optical curvature styling, not geometric
+alpha smoothing: scene alpha, support, silhouette, topology, ownership, and
+physics remain unchanged. It adds no texture, sampler, field, pass, target,
+upload, allocation, scheduler stage, or clock. Flat shore, deep core, other
+liquid species, strands/droplets, holes/channels, contacts, native walls, blank
+space, Canvas, and compact true 8× are exact controls.
+
+`npm run audit:vfx:water-curvature` runs paused topology-identical moving and
+still off→on→off fixtures at 1×/2×/4×. Both must retain exact semantic,
+material, wall, velocity, alpha, and support state, byte-identical repeated-off
+frames, positive convex response, negative concave response, and exact flat-
+shore/protected controls. Requested-on true 8× must report E03/E08/E65/E66/
+HDR inactive for `scale-8`, keep the dense fixture absent, present exact
+4896×3072 WebGL, and complete the canonical GPU-fence proof while preserving
+the recovery contract (accepted full-matrix fence `5.2063 s`, zero browser
+errors). Detached spray remains deferred until a real air-side state/support
+source exists. The next recommended visual experiment is an exact-owner Fire
+blackbody/velocity-tongue identity; it is not implemented yet.
 
 ## Phase 1 — HDR pipeline & lighting core (biggest visual payoff)
 
@@ -2826,9 +2853,9 @@ curvature-flow menisci, and advected gas/fire volumes remain open Phase-2 work.
 **Goal:** liquids read as one continuous body with a surface; gases read as volumetric media.
 
 - **Screen-space fluid rendering** (Müller-style, the classic 2007 technique): liquid coverage → depth/thickness buffer → **curvature flow smoothing** for a real meniscus → reconstruct normals → **Fresnel reflection + refraction of the background/wall pattern behind** → specular glints. Your current per-species depth gradient is the seed of the thickness buffer.
-- **Foam & spray:** E65 now supplies a bounded exact-Water whitecap/refraction response from packed native velocity on already-connected E08 surfaces. Detached spray support, divergence-aware foam persistence, and non-Water family treatments remain open and must retain exact topology controls.
+- **Foam, spray & meniscus:** E65 supplies a bounded exact-Water whitecap/refraction response from packed native velocity on already-connected E08 surfaces. E66 adds an independent optical curvature finish for resting convex crests and concave inlets; it does not smooth geometric alpha. Detached spray support, divergence-aware foam persistence, and non-Water family treatments remain open and must retain exact topology controls.
 - **Gases as participating media:** extend your density/colour field with a **noise-animated volume** — FBM curl noise advected by the velocity field, modulated by density, lit by the dynamic lights (light shafts through smoke are extremely high-impact). Approximate with 2–3 octave noise at half res, upsampled.
-- **Fire:** blackbody core + procedural licking edges (domain-warped FBM along the temperature gradient), ember streaks from velocity.
+- **Fire:** the next recommended visual experiment is an exact-owner blackbody core plus velocity-shaped tongue identity. Keep procedural licking edges and ember streaks subordinate to authentic temperature/velocity state; this work is not yet implemented.
 
 ## Phase 3 — Material delicacy
 

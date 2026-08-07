@@ -20,6 +20,7 @@ import {
   resolveGasMotionVfxEnabled,
   resolveLiquidBodyVfxEnabled, resolveLiquidSolidMeniscusVfxEnabled,
   resolveLiquidSurfaceVfxEnabled, resolveLiquidMotionVfxEnabled,
+  resolveWaterCurvatureVfxEnabled,
   resolveNobleGasBillowVfxEnabled, resolveNobleGasPrismVfxEnabled,
   resolveHydrogenBodyVfxEnabled,
   resolveOxygenVolumeFoldVfxEnabled,
@@ -125,6 +126,35 @@ describe('resolveRenderLook', () => {
     )).toBe(false);
     expect(resolveLiquidMotionVfxEnabled(
       'realistic', '?liquidBodyVfx=0&liquidSurfaceVfx=1&liquidMotionVfx=1',
+    )).toBe(false);
+  });
+
+  it('keeps Water curvature styling subordinate to E08 but independent of motion', () => {
+    expect(resolveWaterCurvatureVfxEnabled('classic', '?waterCurvatureVfx=on')).toBe(false);
+    expect(resolveWaterCurvatureVfxEnabled('realistic', '')).toBe(true);
+    expect(resolveWaterCurvatureVfxEnabled('neon-lab', '')).toBe(true);
+    expect(resolveWaterCurvatureVfxEnabled('realistic', '?inputAudit=1')).toBe(false);
+    expect(resolveWaterCurvatureVfxEnabled(
+      'realistic', '?inputAudit=1&liquidBodyVfx=1&liquidSurfaceVfx=1&waterCurvatureVfx=true',
+    )).toBe(true);
+    for (const disabled of ['0', 'off', 'false']) {
+      expect(resolveWaterCurvatureVfxEnabled(
+        'realistic', `?waterCurvatureVfx=${disabled}`,
+      )).toBe(false);
+    }
+    for (const enabled of ['1', 'on', 'true']) {
+      expect(resolveWaterCurvatureVfxEnabled(
+        'realistic', `?waterCurvatureVfx=${enabled}`,
+      )).toBe(true);
+    }
+    expect(resolveWaterCurvatureVfxEnabled(
+      'realistic', '?liquidMotionVfx=0&waterCurvatureVfx=1',
+    )).toBe(true);
+    expect(resolveWaterCurvatureVfxEnabled(
+      'realistic', '?liquidSurfaceVfx=0&waterCurvatureVfx=1',
+    )).toBe(false);
+    expect(resolveWaterCurvatureVfxEnabled(
+      'realistic', '?liquidBodyVfx=0&liquidSurfaceVfx=1&waterCurvatureVfx=1',
     )).toBe(false);
   });
 

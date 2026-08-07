@@ -234,6 +234,12 @@ const liquidMotionVfxOnly = process.argv.includes('--liquid-motion-vfx-only');
 if (liquidMotionVfxOnly && (modes.length !== 1 || modes[0] !== 'webgl')) {
   throw new Error('--liquid-motion-vfx-only requires --webgl-only');
 }
+// E66 is a strict E03/E08 child that measures static curvature composition
+// while E65's velocity transport stays explicitly inactive.
+const waterCurvatureVfxOnly = process.argv.includes('--water-curvature-vfx-only');
+if (waterCurvatureVfxOnly && (modes.length !== 1 || modes[0] !== 'webgl')) {
+  throw new Error('--water-curvature-vfx-only requires --webgl-only');
+}
 // E04 keeps the atmospheric body experiment separate from both the broad E02
 // treatment and E03's liquid-only optics. It remains normal-detail only.
 const gasBodyVfxOnly = process.argv.includes('--gas-body-vfx-only');
@@ -587,7 +593,8 @@ if (woodTanninVfxOnly && (modes.length !== 1 || modes[0] !== 'webgl')) {
   throw new Error('--wood-tannin-vfx-only requires --webgl-only');
 }
 const focusedVfxOnlyFlags = [
-  hdrVfxOnly, volumeVfxOnly, liquidBodyVfxOnly, liquidSurfaceVfxOnly, liquidMotionVfxOnly, gasBodyVfxOnly,
+  hdrVfxOnly, volumeVfxOnly, liquidBodyVfxOnly, liquidSurfaceVfxOnly, liquidMotionVfxOnly,
+  waterCurvatureVfxOnly, gasBodyVfxOnly,
   gasMotionVfxOnly, powderBodyVfxOnly, powderLightVfxOnly, powderSolidContactVfxOnly,
   translucentEdgeVfxOnly, organicSubsurfaceVfxOnly, wetSedimentVfxOnly, gasLightVfxOnly,
   liquidSolidMeniscusVfxOnly, metalWaterContactVfxOnly, waterMetalTransmissionVfxOnly,
@@ -610,7 +617,7 @@ const focusedVfxOnlyFlags = [
   woodTanninVfxOnly,
 ];
 if (focusedVfxOnlyFlags.filter(Boolean).length > 1) {
-  throw new Error('HDR/volume/liquid-body/liquid-surface/liquid-motion/gas-body/gas-motion/powder-body/powder-light/powder-solid-contact/translucent-edge/organic-subsurface/wet-sediment/gas-light/liquid-solid-meniscus/metal-water-contact/water-metal-transmission/gas-core-depth/plasma-core/solid-body/platinum-body/ceramic-glaze/botanical-body/glass-body/oil-body/rock-roughness/rock-mesostructure/rock-weathered-facet/water-body/water-volume-recession/acid-body/soap-body/nitro-body/sooty-powder-body/thermite-body/snowpack-body/quartz-mesostructure/c4-body/deut-body/hydrogen-body/carbon-dioxide-body/fog-core-diffuse/radioactive-solid-body/iszs-crystalline/iszs-crystal-hierarchy/vibr-macro-relief/noble-gas-billow/noble-gas-prism/smoke-softness/smoke-billow-depth/botanical-mesostructure/wood-bark-relief/botanical-pigment/plant-lamina/plant-lobe-depth/plant-canopy-mass/plant-canopy-tissue/plant-canopy-interlock/plant-canopy-hierarchy/wood-tannin focused audits are mutually exclusive');
+  throw new Error('HDR/volume/liquid-body/liquid-surface/liquid-motion/water-curvature/gas-body/gas-motion/powder-body/powder-light/powder-solid-contact/translucent-edge/organic-subsurface/wet-sediment/gas-light/liquid-solid-meniscus/metal-water-contact/water-metal-transmission/gas-core-depth/plasma-core/solid-body/platinum-body/ceramic-glaze/botanical-body/glass-body/oil-body/rock-roughness/rock-mesostructure/rock-weathered-facet/water-body/water-volume-recession/acid-body/soap-body/nitro-body/sooty-powder-body/thermite-body/snowpack-body/quartz-mesostructure/c4-body/deut-body/hydrogen-body/carbon-dioxide-body/fog-core-diffuse/radioactive-solid-body/iszs-crystalline/iszs-crystal-hierarchy/vibr-macro-relief/noble-gas-billow/noble-gas-prism/smoke-softness/smoke-billow-depth/botanical-mesostructure/wood-bark-relief/botanical-pigment/plant-lamina/plant-lobe-depth/plant-canopy-mass/plant-canopy-tissue/plant-canopy-interlock/plant-canopy-hierarchy/wood-tannin focused audits are mutually exclusive');
 }
 
 const layoutOnly = process.argv.includes('--layout-only');
@@ -697,7 +704,7 @@ const liveScaleOnly = process.argv.includes('--live-scale-only');
 const productionBundle = process.argv.includes('--production-bundle');
 const usesProductionBundle = productionBundle || showcaseScreenshotOnly || composedRankOnly
   || candidateRankOnly || nitroBodyVfxOnly || hdrVfxOnly || volumeVfxOnly || plantCanopyInterlockVfxOnly || plantCanopyHierarchyVfxOnly
-  || liquidBodyVfxOnly || liquidSurfaceVfxOnly || liquidMotionVfxOnly || gasBodyVfxOnly || gasMotionVfxOnly
+  || liquidBodyVfxOnly || liquidSurfaceVfxOnly || liquidMotionVfxOnly || waterCurvatureVfxOnly || gasBodyVfxOnly || gasMotionVfxOnly
   || powderBodyVfxOnly || powderLightVfxOnly || powderSolidContactVfxOnly || translucentEdgeVfxOnly || organicSubsurfaceVfxOnly || wetSedimentVfxOnly || gasLightVfxOnly || liquidSolidMeniscusVfxOnly || metalWaterContactVfxOnly || waterMetalTransmissionVfxOnly || gasCoreDepthVfxOnly || plasmaCoreVfxOnly || solidBodyVfxOnly || platinumBodyVfxOnly || ceramicGlazeVfxOnly || botanicalBodyVfxOnly || glassBodyVfxOnly || oilBodyVfxOnly || rockRoughnessVfxOnly || rockMesostructureVfxOnly || rockWeatheredFacetVfxOnly || waterBodyVfxOnly || waterVolumeRecessionVfxOnly || acidBodyVfxOnly || soapBodyVfxOnly || sootyPowderBodyVfxOnly || thermiteBodyVfxOnly || snowpackBodyVfxOnly || quartzMesostructureVfxOnly || c4BodyVfxOnly || bglaBodyVfxOnly || bglaClusterVfxOnly || deutBodyVfxOnly || hydrogenBodyVfxOnly || carbonDioxideBodyVfxOnly || fogCoreDiffuseVfxOnly || radioactiveSolidBodyVfxOnly || iszsCrystallineVfxOnly || iszsCrystalHierarchyVfxOnly || nobleGasBillowVfxOnly || nobleGasPrismVfxOnly || smokeSoftnessVfxOnly || smokeBillowDepthVfxOnly || botanicalMesostructureVfxOnly || woodBarkReliefVfxOnly || botanicalPigmentVfxOnly || plantLaminaVfxOnly || plantLobeDepthVfxOnly || woodTanninVfxOnly || cellularGraphicsOnly || sensorGraphicsOnly
   || unusualPowderGraphicsOnly || earthenPowderGraphicsOnly || explosivePowderGraphicsOnly || unusualSolidGraphicsOnly
   || deviceIdentityGraphicsOnly
@@ -737,6 +744,8 @@ const liquidSurfaceVfxArgument = process.argv.find((argument) => argument.starts
   ?.slice('--liquid-surface-vfx='.length);
 const liquidMotionVfxArgument = process.argv.find((argument) => argument.startsWith('--liquid-motion-vfx='))
   ?.slice('--liquid-motion-vfx='.length);
+const waterCurvatureVfxArgument = process.argv.find((argument) => argument.startsWith('--water-curvature-vfx='))
+  ?.slice('--water-curvature-vfx='.length);
 const gasBodyVfxArgument = process.argv.find((argument) => argument.startsWith('--gas-body-vfx='))
   ?.slice('--gas-body-vfx='.length);
 const gasMotionVfxArgument = process.argv.find((argument) => argument.startsWith('--gas-motion-vfx='))
@@ -855,6 +864,9 @@ if (liquidSurfaceVfxArgument !== undefined && !['0', '1', 'off', 'on'].includes(
 }
 if (liquidMotionVfxArgument !== undefined && !['0', '1', 'off', 'on'].includes(liquidMotionVfxArgument)) {
   throw new Error('--liquid-motion-vfx must be 0, 1, off, or on');
+}
+if (waterCurvatureVfxArgument !== undefined && !['0', '1', 'off', 'on'].includes(waterCurvatureVfxArgument)) {
+  throw new Error('--water-curvature-vfx must be 0, 1, off, or on');
 }
 if (gasBodyVfxArgument !== undefined && !['0', '1', 'off', 'on'].includes(gasBodyVfxArgument)) {
   throw new Error('--gas-body-vfx must be 0, 1, off, or on');
@@ -1094,6 +1106,19 @@ if (liquidMotionVfxOnly && liquidMotionVfxArgument !== undefined) {
 if (!liquidMotionVfxOnly && focusedVfxOnlyFlags.some(Boolean)
   && liquidMotionVfxArgument !== undefined) {
   throw new Error('focused VFX audits pin liquidMotionVfx=0; omit --liquid-motion-vfx');
+}
+if (waterCurvatureVfxOnly && (volumeVfxArgument !== undefined || liquidBodyVfxArgument !== undefined
+  || liquidSurfaceVfxArgument !== undefined || liquidMotionVfxArgument !== undefined
+  || gasBodyVfxArgument !== undefined || gasMotionVfxArgument !== undefined
+  || powderBodyVfxArgument !== undefined || powderLightVfxArgument !== undefined)) {
+  throw new Error('--water-curvature-vfx-only owns its E03/E08 baseline, pins E65 off, and owns other VFX selectors; omit overrides');
+}
+if (waterCurvatureVfxOnly && waterCurvatureVfxArgument !== undefined) {
+  throw new Error('--water-curvature-vfx-only owns its off -> on -> off sequence; omit --water-curvature-vfx');
+}
+if (!waterCurvatureVfxOnly && focusedVfxOnlyFlags.some(Boolean)
+  && waterCurvatureVfxArgument !== undefined) {
+  throw new Error('focused VFX audits pin waterCurvatureVfx=0; omit --water-curvature-vfx');
 }
 if (gasBodyVfxOnly && (volumeVfxArgument !== undefined || liquidBodyVfxArgument !== undefined)) {
   throw new Error('--gas-body-vfx-only fixes volumeVfx=0 and liquidBodyVfx=0; omit those flags');
@@ -1805,7 +1830,7 @@ async function auditMode(mode) {
   // canonical paused scene there and prove real material delivery/occupancy.
   const startsBlank = !canvasFallbackAudit && (hdrVfxOnly || volumeVfxOnly
     || plantCanopyHierarchyVfxOnly
-    || liquidBodyVfxOnly || liquidSurfaceVfxOnly || liquidMotionVfxOnly || gasBodyVfxOnly || gasMotionVfxOnly
+    || liquidBodyVfxOnly || liquidSurfaceVfxOnly || liquidMotionVfxOnly || waterCurvatureVfxOnly || gasBodyVfxOnly || gasMotionVfxOnly
   || powderBodyVfxOnly || powderLightVfxOnly || powderSolidContactVfxOnly || translucentEdgeVfxOnly || organicSubsurfaceVfxOnly || wetSedimentVfxOnly || gasLightVfxOnly || liquidSolidMeniscusVfxOnly || metalWaterContactVfxOnly || waterMetalTransmissionVfxOnly || gasCoreDepthVfxOnly || oxygenVolumeFoldVfxOnly || plasmaCoreVfxOnly || solidBodyVfxOnly || platinumBodyVfxOnly || ceramicGlazeVfxOnly || botanicalBodyVfxOnly || glassBodyVfxOnly || oilBodyVfxOnly || rockRoughnessVfxOnly || rockMesostructureVfxOnly || rockWeatheredFacetVfxOnly || waterBodyVfxOnly || waterVolumeRecessionVfxOnly || acidBodyVfxOnly || soapBodyVfxOnly || sootyPowderBodyVfxOnly || thermiteBodyVfxOnly || snowpackBodyVfxOnly || quartzMesostructureVfxOnly || c4BodyVfxOnly || bglaBodyVfxOnly || bglaClusterVfxOnly || deutBodyVfxOnly || hydrogenBodyVfxOnly || carbonDioxideBodyVfxOnly || fogCoreDiffuseVfxOnly || radioactiveSolidBodyVfxOnly || iszsCrystallineVfxOnly || iszsCrystalHierarchyVfxOnly || nobleGasBillowVfxOnly || nobleGasPrismVfxOnly || smokeSoftnessVfxOnly || smokeBillowDepthVfxOnly || botanicalMesostructureVfxOnly || woodBarkReliefVfxOnly || botanicalPigmentVfxOnly || plantLaminaVfxOnly || plantLobeDepthVfxOnly || woodTanninVfxOnly || cellularGraphicsOnly || sensorGraphicsOnly
     || unusualPowderGraphicsOnly || earthenPowderGraphicsOnly || explosivePowderGraphicsOnly
     || unusualSolidGraphicsOnly || deviceIdentityGraphicsOnly || fieldProfileGraphicsOnly
@@ -1832,6 +1857,11 @@ async function auditMode(mode) {
     ...(focusedVfxOnlyFlags.some(Boolean)
       ? { liquidMotionVfx: '0' }
       : liquidMotionVfxArgument ? { liquidMotionVfx: liquidMotionVfxArgument } : {}),
+    // E66 defaults on in normal realistic WebGL only after implementation.
+    // Focused routes are byte-stable controls; E66 alone owns its reload loop.
+    ...(focusedVfxOnlyFlags.some(Boolean)
+      ? { waterCurvatureVfx: '0' }
+      : waterCurvatureVfxArgument ? { waterCurvatureVfx: waterCurvatureVfxArgument } : {}),
     ...(gasBodyVfxArgument ? { gasBodyVfx: gasBodyVfxArgument } : {}),
     ...(gasMotionVfxArgument ? { gasMotionVfx: gasMotionVfxArgument } : {}),
     ...(powderBodyVfxArgument ? { powderBodyVfx: powderBodyVfxArgument } : {}),
@@ -2350,6 +2380,13 @@ async function auditMode(mode) {
       assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
       cdp.close();
       return { backend: mode, liquidMotionVfx, browserErrors: errors.length };
+    }
+    if (waterCurvatureVfxOnly) {
+      assert(mode === 'webgl', '--water-curvature-vfx-only requires --webgl-only');
+      const waterCurvatureVfx = await auditWaterCurvatureVfxExperiment(cdp, mode, dpr);
+      assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
+      cdp.close();
+      return { backend: mode, waterCurvatureVfx, browserErrors: errors.length };
     }
     if (gasBodyVfxOnly) {
       assert(mode === 'webgl', '--gas-body-vfx-only requires --webgl-only');
@@ -26000,7 +26037,8 @@ async function navigateLiquidMotionVfxState(cdp, mode, scale, fixtureMode, enabl
     liquidBodyVfxAudit: '1', liquidSurfaceVfxAudit: '1', liquidMotionVfxAudit: '1',
     renderScale: String(scale), renderLook: 'realistic',
     volumeVfx: '0', liquidBodyVfx: '1', liquidSurfaceVfx: '1',
-    liquidMotionVfx: enabled ? '1' : '0', gasBodyVfx: '0', gasMotionVfx: '0',
+    liquidMotionVfx: enabled ? '1' : '0', waterCurvatureVfx: '0',
+    gasBodyVfx: '0', gasMotionVfx: '0',
     powderBodyVfx: '0', powderLightVfx: '0', organicSubsurfaceVfx: '0',
     wetSedimentVfx: '0', gasLightVfx: '0', liquidSolidMeniscusVfx: '0',
     gasCoreDepthVfx: '0', nobleGasBillowVfx: '0', smokeSoftnessVfx: '0',
@@ -26098,7 +26136,7 @@ async function auditEightXLiquidMotionVfxExclusion(cdp, dpr) {
     scene: 'render-lab', inputAudit: '1', blankAudit: '1',
     auditStage: 'eight-liquid-motion', liquidMotionVfxAudit: '1',
     renderScale: '8', renderLook: 'realistic',
-    liquidBodyVfx: '1', liquidSurfaceVfx: '1', liquidMotionVfx: '1',
+    liquidBodyVfx: '1', liquidSurfaceVfx: '1', liquidMotionVfx: '1', waterCurvatureVfx: '0',
   });
   await cdp.send('Page.navigate', { url: `${AUDIT_BASE_URL}?${query}` });
   const deadline = Date.now() + EIGHT_X_PRESENTATION_DEADLINE_MS;
@@ -26155,6 +26193,476 @@ async function auditEightXLiquidMotionVfxExclusion(cdp, dpr) {
     geometry, backend, state, materialPlane, fixtureUploaded: false,
     semanticStable: true, timing,
   };
+}
+
+/**
+ * E66 measures the static curvature composition over the accepted E03/E08
+ * Water path. It deliberately stages moving and still copies of the same
+ * native scene, but holds E65 transport inactive in every capture so velocity
+ * can only be a regression control—not an additional visual owner.
+ */
+async function auditWaterCurvatureVfxExperiment(cdp, mode, dpr) {
+  const requestedScale = renderScaleArgument === undefined
+    ? undefined : Number(renderScaleArgument);
+  const requestedScales = requestedScale === undefined
+    ? VOLUME_VFX_SCALES : requestedScale < 8 ? [requestedScale] : [];
+  const scales = [];
+  for (const scale of requestedScales) {
+    const movingOff = await navigateWaterCurvatureVfxState(cdp, mode, scale, 'moving', false, 'movingOff');
+    const movingOn = await navigateWaterCurvatureVfxState(cdp, mode, scale, 'moving', true, 'movingOn');
+    const movingRepeat = await navigateWaterCurvatureVfxState(cdp, mode, scale, 'moving', false, 'movingRepeat');
+    const stillOff = await navigateWaterCurvatureVfxState(cdp, mode, scale, 'still', false, 'stillOff');
+    const stillOn = await navigateWaterCurvatureVfxState(cdp, mode, scale, 'still', true, 'stillOn');
+    const stillRepeat = await navigateWaterCurvatureVfxState(cdp, mode, scale, 'still', false, 'stillRepeat');
+    const variants = { movingOff, movingOn, movingRepeat, stillOff, stillOn, stillRepeat };
+    const fixture = movingOff.fixture;
+    assert(Object.values(variants).every((variant) => JSON.stringify(variant.fixture) === JSON.stringify(fixture)),
+      `E66 ${scale}x fixture metadata changed`);
+
+    for (const [label, variant] of Object.entries(variants)) {
+      assertGeometry(variant.geometry, `E66 ${label} ${scale}x`, scale);
+      assert(variant.geometry.backend.backend === 'webgl',
+        `E66 ${label} ${scale}x lost WebGL presentation`);
+      assert(variant.hdrPipeline?.state === 'active'
+        && variant.hdrPipeline?.liquidBodyVfx === 'active'
+        && variant.hdrPipeline?.liquidSurfaceVfx === 'active'
+        && variant.hdrPipeline?.liquidMotionVfx === 'inactive'
+        && variant.hdrPipeline?.waterCurvatureVfx === (
+          label === 'movingOn' || label === 'stillOn' ? 'active' : 'inactive'
+        )
+        && variant.hdrPipeline?.volumeVfx === 'inactive'
+        && variant.hdrPipeline?.gasBodyVfx === 'inactive'
+        && variant.hdrPipeline?.gasMotionVfx === 'inactive'
+        && variant.hdrPipeline?.powderBodyVfx === 'inactive'
+        && variant.hdrPipeline?.powderLightVfx === 'inactive',
+      `E66 ${label} ${scale}x selector state resolved incorrectly (${JSON.stringify(variant.hdrPipeline)})`);
+      assertWaterCurvatureFixtureState(
+        variant.fixtureState, fixture, label.startsWith('moving') ? 'moving' : 'still',
+        `E66 ${label} ${scale}x`,
+      );
+    }
+
+    for (const [leftName, rightName] of [
+      ['movingOff', 'movingOn'], ['movingOff', 'movingRepeat'],
+      ['stillOff', 'stillOn'], ['stillOff', 'stillRepeat'], ['movingOff', 'stillOff'],
+    ]) {
+      const left = variants[leftName];
+      const right = variants[rightName];
+      assertCanvasRectsEqual(left.geometry.canvas, right.geometry.canvas,
+        `E66 ${scale}x ${leftName}/${rightName} CSS geometry`);
+      assert(JSON.stringify(left.geometry.backing) === JSON.stringify(right.geometry.backing),
+        `E66 ${scale}x ${leftName}/${rightName} backing geometry changed`);
+      assertHdrVfxSemanticEquality(left.semantic, right.semantic,
+        `E66 ${scale}x ${leftName}/${rightName}`);
+      assert(left.fixtureState.materialHash === right.fixtureState.materialHash
+        && left.fixtureState.wallHash === right.fixtureState.wallHash
+        && left.fixtureState.wallCells === right.fixtureState.wallCells,
+      `E66 ${scale}x ${leftName}/${rightName} changed material/wall topology (${JSON.stringify({
+        left: left.fixtureState, right: right.fixtureState,
+      })})`);
+      assertVolumeVfxBackingInvariant(left.backing, right.backing,
+        `E66 ${scale}x ${leftName}/${rightName}`);
+      assertVolumeVfxRawAlphaInvariant(left.rawControls, right.rawControls,
+        `E66 ${scale}x ${leftName}/${rightName}`);
+      const sameVelocityPlane = leftName.startsWith('moving') === rightName.startsWith('moving');
+      if (sameVelocityPlane) {
+        assert(left.fixtureState.velocityHash === right.fixtureState.velocityHash
+          && left.fixtureState.renderedVelocityHash === right.fixtureState.renderedVelocityHash,
+        `E66 ${scale}x ${leftName}/${rightName} changed packed velocity bytes`);
+      }
+    }
+    assert(movingOff.fixtureState.velocityHash !== stillOff.fixtureState.velocityHash
+      && movingOff.fixtureState.nonzeroVelocityCells === fixture.expected.movingVelocityCells
+      && stillOff.fixtureState.nonzeroVelocityCells === 0,
+    `E66 ${scale}x still/moving fixture did not isolate packed velocity (${JSON.stringify({
+      moving: movingOff.fixtureState, still: stillOff.fixtureState,
+    })})`);
+    // PNG bytes cover the whole backing, not just sampled regions. This catches
+    // a selector-on mutation that escapes all named semantic controls.
+    assert(movingOff.capture.capture.data === movingRepeat.capture.capture.data,
+      `E66 ${scale}x moving repeated-off full framebuffer was not byte-exact`);
+    assert(stillOff.capture.capture.data === stillRepeat.capture.capture.data,
+      `E66 ${scale}x still repeated-off full framebuffer was not byte-exact`);
+
+    const regions = waterCurvatureVfxRegions(fixture);
+    const compare = async (off, on, repeat, phase) => {
+      const raw = await sampleBackdropRefractionRegions(cdp, {
+        straight: off.capture.capture.data,
+        refracted: on.capture.capture.data,
+        repeatedStraight: repeat.capture.capture.data,
+      }, regions, off.capture.canvasRect);
+      const responses = raw.map((sample, index) => {
+        const meanRgbRms = Math.hypot(...sample.responseRgb) / Math.sqrt(3);
+        return {
+          ...sample, ...regions[index], phase,
+          spatialRgbRms: round(Math.sqrt(Math.max(0, sample.rgbRms ** 2 - meanRgbRms ** 2)), 3),
+        };
+      });
+      const targets = responses.filter((sample) => sample.role === 'target');
+      const controls = responses.filter((sample) => sample.role === 'control');
+      const topologyControls = responses.filter((sample) => sample.role === 'topology');
+      const envelope = {
+        1: {
+          convexCrest: { rgb: [1.05, 1.55], spatial: [1.00, 1.50], peak: [18, 28],
+            coverage: [0.004, 0.035], signed: [0.05, 0.25], micro: [0.05, 0.30] },
+          concaveInlet: { rgb: [2.20, 3.00], spatial: [1.85, 2.60], peak: [10, 18],
+            coverage: [0.18, 0.36], signed: [-1.35, -0.75], micro: [0.70, 1.25] },
+        },
+        2: {
+          convexCrest: { rgb: [1.05, 1.55], spatial: [1.05, 1.50], peak: [18, 27],
+            coverage: [0.01, 0.05], signed: [0.08, 0.27], micro: [0.10, 0.35] },
+          concaveInlet: { rgb: [1.95, 2.75], spatial: [1.75, 2.35], peak: [10, 18],
+            coverage: [0.12, 0.28], signed: [-1.15, -0.55], micro: [0.65, 1.15] },
+        },
+        4: {
+          convexCrest: { rgb: [1.10, 1.65], spatial: [1.10, 1.60], peak: [19, 29],
+            coverage: [0.01, 0.05], signed: [0.07, 0.27], micro: [0.10, 0.35] },
+          concaveInlet: { rgb: [1.75, 2.50], spatial: [1.65, 2.25], peak: [10, 18],
+            coverage: [0.08, 0.22], signed: [-0.95, -0.35], micro: [0.60, 1.10] },
+        },
+      }[scale];
+      const inRange = (value, bounds) => value >= bounds[0] && value <= bounds[1];
+      const targetByName = Object.fromEntries(targets.map((sample) => [sample.name, sample]));
+      assert(targets.length === 2 && Object.entries(envelope).every(([name, bounds]) => {
+        const sample = targetByName[name];
+        const channelSignExact = name === 'convexCrest'
+          ? sample?.responseRgb.every((value) => value > 0)
+          : sample?.responseRgb.every((value) => value < 0);
+        return sample && channelSignExact
+          && inRange(sample.rgbRms, bounds.rgb)
+          && inRange(sample.spatialRgbRms, bounds.spatial)
+          && inRange(sample.rgbPeak, bounds.peak)
+          && inRange(sample.coverage, bounds.coverage)
+          && inRange(sample.signedMean, bounds.signed)
+          && inRange(sample.responseMicroContrast, bounds.micro)
+          && sample.repeatRgbPeak === 0;
+      }), `E66 ${scale}x ${phase} curvature response escaped its signed envelope (${JSON.stringify(targets)})`);
+      assert(controls.every((sample) => sample.rgbPeak === 0 && sample.repeatRgbPeak === 0),
+        `E66 ${scale}x ${phase} escaped a protected control (${JSON.stringify(controls)})`);
+      // Empty interiors retain exact alpha/support through the backing/raw-plane
+      // proof above. Their nearby Water rims are intentional curvature carriers,
+      // so do not incorrectly demand a zero RGB footprint from this topology set.
+      assert(topologyControls.every((sample) => sample.repeatRgbPeak === 0),
+        `E66 ${scale}x ${phase} topology controls were not repeat-stable (${JSON.stringify(topologyControls)})`);
+      console.log(`E66 ${phase} ${scale}x`, JSON.stringify({
+        targets,
+        protectedControls: controls.length,
+        topologyControls: topologyControls.length,
+      }));
+      return {
+        targets,
+        protectedControls: controls.length,
+        topologyControls: topologyControls.length,
+      };
+    };
+    const moving = await compare(movingOff, movingOn, movingRepeat, 'moving');
+    const still = await compare(stillOff, stillOn, stillRepeat, 'still');
+    for (const name of ['convexCrest', 'concaveInlet']) {
+      const movingTarget = moving.targets.find((target) => target.name === name);
+      const stillTarget = still.targets.find((target) => target.name === name);
+      assert(Math.abs(movingTarget.rgbRms - stillTarget.rgbRms) <= 0.08
+        && Math.abs(movingTarget.spatialRgbRms - stillTarget.spatialRgbRms) <= 0.08
+        && Math.abs(movingTarget.signedMean - stillTarget.signedMean) <= 0.08
+        && Math.abs(movingTarget.coverage - stillTarget.coverage) <= 0.03
+        && Math.abs(movingTarget.rgbPeak - stillTarget.rgbPeak) <= 1,
+      `E66 ${scale}x ${name} incorrectly depended on E65 velocity (${JSON.stringify({
+        moving: movingTarget, still: stillTarget,
+      })})`);
+    }
+    const screenshots = screenshotRequest
+      ? await writeWaterCurvatureVfxScreenshots(screenshotRequest, scale, variants)
+      : undefined;
+    scales.push({
+      scale, backing: movingOff.geometry.backing, alphaSupport: movingOff.backing,
+      fixtureState: movingOff.fixtureState, moving, still,
+      ...(screenshots ? { screenshots } : {}),
+    });
+  }
+  let crossScale;
+  if (scales.length === VOLUME_VFX_SCALES.length
+    && scales.every(({ scale }, index) => scale === VOLUME_VFX_SCALES[index])) {
+    const responseByName = (phase, name) => scales.map(({ [phase]: response }) =>
+      response.targets.find((target) => target.name === name));
+    const spread = (samples, read) => Math.max(...samples.map(read)) - Math.min(...samples.map(read));
+    crossScale = Object.fromEntries(['moving', 'still'].flatMap((phase) =>
+      ['convexCrest', 'concaveInlet'].map((name) => {
+        const samples = responseByName(phase, name);
+        return [`${phase}:${name}`, {
+          rgbRms: round(spread(samples, (sample) => sample.rgbRms), 3),
+          spatialRgbRms: round(spread(samples, (sample) => sample.spatialRgbRms), 3),
+          coverage: round(spread(samples, (sample) => sample.coverage), 3),
+          signedMean: round(spread(samples, (sample) => sample.signedMean), 3),
+          microContrast: round(spread(samples, (sample) => sample.responseMicroContrast), 3),
+          peak: spread(samples, (sample) => sample.rgbPeak),
+        }];
+      })));
+    assert(Object.values(crossScale).every((entry) => entry.rgbRms <= 0.60
+      && entry.spatialRgbRms <= 0.40 && entry.coverage <= 0.17
+      && entry.signedMean <= 0.50 && entry.microContrast <= 0.25 && entry.peak <= 3),
+    `E66 response drifted across 1x/2x/4x (${JSON.stringify(crossScale)})`);
+  }
+  const trueEightX = renderScaleArgument === undefined || renderScaleArgument === '8'
+    ? await auditEightXWaterCurvatureVfxExclusion(cdp, dpr)
+    : undefined;
+  return { scales, ...(crossScale ? { crossScale } : {}), ...(trueEightX ? { trueEightX } : {}) };
+}
+
+async function writeWaterCurvatureVfxScreenshots(source, scale, variants) {
+  const paths = {};
+  for (const [variant, capture] of Object.entries(variants)) {
+    paths[variant] = variantScreenshotPath(source, `water-curvature-${scale}x-${variant}`);
+    await writeFile(paths[variant], Buffer.from(capture.capture.capture.data, 'base64'));
+  }
+  return paths;
+}
+
+function waterCurvatureVfxRegions(fixture) {
+  const centre = (rect) => ({ x: rect.x + rect.width / 2, y: rect.y + rect.height / 2 });
+  const point = (name, entry, extra = {}) => ({
+    name, x: entry.x, y: entry.y, radius: 0.35, role: 'control', ...extra,
+  });
+  const body = fixture.body;
+  return [
+    // Both target bands deliberately include their Water/air transition. The
+    // fixture's rectangles describe curvature geometry rather than a filled mask.
+    { name: 'convexCrest', role: 'target', x: body.convexCrest.x + body.convexCrest.width / 2,
+      y: body.convexCrest.y + body.convexCrest.height / 2,
+      radiusX: body.convexCrest.width / 2 - 8, radiusY: body.convexCrest.height / 2 + 2 },
+    // Sample the Water floor immediately below the air inlet. The broader
+    // rectangle also contains convex outer shoulders whose opposite sign would
+    // hide the intended concave response in a single regional mean.
+    { name: 'concaveInlet', role: 'target', x: body.concaveInlet.x + body.concaveInlet.width / 2,
+      y: body.concaveInlet.y + body.concaveInlet.height,
+      radiusX: body.concaveInlet.width / 2 - 2, radiusY: 2 },
+    { name: 'straightShore', role: 'control',
+      x: body.straightShore.x + body.straightShore.width / 2, y: body.straightShore.y + 1,
+      radiusX: body.straightShore.width / 2 - 6, radiusY: 2 },
+    { name: 'deepWaterCore', role: 'control', ...rectRegion(body.deepCore) },
+    { name: 'movingOil', role: 'control', ...rectRegion(fixture.moving.oil) },
+    { name: 'movingAcid', role: 'control', ...rectRegion(fixture.moving.acid) },
+    { name: 'thinWaterStrand', role: 'control', ...rectRegion(fixture.moving.strand) },
+    point('isolatedWater', fixture.moving.isolated),
+    point('waterMetalWater', fixture.contacts.waterMetal.waterProbe),
+    point('waterMetalMetal', fixture.contacts.waterMetal.otherProbe),
+    point('waterOilWater', fixture.contacts.waterOil.waterProbe),
+    point('waterOilOil', fixture.contacts.waterOil.otherProbe),
+    point('nativeWall', fixture.wallCoexistence.wallProbe),
+    point('wallClear', fixture.wallCoexistence.clearProbe),
+    point('authoredHole', centre(body.authoredHole), { role: 'topology' }),
+    point('openChannel', centre(body.openChannel), { role: 'topology' }),
+    point('guardedBlank', centre(fixture.guardedBlank)),
+  ];
+}
+
+function waterCurvatureRawControlPoints(fixture) {
+  return waterCurvatureVfxRegions(fixture).map(({ name, x, y }) => ({
+    name, x: Math.floor(x), y: Math.floor(y),
+  }));
+}
+
+function assertWaterCurvatureFixtureState(state, fixture, mode, label) {
+  assert(state.mode === mode
+    && state.materialCounts.water === fixture.expected.waterCells
+    && state.materialCounts.oil === fixture.expected.oilCells
+    && state.materialCounts.acid === fixture.expected.acidCells
+    && state.materialCounts.metal === fixture.expected.metalCells
+    && state.wallCells === fixture.expected.wallCells
+    && state.nonzeroVelocityCells === (mode === 'moving' ? fixture.expected.movingVelocityCells : 0)
+    && state.backendVelocityExact && state.renderedVelocityExact
+    && state.velocityStagingMismatches === 0 && state.wallWaterCoexistence
+    && state.authoredVoidsExact && state.contactsExact && state.guardedBlankExact,
+  `${label}: fixture state was not exact (${JSON.stringify(state)})`);
+}
+
+async function sampleWaterCurvatureVfxFixtureState(cdp, mode) {
+  return evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    if (typeof audit?.velocity !== 'function' || typeof audit?.renderedVelocity !== 'function'
+      || typeof audit?.wall !== 'function' || typeof audit?.waterCurvatureVfxFixture !== 'function') {
+      throw new Error('E66 material/wall/velocity audit API unavailable');
+    }
+    const fixture = audit.waterCurvatureVfxFixture();
+    const inRect = (x, y, rect) => x >= rect.x && x < rect.x + rect.width
+      && y >= rect.y && y < rect.y + rect.height;
+    const byte = (value) => value & 255;
+    let materialHash = 2166136261, wallHash = 2166136261;
+    let velocityHash = 2166136261, renderedVelocityHash = 2166136261;
+    let wallCells = 0, nonzeroVelocityCells = 0, velocityStagingMismatches = 0;
+    let backendVelocityExact = true, renderedVelocityExact = true, wallWaterCoexistence = true;
+    const materialCounts = { water: 0, oil: 0, acid: 0, metal: 0 };
+    for (let y = 0; y < ${WORLD_HEIGHT}; y++) for (let x = 0; x < ${WORLD_WIDTH}; x++) {
+      const index = y * ${WORLD_WIDTH} + x;
+      const material = audit.cell(x, y), wall = audit.wall(x, y);
+      const velocity = audit.velocity(x, y), rendered = audit.renderedVelocity(x, y);
+      materialHash = Math.imul(materialHash ^ material ^ index, 16777619) >>> 0;
+      wallHash = Math.imul(wallHash ^ wall ^ index, 16777619) >>> 0;
+      velocityHash = Math.imul(velocityHash ^ byte(velocity[0]) ^ (byte(velocity[1]) << 8) ^ index, 16777619) >>> 0;
+      renderedVelocityHash = Math.imul(renderedVelocityHash ^ byte(rendered[0]) ^ (byte(rendered[1]) << 8) ^ index, 16777619) >>> 0;
+      wallCells += Number(wall !== 0);
+      nonzeroVelocityCells += Number(velocity[0] !== 0 || velocity[1] !== 0);
+      velocityStagingMismatches += Number(velocity[0] !== rendered[0] || velocity[1] !== rendered[1]);
+      materialCounts.water += Number(material === fixture.body.material);
+      materialCounts.oil += Number(material === fixture.moving.oil.material);
+      materialCounts.acid += Number(material === fixture.moving.acid.material);
+      materialCounts.metal += Number(material === fixture.contacts.waterMetal.otherMaterial);
+      let expectedX = 0, expectedY = 0;
+      if (${JSON.stringify(mode)} === 'moving') {
+        if (inRect(x, y, fixture.body.bounds) && material === fixture.body.material) {
+          expectedX = fixture.body.velocity.x; expectedY = fixture.body.velocity.y;
+        } else if (inRect(x, y, fixture.moving.oil)) {
+          expectedX = fixture.moving.oil.velocity.x; expectedY = fixture.moving.oil.velocity.y;
+        } else if (inRect(x, y, fixture.moving.acid)) {
+          expectedX = fixture.moving.acid.velocity.x; expectedY = fixture.moving.acid.velocity.y;
+        } else if (inRect(x, y, fixture.moving.strand)) {
+          expectedX = fixture.moving.strand.velocity.x; expectedY = fixture.moving.strand.velocity.y;
+        } else if (x === fixture.moving.isolated.x && y === fixture.moving.isolated.y) {
+          expectedX = fixture.moving.isolated.velocity.x; expectedY = fixture.moving.isolated.velocity.y;
+        }
+      }
+      backendVelocityExact = backendVelocityExact && velocity[0] === expectedX && velocity[1] === expectedY;
+      renderedVelocityExact = renderedVelocityExact && rendered[0] === expectedX && rendered[1] === expectedY;
+      if (wall !== 0) wallWaterCoexistence = wallWaterCoexistence && material === fixture.body.material;
+    }
+    const emptyRect = (rect) => {
+      for (let y = rect.y; y < rect.y + rect.height; y++) for (let x = rect.x; x < rect.x + rect.width; x++) {
+        if (audit.cell(x, y) !== 0) return false;
+      }
+      return true;
+    };
+    const authoredVoidsExact = emptyRect(fixture.body.concaveInlet)
+      && emptyRect(fixture.body.authoredHole) && emptyRect(fixture.body.openChannel);
+    const contactsExact = Object.values(fixture.contacts).every((entry) =>
+      audit.cell(entry.waterProbe.x, entry.waterProbe.y) === fixture.body.material
+      && audit.cell(entry.otherProbe.x, entry.otherProbe.y) === entry.otherMaterial);
+    return {
+      mode: ${JSON.stringify(mode)}, materialHash, wallHash, velocityHash, renderedVelocityHash,
+      wallCells, nonzeroVelocityCells, velocityStagingMismatches, backendVelocityExact,
+      renderedVelocityExact, wallWaterCoexistence, authoredVoidsExact, contactsExact,
+      guardedBlankExact: emptyRect(fixture.guardedBlank), materialCounts,
+    };
+  })()`);
+}
+
+async function navigateWaterCurvatureVfxState(cdp, mode, scale, fixtureMode, enabled, label) {
+  const query = new URLSearchParams({
+    scene: 'render-lab', inputAudit: '1', blankAudit: '1', auditStage: 'blank',
+    liquidBodyVfxAudit: '1', liquidSurfaceVfxAudit: '1', waterCurvatureVfxAudit: '1',
+    renderScale: String(scale), renderLook: 'realistic',
+    volumeVfx: '0', liquidBodyVfx: '1', liquidSurfaceVfx: '1', liquidMotionVfx: '0',
+    waterCurvatureVfx: enabled ? '1' : '0', gasBodyVfx: '0', gasMotionVfx: '0',
+    powderBodyVfx: '0', powderLightVfx: '0', organicSubsurfaceVfx: '0',
+    wetSedimentVfx: '0', gasLightVfx: '0', liquidSolidMeniscusVfx: '0',
+    gasCoreDepthVfx: '0', nobleGasBillowVfx: '0', smokeSoftnessVfx: '0',
+    smokeBillowDepthVfx: '0', plasmaCoreVfx: '0', solidBodyVfx: '0',
+    platinumBodyVfx: '0', ceramicGlazeVfx: '0', botanicalBodyVfx: '0',
+    glassBodyVfx: '0', oilBodyVfx: '0', rockRoughnessVfx: '0',
+    waterBodyVfx: '0', waterVolumeRecessionVfx: '0', acidBodyVfx: '0',
+  });
+  await cdp.send('Page.navigate', { url: `${AUDIT_BASE_URL}?${query}` });
+  await waitFor(() => evaluate(cdp, `(() => {
+    const parameters = new URLSearchParams(location.search);
+    return parameters.get('scene') === 'render-lab' && parameters.get('inputAudit') === '1'
+      && parameters.get('blankAudit') === '1' && parameters.get('waterCurvatureVfxAudit') === '1'
+      && parameters.get('renderScale') === ${JSON.stringify(String(scale))}
+      && parameters.get('liquidBodyVfx') === '1' && parameters.get('liquidSurfaceVfx') === '1'
+      && parameters.get('liquidMotionVfx') === '0'
+      && parameters.get('waterCurvatureVfx') === ${JSON.stringify(enabled ? '1' : '0')}
+      && typeof window.__ANIFOR_INPUT_AUDIT__?.prepareWaterCurvatureVfxFixture === 'function';
+  })()`), 15_000, `E66 ${label} ${scale}x page`);
+  await waitFor(() => evaluate(cdp,
+    `window.__ANIFOR_INPUT_AUDIT__.backend().backend === ${JSON.stringify(mode)}`),
+  15_000, `E66 ${label} ${scale}x backend`);
+  const fixture = await evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    audit.prepareWaterCurvatureVfxFixture(${JSON.stringify(fixtureMode)});
+    audit.resetView();
+    return audit.waterCurvatureVfxFixture();
+  })()`);
+  const fixtureState = await waitFor(async () => {
+    const candidate = await sampleWaterCurvatureVfxFixtureState(cdp, fixtureMode);
+    try {
+      assertWaterCurvatureFixtureState(candidate, fixture, fixtureMode,
+        `E66 ${label} ${scale}x readiness`);
+      return candidate;
+    } catch { return undefined; }
+  }, 8_000, `E66 ${label} ${scale}x semantic velocity staging`);
+  const hdrPipeline = await evaluate(cdp, `(() => {
+    const canvas = document.querySelector('.semantic-field-canvas');
+    return canvas ? {
+      look: canvas.dataset.renderLook, state: canvas.dataset.hdrPipeline,
+      reason: canvas.dataset.hdrPipelineReason, bloomBacking: canvas.dataset.bloomBacking,
+      volumeVfx: canvas.dataset.volumeVfx, liquidBodyVfx: canvas.dataset.liquidBodyVfx,
+      liquidSurfaceVfx: canvas.dataset.liquidSurfaceVfx, liquidMotionVfx: canvas.dataset.liquidMotionVfx,
+      waterCurvatureVfx: canvas.dataset.waterCurvatureVfx, gasBodyVfx: canvas.dataset.gasBodyVfx,
+      gasMotionVfx: canvas.dataset.gasMotionVfx, powderBodyVfx: canvas.dataset.powderBodyVfx,
+      powderLightVfx: canvas.dataset.powderLightVfx,
+    } : undefined;
+  })()`);
+  const expectedBloom = `${WORLD_WIDTH * scale / 2}x${WORLD_HEIGHT * scale / 2}`;
+  assert(hdrPipeline?.look === 'realistic' && hdrPipeline?.state === 'active'
+    && hdrPipeline?.bloomBacking === expectedBloom && hdrPipeline?.volumeVfx === 'inactive'
+    && hdrPipeline?.liquidBodyVfx === 'active' && hdrPipeline?.liquidSurfaceVfx === 'active'
+    && hdrPipeline?.liquidMotionVfx === 'inactive'
+    && hdrPipeline?.waterCurvatureVfx === (enabled ? 'active' : 'inactive')
+    && hdrPipeline?.gasBodyVfx === 'inactive' && hdrPipeline?.gasMotionVfx === 'inactive'
+    && hdrPipeline?.powderBodyVfx === 'inactive' && hdrPipeline?.powderLightVfx === 'inactive',
+  `E66 ${label} ${scale}x HDR/water-curvature state resolved incorrectly (${JSON.stringify(hdrPipeline)})`);
+  const capture = await waitForStablePageCapture(cdp,
+    `E66 ${label} ${scale}x framebuffer`, scale === 4 ? 25_000 : undefined);
+  return {
+    fixture, fixtureState, capture, geometry: await metrics(cdp), semantic: await hdrVfxSemanticDigest(cdp),
+    backing: await sampleVolumeVfxCanvasAlphaSupport(cdp),
+    rawControls: await sampleVolumeVfxRawWorldPixels(cdp, waterCurvatureRawControlPoints(fixture)),
+    hdrPipeline,
+  };
+}
+
+async function auditEightXWaterCurvatureVfxExclusion(cdp, dpr) {
+  await setDesktopMetrics(cdp, 1280, 720, dpr);
+  const query = new URLSearchParams({
+    scene: 'render-lab', inputAudit: '1', blankAudit: '1', auditStage: 'eight-water-curvature',
+    waterCurvatureVfxAudit: '1', renderScale: '8', renderLook: 'realistic',
+    liquidBodyVfx: '1', liquidSurfaceVfx: '1', liquidMotionVfx: '0', waterCurvatureVfx: '1',
+  });
+  await cdp.send('Page.navigate', { url: `${AUDIT_BASE_URL}?${query}` });
+  const deadline = Date.now() + EIGHT_X_PRESENTATION_DEADLINE_MS;
+  await waitFor(() => evaluate(cdp, `new URLSearchParams(location.search).get('renderScale') === '8'
+    && new URLSearchParams(location.search).get('waterCurvatureVfx') === '1'
+    && new URLSearchParams(location.search).get('liquidMotionVfx') === '0'
+    && Boolean(window.__ANIFOR_INPUT_AUDIT__)`),
+  remainingDeadlineMs(deadline, 'true-8x E66 API'), 'true-8x E66 API');
+  const backend = await waitForEightXTerminalBackend(cdp, 'true-8x E66', deadline);
+  assertEightXWebGLBackend(backend, 'true-8x E66');
+  const geometry = await waitForStableCanvas(cdp, 1280, 720, undefined,
+    Math.min(45_000, remainingDeadlineMs(deadline, 'true-8x E66 geometry')), 'true-8x E66 geometry');
+  assert(geometry.backing.width === WORLD_WIDTH * 8 && geometry.backing.height === WORLD_HEIGHT * 8
+    && geometry.outputScale === '8', 'true-8x E66 lost exact backing');
+  const state = await evaluate(cdp, `(() => {
+    const canvas = document.querySelector('canvas.semantic-field-canvas');
+    return canvas ? {
+      renderer: canvas.dataset.renderer, look: canvas.dataset.renderLook,
+      liquidBodyVfx: canvas.dataset.liquidBodyVfx, liquidSurfaceVfx: canvas.dataset.liquidSurfaceVfx,
+      liquidMotionVfx: canvas.dataset.liquidMotionVfx, waterCurvatureVfx: canvas.dataset.waterCurvatureVfx,
+      hdr: canvas.dataset.hdrPipeline, reason: canvas.dataset.hdrPipelineReason,
+      bloom: canvas.dataset.bloomBacking ?? null,
+    } : undefined;
+  })()`);
+  assert(state?.renderer === 'semantic-field-webgl' && state.look === 'realistic'
+    && state.liquidBodyVfx === 'inactive' && state.liquidSurfaceVfx === 'inactive'
+    && state.liquidMotionVfx === 'inactive' && state.waterCurvatureVfx === 'inactive'
+    && state.hdr === 'inactive' && state.reason === 'scale-8' && state.bloom === null,
+  `true-8x E66 selector/resource exclusion failed: ${JSON.stringify(state)}`);
+  const materialPlane = await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.materialPlaneDigest()');
+  assert(materialPlane.occupied === 0,
+    `true-8x E66 unexpectedly uploaded its dense fixture: ${JSON.stringify(materialPlane)}`);
+  const semanticBefore = await hdrVfxSemanticDigest(cdp);
+  const timingBudget = remainingDeadlineMs(deadline, 'true-8x E66 GPU completion');
+  const timing = await auditWebGLPresentationTiming(cdp, 1, Math.min(12_000, timingBudget), timingBudget, 1);
+  assert(timing.source === 'gpu-fence',
+    `true-8x E66 did not complete a GPU fence: ${JSON.stringify(timing)}`);
+  const semanticAfter = await hdrVfxSemanticDigest(cdp);
+  assertHdrVfxSemanticEquality(semanticBefore, semanticAfter, 'true-8x E66 GPU completion');
+  return { geometry, backend, state, materialPlane, fixtureUploaded: false, semanticStable: true, timing };
 }
 
 /**

@@ -87,6 +87,25 @@ export function resolveLiquidMotionVfxEnabled(
 }
 
 /**
+ * E66 gives exact Water a curvature-flow-inspired meniscus only after E08 has
+ * established a connected liquid/air surface. It is independent of E65's
+ * velocity response so a resting curved shore still reads as a fluid surface.
+ * Audit URLs retain their frozen reference until they request this child.
+ */
+export function resolveWaterCurvatureVfxEnabled(
+  look: RenderLook,
+  search = globalThis.location?.search ?? '',
+): boolean {
+  if (!resolveLiquidSurfaceVfxEnabled(look, search)) return false;
+  const parameters = new URLSearchParams(search);
+  const requested = parameters.get('waterCurvatureVfx');
+  if (requested === '0' || requested === 'off' || requested === 'false') return false;
+  if (requested === '1' || requested === 'on' || requested === 'true') return true;
+  if (parameters.get('inputAudit') === '1') return false;
+  return true;
+}
+
+/**
  * Adds a narrow liquid-side optical response at exact ordinary Solid contact.
  * E14 reuses E03's connected-liquid body proof and the semantic contact probes
  * already consumed by the normal shader; an explicit override cannot bypass
