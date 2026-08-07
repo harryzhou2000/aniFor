@@ -67,6 +67,25 @@ export interface GasMotionVfxAuditSnapshot {
     readonly gas: GasMotionVfxRect;
     readonly liquid: GasMotionVfxRect;
   };
+  /** Exact CFLM ownership controls for E68. These compact bodies are isolated
+   * from the E07 cards so a propagated cold-flame fold cannot cross a foreign
+   * material or native-wall boundary. */
+  readonly cflmContacts: {
+    readonly velocity: { readonly x: 0; readonly y: 48 };
+    readonly metal: {
+      readonly gas: GasMotionVfxRect;
+      readonly solid: GasMotionVfxRect;
+    };
+    readonly water: {
+      readonly gas: GasMotionVfxRect;
+      readonly liquid: GasMotionVfxRect;
+    };
+    readonly wall: {
+      readonly gas: GasMotionVfxRect;
+      readonly wallAnchor: GasMotionVfxPoint;
+      readonly conductiveWall: 1;
+    };
+  };
   readonly nativeWall: GasMotionVfxPoint;
   readonly guardedBlank: GasMotionVfxRect;
 }
@@ -126,6 +145,22 @@ export const GAS_MOTION_VFX_AUDIT: GasMotionVfxAuditSnapshot = {
     gas: { x: 438, y: 278, width: 36, height: 32 },
     liquid: { x: 474, y: 278, width: 20, height: 32 },
   },
+  cflmContacts: {
+    velocity: { x: 0, y: 48 },
+    metal: {
+      gas: { x: 20, y: 160, width: 40, height: 24 },
+      solid: { x: 60, y: 160, width: 16, height: 24 },
+    },
+    water: {
+      gas: { x: 96, y: 160, width: 40, height: 24 },
+      liquid: { x: 136, y: 160, width: 16, height: 24 },
+    },
+    wall: {
+      gas: { x: 232, y: 160, width: 48, height: 28 },
+      wallAnchor: { x: 256, y: 174 },
+      conductiveWall: CONDUCTIVE_WALL,
+    },
+  },
   nativeWall: { x: 544, y: 244 },
   guardedBlank: { x: 518, y: 334, width: 68, height: 30 },
 };
@@ -149,6 +184,7 @@ interface GasMotionFixtureBackend extends SimulationBackend {
 export function prepareGasMotionVfxFixture(
   simulation: SimulationBackend,
   mode: GasMotionVfxFixtureMode,
+  includeCflmContacts = false,
 ): void {
   if (!supportsGasMotionFixture(simulation)) {
     throw new Error('Gas-motion VFX fixture requires render-lab velocity and wall planes');
@@ -187,15 +223,39 @@ export function prepareGasMotionVfxFixture(
   fillRect(cells, simulation.width, GAS_MOTION_VFX_AUDIT.solidContact.solid, Material.Metal);
   fillRect(cells, simulation.width, GAS_MOTION_VFX_AUDIT.liquidContact.gas, Material.FOG);
   fillRect(cells, simulation.width, GAS_MOTION_VFX_AUDIT.liquidContact.liquid, Material.Water);
+  const cflmContacts = GAS_MOTION_VFX_AUDIT.cflmContacts;
+  if (includeCflmContacts) {
+    fillRect(cells, simulation.width, cflmContacts.metal.gas, Material.CFLM);
+    fillRect(cells, simulation.width, cflmContacts.metal.solid, Material.Metal);
+    fillRect(cells, simulation.width, cflmContacts.water.gas, Material.CFLM);
+    fillRect(cells, simulation.width, cflmContacts.water.liquid, Material.Water);
+    fillRect(cells, simulation.width, cflmContacts.wall.gas, Material.CFLM);
+  }
   fillRect(cells, simulation.width, GAS_MOTION_VFX_AUDIT.guardedBlank, Material.Empty);
   simulation.paintWall(
     GAS_MOTION_VFX_AUDIT.nativeWall.x, GAS_MOTION_VFX_AUDIT.nativeWall.y,
     CONDUCTIVE_WALL, 0,
   );
+  if (includeCflmContacts) {
+    simulation.paintWall(
+      cflmContacts.wall.wallAnchor.x, cflmContacts.wall.wallAnchor.y,
+      cflmContacts.wall.conductiveWall, 0,
+    );
+  }
 
   if (mode !== 'still') {
     for (const entry of GAS_MOTION_VFX_AUDIT.cards) {
       setExactOwnerVelocityRuns(simulation, cells, entry, mode === 'reversed' ? -1 : 1);
+    }
+    if (includeCflmContacts) {
+      const direction = mode === 'reversed' ? -1 : 1;
+      for (const gas of [
+        cflmContacts.metal.gas, cflmContacts.water.gas, cflmContacts.wall.gas,
+      ]) {
+        setExactMaterialVelocityRuns(
+          simulation, cells, gas, Material.CFLM, cflmContacts.velocity, direction,
+        );
+      }
     }
     setCounterflowVelocityRuns(simulation, cells, counterflow, mode === 'reversed' ? -1 : 1);
   }
@@ -257,6 +317,31 @@ function setExactOwnerVelocityRuns(
         simulation.setFixtureVelocityRect(
           start, y, x - start, 1,
           entry.velocity.x * direction, entry.velocity.y * direction,
+        );
+      }
+    }
+  }
+}
+
+/** Stages velocity only below exact owners in a compact contact rectangle. */
+function setExactMaterialVelocityRuns(
+  simulation: GasMotionFixtureBackend,
+  cells: Uint8Array,
+  rect: GasMotionVfxRect,
+  material: Material,
+  velocity: GasMotionVector,
+  direction: -1 | 1,
+): void {
+  const right = rect.x + rect.width;
+  for (let y = rect.y; y < rect.y + rect.height; y++) {
+    let x = rect.x;
+    while (x < right) {
+      while (x < right && cells[y * simulation.width + x] !== material) x++;
+      const start = x;
+      while (x < right && cells[y * simulation.width + x] === material) x++;
+      if (x > start) {
+        simulation.setFixtureVelocityRect(
+          start, y, x - start, 1, velocity.x * direction, velocity.y * direction,
         );
       }
     }

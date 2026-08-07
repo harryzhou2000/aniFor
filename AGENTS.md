@@ -13,7 +13,7 @@ powder, solid, liquid, gas, energy, and contact scenes across Canvas and WebGL a
 mobile gestures, save/load, CI, and Pages deployment as protected regression
 contracts rather than the primary feature stream.
 
-The accepted visual experiment ladder now runs through E67. E12 is the
+The accepted visual experiment ladder now runs through E68. E12 is the
 species-safe Sand/Clay/Concrete wet-sediment checkpoint; preserve its exact
 aqueous owner/stability proof, split moving-powder/stationary-Water control,
 Local/Grains no-op, fine structures, authored gaps, Canvas fallback, and true
@@ -1431,9 +1431,48 @@ authored holes/channels retain exact zero support with at most three bloom bytes
 final-composite probes as RGB-exact. Requested-on true 8× must report E67/HDR
 inactive with `scale-8`, no bloom or dense fixture, exact 4896×3072 WebGL, and a
 real GPU fence (accepted strengthened full-matrix fence `3.1667 s`, zero browser errors).
-Select any E68 owner/effect only from a fresh composed fit-view diagnosis; do
+Select any E69 owner/effect only from a fresh composed fit-view diagnosis; do
 not widen E67 to Plasma, ELEC, Lava, Smoke, traits, walls, sparse Fire, or the
 compact shader by visual resemblance.
+
+E68 is the normal-WebGL HDR-only propagated-CFLM cold-flame checkpoint,
+independently measurable with `?cflmColdFlameVfx=0|1`. It was selected from a
+fresh 4× composed/candidate survey: the accepted families remained strong,
+while CFLM still read as a flat pale slab and E07 alone moved its framebuffer
+by only a few bytes. E68 is a strict E04/E07 child. It identifies exact
+propagated atmosphere style `12`, then reuses the already-live coherent motion
+derivative, atmosphere density/cardinals, body support, centre emission, and
+optical depth to make a broad bipolar cyan leading key and green-absorbing
+violet recess. Still or incoherent CFLM is an exact no-op. The effect is RGB
+only and adds one selector uniform but no sample, sampler, texture, field,
+pass, target, upload, persistent allocation, wave, clock/noise, alpha, support,
+silhouette, ownership, topology, or physics decision. Canvas and compact true
+8× remain E68-inactive.
+
+`npm run audit:vfx:cflm-cold-flame` owns topology-identical paused directed,
+reversed, and still fixtures at 1×/2×/4×. Besides the dense CFLM card, it stages
+exact moving CFLM beside Metal and Water and co-located with a conductive
+native wall. Every off→on→off sequence must preserve exact semantic, material,
+wall, raw/staged velocity, atmosphere support/style/motion, emission, alpha,
+and support state and restore a byte-identical disabled framebuffer. Require a
+broad core-plus-shoulder response, both cyan and violet chroma projections,
+and at least two same-zone spectral reversals when velocity reverses. Sparse
+carriers, foreign gases, zero-flow bodies, guarded blank, and the co-located
+wall remain exact. Metal/Water contact-side composite spill is bounded to one
+RGB byte; the low-alpha authored CFLM hole/channel may reuse only their
+already-owned atmosphere support, with alpha exact and response bounded to a
+48-byte peak and 16 RGB RMS. Requested-on true 8× must report E04/E07/E68/HDR
+inactive for `scale-8`, omit the dense fixture and bloom resources, retain exact
+4896×3072 WebGL, and finish a real GPU fence before acceptance.
+The accepted full matrix records primary-body RGB RMS
+`1.748/1.751/1.758`, cyan–violet spectral span `8.36/8.77/8.76`, directed
+core chroma `1.97/1.99/2.01`, and reversed core chroma
+`-1.04/-1.04/-1.05` at 1×/2×/4×. The authored hole remains low-alpha with
+RGB RMS `9.40/9.78/10.11` and peaks `24/25/26`; the open channel stays at or
+below `.34` RMS and one peak byte. Contact-side spill occurs only at 1×
+(`.02/.10` RMS, one peak byte) and is exact at 2×/4×; the co-located wall is
+exact throughout. The true-8× exclusion fence completed in `5.2063 s` with
+zero browser errors.
 
 Visual-audit lesson: `inputAudit=1` disables opt-in child selectors unless the
 composed route names them explicitly, so canonical evidence must request and
@@ -1739,7 +1778,10 @@ matrix and field readback are release contracts. Do not declare, branch on, or
 decode E07 in `FIELD_EIGHT_X_FRAGMENT`; the one-navigation true-8× SPNG fence
 explicitly requests it and must still report E07/HDR inactive, reason `scale-8`,
 no bloom backing, exact 4896×3072 WebGL, and a completed GPU fence. Freeze the
-accepted amplitude until a new normal-view review.
+accepted amplitude until a new normal-view review. The CFLM red-axis direction
+probe has a `0.015` per-side floor because its smaller reversed 1× shoulder
+quantizes to `0.02`; keep the independent `0.06` paired-reversal margin as the
+authoritative protection against an inert or one-direction-only response.
 
 E08 is the accepted first HDR-composite liquid-surface transport layer,
 independently measurable with `?liquidSurfaceVfx=0|1` and subordinate to E03.

@@ -18,6 +18,7 @@ import {
   resolveGasLightVfxEnabled,
   resolveGlassBodyVfxEnabled,
   resolveGasMotionVfxEnabled,
+  resolveCflmColdFlameVfxEnabled,
   resolveLiquidBodyVfxEnabled, resolveLiquidSolidMeniscusVfxEnabled,
   resolveLiquidSurfaceVfxEnabled, resolveLiquidMotionVfxEnabled,
   resolveWaterCurvatureVfxEnabled,
@@ -196,6 +197,34 @@ describe('resolveRenderLook', () => {
     )).toBe(true);
     expect(resolveGasMotionVfxEnabled(
       'realistic', '?gasBodyVfx=off&gasMotionVfx=on',
+    )).toBe(false);
+  });
+
+  it('keeps the CFLM cold-flame fold subordinate to E04/E07 and audit-isolated', () => {
+    expect(resolveCflmColdFlameVfxEnabled(
+      'classic', '?cflmColdFlameVfx=on',
+    )).toBe(false);
+    expect(resolveCflmColdFlameVfxEnabled('realistic', '')).toBe(true);
+    expect(resolveCflmColdFlameVfxEnabled('neon-lab', '')).toBe(true);
+    expect(resolveCflmColdFlameVfxEnabled('realistic', '?inputAudit=1')).toBe(false);
+    expect(resolveCflmColdFlameVfxEnabled(
+      'realistic', '?inputAudit=1&cflmColdFlameVfx=true',
+    )).toBe(true);
+    for (const disabled of ['0', 'off', 'false']) {
+      expect(resolveCflmColdFlameVfxEnabled(
+        'realistic', `?cflmColdFlameVfx=${disabled}`,
+      )).toBe(false);
+    }
+    for (const enabled of ['1', 'on', 'true']) {
+      expect(resolveCflmColdFlameVfxEnabled(
+        'realistic', `?cflmColdFlameVfx=${enabled}`,
+      )).toBe(true);
+    }
+    expect(resolveCflmColdFlameVfxEnabled(
+      'realistic', '?gasBodyVfx=0&cflmColdFlameVfx=1',
+    )).toBe(false);
+    expect(resolveCflmColdFlameVfxEnabled(
+      'realistic', '?gasMotionVfx=0&cflmColdFlameVfx=1',
     )).toBe(false);
   });
 

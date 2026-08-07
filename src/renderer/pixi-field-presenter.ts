@@ -52,6 +52,7 @@ import {
   resolveGlassBodyVfxEnabled,
   resolveGasBodyVfxEnabled, resolveGasCoreDepthVfxEnabled, resolveGasLightVfxEnabled,
   resolveGasMotionVfxEnabled,
+  resolveCflmColdFlameVfxEnabled,
   resolveCarbonDioxideBodyVfxEnabled,
   resolveFogCoreDiffuseVfxEnabled,
   resolveHydrogenBodyVfxEnabled,
@@ -3293,6 +3294,7 @@ uniform float uHDRVfx;
 uniform float uVolumeVfx;
 uniform float uGasBodyVfx;
 uniform float uGasMotionVfx;
+uniform float uCflmColdFlameVfx;
 uniform float uGasLightVfx;
 uniform float uGasCoreDepthVfx;
 uniform float uOxygenVolumeFoldVfx;
@@ -6886,6 +6888,47 @@ void main() {
           float gasMotionShadowBytes = material == 87.0 ? 40.0 : 32.0;
           color -= clamp(color, 0.0, 1.0)
             * max(-gasMotionTone, 0.0) * (gasMotionShadowBytes / 255.0);
+
+          // E68: propagated style 12 is authoritative CFLM even where the
+          // atmosphere, rather than an exact semantic carrier, owns the visible
+          // body. Reuse E07's coherent native-flow derivative as a broad bipolar
+          // cold-flame fold: cyan catches the leading lobe and a violet recess
+          // turns away behind it. Reversal negates the fold, while still or
+          // incoherent CFLM never reaches this branch. RGB only: no new sample,
+          // texture, field, pass, target, upload, allocation, wave, clock,
+          // alpha, support, silhouette, ownership, topology, or physics state.
+          if (uCflmColdFlameVfx > 0.5 && uGasIdentityStyling > 0.5
+            && wall < 0.5) {
+            float cflmColdStyle = floor(gasStyleState.r * 255.0 + 0.5);
+            float cflmColdOwner = 1.0 - step(0.5, abs(cflmColdStyle - 12.0));
+            if (cflmColdOwner > 0.5) {
+              float cflmColdBody = cflmColdOwner * gasVfxBodySupport
+                * smoothstep(0.14, 0.50, cloudNeighbourMean)
+                * smoothstep(0.08, 0.42, atmosphereState.a);
+              float cflmColdPhase = clamp(
+                (gasMotionInteriorTone * 0.92 + gasMotionEdgeTone * 0.08)
+                  * gasMotionStrength * 3.60,
+                -1.0, 1.0
+              );
+              float cflmColdEmission = smoothstep(0.010, 0.30, emissionState.a);
+              float cflmColdKey = max(cflmColdPhase, 0.0) * cflmColdBody
+                * (0.58 + cflmColdEmission * 0.42)
+                * (1.0 - opticalDepth * 0.18);
+              float cflmColdPocket = max(-cflmColdPhase, 0.0) * cflmColdBody
+                * (0.72 + opticalDepth * 0.28);
+              vec3 cflmColdKeySpectrum = mix(
+                vec3(0.24, 0.92, 1.18), vividColor(emissionState.rgb, 1.16), 0.20
+              );
+              color += (vec3(1.30) - clamp(color, 0.0, 1.30))
+                * cflmColdKeySpectrum * cflmColdKey * 0.80;
+              color *= vec3(1.0)
+                - vec3(0.32, 0.02, 0.0) * cflmColdKey * 0.75;
+              color *= vec3(1.0)
+                - vec3(0.08, 0.48, 0.03) * cflmColdPocket * 0.52;
+              color += (vec3(1.18) - clamp(color, 0.0, 1.18))
+                * vec3(0.78, 0.16, 1.00) * cflmColdPocket * 0.26;
+            }
+          }
         }
       }
     }
@@ -11411,6 +11454,11 @@ export class PixiFieldPresenter {
     // true-8x shader neither declares its selector nor decodes particle flow.
     const gasMotionVfxEnabled = outputScale < 8
       && resolveGasMotionVfxEnabled(renderLook);
+    // E68 is an exact propagated-CFLM child of E04/E07. It reuses normal
+    // WebGL's existing atmosphere identity, coherent flow, density, emission,
+    // and billow values; compact true 8x declares no selector or branch.
+    const cflmColdFlameVfxEnabled = outputScale < 8
+      && resolveCflmColdFlameVfxEnabled(renderLook);
     // E13 consumes only normal WebGL's established atmosphere identity and
     // emission-light values. The compact true-8x shader declares no selector
     // or parallel branch and retains its existing register/sample budget.
@@ -11638,6 +11686,7 @@ export class PixiFieldPresenter {
       uVolumeVfx: { value: volumeVfxEnabled ? 1 : 0, type: 'f32' },
       uGasBodyVfx: { value: gasBodyVfxEnabled ? 1 : 0, type: 'f32' },
       uGasMotionVfx: { value: gasMotionVfxEnabled ? 1 : 0, type: 'f32' },
+      uCflmColdFlameVfx: { value: cflmColdFlameVfxEnabled ? 1 : 0, type: 'f32' },
       uGasLightVfx: { value: gasLightVfxEnabled ? 1 : 0, type: 'f32' },
       uGasCoreDepthVfx: { value: gasCoreDepthVfxEnabled ? 1 : 0, type: 'f32' },
       uOxygenVolumeFoldVfx: { value: oxygenVolumeFoldVfxEnabled ? 1 : 0, type: 'f32' },
@@ -11921,6 +11970,7 @@ export class PixiFieldPresenter {
       this.uniforms.uniforms.uVolumeVfx = 0;
       this.uniforms.uniforms.uGasBodyVfx = 0;
       this.uniforms.uniforms.uGasMotionVfx = 0;
+      this.uniforms.uniforms.uCflmColdFlameVfx = 0;
       this.uniforms.uniforms.uGasLightVfx = 0;
       this.uniforms.uniforms.uGasCoreDepthVfx = 0;
       this.uniforms.uniforms.uOxygenVolumeFoldVfx = 0;
@@ -12009,6 +12059,7 @@ export class PixiFieldPresenter {
             || new URLSearchParams(location.search).get('volumeVfxAudit') === '1'
             || new URLSearchParams(location.search).get('gasBodyVfxAudit') === '1'
             || new URLSearchParams(location.search).get('gasMotionVfxAudit') === '1'
+            || new URLSearchParams(location.search).get('cflmColdFlameVfxAudit') === '1'
             || new URLSearchParams(location.search).get('gasLightVfxAudit') === '1'
             || new URLSearchParams(location.search).get('gasCoreDepthVfxAudit') === '1'
             || new URLSearchParams(location.search).get('oxygenVolumeFoldVfxAudit') === '1'
@@ -12099,6 +12150,9 @@ export class PixiFieldPresenter {
       ? 'active' : 'inactive';
     presenter.app.canvas.dataset.gasMotionVfx = Number(presenter.uniforms.uniforms.uGasMotionVfx) > 0.5
       ? 'active' : 'inactive';
+    presenter.app.canvas.dataset.cflmColdFlameVfx = Number(
+      presenter.uniforms.uniforms.uCflmColdFlameVfx
+    ) > 0.5 ? 'active' : 'inactive';
     presenter.app.canvas.dataset.gasLightVfx = Number(presenter.uniforms.uniforms.uGasLightVfx) > 0.5
       ? 'active' : 'inactive';
     presenter.app.canvas.dataset.gasCoreDepthVfx = Number(
@@ -13719,6 +13773,7 @@ export class PixiFieldPresenter {
         this.uniforms.uniforms.uVolumeVfx = 0;
         this.uniforms.uniforms.uGasBodyVfx = 0;
         this.uniforms.uniforms.uGasMotionVfx = 0;
+        this.uniforms.uniforms.uCflmColdFlameVfx = 0;
         this.uniforms.uniforms.uGasLightVfx = 0;
         this.uniforms.uniforms.uGasCoreDepthVfx = 0;
         this.uniforms.uniforms.uOxygenVolumeFoldVfx = 0;
@@ -13783,6 +13838,7 @@ export class PixiFieldPresenter {
         this.app.canvas.dataset.volumeVfx = 'inactive';
         this.app.canvas.dataset.gasBodyVfx = 'inactive';
         this.app.canvas.dataset.gasMotionVfx = 'inactive';
+        this.app.canvas.dataset.cflmColdFlameVfx = 'inactive';
         this.app.canvas.dataset.gasLightVfx = 'inactive';
         this.app.canvas.dataset.gasCoreDepthVfx = 'inactive';
         this.app.canvas.dataset.oxygenVolumeFoldVfx = 'inactive';

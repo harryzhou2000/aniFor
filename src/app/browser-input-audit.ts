@@ -263,7 +263,9 @@ export interface BrowserInputAuditApi {
   soapBodyVfxFixture(): SoapBodyVfxAuditSnapshot;
   prepareSoapBodyVfxFixture(): void;
   gasMotionVfxFixture(): GasMotionVfxAuditSnapshot;
-  prepareGasMotionVfxFixture(mode: GasMotionVfxFixtureMode): void;
+  prepareGasMotionVfxFixture(
+    mode: GasMotionVfxFixtureMode, includeCflmContacts?: boolean,
+  ): void;
   liquidMotionVfxFixture(): LiquidMotionVfxAuditSnapshot;
   prepareLiquidMotionVfxFixture(mode: LiquidMotionVfxFixtureMode): void;
   /** E66 uses the same exact material topology in still/moving forms. */

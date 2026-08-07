@@ -64,6 +64,37 @@ describe('gas-motion VFX audit fixture', () => {
     expect(cell(simulation, centre(GAS_MOTION_VFX_AUDIT.guardedBlank))).toBe(Material.Empty);
   });
 
+  it('adds exact moving CFLM contacts only for the E68 fixture variant', () => {
+    const baseline = new RenderLabBackend();
+    const directed = new RenderLabBackend();
+    const reversed = new RenderLabBackend();
+    const still = new RenderLabBackend();
+    prepareGasMotionVfxFixture(baseline, 'directed');
+    prepareGasMotionVfxFixture(directed, 'directed', true);
+    prepareGasMotionVfxFixture(reversed, 'reversed', true);
+    prepareGasMotionVfxFixture(still, 'still', true);
+    const contacts = GAS_MOTION_VFX_AUDIT.cflmContacts;
+
+    for (const gas of [contacts.metal.gas, contacts.water.gas, contacts.wall.gas]) {
+      const point = centre(gas);
+      expect(cell(baseline, point)).toBe(Material.Empty);
+      expect(cell(directed, point)).toBe(Material.CFLM);
+      expect(velocity(directed, point)).toEqual([0, contacts.velocity.y]);
+      expect(velocity(reversed, point)).toEqual([0, -contacts.velocity.y]);
+      expect(velocity(still, point)).toEqual([0, 0]);
+    }
+    expect(cell(directed, centre(contacts.metal.solid))).toBe(Material.Metal);
+    expect(cell(directed, centre(contacts.water.liquid))).toBe(Material.Water);
+    const wallOffset = contacts.wall.wallAnchor.y * directed.width
+      + contacts.wall.wallAnchor.x;
+    expect(baseline.walls()[wallOffset]).toBe(0);
+    expect(directed.walls()[wallOffset]).toBe(contacts.wall.conductiveWall);
+    expect(equalBytes(directed.cells(), reversed.cells())).toBe(true);
+    expect(equalBytes(directed.cells(), still.cells())).toBe(true);
+    expect(equalBytes(directed.walls(), reversed.walls())).toBe(true);
+    expect(equalBytes(directed.walls(), still.walls())).toBe(true);
+  });
+
   it('keeps a lower-left Smoke counterflow topology while alternating only exact owners', () => {
     const directed = new RenderLabBackend();
     const reversed = new RenderLabBackend();

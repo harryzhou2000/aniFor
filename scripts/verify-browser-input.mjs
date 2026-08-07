@@ -247,6 +247,13 @@ const fireFlameVfxOnly = process.argv.includes('--fire-flame-vfx-only');
 if (fireFlameVfxOnly && (modes.length !== 1 || modes[0] !== 'webgl')) {
   throw new Error('--fire-flame-vfx-only requires --webgl-only');
 }
+// E68 is an exact CFLM child of the accepted E04/E07 atmosphere stack. Its
+// paused fixture retains the parent gas body/motion proof while only the new
+// cold-flame RGB layer is reload-toggled.
+const cflmColdFlameVfxOnly = process.argv.includes('--cflm-cold-flame-vfx-only');
+if (cflmColdFlameVfxOnly && (modes.length !== 1 || modes[0] !== 'webgl')) {
+  throw new Error('--cflm-cold-flame-vfx-only requires --webgl-only');
+}
 // E04 keeps the atmospheric body experiment separate from both the broad E02
 // treatment and E03's liquid-only optics. It remains normal-detail only.
 const gasBodyVfxOnly = process.argv.includes('--gas-body-vfx-only');
@@ -601,7 +608,7 @@ if (woodTanninVfxOnly && (modes.length !== 1 || modes[0] !== 'webgl')) {
 }
 const focusedVfxOnlyFlags = [
   hdrVfxOnly, volumeVfxOnly, liquidBodyVfxOnly, liquidSurfaceVfxOnly, liquidMotionVfxOnly,
-  waterCurvatureVfxOnly, fireFlameVfxOnly, gasBodyVfxOnly,
+  waterCurvatureVfxOnly, fireFlameVfxOnly, cflmColdFlameVfxOnly, gasBodyVfxOnly,
   gasMotionVfxOnly, powderBodyVfxOnly, powderLightVfxOnly, powderSolidContactVfxOnly,
   translucentEdgeVfxOnly, organicSubsurfaceVfxOnly, wetSedimentVfxOnly, gasLightVfxOnly,
   liquidSolidMeniscusVfxOnly, metalWaterContactVfxOnly, waterMetalTransmissionVfxOnly,
@@ -624,7 +631,7 @@ const focusedVfxOnlyFlags = [
   woodTanninVfxOnly,
 ];
 if (focusedVfxOnlyFlags.filter(Boolean).length > 1) {
-  throw new Error('HDR/volume/liquid-body/liquid-surface/liquid-motion/water-curvature/fire-flame/gas-body/gas-motion/powder-body/powder-light/powder-solid-contact/translucent-edge/organic-subsurface/wet-sediment/gas-light/liquid-solid-meniscus/metal-water-contact/water-metal-transmission/gas-core-depth/plasma-core/solid-body/platinum-body/ceramic-glaze/botanical-body/glass-body/oil-body/rock-roughness/rock-mesostructure/rock-weathered-facet/water-body/water-volume-recession/acid-body/soap-body/nitro-body/sooty-powder-body/thermite-body/snowpack-body/quartz-mesostructure/c4-body/deut-body/hydrogen-body/carbon-dioxide-body/fog-core-diffuse/radioactive-solid-body/iszs-crystalline/iszs-crystal-hierarchy/vibr-macro-relief/noble-gas-billow/noble-gas-prism/smoke-softness/smoke-billow-depth/botanical-mesostructure/wood-bark-relief/botanical-pigment/plant-lamina/plant-lobe-depth/plant-canopy-mass/plant-canopy-tissue/plant-canopy-interlock/plant-canopy-hierarchy/wood-tannin focused audits are mutually exclusive');
+  throw new Error('HDR/volume/liquid-body/liquid-surface/liquid-motion/water-curvature/fire-flame/cflm-cold-flame/gas-body/gas-motion/powder-body/powder-light/powder-solid-contact/translucent-edge/organic-subsurface/wet-sediment/gas-light/liquid-solid-meniscus/metal-water-contact/water-metal-transmission/gas-core-depth/plasma-core/solid-body/platinum-body/ceramic-glaze/botanical-body/glass-body/oil-body/rock-roughness/rock-mesostructure/rock-weathered-facet/water-body/water-volume-recession/acid-body/soap-body/nitro-body/sooty-powder-body/thermite-body/snowpack-body/quartz-mesostructure/c4-body/deut-body/hydrogen-body/carbon-dioxide-body/fog-core-diffuse/radioactive-solid-body/iszs-crystalline/iszs-crystal-hierarchy/vibr-macro-relief/noble-gas-billow/noble-gas-prism/smoke-softness/smoke-billow-depth/botanical-mesostructure/wood-bark-relief/botanical-pigment/plant-lamina/plant-lobe-depth/plant-canopy-mass/plant-canopy-tissue/plant-canopy-interlock/plant-canopy-hierarchy/wood-tannin focused audits are mutually exclusive');
 }
 
 const layoutOnly = process.argv.includes('--layout-only');
@@ -711,7 +718,7 @@ const liveScaleOnly = process.argv.includes('--live-scale-only');
 const productionBundle = process.argv.includes('--production-bundle');
 const usesProductionBundle = productionBundle || showcaseScreenshotOnly || composedRankOnly
   || candidateRankOnly || nitroBodyVfxOnly || hdrVfxOnly || volumeVfxOnly || plantCanopyInterlockVfxOnly || plantCanopyHierarchyVfxOnly
-  || liquidBodyVfxOnly || liquidSurfaceVfxOnly || liquidMotionVfxOnly || waterCurvatureVfxOnly || fireFlameVfxOnly || gasBodyVfxOnly || gasMotionVfxOnly
+  || liquidBodyVfxOnly || liquidSurfaceVfxOnly || liquidMotionVfxOnly || waterCurvatureVfxOnly || fireFlameVfxOnly || cflmColdFlameVfxOnly || gasBodyVfxOnly || gasMotionVfxOnly
   || powderBodyVfxOnly || powderLightVfxOnly || powderSolidContactVfxOnly || translucentEdgeVfxOnly || organicSubsurfaceVfxOnly || wetSedimentVfxOnly || gasLightVfxOnly || liquidSolidMeniscusVfxOnly || metalWaterContactVfxOnly || waterMetalTransmissionVfxOnly || gasCoreDepthVfxOnly || plasmaCoreVfxOnly || solidBodyVfxOnly || platinumBodyVfxOnly || ceramicGlazeVfxOnly || botanicalBodyVfxOnly || glassBodyVfxOnly || oilBodyVfxOnly || rockRoughnessVfxOnly || rockMesostructureVfxOnly || rockWeatheredFacetVfxOnly || waterBodyVfxOnly || waterVolumeRecessionVfxOnly || acidBodyVfxOnly || soapBodyVfxOnly || sootyPowderBodyVfxOnly || thermiteBodyVfxOnly || snowpackBodyVfxOnly || quartzMesostructureVfxOnly || c4BodyVfxOnly || bglaBodyVfxOnly || bglaClusterVfxOnly || deutBodyVfxOnly || hydrogenBodyVfxOnly || carbonDioxideBodyVfxOnly || fogCoreDiffuseVfxOnly || radioactiveSolidBodyVfxOnly || iszsCrystallineVfxOnly || iszsCrystalHierarchyVfxOnly || nobleGasBillowVfxOnly || nobleGasPrismVfxOnly || smokeSoftnessVfxOnly || smokeBillowDepthVfxOnly || botanicalMesostructureVfxOnly || woodBarkReliefVfxOnly || botanicalPigmentVfxOnly || plantLaminaVfxOnly || plantLobeDepthVfxOnly || woodTanninVfxOnly || cellularGraphicsOnly || sensorGraphicsOnly
   || unusualPowderGraphicsOnly || earthenPowderGraphicsOnly || explosivePowderGraphicsOnly || unusualSolidGraphicsOnly
   || deviceIdentityGraphicsOnly
@@ -755,6 +762,8 @@ const waterCurvatureVfxArgument = process.argv.find((argument) => argument.start
   ?.slice('--water-curvature-vfx='.length);
 const fireFlameVfxArgument = process.argv.find((argument) => argument.startsWith('--fire-flame-vfx='))
   ?.slice('--fire-flame-vfx='.length);
+const cflmColdFlameVfxArgument = process.argv.find((argument) => argument.startsWith('--cflm-cold-flame-vfx='))
+  ?.slice('--cflm-cold-flame-vfx='.length);
 const gasBodyVfxArgument = process.argv.find((argument) => argument.startsWith('--gas-body-vfx='))
   ?.slice('--gas-body-vfx='.length);
 const gasMotionVfxArgument = process.argv.find((argument) => argument.startsWith('--gas-motion-vfx='))
@@ -879,6 +888,9 @@ if (waterCurvatureVfxArgument !== undefined && !['0', '1', 'off', 'on'].includes
 }
 if (fireFlameVfxArgument !== undefined && !['0', '1', 'off', 'on'].includes(fireFlameVfxArgument)) {
   throw new Error('--fire-flame-vfx must be 0, 1, off, or on');
+}
+if (cflmColdFlameVfxArgument !== undefined && !['0', '1', 'off', 'on'].includes(cflmColdFlameVfxArgument)) {
+  throw new Error('--cflm-cold-flame-vfx must be 0, 1, off, or on');
 }
 if (gasBodyVfxArgument !== undefined && !['0', '1', 'off', 'on'].includes(gasBodyVfxArgument)) {
   throw new Error('--gas-body-vfx must be 0, 1, off, or on');
@@ -1145,6 +1157,20 @@ if (fireFlameVfxOnly && fireFlameVfxArgument !== undefined) {
 if (!fireFlameVfxOnly && focusedVfxOnlyFlags.some(Boolean)
   && fireFlameVfxArgument !== undefined) {
   throw new Error('focused VFX audits pin fireFlameVfx=0; omit --fire-flame-vfx');
+}
+if (cflmColdFlameVfxOnly && (volumeVfxArgument !== undefined || liquidBodyVfxArgument !== undefined
+  || liquidSurfaceVfxArgument !== undefined || liquidMotionVfxArgument !== undefined
+  || waterCurvatureVfxArgument !== undefined || gasBodyVfxArgument !== undefined
+  || gasMotionVfxArgument !== undefined || powderBodyVfxArgument !== undefined
+  || powderLightVfxArgument !== undefined)) {
+  throw new Error('--cflm-cold-flame-vfx-only owns its E04/E07 baseline and other VFX selectors; omit overrides');
+}
+if (cflmColdFlameVfxOnly && cflmColdFlameVfxArgument !== undefined) {
+  throw new Error('--cflm-cold-flame-vfx-only owns its off -> on -> off sequence; omit --cflm-cold-flame-vfx');
+}
+if (!cflmColdFlameVfxOnly && focusedVfxOnlyFlags.some(Boolean)
+  && cflmColdFlameVfxArgument !== undefined) {
+  throw new Error('focused VFX audits pin cflmColdFlameVfx=0; omit --cflm-cold-flame-vfx');
 }
 if (gasBodyVfxOnly && (volumeVfxArgument !== undefined || liquidBodyVfxArgument !== undefined)) {
   throw new Error('--gas-body-vfx-only fixes volumeVfx=0 and liquidBodyVfx=0; omit those flags');
@@ -1856,7 +1882,7 @@ async function auditMode(mode) {
   // canonical paused scene there and prove real material delivery/occupancy.
   const startsBlank = !canvasFallbackAudit && (hdrVfxOnly || volumeVfxOnly
     || plantCanopyHierarchyVfxOnly
-    || liquidBodyVfxOnly || liquidSurfaceVfxOnly || liquidMotionVfxOnly || waterCurvatureVfxOnly || fireFlameVfxOnly || gasBodyVfxOnly || gasMotionVfxOnly
+    || liquidBodyVfxOnly || liquidSurfaceVfxOnly || liquidMotionVfxOnly || waterCurvatureVfxOnly || fireFlameVfxOnly || cflmColdFlameVfxOnly || gasBodyVfxOnly || gasMotionVfxOnly
   || powderBodyVfxOnly || powderLightVfxOnly || powderSolidContactVfxOnly || translucentEdgeVfxOnly || organicSubsurfaceVfxOnly || wetSedimentVfxOnly || gasLightVfxOnly || liquidSolidMeniscusVfxOnly || metalWaterContactVfxOnly || waterMetalTransmissionVfxOnly || gasCoreDepthVfxOnly || oxygenVolumeFoldVfxOnly || plasmaCoreVfxOnly || solidBodyVfxOnly || platinumBodyVfxOnly || ceramicGlazeVfxOnly || botanicalBodyVfxOnly || glassBodyVfxOnly || oilBodyVfxOnly || rockRoughnessVfxOnly || rockMesostructureVfxOnly || rockWeatheredFacetVfxOnly || waterBodyVfxOnly || waterVolumeRecessionVfxOnly || acidBodyVfxOnly || soapBodyVfxOnly || sootyPowderBodyVfxOnly || thermiteBodyVfxOnly || snowpackBodyVfxOnly || quartzMesostructureVfxOnly || c4BodyVfxOnly || bglaBodyVfxOnly || bglaClusterVfxOnly || deutBodyVfxOnly || hydrogenBodyVfxOnly || carbonDioxideBodyVfxOnly || fogCoreDiffuseVfxOnly || radioactiveSolidBodyVfxOnly || iszsCrystallineVfxOnly || iszsCrystalHierarchyVfxOnly || nobleGasBillowVfxOnly || nobleGasPrismVfxOnly || smokeSoftnessVfxOnly || smokeBillowDepthVfxOnly || botanicalMesostructureVfxOnly || woodBarkReliefVfxOnly || botanicalPigmentVfxOnly || plantLaminaVfxOnly || plantLobeDepthVfxOnly || woodTanninVfxOnly || cellularGraphicsOnly || sensorGraphicsOnly
     || unusualPowderGraphicsOnly || earthenPowderGraphicsOnly || explosivePowderGraphicsOnly
     || unusualSolidGraphicsOnly || deviceIdentityGraphicsOnly || fieldProfileGraphicsOnly
@@ -1893,6 +1919,11 @@ async function auditMode(mode) {
     ...(focusedVfxOnlyFlags.some(Boolean)
       ? { fireFlameVfx: '0' }
       : fireFlameVfxArgument ? { fireFlameVfx: fireFlameVfxArgument } : {}),
+    // E68 is independently reload-toggled only by its focused route. Every
+    // other focused audit, notably E07, remains an explicit byte-stable control.
+    ...(focusedVfxOnlyFlags.some(Boolean)
+      ? { cflmColdFlameVfx: '0' }
+      : cflmColdFlameVfxArgument ? { cflmColdFlameVfx: cflmColdFlameVfxArgument } : {}),
     ...(gasBodyVfxArgument ? { gasBodyVfx: gasBodyVfxArgument } : {}),
     ...(gasMotionVfxArgument ? { gasMotionVfx: gasMotionVfxArgument } : {}),
     ...(powderBodyVfxArgument ? { powderBodyVfx: powderBodyVfxArgument } : {}),
@@ -2425,6 +2456,13 @@ async function auditMode(mode) {
       assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
       cdp.close();
       return { backend: mode, fireFlameVfx, browserErrors: errors.length };
+    }
+    if (cflmColdFlameVfxOnly) {
+      assert(mode === 'webgl', '--cflm-cold-flame-vfx-only requires --webgl-only');
+      const cflmColdFlameVfx = await auditCflmColdFlameVfxExperiment(cdp, mode, dpr);
+      assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
+      cdp.close();
+      return { backend: mode, cflmColdFlameVfx, browserErrors: errors.length };
     }
     if (gasBodyVfxOnly) {
       assert(mode === 'webgl', '--gas-body-vfx-only requires --webgl-only');
@@ -27613,6 +27651,325 @@ async function writeGasMotionVfxScreenshots(source, scale, variants) {
   return paths;
 }
 
+/**
+ * E68 is deliberately a child of the already-audited E04/E07 AtmosphereField
+ * path.  This route changes only its RGB selector while retaining the same
+ * directed, reversed, and still fixture so a CFLM-only flow fold cannot claim
+ * support, emission, or velocity ownership.
+ */
+const CFLM_COLD_FLAME_TOPOLOGY_RGB_PEAK = 48;
+
+async function auditCflmColdFlameVfxExperiment(cdp, mode, dpr) {
+  const scales = [];
+  const requestedScales = renderScaleArgument === undefined
+    ? VOLUME_VFX_SCALES : [Number(renderScaleArgument)];
+  for (const scale of requestedScales) {
+    if (scale === 8) continue;
+    const variants = {};
+    for (const fixtureMode of ['directed', 'reversed', 'still']) {
+      for (const enabled of [false, true, false]) {
+        const key = `${fixtureMode}${enabled ? 'On' : variants[`${fixtureMode}Off`] ? 'Repeat' : 'Off'}`;
+        variants[key] = await navigateCflmColdFlameVfxState(
+          cdp, mode, scale, fixtureMode, enabled, key,
+        );
+      }
+    }
+    const fixture = variants.directedOff.fixture;
+    assert(Object.values(variants).every((variant) => JSON.stringify(variant.fixture) === JSON.stringify(fixture)),
+      `E68 ${scale}x fixture metadata changed`);
+    // Persist visual evidence before calibrated response assertions so a failed
+    // tuning run still leaves every directed/reversed/still state inspectable.
+    const screenshotBase = screenshotRequest ?? path.join(tmpdir(), 'anifor-e68-cflm-cold-flame.png');
+    const screenshots = await writeCflmColdFlameVfxScreenshots(screenshotBase, scale, variants);
+    for (const [label, variant] of Object.entries(variants)) {
+      assertGeometry(variant.geometry, `E68 ${label} ${scale}x`, scale);
+      assert(variant.geometry.backend.backend === 'webgl' && variant.hdrPipeline?.state === 'active'
+        && variant.hdrPipeline.gasBodyVfx === 'active' && variant.hdrPipeline.gasMotionVfx === 'active'
+        && variant.hdrPipeline.cflmColdFlameVfx === (label.endsWith('On') ? 'active' : 'inactive'),
+      `E68 ${label} ${scale}x selector/HDR state resolved incorrectly (${JSON.stringify(variant.hdrPipeline)})`);
+      assertGasMotionRawTopology(variant.rawControls, `E68 ${label} ${scale}x`);
+      const fixtureMode = label.startsWith('directed') ? 'directed'
+        : label.startsWith('reversed') ? 'reversed' : 'still';
+      assertGasMotionVelocityMetadata(
+        variant.velocity, fixture, fixtureMode, `E68 ${label} ${scale}x`,
+      );
+      assertCflmColdFlameVelocityMetadata(
+        variant.velocity, fixture, fixtureMode, `E68 ${label} ${scale}x`,
+      );
+      assertGasMotionFieldMetadata(
+        variant.motion, fixture, fixtureMode, `E68 ${label} ${scale}x`,
+      );
+      assertCflmColdFlameFieldMetadata(
+        variant.motion, fixture, fixtureMode, `E68 ${label} ${scale}x`,
+      );
+    }
+    for (const fixtureMode of ['directed', 'reversed', 'still']) {
+      const off = variants[`${fixtureMode}Off`];
+      const on = variants[`${fixtureMode}On`];
+      const repeat = variants[`${fixtureMode}Repeat`];
+      for (const [leftName, left, rightName, right] of [
+        ['off', off, 'on', on], ['off', off, 'repeat', repeat],
+      ]) {
+        assertCanvasRectsEqual(left.geometry.canvas, right.geometry.canvas,
+          `E68 ${scale}x ${fixtureMode} ${leftName}/${rightName} CSS geometry`);
+        assert(JSON.stringify(left.geometry.backing) === JSON.stringify(right.geometry.backing),
+          `E68 ${scale}x ${fixtureMode} ${leftName}/${rightName} backing changed`);
+        assertHdrVfxSemanticEquality(left.semantic, right.semantic,
+          `E68 ${scale}x ${fixtureMode} ${leftName}/${rightName}`);
+        assertGasMotionAtmosphereEquality(left.atmosphere, right.atmosphere,
+          `E68 ${scale}x ${fixtureMode} ${leftName}/${rightName}`);
+        assert(JSON.stringify(left.planes) === JSON.stringify(right.planes),
+          `E68 ${scale}x ${fixtureMode} selector changed semantic/emission/velocity/wall planes (${JSON.stringify({ left: left.planes, right: right.planes })})`);
+        assertVolumeVfxBackingInvariant(left.backing, right.backing,
+          `E68 ${scale}x ${fixtureMode} ${leftName}/${rightName}`);
+        assertCflmColdFlameRawControlInvariant(left.rawControls, right.rawControls,
+          `E68 ${scale}x ${fixtureMode} ${leftName}/${rightName}`);
+      }
+      assert(off.capture.capture.data === repeat.capture.capture.data,
+        `E68 ${scale}x ${fixtureMode} disabled framebuffer did not restore byte-for-byte`);
+    }
+    const targetRegions = cflmColdFlameTargetRegions(fixture);
+    const controlRegions = cflmColdFlameControlRegions(fixture);
+    const regions = [...targetRegions, ...controlRegions];
+    const sampleMode = async (fixtureMode) => {
+      const off = variants[`${fixtureMode}Off`];
+      const on = variants[`${fixtureMode}On`];
+      const repeat = variants[`${fixtureMode}Repeat`];
+      const samples = await sampleBackdropRefractionRegions(cdp, {
+        straight: off.capture.capture.data, refracted: on.capture.capture.data,
+        repeatedStraight: repeat.capture.capture.data,
+      }, regions, off.capture.canvasRect);
+      return samples.map((sample, index) => ({ ...sample, ...regions[index] }));
+    };
+    const directed = await sampleMode('directed');
+    const reversed = await sampleMode('reversed');
+    const still = await sampleMode('still');
+    const targetCount = targetRegions.length;
+    const directedTargets = directed.slice(0, targetCount);
+    const reversedTargets = reversed.slice(0, targetCount);
+    const stillTargets = still.slice(0, targetCount);
+    const directedControls = directed.slice(targetCount);
+    const reversedControls = reversed.slice(targetCount);
+    const stillControls = still.slice(targetCount);
+    const allSamples = [...directed, ...reversed, ...still];
+    assert(allSamples.every((sample) => sample.repeatRgbPeak === 0),
+      `E68 ${scale}x off/on/off capture was not deterministic (${JSON.stringify(allSamples)})`);
+    // Provisional envelopes deliberately leave calibration headroom while
+    // rejecting inert, uniform, or runaway additions. The parent fixture pins
+    // the selector to coherent CFLM flow, so the still plane must remain raw.
+    for (const [name, targets, controls] of [
+      ['directed', directedTargets, directedControls], ['reversed', reversedTargets, reversedControls],
+    ]) {
+      const chroma = targets.map(cflmColdFlameChromaProjection);
+      assert(targets.find((sample) => sample.zone === 'core')?.rgbRms >= 0.8
+        && targets.filter((sample) => sample.rgbRms >= 0.3).length >= 4
+        && targets.every((sample) => sample.rgbPeak <= 64 && sample.rgbRms <= 32)
+        && Math.max(...chroma) >= 0.5 && Math.min(...chroma) <= -0.5,
+      `E68 ${scale}x ${name} CFLM lacked a bounded broad bipolar body fold (${JSON.stringify({ targets, chroma })})`);
+      const exactControls = controls.filter((sample) =>
+        sample.name !== 'CFLMHole' && sample.name !== 'CFLMChannel'
+          && sample.name !== 'CFLMMetalContactSolid'
+          && sample.name !== 'CFLMWaterContactLiquid');
+      const topologyControls = controls.filter((sample) =>
+        sample.name === 'CFLMHole' || sample.name === 'CFLMChannel');
+      const contactControls = controls.filter((sample) =>
+        sample.name === 'CFLMMetalContactSolid'
+          || sample.name === 'CFLMWaterContactLiquid');
+      assert(exactControls.every((sample) => sample.rgbPeak === 0),
+        `E68 ${scale}x ${name} changed sparse/foreign/contact/blank controls (${JSON.stringify(exactControls)})`);
+      assert(contactControls.every((sample) => sample.rgbPeak <= 1 && sample.rgbRms <= 0.15),
+        `E68 ${scale}x ${name} exceeded bounded CFLM contact-side composite spill (${JSON.stringify(contactControls)})`);
+      assert(topologyControls.every((sample) =>
+        sample.rgbPeak <= CFLM_COLD_FLAME_TOPOLOGY_RGB_PEAK
+          && sample.rgbRms <= 16),
+        `E68 ${scale}x ${name} exceeded bounded atmosphere-owned hole/channel RGB (${JSON.stringify(topologyControls)})`);
+    }
+    assert(still.every((sample) => sample.rgbPeak === 0),
+      `E68 ${scale}x stationary CFLM unexpectedly received a flow fold (${JSON.stringify(still)})`);
+    const reversalPairs = directedTargets.map((directedSample) => {
+      const reversedSample = reversedTargets.find((sample) => sample.zone === directedSample.zone);
+      const directedChroma = cflmColdFlameChromaProjection(directedSample);
+      const reversedChroma = cflmColdFlameChromaProjection(reversedSample);
+      return { zone: directedSample.zone, directedChroma, reversedChroma,
+        separation: Math.abs(directedChroma - reversedChroma),
+        reversed: directedChroma * reversedChroma < 0 };
+    });
+    assert(reversalPairs.filter((pair) => pair.reversed && pair.separation >= 0.65).length >= 2
+      && reversalPairs.reduce((sum, pair) => sum + pair.separation, 0) >= 2.5,
+    `E68 ${scale}x reversing CFLM velocity did not reverse the cyan/violet fold (${JSON.stringify(reversalPairs)})`);
+    scales.push({ scale, backing: variants.directedOff.geometry.backing, directedTargets,
+      reversedTargets, stillTargets, directedControls, reversedControls, stillControls, screenshots });
+  }
+  let crossScale;
+  if (scales.length > 1) {
+    const summaries = scales.map((entry) => {
+      const primaryZones = new Set(['core', 'left', 'right', 'top', 'bottom']);
+      const directed = entry.directedTargets.filter((sample) => primaryZones.has(sample.zone));
+      const reversed = entry.reversedTargets.filter((sample) => primaryZones.has(sample.zone));
+      const coreDirected = directed.find((sample) => sample.zone === 'core');
+      const coreReversed = reversed.find((sample) => sample.zone === 'core');
+      const all = [...directed, ...reversed];
+      const projections = all.map(cflmColdFlameChromaProjection);
+      return { scale: entry.scale,
+        bodyRms: all.reduce((sum, sample) => sum + sample.rgbRms, 0) / all.length,
+        spectralSpan: Math.max(...projections) - Math.min(...projections),
+        directedCoreChroma: cflmColdFlameChromaProjection(coreDirected),
+        reversedCoreChroma: cflmColdFlameChromaProjection(coreReversed) };
+    });
+    const boundedRatio = (values, limit) => Math.max(...values) / Math.min(...values) <= limit;
+    assert(summaries.every((entry) => entry.directedCoreChroma >= 0.5
+      && entry.reversedCoreChroma <= -0.5)
+      && boundedRatio(summaries.map((entry) => entry.bodyRms), 2.75)
+      && boundedRatio(summaries.map((entry) => entry.spectralSpan), 2.75),
+    `E68 cross-scale CFLM fold drifted in magnitude or core polarity (${JSON.stringify(summaries)})`);
+    crossScale = summaries;
+  }
+  const trueEightX = await auditEightXCflmColdFlameVfxExclusion(cdp, dpr);
+  return { scales, crossScale, trueEightXExcluded: true, trueEightX };
+}
+
+function cflmColdFlameChromaProjection(sample) {
+  return (sample?.responseRgb?.[1] ?? 0) - (sample?.responseRgb?.[0] ?? 0);
+}
+
+function assertCflmColdFlameRawControlInvariant(left, right, label) {
+  const atmosphereOwnedTopology = new Set(['CFLMHole', 'CFLMChannel']);
+  const same = left.length === right.length && left.every((point, index) => {
+    const candidate = right[index];
+    if (point.name !== candidate.name || point.x !== candidate.x || point.y !== candidate.y
+      || point.rgba[3] !== candidate.rgba[3]) return false;
+    const peak = Math.max(...point.rgba.slice(0, 3).map((value, channel) =>
+      Math.abs(value - candidate.rgba[channel])));
+    return atmosphereOwnedTopology.has(point.name)
+      ? peak <= CFLM_COLD_FLAME_TOPOLOGY_RGB_PEAK : peak === 0;
+  });
+  assert(same,
+    `${label}: CFLM fold escaped exact controls or bounded field-owned topology RGB (${JSON.stringify({ left, right })})`);
+}
+
+async function writeCflmColdFlameVfxScreenshots(source, scale, variants) {
+  const paths = {};
+  for (const [variant, capture] of Object.entries(variants)) {
+    paths[variant] = variantScreenshotPath(source, `cflm-cold-flame-${scale}x-${variant}`);
+    await writeFile(paths[variant], Buffer.from(capture.capture.capture.data, 'base64'));
+  }
+  return paths;
+}
+
+async function sampleCflmColdFlamePlanes(cdp) {
+  return evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    if (typeof audit?.cell !== 'function' || typeof audit?.wall !== 'function'
+      || typeof audit?.velocity !== 'function' || typeof audit?.renderedVelocity !== 'function'
+      || typeof audit?.gasIdentityStyle !== 'function'
+      || typeof audit?.atmosphereMotion !== 'function'
+      || typeof audit?.emissionFieldAlpha !== 'function') {
+      throw new Error('E68 semantic/emission/style/motion/velocity audit API unavailable');
+    }
+    let material = 2166136261, wall = 2166136261, velocity = 2166136261;
+    let style = 2166136261, motion = 2166136261, emission = 2166136261;
+    let emissionNonzero = 0, emissionSum = 0;
+    for (let y = 0; y < audit.height; y++) for (let x = 0; x < audit.width; x++) {
+      const mix = (hash, value) => Math.imul(hash ^ (value & 255), 16777619) >>> 0;
+      material = mix(material, audit.cell(x, y)); wall = mix(wall, audit.wall(x, y));
+      const raw = audit.velocity(x, y), staged = audit.renderedVelocity(x, y);
+      velocity = mix(mix(mix(mix(velocity, raw[0]), raw[1]), staged[0]), staged[1]);
+      style = mix(style, audit.gasIdentityStyle(x, y));
+      const flow = audit.atmosphereMotion(x, y);
+      motion = mix(mix(mix(motion, flow[0]), flow[1]), flow[2]);
+      const alpha = Math.round(audit.emissionFieldAlpha(x, y));
+      emission = mix(emission, alpha); emissionNonzero += Number(alpha !== 0); emissionSum += alpha;
+    }
+    return { material, wall, velocity, style, motion, emission, emissionNonzero, emissionSum };
+  })()`);
+}
+
+async function navigateCflmColdFlameVfxState(cdp, mode, scale, fixtureMode, enabled, label) {
+  const query = new URLSearchParams({
+    scene: 'render-lab', inputAudit: '1', blankAudit: '1', auditStage: 'blank',
+    gasMotionVfxAudit: '1', renderScale: String(scale), renderLook: 'realistic',
+    volumeVfx: '0', liquidBodyVfx: '0', liquidSurfaceVfx: '0', liquidMotionVfx: '0',
+    waterCurvatureVfx: '0', fireFlameVfx: '0', gasBodyVfx: '1', gasMotionVfx: '1',
+    cflmColdFlameVfx: enabled ? '1' : '0', powderBodyVfx: '0', powderLightVfx: '0',
+    organicSubsurfaceVfx: '0', wetSedimentVfx: '0', gasLightVfx: '0', liquidSolidMeniscusVfx: '0',
+    gasCoreDepthVfx: '0', nobleGasBillowVfx: '0', nobleGasPrismVfx: '0', smokeSoftnessVfx: '0',
+    smokeBillowDepthVfx: '0', plasmaCoreVfx: '0', solidBodyVfx: '0', platinumBodyVfx: '0',
+    ceramicGlazeVfx: '0', botanicalBodyVfx: '0', glassBodyVfx: '0', oilBodyVfx: '0',
+    rockRoughnessVfx: '0', waterBodyVfx: '0',
+  });
+  await cdp.send('Page.navigate', { url: `${AUDIT_BASE_URL}?${query}` });
+  await waitFor(() => evaluate(cdp, `(() => {
+    const p = new URLSearchParams(location.search);
+    return p.get('gasMotionVfxAudit') === '1' && p.get('renderScale') === ${JSON.stringify(String(scale))}
+      && p.get('gasBodyVfx') === '1' && p.get('gasMotionVfx') === '1'
+      && p.get('cflmColdFlameVfx') === ${JSON.stringify(enabled ? '1' : '0')}
+      && typeof window.__ANIFOR_INPUT_AUDIT__?.prepareGasMotionVfxFixture === 'function';
+  })()`), 15_000, `E68 ${label} ${scale}x page`);
+  await waitFor(() => evaluate(cdp,
+    `window.__ANIFOR_INPUT_AUDIT__.backend().backend === ${JSON.stringify(mode)}`),
+  15_000, `E68 ${label} ${scale}x backend`);
+  const fixture = await evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    audit.prepareGasMotionVfxFixture(${JSON.stringify(fixtureMode)}, true); audit.resetView();
+    return audit.gasMotionVfxFixture();
+  })()`);
+  const velocity = await waitFor(async () => {
+    const value = await sampleGasMotionVelocityMetadata(cdp, fixtureMode);
+    try { assertGasMotionVelocityMetadata(value, fixture, fixtureMode, `E68 ${label} ${scale}x readiness`); return value; } catch { return undefined; }
+  }, 8_000, `E68 ${label} ${scale}x velocity staging`);
+  const motion = await waitFor(async () => {
+    const value = await sampleGasMotionFieldMetadata(cdp, fixtureMode);
+    try { assertGasMotionFieldMetadata(value, fixture, fixtureMode, `E68 ${label} ${scale}x readiness`); return value; } catch { return undefined; }
+  }, 8_000, `E68 ${label} ${scale}x atmosphere staging`);
+  const hdrPipeline = await evaluate(cdp, `(() => {
+    const canvas = document.querySelector('.semantic-field-canvas');
+    return canvas ? { state: canvas.dataset.hdrPipeline, reason: canvas.dataset.hdrPipelineReason,
+      bloomBacking: canvas.dataset.bloomBacking, gasBodyVfx: canvas.dataset.gasBodyVfx,
+      gasMotionVfx: canvas.dataset.gasMotionVfx, cflmColdFlameVfx: canvas.dataset.cflmColdFlameVfx } : undefined;
+  })()`);
+  const capture = await waitForStablePageCapture(cdp, `E68 ${label} ${scale}x framebuffer`, scale === 4 ? 25_000 : undefined);
+  return { fixture, velocity, motion, capture, geometry: await metrics(cdp), semantic: await hdrVfxSemanticDigest(cdp),
+    atmosphere: await sampleGasMotionAtmosphereSupport(cdp), planes: await sampleCflmColdFlamePlanes(cdp),
+    backing: await sampleVolumeVfxCanvasAlphaSupport(cdp),
+    rawControls: await sampleVolumeVfxRawWorldPixels(
+      cdp, cflmColdFlameRawControlPoints(fixture),
+    ), hdrPipeline };
+}
+
+async function auditEightXCflmColdFlameVfxExclusion(cdp, dpr) {
+  await setDesktopMetrics(cdp, 1280, 720, dpr);
+  const query = new URLSearchParams({ scene: 'render-lab', inputAudit: '1', blankAudit: '1',
+    auditStage: 'eight-cflm-cold-flame', gasMotionVfxAudit: '1', renderScale: '8', renderLook: 'realistic',
+    volumeVfx: '0', liquidBodyVfx: '0', liquidSurfaceVfx: '0', liquidMotionVfx: '0', waterCurvatureVfx: '0',
+    fireFlameVfx: '0', gasBodyVfx: '1', gasMotionVfx: '1', cflmColdFlameVfx: '1' });
+  await cdp.send('Page.navigate', { url: `${AUDIT_BASE_URL}?${query}` });
+  const deadline = Date.now() + EIGHT_X_PRESENTATION_DEADLINE_MS;
+  await waitFor(() => evaluate(cdp, `new URLSearchParams(location.search).get('cflmColdFlameVfx') === '1'
+    && Boolean(window.__ANIFOR_INPUT_AUDIT__)`), remainingDeadlineMs(deadline, 'true-8x E68 API'), 'true-8x E68 API');
+  const backend = await waitForEightXTerminalBackend(cdp, 'true-8x E68', deadline);
+  assertEightXWebGLBackend(backend, 'true-8x E68');
+  const geometry = await waitForStableCanvas(cdp, 1280, 720, undefined,
+    Math.min(45_000, remainingDeadlineMs(deadline, 'true-8x E68 geometry')), 'true-8x E68 geometry');
+  assert(geometry.backing.width === WORLD_WIDTH * 8 && geometry.backing.height === WORLD_HEIGHT * 8
+    && geometry.outputScale === '8', 'true-8x E68 lost exact backing');
+  const state = await evaluate(cdp, `(() => { const canvas = document.querySelector('canvas.semantic-field-canvas');
+    return canvas ? { renderer: canvas.dataset.renderer, cflmColdFlameVfx: canvas.dataset.cflmColdFlameVfx,
+      gasBodyVfx: canvas.dataset.gasBodyVfx, gasMotionVfx: canvas.dataset.gasMotionVfx,
+      hdr: canvas.dataset.hdrPipeline, reason: canvas.dataset.hdrPipelineReason, bloom: canvas.dataset.bloomBacking ?? null } : undefined; })()`);
+  assert(state?.renderer === 'semantic-field-webgl' && state.cflmColdFlameVfx === 'inactive'
+    && state.gasBodyVfx === 'inactive' && state.gasMotionVfx === 'inactive'
+    && state.hdr === 'inactive' && state.reason === 'scale-8' && state.bloom === null,
+  `true-8x E68 selector/HDR/resource exclusion failed: ${JSON.stringify(state)}`);
+  const materialPlane = await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.materialPlaneDigest()');
+  assert(materialPlane.occupied === 0, `true-8x E68 unexpectedly uploaded its fixture: ${JSON.stringify(materialPlane)}`);
+  const semanticBefore = await hdrVfxSemanticDigest(cdp);
+  const budget = remainingDeadlineMs(deadline, 'true-8x E68 GPU completion');
+  const timing = await auditWebGLPresentationTiming(cdp, 1, Math.min(12_000, budget), budget, 1);
+  assert(timing.source === 'gpu-fence', `true-8x E68 did not complete a real GPU fence: ${JSON.stringify(timing)}`);
+  assertHdrVfxSemanticEquality(semanticBefore, await hdrVfxSemanticDigest(cdp), 'true-8x E68 GPU completion');
+  return { geometry, backend, state, materialPlane, fixtureUploaded: false, semanticStable: true, timing };
+}
+
 function gasMotionTargetRegions(fixture) {
   return fixture.cards.flatMap((card) => [
     { name: `${card.code}Core`, code: card.code, zone: 'core', ...rectRegion(card.coreProbe) },
@@ -27652,6 +28009,42 @@ function gasMotionControlRegions(fixture) {
     { name: 'liquid', ...rectRegion(fixture.liquidContact.liquid) },
     point('nativeWall', fixture.nativeWall),
     { name: 'guardedBlank', ...rectRegion(fixture.guardedBlank) },
+  ];
+}
+
+function cflmColdFlameTargetRegions(fixture) {
+  const edge = (name, rect, zone) => ({ name, code: 'CFLM', zone,
+    x: rect.x + rect.width - 3, y: rect.y + rect.height / 2,
+    radiusX: 2.25, radiusY: Math.max(0.35, rect.height / 2 - 4.25) });
+  const wallGas = fixture.cflmContacts.wall.gas;
+  return [
+    ...gasMotionTargetRegions(fixture).filter((region) => region.code === 'CFLM'),
+    edge('CFLMMetalContactGas', fixture.cflmContacts.metal.gas, 'metal-contact'),
+    edge('CFLMWaterContactGas', fixture.cflmContacts.water.gas, 'water-contact'),
+    { name: 'CFLMWallBody', code: 'CFLM', zone: 'wall-body',
+      x: wallGas.x + 7, y: wallGas.y + wallGas.height / 2,
+      radiusX: 3.25, radiusY: Math.max(0.35, wallGas.height / 2 - 5.25) },
+  ];
+}
+
+function cflmColdFlameControlRegions(fixture) {
+  const wall = fixture.cflmContacts.wall.wallAnchor;
+  return [
+    ...gasMotionControlRegions(fixture),
+    { name: 'CFLMMetalContactSolid', ...rectRegion(fixture.cflmContacts.metal.solid) },
+    { name: 'CFLMWaterContactLiquid', ...rectRegion(fixture.cflmContacts.water.liquid) },
+    { name: 'CFLMNativeWall', x: wall.x + 0.5, y: wall.y + 0.5, radius: 0.35 },
+  ];
+}
+
+function cflmColdFlameRawControlPoints(fixture) {
+  const centre = (name, rect) => ({ name,
+    x: Math.floor(rect.x + rect.width / 2), y: Math.floor(rect.y + rect.height / 2) });
+  return [
+    ...gasMotionRawControlPoints(fixture),
+    centre('CFLMMetalContactSolid', fixture.cflmContacts.metal.solid),
+    centre('CFLMWaterContactLiquid', fixture.cflmContacts.water.liquid),
+    { name: 'CFLMNativeWall', ...fixture.cflmContacts.wall.wallAnchor },
   ];
 }
 
@@ -27757,7 +28150,9 @@ function assertGasMotionDirectionality(directed, reversed, scale) {
     // CFLM's body is already HDR-bright, so E07 deliberately carries motion
     // through a bipolar cyan/amber shift. Test the red-axis reversal directly;
     // Rec.709 mean can cancel even while that designed hue direction is clear.
-    { code: 'CFLM', first: 'bottom', second: 'top', channel: 0, expectedSign: -1, minimum: 0.03, reversal: 0.06 },
+    // One-sample 1x output quantizes its smaller reversed shoulder to 0.02;
+    // retain the independent 0.06 paired-reversal margin against inert output.
+    { code: 'CFLM', first: 'bottom', second: 'top', channel: 0, expectedSign: -1, minimum: 0.015, reversal: 0.06 },
   ].map(({ code, first, second, channel, expectedSign, minimum, reversal }) => {
     const directFirst = target(directed, code, first);
     const directSecond = target(directed, code, second);
@@ -27809,6 +28204,26 @@ function assertGasMotionVelocityMetadata(metadata, fixture, mode, label) {
   }
 }
 
+function assertCflmColdFlameVelocityMetadata(metadata, fixture, mode, label) {
+  const expectedY = mode === 'still' ? 0
+    : fixture.cflmContacts.velocity.y * (mode === 'reversed' ? -1 : 1);
+  const rects = [
+    fixture.cflmContacts.metal.gas,
+    fixture.cflmContacts.water.gas,
+    fixture.cflmContacts.wall.gas,
+  ];
+  assert(metadata.cflmContacts?.length === rects.length
+    && metadata.cflmContacts.every((entry, index) => {
+      const ownerCells = rects[index].width * rects[index].height;
+      return entry.ownerCells === ownerCells && entry.uniform && entry.stagedUniform
+        && entry.velocityCells === (mode === 'still' ? 0 : ownerCells)
+        && entry.stagedVelocityCells === (mode === 'still' ? 0 : ownerCells)
+        && entry.velocityX === 0 && entry.velocityY === expectedY
+        && entry.stagedVelocityX === 0 && entry.stagedVelocityY === expectedY;
+    }),
+  `${label}: exact CFLM contact velocity metadata was invalid (${JSON.stringify(metadata.cflmContacts)})`);
+}
+
 function assertGasMotionFieldMetadata(metadata, fixture, mode, label) {
   assert(metadata.mode === mode && metadata.cards.length === fixture.cards.length
     && metadata.counterflow.every((sample) => sample.identity > 0
@@ -27831,6 +28246,21 @@ function assertGasMotionFieldMetadata(metadata, fixture, mode, label) {
   }
 }
 
+function assertCflmColdFlameFieldMetadata(metadata, fixture, mode, label) {
+  const direction = mode === 'reversed' ? -1 : 1;
+  const expected = mode === 'still'
+    ? [0, 0, 0]
+    : [fixture.cflmContacts.velocity.x * direction,
+      fixture.cflmContacts.velocity.y * direction, 255];
+  assert(metadata.cflmContacts?.length === 3
+    && metadata.cflmContacts.every((entry) => entry.identity > 0
+      && entry.flow[0] === expected[0] && entry.flow[1] === expected[1]
+      && entry.flow[2] === expected[2]),
+  `${label}: exact CFLM contact atmosphere motion was invalid (${JSON.stringify({
+    contacts: metadata.cflmContacts, expected,
+  })})`);
+}
+
 async function sampleGasMotionFieldMetadata(cdp, mode) {
   return evaluate(cdp, `(() => {
     const audit = window.__ANIFOR_INPUT_AUDIT__;
@@ -27843,14 +28273,23 @@ async function sampleGasMotionFieldMetadata(cdp, mode) {
       x: Math.floor(rect.x + rect.width / 2),
       y: Math.floor(rect.y + rect.height / 2),
     });
-    const sample = (rect) => {
-      const point = centre(rect);
+    const samplePoint = (point) => {
       return { point, identity: audit.gasIdentityStyle(point.x, point.y),
         flow: audit.atmosphereMotion(point.x, point.y) };
     };
+    const sample = (rect) => samplePoint(centre(rect));
     return {
       mode: ${JSON.stringify(mode)},
       cards: fixture.cards.map((card) => ({ code: card.code, ...sample(card.coreProbe) })),
+      cflmContacts: [
+        { code: 'metal', ...sample(fixture.cflmContacts.metal.gas) },
+        { code: 'water', ...sample(fixture.cflmContacts.water.gas) },
+        { code: 'wall', ...samplePoint({
+          x: fixture.cflmContacts.wall.gas.x + 7,
+          y: Math.floor(fixture.cflmContacts.wall.gas.y
+            + fixture.cflmContacts.wall.gas.height / 2),
+        }) },
+      ],
       counterflow: [sample(fixture.counterflow.leftProbe), sample(fixture.counterflow.rightProbe)],
       still: sample(fixture.stillCloud.coreProbe),
       protected: [
@@ -27895,6 +28334,32 @@ async function sampleGasMotionVelocityMetadata(cdp, mode) {
       return velocity[0] === 0 && velocity[1] === 0
         && staged[0] === 0 && staged[1] === 0;
     };
+    const summarizeExactRect = (rect, material) => {
+      let ownerCells = 0, velocityCells = 0, stagedVelocityCells = 0;
+      let velocityX = 0, velocityY = 0, stagedVelocityX = 0, stagedVelocityY = 0;
+      let uniform = true, stagedUniform = true;
+      for (let y = rect.y; y < rect.y + rect.height; y++) {
+        for (let x = rect.x; x < rect.x + rect.width; x++) {
+          if (audit.cell(x, y) !== material) continue;
+          ownerCells++;
+          const velocity = velocityAt(x, y), staged = stagedAt(x, y);
+          if (velocity[0] !== 0 || velocity[1] !== 0) velocityCells++;
+          if (staged[0] !== 0 || staged[1] !== 0) stagedVelocityCells++;
+          if (ownerCells === 1) {
+            velocityX = velocity[0]; velocityY = velocity[1];
+            stagedVelocityX = staged[0]; stagedVelocityY = staged[1];
+          } else {
+            uniform = uniform && velocity[0] === velocityX && velocity[1] === velocityY;
+            stagedUniform = stagedUniform
+              && staged[0] === stagedVelocityX && staged[1] === stagedVelocityY;
+          }
+        }
+      }
+      return { ownerCells, velocityCells, stagedVelocityCells, velocityX, velocityY,
+        stagedVelocityX, stagedVelocityY, uniform, stagedUniform };
+    };
+    const cflmMaterial = fixture.cards.find((card) => card.code === 'CFLM')?.material;
+    if (!Number.isInteger(cflmMaterial)) throw new Error('E68 CFLM fixture owner unavailable');
     return {
       mode: ${JSON.stringify(mode)},
       cards: fixture.cards.map((card) => {
@@ -27955,6 +28420,17 @@ async function sampleGasMotionVelocityMetadata(cdp, mode) {
           channelsZero: zeroRect(fixture.counterflow.openChannel)
             && stagedZeroRect(fixture.counterflow.openChannel) };
       })(),
+      cflmContacts: [
+        { code: 'metal', ...summarizeExactRect(
+          fixture.cflmContacts.metal.gas, cflmMaterial,
+        ) },
+        { code: 'water', ...summarizeExactRect(
+          fixture.cflmContacts.water.gas, cflmMaterial,
+        ) },
+        { code: 'wall', ...summarizeExactRect(
+          fixture.cflmContacts.wall.gas, cflmMaterial,
+        ) },
+      ],
       stillZero: zeroRect(fixture.stillCloud.body) && stagedZeroRect(fixture.stillCloud.body),
       sparseZero: fixture.sparseChains.every((chain) => chain.carriers.every(zeroPoint)
         && zeroPoint(chain.midpoint) && zeroPoint(chain.gap) && zeroPoint(chain.isolated)),
@@ -27982,7 +28458,7 @@ async function navigateGasMotionVfxState(cdp, mode, scale, fixtureMode, enabled,
     scene: 'render-lab', inputAudit: '1', blankAudit: '1', auditStage: 'blank',
     gasMotionVfxAudit: '1', renderScale: String(scale), renderLook: 'realistic',
     volumeVfx: '0', liquidBodyVfx: '0', liquidSurfaceVfx: '0',
-    gasBodyVfx: '1', gasMotionVfx: enabled ? '1' : '0',
+    gasBodyVfx: '1', gasMotionVfx: enabled ? '1' : '0', cflmColdFlameVfx: '0',
     powderBodyVfx: '0', powderLightVfx: '0', organicSubsurfaceVfx: '0', wetSedimentVfx: '0', gasLightVfx: '0', liquidSolidMeniscusVfx: '0', gasCoreDepthVfx: '0', nobleGasBillowVfx: '0', smokeSoftnessVfx: '0', smokeBillowDepthVfx: '0', plasmaCoreVfx: '0', solidBodyVfx: '0', platinumBodyVfx: '0', ceramicGlazeVfx: '0', botanicalBodyVfx: '0', glassBodyVfx: '0', oilBodyVfx: '0', rockRoughnessVfx: '0', waterBodyVfx: '0',
   });
   await cdp.send('Page.navigate', { url: `${AUDIT_BASE_URL}?${query}` });
@@ -27995,6 +28471,7 @@ async function navigateGasMotionVfxState(cdp, mode, scale, fixtureMode, enabled,
       && parameters.get('liquidBodyVfx') === '0' && parameters.get('liquidSurfaceVfx') === '0'
       && parameters.get('gasBodyVfx') === '1'
       && parameters.get('gasMotionVfx') === ${JSON.stringify(enabled ? '1' : '0')}
+      && parameters.get('cflmColdFlameVfx') === '0'
       && parameters.get('powderBodyVfx') === '0' && parameters.get('powderLightVfx') === '0'
       && parameters.get('nobleGasBillowVfx') === '0'
       && parameters.get('smokeSoftnessVfx') === '0'
@@ -28042,6 +28519,7 @@ async function navigateGasMotionVfxState(cdp, mode, scale, fixtureMode, enabled,
       volumeVfx: canvas.dataset.volumeVfx, liquidBodyVfx: canvas.dataset.liquidBodyVfx,
       liquidSurfaceVfx: canvas.dataset.liquidSurfaceVfx,
       gasBodyVfx: canvas.dataset.gasBodyVfx, gasMotionVfx: canvas.dataset.gasMotionVfx,
+      cflmColdFlameVfx: canvas.dataset.cflmColdFlameVfx,
       powderBodyVfx: canvas.dataset.powderBodyVfx, powderLightVfx: canvas.dataset.powderLightVfx,
       nobleGasBillowVfx: canvas.dataset.nobleGasBillowVfx,
       smokeSoftnessVfx: canvas.dataset.smokeSoftnessVfx,
@@ -28057,10 +28535,14 @@ async function navigateGasMotionVfxState(cdp, mode, scale, fixtureMode, enabled,
     && hdrPipeline?.nobleGasBillowVfx === 'inactive'
     && hdrPipeline?.smokeSoftnessVfx === 'inactive'
     && hdrPipeline?.smokeBillowDepthVfx === 'inactive'
+    && hdrPipeline?.cflmColdFlameVfx === 'inactive'
     && hdrPipeline?.gasMotionVfx === (enabled ? 'active' : 'inactive'),
   `E07 ${label} ${scale}x HDR/gas-motion state resolved incorrectly (${JSON.stringify(hdrPipeline)})`);
+  // Repeated 2448x1536 PNG transfer can exceed the legacy 20-second window
+  // after several HDR navigations even when the GPU frame itself completed.
+  // Keep this bounded and preserve the exact two-capture stability contract.
   const capture = await waitForStablePageCapture(
-    cdp, `E07 ${label} ${scale}x framebuffer`, scale === 4 ? 20_000 : undefined,
+    cdp, `E07 ${label} ${scale}x framebuffer`, scale === 4 ? 30_000 : undefined,
   );
   return {
     fixture, velocity, motion, capture, geometry: await metrics(cdp), semantic: await hdrVfxSemanticDigest(cdp),

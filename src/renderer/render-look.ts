@@ -157,6 +157,26 @@ export function resolveGasMotionVfxEnabled(
 }
 
 /**
+ * E68 turns only propagated CFLM into a coherent moving cold-flame volume.
+ * E04 continues to own atmosphere mass and E07 continues to own native-flow
+ * propagation; this child can alter neither when either parent is disabled.
+ * Established input-audit captures keep their frozen baseline unless they
+ * explicitly opt into the new exact-style fold.
+ */
+export function resolveCflmColdFlameVfxEnabled(
+  look: RenderLook,
+  search = globalThis.location?.search ?? '',
+): boolean {
+  if (!resolveGasMotionVfxEnabled(look, search)) return false;
+  const parameters = new URLSearchParams(search);
+  const requested = parameters.get('cflmColdFlameVfx');
+  if (requested === '0' || requested === 'off' || requested === 'false') return false;
+  if (requested === '1' || requested === 'on' || requested === 'true') return true;
+  if (parameters.get('inputAudit') === '1') return false;
+  return true;
+}
+
+/**
  * Adds a species-safe external-light response on top of E04's field-owned gas
  * body. Smoke and FOG remain atmosphere-owned; this selector admits only a
  * bounded normal-WebGL RGB key/fill from light data the gas branch already

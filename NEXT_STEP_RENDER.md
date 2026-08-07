@@ -2350,7 +2350,7 @@ next production 4× survey then selected Wood/PLNT as the largest remaining
   coverage `.971`, macro range `50`, zero dark/clipped fraction, and exact
   semantics across the full composed matrix.
 
-**Next visual experiments:** E03–E67 provide accepted liquid body/surface,
+**Next visual experiments:** E03–E68 provide accepted liquid body/surface,
 stable-gas, coherent-gas-motion, powder-depth, and powder-local-light
 checkpoints plus exact resting contact grounding, Glass/Ice transmission, and
 state-aware Wax/PLNT subsurface response, composed wet-mineral optics,
@@ -2362,7 +2362,8 @@ Glass selective transmission, exact Oil amber-crown/cool-pocket body optics,
 an exact ROCK matte-body correction over E17, lower-anisotropy exact-Water
 depth-light recomposition, exact Noble Gas pearlescent billow depth, exact
 Wood/PLNT mesostructure, exact Smoke soft soot volume, and exact Smoke
-billow-depth, plus an exact temperature- and velocity-driven Fire identity. E27's final
+billow-depth, plus exact temperature- and velocity-driven Fire identity and an
+atmosphere-owned coherent CFLM cold-flame fold. E27's final
 canonical 2× Smoke result is luma deviation `2.22`, microcontrast `.39`, macro
 range `10`, luma range `14`, full support recall, and no clipping. E28 adds
 exact Wood/PLNT pigment/body depth without disturbing E20/E26 topology or
@@ -2865,6 +2866,44 @@ true 8× reports E67/HDR inactive with `scale-8`, no bloom or dense fixture,
 exact 4896×3072 WebGL, and a real GPU fence (accepted full-matrix run
 `3.1667 s`, zero browser errors). Choose a later owner/effect from a fresh
 composed fit-view diagnosis rather than widening E67 by resemblance.
+
+E68 is the accepted propagated-CFLM cold-flame volume checkpoint,
+independently selectable with `?cflmColdFlameVfx=0|1`. A fresh production 4×
+survey found the established composed families intact but showed CFLM as a
+flat pale slab whose E07-only directed/reversed captures were nearly
+indistinguishable. Normal 1×–4× WebGL now treats exact atmosphere style `12`
+as a strict E04/E07 child: it reuses coherent native-flow derivatives,
+atmosphere density/cardinals, field-owned body support, centre emission, and
+optical depth for a broad cyan leading key and green-absorbing violet recess.
+Still or incoherent CFLM is an exact no-op. The fold is RGB only and adds one
+uniform but no sample, sampler, texture, field, pass, target, upload,
+allocation, scheduler stage, wave, clock/noise, alpha, support, silhouette,
+ownership, topology, or physics decision. Canvas and compact true 8× remain
+E68-inactive.
+
+`npm run audit:vfx:cflm-cold-flame` runs topology-identical directed,
+reversed, and still off→on→off fixtures at 1×/2×/4×. It hashes the full
+semantic, material, native-wall, raw/staged velocity, propagated atmosphere
+style/motion, emission, alpha, and support planes, and it adds exact moving
+CFLM/Metal, CFLM/Water, and CFLM/native-wall contacts. Acceptance requires a
+broad core-plus-shoulder response, both cyan and violet projections, at least
+two same-zone spectral reversals, bounded cross-scale magnitude, byte-exact
+disabled restoration, exact still/sparse/foreign/wall controls, and at most a
+one-byte final-composite spill on the Metal/Water side. The authored CFLM hole
+and channel retain byte-exact alpha/support; only their pre-existing
+atmosphere-owned RGB may respond, capped at 48 peak and 16 RMS bytes.
+Requested-on true 8× must report E04/E07/E68/HDR inactive for `scale-8`, omit
+the dense fixture and bloom resources, present exact 4896×3072 WebGL, and
+complete a real GPU fence before the checkpoint is accepted.
+The accepted full matrix records primary-body RGB RMS
+`1.748/1.751/1.758`, cyan–violet spectral span `8.36/8.77/8.76`, directed
+core chroma `1.97/1.99/2.01`, and reversed core chroma
+`-1.04/-1.04/-1.05` at 1×/2×/4×. The authored hole remains low-alpha with
+RGB RMS `9.40/9.78/10.11` and peaks `24/25/26`; the open channel stays at or
+below `.34` RMS and one peak byte. Contact-side spill occurs only at 1×
+(`.02/.10` RMS, one peak byte) and is exact at 2×/4×; the co-located wall is
+exact throughout. The true-8× exclusion fence completed in `5.2063 s` with
+zero browser errors.
 
 ## Phase 1 — HDR pipeline & lighting core (biggest visual payoff)
 

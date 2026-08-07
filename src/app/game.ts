@@ -865,8 +865,8 @@ export class Game {
         this.renderer.invalidateDynamicPresentation();
       },
       gasMotionVfxFixture: () => GAS_MOTION_VFX_AUDIT,
-      prepareGasMotionVfxFixture: (mode) => {
-        prepareGasMotionVfxFixture(this.simulation, mode);
+      prepareGasMotionVfxFixture: (mode, includeCflmContacts) => {
+        prepareGasMotionVfxFixture(this.simulation, mode, includeCflmContacts);
         this.renderer.synchronizeFixtureMaterialPlane();
         this.renderer.invalidateDynamicPresentation();
       },

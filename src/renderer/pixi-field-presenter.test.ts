@@ -317,6 +317,7 @@ describe('Pixi presenter startup configuration', () => {
     expect(normal).toContain('uniform float uVolumeVfx;');
     expect(normal).toContain('uniform float uGasBodyVfx;');
     expect(normal).toContain('uniform float uGasMotionVfx;');
+    expect(normal).toContain('uniform float uCflmColdFlameVfx;');
     expect(normal).toContain('uniform float uGasLightVfx;');
     expect(normal).toContain('uniform float uGasCoreDepthVfx;');
     expect(normal).toContain('uniform float uPlasmaCoreVfx;');
@@ -331,6 +332,8 @@ describe('Pixi presenter startup configuration', () => {
     expect(eight).not.toContain('uVolumeVfx');
     expect(eight).not.toContain('uGasBodyVfx');
     expect(eight).not.toContain('uGasMotionVfx');
+    expect(eight).not.toContain('uCflmColdFlameVfx');
+    expect(eight).not.toContain('cflmColdFlameVfx');
     expect(eight).not.toContain('uGasLightVfx');
     expect(eight).not.toContain('gasLightVfx');
     expect(canvasSource).not.toContain('gasLightVfx');
@@ -688,6 +691,7 @@ describe('Pixi presenter startup configuration', () => {
     expect(source.match(/this\.uniforms\.uniforms\.uVolumeVfx = 0;/g)).toHaveLength(2);
     expect(source.match(/this\.uniforms\.uniforms\.uGasBodyVfx = 0;/g)).toHaveLength(2);
     expect(source.match(/this\.uniforms\.uniforms\.uGasMotionVfx = 0;/g)).toHaveLength(2);
+    expect(source.match(/this\.uniforms\.uniforms\.uCflmColdFlameVfx = 0;/g)).toHaveLength(2);
     expect(source.match(/this\.uniforms\.uniforms\.uGasLightVfx = 0;/g)).toHaveLength(2);
     expect(source.match(/this\.uniforms\.uniforms\.uGasCoreDepthVfx = 0;/g)).toHaveLength(2);
     expect(source.match(/this\.uniforms\.uniforms\.uSmokeSoftnessVfx = 0;/g)).toHaveLength(2);
@@ -704,6 +708,7 @@ describe('Pixi presenter startup configuration', () => {
     expect(source).toContain("get('volumeVfxAudit') === '1'");
     expect(source).toContain("get('gasBodyVfxAudit') === '1'");
     expect(source).toContain("get('gasMotionVfxAudit') === '1'");
+    expect(source).toContain("get('cflmColdFlameVfxAudit') === '1'");
     expect(source).toContain("get('gasLightVfxAudit') === '1'");
     expect(source).toContain("get('gasCoreDepthVfxAudit') === '1'");
     expect(source).toContain("get('smokeBillowDepthVfxAudit') === '1'");
@@ -718,6 +723,9 @@ describe('Pixi presenter startup configuration', () => {
     expect(source).toContain("get('wetSedimentVfxAudit') === '1'");
     expect(source).toContain('const gasBodyVfxEnabled = outputScale < 8');
     expect(source).toContain('const gasMotionVfxEnabled = outputScale < 8');
+    expect(source).toMatch(
+      /const cflmColdFlameVfxEnabled = outputScale < 8\s*&& resolveCflmColdFlameVfxEnabled\(renderLook\);/,
+    );
     expect(source).toMatch(
       /const gasLightVfxEnabled = outputScale < 8\s*&& resolveGasLightVfxEnabled\(renderLook\);/,
     );
@@ -3681,6 +3689,44 @@ describe('Pixi presenter startup configuration', () => {
     expect(source.indexOf('blackbodyColor(temperatureByte)', branchEnd)).toBeGreaterThan(branchEnd);
     expect(eight).not.toContain('fireFlameVfx');
     expect(eight).not.toContain('uFireFlameVfx');
+  });
+
+  it('routes E68 propagated CFLM through the existing coherent gas-flow fold only', () => {
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');
+    const normalStart = source.indexOf('const FIELD_FRAGMENT = `', eightStart);
+    const eight = source.slice(eightStart, normalStart);
+    const branchStart = source.indexOf('// E68: propagated style 12');
+    const branchEnd = source.indexOf('    if (uGasIdentityStyling > 0.5)', branchStart);
+    const branch = source.slice(branchStart, branchEnd);
+
+    expect(source).toContain('resolveCflmColdFlameVfxEnabled');
+    expect(source).toContain('uniform float uCflmColdFlameVfx;');
+    expect(source).toContain(
+      'uCflmColdFlameVfx: { value: cflmColdFlameVfxEnabled ? 1 : 0',
+    );
+    expect(source).toMatch(
+      /presenter\.app\.canvas\.dataset\.cflmColdFlameVfx\s*=[\s\S]*?\? 'active' : 'inactive';/,
+    );
+    expect(source).toContain("this.app.canvas.dataset.cflmColdFlameVfx = 'inactive';");
+    expect(branchStart).toBeGreaterThan(normalStart);
+    expect(branchEnd).toBeGreaterThan(branchStart);
+    expect(branch).toContain('uCflmColdFlameVfx > 0.5');
+    expect(branch).toContain('uGasIdentityStyling > 0.5');
+    expect(branch).toContain('cflmColdStyle - 12.0');
+    for (const reusedEvidence of [
+      'gasVfxBodySupport', 'cloudNeighbourMean', 'atmosphereState.a',
+      'gasMotionInteriorTone', 'gasMotionEdgeTone', 'gasMotionStrength',
+      'emissionState.a', 'opticalDepth',
+    ]) expect(branch).toContain(reusedEvidence);
+    expect(branch).toContain('cflmColdKey');
+    expect(branch).toContain('cflmColdPocket');
+    expect(branch).not.toContain('texture(');
+    expect(branch).not.toContain('uTime');
+    expect(branch).not.toContain('gl_FragCoord');
+    expect(branch).not.toMatch(/\balpha\s*[+*]?=/);
+    expect(eight).not.toContain('CflmColdFlame');
+    expect(eight).not.toContain('cflmColdFlame');
   });
 
   it('advances fallback presentation timing only after its GPU fence signals', () => {
