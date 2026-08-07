@@ -13501,6 +13501,12 @@ async function auditComposedRankShowcase(cdp, mode, dpr) {
   // Input-audit URLs must name it explicitly because its resolver is opt-in.
   const composedIszsCrystalHierarchyVfx = iszsCrystalHierarchyVfxArgument ?? '1';
   const composedVibrMacroReliefVfx = vibrMacroReliefVfxArgument ?? '1';
+  // E56 intentionally stays off for an input-audit URL that does not name it.
+  // The composed survey represents the accepted product stack, so keep both
+  // its E37 parent and the Water-side transmission child explicit at every
+  // captured scale instead of silently scoring the focused-audit baseline.
+  const composedMetalWaterContactVfx = metalWaterContactVfxArgument ?? '1';
+  const composedWaterMetalTransmissionVfx = waterMetalTransmissionVfxArgument ?? '1';
   // E55 telemetry is default-on in the composed survey; its focused numeric
   // acceptance remains isolated in the dedicated production-WebGL audit.
   const composedPlantCanopyInterlockVfx = plantCanopyInterlockVfxArgument ?? '1';
@@ -13543,12 +13549,8 @@ async function auditComposedRankShowcase(cdp, mode, dpr) {
       iszsCrystallineVfx: composedIszsCrystallineVfx,
       iszsCrystalHierarchyVfx: composedIszsCrystalHierarchyVfx,
       vibrMacroReliefVfx: composedVibrMacroReliefVfx,
-      ...(metalWaterContactVfxArgument !== undefined ? {
-        metalWaterContactVfx: metalWaterContactVfxArgument,
-      } : {}),
-      ...(waterMetalTransmissionVfxArgument !== undefined ? {
-        waterMetalTransmissionVfx: waterMetalTransmissionVfxArgument,
-      } : {}),
+      metalWaterContactVfx: composedMetalWaterContactVfx,
+      waterMetalTransmissionVfx: composedWaterMetalTransmissionVfx,
       ...(botanicalMesostructureVfxArgument !== undefined ? {
         botanicalMesostructureVfx: botanicalMesostructureVfxArgument,
       } : {}),
@@ -13597,8 +13599,8 @@ async function auditComposedRankShowcase(cdp, mode, dpr) {
         && parameters.get('iszsCrystallineVfx') === ${JSON.stringify(composedIszsCrystallineVfx)}
         && parameters.get('iszsCrystalHierarchyVfx') === ${JSON.stringify(composedIszsCrystalHierarchyVfx)}
         && parameters.get('vibrMacroReliefVfx') === ${JSON.stringify(composedVibrMacroReliefVfx)}
-        && parameters.get('metalWaterContactVfx') === ${JSON.stringify(metalWaterContactVfxArgument ?? null)}
-        && parameters.get('waterMetalTransmissionVfx') === ${JSON.stringify(waterMetalTransmissionVfxArgument ?? null)}
+        && parameters.get('metalWaterContactVfx') === ${JSON.stringify(composedMetalWaterContactVfx)}
+        && parameters.get('waterMetalTransmissionVfx') === ${JSON.stringify(composedWaterMetalTransmissionVfx)}
         && parameters.get('botanicalMesostructureVfx') === ${JSON.stringify(botanicalMesostructureVfxArgument ?? null)}
         && parameters.get('botanicalPigmentVfx') === ${JSON.stringify(botanicalPigmentVfxArgument ?? null)}
         && parameters.get('plantLaminaVfx') === ${JSON.stringify(plantLaminaVfxArgument ?? null)}
@@ -13801,31 +13803,28 @@ async function auditComposedRankShowcase(cdp, mode, dpr) {
         argument: composedCarbonDioxideBodyVfx, composedLook, carbonDioxideBodyVfx,
         expectedCarbonDioxideBodyState,
       })})`);
-    let metalWaterContactVfx;
-    if (metalWaterContactVfxArgument !== undefined) {
-      metalWaterContactVfx = await evaluate(cdp,
-        `document.querySelector('canvas.world-canvas')?.dataset.metalWaterContactVfx ?? 'missing'`,
-      );
-      const expectedState = metalWaterContactVfxArgument === '1' ? 'active' : 'inactive';
-      assert(metalWaterContactVfx === expectedState,
-        `composed rank ${scale}x Metal/Water contact selector resolved incorrectly (${JSON.stringify({
-          argument: metalWaterContactVfxArgument, metalWaterContactVfx,
-        })})`);
-    }
-    let waterMetalTransmissionVfx;
-    if (waterMetalTransmissionVfxArgument !== undefined) {
-      waterMetalTransmissionVfx = await evaluate(cdp,
-        `document.querySelector('canvas.world-canvas')?.dataset.waterMetalTransmissionVfx ?? 'missing'`,
-      );
-      const expectedState = waterMetalTransmissionVfxArgument === '1'
-        && (metalWaterContactVfxArgument === undefined || metalWaterContactVfxArgument === '1')
-        ? 'active' : 'inactive';
-      assert(waterMetalTransmissionVfx === expectedState,
-        `composed rank ${scale}x Water/Metal transmission selector resolved incorrectly (${JSON.stringify({
-          argument: waterMetalTransmissionVfxArgument, metalWaterContactVfxArgument,
-          waterMetalTransmissionVfx, expectedState,
-        })})`);
-    }
+    const metalWaterContactVfx = await evaluate(cdp,
+      `document.querySelector('canvas.world-canvas')?.dataset.metalWaterContactVfx ?? 'missing'`,
+    );
+    const expectedMetalWaterContactState = expectedSolidBodyState === 'active'
+      && composedLook !== 'classic' && composedMetalWaterContactVfx === '1'
+      ? 'active' : 'inactive';
+    assert(metalWaterContactVfx === expectedMetalWaterContactState,
+      `composed rank ${scale}x Metal/Water contact selector resolved incorrectly (${JSON.stringify({
+        argument: composedMetalWaterContactVfx, composedLook, solidBodyVfx,
+        metalWaterContactVfx, expectedMetalWaterContactState,
+      })})`);
+    const waterMetalTransmissionVfx = await evaluate(cdp,
+      `document.querySelector('canvas.world-canvas')?.dataset.waterMetalTransmissionVfx ?? 'missing'`,
+    );
+    const expectedWaterMetalTransmissionState = expectedMetalWaterContactState === 'active'
+      && composedWaterMetalTransmissionVfx === '1' ? 'active' : 'inactive';
+    assert(waterMetalTransmissionVfx === expectedWaterMetalTransmissionState,
+      `composed rank ${scale}x Water/Metal transmission selector resolved incorrectly (${JSON.stringify({
+        argument: composedWaterMetalTransmissionVfx,
+        metalWaterContactArgument: composedMetalWaterContactVfx,
+        waterMetalTransmissionVfx, expectedWaterMetalTransmissionState,
+      })})`);
     if (botanicalMesostructureVfxArgument !== undefined) {
       const expectedState = ['1', 'on'].includes(botanicalMesostructureVfxArgument) ? 'active' : 'inactive';
       assert(botanicalMesostructureVfx === expectedState,
@@ -14007,8 +14006,7 @@ async function auditComposedRankShowcase(cdp, mode, dpr) {
       solidBodyVfx, radioactiveSolidBodyVfx, iszsCrystallineVfx, vibrMacroReliefVfx,
       iszsCrystalHierarchyVfx,
       rockWeatheredFacetVfx,
-      ...(metalWaterContactVfxArgument !== undefined ? { metalWaterContactVfx } : {}),
-      ...(waterMetalTransmissionVfxArgument !== undefined ? { waterMetalTransmissionVfx } : {}),
+      metalWaterContactVfx, waterMetalTransmissionVfx,
       ...(screenshot ? { screenshot } : {}),
     });
   }
@@ -14021,7 +14019,9 @@ async function auditComposedRankShowcase(cdp, mode, dpr) {
       && JSON.stringify(reference.fixture) === JSON.stringify(capture.fixture)
       && reference.semantic.hash === capture.semantic.hash
       && reference.semantic.occupied === capture.semantic.occupied
-      && JSON.stringify(reference.semantic) === JSON.stringify(capture.semantic),
+      && JSON.stringify(reference.semantic) === JSON.stringify(capture.semantic)
+      && reference.metalWaterContactVfx === capture.metalWaterContactVfx
+      && reference.waterMetalTransmissionVfx === capture.waterMetalTransmissionVfx,
     `composed rank ${reference.scale}x/${capture.scale}x changed showcase semantics`);
     for (const baseline of reference.regions) {
       const current = capture.regions.find(({ name }) => name === baseline.name);
@@ -14147,8 +14147,8 @@ async function auditComposedRankShowcase(cdp, mode, dpr) {
       vibrMacroReliefVfx,
       rockWeatheredFacetVfx,
       powderStability,
-      ...(metalWaterContactVfxArgument !== undefined ? { metalWaterContactVfx } : {}),
-      ...(waterMetalTransmissionVfxArgument !== undefined ? { waterMetalTransmissionVfx } : {}),
+      metalWaterContactVfx,
+      waterMetalTransmissionVfx,
       semanticHash: semantic.hash,
       occupied: semantic.occupied,
       metal: semantic.metal,
