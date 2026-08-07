@@ -750,6 +750,9 @@ export class Game {
       setPlantCanopyInterlockVfx: (enabled) => {
         this.renderer.setPlantCanopyInterlockVfxEnabled(enabled);
       },
+      setPlantCanopyHierarchyVfx: (enabled) => {
+        this.renderer.setPlantCanopyHierarchyVfxEnabled(enabled);
+      },
       setSparkStateStyling: (enabled) => {
         this.renderer.setSparkStateStylingEnabled(enabled);
       },

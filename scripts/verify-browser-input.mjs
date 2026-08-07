@@ -502,6 +502,12 @@ const plantCanopyInterlockVfxOnly = process.argv.includes('--plant-canopy-interl
 if (plantCanopyInterlockVfxOnly && (modes.length !== 1 || modes[0] !== 'webgl')) {
   throw new Error('--plant-canopy-interlock-vfx-only requires --webgl-only');
 }
+// E58 is a hierarchy child of the complete E20/E26/E28/E32/E34/E36/E53/E55
+// canopy stack. Its focused route owns the live paused-fixture toggle.
+const plantCanopyHierarchyVfxOnly = process.argv.includes('--plant-canopy-hierarchy-vfx-only');
+if (plantCanopyHierarchyVfxOnly && (modes.length !== 1 || modes[0] !== 'webgl')) {
+  throw new Error('--plant-canopy-hierarchy-vfx-only requires --webgl-only');
+}
 // E54 is an exact VIBR macro-relief child of E43. Its focused route reuses the
 // paused radioactive-Solid fixture and keeps compact true 8x as an exclusion.
 const vibrMacroReliefVfxOnly = process.argv.includes('--vibr-macro-relief-vfx-only');
@@ -531,12 +537,12 @@ const focusedVfxOnlyFlags = [
   nobleGasBillowVfxOnly, nobleGasPrismVfxOnly,
   smokeSoftnessVfxOnly, smokeBillowDepthVfxOnly, botanicalMesostructureVfxOnly, woodBarkReliefVfxOnly,
   botanicalPigmentVfxOnly, plantLaminaVfxOnly, plantLobeDepthVfxOnly, plantCanopyMassVfxOnly,
-  plantCanopyTissueVfxOnly, plantCanopyInterlockVfxOnly,
+  plantCanopyTissueVfxOnly, plantCanopyInterlockVfxOnly, plantCanopyHierarchyVfxOnly,
   vibrMacroReliefVfxOnly,
   woodTanninVfxOnly,
 ];
 if (focusedVfxOnlyFlags.filter(Boolean).length > 1) {
-  throw new Error('HDR/volume/liquid-body/liquid-surface/gas-body/gas-motion/powder-body/powder-light/powder-solid-contact/translucent-edge/organic-subsurface/wet-sediment/gas-light/liquid-solid-meniscus/metal-water-contact/water-metal-transmission/gas-core-depth/plasma-core/solid-body/platinum-body/ceramic-glaze/botanical-body/glass-body/oil-body/rock-roughness/rock-mesostructure/water-body/acid-body/soap-body/sooty-powder-body/thermite-body/snowpack-body/quartz-mesostructure/c4-body/deut-body/hydrogen-body/carbon-dioxide-body/fog-core-diffuse/radioactive-solid-body/iszs-crystalline/vibr-macro-relief/noble-gas-billow/noble-gas-prism/smoke-softness/smoke-billow-depth/botanical-mesostructure/wood-bark-relief/botanical-pigment/plant-lamina/plant-lobe-depth/plant-canopy-mass/plant-canopy-tissue/plant-canopy-interlock/wood-tannin focused audits are mutually exclusive');
+  throw new Error('HDR/volume/liquid-body/liquid-surface/gas-body/gas-motion/powder-body/powder-light/powder-solid-contact/translucent-edge/organic-subsurface/wet-sediment/gas-light/liquid-solid-meniscus/metal-water-contact/water-metal-transmission/gas-core-depth/plasma-core/solid-body/platinum-body/ceramic-glaze/botanical-body/glass-body/oil-body/rock-roughness/rock-mesostructure/water-body/acid-body/soap-body/sooty-powder-body/thermite-body/snowpack-body/quartz-mesostructure/c4-body/deut-body/hydrogen-body/carbon-dioxide-body/fog-core-diffuse/radioactive-solid-body/iszs-crystalline/vibr-macro-relief/noble-gas-billow/noble-gas-prism/smoke-softness/smoke-billow-depth/botanical-mesostructure/wood-bark-relief/botanical-pigment/plant-lamina/plant-lobe-depth/plant-canopy-mass/plant-canopy-tissue/plant-canopy-interlock/plant-canopy-hierarchy/wood-tannin focused audits are mutually exclusive');
 }
 
 const layoutOnly = process.argv.includes('--layout-only');
@@ -622,7 +628,7 @@ const liveScaleOnly = process.argv.includes('--live-scale-only');
 // dev-server navigation timing while leaving all default audit paths unchanged.
 const productionBundle = process.argv.includes('--production-bundle');
 const usesProductionBundle = productionBundle || showcaseScreenshotOnly || composedRankOnly
-  || candidateRankOnly || hdrVfxOnly || volumeVfxOnly || plantCanopyInterlockVfxOnly
+  || candidateRankOnly || hdrVfxOnly || volumeVfxOnly || plantCanopyInterlockVfxOnly || plantCanopyHierarchyVfxOnly
   || liquidBodyVfxOnly || liquidSurfaceVfxOnly || gasBodyVfxOnly || gasMotionVfxOnly
   || powderBodyVfxOnly || powderLightVfxOnly || powderSolidContactVfxOnly || translucentEdgeVfxOnly || organicSubsurfaceVfxOnly || wetSedimentVfxOnly || gasLightVfxOnly || liquidSolidMeniscusVfxOnly || metalWaterContactVfxOnly || waterMetalTransmissionVfxOnly || gasCoreDepthVfxOnly || plasmaCoreVfxOnly || solidBodyVfxOnly || platinumBodyVfxOnly || ceramicGlazeVfxOnly || botanicalBodyVfxOnly || glassBodyVfxOnly || oilBodyVfxOnly || rockRoughnessVfxOnly || rockMesostructureVfxOnly || waterBodyVfxOnly || acidBodyVfxOnly || soapBodyVfxOnly || sootyPowderBodyVfxOnly || thermiteBodyVfxOnly || snowpackBodyVfxOnly || quartzMesostructureVfxOnly || c4BodyVfxOnly || bglaBodyVfxOnly || deutBodyVfxOnly || hydrogenBodyVfxOnly || carbonDioxideBodyVfxOnly || fogCoreDiffuseVfxOnly || radioactiveSolidBodyVfxOnly || iszsCrystallineVfxOnly || nobleGasBillowVfxOnly || nobleGasPrismVfxOnly || smokeSoftnessVfxOnly || smokeBillowDepthVfxOnly || botanicalMesostructureVfxOnly || woodBarkReliefVfxOnly || botanicalPigmentVfxOnly || plantLaminaVfxOnly || plantLobeDepthVfxOnly || woodTanninVfxOnly || cellularGraphicsOnly || sensorGraphicsOnly
   || unusualPowderGraphicsOnly || earthenPowderGraphicsOnly || explosivePowderGraphicsOnly || unusualSolidGraphicsOnly
@@ -741,6 +747,9 @@ const plantCanopyTissueVfxArgument = process.argv.find(
 const plantCanopyInterlockVfxArgument = process.argv.find(
   (argument) => argument.startsWith('--plant-canopy-interlock-vfx='),
  )?.slice('--plant-canopy-interlock-vfx='.length);
+const plantCanopyHierarchyVfxArgument = process.argv.find(
+  (argument) => argument.startsWith('--plant-canopy-hierarchy-vfx='),
+ )?.slice('--plant-canopy-hierarchy-vfx='.length);
 const vibrMacroReliefVfxArgument = process.argv.find(
   (argument) => argument.startsWith('--vibr-macro-relief-vfx='),
 )?.slice('--vibr-macro-relief-vfx='.length);
@@ -913,6 +922,10 @@ if (plantCanopyTissueVfxArgument !== undefined
 if (plantCanopyInterlockVfxArgument !== undefined
   && !['0', '1', 'off', 'on', 'false', 'true'].includes(plantCanopyInterlockVfxArgument)) {
   throw new Error('--plant-canopy-interlock-vfx must be 0, 1, off, on, false, or true');
+}
+if (plantCanopyHierarchyVfxArgument !== undefined
+  && !['0', '1'].includes(plantCanopyHierarchyVfxArgument)) {
+  throw new Error('--plant-canopy-hierarchy-vfx must be 0 or 1');
 }
 if (vibrMacroReliefVfxArgument !== undefined
   && !['0', '1', 'off', 'on'].includes(vibrMacroReliefVfxArgument)) {
@@ -1116,9 +1129,10 @@ if (focusedVfxOnlyFlags.some(Boolean) && (botanicalMesostructureVfxArgument !== 
   || botanicalPigmentVfxArgument !== undefined || plantLaminaVfxArgument !== undefined
   || plantLobeDepthVfxArgument !== undefined || plantCanopyMassVfxArgument !== undefined
   || plantCanopyTissueVfxArgument !== undefined || plantCanopyInterlockVfxArgument !== undefined
+  || plantCanopyHierarchyVfxArgument !== undefined
   || vibrMacroReliefVfxArgument !== undefined
   || woodTanninVfxArgument !== undefined)) {
-  throw new Error('focused VFX audits own botanicalMesostructureVfx, botanicalPigmentVfx, plantLaminaVfx, plantLobeDepthVfx, plantCanopyMassVfx, plantCanopyTissueVfx, plantCanopyInterlockVfx, vibrMacroReliefVfx, and woodTanninVfx state; omit their overrides');
+  throw new Error('focused VFX audits own botanicalMesostructureVfx, botanicalPigmentVfx, plantLaminaVfx, plantLobeDepthVfx, plantCanopyMassVfx, plantCanopyTissueVfx, plantCanopyInterlockVfx, plantCanopyHierarchyVfx, vibrMacroReliefVfx, and woodTanninVfx state; omit their overrides');
 }
 if (gasLightVfxOnly && (volumeVfxArgument !== undefined || liquidBodyVfxArgument !== undefined
   || liquidSurfaceVfxArgument !== undefined || gasBodyVfxArgument !== undefined || gasMotionVfxArgument !== undefined
@@ -1481,6 +1495,9 @@ if (plantCanopyTissueVfxOnly && renderScaleArgument === '8') {
 if (plantCanopyInterlockVfxOnly && renderScaleArgument === '8') {
   throw new Error('--plant-canopy-interlock-vfx-only is a normal-detail 1x/2x/4x experiment');
 }
+if (plantCanopyHierarchyVfxOnly && renderScaleArgument === '8') {
+  throw new Error('--plant-canopy-hierarchy-vfx-only is a normal-detail 1x/2x/4x experiment');
+}
 if (vibrMacroReliefVfxOnly && renderScaleArgument === '8') {
   throw new Error('--vibr-macro-relief-vfx-only is a normal-detail 1x/2x/4x experiment');
 }
@@ -1570,7 +1587,7 @@ async function main() {
     const results = [];
     for (const mode of modes) results.push(await auditMode(mode));
     const reducedAudit = quickScreenshot || showcaseScreenshotOnly || composedRankOnly
-      || candidateRankOnly || hdrVfxOnly || volumeVfxOnly || plantCanopyInterlockVfxOnly
+      || candidateRankOnly || hdrVfxOnly || volumeVfxOnly || plantCanopyInterlockVfxOnly || plantCanopyHierarchyVfxOnly
       || liquidBodyVfxOnly || liquidSurfaceVfxOnly || gasBodyVfxOnly || gasMotionVfxOnly
       || powderBodyVfxOnly || powderLightVfxOnly || powderSolidContactVfxOnly || translucentEdgeVfxOnly || organicSubsurfaceVfxOnly || wetSedimentVfxOnly || gasLightVfxOnly || liquidSolidMeniscusVfxOnly || metalWaterContactVfxOnly || waterMetalTransmissionVfxOnly || gasCoreDepthVfxOnly || plasmaCoreVfxOnly || solidBodyVfxOnly || platinumBodyVfxOnly || ceramicGlazeVfxOnly || botanicalBodyVfxOnly || glassBodyVfxOnly || oilBodyVfxOnly || rockRoughnessVfxOnly || rockMesostructureVfxOnly || waterBodyVfxOnly || acidBodyVfxOnly || soapBodyVfxOnly || sootyPowderBodyVfxOnly || thermiteBodyVfxOnly || snowpackBodyVfxOnly || quartzMesostructureVfxOnly || c4BodyVfxOnly || deutBodyVfxOnly || hydrogenBodyVfxOnly || carbonDioxideBodyVfxOnly || fogCoreDiffuseVfxOnly || radioactiveSolidBodyVfxOnly || iszsCrystallineVfxOnly || nobleGasBillowVfxOnly || nobleGasPrismVfxOnly || smokeSoftnessVfxOnly || smokeBillowDepthVfxOnly || botanicalMesostructureVfxOnly || woodBarkReliefVfxOnly || botanicalPigmentVfxOnly || plantLaminaVfxOnly || plantLobeDepthVfxOnly || woodTanninVfxOnly || layoutOnly || mobileOnly || mobileGestureOnly
       || desktopInputOnly || visualScaleMatrixOnly || powderBodyOnly || liquidDepthOnly
@@ -1669,6 +1686,7 @@ async function auditMode(mode) {
   // measures. Canvas fallback has no advanced optics obligation, so retain the
   // canonical paused scene there and prove real material delivery/occupancy.
   const startsBlank = !canvasFallbackAudit && (hdrVfxOnly || volumeVfxOnly
+    || plantCanopyHierarchyVfxOnly
     || liquidBodyVfxOnly || liquidSurfaceVfxOnly || gasBodyVfxOnly || gasMotionVfxOnly
   || powderBodyVfxOnly || powderLightVfxOnly || powderSolidContactVfxOnly || translucentEdgeVfxOnly || organicSubsurfaceVfxOnly || wetSedimentVfxOnly || gasLightVfxOnly || liquidSolidMeniscusVfxOnly || metalWaterContactVfxOnly || waterMetalTransmissionVfxOnly || gasCoreDepthVfxOnly || plasmaCoreVfxOnly || solidBodyVfxOnly || platinumBodyVfxOnly || ceramicGlazeVfxOnly || botanicalBodyVfxOnly || glassBodyVfxOnly || oilBodyVfxOnly || rockRoughnessVfxOnly || rockMesostructureVfxOnly || waterBodyVfxOnly || acidBodyVfxOnly || soapBodyVfxOnly || sootyPowderBodyVfxOnly || thermiteBodyVfxOnly || snowpackBodyVfxOnly || quartzMesostructureVfxOnly || c4BodyVfxOnly || bglaBodyVfxOnly || deutBodyVfxOnly || hydrogenBodyVfxOnly || carbonDioxideBodyVfxOnly || fogCoreDiffuseVfxOnly || radioactiveSolidBodyVfxOnly || iszsCrystallineVfxOnly || nobleGasBillowVfxOnly || nobleGasPrismVfxOnly || smokeSoftnessVfxOnly || smokeBillowDepthVfxOnly || botanicalMesostructureVfxOnly || woodBarkReliefVfxOnly || botanicalPigmentVfxOnly || plantLaminaVfxOnly || plantLobeDepthVfxOnly || woodTanninVfxOnly || cellularGraphicsOnly || sensorGraphicsOnly
     || unusualPowderGraphicsOnly || earthenPowderGraphicsOnly || explosivePowderGraphicsOnly
@@ -1882,6 +1900,11 @@ async function auditMode(mode) {
       ? { plantCanopyInterlockVfx: '0' }
       : plantCanopyInterlockVfxArgument !== undefined
         ? { plantCanopyInterlockVfx: plantCanopyInterlockVfxArgument }
+        : {}),
+    ...(focusedVfxOnlyFlags.some(Boolean)
+      ? { plantCanopyHierarchyVfx: '0' }
+      : plantCanopyHierarchyVfxArgument !== undefined
+        ? { plantCanopyHierarchyVfx: plantCanopyHierarchyVfxArgument }
         : {}),
     // E54 is an E43 child. Every focused audit starts from its no-op path;
     // the E54 navigation owns its own off -> on -> off reload sequence.
@@ -2538,6 +2561,13 @@ async function auditMode(mode) {
       assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
       cdp.close();
       return { backend: mode, plantCanopyInterlockVfx, browserErrors: errors.length };
+    }
+    if (plantCanopyHierarchyVfxOnly) {
+      assert(mode === 'webgl', '--plant-canopy-hierarchy-vfx-only requires --webgl-only');
+      const plantCanopyHierarchyVfx = await auditPlantCanopyHierarchyVfxExperiment(cdp, mode, dpr);
+      assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
+      cdp.close();
+      return { backend: mode, plantCanopyHierarchyVfx, browserErrors: errors.length };
     }
     if (woodTanninVfxOnly) {
       assert(mode === 'webgl', '--wood-tannin-vfx-only requires --webgl-only');
@@ -13408,6 +13438,7 @@ async function auditComposedRankShowcase(cdp, mode, dpr) {
   // E55 telemetry is default-on in the composed survey; its focused numeric
   // acceptance remains isolated in the dedicated production-WebGL audit.
   const composedPlantCanopyInterlockVfx = plantCanopyInterlockVfxArgument ?? '1';
+  const composedPlantCanopyHierarchyVfx = plantCanopyHierarchyVfxArgument ?? '1';
   const composedCarbonDioxideBodyVfx = carbonDioxideBodyVfxArgument ?? '1';
   const composedThermiteBodyVfx = thermiteBodyVfxArgument ?? '1';
   // Showcase v6 adds an authoritative deep SOAP body and a scored liquidSoap
@@ -13467,6 +13498,7 @@ async function auditComposedRankShowcase(cdp, mode, dpr) {
         plantCanopyTissueVfx: plantCanopyTissueVfxArgument,
       } : {}),
       plantCanopyInterlockVfx: composedPlantCanopyInterlockVfx,
+      plantCanopyHierarchyVfx: composedPlantCanopyHierarchyVfx,
       ...(woodTanninVfxArgument !== undefined ? {
         woodTanninVfx: woodTanninVfxArgument,
       } : {}),
@@ -13502,6 +13534,7 @@ async function auditComposedRankShowcase(cdp, mode, dpr) {
         && parameters.get('plantCanopyMassVfx') === ${JSON.stringify(plantCanopyMassVfxArgument ?? null)}
         && parameters.get('plantCanopyTissueVfx') === ${JSON.stringify(plantCanopyTissueVfxArgument ?? null)}
         && parameters.get('plantCanopyInterlockVfx') === ${JSON.stringify(composedPlantCanopyInterlockVfx)}
+        && parameters.get('plantCanopyHierarchyVfx') === ${JSON.stringify(composedPlantCanopyHierarchyVfx)}
         && parameters.get('woodTanninVfx') === ${JSON.stringify(woodTanninVfxArgument ?? null)}
         && document.querySelector('[data-scene="showcase"]') !== null
         && typeof window.__ANIFOR_INPUT_AUDIT__?.materialShowcaseFixture === 'function';
@@ -13530,8 +13563,13 @@ async function auditComposedRankShowcase(cdp, mode, dpr) {
     })()`);
     assert(indicator.count > 0 && indicator.hidden,
       `composed rank ${scale}x did not hide only the field indicator overlay`);
+    // A same-process 1x -> 2x navigation can leave Chrome's full-page
+    // compositor settling after WebGL itself is ready. Keep that transition
+    // bounded but do not mistake its former 8-second capture window for a
+    // material-shader failure; 4x retains the established wider allowance.
+    const captureTimeout = scale === 4 ? 45_000 : scale === 2 ? 15_000 : undefined;
     const capture = await waitForStablePageCapture(
-      cdp, `composed rank ${scale}x showcase framebuffer`, scale === 4 ? 45_000 : undefined,
+      cdp, `composed rank ${scale}x showcase framebuffer`, captureTimeout,
     );
     const backdrop = await captureWorldCanvasBackdrop(
       cdp, `composed rank ${scale}x canvas-hidden backdrop`,
@@ -13564,6 +13602,9 @@ async function auditComposedRankShowcase(cdp, mode, dpr) {
     );
     const plantCanopyInterlockVfx = await evaluate(cdp,
       `document.querySelector('canvas.world-canvas')?.dataset.plantCanopyInterlockVfx ?? 'missing'`,
+    );
+    const plantCanopyHierarchyVfx = await evaluate(cdp,
+      `document.querySelector('canvas.world-canvas')?.dataset.plantCanopyHierarchyVfx ?? 'missing'`,
     );
     const woodTanninVfx = await evaluate(cdp,
       `document.querySelector('canvas.world-canvas')?.dataset.woodTanninVfx ?? 'missing'`,
@@ -13756,6 +13797,16 @@ async function auditComposedRankShowcase(cdp, mode, dpr) {
         argument: composedPlantCanopyInterlockVfx, plantCanopyTissueVfx,
         plantCanopyInterlockVfx, expectedPlantCanopyInterlockState,
       })})`);
+    const plantCanopyHierarchyRequestedOn = ['1', 'on', 'true'].includes(
+      composedPlantCanopyHierarchyVfx,
+    );
+    const expectedPlantCanopyHierarchyState = plantCanopyHierarchyRequestedOn
+      && plantCanopyInterlockVfx === 'active' ? 'active' : 'inactive';
+    assert(plantCanopyHierarchyVfx === expectedPlantCanopyHierarchyState,
+      `composed rank ${scale}x plant canopy-hierarchy selector resolved incorrectly (${JSON.stringify({
+        argument: composedPlantCanopyHierarchyVfx, plantCanopyInterlockVfx,
+        plantCanopyHierarchyVfx, expectedPlantCanopyHierarchyState,
+      })})`);
     if (woodTanninVfxArgument !== undefined) {
       const requestedOn = ['1', 'on'].includes(woodTanninVfxArgument);
       const woodBarkReliefVfx = await evaluate(cdp,
@@ -13855,7 +13906,7 @@ async function auditComposedRankShowcase(cdp, mode, dpr) {
     captures.push({
       scale, geometry, fixture, semantic, regions, hdrPipeline, botanicalMesostructureVfx,
       botanicalPigmentVfx, plantLaminaVfx, plantLobeDepthVfx, plantCanopyMassVfx, plantCanopyTissueVfx,
-      plantCanopyInterlockVfx,
+      plantCanopyInterlockVfx, plantCanopyHierarchyVfx,
       woodTanninVfx,
       oilVolumeFinishVfx, acidBodyVfx, soapBodyVfx, sootyPowderBodyVfx, thermiteBodyVfx,
       bglaBodyVfx,
@@ -13966,7 +14017,7 @@ async function auditComposedRankShowcase(cdp, mode, dpr) {
   return {
     scales: captures.map(({ scale, geometry, semantic, regions, hdrPipeline, botanicalMesostructureVfx,
       botanicalPigmentVfx, plantLaminaVfx, plantLobeDepthVfx, plantCanopyMassVfx, plantCanopyTissueVfx,
-      plantCanopyInterlockVfx,
+      plantCanopyInterlockVfx, plantCanopyHierarchyVfx,
       woodTanninVfx,
       smokeBillowDepthVfx, thermiteBodyVfx, bglaBodyVfx, soapBodyVfx,
       metalWaterContactVfx, waterMetalTransmissionVfx, powderStability,
@@ -13984,6 +14035,7 @@ async function auditComposedRankShowcase(cdp, mode, dpr) {
       plantCanopyMassVfx,
       plantCanopyTissueVfx,
       plantCanopyInterlockVfx,
+      plantCanopyHierarchyVfx,
       woodTanninVfx,
       smokeBillowDepthVfx,
       thermiteBodyVfx,
@@ -33324,6 +33376,385 @@ const PLANT_CANOPY_INTERLOCK_VFX_ACCEPTANCE = Object.freeze({
   }),
 });
 
+// Frozen from the accepted production-WebGL 1x/2x/4x E58 matrix. The two
+// asymmetric PLNT bodies retain separate hierarchy, frequency, and appearance
+// envelopes so a no-op, fine stipple, or one-sided canopy regression cannot
+// hide behind an aggregate mean.
+const PLANT_CANOPY_HIERARCHY_VFX_ACCEPTANCE = Object.freeze({
+  targets: Object.freeze({
+    PLNTLeft: Object.freeze({
+      response: Object.freeze({
+        rgbRms: [2.25, 2.50], chromaRms: [2.55, 2.85], spatialRgbRms: [2.20, 2.50],
+        rgbPeak: [11, 14], coverage: [0.44, 0.50], signedMean: [0.42, 0.52],
+        meanBiasRatio: [0.14, 0.20], positiveMean: [1.15, 1.40], negativeMean: [0.70, 0.90],
+        bipolarBalance: [0.55, 0.70], responseMicroContrast: [0.25, 0.40],
+        red: [-0.10, 0.02], green: [0.60, 0.78], blue: [-0.12, 0.0],
+      }),
+      frequency: Object.freeze({
+        mesoRgbRms: [0.82, 0.95], cellRgbRms: [0.38, 0.48], mesoShare: [0.77, 0.84],
+        positiveCoverage: [0.40, 0.45], negativeCoverage: [0.40, 0.46],
+        mesoMeanBiasRatio: [0.006, 0.013], downsampleRetention: [0.982, 0.990],
+        gradientRatio: [0.93, 1.03], rgbPeak: [11, 14],
+        ySegmentMesoRgbRms: [[0.72, 0.82], [0.84, 0.95], [0.92, 1.03]],
+      }),
+      appearance: Object.freeze({
+        enabledDarkSeam: [0.055, 0.095], enabledStrongSeam: [0.015, 0.030],
+        darkSeamGain: [0.0, 0.005], strongSeamGain: [-0.001, 0.003],
+        enabledLocalContrastRms: [3.8, 4.7], localContrastGain: [0.015, 0.040],
+        localContrastRetention: [1.003, 1.010], enabledLumaStdDev: [22.9, 24.1],
+        lumaStdDevGain: [0.80, 1.05], enabledMacro: [54.8, 55.9], macroGain: [3.50, 4.10],
+        meanLumaGain: [0.42, 0.52],
+      }),
+    }),
+    PLNTRight: Object.freeze({
+      response: Object.freeze({
+        rgbRms: [2.15, 2.45], chromaRms: [2.45, 2.75], spatialRgbRms: [2.10, 2.40],
+        rgbPeak: [13, 16], coverage: [0.44, 0.50], signedMean: [0.52, 0.65],
+        meanBiasRatio: [0.18, 0.25], positiveMean: [1.18, 1.42], negativeMean: [0.62, 0.82],
+        bipolarBalance: [0.48, 0.63], responseMicroContrast: [0.24, 0.40],
+        red: [-0.12, 0.0], green: [0.74, 0.94], blue: [-0.18, -0.03],
+      }),
+      frequency: Object.freeze({
+        mesoRgbRms: [0.70, 0.80], cellRgbRms: [0.38, 0.48], mesoShare: [0.72, 0.79],
+        positiveCoverage: [0.38, 0.44], negativeCoverage: [0.36, 0.42],
+        mesoMeanBiasRatio: [0.019, 0.028], downsampleRetention: [0.982, 0.990],
+        gradientRatio: [1.25, 1.38], rgbPeak: [13, 16],
+        ySegmentMesoRgbRms: [[0.35, 0.45], [0.83, 0.93], [0.80, 0.91]],
+      }),
+      appearance: Object.freeze({
+        enabledDarkSeam: [0.060, 0.090], enabledStrongSeam: [0.019, 0.035],
+        darkSeamGain: [-0.003, 0.0], strongSeamGain: [-0.001, 0.003],
+        enabledLocalContrastRms: [3.8, 4.5], localContrastGain: [-0.020, 0.0],
+        localContrastRetention: [0.994, 1.0], enabledLumaStdDev: [30.4, 31.5],
+        lumaStdDevGain: [1.15, 1.45], enabledMacro: [80.0, 81.0], macroGain: [2.70, 3.35],
+        meanLumaGain: [0.50, 0.61],
+      }),
+    }),
+  }),
+  // The direct semantic/raw controls remain exact. Page capture can quantize
+  // a filtered edge by one byte at 2x without changing shader ownership.
+  composedResponseControlPeak: Object.freeze({
+    2: Object.freeze({
+      WOODSandContactSand: 1, PLNTSandContactSand: 1, PLNTThinStem: 1,
+    }),
+  }),
+  spread: Object.freeze({
+    rgbRms: 0.03, chromaRms: 0.03, spatialRgbRms: 0.03, rgbPeak: 1, coverage: 0.01,
+    signedMean: 0.02, meanBiasRatio: 0.02, bipolarBalance: 0.04,
+    responseMicroContrast: 0.06, mesoRgbRms: 0.01, cellRgbRms: 0.015,
+    mesoShare: 0.01, positiveCoverage: 0.025, negativeCoverage: 0.02,
+    mesoMeanBiasRatio: 0.003, downsampleRetention: 0.002, gradientRatio: 0.04,
+    ySegmentMesoRgbRms: 0.02, enabledLocalContrastRms: 0.25,
+    localContrastGain: 0.01, localContrastRetention: 0.003, enabledDarkSeam: 0.02,
+    enabledStrongSeam: 0.008, darkSeamGain: 0.002, strongSeamGain: 0.002,
+    meanLumaGain: 0.03, lumaStdDevGain: 0.05, macroGain: 0.15,
+  }),
+});
+
+/** E58: exact-state PLNT canopy hierarchy, strictly subordinate to E55. */
+async function auditPlantCanopyHierarchyVfxExperiment(cdp, mode, dpr) {
+  const scales = [];
+  const requestedScales = renderScaleArgument === undefined
+    ? VOLUME_VFX_SCALES : [Number(renderScaleArgument)];
+  for (const scale of requestedScales) {
+    const captures = {};
+    for (const enabled of [false, true, false]) {
+      const key = enabled ? 'enabled' : captures.disabled ? 'disabledRepeat' : 'disabled';
+      captures[key] = await navigatePlantCanopyHierarchyVfxState(
+        cdp, mode, scale, enabled, key, key !== 'disabled',
+      );
+    }
+    const { disabled, enabled, disabledRepeat } = captures;
+    assert(JSON.stringify(disabled.fixture) === JSON.stringify(enabled.fixture)
+      && JSON.stringify(disabled.fixture) === JSON.stringify(disabledRepeat.fixture),
+    `E58 ${scale}x fixture metadata changed`);
+    for (const [label, variant] of Object.entries(captures)) {
+      assertGeometry(variant.geometry, `E58 ${label} ${scale}x`, scale);
+      assert(variant.geometry.backend.backend === 'webgl' && variant.hdrPipeline?.state === 'active'
+        && ['botanicalBodyVfx', 'botanicalMesostructureVfx', 'botanicalPigmentVfx',
+          'plantLaminaVfx', 'plantLobeDepthVfx', 'plantCanopyMassVfx',
+          'plantCanopyTissueVfx', 'plantCanopyInterlockVfx'].every((name) => variant.hdrPipeline[name] === 'active')
+        && variant.hdrPipeline.plantCanopyHierarchyVfx === (label === 'enabled' ? 'active' : 'inactive'),
+      `E58 ${label} ${scale}x ancestry/selector state was wrong (${JSON.stringify(variant.hdrPipeline)})`);
+      assertBotanicalBodyVfxLifecycleDigest(variant.lifecycleDigest, `E58 ${label} ${scale}x`);
+    }
+    assertHdrVfxSemanticEquality(disabled.semantic, enabled.semantic, `E58 ${scale}x disabled/enabled`);
+    assertHdrVfxSemanticEquality(disabled.semantic, disabledRepeat.semantic, `E58 ${scale}x disabled/repeated`);
+    assertPlantCanopyInterlockBackingInvariant(disabled.backing, enabled.backing,
+      `E58 ${scale}x disabled/enabled`, false);
+    assertPlantCanopyInterlockBackingInvariant(disabled.backing, disabledRepeat.backing,
+      `E58 ${scale}x disabled/repeated`, true);
+    for (const field of ['walls', 'lifecycleDigest', 'auxiliaryDigest', 'targetDigest', 'rawControls']) {
+      assert(JSON.stringify(disabled[field]) === JSON.stringify(enabled[field])
+        && JSON.stringify(disabled[field]) === JSON.stringify(disabledRepeat[field]),
+      `E58 ${scale}x changed protected ${field}`);
+    }
+    assert(disabled.capture.capture.data === disabledRepeat.capture.capture.data,
+      `E58 ${scale}x repeated off framebuffer was not byte exact`);
+    const { targets, controls } = plantLaminaVfxRegions(disabled.fixture);
+    const sampled = await sampleBackdropRefractionRegions(cdp, {
+      straight: disabled.capture.capture.data, refracted: enabled.capture.capture.data,
+      repeatedStraight: disabledRepeat.capture.capture.data,
+    }, [...targets, ...controls], disabled.capture.canvasRect);
+    const targetResponses = sampled.slice(0, targets.length).map((sample) => ({ ...sample,
+      spatialRgbRms: round(Math.sqrt(Math.max(0, sample.rgbRms ** 2
+        - (Math.hypot(...sample.responseRgb) / Math.sqrt(3)) ** 2)), 3) }));
+    const controlResponses = sampled.slice(targets.length);
+    const frequency = await sampleBotanicalMesostructureFrequency(cdp, {
+      disabled: disabled.capture.capture.data, enabled: enabled.capture.capture.data,
+      disabledRepeat: disabledRepeat.capture.capture.data,
+    }, targets, 'E58');
+    const appearance = await samplePlantCanopyMassAppearance(cdp, {
+      disabled: disabled.capture.capture.data, enabled: enabled.capture.capture.data,
+    }, targets);
+    // Keep screenshots ahead of numeric assertions so a future visual drift
+    // leaves reviewable evidence even when it correctly fails the gate.
+    const screenshots = screenshotRequest && (requestedScales.length === 1 || scale === 2)
+      ? await writePlantCanopyHierarchyVfxScreenshots(screenshotRequest, scale, disabled, enabled)
+      : undefined;
+    assertPlantCanopyHierarchyVfxResponses(targetResponses, scale);
+    const controlAllowance = (sample) => (
+      PLANT_CANOPY_HIERARCHY_VFX_ACCEPTANCE
+        .composedResponseControlPeak[scale]?.[sample.name] ?? 0
+    );
+    assert(controlResponses.length === controls.length
+      && controlResponses.every((sample) => sample.rgbPeak <= controlAllowance(sample)
+        && sample.repeatRgbPeak <= controlAllowance(sample)),
+    `E58 ${scale}x changed a protected composed control (${JSON.stringify(controlResponses)})`);
+    assertPlantCanopyHierarchyVfxFrequency(frequency, scale);
+    assertPlantCanopyHierarchyVfxAppearance(appearance, scale);
+    scales.push({ scale, targetResponses, controlResponses, frequency, appearance, screenshots,
+      semantic: disabled.semantic, backing: disabled.backing, lifecycleDigest: disabled.lifecycleDigest,
+      auxiliaryDigest: disabled.auxiliaryDigest, rawControls: disabled.rawControls, exactRepeatedOff: true });
+  }
+  if (scales.length > 1) assertPlantCanopyHierarchyVfxCrossScale(scales);
+  return { calibration: 'frozen', acceptance: PLANT_CANOPY_HIERARCHY_VFX_ACCEPTANCE,
+    scales, trueEightXExcluded: true, trueEightX: await auditEightXPlantCanopyHierarchyVfxExclusion(cdp, dpr) };
+}
+
+function assertPlantCanopyHierarchyVfxResponses(samples, scale) {
+  const inRange = (value, range) => Number.isFinite(value)
+    && value >= range[0] && value <= range[1];
+  assert(samples.length === 2 && new Set(samples.map(({ name }) => name)).size === 2
+    && samples.every((sample) => {
+      const bounds = PLANT_CANOPY_HIERARCHY_VFX_ACCEPTANCE.targets[sample?.name]?.response;
+      return sample && bounds
+        && inRange(sample.rgbRms, bounds.rgbRms)
+        && inRange(sample.chromaRms, bounds.chromaRms)
+        && inRange(sample.spatialRgbRms, bounds.spatialRgbRms)
+        && inRange(sample.rgbPeak, bounds.rgbPeak)
+        && inRange(sample.coverage, bounds.coverage)
+        && inRange(sample.signedMean, bounds.signedMean)
+        && inRange(sample.meanBiasRatio, bounds.meanBiasRatio)
+        && inRange(sample.positiveMean, bounds.positiveMean)
+        && inRange(sample.negativeMean, bounds.negativeMean)
+        && inRange(sample.bipolarBalance, bounds.bipolarBalance)
+        && inRange(sample.responseMicroContrast, bounds.responseMicroContrast)
+        && inRange(sample.responseRgb[0], bounds.red)
+        && inRange(sample.responseRgb[1], bounds.green)
+        && inRange(sample.responseRgb[2], bounds.blue)
+        && sample.repeatRgbPeak === 0;
+    }),
+  `E58 ${scale}x PLNT hierarchy response escaped its frozen envelope (${JSON.stringify(samples)})`);
+}
+
+function assertPlantCanopyHierarchyVfxFrequency(samples, scale) {
+  const inRange = (value, range) => Number.isFinite(value)
+    && value >= range[0] && value <= range[1];
+  assert(samples.length === 2 && samples.every((sample) => {
+    const bounds = PLANT_CANOPY_HIERARCHY_VFX_ACCEPTANCE.targets[sample?.name]?.frequency;
+    return sample?.code === 'PLNT' && bounds
+      && inRange(sample.mesoRgbRms, bounds.mesoRgbRms)
+      && inRange(sample.cellRgbRms, bounds.cellRgbRms)
+      && inRange(sample.mesoShare, bounds.mesoShare)
+      && inRange(sample.positiveCoverage, bounds.positiveCoverage)
+      && inRange(sample.negativeCoverage, bounds.negativeCoverage)
+      && inRange(sample.mesoMeanBiasRatio, bounds.mesoMeanBiasRatio)
+      && inRange(sample.downsampleRetention, bounds.downsampleRetention)
+      && inRange(sample.gradientRatio, bounds.gradientRatio)
+      && inRange(sample.rgbPeak, bounds.rgbPeak)
+      && sample.ySegmentMesoRgbRms?.length === 3
+      && sample.ySegmentMesoRgbRms.every((value, index) => inRange(
+        value, bounds.ySegmentMesoRgbRms[index],
+      ))
+      && sample.repeatRgbPeak === 0;
+  }), `E58 ${scale}x PLNT hierarchy frequency escaped its frozen envelope (${JSON.stringify(samples)})`);
+}
+
+function assertPlantCanopyHierarchyVfxAppearance(samples, scale) {
+  const inRange = (value, range) => Number.isFinite(value)
+    && value >= range[0] && value <= range[1];
+  assert(samples.length === 2 && samples.every((sample) => {
+    const bounds = PLANT_CANOPY_HIERARCHY_VFX_ACCEPTANCE.targets[sample?.name]?.appearance;
+    const darkSeamGain = sample?.enabled.darkSeamFraction - sample?.disabled.darkSeamFraction;
+    const strongSeamGain = sample?.enabled.strongSeamFraction - sample?.disabled.strongSeamFraction;
+    const localContrastGain = sample?.enabled.localContrastRms - sample?.disabled.localContrastRms;
+    const lumaStdDevGain = sample?.enabled.lumaStdDev - sample?.disabled.lumaStdDev;
+    const macroGain = sample?.enabled.macroP90P10 - sample?.disabled.macroP90P10;
+    const meanLumaGain = sample?.enabled.meanLuma - sample?.disabled.meanLuma;
+    return sample?.code === 'PLNT' && bounds
+      && sample.uniqueSamplePixels === sample.width * sample.height
+      && inRange(sample.enabled.darkSeamFraction, bounds.enabledDarkSeam)
+      && inRange(sample.enabled.strongSeamFraction, bounds.enabledStrongSeam)
+      && inRange(darkSeamGain, bounds.darkSeamGain)
+      && inRange(strongSeamGain, bounds.strongSeamGain)
+      && inRange(sample.enabled.localContrastRms, bounds.enabledLocalContrastRms)
+      && inRange(localContrastGain, bounds.localContrastGain)
+      && inRange(sample.localContrastRetention, bounds.localContrastRetention)
+      && inRange(sample.enabled.lumaStdDev, bounds.enabledLumaStdDev)
+      && inRange(lumaStdDevGain, bounds.lumaStdDevGain)
+      && inRange(sample.enabled.macroP90P10, bounds.enabledMacro)
+      && inRange(macroGain, bounds.macroGain)
+      && inRange(meanLumaGain, bounds.meanLumaGain);
+  }), `E58 ${scale}x PLNT hierarchy appearance escaped its frozen envelope (${JSON.stringify(samples)})`);
+}
+
+function assertPlantCanopyHierarchyVfxCrossScale(scales) {
+  const bounds = PLANT_CANOPY_HIERARCHY_VFX_ACCEPTANCE.spread;
+  const spread = (values) => Math.max(...values) - Math.min(...values);
+  for (const name of ['PLNTLeft', 'PLNTRight']) {
+    const responses = scales.map((entry) => entry.targetResponses.find((sample) => sample.name === name));
+    const frequency = scales.map((entry) => entry.frequency.find((sample) => sample.name === name));
+    const appearance = scales.map((entry) => entry.appearance.find((sample) => sample.name === name));
+    assert(responses.every(Boolean) && frequency.every(Boolean) && appearance.every(Boolean)
+      && spread(responses.map((sample) => sample.rgbRms)) <= bounds.rgbRms
+      && spread(responses.map((sample) => sample.chromaRms)) <= bounds.chromaRms
+      && spread(responses.map((sample) => sample.spatialRgbRms)) <= bounds.spatialRgbRms
+      && spread(responses.map((sample) => sample.rgbPeak)) <= bounds.rgbPeak
+      && spread(responses.map((sample) => sample.coverage)) <= bounds.coverage
+      && spread(responses.map((sample) => sample.signedMean)) <= bounds.signedMean
+      && spread(responses.map((sample) => sample.meanBiasRatio)) <= bounds.meanBiasRatio
+      && spread(responses.map((sample) => sample.bipolarBalance)) <= bounds.bipolarBalance
+      && spread(responses.map((sample) => sample.responseMicroContrast)) <= bounds.responseMicroContrast
+      && spread(frequency.map((sample) => sample.mesoRgbRms)) <= bounds.mesoRgbRms
+      && spread(frequency.map((sample) => sample.cellRgbRms)) <= bounds.cellRgbRms
+      && spread(frequency.map((sample) => sample.mesoShare)) <= bounds.mesoShare
+      && spread(frequency.map((sample) => sample.positiveCoverage)) <= bounds.positiveCoverage
+      && spread(frequency.map((sample) => sample.negativeCoverage)) <= bounds.negativeCoverage
+      && spread(frequency.map((sample) => sample.mesoMeanBiasRatio)) <= bounds.mesoMeanBiasRatio
+      && spread(frequency.map((sample) => sample.downsampleRetention)) <= bounds.downsampleRetention
+      && spread(frequency.map((sample) => sample.gradientRatio)) <= bounds.gradientRatio
+      && [0, 1, 2].every((index) => spread(frequency.map(
+        (sample) => sample.ySegmentMesoRgbRms[index],
+      )) <= bounds.ySegmentMesoRgbRms)
+      && spread(appearance.map((sample) => sample.enabled.localContrastRms))
+        <= bounds.enabledLocalContrastRms
+      && spread(appearance.map((sample) => sample.enabled.localContrastRms
+        - sample.disabled.localContrastRms)) <= bounds.localContrastGain
+      && spread(appearance.map((sample) => sample.localContrastRetention))
+        <= bounds.localContrastRetention
+      && spread(appearance.map((sample) => sample.enabled.darkSeamFraction)) <= bounds.enabledDarkSeam
+      && spread(appearance.map((sample) => sample.enabled.strongSeamFraction)) <= bounds.enabledStrongSeam
+      && spread(appearance.map((sample) => sample.enabled.darkSeamFraction
+        - sample.disabled.darkSeamFraction)) <= bounds.darkSeamGain
+      && spread(appearance.map((sample) => sample.enabled.strongSeamFraction
+        - sample.disabled.strongSeamFraction)) <= bounds.strongSeamGain
+      && spread(appearance.map((sample) => sample.enabled.meanLuma
+        - sample.disabled.meanLuma)) <= bounds.meanLumaGain
+      && spread(appearance.map((sample) => sample.enabled.lumaStdDev
+        - sample.disabled.lumaStdDev)) <= bounds.lumaStdDevGain
+      && spread(appearance.map((sample) => sample.enabled.macroP90P10
+        - sample.disabled.macroP90P10)) <= bounds.macroGain,
+    `E58 ${name} changed excessively across normal output scales (${JSON.stringify({ responses, frequency, appearance })})`);
+  }
+}
+
+async function navigatePlantCanopyHierarchyVfxState(cdp, mode, scale, enabled, label, reuseHydratedPage) {
+  const query = new URLSearchParams({
+    scene: 'render-lab', inputAudit: '1', blankAudit: '1', auditStage: 'blank',
+    plantCanopyHierarchyVfxAudit: '1', renderScale: String(scale), renderLook: 'realistic',
+    volumeVfx: '0', liquidBodyVfx: '0', liquidSurfaceVfx: '0', gasBodyVfx: '0', gasMotionVfx: '0',
+    powderBodyVfx: '0', powderLightVfx: '0', powderSolidContactVfx: '0', translucentEdgeVfx: '0',
+    organicSubsurfaceVfx: '0', wetSedimentVfx: '0', gasLightVfx: '0', liquidSolidMeniscusVfx: '0',
+    gasCoreDepthVfx: '0', nobleGasBillowVfx: '0', nobleGasPrismVfx: '0', smokeSoftnessVfx: '0',
+    plasmaCoreVfx: '0', solidBodyVfx: '0', botanicalBodyVfx: '1', botanicalMesostructureVfx: '1',
+    botanicalPigmentVfx: '1', plantLaminaVfx: '1', plantLobeDepthVfx: '1', plantCanopyMassVfx: '1',
+    plantCanopyTissueVfx: '1', plantCanopyInterlockVfx: '1', plantCanopyHierarchyVfx: enabled ? '1' : '0',
+    woodBarkReliefVfx: '0', woodTanninVfx: '0', glassBodyVfx: '0', oilBodyVfx: '0',
+    rockRoughnessVfx: '0', rockMesostructureVfx: '0', waterBodyVfx: '0',
+  });
+  let fixture;
+  if (reuseHydratedPage) {
+    const reused = await evaluate(cdp, `(() => { const audit = window.__ANIFOR_INPUT_AUDIT__;
+      if (new URLSearchParams(location.search).get('plantCanopyHierarchyVfxAudit') !== '1'
+        || audit?.backend().backend !== 'webgl' || typeof audit?.setPlantCanopyHierarchyVfx !== 'function') return undefined;
+      audit.setPlantCanopyHierarchyVfx(${JSON.stringify(enabled)}); return audit.botanicalBodyVfxFixture?.(); })()`);
+    assert(reused, `E58 ${label} ${scale}x could not reuse hydrated PLNT fixture`); fixture = reused;
+  } else {
+    await cdp.send('Page.navigate', { url: `${AUDIT_BASE_URL}?${query}` });
+    await waitFor(() => evaluate(cdp, `(() => { const p = new URLSearchParams(location.search); const audit = window.__ANIFOR_INPUT_AUDIT__;
+      return p.get('plantCanopyHierarchyVfxAudit') === '1' && p.get('renderScale') === ${JSON.stringify(String(scale))}
+        && p.get('plantCanopyHierarchyVfx') === ${JSON.stringify(enabled ? '1' : '0')}
+        && typeof audit?.setPlantCanopyHierarchyVfx === 'function' && typeof audit?.prepareBotanicalBodyVfxFixture === 'function'; })()`),
+    scale === 4 ? 90_000 : 45_000, `E58 ${label} ${scale}x page`);
+    await waitFor(() => evaluate(cdp, `window.__ANIFOR_INPUT_AUDIT__.backend().backend === ${JSON.stringify(mode)}`),
+      scale === 4 ? 90_000 : 45_000, `E58 ${label} ${scale}x backend`);
+    fixture = await evaluate(cdp, `(() => { const audit = window.__ANIFOR_INPUT_AUDIT__;
+      audit.prepareBotanicalBodyVfxFixture(); return audit.botanicalBodyVfxFixture(); })()`);
+    for (let pass = 0; pass < 7; pass++) {
+      const before = await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.presentationRefreshAudit()');
+      await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.refreshPresentationFields(); true');
+      await waitFor(() => evaluate(cdp, `window.__ANIFOR_INPUT_AUDIT__.presentationRefreshAudit()?.dynamicSequence > ${before.dynamicSequence}`),
+        scale === 4 ? 15_000 : 5_000, `E58 ${label} ${scale}x stability ${pass + 1}`);
+    }
+  }
+  await waitFor(() => botanicalBodyVfxFixtureReady(cdp, fixture), 20_000, `E58 ${label} ${scale}x fixture hydration`);
+  await waitFor(() => evaluate(cdp, `document.querySelector('canvas.semantic-field-canvas')?.dataset.plantCanopyHierarchyVfx === ${JSON.stringify(enabled ? 'active' : 'inactive')}`),
+    20_000, `E58 ${label} ${scale}x in-place selector`);
+  const hdrPipeline = await evaluate(cdp, `(() => { const canvas = document.querySelector('canvas.semantic-field-canvas'); if (!canvas) return undefined;
+    const names = ['botanicalBodyVfx', 'botanicalMesostructureVfx', 'botanicalPigmentVfx', 'plantLaminaVfx',
+      'plantLobeDepthVfx', 'plantCanopyMassVfx', 'plantCanopyTissueVfx', 'plantCanopyInterlockVfx', 'plantCanopyHierarchyVfx'];
+    return { state: canvas.dataset.hdrPipeline, bloomBacking: canvas.dataset.bloomBacking,
+      ...Object.fromEntries(names.map((name) => [name, canvas.dataset[name]])) }; })()`);
+  const { targets } = plantLaminaVfxRegions(fixture);
+  return { fixture, hdrPipeline, geometry: await metrics(cdp), semantic: await hdrVfxSemanticDigest(cdp),
+    walls: await botanicalBodyVfxWallDigest(cdp), targetDigest: await plantLaminaVfxTargetDigest(cdp, targets),
+    lifecycleDigest: await botanicalBodyVfxLifecycleDigest(cdp, fixture), auxiliaryDigest: await botanicalMesostructureVfxAuxiliaryDigest(cdp, fixture),
+    backing: await sampleVolumeVfxCanvasAlphaSupport(cdp, true, targets),
+    rawControls: await sampleVolumeVfxRawWorldPixels(cdp, plantLaminaVfxRawControlPoints(fixture)),
+    capture: await captureSettledPage(cdp, `E58 ${label} ${scale}x completed framebuffer`, 450, false, false, false, scale === 4 ? 60_000 : 30_000) };
+}
+
+async function writePlantCanopyHierarchyVfxScreenshots(source, scale, disabled, enabled) {
+  const paths = { off: variantScreenshotPath(source, `e58-plant-canopy-hierarchy-${scale}x-off`),
+    on: variantScreenshotPath(source, `e58-plant-canopy-hierarchy-${scale}x-on`) };
+  await writeFile(paths.off, Buffer.from(disabled.capture.capture.data, 'base64'));
+  await writeFile(paths.on, Buffer.from(enabled.capture.capture.data, 'base64')); return paths;
+}
+
+async function auditEightXPlantCanopyHierarchyVfxExclusion(cdp, dpr) {
+  await setDesktopMetrics(cdp, 1280, 720, dpr);
+  const query = new URLSearchParams({ scene: 'render-lab', inputAudit: '1', blankAudit: '1', renderScale: '8',
+    auditStage: 'eight-plant-canopy-hierarchy', plantCanopyHierarchyVfxAudit: '1', renderLook: 'realistic',
+    botanicalBodyVfx: '1', botanicalMesostructureVfx: '1', botanicalPigmentVfx: '1', plantLaminaVfx: '1',
+    plantLobeDepthVfx: '1', plantCanopyMassVfx: '1', plantCanopyTissueVfx: '1', plantCanopyInterlockVfx: '1', plantCanopyHierarchyVfx: '1' });
+  await cdp.send('Page.navigate', { url: `${AUDIT_BASE_URL}?${query}` }); const deadline = Date.now() + EIGHT_X_PRESENTATION_DEADLINE_MS;
+  await waitFor(() => evaluate(cdp, `(() => { const p = new URLSearchParams(location.search); return p.get('renderScale') === '8'
+    && p.get('plantCanopyHierarchyVfxAudit') === '1' && p.get('plantCanopyHierarchyVfx') === '1' && Boolean(window.__ANIFOR_INPUT_AUDIT__); })()`),
+  remainingDeadlineMs(deadline, 'true-8x E58 input audit API'), 'true-8x E58 input audit API');
+  const backend = await waitForEightXTerminalBackend(cdp, 'true-8x E58', deadline); assertEightXWebGLBackend(backend, 'true-8x E58');
+  const geometry = await waitForStableCanvas(cdp, 1280, 720, undefined,
+    Math.min(45_000, remainingDeadlineMs(deadline, 'true-8x E58 geometry')), 'true-8x E58 geometry');
+  assert(geometry.backing.width === WORLD_WIDTH * 8 && geometry.backing.height === WORLD_HEIGHT * 8 && geometry.outputScale === '8',
+    `true-8x E58 lost exact backing (${JSON.stringify(geometry.backing)})`);
+  const isolation = await evaluate(cdp, `(() => { const canvas = document.querySelector('canvas.semantic-field-canvas'); const names = [
+    'botanicalBodyVfx', 'botanicalMesostructureVfx', 'botanicalPigmentVfx', 'plantLaminaVfx',
+    'plantLobeDepthVfx', 'plantCanopyMassVfx', 'plantCanopyTissueVfx', 'plantCanopyInterlockVfx',
+    'plantCanopyHierarchyVfx']; return canvas ? {
+    state: canvas.dataset.hdrPipeline, reason: canvas.dataset.hdrPipelineReason, bloomBacking: canvas.dataset.bloomBacking ?? null,
+    ...Object.fromEntries(names.map((name) => [name, canvas.dataset[name]])) } : undefined; })()`);
+  assert(isolation?.state === 'inactive' && isolation.reason === 'scale-8' && isolation.bloomBacking === null
+    && ['botanicalBodyVfx', 'botanicalMesostructureVfx', 'botanicalPigmentVfx', 'plantLaminaVfx',
+      'plantLobeDepthVfx', 'plantCanopyMassVfx', 'plantCanopyTissueVfx', 'plantCanopyInterlockVfx',
+      'plantCanopyHierarchyVfx'].every((name) => isolation[name] === 'inactive'),
+  `true-8x E58/HDR exclusion failed (${JSON.stringify(isolation)})`);
+  const budget = remainingDeadlineMs(deadline, 'true-8x E58 GPU completion');
+  const timing = await auditWebGLPresentationTiming(cdp, 1, Math.min(12_000, budget), budget, 1);
+  assert(timing.source === 'gpu-fence' || timing.source === 'gpu-query' || timing.source === 'gpu-finish',
+    `true-8x E58 did not complete GPU work (${JSON.stringify(timing)})`);
+  return { backing: `${geometry.backing.width}x${geometry.backing.height}`, promotionFence: 'signaled', isolation, timing };
+}
+
 /** E55: exact-state PLNT canopy interlock, strictly subordinate to E53. */
 async function auditPlantCanopyInterlockVfxExperiment(cdp, mode, dpr) {
   const scales = [];
@@ -33623,6 +34054,7 @@ async function navigatePlantCanopyMassVfxState(
     plantLobeDepthVfx: '1', plantCanopyMassVfx: canopyMassEnabled,
     plantCanopyTissueVfx: canopyTissueEnabled,
     plantCanopyInterlockVfx: canopyInterlockEnabled,
+    plantCanopyHierarchyVfx: '0',
     woodBarkReliefVfx: '0', woodTanninVfx: '0', glassBodyVfx: '0', oilBodyVfx: '0',
     rockRoughnessVfx: '0', rockMesostructureVfx: '0', waterBodyVfx: '0',
   });
@@ -33663,6 +34095,7 @@ async function navigatePlantCanopyMassVfxState(
         && p.get('plantCanopyMassVfx') === ${JSON.stringify(canopyMassEnabled)}
         && p.get('plantCanopyTissueVfx') === ${JSON.stringify(canopyTissueEnabled)}
         && p.get('plantCanopyInterlockVfx') === ${JSON.stringify(canopyInterlockEnabled)}
+        && p.get('plantCanopyHierarchyVfx') === '0'
         && p.get('woodBarkReliefVfx') === '0' && p.get('woodTanninVfx') === '0'
         && ['volumeVfx', 'liquidBodyVfx', 'liquidSurfaceVfx', 'gasBodyVfx', 'gasMotionVfx',
           'powderBodyVfx', 'powderLightVfx', 'powderSolidContactVfx', 'translucentEdgeVfx',
@@ -33713,7 +34146,7 @@ async function navigatePlantCanopyMassVfxState(
       'plasmaCoreVfx', 'solidBodyVfx', 'platinumBodyVfx', 'ceramicGlazeVfx',
       'botanicalBodyVfx', 'botanicalMesostructureVfx', 'botanicalPigmentVfx',
       'plantLaminaVfx', 'plantLobeDepthVfx', 'plantCanopyMassVfx', 'plantCanopyTissueVfx',
-      'plantCanopyInterlockVfx',
+      'plantCanopyInterlockVfx', 'plantCanopyHierarchyVfx',
       'woodBarkReliefVfx',
       'woodTanninVfx', 'glassBodyVfx', 'oilBodyVfx', 'rockRoughnessVfx',
       'rockMesostructureVfx', 'waterBodyVfx'];
@@ -33739,6 +34172,7 @@ async function navigatePlantCanopyMassVfxState(
     && hdrPipeline.plantCanopyMassVfx === (canopyMassEnabled === '1' ? 'active' : 'inactive')
     && hdrPipeline.plantCanopyTissueVfx === (canopyTissueEnabled === '1' ? 'active' : 'inactive')
     && hdrPipeline.plantCanopyInterlockVfx === (canopyInterlockEnabled === '1' ? 'active' : 'inactive')
+    && hdrPipeline.plantCanopyHierarchyVfx === 'inactive'
     && siblings.every((name) => hdrPipeline[name] === 'inactive'),
   `${experiment} ${label} ${scale}x HDR/selector state resolved incorrectly (${JSON.stringify(hdrPipeline)})`);
   const indicator = await evaluate(cdp, `(() => {
@@ -34069,6 +34503,7 @@ async function auditEightXPlantCanopyMassVfxExclusion(
     plantLaminaVfx: '1', plantLobeDepthVfx: '1', plantCanopyMassVfx: '1',
     plantCanopyTissueVfx: interlockRequested || tissueRequested ? '1' : '0',
     plantCanopyInterlockVfx: interlockRequested ? '1' : '0',
+    plantCanopyHierarchyVfx: '0',
     woodBarkReliefVfx: '0', woodTanninVfx: '0', glassBodyVfx: '0', oilBodyVfx: '0',
     rockRoughnessVfx: '0', rockMesostructureVfx: '0', waterBodyVfx: '0',
   });
@@ -34109,13 +34544,14 @@ async function auditEightXPlantCanopyMassVfxExclusion(
       plantLobeDepthVfx: canvas.dataset.plantLobeDepthVfx,
       plantCanopyMassVfx: canvas.dataset.plantCanopyMassVfx,
       plantCanopyTissueVfx: canvas.dataset.plantCanopyTissueVfx,
-      plantCanopyInterlockVfx: canvas.dataset.plantCanopyInterlockVfx } : undefined;
+      plantCanopyInterlockVfx: canvas.dataset.plantCanopyInterlockVfx,
+      plantCanopyHierarchyVfx: canvas.dataset.plantCanopyHierarchyVfx } : undefined;
   })()`, Math.min(1_000, remainingDeadlineMs(deadline, `true-8x ${experiment} isolation`)));
   assert(isolation?.renderer === 'semantic-field-webgl' && isolation.look === 'realistic'
     && isolation.state === 'inactive' && isolation.reason === 'scale-8' && isolation.bloomBacking === null
     && ['botanicalBodyVfx', 'botanicalMesostructureVfx', 'botanicalPigmentVfx',
       'plantLaminaVfx', 'plantLobeDepthVfx', 'plantCanopyMassVfx', 'plantCanopyTissueVfx',
-      'plantCanopyInterlockVfx']
+      'plantCanopyInterlockVfx', 'plantCanopyHierarchyVfx']
       .every((name) => isolation[name] === 'inactive'),
   `true-8x ${experiment} isolation failed (${JSON.stringify(isolation)})`);
   const timingBudget = remainingDeadlineMs(deadline, `true-8x ${experiment} GPU completion`);

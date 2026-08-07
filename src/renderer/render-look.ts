@@ -586,6 +586,24 @@ export function resolvePlantCanopyInterlockVfxEnabled(
 }
 
 /**
+ * E58 refines only E55's proven PLNT canopy interlock into a bounded hierarchy
+ * response. This strict child cannot revive any botanical parent, and focused
+ * input audits remain frozen until they request it.
+ */
+export function resolvePlantCanopyHierarchyVfxEnabled(
+  look: RenderLook,
+  search = globalThis.location?.search ?? '',
+): boolean {
+  if (!resolvePlantCanopyInterlockVfxEnabled(look, search)) return false;
+  const parameters = new URLSearchParams(search);
+  const requested = parameters.get('plantCanopyHierarchyVfx');
+  if (requested === '0' || requested === 'off' || requested === 'false') return false;
+  if (requested === '1' || requested === 'on' || requested === 'true') return true;
+  if (parameters.get('inputAudit') === '1') return false;
+  return true;
+}
+
+/**
  * Keeps the exact thick-Glass body-transmission experiment independently
  * measurable inside the broader volume study. Normal WebGL owns the strict
  * Glass owner, depth, contact, and topology guards; Canvas and compact true 8x

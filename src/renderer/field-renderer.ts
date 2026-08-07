@@ -1308,6 +1308,12 @@ export class MaterialRenderer {
     // between the focused audit's flat/styled/flat captures.
   }
 
+  /** Normal-WebGL audit-only in-place uniform toggle; Canvas keeps its path. */
+  setPlantCanopyHierarchyVfxEnabled(enabled: boolean): void {
+    this.presenter?.setPlantCanopyHierarchyVfxEnabled(enabled);
+    // Preserve the hydrated E55 fixture and submit only the causal uniform.
+  }
+
   setSparkStateStylingEnabled(enabled: boolean): void {
     if (enabled === this.sparkStateStylingEnabled) return;
     this.sparkStateStylingEnabled = enabled;

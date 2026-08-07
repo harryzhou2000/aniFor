@@ -58,6 +58,7 @@ interface PresenterHarness {
   setBotanicalIdentityStylingEnabled: PixiFieldPresenter['setBotanicalIdentityStylingEnabled'];
   setBotanicalLifecycleStylingEnabled: PixiFieldPresenter['setBotanicalLifecycleStylingEnabled'];
   setPlantCanopyInterlockVfxEnabled: PixiFieldPresenter['setPlantCanopyInterlockVfxEnabled'];
+  setPlantCanopyHierarchyVfxEnabled: PixiFieldPresenter['setPlantCanopyHierarchyVfxEnabled'];
   setSparkStateStylingEnabled: PixiFieldPresenter['setSparkStateStylingEnabled'];
   setLiquidSilhouetteCohesionEnabled: PixiFieldPresenter['setLiquidSilhouetteCohesionEnabled'];
   setRenderStallHandler: PixiFieldPresenter['setRenderStallHandler'];
@@ -1125,6 +1126,7 @@ describe('Pixi presenter startup configuration', () => {
     const e20End = normal.indexOf('    } else if (radioactiveSurface', e20Start);
     const e20 = normal.slice(e20Start, e20End);
     const e26Start = e20.indexOf('        // E26');
+    const e58Start = e20.indexOf('                // E58:', e26Start);
     const preserveDrawingBufferStart = source.indexOf('preserveDrawingBuffer:');
     const preserveDrawingBufferEnd = source.indexOf(
       'resolution: outputScale', preserveDrawingBufferStart,
@@ -1136,6 +1138,7 @@ describe('Pixi presenter startup configuration', () => {
     expect(e20Start).toBeGreaterThanOrEqual(0);
     expect(e20End).toBeGreaterThan(e20Start);
     expect(e26Start).toBeGreaterThanOrEqual(0);
+    expect(e58Start).toBeGreaterThan(e26Start);
     expect(normal).toContain('uniform float uBotanicalMesostructureVfx;');
     // E26 owns its body gate and both exact children repeat the same predicate
     // so an inconsistent child uniform cannot bypass its parent in GLSL.
@@ -1151,7 +1154,8 @@ describe('Pixi presenter startup configuration', () => {
       'botanicalDepth', 'botanicalMacro', 'botanicalCluster',
       'leafBoundary', 'barkBody', 'barkKnot',
     ]) expect(e20.slice(e26Start)).toContain(establishedValue);
-    expect(e20.match(/botanicalBodyNoise\(/g)).toHaveLength(4);
+    // E20/E26/E32 retain four established calls; E58 owns exactly one more.
+    expect(e20.match(/botanicalBodyNoise\(/g)).toHaveLength(5);
     expect(e20).not.toContain('texture(');
     expect(e20).not.toContain('uTime');
     expect(e20).not.toContain('gl_FragCoord');
@@ -1188,6 +1192,7 @@ describe('Pixi presenter startup configuration', () => {
     const pigmentGate = e20.indexOf('        float botanicalPigment =');
     const plantFinish = e20.indexOf('          // E28:');
     const woodFinish = e20.indexOf('          // E28 keeps');
+    const e58Start = e20.indexOf('                // E58:', plantFinish);
     const preserveDrawingBufferStart = source.indexOf('preserveDrawingBuffer:');
     const preserveDrawingBufferEnd = source.indexOf(
       'resolution: outputScale', preserveDrawingBufferStart,
@@ -1201,6 +1206,8 @@ describe('Pixi presenter startup configuration', () => {
     expect(pigmentGate).toBeGreaterThan(e20.indexOf('if (botanicalBodyReplacement > 0.5)'));
     expect(plantFinish).toBeGreaterThan(pigmentGate);
     expect(woodFinish).toBeGreaterThan(plantFinish);
+    expect(e58Start).toBeGreaterThan(plantFinish);
+    expect(e58Start).toBeLessThan(woodFinish);
     expect(normal).toContain('uniform float uBotanicalPigmentVfx;');
     expect(normal.match(/uBotanicalPigmentVfx > 0\.5/g)).toHaveLength(2);
     expect(eight).not.toContain('uBotanicalPigmentVfx');
@@ -1220,7 +1227,8 @@ describe('Pixi presenter startup configuration', () => {
     expect(e20).toContain('vec3(-0.052, 0.022, -0.060) * leafPigmentBody');
     expect(e20).toContain('barkPigmentBody * 0.026 * botanicalPigment');
     expect(e20).toContain('vec3(0.085, -0.017, -0.052) * barkPigmentBody');
-    expect(e20.match(/botanicalBodyNoise\(/g)).toHaveLength(4);
+    // E20/E26/E32 retain four established calls; E58 owns exactly one more.
+    expect(e20.match(/botanicalBodyNoise\(/g)).toHaveLength(5);
     expect(e20).not.toContain('texture(');
     expect(e20).not.toContain('uTime');
     expect(e20).not.toContain('gl_FragCoord');
@@ -1249,6 +1257,8 @@ describe('Pixi presenter startup configuration', () => {
     const e32Start = normal.indexOf('          // E32: exact PLNT');
     const e32End = normal.indexOf('        } else {', e32Start);
     const e32 = normal.slice(e32Start, e32End);
+    const e58Start = e32.indexOf('                // E58:');
+    const preE58 = e32.slice(0, e58Start);
     const preserveDrawingBufferStart = source.indexOf('preserveDrawingBuffer:');
     const preserveDrawingBufferEnd = source.indexOf(
       'resolution: outputScale', preserveDrawingBufferStart,
@@ -1259,6 +1269,7 @@ describe('Pixi presenter startup configuration', () => {
 
     expect(e32Start).toBeGreaterThanOrEqual(0);
     expect(e32End).toBeGreaterThan(e32Start);
+    expect(e58Start).toBeGreaterThan(0);
     expect(normal).toContain('uniform float uPlantLaminaVfx;');
     expect(normal.match(/uPlantLaminaVfx > 0\.5/g)).toHaveLength(1);
     expect(eight).not.toContain('uPlantLaminaVfx');
@@ -1273,7 +1284,7 @@ describe('Pixi presenter startup configuration', () => {
       'botanicalDepth', 'leafPigmentBody', 'leafBody', 'leafVein', 'leafBoundary',
     ]) expect(e32).toContain(establishedValue);
     expect(e32).toContain('fieldPosition / 2.8');
-    expect(e32.match(/botanicalBodyNoise\(/g)).toHaveLength(1);
+    expect(preE58.match(/botanicalBodyNoise\(/g)).toHaveLength(1);
     expect(e32).toContain('if (plantLamina > 0.001)');
     expect(e32).not.toContain('sin(');
     expect(e32).not.toContain('texture(');
@@ -1301,8 +1312,11 @@ describe('Pixi presenter startup configuration', () => {
     const normalEnd = source.indexOf('`;\n\n/** Primary WebGL presentation', normalStart);
     const eight = source.slice(eightStart, normalStart);
     const normal = source.slice(normalStart, normalEnd);
-    const e34Start = normal.indexOf("          // E34: E32's fine carrier");
-    const e34End = normal.indexOf('        } else {', e34Start);
+    const e34Comment = normal.indexOf("          // E34: E32's fine carrier");
+    const e34Start = normal.lastIndexOf('          float plantLobeDepth =', e34Comment);
+    const e34End = normal.indexOf(
+      '            // E53 is a strict E36 child', e34Start,
+    );
     const e34 = normal.slice(e34Start, e34End);
     const preserveDrawingBufferStart = source.indexOf('preserveDrawingBuffer:');
     const preserveDrawingBufferEnd = source.indexOf(
@@ -1313,6 +1327,7 @@ describe('Pixi presenter startup configuration', () => {
     );
 
     expect(e34Start).toBeGreaterThanOrEqual(0);
+    expect(e34Comment).toBeGreaterThan(e34Start);
     expect(e34End).toBeGreaterThan(e34Start);
     expect(normal).toContain('uniform float uPlantLobeDepthVfx;');
     expect(normal.match(/uPlantLobeDepthVfx > 0\.5/g)).toHaveLength(1);
@@ -1360,7 +1375,7 @@ describe('Pixi presenter startup configuration', () => {
     const proofStart = normal.indexOf("          // Resolve E36's exact zero-state PLNT proof");
     const proofEnd = normal.indexOf('          color *= 1.0 - (leafPigmentPocket', proofStart);
     const finishStart = normal.indexOf('          // E36 is a strict E34 child', proofEnd);
-    const finishEnd = normal.indexOf('        } else {', finishStart);
+    const finishEnd = normal.indexOf('            // E53 is a strict E36 child', finishStart);
     const e36 = normal.slice(proofStart, proofEnd) + normal.slice(finishStart, finishEnd);
     const preserveDrawingBufferStart = source.indexOf('preserveDrawingBuffer:');
     const preserveDrawingBufferEnd = source.indexOf(
@@ -1468,9 +1483,10 @@ describe('Pixi presenter startup configuration', () => {
     const normal = source.slice(normalStart, normalEnd);
     const e53Start = normal.indexOf('            // E53 is a strict E36 child');
     const e55Start = normal.indexOf('              // E55:', e53Start);
+    const e58Start = normal.indexOf('                // E58:', e55Start);
     const e55End = normal.indexOf('        } else {', e55Start);
     const e53Parent = normal.slice(e53Start, e55Start);
-    const e55 = normal.slice(e55Start, e55End);
+    const e55 = normal.slice(e55Start, e58Start);
     const preserveDrawingBufferStart = source.indexOf('preserveDrawingBuffer:');
     const preserveDrawingBufferEnd = source.indexOf(
       'resolution: outputScale', preserveDrawingBufferStart,
@@ -1481,6 +1497,7 @@ describe('Pixi presenter startup configuration', () => {
 
     expect(e53Start).toBeGreaterThanOrEqual(0);
     expect(e55Start).toBeGreaterThan(e53Start);
+    expect(e58Start).toBeGreaterThan(e55Start);
     expect(e55End).toBeGreaterThan(e55Start);
     expect(e53Parent).toContain('if (uPlantCanopyTissueVfx > 0.5)');
     expect(normal).toContain('uniform float uPlantCanopyInterlockVfx;');
@@ -1543,6 +1560,94 @@ describe('Pixi presenter startup configuration', () => {
     const auditSetter = canvasSource.slice(auditSetterStart, auditSetterEnd);
     expect(auditSetterStart).toBeGreaterThan(0);
     expect(auditSetter).toContain('this.presenter?.setPlantCanopyInterlockVfxEnabled(enabled)');
+    expect(auditSetter).not.toContain('fallbackFields');
+    expect(auditSetter).not.toContain('contourChunks');
+  });
+
+  it('keeps E58 PLNT canopy hierarchy continuous, E55-dependent, and resource-neutral', () => {
+    const presenter = presenterHarness();
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const canvasSource = readFileSync(new URL('./field-renderer.ts', import.meta.url), 'utf8');
+    const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');
+    const normalStart = source.indexOf('const FIELD_FRAGMENT = `', eightStart);
+    const normalEnd = source.indexOf('`;\n\n/** Primary WebGL presentation', normalStart);
+    const eight = source.slice(eightStart, normalStart);
+    const normal = source.slice(normalStart, normalEnd);
+    const e55Start = normal.indexOf('              // E55:');
+    const e58Start = normal.indexOf('                // E58:', e55Start);
+    const e58End = normal.indexOf('        } else {', e58Start);
+    const e55Parent = normal.slice(e55Start, e58Start);
+    const e58 = normal.slice(e58Start, e58End);
+    const preserveDrawingBufferStart = source.indexOf('preserveDrawingBuffer:');
+    const preserveDrawingBufferEnd = source.indexOf(
+      'resolution: outputScale', preserveDrawingBufferStart,
+    );
+    const preserveDrawingBuffer = source.slice(
+      preserveDrawingBufferStart, preserveDrawingBufferEnd,
+    );
+
+    expect(e55Start).toBeGreaterThanOrEqual(0);
+    expect(e58Start).toBeGreaterThan(e55Start);
+    expect(e58End).toBeGreaterThan(e58Start);
+    expect(e55Parent).toContain('if (uPlantCanopyInterlockVfx > 0.5)');
+    expect(normal).toContain('uniform float uPlantCanopyHierarchyVfx;');
+    expect(normal.match(/uPlantCanopyHierarchyVfx > 0\.5/g)).toHaveLength(1);
+    expect(eight).not.toContain('uPlantCanopyHierarchyVfx');
+    expect(eight).not.toContain('plantCanopyHierarchyVfx');
+    for (const establishedValue of [
+      'botanicalBodyNoise(', 'fieldPosition / 11.0',
+      'leafCanopyInterlockFold', 'leafCanopyRank',
+      'leafCanopyFront', 'leafCanopyRear', 'leafCanopyOverlap',
+      'solidEnvironment', 'plantCanopyMass',
+    ]) expect(e58).toContain(establishedValue);
+    expect(e58.match(/botanicalBodyNoise\(/g)).toHaveLength(1);
+    expect(e58).not.toContain('smoothstep(');
+    expect(e58).not.toContain('step(');
+    expect(e58).not.toContain('sin(');
+    expect(e58).not.toContain('texture(');
+    expect(e58).not.toContain('uTime');
+    expect(e58).not.toContain('gl_FragCoord');
+    expect(e58).not.toMatch(/\balpha\s*[+*]?=/);
+    expect(source.match(/this\.uniforms\.uniforms\.uPlantCanopyHierarchyVfx = 0;/g))
+      .toHaveLength(3);
+    expect(source).toMatch(
+      /const plantCanopyHierarchyVfxEnabled = outputScale < 8\s*&& resolvePlantCanopyHierarchyVfxEnabled\(renderLook\);/,
+    );
+    expect(source).toContain(
+      'uPlantCanopyHierarchyVfx: { value: plantCanopyHierarchyVfxEnabled ? 1 : 0',
+    );
+    expect(preserveDrawingBuffer).toContain("get('plantCanopyHierarchyVfxAudit') === '1'");
+    expect(source).toContain('presenter.app.canvas.dataset.plantCanopyHierarchyVfx');
+    expect(source).toContain("this.app.canvas.dataset.plantCanopyHierarchyVfx = 'inactive';");
+
+    presenter.uniforms.uniforms.uPlantCanopyInterlockVfx = 1;
+    presenter.setPlantCanopyHierarchyVfxEnabled(true);
+    expect(presenter.uniforms.uniforms.uPlantCanopyHierarchyVfx).toBe(1);
+    expect(presenter.app.canvas.dataset.plantCanopyHierarchyVfx).toBe('active');
+    expect(presenter.app.render).toHaveBeenCalledOnce();
+    presenter.app.render.mockClear();
+    presenter.setPlantCanopyHierarchyVfxEnabled(false);
+    expect(presenter.uniforms.uniforms.uPlantCanopyHierarchyVfx).toBe(0);
+    expect(presenter.app.canvas.dataset.plantCanopyHierarchyVfx).toBe('inactive');
+    expect(presenter.app.render).toHaveBeenCalledOnce();
+    presenter.app.render.mockClear();
+    presenter.uniforms.uniforms.uPlantCanopyInterlockVfx = 0;
+    presenter.setPlantCanopyHierarchyVfxEnabled(true);
+    expect(presenter.uniforms.uniforms.uPlantCanopyHierarchyVfx).toBe(0);
+    expect(presenter.app.canvas.dataset.plantCanopyHierarchyVfx).toBe('inactive');
+    expect(presenter.app.render).not.toHaveBeenCalled();
+    presenter.uniforms.uniforms.uPlantCanopyInterlockVfx = 1;
+    Object.assign(presenter, { outputScale: 8 });
+    presenter.setPlantCanopyHierarchyVfxEnabled(true);
+    expect(presenter.uniforms.uniforms.uPlantCanopyHierarchyVfx).toBe(0);
+    expect(presenter.app.canvas.dataset.plantCanopyHierarchyVfx).toBe('inactive');
+    expect(presenter.app.render).not.toHaveBeenCalled();
+
+    const auditSetterStart = canvasSource.indexOf('setPlantCanopyHierarchyVfxEnabled(');
+    const auditSetterEnd = canvasSource.indexOf('\n  }', auditSetterStart);
+    const auditSetter = canvasSource.slice(auditSetterStart, auditSetterEnd);
+    expect(auditSetterStart).toBeGreaterThan(0);
+    expect(auditSetter).toContain('this.presenter?.setPlantCanopyHierarchyVfxEnabled(enabled)');
     expect(auditSetter).not.toContain('fallbackFields');
     expect(auditSetter).not.toContain('contourChunks');
   });

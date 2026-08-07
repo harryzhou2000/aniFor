@@ -964,11 +964,30 @@ does not alter simulation, camera, semantic ownership, or `renderScale`.
   exact with a two-byte composed cap. Requested-on true 8× excludes E04/E57/HDR
   at exact 4896×3072 and the frozen full-matrix fence completed in `5268.9 ms`
   with zero browser errors.
+- **E58 accepted PLNT canopy hierarchy:** exact zero-state/presence-only PLNT
+  `10` gains one smooth deterministic 11-cell hierarchy octave as a strict
+  normal-WebGL child of E55 and its full botanical ancestry
+  (`?plantCanopyHierarchyVfx=0|1`). The octave is organized by the existing
+  interlock fold, rank, front/rear, overlap, mass, and environment; it adds no
+  thresholded seam, sample, texture, field, pass, target, allocation, clock,
+  alpha/support, lifecycle, ownership, topology, or physics decision. The
+  frozen 1×/2×/4× response holds left/right RGB RMS at `2.37`/`2.28–2.29`,
+  peaks at `12`/`14`, meso RMS at `.8846–.8867`/`.7447–.7479`, and
+  downsample retention at `.9869–.9872`/`.9856–.9860`. Macro-range gain is
+  `3.745–3.803`/`2.964–3.071`, while fine contrast and seam response remain
+  bounded. Requested-on true 8× excludes the complete botanical chain plus
+  HDR at exact 4896×3072; the frozen fence completed in `5334.8 ms` with zero
+  browser errors. The canonical 2× composed survey improves Organic quality
+  `77.129 → 79.044`, PLNT mesostructure `.405 → .430`, and Organic macro range
+  `40 → 45.5` without changing scene semantics or continuity. The final
+  production-bundle 1×/2×/4× composed run reports
+  `fullScaleMatrix=true`, `crossScaleVerified=true`, all three E58 selectors
+  active, and zero browser errors.
 - **Protected 8× rung:** `renderScale=8` deliberately reports
   `hdrPipeline=inactive` / `scale-8` and retains the proven direct single-mesh
   4896×3072 path. The experiment must earn a bounded 8× design rather than
   allocating a 115 MiB full-resolution float target beside that path.
-- **Current decision:** E01/E02/E03/E04/E05/E06/E07/E08/E09/E10/E11/E12/E13/E14/E15/E16/E17/E18/E19/E20/E21/E22/E23/E24/E25/E26/E27/E28/E29/E30/E31/E32/E33/E34/E35/E36/E37/E38/E39/E40/E41/E42/E43/E44/E45/E46/E47/E48/E49/E50/E51/E52/E53/E54/E55/E56/E57 remain opt-in through the non-Classic looks
+- **Current decision:** E01/E02/E03/E04/E05/E06/E07/E08/E09/E10/E11/E12/E13/E14/E15/E16/E17/E18/E19/E20/E21/E22/E23/E24/E25/E26/E27/E28/E29/E30/E31/E32/E33/E34/E35/E36/E37/E38/E39/E40/E41/E42/E43/E44/E45/E46/E47/E48/E49/E50/E51/E52/E53/E54/E55/E56/E57/E58 remain opt-in through the non-Classic looks
   until representative hardware timing and mobile thermal behavior are
   measured. E02 remains the safe family-wide baseline. E03 is accepted as the
   liquid-depth checkpoint: its fit-view crop is visibly more cohesive, retains
@@ -2166,7 +2185,7 @@ next production 4× survey then selected Wood/PLNT as the largest remaining
   coverage `.971`, macro range `50`, zero dark/clipped fraction, and exact
   semantics across the full composed matrix.
 
-**Next visual experiments:** E03–E57 provide accepted liquid body/surface,
+**Next visual experiments:** E03–E58 provide accepted liquid body/surface,
 stable-gas, coherent-gas-motion, powder-depth, and powder-local-light
 checkpoints plus exact resting contact grounding, Glass/Ice transmission, and
 state-aware Wax/PLNT subsurface response, composed wet-mineral optics,
@@ -2201,6 +2220,9 @@ fit-view articulation without reviving the rejected enclosed cellular mesh.
 E55 closes the diagnosed PLNT middle-scale gap as a strict E53/E36 child:
 its focused evidence increases broad macro hierarchy and reduces local/seam
 contrast without claiming an aggregate composed-score improvement.
+E58 adds broad cluster placement inside that interlock as a strict E55 child:
+one continuous 11-cell octave raises visible canopy hierarchy and the composed
+Organic score without reviving fine veins or changing topology.
 E37 adds exact Metal-side Water-contact spectral separation over the joint E14+
 E17 proof without changing either body's topology. E56 completes only the
 exact WATR side beside exact METL through E03/E14/E17/E37's inherited clean
@@ -2373,11 +2395,38 @@ the accepted full-matrix tail was `5110.9 ms`. The focused release gate is
 inactive also passes through a `5135.8 ms` true-8× fence, while the full composed
 1×/2×/4× material rank passes its exact-scene and cross-scale gates. Treat that
 as regression evidence rather than a new aggregate-score claim.
+E58 is the accepted exact zero-state/presence-only PLNT `10` canopy-hierarchy
+checkpoint, a normal-WebGL-only strict E55 child
+(`?plantCanopyHierarchyVfx=0|1`). It evaluates one deterministic smooth
+`botanicalBodyNoise(fieldPosition / 11.0 + vec2(31.7, -19.1))` octave and
+combines it continuously with E55's already-live interlock fold, rank,
+front/rear, overlap, mass, and environment. It introduces no ridge or
+zero-crossing threshold and changes RGB only, with no new sample, texture,
+field, pass, target, upload, allocation, clock, alpha/support, lifecycle,
+ownership, topology, or physics decision. Canvas and compact true 8× retain
+E55 unchanged.
+
+The frozen focused matrix measures scale-stable left/right target RGB RMS
+`2.37`/`2.28–2.29`, peaks `12`/`14`, coverage `.466–.469`/`.469–.473`, meso
+RMS `.8846–.8867`/`.7447–.7479`, meso share `.8064–.8107`/`.7533–.7557`, and
+downsample retention `.9869–.9872`/`.9856–.9860`. Left/right macro P90–P10
+gain is `3.745–3.803`/`2.964–3.071`; luma-deviation gain is
+`.923–.946`/`1.288–1.310`; and local-contrast retention remains
+`1.0053–1.0060`/`.9978–.9984`. All semantics, state, support, walls, auxiliary
+data, raw controls, and repeated-off framebuffers are exact. Three named 2×
+filtered page-capture controls alone allow one byte while their raw evidence
+stays exact. Requested-on true 8× excludes
+E20/E26/E28/E32/E34/E36/E53/E55/E58/HDR, promotes exact 4896×3072 WebGL, and
+signals its GPU fence in `5334.8 ms` with zero browser errors. Run
+`npm run audit:vfx:plant-canopy-hierarchy` for the release evidence.
+The production-bundle composed rank independently passes its full 1×/2×/4×
+matrix and cross-scale assertions with E58 active at every scale and zero
+browser errors; its Organic quality spread is `6.464`.
 Improve distinctive depth, transmission, reflection, lighting, and
 mesostructure without stacking another narrow Oil/Acid/contact tint or generic
 PLNT/gas layer.
 The fresh composed-family/material survey now uses
-E17/E43/E44/E45/E46/E47/E53/E54/E55 under
+E17/E43/E44/E45/E46/E47/E53/E54/E55/E58 under
 `inputAudit=1`. Fixture v6 freezes 23 material counts, 18 scored regions,
 semantic hash `3610338776`, and 114,015 occupied cells at 1×/2×/4×; its exact
 SOAP body owns 1,220 cells and the deep `liquidSoap` region owns 384. The
@@ -2400,13 +2449,17 @@ clipped fractions remain zero. With E54 active, `solidVIBR` quality is
 `97.731/100/100` at 1×/2×/4×, raising the canonical 2× result from `86.207`
 to `100`. Its canonical luma deviation is `4.37`, microcontrast `1.65`,
 chromatic contrast `3.15`, and macro range `20`, while support `1`, coverage
-`.959`, and zero dark/clipped fractions are unchanged. The current canonical
-2× family rank is Organic `77.290` (exact PLNT mesostructure), Contact `88.768`
+`.959`, and zero dark/clipped fractions are unchanged. With E58 active, the
+canonical 2× Organic floor rises from the fresh `77.129` baseline to `79.044`;
+PLNT mesostructure rises `.405 → .430` and aggregate Organic macro range rises
+`40 → 45.5`, with continuity still `1`. Isolated production captures score
+exact PLNT `73.893/79.044/80.357` at 1×/2×/4×. The current canonical 2× family rank
+is Organic `79.044`, Contact `88.768`
 (Water/Metal chromatic separation), Solid `90.2` (ROCK surface detail), Gas
 `95.463`, Emission `98.475`, and Powder/Liquid `100`; exact 1×/2×/4×
 semantics and CSS geometry remain fixed with zero browser errors. The next
-fit-view candidates are PLNT mesostructure, Water/Metal chromatic separation,
-and ROCK surface detail; do not stack another VIBR layer. Because E36 already
+fit-view candidates are Water/Metal chromatic separation and ROCK surface
+detail; do not immediately stack another PLNT or VIBR layer. Because E36 already
 proved that
 the PLNT aggregate scorer can penalize accepted broad canopy recomposition,
 select the next experiment from a new fit-view diagnosis rather than tuning
@@ -2449,7 +2502,7 @@ is `24.657/23.679/22.240` at 1×/2×/4×, with full support and zero dark/clippe
 fraction. Do not alter E48 from candidate-rank evidence; its focused exact-owner
 fixture remains the acceptance contract. Choose any later experiment only from
 a new visible fit-view diagnosis. Preserve the E14 1× stencil snap and all
-E01–E57 selectors and controls.
+E01–E58 selectors and controls.
 
 ## Phase 1 — HDR pipeline & lighting core (biggest visual payoff)
 

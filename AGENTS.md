@@ -13,7 +13,7 @@ powder, solid, liquid, gas, energy, and contact scenes across Canvas and WebGL a
 mobile gestures, save/load, CI, and Pages deployment as protected regression
 contracts rather than the primary feature stream.
 
-The accepted visual experiment ladder now runs through E57. E12 is the
+The accepted visual experiment ladder now runs through E58. E12 is the
 species-safe Sand/Clay/Concrete wet-sediment checkpoint; preserve its exact
 aqueous owner/stability proof, split moving-powder/stationary-Water control,
 Local/Grains no-op, fine structures, authored gaps, Canvas fallback, and true
@@ -1151,6 +1151,37 @@ composed cap and exact raw pixel.
 Requested-on true 8× keeps E04/E57/HDR inactive for `scale-8`, promotes exact
 4896×3072 WebGL, and completes a GPU fence; the frozen full-matrix tail was
 `5268.9 ms` with zero browser errors.
+
+E58 is the accepted normal-WebGL-only exact zero-state/presence-only PLNT `10`
+canopy-hierarchy checkpoint, independently measurable with
+`?plantCanopyHierarchyVfx=0|1` and a strict child of E55 plus the complete
+E20/E26/E28/E32/E34/E36/E53 ancestry. It adds exactly one deterministic smooth
+11-cell `botanicalBodyNoise` octave, then organizes that broad placement with
+E55's live interlock fold, rank, front/rear, overlap, mass, and environment.
+The signed response has no threshold, ridge, or zero-crossing seam. It is
+static RGB-only arithmetic and adds no texture read, sampler, field, resource,
+pass, target, upload, persistent allocation, clock, alpha, support, lifecycle,
+ownership, topology, or physics decision. Stateful PLNT, holes, notches, thin
+and isolated structures, contacts, walls, foreign owners, Canvas, and compact
+true 8× retain their established paths.
+
+`npm run audit:vfx:plant-canopy-hierarchy` freezes the full production-WebGL
+1×/2×/4× off→on→off matrix. Left/right RGB RMS is scale-stable at
+`2.37`/`2.28–2.29`, with peaks `12`/`14`, meso RMS
+`.8846–.8867`/`.7447–.7479`, and downsample retention
+`.9869–.9872`/`.9856–.9860`. The 15-cell macro-range gain is
+`3.745–3.803`/`2.964–3.071`, while local-contrast retention stays
+`1.0053–1.0060`/`.9978–.9984`; seam change remains bounded rather than becoming
+a cellular outline. Semantics, alpha/support, lifecycle/state, walls,
+auxiliary depth, direct raw controls, and repeated-off frames remain exact.
+Only three named 2× filtered page-capture controls have a one-byte allowance;
+their raw evidence remains exact. Requested-on true 8× keeps the complete
+E20/E26/E28/E32/E34/E36/E53/E55/E58/HDR chain inactive for `scale-8`, promotes
+exact 4896×3072 WebGL, and completes a GPU fence; the frozen run was
+`5334.8 ms` with zero browser errors. The canonical 2× composed survey raises
+Organic quality from `77.129` to `79.044`, exact PLNT mesostructure from `.405`
+to `.430`, and aggregate Organic macro range from `40` to `45.5`, with perfect
+continuity and unchanged scene semantics.
 
 The isolated candidate-survey v1 route is app-owned and must use the
 deterministic 612×384 RenderLab backend unless `simulation=native` is explicit.
