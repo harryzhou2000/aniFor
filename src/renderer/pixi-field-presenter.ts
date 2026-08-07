@@ -77,6 +77,7 @@ import {
   resolvePlatinumBodyVfxEnabled,
   resolveRockMesostructureVfxEnabled,
   resolveRockRoughnessVfxEnabled,
+  resolveRockWeatheredFacetVfxEnabled,
   resolveSolidBodyVfxEnabled,
   resolvePowderBodyVfxEnabled, resolvePowderLightVfxEnabled, resolveRenderLook,
   resolveSootyPowderBodyVfxEnabled,
@@ -3301,6 +3302,7 @@ uniform float uVibrMacroReliefVfx;
 uniform float uIszsCrystallineVfx;
 uniform float uRockRoughnessVfx;
 uniform float uRockMesostructureVfx;
+uniform float uRockWeatheredFacetVfx;
 uniform float uPlatinumBodyVfx;
 uniform float uCeramicGlazeVfx;
 uniform float uBotanicalBodyVfx;
@@ -10221,6 +10223,33 @@ void main() {
           * rockFacetPocket * rockMesostructure;
         color += vec3(0.008, -0.001, -0.014) * rockFacetBody
           * rockMesostructure;
+        // E59: strengthen E29's interrupted mineral facets without adding a
+        // second carrier or pushing its weak diagonal lamina back into visible
+        // stripes. Recombine only E29's live world-space facet, lamina mask,
+        // and E17 relief into a restrained weathered crown/pocket response.
+        // This exact deep-ROCK child is static RGB-only arithmetic: no noise,
+        // sample, texture, field, pass, target, allocation, clock, alpha,
+        // support, ownership, topology, state, or physics decision. Canvas and
+        // compact true 8x retain the accepted E29 presentation.
+        if (uRockWeatheredFacetVfx > 0.5) {
+          float rockWeatheredLamina = rockLamina * rockLaminaMask;
+          float rockWeatheredFacet = clamp(
+            rockFacetBody * 0.78 + rockFacet * 0.22
+              - rockWeatheredLamina * 0.06 + solidBodyRelief * 0.045,
+            -1.0, 1.0
+          );
+          float rockWeatheredWeight = rockMesostructure
+            * (0.82 + rockRoughness * 0.18);
+          float rockWeatheredCrown = max(rockWeatheredFacet, 0.0);
+          float rockWeatheredPocket = max(-rockWeatheredFacet, 0.0);
+          color += (vec3(1.0) - clamp(color, 0.0, 1.0))
+            * vec3(0.030, 0.037, 0.047)
+            * rockWeatheredCrown * rockWeatheredWeight;
+          color *= vec3(1.0) - vec3(0.035, 0.030, 0.025)
+            * rockWeatheredPocket * rockWeatheredWeight;
+          color += vec3(0.003, 0.000, -0.003)
+            * rockWeatheredFacet * rockWeatheredWeight;
+        }
       }
     }
     // E18: Platinum's established catalytic planes and sites identify the
@@ -11216,6 +11245,10 @@ export class PixiFieldPresenter {
     // Canvas and compact true 8x retain their accepted geological grammar.
     const rockMesostructureVfxEnabled = outputScale < 8
       && resolveRockMesostructureVfxEnabled(renderLook);
+    // E59 is arithmetic over E29's already-proven exact-ROCK facets. Canvas
+    // and compact true 8x retain the accepted E29 geological presentation.
+    const rockWeatheredFacetVfxEnabled = outputScale < 8
+      && resolveRockWeatheredFacetVfxEnabled(renderLook);
     // E18 is a normal-WebGL body finish over values already used by the
     // established solid shader. The compact true-8x program declares neither
     // this selector nor a parallel reflection branch.
@@ -11358,6 +11391,7 @@ export class PixiFieldPresenter {
       uIszsCrystallineVfx: { value: iszsCrystallineVfxEnabled ? 1 : 0, type: 'f32' },
       uRockRoughnessVfx: { value: rockRoughnessVfxEnabled ? 1 : 0, type: 'f32' },
       uRockMesostructureVfx: { value: rockMesostructureVfxEnabled ? 1 : 0, type: 'f32' },
+      uRockWeatheredFacetVfx: { value: rockWeatheredFacetVfxEnabled ? 1 : 0, type: 'f32' },
       uPlatinumBodyVfx: { value: platinumBodyVfxEnabled ? 1 : 0, type: 'f32' },
       uCeramicGlazeVfx: { value: ceramicGlazeVfxEnabled ? 1 : 0, type: 'f32' },
       uBotanicalBodyVfx: { value: botanicalBodyVfxEnabled ? 1 : 0, type: 'f32' },
@@ -11624,6 +11658,7 @@ export class PixiFieldPresenter {
       this.uniforms.uniforms.uIszsCrystallineVfx = 0;
       this.uniforms.uniforms.uRockRoughnessVfx = 0;
       this.uniforms.uniforms.uRockMesostructureVfx = 0;
+      this.uniforms.uniforms.uRockWeatheredFacetVfx = 0;
       this.uniforms.uniforms.uPlatinumBodyVfx = 0;
       this.uniforms.uniforms.uCeramicGlazeVfx = 0;
       this.uniforms.uniforms.uBotanicalBodyVfx = 0;
@@ -11705,6 +11740,7 @@ export class PixiFieldPresenter {
             || new URLSearchParams(location.search).get('iszsCrystallineVfxAudit') === '1'
             || new URLSearchParams(location.search).get('rockRoughnessVfxAudit') === '1'
             || new URLSearchParams(location.search).get('rockMesostructureVfxAudit') === '1'
+            || new URLSearchParams(location.search).get('rockWeatheredFacetVfxAudit') === '1'
             || new URLSearchParams(location.search).get('platinumBodyVfxAudit') === '1'
             || new URLSearchParams(location.search).get('ceramicGlazeVfxAudit') === '1'
             || new URLSearchParams(location.search).get('botanicalBodyVfxAudit') === '1'
@@ -11816,6 +11852,9 @@ export class PixiFieldPresenter {
     ) > 0.5 ? 'active' : 'inactive';
     presenter.app.canvas.dataset.rockMesostructureVfx = Number(
       presenter.uniforms.uniforms.uRockMesostructureVfx
+    ) > 0.5 ? 'active' : 'inactive';
+    presenter.app.canvas.dataset.rockWeatheredFacetVfx = Number(
+      presenter.uniforms.uniforms.uRockWeatheredFacetVfx
     ) > 0.5 ? 'active' : 'inactive';
     presenter.app.canvas.dataset.platinumBodyVfx = Number(
       presenter.uniforms.uniforms.uPlatinumBodyVfx
@@ -12673,6 +12712,22 @@ export class PixiFieldPresenter {
     this.renderApplication();
   }
 
+  /**
+   * Audit-only causal toggle for E59. It cannot revive E29 and is absent from
+   * the compact true-8x shader; normal product state comes from render-look.
+   */
+  setRockWeatheredFacetVfxEnabled(enabled: boolean): void {
+    if (this.outputScale >= 8
+      || Number(this.uniforms.uniforms.uRockMesostructureVfx) <= 0.5) {
+      this.uniforms.uniforms.uRockWeatheredFacetVfx = 0;
+      this.app.canvas.dataset.rockWeatheredFacetVfx = 'inactive';
+      return;
+    }
+    this.uniforms.uniforms.uRockWeatheredFacetVfx = enabled ? 1 : 0;
+    this.app.canvas.dataset.rockWeatheredFacetVfx = enabled ? 'active' : 'inactive';
+    this.renderApplication();
+  }
+
   setSparkStateStylingEnabled(enabled: boolean): void {
     this.uniforms.uniforms.uSparkStateStyling = enabled ? 1 : 0;
     this.renderApplication();
@@ -13349,6 +13404,7 @@ export class PixiFieldPresenter {
         this.uniforms.uniforms.uIszsCrystallineVfx = 0;
         this.uniforms.uniforms.uRockRoughnessVfx = 0;
         this.uniforms.uniforms.uRockMesostructureVfx = 0;
+        this.uniforms.uniforms.uRockWeatheredFacetVfx = 0;
         this.uniforms.uniforms.uPlatinumBodyVfx = 0;
         this.uniforms.uniforms.uCeramicGlazeVfx = 0;
         this.uniforms.uniforms.uBotanicalBodyVfx = 0;
@@ -13406,6 +13462,7 @@ export class PixiFieldPresenter {
         this.app.canvas.dataset.iszsCrystallineVfx = 'inactive';
         this.app.canvas.dataset.rockRoughnessVfx = 'inactive';
         this.app.canvas.dataset.rockMesostructureVfx = 'inactive';
+        this.app.canvas.dataset.rockWeatheredFacetVfx = 'inactive';
         this.app.canvas.dataset.platinumBodyVfx = 'inactive';
         this.app.canvas.dataset.ceramicGlazeVfx = 'inactive';
         this.app.canvas.dataset.botanicalBodyVfx = 'inactive';

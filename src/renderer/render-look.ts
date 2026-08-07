@@ -387,6 +387,25 @@ export function resolveRockMesostructureVfxEnabled(
 }
 
 /**
+ * E59 refines only E29's already-proven ROCK mesostructure into a bounded
+ * weathered-facet response. This strict child cannot revive the roughness,
+ * solid-body, or HDR parents, and generic input audits retain it as an
+ * explicit opt-in comparison selector.
+ */
+export function resolveRockWeatheredFacetVfxEnabled(
+  look: RenderLook,
+  search = globalThis.location?.search ?? '',
+): boolean {
+  if (!resolveRockMesostructureVfxEnabled(look, search)) return false;
+  const parameters = new URLSearchParams(search);
+  const requested = parameters.get('rockWeatheredFacetVfx');
+  if (requested === '0' || requested === 'off' || requested === 'false') return false;
+  if (requested === '1' || requested === 'on' || requested === 'true') return true;
+  if (parameters.get('inputAudit') === '1') return false;
+  return true;
+}
+
+/**
  * Keeps the exact Platinum body experiment independently measurable while
  * retaining the same non-Classic preset policy as the broader volume studies.
  * The renderer decides its strict native-owner and topology eligibility.

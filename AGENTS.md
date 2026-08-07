@@ -1183,6 +1183,35 @@ Organic quality from `77.129` to `79.044`, exact PLNT mesostructure from `.405`
 to `.430`, and aggregate Organic macro range from `40` to `45.5`, with perfect
 continuity and unchanged scene semantics.
 
+E59 is the accepted normal-WebGL-only exact native ROCK `78` weathered-facet
+checkpoint, independently measurable with `?rockWeatheredFacetVfx=0|1` and a
+strict child of E29/E23/E17. Keep it inside E29's existing exact-owner,
+SmoothRigid-profile, deep stable connected interior proof. Reuse only the live
+`rockFacet`, `rockLamina`, `rockLaminaMask`, `rockFacetBody`,
+`solidBodyRelief`, `rockRoughness`, and `rockMesostructure` values. Add no new
+noise, sine, sample, texture, field, resource, pass, target, upload,
+allocation, clock, alpha, support, ownership, topology, state, or physics
+decision. Canvas and compact true 8× retain the established E29 presentation.
+Never restore E29's rejected continuous stripes, add a hard threshold/ridge,
+turn the response into cell-scale stipple, or widen it to reconstructed,
+contacted, trait-bearing, emissive, wall, fine-topology, or non-ROCK matter.
+
+`npm run audit:vfx:rock-weathered-facet` freezes production-WebGL
+1×/2×/4× off→on→off evidence. Transition/mid/deep RGB RMS is
+`1.79–1.82`/`1.60–1.63`/`1.72–1.77`; left/right meso RMS is
+`.9754–.9844`/`.8474–.8687`; and downsample retention is
+`.9643–.9654`/`.9606–.9619`. Semantics, alpha/support, walls, exact solid-depth
+bytes, 30 protected controls, and repeated-off framebuffers remain exact.
+Classic and removal of E17, E23, or E29 each collapse E59. Requested-on true
+8× keeps E17/E23/E29/E59/HDR inactive for `scale-8`, promotes exact
+4896×3072 WebGL, and completes a GPU fence; the frozen run was `3276.7 ms`
+with zero browser errors. Canonical 2× ROCK quality rises `90.2 → 98.651`,
+microcontrast `1.06 → 1.42`, chromatic contrast `.43 → .47`, and macro range
+`30 → 35`, with unchanged support, `.967` coverage, continuity, cavity
+control, and zero clipping. Every later normal-fragment edit must retain a
+real production-browser shader gate; TypeScript and shader-string tests are
+not acceptance evidence by themselves.
+
 The isolated candidate-survey v1 route is app-owned and must use the
 deterministic 612×384 RenderLab backend unless `simulation=native` is explicit.
 It freezes semantic hash `2255453673`, 115,368 occupied cells, all six exact
@@ -1222,27 +1251,22 @@ candidate-rank evidence or widen E50, E51, or E52; select any later experiment
 only from a new visible fit-view diagnosis.
 
 The composed showcase remains a separate roadmap signal. Its refreshed
-E54-active 1×/2×/4× matrix is exact and cross-scale verified with zero browser
-errors, while E52 remains explicitly inactive because showcase v6 contains no
-authoritative BGLA region. Organic remains the lowest family, led by exact PLNT
-at quality `72.165/77.290/78.704`; its remaining weakest cue is mesostructure
-`.350/.405/.425`. PLNT keeps support `1`, coverage `.971`, macro range `50`,
-and zero dark/clipped fraction, with microcontrast `1.70/1.81/1.85`, chroma
-`1.90/2.00/2.03`, and luma deviation `10.80/10.90/10.93`. E55 closes the
-diagnosed PLNT middle-scale gap in focused evidence by increasing broad macro
-hierarchy while reducing local and seam contrast; do not claim an aggregate
-composed-score improvement until a fresh accepted composed matrix measures it.
-E54 raises exact
-zero-state VIBR to `97.731/100/100` at 1×/2×/4×; at canonical 2× its luma
-standard deviation/microcontrast/chroma/macro range is `4.37`/`1.65`/`3.15`/`20`,
-with unchanged support, coverage, and clipping. The Solid floor is therefore
-native ROCK `78` at `90.2`, from its remaining surface-detail cue rather than
-VIBR macro relief. At canonical 2×, Organic is `77.290`, Contact `88.768`,
-Solid `90.2`, Gas `95.463`, Emission `98.475`, and Powder/Liquid `100`. E54
-closes the demonstrated VIBR fit-view defect; do not stack another VIBR layer.
-Select a future target only from a new visible diagnosis, with PLNT
-mesostructure, Water/Metal chromatic separation, and ROCK surface detail as
-current contextual cues rather than an automatic implementation queue.
+E58/E59-active 1×/2×/4× matrix is exact and cross-scale verified with zero
+browser errors, while E52 remains explicitly inactive because showcase v6 has
+no authoritative BGLA region. Organic remains the lowest family, led by exact
+PLNT at quality `73.893/79.044/80.357`; E58 raises its canonical
+mesostructure `.405 → .430` and macro range `40 → 45.5` without changing
+continuity or scene semantics. E59 raises exact native ROCK `78` to quality
+`97.345/98.651/99.174`; canonical microcontrast/chroma/macro range becomes
+`1.42`/`.47`/`35`, with support `1`, coverage `.967`, and zero clipping. The
+Solid floor is therefore exact ISZS at `89.245/93.047/94.303`, from its
+remaining surface-detail cue rather than ROCK or VIBR. At canonical 2×,
+Organic is `79.044`, Contact `88.768`, Solid `93.047`, Gas `95.463`, Emission
+`98.475`, and Powder/Liquid `100`. Do not stack another PLNT, Water/Metal,
+ROCK, or VIBR layer merely to chase that order. Select a future target only
+from a new visible fit-view diagnosis; PLNT mesostructure, Water/Metal
+chromatic separation, ISZS surface detail, and Noble Gas billow depth are
+contextual cues rather than an automatic implementation queue.
 
 The old post-E16 rank that labelled Stone `21` as Solid was invalid because
 Stone is native Powder. The corrected showcase uses native ROCK ground and

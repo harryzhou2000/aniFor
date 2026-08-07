@@ -983,11 +983,28 @@ does not alter simulation, camera, semantic ownership, or `renderScale`.
   production-bundle 1×/2×/4× composed run reports
   `fullScaleMatrix=true`, `crossScaleVerified=true`, all three E58 selectors
   active, and zero browser errors.
+- **E59 accepted ROCK weathered facets:** exact native ROCK `78` gains a
+  restrained normal-WebGL-only facet hierarchy as a strict E29/E23/E17 child
+  (`?rockWeatheredFacetVfx=0|1`). It recombines only E29's live 3.5-cell facet,
+  interrupted lamina/mask, E17 relief, roughness, and mesostructure weight into
+  a cool crown, opposing mineral pocket, and near-neutral signed colour cue.
+  It adds no noise, sample, texture, field, resource, pass, target, upload,
+  allocation, clock, alpha, support, ownership, topology, state, or physics
+  decision. The frozen 1×/2×/4× off→on→off response holds transition RGB RMS
+  at `1.79–1.82`, mid-body at `1.60–1.63`, and deep-core at `1.72–1.77`, with
+  peaks `5–6`; left/right meso RMS remains `.9754–.9844`/`.8474–.8687` and
+  downsample retention `.9643–.9654`/`.9606–.9619`. All 30 controls, semantics,
+  alpha/support, walls, exact depth bytes, and repeated-off frames remain
+  exact. Classic and every parent-removal case collapse the child. Requested-
+  on true 8× excludes E17/E23/E29/E59/HDR at exact 4896×3072 and completes a
+  GPU fence; the frozen run was `3276.7 ms` with zero browser errors. The
+  canonical 2× composed survey raises ROCK quality `90.2 → 98.651` and
+  microcontrast `1.06 → 1.42`, with unchanged `.967` coverage and no clipping.
 - **Protected 8× rung:** `renderScale=8` deliberately reports
   `hdrPipeline=inactive` / `scale-8` and retains the proven direct single-mesh
   4896×3072 path. The experiment must earn a bounded 8× design rather than
   allocating a 115 MiB full-resolution float target beside that path.
-- **Current decision:** E01/E02/E03/E04/E05/E06/E07/E08/E09/E10/E11/E12/E13/E14/E15/E16/E17/E18/E19/E20/E21/E22/E23/E24/E25/E26/E27/E28/E29/E30/E31/E32/E33/E34/E35/E36/E37/E38/E39/E40/E41/E42/E43/E44/E45/E46/E47/E48/E49/E50/E51/E52/E53/E54/E55/E56/E57/E58 remain opt-in through the non-Classic looks
+- **Current decision:** E01/E02/E03/E04/E05/E06/E07/E08/E09/E10/E11/E12/E13/E14/E15/E16/E17/E18/E19/E20/E21/E22/E23/E24/E25/E26/E27/E28/E29/E30/E31/E32/E33/E34/E35/E36/E37/E38/E39/E40/E41/E42/E43/E44/E45/E46/E47/E48/E49/E50/E51/E52/E53/E54/E55/E56/E57/E58/E59 remain opt-in through the non-Classic looks
   until representative hardware timing and mobile thermal behavior are
   measured. E02 remains the safe family-wide baseline. E03 is accepted as the
   liquid-depth checkpoint: its fit-view crop is visibly more cohesive, retains
@@ -1099,6 +1116,13 @@ does not alter simulation, camera, semantic ownership, or `renderScale`.
   proof, 3.5-cell facet, and masked interrupted lamina. Its continuous-striped
   predecessor remains rejected. Its package gate passed the frozen cross-scale
   matrix and true-8× exclusion/fence proof.
+  E59 is the accepted exact-ROCK weathered-facet checkpoint: freeze its strict
+  E29/E23/E17 dependency, deep stable connected exact-owner proof, reuse of the
+  existing facet/lamina/relief carriers, restrained crown/pocket spectra, and
+  compact-8× exclusion. It is a bounded hierarchy refinement, not permission
+  to restore E29's rejected continuous stripes, introduce a hard ridge or
+  threshold, add cell-scale stipple, or widen the response to reconstructed,
+  contacted, trait-bearing, emissive, wall, fine-topology, or non-ROCK matter.
   E30 is the accepted exact-Wood interrupted-bark checkpoint: freeze its E26
   dependency, E28 independence, E20 exact-owner/body proof, existing-evidence-
   only irregular segment mask, 32-byte focused peak, longitudinal direction
@@ -2185,7 +2209,7 @@ next production 4× survey then selected Wood/PLNT as the largest remaining
   coverage `.971`, macro range `50`, zero dark/clipped fraction, and exact
   semantics across the full composed matrix.
 
-**Next visual experiments:** E03–E58 provide accepted liquid body/surface,
+**Next visual experiments:** E03–E59 provide accepted liquid body/surface,
 stable-gas, coherent-gas-motion, powder-depth, and powder-local-light
 checkpoints plus exact resting contact grounding, Glass/Ice transmission, and
 state-aware Wax/PLNT subsurface response, composed wet-mineral optics,
@@ -2223,6 +2247,11 @@ contrast without claiming an aggregate composed-score improvement.
 E58 adds broad cluster placement inside that interlock as a strict E55 child:
 one continuous 11-cell octave raises visible canopy hierarchy and the composed
 Organic score without reviving fine veins or changing topology.
+E59 closes the fresh broad ROCK surface-detail diagnosis as a strict E29 child:
+it strengthens only the existing interrupted facet vocabulary, materially
+raising the composed ROCK score while retaining exact topology and a quiet
+fit-view response. Do not treat Water/Metal as an automatic queued tint after
+this checkpoint; select the next owner from a fresh full-scene fit-view review.
 E37 adds exact Metal-side Water-contact spectral separation over the joint E14+
 E17 proof without changing either body's topology. E56 completes only the
 exact WATR side beside exact METL through E03/E14/E17/E37's inherited clean
@@ -2422,11 +2451,37 @@ signals its GPU fence in `5334.8 ms` with zero browser errors. Run
 The production-bundle composed rank independently passes its full 1×/2×/4×
 matrix and cross-scale assertions with E58 active at every scale and zero
 browser errors; its Organic quality spread is `6.464`.
+E59 is the accepted normal-WebGL-only exact native ROCK `78` weathered-facet
+checkpoint, independently measurable with `?rockWeatheredFacetVfx=0|1` and a
+strict child of E29/E23/E17. It runs only inside E29's existing exact-owner,
+SmoothRigid-profile, deep stable connected interior proof. It recombines the
+already-live `rockFacet`, `rockLamina`, `rockLaminaMask`, `rockFacetBody`,
+`solidBodyRelief`, `rockRoughness`, and `rockMesostructure` values into a
+restrained key/pocket hierarchy. It adds no noise or sine, sample, texture,
+field, resource, pass, target, upload, persistent allocation, clock, alpha,
+support, ownership, topology, state, or physics decision. Canvas and compact
+true 8× retain the established E29 presentation.
+
+`npm run audit:vfx:rock-weathered-facet` freezes a production-WebGL
+1×/2×/4× off→on→off matrix. The shallow shoulder remains bounded at RGB RMS
+`.52–.54`; transition, mid-body, and deep-core respond independently at
+`1.79–1.82`, `1.60–1.63`, and `1.72–1.77`, with peaks `5–6`. Left/right
+meso RMS is `.9754–.9844`/`.8474–.8687`, meso share
+`.5592–.5773`/`.4894–.5128`, gradient ratio `1.0270–1.0395`/
+`1.0127–1.0352`, and downsample retention `.9643–.9654`/`.9606–.9619`.
+Semantics, alpha/support, walls, solid-depth bytes, 30 exact controls, and the
+repeated-off framebuffer remain exact. E17-off, E23-off, E29-off, and Classic
+each collapse E59. Requested-on true 8× keeps E17/E23/E29/E59/HDR inactive for
+`scale-8`, promotes exact 4896×3072 WebGL, and completes a GPU fence; the
+frozen run was `3276.7 ms` with zero browser errors. Canonical 2× ROCK quality
+rises `90.2 → 98.651`, microcontrast `1.06 → 1.42`, chromatic contrast
+`.43 → .47`, and macro range `30 → 35`, while coverage `.967`, support,
+continuity, cavity control, and zero clipping stay unchanged.
 Improve distinctive depth, transmission, reflection, lighting, and
 mesostructure without stacking another narrow Oil/Acid/contact tint or generic
 PLNT/gas layer.
 The fresh composed-family/material survey now uses
-E17/E43/E44/E45/E46/E47/E53/E54/E55/E58 under
+E17/E43/E44/E45/E46/E47/E53/E54/E55/E58/E59 under
 `inputAudit=1`. Fixture v6 freezes 23 material counts, 18 scored regions,
 semantic hash `3610338776`, and 114,015 occupied cells at 1×/2×/4×; its exact
 SOAP body owns 1,220 cells and the deep `liquidSoap` region owns 384. The
@@ -2453,13 +2508,18 @@ chromatic contrast `3.15`, and macro range `20`, while support `1`, coverage
 canonical 2× Organic floor rises from the fresh `77.129` baseline to `79.044`;
 PLNT mesostructure rises `.405 → .430` and aggregate Organic macro range rises
 `40 → 45.5`, with continuity still `1`. Isolated production captures score
-exact PLNT `73.893/79.044/80.357` at 1×/2×/4×. The current canonical 2× family rank
-is Organic `79.044`, Contact `88.768`
-(Water/Metal chromatic separation), Solid `90.2` (ROCK surface detail), Gas
-`95.463`, Emission `98.475`, and Powder/Liquid `100`; exact 1×/2×/4×
-semantics and CSS geometry remain fixed with zero browser errors. The next
-fit-view candidates are Water/Metal chromatic separation and ROCK surface
-detail; do not immediately stack another PLNT or VIBR layer. Because E36 already
+exact PLNT `73.893/79.044/80.357` at 1×/2×/4×. With E59 active, exact ROCK
+quality becomes `97.345/98.651/99.174`; canonical microcontrast rises
+`1.06 → 1.42`, chromatic contrast `.43 → .47`, and macro range `30 → 35`,
+with support `1`, coverage `.967`, continuity/cavity control `1`, and zero
+clipping. The current canonical 2× family rank is Organic `79.044`, Contact
+`88.768` (Water/Metal chromatic separation), Solid `93.047` (ISZS surface
+detail), Gas `95.463`, Emission `98.475`, and Powder/Liquid `100`; exact
+1×/2×/4× semantics and CSS geometry remain fixed with zero browser errors.
+The next contextual cues are PLNT mesostructure, Water/Metal chromatic
+separation, ISZS surface detail, and Noble Gas billow depth; ROCK is no longer
+the Solid floor. Do not immediately stack another PLNT, contact, ROCK, or VIBR
+layer. Because E36 already
 proved that
 the PLNT aggregate scorer can penalize accepted broad canopy recomposition,
 select the next experiment from a new fit-view diagnosis rather than tuning

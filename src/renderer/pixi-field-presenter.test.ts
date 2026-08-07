@@ -59,6 +59,7 @@ interface PresenterHarness {
   setBotanicalLifecycleStylingEnabled: PixiFieldPresenter['setBotanicalLifecycleStylingEnabled'];
   setPlantCanopyInterlockVfxEnabled: PixiFieldPresenter['setPlantCanopyInterlockVfxEnabled'];
   setPlantCanopyHierarchyVfxEnabled: PixiFieldPresenter['setPlantCanopyHierarchyVfxEnabled'];
+  setRockWeatheredFacetVfxEnabled: PixiFieldPresenter['setRockWeatheredFacetVfxEnabled'];
   setSparkStateStylingEnabled: PixiFieldPresenter['setSparkStateStylingEnabled'];
   setLiquidSilhouetteCohesionEnabled: PixiFieldPresenter['setLiquidSilhouetteCohesionEnabled'];
   setRenderStallHandler: PixiFieldPresenter['setRenderStallHandler'];
@@ -2666,6 +2667,91 @@ describe('Pixi presenter startup configuration', () => {
     expect(preserveDrawingBuffer).toContain("get('rockMesostructureVfxAudit') === '1'");
     expect(source).toContain('presenter.app.canvas.dataset.rockMesostructureVfx');
     expect(source).toContain("this.app.canvas.dataset.rockMesostructureVfx = 'inactive';");
+  });
+
+  it('keeps E59 ROCK weathered facets E29-dependent and resource-neutral', () => {
+    const presenter = presenterHarness();
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const canvasSource = readFileSync(new URL('./field-renderer.ts', import.meta.url), 'utf8');
+    const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');
+    const normalStart = source.indexOf('const FIELD_FRAGMENT = `', eightStart);
+    const normalEnd = source.indexOf('`;\n\n/** Primary WebGL presentation', normalStart);
+    const eight = source.slice(eightStart, normalStart);
+    const normal = source.slice(normalStart, normalEnd);
+    const e29Start = normal.indexOf('      // E29:');
+    const e59Start = normal.indexOf('        // E59:', e29Start);
+    const e59End = normal.indexOf('      }\n    }\n    // E18:', e59Start);
+    const e29Parent = normal.slice(e29Start, e59Start);
+    const e59 = normal.slice(e59Start, e59End);
+    const preserveDrawingBufferStart = source.indexOf('preserveDrawingBuffer:');
+    const preserveDrawingBufferEnd = source.indexOf(
+      'resolution: outputScale', preserveDrawingBufferStart,
+    );
+    const preserveDrawingBuffer = source.slice(
+      preserveDrawingBufferStart, preserveDrawingBufferEnd,
+    );
+
+    expect(e29Start).toBeGreaterThanOrEqual(0);
+    expect(e59Start).toBeGreaterThan(e29Start);
+    expect(e59End).toBeGreaterThan(e59Start);
+    expect(e29Parent).toContain('if (rockMesostructure > 0.0)');
+    expect(normal).toContain('uniform float uRockWeatheredFacetVfx;');
+    expect(normal.match(/uRockWeatheredFacetVfx > 0\.5/g)).toHaveLength(1);
+    expect(eight).not.toContain('uRockWeatheredFacetVfx');
+    expect(eight).not.toContain('rockWeatheredFacetVfx');
+    for (const reused of [
+      'rockLamina * rockLaminaMask', 'rockFacetBody', 'rockFacet',
+      'solidBodyRelief', 'rockMesostructure', 'rockRoughness',
+      'rockWeatheredCrown', 'rockWeatheredPocket',
+    ]) expect(e59).toContain(reused);
+    expect(e59).not.toContain('botanicalBodyNoise(');
+    expect(e59).not.toContain('sin(');
+    expect(e59).not.toContain('smoothstep(');
+    expect(e59).not.toContain('texture(');
+    expect(e59).not.toContain('uTime');
+    expect(e59).not.toContain('gl_FragCoord');
+    expect(e59).not.toMatch(/\balpha\s*[+*]?=/);
+    expect(source.match(/this\.uniforms\.uniforms\.uRockWeatheredFacetVfx = 0;/g))
+      .toHaveLength(3);
+    expect(source).toMatch(
+      /const rockWeatheredFacetVfxEnabled = outputScale < 8\s*&& resolveRockWeatheredFacetVfxEnabled\(renderLook\);/,
+    );
+    expect(source).toContain(
+      'uRockWeatheredFacetVfx: { value: rockWeatheredFacetVfxEnabled ? 1 : 0',
+    );
+    expect(preserveDrawingBuffer).toContain("get('rockWeatheredFacetVfxAudit') === '1'");
+    expect(source).toContain('presenter.app.canvas.dataset.rockWeatheredFacetVfx');
+    expect(source).toContain("this.app.canvas.dataset.rockWeatheredFacetVfx = 'inactive';");
+    const auditSetterStart = canvasSource.indexOf('setRockWeatheredFacetVfxEnabled(');
+    const auditSetterEnd = canvasSource.indexOf('\n  }', auditSetterStart);
+    const auditSetter = canvasSource.slice(auditSetterStart, auditSetterEnd);
+    expect(auditSetterStart).toBeGreaterThan(0);
+    expect(auditSetter).toContain('this.presenter?.setRockWeatheredFacetVfxEnabled(enabled)');
+    expect(auditSetter).not.toContain('fallbackFields');
+    expect(auditSetter).not.toContain('contourChunks');
+
+    presenter.uniforms.uniforms.uRockMesostructureVfx = 1;
+    presenter.setRockWeatheredFacetVfxEnabled(true);
+    expect(presenter.uniforms.uniforms.uRockWeatheredFacetVfx).toBe(1);
+    expect(presenter.app.canvas.dataset.rockWeatheredFacetVfx).toBe('active');
+    expect(presenter.app.render).toHaveBeenCalledOnce();
+    presenter.app.render.mockClear();
+    presenter.setRockWeatheredFacetVfxEnabled(false);
+    expect(presenter.uniforms.uniforms.uRockWeatheredFacetVfx).toBe(0);
+    expect(presenter.app.canvas.dataset.rockWeatheredFacetVfx).toBe('inactive');
+    expect(presenter.app.render).toHaveBeenCalledOnce();
+    presenter.app.render.mockClear();
+    presenter.uniforms.uniforms.uRockMesostructureVfx = 0;
+    presenter.setRockWeatheredFacetVfxEnabled(true);
+    expect(presenter.uniforms.uniforms.uRockWeatheredFacetVfx).toBe(0);
+    expect(presenter.app.canvas.dataset.rockWeatheredFacetVfx).toBe('inactive');
+    expect(presenter.app.render).not.toHaveBeenCalled();
+    presenter.uniforms.uniforms.uRockMesostructureVfx = 1;
+    Object.assign(presenter, { outputScale: 8 });
+    presenter.setRockWeatheredFacetVfxEnabled(true);
+    expect(presenter.uniforms.uniforms.uRockWeatheredFacetVfx).toBe(0);
+    expect(presenter.app.canvas.dataset.rockWeatheredFacetVfx).toBe('inactive');
+    expect(presenter.app.render).not.toHaveBeenCalled();
   });
 
   it('keeps E24 Water recomposition exact-owner, E03-dependent, normal-WebGL-only, and RGB-only', () => {

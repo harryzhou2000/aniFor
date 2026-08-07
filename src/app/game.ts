@@ -753,6 +753,9 @@ export class Game {
       setPlantCanopyHierarchyVfx: (enabled) => {
         this.renderer.setPlantCanopyHierarchyVfxEnabled(enabled);
       },
+      setRockWeatheredFacetVfx: (enabled) => {
+        this.renderer.setRockWeatheredFacetVfxEnabled(enabled);
+      },
       setSparkStateStyling: (enabled) => {
         this.renderer.setSparkStateStylingEnabled(enabled);
       },

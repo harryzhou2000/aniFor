@@ -37,6 +37,7 @@ import {
   resolvePlatinumBodyVfxEnabled,
   resolveRockMesostructureVfxEnabled,
   resolveRockRoughnessVfxEnabled,
+  resolveRockWeatheredFacetVfxEnabled,
   resolveMetalWaterContactVfxEnabled,
   resolveWaterMetalTransmissionVfxEnabled,
   resolveSolidBodyVfxEnabled,
@@ -352,6 +353,37 @@ describe('resolveRenderLook', () => {
     expect(resolveRockMesostructureVfxEnabled(
       'neon-lab', '?rockMesostructureVfx=false',
     )).toBe(false);
+  });
+
+  it('keeps ROCK weathered facets subordinate to E29 and frozen in input audits', () => {
+    expect(resolveRockWeatheredFacetVfxEnabled(
+      'classic', '?rockWeatheredFacetVfx=true',
+    )).toBe(false);
+    expect(resolveRockWeatheredFacetVfxEnabled('realistic', '')).toBe(true);
+    expect(resolveRockWeatheredFacetVfxEnabled('neon-lab', '')).toBe(true);
+    expect(resolveRockWeatheredFacetVfxEnabled(
+      'realistic', '?inputAudit=1',
+    )).toBe(false);
+    expect(resolveRockWeatheredFacetVfxEnabled(
+      'realistic', '?inputAudit=1&rockWeatheredFacetVfx=true',
+    )).toBe(true);
+    expect(resolveRockWeatheredFacetVfxEnabled(
+      'realistic', '?rockMesostructureVfx=0&rockWeatheredFacetVfx=on',
+    )).toBe(false);
+    expect(resolveRockWeatheredFacetVfxEnabled(
+      'realistic', '?rockRoughnessVfx=0&rockMesostructureVfx=1&rockWeatheredFacetVfx=on',
+    )).toBe(false);
+    expect(resolveRockWeatheredFacetVfxEnabled(
+      'realistic', '?solidBodyVfx=0&rockRoughnessVfx=1&rockMesostructureVfx=1&rockWeatheredFacetVfx=on',
+    )).toBe(false);
+    expect(resolveRockWeatheredFacetVfxEnabled(
+      'realistic', '?volumeVfx=0&solidBodyVfx=1&rockRoughnessVfx=1&rockMesostructureVfx=1&rockWeatheredFacetVfx=true',
+    )).toBe(true);
+    for (const requested of ['0', 'off', 'false']) {
+      expect(resolveRockWeatheredFacetVfxEnabled(
+        'neon-lab', `?rockWeatheredFacetVfx=${requested}`,
+      )).toBe(false);
+    }
   });
 
   it('keeps Platinum body optics independently measurable inside HDR looks', () => {
