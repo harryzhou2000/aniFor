@@ -13,7 +13,7 @@ powder, solid, liquid, gas, energy, and contact scenes across Canvas and WebGL a
 mobile gestures, save/load, CI, and Pages deployment as protected regression
 contracts rather than the primary feature stream.
 
-The accepted visual experiment ladder now runs through E58. E12 is the
+The accepted visual experiment ladder now runs through E61. E12 is the
 species-safe Sand/Clay/Concrete wet-sediment checkpoint; preserve its exact
 aqueous owner/stability proof, split moving-powder/stationary-Water control,
 Local/Grains no-op, fine structures, authored gaps, Canvas fallback, and true
@@ -1236,6 +1236,37 @@ errors; ISZS quality is `95.463/98.291/99.174`. Canonical 2× ISZS rises
 `1.16 → 1.40`, chroma `2.19 → 2.38`, and macro range `28 → 43`, with support
 `1`, coverage `.961`, and clipped fraction `0` unchanged.
 
+E61 is the accepted normal-WebGL-only exact Water `2` deep-volume recession,
+independently measurable with `?waterVolumeRecessionVfx=0|1` and a strict
+E24/E03 child. It applies only to the ordinary dense Aqueous Water interior
+already owned by E24; all depth bytes through the exact byte-192 hand-off are
+unchanged. Beyond that boundary, reuse only E24's existing crown, pocket,
+caustic-filament, optical-depth, and `waterBodyRecompose` scalars to attenuate
+the inherited broad reflection and add bounded spatially varying blue-green
+absorption. This is RGB-only arithmetic: add no carrier/noise, sample, texture,
+field, pass, target, upload, allocation, clock, alpha, support, silhouette,
+ownership, topology, state, or physics decision. Non-Water materials, shallow
+or sparse Water, seams, contacts, walls, holes, Canvas, and compact true 8×
+retain their established paths.
+
+`npm run audit:vfx:water-volume-recession` holds E24/E37/E56 active while
+toggling only E61 off→on→off at 1×/2×/4×. Treat exact byte 192 as the protected
+hand-off, measure the byte-198–216 ramp and saturated byte-255 core separately,
+and require monotone response, exact semantics/alpha/support/depth/walls/raw
+controls/repeated-off frames, plus requested-on true-8× `scale-8` exclusion at
+exact 4896×3072 after a GPU fence. The frozen ramp/core RGB RMS is
+`.56–.58`/`1.42–1.43` for open Water and `.49–.50`/`2.17` for checker-backed
+Water. Canvas and true 8× deliberately advertise E61 inactive; the accepted
+true-8× fence completed in `5.2559 s` with zero browser errors.
+
+Visual-audit lesson: `inputAudit=1` disables opt-in child selectors unless the
+composed route names them explicitly, so canonical evidence must request and
+prove every accepted child it claims (notably E37/E56/E61). Keep the audited
+depth endpoint identical to the shader activation boundary, and describe only
+structures the frozen measurements actually establish; an absorptive response
+does not prove a positive caustic arc merely because the shader reuses a
+filament scalar.
+
 The isolated candidate-survey v1 route is app-owned and must use the
 deterministic 612×384 RenderLab backend unless `simulation=native` is explicit.
 It freezes semantic hash `2255453673`, 115,368 occupied cells, all six exact
@@ -1275,9 +1306,10 @@ candidate-rank evidence or widen E50, E51, or E52; select any later experiment
 only from a new visible fit-view diagnosis.
 
 The composed showcase remains a separate roadmap signal. Its refreshed
-E58/E59-active 1×/2×/4× matrix is exact and cross-scale verified with zero
-browser errors, while E52 remains explicitly inactive because showcase v6 has
-no authoritative BGLA region. Organic remains the lowest family, led by exact
+E37/E56/E58/E59/E60/E61-active 1×/2×/4× matrix is exact and cross-scale
+verified with zero browser errors, while E52 remains explicitly inactive
+because showcase v6 has no authoritative BGLA region. Organic remains the
+lowest family, led by exact
 PLNT at quality `73.893/79.044/80.357`; E58 raises its canonical
 mesostructure `.405 → .430` and macro range `40 → 45.5` without changing
 continuity or scene semantics. E59 raises exact native ROCK `78` to quality
@@ -1287,13 +1319,22 @@ E60 raises canonical 2× exact ISZS from `93.047` to `98.291`; luma SD is
 `12.29`, microcontrast `1.40`, chroma `2.38`, and macro range `43`, while
 support `1`, coverage `.961`, and clipped fraction `0` remain unchanged. The
 final exact ISZS quality is `95.463/98.291/99.174` at 1×/2×/4×. Canonical
-family rank is Organic `79.044`, Contact `88.768`, Gas `95.463`, Solid
+family rank is Organic `79.044`, Contact `91.216`, Gas `95.463`, Solid
 `98.291`, Emission `98.475`, and Powder/Liquid `100`. ISZS is no longer the
 Solid floor or an automatic next diagnosis. Do not stack another PLNT,
 Water/Metal, ROCK, VIBR, or ISZS layer merely to chase rank. Select a future
 target only from a new visible fit-view diagnosis; PLNT mesostructure,
 Water/Metal chromatic separation, and Noble Gas billow depth remain contextual
 cues rather than an implementation queue.
+
+The current Contact score is `87.058/91.216/91.667` at 1×/2×/4× with E37,
+E56, and E61 explicitly active. Its broad `contactWaterMetal` rank box includes
+a saturated clean-Water shoulder as well as the immediate seam; E61 may own the
+former but E24's foreign-contact guard excludes the latter. Keep the narrow
+E61-active `boundedSeamRelief` cross-scale allowance at `0.18` for this one
+named box only. Support recall `1`, coverage `.947`, dominant component `1`,
+zero dark/clipped fraction, raw-metric drift, every other phase-contact
+component, and every other region retain the generic composed limits.
 
 The old post-E16 rank that labelled Stone `21` as Solid was invalid because
 Stone is native Powder. The corrected showcase uses native ROCK ground and

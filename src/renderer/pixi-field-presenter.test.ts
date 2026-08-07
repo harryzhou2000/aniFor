@@ -2875,7 +2875,10 @@ describe('Pixi presenter startup configuration', () => {
     expect(carrier).toContain('inheritedLiquidCarrier *= mix(1.0, 0.50, waterBodyRecompose);');
     expect(body).toContain('(broadSheen - 0.5) * (causticWave - 0.5) * 3.25');
     expect(body).toContain('waterCausticLine * waterCausticLine');
-    expect(body).toContain('waterBodyCrown * 0.160 + waterCausticFilament * 0.008');
+    expect(body).toContain('float waterCrownGain = 0.160;');
+    expect(body).toContain('float waterFilamentGain = 0.008;');
+    expect(body).toContain('waterBodyCrown * waterCrownGain');
+    expect(body).toContain('waterCausticFilament * waterFilamentGain');
     expect(body).toContain('vec3(0.042, 0.030, 0.016)');
     expect(`${carrier}\n${body}`).not.toContain('texture(');
     expect(`${carrier}\n${body}`).not.toMatch(/\balpha\s*[+*]?=/);
@@ -2886,6 +2889,51 @@ describe('Pixi presenter startup configuration', () => {
     );
     expect(source).toContain('presenter.app.canvas.dataset.waterBodyVfx');
     expect(source).toContain("this.app.canvas.dataset.waterBodyVfx = 'inactive';");
+  });
+
+  it('keeps E61 Water recession deep, E24-dependent, normal-WebGL-only, and RGB-only', () => {
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const canvasSource = readFileSync(new URL('./field-renderer.ts', import.meta.url), 'utf8');
+    const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');
+    const normalStart = source.indexOf('const FIELD_FRAGMENT = `', eightStart);
+    const normalEnd = source.indexOf('`;\n\n/** Primary WebGL presentation', normalStart);
+    const eight = source.slice(eightStart, normalStart);
+    const normal = source.slice(normalStart, normalEnd);
+    const e61Start = normal.indexOf('            // E61 makes');
+    const e61End = normal.indexOf('          // E22:', e61Start);
+    const e61 = normal.slice(e61Start, e61End);
+
+    expect(eightStart).toBeGreaterThanOrEqual(0);
+    expect(normalStart).toBeGreaterThan(eightStart);
+    expect(normalEnd).toBeGreaterThan(normalStart);
+    expect(e61Start).toBeGreaterThanOrEqual(0);
+    expect(e61End).toBeGreaterThan(e61Start);
+    expect(normal).toContain('uniform float uWaterVolumeRecessionVfx;');
+    expect(eight).not.toContain('uWaterVolumeRecessionVfx');
+    expect(eight).not.toContain('waterDeepRecession');
+    expect(canvasSource).not.toContain('waterVolumeRecessionVfx');
+    for (const proof of [
+      'uWaterVolumeRecessionVfx > 0.5',
+      '192.0 / 255.0, 240.0 / 255.0, liquidOpticalDepth',
+      '* waterBodyRecompose',
+      'mix(0.160, 0.105, waterDeepRecession)',
+      'mix(0.008, 0.026, waterDeepRecession)',
+      'waterBodyPocket * 0.80',
+      'vec3(0.058, 0.036, 0.018)',
+    ]) expect(e61).toContain(proof);
+    expect(e61).not.toContain('texture(');
+    expect(e61).not.toMatch(/\balpha\s*[+*]?=/);
+    expect(source.match(/this\.uniforms\.uniforms\.uWaterVolumeRecessionVfx = 0;/g))
+      .toHaveLength(2);
+    expect(source).toContain("get('waterVolumeRecessionVfxAudit') === '1'");
+    expect(source).toMatch(
+      /const waterVolumeRecessionVfxEnabled = outputScale < 8\s*&& resolveWaterVolumeRecessionVfxEnabled\(renderLook\);/,
+    );
+    expect(source).toContain(
+      'uWaterVolumeRecessionVfx: {\n        value: waterVolumeRecessionVfxEnabled ? 1 : 0',
+    );
+    expect(source).toContain('presenter.app.canvas.dataset.waterVolumeRecessionVfx');
+    expect(source).toContain("this.app.canvas.dataset.waterVolumeRecessionVfx = 'inactive';");
   });
 
   it('keeps E25 Noble Gas billows exact-style, E04-dependent, normal-WebGL-only, and RGB-only', () => {

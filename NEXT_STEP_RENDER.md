@@ -1024,11 +1024,42 @@ does not alter simulation, camera, semantic ownership, or `renderScale`.
   and clipped fraction `0` remain exact. The final composed matrix is exact and
   cross-scale verified with zero browser errors; ISZS quality is
   `95.463/98.291/99.174` at 1×/2×/4×.
+- **E61 accepted Water volume recession:** exact Water `2` gains a restrained
+  normal-WebGL-only deep-body correction as a strict E24/E03 child
+  (`?waterVolumeRecessionVfx=0|1`). Depth bytes through the exact byte-192
+  hand-off remain unchanged. Beyond that boundary, E61 reuses only E24's
+  crown, pocket, caustic-filament, and `waterBodyRecompose` evidence to
+  attenuate the inherited broad reflection and apply a spatially varying,
+  bounded blue-green rear-pocket absorption. It is RGB-only
+  arithmetic with no new wave/noise, sample, texture, field, pass, target,
+  upload, allocation, clock, alpha, support, ownership, topology, state, or
+  physics decision. Salt/Distilled/DEUT/Oil/Acid/Lava, shallow and sparse
+  Water, seams, Water/Glass/Metal/Sand/Smoke contacts, holes/chimneys, walls,
+  Canvas, and compact true 8× retain their established paths.
+
+  `npm run audit:vfx:water-volume-recession` holds E24, E37, and E56 active
+  while toggling only E61 off→on→off at 1×/2×/4×. The exact byte-192 open-pool
+  entry is a no-op control. The first post-boundary byte-198–216 ramp measures
+  `.56–.58` RGB RMS in the open pool and `.49–.50` in the checker-backed pane;
+  saturated byte-255 cores rise monotonically to `1.42–1.43` and `2.17`
+  RGB RMS, with ramp/core peaks `2/4` and `2/5`. Semantics, alpha/support,
+  liquid-depth bytes, walls, raw controls, contacts, and repeated-off frames
+  remain exact. Five named post-HDR neighbour/hand-off probes alone have
+  bounded `1/1/1/1/3`-byte peaks.
+  Requested-on true 8× keeps E03/E14/E17/E24/E37/E56/E61/HDR inactive for
+  `scale-8`, preserves exact 4896×3072 WebGL, and completes a GPU fence in
+  `5.2559 s` with zero browser errors. The canonical composed audit now
+  explicitly enables E37/E56/E61 under `inputAudit=1`; this fixes the prior
+  evidence omission in
+  which accepted E56 silently stayed off. Its full matrix is exact and
+  cross-scale verified: Contact quality is `87.058/91.216/91.667` at
+  1×/2×/4×, and canonical Water/Metal support recall `1`, coverage `.947`,
+  dark/clipped fraction `0`, and Liquid quality `100` remain protected.
 - **Protected 8× rung:** `renderScale=8` deliberately reports
   `hdrPipeline=inactive` / `scale-8` and retains the proven direct single-mesh
   4896×3072 path. The experiment must earn a bounded 8× design rather than
   allocating a 115 MiB full-resolution float target beside that path.
-- **Current decision:** E01/E02/E03/E04/E05/E06/E07/E08/E09/E10/E11/E12/E13/E14/E15/E16/E17/E18/E19/E20/E21/E22/E23/E24/E25/E26/E27/E28/E29/E30/E31/E32/E33/E34/E35/E36/E37/E38/E39/E40/E41/E42/E43/E44/E45/E46/E47/E48/E49/E50/E51/E52/E53/E54/E55/E56/E57/E58/E59/E60 remain opt-in through the non-Classic looks
+- **Current decision:** E01/E02/E03/E04/E05/E06/E07/E08/E09/E10/E11/E12/E13/E14/E15/E16/E17/E18/E19/E20/E21/E22/E23/E24/E25/E26/E27/E28/E29/E30/E31/E32/E33/E34/E35/E36/E37/E38/E39/E40/E41/E42/E43/E44/E45/E46/E47/E48/E49/E50/E51/E52/E53/E54/E55/E56/E57/E58/E59/E60/E61 remain opt-in through the non-Classic looks
   until representative hardware timing and mobile thermal behavior are
   measured. E02 remains the safe family-wide baseline. E03 is accepted as the
   liquid-depth checkpoint: its fit-view crop is visibly more cohesive, retains
@@ -2241,7 +2272,7 @@ next production 4× survey then selected Wood/PLNT as the largest remaining
   coverage `.971`, macro range `50`, zero dark/clipped fraction, and exact
   semantics across the full composed matrix.
 
-**Next visual experiments:** E03–E60 provide accepted liquid body/surface,
+**Next visual experiments:** E03–E61 provide accepted liquid body/surface,
 stable-gas, coherent-gas-motion, powder-depth, and powder-local-light
 checkpoints plus exact resting contact grounding, Glass/Ice transmission, and
 state-aware Wax/PLNT subsurface response, composed wet-mineral optics,
@@ -2289,6 +2320,10 @@ child: its broad aperiodic crystal-face hierarchy raises the canonical fit-view
 without reviving E47's rejected lens or a repeated directional band. ISZS is no
 longer the Solid floor; its final exact quality is `95.463/98.291/99.174` at
 1×/2×/4×. Do not immediately queue another Solid layer.
+E61 closes the diagnosed deep-Water luminous-curtain excess as a strict
+E24/E03 child. It begins only beyond the exact byte-192 hand-off and applies a
+measured spatially varying absorptive recession without adding a carrier,
+sample, resource, alpha, support, topology, Canvas path, or compact-8× branch.
 E37 adds exact Metal-side Water-contact spectral separation over the joint E14+
 E17 proof without changing either body's topology. E56 completes only the
 exact WATR side beside exact METL through E03/E14/E17/E37's inherited clean
@@ -2538,7 +2573,7 @@ Improve distinctive depth, transmission, reflection, lighting, and
 mesostructure without stacking another narrow Oil/Acid/contact tint or generic
 PLNT/gas layer.
 The fresh composed-family/material survey now uses
-E17/E43/E44/E45/E46/E47/E53/E54/E55/E58/E59/E60 under
+E17/E37/E43/E44/E45/E46/E47/E53/E54/E55/E56/E58/E59/E60/E61 under
 `inputAudit=1`. Fixture v6 freezes 23 material counts, 18 scored regions,
 semantic hash `3610338776`, and 114,015 occupied cells at 1×/2×/4×; its exact
 SOAP body owns 1,220 cells and the deep `liquidSoap` region owns 384. The
@@ -2572,7 +2607,7 @@ with support `1`, coverage `.967`, continuity/cavity control `1`, and zero
 clipping. E60 exact ISZS quality is `95.463/98.291/99.174` at 1×/2×/4×; the
 full composed matrix is exact and cross-scale verified with zero browser
 errors. The current canonical 2× family rank is Organic `79.044`, Contact
-`88.768` (Water/Metal chromatic separation), Gas `95.463`, Solid `98.291`
+`91.216` (Water/Metal chromatic separation), Gas `95.463`, Solid `98.291`
 (E60 exact ISZS crystal hierarchy), Emission `98.475`, and Powder/Liquid `100`.
 ISZS is no longer the Solid floor. Do not
 immediately stack another PLNT, contact, ROCK, VIBR, or ISZS layer. Because E36 already

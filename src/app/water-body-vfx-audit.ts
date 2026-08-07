@@ -40,6 +40,12 @@ export interface WaterBodyVfxPane {
   readonly midBand: WaterBodyVfxRect;
   /** Broad exact-Water core spanning exact depth bytes 192--255. */
   readonly deepCore: WaterBodyVfxRect;
+  /** Exact first deep-body row at vertical liquid-optical-depth byte 192. */
+  readonly deepEntry: WaterBodyVfxRect;
+  /** Four-row deep-body ramp spanning exact depth bytes 198--216. */
+  readonly deepRamp: WaterBodyVfxRect;
+  /** Fully saturated lower deep-body rows at exact depth byte 255. */
+  readonly saturatedCore: WaterBodyVfxRect;
   /** Authored multi-cell air remains open instead of becoming Water support. */
   readonly authoredHole: WaterBodyVfxRect;
   /** Authored air path open from the top silhouette into the body. */
@@ -99,6 +105,7 @@ const pane = (
   const y = 16;
   const body = { x, y, width: 264, height: 176 };
   const calibrationX = x + 20;
+  const deepCore = { x: calibrationX, y: y + 32, width: 64, height: 28 };
   return {
     code,
     material: Material.Water,
@@ -111,7 +118,10 @@ const pane = (
     shallowBand: { x: calibrationX, y: y + 2, width: 64, height: 4 },
     transitionBand: { x: calibrationX, y: y + 6, width: 64, height: 6 },
     midBand: { x: calibrationX, y: y + 12, width: 64, height: 10 },
-    deepCore: { x: calibrationX, y: y + 32, width: 64, height: 28 },
+    deepCore,
+    deepEntry: { ...deepCore, height: 1 },
+    deepRamp: { x: calibrationX, y: y + 33, width: 64, height: 4 },
+    saturatedCore: { x: calibrationX, y: y + 43, width: 64, height: 17 },
     authoredHole: { x: x + 108, y: y + 72, width: 16, height: 16 },
     openChimney: { x: x + 136, y, width: 12, height: 72 },
     reconstructablePinhole: { x: x + 176, y: y + 120 },

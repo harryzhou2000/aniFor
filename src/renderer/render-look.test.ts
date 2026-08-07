@@ -50,7 +50,8 @@ import {
   resolveQuartzMesostructureVfxEnabled,
   resolveThermiteBodyVfxEnabled,
   resolvePowderSolidContactVfxEnabled, resolveRenderLook, resolveTranslucentEdgeVfxEnabled,
-  resolveVolumeVfxEnabled, resolveWaterBodyVfxEnabled, resolveWetSedimentVfxEnabled,
+  resolveVolumeVfxEnabled, resolveWaterBodyVfxEnabled, resolveWaterVolumeRecessionVfxEnabled,
+  resolveWetSedimentVfxEnabled,
 } from './render-look';
 
 describe('resolveRenderLook', () => {
@@ -781,6 +782,36 @@ describe('resolveRenderLook', () => {
     expect(resolveWaterBodyVfxEnabled(
       'neon-lab', '?liquidBodyVfx=on&waterBodyVfx=off',
     )).toBe(false);
+  });
+
+  it('keeps Water volume recession subordinate to E24 and frozen in input audits', () => {
+    expect(resolveWaterVolumeRecessionVfxEnabled(
+      'classic', '?waterVolumeRecessionVfx=true',
+    )).toBe(false);
+    expect(resolveWaterVolumeRecessionVfxEnabled('realistic', '')).toBe(true);
+    expect(resolveWaterVolumeRecessionVfxEnabled('neon-lab', '')).toBe(true);
+    expect(resolveWaterVolumeRecessionVfxEnabled(
+      'realistic', '?inputAudit=1',
+    )).toBe(false);
+    for (const requested of ['1', 'on', 'true']) {
+      expect(resolveWaterVolumeRecessionVfxEnabled(
+        'realistic', `?inputAudit=1&waterVolumeRecessionVfx=${requested}`,
+      )).toBe(true);
+    }
+    expect(resolveWaterVolumeRecessionVfxEnabled(
+      'realistic', '?waterBodyVfx=0&waterVolumeRecessionVfx=on',
+    )).toBe(false);
+    expect(resolveWaterVolumeRecessionVfxEnabled(
+      'realistic', '?liquidBodyVfx=0&waterBodyVfx=1&waterVolumeRecessionVfx=on',
+    )).toBe(false);
+    expect(resolveWaterVolumeRecessionVfxEnabled(
+      'realistic', '?volumeVfx=0&liquidBodyVfx=1&waterBodyVfx=1&waterVolumeRecessionVfx=true',
+    )).toBe(true);
+    for (const requested of ['0', 'off', 'false']) {
+      expect(resolveWaterVolumeRecessionVfxEnabled(
+        'neon-lab', `?waterVolumeRecessionVfx=${requested}`,
+      )).toBe(false);
+    }
   });
 
   it('keeps exact Acid recomposition independently measurable but subordinate to the liquid-body baseline', () => {

@@ -825,6 +825,25 @@ export function resolveWaterBodyVfxEnabled(
 }
 
 /**
+ * E61 refines only E24's already-proven exact Water body. This strict child
+ * cannot recreate the liquid-body baseline or Water recomposition when either
+ * parent is disabled, and generic input audits retain it as an explicit opt-in
+ * comparison selector.
+ */
+export function resolveWaterVolumeRecessionVfxEnabled(
+  look: RenderLook,
+  search = globalThis.location?.search ?? '',
+): boolean {
+  if (!resolveWaterBodyVfxEnabled(look, search)) return false;
+  const parameters = new URLSearchParams(search);
+  const requested = parameters.get('waterVolumeRecessionVfx');
+  if (requested === '0' || requested === 'off' || requested === 'false') return false;
+  if (requested === '1' || requested === 'on' || requested === 'true') return true;
+  if (parameters.get('inputAudit') === '1') return false;
+  return true;
+}
+
+/**
  * Keeps the settled-powder crown experiment independently measurable without
  * changing liquid or gas. Ordinary realistic/neon presets retain the broad
  * volume default; the explicit query is reserved for comparison captures and

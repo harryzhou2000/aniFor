@@ -73,6 +73,7 @@ import {
   resolveOilBodyVfxEnabled,
   resolveOilVolumeFinishVfxEnabled,
   resolveWaterBodyVfxEnabled,
+  resolveWaterVolumeRecessionVfxEnabled,
   resolvePlasmaCoreVfxEnabled,
   resolveCeramicGlazeVfxEnabled,
   resolvePlatinumBodyVfxEnabled,
@@ -3326,6 +3327,7 @@ uniform float uDeutBodyVfx;
 uniform float uOilBodyVfx;
 uniform float uOilVolumeFinishVfx;
 uniform float uWaterBodyVfx;
+uniform float uWaterVolumeRecessionVfx;
 uniform float uLiquidSolidMeniscusVfx;
 uniform float uMetalWaterContactVfx;
 uniform float uWaterMetalTransmissionVfx;
@@ -7253,14 +7255,38 @@ void main() {
             float waterCausticFilament = waterCausticLine * waterCausticLine
               * smoothstep(0.04, 0.34, abs(broadSheen - 0.5))
               * waterBodyRecompose;
+            // E61 makes only Water beyond the fixture-proven byte-192 deep-body
+            // boundary recede behind E24's reflection roll. It attenuates the
+            // long bright crown carrier more strongly than the existing narrow
+            // high-caustic filament, then gives the complementary pocket a
+            // restrained blue-green Beer-Lambert falloff. Reuse only E24's
+            // existing optical-depth, crown, pocket, and filament scalars.
+            float waterDeepRecession = 0.0;
+            float waterCrownGain = 0.160;
+            float waterFilamentGain = 0.008;
+            if (uWaterVolumeRecessionVfx > 0.5) {
+              waterDeepRecession = smoothstep(
+                192.0 / 255.0, 240.0 / 255.0, liquidOpticalDepth
+              ) * waterBodyRecompose;
+              waterCrownGain = mix(0.160, 0.105, waterDeepRecession);
+              waterFilamentGain = mix(0.008, 0.026, waterDeepRecession);
+            }
             vec3 waterBodyReflection = mix(
               vec3(0.12, 0.70, 1.00), reflectedEnvironment, 0.18
             );
             color += (vec3(1.16) - clamp(color, 0.0, 1.16))
               * waterBodyReflection
-              * (waterBodyCrown * 0.160 + waterCausticFilament * 0.008);
+              * (waterBodyCrown * waterCrownGain
+                + waterCausticFilament * waterFilamentGain);
             color *= vec3(1.0) - vec3(0.042, 0.030, 0.016)
               * waterBodyPocket * (0.66 + liquidDepth * 0.16);
+            if (waterDeepRecession > 0.0) {
+              float waterRearPocket = waterDeepRecession
+                * (0.20 + waterBodyPocket * 0.80)
+                * (1.0 - waterBodyCrown * 0.28);
+              color *= vec3(1.0) - vec3(0.058, 0.036, 0.018)
+                * waterRearPocket;
+            }
           }
           // E22: exact Oil needs a shaped body finish after E03's accepted
           // column absorption. Reuse only the already-live connected-body,
@@ -11371,6 +11397,10 @@ export class PixiFieldPresenter {
     // and deliberately declares neither this selector nor its arithmetic.
     const waterBodyVfxEnabled = outputScale < 8
       && resolveWaterBodyVfxEnabled(renderLook);
+    // E61 is deep exact-Water arithmetic inside E24's normal-WebGL body.
+    // Canvas and compact true 8x retain the accepted E24 presentation.
+    const waterVolumeRecessionVfxEnabled = outputScale < 8
+      && resolveWaterVolumeRecessionVfxEnabled(renderLook);
     // E03 is a normal-detail experiment. The true-8x shader intentionally has
     // no corresponding uniform or arithmetic, so its public capability state
     // must not advertise an effect that cannot run on that path.
@@ -11465,6 +11495,9 @@ export class PixiFieldPresenter {
       uOilBodyVfx: { value: oilBodyVfxEnabled ? 1 : 0, type: 'f32' },
       uOilVolumeFinishVfx: { value: oilVolumeFinishVfxEnabled ? 1 : 0, type: 'f32' },
       uWaterBodyVfx: { value: waterBodyVfxEnabled ? 1 : 0, type: 'f32' },
+      uWaterVolumeRecessionVfx: {
+        value: waterVolumeRecessionVfxEnabled ? 1 : 0, type: 'f32',
+      },
       uLiquidSolidMeniscusVfx: {
         value: liquidSolidMeniscusVfxEnabled ? outputScale : 0, type: 'f32',
       },
@@ -11731,6 +11764,7 @@ export class PixiFieldPresenter {
       this.uniforms.uniforms.uOilBodyVfx = 0;
       this.uniforms.uniforms.uOilVolumeFinishVfx = 0;
       this.uniforms.uniforms.uWaterBodyVfx = 0;
+      this.uniforms.uniforms.uWaterVolumeRecessionVfx = 0;
       this.uniforms.uniforms.uLiquidSolidMeniscusVfx = 0;
       this.uniforms.uniforms.uMetalWaterContactVfx = 0;
       this.uniforms.uniforms.uWaterMetalTransmissionVfx = 0;
@@ -11814,6 +11848,7 @@ export class PixiFieldPresenter {
             || new URLSearchParams(location.search).get('soapBodyVfxAudit') === '1'
             || new URLSearchParams(location.search).get('deutBodyVfxAudit') === '1'
             || new URLSearchParams(location.search).get('waterBodyVfxAudit') === '1'
+            || new URLSearchParams(location.search).get('waterVolumeRecessionVfxAudit') === '1'
             || new URLSearchParams(location.search).get('liquidBodyVfxAudit') === '1'
             || new URLSearchParams(location.search).get('liquidSolidMeniscusVfxAudit') === '1'
             || new URLSearchParams(location.search).get('liquidSurfaceVfxAudit') === '1'
@@ -11972,6 +12007,9 @@ export class PixiFieldPresenter {
     ) > 0.5 ? 'active' : 'inactive';
     presenter.app.canvas.dataset.waterBodyVfx = Number(
       presenter.uniforms.uniforms.uWaterBodyVfx
+    ) > 0.5 ? 'active' : 'inactive';
+    presenter.app.canvas.dataset.waterVolumeRecessionVfx = Number(
+      presenter.uniforms.uniforms.uWaterVolumeRecessionVfx
     ) > 0.5 ? 'active' : 'inactive';
     presenter.app.canvas.dataset.liquidSolidMeniscusVfx = Number(
       presenter.uniforms.uniforms.uLiquidSolidMeniscusVfx
@@ -13498,6 +13536,7 @@ export class PixiFieldPresenter {
         this.uniforms.uniforms.uOilBodyVfx = 0;
         this.uniforms.uniforms.uOilVolumeFinishVfx = 0;
         this.uniforms.uniforms.uWaterBodyVfx = 0;
+        this.uniforms.uniforms.uWaterVolumeRecessionVfx = 0;
         this.uniforms.uniforms.uLiquidSolidMeniscusVfx = 0;
         this.uniforms.uniforms.uMetalWaterContactVfx = 0;
         this.uniforms.uniforms.uWaterMetalTransmissionVfx = 0;
@@ -13557,6 +13596,7 @@ export class PixiFieldPresenter {
         this.app.canvas.dataset.oilBodyVfx = 'inactive';
         this.app.canvas.dataset.oilVolumeFinishVfx = 'inactive';
         this.app.canvas.dataset.waterBodyVfx = 'inactive';
+        this.app.canvas.dataset.waterVolumeRecessionVfx = 'inactive';
         this.app.canvas.dataset.liquidSolidMeniscusVfx = 'inactive';
         this.app.canvas.dataset.metalWaterContactVfx = 'inactive';
         this.app.canvas.dataset.waterMetalTransmissionVfx = 'inactive';

@@ -41,6 +41,9 @@ describe('Water body VFX audit fixture', () => {
       expect(depthRange(depth, pane.transitionBand)).toEqual({ min: 36, max: 66 });
       expect(depthRange(depth, pane.midBand)).toEqual({ min: 72, max: 126 });
       expect(depthRange(depth, pane.deepCore)).toEqual({ min: 192, max: 255 });
+      expect(depthRange(depth, pane.deepEntry)).toEqual({ min: 192, max: 192 });
+      expect(depthRange(depth, pane.deepRamp)).toEqual({ min: 198, max: 216 });
+      expect(depthRange(depth, pane.saturatedCore)).toEqual({ min: 255, max: 255 });
       expect(depthAt(depth, pane.reconstructablePinhole)).toBe(0);
     }
 
@@ -137,6 +140,18 @@ describe('Water body VFX audit fixture', () => {
       for (const rect of [...bands, pane.authoredHole, pane.openChimney]) {
         expect(rectInside(rect, pane.body)).toBe(true);
       }
+      expect(pane.deepEntry).toEqual({
+        x: pane.deepCore.x, y: pane.deepCore.y, width: pane.deepCore.width, height: 1,
+      });
+      expect(pane.deepRamp).toEqual({
+        x: pane.deepCore.x, y: pane.deepCore.y + 1, width: pane.deepCore.width, height: 4,
+      });
+      expect(pane.saturatedCore).toEqual({
+        x: pane.deepCore.x, y: pane.deepCore.y + 11, width: pane.deepCore.width, height: 17,
+      });
+      expect(rectInside(pane.deepEntry, pane.deepCore)).toBe(true);
+      expect(rectInside(pane.deepRamp, pane.deepCore)).toBe(true);
+      expect(rectInside(pane.saturatedCore, pane.deepCore)).toBe(true);
       expect(pointInside(pane.reconstructablePinhole, pane.body)).toBe(true);
       for (let index = 0; index < bands.length; index++) {
         for (let other = index + 1; other < bands.length; other++) {
