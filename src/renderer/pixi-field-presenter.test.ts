@@ -2400,7 +2400,7 @@ describe('Pixi presenter startup configuration', () => {
     const eight = source.slice(eightStart, normalStart);
     const normal = source.slice(normalStart, normalEnd);
     const e52Start = normal.indexOf('          // E52:');
-    const e52End = normal.indexOf('          // E40:', e52Start);
+    const e52End = normal.indexOf('          // E64:', e52Start);
     const e52 = normal.slice(e52Start, e52End);
     const gateStart = normal.indexOf(
       '  if (family == 4.0 && boundaryStability > 0.001 && uPowderStyle > 1.5)',
@@ -2416,7 +2416,8 @@ describe('Pixi presenter startup configuration', () => {
     expect(gateStart).toBeGreaterThanOrEqual(0);
     expect(gateEnd).toBeGreaterThan(gateStart);
     expect(normal).toContain('uniform float uBglaBodyVfx;');
-    expect(normal.match(/uBglaBodyVfx > 0\.5/g)).toHaveLength(1);
+    expect(e52.match(/uBglaBodyVfx > 0\.5/g)).toHaveLength(1);
+    expect(normal.match(/uBglaBodyVfx > 0\.5/g)).toHaveLength(2);
     expect(eight).not.toContain('uBglaBodyVfx');
     expect(normal).not.toContain('bglaBodyCalm');
     expect(canvasSource).not.toContain('bglaBodyVfx');
@@ -2448,6 +2449,59 @@ describe('Pixi presenter startup configuration', () => {
     expect(source).toContain('presenter.app.canvas.dataset.bglaBodyVfx');
     expect(source).toContain("this.app.canvas.dataset.bglaBodyVfx = 'inactive';");
     expect(preserve).toContain("get('bglaBodyVfxAudit') === '1'");
+  });
+
+  it('keeps E64 BGLA cluster consolidation a late, exact E52 child on normal WebGL', () => {
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const canvasSource = readFileSync(new URL('./field-renderer.ts', import.meta.url), 'utf8');
+    const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');
+    const normalStart = source.indexOf('const FIELD_FRAGMENT = `', eightStart);
+    const normalEnd = source.indexOf('`;\n\n/** Primary WebGL presentation', normalStart);
+    const eight = source.slice(eightStart, normalStart);
+    const normal = source.slice(normalStart, normalEnd);
+    const e64Start = normal.indexOf('          // E64:');
+    const e64End = normal.indexOf('          // E40:', e64Start);
+    const e64 = normal.slice(e64Start, e64End);
+    const contourStart = normal.indexOf('      float smoothContourTransfer');
+    const contourEnd = normal.indexOf('      float localHeapAlpha', contourStart);
+    const contour = normal.slice(contourStart, contourEnd);
+    const motifStart = normal.indexOf('        } else if (material == 44.0) {');
+    const motifEnd = normal.indexOf('        } else if (material == 45.0) {', motifStart);
+    const motif = normal.slice(motifStart, motifEnd);
+    const preserveStart = source.indexOf('preserveDrawingBuffer:');
+    const preserveEnd = source.indexOf('resolution: outputScale', preserveStart);
+    const preserve = source.slice(preserveStart, preserveEnd);
+
+    expect(e64Start).toBeGreaterThanOrEqual(0);
+    expect(e64End).toBeGreaterThan(e64Start);
+    expect(normal).toContain('uniform float uBglaClusterVfx;');
+    expect(normal.match(/uBglaClusterVfx > 0\.5/g)).toHaveLength(1);
+    expect(eight).not.toContain('uBglaClusterVfx');
+    expect(canvasSource).not.toContain('bglaClusterVfx');
+    expect(e64).toContain('uBglaBodyVfx > 0.5');
+    expect(e64).toContain('material == 44.0');
+    expect(e64).toContain('optics == 13.0');
+    expect(e64).toContain('powderBodyGate');
+    expect(e64).toContain('powderBodyVolumeDepth');
+    expect(e64).toContain('foreignMatterContact < 0.5');
+    expect(e64).toContain('unlikeMaterialContact < 0.5');
+    expect(e64).toContain('bglaClusterCalm = powderBodyGate');
+    expect(contour).toContain('0.22, bglaClusterCalm');
+    expect(motif).toContain('float splinterRetention = mix(1.0, 0.38, bglaClusterCalm);');
+    for (const branch of [e64, contour, motif]) {
+      expect(branch).not.toContain('texture(');
+      expect(branch).not.toContain('uTime');
+      expect(branch).not.toContain('gl_FragCoord');
+      expect(branch).not.toMatch(/\balpha\s*[+*]?=/);
+    }
+    expect(source).toMatch(
+      /const bglaClusterVfxEnabled = outputScale < 8\s*&& resolveBglaClusterVfxEnabled\(renderLook\);/,
+    );
+    expect(source.match(/this\.uniforms\.uniforms\.uBglaClusterVfx = 0;/g)).toHaveLength(2);
+    expect(source).toContain('uBglaClusterVfx: { value: bglaClusterVfxEnabled ? 1 : 0');
+    expect(source).toContain('presenter.app.canvas.dataset.bglaClusterVfx');
+    expect(source).toContain("this.app.canvas.dataset.bglaClusterVfx = 'inactive';");
+    expect(preserve).toContain("get('bglaClusterVfxAudit') === '1'");
   });
 
   it('keeps E41 DEUT concentration-volume exact-owner, trait-aware, normal-WebGL-only, and RGB-only', () => {

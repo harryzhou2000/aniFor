@@ -1318,6 +1318,32 @@ remain exact despite sharing Oily optics. Requested-on true 8× reports
 E03/E63/HDR inactive for `scale-8`, presents exact 4896×3072 WebGL, and
 completes a GPU fence (accepted run `5.1513 s`) with zero browser errors.
 
+E64 is the accepted normal-WebGL-only exact BGLA `44` fit-view consolidation
+layer, independently measurable with `?bglaClusterVfx=0|1` and a strict child
+of E52/E05. E52's broad cool shard-pack response stays frozen. E64 carries one
+bounded calm scalar from the already-proven exact, trait-free, non-emissive,
+dry, wall-free, contact-free settled Smooth `powderBodyGate` and body-volume
+depth to the later generic mineral and exact BGLA splinter RGB sites. It
+therefore lets the established broad facets read as coherent clusters while
+retaining visible crystalline granulation. Add no noise, wave, sample, texture,
+field, resource, pass, target, upload, allocation, clock, alpha, support,
+silhouette, ownership, topology, state, or physics decision. Moving or wet
+BGLA, authored holes/channels, fine structures, native walls, BGLA/ROCK/Metal/
+Water contacts, all sibling materials, Local, Grains, Canvas, and compact true
+8× remain exact controls.
+
+`npm run audit:vfx:bgla-cluster` holds E52 active and toggles only E64
+off→on→off at 1×/2×/4×. Enabled microcontrast is `4.82–7.22`, chromatic
+contrast `2.24–3.13`, and macro range `7–28`; relative to the frozen E52
+parent, micro retention is `.5721–.5946`, chroma retention `.5415–.5761`, and
+macro retention `.6190–.9583`. The three target responses remain bounded at
+RGB RMS `3.76–5.36`, peaks `12–20`, and coverage `.683–.787`. All named
+controls are framebuffer-exact, raw alpha/support and semantic state are exact,
+Local and Grains are exact no-ops, repeated-off output is byte-identical, and
+browser errors are zero. Requested-on true 8× reports E05/E52/E64/HDR inactive
+for `scale-8`, presents exact 4896×3072 WebGL, keeps the dense fixture absent,
+and completes a GPU fence in `5.3813 s`.
+
 Visual-audit lesson: `inputAudit=1` disables opt-in child selectors unless the
 composed route names them explicitly, so canonical evidence must request and
 prove every accepted child it claims (notably E37/E56/E61/E62/E63). Keep the
@@ -1358,10 +1384,11 @@ The post-E52 survey exposed a scorer blind spot: exact Nitro still scored
 retains quality `100`, full support/coverage, zero dark/clipped fraction, and
 raises those measures to `7.129`/`.321`/`.332`/`27.918` while replacing the
 flat body with a coherent crown/pocket volume. The candidate survey command
-must explicitly enable all five candidate-facing accepted selectors. BGLA then
-remains quality `100` at 1×/2×/4×, with microcontrast `9.393/10.971/8.452`, chromatic contrast
-`5.872/5.614/4.136`, macro range `34.213/29.575/24.387`, full support, and zero
-clipping. Snow's formerly measured candidate deficit is closed: quality is
+must explicitly enable all six candidate-facing accepted selectors. With E52
+and E64 active, BGLA remains quality `100` at 1×/2×/4×, with luma deviation
+`7.808/7.822/6.699`, microcontrast `5.397/6.348/5.004`, chromatic contrast
+`3.170/3.076/2.363`, macro range `27.043/24.229/22.665`, full support, and zero
+dark/clipped fraction. Snow's formerly measured candidate deficit is closed: quality is
 `93.614/92.916/93.274` at 1×/2×/4× after the bounded 4× fit-view refinement;
 microcontrast is `4.815/5.702/5.424`, chromatic contrast is
 `1.307/1.224/1.235`, and macro range is `24.657/23.679/22.240`, with full
@@ -1902,9 +1929,9 @@ npm run audit:vfx:candidate-rank
 
 The candidate-survey route is a separate app-owned deterministic fixture; its
 frozen six-region 1×/2×/4× production-WebGL matrix selects bounded exact-owner
-experiments without mutating the accepted showcase contract. Its five
-candidate-facing selectors explicitly enable accepted E48, E49, E50, E52, and
-E63.
+experiments without mutating the accepted showcase contract. Its six
+candidate-facing selectors explicitly enable accepted E48, E49, E50, E52,
+E63, and E64.
 E51 has no candidate-survey selector and is proved separately by its authentic
 native-state fixture; do not use this route to claim a pre/post-E51 rank. Use
 the underlying driver's
@@ -1912,7 +1939,8 @@ the underlying driver's
 `--candidate-quartz-mesostructure-vfx=0` only to reproduce the pre-E49 Quartz
 baseline. Use `--candidate-c4-body-vfx=0` only to reproduce the pre-E50 C4
 baseline; matching `=1` flags isolate an accepted child without relying on
-renderer defaults.
+renderer defaults. Use `--candidate-bgla-cluster-vfx=0` only to reproduce the
+post-E52/pre-E64 BGLA card.
 
 The desktop gate performs a paired `renderScale=2` then `renderScale=1` navigation at the same explicit CSS viewport. It must report identical CSS canvas geometry while the backing changes only from 1224×768 to 612×384, and it repeats exact landmark painting, cursor-anchored wheel zoom, and 42×27 CSS-pixel middle-pan at 1×. Do not compare geometry captured under different device-emulation viewports; that tests browser setup rather than backing-scale independence.
 

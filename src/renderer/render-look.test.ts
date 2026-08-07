@@ -47,6 +47,7 @@ import {
   resolvePowderBodyVfxEnabled, resolvePowderLightVfxEnabled,
   resolveSootyPowderBodyVfxEnabled,
   resolveBglaBodyVfxEnabled,
+  resolveBglaClusterVfxEnabled,
   resolveC4BodyVfxEnabled,
   resolveSnowpackBodyVfxEnabled,
   resolveQuartzMesostructureVfxEnabled,
@@ -1319,6 +1320,32 @@ describe('resolveRenderLook', () => {
     expect(resolveBglaBodyVfxEnabled(
       'realistic', '?volumeVfx=0&powderBodyVfx=on&bglaBodyVfx=1',
     )).toBe(true);
+  });
+
+  it('keeps BGLA cluster consolidation subordinate to E52 and audit-isolated', () => {
+    expect(resolveBglaClusterVfxEnabled('classic', '?bglaClusterVfx=on')).toBe(false);
+    expect(resolveBglaClusterVfxEnabled('realistic', '')).toBe(true);
+    expect(resolveBglaClusterVfxEnabled('neon-lab', '')).toBe(true);
+    expect(resolveBglaClusterVfxEnabled('realistic', '?inputAudit=1')).toBe(false);
+    expect(resolveBglaClusterVfxEnabled(
+      'realistic', '?inputAudit=1&bglaBodyVfx=1&bglaClusterVfx=true',
+    )).toBe(true);
+    for (const disabled of ['0', 'off', 'false']) {
+      expect(resolveBglaClusterVfxEnabled(
+        'realistic', `?bglaClusterVfx=${disabled}`,
+      )).toBe(false);
+    }
+    for (const enabled of ['1', 'on', 'true']) {
+      expect(resolveBglaClusterVfxEnabled(
+        'realistic', `?bglaClusterVfx=${enabled}`,
+      )).toBe(true);
+    }
+    expect(resolveBglaClusterVfxEnabled(
+      'realistic', '?bglaBodyVfx=0&bglaClusterVfx=1',
+    )).toBe(false);
+    expect(resolveBglaClusterVfxEnabled(
+      'realistic', '?powderBodyVfx=0&bglaBodyVfx=1&bglaClusterVfx=1',
+    )).toBe(false);
   });
 
   it('keeps powder/solid contact VFX independent of the powder-body crown layer', () => {

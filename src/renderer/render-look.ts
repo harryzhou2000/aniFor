@@ -1010,6 +1010,24 @@ export function resolveBglaBodyVfxEnabled(
 }
 
 /**
+ * E64 consolidates only the exact BGLA body already proved by E52. It cannot
+ * revive either E52 or its settled Smooth E05 parent, and audit scenes stay on
+ * the frozen E52 reference until they explicitly opt into this child.
+ */
+export function resolveBglaClusterVfxEnabled(
+  look: RenderLook,
+  search = globalThis.location?.search ?? '',
+): boolean {
+  if (!resolveBglaBodyVfxEnabled(look, search)) return false;
+  const parameters = new URLSearchParams(search);
+  const requested = parameters.get('bglaClusterVfx');
+  if (requested === '0' || requested === 'off' || requested === 'false') return false;
+  if (requested === '1' || requested === 'on' || requested === 'true') return true;
+  if (parameters.get('inputAudit') === '1') return false;
+  return true;
+}
+
+/**
  * Keeps the settled powder/solid contact experiment independently measurable
  * without requiring the powder-body crown layer. Ordinary realistic/neon
  * presets retain the broad volume default; the explicit query is reserved for

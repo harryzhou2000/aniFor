@@ -1108,11 +1108,32 @@ does not alter simulation, camera, semantic ownership, or `renderScale`.
   over `.04` coverage, with support unchanged. Requested-on true 8× reports
   E03/E63/HDR inactive for `scale-8`, presents exact 4896×3072 WebGL, and
   completes a GPU fence (accepted run `5.1513 s`) with zero browser errors.
+- **E64 accepted BGLA fit-view consolidation:** exact BGLA `44` gains a
+  normal-WebGL-only late pigment/splinter consolidation layer as a strict
+  E52/E05 child (`?bglaClusterVfx=0|1`). E52's broad shard-pack response stays
+  frozen. E64 carries one bounded scalar from the existing settled, dry,
+  trait-free, non-emissive, wall/contact-free Smooth body proof to the later
+  generic mineral and exact BGLA splinter RGB sites. Broad facets therefore
+  read as coherent clusters while visible crystalline granulation remains.
+  It adds no carrier, wave, sample, texture, field, resource, pass, target,
+  upload, allocation, clock, alpha, support, silhouette, ownership, topology,
+  state, or physics decision; moving/wet/fine/contacted BGLA, walls, holes,
+  sibling materials, Local, Grains, Canvas, and compact true 8× remain exact.
+
+  `npm run audit:vfx:bgla-cluster` holds E52 active while toggling only E64
+  off→on→off at 1×/2×/4×. Enabled micro/chroma/macro ranges are
+  `4.82–7.22`/`2.24–3.13`/`7–28`; relative retention is
+  `.5721–.5946`/`.5415–.5761`/`.6190–.9583`. Target RGB RMS is `3.76–5.36`
+  with peaks `12–20` and coverage `.683–.787`. Every named control, Local,
+  Grains, raw alpha/support, semantics, and repeated-off output remains exact.
+  Requested-on true 8× reports E05/E52/E64/HDR inactive for `scale-8`, keeps
+  the dense fixture absent, presents exact 4896×3072 WebGL, and completes a
+  GPU fence in `5.3813 s` with zero browser errors.
 - **Protected 8× rung:** `renderScale=8` deliberately reports
   `hdrPipeline=inactive` / `scale-8` and retains the proven direct single-mesh
   4896×3072 path. The experiment must earn a bounded 8× design rather than
   allocating a 115 MiB full-resolution float target beside that path.
-- **Current decision:** E01/E02/E03/E04/E05/E06/E07/E08/E09/E10/E11/E12/E13/E14/E15/E16/E17/E18/E19/E20/E21/E22/E23/E24/E25/E26/E27/E28/E29/E30/E31/E32/E33/E34/E35/E36/E37/E38/E39/E40/E41/E42/E43/E44/E45/E46/E47/E48/E49/E50/E51/E52/E53/E54/E55/E56/E57/E58/E59/E60/E61/E62/E63 remain opt-in through the non-Classic looks
+- **Current decision:** E01/E02/E03/E04/E05/E06/E07/E08/E09/E10/E11/E12/E13/E14/E15/E16/E17/E18/E19/E20/E21/E22/E23/E24/E25/E26/E27/E28/E29/E30/E31/E32/E33/E34/E35/E36/E37/E38/E39/E40/E41/E42/E43/E44/E45/E46/E47/E48/E49/E50/E51/E52/E53/E54/E55/E56/E57/E58/E59/E60/E61/E62/E63/E64 remain opt-in through the non-Classic looks
   until representative hardware timing and mobile thermal behavior are
   measured. E02 remains the safe family-wide baseline. E03 is accepted as the
   liquid-depth checkpoint: its fit-view crop is visibly more cohesive, retains
@@ -1409,7 +1430,7 @@ survey. It drives
 612×384 RenderLab backend, freezes the semantic hash/material counts/region
 support, and compares the same six candidate cards at 1×/2×/4× production
 WebGL. Keep candidate selectors explicit when evaluating an accepted child;
-the package command retains the five accepted E48/E49/E50/E52/E63 selectors. E51
+the package command retains the six accepted E48/E49/E50/E52/E63/E64 selectors. E51
 has no candidate-survey selector and is proved by its separate authentic-state
 fixture, so this route cannot establish a pre/post-E51 rank. Pass
 `--candidate-snowpack-body-vfx=0` to the underlying
@@ -1418,6 +1439,8 @@ driver only when reproducing the frozen pre-E48 Snow baseline, and pass
 baseline. Pass `--candidate-c4-body-vfx=0` only for the frozen pre-E50 C4
 baseline, and pass `--candidate-bgla-body-vfx=0` only when reproducing the
 pre-E52 BGLA card.
+Pass `--candidate-bgla-cluster-vfx=0` only when reproducing the post-E52,
+pre-E64 BGLA card.
 Pass `--candidate-nitro-body-vfx=0` only when reproducing the frozen pre-E63
 flat-Nitro baseline.
 
@@ -2496,6 +2519,26 @@ recall is one, and clipping remains zero. Requested-on true 8× proves
 E52/HDR/bloom exclusion, a blank material plane, exact 4896×3072 WebGL, and a
 completed `gpu-fence` in `5172.5 ms`, with stable semantics and zero browser errors. The focused release
 gate is `npm run audit:vfx:bgla-body`.
+E64 is the accepted exact-BGLA `44` fit-view consolidation checkpoint, a
+normal-WebGL-only strict E52/E05 child (`?bglaClusterVfx=0|1`). It leaves E52
+unchanged and carries one derived calm scalar from the existing exact settled
+Smooth body gate and body-volume depth to the later generic mineral and native
+BGLA splinter RGB sites. This corrects the fit-view pepper field at the sites
+that actually own it while retaining the established broad facets and visible
+crystalline texture. Moving or wet BGLA, authored holes/channels, fine
+structures, walls, contacts, sibling owners, Local, Grains, Canvas, and compact
+true 8× are exact controls. E64 adds no carrier, noise, wave, sample, texture,
+field, resource, pass, target, upload, allocation, clock, alpha, support,
+silhouette, ownership, topology, state, or physics decision. Its frozen
+1×/2×/4× matrix holds enabled microcontrast at `4.82–7.22`, chromatic contrast
+at `2.24–3.13`, macro range at `7–28`, and E52-relative micro/chroma/macro
+retention at `.5721–.5946`/`.5415–.5761`/`.6190–.9583`. Target RGB RMS is
+`3.76–5.36`, peaks are `12–20`, and coverage is `.683–.787`; all named
+controls, semantic/alpha/support state, Local, Grains, and repeated-off output
+are exact. Requested-on true 8× proves E05/E52/E64/HDR exclusion, a blank
+material plane, exact 4896×3072 WebGL, and a `gpu-fence` completed in
+`5.3813 s`, with zero browser errors. The focused gate is
+`npm run audit:vfx:bgla-cluster`.
 E53 is the accepted exact-PLNT `10` continuous-canopy-tissue checkpoint, a
 normal-WebGL-only strict E36 child (`?plantCanopyTissueVfx=0|1`). It reuses
 only E36's already-live signed lamina, front/rear, overlap, and canopy-mass
@@ -2724,17 +2767,20 @@ flat olive body: canonical 2× luma SD/microcontrast/chroma/macro range was
 explicit selector raises those measures to `7.129/.321/.332/27.918` with full
 support/coverage and zero clipping while adding coherent crown/pocket volume.
 BGLA's historical quality-`100` candidate card selected E52; it is not its
-acceptance evidence. With E52 explicitly enabled, BGLA remains quality `100`
-at every scale, with microcontrast `9.393/10.971/8.452`, chromatic contrast
-`5.872/5.614/4.136`, macro range `34.213/29.575/24.387`, full support, and zero
-clipping. The explicit-selector candidate matrix closes Snow's former 4×
+acceptance evidence. A later visible fit-view diagnosis showed that E52's fine
+splinters still read as uniform pepper, selecting E64 without retuning E52.
+With both explicit selectors active, BGLA remains quality `100` at every scale;
+luma deviation is `7.808/7.822/6.699`, microcontrast
+`5.397/6.348/5.004`, chromatic contrast `3.170/3.076/2.363`, and macro range
+`27.043/24.229/22.665`, with full support and zero dark/clipped fraction. The
+explicit-selector candidate matrix closes Snow's former 4×
 fit-view loss: quality is `93.614/92.916/93.274`, microcontrast is
 `4.815/5.702/5.424`, chromatic contrast is `1.307/1.224/1.235`, and macro range
 is `24.657/23.679/22.240` at 1×/2×/4×, with full support and zero dark/clipped
 fraction. Do not alter E48 from candidate-rank evidence; its focused exact-owner
 fixture remains the acceptance contract. Choose any later experiment only from
 a new visible fit-view diagnosis. Preserve the E14 1× stencil snap and all
-E01–E63 selectors and controls.
+E01–E64 selectors and controls.
 
 ## Phase 1 — HDR pipeline & lighting core (biggest visual payoff)
 
