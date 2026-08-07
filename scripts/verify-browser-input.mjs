@@ -478,6 +478,12 @@ const plantCanopyMassVfxOnly = process.argv.includes('--plant-canopy-mass-vfx-on
 if (plantCanopyMassVfxOnly && (modes.length !== 1 || modes[0] !== 'webgl')) {
   throw new Error('--plant-canopy-mass-vfx-only requires --webgl-only');
 }
+// E53 is a restrained continuous-tissue child of E36. It owns no new fixture
+// or carrier and remains a normal-detail WebGL experiment only.
+const plantCanopyTissueVfxOnly = process.argv.includes('--plant-canopy-tissue-vfx-only');
+if (plantCanopyTissueVfxOnly && (modes.length !== 1 || modes[0] !== 'webgl')) {
+  throw new Error('--plant-canopy-tissue-vfx-only requires --webgl-only');
+}
 // E35 is an exact-Wood tannin child of E20/E26/E28/E30. Its focused route
 // keeps PLNT-only children disabled while compact true 8x remains excluded.
 const woodTanninVfxOnly = process.argv.includes('--wood-tannin-vfx-only');
@@ -501,10 +507,11 @@ const focusedVfxOnlyFlags = [
   nobleGasBillowVfxOnly, nobleGasPrismVfxOnly,
   smokeSoftnessVfxOnly, smokeBillowDepthVfxOnly, botanicalMesostructureVfxOnly, woodBarkReliefVfxOnly,
   botanicalPigmentVfxOnly, plantLaminaVfxOnly, plantLobeDepthVfxOnly, plantCanopyMassVfxOnly,
+  plantCanopyTissueVfxOnly,
   woodTanninVfxOnly,
 ];
 if (focusedVfxOnlyFlags.filter(Boolean).length > 1) {
-  throw new Error('HDR/volume/liquid-body/liquid-surface/gas-body/gas-motion/powder-body/powder-light/powder-solid-contact/translucent-edge/organic-subsurface/wet-sediment/gas-light/liquid-solid-meniscus/metal-water-contact/gas-core-depth/plasma-core/solid-body/platinum-body/ceramic-glaze/botanical-body/glass-body/oil-body/rock-roughness/rock-mesostructure/water-body/acid-body/soap-body/sooty-powder-body/thermite-body/snowpack-body/quartz-mesostructure/c4-body/deut-body/hydrogen-body/carbon-dioxide-body/radioactive-solid-body/iszs-crystalline/noble-gas-billow/noble-gas-prism/smoke-softness/smoke-billow-depth/botanical-mesostructure/wood-bark-relief/botanical-pigment/plant-lamina/plant-lobe-depth/plant-canopy-mass/wood-tannin focused audits are mutually exclusive');
+  throw new Error('HDR/volume/liquid-body/liquid-surface/gas-body/gas-motion/powder-body/powder-light/powder-solid-contact/translucent-edge/organic-subsurface/wet-sediment/gas-light/liquid-solid-meniscus/metal-water-contact/gas-core-depth/plasma-core/solid-body/platinum-body/ceramic-glaze/botanical-body/glass-body/oil-body/rock-roughness/rock-mesostructure/water-body/acid-body/soap-body/sooty-powder-body/thermite-body/snowpack-body/quartz-mesostructure/c4-body/deut-body/hydrogen-body/carbon-dioxide-body/radioactive-solid-body/iszs-crystalline/noble-gas-billow/noble-gas-prism/smoke-softness/smoke-billow-depth/botanical-mesostructure/wood-bark-relief/botanical-pigment/plant-lamina/plant-lobe-depth/plant-canopy-mass/plant-canopy-tissue/wood-tannin focused audits are mutually exclusive');
 }
 
 const layoutOnly = process.argv.includes('--layout-only');
@@ -700,6 +707,9 @@ const plantLobeDepthVfxArgument = process.argv.find(
 const plantCanopyMassVfxArgument = process.argv.find(
   (argument) => argument.startsWith('--plant-canopy-mass-vfx='),
 )?.slice('--plant-canopy-mass-vfx='.length);
+const plantCanopyTissueVfxArgument = process.argv.find(
+  (argument) => argument.startsWith('--plant-canopy-tissue-vfx='),
+)?.slice('--plant-canopy-tissue-vfx='.length);
 const woodTanninVfxArgument = process.argv.find(
   (argument) => argument.startsWith('--wood-tannin-vfx='),
  )?.slice('--wood-tannin-vfx='.length);
@@ -854,6 +864,10 @@ if (plantLobeDepthVfxArgument !== undefined
 if (plantCanopyMassVfxArgument !== undefined
   && !['0', '1', 'off', 'on'].includes(plantCanopyMassVfxArgument)) {
   throw new Error('--plant-canopy-mass-vfx must be 0, 1, off, or on');
+}
+if (plantCanopyTissueVfxArgument !== undefined
+  && !['0', '1', 'off', 'on'].includes(plantCanopyTissueVfxArgument)) {
+  throw new Error('--plant-canopy-tissue-vfx must be 0, 1, off, or on');
 }
 if (woodTanninVfxArgument !== undefined
   && !['0', '1', 'off', 'on'].includes(woodTanninVfxArgument)) {
@@ -1052,8 +1066,8 @@ if (focusedVfxOnlyFlags.some(Boolean) && !carbonDioxideBodyVfxOnly
 if (focusedVfxOnlyFlags.some(Boolean) && (botanicalMesostructureVfxArgument !== undefined
   || botanicalPigmentVfxArgument !== undefined || plantLaminaVfxArgument !== undefined
   || plantLobeDepthVfxArgument !== undefined || plantCanopyMassVfxArgument !== undefined
-  || woodTanninVfxArgument !== undefined)) {
-  throw new Error('focused VFX audits own botanicalMesostructureVfx, botanicalPigmentVfx, plantLaminaVfx, plantLobeDepthVfx, plantCanopyMassVfx, and woodTanninVfx state; omit their overrides');
+  || plantCanopyTissueVfxArgument !== undefined || woodTanninVfxArgument !== undefined)) {
+  throw new Error('focused VFX audits own botanicalMesostructureVfx, botanicalPigmentVfx, plantLaminaVfx, plantLobeDepthVfx, plantCanopyMassVfx, plantCanopyTissueVfx, and woodTanninVfx state; omit their overrides');
 }
 if (gasLightVfxOnly && (volumeVfxArgument !== undefined || liquidBodyVfxArgument !== undefined
   || liquidSurfaceVfxArgument !== undefined || gasBodyVfxArgument !== undefined || gasMotionVfxArgument !== undefined
@@ -1406,6 +1420,9 @@ if (plantLobeDepthVfxOnly && renderScaleArgument === '8') {
 }
 if (plantCanopyMassVfxOnly && renderScaleArgument === '8') {
   throw new Error('--plant-canopy-mass-vfx-only is a normal-detail 1x/2x/4x experiment');
+}
+if (plantCanopyTissueVfxOnly && renderScaleArgument === '8') {
+  throw new Error('--plant-canopy-tissue-vfx-only is a normal-detail 1x/2x/4x experiment');
 }
 if (woodTanninVfxOnly && renderScaleArgument === '8') {
   throw new Error('--wood-tannin-vfx-only is a normal-detail 1x/2x/4x experiment');
@@ -1792,6 +1809,11 @@ async function auditMode(mode) {
       ? { plantCanopyMassVfx: '0' }
       : plantCanopyMassVfxArgument !== undefined
         ? { plantCanopyMassVfx: plantCanopyMassVfxArgument }
+        : {}),
+    ...(focusedVfxOnlyFlags.some(Boolean)
+      ? { plantCanopyTissueVfx: '0' }
+      : plantCanopyTissueVfxArgument !== undefined
+        ? { plantCanopyTissueVfx: plantCanopyTissueVfxArgument }
         : {}),
     ...(focusedVfxOnlyFlags.some(Boolean)
       ? { woodTanninVfx: '0' }
@@ -2406,6 +2428,13 @@ async function auditMode(mode) {
       assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
       cdp.close();
       return { backend: mode, plantCanopyMassVfx, browserErrors: errors.length };
+    }
+    if (plantCanopyTissueVfxOnly) {
+      assert(mode === 'webgl', '--plant-canopy-tissue-vfx-only requires --webgl-only');
+      const plantCanopyTissueVfx = await auditPlantCanopyTissueVfxExperiment(cdp, mode, dpr);
+      assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
+      cdp.close();
+      return { backend: mode, plantCanopyTissueVfx, browserErrors: errors.length };
     }
     if (woodTanninVfxOnly) {
       assert(mode === 'webgl', '--wood-tannin-vfx-only requires --webgl-only');
@@ -13323,6 +13352,9 @@ async function auditComposedRankShowcase(cdp, mode, dpr) {
       ...(plantCanopyMassVfxArgument !== undefined ? {
         plantCanopyMassVfx: plantCanopyMassVfxArgument,
       } : {}),
+      ...(plantCanopyTissueVfxArgument !== undefined ? {
+        plantCanopyTissueVfx: plantCanopyTissueVfxArgument,
+      } : {}),
       ...(woodTanninVfxArgument !== undefined ? {
         woodTanninVfx: woodTanninVfxArgument,
       } : {}),
@@ -13354,6 +13386,7 @@ async function auditComposedRankShowcase(cdp, mode, dpr) {
         && parameters.get('plantLaminaVfx') === ${JSON.stringify(plantLaminaVfxArgument ?? null)}
         && parameters.get('plantLobeDepthVfx') === ${JSON.stringify(plantLobeDepthVfxArgument ?? null)}
         && parameters.get('plantCanopyMassVfx') === ${JSON.stringify(plantCanopyMassVfxArgument ?? null)}
+        && parameters.get('plantCanopyTissueVfx') === ${JSON.stringify(plantCanopyTissueVfxArgument ?? null)}
         && parameters.get('woodTanninVfx') === ${JSON.stringify(woodTanninVfxArgument ?? null)}
         && document.querySelector('[data-scene="showcase"]') !== null
         && typeof window.__ANIFOR_INPUT_AUDIT__?.materialShowcaseFixture === 'function';
@@ -13410,6 +13443,9 @@ async function auditComposedRankShowcase(cdp, mode, dpr) {
     );
     const plantCanopyMassVfx = await evaluate(cdp,
       `document.querySelector('canvas.world-canvas')?.dataset.plantCanopyMassVfx ?? 'missing'`,
+    );
+    const plantCanopyTissueVfx = await evaluate(cdp,
+      `document.querySelector('canvas.world-canvas')?.dataset.plantCanopyTissueVfx ?? 'missing'`,
     );
     const woodTanninVfx = await evaluate(cdp,
       `document.querySelector('canvas.world-canvas')?.dataset.woodTanninVfx ?? 'missing'`,
@@ -13559,6 +13595,16 @@ async function auditComposedRankShowcase(cdp, mode, dpr) {
         argument: plantCanopyMassVfxArgument ?? 'default-on', plantLobeDepthVfx,
         plantCanopyMassVfx, expectedPlantCanopyMassState,
       })})`);
+    const plantCanopyTissueRequestedOn = plantCanopyTissueVfxArgument === undefined
+      || ['1', 'on'].includes(plantCanopyTissueVfxArgument);
+    const expectedPlantCanopyTissueState = plantCanopyTissueRequestedOn
+        && plantCanopyMassVfx === 'active'
+      ? 'active' : 'inactive';
+    assert(plantCanopyTissueVfx === expectedPlantCanopyTissueState,
+      `composed rank ${scale}x plant canopy-tissue selector resolved incorrectly (${JSON.stringify({
+        argument: plantCanopyTissueVfxArgument ?? 'default-on', plantCanopyMassVfx,
+        plantCanopyTissueVfx, expectedPlantCanopyTissueState,
+      })})`);
     if (woodTanninVfxArgument !== undefined) {
       const requestedOn = ['1', 'on'].includes(woodTanninVfxArgument);
       const woodBarkReliefVfx = await evaluate(cdp,
@@ -13657,7 +13703,8 @@ async function auditComposedRankShowcase(cdp, mode, dpr) {
     if (screenshot) await writeFile(screenshot, Buffer.from(capture.capture.data, 'base64'));
     captures.push({
       scale, geometry, fixture, semantic, regions, hdrPipeline, botanicalMesostructureVfx,
-      botanicalPigmentVfx, plantLaminaVfx, plantLobeDepthVfx, plantCanopyMassVfx, woodTanninVfx,
+      botanicalPigmentVfx, plantLaminaVfx, plantLobeDepthVfx, plantCanopyMassVfx, plantCanopyTissueVfx,
+      woodTanninVfx,
       oilVolumeFinishVfx, acidBodyVfx, soapBodyVfx, sootyPowderBodyVfx, thermiteBodyVfx,
       bglaBodyVfx,
       smokeBillowDepthVfx, powderStability,
@@ -13765,7 +13812,8 @@ async function auditComposedRankShowcase(cdp, mode, dpr) {
     .map((sample, index) => ({ rank: index + 1, ...sample }));
   return {
     scales: captures.map(({ scale, geometry, semantic, regions, hdrPipeline, botanicalMesostructureVfx,
-      botanicalPigmentVfx, plantLaminaVfx, plantLobeDepthVfx, plantCanopyMassVfx, woodTanninVfx,
+      botanicalPigmentVfx, plantLaminaVfx, plantLobeDepthVfx, plantCanopyMassVfx, plantCanopyTissueVfx,
+      woodTanninVfx,
       smokeBillowDepthVfx, thermiteBodyVfx, bglaBodyVfx, soapBodyVfx,
       metalWaterContactVfx, powderStability,
       deutBodyVfx, hydrogenBodyVfx, carbonDioxideBodyVfx,
@@ -13780,6 +13828,7 @@ async function auditComposedRankShowcase(cdp, mode, dpr) {
       plantLaminaVfx,
       plantLobeDepthVfx,
       plantCanopyMassVfx,
+      plantCanopyTissueVfx,
       woodTanninVfx,
       smokeBillowDepthVfx,
       thermiteBodyVfx,
@@ -32350,6 +32399,7 @@ async function auditPlantCanopyMassVfxExperiment(cdp, mode, dpr) {
         && variant.hdrPipeline.plantLobeDepthVfx === 'active'
         && variant.hdrPipeline.plantCanopyMassVfx
           === (label === 'enabled' ? 'active' : 'inactive')
+        && variant.hdrPipeline.plantCanopyTissueVfx === 'inactive'
         && variant.hdrPipeline.woodBarkReliefVfx === 'inactive'
         && variant.hdrPipeline.woodTanninVfx === 'inactive',
       `E36 ${label} ${scale}x parent/selector state was wrong (${JSON.stringify(variant.hdrPipeline)})`);
@@ -32444,10 +32494,301 @@ async function auditPlantCanopyMassVfxExperiment(cdp, mode, dpr) {
   };
 }
 
-async function navigatePlantCanopyMassVfxState(cdp, mode, scale, enabled, label) {
+// Frozen from the accepted production-WebGL 1x/2x/4x E53 matrix. The two
+// asymmetric PLNT bodies keep independent frequency and appearance bounds so
+// a later change cannot trade broad continuous tissue for a cellular seam.
+const PLANT_CANOPY_TISSUE_VFX_ACCEPTANCE = Object.freeze({
+  targets: Object.freeze({
+    PLNTLeft: Object.freeze({
+      response: Object.freeze({
+        rgbRms: [0.80, 0.91], chromaRms: [0.75, 0.86], spatialRgbRms: [0.79, 0.90],
+        rgbPeak: [4, 5], coverage: [0.050, 0.080], signedMean: [0.12, 0.20],
+        positiveMean: [0.28, 0.38], negativeMean: [0.12, 0.21],
+        bipolarBalance: [0.44, 0.56], responseMicroContrast: [0.36, 0.50],
+        red: [0.09, 0.17], green: [0.14, 0.23], blue: [0.05, 0.12],
+      }),
+      frequency: Object.freeze({
+        mesoRgbRms: [0.37, 0.44], cellRgbRms: [0.57, 0.66], mesoShare: [0.28, 0.33],
+        positiveCoverage: [0.32, 0.37], negativeCoverage: [0.36, 0.41],
+        mesoMeanBiasRatio: [0, 0.010], downsampleRetention: [0.94, 0.965],
+        gradientRatio: [1.00, 1.09], rgbPeak: [4, 5],
+      }),
+      appearance: Object.freeze({
+        enabledDarkSeam: [0.050, 0.080], enabledStrongSeam: [0.002, 0.009],
+        strongSeamGain: [0, 0.006], enabledLocalContrastRms: [3.10, 3.60],
+        localContrastGain: [0.35, 0.50], localContrastRetention: [1.10, 1.18],
+        enabledLumaStdDev: [9.80, 10.50], enabledMacro: [17.20, 17.70],
+        macroGain: [0.02, 0.25], meanLumaGain: [0.12, 0.22],
+      }),
+    }),
+    PLNTRight: Object.freeze({
+      response: Object.freeze({
+        rgbRms: [0.89, 1.02], chromaRms: [0.84, 0.97], spatialRgbRms: [0.88, 1.01],
+        rgbPeak: [4, 5], coverage: [0.080, 0.110], signedMean: [0.12, 0.21],
+        positiveMean: [0.33, 0.42], negativeMean: [0.16, 0.24],
+        bipolarBalance: [0.49, 0.60], responseMicroContrast: [0.37, 0.52],
+        red: [0.05, 0.13], green: [0.15, 0.23], blue: [0.08, 0.16],
+      }),
+      frequency: Object.freeze({
+        mesoRgbRms: [0.43, 0.49], cellRgbRms: [0.58, 0.68], mesoShare: [0.32, 0.38],
+        positiveCoverage: [0.33, 0.38], negativeCoverage: [0.37, 0.42],
+        mesoMeanBiasRatio: [0.012, 0.030], downsampleRetention: [0.94, 0.965],
+        gradientRatio: [1.03, 1.14], rgbPeak: [4, 5],
+      }),
+      appearance: Object.freeze({
+        enabledDarkSeam: [0.055, 0.085], enabledStrongSeam: [0.004, 0.013],
+        strongSeamGain: [0, 0.008], enabledLocalContrastRms: [3.10, 3.65],
+        localContrastGain: [0.35, 0.50], localContrastRetention: [1.10, 1.18],
+        enabledLumaStdDev: [11.20, 11.80], enabledMacro: [21.90, 22.40],
+        macroGain: [0.02, 0.20], meanLumaGain: [0.12, 0.22],
+      }),
+    }),
+  }),
+  spread: Object.freeze({
+    rgbRms: 0.05, chromaRms: 0.05, spatialRgbRms: 0.05, rgbPeak: 1,
+    coverage: 0.012, signedMean: 0.03, responseMicroContrast: 0.08,
+    mesoRgbRms: 0.025, cellRgbRms: 0.05, downsampleRetention: 0.004,
+    gradientRatio: 0.05, enabledLocalContrastRms: 0.30,
+    localContrastGain: 0.08, localContrastRetention: 0.02,
+    enabledStrongSeam: 0.008, meanLumaGain: 0.03,
+  }),
+});
+
+/** E53: continuous exact-state PLNT tissue, strictly subordinate to E36. */
+async function auditPlantCanopyTissueVfxExperiment(cdp, mode, dpr) {
+  const scales = [];
+  const requestedScales = renderScaleArgument === undefined
+    ? VOLUME_VFX_SCALES : [Number(renderScaleArgument)];
+  for (const scale of requestedScales) {
+    const captures = {};
+    for (const enabled of [false, true, false]) {
+      const key = enabled ? 'enabled' : captures.disabled ? 'disabledRepeat' : 'disabled';
+      captures[key] = await navigatePlantCanopyMassVfxState(
+        cdp, mode, scale, enabled, key, true,
+      );
+    }
+    const { disabled, enabled, disabledRepeat } = captures;
+    assert(JSON.stringify(disabled.fixture) === JSON.stringify(enabled.fixture)
+      && JSON.stringify(disabled.fixture) === JSON.stringify(disabledRepeat.fixture),
+    `E53 ${scale}x fixture metadata changed`);
+    for (const [label, variant] of Object.entries(captures)) {
+      assertGeometry(variant.geometry, `E53 ${label} ${scale}x`, scale);
+      assert(variant.geometry.backend.backend === 'webgl'
+        && variant.hdrPipeline?.state === 'active'
+        && variant.hdrPipeline.botanicalBodyVfx === 'active'
+        && variant.hdrPipeline.botanicalMesostructureVfx === 'active'
+        && variant.hdrPipeline.botanicalPigmentVfx === 'active'
+        && variant.hdrPipeline.plantLaminaVfx === 'active'
+        && variant.hdrPipeline.plantLobeDepthVfx === 'active'
+        && variant.hdrPipeline.plantCanopyMassVfx === 'active'
+        && variant.hdrPipeline.plantCanopyTissueVfx
+          === (label === 'enabled' ? 'active' : 'inactive'),
+      `E53 ${label} ${scale}x parent/selector state was wrong (${JSON.stringify(variant.hdrPipeline)})`);
+      assertBotanicalBodyVfxLifecycleDigest(variant.lifecycleDigest, `E53 ${label} ${scale}x`);
+      assertPlantLaminaVfxTargetDigest(variant.targetDigest, scale);
+    }
+    assertCanvasRectsEqual(disabled.geometry.canvas, enabled.geometry.canvas,
+      `E53 ${scale}x disabled/enabled CSS geometry`);
+    assertCanvasRectsEqual(disabled.geometry.canvas, disabledRepeat.geometry.canvas,
+      `E53 ${scale}x disabled/repeated CSS geometry`);
+    assert(JSON.stringify(disabled.geometry.backing) === JSON.stringify(enabled.geometry.backing)
+      && JSON.stringify(disabled.geometry.backing) === JSON.stringify(disabledRepeat.geometry.backing),
+    `E53 ${scale}x backing geometry changed`);
+    assertHdrVfxSemanticEquality(disabled.semantic, enabled.semantic, `E53 ${scale}x disabled/enabled`);
+    assertHdrVfxSemanticEquality(disabled.semantic, disabledRepeat.semantic, `E53 ${scale}x disabled/repeated`);
+    assertVolumeVfxBackingInvariant(disabled.backing, enabled.backing, `E53 ${scale}x disabled/enabled`);
+    assertVolumeVfxBackingInvariant(disabled.backing, disabledRepeat.backing, `E53 ${scale}x disabled/repeated`);
+    assert(JSON.stringify(disabled.walls) === JSON.stringify(enabled.walls)
+      && JSON.stringify(disabled.walls) === JSON.stringify(disabledRepeat.walls),
+    `E53 ${scale}x changed native-wall topology`);
+    assert(JSON.stringify(disabled.lifecycleDigest) === JSON.stringify(enabled.lifecycleDigest)
+      && JSON.stringify(disabled.lifecycleDigest) === JSON.stringify(disabledRepeat.lifecycleDigest),
+    `E53 ${scale}x changed native PLNT lifecycle state`);
+    assert(JSON.stringify(disabled.auxiliaryDigest) === JSON.stringify(enabled.auxiliaryDigest)
+      && JSON.stringify(disabled.auxiliaryDigest) === JSON.stringify(disabledRepeat.auxiliaryDigest),
+    `E53 ${scale}x changed scoped solid-depth/contact auxiliary evidence`);
+    assert(JSON.stringify(disabled.targetDigest) === JSON.stringify(enabled.targetDigest)
+      && JSON.stringify(disabled.targetDigest) === JSON.stringify(disabledRepeat.targetDigest),
+    `E53 ${scale}x changed exact PLNT target semantics, state, or depth`);
+    assert(JSON.stringify(disabled.rawControls) === JSON.stringify(enabled.rawControls)
+      && JSON.stringify(disabled.rawControls) === JSON.stringify(disabledRepeat.rawControls),
+    `E53 ${scale}x changed an exact protected raw control`);
+    assert(disabled.capture.capture.data === disabledRepeat.capture.capture.data,
+      `E53 ${scale}x repeated off framebuffer was not byte exact`);
+
+    const { targets, controls } = plantLaminaVfxRegions(disabled.fixture);
+    const sampled = await sampleBackdropRefractionRegions(cdp, {
+      straight: disabled.capture.capture.data,
+      refracted: enabled.capture.capture.data,
+      repeatedStraight: disabledRepeat.capture.capture.data,
+    }, [...targets, ...controls], disabled.capture.canvasRect);
+    const responses = sampled.map((sample) => {
+      const meanRgbRms = Math.hypot(...sample.responseRgb) / Math.sqrt(3);
+      return {
+        ...sample,
+        spatialRgbRms: round(Math.sqrt(Math.max(
+          0, sample.rgbRms ** 2 - meanRgbRms ** 2,
+        )), 3),
+      };
+    });
+    const byName = Object.fromEntries(responses.map((sample) => [sample.name, sample]));
+    const targetResponses = targets.map(({ name }) => byName[name]);
+    const controlResponses = controls.map(({ name }) => byName[name]);
+    assertPlantCanopyTissueVfxResponses(targetResponses, scale);
+    assert(controlResponses.length === 34
+      && new Set(controlResponses.map(({ name }) => name)).size === 34
+      && controlResponses.every((sample) => sample?.rgbPeak === 0 && sample.repeatRgbPeak === 0),
+    `E53 ${scale}x escaped a Wood/lifecycle/topology/contact/wall/foreign-owner control (${JSON.stringify(controlResponses)})`);
+    assert(responses.every((sample) => sample.repeatRgbPeak === 0),
+      `E53 ${scale}x off -> on -> off was not deterministic (${JSON.stringify(responses)})`);
+
+    const frequency = await sampleBotanicalMesostructureFrequency(cdp, {
+      disabled: disabled.capture.capture.data,
+      enabled: enabled.capture.capture.data,
+      disabledRepeat: disabledRepeat.capture.capture.data,
+    }, targets, 'E53');
+    assertPlantCanopyTissueVfxFrequency(frequency, scale);
+    const appearance = await samplePlantCanopyMassAppearance(cdp, {
+      disabled: disabled.capture.capture.data,
+      enabled: enabled.capture.capture.data,
+    }, targets);
+    assertPlantCanopyTissueVfxAppearance(appearance, scale);
+    const lifecycleSamples = await samplePageRegions(
+      cdp, enabled.capture.capture.data, botanicalBodyVfxLifecycleRegions(disabled.fixture),
+      undefined, undefined, enabled.capture.canvasRect,
+    );
+    const lifecycleAppearance = assertBotanicalBodyVfxLifecycleColors(lifecycleSamples, scale, 'E53');
+    const screenshots = screenshotRequest && (requestedScales.length === 1 || scale === 2)
+      ? await writePlantCanopyTissueVfxScreenshots(screenshotRequest, scale, disabled, enabled)
+      : undefined;
+    scales.push({
+      scale, backing: disabled.geometry.backing, targetDigest: disabled.targetDigest,
+      auxiliaryDigest: disabled.auxiliaryDigest, lifecycleDigest: disabled.lifecycleDigest,
+      walls: disabled.walls, rawControls: disabled.rawControls, targetResponses,
+      controlResponses, frequency, appearance, lifecycleSamples, lifecycleAppearance,
+      repeatedOffPeak: Math.max(...responses.map((sample) => sample.repeatRgbPeak)), screenshots,
+    });
+  }
+  if (scales.length > 1) assertPlantCanopyTissueVfxCrossScale(scales);
+  const trueEightX = await auditEightXPlantCanopyMassVfxExclusion(cdp, dpr, true);
+  return {
+    calibration: 'frozen', acceptance: PLANT_CANOPY_TISSUE_VFX_ACCEPTANCE,
+    scales, trueEightXExcluded: true, trueEightX,
+  };
+}
+
+function assertPlantCanopyTissueVfxResponses(samples, scale) {
+  const inRange = (value, range) => Number.isFinite(value)
+    && value >= range[0] && value <= range[1];
+  assert(samples.length === 2 && new Set(samples.map(({ name }) => name)).size === 2
+    && samples.every((sample) => {
+      const bounds = PLANT_CANOPY_TISSUE_VFX_ACCEPTANCE.targets[sample?.name]?.response;
+      return sample && bounds
+        && inRange(sample.rgbRms, bounds.rgbRms)
+        && inRange(sample.chromaRms, bounds.chromaRms)
+        && inRange(sample.spatialRgbRms, bounds.spatialRgbRms)
+        && inRange(sample.rgbPeak, bounds.rgbPeak)
+        && inRange(sample.coverage, bounds.coverage)
+        && inRange(sample.signedMean, bounds.signedMean)
+        && inRange(sample.positiveMean, bounds.positiveMean)
+        && inRange(sample.negativeMean, bounds.negativeMean)
+        && inRange(sample.bipolarBalance, bounds.bipolarBalance)
+        && inRange(sample.responseMicroContrast, bounds.responseMicroContrast)
+        && inRange(sample.responseRgb[0], bounds.red)
+        && inRange(sample.responseRgb[1], bounds.green)
+        && inRange(sample.responseRgb[2], bounds.blue)
+        && sample.repeatRgbPeak === 0;
+    }),
+  `E53 ${scale}x PLNT tissue response escaped its frozen envelope (${JSON.stringify(samples)})`);
+}
+
+function assertPlantCanopyTissueVfxFrequency(samples, scale) {
+  const inRange = (value, range) => Number.isFinite(value)
+    && value >= range[0] && value <= range[1];
+  assert(samples.length === 2 && samples.every((sample) => {
+    const bounds = PLANT_CANOPY_TISSUE_VFX_ACCEPTANCE.targets[sample?.name]?.frequency;
+    return sample?.code === 'PLNT' && bounds
+      && inRange(sample.mesoRgbRms, bounds.mesoRgbRms)
+      && inRange(sample.cellRgbRms, bounds.cellRgbRms)
+      && inRange(sample.mesoShare, bounds.mesoShare)
+      && inRange(sample.positiveCoverage, bounds.positiveCoverage)
+      && inRange(sample.negativeCoverage, bounds.negativeCoverage)
+      && inRange(sample.mesoMeanBiasRatio, bounds.mesoMeanBiasRatio)
+      && inRange(sample.downsampleRetention, bounds.downsampleRetention)
+      && inRange(sample.gradientRatio, bounds.gradientRatio)
+      && inRange(sample.rgbPeak, bounds.rgbPeak)
+      && sample.repeatRgbPeak === 0;
+  }), `E53 ${scale}x PLNT tissue frequency escaped its frozen envelope (${JSON.stringify(samples)})`);
+}
+
+function assertPlantCanopyTissueVfxAppearance(samples, scale) {
+  const inRange = (value, range) => Number.isFinite(value)
+    && value >= range[0] && value <= range[1];
+  assert(samples.length === 2 && samples.every((sample) => {
+    const bounds = PLANT_CANOPY_TISSUE_VFX_ACCEPTANCE.targets[sample?.name]?.appearance;
+    const localGain = sample?.enabled.localContrastRms - sample?.disabled.localContrastRms;
+    const strongSeamGain = sample?.enabled.strongSeamFraction - sample?.disabled.strongSeamFraction;
+    const macroGain = sample?.enabled.macroP90P10 - sample?.disabled.macroP90P10;
+    const meanLumaGain = sample?.enabled.meanLuma - sample?.disabled.meanLuma;
+    return sample?.code === 'PLNT' && bounds
+      && sample.uniqueSamplePixels === sample.width * sample.height
+      && inRange(sample.enabled.darkSeamFraction, bounds.enabledDarkSeam)
+      && inRange(sample.enabled.strongSeamFraction, bounds.enabledStrongSeam)
+      && inRange(strongSeamGain, bounds.strongSeamGain)
+      && inRange(sample.enabled.localContrastRms, bounds.enabledLocalContrastRms)
+      && inRange(localGain, bounds.localContrastGain)
+      && inRange(sample.localContrastRetention, bounds.localContrastRetention)
+      && inRange(sample.enabled.lumaStdDev, bounds.enabledLumaStdDev)
+      && inRange(sample.enabled.macroP90P10, bounds.enabledMacro)
+      && inRange(macroGain, bounds.macroGain)
+      && inRange(meanLumaGain, bounds.meanLumaGain);
+  }), `E53 ${scale}x PLNT tissue appearance escaped its frozen continuous-detail envelope (${JSON.stringify(samples)})`);
+}
+
+function assertPlantCanopyTissueVfxCrossScale(scales) {
+  const bounds = PLANT_CANOPY_TISSUE_VFX_ACCEPTANCE.spread;
+  const spread = (values) => Math.max(...values) - Math.min(...values);
+  for (const name of ['PLNTLeft', 'PLNTRight']) {
+    const responses = scales.map((entry) => entry.targetResponses.find((sample) => sample.name === name));
+    const frequency = scales.map((entry) => entry.frequency.find((sample) => sample.name === name));
+    const appearance = scales.map((entry) => entry.appearance.find((sample) => sample.name === name));
+    assert(responses.every(Boolean) && frequency.every(Boolean) && appearance.every(Boolean)
+      && spread(responses.map((sample) => sample.rgbRms)) <= bounds.rgbRms
+      && spread(responses.map((sample) => sample.chromaRms)) <= bounds.chromaRms
+      && spread(responses.map((sample) => sample.spatialRgbRms)) <= bounds.spatialRgbRms
+      && spread(responses.map((sample) => sample.rgbPeak)) <= bounds.rgbPeak
+      && spread(responses.map((sample) => sample.coverage)) <= bounds.coverage
+      && spread(responses.map((sample) => sample.signedMean)) <= bounds.signedMean
+      && spread(responses.map((sample) => sample.responseMicroContrast))
+        <= bounds.responseMicroContrast
+      && spread(frequency.map((sample) => sample.mesoRgbRms)) <= bounds.mesoRgbRms
+      && spread(frequency.map((sample) => sample.cellRgbRms)) <= bounds.cellRgbRms
+      && spread(frequency.map((sample) => sample.downsampleRetention))
+        <= bounds.downsampleRetention
+      && spread(frequency.map((sample) => sample.gradientRatio)) <= bounds.gradientRatio
+      && spread(appearance.map((sample) => sample.enabled.localContrastRms))
+        <= bounds.enabledLocalContrastRms
+      && spread(appearance.map((sample) => sample.enabled.localContrastRms
+        - sample.disabled.localContrastRms)) <= bounds.localContrastGain
+      && spread(appearance.map((sample) => sample.localContrastRetention))
+        <= bounds.localContrastRetention
+      && spread(appearance.map((sample) => sample.enabled.strongSeamFraction))
+        <= bounds.enabledStrongSeam
+      && spread(appearance.map((sample) => sample.enabled.meanLuma
+        - sample.disabled.meanLuma)) <= bounds.meanLumaGain,
+    `E53 ${name} changed excessively across normal output scales (${JSON.stringify({ responses, appearance })})`);
+  }
+}
+
+async function navigatePlantCanopyMassVfxState(cdp, mode, scale, enabled, label, tissueExperiment = false) {
+  const experiment = tissueExperiment ? 'E53' : 'E36';
+  const canopyMassEnabled = tissueExperiment ? '1' : (enabled ? '1' : '0');
+  const canopyTissueEnabled = tissueExperiment && enabled ? '1' : '0';
   const query = new URLSearchParams({
     scene: 'render-lab', inputAudit: '1', blankAudit: '1', auditStage: 'blank',
-    plantCanopyMassVfxAudit: '1', renderScale: String(scale), renderLook: 'realistic',
+    plantCanopyMassVfxAudit: tissueExperiment ? '0' : '1',
+    plantCanopyTissueVfxAudit: tissueExperiment ? '1' : '0',
+    renderScale: String(scale), renderLook: 'realistic',
     volumeVfx: '0', liquidBodyVfx: '0', liquidSurfaceVfx: '0', gasBodyVfx: '0',
     gasMotionVfx: '0', powderBodyVfx: '0', powderLightVfx: '0', powderSolidContactVfx: '0',
     translucentEdgeVfx: '0', organicSubsurfaceVfx: '0', wetSedimentVfx: '0', gasLightVfx: '0',
@@ -32455,19 +32796,22 @@ async function navigatePlantCanopyMassVfxState(cdp, mode, scale, enabled, label)
     nobleGasPrismVfx: '0', smokeSoftnessVfx: '0', plasmaCoreVfx: '0', solidBodyVfx: '0',
     platinumBodyVfx: '0', ceramicGlazeVfx: '0', botanicalBodyVfx: '1',
     botanicalMesostructureVfx: '1', botanicalPigmentVfx: '1', plantLaminaVfx: '1',
-    plantLobeDepthVfx: '1', plantCanopyMassVfx: enabled ? '1' : '0',
+    plantLobeDepthVfx: '1', plantCanopyMassVfx: canopyMassEnabled,
+    plantCanopyTissueVfx: canopyTissueEnabled,
     woodBarkReliefVfx: '0', woodTanninVfx: '0', glassBodyVfx: '0', oilBodyVfx: '0',
     rockRoughnessVfx: '0', rockMesostructureVfx: '0', waterBodyVfx: '0',
   });
   await cdp.send('Page.navigate', { url: `${AUDIT_BASE_URL}?${query}` });
   await waitFor(() => evaluate(cdp, `(() => {
     const p = new URLSearchParams(location.search); const audit = window.__ANIFOR_INPUT_AUDIT__;
-    return p.get('plantCanopyMassVfxAudit') === '1'
+    return p.get('plantCanopyMassVfxAudit') === ${JSON.stringify(tissueExperiment ? '0' : '1')}
+      && p.get('plantCanopyTissueVfxAudit') === ${JSON.stringify(tissueExperiment ? '1' : '0')}
       && p.get('renderScale') === ${JSON.stringify(String(scale))}
       && p.get('renderLook') === 'realistic' && p.get('botanicalBodyVfx') === '1'
       && p.get('botanicalMesostructureVfx') === '1' && p.get('botanicalPigmentVfx') === '1'
       && p.get('plantLaminaVfx') === '1' && p.get('plantLobeDepthVfx') === '1'
-      && p.get('plantCanopyMassVfx') === ${JSON.stringify(enabled ? '1' : '0')}
+      && p.get('plantCanopyMassVfx') === ${JSON.stringify(canopyMassEnabled)}
+      && p.get('plantCanopyTissueVfx') === ${JSON.stringify(canopyTissueEnabled)}
       && p.get('woodBarkReliefVfx') === '0' && p.get('woodTanninVfx') === '0'
       && ['volumeVfx', 'liquidBodyVfx', 'liquidSurfaceVfx', 'gasBodyVfx', 'gasMotionVfx',
         'powderBodyVfx', 'powderLightVfx', 'powderSolidContactVfx', 'translucentEdgeVfx',
@@ -32479,17 +32823,17 @@ async function navigatePlantCanopyMassVfxState(cdp, mode, scale, enabled, label)
       && typeof audit?.prepareBotanicalBodyVfxFixture === 'function'
       && typeof audit?.botanicalBodyVfxFixture === 'function';
   })()`), scale === 4 ? 90_000 : scale === 2 ? 45_000 : 20_000,
-  `E36 ${label} ${scale}x page`);
+  `${experiment} ${label} ${scale}x page`);
   await waitFor(() => evaluate(cdp,
     `window.__ANIFOR_INPUT_AUDIT__.backend().backend === ${JSON.stringify(mode)}`),
   scale === 4 ? 90_000 : scale === 2 ? 45_000 : 20_000,
-  `E36 ${label} ${scale}x backend`);
+  `${experiment} ${label} ${scale}x backend`);
   const fixture = await evaluate(cdp, `(() => {
     const audit = window.__ANIFOR_INPUT_AUDIT__;
     audit.prepareBotanicalBodyVfxFixture(); return audit.botanicalBodyVfxFixture();
   })()`);
   await waitFor(() => botanicalBodyVfxFixtureReady(cdp, fixture), 20_000,
-    `E36 ${label} ${scale}x fixture hydration`);
+    `${experiment} ${label} ${scale}x fixture hydration`);
   const hdrPipeline = await evaluate(cdp, `(() => {
     const canvas = document.querySelector('canvas.semantic-field-canvas');
     const names = ['volumeVfx', 'liquidBodyVfx', 'liquidSurfaceVfx', 'gasBodyVfx', 'gasMotionVfx',
@@ -32498,7 +32842,8 @@ async function navigatePlantCanopyMassVfxState(cdp, mode, scale, enabled, label)
       'gasCoreDepthVfx', 'nobleGasBillowVfx', 'nobleGasPrismVfx', 'smokeSoftnessVfx',
       'plasmaCoreVfx', 'solidBodyVfx', 'platinumBodyVfx', 'ceramicGlazeVfx',
       'botanicalBodyVfx', 'botanicalMesostructureVfx', 'botanicalPigmentVfx',
-      'plantLaminaVfx', 'plantLobeDepthVfx', 'plantCanopyMassVfx', 'woodBarkReliefVfx',
+      'plantLaminaVfx', 'plantLobeDepthVfx', 'plantCanopyMassVfx', 'plantCanopyTissueVfx',
+      'woodBarkReliefVfx',
       'woodTanninVfx', 'glassBodyVfx', 'oilBodyVfx', 'rockRoughnessVfx',
       'rockMesostructureVfx', 'waterBodyVfx'];
     return canvas ? { look: canvas.dataset.renderLook, state: canvas.dataset.hdrPipeline,
@@ -32520,17 +32865,18 @@ async function navigatePlantCanopyMassVfxState(cdp, mode, scale, enabled, label)
     && hdrPipeline.botanicalMesostructureVfx === 'active'
     && hdrPipeline.botanicalPigmentVfx === 'active' && hdrPipeline.plantLaminaVfx === 'active'
     && hdrPipeline.plantLobeDepthVfx === 'active'
-    && hdrPipeline.plantCanopyMassVfx === (enabled ? 'active' : 'inactive')
+    && hdrPipeline.plantCanopyMassVfx === (canopyMassEnabled === '1' ? 'active' : 'inactive')
+    && hdrPipeline.plantCanopyTissueVfx === (canopyTissueEnabled === '1' ? 'active' : 'inactive')
     && siblings.every((name) => hdrPipeline[name] === 'inactive'),
-  `E36 ${label} ${scale}x HDR/selector state resolved incorrectly (${JSON.stringify(hdrPipeline)})`);
+  `${experiment} ${label} ${scale}x HDR/selector state resolved incorrectly (${JSON.stringify(hdrPipeline)})`);
   const indicator = await evaluate(cdp, `(() => {
     const nodes = [...document.querySelectorAll('.field-indicator')];
     for (const node of nodes) node.style.visibility = 'hidden';
     return { count: nodes.length, hidden: nodes.every((node) => getComputedStyle(node).visibility === 'hidden') };
   })()`);
   assert(indicator.count > 0 && indicator.hidden,
-    `E36 ${label} ${scale}x did not hide only the field indicator overlay`);
-  const capture = await waitForStablePageCapture(cdp, `E36 ${label} ${scale}x framebuffer`,
+    `${experiment} ${label} ${scale}x did not hide only the field indicator overlay`);
+  const capture = await waitForStablePageCapture(cdp, `${experiment} ${label} ${scale}x framebuffer`,
     scale === 4 ? 120_000 : scale === 2 ? 30_000 : 15_000, 1);
   const { targets } = plantLaminaVfxRegions(fixture);
   return {
@@ -32798,11 +33144,24 @@ async function writePlantCanopyMassVfxScreenshots(source, scale, disabled, enabl
   return paths;
 }
 
-async function auditEightXPlantCanopyMassVfxExclusion(cdp, dpr) {
+async function writePlantCanopyTissueVfxScreenshots(source, scale, disabled, enabled) {
+  const paths = {
+    off: variantScreenshotPath(source, `e53-plant-canopy-tissue-${scale}x-off`),
+    on: variantScreenshotPath(source, `e53-plant-canopy-tissue-${scale}x-on`),
+  };
+  await writeFile(paths.off, Buffer.from(disabled.capture.capture.data, 'base64'));
+  await writeFile(paths.on, Buffer.from(enabled.capture.capture.data, 'base64'));
+  return paths;
+}
+
+async function auditEightXPlantCanopyMassVfxExclusion(cdp, dpr, tissueRequested = false) {
+  const experiment = tissueRequested ? 'E53' : 'E36';
   await setDesktopMetrics(cdp, 1280, 720, dpr);
   const query = new URLSearchParams({
     scene: 'render-lab', inputAudit: '1', blankAudit: '1', renderScale: '8',
-    auditStage: 'eight-plant-canopy-mass', plantCanopyMassVfxAudit: '1', renderLook: 'realistic',
+    auditStage: tissueRequested ? 'eight-plant-canopy-tissue' : 'eight-plant-canopy-mass',
+    plantCanopyMassVfxAudit: tissueRequested ? '0' : '1',
+    plantCanopyTissueVfxAudit: tissueRequested ? '1' : '0', renderLook: 'realistic',
     volumeVfx: '0', liquidBodyVfx: '0', liquidSurfaceVfx: '0', gasBodyVfx: '0', gasMotionVfx: '0',
     powderBodyVfx: '0', powderLightVfx: '0', powderSolidContactVfx: '0', translucentEdgeVfx: '0',
     organicSubsurfaceVfx: '0', wetSedimentVfx: '0', gasLightVfx: '0', liquidSolidMeniscusVfx: '0',
@@ -32810,6 +33169,7 @@ async function auditEightXPlantCanopyMassVfxExclusion(cdp, dpr) {
     plasmaCoreVfx: '0', solidBodyVfx: '0', platinumBodyVfx: '0', ceramicGlazeVfx: '0',
     botanicalBodyVfx: '1', botanicalMesostructureVfx: '1', botanicalPigmentVfx: '1',
     plantLaminaVfx: '1', plantLobeDepthVfx: '1', plantCanopyMassVfx: '1',
+    plantCanopyTissueVfx: tissueRequested ? '1' : '0',
     woodBarkReliefVfx: '0', woodTanninVfx: '0', glassBodyVfx: '0', oilBodyVfx: '0',
     rockRoughnessVfx: '0', rockMesostructureVfx: '0', waterBodyVfx: '0',
   });
@@ -32817,22 +33177,27 @@ async function auditEightXPlantCanopyMassVfxExclusion(cdp, dpr) {
   const deadline = Date.now() + EIGHT_X_PRESENTATION_DEADLINE_MS;
   await waitFor(() => evaluate(cdp, `(() => {
     const p = new URLSearchParams(location.search);
-    return p.get('renderScale') === '8' && p.get('auditStage') === 'eight-plant-canopy-mass'
-      && p.get('plantCanopyMassVfxAudit') === '1' && p.get('botanicalBodyVfx') === '1'
+    return p.get('renderScale') === '8'
+      && p.get('auditStage') === ${JSON.stringify(tissueRequested ? 'eight-plant-canopy-tissue' : 'eight-plant-canopy-mass')}
+      && p.get('plantCanopyMassVfxAudit') === ${JSON.stringify(tissueRequested ? '0' : '1')}
+      && p.get('plantCanopyTissueVfxAudit') === ${JSON.stringify(tissueRequested ? '1' : '0')}
+      && p.get('botanicalBodyVfx') === '1'
       && p.get('botanicalMesostructureVfx') === '1' && p.get('botanicalPigmentVfx') === '1'
       && p.get('plantLaminaVfx') === '1' && p.get('plantLobeDepthVfx') === '1'
-      && p.get('plantCanopyMassVfx') === '1' && Boolean(window.__ANIFOR_INPUT_AUDIT__);
-  })()`), remainingDeadlineMs(deadline, 'true-8x E36 input audit API'),
-  'true-8x E36 input audit API');
-  const backend = await waitForEightXTerminalBackend(cdp, 'true-8x E36', deadline);
-  assertEightXWebGLBackend(backend, 'true-8x E36');
+      && p.get('plantCanopyMassVfx') === '1'
+      && p.get('plantCanopyTissueVfx') === ${JSON.stringify(tissueRequested ? '1' : '0')}
+      && Boolean(window.__ANIFOR_INPUT_AUDIT__);
+  })()`), remainingDeadlineMs(deadline, `true-8x ${experiment} input audit API`),
+  `true-8x ${experiment} input audit API`);
+  const backend = await waitForEightXTerminalBackend(cdp, `true-8x ${experiment}`, deadline);
+  assertEightXWebGLBackend(backend, `true-8x ${experiment}`);
   const promotionFence = 'signaled';
   const geometry = await waitForStableCanvas(cdp, 1280, 720, undefined,
-    Math.min(45_000, remainingDeadlineMs(deadline, 'true-8x E36 geometry')),
-    'true-8x E36 geometry');
+    Math.min(45_000, remainingDeadlineMs(deadline, `true-8x ${experiment} geometry`)),
+    `true-8x ${experiment} geometry`);
   assert(geometry.backing.width === WORLD_WIDTH * 8
     && geometry.backing.height === WORLD_HEIGHT * 8 && geometry.outputScale === '8',
-  `true-8x E36 lost exact backing (${JSON.stringify(geometry.backing)})`);
+  `true-8x ${experiment} lost exact backing (${JSON.stringify(geometry.backing)})`);
   const isolation = await evaluate(cdp, `(() => {
     const canvas = document.querySelector('canvas.semantic-field-canvas');
     return canvas ? { renderer: canvas.dataset.renderer, look: canvas.dataset.renderLook,
@@ -32841,18 +33206,19 @@ async function auditEightXPlantCanopyMassVfxExclusion(cdp, dpr) {
       botanicalMesostructureVfx: canvas.dataset.botanicalMesostructureVfx,
       botanicalPigmentVfx: canvas.dataset.botanicalPigmentVfx, plantLaminaVfx: canvas.dataset.plantLaminaVfx,
       plantLobeDepthVfx: canvas.dataset.plantLobeDepthVfx,
-      plantCanopyMassVfx: canvas.dataset.plantCanopyMassVfx } : undefined;
-  })()`, Math.min(1_000, remainingDeadlineMs(deadline, 'true-8x E36 isolation')));
+      plantCanopyMassVfx: canvas.dataset.plantCanopyMassVfx,
+      plantCanopyTissueVfx: canvas.dataset.plantCanopyTissueVfx } : undefined;
+  })()`, Math.min(1_000, remainingDeadlineMs(deadline, `true-8x ${experiment} isolation`)));
   assert(isolation?.renderer === 'semantic-field-webgl' && isolation.look === 'realistic'
     && isolation.state === 'inactive' && isolation.reason === 'scale-8' && isolation.bloomBacking === null
     && ['botanicalBodyVfx', 'botanicalMesostructureVfx', 'botanicalPigmentVfx',
-      'plantLaminaVfx', 'plantLobeDepthVfx', 'plantCanopyMassVfx']
+      'plantLaminaVfx', 'plantLobeDepthVfx', 'plantCanopyMassVfx', 'plantCanopyTissueVfx']
       .every((name) => isolation[name] === 'inactive'),
-  `true-8x E36 isolation failed (${JSON.stringify(isolation)})`);
-  const timingBudget = remainingDeadlineMs(deadline, 'true-8x E36 GPU completion');
+  `true-8x ${experiment} isolation failed (${JSON.stringify(isolation)})`);
+  const timingBudget = remainingDeadlineMs(deadline, `true-8x ${experiment} GPU completion`);
   const timing = await auditWebGLPresentationTiming(cdp, 1, Math.min(12_000, timingBudget), timingBudget, 1);
   assert(timing.source === 'gpu-query' || timing.source === 'gpu-fence' || timing.source === 'gpu-finish',
-    `true-8x E36 did not complete GPU work (${JSON.stringify(timing)})`);
+  `true-8x ${experiment} did not complete GPU work (${JSON.stringify(timing)})`);
   return { backing: `${geometry.backing.width}x${geometry.backing.height}`, promotionFence, isolation, timing };
 }
 

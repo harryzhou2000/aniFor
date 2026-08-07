@@ -13,7 +13,7 @@ powder, solid, liquid, gas, energy, and contact scenes across Canvas and WebGL a
 mobile gestures, save/load, CI, and Pages deployment as protected regression
 contracts rather than the primary feature stream.
 
-The accepted visual experiment ladder now runs through E52. E12 is the
+The accepted visual experiment ladder now runs through E53. E12 is the
 species-safe Sand/Clay/Concrete wet-sediment checkpoint; preserve its exact
 aqueous owner/stability proof, split moving-powder/stationary-Water control,
 Local/Grains no-op, fine structures, authored gaps, Canvas fallback, and true
@@ -559,9 +559,11 @@ physics decision. Canvas and compact true 8× retain E34. `npm run
 audit:vfx:plant-canopy-mass` owns the direct focused seam metrics and frozen
 off→on→off 1×/2×/4× proof, including exact semantic/alpha/support, lifecycle,
 wall, topology/contact/foreign-owner controls, and byte-exact repeated-off
-frames. Requested-on true 8× must promote exact 4896×3072 WebGL while
-E20/E26/E28/E32/E34/E36/HDR remain inactive for `scale-8`, with no bloom and a
-completed GPU fence. A composed-rank drop after E36 is a scorer blind spot,
+frames. The focused gate pins `plantCanopyTissueVfx=0`; E53 is measured only
+as E36's strict child and cannot revive E36 or a botanical ancestor.
+Requested-on true 8× must promote exact 4896×3072 WebGL while
+E20/E26/E28/E32/E34/E36/E53/HDR remain inactive for `scale-8`, with no bloom
+and a completed GPU fence. A composed-rank drop after E36 is a scorer blind spot,
 not a reason to weaken hierarchy evidence or game the scorer; preserve the
 direct seam proof and the visible front/rear overlap result. Across 1×/2×/4×,
 the left body's dark-seam fraction changes `.0573/.0775/.0861 →
@@ -570,9 +572,9 @@ the left body's dark-seam fraction changes `.0573/.0775/.0861 →
 range rises from roughly `14.1 → 17.3` and `16.4 → 22.1`. Every one of the
 `4416`/`4048` target world cells maps to a unique sampled pixel. The accepted
 true-8× production run signalled its GPU fence at `5268.1 ms` with zero browser
-errors. The composed scorer reports PLNT `62.215`/`67.661`/`69.253` because it
-rewards the very cell-scale contrast E36 removes; do not restore the mesh to
-raise that number.
+errors. The E53-off composed baseline reports PLNT
+`62.215`/`67.661`/`69.253` because it rewards the very cell-scale contrast E36
+removes; do not restore the mesh to raise that number.
 
 E37 is the accepted normal-WebGL-only exact Metal-side Water-contact polish,
 independently measurable with `?metalWaterContactVfx=0|1` and strictly
@@ -1009,6 +1011,25 @@ support recall is one with zero clipping, and browser errors remain zero. Reques
 4896×3072, and completes a real GPU fence in `5172.5 ms`. Use
 `npm run audit:vfx:bgla-body` for the focused release gate.
 
+E53 is the accepted normal-WebGL-only exact-PLNT continuous-canopy-tissue
+checkpoint, independently measurable with `?plantCanopyTissueVfx=0|1` and a
+strict child of E36, including its E20/E26/E28/E32/E34 ancestry. Only E36's
+authoritative ordinary zero-state or presence-only PLNT `10` body proof may
+respond. Reuse E36's already-live continuous signed lamina plus front/rear/
+overlap scalars for bounded continuous RGB tissue relief; never revive E34's
+zero-crossing rib/vein network. Add no noise, sample, texture, field, resource,
+pass, target, allocation, clock, alpha, support, silhouette, ownership,
+lifecycle, topology, or physics decision. Canvas and compact true 8× retain
+E36. `npm run audit:vfx:plant-canopy-tissue` freezes two asymmetric PLNT
+targets at 1×/2×/4×: RGB/chroma/spatial RMS is `.84–.96`/`.79–.91`/
+`.829–.950`, coverage `.061–.096`, signed mean `.16–.17`, peaks 4–5 bytes,
+response microcontrast `.40–.46`, meso/cell frequency `.3957–.4654`/
+`.6012–.6483`, and downsample retention `.9527–.9542`. All 34 controls,
+semantic/alpha/support/wall/lifecycle data, and repeated-off output remain
+exact; browser errors are zero. Requested-on true 8× promotes exact 4896×3072
+WebGL while E20/E26/E28/E32/E34/E36/E53/HDR are inactive for `scale-8`, with
+no bloom, a signalled fence, and completed GPU timing of `5373.1 ms`.
+
 The isolated candidate-survey v1 route is app-owned and must use the
 deterministic 612×384 RenderLab backend unless `simulation=native` is explicit.
 It freezes semantic hash `2255453673`, 115,368 occupied cells, all six exact
@@ -1047,14 +1068,17 @@ therefore no longer an open candidate deficit. Do not alter E48 from
 candidate-rank evidence or widen E50, E51, or E52; select any later experiment
 only from a new visible fit-view diagnosis.
 
-The composed showcase remains a separate roadmap signal. Its current exact
-1×/2×/4× matrix has zero browser errors and keeps E52 explicitly inactive
-because showcase v6 contains no authoritative BGLA region. At canonical 2×,
-Organic is the weakest family (`67.661`, exact PLNT mesostructure), followed by
-Solid (`86.207`, VIBR macro relief) and Contact (`88.768`, Water/Metal chromatic
-separation). E36 already established that the PLNT aggregate scorer can punish
-accepted broad canopy mass, so require paired fit-view evidence before selecting
-another organic layer; never tune merely to raise this rank.
+The composed showcase remains a separate roadmap signal. Its refreshed
+E53-active 1×/2×/4× matrix is exact and cross-scale verified with zero browser
+errors, while E52 remains explicitly inactive because showcase v6 contains no
+authoritative BGLA region. Organic remains the lowest family, led by exact PLNT
+at quality `72.165/77.290/78.704`; its remaining weakest cue is mesostructure
+`.350/.405/.425`. PLNT keeps support `1`, coverage `.971`, macro range `50`,
+and zero dark/clipped fraction, with microcontrast `1.70/1.81/1.85`, chroma
+`1.90/2.00/2.03`, and luma deviation `10.80/10.90/10.93`. At canonical 2×,
+Organic is `77.290`, followed by Solid `86.207`, Contact `88.768`, Gas `95.463`,
+Emission `98.475`, and Powder/Liquid `100`. Select the next experiment from a
+new visible diagnosis rather than tuning merely to raise this rank.
 
 The old post-E16 rank that labelled Stone `21` as Solid was invalid because
 Stone is native Powder. The corrected showcase uses native ROCK ground and

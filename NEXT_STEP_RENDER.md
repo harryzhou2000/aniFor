@@ -561,7 +561,9 @@ does not alter simulation, camera, semantic ownership, or `renderScale`.
   audit:vfx:plant-canopy-mass` owns direct focused seam metrics plus frozen
   1×/2×/4× off→on→off semantic/alpha/support, lifecycle, wall, topology,
   contact, and foreign-owner proof with byte-exact repeated-off frames.
-  Requested-on true 8× keeps E20/E26/E28/E32/E34/E36/HDR inactive for
+  That focused gate pins `plantCanopyTissueVfx=0`; E53 is measured only as
+  E36's strict child and cannot revive E36 or any botanical ancestor.
+  Requested-on true 8× keeps E20/E26/E28/E32/E34/E36/E53/HDR inactive for
   `scale-8`, with no bloom, exact 4896×3072 promotion, and a completed GPU
   fence. A composed-rank drop after E36 is a scorer blind spot and must not be
   gamed: preserve the direct seam evidence and visible hierarchy/overlap. The
@@ -878,11 +880,29 @@ does not alter simulation, camera, semantic ownership, or `renderScale`.
   proves native default/dilution/corrosion/OPS behavior, Canvas 2×, realistic
   WebGL 1×/2×/4×, and fence-completed 4896×3072 WebGL with exact off repetition,
   foreign-material/wall controls, stable topology, and zero browser errors.
+- **E52 accepted:** exact BGLA `44` gains a normal-WebGL-only cohesive shard
+  pack as a strict E05 child (`?bglaBodyVfx=0|1`). It reuses only settled,
+  dry, Smooth powder-body evidence and retains the existing fine splinter
+  identity. Moving or wet BGLA, holes, thin structures, walls, contacts,
+  foreign owners, Local, Grains, Canvas, and compact true 8× remain controls.
+  `npm run audit:vfx:bgla-body` freezes the all-scale response, exact repeated
+  off frame, and true-8× exclusion without adding a sample, resource, or
+  topology decision.
+- **E53 accepted:** exact ordinary PLNT `10` gains continuous canopy-tissue
+  relief as a strict normal-WebGL-only E36 child
+  (`?plantCanopyTissueVfx=0|1`). It reuses E36's already-live signed lamina and
+  front/rear/overlap evidence to strengthen broad tissue without reviving the
+  enclosed E26/E32/E34 rib-and-vein mesh. Stateful PLNT, lifecycle data,
+  walls, contacts, foreign owners, Canvas, and compact true 8× remain exact
+  controls. `npm run audit:vfx:plant-canopy-tissue` freezes asymmetric target
+  envelopes, 34 controls, exact off repetition, all-scale frequency retention,
+  and requested-on true-8× exclusion without a new carrier, sample, resource,
+  state, support, or topology decision.
 - **Protected 8× rung:** `renderScale=8` deliberately reports
   `hdrPipeline=inactive` / `scale-8` and retains the proven direct single-mesh
   4896×3072 path. The experiment must earn a bounded 8× design rather than
   allocating a 115 MiB full-resolution float target beside that path.
-- **Current decision:** E01/E02/E03/E04/E05/E06/E07/E08/E09/E10/E11/E12/E13/E14/E15/E16/E17/E18/E19/E20/E21/E22/E23/E24/E25/E26/E27/E28/E29/E30/E31/E32/E33/E34/E35/E36/E37/E38/E39/E40/E41/E42/E43/E44/E45/E46/E47/E48/E49/E50/E51/E52 remain opt-in through the non-Classic looks
+- **Current decision:** E01/E02/E03/E04/E05/E06/E07/E08/E09/E10/E11/E12/E13/E14/E15/E16/E17/E18/E19/E20/E21/E22/E23/E24/E25/E26/E27/E28/E29/E30/E31/E32/E33/E34/E35/E36/E37/E38/E39/E40/E41/E42/E43/E44/E45/E46/E47/E48/E49/E50/E51/E52/E53 remain opt-in through the non-Classic looks
   until representative hardware timing and mobile thermal behavior are
   measured. E02 remains the safe family-wide baseline. E03 is accepted as the
   liquid-depth checkpoint: its fit-view crop is visibly more cohesive, retains
@@ -1033,9 +1053,15 @@ does not alter simulation, camera, semantic ownership, or `renderScale`.
   thresholded vein-loop suppression only while active, 34 exact controls, and
   compact-8× exclusion. A composed-rank drop is a scorer blind spot, not a
   mandate to game the scorer or weaken the hierarchy/overlap proof. Its final
-  composed PLNT score is `62.215`/`67.661`/`69.253`; that score fell because
+  E53-off composed PLNT baseline is `62.215`/`67.661`/`69.253`; that score fell because
   the current organic scorer rewards cell-scale contrast, while E36's direct
   seam gate proves that the repeated enclosed mesh was actually removed.
+  E53 is the accepted exact-PLNT continuous-tissue checkpoint: freeze its
+  strict E36 dependency, exact zero-or-presence-only lifecycle proof, reuse of
+  the already-live signed lamina/front/rear/overlap scalars, asymmetric
+  target-specific response/frequency/appearance envelopes, 34 exact controls,
+  and Canvas/compact-8× exclusion. Never revive the thresholded rib/vein mesh,
+  add another carrier, or widen the owner to stateful/contact PLNT.
   E37 is the accepted exact Metal-side Water-contact checkpoint: freeze its
   joint E14+E17 dependency, exact Water/Metal ownership, scale-specific reuse
   of the existing liquid/contact evidence, Oil/Metal and mixed-contact controls,
@@ -1873,15 +1899,24 @@ Wood quality is `79.215`/`86.709`/`89.610`, mesostructure is
 
 Run `npm run audit:vfx:plant-canopy-mass` for E36. It isolates the strict
 E20+E26+E28+E32+E34 parent chain and runs `plantCanopyMassVfx=0 → 1 → 0` at
-normal WebGL 1×/2×/4× while pinning unrelated optional selectors off. Its
+normal WebGL 1×/2×/4× while pinning unrelated optional selectors and
+`plantCanopyTissueVfx` off. Its
 direct focused seam metrics must prove the broad front/rear/overlap canopy
 result while the thresholded E26/E32/E34 vein loops are suppressed only for
 the enabled E36 frame. Semantic, alpha, support, lifecycle, native walls,
 topology/contact/foreign-owner controls, and repeated-off framebuffer remain
 exact. Requested-on true 8× promotes exact 4896×3072 WebGL while
-E20/E26/E28/E32/E34/E36/HDR remain inactive for `scale-8`, with no bloom and a
+E20/E26/E28/E32/E34/E36/E53/HDR remain inactive for `scale-8`, with no bloom and a
 completed GPU fence. Do not use a composed-rank drop to game the scorer; the
 direct seam metrics and visible hierarchy are the acceptance evidence.
+
+Run `npm run audit:vfx:plant-canopy-tissue` for E53. It keeps E36 and its
+botanical ancestry active while running `plantCanopyTissueVfx=0 → 1 → 0` at
+normal WebGL 1×/2×/4×. The reused E36 fixture freezes two asymmetric PLNT
+targets, 34 lifecycle/topology/contact/wall/foreign-owner controls, exact
+semantic/alpha/support/auxiliary state, byte-exact repeated-off frames,
+continuous local-contrast gain without a cellular seam, cross-scale frequency
+retention, and requested-on true-8× exclusion at exact 4896×3072.
 
 Run `npm run audit:vfx:metal-water-contact` for E37. It keeps E14 and E17 live,
 runs `metalWaterContactVfx=0 → 1 → 0` at normal WebGL 1×/2×/4×, and samples the
@@ -1990,15 +2025,19 @@ next production 4× survey then selected Wood/PLNT as the largest remaining
   owner, exposure, topology, scale, and true-8× contracts. E35 then raises
   Wood to `79.215`/`86.709`/`89.610`; the fresh post-E35 canonical survey made
   PLNT `82.892` the organic floor and visibly exposed its repeated enclosed
-  mesh. E36 deliberately removes that mesh. Its final composed PLNT score is
+  mesh. E36 deliberately removes that mesh. Its E53-off composed baseline is
   `62.215`/`67.661`/`69.253`, while Contact `88.235`, Solid `90.2`, Liquid
   `91.033`, Gas `95.463`, Emission `98.475`, and Powder `100.000` remain
   unchanged. This numeric decrease is a known scorer blind spot: the scorer
   rewards cell-scale contrast, while E36's exact focused appearance gate proves
   lower seam density, lower local contrast, stronger macro hierarchy, unchanged
-  semantic support, and byte-exact selector-off recovery.
+  semantic support, and byte-exact selector-off recovery. E53 then restores
+  continuous signed lamina articulation without restoring that mesh. Its exact
+  PLNT result is `72.165`/`77.290`/`78.704` at 1×/2×/4×, with support `1`,
+  coverage `.971`, macro range `50`, zero dark/clipped fraction, and exact
+  semantics across the full composed matrix.
 
-**Next visual experiments:** E03–E52 provide accepted liquid body/surface,
+**Next visual experiments:** E03–E53 provide accepted liquid body/surface,
 stable-gas, coherent-gas-motion, powder-depth, and powder-local-light
 checkpoints plus exact resting contact grounding, Glass/Ice transmission, and
 state-aware Wax/PLNT subsurface response, composed wet-mineral optics,
@@ -2027,6 +2066,9 @@ E32 lifecycle gate or compact 8×. E35 adds exact Wood tannin/cambium volume
 over E20/E26/E28/E30. E36 adds exact PLNT broad front/rear/overlap canopy mass
 recomposition over E34 while suppressing thresholded vein loops only when
 active; its composed-rank drop is a scorer blind spot and must not be gamed.
+E53 adds exact PLNT continuous canopy tissue over E36 by reusing only the
+already-live signed lamina/front/rear/overlap evidence; it improves broad
+fit-view articulation without reviving the rejected enclosed cellular mesh.
 E37 adds exact Metal-side Water-contact spectral separation over the joint E14+
 E17 proof without changing either body's topology. E38 turns the previously
 flat, opaque-looking exact-Oil pool into a broad bipolar amber/cool volume by
@@ -2117,6 +2159,24 @@ recall is one, and clipping remains zero. Requested-on true 8× proves
 E52/HDR/bloom exclusion, a blank material plane, exact 4896×3072 WebGL, and a
 completed `gpu-fence` in `5172.5 ms`, with stable semantics and zero browser errors. The focused release
 gate is `npm run audit:vfx:bgla-body`.
+E53 is the accepted exact-PLNT `10` continuous-canopy-tissue checkpoint, a
+normal-WebGL-only strict E36 child (`?plantCanopyTissueVfx=0|1`). It reuses
+only E36's already-live signed lamina, front/rear, overlap, and canopy-mass
+proof to add bounded continuous RGB tissue relief. It never revives E34's
+zero-crossing rib/vein network. Stateful PLNT, lifecycle and auxiliary state,
+holes, fine topology, walls, contacts, foreign owners, Canvas, and compact true
+8× remain exact controls. It adds no carrier, noise, sample, texture, field,
+resource, pass, target, upload, allocation, clock, alpha, support, silhouette,
+ownership, lifecycle, topology, or physics decision. Its frozen 1×/2×/4×
+focused matrix holds target RGB/chroma/spatial RMS at `.84–.96`/`.79–.91`/
+`.829–.950`, coverage at `.061–.096`, signed mean at `.16–.17`, response
+microcontrast at `.40–.46`, meso/cell frequency at `.3957–.4654`/
+`.6012–.6483`, and downsample retention at `.9527–.9542`. All 34 named
+controls and the repeated-off framebuffer are exact. Requested-on true 8×
+proves E20/E26/E28/E32/E34/E36/E53/HDR/bloom exclusion, exact 4896×3072
+WebGL, stable semantics, zero browser errors, and a signalled `gpu-fence` in
+`5373.1 ms`. The focused release gate is
+`npm run audit:vfx:plant-canopy-tissue`.
 Improve distinctive depth, transmission, reflection, lighting, and
 mesostructure without stacking another narrow Oil/Acid/contact tint or generic
 PLNT/gas layer.
@@ -2135,14 +2195,18 @@ checkpoint. With explicit E47 telemetry, canonical v6 `solidISZS` quality
 reaches `93.047`: luma standard deviation is `7.68`, microcontrast `1.16`,
 chromatic contrast `2.19`, and macro range `28`, with full support and zero
 dark/clipped fraction. E52 is explicitly inactive in this matrix because
-showcase v6 has no authoritative BGLA evidence. The current canonical 2× family
-rank is Organic `67.661` (exact PLNT mesostructure), Solid `86.207` (VIBR macro
+showcase v6 has no authoritative BGLA evidence. With E53 active, exact PLNT
+quality becomes `72.165`/`77.290`/`78.704` at 1×/2×/4×. Its
+microcontrast/chroma are `1.70`/`1.90`, `1.81`/`2.00`, and `1.85`/`2.03`;
+macro range stays `50`, support stays `1`, coverage stays `.971`, and dark and
+clipped fractions remain zero. The current canonical 2× family rank is Organic
+`77.290` (exact PLNT mesostructure), Solid `86.207` (VIBR macro
 relief), Contact `88.768` (Water/Metal chromatic separation), Gas `95.463`,
 Emission `98.475`, and Powder/Liquid `100`; exact 1×/2×/4× semantics and CSS
 geometry remain fixed with zero browser errors. Because E36 already proved that
 the PLNT aggregate scorer can penalize accepted broad canopy recomposition,
-require paired fit-view evidence before selecting another organic experiment
-instead of tuning only to the rank.
+select the next experiment from a new fit-view diagnosis rather than tuning
+only to the rank.
 
 The separate app-owned candidate-survey v1 fixture uses
 the deterministic 612×384 RenderLab backend unless `simulation=native` is
@@ -2181,7 +2245,7 @@ is `24.657/23.679/22.240` at 1×/2×/4×, with full support and zero dark/clippe
 fraction. Do not alter E48 from candidate-rank evidence; its focused exact-owner
 fixture remains the acceptance contract. Choose any later experiment only from
 a new visible fit-view diagnosis. Preserve the E14 1× stencil snap and all
-E01–E52 selectors and controls.
+E01–E53 selectors and controls.
 
 ## Phase 1 — HDR pipeline & lighting core (biggest visual payoff)
 

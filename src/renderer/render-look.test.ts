@@ -4,6 +4,7 @@ import {
   resolveBotanicalMesostructureVfxEnabled,
   resolveBotanicalPigmentVfxEnabled,
   resolvePlantCanopyMassVfxEnabled,
+  resolvePlantCanopyTissueVfxEnabled,
   resolvePlantLaminaVfxEnabled,
   resolvePlantLobeDepthVfxEnabled,
   resolveWoodBarkReliefVfxEnabled,
@@ -469,6 +470,37 @@ describe('resolveRenderLook', () => {
     expect(resolvePlantCanopyMassVfxEnabled(
       'realistic', '?plantCanopyMassVfx=false',
     )).toBe(false);
+  });
+
+  it('keeps continuous PLNT canopy tissue subordinate to the E36 canopy-mass parent', () => {
+    expect(resolvePlantCanopyTissueVfxEnabled(
+      'classic', '?plantCanopyTissueVfx=1',
+    )).toBe(false);
+    expect(resolvePlantCanopyTissueVfxEnabled('realistic', '')).toBe(true);
+    expect(resolvePlantCanopyTissueVfxEnabled('neon-lab', '')).toBe(true);
+    for (const parentOff of [
+      'botanicalBodyVfx=0', 'botanicalMesostructureVfx=0',
+      'botanicalPigmentVfx=0', 'plantLaminaVfx=0', 'plantLobeDepthVfx=0',
+      'plantCanopyMassVfx=0',
+    ]) {
+      expect(resolvePlantCanopyTissueVfxEnabled(
+        'realistic', `?${parentOff}&plantCanopyTissueVfx=1`,
+      )).toBe(false);
+    }
+    expect(resolvePlantCanopyTissueVfxEnabled(
+      'realistic',
+      '?volumeVfx=0&botanicalBodyVfx=1&botanicalMesostructureVfx=1&botanicalPigmentVfx=1&plantLaminaVfx=1&plantLobeDepthVfx=1&plantCanopyMassVfx=1',
+    )).toBe(true);
+    for (const requested of ['0', 'off', 'false']) {
+      expect(resolvePlantCanopyTissueVfxEnabled(
+        'realistic', `?plantCanopyTissueVfx=${requested}`,
+      )).toBe(false);
+    }
+    for (const requested of ['1', 'on', 'true']) {
+      expect(resolvePlantCanopyTissueVfxEnabled(
+        'realistic', `?plantCanopyTissueVfx=${requested}`,
+      )).toBe(true);
+    }
   });
 
   it('keeps exact-Wood bark relief subordinate to E26 but independent of E28 pigment', () => {

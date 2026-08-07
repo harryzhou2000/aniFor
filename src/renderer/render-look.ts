@@ -513,6 +513,24 @@ export function resolvePlantCanopyMassVfxEnabled(
 }
 
 /**
+ * The evidence-backed continuous-tissue experiment styles exact PLNT canopy
+ * masses only after E36 has established the canopy-mass parent. This child
+ * cannot revive any earlier botanical layer and remains independently
+ * switchable for focused topology and fit-view audits. Normal WebGL selection
+ * is enforced by the presenter.
+ */
+export function resolvePlantCanopyTissueVfxEnabled(
+  look: RenderLook,
+  search = globalThis.location?.search ?? '',
+): boolean {
+  if (!resolvePlantCanopyMassVfxEnabled(look, search)) return false;
+  const requested = new URLSearchParams(search).get('plantCanopyTissueVfx');
+  if (requested === '0' || requested === 'off' || requested === 'false') return false;
+  if (requested === '1' || requested === 'on' || requested === 'true') return true;
+  return true;
+}
+
+/**
  * Keeps the exact thick-Glass body-transmission experiment independently
  * measurable inside the broader volume study. Normal WebGL owns the strict
  * Glass owner, depth, contact, and topology guards; Canvas and compact true 8x

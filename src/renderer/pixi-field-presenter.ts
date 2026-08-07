@@ -44,6 +44,7 @@ import {
   resolvePlantLaminaVfxEnabled,
   resolvePlantLobeDepthVfxEnabled,
   resolvePlantCanopyMassVfxEnabled,
+  resolvePlantCanopyTissueVfxEnabled,
   resolveWoodBarkReliefVfxEnabled,
   resolveWoodTanninVfxEnabled,
   resolveGlassBodyVfxEnabled,
@@ -3301,6 +3302,7 @@ uniform float uBotanicalPigmentVfx;
 uniform float uPlantLaminaVfx;
 uniform float uPlantLobeDepthVfx;
 uniform float uPlantCanopyMassVfx;
+uniform float uPlantCanopyTissueVfx;
 uniform float uWoodBarkReliefVfx;
 uniform float uWoodTanninVfx;
 uniform float uGlassBodyVfx;
@@ -9314,6 +9316,27 @@ void main() {
             color += vec3(-0.018, 0.009, -0.020)
               * (leafCanopyCrown - leafCanopyPocket)
               * plantCanopyMass;
+            // E53 is a strict E36 child selected from the composed fit-view
+            // PLNT deficit. Strengthen only E36's already-continuous signed
+            // lamina tissue; do not revive the zero-crossing rib/vein network
+            // that E34/E36 deliberately suppressed. The front/rear rank and
+            // overlap are already-live broad scalars, so this adds only static
+            // RGB arithmetic: no noise, sample, texture, field, pass, target,
+            // clock, alpha, support, lifecycle, topology, or physics decision.
+            if (uPlantCanopyTissueVfx > 0.5) {
+              float leafCanopyTissueGain = mix(
+                0.016, 0.024, leafCanopyFront
+              ) + leafCanopyOverlap * 0.004;
+              // Preserve the continuous signed carrier, but keep its negative
+              // lobe subordinate so fine pockets do not become dark cellular
+              // cracks at the fitted canvas size.
+              float leafCanopyTissueRelief = max(leafCanopyTissue, 0.0)
+                - max(-leafCanopyTissue, 0.0) * 0.38;
+              color *= 1.0 + leafCanopyTissueRelief
+                * leafCanopyTissueGain * plantCanopyMass;
+              color += vec3(0.009, 0.002, -0.012)
+                * leafCanopyTissue * plantCanopyMass;
+            }
           }
         } else {
           float barkWarp = botanicalBodyNoise(vec2(
@@ -11003,6 +11026,10 @@ export class PixiFieldPresenter {
     // canopy masses. Canvas and compact true 8x keep the accepted E34 path.
     const plantCanopyMassVfxEnabled = outputScale < 8
       && resolvePlantCanopyMassVfxEnabled(renderLook);
+    // E53 strengthens only E36's already-live continuous lamina tissue.
+    // Canvas and compact true 8x keep the accepted E36 presentation.
+    const plantCanopyTissueVfxEnabled = outputScale < 8
+      && resolvePlantCanopyTissueVfxEnabled(renderLook);
     // E21 replaces only normal-WebGL's deep exact-Glass body grade. The
     // compact true-8x shader retains its separately proven transmission path
     // and deliberately declares neither this selector nor its arithmetic.
@@ -11093,6 +11120,7 @@ export class PixiFieldPresenter {
       uPlantLaminaVfx: { value: plantLaminaVfxEnabled ? 1 : 0, type: 'f32' },
       uPlantLobeDepthVfx: { value: plantLobeDepthVfxEnabled ? 1 : 0, type: 'f32' },
       uPlantCanopyMassVfx: { value: plantCanopyMassVfxEnabled ? 1 : 0, type: 'f32' },
+      uPlantCanopyTissueVfx: { value: plantCanopyTissueVfxEnabled ? 1 : 0, type: 'f32' },
       uWoodBarkReliefVfx: { value: woodBarkReliefVfxEnabled ? 1 : 0, type: 'f32' },
       uWoodTanninVfx: { value: woodTanninVfxEnabled ? 1 : 0, type: 'f32' },
       uGlassBodyVfx: { value: glassBodyVfxEnabled ? 1 : 0, type: 'f32' },
@@ -11349,6 +11377,7 @@ export class PixiFieldPresenter {
       this.uniforms.uniforms.uPlantLaminaVfx = 0;
       this.uniforms.uniforms.uPlantLobeDepthVfx = 0;
       this.uniforms.uniforms.uPlantCanopyMassVfx = 0;
+      this.uniforms.uniforms.uPlantCanopyTissueVfx = 0;
       this.uniforms.uniforms.uWoodBarkReliefVfx = 0;
       this.uniforms.uniforms.uWoodTanninVfx = 0;
       this.uniforms.uniforms.uGlassBodyVfx = 0;
@@ -11424,6 +11453,7 @@ export class PixiFieldPresenter {
             || new URLSearchParams(location.search).get('plantLaminaVfxAudit') === '1'
             || new URLSearchParams(location.search).get('plantLobeDepthVfxAudit') === '1'
             || new URLSearchParams(location.search).get('plantCanopyMassVfxAudit') === '1'
+            || new URLSearchParams(location.search).get('plantCanopyTissueVfxAudit') === '1'
             || new URLSearchParams(location.search).get('metalWaterContactVfxAudit') === '1'
             || new URLSearchParams(location.search).get('woodBarkReliefVfxAudit') === '1'
             || new URLSearchParams(location.search).get('woodTanninVfxAudit') === '1'
@@ -11541,6 +11571,9 @@ export class PixiFieldPresenter {
     ) > 0.5 ? 'active' : 'inactive';
     presenter.app.canvas.dataset.plantCanopyMassVfx = Number(
       presenter.uniforms.uniforms.uPlantCanopyMassVfx
+    ) > 0.5 ? 'active' : 'inactive';
+    presenter.app.canvas.dataset.plantCanopyTissueVfx = Number(
+      presenter.uniforms.uniforms.uPlantCanopyTissueVfx
     ) > 0.5 ? 'active' : 'inactive';
     presenter.app.canvas.dataset.woodBarkReliefVfx = Number(
       presenter.uniforms.uniforms.uWoodBarkReliefVfx
@@ -13011,6 +13044,7 @@ export class PixiFieldPresenter {
         this.uniforms.uniforms.uPlantLaminaVfx = 0;
         this.uniforms.uniforms.uPlantLobeDepthVfx = 0;
         this.uniforms.uniforms.uPlantCanopyMassVfx = 0;
+        this.uniforms.uniforms.uPlantCanopyTissueVfx = 0;
         this.uniforms.uniforms.uWoodBarkReliefVfx = 0;
         this.uniforms.uniforms.uWoodTanninVfx = 0;
         this.uniforms.uniforms.uGlassBodyVfx = 0;
@@ -13062,6 +13096,7 @@ export class PixiFieldPresenter {
         this.app.canvas.dataset.plantLaminaVfx = 'inactive';
         this.app.canvas.dataset.plantLobeDepthVfx = 'inactive';
         this.app.canvas.dataset.plantCanopyMassVfx = 'inactive';
+        this.app.canvas.dataset.plantCanopyTissueVfx = 'inactive';
         this.app.canvas.dataset.woodBarkReliefVfx = 'inactive';
         this.app.canvas.dataset.woodTanninVfx = 'inactive';
         this.app.canvas.dataset.glassBodyVfx = 'inactive';

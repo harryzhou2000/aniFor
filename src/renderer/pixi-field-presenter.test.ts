@@ -1358,6 +1358,55 @@ describe('Pixi presenter startup configuration', () => {
     expect(source).toContain("this.app.canvas.dataset.plantCanopyMassVfx = 'inactive';");
   });
 
+  it('keeps E53 PLNT canopy tissue continuous, resource-neutral, and normal-WebGL-only', () => {
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const canvasSource = readFileSync(new URL('./field-renderer.ts', import.meta.url), 'utf8');
+    const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');
+    const normalStart = source.indexOf('const FIELD_FRAGMENT = `', eightStart);
+    const normalEnd = source.indexOf('`;\n\n/** Primary WebGL presentation', normalStart);
+    const eight = source.slice(eightStart, normalStart);
+    const normal = source.slice(normalStart, normalEnd);
+    const e53Start = normal.indexOf('            // E53 is a strict E36 child');
+    const e53End = normal.indexOf('        } else {', e53Start);
+    const e53 = normal.slice(e53Start, e53End);
+    const preserveDrawingBufferStart = source.indexOf('preserveDrawingBuffer:');
+    const preserveDrawingBufferEnd = source.indexOf(
+      'resolution: outputScale', preserveDrawingBufferStart,
+    );
+    const preserveDrawingBuffer = source.slice(
+      preserveDrawingBufferStart, preserveDrawingBufferEnd,
+    );
+
+    expect(e53Start).toBeGreaterThanOrEqual(0);
+    expect(e53End).toBeGreaterThan(e53Start);
+    expect(normal).toContain('uniform float uPlantCanopyTissueVfx;');
+    expect(normal.match(/uPlantCanopyTissueVfx > 0\.5/g)).toHaveLength(1);
+    expect(eight).not.toContain('uPlantCanopyTissueVfx');
+    expect(eight).not.toContain('plantCanopyTissueVfx');
+    expect(canvasSource).not.toContain('plantCanopyTissueVfx');
+    for (const establishedValue of [
+      'leafCanopyTissue', 'leafCanopyFront', 'leafCanopyOverlap', 'plantCanopyMass',
+    ]) expect(e53).toContain(establishedValue);
+    expect(e53).not.toContain('botanicalBodyNoise(');
+    expect(e53).not.toContain('smoothstep(');
+    expect(e53).not.toContain('sin(');
+    expect(e53).not.toContain('texture(');
+    expect(e53).not.toContain('uTime');
+    expect(e53).not.toContain('gl_FragCoord');
+    expect(e53).not.toMatch(/\balpha\s*[+*]?=/);
+    expect(source.match(/this\.uniforms\.uniforms\.uPlantCanopyTissueVfx = 0;/g))
+      .toHaveLength(2);
+    expect(source).toMatch(
+      /const plantCanopyTissueVfxEnabled = outputScale < 8\s*&& resolvePlantCanopyTissueVfxEnabled\(renderLook\);/,
+    );
+    expect(source).toContain(
+      'uPlantCanopyTissueVfx: { value: plantCanopyTissueVfxEnabled ? 1 : 0',
+    );
+    expect(preserveDrawingBuffer).toContain("get('plantCanopyTissueVfxAudit') === '1'");
+    expect(source).toContain('presenter.app.canvas.dataset.plantCanopyTissueVfx');
+    expect(source).toContain("this.app.canvas.dataset.plantCanopyTissueVfx = 'inactive';");
+  });
+
   it('keeps E30 Wood bark relief exact-owner, normal-WebGL-only, and resource-neutral', () => {
     const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
     const canvasSource = readFileSync(new URL('./field-renderer.ts', import.meta.url), 'utf8');
