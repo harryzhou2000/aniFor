@@ -744,6 +744,9 @@ export class Game {
       setBotanicalLifecycleStyling: (enabled) => {
         this.renderer.setBotanicalLifecycleStylingEnabled(enabled);
       },
+      setPlantCanopyInterlockVfx: (enabled) => {
+        this.renderer.setPlantCanopyInterlockVfxEnabled(enabled);
+      },
       setSparkStateStyling: (enabled) => {
         this.renderer.setSparkStateStylingEnabled(enabled);
       },

@@ -914,11 +914,27 @@ does not alter simulation, camera, semantic ownership, or `renderScale`.
   output, cross-scale appearance, and requested-on true-8× exclusion without a
   new sample, noise call, texture, field, resource, state, support, topology, or
   physics decision.
+- **E55 accepted:** exact zero-state/presence-only PLNT `10` gains a
+  normal-WebGL-only canopy-interlock fold as a strict E53/E36 child
+  (`?plantCanopyInterlockVfx=0|1`). It recombines the already-live signed
+  fold/rank/front/rear/overlap evidence, with lobe contour limited to five
+  percent, and blends restrainedly toward the existing pre-detail `leafKey`.
+  The RGB-only response restores broad middle-scale canopy hierarchy while
+  reducing local/seam contrast, without reviving fine tissue or changing
+  lifecycle, support, topology, alpha, physics, Canvas, or compact true 8×.
+  `npm run audit:vfx:plant-canopy-interlock` freezes the independent focused
+  1×/2×/4× matrix, exact semantic/raw evidence for 34 controls, a direct exact
+  owned-PLNT repeated-off framebuffer, the named bounded 2× full-page
+  compositor diagnostic allowance, and requested-on true-8× exclusion. It
+  finishes the seven canonical paused-field stability refreshes once per scale,
+  then toggles only the E55 uniform in one hydrated page per scale, so
+  flat→styled→flat evidence is causal and every 4× protected/repeated page
+  footprint is exact.
 - **Protected 8× rung:** `renderScale=8` deliberately reports
   `hdrPipeline=inactive` / `scale-8` and retains the proven direct single-mesh
   4896×3072 path. The experiment must earn a bounded 8× design rather than
   allocating a 115 MiB full-resolution float target beside that path.
-- **Current decision:** E01/E02/E03/E04/E05/E06/E07/E08/E09/E10/E11/E12/E13/E14/E15/E16/E17/E18/E19/E20/E21/E22/E23/E24/E25/E26/E27/E28/E29/E30/E31/E32/E33/E34/E35/E36/E37/E38/E39/E40/E41/E42/E43/E44/E45/E46/E47/E48/E49/E50/E51/E52/E53/E54 remain opt-in through the non-Classic looks
+- **Current decision:** E01/E02/E03/E04/E05/E06/E07/E08/E09/E10/E11/E12/E13/E14/E15/E16/E17/E18/E19/E20/E21/E22/E23/E24/E25/E26/E27/E28/E29/E30/E31/E32/E33/E34/E35/E36/E37/E38/E39/E40/E41/E42/E43/E44/E45/E46/E47/E48/E49/E50/E51/E52/E53/E54/E55 remain opt-in through the non-Classic looks
   until representative hardware timing and mobile thermal behavior are
   measured. E02 remains the safe family-wide baseline. E03 is accepted as the
   liquid-depth checkpoint: its fit-view crop is visibly more cohesive, retains
@@ -1085,6 +1101,14 @@ does not alter simulation, camera, semantic ownership, or `renderScale`.
   Canvas/compact-8× exclusion. Never widen it to BVBR or nonzero VIBR state,
   displace the later native-state grammar, add another carrier, or turn its RGB
   relief into support, topology, state, or physics.
+  E55 is the accepted exact zero-state/presence-only PLNT canopy-interlock
+  checkpoint: freeze its strict E53/E36 dependency, broad signed fold/rank/
+  front/rear/overlap reuse, five-percent lobe contribution, and restrained
+  existing-`leafKey` blend. Its focused evidence must show more middle-scale
+  meso share and broad macro hierarchy with lower local/seam contrast, never a
+  revived fine rib/vein mesh, stateful/contact owner, Canvas change, or compact-
+  8× branch. It is RGB-only and may add no resource, carrier, alpha, support,
+  lifecycle, topology, or physics decision.
   E37 is the accepted exact Metal-side Water-contact checkpoint: freeze its
   joint E14+E17 dependency, exact Water/Metal ownership, scale-specific reuse
   of the existing liquid/contact evidence, Oil/Metal and mixed-contact controls,
@@ -1941,6 +1965,22 @@ semantic/alpha/support/auxiliary state, byte-exact repeated-off frames,
 continuous local-contrast gain without a cellular seam, cross-scale frequency
 retention, and requested-on true-8× exclusion at exact 4896×3072.
 
+Run `npm run audit:vfx:plant-canopy-interlock` for E55. It keeps the full
+E53/E36 botanical chain active while running `plantCanopyInterlockVfx=0 → 1 →
+0` at normal WebGL 1×/2×/4×. The two exact zero-state/presence-only PLNT
+targets prove a broad signed middle-scale fold, higher meso share than E53,
+positive 15-cell macro gain, and reduced local/seam contrast. All 34 controls
+remain exact in semantic/raw WebGL evidence; only the two named 2× Sand-contact
+full-page compositor diagnostics retain a bounded one-byte allowance. The gate
+finishes seven canonical paused-field stability refreshes once per scale, then
+toggles only the E55 uniform in one hydrated page; semantic/alpha/support/
+auxiliary state, direct owned-PLNT restoration, and every 4× protected/repeated
+page footprint remain exact. At 4×, use
+completed-frame capture, direct WebGL alpha readback, and one evidence PNG
+with a bounded 60-second compositor transfer. Requested-on true 8× promotes
+exact 4896×3072 WebGL while E20/E26/E28/E32/E34/E36/E53/E55/HDR/bloom are
+inactive for `scale-8`, with a completed GPU fence.
+
 Run `npm run audit:vfx:metal-water-contact` for E37. It keeps E14 and E17 live,
 runs `metalWaterContactVfx=0 → 1 → 0` at normal WebGL 1×/2×/4×, and samples the
 exact Metal side of horizontal and vertical Water/Metal contacts. The same
@@ -2060,7 +2100,7 @@ next production 4× survey then selected Wood/PLNT as the largest remaining
   coverage `.971`, macro range `50`, zero dark/clipped fraction, and exact
   semantics across the full composed matrix.
 
-**Next visual experiments:** E03–E54 provide accepted liquid body/surface,
+**Next visual experiments:** E03–E55 provide accepted liquid body/surface,
 stable-gas, coherent-gas-motion, powder-depth, and powder-local-light
 checkpoints plus exact resting contact grounding, Glass/Ice transmission, and
 state-aware Wax/PLNT subsurface response, composed wet-mineral optics,
@@ -2092,6 +2132,9 @@ active; its composed-rank drop is a scorer blind spot and must not be gamed.
 E53 adds exact PLNT continuous canopy tissue over E36 by reusing only the
 already-live signed lamina/front/rear/overlap evidence; it improves broad
 fit-view articulation without reviving the rejected enclosed cellular mesh.
+E55 closes the diagnosed PLNT middle-scale gap as a strict E53/E36 child:
+its focused evidence increases broad macro hierarchy and reduces local/seam
+contrast without claiming an aggregate composed-score improvement.
 E37 adds exact Metal-side Water-contact spectral separation over the joint E14+
 E17 proof without changing either body's topology. E38 turns the previously
 flat, opaque-looking exact-Oil pool into a broad bipolar amber/cool volume by
@@ -2227,11 +2270,43 @@ raw framebuffer, exact depth, and repeated-off evidence remain exact, and every
 E17/E43/E47/E54/HDR/bloom exclusion, exact 4896×3072 WebGL, stable semantics,
 zero browser errors, and a signalled `gpu-fence` in `5226.8 ms`. The focused
 release gate is `npm run audit:vfx:vibr-macro-relief`.
+E55 is the accepted exact zero-state/presence-only PLNT `10` canopy-interlock
+checkpoint, a normal-WebGL-only strict E53/E36 child
+(`?plantCanopyInterlockVfx=0|1`). It reuses only the already-live signed canopy
+fold, rank, front/rear, and overlap evidence, with lobe contour at five percent,
+to make a broad signed middle-scale fold. A restrained blend toward the
+existing pre-detail `leafKey` organizes broad canopy volume instead of adding
+another fine tissue carrier. It is RGB-only and adds no noise, sample, texture,
+field, resource, pass, target, allocation, clock, alpha, support, lifecycle,
+topology, or physics decision. Stateful PLNT, ineligible lifecycle payloads,
+holes, fine topology, walls, contacts, foreign owners, Canvas, and compact
+true 8× remain exact controls.
+
+Its focused 1×/2×/4× production matrices hold independent left/right target
+RGB RMS at `.50–.53`/`1.01–1.06`, meso share at `.4372–.4720`/`.4762–.5162`,
+and downsample retention at `.9620–.9648`. The 15-cell macro P90–P10 gain is
+`.1729–.2149`/`.4355–.5151`, while local contrast falls
+`.0409–.0483`/`.0229–.0273` and dark/strong seam fractions do not increase.
+All 34 controls remain exact in semantic/raw WebGL evidence; the two named 2×
+Sand-contact full-page compositor diagnostics alone have a bounded one-byte
+  allowance after seven canonical paused-field stability refreshes per scale.
+  The gate then toggles only the E55 uniform in one hydrated page per scale.
+  Semantics, state, support, walls, auxiliary data, direct owned-PLNT
+  repeated-off frames, and every 4× protected/repeated page footprint are
+  exact. The 4× robustness capture is a completed frame with direct WebGL alpha
+  readback and one evidence PNG under a bounded 60-second compositor transfer.
+  Requested-on true 8× proves E20/E26/E28/E32/E34/E36/E53/
+E55/HDR/bloom inactive for `scale-8`, exact 4896×3072 WebGL, and a GPU fence;
+the accepted full-matrix tail was `5110.9 ms`. The focused release gate is
+`npm run audit:vfx:plant-canopy-interlock`. A fresh 2× E53 parent run with E55
+inactive also passes through a `5135.8 ms` true-8× fence, while the full composed
+1×/2×/4× material rank passes its exact-scene and cross-scale gates. Treat that
+as regression evidence rather than a new aggregate-score claim.
 Improve distinctive depth, transmission, reflection, lighting, and
 mesostructure without stacking another narrow Oil/Acid/contact tint or generic
 PLNT/gas layer.
 The fresh composed-family/material survey now uses
-E17/E43/E44/E45/E46/E47/E53/E54 under
+E17/E43/E44/E45/E46/E47/E53/E54/E55 under
 `inputAudit=1`. Fixture v6 freezes 23 material counts, 18 scored regions,
 semantic hash `3610338776`, and 114,015 occupied cells at 1×/2×/4×; its exact
 SOAP body owns 1,220 cells and the deep `liquidSoap` region owns 384. The
@@ -2303,7 +2378,7 @@ is `24.657/23.679/22.240` at 1×/2×/4×, with full support and zero dark/clippe
 fraction. Do not alter E48 from candidate-rank evidence; its focused exact-owner
 fixture remains the acceptance contract. Choose any later experiment only from
 a new visible fit-view diagnosis. Preserve the E14 1× stencil snap and all
-E01–E54 selectors and controls.
+E01–E55 selectors and controls.
 
 ## Phase 1 — HDR pipeline & lighting core (biggest visual payoff)
 

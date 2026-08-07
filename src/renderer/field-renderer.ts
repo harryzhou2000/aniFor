@@ -1300,6 +1300,14 @@ export class MaterialRenderer {
     this.changed = true;
   }
 
+  /** Normal-WebGL audit-only in-place uniform toggle; Canvas keeps its path. */
+  setPlantCanopyInterlockVfxEnabled(enabled: boolean): void {
+    this.presenter?.setPlantCanopyInterlockVfxEnabled(enabled);
+    // The presenter submits this uniform-only frame immediately. Do not mark
+    // the field renderer dirty: that would rebuild unrelated paced fields
+    // between the focused audit's flat/styled/flat captures.
+  }
+
   setSparkStateStylingEnabled(enabled: boolean): void {
     if (enabled === this.sparkStateStylingEnabled) return;
     this.sparkStateStylingEnabled = enabled;

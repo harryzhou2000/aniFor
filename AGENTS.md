@@ -13,7 +13,7 @@ powder, solid, liquid, gas, energy, and contact scenes across Canvas and WebGL a
 mobile gestures, save/load, CI, and Pages deployment as protected regression
 contracts rather than the primary feature stream.
 
-The accepted visual experiment ladder now runs through E54. E12 is the
+The accepted visual experiment ladder now runs through E55. E12 is the
 species-safe Sand/Clay/Concrete wet-sediment checkpoint; preserve its exact
 aqueous owner/stability proof, split moving-powder/stationary-Water control,
 Local/Grains no-op, fine structures, authored gaps, Canvas fallback, and true
@@ -858,7 +858,7 @@ Every E47 navigation and the accepted full parent matrix pins
 exact VIBR/native-state controls.
 
 The corrected v6 composed survey now explicitly enables
-E17/E43/E44/E45/E46/E47/E53/E54
+E17/E43/E44/E45/E46/E47/E53/E54/E55
 under `inputAudit=1` and freezes 23 material counts, 18 scored regions,
 semantic hash `3610338776`, and 114,015 occupied cells across 1×/2×/4×. Its
 new exact-owner evidence is 1,220 Soap cells and a `liquidSoap` cohesive-liquid
@@ -1067,6 +1067,42 @@ full parent matrices pass with E54 pinned inactive. Requested-on true 8× keeps
 E17/E43/E47/E54/HDR/bloom inactive for `scale-8`, promotes exact 4896×3072
 WebGL, and completes the final stricter-gate GPU fence in `5226.8 ms`.
 
+E55 is the accepted normal-WebGL-only exact zero-state/presence-only PLNT `10`
+canopy-interlock checkpoint, independently measurable with
+`?plantCanopyInterlockVfx=0|1` and a strict child of E53/E36, including the
+E20/E26/E28/E32/E34 ancestry. Only the inherited authoritative ordinary PLNT
+body proof may respond. Reuse only the already-live signed canopy fold, rank,
+front/rear, and overlap evidence, with lobe contour at five percent, to form a
+broad signed middle-scale fold; blend it restrainedly toward the existing
+pre-detail `leafKey` so it organizes the canopy rather than amplifying E53's
+fine tissue. The response is RGB-only and adds no noise, sample, texture,
+field, resource, pass, target, allocation, clock, alpha, support, lifecycle,
+topology, or physics decision. Stateful PLNT, non-eligible lifecycle payloads,
+holes, fine structures, walls, contacts, foreign owners, Canvas, and compact
+true 8× retain their established paths.
+
+`npm run audit:vfx:plant-canopy-interlock` freezes independent 1×/2×/4×
+off→on→off production matrices. Target RGB RMS is `.50–.53` on the left and
+`1.01–1.06` on the right; meso share is `.4372–.4720`/`.4762–.5162`, higher
+and more middle-scale than E53; downsample retention is `.9620–.9648`; and
+15-cell macro P90–P10 gain is `.1729–.2149`/`.4355–.5151`. Local contrast
+falls by `.0409–.0483`/`.0229–.0273`, while dark/strong seam fractions do not
+increase. All 34 controls remain exact in semantic/raw WebGL evidence; after
+the canonical seven paused-field stability refreshes per scale, the gate
+toggles only the E55 uniform in one hydrated page. The two named 2× Sand-contact
+full-page compositor diagnostics retain a bounded one-byte allowance; every 4×
+protected control and repeated page footprint is exact. Lifecycle/state,
+support, wall, auxiliary evidence, and the direct owned-PLNT repeated-off
+framebuffer remain exact. The 4× path uses completed-frame capture, direct
+WebGL alpha readback, and one
+evidence PNG with bounded 60-second compositor transfer. Requested-on true 8×
+keeps E20/E26/E28/E32/E34/E36/E53/E55/HDR/bloom inactive for `scale-8`,
+promotes exact 4896×3072 WebGL, and completes a GPU fence; the accepted 4×
+tail was `5110.9 ms`. A fresh 2× E53 parent gate with E55 inactive also passes
+through a `5135.8 ms` true-8× fence, and the full composed 1×/2×/4× material
+rank passes exact-scene and cross-scale checks; this is regression evidence,
+not an aggregate-score uplift claim.
+
 The isolated candidate-survey v1 route is app-owned and must use the
 deterministic 612×384 RenderLab backend unless `simulation=native` is explicit.
 It freezes semantic hash `2255453673`, 115,368 occupied cells, all six exact
@@ -1112,7 +1148,11 @@ authoritative BGLA region. Organic remains the lowest family, led by exact PLNT
 at quality `72.165/77.290/78.704`; its remaining weakest cue is mesostructure
 `.350/.405/.425`. PLNT keeps support `1`, coverage `.971`, macro range `50`,
 and zero dark/clipped fraction, with microcontrast `1.70/1.81/1.85`, chroma
-`1.90/2.00/2.03`, and luma deviation `10.80/10.90/10.93`. E54 raises exact
+`1.90/2.00/2.03`, and luma deviation `10.80/10.90/10.93`. E55 closes the
+diagnosed PLNT middle-scale gap in focused evidence by increasing broad macro
+hierarchy while reducing local and seam contrast; do not claim an aggregate
+composed-score improvement until a fresh accepted composed matrix measures it.
+E54 raises exact
 zero-state VIBR to `97.731/100/100` at 1×/2×/4×; at canonical 2× its luma
 standard deviation/microcontrast/chroma/macro range is `4.37`/`1.65`/`3.15`/`20`,
 with unchanged support, coverage, and clipping. The Solid floor is therefore

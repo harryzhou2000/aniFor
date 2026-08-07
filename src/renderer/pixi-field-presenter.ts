@@ -45,6 +45,7 @@ import {
   resolvePlantLobeDepthVfxEnabled,
   resolvePlantCanopyMassVfxEnabled,
   resolvePlantCanopyTissueVfxEnabled,
+  resolvePlantCanopyInterlockVfxEnabled,
   resolveWoodBarkReliefVfxEnabled,
   resolveWoodTanninVfxEnabled,
   resolveGlassBodyVfxEnabled,
@@ -3305,6 +3306,7 @@ uniform float uPlantLaminaVfx;
 uniform float uPlantLobeDepthVfx;
 uniform float uPlantCanopyMassVfx;
 uniform float uPlantCanopyTissueVfx;
+uniform float uPlantCanopyInterlockVfx;
 uniform float uWoodBarkReliefVfx;
 uniform float uWoodTanninVfx;
 uniform float uGlassBodyVfx;
@@ -9338,6 +9340,66 @@ void main() {
                 * leafCanopyTissueGain * plantCanopyMass;
               color += vec3(0.009, 0.002, -0.012)
                 * leafCanopyTissue * plantCanopyMass;
+              // E55: the composed canopy still jumps from E36's broad front/
+              // rear masses directly to E53's fine tissue, so fitted PLNT reads
+              // as a softly stippled blob. Recombine only the already-live lobe,
+              // rank, front/rear, and overlap evidence into one continuous
+              // interlock fold at the missing middle scale. In proven overlap
+              // zones, blend a restrained amount back toward E20's pre-detail
+              // leaf albedo so the broad fold can organize, rather than merely
+              // brighten, E32/E53's fine tissue. Do not reuse a rib, vein,
+              // lamina threshold, or new carrier: this is static RGB-only
+              // arithmetic with no noise, sample, texture, field, pass, target,
+              // allocation, clock, alpha, support, lifecycle, topology, state,
+              // ownership, or physics decision.
+              if (uPlantCanopyInterlockVfx > 0.5) {
+                float leafCanopyInterlockFold = clamp(
+                  leafCanopyFold * 0.62 + leafCanopyRank * 0.22
+                    + (leafCanopyFront - leafCanopyRear) * 0.11
+                    + leafLobeContour * 0.05,
+                  -1.0, 1.0
+                );
+                float leafCanopyInterlockWeight = min(
+                  1.0,
+                  leafCanopyOverlap * (0.85 + abs(leafCanopyRank) * 0.65)
+                );
+                float leafCanopyInterlockCrown = max(
+                  leafCanopyInterlockFold, 0.0
+                ) * (0.72 + leafCanopyFront * 0.28);
+                float leafCanopyInterlockPocket = max(
+                  -leafCanopyInterlockFold, 0.0
+                ) * (0.72 + leafCanopyRear * 0.28);
+                float leafCanopyInterlockBlend = min(
+                  0.32,
+                  (0.155 + abs(leafCanopyInterlockFold) * 0.165)
+                    * leafCanopyInterlockWeight * plantCanopyMass
+                );
+                vec3 leafCanopyInterlockAlbedo = clamp(
+                  leafKey * (
+                    0.90 + leafCanopyInterlockCrown * 0.22
+                      - leafCanopyInterlockPocket * 0.16
+                  )
+                    + solidEnvironment
+                      * (0.024 + leafCanopyInterlockCrown * 0.052)
+                    + vec3(-0.030, 0.041, -0.048)
+                      * leafCanopyInterlockFold,
+                  0.0, 1.0
+                );
+                color = mix(
+                  color, leafCanopyInterlockAlbedo,
+                  leafCanopyInterlockBlend
+                );
+                color *= vec3(1.0) - vec3(0.180, 0.100, 0.220)
+                  * leafCanopyInterlockPocket
+                  * leafCanopyInterlockWeight * plantCanopyMass;
+                color += (vec3(1.0) - clamp(color, 0.0, 1.0))
+                  * (vec3(0.320, 0.860, 0.300) * leafCanopyInterlockCrown
+                    + solidEnvironment * leafCanopyOverlap * 0.072)
+                  * leafCanopyInterlockWeight * plantCanopyMass;
+                color += vec3(-0.042, 0.054, -0.066)
+                  * leafCanopyInterlockFold * leafCanopyInterlockWeight
+                  * plantCanopyMass;
+              }
             }
           }
         } else {
@@ -11075,6 +11137,10 @@ export class PixiFieldPresenter {
     // Canvas and compact true 8x keep the accepted E36 presentation.
     const plantCanopyTissueVfxEnabled = outputScale < 8
       && resolvePlantCanopyTissueVfxEnabled(renderLook);
+    // E55 inserts a continuous mid-scale interlock fold between E36's canopy
+    // mass and E53's fine tissue. Canvas and compact true 8x keep E53 unchanged.
+    const plantCanopyInterlockVfxEnabled = outputScale < 8
+      && resolvePlantCanopyInterlockVfxEnabled(renderLook);
     // E21 replaces only normal-WebGL's deep exact-Glass body grade. The
     // compact true-8x shader retains its separately proven transmission path
     // and deliberately declares neither this selector nor its arithmetic.
@@ -11167,6 +11233,7 @@ export class PixiFieldPresenter {
       uPlantLobeDepthVfx: { value: plantLobeDepthVfxEnabled ? 1 : 0, type: 'f32' },
       uPlantCanopyMassVfx: { value: plantCanopyMassVfxEnabled ? 1 : 0, type: 'f32' },
       uPlantCanopyTissueVfx: { value: plantCanopyTissueVfxEnabled ? 1 : 0, type: 'f32' },
+      uPlantCanopyInterlockVfx: { value: plantCanopyInterlockVfxEnabled ? 1 : 0, type: 'f32' },
       uWoodBarkReliefVfx: { value: woodBarkReliefVfxEnabled ? 1 : 0, type: 'f32' },
       uWoodTanninVfx: { value: woodTanninVfxEnabled ? 1 : 0, type: 'f32' },
       uGlassBodyVfx: { value: glassBodyVfxEnabled ? 1 : 0, type: 'f32' },
@@ -11425,6 +11492,7 @@ export class PixiFieldPresenter {
       this.uniforms.uniforms.uPlantLobeDepthVfx = 0;
       this.uniforms.uniforms.uPlantCanopyMassVfx = 0;
       this.uniforms.uniforms.uPlantCanopyTissueVfx = 0;
+      this.uniforms.uniforms.uPlantCanopyInterlockVfx = 0;
       this.uniforms.uniforms.uWoodBarkReliefVfx = 0;
       this.uniforms.uniforms.uWoodTanninVfx = 0;
       this.uniforms.uniforms.uGlassBodyVfx = 0;
@@ -11502,6 +11570,7 @@ export class PixiFieldPresenter {
             || new URLSearchParams(location.search).get('plantLobeDepthVfxAudit') === '1'
             || new URLSearchParams(location.search).get('plantCanopyMassVfxAudit') === '1'
             || new URLSearchParams(location.search).get('plantCanopyTissueVfxAudit') === '1'
+            || new URLSearchParams(location.search).get('plantCanopyInterlockVfxAudit') === '1'
             || new URLSearchParams(location.search).get('metalWaterContactVfxAudit') === '1'
             || new URLSearchParams(location.search).get('woodBarkReliefVfxAudit') === '1'
             || new URLSearchParams(location.search).get('woodTanninVfxAudit') === '1'
@@ -11625,6 +11694,9 @@ export class PixiFieldPresenter {
     ) > 0.5 ? 'active' : 'inactive';
     presenter.app.canvas.dataset.plantCanopyTissueVfx = Number(
       presenter.uniforms.uniforms.uPlantCanopyTissueVfx
+    ) > 0.5 ? 'active' : 'inactive';
+    presenter.app.canvas.dataset.plantCanopyInterlockVfx = Number(
+      presenter.uniforms.uniforms.uPlantCanopyInterlockVfx
     ) > 0.5 ? 'active' : 'inactive';
     presenter.app.canvas.dataset.woodBarkReliefVfx = Number(
       presenter.uniforms.uniforms.uWoodBarkReliefVfx
@@ -12413,6 +12485,23 @@ export class PixiFieldPresenter {
     this.renderApplication();
   }
 
+  /**
+   * Audit-only causal toggle for E55. Normal product state still comes from
+   * the render-look resolver; the focused browser gate uses this method to
+   * compare one hydrated semantic/field state without reloading the page.
+  */
+  setPlantCanopyInterlockVfxEnabled(enabled: boolean): void {
+    if (this.outputScale >= 8
+      || Number(this.uniforms.uniforms.uPlantCanopyTissueVfx) <= 0.5) {
+      this.uniforms.uniforms.uPlantCanopyInterlockVfx = 0;
+      this.app.canvas.dataset.plantCanopyInterlockVfx = 'inactive';
+      return;
+    }
+    this.uniforms.uniforms.uPlantCanopyInterlockVfx = enabled ? 1 : 0;
+    this.app.canvas.dataset.plantCanopyInterlockVfx = enabled ? 'active' : 'inactive';
+    this.renderApplication();
+  }
+
   setSparkStateStylingEnabled(enabled: boolean): void {
     this.uniforms.uniforms.uSparkStateStyling = enabled ? 1 : 0;
     this.renderApplication();
@@ -13097,6 +13186,7 @@ export class PixiFieldPresenter {
         this.uniforms.uniforms.uPlantLobeDepthVfx = 0;
         this.uniforms.uniforms.uPlantCanopyMassVfx = 0;
         this.uniforms.uniforms.uPlantCanopyTissueVfx = 0;
+        this.uniforms.uniforms.uPlantCanopyInterlockVfx = 0;
         this.uniforms.uniforms.uWoodBarkReliefVfx = 0;
         this.uniforms.uniforms.uWoodTanninVfx = 0;
         this.uniforms.uniforms.uGlassBodyVfx = 0;
@@ -13150,6 +13240,7 @@ export class PixiFieldPresenter {
         this.app.canvas.dataset.plantLobeDepthVfx = 'inactive';
         this.app.canvas.dataset.plantCanopyMassVfx = 'inactive';
         this.app.canvas.dataset.plantCanopyTissueVfx = 'inactive';
+        this.app.canvas.dataset.plantCanopyInterlockVfx = 'inactive';
         this.app.canvas.dataset.woodBarkReliefVfx = 'inactive';
         this.app.canvas.dataset.woodTanninVfx = 'inactive';
         this.app.canvas.dataset.glassBodyVfx = 'inactive';

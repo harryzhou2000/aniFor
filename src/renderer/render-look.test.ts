@@ -5,6 +5,7 @@ import {
   resolveBotanicalPigmentVfxEnabled,
   resolvePlantCanopyMassVfxEnabled,
   resolvePlantCanopyTissueVfxEnabled,
+  resolvePlantCanopyInterlockVfxEnabled,
   resolvePlantLaminaVfxEnabled,
   resolvePlantLobeDepthVfxEnabled,
   resolveWoodBarkReliefVfxEnabled,
@@ -502,6 +503,40 @@ describe('resolveRenderLook', () => {
         'realistic', `?plantCanopyTissueVfx=${requested}`,
       )).toBe(true);
     }
+  });
+
+  it('keeps PLNT canopy interlock volume subordinate to E53 and isolated in input audits', () => {
+    expect(resolvePlantCanopyInterlockVfxEnabled(
+      'classic', '?plantCanopyInterlockVfx=on',
+    )).toBe(false);
+    expect(resolvePlantCanopyInterlockVfxEnabled('realistic', '')).toBe(true);
+    expect(resolvePlantCanopyInterlockVfxEnabled('neon-lab', '')).toBe(true);
+    expect(resolvePlantCanopyInterlockVfxEnabled('realistic', '?inputAudit=1')).toBe(false);
+
+    for (const requested of ['1', 'on', 'true']) {
+      expect(resolvePlantCanopyInterlockVfxEnabled(
+        'realistic', `?inputAudit=1&plantCanopyInterlockVfx=${requested}`,
+      )).toBe(true);
+    }
+    for (const requested of ['0', 'off', 'false']) {
+      expect(resolvePlantCanopyInterlockVfxEnabled(
+        'realistic', `?plantCanopyInterlockVfx=${requested}`,
+      )).toBe(false);
+    }
+
+    for (const parentOff of [
+      'volumeVfx=0', 'botanicalBodyVfx=0', 'botanicalMesostructureVfx=0',
+      'botanicalPigmentVfx=0', 'plantLaminaVfx=0', 'plantLobeDepthVfx=0',
+      'plantCanopyMassVfx=0', 'plantCanopyTissueVfx=0',
+    ]) {
+      expect(resolvePlantCanopyInterlockVfxEnabled(
+        'realistic', `?${parentOff}&plantCanopyInterlockVfx=on`,
+      )).toBe(false);
+    }
+    expect(resolvePlantCanopyInterlockVfxEnabled(
+      'realistic',
+      '?volumeVfx=0&botanicalBodyVfx=1&botanicalMesostructureVfx=1&botanicalPigmentVfx=1&plantLaminaVfx=1&plantLobeDepthVfx=1&plantCanopyMassVfx=1&plantCanopyTissueVfx=1&plantCanopyInterlockVfx=on',
+    )).toBe(true);
   });
 
   it('keeps exact-Wood bark relief subordinate to E26 but independent of E28 pigment', () => {
