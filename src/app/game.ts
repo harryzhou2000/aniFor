@@ -63,6 +63,9 @@ import {
   CARBON_DIOXIDE_BODY_VFX_AUDIT, prepareCarbonDioxideBodyVfxFixture,
 } from './carbon-dioxide-body-vfx-audit';
 import {
+  FOG_CORE_DIFFUSE_VFX_AUDIT, prepareFogCoreDiffuseVfxFixture,
+} from './fog-core-diffuse-vfx-audit';
+import {
   RADIOACTIVE_SOLID_BODY_VFX_AUDIT, prepareRadioactiveSolidBodyVfxFixture,
 } from './radioactive-solid-body-vfx-audit';
 import {
@@ -876,6 +879,12 @@ export class Game {
       carbonDioxideBodyVfxFixture: () => CARBON_DIOXIDE_BODY_VFX_AUDIT,
       prepareCarbonDioxideBodyVfxFixture: () => {
         prepareCarbonDioxideBodyVfxFixture(this.simulation);
+        this.renderer.synchronizeFixtureMaterialPlane();
+        this.renderer.invalidateDynamicPresentation();
+      },
+      fogCoreDiffuseVfxAtlas: () => FOG_CORE_DIFFUSE_VFX_AUDIT,
+      prepareFogCoreDiffuseVfxFixture: () => {
+        prepareFogCoreDiffuseVfxFixture(this.simulation);
         this.renderer.synchronizeFixtureMaterialPlane();
         this.renderer.invalidateDynamicPresentation();
       },

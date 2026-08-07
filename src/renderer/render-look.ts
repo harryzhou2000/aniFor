@@ -248,6 +248,25 @@ export function resolveCarbonDioxideBodyVfxEnabled(
 }
 
 /**
+ * E57 controls the independently measurable exact-FOG connected-core response.
+ * It remains a strict child of E04 and defaults off in generic input fixtures,
+ * keeping every older gas audit's selector set and calibrated framebuffer
+ * unchanged until the focused FOG fixture opts in.
+ */
+export function resolveFogCoreDiffuseVfxEnabled(
+  look: RenderLook,
+  search = globalThis.location?.search ?? '',
+): boolean {
+  if (!resolveGasBodyVfxEnabled(look, search)) return false;
+  const parameters = new URLSearchParams(search);
+  const requested = parameters.get('fogCoreDiffuseVfx');
+  if (requested === '0' || requested === 'off' || requested === 'false') return false;
+  if (requested === '1' || requested === 'on' || requested === 'true') return true;
+  if (parameters.get('inputAudit') === '1') return false;
+  return true;
+}
+
+/**
  * E31 adds a broad prismatic interior lobe only after E25 has established the
  * exact Noble Gas billow. It cannot revive E04/E25, and remains independently
  * switchable so its bipolar volume response can be measured without changing
@@ -312,6 +331,24 @@ export function resolveMetalWaterContactVfxEnabled(
   const requested = new URLSearchParams(search).get('metalWaterContactVfx');
   if (requested === '0' || requested === 'off' || requested === 'false') return false;
   if (requested === '1' || requested === 'on' || requested === 'true') return true;
+  return true;
+}
+
+/**
+ * E56 refines only the already-proven Metal-side Water contact. It cannot
+ * recreate E37 ownership, and focused input audits keep it frozen unless they
+ * explicitly request the child selector.
+ */
+export function resolveWaterMetalTransmissionVfxEnabled(
+  look: RenderLook,
+  search = globalThis.location?.search ?? '',
+): boolean {
+  if (!resolveMetalWaterContactVfxEnabled(look, search)) return false;
+  const parameters = new URLSearchParams(search);
+  const requested = parameters.get('waterMetalTransmissionVfx');
+  if (requested === '0' || requested === 'off' || requested === 'false') return false;
+  if (requested === '1' || requested === 'on' || requested === 'true') return true;
+  if (parameters.get('inputAudit') === '1') return false;
   return true;
 }
 

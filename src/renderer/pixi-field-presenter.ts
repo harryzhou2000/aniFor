@@ -52,6 +52,7 @@ import {
   resolveGasBodyVfxEnabled, resolveGasCoreDepthVfxEnabled, resolveGasLightVfxEnabled,
   resolveGasMotionVfxEnabled,
   resolveCarbonDioxideBodyVfxEnabled,
+  resolveFogCoreDiffuseVfxEnabled,
   resolveHydrogenBodyVfxEnabled,
   resolveIszsCrystallineVfxEnabled,
   resolveRadioactiveSolidBodyVfxEnabled,
@@ -62,6 +63,7 @@ import {
   resolveSmokeSoftnessVfxEnabled,
   resolveLiquidBodyVfxEnabled, resolveLiquidSolidMeniscusVfxEnabled,
   resolveMetalWaterContactVfxEnabled,
+  resolveWaterMetalTransmissionVfxEnabled,
   resolveLiquidSurfaceVfxEnabled,
   resolveAcidBodyVfxEnabled,
   resolveSoapBodyVfxEnabled,
@@ -3286,6 +3288,7 @@ uniform float uGasLightVfx;
 uniform float uGasCoreDepthVfx;
 uniform float uHydrogenBodyVfx;
 uniform float uCarbonDioxideBodyVfx;
+uniform float uFogCoreDiffuseVfx;
 uniform float uNobleGasBillowVfx;
 uniform float uNobleGasPrismVfx;
 uniform float uSmokeSoftnessVfx;
@@ -3319,6 +3322,7 @@ uniform float uOilVolumeFinishVfx;
 uniform float uWaterBodyVfx;
 uniform float uLiquidSolidMeniscusVfx;
 uniform float uMetalWaterContactVfx;
+uniform float uWaterMetalTransmissionVfx;
 uniform float uPowderBodyVfx;
 uniform float uSootyPowderBodyVfx;
 uniform float uThermiteBodyVfx;
@@ -5153,6 +5157,7 @@ vec3 sourceTargetDelta(float material, vec2 stateBytes, vec2 position) {
 vec4 contactSample(vec2 uv, float material, float family) {
   float candidate = materialAt(uv);
   float exactWaterCandidate = abs(candidate - 2.0) < 0.5 ? 1.0 : 0.0;
+  float exactMetalCandidate = abs(candidate - 23.0) < 0.5 ? 1.0 : 0.0;
   if (abs(candidate - material) < 0.5) return vec4(1.0, 0.0, 0.0, 0.0);
   if (candidate < 0.5) return vec4(0.0);
   vec4 candidateStyle = texture(
@@ -5163,10 +5168,14 @@ vec4 contactSample(vec2 uv, float material, float family) {
   float ordinaryCandidate = candidateStyle.b < 0.5 && candidateTraits < 0.5
     && candidate != 3.0 ? 1.0 : 0.0;
   // Preserve the established categorical foreign bit in the low range and
-  // carry an exact-Water tag above one. Existing consumers compare only with
-  // the 0.5 categorical threshold; E37 decodes > 1.5 from the same probes.
+  // carry exact-Water and exact-Metal tags in disjoint ranges above one.
+  // Existing consumers compare only with the 0.5 categorical threshold; E37
+  // decodes Water above 1.5 and E56 decodes Metal above 2.5 from the same
+  // probes. Since candidate == material returned above, the two tags cannot
+  // alias an authoritative owner with itself.
   float foreignMatter = candidateFamily != family ? 1.0 : 0.0;
-  float packedForeignMatter = foreignMatter + exactWaterCandidate;
+  float packedForeignMatter = foreignMatter + exactWaterCandidate
+    + exactMetalCandidate * 2.0;
   // The third component marks only cross-phase contacts that can be lit without
   // another semantic/style probe. A solid deliberately does not mark powder:
   // its neighbour stability is unavailable here, so only the authoritative
@@ -6535,6 +6544,47 @@ void main() {
         }
       }
 
+      // E57: exact FOG previously inherited only E04's generic clean-gas body,
+      // leaving an unlit connected core visually flat once the fine style-10
+      // motif yielded to atmosphere ownership. Recompose that propagated owner
+      // into one broad pearly crown, opposing blue-grey pocket, and restrained
+      // optical-depth attenuation. Every input is already live in E04: the
+      // accepted billow carriers, cardinal relief, connected-density proof,
+      // optical depth, and gas base colour. RGB only: no wave, sample, texture,
+      // field, pass, target, upload, allocation, clock, alpha, support,
+      // silhouette, ownership, topology, state, or physics change. Canvas and
+      // compact true 8x retain their established style-10 presentation.
+      if (uFogCoreDiffuseVfx > 0.5 && uGasIdentityStyling > 0.5
+        && wall < 0.5 && !materialEmissive) {
+        float fogCoreStyle = floor(gasStyleState.r * 255.0 + 0.5);
+        float fogCoreOwner = 1.0 - step(0.5, abs(fogCoreStyle - 10.0));
+        if (fogCoreOwner > 0.5) {
+          float fogCoreSupport = fogCoreOwner * gasVfxBodySupport
+            * smoothstep(0.20, 0.60, cloudNeighbourMean)
+            * smoothstep(0.28, 0.68, atmosphereState.a);
+          float fogCorePhase = clamp(
+            mix(gasVfxBillow, gasVfxWaveC, 0.22)
+              + gasDirectionalRelief * 0.06,
+            -1.0, 1.0
+          );
+          float fogCoreCrown = fogCoreSupport
+            * (max(fogCorePhase, 0.0) + gasCrown * 0.10);
+          float fogCorePocket = fogCoreSupport
+            * (max(-fogCorePhase, 0.0) + gasPocket * 0.10);
+          float fogCoreDepth = fogCoreSupport * opticalDepth;
+          vec3 fogCoreKey = mix(
+            vec3(0.68, 0.76, 0.88), vec3(0.90, 0.94, 1.00),
+            clamp(0.50 + gasDirectionalRelief * 0.22, 0.0, 1.0)
+          );
+          color += (vec3(1.10) - clamp(color, 0.0, 1.10))
+            * mix(fogCoreKey, vividColor(gasBase, 1.02), 0.18)
+            * fogCoreCrown * 0.250;
+          color *= vec3(1.0)
+            - vec3(0.18, 0.14, 0.10) * fogCorePocket * 0.340
+            - vec3(0.035, 0.040, 0.050) * fogCoreDepth;
+        }
+      }
+
       // E27: the fit-view survey found exact Smoke coherent but too uniformly
       // matte. Recombine E04's already-live, static long-wave billow, cardinal
       // relief, curvature, and connected-body proof into one broad soot fold.
@@ -7455,6 +7505,36 @@ void main() {
       color += (vec3(1.16) - clamp(color, 0.0, 1.16))
         * wetContactKey * wetContactKeyGain;
       color *= vec3(1.0) - wetContactAbsorption * wetContactAbsorptionGain;
+      // E56: E37 separates the exact Metal side, but the adjacent Water still
+      // reads as a flat cyan sheet. Within E14's already-proven clean ordinary
+      // liquid/Solid contact, decode exact Metal from the same packed scalar
+      // and reuse E14's live band/crown/pocket values for a thin transmitted
+      // key, opposing absorption, and restrained warm return on Water alone.
+      // Keep this branch declaration-free: the contact shader is already near
+      // normal-WebGL register limits. It adds no sample, output, sampler,
+      // texture, field, pass, target, allocation, clock, alpha, support,
+      // silhouette, ownership, topology, state, or physics decision. Canvas
+      // and compact true 8x retain E14/E37 unchanged.
+      if (uWaterMetalTransmissionVfx > 0.5
+        && uMetalWaterContactVfx > 0.5 && material == 2.0
+        && foreignMatterContact > 2.5) {
+        color += (vec3(1.12) - clamp(color, 0.0, 1.12))
+          * vec3(0.18, 0.86, 1.00)
+          * max(wetContactBand, crossPhaseContact.x * 0.16)
+          * (0.068 + wetContactCrown * 0.160);
+        color *= vec3(1.0) - vec3(0.20, 0.46, 0.72)
+          * max(wetContactBand, crossPhaseContact.x * 0.16)
+          * (0.042 + wetContactPocket * 0.170);
+        // Two-to-three low-saturation source bytes of rear occlusion make the
+        // submerged ordering legible at fit view without widening or
+        // intensifying the complementary contact rim.
+        color *= vec3(1.0) - vec3(0.52, 0.58, 0.64)
+          * max(wetContactBand, crossPhaseContact.x * 0.16)
+          * wetContactPocket * 0.060;
+        color += vec3(0.032, 0.012, -0.028)
+          * max(wetContactBand, crossPhaseContact.x * 0.16)
+          * (0.45 + wetContactPocket * 0.55);
+      }
     }
     // Twenty ordinary, unusual, metallic, cryogenic, and radioactive liquids retain a world-anchored material signature
     // after generic body optics. The authoritative semantic fragment is the
@@ -11039,6 +11119,10 @@ export class PixiFieldPresenter {
     // compact true 8x retain their existing propagated style-6 presentation.
     const carbonDioxideBodyVfxEnabled = outputScale < 8
       && resolveCarbonDioxideBodyVfxEnabled(renderLook);
+    // E57 is an arithmetic-only exact-FOG child of E04. Canvas and compact
+    // true 8x retain their existing propagated style-10 presentation.
+    const fogCoreDiffuseVfxEnabled = outputScale < 8
+      && resolveFogCoreDiffuseVfxEnabled(renderLook);
     // E25 is an arithmetic-only exact Noble Gas recomposition over E04's
     // connected body. Compact true 8x retains its established style-7 path and
     // declares neither this selector nor a parallel branch.
@@ -11186,6 +11270,10 @@ export class PixiFieldPresenter {
     // It reuses the normal shader's four contact probes and is absent at 8x.
     const metalWaterContactVfxEnabled = outputScale < 8
       && resolveMetalWaterContactVfxEnabled(renderLook);
+    // E56 completes only Water's side of E37's exact clean submerged contact.
+    // It reuses the same four probes and remains absent from compact true 8x.
+    const waterMetalTransmissionVfxEnabled = outputScale < 8
+      && resolveWaterMetalTransmissionVfxEnabled(renderLook);
     // E08 is a normal-detail HDR-composite experiment. Its displaced transport
     // reuses existing presenter textures and never enters the direct 8x shader.
     const liquidSurfaceVfxEnabled = outputScale < 8
@@ -11209,6 +11297,7 @@ export class PixiFieldPresenter {
       uCarbonDioxideBodyVfx: {
         value: carbonDioxideBodyVfxEnabled ? 1 : 0, type: 'f32',
       },
+      uFogCoreDiffuseVfx: { value: fogCoreDiffuseVfxEnabled ? 1 : 0, type: 'f32' },
       uNobleGasBillowVfx: { value: nobleGasBillowVfxEnabled ? 1 : 0, type: 'f32' },
       uNobleGasPrismVfx: { value: nobleGasPrismVfxEnabled ? 1 : 0, type: 'f32' },
       uSmokeSoftnessVfx: { value: smokeSoftnessVfxEnabled ? 1 : 0, type: 'f32' },
@@ -11249,6 +11338,9 @@ export class PixiFieldPresenter {
       },
       uMetalWaterContactVfx: {
         value: metalWaterContactVfxEnabled ? outputScale : 0, type: 'f32',
+      },
+      uWaterMetalTransmissionVfx: {
+        value: waterMetalTransmissionVfxEnabled ? outputScale : 0, type: 'f32',
       },
       uPowderBodyVfx: { value: powderBodyVfxEnabled ? 1 : 0, type: 'f32' },
       uSootyPowderBodyVfx: { value: sootyPowderBodyVfxEnabled ? 1 : 0, type: 'f32' },
@@ -11472,6 +11564,7 @@ export class PixiFieldPresenter {
       this.uniforms.uniforms.uGasCoreDepthVfx = 0;
       this.uniforms.uniforms.uHydrogenBodyVfx = 0;
       this.uniforms.uniforms.uCarbonDioxideBodyVfx = 0;
+      this.uniforms.uniforms.uFogCoreDiffuseVfx = 0;
       this.uniforms.uniforms.uNobleGasBillowVfx = 0;
       this.uniforms.uniforms.uNobleGasPrismVfx = 0;
       this.uniforms.uniforms.uSmokeSoftnessVfx = 0;
@@ -11505,6 +11598,7 @@ export class PixiFieldPresenter {
       this.uniforms.uniforms.uWaterBodyVfx = 0;
       this.uniforms.uniforms.uLiquidSolidMeniscusVfx = 0;
       this.uniforms.uniforms.uMetalWaterContactVfx = 0;
+      this.uniforms.uniforms.uWaterMetalTransmissionVfx = 0;
       this.uniforms.uniforms.uPowderBodyVfx = 0;
       this.uniforms.uniforms.uSootyPowderBodyVfx = 0;
       this.uniforms.uniforms.uThermiteBodyVfx = 0;
@@ -11550,6 +11644,7 @@ export class PixiFieldPresenter {
             || new URLSearchParams(location.search).get('gasCoreDepthVfxAudit') === '1'
             || new URLSearchParams(location.search).get('hydrogenBodyVfxAudit') === '1'
             || new URLSearchParams(location.search).get('carbonDioxideBodyVfxAudit') === '1'
+            || new URLSearchParams(location.search).get('fogCoreDiffuseVfxAudit') === '1'
             || new URLSearchParams(location.search).get('nobleGasBillowVfxAudit') === '1'
             || new URLSearchParams(location.search).get('nobleGasPrismVfxAudit') === '1'
             || new URLSearchParams(location.search).get('smokeSoftnessVfxAudit') === '1'
@@ -11572,6 +11667,7 @@ export class PixiFieldPresenter {
             || new URLSearchParams(location.search).get('plantCanopyTissueVfxAudit') === '1'
             || new URLSearchParams(location.search).get('plantCanopyInterlockVfxAudit') === '1'
             || new URLSearchParams(location.search).get('metalWaterContactVfxAudit') === '1'
+            || new URLSearchParams(location.search).get('waterMetalTransmissionVfxAudit') === '1'
             || new URLSearchParams(location.search).get('woodBarkReliefVfxAudit') === '1'
             || new URLSearchParams(location.search).get('woodTanninVfxAudit') === '1'
             || new URLSearchParams(location.search).get('glassBodyVfxAudit') === '1'
@@ -11634,6 +11730,9 @@ export class PixiFieldPresenter {
     ) > 0.5 ? 'active' : 'inactive';
     presenter.app.canvas.dataset.carbonDioxideBodyVfx = Number(
       presenter.uniforms.uniforms.uCarbonDioxideBodyVfx
+    ) > 0.5 ? 'active' : 'inactive';
+    presenter.app.canvas.dataset.fogCoreDiffuseVfx = Number(
+      presenter.uniforms.uniforms.uFogCoreDiffuseVfx
     ) > 0.5 ? 'active' : 'inactive';
     presenter.app.canvas.dataset.nobleGasBillowVfx = Number(
       presenter.uniforms.uniforms.uNobleGasBillowVfx
@@ -11732,6 +11831,9 @@ export class PixiFieldPresenter {
     ) > 0.5 ? 'active' : 'inactive';
     presenter.app.canvas.dataset.metalWaterContactVfx = Number(
       presenter.uniforms.uniforms.uMetalWaterContactVfx
+    ) > 0.5 ? 'active' : 'inactive';
+    presenter.app.canvas.dataset.waterMetalTransmissionVfx = Number(
+      presenter.uniforms.uniforms.uWaterMetalTransmissionVfx
     ) > 0.5 ? 'active' : 'inactive';
     presenter.app.canvas.dataset.liquidSurfaceVfx = presenter.hdrPipelineInfo.active
       && presenter.hdrPipelineInfo.liquidSurfaceVfx ? 'active' : 'inactive';
@@ -13166,6 +13268,7 @@ export class PixiFieldPresenter {
         this.uniforms.uniforms.uGasCoreDepthVfx = 0;
         this.uniforms.uniforms.uHydrogenBodyVfx = 0;
         this.uniforms.uniforms.uCarbonDioxideBodyVfx = 0;
+        this.uniforms.uniforms.uFogCoreDiffuseVfx = 0;
         this.uniforms.uniforms.uNobleGasBillowVfx = 0;
         this.uniforms.uniforms.uNobleGasPrismVfx = 0;
         this.uniforms.uniforms.uSmokeSoftnessVfx = 0;
@@ -13199,6 +13302,7 @@ export class PixiFieldPresenter {
         this.uniforms.uniforms.uWaterBodyVfx = 0;
         this.uniforms.uniforms.uLiquidSolidMeniscusVfx = 0;
         this.uniforms.uniforms.uMetalWaterContactVfx = 0;
+        this.uniforms.uniforms.uWaterMetalTransmissionVfx = 0;
         this.uniforms.uniforms.uPowderBodyVfx = 0;
         this.uniforms.uniforms.uSootyPowderBodyVfx = 0;
         this.uniforms.uniforms.uThermiteBodyVfx = 0;
@@ -13220,6 +13324,7 @@ export class PixiFieldPresenter {
         this.app.canvas.dataset.gasCoreDepthVfx = 'inactive';
         this.app.canvas.dataset.hydrogenBodyVfx = 'inactive';
         this.app.canvas.dataset.carbonDioxideBodyVfx = 'inactive';
+        this.app.canvas.dataset.fogCoreDiffuseVfx = 'inactive';
         this.app.canvas.dataset.nobleGasBillowVfx = 'inactive';
         this.app.canvas.dataset.nobleGasPrismVfx = 'inactive';
         this.app.canvas.dataset.smokeSoftnessVfx = 'inactive';
@@ -13253,6 +13358,7 @@ export class PixiFieldPresenter {
         this.app.canvas.dataset.waterBodyVfx = 'inactive';
         this.app.canvas.dataset.liquidSolidMeniscusVfx = 'inactive';
         this.app.canvas.dataset.metalWaterContactVfx = 'inactive';
+        this.app.canvas.dataset.waterMetalTransmissionVfx = 'inactive';
         this.app.canvas.dataset.liquidSurfaceVfx = 'inactive';
         this.app.canvas.dataset.powderBodyVfx = 'inactive';
         this.app.canvas.dataset.sootyPowderBodyVfx = 'inactive';

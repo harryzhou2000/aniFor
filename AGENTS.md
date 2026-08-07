@@ -13,7 +13,7 @@ powder, solid, liquid, gas, energy, and contact scenes across Canvas and WebGL a
 mobile gestures, save/load, CI, and Pages deployment as protected regression
 contracts rather than the primary feature stream.
 
-The accepted visual experiment ladder now runs through E55. E12 is the
+The accepted visual experiment ladder now runs through E57. E12 is the
 species-safe Sand/Clay/Concrete wet-sediment checkpoint; preserve its exact
 aqueous owner/stability proof, split moving-powder/stationary-Water control,
 Local/Grains no-op, fine structures, authored gaps, Canvas fallback, and true
@@ -1102,6 +1102,55 @@ tail was `5110.9 ms`. A fresh 2× E53 parent gate with E55 inactive also passes
 through a `5135.8 ms` true-8× fence, and the full composed 1×/2×/4× material
 rank passes exact-scene and cross-scale checks; this is regression evidence,
 not an aggregate-score uplift claim.
+
+E56 is the accepted normal-WebGL-only exact-Water-side transmission checkpoint,
+independently measurable with `?waterMetalTransmissionVfx=0|1` and a strict
+child of E03/E14/E17/E37. It may style only authoritative ordinary connected
+trait-free, non-emissive Water `2` beside exact Metal `23` inside E14's already
+proven clean Liquid/Solid contact. Reuse only E14's live wet-contact band,
+crown, and pocket for a bounded RGB-only transmitted key, opposing absorption,
+and directional low-saturation rear-pocket attenuation. It adds no sample,
+texture, field, resource, pass, target, upload, allocation, clock, alpha,
+support, silhouette, ownership, topology, state, or physics decision. The
+Metal side remains E37-owned; Oil, Acid, unlike-liquid/foreign/triple contacts,
+air, deep non-contact Water, traits, emission, walls, holes, fine topology,
+Canvas, and compact true 8× retain their established paths. The frozen
+normal-WebGL 1×/2×/4× off→on→off gate measures horizontal Water-side RGB RMS
+`7.69/7.07/6.42` with peaks `18/19/16` and vertical RGB RMS
+`7.05/3.36/2.02` with peaks `14/8/5`; its worst cross-scale target ratio is
+`3.4901` inside the fixed `4.0` ceiling. Protected raw pixels, semantics,
+alpha/support, walls, ownership, and repeated-off frames remain exact. Only
+the named shared-interface Metal strips and bounded mixed-triple compositor
+pixels may inherit the same raster footprint. Requested-on true 8× keeps
+E03/E14/E17/E37/E56/HDR/bloom inactive for `scale-8`, promotes exact
+4896×3072 WebGL, and completes a GPU fence; the accepted tail was `5186.3 ms`
+with zero browser errors.
+
+An earlier E56 branch-local GLSL scope mistake blanked normal WebGL even though
+TypeScript and shader-string tests passed. Production-browser shader compilation
+is therefore mandatory evidence for E56 and any later normal-fragment edit; a
+source or unit pass alone is not an acceptance substitute.
+
+E57 is the accepted normal-WebGL-only exact-FOG connected-core checkpoint,
+independently measurable with `?fogCoreDiffuseVfx=0|1` and a strict child of
+E04. It may style only propagated atmosphere identity `10` with connected body
+support, outside native walls and non-emissive ownership. Reuse only E04's
+already-live billow/wave-C carriers, cardinal directional relief, crown/pocket,
+optical depth, neighbour density, body support, and gas base colour for a broad
+pearly crown, opposing blue-grey pocket, and restrained core attenuation. It
+adds no wave, sample, texture, field, resource, pass, target, upload,
+allocation, clock, alpha, support, silhouette, ownership, topology, state, or
+physics decision; Canvas and compact true 8× retain style-10 presentation.
+The frozen 1×/2×/4× gate holds broad-body RGB RMS `2.10–2.11`, deep-core
+`3.92`, crown `5.03–5.04`, and pocket `2.77–2.79`, with microcontrast
+`.13–.23`, exact off→on→off recovery, and exact semantic/atmosphere-alpha/wall/
+raw controls. The eligible named FOG-side seam shoulder is independently
+bounded to seven composed bytes and excluded from RGB-exact raw controls while
+remaining in the raw-alpha proof; the foreign CO2 side retains its two-byte
+composed cap and exact raw pixel.
+Requested-on true 8× keeps E04/E57/HDR inactive for `scale-8`, promotes exact
+4896×3072 WebGL, and completes a GPU fence; the frozen full-matrix tail was
+`5268.9 ms` with zero browser errors.
 
 The isolated candidate-survey v1 route is app-owned and must use the
 deterministic 612×384 RenderLab backend unless `simulation=native` is explicit.

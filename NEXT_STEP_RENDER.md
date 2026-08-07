@@ -930,11 +930,45 @@ does not alter simulation, camera, semantic ownership, or `renderScale`.
   then toggles only the E55 uniform in one hydrated page per scale, so
   flat→styled→flat evidence is causal and every 4× protected/repeated page
   footprint is exact.
+- **E56 accepted Water/Metal transmission:** exact Water `2` gains a normal-WebGL-only transmitted
+  contact response on the Water side of exact Metal `23`, as a strict
+  E03/E14/E17/E37 child (`?waterMetalTransmissionVfx=0|1`). Only ordinary,
+  connected, trait-free, non-emissive Water inside E14's clean proven
+  Liquid/Solid contact may respond. It reuses E14's live band/crown/pocket for
+  an RGB-only transmitted key, opposing absorption, and directional
+  low-saturation rear-pocket attenuation; the Metal side remains E37-owned.
+  It adds no sample, texture, field, resource, pass, target, upload, allocation,
+  clock, alpha, support, silhouette, ownership, topology, state, or physics
+  decision. Oil, Acid, air/deep non-contact Water, foreign or triple contacts,
+  walls, traits, emission, holes, fine topology, Canvas, and compact true 8×
+  remain controls. The frozen 1×/2×/4× off→on→off response measures horizontal
+  Water-side RGB RMS `7.69/7.07/6.42` (peaks `18/19/16`) and vertical RGB RMS
+  `7.05/3.36/2.02` (peaks `14/8/5`), with worst cross-scale ratio `3.4901`
+  inside the fixed `4.0` ceiling. Requested-on true 8× excludes
+  E03/E14/E17/E37/E56/HDR at exact 4896×3072; its GPU fence completed in
+  `5186.3 ms` with zero browser errors.
+- **E57 accepted FOG volume:** exact propagated atmosphere style `10` gains a
+  normal-WebGL-only connected-core treatment as a strict E04 child
+  (`?fogCoreDiffuseVfx=0|1`). It reuses only E04's existing billow/wave-C,
+  directional relief, crown/pocket, optical-depth, neighbour-density,
+  body-support, and gas-base evidence for a broad pearly crown, opposing
+  blue-grey pocket, and restrained core attenuation. It adds no wave, sample,
+  texture, field, resource, pass, target, upload, allocation, clock, alpha,
+  support, silhouette, ownership, topology, state, or physics decision. The
+  frozen 1×/2×/4× response is scale-stable: broad-body RGB RMS `2.10–2.11`,
+  deep core `3.92`, crown `5.03–5.04`, pocket `2.77–2.79`, and microcontrast
+  `.13–.23`. Semantics, atmosphere alpha/style, holes/channels, sparse FOG,
+  sibling gases, contacts, walls, raw pixels, and repeated-off frames stay
+  exact. The eligible named FOG-side seam shoulder has a seven-byte composed
+  cap while remaining in the raw-alpha proof; the foreign CO2 pixel stays raw
+  exact with a two-byte composed cap. Requested-on true 8× excludes E04/E57/HDR
+  at exact 4896×3072 and the frozen full-matrix fence completed in `5268.9 ms`
+  with zero browser errors.
 - **Protected 8× rung:** `renderScale=8` deliberately reports
   `hdrPipeline=inactive` / `scale-8` and retains the proven direct single-mesh
   4896×3072 path. The experiment must earn a bounded 8× design rather than
   allocating a 115 MiB full-resolution float target beside that path.
-- **Current decision:** E01/E02/E03/E04/E05/E06/E07/E08/E09/E10/E11/E12/E13/E14/E15/E16/E17/E18/E19/E20/E21/E22/E23/E24/E25/E26/E27/E28/E29/E30/E31/E32/E33/E34/E35/E36/E37/E38/E39/E40/E41/E42/E43/E44/E45/E46/E47/E48/E49/E50/E51/E52/E53/E54/E55 remain opt-in through the non-Classic looks
+- **Current decision:** E01/E02/E03/E04/E05/E06/E07/E08/E09/E10/E11/E12/E13/E14/E15/E16/E17/E18/E19/E20/E21/E22/E23/E24/E25/E26/E27/E28/E29/E30/E31/E32/E33/E34/E35/E36/E37/E38/E39/E40/E41/E42/E43/E44/E45/E46/E47/E48/E49/E50/E51/E52/E53/E54/E55/E56/E57 remain opt-in through the non-Classic looks
   until representative hardware timing and mobile thermal behavior are
   measured. E02 remains the safe family-wide baseline. E03 is accepted as the
   liquid-depth checkpoint: its fit-view crop is visibly more cohesive, retains
@@ -1994,6 +2028,38 @@ while E03/E14/E17/E37/HDR remain inactive for `scale-8`, with no bloom and a
 completed GPU fence. The numeric response bounds and cross-scale strength
 ceiling are intentionally frozen in the gate rather than duplicated here.
 
+Run the focused E56 Water/Metal transmission gate with E03/E14/E17/E37 live,
+then toggle only `waterMetalTransmissionVfx=0 → 1 → 0` at normal WebGL
+1×/2×/4×. It must prove the exact Water side of horizontal and vertical
+WATR/METL contacts changes only through the inherited clean-contact proof,
+while Metal/E37, Oil/Metal, Acid/Metal, air/deep non-contact Water, foreign and
+triple contacts, walls, traits, emission, holes, fine topology, Canvas, and raw
+protected pixels remain exact. Semantic, alpha, support, auxiliary/wall state,
+CSS/backing geometry, and repeated-off framebuffer recovery are invariants.
+Requested-on true 8× must exclude E03/E14/E17/E37/E56/HDR for `scale-8`, retain
+the direct 4896×3072 path, and complete the recovery/fence evidence. A prior
+branch-local GLSL scope error blanked normal WebGL despite TypeScript and
+shader-string tests passing, so this gate must include successful production
+browser shader compilation; source/unit checks alone are insufficient.
+
+The accepted E56 run measures horizontal Water-side RGB RMS
+`7.69/7.07/6.42` and vertical RGB RMS `7.05/3.36/2.02` at 1×/2×/4×,
+respectively. Its worst target-strength ratio is `3.4901`, all dependency
+probes collapse E56 when any required parent is disabled, and requested-on true
+8× remains selector/resource-excluded at exact 4896×3072 with a signalled
+`5186.3 ms` GPU fence and zero browser errors.
+
+Run `npm run audit:vfx:fog-core-diffuse` for E57. It holds only E04 live while
+toggling `fogCoreDiffuseVfx=0 → 1 → 0` at normal WebGL 1×/2×/4×, then proves
+the selector and HDR resources remain excluded at true 8×. The fixture owns a
+broad style-10 FOG superellipse with opposite crown/pocket probes, deep core,
+authored void/open channel, sparse carriers, seven sibling gases, unlike-gas
+seam, Water/Metal contacts, native wall, and blank controls. The FOG side of
+the FOG/CO2 seam is a named bounded composed control, not an RGB-exact control;
+it remains in the raw-alpha invariant, while the CO2 integer-cell pixel remains
+raw exact. The frozen full matrix completes exact 4896×3072 with a signalled
+`5268.9 ms` GPU fence and zero browser errors.
+
 The earlier post-E16 survey was invalid for Solid: it sampled native Stone `21`,
 which is Powder, while labelling that region Solid. The corrected post-E17
 showcase uses native ROCK `78`, asserts exactly `2769` matching Solid cells, and
@@ -2100,7 +2166,7 @@ next production 4× survey then selected Wood/PLNT as the largest remaining
   coverage `.971`, macro range `50`, zero dark/clipped fraction, and exact
   semantics across the full composed matrix.
 
-**Next visual experiments:** E03–E55 provide accepted liquid body/surface,
+**Next visual experiments:** E03–E57 provide accepted liquid body/surface,
 stable-gas, coherent-gas-motion, powder-depth, and powder-local-light
 checkpoints plus exact resting contact grounding, Glass/Ice transmission, and
 state-aware Wax/PLNT subsurface response, composed wet-mineral optics,
@@ -2136,7 +2202,12 @@ E55 closes the diagnosed PLNT middle-scale gap as a strict E53/E36 child:
 its focused evidence increases broad macro hierarchy and reduces local/seam
 contrast without claiming an aggregate composed-score improvement.
 E37 adds exact Metal-side Water-contact spectral separation over the joint E14+
-E17 proof without changing either body's topology. E38 turns the previously
+E17 proof without changing either body's topology. E56 completes only the
+exact WATR side beside exact METL through E03/E14/E17/E37's inherited clean
+contact proof; its focused browser gate freezes the measured response and
+true-8× exclusion above. E57 gives exact FOG a broad, diffuse connected
+core over E04 without altering atmosphere support, authored gaps, sibling gases,
+Canvas, or compact true 8×. E38 turns the previously
 flat, opaque-looking exact-Oil pool into a broad bipolar amber/cool volume by
 recombining already-live E22/E03 evidence; it deliberately ends the current
 Oil stack. E39 turns the formerly one-sided exact-Acid absorption into a broad
@@ -2289,14 +2360,14 @@ and downsample retention at `.9620–.9648`. The 15-cell macro P90–P10 gain is
 `.0409–.0483`/`.0229–.0273` and dark/strong seam fractions do not increase.
 All 34 controls remain exact in semantic/raw WebGL evidence; the two named 2×
 Sand-contact full-page compositor diagnostics alone have a bounded one-byte
-  allowance after seven canonical paused-field stability refreshes per scale.
-  The gate then toggles only the E55 uniform in one hydrated page per scale.
-  Semantics, state, support, walls, auxiliary data, direct owned-PLNT
-  repeated-off frames, and every 4× protected/repeated page footprint are
-  exact. The 4× robustness capture is a completed frame with direct WebGL alpha
-  readback and one evidence PNG under a bounded 60-second compositor transfer.
-  Requested-on true 8× proves E20/E26/E28/E32/E34/E36/E53/
-E55/HDR/bloom inactive for `scale-8`, exact 4896×3072 WebGL, and a GPU fence;
+allowance after seven canonical paused-field stability refreshes per scale. The
+gate then toggles only the E55 uniform in one hydrated page per scale.
+Semantics, state, support, walls, auxiliary data, direct owned-PLNT
+repeated-off frames, and every 4× protected/repeated page footprint are exact.
+The 4× robustness capture is a completed frame with direct WebGL alpha readback
+and one evidence PNG under a bounded 60-second compositor transfer.
+Requested-on true 8× proves E20/E26/E28/E32/E34/E36/E53/E55/HDR/bloom inactive
+for `scale-8`, exact 4896×3072 WebGL, and a GPU fence;
 the accepted full-matrix tail was `5110.9 ms`. The focused release gate is
 `npm run audit:vfx:plant-canopy-interlock`. A fresh 2× E53 parent run with E55
 inactive also passes through a `5135.8 ms` true-8× fence, while the full composed
@@ -2378,7 +2449,7 @@ is `24.657/23.679/22.240` at 1×/2×/4×, with full support and zero dark/clippe
 fraction. Do not alter E48 from candidate-rank evidence; its focused exact-owner
 fixture remains the acceptance contract. Choose any later experiment only from
 a new visible fit-view diagnosis. Preserve the E14 1× stencil snap and all
-E01–E55 selectors and controls.
+E01–E57 selectors and controls.
 
 ## Phase 1 — HDR pipeline & lighting core (biggest visual payoff)
 

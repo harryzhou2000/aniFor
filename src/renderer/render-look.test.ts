@@ -11,6 +11,7 @@ import {
   resolveWoodBarkReliefVfxEnabled,
   resolveWoodTanninVfxEnabled,
   resolveCarbonDioxideBodyVfxEnabled,
+  resolveFogCoreDiffuseVfxEnabled,
   resolveCeramicGlazeVfxEnabled,
   DEFAULT_RENDER_LOOK, resolveGasBodyVfxEnabled, resolveGasCoreDepthVfxEnabled,
   resolveGasLightVfxEnabled,
@@ -36,6 +37,7 @@ import {
   resolveRockMesostructureVfxEnabled,
   resolveRockRoughnessVfxEnabled,
   resolveMetalWaterContactVfxEnabled,
+  resolveWaterMetalTransmissionVfxEnabled,
   resolveSolidBodyVfxEnabled,
   resolvePowderBodyVfxEnabled, resolvePowderLightVfxEnabled,
   resolveSootyPowderBodyVfxEnabled,
@@ -283,6 +285,35 @@ describe('resolveRenderLook', () => {
     )).toBe(true);
     expect(resolveMetalWaterContactVfxEnabled(
       'neon-lab', '?metalWaterContactVfx=false',
+    )).toBe(false);
+  });
+
+  it('keeps Water/Metal transmission subordinate to E37 and frozen in input audits', () => {
+    expect(resolveWaterMetalTransmissionVfxEnabled(
+      'classic', '?waterMetalTransmissionVfx=on',
+    )).toBe(false);
+    expect(resolveWaterMetalTransmissionVfxEnabled('realistic', '')).toBe(true);
+    expect(resolveWaterMetalTransmissionVfxEnabled('neon-lab', '')).toBe(true);
+    expect(resolveWaterMetalTransmissionVfxEnabled(
+      'realistic', '?inputAudit=1',
+    )).toBe(false);
+    expect(resolveWaterMetalTransmissionVfxEnabled(
+      'realistic', '?inputAudit=1&waterMetalTransmissionVfx=true',
+    )).toBe(true);
+    expect(resolveWaterMetalTransmissionVfxEnabled(
+      'realistic', '?metalWaterContactVfx=0&waterMetalTransmissionVfx=on',
+    )).toBe(false);
+    expect(resolveWaterMetalTransmissionVfxEnabled(
+      'realistic', '?solidBodyVfx=0&metalWaterContactVfx=on&waterMetalTransmissionVfx=on',
+    )).toBe(false);
+    expect(resolveWaterMetalTransmissionVfxEnabled(
+      'realistic', '?liquidSolidMeniscusVfx=0&metalWaterContactVfx=on&waterMetalTransmissionVfx=on',
+    )).toBe(false);
+    expect(resolveWaterMetalTransmissionVfxEnabled(
+      'realistic', '?volumeVfx=0&waterMetalTransmissionVfx=on',
+    )).toBe(false);
+    expect(resolveWaterMetalTransmissionVfxEnabled(
+      'realistic', '?waterMetalTransmissionVfx=off',
     )).toBe(false);
   });
 
@@ -782,6 +813,36 @@ describe('resolveRenderLook', () => {
     )).toBe(false);
     expect(resolveCarbonDioxideBodyVfxEnabled(
       'realistic', '?volumeVfx=0&gasBodyVfx=on&carbonDioxideBodyVfx=1',
+    )).toBe(true);
+  });
+
+  it('keeps exact FOG core diffusion subordinate to E04 and isolated from older input audits', () => {
+    expect(resolveFogCoreDiffuseVfxEnabled(
+      'classic', '?fogCoreDiffuseVfx=on',
+    )).toBe(false);
+    expect(resolveFogCoreDiffuseVfxEnabled('realistic', '')).toBe(true);
+    expect(resolveFogCoreDiffuseVfxEnabled('neon-lab', '')).toBe(true);
+    expect(resolveFogCoreDiffuseVfxEnabled('realistic', '?inputAudit=1')).toBe(false);
+    expect(resolveFogCoreDiffuseVfxEnabled(
+      'realistic', '?inputAudit=1&fogCoreDiffuseVfx=true',
+    )).toBe(true);
+    expect(resolveFogCoreDiffuseVfxEnabled(
+      'realistic', '?fogCoreDiffuseVfx=off',
+    )).toBe(false);
+    expect(resolveFogCoreDiffuseVfxEnabled(
+      'realistic', '?fogCoreDiffuseVfx=0',
+    )).toBe(false);
+    expect(resolveFogCoreDiffuseVfxEnabled(
+      'realistic', '?fogCoreDiffuseVfx=false',
+    )).toBe(false);
+    expect(resolveFogCoreDiffuseVfxEnabled(
+      'realistic', '?fogCoreDiffuseVfx=on',
+    )).toBe(true);
+    expect(resolveFogCoreDiffuseVfxEnabled(
+      'realistic', '?gasBodyVfx=0&fogCoreDiffuseVfx=on',
+    )).toBe(false);
+    expect(resolveFogCoreDiffuseVfxEnabled(
+      'realistic', '?volumeVfx=0&gasBodyVfx=on&fogCoreDiffuseVfx=1',
     )).toBe(true);
   });
 

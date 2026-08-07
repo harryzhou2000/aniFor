@@ -85,6 +85,7 @@ import type { HydrogenBodyVfxAuditSnapshot } from './hydrogen-body-vfx-audit';
 import type {
   CarbonDioxideBodyVfxAuditSnapshot,
 } from './carbon-dioxide-body-vfx-audit';
+import type { FogCoreDiffuseVfxAuditSnapshot } from './fog-core-diffuse-vfx-audit';
 import type { RadioactiveSolidBodyVfxAuditSnapshot } from './radioactive-solid-body-vfx-audit';
 import type { SmokeSoftnessVfxAuditSnapshot } from './smoke-softness-vfx-audit';
 import type { PlasmaCoreVfxAuditSnapshot } from './plasma-core-vfx-audit';
@@ -258,6 +259,8 @@ export interface BrowserInputAuditApi {
   prepareHydrogenBodyVfxFixture(): void;
   carbonDioxideBodyVfxFixture(): CarbonDioxideBodyVfxAuditSnapshot;
   prepareCarbonDioxideBodyVfxFixture(): void;
+  fogCoreDiffuseVfxAtlas(): FogCoreDiffuseVfxAuditSnapshot;
+  prepareFogCoreDiffuseVfxFixture(): void;
   radioactiveSolidBodyVfxFixture(): RadioactiveSolidBodyVfxAuditSnapshot;
   prepareRadioactiveSolidBodyVfxFixture(): void;
   smokeSoftnessVfxFixture(): SmokeSoftnessVfxAuditSnapshot;

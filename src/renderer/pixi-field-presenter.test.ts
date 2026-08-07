@@ -841,7 +841,8 @@ describe('Pixi presenter startup configuration', () => {
     expect(eight).not.toContain('metalWaterContactVfx');
     expect(canvasSource).not.toContain('metalWaterContactVfx');
     expect(normal).toContain('abs(candidate - 2.0) < 0.5 ? 1.0 : 0.0');
-    expect(normal).toContain('float packedForeignMatter = foreignMatter + exactWaterCandidate;');
+    expect(normal).toContain('float packedForeignMatter = foreignMatter + exactWaterCandidate');
+    expect(normal).toContain('+ exactMetalCandidate * 2.0;');
     expect(normal.match(/contactSample\(/g)).toHaveLength(5);
     expect(e37).toContain('uMetalWaterContactVfx > 0.5');
     expect(e37).toContain('uSolidBodyVfx > 0.5');
@@ -871,6 +872,54 @@ describe('Pixi presenter startup configuration', () => {
     expect(source).toContain("get('metalWaterContactVfxAudit') === '1'");
     expect(source).toMatch(
       /const metalWaterContactVfxEnabled = outputScale < 8\s*&& resolveMetalWaterContactVfxEnabled\(renderLook\);/,
+    );
+  });
+
+  it('keeps E56 on exact Water beside Metal with no new contact/resource path', () => {
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const canvasSource = readFileSync(new URL('./field-renderer.ts', import.meta.url), 'utf8');
+    const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');
+    const normalStart = source.indexOf('const FIELD_FRAGMENT = `', eightStart);
+    const normalEnd = source.indexOf('`;\n\n/** Primary WebGL presentation', normalStart);
+    const eight = source.slice(eightStart, normalStart);
+    const normal = source.slice(normalStart, normalEnd);
+    const e56Start = normal.indexOf('      // E56:');
+    const e56End = normal.indexOf('    // Twenty ordinary', e56Start);
+    const e56 = normal.slice(e56Start, e56End);
+
+    expect(e56Start).toBeGreaterThanOrEqual(0);
+    expect(e56End).toBeGreaterThan(e56Start);
+    expect(normal).toContain('uniform float uWaterMetalTransmissionVfx;');
+    expect(eight).not.toContain('uWaterMetalTransmissionVfx');
+    expect(eight).not.toContain('waterMetalTransmissionVfx');
+    expect(canvasSource).not.toContain('waterMetalTransmissionVfx');
+    expect(normal).toContain('abs(candidate - 23.0) < 0.5 ? 1.0 : 0.0');
+    expect(normal).toContain('+ exactMetalCandidate * 2.0;');
+    expect(normal.match(/contactSample\(/g)).toHaveLength(5);
+    expect(normal.match(/out float foreignMatterContact/g)).toHaveLength(1);
+    for (const parent of [
+      'uWaterMetalTransmissionVfx > 0.5', 'uMetalWaterContactVfx > 0.5',
+    ]) expect(e56).toContain(parent);
+    expect(e56).toContain('material == 2.0');
+    expect(e56).toContain('foreignMatterContact > 2.5');
+    expect(e56).toContain('wetContactBand');
+    expect(e56).toContain('wetContactCrown');
+    expect(e56).toContain('wetContactPocket');
+    expect(e56).not.toContain('contactSample(');
+    expect(e56).not.toContain('texture(');
+    expect(e56).not.toContain('botanicalBodyNoise(');
+    expect(e56).not.toContain('uTime');
+    expect(e56).not.toContain('gl_FragCoord');
+    expect(e56).not.toMatch(/\b(?:float|vec[234])\s+[A-Za-z_]/);
+    expect(e56).not.toMatch(/\b(?:alpha|support)\s*[+*]?=/);
+    expect(source).toContain('value: waterMetalTransmissionVfxEnabled ? outputScale : 0');
+    expect(source.match(/this\.uniforms\.uniforms\.uWaterMetalTransmissionVfx = 0;/g))
+      .toHaveLength(2);
+    expect(source).toContain('presenter.app.canvas.dataset.waterMetalTransmissionVfx');
+    expect(source).toContain("this.app.canvas.dataset.waterMetalTransmissionVfx = 'inactive';");
+    expect(source).toContain("get('waterMetalTransmissionVfxAudit') === '1'");
+    expect(source).toMatch(
+      /const waterMetalTransmissionVfxEnabled = outputScale < 8\s*&& resolveWaterMetalTransmissionVfxEnabled\(renderLook\);/,
     );
   });
 
@@ -2686,7 +2735,7 @@ describe('Pixi presenter startup configuration', () => {
     const eight = source.slice(eightStart, normalStart);
     const normal = source.slice(normalStart, normalEnd);
     const e44Start = normal.indexOf('      // E44:');
-    const e44End = normal.indexOf('      // E27:', e44Start);
+    const e44End = normal.indexOf('      // E57:', e44Start);
     const e44 = normal.slice(e44Start, e44End);
     const parentStart = normal.lastIndexOf('    if (uGasBodyVfx > 0.5)', e44Start);
     const preserveStart = source.indexOf('preserveDrawingBuffer:');
@@ -2731,6 +2780,62 @@ describe('Pixi presenter startup configuration', () => {
     expect(source).toContain('presenter.app.canvas.dataset.carbonDioxideBodyVfx');
     expect(source).toContain("this.app.canvas.dataset.carbonDioxideBodyVfx = 'inactive';");
     expect(preserve).toContain("get('carbonDioxideBodyVfxAudit') === '1'");
+  });
+
+  it('keeps E57 FOG core diffusion exact-style, E04-dependent, normal-WebGL-only, and RGB-only', () => {
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const canvasSource = readFileSync(new URL('./field-renderer.ts', import.meta.url), 'utf8');
+    const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');
+    const normalStart = source.indexOf('const FIELD_FRAGMENT = `', eightStart);
+    const normalEnd = source.indexOf('`;\n\n/** Primary WebGL presentation', normalStart);
+    const eight = source.slice(eightStart, normalStart);
+    const normal = source.slice(normalStart, normalEnd);
+    const e57Start = normal.indexOf('      // E57:');
+    const e57End = normal.indexOf('      // E27:', e57Start);
+    const e57 = normal.slice(e57Start, e57End);
+    const parentStart = normal.lastIndexOf('    if (uGasBodyVfx > 0.5)', e57Start);
+    const preserveStart = source.indexOf('preserveDrawingBuffer:');
+    const preserveEnd = source.indexOf('resolution: outputScale', preserveStart);
+    const preserve = source.slice(preserveStart, preserveEnd);
+
+    expect(eightStart).toBeGreaterThanOrEqual(0);
+    expect(normalStart).toBeGreaterThan(eightStart);
+    expect(normalEnd).toBeGreaterThan(normalStart);
+    expect(e57Start).toBeGreaterThanOrEqual(0);
+    expect(e57End).toBeGreaterThan(e57Start);
+    expect(parentStart).toBeGreaterThanOrEqual(0);
+    expect(normal).toContain('uniform float uFogCoreDiffuseVfx;');
+    expect(normal.match(/uFogCoreDiffuseVfx > 0\.5/g)).toHaveLength(1);
+    expect(eight).not.toContain('uFogCoreDiffuseVfx');
+    expect(eight).not.toContain('fogCorePhase');
+    expect(canvasSource).not.toContain('fogCoreDiffuseVfx');
+    for (const guard of [
+      'uFogCoreDiffuseVfx > 0.5', 'uGasIdentityStyling > 0.5',
+      'wall < 0.5', '!materialEmissive',
+      'floor(gasStyleState.r * 255.0 + 0.5)',
+      'abs(fogCoreStyle - 10.0)', 'fogCoreOwner > 0.5',
+    ]) expect(e57).toContain(guard);
+    for (const establishedFieldScalar of [
+      'gasVfxBodySupport', 'cloudNeighbourMean', 'atmosphereState.a',
+      'gasVfxBillow', 'gasVfxWaveC', 'gasDirectionalRelief',
+      'gasCrown', 'gasPocket', 'opticalDepth', 'gasBase',
+    ]) expect(e57).toContain(establishedFieldScalar);
+    expect(e57).not.toContain('texture(');
+    expect(e57).not.toContain('uTime');
+    expect(e57).not.toContain('sin(');
+    expect(e57).not.toContain('gl_FragCoord');
+    expect(e57).not.toMatch(/\balpha\s*[+*]?=/);
+    expect(source).toMatch(
+      /const fogCoreDiffuseVfxEnabled = outputScale < 8\s*&& resolveFogCoreDiffuseVfxEnabled\(renderLook\);/,
+    );
+    expect(source.match(/this\.uniforms\.uniforms\.uFogCoreDiffuseVfx = 0;/g))
+      .toHaveLength(2);
+    expect(source).toContain(
+      'uFogCoreDiffuseVfx: { value: fogCoreDiffuseVfxEnabled ? 1 : 0',
+    );
+    expect(source).toContain('presenter.app.canvas.dataset.fogCoreDiffuseVfx');
+    expect(source).toContain("this.app.canvas.dataset.fogCoreDiffuseVfx = 'inactive';");
+    expect(preserve).toContain("get('fogCoreDiffuseVfxAudit') === '1'");
   });
 
   it('keeps E31 Noble Gas prism exact-style, E25-dependent, normal-WebGL-only, and RGB-only', () => {
