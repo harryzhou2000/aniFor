@@ -13,7 +13,7 @@ powder, solid, liquid, gas, energy, and contact scenes across Canvas and WebGL a
 mobile gestures, save/load, CI, and Pages deployment as protected regression
 contracts rather than the primary feature stream.
 
-The accepted visual experiment ladder now runs through E72. E12 is the
+The accepted visual experiment ladder now runs through E73. E12 is the
 species-safe Sand/Clay/Concrete wet-sediment checkpoint; preserve its exact
 aqueous owner/stability proof, split moving-powder/stationary-Water control,
 Local/Grains no-op, fine structures, authored gaps, Canvas fallback, and true
@@ -1613,6 +1613,50 @@ another Oil layer. The final canonical composed 1×/2×/4× matrix reports E72
 active with full Oil support, zero dark/clipped fraction, luma standard
 deviation `6.05/6.07/6.10`, microcontrast `.45/.46/.48`, and a stable
 `28`-byte macro range / `33`-byte total luma range.
+
+E73 is the accepted normal-WebGL-only exact-Carbon-Dioxide core-fold
+checkpoint, independently measurable with
+`?carbonDioxideCoreFoldVfx=0|1` and strictly subordinate to E44 and therefore
+E04. Only E44's authoritative dense propagated style-6 Carbon Dioxide may
+respond. E73 recombines the already-live billow and third carrier into broad
+cool-transmission and blue-grey absorptive lobes, admitted by the existing
+body, optical-depth, connected-neighbour, and curvature-flat proofs. It adds
+no sample, sampler, texture, field, resource, pass, target, upload, allocation,
+noise, clock, alpha, support, silhouette, ownership, topology, state, or
+physics decision. Canvas and compact true 8× retain E44 and contain no E73
+branch; `inputAudit=1` enables E73 only when explicitly requested.
+
+`npm run audit:vfx:carbon-dioxide-core-fold` owns deterministic E44-parented
+off→on→off captures at 1×/2×/4×. The accepted whole-body response is
+scale-stable at RGB RMS `3.17`, coverage `.556/.559/.558`, peak `8`, and
+bipolar balance `.832/.836/.836`. Its positive anchor is RGB RMS `5.23`,
+signed mean `4.99/4.99/5.02`, and peak `7`; its negative anchor is RGB RMS
+`5.62/5.61/5.63`, signed mean `−5.06/−5.07/−5.08`, and peak `8`. Cross-scale
+response-channel spread is at most `.08` byte. Authored holes/channels, seven
+foreign gases, sparse carriers/midpoint/gap, Water/Metal contact owners, wall,
+blank, semantics, atmosphere style/density, alpha/support, and repeated-off
+framebuffers remain exact. Only the named CO2 soft rim may retain bounded RGB
+(`<=5` composed and `<=12` at one raw subpixel) while its alpha stays exact.
+Requested-on true 8× remains an exact blank 4896×3072 `scale-8` exclusion with
+no E73/HDR resource or fixture upload; the final frozen GPU fence completed in
+`5.2481 s` with zero browser errors.
+
+The canonical composed 1×/2×/4× matrix explicitly enables E73 and now freezes
+the Carbon Dioxide body at luma standard deviation `5.06/5.07/5.07` (up from
+the pre-E73 `3.88`), microcontrast `.38/.39/.39`, chromatic contrast
+`.43/.45/.47`, macro range `18/19/19`, total range `27/27/28`, coverage `.955`,
+full support, one dominant component, and zero dark/clipped fraction. This
+fit-view floor is part of acceptance so an isolated-fixture pass cannot return
+the product scene to a flat grey lozenge.
+
+The next visual diagnostic is exact settled Concrete's 4× detail retention,
+not another Carbon Dioxide layer. The latest composed survey reports Concrete
+quality `100/100/97.588`, luma deviation `7.55/7.68/5.49`, microcontrast
+`6.24/6.95/4.78`, macro range `17/14/11`, coverage `.942`, full support, and
+zero clipping at 1×/2×/4×. Investigate only through the existing deep, stable,
+dry, trait-free, non-emissive Smooth-powder proof; preserve Sand/Clay,
+Local/Grains, unstable/wet/thin/hole/notch/wall/seam controls and the true-8×
+fence contract.
 
 Visual-audit lesson: `inputAudit=1` disables opt-in child selectors unless the
 composed route names them explicitly, so canonical evidence must request and

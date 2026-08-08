@@ -346,6 +346,24 @@ export function resolveCarbonDioxideBodyVfxEnabled(
 }
 
 /**
+ * E73 folds only E44's dense exact-Carbon-Dioxide core into a second broad
+ * transmission lobe. Generic input audits retain the accepted E44 reference
+ * until they explicitly request this resource-neutral child.
+ */
+export function resolveCarbonDioxideCoreFoldVfxEnabled(
+  look: RenderLook,
+  search = globalThis.location?.search ?? '',
+): boolean {
+  if (!resolveCarbonDioxideBodyVfxEnabled(look, search)) return false;
+  const parameters = new URLSearchParams(search);
+  const requested = parameters.get('carbonDioxideCoreFoldVfx');
+  if (requested === '0' || requested === 'off' || requested === 'false') return false;
+  if (requested === '1' || requested === 'on' || requested === 'true') return true;
+  if (parameters.get('inputAudit') === '1') return false;
+  return true;
+}
+
+/**
  * E70 recomposes only exact propagated Steam/WTRV into a pearly condensate
  * volume after E04 has proved a connected atmosphere-owned body. The child
  * cannot recreate the gas baseline, and generic input audits retain their

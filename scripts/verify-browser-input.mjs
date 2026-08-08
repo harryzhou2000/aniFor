@@ -503,6 +503,12 @@ const carbonDioxideBodyVfxOnly = process.argv.includes('--carbon-dioxide-body-vf
 if (carbonDioxideBodyVfxOnly && (modes.length !== 1 || modes[0] !== 'webgl')) {
   throw new Error('--carbon-dioxide-body-vfx-only requires --webgl-only');
 }
+// E73 is a normal-detail exact-Carbon-Dioxide core-fold child of E44. It
+// reuses E44's paused fixture while Canvas and compact true 8x stay controls.
+const carbonDioxideCoreFoldVfxOnly = process.argv.includes('--carbon-dioxide-core-fold-vfx-only');
+if (carbonDioxideCoreFoldVfxOnly && (modes.length !== 1 || modes[0] !== 'webgl')) {
+  throw new Error('--carbon-dioxide-core-fold-vfx-only requires --webgl-only');
+}
 // E70 is a normal-detail exact-Steam condensate-volume child of E04. Canvas
 // and the compact true-8x mesh retain their established style-2 presentation.
 const steamCondensateVfxOnly = process.argv.includes('--steam-condensate-vfx-only');
@@ -648,7 +654,8 @@ const focusedVfxOnlyFlags = [
   sootyPowderBodyVfxOnly, thermiteBodyVfxOnly, snowpackBodyVfxOnly,
   quartzMesostructureVfxOnly, c4BodyVfxOnly, bglaBodyVfxOnly, bglaClusterVfxOnly,
   deutBodyVfxOnly, hydrogenBodyVfxOnly,
-  carbonDioxideBodyVfxOnly, steamCondensateVfxOnly, fogCoreDiffuseVfxOnly,
+  carbonDioxideBodyVfxOnly, carbonDioxideCoreFoldVfxOnly,
+  steamCondensateVfxOnly, fogCoreDiffuseVfxOnly,
   radioactiveSolidBodyVfxOnly, iszsCrystallineVfxOnly, iszsCrystalHierarchyVfxOnly,
   nobleGasBillowVfxOnly, nobleGasPrismVfxOnly,
   smokeSoftnessVfxOnly, smokeBillowDepthVfxOnly, botanicalMesostructureVfxOnly, woodBarkReliefVfxOnly,
@@ -659,7 +666,7 @@ const focusedVfxOnlyFlags = [
   woodTanninVfxOnly,
 ];
 if (focusedVfxOnlyFlags.filter(Boolean).length > 1) {
-  throw new Error('HDR/volume/liquid-body/liquid-surface/liquid-motion/oil-motion/water-curvature/fire-flame/cflm-cold-flame/gas-body/gas-motion/powder-body/powder-light/powder-solid-contact/translucent-edge/organic-subsurface/wet-sediment/gas-light/liquid-solid-meniscus/metal-water-contact/water-metal-transmission/gas-core-depth/plasma-core/solid-body/platinum-body/ceramic-glaze/botanical-body/glass-body/oil-body/oil-depth-transmission/rock-roughness/rock-mesostructure/rock-weathered-facet/water-body/water-volume-recession/acid-body/soap-body/nitro-body/sooty-powder-body/thermite-body/snowpack-body/quartz-mesostructure/c4-body/deut-body/hydrogen-body/carbon-dioxide-body/steam-condensate/fog-core-diffuse/radioactive-solid-body/iszs-crystalline/iszs-crystal-hierarchy/vibr-macro-relief/noble-gas-billow/noble-gas-prism/smoke-softness/smoke-billow-depth/botanical-mesostructure/wood-bark-relief/botanical-pigment/plant-lamina/plant-lobe-depth/plant-canopy-mass/plant-canopy-tissue/plant-canopy-interlock/plant-canopy-hierarchy/plant-canopy-foliage/wood-tannin focused audits are mutually exclusive');
+  throw new Error('HDR/volume/liquid-body/liquid-surface/liquid-motion/oil-motion/water-curvature/fire-flame/cflm-cold-flame/gas-body/gas-motion/powder-body/powder-light/powder-solid-contact/translucent-edge/organic-subsurface/wet-sediment/gas-light/liquid-solid-meniscus/metal-water-contact/water-metal-transmission/gas-core-depth/plasma-core/solid-body/platinum-body/ceramic-glaze/botanical-body/glass-body/oil-body/oil-depth-transmission/rock-roughness/rock-mesostructure/rock-weathered-facet/water-body/water-volume-recession/acid-body/soap-body/nitro-body/sooty-powder-body/thermite-body/snowpack-body/quartz-mesostructure/c4-body/deut-body/hydrogen-body/carbon-dioxide-body/carbon-dioxide-core-fold/steam-condensate/fog-core-diffuse/radioactive-solid-body/iszs-crystalline/iszs-crystal-hierarchy/vibr-macro-relief/noble-gas-billow/noble-gas-prism/smoke-softness/smoke-billow-depth/botanical-mesostructure/wood-bark-relief/botanical-pigment/plant-lamina/plant-lobe-depth/plant-canopy-mass/plant-canopy-tissue/plant-canopy-interlock/plant-canopy-hierarchy/plant-canopy-foliage/wood-tannin focused audits are mutually exclusive');
 }
 
 const layoutOnly = process.argv.includes('--layout-only');
@@ -747,7 +754,7 @@ const productionBundle = process.argv.includes('--production-bundle');
 const usesProductionBundle = productionBundle || showcaseScreenshotOnly || composedRankOnly
   || candidateRankOnly || nitroBodyVfxOnly || hdrVfxOnly || volumeVfxOnly || plantCanopyInterlockVfxOnly || plantCanopyHierarchyVfxOnly || plantCanopyFoliageVfxOnly || oilDepthTransmissionVfxOnly
   || liquidBodyVfxOnly || liquidSurfaceVfxOnly || liquidMotionVfxOnly || oilMotionVfxOnly || waterCurvatureVfxOnly || fireFlameVfxOnly || cflmColdFlameVfxOnly || gasBodyVfxOnly || gasMotionVfxOnly
-  || powderBodyVfxOnly || powderLightVfxOnly || powderSolidContactVfxOnly || translucentEdgeVfxOnly || organicSubsurfaceVfxOnly || wetSedimentVfxOnly || gasLightVfxOnly || liquidSolidMeniscusVfxOnly || metalWaterContactVfxOnly || waterMetalTransmissionVfxOnly || gasCoreDepthVfxOnly || plasmaCoreVfxOnly || solidBodyVfxOnly || platinumBodyVfxOnly || ceramicGlazeVfxOnly || botanicalBodyVfxOnly || glassBodyVfxOnly || oilBodyVfxOnly || rockRoughnessVfxOnly || rockMesostructureVfxOnly || rockWeatheredFacetVfxOnly || waterBodyVfxOnly || waterVolumeRecessionVfxOnly || acidBodyVfxOnly || soapBodyVfxOnly || sootyPowderBodyVfxOnly || thermiteBodyVfxOnly || snowpackBodyVfxOnly || quartzMesostructureVfxOnly || c4BodyVfxOnly || bglaBodyVfxOnly || bglaClusterVfxOnly || deutBodyVfxOnly || hydrogenBodyVfxOnly || carbonDioxideBodyVfxOnly || steamCondensateVfxOnly || fogCoreDiffuseVfxOnly || radioactiveSolidBodyVfxOnly || iszsCrystallineVfxOnly || iszsCrystalHierarchyVfxOnly || nobleGasBillowVfxOnly || nobleGasPrismVfxOnly || smokeSoftnessVfxOnly || smokeBillowDepthVfxOnly || botanicalMesostructureVfxOnly || woodBarkReliefVfxOnly || botanicalPigmentVfxOnly || plantLaminaVfxOnly || plantLobeDepthVfxOnly || woodTanninVfxOnly || cellularGraphicsOnly || sensorGraphicsOnly
+  || powderBodyVfxOnly || powderLightVfxOnly || powderSolidContactVfxOnly || translucentEdgeVfxOnly || organicSubsurfaceVfxOnly || wetSedimentVfxOnly || gasLightVfxOnly || liquidSolidMeniscusVfxOnly || metalWaterContactVfxOnly || waterMetalTransmissionVfxOnly || gasCoreDepthVfxOnly || plasmaCoreVfxOnly || solidBodyVfxOnly || platinumBodyVfxOnly || ceramicGlazeVfxOnly || botanicalBodyVfxOnly || glassBodyVfxOnly || oilBodyVfxOnly || rockRoughnessVfxOnly || rockMesostructureVfxOnly || rockWeatheredFacetVfxOnly || waterBodyVfxOnly || waterVolumeRecessionVfxOnly || acidBodyVfxOnly || soapBodyVfxOnly || sootyPowderBodyVfxOnly || thermiteBodyVfxOnly || snowpackBodyVfxOnly || quartzMesostructureVfxOnly || c4BodyVfxOnly || bglaBodyVfxOnly || bglaClusterVfxOnly || deutBodyVfxOnly || hydrogenBodyVfxOnly || carbonDioxideBodyVfxOnly || carbonDioxideCoreFoldVfxOnly || steamCondensateVfxOnly || fogCoreDiffuseVfxOnly || radioactiveSolidBodyVfxOnly || iszsCrystallineVfxOnly || iszsCrystalHierarchyVfxOnly || nobleGasBillowVfxOnly || nobleGasPrismVfxOnly || smokeSoftnessVfxOnly || smokeBillowDepthVfxOnly || botanicalMesostructureVfxOnly || woodBarkReliefVfxOnly || botanicalPigmentVfxOnly || plantLaminaVfxOnly || plantLobeDepthVfxOnly || woodTanninVfxOnly || cellularGraphicsOnly || sensorGraphicsOnly
   || unusualPowderGraphicsOnly || earthenPowderGraphicsOnly || explosivePowderGraphicsOnly || unusualSolidGraphicsOnly
   || deviceIdentityGraphicsOnly
   || fieldProfileGraphicsOnly
@@ -1543,6 +1550,18 @@ if (carbonDioxideBodyVfxOnly && (volumeVfxArgument !== undefined
   || solidBodyVfxArgument !== undefined || carbonDioxideBodyVfxArgument !== undefined)) {
   throw new Error('--carbon-dioxide-body-vfx-only pins E04 and owns off -> on -> off; omit overrides');
 }
+if (carbonDioxideCoreFoldVfxOnly && (volumeVfxArgument !== undefined
+  || gasBodyVfxArgument !== undefined || gasMotionVfxArgument !== undefined
+  || gasLightVfxArgument !== undefined || gasCoreDepthVfxArgument !== undefined
+  || nobleGasBillowVfxArgument !== undefined || nobleGasPrismVfxArgument !== undefined
+  || smokeSoftnessVfxArgument !== undefined || smokeBillowDepthVfxArgument !== undefined
+  || liquidBodyVfxArgument !== undefined || liquidSurfaceVfxArgument !== undefined
+  || powderBodyVfxArgument !== undefined || powderLightVfxArgument !== undefined
+  || translucentEdgeVfxArgument !== undefined || organicSubsurfaceVfxArgument !== undefined
+  || wetSedimentVfxArgument !== undefined || plasmaCoreVfxArgument !== undefined
+  || solidBodyVfxArgument !== undefined || carbonDioxideBodyVfxArgument !== undefined)) {
+  throw new Error('--carbon-dioxide-core-fold-vfx-only pins E04/E44 and owns off -> on -> off; omit overrides');
+}
 if (steamCondensateVfxOnly && (volumeVfxArgument !== undefined
   || gasBodyVfxArgument !== undefined || gasMotionVfxArgument !== undefined
   || gasLightVfxArgument !== undefined || gasCoreDepthVfxArgument !== undefined
@@ -1746,6 +1765,9 @@ if (hydrogenBodyVfxOnly && renderScaleArgument === '8') {
 if (carbonDioxideBodyVfxOnly && renderScaleArgument === '8') {
   throw new Error('--carbon-dioxide-body-vfx-only is a normal-detail 1x/2x/4x experiment');
 }
+if (carbonDioxideCoreFoldVfxOnly && renderScaleArgument === '8') {
+  throw new Error('--carbon-dioxide-core-fold-vfx-only is a normal-detail 1x/2x/4x experiment');
+}
 if (steamCondensateVfxOnly && renderScaleArgument === '8') {
   throw new Error('--steam-condensate-vfx-only is a normal-detail 1x/2x/4x experiment');
 }
@@ -1882,7 +1904,7 @@ async function main() {
     const reducedAudit = quickScreenshot || showcaseScreenshotOnly || composedRankOnly
       || candidateRankOnly || nitroBodyVfxOnly || hdrVfxOnly || volumeVfxOnly || plantCanopyInterlockVfxOnly || plantCanopyHierarchyVfxOnly || plantCanopyFoliageVfxOnly || oilDepthTransmissionVfxOnly
       || liquidBodyVfxOnly || liquidSurfaceVfxOnly || liquidMotionVfxOnly || oilMotionVfxOnly || gasBodyVfxOnly || gasMotionVfxOnly
-      || powderBodyVfxOnly || powderLightVfxOnly || powderSolidContactVfxOnly || translucentEdgeVfxOnly || organicSubsurfaceVfxOnly || wetSedimentVfxOnly || gasLightVfxOnly || liquidSolidMeniscusVfxOnly || metalWaterContactVfxOnly || waterMetalTransmissionVfxOnly || gasCoreDepthVfxOnly || oxygenVolumeFoldVfxOnly || plasmaCoreVfxOnly || solidBodyVfxOnly || platinumBodyVfxOnly || ceramicGlazeVfxOnly || botanicalBodyVfxOnly || glassBodyVfxOnly || oilBodyVfxOnly || rockRoughnessVfxOnly || rockMesostructureVfxOnly || rockWeatheredFacetVfxOnly || waterBodyVfxOnly || waterVolumeRecessionVfxOnly || acidBodyVfxOnly || soapBodyVfxOnly || sootyPowderBodyVfxOnly || thermiteBodyVfxOnly || snowpackBodyVfxOnly || quartzMesostructureVfxOnly || c4BodyVfxOnly || deutBodyVfxOnly || hydrogenBodyVfxOnly || carbonDioxideBodyVfxOnly || steamCondensateVfxOnly || fogCoreDiffuseVfxOnly || radioactiveSolidBodyVfxOnly || iszsCrystallineVfxOnly || iszsCrystalHierarchyVfxOnly || nobleGasBillowVfxOnly || nobleGasPrismVfxOnly || smokeSoftnessVfxOnly || smokeBillowDepthVfxOnly || botanicalMesostructureVfxOnly || woodBarkReliefVfxOnly || botanicalPigmentVfxOnly || plantLaminaVfxOnly || plantLobeDepthVfxOnly || woodTanninVfxOnly || layoutOnly || mobileOnly || mobileGestureOnly
+      || powderBodyVfxOnly || powderLightVfxOnly || powderSolidContactVfxOnly || translucentEdgeVfxOnly || organicSubsurfaceVfxOnly || wetSedimentVfxOnly || gasLightVfxOnly || liquidSolidMeniscusVfxOnly || metalWaterContactVfxOnly || waterMetalTransmissionVfxOnly || gasCoreDepthVfxOnly || oxygenVolumeFoldVfxOnly || plasmaCoreVfxOnly || solidBodyVfxOnly || platinumBodyVfxOnly || ceramicGlazeVfxOnly || botanicalBodyVfxOnly || glassBodyVfxOnly || oilBodyVfxOnly || rockRoughnessVfxOnly || rockMesostructureVfxOnly || rockWeatheredFacetVfxOnly || waterBodyVfxOnly || waterVolumeRecessionVfxOnly || acidBodyVfxOnly || soapBodyVfxOnly || sootyPowderBodyVfxOnly || thermiteBodyVfxOnly || snowpackBodyVfxOnly || quartzMesostructureVfxOnly || c4BodyVfxOnly || deutBodyVfxOnly || hydrogenBodyVfxOnly || carbonDioxideBodyVfxOnly || carbonDioxideCoreFoldVfxOnly || steamCondensateVfxOnly || fogCoreDiffuseVfxOnly || radioactiveSolidBodyVfxOnly || iszsCrystallineVfxOnly || iszsCrystalHierarchyVfxOnly || nobleGasBillowVfxOnly || nobleGasPrismVfxOnly || smokeSoftnessVfxOnly || smokeBillowDepthVfxOnly || botanicalMesostructureVfxOnly || woodBarkReliefVfxOnly || botanicalPigmentVfxOnly || plantLaminaVfxOnly || plantLobeDepthVfxOnly || woodTanninVfxOnly || layoutOnly || mobileOnly || mobileGestureOnly
       || desktopInputOnly || visualScaleMatrixOnly || powderBodyOnly || liquidDepthOnly
       || solidDepthOnly || gasChromaOnly || surfaceContourOnly || solidFieldOnly
       || roleGraphicsOnly || cellularGraphicsOnly || sensorGraphicsOnly
@@ -1981,7 +2003,7 @@ async function auditMode(mode) {
   const startsBlank = !canvasFallbackAudit && (hdrVfxOnly || volumeVfxOnly
     || plantCanopyHierarchyVfxOnly || plantCanopyFoliageVfxOnly || oilDepthTransmissionVfxOnly
     || liquidBodyVfxOnly || liquidSurfaceVfxOnly || liquidMotionVfxOnly || oilMotionVfxOnly || waterCurvatureVfxOnly || fireFlameVfxOnly || cflmColdFlameVfxOnly || gasBodyVfxOnly || gasMotionVfxOnly
-  || powderBodyVfxOnly || powderLightVfxOnly || powderSolidContactVfxOnly || translucentEdgeVfxOnly || organicSubsurfaceVfxOnly || wetSedimentVfxOnly || gasLightVfxOnly || liquidSolidMeniscusVfxOnly || metalWaterContactVfxOnly || waterMetalTransmissionVfxOnly || gasCoreDepthVfxOnly || oxygenVolumeFoldVfxOnly || plasmaCoreVfxOnly || solidBodyVfxOnly || platinumBodyVfxOnly || ceramicGlazeVfxOnly || botanicalBodyVfxOnly || glassBodyVfxOnly || oilBodyVfxOnly || rockRoughnessVfxOnly || rockMesostructureVfxOnly || rockWeatheredFacetVfxOnly || waterBodyVfxOnly || waterVolumeRecessionVfxOnly || acidBodyVfxOnly || soapBodyVfxOnly || sootyPowderBodyVfxOnly || thermiteBodyVfxOnly || snowpackBodyVfxOnly || quartzMesostructureVfxOnly || c4BodyVfxOnly || bglaBodyVfxOnly || bglaClusterVfxOnly || deutBodyVfxOnly || hydrogenBodyVfxOnly || carbonDioxideBodyVfxOnly || steamCondensateVfxOnly || fogCoreDiffuseVfxOnly || radioactiveSolidBodyVfxOnly || iszsCrystallineVfxOnly || iszsCrystalHierarchyVfxOnly || nobleGasBillowVfxOnly || nobleGasPrismVfxOnly || smokeSoftnessVfxOnly || smokeBillowDepthVfxOnly || botanicalMesostructureVfxOnly || woodBarkReliefVfxOnly || botanicalPigmentVfxOnly || plantLaminaVfxOnly || plantLobeDepthVfxOnly || woodTanninVfxOnly || cellularGraphicsOnly || sensorGraphicsOnly
+  || powderBodyVfxOnly || powderLightVfxOnly || powderSolidContactVfxOnly || translucentEdgeVfxOnly || organicSubsurfaceVfxOnly || wetSedimentVfxOnly || gasLightVfxOnly || liquidSolidMeniscusVfxOnly || metalWaterContactVfxOnly || waterMetalTransmissionVfxOnly || gasCoreDepthVfxOnly || oxygenVolumeFoldVfxOnly || plasmaCoreVfxOnly || solidBodyVfxOnly || platinumBodyVfxOnly || ceramicGlazeVfxOnly || botanicalBodyVfxOnly || glassBodyVfxOnly || oilBodyVfxOnly || rockRoughnessVfxOnly || rockMesostructureVfxOnly || rockWeatheredFacetVfxOnly || waterBodyVfxOnly || waterVolumeRecessionVfxOnly || acidBodyVfxOnly || soapBodyVfxOnly || sootyPowderBodyVfxOnly || thermiteBodyVfxOnly || snowpackBodyVfxOnly || quartzMesostructureVfxOnly || c4BodyVfxOnly || bglaBodyVfxOnly || bglaClusterVfxOnly || deutBodyVfxOnly || hydrogenBodyVfxOnly || carbonDioxideBodyVfxOnly || carbonDioxideCoreFoldVfxOnly || steamCondensateVfxOnly || fogCoreDiffuseVfxOnly || radioactiveSolidBodyVfxOnly || iszsCrystallineVfxOnly || iszsCrystalHierarchyVfxOnly || nobleGasBillowVfxOnly || nobleGasPrismVfxOnly || smokeSoftnessVfxOnly || smokeBillowDepthVfxOnly || botanicalMesostructureVfxOnly || woodBarkReliefVfxOnly || botanicalPigmentVfxOnly || plantLaminaVfxOnly || plantLobeDepthVfxOnly || woodTanninVfxOnly || cellularGraphicsOnly || sensorGraphicsOnly
     || unusualPowderGraphicsOnly || earthenPowderGraphicsOnly || explosivePowderGraphicsOnly
     || unusualSolidGraphicsOnly || deviceIdentityGraphicsOnly || fieldProfileGraphicsOnly
     || electricDischargeGraphicsOnly || liquidIdentityGraphicsOnly
@@ -2082,6 +2104,9 @@ async function auditMode(mode) {
       : carbonDioxideBodyVfxArgument !== undefined
         ? { carbonDioxideBodyVfx: carbonDioxideBodyVfxArgument }
         : {}),
+    // E73 is an input-audit opt-in child of E44. Every focused route starts
+    // from the child-off baseline; E73 owns its explicit reload sequence.
+    ...(focusedVfxOnlyFlags.some(Boolean) ? { carbonDioxideCoreFoldVfx: '0' } : {}),
     // E70 is a strict E04 exact-Steam child. All focused routes start from an
     // explicit no-op; only E70 owns its off -> on -> off reload sequence.
     ...(focusedVfxOnlyFlags.some(Boolean)
@@ -2876,6 +2901,15 @@ async function auditMode(mode) {
       assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
       cdp.close();
       return { backend: mode, carbonDioxideBodyVfx, browserErrors: errors.length };
+    }
+    if (carbonDioxideCoreFoldVfxOnly) {
+      assert(mode === 'webgl', '--carbon-dioxide-core-fold-vfx-only requires --webgl-only');
+      const carbonDioxideCoreFoldVfx = await auditCarbonDioxideCoreFoldVfxExperiment(
+        cdp, mode, dpr,
+      );
+      assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
+      cdp.close();
+      return { backend: mode, carbonDioxideCoreFoldVfx, browserErrors: errors.length };
     }
     if (steamCondensateVfxOnly) {
       assert(mode === 'webgl', '--steam-condensate-vfx-only requires --webgl-only');
@@ -14413,6 +14447,9 @@ async function auditComposedRankShowcase(cdp, mode, dpr) {
   // showcase owns the accepted product stack, so make E59 explicit here.
   const composedRockWeatheredFacetVfx = rockWeatheredFacetVfxArgument ?? '1';
   const composedCarbonDioxideBodyVfx = carbonDioxideBodyVfxArgument ?? '1';
+  // E73 remains numerically provisional, but the canonical product survey
+  // explicitly exercises it so selector ancestry is visible at every scale.
+  const composedCarbonDioxideCoreFoldVfx = '1';
   const composedThermiteBodyVfx = thermiteBodyVfxArgument ?? '1';
   // Showcase v6 adds an authoritative deep SOAP body and a scored liquidSoap
   // region, so this selector telemetry is coupled to real composed evidence.
@@ -14437,6 +14474,7 @@ async function auditComposedRankShowcase(cdp, mode, dpr) {
       ...(hydrogenBodyVfxArgument ? { hydrogenBodyVfx: hydrogenBodyVfxArgument } : {}),
       oxygenVolumeFoldVfx: composedOxygenVolumeFoldVfx,
       carbonDioxideBodyVfx: composedCarbonDioxideBodyVfx,
+      carbonDioxideCoreFoldVfx: composedCarbonDioxideCoreFoldVfx,
       thermiteBodyVfx: composedThermiteBodyVfx,
       // Showcase v6 has no authoritative BGLA evidence; keep E52 fenced off
       // instead of silently grading some unrelated powder through its selector.
@@ -14494,6 +14532,7 @@ async function auditComposedRankShowcase(cdp, mode, dpr) {
         && parameters.get('hydrogenBodyVfx') === ${JSON.stringify(hydrogenBodyVfxArgument ?? null)}
         && parameters.get('oxygenVolumeFoldVfx') === ${JSON.stringify(composedOxygenVolumeFoldVfx)}
         && parameters.get('carbonDioxideBodyVfx') === ${JSON.stringify(composedCarbonDioxideBodyVfx)}
+        && parameters.get('carbonDioxideCoreFoldVfx') === ${JSON.stringify(composedCarbonDioxideCoreFoldVfx)}
         && parameters.get('thermiteBodyVfx') === ${JSON.stringify(composedThermiteBodyVfx)}
         && parameters.get('bglaBodyVfx') === '0'
         && parameters.get('soapBodyVfx') === ${JSON.stringify(composedSoapBodyVfx)}
@@ -14746,6 +14785,17 @@ async function auditComposedRankShowcase(cdp, mode, dpr) {
         argument: composedCarbonDioxideBodyVfx, composedLook, carbonDioxideBodyVfx,
         expectedCarbonDioxideBodyState,
       })})`);
+    const carbonDioxideCoreFoldVfx = await evaluate(cdp,
+      `document.querySelector('canvas.world-canvas')?.dataset.carbonDioxideCoreFoldVfx ?? 'missing'`,
+    );
+    const expectedCarbonDioxideCoreFoldState = expectedCarbonDioxideBodyState === 'active'
+      && composedCarbonDioxideCoreFoldVfx === '1' ? 'active' : 'inactive';
+    assert(carbonDioxideCoreFoldVfx === expectedCarbonDioxideCoreFoldState,
+      `composed rank ${scale}x Carbon-Dioxide core-fold selector resolved incorrectly (${JSON.stringify({
+        argument: composedCarbonDioxideCoreFoldVfx, carbonDioxideBodyVfx,
+        carbonDioxideCoreFoldVfx, expectedCarbonDioxideCoreFoldState,
+        numericCalibration: 'accepted-e73-focused-and-composed-matrix',
+      })})`);
     const metalWaterContactVfx = await evaluate(cdp,
       `document.querySelector('canvas.world-canvas')?.dataset.metalWaterContactVfx ?? 'missing'`,
     );
@@ -14939,6 +14989,30 @@ async function auditComposedRankShowcase(cdp, mode, dpr) {
         evidence: scoreComposedMediaSample(sample, contract.profile),
       };
     });
+    const composedCarbonDioxide = regions.find(({ name }) => name === 'gasCarbonDioxide');
+    if (expectedCarbonDioxideCoreFoldState === 'active') {
+      assert(composedCarbonDioxide?.family === 'gas'
+        && composedCarbonDioxide.profile === 'diffuse-gas'
+        && composedCarbonDioxide.supportRecall === 1
+        && composedCarbonDioxide.coverage === 0.955
+        && composedCarbonDioxide.dominantComponent === 1
+        && composedCarbonDioxide.darkFraction === 0
+        && composedCarbonDioxide.clippedFraction === 0
+        && composedCarbonDioxide.lumaStdDev >= 5.00
+        && composedCarbonDioxide.lumaStdDev <= 5.15
+        && composedCarbonDioxide.microContrast >= 0.36
+        && composedCarbonDioxide.microContrast <= 0.42
+        && composedCarbonDioxide.chromaticContrast >= 0.40
+        && composedCarbonDioxide.chromaticContrast <= 0.50
+        && composedCarbonDioxide.macroLumaRange >= 18
+        && composedCarbonDioxide.macroLumaRange <= 20
+        && composedCarbonDioxide.lumaRange >= 26
+        && composedCarbonDioxide.lumaRange <= 29
+        && composedCarbonDioxide.evidence?.qualityIndex === 100,
+      `composed rank ${scale}x lost accepted E73 Carbon-Dioxide volume (${JSON.stringify(
+        composedCarbonDioxide,
+      )})`);
+    }
     const composedSoap = regions.find(({ name }) => name === 'liquidSoap');
     assert(composedSoap?.family === 'liquid' && composedSoap.profile === 'cohesive-liquid'
       && composedSoap.supportPixels > 0 && composedSoap.supportRecall >= 0.96
@@ -14972,6 +15046,7 @@ async function auditComposedRankShowcase(cdp, mode, dpr) {
       bglaBodyVfx,
       smokeBillowDepthVfx, powderStability,
       deutBodyVfx, hydrogenBodyVfx, oxygenVolumeFoldVfx, carbonDioxideBodyVfx,
+      carbonDioxideCoreFoldVfx,
       solidBodyVfx, radioactiveSolidBodyVfx, iszsCrystallineVfx, vibrMacroReliefVfx,
       iszsCrystalHierarchyVfx,
       rockWeatheredFacetVfx,
@@ -15005,6 +15080,8 @@ async function auditComposedRankShowcase(cdp, mode, dpr) {
       && reference.oilMotionVfx === capture.oilMotionVfx
       && reference.oilDepthTransmissionVfx === capture.oilDepthTransmissionVfx
       && reference.oxygenVolumeFoldVfx === capture.oxygenVolumeFoldVfx
+      && reference.carbonDioxideBodyVfx === capture.carbonDioxideBodyVfx
+      && reference.carbonDioxideCoreFoldVfx === capture.carbonDioxideCoreFoldVfx
       && reference.plantCanopyFoliageVfx === capture.plantCanopyFoliageVfx,
     `composed rank ${reference.scale}x/${capture.scale}x changed showcase semantics`);
     for (const baseline of reference.regions) {
@@ -15124,6 +15201,7 @@ async function auditComposedRankShowcase(cdp, mode, dpr) {
       metalWaterContactVfx, waterMetalTransmissionVfx,
       waterBodyVfx, waterVolumeRecessionVfx, powderStability,
       deutBodyVfx, hydrogenBodyVfx, oxygenVolumeFoldVfx, carbonDioxideBodyVfx,
+      carbonDioxideCoreFoldVfx,
       solidBodyVfx, radioactiveSolidBodyVfx, iszsCrystallineVfx, iszsCrystalHierarchyVfx, vibrMacroReliefVfx,
       rockWeatheredFacetVfx, screenshot }) => ({
       scale,
@@ -15153,6 +15231,8 @@ async function auditComposedRankShowcase(cdp, mode, dpr) {
       hydrogenBodyVfx,
       oxygenVolumeFoldVfx,
       carbonDioxideBodyVfx,
+      carbonDioxideCoreFoldVfx,
+      carbonDioxideCoreFoldVfxCalibration: 'accepted-e73-focused-and-composed-matrix',
       solidBodyVfx,
       radioactiveSolidBodyVfx,
       iszsCrystallineVfx,
@@ -15200,6 +15280,7 @@ async function auditComposedRankShowcase(cdp, mode, dpr) {
     fieldIndicatorHiddenOnlyForCapture: true,
     soapBodyVfxEvidence: 'showcase-v6-liquidSoap-region',
     iszsCrystallineVfxEvidence: 'showcase-v6-solidISZS-region',
+    carbonDioxideCoreFoldVfxCalibration: 'accepted-e73-focused-and-composed-matrix',
   };
 }
 
@@ -49271,6 +49352,496 @@ async function auditEightXCarbonDioxideBodyVfxExclusion(cdp, dpr) {
       && geometry.backend.backend === 'webgl',
     selectorExcluded: true, resourcesIdentical: isolation.bloomBacking === null,
     semanticStable: true, isolation, timing,
+  };
+}
+
+// E73 is measured only as a strict E44 child. Keep every sibling explicit so
+// future ordinary-play defaults cannot silently enter the accepted calibration.
+const CARBON_DIOXIDE_CORE_FOLD_VFX_ISOLATED_SELECTORS = Object.freeze([
+  'volumeVfx', 'liquidBodyVfx', 'liquidSurfaceVfx', 'liquidMotionVfx',
+  'oilMotionVfx', 'waterCurvatureVfx', 'fireFlameVfx', 'cflmColdFlameVfx',
+  'gasMotionVfx', 'powderBodyVfx', 'powderLightVfx', 'powderSolidContactVfx',
+  'translucentEdgeVfx', 'organicSubsurfaceVfx', 'wetSedimentVfx', 'gasLightVfx',
+  'liquidSolidMeniscusVfx', 'metalWaterContactVfx', 'waterMetalTransmissionVfx',
+  'gasCoreDepthVfx', 'oxygenVolumeFoldVfx', 'hydrogenBodyVfx',
+  'steamCondensateVfx', 'fogCoreDiffuseVfx', 'nobleGasBillowVfx',
+  'nobleGasPrismVfx', 'smokeSoftnessVfx', 'smokeBillowDepthVfx',
+  'plasmaCoreVfx', 'solidBodyVfx', 'platinumBodyVfx', 'ceramicGlazeVfx',
+  'botanicalBodyVfx', 'botanicalMesostructureVfx', 'botanicalPigmentVfx',
+  'plantLaminaVfx', 'plantLobeDepthVfx', 'plantCanopyMassVfx',
+  'plantCanopyTissueVfx', 'plantCanopyInterlockVfx', 'plantCanopyHierarchyVfx',
+  'plantCanopyFoliageVfx', 'woodBarkReliefVfx', 'woodTanninVfx',
+  'glassBodyVfx', 'oilBodyVfx', 'oilVolumeFinishVfx', 'oilDepthTransmissionVfx',
+  'nitroBodyVfx', 'rockRoughnessVfx', 'rockMesostructureVfx',
+  'rockWeatheredFacetVfx', 'waterBodyVfx', 'waterVolumeRecessionVfx',
+  'acidBodyVfx', 'soapBodyVfx', 'sootyPowderBodyVfx', 'thermiteBodyVfx',
+  'snowpackBodyVfx', 'quartzMesostructureVfx', 'c4BodyVfx', 'bglaBodyVfx',
+  'bglaClusterVfx', 'deutBodyVfx', 'radioactiveSolidBodyVfx',
+  'iszsCrystallineVfx', 'iszsCrystalHierarchyVfx', 'vibrMacroReliefVfx',
+]);
+
+// E73's accepted 1x/2x/4x SwiftShader matrix freezes one balanced whole-body
+// response plus the opposing crown/pocket anchors. Tight common envelopes are
+// possible because the fold is world-anchored and independent of output scale.
+const CARBON_DIOXIDE_CORE_FOLD_VFX_ACCEPTANCE = Object.freeze({
+  CO2WholeBodyInset: Object.freeze({
+    rgbRms: [3.12, 3.22], chromaRms: [0.70, 0.80], rgbPeak: [8, 8],
+    coverage: [0.54, 0.57], signedMean: [0.16, 0.24],
+    meanBiasRatio: [0.04, 0.10], positiveMean: [1.16, 1.26],
+    negativeMean: [0.96, 1.06], bipolarBalance: [0.78, 0.88],
+    responseMicroContrast: [0.20, 0.28],
+    responseRgb: [[0.27, 0.35], [0.15, 0.24], [-0.08, 0.00]],
+  }),
+  CO2PositiveFold: Object.freeze({
+    rgbRms: [5.17, 5.29], chromaRms: [0.77, 0.87], rgbPeak: [7, 7],
+    coverage: [0.99, 1.00], signedMean: [4.92, 5.08],
+    meanBiasRatio: [0.98, 1.00], positiveMean: [4.92, 5.08],
+    negativeMean: [0, 0], bipolarBalance: [0, 0],
+    responseMicroContrast: [0.31, 0.40],
+    responseRgb: [[4.25, 4.40], [5.02, 5.20], [5.90, 6.03]],
+  }),
+  CO2NegativeFold: Object.freeze({
+    rgbRms: [5.54, 5.70], chromaRms: [1.44, 1.58], rgbPeak: [8, 8],
+    coverage: [0.99, 1.00], signedMean: [-5.14, -5.00],
+    meanBiasRatio: [0.99, 1.00], positiveMean: [0, 0],
+    negativeMean: [5.00, 5.14], bipolarBalance: [0, 0],
+    responseMicroContrast: [0.13, 0.20],
+    responseRgb: [[-3.82, -3.66], [-5.32, -5.17], [-7.34, -7.19]],
+  }),
+});
+
+// Exact foreign owners and sparse topology remain zero. Only the named soft
+// style-6 rim gets a bounded RGB allowance; material/alpha/field evidence is
+// still exact below.
+const CARBON_DIOXIDE_CORE_FOLD_VFX_CONTROL_PEAK = Object.freeze({
+  CO2SoftRim: 5,
+});
+const CARBON_DIOXIDE_CORE_FOLD_VFX_RAW_CONTROL_PEAK = Object.freeze({
+  // One 1x/2x centre sample can retain more RGB than the fitted composed
+  // footprint even though E73 preserves the authoritative alpha byte.
+  CO2SoftRim: 12,
+});
+
+/** E73: accepted exact style-6 core fold, strictly subordinate to E04/E44. */
+async function auditCarbonDioxideCoreFoldVfxExperiment(cdp, mode, dpr) {
+  const scales = [];
+  const requestedScales = renderScaleArgument === undefined
+    ? VOLUME_VFX_SCALES : [Number(renderScaleArgument)];
+  for (const scale of requestedScales) {
+    const captures = {};
+    for (const enabled of [false, true, false]) {
+      const key = enabled ? 'enabled' : captures.disabled ? 'disabledRepeat' : 'disabled';
+      captures[key] = await navigateCarbonDioxideCoreFoldVfxState(
+        cdp, mode, scale, enabled, key,
+      );
+    }
+    const { disabled, enabled, disabledRepeat } = captures;
+    const fixture = disabled.fixture;
+    const rawControlResponses = carbonDioxideCoreFoldRawControlResponses(
+      disabled.rawControls, enabled.rawControls,
+    );
+    assert(JSON.stringify(fixture) === JSON.stringify(enabled.fixture)
+      && JSON.stringify(fixture) === JSON.stringify(disabledRepeat.fixture),
+    `E73 ${scale}x E44 fixture metadata changed`);
+    for (const [label, variant] of Object.entries(captures)) {
+      assertGeometry(variant.geometry, `E73 ${label} ${scale}x`, scale);
+      assert(variant.geometry.backend.backend === 'webgl'
+        && variant.hdrPipeline?.state === 'active'
+        && variant.hdrPipeline.gasBodyVfx === 'active'
+        && variant.hdrPipeline.carbonDioxideBodyVfx === 'active'
+        && variant.hdrPipeline.carbonDioxideCoreFoldVfx
+          === (label === 'enabled' ? 'active' : 'inactive')
+        && Object.values(variant.hdrPipeline.isolatedSelectors)
+          .every((state) => state === 'inactive'),
+      `E73 ${label} ${scale}x parent/selector isolation failed (${JSON.stringify(variant.hdrPipeline)})`);
+    }
+    assertCanvasRectsEqual(disabled.geometry.canvas, enabled.geometry.canvas,
+      `E73 ${scale}x disabled/enabled CSS geometry`);
+    assertCanvasRectsEqual(disabled.geometry.canvas, disabledRepeat.geometry.canvas,
+      `E73 ${scale}x disabled/repeated CSS geometry`);
+    assert(JSON.stringify(disabled.geometry.backing) === JSON.stringify(enabled.geometry.backing)
+      && JSON.stringify(disabled.geometry.backing) === JSON.stringify(disabledRepeat.geometry.backing),
+    `E73 ${scale}x backing geometry changed`);
+    assertHdrVfxSemanticEquality(disabled.semantic, enabled.semantic,
+      `E73 ${scale}x disabled/enabled`);
+    assertHdrVfxSemanticEquality(disabled.semantic, disabledRepeat.semantic,
+      `E73 ${scale}x disabled/repeated`);
+    assertVolumeVfxBackingInvariant(disabled.backing, enabled.backing,
+      `E73 ${scale}x disabled/enabled`);
+    assertVolumeVfxBackingInvariant(disabled.backing, disabledRepeat.backing,
+      `E73 ${scale}x disabled/repeated`);
+    assertVolumeVfxRawAlphaInvariant(disabled.rawAll, enabled.rawAll,
+      `E73 ${scale}x disabled/enabled`);
+    assertVolumeVfxRawAlphaInvariant(disabled.rawAll, disabledRepeat.rawAll,
+      `E73 ${scale}x disabled/repeated`);
+    assertCarbonDioxideCoreFoldRawControlsInvariant(
+      disabled.rawControls, enabled.rawControls, `E73 ${scale}x disabled/enabled`,
+    );
+    assertCarbonDioxideCoreFoldRawControlsInvariant(
+      disabled.rawControls, disabledRepeat.rawControls, `E73 ${scale}x disabled/repeated`,
+    );
+    assert(JSON.stringify(disabled.field) === JSON.stringify(enabled.field)
+      && JSON.stringify(disabled.field) === JSON.stringify(disabledRepeat.field),
+    `E73 ${scale}x changed style-6 atmosphere ownership/density`);
+    assert(JSON.stringify(disabled.walls) === JSON.stringify(enabled.walls)
+      && JSON.stringify(disabled.walls) === JSON.stringify(disabledRepeat.walls)
+      && disabled.walls.occupied > 0,
+    `E73 ${scale}x changed native-wall topology`);
+    assert(disabled.capture.capture.data === disabledRepeat.capture.capture.data,
+      `E73 ${scale}x repeated off framebuffer was not byte exact`);
+
+    const targets = carbonDioxideCoreFoldVfxTargetRegions(fixture);
+    const controls = carbonDioxideCoreFoldVfxControlRegions(fixture);
+    const responses = await sampleBackdropRefractionRegions(cdp, {
+      straight: disabled.capture.capture.data,
+      refracted: enabled.capture.capture.data,
+      repeatedStraight: disabledRepeat.capture.capture.data,
+    }, [...targets, ...controls], disabled.capture.canvasRect);
+    const targetResponses = responses.slice(0, targets.length);
+    const controlResponses = responses.slice(targets.length);
+    const inRange = (value, range) => value >= range[0] && value <= range[1];
+    assert(targetResponses.length === 3 && targetResponses.every((sample) => {
+      const bounds = CARBON_DIOXIDE_CORE_FOLD_VFX_ACCEPTANCE[sample.name];
+      return bounds
+        && inRange(sample.rgbRms, bounds.rgbRms)
+        && inRange(sample.chromaRms, bounds.chromaRms)
+        && inRange(sample.rgbPeak, bounds.rgbPeak)
+        && inRange(sample.coverage, bounds.coverage)
+        && inRange(sample.signedMean, bounds.signedMean)
+        && inRange(sample.meanBiasRatio, bounds.meanBiasRatio)
+        && inRange(sample.positiveMean, bounds.positiveMean)
+        && inRange(sample.negativeMean, bounds.negativeMean)
+        && inRange(sample.bipolarBalance, bounds.bipolarBalance)
+        && inRange(sample.responseMicroContrast, bounds.responseMicroContrast)
+        && sample.responseRgb.every((value, channel) => (
+          inRange(value, bounds.responseRgb[channel])
+        ))
+        && sample.repeatRgbPeak === 0;
+    }), `E73 ${scale}x escaped its accepted core-fold response (${JSON.stringify(targetResponses)})`);
+    const targetByName = Object.fromEntries(targetResponses.map((sample) => [sample.name, sample]));
+    assert(targetByName.CO2PositiveFold?.signedMean > 0
+      && targetByName.CO2NegativeFold?.signedMean < 0
+      && targetByName.CO2PositiveFold.responseSignature
+        !== targetByName.CO2NegativeFold.responseSignature,
+    `E73 ${scale}x lost its bipolar fold (${JSON.stringify(targetResponses)})`);
+    assert(controlResponses.length === controls.length && controlResponses.every((sample) => (
+      sample.rgbPeak <= (CARBON_DIOXIDE_CORE_FOLD_VFX_CONTROL_PEAK[sample.name] ?? 0)
+        && sample.repeatRgbPeak === 0
+    )), `E73 ${scale}x escaped an E44 sibling/topology/contact/wall control (${JSON.stringify(controlResponses)})`);
+    assert(responses.every((sample) => sample.repeatRgbPeak === 0),
+      `E73 ${scale}x off -> on -> off was not deterministic`);
+    const screenshots = screenshotRequest && (requestedScales.length === 1 || scale === 2)
+      ? await writeCarbonDioxideCoreFoldVfxScreenshots(
+        screenshotRequest, scale, disabled, enabled, disabledRepeat,
+      ) : undefined;
+    scales.push({
+      scale, geometry: disabled.geometry, semantic: disabled.semantic,
+      backing: disabled.geometry.backing, alphaSupport: disabled.backing,
+      field: disabled.field, walls: disabled.walls, rawControls: disabled.rawControls,
+      rawControlResponses, targetResponses, controlResponses,
+      exactRepeatedOff: true, screenshots,
+      numericCalibration: 'accepted-e73-focused-and-composed-matrix',
+    });
+  }
+  if (scales.length > 1) {
+    const reference = scales.find(({ scale }) => scale === 2) ?? scales[0];
+    for (const sample of scales.filter(({ scale }) => scale !== reference.scale)) {
+      assertCanvasRectsEqual(reference.geometry.canvas, sample.geometry.canvas,
+        `E73 ${reference.scale}x/${sample.scale}x CSS geometry`);
+      assert(JSON.stringify(reference.semantic) === JSON.stringify(sample.semantic)
+        && JSON.stringify(reference.field) === JSON.stringify(sample.field)
+        && JSON.stringify(reference.walls) === JSON.stringify(sample.walls),
+      `E73 ${sample.scale}x changed the exact fixture/field contract across scales`);
+    }
+    for (const name of Object.keys(CARBON_DIOXIDE_CORE_FOLD_VFX_ACCEPTANCE)) {
+      const samples = scales.map((entry) => (
+        entry.targetResponses.find((sample) => sample.name === name)
+      ));
+      const spread = (field) => {
+        const values = samples.map((sample) => sample[field]);
+        return Math.max(...values) - Math.min(...values);
+      };
+      const channelSpread = Math.max(...[0, 1, 2].map((channel) => {
+        const values = samples.map((sample) => sample.responseRgb[channel]);
+        return Math.max(...values) - Math.min(...values);
+      }));
+      assert(samples.every(Boolean) && spread('rgbRms') <= 0.03
+        && spread('chromaRms') <= 0.04 && spread('signedMean') <= 0.05
+        && spread('coverage') <= 0.006 && spread('responseMicroContrast') <= 0.03
+        && spread('rgbPeak') === 0 && channelSpread <= 0.08,
+      `E73 ${name} response diverged across scales (${JSON.stringify(samples)})`);
+    }
+  }
+  return {
+    calibration: 'accepted-e73-focused-and-composed-matrix',
+    acceptance: CARBON_DIOXIDE_CORE_FOLD_VFX_ACCEPTANCE,
+    scales, trueEightXExcluded: true,
+    trueEightX: await auditEightXCarbonDioxideCoreFoldVfxExclusion(cdp, dpr),
+  };
+}
+
+async function navigateCarbonDioxideCoreFoldVfxState(cdp, mode, scale, enabled, label) {
+  const query = new URLSearchParams({
+    scene: 'render-lab', inputAudit: '1', blankAudit: '1', auditStage: 'blank',
+    carbonDioxideBodyVfxAudit: '1', carbonDioxideCoreFoldVfxAudit: '1',
+    renderScale: String(scale), renderLook: 'realistic', gasBodyVfx: '1',
+    carbonDioxideBodyVfx: '1', carbonDioxideCoreFoldVfx: enabled ? '1' : '0',
+    ...Object.fromEntries(CARBON_DIOXIDE_CORE_FOLD_VFX_ISOLATED_SELECTORS.map(
+      (name) => [name, '0'],
+    )),
+  });
+  await cdp.send('Page.navigate', { url: `${AUDIT_BASE_URL}?${query}` });
+  await waitFor(() => evaluate(cdp, `(() => {
+    const p = new URLSearchParams(location.search);
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    return p.get('carbonDioxideBodyVfxAudit') === '1'
+      && p.get('carbonDioxideCoreFoldVfxAudit') === '1'
+      && p.get('renderScale') === ${JSON.stringify(String(scale))}
+      && p.get('renderLook') === 'realistic' && p.get('gasBodyVfx') === '1'
+      && p.get('carbonDioxideBodyVfx') === '1'
+      && p.get('carbonDioxideCoreFoldVfx') === ${JSON.stringify(enabled ? '1' : '0')}
+      && ${JSON.stringify(CARBON_DIOXIDE_CORE_FOLD_VFX_ISOLATED_SELECTORS)}
+        .every((name) => p.get(name) === '0')
+      && typeof audit?.prepareCarbonDioxideBodyVfxFixture === 'function'
+      && typeof audit?.carbonDioxideBodyVfxFixture === 'function';
+  })()`), scale === 4 ? 45_000 : 15_000, `E73 ${label} ${scale}x page`);
+  await waitFor(() => evaluate(cdp,
+    `window.__ANIFOR_INPUT_AUDIT__.backend().backend === ${JSON.stringify(mode)}`),
+  scale === 4 ? 30_000 : 15_000, `E73 ${label} ${scale}x backend`);
+  const fixture = await evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    audit.prepareCarbonDioxideBodyVfxFixture();
+    return audit.carbonDioxideBodyVfxFixture();
+  })()`);
+  for (let pass = 0; pass < 5; pass++) {
+    const before = await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.presentationRefreshAudit()');
+    await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.refreshPresentationFields(); true');
+    await waitFor(() => evaluate(cdp,
+      `window.__ANIFOR_INPUT_AUDIT__.presentationRefreshAudit()?.dynamicSequence > ${before.dynamicSequence}`),
+    scale === 4 ? 15_000 : 5_000, `E73 ${label} ${scale}x presentation refresh ${pass + 1}`);
+  }
+  await waitFor(() => carbonDioxideBodyVfxFixtureReady(cdp, fixture),
+    20_000, `E73 ${label} ${scale}x fixture/atmosphere hydration`);
+  const hdrPipeline = await evaluate(cdp, `(() => {
+    const canvas = document.querySelector('canvas.semantic-field-canvas');
+    if (!canvas) return undefined;
+    const names = ${JSON.stringify(CARBON_DIOXIDE_CORE_FOLD_VFX_ISOLATED_SELECTORS)};
+    return {
+      look: canvas.dataset.renderLook, state: canvas.dataset.hdrPipeline,
+      reason: canvas.dataset.hdrPipelineReason,
+      bloomBacking: canvas.dataset.bloomBacking,
+      gasBodyVfx: canvas.dataset.gasBodyVfx,
+      carbonDioxideBodyVfx: canvas.dataset.carbonDioxideBodyVfx,
+      carbonDioxideCoreFoldVfx: canvas.dataset.carbonDioxideCoreFoldVfx,
+      isolatedSelectors: Object.fromEntries(names.map((name) => [name, canvas.dataset[name]])),
+    };
+  })()`);
+  const expectedBloom = `${WORLD_WIDTH * scale / 2}x${WORLD_HEIGHT * scale / 2}`;
+  assert(hdrPipeline?.look === 'realistic' && hdrPipeline.state === 'active'
+    && hdrPipeline.bloomBacking === expectedBloom
+    && hdrPipeline.gasBodyVfx === 'active'
+    && hdrPipeline.carbonDioxideBodyVfx === 'active'
+    && hdrPipeline.carbonDioxideCoreFoldVfx === (enabled ? 'active' : 'inactive')
+    && Object.values(hdrPipeline.isolatedSelectors).every((state) => state === 'inactive'),
+  `E73 ${label} ${scale}x HDR/selector isolation failed (${JSON.stringify(hdrPipeline)})`);
+  const capture = await waitForStablePageCapture(
+    cdp, `E73 ${label} ${scale}x framebuffer`,
+    scale === 4 ? 45_000 : scale === 2 ? 30_000 : 15_000, 1,
+  );
+  return {
+    fixture, capture, geometry: await metrics(cdp), semantic: await hdrVfxSemanticDigest(cdp),
+    backing: await sampleVolumeVfxCanvasAlphaSupport(cdp),
+    field: await carbonDioxideCoreFoldVfxFieldDigest(cdp, fixture),
+    walls: await nobleGasBillowVfxWallDigest(cdp),
+    rawAll: await sampleVolumeVfxRawWorldPixels(cdp, carbonDioxideCoreFoldVfxAllRawPoints(fixture)),
+    rawControls: await sampleVolumeVfxRawWorldPixels(
+      cdp, carbonDioxideCoreFoldVfxRawControlPoints(fixture),
+    ),
+    hdrPipeline,
+  };
+}
+
+function carbonDioxideCoreFoldVfxTargetRegions(fixture) {
+  const rect = (name, candidate, inset = 0) => ({
+    name, target: true,
+    x: candidate.x + candidate.width / 2, y: candidate.y + candidate.height / 2,
+    radiusX: Math.max(0.35, candidate.width / 2 - inset - 0.2),
+    radiusY: Math.max(0.35, candidate.height / 2 - inset - 0.2),
+  });
+  return [
+    rect('CO2WholeBodyInset', fixture.target.body, 12),
+    rect('CO2PositiveFold', { x: 84, y: 35, width: 16, height: 10 }),
+    rect('CO2NegativeFold', { x: 102, y: 151, width: 16, height: 10 }),
+  ];
+}
+
+function carbonDioxideCoreFoldVfxControlRegions(fixture) {
+  return [
+    ...carbonDioxideBodyVfxControlRegions(fixture),
+    { name: 'CO2SoftRim', x: 160.5, y: 20.5, radius: 0 },
+  ];
+}
+
+function carbonDioxideCoreFoldVfxAllRawPoints(fixture) {
+  return [
+    ...carbonDioxideCoreFoldVfxTargetRegions(fixture).map(({ name, x, y }) => ({
+      name, x: Math.floor(x), y: Math.floor(y),
+    })),
+    ...carbonDioxideCoreFoldVfxRawControlPoints(fixture),
+    { name: 'GasSeamCO2', ...fixture.gasSeam.gasProbe },
+  ];
+}
+
+function carbonDioxideCoreFoldVfxRawControlPoints(fixture) {
+  return carbonDioxideCoreFoldVfxControlRegions(fixture)
+    // As in E44, the connected CO2 side is intentionally eligible up to the
+    // unlike-gas seam; its composed one-byte rail is frozen separately.
+    .filter(({ name }) => name !== 'GasSeamCO2')
+    .map(({ name, x, y }) => ({ name, x: Math.floor(x), y: Math.floor(y) }));
+}
+
+function assertCarbonDioxideCoreFoldRawControlsInvariant(left, right, label) {
+  const responses = carbonDioxideCoreFoldRawControlResponses(left, right);
+  const same = left.length === right.length && responses.length === left.length
+    && responses.every((response) => response.alphaExact
+      && response.rgbPeak <= (
+        CARBON_DIOXIDE_CORE_FOLD_VFX_RAW_CONTROL_PEAK[response.name] ?? 0
+      ));
+  assert(same,
+    `${label}: E73 escaped an exact or bounded raw E44 control (${JSON.stringify({
+      responses, left, right,
+    })})`);
+}
+
+function carbonDioxideCoreFoldRawControlResponses(left, right) {
+  return left.map((point, index) => {
+    const candidate = right[index];
+    const identityExact = candidate && point.name === candidate.name
+      && point.x === candidate.x && point.y === candidate.y;
+    const responseRgb = identityExact ? point.rgba.slice(0, 3).map(
+      (value, channel) => candidate.rgba[channel] - value,
+    ) : [Number.POSITIVE_INFINITY, Number.POSITIVE_INFINITY, Number.POSITIVE_INFINITY];
+    return {
+      name: point.name, x: point.x, y: point.y, identityExact,
+      alphaExact: Boolean(identityExact && point.rgba[3] === candidate.rgba[3]),
+      responseRgb,
+      rgbPeak: Math.max(...responseRgb.map((value) => Math.abs(value))),
+    };
+  });
+}
+
+async function carbonDioxideCoreFoldVfxFieldDigest(cdp, fixture) {
+  const inherited = await carbonDioxideBodyVfxFieldDigest(cdp, fixture);
+  const points = [
+    { name: 'CO2PositiveFold', x: 92, y: 40 },
+    { name: 'CO2NegativeFold', x: 110, y: 156 },
+    { name: 'CO2SoftRim', x: 160, y: 20 },
+  ];
+  const probes = await evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    return ${JSON.stringify(points)}.map((point) => ({
+      ...point, material: audit.cell(point.x, point.y),
+      style: audit.gasIdentityStyle(point.x, point.y),
+      alpha: Math.round(audit.atmosphereFieldAlpha(point.x, point.y) * 1000) / 1000,
+    }));
+  })()`);
+  assert(probes.slice(0, 2).every((probe) => (
+    probe.material === 41 && probe.style === 6 && probe.alpha === 255
+  )), `E73 target probes lost exact dense style-6 ownership (${JSON.stringify(probes)})`);
+  return { inherited, probes };
+}
+
+async function writeCarbonDioxideCoreFoldVfxScreenshots(
+  source, scale, disabled, enabled, disabledRepeat,
+) {
+  const paths = {
+    off: variantScreenshotPath(source, `e73-carbon-dioxide-core-fold-${scale}x-off`),
+    on: variantScreenshotPath(source, `e73-carbon-dioxide-core-fold-${scale}x-on`),
+    repeatedOff: variantScreenshotPath(
+      source, `e73-carbon-dioxide-core-fold-${scale}x-repeated-off`,
+    ),
+  };
+  await writeFile(paths.off, Buffer.from(disabled.capture.capture.data, 'base64'));
+  await writeFile(paths.on, Buffer.from(enabled.capture.capture.data, 'base64'));
+  await writeFile(
+    paths.repeatedOff, Buffer.from(disabledRepeat.capture.capture.data, 'base64'),
+  );
+  return paths;
+}
+
+async function auditEightXCarbonDioxideCoreFoldVfxExclusion(cdp, dpr) {
+  await setDesktopMetrics(cdp, 1280, 720, dpr);
+  const query = new URLSearchParams({
+    scene: 'render-lab', inputAudit: '1', blankAudit: '1', renderScale: '8',
+    auditStage: 'eight-carbon-dioxide-core-fold', carbonDioxideBodyVfxAudit: '1',
+    carbonDioxideCoreFoldVfxAudit: '1', renderLook: 'realistic', gasBodyVfx: '1',
+    carbonDioxideBodyVfx: '1', carbonDioxideCoreFoldVfx: '1',
+    ...Object.fromEntries(CARBON_DIOXIDE_CORE_FOLD_VFX_ISOLATED_SELECTORS.map(
+      (name) => [name, '0'],
+    )),
+  });
+  await cdp.send('Page.navigate', { url: `${AUDIT_BASE_URL}?${query}` });
+  const deadline = Date.now() + EIGHT_X_PRESENTATION_DEADLINE_MS;
+  await waitFor(() => evaluate(cdp, `(() => {
+    const p = new URLSearchParams(location.search);
+    return p.get('renderScale') === '8'
+      && p.get('auditStage') === 'eight-carbon-dioxide-core-fold'
+      && p.get('gasBodyVfx') === '1' && p.get('carbonDioxideBodyVfx') === '1'
+      && p.get('carbonDioxideCoreFoldVfx') === '1'
+      && ${JSON.stringify(CARBON_DIOXIDE_CORE_FOLD_VFX_ISOLATED_SELECTORS)}
+        .every((name) => p.get(name) === '0')
+      && Boolean(window.__ANIFOR_INPUT_AUDIT__);
+  })()`), remainingDeadlineMs(deadline, 'true-8x E73 input audit API'),
+  'true-8x E73 input audit API');
+  const backend = await waitForEightXTerminalBackend(cdp, 'true-8x E73', deadline);
+  assertEightXWebGLBackend(backend, 'true-8x E73');
+  const geometry = await waitForStableCanvas(
+    cdp, 1280, 720, undefined,
+    Math.min(45_000, remainingDeadlineMs(deadline, 'true-8x E73 geometry')),
+    'true-8x E73 geometry',
+  );
+  assert(geometry.backing.width === WORLD_WIDTH * 8
+    && geometry.backing.height === WORLD_HEIGHT * 8 && geometry.outputScale === '8',
+  `true-8x E73 lost exact backing (${JSON.stringify(geometry.backing)})`);
+  const isolation = await evaluate(cdp, `(() => {
+    const canvas = document.querySelector('canvas.semantic-field-canvas');
+    return canvas ? {
+      renderer: canvas.dataset.renderer, look: canvas.dataset.renderLook,
+      state: canvas.dataset.hdrPipeline, reason: canvas.dataset.hdrPipelineReason,
+      bloomBacking: canvas.dataset.bloomBacking ?? null,
+      gasBodyVfx: canvas.dataset.gasBodyVfx,
+      carbonDioxideBodyVfx: canvas.dataset.carbonDioxideBodyVfx,
+      carbonDioxideCoreFoldVfx: canvas.dataset.carbonDioxideCoreFoldVfx,
+    } : undefined;
+  })()`, Math.min(1_000, remainingDeadlineMs(deadline, 'true-8x E73 isolation')));
+  assert(isolation?.renderer === 'semantic-field-webgl' && isolation.look === 'realistic'
+    && isolation.state === 'inactive' && isolation.reason === 'scale-8'
+    && isolation.bloomBacking === null && isolation.gasBodyVfx === 'inactive'
+    && isolation.carbonDioxideBodyVfx === 'inactive'
+    && isolation.carbonDioxideCoreFoldVfx === 'inactive',
+  `true-8x E73 selector/resource isolation failed (${JSON.stringify(isolation)})`);
+  const materialPlane = await evaluate(
+    cdp, 'window.__ANIFOR_INPUT_AUDIT__.materialPlaneDigest()',
+  );
+  assert(materialPlane.occupied === 0,
+    `true-8x E73 unexpectedly uploaded its dense fixture (${JSON.stringify(materialPlane)})`);
+  const semanticBefore = await hdrVfxSemanticDigest(cdp);
+  assert(semanticBefore.occupied === 0,
+    `true-8x E73 material plane was not blank (${JSON.stringify(semanticBefore)})`);
+  const timingBudget = remainingDeadlineMs(deadline, 'true-8x E73 GPU completion');
+  const timing = await auditWebGLPresentationTiming(
+    cdp, 1, Math.min(12_000, timingBudget), timingBudget, 1,
+  );
+  assert(timing.source === 'gpu-fence',
+    `true-8x E73 did not signal its GPU fence (${JSON.stringify(timing)})`);
+  const semanticAfter = await hdrVfxSemanticDigest(cdp);
+  assertHdrVfxSemanticEquality(semanticBefore, semanticAfter, 'true-8x E73 GPU completion');
+  return {
+    backing: `${geometry.backing.width}x${geometry.backing.height}`,
+    promotedWebGLObserved: geometry.outputScale === '8'
+      && geometry.backend.backend === 'webgl',
+    selectorExcluded: true, fixtureUploaded: false, semanticStable: true,
+    materialPlane, isolation, timing,
   };
 }
 

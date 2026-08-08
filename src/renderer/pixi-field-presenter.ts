@@ -55,6 +55,7 @@ import {
   resolveGasMotionVfxEnabled,
   resolveCflmColdFlameVfxEnabled,
   resolveCarbonDioxideBodyVfxEnabled,
+  resolveCarbonDioxideCoreFoldVfxEnabled,
   resolveSteamCondensateVfxEnabled,
   resolveFogCoreDiffuseVfxEnabled,
   resolveHydrogenBodyVfxEnabled,
@@ -3304,6 +3305,7 @@ uniform float uGasCoreDepthVfx;
 uniform float uOxygenVolumeFoldVfx;
 uniform float uHydrogenBodyVfx;
 uniform float uCarbonDioxideBodyVfx;
+uniform float uCarbonDioxideCoreFoldVfx;
 uniform float uSteamCondensateVfx;
 uniform float uFogCoreDiffuseVfx;
 uniform float uNobleGasBillowVfx;
@@ -6658,6 +6660,37 @@ void main() {
           color *= vec3(1.0)
             - vec3(0.20, 0.14, 0.08) * carbonDioxideBodyPocket * 0.500
             - vec3(0.07, 0.06, 0.045) * carbonDioxideBodyCore * 0.080;
+          // E73: the accepted E44 body can still converge on one grey lozenge
+          // at fit view. Cross its already-live billow and third wave into a
+          // second broad fold, then admit that response only in the optically
+          // deep connected core. This produces an opposing cool transmission
+          // shoulder and blue-grey absorptive pocket while preserving E44's
+          // soft-rim support. The two scalars are consumed locally; this is
+          // RGB-only arithmetic with no sample, wave, resource, clock, alpha, support,
+          // silhouette, ownership, topology, or physics decision.
+          if (uCarbonDioxideCoreFoldVfx > 0.5
+            && uCarbonDioxideBodyVfx > 0.5) {
+            float carbonDioxideCoreFold = clamp(
+              gasVfxBillow * 1.10 - gasVfxWaveC * 0.46,
+              -1.0, 1.0
+            );
+            float carbonDioxideCoreSupport = carbonDioxideBodySupport
+              * smoothstep(0.36, 0.78, opticalDepth)
+              * smoothstep(0.72, 0.96, cloudNeighbourMean)
+              * (1.0 - smoothstep(0.04, 0.34, abs(gasCurvature)));
+            float carbonDioxideCoreCrown = carbonDioxideCoreSupport
+              * smoothstep(0.08, 0.72, max(carbonDioxideCoreFold, 0.0));
+            float carbonDioxideCorePocket = carbonDioxideCoreSupport
+              * smoothstep(0.08, 0.72, max(-carbonDioxideCoreFold, 0.0));
+            vec3 carbonDioxideCoreKey = mix(
+              vec3(0.52, 0.67, 0.80), vec3(0.64, 0.75, 0.86),
+              clamp(0.52 + gasDirectionalRelief * 0.20, 0.0, 1.0)
+            );
+            color += (vec3(1.10) - clamp(color, 0.0, 1.10))
+              * carbonDioxideCoreKey * carbonDioxideCoreCrown * 0.220;
+            color *= vec3(1.0) - vec3(0.12, 0.16, 0.22)
+              * carbonDioxideCorePocket * 1.200;
+          }
         }
       }
 
@@ -11617,6 +11650,10 @@ export class PixiFieldPresenter {
     // compact true 8x retain their existing propagated style-6 presentation.
     const carbonDioxideBodyVfxEnabled = outputScale < 8
       && resolveCarbonDioxideBodyVfxEnabled(renderLook);
+    // E73 is arithmetic inside E44's exact dense-core proof. Canvas and compact
+    // true 8x retain E44 and declare neither this selector nor its branch.
+    const carbonDioxideCoreFoldVfxEnabled = outputScale < 8
+      && resolveCarbonDioxideCoreFoldVfxEnabled(renderLook);
     // E70 is an arithmetic-only exact-Steam child of E04. Canvas and compact
     // true 8x keep the established propagated style-2 presentation.
     const steamCondensateVfxEnabled = outputScale < 8
@@ -11845,6 +11882,9 @@ export class PixiFieldPresenter {
       uHydrogenBodyVfx: { value: hydrogenBodyVfxEnabled ? 1 : 0, type: 'f32' },
       uCarbonDioxideBodyVfx: {
         value: carbonDioxideBodyVfxEnabled ? 1 : 0, type: 'f32',
+      },
+      uCarbonDioxideCoreFoldVfx: {
+        value: carbonDioxideCoreFoldVfxEnabled ? 1 : 0, type: 'f32',
       },
       uSteamCondensateVfx: { value: steamCondensateVfxEnabled ? 1 : 0, type: 'f32' },
       uFogCoreDiffuseVfx: { value: fogCoreDiffuseVfxEnabled ? 1 : 0, type: 'f32' },
@@ -12134,6 +12174,7 @@ export class PixiFieldPresenter {
       this.uniforms.uniforms.uOxygenVolumeFoldVfx = 0;
       this.uniforms.uniforms.uHydrogenBodyVfx = 0;
       this.uniforms.uniforms.uCarbonDioxideBodyVfx = 0;
+      this.uniforms.uniforms.uCarbonDioxideCoreFoldVfx = 0;
       this.uniforms.uniforms.uSteamCondensateVfx = 0;
       this.uniforms.uniforms.uFogCoreDiffuseVfx = 0;
       this.uniforms.uniforms.uNobleGasBillowVfx = 0;
@@ -12226,6 +12267,7 @@ export class PixiFieldPresenter {
             || new URLSearchParams(location.search).get('oxygenVolumeFoldVfxAudit') === '1'
             || new URLSearchParams(location.search).get('hydrogenBodyVfxAudit') === '1'
             || new URLSearchParams(location.search).get('carbonDioxideBodyVfxAudit') === '1'
+            || new URLSearchParams(location.search).get('carbonDioxideCoreFoldVfxAudit') === '1'
             || new URLSearchParams(location.search).get('steamCondensateVfxAudit') === '1'
             || new URLSearchParams(location.search).get('fogCoreDiffuseVfxAudit') === '1'
             || new URLSearchParams(location.search).get('nobleGasBillowVfxAudit') === '1'
@@ -12331,6 +12373,9 @@ export class PixiFieldPresenter {
     ) > 0.5 ? 'active' : 'inactive';
     presenter.app.canvas.dataset.carbonDioxideBodyVfx = Number(
       presenter.uniforms.uniforms.uCarbonDioxideBodyVfx
+    ) > 0.5 ? 'active' : 'inactive';
+    presenter.app.canvas.dataset.carbonDioxideCoreFoldVfx = Number(
+      presenter.uniforms.uniforms.uCarbonDioxideCoreFoldVfx
     ) > 0.5 ? 'active' : 'inactive';
     presenter.app.canvas.dataset.steamCondensateVfx = Number(
       presenter.uniforms.uniforms.uSteamCondensateVfx
@@ -13971,6 +14016,7 @@ export class PixiFieldPresenter {
         this.uniforms.uniforms.uOxygenVolumeFoldVfx = 0;
         this.uniforms.uniforms.uHydrogenBodyVfx = 0;
         this.uniforms.uniforms.uCarbonDioxideBodyVfx = 0;
+        this.uniforms.uniforms.uCarbonDioxideCoreFoldVfx = 0;
         this.uniforms.uniforms.uSteamCondensateVfx = 0;
         this.uniforms.uniforms.uFogCoreDiffuseVfx = 0;
         this.uniforms.uniforms.uNobleGasBillowVfx = 0;
@@ -14039,6 +14085,7 @@ export class PixiFieldPresenter {
         this.app.canvas.dataset.oxygenVolumeFoldVfx = 'inactive';
         this.app.canvas.dataset.hydrogenBodyVfx = 'inactive';
         this.app.canvas.dataset.carbonDioxideBodyVfx = 'inactive';
+        this.app.canvas.dataset.carbonDioxideCoreFoldVfx = 'inactive';
         this.app.canvas.dataset.steamCondensateVfx = 'inactive';
         this.app.canvas.dataset.fogCoreDiffuseVfx = 'inactive';
         this.app.canvas.dataset.nobleGasBillowVfx = 'inactive';

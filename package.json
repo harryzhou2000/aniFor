@@ -48,6 +48,7 @@
     "audit:vfx:deut-body": "npm run build && node scripts/verify-browser-input.mjs --deut-body-vfx-only --webgl-only --production-bundle --capture-dpr=1",
     "audit:vfx:hydrogen-body": "npm run build && node scripts/verify-browser-input.mjs --hydrogen-body-vfx-only --webgl-only --production-bundle --capture-dpr=1",
     "audit:vfx:carbon-dioxide-body": "npm run build && node scripts/verify-browser-input.mjs --carbon-dioxide-body-vfx-only --webgl-only --production-bundle --capture-dpr=1",
+    "audit:vfx:carbon-dioxide-core-fold": "npm run build && node scripts/verify-browser-input.mjs --carbon-dioxide-core-fold-vfx-only --webgl-only --production-bundle --capture-dpr=1",
     "audit:vfx:steam-condensate": "npm run build && node scripts/verify-browser-input.mjs --steam-condensate-vfx-only --webgl-only --production-bundle --capture-dpr=1",
     "audit:vfx:fog-core-diffuse": "npm run build && node scripts/verify-browser-input.mjs --fog-core-diffuse-vfx-only --webgl-only --production-bundle --capture-dpr=1",
     "audit:vfx:radioactive-solid-body": "npm run build && node scripts/verify-browser-input.mjs --radioactive-solid-body-vfx-only --webgl-only --production-bundle --capture-dpr=1",

@@ -13,6 +13,7 @@ import {
   resolveWoodBarkReliefVfxEnabled,
   resolveWoodTanninVfxEnabled,
   resolveCarbonDioxideBodyVfxEnabled,
+  resolveCarbonDioxideCoreFoldVfxEnabled,
   resolveSteamCondensateVfxEnabled,
   resolveFogCoreDiffuseVfxEnabled,
   resolveCeramicGlazeVfxEnabled,
@@ -1177,6 +1178,36 @@ describe('resolveRenderLook', () => {
     )).toBe(false);
     expect(resolveCarbonDioxideBodyVfxEnabled(
       'realistic', '?volumeVfx=0&gasBodyVfx=on&carbonDioxideBodyVfx=1',
+    )).toBe(true);
+  });
+
+  it('keeps exact Carbon Dioxide core fold strictly subordinate to E44 and isolated in input audits', () => {
+    expect(resolveCarbonDioxideCoreFoldVfxEnabled(
+      'classic', '?carbonDioxideBodyVfx=1&carbonDioxideCoreFoldVfx=1',
+    )).toBe(false);
+    expect(resolveCarbonDioxideCoreFoldVfxEnabled('realistic', '')).toBe(true);
+    expect(resolveCarbonDioxideCoreFoldVfxEnabled('neon-lab', '')).toBe(true);
+    expect(resolveCarbonDioxideCoreFoldVfxEnabled(
+      'realistic', '?inputAudit=1&carbonDioxideBodyVfx=1',
+    )).toBe(false);
+    for (const requested of ['1', 'on', 'true']) {
+      expect(resolveCarbonDioxideCoreFoldVfxEnabled(
+        'realistic', `?inputAudit=1&carbonDioxideBodyVfx=1&carbonDioxideCoreFoldVfx=${requested}`,
+      )).toBe(true);
+    }
+    for (const requested of ['0', 'off', 'false']) {
+      expect(resolveCarbonDioxideCoreFoldVfxEnabled(
+        'realistic', `?carbonDioxideCoreFoldVfx=${requested}`,
+      )).toBe(false);
+    }
+    for (const parentOff of ['volumeVfx=0', 'gasBodyVfx=0', 'carbonDioxideBodyVfx=0']) {
+      expect(resolveCarbonDioxideCoreFoldVfxEnabled(
+        'realistic', `?${parentOff}&carbonDioxideCoreFoldVfx=on`,
+      )).toBe(false);
+    }
+    expect(resolveCarbonDioxideCoreFoldVfxEnabled(
+      'realistic',
+      '?volumeVfx=0&gasBodyVfx=1&carbonDioxideBodyVfx=1&carbonDioxideCoreFoldVfx=on',
     )).toBe(true);
   });
 

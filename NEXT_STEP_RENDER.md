@@ -3057,6 +3057,52 @@ full Oil support, zero dark/clipped fraction, luma standard deviation
 `6.05/6.07/6.10`, microcontrast `.45/.46/.48`, and a stable `28`-byte macro
 range / `33`-byte total luma range.
 
+### Accepted E73 — exact Carbon Dioxide core fold
+
+E73 is a normal-WebGL-only, independently selectable
+`?carbonDioxideCoreFoldVfx=0|1` child of E44 and therefore E04. It is limited
+to E44's authoritative dense propagated style-6 Carbon Dioxide and reuses only
+the established body support, optical depth, connected-neighbour density,
+curvature, directional relief, billow, and third-carrier arithmetic. Their
+broader opposing fold adds cool transmission crowns and blue-grey absorptive
+pockets without any new sample, sampler, texture, field, resource, pass,
+target, upload, allocation, noise, clock, alpha, support, silhouette,
+ownership, topology, state, or physics decision. Canvas and compact true 8×
+retain E44; generic `inputAudit=1` keeps E73 off unless it is explicit.
+
+`npm run audit:vfx:carbon-dioxide-core-fold` freezes deterministic
+off→on→off evidence over E44's exact fixture at 1×/2×/4×. Whole-body RGB RMS
+is `3.17`, coverage `.556/.559/.558`, peak `8`, and bipolar balance
+`.832/.836/.836`; the positive anchor has RGB RMS `5.23`, signed mean
+`4.99/4.99/5.02`, and peak `7`, while the negative anchor has RGB RMS
+`5.62/5.61/5.63`, signed mean `−5.06/−5.07/−5.08`, and peak `8`. Response
+channels drift by at most `.08` byte across scales. Every authored opening,
+foreign gas, sparse probe, contact owner, wall, blank, semantic, atmosphere,
+alpha/support, and repeated-off control is exact except one named soft-rim RGB
+allowance (`<=5` composed, `<=12` raw) whose alpha remains exact. Requested-on
+true 8× stays blank at 4896×3072 with E73/HDR inactive, no fixture upload, and
+a real `gpu-fence`; the frozen run measured `5.2481 s` with zero errors.
+
+The canonical composed matrix explicitly enables E73. Carbon Dioxide now
+measures luma deviation `5.06/5.07/5.07` versus the pre-E73 `3.88`,
+microcontrast `.38/.39/.39`, chromatic contrast `.43/.45/.47`, macro range
+`18/19/19`, total range `27/27/28`, coverage `.955`, full support, one
+dominant component, and zero dark/clipped fraction at 1×/2×/4×. The fit-view
+acceptance rail prevents the isolated fixture from hiding a return to the old
+flat grey lozenge.
+
+### Next visual diagnostic — Concrete 4× detail retention
+
+Treat exact settled Concrete as a diagnostic candidate, not an accepted
+checkpoint. The latest composed survey reports quality `100/100/97.588`, luma
+deviation `7.55/7.68/5.49`, microcontrast `6.24/6.95/4.78`, macro range
+`17/14/11`, coverage `.942`, full support, and zero clipping at 1×/2×/4×.
+Investigate only through the existing deep, stable, dry, trait-free,
+non-emissive Smooth-powder proof. Preserve Sand/Clay, Local/Grains,
+unstable/wet/thin/hole/notch/wall/seam controls, and require focused
+1×/2×/4× off→on→off plus requested-on true-8× fence evidence before accepting
+any new Concrete layer.
+
 ## Phase 1 — HDR pipeline & lighting core (biggest visual payoff)
 
 **Goal:** everything downstream needs light and dynamic range; build the chassis first.

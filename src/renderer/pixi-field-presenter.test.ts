@@ -3403,7 +3403,9 @@ describe('Pixi presenter startup configuration', () => {
     expect(e44End).toBeGreaterThan(e44Start);
     expect(parentStart).toBeGreaterThanOrEqual(0);
     expect(normal).toContain('uniform float uCarbonDioxideBodyVfx;');
-    expect(normal.match(/uCarbonDioxideBodyVfx > 0\.5/g)).toHaveLength(1);
+    // E73 retains an explicit parent guard inside E44's branch, so the normal
+    // shader names E44 once for its own body and once for its strict child.
+    expect(normal.match(/uCarbonDioxideBodyVfx > 0\.5/g)).toHaveLength(2);
     expect(eight).not.toContain('uCarbonDioxideBodyVfx');
     expect(eight).not.toContain('carbonDioxideBodyPhase');
     expect(canvasSource).not.toContain('carbonDioxideBodyVfx');
@@ -3434,6 +3436,59 @@ describe('Pixi presenter startup configuration', () => {
     expect(source).toContain('presenter.app.canvas.dataset.carbonDioxideBodyVfx');
     expect(source).toContain("this.app.canvas.dataset.carbonDioxideBodyVfx = 'inactive';");
     expect(preserve).toContain("get('carbonDioxideBodyVfxAudit') === '1'");
+  });
+
+  it('keeps E73 Carbon Dioxide core fold as an E44 child, normal-WebGL-only, and resource-neutral', () => {
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const canvasSource = readFileSync(new URL('./field-renderer.ts', import.meta.url), 'utf8');
+    const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');
+    const normalStart = source.indexOf('const FIELD_FRAGMENT = `', eightStart);
+    const normalEnd = source.indexOf('`;\n\n/** Primary WebGL presentation', normalStart);
+    const eight = source.slice(eightStart, normalStart);
+    const normal = source.slice(normalStart, normalEnd);
+    const e44Start = normal.indexOf('      // E44:');
+    const e44End = normal.indexOf('      // E57:', e44Start);
+    const e44 = normal.slice(e44Start, e44End);
+    const e73Start = e44.indexOf('// E73:');
+    const e73 = e44.slice(e73Start);
+    const preserveStart = source.indexOf('preserveDrawingBuffer:');
+    const preserveEnd = source.indexOf('resolution: outputScale', preserveStart);
+    const preserve = source.slice(preserveStart, preserveEnd);
+
+    expect(eightStart).toBeGreaterThanOrEqual(0);
+    expect(normalStart).toBeGreaterThan(eightStart);
+    expect(normalEnd).toBeGreaterThan(normalStart);
+    expect(e44Start).toBeGreaterThanOrEqual(0);
+    expect(e44End).toBeGreaterThan(e44Start);
+    expect(e73Start).toBeGreaterThanOrEqual(0);
+    expect(normal).toContain('uniform float uCarbonDioxideCoreFoldVfx;');
+    expect(normal.match(/uCarbonDioxideCoreFoldVfx > 0\.5/g)).toHaveLength(1);
+    expect(eight).not.toContain('uCarbonDioxideCoreFoldVfx');
+    expect(eight).not.toContain('carbonDioxideCoreFoldVfx');
+    expect(canvasSource).not.toContain('carbonDioxideCoreFoldVfx');
+    for (const guard of [
+      'uCarbonDioxideCoreFoldVfx > 0.5', 'uCarbonDioxideBodyVfx > 0.5',
+    ]) expect(e73).toContain(guard);
+    for (const establishedFieldScalar of [
+      'gasVfxBillow', 'gasVfxWaveC', 'carbonDioxideBodySupport', 'opticalDepth',
+    ]) expect(e73).toContain(establishedFieldScalar);
+    expect(e73).not.toContain('texture(');
+    expect(e73).not.toContain('uTime');
+    expect(e73).not.toContain('sin(');
+    expect(e73).not.toContain('gl_FragCoord');
+    expect(e73).not.toMatch(/\b(?:noise|Noise)\w*\s*\(/);
+    expect(e73).not.toMatch(/\balpha\s*[+*]?=/);
+    expect(source).toMatch(
+      /const carbonDioxideCoreFoldVfxEnabled = outputScale < 8\s*&& resolveCarbonDioxideCoreFoldVfxEnabled\(renderLook\);/,
+    );
+    expect(source.match(/this\.uniforms\.uniforms\.uCarbonDioxideCoreFoldVfx = 0;/g))
+      .toHaveLength(2);
+    expect(source).toContain(
+      'uCarbonDioxideCoreFoldVfx: {\n        value: carbonDioxideCoreFoldVfxEnabled ? 1 : 0',
+    );
+    expect(source).toContain('presenter.app.canvas.dataset.carbonDioxideCoreFoldVfx');
+    expect(source).toContain("this.app.canvas.dataset.carbonDioxideCoreFoldVfx = 'inactive';");
+    expect(preserve).toContain("get('carbonDioxideCoreFoldVfxAudit') === '1'");
   });
 
   it('keeps E70 Steam condensate exact-style, E04-dependent, normal-WebGL-only, and RGB-only', () => {
