@@ -2018,6 +2018,69 @@ describe('Pixi presenter startup configuration', () => {
     expect(source).toContain("this.app.canvas.dataset.oilVolumeFinishVfx = 'inactive';");
   });
 
+  it('keeps E72 Oil depth transmission E38-dependent, normal-WebGL-only, and resource-neutral', () => {
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const canvasSource = readFileSync(new URL('./field-renderer.ts', import.meta.url), 'utf8');
+    const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');
+    const normalStart = source.indexOf('const FIELD_FRAGMENT = `', eightStart);
+    const normalEnd = source.indexOf('`;\n\n/** Primary WebGL presentation', normalStart);
+    const eight = source.slice(eightStart, normalStart);
+    const normal = source.slice(normalStart, normalEnd);
+    const e22Start = normal.indexOf('          // E22:');
+    const e72Start = normal.indexOf('            // E72:', e22Start);
+    const e72End = normal.indexOf('          }', e72Start);
+    const e22 = normal.slice(e22Start, e72Start);
+    const e72 = normal.slice(e72Start, e72End);
+    const preserveDrawingBufferStart = source.indexOf('preserveDrawingBuffer:');
+    const preserveDrawingBufferEnd = source.indexOf(
+      'resolution: outputScale', preserveDrawingBufferStart,
+    );
+    const preserveDrawingBuffer = source.slice(
+      preserveDrawingBufferStart, preserveDrawingBufferEnd,
+    );
+
+    expect(e22Start).toBeGreaterThanOrEqual(0);
+    expect(e72Start).toBeGreaterThan(e22Start);
+    expect(e72End).toBeGreaterThan(e72Start);
+    expect(e22).toContain('if (uOilBodyVfx > 0.5 && material == 8.0 && optics == 2.0');
+    expect(e22).toContain('uOilVolumeFinishVfx > 0.5');
+    expect(normal).toContain('uniform float uOilDepthTransmissionVfx;');
+    expect(normal.match(/uOilDepthTransmissionVfx > 0\.5/g)).toHaveLength(1);
+    expect(eight).not.toContain('uOilDepthTransmissionVfx');
+    expect(eight).not.toContain('oilDepthTransmissionVfx');
+    expect(canvasSource).not.toContain('oilDepthTransmissionVfx');
+    expect(e72).toContain('uOilDepthTransmissionVfx > 0.5');
+    expect(e72).toContain('uOilVolumeFinishVfx > 0.5');
+    for (const establishedValue of [
+      'oilBodyWeight', 'oilBodyCrown', 'oilBodyPocket', 'liquidOpticalDepth',
+      'liquidFresnelContour', 'reflectedEnvironment',
+    ]) expect(e72).toContain(establishedValue);
+    expect(e72).not.toContain('texture(');
+    expect(e72).not.toContain('botanicalBodyNoise(');
+    expect(e72).not.toContain('broadSheen');
+    expect(e72).not.toContain('causticWave');
+    expect(e72).not.toContain('caustic');
+    expect(e72).not.toContain('liquidMacroRelief');
+    expect(e72).not.toContain('liquidVfxBody');
+    expect(e72).not.toContain('liquidSpeciesSlope');
+    expect(e72).not.toContain('sin(');
+    expect(e72).not.toContain('uTime');
+    expect(e72).not.toContain('gl_FragCoord');
+    expect(e72).not.toMatch(/\balpha\s*[+*]?=/);
+    expect(source.match(/this\.uniforms\.uniforms\.uOilDepthTransmissionVfx = 0;/g))
+      .toHaveLength(2);
+    expect(source).toMatch(
+      /const oilDepthTransmissionVfxEnabled = outputScale < 8\s*&& resolveOilDepthTransmissionVfxEnabled\(renderLook\);/,
+    );
+    expect(source).toMatch(
+      /uOilDepthTransmissionVfx:\s*\{\s*value: oilDepthTransmissionVfxEnabled \? 1 : 0/,
+    );
+    expect(source).toContain("get('oilDepthTransmissionVfxAudit') === '1'");
+    expect(preserveDrawingBuffer).toContain("get('oilDepthTransmissionVfxAudit') === '1'");
+    expect(source).toContain('presenter.app.canvas.dataset.oilDepthTransmissionVfx');
+    expect(source).toContain("this.app.canvas.dataset.oilDepthTransmissionVfx = 'inactive';");
+  });
+
   it('keeps E39 Acid body optics exact-owner, E03-dependent, normal-WebGL-only, and RGB-only', () => {
     const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
     const canvasSource = readFileSync(new URL('./field-renderer.ts', import.meta.url), 'utf8');

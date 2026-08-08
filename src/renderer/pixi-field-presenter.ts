@@ -79,6 +79,7 @@ import {
   resolveNitroBodyVfxEnabled,
   resolveOilBodyVfxEnabled,
   resolveOilVolumeFinishVfxEnabled,
+  resolveOilDepthTransmissionVfxEnabled,
   resolveWaterBodyVfxEnabled,
   resolveWaterVolumeRecessionVfxEnabled,
   resolveFireFlameVfxEnabled,
@@ -3341,6 +3342,7 @@ uniform float uDeutBodyVfx;
 uniform float uNitroBodyVfx;
 uniform float uOilBodyVfx;
 uniform float uOilVolumeFinishVfx;
+uniform float uOilDepthTransmissionVfx;
 uniform float uWaterBodyVfx;
 uniform float uWaterVolumeRecessionVfx;
 uniform float uLiquidSolidMeniscusVfx;
@@ -7530,6 +7532,34 @@ void main() {
               ? vec3(0.038, 0.075, 0.160) : vec3(0.030, 0.060, 0.145))
               * oilBodyPocket * (uOilVolumeFinishVfx > 0.5
                 ? (0.60 + caustic * 0.22) : (0.54 + caustic * 0.20));
+            // E72: E38's accepted broad roll is attractive but a static Oil
+            // plug can still read as one opaque brown cutout. Reuse its exact
+            // dense-body proof to introduce one calm vertical optical axis:
+            // amber transmission rises just beyond the byte-30 hand-off, then
+            // cross-fades through the middle band into a blue-weighted deep
+            // Beer-Lambert pocket. The two scalars are consumed here so their
+            // live ranges cannot tax unrelated branches. This is RGB-only
+            // arithmetic over existing depth, crown/pocket, Fresnel, and
+            // environment evidence; it adds
+            // no sample, resource, noise, motion, alpha, support, or topology.
+            if (uOilDepthTransmissionVfx > 0.5
+              && uOilVolumeFinishVfx > 0.5) {
+              float oilShallowTransmission = smoothstep(
+                36.0 / 255.0, 60.0 / 255.0, liquidOpticalDepth
+              ) * (1.0 - smoothstep(
+                66.0 / 255.0, 120.0 / 255.0, liquidOpticalDepth
+              )) * oilBodyWeight * (1.0 - liquidFresnelContour * 0.20);
+              color += (vec3(1.10) - clamp(color, 0.0, 1.10))
+                * mix(vec3(1.00, 0.58, 0.16), reflectedEnvironment, 0.14)
+                * oilShallowTransmission * (0.041 + oilBodyCrown * 0.068);
+              float oilDeepRecession = smoothstep(
+                96.0 / 255.0, 216.0 / 255.0, liquidOpticalDepth
+              ) * oilBodyWeight * (1.0 - liquidFresnelContour * 0.20)
+                * (0.34 + oilBodyPocket * 0.66)
+                * (1.0 - oilBodyCrown * 0.22);
+              color *= vec3(1.0) - vec3(0.056, 0.112, 0.352)
+                * oilDeepRecession;
+            }
           }
           // E63: exact Nitro shares Oily optics with Oil and Diesel, but the
           // broad candidate-survey body still reads as a flat ochre plate.
@@ -11732,6 +11762,10 @@ export class PixiFieldPresenter {
     // true-8x path deliberately declares neither this selector nor arithmetic.
     const oilVolumeFinishVfxEnabled = outputScale < 8
       && resolveOilVolumeFinishVfxEnabled(renderLook);
+    // E72 is arithmetic inside E38's exact dense-Oil proof. Canvas and compact
+    // true 8x retain the accepted E38 presentation and declare no selector.
+    const oilDepthTransmissionVfxEnabled = outputScale < 8
+      && resolveOilDepthTransmissionVfxEnabled(renderLook);
     // E24 replaces only normal-WebGL's exact deep-Water stripe carrier. The
     // compact true-8x shader retains its independently proven aqueous grammar
     // and deliberately declares neither this selector nor its arithmetic.
@@ -11856,6 +11890,9 @@ export class PixiFieldPresenter {
       uDeutBodyVfx: { value: deutBodyVfxEnabled ? 1 : 0, type: 'f32' },
       uOilBodyVfx: { value: oilBodyVfxEnabled ? 1 : 0, type: 'f32' },
       uOilVolumeFinishVfx: { value: oilVolumeFinishVfxEnabled ? 1 : 0, type: 'f32' },
+      uOilDepthTransmissionVfx: {
+        value: oilDepthTransmissionVfxEnabled ? 1 : 0, type: 'f32',
+      },
       uWaterBodyVfx: { value: waterBodyVfxEnabled ? 1 : 0, type: 'f32' },
       uWaterVolumeRecessionVfx: {
         value: waterVolumeRecessionVfxEnabled ? 1 : 0, type: 'f32',
@@ -12135,6 +12172,7 @@ export class PixiFieldPresenter {
       this.uniforms.uniforms.uDeutBodyVfx = 0;
       this.uniforms.uniforms.uOilBodyVfx = 0;
       this.uniforms.uniforms.uOilVolumeFinishVfx = 0;
+      this.uniforms.uniforms.uOilDepthTransmissionVfx = 0;
       this.uniforms.uniforms.uWaterBodyVfx = 0;
       this.uniforms.uniforms.uWaterVolumeRecessionVfx = 0;
       this.uniforms.uniforms.uLiquidSolidMeniscusVfx = 0;
@@ -12222,6 +12260,7 @@ export class PixiFieldPresenter {
             || new URLSearchParams(location.search).get('woodTanninVfxAudit') === '1'
             || new URLSearchParams(location.search).get('glassBodyVfxAudit') === '1'
             || new URLSearchParams(location.search).get('oilBodyVfxAudit') === '1'
+            || new URLSearchParams(location.search).get('oilDepthTransmissionVfxAudit') === '1'
             || new URLSearchParams(location.search).get('acidBodyVfxAudit') === '1'
             || new URLSearchParams(location.search).get('soapBodyVfxAudit') === '1'
             || new URLSearchParams(location.search).get('deutBodyVfxAudit') === '1'
@@ -12405,6 +12444,9 @@ export class PixiFieldPresenter {
     ) > 0.5 ? 'active' : 'inactive';
     presenter.app.canvas.dataset.oilVolumeFinishVfx = Number(
       presenter.uniforms.uniforms.uOilVolumeFinishVfx
+    ) > 0.5 ? 'active' : 'inactive';
+    presenter.app.canvas.dataset.oilDepthTransmissionVfx = Number(
+      presenter.uniforms.uniforms.uOilDepthTransmissionVfx
     ) > 0.5 ? 'active' : 'inactive';
     presenter.app.canvas.dataset.waterBodyVfx = Number(
       presenter.uniforms.uniforms.uWaterBodyVfx
@@ -13967,6 +14009,7 @@ export class PixiFieldPresenter {
         this.uniforms.uniforms.uDeutBodyVfx = 0;
         this.uniforms.uniforms.uOilBodyVfx = 0;
         this.uniforms.uniforms.uOilVolumeFinishVfx = 0;
+        this.uniforms.uniforms.uOilDepthTransmissionVfx = 0;
         this.uniforms.uniforms.uWaterBodyVfx = 0;
         this.uniforms.uniforms.uWaterVolumeRecessionVfx = 0;
         this.uniforms.uniforms.uLiquidSolidMeniscusVfx = 0;
@@ -14034,6 +14077,7 @@ export class PixiFieldPresenter {
         this.app.canvas.dataset.deutBodyVfx = 'inactive';
         this.app.canvas.dataset.oilBodyVfx = 'inactive';
         this.app.canvas.dataset.oilVolumeFinishVfx = 'inactive';
+        this.app.canvas.dataset.oilDepthTransmissionVfx = 'inactive';
         this.app.canvas.dataset.waterBodyVfx = 'inactive';
         this.app.canvas.dataset.waterVolumeRecessionVfx = 'inactive';
         this.app.canvas.dataset.liquidSolidMeniscusVfx = 'inactive';

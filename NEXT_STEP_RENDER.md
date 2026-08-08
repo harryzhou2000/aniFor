@@ -2350,7 +2350,7 @@ next production 4× survey then selected Wood/PLNT as the largest remaining
   coverage `.971`, macro range `50`, zero dark/clipped fraction, and exact
   semantics across the full composed matrix.
 
-**Next visual experiments:** E03–E71 provide accepted liquid body/surface,
+**Next visual experiments:** E03–E72 provide accepted liquid body/surface,
 stable-gas, coherent-gas-motion, powder-depth, and powder-local-light
 checkpoints plus exact resting contact grounding, Glass/Ice transmission, and
 state-aware Wax/PLNT subsurface response, composed wet-mineral optics,
@@ -2367,7 +2367,8 @@ atmosphere-owned coherent CFLM cold-flame fold, and an exact-Oil
 velocity-oriented reflective slick with a cool absorptive wake, plus an exact-
 Steam pearly condensate crown/cool pocket over the established connected gas
 body, and exact-PLNT foliage consolidation that turns fine canopy mottling into
-broader overlapping leaf masses. E27's final
+broader overlapping leaf masses, plus exact-Oil depth transmission that carries
+an amber crown continuously into a deep blue absorptive pocket. E27's final
 canonical 2× Smoke result is luma deviation `2.22`, microcontrast `.39`, macro
 range `10`, luma range `14`, full support recall, and no clipping. E28 adds
 exact Wood/PLNT pigment/body depth without disturbing E20/E26 topology or
@@ -3014,16 +3015,47 @@ The corrected post-E71 canonical 2× survey explicitly requests the child under
 and zero browser errors. Its Organic heuristic falls to `71.608` because the
 ranker rewards precisely the fine mesostructure E71 deliberately consolidates;
 that score is therefore diagnostic of a ranker blind spot, not a reason to
-restore noisy foliage. Screenshot review selects static exact Oil as the next
-material experiment instead. Its composed body remains a nearly uniform opaque
-brown plug with luma standard deviation `5.02`, microcontrast `.29`, macro
-range `20`, and total luma range `22`, despite a saturated generic-liquid
-quality score. Prototype a resource-neutral E22/E38 child that reuses
-`oilBodyWeight`, `liquidOpticalDepth`, `oilBodyCrown`, `oilBodyPocket`,
-`liquidFresnelContour`, and `reflectedEnvironment` for a shallow warm
-transmission lift and an opposing deep blue-weighted absorption pocket. Add no
-noise or motion and no sample, sampler, texture, field, pass, target, clock,
-alpha/support/silhouette, ownership, state, or physics change.
+restore noisy foliage. Screenshot review selected the nearly uniform static
+exact-Oil body for E72.
+
+E72 is the accepted normal-WebGL exact-Oil depth-transmission checkpoint,
+independently selectable with `?oilDepthTransmissionVfx=0|1`. It is a strict
+child of E38/E22 and therefore E03, and can style only E38's already-proven
+authoritative, deep, connected Oil `8` body. It reuses `oilBodyWeight`,
+`liquidOpticalDepth`, `oilBodyCrown`, `oilBodyPocket`,
+`liquidFresnelContour`, and `reflectedEnvironment` to carry a shallow amber
+crown continuously into a deep blue-weighted absorption pocket. It adds no
+sample, sampler, texture, field, resource, pass, target, upload, allocation,
+noise, clock, motion, alpha, support, silhouette, ownership, topology, state,
+or physics decision. Canvas and compact true 8× contain no E72 branch and
+retain the accepted E38 presentation.
+
+`npm run audit:vfx:oil-depth-transmission` runs deterministic off→on→off
+captures at 1×/2×/4× over the established exact-Oil fixture while E03/E22/E38
+remain active and liquid/Oil motion remains off. Raw RGBA, semantics, liquid
+depth, liquid-field ownership, native walls, alpha/support, and repeated-off
+framebuffers stay exact. Accepted transition RGB channel means are roughly
+`+2.18…+2.25`, `+1.36…+1.42`, and `+0.40…+0.41`; deep means are roughly
+`−1.45`, `−2.00…−2.01`, and `−2.77…−2.79`. The open and wall-backed complete
+bodies measure respectively `2.44–2.45` and `2.16` RGB RMS. Surface, first,
+shallow, authored holes/chimneys, sparse owners, foreign materials, walls, and
+blank stay exact. Composed filtering is capped at one byte for
+`WALL_CONTROLPinhole` and `oilSandOil`, two for `oilGlassOil`, and three for
+`oilDieselOil`, `oilWaterOil`, `oilMetalOil`, and `oilSmokeOil`; every other
+composed control, every foreign-side probe, and every raw probe remains exact.
+
+Independent fit-view review accepts a continuous crown-to-pocket hierarchy
+with no neutral shelf or stripe. E38's high-frequency residual changes by only
+`+2.4%`, and E72 introduces no clipping, halo, silhouette, meniscus, or
+authored-hole change. Requested-on true 8× retains the exact 4896×3072 blank
+plane with E03/E22/E38/E72 and HDR selectors/resources inactive and completes a
+real GPU fence; the final frozen run measured `5.5271 s` with zero browser errors.
+Canonical `inputAudit=1` evidence must request E72 explicitly. Select the next
+experiment from a fresh composed/material survey rather than adding another
+Oil layer. The final canonical composed 1×/2×/4× matrix reports E72 active,
+full Oil support, zero dark/clipped fraction, luma standard deviation
+`6.05/6.07/6.10`, microcontrast `.45/.46/.48`, and a stable `28`-byte macro
+range / `33`-byte total luma range.
 
 ## Phase 1 — HDR pipeline & lighting core (biggest visual payoff)
 

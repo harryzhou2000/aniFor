@@ -827,6 +827,24 @@ export function resolveOilVolumeFinishVfxEnabled(
 }
 
 /**
+ * E72 gives only E38's dense exact-Oil body a calm vertical transmission axis:
+ * shallow amber light yields to blue-weighted deep absorption. Generic input
+ * audits retain the accepted E38 reference unless they request this child.
+ */
+export function resolveOilDepthTransmissionVfxEnabled(
+  look: RenderLook,
+  search = globalThis.location?.search ?? '',
+): boolean {
+  if (!resolveOilVolumeFinishVfxEnabled(look, search)) return false;
+  const parameters = new URLSearchParams(search);
+  const requested = parameters.get('oilDepthTransmissionVfx');
+  if (requested === '0' || requested === 'off' || requested === 'false') return false;
+  if (requested === '1' || requested === 'on' || requested === 'true') return true;
+  if (parameters.get('inputAudit') === '1') return false;
+  return true;
+}
+
+/**
  * Re-composes only the exact native Acid body after E03 has established a
  * connected, same-species liquid volume. The child remains independently
  * measurable, but cannot recreate the liquid-body baseline when its parent or

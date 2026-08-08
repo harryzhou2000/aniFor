@@ -40,6 +40,7 @@ import {
   resolveOilBodyVfxEnabled,
   resolveNitroBodyVfxEnabled,
   resolveOilVolumeFinishVfxEnabled,
+  resolveOilDepthTransmissionVfxEnabled,
   resolveOrganicSubsurfaceVfxEnabled,
   resolveFireFlameVfxEnabled,
   resolvePlasmaCoreVfxEnabled,
@@ -972,6 +973,36 @@ describe('resolveRenderLook', () => {
     expect(resolveOilVolumeFinishVfxEnabled(
       'realistic', '?oilVolumeFinishVfx=false',
     )).toBe(false);
+  });
+
+  it('keeps exact Oil depth transmission subordinate to E38 and isolated in input audits', () => {
+    expect(resolveOilDepthTransmissionVfxEnabled(
+      'classic', '?oilDepthTransmissionVfx=on',
+    )).toBe(false);
+    expect(resolveOilDepthTransmissionVfxEnabled('realistic', '')).toBe(true);
+    expect(resolveOilDepthTransmissionVfxEnabled('neon-lab', '')).toBe(true);
+    expect(resolveOilDepthTransmissionVfxEnabled(
+      'realistic', '?inputAudit=1&liquidBodyVfx=1&oilBodyVfx=1&oilVolumeFinishVfx=1',
+    )).toBe(false);
+    for (const requested of ['1', 'on', 'true']) {
+      expect(resolveOilDepthTransmissionVfxEnabled(
+        'realistic', `?inputAudit=1&liquidBodyVfx=1&oilBodyVfx=1&oilVolumeFinishVfx=1&oilDepthTransmissionVfx=${requested}`,
+      )).toBe(true);
+    }
+    for (const requested of ['0', 'off', 'false']) {
+      expect(resolveOilDepthTransmissionVfxEnabled(
+        'realistic', `?oilDepthTransmissionVfx=${requested}`,
+      )).toBe(false);
+    }
+    for (const parentOff of ['liquidBodyVfx=0', 'oilBodyVfx=0', 'oilVolumeFinishVfx=0']) {
+      expect(resolveOilDepthTransmissionVfxEnabled(
+        'realistic', `?${parentOff}&oilDepthTransmissionVfx=on`,
+      )).toBe(false);
+    }
+    expect(resolveOilDepthTransmissionVfxEnabled(
+      'realistic',
+      '?volumeVfx=0&liquidBodyVfx=1&oilBodyVfx=1&oilVolumeFinishVfx=1&oilDepthTransmissionVfx=on',
+    )).toBe(true);
   });
 
   it('keeps exact Water recomposition subordinate to the liquid-body baseline', () => {

@@ -13,7 +13,7 @@ powder, solid, liquid, gas, energy, and contact scenes across Canvas and WebGL a
 mobile gestures, save/load, CI, and Pages deployment as protected regression
 contracts rather than the primary feature stream.
 
-The accepted visual experiment ladder now runs through E71. E12 is the
+The accepted visual experiment ladder now runs through E72. E12 is the
 species-safe Sand/Clay/Concrete wet-sediment checkpoint; preserve its exact
 aqueous owner/stability proof, split moving-powder/stationary-Water control,
 Local/Grains no-op, fine structures, authored gaps, Canvas fallback, and true
@@ -1574,14 +1574,45 @@ selector active with exact 1224×768 backing and zero browser errors. Do not use
 the current Organic quality score as an optimization target for E71: that
 heuristic rewards fine mesostructure and therefore drops from `79.044` to
 `71.608` when the independently accepted foliage consolidation removes excess
-grain. The fresh visual survey instead selects exact Oil body depth as the next
-experiment. Static Oil remains a near-uniform opaque brown body (`5.02` luma
-standard deviation, `.29` microcontrast, `20`-byte macro range) even though the
-generic cohesive-liquid score saturates. Prefer a resource-neutral E22/E38
-child that reuses existing Oil depth, crown/pocket, Fresnel, and reflected-
-environment scalars for shallow amber transmission and opposing deep
-absorption; add no noise, motion, sample, resource, alpha, silhouette, or
-physics decision.
+grain. That survey selected the flat static exact-Oil body for E72.
+
+E72 is the accepted normal-WebGL-only exact-Oil depth-transmission checkpoint,
+independently measurable with `?oilDepthTransmissionVfx=0|1` and strictly
+subordinate to E38, E22, and therefore E03. Only E38's already-authoritative,
+deep, connected Oil `8` body may respond. It reuses the established Oil body
+weight, liquid optical depth, crown/pocket, Fresnel, and reflected-environment
+evidence to form a continuous shallow amber crown-to-deep blue absorptive
+pocket hierarchy. E72 adds no sample, sampler, texture, field, resource, pass,
+target, upload, allocation, noise, clock, motion, alpha, support, silhouette,
+ownership, topology, state, or physics decision. Canvas and compact true 8×
+have no E72 branch and retain the accepted E38 presentation.
+
+`npm run audit:vfx:oil-depth-transmission` owns the established exact-Oil
+fixture and runs deterministic off→on→off captures at 1×/2×/4× with E03/E22/E38
+held active and liquid/Oil motion held off. Semantic, raw RGBA, liquid depth,
+liquid field, native-wall state, alpha/support, and repeated-off framebuffers
+remain exact. Accepted transition response RGB channel means are approximately
+`+2.18…+2.25`, `+1.36…+1.42`, and `+0.40…+0.41`; deep response means are
+approximately `−1.45`, `−2.00…−2.01`, and `−2.77…−2.79`. Open and wall-backed
+whole-body RGB RMS is respectively `2.44–2.45` and `2.16`. Surface, first,
+shallow, holes, chimneys, sparse Oil, foreign materials, walls, and blank remain
+exact. Composed filtering is capped at one byte for `WALL_CONTROLPinhole` and
+`oilSandOil`, two for `oilGlassOil`, and three for `oilDieselOil`,
+`oilWaterOil`, `oilMetalOil`, and `oilSmokeOil`; every other composed control,
+every foreign-side probe, and every raw control remains exact.
+
+Independent fit-view review accepts the continuous crown-to-pocket depth
+hierarchy: it introduces no neutral shelf or stripe, retains E38's
+high-frequency residual with a `+2.4%` change, and produces no clipping, halo,
+silhouette, meniscus, or authored-hole change. Requested-on true 8× presents
+the exact 4896×3072 blank plane with E03/E22/E38/E72 and HDR selectors/resources
+inactive, and completed the final frozen real GPU fence in `5.5271 s` with zero browser
+errors. Canonical `inputAudit=1` surveys must request E72 explicitly. Select the
+next experiment from a fresh composed/material survey rather than stacking
+another Oil layer. The final canonical composed 1×/2×/4× matrix reports E72
+active with full Oil support, zero dark/clipped fraction, luma standard
+deviation `6.05/6.07/6.10`, microcontrast `.45/.46/.48`, and a stable
+`28`-byte macro range / `33`-byte total luma range.
 
 Visual-audit lesson: `inputAudit=1` disables opt-in child selectors unless the
 composed route names them explicitly, so canonical evidence must request and
