@@ -165,6 +165,7 @@ describe('HDR liquid-surface composite contract', () => {
     ]);
     expect(HDR_TONEMAP_FRAGMENT).toMatch(/uniform\s+float\s+uLiquidSurfaceVfx\s*;/);
     expect(HDR_TONEMAP_FRAGMENT).toMatch(/uniform\s+float\s+uLiquidMotionVfx\s*;/);
+    expect(HDR_TONEMAP_FRAGMENT).toMatch(/uniform\s+float\s+uOilMotionVfx\s*;/);
     expect(HDR_TONEMAP_FRAGMENT).toMatch(/uniform\s+float\s+uWaterCurvatureVfx\s*;/);
     expect(HDR_TONEMAP_FRAGMENT).toMatch(/uniform\s+vec2\s+uWorldTexel\s*;/);
 
@@ -207,6 +208,45 @@ describe('HDR liquid-surface composite contract', () => {
     expect(HDR_TONEMAP_FRAGMENT).toContain('whitecap');
     expect(HDR_TONEMAP_FRAGMENT).not.toContain('uVelocityTexture');
     expect(HDR_TONEMAP_FRAGMENT).not.toContain('uMotionTexture');
+    expect(HDR_TONEMAP_FRAGMENT).not.toContain('uTime');
+  });
+
+  it('derives E69 exact-Oil slick and wake from E08 velocity without another input', () => {
+    const eligibility = HDR_TONEMAP_FRAGMENT.slice(
+      HDR_TONEMAP_FRAGMENT.indexOf('// E69 is independent'),
+      HDR_TONEMAP_FRAGMENT.indexOf('float motionFacing'),
+    );
+    const direction = HDR_TONEMAP_FRAGMENT.slice(
+      HDR_TONEMAP_FRAGMENT.indexOf('float oilAgitation'),
+      HDR_TONEMAP_FRAGMENT.indexOf('float ripple'),
+    );
+    const finish = HDR_TONEMAP_FRAGMENT.slice(
+      HDR_TONEMAP_FRAGMENT.indexOf('// E69: exact moving Oil'),
+      HDR_TONEMAP_FRAGMENT.indexOf('// E66:'),
+    );
+    expect(HDR_TONEMAP_FRAGMENT).toMatch(
+      /float\s+oilMotion\s*=\s*uOilMotionVfx[\s\S]*?exactMaterial\(material, MATERIAL_OIL\)/,
+    );
+    for (const reusedEvidence of [
+      'motionEnergy', 'motionFacing', 'flowDirection', 'outward', 'surface',
+      'reflected', 'worldPosition',
+    ]) expect(HDR_TONEMAP_FRAGMENT).toContain(reusedEvidence);
+    expect(HDR_TONEMAP_FRAGMENT).toContain('oilLeading');
+    expect(HDR_TONEMAP_FRAGMENT).toContain('oilWake');
+    expect(HDR_TONEMAP_FRAGMENT).toContain('oilRibbon');
+    expect(HDR_TONEMAP_FRAGMENT).toContain('oilReflection');
+    expect(HDR_TONEMAP_FRAGMENT).toMatch(
+      /vec2 flowDirection = motionSpeed > 0\.01\s*\? centreVelocity \/ motionSpeed : vec2\(0\.0\);/,
+    );
+    expect(HDR_TONEMAP_FRAGMENT).toContain(
+      'vec2 transportDirection = oilMotion > 0.001 ? oilFlowDirection : flowDirection;',
+    );
+    expect(eligibility).not.toContain('texture(');
+    expect(direction).not.toContain('texture(');
+    expect(finish).not.toContain('texture(');
+    expect(finish).not.toContain('sin(');
+    expect(HDR_TONEMAP_FRAGMENT).not.toContain('uOilMotionTexture');
+    expect(HDR_TONEMAP_FRAGMENT).not.toContain('uOilSurfaceTexture');
     expect(HDR_TONEMAP_FRAGMENT).not.toContain('uTime');
   });
 

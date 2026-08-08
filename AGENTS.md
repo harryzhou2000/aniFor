@@ -13,7 +13,7 @@ powder, solid, liquid, gas, energy, and contact scenes across Canvas and WebGL a
 mobile gestures, save/load, CI, and Pages deployment as protected regression
 contracts rather than the primary feature stream.
 
-The accepted visual experiment ladder now runs through E68. E12 is the
+The accepted visual experiment ladder now runs through E69. E12 is the
 species-safe Sand/Clay/Concrete wet-sediment checkpoint; preserve its exact
 aqueous owner/stability proof, split moving-powder/stationary-Water control,
 Local/Grains no-op, fine structures, authored gaps, Canvas fallback, and true
@@ -1431,9 +1431,9 @@ authored holes/channels retain exact zero support with at most three bloom bytes
 final-composite probes as RGB-exact. Requested-on true 8× must report E67/HDR
 inactive with `scale-8`, no bloom or dense fixture, exact 4896×3072 WebGL, and a
 real GPU fence (accepted strengthened full-matrix fence `3.1667 s`, zero browser errors).
-Select any E69 owner/effect only from a fresh composed fit-view diagnosis; do
-not widen E67 to Plasma, ELEC, Lava, Smoke, traits, walls, sparse Fire, or the
-compact shader by visual resemblance.
+E69 was selected from a fresh composed fit-view diagnosis as a separate exact-
+Oil motion-surface treatment; it does not widen E67 to Plasma, ELEC, Lava,
+Smoke, traits, walls, sparse Fire, or the compact shader by visual resemblance.
 
 E68 is the normal-WebGL HDR-only propagated-CFLM cold-flame checkpoint,
 independently measurable with `?cflmColdFlameVfx=0|1`. It was selected from a
@@ -1473,6 +1473,45 @@ below `.34` RMS and one peak byte. Contact-side spill occurs only at 1×
 (`.02/.10` RMS, one peak byte) and is exact at 2×/4×; the co-located wall is
 exact throughout. The true-8× exclusion fence completed in `5.2063 s` with
 zero browser errors.
+
+E69 is the normal-WebGL HDR-only exact-Oil motion-surface checkpoint,
+independently measurable with `?oilMotionVfx=0|1`. It is a strict child of the
+accepted connected-liquid body and surface path and composes over E22/E38's
+Oil body/volume finish. Only authoritative ordinary Oil `8` on an already-
+proved same-owner air-facing surface with authentic packed native velocity may
+respond. It reuses the semantic centre/cardinals, species-valid liquid field,
+packed velocity, existing surface normal/depth, HDR reflection, native-wall
+sample, and already-live Oil sheen/caustic carriers to form a warm reflective
+leading slick and a blue-dominant absorptive wake. The effect is RGB only and
+adds one selector uniform but no sample, sampler, texture, field, pass, target,
+upload, persistent allocation, wave, clock/noise, alpha, support, silhouette,
+ownership, topology, or physics decision. Canvas and compact true 8× remain
+E69-inactive; E69-off leaves the accepted E65 transport direction unchanged.
+
+`npm run audit:vfx:oil-motion` owns topology-identical paused moving,
+reversed, and still fixtures at 1×/2×/4×. Reversed velocity is the byte-exact
+negative of moving velocity, while material, wall, liquid field, semantic
+support, and alpha stay identical. Every mode runs off→on→off and restores a
+byte-identical disabled framebuffer. The gate hashes raw and staged velocity,
+material, native wall, liquid-field density, semantic state, alpha, and support;
+then measures the isolated selector response `(on-off)` so pre-existing
+velocity shading cannot impersonate E69 direction. It requires positive amber
+leading lobes, negative blue-dominant wake lobes, signed reversal at the top
+and both sides, and bounded cross-scale magnitude/spatial retention. Stationary
+Oil, moving Water/Acid/Diesel/Nitro, thin or isolated Oil, Oil/Water and
+Oil/Diesel seams, co-located native wall, authored hole/chimney, and guarded
+blank are exact controls. Requested-on true 8× must report E03/E08/E22/E38/E69
+and HDR inactive for `scale-8`, omit the dense fixture and bloom resources,
+retain exact 4896×3072 WebGL, and complete a real GPU fence before acceptance.
+The accepted full matrix records forward top/right leading RGB RMS
+`4.75/4.90/4.48` and `4.20/4.42/4.47`, with left-wake RGB RMS
+`1.57/1.70/1.73`, at 1×/2×/4×. Reversal moves the leading lobe to the left at
+`6.53/7.20/7.32` RMS while the top/right wakes remain
+`2.18/2.12/2.15` and `.71/.90/.90`. Isolated reversal-response RMS is
+top `4.19/4.20/3.58`, left `4.94/5.19/4.56`, and right
+`2.08/2.27/2.30`, with the required signed polarity retained at every scale.
+All controls are exact, browser errors are zero, and the true-8× exclusion
+fence completed in `5.0048 s`.
 
 Visual-audit lesson: `inputAudit=1` disables opt-in child selectors unless the
 composed route names them explicitly, so canonical evidence must request and

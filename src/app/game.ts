@@ -51,6 +51,9 @@ import {
   LIQUID_MOTION_VFX_AUDIT, prepareLiquidMotionVfxFixture,
 } from './liquid-motion-vfx-audit';
 import {
+  OIL_MOTION_VFX_AUDIT, prepareOilMotionVfxFixture,
+} from './oil-motion-vfx-audit';
+import {
   WATER_CURVATURE_VFX_AUDIT, prepareWaterCurvatureVfxFixture,
 } from './water-curvature-vfx-audit';
 import {
@@ -875,6 +878,13 @@ export class Game {
         prepareLiquidMotionVfxFixture(this.simulation, mode);
         // The fixture changes packed velocity bytes as well as the material
         // plane. Refresh both projections before browser capture reads .ba.
+        this.renderer.synchronizeFixtureMaterialPlane();
+        this.renderer.invalidateDynamicPresentation();
+      },
+      oilMotionVfxFixture: () => OIL_MOTION_VFX_AUDIT,
+      prepareOilMotionVfxFixture: (mode) => {
+        prepareOilMotionVfxFixture(this.simulation, mode);
+        // E69 consumes the same packed semantic velocity bytes as E08/E65.
         this.renderer.synchronizeFixtureMaterialPlane();
         this.renderer.invalidateDynamicPresentation();
       },

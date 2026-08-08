@@ -3620,6 +3620,46 @@ describe('Pixi presenter startup configuration', () => {
     expect(eight).not.toContain('uLiquidMotionVfx');
   });
 
+  it('routes E69 exact-Oil motion through E08 without resources or an 8x branch', () => {
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const hdrSource = readFileSync(new URL('./hdr-vfx-pipeline.ts', import.meta.url), 'utf8');
+    const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');
+    const normalStart = source.indexOf('const FIELD_FRAGMENT = `', eightStart);
+    const eight = source.slice(eightStart, normalStart);
+    const hdrCreateStart = source.indexOf('const hdr = HDRVfxPipeline.create(');
+    const hdrCreateEnd = source.indexOf(');', hdrCreateStart);
+    const hdrCreate = source.slice(hdrCreateStart, hdrCreateEnd);
+    const branchStart = hdrSource.indexOf('// E69: exact moving Oil');
+    const branchEnd = hdrSource.indexOf('// E66:', branchStart);
+    const branch = hdrSource.slice(branchStart, branchEnd);
+
+    expect(source).toContain('resolveOilMotionVfxEnabled');
+    expect(source).toMatch(
+      /const oilMotionVfxEnabled = outputScale < 8\s*&& resolveOilMotionVfxEnabled\(renderLook\);/,
+    );
+    expect(hdrCreate).toContain('oilMotionEnabled: oilMotionVfxEnabled');
+    for (const existingResource of [
+      'this.fieldSource', 'this.wallSource', 'this.liquidSource',
+    ]) expect(hdrCreate).toContain(existingResource);
+    expect(source).toMatch(
+      /presenter\.app\.canvas\.dataset\.oilMotionVfx\s*=[\s\S]*?\? 'active' : 'inactive';/,
+    );
+    expect(source).toContain("this.app.canvas.dataset.oilMotionVfx = 'inactive';");
+    expect(source).toContain("get('oilMotionVfxAudit') === '1'");
+    expect(hdrSource).toContain('uOilMotionVfx');
+    expect(branchStart).toBeGreaterThan(0);
+    expect(branchEnd).toBeGreaterThan(branchStart);
+    expect(hdrSource).toMatch(
+      /float oilMotion\s*=\s*uOilMotionVfx[\s\S]*?exactMaterial\(material, MATERIAL_OIL\)/,
+    );
+    expect(branch).toContain('oilFlowDirection');
+    expect(branch).not.toContain('texture(');
+    expect(branch).not.toContain('uTime');
+    expect(branch).not.toMatch(/(?:finalColor|scene)\.a\s*=/);
+    expect(eight).not.toContain('oilMotionVfx');
+    expect(eight).not.toContain('uOilMotionVfx');
+  });
+
   it('routes E66 Water curvature through E08 liquid density without an 8x branch', () => {
     const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
     const hdrSource = readFileSync(new URL('./hdr-vfx-pipeline.ts', import.meta.url), 'utf8');

@@ -24,6 +24,7 @@ export interface HDRPipelineInfo {
   readonly bloomHeight?: number;
   readonly liquidSurfaceVfx?: boolean;
   readonly liquidMotionVfx?: boolean;
+  readonly oilMotionVfx?: boolean;
   readonly waterCurvatureVfx?: boolean;
 }
 
@@ -31,6 +32,7 @@ export interface HDRPipelineInfo {
 export interface HDRLiquidSurfaceResources {
   readonly enabled: boolean;
   readonly motionEnabled: boolean;
+  readonly oilMotionEnabled: boolean;
   readonly curvatureEnabled: boolean;
   readonly semanticTexture: TextureSource;
   readonly wallTexture: TextureSource;
@@ -114,6 +116,7 @@ uniform sampler2D uLiquidTexture;
 uniform vec2 uWorldTexel;
 uniform float uLiquidSurfaceVfx;
 uniform float uLiquidMotionVfx;
+uniform float uOilMotionVfx;
 uniform float uWaterCurvatureVfx;
 uniform float uBloomIntensity;
 uniform float uExposure;
@@ -232,6 +235,11 @@ vec3 liquidSurfaceTransport(
   float liquidMotion = uLiquidMotionVfx
     * exactMaterial(material, MATERIAL_WATER)
     * smoothstep(0.10, 0.58, motionEnergy);
+  // E69 is independent of E65: the same already-sampled native velocity and
+  // connected E08 surface proof drive only exact Oil's reflective slick.
+  float oilMotion = uOilMotionVfx
+    * exactMaterial(material, MATERIAL_OIL)
+    * smoothstep(0.06, 0.42, motionEnergy);
   float motionFacing = clamp(
     abs(dot(centreVelocity, outward)) * 0.72
       + abs(dot(centreVelocity, tangent)) * 0.28
@@ -239,19 +247,32 @@ vec3 liquidSurfaceTransport(
     0.0, 1.0
   );
   float liquidAgitation = liquidMotion * (0.42 + motionFacing * 0.58);
+  float oilAgitation = oilMotion * (0.48 + motionFacing * 0.72);
   vec2 flowDirection = motionSpeed > 0.01
     ? centreVelocity / motionSpeed : vec2(0.0);
+  vec2 shearDirection = centreVelocity - neighbourVelocity;
+  vec2 oilFlowDirection = motionSpeed > 0.01
+    ? flowDirection
+    : (velocityShear > 0.01 ? shearDirection / velocityShear : vec2(0.0));
   float ripple = sin(dot(worldPosition, vec2(0.071, 0.047)) + material * 0.61)
     * sin(dot(worldPosition, vec2(-0.039, 0.083)) + material * 0.37);
   float wallBacked = step(
     0.5, floor(texture(uWallTexture, vUv).r * 255.0 + 0.5)
   );
+  // Native walls are an exact E69 control. They may retain E08's established
+  // static refraction, but Oil velocity cannot bend or brighten that path.
+  float transportAgitation = max(
+    liquidAgitation, oilAgitation * 0.78 * (1.0 - wallBacked)
+  );
+  // Preserve E65/E08's accepted centre-velocity direction exactly when E69 is
+  // off. Only an active exact-Oil child may fall back to neighbour shear.
+  vec2 transportDirection = oilMotion > 0.001 ? oilFlowDirection : flowDirection;
   float familyOffset = material == MATERIAL_WATER ? 1.85
     : (material == MATERIAL_OIL ? 1.35 : 1.60);
   vec2 transmissionUv = boundedUv(
-    vUv - outward * uWorldTexel * familyOffset * (1.0 + wallBacked * 0.28)
+      vUv - outward * uWorldTexel * familyOffset * (1.0 + wallBacked * 0.28)
       + tangent * uWorldTexel * ripple * (0.44 + wallBacked * 0.22)
-      - flowDirection * uWorldTexel * liquidAgitation * 3.40
+      - transportDirection * uWorldTexel * transportAgitation * 3.40
   );
   if (exactMaterial(semanticMaterial(transmissionUv), material) < 0.5) {
     return sourceRadiance;
@@ -283,7 +304,7 @@ vec3 liquidSurfaceTransport(
   vec3 transported = mix(transmitted * transmissionTint, reflected, reflectionShare);
   float transportAmount = surface * (
     material == MATERIAL_WATER ? 0.18 : (material == MATERIAL_OIL ? 0.15 : 0.16)
-  ) * (1.0 + wallBacked * 0.24 + liquidAgitation);
+  ) * (1.0 + wallBacked * 0.24 + transportAgitation);
   vec3 result = mix(sourceRadiance, transported, min(0.24, transportAmount));
   // E65: the same velocity proof that bends transmission may lift only exact
   // Water's already-authoritative air-facing surface. This is a restrained
@@ -294,6 +315,33 @@ vec3 liquidSurfaceTransport(
     * (0.380 + whitecapPattern * 0.720 + min(0.280, velocityShear * 0.36));
   result += (vec3(1.18) - clamp(result, 0.0, 1.18))
     * vec3(0.82, 0.96, 1.08) * whitecap;
+  // E69: exact moving Oil stretches its already-live HDR reflection along the
+  // native flow and carries an opposing cool absorptive wake. The direction
+  // comes only from E08's retained semantic velocity samples; the ribbon
+  // recomposes E08's already-live static ripple rather than adding a carrier.
+  // This changes RGB only and adds no texture read,
+  // sampler, target, pass, allocation, clock, support, alpha, or topology.
+  if (oilMotion > 0.001 && wallBacked < 0.5) {
+    float oilFlowFacing = clamp(dot(oilFlowDirection, outward), -1.0, 1.0);
+    float oilLeading = smoothstep(-0.10, 0.62, oilFlowFacing);
+    float oilWake = smoothstep(-0.10, 0.62, -oilFlowFacing);
+    float oilRibbon = smoothstep(
+      0.10, 0.86, ripple * 0.5 + oilFlowFacing * 0.24 + 0.50
+    );
+    float oilSlick = surface * oilMotion * (0.55 + motionFacing * 0.85);
+    vec3 oilReflection = mix(
+      vec3(1.12, 0.72, 0.24), max(reflected, vec3(0.0)), 0.38
+    );
+    // Keep the two lobes optically distinct: the leading face receives the
+    // amber reflection, while a receding face cannot inherit that lift and
+    // therefore exposes the cooler wavelength-selective absorption below.
+    float oilKey = oilSlick * oilLeading * (0.26 + oilRibbon * 0.26);
+    result += (vec3(1.22) - clamp(result, 0.0, 1.22))
+      * oilReflection * oilKey;
+    float oilPocket = oilSlick
+      * (0.08 + oilWake * 0.56 + (1.0 - oilRibbon) * 0.12);
+    result *= vec3(1.0) - vec3(0.15, 0.25, 0.65) * oilPocket;
+  }
   // E66: sample the existing species-aware liquid plane at two mesoscopic
   // tangent shoulders around the already-proven Water/air interface. A flat
   // shore sees equal density at both shoulders; a convex crest recedes from
@@ -526,6 +574,10 @@ export class HDRVfxPipeline {
               value: liquidSurface.enabled && liquidSurface.motionEnabled ? 1 : 0,
               type: 'f32',
             },
+            uOilMotionVfx: {
+              value: liquidSurface.enabled && liquidSurface.oilMotionEnabled ? 1 : 0,
+              type: 'f32',
+            },
             uWaterCurvatureVfx: {
               value: liquidSurface.enabled && liquidSurface.curvatureEnabled ? 1 : 0,
               type: 'f32',
@@ -550,6 +602,7 @@ export class HDRVfxPipeline {
       this.info = {
         active: true, look, liquidSurfaceVfx: liquidSurface.enabled,
         liquidMotionVfx: liquidSurface.enabled && liquidSurface.motionEnabled,
+        oilMotionVfx: liquidSurface.enabled && liquidSurface.oilMotionEnabled,
         waterCurvatureVfx: liquidSurface.enabled && liquidSurface.curvatureEnabled,
         bloomWidth: bloomWidth * outputScale,
         bloomHeight: bloomHeight * outputScale,

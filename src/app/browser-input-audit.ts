@@ -82,6 +82,9 @@ import type {
   LiquidMotionVfxAuditSnapshot, LiquidMotionVfxFixtureMode,
 } from './liquid-motion-vfx-audit';
 import type {
+  OilMotionVfxAuditSnapshot, OilMotionVfxFixtureMode,
+} from './oil-motion-vfx-audit';
+import type {
   WaterCurvatureVfxAuditSnapshot, WaterCurvatureVfxFixtureMode,
 } from './water-curvature-vfx-audit';
 import type {
@@ -268,6 +271,9 @@ export interface BrowserInputAuditApi {
   ): void;
   liquidMotionVfxFixture(): LiquidMotionVfxAuditSnapshot;
   prepareLiquidMotionVfxFixture(mode: LiquidMotionVfxFixtureMode): void;
+  /** E69 varies only exact-owner velocity over one topology-frozen Oil atlas. */
+  oilMotionVfxFixture(): OilMotionVfxAuditSnapshot;
+  prepareOilMotionVfxFixture(mode: OilMotionVfxFixtureMode): void;
   /** E66 uses the same exact material topology in still/moving forms. */
   waterCurvatureVfxFixture(): WaterCurvatureVfxAuditSnapshot;
   prepareWaterCurvatureVfxFixture(mode: WaterCurvatureVfxFixtureMode): void;

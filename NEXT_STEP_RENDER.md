@@ -2350,7 +2350,7 @@ next production 4× survey then selected Wood/PLNT as the largest remaining
   coverage `.971`, macro range `50`, zero dark/clipped fraction, and exact
   semantics across the full composed matrix.
 
-**Next visual experiments:** E03–E68 provide accepted liquid body/surface,
+**Next visual experiments:** E03–E69 provide accepted liquid body/surface,
 stable-gas, coherent-gas-motion, powder-depth, and powder-local-light
 checkpoints plus exact resting contact grounding, Glass/Ice transmission, and
 state-aware Wax/PLNT subsurface response, composed wet-mineral optics,
@@ -2362,8 +2362,9 @@ Glass selective transmission, exact Oil amber-crown/cool-pocket body optics,
 an exact ROCK matte-body correction over E17, lower-anisotropy exact-Water
 depth-light recomposition, exact Noble Gas pearlescent billow depth, exact
 Wood/PLNT mesostructure, exact Smoke soft soot volume, and exact Smoke
-billow-depth, plus exact temperature- and velocity-driven Fire identity and an
-atmosphere-owned coherent CFLM cold-flame fold. E27's final
+billow-depth, plus exact temperature- and velocity-driven Fire identity, an
+atmosphere-owned coherent CFLM cold-flame fold, and an exact-Oil
+velocity-oriented reflective slick with a cool absorptive wake. E27's final
 canonical 2× Smoke result is luma deviation `2.22`, microcontrast `.39`, macro
 range `10`, luma range `14`, full support recall, and no clipping. E28 adds
 exact Wood/PLNT pigment/body depth without disturbing E20/E26 topology or
@@ -2905,6 +2906,45 @@ below `.34` RMS and one peak byte. Contact-side spill occurs only at 1×
 exact throughout. The true-8× exclusion fence completed in `5.2063 s` with
 zero browser errors.
 
+E69 is the accepted normal-WebGL HDR-only exact-Oil motion-surface checkpoint,
+independently selectable with `?oilMotionVfx=0|1`. A fresh composed fit-view
+diagnosis selected moving Oil because its established E22/E38 amber body and
+volume finish still lacked directional surface transport. E69 is a strict
+child of the connected E03/E08 liquid body/surface path and composes over that
+accepted Oil finish. Only authoritative ordinary Oil `8` on an already-proved
+same-owner air-facing surface with authentic packed native velocity may
+respond. It reuses the semantic centre/cardinals, species-valid liquid samples,
+packed velocity, surface normal/depth, HDR reflection, native-wall sample, and
+already-live Oil sheen/caustic carriers to produce a warm reflective leading
+slick and a blue-dominant absorptive wake. The response is RGB only and adds
+one selector uniform but no sample, sampler, texture, field, pass, target,
+upload, allocation, scheduler stage, wave, clock/noise, alpha, support,
+silhouette, ownership, topology, or physics decision. Canvas and compact true
+8× remain E69-inactive; E69-off leaves the accepted E65 transport path exact.
+
+`npm run audit:vfx:oil-motion` runs topology-identical paused moving,
+reversed, and still off→on→off fixtures at 1×/2×/4× while E22/E38 stay active.
+It hashes semantic, material, native-wall, raw/staged velocity, species-valid
+liquid-field, alpha, and support state and requires a byte-identical repeated-
+off framebuffer. Direction is proved from the isolated `(on-off)` response,
+not from raw moving/reversed frames, so established velocity shading cannot
+contaminate E69 evidence. Acceptance requires positive amber leading lobes,
+negative blue-dominant wakes, signed reversal at the top and both sides,
+bounded cross-scale magnitude/spatial retention, and an exact still no-op.
+Moving Water/Acid/Diesel/Nitro, stationary Oil, thin/isolated Oil, Oil/Water and
+Oil/Diesel seams, co-located native wall, authored hole/chimney, and guarded
+blank remain exact. Requested-on true 8× must report the connected-liquid/Oil
+body chain, E69, and HDR inactive for `scale-8`, omit the dense fixture and
+bloom resources, present exact 4896×3072 WebGL, and complete a real GPU fence.
+The accepted full matrix records forward top/right leading RGB RMS
+`4.75/4.90/4.48` and `4.20/4.42/4.47`, with left-wake RGB RMS
+`1.57/1.70/1.73`, at 1×/2×/4×. Reversal moves the leading lobe to the left at
+`6.53/7.20/7.32` RMS while top/right wakes remain `2.18/2.12/2.15` and
+`.71/.90/.90`. The isolated directional response remains signed and bounded:
+top `4.19/4.20/3.58`, left `4.94/5.19/4.56`, and right
+`2.08/2.27/2.30` RMS. All controls are exact, browser errors are zero, and the
+true-8× exclusion fence completed in `5.0048 s`.
+
 ## Phase 1 — HDR pipeline & lighting core (biggest visual payoff)
 
 **Goal:** everything downstream needs light and dynamic range; build the chassis first.
@@ -2920,7 +2960,7 @@ zero browser errors.
 **Goal:** liquids read as one continuous body with a surface; gases read as volumetric media.
 
 - **Screen-space fluid rendering** (Müller-style, the classic 2007 technique): liquid coverage → depth/thickness buffer → **curvature flow smoothing** for a real meniscus → reconstruct normals → **Fresnel reflection + refraction of the background/wall pattern behind** → specular glints. Your current per-species depth gradient is the seed of the thickness buffer.
-- **Foam, spray & meniscus:** E65 supplies a bounded exact-Water whitecap/refraction response from packed native velocity on already-connected E08 surfaces. E66 adds an independent optical curvature finish for resting convex crests and concave inlets; it does not smooth geometric alpha. Detached spray support, divergence-aware foam persistence, and non-Water family treatments remain open and must retain exact topology controls.
+- **Foam, spray & meniscus:** E65 supplies a bounded exact-Water whitecap/refraction response from packed native velocity on already-connected E08 surfaces. E66 adds an independent optical curvature finish for resting convex crests and concave inlets; it does not smooth geometric alpha. E69 closes the first exact-Oil non-Water treatment with a velocity-oriented reflective slick and cool absorptive wake over the established E22/E38 body finish. Detached spray support, divergence-aware foam persistence, and Acid/Diesel/Nitro family treatments remain open and must retain exact topology controls.
 - **Gases as participating media:** extend your density/colour field with a **noise-animated volume** — FBM curl noise advected by the velocity field, modulated by density, lit by the dynamic lights (light shafts through smoke are extremely high-impact). Approximate with 2–3 octave noise at half res, upsampled.
 - **Fire:** E67 now adds an exact-owner temperature-stratified body and velocity-shaped tongue on the normal HDR path. Its procedural flow remains subordinate to authentic temperature/velocity state, sparse Fire stays discrete, and compact true 8× keeps the established generic Energy presentation. Persistent advected flame volume, ember/spray support, and dynamic light transport remain separate future experiments.
 

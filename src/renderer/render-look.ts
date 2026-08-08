@@ -87,6 +87,26 @@ export function resolveLiquidMotionVfxEnabled(
 }
 
 /**
+ * E69 gives exact moving Oil its own velocity-oriented reflective slick and
+ * absorptive wake after E08 has proved a connected liquid/air surface. It is
+ * deliberately independent of E65's Water-only whitecap so neither child can
+ * broaden the other's exact owner. Audit URLs retain their frozen reference
+ * unless they request this Oil child explicitly.
+ */
+export function resolveOilMotionVfxEnabled(
+  look: RenderLook,
+  search = globalThis.location?.search ?? '',
+): boolean {
+  if (!resolveLiquidSurfaceVfxEnabled(look, search)) return false;
+  const parameters = new URLSearchParams(search);
+  const requested = parameters.get('oilMotionVfx');
+  if (requested === '0' || requested === 'off' || requested === 'false') return false;
+  if (requested === '1' || requested === 'on' || requested === 'true') return true;
+  if (parameters.get('inputAudit') === '1') return false;
+  return true;
+}
+
+/**
  * E66 gives exact Water a curvature-flow-inspired meniscus only after E08 has
  * established a connected liquid/air surface. It is independent of E65's
  * velocity response so a resting curved shore still reads as a fluid surface.
