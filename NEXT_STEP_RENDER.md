@@ -2,30 +2,33 @@
 
 Prioritize an effective rendering-experiment framework over further isolated
 visual-detail work. The modular typed Visual Lab facade, executable capability
-profiles, named capture recipes, and content-addressed result records are
-deployed. Frozen renderer/capture descriptors share exact domain, target,
-Detail/fallback, evidence, URL, backend/pipeline, and resource-budget semantics,
-and the generic runner consumes them without domain branches. The immediate
-milestone is a deterministic batch runner and contact-sheet index. A normal-
-scale A/B experiment should touch one domain module and one catalog entry—not
-presenter setup, app lifecycle, package-script duplication, or CDP branching.
+profiles, named capture recipes, content-addressed result records, deterministic
+batch runner, and static contact-sheet index are deployed. Frozen renderer and
+capture descriptors share exact domain, target, Detail/fallback, evidence, URL,
+backend/pipeline, and resource-budget semantics, and the generic runner consumes
+them without domain branches. The immediate milestone is opt-in CI review
+publication and deployment gating over the already-verified build artifact. A
+normal-scale A/B experiment should touch one domain module and one catalog
+entry—not presenter setup, app lifecycle, package/workflow duplication, or CDP
+branching.
 
 The fixed `domain/variant/target/gain` state, promotion-safe same-page switching,
 declarative fixture startup, and production-bundle off/A/B route already form
 the base. E62 Oxygen, E69 Oil motion, and E65 Water motion have been folded into
 their accepted parent baselines and their one-off selector/telemetry/verifier
-plumbing removed. The recipe/result framework checkpoint is complete and
+plumbing removed. The batch/index framework checkpoint is complete and
 deployed: `main_codex` and Pages serve revision
-`70d33d8383e75dfb3f071b8e405be2f910d735fa` after successful workflow run
-`31279274149` and independent 19-resource live asset-closure verification.
+`e06d11398a37dcf1558411a350af631452c4953e` after successful workflow run
+`31283340387` and independent 19-resource live asset-closure verification.
 
-The next stable deployment checkpoint is the batch milestone, not a fourth
-effect. One production build must feed all selected frozen recipes, each in a
-fresh sequential browser session. The runner must validate child reports and
-recompute result identity from the actual local PNG bytes before publishing a
-versioned deterministic index and relative-path contact sheet. Partial failures
-retain diagnostics but do not publish a complete index. The sheet aids human
-comparison; it does not invent a visual-quality score. Canvas remains the
+The next stable deployment checkpoint is the CI review layer, not a fourth
+effect. It must consume the exact static-site artifact from its prerequisite
+build without rebuilding, run selected frozen recipes in fresh sequential
+hosted SwiftShader sessions, and always publish complete or failed evidence.
+Only an exact complete v1 index passes. When review is requested it gates
+deployment; when skipped it leaves the established build and build+deploy
+controls unchanged. The sheet aids human comparison and remains a downloadable
+artifact, not a Pages asset or visual-quality score. Canvas remains the
 resilient semantic fallback and true 8× stays on its compact direct path unless
 a separately budgeted design proves otherwise.
 
@@ -75,6 +78,30 @@ not a Pages asset or an automated aesthetic score. Once this checkpoint is
 deployed, extend the framework only where it shortens candidate authoring,
 comparison, or CI artifact review; then use one catalog entry to choose the next
 high-value material treatment.
+
+### CI review acceptance
+
+Manual dispatch exposes `visual_lab_review` and optional
+`visual_lab_candidates`. Empty candidates mean the complete frozen catalog;
+explicit comma-separated names remain catalog-validated and are emitted in
+canonical order. The review job depends on `build`, downloads that run's
+`anifortpt-static-site` into `dist`, and invokes `visual-lab-batch.mjs` directly
+with `--gpu=swiftshader`. It performs no second WASM or Vite build. Its evidence
+artifact is named by the exact commit and uploads under `always()`, including an
+incomplete index, contact sheet, PNGs, reports, stdout/stderr, and failure
+tombstones. A final independent check requires the v1 schema and
+`complete: true`.
+
+Hosted software readback retains the exact two-consecutive semantic, field, and
+framebuffer-alpha snapshot proof but has a 30-second per-variant settle window;
+native GPU keeps ten seconds. The selected proof run `31284382855` received
+`water-motion,gas-showcase`, published canonical gas-then-water order, passed
+both candidates, and produced a downloaded sheet whose eight relative links
+all resolve. The stable release gate is the full four-candidate catalog coupled
+to build+deploy: successful review permits Pages deployment and failed review
+blocks it while preserving diagnostics. After that checkpoint, the next
+framework work is versioned accepted-baseline/result comparison rather than
+another shader-detail ladder or verifier clone.
 
 ## Visual north star
 
@@ -3502,11 +3529,13 @@ E62, E69, and E65 prove that the framework can absorb accepted leaf treatments
 while deleting selector/plumbing and cloned verifier code. The typed domain
 facade, executable capability profiles, exact 0/7/7 read budgets, declarative
 fixtures, protocol-owned URL/dataset requirements, bounded Chrome lifecycle,
-named recipes, and content-addressed results are complete and deployed at
-revision `70d33d8383e75dfb3f071b8e405be2f910d735fa`. The current milestone is
-operational leverage over that seam: run selected recipes from one build,
-validate their local artifacts, and publish a deterministic batch index/contact
-sheet. Defer E66 and Powder until
+named recipes, content-addressed results, deterministic batch index, and static
+contact sheet are complete and deployed at revision
+`e06d11398a37dcf1558411a350af631452c4953e` by workflow run `31283340387`.
+The current milestone is operational CI leverage over that seam: consume the
+verified static-site artifact without another build, publish complete or failed
+batch evidence for review, and optionally make successful review a deployment
+prerequisite. Defer E66 and Powder until
 their extra samples or source-stage stability proof fit the existing budgeted
 facade without creating a second experiment framework.
 
@@ -3557,7 +3586,7 @@ promotion before running off/A/B. The domain capability table is renderer-owned;
 reserved Powder resolves fully disabled instead of compiling and binding an
 eight-sampler compositor that has no Powder implementation.
 
-### Next stable deploy checkpoint — named recipes and result records
+### Deployed checkpoint — named recipes, results, and batch index
 
 This checkpoint is infrastructure, not a new look. The frozen recipe catalog
 owns `domain/target/fixture/gain/renderScale`; `--candidate=<name>` rejects every
@@ -3576,11 +3605,15 @@ Reuse an existing production bundle with:
 Every report retains full capability/protocol evidence and adds
 `anifor.visual-lab.result/v1`: candidate name, normalized request, ordered
 off/A/B hashes, and a deterministic `sha256:` identity over that exact record.
-The reusable gate is focused catalog/result tests, a production build, one real
-named WebGL/HDR capture with invariant alpha/support, bounded Chrome cleanup,
-CI success, Pages asset closure, and exact live revision. The following
-framework increment is a batch index/contact sheet over these records; it must
-not add renderer selectors or CDP domain branches.
+The batch runner resolves a selected set in frozen catalog order, launches one
+fresh browser per candidate against one existing production build, independently
+validates the actual PNG/report bytes, and publishes
+`anifor.visual-lab.batch/v1` plus a static relative-path contact sheet. A failed
+candidate retains its logs and failure tombstone but forces `complete: false`.
+The reusable gate is focused catalog/result/batch tests, a production build, one
+real named WebGL/HDR batch with invariant alpha/support, bounded Chrome cleanup,
+CI success, Pages asset closure, and exact live revision. It adds no renderer
+selector or CDP domain branch.
 
 E62 Oxygen volume folding is the first migrated accepted treatment. Its
 established exact-Oxygen arithmetic remains inside the E15 body proof, preserving
@@ -3639,8 +3672,9 @@ alpha, support, ownership, or compact-8× branch was added.
 The migration was checkpointed as
 `c85e3cfdd1deb16dd4994a51db29929c01df76a3`; the later recipe/result framework
 checkpoint is deployed at `70d33d8383e75dfb3f071b8e405be2f910d735fa` by
-workflow run `31279274149`. Treat E65 and the framework facade as complete; the
-next deployment is the batch runner/index checkpoint above.
+workflow run `31279274149`, and the batch/index checkpoint is deployed at
+`e06d11398a37dcf1558411a350af631452c4953e` by workflow run `31283340387`.
+Treat E65, the framework facade, and local batch aggregation as complete.
 
 The hook runs after bloom extraction. Emission experiments can reshape final
 radiance but cannot seed new bloom until a deliberately budgeted pre-extract
@@ -3660,9 +3694,22 @@ ownership, URL construction, and compatibility aliases; the detached-process
 lifecycle tests remain alongside them in `npm test`. The named Water candidate
 passes at canonical 2× with exact topology/alpha invariants, distinct off/A/B
 images, zero browser errors, and a deterministic content-addressed result.
-Immediate work is checkpoint/deployment of the batch result index and contact
-sheet. Defer E66 and Powder until the fixed HDR seam can receive
-their stability/body proof without a second experiment framework.
+Immediate work is the opt-in CI review layer. A manual boolean enables it and an
+optional comma list selects candidates; empty means the full frozen catalog.
+The review job downloads the prerequisite build's `anifortpt-static-site`, runs
+the batch directly against `dist/index.html` with hosted SwiftShader, always
+uploads the batch root, and requires a complete v1 index. A requested review
+must gate build+deploy, while a skipped review must preserve both existing
+controls. The sheet remains a downloadable artifact rather than a Pages asset.
+The selected hosted proof is workflow run `31284382855`: reversed input
+`water-motion,gas-showcase` published canonical gas-then-water order, both
+candidates passed, and all relative sheet links resolved after download. The
+cold software renderer retains the same two-consecutive-snapshot proof with a
+30-second settle budget; native GPU keeps ten seconds. After a full-catalog
+deploy gate is green, prefer accepted-baseline/result comparison metadata over
+another verifier or workflow clone. Defer E66 and Powder until the fixed HDR
+seam can receive their stability/body proof without a second experiment
+framework.
 
 ## Phase 1 — HDR pipeline & lighting core (biggest visual payoff)
 

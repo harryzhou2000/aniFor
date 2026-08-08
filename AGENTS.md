@@ -5,12 +5,15 @@
 Pause the detail-first E-number ladder. The active goal is framework leverage,
 not another isolated material treatment. The modular typed Visual Lab facade,
 executable capability profiles, named capture recipes, and content-addressed
-result records are deployed. Renderer and capture descriptors share exact
-domain, target, Detail/fallback, evidence, URL, backend/pipeline, and resource-
-budget semantics. Build the deterministic batch runner and contact-sheet index
-next. A normal A/B idea should touch one domain module plus one catalog entry—
-not presenter setup, HDR lifecycle, app boot, package-script duplication, or
-CDP branching.
+result records are deployed, as is the deterministic batch runner and static
+contact-sheet index. Renderer and capture descriptors share exact domain,
+target, Detail/fallback, evidence, URL, backend/pipeline, and resource-budget
+semantics. The current checkpoint is operational CI leverage: publish an
+opt-in review artifact from the already-verified `dist`, preserve incomplete
+diagnostics, and let a requested review gate deployment. A normal A/B idea
+should touch one domain module plus one catalog entry—not presenter setup, HDR
+lifecycle, app boot, package-script duplication, workflow duplication, or CDP
+branching.
 
 The typed Visual Lab state, fixed normal-HDR composition seam, promotion-safe
 same-page off/A/B selection, declarative fixtures, and production-bundle capture
@@ -20,20 +23,24 @@ motion is an accepted E08 baseline and uses the moving-Oil fixture with liquid
 target `8`; E65 Water surface motion is an accepted E08 baseline and uses the
 retained moving-Water fixture with liquid target `2`. Their legacy resolvers,
 uniforms, queries, datasets, and bespoke verifier paths are removed. E65 is also
-deployed. The recipe/result framework checkpoint is live: `main_codex` and
-Pages serve revision `70d33d8383e75dfb3f071b8e405be2f910d735fa` after
-successful workflow run `31279274149` and independent 19-resource live asset-
-closure verification.
+deployed. The batch/index framework checkpoint is live: `main_codex` and Pages
+serve revision `e06d11398a37dcf1558411a350af631452c4953e` after successful
+workflow run `31283340387` and independent 19-resource live asset-closure
+verification.
 
-The next stable deployment checkpoint is the batch runner/index milestone, not
-a fourth leaf migration. It builds once, runs selected frozen recipes
-sequentially in fresh browser sessions, validates reports against the actual
-off/A/B PNG bytes, and writes a deterministic versioned index plus a static
-relative-path contact sheet. A partial capture may retain per-candidate logs,
-but must not publish a complete index. The sheet is comparison navigation, not
-an aesthetic acceptance score or a renderer artifact. Defer E66 because its
-tangent reads make it resource-sensitive; migrate another accepted leaf only
-when doing so removes more special-case infrastructure than it adds.
+The next stable deployment checkpoint is the opt-in CI review layer, not a
+fourth leaf migration. A manual review depends on the ordinary verified build,
+downloads that run's static-site artifact, and runs selected frozen recipes in
+fresh sequential SwiftShader sessions without rebuilding WASM or Vite. It
+always uploads the local batch root—including incomplete indexes, PNGs,
+reports, stdout/stderr, and failure tombstones—and succeeds only for an exact
+complete v1 index. A requested review gates deployment; a skipped review must
+leave existing build and build+deploy controls unchanged. The contact sheet is
+a downloadable comparison artifact, never a Pages/runtime asset or aesthetic
+acceptance score. After this layer is deployed, prefer a versioned accepted-
+baseline/result comparison over more workflow or verifier clones. Defer E66
+because its tangent reads make it resource-sensitive; migrate another accepted
+leaf only when doing so removes more special-case infrastructure than it adds.
 Same-page variant selection must remain owned across asynchronous WebGL promotion; a
 choice made during the temporary Canvas `webgl-starting` phase is seeded before
 the first WebGL frame. Lab
@@ -1969,20 +1976,25 @@ Framework leverage remains the checkpoint priority rather than E83 material
 polish. The fixed `domain/variant/target/gain` state, domain-local shader facade,
 executable renderer/capture capability profiles, browser diagnostics, named
 recipes, content-addressed results, and off/A/B harness are complete and
-deployed at revision `70d33d8383e75dfb3f071b8e405be2f910d735fa`. E62, E69,
-and E65 prove that
+deployed. The deterministic batch/index layer is also live at revision
+`e06d11398a37dcf1558411a350af631452c4953e`. E62, E69, and E65 prove that
 accepted leaf treatments can be folded into parent baselines while deleting
 selector, uniform, query, telemetry, and bespoke-verifier plumbing. Do not
 reopen them merely to add more effect detail.
 
-The next checkpoint is the deterministic batch layer. It consumes frozen
-recipes and `anifor.visual-lab.result/v1` records, captures candidates
-sequentially from one production build, re-hashes local off/A/B artifacts, and
-emits `anifor.visual-lab.batch/v1` plus a static relative-path contact sheet.
-Keep variant zero pixel-preserving, the direct true-8× fragment untouched, and
-the generic CDP harness domain-branch-free. A failed candidate must leave useful
-diagnostics without publishing a complete index. Defer E66 and Powder until
-their resource/stability proof fits the existing facade.
+The current checkpoint is opt-in CI publication of that batch evidence. The
+review job must consume the exact `anifortpt-static-site` artifact produced by
+its prerequisite build, force hosted SwiftShader, preserve every diagnostic
+through an `always()` artifact upload, and require `index.complete === true`.
+An empty candidate input means the full frozen catalog; an explicit comma list
+remains catalog-validated and canonically ordered. Build+deploy may proceed
+only after a requested review succeeds, while a skipped review remains
+compatible with the established controls. Keep variant zero pixel-preserving,
+the direct true-8× fragment untouched, and the generic CDP harness domain-
+branch-free. After this is stable, add accepted-baseline/result comparison at
+the batch-record layer instead of cloning workflow, renderer, or CDP paths.
+Defer E66 and Powder until their resource/stability proof fits the existing
+facade.
 
 Ordinary pages compile the original five-sampler HDR compositor; only an
 explicit lab session compiles the eight-sampler gas/emission permutation. Use
@@ -2011,8 +2023,8 @@ relative paths and an explicit `complete` bit meaning every selected candidate
 passed. Invalidate an old complete root sheet before mutating a rerun, publish
 the contact sheet first, and publish the complete machine index last. The
 `audit:visual-lab:batch:capture` route with `--index-only=1` launches neither
-Chrome nor a build. Do not describe this local sheet as a Pages artifact unless
-CI is later changed to publish it.
+Chrome nor a build. CI may publish this same local root only as a downloadable
+review artifact; it must never copy the sheet into `dist` or Pages.
 Its built-bundle `file://` route is preferred over an old long-running Vite
 server. The compositor hook is post-bloom, so do not claim that emission lab
 brightness generates bloom.
