@@ -41,6 +41,7 @@ import {
   resolveRadioactiveSolidBodyVfxEnabled,
   resolveVibrMacroReliefVfxEnabled,
   resolveOilBodyVfxEnabled,
+  resolveDistilledDieselBodyVfxEnabled,
   resolveNitroBodyVfxEnabled,
   resolveOilVolumeFinishVfxEnabled,
   resolveOilDepthTransmissionVfxEnabled,
@@ -1253,6 +1254,34 @@ describe('resolveRenderLook', () => {
     expect(resolveNitroBodyVfxEnabled(
       'realistic', '?oilBodyVfx=on&nitroBodyVfx=off',
     )).toBe(false);
+  });
+
+  it('keeps exact Distilled/Diesel body optics subordinate to E03 and audit-isolated', () => {
+    expect(resolveDistilledDieselBodyVfxEnabled(
+      'classic', '?distilledDieselBodyVfx=on',
+    )).toBe(false);
+    expect(resolveDistilledDieselBodyVfxEnabled('realistic', '')).toBe(true);
+    expect(resolveDistilledDieselBodyVfxEnabled('neon-lab', '')).toBe(true);
+    expect(resolveDistilledDieselBodyVfxEnabled('realistic', '?inputAudit=1')).toBe(false);
+    expect(resolveDistilledDieselBodyVfxEnabled(
+      'realistic', '?inputAudit=1&distilledDieselBodyVfx=true',
+    )).toBe(true);
+    for (const value of ['0', 'off', 'false']) {
+      expect(resolveDistilledDieselBodyVfxEnabled(
+        'realistic', `?distilledDieselBodyVfx=${value}`,
+      )).toBe(false);
+    }
+    for (const value of ['1', 'on', 'true']) {
+      expect(resolveDistilledDieselBodyVfxEnabled(
+        'realistic', `?distilledDieselBodyVfx=${value}`,
+      )).toBe(true);
+    }
+    expect(resolveDistilledDieselBodyVfxEnabled(
+      'realistic', '?liquidBodyVfx=0&distilledDieselBodyVfx=on',
+    )).toBe(false);
+    expect(resolveDistilledDieselBodyVfxEnabled(
+      'realistic', '?waterBodyVfx=0&oilBodyVfx=0&nitroBodyVfx=0&distilledDieselBodyVfx=on',
+    )).toBe(true);
   });
 
   it('keeps exact Hydrogen body optics subordinate to E04 and isolated from older input audits', () => {

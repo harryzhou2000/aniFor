@@ -992,6 +992,25 @@ export function resolveNitroBodyVfxEnabled(
 }
 
 /**
+ * E79 gives exact Distilled Water and Diesel their own connected-liquid body
+ * spectra after E03 has established ordinary same-species support. The child
+ * cannot revive E03, is independent of Water/Oil/Nitro body recomposition, and
+ * keeps older input-audit scenes frozen until they explicitly opt in.
+ */
+export function resolveDistilledDieselBodyVfxEnabled(
+  look: RenderLook,
+  search = globalThis.location?.search ?? '',
+): boolean {
+  if (!resolveLiquidBodyVfxEnabled(look, search)) return false;
+  const parameters = new URLSearchParams(search);
+  const requested = parameters.get('distilledDieselBodyVfx');
+  if (requested === '0' || requested === 'off' || requested === 'false') return false;
+  if (requested === '1' || requested === 'on' || requested === 'true') return true;
+  if (parameters.get('inputAudit') === '1') return false;
+  return true;
+}
+
+/**
  * Gives exact native DEUT a trait-aware connected-liquid body without
  * weakening E03's deliberately trait-free eligibility. This is a sibling of
  * E03 inside a non-Classic HDR look: an explicit selector can isolate E41

@@ -3272,6 +3272,48 @@ four-level chain. Select the next experiment from a fresh fit-view diagnosis of
 powder, liquid, gas, or emission volume rather than chasing the remaining broad
 contact-ranker quantisation.
 
+### E79 — accepted Distilled Water/Diesel body optics
+
+E79 closes the fit-view deficit where Distilled Water and Diesel inherited
+E03's common liquid absorption and an identity accent but lacked their own
+body-scale optical read. It is a normal-WebGL-only strict E03 child,
+independently selectable with `?distilledDieselBodyVfx=0|1`. Exact DSTW `34`
+with Aqueous optics and exact DESL `35` with Oily optics are the only owners;
+both are ordinary liquid-category materials with neutral render profile `0`.
+The branch reuses E03's existing column depth, broad sheen, caustic wave, macro
+relief, Fresnel contour, and reflected environment. DSTW gains coherent cool
+transmission/reflection lobes while DESL gains a warmer fuel crown and opposing
+blue-forward absorption. It changes RGB only and adds no sample, texture,
+field, pass, target, upload, allocation, clock, alpha/support, silhouette,
+ownership, topology, state, or physics decision. Established liquid identity
+remains a later layer; Canvas and compact true 8× remain unchanged.
+
+`npm run audit:vfx:distilled-diesel-body` holds identity styling active and
+varies only E79 through exact off→on→off navigations at 1×/2×/4×. DSTW surface
+RGB RMS is `3.3181/3.3495/3.3123`, with core
+`1.1587/1.0844/1.1667`; DESL surface is
+`2.1157/2.1647/2.1536`, with core `1.1426/1.1222/1.1746`. Repeated-off RGB is
+byte-exact, topology and alpha/support are invariant, cross-scale response is
+stable, and cavities, open chimneys, strands, isolated droplets, native walls,
+Water/Oil sibling seams, Metal, and blank space remain protected. The 2×
+off/on captures show broad rather than particle-scale response. Requested-on
+true 8× promotes exact `4896×3072`, reports E79 inactive, produces exact zero
+response for both materials, and records zero browser errors.
+
+Fixture attribution matters here. The earlier audit toggled established liquid
+identity together with the new body candidate and therefore assigned an old
+strand response to E79. Keep parent/identity layers fixed when measuring a
+nested child. Likewise, a remote liquid-owner interior is a valid body target,
+not a seam control; sample the actual interface for semantics/alpha and place
+the foreign-owner RGB no-op probe safely inside the foreign block so bounded
+HDR spill cannot masquerade as ownership leakage.
+
+The next experiment should come from a fresh canonical fit-view diagnosis.
+Avoid another Water/Metal or DSTW/DESL colour layer. Prefer either heap-scale
+powder valley depth using already-live stable occupancy evidence, or a bounded
+emission/gas volume refinement with an explicit resource budget and frozen
+sparse-topology controls.
+
 ## Phase 1 — HDR pipeline & lighting core (biggest visual payoff)
 
 **Goal:** everything downstream needs light and dynamic range; build the chassis first.
@@ -3287,7 +3329,7 @@ contact-ranker quantisation.
 **Goal:** liquids read as one continuous body with a surface; gases read as volumetric media.
 
 - **Screen-space fluid rendering** (Müller-style, the classic 2007 technique): liquid coverage → depth/thickness buffer → **curvature flow smoothing** for a real meniscus → reconstruct normals → **Fresnel reflection + refraction of the background/wall pattern behind** → specular glints. Your current per-species depth gradient is the seed of the thickness buffer.
-- **Foam, spray & meniscus:** E65 supplies a bounded exact-Water whitecap/refraction response from packed native velocity on already-connected E08 surfaces. E66 adds an independent optical curvature finish for resting convex crests and concave inlets; it does not smooth geometric alpha. E69 closes the first exact-Oil non-Water treatment with a velocity-oriented reflective slick and cool absorptive wake over the established E22/E38 body finish. Detached spray support, divergence-aware foam persistence, and Acid/Diesel/Nitro family treatments remain open and must retain exact topology controls.
+- **Foam, spray & meniscus:** E65 supplies a bounded exact-Water whitecap/refraction response from packed native velocity on already-connected E08 surfaces. E66 adds an independent optical curvature finish for resting convex crests and concave inlets; it does not smooth geometric alpha. E69 closes the first exact-Oil non-Water treatment with a velocity-oriented reflective slick and cool absorptive wake over the established E22/E38 body finish. E79 now gives static dense Distilled Water and Diesel distinct body optics without changing topology. Detached spray support, divergence-aware foam persistence, and Acid/Nitro motion-family treatments remain open and must retain exact topology controls.
 - **Steam condensate volume:** E70 adds broad static pearly lobes and a cool recessed pocket only to exact propagated WTRV style `2`, reusing E04's connected atmosphere evidence without changing support or adding a field/resource. All other gas identities, sparse topology, Canvas, and compact true 8× remain controls. Advected vapour detail and light shafts remain separate future experiments.
 - **Gases as participating media:** extend your density/colour field with a **noise-animated volume** — FBM curl noise advected by the velocity field, modulated by density, lit by the dynamic lights (light shafts through smoke are extremely high-impact). Approximate with 2–3 octave noise at half res, upsampled.
 - **Fire:** E67 now adds an exact-owner temperature-stratified body and velocity-shaped tongue on the normal HDR path. Its procedural flow remains subordinate to authentic temperature/velocity state, sparse Fire stays discrete, and compact true 8× keeps the established generic Energy presentation. Persistent advected flame volume, ember/spray support, and dynamic light transport remain separate future experiments.

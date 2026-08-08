@@ -3403,6 +3403,71 @@ describe('Pixi presenter startup configuration', () => {
     expect(source).toContain("this.app.canvas.dataset.oxygenVolumeFoldVfx = 'inactive';");
   });
 
+  it('keeps E79 Distilled/Diesel bodies exact-owner, E03-dependent, normal-WebGL-only, and RGB-only', () => {
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const canvasSource = readFileSync(new URL('./field-renderer.ts', import.meta.url), 'utf8');
+    const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');
+    const normalStart = source.indexOf('const FIELD_FRAGMENT = `', eightStart);
+    const normalEnd = source.indexOf('`;\n\n/** Primary WebGL presentation', normalStart);
+    const eight = source.slice(eightStart, normalStart);
+    const normal = source.slice(normalStart, normalEnd);
+    const e03ParentStart = normal.lastIndexOf('    if (liquidOnly < 0.5');
+    const e03Start = normal.indexOf('        if (uLiquidBodyVfx > 0.5', e03ParentStart);
+    const e79Start = normal.indexOf('          // E79:', e03Start);
+    const e79End = normal.indexOf('          // E63:', e79Start);
+    const e03End = normal.indexOf('    // E14:', e79End);
+    const e03 = normal.slice(e03ParentStart, e03End);
+    const e79 = normal.slice(e79Start, e79End);
+    const preserveStart = source.indexOf('preserveDrawingBuffer:');
+    const preserveEnd = source.indexOf('resolution: outputScale', preserveStart);
+    const preserve = source.slice(preserveStart, preserveEnd);
+
+    expect(eightStart).toBeGreaterThanOrEqual(0);
+    expect(normalStart).toBeGreaterThan(eightStart);
+    expect(normalEnd).toBeGreaterThan(normalStart);
+    expect(e03Start).toBeGreaterThan(e03ParentStart);
+    expect(e79Start).toBeGreaterThan(e03Start);
+    expect(e79End).toBeGreaterThan(e79Start);
+    expect(normal).toContain('uniform float uDistilledDieselBodyVfx;');
+    expect(normal.match(/uDistilledDieselBodyVfx > 0\.5/g)).toHaveLength(1);
+    expect(eight).not.toContain('uDistilledDieselBodyVfx');
+    expect(eight).not.toContain('distilledDieselBody');
+    expect(canvasSource).not.toContain('distilledDieselBodyVfx');
+    for (const guard of [
+      'uDistilledDieselBodyVfx > 0.5', 'material == 34.0', 'material == 35.0',
+      'optics == 1.0', 'optics == 2.0', 'profile == 0.0',
+      'surfaceOnly < 0.5', 'emissionOnly < 0.5', 'shape.w > 3.5',
+      'exposedLiquidSide < 0.5', 'liquidNeighbourMean > 0.80',
+    ]) expect(e79).toContain(guard);
+    for (const parentProof of [
+      'uLiquidBodyVfx > 0.5', 'family == 2.0', 'traits < 0.5',
+      '!materialEmissive', 'liquidOnly < 0.5', 'halo < 0.5', 'wall < 0.5',
+      'molten < 0.5', 'foreignMatterContact < 0.5',
+      'unlikeMaterialContact < 0.5', 'dot(liquidSpeciesSlope, liquidSpeciesSlope) < 0.0004',
+    ]) expect(e03).toContain(parentProof);
+    for (const establishedScalar of [
+      'liquidVfxBody', 'liquidOpticalDepth', 'liquidFresnelContour',
+      'liquidNeighbourMean', 'liquidSpeciesSlope', 'broadSheen',
+      'causticWave', 'liquidMacroRelief', 'reflectedEnvironment',
+    ]) expect(e79).toContain(establishedScalar);
+    expect(e79).not.toMatch(/\b(?:texture|textureLod|texelFetch)\s*\(/);
+    expect(e79).not.toContain('uTime');
+    expect(e79).not.toContain('gl_FragCoord');
+    expect(e79).not.toContain('discard');
+    expect(e79).not.toMatch(/\balpha\s*[+*]?=/);
+    expect(e79).not.toMatch(/\b(?:density|shape|support)\s*[+*]?=/);
+    expect(source.match(/this\.uniforms\.uniforms\.uDistilledDieselBodyVfx = 0;/g))
+      .toHaveLength(2);
+    expect(source).toMatch(
+      /const distilledDieselBodyVfxEnabled = outputScale < 8\s*&& resolveDistilledDieselBodyVfxEnabled\(renderLook\);/,
+    );
+    expect(source).toContain('uDistilledDieselBodyVfx: {');
+    expect(source).toContain('value: distilledDieselBodyVfxEnabled ? 1 : 0');
+    expect(preserve).toContain("get('distilledDieselBodyVfxAudit') === '1'");
+    expect(source).toContain('presenter.app.canvas.dataset.distilledDieselBodyVfx');
+    expect(source).toContain("this.app.canvas.dataset.distilledDieselBodyVfx = 'inactive';");
+  });
+
   it('keeps E63 Nitro body exact-owner, E03-dependent, normal-WebGL-only, and RGB-only', () => {
     const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
     const canvasSource = readFileSync(new URL('./field-renderer.ts', import.meta.url), 'utf8');

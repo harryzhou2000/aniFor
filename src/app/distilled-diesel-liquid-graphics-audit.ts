@@ -22,7 +22,7 @@ export interface DistilledDieselLiquidGraphicsAtlasEntry {
   readonly color: string;
   readonly index: number;
   readonly card: DistilledDieselLiquidRect;
-  /** Deep exact-material support for future liquid body/identity probes. */
+  /** Deep exact-material support for E79 liquid body and identity probes. */
   readonly body: DistilledDieselLiquidRect;
   readonly surfaceProbe: DistilledDieselLiquidRect;
   readonly coreProbe: DistilledDieselLiquidRect;

@@ -13,7 +13,7 @@ powder, solid, liquid, gas, energy, and contact scenes across Canvas and WebGL a
 mobile gestures, save/load, CI, and Pages deployment as protected regression
 contracts rather than the primary feature stream.
 
-The accepted visual experiment ladder now runs through E77. E12 is the
+The accepted visual experiment ladder now runs through E79. E12 is the
 species-safe Sand/Clay/Concrete wet-sediment checkpoint; preserve its exact
 aqueous owner/stability proof, split moving-powder/stationary-Water control,
 Local/Grains no-op, fine structures, authored gaps, Canvas fallback, and true
@@ -1785,6 +1785,40 @@ absolute luma means below `.032`, byte-exact off restoration, and compact true-
 8× exclusion. The canonical 2× A/B raises chromatic separation `.6750→.6875`
 and quality `91.216→91.667` without changing luma, coverage, macro range,
 support, clipping, or E77. Do not stack another Water/Metal colour layer.
+
+E79 is the accepted normal-WebGL-only exact Distilled Water/Diesel body-optics
+checkpoint and a strict child of E03. Ordinary liquid-category DSTW and DESL
+use the neutral render profile (`0`), not the granular profile. After E03 has
+proved an authoritative, trait-free, non-emissive, non-molten, non-wall,
+same-species connected body with no foreign or unlike contact, E79 may
+recombine only the existing vertical optical depth, broad sheen, caustic wave,
+macro relief, Fresnel contour, and reflected environment. DSTW receives a cool
+transmissive crown over red-forward absorption; DESL receives a warm fuel
+reflection over blue-forward absorption. The result is RGB-only arithmetic:
+add no sample, texture, field, pass, target, upload, allocation, clock,
+alpha/support, silhouette, ownership, topology, state, or physics decision.
+Keep established liquid identity enabled after this body layer. Canvas and the
+compact true-8× shader retain their established presentation and declare no E79
+selector or arithmetic.
+
+The frozen E79 1×/2×/4× matrix measures DSTW surface RGB RMS
+`3.3181/3.3495/3.3123` and core `1.1587/1.0844/1.1667`; DESL surface RGB RMS is
+`2.1157/2.1647/2.1536` and core `1.1426/1.1222/1.1746`. Every off→on→off
+restoration is exact, alpha/support and semantic topology are invariant, and
+cavities, open chimneys, strands, isolated droplets, walls, sibling liquids,
+Metal, and blank space remain protected. Requested-on true 8× promotes exact
+`4896×3072`, exposes E79 inactive, returns exact zero response on both cards,
+and reports zero browser errors. Use
+`npm run audit:vfx:distilled-diesel-body` for the normal matrix and
+`npm run audit:distilled-diesel-liquid:8x` for the compact-path proof.
+
+E79 audit lesson: hold pre-existing identity styling constant while attributing
+a nested body selector; toggling both converts established identity into a
+false body response. A one-cell liquid-side contact sample remains semantic and
+alpha/support evidence, but the HDR compositor can carry bounded neighbouring
+body light into its RGB. Keep the foreign material's RGB no-op probe safely
+inside that owner, and never misclassify the remote interior of a liquid owner
+block as a seam/contact control.
 
 Contact-audit lesson: a DPR-1 fit-view PNG may merge opposing subcell lobes into
 one CSS pixel. It remains authoritative for visible seam width, topology, and

@@ -163,6 +163,7 @@
     "audit:gbmb-force:8x": "npm run build && node scripts/verify-browser-input.mjs --gbmb-force-graphics-only --render-scale=8 --webgl-only --production-bundle",
     "audit:distilled-diesel-liquid": "npm run build && node scripts/verify-browser-input.mjs --distilled-diesel-liquid-graphics-only --webgl-only --production-bundle",
     "audit:distilled-diesel-liquid:8x": "npm run build && node scripts/verify-browser-input.mjs --distilled-diesel-liquid-graphics-only --render-scale=8 --webgl-only --production-bundle",
+    "audit:vfx:distilled-diesel-body": "npm run build && node scripts/verify-browser-input.mjs --distilled-diesel-liquid-graphics-only --webgl-only --production-bundle --capture-dpr=1",
     "audit:dense-body-ambient": "npm run build && node scripts/verify-browser-input.mjs --dense-body-ambient-only --webgl-only --production-bundle",
     "audit:dense-body-ambient:8x": "npm run build && node scripts/verify-browser-input.mjs --dense-body-ambient-only --render-scale=8 --webgl-only --production-bundle",
     "audit:lava-state": "node scripts/verify-browser-input.mjs --lava-state-graphics-only",

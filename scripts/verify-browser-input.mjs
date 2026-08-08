@@ -3775,6 +3775,9 @@ async function auditMode(mode) {
         waitForStablePageCapture,
         captureSettledPage,
         outputScale: distilledDieselLiquidGraphicsEight ? 8 : 2,
+        screenshotRequest,
+        variantScreenshotPath,
+        writeFile,
         assert,
       });
       assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);

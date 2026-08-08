@@ -81,6 +81,7 @@ import {
   resolveAcidBodyVfxEnabled,
   resolveSoapBodyVfxEnabled,
   resolveDeutBodyVfxEnabled,
+  resolveDistilledDieselBodyVfxEnabled,
   resolveNitroBodyVfxEnabled,
   resolveOilBodyVfxEnabled,
   resolveOilVolumeFinishVfxEnabled,
@@ -3348,6 +3349,7 @@ uniform float uLiquidBodyVfx;
 uniform float uAcidBodyVfx;
 uniform float uSoapBodyVfx;
 uniform float uDeutBodyVfx;
+uniform float uDistilledDieselBodyVfx;
 uniform float uNitroBodyVfx;
 uniform float uOilBodyVfx;
 uniform float uOilVolumeFinishVfx;
@@ -7645,6 +7647,62 @@ void main() {
                 * (1.0 - oilBodyCrown * 0.22);
               color *= vec3(1.0) - vec3(0.056, 0.112, 0.352)
                 * oilDeepRecession;
+            }
+          }
+          // E79: Distilled Water and Diesel previously stopped at E03's common
+          // family absorption plus a small identity thread. Give only their
+          // dense, exact-owner interiors a broad opposing crown/pocket grammar:
+          // DSTW carries clean cool transmission while DESL keeps a warmer fuel
+          // reflection over blue-forward absorption. The already-live column
+          // depth, crossed sheen/caustic roll, macro relief, and environment own
+          // every spatial decision. This is RGB-only arithmetic: strands,
+          // droplets, authored air, walls, sibling seams, contacts, Canvas, and
+          // compact true 8x retain their established presentation.
+          if (uDistilledDieselBodyVfx > 0.5
+            && (material == 34.0 || material == 35.0)
+            && ((material == 34.0 && optics == 1.0)
+              || (material == 35.0 && optics == 2.0))
+            && family == 2.0 && profile == 0.0
+            && surfaceOnly < 0.5 && emissionOnly < 0.5
+            && shape.w > 3.5 && exposedLiquidSide < 0.5
+            && liquidNeighbourMean > 0.80
+            && dot(liquidSpeciesSlope, liquidSpeciesSlope) < 0.00024) {
+            float distilledDieselBodyWeight = smoothstep(
+              30.0 / 255.0, 78.0 / 255.0, liquidOpticalDepth
+            ) * liquidVfxBody * (1.0 - liquidFresnelContour)
+              * smoothstep(0.80, 0.97, liquidNeighbourMean)
+              * (1.0 - smoothstep(
+                0.00002, 0.00024,
+                dot(liquidSpeciesSlope, liquidSpeciesSlope)
+              ));
+            float distilledDieselBodyRoll = clamp(
+              (broadSheen - 0.5) * (causticWave - 0.5)
+                * (material == 34.0 ? 2.85 : -3.05)
+                + (broadSheen - 0.5) * (material == 34.0 ? 0.24 : -0.18)
+                + (causticWave - 0.5) * (material == 34.0 ? -0.14 : 0.32)
+                + liquidMacroRelief * (material == 34.0 ? 1.65 : 1.45),
+              -1.0, 1.0
+            );
+            float distilledDieselBodyCrown = smoothstep(
+              0.025, 0.50, max(distilledDieselBodyRoll, 0.0)
+            ) * distilledDieselBodyWeight;
+            float distilledDieselBodyPocket = smoothstep(
+              0.025, 0.52, max(-distilledDieselBodyRoll, 0.0)
+            ) * distilledDieselBodyWeight;
+            if (material == 34.0) {
+              color += (vec3(1.16) - clamp(color, 0.0, 1.16))
+                * mix(vec3(0.20, 0.82, 1.00), reflectedEnvironment, 0.24)
+                * distilledDieselBodyCrown
+                * (0.104 + broadSheen * 0.022 + caustic * 0.016);
+              color *= vec3(1.0) - vec3(0.078, 0.048, 0.018)
+                * distilledDieselBodyPocket * (0.62 + liquidDepth * 0.18);
+            } else {
+              color += (vec3(1.14) - clamp(color, 0.0, 1.14))
+                * mix(vec3(1.00, 0.68, 0.18), reflectedEnvironment, 0.16)
+                * distilledDieselBodyCrown
+                * (0.112 + broadSheen * 0.018 + caustic * 0.020);
+              color *= vec3(1.0) - vec3(0.035, 0.074, 0.142)
+                * distilledDieselBodyPocket * (0.64 + caustic * 0.20);
             }
           }
           // E63: exact Nitro shares Oily optics with Oil and Diesel, but the
@@ -11986,6 +12044,10 @@ export class PixiFieldPresenter {
     // must not advertise an effect that cannot run on that path.
     const liquidBodyVfxEnabled = outputScale < 8
       && resolveLiquidBodyVfxEnabled(renderLook);
+    // E79 is exact DSTW/DESL arithmetic inside E03's connected-liquid proof.
+    // Canvas and compact true 8x retain their established family/identity paths.
+    const distilledDieselBodyVfxEnabled = outputScale < 8
+      && resolveDistilledDieselBodyVfxEnabled(renderLook);
     // E63 recomposes only exact Nitro after E03 has proved a dense connected
     // liquid body. Canvas and compact true 8x retain the established Oily path.
     const nitroBodyVfxEnabled = outputScale < 8
@@ -12107,6 +12169,9 @@ export class PixiFieldPresenter {
       uWoodTanninVfx: { value: woodTanninVfxEnabled ? 1 : 0, type: 'f32' },
       uGlassBodyVfx: { value: glassBodyVfxEnabled ? 1 : 0, type: 'f32' },
       uLiquidBodyVfx: { value: liquidBodyVfxEnabled ? 1 : 0, type: 'f32' },
+      uDistilledDieselBodyVfx: {
+        value: distilledDieselBodyVfxEnabled ? 1 : 0, type: 'f32',
+      },
       uNitroBodyVfx: { value: nitroBodyVfxEnabled ? 1 : 0, type: 'f32' },
       uAcidBodyVfx: { value: acidBodyVfxEnabled ? 1 : 0, type: 'f32' },
       uSoapBodyVfx: { value: soapBodyVfxEnabled ? 1 : 0, type: 'f32' },
@@ -12401,6 +12466,7 @@ export class PixiFieldPresenter {
       this.uniforms.uniforms.uWoodTanninVfx = 0;
       this.uniforms.uniforms.uGlassBodyVfx = 0;
       this.uniforms.uniforms.uLiquidBodyVfx = 0;
+      this.uniforms.uniforms.uDistilledDieselBodyVfx = 0;
       this.uniforms.uniforms.uNitroBodyVfx = 0;
       this.uniforms.uniforms.uAcidBodyVfx = 0;
       this.uniforms.uniforms.uSoapBodyVfx = 0;
@@ -12510,6 +12576,7 @@ export class PixiFieldPresenter {
             || new URLSearchParams(location.search).get('waterBodyVfxAudit') === '1'
             || new URLSearchParams(location.search).get('waterVolumeRecessionVfxAudit') === '1'
             || new URLSearchParams(location.search).get('liquidBodyVfxAudit') === '1'
+            || new URLSearchParams(location.search).get('distilledDieselBodyVfxAudit') === '1'
             || new URLSearchParams(location.search).get('nitroBodyVfxAudit') === '1'
             || new URLSearchParams(location.search).get('liquidSolidMeniscusVfxAudit') === '1'
             || new URLSearchParams(location.search).get('liquidSurfaceVfxAudit') === '1'
@@ -12679,6 +12746,9 @@ export class PixiFieldPresenter {
     ) > 0.5 ? 'active' : 'inactive';
     presenter.app.canvas.dataset.liquidBodyVfx = Number(presenter.uniforms.uniforms.uLiquidBodyVfx) > 0.5
       ? 'active' : 'inactive';
+    presenter.app.canvas.dataset.distilledDieselBodyVfx = Number(
+      presenter.uniforms.uniforms.uDistilledDieselBodyVfx
+    ) > 0.5 ? 'active' : 'inactive';
     presenter.app.canvas.dataset.nitroBodyVfx = Number(
       presenter.uniforms.uniforms.uNitroBodyVfx
     ) > 0.5 ? 'active' : 'inactive';
@@ -14267,6 +14337,7 @@ export class PixiFieldPresenter {
         this.uniforms.uniforms.uWoodTanninVfx = 0;
         this.uniforms.uniforms.uGlassBodyVfx = 0;
         this.uniforms.uniforms.uLiquidBodyVfx = 0;
+        this.uniforms.uniforms.uDistilledDieselBodyVfx = 0;
         this.uniforms.uniforms.uNitroBodyVfx = 0;
         this.uniforms.uniforms.uAcidBodyVfx = 0;
         this.uniforms.uniforms.uSoapBodyVfx = 0;
@@ -14341,6 +14412,7 @@ export class PixiFieldPresenter {
         this.app.canvas.dataset.woodTanninVfx = 'inactive';
         this.app.canvas.dataset.glassBodyVfx = 'inactive';
         this.app.canvas.dataset.liquidBodyVfx = 'inactive';
+        this.app.canvas.dataset.distilledDieselBodyVfx = 'inactive';
         this.app.canvas.dataset.nitroBodyVfx = 'inactive';
         this.app.canvas.dataset.acidBodyVfx = 'inactive';
         this.app.canvas.dataset.soapBodyVfx = 'inactive';
