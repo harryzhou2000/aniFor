@@ -2,10 +2,12 @@
 
 ## Current direction
 
-The E80 dense-body ambient floor is accepted across normal WebGL and its strict
-true-8× exclusion. The next visual preflight is E81 native-PHOT spectral
-irradiance on exact deep Metal; the rejected Powder-concavity idea must not be
-revived by misnaming directional slope or adding an unbudgeted sample. Spend
+The E80 dense-body ambient floor and E81 native-PHOT spectral irradiance on
+exact deep Metal are accepted across normal WebGL and their strict true-8×
+exclusions. The next visual preflight is E82: authoritative-temperature
+blackbody emission for an exact native hot-material owner, rather than a
+generic light system. The rejected Powder-concavity idea must not be revived by
+misnaming directional slope or adding an unbudgeted sample. Spend
 most implementation and audit effort on material breadth, native material behaviour, and graphics:
 expose more TPT
 forces/sources, radioactive matter, botanical growth, phase changes, and
@@ -1858,11 +1860,39 @@ queues no subsequent field presentation.
 E81 preflight rejected settled-Powder "self-valley curvature" under the
 no-new-sample constraint: normal WebGL's `occupancyShape` computes
 `contourCurvature` only for family-0 Solid, so the value is exactly zero for
-family-4 Powder. Do not relabel E05's signed broad slope as curvature. The next
-evidence candidate is exact deep Metal under an independently present native
-PHOT spectrum, reusing the already decoded photon state and existing Metal
-depth/Fresnel carriers; it must remain distinct from generic photon glow and
-must first pass the established photon-spectrum topology controls.
+family-4 Powder. Do not relabel E05's signed broad slope as curvature.
+
+E81 is the accepted normal-WebGL-only exact native-PHOT spectral-irradiance
+checkpoint, independently selectable with `?photonMetalIrradianceVfx=0|1`.
+Only an independently present authoritative native PHOT spectrum over deep
+Metal may reuse the existing decoded photon spectrum/peak and Metal
+`solidInterior`/optical-depth state. Its compact constant-gain expression is
+`0.068`; it remains distinct from generic photon glow. It adds no sample,
+texture, field, pass, target, upload, allocation, clock, alpha/support,
+silhouette, ownership, topology, or physics decision, and Canvas remains the
+semantic fallback.
+
+Keep E81's normal-shader eligibility as the compact exact-owner/depth branch.
+On SwiftShader, redundant granular/translucent/contact guards, or extending
+the coefficient with `solidKey`/`solidFresnel`, made the response inert. Do not
+reintroduce those terms. Compact true 8× deliberately excludes E81 entirely:
+it has no E81 branch, uniform, sampler, or resource.
+
+`npm run audit:vfx:photon-metal-irradiance` freezes DPR-1 normal-WebGL
+compositor screenshot A/B/A captures at 1×/2×/4×. It proves the native
+red/green/blue/violet spectral ordering, exact topology/contact/foreign-owner
+controls, byte-exact repeated-off restoration, and a maximum cross-scale RGB
+RMS spread of `0.08`. `npm run audit:vfx:photon-metal-irradiance:8x` proves the
+requested-on compact true-8× path is an exact no-op at `4896×3072` through a
+completed GPU fence (about `5.77 s` on the accepted SwiftShader run), with an
+exact repeated-off framebuffer, no later presentation refresh, and zero browser
+errors.
+
+E82 is a preflight for a bounded normal-WebGL exact-owner blackbody-emission
+response from authoritative native temperature, following the Phase-1
+blackbody roadmap. It must reuse authentic material temperature and preserve
+the established normal/compact topology and true-8× contracts before any
+generic dynamic-light system is considered.
 
 Contact-audit lesson: a DPR-1 fit-view PNG may merge opposing subcell lobes into
 one CSS pixel. It remains authoritative for visible seam width, topology, and

@@ -1011,6 +1011,25 @@ export function resolveDistilledDieselBodyVfxEnabled(
 }
 
 /**
+ * E81 gives only deep, photon-bearing Metal its independently measurable
+ * spectral-irradiance finish. Its shader-side solid-body parent owns actual
+ * eligibility; this resolver only keeps Classic and pre-existing input audits
+ * on their established presentation unless they explicitly opt in.
+ */
+export function resolvePhotonMetalIrradianceVfxEnabled(
+  look: RenderLook,
+  search = globalThis.location?.search ?? '',
+): boolean {
+  if (look === 'classic') return false;
+  const parameters = new URLSearchParams(search);
+  const requested = parameters.get('photonMetalIrradianceVfx');
+  if (requested === '0' || requested === 'off' || requested === 'false') return false;
+  if (requested === '1' || requested === 'on' || requested === 'true') return true;
+  if (parameters.get('inputAudit') === '1') return false;
+  return true;
+}
+
+/**
  * Gives exact native DEUT a trait-aware connected-liquid body without
  * weakening E03's deliberately trait-free eligibility. This is a sibling of
  * E03 inside a non-Classic HDR look: an explicit selector can isolate E41

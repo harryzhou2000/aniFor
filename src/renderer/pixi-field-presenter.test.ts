@@ -26,6 +26,7 @@ interface PresenterHarness {
   setPhaseContactLightingEnabled: PixiFieldPresenter['setPhaseContactLightingEnabled'];
   setSolidFieldLightingEnabled: PixiFieldPresenter['setSolidFieldLightingEnabled'];
   setDenseBodyAmbientFillEnabled: PixiFieldPresenter['setDenseBodyAmbientFillEnabled'];
+  setPhotonMetalIrradianceVfxEnabled: PixiFieldPresenter['setPhotonMetalIrradianceVfxEnabled'];
   setRoleMaterialStylingEnabled: PixiFieldPresenter['setRoleMaterialStylingEnabled'];
   setCellularMaterialStylingEnabled: PixiFieldPresenter['setCellularMaterialStylingEnabled'];
   setStructuralRigidStylingEnabled: PixiFieldPresenter['setStructuralRigidStylingEnabled'];
@@ -3466,6 +3467,68 @@ describe('Pixi presenter startup configuration', () => {
     expect(preserve).toContain("get('distilledDieselBodyVfxAudit') === '1'");
     expect(source).toContain('presenter.app.canvas.dataset.distilledDieselBodyVfx');
     expect(source).toContain("this.app.canvas.dataset.distilledDieselBodyVfx = 'inactive';");
+  });
+
+  it('keeps E81 native-PHOT Metal irradiance deep-owner, E17-dependent, normal-WebGL-only, and RGB-only', () => {
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const canvasSource = readFileSync(new URL('./field-renderer.ts', import.meta.url), 'utf8');
+    const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');
+    const normalStart = source.indexOf('const FIELD_FRAGMENT = `', eightStart);
+    const normalEnd = source.indexOf('`;\n\n/** Primary WebGL presentation', normalStart);
+    const eight = source.slice(eightStart, normalStart);
+    const normal = source.slice(normalStart, normalEnd);
+    const e81Start = normal.indexOf('      // E81:');
+    const e81End = normal.indexOf('      premultiplied = mix(', e81Start);
+    const e81 = normal.slice(e81Start, e81End);
+    const preserveStart = source.indexOf('preserveDrawingBuffer:');
+    const preserveEnd = source.indexOf('resolution: outputScale', preserveStart);
+    const preserve = source.slice(preserveStart, preserveEnd);
+
+    expect(eightStart).toBeGreaterThanOrEqual(0);
+    expect(normalStart).toBeGreaterThan(eightStart);
+    expect(normalEnd).toBeGreaterThan(normalStart);
+    expect(e81Start).toBeGreaterThan(0);
+    expect(e81End).toBeGreaterThan(e81Start);
+    expect(normal).toContain('uniform float uPhotonMetalIrradianceVfx;');
+    expect(normal.match(/uPhotonMetalIrradianceVfx > 0\.5/g)).toHaveLength(1);
+    expect(eight).not.toContain('uPhotonMetalIrradianceVfx');
+    expect(eight).not.toContain('photonMetalIrradiance');
+    expect(canvasSource).not.toContain('resolvePhotonMetalIrradianceVfxEnabled');
+    for (const guard of [
+      'uPhotonMetalIrradianceVfx > 0.5', 'uSolidBodyVfx > 0.5',
+      'material == 23.0', 'family == 0.0', 'profile == 2.0', 'optics == 8.0',
+      'traits < 0.5', '!materialEmissive', 'surfaceOnly < 0.5', 'halo < 0.5',
+      'wall < 0.5', 'wallOnly < 0.5', 'emissionOnly < 0.5',
+      'uSolidOpticalDepth > 0.5', 'solidOpticalDepth > 6.0 / 255.0',
+      'solidInterior > 0.001',
+    ]) expect(e81).toContain(guard);
+    for (const establishedScalar of [
+      'photonSpectrum', 'photonPeak', 'solidInterior', 'solidOpticalDepth',
+      'compositeAlpha', 'premultiplied',
+    ]) expect(e81).toContain(establishedScalar);
+    // Keep this exact-owner branch compact. Redundant style/contact guards and
+    // extending its coefficient with the richer Metal lighting carriers made
+    // the real SwiftShader compositor silently inert at 1x-4x.
+    for (const forbidden of [
+      'granularSurface', 'translucentSurface', 'foreignMatterContact',
+      'unlikeMaterialContact', 'solidKey', 'solidFresnel',
+    ]) expect(e81).not.toContain(forbidden);
+    expect(e81).not.toMatch(/\b(?:texture|textureLod|texelFetch)\s*\(/);
+    expect(e81).not.toContain('uTime');
+    expect(e81).not.toContain('gl_FragCoord');
+    expect(e81).not.toContain('discard');
+    expect(e81).not.toMatch(/\b(?:alpha|compositeAlpha)\s*[+*]?=/);
+    expect(e81).not.toMatch(/\b(?:density|shape|support)\s*[+*]?=/);
+    expect(source.match(/this\.uniforms\.uniforms\.uPhotonMetalIrradianceVfx = 0;/g))
+      .toHaveLength(2);
+    expect(source).toMatch(
+      /const photonMetalIrradianceVfxEnabled = outputScale < 8\s*&& solidBodyVfxEnabled && resolvePhotonMetalIrradianceVfxEnabled\(renderLook\);/,
+    );
+    expect(source).toContain('uPhotonMetalIrradianceVfx: {');
+    expect(source).toContain('value: photonMetalIrradianceVfxEnabled ? 1 : 0');
+    expect(preserve).toContain("get('photonMetalIrradianceVfxAudit') === '1'");
+    expect(source).toContain('presenter.app.canvas.dataset.photonMetalIrradianceVfx');
+    expect(source).toContain("this.app.canvas.dataset.photonMetalIrradianceVfx = 'inactive';");
   });
 
   it('keeps E63 Nitro body exact-owner, E03-dependent, normal-WebGL-only, and RGB-only', () => {
@@ -7515,6 +7578,34 @@ describe('Pixi presenter startup configuration', () => {
     presenter.setDenseBodyAmbientFillEnabled(true);
     expect(presenter.uniforms.uniforms.uDenseBodyAmbientFill).toBe(0);
     expect(presenter.app.canvas.dataset.denseBodyAmbientFill).toBe('inactive');
+    expect(presenter.app.render).not.toHaveBeenCalled();
+  });
+
+  it('toggles photon/Metal irradiance only in normal WebGL and submits one frame', () => {
+    const presenter = presenterHarness();
+    presenter.uniforms.uniforms.uSolidBodyVfx = 1;
+    presenter.uniforms.uniforms.uPhotonMetalIrradianceVfx = 1;
+
+    presenter.setPhotonMetalIrradianceVfxEnabled(false);
+    expect(presenter.uniforms.uniforms.uPhotonMetalIrradianceVfx).toBe(0);
+    expect(presenter.app.canvas.dataset.photonMetalIrradianceVfx).toBe('inactive');
+    expect(presenter.app.render).toHaveBeenCalledOnce();
+
+    presenter.setPhotonMetalIrradianceVfxEnabled(true);
+    expect(presenter.uniforms.uniforms.uPhotonMetalIrradianceVfx).toBe(1);
+    expect(presenter.app.canvas.dataset.photonMetalIrradianceVfx).toBe('active');
+    expect(presenter.app.render).toHaveBeenCalledTimes(2);
+  });
+
+  it('keeps photon/Metal irradiance inactive and render-free at true 8x', () => {
+    const presenter = presenterHarness(8);
+    presenter.uniforms.uniforms.uSolidBodyVfx = 1;
+    presenter.uniforms.uniforms.uPhotonMetalIrradianceVfx = 0;
+
+    presenter.setPhotonMetalIrradianceVfxEnabled(true);
+
+    expect(presenter.uniforms.uniforms.uPhotonMetalIrradianceVfx).toBe(0);
+    expect(presenter.app.canvas.dataset.photonMetalIrradianceVfx).toBe('inactive');
     expect(presenter.app.render).not.toHaveBeenCalled();
   });
 

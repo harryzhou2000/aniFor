@@ -46,6 +46,7 @@ import { auditFrayForceGraphics } from './fray-force-graphics-audit.mjs';
 import { auditGbmbForceGraphics } from './gbmb-force-graphics-audit.mjs';
 import { auditDistilledDieselLiquidGraphics } from './distilled-diesel-liquid-graphics-audit.mjs';
 import { auditDenseBodyAmbientGraphics } from './dense-body-ambient-graphics-audit.mjs';
+import { auditPhotonMetalIrradianceVfx } from './photon-metal-irradiance-vfx-audit.mjs';
 import {
   assertPairedLavaStateGraphics,
   auditLavaStateGraphics,
@@ -676,6 +677,13 @@ const woodTanninVfxOnly = process.argv.includes('--wood-tannin-vfx-only');
 if (woodTanninVfxOnly && (modes.length !== 1 || modes[0] !== 'webgl')) {
   throw new Error('--wood-tannin-vfx-only requires --webgl-only');
 }
+// E81 is an exact PHOT-over-Metal normal-WebGL irradiance study. Its own
+// module owns the parent-metal and photon-state matrix; true 8x is an explicit
+// selector/resource exclusion route with the established promotion fence.
+const photonMetalIrradianceVfxOnly = process.argv.includes('--photon-metal-irradiance-vfx-only');
+if (photonMetalIrradianceVfxOnly && (modes.length !== 1 || modes[0] !== 'webgl')) {
+  throw new Error('--photon-metal-irradiance-vfx-only requires --webgl-only');
+}
 const focusedVfxOnlyFlags = [
   hdrVfxOnly, volumeVfxOnly, liquidBodyVfxOnly, liquidSurfaceVfxOnly, liquidMotionVfxOnly,
   oilMotionVfxOnly,
@@ -705,9 +713,10 @@ const focusedVfxOnlyFlags = [
   plantCanopyFoliageVfxOnly, plantCanopyLifecycleVfxOnly,
   vibrMacroReliefVfxOnly,
   woodTanninVfxOnly,
+  photonMetalIrradianceVfxOnly,
 ];
 if (focusedVfxOnlyFlags.filter(Boolean).length > 1) {
-  throw new Error('HDR/volume/liquid-body/liquid-surface/liquid-motion/oil-motion/water-curvature/fire-flame/cflm-cold-flame/gas-body/gas-motion/powder-body/concrete-mesostrata-retention/powder-light/powder-solid-contact/translucent-edge/organic-subsurface/wet-sediment/gas-light/liquid-solid-meniscus/metal-water-contact/water-metal-transmission/water-metal-separation/water-metal-fresnel-spectrum/gas-core-depth/plasma-core/solid-body/platinum-body/ceramic-glaze/botanical-body/glass-body/oil-body/oil-depth-transmission/rock-roughness/rock-mesostructure/rock-weathered-facet/water-body/water-volume-recession/acid-body/soap-body/nitro-body/sooty-powder-body/thermite-body/snowpack-body/quartz-mesostructure/c4-body/deut-body/hydrogen-body/carbon-dioxide-body/carbon-dioxide-core-fold/steam-condensate/fog-core-diffuse/radioactive-solid-body/iszs-crystalline/iszs-crystal-hierarchy/vibr-macro-relief/noble-gas-billow/noble-gas-prism/smoke-softness/smoke-billow-depth/botanical-mesostructure/wood-bark-relief/botanical-pigment/plant-lamina/plant-lobe-depth/plant-canopy-mass/plant-canopy-tissue/plant-canopy-interlock/plant-canopy-hierarchy/plant-canopy-foliage/plant-canopy-lifecycle/wood-tannin focused audits are mutually exclusive');
+  throw new Error('HDR/volume/liquid-body/liquid-surface/liquid-motion/oil-motion/water-curvature/fire-flame/cflm-cold-flame/gas-body/gas-motion/powder-body/concrete-mesostrata-retention/powder-light/powder-solid-contact/translucent-edge/organic-subsurface/wet-sediment/gas-light/liquid-solid-meniscus/metal-water-contact/water-metal-transmission/water-metal-separation/water-metal-fresnel-spectrum/gas-core-depth/plasma-core/solid-body/platinum-body/ceramic-glaze/botanical-body/glass-body/oil-body/oil-depth-transmission/rock-roughness/rock-mesostructure/rock-weathered-facet/water-body/water-volume-recession/acid-body/soap-body/nitro-body/sooty-powder-body/thermite-body/snowpack-body/quartz-mesostructure/c4-body/deut-body/hydrogen-body/carbon-dioxide-body/carbon-dioxide-core-fold/steam-condensate/fog-core-diffuse/radioactive-solid-body/iszs-crystalline/iszs-crystal-hierarchy/vibr-macro-relief/noble-gas-billow/noble-gas-prism/smoke-softness/smoke-billow-depth/botanical-mesostructure/wood-bark-relief/botanical-pigment/plant-lamina/plant-lobe-depth/plant-canopy-mass/plant-canopy-tissue/plant-canopy-interlock/plant-canopy-hierarchy/plant-canopy-foliage/plant-canopy-lifecycle/wood-tannin/photon-metal-irradiance focused audits are mutually exclusive');
 }
 
 const layoutOnly = process.argv.includes('--layout-only');
@@ -780,6 +789,8 @@ const distilledDieselLiquidGraphicsOnly = process.argv.includes('--distilled-die
 const distilledDieselLiquidGraphicsEight = distilledDieselLiquidGraphicsOnly && process.argv.includes('--render-scale=8');
 const denseBodyAmbientOnly = process.argv.includes('--dense-body-ambient-only');
 const denseBodyAmbientEight = denseBodyAmbientOnly && process.argv.includes('--render-scale=8');
+const photonMetalIrradianceVfxEight = photonMetalIrradianceVfxOnly
+  && process.argv.includes('--render-scale=8');
 const lavaStateGraphicsOnly = process.argv.includes('--lava-state-graphics-only');
 const botanicalLifecycleGraphicsOnly = process.argv.includes('--botanical-lifecycle-graphics-only');
 const sparkStateGraphicsOnly = process.argv.includes('--spark-state-graphics-only');
@@ -817,7 +828,7 @@ const usesProductionBundle = productionBundle || showcaseScreenshotOnly || compo
   || gooSolidGraphicsOnly
   || frayForceGraphicsOnly
   || gbmbForceGraphicsOnly
-  || distilledDieselLiquidGraphicsOnly
+  || distilledDieselLiquidGraphicsOnly || denseBodyAmbientOnly || photonMetalIrradianceVfxOnly
   || botanicalLifecycleGraphicsOnly || sparkStateGraphicsOnly
   || nativeSeedGrowthOnly || nativeSemanticsOnly || catalogSelectionOnly || shortDesktopOnly || liveScaleOnly
   || scaleEightOnly || eightSpngOnly || eightFieldProfileOnly || eightMaterialAtlasOnly || eightRecoveryOnly;
@@ -2022,6 +2033,7 @@ async function main() {
       || powderBodyVfxOnly || concreteMesostrataRetentionVfxOnly || powderLightVfxOnly || powderSolidContactVfxOnly || translucentEdgeVfxOnly || organicSubsurfaceVfxOnly || wetSedimentVfxOnly || gasLightVfxOnly || liquidSolidMeniscusVfxOnly || metalWaterContactVfxOnly || waterMetalTransmissionVfxOnly || waterMetalSeparationVfxOnly || gasCoreDepthVfxOnly || oxygenVolumeFoldVfxOnly || plasmaCoreVfxOnly || solidBodyVfxOnly || platinumBodyVfxOnly || ceramicGlazeVfxOnly || botanicalBodyVfxOnly || glassBodyVfxOnly || oilBodyVfxOnly || rockRoughnessVfxOnly || rockMesostructureVfxOnly || rockWeatheredFacetVfxOnly || waterBodyVfxOnly || waterVolumeRecessionVfxOnly || acidBodyVfxOnly || soapBodyVfxOnly || sootyPowderBodyVfxOnly || thermiteBodyVfxOnly || snowpackBodyVfxOnly || quartzMesostructureVfxOnly || c4BodyVfxOnly || deutBodyVfxOnly || hydrogenBodyVfxOnly || carbonDioxideBodyVfxOnly || carbonDioxideCoreFoldVfxOnly || steamCondensateVfxOnly || fogCoreDiffuseVfxOnly || radioactiveSolidBodyVfxOnly || iszsCrystallineVfxOnly || iszsCrystalHierarchyVfxOnly || nobleGasBillowVfxOnly || nobleGasPrismVfxOnly || nobleGasCoreReliefVfxOnly || smokeSoftnessVfxOnly || smokeBillowDepthVfxOnly || botanicalMesostructureVfxOnly || woodBarkReliefVfxOnly || botanicalPigmentVfxOnly || plantLaminaVfxOnly || plantLobeDepthVfxOnly || woodTanninVfxOnly || layoutOnly || mobileOnly || mobileGestureOnly
       || desktopInputOnly || visualScaleMatrixOnly || powderBodyOnly || liquidDepthOnly
       || solidDepthOnly || gasChromaOnly || surfaceContourOnly || solidFieldOnly
+      || photonMetalIrradianceVfxOnly
       || roleGraphicsOnly || cellularGraphicsOnly || sensorGraphicsOnly
       || unusualPowderGraphicsOnly || earthenPowderGraphicsOnly || explosivePowderGraphicsOnly
       || unusualSolidGraphicsOnly || liquidIdentityGraphicsOnly
@@ -2131,6 +2143,7 @@ async function auditMode(mode) {
     || pipeStateGraphicsOnly || swchStateGraphicsOnly || storStateGraphicsOnly
     || dlayStateGraphicsOnly || wifiStateGraphicsOnly || powderMesostrataGraphicsOnly
     || geologicalSolidGraphicsOnly || gooSolidGraphicsOnly || distilledDieselLiquidGraphicsOnly || denseBodyAmbientOnly
+    || photonMetalIrradianceVfxOnly
     || thermalCatalyticRigidGraphicsOnly || frayForceGraphicsOnly || gbmbForceGraphicsOnly
     || sparkStateGraphicsOnly
     || nativeSeedGrowthOnly);
@@ -2431,7 +2444,7 @@ async function auditMode(mode) {
     renderScale: renderScaleArgument ?? ((baseStateGraphicsEight || pqrtStateGraphicsEight || filtStateGraphicsEight || lcryStateGraphicsEight
       || pipeStateGraphicsEight || swchStateGraphicsEight || storStateGraphicsEight
       || dlayStateGraphicsEight || wifiStateGraphicsEight || powderMesostrataGraphicsEight
-      || geologicalSolidGraphicsEight || thermalCatalyticRigidGraphicsEight || gooSolidGraphicsEight || frayForceGraphicsEight || gbmbForceGraphicsEight || distilledDieselLiquidGraphicsEight || denseBodyAmbientEight) ? '8' : '2'),
+      || geologicalSolidGraphicsEight || thermalCatalyticRigidGraphicsEight || gooSolidGraphicsEight || frayForceGraphicsEight || gbmbForceGraphicsEight || distilledDieselLiquidGraphicsEight || denseBodyAmbientEight || photonMetalIrradianceVfxEight) ? '8' : '2'),
     ...(showcaseScreenshotOnly || composedRankOnly ? { auditStage: 'showcase' } : {
       auditStage: startsBlank ? 'blank' : 'canonical',
       ...(startsBlank ? { blankAudit: '1' } : {}),
@@ -2670,14 +2683,15 @@ async function auditMode(mode) {
     const dedicatedEightX = baseStateGraphicsEight || pqrtStateGraphicsEight || filtStateGraphicsEight || lcryStateGraphicsEight
       || denseBodyAmbientEight || wifiStateGraphicsEight || powderMesostrataGraphicsEight
       || geologicalSolidGraphicsEight || thermalCatalyticRigidGraphicsEight || gooSolidGraphicsEight
-      || frayForceGraphicsEight || gbmbForceGraphicsEight || distilledDieselLiquidGraphicsEight;
+      || frayForceGraphicsEight || gbmbForceGraphicsEight || distilledDieselLiquidGraphicsEight
+      || photonMetalIrradianceVfxEight;
     const dedicatedEightXDeadline = dedicatedEightX
       ? Date.now() + EIGHT_X_PRESENTATION_DEADLINE_MS : undefined;
     const auditApiExpression = `(() => {
       const parameters = new URLSearchParams(location.search);
       const ready = parameters.get('scene') === 'render-lab'
         && parameters.get('inputAudit') === '1'
-        && parameters.get('renderScale') === ${JSON.stringify(renderScaleArgument ?? ((baseStateGraphicsEight || pqrtStateGraphicsEight || filtStateGraphicsEight || lcryStateGraphicsEight || pipeStateGraphicsEight || swchStateGraphicsEight || storStateGraphicsEight || dlayStateGraphicsEight || wifiStateGraphicsEight || powderMesostrataGraphicsEight || geologicalSolidGraphicsEight || thermalCatalyticRigidGraphicsEight || gooSolidGraphicsEight || frayForceGraphicsEight || gbmbForceGraphicsEight || distilledDieselLiquidGraphicsEight || denseBodyAmbientEight) ? '8' : '2'))}
+        && parameters.get('renderScale') === ${JSON.stringify(renderScaleArgument ?? ((baseStateGraphicsEight || pqrtStateGraphicsEight || filtStateGraphicsEight || lcryStateGraphicsEight || pipeStateGraphicsEight || swchStateGraphicsEight || storStateGraphicsEight || dlayStateGraphicsEight || wifiStateGraphicsEight || powderMesostrataGraphicsEight || geologicalSolidGraphicsEight || thermalCatalyticRigidGraphicsEight || gooSolidGraphicsEight || frayForceGraphicsEight || gbmbForceGraphicsEight || distilledDieselLiquidGraphicsEight || denseBodyAmbientEight || photonMetalIrradianceVfxEight) ? '8' : '2'))}
         && parameters.get('auditStage') === ${JSON.stringify(startsBlank ? 'blank' : 'canonical')}
         && parameters.has('blankAudit') === ${startsBlank}
         && Boolean(window.__ANIFOR_INPUT_AUDIT__ && document.documentElement);
@@ -3802,6 +3816,26 @@ async function auditMode(mode) {
       assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
       cdp.close();
       return { backend: mode, denseBodyAmbientGraphics, browserErrors: errors.length };
+    }
+    if (photonMetalIrradianceVfxOnly) {
+      const photonMetalIrradianceVfx = await auditPhotonMetalIrradianceVfx({
+        cdp,
+        mode,
+        evaluate,
+        waitFor,
+        waitForStablePageCapture,
+        captureSettledPage,
+        waitForNextWebGLPresentation,
+        outputScale: photonMetalIrradianceVfxEight ? 8 : 2,
+        screenshotRequest,
+        variantScreenshotPath,
+        writeFile,
+        sampleBackdropRefractionRegions,
+        assert,
+      });
+      assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
+      cdp.close();
+      return { backend: mode, photonMetalIrradianceVfx, browserErrors: errors.length };
     }
     if (lavaStateGraphicsOnly) {
       const lavaStateGraphics = await auditLavaStateGraphics({

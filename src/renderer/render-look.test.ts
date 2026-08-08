@@ -42,6 +42,7 @@ import {
   resolveVibrMacroReliefVfxEnabled,
   resolveOilBodyVfxEnabled,
   resolveDistilledDieselBodyVfxEnabled,
+  resolvePhotonMetalIrradianceVfxEnabled,
   resolveNitroBodyVfxEnabled,
   resolveOilVolumeFinishVfxEnabled,
   resolveOilDepthTransmissionVfxEnabled,
@@ -1282,6 +1283,30 @@ describe('resolveRenderLook', () => {
     expect(resolveDistilledDieselBodyVfxEnabled(
       'realistic', '?waterBodyVfx=0&oilBodyVfx=0&nitroBodyVfx=0&distilledDieselBodyVfx=on',
     )).toBe(true);
+  });
+
+  it('keeps exact Metal/PHOT irradiance out of Classic and legacy audit defaults', () => {
+    expect(resolvePhotonMetalIrradianceVfxEnabled(
+      'classic', '?photonMetalIrradianceVfx=on',
+    )).toBe(false);
+    expect(resolvePhotonMetalIrradianceVfxEnabled('realistic', '')).toBe(true);
+    expect(resolvePhotonMetalIrradianceVfxEnabled('neon-lab', '')).toBe(true);
+    expect(resolvePhotonMetalIrradianceVfxEnabled(
+      'realistic', '?inputAudit=1',
+    )).toBe(false);
+    expect(resolvePhotonMetalIrradianceVfxEnabled(
+      'realistic', '?inputAudit=1&photonMetalIrradianceVfx=true',
+    )).toBe(true);
+    for (const value of ['0', 'off', 'false']) {
+      expect(resolvePhotonMetalIrradianceVfxEnabled(
+        'realistic', `?photonMetalIrradianceVfx=${value}`,
+      )).toBe(false);
+    }
+    for (const value of ['1', 'on', 'true']) {
+      expect(resolvePhotonMetalIrradianceVfxEnabled(
+        'realistic', `?photonMetalIrradianceVfx=${value}`,
+      )).toBe(true);
+    }
   });
 
   it('keeps exact Hydrogen body optics subordinate to E04 and isolated from older input audits', () => {

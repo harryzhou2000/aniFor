@@ -146,6 +146,25 @@ describe('field renderer layout scheduling', () => {
     expect(renderer.changed).toBe(false);
   });
 
+  it('delegates photon/Metal irradiance without queuing a Canvas or second field frame', () => {
+    const setPhotonMetalIrradianceVfxEnabled = vi.fn();
+    const renderer = Object.create(MaterialRenderer.prototype) as {
+      presenter?: { setPhotonMetalIrradianceVfxEnabled(enabled: boolean): void };
+      changed: boolean;
+      setPhotonMetalIrradianceVfxEnabled(enabled: boolean): void;
+    };
+    Object.assign(renderer, {
+      presenter: { setPhotonMetalIrradianceVfxEnabled },
+      changed: false,
+    });
+
+    renderer.setPhotonMetalIrradianceVfxEnabled(false);
+
+    expect(setPhotonMetalIrradianceVfxEnabled).toHaveBeenCalledOnce();
+    expect(setPhotonMetalIrradianceVfxEnabled).toHaveBeenCalledWith(false);
+    expect(renderer.changed).toBe(false);
+  });
+
   it('ignores a queued frame after navigation has disposed the outgoing renderer', () => {
     const renderer = Object.create(MaterialRenderer.prototype) as {
       disposed: boolean;

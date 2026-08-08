@@ -82,6 +82,7 @@ import {
   resolveSoapBodyVfxEnabled,
   resolveDeutBodyVfxEnabled,
   resolveDistilledDieselBodyVfxEnabled,
+  resolvePhotonMetalIrradianceVfxEnabled,
   resolveNitroBodyVfxEnabled,
   resolveOilBodyVfxEnabled,
   resolveOilVolumeFinishVfxEnabled,
@@ -3322,6 +3323,7 @@ uniform float uSmokeBillowDepthVfx;
 uniform float uFireFlameVfx;
 uniform float uPlasmaCoreVfx;
 uniform float uSolidBodyVfx;
+uniform float uPhotonMetalIrradianceVfx;
 uniform float uRadioactiveSolidBodyVfx;
 uniform float uVibrMacroReliefVfx;
 uniform float uIszsCrystallineVfx;
@@ -11579,6 +11581,27 @@ void main() {
       ) * (16.0 / 255.0);
       float photonPeak = max(photonSpectrum.r, max(photonSpectrum.g, photonSpectrum.b));
       float photonAmount = 0.44 + min(0.18, photonPeak * 0.24);
+      // E81: a native PHOT spectrum may coexist with pmap Metal. Give only the
+      // already-proven deep E17 Metal body a bounded spectrum-preserving
+      // irradiance response before the established generic photon composite.
+      // This reuses the current nearest photon fetch plus live solid depth and
+      // interior proof; alpha, support, ownership, state, topology, physics,
+      // and every compact-8x resource remain unchanged.
+      if (uPhotonMetalIrradianceVfx > 0.5 && uSolidBodyVfx > 0.5
+        && material == 23.0 && family == 0.0 && profile == 2.0 && optics == 8.0
+        && traits < 0.5 && !materialEmissive
+        && surfaceOnly < 0.5 && halo < 0.5 && wall < 0.5
+        && wallOnly < 0.5 && emissionOnly < 0.5
+        && uSolidOpticalDepth > 0.5 && solidOpticalDepth > 6.0 / 255.0
+        && solidInterior > 0.001) {
+        float photonMetalIrradiance = solidInterior
+          * smoothstep(6.0 / 255.0, 42.0 / 255.0, solidOpticalDepth)
+          * photonPeak * 0.068;
+        premultiplied += (
+          vec3(1.18) * compositeAlpha
+            - min(premultiplied, vec3(1.18) * compositeAlpha)
+        ) * (photonSpectrum / max(photonPeak, 0.0001)) * photonMetalIrradiance;
+      }
       premultiplied = mix(premultiplied, photonSpectrum * compositeAlpha, photonAmount);
     }
   }
@@ -11919,6 +11942,11 @@ export class PixiFieldPresenter {
     // values. The compact true-8x shader has no selector or parallel branch.
     const solidBodyVfxEnabled = outputScale < 8
       && resolveSolidBodyVfxEnabled(renderLook);
+    // E81 is a late exact-Metal child of E17 that reuses the already-decoded
+    // independent native PHOT spectrum. Compact true 8x keeps its established
+    // generic PHOT projection and declares no selector or parallel branch.
+    const photonMetalIrradianceVfxEnabled = outputScale < 8
+      && solidBodyVfxEnabled && resolvePhotonMetalIrradianceVfxEnabled(renderLook);
     // E43 is an exact ISZS/VIBR child of E17's normal-WebGL solid-depth
     // baseline. Canvas and compact true 8x retain their independently proven
     // radioactive identity/state grammar and declare no E43 selector.
@@ -12139,6 +12167,9 @@ export class PixiFieldPresenter {
       uFireFlameVfx: { value: fireFlameVfxEnabled ? 1 : 0, type: 'f32' },
       uPlasmaCoreVfx: { value: plasmaCoreVfxEnabled ? 1 : 0, type: 'f32' },
       uSolidBodyVfx: { value: solidBodyVfxEnabled ? 1 : 0, type: 'f32' },
+      uPhotonMetalIrradianceVfx: {
+        value: photonMetalIrradianceVfxEnabled ? 1 : 0, type: 'f32',
+      },
       uRadioactiveSolidBodyVfx: {
         value: radioactiveSolidBodyVfxEnabled ? 1 : 0, type: 'f32',
       },
@@ -12444,6 +12475,7 @@ export class PixiFieldPresenter {
       this.uniforms.uniforms.uFireFlameVfx = 0;
       this.uniforms.uniforms.uPlasmaCoreVfx = 0;
       this.uniforms.uniforms.uSolidBodyVfx = 0;
+      this.uniforms.uniforms.uPhotonMetalIrradianceVfx = 0;
       this.uniforms.uniforms.uRadioactiveSolidBodyVfx = 0;
       this.uniforms.uniforms.uVibrMacroReliefVfx = 0;
       this.uniforms.uniforms.uIszsCrystallineVfx = 0;
@@ -12579,6 +12611,7 @@ export class PixiFieldPresenter {
             || new URLSearchParams(location.search).get('waterVolumeRecessionVfxAudit') === '1'
             || new URLSearchParams(location.search).get('liquidBodyVfxAudit') === '1'
             || new URLSearchParams(location.search).get('distilledDieselBodyVfxAudit') === '1'
+            || new URLSearchParams(location.search).get('photonMetalIrradianceVfxAudit') === '1'
             || new URLSearchParams(location.search).get('denseBodyAmbientVfxAudit') === '1'
             || new URLSearchParams(location.search).get('nitroBodyVfxAudit') === '1'
             || new URLSearchParams(location.search).get('liquidSolidMeniscusVfxAudit') === '1'
@@ -12680,6 +12713,9 @@ export class PixiFieldPresenter {
     ) > 0.5 ? 'active' : 'inactive';
     presenter.app.canvas.dataset.solidBodyVfx = Number(
       presenter.uniforms.uniforms.uSolidBodyVfx
+    ) > 0.5 ? 'active' : 'inactive';
+    presenter.app.canvas.dataset.photonMetalIrradianceVfx = Number(
+      presenter.uniforms.uniforms.uPhotonMetalIrradianceVfx
     ) > 0.5 ? 'active' : 'inactive';
     presenter.app.canvas.dataset.radioactiveSolidBodyVfx = Number(
       presenter.uniforms.uniforms.uRadioactiveSolidBodyVfx
@@ -13357,6 +13393,20 @@ export class PixiFieldPresenter {
     }
     this.uniforms.uniforms.uDenseBodyAmbientFill = enabled ? 1 : 0;
     this.app.canvas.dataset.denseBodyAmbientFill = enabled ? 'active' : 'inactive';
+    this.renderApplication();
+  }
+
+  /** Normal-WebGL-only native PHOT response; direct 8x stays byte-identical. */
+  setPhotonMetalIrradianceVfxEnabled(enabled: boolean): void {
+    const uniforms = this.uniforms.uniforms;
+    if (this.outputScale >= 8) {
+      uniforms.uPhotonMetalIrradianceVfx = 0;
+      this.app.canvas.dataset.photonMetalIrradianceVfx = 'inactive';
+      return;
+    }
+    const active = enabled && Number(uniforms.uSolidBodyVfx) > 0.5;
+    uniforms.uPhotonMetalIrradianceVfx = active ? 1 : 0;
+    this.app.canvas.dataset.photonMetalIrradianceVfx = active ? 'active' : 'inactive';
     this.renderApplication();
   }
 
@@ -14326,6 +14376,7 @@ export class PixiFieldPresenter {
         this.uniforms.uniforms.uFireFlameVfx = 0;
         this.uniforms.uniforms.uPlasmaCoreVfx = 0;
         this.uniforms.uniforms.uSolidBodyVfx = 0;
+        this.uniforms.uniforms.uPhotonMetalIrradianceVfx = 0;
         this.uniforms.uniforms.uRadioactiveSolidBodyVfx = 0;
         this.uniforms.uniforms.uVibrMacroReliefVfx = 0;
         this.uniforms.uniforms.uIszsCrystallineVfx = 0;
@@ -14401,6 +14452,7 @@ export class PixiFieldPresenter {
         this.app.canvas.dataset.plasmaCoreVfx = 'inactive';
         this.app.canvas.dataset.fireFlameVfx = 'inactive';
         this.app.canvas.dataset.solidBodyVfx = 'inactive';
+        this.app.canvas.dataset.photonMetalIrradianceVfx = 'inactive';
         this.app.canvas.dataset.radioactiveSolidBodyVfx = 'inactive';
         this.app.canvas.dataset.vibrMacroReliefVfx = 'inactive';
         this.app.canvas.dataset.iszsCrystallineVfx = 'inactive';

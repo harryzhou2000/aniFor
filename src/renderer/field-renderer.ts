@@ -934,6 +934,13 @@ export class MaterialRenderer {
     this.presenter?.setDenseBodyAmbientFillEnabled(enabled);
   }
 
+  /** Normal-WebGL exact Metal/PHOT irradiance; Canvas remains unchanged. */
+  setPhotonMetalIrradianceVfxEnabled(enabled: boolean): void {
+    // The presenter owns both the uniform mutation and its single submitted
+    // frame. A missing presenter means Canvas fallback, where E81 is a no-op.
+    this.presenter?.setPhotonMetalIrradianceVfxEnabled(enabled);
+  }
+
   /** Native DLAY countdown is a state-owned RGB cue, never a JavaScript timer. */
   setDlayStateStylingEnabled(enabled: boolean): void {
     if (enabled === this.dlayStateStylingEnabled) return;

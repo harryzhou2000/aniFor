@@ -654,6 +654,9 @@ export class Game {
       setDenseBodyAmbientFill: (enabled) => {
         this.renderer.setDenseBodyAmbientFillEnabled(enabled);
       },
+      setPhotonMetalIrradianceVfx: (enabled) => {
+        this.renderer.setPhotonMetalIrradianceVfxEnabled(enabled);
+      },
       setRoleMaterialStyling: (enabled) => {
         this.renderer.setRoleMaterialStylingEnabled(enabled);
       },

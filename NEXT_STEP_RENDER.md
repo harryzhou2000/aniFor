@@ -3308,9 +3308,10 @@ not a seam control; sample the actual interface for semantics/alpha and place
 the foreign-owner RGB no-op probe safely inside the foreign block so bounded
 HDR spill cannot masquerade as ownership leakage.
 
-E80 closes the shared dark-backdrop deep-body leg without reopening E78/E79.
-The next experiment must diagnose a fresh fit-view deficit outside Water/Metal,
-DSTW/DESL, or generic deep-body lift.
+E80 closes the shared dark-backdrop deep-body leg without reopening E78/E79;
+E81 closes the exact native PHOT-over-Metal lighting leg. The next E82 preflight
+is authoritative-temperature blackbody emission for one exact native hot
+material owner, not a generic dynamic-light system.
 
 ### E80 — accepted dense-body ambient floor
 
@@ -3347,14 +3348,42 @@ family-0 Solid, so family-4 Powder receives exact zero. E05's live signed
 powder slope is directional relief, not genuine concavity; do not rename it or
 add an unbudgeted neighbour sample merely to rescue the idea.
 
-The next evidence candidate is normal-WebGL exact deep Metal illuminated by an
-independently present native PHOT spectrum (`photonMetalIrradianceVfx`). Reuse
-only the already decoded photon spectrum/peak and existing Metal interior,
-optical-depth, Fresnel, and environment carriers. The existing photon-spectrum
-fixture must prove red/green/blue/violet ordering plus exact holes, channels,
-thin/isolated/absent state, Water, Glass, native-wall, blank, off restoration,
-and true-8× no-op before any candidate can be accepted. Add no photon velocity
-or directional-streak claim: no authoritative photon velocity is projected.
+### E81 — accepted native PHOT spectral irradiance over Metal
+
+E81 is a normal-WebGL-only exact-owner response, independently selectable with
+`?photonMetalIrradianceVfx=0|1`. It styles an authoritative native PHOT spectrum
+only where it is independently present over deep Metal, reusing the existing
+decoded photon spectrum/peak and Metal `solidInterior`/optical-depth state. The
+compact constant-gain expression is `0.068`; it is not generic photon glow.
+E81 adds no sample, texture, field, pass, target, upload, allocation, clock,
+alpha/support, silhouette, ownership, topology, or physics decision. Canvas
+retains its semantic fallback.
+
+Keep the normal path's exact-owner/depth eligibility compact. On SwiftShader,
+redundant granular/translucent/contact guards and an attempted coefficient
+extension with `solidKey`/`solidFresnel` made the response inert. Retain the
+compact exact-owner/depth branch instead. Direct compact true 8× intentionally
+excludes E81: no E81 branch, uniform, sampler, or resource belongs there.
+
+`npm run audit:vfx:photon-metal-irradiance` freezes a DPR-1 WebGL compositor
+screenshot A/B/A matrix at 1×/2×/4×. It proves red/green/blue/violet native
+spectral ordering; exact holes, channels, thin/isolated/absent state, Water,
+Glass, native-wall, blank, topology/contact/foreign-owner controls; byte-exact
+repeated-off restoration; and at most `0.08` cross-scale RGB-RMS spread.
+`npm run audit:vfx:photon-metal-irradiance:8x` proves requested-on compact true
+8× is an exact no-op at `4896×3072` through a completed GPU fence (about
+`5.77 s` on the accepted SwiftShader run), with an exact repeated-off
+framebuffer, no later presentation refresh, and zero browser errors. Do not
+claim photon velocity or directional streaks: no authoritative photon velocity
+is projected.
+
+### E82 — next preflight: native-temperature blackbody owner
+
+E82 should evaluate a bounded normal-WebGL blackbody-emission response for one
+exact native hot-material owner, using authoritative temperature as described
+in the Phase-1 blackbody roadmap. It must be a topology-preserving exact-owner
+preflight, not a generic dynamic-light or multi-pass-lighting expansion, and
+must establish Canvas and compact true-8× control contracts before code changes.
 
 ## Phase 1 — HDR pipeline & lighting core (biggest visual payoff)
 
