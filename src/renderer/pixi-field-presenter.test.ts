@@ -1746,6 +1746,87 @@ describe('Pixi presenter startup configuration', () => {
     expect(presenter.app.render).not.toHaveBeenCalled();
   });
 
+  it('keeps E75 authenticated PLNT canopy lifecycle organization normal-WebGL-only and carrier-neutral', () => {
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const canvasSource = readFileSync(new URL('./field-renderer.ts', import.meta.url), 'utf8');
+    const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');
+    const normalStart = source.indexOf('const FIELD_FRAGMENT = `', eightStart);
+    const normalEnd = source.indexOf('`;\n\n/** Primary WebGL presentation', normalStart);
+    const eight = source.slice(eightStart, normalStart);
+    const normal = source.slice(normalStart, normalEnd);
+    const packedStateStart = normal.indexOf('          // Resolve E36\'s exact zero-state PLNT proof');
+    const lifecycleStart = normal.indexOf('          // E75 opens the accepted E36->E71 broad canopy');
+    const lifecycleEnd = normal.indexOf('          float plantCanopyMass =', lifecycleStart);
+    const lifecycle = normal.slice(lifecycleStart, lifecycleEnd);
+    const packedState = normal.slice(packedStateStart, lifecycleEnd);
+    const canopyMassStart = normal.indexOf('          float plantCanopyMass =', lifecycleEnd);
+    const canopyMassEnd = normal.indexOf('          float leafCanopyRank =', canopyMassStart);
+    const canopyMass = normal.slice(canopyMassStart, canopyMassEnd);
+    const e71Start = normal.indexOf('                // E71:', lifecycleEnd);
+    const e71End = normal.indexOf('        } else {', e71Start);
+    const e71 = normal.slice(e71Start, e71End);
+    const preserveDrawingBufferStart = source.indexOf('preserveDrawingBuffer:');
+    const preserveDrawingBufferEnd = source.indexOf('resolution: outputScale', preserveDrawingBufferStart);
+    const preserveDrawingBuffer = source.slice(preserveDrawingBufferStart, preserveDrawingBufferEnd);
+
+    expect(eightStart).toBeGreaterThanOrEqual(0);
+    expect(normalStart).toBeGreaterThan(eightStart);
+    expect(normalEnd).toBeGreaterThan(normalStart);
+    expect(packedStateStart).toBeGreaterThanOrEqual(0);
+    expect(lifecycleStart).toBeGreaterThanOrEqual(0);
+    expect(lifecycleStart).toBeGreaterThan(packedStateStart);
+    expect(lifecycleEnd).toBeGreaterThan(lifecycleStart);
+    expect(canopyMassEnd).toBeGreaterThan(canopyMassStart);
+    expect(e71Start).toBeGreaterThan(lifecycleEnd);
+    expect(e71End).toBeGreaterThan(e71Start);
+    expect(preserveDrawingBufferEnd).toBeGreaterThan(preserveDrawingBufferStart);
+
+    expect(normal).toContain('uniform float uPlantCanopyLifecycleVfx;');
+    expect(normal.match(/uniform float uPlantCanopyLifecycleVfx;/g)).toHaveLength(1);
+    expect(eight).not.toContain('uPlantCanopyLifecycleVfx');
+    expect(eight).not.toContain('plantCanopyLifecycleVfx');
+    expect(canvasSource).not.toContain('plantCanopyLifecycleVfx');
+
+    // E75 authenticates the native packed word before admitting a non-zero
+    // lifecycle payload: present (bit 15), tree (bit 0), and active (bit 14).
+    expect(lifecycle).toContain('packedPlantCanopyState >= 32768.0');
+    expect(lifecycle).toContain('mod(plantCanopyPayload, 2.0) > 0.5');
+    expect(lifecycle).toContain('mod(floor(plantCanopyPayload / 16384.0), 2.0) > 0.5');
+    expect(packedState).toContain('floor(wallState.b * 255.0 + 0.5)');
+    expect(packedState).toContain('floor(wallState.a * 255.0 + 0.5) * 256.0');
+    expect(lifecycle).toContain('floor(plantCanopyPayload / 2.0), 4.0');
+    expect(lifecycle).toContain('floor(plantCanopyPayload / 8.0), 8.0');
+    expect(lifecycle).toContain('floor(plantCanopyPayload / 4096.0), 4.0');
+    for (const carrier of ['botanicalMacro', 'botanicalCluster']) {
+      expect(lifecycle).toContain(carrier);
+    }
+    expect(lifecycle).not.toContain('botanicalBodyNoise(');
+    expect(lifecycle).not.toContain('sin(');
+    expect(lifecycle).not.toContain('texture(');
+    expect(lifecycle).not.toContain('uTime');
+    expect(lifecycle).not.toMatch(/\balpha\s*[+*]?=/);
+
+    // The accepted zero-payload E71 path stays available; E75 only adds its
+    // authenticated owner proof rather than making E71 decode lifecycle state.
+    expect(normal).toContain('float plantCanopyZeroPayload = plantCanopyPayload < 0.5 ? 1.0 : 0.0;');
+    expect(canopyMass).toContain('plantCanopyZeroPayload > 0.5 || plantCanopyLifecycleOwner > 0.5');
+    expect(e71).toContain('if (uPlantCanopyFoliageVfx > 0.5)');
+    expect(e71).not.toContain('wallState');
+    expect(e71).not.toContain('plantCanopyLifecycle');
+
+    expect(source).toMatch(
+      /const plantCanopyLifecycleVfxEnabled = outputScale < 8\s*&& resolvePlantCanopyLifecycleVfxEnabled\(renderLook\);/,
+    );
+    expect(source).toContain(
+      'uPlantCanopyLifecycleVfx: {\n        value: plantCanopyLifecycleVfxEnabled ? 1 : 0',
+    );
+    expect(source.match(/this\.uniforms\.uniforms\.uPlantCanopyLifecycleVfx = 0;/g))
+      .toHaveLength(2);
+    expect(source).toContain('presenter.app.canvas.dataset.plantCanopyLifecycleVfx = Number(');
+    expect(source).toContain("this.app.canvas.dataset.plantCanopyLifecycleVfx = 'inactive';");
+    expect(preserveDrawingBuffer).toContain("get('plantCanopyLifecycleVfxAudit') === '1'");
+  });
+
   it('keeps E30 Wood bark relief exact-owner, normal-WebGL-only, and resource-neutral', () => {
     const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
     const canvasSource = readFileSync(new URL('./field-renderer.ts', import.meta.url), 'utf8');

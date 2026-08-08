@@ -48,6 +48,7 @@ import {
   resolvePlantCanopyInterlockVfxEnabled,
   resolvePlantCanopyHierarchyVfxEnabled,
   resolvePlantCanopyFoliageVfxEnabled,
+  resolvePlantCanopyLifecycleVfxEnabled,
   resolveWoodBarkReliefVfxEnabled,
   resolveWoodTanninVfxEnabled,
   resolveGlassBodyVfxEnabled,
@@ -3335,6 +3336,7 @@ uniform float uPlantCanopyTissueVfx;
 uniform float uPlantCanopyInterlockVfx;
 uniform float uPlantCanopyHierarchyVfx;
 uniform float uPlantCanopyFoliageVfx;
+uniform float uPlantCanopyLifecycleVfx;
 uniform float uWoodBarkReliefVfx;
 uniform float uWoodTanninVfx;
 uniform float uGlassBodyVfx;
@@ -9596,13 +9598,50 @@ void main() {
           // closed pigment zero-crossing. The accepted E26 value remains live,
           // but the new child can subordinate that contour to a broad ranked
           // canopy without a second procedural evaluation.
+          float packedPlantCanopyState = floor(wallState.b * 255.0 + 0.5)
+            + floor(wallState.a * 255.0 + 0.5) * 256.0;
+          float plantCanopyPayload = mod(packedPlantCanopyState, 32768.0);
+          float plantCanopyZeroPayload = plantCanopyPayload < 0.5 ? 1.0 : 0.0;
+          float plantCanopyLifecycleOwner = 0.0;
+          float plantCanopyLifecycleRank = 0.0;
+          // E75 opens the accepted E36->E71 broad canopy only for an
+          // authenticated native tree which is actively growing. Direction,
+          // phase, and hydration rank the two already-live E20 carriers; they
+          // do not create another noise octave. The later lifecycle layer still
+          // owns inherited colour and fine veins. This normal-WebGL child is
+          // RGB-only and adds no sample, texture, field, pass, allocation,
+          // clock, alpha, support, silhouette, topology, state, or physics.
+          if (uPlantCanopyLifecycleVfx > 0.5
+            && packedPlantCanopyState >= 32768.0
+            && mod(plantCanopyPayload, 2.0) > 0.5
+            && mod(floor(plantCanopyPayload / 16384.0), 2.0) > 0.5) {
+            float plantLifecyclePhase = mod(
+              floor(plantCanopyPayload / 2.0), 4.0
+            );
+            float plantLifecycleDirection = mod(
+              floor(plantCanopyPayload / 8.0), 8.0
+            );
+            float plantLifecycleHydration = mod(
+              floor(plantCanopyPayload / 4096.0), 4.0
+            ) / 3.0;
+            float plantLifecycleDirectionMix = plantLifecycleDirection / 7.0;
+            float plantLifecycleDirectionSign = mod(
+              floor(plantLifecycleDirection / 2.0), 2.0
+            ) > 0.5 ? 1.0 : -1.0;
+            float plantLifecycleCarrier = mix(
+              botanicalMacro - 0.5,
+              botanicalCluster - 0.5,
+              plantLifecycleDirectionMix
+            ) * plantLifecycleDirectionSign;
+            plantCanopyLifecycleRank = plantLifecycleCarrier
+                * (0.22 + plantLifecycleHydration * 0.08)
+              + (botanicalMacro - botanicalCluster)
+                * ((plantLifecyclePhase - 1.5) / 1.5) * 0.08;
+            plantCanopyLifecycleOwner = 1.0;
+          }
           float plantCanopyMass = botanicalBodyReplacement > 0.5
               && uPlantCanopyMassVfx > 0.5
-              && mod(
-                floor(wallState.b * 255.0 + 0.5)
-                  + floor(wallState.a * 255.0 + 0.5) * 256.0,
-                32768.0
-              ) < 0.5
+              && (plantCanopyZeroPayload > 0.5 || plantCanopyLifecycleOwner > 0.5)
             ? botanicalDepth : 0.0;
           float leafCanopyRank = 0.0;
           float leafCanopyFront = 0.0;
@@ -9613,7 +9652,8 @@ void main() {
             leafCanopyRank = clamp(
               (botanicalMacro - 0.5) * 1.55
                 + leafBody * 0.22
-                + botanicalExistingRelief * 0.10,
+                + botanicalExistingRelief * 0.10
+                + plantCanopyLifecycleRank,
               -1.0, 1.0
             );
             leafCanopyFront = smoothstep(-0.18, 0.52, leafCanopyRank);
@@ -11809,6 +11849,10 @@ export class PixiFieldPresenter {
     // foliage masses. Canvas and compact true 8x keep E58 unchanged.
     const plantCanopyFoliageVfxEnabled = outputScale < 8
       && resolvePlantCanopyFoliageVfxEnabled(renderLook);
+    // E75 admits only authenticated present+tree+active PLNT to E71's already
+    // live broad carriers. Canvas and compact true 8x retain E71 unchanged.
+    const plantCanopyLifecycleVfxEnabled = outputScale < 8
+      && resolvePlantCanopyLifecycleVfxEnabled(renderLook);
     // E21 replaces only normal-WebGL's deep exact-Glass body grade. The
     // compact true-8x shader retains its separately proven transmission path
     // and deliberately declares neither this selector nor its arithmetic.
@@ -11944,6 +11988,9 @@ export class PixiFieldPresenter {
       uPlantCanopyInterlockVfx: { value: plantCanopyInterlockVfxEnabled ? 1 : 0, type: 'f32' },
       uPlantCanopyHierarchyVfx: { value: plantCanopyHierarchyVfxEnabled ? 1 : 0, type: 'f32' },
       uPlantCanopyFoliageVfx: { value: plantCanopyFoliageVfxEnabled ? 1 : 0, type: 'f32' },
+      uPlantCanopyLifecycleVfx: {
+        value: plantCanopyLifecycleVfxEnabled ? 1 : 0, type: 'f32',
+      },
       uWoodBarkReliefVfx: { value: woodBarkReliefVfxEnabled ? 1 : 0, type: 'f32' },
       uWoodTanninVfx: { value: woodTanninVfxEnabled ? 1 : 0, type: 'f32' },
       uGlassBodyVfx: { value: glassBodyVfxEnabled ? 1 : 0, type: 'f32' },
@@ -12230,6 +12277,7 @@ export class PixiFieldPresenter {
       this.uniforms.uniforms.uPlantCanopyInterlockVfx = 0;
       this.uniforms.uniforms.uPlantCanopyHierarchyVfx = 0;
       this.uniforms.uniforms.uPlantCanopyFoliageVfx = 0;
+      this.uniforms.uniforms.uPlantCanopyLifecycleVfx = 0;
       this.uniforms.uniforms.uWoodBarkReliefVfx = 0;
       this.uniforms.uniforms.uWoodTanninVfx = 0;
       this.uniforms.uniforms.uGlassBodyVfx = 0;
@@ -12324,6 +12372,7 @@ export class PixiFieldPresenter {
             || new URLSearchParams(location.search).get('plantCanopyInterlockVfxAudit') === '1'
             || new URLSearchParams(location.search).get('plantCanopyHierarchyVfxAudit') === '1'
             || new URLSearchParams(location.search).get('plantCanopyFoliageVfxAudit') === '1'
+            || new URLSearchParams(location.search).get('plantCanopyLifecycleVfxAudit') === '1'
             || new URLSearchParams(location.search).get('metalWaterContactVfxAudit') === '1'
             || new URLSearchParams(location.search).get('waterMetalTransmissionVfxAudit') === '1'
             || new URLSearchParams(location.search).get('woodBarkReliefVfxAudit') === '1'
@@ -12488,6 +12537,9 @@ export class PixiFieldPresenter {
     ) > 0.5 ? 'active' : 'inactive';
     presenter.app.canvas.dataset.plantCanopyFoliageVfx = Number(
       presenter.uniforms.uniforms.uPlantCanopyFoliageVfx
+    ) > 0.5 ? 'active' : 'inactive';
+    presenter.app.canvas.dataset.plantCanopyLifecycleVfx = Number(
+      presenter.uniforms.uniforms.uPlantCanopyLifecycleVfx
     ) > 0.5 ? 'active' : 'inactive';
     presenter.app.canvas.dataset.woodBarkReliefVfx = Number(
       presenter.uniforms.uniforms.uWoodBarkReliefVfx
@@ -14076,6 +14128,7 @@ export class PixiFieldPresenter {
         this.uniforms.uniforms.uPlantCanopyInterlockVfx = 0;
         this.uniforms.uniforms.uPlantCanopyHierarchyVfx = 0;
         this.uniforms.uniforms.uPlantCanopyFoliageVfx = 0;
+        this.uniforms.uniforms.uPlantCanopyLifecycleVfx = 0;
         this.uniforms.uniforms.uWoodBarkReliefVfx = 0;
         this.uniforms.uniforms.uWoodTanninVfx = 0;
         this.uniforms.uniforms.uGlassBodyVfx = 0;
@@ -14146,6 +14199,7 @@ export class PixiFieldPresenter {
         this.app.canvas.dataset.plantCanopyInterlockVfx = 'inactive';
         this.app.canvas.dataset.plantCanopyHierarchyVfx = 'inactive';
         this.app.canvas.dataset.plantCanopyFoliageVfx = 'inactive';
+        this.app.canvas.dataset.plantCanopyLifecycleVfx = 'inactive';
         this.app.canvas.dataset.woodBarkReliefVfx = 'inactive';
         this.app.canvas.dataset.woodTanninVfx = 'inactive';
         this.app.canvas.dataset.glassBodyVfx = 'inactive';

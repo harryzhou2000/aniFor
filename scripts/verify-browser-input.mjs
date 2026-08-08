@@ -36,6 +36,9 @@ import { auditPowderMesostrataGraphics } from './powder-mesostrata-graphics-audi
 import {
   auditConcreteMesostrataRetentionVfx,
 } from './concrete-mesostrata-retention-vfx-audit.mjs';
+import {
+  auditPlantCanopyLifecycleVfx,
+} from './plant-canopy-lifecycle-vfx-audit.mjs';
 import { auditGeologicalSolidGraphics } from './geological-solid-graphics-audit.mjs';
 import { auditThermalCatalyticRigidGraphics } from './thermal-catalytic-rigid-graphics-audit.mjs';
 import { auditGooSolidGraphics } from './goo-solid-graphics-audit.mjs';
@@ -636,6 +639,13 @@ const plantCanopyFoliageVfxOnly = process.argv.includes('--plant-canopy-foliage-
 if (plantCanopyFoliageVfxOnly && (modes.length !== 1 || modes[0] !== 'webgl')) {
   throw new Error('--plant-canopy-foliage-vfx-only requires --webgl-only');
 }
+// E75 authenticates native present+tree+active PLNT before admitting the
+// accepted E71 canopy stack. Its lifecycle-atlas route remains normal-WebGL
+// only and proves compact true 8x as an explicit exclusion tail.
+const plantCanopyLifecycleVfxOnly = process.argv.includes('--plant-canopy-lifecycle-vfx-only');
+if (plantCanopyLifecycleVfxOnly && (modes.length !== 1 || modes[0] !== 'webgl')) {
+  throw new Error('--plant-canopy-lifecycle-vfx-only requires --webgl-only');
+}
 // E54 is an exact VIBR macro-relief child of E43. Its focused route reuses the
 // paused radioactive-Solid fixture and keeps compact true 8x as an exclusion.
 const vibrMacroReliefVfxOnly = process.argv.includes('--vibr-macro-relief-vfx-only');
@@ -673,12 +683,12 @@ const focusedVfxOnlyFlags = [
   smokeSoftnessVfxOnly, smokeBillowDepthVfxOnly, botanicalMesostructureVfxOnly, woodBarkReliefVfxOnly,
   botanicalPigmentVfxOnly, plantLaminaVfxOnly, plantLobeDepthVfxOnly, plantCanopyMassVfxOnly,
   plantCanopyTissueVfxOnly, plantCanopyInterlockVfxOnly, plantCanopyHierarchyVfxOnly,
-  plantCanopyFoliageVfxOnly,
+  plantCanopyFoliageVfxOnly, plantCanopyLifecycleVfxOnly,
   vibrMacroReliefVfxOnly,
   woodTanninVfxOnly,
 ];
 if (focusedVfxOnlyFlags.filter(Boolean).length > 1) {
-  throw new Error('HDR/volume/liquid-body/liquid-surface/liquid-motion/oil-motion/water-curvature/fire-flame/cflm-cold-flame/gas-body/gas-motion/powder-body/concrete-mesostrata-retention/powder-light/powder-solid-contact/translucent-edge/organic-subsurface/wet-sediment/gas-light/liquid-solid-meniscus/metal-water-contact/water-metal-transmission/gas-core-depth/plasma-core/solid-body/platinum-body/ceramic-glaze/botanical-body/glass-body/oil-body/oil-depth-transmission/rock-roughness/rock-mesostructure/rock-weathered-facet/water-body/water-volume-recession/acid-body/soap-body/nitro-body/sooty-powder-body/thermite-body/snowpack-body/quartz-mesostructure/c4-body/deut-body/hydrogen-body/carbon-dioxide-body/carbon-dioxide-core-fold/steam-condensate/fog-core-diffuse/radioactive-solid-body/iszs-crystalline/iszs-crystal-hierarchy/vibr-macro-relief/noble-gas-billow/noble-gas-prism/smoke-softness/smoke-billow-depth/botanical-mesostructure/wood-bark-relief/botanical-pigment/plant-lamina/plant-lobe-depth/plant-canopy-mass/plant-canopy-tissue/plant-canopy-interlock/plant-canopy-hierarchy/plant-canopy-foliage/wood-tannin focused audits are mutually exclusive');
+  throw new Error('HDR/volume/liquid-body/liquid-surface/liquid-motion/oil-motion/water-curvature/fire-flame/cflm-cold-flame/gas-body/gas-motion/powder-body/concrete-mesostrata-retention/powder-light/powder-solid-contact/translucent-edge/organic-subsurface/wet-sediment/gas-light/liquid-solid-meniscus/metal-water-contact/water-metal-transmission/gas-core-depth/plasma-core/solid-body/platinum-body/ceramic-glaze/botanical-body/glass-body/oil-body/oil-depth-transmission/rock-roughness/rock-mesostructure/rock-weathered-facet/water-body/water-volume-recession/acid-body/soap-body/nitro-body/sooty-powder-body/thermite-body/snowpack-body/quartz-mesostructure/c4-body/deut-body/hydrogen-body/carbon-dioxide-body/carbon-dioxide-core-fold/steam-condensate/fog-core-diffuse/radioactive-solid-body/iszs-crystalline/iszs-crystal-hierarchy/vibr-macro-relief/noble-gas-billow/noble-gas-prism/smoke-softness/smoke-billow-depth/botanical-mesostructure/wood-bark-relief/botanical-pigment/plant-lamina/plant-lobe-depth/plant-canopy-mass/plant-canopy-tissue/plant-canopy-interlock/plant-canopy-hierarchy/plant-canopy-foliage/plant-canopy-lifecycle/wood-tannin focused audits are mutually exclusive');
 }
 
 const layoutOnly = process.argv.includes('--layout-only');
@@ -764,7 +774,7 @@ const liveScaleOnly = process.argv.includes('--live-scale-only');
 // dev-server navigation timing while leaving all default audit paths unchanged.
 const productionBundle = process.argv.includes('--production-bundle');
 const usesProductionBundle = productionBundle || showcaseScreenshotOnly || composedRankOnly
-  || candidateRankOnly || nitroBodyVfxOnly || hdrVfxOnly || volumeVfxOnly || plantCanopyInterlockVfxOnly || plantCanopyHierarchyVfxOnly || plantCanopyFoliageVfxOnly || oilDepthTransmissionVfxOnly
+  || candidateRankOnly || nitroBodyVfxOnly || hdrVfxOnly || volumeVfxOnly || plantCanopyInterlockVfxOnly || plantCanopyHierarchyVfxOnly || plantCanopyFoliageVfxOnly || plantCanopyLifecycleVfxOnly || oilDepthTransmissionVfxOnly
   || liquidBodyVfxOnly || liquidSurfaceVfxOnly || liquidMotionVfxOnly || oilMotionVfxOnly || waterCurvatureVfxOnly || fireFlameVfxOnly || cflmColdFlameVfxOnly || gasBodyVfxOnly || gasMotionVfxOnly
   || powderBodyVfxOnly || concreteMesostrataRetentionVfxOnly || powderLightVfxOnly || powderSolidContactVfxOnly || translucentEdgeVfxOnly || organicSubsurfaceVfxOnly || wetSedimentVfxOnly || gasLightVfxOnly || liquidSolidMeniscusVfxOnly || metalWaterContactVfxOnly || waterMetalTransmissionVfxOnly || gasCoreDepthVfxOnly || plasmaCoreVfxOnly || solidBodyVfxOnly || platinumBodyVfxOnly || ceramicGlazeVfxOnly || botanicalBodyVfxOnly || glassBodyVfxOnly || oilBodyVfxOnly || rockRoughnessVfxOnly || rockMesostructureVfxOnly || rockWeatheredFacetVfxOnly || waterBodyVfxOnly || waterVolumeRecessionVfxOnly || acidBodyVfxOnly || soapBodyVfxOnly || sootyPowderBodyVfxOnly || thermiteBodyVfxOnly || snowpackBodyVfxOnly || quartzMesostructureVfxOnly || c4BodyVfxOnly || bglaBodyVfxOnly || bglaClusterVfxOnly || deutBodyVfxOnly || hydrogenBodyVfxOnly || carbonDioxideBodyVfxOnly || carbonDioxideCoreFoldVfxOnly || steamCondensateVfxOnly || fogCoreDiffuseVfxOnly || radioactiveSolidBodyVfxOnly || iszsCrystallineVfxOnly || iszsCrystalHierarchyVfxOnly || nobleGasBillowVfxOnly || nobleGasPrismVfxOnly || smokeSoftnessVfxOnly || smokeBillowDepthVfxOnly || botanicalMesostructureVfxOnly || woodBarkReliefVfxOnly || botanicalPigmentVfxOnly || plantLaminaVfxOnly || plantLobeDepthVfxOnly || woodTanninVfxOnly || cellularGraphicsOnly || sensorGraphicsOnly
   || unusualPowderGraphicsOnly || earthenPowderGraphicsOnly || explosivePowderGraphicsOnly || unusualSolidGraphicsOnly
@@ -908,6 +918,9 @@ const plantCanopyHierarchyVfxArgument = process.argv.find(
 const plantCanopyFoliageVfxArgument = process.argv.find(
   (argument) => argument.startsWith('--plant-canopy-foliage-vfx='),
  )?.slice('--plant-canopy-foliage-vfx='.length);
+const plantCanopyLifecycleVfxArgument = process.argv.find(
+  (argument) => argument.startsWith('--plant-canopy-lifecycle-vfx='),
+)?.slice('--plant-canopy-lifecycle-vfx='.length);
 const vibrMacroReliefVfxArgument = process.argv.find(
   (argument) => argument.startsWith('--vibr-macro-relief-vfx='),
 )?.slice('--vibr-macro-relief-vfx='.length);
@@ -1114,6 +1127,10 @@ if (plantCanopyHierarchyVfxArgument !== undefined
 if (plantCanopyFoliageVfxArgument !== undefined
   && !['0', '1'].includes(plantCanopyFoliageVfxArgument)) {
   throw new Error('--plant-canopy-foliage-vfx must be 0 or 1');
+}
+if (plantCanopyLifecycleVfxArgument !== undefined
+  && !['0', '1'].includes(plantCanopyLifecycleVfxArgument)) {
+  throw new Error('--plant-canopy-lifecycle-vfx must be 0 or 1');
 }
 if (vibrMacroReliefVfxArgument !== undefined
   && !['0', '1', 'off', 'on'].includes(vibrMacroReliefVfxArgument)) {
@@ -1415,9 +1432,10 @@ if (focusedVfxOnlyFlags.some(Boolean) && (botanicalMesostructureVfxArgument !== 
   || plantLobeDepthVfxArgument !== undefined || plantCanopyMassVfxArgument !== undefined
   || plantCanopyTissueVfxArgument !== undefined || plantCanopyInterlockVfxArgument !== undefined
   || plantCanopyHierarchyVfxArgument !== undefined || plantCanopyFoliageVfxArgument !== undefined
+  || plantCanopyLifecycleVfxArgument !== undefined
   || vibrMacroReliefVfxArgument !== undefined
   || woodTanninVfxArgument !== undefined)) {
-  throw new Error('focused VFX audits own botanicalMesostructureVfx, botanicalPigmentVfx, plantLaminaVfx, plantLobeDepthVfx, plantCanopyMassVfx, plantCanopyTissueVfx, plantCanopyInterlockVfx, plantCanopyHierarchyVfx, plantCanopyFoliageVfx, vibrMacroReliefVfx, and woodTanninVfx state; omit their overrides');
+  throw new Error('focused VFX audits own botanicalMesostructureVfx, botanicalPigmentVfx, plantLaminaVfx, plantLobeDepthVfx, plantCanopyMassVfx, plantCanopyTissueVfx, plantCanopyInterlockVfx, plantCanopyHierarchyVfx, plantCanopyFoliageVfx, plantCanopyLifecycleVfx, vibrMacroReliefVfx, and woodTanninVfx state; omit their overrides');
 }
 if (gasLightVfxOnly && (volumeVfxArgument !== undefined || liquidBodyVfxArgument !== undefined
   || liquidSurfaceVfxArgument !== undefined || gasBodyVfxArgument !== undefined || gasMotionVfxArgument !== undefined
@@ -1835,6 +1853,9 @@ if (plantCanopyHierarchyVfxOnly && renderScaleArgument === '8') {
 if (plantCanopyFoliageVfxOnly && renderScaleArgument === '8') {
   throw new Error('--plant-canopy-foliage-vfx-only is a normal-detail 1x/2x/4x experiment');
 }
+if (plantCanopyLifecycleVfxOnly && renderScaleArgument === '8') {
+  throw new Error('--plant-canopy-lifecycle-vfx-only is a normal-detail 1x/2x/4x experiment');
+}
 if (vibrMacroReliefVfxOnly && renderScaleArgument === '8') {
   throw new Error('--vibr-macro-relief-vfx-only is a normal-detail 1x/2x/4x experiment');
 }
@@ -1924,7 +1945,7 @@ async function main() {
     const results = [];
     for (const mode of modes) results.push(await auditMode(mode));
     const reducedAudit = quickScreenshot || showcaseScreenshotOnly || composedRankOnly
-      || candidateRankOnly || nitroBodyVfxOnly || hdrVfxOnly || volumeVfxOnly || plantCanopyInterlockVfxOnly || plantCanopyHierarchyVfxOnly || plantCanopyFoliageVfxOnly || oilDepthTransmissionVfxOnly
+      || candidateRankOnly || nitroBodyVfxOnly || hdrVfxOnly || volumeVfxOnly || plantCanopyInterlockVfxOnly || plantCanopyHierarchyVfxOnly || plantCanopyFoliageVfxOnly || plantCanopyLifecycleVfxOnly || oilDepthTransmissionVfxOnly
       || liquidBodyVfxOnly || liquidSurfaceVfxOnly || liquidMotionVfxOnly || oilMotionVfxOnly || gasBodyVfxOnly || gasMotionVfxOnly
       || powderBodyVfxOnly || concreteMesostrataRetentionVfxOnly || powderLightVfxOnly || powderSolidContactVfxOnly || translucentEdgeVfxOnly || organicSubsurfaceVfxOnly || wetSedimentVfxOnly || gasLightVfxOnly || liquidSolidMeniscusVfxOnly || metalWaterContactVfxOnly || waterMetalTransmissionVfxOnly || gasCoreDepthVfxOnly || oxygenVolumeFoldVfxOnly || plasmaCoreVfxOnly || solidBodyVfxOnly || platinumBodyVfxOnly || ceramicGlazeVfxOnly || botanicalBodyVfxOnly || glassBodyVfxOnly || oilBodyVfxOnly || rockRoughnessVfxOnly || rockMesostructureVfxOnly || rockWeatheredFacetVfxOnly || waterBodyVfxOnly || waterVolumeRecessionVfxOnly || acidBodyVfxOnly || soapBodyVfxOnly || sootyPowderBodyVfxOnly || thermiteBodyVfxOnly || snowpackBodyVfxOnly || quartzMesostructureVfxOnly || c4BodyVfxOnly || deutBodyVfxOnly || hydrogenBodyVfxOnly || carbonDioxideBodyVfxOnly || carbonDioxideCoreFoldVfxOnly || steamCondensateVfxOnly || fogCoreDiffuseVfxOnly || radioactiveSolidBodyVfxOnly || iszsCrystallineVfxOnly || iszsCrystalHierarchyVfxOnly || nobleGasBillowVfxOnly || nobleGasPrismVfxOnly || smokeSoftnessVfxOnly || smokeBillowDepthVfxOnly || botanicalMesostructureVfxOnly || woodBarkReliefVfxOnly || botanicalPigmentVfxOnly || plantLaminaVfxOnly || plantLobeDepthVfxOnly || woodTanninVfxOnly || layoutOnly || mobileOnly || mobileGestureOnly
       || desktopInputOnly || visualScaleMatrixOnly || powderBodyOnly || liquidDepthOnly
@@ -2023,7 +2044,7 @@ async function auditMode(mode) {
   // measures. Canvas fallback has no advanced optics obligation, so retain the
   // canonical paused scene there and prove real material delivery/occupancy.
   const startsBlank = !canvasFallbackAudit && (hdrVfxOnly || volumeVfxOnly
-    || plantCanopyHierarchyVfxOnly || plantCanopyFoliageVfxOnly || oilDepthTransmissionVfxOnly
+    || plantCanopyHierarchyVfxOnly || plantCanopyFoliageVfxOnly || plantCanopyLifecycleVfxOnly || oilDepthTransmissionVfxOnly
     || liquidBodyVfxOnly || liquidSurfaceVfxOnly || liquidMotionVfxOnly || oilMotionVfxOnly || waterCurvatureVfxOnly || fireFlameVfxOnly || cflmColdFlameVfxOnly || gasBodyVfxOnly || gasMotionVfxOnly
   || powderBodyVfxOnly || concreteMesostrataRetentionVfxOnly || powderLightVfxOnly || powderSolidContactVfxOnly || translucentEdgeVfxOnly || organicSubsurfaceVfxOnly || wetSedimentVfxOnly || gasLightVfxOnly || liquidSolidMeniscusVfxOnly || metalWaterContactVfxOnly || waterMetalTransmissionVfxOnly || gasCoreDepthVfxOnly || oxygenVolumeFoldVfxOnly || plasmaCoreVfxOnly || solidBodyVfxOnly || platinumBodyVfxOnly || ceramicGlazeVfxOnly || botanicalBodyVfxOnly || glassBodyVfxOnly || oilBodyVfxOnly || rockRoughnessVfxOnly || rockMesostructureVfxOnly || rockWeatheredFacetVfxOnly || waterBodyVfxOnly || waterVolumeRecessionVfxOnly || acidBodyVfxOnly || soapBodyVfxOnly || sootyPowderBodyVfxOnly || thermiteBodyVfxOnly || snowpackBodyVfxOnly || quartzMesostructureVfxOnly || c4BodyVfxOnly || bglaBodyVfxOnly || bglaClusterVfxOnly || deutBodyVfxOnly || hydrogenBodyVfxOnly || carbonDioxideBodyVfxOnly || carbonDioxideCoreFoldVfxOnly || steamCondensateVfxOnly || fogCoreDiffuseVfxOnly || radioactiveSolidBodyVfxOnly || iszsCrystallineVfxOnly || iszsCrystalHierarchyVfxOnly || nobleGasBillowVfxOnly || nobleGasPrismVfxOnly || smokeSoftnessVfxOnly || smokeBillowDepthVfxOnly || botanicalMesostructureVfxOnly || woodBarkReliefVfxOnly || botanicalPigmentVfxOnly || plantLaminaVfxOnly || plantLobeDepthVfxOnly || woodTanninVfxOnly || cellularGraphicsOnly || sensorGraphicsOnly
     || unusualPowderGraphicsOnly || earthenPowderGraphicsOnly || explosivePowderGraphicsOnly
@@ -2305,6 +2326,13 @@ async function auditMode(mode) {
       ? { plantCanopyFoliageVfx: '0' }
       : plantCanopyFoliageVfxArgument !== undefined
         ? { plantCanopyFoliageVfx: plantCanopyFoliageVfxArgument }
+        : {}),
+    // E75 is a strict E71 child. Focused routes pin it off; the dedicated
+    // lifecycle-atlas route owns its fresh-page off -> on -> off sequence.
+    ...(focusedVfxOnlyFlags.some(Boolean)
+      ? { plantCanopyLifecycleVfx: '0' }
+      : plantCanopyLifecycleVfxArgument !== undefined
+        ? { plantCanopyLifecycleVfx: plantCanopyLifecycleVfxArgument }
         : {}),
     // E54 is an E43 child. Every focused audit starts from its no-op path;
     // the E54 navigation owns its own off -> on -> off reload sequence.
@@ -3119,6 +3147,32 @@ async function auditMode(mode) {
       assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
       cdp.close();
       return { backend: mode, plantCanopyFoliageVfx, browserErrors: errors.length };
+    }
+    if (plantCanopyLifecycleVfxOnly) {
+      assert(mode === 'webgl', '--plant-canopy-lifecycle-vfx-only requires --webgl-only');
+      const plantCanopyLifecycleVfx = await auditPlantCanopyLifecycleVfx({
+        cdp,
+        mode,
+        dpr,
+        auditBaseUrl: AUDIT_BASE_URL,
+        renderScaleArgument,
+        evaluate,
+        waitFor,
+        waitForStablePageCapture,
+        sampleVolumeVfxCanvasAlphaSupport,
+        setDesktopMetrics,
+        waitForEightXTerminalBackend,
+        assertEightXWebGLBackend,
+        auditWebGLPresentationTiming,
+        remainingDeadlineMs,
+        screenshotRequest,
+        variantScreenshotPath,
+        writeFile,
+        assert,
+      });
+      assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
+      cdp.close();
+      return { backend: mode, plantCanopyLifecycleVfx, browserErrors: errors.length };
     }
     if (woodTanninVfxOnly) {
       assert(mode === 'webgl', '--wood-tannin-vfx-only requires --webgl-only');
@@ -14510,6 +14564,9 @@ async function auditComposedRankShowcase(cdp, mode, dpr) {
   const composedPlantCanopyInterlockVfx = plantCanopyInterlockVfxArgument ?? '1';
   const composedPlantCanopyHierarchyVfx = plantCanopyHierarchyVfxArgument ?? '1';
   const composedPlantCanopyFoliageVfx = plantCanopyFoliageVfxArgument ?? '1';
+  // E75 defaults off under inputAudit, so the product survey must request its
+  // accepted authenticated native-tree child explicitly.
+  const composedPlantCanopyLifecycleVfx = plantCanopyLifecycleVfxArgument ?? '1';
   // inputAudit deliberately defaults isolated experiments off. The composed
   // showcase owns the accepted product stack, so make E59 explicit here.
   const composedRockWeatheredFacetVfx = rockWeatheredFacetVfxArgument ?? '1';
@@ -14584,6 +14641,7 @@ async function auditComposedRankShowcase(cdp, mode, dpr) {
       plantCanopyInterlockVfx: composedPlantCanopyInterlockVfx,
       plantCanopyHierarchyVfx: composedPlantCanopyHierarchyVfx,
       plantCanopyFoliageVfx: composedPlantCanopyFoliageVfx,
+      plantCanopyLifecycleVfx: composedPlantCanopyLifecycleVfx,
       ...(woodTanninVfxArgument !== undefined ? {
         woodTanninVfx: woodTanninVfxArgument,
       } : {}),
@@ -14629,6 +14687,7 @@ async function auditComposedRankShowcase(cdp, mode, dpr) {
         && parameters.get('plantCanopyInterlockVfx') === ${JSON.stringify(composedPlantCanopyInterlockVfx)}
         && parameters.get('plantCanopyHierarchyVfx') === ${JSON.stringify(composedPlantCanopyHierarchyVfx)}
         && parameters.get('plantCanopyFoliageVfx') === ${JSON.stringify(composedPlantCanopyFoliageVfx)}
+        && parameters.get('plantCanopyLifecycleVfx') === ${JSON.stringify(composedPlantCanopyLifecycleVfx)}
         && parameters.get('woodTanninVfx') === ${JSON.stringify(woodTanninVfxArgument ?? null)}
         && parameters.get('rockWeatheredFacetVfx') === ${JSON.stringify(composedRockWeatheredFacetVfx)}
         && document.querySelector('[data-scene="showcase"]') !== null
@@ -14703,6 +14762,9 @@ async function auditComposedRankShowcase(cdp, mode, dpr) {
     );
     const plantCanopyFoliageVfx = await evaluate(cdp,
       `document.querySelector('canvas.world-canvas')?.dataset.plantCanopyFoliageVfx ?? 'missing'`,
+    );
+    const plantCanopyLifecycleVfx = await evaluate(cdp,
+      `document.querySelector('canvas.world-canvas')?.dataset.plantCanopyLifecycleVfx ?? 'missing'`,
     );
     const woodTanninVfx = await evaluate(cdp,
       `document.querySelector('canvas.world-canvas')?.dataset.woodTanninVfx ?? 'missing'`,
@@ -15000,6 +15062,16 @@ async function auditComposedRankShowcase(cdp, mode, dpr) {
         argument: composedPlantCanopyFoliageVfx, plantCanopyHierarchyVfx,
         plantCanopyFoliageVfx, expectedPlantCanopyFoliageState,
       })})`);
+    const plantCanopyLifecycleRequestedOn = ['1', 'on', 'true'].includes(
+      composedPlantCanopyLifecycleVfx,
+    );
+    const expectedPlantCanopyLifecycleState = plantCanopyLifecycleRequestedOn
+      && plantCanopyFoliageVfx === 'active' ? 'active' : 'inactive';
+    assert(plantCanopyLifecycleVfx === expectedPlantCanopyLifecycleState,
+      `composed rank ${scale}x plant canopy-lifecycle selector resolved incorrectly (${JSON.stringify({
+        argument: composedPlantCanopyLifecycleVfx, plantCanopyFoliageVfx,
+        plantCanopyLifecycleVfx, expectedPlantCanopyLifecycleState,
+      })})`);
     if (woodTanninVfxArgument !== undefined) {
       const requestedOn = ['1', 'on'].includes(woodTanninVfxArgument);
       const woodBarkReliefVfx = await evaluate(cdp,
@@ -15156,6 +15228,7 @@ async function auditComposedRankShowcase(cdp, mode, dpr) {
       scale, geometry, fixture, semantic, regions, hdrPipeline, botanicalMesostructureVfx,
       botanicalPigmentVfx, plantLaminaVfx, plantLobeDepthVfx, plantCanopyMassVfx, plantCanopyTissueVfx,
       plantCanopyInterlockVfx, plantCanopyHierarchyVfx, plantCanopyFoliageVfx,
+      plantCanopyLifecycleVfx,
       woodTanninVfx,
       oilVolumeFinishVfx, oilDepthTransmissionVfx, oilMotionVfx, acidBodyVfx, soapBodyVfx,
       sootyPowderBodyVfx, thermiteBodyVfx,
@@ -15189,6 +15262,7 @@ async function auditComposedRankShowcase(cdp, mode, dpr) {
       && reference.plantCanopyTissueVfx === capture.plantCanopyTissueVfx
       && reference.plantCanopyInterlockVfx === capture.plantCanopyInterlockVfx
       && reference.plantCanopyHierarchyVfx === capture.plantCanopyHierarchyVfx
+      && reference.plantCanopyLifecycleVfx === capture.plantCanopyLifecycleVfx
       && reference.metalWaterContactVfx === capture.metalWaterContactVfx
       && reference.waterMetalTransmissionVfx === capture.waterMetalTransmissionVfx
       && reference.waterBodyVfx === capture.waterBodyVfx
@@ -15311,6 +15385,7 @@ async function auditComposedRankShowcase(cdp, mode, dpr) {
     scales: captures.map(({ scale, geometry, semantic, regions, hdrPipeline, botanicalMesostructureVfx,
       botanicalPigmentVfx, plantLaminaVfx, plantLobeDepthVfx, plantCanopyMassVfx, plantCanopyTissueVfx,
       plantCanopyInterlockVfx, plantCanopyHierarchyVfx, plantCanopyFoliageVfx,
+      plantCanopyLifecycleVfx,
       woodTanninVfx,
       oilVolumeFinishVfx, oilDepthTransmissionVfx, oilMotionVfx,
       smokeBillowDepthVfx, thermiteBodyVfx, bglaBodyVfx, soapBodyVfx,
@@ -15333,6 +15408,8 @@ async function auditComposedRankShowcase(cdp, mode, dpr) {
       plantCanopyInterlockVfx,
       plantCanopyHierarchyVfx,
       plantCanopyFoliageVfx,
+      plantCanopyLifecycleVfx,
+      plantCanopyLifecycleVfxCalibration: 'accepted-e75-focused-lifecycle-atlas',
       woodTanninVfx,
       oilVolumeFinishVfx,
       oilDepthTransmissionVfx,
@@ -15400,6 +15477,7 @@ async function auditComposedRankShowcase(cdp, mode, dpr) {
     iszsCrystallineVfxEvidence: 'showcase-v6-solidISZS-region',
     carbonDioxideCoreFoldVfxCalibration: 'accepted-e73-focused-and-composed-matrix',
     concreteMesostrataRetentionVfxCalibration: 'accepted-e74-focused-and-composed-matrix',
+    plantCanopyLifecycleVfxCalibration: 'accepted-e75-focused-lifecycle-atlas',
   };
 }
 
@@ -49489,7 +49567,7 @@ const CARBON_DIOXIDE_CORE_FOLD_VFX_ISOLATED_SELECTORS = Object.freeze([
   'botanicalBodyVfx', 'botanicalMesostructureVfx', 'botanicalPigmentVfx',
   'plantLaminaVfx', 'plantLobeDepthVfx', 'plantCanopyMassVfx',
   'plantCanopyTissueVfx', 'plantCanopyInterlockVfx', 'plantCanopyHierarchyVfx',
-  'plantCanopyFoliageVfx', 'woodBarkReliefVfx', 'woodTanninVfx',
+  'plantCanopyFoliageVfx', 'plantCanopyLifecycleVfx', 'woodBarkReliefVfx', 'woodTanninVfx',
   'glassBodyVfx', 'oilBodyVfx', 'oilVolumeFinishVfx', 'oilDepthTransmissionVfx',
   'nitroBodyVfx', 'rockRoughnessVfx', 'rockMesostructureVfx',
   'rockWeatheredFacetVfx', 'waterBodyVfx', 'waterVolumeRecessionVfx',
@@ -49980,7 +50058,7 @@ const STEAM_CONDENSATE_VFX_ISOLATED_SELECTORS = Object.freeze([
   'botanicalBodyVfx', 'botanicalMesostructureVfx', 'botanicalPigmentVfx',
   'plantLaminaVfx', 'plantLobeDepthVfx', 'plantCanopyMassVfx',
   'plantCanopyTissueVfx', 'plantCanopyInterlockVfx', 'plantCanopyHierarchyVfx',
-  'plantCanopyFoliageVfx',
+  'plantCanopyFoliageVfx', 'plantCanopyLifecycleVfx',
   'woodBarkReliefVfx', 'woodTanninVfx',
   'glassBodyVfx', 'oilBodyVfx', 'oilVolumeFinishVfx', 'oilDepthTransmissionVfx',
   'nitroBodyVfx', 'rockRoughnessVfx',

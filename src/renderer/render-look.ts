@@ -795,6 +795,25 @@ export function resolvePlantCanopyFoliageVfxEnabled(
 }
 
 /**
+ * E75 organizes only E71's accepted canopy foliage through authenticated PLNT
+ * lifecycle state. This strict child cannot revive any botanical ancestor, and
+ * generic input audits retain the accepted E71 reference until explicitly
+ * requested.
+ */
+export function resolvePlantCanopyLifecycleVfxEnabled(
+  look: RenderLook,
+  search = globalThis.location?.search ?? '',
+): boolean {
+  if (!resolvePlantCanopyFoliageVfxEnabled(look, search)) return false;
+  const parameters = new URLSearchParams(search);
+  const requested = parameters.get('plantCanopyLifecycleVfx');
+  if (requested === '0' || requested === 'off' || requested === 'false') return false;
+  if (requested === '1' || requested === 'on' || requested === 'true') return true;
+  if (parameters.get('inputAudit') === '1') return false;
+  return true;
+}
+
+/**
  * Keeps the exact thick-Glass body-transmission experiment independently
  * measurable inside the broader volume study. Normal WebGL owns the strict
  * Glass owner, depth, contact, and topology guards; Canvas and compact true 8x

@@ -729,6 +729,15 @@ node scripts/verify-browser-input.mjs --composed-rank-only --webgl-only \
   --production-bundle --render-look=realistic --capture-dpr=1 --render-scale=4
 ```
 
+The composed route explicitly requests accepted E75
+`plantCanopyLifecycleVfx=1` and proves the live WebGL dataset state at every
+captured scale; generic `inputAudit=1` would otherwise keep that child off.
+The current `organicPlant` showcase body intentionally carries zero lifecycle
+payload, so the focused native lifecycle atlas remains the authority for E75's
+actual two-tree response. Composed telemetry proves selector integration and
+continues to grade the protected zero-state E71 body without inventing native
+growth state in a product fixture.
+
 The browser obtains regions and exact semantic expectations from the app-owned
 `MATERIAL_SHOWCASE_AUDIT`; the driver must not maintain copied coordinates.
 Version 3 fixes the scene at semantic hash `595518258`, 104,027 occupied cells,

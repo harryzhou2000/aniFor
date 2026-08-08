@@ -3133,19 +3133,43 @@ range `5.49/4.78/2.19/11/31` becomes `7.99/6.76/2.69/13/46`. The complete
 `2318` support pixels are recalled in one component, and dark, pinned, and
 clipped fractions stay zero.
 
-### Next visual diagnostic — E75 lifecycle-grounded native-tree PLNT canopy orientation
+### E75 — accepted lifecycle-grounded native-tree PLNT canopy orientation
 
-The fresh post-E74 composed matrix selects Plant as the weakest visible probe
-at quality `67.566/71.608/72.916` for 1×/2×/4×, with mesostructure weakest.
-The accepted E36→E71 hierarchy deliberately admits only zero-payload PLNT;
-present+tree native PLNT receives inherited colour/vein cues later but no
-coherent canopy body organization. Investigate a normal-WebGL-only strict E71
-child that reuses already-fetched present/tree/direction/phase/hydration/active
-state to orient the existing broad canopy carriers. Do not add another noise
-octave, sample, resource, clock, topology, ownership, or physics decision.
-Preserve the accepted E20/E26/E28/E32/E34/E36/E53/E55/E58/E71 hierarchy,
-zero/presence-only/non-tree and inactive-tree PLNT, all SEED semantics, holes,
-fine branches, contacts, walls, Canvas fallback, and the true-8× fence contract.
+E75 is the accepted normal-WebGL-only strict E71 child, independently
+selectable with `?plantCanopyLifecycleVfx=0|1`. It styles exactly two active,
+authoritative native present+tree PLNT owners and reuses the existing E20 canopy
+carriers with their exact packed present/tree/active state plus phase, direction,
+and hydration bits to orient the canopy response. It adds no noise octave,
+sample, texture, field, resource, pass, target, upload, allocation, clock,
+alpha/support, silhouette, topology, ownership, state, or physics decision.
+Inherited palette application remains its established later owner.
+
+The successful deterministic normal-WebGL 1×/2×/4× off→on→off matrix preserves
+exact packed lifecycle state, semantics, alpha, support, and protected controls.
+The whole-body Green owner response is about `2.77` RGB RMS, peak `16–17`, and
+coverage `.788–.792`; the Cyan owner is about `4.46` RGB RMS, peak `25`, and
+coverage `.783–.784`. The bounded response is cross-scale stable. Zero-state,
+presence-only, non-tree, inactive-tree, and SEED PLNT; holes, fine branches,
+contacts, walls, and Canvas remain exact controls. Requested-on populated true
+8× promotes exact `4896×3072` while E75 is inactive, then completes a real
+`gpu-fence` in about `5.10 s`.
+
+The post-E75 composed 1×/2×/4× matrix explicitly requests and proves E75 active
+at every normal scale. The showcase `organicPlant` body deliberately remains a
+zero-payload E71 control, so its unchanged `67.566/71.608/72.916` score is not
+a reason to add another unguided PLNT octave. The next eligible ranked defect
+is Water/Metal contact chromatic separation at `87.058/91.216/91.667`, with a
+canonical component score of `.675`.
+
+### Next visual diagnostic — E76 Water/Metal contact optical separation
+
+Investigate a normal-WebGL-only strict E37/E56 child that reuses their existing
+exact-owner contact band, crown/pocket response, and already-fetched semantic
+and liquid-field samples to strengthen fit-view material separation. Do not add
+a sample, texture, field, resource, pass, target, upload, allocation, clock,
+alpha/support, silhouette, topology, ownership, state, or physics decision.
+Preserve Water/Glass and all non-Metal liquid contacts, dense cores, gaps,
+walls, traits, emission, Canvas fallback, and compact true 8× as controls.
 
 ## Phase 1 — HDR pipeline & lighting core (biggest visual payoff)
 

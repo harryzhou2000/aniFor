@@ -99,6 +99,7 @@
     "audit:vfx:plant-canopy-interlock": "npm run build && node scripts/verify-browser-input.mjs --plant-canopy-interlock-vfx-only --webgl-only --production-bundle --capture-dpr=1",
     "audit:vfx:plant-canopy-hierarchy": "npm run build && node scripts/verify-browser-input.mjs --plant-canopy-hierarchy-vfx-only --webgl-only --production-bundle --capture-dpr=1",
     "audit:vfx:plant-canopy-foliage": "npm run build && node scripts/verify-browser-input.mjs --plant-canopy-foliage-vfx-only --webgl-only --production-bundle --capture-dpr=1",
+    "audit:vfx:plant-canopy-lifecycle": "npm run build && node scripts/verify-browser-input.mjs --plant-canopy-lifecycle-vfx-only --webgl-only --production-bundle --capture-dpr=1",
     "audit:vfx:wood-tannin": "npm run build && node scripts/verify-browser-input.mjs --wood-tannin-vfx-only --webgl-only --production-bundle --capture-dpr=1",
     "audit:8x": "node scripts/verify-browser-input.mjs --scale-eight-only",
     "audit:powder:8x": "npm run build && node scripts/verify-browser-input.mjs --eight-powder-only --production-bundle",
