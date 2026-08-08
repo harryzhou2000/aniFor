@@ -22,7 +22,10 @@ vec3 applyHdrLiquidLab(
   vec2 outward,
   vec3 transmitted,
   vec3 reflected,
-  float wallBacked
+  float wallBacked,
+  float motion,
+  float motionFacing,
+  float flowFacing
 ) {
   float labDomain = floor(uVisualLab.x + 0.5);
   float labVariant = floor(uVisualLab.y + 0.5);
@@ -43,6 +46,10 @@ vec3 applyHdrLiquidLab(
     * (0.72 + rippleBand * 0.28);
   float pocket = surface * (1.0 - keyFacing)
     * (0.72 + (1.0 - rippleBand) * 0.28);
+  float oilMotion = (material == MATERIAL_OIL ? 1.0 : 0.0)
+    * clamp(motion * (0.45 + motionFacing * 0.55), 0.0, 1.0);
+  float oilLeading = smoothstep(-0.10, 0.62, flowFacing) * oilMotion;
+  float oilWake = smoothstep(-0.10, 0.62, -flowFacing) * oilMotion;
   vec3 familyTint = material == MATERIAL_WATER ? vec3(0.76, 0.98, 1.10)
     : (material == MATERIAL_OIL ? vec3(1.10, 0.82, 0.44)
     : vec3(0.84, 1.08, 0.68));
@@ -56,7 +63,7 @@ vec3 applyHdrLiquidLab(
     );
     radiance = mix(radiance, transmission, transmissionMix);
     radiance += (vec3(1.18) - clamp(radiance, 0.0, 1.18))
-      * familyTint * crown * 0.040 * labGain;
+      * familyTint * crown * (0.040 + oilLeading * 0.035) * labGain;
     return max(radiance, vec3(0.0));
   }
 
@@ -64,11 +71,12 @@ vec3 applyHdrLiquidLab(
   // it with a restrained opposing absorption pocket.
   vec3 reflectionTint = mix(familyTint, max(reflected, vec3(0.0)), 0.38);
   radiance += (vec3(1.24) - clamp(radiance, 0.0, 1.24))
-    * reflectionTint * crown * 0.075 * labGain;
+    * reflectionTint * crown * (0.075 + oilLeading * 0.050) * labGain;
   vec3 absorption = material == MATERIAL_WATER ? vec3(0.18, 0.07, 0.03)
     : (material == MATERIAL_OIL ? vec3(0.05, 0.18, 0.42)
     : vec3(0.20, 0.05, 0.24));
-  radiance *= vec3(1.0) - absorption * pocket * 0.055 * labGain;
+  radiance *= vec3(1.0) - absorption
+    * (pocket * 0.055 + oilWake * surface * 0.035) * labGain;
   return max(radiance, vec3(0.0));
 }
 

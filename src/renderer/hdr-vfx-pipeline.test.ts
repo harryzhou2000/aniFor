@@ -167,7 +167,6 @@ describe('HDR composition contract', () => {
     ]);
     expect(HDR_TONEMAP_FRAGMENT).toMatch(/uniform\s+float\s+uLiquidSurfaceVfx\s*;/);
     expect(HDR_TONEMAP_FRAGMENT).toMatch(/uniform\s+float\s+uLiquidMotionVfx\s*;/);
-    expect(HDR_TONEMAP_FRAGMENT).toMatch(/uniform\s+float\s+uOilMotionVfx\s*;/);
     expect(HDR_TONEMAP_FRAGMENT).toMatch(/uniform\s+float\s+uWaterCurvatureVfx\s*;/);
     expect(HDR_TONEMAP_FRAGMENT).toMatch(/uniform\s+vec2\s+uWorldTexel\s*;/);
 
@@ -212,8 +211,10 @@ describe('HDR composition contract', () => {
     expect(helper).toContain('max(transmitted, vec3(0.0))');
     expect(helper).toContain('max(reflected, vec3(0.0))');
     expect(helper).not.toContain('texture(');
-    expect(HDR_VISUAL_LAB_TONEMAP_FRAGMENT).toContain(
-      'result, material, surface, ripple, outward, transmitted, reflected, wallBacked',
+    expect(helper).toContain('float oilLeading');
+    expect(helper).toContain('float oilWake');
+    expect(HDR_VISUAL_LAB_TONEMAP_FRAGMENT).toMatch(
+      /result, material, surface, ripple, outward, transmitted, reflected,\s*wallBacked, oilMotion, motionFacing/,
     );
     expect(HDR_TONEMAP_FRAGMENT).not.toContain('applyHdrLiquidLab');
   });
@@ -253,10 +254,14 @@ describe('HDR composition contract', () => {
     expect(HDR_TONEMAP_FRAGMENT).not.toContain('uTime');
   });
 
-  it('derives E69 exact-Oil slick and wake from E08 velocity without another input', () => {
+  it('keeps accepted E69 exact-Oil slick and wake in the E08 baseline without a selector', () => {
+    const eligibilityStart = HDR_TONEMAP_FRAGMENT.indexOf('// Migrated E69');
+    const eligibilityEnd = HDR_TONEMAP_FRAGMENT.indexOf('float motionFacing');
+    expect(eligibilityStart).toBeGreaterThan(-1);
+    expect(eligibilityEnd).toBeGreaterThan(eligibilityStart);
     const eligibility = HDR_TONEMAP_FRAGMENT.slice(
-      HDR_TONEMAP_FRAGMENT.indexOf('// E69 is independent'),
-      HDR_TONEMAP_FRAGMENT.indexOf('float motionFacing'),
+      eligibilityStart,
+      eligibilityEnd,
     );
     const direction = HDR_TONEMAP_FRAGMENT.slice(
       HDR_TONEMAP_FRAGMENT.indexOf('float oilAgitation'),
@@ -267,7 +272,7 @@ describe('HDR composition contract', () => {
       HDR_TONEMAP_FRAGMENT.indexOf('// E66:'),
     );
     expect(HDR_TONEMAP_FRAGMENT).toMatch(
-      /float\s+oilMotion\s*=\s*uOilMotionVfx[\s\S]*?exactMaterial\(material, MATERIAL_OIL\)/,
+      /float\s+oilMotion\s*=\s*exactMaterial\(material, MATERIAL_OIL\)\s*\*\s*smoothstep\(0\.06, 0\.42, motionEnergy\)/,
     );
     for (const reusedEvidence of [
       'motionEnergy', 'motionFacing', 'flowDirection', 'outward', 'surface',
@@ -287,6 +292,7 @@ describe('HDR composition contract', () => {
     expect(direction).not.toContain('texture(');
     expect(finish).not.toContain('texture(');
     expect(finish).not.toContain('sin(');
+    expect(HDR_TONEMAP_FRAGMENT).not.toContain('uOilMotionVfx');
     expect(HDR_TONEMAP_FRAGMENT).not.toContain('uOilMotionTexture');
     expect(HDR_TONEMAP_FRAGMENT).not.toContain('uOilSurfaceTexture');
     expect(HDR_TONEMAP_FRAGMENT).not.toContain('uTime');

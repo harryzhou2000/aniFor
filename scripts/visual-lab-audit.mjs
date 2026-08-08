@@ -3,7 +3,7 @@
 /**
  * Small, dependency-free visual-lab capture harness.
  *
- * This deliberately reuses the app-owned deterministic showcase, browser
+ * This deliberately reuses app-owned deterministic fixtures, the browser
  * input-audit API, WebGL/HDR presenter, and canvas datasets. It does not import
  * or duplicate the broad verify-browser-input.mjs acceptance suite.
  *
@@ -42,6 +42,7 @@ Options (use --name=value):
   --bundle=dist/index.html              Built bundle entry (overrides default URL)
   --domain=gas|liquid|emission         Lab domain (default: gas)
   --target=0..255                      Gas style byte or liquid/emission material ID
+  --fixture=showcase|oil-motion        App-owned fixture (default: showcase)
   --gain=0.01..2                       RGB-only experiment gain (default: 1)
   --render-scale=1|2|4                 Normal WebGL scale (default: 2)
   --output-dir=/tmp/anifor-visual-lab-gas
@@ -58,7 +59,7 @@ Outputs: off.png, a.png, b.png, and report.json in --output-dir.`;
 function parseArguments(argv) {
   if (argv.includes('--help')) return { help: true };
   const known = new Set([
-    'base-url', 'bundle', 'domain', 'target', 'gain', 'render-scale', 'output-dir',
+    'base-url', 'bundle', 'domain', 'target', 'fixture', 'gain', 'render-scale', 'output-dir',
     'chrome', 'gpu',
   ]);
   const values = new Map();
@@ -79,6 +80,13 @@ function parseArguments(argv) {
   const target = Number(values.get('target') ?? 0);
   if (!Number.isInteger(target) || target < 0 || target > 255) {
     throw new Error('--target must be an integer from 0 through 255');
+  }
+  const fixture = values.get('fixture') ?? 'showcase';
+  if (fixture !== 'showcase' && fixture !== 'oil-motion') {
+    throw new Error('--fixture must be showcase or oil-motion');
+  }
+  if (fixture === 'oil-motion' && (domain !== 'liquid' || target !== 8)) {
+    throw new Error('--fixture=oil-motion requires --domain=liquid --target=8');
   }
   const gain = Number(values.get('gain') ?? 1);
   if (!Number.isFinite(gain) || gain <= 0 || gain > 2) {
@@ -113,12 +121,14 @@ function parseArguments(argv) {
     throw new Error('--base-url must use HTTP, HTTPS, or file');
   }
 
-  const defaultOutput = path.join(tmpdir(), `anifor-visual-lab-${domain}`);
+  const fixtureSuffix = fixture === 'showcase' ? '' : `-${fixture}`;
+  const defaultOutput = path.join(tmpdir(), `anifor-visual-lab-${domain}${fixtureSuffix}`);
   return Object.freeze({
     help: false,
     baseUrl,
     domain,
     target,
+    fixture,
     gain,
     renderScale,
     gpu,
@@ -208,7 +218,9 @@ async function main() {
     const startupSelection = await stageVariantDuringStartup(cdp, options);
     assert(startupSelection.backendBeforeSelection === 'canvas2d'
       && startupSelection.backendReasonBeforeSelection === 'webgl-starting'
-      && startupSelection.stagedBeforeWebGL === true,
+      && startupSelection.stagedBeforeWebGL === true
+      && startupSelection.fixture === options.fixture
+      && startupSelection.fixturePrepared === true,
     `Visual Lab selector was not staged during bounded Canvas startup: ${JSON.stringify(startupSelection)}`);
     await waitForPage(cdp, options, 2);
 
@@ -223,7 +235,7 @@ async function main() {
       return snapshot.semantic.occupied > 0
         && snapshot.fieldAlpha.nonzero > 0
         && snapshot.framebufferAlpha.nonzero > 0;
-    }, PAGE_STARTUP_TIMEOUT_MS, 'populated showcase presentation fields');
+    }, PAGE_STARTUP_TIMEOUT_MS, `populated ${options.fixture} presentation fields`);
 
     const captures = {};
     for (const variant of VARIANTS) {
@@ -263,6 +275,7 @@ async function main() {
       url: url.href,
       domain: options.domain,
       target: options.target,
+      fixture: options.fixture,
       targetKind: options.domain === 'gas'
         ? 'propagated-atmosphere-style-byte' : 'semantic-material-id',
       gain: options.gain,
@@ -395,15 +408,24 @@ async function stageVariantDuringStartup(cdp, options) {
   return waitFor(() => evaluate(cdp, `(() => {
     const audit = window.__ANIFOR_INPUT_AUDIT__;
     if (!audit || typeof audit.setVisualLabVariant !== 'function') return false;
+    const fixture = ${JSON.stringify(options.fixture)};
+    let fixturePrepared = fixture === 'showcase';
+    if (fixture === 'oil-motion') {
+      if (typeof audit.prepareOilMotionVfxFixture !== 'function') return false;
+      audit.prepareOilMotionVfxFixture('moving');
+      fixturePrepared = true;
+    }
     const before = audit.backend();
     audit.setVisualLabVariant(2);
     return {
       requestedVariant: 2,
+      fixture,
+      fixturePrepared,
       backendBeforeSelection: before.backend,
       backendReasonBeforeSelection: before.reason,
       stagedBeforeWebGL: before.backend !== 'webgl',
     };
-  })()`), PAGE_STARTUP_TIMEOUT_MS, `${options.domain} startup audit bridge`);
+  })()`), PAGE_STARTUP_TIMEOUT_MS, `${options.fixture} startup audit bridge`);
 }
 
 async function waitForPage(cdp, options, expectedVariant) {

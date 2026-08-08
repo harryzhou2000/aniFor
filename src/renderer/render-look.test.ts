@@ -25,7 +25,6 @@ import {
   resolveCflmColdFlameVfxEnabled,
   resolveLiquidBodyVfxEnabled, resolveLiquidSolidMeniscusVfxEnabled,
   resolveLiquidSurfaceVfxEnabled, resolveLiquidMotionVfxEnabled,
-  resolveOilMotionVfxEnabled,
   resolveWaterCurvatureVfxEnabled,
   resolveNobleGasBillowVfxEnabled, resolveNobleGasPrismVfxEnabled,
   resolveNobleGasCoreReliefVfxEnabled,
@@ -139,35 +138,6 @@ describe('resolveRenderLook', () => {
     )).toBe(false);
     expect(resolveLiquidMotionVfxEnabled(
       'realistic', '?liquidBodyVfx=0&liquidSurfaceVfx=1&liquidMotionVfx=1',
-    )).toBe(false);
-  });
-
-  it('keeps exact-Oil motion optics subordinate to E08 but independent of E65', () => {
-    expect(resolveOilMotionVfxEnabled('classic', '?oilMotionVfx=on')).toBe(false);
-    expect(resolveOilMotionVfxEnabled('realistic', '')).toBe(true);
-    expect(resolveOilMotionVfxEnabled('neon-lab', '')).toBe(true);
-    expect(resolveOilMotionVfxEnabled('realistic', '?inputAudit=1')).toBe(false);
-    expect(resolveOilMotionVfxEnabled(
-      'realistic', '?inputAudit=1&liquidBodyVfx=1&liquidSurfaceVfx=1&oilMotionVfx=true',
-    )).toBe(true);
-    for (const disabled of ['0', 'off', 'false']) {
-      expect(resolveOilMotionVfxEnabled(
-        'realistic', `?oilMotionVfx=${disabled}`,
-      )).toBe(false);
-    }
-    for (const enabled of ['1', 'on', 'true']) {
-      expect(resolveOilMotionVfxEnabled(
-        'realistic', `?oilMotionVfx=${enabled}`,
-      )).toBe(true);
-    }
-    expect(resolveOilMotionVfxEnabled(
-      'realistic', '?liquidMotionVfx=0&oilMotionVfx=1',
-    )).toBe(true);
-    expect(resolveOilMotionVfxEnabled(
-      'realistic', '?liquidSurfaceVfx=0&oilMotionVfx=1',
-    )).toBe(false);
-    expect(resolveOilMotionVfxEnabled(
-      'realistic', '?liquidBodyVfx=0&liquidSurfaceVfx=1&oilMotionVfx=1',
     )).toBe(false);
   });
 

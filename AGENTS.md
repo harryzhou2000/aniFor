@@ -9,12 +9,16 @@ detail-first E-number ladder here. The primary objective is now an effective,
 reusable rendering-experiment framework. The typed Visual Lab state, fixed
 normal-HDR composition seam, and same-page off/A/B capture route are established
 for gas, emission, and connected Water/Oil/Acid surfaces. Keep extending this
-one route and migrate an accepted treatment through it before adding more
-isolated selectors or cloned browser verifiers. The first migration is complete:
-E62 Oxygen volume folding is now an accepted E15 baseline, while its legacy
-resolver, uniform, query, dataset, and bespoke verifier have been removed in
-favour of Visual Lab gas target `4`. Same-page variant selection must remain
-owned across asynchronous WebGL promotion; a choice made during the temporary
+one route and migrate accepted treatments through it before adding more
+isolated selectors or cloned browser verifiers. Two leaf migrations are now
+complete. E62 Oxygen volume folding is an accepted E15 baseline and uses Visual
+Lab gas target `4` for alternatives. E69 Oil surface motion is an accepted E08
+baseline and uses an app-owned moving-Oil fixture with Visual Lab liquid target
+`8`. Their legacy resolvers, uniforms, queries, datasets, and bespoke verifier
+paths have been removed. The next framework step is a declarative fixture/domain
+adapter and then the similarly bounded E65 leaf; defer E66 because its tangent
+reads make it a resource-sensitive migration. Same-page variant selection must
+remain owned across asynchronous WebGL promotion; a choice made during the temporary
 Canvas `webgl-starting` phase is seeded before the first WebGL frame. Lab
 variants must reuse live
 presenter textures or already-computed compositor values, remain RGB-only, add
@@ -1515,44 +1519,34 @@ below `.34` RMS and one peak byte. Contact-side spill occurs only at 1×
 exact throughout. The true-8× exclusion fence completed in `5.2063 s` with
 zero browser errors.
 
-E69 is the normal-WebGL HDR-only exact-Oil motion-surface checkpoint,
-independently measurable with `?oilMotionVfx=0|1`. It is a strict child of the
-accepted connected-liquid body and surface path and composes over E22/E38's
-Oil body/volume finish. Only authoritative ordinary Oil `8` on an already-
-proved same-owner air-facing surface with authentic packed native velocity may
-respond. It reuses the semantic centre/cardinals, species-valid liquid field,
-packed velocity, existing surface normal/depth, HDR reflection, native-wall
-sample, and already-live Oil sheen/caustic carriers to form a warm reflective
-leading slick and a blue-dominant absorptive wake. The effect is RGB only and
-adds one selector uniform but no sample, sampler, texture, field, pass, target,
+E69 is now the always-present normal-WebGL HDR exact-Oil motion-surface baseline
+inside E08, rather than an independently selectable effect. It remains a strict
+child of the accepted connected-liquid body and surface path and composes over
+E22/E38's Oil body/volume finish. Only authoritative ordinary Oil `8` on an
+already-proved same-owner air-facing surface with authentic packed native
+velocity may respond. It reuses the semantic centre/cardinals, species-valid
+liquid field, packed velocity, existing surface normal/depth, HDR reflection,
+native-wall sample, and already-live Oil sheen/caustic carriers to form a warm
+reflective leading slick and a blue-dominant absorptive wake. The baseline is
+RGB only and adds no selector, sample, sampler, texture, field, pass, target,
 upload, persistent allocation, wave, clock/noise, alpha, support, silhouette,
 ownership, topology, or physics decision. Canvas and compact true 8× remain
-E69-inactive; E69-off leaves the accepted E65 transport direction unchanged.
+outside the HDR/E69 path.
 
-`npm run audit:vfx:oil-motion` owns topology-identical paused moving,
-reversed, and still fixtures at 1×/2×/4×. Reversed velocity is the byte-exact
-negative of moving velocity, while material, wall, liquid field, semantic
-support, and alpha stay identical. Every mode runs off→on→off and restores a
-byte-identical disabled framebuffer. The gate hashes raw and staged velocity,
-material, native wall, liquid-field density, semantic state, alpha, and support;
-then measures the isolated selector response `(on-off)` so pre-existing
-velocity shading cannot impersonate E69 direction. It requires positive amber
-leading lobes, negative blue-dominant wake lobes, signed reversal at the top
-and both sides, and bounded cross-scale magnitude/spatial retention. Stationary
-Oil, moving Water/Acid/Diesel/Nitro, thin or isolated Oil, Oil/Water and
-Oil/Diesel seams, co-located native wall, authored hole/chimney, and guarded
-blank are exact controls. Requested-on true 8× must report E03/E08/E22/E38/E69
-and HDR inactive for `scale-8`, omit the dense fixture and bloom resources,
-retain exact 4896×3072 WebGL, and complete a real GPU fence before acceptance.
-The accepted full matrix records forward top/right leading RGB RMS
-`4.75/4.90/4.48` and `4.20/4.42/4.47`, with left-wake RGB RMS
-`1.57/1.70/1.73`, at 1×/2×/4×. Reversal moves the leading lobe to the left at
-`6.53/7.20/7.32` RMS while the top/right wakes remain
-`2.18/2.12/2.15` and `.71/.90/.90`. Isolated reversal-response RMS is
-top `4.19/4.20/3.58`, left `4.94/5.19/4.56`, and right
-`2.08/2.27/2.30`, with the required signed polarity retained at every scale.
-All controls are exact, browser errors are zero, and the true-8× exclusion
-fence completed in `5.0048 s`.
+`npm run audit:visual-lab:oil-motion` runs the narrow structural baseline check
+and the generic production-bundle Visual Lab route with `--fixture=oil-motion`,
+liquid target `8`, and canonical 2× presentation. The app-owned paused moving-
+Oil fixture is staged during the temporary Canvas `webgl-starting` phase, then
+the selected comparison variant must survive promotion into WebGL. Off/A/B
+captures reuse the already-computed motion, surface-normal, reflection, and
+flow-facing scalars; they keep semantic state, liquid-field alpha, framebuffer
+alpha/support, authored holes, walls, and foreign materials exact. The legacy
+`audit:vfx:oil-motion` name is a compatibility alias for this framework route,
+not an E69 selector. The parent E08 browser gate owns the accepted baseline and
+uses renderer completed-frame settling for WebGL captures; its true-8× run must
+still report HDR inactive, present exact 4896×3072 WebGL, and complete a real GPU
+fence. The former moving/reversed selector matrix and its numeric measurements
+remain historical acceptance evidence only.
 
 E70 is the normal-WebGL HDR-only exact-Steam condensate-volume checkpoint,
 independently measurable with `?steamCondensateVfx=0|1` and strictly
@@ -1630,7 +1624,8 @@ have no E72 branch and retain the accepted E38 presentation.
 
 `npm run audit:vfx:oil-depth-transmission` owns the established exact-Oil
 fixture and runs deterministic off→on→off captures at 1×/2×/4× with E03/E22/E38
-held active and liquid/Oil motion held off. Semantic, raw RGBA, liquid depth,
+held active. E65 is pinned off and the fixture authors no Oil velocity, so the
+accepted E69 baseline is naturally inert. Semantic, raw RGBA, liquid depth,
 liquid field, native-wall state, alpha/support, and repeated-off framebuffers
 remain exact. Accepted transition response RGB channel means are approximately
 `+2.18…+2.25`, `+1.36…+1.42`, and `+0.40…+0.41`; deep response means are
@@ -1944,14 +1939,17 @@ space, and repeated-off frames remain exact. Requested-on compact true 8× is
 inactive at exact `4896×3072`, completes a real GPU fence in about `5.31 s`,
 and reports zero browser errors. Do not add E82 to the compact fragment.
 
-The next checkpoint is framework work rather than E83 material polish. Finish
-the fixed `domain/variant/target/gain` Visual Lab state, its normal-HDR
-gas/emission compositor hook, browser setter/dataset diagnostics, and a compact
-off/A/B capture script. Keep variant zero byte-identical and keep the direct
-true-8× fragment untouched. The two candidate variants are lab evidence, not
-accepted release styling; selecting or migrating one belongs in a later small
-checkpoint. After the seam is proven, extend it to powder/liquid and only then
-consider declaratively migrating historical selectors.
+Framework leverage remains the checkpoint priority rather than E83 material
+polish. The fixed `domain/variant/target/gain` Visual Lab state, normal-HDR
+gas/emission/liquid compositor hook, browser setter/dataset diagnostics, and
+off/A/B capture script are complete. E62 and E69 prove that accepted leaf
+treatments can be folded into their parent baselines while deleting selector,
+uniform, query, telemetry, and bespoke-verifier plumbing. Keep variant zero
+pixel-preserving, keep the direct true-8× fragment untouched, and treat candidate
+variants as comparison evidence rather than release styling. Next consolidate
+named fixture/domain adapters, then migrate E65 if its parent gate stays exact;
+defer E66 and Powder until their additional samples or source-stage stability
+proof fit the resource contract without creating a second experiment framework.
 
 The first seam now uses `domain/variant/target/gain` (target is deliberately
 domain-specific, not always a material ID). Ordinary pages compile the original

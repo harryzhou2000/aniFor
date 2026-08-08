@@ -4388,7 +4388,7 @@ describe('Pixi presenter startup configuration', () => {
     expect(eight).not.toContain('uLiquidMotionVfx');
   });
 
-  it('routes E69 exact-Oil motion through E08 without resources or an 8x branch', () => {
+  it('keeps accepted E69 exact-Oil motion in the E08 baseline without a selector or 8x branch', () => {
     const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
     const hdrSource = readFileSync(new URL('./hdr-vfx-pipeline.ts', import.meta.url), 'utf8');
     const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');
@@ -4401,24 +4401,19 @@ describe('Pixi presenter startup configuration', () => {
     const branchEnd = hdrSource.indexOf('// E66:', branchStart);
     const branch = hdrSource.slice(branchStart, branchEnd);
 
-    expect(source).toContain('resolveOilMotionVfxEnabled');
-    expect(source).toMatch(
-      /const oilMotionVfxEnabled = outputScale < 8\s*&& resolveOilMotionVfxEnabled\(renderLook\);/,
-    );
-    expect(hdrCreate).toContain('oilMotionEnabled: oilMotionVfxEnabled');
     for (const existingResource of [
       'this.fieldSource', 'this.wallSource', 'this.liquidSource',
     ]) expect(hdrCreate).toContain(existingResource);
-    expect(source).toMatch(
-      /presenter\.app\.canvas\.dataset\.oilMotionVfx\s*=[\s\S]*?\? 'active' : 'inactive';/,
-    );
-    expect(source).toContain("this.app.canvas.dataset.oilMotionVfx = 'inactive';");
-    expect(source).toContain("get('oilMotionVfxAudit') === '1'");
-    expect(hdrSource).toContain('uOilMotionVfx');
+    expect(source).not.toContain('resolveOilMotionVfxEnabled');
+    expect(source).not.toContain('oilMotionVfxEnabled');
+    expect(source).not.toContain('oilMotionEnabled:');
+    expect(source).not.toContain('oilMotionVfxAudit');
+    expect(source).not.toContain('dataset.oilMotionVfx');
+    expect(hdrSource).not.toContain('uOilMotionVfx');
     expect(branchStart).toBeGreaterThan(0);
     expect(branchEnd).toBeGreaterThan(branchStart);
     expect(hdrSource).toMatch(
-      /float oilMotion\s*=\s*uOilMotionVfx[\s\S]*?exactMaterial\(material, MATERIAL_OIL\)/,
+      /float oilMotion\s*=\s*exactMaterial\(material, MATERIAL_OIL\)\s*\*\s*smoothstep\(0\.06, 0\.42, motionEnergy\)/,
     );
     expect(branch).toContain('oilFlowDirection');
     expect(branch).not.toContain('texture(');
