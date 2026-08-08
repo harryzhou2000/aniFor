@@ -15,6 +15,16 @@ on:
         options:
           - build
           - build-and-deploy
+      visual_lab_review:
+        description: Capture and publish a deterministic Visual Lab review batch
+        required: true
+        default: false
+        type: boolean
+      visual_lab_candidates:
+        description: Optional comma-separated Visual Lab candidates; empty runs the frozen catalog
+        required: false
+        default: ''
+        type: string
 
 permissions:
   contents: read
@@ -118,11 +128,76 @@ jobs:
         with:
           path: dist
 
+  visual-lab-review:
+    if: github.event_name == 'workflow_dispatch' && inputs.visual_lab_review == true
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      - name: Download the verified static site
+        uses: actions/download-artifact@v8
+        with:
+          name: anifortpt-static-site
+          path: dist
+
+      - name: Capture deterministic Visual Lab review
+        id: visual-lab-batch
+        continue-on-error: true
+        env:
+          VISUAL_LAB_CANDIDATES: ${{ inputs.visual_lab_candidates }}
+        run: |
+          review_args=(
+            --bundle=dist/index.html
+            --output-dir=artifacts/visual-lab-review
+            --gpu=swiftshader
+          )
+          if [[ -n "${VISUAL_LAB_CANDIDATES//[[:space:]]/}" ]]; then
+            review_args+=("--candidates=${VISUAL_LAB_CANDIDATES}")
+          fi
+          node scripts/visual-lab-batch.mjs "${review_args[@]}"
+
+      - name: Upload Visual Lab review evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: anifortpt-visual-lab-${{ github.sha }}
+          path: artifacts/visual-lab-review
+          if-no-files-found: error
+          include-hidden-files: true
+
+      - name: Require a complete Visual Lab review index
+        if: always()
+        env:
+          CAPTURE_OUTCOME: ${{ steps.visual-lab-batch.outcome }}
+        run: |
+          test "${CAPTURE_OUTCOME}" = success
+          node --input-type=module -e "
+            import { readFile } from 'node:fs/promises';
+            const index = JSON.parse(await readFile(
+              'artifacts/visual-lab-review/index.json', 'utf8',
+            ));
+            if (index.schema !== 'anifor.visual-lab.batch/v1' || index.complete !== true) {
+              throw new Error('Visual Lab review did not publish a complete v1 batch index');
+            }
+          "
+
   deploy:
     if: >-
-      (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
-      (github.event_name == 'workflow_dispatch' && inputs.operation == 'build-and-deploy')
-    needs: build
+      always() &&
+      needs.build.result == 'success' &&
+      (needs.visual-lab-review.result == 'success' ||
+       needs.visual-lab-review.result == 'skipped') &&
+      ((github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+       (github.event_name == 'workflow_dispatch' && inputs.operation == 'build-and-deploy'))
+    needs:
+      - build
+      - visual-lab-review
     runs-on: ubuntu-latest
     permissions:
       pages: write
