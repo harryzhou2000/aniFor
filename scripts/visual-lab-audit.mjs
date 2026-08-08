@@ -43,6 +43,11 @@ const CDP_CONNECT_TIMEOUT_MS = 10_000;
 const CDP_COMMAND_TIMEOUT_MS = 20_000;
 const PAGE_STARTUP_TIMEOUT_MS = 60_000;
 const VARIANT_SETTLE_TIMEOUT_MS = 10_000;
+// A cold hosted SwiftShader readback covers the full 1224x768 framebuffer plus
+// both world-sized semantic fields. One snapshot can consume most of the
+// ordinary settle window, so retain the exact two-consecutive-snapshot proof
+// while giving the software path enough time to begin its second readback.
+const SWIFTSHADER_VARIANT_SETTLE_TIMEOUT_MS = 30_000;
 const VISUAL_LAB_LIFECYCLE_SCHEMA = 'anifor.visual-lab.lifecycle/v1';
 const PNG_SIGNATURE = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
 const VARIANTS = Object.freeze([
@@ -590,6 +595,8 @@ async function waitForPage(cdp, options, expectedVariant) {
 }
 
 async function captureVariant(cdp, options, variant) {
+  const settleTimeoutMs = options.gpu === 'swiftshader'
+    ? SWIFTSHADER_VARIANT_SETTLE_TIMEOUT_MS : VARIANT_SETTLE_TIMEOUT_MS;
   await evaluate(cdp, `(() => {
     window.__ANIFOR_INPUT_AUDIT__.setVisualLabVariant(${variant.value});
     return new Promise((resolve) => requestAnimationFrame(() =>
@@ -603,7 +610,7 @@ async function captureVariant(cdp, options, variant) {
       && canvas.dataset.visualLabDomain === ${JSON.stringify(options.domain)}
       && Number(canvas.dataset.visualLabTarget) === ${options.target}
       && Number(canvas.dataset.visualLabGain) === ${options.gain};
-  })()`), VARIANT_SETTLE_TIMEOUT_MS, `${variant.name} lab dataset`);
+  })()`), settleTimeoutMs, `${variant.name} lab dataset`);
 
   let previousState;
   const state = await waitFor(async () => {
@@ -614,7 +621,7 @@ async function captureVariant(cdp, options, variant) {
       && sameDigest(previousState.framebufferAlpha, current.framebufferAlpha);
     previousState = current;
     return stable ? current : false;
-  }, VARIANT_SETTLE_TIMEOUT_MS, `${variant.name} stable semantic/alpha presentation`);
+  }, settleTimeoutMs, `${variant.name} stable semantic/alpha presentation`);
   assertVariantState(state, options, variant);
   const clip = await evaluate(cdp, `(() => {
     const rect = document.querySelector('.semantic-field-canvas').getBoundingClientRect();
